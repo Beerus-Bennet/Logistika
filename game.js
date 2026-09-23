@@ -656,7 +656,8 @@ function bestOption(opts) {
 
 function openPlanner(orderId, preferVi) {
   const o = S.orders.find(x => x.id === orderId);
-  if (!o) return;
+  /* Karte angetippt, die Ausschreibung ist aber gerade abgelaufen oder vergeben */
+  if (!o) { toast("Diese Ausschreibung ist gerade abgelaufen.", "warn"); render(); return; }
   const variants = buildVariants(o);
   if (!variants.length) return toast("Mit deinen Verkehrsträgern gibt es dafür keine Route.", "warn");
   /* Vorausgewählt wird die Variante, die mit der eigenen Flotte am meisten
@@ -2224,6 +2225,7 @@ const TAB_TITLE = { orders: "Aufträge", jobs: "Live-Verfolgung", fleet: "Fuhrpa
 let activeTab = "map";
 let lastPanel = "orders";
 let renderDirty = true;
+let touchDown = false, touchUpAt = 0;
 
 function showTab(name) {
   if (name !== "market") marketFocus = null;     /* Markt-Fokus gilt nur für den direkten Sprung */
@@ -2311,6 +2313,12 @@ function boot() {
     if (!S.orders.length) spawnOrders(8);
     renderFollowBar();
     renderFogNote(fogRadiusKm(S.stage, level()));
+    /* Mitten im Tutorial neu geladen: Lina macht weiter. Wer schon weiter
+       ist, bekommt es nicht nachträglich aufgedrückt. */
+    if (S.tut && S.tut.done === false) {
+      if (level() < 3 && typeof startTutorial === "function") setTimeout(startTutorial, 900);
+      else S.tut.done = true;
+    }
   } else {
     document.body.classList.add("tab-map");
     map.setView(st.center, st.zoom);
@@ -2358,7 +2366,14 @@ function boot() {
   $("#zoomIn").onclick = () => map.zoomBy(1);
   $("#zoomOut").onclick = () => map.zoomBy(-1);
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
-  window.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); } });
+  window.addEventListener("keydown", e => { if (e.key === "Escape" && !tutorialRunning()) { closeModal(); } });
+  /* Solange ein Finger auf dem Schirm liegt (und kurz danach), wird die
+     offene Liste nicht neu gezeichnet – sonst verschwindet die Karte oder
+     der Knopf unter dem Finger und der Tipp geht ins Leere. */
+  document.addEventListener("pointerdown", () => { touchDown = true; }, true);
+  const lift = () => { touchDown = false; touchUpAt = performance.now(); };
+  document.addEventListener("pointerup", lift, true);
+  document.addEventListener("pointercancel", lift, true);
 
   /* Spieluhr: 1 Sekunde Echtzeit = 1 Spielminute bei Tempo 1× */
   let last = performance.now(), acc = 0, autoTimer = 0, baseTick = 0;
@@ -2377,9 +2392,13 @@ function boot() {
     acc += real;
     if (acc > 0.9 && playing()) {
       acc = 0; renderHud(); renderPause();
-      if (activeTab !== "market" && activeTab !== "world" && activeTab !== "bases") render();
-      /* Der Büroreiter zeichnet Grundrisse und Porträts – der reicht seltener. */
-      else if (activeTab === "bases" && ++baseTick % 4 === 0) render();
+      /* Im Tutorial steht die Uhr – nichts ändert sich, also auch nichts neu zeichnen */
+      const hold = touchDown || performance.now() - touchUpAt < 450 || tutorialRunning();
+      if (!hold) {
+        if (activeTab !== "market" && activeTab !== "world" && activeTab !== "bases") render();
+        /* Der Büroreiter zeichnet Grundrisse und Porträts – der reicht seltener. */
+        else if (activeTab === "bases" && ++baseTick % 4 === 0) render();
+      }
       if (selected) renderInspector();
       renderFollowBar();
     }

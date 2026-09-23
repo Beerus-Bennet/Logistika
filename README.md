@@ -15,6 +15,9 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    Name. Die Figuren sind halbrealistisch gezeichnet: Gesichtsanatomie,
    Hautschattierung, Haarsträhnen mit Glanz – alles als reines SVG, ohne eine
    einzige Bilddatei. Aus der Sicht dieser Figur läuft das ganze Spiel.
+   Alternativ zehn **fertig gezeichnete Figuren** zur Auswahl (unter
+   „🧑 Fertige Figur“) – eigene lassen sich nach [PLAYER-ART.md](PLAYER-ART.md)
+   ergänzen.
    **📸 Aus Foto:** Selfie aufnehmen oder ein Bild wählen – das Spiel zeichnet
    daraus direkt im Browser ein Comic-Porträt (Stile: Comic, Comic kräftig,
    Original; mit Zoom und Verschieben). Ein gespeichertes Memoji oder Bitmoji
@@ -33,7 +36,9 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    echten Übungsauftrag durch, der genau dort startet, wo dein Fahrzeug steht:
    Auftrag finden, Leerfahrt-Hinweis lesen, Planung mit Minikarte verstehen,
    annehmen, verfolgen – und danach wartet ein Anschlussauftrag am Zielort.
-   Die Uhr steht so lange still. Unter *Welt* lässt sich das Tutorial jederzeit
+   Die Uhr steht so lange still, und außer Linas „Weiter“ bzw. dem leuchtenden
+   Feld ist alles gesperrt – kein Scrollen, kein Danebentippen, kein Überspringen.
+   Wer mittendrin neu lädt, macht dort weiter. Unter *Welt* lässt sich das Tutorial jederzeit
    wiederholen. Eigene Artwork für Lina: `lina.png` ersetzen, siehe [ART.md](ART.md).
 
 ## Spielprinzip
@@ -232,7 +237,7 @@ data.js                 Weltdaten: Knoten, Strecken, Fahrzeuge, Ladungen, Etappe
 avatar.js               Charakter-Baukasten: Porträts und Brustbilder als reines SVG
 photo.js                Figur aus Foto: Selfie/Bild → Comic-Porträt, alles im Browser
 lina.png, ART.md        optionale eigene Artwork für die Disponentin
-player-*.png, PLAYER-ART.md  optionale eigene Porträts für die Spielfigur
+player-p1.png … p10.png, PLAYER-ART.md  fertige und eigene Porträts für die Spielfigur
 map.js                  eigene Slippy-Map-Engine auf <canvas>
 offices.js              Standorte, Personal, Möblierung, Diensttelefon
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft

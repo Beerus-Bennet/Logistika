@@ -55,7 +55,7 @@ function probeGuideArt() {
 }
 function guideFigure(size, uid) {
   return guideArt
-    ? `<img class="guide-art" src="${guideArt}" alt="${GUIDE.name}">`
+    ? `<img class="guide-art" src="${guideArt}" alt="${GUIDE.name}" width="289" height="821">`
     : avatarFigureSVG(GUIDE.avatar, size, { uid: uid, label: GUIDE.name });
 }
 
@@ -472,7 +472,7 @@ const TUT_STEPS = [
   { id: "pick", need: "order",
     tx: "Jetzt du: Tipp auf den ⭐ Übungsauftrag.",
     target: tutOrderCard, waitFor: "openPlanner",
-    before: () => { if (activeTab !== "orders") showTab("orders"); },
+    before: () => { if (activeTab !== "orders") showTab("orders"); $("#view .view-body").scrollTop = 0; },
     already: () => planState && planState.order.id === tutOrderId },
   { need: "order", inPlanner: true, top: false,
     tx: () => {
@@ -489,7 +489,7 @@ const TUT_STEPS = [
         + "mit Standort und was die Leerfahrt kosten würde. Tipp ruhig mal ein anderes an, dann siehst du die Leerfahrt auf der Karte."
       : `Hier wählst du das Fahrzeug. Bei jedem steht, wo es gerade parkt und ob es erst leer anfahren müsste. `
         + `Dein ${esc(tvName())} ist schon da: ✅ vor Ort.`,
-    target: "#modalBody .vpick" },
+    target: "#modalBody .vpick", allow: () => tutEligibleCount() > 1 },
   { need: "order", inPlanner: true, top: true,
     tx: () => {
       const r = tutRepoSel();
@@ -645,8 +645,7 @@ function endTutorial() {
   if (typeof renderPause === "function") renderPause();
   $("#tutor").classList.remove("on", "top", "compact");
   $("#tutor").innerHTML = "";          /* keine unsichtbaren Knöpfe zurücklassen */
-  $("#spot").classList.remove("on");
-  $("#spot").innerHTML = "";
+  tutUnblock();
   save();
   render();
 }
@@ -671,17 +670,116 @@ function showTutStep() {
      sonst genau über dem, was sie gerade zeigt). */
   document.body.classList.toggle("tut-talk", tutKey !== "main");
   if (typeof renderPause === "function") renderPause();
-  if (st.before) st.before();
+  try { if (st.before) st.before(); } catch (e) { console.warn("Tutorial:", e); }
 
   const tutor = $("#tutor");
   tutor.classList.remove("on");
   tutor.innerHTML = "";                /* keine Knöpfe vom letzten Schritt stehen lassen */
-  $("#spot").classList.remove("on");
+  tutBlock(null, false);               /* in der Pause dazwischen ist alles gesperrt */
+  tutAskedAt = performance.now();
+  tutWatch();
   /* Kurz warten, bis Reiterwechsel, Kartenschwenk oder das Hochfahren des
      Planers durch sind – sonst misst man das Ziel mitten in der Bewegung. */
   const delay = st.before || st.inPlanner || st.wait ? (st.wait || 380) : 40;
   const idx = tutStep;
-  tutTimer = setTimeout(() => { if (tutStep === idx) renderTutStep(st, true); }, delay);
+  tutTimer = setTimeout(() => {
+    if (tutStep !== idx) return;
+    try { renderTutStep(st, true); }
+    catch (e) { console.warn("Tutorial:", e); tutGo(tutStep + 1); }
+  }, delay);
+}
+
+/* ------------------------------ Sperre ----------------------------------
+   Solange Lina spricht, geht nur, was sie verlangt. Vier unsichtbare
+   Scheiben rund um das Leuchtfenster fangen jede Berührung ab. Bei
+   Mitmach-Schritten („Tipp auf …“) bleibt das Fenster selbst frei, sonst
+   ist auch das abgedeckt. Scrollen ist währenddessen aus, damit das
+   Fenster nicht vom Inhalt wegrutschen kann.                             */
+let tutAskedAt = 0, tutWatchT = 0, tutPlaced = null;
+function tutBlock(hole, open, ring) {
+  const spot = $("#spot");
+  if (!spot.querySelector("b")) spot.innerHTML = `<i></i><b></b><b></b><b></b><b></b>`;
+  spot.classList.add("on");
+  const W = innerWidth, H = innerHeight;
+  const i = spot.querySelector("i"), bs = spot.querySelectorAll("b");
+  const set = (el, x, y, w, h) => {
+    if (w <= 0 || h <= 0) { el.style.display = "none"; return; }
+    el.style.display = "block";
+    el.style.left = x + "px"; el.style.top = y + "px"; el.style.width = w + "px"; el.style.height = h + "px";
+  };
+  if (ring) set(i, ring.left, ring.top, ring.width, ring.height); else i.style.display = "none";
+  if (hole && open) {
+    const x0 = Math.max(0, hole.left), y0 = Math.max(0, hole.top);
+    const x1 = Math.min(W, hole.left + hole.width), y1 = Math.min(H, hole.top + hole.height);
+    set(bs[0], 0, 0, W, y0);
+    set(bs[1], 0, y1, W, H - y1);
+    set(bs[2], 0, y0, x0, y1 - y0);
+    set(bs[3], x1, y0, W - x1, y1 - y0);
+  } else {
+    set(bs[0], 0, 0, W, H);
+    for (let k = 1; k < 4; k++) bs[k].style.display = "none";
+  }
+}
+function tutUnblock() {
+  const spot = $("#spot");
+  spot.classList.remove("on");
+  spot.innerHTML = "";
+  clearInterval(tutWatchT); tutWatchT = 0;
+}
+/* Wo liegt das Ziel gerade, wie groß ist das Leuchtfenster? */
+function tutGeom(st) {
+  const el = tutResolve(st);
+  const r = el ? (el.nodeType === 1 ? el.getBoundingClientRect() : el) : null;
+  const ok = !!(r && r.width >= 12 && r.height >= 12);
+  const p = st.pad == null ? 6 : st.pad;
+  let ring = null;
+  if (ok && (r.width + p * 2) * (r.height + p * 2) <= innerWidth * innerHeight * 0.42) {
+    ring = { left: Math.max(2, r.left - p), top: Math.max(2, r.top - p),
+             width: Math.min(r.width + p * 2, innerWidth - 4), height: Math.min(r.height + p * 2, innerHeight - 4) };
+  }
+  const hole = ring || (ok ? { left: r.left, top: r.top, width: r.width, height: r.height } : null);
+  return { el, r, ok, ring, hole };
+}
+function tutOpen(st) {
+  if (st.waitFor) return true;
+  return typeof st.allow === "function" ? !!st.allow() : !!st.allow;
+}
+/* Fenster nachführen (Liste neu gezeichnet, Planer umgebaut, Handy gedreht)
+   und aufpassen, dass nie eine Sperre ohne Lina stehen bleibt. */
+function tutWatch() {
+  if (tutWatchT) return;
+  tutWatchT = setInterval(() => {
+    if (!document.body.classList.contains("tut-on")) { tutUnblock(); return; }
+    const tutor = $("#tutor"), st = tutList[tutStep];
+    if (!st) return endTutorial();
+    if (!tutor.classList.contains("on")) {
+      if (performance.now() - tutAskedAt > 2500) showTutStep();
+      return;
+    }
+    const g = tutGeom(st);
+    /* Hat sich das Ziel spürbar verschoben (Schrift nachgeladen, Liste neu
+       gezeichnet), wird auch Linas Platz neu bestimmt – sonst nur das Fenster. */
+    const pl = tutPlaced, r = g.r;
+    const moved = !pl !== !r || (r && pl && Math.abs(r.top - pl.top) + Math.abs(r.left - pl.left)
+      + Math.abs(r.width - pl.width) + Math.abs(r.height - pl.height) > 4);
+    if (moved) renderTutStep(st, false);
+    else tutBlock(g.hole, tutOpen(st) && g.ok, g.ring);
+  }, 200);
+}
+/* Mitmach-Schritt, dessen Ziel nicht da ist: Lina erledigt es selbst,
+   damit niemand in der Sperre festsitzt. */
+function tutFallback(st) {
+  if (st.waitFor === "openPlanner" && tutOrder()) return openPlanner(tutOrderId);
+  if (st.waitFor === "orderAccepted" && planState && planState.order.id === tutOrderId) {
+    const btn = $("#mAccept");
+    if (btn && !btn.classList.contains("disabled")) return acceptOrder(planState.vi);
+    /* Geht wirklich nicht: Übung fallen lassen, weiter mit der Kurzfassung */
+    const id = tutOrderId;
+    tutOrderId = null;
+    S.orders = S.orders.filter(o => o.id !== id);
+    closeModal();
+  }
+  tutGo(tutStep + 1);
 }
 
 function renderTutStep(st, fresh) {
@@ -690,6 +788,8 @@ function renderTutStep(st, fresh) {
   const el = tutResolve(st);
   const inModal = !!(el && el.nodeType === 1 && el.closest("#modal"));
   const inView = !!(el && el.nodeType === 1 && el.closest("#view .view-body"));
+  /* Mitmach-Schritt ohne erreichbares Ziel (oder „annehmen“ gesperrt)? */
+  const stuck = st.waitFor && (!el || (el.nodeType === 1 && el.classList.contains("disabled")));
   if (fresh) {
     tutor.innerHTML = `
       <div class="tut-box">
@@ -700,17 +800,25 @@ function renderTutStep(st, fresh) {
             <div class="tut-who">${GUIDE.name} · ${GUIDE.role}</div>
             <div class="tut-tx">${tutText(st)}</div>
             <div class="tut-row">
-              ${st.waitFor
-                ? `<span class="tut-wait">👉 selbst antippen</span>`
+              ${st.waitFor && !stuck
+                ? `<span class="tut-wait">👉 Tipp auf das leuchtende Feld</span>`
                 : `<button class="btn" id="tutNext">${last ? "Alles klar" : "Weiter"}</button>`}
-              <button class="tut-skip" id="tutSkip">überspringen</button>
             </div>
           </div>
         </div>
       </div>`;
+    /* Größe steht fest, bevor das Bild geladen ist; trotzdem nach dem Laden
+       einmal nachmessen, damit Lina sicher nicht aufs Ziel rutscht. */
+    const fig = tutor.querySelector("img.guide-art");
+    if (fig && !fig.complete) fig.onload = () => tutRefresh();
     const nextBtn = $("#tutNext");
-    if (nextBtn) nextBtn.onclick = () => tutGo(tutStep + 1);
-    $("#tutSkip").onclick = endTutorial;
+    if (nextBtn) {
+      let used = false;                 /* ein Tipp = ein Schritt, auch bei Doppeltipp */
+      nextBtn.onclick = () => {
+        if (used) return; used = true;
+        if (stuck) tutFallback(st); else tutGo(tutStep + 1);
+      };
+    }
   }
   /* Lina rückt zusammen, wo es eng wird: im Planer immer, in den Listen bei
      den späteren Gesprächen (Büros, Mr. Snus, Don Pablo). */
@@ -724,18 +832,29 @@ function renderTutStep(st, fresh) {
       box.scrollTop += st.top ? (er.bottom - br.bottom + 14) : (er.top - br.top - 12);
     }
   }
-  const r = el ? (el.nodeType === 1 ? el.getBoundingClientRect() : el) : null;
-  const ok = r && r.width >= 12 && r.height >= 12;
+  const g = tutGeom(st);
+  const r = g.r, ok = g.ok;
+  tutPlaced = r ? { top: r.top, left: r.left, width: r.width, height: r.height } : null;
 
   /* Oben oder unten? Beide Lagen ausmessen und die nehmen, die das Ziel
      nicht verdeckt – die Vorgabe des Schritts hat bei Gleichstand Vorrang. */
   if (fresh) tutor.classList.add("measure");
   tutor.classList.add("on");
   const bx = tutor.querySelector(".tut-box");
-  tutor.classList.add("top"); const rt = bx.getBoundingClientRect();
-  tutor.classList.remove("top"); const rb = bx.getBoundingClientRect();
   const cover = a => ok ? Math.max(0, Math.min(a.bottom, r.bottom + 10) - Math.max(a.top, r.top - 10)) : 0;
-  const ct = cover(rt), cb = cover(rb);
+  /* Lage ohne Aufploppen-Animation messen (die skaliert die Blase gerade noch) */
+  const place = () => { const t = tutor.getBoundingClientRect(); return { top: t.top + bx.offsetTop, bottom: t.top + bx.offsetTop + bx.offsetHeight }; };
+  const measure = () => {
+    tutor.classList.add("top"); const rt = place();
+    tutor.classList.remove("top"); const rb = place();
+    return [cover(rt), cover(rb)];
+  };
+  let [ct, cb] = measure();
+  /* Kleiner Bildschirm: Deckt Lina das Ziel oben wie unten zu, rückt sie zusammen */
+  if (ct > 0 && cb > 0 && !tutor.classList.contains("compact")) {
+    tutor.classList.add("compact");
+    [ct, cb] = measure();
+  }
   let top;
   if (st.top === true) top = !(ct > 0 && cb < ct);
   else if (st.top === false) top = cb > 0 && ct < cb;
@@ -745,15 +864,7 @@ function renderTutStep(st, fresh) {
   drawCloud();
   requestAnimationFrame(drawCloud);
 
-  const spot = $("#spot");
-  const p = st.pad == null ? 6 : st.pad;
-  if (!ok || (r.width + p * 2) * (r.height + p * 2) > innerWidth * innerHeight * 0.42) {
-    spot.classList.remove("on"); spot.innerHTML = "";
-    return;
-  }
-  spot.classList.add("on");
-  spot.innerHTML = `<i style="left:${Math.max(2, r.left - p)}px;top:${Math.max(2, r.top - p)}px;
-    width:${Math.min(r.width + p * 2, innerWidth - 4)}px;height:${Math.min(r.height + p * 2, innerHeight - 4)}px"></i>`;
+  tutBlock(g.hole, tutOpen(st) && ok && !stuck, g.ring);
 }
 
 /* Planer neu gezeichnet (anderes Fahrzeug gewählt) oder Fenster gedreht:
