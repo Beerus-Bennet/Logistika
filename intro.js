@@ -5,14 +5,21 @@
 
 const COMPANY_COLORS = ["#2f6fed", "#19b8c9", "#20a97a", "#f2a33c", "#e2465f", "#7c5cff"];
 
+/* Klein anfangen: wenig Geld, dafür ein, zwei Fahrzeuge aus der Vorgeschichte. */
 const ORIGINS = [
-  { id: "kurier", name: "Fahrradkurier", cash: 58000, gift: "v-bullitt",
-    text: "Du kennst jede Abkürzung zwischen Mitte und Neukölln. Dein Lastenrad bringst du mit." },
-  { id: "kaufmann", name: "Speditionskaufmann", cash: 65000, gift: null,
-    text: "Zehn Jahre Disposition bei einer großen Spedition. Jetzt auf eigene Rechnung." },
-  { id: "erbe", name: "Werkstatterbe", cash: 36000, gift: "v-caddy",
+  { id: "kurier", name: "Fahrradkurier", cash: 1000, gifts: ["v-bullitt", "v-bullitt"],
+    text: "Du kennst jede Abkürzung zwischen Mitte und Neukölln. Zwei Lastenräder bringst du mit." },
+  { id: "roller", name: "Rollerkurier", cash: 1000, gifts: ["v-simson", "v-simson"],
+    text: "Jahrelang Pizza und Apothekenfahrten – jetzt auf eigene Rechnung, mit zwei Mopeds." },
+  { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"],
     text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." }
 ];
+/* Geschenkfahrzeuge als „2× 🚲 Larry vs Harry Bullitt“ */
+function giftText(o) {
+  const c = {};
+  (o.gifts || []).forEach(id => { c[id] = (c[id] || 0) + 1; });
+  return Object.keys(c).map(id => { const t = vType(id); return (c[id] > 1 ? c[id] + "× " : "") + t.icon + " " + t.name; }).join(", ");
+}
 
 const NAME_POOL = ["Mara", "Jonas", "Lea", "Timo", "Nora", "Elias", "Frida", "Kian", "Alma", "Bosse"];
 const FIRM_POOL = ["Nordpfeil Logistik", "Spree Fracht", "Kompass Transporte", "Achse & Anker",
@@ -106,7 +113,7 @@ function renderIntro() {
     const a = d.avatar;
     const male = AV.sexes[avWrap(a, "sex")] === "m";
     const slots = PLAYER_ART_SLOTS.filter(sl => playerArtSrc(sl.id));
-    const mode = d.mode === "preset" ? "preset" : "build";
+    const mode = d.mode === "preset" || d.mode === "photo" ? d.mode : "build";
     body = `
       <div class="intro-card">
         <div class="intro-h">Wer bist du?</div>
@@ -116,9 +123,10 @@ function renderIntro() {
         <div class="modeswitch">
           <button data-mode="build" class="${mode === "build" ? "on" : ""}">✏️ Selbst gestalten</button>
           <button data-mode="preset" class="${mode === "preset" ? "on" : ""}">🧑 Fertige Figur</button>
+          <button data-mode="photo" class="${mode === "photo" ? "on" : ""}">📸 Aus Foto</button>
         </div>
 
-        ${mode === "build" ? `<div class="pickers">
+        ${mode === "photo" ? photoEditorHTML(!!a.photo) : mode === "build" ? `<div class="pickers">
           ${pick("sex", "Typ", AV_LABEL.sex[AV.sexes[avWrap(a, "sex")]])}
           ${pick("hair", "Frisur", AV_LABEL.hair[avHairList(a)[avWrap(a, "hair")]])}
           ${pick("hairColor", "Haarfarbe", AV_LABEL.hairColor[AV.hairColors[avWrap(a, "hairColor")].id])}
@@ -175,10 +183,10 @@ function renderIntro() {
           <label>Herkunft</label>
           <div class="origins">
             ${ORIGINS.map((o, i) => {
-              const gift = o.gift ? vType(o.gift) : null;
+              const gift = giftText(o);
               return `<button class="origin ${i === d.origin ? "on" : ""}" data-origin="${i}">
                 <b>${o.name}</b><small>${o.text}</small>
-                <span class="cash">${money(o.cash)}${gift ? " + " + gift.icon + " " + esc(gift.name) : ""}</span>
+                <span class="cash">${money(o.cash)}${gift ? " + " + esc(gift) : ""}</span>
               </button>`;
             }).join("")}
           </div>
@@ -205,8 +213,9 @@ function renderIntro() {
             <div class="intro-p">${esc(S.player.name)} · ${ORIGINS[S.player.origin].name}</div></div>
         </div>
         <div class="intro-p">
-          Ohne Fahrzeug keine Spedition. Kauf dir mindestens eins, dann melden wir
-          den Betrieb an und die Karte geht auf.
+          Deine Fahrzeuge aus der Vorgeschichte stehen schon im Hof. Viel Geld ist
+          nicht da – der Rest kommt über die ersten Aufträge. Mehr Fahrzeuge gibt es
+          jederzeit im Markt.
         </div>
         <div class="found-money"><span>Startkapital</span><b>${money(S.money)}</b></div>
         ${startVehicles.map(t => {
@@ -254,13 +263,23 @@ function bindIntro() {
   };
   $$("#intro [data-mode]").forEach(b => b.onclick = () => {
     INTRO.draft.mode = b.dataset.mode;
-    if (b.dataset.mode === "build") INTRO.draft.avatar.art = null;
+    if (b.dataset.mode !== "photo") { delete INTRO.draft.avatar.photo; photoForget(); }
+    if (b.dataset.mode === "build" || b.dataset.mode === "photo") INTRO.draft.avatar.art = null;
     else if (!INTRO.draft.avatar.art) {
       const first = PLAYER_ART_SLOTS.find(sl => playerArtSrc(sl.id));
       if (first) INTRO.draft.avatar.art = first.id;
     }
     renderIntro();
   });
+  /* Foto-Modus: Vorschau ist das große Porträt oben */
+  if (d.mode === "photo" && INTRO.step === 1) {
+    bindPhotoEditor($("#intro .av-stage .frame"), (url, full) => {
+      d.avatar.photo = url;
+      const img = $("#intro .av-stage .frame img.pt-photo");
+      /* Stil-Knöpfe erscheinen erst, wenn ein Bild geladen ist */
+      if (img && (!full || $("#intro .ph-styles"))) img.src = url; else renderIntro();
+    }, renderIntro);
+  }
   $$("#intro [data-art]").forEach(b => b.onclick = () => {
     INTRO.draft.avatar.art = b.dataset.art || null;
     renderIntro();
@@ -327,6 +346,7 @@ function bindIntro() {
 
 /* --------------------------- Gründungsphase ----------------------------- */
 function beginFounding() {
+  if (typeof photoForget === "function") photoForget();
   const d = INTRO.draft;
   const o = ORIGINS[d.origin];
   S.player = JSON.parse(JSON.stringify(d));
@@ -334,11 +354,11 @@ function beginFounding() {
   S.money = o.cash;
   S.revenue = 0; S.expense = 0;
   S.fleet = [];
-  if (o.gift) {
-    const v = makeVehicle(o.gift, false);
+  (o.gifts || []).forEach(id => {
+    const v = makeVehicle(id, false);
     v.gift = true;
     S.fleet.push(v);
-  }
+  });
   INTRO.step = 3;
   renderIntro();
   save();
@@ -363,27 +383,167 @@ function finishFounding() {
   setTimeout(startTutorial, 700);
 }
 
-/* ------------------------------ Tutorial -------------------------------- */
+/* ------------------------------ Tutorial --------------------------------
+   Lina geht mit dem Spieler einen echten Auftrag durch: Übungsauftrag in
+   der Liste finden, Leerfahrt-Hinweis lesen, Planung mit Minikarte und
+   Fahrzeugauswahl verstehen, annehmen, verfolgen. Der Übungsauftrag startet
+   genau dort, wo ein freies Fahrzeug steht – so sieht man einmal, wie ein
+   Auftrag ohne Leerfahrt aussieht.
+
+   Schritt-Felder:
+     tx       Text oder Funktion, die den Text liefert
+     target   CSS-Selektor, Funktion (Element oder Rechteck) oder nichts
+     top      Blase oben (true) / unten (false); fehlt es, entscheidet der Platz
+     before   läuft vor dem Anzeigen (Reiter wechseln, Karte schwenken)
+     waitFor  kein „Weiter“ – der Schritt wartet auf eine echte Aktion
+     inPlanner  gehört zum geöffneten Planer; Schließen führt zurück
+     need     "order" (Übungsauftrag offen), "job" (angenommen),
+              "none" (keine Übung möglich) – sonst wird übersprungen      */
+let tutOrderId = null;
+function tutOrder() { return tutOrderId ? S.orders.find(o => o.id === tutOrderId) || null : null; }
+function tutJob() { return tutOrderId ? S.jobs.find(j => j.order.id === tutOrderId) || null : null; }
+/* Das Fahrzeug, um das es geht – je nach Stand aus Planer, Auftrag oder Flotte */
+function tutVeh() {
+  if (planState && planState.order.id === tutOrderId) {
+    const f = S.fleet.find(x => x.uid === planState.assign[0]);
+    if (f) return f;
+  }
+  const j = tutJob();
+  if (j) { const f = S.fleet.find(x => x.uid === j.legs[0].veh); if (f) return f; }
+  const o = tutOrder();
+  if (o) { const p = dispatchPreview(o); if (p.ok && p.veh) return p.veh; }
+  return S.fleet.find(f => f.phase === "idle") || S.fleet[0] || null;
+}
+const tvName = () => { const f = tutVeh(); return f ? vType(f.type).brand : "Fahrzeug"; };
+const tvIcon = () => { const f = tutVeh(); return f ? vType(f.type).icon : "🚚"; };
+function tutRepoSel() {
+  if (!planState) return { km: 0, eur: 0 };
+  const ev = evaluate(planState.variants[planState.vi], planState.order, planState.assign);
+  let km = 0, eur = 0;
+  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok) { km += d.repo.d; eur += d.repo.d * d.t.costKm; } });
+  return { km, eur };
+}
+function tutEligibleCount() {
+  if (!planState) return 0;
+  const leg = planState.variants[planState.vi].legs[0];
+  return eligible(leg, planState.order, []).length;
+}
+const tutOrderCard = () => document.querySelector("#tab-orders .card.order.tut");
+/* Rechteck um ein Fahrzeug auf der großen Karte */
+function tutVehRect() {
+  const f = tutVeh();
+  if (!f || !map) return null;
+  const p = vehPos(f) || [N[f.at].lat, N[f.at].lon];
+  const s = map.screenPos(p[0], p[1]);
+  const fo = (typeof vehFan === "function" && vehFan()[f.uid]) || [0, 0];
+  const x = s[0] + fo[0], y = s[1] + fo[1];
+  return { left: x - 24, top: y - 24, width: 48, height: 48, right: x + 24, bottom: y + 24 };
+}
+
 const TUT_STEPS = [
-  { tx: "Moin! Ich bin Lina, deine Disponentin. Eine Minute, dann kennst du den Laden. Die Uhr steht solange still." },
-  { tx: "Das hier ist deine Karte. Jedes Fahrzeug fährt live über das echte Straßen-, Schienen- und Wassernetz.",
-    top: true, before: () => showTab("map") },
-  { tx: "Alles Dunkle ist noch unerschlossen. Mit jedem Level und jeder Etappe lichtet sich der Nebel.",
-    target: "#fogBtn", pad: 6, top: true, before: () => showTab("map") },
-  { tx: "Unten wechselst du die Ansicht. Unter „Aufträge“ laufen die Ausschreibungen ein.",
-    target: '[data-tab="orders"]', pad: 6, before: () => showTab("orders") },
-  { tx: "Jede Zeile ist ein Angebot: Ladung, Strecke, Erlös und Frist. Tipp eine an – dann öffnet sich die Planung.",
-    target: "#tab-orders .card.order", pad: 5, before: () => showTab("orders") },
-  { tx: "In der Planung wählst du für jede Teilstrecke ein Fahrzeug. Unten stehen Kosten, Laufzeit und Deckungsbeitrag. "
-      + "Ist der grün, lohnt sich die Fahrt – dann auf „Auftrag annehmen“.",
-    before: () => showTab("orders") },
-  { tx: "Leerfahrten, Standzeiten und Tagesfixkosten gehen von der Marge ab. Fahr nie mit einem zu großen Fahrzeug los.",
-    before: () => showTab("orders") },
+  { tx: "Moin! Ich bin Lina, deine Disponentin. Wir wickeln jetzt zusammen deinen ersten Auftrag ab – "
+      + "Schritt für Schritt. Die Uhr steht so lange still." },
+  { tx: () => {
+      const f = tutVeh();
+      return "Das ist deine Karte – alles Dunkle ist noch Nebel, der lichtet sich mit jedem Level. "
+        + (f ? `Und hier steht dein ${tvIcon()} ${esc(tvName())}: in ${esc(N[f.at].name)}. ` : "")
+        + "Merk dir das: <b>Wo ein Fahrzeug steht, entscheidet, ob eine Fahrt Geld bringt oder kostet.</b>";
+    },
+    target: tutVehRect,
+    before: () => {
+      showTab("map");
+      const f = tutVeh();
+      if (f) { const p = vehPos(f) || [N[f.at].lat, N[f.at].lon]; map.setView(p, Math.max(12.6, Math.min(13.4, map.zoom))); }
+    } },
+
+  /* ---------- mit Übungsauftrag ---------- */
+  { need: "order",
+    tx: () => {
+      const o = tutOrder();
+      return `Unter „Aufträge“ laufen die Ausschreibungen ein. Ganz oben liegt ein Übungsauftrag von mir ⭐: `
+        + `${CARGO[o.cargo].name} von ${esc(N[o.from].short)} nach ${esc(N[o.to].short)}.`;
+    },
+    target: tutOrderCard, before: () => { showTab("orders"); $("#view .view-body").scrollTop = 0; } },
+  { need: "order",
+    tx: () => `Diese Zeile ist dein <b>Leerfahrt-Radar</b>. ✅ Grün: ein freies Fahrzeug steht schon am Abholort – `
+      + `keine Leerfahrt. ↩️ Gelb: es müsste erst leer hinfahren. Das kostet Sprit und Zeit, und keiner bezahlt dich dafür. `
+      + `🚫 Rot: gerade kein passendes Fahrzeug frei.`,
+    target: () => document.querySelector("#tab-orders .card.order.tut .vhintrow") },
+  { id: "pick", need: "order",
+    tx: "Jetzt du: Tipp auf den ⭐ Übungsauftrag.",
+    target: tutOrderCard, waitFor: "openPlanner",
+    before: () => { if (activeTab !== "orders") showTab("orders"); },
+    already: () => planState && planState.order.id === tutOrderId },
+  { need: "order", inPlanner: true, top: false,
+    tx: () => {
+      const r = tutRepoSel();
+      return `Das ist die Planung. Die Minikarte zeigt, wo alles liegt: 📦 Abholung, 🏁 Ziel und deine Fahrzeuge. `
+        + (r.km < 0.5
+          ? `Dein ${esc(tvName())} steht direkt am Abholort – darum gibt es keine gestrichelte Linie. <b>Keine Linie = keine Leerfahrt.</b>`
+          : `Die gestrichelte Linie ist die Leerfahrt: ${kmf(r.km)}, die du selbst bezahlst.`);
+    },
+    target: "#modalBody .pmap" },
+  { need: "order", inPlanner: true, top: false,
+    tx: () => tutEligibleCount() > 1
+      ? "Hier wählst du das Fahrzeug. Die Liste ist nach Entfernung sortiert: oben steht, wer am nächsten dran ist – "
+        + "mit Standort und was die Leerfahrt kosten würde. Tipp ruhig mal ein anderes an, dann siehst du die Leerfahrt auf der Karte."
+      : `Hier wählst du das Fahrzeug. Bei jedem steht, wo es gerade parkt und ob es erst leer anfahren müsste. `
+        + `Dein ${esc(tvName())} ist schon da: ✅ vor Ort.`,
+    target: "#modalBody .vpick" },
+  { need: "order", inPlanner: true, top: true,
+    tx: () => {
+      const r = tutRepoSel();
+      return "Unten die Rechnung: Frachterlös minus Fahrtkosten ergibt den <b>Deckungsbeitrag</b>. Grün heißt, die Fahrt lohnt sich. "
+        + (r.eur > 0.005
+          ? `Gerade frisst die Leerfahrt ${money(r.eur)} davon – das Fahrzeug vor Ort wäre günstiger.`
+          : "Ohne Leerfahrt bleibt am meisten übrig.");
+    },
+    target: "#modalBody .sum" },
+  { id: "accept", need: "order", inPlanner: true, top: true,
+    tx: "Passt? Dann tipp auf „Auftrag annehmen“.",
+    target: "#modalBody #mAccept", waitFor: "orderAccepted" },
+
+  { id: "accepted", need: "job",
+    tx: () => `Angenommen – dein erster Auftrag! Unter „Live“ verfolgst du ihn. Sobald wir fertig sind, läuft die Uhr `
+      + `und dein ${tvIcon()} ${esc(tvName())} fährt los.`,
+    target: () => { const j = tutJob(); return j && document.querySelector(`#tab-jobs .card.job[data-job="${j.id}"]`); },
+    before: () => showTab("jobs") },
+  { need: "job",
+    tx: () => {
+      const j = tutJob(), nx = S.orders.find(o => o.tutNext);
+      return `Und jetzt der wichtigste Trick gegen Leerfahrten: Nach der Zustellung steht dein ${esc(tvName())} in `
+        + `${esc(N[j.order.to].short)}. <b>Nimm als Nächstes einen Auftrag, der genau dort startet.</b> `
+        + (nx ? `Einen hab ich dir schon reingelegt ⭐ – sobald dein ${esc(tvName())} dort ist, wird sein Hinweis grün. ` : "")
+        + `Mit „📍 Wenig Leerfahrt“ holst du solche Aufträge nach oben.`;
+    },
+    target: () => document.querySelector("#tab-orders .card.order.tutnext .vhintrow")
+      || document.querySelector('#tab-orders .osort [data-sort="near"]'),
+    before: () => {
+      const j = tutJob();
+      if (j && !S.orders.some(o => o.tutNext) && typeof makeFollowupOrder === "function") makeFollowupOrder(j);
+      showTab("orders");
+      $("#view .view-body").scrollTop = 0;
+    } },
+
+  /* ---------- ohne Übungsauftrag (alle Fahrzeuge unterwegs) ---------- */
+  { need: "none",
+    tx: "Unter „Aufträge“ laufen die Ausschreibungen ein. Für eine Übungsfahrt ist gerade kein Fahrzeug frei – "
+      + "so liest du die Liste trotzdem:",
+    target: '[data-tab="orders"]', before: () => showTab("orders") },
+  { need: "none",
+    tx: "Unter jedem Auftrag steht dein <b>Leerfahrt-Radar</b>: ✅ ein Fahrzeug steht schon am Abholort, ↩️ es müsste erst leer "
+      + "hinfahren, 🚫 gerade keins frei. Tippst du einen Auftrag an, zeigt dir die Minikarte, wo alles steht – "
+      + "die gestrichelte Linie ist die Leerfahrt.",
+    target: "#tab-orders .card.order .vhintrow" },
+
+  { tx: "Unter „Flotte“ steht bei jedem Fahrzeug, wo es gerade parkt oder hinfährt. Hast du mehrere, verteil sie auf "
+      + "verschiedene Stadtteile – dann ist fast immer eins in der Nähe.",
+    target: '[data-tab="fleet"]', before: () => showTab("map") },
   { tx: "Später mietest du unter „Büros“ einen Standort. Wer dort Personal einstellt, lässt sein Team disponieren – "
       + "und bekommt Anrufe aufs Diensttelefon.",
-    target: '[data-tab="bases"]', pad: 6, before: () => showTab("map") },
+    target: '[data-tab="bases"]', before: () => showTab("map") },
   { tx: "Das war’s. Oben rechts hältst du das Spiel jederzeit an – ab jetzt läuft die Uhr. Viel Erfolg, und wenn’s brennt, bin ich auf Kanal 1.",
-    target: "#pauseBtn", pad: 6, top: true, before: () => showTab("map") }
+    target: "#pauseBtn", top: true, before: () => showTab("map") }
 ];
 
 
@@ -421,76 +581,299 @@ function drawCloud() {
   svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   svg.innerHTML = `<g><path d="${cloudPath(w, h, bump)}"/>${tail}</g>`;
 }
-addEventListener("resize", () => { if (document.body.classList.contains("tut-on")) drawCloud(); });
+addEventListener("resize", () => { if (document.body.classList.contains("tut-on")) { drawCloud(); tutRefresh(); } });
 
-let tutStep = 0;
+let tutStep = 0, tutTimer = 0;
+/* Welche Schrittliste gerade läuft: das große Einführungstutorial ("main")
+   oder eines von Linas späteren Gesprächen (siehe LINA_TALKS). */
+let tutList = TUT_STEPS, tutKey = "main";
 function startTutorial() {
   if (S.tut && S.tut.done) return;
+  if (planState) closeModal();
+  tutList = TUT_STEPS; tutKey = "main";
+  /* Übungsauftrag anlegen – oder einen alten wiederfinden, falls das
+     Tutorial nochmal läuft. */
+  const old = S.orders.find(o => o.tut);
+  tutOrderId = old ? old.id : ((typeof makeTutorialOrder === "function" && makeTutorialOrder()) || {}).id || null;
   tutStep = 0;
   showTutStep();
 }
+function tutNeedOk(need) {
+  if (!need) return true;
+  if (need === "order") return !!tutOrder();
+  if (need === "job") return !!tutJob();
+  if (need === "none") return !tutOrder() && !tutJob();
+  return true;
+}
+function tutGo(i) { tutStep = i; showTutStep(); }
+
+/* Echte Aktionen aus game.js: Planer geöffnet, Auftrag angenommen, Planer zu. */
+function tutSignal(tag, o) {
+  if (!document.body.classList.contains("tut-on")) return;
+  if (tutKey !== "main") return;
+  const st = tutList[tutStep];
+  if (!st) return;
+  if (tag === "openPlanner") {
+    if (st.waitFor !== "openPlanner") return;
+    if (!o || o.id !== tutOrderId) {
+      closeModal();
+      toast("Tipp erst auf Linas ⭐ Übungsauftrag – danach bist du frei.", "warn");
+      return;
+    }
+    tutGo(tutStep + 1);
+  } else if (tag === "orderAccepted") {
+    if (!o || o.id !== tutOrderId) return;
+    const i = tutList.findIndex(s => s.id === "accepted");
+    if (i > tutStep) tutGo(i);
+  } else if (tag === "plannerClosed") {
+    /* Abgebrochen, während Lina die Planung erklärt: zurück zur Liste. */
+    if (st.inPlanner && tutOrder()) tutGo(tutList.findIndex(s => s.id === "pick"));
+  }
+}
+
 function endTutorial() {
-  S.tut = { done: true };
-  document.body.classList.remove("tut-on");
+  clearTimeout(tutTimer);
+  if (tutKey === "main") {
+    S.tut = { done: true };
+    S.orders.forEach(o => { delete o.tut; });
+    tutOrderId = null;
+  } else {
+    (S.tutSeen = S.tutSeen || {})[tutKey] = true;
+  }
+  tutKey = "main"; tutList = TUT_STEPS;
+  document.body.classList.remove("tut-on", "tut-talk");
   if (typeof renderPause === "function") renderPause();
-  $("#tutor").classList.remove("on");
+  $("#tutor").classList.remove("on", "top", "compact");
   $("#tutor").innerHTML = "";          /* keine unsichtbaren Knöpfe zurücklassen */
   $("#spot").classList.remove("on");
   $("#spot").innerHTML = "";
   save();
+  render();
+}
+
+function tutText(st) { return typeof st.tx === "function" ? st.tx() : st.tx; }
+function tutResolve(st) {
+  if (!st.target) return null;
+  const t = typeof st.target === "function" ? st.target() : document.querySelector(st.target);
+  return t || null;
 }
 
 function showTutStep() {
-  const st = TUT_STEPS[tutStep];
+  let st = tutList[tutStep];
+  while (st && !tutNeedOk(st.need)) { tutStep++; st = tutList[tutStep]; }
   if (!st) return endTutorial();
+  /* Ist die erwartete Aktion schon passiert (Planer bereits offen), gleich weiter. */
+  if (st.waitFor && st.already && st.already()) { tutStep++; return showTutStep(); }
+
+  clearTimeout(tutTimer);
+  document.body.classList.add("tut-on");
+  /* Bei Linas späteren Gesprächen stören Meldungen oben nur (sie liegen
+     sonst genau über dem, was sie gerade zeigt). */
+  document.body.classList.toggle("tut-talk", tutKey !== "main");
+  if (typeof renderPause === "function") renderPause();
   if (st.before) st.before();
 
-  const tutor = $("#tutor"), spot = $("#spot");
-  document.body.classList.add("tut-on");
-  tutor.classList.toggle("top", !!st.top);
-  tutor.classList.add("on");
-  tutor.innerHTML = `
-    <div class="tut-box">
-      <div class="tut-fig">${guideFigure(300, "t" + tutStep)}</div>
-      <div class="tut-bubble">
-        <svg class="tut-cloud" aria-hidden="true" preserveAspectRatio="none"></svg>
-        <div class="tut-in">
-          <div class="tut-who">${GUIDE.name} · ${GUIDE.role}</div>
-          <div class="tut-tx">${st.tx}</div>
-          <div class="tut-row">
-            <button class="btn" id="tutNext">${tutStep === TUT_STEPS.length - 1 ? "Alles klar" : "Weiter"}</button>
-            <button class="tut-skip" id="tutSkip">überspringen</button>
+  const tutor = $("#tutor");
+  tutor.classList.remove("on");
+  tutor.innerHTML = "";                /* keine Knöpfe vom letzten Schritt stehen lassen */
+  $("#spot").classList.remove("on");
+  /* Kurz warten, bis Reiterwechsel, Kartenschwenk oder das Hochfahren des
+     Planers durch sind – sonst misst man das Ziel mitten in der Bewegung. */
+  const delay = st.before || st.inPlanner || st.wait ? (st.wait || 380) : 40;
+  const idx = tutStep;
+  tutTimer = setTimeout(() => { if (tutStep === idx) renderTutStep(st, true); }, delay);
+}
+
+function renderTutStep(st, fresh) {
+  const tutor = $("#tutor");
+  const last = tutStep === tutList.length - 1;
+  const el = tutResolve(st);
+  const inModal = !!(el && el.nodeType === 1 && el.closest("#modal"));
+  const inView = !!(el && el.nodeType === 1 && el.closest("#view .view-body"));
+  if (fresh) {
+    tutor.innerHTML = `
+      <div class="tut-box">
+        <div class="tut-fig">${guideFigure(300, "t" + tutStep)}</div>
+        <div class="tut-bubble">
+          <svg class="tut-cloud" aria-hidden="true" preserveAspectRatio="none"></svg>
+          <div class="tut-in">
+            <div class="tut-who">${GUIDE.name} · ${GUIDE.role}</div>
+            <div class="tut-tx">${tutText(st)}</div>
+            <div class="tut-row">
+              ${st.waitFor
+                ? `<span class="tut-wait">👉 selbst antippen</span>`
+                : `<button class="btn" id="tutNext">${last ? "Alles klar" : "Weiter"}</button>`}
+              <button class="tut-skip" id="tutSkip">überspringen</button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
+    const nextBtn = $("#tutNext");
+    if (nextBtn) nextBtn.onclick = () => tutGo(tutStep + 1);
+    $("#tutSkip").onclick = endTutorial;
+  }
+  /* Lina rückt zusammen, wo es eng wird: im Planer immer, in den Listen bei
+     den späteren Gesprächen (Büros, Mr. Snus, Don Pablo). */
+  tutor.classList.toggle("compact", inModal || (inView && tutKey !== "main"));
+
+  /* Ziel im Planer bzw. in der Liste so scrollen, dass es neben der Blase frei liegt */
+  if (fresh && (inModal || (inView && tutKey !== "main"))) {
+    const box = el.closest(".modal-inner, .view-body");
+    if (box) {
+      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect();
+      box.scrollTop += st.top ? (er.bottom - br.bottom + 14) : (er.top - br.top - 12);
+    }
+  }
+  const r = el ? (el.nodeType === 1 ? el.getBoundingClientRect() : el) : null;
+  const ok = r && r.width >= 12 && r.height >= 12;
+
+  /* Oben oder unten? Beide Lagen ausmessen und die nehmen, die das Ziel
+     nicht verdeckt – die Vorgabe des Schritts hat bei Gleichstand Vorrang. */
+  if (fresh) tutor.classList.add("measure");
+  tutor.classList.add("on");
+  const bx = tutor.querySelector(".tut-box");
+  tutor.classList.add("top"); const rt = bx.getBoundingClientRect();
+  tutor.classList.remove("top"); const rb = bx.getBoundingClientRect();
+  const cover = a => ok ? Math.max(0, Math.min(a.bottom, r.bottom + 10) - Math.max(a.top, r.top - 10)) : 0;
+  const ct = cover(rt), cb = cover(rb);
+  let top;
+  if (st.top === true) top = !(ct > 0 && cb < ct);
+  else if (st.top === false) top = cb > 0 && ct < cb;
+  else top = ok ? (ct < cb || (ct === cb && r.top + r.height / 2 > innerHeight * 0.55)) : false;
+  tutor.classList.toggle("top", top);
+  tutor.classList.remove("measure");
   drawCloud();
   requestAnimationFrame(drawCloud);
-  $("#tutNext").onclick = () => { tutStep++; showTutStep(); };
-  $("#tutSkip").onclick = endTutorial;
 
-  /* Scheinwerfer auf das passende Element. Das Ziel wird erst im Moment des
-     Messens gesucht: Listen bauen sich zwischendurch neu auf, und ein Element
-     von vorhin liefert dann eine Größe von null – daraus wurde früher ein
-     winziges Rechteck in der Ecke. */
-  if (st.target) {
-    const place = () => {
-      const el = document.querySelector(st.target);
-      const hide = () => { spot.classList.remove("on"); spot.innerHTML = ""; };
-      if (!el) return hide();
-      const r = el.getBoundingClientRect();
-      if (r.width < 12 || r.height < 12) return hide();
-      const p = st.pad == null ? 6 : st.pad;
-      const w = r.width + p * 2, h = r.height + p * 2;
-      /* Ein Rahmen um den halben Bildschirm erklärt nichts – dann lieber keiner. */
-      if (w * h > window.innerWidth * window.innerHeight * 0.4) return hide();
-      spot.classList.add("on");
-      spot.innerHTML = `<i style="left:${Math.max(2, r.left - p)}px;top:${Math.max(2, r.top - p)}px;
-        width:${Math.min(w, window.innerWidth - 4)}px;height:${Math.min(h, window.innerHeight - 4)}px"></i>`;
-    };
-    setTimeout(place, st.before ? 360 : 0);
+  const spot = $("#spot");
+  const p = st.pad == null ? 6 : st.pad;
+  if (!ok || (r.width + p * 2) * (r.height + p * 2) > innerWidth * innerHeight * 0.42) {
+    spot.classList.remove("on"); spot.innerHTML = "";
     return;
   }
-  spot.classList.remove("on");
-  spot.innerHTML = "";
+  spot.classList.add("on");
+  spot.innerHTML = `<i style="left:${Math.max(2, r.left - p)}px;top:${Math.max(2, r.top - p)}px;
+    width:${Math.min(r.width + p * 2, innerWidth - 4)}px;height:${Math.min(r.height + p * 2, innerHeight - 4)}px"></i>`;
+}
+
+/* Planer neu gezeichnet (anderes Fahrzeug gewählt) oder Fenster gedreht:
+   Text und Scheinwerfer nachziehen, ohne die Blase neu aufploppen zu lassen. */
+function tutRefresh() {
+  if (!document.body.classList.contains("tut-on")) return;
+  const st = tutList[tutStep];
+  if (!st || !$("#tutor").classList.contains("on")) return;
+  const tx = $("#tutor .tut-tx");
+  if (tx) { const t = tutText(st); if (tx.innerHTML !== t) tx.innerHTML = t; }
+  renderTutStep(st, false);
+}
+
+/* ============================ Linas Gespräche ============================
+   Kurze Einschübe, sobald etwas Neues auftaucht: Mr. Snus, Don Pablo und
+   die Büros (einmal ohne, einmal mit erstem Standort). Jedes nur einmal –
+   unter „Welt“ lassen sie sich wiederholen. Die Uhr steht dabei still.  */
+const baseHead = i => () => $$("#tab-bases .card.base .sechead.sm")[i] || null;
+const LINA_TALKS = {
+  snus: [
+    { tx: "Psst, Chef! Auf dem Diensttelefon hat sich gerade <b>Mr. Snus</b> gemeldet. Der verkauft Snus unter der Hand.",
+      target: "#phoneBtn", top: true },
+    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose. Die Ware liegt dann in einem Späti-Lager in der Stadt. `
+        + `Kunden melden sich als <b>graue Aufträge</b> und zahlen ${money(SNUS_SELL)} die Dose – geliefert wird mit deiner eigenen Flotte.` },
+    { tx: () => `Aber Vorsicht: Unter den Kunden sind <b>Zivilfahnder</b>. Die verraten sich – sie zahlen auffällig mehr als ${money(SNUS_SELL)}, `
+        + `wollen gleich 20, 30 Dosen auf einmal, haben „deine Nummer von einem Kumpel“ und kommen im weißen Hemd, glatt rasiert.` },
+    { tx: () => `Lieferst du an so einen, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
+        + "Die Fixkosten laufen in der Zeit weiter." },
+    { tx: "Ob du mitmachst, entscheidest du – „Nein, danke mein Akh“ ist auch eine Antwort. Seine Nachricht liegt auf dem Telefon.",
+      target: "#phoneBtn", top: true }
+  ],
+  pablo: [
+    { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Der spielt in einer ganz anderen Liga: Kokain, tonnenweise.",
+      target: "#phoneBtn", top: true },
+    { tx: () => `Er verkauft die Tonne für ${money(PABLO_BUY * 1000)}. Die Ware wartet in einem Hangar an einem Flughafen. `
+        + `Seine Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne und nehmen ein paar hundert Kilo bis ein paar Tonnen.` },
+    { tx: "Echte Kunden heißen wie ihre Stadt – <b>Mr. Hamburg</b>, <b>Mr. Paris</b> – und wollen genau dorthin beliefert werden." },
+    { tx: "Heißt einer anders – <b>Mr. Banane</b>, <b>Mr. Schnitzel</b> –, dann ist das Interpol. Lieferst du an so jemanden, "
+        + "ist das Spiel vorbei. Endgültig, mit Bericht und allem." },
+    { tx: "Ich hab dich gewarnt. Seine Nachricht liegt auf dem Telefon.", target: "#phoneBtn", top: true }
+  ],
+  bases: [
+    { tx: "Willkommen in der Standortverwaltung! Ein <b>Büro</b> ist ein Stützpunkt: Dein Team dort nimmt selbst Aufträge an "
+        + "und schickt die Fahrzeuge los, die du ihm zuordnest – auch wenn du gerade woanders beschäftigt bist.",
+      target: "#tab-bases .card", wait: 420 },
+    { tx: "Pro Etappe darfst du einen Standort betreiben. Hier wählst du den Ort: Stadtteile sind günstig, Häfen, Flughäfen "
+        + "und Terminals kosten mehr, liegen aber an den großen Verkehrswegen.",
+      target: "#newBaseNode" },
+    { tx: "Drei Größen: <b>Kontor</b>, <b>Halle</b> und <b>Zentrum</b>. 👥 sind die Schreibtische für Personal, 🚚 die Stellplätze "
+        + "für Fahrzeuge und 📡 das Einzugsgebiet, in dem dein Team Ausschreibungen abgreift.",
+      target: "#tab-bases .tierlist .tier" },
+    { tx: "Kaufen kostet einmal viel Geld. Mieten kostet pro Tag, abgebucht wird einmal im Monat. Mieten kannst du erst, "
+        + "wenn mindestens 30 Tagesmieten auf dem Konto liegen.",
+      target: "#tab-bases .tierlist .tier .buyrow" },
+    { tx: "Sobald dein erstes Büro steht, zeig ich dir Personal, Rollen, Fahrzeuge und Einrichtung." }
+  ],
+  base1: [
+    { tx: () => { const b = S.bases[0]; return `Dein erstes Büro${b ? " in " + esc(N[b.node].name) : ""}! Oben stehen Größe, `
+        + "ob gemietet oder gekauft, und was es im Monat kostet."; },
+      target: "#tab-bases .card.base .card-top", wait: 420 },
+    { tx: "Das ist der Grundriss von oben. Tipp drauf, um einzurichten: Boden, Wände, Küche, Pflanzen – die Möbel lassen sich "
+        + "verschieben. Jedes Stück macht das Büro behaglicher, und Behaglichkeit hält die Stimmung oben.",
+      target: "#tab-bases .card.base .planpeek" },
+    { tx: "Die <b>Stimmung</b> im Team. Unter 70 % gibt es öfter Ärger: Dann klingelt das Diensttelefon, der Standort steht still, "
+        + "und du entscheidest, wie der Streit gelöst wird – mal kostet das Geld, mal Zeit.",
+      target: "#tab-bases .card.base .moodbar" },
+    { tx: () => `Es gibt vier Rollen. ${ROLES.disp.icon} <b>Disposition</b> nimmt Aufträge an – ohne sie passiert gar nichts. `
+        + `${ROLES.fahr.icon} <b>Fahrpersonal</b> legt fest, wie viele Fahrzeuge gleichzeitig rollen. ${ROLES.ums.icon} <b>Umschlag</b> `
+        + `verkürzt Lade- und Entladezeiten. ${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b> bringen Servicezuschlag. Die Zahl zeigt, wie stark die Rolle besetzt ist.`,
+      target: "#tab-bases .card.base .covrow" },
+    { tx: "Hier kommen jeden Tag neue <b>Bewerbungen</b> rein. Die Sterne zeigen das Können, darunter stehen Rolle und Tageslohn, "
+        + "rechts die einmalige Vermittlungsgebühr. Tipp auf 🤝, um jemanden einzustellen.",
+      target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() },
+    { tx: "Dein <b>Team</b>. Mischung ist wichtig: Wer nur eine Rolle besetzt oder zu wenig Leute für zu viele Fahrzeuge hat, "
+        + "bekommt Streit. Kündigen geht über ✕ oder indem du die Person auf den Mülleimer unten ziehst – "
+        + "die Abfindung sind zwei Wochenlöhne.",
+      target: baseHead(0) },
+    { tx: "Hier ordnest du dem Standort <b>Fahrzeuge</b> zu. Mit denen disponiert das Team – der Rest deiner Flotte bleibt bei dir.",
+      target: () => $("#tab-bases .card.base .assignrow") || baseHead(2)() },
+    { tx: "Zieh jemanden aus dem Fahrpersonal auf ein Fahrzeug: Dann fährt diese Person es fest und ist schneller unterwegs. "
+        + "Beim Ziehen zeigt dir eine Leiste unten, wo du loslassen kannst.",
+      target: () => $("#tab-bases .card.base .staff.veh") || baseHead(2)() },
+    { tx: "Die Kennzahlen: Plätze, Stellplätze, wie viele Fahrzeuge gleichzeitig fahren können, Einzugsgebiet, Löhne pro Tag "
+        + "und die nächste Miete. Löhne gehen täglich ab, die Miete monatlich – auch wenn gerade nichts läuft.",
+      target: "#tab-bases .card.base .meta.small" },
+    { tx: "Wird es eng, vergrößerst du hier zum nächsten Gebäude. Kündigen oder verkaufen geht auch – dann sind Team und Einrichtung weg.",
+      target: "#tab-bases .card.base .baserow" },
+    { tx: "Das war’s zu den Büros. Gutes Team, schönes Büro, genug Leute für die Fahrzeuge – dann läuft der Laden fast von allein." }
+  ]
+};
+
+/* Startet ein Gespräch, sobald Platz dafür ist (kein anderes Tutorial,
+   keine Haft, kein Bericht auf dem Schirm). */
+function linaTalk(key, tries) {
+  const seen = (S.tutSeen = S.tutSeen || {});
+  if (seen[key] || !LINA_TALKS[key]) return;
+  const busy = !playing() || !(S.tut && S.tut.done) || tutorialRunning() || S.jail || S.over
+    || document.body.classList.contains("report-open") || document.body.classList.contains("dragging-staff");
+  if (busy) {
+    if ((tries || 0) < 30) setTimeout(() => linaTalk(key, (tries || 0) + 1), 4000);
+    return;
+  }
+  tutList = LINA_TALKS[key]; tutKey = key; tutStep = 0;
+  if (key === "bases" || key === "base1") { if (planState) closeModal(); if (activeTab !== "bases") showTab("bases"); $("#view .view-body").scrollTop = 0; }
+  showTutStep();
+}
+/* Beim Öffnen des Büro-Reiters: passendes Gespräch, falls noch nicht gehört */
+function tutTabHook(name) {
+  if (name !== "bases" || !S.tut || !S.tut.done || tutorialRunning() || tutKey !== "main") return;
+  const seen = S.tutSeen || {};
+  if ((S.bases || []).length) { if (!seen.base1) setTimeout(() => linaTalk("base1"), 350); }
+  else if (!seen.bases) setTimeout(() => linaTalk("bases"), 350);
+}
+/* Unter „Welt“: ein Gespräch noch einmal hören */
+function replayTalk(key) {
+  if (!S.tutSeen) S.tutSeen = {};
+  if (key === "offices") {
+    delete S.tutSeen.bases; delete S.tutSeen.base1;
+    return linaTalk((S.bases || []).length ? "base1" : "bases");
+  }
+  delete S.tutSeen[key];
+  linaTalk(key);
 }

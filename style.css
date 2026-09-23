@@ -337,10 +337,91 @@ body:not(.tab-map) #mapUI{display:none}
   width:100%;margin-top:7px;border:2.5px solid var(--ink);border-radius:10px;padding:6px;
   font-family:var(--font);font-weight:700;font-size:12px;background:var(--paper);color:var(--ink);
 }
-.repo{font-size:11px;font-weight:700;margin-top:5px;color:#b8531d}
 .warnbox{margin-top:7px;font-size:11.5px;font-weight:700;background:#ffe1e7;border:2px dashed var(--red);border-radius:10px;padding:5px 8px;line-height:1.35}
 .mbtns{display:flex;gap:8px;margin-top:12px}
 .mbtns .btn{flex:1;text-align:center}
+
+/* Leerfahrt-Vorschau auf der Auftragskarte */
+.vhintrow{margin-top:7px}
+.vhint{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:11.5px;line-height:1.3;
+  padding:4px 9px;border-radius:12px;background:#fff1d6;color:#7a4f00;border:2px solid #f0b54a}
+.vhint.ontime{background:#dff6e8;color:#11683b;border-color:#6fd39a}
+.vhint.none{background:#ffe1e7;color:#a3213b;border-color:#f5a9b8}
+
+/* Sortierung der Auftragsliste */
+.osort{display:flex;gap:6px;margin:0 0 10px;overflow-x:auto;scrollbar-width:none}
+.osort::-webkit-scrollbar{display:none}
+.osort button{flex:none;border:2.5px solid var(--ink);border-radius:99px;background:var(--card);
+  padding:4px 11px;font-weight:800;font-size:12px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+.osort button.on{background:var(--blue);color:#fff;transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+
+/* Linas Übungsauftrag */
+.card.order.tut,.card.order.tutnext{border-color:#c98a00;background:linear-gradient(#fffaf0,#fff)}
+.tutribbon{display:inline-block;margin:-2px 0 6px;font-size:11px;font-weight:800;letter-spacing:.3px;
+  background:#ffd36b;border:2px solid var(--ink);border-radius:99px;padding:1px 9px}
+
+/* Standort-Überblick in der Flottenliste */
+.locrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.loclbl{font-size:11px;font-weight:800;opacity:.7}
+.locchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#eef2fb;color:#3552a0;border:1.5px solid #c9d6f2}
+.locchip b{font-weight:800}
+.locchip.none{background:#f3f4f6;color:#5b6573;border-color:#d6dae0}
+
+/* Minikarte im Planer */
+.pmap{margin-top:10px}
+.pm-box{position:relative;width:100%;overflow:hidden;border:var(--line);border-radius:12px;
+  background:#e4ecf5 repeating-linear-gradient(0deg,transparent 0 23px,rgba(13,27,42,.05) 23px 24px),
+             repeating-linear-gradient(90deg,transparent 0 23px,rgba(13,27,42,.05) 23px 24px);
+  box-shadow:var(--shadow-sm)}
+.pm-tiles{position:absolute;inset:0}
+.pm-tiles img{position:absolute;display:block;max-width:none;pointer-events:none;
+  filter:saturate(1.12) contrast(1.05) brightness(1.06)}
+.pm-tiles::after{content:"";position:absolute;inset:0;background:rgba(215,232,250,.28)}
+.pm-box svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pm-out{fill:none;stroke:rgba(13,27,42,.7);stroke-width:7.5;stroke-linecap:round;stroke-linejoin:round}
+.pm-route{fill:none;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.pm-repo-out{fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.pm-repo{fill:none;stroke:#d9480f;stroke-width:3.2;stroke-dasharray:6 5;stroke-linecap:round;stroke-linejoin:round}
+.pm-hub{fill:#fff;stroke:var(--ink);stroke-width:2.2}
+.pm-node{stroke:var(--ink);stroke-width:2.6}
+.pm-gl{font-size:12px;text-anchor:middle}
+.pm-veh circle{fill:#fff;stroke-width:3}
+.pm-veh:not(.sel){opacity:.8}
+.pm-veh text{text-anchor:middle}
+.pm-tie{stroke:var(--ink);stroke-width:1.6;opacity:.55}
+.pm-lbl{font:800 10.5px var(--font);text-anchor:middle;fill:var(--ink);paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:3.4px;stroke-linejoin:round}
+.pm-lbl.warn{fill:#b8390b}
+.pm-key{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:5px;font-size:10.5px;font-weight:700;opacity:.75}
+.pm-key span{display:inline-flex;align-items:center;gap:4px}
+.pm-key i{display:inline-block;width:18px;height:0;border-top:4px solid #2fa85c;border-radius:2px}
+.pm-key i.k-repo{border-top:3px dashed #d9480f}
+.pm-sum{margin-top:6px;font-size:12px;font-weight:800;line-height:1.35;padding:6px 9px;border-radius:10px;border:2px solid}
+.pm-sum.ok{background:#dff6e8;color:#11683b;border-color:#6fd39a}
+.pm-sum.warn{background:#fff1d6;color:#7a4f00;border-color:#f0b54a}
+.pm-sum.bad{background:#ffe1e7;color:#a3213b;border-color:#f5a9b8}
+
+/* Fahrzeugauswahl im Planer */
+.vpick{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.vp-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+.vp-h small{text-transform:none;letter-spacing:0;font-size:10.5px}
+.vopt{display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;
+  background:var(--paper);border:2.5px solid rgba(13,27,42,.35);border-radius:11px;padding:6px 8px;font-family:var(--font)}
+.vopt.on{border-color:var(--ink);background:#fff;box-shadow:3px 3px 0 var(--blue)}
+.vopt .vo-ic{font-size:20px;flex:none;width:30px;height:30px;display:grid;place-items:center;
+  background:#fff;border:2px solid var(--ink);border-radius:50%}
+.vopt.on .vo-ic{background:#dfe9ff}
+.vo-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.vo-tx b{font-size:12.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vo-tx small{font-size:11px;font-weight:700;opacity:.75;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vo-b{flex:none;display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-size:11.5px;font-weight:800;
+  padding:3px 7px;border-radius:9px;border:2px solid;line-height:1.2}
+.vo-b small{font-size:10px;font-weight:700;opacity:.85}
+.vo-b.ok{background:#dff6e8;color:#11683b;border-color:#6fd39a}
+.vo-b.warn{background:#fff1d6;color:#7a4f00;border-color:#f0b54a}
+.vo-b.bad{background:#ffe1e7;color:#a3213b;border-color:#f5a9b8}
+.vmore{align-self:flex-start;background:none;border:none;font-weight:800;font-size:12px;color:var(--blue-d);cursor:pointer;padding:2px}
+.modenote{margin-top:7px;font-size:11px;font-weight:700;line-height:1.35;background:#eef2fb;border:2px dashed #9db4e6;border-radius:10px;padding:5px 8px;color:#2c457f}
+.sum small{display:block;font-size:10.5px;font-weight:800;margin-top:1px}
 
 /* ------------------------------- Toasts ----------------------------- */
 #toasts{
@@ -524,6 +605,19 @@ body.guide-art .tut-fig{
 .tut-row{display:flex;gap:7px;margin-top:9px;align-items:center}
 .tut-row .btn{padding:6px 13px;font-size:13px}
 .tut-skip{background:none;border:none;font-size:11.5px;font-weight:700;opacity:.6;cursor:pointer;padding:4px}
+.tut-wait{font-size:12px;font-weight:800;color:var(--cyan);animation:tutpulse 1.3s ease-in-out infinite}
+@keyframes tutpulse{0%,100%{opacity:.55}50%{opacity:1}}
+.tut-tx b{font-weight:800}
+/* Beim Ausmessen keine Aufploppen-Animation, sonst stimmt die Größe nicht */
+#tutor.measure .tut-box{animation:none}
+/* Im Planer ist wenig Platz: Lina rückt zusammen, damit Karte und Liste
+   neben der Blase frei bleiben. */
+#tutor.compact .tut-fig{width:70px}
+body.guide-art #tutor.compact .tut-fig{width:58px}
+#tutor.compact .tut-fig .guide-art{max-height:21vh}
+body.guide-art #tutor.compact .tut-box{align-items:flex-end;gap:10px}
+#tutor.compact .tut-bubble{padding:12px 14px}
+#tutor.compact .tut-tx{font-size:12.5px;line-height:1.35}
 
 /* ------------------------------ Desktop ----------------------------- */
 @media(min-width:860px){
@@ -808,3 +902,118 @@ body.dragging-staff .firezone{display:none}
   padding:3px 10px;font-size:11px;font-weight:800;white-space:nowrap;
 }
 @media(max-width:400px){ .pausebtn{width:34px;height:34px;font-size:13px} }
+
+/* ============================== Mr. Snus ============================== */
+.pmsg.snus{background:#1f242d;border-color:#0b0e13;color:#e8ecf2;box-shadow:3px 3px 0 #0b0e13;padding:10px}
+.sn-head{display:flex;align-items:center;gap:9px;padding-bottom:8px;border-bottom:1.5px solid rgba(255,255,255,.1)}
+.sn-head svg{flex:none;display:block;border-radius:50%;box-shadow:0 0 0 2px #0b0e13}
+.sn-head b{font-size:14px;color:#fff;display:block}
+.sn-head small{font-size:10.5px;opacity:.6;font-weight:700}
+.sn-chat{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+.bub{max-width:84%;padding:6px 10px;border-radius:14px;font-size:13px;font-weight:700;line-height:1.35}
+.bub.in{align-self:flex-start;background:#343b47;border-bottom-left-radius:4px}
+.bub.out{align-self:flex-end;background:#2f6fed;color:#fff;border-bottom-right-radius:4px}
+.bub.list{max-width:100%;width:100%;padding:8px}
+.sn-lh{font-size:12px;opacity:.75;margin-bottom:6px}
+.sn-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.08)}
+.sn-row:first-of-type{border-top:0}
+.sn-row svg{flex:none;display:block}
+.sn-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.sn-tx b{font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-tx small{font-size:11px;opacity:.7;font-weight:700}
+.sn-step{display:flex;align-items:center;gap:6px;flex:none}
+.sn-step button{width:28px;height:28px;border-radius:9px;border:2px solid #0b0e13;background:#e8ecf2;
+  font-size:16px;font-weight:800;line-height:1;cursor:pointer;padding:0}
+.sn-step b{min-width:28px;text-align:center;font-size:14px;color:#fff}
+.sn-got{font-weight:800;font-size:13px;color:#7fe3a9}
+.sn-sum{margin-top:9px;font-size:12.5px;font-weight:700}
+.sn-sum b{font-size:14px;color:#fff}
+.sn-sum small{display:block;font-size:10.5px;opacity:.6;margin-top:1px}
+.sn-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pmsg.snus .btn.tiny{margin-top:0}
+.pmsg.snus .btn.ghost{background:#343b47;color:#e8ecf2;border-color:#0b0e13}
+.pmsg.snus .pmsg-note{color:#aab3c0}
+
+/* Lager und graue Kundenaufträge */
+.snusbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;padding:7px 9px;
+  background:#2a2f38;color:#e8ecf2;border:2.5px solid var(--ink);border-radius:12px;box-shadow:var(--shadow-sm)}
+.sn-lbl{font-size:12px;font-weight:800;margin-right:4px}
+.sn-chip{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:800}
+.sn-chip svg{display:block}
+.card.order.gray{background:#eceef1;border-color:#59616d;color:#2b3038}
+.card.order.gray .pay{color:#3d4550}
+.badge.gray{background:#59616d;color:#fff}
+.sn-cust{display:flex;align-items:center;gap:9px;margin-top:6px}
+.sn-cust .face{width:40px;height:40px;flex:none;border-radius:50%;overflow:hidden;border:2px solid var(--ink);filter:grayscale(.35)}
+.sn-cust .face svg{display:block;width:100%;height:100%}
+.sn-cust div{flex:1;min-width:0}
+.sn-cust b{display:block;font-size:14px;line-height:1.2}
+.sn-cust small{font-size:11.5px;font-weight:700;opacity:.7}
+.sn-want{display:flex;align-items:center;gap:4px;flex:none}
+.sn-want svg{display:block}
+.sn-want b{font-size:15px}
+.badge.air{background:#ffd9df;color:#8a1024;margin-left:4px;margin-right:auto}
+
+/* Don Pablo */
+.pmsg.snus.pablo{background:#2a1c24;box-shadow:3px 3px 0 #0b0e13}
+.pmsg.pablo .bub.in{background:#44303b}
+.pb-ic{width:38px;height:38px;flex:none;display:grid;place-items:center;font-size:22px;background:#f4f6fb;
+  border:2px solid #0b0e13;border-radius:50%}
+.snusbar.pablo{background:#2a1c24}
+.card.order.gray.dark{background:#dfe1e6;border-color:#3b2a33}
+.card.order.gray.dark .badge.gray{background:#3b2a33}
+.sn-cust .face svg{display:block}
+
+/* ================= Haft & Interpol (Vollbild-Berichte) ================= */
+#report{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,18,.86);padding:calc(16px + var(--safe-t)) 14px calc(16px + var(--safe-b));overflow-y:auto}
+#report.on{display:flex}
+body.report-open #toasts,body.report-open #tutor,body.report-open #spot{display:none}
+.rp{position:relative;width:100%;max-width:440px;background:#fbfaf6;color:#1b1f26;border:3px solid var(--ink);
+  border-radius:14px;padding:16px 16px 18px;box-shadow:6px 6px 0 rgba(0,0,0,.45);animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+.rp-head{display:flex;flex-direction:column;gap:2px;border-bottom:2px solid #1b1f26;padding-bottom:8px;margin-bottom:10px}
+.rp-head b{font-family:var(--display);font-size:26px;letter-spacing:1px}
+.rp-head span{font-size:11.5px;font-weight:700;opacity:.65}
+.rp p{font-size:13.5px;line-height:1.45;margin:8px 0}
+.rp dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:10px 0;font-size:13px}
+.rp dt{font-weight:800;opacity:.6;text-transform:uppercase;font-size:10.5px;letter-spacing:.5px;padding-top:2px}
+.rp dd{margin:0;font-weight:700}
+.rp-note{font-size:12px!important;opacity:.7}
+.rp .btn{width:100%;margin-top:8px}
+.rp-stamp{display:table;margin:12px auto 6px;transform:rotate(-7deg);border:3px solid #b3261e;color:#b3261e;
+  font-family:var(--display);font-size:22px;letter-spacing:2px;padding:2px 10px;border-radius:6px;opacity:.85}
+.rp-days{font-family:var(--display);font-size:30px;letter-spacing:1px;text-align:center;margin:18px 0 10px}
+.rp-bar{height:14px;border:2.5px solid var(--ink);border-radius:99px;overflow:hidden;background:#e4e7ec}
+.rp-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(45deg,#59616d,#59616d 6px,#7a8390 6px,#7a8390 12px)}
+.rp.interpol{background:#fff;font-family:"Courier New",ui-monospace,monospace;padding-top:0;overflow:hidden}
+.rp-bar-top{display:flex;flex-direction:column;background:#0b3a7a;color:#fff;margin:0 -16px 10px;padding:12px 16px}
+.rp-bar-top b{font-family:Arial Black,Arial,sans-serif;font-size:24px;letter-spacing:4px}
+.rp-bar-top span{font-size:12px;font-weight:700;opacity:.85}
+.rp-meta{display:flex;justify-content:space-between;font-size:11px;font-weight:700;opacity:.7;margin-bottom:6px}
+
+.rp-end{text-align:center;border-top:2px dashed #1b1f26;padding-top:10px;margin-top:12px!important}
+.rp.interpol .btn{font-family:var(--font)}
+body.tut-talk #toasts{display:none}
+
+/* Markt im Fokus: nur die passenden Fahrzeuge für einen Auftrag */
+.shopjump{display:block;width:100%;margin-top:7px}
+.card.shopfocus{background:#fff6dc;border-color:#c98a00}
+.card.shop.match{box-shadow:4px 4px 0 var(--ink),0 0 0 3px #ffd36b}
+
+/* ======================= Figur aus Foto ======================= */
+.ph-edit{margin:4px 0 8px}
+.ph-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.ph-btns .btn{margin-top:0}
+.ph-styles{display:flex;gap:6px;justify-content:center;margin-top:9px;flex-wrap:wrap}
+.ph-styles button{border:2.5px solid var(--ink);border-radius:99px;background:var(--card);padding:4px 11px;
+  font-weight:800;font-size:12px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+.ph-styles button.on{background:var(--blue);color:#fff;transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.ph-zoom{display:flex;align-items:center;gap:8px;margin:9px auto 0;max-width:260px;font-size:12px;font-weight:800}
+.ph-zoom input{flex:1;accent-color:var(--blue)}
+.ph-hint{text-align:center;font-size:11.5px;font-weight:700;opacity:.7;margin-top:5px}
+.ph-note{font-size:11px;font-weight:600;line-height:1.4;opacity:.7;margin-top:8px;text-align:center}
+.frame.ph-drag{cursor:grab;touch-action:none}
+.frame.ph-drag:active{cursor:grabbing}
+.pt-photo{object-position:center!important;-webkit-user-drag:none;user-select:none}
+#hudAvatar{cursor:pointer}
+#modalBody .av-stage .frame{width:170px;height:170px}

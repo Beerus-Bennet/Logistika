@@ -399,6 +399,11 @@ function probePlayerArt(done) {
 
 /* Porträt für HUD, Karten und Auswahl: Bild, wenn vorhanden, sonst SVG. */
 function portraitHTML(cfg, size, opts) {
+  /* Eigenes Foto-Porträt (photo.js) hat Vorrang */
+  if (cfg && cfg.photo) {
+    return `<img class="pt-art pt-photo" src="${cfg.photo}" width="${size}" height="${size}"
+            alt="${(opts && opts.label) || "Porträt"}" draggable="false">`;
+  }
   const id = cfg && cfg.art;
   if (id && playerArt[id]) {
     return `<img class="pt-art" src="${playerArt[id]}" width="${size}" height="${size}"
