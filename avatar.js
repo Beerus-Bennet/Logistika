@@ -373,10 +373,11 @@ function avBeardFront(beard, hc, ink) {
    Spiel es anstelle der gezeichneten Figur. Fehlt es, bleibt alles beim
    SVG-Baukasten. Siehe PLAYER-ART.md.                                     */
 const PLAYER_ART_SLOTS = [
-  { id: "w1", label: "Porträt 1" }, { id: "w2", label: "Porträt 2" },
-  { id: "w3", label: "Porträt 3" }, { id: "w4", label: "Porträt 4" },
-  { id: "m1", label: "Porträt 5" }, { id: "m2", label: "Porträt 6" },
-  { id: "m3", label: "Porträt 7" }, { id: "m4", label: "Porträt 8" }
+  { id: "p1", label: "Elif" }, { id: "p2", label: "Jonas" },
+  { id: "p3", label: "Björn" }, { id: "p4", label: "Herbert" },
+  { id: "p5", label: "Amir" }, { id: "p6", label: "Finn" },
+  { id: "p7", label: "Matthis" }, { id: "p8", label: "Malik" },
+  { id: "p9", label: "Diego" }, { id: "p10", label: "Kilian" }
 ];
 const playerArt = {};                       /* id -> Dateipfad, wenn geladen */
 function playerArtSrc(id) { return playerArt[id] || ""; }
