@@ -24,10 +24,10 @@ const INTRO = {
 };
 
 /* ---------------------- Eigene Artwork für die Disponentin ---------------
-   Liegt unter art/lina.png eine Bilddatei, wird sie statt der SVG-Figur
+   Liegt unter lina.png eine Bilddatei, wird sie statt der SVG-Figur
    verwendet – Hochformat, freigestellt (PNG oder WebP mit Transparenz).
    Fehlt sie, zeichnet das Spiel die Figur wie bisher selbst.             */
-const GUIDE_ART = "art/lina.png";
+const GUIDE_ART = "lina.png";
 /* Die Grafik gehört zum Lieferumfang, also wird sie von Anfang an gezeigt.
    Erst wenn sie wirklich fehlt, springt der SVG-Baukasten ein – vorher
    erschien für einen Moment die gezeichnete Figur, was wie ein Wechsel
@@ -137,8 +137,8 @@ function renderIntro() {
           </div>
           <div class="intro-p small">Tipp die Figur an, die du spielen willst.</div>`
         : `<div class="hintbox">Noch sind keine fertigen Figuren hinterlegt. Leg Bilder als
-             <b>art/player/w1.png</b> bis <b>m4.png</b> ab – sie erscheinen dann hier zur Auswahl.
-             Das Format steht in <b>art/player/README.md</b>.</div>`}
+             <b>player-w1.png</b> bis <b>player-m4.png</b> ab – sie erscheinen dann hier zur Auswahl.
+             Das Format steht in <b>PLAYER-ART.md</b>.</div>`}
 
         <div class="field">
           <label for="iName">Dein Name</label>

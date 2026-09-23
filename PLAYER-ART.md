@@ -5,10 +5,11 @@ zusammengesetzten SVG-Figur benutzen.
 
 ## So geht es
 
-Leg deine Bilder in diesen Ordner, benannt nach diesen Plätzen:
+Leg deine Bilder direkt ins Hauptverzeichnis des Projekts (neben `index.html`),
+benannt nach diesen Plätzen:
 
-    w1.png  w2.png  w3.png  w4.png
-    m1.png  m2.png  m3.png  m4.png
+    player-w1.png  player-w2.png  player-w3.png  player-w4.png
+    player-m1.png  player-m2.png  player-m3.png  player-m4.png
 
 `.webp` geht auch. Das Spiel sucht beim Start nach jeder Datei; gefundene
 Bilder erscheinen in der Charaktererstellung als Auswahl neben „gezeichnet“.
@@ -25,5 +26,5 @@ Fehlt eine Datei, passiert nichts – der SVG-Baukasten bleibt.
 
 ## Nach dem Austausch
 
-In `sw.js` die `VERSION` hochzählen (z. B. `v8` → `v9`). Sonst holt der
+In `sw.js` die `VERSION` hochzählen (z. B. `v14` → `v15`). Sonst holt der
 Service Worker die alten Dateien aus dem Zwischenspeicher.

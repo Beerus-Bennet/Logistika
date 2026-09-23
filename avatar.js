@@ -369,9 +369,9 @@ function avBeardFront(beard, hc, ink) {
 }
 
 /* ====================== Eigene Porträts (Bilddateien) =====================
-   Wie bei Lina Sturm: liegt unter art/player/<id>.png ein Bild, benutzt das
+   Wie bei Lina Sturm: liegt unter player-<id>.png ein Bild, benutzt das
    Spiel es anstelle der gezeichneten Figur. Fehlt es, bleibt alles beim
-   SVG-Baukasten. Siehe art/player/README.md.                              */
+   SVG-Baukasten. Siehe PLAYER-ART.md.                                     */
 const PLAYER_ART_SLOTS = [
   { id: "w1", label: "Porträt 1" }, { id: "w2", label: "Porträt 2" },
   { id: "w3", label: "Porträt 3" }, { id: "w4", label: "Porträt 4" },
@@ -387,7 +387,7 @@ function probePlayerArt(done) {
     ["png", "webp"].forEach(ext => {
       open++;
       const img = new Image();
-      const src = "art/player/" + sl.id + "." + ext;
+      const src = "player-" + sl.id + "." + ext;
       img.onload = () => { if (!playerArt[sl.id]) { playerArt[sl.id] = src; any = true; } fin(); };
       img.onerror = fin;
       img.src = src;
