@@ -147,7 +147,8 @@ function pabloBuy(msgId) {
   logMoney("pablo", "Don Pablo · " + m.pick + " t", -cost);
   pb.kg += kg; pb.bought += kg;
   m.thread.push({ me: true, t: "Ich nehm " + m.pick + " Tonnen." });
-  m.thread.push({ me: false, t: "Perfecto. Hangar 7, " + N[pb.at].name + ". Meine Leute melden sich bei dir." });
+  const hg = pabloHangar();
+  m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : "Hangar 7") + ", " + N[pb.at].name + ". Meine Leute melden sich bei dir." });
   m.state = "done"; m.bought = m.pick;
   const first = !pb.bustFree;
   pb.bustFree = true;
@@ -187,8 +188,11 @@ function pabloCustomer(safe) {
       shipper: name || "Mr. " + dest.short, desc: "nimmt " + kgf(kg) + " · Übergabe in " + dest.name, created: S.time,
       refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
       expire: Math.round(S.time + rnd(8, 16) * 60),
-      pablo: { kg, cop, city: dest.id }
+      pablo: { kg, cop, city: dest.id },
+      /* Abgeholt im Hangar, übergeben in einer Siedlung am Stadtrand */
+      pick: pabloHangar(), drop: typeof makeAddr === "function" ? makeAddr(dest.id, "home") : undefined
     };
+    if (typeof withLastMile === "function") withLastMile(o);
     if (bestOption(planOptions(o, buildVariants(o)))) { fallback = o; break; }
     if (!fallback) fallback = o;
   }
@@ -196,6 +200,15 @@ function pabloCustomer(safe) {
   S.orders.push(fallback);
   if (typeof renderDirty !== "undefined") renderDirty = true;
   return fallback;
+}
+function pabloHangar() {
+  const pb = pabloState();
+  if (!pb.at) return undefined;
+  if (!pb.hangar || pb.hangarAt !== pb.at) {
+    pb.hangar = typeof makeAddr === "function" ? makeAddr(pb.at, "hangar") : null;
+    pb.hangarAt = pb.at;
+  }
+  return pb.hangar ? Object.assign({}, pb.hangar) : undefined;
 }
 function pabloTake(o) { const pb = pabloState(); pb.kg = Math.max(0, pb.kg - o.pablo.kg); }
 function pabloGiveBack(o) { pabloState().kg += o.pablo.kg; }
@@ -294,7 +307,7 @@ function pabloStockHTML() {
 }
 function pabloOrderCard(o, previewRow) {
   const rest = o.deadline - S.time;
-  return `<div class="card order gray dark" data-order="${o.id}">
+  return `<div class="card order gray dark${typeof flashOn === "function" && flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
     <div class="card-top">
       <span class="badge gray">❄️ Ware · Don Pablo</span>
       <span class="pay">${money(o.pay)}</span>
@@ -305,7 +318,7 @@ function pabloOrderCard(o, previewRow) {
       <span class="sn-want"><b>${kgf(o.pablo.kg)}</b></span>
     </div>
     <div class="desc">${esc(o.desc)} · ${money(PABLO_SELL * 1000)}/t</div>
-    <div class="meta"><span>🛫 Hangar ${esc(N[o.from].short)}</span><span>🏁 ${esc(N[o.to].short)}</span></div>
+    <div class="meta addr"><span>🛫 ${esc(addrText(oPick(o)))} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(addrText(oDrop(o)))} <small>${esc(N[o.to].short)}</small></span></div>
     <div class="meta small"><span>📏 ${kmf(o.refDist)}</span><span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span></div>
     ${previewRow}
   </div>`;

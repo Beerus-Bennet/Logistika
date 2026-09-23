@@ -420,7 +420,7 @@ function tutRepoSel() {
   if (!planState) return { km: 0, eur: 0 };
   const ev = evaluate(planState.variants[planState.vi], planState.order, planState.assign);
   let km = 0, eur = 0;
-  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok) { km += d.repo.d; eur += d.repo.d * d.t.costKm; } });
+  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5) { km += d.repo.d; eur += d.repo.d * d.t.costKm; } });
   return { km, eur };
 }
 function tutEligibleCount() {
@@ -440,13 +440,21 @@ function tutVehRect() {
   return { left: x - 24, top: y - 24, width: 48, height: 48, right: x + 24, bottom: y + 24 };
 }
 
+/* Stecknadel des Übungsauftrags auf der großen Karte */
+function tutPinRect() {
+  if (typeof pinHits === "undefined") return null;
+  const h = pinHits.find(x => x.items.some(i => i.kind === "order" && i.id === tutOrderId));
+  if (!h) return null;
+  return { left: h.x - 17, top: h.y - 17, width: 34, height: 46, right: h.x + 17, bottom: h.y + 29 };
+}
+
 const TUT_STEPS = [
   { tx: "Moin! Ich bin Lina, deine Disponentin. Wir wickeln jetzt zusammen deinen ersten Auftrag ab – "
       + "Schritt für Schritt. Die Uhr steht so lange still." },
   { tx: () => {
       const f = tutVeh();
       return "Das ist deine Karte – alles Dunkle ist noch Nebel, der lichtet sich mit jedem Level. "
-        + (f ? `Und hier steht dein ${tvIcon()} ${esc(tvName())}: in ${esc(N[f.at].name)}. ` : "")
+        + (f ? `Und hier steht dein ${tvIcon()} ${esc(tvName())} – ${esc(vehSpot(f).t)} in ${esc(N[f.at].short)}. ` : "")
         + "Merk dir das: <b>Wo ein Fahrzeug steht, entscheidet, ob eine Fahrt Geld bringt oder kostet.</b>";
     },
     target: tutVehRect,
@@ -457,6 +465,19 @@ const TUT_STEPS = [
     } },
 
   /* ---------- mit Übungsauftrag ---------- */
+  { need: "order",
+    tx: () => "Siehst du die Stecknadeln? <b>Gelb</b> ist eine offene Ausschreibung – genau dort, wo der Auftraggeber sitzt. "
+      + "<b>Orange</b> heißt: angenommen und in Arbeit. Antippen öffnet den Auftrag. Meine Übung wartet gleich neben deinem "
+      + `${tvIcon()} ${esc(tvName())}.`,
+    target: tutPinRect,
+    before: () => {
+      /* Nah genug heran, dass Nadel und Fahrzeug nebeneinander zu sehen sind */
+      const o = tutOrder(), f = tutVeh();
+      if (!o || !f) return;
+      const a = oPick(o), v = vehPoint(f);
+      showTab("map");
+      map.setView([(a.lat + v[0]) / 2 + 0.0012, (a.lon + v[1]) / 2], 14.3);
+    } },
   { need: "order",
     tx: () => {
       const o = tutOrder();

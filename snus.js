@@ -48,6 +48,16 @@ function snusState() {
   if (!S.snus) S.snus = { stock: {}, at: null, nextOffer: 0, nextCust: 0, bought: 0, sold: 0 };
   return S.snus;
 }
+/* Der Späti, in dem die Ware liegt – mit Adresse */
+function snusShop() {
+  const sn = snusState();
+  if (!sn.at) return undefined;
+  if (!sn.shop || sn.shopAt !== sn.at) {
+    sn.shop = typeof makeAddr === "function" ? makeAddr(sn.at, "spaeti") : null;
+    sn.shopAt = sn.at;
+  }
+  return sn.shop ? Object.assign({}, sn.shop) : undefined;
+}
 function snusTotal() { const st = snusState().stock; return Object.values(st).reduce((a, n) => a + n, 0); }
 /* Dosen, die noch keinem offenen Kundenauftrag versprochen sind */
 function snusFree(id) {
@@ -202,7 +212,8 @@ function snusBuy(msgId) {
   });
   sn.bought += n;
   m.thread.push({ me: true, t: "Nehm ich: " + parts.join(", ") + "." });
-  m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim Späti in " + N[sn.at].short + ". Die Jungs melden sich bei dir." });
+  const shop = snusShop();
+  m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim " + (shop ? shop.t + ", " + N[sn.at].short : "Späti in " + N[sn.at].short) + ". Die Jungs melden sich bei dir." });
   m.state = "done";
   m.bought = n;
   /* Die ersten Kunden sind schnell da – und beim allerersten Einkauf echt */
@@ -245,14 +256,23 @@ function snusCustomer(safe) {
   const n = cop ? Math.min(snusFree(s.id), 16 + Math.floor(Math.random() * 21))
                 : Math.min(snusFree(s.id), 2 + Math.floor(Math.random() * 11));
   const from = N[sn.at];
-  const dests = unlockedNodes().filter(x => x.id !== sn.at && x.type === "city")
-    .map(x => ({ x, d: hav([from.lat, from.lon], [x.lat, x.lon]) }))
-    .filter(q => q.d > 1.2 && q.d < 30)
-    .sort((a, b) => a.d - b.d).slice(0, 12);
-  if (!dests.length) return null;
-  const to = pick(dests).x;
   const weight = 1;
-  const fast = plan(sn.at, to.id, "snus", weight, "time");
+  /* Die Kundschaft wohnt am Stadtrand in den großen Siedlungen:
+     Marzahn, Gropiusstadt, Märkisches Viertel, Falkenhagener Feld … */
+  let to = null, drop = null, fast = null;
+  for (let k = 0; k < 6 && !fast; k++) {
+    const est = typeof berlinEstate === "function" ? berlinEstate(sn.at, 30) : null;
+    if (est) { to = N[est.node]; drop = est.addr; }
+    else {
+      const dests = unlockedNodes().filter(x => x.id !== sn.at && x.type === "city")
+        .map(x => ({ x, d: hav([from.lat, from.lon], [x.lat, x.lon]) }))
+        .filter(q => q.d > 1.2 && q.d < 30)
+        .sort((a, b) => a.d - b.d).slice(0, 12);
+      if (!dests.length) return null;
+      to = pick(dests).x; drop = typeof makeAddr === "function" ? makeAddr(to.id, "home") : null;
+    }
+    fast = plan(sn.at, to.id, "snus", weight, "time");
+  }
   if (!fast) return null;
   const last = pick(STAFF_LAST);
   const who = { name: pick(STAFF_FIRST_M) + " " + last[0] + ".", job: pick(cop ? SNUS_COP_JOBS : SNUS_JOBS), av: snusGuy() };
@@ -270,8 +290,10 @@ function snusCustomer(safe) {
     created: S.time,
     refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
     expire: Math.round(S.time + rnd(5, 12) * 60),
-    snus: { sort: s.id, n, who, each, cop }
+    snus: { sort: s.id, n, who, each, cop },
+    pick: snusShop(), drop: drop || undefined
   };
+  if (typeof withLastMile === "function") withLastMile(o);
   S.orders.push(o);
   if (typeof renderDirty !== "undefined") renderDirty = true;
   return o;
@@ -453,7 +475,7 @@ function snusStockHTML() {
 function snusOrderCard(o, previewRow) {
   const s = snusSort(o.snus.sort), w = o.snus.who;
   const rest = o.deadline - S.time;
-  return `<div class="card order gray" data-order="${o.id}">
+  return `<div class="card order gray${typeof flashOn === "function" && flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
     <div class="card-top">
       <span class="badge gray">🥫 Snus · privat</span>
       <span class="pay">${money(o.pay)}</span>
@@ -464,7 +486,7 @@ function snusOrderCard(o, previewRow) {
       <span class="sn-want">${snusCan(s, 30)}<b>${o.snus.n}×</b></span>
     </div>
     <div class="desc">${esc(o.desc)} · ${money(o.snus.each || SNUS_SELL)}/Dose</div>
-    <div class="meta"><span>📦 Lager ${esc(N[o.from].short)}</span><span>🏠 ${esc(N[o.to].short)}</span></div>
+    <div class="meta addr"><span>📦 ${esc(addrText(oPick(o)))} <small>${esc(N[o.from].short)}</small></span><span>🏠 ${esc(addrText(oDrop(o)))} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
     <div class="meta small"><span>📏 ${kmf(o.refDist)}</span><span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span></div>
     ${previewRow}
   </div>`;

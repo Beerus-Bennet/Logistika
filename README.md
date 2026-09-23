@@ -67,14 +67,36 @@ setzt die passenden Fahrzeuge ein.
 4. **Kosten im Blick behalten** – Umschlagzeiten beim Moduswechsel und
    Tagesfixkosten gehen ebenfalls von der Marge ab.
 
+### Adressen und Stecknadeln
+
+Jeder Auftraggeber hat eine eigene Adresse – in Berlin echte Straßen je
+Stadtteil (Torstraße, Bergmannstraße, Sonnenallee …), an Häfen, Flughäfen und
+Terminals ein Tor, Kai oder eine Halle. Wer schon im Namen sagt, wo er sitzt
+(„Apotheke am Rosenthaler Platz“), wird genau dort abgeholt. Die Stadtteile
+selbst sind nur noch Knoten im Netz: aus der Nähe verschwindet ihr Punkt, dafür
+stehen auf der Karte **Stecknadeln** im Comic-Stil:
+
+* 🟡 **gelb** – offene Ausschreibung beim Auftraggeber (⭐ = Linas Übung)
+* ⚪ **grau** – Kundschaft von Mr. Snus und Don Pablo
+* 🟠 **orange** – angenommen und in Arbeit: an der Abholung, bis geladen ist,
+  danach am Ziel; eine kleine 🏁-Fahne zeigt vorher schon, wohin es geht
+
+Antippen öffnet die Ausschreibung mit beiden Adressen – „Planen & annehmen“
+führt in den Planer, „In der Auftragsliste“ springt zur Karte im Menü und hebt
+sie hervor. Liegen Nadeln zu dicht, werden sie mit einer Zahl gebündelt;
+Antippen zoomt hinein. Fahrzeuge fahren bis vor die Tür, laden dort und parken
+nach der Zustellung beim Empfänger. Eigene Büros stehen als kleines Haus in der
+Firmenfarbe an ihrer Adresse.
+
 ### Mr. Snus
 
 Ab Level 2 schreibt gelegentlich ein Schatten mit Zylinder aufs Diensttelefon:
 „Jo brauchst du Snus?“ Wer mit „Ja was hast du da?“ antwortet, bekommt seine
 Liste (ein paar Sorten, je 68 bis 128 Dosen) und kauft für 5 € pro Dose ein.
-Die Ware liegt dann in einem Späti-Lager in der Stadt, und private Kunden melden
+Die Ware liegt dann in einem Späti in der Stadt, und private Kunden melden
 sich als **graue Aufträge**: 10 € pro Dose, geliefert wird mit der eigenen
-Flotte. Diese Aufträge nimmt nur der Spieler selbst an – weder die
+Flotte – in die großen Siedlungen am Stadtrand (Marzahn, Hellersdorf,
+Gropiusstadt, Märkisches Viertel, Falkenhagener Feld, Neu-Hohenschönhausen …). Diese Aufträge nimmt nur der Spieler selbst an – weder die
 Auto-Disposition noch die Büros fassen sie an. „Nein, danke mein Akh“ lehnt ab.
 
 Unter den Kunden sind **Zivilfahnder**. Sie verraten sich durch ihr Verhalten:
@@ -89,6 +111,8 @@ Ab Etappe 4 (Luftfracht) ruft gelegentlich Don Pablo an und bietet Kokain in
 Tonnen an (35.000 € je Tonne). Die Ware wartet in einem Hangar an einem
 Flughafen. Seine Kunden heißen wie ihre Stadt – „Mr. Hamburg“, „Mr. Paris“ –
 und nehmen ein paar hundert Kilo bis ein paar Tonnen zu 80.000 € je Tonne.
+Übergeben wird in einer Großsiedlung am Rand der Zielstadt (Grünau, Chorweiler,
+Neuperlach, La Courneuve …).
 Wer anders heißt („Mr. Banane“), ermittelt für Interpol: Eine Lieferung an ihn
 zeigt den Interpol-Abschlussbericht und beendet das Spiel.
 
@@ -236,6 +260,7 @@ style.css               Comic-Design in Blau, Ansichten, Dialoge
 data.js                 Weltdaten: Knoten, Strecken, Fahrzeuge, Ladungen, Etappen, Nebel
 avatar.js               Charakter-Baukasten: Porträts und Brustbilder als reines SVG
 photo.js                Figur aus Foto: Selfie/Bild → Comic-Porträt, alles im Browser
+places.js               Adressen: Berliner Straßen, Terminals, Siedlungen am Stadtrand
 lina.png, ART.md        optionale eigene Artwork für die Disponentin
 player-p1.png … p10.png, PLAYER-ART.md  fertige und eigene Porträts für die Spielfigur
 map.js                  eigene Slippy-Map-Engine auf <canvas>

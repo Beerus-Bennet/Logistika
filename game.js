@@ -311,14 +311,14 @@ function makeOrder() {
       owned.push(f);
       if (f.phase === "idle") { owned.push(f); owned.push(f); }   // freie Kapazität zieht Ladung an
     });
-    let rv, fill, anchor = null;
+    let rv, fill, anchor = null, anchorVeh = null;
     if (owned.length && Math.random() < 0.6) {
       const f = pick(owned);
       rv = vType(f.type); fill = rnd(0.72, 1.0);
       /* Anschlussaufträge: ein Teil der zugeschnittenen Ladung wartet genau
          dort, wo das Fahrzeug gerade frei steht. Wer darauf achtet, fährt
          ohne Leerfahrt weiter. */
-      if (f.phase === "idle" && Math.random() < 0.45) anchor = f.at;
+      if (f.phase === "idle" && Math.random() < 0.45) { anchor = f.at; anchorVeh = f; }
     } else {
       const sorted = [...cands].sort((a, b) => a.cap - b.cap);
       const idx = Math.floor(Math.pow(Math.random(), 1.5) * sorted.length);
@@ -342,16 +342,45 @@ function makeOrder() {
 
     const pr = priceOrder(a.id, b.id, ck, weight);
     if (!pr || pr.pay < 5) continue;
-    const sh = pick(SHIPPERS[ck] || SHIPPERS.pak);
-    return {
+    /* Auftraggeber mit eigener Adresse. Wer schon im Namen sagt, wo er sitzt
+       („Apotheke am Rosenthaler Platz“), wird genau dort abgeholt. Wartet die
+       Ladung dort, wo ein Fahrzeug frei steht, liegt sie gleich nebenan. */
+    const sp = anchorVeh && a.id === anchorVeh.at ? vehSpot(anchorVeh) : null;
+    const sh = pickShipper(ck, a.id, !sp);
+    const home = sh.home;
+    const o = {
       id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight,
       pay: pr.pay, deadline: pr.deadline,
       shipper: sh[0], desc: sh[1], created: S.time,
       refDist: Math.round(pr.ref.dist), refTime: Math.round(pr.fastest.time),
-      expire: Math.round(S.time + rnd(400, 1500))
+      expire: Math.round(S.time + rnd(400, 1500)),
+      pick: home ? home.addr : sp ? addrNear(a.id, sp.lat, sp.lon) : makeAddr(a.id), drop: makeAddr(b.id)
     };
+    withLastMile(o);
+    return o;
   }
   return null;
+}
+
+/* Auftraggeber passend zum Abholort: ortsgebundene nur in ihrem Stadtteil */
+function pickShipper(ck, fromId, allowHome) {
+  const list = SHIPPERS[ck] || SHIPPERS.pak;
+  const fits = list.filter(sh => {
+    const h = typeof SHIPPER_HOME !== "undefined" && SHIPPER_HOME[sh[0]];
+    return !h || (allowHome && h[0] === fromId);
+  });
+  const sh = pick(fits.length ? fits : list);
+  const home = allowHome && typeof shipperHome === "function" ? shipperHome(sh[0]) : null;
+  return { 0: sh[0], 1: sh[1], home: home && home.node === fromId ? home : null };
+}
+
+/* Die letzten Meter zur Tür: Frist und angezeigte Strecke wachsen mit.
+   Gerechnet mit Radtempo in der Stadt, sonst Lieferwagen. */
+function withLastMile(o) {
+  const km = lastMileKm(o);
+  o.refDist = Math.round(o.refDist + km);
+  o.deadline = Math.round(o.deadline + (km / (S.stage === 1 ? 15 : 40)) * 60 * 1.3);
+  return o;
 }
 
 /* Frachtpreis und Frist einer Relation. Der Preis richtet sich nach der
@@ -398,7 +427,7 @@ function tutDests(from, t, avoid) {
     .map(x => x.n);
 }
 function tutOrderObj(from, to, ck, weight, pr, extra) {
-  const sh = pick(SHIPPERS[ck] || SHIPPERS.pak);
+  const sh = pickShipper(ck, from, false);
   return Object.assign({
     id: "A" + (S.seq++), from, to, cargo: ck, weight,
     pay: pr.pay, deadline: Math.round(S.time + pr.fastest.time * 3 + 300),
@@ -417,7 +446,9 @@ function makeTutorialOrder() {
     for (const n of tutDests(f.at, t)) {
       const pr = priceOrder(f.at, n.id, c.ck, c.weight);
       if (!pr) continue;
-      const o = tutOrderObj(f.at, n.id, c.ck, c.weight, pr, { tut: true });
+      const sp = vehSpot(f);
+      const o = tutOrderObj(f.at, n.id, c.ck, c.weight, pr,
+        { tut: true, pick: addrNear(f.at, sp.lat, sp.lon, 0.22 + Math.random() * 0.12), drop: makeAddr(n.id) });
       const best = bestOption(planOptions(o, buildVariants(o)));
       if (!best || best.repoKm > 0.5) continue;
       /* Die Übung soll sich lohnen – sonst lernt man das Falsche. */
@@ -441,7 +472,9 @@ function makeFollowupOrder(job) {
   for (const n of tutDests(leg.to, t, job.order.from)) {
     const pr = priceOrder(leg.to, n.id, c.ck, c.weight);
     if (!pr) continue;
-    const o = tutOrderObj(leg.to, n.id, c.ck, c.weight, pr, { tutNext: true, tutVeh: f.uid });
+    const d = oDrop(job.order);
+    const o = tutOrderObj(leg.to, n.id, c.ck, c.weight, pr,
+      { tutNext: true, tutVeh: f.uid, pick: addrNear(leg.to, d.lat, d.lon, 0.22 + Math.random() * 0.12), drop: makeAddr(n.id) });
     const fits = buildVariants(o).some(v => v.legs.every(l => l.mode === t.mode && canCarry(t, o.cargo, o.weight, l.maxHop)));
     if (!fits) continue;
     o.deadline += Math.round(arrive);
@@ -485,13 +518,14 @@ function makeAirOrder() {
     fast.legs.forEach(l => { const mi = MODE_INFO[l.mode]; handling += mi.handleFix + tons * mi.handleTon; tkm += l.dist * tons * mi.tariff; });
     const core = Math.max(fast.cost, tkm);
     const pay = Math.round((core + handling + BASE_FEE) * cg.rate * rnd(1.35, 1.7) * rnd(1.35, 1.65));
-    const sh = pick(SHIPPERS[ck] || SHIPPERS.pak);
+    const sh = pickShipper(ck, a.id, false);
     return {
       id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight, pay, air: true,
       deadline: Math.round(S.time + fast.time * rnd(1.25, 1.55) + 240),
       shipper: sh[0], desc: sh[1] + " · per Luftfracht", created: S.time,
       refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
-      expire: Math.round(S.time + rnd(300, 900))
+      expire: Math.round(S.time + rnd(300, 900)),
+      pick: makeAddr(a.id), drop: makeAddr(b.id)
     };
   }
   return null;
@@ -527,10 +561,10 @@ function makeVehicle(typeId, lease) {
   const t = vType(typeId);
   return {
     uid: "F" + (S.seq++), type: typeId, at: homeFor(t.mode), phase: "idle", lease: !!lease,
-    jobId: null, legIdx: -1, route: null, routeDist: 0, pos: 0, timer: 0, kmTotal: 0, jobs: 0
+    jobId: null, legIdx: -1, route: null, routeDist: 0, pos: 0, timer: 0, kmTotal: 0, jobs: 0, spot: null
   };
 }
-function acquire(typeId, lease, deliverTo) {
+function acquire(typeId, lease, deliverTo, deliverAddr) {
   const t = vType(typeId);
   if (!t) return;
   if (t.stage > S.stage) return toast("Erst ab Etappe " + t.stage + " verfügbar.", "warn");
@@ -545,7 +579,10 @@ function acquire(typeId, lease, deliverTo) {
   }
   const v = makeVehicle(typeId, lease);
   /* Aus dem Planer heraus gekauft: Überführung direkt an den Ladeort */
-  if (deliverTo && N[deliverTo] && N[deliverTo].modes.includes(t.mode)) v.at = deliverTo;
+  if (deliverTo && N[deliverTo] && N[deliverTo].modes.includes(t.mode)) {
+    v.at = deliverTo;
+    if (deliverAddr) setSpot(v, addrPt(deliverAddr), deliverAddr);   /* direkt vor die Tür des Kunden */
+  }
   S.fleet.push(v);
   toast((lease ? "Geleast: " : "Gekauft: ") + t.name + " – stationiert in " + N[v.at].name, "ok");
   render();
@@ -592,13 +629,21 @@ function repoPath(from, to, mode) {
   repoMemo.set(k, e);
   return e;
 }
-function repoCost(veh, leg) {
-  if (veh.at === leg.from) return { t: 0, d: 0, ok: true, edges: [] };
+/* Anfahrt eines freien Fahrzeugs zum Ladepunkt: vom eigenen Stellplatz über
+   das Netz bis vor die Tür des Auftraggebers (bei der ersten Teilstrecke)
+   bzw. bis zum Umschlagterminal. pts = die gefahrene Linie. */
+function repoCost(veh, leg, order, i) {
   const t = vType(veh.type);
+  const O = vehPoint(veh), T = legStartPt(leg, order, i || 0);
+  if (veh.at === leg.from) {
+    const d = hav(O, T);
+    return { t: (d / t.speed) * 60, d, ok: true, edges: [], pts: [O, T] };
+  }
   const e = repoPath(veh.at, leg.from, t.mode);
-  if (!e || !e.length) return { t: Infinity, d: 0, ok: false, edges: [] };
-  const d = e.reduce((a, x) => a + x.dist, 0);
-  return { t: (d / t.speed) * 60, d, ok: true, edges: e };
+  if (!e || !e.length) return { t: Infinity, d: 0, ok: false, edges: [], pts: [] };
+  const pts = pathPts([veh.at].concat(e.map(x => x.to)), O, T);
+  const d = pathLen(pts);
+  return { t: (d / t.speed) * 60, d, ok: true, edges: e, pts };
 }
 
 /* --------------------------- Dispositionsdialog ------------------------- */
@@ -618,11 +663,11 @@ function buildVariants(o) {
 
 function assignFor(variant, order) {
   const used = [];
-  return variant.legs.map(leg => {
+  return variant.legs.map((leg, li) => {
     const list = eligible(leg, order, used);
     if (!list.length) return null;
     list.sort((a, b) => {
-      const ra = repoCost(a, leg), rb = repoCost(b, leg);
+      const ra = repoCost(a, leg, order, li), rb = repoCost(b, leg, order, li);
       if (Math.abs(ra.t - rb.t) > 1) return ra.t - rb.t;
       return vType(a.type).costKm - vType(b.type).costKm;
     });
@@ -700,17 +745,20 @@ function closeModal() {
 
 function evaluate(variant, order, assign) {
   let cost = 0, time = 0, ok = true;
+  const last = variant.legs.length - 1;
   const detail = variant.legs.map((leg, i) => {
     const mi = MODE_INFO[leg.mode];
+    /* Von der Tür des Auftraggebers bis zur Tür des Empfängers */
+    const dist = order ? pathLen(legPts(leg, order, i, last + 1)) : leg.dist;
     const veh = S.fleet.find(f => f.uid === assign[i]);
-    if (!veh) { ok = false; return { leg, veh: null, repo: null, time: (leg.dist / 50) * 60, cost: 0 }; }
+    if (!veh) { ok = false; return { leg, veh: null, repo: null, time: (dist / 50) * 60, cost: 0, dist }; }
     const t = vType(veh.type);
-    const repo = repoCost(veh, leg);
+    const repo = repoCost(veh, leg, order, i);
     if (!repo.ok) { ok = false; }
-    const lt = (leg.dist / t.speed) * 60 + (repo.ok ? repo.t : 0) + mi.umschlag * 1.8;
-    const lc = (leg.dist + (repo.ok ? repo.d : 0)) * t.costKm;
+    const lt = (dist / t.speed) * 60 + (repo.ok ? repo.t : 0) + mi.umschlag * 1.8;
+    const lc = (dist + (repo.ok ? repo.d : 0)) * t.costKm;
     cost += lc; time += lt;
-    return { leg, veh, repo, time: lt, cost: lc, t };
+    return { leg, veh, repo, time: lt, cost: lc, t, dist };
   });
   return { detail, cost, time, ok };
 }
@@ -728,7 +776,7 @@ function vehOptHTML(r, i, on) {
       : `<span class="vo-b ${rc.d > 15 ? "bad" : "warn"}">↩️ ${kmf(rc.d)} leer<small>${dur(rc.t)} · −${money(rc.d * t.costKm)}</small></span>`;
   return `<button class="vopt${on ? " on" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on}">
     <span class="vo-ic">${t.icon}</span>
-    <span class="vo-tx"><b>${esc(t.name)}</b><small>📍 ${esc(N[f.at].name)}</small></span>
+    <span class="vo-tx"><b>${esc(t.name)}</b><small>📍 ${esc(vehSpot(f).t)} · ${esc(N[f.at].short)}</small></span>
     ${badge}
   </button>`;
 }
@@ -766,10 +814,10 @@ function openShopFor(legIdx) {
   const cg = CARGO[o.cargo], mi = MODE_INFO[leg.mode];
   const ids = fitTypes(leg, o).filter(t => t.stage <= S.stage && unlockedModes().includes(t.mode)).map(t => t.id);
   marketFocus = {
-    orderId: o.id, vi: ps.vi, ids, at: leg.from,
+    orderId: o.id, vi: ps.vi, ids, at: leg.from, addr: legIdx === 0 ? oPick(o) : null,
     label: `${mi.icon} ${mi.name} · ab ${kgf(o.weight)}${cg.req.length ? " · " + cg.req.map(flagName).join(" + ") : ""}`
       + `${leg.maxHop > 400 ? " · Reichweite " + kmf(leg.maxHop) : ""}`,
-    title: o.shipper, from: N[leg.from].name
+    title: o.shipper, from: legIdx === 0 ? addrText(oPick(o), true) : N[leg.from].name
   };
   closeModal();
   showTab("market");
@@ -814,26 +862,29 @@ function planMapHTML(ps, ev) {
   ev.detail.forEach((d, i) => { if (d.veh) vehs.push({ f: d.veh, sel: true, repo: d.repo }); });
   /* Weitere freie Fahrzeuge, die eine Teilstrecke fahren könnten – nur die
      in der Nähe, sonst schrumpft der Ausschnitt auf Briefmarkengröße. */
-  const start = N[v.legs[0].from];
+  const pickA = oPick(o), dropA = oDrop(o), start = addrPt(pickA);
   const span = Math.max(12, v.legs.reduce((a, l) => a + l.dist, 0) * 1.3);
   const others = new Map();
   v.legs.forEach(l => eligible(l, o, []).forEach(f => {
     if (selUids.has(f.uid) || others.has(f.uid)) return;
-    if (hav([start.lat, start.lon], [N[f.at].lat, N[f.at].lon]) > span) return;
+    if (hav(start, vehPoint(f)) > span) return;
     others.set(f.uid, f);
   }));
   [...others.values()].slice(0, 8).forEach(f => vehs.push({ f, sel: false }));
 
-  /* Punkte sammeln und in Web-Mercator projizieren */
-  const ids = [];
-  v.legs.forEach(l => l.nodes.forEach(id => ids.push(id)));
+  /* Punkte sammeln – Netzknoten, die beiden Türen, Stellplätze und
+     Leerfahrten – und in Web-Mercator projizieren */
+  const keys = [], raw = [];
+  const add = (k, p) => { keys.push(k); raw.push(p); };
+  v.legs.forEach(l => l.nodes.forEach(id => add(id, nodePt(id))));
+  add("@pick", start); add("@drop", addrPt(dropA));
   vehs.forEach(x => {
-    ids.push(x.f.at);
-    if (x.repo && x.repo.ok) x.repo.edges.forEach(e => ids.push(e.to));
+    add("@v" + x.f.uid, vehPoint(x.f));
+    if (x.sel && x.repo && x.repo.ok && x.repo.pts && x.repo.d >= 0.5) x.repo.pts.forEach((p, k) => add("@r" + x.f.uid + "_" + k, p));
   });
-  const ll = unwrapLons(ids.map(id => [N[id].lat, N[id].lon]));
+  const ll = unwrapLons(raw);
   const W = {};
-  ids.forEach((id, k) => { if (!W[id]) W[id] = [projX(ll[k][1]), projY(ll[k][0])]; });
+  keys.forEach((id, k) => { if (!W[id]) W[id] = [projX(ll[k][1]), projY(ll[k][0])]; });
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   Object.values(W).forEach(p => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
   const padX = 34, padY = 30;
@@ -858,15 +909,21 @@ function planMapHTML(ps, ev) {
 
   const pl = pts => pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   let svg = "";
-  /* Route */
-  v.legs.forEach(l => {
-    const pts = l.nodes.map(P), c = MODE_INFO[l.mode].color;
+  /* Route – von Tür zu Tür */
+  const nl = v.legs.length;
+  v.legs.forEach((l, i) => {
+    const city = id => N[id].type === "city";
+    const ids = l.nodes.slice(), a = i === 0, b = i === nl - 1;
+    if (a && city(ids[0]) && (ids.length > 1 || b)) ids.shift();
+    if (b && ids.length && city(ids[ids.length - 1]) && (ids.length > 1 || a)) ids.pop();
+    const ks = (a ? ["@pick"] : []).concat(ids, b ? ["@drop"] : []);
+    const pts = ks.map(P), c = MODE_INFO[l.mode].color;
     svg += `<polyline points="${pl(pts)}" class="pm-out"/><polyline points="${pl(pts)}" class="pm-route" style="stroke:${c}"/>`;
   });
   /* Leerfahrten der gewählten Fahrzeuge */
   vehs.forEach(x => {
-    if (!x.sel || !x.repo || !x.repo.ok || x.repo.d < 0.5) return;
-    const pts = [P(x.f.at)].concat(x.repo.edges.map(e => P(e.to)));
+    if (!x.sel || !x.repo || !x.repo.ok || x.repo.d < 0.5 || !x.repo.pts) return;
+    const pts = x.repo.pts.map((p, k) => P("@r" + x.f.uid + "_" + k));
     svg += `<polyline points="${pl(pts)}" class="pm-repo-out"/><polyline points="${pl(pts)}" class="pm-repo"/>`;
   });
   /* Umschlagpunkte zwischen zwei Teilstrecken */
@@ -875,7 +932,7 @@ function planMapHTML(ps, ev) {
   /* Abholung und Ziel */
   const f1 = n => n.toFixed(1);
   const label = (p, txt, below, cls) => `<text x="${f1(clamp(p[0], 30, PM_W - 30))}" y="${f1(clamp(p[1] + (below ? 23 : -15), 11, PM_H - 4))}" class="pm-lbl${cls ? " " + cls : ""}">${esc(txt)}</text>`;
-  const pickP = P(o.from), dropP = P(o.to);
+  const pickP = P("@pick"), dropP = P("@drop");
   const marker = (p, glyph, fill) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="11" class="pm-node" style="fill:${fill}"/>
     <text x="${f1(p[0])}" y="${f1(p[1] + 4.5)}" class="pm-gl">${glyph}</text>`;
   const anchors = [pickP, dropP].concat(v.legs.slice(1).map(l => P(l.from)));
@@ -889,9 +946,10 @@ function planMapHTML(ps, ev) {
   const used = {};
   const order = [...vehs].sort((a, b) => (b.sel ? 1 : 0) - (a.sel ? 1 : 0));
   const placed = order.map(x => {
-    const id = x.f.at, base = P(id);
-    const onMarker = id === o.from || id === o.to || v.legs.some(l => l.from === id);
-    const k = used[id] = (used[id] || 0) + 1;
+    const id = x.f.at, base = P("@v" + x.f.uid);
+    const onMarker = anchors.some(m => Math.hypot(m[0] - base[0], m[1] - base[1]) < 8);
+    const slot = base[0].toFixed(0) + "," + base[1].toFixed(0);
+    const k = used[slot] = (used[slot] || 0) + 1;
     const off = onMarker ? FAN[(k - 1) % FAN.length] : (k === 1 ? [0, 0] : FAN[(k - 2) % FAN.length]);
     let p = [base[0] + off[0], base[1] + off[1]];
     if (!onMarker) {
@@ -927,7 +985,7 @@ function planMapHTML(ps, ev) {
     const up = Math.hypot(repV.p[0] - pickP[0], repV.p[1] - pickP[1]) < 90 ? repV.p[1] <= pickP[1] : repV.p[1] > PM_H * 0.6;
     vsvg += label(repV.p, N[repV.id].short + " · " + kmf(repV.x.repo.d) + " leer", !up, "warn");
   }
-  svg += vsvg + label(pickP, N[o.from].short, pickBelow) + label(dropP, N[o.to].short, dropBelow);
+  svg += vsvg + label(pickP, pickA.a || N[o.from].short, pickBelow) + label(dropP, dropA.a || N[o.to].short, dropBelow);
 
   /* Satz darunter: gibt es eine Leerfahrt, und was kostet sie? */
   const rep = ev.detail.filter(d => d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5);
@@ -936,7 +994,7 @@ function planMapHTML(ps, ev) {
     line = `<div class="pm-sum bad">🚫 Für ${ev.detail.length > 1 ? "mindestens eine Teilstrecke" : "diese Strecke"} ist gerade kein passendes Fahrzeug frei.</div>`;
   } else if (!rep.length) {
     const f = ev.detail[0].veh;
-    line = `<div class="pm-sum ok">✅ Keine Leerfahrt – ${esc(vType(f.type).brand)} steht schon in ${esc(N[o.from].short)}.</div>`;
+    line = `<div class="pm-sum ok">✅ Keine Leerfahrt – ${esc(vType(f.type).brand)} steht schon um die Ecke, ${esc(pickA.t)}.</div>`;
   } else {
     const km = rep.reduce((a, d) => a + d.repo.d, 0), mn = rep.reduce((a, d) => a + d.repo.t, 0);
     const eur = rep.reduce((a, d) => a + d.repo.d * d.t.costKm, 0);
@@ -963,14 +1021,15 @@ function renderPlanner(fit) {
   const eta = S.time + ev.time;
   const late = eta > o.deadline;
   let repoEur = 0;
-  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok) repoEur += d.repo.d * d.t.costKm; });
+  /* Unter 500 m ist das nur die Anfahrt um die Ecke, keine Leerfahrt */
+  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5) repoEur += d.repo.d * d.t.costKm; });
 
   const legHtml = ev.detail.map((d, i) => {
     const mi = MODE_INFO[d.leg.mode];
     const list = eligible(d.leg, o, ps.assign.filter((u, k) => k !== i && u));
     const all = d.veh && !list.some(x => x.uid === d.veh.uid) ? [d.veh, ...list] : list;
     /* Nach Anfahrt sortiert: wer schon am Ladeort steht, steht oben. */
-    const rows = all.map(f => ({ f, t: vType(f.type), rc: repoCost(f, d.leg) }))
+    const rows = all.map(f => ({ f, t: vType(f.type), rc: repoCost(f, d.leg, o, i) }))
       .sort((a, b) => (a.rc.ok ? a.rc.d : 1e9) - (b.rc.ok ? b.rc.d : 1e9) || a.t.costKm - b.t.costKm);
     const LIMIT = 3;
     let shown = ps.showAll && ps.showAll[i] ? rows : rows.slice(0, LIMIT);
@@ -981,8 +1040,8 @@ function renderPlanner(fit) {
       ? `<div class="via">über ${d.leg.nodes.slice(1, -1).map(n => esc(N[n].short)).join(" · ")}</div>` : "";
     return `<div class="leg">
       <div class="leg-head"><span class="mode-chip" style="--c:${mi.color}">${mi.icon} ${mi.name}</span>
-        <span class="leg-dist">${kmf(d.leg.dist)}</span></div>
-      <div class="leg-route">${esc(N[d.leg.from].name)} <b>→</b> ${esc(N[d.leg.to].name)}</div>
+        <span class="leg-dist">${kmf(d.dist || d.leg.dist)}</span></div>
+      <div class="leg-route">${esc(i === 0 ? addrText(oPick(o), true) : N[d.leg.from].name)} <b>→</b> ${esc(i === ev.detail.length - 1 ? addrText(oDrop(o), true) : N[d.leg.to].name)}</div>
       ${via}
       ${rows.length
         ? `<div class="vpick" data-leg="${i}">
@@ -1070,9 +1129,10 @@ function acceptOrder(vi) {
 function startJob(o, variant, assign) {
   const job = {
     id: "J" + (S.seq++), order: o, curLeg: 0, started: S.time, cost: 0,
-    legs: variant.legs.map((leg, i) => ({
+    legs: variant.legs.map((leg, i, all) => ({
       mode: leg.mode, nodes: leg.nodes.slice(), dist: leg.dist, maxHop: leg.maxHop,
-      from: leg.from, to: leg.to, veh: assign[i], done: false
+      from: leg.from, to: leg.to, veh: assign[i], done: false,
+      a: i === 0 ? addrPt(oPick(o)) : null, b: i === all.length - 1 ? addrPt(oDrop(o)) : null
     }))
   };
   job.legs.forEach(l => { const f = S.fleet.find(x => x.uid === l.veh); if (f) f.phase = "reserved"; });
@@ -1127,8 +1187,62 @@ function autoDispatchRun(idleModes) {
 
 /* ------------------------------- Simulation ----------------------------- */
 function legCoords(leg) {
-  if (!leg._c) leg._c = unwrapLons(leg.nodes.map(id => [N[id].lat, N[id].lon]));
+  /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
+  if (!leg._c) leg._c = unwrapLons(pathPts(leg.nodes, leg.a, leg.b));
   return leg._c;
+}
+/* Linie über die Netzknoten, beginnend/endend an einer Adresse. Stadtteile
+   sind nur Knoten im Netz: von der Tür geht es direkt zum nächsten echten
+   Wegpunkt statt erst zur Mitte des Stadtteils (sonst entstehen Zacken).
+   Häfen, Flughäfen und Terminals werden immer angefahren. */
+function pathPts(nodes, a, b) {
+  const ids = nodes.slice();
+  const city = id => N[id] && N[id].type === "city";
+  if (a && ids.length && city(ids[0]) && (ids.length > 1 || b)) ids.shift();
+  if (b && ids.length && city(ids[ids.length - 1]) && (ids.length > 1 || a)) ids.pop();
+  const pts = ids.map(nodePt);
+  if (a) pts.unshift(a);
+  if (b) pts.push(b);
+  return pts;
+}
+/* Gefahrene Linie einer Teilstrecke im Planer – dieselbe wie später auf der Karte */
+function legPts(leg, order, i, n) {
+  return pathPts(leg.nodes, order && i === 0 ? addrPt(oPick(order)) : null, order && i === n - 1 ? addrPt(oDrop(order)) : null);
+}
+
+/* ------------------------------- Adressen --------------------------------
+   Aufträge holen beim Auftraggeber ab und liefern beim Empfänger – beide
+   mit eigener Adresse (places.js). Fahrzeuge parken nach der Zustellung
+   dort, wo sie abgeladen haben.                                          */
+function nodePt(id) { return [N[id].lat, N[id].lon]; }
+function nodeAddr(id) { const n = N[id]; return { lat: n.lat, lon: n.lon, t: n.name, a: n.short }; }
+function ensureAddr(o) {
+  if (!o.pick) o.pick = (typeof makeAddr === "function" && makeAddr(o.from)) || nodeAddr(o.from);
+  if (!o.drop) o.drop = (typeof makeAddr === "function" && makeAddr(o.to)) || nodeAddr(o.to);
+  return o;
+}
+function oPick(o) { return ensureAddr(o).pick; }
+function oDrop(o) { return ensureAddr(o).drop; }
+function legStartPt(leg, order, i) { return i === 0 && order ? addrPt(oPick(order)) : nodePt(leg.from); }
+function lastMileKm(o) { return hav(addrPt(oPick(o)), nodePt(o.from)) + hav(nodePt(o.to), addrPt(oDrop(o))); }
+const normLon = lon => ((lon + 540) % 360) - 180;
+function setSpot(v, p, addr) {
+  v.spot = { lat: +p[0].toFixed(5), lon: +normLon(p[1]).toFixed(5), t: addr ? addr.t : N[v.at].name, a: addr ? addr.a : N[v.at].short };
+  v.spotAt = v.at;
+}
+/* Wo ein Fahrzeug parkt. Neue Fahrzeuge stehen auf dem Firmenhof des
+   Stadtteils – gibt es dort schon einen, stellen sie sich dazu. */
+function vehSpot(v) {
+  if (!v.spot || v.spotAt !== v.at) {
+    const mate = S.fleet.find(f => f !== v && f.spot && f.spotAt === v.at && /^Stellplatz/.test(f.spot.t));
+    const a = mate ? Object.assign({}, mate.spot) : ((typeof makeAddr === "function" && makeAddr(v.at, "yard")) || nodeAddr(v.at));
+    v.spot = { lat: a.lat, lon: a.lon, t: a.t, a: a.a }; v.spotAt = v.at;
+  }
+  return v.spot;
+}
+function vehPoint(v) {
+  if ((v.phase === "repo" || v.phase === "haul") && v.route) return routePointAt(v.route, v.pos);
+  return addrPt(vehSpot(v));
 }
 function pathLen(route) {
   let d = 0;
@@ -1155,11 +1269,11 @@ function beginLeg(job, idx) {
   const veh = S.fleet.find(f => f.uid === leg.veh);
   if (!veh) { failJob(job, "Fahrzeug nicht mehr verfügbar"); return; }
   veh.jobId = job.id; veh.legIdx = idx; veh.pos = 0;
-  if (veh.at !== leg.from) {
-    const r = repoCost(veh, leg);
-    if (!r.ok) { failJob(job, "Leerfahrt zum Ladeort nicht möglich"); return; }
+  const r = repoCost(veh, leg, job.order, idx);
+  if (!r.ok) { failJob(job, "Leerfahrt zum Ladeort nicht möglich"); return; }
+  if (r.d > 0.03) {                      /* erst hinfahren – zur Tür oder zum Terminal */
     veh.phase = "repo";
-    veh.route = unwrapLons([[N[veh.at].lat, N[veh.at].lon]].concat(r.edges.map(e => [N[e.to].lat, N[e.to].lon])));
+    veh.route = unwrapLons(r.pts);
     veh.routeDist = pathLen(veh.route);
   } else {
     veh.phase = "load";
@@ -1289,12 +1403,16 @@ function tick(dtMin) {
       if (veh.pos >= veh.routeDist) {
         const cost = veh.routeDist * t.costKm;
         S.money -= cost; S.expense += cost; job.cost += cost;
+        const end = veh.route[veh.route.length - 1];
+        const li = job.legs.indexOf(leg), lastLeg = li === job.legs.length - 1;
         veh.pos = 0; veh.route = null;
         if (veh.phase === "repo") {
           veh.at = leg.from;
+          setSpot(veh, end, li === 0 ? oPick(job.order) : nodeAddr(leg.from));
           veh.phase = "load"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from);
         } else {
           veh.at = leg.to;
+          setSpot(veh, end, lastLeg && leg.b ? oDrop(job.order) : nodeAddr(leg.to));
           veh.phase = "unload"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.55, 0.95) * umschlagFactor(leg.to);
         }
       }
@@ -1331,10 +1449,7 @@ let selected = null;
 function mapRedraw() { if (map) map.redraw(); }
 
 /* ------------------------- Live-Verfolgung ------------------------------ */
-function vehPos(v) {
-  return (v.phase === "repo" || v.phase === "haul") && v.route
-    ? routePointAt(v.route, v.pos) : [N[v.at].lat, N[v.at].lon];
-}
+function vehPos(v) { return vehPoint(v); }
 function setFollow(uid) {
   S.follow = uid || null;
   if (uid) {
@@ -1527,16 +1642,24 @@ function drawWorld(m, ctx) {
     });
   });
 
-  // 3. Vorschau im Planungsdialog
+  // 3. Vorschau im Planungsdialog – mit den letzten Metern bis zur Tür
   if (planState) {
-    const v = planState.variants[planState.vi];
-    v.legs.forEach(l => {
+    const v = planState.variants[planState.vi], o = planState.order, n = v.legs.length;
+    v.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
-      m.line(legCoords(l), {
+      m.line(unwrapLons(legPts(l, o, i, n)), {
         color: mi.color, width: 5, dash: [10, 8],
         dashOffset: -(performance.now() / 45) % 18,
         outline: "rgba(16,34,47,0.6)", outlineWidth: 3
       });
+    });
+  }
+  // 3b. Angetippte Ausschreibung: gestrichelt von der Abholung zum Ziel
+  const selOrder = selected && selected.kind === "order" ? S.orders.find(o => o.id === selected.id) : null;
+  if (selOrder && !planState) {
+    m.line(unwrapLons([addrPt(oPick(selOrder)), addrPt(oDrop(selOrder))]), {
+      color: "#ffc12e", width: 4, dash: [9, 7], dashOffset: -(performance.now() / 45) % 16,
+      outline: "rgba(13,27,42,0.55)", outlineWidth: 3
     });
   }
 
@@ -1551,6 +1674,10 @@ function drawWorld(m, ctx) {
   S.jobs.forEach(j => { hot.add(j.order.from); hot.add(j.order.to); });
   if (planState) { hot.add(planState.order.from); hot.add(planState.order.to); }
   unlockedNodes().forEach(n => {
+    /* Stadtteile sind nur Knoten im Netz – aus der Nähe zählt die Adresse,
+       also dort kein Punkt mehr mitten auf der Kreuzung. Häfen, Flughäfen
+       und Terminals bleiben: das sind echte Orte. */
+    if (n.type === "city" && z >= CITY_DOT_MAX_Z) return;
     const big = n.type !== "city" || z >= 8;
     const labelOk = n.type !== "city" ? z >= 5.4 : z >= 10.2;
     const r = z < 4 ? 5 : (big ? 9 : 7);
@@ -1580,7 +1707,11 @@ function drawWorld(m, ctx) {
     });
   });
 
-  // 5. Fahrzeuge
+  // 5. Büros und Stecknadeln der Aufträge
+  drawBases(m, z);
+  drawPins(m, z);
+
+  // 6. Fahrzeuge
   const now = performance.now();
   const fan = vehFan();
   S.fleet.forEach(v => {
@@ -1627,6 +1758,136 @@ function drawWorld(m, ctx) {
   });
 }
 const LABEL_FONT = "'Baloo 2', system-ui, sans-serif";
+const CITY_DOT_MAX_Z = 9;
+
+/* ------------------------------ Stecknadeln -------------------------------
+   Gelb: offene Ausschreibung beim Auftraggeber. Grau: Kundschaft von
+   Mr. Snus und Don Pablo. Orange: angenommen und in Arbeit – steht an der
+   Abholung, bis geladen ist, danach am Ziel. Liegen Nadeln zu dicht, werden
+   sie zu einer mit Zahl zusammengefasst; Antippen zoomt hinein.        */
+const PIN_COL = { yellow: "#ffc12e", orange: "#ff8a3d", gray: "#a3aebb", white: "#ffffff" };
+let pinHits = [];
+function jobPicked(j) {
+  if (j.curLeg > 0 || j.legs[0].done) return true;
+  const v = S.fleet.find(f => f.uid === j.legs[0].veh);
+  return !!(v && v.jobId === j.id && v.legIdx === 0 && (v.phase === "haul" || v.phase === "unload"));
+}
+function mapPins() {
+  const out = [];
+  S.jobs.forEach(j => {
+    const picked = jobPicked(j), a = picked ? oDrop(j.order) : oPick(j.order);
+    out.push({ kind: "job", id: j.id, p: addrPt(a), col: "orange", icon: picked ? "🏁" : CARGO[j.order.cargo].icon, prio: 2 });
+    /* Noch nicht abgeholt: das Ziel steht schon als kleine Fahne da */
+    if (!picked) out.push({ kind: "job", id: j.id, p: addrPt(oDrop(j.order)), col: "white", icon: "🏁", prio: -1, flag: true });
+  });
+  S.orders.forEach(o => {
+    const grey = o.snus || o.pablo;
+    const star = o.tut || o.tutNext;       /* Linas Übung: eigene Nadel mit Stern, nie gebündelt */
+    out.push({ kind: "order", id: o.id, p: addrPt(oPick(o)), col: grey ? "gray" : "yellow",
+      icon: star ? "⭐" : o.snus ? "🥫" : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
+  });
+  return out;
+}
+function pinSize(z) { return z >= 11 ? 11.5 : z >= 8 ? 10 : z >= 5 ? 8.5 : 7; }
+/* Tropfenform: Kopf oben, Spitze auf dem Punkt. Tinte, Schatten und ein
+   heller Glanz wie bei den übrigen Kartenmarken. */
+function drawPinShape(c, x, y, R, fill, icon, opts) {
+  opts = opts || {};
+  const h = R * 2.05, cx = x, cy = y - h;
+  const ty = (R * R) / h, tx = Math.sqrt(R * R - ty * ty), a0 = Math.atan2(ty, tx);
+  const path = (ox, oy) => {
+    c.beginPath();
+    c.moveTo(x + ox, y + oy);
+    c.lineTo(cx + tx + ox, cy + ty + oy);
+    c.arc(cx + ox, cy + oy, R, a0, Math.PI - a0, true);
+    c.closePath();
+  };
+  c.beginPath(); c.ellipse(x + 1, y + 1, R * 0.62, R * 0.24, 0, 0, 7); c.fillStyle = "rgba(13,27,42,0.35)"; c.fill();
+  path(2, 2.5); c.fillStyle = "rgba(13,27,42,0.38)"; c.fill();
+  path(0, 0); c.fillStyle = fill; c.fill();
+  c.lineWidth = 2.4; c.strokeStyle = "#0d1b2a"; c.lineJoin = "round"; c.stroke();
+  c.beginPath(); c.arc(cx, cy, R * 0.66, 0, 7); c.fillStyle = "#fff8e8"; c.fill();
+  c.lineWidth = 1.4; c.strokeStyle = "rgba(13,27,42,0.55)"; c.stroke();
+  c.beginPath(); c.arc(cx - R * 0.08, cy - R * 0.1, R * 0.86, Math.PI * 1.08, Math.PI * 1.45);
+  c.lineWidth = 2; c.strokeStyle = "rgba(255,255,255,0.75)"; c.lineCap = "round"; c.stroke();
+  if (opts.count) {
+    c.font = "800 " + Math.round(R * 0.95) + "px " + LABEL_FONT;
+    c.fillStyle = "#0d1b2a"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(opts.count > 99 ? "99+" : String(opts.count), cx, cy + 1);
+  } else if (icon) {
+    c.font = Math.round(R * 0.95) + "px system-ui, 'Apple Color Emoji','Segoe UI Emoji', sans-serif";
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
+    c.fillText(icon, cx, cy + 1);
+  }
+  if (opts.sel) {
+    c.beginPath(); c.arc(cx, cy, R + 5, 0, 7);
+    c.lineWidth = 3; c.strokeStyle = "#e2465f"; c.setLineDash([6, 5]);
+    c.lineDashOffset = -(performance.now() / 60) % 11; c.stroke(); c.setLineDash([]);
+  }
+  return [cx, cy];
+}
+function drawPins(m, z) {
+  const R = pinSize(z);
+  const list = mapPins().map(p => ({ ...p, s: m.screenPos(p.p[0], p.p[1]) }))
+    .filter(p => p.s[0] > -40 && p.s[0] < m.width + 40 && p.s[1] > -40 && p.s[1] < m.height + 60);
+  /* Nahe Nadeln bündeln – die wichtigste liegt oben */
+  list.sort((a, b) => b.prio - a.prio);
+  const groups = [];
+  const near = R * 2.1;
+  list.forEach(p => {
+    const g = !p.solo && groups.find(q => !q.solo && Math.hypot(q.s[0] - p.s[0], q.s[1] - p.s[1]) < near);
+    if (g) g.items.push(p); else groups.push({ s: p.s, items: [p], solo: !!p.solo });
+  });
+  pinHits = [];
+  const ctx = m.ctx;
+  /* Ausgewählte Ausschreibung: ihr Ziel als weiße Fahne */
+  if (selected && selected.kind === "order") {
+    const o = S.orders.find(x => x.id === selected.id);
+    if (o) { const d = oDrop(o), s2 = m.screenPos(d.lat, d.lon); drawPinShape(ctx, s2[0], s2[1], R * 0.85, PIN_COL.white, "🏁"); }
+  }
+  groups.slice().reverse().forEach(g => {
+    /* Ziel-Fähnchen zählen im Bündel nicht mit */
+    const real = g.items.filter(p => !p.flag);
+    if (real.length) g.items = real;
+    const top = g.items[0];
+    const col = g.items.some(p => p.col === "orange") ? "orange" : top.col;
+    const isSel = g.items.length === 1 && !top.flag && selected && selected.kind === top.kind && selected.id === top.id;
+    const r = isSel ? R * 1.18 : top.flag ? R * 0.8 : R;
+    const head = drawPinShape(ctx, g.s[0], g.s[1], r, PIN_COL[col], top.icon, { count: g.items.length > 1 ? g.items.length : 0, sel: isSel });
+    pinHits.push({ x: head[0], y: head[1], r: r + 6, items: g.items, s: g.s });
+  });
+}
+function rrect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+/* Eigene Büros: kleines Haus in der Firmenfarbe an ihrer Adresse */
+function baseAddr(b) {
+  if (!b.addr) b.addr = (typeof makeAddr === "function" && makeAddr(b.node, "office")) || nodeAddr(b.node);
+  return b.addr;
+}
+let baseHits = [];
+function drawBases(m, z) {
+  baseHits = [];
+  if (!S.bases || !S.bases.length || z < 5) return;
+  const col = S.player ? COMPANY_COLORS[S.player.color] : "#2f6fed";
+  S.bases.forEach(b => {
+    const a = baseAddr(b);
+    m.pin(a.lat, a.lon, (c, x, y) => {
+      const w = z >= 11 ? 26 : 20, h = w * 0.78;
+      rrect(c, x - w / 2 + 2, y - h / 2 + 2.5, w, h, 5); c.fillStyle = "rgba(13,27,42,0.4)"; c.fill();
+      rrect(c, x - w / 2, y - h / 2, w, h, 5); c.fillStyle = "#fff8e8"; c.fill();
+      c.lineWidth = 2.4; c.strokeStyle = "#0d1b2a"; c.stroke();
+      c.beginPath(); c.moveTo(x - w / 2 - 3, y - h / 2 + 1); c.lineTo(x, y - h / 2 - w * 0.42); c.lineTo(x + w / 2 + 3, y - h / 2 + 1); c.closePath();
+      c.fillStyle = col; c.fill(); c.stroke();
+      c.font = Math.round(h * 0.72) + "px system-ui, 'Apple Color Emoji', sans-serif";
+      c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
+      c.fillText("🏢", x, y + 1);
+      baseHits.push({ x, y, r: w * 0.8, id: b.id });
+    });
+  });
+}
 
 /* Stehen mehrere Fahrzeuge am selben Ort, lagen sie bisher exakt
    übereinander – man sah nur eins. Jetzt rücken sie im Kreis auseinander,
@@ -1635,7 +1896,8 @@ function vehFan() {
   const groups = new Map();
   S.fleet.forEach(v => {
     if ((v.phase === "repo" || v.phase === "haul") && v.route) return;
-    const g = groups.get(v.at); if (g) g.push(v.uid); else groups.set(v.at, [v.uid]);
+    const sp = vehSpot(v), k = sp.lat.toFixed(4) + "," + sp.lon.toFixed(4);
+    const g = groups.get(k); if (g) g.push(v.uid); else groups.set(k, [v.uid]);
   });
   const off = {};
   groups.forEach(list => {
@@ -1655,20 +1917,46 @@ function onMapTap(px, py) {
   let best = null, bestD = 26;
   const fan = vehFan();
   S.fleet.forEach(v => {
-    const p = (v.phase === "repo" || v.phase === "haul") && v.route
-      ? routePointAt(v.route, v.pos) : [N[v.at].lat, N[v.at].lon];
+    const p = vehPoint(v);
     if (!p) return;
     const s = map.screenPos(p[0], p[1]);
     const fo = fan[v.uid] || [0, 0];
     const d = Math.hypot(s[0] + fo[0] - px, s[1] + fo[1] - py);
     if (d < bestD) { bestD = d; best = { kind: "veh", id: v.uid }; }
   });
+  /* Nadelkopf zählt – etwas großzügiger, er ist das Ziel des Fingers */
+  pinHits.forEach(h => {
+    const d = Math.hypot(h.x - px, h.y - py) - 4;
+    if (d < h.r && d < bestD) {
+      bestD = d;
+      best = h.items.length > 1 ? { kind: "cluster", items: h.items.map(i => ({ kind: i.kind, id: i.id })), at: map.fromScreen(h.s[0], h.s[1]) }
+        : { kind: h.items[0].kind, id: h.items[0].id };
+    }
+  });
+  baseHits.forEach(h => {
+    const d = Math.hypot(h.x - px, h.y - py);
+    if (d < h.r && d < bestD) { bestD = d; best = { kind: "base", id: h.id }; }
+  });
   if (!best) {
     unlockedNodes().forEach(n => {
+      if (n.type === "city" && map.zoom >= CITY_DOT_MAX_Z) return;
       const s = map.screenPos(n.lat, n.lon);
       const d = Math.hypot(s[0] - px, s[1] - py);
       if (d < bestD) { bestD = d; best = { kind: "node", id: n.id }; }
     });
+  }
+  /* Bündel: hineinzoomen, bis die Nadeln einzeln stehen */
+  if (best && best.kind === "cluster") {
+    const pts = best.items.map(it => {
+      const o = it.kind === "order" ? S.orders.find(x => x.id === it.id) : null;
+      const j = it.kind === "job" ? S.jobs.find(x => x.id === it.id) : null;
+      return o ? addrPt(oPick(o)) : j ? addrPt(jobPicked(j) ? oDrop(j.order) : oPick(j.order)) : null;
+    }).filter(Boolean);
+    if (pts.length > 1) map.fitBounds(pts, 90, Math.max(map.zoom + 1.5, 13));
+    else map.flyTo(best.at, map.zoom + 2, 600);
+    selected = null;
+    renderInspector();
+    return;
   }
   selected = best;
   renderInspector();
@@ -1691,6 +1979,45 @@ function renderInspector() {
       <div class="ins-row small">Laufleistung ${kmf(v.kmTotal)} · ${v.jobs} Teilstrecken · ${money(dailyCost(v))}/Tag</div>
       <button class="btn tiny ${S.follow === v.uid ? "" : "ghost"}" id="insFollow">
         ${S.follow === v.uid ? "📡 Verfolgung beenden" : "📡 live verfolgen"}</button>`;
+  } else if (selected.kind === "order") {
+    const o = S.orders.find(x => x.id === selected.id);
+    if (!o) { selected = null; return renderInspector(); }
+    const cg = CARGO[o.cargo], pa = oPick(o), da = oDrop(o);
+    const icon = o.snus ? "🥫" : o.pablo ? "❄️" : cg.icon;
+    el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
+      <div class="ins-title">${icon} ${esc(o.shipper)} <span class="ins-pin ${o.snus || o.pablo ? "gray" : "yellow"}">offen</span></div>
+      <div class="ins-sub">${esc(o.desc)}</div>
+      <div class="ins-addr"><span>📍 ${esc(addrText(pa, true))}</span><span>🏁 ${esc(addrText(da, true))}</span></div>
+      <div class="ins-row small">⚖️ ${kgf(o.weight)} · 💶 ${money(o.pay)} · ⏳ ${dur(o.deadline - S.time)}</div>
+      ${previewHTML(dispatchPreview(o))}
+      <div class="ins-btns">
+        <button class="btn tiny" id="insPlan">📋 Planen &amp; annehmen</button>
+        <button class="btn tiny ghost" id="insList">In der Auftragsliste</button>
+      </div>`;
+  } else if (selected.kind === "job") {
+    const j = S.jobs.find(x => x.id === selected.id);
+    if (!j) { selected = null; return renderInspector(); }
+    const o = j.order, cur = j.legs[j.curLeg];
+    const veh = cur ? S.fleet.find(f => f.uid === cur.veh) : null;
+    const picked = jobPicked(j);
+    el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
+      <div class="ins-title">${CARGO[o.cargo].icon} ${esc(o.shipper)} <span class="ins-pin orange">in Arbeit</span></div>
+      <div class="ins-addr"><span class="${picked ? "done" : ""}">📍 ${esc(addrText(oPick(o), true))}</span><span>🏁 ${esc(addrText(oDrop(o), true))}</span></div>
+      <div class="ins-row">${veh ? vType(veh.type).icon + " " + esc(phaseLabel(veh)) : "wartet auf Vorlauf"}</div>
+      <div class="ins-row small">⚖️ ${kgf(o.weight)} · 💶 ${money(o.pay)} · ⏳ ${S.time > o.deadline ? "überfällig" : dur(o.deadline - S.time)}</div>
+      <div class="ins-btns">
+        ${veh ? `<button class="btn tiny ${S.follow === veh.uid ? "" : "ghost"}" id="insFollowJob" data-uid="${veh.uid}">📡 live verfolgen</button>` : ""}
+        <button class="btn tiny ghost" id="insJobs">Unter „Live“ zeigen</button>
+      </div>`;
+  } else if (selected.kind === "base") {
+    const b = (S.bases || []).find(x => x.id === selected.id);
+    if (!b) { selected = null; return renderInspector(); }
+    const t = OFFICE_TIERS[b.tier];
+    el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
+      <div class="ins-title">🏢 ${esc(t ? t.name : "Büro")} ${esc(N[b.node].short)}</div>
+      <div class="ins-addr"><span>📍 ${esc(addrText(baseAddr(b), true))}</span></div>
+      <div class="ins-row small">👥 ${b.staff.length} im Team · 🚚 ${b.vehicles.length} Fahrzeug${b.vehicles.length === 1 ? "" : "e"}</div>
+      <div class="ins-btns"><button class="btn tiny" id="insBase">Büro öffnen</button></div>`;
   } else {
     const n = N[selected.id];
     const here = S.fleet.filter(f => f.at === n.id && f.phase === "idle").length;
@@ -1706,7 +2033,32 @@ function renderInspector() {
   if (c) c.onclick = () => { selected = null; renderInspector(); mapRedraw(); };
   const f = $("#insFollow");
   if (f) f.onclick = () => { setFollow(S.follow === selected.id ? null : selected.id); renderInspector(); };
+  const pl = $("#insPlan");
+  if (pl) pl.onclick = () => { const id = selected.id; selected = null; renderInspector(); openPlanner(id); };
+  const li = $("#insList");
+  if (li) li.onclick = () => { const id = selected.id; selected = null; renderInspector(); showInList("orders", id); };
+  const fj = $("#insFollowJob");
+  if (fj) fj.onclick = () => { setFollow(fj.dataset.uid); selected = null; renderInspector(); };
+  const jb = $("#insJobs");
+  if (jb) jb.onclick = () => { const id = selected.id; selected = null; renderInspector(); showInList("jobs", id); };
+  const ib = $("#insBase");
+  if (ib) ib.onclick = () => { const id = selected.id; selected = null; renderInspector(); showTab("bases"); if (typeof openOffice === "function") openOffice(id); };
 }
+/* Aus der Karte in die Liste: Reiter öffnen, Karte hinscrollen, kurz aufleuchten */
+function showInList(tab, id) {
+  showTab(tab);
+  const sel = tab === "orders" ? `#tab-orders .card[data-order="${id}"]` : `#tab-jobs .card[data-job="${id}"]`;
+  requestAnimationFrame(() => {
+    const card = document.querySelector(sel);
+    if (!card) return toast("Der Auftrag ist gerade nicht mehr da.", "warn");
+    const box = $("#view .view-body");
+    box.scrollTop += card.getBoundingClientRect().top - box.getBoundingClientRect().top - 60;
+    card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+    flashId = id; flashUntil = performance.now() + 2600;
+  });
+}
+let flashId = null, flashUntil = 0;
+const flashOn = id => flashId === id && performance.now() < flashUntil;
 
 /* --------------------------------- UI ----------------------------------- */
 let lastToast = 0, hiddenToasts = 0;
@@ -1810,9 +2162,9 @@ function phaseLabel(v) {
   const job = S.jobs.find(j => j.id === v.jobId);
   const leg = job ? job.legs[v.legIdx] : null;
   switch (v.phase) {
-    case "idle": return "bereit in " + N[v.at].name;
+    case "idle": return "bereit · " + vehSpot(v).t + ", " + N[v.at].short;
     case "reserved": return "disponiert, wartet auf Vorlauf";
-    case "repo": return "Leerfahrt nach " + (leg ? N[leg.from].short : "?");
+    case "repo": return leg && leg.from === v.at ? "fährt zur Abholung" : "Leerfahrt nach " + (leg ? N[leg.from].short : "?");
     case "load": return "wird beladen";
     case "haul": return "unterwegs nach " + (leg ? N[leg.to].short : "?");
     case "unload": return "wird entladen";
@@ -1862,7 +2214,7 @@ function renderHud() {
 let previewSig = "";
 const previewCache = new Map();
 function dispatchPreview(o) {
-  const sig = S.stage + "|" + S.fleet.map(f => f.uid + ":" + f.phase + "@" + f.at).join(",");
+  const sig = S.stage + "|" + S.fleet.map(f => f.uid + ":" + f.phase + "@" + f.at + (f.spot ? "~" + f.spot.lat + "," + f.spot.lon : "")).join(",");
   if (sig !== previewSig) { previewSig = sig; previewCache.clear(); }
   const hit = previewCache.get(o.id);
   if (hit) return hit;
@@ -1936,7 +2288,7 @@ function renderOrders() {
     const cg = CARGO[o.cargo];
     const rest = o.deadline - S.time;
     const tight = rest < o.refTime * 1.25;
-    return `<div class="card order${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}" data-order="${o.id}">
+    return `<div class="card order${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
       ${o.tut ? `<div class="tutribbon">⭐ Linas Übungsauftrag</div>` : ""}
       ${o.tutNext ? `<div class="tutribbon">⭐ Anschlussauftrag ab ${esc(N[o.from].short)}</div>` : ""}
       <div class="card-top">
@@ -1946,7 +2298,7 @@ function renderOrders() {
       </div>
       <div class="ship">${esc(o.shipper)}</div>
       <div class="desc">${esc(o.desc)}</div>
-      <div class="meta"><span>📍 ${esc(N[o.from].short)}</span><span>🏁 ${esc(N[o.to].short)}</span></div>
+      <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
         <span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
         <span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
@@ -1973,13 +2325,13 @@ function renderJobs() {
     const total = j.legs.reduce((a, l) => a + l.dist, 0);
     const prog = clamp(((doneDist + curProg) / total) * 100, 0, 100);
     const late = S.time > o.deadline;
-    return `<div class="card job" data-job="${j.id}">
+    return `<div class="card job${flashOn(j.id) ? " flash" : ""}" data-job="${j.id}">
       <div class="card-top">
         <span class="badge" style="--c:${late ? "#ff5c78" : "#7cd6a0"}">${cg.icon} ${cg.name}</span>
         <span class="pay">${money(o.pay)}</span>
       </div>
       <div class="ship">${esc(o.shipper)}</div>
-      <div class="meta small"><span>${esc(N[o.from].short)} → ${esc(N[o.to].short)}</span>
+      <div class="meta small"><span>${esc(oPick(o).t)} → ${esc(oDrop(o).t)}</span>
         <span>⚖️ ${kgf(o.weight)}</span><span>⏳ ${late ? "überfällig" : dur(o.deadline - S.time)}</span></div>
       <div class="chain">${j.legs.map((l, i) => {
         const mi = MODE_INFO[l.mode];
@@ -2001,8 +2353,8 @@ function renderJobs() {
     if (!j) return;
     setFollow(null);
     const pts = [];
-    j.legs.forEach(l => l.nodes.forEach(id => pts.push([N[id].lat, N[id].lon])));
-    map.fitBounds(pts, 80, 11);
+    j.legs.forEach(l => legCoords(l).forEach(p => pts.push(p)));
+    map.fitBounds(pts, 80, 14);
     closeSheet();
   });
   $$("#tab-jobs [data-follow]").forEach(b => b.onclick = (e) => {
@@ -2085,7 +2437,7 @@ function renderMarket() {
   if (!mf) marketFocus = null;
   let html = "";
   if (mf) html += `<div class="card shopfocus">
-      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung nach ${esc(mf.from)} inklusive</small></div>
+      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung zu ${esc(mf.from)} inklusive</small></div>
       <div class="buyrow">
         <button class="btn tiny" id="mfBack">↩ zurück zum Auftrag</button>
         <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
@@ -2120,7 +2472,7 @@ function renderMarket() {
   $("#tab-market").innerHTML = html;
   /* Im Fokus: Kauf wird an den Ladeort überführt, danach zurück zum Auftrag */
   const buy = (id, lease) => {
-    const v = acquire(id, lease, mf ? mf.at : null);
+    const v = acquire(id, lease, mf ? mf.at : null, mf ? mf.addr : null);
     if (v && mf) backToOrder();
   };
   $$("#tab-market [data-buy]").forEach(b => b.onclick = () => buy(b.dataset.buy, false));
