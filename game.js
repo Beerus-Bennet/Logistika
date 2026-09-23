@@ -530,7 +530,7 @@ function makeVehicle(typeId, lease) {
     jobId: null, legIdx: -1, route: null, routeDist: 0, pos: 0, timer: 0, kmTotal: 0, jobs: 0
   };
 }
-function acquire(typeId, lease, deliverTo) {
+function acquire(typeId, lease) {
   const t = vType(typeId);
   if (!t) return;
   if (t.stage > S.stage) return toast("Erst ab Etappe " + t.stage + " verfügbar.", "warn");
@@ -544,12 +544,9 @@ function acquire(typeId, lease, deliverTo) {
     logMoney("fleet", "Geleast: " + t.name, 0);
   }
   const v = makeVehicle(typeId, lease);
-  /* Aus dem Planer heraus gekauft: Überführung direkt an den Ladeort */
-  if (deliverTo && N[deliverTo] && N[deliverTo].modes.includes(t.mode)) v.at = deliverTo;
   S.fleet.push(v);
   toast((lease ? "Geleast: " : "Gekauft: ") + t.name + " – stationiert in " + N[v.at].name, "ok");
   render();
-  return v;
 }
 
 function release(uid) {
@@ -654,19 +651,17 @@ function bestOption(opts) {
   return best;
 }
 
-function openPlanner(orderId, preferVi) {
+function openPlanner(orderId) {
   const o = S.orders.find(x => x.id === orderId);
   if (!o) return;
   const variants = buildVariants(o);
   if (!variants.length) return toast("Mit deinen Verkehrsträgern gibt es dafür keine Route.", "warn");
   /* Vorausgewählt wird die Variante, die mit der eigenen Flotte am meisten
      übrig lässt – nicht stur die schnellste, die vielleicht gar kein freies
-     Fahrzeug hat (z. B. Straße, obwohl nur das Lastenrad frei ist).
-     Zurück aus dem Markt: die Route, für die gerade eingekauft wurde. */
-  const opts = planOptions(o, variants);
-  const best = preferVi != null && opts[preferVi] ? opts[preferVi] : bestOption(opts);
+     Fahrzeug hat (z. B. Straße, obwohl nur das Lastenrad frei ist). */
+  const best = bestOption(planOptions(o, variants));
   const vi = best ? best.vi : 0;
-  planState = { order: o, variants, vi, assign: best ? best.assign.map(u => u || null) : assignFor(variants[0], o), showAll: {} };
+  planState = { order: o, variants, vi, assign: best ? best.assign.slice() : assignFor(variants[0], o), showAll: {} };
   renderPlanner(true);
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   if (typeof tutSignal === "function") tutSignal("openPlanner", o);
@@ -730,56 +725,6 @@ function vehOptHTML(r, i, on) {
     <span class="vo-tx"><b>${esc(t.name)}</b><small>📍 ${esc(N[f.at].name)}</small></span>
     ${badge}
   </button>`;
-}
-
-/* ---------------- Fahrzeug fehlt: direkt zum passenden im Markt -------------
-   Welche Typen könnten diese Teilstrecke fahren? Gibt es einen eigenen, der
-   nur gerade unterwegs ist? Der Knopf springt in den Markt, zeigt nur die
-   passenden, und nach dem Kauf geht es zurück zum Auftrag.               */
-function fitTypes(leg, o) {
-  return VEHICLES.filter(t => t.mode === leg.mode && canCarry(t, o.cargo, o.weight, leg.maxHop))
-    .sort((a, b) => a.price - b.price);
-}
-function missingHelpHTML(leg, o, i) {
-  const fit = fitTypes(leg, o);
-  const now = fit.filter(t => t.stage <= S.stage && unlockedModes().includes(t.mode));
-  const busy = S.fleet.filter(f => f.phase !== "idle" && fit.some(t => t.id === f.type));
-  const busyNote = busy.length
-    ? `<div class="modenote busynote">⏳ ${busy.slice(0, 2).map(f => vType(f.type).icon + " " + esc(vType(f.type).name) + " · " + esc(phaseLabel(f))).join("<br>")}</div>`
-    : "";
-  if (!fit.length) return busyNote + `<div class="modenote">Kein Fahrzeug im Spiel schafft diese Teilstrecke – nimm die andere Route oder einen anderen Auftrag.</div>`;
-  if (!now.length) {
-    const st = Math.min(...fit.map(t => Math.max(t.stage, firstStageWith(t.mode))));
-    return busyNote + `<button class="btn tiny ghost disabled shopjump">🔒 Passendes Fahrzeug erst ab Etappe ${st}</button>`;
-  }
-  const from = now[0].price;
-  /* Reicht das Geld nicht, steht gleich die Leasingrate dabei */
-  const lease = Math.min(...now.map(t => t.daily + t.price * LEASE_RATE));
-  const price = S.money >= from ? "ab " + money(from) : "Leasing ab " + money(lease) + "/Tag";
-  return busyNote + `<button class="btn tiny shopjump" data-shop="${i}">🛒 ${now.length === 1 ? esc(now[0].name) : now.length + " passende Fahrzeuge"} im Markt · ${price}</button>`;
-}
-let marketFocus = null;          /* { orderId, leg, ids, label, at } solange der Markt gefiltert ist */
-function openShopFor(legIdx) {
-  const ps = planState; if (!ps) return;
-  const o = ps.order, leg = ps.variants[ps.vi].legs[legIdx];
-  const cg = CARGO[o.cargo], mi = MODE_INFO[leg.mode];
-  const ids = fitTypes(leg, o).filter(t => t.stage <= S.stage && unlockedModes().includes(t.mode)).map(t => t.id);
-  marketFocus = {
-    orderId: o.id, vi: ps.vi, ids, at: leg.from,
-    label: `${mi.icon} ${mi.name} · ab ${kgf(o.weight)}${cg.req.length ? " · " + cg.req.map(flagName).join(" + ") : ""}`
-      + `${leg.maxHop > 400 ? " · Reichweite " + kmf(leg.maxHop) : ""}`,
-    title: o.shipper, from: N[leg.from].name
-  };
-  closeModal();
-  showTab("market");
-  $("#view .view-body").scrollTop = 0;
-}
-function backToOrder() {
-  const f = marketFocus; marketFocus = null;
-  if (f && S.orders.some(o => o.id === f.orderId)) {
-    showTab("orders");
-    openPlanner(f.orderId, f.vi);
-  } else { toast("Der Auftrag ist inzwischen weg.", "warn"); render(); }
 }
 
 /* Freie Fahrzeuge eines anderen Verkehrsträgers tauchen in der Auswahl
@@ -991,7 +936,6 @@ function renderPlanner(fit) {
            </div>`
         : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, mind. ${kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
       ${modeNote(d.leg, o, ps)}
-      ${rows.length ? "" : missingHelpHTML(d.leg, o, i)}
       ${d.repo && !d.repo.ok ? `<div class="warnbox">Dieses Fahrzeug erreicht den Ladeort nicht.</div>` : ""}
     </div>`;
   }).join("");
@@ -1037,7 +981,6 @@ function renderPlanner(fit) {
   $$("#modalBody .vopt").forEach(b => b.onclick = () => {
     ps.assign[+b.dataset.leg] = b.dataset.uid; renderPlanner(false);
   });
-  $$("#modalBody [data-shop]").forEach(b => b.onclick = () => openShopFor(+b.dataset.shop));
   $$("#modalBody [data-more]").forEach(b => b.onclick = () => {
     ps.showAll = ps.showAll || {}; ps.showAll[+b.dataset.more] = true; renderPlanner(false);
   });
@@ -1822,9 +1765,7 @@ function phaseLabel(v) {
 let hudAvatarKey = "";
 function renderHud() {
   if (S.player) {
-    const av = S.player.avatar;
-    const key = (av.photo ? "p" + av.photo.length + av.photo.slice(-32) : "")
-      + JSON.stringify(Object.assign({}, av, { photo: null })) + S.player.color;
+    const key = JSON.stringify(S.player.avatar) + S.player.color;
     if (key !== hudAvatarKey) {
       hudAvatarKey = key;
       $("#hudAvatar").innerHTML = portraitHTML(S.player.avatar, 42, { uid: "hud", bg: false });
@@ -2080,17 +2021,9 @@ function flagName(f) {
 
 function renderMarket() {
   const groups = ["b", "r", "i", "l", "s", "a"];
-  const mf = marketFocus && S.orders.some(o => o.id === marketFocus.orderId) ? marketFocus : null;
-  if (!mf) marketFocus = null;
   let html = "";
-  if (mf) html += `<div class="card shopfocus">
-      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung nach ${esc(mf.from)} inklusive</small></div>
-      <div class="buyrow">
-        <button class="btn tiny" id="mfBack">↩ zurück zum Auftrag</button>
-        <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
-      </div></div>`;
   groups.forEach(m => {
-    const list = VEHICLES.filter(v => v.mode === m && (!mf || mf.ids.includes(v.id)));
+    const list = VEHICLES.filter(v => v.mode === m);
     if (!list.length) return;
     const mi = MODE_INFO[m];
     const avail = unlockedModes().includes(m);
@@ -2098,7 +2031,7 @@ function renderMarket() {
     html += list.map(t => {
       const locked = t.stage > S.stage || !avail;
       const lease = t.daily + t.price * LEASE_RATE;
-      return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
+      return `<div class="card shop${locked ? " locked" : ""}">
         <div class="card-top"><span class="vicon">${t.icon}</span>
           <div class="vname">${esc(t.name)}<small>${esc(t.brand)}</small></div>
           <span class="price">${money(t.price)}</span></div>
@@ -2117,17 +2050,8 @@ function renderMarket() {
     }).join("");
   });
   $("#tab-market").innerHTML = html;
-  /* Im Fokus: Kauf wird an den Ladeort überführt, danach zurück zum Auftrag */
-  const buy = (id, lease) => {
-    const v = acquire(id, lease, mf ? mf.at : null);
-    if (v && mf) backToOrder();
-  };
-  $$("#tab-market [data-buy]").forEach(b => b.onclick = () => buy(b.dataset.buy, false));
-  $$("#tab-market [data-lease]").forEach(b => b.onclick = () => buy(b.dataset.lease, true));
-  if (mf) {
-    $("#mfBack").onclick = backToOrder;
-    $("#mfAll").onclick = () => { marketFocus = null; renderMarket(); };
-  }
+  $$("#tab-market [data-buy]").forEach(b => b.onclick = () => acquire(b.dataset.buy, false));
+  $$("#tab-market [data-lease]").forEach(b => b.onclick = () => acquire(b.dataset.lease, true));
 }
 function firstStageWith(mode) {
   for (const st of STAGES) if (st.modes.includes(mode)) return st.n;
@@ -2226,7 +2150,6 @@ let lastPanel = "orders";
 let renderDirty = true;
 
 function showTab(name) {
-  if (name !== "market") marketFocus = null;     /* Markt-Fokus gilt nur für den direkten Sprung */
   activeTab = name;
   if (name !== "map") lastPanel = name;
   $$(".navbtn").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
@@ -2352,8 +2275,6 @@ function boot() {
   $("#liveBtn").onclick = followNext;
   $("#phoneBtn").onclick = openPhone;
   $("#hudMoney").onclick = openLedger;
-  $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
-  $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
   renderPhoneBadge();
   $("#zoomIn").onclick = () => map.zoomBy(1);
   $("#zoomOut").onclick = () => map.zoomBy(-1);

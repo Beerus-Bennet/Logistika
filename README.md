@@ -15,12 +15,6 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    Name. Die Figuren sind halbrealistisch gezeichnet: Gesichtsanatomie,
    Hautschattierung, Haarsträhnen mit Glanz – alles als reines SVG, ohne eine
    einzige Bilddatei. Aus der Sicht dieser Figur läuft das ganze Spiel.
-   **📸 Aus Foto:** Selfie aufnehmen oder ein Bild wählen – das Spiel zeichnet
-   daraus direkt im Browser ein Comic-Porträt (Stile: Comic, Comic kräftig,
-   Original; mit Zoom und Verschieben). Ein gespeichertes Memoji oder Bitmoji
-   lässt sich genauso als Bild nehmen oder einfügen. Das Foto verlässt das
-   Gerät nicht, gespeichert wird nur das fertige 256-px-Porträt. Im laufenden
-   Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
 2. **Firma anmelden** – Firmenname, Hausfarbe und eine Herkunft, die über
    Startkapital und Startfahrzeug entscheidet:
    Fahrradkurier (1.000 € + zwei Lastenräder), Rollerkurier (1.000 € + zwei
@@ -55,10 +49,6 @@ setzt die passenden Fahrzeuge ein.
    Planer zeigt eine Minikarte Abholung, Ziel und alle Fahrzeuge – die
    gestrichelte Linie ist die Leerfahrt, samt Kilometern und Kosten. Ein Teil der
    Ausschreibungen startet bewusst dort, wo gerade ein Fahrzeug frei steht.
-   Fehlt für eine Teilstrecke das passende Fahrzeug (etwa ein Binnenschiff),
-   springt der Knopf „🛒 … im Markt“ direkt zu den Fahrzeugen, die genau diese
-   Strecke schaffen. Gekauft oder geleast wird es gleich an den Ladeort
-   überführt, und danach geht es zurück zum Auftrag.
 4. **Kosten im Blick behalten** – Umschlagzeiten beim Moduswechsel und
    Tagesfixkosten gehen ebenfalls von der Marge ab.
 
@@ -222,7 +212,7 @@ Unterverzeichnis wie unter einer eigenen Domain.
 
 ## Technik
 
-Kein Framework, kein Build, keine Abhängigkeit. Reine Skriptdateien, eine
+Kein Framework, kein Build, keine Abhängigkeit. Drei Skriptdateien, eine
 CSS-Datei, ein Service Worker.
 
 ```
@@ -230,7 +220,6 @@ index.html              Aufbau der Oberfläche
 style.css               Comic-Design in Blau, Ansichten, Dialoge
 data.js                 Weltdaten: Knoten, Strecken, Fahrzeuge, Ladungen, Etappen, Nebel
 avatar.js               Charakter-Baukasten: Porträts und Brustbilder als reines SVG
-photo.js                Figur aus Foto: Selfie/Bild → Comic-Porträt, alles im Browser
 lina.png, ART.md        optionale eigene Artwork für die Disponentin
 player-*.png, PLAYER-ART.md  optionale eigene Porträts für die Spielfigur
 map.js                  eigene Slippy-Map-Engine auf <canvas>
@@ -260,12 +249,6 @@ angeschnittener Iris, Limbusring, Irisfasern, Lidschatten, zwei Glanzlichtern,
 Wimpernkranz mit Schwung und Lidfalte, Brauen aus einzelnen Haarstrichen, Nase
 mit Schattenseite und Glanzkante, Lippen mit Amorbogen. Dazu eine Spur
 Asymmetrie, damit das Gesicht nicht wie ein Symbol wirkt.
-
-**Foto-Porträt** – kein KI-Dienst und kein Server: `photo.js` schneidet das Bild
-auf 256 × 256 px zu und filtert es auf dem Gerät. Ein mehrfacher Bilateral-Filter
-glättet Flächen und lässt Kanten stehen, weiche Tonstufen sorgen für
-Cel-Shading, und eine Differenz zweier Weichzeichner (XDoG) liefert die
-Tuschelinien. Sticker mit Transparenz bekommen zusätzlich eine Außenkontur.
 
 **Nebel** – ein halbtransparenter Layer auf einem zweiten Canvas, aus dem
 Lichtkegel, Routenkorridore und Fahrzeuge per `destination-out` ausgestanzt

@@ -306,6 +306,11 @@ const VEHICLES = [
   {id:"v-urbanarrow",name:"Urban Arrow Cargo L (Kühlbox)",     brand:"E-Lastenrad",      mode:"b", cap:125,       speed:22,  costKm:0.06, daily:6,     price:8900,      stage:1, range:80,    icon:"🚲", flags:["kuehl"]},
   {id:"v-chike",    name:"Chike E-Kart Anhängerzug",           brand:"E-Lastenrad",      mode:"b", cap:180,       speed:20,  costKm:0.07, daily:8,     price:11500,     stage:2, range:70,    icon:"🚲", flags:[]},
 
+  /* ---- Straße: Zweirad ---- */
+  {id:"v-simson",   name:"Simson S51 mit Kurierbox",           brand:"Moped",            mode:"r", cap:35,        speed:46,  costKm:0.07, daily:3,     price:2900,      stage:1, range:230,   icon:"🛵", flags:[]},
+  {id:"v-liberty",  name:"Piaggio Liberty 50 mit Topcase",     brand:"Motorroller",      mode:"r", cap:45,        speed:40,  costKm:0.06, daily:3.5,   price:3400,      stage:1, range:200,   icon:"🛵", flags:[]},
+  {id:"v-kumpan",   name:"Kumpan 54 Ride (E-Roller)",          brand:"E-Roller",         mode:"r", cap:40,        speed:40,  costKm:0.03, daily:4,     price:4600,      stage:1, range:70,    icon:"🛵", flags:[]},
+
   /* ---- Straße: leicht ---- */
   {id:"v-caddy",    name:"VW Caddy Cargo Maxi",                brand:"Kastenwagen",      mode:"r", cap:670,       speed:78,  costKm:0.29, daily:26,    price:29000,     stage:1, range:900,   icon:"🚐", flags:[]},
   {id:"v-sprinter", name:"Mercedes-Benz Sprinter 317 CDI",     brand:"Transporter",      mode:"r", cap:1400,      speed:84,  costKm:0.38, daily:38,    price:54000,     stage:1, range:1100,  icon:"🚐", flags:[]},
@@ -387,7 +392,11 @@ const CARGO = {
   schuett: {name:"Schüttgut",          icon:"⛏️",  req:["schuett"],  rate:0.85, minStage:2, minKg:200000, maxKg:180000000},
   adr:     {name:"Gefahrgut (ADR)",    icon:"☣️",  req:["adr"],      rate:1.60, minStage:3, minKg:900,    maxKg:200000000},
   sperrig: {name:"Schwer- & Sperrgut", icon:"🏗️",  req:["sperrig"],  rate:1.75, minStage:3, minKg:8000,   maxKg:180000000},
-  cont:    {name:"Container (FCL)",    icon:"📮",  req:["container"],rate:1.10, minStage:3, minKg:180000, maxKg:220000000}
+  cont:    {name:"Container (FCL)",    icon:"📮",  req:["container"],rate:1.10, minStage:3, minKg:180000, maxKg:220000000},
+  /* Nur für Mr. Snus' Privatkunden – taucht in normalen Ausschreibungen nie auf */
+  snus:    {name:"Snus",               icon:"🥫",  req:[],           rate:1.00, minStage:99,minKg:1,      maxKg:50},
+  /* Nur für Don Pablos Kundschaft */
+  ware:    {name:"Ware",               icon:"❄️",  req:[],           rate:1.00, minStage:99,minKg:1,      maxKg:200000000}
 };
 
 /* Auftraggeber & Ladungsbeschreibungen – realistische Situationen */

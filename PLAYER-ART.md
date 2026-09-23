@@ -26,5 +26,5 @@ Fehlt eine Datei, passiert nichts – der SVG-Baukasten bleibt.
 
 ## Nach dem Austausch
 
-In `sw.js` die `VERSION` hochzählen (z. B. `v14` → `v15`). Sonst holt der
+In `sw.js` die `VERSION` hochzählen (z. B. `v16` → `v17`). Sonst holt der
 Service Worker die alten Dateien aus dem Zwischenspeicher.

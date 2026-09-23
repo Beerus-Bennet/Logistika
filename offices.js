@@ -374,6 +374,8 @@ function openBase(nodeId, tierIdx, rent) {
       + "stell Personal ein und ordne dem Standort Fahrzeuge zu.", baseId: b.id
   });
   save(); render();
+  /* Erstes Büro: Lina erklärt Personal, Rollen und Einrichtung */
+  if (typeof tutTabHook === "function") tutTabHook("bases");
 }
 
 function closeBase(id) {
@@ -505,7 +507,7 @@ function baseDispatch(b) {
   const here = [N[b.node].lat, N[b.node].lon];
   const reach = reachKm(b);
   const cands = S.orders
-    .filter(o => hav(here, [N[o.from].lat, N[o.from].lon]) <= reach)
+    .filter(o => !o.snus && !o.pablo && hav(here, [N[o.from].lat, N[o.from].lon]) <= reach)
     .sort((a, c) => c.pay - a.pay);
   if (!cands.length) return false;
 
@@ -625,8 +627,7 @@ function phoneMsg(m) {
   if (S.phone.msgs.length > 40) S.phone.msgs.length = 40;
   S.phone.unread++;
   renderPhoneBadge(true);
-  const icon = m.kind === "trouble" ? "📞" : m.kind === "good" ? "📞" : "📞";
-  toast(icon + " Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok");
+  toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok");
 }
 function renderPhoneBadge(ring) {
   const el = $("#phoneBtn"); if (!el) return;
@@ -653,6 +654,8 @@ function renderPhone() {
   if (!$("#modal").classList.contains("open")) return;
   const msgs = S.phone.msgs;
   const body = msgs.length ? msgs.map(m => {
+    if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
+    if (m.kind === "pablo" && typeof pabloMsgHTML === "function") return pabloMsgHTML(m);
     const b = baseById(m.baseId);
     const acts = (m.actions || []).map(a =>
       `<button class="btn tiny${a.cost > S.money ? " disabled" : ""}" data-fix="${m.id}" data-idx="${a.idx}">
@@ -672,6 +675,7 @@ function renderPhone() {
     </div>`;
   }).join("") : `<div class="empty">Noch keine Anrufe. Sobald du Standorte mit Personal führst,
      meldet sich hier dein Team.</div>`;
+  const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
 
   $("#modalBody").innerHTML = `
     <div class="mhead">
@@ -681,10 +685,13 @@ function renderPhone() {
     </div>
     <div class="phone-list">${body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
+  $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
   $("#mClose").onclick = closeModal;
   $("#mCancel").onclick = closeModal;
   $$("#modalBody [data-fix]").forEach(btn =>
     btn.onclick = () => applyFix(btn.dataset.fix, +btn.dataset.idx));
+  if (typeof bindSnusMsgs === "function") bindSnusMsgs();
+  if (typeof bindPabloMsgs === "function") bindPabloMsgs();
 }
 
 /* ------------------------------ Tagesablauf ------------------------------ */

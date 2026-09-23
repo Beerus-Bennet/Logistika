@@ -994,26 +994,3 @@ body.report-open #toasts,body.report-open #tutor,body.report-open #spot{display:
 .rp-end{text-align:center;border-top:2px dashed #1b1f26;padding-top:10px;margin-top:12px!important}
 .rp.interpol .btn{font-family:var(--font)}
 body.tut-talk #toasts{display:none}
-
-/* Markt im Fokus: nur die passenden Fahrzeuge für einen Auftrag */
-.shopjump{display:block;width:100%;margin-top:7px}
-.card.shopfocus{background:#fff6dc;border-color:#c98a00}
-.card.shop.match{box-shadow:4px 4px 0 var(--ink),0 0 0 3px #ffd36b}
-
-/* ======================= Figur aus Foto ======================= */
-.ph-edit{margin:4px 0 8px}
-.ph-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.ph-btns .btn{margin-top:0}
-.ph-styles{display:flex;gap:6px;justify-content:center;margin-top:9px;flex-wrap:wrap}
-.ph-styles button{border:2.5px solid var(--ink);border-radius:99px;background:var(--card);padding:4px 11px;
-  font-weight:800;font-size:12px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
-.ph-styles button.on{background:var(--blue);color:#fff;transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
-.ph-zoom{display:flex;align-items:center;gap:8px;margin:9px auto 0;max-width:260px;font-size:12px;font-weight:800}
-.ph-zoom input{flex:1;accent-color:var(--blue)}
-.ph-hint{text-align:center;font-size:11.5px;font-weight:700;opacity:.7;margin-top:5px}
-.ph-note{font-size:11px;font-weight:600;line-height:1.4;opacity:.7;margin-top:8px;text-align:center}
-.frame.ph-drag{cursor:grab;touch-action:none}
-.frame.ph-drag:active{cursor:grabbing}
-.pt-photo{object-position:center!important;-webkit-user-drag:none;user-select:none}
-#hudAvatar{cursor:pointer}
-#modalBody .av-stage .frame{width:170px;height:170px}
