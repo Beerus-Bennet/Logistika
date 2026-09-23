@@ -56,7 +56,7 @@ setzt die passenden Fahrzeuge ein.
    Muss es für den nächsten Auftrag erst leer zum Ladeort, kostet das Sprit und
    Zeit. Darum zeigt jede Ausschreibung, welches Fahrzeug sie übernehmen würde
    (✅ steht schon am Abholort, ↩️ müsste erst leer hinfahren, 🚫 gerade keins
-   passend), die Liste lässt sich nach „📍 Wenig Leerfahrt“ sortieren, und im
+   passend), die Liste lässt sich nach „📍 Leerfahrt“ sortieren, und im
    Planer zeigt eine Minikarte Abholung, Ziel und alle Fahrzeuge – die
    gestrichelte Linie ist die Leerfahrt, samt Kilometern und Kosten. Ein Teil der
    Ausschreibungen startet bewusst dort, wo gerade ein Fahrzeug frei steht.
@@ -246,6 +246,14 @@ bleibt die Karte links stehen und die Ansicht dockt rechts an.
 | Verkehrsnetz ein-/ausblenden | 🕸️ |
 | Nebel ein-/ausblenden | 🌫️ |
 | Zurück zur aktuellen Etappe | 🎯 |
+
+Über den **Aufträgen** sitzt eine feste Leiste: oben sortieren (💶 Erlös,
+📍 Leerfahrt, ⏳ Frist), darunter filtern – alle, nur jetzt machbare oder nach
+Ladungsart, jeweils mit Anzahl. Der **Fahrzeugmarkt** hat dieselbe Leiste:
+Kategorie (Rad, Moped, Transporter, Lkw, Binnenschiff, Schiene, Seeschiff,
+Flugzeug), Sortierung (Preis, Nutzlast, € je km, € je Tag, Tempo, Reichweite)
+und Häkchen für „freigeschaltet“, „bezahlbar“ und Eigenschaften wie Kühlung,
+Gefahrgut oder Wertkurier. Die Auswahl bleibt gespeichert.
 
 Doppeltippen zoomt nicht mehr (auch nicht die Seite), damit schnelles Tippen
 nichts verschiebt. Eine Sekunde Echtzeit entspricht bei 1× einer Spielminute. Der Spielstand wird

@@ -535,10 +535,10 @@ const TUT_STEPS = [
       return `Und jetzt der wichtigste Trick gegen Leerfahrten: Nach der Zustellung steht dein ${esc(tvName())} in `
         + `${esc(N[j.order.to].short)}. <b>Nimm als Nächstes einen Auftrag, der genau dort startet.</b> `
         + (nx ? `Einen hab ich dir schon reingelegt ⭐ – sobald dein ${esc(tvName())} dort ist, wird sein Hinweis grün. ` : "")
-        + `Mit „📍 Wenig Leerfahrt“ holst du solche Aufträge nach oben.`;
+        + `Mit „📍 Leerfahrt“ oben in der Leiste holst du solche Aufträge nach oben.`;
     },
     target: () => document.querySelector("#tab-orders .card.order.tutnext .vhintrow")
-      || document.querySelector('#tab-orders .osort [data-sort="near"]'),
+      || document.querySelector('#viewTools [data-sort="near"]'),
     before: () => {
       const j = tutJob();
       if (j && !S.orders.some(o => o.tutNext) && typeof makeFollowupOrder === "function") makeFollowupOrder(j);

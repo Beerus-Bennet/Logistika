@@ -2445,11 +2445,53 @@ function followRelevant(o) {
 function rejectBtnHTML(id) {
   return `<button class="rejectbtn" data-reject="${id}" aria-label="Ausschreibung ablehnen" title="Ablehnen">✕</button>`;
 }
-const ORDER_SORTS = [["pay", "💶 Erlös"], ["near", "📍 Wenig Leerfahrt"], ["due", "⏳ Frist"]];
+/* ------------------------ Werkzeugleiste über der Liste ------------------------
+   Sitzt fest zwischen Titel und Liste, scrollt also nicht mit weg. Neu gebaut
+   wird sie nur, wenn sich etwas ändert – sonst springt die Chipreihe zurück. */
+function setTools(tab, html, bind) {
+  const vt = $("#viewTools");
+  if (!vt) return;
+  if (!html) { if (vt._k) { vt.innerHTML = ""; vt._k = ""; vt._tab = ""; } vt.classList.remove("on"); return; }
+  vt.classList.add("on");
+  if (vt._k === html) return;
+  const keep = vt._tab === tab ? [...vt.querySelectorAll(".chiprow")].map(r => r.scrollLeft) : [];
+  vt.innerHTML = html; vt._k = html; vt._tab = tab;
+  vt.querySelectorAll(".chiprow").forEach((r, i) => { if (keep[i]) r.scrollLeft = keep[i]; });
+  bind(vt);
+}
+const chipHTML = (attr, key, label, n, on, extra) =>
+  `<button class="fchip${on ? " on" : ""}${n === 0 && !on ? " zero" : ""}${extra ? " " + extra : ""}" ${attr}="${key}">${label}${n != null ? ` <b>${n}</b>` : ""}</button>`;
+
+const ORDER_SORTS = [["pay", "💶", "Erlös"], ["near", "📍", "Leerfahrt"], ["due", "⏳", "Frist"]];
+const ORDER_CHIP = { pak: "Pakete", express: "Express", pal: "Paletten", kuehl: "Kühlware", schuett: "Schüttgut",
+  adr: "Gefahrgut", sperrig: "Schwerlast", cont: "Container", schmuck: "Schmuck", snus: "Snus", ware: "Don Pablo" };
+function orderMatches(o, p, f) {
+  if (f === "all") return true;
+  if (f === "ok") return p.ok;
+  if (f === "air") return !!o.air;
+  return o.cargo === f;
+}
+function orderToolsHTML(rows, mode, filt) {
+  const seg = `<div class="seg" aria-label="Sortieren">${ORDER_SORTS.map(([k, i, l]) =>
+    `<button data-sort="${k}" class="${k === mode ? "on" : ""}"><i>${i}</i>${l}</button>`).join("")}</div>`;
+  const n = {};
+  rows.forEach(({ o }) => { n[o.cargo] = (n[o.cargo] || 0) + 1; if (o.air) n.air = (n.air || 0) + 1; });
+  const kinds = Object.keys(CARGO).filter(k => n[k] || k === filt);
+  const icon = k => k === "snus" && typeof snusLogo === "function" ? snusLogo(14) : CARGO[k].icon;
+  const chips = [chipHTML("data-of", "all", "Alle", rows.length, filt === "all"),
+    chipHTML("data-of", "ok", "✅ jetzt machbar", rows.filter(r => r.p.ok).length, filt === "ok")];
+  if (n.air || filt === "air") chips.push(chipHTML("data-of", "air", "✈️ Luftfracht", n.air || 0, filt === "air"));
+  kinds.forEach(k => chips.push(chipHTML("data-of", k, icon(k) + " " + (ORDER_CHIP[k] || CARGO[k].name), n[k] || 0, filt === k)));
+  return seg + `<div class="chiprow">${chips.join("")}</div>`;
+}
 function renderOrders() {
   const el = $("#tab-orders");
-  if (!S.orders.length) { el.innerHTML = `<div class="empty">Gerade keine Ausschreibungen. In ein paar Stunden kommen neue herein.</div>`; return; }
+  if (!S.orders.length) {
+    setTools("orders", "");
+    el.innerHTML = `<div class="empty">Gerade keine Ausschreibungen. In ein paar Stunden kommen neue herein.</div>`; return;
+  }
   const mode = S.orderSort || "pay";
+  const filt = S.orderFilter || "all";
   const rows = S.orders.map(o => ({ o, p: dispatchPreview(o) }));
   const by = {
     pay: (a, b) => b.o.pay - a.o.pay,
@@ -2463,11 +2505,23 @@ function renderOrders() {
   S.orders.forEach(o => { if (o.tutNext && !followRelevant(o)) { delete o.tutNext; delete o.tutVeh; } });
   const pin = o => o.tut ? 2 : o.tutNext ? 1 : 0;
   rows.sort((a, b) => pin(b.o) - pin(a.o) || by(a, b));
-  const bar = `<div class="osort">${ORDER_SORTS.map(([k, l]) =>
-    `<button data-sort="${k}" class="${k === mode ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  setTools("orders", orderToolsHTML(rows, mode, filt), vt => {
+    vt.querySelectorAll("[data-sort]").forEach(b => b.onclick = () => {
+      S.orderSort = b.dataset.sort; save(); renderOrders();
+      $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
+    });
+    vt.querySelectorAll("[data-of]").forEach(b => b.onclick = () => {
+      S.orderFilter = b.dataset.of === S.orderFilter ? "all" : b.dataset.of; save(); renderOrders();
+      $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
+    });
+  });
+  /* Linas Übungsaufträge bleiben immer sichtbar, egal welcher Filter */
+  const shown = rows.filter(r => pin(r.o) || orderMatches(r.o, r.p, filt));
   const stock = (typeof snusStockHTML === "function" ? snusStockHTML() : "")
     + (typeof pabloStockHTML === "function" ? pabloStockHTML() : "");
-  el.innerHTML = bar + stock + rows.map(({ o, p }) => {
+  const none = shown.length ? "" : `<div class="empty">Keine Ausschreibung passt zu diesem Filter.
+    <button class="btn tiny ghost" id="ofReset">Alle zeigen</button></div>`;
+  el.innerHTML = stock + none + shown.map(({ o, p }) => {
     if (o.snus && typeof snusOrderCard === "function") return snusOrderCard(o, previewHTML(p));
     if (o.pablo && typeof pabloOrderCard === "function") return pabloOrderCard(o, previewHTML(p));
     const cg = CARGO[o.cargo];
@@ -2494,10 +2548,8 @@ function renderOrders() {
   }).join("");
   $$("#tab-orders .order").forEach(c => c.onclick = () => openPlanner(c.dataset.order));
   $$("#tab-orders [data-reject]").forEach(b => b.onclick = (e) => { e.stopPropagation(); rejectOrder(b.dataset.reject); });
-  $$("#tab-orders [data-sort]").forEach(b => b.onclick = () => {
-    S.orderSort = b.dataset.sort; save(); renderOrders();
-    $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
-  });
+  const rs = $("#ofReset");
+  if (rs) rs.onclick = () => { S.orderFilter = "all"; save(); renderOrders(); };
 }
 
 function renderJobs() {
@@ -2617,36 +2669,87 @@ function bindAuto() {
   };
 }
 function flagName(f) {
-  return { kuehl: "Kühlung", adr: "Gefahrgut", sperrig: "Schwerlast", container: "Container", schuett: "Schüttgut" }[f] || f;
+  return { kuehl: "Kühlung", adr: "Gefahrgut", sperrig: "Schwerlast", container: "Container", schuett: "Schüttgut", kurier: "Wertkurier" }[f] || f;
 }
+
+/* ------------------------------ Markt-Filter ------------------------------ */
+const MKT_CATS = [["all", "Alle"], ["rad", "🚲 Rad"], ["moped", "🛵 Moped"], ["van", "🚐 Transporter"], ["lkw", "🚛 Lkw"],
+  ["i", "🛥️ Binnenschiff"], ["l", "🚆 Schiene"], ["s", "🚢 Seeschiff"], ["a", "✈️ Flugzeug"]];
+const MKT_SORTS = [["std", "Nach Art"], ["price", "Preis ↑"], ["priceD", "Preis ↓"], ["cap", "Nutzlast"],
+  ["km", "€ je km"], ["day", "€ je Tag"], ["speed", "Tempo"], ["range", "Reichweite"]];
+const MKT_FLAGS = [["kurier", "💎 Wertkurier"], ["kuehl", "🧊 Kühlung"], ["adr", "☣️ Gefahrgut"], ["sperrig", "🏗️ Schwerlast"],
+  ["container", "📮 Container"], ["schuett", "⛏️ Schüttgut"]];
+function vehCat(t) {
+  if (t.mode === "b") return "rad";
+  if (t.mode === "r") return t.icon === "🛵" ? "moped" : t.icon === "🚛" ? "lkw" : "van";
+  return t.mode;
+}
+function mktState() {
+  if (!S.mkt) S.mkt = { cat: "all", sort: "std", avail: false, afford: false, flags: [] };
+  return S.mkt;
+}
+function vehLocked(t) { return t.stage > S.stage || !unlockedModes().includes(t.mode); }
+/* Alles außer der Kategorie – damit die Zahlen an den Kategorien stimmen */
+function mktPass(t, f) {
+  if (f.avail && vehLocked(t)) return false;
+  if (f.afford && t.price > S.money) return false;
+  return f.flags.every(fl => t.flags.includes(fl));
+}
+function mktActive(f) { return f.cat !== "all" || f.avail || f.afford || f.flags.length > 0; }
+function marketToolsHTML(f) {
+  const base = VEHICLES.filter(t => mktPass(t, f));
+  const cats = MKT_CATS.map(([k, l]) => chipHTML("data-mcat", k, l,
+    k === "all" ? base.length : base.filter(t => vehCat(t) === k).length, f.cat === k)).join("");
+  const sel = `<label class="fchip sel" title="Sortieren">↕<select id="mktSort" aria-label="Sortieren">${MKT_SORTS.map(([k, l]) =>
+    `<option value="${k}"${f.sort === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
+  const tg = (k, l, on) => `<button class="fchip tg${on ? " on" : ""}" data-mtg="${k}">${l}</button>`;
+  const opts = [sel, `<span class="chipdiv"></span>`, tg("avail", "🔓 freigeschaltet", f.avail), tg("afford", "💶 bezahlbar", f.afford),
+    `<span class="chipdiv"></span>`, ...MKT_FLAGS.map(([k, l]) => tg("flag:" + k, l, f.flags.includes(k)))];
+  if (mktActive(f)) opts.push(`<button class="fchip reset" data-mreset="1">✕ zurücksetzen</button>`);
+  return `<div class="chiprow first">${cats}</div><div class="chiprow">${opts.join("")}</div>`;
+}
+function bindMarketTools(vt) {
+  const f = mktState();
+  const again = () => { save(); renderMarket(); $("#view .view-body") && ($("#view .view-body").scrollTop = 0); };
+  vt.querySelectorAll("[data-mcat]").forEach(b => b.onclick = () => { f.cat = b.dataset.mcat === f.cat ? "all" : b.dataset.mcat; again(); });
+  vt.querySelectorAll("[data-mtg]").forEach(b => b.onclick = () => {
+    const k = b.dataset.mtg;
+    if (k.startsWith("flag:")) {
+      const fl = k.slice(5);
+      f.flags = f.flags.includes(fl) ? f.flags.filter(x => x !== fl) : [...f.flags, fl];
+    } else f[k] = !f[k];
+    again();
+  });
+  const so = vt.querySelector("#mktSort");
+  if (so) so.onchange = () => { f.sort = so.value; again(); };
+  const rs = vt.querySelector("[data-mreset]");
+  if (rs) rs.onclick = () => { Object.assign(f, { cat: "all", avail: false, afford: false, flags: [] }); again(); };
+}
+const MKT_SORT_FN = {
+  price: (a, b) => a.price - b.price, priceD: (a, b) => b.price - a.price, cap: (a, b) => b.cap - a.cap,
+  km: (a, b) => a.costKm - b.costKm, day: (a, b) => a.daily - b.daily, speed: (a, b) => b.speed - a.speed,
+  range: (a, b) => b.range - a.range
+};
 
 function renderMarket() {
   const groups = ["b", "r", "i", "l", "s", "a"];
   const mf = marketFocus && S.orders.some(o => o.id === marketFocus.orderId) ? marketFocus : null;
   if (!mf) marketFocus = null;
   let html = "";
-  if (mf) html += `<div class="card shopfocus">
-      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung zu ${esc(mf.from)} inklusive</small></div>
-      <div class="buyrow">
-        <button class="btn tiny" id="mfBack">↩ zurück zum Auftrag</button>
-        <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
-      </div></div>`;
-  groups.forEach(m => {
-    const list = VEHICLES.filter(v => v.mode === m && (!mf || mf.ids.includes(v.id)));
-    if (!list.length) return;
-    const mi = MODE_INFO[m];
-    const avail = unlockedModes().includes(m);
-    html += `<h3 class="grp" style="--c:${mi.color}">${mi.icon} ${mi.name}${avail ? "" : " <small>· ab Etappe " + firstStageWith(m) + "</small>"}</h3>`;
-    html += list.map(t => {
-      const locked = t.stage > S.stage || !avail;
-      const lease = t.daily + t.price * LEASE_RATE;
-      return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
+  const f = mktState();
+  if (mf) setTools("market", "");
+  else setTools("market", marketToolsHTML(f), bindMarketTools);
+  const shopCard = t => {
+    const m = t.mode, avail = unlockedModes().includes(m);
+    const locked = t.stage > S.stage || !avail;
+    const lease = t.daily + t.price * LEASE_RATE;
+    return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
         <div class="card-top"><span class="vicon">${t.icon}</span>
           <div class="vname">${esc(t.name)}<small>${esc(t.brand)}</small></div>
           <span class="price">${money(t.price)}</span></div>
         <div class="meta small">
           <span>⚖️ ${kgf(t.cap)}</span><span>🏎️ ${t.speed} km/h</span>
-          <span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>📏 ${kmf(t.range)}</span>
+          <span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>🅿️ ${money(t.daily)}/Tag</span><span>📏 ${kmf(t.range)}</span>
         </div>
         ${t.flags.length ? `<div class="flags">${t.flags.map(f => `<i>${flagName(f)}</i>`).join("")}</div>` : ""}
         ${locked
@@ -2656,9 +2759,34 @@ function renderMarket() {
                <button class="btn tiny ghost" data-lease="${t.id}">leasen · ${money(lease)}/Tag</button>
              </div>`}
       </div>`;
-    }).join("");
+  };
+  if (mf) html += `<div class="card shopfocus">
+      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung zu ${esc(mf.from)} inklusive</small></div>
+      <div class="buyrow">
+        <button class="btn tiny" id="mfBack">↩ zurück zum Auftrag</button>
+        <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
+      </div></div>`;
+  /* Im Fokus zählt nur, was die Strecke schafft; sonst greifen die Filter */
+  const pass = t => mf ? mf.ids.includes(t.id) : mktPass(t, f) && (f.cat === "all" || vehCat(t) === f.cat);
+  const sortFn = !mf && MKT_SORT_FN[f.sort];
+  if (sortFn) {
+    const list = VEHICLES.filter(pass).sort((a, b) => sortFn(a, b) || a.price - b.price);
+    const lbl = (MKT_SORTS.find(x => x[0] === f.sort) || [])[1];
+    if (list.length) html += `<div class="sortnote">${list.length} Fahrzeug${list.length === 1 ? "" : "e"} · sortiert nach ${esc(lbl)}</div>`;
+    html += list.map(shopCard).join("");
+  } else groups.forEach(m => {
+    const list = VEHICLES.filter(v => v.mode === m && pass(v));
+    if (!list.length) return;
+    const mi = MODE_INFO[m];
+    const avail = unlockedModes().includes(m);
+    html += `<h3 class="grp" style="--c:${mi.color}">${mi.icon} ${mi.name}${avail ? "" : " <small>· ab Etappe " + firstStageWith(m) + "</small>"}</h3>`;
+    html += list.map(shopCard).join("");
   });
+  if (!mf && !VEHICLES.some(pass)) html += `<div class="empty">Kein Fahrzeug passt zu diesen Filtern.
+    <button class="btn tiny ghost" id="mfReset">Filter zurücksetzen</button></div>`;
   $("#tab-market").innerHTML = html;
+  const mr = $("#mfReset");
+  if (mr) mr.onclick = () => { Object.assign(f, { cat: "all", avail: false, afford: false, flags: [] }); save(); renderMarket(); };
   /* Im Fokus: Kauf wird an den Ladeort überführt, danach zurück zum Auftrag */
   const buy = (id, lease) => {
     const v = acquire(id, lease, mf ? mf.at : null, mf ? mf.addr : null);
@@ -2810,6 +2938,7 @@ function render() {
   renderHud();
   /* Während eines Ziehvorgangs bleibt die Liste stehen. */
   if (document.body.classList.contains("dragging-staff")) return;
+  if (activeTab !== "orders" && activeTab !== "market") setTools(activeTab, "");
   ({ orders: renderOrders, jobs: renderJobs, fleet: renderFleet, bases: renderBases,
      market: renderMarket, world: renderWorld }[activeTab] || function () {})();
   renderDirty = false;
@@ -2848,6 +2977,19 @@ function applyPadding() {
   map.setPadding(0, wide && activeTab !== "map" ? 430 : 0);
 }
 function syncPadding() { applyPadding(); setTimeout(applyPadding, 340); }
+/* Die Kopfleiste ist je nach Gerät und Schrift unterschiedlich hoch. Die
+   Ansichten docken exakt darunter an – sonst blitzt zwischen beiden ein
+   Streifen Karte durch. */
+function syncHeadH() {
+  const h = $("#hud");
+  if (!h || !h.offsetHeight) return;
+  document.documentElement.style.setProperty("--head-h", h.offsetHeight + "px");
+}
+if (typeof ResizeObserver === "function") {
+  const hud = document.getElementById("hud");
+  if (hud) new ResizeObserver(syncHeadH).observe(hud);
+}
+window.addEventListener("resize", syncHeadH);
 
 /* --------------------------------- Start -------------------------------- */
 function boot() {
