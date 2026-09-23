@@ -29,6 +29,7 @@ function fmt(n, d) { return n.toLocaleString("de-DE", { minimumFractionDigits: d
 function kgf(n) {
   if (n >= 1e6) return fmt(n / 1e6, n >= 1e7 ? 0 : 1) + " kt";
   if (n >= 1000) return fmt(n / 1000, n >= 1e4 ? 0 : 1) + " t";
+  if (n < 10 && Math.round(n) !== n) return fmt(n, n < 1 ? 2 : 1).replace(/0$/, "") + " kg";
   return Math.round(n) + " kg";
 }
 function kmf(n) { return Math.round(n).toLocaleString("de-DE") + " km"; }
@@ -531,14 +532,60 @@ function makeAirOrder() {
   return null;
 }
 
+/* --------------------------- Wertsachen-Kurier ---------------------------
+   Juweliere, Uhrmacher, Auktionshäuser: kleine, teure Stücke quer durch
+   Berlin. Nur Kuriere mit persönlicher Übergabe (Rad, Moped) dürfen sie
+   fahren. Das Honorar richtet sich nach dem Warenwert – so lohnt sich das
+   Fahrrad auch dann noch, wenn längst Schiffe und Flieger unterwegs sind. */
+function jewelOpen() { return S.orders.filter(o => o.jewel).length; }
+function makeJewelOrder() {
+  const districts = unlockedNodes().filter(n => n.id.startsWith("b-") && n.type === "city");
+  if (districts.length < 2) return null;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const job = pick(JEWEL_JOBS);
+    const home = typeof shipperHome === "function" ? shipperHome(job.from) : null;
+    const a = home ? N[home.node] : pick(districts);
+    const b = pick(districts.filter(n => n.id !== a.id));
+    if (!b) continue;
+    const weight = +(job.kg * rnd(0.8, 1.25)).toFixed(2);
+    const fast = plan(a.id, b.id, "schmuck", weight, "time");
+    if (!fast) continue;
+    const mult = JEWEL_STAGE_MULT[Math.min(JEWEL_STAGE_MULT.length, S.stage) - 1];
+    const value = Math.round(rnd(job.value[0], job.value[1]) * mult / 100) * 100;
+    /* Versicherter Kurier: ein paar Promille vom Warenwert plus Grundgebühr */
+    const pay = Math.round(value * rnd(0.0035, 0.006) + 22 + fast.dist * 1.6);
+    /* Frist so, dass es auch mit dem Rad (19–22 km/h) gut zu schaffen ist */
+    const bikeMin = (fast.dist * 1.15 / 19) * 60;
+    const o = {
+      id: "A" + (S.seq++), from: a.id, to: b.id, cargo: "schmuck", weight, jewel: { item: job.item, value },
+      pay, deadline: Math.round(S.time + bikeMin * 1.9 + rnd(45, 90)),
+      shipper: job.from, desc: job.item + " " + job.why + " · Warenwert " + money(value), created: S.time,
+      refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
+      expire: Math.round(S.time + rnd(120, 300)),
+      pick: home ? home.addr : makeAddr(a.id), drop: makeAddr(b.id)
+    };
+    withLastMile(o);
+    return o;
+  }
+  return null;
+}
+function spawnJewels() {
+  /* Wer Rad oder Moped hat, bekommt ein paar mehr davon */
+  const couriers = S.fleet.some(f => vType(f.type).flags.includes("kurier"));
+  const max = (couriers ? 4 : 2) - (S.stage <= 2 ? 1 : 0);
+  if (jewelOpen() >= max) return;
+  const o = makeJewelOrder();
+  if (o) { S.orders.push(o); renderDirty = true; }
+}
+
 function orderCap() {
   return Math.min(48, 6 + S.stage * 3 + Math.floor(S.fleet.length * 0.9));
 }
 function spawnOrders(max) {
   const cap = orderCap();
   let added = 0;
-  /* Mr. Snus' Privatkunden zählen nicht gegen das Auftragsbuch */
-  while (S.orders.filter(o => !o.snus && !o.pablo).length < cap && added < (max || 3)) {
+  /* Mr. Snus' Privatkunden und die Wertsachen zählen nicht gegen das Auftragsbuch */
+  while (S.orders.filter(o => !o.snus && !o.pablo && !o.jewel).length < cap && added < (max || 3)) {
     /* Ab Etappe 4 ist ein gutes Viertel reine Luftfracht – mit eigener
        Maschine noch etwas mehr. */
     const airShare = S.fleet.some(f => vType(f.type).mode === "a") ? 0.36 : 0.26;
@@ -1058,7 +1105,7 @@ function renderPlanner(fit) {
 
   $("#modalBody").innerHTML = `
     <div class="mhead">
-      <div><div class="mtitle">${cg.icon} ${esc(o.shipper)}</div>
+      <div><div class="mtitle">${o.snus && typeof snusLogo === "function" ? snusLogo(24) : cg.icon} ${esc(o.shipper)}</div>
       <div class="msub">${esc(o.desc)}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
@@ -1079,6 +1126,7 @@ function renderPlanner(fit) {
       <div><span>Ankunft</span><b class="${ev.ok ? (late ? "bad" : "good") : ""}">${ev.ok ? stamp(eta) + (late ? " · zu spät" : "") : "—"}</b></div>
       <div><span>Deckungsbeitrag</span><b class="${ev.ok ? (profit > 0 ? "good" : "bad") : ""}">${ev.ok ? money(profit) : "—"}</b></div>
     </div>
+    ${o.tut || o.tutNext ? "" : `<button class="rejectlink" id="mReject">🗑️ Ausschreibung ablehnen${o.snus || o.pablo ? " und Kunden blockieren" : ""}</button>`}
     <div class="mbtns">
       <button class="btn ghost" id="mCancel">Abbrechen</button>
       <button class="btn${ev.ok ? "" : " disabled"}" id="mAccept">${ev.ok ? "Auftrag annehmen" : "Fahrzeug fehlt"}</button>
@@ -1103,6 +1151,8 @@ function renderPlanner(fit) {
   });
   $("#mCancel").onclick = () => closeModal();
   $("#mClose").onclick = () => closeModal();
+  const rj = $("#mReject");
+  if (rj) rj.onclick = () => rejectOrder(o.id);
   if (ev.ok) $("#mAccept").onclick = () => acceptOrder(ps.vi);
   if (fit) {
     const pts = [];
@@ -1124,6 +1174,33 @@ function acceptOrder(vi) {
   closeModal();
   if (!tut) toast("Auftrag angenommen: " + o.shipper, "ok");   /* im Tutorial sagt Lina das */
   render();
+}
+
+/* Ausschreibung ablehnen: verschwindet ohne Folgen. Bei Mr. Snus' Kunden
+   werden die Dosen wieder frei. */
+function rejectOrder(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o || o.tut || o.tutNext) return;
+  S.orders = S.orders.filter(x => x.id !== id);
+  if (planState && planState.order.id === id) closeModal();
+  if (selected && selected.id === id) { selected = null; renderInspector(); }
+  toast(o.snus || o.pablo ? "🚫 " + o.shipper + " blockiert." : "Ausschreibung abgelehnt: " + o.shipper, "ok");
+  save(); render(); mapRedraw();
+}
+/* Angenommenen Auftrag abbrechen: Privatkunden von Mr. Snus und Don Pablo
+   ohne Folgen (Ware zurück ins Lager), reguläre gegen Vertragsstrafe. */
+function cancelJob(id) {
+  const j = S.jobs.find(x => x.id === id);
+  if (!j) return;
+  const o = j.order;
+  if (o.snus || o.pablo) {
+    failJob(j, "abgebrochen");
+  } else {
+    askConfirm("Auftrag stornieren?", o.shipper + ": Der Auftraggeber berechnet 20 % Vertragsstrafe (" + money(Math.round(o.pay * 0.2)) + "). Das Fahrzeug bleibt, wo es gerade ist.",
+      "Stornieren", () => { failJob(j, "storniert"); save(); render(); }, true);
+    return;
+  }
+  save(); render();
 }
 
 function startJob(o, variant, assign) {
@@ -1159,8 +1236,16 @@ function autoDispatch() {
 }
 function autoDispatchRun(idleModes) {
   const inPool = (f) => !dispatchPool || dispatchPool.has(f.uid);
-  /* Mr. Snus' Kundschaft bleibt Handarbeit */
-  const cands = S.orders.filter(o => !o.snus && !o.pablo).sort((a, b) => b.pay - a.pay);
+  /* Mr. Snus' Kundschaft fährt die Dispo mit – außer wer auffällig viel zahlt
+     oder auffällig viel will: den lässt sie liegen und sagt Bescheid. Ob der
+     wirklich ein Fahnder ist (Hemd, glatt rasiert) oder einfach großzügig,
+     muss der Chef selbst entscheiden. Don Pablos Ware fasst sie nicht an. */
+  S.orders.forEach(o => {
+    if (!o.snus || o.snus.flagged || typeof snusSuspicious !== "function" || !snusSuspicious(o)) return;
+    o.snus.flagged = true;
+    toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
+  });
+  const cands = S.orders.filter(o => !o.pablo && !(o.snus && o.snus.flagged)).sort((a, b) => b.pay - a.pay);
   let examined = 0, taken = 0;
   for (const o of cands) {
     if (examined++ > 30 || taken >= 3) break;
@@ -1184,6 +1269,27 @@ function autoDispatchRun(idleModes) {
     }
   }
 }
+
+/* -------------------------------- CO₂ ------------------------------------
+   Je gefahrenem Kilometer nach Fahrzeug und Beladung (VEH_CO2), Leerfahrten
+   eingeschlossen. Dazu Tonnenkilometer für die Kennzahl g CO₂ je tkm und
+   die Ersparnis der Räder gegenüber einem Kastenwagen.                   */
+function co2State() {
+  if (!S.eco) S.eco = { kg: 0, empty: 0, tkm: 0, bikeKm: 0, byMode: {} };
+  return S.eco;
+}
+function addCO2(veh, t, km, loadKg) {
+  const f = VEH_CO2[t.id] || [0.2, 0.3];
+  const share = t.cap > 0 ? Math.min(1, loadKg / t.cap) : 0;
+  const kg = km * (f[0] + (f[1] - f[0]) * share);
+  const e = co2State();
+  e.kg += kg;
+  if (!loadKg) e.empty += kg;
+  e.tkm += km * loadKg / 1000;
+  e.byMode[t.mode] = (e.byMode[t.mode] || 0) + kg;
+  if (t.mode === "b") e.bikeKm += km;
+}
+function co2f(kg) { return kg >= 1000 ? fmt(kg / 1000, kg >= 1e5 ? 0 : 1) + " t" : fmt(kg, kg < 10 ? 1 : 0) + " kg"; }
 
 /* ------------------------------- Simulation ----------------------------- */
 function legCoords(leg) {
@@ -1282,22 +1388,37 @@ function beginLeg(job, idx) {
   }
 }
 
+/* Fahrzeug bleibt dort stehen, wo es gerade ist (statt zurückzuspringen) */
+function parkHere(f) {
+  const moving = (f.phase === "repo" || f.phase === "haul") && f.route;
+  if (!moving) return;
+  const p = routePointAt(f.route, f.pos);
+  const job = S.jobs.find(j => j.id === f.jobId), leg = job && job.legs[f.legIdx];
+  const cands = leg ? [f.at, leg.from, leg.to] : [f.at];
+  let best = f.at, bd = Infinity;
+  cands.forEach(id => { if (!N[id]) return; const d = hav(p, nodePt(id)); if (d < bd) { bd = d; best = id; } });
+  f.at = best;
+  setSpot(f, p, { t: "abgestellt unterwegs", a: N[best].short });
+}
 function failJob(job, reason) {
   job.legs.forEach(l => {
     const f = S.fleet.find(x => x.uid === l.veh);
-    if (f && f.jobId === job.id || (f && f.phase === "reserved")) { f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; }
+    if (f && f.jobId === job.id || (f && f.phase === "reserved")) {
+      parkHere(f);
+      f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null;
+    }
   });
   /* Privatkunde von Mr. Snus / Don Pablo: keine Vertragsstrafe, die Ware geht zurück ins Lager */
   if (job.order.pablo) {
     if (typeof pabloGiveBack === "function") pabloGiveBack(job.order);
     S.jobs = S.jobs.filter(j => j.id !== job.id);
-    toast("❄️ " + job.order.shipper + " ist abgesprungen – die Ware liegt wieder im Hangar.", "warn");
+    toast("❄️ " + job.order.shipper + (reason === "abgebrochen" ? ": Übergabe abgebrochen" : " ist abgesprungen") + " – die Ware liegt wieder im Hangar.", "warn");
     return;
   }
   if (job.order.snus) {
     if (typeof snusGiveBack === "function") snusGiveBack(job.order);
     S.jobs = S.jobs.filter(j => j.id !== job.id);
-    toast("🥫 " + job.order.shipper + " hat abgesagt – Dosen wieder im Lager.", "warn");
+    toast("[[snus]] " + job.order.shipper + (reason === "abgebrochen" ? ": Übergabe abgebrochen" : " hat abgesagt") + " – Dosen wieder im Lager.", "warn");
     return;
   }
   const fee = Math.round(job.order.pay * 0.2);
@@ -1336,10 +1457,10 @@ function finishLeg(job, veh) {
   S.money += pay; S.revenue += pay; S.done++;
   if (o.snus) {
     logMoney("snus", o.shipper + " · " + o.snus.n + " Dosen", pay);
-    if (typeof snusDelivered === "function") snusDelivered(o);
+    if (typeof snusDelivered === "function") snusDelivered(o, pay);
   } else if (o.pablo) {
     logMoney("pablo", o.shipper + " · " + kgf(o.pablo.kg), pay);
-    if (typeof pabloDelivered === "function") pabloDelivered(o);
+    if (typeof pabloDelivered === "function") pabloDelivered(o, pay);
   } else logMoney("job", o.shipper + " · " + N[o.from].short + " → " + N[o.to].short, pay);
   if (job.cost > 0) logMoney("drive", "Fahrt und Umschlag · " + o.shipper, -job.cost);
   S.xp += Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2));
@@ -1396,10 +1517,8 @@ function tick(dtMin) {
     if (veh.phase === "repo" || veh.phase === "haul") {
       const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * dtMin) / 60;
       veh.pos += step; veh.kmTotal += step;
-      if (veh.phase === "haul") {
-        S.kmTotal += step;
-        S.co2 += step * (CO2[t.mode] || 0.05) * (job.order.weight / 1000);
-      }
+      if (veh.phase === "haul") S.kmTotal += step;
+      addCO2(veh, t, step, veh.phase === "haul" ? job.order.weight : 0);
       if (veh.pos >= veh.routeDist) {
         const cost = veh.routeDist * t.costKm;
         S.money -= cost; S.expense += cost; job.cost += cost;
@@ -1423,6 +1542,9 @@ function tick(dtMin) {
   S.orders = S.orders.filter(o => o.expire > S.time && o.deadline > S.time + 30);
   if (S.orders.length !== before) renderDirty = true;
   if (S.time - S.lastSpawn > 120) { S.lastSpawn = S.time; if (spawnOrders(3 + Math.floor(S.fleet.length / 6))) renderDirty = true; }
+  /* Anfangs nur ab und zu ein Juwelier, später regelmäßig */
+  if (S.time - (S.lastJewel || -999) > (S.stage <= 2 ? 150 : 75)) { S.lastJewel = S.time; spawnJewels(); }
+  if (typeof prunePhone === "function") prunePhone();
   tickBases(dtMin);
   if (typeof tickSnus === "function") tickSnus(dtMin);
   if (typeof tickPablo === "function") tickPablo(dtMin);
@@ -1765,6 +1887,17 @@ const CITY_DOT_MAX_Z = 9;
    Mr. Snus und Don Pablo. Orange: angenommen und in Arbeit – steht an der
    Abholung, bis geladen ist, danach am Ziel. Liegen Nadeln zu dicht, werden
    sie zu einer mit Zahl zusammengefasst; Antippen zoomt hinein.        */
+/* Mr. Snus' Logo als Bild für die Karte (einmal aus dem SVG gebaut) */
+const SNUS_PIN = "@snus";
+let snusImg = null;
+function snusPinImg() {
+  if (snusImg) return snusImg.complete ? snusImg : null;
+  if (typeof snusLogo !== "function") return null;
+  snusImg = new Image();
+  snusImg.onload = () => mapRedraw();
+  snusImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(snusLogo(64, true));
+  return null;
+}
 const PIN_COL = { yellow: "#ffc12e", orange: "#ff8a3d", gray: "#a3aebb", white: "#ffffff" };
 let pinHits = [];
 function jobPicked(j) {
@@ -1772,19 +1905,25 @@ function jobPicked(j) {
   const v = S.fleet.find(f => f.uid === j.legs[0].veh);
   return !!(v && v.jobId === j.id && v.legIdx === 0 && (v.phase === "haul" || v.phase === "unload"));
 }
+/* Wo die Nadel steht: bei regulären Aufträgen am Abholort des Auftraggebers,
+   bei Mr. Snus und Don Pablo beim Kunden in der Siedlung – abgeholt wird
+   dort ja nur das eigene Lager. */
+const shady = o => !!(o && (o.snus || o.pablo));
+function orderPinPt(o) { return addrPt(shady(o) ? oDrop(o) : oPick(o)); }
+function jobPinPt(j) { return addrPt(jobPicked(j) ? oDrop(j.order) : oPick(j.order)); }
 function mapPins() {
   const out = [];
   S.jobs.forEach(j => {
-    const picked = jobPicked(j), a = picked ? oDrop(j.order) : oPick(j.order);
-    out.push({ kind: "job", id: j.id, p: addrPt(a), col: "orange", icon: picked ? "🏁" : CARGO[j.order.cargo].icon, prio: 2 });
+    const picked = jobPicked(j);
+    out.push({ kind: "job", id: j.id, p: jobPinPt(j), col: "orange", icon: picked ? "🏁" : j.order.snus ? SNUS_PIN : CARGO[j.order.cargo].icon, prio: 2 });
     /* Noch nicht abgeholt: das Ziel steht schon als kleine Fahne da */
     if (!picked) out.push({ kind: "job", id: j.id, p: addrPt(oDrop(j.order)), col: "white", icon: "🏁", prio: -1, flag: true });
   });
   S.orders.forEach(o => {
     const grey = o.snus || o.pablo;
     const star = o.tut || o.tutNext;       /* Linas Übung: eigene Nadel mit Stern, nie gebündelt */
-    out.push({ kind: "order", id: o.id, p: addrPt(oPick(o)), col: grey ? "gray" : "yellow",
-      icon: star ? "⭐" : o.snus ? "🥫" : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
+    out.push({ kind: "order", id: o.id, p: orderPinPt(o), col: grey ? "gray" : "yellow",
+      icon: star ? "⭐" : o.snus ? SNUS_PIN : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
   });
   return out;
 }
@@ -1814,6 +1953,9 @@ function drawPinShape(c, x, y, R, fill, icon, opts) {
     c.font = "800 " + Math.round(R * 0.95) + "px " + LABEL_FONT;
     c.fillStyle = "#0d1b2a"; c.textAlign = "center"; c.textBaseline = "middle";
     c.fillText(opts.count > 99 ? "99+" : String(opts.count), cx, cy + 1);
+  } else if (icon === SNUS_PIN) {
+    const img = snusPinImg();
+    if (img) c.drawImage(img, cx - R * 0.62, cy - R * 0.62, R * 1.24, R * 1.24);
   } else if (icon) {
     c.font = Math.round(R * 0.95) + "px system-ui, 'Apple Color Emoji','Segoe UI Emoji', sans-serif";
     c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
@@ -1843,7 +1985,11 @@ function drawPins(m, z) {
   /* Ausgewählte Ausschreibung: ihr Ziel als weiße Fahne */
   if (selected && selected.kind === "order") {
     const o = S.orders.find(x => x.id === selected.id);
-    if (o) { const d = oDrop(o), s2 = m.screenPos(d.lat, d.lon); drawPinShape(ctx, s2[0], s2[1], R * 0.85, PIN_COL.white, "🏁"); }
+    if (o) {
+      /* Gegenstück zur Nadel: das Ziel – bei Schattenkunden das eigene Lager */
+      const d = shady(o) ? oPick(o) : oDrop(o), s2 = m.screenPos(d.lat, d.lon);
+      drawPinShape(ctx, s2[0], s2[1], R * 0.85, PIN_COL.white, shady(o) ? "📦" : "🏁");
+    }
   }
   groups.slice().reverse().forEach(g => {
     /* Ziel-Fähnchen zählen im Bündel nicht mit */
@@ -1950,8 +2096,18 @@ function onMapTap(px, py) {
     const pts = best.items.map(it => {
       const o = it.kind === "order" ? S.orders.find(x => x.id === it.id) : null;
       const j = it.kind === "job" ? S.jobs.find(x => x.id === it.id) : null;
-      return o ? addrPt(oPick(o)) : j ? addrPt(jobPicked(j) ? oDrop(j.order) : oPick(j.order)) : null;
+      return o ? orderPinPt(o) : j ? jobPinPt(j) : null;
     }).filter(Boolean);
+    /* Alle an derselben Adresse (z. B. mehrere Kunden am eigenen Lager) –
+       Zoomen trennt sie nie, also eine kleine Auswahl zeigen. */
+    let spread = 0;
+    pts.forEach(a => pts.forEach(b => { spread = Math.max(spread, hav(a, b)); }));
+    if (pts.length > 1 && (spread < 0.03 || map.zoom >= 17.5)) {
+      selected = { kind: "cluster", items: best.items };
+      renderInspector();
+      mapRedraw();
+      return;
+    }
     if (pts.length > 1) map.fitBounds(pts, 90, Math.max(map.zoom + 1.5, 13));
     else map.flyTo(best.at, map.zoom + 2, 600);
     selected = null;
@@ -1983,7 +2139,7 @@ function renderInspector() {
     const o = S.orders.find(x => x.id === selected.id);
     if (!o) { selected = null; return renderInspector(); }
     const cg = CARGO[o.cargo], pa = oPick(o), da = oDrop(o);
-    const icon = o.snus ? "🥫" : o.pablo ? "❄️" : cg.icon;
+    const icon = o.snus && typeof snusLogo === "function" ? snusLogo(18) : o.pablo ? "❄️" : cg.icon;
     el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
       <div class="ins-title">${icon} ${esc(o.shipper)} <span class="ins-pin ${o.snus || o.pablo ? "gray" : "yellow"}">offen</span></div>
       <div class="ins-sub">${esc(o.desc)}</div>
@@ -1993,6 +2149,7 @@ function renderInspector() {
       <div class="ins-btns">
         <button class="btn tiny" id="insPlan">📋 Planen &amp; annehmen</button>
         <button class="btn tiny ghost" id="insList">In der Auftragsliste</button>
+        ${o.tut || o.tutNext ? "" : `<button class="btn tiny ghost danger" id="insReject">🗑️</button>`}
       </div>`;
   } else if (selected.kind === "job") {
     const j = S.jobs.find(x => x.id === selected.id);
@@ -2001,7 +2158,7 @@ function renderInspector() {
     const veh = cur ? S.fleet.find(f => f.uid === cur.veh) : null;
     const picked = jobPicked(j);
     el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
-      <div class="ins-title">${CARGO[o.cargo].icon} ${esc(o.shipper)} <span class="ins-pin orange">in Arbeit</span></div>
+      <div class="ins-title">${o.snus && typeof snusLogo === "function" ? snusLogo(18) : CARGO[o.cargo].icon} ${esc(o.shipper)} <span class="ins-pin orange">in Arbeit</span></div>
       <div class="ins-addr"><span class="${picked ? "done" : ""}">📍 ${esc(addrText(oPick(o), true))}</span><span>🏁 ${esc(addrText(oDrop(o), true))}</span></div>
       <div class="ins-row">${veh ? vType(veh.type).icon + " " + esc(phaseLabel(veh)) : "wartet auf Vorlauf"}</div>
       <div class="ins-row small">⚖️ ${kgf(o.weight)} · 💶 ${money(o.pay)} · ⏳ ${S.time > o.deadline ? "überfällig" : dur(o.deadline - S.time)}</div>
@@ -2009,6 +2166,24 @@ function renderInspector() {
         ${veh ? `<button class="btn tiny ${S.follow === veh.uid ? "" : "ghost"}" id="insFollowJob" data-uid="${veh.uid}">📡 live verfolgen</button>` : ""}
         <button class="btn tiny ghost" id="insJobs">Unter „Live“ zeigen</button>
       </div>`;
+  } else if (selected.kind === "cluster") {
+    const rows = selected.items.map(it => {
+      const o = it.kind === "order" ? S.orders.find(x => x.id === it.id) : null;
+      const j = it.kind === "job" ? S.jobs.find(x => x.id === it.id) : null;
+      const oo = o || (j && j.order);
+      if (!oo) return "";
+      const icon = oo.snus && typeof snusLogo === "function" ? snusLogo(18) : oo.pablo ? "❄️" : CARGO[oo.cargo].icon;
+      const tag = o ? `<span class="ins-pin ${shady(o) ? "gray" : "yellow"}">offen</span>` : `<span class="ins-pin orange">in Arbeit</span>`;
+      return `<button class="ins-pick" data-k="${it.kind}" data-id="${esc(it.id)}">${icon} <b>${esc(oo.shipper)}</b> ${tag}<small>${money(oo.pay)}</small></button>`;
+    }).filter(Boolean);
+    if (!rows.length) { selected = null; return renderInspector(); }
+    el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
+      <div class="ins-title">📍 ${rows.length} Aufträge an einer Adresse</div>
+      <div class="ins-picks">${rows.join("")}</div>`;
+    el.querySelectorAll(".ins-pick").forEach(b => b.onclick = () => {
+      selected = { kind: b.dataset.k, id: b.dataset.id };
+      renderInspector(); mapRedraw();
+    });
   } else if (selected.kind === "base") {
     const b = (S.bases || []).find(x => x.id === selected.id);
     if (!b) { selected = null; return renderInspector(); }
@@ -2035,6 +2210,8 @@ function renderInspector() {
   if (f) f.onclick = () => { setFollow(S.follow === selected.id ? null : selected.id); renderInspector(); };
   const pl = $("#insPlan");
   if (pl) pl.onclick = () => { const id = selected.id; selected = null; renderInspector(); openPlanner(id); };
+  const ir = $("#insReject");
+  if (ir) ir.onclick = () => rejectOrder(selected.id);
   const li = $("#insList");
   if (li) li.onclick = () => { const id = selected.id; selected = null; renderInspector(); showInList("orders", id); };
   const fj = $("#insFollowJob");
@@ -2075,7 +2252,7 @@ const LEDGER_KIND = {
   staff: { icon: "👥", name: "Personal" },
   deco:  { icon: "🪴", name: "Einrichtung" },
   stage: { icon: "🌍", name: "Etappe" },
-  snus:  { icon: "🥫", name: "Snus" },
+  snus:  { icon: "🎩", name: "Snus" },
   pablo: { icon: "❄️", name: "Don Pablo" }
 };
 function logMoney(kind, label, amount) {
@@ -2084,10 +2261,12 @@ function logMoney(kind, label, amount) {
   S.ledger.unshift({ t: S.time, k: kind, l: label, a: Math.round(amount) });
   if (S.ledger.length > 260) S.ledger.length = 260;
 }
-function ledgerSums(fromTime) {
+const SHADOW_KINDS = new Set(["snus", "pablo"]);
+function ledgerSums(fromTime, shadow) {
   let inc = 0, exp = 0;
   (S.ledger || []).forEach(e => {
     if (fromTime != null && e.t < fromTime) return;
+    if (SHADOW_KINDS.has(e.k) !== !!shadow) return;
     if (e.a >= 0) inc += e.a; else exp -= e.a;
   });
   return { inc, exp, net: inc - exp };
@@ -2100,7 +2279,8 @@ function renderLedger() {
   if (!$("#modal").classList.contains("open")) return;
   const day = Math.floor(S.time / 1440) * 1440;
   const today = ledgerSums(day), all = ledgerSums();
-  const rows = (S.ledger || []);
+  /* Nebengeschäfte stehen nur im Schattenbuch auf dem Diensthandy */
+  const rows = (S.ledger || []).filter(e => !SHADOW_KINDS.has(e.k));
   let html = "", lastDay = null;
   rows.forEach(e => {
     const d = dayOf(e.t);
@@ -2150,7 +2330,9 @@ function toast(msg, kind, low) {
   const box = $("#toasts");
   const el = document.createElement("div");
   el.className = "toast " + (kind || "");
-  el.textContent = hiddenToasts && low ? msg + "  (+" + hiddenToasts + ")" : msg;
+  const txt = hiddenToasts && low ? msg + "  (+" + hiddenToasts + ")" : msg;
+  if (txt.includes("[[snus]]") && typeof snusLogo === "function") el.innerHTML = esc(txt).replace("[[snus]]", snusLogo(18));
+  else el.textContent = txt;
   if (low) hiddenToasts = 0;
   box.appendChild(el);
   while (box.children.length > 2) box.removeChild(box.firstChild);
@@ -2260,6 +2442,9 @@ function followRelevant(o) {
   const j = S.jobs.find(x => x.id === f.jobId) || S.jobs.find(x => x.legs.some(l => l.veh === f.uid && !l.done));
   return !!j && j.legs[j.legs.length - 1].to === o.from;
 }
+function rejectBtnHTML(id) {
+  return `<button class="rejectbtn" data-reject="${id}" aria-label="Ausschreibung ablehnen" title="Ablehnen">✕</button>`;
+}
 const ORDER_SORTS = [["pay", "💶 Erlös"], ["near", "📍 Wenig Leerfahrt"], ["due", "⏳ Frist"]];
 function renderOrders() {
   const el = $("#tab-orders");
@@ -2292,21 +2477,23 @@ function renderOrders() {
       ${o.tut ? `<div class="tutribbon">⭐ Linas Übungsauftrag</div>` : ""}
       ${o.tutNext ? `<div class="tutribbon">⭐ Anschlussauftrag ab ${esc(N[o.from].short)}</div>` : ""}
       <div class="card-top">
-        <span class="badge" style="--c:${tight ? "#ff5c78" : "#ffc12e"}">${cg.icon} ${cg.name}</span>
+        <span class="badge" style="--c:${tight ? "#ff5c78" : o.jewel ? "#b9a6ff" : "#ffc12e"}">${cg.icon} ${cg.name}</span>
         ${o.air ? `<span class="badge air">✈️ Luftfracht</span>` : ""}
         <span class="pay">${money(o.pay)}</span>
+        ${o.tut || o.tutNext ? "" : rejectBtnHTML(o.id)}
       </div>
       <div class="ship">${esc(o.shipper)}</div>
       <div class="desc">${esc(o.desc)}</div>
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
-        <span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
+        ${o.jewel ? `<span class="jewelonly">🚲🛵 nur Rad &amp; Moped</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
         <span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
       </div>
       ${previewHTML(p)}
     </div>`;
   }).join("");
   $$("#tab-orders .order").forEach(c => c.onclick = () => openPlanner(c.dataset.order));
+  $$("#tab-orders [data-reject]").forEach(b => b.onclick = (e) => { e.stopPropagation(); rejectOrder(b.dataset.reject); });
   $$("#tab-orders [data-sort]").forEach(b => b.onclick = () => {
     S.orderSort = b.dataset.sort; save(); renderOrders();
     $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
@@ -2342,6 +2529,7 @@ function renderJobs() {
       <div class="meta small"><span>${veh ? esc(phaseLabel(veh)) : "wartet"}</span><span>${Math.round(prog)} %</span></div>
       <div class="buyrow">
         <button class="btn tiny ghost" data-zoom="${j.id}">🗺️ Route zeigen</button>
+        <button class="btn tiny ghost danger" data-canceljob="${j.id}">${o.snus || o.pablo ? "✋ Übergabe abbrechen" : "✕ Stornieren"}</button>
         ${veh ? `<button class="btn tiny ${S.follow === veh.uid ? "" : "ghost"}" data-follow="${veh.uid}">
           ${S.follow === veh.uid ? "📡 verfolgt" : "📡 live verfolgen"}</button>` : ""}
       </div>
@@ -2357,6 +2545,7 @@ function renderJobs() {
     map.fitBounds(pts, 80, 14);
     closeSheet();
   });
+  $$("#tab-jobs [data-canceljob]").forEach(b => b.onclick = (e) => { e.stopPropagation(); cancelJob(b.dataset.canceljob); });
   $$("#tab-jobs [data-follow]").forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     setFollow(S.follow === b.dataset.follow ? null : b.dataset.follow);
@@ -2522,11 +2711,11 @@ function infoHTML() {
       <div class="meta small">
         <span>📦 ${S.done} zugestellt</span><span>⏰ ${S.late} verspätet</span><span>❌ ${S.failed} geplatzt</span>
         <span>🎯 ${punkt} % pünktlich</span><span>🛣️ ${kmf(S.kmTotal)}</span>
-        <span>🌱 ${fmt(S.co2 / 1000, 1)} t CO₂</span>
         <span>🚚 ${S.fleet.length} Fahrzeuge</span><span>⭐ ${S.xp} XP</span>
       </div>
       <div class="meta small"><span>Einnahmen ${money(S.revenue)}</span><span>Ausgaben ${money(S.expense)}</span></div>
     </div>
+    ${co2HTML()}
     <div class="card"><div class="vname">So spielst du<small>Kurzanleitung</small></div>
       <ol class="how">
         <li>Unter <b>Aufträge</b> eine Ausschreibung antippen.</li>
@@ -2538,7 +2727,7 @@ function infoHTML() {
       <div class="buyrow">
         <button class="btn tiny ghost" id="tutAgainBtn">🎓 Tutorial mit Lina nochmal</button>
         <button class="btn tiny ghost" data-talk="offices">🏢 Büro-Tutorial</button>
-        ${S.tutSeen && S.tutSeen.snus ? `<button class="btn tiny ghost" data-talk="snus">🥫 Mr. Snus erklärt</button>` : ""}
+        ${S.tutSeen && S.tutSeen.snus ? `<button class="btn tiny ghost" data-talk="snus">${typeof snusLogo === "function" ? snusLogo(16) : "🎩"} Mr. Snus erklärt</button>` : ""}
         ${S.tutSeen && S.tutSeen.pablo ? `<button class="btn tiny ghost" data-talk="pablo">❄️ Don Pablo erklärt</button>` : ""}
       </div></div>
     <div class="card"><div class="vname">Tipp<small>${esc(pick(TIPS))}</small></div></div>
@@ -2554,6 +2743,28 @@ function infoHTML() {
     <div class="card"><div class="vname">Spielstand<small>wird automatisch im Browser gesichert</small></div>
       <button class="btn tiny ghost" id="resetBtn">neues Spiel starten</button></div>
     <p class="attr">Kartendaten © OpenStreetMap-Mitwirkende, ODbL. LOGISTIKA ist ein freies Hobbyprojekt.</p>`;
+}
+
+/* Klimabilanz: gesamt, je Tonnenkilometer, Anteil der Leerfahrten, nach
+   Verkehrsträger und was die Räder gegenüber dem Kastenwagen sparen */
+function co2HTML() {
+  const e = co2State();
+  const perTkm = e.tkm > 0.5 ? Math.round(e.kg * 1000 / e.tkm) : null;
+  const emptyPct = e.kg > 0 ? Math.round(e.empty / e.kg * 100) : 0;
+  const saved = e.bikeKm * CO2_VAN_KM;
+  const modes = Object.keys(MODE_INFO).filter(m => e.byMode[m] > 0.05 || (m === "b" && e.bikeKm > 0));
+  const bench = perTkm == null ? "" : perTkm < 60 ? "sehr sauber" : perTkm < 120 ? "ordentlich" : perTkm < 300 ? "viel Straße" : "viel Luftfracht";
+  return `<div class="card">
+      <div class="vname">🌱 Klimabilanz<small>CO₂ aus allen gefahrenen Kilometern, Leerfahrten eingeschlossen</small></div>
+      <div class="kpis co2">
+        <div><span>Ausgestoßen</span><b>${co2f(e.kg)}</b></div>
+        <div><span>je Tonnenkilometer</span><b>${perTkm == null ? "—" : perTkm + " g"}</b>${bench ? `<small>${bench}</small>` : ""}</div>
+        <div><span>davon Leerfahrten</span><b class="${emptyPct > 30 ? "bad" : ""}">${emptyPct} %</b></div>
+        <div><span>Mit dem Rad gespart</span><b class="good">${co2f(saved)}</b><small>${kmf(e.bikeKm)} geradelt</small></div>
+      </div>
+      ${modes.length ? `<div class="meta small">${modes.map(m => `<span>${MODE_INFO[m].icon} ${co2f(e.byMode[m] || 0)}</span>`).join("")}</div>` : ""}
+      <div class="co2note">Zum Vergleich: Lkw ≈ 80–110 g, Güterzug ≈ 15–30 g, Binnenschiff ≈ 30 g, Containerschiff ≈ 10 g, Luftfracht ≈ 300–600 g je Tonnenkilometer (mit Wirkung in großer Höhe gut das Doppelte). Kleine Lieferwagen liegen wegen der geringen Zuladung weit darüber. E-Lastenräder fahren praktisch emissionsfrei.</div>
+    </div>`;
 }
 
 function renderWorld() {
@@ -2719,6 +2930,11 @@ function boot() {
   $("#zoomOut").onclick = () => map.zoomBy(-1);
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
   window.addEventListener("keydown", e => { if (e.key === "Escape" && !tutorialRunning()) { closeModal(); } });
+  /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste
+     (iOS ignoriert user-scalable=no) – die Karte zoomt selbst mit + / − und
+     Pinch auf der Karte. */
+  document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
+  ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
   /* Solange ein Finger auf dem Schirm liegt (und kurz danach), wird die
      offene Liste nicht neu gezeichnet – sonst verschwindet die Karte oder
      der Knopf unter dem Finger und der Tipp geht ins Leere. */

@@ -75,7 +75,18 @@ const SHIPPER_HOME = {
   "Charité Logistikzentrum": ["b-mitte", "Charitéplatz", 52.5255, 13.3775],
   "Notariat Friedrichstraße": ["b-mitte", "Friedrichstraße", 52.5185, 13.3885],
   "Fahrradwerkstatt Kreuzberg": ["b-kreuz", "Oranienstraße", 52.5010, 13.4170],
-  "Fotolabor Prenzlauer Berg": ["b-pberg", "Kastanienallee", 52.5375, 13.4090]
+  "Fotolabor Prenzlauer Berg": ["b-pberg", "Kastanienallee", 52.5375, 13.4090],
+  /* Wertsachen (JEWEL_JOBS) */
+  "Juwelier am Kurfürstendamm": ["b-char", "Kurfürstendamm", 52.5024, 13.3255],
+  "Uhrmacherwerkstatt Friedrichstraße": ["b-mitte", "Friedrichstraße", 52.5160, 13.3888],
+  "Goldschmiede Hackesche Höfe": ["b-mitte", "Rosenthaler Straße", 52.5245, 13.4022],
+  "Auktionshaus Fasanenstraße": ["b-char", "Fasanenstraße", 52.5008, 13.3285],
+  "Münzhandlung am Gendarmenmarkt": ["b-mitte", "Markgrafenstraße", 52.5140, 13.3935],
+  "Perlenhaus Prenzlauer Berg": ["b-pberg", "Kastanienallee", 52.5385, 13.4095],
+  "Pfandleihhaus Karl-Marx-Straße": ["b-neu", "Karl-Marx-Straße", 52.4800, 13.4380],
+  "Diamantschleiferei Kreuzberg": ["b-kreuz", "Ritterstraße", 52.5035, 13.4070],
+  "Luxuskaufhaus am Tauentzien": ["b-char", "Tauentzienstraße", 52.5015, 13.3400],
+  "Privatbank am Gendarmenmarkt": ["b-mitte", "Jägerstraße", 52.5145, 13.3920]
 };
 function shipperHome(name) {
   const h = SHIPPER_HOME[name];

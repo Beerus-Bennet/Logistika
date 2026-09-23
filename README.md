@@ -66,6 +66,17 @@ setzt die passenden Fahrzeuge ein.
    überführt, und danach geht es zurück zum Auftrag.
 4. **Kosten im Blick behalten** – Umschlagzeiten beim Moduswechsel und
    Tagesfixkosten gehen ebenfalls von der Marge ab.
+5. **Wachsen** – Erfahrung bringt Level, Level und Kapital schalten die nächste
+   Weltregion frei.
+
+### Ablehnen und stornieren
+
+Jede Ausschreibung hat oben rechts ein **✕** (auch im Planer und an der
+Stecknadel): weg damit, ohne Kosten. Bei Snus- und Pablo-Kunden wird der Kunde
+dabei gleich blockiert. Schon angenommene Aufträge lassen sich unter *Live*
+stornieren – regulär kostet das 20 % Vertragsstrafe, eine Übergabe im
+Schattengeschäft abzubrechen kostet nichts, die Ware geht zurück ins Lager.
+Das Fahrzeug bleibt dort stehen, wo es gerade ist.
 
 ### Adressen und Stecknadeln
 
@@ -77,14 +88,16 @@ selbst sind nur noch Knoten im Netz: aus der Nähe verschwindet ihr Punkt, dafü
 stehen auf der Karte **Stecknadeln** im Comic-Stil:
 
 * 🟡 **gelb** – offene Ausschreibung beim Auftraggeber (⭐ = Linas Übung)
-* ⚪ **grau** – Kundschaft von Mr. Snus und Don Pablo
+* ⚪ **grau** – Kundschaft von Mr. Snus (mit seinem Logo) und Don Pablo – die
+  Nadel steht beim Kunden in der Siedlung, abgeholt wird im eigenen Lager
 * 🟠 **orange** – angenommen und in Arbeit: an der Abholung, bis geladen ist,
   danach am Ziel; eine kleine 🏁-Fahne zeigt vorher schon, wohin es geht
 
 Antippen öffnet die Ausschreibung mit beiden Adressen – „Planen & annehmen“
 führt in den Planer, „In der Auftragsliste“ springt zur Karte im Menü und hebt
 sie hervor. Liegen Nadeln zu dicht, werden sie mit einer Zahl gebündelt;
-Antippen zoomt hinein. Fahrzeuge fahren bis vor die Tür, laden dort und parken
+Antippen zoomt hinein. Stehen mehrere Aufträge an genau derselben Adresse,
+erscheint stattdessen eine kleine Auswahl. Fahrzeuge fahren bis vor die Tür, laden dort und parken
 nach der Zustellung beim Empfänger. Eigene Büros stehen als kleines Haus in der
 Firmenfarbe an ihrer Adresse.
 
@@ -96,14 +109,29 @@ Liste (ein paar Sorten, je 68 bis 128 Dosen) und kauft für 5 € pro Dose ein.
 Die Ware liegt dann in einem Späti in der Stadt, und private Kunden melden
 sich als **graue Aufträge**: 10 € pro Dose, geliefert wird mit der eigenen
 Flotte – in die großen Siedlungen am Stadtrand (Marzahn, Hellersdorf,
-Gropiusstadt, Märkisches Viertel, Falkenhagener Feld, Neu-Hohenschönhausen …). Diese Aufträge nimmt nur der Spieler selbst an – weder die
-Auto-Disposition noch die Büros fassen sie an. „Nein, danke mein Akh“ lehnt ab.
+Gropiusstadt, Märkisches Viertel, Falkenhagener Feld, Neu-Hohenschönhausen …).
+„Nein, danke mein Akh“ lehnt ab.
 
-Unter den Kunden sind **Zivilfahnder**. Sie verraten sich durch ihr Verhalten:
-Sie zahlen mehr als 10 € pro Dose, wollen gleich 16 oder mehr Dosen, haben
-„deine Nummer von einem Kumpel“ und tragen Hemd, glatt rasiert. Wer an sie
-liefert, verliert Ware und Geld und sitzt **14 Tage** – die Zeit läuft im
-Schnelldurchlauf weiter, Fixkosten, Löhne und Miete auch.
+Unter den Kunden sind **Zivilfahnder**. Sie zahlen mehr als 10 € pro Dose,
+wollen gleich 16 oder mehr Dosen, haben „deine Nummer von einem Kumpel“ und
+tragen **weißes Hemd und sind glatt rasiert**. Wer an sie liefert, verliert
+Ware und Geld und sitzt **14 Tage** – die Zeit läuft im Schnelldurchlauf
+weiter, Fixkosten, Löhne und Miete auch. Mehr zahlen aber auch **großzügige
+Stammkunden** (Geburtstag, Trinkgeld, WG-Vorrat) – die haben nie Hemd UND
+glatte Wange zugleich. Also: Profilbild prüfen.
+
+Die **Auto-Disposition** fährt unauffällige Kunden selbst. Zahlt einer mehr
+oder will auffällig viel, lässt sie ihn liegen, meldet sich mit „🕵️ Dispo
+lässt … liegen“ und markiert die Karte – dann entscheidet der Spieler. Die
+Büros fassen Schattengeschäfte nie an, Don Pablo bleibt immer Handarbeit.
+
+### Diensthandy
+
+Nachrichten löschen sich nach **24 Stunden** von selbst („Sicherheits­maßnahmen“,
+sagt Lina) – 🔥 zeigt, wie lange eine noch bleibt. Hinter dem unscheinbaren
+**🧮** im Handy liegt das Schattenbuch: Einkauf, Verkauf, Beschlagnahmtes,
+Lagerbestand und der Gewinn aus Mr. Snus und Don Pablo, dazu die letzten
+Buchungen. In der offiziellen Kasse taucht davon nichts auf.
 
 ### Don Pablo
 
@@ -118,8 +146,6 @@ zeigt den Interpol-Abschlussbericht und beendet das Spiel.
 
 Lina Sturm erklärt Mr. Snus, Don Pablo und die Büros jeweils beim ersten
 Auftauchen; unter *Welt* lassen sich die Erklärungen wiederholen.
-5. **Wachsen** – Erfahrung bringt Level, Level und Kapital schalten die nächste
-   Weltregion frei.
 
 ### Nebel über unerschlossenem Gebiet
 
@@ -145,7 +171,8 @@ alles sieht, schaltet den Nebel mit 🌫️ ab.
 Alle Fahrzeuge gibt es wirklich, mit realistischen Nutzlasten,
 Reisegeschwindigkeiten, Reichweiten und Betriebskosten:
 
-* **Fahrrad** – Larry vs Harry Bullitt, Urban Arrow Cargo L, Chike E-Kart
+* **Fahrrad** – Kurierrad mit Messenger-Bag, Larry vs Harry Bullitt, Urban Arrow
+  Cargo L, Chike E-Kart mit Kurierbox
 * **Moped & Roller** – Simson S51 mit Kurierbox, Piaggio Liberty 50, Kumpan 54 Ride
 * **Straße** – VW Caddy Cargo, Mercedes Sprinter und eSprinter, Iveco Daily,
   Mercedes Atego, Scania R 450, Mercedes Actros 1851, Volvo FH Electric,
@@ -162,6 +189,12 @@ Reisegeschwindigkeiten, Reichweiten und Betriebskosten:
   Luftfracht-Aufträge von Flughafen zu Flughafen mit knappen Fristen – nur wer
   fliegt, schafft sie.
 
+**Rad oder Moped?** Räder tragen weniger (10–40 kg gegenüber 50–60 kg), sind
+dafür im Unterhalt am günstigsten (1–3 € am Tag, 1–3 Cent je km gegenüber
+4,5–5 € und 5–9 Cent beim Moped). Eine Leerfahrt kostet deshalb mit dem Rad
+fast nichts, mit dem Transporter wegen des Sprits deutlich mehr (10 km:
+Bullitt 0,20 € · Simson 0,90 € · Caddy 3,20 € · Sprinter 4,20 €).
+
 Jedes Fahrzeug lässt sich **kaufen** (viel Kapital, niedrige Tageskosten) oder
 **leasen** (kein Kapital, höhere Tageskosten). Wer zu groß einkauft, zahlt die
 Fixkosten auch im Stillstand.
@@ -169,10 +202,31 @@ Fixkosten auch im Stillstand.
 ### Ladungsarten
 
 Pakete · Expressfracht · Palettenware · Kühlware · Gefahrgut (ADR) ·
-Schwer- und Sperrgut · Container (FCL) · Schüttgut
+Schwer- und Sperrgut · Container (FCL) · Schüttgut · Schmuck & Uhren
 
 Kühlware braucht einen Kühlaufbau, Gefahrgut eine ADR-Zulassung, ein Rotorblatt
 einen Tieflader – die Symbole am Fahrzeug sagen, was geht.
+
+### Wertsachen-Kurier
+
+Juweliere, Uhrmacher, Goldschmiede, Auktionshäuser, Münzhandlung, Pfandhaus
+und Privatbank verschicken innerhalb Berlins Wertsachen: eine Rolex zur
+Revision, einen Verlobungsring, Familienschmuck aus dem Schließfach. 💎
+**Schmuck & Uhren** fahren nur Rad und Moped (diskret, schnell, versichert) –
+kein Transporter. Bezahlt wird ein paar Promille vom Warenwert plus
+Grundgebühr, deutlich mehr als für ein Paket. Mit jeder Etappe wird die
+Kundschaft reicher (von der Omega bis zur Patek Philippe und zum Diamanten),
+so lohnen sich Räder bis ins späte Spiel.
+
+### Klimabilanz
+
+Unter *Welt → Deine Bilanz* rechnet eine Klimabilanz das CO₂ aus allen
+gefahrenen Kilometern – Leerfahrten eingeschlossen, leer weniger als voll,
+je Fahrzeug nach realen Verbrauchswerten (Lieferwagen ≈ 16–19 kg je 100 km,
+Bahn ≈ 6 g, Luftfracht ≈ 300–400 g je Tonnenkilometer). Dazu: Gramm je
+Tonnenkilometer mit Vergleichswerten, der Anteil der Leerfahrten, was die
+Räder gegenüber einem Lieferwagen gespart haben, und die Aufteilung nach
+Verkehrsträger.
 
 ---
 
@@ -184,7 +238,7 @@ bleibt die Karte links stehen und die Ansicht dockt rechts an.
 
 | Aktion | Wie |
 |---|---|
-| Karte bewegen | Ziehen, zwei Finger zum Zoomen, Mausrad |
+| Karte bewegen | Ziehen, zwei Finger oder + / − zum Zoomen, Mausrad |
 | Station oder Fahrzeug ansehen | Antippen |
 | Fahrzeug live verfolgen | Fahrzeug antippen → *live verfolgen*, oder 📡 |
 | Verfolgung beenden | Karte ziehen oder ✕ am Live-Band |
@@ -193,11 +247,13 @@ bleibt die Karte links stehen und die Ansicht dockt rechts an.
 | Nebel ein-/ausblenden | 🌫️ |
 | Zurück zur aktuellen Etappe | 🎯 |
 
-Eine Sekunde Echtzeit entspricht bei 1× einer Spielminute. Der Spielstand wird
+Doppeltippen zoomt nicht mehr (auch nicht die Seite), damit schnelles Tippen
+nichts verschiebt. Eine Sekunde Echtzeit entspricht bei 1× einer Spielminute. Der Spielstand wird
 automatisch im Browser gespeichert (`localStorage`).
 
 Die **Auto-Disposition** im Reiter *Flotte* nimmt passende, profitable Aufträge
-selbstständig an – praktisch, sobald die Flotte größer wird.
+selbstständig an – praktisch, sobald die Flotte größer wird. Verdächtige
+Snus-Kunden lässt sie mit einem Hinweis liegen.
 
 ---
 

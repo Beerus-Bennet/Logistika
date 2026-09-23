@@ -629,6 +629,24 @@ function phoneMsg(m) {
   renderPhoneBadge(true);
   toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok");
 }
+/* Sicherheitsmaßnahme: Nachrichten löschen sich nach 24 Spielstunden */
+const PHONE_TTL = 24 * 60;
+function prunePhone() {
+  if (!S.phone || !S.phone.msgs.length) return;
+  const before = S.phone.msgs.length;
+  S.phone.msgs = S.phone.msgs.filter(m => S.time - m.time < PHONE_TTL);
+  if (S.phone.msgs.length === before) return;
+  S.phone.unread = Math.min(S.phone.unread, S.phone.msgs.length);
+  renderPhoneBadge(false);
+  if (phoneOpen()) renderPhone();
+}
+function phoneTTL(m) {
+  const left = PHONE_TTL - (S.time - m.time);
+  const txt = left >= 60 ? Math.ceil(left / 60) + " h" : Math.max(1, Math.ceil(left)) + " min";
+  return `<span class="pmsg-ttl${left < 180 ? " soon" : ""}" title="Löscht sich automatisch">🔥 ${txt}</span>`;
+}
+function phoneOpen() { return $("#modal").classList.contains("open") && !!$("#modalBody .phone"); }
+let phoneTab = "msgs";
 function renderPhoneBadge(ring) {
   const el = $("#phoneBtn"); if (!el) return;
   const n = (S.phone && S.phone.unread) || 0;
@@ -644,6 +662,7 @@ function renderPhoneBadge(ring) {
 }
 function openPhone() {
   ensureOffices();
+  phoneTab = "msgs";                     /* der Rechner bleibt versteckt, bis man ihn antippt */
   S.phone.unread = 0;
   renderPhoneBadge();
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
@@ -652,6 +671,7 @@ function openPhone() {
 }
 function renderPhone() {
   if (!$("#modal").classList.contains("open")) return;
+  prunePhoneSilent();
   const msgs = S.phone.msgs;
   const body = msgs.length ? msgs.map(m => {
     if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
@@ -663,7 +683,7 @@ function renderPhone() {
     return `<div class="pmsg ${m.kind}${m.handled ? " done" : ""}">
       <div class="pmsg-head">
         <span class="pmsg-from">${esc(m.from)}</span>
-        <span class="pmsg-time">${stamp(m.time)}</span>
+        <span class="pmsg-time">${stamp(m.time)} ${phoneTTL(m)}</span>
       </div>
       <b>${esc(m.title)}</b>
       <p>${esc(m.body)}</p>
@@ -676,22 +696,34 @@ function renderPhone() {
   }).join("") : `<div class="empty">Noch keine Anrufe. Sobald du Standorte mit Personal führst,
      meldet sich hier dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
+  const calc = phoneTab === "calc";
 
   $("#modalBody").innerHTML = `
-    <div class="mhead">
+    <div class="mhead phone">
       <div><div class="mtitle">📞 Diensttelefon</div>
-      <div class="msub">${msgs.length} Nachricht${msgs.length === 1 ? "" : "en"}</div></div>
+      <div class="msub">${calc ? "Rechner" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
-    <div class="phone-list">${body}</div>
+    <div class="ptabs">
+      <button class="ptab${calc ? "" : " on"}" data-ptab="msgs">💬 Nachrichten</button>
+      <button class="ptab calc${calc ? " on" : ""}" data-ptab="calc" title="Rechner" aria-label="Rechner">🧮</button>
+    </div>
+    <div class="phone-list">${calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
   $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
   $("#mClose").onclick = closeModal;
   $("#mCancel").onclick = closeModal;
+  $$("#modalBody [data-ptab]").forEach(b => b.onclick = () => { phoneTab = b.dataset.ptab; $(".phone-list").scrollTop = 0; renderPhone(); });
   $$("#modalBody [data-fix]").forEach(btn =>
     btn.onclick = () => applyFix(btn.dataset.fix, +btn.dataset.idx));
   if (typeof bindSnusMsgs === "function") bindSnusMsgs();
   if (typeof bindPabloMsgs === "function") bindPabloMsgs();
+}
+
+function prunePhoneSilent() {
+  if (!S.phone) return;
+  S.phone.msgs = S.phone.msgs.filter(m => S.time - m.time < PHONE_TTL);
+  S.phone.unread = Math.min(S.phone.unread, S.phone.msgs.length);
 }
 
 /* ------------------------------ Tagesablauf ------------------------------ */

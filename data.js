@@ -299,24 +299,29 @@ const INLAND_ROUTES = [
    daily  Fixkosten €/Tag im Eigentum (Personal, Versicherung, Stellplatz)
    price  Kaufpreis €   |   range  max. Einzeletappe km
    flags  Fähigkeiten: kuehl adr sperrig container schuett
+          kurier = darf Wertsachen persönlich übergeben (Rad und Moped)
    ----------------------------------------------------------------------- */
 const VEHICLES = [
-  /* ---- Fahrrad ---- */
-  {id:"v-bullitt",  name:"Larry vs Harry Bullitt",             brand:"Lastenrad",        mode:"b", cap:100,       speed:19,  costKm:0.05, daily:4,     price:6200,      stage:1, range:60,    icon:"🚲", flags:[]},
-  {id:"v-urbanarrow",name:"Urban Arrow Cargo L (Kühlbox)",     brand:"E-Lastenrad",      mode:"b", cap:125,       speed:22,  costKm:0.06, daily:6,     price:8900,      stage:1, range:80,    icon:"🚲", flags:["kuehl"]},
-  {id:"v-chike",    name:"Chike E-Kart Anhängerzug",           brand:"E-Lastenrad",      mode:"b", cap:180,       speed:20,  costKm:0.07, daily:8,     price:11500,     stage:2, range:70,    icon:"🚲", flags:[]},
+  /* ---- Fahrrad: am billigsten im Unterhalt, trägt aber am wenigsten ----
+     Fahrer strampeln selbst: kein Sprit, nur Verschleiß (Kette, Bremsen,
+     Reifen) – eine Leerfahrt kostet Cent. */
+  {id:"v-messenger",name:"Kurierrad mit Messenger-Bag",        brand:"Fahrradkurier",    mode:"b", cap:10,        speed:22,  costKm:0.01, daily:1,     price:1100,      stage:1, range:45,    icon:"🚲", flags:["kurier"]},
+  {id:"v-bullitt",  name:"Larry vs Harry Bullitt",             brand:"Lastenrad",        mode:"b", cap:30,        speed:19,  costKm:0.02, daily:1.5,   price:3900,      stage:1, range:60,    icon:"🚲", flags:["kurier"]},
+  {id:"v-urbanarrow",name:"Urban Arrow Cargo L (Kühlbox)",     brand:"E-Lastenrad",      mode:"b", cap:35,        speed:22,  costKm:0.03, daily:2.5,   price:6900,      stage:1, range:80,    icon:"🚲", flags:["kuehl","kurier"]},
+  {id:"v-chike",    name:"Chike E-Kart mit Kurierbox",         brand:"E-Lastenrad",      mode:"b", cap:40,        speed:20,  costKm:0.03, daily:3,     price:8200,      stage:2, range:70,    icon:"🚲", flags:["kurier"]},
 
-  /* ---- Straße: Zweirad ---- */
-  {id:"v-simson",   name:"Simson S51 mit Kurierbox",           brand:"Moped",            mode:"r", cap:35,        speed:46,  costKm:0.07, daily:3,     price:2900,      stage:1, range:230,   icon:"🛵", flags:[]},
-  {id:"v-liberty",  name:"Piaggio Liberty 50 mit Topcase",     brand:"Motorroller",      mode:"r", cap:45,        speed:40,  costKm:0.06, daily:3.5,   price:3400,      stage:1, range:200,   icon:"🛵", flags:[]},
-  {id:"v-kumpan",   name:"Kumpan 54 Ride (E-Roller)",          brand:"E-Roller",         mode:"r", cap:40,        speed:40,  costKm:0.03, daily:4,     price:4600,      stage:1, range:70,    icon:"🛵", flags:[]},
+  /* ---- Straße: Zweirad – schneller und trägt mehr als das Rad, kostet aber
+     Sprit bzw. Strom, Versicherung und Kennzeichen ---- */
+  {id:"v-simson",   name:"Simson S51 mit Kurierbox",           brand:"Moped",            mode:"r", cap:50,        speed:46,  costKm:0.09, daily:4.5,   price:2900,      stage:1, range:230,   icon:"🛵", flags:["kurier"]},
+  {id:"v-liberty",  name:"Piaggio Liberty 50 mit Topcase",     brand:"Motorroller",      mode:"r", cap:55,        speed:40,  costKm:0.08, daily:4.5,   price:3400,      stage:1, range:200,   icon:"🛵", flags:["kurier"]},
+  {id:"v-kumpan",   name:"Kumpan 54 Ride (E-Roller)",          brand:"E-Roller",         mode:"r", cap:60,        speed:40,  costKm:0.05, daily:5,     price:4600,      stage:1, range:70,    icon:"🛵", flags:["kurier"]},
 
-  /* ---- Straße: leicht ---- */
-  {id:"v-caddy",    name:"VW Caddy Cargo Maxi",                brand:"Kastenwagen",      mode:"r", cap:670,       speed:78,  costKm:0.29, daily:26,    price:29000,     stage:1, range:900,   icon:"🚐", flags:[]},
-  {id:"v-sprinter", name:"Mercedes-Benz Sprinter 317 CDI",     brand:"Transporter",      mode:"r", cap:1400,      speed:84,  costKm:0.38, daily:38,    price:54000,     stage:1, range:1100,  icon:"🚐", flags:[]},
-  {id:"v-esprinter",name:"Mercedes-Benz eSprinter",            brand:"E-Transporter",    mode:"r", cap:1000,      speed:80,  costKm:0.21, daily:34,    price:69000,     stage:2, range:400,   icon:"🚐", flags:[]},
-  {id:"v-daily",    name:"Iveco Daily 7t Koffer",              brand:"Leicht-Lkw",       mode:"r", cap:4200,      speed:80,  costKm:0.55, daily:56,    price:78000,     stage:2, range:1200,  icon:"🚚", flags:[]},
-  {id:"v-atego",    name:"Mercedes-Benz Atego 1223 Kühlkoffer",brand:"Verteiler-Lkw",    mode:"r", cap:6800,      speed:78,  costKm:0.68, daily:78,    price:112000,    stage:2, range:1000,  icon:"🚚", flags:["kuehl"]},
+  /* ---- Straße: leicht – Diesel ist der größte Posten ---- */
+  {id:"v-caddy",    name:"VW Caddy Cargo Maxi",                brand:"Kastenwagen",      mode:"r", cap:670,       speed:78,  costKm:0.32, daily:26,    price:29000,     stage:1, range:900,   icon:"🚐", flags:[]},
+  {id:"v-sprinter", name:"Mercedes-Benz Sprinter 317 CDI",     brand:"Transporter",      mode:"r", cap:1400,      speed:84,  costKm:0.42, daily:38,    price:54000,     stage:1, range:1100,  icon:"🚐", flags:[]},
+  {id:"v-esprinter",name:"Mercedes-Benz eSprinter",            brand:"E-Transporter",    mode:"r", cap:1000,      speed:80,  costKm:0.22, daily:34,    price:69000,     stage:2, range:400,   icon:"🚐", flags:[]},
+  {id:"v-daily",    name:"Iveco Daily 7t Koffer",              brand:"Leicht-Lkw",       mode:"r", cap:4200,      speed:80,  costKm:0.62, daily:56,    price:78000,     stage:2, range:1200,  icon:"🚚", flags:[]},
+  {id:"v-atego",    name:"Mercedes-Benz Atego 1223 Kühlkoffer",brand:"Verteiler-Lkw",    mode:"r", cap:6800,      speed:78,  costKm:0.74, daily:78,    price:112000,    stage:2, range:1000,  icon:"🚚", flags:["kuehl"]},
 
   /* ---- Straße: schwer ---- */
   {id:"v-scania",   name:"Scania R 450 Sattelzug",             brand:"Sattelzug",        mode:"r", cap:24000,     speed:74,  costKm:0.95, daily:135,   price:128000,    stage:2, range:2200,  icon:"🚛", flags:[]},
@@ -393,8 +398,11 @@ const CARGO = {
   adr:     {name:"Gefahrgut (ADR)",    icon:"☣️",  req:["adr"],      rate:1.60, minStage:3, minKg:900,    maxKg:200000000},
   sperrig: {name:"Schwer- & Sperrgut", icon:"🏗️",  req:["sperrig"],  rate:1.75, minStage:3, minKg:8000,   maxKg:180000000},
   cont:    {name:"Container (FCL)",    icon:"📮",  req:["container"],rate:1.10, minStage:3, minKg:180000, maxKg:220000000},
+  /* Wertsachen innerhalb Berlins: nur mit persönlicher Übergabe durch einen
+     Kurier (Rad oder Moped). Eigene Ausschreibungen, siehe JEWEL_JOBS. */
+  schmuck: {name:"Schmuck & Uhren",    icon:"💎",  req:["kurier"],   rate:1.00, minStage:99,minKg:0.05,   maxKg:6},
   /* Nur für Mr. Snus' Privatkunden – taucht in normalen Ausschreibungen nie auf */
-  snus:    {name:"Snus",               icon:"🥫",  req:[],           rate:1.00, minStage:99,minKg:1,      maxKg:50},
+  snus:    {name:"Snus",               icon:"🎩",  req:[],           rate:1.00, minStage:99,minKg:1,      maxKg:50},
   /* Nur für Don Pablos Kundschaft */
   ware:    {name:"Ware",               icon:"❄️",  req:[],           rate:1.00, minStage:99,minKg:1,      maxKg:200000000}
 };
@@ -510,6 +518,47 @@ const BASE_FEE = 9;
 const LEASE_RATE = 0.00055;
 /* CO₂ in kg je Tonnenkilometer */
 const CO2 = { b: 0, r: 0.075, l: 0.018, i: 0.031, s: 0.008, a: 0.50 };
+/* CO₂ je gefahrenem Kilometer: [leer, voll beladen] in kg. Aus Verbrauch
+   (Diesel 2,65 kg/l, Benzin 2,37 kg/l, Kerosin 3,16 kg/kg, Schiffsdiesel
+   3,11 kg/kg) bzw. Strom im deutschen Mix (0,38 kg/kWh). Leerfahrten zählen
+   mit – ein leerer Lkw verbraucht rund zwei Drittel eines vollen. */
+const VEH_CO2 = {
+  "v-messenger": [0, 0], "v-bullitt": [0, 0], "v-urbanarrow": [0.004, 0.006], "v-chike": [0.005, 0.008],
+  "v-simson": [0.066, 0.072], "v-liberty": [0.052, 0.058], "v-kumpan": [0.015, 0.017],
+  "v-caddy": [0.16, 0.19], "v-sprinter": [0.24, 0.29], "v-esprinter": [0.11, 0.13],
+  "v-daily": [0.33, 0.40], "v-atego": [0.50, 0.62],
+  "v-scania": [0.58, 0.85], "v-actros": [0.56, 0.83], "v-volvofhe": [0.40, 0.52], "v-dafreefer": [0.62, 0.95],
+  "v-manadr": [0.60, 0.90], "v-volvoheavy": [0.75, 1.6], "v-goldhofer": [1.4, 4.5],
+  "v-gms": [20, 35], "v-tms": [26, 45], "v-gross": [30, 52], "v-koppel": [42, 75],
+  "v-br185": [4, 7.5], "v-ludmilla": [14, 24], "v-vectron": [5, 9], "v-silkroad": [10, 18],
+  "v-feeder": [60, 90], "v-supramax": [70, 110], "v-panamax": [170, 250], "v-roro": [150, 220],
+  "v-triplee": [400, 580], "v-capesize": [250, 380], "v-hmm": [450, 640],
+  "v-caravan": [1.4, 1.7], "v-atr": [4.2, 5.2], "v-737": [9, 11.5], "v-a330f": [18, 23],
+  "v-777f": [21, 28], "v-7478f": [29, 38], "v-an124": [42, 52]
+};
+/* Vergleich für „mit dem Rad gespart“: derselbe Weg im Kastenwagen */
+const CO2_VAN_KM = 0.17;
+
+/* Wertsachen-Kurier innerhalb Berlins. Honorar nach Warenwert – und die
+   Kundschaft wird mit dem eigenen Aufstieg feiner: späte Etappen bringen
+   teurere Stücke. Zugestellt wird nur persönlich, durch Rad oder Moped. */
+const JEWEL_JOBS = [
+  { from: "Juwelier am Kurfürstendamm",       item: "Rolex Submariner",                     why: "zur Revision beim Uhrmacher",                 value: [9000, 14000],   kg: 0.4 },
+  { from: "Juwelier am Kurfürstendamm",       item: "Rolex Daytona",                        why: "an einen Sammler, Übergabe nur gegen Ausweis", value: [28000, 45000],  kg: 0.4 },
+  { from: "Uhrmacherwerkstatt Friedrichstraße",item: "Patek Philippe Calatrava",            why: "nach der Revision zurück zum Kunden",         value: [22000, 38000],  kg: 0.3 },
+  { from: "Uhrmacherwerkstatt Friedrichstraße",item: "Omega Speedmaster",                   why: "neues Glas eingesetzt, zurück zum Besitzer",  value: [6000, 9000],    kg: 0.3 },
+  { from: "Goldschmiede Hackesche Höfe",      item: "Verlobungsring mit Brillant",          why: "– der Antrag ist heute Abend",                value: [3500, 9000],    kg: 0.1 },
+  { from: "Goldschmiede Hackesche Höfe",      item: "Maßgefertigte Eheringe",               why: "zum Brautpaar, Hochzeit ist morgen",          value: [2500, 6000],    kg: 0.1 },
+  { from: "Auktionshaus Fasanenstraße",       item: "Diamantcollier",                       why: "zur Vorbesichtigung beim Bieter",             value: [60000, 140000], kg: 0.6 },
+  { from: "Auktionshaus Fasanenstraße",       item: "Art-déco-Brosche",                     why: "an den Käufer, Zuschlag gestern Abend",       value: [12000, 30000],  kg: 0.2 },
+  { from: "Münzhandlung am Gendarmenmarkt",   item: "Seltene Goldmünzen",                   why: "versiegelt für einen Sammler",                value: [8000, 25000],   kg: 1.2 },
+  { from: "Perlenhaus Prenzlauer Berg",       item: "Südsee-Perlenkette",                   why: "zur Hochzeit, vor dem Sektempfang",           value: [5000, 15000],   kg: 0.3 },
+  { from: "Pfandleihhaus Karl-Marx-Straße",   item: "Goldschmuck",                          why: "an die Eigentümerin, Pfand ist ausgelöst",    value: [1500, 6000],    kg: 0.8 },
+  { from: "Diamantschleiferei Kreuzberg",     item: "Geschliffene Brillanten im Wertbrief", why: "an den Juwelier am Kurfürstendamm",           value: [20000, 70000],  kg: 0.1 },
+  { from: "Luxuskaufhaus am Tauentzien",      item: "Cartier-Armband",                      why: "zum Kunden ins Hotel",                        value: [7000, 18000],   kg: 0.3 },
+  { from: "Privatbank am Gendarmenmarkt",     item: "Familienschmuck aus dem Schließfach",  why: "an die Erbin, gegen Unterschrift",            value: [30000, 90000],  kg: 1.5 }
+];
+const JEWEL_STAGE_MULT = [1, 1.6, 2.6, 4, 6.5, 10];
 
 /* ---------------------------- Kartennebel --------------------------------
    Sichtweite um jeden erschlossenen Standort in Kilometern. Sie wächst mit

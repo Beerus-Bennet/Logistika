@@ -36,6 +36,18 @@ const SNUS_DEAL = ["Deal 🤝", "Geht klar 🤝", "Läuft 🤝"];
    Nummer von einem Kumpel“, tragen Hemd und sind glatt rasiert.
    Namen kommen aus demselben Topf wie bei allen anderen Kunden.           */
 const SNUS_COP_SHARE = 0.18;
+/* Großzügige Stammkunden: zahlen auch mehr und wollen mehr – sind aber echt.
+   Den Unterschied sieht man nur am Aussehen: Fahnder tragen weißes Hemd UND
+   sind glatt rasiert, die hier nie beides zugleich. */
+const SNUS_RICH_SHARE = 0.16;
+const SNUS_RICH_JOBS = ["Barbershop-Besitzer", "Bauunternehmer", "Clubbetreiber", "Fußballtrainer", "Autohändler",
+  "Gastronom", "Berater", "Projektleiter", "Tattoo-Künstler"];
+const SNUS_RICH_LINES = [
+  "Für die ganze Baustelle: {n}× {s}. Ich leg was drauf, wenn's heute noch klappt.",
+  "Hab Geburtstag 🎉 {n}× {s}, Trinkgeld ist drin.",
+  "Mein Kumpel Kevin schwört auf dich. {n}× {s}, zahl gern mehr.",
+  "Für die Jungs vom Verein: {n}× {s}. Passt schon mit dem Preis."
+];
 const SNUS_JAIL_DAYS = 14;
 const SNUS_COP_JOBS = ["Angestellter", "Berater", "Sachbearbeiter", "Vertriebler", "Projektleiter"];
 const SNUS_COP_LINES = [
@@ -67,6 +79,21 @@ function snusFree(id) {
 }
 
 /* ------------------------------- Bilder --------------------------------- */
+/* Das Logo von Mr. Snus: Dose von oben, dunkler Deckel mit goldenem Ring,
+   darauf sein Zylinder. forImage = eigenständiges SVG (für die Karte). */
+function snusLogo(size, forImage) {
+  return `<svg ${forImage ? 'xmlns="http://www.w3.org/2000/svg" ' : 'class="snus-logo" '}viewBox="0 0 48 48" width="${size}" height="${size}" role="img" aria-label="Mr. Snus">
+    <circle cx="24" cy="24" r="22.5" fill="#cfd6df" stroke="#0d1b2a" stroke-width="2"/>
+    <circle cx="24" cy="24" r="19.2" fill="#1c2230" stroke="#0d1b2a" stroke-width="1.2"/>
+    <circle cx="24" cy="24" r="16.6" fill="none" stroke="#d4a73a" stroke-width="1.3"/>
+    <path d="M17.6 21.2L18.4 9.8Q24 8.6 29.6 9.8L30.4 21.2Z" fill="#f3ead7"/>
+    <rect x="17.8" y="17.4" width="12.4" height="2.5" fill="#d4a73a"/>
+    <ellipse cx="24" cy="21.6" rx="10.6" ry="2.4" fill="#f3ead7"/>
+    <text x="24" y="28.4" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="4.2" fill="#d4a73a">MR.</text>
+    <text x="24" y="35.2" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="7.2" letter-spacing=".4" fill="#f3ead7">SNUS</text>
+    <path d="M8.5 17A17 17 0 0 1 19 5.8" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+}
 /* Mr. Snus: nur ein Schatten im Profil, mit Zylinder und hochgeschlagenem
    Kragen – wie ein Inkognito-Symbol. Eigene Zeichnung, keine Vorlage.     */
 function snusFace(size) {
@@ -203,6 +230,7 @@ function snusBuy(msgId) {
   if (!sn.at || snusTotal() === 0) sn.at = snusDropNode();
   S.money -= cost; S.expense += cost;
   logMoney("snus", "Mr. Snus · " + n + " Dosen", -cost);
+  sn.spent = (sn.spent || 0) + cost;
   const parts = [];
   m.offer.forEach(r => {
     const k = m.pick[r.id] || 0;
@@ -221,7 +249,7 @@ function snusBuy(msgId) {
   sn.bustFree = true;
   snusCustomer(first); snusCustomer(first);
   sn.nextCust = S.time + rnd(60, 120);
-  toast("🥫 " + n + " Dosen im Lager in " + N[sn.at].short + " – Kunden unter „Aufträge“.", "ok");
+  toast("[[snus]] " + n + " Dosen im Lager in " + N[sn.at].short + " – Kunden unter „Aufträge“.", "ok");
   save(); renderPhone(); render();
 }
 function snusCancel(msgId) {
@@ -252,9 +280,12 @@ function snusCustomer(safe) {
   const sorts = SNUS_SORTS.filter(s => snusFree(s.id) > 0);
   if (!sorts.length) return null;
   const s = pick(sorts);
-  const cop = !safe && snusFree(s.id) >= 8 && Math.random() < SNUS_COP_SHARE;
+  const roll = Math.random();
+  const cop = !safe && snusFree(s.id) >= 8 && roll < SNUS_COP_SHARE;
+  const rich = !cop && !safe && snusFree(s.id) >= 6 && roll < SNUS_COP_SHARE + SNUS_RICH_SHARE;
   const n = cop ? Math.min(snusFree(s.id), 16 + Math.floor(Math.random() * 21))
-                : Math.min(snusFree(s.id), 2 + Math.floor(Math.random() * 11));
+          : rich ? Math.min(snusFree(s.id), 8 + Math.floor(Math.random() * 17))
+                 : Math.min(snusFree(s.id), 2 + Math.floor(Math.random() * 11));
   const from = N[sn.at];
   const weight = 1;
   /* Die Kundschaft wohnt am Stadtrand in den großen Siedlungen:
@@ -275,22 +306,28 @@ function snusCustomer(safe) {
   }
   if (!fast) return null;
   const last = pick(STAFF_LAST);
-  const who = { name: pick(STAFF_FIRST_M) + " " + last[0] + ".", job: pick(cop ? SNUS_COP_JOBS : SNUS_JOBS), av: snusGuy() };
+  const who = { name: pick(STAFF_FIRST_M) + " " + last[0] + ".", job: pick(cop ? SNUS_COP_JOBS : rich ? SNUS_RICH_JOBS : SNUS_JOBS), av: snusGuy() };
   const shirt = AV.outfits.findIndex(x => x.id === "bluse");
+  const otherOutfit = () => 1 + Math.floor(Math.random() * (AV.outfits.length - 1));
   if (cop) {                                  /* Hemd, glatt rasiert, ordentlich kurz */
     who.av.beard = 0; who.av.acc = 0; who.av.outfit = shirt;
     who.av.hair = Math.max(0, avHairList(who.av).indexOf("kurz"));
-  } else if (who.av.outfit === shirt) who.av.outfit = 1 + Math.floor(Math.random() * (AV.outfits.length - 1));
-  const each = cop ? 13 + Math.floor(Math.random() * 3) : SNUS_SELL;
+  } else if (rich) {
+    /* Nie beides zugleich: im Hemd dann mit Bart – oder ohne Hemd */
+    if (Math.random() < 0.5) { who.av.outfit = shirt; if (!who.av.beard) who.av.beard = 1 + Math.floor(Math.random() * (AV.beards.length - 1)); }
+    else if (who.av.outfit === shirt) who.av.outfit = otherOutfit();
+  } else if (who.av.outfit === shirt) who.av.outfit = otherOutfit();
+  if (who.av.outfit === shirt && !cop && !who.av.beard) who.av.beard = 1;     /* Sicherheitsnetz */
+  const each = cop ? 13 + Math.floor(Math.random() * 3) : rich ? 12 + Math.floor(Math.random() * 4) : SNUS_SELL;
   const o = {
     id: "A" + (S.seq++), from: sn.at, to: to.id, cargo: "snus", weight,
     pay: n * each, deadline: Math.round(S.time + fast.time * 2.5 + rnd(150, 300)),
     shipper: who.name,
-    desc: cop ? pick(SNUS_COP_LINES).replace("{n}", n).replace("{s}", snusLabel(s)) : "will " + n + "× " + snusLabel(s),
+    desc: cop || rich ? pick(cop ? SNUS_COP_LINES : SNUS_RICH_LINES).replace("{n}", n).replace("{s}", snusLabel(s)) : "will " + n + "× " + snusLabel(s),
     created: S.time,
     refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
     expire: Math.round(S.time + rnd(5, 12) * 60),
-    snus: { sort: s.id, n, who, each, cop },
+    snus: { sort: s.id, n, who, each, cop, kind: cop ? "cop" : rich ? "rich" : "normal" },
     pick: snusShop(), drop: drop || undefined
   };
   if (typeof withLastMile === "function") withLastMile(o);
@@ -308,7 +345,14 @@ function snusGiveBack(o) {
   const st = snusState().stock;
   st[o.snus.sort] = (st[o.snus.sort] || 0) + o.snus.n;
 }
-function snusDelivered(o) { snusState().sold += o.snus.n; }
+function snusDelivered(o, pay) { const sn = snusState(); sn.sold += o.snus.n; sn.earned = (sn.earned || 0) + (pay || 0); }
+/* Was die Dispo stutzig macht: mehr als der übliche Preis oder eine auffällig
+   große Menge. Das trifft Fahnder UND großzügige Stammkunden. */
+function snusSuspicious(o) { return !!o.snus && (o.snus.each > SNUS_SELL || o.snus.n >= 16); }
+function snusWhy(o) {
+  return o.snus.each > SNUS_SELL ? "zahlt " + money(o.snus.each) + " pro Dose statt " + money(SNUS_SELL)
+    : "will gleich " + o.snus.n + " Dosen";
+}
 
 /* ---------------------------- Festnahme & Haft --------------------------
    Übergabe an einen Zivilfahnder: Ware beschlagnahmt, kein Geld, 14 Tage
@@ -323,6 +367,7 @@ function snusBust(job) {
     money0: S.money, done0: S.done
   };
   logMoney("snus", "Beschlagnahmt: " + o.snus.n + " Dosen bei " + o.snus.who.name, 0);
+  const sn = snusState(); sn.lost = (sn.lost || 0) + o.snus.n;
   save();
 }
 function jailCheck() {
@@ -445,7 +490,7 @@ function snusMsgHTML(m) {
     acts = `<div class="pmsg-note">Mr. Snus ist offline.</div>`;
   }
   return `<div class="pmsg snus">
-    <div class="sn-head">${snusFace(38)}<div><b>Mr. Snus</b><small>${stamp(m.time)}</small></div></div>
+    <div class="sn-head">${snusFace(38)}<div><b>Mr. Snus</b><small>${stamp(m.time)}</small></div>${typeof phoneTTL === "function" ? phoneTTL(m) : ""}</div>
     <div class="sn-chat">${m.thread.map(bub).join("")}</div>
     ${acts}
   </div>`;
@@ -469,7 +514,7 @@ function snusStockHTML() {
   if (!sn || !sn.at || snusTotal() <= 0) return "";
   const parts = SNUS_SORTS.filter(s => sn.stock[s.id] > 0)
     .map(s => `<span class="sn-chip">${snusCan(s, 18)}${sn.stock[s.id]}</span>`).join("");
-  return `<div class="snusbar"><span class="sn-lbl">🥫 Snus-Lager ${esc(N[sn.at].short)} · ${snusTotal()} Dosen</span>${parts}</div>`;
+  return `<div class="snusbar"><span class="sn-lbl">${snusLogo(18)} Snus-Lager ${esc(N[sn.at].short)} · ${snusTotal()} Dosen</span>${parts}</div>`;
 }
 /* Grauer Auftrag eines privaten Kunden */
 function snusOrderCard(o, previewRow) {
@@ -477,9 +522,11 @@ function snusOrderCard(o, previewRow) {
   const rest = o.deadline - S.time;
   return `<div class="card order gray${typeof flashOn === "function" && flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
     <div class="card-top">
-      <span class="badge gray">🥫 Snus · privat</span>
+      <span class="badge gray">${snusLogo(16)} Snus · privat</span>
       <span class="pay">${money(o.pay)}</span>
+      ${typeof rejectBtnHTML === "function" ? rejectBtnHTML(o.id) : ""}
     </div>
+    ${o.snus.flagged ? `<div class="sn-flag">🕵️ <b>Dispo: verdächtig</b> – ${esc(snusWhy(o))}. Weißes Hemd <b>und</b> glatt rasiert? Dann Finger weg. Sonst einfach ein großzügiger Kunde.</div>` : ""}
     <div class="sn-cust">
       <span class="face">${w.av ? avatarSVG(w.av, 40, { uid: "sc" + o.id, bg: true }) : ""}</span>
       <div><b>${esc(w.name)}</b><small>${esc(w.job)}</small></div>
@@ -489,5 +536,62 @@ function snusOrderCard(o, previewRow) {
     <div class="meta addr"><span>📦 ${esc(addrText(oPick(o)))} <small>${esc(N[o.from].short)}</small></span><span>🏠 ${esc(addrText(oDrop(o)))} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
     <div class="meta small"><span>📏 ${kmf(o.refDist)}</span><span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span></div>
     ${previewRow}
+  </div>`;
+}
+
+/* ------------------------------ Schattenbuch ------------------------------
+   Einkauf, Verkauf und Gewinn der Nebengeschäfte – versteckt hinter dem
+   Taschenrechner im Diensthandy. In der offiziellen Kasse steht davon nichts. */
+function shadowTotals() {
+  const sn = S.snus || {}, pb = S.pablo || {};
+  /* Ältere Spielstände: aus den Buchungen nachrechnen */
+  const fromLedger = (k, sign) => (S.ledger || []).filter(e => e.k === k && Math.sign(e.a) === sign).reduce((a, e) => a + Math.abs(e.a), 0);
+  if (S.snus && sn.spent == null) { sn.spent = fromLedger("snus", -1); sn.earned = fromLedger("snus", 1); }
+  if (S.pablo && pb.spent == null) { pb.spent = fromLedger("pablo", -1); pb.earned = fromLedger("pablo", 1); }
+  /* Ware, die gerade unterwegs zum Kunden ist, gehört noch zum Bestand */
+  const snWay = S.jobs.filter(j => j.order.snus).reduce((a, j) => a + j.order.snus.n, 0);
+  const pbWay = S.jobs.filter(j => j.order.pablo).reduce((a, j) => a + (j.order.pablo.kg || 0), 0);
+  return {
+    sn: { bought: sn.bought || 0, sold: sn.sold || 0, lost: sn.lost || 0, stock: (S.snus ? snusTotal() : 0) + snWay, way: snWay,
+          spent: sn.spent || 0, earned: sn.earned || 0 },
+    pb: { bought: pb.bought || 0, sold: pb.sold || 0, stock: (pb.kg || 0) + pbWay, way: pbWay, spent: pb.spent || 0, earned: pb.earned || 0 }
+  };
+}
+function shadowBookHTML() {
+  const t = shadowTotals();
+  const any = t.sn.bought || t.pb.bought;
+  if (!any) return `<div class="calc">
+      <div class="calc-disp">0</div>
+      <div class="empty">Nichts zu verbergen. Noch.</div>
+    </div>`;
+  const pm = n => `<b class="${n >= 0 ? "good" : "bad"}">${n >= 0 ? "+" : "−"}${money(Math.abs(n))}</b>`;
+  /* Gewinn wie beim Kaufmann: Verkauf minus Einkauf, der Rest im Lager zählt
+     zum Einkaufspreis mit – sonst stünde nach jedem Großeinkauf ein Minus da. */
+  const snStock = t.sn.stock * SNUS_BUY, pbStock = t.pb.stock * PABLO_BUY;
+  const snP = t.sn.earned - t.sn.spent + snStock, pbP = t.pb.earned - t.pb.spent + pbStock, all = snP + pbP;
+  const cash = t.sn.earned - t.sn.spent + t.pb.earned - t.pb.spent;
+  const rows = (S.ledger || []).filter(e => e.k === "snus" || e.k === "pablo").slice(0, 14).map(e => `<div class="ldrow">
+      <span class="ldi">${e.k === "snus" ? snusLogo(18) : "❄️"}</span>
+      <span class="ldl">${esc(e.l)}<small>Tag ${dayOf(e.t)}, ${clock(e.t)}</small></span>
+      ${pm(e.a)}
+    </div>`).join("");
+  return `<div class="shadow">
+    <div class="calc-disp ${all >= 0 ? "" : "neg"}">${all >= 0 ? "" : "−"}${money(Math.abs(all))}</div>
+    <div class="sb-sub">Gewinn aus Nebengeschäften · Kasse ${cash >= 0 ? "+" : "−"}${money(Math.abs(cash))}, Rest liegt im Lager</div>
+    ${t.sn.bought ? `<div class="sb-card">
+      <div class="sb-h">${snusLogo(22)} <b>Mr. Snus</b><span>${pm(snP)}</span></div>
+      <div class="sb-row"><span>Eingekauft</span><span>${t.sn.bought} Dosen</span><b class="bad">−${money(t.sn.spent)}</b></div>
+      <div class="sb-row"><span>Verkauft</span><span>${t.sn.sold} Dosen</span><b class="good">+${money(t.sn.earned)}</b></div>
+      ${t.sn.lost ? `<div class="sb-row"><span>Beschlagnahmt</span><span>${t.sn.lost} Dosen</span><b class="bad">−${money(t.sn.lost * SNUS_BUY)}</b></div>` : ""}
+      <div class="sb-row muted"><span>Im Lager${t.sn.way ? " + unterwegs" : ""}</span><span>${t.sn.stock} Dosen</span><b>+${money(snStock)}</b></div>
+    </div>` : ""}
+    ${t.pb.bought ? `<div class="sb-card dark">
+      <div class="sb-h">❄️ <b>Don Pablo</b><span>${pm(pbP)}</span></div>
+      <div class="sb-row"><span>Eingekauft</span><span>${kgf(t.pb.bought)}</span><b class="bad">−${money(t.pb.spent)}</b></div>
+      <div class="sb-row"><span>Verkauft</span><span>${kgf(t.pb.sold)}</span><b class="good">+${money(t.pb.earned)}</b></div>
+      <div class="sb-row muted"><span>Im Hangar${t.pb.way ? " + unterwegs" : ""}</span><span>${kgf(t.pb.stock)}</span><b>+${money(pbStock)}</b></div>
+    </div>` : ""}
+    ${rows ? `<div class="sb-list"><div class="sb-lh">Letzte Buchungen</div>${rows}</div>` : ""}
+    <div class="sb-note">Dieses Buch gibt es offiziell nicht – in der Kasse taucht davon nichts auf.</div>
   </div>`;
 }

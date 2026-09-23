@@ -145,6 +145,7 @@ function pabloBuy(msgId) {
   }
   S.money -= cost; S.expense += cost;
   logMoney("pablo", "Don Pablo · " + m.pick + " t", -cost);
+  pb.spent = (pb.spent || 0) + cost;
   pb.kg += kg; pb.bought += kg;
   m.thread.push({ me: true, t: "Ich nehm " + m.pick + " Tonnen." });
   const hg = pabloHangar();
@@ -212,7 +213,7 @@ function pabloHangar() {
 }
 function pabloTake(o) { const pb = pabloState(); pb.kg = Math.max(0, pb.kg - o.pablo.kg); }
 function pabloGiveBack(o) { pabloState().kg += o.pablo.kg; }
-function pabloDelivered(o) { pabloState().sold += o.pablo.kg; }
+function pabloDelivered(o, pay) { const pb = pabloState(); pb.sold += o.pablo.kg; pb.earned = (pb.earned || 0) + (pay || 0); }
 
 /* ------------------------------ Spielende -------------------------------- */
 function pabloBust(job) {
@@ -287,7 +288,7 @@ function pabloMsgHTML(m) {
     acts = `<div class="pmsg-note">Don Pablo hat aufgelegt.</div>`;
   }
   return `<div class="pmsg snus pablo">
-    <div class="sn-head">${pabloFace(38)}<div><b>Don Pablo</b><small>${stamp(m.time)} · unterdrückte Nummer</small></div></div>
+    <div class="sn-head">${pabloFace(38)}<div><b>Don Pablo</b><small>${stamp(m.time)} · unterdrückte Nummer</small></div>${typeof phoneTTL === "function" ? phoneTTL(m) : ""}</div>
     <div class="sn-chat">${m.thread.map(bub).join("")}</div>
     ${acts}
   </div>`;
@@ -311,6 +312,7 @@ function pabloOrderCard(o, previewRow) {
     <div class="card-top">
       <span class="badge gray">❄️ Ware · Don Pablo</span>
       <span class="pay">${money(o.pay)}</span>
+      ${typeof rejectBtnHTML === "function" ? rejectBtnHTML(o.id) : ""}
     </div>
     <div class="sn-cust">
       <span class="face">${pabloGuy(40)}</span>

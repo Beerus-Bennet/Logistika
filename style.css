@@ -28,7 +28,7 @@
   --display:"Bangers","Baloo 2",system-ui,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0;overscroll-behavior:none}
+html,body{height:100%;margin:0;overscroll-behavior:none;touch-action:manipulation}
 body{
   font-family:var(--font);color:var(--ink);background:var(--ink);
   font-weight:600;overflow:hidden;-webkit-user-select:none;user-select:none;
@@ -1039,3 +1039,53 @@ body.tut-talk #toasts{display:none}
 /* Aus der Karte angesprungen: kurz hervorgehoben */
 .card.flash{box-shadow:0 0 0 4px #19b8c9,var(--shadow)!important;animation:cardflash 1.3s ease-in-out 2}
 @keyframes cardflash{0%,100%{transform:none}50%{transform:scale(1.015)}}
+
+/* ===================== Schmuck, Ablehnen, Snus-Logo ===================== */
+.snus-logo{display:inline-block;vertical-align:-3px;flex:none}
+.card-top .pay{margin-left:auto}
+.rejectbtn{flex:none;width:26px;height:26px;margin-left:2px;border:2px solid var(--ink);border-radius:8px;background:#fff;
+  font-size:12px;font-weight:900;line-height:1;cursor:pointer;padding:0;color:var(--ink);opacity:.75}
+.rejectbtn:active{transform:translate(1px,1px)}
+.card.order.gray .rejectbtn{background:#434a56;color:#fff;border-color:#0b0e13}
+.rejectlink{display:block;margin:10px auto 0;background:none;border:0;font:inherit;font-size:12px;font-weight:800;
+  color:var(--red);opacity:.8;cursor:pointer;padding:4px 8px}
+.jewelonly{color:#4b35a8;font-weight:800}
+.card-top .badge{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sn-flag{margin-top:8px;padding:6px 9px;border-radius:9px;background:#fff2c9;color:#4a3700;border:2px dashed #d4a73a;
+  font-size:11.5px;font-weight:700;line-height:1.35}
+.card.order.gray .sn-flag{background:#3d3524;color:#ffe7a3;border-color:#d4a73a}
+/* Diensthandy: Reiter, Rechner, Selbstlöschen */
+.ptabs{display:flex;gap:6px;margin:8px 0 4px}
+.ptab{flex:1;border:2.5px solid var(--ink);border-radius:10px;background:var(--card);font:inherit;font-weight:800;font-size:12.5px;
+  padding:6px 8px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
+.ptab.on{background:var(--blue);color:#fff;transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.ptab.calc{flex:none;width:46px;font-size:17px;padding:3px 0}
+.pmsg-ttl{font-weight:800;opacity:.75;margin-left:4px;white-space:nowrap}
+.pmsg-ttl.soon{color:var(--red);opacity:1}
+.sn-head .pmsg-ttl{margin-left:auto;color:#ffb38a;font-size:10.5px}
+.calc{text-align:center}
+.calc-disp{font-family:"Courier New",monospace;font-weight:700;font-size:26px;text-align:right;background:#cfd9c4;color:#1d2a17;
+  border:2.5px solid var(--ink);border-radius:10px;padding:8px 12px;box-shadow:inset 0 2px 0 rgba(0,0,0,.12);letter-spacing:1px}
+.calc-disp.neg{color:#8a1024}
+.sb-sub{font-size:11px;font-weight:800;opacity:.6;text-align:right;margin:3px 2px 8px}
+.sb-card{background:#1f2530;color:#e8ecf2;border:2.5px solid var(--ink);border-radius:12px;padding:9px 11px;margin-bottom:8px}
+.sb-card.dark{background:#2b1f26}
+.sb-h{display:flex;align-items:center;gap:7px;font-size:14px;margin-bottom:5px}
+.sb-h span{margin-left:auto}
+.sb-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;font-size:12px;font-weight:700;padding:3px 0;border-top:1px solid rgba(255,255,255,.08)}
+.sb-row.muted{opacity:.6}
+.sb-card .good{color:#6fe3a6}.sb-card .bad{color:#ff8fa3}
+.sb-list{margin-top:6px}
+.sb-lh{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.6;margin:4px 2px}
+.sb-note{font-size:11px;font-weight:700;opacity:.55;text-align:center;margin:8px 4px 2px}
+/* Klimabilanz */
+.kpis.co2 small{display:block;font-size:10px;font-weight:700;opacity:.6}
+.co2note{font-size:10.5px;font-weight:600;opacity:.65;line-height:1.4;margin-top:7px}
+/* Mehrere Nadeln an derselben Adresse */
+.ins-picks{display:flex;flex-direction:column;gap:6px;margin-top:6px;max-height:210px;overflow:auto}
+.ins-pick{display:flex;align-items:center;gap:6px;width:100%;text-align:left;font:inherit;font-size:14px;color:var(--ink);
+  background:#fff;border:2px solid var(--ink);border-radius:12px;padding:7px 10px;box-shadow:0 2px 0 var(--ink)}
+.ins-pick b{flex:1;min-width:0;line-height:1.2;font-size:13px}
+.ins-pick small{font-weight:800;color:#0e7a4b}
+.ins-pick .ins-pin{margin-left:0}
+.ins-pick .snus-logo{flex:none}

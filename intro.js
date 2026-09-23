@@ -563,6 +563,9 @@ const TUT_STEPS = [
   { tx: "Später mietest du unter „Büros“ einen Standort. Wer dort Personal einstellt, lässt sein Team disponieren – "
       + "und bekommt Anrufe aufs Diensttelefon.",
     target: '[data-tab="bases"]', before: () => showTab("map") },
+  { tx: "Das ist dein <b>Diensthandy</b>. Hier melden sich dein Team – und manchmal auch Leute, die du nicht kennst. "
+      + "Aus Sicherheitsgründen löscht es jede Nachricht nach <b>24 Stunden</b>. Lies also zeitnah.",
+    target: "#phoneBtn", top: true, before: () => showTab("map") },
   { tx: "Das war’s. Oben rechts hältst du das Spiel jederzeit an – ab jetzt läuft die Uhr. Viel Erfolg, und wenn’s brennt, bin ich auf Kanal 1.",
     target: "#pauseBtn", top: true, before: () => showTab("map") }
 ];
@@ -908,13 +911,17 @@ const LINA_TALKS = {
   snus: [
     { tx: "Psst, Chef! Auf dem Diensttelefon hat sich gerade <b>Mr. Snus</b> gemeldet. Der verkauft Snus unter der Hand.",
       target: "#phoneBtn", top: true },
-    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose. Die Ware liegt dann in einem Späti-Lager in der Stadt. `
-        + `Kunden melden sich als <b>graue Aufträge</b> und zahlen ${money(SNUS_SELL)} die Dose – geliefert wird mit deiner eigenen Flotte.` },
-    { tx: () => `Aber Vorsicht: Unter den Kunden sind <b>Zivilfahnder</b>. Die verraten sich – sie zahlen auffällig mehr als ${money(SNUS_SELL)}, `
-        + `wollen gleich 20, 30 Dosen auf einmal, haben „deine Nummer von einem Kumpel“ und kommen im weißen Hemd, glatt rasiert.` },
-    { tx: () => `Lieferst du an so einen, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
-        + "Die Fixkosten laufen in der Zeit weiter." },
-    { tx: "Ob du mitmachst, entscheidest du – „Nein, danke mein Akh“ ist auch eine Antwort. Seine Nachricht liegt auf dem Telefon.",
+    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose. Die Ware liegt dann in einem Späti in der Stadt. `
+        + `Kunden aus den Siedlungen am Stadtrand melden sich als <b>graue Aufträge</b> und zahlen ${money(SNUS_SELL)} die Dose – geliefert wird mit deiner eigenen Flotte.` },
+    { tx: () => `Aber Vorsicht: Unter den Kunden sind <b>Zivilfahnder</b>. Die zahlen mehr als ${money(SNUS_SELL)} und wollen gleich 20, 30 Dosen. `
+        + `Nur: Manche Stammkunden zahlen auch einfach gern mehr. Der sichere Hinweis ist das Aussehen – <b>weißes Hemd UND glatt rasiert</b>. `
+        + `Hat einer nur eins von beidem, ist er echt.` },
+    { tx: () => `Lieferst du an einen Fahnder, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
+        + "Passt dir ein Kunde nicht, blockierst du ihn mit ✕ – kostet nichts. Und eine laufende Übergabe kannst du unter „Live“ abbrechen." },
+    { tx: "Die Auto-Disposition fährt Snus-Kunden mit. Wer auffällig viel zahlt oder will, den lässt sie liegen und sagt dir Bescheid – "
+        + "ob Fahnder oder großzügiger Kunde, entscheidest du dann selbst." },
+    { tx: "Ob du mitmachst, entscheidest du – „Nein, danke mein Akh“ ist auch eine Antwort. Übrigens: Aus Sicherheitsgründen löscht das "
+        + "Diensthandy jede Nachricht nach <b>24 Stunden</b>. Und den 🧮 Rechner darin solltest du dir mal genauer ansehen.",
       target: "#phoneBtn", top: true }
   ],
   pablo: [
