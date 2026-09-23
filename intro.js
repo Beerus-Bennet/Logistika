@@ -113,7 +113,7 @@ function renderIntro() {
     const a = d.avatar;
     const male = AV.sexes[avWrap(a, "sex")] === "m";
     const slots = PLAYER_ART_SLOTS.filter(sl => playerArtSrc(sl.id));
-    const mode = d.mode === "preset" ? "preset" : "build";
+    const mode = d.mode === "preset" || d.mode === "photo" ? d.mode : "build";
     body = `
       <div class="intro-card">
         <div class="intro-h">Wer bist du?</div>
@@ -123,9 +123,10 @@ function renderIntro() {
         <div class="modeswitch">
           <button data-mode="build" class="${mode === "build" ? "on" : ""}">✏️ Selbst gestalten</button>
           <button data-mode="preset" class="${mode === "preset" ? "on" : ""}">🧑 Fertige Figur</button>
+          <button data-mode="photo" class="${mode === "photo" ? "on" : ""}">📸 Aus Foto</button>
         </div>
 
-        ${mode === "build" ? `<div class="pickers">
+        ${mode === "photo" ? photoEditorHTML(!!a.photo) : mode === "build" ? `<div class="pickers">
           ${pick("sex", "Typ", AV_LABEL.sex[AV.sexes[avWrap(a, "sex")]])}
           ${pick("hair", "Frisur", AV_LABEL.hair[avHairList(a)[avWrap(a, "hair")]])}
           ${pick("hairColor", "Haarfarbe", AV_LABEL.hairColor[AV.hairColors[avWrap(a, "hairColor")].id])}
@@ -262,13 +263,23 @@ function bindIntro() {
   };
   $$("#intro [data-mode]").forEach(b => b.onclick = () => {
     INTRO.draft.mode = b.dataset.mode;
-    if (b.dataset.mode === "build") INTRO.draft.avatar.art = null;
+    if (b.dataset.mode !== "photo") { delete INTRO.draft.avatar.photo; photoForget(); }
+    if (b.dataset.mode === "build" || b.dataset.mode === "photo") INTRO.draft.avatar.art = null;
     else if (!INTRO.draft.avatar.art) {
       const first = PLAYER_ART_SLOTS.find(sl => playerArtSrc(sl.id));
       if (first) INTRO.draft.avatar.art = first.id;
     }
     renderIntro();
   });
+  /* Foto-Modus: Vorschau ist das große Porträt oben */
+  if (d.mode === "photo" && INTRO.step === 1) {
+    bindPhotoEditor($("#intro .av-stage .frame"), (url, full) => {
+      d.avatar.photo = url;
+      const img = $("#intro .av-stage .frame img.pt-photo");
+      /* Stil-Knöpfe erscheinen erst, wenn ein Bild geladen ist */
+      if (img && (!full || $("#intro .ph-styles"))) img.src = url; else renderIntro();
+    }, renderIntro);
+  }
   $$("#intro [data-art]").forEach(b => b.onclick = () => {
     INTRO.draft.avatar.art = b.dataset.art || null;
     renderIntro();
@@ -335,6 +346,7 @@ function bindIntro() {
 
 /* --------------------------- Gründungsphase ----------------------------- */
 function beginFounding() {
+  if (typeof photoForget === "function") photoForget();
   const d = INTRO.draft;
   const o = ORIGINS[d.origin];
   S.player = JSON.parse(JSON.stringify(d));
