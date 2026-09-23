@@ -1,0 +1,50 @@
+{
+  "name": "LOGISTIKA – Welt der Logistik",
+  "short_name": "LOGISTIKA",
+  "description": "Comic-Logistiksimulation auf echter OpenStreetMap-Karte: vom Berliner Lastenrad bis zur weltweiten Containerflotte.",
+  "id": "logistika",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#15325e",
+  "theme_color": "#2f6fed",
+  "lang": "de",
+  "dir": "ltr",
+  "categories": [
+    "games",
+    "simulation",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "icons/favicon-64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

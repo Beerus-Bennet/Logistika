@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>LOGISTIKA – Welt der Logistik</title>
+<meta name="description" content="Comic-Logistiksimulation auf echter OpenStreetMap-Karte: vom Berliner Lastenrad bis zur weltweiten Containerflotte.">
+<meta name="theme-color" content="#2f6fed">
+<meta name="color-scheme" content="light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LOGISTIKA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Baloo+2:wght@500;600;700;800&display=swap">
+<link rel="preload" as="image" href="art/lina.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="locked">
+
+<canvas id="map" aria-label="Weltkarte mit Verkehrsnetz"></canvas>
+
+<!-- ================= Kopfleiste ================= -->
+<header id="hud">
+  <div class="hud-top">
+    <div class="hud-av" id="hudAvatar"></div>
+    <div class="hud-id">
+      <div class="brand" id="hudCompany">LOGISTIKA</div>
+      <div class="hud-name" id="hudName">Welt der Logistik</div>
+    </div>
+    <div class="hud-right">
+      <button id="pauseBtn" class="pausebtn" title="Spiel anhalten"><i>⏸</i></button>
+      <div class="hud-clock"><b id="hudTime">Tag 1, 06:00</b><span id="hudStage">Etappe 1</span></div>
+    </div>
+  </div>
+  <div class="stats">
+    <span class="chip money" id="hudMoney">–</span>
+    <span class="chip lvl" id="hudLevel">Lv 1</span>
+    <button class="chip phone" id="phoneBtn" title="Diensttelefon">📞<em id="phoneCount">0</em></button>
+    <span class="xp"><i id="xpFill"></i></span>
+  </div>
+</header>
+
+<!-- ================= Kartensteuerung ================= -->
+<div id="mapUI">
+  <div id="controls">
+    <button data-speed="0" title="Pause">⏸</button>
+    <button data-speed="1" title="Normal">1×</button>
+    <button data-speed="3" title="Schnell">3×</button>
+    <button data-speed="10" title="Sehr schnell">10×</button>
+    <button data-speed="30" title="Zeitraffer">30×</button>
+  </div>
+  <div id="controls2">
+    <button id="zoomIn" title="Hineinzoomen">+</button>
+    <button id="zoomOut" title="Herauszoomen">−</button>
+    <button id="homeBtn" title="Zur aktuellen Etappe">🎯</button>
+    <button id="netBtn" title="Verkehrsnetz ein-/ausblenden">🕸️</button>
+    <button id="fogBtn" title="Unerschlossenes Gebiet abdunkeln">🌫️</button>
+    <button id="liveBtn" title="Nächstes Fahrzeug live verfolgen">📡</button>
+  </div>
+  <div id="followBar"></div>
+  <div id="inspector"></div>
+  <div id="fogNote"></div>
+</div>
+
+<!-- ================= Vollbild-Ansichten ================= -->
+<section id="view">
+  <header class="view-head">
+    <h2 id="viewTitle">Aufträge</h2>
+    <button id="viewClose">🗺️ Karte</button>
+  </header>
+  <div class="view-body">
+    <div class="tabpane" id="tab-orders"></div>
+    <div class="tabpane" id="tab-jobs"></div>
+    <div class="tabpane" id="tab-fleet"></div>
+    <div class="tabpane" id="tab-bases"></div>
+    <div class="tabpane" id="tab-market"></div>
+    <div class="tabpane" id="tab-world"></div>
+  </div>
+</section>
+
+<!-- ================= Navigation ================= -->
+<nav id="nav">
+  <button class="navbtn on" data-tab="map"><i>🗺️</i><span>Karte</span></button>
+  <button class="navbtn" data-tab="orders"><i>📋</i><span>Aufträge</span><em class="badge2" id="badgeOrders">0</em></button>
+  <button class="navbtn" data-tab="jobs"><i>🛰️</i><span>Live</span><em class="badge2" id="badgeJobs">0</em></button>
+  <button class="navbtn" data-tab="fleet"><i>🚚</i><span>Flotte</span><em class="badge2" id="badgeFleet">0</em></button>
+  <button class="navbtn" data-tab="bases"><i>🏢</i><span>Büros</span><em class="badge2" id="badgeBases">0</em></button>
+  <button class="navbtn" data-tab="market"><i>🏪</i><span>Markt</span></button>
+  <button class="navbtn" data-tab="world"><i>🌍</i><span>Welt</span></button>
+</nav>
+
+<!-- ================= Dispositionsdialog ================= -->
+<div id="modal"><div class="modal-inner"><div id="modalBody"></div></div></div>
+
+<!-- ================= Charaktererstellung & Gründung ================= -->
+<div id="intro"></div>
+
+<!-- ================= Tutorial ================= -->
+<div id="spot"></div>
+<div id="tutor"></div>
+
+<div id="dropbar"></div>
+<div id="ask"><div class="ask-box" id="askBox"></div></div>
+<div id="toasts"></div>
+
+<script src="js/data.js"></script>
+<script src="js/avatar.js"></script>
+<script src="js/map.js"></script>
+<script src="js/offices.js"></script>
+<script src="js/game.js"></script>
+<script src="js/intro.js"></script>
+</body>
+</html>
