@@ -560,8 +560,8 @@ const TUT_STEPS = [
   { tx: "Unter „Flotte“ steht bei jedem Fahrzeug, wo es gerade parkt oder hinfährt. Hast du mehrere, verteil sie auf "
       + "verschiedene Stadtteile – dann ist fast immer eins in der Nähe.",
     target: '[data-tab="fleet"]', before: () => showTab("map") },
-  { tx: "Später mietest du unter „Büros“ einen Standort. Wer dort Personal einstellt, lässt sein Team disponieren – "
-      + "und bekommt Anrufe aufs Diensttelefon.",
+  { tx: "Noch disponierst du jeden Auftrag selbst. Später mietest du unter „Büros“ einen Standort: Wer dort jemanden aus der "
+      + "<b>Disposition</b> einstellt, dessen Fahrzeuge fahren von allein – und er bekommt Anrufe aufs Diensttelefon.",
     target: '[data-tab="bases"]', before: () => showTab("map") },
   { tx: "Das ist dein <b>Diensthandy</b>. Hier melden sich dein Team – und manchmal auch Leute, die du nicht kennst. "
       + "Aus Sicherheitsgründen löscht es jede Nachricht nach <b>24 Stunden</b>. Lies also zeitnah.",
@@ -918,7 +918,7 @@ const LINA_TALKS = {
         + `Hat einer nur eins von beidem, ist er echt.` },
     { tx: () => `Lieferst du an einen Fahnder, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
         + "Passt dir ein Kunde nicht, blockierst du ihn mit ✕ – kostet nichts. Und eine laufende Übergabe kannst du unter „Live“ abbrechen." },
-    { tx: "Die Auto-Disposition fährt Snus-Kunden mit. Wer auffällig viel zahlt oder will, den lässt sie liegen und sagt dir Bescheid – "
+    { tx: "Hast du ein Büro mit Disposition, fährt dein Team Snus-Kunden mit. Wer auffällig viel zahlt oder will, den lässt es liegen und sagt dir Bescheid – "
         + "ob Fahnder oder großzügiger Kunde, entscheidest du dann selbst." },
     { tx: "Ob du mitmachst, entscheidest du – „Nein, danke mein Akh“ ist auch eine Antwort. Übrigens: Aus Sicherheitsgründen löscht das "
         + "Diensthandy jede Nachricht nach <b>24 Stunden</b>. Und den 🧮 Rechner darin solltest du dir mal genauer ansehen.",
@@ -970,7 +970,8 @@ const LINA_TALKS = {
         + "bekommt Streit. Kündigen geht über ✕ oder indem du die Person auf den Mülleimer unten ziehst – "
         + "die Abfindung sind zwei Wochenlöhne.",
       target: baseHead(0) },
-    { tx: "Hier ordnest du dem Standort <b>Fahrzeuge</b> zu. Mit denen disponiert das Team – der Rest deiner Flotte bleibt bei dir.",
+    { tx: "Hier ordnest du dem Standort <b>Fahrzeuge</b> zu – oder direkt unter „Flotte“ am Fahrzeug. Mit denen disponiert das Team "
+        + "und nimmt jeweils das passende. Der Rest deiner Flotte bleibt bei dir: Den teilst du selbst ein.",
       target: () => $("#tab-bases .card.base .assignrow") || baseHead(2)() },
     { tx: "Zieh jemanden aus dem Fahrpersonal auf ein Fahrzeug: Dann fährt diese Person es fest und ist schneller unterwegs. "
         + "Beim Ziehen zeigt dir eine Leiste unten, wo du loslassen kannst.",

@@ -120,10 +120,10 @@ weiter, Fixkosten, Löhne und Miete auch. Mehr zahlen aber auch **großzügige
 Stammkunden** (Geburtstag, Trinkgeld, WG-Vorrat) – die haben nie Hemd UND
 glatte Wange zugleich. Also: Profilbild prüfen.
 
-Die **Auto-Disposition** fährt unauffällige Kunden selbst. Zahlt einer mehr
+Die **Disposition im Büro** fährt unauffällige Kunden selbst. Zahlt einer mehr
 oder will auffällig viel, lässt sie ihn liegen, meldet sich mit „🕵️ Dispo
-lässt … liegen“ und markiert die Karte – dann entscheidet der Spieler. Die
-Büros fassen Schattengeschäfte nie an, Don Pablo bleibt immer Handarbeit.
+lässt … liegen“ und markiert die Karte – dann entscheidet der Spieler. Don
+Pablo bleibt immer Handarbeit.
 
 ### Diensthandy
 
@@ -257,9 +257,30 @@ Doppeltippen zoomt nicht mehr (auch nicht die Seite), damit schnelles Tippen
 nichts verschiebt. Eine Sekunde Echtzeit entspricht bei 1× einer Spielminute. Der Spielstand wird
 automatisch im Browser gespeichert (`localStorage`).
 
-Die **Auto-Disposition** im Reiter *Flotte* nimmt passende, profitable Aufträge
-selbstständig an – praktisch, sobald die Flotte größer wird. Verdächtige
-Snus-Kunden lässt sie mit einem Hinweis liegen.
+### Disposition: selbst oder im Büro
+
+Eine eigene Auto-Disposition gibt es nicht mehr – automatisch disponieren nur
+die Leute aus der **Disposition** in deinen Büros. Jedes Fahrzeug gehört
+entweder einem Büro (zuordnen unter *Büros* oder direkt am Fahrzeug unter
+*Flotte*) oder bleibt bei dir: Dann nimmst du die Aufträge selbst an. Der
+Reiter *Flotte* zeigt oben, welches Büro wie viele Fahrzeuge fährt.
+
+Wie viel ein Büro schafft, hängt am Team (Können × Stimmung): eine
+Disponentin mit ★★★ betreut rund zehn Fahrzeuge und schaut etwa alle 25
+Minuten nach freien Fahrzeugen, zwei gute schaffen deutlich mehr. Fahrpersonal
+begrenzt, wie viele davon gleichzeitig rollen, Zoll & Papiere bringen
+Zuschlag. Jedes Büro lässt sich mit einem Schalter pausieren.
+
+### Das passende Fahrzeug
+
+Zugeteilt wird nicht mehr einfach das nächstbeste Fahrzeug, sondern das
+günstigste in Euro gerechnet: Anfahrt und Strecke mal Kilometerkosten, dazu
+die Fixkosten der Zeit, in der es gebunden ist – je leerer es fährt, desto
+teurer (ein 24-Tonner für eine Uhr fehlt der nächsten Palettenladung) –, ein
+kleiner Preis je Minute Anfahrt und ein dicker Malus, wenn die Frist reißt.
+So fährt die Uhr aufs Rad oder Moped, die Paletten auf den Lkw. Im Planer
+steht das beste Fahrzeug oben (💡 passt am besten), bei jedem steht die
+Auslastung, und zu große sind als „überdimensioniert“ markiert.
 
 ---
 

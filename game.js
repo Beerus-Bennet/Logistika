@@ -254,7 +254,7 @@ function newGame() {
     money: 0, xp: 0, stage: 1, time: 6 * 60, speed: 1,
     fleet: [], orders: [], jobs: [], seq: 1, lastSpawn: -999, lastDay: 0,
     done: 0, late: 0, failed: 0, kmTotal: 0, co2: 0, revenue: 0, expense: 0,
-    showNet: false, fog: true, autoDispatch: false, follow: null,
+    showNet: false, fog: true, follow: null, dispoMoved: true,
     bases: [], phone: { msgs: [], unread: 0 }, ledger: []
   };
 }
@@ -708,18 +708,55 @@ function buildVariants(o) {
   return list;
 }
 
+/* ------------------------- Das passende Fahrzeug -------------------------
+   Nicht einfach das nächstbeste: Gerechnet wird in Euro, was ein Fahrzeug
+   für diese Teilstrecke kostet –
+   · Fahrt: Anfahrt und Strecke mal Kilometerkosten,
+   · Blockade: die Fixkosten der Zeit, in der es gebunden ist – und zwar umso
+     teurer, je leerer es fährt (ein 24-Tonner für eine Uhr fehlt dann für
+     die nächste Palettenladung),
+   · Warten: ein kleiner Preis je Minute Anfahrt,
+   · Verspätung: wer die Frist reißt, fällt nach hinten.
+   Das Günstigste gewinnt – also Rad für die Uhr, Lkw für die Paletten. */
+function legTimeRest(variant, from) {
+  let t = 0;
+  for (let k = from; k < variant.legs.length; k++) {
+    const l = variant.legs[k], ref = l.ref ? vType(l.ref) : null;
+    t += (l.dist / (ref ? ref.speed : 50)) * 60 + MODE_INFO[l.mode].umschlag * 1.8;
+  }
+  return t;
+}
+function vehScore(f, leg, order, i, n, tBefore, tAfter) {
+  const t = vType(f.type), rc = repoCost(f, leg, order, i);
+  if (!rc.ok) return { s: Infinity, rc, t, util: 0 };
+  const dist = order ? pathLen(legPts(leg, order, i, n)) : leg.dist;
+  const legT = (dist / t.speed) * 60 + rc.t;
+  const util = order ? Math.min(1, order.weight / t.cap) : 1;
+  const drive = (dist + rc.d) * t.costKm;
+  const block = (t.daily / 1440) * legT * (1 + 3 * (1 - util));
+  const wait = rc.t * 0.03;
+  let late = 0;
+  if (order && order.deadline) {
+    const eta = S.time + (tBefore || 0) + legT + MODE_INFO[leg.mode].umschlag * 1.8 + (tAfter || 0);
+    if (eta > order.deadline) late = 1000 + (eta - order.deadline) * 5;
+  }
+  return { s: drive + block + wait + late, rc, t, util, legT };
+}
 function assignFor(variant, order) {
-  const used = [];
+  const used = [], n = variant.legs.length;
+  let tAcc = 0;
   return variant.legs.map((leg, li) => {
     const list = eligible(leg, order, used);
     if (!list.length) return null;
-    list.sort((a, b) => {
-      const ra = repoCost(a, leg, order, li), rb = repoCost(b, leg, order, li);
-      if (Math.abs(ra.t - rb.t) > 1) return ra.t - rb.t;
-      return vType(a.type).costKm - vType(b.type).costKm;
-    });
-    used.push(list[0].uid);
-    return list[0].uid;
+    const rest = legTimeRest(variant, li + 1);
+    let best = null, bestSc = null;
+    for (const f of list) {
+      const sc = vehScore(f, leg, order, li, n, tAcc, rest);
+      if (!best || sc.s < bestSc.s - 0.001 || (Math.abs(sc.s - bestSc.s) <= 0.001 && sc.rc.t < bestSc.rc.t)) { best = f; bestSc = sc; }
+    }
+    used.push(best.uid);
+    tAcc += (isFinite(bestSc.legT) ? bestSc.legT : 0) + MODE_INFO[leg.mode].umschlag * 1.8;
+    return best.uid;
   });
 }
 
@@ -821,9 +858,13 @@ function vehOptHTML(r, i, on) {
     : here
       ? `<span class="vo-b ok">✅ vor Ort</span>`
       : `<span class="vo-b ${rc.d > 15 ? "bad" : "warn"}">↩️ ${kmf(rc.d)} leer<small>${dur(rc.t)} · −${money(rc.d * t.costKm)}</small></span>`;
-  return `<button class="vopt${on ? " on" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on}">
+  /* Auslastung: wie viel der Nutzlast die Ladung belegt */
+  const u = r.sc ? r.sc.util : 1;
+  const uTxt = u >= 0.995 ? "voll" : u >= 0.1 ? Math.round(u * 100) + " %" : u >= 0.001 ? fmt(u * 100, 1) + " %" : "< 0,1 %";
+  const util = r.sc ? `<i class="vo-u${u < 0.02 && t.cap >= 500 ? " big" : ""}">⚖️ ${uTxt} ausgelastet${u < 0.02 && t.cap >= 500 ? " · überdimensioniert" : ""}</i>` : "";
+  return `<button class="vopt${on ? " on" : ""}${r.best ? " best" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on}">
     <span class="vo-ic">${t.icon}</span>
-    <span class="vo-tx"><b>${esc(t.name)}</b><small>📍 ${esc(vehSpot(f).t)} · ${esc(N[f.at].short)}</small></span>
+    <span class="vo-tx"><b>${r.best ? `<em class="vo-best">💡 passt am besten</em>` : ""}${esc(t.name)}</b><small>📍 ${esc(vehSpot(f).t)} · ${esc(N[f.at].short)}</small>${util}</span>
     ${badge}
   </button>`;
 }
@@ -1075,9 +1116,13 @@ function renderPlanner(fit) {
     const mi = MODE_INFO[d.leg.mode];
     const list = eligible(d.leg, o, ps.assign.filter((u, k) => k !== i && u));
     const all = d.veh && !list.some(x => x.uid === d.veh.uid) ? [d.veh, ...list] : list;
-    /* Nach Anfahrt sortiert: wer schon am Ladeort steht, steht oben. */
-    const rows = all.map(f => ({ f, t: vType(f.type), rc: repoCost(f, d.leg, o, i) }))
-      .sort((a, b) => (a.rc.ok ? a.rc.d : 1e9) - (b.rc.ok ? b.rc.d : 1e9) || a.t.costKm - b.t.costKm);
+    /* Beste Wahl zuerst – dieselbe Rechnung wie bei der automatischen Zuteilung */
+    let tB = 0;
+    for (let k = 0; k < i; k++) tB += ev.detail[k].time;
+    const rest = legTimeRest(v, i + 1);
+    const rows = all.map(f => { const sc = vehScore(f, d.leg, o, i, ev.detail.length, tB, rest); return { f, t: sc.t, rc: sc.rc, sc }; })
+      .sort((a, b) => a.sc.s - b.sc.s || a.rc.t - b.rc.t);
+    if (rows.length > 1 && isFinite(rows[0].sc.s)) rows[0].best = true;
     const LIMIT = 3;
     let shown = ps.showAll && ps.showAll[i] ? rows : rows.slice(0, LIMIT);
     const selRow = rows.find(r => r.f.uid === ps.assign[i]);
@@ -1092,7 +1137,7 @@ function renderPlanner(fit) {
       ${via}
       ${rows.length
         ? `<div class="vpick" data-leg="${i}">
-             <div class="vp-h">Fahrzeug wählen <small>· nächstes zuerst</small></div>
+             <div class="vp-h">Fahrzeug wählen <small>· passendstes zuerst</small></div>
              ${shown.map(r => vehOptHTML(r, i, r.f.uid === ps.assign[i])).join("")}
              ${more > 0 ? `<button class="vmore" data-more="${i}">+ ${more} weitere${more === 1 ? "s" : ""} Fahrzeug${more === 1 ? "" : "e"} zeigen</button>` : ""}
            </div>`
@@ -1220,54 +1265,59 @@ function startJob(o, variant, assign) {
   beginLeg(job, 0);
 }
 
-/* ---------------------------- Auto-Disposition -------------------------- */
-const AUTO_LEVEL = 2;                 /* vorher disponiert man von Hand */
-function autoAllowed() { return level() >= AUTO_LEVEL; }
-function autoDispatch() {
-  if (!S.autoDispatch || !autoAllowed()) return;
-  /* Fahrzeuge mit Standort werden von ihrem eigenen Team disponiert. */
-  const bound = assignedUids();
-  const freeFleet = S.fleet.filter(f => !bound.has(f.uid));
-  const idleModes = new Set();
-  freeFleet.forEach(f => { if (f.phase === "idle") idleModes.add(vType(f.type).mode); });
-  if (!idleModes.size) return;
-  dispatchPool = new Set(freeFleet.map(f => f.uid));
-  try { autoDispatchRun(idleModes); } finally { dispatchPool = null; }
-}
-function autoDispatchRun(idleModes) {
-  const inPool = (f) => !dispatchPool || dispatchPool.has(f.uid);
+/* ------------------------------ Disposition -------------------------------
+   Automatisch disponiert wird nur noch im Büro: Wer dort jemanden aus der
+   Disposition sitzen hat, dessen Team verteilt die Aufträge auf die Fahrzeuge
+   des Standorts (siehe offices.js). Fahrzeuge ohne Büro teilt der Chef selbst
+   ein. Hier steht die Rechnung, mit der das Team entscheidet.
+
+   opt.accept(o)  – welche Ausschreibungen in Frage kommen (Einzugsgebiet)
+   opt.maxTake    – wie viele es in dieser Runde höchstens annimmt
+   opt.onStart(o) – nach jeder Annahme (Zuschlag, Zähler, Fahrerlimit)
+   Die Fahrzeuge kommen aus dispatchPool.                                 */
+function dispatchRun(opt) {
+  const inPool = f => !dispatchPool || dispatchPool.has(f.uid);
+  const idleModes = () => {
+    const m = new Set();
+    S.fleet.forEach(f => { if (f.phase === "idle" && inPool(f)) m.add(vType(f.type).mode); });
+    return m;
+  };
+  let modes = idleModes();
+  if (!modes.size) return 0;
   /* Mr. Snus' Kundschaft fährt die Dispo mit – außer wer auffällig viel zahlt
      oder auffällig viel will: den lässt sie liegen und sagt Bescheid. Ob der
      wirklich ein Fahnder ist (Hemd, glatt rasiert) oder einfach großzügig,
      muss der Chef selbst entscheiden. Don Pablos Ware fasst sie nicht an. */
   S.orders.forEach(o => {
-    if (!o.snus || o.snus.flagged || typeof snusSuspicious !== "function" || !snusSuspicious(o)) return;
+    if (!o.snus || o.snus.flagged || typeof snusSuspicious !== "function" || !snusSuspicious(o) || !opt.accept(o)) return;
     o.snus.flagged = true;
     toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
   });
-  const cands = S.orders.filter(o => !o.pablo && !(o.snus && o.snus.flagged)).sort((a, b) => b.pay - a.pay);
+  const cands = S.orders.filter(o => !o.pablo && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && opt.accept(o))
+    .sort((a, b) => b.pay - a.pay);
   let examined = 0, taken = 0;
   for (const o of cands) {
-    if (examined++ > 30 || taken >= 3) break;
-    if (!S.fleet.some(f => f.phase === "idle" && inPool(f))) break;
-    const variants = buildVariants(o);
-    for (const v of variants) {
-      if (!v.legs.every(l => idleModes.has(l.mode))) continue;
+    if (examined++ > 30 || taken >= (opt.maxTake || 1)) break;
+    if (!modes.size) break;
+    for (const v of buildVariants(o)) {
+      if (!v.legs.every(l => modes.has(l.mode))) continue;
       const assign = assignFor(v, o);
       if (assign.some(x => !x)) continue;
       const ev = evaluate(v, o, assign);
       if (!ev.ok) continue;
       const over = (S.time + ev.time) - o.deadline;
-      if (over > 6 * 60) continue;
+      if (over > 4 * 60) continue;
       const expPay = over > 0 ? o.pay * Math.max(0.2, 1 - (over / 60) * 0.04) : o.pay;
-      if (expPay - ev.cost <= ev.cost * 0.12) continue;
+      if (expPay - ev.cost <= ev.cost * 0.10) continue;
+      if (opt.onBefore) opt.onBefore(o);
       startJob(o, v, assign);
       taken++;
-      idleModes.clear();
-      S.fleet.forEach(f => { if (f.phase === "idle" && inPool(f)) idleModes.add(vType(f.type).mode); });
+      if (opt.onStart) opt.onStart(o, assign);
+      modes = idleModes();
       break;
     }
   }
+  return taken;
 }
 
 /* -------------------------------- CO₂ ------------------------------------
@@ -2643,13 +2693,10 @@ function renderFleet() {
   idleFleet.forEach(f => byNode.set(f.at, (byNode.get(f.at) || 0) + 1));
   const locChips = [...byNode.entries()].sort((a, b) => b[1] - a[1])
     .map(([id, n]) => `<span class="locchip">📍 ${esc(N[id].short)} <b>${n}</b></span>`).join("");
-  const head = `<div class="card auto${autoAllowed() ? "" : " locked"}">
-      <div class="card-top"><div class="vname">Auto-Disposition<small>${autoAllowed()
-        ? "Das Spiel nimmt passende, profitable Aufträge selbst an."
-        : "Ab Level " + AUTO_LEVEL + ". Die ersten Aufträge disponierst du von Hand – danach weißt du, worauf es ankommt."}</small></div>
-      ${autoAllowed()
-        ? `<button class="toggle ${S.autoDispatch ? "on" : ""}" id="autoBtn"><i></i></button>`
-        : `<span class="lockchip">🔒 Lv ${AUTO_LEVEL}</span>`}</div>
+  const head = `<div class="card auto">
+      <div class="card-top"><div class="vname">🗂️ Disposition<small>Von allein fahren nur Fahrzeuge, die einem Büro mit jemandem aus der
+        Disposition gehören. Alle anderen teilst du selbst ein.</small></div></div>
+      ${dispoRowsHTML()}
       ${S.fleet.length ? `<div class="meta small"><span>💤 ${idle} von ${S.fleet.length} im Leerlauf</span><span>🅿️ ${money(fix)}/Tag Fixkosten</span></div>` : ""}
       ${S.fleet.length ? `<div class="locrow"><span class="loclbl">Frei stehen:</span>${locChips || `<span class="locchip none">gerade keins – alle unterwegs</span>`}</div>` : ""}
       ${S.fleet.length > 3 && idle > S.fleet.length * 0.6
@@ -2657,7 +2704,7 @@ function renderFleet() {
       </div>`;
   if (!S.fleet.length) {
     el.innerHTML = head + `<div class="empty">Noch kein Fahrzeug. Hol dir im <b>Markt</b> ein Lastenrad oder einen Kastenwagen.</div>`;
-    bindAuto(); return;
+    bindDispo(); return;
   }
   const order = { b: 0, r: 1, i: 2, l: 3, s: 4, a: 5 };
   const fleet = [...S.fleet].sort((a, b) => order[vType(a.type).mode] - order[vType(b.type).mode]);
@@ -2673,6 +2720,7 @@ function renderFleet() {
       ${v.phase === "repo" || v.phase === "haul" ? `<div class="bar"><i style="width:${prog}%"></i></div>` : ""}
       ${t.flags.length ? `<div class="flags">${t.flags.map(f => `<i>${flagName(f)}</i>`).join("")}</div>` : ""}
       <div class="meta small"><span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>🅿️ ${money(dailyCost(v))}/Tag</span><span>🛣️ ${kmf(v.kmTotal)}</span></div>
+      ${vehDispoHTML(v)}
       <div class="buyrow">
         ${v.phase !== "idle" ? `<button class="btn tiny ${S.follow === v.uid ? "" : "ghost"}" data-follow="${v.uid}">
           ${S.follow === v.uid ? "📡 verfolgt" : "📡 live verfolgen"}</button>` : ""}
@@ -2685,15 +2733,49 @@ function renderFleet() {
     setFollow(S.follow === b.dataset.follow ? null : b.dataset.follow);
     closeSheet();
   });
-  bindAuto();
+  bindDispo();
 }
-function bindAuto() {
-  const b = $("#autoBtn");
-  if (b) b.onclick = () => {
-    S.autoDispatch = !S.autoDispatch;
-    b.classList.toggle("on", S.autoDispatch);
-    toast(S.autoDispatch ? "Auto-Disposition aktiv." : "Auto-Disposition aus.", "ok");
-  };
+/* Überblick: welches Büro disponiert wie viele Fahrzeuge, was bleibt beim Chef */
+function dispoRowsHTML() {
+  const bases = typeof basesOf === "function" ? basesOf() : [];
+  const own = S.fleet.filter(f => !baseOfVehicle(f.uid)).length;
+  const rows = bases.map(b => {
+    const n = b.vehicles.length, cap = dispCap(b);
+    const st = rolePower(b, "disp") <= 0 ? ["none", "ohne Disponent"] : b.dispOff ? ["off", "pausiert"]
+      : basePaused(b) ? ["off", "steht still"] : ["on", "disponiert"];
+    return `<button class="drow" data-gobase="${b.id}">
+      <span class="dn">${tierOf(b).icon} <b>${esc(N[b.node].short)}</b></span>
+      <span class="dv">🚚 ${n}${cap ? ` <small>/ ${cap} betreubar</small>` : ""}</span>
+      <span class="dst ${st[0]}">${st[1]}</span></button>`;
+  }).join("");
+  return `<div class="drows">${rows}
+      <div class="drow self"><span class="dn">✋ <b>Selbst</b></span><span class="dv">🚚 ${own}</span><span class="dst self">du teilst ein</span></div>
+    </div>
+    ${bases.length ? "" : `<button class="btn tiny" id="goBases">🏢 Büro eröffnen – dann fährt die Flotte von allein</button>`}`;
+}
+/* Pro Fahrzeug: wer es disponiert – direkt hier umhängen */
+function vehDispoHTML(v) {
+  const bases = S.bases || [];
+  if (!bases.length) return "";
+  const cur = baseOfVehicle(v.uid);
+  return `<label class="vdispo">🗂️ Disposition
+    <select data-vbase="${v.uid}">
+      <option value=""${cur ? "" : " selected"}>✋ selbst einteilen</option>
+      ${bases.map(b => {
+        const full = b.vehicles.length >= tierOf(b).slots && b !== cur;
+        return `<option value="${b.id}"${b === cur ? " selected" : ""}${full ? " disabled" : ""}>${tierOf(b).icon} Büro ${esc(N[b.node].short)}${full ? " · Hof voll" : ""}${rolePower(b, "disp") <= 0 ? " · ohne Disponent" : ""}</option>`;
+      }).join("")}
+    </select></label>`;
+}
+function bindDispo() {
+  const gb = $("#goBases");
+  if (gb) gb.onclick = () => showTab("bases");
+  $$("#tab-fleet [data-gobase]").forEach(b => b.onclick = () => showTab("bases"));
+  $$("#tab-fleet [data-vbase]").forEach(sel => sel.onchange = () => {
+    sel.blur();
+    if (sel.value) assignVehicle(sel.value, sel.dataset.vbase);
+    else unassignVehicle(sel.dataset.vbase);
+  });
 }
 function flagName(f) {
   return { kuehl: "Kühlung", adr: "Gefahrgut", sperrig: "Schwerlast", container: "Container", schuett: "Schüttgut", kurier: "Wertkurier" }[f] || f;
@@ -2748,7 +2830,7 @@ function bindMarketTools(vt) {
     again();
   });
   const so = vt.querySelector("#mktSort");
-  if (so) so.onchange = () => { f.sort = so.value; again(); };
+  if (so) so.onchange = () => { so.blur(); f.sort = so.value; again(); };
   const rs = vt.querySelector("[data-mreset]");
   if (rs) rs.onclick = () => { Object.assign(f, { cat: "all", avail: false, afford: false, flags: [] }); again(); };
 }
@@ -2965,6 +3047,9 @@ function render() {
   renderHud();
   /* Während eines Ziehvorgangs bleibt die Liste stehen. */
   if (document.body.classList.contains("dragging-staff")) return;
+  /* Auswahlliste gerade offen (z. B. Büro zuordnen): nicht unter dem Finger neu bauen */
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "SELECT" && ae.closest("#view")) return;
   if (activeTab !== "orders" && activeTab !== "market") setTools(activeTab, "");
   ({ orders: renderOrders, jobs: renderJobs, fleet: renderFleet, bases: renderBases,
      market: renderMarket, world: renderWorld }[activeTab] || function () {})();
@@ -2991,6 +3076,7 @@ function load() {
     const d = JSON.parse(raw);
     if (!d || typeof d.money !== "number" || !Array.isArray(d.fleet)) return null;
     d.fleet = d.fleet.filter(f => vType(f.type));
+    if (!("dispoMoved" in d)) d.dispoMoved = false;   /* Stand vor der Büro-Disposition */
     d.jobs = (d.jobs || []).filter(j => j.legs && j.legs.every(l => N[l.from] && N[l.to]));
     d.orders = (d.orders || []).filter(o => N[o.from] && N[o.to] && CARGO[o.cargo]);
     return d;
@@ -3045,6 +3131,19 @@ function boot() {
     if (!S.orders.length) spawnOrders(8);
     renderFollowBar();
     renderFogNote(fogRadiusKm(S.stage, level()));
+    /* Ältere Spielstände: Die Auto-Disposition ist ins Büro umgezogen */
+    if (!S.dispoMoved) {
+      S.dispoMoved = true;
+      const had = S.autoDispatch;
+      delete S.autoDispatch;
+      if (had || S.fleet.length > 1) setTimeout(() => {
+        phoneMsg({ from: "Lina Sturm", kind: "info", title: "Disposition jetzt im Büro",
+          body: "Chef, die Auto-Disposition gibt’s nicht mehr extra – das erledigen jetzt die Leute aus der Disposition in deinen Büros. "
+            + "Ordne Fahrzeuge einem Büro mit Disponent zu (geht auch direkt unter „Flotte“), dann fahren sie von allein. "
+            + "Alle anderen teilst du selbst ein. Und die Dispo nimmt jetzt immer das passende Fahrzeug – kein Sattelzug mehr für eine Uhr." });
+        save();
+      }, 1500);
+    }
     /* Mitten im Tutorial neu geladen: Lina macht weiter. Wer schon weiter
        ist, bekommt es nicht nachträglich aufgedrückt. */
     if (S.tut && S.tut.done === false) {
@@ -3061,6 +3160,11 @@ function boot() {
     showTab(activeTab === b.dataset.tab && b.dataset.tab !== "map" ? "map" : b.dataset.tab);
   });
   $("#viewClose").onclick = () => showTab("map");
+  /* Nach der Auswahl gibt jede Liste den Fokus wieder ab – sonst hält die
+     Ansicht das Neuzeichnen an (siehe render). */
+  document.addEventListener("change", e => {
+    if (e.target && e.target.tagName === "SELECT") setTimeout(() => e.target.blur(), 0);
+  }, true);
 
   $$("[data-speed]").forEach(b => {
     b.classList.toggle("on", +b.dataset.speed === S.speed);
@@ -3100,15 +3204,11 @@ function boot() {
   document.addEventListener("pointercancel", lift, true);
 
   /* Spieluhr: 1 Sekunde Echtzeit = 1 Spielminute bei Tempo 1× */
-  let last = performance.now(), acc = 0, autoTimer = 0, baseTick = 0;
+  let last = performance.now(), acc = 0, baseTick = 0;
   function frame(now) {
     const real = Math.min(0.4, (now - last) / 1000);
     last = now;
-    if (clockRunning()) {
-      tick(real * S.speed);
-      autoTimer += real;
-      if (autoTimer > 1.2) { autoTimer = 0; autoDispatch(); }
-    }
+    if (clockRunning()) tick(real * S.speed);
     if (playing()) tickFollow();
     /* Haft oder Spielende: eigene Vollbildanzeige, die Uhr steht */
     if (S.jail && typeof jailCheck === "function") jailCheck();

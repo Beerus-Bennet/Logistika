@@ -457,10 +457,18 @@ function fire(baseId, staffId) {
 function assignVehicle(baseId, uid) {
   const b = baseById(baseId); if (!b) return;
   const old = baseOfVehicle(uid);
-  if (old) old.vehicles = old.vehicles.filter(u => u !== uid);
-  if (b.vehicles.length >= tierOf(b).slots)
-    return toast("Der Hof am Standort ist voll (" + tierOf(b).slots + " Stellplätze).", "warn");
+  if (old === b) return;
+  if (b.vehicles.length >= tierOf(b).slots) {
+    toast("Der Hof am Standort ist voll (" + tierOf(b).slots + " Stellplätze).", "warn");
+    return render();
+  }
+  if (old) {
+    old.vehicles = old.vehicles.filter(u => u !== uid);
+    const f = S.fleet.find(x => x.uid === uid);
+    if (f && f.driver && !b.staff.some(st => st.id === f.driver)) f.driver = null;   /* Fahrer bleibt im alten Büro */
+  }
   b.vehicles.push(uid);
+  b.nextAt = Math.min(b.nextAt || 0, S.time + 5);   /* Dispo schaut gleich drauf */
   save(); render();
 }
 function unassignVehicle(uid) {
@@ -478,68 +486,57 @@ function assignedUids() {
 
 /* ====================== Betrieb: Aufträge automatisch ==================== */
 /* Wie oft ein Standort eine Ausschreibung greift (in Spielminuten). */
+/* Die Disposition ist die einzige Automatik im Spiel. Wie viel sie schafft,
+   hängt am Team: Können × Stimmung. Daraus folgt, wie viele Fahrzeuge es
+   gleichzeitig im Blick behält und wie schnell es auf ein frei gewordenes
+   Fahrzeug reagiert. */
+function dispoPower(b) { return rolePower(b, "disp") * moodFactor(b); }
+function dispCap(b) { const p = dispoPower(b); return p <= 0 ? 0 : Math.floor(2 + p * 3); }
 function dispatchInterval(b) {
-  const p = rolePower(b, "disp") * moodFactor(b);
+  const p = dispoPower(b);
   if (p <= 0) return Infinity;
-  const perDay = 2.5 + p * 2.2;
-  return Math.max(25, 1440 / perDay);
+  return clamp(Math.round(90 / (1 + p)), 8, 60);
 }
 function baseBonus(b) { return Math.min(0.12, rolePower(b, "zoll") * 0.022 * moodFactor(b)); }
 
 function baseDispatch(b) {
-  if (basePaused(b) || !b.vehicles.length || rolePower(b, "disp") <= 0) return false;
-  const idle = b.vehicles.filter(u => {
-    const f = S.fleet.find(x => x.uid === u);
-    return f && f.phase === "idle";
-  });
-  if (!idle.length) return false;
-  /* Wie viele Fahrzeuge ohne festen Fahrer gerade unterwegs sind */
-  const busyOpen = b.vehicles.filter(u => {
-    const f = S.fleet.find(x => x.uid === u);
-    return f && f.phase !== "idle" && !f.driver;
-  }).length;
-  let usable = idle;
-  if (busyOpen >= driverCap(b)) {
-    usable = idle.filter(u => { const f = S.fleet.find(x => x.uid === u); return f && f.driver; });
-    if (!usable.length) return false;               /* kein Fahrpersonal mehr frei */
-  }
+  if (basePaused(b) || b.dispOff || !b.vehicles.length || dispoPower(b) <= 0) return false;
+  const fleet = b.vehicles.map(u => S.fleet.find(x => x.uid === u)).filter(Boolean);
+  const room = dispCap(b) - fleet.filter(f => f.phase !== "idle").length;
+  if (room <= 0) return false;
+  /* Ohne festen Fahrer rollen nur so viele, wie Fahrpersonal da ist */
+  let openLeft = driverCap(b) - fleet.filter(f => f.phase !== "idle" && !f.driver).length;
+  const usable = fleet.filter(f => f.phase === "idle" && (f.driver || openLeft > 0));
+  if (!usable.length) return false;
 
   const here = [N[b.node].lat, N[b.node].lon];
   const reach = reachKm(b);
-  const cands = S.orders
-    .filter(o => !o.snus && !o.pablo && hav(here, [N[o.from].lat, N[o.from].lon]) <= reach)
-    .sort((a, c) => c.pay - a.pay);
-  if (!cands.length) return false;
-
-  const pool = new Set(usable);
-  let ok = false;
+  const pool = new Set(usable.map(f => f.uid));
+  let got = 0;
   dispatchPool = pool;
   try {
-    let examined = 0;
-    for (const o of cands) {
-      if (examined++ > 14) break;
-      for (const v of buildVariants(o)) {
-        const assign = assignFor(v, o);
-        if (assign.some(x => !x)) continue;
-        const ev = evaluate(v, o, assign);
-        if (!ev.ok) continue;
-        const over = (S.time + ev.time) - o.deadline;
-        if (over > 4 * 60) continue;
-        const expPay = over > 0 ? o.pay * Math.max(0.2, 1 - (over / 60) * 0.04) : o.pay;
-        if (expPay - ev.cost <= ev.cost * 0.10) continue;
+    got = dispatchRun({
+      maxTake: room,
+      accept: o => !o.pablo && hav(here, [N[o.from].lat, N[o.from].lon]) <= reach,
+      onBefore: o => {
         const bonus = baseBonus(b);
-        if (bonus > 0) o.pay = Math.round(o.pay * (1 + bonus));
+        if (bonus > 0 && !o.snus) o.pay = Math.round(o.pay * (1 + bonus));
         o.viaBase = b.id;
-        startJob(o, v, assign);
+      },
+      onStart: (o, assign) => {
         b.done++;
         b.staff.forEach(s => { if (s.role === "disp") s.jobs++; });
-        ok = true;
-        break;
+        /* Wer ohne festen Fahrer losfuhr, belegt einen Platz im Fahrerpool */
+        assign.forEach(u => {
+          const f = S.fleet.find(x => x.uid === u);
+          if (f && !f.driver) openLeft--;
+          pool.delete(u);
+        });
+        if (openLeft <= 0) fleet.forEach(f => { if (!f.driver) pool.delete(f.uid); });
       }
-      if (ok) break;
-    }
+    });
   } finally { dispatchPool = null; }
-  return ok;
+  return got > 0;
 }
 
 /* --------------------------- Stimmung & Vorfälle ------------------------- */
@@ -732,9 +729,8 @@ function tickBases(dtMin) {
   for (const b of S.bases) {
     if (b.poolDay !== dayOf(S.time) && Math.random() < 0.4) refreshPool(b);
     if (S.time >= (b.nextAt || 0)) {
-      const got = baseDispatch(b);
-      const iv = dispatchInterval(b);
-      b.nextAt = S.time + (got ? iv : Math.min(iv, 45));
+      baseDispatch(b);
+      b.nextAt = S.time + Math.min(dispatchInterval(b), 60);
     }
   }
 }
@@ -841,17 +837,26 @@ function baseCard(b) {
       <span class="${lr > 1 ? "bad" : ""}">🧑‍✈️ ${cap} gleichzeitig fahrbar</span>
       <span>📡 ${kmf(Math.round(reachKm(b)))} Einzugsgebiet</span>
       <span>📦 ${b.done} selbst disponiert</span>
+      ${dispCap(b) ? `<span class="${mine.length > dispCap(b) ? "bad" : ""}">🗂️ betreut bis ${dispCap(b)} Fahrzeuge</span>
+      <span>⏱️ schaut alle ${dur(dispatchInterval(b))} nach</span>` : ""}
       <span>💶 ${money(wagesDaily(b))} Löhne/Tag</span>
       <span>🛋️ Behaglichkeit ${comfortOf(b)}</span>
       <span>🗓️ nächste Miete ${stamp(b.rentDue)}</span>
       ${baseBonus(b) > 0 ? `<span class="good">📑 +${Math.round(baseBonus(b) * 100)} % Servicezuschlag</span>` : ""}
     </div>
 
+    ${rolePower(b, "disp") > 0 ? `<div class="dispotoggle">
+      <div><b>🗂️ Disposition</b><small>${b.dispOff ? "pausiert – die Fahrzeuge hier teilst du gerade selbst ein"
+        : "nimmt Aufträge im Einzugsgebiet an und schickt das passende Fahrzeug"}</small></div>
+      <button class="toggle ${b.dispOff ? "" : "on"}" data-dispo="${b.id}" aria-label="Disposition an/aus"><i></i></button>
+    </div>` : ""}
     ${rolePower(b, "disp") <= 0
-      ? `<div class="hintbox">Ohne Disposition nimmt dieser Standort nichts an. Stell jemanden aus der Disposition ein.</div>`
-      : lr > 1
-        ? `<div class="hintbox warn">Mehr Fahrzeuge als Fahrpersonal – ${mine.length} Fahrzeuge, ${cap} gleichzeitig möglich. Das drückt die Stimmung.</div>`
-        : ""}
+      ? `<div class="hintbox">Ohne Disposition nimmt dieser Standort nichts an – die Fahrzeuge hier fahren dann nur, wenn du sie selbst einteilst. Stell jemanden aus der Disposition ein.</div>`
+      : mine.length > dispCap(b)
+        ? `<div class="hintbox warn">${mine.length} Fahrzeuge, aber die Disposition betreut nur ${dispCap(b)} – der Rest wartet. Mehr oder bessere Disponenten helfen.</div>`
+        : lr > 1
+          ? `<div class="hintbox warn">Mehr Fahrzeuge als Fahrpersonal – ${mine.length} Fahrzeuge, ${cap} gleichzeitig möglich. Das drückt die Stimmung.</div>`
+          : ""}
 
     <div class="sechead sm">Team</div>
     ${b.staff.length ? b.staff.map(s => staffRow(b, s)).join("")
@@ -933,7 +938,7 @@ function renderBases() {
       ? `<div class="sechead" style="margin-top:0">Deine Standorte</div>` + S.bases.map(baseCard).join("")
       : `<div class="card"><div class="vname">Noch kein eigenes Büro<small>Standorte nehmen dir die Arbeit ab</small></div>
          <p class="pintro">Ein Standort greift Ausschreibungen in seinem Einzugsgebiet selbst ab, sobald dort jemand
-         aus der <b>Disposition</b> sitzt. <b>Fahrpersonal</b> bestimmt, wie viele der zugeordneten Fahrzeuge
+         aus der <b>Disposition</b> sitzt – das ist die einzige Automatik im Spiel. Alles ohne Büro teilst du selbst ein. <b>Fahrpersonal</b> bestimmt, wie viele der zugeordneten Fahrzeuge
          gleichzeitig rollen, <b>Umschlag</b> verkürzt die Standzeiten, <b>Zoll &amp; Papiere</b> bringen Zuschlag.
          Wer die Rollen einseitig besetzt oder zu wenige Leute für zu viele Fahrzeuge hat, bekommt Ärger im Team –
          das Telefon meldet sich dann.</p></div>`) +
@@ -954,6 +959,13 @@ function renderBases() {
     if (sel && sel.value) assignVehicle(b.dataset.assign, sel.value);
   });
   $$("#tab-bases [data-unassign]").forEach(b => b.onclick = () => unassignVehicle(b.dataset.unassign));
+  $$("#tab-bases [data-dispo]").forEach(t => t.onclick = () => {
+    const base = baseById(t.dataset.dispo); if (!base) return;
+    base.dispOff = !base.dispOff;
+    if (!base.dispOff) base.nextAt = S.time + 2;
+    toast(base.dispOff ? "Disposition " + N[base.node].short + " pausiert." : "Disposition " + N[base.node].short + " läuft wieder.", "ok");
+    save(); render();
+  });
   $$("#tab-bases [data-nodriver]").forEach(b => b.onclick = () => clearDriver(b.dataset.nodriver));
   $$("#tab-bases [data-staffdrag]").forEach(el => makeDraggable(el, el.dataset.staffdrag));
   $$("#tab-bases [data-office]").forEach(b => {
