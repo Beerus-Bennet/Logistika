@@ -254,7 +254,7 @@ function newGame() {
     money: 0, xp: 0, stage: 1, time: 6 * 60, speed: 1,
     fleet: [], orders: [], jobs: [], seq: 1, lastSpawn: -999, lastDay: 0,
     done: 0, late: 0, failed: 0, kmTotal: 0, co2: 0, revenue: 0, expense: 0,
-    showNet: true, fog: true, autoDispatch: false, follow: null,
+    showNet: false, fog: true, autoDispatch: false, follow: null,
     bases: [], phone: { msgs: [], unread: 0 }, ledger: []
   };
 }
@@ -1475,7 +1475,7 @@ function checkLevel() {
   if (l > lastLevel) {
     lastLevel = l;
     toast("🎉 Level " + l + " erreicht!", "ok");
-    if (S.fog) toast("🌫️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
+    if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
     const nx = STAGES[S.stage];
     if (nx && l >= nx.reqLevel) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
   }
@@ -1612,7 +1612,60 @@ function tickFollow() {
   if (p) map.panTo(p);
 }
 
-const TYPE_GLYPH = { city: "🏙", port: "⚓", air: "🛫", rail: "🚉" };
+const TYPE_GLYPH = { city: "🏙️", port: "⚓", air: "🛫", rail: "🚉" };
+
+/* ------------------------------ Emojis auf der Karte ------------------------------
+   Canvas setzt Emojis je nach Gerät und Zeichen unterschiedlich: manche sitzen
+   tief, manche rechts (🛥️, ✈️ …), weil die Schriftmetrik nicht zur Grafik passt.
+   Darum wird jedes Emoji einmal groß gezeichnet, sein sichtbarer Umriss
+   ausgemessen und als Bildchen gespeichert. Gezeichnet wird dann genau um die
+   Mitte der sichtbaren Pixel – und alle gleich groß, egal ob breit oder hoch. */
+const EMOJI_FONT = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Twemoji Mozilla',system-ui,sans-serif";
+const emojiCache = new Map();
+function emojiSprite(ch) {
+  let sp = emojiCache.get(ch);
+  if (sp !== undefined) return sp;
+  sp = null;
+  try {
+    const F = 96, W = F * 2;
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = W;
+    const c = cv.getContext("2d", { willReadFrequently: true });
+    c.font = F + "px " + EMOJI_FONT;
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
+    c.fillText(ch, W / 2, W / 2);
+    const d = c.getImageData(0, 0, W, W).data;
+    let x0 = W, y0 = W, x1 = -1, y1 = -1;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 >= x0 && y1 >= y0) {
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
+      const out = document.createElement("canvas");
+      out.width = w; out.height = h;
+      out.getContext("2d").drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+      sp = { cv: out, w, h };
+    }
+  } catch (e) { sp = null; }
+  emojiCache.set(ch, sp);
+  return sp;
+}
+/* size = Kantenlänge des gedachten Quadrats, in das das Emoji passt */
+function drawEmoji(c, ch, x, y, size) {
+  const sp = emojiSprite(ch);
+  if (!sp) {                                     /* Notlösung: wie früher als Text */
+    c.font = Math.round(size) + "px " + EMOJI_FONT;
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
+    c.fillText(ch, x, y + 1);
+    return;
+  }
+  const k = size / Math.max(sp.w, sp.h);
+  const w = sp.w * k, h = sp.h * k;
+  const q = c.imageSmoothingQuality;
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
+  c.drawImage(sp.cv, x - w / 2, y - h / 2, w, h);
+  c.imageSmoothingQuality = q;
+}
 
 /* Das Infrastrukturnetz ändert sich nur beim Etappenwechsel. Einmal
    projizieren spart pro Bild mehrere tausend Rechnungen. */
@@ -1724,30 +1777,15 @@ function renderFogNote(km) {
   const el = $("#fogNote");
   if (!el) return;
   if (!S.fog) { el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="fog-note">🌫️ erschlossen: ${kmf(km)} um jeden Standort</div>`;
+  el.innerHTML = `<div class="fog-note">☁️ erschlossen: ${kmf(km)} um jeden Standort</div>`;
 }
 
 function drawWorld(m, ctx) {
   const z = m.zoom;
   drawFog(m, ctx);
 
-  // 1. Infrastrukturnetz (vorprojiziert, gebündelt gezeichnet)
-  if (S.showNet) {
-    const minZoomFor = { s: 0, i: 3.8, l: 3.4, r: 4.6, a: 3.6, b: 8.5 };
-    for (const mode of ["s", "i", "l", "r", "a", "b"]) {
-      const buf = netBuffers[mode];
-      if (!buf || !buf.length) continue;
-      if (z < minZoomFor[mode]) continue;
-      const mi = MODE_INFO[mode];
-      const close = z >= 8.5;                       // Stadtmaßstab: sehr zurückhaltend
-      m.segments(buf, {
-        color: mi.color,
-        width: mode === "a" ? 1 : (close ? 1.5 : 2),
-        alpha: mode === "a" ? 0.15 : (close ? 0.2 : 0.32),
-        dash: mode === "a" ? [3, 7] : (mode === "s" ? [9, 6] : (close ? [7, 7] : []))
-      });
-    }
-  }
+  // 1. Das Verkehrsnetz als Linienteppich bleibt aus (der Schalter ist weg) –
+  //    sichtbar sind die Strecken der laufenden Aufträge.
 
   // 2. Laufende Aufträge – die aktive Teilstrecke läuft sichtbar mit
   const dashOff = -(performance.now() / 40) % 22;
@@ -1809,11 +1847,7 @@ function drawWorld(m, ctx) {
       c.fillStyle = n.type === "port" ? "#9fd7ef" : n.type === "air" ? "#ffc3cd" : n.type === "rail" ? "#d6c9ff" : "#ffe4a0";
       c.fill();
       c.lineWidth = 2.2; c.strokeStyle = "#10222f"; c.stroke();
-      if (z >= 6.5) {
-        c.font = (r + 2) + "px system-ui, sans-serif";
-        c.textAlign = "center"; c.textBaseline = "middle";
-        c.fillText(TYPE_GLYPH[n.type] || "•", x, y + 0.5);
-      }
+      if (z >= 6.5 && TYPE_GLYPH[n.type]) drawEmoji(c, TYPE_GLYPH[n.type], x, y, r * 1.2);
       if (labelOk || (hot.has(n.id) && z >= 2.0)) {
         const label = n.short;
         c.font = "700 11px " + LABEL_FONT;
@@ -1860,10 +1894,7 @@ function drawWorld(m, ctx) {
       c.lineWidth = 3; c.strokeStyle = mi.color; c.stroke();
       c.lineWidth = 2.4; c.strokeStyle = "#0d1b2a";
       c.beginPath(); c.arc(x, y, r + 1.6, 0, 7); c.stroke();
-      c.font = (r - 1) + "px system-ui, 'Apple Color Emoji','Segoe UI Emoji', sans-serif";
-      c.textAlign = "center"; c.textBaseline = "middle";
-      c.fillStyle = "#0d1b2a";
-      c.fillText(t.icon, x, y + 1);
+      drawEmoji(c, t.icon, x, y, r * 1.3);
       if (!moving) {
         c.beginPath(); c.arc(x + r * 0.72, y - r * 0.72, 4, 0, 7);
         c.fillStyle = "#9fb0c2"; c.fill();
@@ -1957,9 +1988,7 @@ function drawPinShape(c, x, y, R, fill, icon, opts) {
     const img = snusPinImg();
     if (img) c.drawImage(img, cx - R * 0.62, cy - R * 0.62, R * 1.24, R * 1.24);
   } else if (icon) {
-    c.font = Math.round(R * 0.95) + "px system-ui, 'Apple Color Emoji','Segoe UI Emoji', sans-serif";
-    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
-    c.fillText(icon, cx, cy + 1);
+    drawEmoji(c, icon, cx, cy, R * 0.98);
   }
   if (opts.sel) {
     c.beginPath(); c.arc(cx, cy, R + 5, 0, 7);
@@ -2027,9 +2056,7 @@ function drawBases(m, z) {
       c.lineWidth = 2.4; c.strokeStyle = "#0d1b2a"; c.stroke();
       c.beginPath(); c.moveTo(x - w / 2 - 3, y - h / 2 + 1); c.lineTo(x, y - h / 2 - w * 0.42); c.lineTo(x + w / 2 + 3, y - h / 2 + 1); c.closePath();
       c.fillStyle = col; c.fill(); c.stroke();
-      c.font = Math.round(h * 0.72) + "px system-ui, 'Apple Color Emoji', sans-serif";
-      c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0d1b2a";
-      c.fillText("🏢", x, y + 1);
+      drawEmoji(c, "🏢", x, y + 1, h * 0.74);
       baseHits.push({ x, y, r: w * 0.8, id: b.id });
     });
   });
@@ -3042,17 +3069,6 @@ function boot() {
   if (S.speed > 0) lastSpeed = S.speed;
   $("#pauseBtn").onclick = togglePause;
   renderPause();
-  $("#netBtn").classList.toggle("on", S.showNet);
-  $("#netBtn").onclick = () => {
-    S.showNet = !S.showNet;
-    $("#netBtn").classList.toggle("on", S.showNet);
-    mapRedraw();
-  };
-  $("#homeBtn").onclick = () => {
-    setFollow(null);
-    const s = STAGES[S.stage - 1];
-    map.flyTo(s.center, s.zoom, 900);
-  };
   $("#fogBtn").classList.toggle("on", S.fog);
   $("#fogBtn").onclick = () => {
     S.fog = !S.fog;
@@ -3068,8 +3084,6 @@ function boot() {
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
   renderPhoneBadge();
-  $("#zoomIn").onclick = () => map.zoomBy(1);
-  $("#zoomOut").onclick = () => map.zoomBy(-1);
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
   window.addEventListener("keydown", e => { if (e.key === "Escape" && !tutorialRunning()) { closeModal(); } });
   /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste

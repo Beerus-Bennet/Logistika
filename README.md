@@ -153,7 +153,7 @@ Was du noch nicht erschlossen hast, liegt im Dunkeln. Um jeden erschlossenen
 Standort liegt ein Lichtkegel, dessen Radius mit **Level und Etappe** wächst –
 von 16 km rund um Berlin bis zu mehreren tausend Kilometern am Ende. Deine
 laufenden Routen und deine Fahrzeuge leuchten sich zusätzlich frei. Wer lieber
-alles sieht, schaltet den Nebel mit 🌫️ ab.
+alles sieht, schaltet den Nebel mit ☁️ ab.
 
 ### Die sechs Etappen
 
@@ -238,14 +238,12 @@ bleibt die Karte links stehen und die Ansicht dockt rechts an.
 
 | Aktion | Wie |
 |---|---|
-| Karte bewegen | Ziehen, zwei Finger oder + / − zum Zoomen, Mausrad |
+| Karte bewegen | Ziehen, zwei Finger zum Zoomen, Mausrad |
 | Station oder Fahrzeug ansehen | Antippen |
 | Fahrzeug live verfolgen | Fahrzeug antippen → *live verfolgen*, oder 📡 |
 | Verfolgung beenden | Karte ziehen oder ✕ am Live-Band |
 | Tempo | Leiste links: Pause, 1×, 3×, 10×, 30× |
-| Verkehrsnetz ein-/ausblenden | 🕸️ |
-| Nebel ein-/ausblenden | 🌫️ |
-| Zurück zur aktuellen Etappe | 🎯 |
+| Nebel ein-/ausblenden | ☁️ |
 
 Über den **Aufträgen** sitzt eine feste Leiste: oben sortieren (💶 Erlös,
 📍 Leerfahrt, ⏳ Frist), darunter filtern – alle, nur jetzt machbare oder nach
