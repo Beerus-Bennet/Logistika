@@ -2135,8 +2135,13 @@ function vehFan() {
   return off;
 }
 
+/* Nach dem Antippen der Karte schickt der Browser noch einen „Klick“ an
+   dieselbe Stelle hinterher. Liegt dort inzwischen ein Knopf der Infokarte,
+   würde der sonst gleich mit ausgelöst (z. B. „In der Auftragsliste“). */
+let mapTapAt = 0;
 function onMapTap(px, py) {
   if (!playing()) return;
+  mapTapAt = performance.now();
   let best = null, bestD = 26;
   const fan = vehFan();
   S.fleet.forEach(v => {
@@ -3160,6 +3165,9 @@ function boot() {
     showTab(activeTab === b.dataset.tab && b.dataset.tab !== "map" ? "map" : b.dataset.tab);
   });
   $("#viewClose").onclick = () => showTab("map");
+  $("#inspector").addEventListener("click", e => {
+    if (performance.now() - mapTapAt < 400) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
   /* Nach der Auswahl gibt jede Liste den Fokus wieder ab – sonst hält die
      Ansicht das Neuzeichnen an (siehe render). */
   document.addEventListener("change", e => {
@@ -3189,7 +3197,10 @@ function boot() {
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
   renderPhoneBadge();
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
-  window.addEventListener("keydown", e => { if (e.key === "Escape" && !tutorialRunning()) { closeModal(); } });
+  window.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || tutorialRunning()) return;
+    if (typeof walletOpen === "function" && walletOpen()) walletClose(); else closeModal();
+  });
   /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste
      (iOS ignoriert user-scalable=no) – die Karte zoomt selbst mit + / − und
      Pinch auf der Karte. */

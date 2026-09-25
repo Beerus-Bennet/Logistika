@@ -665,6 +665,8 @@ function openPhone() {
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderPhone();
   save();
+  /* Solana-Kurs schon mal holen, damit Angebote gleich in SOL dastehen */
+  if (typeof solFetch === "function") solFetch().then(() => { if (phoneOpen()) renderPhone(); });
 }
 function renderPhone() {
   if (!$("#modal").classList.contains("open")) return;

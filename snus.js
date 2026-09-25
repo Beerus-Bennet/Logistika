@@ -219,17 +219,30 @@ function snusDropNode() {
   return pick(pool.length ? pool : unlockedNodes()).id;
 }
 
-function snusBuy(msgId) {
+/* Kaufen: erst die Wallet, bezahlt wird in Solana – danach geht die Ware raus */
+function snusPay(msgId) {
   const m = S.phone.msgs.find(x => x.id === msgId);
   if (!m || m.state !== "offer") return;
   const n = snusPicked(m);
   if (!n) return toast("Erst Dosen auswählen.", "warn");
   const cost = n * SNUS_BUY;
   if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
+  if (typeof walletPay !== "function") return snusBuy(msgId);
+  walletPay({ to: "Mr. Snus", icon: snusLogo(34), eur: cost, memo: n + " Dosen", onPaid: tx => snusBuy(msgId, tx) });
+}
+function snusBuy(msgId, tx) {
+  const m = S.phone.msgs.find(x => x.id === msgId);
+  if (!m || m.state !== "offer") return;
+  const n = snusPicked(m);
+  if (!n) return toast("Erst Dosen auswählen.", "warn");
+  const cost = n * SNUS_BUY;
+  if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
+  if (!tx && typeof walletQuote === "function") tx = walletQuote(cost);
   const sn = snusState();
   if (!sn.at || snusTotal() === 0) sn.at = snusDropNode();
   S.money -= cost; S.expense += cost;
-  logMoney("snus", "Mr. Snus · " + n + " Dosen", -cost);
+  logMoney("snus", "Mr. Snus · " + n + " Dosen" + (tx ? " · " + solf(tx.sol, 2) + " SOL" : ""), -cost);
+  if (tx) sn.sol = (sn.sol || 0) + tx.sol;
   sn.spent = (sn.spent || 0) + cost;
   const parts = [];
   m.offer.forEach(r => {
@@ -240,6 +253,7 @@ function snusBuy(msgId) {
   });
   sn.bought += n;
   m.thread.push({ me: true, t: "Nehm ich: " + parts.join(", ") + "." });
+  if (tx) m.thread.push({ me: true, tx });
   const shop = snusShop();
   m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim " + (shop ? shop.t + ", " + N[sn.at].short : "Späti in " + N[sn.at].short) + ". Die Jungs melden sich bei dir." });
   m.state = "done";
@@ -472,6 +486,7 @@ function snusMsgHTML(m) {
       }).join("");
       return `<div class="bub in list"><div class="sn-lh">Was ich grad dahab:</div>${rows}</div>`;
     }
+    if (e.tx && typeof walletTxBubble === "function") return walletTxBubble(e.tx);
     return `<div class="bub ${e.me ? "out" : "in"}">${esc(e.t)}</div>`;
   };
   let acts = "";
@@ -481,9 +496,9 @@ function snusMsgHTML(m) {
       <button class="btn tiny ghost" data-snno="${m.id}">Nein, danke mein Akh</button></div>`;
   } else if (m.state === "offer") {
     const n = snusPicked(m), cost = n * SNUS_BUY;
-    acts = `<div class="sn-sum">${n} Dosen · <b>${money(cost)}</b> <small>Verkauf später ${money(SNUS_SELL)}/Dose</small></div>
+    acts = `<div class="sn-sum">${n} Dosen · <b>${money(cost)}</b>${n && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 2)} SOL</span>` : ""} <small>Verkauf später ${money(SNUS_SELL)}/Dose · bezahlt wird in Solana</small></div>
       <div class="sn-acts">
-        <button class="btn tiny${n && cost <= S.money ? "" : " disabled"}" data-snbuy="${m.id}">Kaufen${n ? " · " + money(cost) : ""}</button>
+        <button class="btn tiny${n && cost <= S.money ? "" : " disabled"}" data-snbuy="${m.id}">◎ Bezahlen${n ? " · " + money(cost) : ""}</button>
         <button class="btn tiny ghost" data-snall="${m.id}|${n ? 0 : 1}">${n ? "Nichts" : "Alles"}</button>
         <button class="btn tiny ghost" data-sncancel="${m.id}">Doch nicht</button></div>`;
   } else if (m.state === "gone") {
@@ -504,7 +519,7 @@ function bindSnusMsgs() {
   $$("#modalBody [data-snall]").forEach(b => b.onclick = () => {
     const [id, on] = b.dataset.snall.split("|"); snusAll(id, on === "1");
   });
-  $$("#modalBody [data-snbuy]").forEach(b => b.onclick = () => snusBuy(b.dataset.snbuy));
+  $$("#modalBody [data-snbuy]").forEach(b => b.onclick = () => snusPay(b.dataset.snbuy));
   $$("#modalBody [data-sncancel]").forEach(b => b.onclick = () => snusCancel(b.dataset.sncancel));
 }
 
@@ -578,9 +593,13 @@ function shadowBookHTML() {
   return `<div class="shadow">
     <div class="calc-disp ${all >= 0 ? "" : "neg"}">${all >= 0 ? "" : "−"}${money(Math.abs(all))}</div>
     <div class="sb-sub">Gewinn aus Nebengeschäften · Kasse ${cash >= 0 ? "+" : "−"}${money(Math.abs(cash))}, Rest liegt im Lager</div>
+    ${typeof solKnown === "function" ? (() => { const r = solKnown(), paid = ((S.snus && S.snus.sol) || 0) + ((S.pablo && S.pablo.sol) || 0);
+      return `<div class="sb-sol"><span>◎ 1 SOL = <b>${fmt(r.eur, 2)} €</b> <i class="${r.live ? "live" : ""}">${r.live ? "● live" : "offline"} · ${solAge(r)}</i></span>
+        ${paid ? `<span>an Verkäufer: <b>${solf(paid, 2)} SOL</b></span>` : ""}</div>`; })() : ""}
     ${t.sn.bought ? `<div class="sb-card">
       <div class="sb-h">${snusLogo(22)} <b>Mr. Snus</b><span>${pm(snP)}</span></div>
       <div class="sb-row"><span>Eingekauft</span><span>${t.sn.bought} Dosen</span><b class="bad">−${money(t.sn.spent)}</b></div>
+      ${S.snus && S.snus.sol ? `<div class="sb-row muted"><span>davon per Wallet</span><span></span><span>${solf(S.snus.sol, 2)} SOL</span></div>` : ""}
       <div class="sb-row"><span>Verkauft</span><span>${t.sn.sold} Dosen</span><b class="good">+${money(t.sn.earned)}</b></div>
       ${t.sn.lost ? `<div class="sb-row"><span>Beschlagnahmt</span><span>${t.sn.lost} Dosen</span><b class="bad">−${money(t.sn.lost * SNUS_BUY)}</b></div>` : ""}
       <div class="sb-row muted"><span>Im Lager${t.sn.way ? " + unterwegs" : ""}</span><span>${t.sn.stock} Dosen</span><b>+${money(snStock)}</b></div>
@@ -588,6 +607,7 @@ function shadowBookHTML() {
     ${t.pb.bought ? `<div class="sb-card dark">
       <div class="sb-h">❄️ <b>Don Pablo</b><span>${pm(pbP)}</span></div>
       <div class="sb-row"><span>Eingekauft</span><span>${kgf(t.pb.bought)}</span><b class="bad">−${money(t.pb.spent)}</b></div>
+      ${S.pablo && S.pablo.sol ? `<div class="sb-row muted"><span>davon per Wallet</span><span></span><span>${solf(S.pablo.sol, 0)} SOL</span></div>` : ""}
       <div class="sb-row"><span>Verkauft</span><span>${kgf(t.pb.sold)}</span><b class="good">+${money(t.pb.earned)}</b></div>
       <div class="sb-row muted"><span>Im Hangar${t.pb.way ? " + unterwegs" : ""}</span><span>${kgf(t.pb.stock)}</span><b>+${money(pbStock)}</b></div>
     </div>` : ""}

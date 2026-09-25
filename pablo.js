@@ -133,21 +133,31 @@ function pabloAll(msgId, on) {
   m.pick = on ? m.tons : 0;
   renderPhone();
 }
-function pabloBuy(msgId) {
+function pabloPay(msgId) {
+  const m = S.phone.msgs.find(x => x.id === msgId);
+  if (!m || m.state !== "offer" || !m.pick) return;
+  const cost = m.pick * 1000 * PABLO_BUY;
+  if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
+  if (typeof walletPay !== "function") return pabloBuy(msgId);
+  walletPay({ to: "Don Pablo", icon: pabloFace(34), eur: cost, memo: m.pick + " t", onPaid: tx => pabloBuy(msgId, tx) });
+}
+function pabloBuy(msgId, tx) {
   const m = S.phone.msgs.find(x => x.id === msgId);
   if (!m || m.state !== "offer" || !m.pick) return;
   const kg = m.pick * 1000, cost = kg * PABLO_BUY;
   if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
+  if (!tx && typeof walletQuote === "function") tx = walletQuote(cost);
   const pb = pabloState();
   if (!pb.at || pb.kg <= 0) {
     const hubs = unlockedNodes().filter(n => n.modes.includes("a"));
     pb.at = pick(hubs.length ? hubs : unlockedNodes()).id;
   }
   S.money -= cost; S.expense += cost;
-  logMoney("pablo", "Don Pablo · " + m.pick + " t", -cost);
+  logMoney("pablo", "Don Pablo · " + m.pick + " t" + (tx ? " · " + solf(tx.sol, 2) + " SOL" : ""), -cost);
   pb.spent = (pb.spent || 0) + cost;
   pb.kg += kg; pb.bought += kg;
   m.thread.push({ me: true, t: "Ich nehm " + m.pick + " Tonnen." });
+  if (tx) { m.thread.push({ me: true, tx }); pb.sol = (pb.sol || 0) + tx.sol; }
   const hg = pabloHangar();
   m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : "Hangar 7") + ", " + N[pb.at].name + ". Meine Leute melden sich bei dir." });
   m.state = "done"; m.bought = m.pick;
@@ -270,6 +280,7 @@ function pabloMsgHTML(m) {
         </div>
       </div>`;
     }
+    if (e.tx && typeof walletTxBubble === "function") return walletTxBubble(e.tx);
     return `<div class="bub ${e.me ? "out" : "in"}">${esc(e.t)}</div>`;
   };
   let acts = "";
@@ -279,9 +290,9 @@ function pabloMsgHTML(m) {
       <button class="btn tiny ghost" data-pbno="${m.id}">Kein Interesse</button></div>`;
   } else if (m.state === "offer") {
     const k = m.pick || 0, cost = k * 1000 * PABLO_BUY;
-    acts = `<div class="sn-sum">${k} t · <b>${money(cost)}</b> <small>Kunden zahlen ${money(PABLO_SELL * 1000)}/t</small></div>
+    acts = `<div class="sn-sum">${k} t · <b>${money(cost)}</b>${k && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 0)} SOL</span>` : ""} <small>Kunden zahlen ${money(PABLO_SELL * 1000)}/t · bezahlt wird in Solana</small></div>
       <div class="sn-acts">
-        <button class="btn tiny${k && cost <= S.money ? "" : " disabled"}" data-pbbuy="${m.id}">Kaufen${k ? " · " + money(cost) : ""}</button>
+        <button class="btn tiny${k && cost <= S.money ? "" : " disabled"}" data-pbbuy="${m.id}">◎ Bezahlen${k ? " · " + money(cost) : ""}</button>
         <button class="btn tiny ghost" data-pball="${m.id}|${k ? 0 : 1}">${k ? "Nichts" : "Alles"}</button>
         <button class="btn tiny ghost" data-pbcancel="${m.id}">Doch nicht</button></div>`;
   } else if (m.state === "gone") {
@@ -298,7 +309,7 @@ function bindPabloMsgs() {
   $$("#modalBody [data-pbno]").forEach(b => b.onclick = () => pabloReply(b.dataset.pbno, false));
   $$("#modalBody [data-pbstep]").forEach(b => b.onclick = () => { const [id, d] = b.dataset.pbstep.split("|"); pabloStep(id, +d); });
   $$("#modalBody [data-pball]").forEach(b => b.onclick = () => { const [id, on] = b.dataset.pball.split("|"); pabloAll(id, on === "1"); });
-  $$("#modalBody [data-pbbuy]").forEach(b => b.onclick = () => pabloBuy(b.dataset.pbbuy));
+  $$("#modalBody [data-pbbuy]").forEach(b => b.onclick = () => pabloPay(b.dataset.pbbuy));
   $$("#modalBody [data-pbcancel]").forEach(b => b.onclick = () => pabloCancel(b.dataset.pbcancel));
 }
 function pabloStockHTML() {

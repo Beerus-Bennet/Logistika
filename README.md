@@ -125,6 +125,20 @@ oder will auffällig viel, lässt sie ihn liegen, meldet sich mit „🕵️ Dis
 lässt … liegen“ und markiert die Karte – dann entscheidet der Spieler. Don
 Pablo bleibt immer Handarbeit.
 
+### Nachtwallet: bezahlt wird in Solana
+
+Mr. Snus und Don Pablo nehmen kein Bargeld. „◎ Bezahlen“ im Chat öffnet die
+**Nachtwallet**: Empfänger mit Wallet-Adresse, die Summe in SOL und in Euro,
+der aktuelle Kurs samt Quelle und Alter, die Netzwerkgebühr (◎ 0,000005).
+Bestätigt wird wie ein angenommener Anruf – den Knopf ganz nach rechts wischen,
+halb gewischt schnappt er zurück. Dann laufen die Bestätigungen der Blockchain
+durch, der Beleg (SOL, Kurs, Signatur) landet im Chat und im Schattenbuch.
+
+Der Kurs kommt live aus dem Netz – zuerst Coinbase, sonst CoinGecko, sonst
+Binance – und wird alle 15 Sekunden erneuert, solange die Wallet offen ist.
+Ohne Netz gilt der letzte bekannte Kurs, deutlich als „offline“ markiert.
+Alles Spielgeld, es wird nichts wirklich überwiesen.
+
 ### Diensthandy
 
 Nachrichten löschen sich nach **24 Stunden** von selbst („Sicherheits­maßnahmen“,
@@ -348,6 +362,7 @@ lina.png, ART.md        optionale eigene Artwork für die Disponentin
 player-p1.png … p10.png, PLAYER-ART.md  fertige und eigene Porträts für die Spielfigur
 map.js                  eigene Slippy-Map-Engine auf <canvas>
 offices.js              Standorte, Personal, Möblierung, Diensttelefon
+wallet.js               Nachtwallet: Solana-Kurs live, Wischen zum Bezahlen
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht
 game.js                 Simulation, Routing, Wirtschaft, Oberfläche

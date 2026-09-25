@@ -911,7 +911,7 @@ const LINA_TALKS = {
   snus: [
     { tx: "Psst, Chef! Auf dem Diensttelefon hat sich gerade <b>Mr. Snus</b> gemeldet. Der verkauft Snus unter der Hand.",
       target: "#phoneBtn", top: true },
-    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose. Die Ware liegt dann in einem Späti in der Stadt. `
+    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose – bar nimmt er nichts, bezahlt wird über die <b>Nachtwallet in Solana</b> ◎ zum aktuellen Kurs. Zum Senden wischst du wie beim Anruf. Die Ware liegt dann in einem Späti in der Stadt. `
         + `Kunden aus den Siedlungen am Stadtrand melden sich als <b>graue Aufträge</b> und zahlen ${money(SNUS_SELL)} die Dose – geliefert wird mit deiner eigenen Flotte.` },
     { tx: () => `Aber Vorsicht: Unter den Kunden sind <b>Zivilfahnder</b>. Die zahlen mehr als ${money(SNUS_SELL)} und wollen gleich 20, 30 Dosen. `
         + `Nur: Manche Stammkunden zahlen auch einfach gern mehr. Der sichere Hinweis ist das Aussehen – <b>weißes Hemd UND glatt rasiert</b>. `
@@ -927,7 +927,7 @@ const LINA_TALKS = {
   pablo: [
     { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Der spielt in einer ganz anderen Liga: Kokain, tonnenweise.",
       target: "#phoneBtn", top: true },
-    { tx: () => `Er verkauft die Tonne für ${money(PABLO_BUY * 1000)}. Die Ware wartet in einem Hangar an einem Flughafen. `
+    { tx: () => `Er verkauft die Tonne für ${money(PABLO_BUY * 1000)}, bezahlt wird natürlich in Solana ◎ über die Nachtwallet. Die Ware wartet in einem Hangar an einem Flughafen. `
         + `Seine Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne und nehmen ein paar hundert Kilo bis ein paar Tonnen.` },
     { tx: "Echte Kunden heißen wie ihre Stadt – <b>Mr. Hamburg</b>, <b>Mr. Paris</b> – und wollen genau dorthin beliefert werden." },
     { tx: "Heißt einer anders – <b>Mr. Banane</b>, <b>Mr. Schnitzel</b> –, dann ist das Interpol. Lieferst du an so jemanden, "
