@@ -271,6 +271,62 @@ Doppeltippen zoomt nicht mehr (auch nicht die Seite), damit schnelles Tippen
 nichts verschiebt. Eine Sekunde Echtzeit entspricht bei 1× einer Spielminute. Der Spielstand wird
 automatisch im Browser gespeichert (`localStorage`).
 
+### Mehr Leben im Betrieb
+
+Wer nur auf 30× stellt und zusieht, verpasst das Beste – und verliert Aufträge.
+
+* **Einladungen zur Sonderfahrt** ✉️ – selten (alle paar Spieltage), eilig und
+  fürstlich bezahlt: Blutkonserven für die Notaufnahme, eine Stradivari fürs
+  Konzerthaus, das Ersatzgetriebe bei Bandstillstand, später Impfstoff nach
+  Mailand oder ein Gemälde nach New York. Sie kommen als Brief mit Wachssiegel,
+  der sich öffnet: Briefkopf, Anrede, Gegenstand, Abholung, Frist, Honorar,
+  handschriftliche Unterschrift. Zusagen muss man vor Ablauf der Antwortfrist,
+  disponieren nur der Chef – die Dispo fasst sie nie an. Pünktlich geliefert
+  gibt es ein Dankschreiben und viel Ruf.
+* **Konkurrenz** ⚔️ – Blitzfracht, Rabe & Söhne und ab Etappe 3 Nordstern Cargo
+  schnappen umkämpfte Ausschreibungen weg; auf der Karte steht, wann. Unter
+  *Welt* zeigt der Marktanteil, wer gerade vorn liegt.
+* **Verhandeln** 🤝 – bei Großaufträgen im Planer per Schieberegler einen
+  Aufschlag verlangen. Zu gierig, und der Kunde geht zur Konkurrenz; knapp
+  drüber, und es kommt ein Gegenangebot.
+* **Störungen** 🚧 – Stau, Sturm am Flughafen, Orkan vor dem Hafen,
+  Hafenstreik, Lokführerstreik, Niedrigwasser. Auf der Karte eingezeichnet,
+  im Planer als Warnung. Sind eigene Fahrten betroffen, fragt die
+  Verkehrsleitstelle: umfahren, abwarten oder um Aufschub bitten.
+* **Pannen und Unfälle** 🔧 – hängen am Verschleiß. Der Fahrer ruft an (zum
+  Annehmen wischen) und fragt: Pannendienst, Abschleppen & Werkstatt oder
+  selbst versuchen. Bei Mr. Snus kann unterwegs eine **Streife** auftauchen.
+* **Tempo** ⏱️ – kommt ein Anruf oder eine Einladung, bremst das Spiel auf 1×.
+  Solange etwas offen ist, geht es höchstens mit 3×. Wer nicht antwortet, für
+  den entscheidet nach einer Weile jemand anderes – meist die billigste Lösung.
+* **Verschleiß & Werkstatt** – jedes Fahrzeug hat einen Zustand; alte fallen
+  öfter aus und bringen beim Verkauf weniger. Die Dispo im Büro schickt stark
+  abgenutzte Fahrzeuge selbst zur Inspektion.
+* **Treibstoffpreis** ⛽ – Diesel und Kerosin schwanken täglich (mit
+  gelegentlichen Ölpreis-Sprüngen); Räder und E-Fahrzeuge sind nicht betroffen.
+* **Versicherung, Hausbank, Monatsabschluss** – die Flottenversicherung zahlt
+  80 % bei Pannen und Unfällen, die Hausbank leiht Geld für schnelles Wachstum
+  (60 Tage, tägliche Rate, vorzeitig ablösbar), alle 30 Tage gehen 30 % Steuern
+  auf den Gewinn der offiziellen Bücher ab.
+* **Ruf** ⭐ – je Region; pünktlich hebt ihn langsam, verspätet oder geplatzt
+  senkt ihn schnell. Er ändert die Preise (−10 % bis +15 %), wie oft die
+  Konkurrenz zugreift und wie oft Einladungen kommen.
+* **Rahmenverträge** 📑 – ab Level 4 bieten Großkunden Verträge an: täglich
+  feste Fahrten über mehrere Tage, gut bezahlt, mit Vertragsstrafe je Ausfall
+  und 15 % Bonus, wer mindestens 90 % schafft.
+* **Missionen** 🧭 – Lina meldet sich mit kleinen Geschichten:
+  Weihnachtsgeschäft, Grüne Woche, Kühlkette, Hochwasserhilfe Dresden,
+  Messe-Marathon Hannover, Rekordwoche im Hafen, Luftbrücke.
+* **Tagesaufgaben & Erfolge** 🎯 – jeden Morgen drei Aufgaben mit Prämie
+  (alle drei gibt Extra-Bonus), dazu 24 Erfolge mit Abzeichen. Alles unter
+  🎯 neben dem Telefon.
+* **Selbst beladen** 📦 – unter *Live* bei noch nicht beladenen Fahrten: Kisten
+  in den Laderaum ziehen oder antippen, ↻ dreht. Alles verstaut in der Zeit
+  bringt 8 % mehr Erlös und schnelleres Beladen.
+
+Lina erklärt das alles einmal, sobald Level 2 erreicht ist; unter *Welt* lässt
+sich das wiederholen.
+
 ### Disposition: selbst oder im Büro
 
 Eine eigene Auto-Disposition gibt es nicht mehr – automatisch disponieren nur
@@ -279,7 +335,8 @@ entweder einem Büro (zuordnen unter *Büros* oder direkt am Fahrzeug unter
 *Flotte*) oder bleibt bei dir: Dann nimmst du die Aufträge selbst an. Der
 Reiter *Flotte* zeigt oben, welches Büro wie viele Fahrzeuge fährt.
 
-Wie viel ein Büro schafft, hängt am Team (Können × Stimmung): eine
+Die Dispo nimmt nur Aufträge an, die sie pünktlich schafft – Verspätungen
+kosten Ruf. Wie viel ein Büro schafft, hängt am Team (Können × Stimmung): eine
 Disponentin mit ★★★ betreut rund zehn Fahrzeuge und schaut etwa alle 25
 Minuten nach freien Fahrzeugen, zwei gute schaffen deutlich mehr. Fahrpersonal
 begrenzt, wie viele davon gleichzeitig rollen, Zoll & Papiere bringen
@@ -363,6 +420,11 @@ player-p1.png … p10.png, PLAYER-ART.md  fertige und eigene Porträts für die 
 map.js                  eigene Slippy-Map-Engine auf <canvas>
 offices.js              Standorte, Personal, Möblierung, Diensttelefon
 wallet.js               Nachtwallet: Solana-Kurs live, Wischen zum Bezahlen
+extras.js               Entscheidungen, Anruf, Tempo-Bremse, Diesel, Verschleiß, Werkstatt, Versicherung, Kredit, Steuern, Ruf
+events.js               Störungen auf der Karte, Pannen und Unfälle, Streife
+vip.js                  Einladungen zur Sonderfahrt, Konkurrenz, Verhandeln
+goals.js                Rahmenverträge, Missionen, Tagesaufgaben, Erfolge
+loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht
 game.js                 Simulation, Routing, Wirtschaft, Oberfläche

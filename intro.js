@@ -924,6 +924,17 @@ const LINA_TALKS = {
         + "Diensthandy jede Nachricht nach <b>24 Stunden</b>. Und den 🧮 Rechner darin solltest du dir mal genauer ansehen.",
       target: "#phoneBtn", top: true }
   ],
+  extras: [
+    { tx: "Chef, ab jetzt wird’s lebendig. Hier oben: 🎯 deine <b>Ziele</b> – jeden Morgen drei Tagesaufgaben mit Prämie, dazu Missionen von mir und Erfolge.",
+      target: "#goalsBtn", top: true },
+    { tx: "Die Konkurrenz schläft nicht: <b>Blitzfracht</b> und <b>Rabe &amp; Söhne</b> schnappen dir Ausschreibungen weg, wenn du zu lange wartest. "
+        + "Auf der Karte des Auftrags steht, wann sie zugreifen. Bei Großaufträgen kannst du im Planer über den Preis verhandeln." },
+    { tx: "Pannen, Staus, Streiks: Dann ruft jemand an und du entscheidest. Solange etwas offen ist, läuft das Spiel höchstens mit 3× – "
+        + "und wer nicht rangeht, für den entscheidet nach einer Weile der Fahrer.", target: "#phoneBtn", top: true },
+    { tx: "Fahrzeuge nutzen sich ab: Unter „Flotte“ siehst du den Zustand und schickst sie in die Werkstatt – alte fallen öfter aus. "
+        + "Unter „Welt“ stehen Ruf, Dieselpreis, Hausbank und der Monatsabschluss mit Steuern." },
+    { tx: "Und manchmal kommt Post mit Siegel: eine <b>Einladung zur Sonderfahrt</b>. Selten, eilig, fürstlich bezahlt – und Chefsache, die Dispo fasst sie nicht an." }
+  ],
   pablo: [
     { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Der spielt in einer ganz anderen Liga: Kokain, tonnenweise.",
       target: "#phoneBtn", top: true },

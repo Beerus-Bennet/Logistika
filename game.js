@@ -119,6 +119,8 @@ function addEdge(a, b, mode) {
 
 /* --------------------------- Fahrzeugfähigkeit -------------------------- */
 function vType(id) { return VEHICLES.find(v => v.id === id); }
+/* Kilometerkosten mit aktuellem Treibstoffpreis (extras.js) */
+function costKmOf(t) { return t.costKm * (typeof fuelFactor === "function" ? fuelFactor(t) : 1); }
 
 function meetsReq(v, cargoKey) {
   const req = (CARGO[cargoKey] || { req: [] }).req;
@@ -265,6 +267,12 @@ function tutorialRunning() { return document.body.classList.contains("tut-on"); 
 function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over; }
 let lastSpeed = 1;
 function setSpeed(v) {
+  /* 30× nur, solange nichts anliegt (extras.js) */
+  if (v > 3 && typeof speedCap === "function" && v > speedCap()) {
+    const p = pendingDecisions()[0];
+    toast("⏱️ Erst entscheiden: " + (p ? p.title : "offene Anfrage") + " – bis dahin höchstens 3×.", "warn");
+    v = speedCap();
+  }
   if (v > 0) lastSpeed = v;
   S.speed = v;
   $$("[data-speed]").forEach(b => b.classList.toggle("on", +b.dataset.speed === S.speed));
@@ -575,7 +583,7 @@ function spawnJewels() {
   const max = (couriers ? 4 : 2) - (S.stage <= 2 ? 1 : 0);
   if (jewelOpen() >= max) return;
   const o = makeJewelOrder();
-  if (o) { S.orders.push(o); renderDirty = true; }
+  if (o) { S.orders.push(o); renderDirty = true; if (typeof onOrderSpawn === "function") onOrderSpawn(o); }
 }
 
 function orderCap() {
@@ -592,6 +600,7 @@ function spawnOrders(max) {
     const o = (unlockedModes().includes("a") && Math.random() < airShare && makeAirOrder()) || makeOrder();
     if (!o) break;
     S.orders.push(o); added++;
+    if (typeof onOrderSpawn === "function") onOrderSpawn(o);
   }
   return added;
 }
@@ -645,7 +654,7 @@ function release(uid) {
   if (f.lease) {
     toast(t.name + " – Leasing beendet.", "ok");
   } else {
-    const val = Math.round(t.price * 0.62);
+    const val = Math.round(t.price * 0.62 * (typeof wearValueFactor === "function" ? wearValueFactor(f) : 1));
     S.money += val; S.revenue += val;
     toast(t.name + " verkauft für " + money(val), "ok");
   }
@@ -732,7 +741,7 @@ function vehScore(f, leg, order, i, n, tBefore, tAfter) {
   const dist = order ? pathLen(legPts(leg, order, i, n)) : leg.dist;
   const legT = (dist / t.speed) * 60 + rc.t;
   const util = order ? Math.min(1, order.weight / t.cap) : 1;
-  const drive = (dist + rc.d) * t.costKm;
+  const drive = (dist + rc.d) * costKmOf(t);
   const block = (t.daily / 1440) * legT * (1 + 3 * (1 - util));
   const wait = rc.t * 0.03;
   let late = 0;
@@ -768,7 +777,7 @@ function planOptions(o, variants) {
     if (!assign.every(Boolean)) return { vi, v, assign, ok: false };
     const ev = evaluate(v, o, assign);
     let repoKm = 0, repoEur = 0;
-    ev.detail.forEach(d => { if (d.repo && d.repo.ok) { repoKm += d.repo.d; repoEur += d.repo.d * d.t.costKm; } });
+    ev.detail.forEach(d => { if (d.repo && d.repo.ok) { repoKm += d.repo.d; repoEur += d.repo.d * costKmOf(d.t); } });
     return { vi, v, assign, ok: ev.ok, ev, repoKm, repoEur, profit: o.pay - ev.cost, late: S.time + ev.time > o.deadline };
   });
 }
@@ -840,7 +849,7 @@ function evaluate(variant, order, assign) {
     const repo = repoCost(veh, leg, order, i);
     if (!repo.ok) { ok = false; }
     const lt = (dist / t.speed) * 60 + (repo.ok ? repo.t : 0) + mi.umschlag * 1.8;
-    const lc = (dist + (repo.ok ? repo.d : 0)) * t.costKm;
+    const lc = (dist + (repo.ok ? repo.d : 0)) * costKmOf(t);
     cost += lc; time += lt;
     return { leg, veh, repo, time: lt, cost: lc, t, dist };
   });
@@ -857,7 +866,7 @@ function vehOptHTML(r, i, on) {
     ? `<span class="vo-b bad">kommt nicht hin</span>`
     : here
       ? `<span class="vo-b ok">✅ vor Ort</span>`
-      : `<span class="vo-b ${rc.d > 15 ? "bad" : "warn"}">↩️ ${kmf(rc.d)} leer<small>${dur(rc.t)} · −${money(rc.d * t.costKm)}</small></span>`;
+      : `<span class="vo-b ${rc.d > 15 ? "bad" : "warn"}">↩️ ${kmf(rc.d)} leer<small>${dur(rc.t)} · −${money(rc.d * costKmOf(t))}</small></span>`;
   /* Auslastung: wie viel der Nutzlast die Ladung belegt */
   const u = r.sc ? r.sc.util : 1;
   const uTxt = u >= 0.995 ? "voll" : u >= 0.1 ? Math.round(u * 100) + " %" : u >= 0.001 ? fmt(u * 100, 1) + " %" : "< 0,1 %";
@@ -1085,7 +1094,7 @@ function planMapHTML(ps, ev) {
     line = `<div class="pm-sum ok">✅ Keine Leerfahrt – ${esc(vType(f.type).brand)} steht schon um die Ecke, ${esc(pickA.t)}.</div>`;
   } else {
     const km = rep.reduce((a, d) => a + d.repo.d, 0), mn = rep.reduce((a, d) => a + d.repo.t, 0);
-    const eur = rep.reduce((a, d) => a + d.repo.d * d.t.costKm, 0);
+    const eur = rep.reduce((a, d) => a + d.repo.d * costKmOf(d.t), 0);
     const f = rep[0].veh;
     line = `<div class="pm-sum warn">↩️ Leerfahrt ${kmf(km)} · ${dur(mn)} · kostet ${money(eur)} – ${esc(vType(f.type).brand)} kommt aus ${esc(N[f.at].short)}.</div>`;
   }
@@ -1110,7 +1119,7 @@ function renderPlanner(fit) {
   const late = eta > o.deadline;
   let repoEur = 0;
   /* Unter 500 m ist das nur die Anfahrt um die Ecke, keine Leerfahrt */
-  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5) repoEur += d.repo.d * d.t.costKm; });
+  ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5) repoEur += d.repo.d * costKmOf(d.t); });
 
   const legHtml = ev.detail.map((d, i) => {
     const mi = MODE_INFO[d.leg.mode];
@@ -1143,6 +1152,7 @@ function renderPlanner(fit) {
            </div>`
         : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, mind. ${kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
       ${modeNote(d.leg, o, ps)}
+      ${typeof legEventNote === "function" ? legEventNote(d.leg) : ""}
       ${rows.length ? "" : missingHelpHTML(d.leg, o, i)}
       ${d.repo && !d.repo.ok ? `<div class="warnbox">Dieses Fahrzeug erreicht den Ladeort nicht.</div>` : ""}
     </div>`;
@@ -1164,6 +1174,7 @@ function renderPlanner(fit) {
     ${ps.variants.length > 1 ? `<div class="vswitch">${ps.variants.map((x, i) =>
       `<button class="${i === ps.vi ? "on" : ""}" data-variant="${i}">${x.label}</button>`).join("")}</div>` : ""}
     <div class="legs">${legHtml}</div>
+    ${typeof negoHTML === "function" ? negoHTML(o) : ""}
     <div class="sum">
       <div><span>Transportkosten</span><b>${ev.ok ? money(ev.cost) : "—"}</b>
         ${ev.ok ? `<small class="${repoEur > 0.005 ? "bad" : "good"}">${repoEur > 0.005 ? "davon Leerfahrt " + money(repoEur) : "ohne Leerfahrt"}</small>` : ""}</div>
@@ -1199,6 +1210,7 @@ function renderPlanner(fit) {
   const rj = $("#mReject");
   if (rj) rj.onclick = () => rejectOrder(o.id);
   if (ev.ok) $("#mAccept").onclick = () => acceptOrder(ps.vi);
+  if (typeof bindNego === "function") bindNego(o);
   if (fit) {
     const pts = [];
     v.legs.forEach(l => l.nodes.forEach(id => pts.push([N[id].lat, N[id].lon])));
@@ -1262,6 +1274,7 @@ function startJob(o, variant, assign) {
   if (o.pablo && typeof pabloTake === "function") pabloTake(o);
   S.jobs.push(job);
   S.orders = S.orders.filter(x => x.id !== o.id);
+  if (typeof onJobStart === "function") onJobStart(job);
   beginLeg(job, 0);
 }
 
@@ -1293,7 +1306,7 @@ function dispatchRun(opt) {
     o.snus.flagged = true;
     toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
   });
-  const cands = S.orders.filter(o => !o.pablo && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && opt.accept(o))
+  const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && opt.accept(o))
     .sort((a, b) => b.pay - a.pay);
   let examined = 0, taken = 0;
   for (const o of cands) {
@@ -1305,10 +1318,10 @@ function dispatchRun(opt) {
       if (assign.some(x => !x)) continue;
       const ev = evaluate(v, o, assign);
       if (!ev.ok) continue;
+      /* Verspätung kostet Ruf – die Dispo nimmt nur, was sie pünktlich schafft */
       const over = (S.time + ev.time) - o.deadline;
-      if (over > 4 * 60) continue;
-      const expPay = over > 0 ? o.pay * Math.max(0.2, 1 - (over / 60) * 0.04) : o.pay;
-      if (expPay - ev.cost <= ev.cost * 0.10) continue;
+      if (over > 0) continue;
+      if (o.pay - ev.cost <= ev.cost * 0.10) continue;
       if (opt.onBefore) opt.onBefore(o);
       startJob(o, v, assign);
       taken++;
@@ -1433,7 +1446,7 @@ function beginLeg(job, idx) {
     veh.routeDist = pathLen(veh.route);
   } else {
     veh.phase = "load";
-    veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from);
+    veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from) * (job.fastLoad ? 0.6 : 1);
     veh.route = null; veh.routeDist = 0;
   }
 }
@@ -1451,11 +1464,12 @@ function parkHere(f) {
   setSpot(f, p, { t: "abgestellt unterwegs", a: N[best].short });
 }
 function failJob(job, reason) {
+  if (typeof onFailed === "function") onFailed(job, reason);
   job.legs.forEach(l => {
     const f = S.fleet.find(x => x.uid === l.veh);
     if (f && f.jobId === job.id || (f && f.phase === "reserved")) {
       parkHere(f);
-      f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null;
+      f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; delete f.halt;
     }
   });
   /* Privatkunde von Mr. Snus / Don Pablo: keine Vertragsstrafe, die Ware geht zurück ins Lager */
@@ -1504,6 +1518,8 @@ function finishLeg(job, veh) {
     pay = Math.round(pay * Math.max(0.2, 1 - h * 0.04));
     S.late++;
   }
+  /* Unfall unterwegs: ohne Versicherung zieht der Kunde ein Viertel ab */
+  if (o.damaged && !S.insure) { pay = Math.round(pay * 0.75); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht 25 % ab.", "warn"); }
   S.money += pay; S.revenue += pay; S.done++;
   if (o.snus) {
     logMoney("snus", o.shipper + " · " + o.snus.n + " Dosen", pay);
@@ -1515,6 +1531,7 @@ function finishLeg(job, veh) {
   if (job.cost > 0) logMoney("drive", "Fahrt und Umschlag · " + o.shipper, -job.cost);
   S.xp += Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2));
   S.jobs = S.jobs.filter(j => j.id !== job.id);
+  if (typeof onDelivered === "function") onDelivered(job, pay, late);
   if (late) toast("⏰ Verspätet zugestellt: " + o.shipper, "warn", true);
   checkLevel();
 }
@@ -1540,6 +1557,7 @@ function tick(dtMin) {
     const fix = S.fleet.reduce((a, f) => a + dailyCost(f), 0) * days;
     if (fix > 0) { S.money -= fix; S.expense += fix; logMoney("fleet", "Tagesfixkosten Flotte", -fix); }
     baseDayChange(days);
+    if (typeof dayExtras === "function") dayExtras(days);
   }
 
   for (const veh of S.fleet) {
@@ -1551,6 +1569,7 @@ function tick(dtMin) {
     const t = vType(veh.type);
 
     if (veh.phase === "load" || veh.phase === "unload") {
+      if (typeof hubHold === "function" && hubHold(veh, leg)) continue;   /* Sturm, Streik am Umschlagplatz */
       veh.timer -= dtMin;
       if (veh.timer <= 0) {
         if (veh.phase === "load") {
@@ -1565,12 +1584,14 @@ function tick(dtMin) {
       continue;
     }
     if (veh.phase === "repo" || veh.phase === "haul") {
-      const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * dtMin) / 60;
+      const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
+      const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
       veh.pos += step; veh.kmTotal += step;
+      if (step > 0 && typeof onDriven === "function") onDriven(veh, t, step, job, leg);
       if (veh.phase === "haul") S.kmTotal += step;
       addCO2(veh, t, step, veh.phase === "haul" ? job.order.weight : 0);
       if (veh.pos >= veh.routeDist) {
-        const cost = veh.routeDist * t.costKm;
+        const cost = veh.routeDist * costKmOf(t);
         S.money -= cost; S.expense += cost; job.cost += cost;
         const end = veh.route[veh.route.length - 1];
         const li = job.legs.indexOf(leg), lastLeg = li === job.legs.length - 1;
@@ -1578,7 +1599,7 @@ function tick(dtMin) {
         if (veh.phase === "repo") {
           veh.at = leg.from;
           setSpot(veh, end, li === 0 ? oPick(job.order) : nodeAddr(leg.from));
-          veh.phase = "load"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from);
+          veh.phase = "load"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from) * (job.fastLoad ? 0.6 : 1);
         } else {
           veh.at = leg.to;
           setSpot(veh, end, lastLeg && leg.b ? oDrop(job.order) : nodeAddr(leg.to));
@@ -1598,6 +1619,7 @@ function tick(dtMin) {
   tickBases(dtMin);
   if (typeof tickSnus === "function") tickSnus(dtMin);
   if (typeof tickPablo === "function") tickPablo(dtMin);
+  if (typeof tickExtras === "function") tickExtras(dtMin);
 }
 
 /* ------------------------------- Etappen -------------------------------- */
@@ -1914,6 +1936,7 @@ function drawWorld(m, ctx) {
   });
 
   // 5. Büros und Stecknadeln der Aufträge
+  if (typeof drawEvents === "function") drawEvents(m);
   drawBases(m, z);
   drawPins(m, z);
 
@@ -2002,9 +2025,9 @@ function mapPins() {
   });
   S.orders.forEach(o => {
     const grey = o.snus || o.pablo;
-    const star = o.tut || o.tutNext;       /* Linas Übung: eigene Nadel mit Stern, nie gebündelt */
+    const star = o.tut || o.tutNext || o.vip;   /* Linas Übung / Sonderfahrt: eigene Nadel, nie gebündelt */
     out.push({ kind: "order", id: o.id, p: orderPinPt(o), col: grey ? "gray" : "yellow",
-      icon: star ? "⭐" : o.snus ? SNUS_PIN : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
+      icon: o.vip ? "✉️" : star ? "⭐" : o.snus ? SNUS_PIN : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
   });
   return out;
 }
@@ -2161,6 +2184,10 @@ function onMapTap(px, py) {
         : { kind: h.items[0].kind, id: h.items[0].id };
     }
   });
+  if (!best && typeof eventAt === "function") {
+    const ev = eventAt(px, py);
+    if (ev) { toast(EVENT_DEF[ev.type].icon + " " + evTitle(ev) + " – bis " + clock(ev.until) + ".", "warn"); return; }
+  }
   baseHits.forEach(h => {
     const d = Math.hypot(h.x - px, h.y - py);
     if (d < h.r && d < bestD) { bestD = d; best = { kind: "base", id: h.id }; }
@@ -2335,7 +2362,12 @@ const LEDGER_KIND = {
   deco:  { icon: "🪴", name: "Einrichtung" },
   stage: { icon: "🌍", name: "Etappe" },
   snus:  { icon: "🎩", name: "Snus" },
-  pablo: { icon: "❄️", name: "Don Pablo" }
+  pablo: { icon: "❄️", name: "Don Pablo" },
+  repair: { icon: "🔧", name: "Werkstatt" },
+  loan:  { icon: "🏦", name: "Kredit" },
+  tax:   { icon: "🧾", name: "Steuern" },
+  insure: { icon: "🛡️", name: "Versicherung" },
+  bonus: { icon: "🏆", name: "Prämie" }
 };
 function logMoney(kind, label, amount) {
   if (!S.ledger) S.ledger = [];
@@ -2423,6 +2455,7 @@ function toast(msg, kind, low) {
 }
 
 function phaseLabel(v) {
+  if (typeof haltLabel === "function") { const h = haltLabel(v); if (h) return h; }
   const job = S.jobs.find(j => j.id === v.jobId);
   const leg = job ? job.legs[v.legIdx] : null;
   switch (v.phase) {
@@ -2468,6 +2501,7 @@ function renderHud() {
   badge("#badgeFleet", S.fleet.length);
   badge("#badgeBases", (S.bases || []).length);
   renderPhoneBadge();
+  if (typeof renderGoalsChip === "function") renderGoalsChip();
 }
 
 /* ---------------------- Leerfahrt-Vorschau je Auftrag ---------------------
@@ -2585,7 +2619,7 @@ function renderOrders() {
   /* Der Anschlussauftrag bleibt nur oben, solange das Übungsfahrzeug
      dorthin unterwegs ist oder dort steht – danach ist er ein ganz normaler. */
   S.orders.forEach(o => { if (o.tutNext && !followRelevant(o)) { delete o.tutNext; delete o.tutVeh; } });
-  const pin = o => o.tut ? 2 : o.tutNext ? 1 : 0;
+  const pin = o => o.tut ? 3 : o.tutNext ? 2 : o.vip ? 1 : 0;
   rows.sort((a, b) => pin(b.o) - pin(a.o) || by(a, b));
   setTools("orders", orderToolsHTML(rows, mode, filt), vt => {
     vt.querySelectorAll("[data-sort]").forEach(b => b.onclick = () => {
@@ -2606,6 +2640,7 @@ function renderOrders() {
   el.innerHTML = stock + none + shown.map(({ o, p }) => {
     if (o.snus && typeof snusOrderCard === "function") return snusOrderCard(o, previewHTML(p));
     if (o.pablo && typeof pabloOrderCard === "function") return pabloOrderCard(o, previewHTML(p));
+    if (o.vip && typeof vipCardHTML === "function") return vipCardHTML(o, previewHTML(p));
     const cg = CARGO[o.cargo];
     const rest = o.deadline - S.time;
     const tight = rest < o.refTime * 1.25;
@@ -2620,6 +2655,7 @@ function renderOrders() {
       </div>
       <div class="ship">${esc(o.shipper)}</div>
       <div class="desc">${esc(o.desc)}</div>
+      ${typeof orderExtraHTML === "function" ? orderExtraHTML(o) : ""}
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
         ${o.jewel ? `<span class="jewelonly">🚲🛵 nur Rad &amp; Moped</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
@@ -2646,7 +2682,8 @@ function renderJobs() {
     const total = j.legs.reduce((a, l) => a + l.dist, 0);
     const prog = clamp(((doneDist + curProg) / total) * 100, 0, 100);
     const late = S.time > o.deadline;
-    return `<div class="card job${flashOn(j.id) ? " flash" : ""}" data-job="${j.id}">
+    return `<div class="card job${flashOn(j.id) ? " flash" : ""}${o.vip ? " vipjob" : ""}" data-job="${j.id}">
+      ${o.vip ? `<div class="vip-ribbon">✉️ Sonderfahrt · ${esc(o.shipper)}</div>` : ""}
       <div class="card-top">
         <span class="badge" style="--c:${late ? "#ff5c78" : "#7cd6a0"}">${cg.icon} ${cg.name}</span>
         <span class="pay">${money(o.pay)}</span>
@@ -2662,6 +2699,7 @@ function renderJobs() {
       <div class="bar"><i style="width:${prog}%"></i></div>
       <div class="meta small"><span>${veh ? esc(phaseLabel(veh)) : "wartet"}</span><span>${Math.round(prog)} %</span></div>
       <div class="buyrow">
+        ${typeof packable === "function" && packable(j) ? `<button class="btn tiny packbtn" data-pack="${j.id}">📦 Selbst beladen · +8 %</button>` : ""}
         <button class="btn tiny ghost" data-zoom="${j.id}">🗺️ Route zeigen</button>
         <button class="btn tiny ghost danger" data-canceljob="${j.id}">${o.snus || o.pablo ? "✋ Übergabe abbrechen" : "✕ Stornieren"}</button>
         ${veh ? `<button class="btn tiny ${S.follow === veh.uid ? "" : "ghost"}" data-follow="${veh.uid}">
@@ -2680,6 +2718,7 @@ function renderJobs() {
     closeSheet();
   });
   $$("#tab-jobs [data-canceljob]").forEach(b => b.onclick = (e) => { e.stopPropagation(); cancelJob(b.dataset.canceljob); });
+  $$("#tab-jobs [data-pack]").forEach(b => b.onclick = (e) => { e.stopPropagation(); openPack(b.dataset.pack); });
   $$("#tab-jobs [data-follow]").forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     setFollow(S.follow === b.dataset.follow ? null : b.dataset.follow);
@@ -2702,6 +2741,7 @@ function renderFleet() {
       <div class="card-top"><div class="vname">🗂️ Disposition<small>Von allein fahren nur Fahrzeuge, die einem Büro mit jemandem aus der
         Disposition gehören. Alle anderen teilst du selbst ein.</small></div></div>
       ${dispoRowsHTML()}
+      ${typeof fleetExtraHTML === "function" ? fleetExtraHTML() : ""}
       ${S.fleet.length ? `<div class="meta small"><span>💤 ${idle} von ${S.fleet.length} im Leerlauf</span><span>🅿️ ${money(fix)}/Tag Fixkosten</span></div>` : ""}
       ${S.fleet.length ? `<div class="locrow"><span class="loclbl">Frei stehen:</span>${locChips || `<span class="locchip none">gerade keins – alle unterwegs</span>`}</div>` : ""}
       ${S.fleet.length > 3 && idle > S.fleet.length * 0.6
@@ -2725,11 +2765,12 @@ function renderFleet() {
       ${v.phase === "repo" || v.phase === "haul" ? `<div class="bar"><i style="width:${prog}%"></i></div>` : ""}
       ${t.flags.length ? `<div class="flags">${t.flags.map(f => `<i>${flagName(f)}</i>`).join("")}</div>` : ""}
       <div class="meta small"><span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>🅿️ ${money(dailyCost(v))}/Tag</span><span>🛣️ ${kmf(v.kmTotal)}</span></div>
+      ${typeof vehExtraHTML === "function" ? vehExtraHTML(v) : ""}
       ${vehDispoHTML(v)}
       <div class="buyrow">
         ${v.phase !== "idle" ? `<button class="btn tiny ${S.follow === v.uid ? "" : "ghost"}" data-follow="${v.uid}">
           ${S.follow === v.uid ? "📡 verfolgt" : "📡 live verfolgen"}</button>` : ""}
-        ${v.phase === "idle" ? `<button class="btn tiny ghost" data-release="${v.uid}">${v.lease ? "Leasing beenden" : "verkaufen · " + money(Math.round(t.price * 0.62))}</button>` : ""}
+        ${v.phase === "idle" ? `<button class="btn tiny ghost" data-release="${v.uid}">${v.lease ? "Leasing beenden" : "verkaufen · " + money(Math.round(t.price * 0.62 * (typeof wearValueFactor === "function" ? wearValueFactor(v) : 1)))}</button>` : ""}
       </div>
     </div>`;
   }).join("");
@@ -2773,6 +2814,7 @@ function vehDispoHTML(v) {
     </select></label>`;
 }
 function bindDispo() {
+  if (typeof bindFleetExtras === "function") bindFleetExtras();
   const gb = $("#goBases");
   if (gb) gb.onclick = () => showTab("bases");
   $$("#tab-fleet [data-gobase]").forEach(b => b.onclick = () => showTab("bases"));
@@ -2971,6 +3013,7 @@ function infoHTML() {
         <button class="btn tiny ghost" data-talk="offices">🏢 Büro-Tutorial</button>
         ${S.tutSeen && S.tutSeen.snus ? `<button class="btn tiny ghost" data-talk="snus">${typeof snusLogo === "function" ? snusLogo(16) : "🎩"} Mr. Snus erklärt</button>` : ""}
         ${S.tutSeen && S.tutSeen.pablo ? `<button class="btn tiny ghost" data-talk="pablo">❄️ Don Pablo erklärt</button>` : ""}
+        ${S.tutSeen && S.tutSeen.extras ? `<button class="btn tiny ghost" data-talk="extras">🎯 Ziele, Konkurrenz, Pannen</button>` : ""}
       </div></div>
     <div class="card"><div class="vname">Tipp<small>${esc(pick(TIPS))}</small></div></div>
     <div class="card"><div class="vname">Verkehrsträger<small>Legende</small></div>
@@ -3012,7 +3055,9 @@ function co2HTML() {
 function renderWorld() {
   $("#tab-world").innerHTML =
     `<div class="sechead" style="margin-top:0">Etappen</div>` + stagesHTML() +
+    (typeof economyHTML === "function" ? `<div class="sechead">Geschäft</div>` + economyHTML() + (typeof rivalsHTML === "function" ? rivalsHTML() : "") : "") +
     `<div class="sechead">Kontor</div>` + infoHTML();
+  if (typeof bindEconomy === "function") bindEconomy();
   const b = $("#unlockBtn");
   if (b) b.onclick = unlockStage;
   const ta = $("#tutAgainBtn");
@@ -3101,7 +3146,8 @@ function syncPadding() { applyPadding(); setTimeout(applyPadding, 340); }
 function syncHeadH() {
   const h = $("#hud");
   if (!h || !h.offsetHeight) return;
-  document.documentElement.style.setProperty("--head-h", h.offsetHeight + "px");
+  /* exakte (auch krumme) Höhe – sonst bleibt ein Pixel Spalt oder Überlappung */
+  document.documentElement.style.setProperty("--head-h", h.getBoundingClientRect().height.toFixed(2) + "px");
 }
 if (typeof ResizeObserver === "function") {
   const hud = document.getElementById("hud");
@@ -3192,6 +3238,7 @@ function boot() {
   };
   $("#liveBtn").onclick = followNext;
   $("#phoneBtn").onclick = openPhone;
+  const gbtn = $("#goalsBtn"); if (gbtn) gbtn.onclick = () => { if (typeof openGoals === "function") openGoals(); };
   $("#hudMoney").onclick = openLedger;
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
@@ -3199,7 +3246,11 @@ function boot() {
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
   window.addEventListener("keydown", e => {
     if (e.key !== "Escape" || tutorialRunning()) return;
-    if (typeof walletOpen === "function" && walletOpen()) walletClose(); else closeModal();
+    if (typeof walletOpen === "function" && walletOpen()) walletClose();
+    else if (document.body.classList.contains("call-open")) closeCall();
+    else if (document.body.classList.contains("invite-open")) closeInvite();
+    else if (document.body.classList.contains("pack-open")) packEnd(false, true);
+    else closeModal();
   });
   /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste
      (iOS ignoriert user-scalable=no) – die Karte zoomt selbst mit + / − und

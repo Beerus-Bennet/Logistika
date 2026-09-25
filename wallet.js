@@ -186,37 +186,9 @@ function renderWallet(tick) {
   }
 }
 
-/* Wischen wie beim Anruf: erst ganz rechts gilt es, sonst schnappt der Knopf zurück */
+/* Wischen wie beim Anruf (bindSwipe aus extras.js) */
 function bindSlide() {
-  const track = $("#wlSlide"), knob = $("#wlKnob"), fill = $("#wlFill");
-  if (!track || !knob) return;
-  let x0 = 0, x = 0, drag = false;
-  const max = () => track.clientWidth - knob.offsetWidth - 8;
-  const put = (v, anim) => {
-    x = clamp(v, 0, max());
-    knob.style.transition = fill.style.transition = anim ? "transform .25s ease, width .25s ease" : "none";
-    knob.style.transform = `translateX(${x}px)`;
-    fill.style.width = (x + knob.offsetWidth + 4) + "px";
-    track.style.setProperty("--p", (x / Math.max(1, max())).toFixed(3));
-  };
-  knob.addEventListener("pointerdown", e => {
-    drag = true; x0 = e.clientX - x;
-    if (walletState) walletState.drag = true;
-    try { knob.setPointerCapture(e.pointerId); } catch (_) { /* egal */ }
-    e.preventDefault();
-  });
-  knob.addEventListener("pointermove", e => { if (drag) put(e.clientX - x0, false); });
-  const end = () => {
-    if (!drag) return;
-    drag = false;
-    if (walletState) walletState.drag = false;
-    if (x >= max() * 0.9) { put(max(), true); walletConfirm(); }
-    else put(0, true);
-  };
-  knob.addEventListener("pointerup", end);
-  knob.addEventListener("pointercancel", end);
-  knob.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === "ArrowRight") { e.preventDefault(); put(max(), true); walletConfirm(); } });
-  put(0, false);
+  bindSwipe($("#wlSlide"), $("#wlKnob"), $("#wlFill"), () => walletConfirm(), walletState);
 }
 
 function walletConfirm() {

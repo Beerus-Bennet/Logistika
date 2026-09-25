@@ -675,6 +675,8 @@ function renderPhone() {
   const body = msgs.length ? msgs.map(m => {
     if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
     if (m.kind === "pablo" && typeof pabloMsgHTML === "function") return pabloMsgHTML(m);
+    if (m.kind === "invite" && typeof inviteMsgHTML === "function") return inviteMsgHTML(m);
+    if (m.dec && typeof decisionMsgHTML === "function") return decisionMsgHTML(m);
     const b = baseById(m.baseId);
     const acts = (m.actions || []).map(a =>
       `<button class="btn tiny${a.cost > S.money ? " disabled" : ""}" data-fix="${m.id}" data-idx="${a.idx}">
@@ -717,6 +719,8 @@ function renderPhone() {
     btn.onclick = () => applyFix(btn.dataset.fix, +btn.dataset.idx));
   if (typeof bindSnusMsgs === "function") bindSnusMsgs();
   if (typeof bindPabloMsgs === "function") bindPabloMsgs();
+  if (typeof bindDecisionMsgs === "function") bindDecisionMsgs($("#modalBody"));
+  $$("#modalBody [data-openinvite]").forEach(b => b.onclick = () => { closeModal(); openInvite(); });
 }
 
 function prunePhoneSilent() {
