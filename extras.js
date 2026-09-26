@@ -72,7 +72,8 @@ function tickDecisions() {
   pendingDecisions().forEach(m => { if (S.time >= m.dec.until) decide(m.id, m.dec.def, true); });
 }
 /* Kosten, die die Flottenversicherung zu 80 % übernimmt */
-function insuredCost(cost, insurable) { return insurable && S.insure ? Math.round(cost * 0.2) : cost; }
+function isInsured() { return !!S.insure || (typeof perkInsured === "function" && perkInsured()); }
+function insuredCost(cost, insurable) { return insurable && isInsured() ? Math.round(cost * 0.2) : cost; }
 function payOut(cost, kind, label) {
   if (!cost) return;
   S.money -= cost; S.expense += cost;
@@ -84,7 +85,7 @@ function decisionMsgHTML(m) {
   const acts = d.done ? "" : d.choices.map((c, i) => {
     const cost = c.cost ? insuredCost(c.cost, c.insurable) : 0;
     return `<button class="dchoice${cost > S.money && !c.debt ? " disabled" : ""}" data-dec="${m.id}|${i}">
-      <b>${esc(c.label)}${cost ? ` · ${money(cost)}` : ""}${c.insurable && S.insure && c.cost ? ` <em>🛡️ −80 %</em>` : ""}</b>
+      <b>${esc(c.label)}${cost ? ` · ${money(cost)}` : ""}${c.insurable && isInsured() && c.cost ? ` <em>🛡️ −80 %</em>` : ""}</b>
       ${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`;
   }).join("");
   return `<div class="pmsg call ${m.kind}${m.handled ? " done" : ""}">
@@ -110,7 +111,7 @@ function queueCall(id) { if (!callQueue.includes(id)) callQueue.push(id); }
 function tickCalls() {
   if (callState || !callQueue.length) return;
   if (typeof walletOpen === "function" && walletOpen()) return;
-  if (document.body.classList.contains("invite-open") || document.body.classList.contains("pack-open")) return;
+  if (["invite-open", "pack-open", "lucky-open"].some(c => document.body.classList.contains(c))) return;
   const id = callQueue.shift();
   const m = S.phone.msgs.find(x => x.id === id);
   if (m && m.dec && !m.dec.done) showCall(m);
@@ -198,7 +199,10 @@ function fuelState() {
 }
 function burnsFuel(t) { return t.mode !== "b" && !ELECTRIC.has(t.id); }
 /* Etwa 45 % der Kilometerkosten sind Treibstoff – der Rest Reifen, Maut, Lohn */
-function fuelFactor(t) { return burnsFuel(t) ? 0.55 + 0.45 * fuelState().p / FUEL_BASE : 1; }
+function fuelFactor(t) {
+  if (!burnsFuel(t)) return 1;
+  return 0.55 + 0.45 * fuelState().p / FUEL_BASE * (typeof perkFuel === "function" ? perkFuel() : 1);
+}
 function fuelDay() {
   const f = fuelState();
   const g = (Math.random() + Math.random() + Math.random() - 1.5) * 0.045;
@@ -244,9 +248,12 @@ function repairMinutes(f) {
 function sendToWorkshop(uid, auto) {
   const f = S.fleet.find(x => x.uid === uid); if (!f) return;
   if (f.phase !== "idle") return toast("Nur freie Fahrzeuge können in die Werkstatt.", "warn");
-  const cost = repairCost(f);
+  const P = S.perk || {};
+  const free = !auto && P.freeRepair > 0;
+  const cost = free ? 0 : repairCost(f);
   if (!auto && cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
-  payOut(cost, "repair", "Werkstatt · " + vType(f.type).name);
+  if (free) { P.freeRepair--; toast("🔧 Werkstattgutschein eingelöst – die Reparatur ist gratis.", "ok", true); }
+  else payOut(cost, "repair", "Werkstatt · " + vType(f.type).name);
   f.phase = "service"; f.serviceUntil = S.time + repairMinutes(f);
   extraStats().repairs++;
   if (!auto) toast("🔧 " + vType(f.type).name + " ist in der Werkstatt bis " + clock(f.serviceUntil) + ".", "ok");
@@ -440,7 +447,7 @@ function dayExtras(days) {
     loanDay();
     S.fleet.forEach(f => { f.wear = Math.min(100, wearOf(f) + 0.15); });
   }
-  if (S.insure && S.fleet.length) payOut(insurePremium() * days, "insure", "Flottenversicherung");
+  if (S.insure && S.fleet.length && !(typeof perkInsured === "function" && perkInsured())) payOut(insurePremium() * days, "insure", "Flottenversicherung");
   taxDay();
   if (typeof goalsDay === "function") goalsDay(days);
 }
@@ -502,6 +509,7 @@ function fleetExtraHTML() {
   return `<div class="fleetx">
     <span class="fuelchip ${tr > 0.001 ? "up" : tr < -0.001 ? "down" : ""}">⛽ Diesel ${fmt(f.p, 2)} €/l ${tr > 0.001 ? "▲" : tr < -0.001 ? "▼" : ""}</span>
     <button class="insure ${S.insure ? "on" : ""}" id="insureBtn">🛡️ ${S.insure ? "versichert · " + money(insurePremium()) + "/Tag" : "unversichert – absichern?"}</button>
+    ${typeof perkChips === "function" ? perkChips().map(c => `<span class="fuelchip perk">🎁 ${esc(c)}</span>`).join("") : ""}
   </div>`;
 }
 function vehExtraHTML(v) {

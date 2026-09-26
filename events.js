@@ -180,7 +180,7 @@ function breakdown(veh, job, leg) {
     title: (acc ? "Unfall" : t.mode === "r" || t.mode === "b" ? "Panne" : "Technischer Defekt") + " bei " + where,
     body: (acc ? "Blechschaden, niemand verletzt – aber die Ladung hat was abbekommen. " : "")
       + `${t.name} steht mit der Ladung für „${job.order.shipper}“. Frist: ${stamp(job.order.deadline)}. Was soll ich machen?`
-      + (acc && !S.insure ? " Ohne Versicherung zieht der Kunde 25 % ab." : ""),
+      + (acc && !isInsured() ? " Ohne Versicherung zieht der Kunde 25 % ab." : ""),
     choices, def, wait: 90, ctx: { uid: veh.uid, job: job.id, acc } });
 }
 DECISIONS.breakdown = {
@@ -200,7 +200,7 @@ DECISIONS.breakdown = {
     else if (/flicken/.test(c.label)) { mins = rnd(20, 40); txt = "Schlauch geflickt."; }
     else { const ok = Math.random() < 0.5; mins = ok ? rnd(25, 45) : rnd(200, 360); txt = ok ? "Der Fahrer hat es selbst hinbekommen." : "Hat länger gedauert – aber es läuft wieder."; }
     v.halt.until = S.time + Math.round(mins);
-    return txt + " Weiter ab " + clock(v.halt.until) + (cost && S.insure && c.insurable ? " · Versicherung zahlt 80 %" : "") + ".";
+    return txt + " Weiter ab " + clock(v.halt.until) + (cost && isInsured() && c.insurable ? " · Versicherung zahlt 80 %" : "") + ".";
   }
 };
 

@@ -318,14 +318,58 @@ Wer nur auf 30× stellt und zusieht, verpasst das Beste – und verliert Aufträ
   Weihnachtsgeschäft, Grüne Woche, Kühlkette, Hochwasserhilfe Dresden,
   Messe-Marathon Hannover, Rekordwoche im Hafen, Luftbrücke.
 * **Tagesaufgaben & Erfolge** 🎯 – jeden Morgen drei Aufgaben mit Prämie
-  (alle drei gibt Extra-Bonus), dazu 24 Erfolge mit Abzeichen. Alles unter
-  🎯 neben dem Telefon.
+  (alle drei gibt Extra-Bonus und eine Luckybox), dazu 24 Erfolge mit
+  Abzeichen. Alles unter 🎯 neben dem Telefon.
+* **Luckybox** 🎁 – siehe unten.
 * **Selbst beladen** 📦 – unter *Live* bei noch nicht beladenen Fahrten: Kisten
   in den Laderaum ziehen oder antippen, ↻ dreht. Alles verstaut in der Zeit
   bringt 8 % mehr Erlös und schnelleres Beladen.
 
 Lina erklärt das alles einmal, sobald Level 2 erreicht ist; unter *Welt* lässt
 sich das wiederholen.
+
+### Luckybox
+
+Wer an einem Tag alle drei Tagesaufgaben schafft, bekommt eine 🎁 Luckybox,
+eine pünktliche Sonderfahrt bringt eine als Dankeschön. Sieben Tage in Folge
+alles geschafft gibt zusätzlich eine 💎 goldene Box mit besseren Chancen. Die
+Boxen warten unter 🎯 (der Knopf zeigt dann 🎁 und die Anzahl). Beim Öffnen
+wackelt die Box, springt auf, und ein Preisband läuft durch, bis es auf dem
+Gewinn stehen bleibt.
+
+| Seltenheit | Chance (gold) | Preise |
+|---|---|---|
+| Gewöhnlich | 55 % (25 %) | 💶 Trinkgeldkasse · ⭐ Erfahrungsschub · ⛽ Tankkarte (24 h Diesel/Kerosin halber Preis) · 🔧 Werkstattgutschein |
+| Selten | 28 % (40 %) | ☕ Kaffeemaschine (+15 Stimmung in allen Büros) · 🤝 Empfehlungsschreiben (+6 Ruf) · 🛡️ Rundum-Schutz (7 Tage gratis versichert) · 🏷️ Händlerrabatt (−20 % aufs nächste Fahrzeug) |
+| Episch | 13 % (27 %) | 📈 Hochsaison (24 h +20 % Frachterlös) · 🕴️ Headhunter (★★★★★-Fachkraft ohne Vermittlungsgebühr) · ✉️ Insider-Tipp (nächste Sonderfahrt in wenigen Stunden) |
+| Legendär | 4 % (8 %) | 🏆 **Hauptpreis: der Goldene Bulli** – VW T1 Samba „Goldstück“, 900 kg, Wertkurier, +10 % Erlös auf jeder Tour, nicht käuflich. Wer ihn schon hat, bekommt den Jackpot. |
+
+Beträge wachsen mit der Etappe mit. Aktive Vorteile stehen im Regal unter 🎯
+und oben unter *Flotte*.
+
+### Größere Büros
+
+Fünf Größen: Kontor, Umschlaghalle, Logistikzentrum, ab Etappe 2 das
+**Bürogebäude** 🏬 (2 Etagen, 24 Plätze, 60 Stellplätze, +3 % Prestige auf
+jeden Auftrag) und ab Etappe 4 die **Konzernzentrale** 🏙️ (3 Etagen, 36
+Plätze, 100 Stellplätze, +6 % Prestige). Beim Einrichten schaltet man oben
+zwischen EG und den Obergeschossen um; Empfang, Küche und Hof sind im EG, die
+Schreibtische verteilen sich auf alle Etagen, oben sitzt der Vorstand.
+
+### Die Stellen im Büro
+
+Im Büro-Rundgang stellt Lina jede der vier Stellen einzeln vor – Disposition,
+Fahrpersonal, Umschlag, Zoll & Papiere. Tippt man später im Büro auf eine
+Stelle, erklärt sie sie noch einmal, mit den Zahlen genau dieses Büros (wie
+viele Fahrzeuge die Dispo schafft, wie viele gleichzeitig fahren können, wie
+viel schneller umgeschlagen wird, wie viel Zuschlag es gibt).
+
+### Live-Verfolgung filtern
+
+Unter *Live* filtert eine Leiste die laufenden Fahrten: Alle, 📦 Regulär,
+🕶️ Grau (Mr. Snus und Don Pablo), ✉️ Sonderfahrt und ⚠️ Probleme
+(verspätet oder liegengeblieben). Grau und Sonderfahrt erscheinen nur, wenn
+es solche Fahrten gibt.
 
 ### Disposition: selbst oder im Büro
 
@@ -424,6 +468,7 @@ extras.js               Entscheidungen, Anruf, Tempo-Bremse, Diesel, Verschleiß
 events.js               Störungen auf der Karte, Pannen und Unfälle, Streife
 vip.js                  Einladungen zur Sonderfahrt, Konkurrenz, Verhandeln
 goals.js                Rahmenverträge, Missionen, Tagesaufgaben, Erfolge
+lucky.js                Luckybox: Preise, Preisband, Goldener Bulli, Vorteile
 loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht

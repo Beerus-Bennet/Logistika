@@ -143,7 +143,7 @@ function refVeh(mode, cargoKey, weight, dist) {
   if (refMemo.has(key)) return refMemo.get(key);
   let best = null;
   for (const v of VEHICLES) {
-    if (v.mode !== mode) continue;
+    if (v.mode !== mode || v.special) continue;
     if (v.stage > S.stage) continue;
     if (!canCarry(v, cargoKey, weight, dist)) continue;
     if (!best || v.costKm < best.costKm) best = v;
@@ -307,7 +307,7 @@ function makeOrder() {
   for (let attempt = 0; attempt < 30; attempt++) {
     const ck = pick(cargoPool());
     const cg = CARGO[ck];
-    const cands = VEHICLES.filter(v => v.stage <= S.stage && um.includes(v.mode) && meetsReq(v, ck));
+    const cands = VEHICLES.filter(v => !v.special && v.stage <= S.stage && um.includes(v.mode) && meetsReq(v, ck));
     if (!cands.length) continue;
 
     /* Der Markt reagiert auf die eigene Flotte: ein Teil der Ausschreibungen
@@ -624,10 +624,13 @@ function acquire(typeId, lease, deliverTo, deliverAddr) {
   const t = vType(typeId);
   if (!t) return;
   if (t.stage > S.stage) return toast("Erst ab Etappe " + t.stage + " verfügbar.", "warn");
+  if (t.special) return toast("Sondereditionen gibt es nur aus der Luckybox.", "warn");
   if (!lease) {
-    if (S.money < t.price) return toast("Nicht genug Kapital – versuch es mit Leasing.", "warn");
-    S.money -= t.price; S.expense += t.price;
-    logMoney("fleet", "Gekauft: " + t.name, -t.price);
+    const price = typeof couponPrice === "function" ? couponPrice(t.price) : t.price;
+    if (S.money < price) return toast("Nicht genug Kapital – versuch es mit Leasing.", "warn");
+    if (price < t.price) useCoupon();
+    S.money -= price; S.expense += price;
+    logMoney("fleet", "Gekauft: " + t.name + (price < t.price ? " (−20 % Gutschein)" : ""), -price);
   } else if (S.money < 0) {
     return toast("Bei negativem Kontostand kein neues Leasing.", "warn");
   } else {
@@ -883,7 +886,7 @@ function vehOptHTML(r, i, on) {
    nur gerade unterwegs ist? Der Knopf springt in den Markt, zeigt nur die
    passenden, und nach dem Kauf geht es zurück zum Auftrag.               */
 function fitTypes(leg, o) {
-  return VEHICLES.filter(t => t.mode === leg.mode && canCarry(t, o.cargo, o.weight, leg.maxHop))
+  return VEHICLES.filter(t => !t.special && t.mode === leg.mode && canCarry(t, o.cargo, o.weight, leg.maxHop))
     .sort((a, b) => a.price - b.price);
 }
 function missingHelpHTML(leg, o, i) {
@@ -1519,7 +1522,8 @@ function finishLeg(job, veh) {
     S.late++;
   }
   /* Unfall unterwegs: ohne Versicherung zieht der Kunde ein Viertel ab */
-  if (o.damaged && !S.insure) { pay = Math.round(pay * 0.75); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht 25 % ab.", "warn"); }
+  if (o.damaged && !(typeof isInsured === "function" ? isInsured() : S.insure)) { pay = Math.round(pay * 0.75); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht 25 % ab.", "warn"); }
+  if (typeof payBoost === "function") pay = Math.round(pay * payBoost(job));
   S.money += pay; S.revenue += pay; S.done++;
   if (o.snus) {
     logMoney("snus", o.shipper + " · " + o.snus.n + " Dosen", pay);
@@ -2670,10 +2674,41 @@ function renderOrders() {
   if (rs) rs.onclick = () => { S.orderFilter = "all"; save(); renderOrders(); };
 }
 
+/* Live-Filter: regulär, grau (Mr. Snus / Don Pablo), Sonderfahrten, Probleme */
+const JOB_FILTERS = [["all", "Alle"], ["legal", "📦 Regulär"], ["grey", "🕶️ Grau"], ["vip", "✉️ Sonderfahrt"], ["trouble", "⚠️ Probleme"]];
+function jobTrouble(j) {
+  const f = S.fleet.find(x => x.uid === (j.legs[j.curLeg] || {}).veh);
+  return S.time > j.order.deadline || !!(f && f.halt);
+}
+function jobMatches(j, k) {
+  const o = j.order, grey = !!(o.snus || o.pablo);
+  return k === "all" || (k === "legal" && !grey) || (k === "grey" && grey) || (k === "vip" && !!o.vip) || (k === "trouble" && jobTrouble(j));
+}
+function jobToolsHTML(k) {
+  return `<div class="chiprow first">${JOB_FILTERS.map(([id, l]) => {
+    const n = S.jobs.filter(j => jobMatches(j, id)).length;
+    if ((id === "vip" || id === "grey") && !n && k !== id) return "";
+    return chipHTML("data-jf", id, l, n, k === id, id === "trouble" && n ? "alert" : "");
+  }).join("")}</div>`;
+}
 function renderJobs() {
   const el = $("#tab-jobs");
-  if (!S.jobs.length) { el.innerHTML = `<div class="empty">Kein laufender Auftrag. Nimm unter <b>Aufträge</b> eine Ausschreibung an.</div>`; return; }
-  el.innerHTML = S.jobs.map(j => {
+  if (!S.jobs.length) {
+    setTools("jobs", "");
+    el.innerHTML = `<div class="empty">Kein laufender Auftrag. Nimm unter <b>Aufträge</b> eine Ausschreibung an.</div>`; return;
+  }
+  const jf = S.jobFilter || "all";
+  setTools("jobs", jobToolsHTML(jf), vt => vt.querySelectorAll("[data-jf]").forEach(b => b.onclick = () => {
+    S.jobFilter = b.dataset.jf === S.jobFilter ? "all" : b.dataset.jf; save(); renderJobs();
+    $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
+  }));
+  const shown = S.jobs.filter(j => j.order.tut || jobMatches(j, jf));
+  if (!shown.length) {
+    el.innerHTML = `<div class="empty">Gerade keine Fahrt in diesem Filter.<button class="btn tiny ghost" id="jfReset">Alle zeigen</button></div>`;
+    $("#jfReset").onclick = () => { S.jobFilter = "all"; save(); renderJobs(); };
+    return;
+  }
+  el.innerHTML = shown.map(j => {
     const o = j.order, cg = CARGO[o.cargo];
     const doneDist = j.legs.filter(l => l.done).reduce((a, l) => a + l.dist, 0);
     const cur = j.legs[j.curLeg];
@@ -2682,7 +2717,7 @@ function renderJobs() {
     const total = j.legs.reduce((a, l) => a + l.dist, 0);
     const prog = clamp(((doneDist + curProg) / total) * 100, 0, 100);
     const late = S.time > o.deadline;
-    return `<div class="card job${flashOn(j.id) ? " flash" : ""}${o.vip ? " vipjob" : ""}" data-job="${j.id}">
+    return `<div class="card job${flashOn(j.id) ? " flash" : ""}${o.vip ? " vipjob" : ""}${o.snus || o.pablo ? " greyjob" : ""}" data-job="${j.id}">
       ${o.vip ? `<div class="vip-ribbon">✉️ Sonderfahrt · ${esc(o.shipper)}</div>` : ""}
       <div class="card-top">
         <span class="badge" style="--c:${late ? "#ff5c78" : "#7cd6a0"}">${cg.icon} ${cg.name}</span>
@@ -2847,6 +2882,7 @@ function mktState() {
 function vehLocked(t) { return t.stage > S.stage || !unlockedModes().includes(t.mode); }
 /* Alles außer der Kategorie – damit die Zahlen an den Kategorien stimmen */
 function mktPass(t, f) {
+  if (t.special) return false;   /* Sondereditionen gibt es nur aus der Luckybox */
   if (f.avail && vehLocked(t)) return false;
   if (f.afford && t.price > S.money) return false;
   return f.flags.every(fl => t.flags.includes(fl));
@@ -2902,7 +2938,8 @@ function renderMarket() {
     return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
         <div class="card-top"><span class="vicon">${t.icon}</span>
           <div class="vname">${esc(t.name)}<small>${esc(t.brand)}</small></div>
-          <span class="price">${money(t.price)}</span></div>
+          <span class="price">${(() => { const cp = typeof couponPrice === "function" ? couponPrice(t.price) : t.price;
+            return cp < t.price ? `<s>${money(t.price)}</s> ${money(cp)}` : money(t.price); })()}</span></div>
         <div class="meta small">
           <span>⚖️ ${kgf(t.cap)}</span><span>🏎️ ${t.speed} km/h</span>
           <span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>🅿️ ${money(t.daily)}/Tag</span><span>📏 ${kmf(t.range)}</span>
@@ -2911,7 +2948,7 @@ function renderMarket() {
         ${locked
           ? `<div class="lockrow">🔒 ab Etappe ${Math.max(t.stage, firstStageWith(m))}</div>`
           : `<div class="buyrow">
-               <button class="btn tiny${S.money >= t.price ? "" : " disabled"}" data-buy="${t.id}">kaufen</button>
+               <button class="btn tiny${S.money >= (typeof couponPrice === "function" ? couponPrice(t.price) : t.price) ? "" : " disabled"}" data-buy="${t.id}">kaufen</button>
                <button class="btn tiny ghost" data-lease="${t.id}">leasen · ${money(lease)}/Tag</button>
              </div>`}
       </div>`;
@@ -2923,7 +2960,7 @@ function renderMarket() {
         <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
       </div></div>`;
   /* Im Fokus zählt nur, was die Strecke schafft; sonst greifen die Filter */
-  const pass = t => mf ? mf.ids.includes(t.id) : mktPass(t, f) && (f.cat === "all" || vehCat(t) === f.cat);
+  const pass = t => mf ? mf.ids.includes(t.id) && !t.special : mktPass(t, f) && (f.cat === "all" || vehCat(t) === f.cat);
   const sortFn = !mf && MKT_SORT_FN[f.sort];
   if (sortFn) {
     const list = VEHICLES.filter(pass).sort((a, b) => sortFn(a, b) || a.price - b.price);
@@ -3100,7 +3137,7 @@ function render() {
   /* Auswahlliste gerade offen (z. B. Büro zuordnen): nicht unter dem Finger neu bauen */
   const ae = document.activeElement;
   if (ae && ae.tagName === "SELECT" && ae.closest("#view")) return;
-  if (activeTab !== "orders" && activeTab !== "market") setTools(activeTab, "");
+  if (activeTab !== "orders" && activeTab !== "market" && activeTab !== "jobs") setTools(activeTab, "");
   ({ orders: renderOrders, jobs: renderJobs, fleet: renderFleet, bases: renderBases,
      market: renderMarket, world: renderWorld }[activeTab] || function () {})();
   renderDirty = false;
@@ -3250,6 +3287,7 @@ function boot() {
     else if (document.body.classList.contains("call-open")) closeCall();
     else if (document.body.classList.contains("invite-open")) closeInvite();
     else if (document.body.classList.contains("pack-open")) packEnd(false, true);
+    else if (document.body.classList.contains("lucky-open")) closeLucky();
     else closeModal();
   });
   /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste

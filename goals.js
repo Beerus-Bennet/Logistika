@@ -243,6 +243,7 @@ function goalsDelivered(job, pay, late) {
     S.money += r; S.revenue += r; S.xp += 50; extraStats().dailySets++;
     logMoney("bonus", "Alle Tagesaufgaben", r);
     toast("🏆 Alle drei Tagesaufgaben! Bonus +" + money(r), "ok");
+    if (typeof luckyDailySet === "function") luckyDailySet();
   }
   checkAchievements();
   checkLevel();
@@ -331,7 +332,8 @@ function renderGoals() {
   let body = "";
   if (goalsTab === "today") {
     const T = t => TASKS.find(x => x.id === t.id);
-    body = `<div class="gsub">Neue Aufgaben jeden Morgen · je ${money(dailyReward())}, alle drei zusammen +${money(dailyReward() * 2)}</div>`
+    body = (typeof luckyShelfHTML === "function" ? luckyShelfHTML() : "")
+      + `<div class="gsub">Neue Aufgaben jeden Morgen · je ${money(dailyReward())}, alle drei zusammen +${money(dailyReward() * 2)} und eine 🎁 Luckybox</div>`
       + (d.tasks.length ? d.tasks.map(t => `<div class="gtask${t.done ? " done" : ""}">
           <span class="gi">${T(t).icon}</span>
           <div class="gt"><b>${esc(T(t).label(t))}</b>${bar(Math.min(t.got, t.n), t.n)}
@@ -368,11 +370,14 @@ function renderGoals() {
   </div>`;
   $("#mClose").onclick = closeModal; $("#mCancel").onclick = closeModal;
   $$("#modalBody [data-gtab]").forEach(b => b.onclick = () => { goalsTab = b.dataset.gtab; renderGoals(); });
+  const lo = $("#lkOpen"); if (lo) lo.onclick = () => openLucky();
 }
 function renderGoalsChip() {
   const el = document.getElementById("goalsCount"); if (!el) return;
   const d = dailyState();
   const open = d.tasks.filter(t => !t.done).length;
-  el.textContent = d.tasks.length ? (d.tasks.length - open) + "/" + d.tasks.length : "–";
-  el.classList.toggle("all", d.tasks.length > 0 && !open);
+  const boxes = S.lucky ? S.lucky.boxes.length : 0;
+  el.textContent = boxes ? "🎁" + boxes : d.tasks.length ? (d.tasks.length - open) + "/" + d.tasks.length : "–";
+  el.classList.toggle("all", d.tasks.length > 0 && !open && !boxes);
+  el.classList.toggle("gift", boxes > 0);
 }

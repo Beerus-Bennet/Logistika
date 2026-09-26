@@ -138,6 +138,7 @@ DECISIONS.invite = {
 function vipDelivered(job, pay, late) {
   const o = job.order; if (!o.vip) return;
   const v = vipState(); v.done++; extraStats().vip++;
+  if (!late && typeof luckyGive === "function") luckyGive("std", "Dankeschön für die Sonderfahrt");
   const tpl = VIP_JOBS.find(t => t.org === o.shipper);
   phoneMsg({ from: o.shipper, kind: "good", title: late ? "Angekommen – wenn auch spät" : "Mit großem Dank",
     body: late ? "Die Lieferung ist angekommen, leider nach der vereinbarten Zeit. Wir werden das bei künftigen Anfragen berücksichtigen."

@@ -24,8 +24,18 @@ const OFFICE_TIERS = [
     info: "Vier Tore, ein Stapler, eigene Disposition." },
   { id: "zentrum", name: "Logistikzentrum", icon: "🏢",
     desks: 12, slots: 30, reach: 6000, buy: 620000, rent: 980,
-    info: "Eigenes Terminal, Zollabfertigung, Nachtschicht." }
+    info: "Eigenes Terminal, Zollabfertigung, Nachtschicht." },
+  /* Mehrere Etagen: je Etage bis zu zwölf Plätze, Empfang, Prestige */
+  { id: "gebaeude", name: "Bürogebäude", icon: "🏬", floors: 2, st: 2, prestige: 0.03, comfort: 4,
+    desks: 24, slots: 60, reach: 15000, buy: 2400000, rent: 3600,
+    info: "Zwei Etagen, Empfang, Konferenzraum – ein echter Firmensitz. +3 % Prestige auf jeden Auftrag." },
+  { id: "tower", name: "Konzernzentrale", icon: "🏙️", floors: 3, st: 4, prestige: 0.06, comfort: 8,
+    desks: 36, slots: 100, reach: 40000, buy: 9500000, rent: 13000,
+    info: "Drei Etagen mit Blick über die Stadt, Kantine, Vorstandsetage. +6 % Prestige auf jeden Auftrag." }
 ];
+const tierFloors = t => t.floors || 1;
+const perFloor = t => Math.ceil(t.desks / tierFloors(t));
+const tierOpen = t => (t.st || 1) <= S.stage;
 
 /* ------------------------------- Rollen --------------------------------- */
 const ROLES = {
@@ -349,6 +359,7 @@ function openBase(nodeId, tierIdx, rent) {
   ensureOffices();
   const t = OFFICE_TIERS[tierIdx];
   if (!t || !isUnlocked(nodeId)) return;
+  if (!tierOpen(t)) return toast(t.name + " gibt es ab Etappe " + t.st + ".", "warn");
   if (baseAtNode(nodeId)) return toast("Hier steht bereits ein Standort.", "warn");
   if (S.bases.length >= maxBases())
     return toast("In Etappe " + S.stage + " kannst du " + maxBases() + " Standort"
@@ -392,6 +403,7 @@ function closeBase(id) {
 function upgradeBase(id) {
   const b = baseById(id); if (!b || b.tier >= OFFICE_TIERS.length - 1) return;
   const next = OFFICE_TIERS[b.tier + 1];
+  if (!tierOpen(next)) return toast(next.name + " gibt es ab Etappe " + next.st + ".", "warn");
   const price = b.rent ? rentPrice(b.node, next) * 30
     : Math.round(buyPrice(b.node, next) - buyPrice(b.node, tierOf(b)) * 0.6);
   if (S.money < price) return toast("Dafür fehlen " + money(price - S.money) + ".", "warn");
@@ -420,7 +432,7 @@ function makeCandidate(cheap) {
 }
 function refreshPool(b, bonus) {
   const n = 3 + Math.floor(S.stage / 2);
-  b.pool = [];
+  b.pool = (b.pool || []).filter(c => c.hh);   /* der Headhunter-Kandidat wartet */
   for (let i = 0; i < n; i++) b.pool.push(makeCandidate(bonus && i === 0));
   b.poolDay = dayOf(S.time);
 }
@@ -497,7 +509,7 @@ function dispatchInterval(b) {
   if (p <= 0) return Infinity;
   return clamp(Math.round(90 / (1 + p)), 8, 60);
 }
-function baseBonus(b) { return Math.min(0.12, rolePower(b, "zoll") * 0.022 * moodFactor(b)); }
+function baseBonus(b) { return Math.min(0.12, rolePower(b, "zoll") * 0.022 * moodFactor(b)) + (tierOf(b).prestige || 0); }
 
 function baseDispatch(b) {
   if (basePaused(b) || b.dispOff || !b.vehicles.length || dispoPower(b) <= 0) return false;
@@ -795,7 +807,7 @@ function staffRow(b, s) {
 }
 function candRow(b, c) {
   const r = ROLES[c.role];
-  return `<div class="staff cand">
+  return `<div class="staff cand${c.hh ? " hh" : ""}">
     ${faceHTML(c, "c" + c.id)}
     <div class="stx">
       <b>${esc(c.name)}</b>
@@ -803,7 +815,7 @@ function candRow(b, c) {
       <small class="trait">${esc(c.trait)}</small>
     </div>
     <button class="btn tiny${S.money >= c.fee ? "" : " disabled"}" data-hire="${b.id}|${c.id}"
-      title="einstellen · Vermittlung ${money(c.fee)}">🤝 ${money(c.fee)}</button>
+      title="einstellen · Vermittlung ${c.fee ? money(c.fee) : "gratis"}">🤝 ${c.fee ? money(c.fee) : "gratis"}</button>
   </div>`;
 }
 
@@ -814,8 +826,8 @@ function baseCard(b) {
   const rest = paused ? dur(b.pausedUntil - S.time) : "";
   const free = S.fleet.filter(f => !baseOfVehicle(f.uid));
   const mine = b.vehicles.map(u => S.fleet.find(f => f.uid === u)).filter(Boolean);
-  const covered = ROLE_KEYS.map(r => `<span class="cov${roleCount(b, r) ? " on" : ""}" title="${ROLES[r].name}">
-      ${ROLES[r].icon}<i>${rolePower(b, r) || "–"}</i></span>`).join("");
+  const covered = ROLE_KEYS.map(r => `<button class="cov${roleCount(b, r) ? " on" : ""}" title="${ROLES[r].name} – antippen, Lina erklärt" data-role="${r}" data-rolebase="${b.id}">
+      ${ROLES[r].icon}<i>${rolePower(b, r) || "–"}</i><small>${ROLES[r].name.split(" ")[0]}</small></button>`).join("");
 
   return `<div class="card base${paused ? " halted" : ""}">
     <div class="card-top">
@@ -825,7 +837,7 @@ function baseCard(b) {
     </div>
 
     <div class="planpeek" data-office="${b.id}" role="button" tabindex="0"
-         title="Büro einrichten">${officeSVG(b, 240, false)}
+         title="Büro einrichten">${officeSVG(b, 240, false)}${tierFloors(t) > 1 ? `<span class="floorbadge">${tierFloors(t)} Etagen</span>` : ""}
       <span class="planhint">🪴 einrichten</span></div>
 
     ${paused ? `<div class="halt">⛔ Der Betrieb steht still · noch ${rest} · <b>siehe Telefon</b></div>` : ""}
@@ -898,7 +910,9 @@ function baseCard(b) {
 
     <div class="baserow">
       ${b.tier < OFFICE_TIERS.length - 1
-        ? `<button class="btn tiny ghost" data-up="${b.id}">vergrößern → ${OFFICE_TIERS[b.tier + 1].name}</button>` : ""}
+        ? (tierOpen(OFFICE_TIERS[b.tier + 1])
+          ? `<button class="btn tiny ghost" data-up="${b.id}">vergrößern → ${OFFICE_TIERS[b.tier + 1].icon} ${OFFICE_TIERS[b.tier + 1].name}</button>`
+          : `<span class="lockchip">🔒 ${OFFICE_TIERS[b.tier + 1].name} ab Etappe ${OFFICE_TIERS[b.tier + 1].st}</span>`) : ""}
       <button class="btn tiny ghost danger" data-close="${b.id}">${b.rent ? "kündigen" : "verkaufen"}</button>
     </div>
   </div>`;
@@ -922,16 +936,16 @@ function newBaseCard() {
           `<option value="${n.id}"${n.id === sel ? " selected" : ""}>${TYPE_GLYPH[n.type] || "🏙"} ${esc(n.name)}</option>`).join("")}</select>
       </div>
       <div class="tierlist">${OFFICE_TIERS.map((t, i) => `
-        <div class="tier">
-          <div class="tier-head"><span>${t.icon}</span><b>${t.name}</b></div>
+        <div class="tier${tierOpen(t) ? "" : " locked"}${tierFloors(t) > 1 ? " big" : ""}">
+          <div class="tier-head"><span>${t.icon}</span><b>${t.name}</b>${tierFloors(t) > 1 ? `<em>${tierFloors(t)} Etagen</em>` : ""}</div>
           <small>${esc(t.info)}</small>
           <div class="meta small">
             <span>👥 ${t.desks}</span><span>🚚 ${t.slots}</span><span>📡 ${kmf(Math.round(t.reach * (1 + (S.stage - 1) * 0.35)))}</span>
           </div>
-          <div class="buyrow">
+          ${tierOpen(t) ? `<div class="buyrow">
             <button class="btn tiny${S.money >= buyPrice(sel, t) ? "" : " disabled"}" data-open="${i}|0">kaufen · ${money(buyPrice(sel, t))}</button>
             <button class="btn tiny ghost${S.money >= rentPrice(sel, t) * 30 ? "" : " disabled"}" data-open="${i}|1">mieten · ${money(rentPrice(sel, t))}/Tag</button>
-          </div>
+          </div>` : `<div class="lockrow">🔒 ab Etappe ${t.st}</div>`}
         </div>`).join("")}</div>`}
   </div>`;
 }
@@ -965,6 +979,7 @@ function renderBases() {
     if (sel && sel.value) assignVehicle(b.dataset.assign, sel.value);
   });
   $$("#tab-bases [data-unassign]").forEach(b => b.onclick = () => unassignVehicle(b.dataset.unassign));
+  $$("#tab-bases [data-role]").forEach(b => b.onclick = () => { if (typeof linaRole === "function") linaRole(b.dataset.role, b.dataset.rolebase); });
   $$("#tab-bases [data-dispo]").forEach(t => t.onclick = () => {
     const base = baseById(t.dataset.dispo); if (!base) return;
     base.dispOff = !base.dispOff;
@@ -1062,12 +1077,16 @@ function decoOf(b) {
 const PLANT_SPOTS = [[46, 64], [354, 64], [46, 236], [354, 236], [46, 150], [354, 150],
                      [112, 258], [288, 258], [200, 258], [80, 100], [320, 100]];
 function deskHome(b, i) {
-  const t = tierOf(b);
-  const cols = t.desks <= 3 ? 2 : t.desks <= 6 ? 3 : 4;
-  const rows = Math.ceil(t.desks / cols);
+  const t = tierOf(b), pf = perFloor(t), li = i % pf;
+  const cols = pf <= 3 ? 2 : pf <= 6 ? 3 : 4;
+  const rows = Math.ceil(pf / cols);
   const gw = 250 / cols, gh = 120 / Math.max(1, rows);
-  return [84 + (i % cols) * gw + gw / 2, 128 + Math.floor(i / cols) * gh + gh / 2];
+  return [84 + (li % cols) * gw + gw / 2, 128 + Math.floor(li / cols) * gh + gh / 2];
 }
+const deskFloor = (b, i) => Math.floor(i / perFloor(tierOf(b)));
+const plantFloor = (b, i) => i % tierFloors(tierOf(b));
+const floorName = f => f === 0 ? "Erdgeschoss" : f + ". Obergeschoss";
+let officeFloor = 0;
 function deskPos(b, i) { return decoOf(b).pos.desks[i] || deskHome(b, i); }
 function plantPos(b, i) { return decoOf(b).pos.plants[i] || PLANT_SPOTS[i % PLANT_SPOTS.length]; }
 function kitchenPos(b) { return decoOf(b).pos.kitchen || [200, 57]; }
@@ -1082,7 +1101,7 @@ function resetPos(b) {
   p.desks = {}; p.plants = {}; p.kitchen = null;
 }
 function findBy(list, id) { return list.find(x => x.id === id) || list[0]; }
-function plantSlots(b) { return [4, 7, 11][b.tier] || 4; }
+function plantSlots(b) { return [4, 7, 11, 18, 27][b.tier] || 4; }
 
 /* Behaglichkeit: 0 bis etwa 30. */
 function comfortOf(b) {
@@ -1090,7 +1109,8 @@ function comfortOf(b) {
   let c = findBy(FLOORS, d.floor).comfort + findBy(WALLS, d.wall).comfort
         + findBy(KITCHENS, d.kitchen).comfort;
   d.plants.forEach(p => { const it = PLANTS.find(x => x.id === p); if (it) c += it.comfort; });
-  return Math.max(-2, Math.min(30, c));
+  c += tierOf(b).comfort || 0;                   /* Empfang, Kantine, Tageslicht */
+  return Math.max(-2, Math.min(38, c));
 }
 
 function buyDeco(baseId, kind, id) {
@@ -1135,8 +1155,9 @@ function removePlant(baseId, idx) {
    Ein Grundriss als SVG: Wände, Boden, Schreibtische mit den Gesichtern der
    Leute, Küchenzeile, Pflanzen, Tor zum Hof. Kein 3D – das würde auf dem
    Handy mehr kosten, als es bringt, und von oben sieht man ohnehin mehr. */
-function officeSVG(b, w, detail) {
+function officeSVG(b, w, detail, floor) {
   const d = decoOf(b), t = tierOf(b);
+  const fl0 = clamp(floor || 0, 0, tierFloors(t) - 1);
   const fl = findBy(FLOORS, d.floor), tint = findBy(FLOOR_TINTS, d.tint);
   const wall = findBy(WALLS, d.wall), kit = findBy(KITCHENS, d.kitchen);
   const u = "of" + b.id;
@@ -1164,6 +1185,7 @@ function officeSVG(b, w, detail) {
      Jedes Möbelstück sitzt in einer eigenen Gruppe und lässt sich ziehen. */
   let desks = "";
   for (let i = 0; i < t.desks; i++) {
+    if (deskFloor(b, i) !== fl0) continue;
     const [cx, cy] = deskPos(b, i);
     const p = b.staff[i];
     desks += `<g class="fur" data-drag="desk|${i}" transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)})">
@@ -1184,7 +1206,7 @@ function officeSVG(b, w, detail) {
 
   /* Küchenzeile – als Ganzes verschiebbar */
   const [kx, ky] = kitchenPos(b);
-  const kitchen = kit.id === "keine"
+  const kitchen = fl0 > 0 ? "" : kit.id === "keine"
     ? `<text x="200" y="66" text-anchor="middle" font-size="11" fill="#7c8794"
              font-family="system-ui">keine Küche</text>`
     : `<g class="fur" data-drag="kitchen|0" transform="translate(${kx} ${ky})">
@@ -1201,7 +1223,7 @@ function officeSVG(b, w, detail) {
 
   /* Pflanzen */
   const plants = d.plants.map((pid, i) => {
-    const it = PLANTS.find(x => x.id === pid); if (!it) return "";
+    const it = PLANTS.find(x => x.id === pid); if (!it || plantFloor(b, i) !== fl0) return "";
     const [x, y] = plantPos(b, i);
     const r = it.h * 0.42;
     return `<g class="fur" data-drag="plant|${i}" transform="translate(${x} ${y})">
@@ -1214,7 +1236,19 @@ function officeSVG(b, w, detail) {
   }).join("");
 
   /* Tor zum Hof, sobald es eine Halle ist */
-  const dock = b.tier > 0
+  /* Treppenhaus und Etagenschild bei mehrstöckigen Gebäuden */
+  const multi = tierFloors(t) > 1;
+  const stairs = multi
+    ? `<g transform="translate(318 44)"><rect width="46" height="40" rx="3" fill="#cfd6df" stroke="#0d1b2a" stroke-width="2"/>
+        ${[0, 1, 2, 3, 4].map(k => `<path d="M${4 + k * 8} 36 V${8 + k * 6}" stroke="#7c8794" stroke-width="2"/>`).join("")}
+        <text x="23" y="-4" text-anchor="middle" font-size="8.5" font-weight="700" fill="#0d1b2a" font-family="system-ui">TREPPE</text></g>
+       ${(() => { const lbl = (fl0 === 0 ? "EG" : fl0 + ". OG") + (fl0 === tierFloors(t) - 1 && fl0 > 0 && b.tier >= 4 ? " · Vorstand" : "");
+          const w = Math.max(44, Math.round(lbl.length * 6.4 + 18));
+          return `<g transform="translate(42 44)"><rect width="${w}" height="18" rx="9" fill="#0d1b2a"/>
+        <text x="${w / 2}" y="12.5" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" font-family="system-ui">${lbl}</text></g>`; })()}
+       ${fl0 === 0 ? `<g transform="translate(150 236)"><rect width="100" height="22" rx="6" fill="#e9dcc0" stroke="#5d4a32" stroke-width="2"/>
+        <text x="50" y="15" text-anchor="middle" font-size="9.5" font-weight="700" fill="#5d4a32" font-family="system-ui">EMPFANG</text></g>` : ""}` : "";
+  const dock = b.tier > 0 && fl0 === 0
     ? `<rect x="300" y="268" width="76" height="14" rx="3" fill="#b8c3d0" stroke="#0d1b2a" stroke-width="2.4"/>
        <text x="338" y="279" text-anchor="middle" font-size="9" font-weight="700"
              fill="#0d1b2a" font-family="system-ui">HOF</text>` : "";
@@ -1229,7 +1263,7 @@ function officeSVG(b, w, detail) {
           stroke="${avMix(wall.color, "#000000", 0.25)}" stroke-width="2"/>
     <rect x="30" y="30" width="340" height="240" rx="5" fill="none"
           stroke="#ffffff" stroke-width="10" opacity="0.14"/>
-    ${kitchen}${desks}${plants}${dock}
+    ${stairs}${kitchen}${desks}${plants}${dock}
     <rect x="30" y="140" width="9" height="46" fill="#8fb6ff" stroke="#0d1b2a" stroke-width="2"/>
     <path d="M361 96 a30 30 0 0 0 -30 30" fill="none" stroke="#0d1b2a" stroke-width="2" opacity="0.5"/>
     <rect x="361" y="96" width="9" height="34" fill="#c8b48f" stroke="#0d1b2a" stroke-width="2"/>
@@ -1239,7 +1273,7 @@ function officeSVG(b, w, detail) {
 /* ------------------------- Einrichtungsdialog ---------------------------- */
 let decoTab = "floor";
 function openOffice(baseId) {
-  decoTab = "floor";
+  decoTab = "floor"; officeFloor = 0;
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderOfficeModal(baseId);
 }
@@ -1291,7 +1325,9 @@ function renderOfficeModal(baseId) {
       <div class="msub">${tierOf(b).name} · Behaglichkeit ${comfortOf(b)}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
-    <div class="planwrap">${officeSVG(b, 360, true)}</div>
+    ${tierFloors(tierOf(b)) > 1 ? `<div class="vswitch floors">${Array.from({ length: tierFloors(tierOf(b)) }, (_, f) =>
+      `<button class="${f === officeFloor ? "on" : ""}" data-floor="${f}">${f === 0 ? "EG" : f + ". OG"}</button>`).join("")}</div>` : ""}
+    <div class="planwrap">${officeSVG(b, 360, true, officeFloor)}</div>
     <div class="planhint2">Möbel, Pflanzen und die Küche lassen sich mit dem Finger verschieben.</div>
     <div class="vswitch">${tabs.map(([k, n]) =>
       `<button class="${k === decoTab ? "on" : ""}" data-decotab="${k}">${n}</button>`).join("")}</div>
@@ -1307,6 +1343,7 @@ function renderOfficeModal(baseId) {
   if (rs) rs.onclick = () => { resetPos(b); save(); renderOfficeModal(baseId); render(); };
   bindPlanDrag(baseId);
   $$("#modalBody [data-decotab]").forEach(x => x.onclick = () => { decoTab = x.dataset.decotab; renderOfficeModal(baseId); });
+  $$("#modalBody [data-floor]").forEach(x => x.onclick = () => { officeFloor = +x.dataset.floor; renderOfficeModal(baseId); });
   $$("#modalBody [data-deco]").forEach(x => x.onclick = () => {
     const [kind, bid, id] = x.dataset.deco.split("|"); buyDeco(bid, kind, id);
   });

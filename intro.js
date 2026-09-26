@@ -200,7 +200,7 @@ function renderIntro() {
 
   /* ---------- 3: Gründung ---------- */
   if (INTRO.step === 3) {
-    const startVehicles = VEHICLES.filter(v => v.stage === 1);
+    const startVehicles = VEHICLES.filter(v => v.stage === 1 && !v.special);
     const count = (id) => S.fleet.filter(f => f.type === id).length;
     /* Nur selbst gekaufte lassen sich wieder abgeben – das Fahrzeug aus der
        Herkunft gehört zur Vorgeschichte und bleibt. */
@@ -952,7 +952,7 @@ const LINA_TALKS = {
     { tx: "Pro Etappe darfst du einen Standort betreiben. Hier wählst du den Ort: Stadtteile sind günstig, Häfen, Flughäfen "
         + "und Terminals kosten mehr, liegen aber an den großen Verkehrswegen.",
       target: "#newBaseNode" },
-    { tx: "Drei Größen: <b>Kontor</b>, <b>Halle</b> und <b>Zentrum</b>. 👥 sind die Schreibtische für Personal, 🚚 die Stellplätze "
+    { tx: "Fünf Größen: <b>Kontor</b>, <b>Halle</b>, <b>Zentrum</b> – und später das <b>Bürogebäude</b> und die <b>Konzernzentrale</b> mit mehreren Etagen und Prestige-Zuschlag. 👥 sind die Schreibtische für Personal, 🚚 die Stellplätze "
         + "für Fahrzeuge und 📡 das Einzugsgebiet, in dem dein Team Ausschreibungen abgreift.",
       target: "#tab-bases .tierlist .tier" },
     { tx: "Kaufen kostet einmal viel Geld. Mieten kostet pro Tag, abgebucht wird einmal im Monat. Mieten kannst du erst, "
@@ -970,10 +970,13 @@ const LINA_TALKS = {
     { tx: "Die <b>Stimmung</b> im Team. Unter 70 % gibt es öfter Ärger: Dann klingelt das Diensttelefon, der Standort steht still, "
         + "und du entscheidest, wie der Streit gelöst wird – mal kostet das Geld, mal Zeit.",
       target: "#tab-bases .card.base .moodbar" },
-    { tx: () => `Es gibt vier Rollen. ${ROLES.disp.icon} <b>Disposition</b> nimmt Aufträge an – ohne sie passiert gar nichts. `
-        + `${ROLES.fahr.icon} <b>Fahrpersonal</b> legt fest, wie viele Fahrzeuge gleichzeitig rollen. ${ROLES.ums.icon} <b>Umschlag</b> `
-        + `verkürzt Lade- und Entladezeiten. ${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b> bringen Servicezuschlag. Die Zahl zeigt, wie stark die Rolle besetzt ist.`,
-      target: "#tab-bases .card.base .covrow" },
+    { tx: "Es gibt vier Stellen im Büro. Die Zahl an jeder zeigt, wie stark sie besetzt ist – die Sterne aller Leute in dieser Rolle zusammen. "
+        + "Ich stell sie dir einzeln vor.", target: "#tab-bases .card.base .covrow" },
+    { tx: () => ROLE_TEXT.disp, target: '#tab-bases .card.base .cov[data-role="disp"]' },
+    { tx: () => ROLE_TEXT.fahr, target: '#tab-bases .card.base .cov[data-role="fahr"]' },
+    { tx: () => ROLE_TEXT.ums, target: '#tab-bases .card.base .cov[data-role="ums"]' },
+    { tx: () => ROLE_TEXT.zoll + " Übrigens: Tippst du später auf eine Stelle, erkläre ich sie dir nochmal – mit den Zahlen deines Büros.",
+      target: '#tab-bases .card.base .cov[data-role="zoll"]' },
     { tx: "Hier kommen jeden Tag neue <b>Bewerbungen</b> rein. Die Sterne zeigen das Können, darunter stehen Rolle und Tageslohn, "
         + "rechts die einmalige Vermittlungsgebühr. Tipp auf 🤝, um jemanden einzustellen.",
       target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() },
@@ -995,6 +998,36 @@ const LINA_TALKS = {
     { tx: "Das war’s zu den Büros. Gutes Team, schönes Büro, genug Leute für die Fahrzeuge – dann läuft der Laden fast von allein." }
   ]
 };
+
+/* Die vier Stellen im Büro – Lina erklärt sie im Büro-Rundgang und
+   auf Zuruf, wenn man im Büro auf eine Stelle tippt. */
+const ROLE_TEXT = {
+  get disp() { return `${ROLES.disp.icon} <b>Disposition</b> ist das Herz des Büros: Sie nimmt Ausschreibungen im Einzugsgebiet an und schickt jeweils das passende Fahrzeug – `
+    + "aber nur, was pünktlich zu schaffen ist. Ohne Disposition passiert hier gar nichts. Faustregel: Eine ★★★-Disponentin betreut rund zehn Fahrzeuge und schaut alle 25 Minuten nach."; },
+  get fahr() { return `${ROLES.fahr.icon} <b>Fahrpersonal</b> bestimmt, wie viele Fahrzeuge ohne festen Fahrer gleichzeitig rollen. Ziehst du jemanden auf ein Fahrzeug, `
+    + "fährt er es fest – pro Stern 2 % schneller. Zu wenige Leute für zu viele Fahrzeuge drücken die Stimmung."; },
+  get ums() { return `${ROLES.ums.icon} <b>Umschlag</b> belädt und entlädt schneller – bis zu einem Drittel weniger Standzeit an diesem Standort. `
+    + "Lohnt sich vor allem an Häfen, Flughäfen und Terminals, wo viel umgeschlagen wird."; },
+  get zoll() { return `${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b> bringt einen Servicezuschlag auf jeden Auftrag, den das Büro annimmt – bis zu 12 %. `
+    + "Ab Etappe 3, wenn es über Grenzen geht, fehlt ohne diese Stelle gern mal ein Papier."; }
+};
+function roleHere(r, b) {
+  if (!b) return "";
+  const where = esc(N[b.node].short), n = roleCount(b, r), pw = rolePower(b, r);
+  if (!n) return `Hier in ${where} sitzt noch niemand auf dieser Stelle. Unter „Bewerbungen“ findest du Leute – auf die Rolle unter dem Namen achten.`;
+  const who = `${n} ${n === 1 ? "Person" : "Leute"} mit zusammen ${pw} ★`;
+  if (r === "disp") return `Hier in ${where}: ${who}. Das reicht für bis zu <b>${dispCap(b)} Fahrzeuge</b>, das Team schaut alle <b>${dur(dispatchInterval(b))}</b> nach freien.`;
+  if (r === "fahr") return `Hier in ${where}: ${who}. Ohne feste Zuordnung können <b>${driverCap(b)} Fahrzeuge</b> gleichzeitig los. Fest zugeordnet sind ${assignedDriverIds(b).size}.`;
+  if (r === "ums") return `Hier in ${where}: ${who}. Laden und Löschen geht <b>${Math.round((1 - umschlagFactor(b.node)) * 100)} %</b> schneller.`;
+  return `Hier in ${where}: ${who}. Auf jeden Auftrag des Büros kommen <b>+${Math.round(baseBonus(b) * 100)} %</b>${tierOf(b).prestige ? " (inklusive Prestige des Gebäudes)" : ""}.`;
+}
+function linaRole(r, baseId) {
+  const b = baseById(baseId);
+  const target = `#tab-bases .card.base .cov[data-role="${r}"][data-rolebase="${baseId}"]`;
+  LINA_TALKS["role_" + r] = [{ tx: () => ROLE_TEXT[r], target }, { tx: () => roleHere(r, b), target }];
+  if (S.tutSeen) delete S.tutSeen["role_" + r];
+  linaTalk("role_" + r);
+}
 
 /* Startet ein Gespräch, sobald Platz dafür ist (kein anderes Tutorial,
    keine Haft, kein Bericht auf dem Schirm). */
