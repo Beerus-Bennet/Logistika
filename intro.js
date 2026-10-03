@@ -1009,7 +1009,8 @@ const ROLE_TEXT = {
   get ums() { return `${ROLES.ums.icon} <b>Umschlag</b> belädt und entlädt schneller – bis zu einem Drittel weniger Standzeit an diesem Standort. `
     + "Lohnt sich vor allem an Häfen, Flughäfen und Terminals, wo viel umgeschlagen wird."; },
   get zoll() { return `${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b> bringt einen Servicezuschlag auf jeden Auftrag, den das Büro annimmt – bis zu 12 %. `
-    + "Ab Etappe 3, wenn es über Grenzen geht, fehlt ohne diese Stelle gern mal ein Papier."; }
+    + "Ab Etappe 4 geht es über Zollgrenzen (Schweiz, Norwegen, Großbritannien, Übersee): Dann macht diese Stelle die Zollpapiere für die Fahrten des Büros – "
+    + "und hilft dir bei deinen eigenen mit einem Tipp und zehn Sekunden mehr."; }
 };
 function roleHere(r, b) {
   if (!b) return "";

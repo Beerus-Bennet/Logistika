@@ -643,6 +643,7 @@ function acquire(typeId, lease, deliverTo, deliverAddr) {
     if (deliverAddr) setSpot(v, addrPt(deliverAddr), deliverAddr);   /* direkt vor die Tür des Kunden */
   }
   S.fleet.push(v);
+  if (typeof onAcquire === "function") onAcquire(v);
   toast((lease ? "Geleast: " : "Gekauft: ") + t.name + " – stationiert in " + N[v.at].name, "ok");
   render();
   return v;
@@ -654,6 +655,7 @@ function release(uid) {
   if (!f) return;
   if (f.phase !== "idle") return toast("Fahrzeug ist im Einsatz.", "warn");
   const t = vType(f.type);
+  if (t.car && typeof carBack === "function") return carBack(uid);
   if (f.lease) {
     toast(t.name + " – Leasing beendet.", "ok");
   } else {
@@ -1524,6 +1526,7 @@ function finishLeg(job, veh) {
   /* Unfall unterwegs: ohne Versicherung zieht der Kunde ein Viertel ab */
   if (o.damaged && !(typeof isInsured === "function" ? isInsured() : S.insure)) { pay = Math.round(pay * 0.75); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht 25 % ab.", "warn"); }
   if (typeof payBoost === "function") pay = Math.round(pay * payBoost(job));
+  if (typeof liveryBoost === "function") pay = Math.round(pay * liveryBoost(job));
   S.money += pay; S.revenue += pay; S.done++;
   if (o.snus) {
     logMoney("snus", o.shipper + " · " + o.snus.n + " Dosen", pay);
@@ -1562,6 +1565,7 @@ function tick(dtMin) {
     if (fix > 0) { S.money -= fix; S.expense += fix; logMoney("fleet", "Tagesfixkosten Flotte", -fix); }
     baseDayChange(days);
     if (typeof dayExtras === "function") dayExtras(days);
+    if (typeof dayAuction === "function") dayAuction(days);
   }
 
   for (const veh of S.fleet) {
@@ -1574,6 +1578,7 @@ function tick(dtMin) {
 
     if (veh.phase === "load" || veh.phase === "unload") {
       if (typeof hubHold === "function" && hubHold(veh, leg)) continue;   /* Sturm, Streik am Umschlagplatz */
+      if (typeof customsHold === "function" && customsHold(veh, job, leg)) continue;   /* Zollabfertigung */
       veh.timer -= dtMin;
       if (veh.timer <= 0) {
         if (veh.phase === "load") {
@@ -1966,9 +1971,11 @@ function drawWorld(m, ctx) {
         c.lineWidth = 3; c.stroke(); c.globalAlpha = 1;
       }
       c.beginPath(); c.arc(x + 2, y + 2.5, r, 0, 7); c.fillStyle = "rgba(13,27,42,0.4)"; c.fill();
+      const lc = typeof vehLiveryCol === "function" ? vehLiveryCol(v) : null;
       c.beginPath(); c.arc(x, y, r, 0, 7);
-      c.fillStyle = "#ffffff"; c.fill();
+      c.fillStyle = lc ? tint(lc, 0.42) : "#ffffff"; c.fill();
       c.lineWidth = 3; c.strokeStyle = mi.color; c.stroke();
+      if (lc) { c.beginPath(); c.arc(x, y, r - 3.2, 0, 7); c.lineWidth = 2.2; c.strokeStyle = lc; c.stroke(); }
       c.lineWidth = 2.4; c.strokeStyle = "#0d1b2a";
       c.beginPath(); c.arc(x, y, r + 1.6, 0, 7); c.stroke();
       drawEmoji(c, t.icon, x, y, r * 1.3);
@@ -2123,7 +2130,7 @@ let baseHits = [];
 function drawBases(m, z) {
   baseHits = [];
   if (!S.bases || !S.bases.length || z < 5) return;
-  const col = S.player ? COMPANY_COLORS[S.player.color] : "#2f6fed";
+  const col = S.livery && S.livery.ver ? S.livery.c1 : S.player ? COMPANY_COLORS[S.player.color] : "#2f6fed";
   S.bases.forEach(b => {
     const a = baseAddr(b);
     m.pin(a.lat, a.lon, (c, x, y) => {
@@ -2371,7 +2378,11 @@ const LEDGER_KIND = {
   loan:  { icon: "🏦", name: "Kredit" },
   tax:   { icon: "🧾", name: "Steuern" },
   insure: { icon: "🛡️", name: "Versicherung" },
-  bonus: { icon: "🏆", name: "Prämie" }
+  bonus: { icon: "🏆", name: "Prämie" },
+  auction: { icon: "🔨", name: "Auktionshaus" },
+  customs: { icon: "🛃", name: "Zoll" },
+  corp:  { icon: "🦈", name: "Übernahme" },
+  paint: { icon: "🎨", name: "Lackierung" }
 };
 function logMoney(kind, label, amount) {
   if (!S.ledger) S.ledger = [];
@@ -2485,6 +2496,7 @@ function renderHud() {
       $("#hudAvatar").style.background = COMPANY_COLORS[S.player.color] + "33";
     }
     $("#hudCompany").textContent = S.player.company;
+    if (typeof renderLogoHud === "function") renderLogoHud();
     $("#hudName").textContent = S.player.name + " · " + ORIGINS[S.player.origin].name;
   }
   const m = $("#hudMoney");
@@ -2662,7 +2674,7 @@ function renderOrders() {
       ${typeof orderExtraHTML === "function" ? orderExtraHTML(o) : ""}
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
-        ${o.jewel ? `<span class="jewelonly">🚲🛵 nur Rad &amp; Moped</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
+        ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
         <span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
       </div>
       ${previewHTML(p)}
@@ -2733,6 +2745,7 @@ function renderJobs() {
       }).join('<i class="arrow">›</i>')}</div>
       <div class="bar"><i style="width:${prog}%"></i></div>
       <div class="meta small"><span>${veh ? esc(phaseLabel(veh)) : "wartet"}</span><span>${Math.round(prog)} %</span></div>
+      ${typeof customsJobHTML === "function" ? customsJobHTML(j) : ""}
       <div class="buyrow">
         ${typeof packable === "function" && packable(j) ? `<button class="btn tiny packbtn" data-pack="${j.id}">📦 Selbst beladen · +8 %</button>` : ""}
         <button class="btn tiny ghost" data-zoom="${j.id}">🗺️ Route zeigen</button>
@@ -2754,6 +2767,7 @@ function renderJobs() {
   });
   $$("#tab-jobs [data-canceljob]").forEach(b => b.onclick = (e) => { e.stopPropagation(); cancelJob(b.dataset.canceljob); });
   $$("#tab-jobs [data-pack]").forEach(b => b.onclick = (e) => { e.stopPropagation(); openPack(b.dataset.pack); });
+  $$("#tab-jobs [data-customs]").forEach(b => b.onclick = (e) => { e.stopPropagation(); openCustoms(b.dataset.customs); });
   $$("#tab-jobs [data-follow]").forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     setFollow(S.follow === b.dataset.follow ? null : b.dataset.follow);
@@ -2803,13 +2817,18 @@ function renderFleet() {
       ${typeof vehExtraHTML === "function" ? vehExtraHTML(v) : ""}
       ${vehDispoHTML(v)}
       <div class="buyrow">
+        ${typeof liveryVehHTML === "function" ? liveryVehHTML(v) : ""}
         ${v.phase !== "idle" ? `<button class="btn tiny ${S.follow === v.uid ? "" : "ghost"}" data-follow="${v.uid}">
           ${S.follow === v.uid ? "📡 verfolgt" : "📡 live verfolgen"}</button>` : ""}
-        ${v.phase === "idle" ? `<button class="btn tiny ghost" data-release="${v.uid}">${v.lease ? "Leasing beenden" : "verkaufen · " + money(Math.round(t.price * 0.62 * (typeof wearValueFactor === "function" ? wearValueFactor(v) : 1)))}</button>` : ""}
+        ${v.phase === "idle" ? (t.car ? `<button class="btn tiny ghost" data-release="${v.uid}">🅿️ zurück in die Garage</button>`
+          : `<button class="btn tiny ghost" data-release="${v.uid}">${v.lease ? "Leasing beenden" : "verkaufen · " + money(Math.round(t.price * 0.62 * (typeof wearValueFactor === "function" ? wearValueFactor(v) : 1)))}</button>`
+            + (!v.lease && !t.special && typeof openConsign === "function" ? `<button class="btn tiny ghost" data-consign="${v.uid}">🔨 versteigern</button>` : "")) : ""}
       </div>
     </div>`;
   }).join("");
   $$("#tab-fleet [data-release]").forEach(b => b.onclick = () => release(b.dataset.release));
+  $$("#tab-fleet [data-consign]").forEach(b => b.onclick = () => openConsign({ veh: b.dataset.consign }));
+  if (typeof bindLiveryFleet === "function") bindLiveryFleet();
   $$("#tab-fleet [data-follow]").forEach(b => b.onclick = () => {
     setFollow(S.follow === b.dataset.follow ? null : b.dataset.follow);
     closeSheet();
@@ -2898,9 +2917,11 @@ function marketToolsHTML(f) {
   const opts = [sel, `<span class="chipdiv"></span>`, tg("avail", "🔓 freigeschaltet", f.avail), tg("afford", "💶 bezahlbar", f.afford),
     `<span class="chipdiv"></span>`, ...MKT_FLAGS.map(([k, l]) => tg("flag:" + k, l, f.flags.includes(k)))];
   if (mktActive(f)) opts.push(`<button class="fchip reset" data-mreset="1">✕ zurücksetzen</button>`);
-  return `<div class="chiprow first">${cats}</div><div class="chiprow">${opts.join("")}</div>`;
+  return (typeof ahSwitchHTML === "function" ? ahSwitchHTML(false) : "")
+    + `<div class="chiprow${typeof ahSwitchHTML === "function" ? "" : " first"}">${cats}</div><div class="chiprow">${opts.join("")}</div>`;
 }
 function bindMarketTools(vt) {
+  if (typeof bindAhSwitch === "function") bindAhSwitch(vt);
   const f = mktState();
   const again = () => { save(); renderMarket(); $("#view .view-body") && ($("#view .view-body").scrollTop = 0); };
   vt.querySelectorAll("[data-mcat]").forEach(b => b.onclick = () => { f.cat = b.dataset.mcat === f.cat ? "all" : b.dataset.mcat; again(); });
@@ -2924,6 +2945,7 @@ const MKT_SORT_FN = {
 };
 
 function renderMarket() {
+  if (typeof ahMode === "function" && ahMode()) return renderAuction();
   const groups = ["b", "r", "i", "l", "s", "a"];
   const mf = marketFocus && S.orders.some(o => o.id === marketFocus.orderId) ? marketFocus : null;
   if (!mf) marketFocus = null;
@@ -3092,9 +3114,11 @@ function co2HTML() {
 function renderWorld() {
   $("#tab-world").innerHTML =
     `<div class="sechead" style="margin-top:0">Etappen</div>` + stagesHTML() +
-    (typeof economyHTML === "function" ? `<div class="sechead">Geschäft</div>` + economyHTML() + (typeof rivalsHTML === "function" ? rivalsHTML() : "") : "") +
-    `<div class="sechead">Kontor</div>` + infoHTML();
+    (typeof economyHTML === "function" ? `<div class="sechead">Geschäft</div>` + economyHTML() + (typeof rivalsHTML === "function" ? rivalsHTML() : "") + (typeof corpHTML === "function" ? corpHTML() : "") : "") +
+    `<div class="sechead">Kontor</div>` + (typeof liveryWorldHTML === "function" && S.player ? liveryWorldHTML() : "") + infoHTML();
   if (typeof bindEconomy === "function") bindEconomy();
+  if (typeof bindCorp === "function") bindCorp();
+  if (typeof bindLiveryWorld === "function") bindLiveryWorld();
   const b = $("#unlockBtn");
   if (b) b.onclick = unlockStage;
   const ta = $("#tutAgainBtn");
@@ -3122,7 +3146,7 @@ function showTab(name) {
   $$(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + name));
   $("#view").classList.toggle("on", name !== "map");
   document.body.classList.toggle("tab-map", name === "map");
-  if (name !== "map") $("#viewTitle").textContent = TAB_TITLE[name] || "";
+  if (name !== "map") $("#viewTitle").textContent = (name === "market" && typeof ahMode === "function" && ahMode() ? "Auktionshaus" : TAB_TITLE[name]) || "";
   applyPadding();
   render();
   if (typeof tutTabHook === "function") tutTabHook(name);
@@ -3288,6 +3312,8 @@ function boot() {
     else if (document.body.classList.contains("invite-open")) closeInvite();
     else if (document.body.classList.contains("pack-open")) packEnd(false, true);
     else if (document.body.classList.contains("lucky-open")) closeLucky();
+    else if (document.body.classList.contains("customs-open")) closeCustoms();
+    else if (document.body.classList.contains("livery-open") && typeof closeLivery === "function") closeLivery();
     else closeModal();
   });
   /* Kein Hineinzoomen der ganzen Seite per Doppeltipp oder Zwei-Finger-Geste

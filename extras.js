@@ -111,7 +111,7 @@ function queueCall(id) { if (!callQueue.includes(id)) callQueue.push(id); }
 function tickCalls() {
   if (callState || !callQueue.length) return;
   if (typeof walletOpen === "function" && walletOpen()) return;
-  if (["invite-open", "pack-open", "lucky-open"].some(c => document.body.classList.contains(c))) return;
+  if (["invite-open", "pack-open", "lucky-open", "hammer-open", "customs-open"].some(c => document.body.classList.contains(c))) return;
   const id = callQueue.shift();
   const m = S.phone.msgs.find(x => x.id === id);
   if (m && m.dec && !m.dec.done) showCall(m);
@@ -283,6 +283,7 @@ function breakdownHazard(t, w) {
   return (1 / (KM_PER_PCT[t.mode] * 45)) * (1 + 30 * Math.pow(w / 100, 2.2));
 }
 function onDriven(veh, t, km, job, leg) {
+  if (typeof carDriven === "function") carDriven(veh, km);
   if (calm()) return;
   veh.wear = Math.min(100, wearOf(veh) + km / KM_PER_PCT[t.mode]);
   if (!lively() || !job || job.order.tut || veh.halt) return;
@@ -292,7 +293,7 @@ function onDriven(veh, t, km, job, leg) {
 
 /* ========================== Versicherung ============================== */
 function fleetValue() {
-  return S.fleet.reduce((a, f) => a + vType(f.type).price * (f.lease ? 0.5 : 1) * wearValueFactor(f), 0);
+  return S.fleet.reduce((a, f) => a + (vType(f.type).car ? 0 : vType(f.type).price * (f.lease ? 0.5 : 1) * wearValueFactor(f)), 0);
 }
 function insurePremium() { return Math.round(fleetValue() * 0.0006); }
 function toggleInsure() {
@@ -383,6 +384,7 @@ function onJobStart(job) {
   const o = job.order, f = S.fleet.find(x => x.uid === job.legs[0].veh);
   if (f) { const rc = repoCost(f, job.legs[0], o, 0); job.repo0 = rc.ok ? rc.d : 0; }
   if (o.rival) { extraStats().beat++; delete o.rival; }
+  if (!calm() && typeof customsOnStart === "function") customsOnStart(job);
 }
 function onDelivered(job, pay, late) {
   const o = job.order, st = extraStats();
@@ -409,6 +411,7 @@ function onFailed(job, reason) {
 }
 function haltLabel(v) {
   if (v.phase === "service") return "🔧 in der Werkstatt bis " + clock(v.serviceUntil || S.time);
+  if (typeof customsLabel === "function") { const c = customsLabel(v); if (c) return c; }
   if (!v.halt) return null;
   const h = v.halt;
   return (h.icon || "⛔") + " " + h.label + (h.until < 1e14 ? " · bis " + clock(h.until) : " · wartet auf deine Entscheidung");
@@ -428,6 +431,7 @@ function moveFactor(veh, leg, job) {
 let extraMin = 0, linaAsked = false;
 function tickExtras(dtMin) {
   tickWorkshop();
+  if (typeof tickAuction === "function") tickAuction(dtMin);
   if (calm()) return;
   /* Einmal erklärt Lina, was jetzt alles passieren kann */
   if (!linaAsked && lively() && level() >= 2 && !(S.tutSeen && S.tutSeen.extras) && typeof linaTalk === "function") {
@@ -510,6 +514,7 @@ function fleetExtraHTML() {
     <span class="fuelchip ${tr > 0.001 ? "up" : tr < -0.001 ? "down" : ""}">⛽ Diesel ${fmt(f.p, 2)} €/l ${tr > 0.001 ? "▲" : tr < -0.001 ? "▼" : ""}</span>
     <button class="insure ${S.insure ? "on" : ""}" id="insureBtn">🛡️ ${S.insure ? "versichert · " + money(insurePremium()) + "/Tag" : "unversichert – absichern?"}</button>
     ${typeof perkChips === "function" ? perkChips().map(c => `<span class="fuelchip perk">🎁 ${esc(c)}</span>`).join("") : ""}
+    ${typeof openLivery === "function" ? `<button class="insure liv" id="livBtn">🎨 ${S.livery && S.livery.ver ? "Lackierung &amp; Logo" : "Firmenfarben gestalten"}</button>` : ""}
   </div>`;
 }
 function vehExtraHTML(v) {

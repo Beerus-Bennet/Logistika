@@ -226,8 +226,9 @@ function rivalOnSpawn(o) {
   if (calm()) return;
   const rep = repOf(regionOf(o));
   const p = (0.22 + 0.04 * S.stage) * (1.25 - rep / 100 * 0.5);
-  if (Math.random() < p) {
-    const r = pick(RIVALS.filter(x => x.st <= S.stage));
+  const pool = RIVALS.filter(x => x.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[x.id]));
+  if (pool.length && Math.random() < p) {
+    const r = pick(pool);
     o.rival = { id: r.id, at: Math.round(S.time + rnd(45, 260)) };
   }
   /* Großaufträge: der Kunde lässt mit sich reden */
@@ -328,7 +329,7 @@ function bindNego(o) {
 function rivalsHTML() {
   const sh = shareState();
   const rows = [{ name: S.player ? S.player.company : "Du", icon: "🏠", col: "#19b8c9", n: sh.me || 0 }]
-    .concat(RIVALS.filter(r => r.st <= S.stage).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0 })));
+    .concat(RIVALS.filter(r => r.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[r.id])).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0 })));
   const tot = rows.reduce((a, r) => a + r.n, 0) || 1;
   return `<div class="card eco">
     <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Wer zu lange wartet, dem schnappen andere Speditionen die Aufträge weg. Anteil der letzten Tage:</small></div></div>

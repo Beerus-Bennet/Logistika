@@ -347,6 +347,70 @@ Gewinn stehen bleibt.
 Beträge wachsen mit der Etappe mit. Aktive Vorteile stehen im Regal unter 🎯
 und oben unter *Flotte*.
 
+### Auktionshaus Falkenried
+
+Unter *Markt* schaltet oben ein Umschalter zwischen **Fahrzeugmarkt** und
+**Auktionshaus** um. Dort laufen immer etwa acht Lose: 77 reale Sport-,
+Super- und Hypercars von Porsche, Audi, Mercedes-Benz, BMW, Ferrari, Bugatti
+und Lamborghini – vom Porsche 924 über Countach, F40, 300 SL, CLK GTR und
+Carrera GT bis zu Chiron, Divo, La Voiture Noire und Tourbillon – dazu ab und
+zu gebrauchte Nutzfahrzeuge aus einer Insolvenzmasse.
+
+* **Ansehen** – jedes Los mit Foto, Baujahr, Kilometerstand, Originalfarbe,
+  Zustandsnote, Leistungsdaten, Stückzahl und Schätzpreis. Der **Katalog**
+  zeigt alle Modelle mit Marktwert und Wertentwicklung, filterbar nach Marke.
+* **Bieten** – „bieten“ legt das nächste Gebot, im Los lässt sich ein
+  **Limit** setzen, bis zu dem das Haus automatisch mitsteigert. Sammler,
+  Telefonbieter und die Konkurrenz bieten dagegen. Auf den Zuschlag kommen
+  12 % Aufgeld.
+* **Schlussphase** – bietest du mit, hält beim Ablauf die Uhr an: Der
+  Auktionator ruft „Zum Ersten … Zum Zweiten … Zum Dritten“, andere legen nach,
+  du kannst live erhöhen. Am Ende fällt der Hammer.
+* **Garage** – ersteigerte Autos mit Marktwert und Gewinn/Verlust. Klassiker
+  steigen meist, neue Sportwagen fallen eher. Ein Auto kann als **Wertkurier**
+  mitfahren (Schmuck & Uhren), jeder Kilometer kostet aber Sammlerwert.
+* **Verkaufen** – Autos aus der Garage und eigene Flottenfahrzeuge (unter
+  *Flotte* „versteigern“) lassen sich einliefern, auf Wunsch mit Mindestpreis.
+  8 % Provision, unverkauft kommt alles zurück.
+
+Die Fotos lädt das Spiel zur Laufzeit von Wikipedia/Wikimedia Commons (das
+Titelbild des jeweiligen Artikels) und zeigt Fotograf und Lizenz direkt am
+Bild; der Service Worker speichert sie für offline. Ohne Netz erscheint eine
+gezeichnete Silhouette in der Originalfarbe.
+
+### Zoll
+
+Ab Etappe 4 gehen Fahrten über Zollgrenzen (Schweiz, Norwegen, Türkei,
+Großbritannien, Übersee). Für selbst disponierte Fahrten steht unter *Live*
+„🛃 Zollanmeldung offen · prüfen“: Links die Handelsrechnung, rechts was der
+Azubi angemeldet hat – Versender, Empfänger, Zolltarifnummer, Gewicht,
+Packstücke, Warenwert, Ursprung, Incoterm. Fehler antippen, abschicken, auf
+Zeit. Fehlerfrei gibt es die **Grüne Spur** (+4 % Erlös, kein Halt), ein
+Fehler bedeutet eine **Stichprobe** (1–2 h), mehr eine **Beschau** (3–6 h und
+Bußgeld). Wer es liegen lässt, zahlt einen Zollagenten und hofft. Büros mit
+Zoll & Papiere erledigen ihre eigenen Fahrten selbst und geben dir bei
+deinen einen Tipp und zehn Sekunden mehr.
+
+### Übernahmen
+
+Unter *Welt* → „🦈 Übernahmen“: ab Level 5 und sobald du mehr Marktanteil
+hast als die Konkurrentin, kannst du ihr ein Angebot machen. Bis zu drei
+Runden, mit Gegenangeboten – wer zu frech bietet, wird zwei Tage nicht mehr
+angehört. Nach dem Kauf gehören dir ihre Flotte (noch in alten Farben), ihr
+Firmensitz als Büro samt zwei Leuten (oder der Erlös aus dem Verkauf) und ihr
+Marktanteil; sie schnappt keine Aufträge mehr weg. Neu dazu: Atlas Global
+Freight (Etappe 4) und Pacific Star Lines (Etappe 5).
+
+### Lackierung & Logo
+
+Unter *Flotte* oder *Welt* → „🎨 Lackierung & Logo“: Grund- und Zweitfarbe,
+sieben Muster (Rallyestreifen, Zweifarbig, Diagonal, Welle, Zielflagge,
+Flammen), ein Logo als Monogramm oder Symbol in fünf Formen – live an einem
+Transporter mit Firmennamen. Lackieren kostet je Fahrzeug, lackierte
+Fahrzeuge fahren in Firmenfarben über die Karte und bringen 2 % mehr Erlös.
+Das Logo steht oben am Porträt, die Büros auf der Karte tragen die
+Firmenfarbe. Sammlerautos und Sondereditionen bleiben im Original.
+
 ### Größere Büros
 
 Fünf Größen: Kontor, Umschlaghalle, Logistikzentrum, ab Etappe 2 das
@@ -469,6 +533,11 @@ events.js               Störungen auf der Karte, Pannen und Unfälle, Streife
 vip.js                  Einladungen zur Sonderfahrt, Konkurrenz, Verhandeln
 goals.js                Rahmenverträge, Missionen, Tagesaufgaben, Erfolge
 lucky.js                Luckybox: Preise, Preisband, Goldener Bulli, Vorteile
+cars.js                 Sammlerautos fürs Auktionshaus: 77 reale Modelle mit Daten
+auction.js              Auktionshaus: Lose, Bieten, Zuschlag live, Garage, Einliefern, Fotos
+customs.js              Zoll: Grenzen, Zollanmeldung als Minispiel, Grüne Spur, Beschau
+corp.js                 Übernahmen der Konkurrenz: Firmenwert, Verhandlung, Übergabe
+livery.js               Firmen-Lackierung und Logo: Editor, Kosten, Kartenfarben
 loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht

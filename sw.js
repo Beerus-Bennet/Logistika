@@ -2,10 +2,13 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v29";
+const VERSION = "v30";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
+/* Fotos der Auktionsautos (Wikimedia) – versionsunabhängig, bleiben erhalten */
+const PICS = "logistika-carpics";
+const MAX_PICS = 160;
 
 const SHELL = [
   "./",
@@ -28,6 +31,11 @@ const SHELL = [
   "./loading.js",
   "./game.js",
   "./intro.js",
+  "./cars.js",
+  "./auction.js",
+  "./customs.js",
+  "./corp.js",
+  "./livery.js",
   "./manifest.webmanifest",
   "./favicon-64.png",
   "./icon-180.png",
@@ -58,7 +66,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== APP && k !== TILES).map(k => caches.delete(k))))
+      .then(ks => Promise.all(ks.filter(k => k !== APP && k !== TILES && k !== PICS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -85,6 +93,26 @@ self.addEventListener("fetch", e => {
       try {
         const res = await fetch(req);
         if (res && res.ok) { cache.put(req, res.clone()); trimTiles(cache); }
+        return res;
+      } catch (_) {
+        return hit || new Response("", { status: 504 });
+      }
+    })());
+    return;
+  }
+
+  /* Autofotos von Wikimedia: einmal geladen, danach auch offline da */
+  if (url.hostname === "upload.wikimedia.org") {
+    e.respondWith((async () => {
+      const cache = await caches.open(PICS);
+      const hit = await cache.match(req);
+      if (hit) return hit;
+      try {
+        const res = await fetch(req);
+        if (res && res.ok) {   /* nur CORS-Antworten – undurchsichtige belegen viel Speicher */
+          cache.put(req, res.clone());
+          cache.keys().then(ks => { for (let i = 0; i < ks.length - MAX_PICS; i++) cache.delete(ks[i]); });
+        }
         return res;
       } catch (_) {
         return hit || new Response("", { status: 504 });
