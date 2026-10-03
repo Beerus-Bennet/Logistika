@@ -699,7 +699,8 @@ function showTutStep() {
   const tutor = $("#tutor");
   tutor.classList.remove("on");
   tutor.innerHTML = "";                /* keine Knöpfe vom letzten Schritt stehen lassen */
-  tutBlock(null, false);               /* in der Pause dazwischen ist alles gesperrt */
+  tutBlock(null, false, null, true);   /* in der Pause dazwischen ist alles gesperrt – das Abdunkeln bleibt,
+                                          sonst blitzt kurz die helle Seite dahinter auf */
   tutAskedAt = performance.now();
   tutWatch();
   /* Kurz warten, bis Reiterwechsel, Kartenschwenk oder das Hochfahren des
@@ -720,7 +721,7 @@ function showTutStep() {
    ist auch das abgedeckt. Scrollen ist währenddessen aus, damit das
    Fenster nicht vom Inhalt wegrutschen kann.                             */
 let tutAskedAt = 0, tutWatchT = 0, tutPlaced = null;
-function tutBlock(hole, open, ring) {
+function tutBlock(hole, open, ring, keep) {
   const spot = $("#spot");
   if (!spot.querySelector("b")) spot.innerHTML = `<i></i><b></b><b></b><b></b><b></b>`;
   spot.classList.add("on");
@@ -731,7 +732,7 @@ function tutBlock(hole, open, ring) {
     el.style.display = "block";
     el.style.left = x + "px"; el.style.top = y + "px"; el.style.width = w + "px"; el.style.height = h + "px";
   };
-  if (ring) set(i, ring.left, ring.top, ring.width, ring.height); else i.style.display = "none";
+  if (ring) set(i, ring.left, ring.top, ring.width, ring.height); else if (!keep) i.style.display = "none";
   if (hole && open) {
     const x0 = Math.max(0, hole.left), y0 = Math.max(0, hole.top);
     const x1 = Math.min(W, hole.left + hole.width), y1 = Math.min(H, hole.top + hole.height);

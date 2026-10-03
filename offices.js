@@ -431,10 +431,33 @@ function makeCandidate(cheap) {
   };
 }
 function refreshPool(b, bonus) {
-  const n = 3 + Math.floor(S.stage / 2);
+  /* Größere Häuser ziehen mehr Bewerbungen an */
+  const n = 3 + Math.floor(S.stage / 2) + ([0, 1, 2, 3, 5][b.tier] || 0);
   b.pool = (b.pool || []).filter(c => c.hh);   /* der Headhunter-Kandidat wartet */
   for (let i = 0; i < n; i++) b.pool.push(makeCandidate(bonus && i === 0));
   b.poolDay = dayOf(S.time);
+}
+/* Stellenanzeige: sofort drei Bewerbungen für genau die gesuchte Stelle */
+const adFee = () => roundK(250 * stageK(), 10);
+function makeCandidateFor(role) {
+  const c = makeCandidate(false), r = ROLES[role];
+  c.role = role;
+  c.skill = clamp(Math.round(rnd(1.6, 5.4)), 2, 5);
+  c.wage = Math.round(r.wage * (0.62 + c.skill * 0.19) * rnd(0.94, 1.08));
+  c.fee = Math.round(c.wage * rnd(3.2, 5.5));
+  return c;
+}
+function postAd(baseId, role) {
+  const b = baseById(baseId); if (!b || !ROLES[role]) return;
+  const fee = adFee();
+  if (fee > S.money) return toast("Für die Anzeige fehlen " + money(fee - S.money) + ".", "warn");
+  S.money -= fee; S.expense += fee;
+  logMoney("staff", "Stellenanzeige " + ROLES[role].name + " · " + N[b.node].short, -fee);
+  b.pool = b.pool || [];
+  for (let i = 0; i < 3; i++) b.pool.unshift(makeCandidateFor(role));
+  if (b.pool.length > 24) b.pool.length = 24;
+  toast("📣 Stellenanzeige geschaltet: drei Bewerbungen für " + ROLES[role].name + " in " + N[b.node].short + ".", "ok");
+  save(); render();
 }
 function hire(baseId, candId) {
   const b = baseById(baseId); if (!b) return;
@@ -952,9 +975,13 @@ function baseCard(b) {
     ${b.staff.length ? b.staff.map(s => staffRow(b, s)).join("")
                      : `<div class="empty sm">Noch niemand eingestellt.</div>`}
 
-    <div class="sechead sm">Bewerbungen<small>wechseln täglich</small></div>
+    <div class="sechead sm">Bewerbungen<small>neue jeden Morgen · ${3 + Math.floor(S.stage / 2) + ([0, 1, 2, 3, 5][b.tier] || 0)} pro Tag</small></div>
     ${(b.pool || []).length ? b.pool.map(c => candRow(b, c)).join("")
-                            : `<div class="empty sm">Heute keine Bewerbungen.</div>`}
+                            : `<div class="empty sm">Heute keine Bewerbungen mehr – die nächsten kommen morgen früh. Oder schalte eine Anzeige:</div>`}
+    <div class="assignrow adrow">
+      <select data-adrole="${b.id}" aria-label="Gesuchte Stelle">${ROLE_KEYS.map(r => `<option value="${r}"${r === (S.adRole || "disp") ? " selected" : ""}>${ROLES[r].icon} ${esc(ROLES[r].name)}</option>`).join("")}</select>
+      <button class="btn tiny ghost${S.money >= adFee() ? "" : " disabled"}" data-ad="${b.id}">📣 Anzeige · ${money(adFee())}</button>
+    </div>
 
     <div class="sechead sm">Fahrzeuge am Standort</div>
     ${autoBoxHTML(b)}
@@ -1037,6 +1064,11 @@ function renderBases() {
          das Telefon meldet sich dann.</p></div>`) +
     `<div class="sechead">Standort eröffnen</div>` + newBaseCard();
 
+  $$("#tab-bases [data-adrole]").forEach(sel => sel.onchange = () => { sel.blur(); S.adRole = sel.value; });
+  $$("#tab-bases [data-ad]").forEach(b => b.onclick = () => {
+    const sel = $(`[data-adrole="${b.dataset.ad}"]`);
+    postAd(b.dataset.ad, sel ? sel.value : "disp");
+  });
   $$("#tab-bases [data-hire]").forEach(b => b.onclick = () => {
     const [bid, cid] = b.dataset.hire.split("|"); hire(bid, cid);
   });
@@ -1153,8 +1185,6 @@ function decoOf(b) {
 }
 
 /* Wohin ein Möbelstück gehört, wenn es noch nie jemand angefasst hat. */
-const PLANT_SPOTS = [[46, 64], [354, 64], [46, 236], [354, 236], [46, 150], [354, 150],
-                     [112, 258], [288, 258], [200, 258], [80, 100], [320, 100]];
 function deskHome(b, i) {
   const t = tierOf(b), pf = perFloor(t), li = i % pf;
   const cols = pf <= 3 ? 2 : pf <= 6 ? 3 : 4;
@@ -1167,7 +1197,18 @@ const plantFloor = (b, i) => i % tierFloors(tierOf(b));
 const floorName = f => f === 0 ? "Erdgeschoss" : f + ". Obergeschoss";
 let officeFloor = 0;
 function deskPos(b, i) { return decoOf(b).pos.desks[i] || deskHome(b, i); }
-function plantPos(b, i) { return decoOf(b).pos.plants[i] || PLANT_SPOTS[i % PLANT_SPOTS.length]; }
+/* Neue Pflanzen kommen paarweise in die unteren Ecken (links, rechts,
+   links, rechts …), dann nach oben – nie auf Treppe, Tür oder Küche. */
+const PLANT_CORNERS = [[48, 252], [352, 252], [48, 222], [352, 222], [78, 258], [322, 258], [48, 194], [352, 194]];
+const PLANT_TOP_SINGLE = [[48, 56], [352, 56], [80, 52], [320, 52], [48, 90]];
+const PLANT_TOP_MULTI = [[52, 92], [298, 58], [88, 96]];
+function plantHome(b, i) {
+  const fl = tierFloors(tierOf(b));
+  const slots = PLANT_CORNERS.concat(fl > 1 ? PLANT_TOP_MULTI : PLANT_TOP_SINGLE);
+  const k = Math.floor(i / fl);                 /* die wievielte Pflanze auf ihrer Etage */
+  return slots[k % slots.length];
+}
+function plantPos(b, i) { return decoOf(b).pos.plants[i] || plantHome(b, i); }
 function kitchenPos(b) { return decoOf(b).pos.kitchen || [200, 57]; }
 function setPos(b, kind, i, xy) {
   const p = decoOf(b).pos;
@@ -1226,7 +1267,12 @@ function addPlant(baseId, id) {
 }
 function removePlant(baseId, idx) {
   const b = baseById(baseId); if (!b) return;
-  decoOf(b).plants.splice(idx, 1);
+  const d = decoOf(b);
+  d.plants.splice(idx, 1);
+  /* Verschobene Plätze der übrigen Pflanzen mitnehmen */
+  const old = d.pos.plants, np = {};
+  Object.keys(old).forEach(k => { const n = +k; if (n < idx) np[n] = old[k]; else if (n > idx) np[n - 1] = old[k]; });
+  d.pos.plants = np;
   save(); renderOfficeModal(baseId);
 }
 

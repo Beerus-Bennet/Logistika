@@ -430,6 +430,16 @@ Plätze, 100 Stellplätze, +6 % Prestige). Beim Einrichten schaltet man oben
 zwischen EG und den Obergeschossen um; Empfang, Küche und Hof sind im EG, die
 Schreibtische verteilen sich auf alle Etagen, oben sitzt der Vorstand.
 
+### Bewerbungen
+
+Jeden Morgen kommen neue Bewerbungen – im Kontor drei, in größeren Häusern
+mehr (in der Konzernzentrale bis zu acht zusätzliche). Wer nicht bis morgen
+warten will, schaltet unter den Bewerbungen eine **Stellenanzeige** für eine
+bestimmte Stelle: sofort drei passende Leute, gegen eine Anzeigengebühr.
+
+Neue Pflanzen stellt das Büro paarweise in die unteren Ecken, dann nach oben
+– nie auf Treppe, Tür oder Küche. Verschieben geht weiter mit dem Finger.
+
 ### Die Stellen im Büro
 
 Im Büro-Rundgang stellt Lina jede der vier Stellen einzeln vor – Disposition,
