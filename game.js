@@ -617,7 +617,8 @@ function makeVehicle(typeId, lease) {
   const t = vType(typeId);
   return {
     uid: "F" + (S.seq++), type: typeId, at: homeFor(t.mode), phase: "idle", lease: !!lease,
-    jobId: null, legIdx: -1, route: null, routeDist: 0, pos: 0, timer: 0, kmTotal: 0, jobs: 0, spot: null
+    jobId: null, legIdx: -1, route: null, routeDist: 0, pos: 0, timer: 0, kmTotal: 0, jobs: 0, spot: null,
+    lastUsed: S.time, busyD: 0, bh: []
   };
 }
 function acquire(typeId, lease, deliverTo, deliverAddr) {
@@ -664,6 +665,7 @@ function release(uid) {
     toast(t.name + " verkauft für " + money(val), "ok");
   }
   S.fleet = S.fleet.filter(x => x.uid !== uid);
+  (S.bases || []).forEach(b => { b.vehicles = b.vehicles.filter(x => x !== uid); });
   render();
 }
 
@@ -1569,9 +1571,16 @@ function tick(dtMin) {
     baseDayChange(days);
     if (typeof dayExtras === "function") dayExtras(days);
     if (typeof dayAuction === "function") dayAuction(days);
+    /* Auslastung je Fahrzeug: Minuten im Einsatz pro Tag, die letzten sieben Tage */
+    S.fleet.forEach(f => {
+      f.bh = (f.bh || []).concat([Math.min(1440, f.busyD || 0)], Array(Math.min(6, days - 1)).fill(0)).slice(-7);
+      f.busyD = 0;
+    });
   }
 
   for (const veh of S.fleet) {
+    if (veh.lastUsed == null) veh.lastUsed = S.time;          /* ältere Spielstände: Messung beginnt jetzt */
+    if (veh.jobId || veh.phase === "reserved") { veh.lastUsed = S.time; veh.busyD = (veh.busyD || 0) + dtMin; }
     if (!veh.jobId) continue;
     const job = S.jobs.find(j => j.id === veh.jobId);
     if (!job) { veh.phase = "idle"; veh.jobId = null; veh.route = null; continue; }
@@ -2800,12 +2809,16 @@ function renderFleet() {
         ? `<div class="warnbox">Mehr als die Hälfte der Flotte steht still und kostet trotzdem. Weniger Fahrzeuge oder größere Etappen wären günstiger.</div>` : ""}
       </div>`;
   if (!S.fleet.length) {
+    setTools("fleet", "");
     el.innerHTML = head + `<div class="empty">Noch kein Fahrzeug. Hol dir im <b>Markt</b> ein Lastenrad oder einen Kastenwagen.</div>`;
     bindDispo(); return;
   }
-  const order = { b: 0, r: 1, i: 2, l: 3, s: 4, a: 5 };
-  const fleet = [...S.fleet].sort((a, b) => order[vType(a.type).mode] - order[vType(b.type).mode]);
-  el.innerHTML = head + fleet.map(v => {
+  const F = fleetF();
+  setTools("fleet", fleetToolsHTML(F), bindFleetTools);
+  const fleet = fleetList(F);
+  const filtered = fleetFiltered(F);
+  el.innerHTML = (filtered ? fleetBulkHTML(F, fleet) : head) + (fleet.length ? "" : `<div class="empty">Kein Fahrzeug passt zu diesen Filtern.
+      <button class="btn tiny ghost" id="ffReset">Filter zurücksetzen</button></div>`) + fleet.map(v => {
     const t = vType(v.type);
     const prog = v.routeDist ? clamp((v.pos / v.routeDist) * 100, 0, 100) : 0;
     return `<div class="card veh-card">
@@ -2815,6 +2828,7 @@ function renderFleet() {
       </div>
       <div class="status ${v.phase}">${esc(phaseLabel(v))}</div>
       ${v.phase === "repo" || v.phase === "haul" ? `<div class="bar"><i style="width:${prog}%"></i></div>` : ""}
+      ${useLineHTML(v)}
       ${t.flags.length ? `<div class="flags">${t.flags.map(f => `<i>${flagName(f)}</i>`).join("")}</div>` : ""}
       <div class="meta small"><span>⛽ ${fmt(t.costKm, 2)} €/km</span><span>🅿️ ${money(dailyCost(v))}/Tag</span><span>🛣️ ${kmf(v.kmTotal)}</span></div>
       ${typeof vehExtraHTML === "function" ? vehExtraHTML(v) : ""}
@@ -2830,6 +2844,8 @@ function renderFleet() {
     </div>`;
   }).join("");
   $$("#tab-fleet [data-release]").forEach(b => b.onclick = () => release(b.dataset.release));
+  const fr = $("#ffReset"); if (fr) fr.onclick = () => { S.fleetF = null; save(); renderFleet(); };
+  const fb = $("#ffBulk"); if (fb) fb.onclick = () => askBulkRelease(fleet);
   $$("#tab-fleet [data-consign]").forEach(b => b.onclick = () => openConsign({ veh: b.dataset.consign }));
   if (typeof bindLiveryFleet === "function") bindLiveryFleet();
   $$("#tab-fleet [data-follow]").forEach(b => b.onclick = () => {
@@ -2838,6 +2854,128 @@ function renderFleet() {
   });
   bindDispo();
 }
+/* ------------------------------ Flotten-Filter ------------------------------ */
+const FLEET_USE = [["all", "Alle"], ["busy", "🚚 im Einsatz"], ["idle", "💤 frei"], ["unused", "🕸️ ungenutzt"]];
+const FLEET_SORTS = [["std", "Nach Art"], ["unused", "Am längsten ungenutzt"], ["util", "Geringste Auslastung"], ["cost", "Höchste Fixkosten"], ["value", "Höchster Wert"]];
+const FLEET_DAYS = [1, 2, 3, 5, 7, 14];
+function fleetF() {
+  if (!S.fleetF) S.fleetF = { use: "all", mode: "all", own: "all", days: 3, sort: "std" };
+  return S.fleetF;
+}
+const fleetFiltered = F => F.use !== "all" || F.mode !== "all" || F.own !== "all";
+/* Wie lange ein freies Fahrzeug schon nichts mehr zu tun hatte (Tage) */
+function idleDays(f) {
+  if (f.phase !== "idle") return 0;
+  return Math.max(0, (S.time - (f.lastUsed == null ? S.time : f.lastUsed)) / 1440);
+}
+/* Auslastung der letzten (bis zu) sieben Tage: Anteil der Zeit im Einsatz */
+function utilOf(f) {
+  const bh = f.bh || [], today = S.time - Math.floor(S.time / 1440) * 1440;
+  const span = bh.length * 1440 + today;
+  return span > 0 ? clamp((bh.reduce((a, b) => a + b, 0) + (f.busyD || 0)) / span, 0, 1) : 0;
+}
+const vehValue = f => { const t = vType(f.type); return f.lease ? 0 : Math.round(t.price * 0.62 * (typeof wearValueFactor === "function" ? wearValueFactor(f) : 1)); };
+function fleetPass(f, F, skip) {
+  const t = vType(f.type);
+  if (skip !== "use") {
+    if (F.use === "busy" && f.phase === "idle") return false;
+    if (F.use === "idle" && f.phase !== "idle") return false;
+    if (F.use === "unused" && idleDays(f) < F.days) return false;
+  }
+  if (skip !== "mode" && F.mode !== "all" && t.mode !== F.mode) return false;
+  if (skip !== "own") {
+    if (F.own === "lease" && !f.lease) return false;
+    if (F.own === "own" && f.lease) return false;
+    if (F.own === "base" && !baseOfVehicle(f.uid)) return false;
+    if (F.own === "self" && baseOfVehicle(f.uid)) return false;
+  }
+  return true;
+}
+function fleetList(F) {
+  const order = { b: 0, r: 1, i: 2, l: 3, s: 4, a: 5 };
+  const sorts = {
+    std: (a, b) => order[vType(a.type).mode] - order[vType(b.type).mode],
+    unused: (a, b) => idleDays(b) - idleDays(a),
+    util: (a, b) => utilOf(a) - utilOf(b),
+    cost: (a, b) => dailyCost(b) - dailyCost(a),
+    value: (a, b) => (vehValue(b) || vType(b.type).price) - (vehValue(a) || vType(a.type).price)
+  };
+  return S.fleet.filter(f => fleetPass(f, F)).sort(sorts[F.sort] || sorts.std);
+}
+function fleetToolsHTML(F) {
+  const n = (k, v) => S.fleet.filter(f => fleetPass(f, Object.assign({}, F, { [k]: v }), null)).length;
+  const use = FLEET_USE.map(([k, l]) => chipHTML("data-fu", k, k === "unused" ? `${l} ≥ ${F.days} T` : l, n("use", k), F.use === k,
+    k === "unused" && n("use", k) ? "alert" : "")).join("");
+  const modes = [...new Set(S.fleet.map(f => vType(f.type).mode))];
+  const mchips = modes.length > 1 ? ["all"].concat(["b", "r", "i", "l", "s", "a"].filter(m => modes.includes(m)))
+    .map(m => chipHTML("data-fm", m, m === "all" ? "Alle Arten" : MODE_INFO[m].icon + " " + MODE_INFO[m].name, n("mode", m), F.mode === m)).join("") : "";
+  const own = [["all", "Alle"], ["own", "🏷️ Eigentum"], ["lease", "🔑 Leasing"], ["base", "🏢 im Büro"], ["self", "✋ selbst"]];
+  const sel = (id, opts, cur, lbl) => `<label class="fchip sel" title="${lbl}">${lbl}<select id="${id}" aria-label="${lbl}">${opts.map(([k, l]) =>
+    `<option value="${k}"${String(k) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
+  return `<div class="chiprow first">${use}</div>`
+    + `<div class="chiprow">${sel("ffSort", FLEET_SORTS, F.sort, "↕")}${sel("ffDays", FLEET_DAYS.map(d => [d, "ungenutzt ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️")}`
+    + own.map(([k, l]) => chipHTML("data-fo", k, l, n("own", k), F.own === k)).join("")
+    + (fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ zurücksetzen</button>` : "") + `</div>`
+    + (mchips ? `<div class="chiprow">${mchips}</div>` : "");
+}
+function bindFleetTools(vt) {
+  const F = fleetF();
+  const again = () => { save(); renderFleet(); const vb = $("#view .view-body"); if (vb) vb.scrollTop = 0; };
+  vt.querySelectorAll("[data-fu]").forEach(b => b.onclick = () => { F.use = b.dataset.fu === F.use ? "all" : b.dataset.fu; again(); });
+  vt.querySelectorAll("[data-fm]").forEach(b => b.onclick = () => { F.mode = b.dataset.fm === F.mode ? "all" : b.dataset.fm; again(); });
+  vt.querySelectorAll("[data-fo]").forEach(b => b.onclick = () => { F.own = b.dataset.fo === F.own ? "all" : b.dataset.fo; again(); });
+  const so = vt.querySelector("#ffSort"); if (so) so.onchange = () => { so.blur(); F.sort = so.value; again(); };
+  const dd = vt.querySelector("#ffDays"); if (dd) dd.onchange = () => { dd.blur(); F.days = +dd.value; if (F.use !== "unused") F.use = "unused"; again(); };
+  const rs = vt.querySelector("[data-ffreset]"); if (rs) rs.onclick = () => { S.fleetF = null; again(); };
+}
+function useLineHTML(v) {
+  const d = idleDays(v), u = utilOf(v);
+  const idleTxt = v.phase !== "idle" ? "gerade im Einsatz" : d < 1 / 24 ? "eben noch im Einsatz"
+    : d < 1 ? "seit " + dur(Math.round(d * 1440)) + " frei" : "seit " + fmt(d, d < 10 ? 1 : 0) + " Tagen ungenutzt";
+  return `<div class="useline${v.phase === "idle" && d >= (fleetF().days || 3) ? " stale" : ""}">
+    <span>${v.phase === "idle" && d >= 1 ? "🕸️" : "⏱️"} ${idleTxt}</span>
+    <span class="ubar" title="Auslastung der letzten Tage"><i style="width:${Math.round(u * 100)}%"></i></span><b>${Math.round(u * 100)} %</b></div>`;
+}
+/* Sammelaktion: alles in der aktuellen Auswahl, was frei ist, verkaufen bzw. Leasing beenden */
+function bulkSet(list) { return list.filter(f => f.phase === "idle" && !vType(f.type).special); }
+function fleetBulkHTML(F, list) {
+  const rel = bulkSet(list), own = rel.filter(f => !f.lease), lease = rel.filter(f => f.lease);
+  const sum = own.reduce((a, f) => a + vehValue(f), 0), perDay = rel.reduce((a, f) => a + dailyCost(f), 0);
+  const busy = list.filter(f => f.phase !== "idle").length, spec = list.filter(f => f.phase === "idle" && vType(f.type).special).length;
+  return `<div class="card bulkbar">
+    <div class="card-top"><div class="vname">${list.length} Fahrzeug${list.length === 1 ? "" : "e"} in dieser Auswahl
+      <small>${rel.length} frei${busy ? " · " + busy + " unterwegs (bleiben)" : ""}${spec ? " · " + spec + " Sonderstück" + (spec === 1 ? "" : "e") + " (bleiben)" : ""} · zusammen ${money(list.reduce((a, f) => a + dailyCost(f), 0))}/Tag Fixkosten</small></div></div>
+    ${rel.length ? `<button class="btn${F.use === "unused" ? "" : " ghost"}" id="ffBulk">💰 ${own.length ? own.length + " verkaufen" + (sum ? " · " + money(sum) : "") : ""}${own.length && lease.length ? " + " : ""}${lease.length ? lease.length + " Leasing beenden" : ""}</button>
+      <div class="lot-est">Spart ${money(perDay)} Fixkosten am Tag.</div>` : `<div class="lot-est">Nichts davon steht gerade frei.</div>`}
+  </div>`;
+}
+function askBulkRelease(list) {
+  const rel = bulkSet(list);
+  if (!rel.length) return;
+  const own = rel.filter(f => !f.lease), lease = rel.filter(f => f.lease);
+  const sum = own.reduce((a, f) => a + vehValue(f), 0), perDay = rel.reduce((a, f) => a + dailyCost(f), 0);
+  askConfirm(rel.length + " Fahrzeuge abgeben?",
+    (own.length ? own.length + " verkaufen für zusammen " + money(sum) + ". " : "")
+    + (lease.length ? lease.length + " Leasingverträge beenden. " : "")
+    + "Das spart " + money(perDay) + " Fixkosten am Tag und lässt sich nicht rückgängig machen.",
+    "Abgeben", () => bulkRelease(rel.map(f => f.uid)), true);
+}
+function bulkRelease(uids) {
+  let sold = 0, ended = 0, sum = 0;
+  uids.forEach(uid => {
+    const f = S.fleet.find(x => x.uid === uid);
+    if (!f || f.phase !== "idle" || vType(f.type).special) return;
+    if (S.follow === uid) setFollow(null);
+    if (f.lease) ended++;
+    else { const v = vehValue(f); sum += v; sold++; }
+    S.fleet = S.fleet.filter(x => x.uid !== uid);
+    (S.bases || []).forEach(b => { b.vehicles = b.vehicles.filter(x => x !== uid); });
+  });
+  if (sum) { S.money += sum; S.revenue += sum; logMoney("fleet", "Verkauft: " + sold + " Fahrzeuge", sum); }
+  toast("💰 " + (sold ? sold + " verkauft (" + money(sum) + ")" : "") + (sold && ended ? ", " : "") + (ended ? ended + " Leasing beendet" : "") + ".", "ok");
+  save(); render();
+}
+
 /* Überblick: welches Büro disponiert wie viele Fahrzeuge, was bleibt beim Chef */
 function dispoRowsHTML() {
   const bases = typeof basesOf === "function" ? basesOf() : [];
@@ -3173,7 +3311,7 @@ function render() {
   /* Auswahlliste gerade offen (z. B. Büro zuordnen): nicht unter dem Finger neu bauen */
   const ae = document.activeElement;
   if (ae && ae.tagName === "SELECT" && ae.closest("#view")) return;
-  if (activeTab !== "orders" && activeTab !== "market" && activeTab !== "jobs") setTools(activeTab, "");
+  if (!["orders", "market", "jobs", "fleet"].includes(activeTab)) setTools(activeTab, "");
   ({ orders: renderOrders, jobs: renderJobs, fleet: renderFleet, bases: renderBases,
      market: renderMarket, world: renderWorld }[activeTab] || function () {})();
   renderDirty = false;

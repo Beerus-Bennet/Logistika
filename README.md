@@ -478,6 +478,18 @@ Minuten nach freien Fahrzeugen, zwei gute schaffen deutlich mehr. Fahrpersonal
 begrenzt, wie viele davon gleichzeitig rollen, Zoll & Papiere bringen
 Zuschlag. Jedes Büro lässt sich mit einem Schalter pausieren.
 
+### Flotte filtern und aufräumen
+
+Unter *Flotte* filtert eine Leiste nach Nutzung (🚚 im Einsatz, 💤 frei,
+🕸️ ungenutzt seit mindestens 1–14 Tagen), nach Besitz (Eigentum, Leasing, im
+Büro, selbst) und nach Verkehrsträger; sortieren lässt sich nach Art, längster
+Standzeit, geringster Auslastung, Fixkosten oder Wert. Jedes Fahrzeug zeigt,
+seit wann es frei steht und wie ausgelastet es die letzten Tage war. Sobald
+ein Filter aktiv ist, steht oben ein Sammelknopf: alle freien Fahrzeuge der
+Auswahl auf einmal verkaufen bzw. Leasing beenden – mit Summe, eingesparten
+Fixkosten und Sicherheitsabfrage. Fahrzeuge im Einsatz und Sondereditionen
+bleiben.
+
 ### Das passende Fahrzeug
 
 Zugeteilt wird nicht mehr einfach das nächstbeste Fahrzeug, sondern das
