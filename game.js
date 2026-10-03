@@ -1819,6 +1819,16 @@ function drawFog(m, ctx) {
   const world = 256 * Math.pow(2, m.zoom);
   let anyVisible = false;
 
+  /* Nah herangezoomt liegt der Bildschirm oft komplett im freien Kreis eines
+     Standorts – dann gibt es keinen Nebel zu zeichnen. */
+  const cover = unlockedNodes().some(n => {
+    const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
+    const r = Math.max(30, km * pxPerKm) * 0.62, p = m.screenPos(n.lat, n.lon);
+    const dx = Math.max(Math.abs(p[0]), Math.abs(p[0] - W)), dy = Math.max(Math.abs(p[1]), Math.abs(p[1] - H));
+    return dx * dx + dy * dy < r * r;
+  });
+  if (cover) { if (km !== lastFogKm) { lastFogKm = km; renderFogNote(km); } return; }
+
   // Lichtkegel um jeden erschlossenen Standort
   unlockedNodes().forEach(n => {
     const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
@@ -1838,12 +1848,9 @@ function drawFog(m, ctx) {
   f.lineCap = "round"; f.lineJoin = "round";
   f.lineWidth = Math.max(16, Math.min(46, 8 + m.zoom * 3));
   S.jobs.forEach(job => job.legs.forEach(l => {
-    const c = legCoords(l);
-    f.beginPath();
-    c.forEach((pt, i) => {
-      const p = m.screenPos(pt[0], pt[1]);
-      if (i === 0) f.moveTo(p[0], p[1]); else f.lineTo(p[0], p[1]);
-    });
+    const runs = m.screenRuns(legCoords(l), f.lineWidth + 10);   /* nur das sichtbare Stück */
+    if (!runs.length) return;
+    m.tracePath(f, runs);
     f.stroke();
   }));
 

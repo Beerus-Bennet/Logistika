@@ -361,39 +361,88 @@ function createMap(canvas, opts) {
   }
 
   /* --------------------------- Zeichenhilfen -------------------------- */
-  function line(coords, style) {
+  /* Strecke auf das sichtbare Rechteck zuschneiden (Liang–Barsky).
+     Ohne das zeichnet der Browser beim Hineinzoomen jede Route auf ihrer
+     vollen Länge – bei Zoom 15 sind das Hunderttausende Bildpunkte, und
+     gestrichelt muss er jedes Stück einzeln ausrechnen. */
+  function clipSeg(x1, y1, x2, y2, x0, y0, xm, ym) {
+    const dx = x2 - x1, dy = y2 - y1;
+    let t0 = 0, t1 = 1;
+    const p = [-dx, dx, -dy, dy], q = [x1 - x0, xm - x1, y1 - y0, ym - y1];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) { if (q[i] < 0) return null; continue; }
+      const r = q[i] / p[i];
+      if (p[i] < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+      else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return [t0, t1];
+  }
+  /* Bildschirmpunkte → sichtbare Teilstücke mit ihrer Startlänge (für die Strichelung) */
+  function clipRuns(sp, margin) {
+    const m = margin == null ? 40 : margin, x0 = -m, y0 = -m, xm = W + m, ym = H + m;
+    const runs = [];
+    let cur = null, acc = 0;
+    for (let i = 0; i < sp.length - 1; i++) {
+      const ax = sp[i][0], ay = sp[i][1], bx = sp[i + 1][0], by = sp[i + 1][1];
+      const len = Math.hypot(bx - ax, by - ay);
+      const c = len > 0 ? clipSeg(ax, ay, bx, by, x0, y0, xm, ym) : null;
+      if (c) {
+        const p0 = [ax + (bx - ax) * c[0], ay + (by - ay) * c[0]], p1 = [ax + (bx - ax) * c[1], ay + (by - ay) * c[1]];
+        if (cur && c[0] === 0) cur.pts.push(p1);
+        else { cur = { start: acc + len * c[0], pts: [p0, p1] }; runs.push(cur); }
+        if (c[1] < 1) cur = null;
+      } else if (len > 0) cur = null;
+      acc += len;
+    }
+    return runs;
+  }
+  /* Geokoordinaten → sichtbare Teilstücke in Bildschirmkoordinaten (alle Weltkopien) */
+  function screenRuns(coords, margin) {
     const un = unwrapLons(coords);
     const pts = un.map(p => [projX(p[1]), projY(p[0])]);
+    const out = [];
     copies().forEach(off => {
-      // Schnelltest: liegt die Linie überhaupt im Bild?
       let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
-      for (const p of pts) {
+      const sp = pts.map(p => {
         const sx = screenX(p[0] + off), sy = screenY(p[1]);
-        minx = Math.min(minx, sx); maxx = Math.max(maxx, sx);
-        miny = Math.min(miny, sy); maxy = Math.max(maxy, sy);
-      }
-      if (maxx < -40 || minx > W + 40 || maxy < -40 || miny > H + 40) return;
-      ctx.beginPath();
-      pts.forEach((p, i) => {
-        const sx = screenX(p[0] + off), sy = screenY(p[1]);
-        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        if (sx < minx) minx = sx; if (sx > maxx) maxx = sx; if (sy < miny) miny = sy; if (sy > maxy) maxy = sy;
+        return [sx, sy];
       });
-      ctx.lineCap = "round"; ctx.lineJoin = "round";
-      if (style.outline) {
-        ctx.strokeStyle = style.outline;
-        ctx.lineWidth = style.width + style.outlineWidth;
-        ctx.setLineDash([]);
-        ctx.stroke();
-      }
-      ctx.strokeStyle = style.color;
-      ctx.lineWidth = style.width;
-      ctx.globalAlpha = style.alpha == null ? 1 : style.alpha;
-      ctx.setLineDash(style.dash || []);
-      ctx.lineDashOffset = style.dashOffset || 0;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
+      if (maxx < -40 || minx > W + 40 || maxy < -40 || miny > H + 40) return;
+      clipRuns(sp, margin).forEach(r => out.push(r));
     });
+    return out;
+  }
+  function tracePath(c, runs) {
+    c.beginPath();
+    runs.forEach(r => { r.pts.forEach((p, i) => { if (i === 0) c.moveTo(p[0], p[1]); else c.lineTo(p[0], p[1]); }); });
+  }
+  function line(coords, style) {
+    const runs = screenRuns(coords, style.width + (style.outlineWidth || 0) + 24);
+    if (!runs.length) return;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (style.outline) {
+      tracePath(ctx, runs);
+      ctx.strokeStyle = style.outline;
+      ctx.lineWidth = style.width + style.outlineWidth;
+      ctx.setLineDash([]);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = style.width;
+    ctx.globalAlpha = style.alpha == null ? 1 : style.alpha;
+    if (style.dash && style.dash.length) {
+      /* jedes Teilstück mit seiner Startlänge – sonst springt das Muster am Bildrand */
+      ctx.setLineDash(style.dash);
+      runs.forEach(r => { tracePath(ctx, [r]); ctx.lineDashOffset = (style.dashOffset || 0) + r.start; ctx.stroke(); });
+    } else {
+      ctx.setLineDash([]);
+      tracePath(ctx, runs);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
+    ctx.globalAlpha = 1;
   }
 
   /* Vorprojizierte Segmente in einem Zug zeichnen (Infrastrukturnetz).
@@ -446,7 +495,7 @@ function createMap(canvas, opts) {
     get width() { return W; },
     get dpr() { return dpr; },
     get height() { return H; },
-    ctx, line, pin, segments, screenPos, toScreen, fromScreen,
+    ctx, line, pin, segments, screenPos, toScreen, fromScreen, screenRuns, clipRuns, tracePath,
     projectPoint: (lat, lon) => [projX(lon), projY(lat)],
     setView, flyTo, panTo, fitBounds, resize, redraw: requestDraw,
     animating: () => !!anim,

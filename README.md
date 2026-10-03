@@ -635,6 +635,14 @@ Charterkosten, multipliziert mit Ladungsart, Dringlichkeit und Marge. Wer ein zu
 großes Fahrzeug einsetzt, zahlt drauf. Der Markt reagiert auf die eigene Flotte:
 freie Kapazität zieht passende Ladung an.
 
+### Flüssig beim Hineinzoomen
+
+Routen, Nebel-Schneisen und Störungskreise werden vor dem Zeichnen auf den
+sichtbaren Ausschnitt zugeschnitten (Liang–Barsky). Vorher zeichnete der
+Browser bei Zoom 15 jede Strecke auf ihrer vollen Länge – Hunderttausende
+Bildpunkte, gestrichelt –, das kostete pro Bild über eine halbe Sekunde.
+Liegt der ganze Bildschirm im erschlossenen Gebiet, entfällt der Nebel ganz.
+
 ### Kachelquelle ändern
 
 Standard sind die Kacheln von openstreetmap.org. Sie sind für kleine Projekte

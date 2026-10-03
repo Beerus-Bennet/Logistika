@@ -329,10 +329,28 @@ function drawEvents(m) {
     const rpx = Math.max(14, Math.abs(s[1] - edge[1]));
     const ctx = m.ctx;
     ctx.save();
-    ctx.beginPath(); ctx.arc(s[0], s[1], rpx, 0, 7);
-    ctx.fillStyle = "rgba(226,70,95,0.12)"; ctx.fill();
-    ctx.setLineDash([7, 6]); ctx.lineDashOffset = -(performance.now() / 60) % 13;
-    ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(226,70,95,0.75)"; ctx.stroke(); ctx.setLineDash([]);
+    const W = m.width, H = m.height;
+    /* Ganz nah dran ist der Kreis riesig: dann nur das sichtbare Stück des Rands zeichnen */
+    const far = Math.max(Math.hypot(s[0], s[1]), Math.hypot(s[0] - W, s[1]), Math.hypot(s[0], s[1] - H), Math.hypot(s[0] - W, s[1] - H));
+    if (rpx < 1500) {
+      ctx.beginPath(); ctx.arc(s[0], s[1], rpx, 0, 7);
+      ctx.fillStyle = "rgba(226,70,95,0.12)"; ctx.fill();
+      ctx.setLineDash([7, 6]); ctx.lineDashOffset = -(performance.now() / 60) % 13;
+      ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(226,70,95,0.75)"; ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      const inside = far < rpx;
+      const ring = [];
+      for (let k = 0; k <= 720; k++) { const a = k / 720 * Math.PI * 2; ring.push([s[0] + Math.cos(a) * rpx, s[1] + Math.sin(a) * rpx]); }
+      ctx.fillStyle = "rgba(226,70,95,0.12)";
+      if (inside) ctx.fillRect(0, 0, W, H);
+      else if (Math.hypot(Math.max(0, Math.abs(s[0] - W / 2) - W / 2), Math.max(0, Math.abs(s[1] - H / 2) - H / 2)) < rpx) {
+        ctx.beginPath(); ring.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.fill();
+      }
+      const runs = m.clipRuns(ring, 10);
+      ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(226,70,95,0.75)";
+      runs.forEach(r => { m.tracePath(ctx, [r]); ctx.lineDashOffset = -(performance.now() / 60) % 13 + r.start; ctx.stroke(); });
+      ctx.setLineDash([]);
+    }
     const R = z >= 9 ? 15 : 12;
     ctx.beginPath(); ctx.arc(s[0] + 1.5, s[1] + 2, R, 0, 7); ctx.fillStyle = "rgba(13,27,42,0.4)"; ctx.fill();
     ctx.beginPath(); ctx.arc(s[0], s[1], R, 0, 7); ctx.fillStyle = "#ffe2e7"; ctx.fill();
