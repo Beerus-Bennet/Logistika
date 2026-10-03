@@ -6,14 +6,21 @@
 const COMPANY_COLORS = ["#2f6fed", "#19b8c9", "#20a97a", "#f2a33c", "#e2465f", "#7c5cff"];
 
 /* Klein anfangen: wenig Geld, dafür ein, zwei Fahrzeuge aus der Vorgeschichte. */
+/* Die drei Kurierstarts bleiben für ältere Spielstände erhalten, werden
+   aber nicht mehr angeboten: Seit v36 startet jeder als Erbe. */
 const ORIGINS = [
-  { id: "kurier", name: "Fahrradkurier", cash: 1000, gifts: ["v-bullitt", "v-bullitt"],
+  { id: "kurier", name: "Fahrradkurier", cash: 1000, gifts: ["v-bullitt", "v-bullitt"], hidden: true,
     text: "Du kennst jede Abkürzung zwischen Mitte und Neukölln. Zwei Lastenräder bringst du mit." },
-  { id: "roller", name: "Rollerkurier", cash: 1000, gifts: ["v-simson", "v-simson"],
+  { id: "roller", name: "Rollerkurier", cash: 1000, gifts: ["v-simson", "v-simson"], hidden: true,
     text: "Jahrelang Pizza und Apothekenfahrten – jetzt auf eigene Rechnung, mit zwei Mopeds." },
-  { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"],
-    text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." }
+  { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"], hidden: true,
+    text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." },
+  { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 1000, gifts: ["v-bullitt", "v-simson"],
+    text: "Opa Hinrich hat dir seinen Obsthof bei Werder (Havel) vererbt – mit Feldern, Apfelbäumen, Hühnern, Backofen, einem Lastenrad und seiner alten Simson." },
+  { id: "fisch", name: "Fischerei-Erbe", farm: "fisch", icon: "🐟", soon: true, cash: 1000, gifts: [],
+    text: "Die Fischerei deiner Tante an der Ostsee: Kutter, Räucherei, Muschelbänke und eine kleine Schmiede für Perlenschmuck." }
 ];
+const ORIGIN_DEFAULT = 3;
 /* Geschenkfahrzeuge als „2× 🚲 Larry vs Harry Bullitt“ */
 function giftText(o) {
   const c = {};
@@ -65,7 +72,7 @@ function startIntro() {
   document.body.classList.add("locked");
   INTRO.draft = {
     name: "", company: "",
-    origin: 1, color: 0,
+    origin: ORIGIN_DEFAULT, color: 0,
     avatar: avRandom()
   };
   INTRO.draft.avatar.acc = 0;
@@ -85,18 +92,19 @@ function renderIntro() {
   if (INTRO.step === 0) {
     body = `
       <div class="intro-card">
-        <div class="intro-h">Willkommen in der Disposition</div>
+        <div class="intro-h">Ein Brief vom Notar</div>
         <div class="intro-p">
-          Du baust eine Spedition auf – vom ersten Lastenrad in Berlin bis zur
-          Containerflotte auf allen Ozeanen. Zuerst brauchst du ein Gesicht,
-          eine Firma und mindestens ein Fahrzeug.
+          Du hast geerbt! Aus einem kleinen Hof wird Stück für Stück ein Betrieb:
+          erst ernten, backen und ins Dorf ausliefern – später eine Spedition,
+          die Waren um die ganze Welt bringt. Zuerst brauchst du ein Gesicht
+          und einen Namen für deinen Betrieb.
         </div>
       </div>
       <div class="intro-card greet">
         <div class="greet-fig">${guideFigure(150, "g0")}</div>
         <div class="greet-tx">
-          <b>${GUIDE.name}</b><span>${GUIDE.role}</span>
-          <div class="intro-p">„Ich bin deine Disponentin. Ich melde mich gleich wieder, sobald deine Firma steht.“</div>
+          <b>${GUIDE.name}</b><span>Nachbarin · fährt Opas Ware aus</span>
+          <div class="intro-p">„Moin! Ich hab deinem Opa jahrelang beim Ausliefern geholfen. Ich zeig dir gleich alles.“</div>
         </div>
       </div>
       <div class="intro-btns"><button class="btn go" id="iNext">Los geht’s</button></div>`;
@@ -164,10 +172,10 @@ function renderIntro() {
   if (INTRO.step === 2) {
     body = `
       <div class="intro-card">
-        <div class="intro-h">Deine Firma</div>
-        <div class="intro-p">Name, Hausfarbe und deine Herkunft. Die Herkunft bestimmt, womit du startest.</div>
+        <div class="intro-h">Dein Erbe</div>
+        <div class="intro-p">Name, Hausfarbe und was du geerbt hast. Der Name steht später auch auf deinen Lkw.</div>
         <div class="field">
-          <label for="iFirm">Firmenname</label>
+          <label for="iFirm">Name deines Betriebs</label>
           <input id="iFirm" maxlength="26" autocomplete="off" spellcheck="false"
                  placeholder="z. B. ${FIRM_POOL[0]}" value="${esc(d.company)}">
         </div>
@@ -180,13 +188,14 @@ function renderIntro() {
           </div>
         </div>
         <div class="field">
-          <label>Herkunft</label>
+          <label>Was hast du geerbt?</label>
           <div class="origins">
             ${ORIGINS.map((o, i) => {
+              if (o.hidden) return "";
               const gift = giftText(o);
-              return `<button class="origin ${i === d.origin ? "on" : ""}" data-origin="${i}">
-                <b>${o.name}</b><small>${o.text}</small>
-                <span class="cash">${money(o.cash)}${gift ? " + " + esc(gift) : ""}</span>
+              return `<button class="origin ${i === d.origin ? "on" : ""}${o.soon ? " soon" : ""}" data-origin="${i}" ${o.soon ? "disabled" : ""}>
+                <b>${o.icon ? o.icon + " " : ""}${o.name}${o.soon ? ` <em class="soonchip">kommt bald</em>` : ""}</b><small>${o.text}</small>
+                ${o.soon ? "" : `<span class="cash">${money(o.cash)}${gift ? " + " + esc(gift) : ""}</span>`}
               </button>`;
             }).join("")}
           </div>
@@ -194,7 +203,7 @@ function renderIntro() {
       </div>
       <div class="intro-btns">
         <button class="btn ghost" id="iBack">Zurück</button>
-        <button class="btn go" id="iNext">Firma anmelden</button>
+        <button class="btn go" id="iNext">Erbe antreten</button>
       </div>`;
   }
 
@@ -213,9 +222,12 @@ function renderIntro() {
             <div class="intro-p">${esc(S.player.name)} · ${ORIGINS[S.player.origin].name}</div></div>
         </div>
         <div class="intro-p">
-          Deine Fahrzeuge aus der Vorgeschichte stehen schon im Hof. Viel Geld ist
+          ${ORIGINS[S.player.origin].farm ? `Im Schuppen stehen Opas Lastenrad und seine Simson – damit bringst du deine
+          Ware nach Werder, Glindow und Potsdam. Viel Geld ist nicht da, den Rest
+          verdient der Hof. Ein Auto kannst du jetzt oder später im Markt kaufen.`
+          : `Deine Fahrzeuge aus der Vorgeschichte stehen schon im Hof. Viel Geld ist
           nicht da – der Rest kommt über die ersten Aufträge. Mehr Fahrzeuge gibt es
-          jederzeit im Markt.
+          jederzeit im Markt.`}
         </div>
         <div class="found-money"><span>Startkapital</span><b>${money(S.money)}</b></div>
         ${startVehicles.map(t => {
@@ -235,7 +247,7 @@ function renderIntro() {
       </div>
       <div class="intro-btns">
         <button class="btn ghost" id="iBack">Zurück</button>
-        <button class="btn go${S.fleet.length ? "" : " disabled"}" id="iFound">Firma gründen</button>
+        <button class="btn go${S.fleet.length ? "" : " disabled"}" id="iFound">${ORIGINS[S.player.origin].farm ? "Hof übernehmen" : "Firma gründen"}</button>
       </div>`;
   }
 
@@ -290,7 +302,7 @@ function bindIntro() {
   if (dice) dice.onclick = () => { d.avatar = avRandom(d.avatar.sex); renderIntro(); };
 
   $$("#intro [data-color]").forEach(b => b.onclick = () => { d.color = +b.dataset.color; renderIntro(); });
-  $$("#intro [data-origin]").forEach(b => b.onclick = () => { d.origin = +b.dataset.origin; renderIntro(); });
+  $$("#intro [data-origin]").forEach(b => b.onclick = () => { if (ORIGINS[+b.dataset.origin].soon) return; d.origin = +b.dataset.origin; renderIntro(); });
   $$("#intro [data-unbuy]").forEach(b => b.onclick = () => {
     const t = vType(b.dataset.unbuy);
     if (!t) return;
@@ -371,6 +383,22 @@ function finishFounding() {
   S.lastDay = 0;
   document.body.classList.remove("locked");
   $("#intro").classList.remove("on");
+  /* Erbe eines Hofs: Start auf dem Hof, die Spedition kommt später */
+  const org = ORIGINS[S.player.origin];
+  if (org && org.farm && typeof farmNew === "function") {
+    farmNew(org.farm);
+    farmBodyClasses();
+    const fa = farmAddr();
+    S.fleet.forEach(f => { f.at = FARM_NODE; f.spot = { lat: fa.lat, lon: fa.lon, t: "Stellplatz am Schuppen, " + fa.t, a: fa.a }; f.spotAt = FARM_NODE; });
+    clearRouteCache();
+    buildNetBuffers();
+    showTab("farm");
+    map.setView(FARM_VIEW.center, FARM_VIEW.zoom);
+    renderFogNote(fogRadiusKm(S.stage, level()));
+    save();
+    toast("🏡 Willkommen auf deinem Hof, " + S.player.name + "!", "ok");
+    return;
+  }
   clearRouteCache();
   buildNetBuffers();
   spawnOrders(8);
@@ -449,7 +477,9 @@ function tutPinRect() {
 }
 
 const TUT_STEPS = [
-  { tx: "Moin! Ich bin Lina, deine Disponentin. Wir wickeln jetzt zusammen deinen ersten Auftrag ab – "
+  { tx: () => S.farm ? "So, Chef – jetzt wird’s eine richtige Spedition! Ich bin ab heute deine Disponentin. Wir wickeln zusammen den ersten fremden Auftrag ab – "
+      + "Schritt für Schritt. Die Uhr steht so lange still."
+      : "Moin! Ich bin Lina, deine Disponentin. Wir wickeln jetzt zusammen deinen ersten Auftrag ab – "
       + "Schritt für Schritt. Die Uhr steht so lange still." },
   { tx: () => {
       const f = tutVeh();
@@ -566,8 +596,8 @@ const TUT_STEPS = [
   { tx: "Das ist dein <b>Diensthandy</b>. Hier melden sich dein Team – und manchmal auch Leute, die du nicht kennst. "
       + "Aus Sicherheitsgründen löscht es jede Nachricht nach <b>24 Stunden</b>. Lies also zeitnah.",
     target: "#phoneBtn", top: true, before: () => showTab("map") },
-  { tx: "Das war’s. Oben rechts hältst du das Spiel jederzeit an – ab jetzt läuft die Uhr. Viel Erfolg, und wenn’s brennt, bin ich auf Kanal 1.",
-    target: "#pauseBtn", top: true, before: () => showTab("map") }
+  { tx: "Das war’s. Mit ⏸ links an der Karte hältst du das Spiel jederzeit an, 1× bis 30× bestimmen das Tempo – ab jetzt läuft die Uhr. Viel Erfolg, und wenn’s brennt, bin ich auf Kanal 1.",
+    target: '#controls [data-speed="0"]', before: () => showTab("map") }
 ];
 
 

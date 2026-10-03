@@ -33,7 +33,6 @@
       <div class="hud-name" id="hudName">Welt der Logistik</div>
     </div>
     <div class="hud-right">
-      <button id="pauseBtn" class="pausebtn" title="Spiel anhalten"><i>⏸</i></button>
       <div class="hud-clock"><b id="hudTime">Tag 1, 06:00</b><span id="hudStage">Etappe 1</span></div>
     </div>
   </div>
@@ -83,6 +82,7 @@
 
 <!-- ================= Navigation ================= -->
 <nav id="nav">
+  <button class="navbtn" data-tab="farm"><i>🏡</i><span>Hof</span></button>
   <button class="navbtn on" data-tab="map"><i>🗺️</i><span>Karte</span></button>
   <button class="navbtn" data-tab="orders"><i>📋</i><span>Aufträge</span><em class="badge2" id="badgeOrders">0</em></button>
   <button class="navbtn" data-tab="jobs"><i>🛰️</i><span>Live</span><em class="badge2" id="badgeJobs">0</em></button>
@@ -108,6 +108,7 @@
 <div id="report"></div>
 
 <script src="data.js"></script>
+<script src="farmdata.js"></script>
 <script src="places.js"></script>
 <script src="avatar.js"></script>
 <script src="photo.js"></script>
@@ -123,11 +124,15 @@
 <script src="lucky.js"></script>
 <script src="loading.js"></script>
 <script src="game.js"></script>
+<script src="farm.js"></script>
 <script src="intro.js"></script>
 <script src="cars.js"></script>
 <script src="auction.js"></script>
 <script src="customs.js"></script>
 <script src="corp.js"></script>
 <script src="livery.js"></script>
+<script src="gl3d.js"></script>
+<script src="farmmodels.js"></script>
+<script src="farmview.js"></script>
 </body>
 </html>

@@ -187,6 +187,8 @@ function makeAddr(nodeId, kind) {
   const n = N[nodeId];
   if (!n) return null;
   kind = kind || "biz";
+  /* Hof und Dörfer rund um Werder (farm.js) */
+  if (n.home && typeof farmNodeAddr === "function") { const fa = farmNodeAddr(nodeId, kind); if (fa) return fa; }
   if (kind === "home") return makeHomeAddr(nodeId);
   let p, t;
   const streets = BERLIN_STREETS[nodeId];

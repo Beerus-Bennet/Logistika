@@ -78,7 +78,7 @@ class Heap {
 const N = {};
 const ADJ = {};
 NODES.forEach(a => {
-  N[a[0]] = { id: a[0], name: a[1], lat: a[2], lon: a[3], land: a[4], stage: a[5], modes: a[6], type: a[7], short: a[8] };
+  N[a[0]] = { id: a[0], name: a[1], lat: a[2], lon: a[3], land: a[4], stage: a[5], modes: a[6], type: a[7], short: a[8], home: a[9] || null };
 });
 const noLand = new Set();
 NO_LAND_LINK.forEach(p => { noLand.add(p[0] + ">" + p[1]); noLand.add(p[1] + ">" + p[0]); });
@@ -284,17 +284,24 @@ function togglePause() {
   setSpeed(S.speed > 0 ? 0 : lastSpeed || 1);
 }
 function renderPause() {
-  const b = $("#pauseBtn"); if (!b) return;
+  /* Der Pausenknopf sitzt links an der Karte (⏸) */
+  const b = $('#controls [data-speed="0"]'); if (!b) return;
   const halted = !clockRunning();
   b.classList.toggle("paused", halted);
-  b.firstElementChild.textContent = halted ? "▶" : "⏸";
   b.title = halted ? "Spiel fortsetzen" : "Spiel anhalten";
 }
 function level() { return Math.max(1, Math.floor(Math.sqrt(S.xp / 50)) + 1); }
 function xpForLevel(l) { return Math.round(50 * (l - 1) ** 2); }
 function unlockedModes() { return STAGES[S.stage - 1].modes; }
-function isUnlocked(id) { return N[id] && N[id].stage <= S.stage; }
-function unlockedNodes() { return Object.values(N).filter(n => n.stage <= S.stage); }
+/* Hof-Knoten (Werder, Glindow …) gibt es nur in Spielständen mit Hof */
+function isUnlocked(id) {
+  const n = N[id];
+  if (!n) return false;
+  if (n.home) return !!(S.farm && S.farm.kind === n.home);
+  if (n.farmX && S.farm) return true;
+  return n.stage <= S.stage;
+}
+function unlockedNodes() { return Object.values(N).filter(n => isUnlocked(n.id)); }
 function dailyCost(f) { const t = vType(f.type); return t.daily + (f.lease ? t.price * LEASE_RATE : 0); }
 
 /* ------------------------------- Aufträge ------------------------------- */
@@ -590,10 +597,12 @@ function orderCap() {
   return Math.min(48, 6 + S.stage * 3 + Math.floor(S.fleet.length * 0.9));
 }
 function spawnOrders(max) {
+  /* Auf dem Hof gibt es erst fremde Aufträge, wenn die Spedition gegründet ist */
+  if (typeof logiOn === "function" && !logiOn()) return 0;
   const cap = orderCap();
   let added = 0;
-  /* Mr. Snus' Privatkunden und die Wertsachen zählen nicht gegen das Auftragsbuch */
-  while (S.orders.filter(o => !o.snus && !o.pablo && !o.jewel).length < cap && added < (max || 3)) {
+  /* Mr. Snus' Privatkunden, Wertsachen und Hofbestellungen zählen nicht gegen das Auftragsbuch */
+  while (S.orders.filter(o => !o.snus && !o.pablo && !o.jewel && !o.farm).length < cap && added < (max || 3)) {
     /* Ab Etappe 4 ist ein gutes Viertel reine Luftfracht – mit eigener
        Maschine noch etwas mehr. */
     const airShare = S.fleet.some(f => vType(f.type).mode === "a") ? 0.36 : 0.26;
@@ -607,6 +616,7 @@ function spawnOrders(max) {
 
 /* ------------------------------- Fahrzeuge ------------------------------ */
 function homeFor(mode) {
+  if (typeof farmOn === "function" && farmOn() && N[FARM_NODE] && N[FARM_NODE].modes.includes(mode)) return FARM_NODE;
   const cand = unlockedNodes().filter(n => n.modes.includes(mode));
   if (!cand.length) return "b-mitte";
   const berlin = cand.filter(n => n.id.startsWith("b-"));
@@ -1230,6 +1240,8 @@ function renderPlanner(fit) {
 function acceptOrder(vi) {
   const ps = planState; if (!ps) return;
   const o = ps.order, v = ps.variants[vi];
+  if (o.farm && typeof farmOrderReady === "function" && !farmOrderReady(o))
+    return toast("🧺 Es fehlt noch Ware: " + farmMissing(o.farm.items).map(m => m.need + "× " + FITEMS[m.id].n).join(", "), "warn");
   startJob(o, v, ps.assign);
   /* Erst Lina Bescheid geben, dann schließen – sonst hielte sie das
      Schließen für ein Abbrechen und schickte einen zurück zur Liste. */
@@ -1257,7 +1269,7 @@ function cancelJob(id) {
   const j = S.jobs.find(x => x.id === id);
   if (!j) return;
   const o = j.order;
-  if (o.snus || o.pablo) {
+  if (o.snus || o.pablo || o.farm) {
     failJob(j, "abgebrochen");
   } else {
     askConfirm("Auftrag stornieren?", o.shipper + ": Der Auftraggeber berechnet 20 % Vertragsstrafe (" + money(Math.round(o.pay * 0.2)) + "). Das Fahrzeug bleibt, wo es gerade ist.",
@@ -1279,6 +1291,7 @@ function startJob(o, variant, assign) {
   job.legs.forEach(l => { const f = S.fleet.find(x => x.uid === l.veh); if (f) f.phase = "reserved"; });
   if (o.snus && typeof snusTake === "function") snusTake(o);
   if (o.pablo && typeof pabloTake === "function") pabloTake(o);
+  if (o.farm && typeof farmTakeOrder === "function") farmTakeOrder(o);
   S.jobs.push(job);
   S.orders = S.orders.filter(x => x.id !== o.id);
   if (typeof onJobStart === "function") onJobStart(job);
@@ -1313,7 +1326,7 @@ function dispatchRun(opt) {
     o.snus.flagged = true;
     toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
   });
-  const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && opt.accept(o))
+  const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && !(o.farm && !(typeof farmOrderReady === "function" && farmOrderReady(o))) && opt.accept(o))
     .sort((a, b) => b.pay - a.pay);
   let examined = 0, taken = 0;
   for (const o of cands) {
@@ -1479,6 +1492,13 @@ function failJob(job, reason) {
       f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; delete f.halt;
     }
   });
+  /* Hofbestellung: Ware zurück in Silo und Scheune, keine Strafe */
+  if (job.order.farm) {
+    if (typeof farmGiveBack === "function") farmGiveBack(job.order);
+    S.jobs = S.jobs.filter(j => j.id !== job.id);
+    toast("🧺 Lieferung an " + job.order.shipper + (reason === "abgebrochen" ? " abgebrochen" : " geplatzt (" + reason + ")") + " – die Ware ist wieder am Hof.", "warn");
+    return;
+  }
   /* Privatkunde von Mr. Snus / Don Pablo: keine Vertragsstrafe, die Ware geht zurück ins Lager */
   if (job.order.pablo) {
     if (typeof pabloGiveBack === "function") pabloGiveBack(job.order);
@@ -1532,6 +1552,7 @@ function finishLeg(job, veh) {
   }
   if (typeof payBoost === "function") pay = Math.round(pay * payBoost(job));
   if (typeof liveryBoost === "function") pay = Math.round(pay * liveryBoost(job));
+  if (o.farm && typeof farmPayFactor === "function") pay = Math.round(pay * farmPayFactor(o));
   S.money += pay; S.revenue += pay; S.done++;
   if (o.snus) {
     logMoney("snus", o.shipper + " · " + o.snus.n + " Dosen", pay);
@@ -1539,6 +1560,9 @@ function finishLeg(job, veh) {
   } else if (o.pablo) {
     logMoney("pablo", o.shipper + " · " + kgf(o.pablo.kg), pay);
     if (typeof pabloDelivered === "function") pabloDelivered(o, pay);
+  } else if (o.farm) {
+    logMoney("farm", o.shipper + " · " + Object.keys(o.farm.items).map(id => o.farm.items[id] + "× " + FITEMS[id].n).join(", "), pay);
+    if (typeof farmDelivered === "function") farmDelivered(o, pay);
   } else logMoney("job", o.shipper + " · " + N[o.from].short + " → " + N[o.to].short, pay);
   if (job.cost > 0) logMoney("drive", "Fahrt und Umschlag · " + o.shipper, -job.cost);
   S.xp += Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2));
@@ -1553,10 +1577,15 @@ function checkLevel() {
   const l = level();
   if (l > lastLevel) {
     lastLevel = l;
-    toast("🎉 Level " + l + " erreicht!", "ok");
+    const party = typeof farmLevelUp === "function" && farmLevelUp(l);
+    if (!party) toast("🎉 Level " + l + " erreicht!", "ok");
+    if (typeof farmEvent === "function") farmEvent("level");
     if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
     const nx = STAGES[S.stage];
-    if (nx && l >= nx.reqLevel) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
+    if (nx && l >= nx.reqLevel && (typeof logiOn !== "function" || logiOn())) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
+    if (typeof farmCanFound === "function" && farmCanFound() && typeof FLOGI_LEVEL !== "undefined" && l === FLOGI_LEVEL)
+      setTimeout(() => phoneMsg({ from: "Lina Sturm", kind: "info", title: "Wir könnten mehr fahren!",
+        body: "Chef, die Leute in Werder fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. Wenn du willst, gründen wir eine richtige Spedition – der Hof läuft weiter. Tipp im Hof auf „Spedition gründen“." }), 1200);
   }
 }
 
@@ -1635,16 +1664,18 @@ function tick(dtMin) {
   if (S.orders.length !== before) renderDirty = true;
   if (S.time - S.lastSpawn > 120) { S.lastSpawn = S.time; if (spawnOrders(3 + Math.floor(S.fleet.length / 6))) renderDirty = true; }
   /* Anfangs nur ab und zu ein Juwelier, später regelmäßig */
-  if (S.time - (S.lastJewel || -999) > (S.stage <= 2 ? 150 : 75)) { S.lastJewel = S.time; spawnJewels(); }
+  if (S.time - (S.lastJewel || -999) > (S.stage <= 2 ? 150 : 75)) { S.lastJewel = S.time; if (typeof logiOn !== "function" || logiOn()) spawnJewels(); }
   if (typeof prunePhone === "function") prunePhone();
   tickBases(dtMin);
-  if (typeof tickSnus === "function") tickSnus(dtMin);
-  if (typeof tickPablo === "function") tickPablo(dtMin);
+  if (typeof tickSnus === "function" && (typeof logiOn !== "function" || logiOn())) tickSnus(dtMin);
+  if (typeof tickPablo === "function" && (typeof logiOn !== "function" || logiOn())) tickPablo(dtMin);
+  if (typeof farmTick === "function") farmTick(dtMin);
   if (typeof tickExtras === "function") tickExtras(dtMin);
 }
 
 /* ------------------------------- Etappen -------------------------------- */
 function unlockStage() {
+  if (typeof logiOn === "function" && !logiOn()) return toast("Erst die Spedition gründen – das geht im Hof ab Level " + FLOGI_LEVEL + ".", "warn");
   const next = STAGES[S.stage];
   if (!next) return toast("Die ganze Welt gehört dir bereits.", "ok");
   if (level() < next.reqLevel) return toast("Dafür brauchst du Level " + next.reqLevel + ".", "warn");
@@ -1966,6 +1997,7 @@ function drawWorld(m, ctx) {
   // 5. Büros und Stecknadeln der Aufträge
   if (typeof drawEvents === "function") drawEvents(m);
   drawBases(m, z);
+  if (typeof drawFarmPin === "function") drawFarmPin(m, z);
   drawPins(m, z);
 
   // 6. Fahrzeuge
@@ -2043,7 +2075,7 @@ function jobPicked(j) {
    bei Mr. Snus und Don Pablo beim Kunden in der Siedlung – abgeholt wird
    dort ja nur das eigene Lager. */
 const shady = o => !!(o && (o.snus || o.pablo));
-function orderPinPt(o) { return addrPt(shady(o) ? oDrop(o) : oPick(o)); }
+function orderPinPt(o) { return addrPt(shady(o) || o.farm ? oDrop(o) : oPick(o)); }
 function jobPinPt(j) { return addrPt(jobPicked(j) ? oDrop(j.order) : oPick(j.order)); }
 function mapPins() {
   const out = [];
@@ -2222,6 +2254,7 @@ function onMapTap(px, py) {
     const d = Math.hypot(h.x - px, h.y - py);
     if (d < h.r && d < bestD) { bestD = d; best = { kind: "base", id: h.id }; }
   });
+  if (typeof farmHit !== "undefined" && farmHit && Math.hypot(farmHit.x - px, farmHit.y - py) < farmHit.r && (!best || best.kind === "node" || Math.hypot(farmHit.x - px, farmHit.y - py) < bestD)) { showTab("farm"); return; }
   if (!best) {
     unlockedNodes().forEach(n => {
       if (n.type === "city" && map.zoom >= CITY_DOT_MAX_Z) return;
@@ -2401,7 +2434,8 @@ const LEDGER_KIND = {
   auction: { icon: "🔨", name: "Auktionshaus" },
   customs: { icon: "🛃", name: "Zoll" },
   corp:  { icon: "🦈", name: "Übernahme" },
-  paint: { icon: "🎨", name: "Lackierung" }
+  paint: { icon: "🎨", name: "Lackierung" },
+  farm:  { icon: "🏡", name: "Hof" }
 };
 function logMoney(kind, label, amount) {
   if (!S.ledger) S.ledger = [];
@@ -2522,7 +2556,7 @@ function renderHud() {
   m.textContent = money(S.money);
   m.classList.toggle("bad", S.money < 0);
   $("#hudLevel").textContent = "Lv " + level();
-  $("#hudStage").textContent = "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
+  $("#hudStage").textContent = typeof farmPhase === "function" && farmPhase() ? "Erbhof · Werder (Havel)" : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
   $("#hudTime").textContent = stamp(S.time);
   const l = level(), a = xpForLevel(l), b = xpForLevel(l + 1);
   $("#xpFill").style.width = clamp(((S.xp - a) / (b - a)) * 100, 0, 100) + "%";
@@ -2690,6 +2724,7 @@ function renderOrders() {
       </div>
       <div class="ship">${esc(o.shipper)}</div>
       <div class="desc">${esc(o.desc)}</div>
+      ${o.farm && typeof farmOrderHTML === "function" ? farmOrderHTML(o) : ""}
       ${typeof orderExtraHTML === "function" ? orderExtraHTML(o) : ""}
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
@@ -3225,8 +3260,10 @@ function infoHTML() {
         <li>XP bringen Level, Level und Kapital schalten unter <b>Etappen</b> die nächste Weltregion frei.</li>
       </ol>
       <div class="buyrow">
-        <button class="btn tiny ghost" id="tutAgainBtn">🎓 Tutorial mit Lina nochmal</button>
-        <button class="btn tiny ghost" data-talk="offices">🏢 Büro-Tutorial</button>
+        ${typeof logiOn === "function" && !logiOn()
+          ? `<button class="btn tiny ghost" id="farmTutAgain">🎓 Hof-Rundgang mit Lina</button>`
+          : `<button class="btn tiny ghost" id="tutAgainBtn">🎓 Tutorial mit Lina nochmal</button>
+        <button class="btn tiny ghost" data-talk="offices">🏢 Büro-Tutorial</button>`}
         ${S.tutSeen && S.tutSeen.snus ? `<button class="btn tiny ghost" data-talk="snus">${typeof snusLogo === "function" ? snusLogo(16) : "🎩"} Mr. Snus erklärt</button>` : ""}
         ${S.tutSeen && S.tutSeen.pablo ? `<button class="btn tiny ghost" data-talk="pablo">❄️ Don Pablo erklärt</button>` : ""}
         ${S.tutSeen && S.tutSeen.extras ? `<button class="btn tiny ghost" data-talk="extras">🎯 Ziele, Konkurrenz, Pannen</button>` : ""}
@@ -3280,6 +3317,8 @@ function renderWorld() {
   if (b) b.onclick = unlockStage;
   const ta = $("#tutAgainBtn");
   if (ta) ta.onclick = () => { S.tut = { done: false }; startTutorial(); };
+  const fta = $("#farmTutAgain");
+  if (fta) fta.onclick = () => { S.farm.tut = { step: 0, done: false, replay: true }; showTab("farm"); };
   $$("#tab-world [data-talk]").forEach(b => b.onclick = () => replayTalk(b.dataset.talk));
   const r = $("#resetBtn");
   if (r) r.onclick = () => {
@@ -3298,12 +3337,16 @@ let touchDown = false, touchUpAt = 0;
 function showTab(name) {
   if (name !== "market") marketFocus = null;     /* Markt-Fokus gilt nur für den direkten Sprung */
   activeTab = name;
-  if (name !== "map") lastPanel = name;
+  if (name !== "map" && name !== "farm") lastPanel = name;
+  if (name === "farm" && !(typeof farmOn === "function" && farmOn())) name = "map";
+  activeTab = name;
   $$(".navbtn").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
   $$(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + name));
-  $("#view").classList.toggle("on", name !== "map");
+  $("#view").classList.toggle("on", name !== "map" && name !== "farm");
   document.body.classList.toggle("tab-map", name === "map");
-  if (name !== "map") $("#viewTitle").textContent = (name === "market" && typeof ahMode === "function" && ahMode() ? "Auktionshaus" : TAB_TITLE[name]) || "";
+  if (name === "farm") { if (typeof farmShow === "function") farmShow(); }
+  else if (typeof farmHide === "function") farmHide();
+  if (name !== "map" && name !== "farm") $("#viewTitle").textContent = (name === "market" && typeof ahMode === "function" && ahMode() ? "Auktionshaus" : TAB_TITLE[name]) || "";
   applyPadding();
   render();
   if (typeof tutTabHook === "function") tutTabHook(name);
@@ -3395,8 +3438,11 @@ function boot() {
   if (playing()) {
     probeGuideArt();
     document.body.classList.remove("locked");
-    showTab("map");
-    setTimeout(() => map.setView(st.center, st.zoom), 60);
+    if (typeof farmBodyClasses === "function") farmBodyClasses();
+    /* Vor der Speditionsgründung startet man auf dem Hof */
+    const onFarm = typeof farmPhase === "function" && farmPhase();
+    showTab(onFarm ? "farm" : "map");
+    setTimeout(() => map.setView(onFarm ? FARM_VIEW.center : st.center, onFarm ? FARM_VIEW.zoom : st.zoom), 60);
     if (!S.orders.length) spawnOrders(8);
     renderFollowBar();
     renderFogNote(fogRadiusKm(S.stage, level()));
@@ -3415,8 +3461,8 @@ function boot() {
     }
     /* Mitten im Tutorial neu geladen: Lina macht weiter. Wer schon weiter
        ist, bekommt es nicht nachträglich aufgedrückt. */
-    if (S.tut && S.tut.done === false) {
-      if (level() < 3 && typeof startTutorial === "function") setTimeout(startTutorial, 900);
+    if (S.tut && S.tut.done === false && (typeof logiOn !== "function" || logiOn())) {
+      if ((level() < 3 || (S.farm && S.farm.logi && !S.farm.sold)) && typeof startTutorial === "function") setTimeout(startTutorial, 900);
       else S.tut.done = true;
     }
   } else {
@@ -3440,10 +3486,10 @@ function boot() {
 
   $$("[data-speed]").forEach(b => {
     b.classList.toggle("on", +b.dataset.speed === S.speed);
-    b.onclick = () => setSpeed(+b.dataset.speed);
+    /* ⏸ hält an – nochmal tippen läuft im letzten Tempo weiter */
+    b.onclick = () => (+b.dataset.speed === 0 ? togglePause() : setSpeed(+b.dataset.speed));
   });
   if (S.speed > 0) lastSpeed = S.speed;
-  $("#pauseBtn").onclick = togglePause;
   renderPause();
   $("#fogBtn").classList.toggle("on", S.fog);
   $("#fogBtn").onclick = () => {
@@ -3509,7 +3555,7 @@ function boot() {
       if (selected) renderInspector();
       renderFollowBar();
     }
-    mapRedraw();
+    if (activeTab !== "farm") mapRedraw();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

@@ -32,6 +32,7 @@ function contractOffer() {
     day: 0, done: 0, missed: 0, pending: [], over: false, refTime: tpl.refTime, refDist: tpl.refDist };
 }
 function offerContract() {
+  if (typeof logiOn === "function" && !logiOn()) return;
   const c = contractOffer(); if (!c) return;
   const total = c.per * c.days * c.pay;
   decisionMsg({ from: c.client, kind: "contract", icon: "📑", type: "contract", title: "Angebot: Rahmenvertrag über " + c.days + " Tage",
@@ -124,6 +125,7 @@ function missionFits(mi) {
 }
 function missionNeed(mi) { return mi.need ? Math.max(3, Math.round(mi.need * (S.fleet.length >= 6 ? 1 : 0.7))) : mi.spawn.n; }
 function offerMission() {
+  if (typeof logiOn === "function" && !logiOn()) return;
   const pool = MISSIONS.filter(missionFits);
   if (!pool.length) return;
   const mi = pick(pool), n = missionNeed(mi);
@@ -192,7 +194,7 @@ function tickMissions() {
 const TASKS = [
   { id: "n", icon: "📦", make: () => ({ n: clamp(3 + S.stage + Math.floor(S.fleet.length * 1.2), 3, 40) }), label: t => `${t.n} Aufträge zustellen`, on: "done" },
   { id: "bike", icon: "🚲", ok: () => S.fleet.some(f => vType(f.type).mode === "b"), make: () => ({ n: 3 + Math.floor(Math.random() * 3) }), label: t => `${t.n} Lieferungen komplett per Rad`, on: "bike" },
-  { id: "jewel", icon: "💎", ok: () => S.fleet.some(f => vType(f.type).flags.includes("kurier")), make: () => ({ n: 2 }), label: t => `${t.n} Wertkurier-Fahrten`, on: "jewel" },
+  { id: "jewel", icon: "💎", ok: () => S.fleet.some(f => vType(f.type).flags.includes("kurier")) && !(typeof logiOn === "function" && !logiOn()), make: () => ({ n: 2 }), label: t => `${t.n} Wertkurier-Fahrten`, on: "jewel" },
   { id: "norepo", icon: "✅", make: () => ({ n: 3 }), label: t => `${t.n} Aufträge ohne Leerfahrt`, on: "norepo" },
   { id: "rev", icon: "💶", make: () => ({ n: roundK(Math.max(600 * stageK(), (S.revY || 0) * 1.15), 50) }), label: t => `${money(t.n)} Frachterlös an einem Tag`, on: "rev", money: true },
   { id: "mode", icon: "🚢", ok: () => S.fleet.some(f => "isla".includes(vType(f.type).mode)), make: () => {

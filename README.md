@@ -1,8 +1,9 @@
 # 🌍 LOGISTIKA – Welt der Logistik
 
 Eine Logistik-Simulation im Comic-Look auf einer echten OpenStreetMap-Karte.
-Du baust dir eine Figur, gründest eine Spedition und arbeitest dich vom ersten
-Lastenrad in Berlin bis zur weltweiten Containerflotte hoch.
+Du erbst einen Obsthof bei Werder (Havel), erntest, backst und lieferst deine
+Ware per Lastenrad und Moped in die Dörfer – und baust daraus Stück für Stück
+eine Spedition, die bis zur weltweiten Containerflotte wächst.
 
 Läuft als **PWA** – installierbar auf iPhone, Android und Desktop, offline
 lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
@@ -24,11 +25,11 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    lässt sich genauso als Bild nehmen oder einfügen. Das Foto verlässt das
    Gerät nicht, gespeichert wird nur das fertige 256-px-Porträt. Im laufenden
    Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
-2. **Firma anmelden** – Firmenname, Hausfarbe und eine Herkunft, die über
-   Startkapital und Startfahrzeug entscheidet:
-   Fahrradkurier (1.000 € + zwei Lastenräder), Rollerkurier (1.000 € + zwei
-   Simson-Mopeds) oder Werkstatterbe (1.000 € + Kastenwagen). Klein anfangen,
-   der Rest kommt über die ersten Aufträge.
+2. **Erbe antreten** – Name des Betriebs, Hausfarbe und was du geerbt hast:
+   den **Obsthof** von Opa Hinrich bei Werder (Havel) – 1.000 €, Felder,
+   Apfelbäume, drei Hühner, Backofen, Futtermühle, ein Lastenrad und seine
+   alte Simson. Die **Fischerei** an der Ostsee folgt in einem der nächsten
+   Updates. (Ältere Spielstände mit Kurierstart laufen unverändert weiter.)
 3. **Fuhrpark kaufen** – ohne Fahrzeug keine Spedition. Erst wenn mindestens
    eins im Hof steht, wird der Betrieb angemeldet und Karte wie Auftragsbuch
    gehen auf.
@@ -40,6 +41,62 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    Feld ist alles gesperrt – kein Scrollen, kein Danebentippen, kein Überspringen.
    Wer mittendrin neu lädt, macht dort weiter. Unter *Welt* lässt sich das Tutorial jederzeit
    wiederholen. Eigene Artwork für Lina: `lina.png` ersetzen, siehe [ART.md](ART.md).
+
+## Der Hof (3D)
+
+Der Hof ist eine eigene 3D-Ansicht im Stil von Hay Day – schwenken mit einem
+Finger, zoomen mit zwei. Alles läuft über die Spieluhr (bei 1× ist eine
+Spielminute eine Sekunde), also auch mit 3× bis 30×.
+
+* **Felder** – antippen, Saat wählen und über die leeren Felder **ziehen**.
+  Reif? Die **Sichel** über alle goldenen Felder ziehen. Gießen macht 25 %
+  schneller und einen Stern besser, **Fruchtwechsel** (andere Sorte als zuletzt)
+  bringt noch einen Stern. Je Saat gibt es zwei Ernten, manchmal eine
+  Rekordernte mit drei.
+* **Obstbäume** – Äpfel, ab Level 4 Werderaner Kirschen, ab Level 7 Birnen.
+  Antippen, wenn sie reif sind; alte Bäume tragen bessere Früchte.
+* **Tiere** – Hühner legen Eier, Kühe geben Milch. Futter kommt aus der
+  Futtermühle (Weizen + Mais). Stall antippen sammelt alles ein, Futter über
+  die Tiere ziehen füttert sie. Ein Tier antippen und streicheln: das nächste
+  Produkt wird einen Stern besser.
+* **Platz = Qualität** – je mehr Auslauf jedes Tier hat, desto besser die Ware:
+  von „zu eng – Massenhaltung“ (★) über Bodenhaltung und Freilandhaltung bis
+  „Bio-Weidehaltung“ (★★★★★). Mehr Tiere bringen mehr Eier, aber auf engem Raum
+  sinkt der Preis. Auslauf und Weide lassen sich in drei Stufen vergrößern – der
+  Zaun wächst sichtbar mit.
+* **Backofen, Mühle, Molkerei** – Rezepte antippen, sie laufen nacheinander in
+  der Warteschlange: Brot, Maisfladen, Apfelkuchen, Möhren-Muffins, Pizza,
+  Kirschtorte; Butter, Pudding, Käse; Hühner- und Kuhfutter. Weitere Plätze
+  kosten Geld.
+* **Silo und Scheune** – zeigen jede Ware mit Menge und Sternen. Volle Lager
+  lassen sich ausbauen; der Großhandel kauft sofort, zahlt aber nur den halben
+  Wert.
+* **Kundschaft** – die Bestelltafel am Tor sammelt Bestellungen aus Werder,
+  Glindow, Petzow, Geltow, Caputh, Michendorf, später Potsdam und Berlin
+  (Bäckerei, Café, Kita, Hotel, Wochenmarkt …). „Liefern“ zeigt die freien
+  Fahrzeuge mit Fahrzeit und Kosten; die Fahrt läuft danach ganz normal auf der
+  Karte und unter *Live*. Gute Qualität bringt bis zu 16 % mehr.
+* **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Molkerei, zweiter
+  Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
+  drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es.
+* **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung.
+* **Erfolgsmomente** – fliegende Waren ins Lager, Münzen und XP-Sterne,
+  Level-Feier mit allem, was neu freigeschaltet ist, Rauch aus dem Ofen,
+  drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
+  kleine Töne (abschaltbar).
+* **Linas Rundgang** – zum Start zeigt Lina mit dem Finger, was zu tun ist:
+  ernten, säen, gießen, Eier holen, füttern, backen, pflücken und die erste
+  Lieferung an die Bäckerei Hahn losschicken.
+
+### Vom Hof zur Spedition
+
+Bis Level 4 gibt es nur die eigene Ware. Dann ruft Lina an: Die Leute fragen,
+ob man nicht auch ihre Sachen mitnimmt. Mit **„Spedition gründen“** kommen
+fremde Aufträge, Büros, Etappen und alles Weitere dazu – Linas
+Dispositions-Tutorial startet. Der Hof läuft weiter und ist jederzeit über den
+Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
+Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
+Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
 ## Spielprinzip
 
@@ -256,7 +313,7 @@ bleibt die Karte links stehen und die Ansicht dockt rechts an.
 | Station oder Fahrzeug ansehen | Antippen |
 | Fahrzeug live verfolgen | Fahrzeug antippen → *live verfolgen*, oder 📡 |
 | Verfolgung beenden | Karte ziehen oder ✕ am Live-Band |
-| Tempo | Leiste links: Pause, 1×, 3×, 10×, 30× |
+| Tempo | Leiste links an der Karte: ⏸ (hält an / läuft weiter), 1×, 3×, 10×, 30× |
 | Nebel ein-/ausblenden | ☁️ |
 
 Über den **Aufträgen** sitzt eine feste Leiste: oben sortieren (💶 Erlös,
@@ -291,7 +348,8 @@ Wer nur auf 30× stellt und zusieht, verpasst das Beste – und verliert Aufträ
   drüber, und es kommt ein Gegenangebot.
 * **Störungen** 🚧 – Stau, Sturm am Flughafen, Orkan vor dem Hafen,
   Hafenstreik, Lokführerstreik, Niedrigwasser. Auf der Karte eingezeichnet,
-  im Planer als Warnung. Sind eigene Fahrten betroffen, fragt die
+  oben ein Knopf „🚧 3 Störungen ▾“, der die Liste aufklappt (antippen fliegt
+  hin), im Planer als Warnung. Sind eigene Fahrten betroffen, fragt die
   Verkehrsleitstelle: umfahren, abwarten oder um Aufschub bitten.
 * **Pannen und Vorfälle** 🔧 – hängen am Verschleiß und kommen höchstens alle
   paar Spieltage. Der Fahrer, Lokführer oder die Kapitänin ruft an (zum
@@ -582,6 +640,11 @@ loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht
 game.js                 Simulation, Routing, Wirtschaft, Oberfläche
+farmdata.js             Hof: Waren, Pflanzen, Tiere, Rezepte, Kundschaft, Notizbuch, Dorfknoten
+farm.js                 Hof: Spielstand, Ernte, Tiere mit Platz-Qualität, Bestellungen, Verkauf
+gl3d.js                 eigene kleine WebGL2-Engine: Low-Poly, Schatten, Wasser, Partikel
+farmmodels.js           alle 3D-Modelle des Hofs, prozedural gebaut
+farmview.js             3D-Hofansicht: Kamera, Gesten, Werkzeuge, Fenster, Effekte, Rundgang
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest
@@ -642,6 +705,24 @@ sichtbaren Ausschnitt zugeschnitten (Liang–Barsky). Vorher zeichnete der
 Browser bei Zoom 15 jede Strecke auf ihrer vollen Länge – Hunderttausende
 Bildpunkte, gestrichelt –, das kostete pro Bild über eine halbe Sekunde.
 Liegt der ganze Bildschirm im erschlossenen Gebiet, entfällt der Nebel ganz.
+
+### Pause und Störungsliste
+
+Den Pause-Knopf neben dem Firmennamen gibt es nicht mehr; angehalten wird mit
+⏸ oben in der Tempo-Leiste links an der Karte. Ein zweiter Tipp lässt die Uhr
+wieder laufen, solange angehalten ist, leuchtet der Knopf gelb. Die Störungen
+stehen nicht mehr als Reihe über der Karte, sondern als ein Knopf mit Anzahl,
+der eine Liste aufklappt.
+
+### 3D ohne Fremdbibliothek
+
+Die Hofansicht rendert mit einer eigenen, kleinen WebGL2-Engine (`gl3d.js`,
+rund 700 Zeilen): flach schattierte Low-Poly-Modelle mit Vertexfarben, Sonne
+mit weichen Schatten (Schattenkarte mit PCF), Himmelslicht, Nebel am Rand,
+Wasser mit Wellen und Glitzern, wiegende Pflanzen und Bäume sowie Partikel
+für Staub, Rauch, Tropfen und Herzen. Alle Modelle entstehen beim Start aus
+Grundkörpern (`farmmodels.js`) – keine einzige Modell- oder Texturdatei. Ohne
+WebGL 2 meldet die Ansicht das; Lager, Kundschaft und Laden gehen trotzdem.
 
 ### Kachelquelle ändern
 
