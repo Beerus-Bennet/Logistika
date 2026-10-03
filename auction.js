@@ -353,71 +353,230 @@ function plainText(html) {
   try { return (new DOMParser().parseFromString(String(html), "text/html").body.textContent || "").replace(/\s+/g, " ").trim(); }
   catch (_) { return String(html).replace(/<[^>]*>/g, "").trim(); }
 }
+/* Zustand für die Anzeige: wie viele Fotos da sind, was zuletzt schiefging */
+const PIC_STATE = { err: "", at: 0 };
+function withTimeout(ms) {
+  const ac = typeof AbortController === "function" ? new AbortController() : null;
+  const t = ac ? setTimeout(() => ac.abort(), ms) : 0;
+  return { signal: ac ? ac.signal : undefined, done: () => clearTimeout(t) };
+}
 async function wikiApi(params) {
   const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&" + params;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+  const to = withTimeout(15000);
+  try {
+    const r = await fetch(url, { signal: to.signal, credentials: "omit" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { to.done(); }
+}
+/* Ersatzweg: Kurzfassung des Artikels (anderer Endpunkt, liefert Titelbild) */
+async function wikiSummary(title) {
+  const to = withTimeout(12000);
+  try {
+    const r = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")), { signal: to.signal, credentials: "omit" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { to.done(); }
 }
 /* Titelbild der Wikipedia-Artikel suchen, dann Vorschaubild, Urheber und
    Lizenz holen – alles gebündelt in wenigen Anfragen, danach gespeichert. */
-async function resolvePics() {
+async function resolvePics(force) {
   if (picsBusy || typeof fetch !== "function") return;
   const now = Date.now();
-  const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 6 * 3600e3));
+  if (force) CARS.forEach(c => { if (PICS[c.id] && !PICS[c.id].src) delete PICS[c.id]; });
+  const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 40 * 60e3));
   if (!todo.length) return;
   picsBusy = true;
+  PIC_STATE.err = "";
+  let apiOk = true;
   try {
     const files = {};
     todo.forEach(c => { if (c.file) files[c.id] = c.file; });
     const wp = todo.filter(c => c.wp && !c.file);
-    for (let i = 0; i < wp.length; i += 40) {
-      const batch = wp.slice(i, i + 40);
-      const j = await wikiApi("redirects=1&prop=pageimages&piprop=name&pilicense=free&titles=" + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
-      const q = j.query || {}, map = {};
-      (q.normalized || []).forEach(n => { map[n.from] = n.to; });
-      (q.redirects || []).forEach(n => { map[n.from] = n.to; });
-      const fin = t => { let x = t, k = 0; while (map[x] && k++ < 4) x = map[x]; return x; };
-      const pages = {};
-      (q.pages || []).forEach(p => { pages[p.title] = p; });
-      batch.forEach(c => { const p = pages[fin(c.wp)]; if (p && p.pageimage) files[c.id] = p.pageimage.replace(/_/g, " "); });
-    }
-    const ids = Object.keys(files);
-    for (let i = 0; i < ids.length; i += 40) {
-      const batch = ids.slice(i, i + 40);
-      const j = await wikiApi("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=960&iiextmetadatafilter=Artist%7CLicenseShortName&titles="
-        + batch.map(id => encodeURIComponent("File:" + files[id])).join("%7C"));
-      const q = j.query || {}, map = {};
-      (q.normalized || []).forEach(n => { map[n.from] = n.to; });
-      const pages = {};
-      (q.pages || []).forEach(p => { pages[p.title] = p; });
-      batch.forEach(id => {
-        const t0 = "File:" + files[id], p = pages[map[t0] || t0];
-        const ii = p && p.imageinfo && p.imageinfo[0];
-        const src = ii && (ii.thumburl || ii.url);
-        if (!src || !/^https:\/\/upload\.wikimedia\.org\//.test(src)) return;
-        const md = ii.extmetadata || {};
-        PICS[id] = { src, page: ii.descriptionurl || "", by: plainText(md.Artist && md.Artist.value).slice(0, 70),
-                     lic: plainText(md.LicenseShortName && md.LicenseShortName.value), t: now };
-      });
+    try {
+      for (let i = 0; i < wp.length; i += 40) {
+        const batch = wp.slice(i, i + 40);
+        const j = await wikiApi("redirects=1&prop=pageimages&piprop=name&pilicense=free&titles=" + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
+        const q = j.query || {}, map = {};
+        (q.normalized || []).forEach(n => { map[n.from] = n.to; });
+        (q.redirects || []).forEach(n => { map[n.from] = n.to; });
+        const fin = t => { let x = t, k = 0; while (map[x] && k++ < 4) x = map[x]; return x; };
+        const pages = {};
+        (q.pages || []).forEach(p => { pages[p.title] = p; });
+        batch.forEach(c => { const p = pages[fin(c.wp)]; if (p && p.pageimage) files[c.id] = p.pageimage.replace(/_/g, " "); });
+      }
+      const ids = Object.keys(files);
+      for (let i = 0; i < ids.length; i += 40) {
+        const batch = ids.slice(i, i + 40);
+        const j = await wikiApi("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=960&iiextmetadatafilter=Artist%7CLicenseShortName&titles="
+          + batch.map(id => encodeURIComponent("File:" + files[id])).join("%7C"));
+        const q = j.query || {}, map = {};
+        (q.normalized || []).forEach(n => { map[n.from] = n.to; });
+        const pages = {};
+        (q.pages || []).forEach(p => { pages[p.title] = p; });
+        batch.forEach(id => {
+          const t0 = "File:" + files[id], p = pages[map[t0] || t0];
+          const ii = p && p.imageinfo && p.imageinfo[0];
+          const src = ii && (ii.thumburl || ii.url);
+          if (!src || !/^https:\/\/upload\.wikimedia\.org\//.test(src)) return;
+          const md = ii.extmetadata || {};
+          PICS[id] = { src, page: ii.descriptionurl || "", by: plainText(md.Artist && md.Artist.value).slice(0, 70),
+                       lic: plainText(md.LicenseShortName && md.LicenseShortName.value), t: now };
+        });
+      }
+    } catch (e) { apiOk = false; PIC_STATE.err = e && e.name === "AbortError" ? "Zeitüberschreitung" : (e && e.message) || "Netzwerkfehler"; }
+    /* Was noch fehlt: einzeln über die Kurzfassung des Artikels */
+    const miss = todo.filter(c => !PICS[c.id] || !PICS[c.id].src).filter(c => c.wp);
+    let fails = 0;
+    for (const c of miss) {
+      if (fails >= 3) break;
+      try {
+        const j = await wikiSummary(c.wp);
+        const im = j && (j.thumbnail || j.originalimage);
+        if (im && im.source && /^https:\/\/upload\.wikimedia\.org\//.test(im.source)) {
+          PICS[c.id] = { src: im.source.replace(/\/\d+px-/, "/960px-"), page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
+        }
+      } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = (e && e.message) || "Netzwerkfehler"; }
     }
     todo.forEach(c => { if (!PICS[c.id]) PICS[c.id] = { t: now }; });
+    if (apiOk || CARS.some(c => PICS[c.id] && PICS[c.id].src)) { if (CARS.filter(c => PICS[c.id] && PICS[c.id].src).length > CARS.length * 0.5) PIC_STATE.err = ""; }
     try { localStorage.setItem(PIC_KEY, JSON.stringify(PICS)); } catch (_) { /* voll */ }
     applyPics();
-  } catch (_) { /* offline oder gesperrt – dann bleiben die Zeichnungen */ }
+  } catch (e) { PIC_STATE.err = (e && e.message) || "Netzwerkfehler"; }
+  PIC_STATE.at = Date.now();
   picsBusy = false;
+  renderPicStatus();
+}
+function picCount() { return CARS.filter(c => PICS[c.id] && PICS[c.id].src).length; }
+/* Hinweis im Auktionshaus, wenn Fotos fehlen – mit „Erneut versuchen“ */
+function picStatusHTML() {
+  const n = picCount();
+  if (n >= CARS.length * 0.9 && !PIC_STATE.err) return "";
+  const txt = picsBusy ? "📷 Fotos werden geladen …"
+    : PIC_STATE.err ? "📷 Fotos von Wikipedia gerade nicht erreichbar (" + PIC_STATE.err + ")"
+    : "📷 " + n + " von " + CARS.length + " Fotos geladen";
+  return `<div class="picstat"><span>${esc(txt)}</span>${picsBusy ? "" : `<button class="btn tiny ghost" data-picretry="1">↻ Erneut versuchen</button>`}</div>`;
+}
+function renderPicStatus() {
+  const el = document.querySelector("#tab-market .picstat-slot");
+  if (el) { el.innerHTML = picStatusHTML(); bindPicRetry(el); }
+}
+function bindPicRetry(root) {
+  root.querySelectorAll("[data-picretry]").forEach(b => b.onclick = () => {
+    COMIC_FAIL.clear();
+    try { localStorage.removeItem(PIC_KEY); } catch (_) { /* egal */ }
+    PICS = {};
+    resolvePics(true);
+    renderPicStatus();
+  });
+}
+
+/* ------------------- Fotos im Comic-Look (photo.js) ---------------------
+   Das Originalfoto wird einmal geladen, mit dem Comic-Filter der
+   Spielerfotos gezeichnet und als JPEG im Foto-Speicher abgelegt. Bis es
+   fertig ist, steht das Originalfoto da.                               */
+const COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_Q = [];
+let comicBusy = false;
+const CAR_FX = { it: 2, sr: 22, bins: 6, phiQ: 2.4, sat: 1.25, sigma: 1.0, eps: -0.010 };
+const comicKey = id => location.origin + "/__carcomic/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
+function wantComic(id) {
+  if (COMIC_URL.has(id) || COMIC_FAIL.has(id) || COMIC_Q.includes(id)) return;
+  if (!PICS[id] || !PICS[id].src || typeof comicFilter !== "function") return;
+  COMIC_Q.push(id);
+  if (!comicBusy) setTimeout(comicNext, 60);
+}
+async function loadBitmap(blob) {
+  if (typeof createImageBitmap === "function") { try { return await createImageBitmap(blob); } catch (_) { /* weiter unten */ } }
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(blob), im = new Image();
+    im.onload = () => { res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("Bild")); };
+    im.src = u;
+  });
+}
+/* Der Filter rechnet im Hintergrund (Worker), damit nichts ruckelt;
+   ohne Worker-Unterstützung eben direkt. */
+let comicWorker = null, comicWorkerBad = false, comicSeq = 0;
+const comicWait = new Map();
+function comicRun(data, W, H) {
+  if (!comicWorker && !comicWorkerBad && typeof Worker === "function") {
+    try {
+      const src = "let phRangeTab = null, phRangeSr = 0; const PHOTO_FX = " + JSON.stringify(PHOTO_FX) + ";\n"
+        + phGauss.toString() + "\n" + phBilateral.toString() + "\n" + comicFilter.toString() + "\n"
+        + "onmessage = e => { const d = e.data; comicFilter({ width: d.w, height: d.h, data: d.px }, false, d.P); postMessage({ n: d.n, px: d.px }, [d.px.buffer]); };";
+      comicWorker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+      comicWorker.onmessage = e => { const f = comicWait.get(e.data.n); if (f) { comicWait.delete(e.data.n); f.res(e.data.px); } };
+      comicWorker.onerror = () => { comicWorkerBad = true; comicWorker = null; comicWait.forEach(f => f.rej(new Error("worker"))); comicWait.clear(); };
+    } catch (_) { comicWorkerBad = true; comicWorker = null; }
+  }
+  if (!comicWorker) { comicFilter(data, false, CAR_FX); return Promise.resolve(data.data); }
+  return new Promise((res, rej) => {
+    const n = ++comicSeq, px = new Uint8ClampedArray(data.data);
+    comicWait.set(n, { res, rej });
+    comicWorker.postMessage({ n, w: W, h: H, px, P: CAR_FX }, [px.buffer]);
+  });
+}
+async function comicNext() {
+  const id = COMIC_Q.shift();
+  if (!id) { comicBusy = false; return; }
+  comicBusy = true;
+  try {
+    const cache = typeof caches !== "undefined" ? await caches.open("logistika-carpics").catch(() => null) : null;
+    const key = comicKey(id);
+    let blob = null;
+    const hit = cache && await cache.match(key).catch(() => null);
+    if (hit) blob = await hit.blob();
+    else {
+      const to = withTimeout(20000);
+      let r;
+      try { r = await fetch(PICS[id].src, { mode: "cors", credentials: "omit", signal: to.signal }); } finally { to.done(); }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const bm = await loadBitmap(await r.blob());
+      const W0 = bm.width, H0 = bm.height, k = Math.min(1, 480 / W0);
+      const W = Math.max(1, Math.round(W0 * k)), H = Math.max(1, Math.round(H0 * k));
+      const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+      const c = cv.getContext("2d");
+      c.drawImage(bm, 0, 0, W, H);
+      if (bm.close) bm.close();
+      const data = c.getImageData(0, 0, W, H);
+      const px = await comicRun(data, W, H);
+      c.putImageData(new ImageData(new Uint8ClampedArray(px), W, H), 0, 0);
+      blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.86));
+      if (!blob) throw new Error("JPEG");
+      if (cache) cache.put(key, new Response(blob, { headers: { "Content-Type": "image/jpeg" } })).catch(() => {});
+    }
+    const url = URL.createObjectURL(blob);
+    COMIC_URL.set(id, url);
+    document.querySelectorAll(`[data-carpic="${id}"] img`).forEach(im => { im.classList.add("cx"); im.src = url; });
+  } catch (_) {
+    COMIC_FAIL.add(id);          /* dann bleibt das Originalfoto (ohne Filter) */
+  }
+  setTimeout(comicNext, 40);
 }
 function picCredit(p) { return "📷 " + (p.by || "Wikimedia Commons") + (p.lic ? " · " + p.lic : ""); }
 function applyPics() {
   document.querySelectorAll("[data-carpic]").forEach(el => {
-    if (el.querySelector("img")) return;
-    const p = PICS[el.dataset.carpic];
+    const id = el.dataset.carpic;
+    if (el.querySelector("img")) { wantComic(id); return; }
+    const p = PICS[id];
     if (!p || !p.src) return;
-    el.insertAdjacentHTML("beforeend", picImgHTML(el.dataset.carpic, p));
+    el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
   });
 }
+/* Foto lädt nicht? Der Reihe nach andere Wege probieren, dann aufgeben */
+function picFail(im) {
+  const n = +(im.dataset.try || 0) + 1;
+  im.dataset.try = n;
+  const id = im.closest("[data-carpic]") && im.closest("[data-carpic]").dataset.carpic, p = PICS[id];
+  if (!p || !p.src || n > 3) { const cr = im.nextElementSibling; if (cr && cr.classList.contains("credit")) cr.remove(); im.remove(); return; }
+  if (n === 1) { im.removeAttribute("referrerpolicy"); im.src = p.src + (p.src.includes("?") ? "&" : "?") + "r=1"; }
+  else if (n === 2) im.src = p.src.replace(/\/960px-/, "/500px-");
+  else im.src = p.src.replace(/\/thumb\//, "/").replace(/\/[^/]+$/, "");
+}
 function picImgHTML(id, p) {
-  return `<img src="${esc(p.src)}" alt="${esc(carName(CAR[id]))}" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.remove()">`
+  wantComic(id);
+  const src = COMIC_URL.get(id) || p.src;
+  return `<img src="${esc(src)}" class="${COMIC_URL.has(id) ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer" onerror="picFail(this)">`
     + `<span class="credit">${esc(picCredit(p))}</span>`;
 }
 /* Gezeichneter Platzhalter, solange kein Foto da ist (oder offline) */
@@ -595,7 +754,8 @@ function renderAuction() {
   } else {
     html = A.past.length ? `<div class="card">${A.past.map(pastRowHTML).join("")}</div>` : `<div class="empty">Noch keine Auktion beendet.</div>`;
   }
-  el.innerHTML = html;
+  el.innerHTML = `<div class="picstat-slot">${picStatusHTML()}</div>` + html;
+  bindPicRetry(el);
   bindAuctionBody(el);
   ahLiveKey = liveKey();
   resolvePics();

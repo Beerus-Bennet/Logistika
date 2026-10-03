@@ -26,13 +26,15 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    Gerät nicht, gespeichert wird nur das fertige 256-px-Porträt. Im laufenden
    Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
 2. **Erbe antreten** – Name des Betriebs, Hausfarbe und was du geerbt hast:
-   den **Obsthof** von Opa Hinrich bei Werder (Havel) – 1.000 €, Felder,
+   den **Obsthof** von Opa Hinrich bei Werder (Havel) – 500 €, Felder,
    Apfelbäume, drei Hühner, Backofen, Futtermühle, ein Lastenrad und seine
-   alte Simson. Die **Fischerei** an der Ostsee folgt in einem der nächsten
-   Updates. (Ältere Spielstände mit Kurierstart laufen unverändert weiter.)
-3. **Fuhrpark kaufen** – ohne Fahrzeug keine Spedition. Erst wenn mindestens
-   eins im Hof steht, wird der Betrieb angemeldet und Karte wie Auftragsbuch
-   gehen auf.
+   alte Simson. „Erbe antreten“ führt direkt auf den Hof, ein Fahrzeugkauf
+   ist nicht nötig. Die **Fischerei** an der Ostsee folgt in einem der
+   nächsten Updates. (Ältere Spielstände mit Kurierstart laufen unverändert
+   weiter.)
+3. **Fuhrpark kaufen** (nur Kurierstart älterer Spielstände) – ohne Fahrzeug
+   keine Spedition. Erst wenn mindestens eins im Hof steht, wird der Betrieb
+   angemeldet und Karte wie Auftragsbuch gehen auf.
 4. **Interaktives Tutorial** – Disponentin Lina Sturm geht mit dir einen
    echten Übungsauftrag durch, der genau dort startet, wo dein Fahrzeug steht:
    Auftrag finden, Leerfahrt-Hinweis lesen, Planung mit Minikarte verstehen,
@@ -72,10 +74,21 @@ Spielminute eine Sekunde), also auch mit 3× bis 30×.
   lassen sich ausbauen; der Großhandel kauft sofort, zahlt aber nur den halben
   Wert.
 * **Kundschaft** – die Bestelltafel am Tor sammelt Bestellungen aus Werder,
-  Glindow, Petzow, Geltow, Caputh, Michendorf, später Potsdam und Berlin
-  (Bäckerei, Café, Kita, Hotel, Wochenmarkt …). „Liefern“ zeigt die freien
-  Fahrzeuge mit Fahrzeit und Kosten; die Fahrt läuft danach ganz normal auf der
-  Karte und unter *Live*. Gute Qualität bringt bis zu 16 % mehr.
+  Glindow, Petzow, Geltow, Caputh, Michendorf und Potsdam (Bäckerei, Café,
+  Kita, Hotel, Wochenmarkt …), Berlin kommt erst mit der Spedition dazu.
+  „Liefern“ zeigt die freien Fahrzeuge mit Fahrzeit und Kosten; die Fahrt
+  läuft danach ganz normal auf der Karte und unter *Live*. Gute Qualität
+  bringt bis zu 16 % mehr.
+* **Echte Mengen und Preise** – gehandelt wird in üblichen Gebinden: Weizen
+  im 10-kg-Sack, Tomaten und Äpfel in 2-kg-Kisten, Eier in 6er-Schachteln,
+  Milch in 5-l-Kannen, Butter zu 250 g. Bestellungen zeigen die echte Menge
+  („18 Eier, 4 kg Tomaten“) und zahlen den Hofladenpreis plus Liefergebühr –
+  rund 25 bis 35 € statt Fantasiepreisen. Auch Saat, Tiere, Ställe und
+  Ausbauten kosten entsprechend weniger.
+* **Nur die Region** – vor der Speditionsgründung zeigt die Karte nur den Hof,
+  die Dörfer und Potsdam; Berlin liegt noch unter dem Nebel.
+* **Teich** – mit Tiefenverlauf, feinen Wellen, Sandufer, Schilf, Seerosen,
+  Steg mit Ruderboot und Enten, die ihre Runden ziehen.
 * **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Molkerei, zweiter
   Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
   drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es.
@@ -443,8 +456,12 @@ zu gebrauchte Nutzfahrzeuge aus einer Insolvenzmasse.
 
 Die Fotos lädt das Spiel zur Laufzeit von Wikipedia/Wikimedia Commons (das
 Titelbild des jeweiligen Artikels) und zeigt Fotograf und Lizenz direkt am
-Bild; der Service Worker speichert sie für offline. Ohne Netz erscheint eine
-gezeichnete Silhouette in der Originalfarbe.
+Bild. Jedes Foto läuft einmal durch denselben Comic-Filter wie die
+Spielerfotos (im Hintergrund, ohne Ruckeln) und wird danach gespeichert – so
+sind es die echten Autos, aber im Look des Spiels. Klappt ein Weg nicht,
+probiert das Spiel andere (Artikel-Kurzfassung, andere Bildgröße); bleibt
+Wikipedia unerreichbar, sagt ein Hinweis warum und bietet „Erneut versuchen“.
+Bis dahin steht eine gezeichnete Silhouette in der Originalfarbe.
 
 ### Zoll
 
@@ -471,7 +488,8 @@ Freight (Etappe 4) und Pacific Star Lines (Etappe 5).
 
 ### Lackierung & Logo
 
-Unter *Flotte* oder *Welt* → „🎨 Lackierung & Logo“: Grund- und Zweitfarbe,
+Unter *Flotte* oder *Welt* → „🎨 Lackierung & Logo“: Grund- und Zweitfarbe
+(acht Vorgaben oder jede beliebige Farbe über das Farbrad mit Helligkeitsregler),
 sieben Muster (Rallyestreifen, Zweifarbig, Diagonal, Welle, Zielflagge,
 Flammen), ein Logo als Monogramm oder Symbol in fünf Formen – live an einem
 Transporter mit Firmennamen. Lackieren kostet je Fahrzeug, lackierte

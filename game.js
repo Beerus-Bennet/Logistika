@@ -298,6 +298,8 @@ function isUnlocked(id) {
   const n = N[id];
   if (!n) return false;
   if (n.home) return !!(S.farm && S.farm.kind === n.home);
+  /* Hofphase: nur die Region um den Hof (Dörfer und Potsdam), Berlin liegt noch im Nebel */
+  if (S.farm && !S.farm.logi && !S.farm.sold) return !!n.farmX;
   if (n.farmX && S.farm) return true;
   return n.stage <= S.stage;
 }
@@ -1241,7 +1243,7 @@ function acceptOrder(vi) {
   const ps = planState; if (!ps) return;
   const o = ps.order, v = ps.variants[vi];
   if (o.farm && typeof farmOrderReady === "function" && !farmOrderReady(o))
-    return toast("🧺 Es fehlt noch Ware: " + farmMissing(o.farm.items).map(m => m.need + "× " + FITEMS[m.id].n).join(", "), "warn");
+    return toast("🧺 Es fehlt noch Ware: " + farmMissing(o.farm.items).map(m => fqty(m.id, m.need)).join(", "), "warn");
   startJob(o, v, ps.assign);
   /* Erst Lina Bescheid geben, dann schließen – sonst hielte sie das
      Schließen für ein Abbrechen und schickte einen zurück zur Liste. */
@@ -1561,7 +1563,7 @@ function finishLeg(job, veh) {
     logMoney("pablo", o.shipper + " · " + kgf(o.pablo.kg), pay);
     if (typeof pabloDelivered === "function") pabloDelivered(o, pay);
   } else if (o.farm) {
-    logMoney("farm", o.shipper + " · " + Object.keys(o.farm.items).map(id => o.farm.items[id] + "× " + FITEMS[id].n).join(", "), pay);
+    logMoney("farm", o.shipper + " · " + Object.keys(o.farm.items).map(id => fqty(id, o.farm.items[id])).join(", "), pay);
     if (typeof farmDelivered === "function") farmDelivered(o, pay);
   } else logMoney("job", o.shipper + " · " + N[o.from].short + " → " + N[o.to].short, pay);
   if (job.cost > 0) logMoney("drive", "Fahrt und Umschlag · " + o.shipper, -job.cost);

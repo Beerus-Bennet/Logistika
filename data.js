@@ -572,6 +572,8 @@ const FOG = [
   { base: 2900, perLevel: 210 }
 ];
 function fogRadiusKm(stage, lvl) {
+  /* Auf dem Hof sieht man nur die Gegend um Werder – Berlin bleibt im Nebel */
+  if (typeof farmPhase === "function" && farmPhase()) return Math.round(7 + 1.2 * Math.max(0, lvl - 1));
   const f = FOG[Math.max(0, Math.min(FOG.length - 1, stage - 1))];
   return Math.round(f.base + f.perLevel * Math.max(0, lvl - 1));
 }

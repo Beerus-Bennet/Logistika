@@ -788,6 +788,116 @@ const FM = (() => {
     for (let i = 0; i < w * d * 1.5; i++) b.ico(0.05, 0xc2b28a, { x: (rnd() - 0.5) * (w - 0.2), y: 0.02, z: (rnd() - 0.5) * (d - 0.2), flat: 0.4 });
     return b;
   }
+  /* ---------------------------- Teich -------------------------------- */
+  const pondR = (r, a) => r * (1 + 0.13 * Math.sin(2 * a + 0.6) + 0.07 * Math.sin(3 * a + 2.1) + 0.04 * Math.sin(5 * a + 0.3));
+  const lerpC = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
+  /* Ringe zwischen zwei Abständen vom Ufer, Farbe läuft weich über */
+  function ringBand(b, r, d0, d1, c0, c1, y, seg) {
+    seg = seg || 64;
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      const P = (a, d) => { const R = pondR(r, a) + d; return [Math.cos(a) * R, y, Math.sin(a) * R]; };
+      const p00 = P(a0, d0), p01 = P(a1, d0), p10 = P(a0, d1), p11 = P(a1, d1);
+      b.triV(p00, p11, p01, c0, c1, c0);
+      b.triV(p00, p10, p11, c0, c1, c1);
+    }
+  }
+  function pondBank(r) {
+    const b = new MB();
+    ringBand(b, r, 1.0, 0.5, 0x7fb444, 0xc9b98c, 0.012);        /* Wiese → trockener Sand */
+    ringBand(b, r, 0.5, 0.15, 0xc9b98c, 0x968566, 0.016);       /* Sand → nasser Sand */
+    ringBand(b, r, 0.15, -0.35, 0x968566, 0x75704f, 0.018);     /* Uferschlamm unter dem Wasserrand */
+    /* Steine am Ufer */
+    G3.seed(941);
+    for (let i = 0; i < 9; i++) {
+      const a = rnd() * 6.28, R = pondR(r, a) + 0.35 + rnd() * 0.5;
+      b.noise(0.1, () => b.ico(0.12 + rnd() * 0.12, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: Math.cos(a) * R, y: 0.03, z: Math.sin(a) * R, jitter: 0.5, flat: 0.55 }));
+    }
+    return b;
+  }
+  /* Wasser: tief in der Mitte, türkis und hell am Rand */
+  function pondWater(r) {
+    const b = new MB(), seg = 72, rings = [0, 0.35, 0.62, 0.82, 0.93, 1.0], cols = [0x174f7a, 0x1d5f8d, 0x2a7aa6, 0x3f96b4, 0x62adb4, 0x8cbca8];
+    const P = (a, f) => { const R = f >= 1 ? pondR(r, a) + 0.06 : pondR(r, a) * f; return [Math.cos(a) * R, 0, Math.sin(a) * R]; };
+    for (let k = 0; k < rings.length - 1; k++)
+      for (let i = 0; i < seg; i++) {
+        const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+        const f0 = rings[k], f1 = rings[k + 1];
+        if (f0 === 0) { b.triV([0, 0, 0], P(a1, f1), P(a0, f1), cols[0], cols[1], cols[1]); continue; }
+        b.triV(P(a0, f0), P(a1, f0), P(a1, f1), cols[k], cols[k], cols[k + 1]);
+        b.triV(P(a0, f0), P(a1, f1), P(a0, f1), cols[k], cols[k + 1], cols[k + 1]);
+      }
+    return b;
+  }
+  /* heller Saum, wo das Wasser ans Ufer schwappt */
+  function pondFoam(r) {
+    const b = new MB();
+    ringBand(b, r, 0.0, 0.12, 0xf2f7f4, 0xf2f7f4, 0, 72);
+    return b;
+  }
+  /* Schilf mit Rohrkolben – eigener Knoten, wiegt im Wind */
+  function pondReeds(r) {
+    G3.seed(951);
+    const b = new MB();
+    [0.5, 1.25, 2.3, 3.4, 4.3, 5.4].forEach(a0 => {
+      for (let i = 0; i < 11; i++) {
+        const a = a0 + (rnd() - 0.5) * 0.35, R = pondR(r, a) + (rnd() - 0.55) * 0.55;
+        const x = Math.cos(a) * R, z = Math.sin(a) * R, h = 0.45 + rnd() * 0.5;
+        b.at({ x, z, rx: (rnd() - 0.5) * 0.25, rz: (rnd() - 0.5) * 0.25 }, () => {
+          b.box(0.03, h, 0.03, rnd() < 0.5 ? 0x5c8f34 : 0x6fa23d);
+          if (rnd() < 0.45) b.box(0.06, 0.15, 0.06, 0x6b4426, { y: h - 0.05 });
+          if (rnd() < 0.5) b.box(0.012, 0.32, 0.07, 0x78ad44, { y: 0.02, rz: 0.35, x: 0.03 });
+        });
+      }
+    });
+    return b;
+  }
+  /* Seerosen, Steg und Ruderboot (liegen auf dem Wasser, ohne Wasser-Shader) */
+  function pondProps(r) {
+    G3.seed(961);
+    const b = new MB();
+    [[0.6, 0.55], [0.85, 0.5], [0.72, 0.62], [3.7, 0.55], [3.9, 0.48], [3.55, 0.62], [5.0, 0.6]].forEach(([a, f], i) => {
+      const R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R, s = 0.17 + rnd() * 0.09, ry = rnd() * 6.28;
+      b.at({ x, z, y: 0.035, ry }, () => {
+        const seg = 12;
+        for (let k = 1; k < seg; k++) {            /* Blatt mit Kerbe */
+          const p0 = k / seg * Math.PI * 2, p1 = (k + 1) / seg * Math.PI * 2;
+          b.tri([0, 0, 0], [Math.cos(p1) * s, 0, Math.sin(p1) * s], [Math.cos(p0) * s, 0, Math.sin(p0) * s], k % 2 ? 0x4c9a3a : 0x55a542);
+        }
+        if (i % 3 === 0) { b.ico(0.055, 0xf6a7c8, { y: 0.03, x: s * 0.2, flat: 0.7 }); b.ico(0.025, 0xffe27a, { y: 0.06, x: s * 0.2 }); }
+      });
+    });
+    /* Steg Richtung Hof */
+    const a = Math.PI, R0 = pondR(r, a);
+    b.at({ x: Math.cos(a) * (R0 - 0.9), z: Math.sin(a) * (R0 - 0.9) + 0.4, ry: 0 }, () => {
+      b.noise(0.12, () => { for (let i = 0; i < 10; i++) b.box(0.26, 0.05, 0.62, i % 2 ? 0xb07d4c : 0xa1703f, { x: -1.2 + i * 0.27, y: 0.2 }); });
+      b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.15, z: 0.28 }); b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.15, z: -0.28 });
+      [-1.25, -0.25, 0.75, 1.3].forEach(x => { b.box(0.09, 0.42, 0.09, 0x6b4a2e, { x, y: -0.17, z: 0.3 }); b.box(0.09, 0.42, 0.09, 0x6b4a2e, { x, y: -0.17, z: -0.3 }); });
+      /* Ruderboot am Steg */
+      b.at({ x: 0.1, z: 0.78, y: 0.03, ry: 0.12 }, () => {
+        b.noise(0.08, () => b.cyl(0.55, 0.42, 0.24, 12, 0x3f78c8, { sx: 0.44, sz: 1.0, ry: Math.PI / 2, top: 0x2b5a99 }));
+        b.box(0.92, 0.04, 0.3, 0xb07d4c, { y: 0.18 });
+        b.box(0.12, 0.04, 0.36, 0xb07d4c, { y: 0.2, x: 0.3 }); b.box(0.12, 0.04, 0.36, 0xb07d4c, { y: 0.2, x: -0.28 });
+        b.box(0.9, 0.025, 0.04, 0xcf9a62, { y: 0.24, z: 0.2, ry: 0.25 });
+      });
+    });
+    return b;
+  }
+  function duck(v) {
+    G3.seed(980 + (v || 0));
+    const b = new MB();
+    const body = v ? 0x9a7a5a : 0x8e8a82, head = v ? 0x8a6a4a : 0x1f6b3a;
+    b.sphere(0.13, 9, 6, body, { y: 0.06, sy: 0.6, sz: 1.35, smooth: true });
+    b.cone(0.07, 0.12, 5, v ? 0x6f5236 : 0xf2f0ea, { z: -0.17, y: 0.1, rx: -1.25 });
+    if (!v) b.box(0.02, 0.025, 0.16, 0xf6f6f6, { y: 0.11, x: 0, z: 0.0 });
+    b.at({ z: 0.13, y: 0.2 }, () => {
+      b.box(0.07, 0.1, 0.07, v ? body : 0xffffff, { y: -0.08 });
+      b.sphere(0.07, 8, 6, head, { smooth: true });
+      b.box(0.06, 0.025, 0.09, 0xf2a531, { z: 0.08, y: -0.01 });
+      b.box(0.018, 0.018, 0.01, 0x15161a, { x: 0.065, y: 0.015, z: 0.03 }); b.box(0.018, 0.018, 0.01, 0x15161a, { x: -0.065, y: 0.015, z: 0.03 });
+    });
+    return b;
+  }
   function lakeShore(r) {
     G3.seed(920);
     const b = new MB();
@@ -831,6 +941,7 @@ const FM = (() => {
     C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
     board, shed, gate, fieldSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
-    lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB
+    lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,
+    pondR, pondBank, pondWater, pondFoam, pondReeds, pondProps, duck
   };
 })();

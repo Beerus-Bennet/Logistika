@@ -130,8 +130,8 @@ function phBilateral(src, W, H, rad, ss, sr) {
   }
   return out;
 }
-function comicFilter(id, strong) {
-  const P = strong ? PHOTO_FX.stark : PHOTO_FX.comic;
+function comicFilter(id, strong, preset) {
+  const P = preset || (strong ? PHOTO_FX.stark : PHOTO_FX.comic);
   const W = id.width, H = id.height, p = id.data, n = W * H;
   let rgb = new Float32Array(n * 3), first = null;
   const lum0 = new Float32Array(n);

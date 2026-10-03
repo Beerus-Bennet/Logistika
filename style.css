@@ -2193,3 +2193,36 @@ body.tab-farm #farmTut.on~#farmQuest{display:none}
 /* Wischen in den Hof-Fenstern erlauben (touch-action wird von Vorfahren eingeschränkt) */
 #farm{touch-action:auto}
 #farmCv{touch-action:none}
+
+/* ---------------------- v37: Farbrad (Lackierung & Logo) ---------------------- */
+.liv-wheel{position:relative;aspect-ratio:1;border-radius:50%;border:2.5px solid var(--ink);cursor:pointer;padding:0;
+  background:conic-gradient(from 0deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)}
+.liv-wheel i{position:absolute;inset:26%;border-radius:50%;background:#fff;border:2px solid var(--ink)}
+.liv-wheel.on i{background:var(--c)}
+.liv-wheel.on{box-shadow:0 0 0 3px #fff,0 0 0 5.5px var(--ink);transform:scale(.9)}
+.liv-wheel.open{box-shadow:0 0 0 3px var(--amber),0 0 0 5.5px var(--ink)}
+.liv-pick{display:flex;gap:12px;align-items:center;margin-top:8px;padding:10px;background:#fff;border:2.5px solid var(--ink);border-radius:14px;
+  box-shadow:var(--shadow-sm);animation:fpop .16s ease}
+.lp-wheel{position:relative;flex:none;width:min(170px,44vw);aspect-ratio:1}
+.lp-wheel canvas{width:100%;height:100%;display:block;border-radius:50%;touch-action:none;cursor:crosshair;
+  box-shadow:0 0 0 2.5px var(--ink)}
+.lp-dot{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;
+  box-shadow:0 0 0 2px var(--ink),0 2px 4px rgba(0,0,0,.35);pointer-events:none}
+.lp-side{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.lp-prev{height:38px;border-radius:10px;border:2.5px solid var(--ink)}
+.lp-hex{font-size:14px;letter-spacing:.5px}
+.lp-lab{font-size:10.5px;font-weight:800;text-transform:uppercase;opacity:.65}
+.lp-val{width:100%;-webkit-appearance:none;appearance:none;height:16px;border-radius:9px;border:2px solid var(--ink);
+  background:linear-gradient(90deg,#000,var(--top,#f00));outline:none}
+.lp-val::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--ink);cursor:pointer}
+.lp-val::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--ink);cursor:pointer}
+.lp-side .btn{margin-top:2px;align-self:flex-start}
+
+/* ---------------------- v37: Autofotos im Comic-Look ---------------------- */
+.carpic img.cx{animation:cxin .45s ease}
+@keyframes cxin{from{filter:saturate(.3) brightness(1.15)}to{filter:none}}
+.picstat{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 9px;padding:7px 10px;
+  background:#fff8e6;border:2px solid var(--ink);border-radius:12px;font-size:12px;font-weight:800}
+.picstat .btn{margin-top:0}
+.picstat-slot:empty{display:none}
+.liv-sw .liv-wheel{background:conic-gradient(from 0deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)}

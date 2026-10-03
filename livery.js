@@ -109,13 +109,86 @@ function nameSize(lines) { const m = Math.max(...lines.map(l => l.length)); retu
 /* -------------------------------- Editor ------------------------------- */
 let livDraft = null;
 function openLivery() {
+  livWheel = null;
   livDraft = JSON.parse(JSON.stringify(livery()));
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderLivery();
 }
 function closeLivery() { livDraft = null; closeModal(); }
+/* ------------------------------ Farbwahl ---------------------------------
+   Acht schnelle Vorgaben plus Farbrad: Farbton rundherum, Sättigung nach
+   außen, Helligkeit per Regler – jede beliebige Farbe.                   */
+const LIV_QUICK = ["#2f6fed", "#20a97a", "#f2c200", "#ff6a2b", "#e2465f", "#7c5cff", "#ffffff", "#0d1b2a"];
+let livWheel = null;                               /* welches Farbfeld gerade das Rad offen hat */
+function hexToHsv(hex) {
+  const h = String(hex || "#000").replace("#", ""), n = parseInt(h.length === 3 ? h.split("").map(x => x + x).join("") : h, 16) || 0;
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let hu = 0;
+  if (d > 1e-6) { if (mx === r) hu = ((g - b) / d) % 6; else if (mx === g) hu = (b - r) / d + 2; else hu = (r - g) / d + 4; hu *= 60; if (hu < 0) hu += 360; }
+  return { h: hu, s: mx ? d / mx : 0, v: mx };
+}
+function hsvToRgb(h, s, v) {
+  const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+const hsvToHex = (h, s, v) => "#" + hsvToRgb(h, s, v).map(x => x.toString(16).padStart(2, "0")).join("");
 function sw(attr, cur) {
-  return `<div class="liv-sw">${LIV_COLORS.map(c => `<button data-${attr}="${c}" class="${c === cur ? "on" : ""}" style="--c:${c}" aria-label="${c}"></button>`).join("")}</div>`;
+  cur = String(cur || "").toLowerCase();
+  const custom = !LIV_QUICK.includes(cur), open = livWheel === attr;
+  const hsv = hexToHsv(cur);
+  return `<div class="liv-sw">${LIV_QUICK.map(c => `<button data-${attr}="${c}" class="${c === cur ? "on" : ""}" style="--c:${c}" aria-label="${c}"></button>`).join("")}
+      <button class="liv-wheel${custom ? " on" : ""}${open ? " open" : ""}" data-wheel="${attr}" style="--c:${cur}" aria-label="Eigene Farbe wählen" title="Eigene Farbe"><i></i></button></div>
+    ${open ? `<div class="liv-pick" data-pick="${attr}">
+      <div class="lp-wheel"><canvas width="360" height="360"></canvas><span class="lp-dot"></span></div>
+      <div class="lp-side">
+        <div class="lp-prev" style="background:${cur}"></div>
+        <b class="lp-hex">${cur.toUpperCase()}</b>
+        <label class="lp-lab">Helligkeit</label>
+        <input class="lp-val" type="range" min="8" max="100" value="${Math.round(hsv.v * 100)}" aria-label="Helligkeit">
+        <button class="btn tiny" data-wheeldone="1">Fertig</button>
+      </div>
+    </div>` : ""}`;
+}
+/* Rad zeichnen und bedienen; set(hex) schreibt die Farbe in den Entwurf */
+function bindWheel(box, cur, set, onLive) {
+  const cv = box.querySelector("canvas"), dot = box.querySelector(".lp-dot"), val = box.querySelector(".lp-val");
+  const prev = box.querySelector(".lp-prev"), hexEl = box.querySelector(".lp-hex");
+  const st = hexToHsv(cur);
+  const draw = () => {
+    const c = cv.getContext("2d"), W = cv.width, R = W / 2 - 2, id = c.createImageData(W, W), p = id.data;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      const dx = x - W / 2, dy = y - W / 2, r = Math.hypot(dx, dy) / R;
+      const i = (y * W + x) * 4;
+      if (r > 1) { p[i + 3] = 0; continue; }
+      const h = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+      const [rr, gg, bb] = hsvToRgb(h, r, st.v);
+      p[i] = rr; p[i + 1] = gg; p[i + 2] = bb; p[i + 3] = r > 0.985 ? Math.round((1 - r) / 0.015 * 255) : 255;
+    }
+    c.putImageData(id, 0, 0);
+    val.style.setProperty("--top", hsvToHex(st.h, st.s, 1));
+  };
+  const place = () => {
+    const a = st.h * Math.PI / 180, r = st.s * 50;
+    dot.style.left = (50 + Math.sin(a) * r) + "%"; dot.style.top = (50 - Math.cos(a) * r) + "%";
+    const hex = hsvToHex(st.h, st.s, st.v);
+    dot.style.background = hex; prev.style.background = hex; hexEl.textContent = hex.toUpperCase();
+    return hex;
+  };
+  let raf = 0;
+  const apply = () => { const hex = place(); set(hex); if (!raf) raf = requestAnimationFrame(() => { raf = 0; onLive(hex); }); };
+  const pickAt = e => {
+    const b = cv.getBoundingClientRect(), dx = e.clientX - b.left - b.width / 2, dy = e.clientY - b.top - b.height / 2;
+    st.h = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    st.s = Math.min(1, Math.hypot(dx, dy) / (b.width / 2));
+    if (st.v < 0.15) { st.v = 0.85; val.value = 85; draw(); }   /* aus Schwarz heraus: erst mal hell */
+    apply();
+  };
+  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); pickAt(e); };
+  cv.onpointermove = e => { if (cv.hasPointerCapture(e.pointerId)) pickAt(e); };
+  val.oninput = () => { st.v = +val.value / 100; draw(); apply(); };
+  draw(); place();
 }
 function fleetPaintInfo() {
   const todo = S.fleet.filter(f => paintable(vType(f.type)) && f.liv !== (livery().ver || 1) && (f.phase === "idle"));
@@ -161,10 +234,25 @@ function renderLivery() {
   </div>`;
   const re = () => renderLivery();
   $("#mClose").onclick = closeLivery;
-  $$("#modalBody [data-c1]").forEach(b => b.onclick = () => { d.c1 = b.dataset.c1; re(); });
-  $$("#modalBody [data-c2]").forEach(b => b.onclick = () => { d.c2 = b.dataset.c2; re(); });
-  $$("#modalBody [data-lbg]").forEach(b => b.onclick = () => { L.bg = b.dataset.lbg; re(); });
-  $$("#modalBody [data-lfg]").forEach(b => b.onclick = () => { L.fg = b.dataset.lfg; re(); });
+  $$("#modalBody [data-c1]").forEach(b => b.onclick = () => { d.c1 = b.dataset.c1; livWheel = null; re(); });
+  $$("#modalBody [data-c2]").forEach(b => b.onclick = () => { d.c2 = b.dataset.c2; livWheel = null; re(); });
+  $$("#modalBody [data-lbg]").forEach(b => b.onclick = () => { L.bg = b.dataset.lbg; livWheel = null; re(); });
+  $$("#modalBody [data-lfg]").forEach(b => b.onclick = () => { L.fg = b.dataset.lfg; livWheel = null; re(); });
+  /* Farbrad: auf, zu, und beim Ziehen nur die Vorschauen neu zeichnen */
+  const setters = { c1: v => { d.c1 = v; }, c2: v => { d.c2 = v; }, lbg: v => { L.bg = v; }, lfg: v => { L.fg = v; } };
+  const getters = { c1: () => d.c1, c2: () => d.c2, lbg: () => L.bg, lfg: () => L.fg };
+  $$("#modalBody [data-wheel]").forEach(b => b.onclick = () => { livWheel = livWheel === b.dataset.wheel ? null : b.dataset.wheel; re(); });
+  $$("#modalBody [data-wheeldone]").forEach(b => b.onclick = () => { livWheel = null; re(); });
+  const pk = $("#modalBody [data-pick]");
+  if (pk) {
+    const k = pk.dataset.pick;
+    bindWheel(pk, getters[k](), setters[k], hex => {
+      const v = $("#modalBody .liv-prev"); if (v) v.innerHTML = vanSVG(d, 340, "ed");
+      const p = $("#modalBody .liv-lprev"); if (p) p.innerHTML = logoSVG(L, 96, "big");
+      const w = $(`#modalBody [data-wheel="${k}"]`); if (w) { w.style.setProperty("--c", hex); w.classList.add("on"); }
+      $$(`#modalBody [data-${k}]`).forEach(x => x.classList.remove("on"));
+    });
+  }
   $$("#modalBody [data-pat]").forEach(b => b.onclick = () => { d.pat = b.dataset.pat; re(); });
   $$("#modalBody [data-shape]").forEach(b => b.onclick = () => { L.shape = b.dataset.shape; re(); });
   $$("#modalBody [data-lmode]").forEach(b => b.onclick = () => { L.mode = b.dataset.lmode; re(); });

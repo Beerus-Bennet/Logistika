@@ -122,6 +122,13 @@ const G3 = (() => {
       return this;
     }
     quad(a, b, c, d, color) { this.tri(a, b, c, color); this.tri(a, c, d, color); return this; }
+    /* Dreieck mit eigener Farbe je Ecke (weiche Verläufe: Wasser, Ufer) */
+    triV(a, b, c, ca, cb, cc) {
+      const A = xf(this.M, a), B = xf(this.M, b), C = xf(this.M, c);
+      const n = norm(cross(sub(B, A), sub(C, A)));
+      this.v.push(...A, ...n, ...col(ca), ...B, ...n, ...col(cb), ...C, ...n, ...col(cc));
+      return this;
+    }
     /* Quader: Grundfläche mittig auf y=0 (o.c = mittig in y) */
     box(w, h, d, color, o) {
       o = o || {};
@@ -311,7 +318,6 @@ const G3 = (() => {
       w.x += sin(uTime * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
       w.z += cos(uTime * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
     }
-    if (uWater > 0.0) w.y += sin(uTime * 1.1 + w.x * 0.8) * 0.025 + cos(uTime * 0.85 + w.z * 1.1) * 0.025;
     vW = w.xyz; vNor = mat3(uModel) * aNor; vCol = aCol; vL = uLVP * w;
     gl_Position = uVP * w;
   }`;
@@ -333,9 +339,14 @@ const G3 = (() => {
   void main(){
     vec3 n = normalize(vNor);
     if (uWater > 0.5) {
-      float dx = cos(uTime * 1.1 + vW.x * 0.8) * 0.08 + cos(uTime * 2.3 + vW.x * 3.1 + vW.z) * 0.05;
-      float dz = -sin(uTime * 0.85 + vW.z * 1.1) * 0.08 + cos(uTime * 1.9 + vW.z * 2.7 - vW.x) * 0.05;
-      n = normalize(vec3(-dx, 1.0, -dz));
+      /* kleine Kräuselwellen aus vier Richtungen */
+      vec2 p = vW.xz, g = vec2(0.0);
+      vec2 d1 = vec2(0.8, 0.6), d2 = vec2(-0.5, 0.86), d3 = vec2(0.95, -0.31), d4 = vec2(-0.7, -0.71);
+      g += d1 * cos(dot(p, d1) * 2.1 + uTime * 1.2) * 0.030;
+      g += d2 * cos(dot(p, d2) * 3.6 + uTime * 1.6) * 0.022;
+      g += d3 * cos(dot(p, d3) * 6.3 + uTime * 2.3) * 0.014;
+      g += d4 * cos(dot(p, d4) * 10.1 + uTime * 3.0) * 0.009;
+      n = normalize(vec3(-g.x, 1.0, -g.y));
     }
     float d = dot(n, uSunDir);
     float wrap = clamp((d + 0.2) / 1.2, 0.0, 1.0);
@@ -344,8 +355,10 @@ const G3 = (() => {
     vec3 c = vCol * (amb + uSunCol * wrap * sh);
     if (uWater > 0.5) {
       vec3 v = normalize(uCam - vW); vec3 h = normalize(uSunDir + v);
-      c += pow(max(dot(n, h), 0.0), 70.0) * 0.9 * sh * uSunCol;
-      c = mix(c, uSky * 1.05, pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.45);
+      c = vCol * (amb * 0.95 + uSunCol * 0.5 * sh);
+      float fr = 0.12 + 0.6 * pow(1.0 - max(dot(n, v), 0.0), 4.0);        /* Himmel spiegelt sich */
+      c = mix(c, uSky * 1.25 + vec3(0.06, 0.08, 0.1), fr);
+      c += pow(max(dot(n, h), 0.0), 180.0) * 1.6 * sh * uSunCol;           /* Glitzern */
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
     float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);

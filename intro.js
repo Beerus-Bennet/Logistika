@@ -15,7 +15,7 @@ const ORIGINS = [
     text: "Jahrelang Pizza und Apothekenfahrten – jetzt auf eigene Rechnung, mit zwei Mopeds." },
   { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"], hidden: true,
     text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." },
-  { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 1000, gifts: ["v-bullitt", "v-simson"],
+  { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 500, gifts: ["v-bullitt", "v-simson"],
     text: "Opa Hinrich hat dir seinen Obsthof bei Werder (Havel) vererbt – mit Feldern, Apfelbäumen, Hühnern, Backofen, einem Lastenrad und seiner alten Simson." },
   { id: "fisch", name: "Fischerei-Erbe", farm: "fisch", icon: "🐟", soon: true, cash: 1000, gifts: [],
     text: "Die Fischerei deiner Tante an der Ostsee: Kutter, Räucherei, Muschelbänke und eine kleine Schmiede für Perlenschmuck." }
@@ -78,6 +78,12 @@ function startIntro() {
   INTRO.draft.avatar.acc = 0;
   INTRO.step = S.phase === "founding" ? 3 : 0;
   if (S.phase === "founding" && S.player) INTRO.draft = JSON.parse(JSON.stringify(S.player));
+  /* Spielstand steckt noch in der Gründung eines Hofs: gleich auf den Hof */
+  if (S.phase === "founding" && S.player && ORIGINS[S.player.origin] && ORIGINS[S.player.origin].farm && S.fleet.length) {
+    $("#intro").classList.add("on");
+    finishFounding();
+    return;
+  }
   $("#intro").classList.add("on");
   renderIntro();
 }
@@ -85,7 +91,8 @@ function startIntro() {
 function renderIntro() {
   const el = $("#intro");
   const d = INTRO.draft;
-  const dots = [0, 1, 2, 3].map(i => `<i class="${i === INTRO.step ? "on" : ""}"></i>`).join("");
+  const farmStart = ORIGINS[d.origin] && ORIGINS[d.origin].farm;
+  const dots = (farmStart ? [0, 1, 2] : [0, 1, 2, 3]).map(i => `<i class="${i === INTRO.step ? "on" : ""}"></i>`).join("");
   let body = "";
 
   /* ---------- 0: Willkommen ---------- */
@@ -371,13 +378,15 @@ function beginFounding() {
     v.gift = true;
     S.fleet.push(v);
   });
+  /* Erben brauchen keinen Fahrzeugkauf – Lastenrad und Simson stehen schon im Schuppen */
+  if (o.farm) { finishFounding(); return; }
   INTRO.step = 3;
   renderIntro();
   save();
 }
 
 function finishFounding() {
-  if (!S.fleet.length) return;
+  if (!S.fleet.length || S.phase === "play") return;
   S.phase = "play";
   S.time = 6 * 60;
   S.lastDay = 0;

@@ -143,6 +143,34 @@ function farmMissing(items) {
 }
 function qStars(q) { const s = Math.max(1, Math.min(5, Math.round(q || 0))); return "★".repeat(s) + "☆".repeat(5 - s); }
 
+/* ------------------------ Mengen anzeigen -----------------------------
+   Gerechnet wird in Gebinden (Sack, Kiste, Schachtel …), gezeigt wird die
+   echte Menge: „20 kg Weizen“, „18 Eier“, „2 Brote“, „750 g Butter“.    */
+const fnum = x => fmt(x, Math.abs(x - Math.round(x)) > 1e-6 ? 1 : 0);
+function famt(id, n) {
+  const it = FITEMS[id];
+  let x = n * (it.a || 1), u = it.u || "";
+  if (u === "g" && x >= 1000) { x /= 1000; u = "kg"; }
+  return fnum(x) + (u ? " " + u : "");
+}
+function fqty(id, n) {
+  const it = FITEMS[id], x = n * (it.a || 1);
+  if (it.u) return famt(id, n) + " " + it.n;
+  return fnum(x) + " " + (Math.abs(x - 1) < 1e-6 && it.sg ? it.sg : it.n);
+}
+/* „6/18“, „4/6 kg“ – vorhanden/benötigt */
+function fpair(id, have, need) {
+  const it = FITEMS[id], a = it.a || 1;
+  let u = it.u || "", k = 1;
+  if (u === "g" && need * a >= 1000) { u = "kg"; k = 1000; }
+  return fnum(have * a / k) + "/" + fnum(need * a / k) + (u ? " " + u : "");
+}
+/* Geldbeträge auf dem Hof: ganze Euro ohne Komma, sonst mit Cent */
+function eur(n) {
+  const r = Math.round(n * 100) / 100;
+  return Math.abs(r - Math.round(r)) < 0.005 ? fmt(Math.round(r), 0) + " €" : fmt(r, 2) + " €";
+}
+
 /* ------------------------------- XP ----------------------------------- */
 function farmXP(n) {
   if (!n) return;
@@ -390,7 +418,7 @@ function farmStoreUp(st) {
 /* Großhandel: sofort Geld, aber nur der halbe Wert */
 function farmSellPrice(id, n) {
   const q = farmQ(id) || 3;
-  return Math.max(1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * 0.08)));
+  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * 0.08) * 10) / 10);
 }
 function farmSell(id, n) {
   n = Math.min(n, farmInv(id));
@@ -399,7 +427,7 @@ function farmSell(id, n) {
   farmTake(id, n);
   S.money += m; S.revenue += m;
   S.farm.stats.earned += m;
-  logMoney("farm", "Großhandel · " + n + "× " + FITEMS[id].n, m);
+  logMoney("farm", "Großhandel · " + fqty(id, n), m);
   return m;
 }
 
@@ -491,9 +519,10 @@ function makeFarmOrder() {
     const pool = wants.slice();
     for (let i = 0; i < lines && pool.length; i++) {
       const id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-      const k = FITEMS[id].k;
-      const hi = k === "crop" || k === "fruit" ? 3 + Math.ceil(lv * 0.8) : k === "ani" ? 2 + Math.ceil(lv / 2) : 1 + Math.floor(lv / 3);
-      const lo = k === "crop" || k === "fruit" ? 2 : 1;
+      /* Mengen in Gebinden: Gastronomie und Märkte nehmen mehr als ein Kindergarten */
+      const k = FITEMS[id].k, big = /Gasthaus|Hotel|Markt|Landbäckerei|Restaurant|Pizzeria/.test(c[0]) ? 1 : 0;
+      const hi = (k === "crop" || k === "fruit" ? 2 + Math.ceil(lv * 0.6) : k === "ani" ? 2 + Math.ceil(lv / 2) : 2 + Math.floor(lv / 2)) + big;
+      const lo = 1 + big;
       items[id] = lo + Math.floor(Math.random() * (hi - lo + 1));
     }
     /* passt aufs größte eigene Fahrzeug */
@@ -517,7 +546,8 @@ function farmOrderObj(town, cust, items, extra) {
   if (!pr) return null;
   const value = Object.keys(items).reduce((s, id) => s + FITEMS[id].v * items[id], 0);
   const dist = pr.dist;
-  const pay = Math.max(10, Math.round((value * rnd(1.45, 1.8) + dist * 1.6 + 8) / 5) * 5);
+  /* Warenwert zum Hofladenpreis, dazu Liefergebühr – wie im echten Lieferdienst */
+  const pay = Math.max(4, Math.round((value * rnd(1.05, 1.22) + 2.5 + dist * 0.45) * 10) / 10);
   const xp = Math.round(Object.keys(items).reduce((s, id) => s + FITEMS[id].xp * items[id], 0) * 1.3 + 4 + dist * 0.3);
   const streets = FTOWN_STREETS[town];
   let drop;
@@ -528,7 +558,7 @@ function farmOrderObj(town, cust, items, extra) {
     const a = typeof makeAddr === "function" ? makeAddr(town) : nodeAddr(town);
     drop = Object.assign({}, a, { t: cust + ", " + a.t });
   }
-  const desc = "Bestellung: " + Object.keys(items).map(id => items[id] + "× " + FITEMS[id].n).join(", ");
+  const desc = "Bestellung: " + Object.keys(items).map(id => fqty(id, items[id])).join(", ");
   return Object.assign({
     id: "A" + (S.seq++), from: FARM_NODE, to: town, cargo: "hof", weight: w, pay,
     deadline: Math.round(S.time + 1800 + pr.time * 2), shipper: cust, desc, created: S.time,
@@ -700,7 +730,23 @@ function farmTick() {
 /* Die Hof-Knoten gehören nur zu Spielständen mit Hof; Potsdam ist von dort
    aus schon zu Beginn erreichbar. */
 if (typeof N !== "undefined" && N.potsdam) N.potsdam.farmX = true;
+/* Spielstände von v36: offene Hofbestellungen auf echte Gebinde und Preise umstellen */
+function farmMigrate() {
+  if (!S.farm || S.farm.sold || S.farm.econ >= 2) return;
+  S.farm.econ = 2;
+  S.orders.forEach(o => {
+    if (!o.farm) return;
+    const value = Object.keys(o.farm.items).reduce((s, id) => s + FITEMS[id].v * o.farm.items[id], 0);
+    o.pay = Math.max(4, Math.round((value * 1.12 + 2.5 + (o.refDist || 3) * 0.45) * 10) / 10);
+    o.desc = "Bestellung: " + Object.keys(o.farm.items).map(id => fqty(id, o.farm.items[id])).join(", ");
+    o.weight = Math.max(0.3, Math.round(Object.keys(o.farm.items).reduce((s, id) => s + FITEMS[id].kg * o.farm.items[id], 0) * 10) / 10);
+  });
+  /* Notizbuch: Aufgaben haben jetzt andere Mengen – Fortschritt deckeln */
+  const q = farmQuest();
+  if (q && S.farm.qp > q.n) S.farm.qp = q.n;
+}
 function farmBodyClasses() {
+  farmMigrate();
   document.body.classList.toggle("has-farm", farmOn());
   document.body.classList.toggle("farm-phase", farmPhase());
   farmNodeName();
@@ -740,7 +786,7 @@ function farmOrderHTML(o) {
   const ready = S.farm && farmOrderReady(o);
   return `<div class="ford">${Object.keys(o.farm.items).map(id => {
     const have = S.farm ? farmInv(id) : 0, need = o.farm.items[id];
-    return `<span class="fchip${have < need ? " miss" : ""}">${FITEMS[id].i}<b>${have}/${need}</b></span>`;
+    return `<span class="fchip${have < need ? " miss" : ""}">${FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
   }).join("")}<span class="ford-s">${ready ? "✓ alles da" : "fehlt noch"} · +${o.farm.xp} XP</span></div>`;
 }
 
