@@ -1524,7 +1524,10 @@ function finishLeg(job, veh) {
     S.late++;
   }
   /* Unfall unterwegs: ohne Versicherung zieht der Kunde ein Viertel ab */
-  if (o.damaged && !(typeof isInsured === "function" ? isInsured() : S.insure)) { pay = Math.round(pay * 0.75); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht 25 % ab.", "warn"); }
+  if (o.damaged && !(typeof isInsured === "function" ? isInsured() : S.insure)) {
+    const cut = o.damageCut || 0.25;
+    pay = Math.round(pay * (1 - cut)); toast("💥 Beschädigte Ladung: " + o.shipper + " zieht " + Math.round(cut * 100) + " % ab.", "warn");
+  }
   if (typeof payBoost === "function") pay = Math.round(pay * payBoost(job));
   if (typeof liveryBoost === "function") pay = Math.round(pay * liveryBoost(job));
   S.money += pay; S.revenue += pay; S.done++;
@@ -2848,9 +2851,16 @@ function dispoRowsHTML() {
       <span class="dv">🚚 ${n}${cap ? ` <small>/ ${cap} betreubar</small>` : ""}</span>
       <span class="dst ${st[0]}">${st[1]}</span></button>`;
   }).join("");
+  const big = typeof freeFleet === "function" ? freeFleet("big").length : 0, all = typeof freeFleet === "function" ? freeFleet("all").length : 0;
+  const room = bases.reduce((a, b) => a + (typeof baseRoom === "function" ? baseRoom(b) : 0), 0);
   return `<div class="drows">${rows}
       <div class="drow self"><span class="dn">✋ <b>Selbst</b></span><span class="dv">🚚 ${own}</span><span class="dst self">du teilst ein</span></div>
     </div>
+    ${bases.length && all ? `<div class="distrow">
+      <button class="btn tiny${big && room ? "" : " disabled"}" id="distBig">⚡ Große verteilen · ${Math.min(big, room)}</button>
+      <button class="btn tiny ghost${room ? "" : " disabled"}" id="distAll">alle verteilen · ${Math.min(all, room)}</button>
+      <small>${room ? "Jedes Fahrzeug ins nächste Büro, so viele wie die Dispo schafft." : "Alle Büros voll ausgelastet – mehr Disposition schafft Platz."}</small>
+    </div>` : ""}
     ${bases.length ? "" : `<button class="btn tiny" id="goBases">🏢 Büro eröffnen – dann fährt die Flotte von allein</button>`}`;
 }
 /* Pro Fahrzeug: wer es disponiert – direkt hier umhängen */
@@ -2871,6 +2881,8 @@ function bindDispo() {
   if (typeof bindFleetExtras === "function") bindFleetExtras();
   const gb = $("#goBases");
   if (gb) gb.onclick = () => showTab("bases");
+  const db = $("#distBig"); if (db) db.onclick = () => distributeFleet("big");
+  const da = $("#distAll"); if (da) da.onclick = () => distributeFleet("all");
   $$("#tab-fleet [data-gobase]").forEach(b => b.onclick = () => showTab("bases"));
   $$("#tab-fleet [data-vbase]").forEach(sel => sel.onchange = () => {
     sel.blur();

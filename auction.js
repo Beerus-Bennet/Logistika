@@ -263,6 +263,13 @@ function finishLot(l) {
       phoneMsg({ from: AH_NAME, kind: "info", title: "Los nicht verkauft",
         body: `${name}: ${l.lead ? "Das Höchstgebot von " + money(l.price) + " blieb unter Ihrem Mindestpreis." : "Leider hat niemand geboten."} ${l.kind === "car" ? "Der Wagen steht wieder in Ihrer Garage." : "Das Fahrzeug ist zurück in Ihrer Flotte."}` });
     }
+  } else if (l.lead === "me" && S.money < Math.round(l.price * (1 + AH_PREMIUM))) {
+    /* Zahlung nicht gedeckt: der Zuschlag geht an den Unterbieter */
+    const next = l.rivals.filter(r => r.max >= l.start).sort((a, b) => b.max - a.max)[0];
+    if (next) { l.lead = next.n; l.price = Math.min(l.price, next.max); } else l.lead = null;
+    res = "lost";
+    phoneMsg({ from: AH_NAME, kind: "trouble", title: "Zuschlag nicht bezahlt",
+      body: `Für ${name} war Ihr Konto nicht gedeckt (${money(Math.round(l.price * (1 + AH_PREMIUM)))} inkl. Aufgeld). ${next ? "Der Zuschlag geht an " + next.n + "." : "Das Los geht zurück an den Einlieferer."}` });
   } else if (l.lead === "me") {
     const cost = Math.round(l.price * (1 + AH_PREMIUM));
     S.money -= cost; S.expense += cost;

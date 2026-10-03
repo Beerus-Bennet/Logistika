@@ -154,53 +154,109 @@ function nearName(p) {
   unlockedNodes().forEach(n => { const d = hav(p, [n.lat, n.lon]); if (d < bd) { bd = d; best = n; } });
   return best ? best.short : "unterwegs";
 }
+/* Was genau kaputt ist, hängt am Verkehrsträger. Die Kosten richten sich nach
+   Fahrzeugwert, Auftragswert und Etappe – ein liegengebliebener Frachter
+   kostet etwas anderes als ein platter Reifen am Lastenrad. */
+function incidentFor(t, veh, job) {
+  const K = stageK(), p = t.price, pay = job.order.pay;
+  const r = x => roundK(x, x >= 1e6 ? 10000 : x >= 1e5 ? 1000 : x >= 1e4 ? 100 : 10);
+  if (t.mode === "b") return { icon: "🔧", title: "Panne", halt: "Panne", def: 0, who: "Kurier", choices: [
+    { label: "Selbst flicken", sub: "gratis, etwa eine halbe Stunde", act: { mins: [20, 40], txt: "Schlauch geflickt." } },
+    { label: "Zur Fahrradwerkstatt", sub: "sicher, eine Stunde", cost: Math.round(35 * K), insurable: true, act: { mins: [60, 60], wear: 30, txt: "Ab in die Werkstatt um die Ecke." } }] };
+  if (t.mode === "r") {
+    const acc = Math.random() < 0.18, big = t.cap >= 7000 && Math.random() < 0.5;
+    return { icon: acc ? "💥" : "🔧", title: acc ? "Unfall" : big ? "Motorschaden" : "Panne", halt: acc ? "Unfall" : "Panne", def: 2, who: "Fahrer",
+      damaged: acc, cut: 0.25, lead: acc ? "Blechschaden, niemand verletzt – aber die Ladung hat was abbekommen. " : big ? "Der Motor hat Öldruck verloren, ich hab sofort abgestellt. " : "",
+      choices: [
+        { label: "Pannendienst rufen", sub: "meist nach 1 h weiter, sonst Abschleppen", cost: r(Math.max(120 * K + p * 0.004, pay * 0.06)), insurable: true,
+          act: { mins: [45, 90], ok: 0.75, fail: [150, 240], failWear: 25, txt: "Der Pannendienst hat's gerichtet.", failTxt: "Pannendienst konnte nicht helfen – abgeschleppt." } },
+        { label: "Abschleppen & Werkstatt", sub: "3–5 h, danach wie neu", cost: r(Math.max(380 * K + p * 0.025, pay * 0.15)), insurable: true,
+          act: { mins: [180, 300], wear: 35, txt: "Abgeschleppt und repariert." } },
+        { label: "Fahrer versucht es selbst", sub: "gratis – halbe Stunde oder halber Tag",
+          act: { mins: [25, 45], ok: 0.5, fail: [200, 360], txt: "Der Fahrer hat es selbst hinbekommen.", failTxt: "Hat länger gedauert – aber es läuft wieder." } }] };
+  }
+  if (t.mode === "a") {
+    const v = pick([
+      ["Triebwerksschaden", "Beim Steigflug ist Triebwerk 2 ausgefallen, wir sind sicher wieder unten. Die Maschine ist AOG – Aircraft on Ground. "],
+      ["Vogelschlag", "Ein Vogelschwarm beim Start, das linke Triebwerk hat Schaufelschäden. Ohne Boroskop-Inspektion darf sie nicht wieder hoch. "],
+      ["Hydraulikleck", "Hydrauliksystem B verliert Druck, wir bleiben am Boden. Das Fahrwerk lässt sich so nicht sicher einfahren. "]]);
+    return { icon: "✈️", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 120, who: "Kapitän", choices: [
+      { label: "AOG-Team und Ersatzteil einfliegen", sub: "6–12 h, danach wie neu", cost: r(Math.max(900 * K + p * 0.004, pay * 0.3)), insurable: true,
+        act: { mins: [360, 720], wear: 35, txt: "Das AOG-Team hat die Maschine wieder flottgemacht." } },
+      { label: "Fracht per Charter weiterfliegen", sub: "in 2–4 h geht's weiter – teuer, nicht versichert", cost: r(Math.max(pay * 0.75, p * 0.003)),
+        act: { mins: [120, 240], txt: "Die Fracht fliegt mit einer gecharterten Maschine weiter." } },
+      { label: "Auf das Ersatzteil warten", sub: "gratis, aber 30–60 h am Boden", act: { mins: [1800, 3600], wear: 20, txt: "Wir warten aufs Ersatzteil." } }] };
+  }
+  if (t.mode === "s") {
+    const v = pick([
+      ["Maschinenschaden auf See", "Die Hauptmaschine ist ausgefallen, wir treiben mit Notstrom. "],
+      ["Ruderanlage ausgefallen", "Die Ruderanlage reagiert nicht mehr, wir halten nur mit dem Bugstrahlruder Kurs. "],
+      ["Brand im Maschinenraum", "Ein Feuer im Maschinenraum ist gelöscht, niemand verletzt – aber ein Hilfsdiesel ist hinüber. "]]);
+    return { icon: "🚢", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 120, who: "Kapitänin", choices: [
+      { label: "Hochseeschlepper ordern", sub: "zieht uns in den nächsten Hafen, 18–30 h, dort repariert", cost: r(Math.max(2000 * K + p * 0.005, pay * 0.4)), insurable: true,
+        act: { mins: [1080, 1800], wear: 25, txt: "Der Schlepper ist längsseits – ab in den Hafen." } },
+      { label: "Techniker per Hubschrauber", sub: "8–14 h, klappt meistens", cost: r(Math.max(700 * K + p * 0.0015, pay * 0.15)), insurable: true,
+        act: { mins: [480, 840], ok: 0.75, fail: [1440, 2160], wear: 15, txt: "Die Techniker haben die Maschine wieder zum Laufen gebracht.", failTxt: "Die Techniker brauchen ein Teil vom Festland – das dauert." } },
+      { label: "Mit halber Kraft weiter", sub: "gratis, aber bis zum Ziel nur halbe Geschwindigkeit", act: { mins: [30, 60], limp: 0.5, txt: "Wir laufen mit halber Kraft weiter." } }] };
+  }
+  if (t.mode === "i") {
+    const v = pick([["Ruderschaden", "Das Ruder klemmt, wir liegen an der Spundwand fest. "],
+      ["Grundberührung", "Bei dem Pegel haben wir Grund berührt – Leck ist dicht, aber die Schraube hat was abbekommen. "]]);
+    return { icon: "⛴️", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 100, who: "Schiffsführer", choices: [
+      { label: "Schlepper anfordern", sub: "6–10 h bis zur Werft, dort repariert", cost: r(Math.max(300 * K + p * 0.01, pay * 0.25)), insurable: true,
+        act: { mins: [360, 600], wear: 25, txt: "Der Schlepper bringt uns zur Werft." } },
+      { label: "Ladung auf ein Leichterschiff umladen", sub: "4–8 h, dann geht die Fracht weiter", cost: r(Math.max(200 * K + p * 0.006, pay * 0.15)),
+        act: { mins: [240, 480], txt: "Umgeladen – es geht weiter." } },
+      { label: "Mit halber Kraft weiter", sub: "gratis, aber bis zum Ziel nur halbe Geschwindigkeit", act: { mins: [20, 40], limp: 0.5, txt: "Wir tuckern mit halber Kraft weiter." } }] };
+  }
+  /* Bahn */
+  const v = pick([["Lokschaden", "Die Lok meldet einen Stromrichterfehler und bleibt stehen. "],
+    ["Heißläufer", "Ein Achslager am 14. Wagen ist heißgelaufen – der Wagen muss raus. "],
+    ["Kupplung gerissen", "Mitten auf der Strecke ist eine Kupplung gerissen, der Zug steht in zwei Teilen. "]]);
+  return { icon: "🚆", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 100, who: "Lokführer", choices: [
+    { label: "Ersatzlok anmieten", sub: "3–6 h, dann weiter", cost: r(Math.max(500 * K + p * 0.008, pay * 0.2)), insurable: true,
+      act: { mins: [180, 360], wear: 20, txt: "Die Ersatzlok ist angekuppelt." } },
+    { label: "Diesellok schleppt in den nächsten Bahnhof", sub: "6–10 h, dort repariert", cost: r(Math.max(250 * K + p * 0.004, pay * 0.1)), insurable: true,
+      act: { mins: [360, 600], wear: 30, txt: "Abgeschleppt und repariert." } },
+    { label: "Auf die Werkstattlok warten", sub: "gratis, aber 16–30 h Stillstand", act: { mins: [960, 1800], wear: 10, txt: "Wir warten auf die Werkstattlok." } }] };
+}
 function breakdown(veh, job, leg) {
-  const t = vType(veh.type), K = stageK();
-  const acc = t.mode === "r" && Math.random() < 0.18;
+  const t = vType(veh.type), sc = incidentFor(t, veh, job);
   const p = vehPoint(veh), where = nearName(p);
   const drv = typeof driverOf === "function" ? driverOf(veh.uid) : null;
-  veh.halt = { icon: acc ? "💥" : "🔧", label: acc ? "Unfall bei " + where : "Panne bei " + where, until: WAIT_DECISION };
-  if (acc) { job.order.damaged = true; }
-  let choices, def;
-  if (t.mode === "b") {
-    choices = [{ label: "Selbst flicken", sub: "gratis, etwa eine halbe Stunde" },
-               { label: "Zur Fahrradwerkstatt", sub: "sicher, eine Stunde", cost: Math.round(35 * K), insurable: true }];
-    def = 0;
-  } else if (t.mode === "r") {
-    choices = [{ label: "Pannendienst rufen", sub: "meist nach 1 h weiter, sonst Abschleppen", cost: Math.round(120 * K + t.price * 0.002), insurable: true },
-               { label: "Abschleppen & Werkstatt", sub: "3–5 h, danach wie neu", cost: Math.round(380 * K + t.price * 0.01), insurable: true },
-               { label: "Fahrer versucht es selbst", sub: "gratis – halbe Stunde oder halber Tag" }];
-    def = 2;
-  } else {
-    choices = [{ label: "Techniker einfliegen", sub: "2–4 h", cost: Math.round(900 * K + t.price * 0.004), insurable: true },
-               { label: "Auf das Ersatzteil warten", sub: "gratis, 8–14 h" }];
-    def = 1;
-  }
-  decisionMsg({ from: drv ? drv.name : "Fahrer · " + t.name, icon: acc ? "💥" : "🔧", type: "breakdown", ring: true,
-    title: (acc ? "Unfall" : t.mode === "r" || t.mode === "b" ? "Panne" : "Technischer Defekt") + " bei " + where,
-    body: (acc ? "Blechschaden, niemand verletzt – aber die Ladung hat was abbekommen. " : "")
-      + `${t.name} steht mit der Ladung für „${job.order.shipper}“. Frist: ${stamp(job.order.deadline)}. Was soll ich machen?`
-      + (acc && !isInsured() ? " Ohne Versicherung zieht der Kunde 25 % ab." : ""),
-    choices, def, wait: 90, ctx: { uid: veh.uid, job: job.id, acc } });
+  veh.halt = { icon: sc.icon, label: sc.halt + " bei " + where, until: WAIT_DECISION };
+  if (sc.damaged) { job.order.damaged = true; job.order.damageCut = sc.cut || 0.25; }
+  /* Pausen zwischen solchen Vorfällen – die Flotte soll nicht dauernd stehen */
+  S.nextBreak = S.time + Math.round(rnd(S.stage >= 4 ? 2.5 : 1.5, S.stage >= 4 ? 4.5 : 3) * 1440);
+  veh.lastBreak = S.time;
+  decisionMsg({ from: drv ? drv.name : sc.who + " · " + t.name, icon: sc.icon, type: "breakdown", ring: true,
+    title: sc.title + " bei " + where,
+    body: (sc.lead || "") + `${t.name} steht mit der Ladung für „${job.order.shipper}“. Frist: ${stamp(job.order.deadline)}. Was soll ich machen?`
+      + (sc.damaged && !isInsured() ? " Ohne Versicherung zieht der Kunde 25 % ab." : ""),
+    choices: sc.choices, def: sc.def, wait: sc.wait || 90, ctx: { uid: veh.uid, job: job.id, acc: !!sc.damaged } });
 }
 DECISIONS.breakdown = {
   choose(m, idx, cost) {
     const v = S.fleet.find(f => f.uid === m.dec.ctx.uid);
     if (!v || !v.halt) return "Hat sich erledigt.";
-    const t = vType(v.type), c = m.dec.choices[idx];
+    const t = vType(v.type), c = m.dec.choices[idx], a = c.act;
     if (cost) payOut(cost, "repair", c.label + " · " + t.name);
     let mins, txt;
-    if (/Pannendienst/.test(c.label)) {
-      if (Math.random() < 0.75) { mins = rnd(45, 90); txt = "Der Pannendienst hat's gerichtet."; }
-      else { mins = rnd(150, 240); txt = "Pannendienst konnte nicht helfen – abgeschleppt."; v.wear = Math.max(0, wearOf(v) - 25); }
-    } else if (/Abschleppen/.test(c.label)) { mins = rnd(180, 300); v.wear = Math.max(0, wearOf(v) - 35); txt = "Abgeschleppt und repariert."; }
-    else if (/Techniker/.test(c.label)) { mins = rnd(120, 240); v.wear = Math.max(0, wearOf(v) - 20); txt = "Techniker ist unterwegs."; }
-    else if (/Ersatzteil/.test(c.label)) { mins = rnd(480, 840); txt = "Wir warten aufs Ersatzteil."; }
-    else if (/Fahrradwerkstatt/.test(c.label)) { mins = 60; v.wear = Math.max(0, wearOf(v) - 30); txt = "Ab in die Werkstatt um die Ecke."; }
-    else if (/flicken/.test(c.label)) { mins = rnd(20, 40); txt = "Schlauch geflickt."; }
-    else { const ok = Math.random() < 0.5; mins = ok ? rnd(25, 45) : rnd(200, 360); txt = ok ? "Der Fahrer hat es selbst hinbekommen." : "Hat länger gedauert – aber es läuft wieder."; }
+    if (a) {
+      const ok = a.ok == null || Math.random() < a.ok;
+      const span = ok ? a.mins : a.fail;
+      mins = rnd(span[0], span[1]);
+      if (a.wear) v.wear = Math.max(0, wearOf(v) - a.wear);
+      if (!ok && a.failWear) v.wear = Math.max(0, wearOf(v) - a.failWear);
+      if (a.limp) v.limp = { k: a.limp, job: v.jobId, leg: v.legIdx };
+      txt = ok ? a.txt : a.failTxt || a.txt;
+    } else {
+      /* ältere Nachrichten ohne hinterlegte Wirkung */
+      mins = rnd(60, 240); txt = "Es geht weiter.";
+    }
     v.halt.until = S.time + Math.round(mins);
-    return txt + " Weiter ab " + clock(v.halt.until) + (cost && isInsured() && c.insurable ? " · Versicherung zahlt 80 %" : "") + ".";
+    const when = mins > 900 ? stamp(v.halt.until) : clock(v.halt.until);
+    return txt + " Weiter ab " + when + (cost && isInsured() && c.insurable ? " · Versicherung zahlt 80 %" : "") + ".";
   }
 };
 

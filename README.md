@@ -293,9 +293,19 @@ Wer nur auf 30× stellt und zusieht, verpasst das Beste – und verliert Aufträ
   Hafenstreik, Lokführerstreik, Niedrigwasser. Auf der Karte eingezeichnet,
   im Planer als Warnung. Sind eigene Fahrten betroffen, fragt die
   Verkehrsleitstelle: umfahren, abwarten oder um Aufschub bitten.
-* **Pannen und Unfälle** 🔧 – hängen am Verschleiß. Der Fahrer ruft an (zum
-  Annehmen wischen) und fragt: Pannendienst, Abschleppen & Werkstatt oder
-  selbst versuchen. Bei Mr. Snus kann unterwegs eine **Streife** auftauchen.
+* **Pannen und Vorfälle** 🔧 – hängen am Verschleiß und kommen höchstens alle
+  paar Spieltage. Der Fahrer, Lokführer oder die Kapitänin ruft an (zum
+  Annehmen wischen). Je nach Verkehrsträger: Lkw-Panne oder Motorschaden
+  (Pannendienst, Abschleppen, selbst versuchen), Lokschaden oder Heißläufer
+  (Ersatzlok, Diesellok, warten), Ruderschaden auf dem Fluss (Schlepper,
+  Leichterschiff, halbe Kraft), Maschinenschaden oder Brand auf See
+  (Hochseeschlepper, Techniker per Hubschrauber, mit halber Kraft weiter),
+  Triebwerksschaden, Vogelschlag oder Hydraulikleck beim Flugzeug (AOG-Team,
+  Charter, auf das Ersatzteil warten). Die Kosten richten sich nach Fahrzeug-
+  und Auftragswert – ein liegengebliebener Frachter kostet schnell sechs- bis
+  siebenstellig. Ab Etappe 4 trifft es seltener die Lkw und eher die großen
+  Brocken. Gratis-Wege lassen sich immer wählen, auch im Minus. Bei Mr. Snus
+  kann unterwegs eine **Streife** auftauchen.
 * **Tempo** ⏱️ – kommt ein Anruf oder eine Einladung, bremst das Spiel auf 1×.
   Solange etwas offen ist, geht es höchstens mit 3×. Wer nicht antwortet, für
   den entscheidet nach einer Weile jemand anderes – meist die billigste Lösung.
@@ -442,6 +452,14 @@ die Leute aus der **Disposition** in deinen Büros. Jedes Fahrzeug gehört
 entweder einem Büro (zuordnen unter *Büros* oder direkt am Fahrzeug unter
 *Flotte*) oder bleibt bei dir: Dann nimmst du die Aufträge selbst an. Der
 Reiter *Flotte* zeigt oben, welches Büro wie viele Fahrzeuge fährt.
+
+**Schnell zuordnen:** Jedes Büro zeigt, wie viele Fahrzeuge es betreuen kann
+(was die Disposition schafft, höchstens so viele wie Stellplätze). „Auffüllen“
+ordnet genau so viele zu – wahlweise alle, nur große (ab Lkw) oder nach
+Verkehrsträger, zuerst die im Einzugsgebiet, dann die größten. Unter *Flotte*
+verteilt „⚡ Große verteilen“ bzw. „alle verteilen“ die ganze Flotte auf einen
+Schlag: jedes Fahrzeug ins nächste Büro mit freier Kapazität. „alle lösen“
+holt die Fahrzeuge eines Büros wieder zu dir.
 
 Die Dispo nimmt nur Aufträge an, die sie pünktlich schafft – Verspätungen
 kosten Ruf. Wie viel ein Büro schafft, hängt am Team (Können × Stimmung): eine

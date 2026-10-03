@@ -496,6 +496,78 @@ function assignedUids() {
   return s;
 }
 
+/* ---------------- Schnell zuordnen: so viele, wie das Büro schafft ---------------- */
+/* Kapazität = was die Disposition betreuen kann, höchstens so viele wie Stellplätze */
+function baseCapacity(b) { return Math.min(tierOf(b).slots, dispCap(b)); }
+function baseRoom(b) { return Math.max(0, baseCapacity(b) - b.vehicles.length); }
+const AUTO_FILTERS = [["big", "ab Lkw"], ["all", "alle"], ["r", "🚛 Straße"], ["l", "🚆 Bahn"], ["i", "⛴️ Binnenschiff"], ["s", "🚢 Seeschiff"], ["a", "✈️ Flugzeug"]];
+const bigVeh = t => t.mode !== "b" && (t.mode !== "r" || t.cap >= 3500);
+function autoMatch(k) { return t => !t.special && (k === "all" || (k === "big" ? bigVeh(t) : t.mode === k)); }
+function freeFleet(k) {
+  const as = assignedUids(), m = autoMatch(k);
+  return S.fleet.filter(f => !as.has(f.uid) && m(vType(f.type)));
+}
+const nodeLL = id => [N[id].lat, N[id].lon];
+/* Ein Büro auffüllen: zuerst Fahrzeuge im Einzugsgebiet, dann die größten */
+function fillBase(baseId, k) {
+  const b = baseById(baseId); if (!b) return 0;
+  if (dispCap(b) <= 0) { toast("Ohne Disposition betreut " + N[b.node].short + " keine Fahrzeuge – erst jemanden einstellen.", "warn"); return 0; }
+  const room = baseRoom(b);
+  if (!room) { toast(N[b.node].short + " ist voll ausgelastet – mehr Disposition oder ein größeres Büro schaffen Platz.", "warn"); return 0; }
+  const here = nodeLL(b.node), reach = reachKm(b);
+  const take = freeFleet(k).map(f => ({ f, near: hav(here, nodeLL(f.at)) <= reach, p: vType(f.type).price }))
+    .sort((a, c) => (c.near - a.near) || (c.p - a.p)).slice(0, room);
+  if (!take.length) { toast("Keine freien Fahrzeuge in dieser Auswahl.", "warn"); return 0; }
+  take.forEach(x => b.vehicles.push(x.f.uid));
+  b.nextAt = Math.min(b.nextAt || 0, S.time + 5);
+  toast("⚡ " + take.length + " Fahrzeug" + (take.length === 1 ? "" : "e") + " an " + N[b.node].short + " – die Dispo legt gleich los.", "ok");
+  save(); render();
+  return take.length;
+}
+/* Ganze Flotte verteilen: jedes Fahrzeug ins nächste Büro mit freier Kapazität */
+function distributeFleet(k) {
+  const bases = (S.bases || []).filter(b => dispCap(b) > 0);
+  if (!bases.length) { toast("Erst braucht ein Büro jemanden aus der Disposition.", "warn"); return 0; }
+  const per = {}; let n = 0;
+  freeFleet(k).sort((a, c) => vType(c.type).price - vType(a.type).price).forEach(f => {
+    const p = nodeLL(f.at);
+    const opts = bases.filter(b => baseRoom(b) > 0)
+      .sort((a, c) => (hav(p, nodeLL(a.node)) > reachKm(a)) - (hav(p, nodeLL(c.node)) > reachKm(c)) || hav(p, nodeLL(a.node)) - hav(p, nodeLL(c.node)));
+    if (!opts.length) return;
+    opts[0].vehicles.push(f.uid); per[opts[0].id] = (per[opts[0].id] || 0) + 1; n++;
+  });
+  bases.forEach(b => { if (per[b.id]) b.nextAt = Math.min(b.nextAt || 0, S.time + 5); });
+  const left = freeFleet(k).length;
+  toast(n ? "⚡ " + n + " Fahrzeuge verteilt: " + Object.entries(per).map(([id, c]) => N[baseById(id).node].short + " " + c).join(", ")
+      + (left ? " · " + left + " bleiben bei dir – mehr Disposition schafft Platz." : ".")
+    : "Alle Büros sind voll ausgelastet – mehr Disposition oder größere Büros schaffen Platz.", n ? "ok" : "warn");
+  save(); render();
+  return n;
+}
+function emptyBase(baseId) {
+  const b = baseById(baseId); if (!b) return;
+  b.vehicles.forEach(u => { const f = S.fleet.find(x => x.uid === u); if (f) f.driver = null; });
+  const n = b.vehicles.length; b.vehicles = [];
+  toast(n + " Fahrzeuge von " + N[b.node].short + " gelöst – die teilst du jetzt selbst ein.", "ok");
+  save(); render();
+}
+function autoBoxHTML(b) {
+  const cap = baseCapacity(b), room = baseRoom(b), k = S.autoF || "big";
+  const opts = AUTO_FILTERS.map(([id, l]) => { const n = freeFleet(id).length; return n || id === k ? `<option value="${id}"${id === k ? " selected" : ""}>${l} (${n} frei)</option>` : ""; }).join("");
+  const avail = freeFleet(k).length, n = Math.min(room, avail);
+  return `<div class="autobox">
+    <div class="ab-top"><b>⚡ Schnell zuordnen</b>
+      <small>Betreut bis zu <b>${cap}</b> Fahrzeuge (Disposition ${dispCap(b)} · Stellplätze ${tierOf(b).slots}) · ${b.vehicles.length} zugeordnet · ${room} frei</small></div>
+    <div class="assignrow">
+      <select data-autof="${b.id}" aria-label="Welche Fahrzeuge">${opts}</select>
+      <button class="btn tiny${n ? "" : " disabled"}" data-autofill="${b.id}">auffüllen${n ? " · " + n : ""}</button>
+      ${b.vehicles.length ? `<button class="btn tiny ghost" data-autoempty="${b.id}">alle lösen</button>` : ""}
+    </div>
+    ${dispCap(b) <= 0 ? `<div class="ab-hint">Ohne Disposition betreut das Büro keine Fahrzeuge.</div>`
+      : !room ? `<div class="ab-hint">Voll ausgelastet – mehr Leute in der Disposition oder ein größeres Büro schaffen Platz.</div>` : ""}
+  </div>`;
+}
+
 /* ====================== Betrieb: Aufträge automatisch ==================== */
 /* Wie oft ein Standort eine Ausschreibung greift (in Spielminuten). */
 /* Die Disposition ist die einzige Automatik im Spiel. Wie viel sie schafft,
@@ -885,6 +957,7 @@ function baseCard(b) {
                             : `<div class="empty sm">Heute keine Bewerbungen.</div>`}
 
     <div class="sechead sm">Fahrzeuge am Standort</div>
+    ${autoBoxHTML(b)}
     ${mine.length ? mine.map(f => {
       const vt = vType(f.type);
       const dr = driverOf(f.uid);
@@ -979,6 +1052,12 @@ function renderBases() {
     if (sel && sel.value) assignVehicle(b.dataset.assign, sel.value);
   });
   $$("#tab-bases [data-unassign]").forEach(b => b.onclick = () => unassignVehicle(b.dataset.unassign));
+  $$("#tab-bases [data-autof]").forEach(sel => sel.onchange = () => { sel.blur(); S.autoF = sel.value; save(); render(); });
+  $$("#tab-bases [data-autofill]").forEach(b => b.onclick = () => fillBase(b.dataset.autofill, S.autoF || "big"));
+  $$("#tab-bases [data-autoempty]").forEach(b => b.onclick = () => {
+    const base = baseById(b.dataset.autoempty);
+    askConfirm("Alle Fahrzeuge lösen?", "Die " + base.vehicles.length + " Fahrzeuge von " + N[base.node].short + " teilst du danach selbst ein.", "Lösen", () => emptyBase(base.id));
+  });
   $$("#tab-bases [data-role]").forEach(b => b.onclick = () => { if (typeof linaRole === "function") linaRole(b.dataset.role, b.dataset.rolebase); });
   $$("#tab-bases [data-dispo]").forEach(t => t.onclick = () => {
     const base = baseById(t.dataset.dispo); if (!base) return;

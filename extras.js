@@ -84,9 +84,12 @@ function decisionMsgHTML(m) {
   const d = m.dec;
   const acts = d.done ? "" : d.choices.map((c, i) => {
     const cost = c.cost ? insuredCost(c.cost, c.insurable) : 0;
-    return `<button class="dchoice${cost > S.money && !c.debt ? " disabled" : ""}" data-dec="${m.id}|${i}">
+    /* Nur was Geld kostet, kann am Kontostand scheitern – gratis geht immer */
+    const lack = cost > 0 && cost > S.money && !c.debt;
+    return `<button class="dchoice${lack ? " disabled" : ""}" data-dec="${m.id}|${i}">
       <b>${esc(c.label)}${cost ? ` · ${money(cost)}` : ""}${c.insurable && isInsured() && c.cost ? ` <em>🛡️ −80 %</em>` : ""}</b>
-      ${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`;
+      ${c.sub ? `<small>${esc(c.sub)}</small>` : ""}
+      ${lack ? `<small class="lack">Dafür fehlen ${money(cost - Math.max(0, S.money))}${S.money < 0 ? " – das Konto ist im Minus" : ""}</small>` : ""}</button>`;
   }).join("");
   return `<div class="pmsg call ${m.kind}${m.handled ? " done" : ""}">
     <div class="pmsg-head"><span class="pmsg-from">${m.icon || "📞"} ${esc(m.from)}</span>
@@ -288,7 +291,12 @@ function onDriven(veh, t, km, job, leg) {
   veh.wear = Math.min(100, wearOf(veh) + km / KM_PER_PCT[t.mode]);
   if (!lively() || !job || job.order.tut || veh.halt) return;
   if (typeof maybeStreife === "function" && maybeStreife(veh, job, leg)) return;
-  if (Math.random() < km * breakdownHazard(t, wearOf(veh)) && typeof breakdown === "function") breakdown(veh, job, leg);
+  /* Zwischen zwei Vorfällen liegen ein paar Tage; später trifft es eher die großen Brocken */
+  if (S.time < (S.nextBreak || 0) || (veh.lastBreak && S.time - veh.lastBreak < 5 * 1440)) return;
+  let hz = km * breakdownHazard(t, wearOf(veh)) * 0.6;
+  if (t.mode === "r" && S.stage >= 4) hz *= 0.3;
+  if (t.mode === "b") hz *= 0.6;
+  if (Math.random() < hz && typeof breakdown === "function") breakdown(veh, job, leg);
 }
 
 /* ========================== Versicherung ============================== */
@@ -412,6 +420,10 @@ function onFailed(job, reason) {
 function haltLabel(v) {
   if (v.phase === "service") return "🔧 in der Werkstatt bis " + clock(v.serviceUntil || S.time);
   if (typeof customsLabel === "function") { const c = customsLabel(v); if (c) return c; }
+  if (!v.halt && v.limp && v.limp.job === v.jobId && v.limp.leg === v.legIdx && v.phase === "haul") {
+    const j = S.jobs.find(x => x.id === v.jobId), l = j && j.legs[v.legIdx];
+    return "🐢 mit halber Kraft nach " + (l ? N[l.to].short : "?");
+  }
   if (!v.halt) return null;
   const h = v.halt;
   return (h.icon || "⛔") + " " + h.label + (h.until < 1e14 ? " · bis " + clock(h.until) : " · wartet auf deine Entscheidung");
@@ -425,7 +437,9 @@ function moveFactor(veh, leg, job) {
       delete veh.halt;
     } else return 0;
   }
-  return typeof eventFactor === "function" ? eventFactor(veh, leg) : 1;
+  let k = 1;
+  if (veh.limp) { if (veh.limp.job === veh.jobId && veh.limp.leg === veh.legIdx) k = veh.limp.k; else delete veh.limp; }
+  return k * (typeof eventFactor === "function" ? eventFactor(veh, leg) : 1);
 }
 
 let extraMin = 0, linaAsked = false;
