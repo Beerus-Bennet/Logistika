@@ -858,7 +858,7 @@ const FM = (() => {
     const b = new MB();
     [[0.6, 0.55], [0.85, 0.5], [0.72, 0.62], [3.7, 0.55], [3.9, 0.48], [3.55, 0.62], [5.0, 0.6]].forEach(([a, f], i) => {
       const R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R, s = 0.17 + rnd() * 0.09, ry = rnd() * 6.28;
-      b.at({ x, z, y: 0.035, ry }, () => {
+      b.at({ x, z, y: 0.055, ry }, () => {
         const seg = 12;
         for (let k = 1; k < seg; k++) {            /* Blatt mit Kerbe */
           const p0 = k / seg * Math.PI * 2, p1 = (k + 1) / seg * Math.PI * 2;
@@ -870,15 +870,19 @@ const FM = (() => {
     /* Steg Richtung Hof */
     const a = Math.PI, R0 = pondR(r, a);
     b.at({ x: Math.cos(a) * (R0 - 0.9), z: Math.sin(a) * (R0 - 0.9) + 0.4, ry: 0 }, () => {
+      /* Keine zwei Flächen auf gleicher Höhe – sonst flackert es beim Schwenken */
       b.noise(0.12, () => { for (let i = 0; i < 10; i++) b.box(0.26, 0.05, 0.62, i % 2 ? 0xb07d4c : 0xa1703f, { x: -1.2 + i * 0.27, y: 0.2 }); });
-      b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.15, z: 0.28 }); b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.15, z: -0.28 });
-      [-1.25, -0.25, 0.75, 1.3].forEach(x => { b.box(0.09, 0.42, 0.09, 0x6b4a2e, { x, y: -0.17, z: 0.3 }); b.box(0.09, 0.42, 0.09, 0x6b4a2e, { x, y: -0.17, z: -0.3 }); });
-      /* Ruderboot am Steg */
-      b.at({ x: 0.1, z: 0.78, y: 0.03, ry: 0.12 }, () => {
-        b.noise(0.08, () => b.cyl(0.55, 0.42, 0.24, 12, 0x3f78c8, { sx: 0.44, sz: 1.0, ry: Math.PI / 2, top: 0x2b5a99 }));
-        b.box(0.92, 0.04, 0.3, 0xb07d4c, { y: 0.18 });
-        b.box(0.12, 0.04, 0.36, 0xb07d4c, { y: 0.2, x: 0.3 }); b.box(0.12, 0.04, 0.36, 0xb07d4c, { y: 0.2, x: -0.28 });
-        b.box(0.9, 0.025, 0.04, 0xcf9a62, { y: 0.24, z: 0.2, ry: 0.25 });
+      b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.13, z: 0.24 }); b.box(2.75, 0.06, 0.08, 0x7a5233, { y: 0.13, z: -0.24 });
+      /* Pfosten stehen seitlich neben den Planken und ragen als Poller darüber */
+      [-1.2, -0.25, 0.7, 1.28].forEach(x => { b.box(0.1, 0.55, 0.1, 0x6b4a2e, { x, y: -0.2, z: 0.37 }); b.box(0.1, 0.55, 0.1, 0x6b4a2e, { x, y: -0.2, z: -0.37 }); });
+      /* Ruderboot am Steg: offener Rumpf, Boden unter der Wasserlinie */
+      b.at({ x: 0.1, z: 0.86, y: -0.06, ry: 0.12 }, () => {
+        b.noise(0.08, () => b.cyl(0.38, 0.52, 0.3, 14, 0x3f78c8, { sx: 0.44, sz: 1.0, ry: Math.PI / 2, notop: true }));
+        /* Innenwand (gespiegelt, damit man von oben hineinsieht) */
+        b.cyl(0.35, 0.49, 0.29, 14, 0x9a6a3c, { sx: -0.41, sz: 0.94, ry: Math.PI / 2, notop: true, nobot: true, y: 0.012 });
+        b.cyl(0.36, 0.36, 0.02, 14, 0x8a5a34, { sx: 0.4, sz: 0.94, ry: Math.PI / 2, y: 0.1 });
+        b.box(0.12, 0.035, 0.4, 0xc48b55, { y: 0.215, x: 0.26 }); b.box(0.12, 0.035, 0.44, 0xc48b55, { y: 0.205, x: -0.24 });
+        b.box(0.88, 0.022, 0.035, 0xcf9a62, { y: 0.262, z: 0.06, ry: 0.22 });
       });
     });
     return b;

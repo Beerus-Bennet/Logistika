@@ -959,10 +959,7 @@ const LINA_TALKS = {
     { tx: () => `Lieferst du an einen Fahnder, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
         + "Passt dir ein Kunde nicht, blockierst du ihn mit ✕ – kostet nichts. Und eine laufende Übergabe kannst du unter „Live“ abbrechen." },
     { tx: "Hast du ein Büro mit Disposition, fährt dein Team Snus-Kunden mit. Wer auffällig viel zahlt oder will, den lässt es liegen und sagt dir Bescheid – "
-        + "ob Fahnder oder großzügiger Kunde, entscheidest du dann selbst." },
-    { tx: "Ob du mitmachst, entscheidest du – „Nein, danke mein Akh“ ist auch eine Antwort. Übrigens: Aus Sicherheitsgründen löscht das "
-        + "Diensthandy jede Nachricht nach <b>24 Stunden</b>. Und den 🧮 Rechner darin solltest du dir mal genauer ansehen.",
-      target: "#phoneBtn", top: true }
+        + "ob Fahnder oder großzügiger Kunde, entscheidest du dann selbst." }
   ],
   extras: [
     { tx: "Chef, ab jetzt wird’s lebendig. Hier oben: 🎯 deine <b>Ziele</b> – jeden Morgen drei Tagesaufgaben mit Prämie, dazu Missionen von mir und Erfolge.",
@@ -1075,6 +1072,8 @@ function linaRole(r, baseId) {
 function linaTalk(key, tries) {
   const seen = (S.tutSeen = S.tutSeen || {});
   if (seen[key] || !LINA_TALKS[key]) return;
+  /* Auf dem Hof stört Lina nicht – sie wartet, bis man zur Spedition wechselt */
+  if (playing() && activeTab === "farm") { setTimeout(() => linaTalk(key, tries), 4000); return; }
   const busy = !playing() || !(S.tut && S.tut.done) || tutorialRunning() || S.jail || S.over
     || document.body.classList.contains("report-open") || document.body.classList.contains("dragging-staff");
   if (busy) {

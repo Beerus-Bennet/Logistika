@@ -38,9 +38,7 @@ function farmDOM() {
       <button class="fbtn" id="fbOrders" title="Bestellungen"><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
       <button class="fbtn small" id="fbSnd" title="Ton an/aus"><i>🔊</i></button>
     </div>
-    <div id="farmSpeed">
-      <button data-speed="0" title="Pause">⏸</button><button data-speed="1">1×</button><button data-speed="3">3×</button><button data-speed="10">10×</button><button data-speed="30">30×</button>
-    </div>
+    <button id="farmPaused" hidden>⏸ Spiel angehalten · <b>weiter</b></button>
     <div id="farmFound"></div>
     <div id="farmPop"></div>
     <div id="farmPlace"></div>
@@ -53,10 +51,9 @@ function farmDOM() {
   $("#fbStore").onclick = () => openFarmStore("silo");
   $("#fbOrders").onclick = () => openFarmOrders();
   $("#fbSnd").onclick = () => { S.farm.snd = !S.farm.snd; renderFarmUI(); if (S.farm.snd) sfx("pop"); };
-  $$("#farmSpeed [data-speed]").forEach(b => {
-    b.onclick = () => (+b.dataset.speed === 0 ? togglePause() : setSpeed(+b.dataset.speed));
-    b.classList.toggle("on", +b.dataset.speed === S.speed);
-  });
+  /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
+     falls das Spiel auf der Karte angehalten wurde */
+  $("#farmPaused").onclick = () => setSpeed(lastSpeed || 1);
   $("#farmSheet").addEventListener("click", e => { if (e.target.id === "farmSheet") closeFarmSheet(); });
   bindFarmInput($("#farmCv"));
 }
@@ -134,7 +131,7 @@ function farmStatic() {
   R.nodes.push(fnode(R.mesh(b)));
   /* Wasser, Uferschaum, Schilf, Seerosen, Steg mit Boot, zwei Enten */
   R.nodes.push(fnode(R.mesh(FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 1, shadow: false }));
-  FV.foam = fnode(R.mesh(FM.pondFoam(POND.r)), { x: POND.x, y: 0.034, z: POND.z, alpha: 0.4, shadow: false });
+  FV.foam = fnode(R.mesh(FM.pondFoam(POND.r)), { x: POND.x, y: 0.042, z: POND.z, alpha: 0.4, shadow: false });
   R.nodes.push(FV.foam);
   R.nodes.push(fnode(R.mesh(FM.pondReeds(POND.r)), { x: POND.x, z: POND.z, sway: 0.9 }));
   R.nodes.push(fnode(R.mesh(FM.pondProps(POND.r)), { x: POND.x, z: POND.z }));
@@ -435,7 +432,8 @@ function farmEnv() {
   const day = ss(4.3, 6.6, h) * (1 - ss(19.6, 21.8, h));
   const az = ((h - 6) / 14) * Math.PI;                  /* Osten → Westen */
   const el = 0.45 + Math.max(0, Math.sin(((h - 5) / 16) * Math.PI)) * 0.7;
-  E.sun = G3.norm([Math.cos(az) * 0.9 + 0.3, Math.sin(el) * 1.4, -Math.sin(az) * 0.5 + 0.45]);
+  const sk = Math.floor(S.time / 4);
+  if (FV.sunKey !== sk) { FV.sunKey = sk; E.sun = G3.norm([Math.cos(az) * 0.9 + 0.3, Math.sin(el) * 1.4, -Math.sin(az) * 0.5 + 0.45]); }
   const g = (c, w) => Math.exp(-((h - c) * (h - c)) / (2 * w * w));
   const warm = Math.max(g(6.2, 1.0), g(20.2, 1.0)) * 0.75 * (day > 0.05 ? 1 : 0);   /* Morgen- und Abendrot */
   const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -757,7 +755,7 @@ function objAction(o, x, y) {
 function objScreen(o, h) {
   const [cx, cz] = farmCenter(o);
   const p = FV.R.project(cx, h == null ? objH(o) * 0.6 : h, cz);
-  return p || [FV.R.w / 2, FV.R.h / 2];
+  return p ? [p[0], p[1]] : [FV.R.w / 2, FV.R.h / 2];
 }
 function doHarvest(o, viaDrag) {
   const r = farmHarvest(o);
@@ -783,7 +781,9 @@ function doWater(o) {
   const [cx, cz] = farmCenter(o);
   for (let i = 0; i < 16; i++) FV.R.emit({ x: cx + (Math.random() - 0.5) * 1.6, y: o.t === "tree" ? 2.4 : 1.2, z: cz + (Math.random() - 0.5) * 1.6, vy: -2.5, g: -6, life: 0.55, size: 0.06, col: [0.45, 0.72, 1, 0.9] });
   sfx("water");
-  floatText(...objScreen(o, 0.9), "💧 schneller · ★+1", "blue");
+  const [wx, wy] = objScreen(o, 0.9);
+  floatText(wx, wy - 18, "💧 wächst schneller", "blue");
+  xpFly(wx, wy, 1);
   return true;
 }
 function doPick(o) {
@@ -886,10 +886,11 @@ function flyItem(icon, x, y, toEl, delay, n) {
   }
 }
 function xpFly(x, y, n) {
-  if (!n) return;
-  const xp = $("#hudLevel");
-  floatText(x + 34, y + 6, "+" + n + " XP", "xp");
-  if (xp) flyItem("⭐", x, y, xp, 200, 1);
+  n = Math.round(n || 0);
+  if (n < 1) return;
+  const bar = document.querySelector("#hud .xp");
+  floatText(x + 34, y + 6, "+" + n + " EP ⭐", "xp");
+  if (bar) flyItem("⭐", x, y, bar, 200, 1);
 }
 function coinFly(x, y, amount) {
   floatText(x, y, "+" + eur(amount), "gold");
@@ -1463,7 +1464,7 @@ function openFarmOrders(sendFor) {
     const km = o.refDist;
     const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small></div>`;
     const items = `<div class="fo-it">${Object.keys(o.farm.items).map(id => itemChip(id, o.farm.items[id], farmInv(id))).join("")}</div>`;
-    const reward = `<div class="fo-r"><span class="fo-m">${eur(Math.round(o.pay * pf))}</span><span class="fo-x">+${o.farm.xp} XP</span>${ready ? `<span class="fo-q">${qStars(q)}${pf !== 1 ? (pf > 1 ? " +" : " ") + Math.round((pf - 1) * 100) + " %" : ""}</span>` : ""}</div>`;
+    const reward = `<div class="fo-r"><span class="fo-m">${eur(Math.round(o.pay * pf))}</span><span class="fo-x">+${o.farm.xp} EP</span>${ready ? `<span class="fo-q">${qStars(q)}${pf !== 1 ? (pf > 1 ? " +" : " ") + Math.round((pf - 1) * 100) + " %" : ""}</span>` : ""}</div>`;
     let send = "";
     if (sendFor === o.id) {
       const opts = farmDispatchOptions(o);
@@ -1558,7 +1559,7 @@ function openFarmHouse() {
   const F = S.farm, q = farmQuest(), val = farmValue();
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hof ${esc(S.player.company)}<small>Erbe von Opa Hinrich · Werder (Havel)</small></div>
     ${q ? `<div class="fquest-card${F.qdone ? " done" : ""}"><b>📒 Opas Notizbuch</b><span>${esc(q.t)}</span>
-      <i><em style="width:${Math.round(F.qp / q.n * 100)}%"></em></i><small>${F.qp}/${q.n} · Belohnung ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " XP" : ""}</small>
+      <i><em style="width:${Math.round(F.qp / q.n * 100)}%"></em></i><small>${F.qp}/${q.n} · Belohnung ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " EP" : ""}</small>
       ${F.qdone ? `<button class="btn tiny" id="fhClaim">Abholen</button>` : ""}</div>` : ""}
     <div class="fstats">
       <div><b>${fmt(F.stats.harvest, 0)}</b><small>geerntet</small></div><div><b>${fmt(F.stats.made, 0)}</b><small>hergestellt</small></div>
@@ -1566,7 +1567,13 @@ function openFarmHouse() {
       <div><b>${fmt(F.stats.deliv, 0)}</b><small>Lieferungen</small></div><div><b>${eur(F.stats.earned)}</b><small>Umsatz</small></div>
     </div>
     <div class="fval">Hofwert heute: <b>${eur(val)}</b></div>
-    ${farmCanFound() ? `<button class="btn fgo" id="fhFound">🚚 Spedition gründen</button>` : F.logi ? "" : `<div class="fs-sub">Ab Level ${FLOGI_LEVEL} kannst du auch für andere fahren und eine richtige Spedition aufbauen.</div>`}
+    <div class="fchaps">${FCHAPTERS.map((C, i) => {
+      const qs = FQUESTS.filter(x => x.c === i), first = FQUESTS.indexOf(qs[0]);
+      const done = Math.max(0, Math.min(qs.length, F.qi - first)), cur = !farmDone() && farmChapter().c === i;
+      return `<div class="fchap${done >= qs.length ? " ok" : cur ? " cur" : ""}"><b>${done >= qs.length ? "✓" : i + 1}</b><div><span>${esc(C.n)}</span><small>${esc(C.t)}</small>
+        <i><em style="width:${Math.round(done / qs.length * 100)}%"></em></i></div><small class="fchap-n">${done}/${qs.length}</small></div>`;
+    }).join("")}</div>
+    ${farmCanFound() ? `<button class="btn fgo" id="fhFound">🚚 Spedition gründen</button>` : F.logi ? "" : `<div class="fs-sub">Arbeite Opas Notizbuch ab – drei Kapitel. Wenn der Hof läuft, kannst du eine Spedition gründen und auch für andere fahren.</div>`}
     ${F.logi ? `<div class="fsell-farm"><b>Hof verkaufen?</b><small>Du kannst den Hof behalten und jederzeit über „Hof“ besuchen – oder ihn verkaufen und mit dem Geld die Spedition ausbauen. Ein Verkauf ist endgültig.</small>
       <button class="btn ghost danger" id="fhSell">Für ${eur(val)} verkaufen</button></div>` : ""}
     <div class="fletter"><b>Opas Brief</b><p>„Mein liebes Enkelkind, der Hof gehört jetzt dir. Die Hühner wollen morgens ihr Futter, der Ofen braucht Geduld, und die Leute in Werder zahlen gut für ehrliche Ware. Lina hilft dir beim Ausliefern – sie kennt jede Abkürzung. Mach was draus. Dein Opa Hinrich“</p></div>
@@ -1627,7 +1634,7 @@ function renderFarmUI() {
     const can = farmCanFound() && S.farm.tut.done;
     if (can !== fd._can) {
       fd._can = can;
-      fd.innerHTML = can ? `<button class="ffound" id="ffGo">🚚 Spedition gründen<small>Level ${FLOGI_LEVEL} geschafft – fahr auch für andere!</small></button>` : "";
+      fd.innerHTML = can ? `<button class="ffound" id="ffGo">🚚 Spedition gründen<small>Der Hof läuft – fahr auch für andere!</small></button>` : "";
       if (can) $("#ffGo").onclick = askFound;
     }
   }
@@ -1636,7 +1643,8 @@ function renderFarmUI() {
     const now = performance.now();
     if ((!FV.sheetAt || now - FV.sheetAt > 1000) && !touchDown && now - touchUpAt > 700) { FV.sheetAt = now; refreshSheet(); }
   }
-  $$("#farmSpeed [data-speed]").forEach(x => x.classList.toggle("on", +x.dataset.speed === S.speed));
+  const pz = $("#farmPaused");
+  if (pz) pz.hidden = !(S.speed === 0 && playing() && !S.jail && !S.over);
 }
 function renderFarmQuest() {
   const el = $("#farmQuest");
@@ -1646,14 +1654,16 @@ function renderFarmQuest() {
   const key = S.farm.qi + ":" + S.farm.qp + ":" + S.farm.qdone;
   if (el._k === key) return;
   el._k = key;
-  el.innerHTML = `<button class="fq-card${S.farm.qdone ? " done" : ""}" id="fqCard"><span>📒</span><div><b>${esc(q.t)}</b>
-    ${S.farm.qdone ? `<small>Geschafft! Tippen: ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " XP" : ""}</small>` : `<i><em style="width:${Math.round(S.farm.qp / q.n * 100)}%"></em></i><small>${S.farm.qp}/${q.n}</small>`}</div></button>`;
+  const ch = farmChapter();
+  el.innerHTML = `<button class="fq-card${S.farm.qdone ? " done" : ""}" id="fqCard"><span>📒</span><div><em class="fq-ch">Kapitel ${ch.c + 1} · ${esc(FCHAPTERS[ch.c].n)} · ${ch.done + 1}/${ch.n}</em><b>${esc(q.t)}</b>
+    ${S.farm.qdone ? `<small>Geschafft! Tippen: ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " EP" : ""}</small>` : `<i><em style="width:${Math.round(S.farm.qp / q.n * 100)}%"></em></i><small>${S.farm.qp}/${q.n}</small>`}</div></button>`;
   $("#fqCard").onclick = () => { if (S.farm.qdone) claimQuest(); else openFarmHouse(); };
 }
 function claimQuest() {
   const card = $("#fqCard");
-  const q = farmQuestClaim();
-  if (!q) return;
+  const res = farmQuestClaim();
+  if (!res) return;
+  const q = res.q;
   const fr = $("#farmFx").getBoundingClientRect();
   const r = card ? card.getBoundingClientRect() : { left: fr.left + 60, top: fr.top + 30, width: 0, height: 0 };
   coinFly(r.left - fr.left + r.width / 2, r.top - fr.top + r.height / 2, q.r.m);
@@ -1662,6 +1672,35 @@ function claimQuest() {
   save();
   renderFarmQuest();
   if (FV.sheet === "house") openFarmHouse();
+  if (res.chapter) setTimeout(() => farmChapterParty(res.c, res.last), 700);
+}
+/* Kapitel geschafft – oder der ganze Hof */
+function farmChapterParty(c, last) {
+  const el = $("#farmLvl");
+  if (!el) return;
+  if (el.classList.contains("on")) { setTimeout(() => farmChapterParty(c, last), 600); return; }
+  const C = FCHAPTERS[c], nx = FCHAPTERS[c + 1];
+  closeFarmSheet();
+  el.className = "on";
+  el.innerHTML = `<div class="flv-wrap"><div class="flv-rays"></div><div class="flv chap">
+    <div class="flv-k">${last ? "Opas Notizbuch" : "Kapitel " + (c + 1)}</div>
+    <div class="flv-n small">${last ? "Der Hof läuft!" : esc(C.n)}</div>
+    <div class="flv-t">${last ? "Alles abgehakt – Opa wäre stolz." : "Kapitel geschafft!"}</div>
+    <div class="fletter mini"><p>„${esc(last ? "Du hast alles geschafft, was ich aufgeschrieben habe. Der Hof ist jetzt deiner, ganz und gar. Und wenn dir das Dorf zu klein wird: Lina kennt jede Straße bis nach Berlin." : C.opa)}“</p></div>
+    <div class="flv-u"><small>Belohnung fürs Kapitel</small><span>${eur(C.r.m)} · +${C.r.xp} EP ⭐</span></div>
+    ${last ? `<div class="flv-u"><small>Neu</small><span>🚚 Spedition gründen – fahr auch für andere</span></div>
+      <div class="flv-b"><button class="btn" id="flvFound">🚚 Spedition gründen</button><button class="btn ghost" id="flvOk">Erst noch auf dem Hof bleiben</button></div>`
+    : `<div class="flv-u"><small>Als Nächstes: Kapitel ${c + 2}</small><span>${esc(nx.n)} – ${esc(nx.t)}</span></div><button class="btn" id="flvOk">Weiter</button>`}
+  </div></div>`;
+  sfx("level");
+  if (FV.R) {
+    const k = FV.R.cam;
+    for (let i = 0; i < 120; i++) FV.R.emit({ x: k.tx + (Math.random() - 0.5) * 12, y: 7 + Math.random() * 3, z: k.tz + (Math.random() - 0.5) * 12, vx: (Math.random() - 0.5) * 2, vy: -0.5, vz: (Math.random() - 0.5) * 2, g: -2.2, drag: 0.6, life: 3.4, size: 0.13, shape: 1, fade: false,
+      col: [[0.95, 0.3, 0.35, 1], [0.3, 0.6, 0.95, 1], [0.98, 0.82, 0.25, 1], [0.35, 0.8, 0.45, 1]][i % 4] });
+  }
+  const close = () => { el.className = ""; el.innerHTML = ""; renderFarmUI(); };
+  $("#flvOk").onclick = close;
+  const fd = $("#flvFound"); if (fd) fd.onclick = () => { close(); askFound(); };
 }
 function farmViewQuest() { if ($("#farmQuest")) { $("#farmQuest")._k = ""; renderFarmQuest(); } }
 function farmViewFull(st) { const b = storeBtn(); if (b) { b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); } sfx("bad"); }
@@ -1671,10 +1710,11 @@ function farmLevelUp(l) {
   if (!farmOn() || activeTab !== "farm" || !$("#farmLvl")) return false;
   const list = FUNLOCK[l] || [];
   const el = $("#farmLvl");
+  if (el.classList.contains("on")) { setTimeout(() => farmLevelUp(l), 600); return true; }
   el.className = "on";
-  el.innerHTML = `<div class="flv"><div class="flv-rays"></div><div class="flv-n">Level ${l}</div><div class="flv-t">Geschafft!</div>
+  el.innerHTML = `<div class="flv-wrap"><div class="flv-rays"></div><div class="flv"><div class="flv-n">Level ${l}</div><div class="flv-t">Geschafft!</div>
     ${list.length ? `<div class="flv-u"><small>Neu freigeschaltet</small>${list.map(x => `<span>${esc(x)}</span>`).join("")}</div>` : `<div class="flv-u"><small>Mehr Felder und Bäume im Laden</small></div>`}
-    <button class="btn" id="flvOk">Weiter</button></div>`;
+    <button class="btn" id="flvOk">Weiter</button></div></div>`;
   sfx("level");
   if (FV.R) {
     const c = FV.R.cam;
@@ -1689,7 +1729,7 @@ function farmLevelUp(l) {
 const FTUT = [
   { tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina. Ich hab deinem Opa jahrelang beim Ausliefern geholfen – und jetzt gehört der Hof dir. Komm, ich zeig dir alles.` },
   { tx: "Der Weizen ist reif! Tipp ein goldenes Feld an und <b>zieh die Sichel über alle reifen Felder</b>.", target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), wait: "harvestField", n: 3 },
-  { tx: "Super Ernte! Die landet im Silo. Jetzt neu säen: <b>Tipp ein leeres Feld an und zieh den Weizen über die leeren Felder.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), wait: "plant", n: 2 },
+  { tx: "Super Ernte! Die landet im Silo – und für fast alles gibt es ⭐ <b>Erfahrungspunkte (EP)</b>; der Balken oben zeigt, wie weit es bis zum nächsten Level ist. Jetzt neu säen: <b>Tipp ein leeres Feld an und zieh den Weizen über die leeren Felder.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), wait: "plant", n: 2 },
   { tx: "Gießen macht schneller und bessere Ware. <b>Tipp ein frisch gesätes Feld an und gieß es.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "grow" && !o.w), wait: "water", n: 1 },
   { tx: "Opas Hühner haben gelegt! <b>Tipp den Hühnerstall an</b> – die Eier kommen in die Scheune.", target: () => firstObj(o => o.t === "coop"), wait: "collect:ei", n: 1 },
   { tx: "Jetzt haben sie Hunger. <b>Tipp den Stall an und zieh das Futter über die Hühner.</b> Je mehr Platz sie haben, desto besser die Eier.", target: () => firstObj(o => o.t === "coop"), wait: "feed", n: 1 },
@@ -1697,7 +1737,7 @@ const FTUT = [
   { tx: "Während das Brot backt: Die Äpfel sind reif. <b>Tipp einen Apfelbaum an.</b>", target: () => firstObj(o => o.t === "tree" && treeRipe(o)) || firstObj(o => o.t === "tree"), wait: "harvest:apfel", n: 1 },
   { tx: "Das Brot ist fertig – <b>tipp den Ofen an und hol es raus.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1 },
   { tx: "Das Café Inselblick in Werder wartet auf Brot und Äpfel. <b>Tipp die Bestelltafel an und schick die Lieferung los.</b>", target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder },
-  { tx: "Unterwegs! Auf der Karte siehst du die Fahrt, bei Ankunft gibt’s Geld und Erfahrung. Mehr Felder, Tiere und Gebäude findest du im 🛒 Laden, Aufgaben in Opas Notizbuch oben links. Ab Level 4 reden wir übers Fahren für andere. Viel Spaß!" }
+  { tx: "Unterwegs! Auf der Karte siehst du die Fahrt, bei Ankunft gibt’s Geld und EP. Oben links liegt jetzt <b>Opas Notizbuch</b>: drei Kapitel, Aufgabe für Aufgabe. Wenn alles abgehakt ist und der Hof läuft, reden wir übers Fahren für andere. Mehr Felder, Tiere und Gebäude gibt’s im 🛒 Laden. Viel Spaß!" }
 ];
 function firstObj(fn) { return S.farm.objs.find(fn) || null; }
 function farmTutOrder() {

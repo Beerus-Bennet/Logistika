@@ -267,6 +267,8 @@ function tutorialRunning() { return document.body.classList.contains("tut-on"); 
 function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over; }
 let lastSpeed = 1;
 function setSpeed(v) {
+  /* Auf dem Hof (vor der Speditionsgründung) läuft die Zeit immer in Echtzeit */
+  if (typeof farmPhase === "function" && farmPhase()) v = 1;
   /* 30× nur, solange nichts anliegt (extras.js) */
   if (v > 3 && typeof speedCap === "function" && v > speedCap()) {
     const p = pendingDecisions()[0];
@@ -1585,9 +1587,6 @@ function checkLevel() {
     if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
     const nx = STAGES[S.stage];
     if (nx && l >= nx.reqLevel && (typeof logiOn !== "function" || logiOn())) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
-    if (typeof farmCanFound === "function" && farmCanFound() && typeof FLOGI_LEVEL !== "undefined" && l === FLOGI_LEVEL)
-      setTimeout(() => phoneMsg({ from: "Lina Sturm", kind: "info", title: "Wir könnten mehr fahren!",
-        body: "Chef, die Leute in Werder fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. Wenn du willst, gründen wir eine richtige Spedition – der Hof läuft weiter. Tipp im Hof auf „Spedition gründen“." }), 1200);
   }
 }
 
@@ -1677,7 +1676,7 @@ function tick(dtMin) {
 
 /* ------------------------------- Etappen -------------------------------- */
 function unlockStage() {
-  if (typeof logiOn === "function" && !logiOn()) return toast("Erst die Spedition gründen – das geht im Hof ab Level " + FLOGI_LEVEL + ".", "warn");
+  if (typeof logiOn === "function" && !logiOn()) return toast("Erst die Spedition gründen – das geht, sobald Opas Notizbuch im Hof abgehakt ist.", "warn");
   const next = STAGES[S.stage];
   if (!next) return toast("Die ganze Welt gehört dir bereits.", "ok");
   if (level() < next.reqLevel) return toast("Dafür brauchst du Level " + next.reqLevel + ".", "warn");
@@ -2562,6 +2561,8 @@ function renderHud() {
   $("#hudTime").textContent = stamp(S.time);
   const l = level(), a = xpForLevel(l), b = xpForLevel(l + 1);
   $("#xpFill").style.width = clamp(((S.xp - a) / (b - a)) * 100, 0, 100) + "%";
+  const xt = $("#xpTxt");
+  if (xt) { const t = "⭐ " + fmt(Math.max(0, Math.round(S.xp - a)), 0) + " / " + fmt(b - a, 0) + " EP"; if (xt.textContent !== t) xt.textContent = t; }
   const badge = (id, n) => {
     const el = $(id); if (!el) return;
     el.textContent = n > 99 ? "99+" : n;
@@ -3506,6 +3507,11 @@ function boot() {
   $("#phoneBtn").onclick = openPhone;
   const gbtn = $("#goalsBtn"); if (gbtn) gbtn.onclick = () => { if (typeof openGoals === "function") openGoals(); };
   $("#hudMoney").onclick = openLedger;
+  const xb = $("#xpBar");
+  if (xb) xb.onclick = () => {
+    const l = level(), need = xpForLevel(l + 1) - S.xp;
+    toast("⭐ Erfahrungspunkte (EP): noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + ". EP gibt es für Ernten, Backen, Tiere, Lieferungen und Opas Notizbuch.", "ok");
+  };
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
   renderPhoneBadge();

@@ -1930,12 +1930,6 @@ body.locked #farm{display:none}
 .fbtn em.ok{background:var(--green)}
 .fbtn em.zero{display:none}
 
-/* Tempo */
-#farmSpeed{position:absolute;z-index:5;left:calc(10px + var(--safe-l));bottom:12px;display:flex;gap:4px;
-  background:rgba(255,255,255,.85);border:var(--line);border-radius:14px;padding:4px;box-shadow:var(--shadow-sm)}
-#farmSpeed button{border:2px solid var(--ink);background:#fff;border-radius:9px;font-weight:800;font-size:12px;padding:5px 7px;min-width:34px;cursor:pointer}
-#farmSpeed button.on{background:var(--blue);color:#fff}
-#farmSpeed button[data-speed="0"].on{background:var(--amber);color:var(--ink)}
 
 /* Opas Notizbuch */
 #farmQuest{position:absolute;z-index:5;left:calc(10px + var(--safe-l));top:10px;max-width:min(250px,62vw)}
@@ -1992,7 +1986,7 @@ body.locked #farm{display:none}
 .fpl-b.ok{background:var(--green);color:#fff}
 .fpl-b.no{background:#ffd0d6}
 .fpl-b.disabled{opacity:.4}
-body.tab-farm #farmPlace.on~#farmSide,body.tab-farm #farmPlace.on~#farmSpeed{opacity:.3}
+body.tab-farm #farmPlace.on~#farmSide{opacity:.3}
 
 /* Fenster von unten */
 #farmSheet{position:absolute;inset:0;z-index:10;display:none;background:rgba(13,27,42,.28)}
@@ -2226,3 +2220,39 @@ body.tab-farm #farmTut.on~#farmQuest{display:none}
 .picstat .btn{margin-top:0}
 .picstat-slot:empty{display:none}
 .liv-sw .liv-wheel{background:conic-gradient(from 0deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)}
+
+/* ---------------------- v38: Hof ohne Tempoleiste ---------------------- */
+body.farm-phase #controls{display:none}
+#farmPaused{position:absolute;z-index:6;left:50%;bottom:14px;transform:translateX(-50%);border:var(--line);border-radius:14px;
+  background:#fff3c4;box-shadow:var(--shadow-sm);font:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+#farmPaused b{color:var(--blue)}
+#farmPaused[hidden]{display:none}
+/* ---------------------- v38: Kapitel im Notizbuch ---------------------- */
+.fq-card .fq-ch{display:block;font-style:normal;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;opacity:.6;margin-bottom:1px}
+.fchaps{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.fchap{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:6px 9px}
+.fchap>b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--ink);background:#e6edf4;font-size:13px}
+.fchap.ok>b{background:var(--green);color:#fff}
+.fchap.cur{background:#fff8e6}
+.fchap.cur>b{background:var(--amber)}
+.fchap span{font-weight:800;font-size:13px}
+.fchap small{display:block;font-size:10.5px;opacity:.7;line-height:1.2}
+.fchap i{display:block;height:6px;border:1.5px solid var(--ink);border-radius:9px;background:#e6edf4;margin-top:4px;overflow:hidden}
+.fchap i em{display:block;height:100%;background:var(--green)}
+.fchap-n{font-size:11px!important;font-weight:800;opacity:.7}
+.flv.chap{width:min(320px,88vw)}
+.flv-k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.6;margin-top:18px}
+.flv-n.small{font-size:32px;margin-top:2px}
+.fletter.mini{margin:6px 0 4px;font-size:15px;padding:8px 10px;text-align:left}
+.flv-b{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.flv-b .btn{text-align:center}
+/* EP-Balken oben mit Zahl */
+.xp{position:relative}
+.xp b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;line-height:1;color:var(--ink);
+  text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap;pointer-events:none}
+.xp{cursor:pointer}
+.xp{height:18px}
+/* Strahlenkranz liegt hinter dem Fenster – auch während der Pop-Animation */
+.flv-wrap{position:relative;animation:flvin .45s cubic-bezier(.2,1.6,.4,1)}
+.flv-wrap .flv{animation:none;z-index:1}
+.flv-wrap .flv-rays{z-index:0}

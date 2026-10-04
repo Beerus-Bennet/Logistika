@@ -20,7 +20,7 @@ function farmNew(kind) {
     v: 1, kind: kind || "hof", logi: false, sold: null, snd: true, seq: 1,
     objs: [], inv: {}, cap: { silo: 1, barn: 1 },
     stats: { harvest: 0, made: 0, eggs: 0, milk: 0, deliv: 0, earned: 0 },
-    qi: 0, qp: 0, qdone: false, lastOrd: -999, tut: { step: 0, done: false }, born: S.time
+    qi: 0, qp: 0, qdone: false, qv: 2, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time
   };
   S.farm = F;
   const add = (t, x, z, extra) => farmAddObj(Object.assign({ t, x, z }, extra || {}));
@@ -218,12 +218,9 @@ function farmPlant(o, crop) {
 }
 function farmWater(o) {
   if (!o) return false;
-  if (o.t === "field" && fieldState(o) === "grow" && !o.w) {
+  if ((o.t === "field" && fieldState(o) === "grow" && !o.w) || (o.t === "tree" && S.time < o.end && !o.w)) {
     o.w = true; o.end = S.time + (o.end - S.time) * 0.75;
-    farmEvent("water"); return true;
-  }
-  if (o.t === "tree" && S.time < o.end && !o.w) {
-    o.w = true; o.end = S.time + (o.end - S.time) * 0.75;
+    farmXP(1);
     farmEvent("water"); return true;
   }
   return false;
@@ -411,6 +408,7 @@ function farmStoreUp(st) {
   if (S.money < c) return toast("Dafür fehlen " + money(c - S.money) + ".", "warn"), false;
   S.money -= c; S.expense += c;
   S.farm.cap[st] = (S.farm.cap[st] || 1) + 1;
+  farmEvent("store:" + st);
   logMoney("farm", FSTORE[st].n + " ausgebaut", -c);
   farmXP(8);
   return true;
@@ -470,6 +468,7 @@ function farmBuild(spec, x, z, r) {
   farmAddObj(o);
   farmXP(spec.t === "deco" ? Math.max(1, Math.round(spec.price / 10)) : spec.t === "field" ? 2 : spec.t === "tree" ? 4 : 25);
   farmEvent("buy:" + (spec.t === "tree" ? "tree" : spec.t));
+  if (spec.t === "tree") farmEvent("buy:tree:" + spec.kind);
   if (spec.t !== "deco" && spec.t !== "field" && spec.t !== "tree") farmEvent("build:" + spec.t);
   return o;
 }
@@ -608,7 +607,7 @@ function farmDelivered(o, pay) {
   farmXP(o.farm.xp);
   farmEvent("deliver");
   farmEvent("deliver:" + o.to);
-  toast("🧺 " + o.shipper + " ist zufrieden: +" + money(pay) + " · +" + o.farm.xp + " XP" + (o.farm.q >= 4 ? " · " + qStars(o.farm.q) : ""), "ok");
+  toast("🧺 " + o.shipper + " ist zufrieden: +" + money(pay) + " · +" + o.farm.xp + " EP" + (o.farm.q >= 4 ? " · " + qStars(o.farm.q) : ""), "ok");
   S.farm.lastOrd = Math.min(S.farm.lastOrd, S.time - 20);
 }
 
@@ -650,18 +649,32 @@ function farmSend(o, opt) {
 }
 
 /* -------------------------- Opas Notizbuch ---------------------------- */
-function farmQuest() { return S.farm && FQUESTS[S.farm.qi] || null; }
+function farmQuest() { return S.farm && !S.farm.sold && FQUESTS[S.farm.qi] || null; }
+/* Wie weit im Notizbuch: Kapitel, erledigt im Kapitel, Aufgaben im Kapitel */
+function farmChapter() {
+  const q = farmQuest(), c = q ? q.c : FCHAPTERS.length - 1;
+  const all = FQUESTS.filter(x => x.c === c), first = FQUESTS.indexOf(all[0]);
+  return { c, done: q ? S.farm.qi - first : all.length, n: all.length };
+}
+function farmDone() { return !!(S.farm && !S.farm.sold && (S.farm.done || S.farm.qi >= FQUESTS.length)); }
 function farmEvent(key, n) {
   if (!S.farm) return;
   n = n || 1;
   const q = farmQuest();
-  if (q && !S.farm.qdone) {
-    if (q.ev === key) S.farm.qp += n;
-    if (q.ev === "level" && level() >= q.n) S.farm.qp = q.n;
-    if (S.farm.qp >= q.n) { S.farm.qp = q.n; S.farm.qdone = true; if (typeof farmViewQuest === "function") farmViewQuest(true); }
-  }
+  if (q && !S.farm.qdone && q.ev === key) S.farm.qp += n;
+  farmQuestCheck();
   if (typeof farmTutSignal === "function") farmTutSignal(key, n);
 }
+/* Erfüllt? Ereignisse zählen mit, Level und „steht schon“ prüft der Zustand */
+function farmQuestCheck() {
+  const q = farmQuest();
+  if (!q || S.farm.qdone) return;
+  if (q.ev === "level" && level() >= q.n) S.farm.qp = q.n;
+  if (q.chk) S.farm.qp = q.chk() ? q.n : 0;
+  if (S.farm.qp >= q.n) { S.farm.qp = q.n; S.farm.qdone = true; if (typeof farmViewQuest === "function") farmViewQuest(true); }
+}
+/* Abholen. Gibt { q, chapter, last } zurück – chapter, wenn damit ein
+   Kapitel fertig ist, last, wenn das ganze Notizbuch abgehakt ist. */
 function farmQuestClaim() {
   const q = farmQuest();
   if (!q || !S.farm.qdone) return null;
@@ -669,14 +682,27 @@ function farmQuestClaim() {
   logMoney("farm", "Opas Notizbuch: " + q.t, q.r.m);
   S.farm.qi++; S.farm.qp = 0; S.farm.qdone = false;
   farmXP(q.r.xp);
-  /* nächste Aufgabe evtl. schon erfüllt (Level) */
   const nx = farmQuest();
-  if (nx && nx.ev === "level" && level() >= nx.n) { S.farm.qp = nx.n; S.farm.qdone = true; }
-  return q;
+  let chapter = null;
+  if (!nx || nx.c !== q.c) {
+    chapter = FCHAPTERS[q.c];
+    S.money += chapter.r.m; S.revenue += chapter.r.m;
+    logMoney("farm", "Kapitel geschafft: " + chapter.n, chapter.r.m);
+    farmXP(chapter.r.xp);
+  }
+  if (!nx) {
+    S.farm.done = true;
+    S.farm.doneAt = S.time;
+    if (farmPhase() && typeof phoneMsg === "function") setTimeout(() => phoneMsg({ from: "Lina Sturm", kind: "info", title: "Der Hof läuft – und jetzt?",
+      body: "Chef, Opas Notizbuch ist abgehakt, der Hof läuft wie geschmiert. Die Leute in Werder fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. "
+        + "Wenn du willst, gründen wir eine richtige Spedition – der Hof läuft nebenher weiter. Tipp im Hof auf „Spedition gründen“." }), 1500);
+  }
+  farmQuestCheck();
+  return { q, chapter, c: q.c, last: !nx };
 }
 
 /* --------------------- Spedition gründen, Hof verkaufen ---------------- */
-function farmCanFound() { return farmPhase() && level() >= FLOGI_LEVEL; }
+function farmCanFound() { return farmPhase() && farmDone(); }
 function farmFoundLogistics() {
   if (!farmCanFound()) return false;
   S.farm.logi = true;
@@ -720,6 +746,7 @@ function farmSellAll() {
 /* -------------------------------- Takt -------------------------------- */
 function farmTick() {
   if (!farmOn() || (S.farm.tut && !S.farm.tut.done)) return;
+  farmQuestCheck();
   if (S.time - (S.farm.lastOrd || -999) > 45) {
     S.farm.lastOrd = S.time;
     farmSpawnOrders(1);
@@ -732,6 +759,11 @@ function farmTick() {
 if (typeof N !== "undefined" && N.potsdam) N.potsdam.farmX = true;
 /* Spielstände von v36: offene Hofbestellungen auf echte Gebinde und Preise umstellen */
 function farmMigrate() {
+  if (S.farm && !S.farm.sold && (S.farm.qv || 1) < 2) {
+    S.farm.qv = 2;
+    S.farm.qi = S.farm.qi >= FQUEST_OLD.length ? FQUEST_OLD[FQUEST_OLD.length - 1] + 1 : FQUEST_OLD[S.farm.qi] || 0;
+    S.farm.qp = 0; S.farm.qdone = false;
+  }
   if (!S.farm || S.farm.sold || S.farm.econ >= 2) return;
   S.farm.econ = 2;
   S.orders.forEach(o => {
@@ -747,6 +779,7 @@ function farmMigrate() {
 }
 function farmBodyClasses() {
   farmMigrate();
+  if (farmPhase() && S.speed !== 1) { S.speed = 1; lastSpeed = 1; }
   document.body.classList.toggle("has-farm", farmOn());
   document.body.classList.toggle("farm-phase", farmPhase());
   farmNodeName();
@@ -787,7 +820,7 @@ function farmOrderHTML(o) {
   return `<div class="ford">${Object.keys(o.farm.items).map(id => {
     const have = S.farm ? farmInv(id) : 0, need = o.farm.items[id];
     return `<span class="fchip${have < need ? " miss" : ""}">${FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
-  }).join("")}<span class="ford-s">${ready ? "✓ alles da" : "fehlt noch"} · +${o.farm.xp} XP</span></div>`;
+  }).join("")}<span class="ford-s">${ready ? "✓ alles da" : "fehlt noch"} · +${o.farm.xp} EP</span></div>`;
 }
 
 /* Adressen am Hof und in den Dörfern */

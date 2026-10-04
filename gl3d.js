@@ -111,7 +111,7 @@ const G3 = (() => {
       const A = xf(this.M, a), B = xf(this.M, b), C = xf(this.M, c);
       let n = norm(cross(sub(B, A), sub(C, A)));
       const cc = col(color);
-      const f = this.jit ? 1 + (srand() - 0.5) * this.jit : 1;
+      const f = this._qf != null ? this._qf : this.jit ? 1 + (srand() - 0.5) * this.jit : 1;
       const k = shade(cc, f);
       if (na) {
         const R = this.M;
@@ -121,7 +121,12 @@ const G3 = (() => {
       } else this.v.push(...A, ...n, ...k, ...B, ...n, ...k, ...C, ...n, ...k);
       return this;
     }
-    quad(a, b, c, d, color) { this.tri(a, b, c, color); this.tri(a, c, d, color); return this; }
+    quad(a, b, c, d, color) {
+      this._qf = this.jit ? 1 + (srand() - 0.5) * this.jit : null;
+      this.tri(a, b, c, color); this.tri(a, c, d, color);
+      this._qf = null;
+      return this;
+    }
     /* Dreieck mit eigener Farbe je Ecke (weiche Verläufe: Wasser, Ufer) */
     triV(a, b, c, ca, cb, cc) {
       const A = xf(this.M, a), B = xf(this.M, b), C = xf(this.M, c);
@@ -318,7 +323,8 @@ const G3 = (() => {
       w.x += sin(uTime * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
       w.z += cos(uTime * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
     }
-    vW = w.xyz; vNor = mat3(uModel) * aNor; vCol = aCol; vL = uLVP * w;
+    vW = w.xyz; vNor = mat3(uModel) * aNor; vCol = aCol;
+    vL = uLVP * vec4(w.xyz + normalize(vNor) * 0.035, 1.0);   /* Normal-Offset: keine Schattenakne */
     gl_Position = uVP * w;
   }`;
   const FS = `#version 300 es
@@ -528,11 +534,14 @@ const G3 = (() => {
       persp(R.P, c.fov, R.w / R.h, Math.max(0.5, c.dist * 0.2), c.dist * 4 + 60);
       mul(R.VP, R.P, R.V);
       invert(R.IVP, R.VP);
-      /* Sonnenkamera: fester Kasten um die Kameramitte */
-      const L = ID(), Pr = ID(), s = R.shadowBox, sd = R.env.sun;
-      const cx = Math.round(c.tx / 2) * 2, cz = Math.round(c.tz / 2) * 2;
-      lookAt(L, [cx + sd[0] * 40, sd[1] * 40, cz + sd[2] * 40], [cx, 0, cz], [0, 1, 0]);
-      ortho(Pr, -s, s, -s, s, 1, 90);
+      /* Sonnenkamera: feste Ausrichtung, der Ausschnitt folgt der Kamera und
+         rastet auf ganze Schattentexel ein – so flimmern Schattenkanten beim
+         Schwenken nicht. */
+      const L = ID(), Pr = ID(), s = R.shadowBox, sd = R.env.sun, tex = (2 * s) / SH;
+      lookAt(L, [sd[0] * 40, sd[1] * 40, sd[2] * 40], [0, 0, 0], [0, 1, 0]);
+      const lc = xf(L, [c.tx, 0, c.tz]);
+      const px = Math.round(lc[0] / tex) * tex, py = Math.round(lc[1] / tex) * tex;
+      ortho(Pr, px - s, px + s, py - s, py + s, 1, 90);
       mul(R.LVP, Pr, L);
     }
     R.updateCamera = updateCamera;

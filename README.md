@@ -47,8 +47,9 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
 ## Der Hof (3D)
 
 Der Hof ist eine eigene 3D-Ansicht im Stil von Hay Day – schwenken mit einem
-Finger, zoomen mit zwei. Alles läuft über die Spieluhr (bei 1× ist eine
-Spielminute eine Sekunde), also auch mit 3× bis 30×.
+Finger, zoomen mit zwei. Auf dem Hof gibt es weder Pause noch Tempo: Bis zur
+Speditionsgründung läuft die Zeit immer in Echtzeit (eine Spielminute pro
+Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
 
 * **Felder** – antippen, Saat wählen und über die leeren Felder **ziehen**.
   Reif? Die **Sichel** über alle goldenen Felder ziehen. Gießen macht 25 %
@@ -92,8 +93,16 @@ Spielminute eine Sekunde), also auch mit 3× bis 30×.
 * **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Molkerei, zweiter
   Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
   drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es.
-* **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung.
-* **Erfolgsmomente** – fliegende Waren ins Lager, Münzen und XP-Sterne,
+* **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung,
+  aufgeteilt in drei Kapitel: *Ankommen* (Felder, Ofen, Hühner, erste
+  Lieferungen), *Wachsen* (Kuhstall, Milch, Kuchen, Potsdam) und *Meisterhof*
+  (Molkerei, Käse, Pizza, beste Qualität, volle Regale). Was schon steht, zählt
+  sofort; jedes Kapitel endet mit einer Feier, einem Bonus und einem Satz von
+  Opa.
+* **Erfahrungspunkte (EP)** – für Ernten, Gießen, Backen, Tiere, Lieferungen
+  und das Notizbuch, immer als ganze Zahl mit ⭐. Der Balken oben zeigt, wie
+  viele EP bis zum nächsten Level fehlen; ein Tipp darauf erklärt es.
+* **Erfolgsmomente** – fliegende Waren ins Lager, Münzen und EP-Sterne,
   Level-Feier mit allem, was neu freigeschaltet ist, Rauch aus dem Ofen,
   drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
   kleine Töne (abschaltbar).
@@ -103,8 +112,11 @@ Spielminute eine Sekunde), also auch mit 3× bis 30×.
 
 ### Vom Hof zur Spedition
 
-Bis Level 4 gibt es nur die eigene Ware. Dann ruft Lina an: Die Leute fragen,
-ob man nicht auch ihre Sachen mitnimmt. Mit **„Spedition gründen“** kommen
+Erst wird der Hof einmal durchgespielt: Solange Opas Notizbuch nicht
+abgehakt ist, gibt es nur die eigene Ware, und Linas Erklärungen zur
+Spedition warten. Ist das letzte Kapitel geschafft, heißt es „Der Hof
+läuft!“, und Lina ruft an: Die Leute fragen, ob man nicht auch ihre Sachen
+mitnimmt. Mit **„Spedition gründen“** kommen
 fremde Aufträge, Büros, Etappen und alles Weitere dazu – Linas
 Dispositions-Tutorial startet. Der Hof läuft weiter und ist jederzeit über den
 Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der

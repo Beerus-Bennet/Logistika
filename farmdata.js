@@ -141,12 +141,11 @@ const FDECO = {
 const FUNLOCK = {
   2: ["🍅 Tomaten", "🫓 Maisfladen", "🌷 Deko: Blumen, Bank, Bäume"],
   3: ["🥕 Karotten", "🐄 Kuhstall mit Weide", "🌿 Kuhfutter", "🥧 Apfelkuchen"],
-  4: ["🚚 Spedition gründen", "🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
+  4: ["🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
   5: ["🥔 Kartoffeln", "🧀 Käse", "🛖 zweiter Hühnerstall"],
   6: ["🍓 Erdbeeren", "🍕 Pizza", "🍰 Kirschtorte"],
   7: ["🎃 Kürbis", "🍐 Birnbaum"]
 };
-const FLOGI_LEVEL = 4;           /* ab hier fährt man auch für andere */
 
 /* Der Hof liegt zwischen Werder und Glindow im Obstanbaugebiet an der Havel */
 const FARM_NODE = "w-hof";
@@ -196,29 +195,64 @@ const FTOWN_STREETS = {
   "potsdam": [["Bassinplatz", 52.4007, 13.0600], ["Mittelstraße", 52.4020, 13.0580], ["Brandenburger Straße", 52.3995, 13.0540]]
 };
 
-/* Opas Notizbuch: Aufgaben der Reihe nach. ev = Ereignis, n = Anzahl */
-const FQUESTS = [
-  { t: "Ernte 6 Sack Weizen",          ev: "harvest:weizen", n: 6,  r: { m: 10,  xp: 8 } },
-  { t: "Backe 4 Brote",                ev: "make:brot",      n: 4,  r: { m: 15,  xp: 10 } },
-  { t: "Sammle 6 Schachteln Eier",     ev: "collect:ei",     n: 6,  r: { m: 15,  xp: 10 } },
-  { t: "Liefere 2 Bestellungen aus",   ev: "deliver",        n: 2,  r: { m: 25,  xp: 15 } },
-  { t: "Kauf ein neues Feld",          ev: "buy:field",      n: 1,  r: { m: 15,  xp: 8 } },
-  { t: "Gieße 6 Felder",               ev: "water",          n: 6,  r: { m: 15,  xp: 10 } },
-  { t: "Mahle 8 Eimer Hühnerfutter",   ev: "make:hfutter",   n: 8,  r: { m: 15,  xp: 10 } },
-  { t: "Kauf 2 Hühner",                ev: "buy:huhn",       n: 2,  r: { m: 20,  xp: 12 } },
-  { t: "Pflanze Tomaten",              ev: "plant:tomate",   n: 2,  r: { m: 15,  xp: 10 } },
-  { t: "Backe 2 Packungen Maisfladen", ev: "make:fladen",    n: 2,  r: { m: 25,  xp: 14 } },
-  { t: "Bau den Kuhstall",             ev: "build:cows",     n: 1,  r: { m: 60, xp: 20 } },
-  { t: "Melke 4 Kannen Milch",         ev: "collect:milch",  n: 4,  r: { m: 30,  xp: 16 } },
-  { t: "Backe Apfelkuchen",            ev: "make:apfelkuchen", n: 2, r: { m: 30, xp: 18 } },
-  { t: "Liefere nach Potsdam",         ev: "deliver:potsdam", n: 1, r: { m: 50, xp: 25 } },
-  { t: "Erreiche Level 4",             ev: "level",          n: 4,  r: { m: 60, xp: 0 } },
-  { t: "Bau die Molkerei",             ev: "build:dairy",    n: 1,  r: { m: 100, xp: 30 } },
-  { t: "Mach 4 Stück Butter",          ev: "make:butter",    n: 4,  r: { m: 50, xp: 25 } },
-  { t: "Vergrößere einen Auslauf",     ev: "pen",            n: 1,  r: { m: 60, xp: 25 } },
-  { t: "Liefere 10 Bestellungen aus",  ev: "deliver",        n: 10, r: { m: 120, xp: 50 } },
-  { t: "Erreiche 5 Sterne bei Eiern",  ev: "q5:ei",          n: 1,  r: { m: 100, xp: 40 } }
+/* Opas Notizbuch: der Hof als Durchlauf in drei Kapiteln. Erst wenn alles
+   abgehakt ist, läuft der Hof – dann kommt die Spedition.
+   ev = Ereignis, das zählt (n mal) · chk = Zustand, der reicht (z. B. „steht
+   schon“) · c = Kapitel · r = Belohnung (€, EP)                          */
+const FCHAPTERS = [
+  { n: "Ankommen",   t: "Der erste Tag auf Opas Hof",                 r: { m: 50,  xp: 30 },
+    opa: "Felder, Hühner, Ofen – das ist das Herz vom Hof. Wenn das läuft, kommen auch die Leute aus dem Dorf von allein." },
+  { n: "Wachsen",    t: "Kühe, Kuchen und die ersten Stammkunden",   r: { m: 100, xp: 60 },
+    opa: "Eine Kuh macht Arbeit, aber ohne Milch kein Kuchen. Und die Potsdamer zahlen gut für ehrliche Ware." },
+  { n: "Meisterhof", t: "Molkerei, beste Qualität und volle Regale", r: { m: 250, xp: 100 },
+    opa: "Gute Ware braucht Platz und Geduld. Gib den Tieren Raum, dann schmeckt man es." }
 ];
+const fcount = t => S.farm.objs.filter(o => o.t === t).length;
+const fanimals = t => S.farm.objs.filter(o => o.t === t).reduce((a, o) => a + o.animals.length, 0);
+const FQUESTS = [
+  /* Kapitel 1 – Ankommen */
+  { c: 0, t: "Ernte 6 Sack Weizen",             ev: "harvest:weizen",   n: 6,  r: { m: 10,  xp: 8 } },
+  { c: 0, t: "Backe 4 Brote",                   ev: "make:brot",        n: 4,  r: { m: 15,  xp: 10 } },
+  { c: 0, t: "Sammle 6 Schachteln Eier",        ev: "collect:ei",       n: 6,  r: { m: 15,  xp: 10 } },
+  { c: 0, t: "Liefere 2 Bestellungen aus",      ev: "deliver",          n: 2,  r: { m: 25,  xp: 15 } },
+  { c: 0, t: "Kauf ein neues Feld",             chk: () => fcount("field") >= 7,       n: 1, r: { m: 15, xp: 8 } },
+  { c: 0, t: "Gieße 6 Felder",                  ev: "water",            n: 6,  r: { m: 15,  xp: 10 } },
+  { c: 0, t: "Mahle 8 Eimer Hühnerfutter",      ev: "make:hfutter",     n: 8,  r: { m: 15,  xp: 10 } },
+  { c: 0, t: "Halte 5 Hühner",                  chk: () => fanimals("coop") >= 5,      n: 1, r: { m: 20, xp: 12 } },
+  { c: 0, t: "Erreiche Level 2",                ev: "level",            n: 2,  r: { m: 20,  xp: 0 } },
+  { c: 0, t: "Pflanze Tomaten auf 2 Feldern",   ev: "plant:tomate",     n: 2,  r: { m: 15,  xp: 10 } },
+  { c: 0, t: "Backe 8 Maisfladen",              ev: "make:fladen",      n: 2,  r: { m: 25,  xp: 14 } },
+  { c: 0, t: "Stell eine neue Deko auf",        ev: "buy:deco",         n: 1,  r: { m: 10,  xp: 5 } },
+  /* Kapitel 2 – Wachsen */
+  { c: 1, t: "Erreiche Level 3",                ev: "level",            n: 3,  r: { m: 30,  xp: 0 } },
+  { c: 1, t: "Bau den Kuhstall",                chk: () => fcount("cows") >= 1,        n: 1, r: { m: 60, xp: 20 } },
+  { c: 1, t: "Halte 2 Kühe",                    chk: () => fanimals("cows") >= 2,      n: 1, r: { m: 40, xp: 16 } },
+  { c: 1, t: "Mahle 2 Ballen Kuhfutter",        ev: "make:kfutter",     n: 2,  r: { m: 15,  xp: 10 } },
+  { c: 1, t: "Melke 4 Kannen Milch",            ev: "collect:milch",    n: 4,  r: { m: 30,  xp: 16 } },
+  { c: 1, t: "Pflanze Karotten auf 2 Feldern",  ev: "plant:karotte",    n: 2,  r: { m: 15,  xp: 10 } },
+  { c: 1, t: "Backe 4 Apfelkuchen",             ev: "make:apfelkuchen", n: 4,  r: { m: 30,  xp: 18 } },
+  { c: 1, t: "Liefere nach Potsdam",            ev: "deliver:potsdam",  n: 1,  r: { m: 50,  xp: 25 } },
+  { c: 1, t: "Liefere 8 Bestellungen aus",      ev: "deliver",          n: 8,  r: { m: 60,  xp: 30 } },
+  { c: 1, t: "Erreiche Level 4",                ev: "level",            n: 4,  r: { m: 60,  xp: 0 } },
+  /* Kapitel 3 – Meisterhof */
+  { c: 2, t: "Pflanze einen Kirschbaum",        chk: () => S.farm.objs.some(o => o.t === "tree" && o.kind === "kirsche"), n: 1, r: { m: 30, xp: 15 } },
+  { c: 2, t: "Bau die Molkerei",                chk: () => fcount("dairy") >= 1,       n: 1, r: { m: 100, xp: 30 } },
+  { c: 2, t: "Mach 1 kg Butter",                ev: "make:butter",      n: 4,  r: { m: 50,  xp: 25 } },
+  { c: 2, t: "Backe 18 Möhren-Muffins",         ev: "make:muffins",     n: 3,  r: { m: 40,  xp: 20 } },
+  { c: 2, t: "Vergrößere einen Auslauf",        chk: () => S.farm.objs.some(o => (o.t === "coop" || o.t === "cows") && o.lvl >= 2), n: 1, r: { m: 60, xp: 25 } },
+  { c: 2, t: "Bau das Silo aus",                chk: () => (S.farm.cap.silo || 1) >= 2, n: 1, r: { m: 40, xp: 15 } },
+  { c: 2, t: "Erreiche 5 Sterne bei Eiern",     ev: "q5:ei",            n: 1,  r: { m: 80,  xp: 30 } },
+  { c: 2, t: "Erreiche Level 5",                ev: "level",            n: 5,  r: { m: 80,  xp: 0 } },
+  { c: 2, t: "Mach 2 kg Käse",                  ev: "make:kaese",       n: 2,  r: { m: 60,  xp: 25 } },
+  { c: 2, t: "Ernte 20 kg Kartoffeln",          ev: "harvest:kartoffel", n: 4, r: { m: 40,  xp: 20 } },
+  { c: 2, t: "Erreiche Level 6",                ev: "level",            n: 6,  r: { m: 100, xp: 0 } },
+  { c: 2, t: "Backe 4 Pizzen",                  ev: "make:pizza",       n: 4,  r: { m: 80,  xp: 30 } },
+  { c: 2, t: "Backe 2 Kirschtorten",            ev: "make:kirschtorte", n: 2,  r: { m: 100, xp: 35 } },
+  { c: 2, t: "Ernte 2 kg Erdbeeren",            ev: "harvest:erdbeere", n: 4,  r: { m: 80,  xp: 30 } },
+  { c: 2, t: "Liefere 15 Bestellungen aus",     ev: "deliver",          n: 15, r: { m: 150, xp: 60 } }
+];
+/* Spielstände vor v38: Index im alten Notizbuch → neuer Index */
+const FQUEST_OLD = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 13, 16, 18, 19, 21, 23, 24, 26, 20, 28];
 
 /* ------------------- Netzknoten rund um den Hof ----------------------
    Sie gehören nur zu Spielständen mit Hof (Feld 10 = "hof"); ältere
