@@ -28,10 +28,11 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
 2. **Erbe antreten** – Name des Betriebs, Hausfarbe und was du geerbt hast:
    den **Obsthof** von Opa Hinrich bei Werder (Havel) – 500 €, Felder,
    Apfelbäume, drei Hühner, Backofen, Futtermühle, ein Lastenrad und seine
-   alte Simson. „Erbe antreten“ führt direkt auf den Hof, ein Fahrzeugkauf
-   ist nicht nötig. Die **Fischerei** an der Ostsee folgt in einem der
-   nächsten Updates. (Ältere Spielstände mit Kurierstart laufen unverändert
-   weiter.)
+   alte Simson – oder die **Fischerei** von Tante Gesche in Warnemünde –
+   500 €, Kutter, Reusen, Muschelleinen, Netzgehege mit Forellen, Fischhalle,
+   Räucherei, Futterküche, ein Lastenrad und ihre Simson. „Erbe antreten“
+   führt direkt hin, ein Fahrzeugkauf ist nicht nötig. (Ältere Spielstände mit
+   Kurierstart laufen unverändert weiter.)
 3. **Fuhrpark kaufen** (nur Kurierstart älterer Spielstände) – ohne Fahrzeug
    keine Spedition. Erst wenn mindestens eins im Hof steht, wird der Betrieb
    angemeldet und Karte wie Auftragsbuch gehen auf.
@@ -58,10 +59,18 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   Rekordernte mit drei.
 * **Obstbäume** – Äpfel, ab Level 4 Werderaner Kirschen, ab Level 7 Birnen.
   Antippen, wenn sie reif sind; alte Bäume tragen bessere Früchte.
-* **Tiere** – Hühner legen Eier, Kühe geben Milch. Futter kommt aus der
-  Futtermühle (Weizen + Mais). Stall antippen sammelt alles ein, Futter über
-  die Tiere ziehen füttert sie. Ein Tier antippen und streicheln: das nächste
-  Produkt wird einen Stern besser.
+* **Tiere** – Hühner legen Eier, Kühe geben Milch, **Schafe** werden
+  geschoren (ein Vlies Rohwolle je Durchgang, danach stehen sie sichtbar
+  „nackt“ da). Futter kommt aus der Futtermühle (Hühner-, Kuh-, Schweine- und
+  Schaffutter). Stall antippen sammelt alles ein, Futter über die Tiere ziehen
+  füttert sie. Ein Tier antippen und streicheln: das nächste Produkt wird
+  einen Stern besser.
+* **Masttiere** – **Schweine** (ab Level 4) und **Rinder** (ab Level 6) wachsen
+  mit jeder Mahlzeit; nach drei bzw. vier Mahlzeiten sind sie schlachtreif
+  (✓ über dem Stall). Ein Tipp bringt sie zum Metzger: je Schwein drei, je Rind
+  vier Fleischpakete à 5 kg – danach kauft man Ferkel und Kälber nach.
+* **Metzgerei und Spinnstube** – Bratwurst, Schinken und Gulasch aus eigenem
+  Fleisch; Wollknäuel, Wollsocken und Pullover aus eigener Wolle.
 * **Platz = Qualität** – je mehr Auslauf jedes Tier hat, desto besser die Ware:
   von „zu eng – Massenhaltung“ (★) über Bodenhaltung und Freilandhaltung bis
   „Bio-Weidehaltung“ (★★★★★). Mehr Tiere bringen mehr Eier, aber auf engem Raum
@@ -90,15 +99,17 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   die Dörfer und Potsdam; Berlin liegt noch unter dem Nebel.
 * **Teich** – mit Tiefenverlauf, feinen Wellen, Sandufer, Schilf, Seerosen,
   Steg mit Ruderboot und Enten, die ihre Runden ziehen.
-* **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Molkerei, zweiter
+* **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Schweinestall,
+  Schafweide, Rinderweide, Molkerei, Metzgerei, Spinnstube, zweiter
   Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
   drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es.
 * **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung,
-  aufgeteilt in drei Kapitel: *Ankommen* (Felder, Ofen, Hühner, erste
-  Lieferungen), *Wachsen* (Kuhstall, Milch, Kuchen, Potsdam) und *Meisterhof*
-  (Molkerei, Käse, Pizza, beste Qualität, volle Regale). Was schon steht, zählt
+  aufgeteilt in vier Kapitel: *Ankommen* (Felder, Ofen, Hühner, erste
+  Lieferungen), *Wachsen* (Kuhstall, Milch, Kuchen, Potsdam), *Vieh & Handwerk*
+  (Schweine, Schafe, Metzgerei, Spinnstube) und *Meisterhof* (Molkerei, Käse,
+  Pizza, Rinder, beste Qualität, volle Regale). Was schon steht, zählt
   sofort; jedes Kapitel endet mit einer Feier, einem Bonus und einem Satz von
-  Opa.
+  Opa. Spielstände von v38 machen an derselben Aufgabe weiter.
 * **Erfahrungspunkte (EP)** – für Ernten, Gießen, Backen, Tiere, Lieferungen
   und das Notizbuch, immer als ganze Zahl mit ⭐. Der Balken oben zeigt, wie
   viele EP bis zum nächsten Level fehlen; ein Tipp darauf erklärt es.
@@ -109,6 +120,54 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
 * **Linas Rundgang** – zum Start zeigt Lina mit dem Finger, was zu tun ist:
   ernten, säen, gießen, Eier holen, füttern, backen, pflücken und die erste
   Lieferung an die Bäckerei Hahn losschicken.
+
+## Die Fischerei (3D)
+
+Tante Gesches Fischerei liegt am Kai in Warnemünde: im Norden die Ostsee mit
+Mole und grünem Molenfeuer, im Osten Leuchtturm, Teepott, Strand mit
+Strandkörben und Dünen, hinter der Straße die Häuser „Am Strom“. Möwen
+kreisen, draußen zieht die Fähre vorbei, Fahrwassertonnen schaukeln.
+
+* **Kutter „Hertha“** – Fangfahrten statt Rezepte: Heringe vor Warnemünde,
+  Dorsch an der Kadetrinne (ab Level 2, braucht Köder) und Garnelen mit der
+  Kurre (ab Level 3). Diesel zahlt man beim Ablegen. Der Kutter läuft sichtbar
+  aus, verschwindet am Horizont und legt mit Möwen im Schlepp wieder an – erst
+  dann wird ausgeladen. Fang schwankt: mal eine Kiste mehr, mal bessere See.
+* **Reusen** – wie Felder: antippen, Krabben (ab Level 3 Garnelen) wählen und
+  den Köder über die leeren Reusen ziehen; volle Reusen hängen halb aus dem
+  Wasser – den **Haken** drüberziehen. Frischer Köder bringt bessere Ware.
+* **Muschelleinen** – wie Obstbäume: alle sechs Stunden 6 kg Miesmuscheln,
+  manchmal steckt eine **Perle** drin (in der allerersten immer).
+  **Perlmuschel-Leinen** (ab Level 4) bringen jedes Mal zwei Perlen. Leine
+  putzen macht schneller und besser.
+* **Netzgehege** – Forellenschwärme ziehen ihre Kreise, springen aus dem
+  Wasser und wollen Fischfutter; Platz im Gehege (m³ je Schwarm) bestimmt die
+  Qualität. Zum Abfischen das Gehege antippen.
+* **Verarbeitung** – Fischhalle (Hering- und Dorschfilet, Fischabfälle fallen
+  dabei an; ab Level 3 Muscheln öffnen für Perlen), Räucherei (Bücklinge,
+  Räucherforellen), Futterküche (Köder aus Abfällen, Fischfutter aus Hering),
+  Fischbude (Fisch-, Backfisch- und Krabbenbrötchen, Fischsuppe) und die
+  **Schmiede**: Perlenring, Perlenkette und Perlendiadem aus Perlen und
+  Silberdraht. Brötchen, Silberdraht und Köder gibt es im Laden unter
+  „Einkauf“.
+* **Angelsteg** – kleines Geschicklichkeitsspiel: Köder auswerfen, warten,
+  bis der Schwimmer richtig abtaucht (Zucken zählt nicht!), dann binnen einer
+  Sekunde anschlagen. Mit Glück zappelt ein Hering, Dorsch oder eine
+  Meerforelle am Haken – manchmal nur ein Gummistiefel oder eine Flaschenpost.
+* **Lager** – Kühlhaus für Fang und Feinkost, Netzspeicher für Köder, Futter,
+  Einkauf, Perlen und Schmuck. Wasserobjekte (Reusen, Leinen, Gehege, Jolle,
+  Leuchtboje) stehen nur im Wasser, Gebäude nur an Land, der Kai bleibt frei.
+* **Kundschaft** – Fischbude Am Strom, Hotel, Restaurant und Juwelier in
+  Warnemünde, Campingplatz Markgrafenheide, später Rostock (Fischmarkt
+  Stadthafen, Goldschmiede), Bad Doberan, Graal-Müritz, Kühlungsborn,
+  Heiligendamm (Grandhotel) und Wismar.
+* **Gesches Logbuch** – drei Kapitel: *Ankommen*, *Wachsen* (Fischbude,
+  Dorsch, Räucherforellen, Rostock) und *Meisterbetrieb* (Schmiede, Perlen,
+  Schmuck für die feinen Hotels). Danach ruft Lina an: Spedition gründen –
+  die Fischerei läuft weiter und lässt sich auch verkaufen.
+* **Linas Rundgang am Kai** – Reusen leeren und beködern, Muscheln mit Perle,
+  Forellen abfischen und füttern, Kutter rausschicken, Bücklinge räuchern,
+  Fang ausladen und die erste Lieferung an die Fischbude.
 
 ### Vom Hof zur Spedition
 
@@ -670,11 +729,14 @@ loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht
 game.js                 Simulation, Routing, Wirtschaft, Oberfläche
-farmdata.js             Hof: Waren, Pflanzen, Tiere, Rezepte, Kundschaft, Notizbuch, Dorfknoten
-farm.js                 Hof: Spielstand, Ernte, Tiere mit Platz-Qualität, Bestellungen, Verkauf
+farmdata.js             Hof: Waren, Pflanzen, Tiere, Rezepte, Kundschaft, Notizbuch, Dorfknoten, Erbe-Register (FSITES)
+fishdata.js             Fischerei: Fang, Reusen, Leinen, Gehege, Kutterfahrten, Rezepte, Küstenorte, Logbuch
+farm.js                 Erbe: Spielstand, Ernte und Fang, Tiere mit Platz-Qualität, Mast, Angeln, Bestellungen, Verkauf
 gl3d.js                 eigene kleine WebGL2-Engine: Low-Poly, Schatten, Wasser, Partikel
 farmmodels.js           alle 3D-Modelle des Hofs, prozedural gebaut
-farmview.js             3D-Hofansicht: Kamera, Gesten, Werkzeuge, Fenster, Effekte, Rundgang
+fishmodels.js           3D-Modelle der Küste: Kutter, Reusen, Gehege, Leuchtturm, Teepott, Strand
+farmview.js             3D-Ansicht des Erbes: Kamera, Gesten, Werkzeuge, Fenster, Effekte, Rundgang
+fishview.js             Küste in Bewegung: Kutterfahrten, Möwen, Fähre, Forellen, Angelspiel
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest

@@ -590,6 +590,265 @@ const FM = (() => {
   }
   /* Futternapf-Symbol über hungrigen Tieren gibt es als HTML – hier nur der Trog */
 
+  /* Schwein: rosa Hausschwein (0) oder Buntes Bentheimer mit Flecken (1) */
+  function pig(variant) {
+    G3.seed(470 + (variant || 0));
+    const b = new MB();
+    const skin = 0xf3aaa2, dark = 0xe28d86, spot = 0x332a2a;
+    [[0.11, 0.19], [-0.11, 0.19], [0.11, -0.19], [-0.11, -0.19]].forEach(([x, z]) => {
+      b.box(0.08, 0.2, 0.08, skin, { x, z, y: 0.02 });
+      b.box(0.085, 0.04, 0.085, 0x6e5048, { x, z });
+    });
+    b.at({ y: 0.36 }, () => {
+      b.sphere(0.2, 11, 8, skin, { sy: 0.86, sz: 1.5, smooth: true });
+      if (variant === 1) [[0.15, 0.04, -0.12, 0.1], [-0.14, 0.02, 0.06, 0.08], [0.0, 0.15, -0.18, 0.09], [-0.12, -0.02, -0.2, 0.07]].forEach(([x, y, z, r]) =>
+        b.sphere(r, 7, 5, spot, { x, y, z, sx: Math.abs(x) > 0.05 ? 0.45 : 1, sy: Math.abs(x) > 0.05 ? 1 : 0.4, smooth: true }));
+      /* Ringelschwanz */
+      for (let i = 0; i < 5; i++) b.box(0.025, 0.025, 0.04, dark, { x: Math.cos(i * 1.4) * 0.025, y: 0.06 + Math.sin(i * 1.4) * 0.025, z: -0.3 - i * 0.012 });
+      /* Kopf mit Rüssel, Schlappohren */
+      b.at({ z: 0.29, y: 0.04 }, () => {
+        b.sphere(0.13, 10, 7, skin, { sz: 0.92, smooth: true });
+        b.cyl(0.068, 0.07, 0.07, 12, 0xf7bab3, { rx: Math.PI / 2, z: 0.09, y: -0.025, top: 0xe8968f });
+        b.box(0.018, 0.026, 0.01, 0x7a3c3c, { x: 0.024, y: -0.025, z: 0.162 }); b.box(0.018, 0.026, 0.01, 0x7a3c3c, { x: -0.024, y: -0.025, z: 0.162 });
+        b.box(0.024, 0.024, 0.01, C.black, { x: 0.07, y: 0.04, z: 0.1, ry: 0.5 }); b.box(0.024, 0.024, 0.01, C.black, { x: -0.07, y: 0.04, z: 0.1, ry: -0.5 });
+        [1, -1].forEach(s => b.cone(0.055, 0.12, 4, variant === 1 ? spot : dark, { x: s * 0.085, y: 0.09, z: 0.0, rx: 0.9, rz: -s * 0.35 }));
+      });
+    });
+    return b;
+  }
+  /* Schaf: Schwarzkopf (0) oder helles Merino (1); geschoren schmal und hell */
+  function sheep(variant, shorn) {
+    G3.seed(490 + (variant || 0) * 3 + (shorn ? 1 : 0));
+    const b = new MB();
+    const wool = variant === 1 ? 0xeee5d3 : 0xf8f5ee, face = variant === 1 ? 0xeedfca : 0x2c2727, leg = variant === 1 ? 0xd8c7ae : 0x2c2727;
+    [[0.1, 0.17], [-0.1, 0.17], [0.1, -0.17], [-0.1, -0.17]].forEach(([x, z]) => b.box(0.05, 0.26, 0.05, leg, { x, z }));
+    b.at({ y: 0.4 }, () => {
+      if (shorn) b.sphere(0.15, 10, 7, 0xf1e5d6, { sy: 0.9, sz: 1.5, smooth: true });
+      else b.noise(0.07, () => {
+        b.at({ sz: 1.3 }, () => b.ico(0.22, wool, { jitter: 0.18, detail: 1 }));
+        [[0.13, 0.08, 0.12], [-0.13, 0.08, 0.1], [0.12, 0.1, -0.14], [-0.12, 0.09, -0.15], [0, 0.17, 0], [0, 0.12, -0.24], [0.15, -0.05, 0], [-0.15, -0.05, -0.02]].forEach(([x, y, z]) =>
+          b.ico(0.1, wool, { x, y, z, jitter: 0.3 }));
+      });
+      b.ico(0.05, shorn ? 0xf1e5d6 : wool, { z: shorn ? -0.22 : -0.3, y: 0.02 });
+      b.at({ z: shorn ? 0.24 : 0.29, y: 0.1, rx: 0.3 }, () => {
+        b.sphere(0.075, 8, 6, face, { sz: 1.4, sy: 1.05, smooth: true });
+        [1, -1].forEach(s => b.box(0.1, 0.035, 0.05, face, { x: s * 0.08, y: 0.03, z: -0.02, rz: s * 0.4 }));
+        b.box(0.02, 0.02, 0.01, variant === 1 ? C.black : 0xf2e6c8, { x: 0.045, y: 0.025, z: 0.07 }); b.box(0.02, 0.02, 0.01, variant === 1 ? C.black : 0xf2e6c8, { x: -0.045, y: 0.025, z: 0.07 });
+        if (!shorn) b.ico(0.06, wool, { y: 0.07, z: -0.03, jitter: 0.3 });
+      });
+    });
+    return b;
+  }
+  /* Mastrind: Angus schwarz (0) oder Hochlandrind mit Hörnern und Zottelfell (1) */
+  function beef(variant) {
+    G3.seed(460 + (variant || 0));
+    const b = new MB();
+    const hl = variant === 1, base = hl ? 0xa9592c : 0x2b2827, dark = hl ? 0x8a4521 : 0x1d1b1a;
+    [[0.19, 0.33], [-0.19, 0.33], [0.19, -0.33], [-0.19, -0.33]].forEach(([x, z]) => {
+      b.box(0.12, 0.34, 0.12, base, { x, z, y: 0.04 });
+      b.box(0.13, 0.06, 0.13, 0x2a2222, { x, z });
+    });
+    b.at({ y: 0.6 }, () => {
+      b.noise(hl ? 0.18 : 0.05, () => {
+        b.box(0.58, 0.42, 1.0, base, { c: true });
+        b.box(0.52, 0.2, 0.9, base, { c: true, y: 0.2 });
+        if (hl) for (let i = 0; i < 14; i++) b.box(0.05, 0.16, 0.05, dark, { x: (i % 2 ? 1 : -1) * 0.29, y: -0.2, z: -0.45 + (i >> 1) * 0.14, rz: (i % 2 ? -1 : 1) * 0.15 });
+      });
+      b.box(0.03, 0.42, 0.03, base, { z: -0.51, y: -0.18, rx: 0.12 });
+      b.box(0.07, 0.12, 0.07, dark, { z: -0.53, y: -0.4 });
+      b.at({ z: 0.58, y: 0.1, rx: 0.3 }, () => {
+        b.noise(hl ? 0.15 : 0.04, () => b.box(0.32, 0.32, 0.34, base, { c: true }));
+        b.box(0.3, 0.17, 0.12, hl ? 0x6a3a22 : 0x3a3434, { c: true, z: 0.21, y: -0.07 });
+        b.box(0.04, 0.03, 0.02, C.black, { x: 0.07, z: 0.275, y: -0.05 }); b.box(0.04, 0.03, 0.02, C.black, { x: -0.07, z: 0.275, y: -0.05 });
+        if (hl) {
+          b.noise(0.2, () => { for (let i = 0; i < 7; i++) b.box(0.06, 0.16, 0.04, 0xc06a33, { x: -0.15 + i * 0.05, y: 0.08, z: 0.17, rx: 0.2 }); });
+          [1, -1].forEach(s => b.at({ x: s * 0.17, y: 0.12 }, () => { b.cone(0.045, 0.32, 6, 0xefe4c8, { rz: -s * 1.2 }); b.box(0.04, 0.04, 0.04, 0x4a3a2a, { x: s * 0.27, y: 0.13 }); }));
+        } else {
+          b.box(0.04, 0.05, 0.02, 0x8a6a5a, { x: 0.1, y: 0.06, z: 0.175 }); b.box(0.04, 0.05, 0.02, 0x8a6a5a, { x: -0.1, y: 0.06, z: 0.175 });
+        }
+        b.box(0.15, 0.07, 0.04, base, { x: 0.21, y: 0.06, rz: -0.3 }); b.box(0.15, 0.07, 0.04, base, { x: -0.21, y: 0.06, rz: 0.3 });
+      });
+    });
+    return b;
+  }
+  /* Wollknäuel neben dem Schaf, wenn es zum Scheren bereit ist */
+  function woolBall() {
+    G3.seed(497);
+    const b = new MB();
+    b.noise(0.1, () => b.ico(0.1, 0xf8f5ee, { y: 0.09, jitter: 0.3 }));
+    b.box(0.14, 0.012, 0.012, 0xe8dcc4, { y: 0.12, ry: 0.5 });
+    return b;
+  }
+
+  /* Schweinestall: Matsch, Suhle, Trog, Holzzaun (Hütte als eigener Knoten) */
+  function pigRun(w, d) {
+    G3.seed(74 + w * 7 + d);
+    const b = new MB();
+    b.noise(0.1, () => b.plate(w - 0.1, d - 0.1, 0x9a7650, { y0: 0.012 }));
+    for (let i = 0; i < w * d * 2; i++) b.box(0.1, 0.01, 0.06, i % 3 ? 0x86663f : 0xd8be6a, { x: (rnd() - 0.5) * (w - 0.4), y: 0.015, z: (rnd() - 0.5) * (d - 0.4), ry: rnd() * 3 });
+    /* Suhle */
+    b.at({ x: w / 2 - 1.3, z: -d / 2 + 1.3 }, () => {
+      b.disc(0.75, 16, 0x5d4430, { y0: 0.02, wob: 0.12 });
+      b.disc(0.5, 14, 0x4f3a2a, { y0: 0.025, wob: 0.15 });
+    });
+    rectFence(b, w - 0.1, d - 0.1, { step: 0.8, h: 0.55, post: 0x6e4a2e, rail: 0x9a6a3c });
+    b.at({ x: w / 2 - 0.9, z: d / 2 - 0.45 }, () => {
+      b.box(1.0, 0.18, 0.28, 0x8c98a2);
+      b.box(0.9, 0.04, 0.2, 0xb08a52, { y: 0.17 });
+    });
+    return b;
+  }
+  /* Schweinehütte mit rundem Wellblechdach (1,6 × 1,3) */
+  function pigHut() {
+    G3.seed(76);
+    const b = new MB();
+    plankWall(b, 1.5, 0.75, 0.08, C.woodL, { z: -0.6 });
+    b.box(0.08, 0.75, 1.2, C.woodD, { x: -0.72 }); b.box(0.08, 0.75, 1.2, C.woodD, { x: 0.72 });
+    for (let i = 0; i <= 8; i++) {
+      const a = i / 8 * Math.PI, a2 = (i + 1) / 8 * Math.PI;
+      if (i === 8) break;
+      const y0 = 0.75 + Math.sin(a) * 0.45, y1 = 0.75 + Math.sin(a2) * 0.45, x0 = Math.cos(a) * 0.82, x1 = Math.cos(a2) * 0.82;
+      b.quad([x0, y0, 0.7], [x0, y0, -0.7], [x1, y1, -0.7], [x1, y1, 0.7], i % 2 ? 0xb8463a : 0xc9554a);
+      b.quad([x1, y1, 0.7], [x1, y1, -0.7], [x0, y0, -0.7], [x0, y0, 0.7], 0x8e3a30);
+    }
+    b.noise(0.2, () => b.box(1.2, 0.15, 0.6, C.hay, { y: 0.0, z: -0.2, top: C.hayD }));
+    return b;
+  }
+  /* Schafweide: Wiese mit Klee, niedriger Holzzaun, Heuraufe, Wanne */
+  function sheepPasture(w, d) {
+    G3.seed(86 + w * 7 + d);
+    const b = new MB();
+    b.noise(0.1, () => b.plate(w - 0.1, d - 0.1, 0x93c955, { y0: 0.01 }));
+    for (let i = 0; i < w * d * 1.4; i++) b.ico(0.06, [0xffffff, 0xd9a7e8, 0x5fae3a][i % 3], { x: (rnd() - 0.5) * (w - 0.6), y: 0.025, z: (rnd() - 0.5) * (d - 0.6), flat: 0.5 });
+    rectFence(b, w - 0.1, d - 0.1, { step: 0.9, h: 0.5, post: 0x5c3d24, rail: 0x8a6038 });
+    b.at({ x: w / 2 - 0.9, z: d / 2 - 0.5 }, () => {
+      b.box(0.7, 0.5, 0.5, C.woodD);
+      for (let i = 0; i < 6; i++) b.box(0.03, 0.4, 0.03, C.woodL, { x: -0.3 + i * 0.12, y: 0.5, z: 0.22 });
+      b.noise(0.2, () => b.box(0.62, 0.25, 0.4, C.hay, { y: 0.5, top: C.hayD }));
+    });
+    b.cyl(0.28, 0.25, 0.18, 12, 0x8c98a2, { x: w / 2 - 2.1, z: d / 2 - 0.45 });
+    b.cyl(0.24, 0.24, 0.02, 12, C.water, { x: w / 2 - 2.1, y: 0.16, z: d / 2 - 0.45 });
+    return b;
+  }
+  /* Unterstand für die Schafe (1,9 × 1,3) */
+  function sheepShelter() {
+    G3.seed(88);
+    const b = new MB();
+    b.noise(0.1, () => b.plate(1.9, 1.3, 0xc9ad78, { y0: 0.012 }));
+    plankWall(b, 1.9, 1.0, 0.1, 0x9c6b3e, { z: -0.6 });
+    b.box(0.1, 0.95, 1.3, 0x7a5233, { x: -0.9 }); b.box(0.1, 0.95, 1.3, 0x7a5233, { x: 0.9 });
+    b.box(0.1, 1.05, 0.1, C.beam, { x: -0.9, z: 0.6 }); b.box(0.1, 1.05, 0.1, C.beam, { x: 0.9, z: 0.6 });
+    b.noise(0.05, () => b.box(2.15, 0.08, 1.65, 0x6b8f6b, { y: 1.05, rx: 0.14, top: 0x5c7d5c }));
+    b.noise(0.2, () => b.ico(0.25, C.hay, { x: 0.4, y: 0.08, z: -0.3, flat: 0.6, jitter: 0.4 }));
+    return b;
+  }
+  /* Rinderweide: dunkler Holzzaun mit drei Latten, Rundraufe, Tränke */
+  function beefPasture(w, d) {
+    G3.seed(84 + w * 7 + d);
+    const b = new MB();
+    b.noise(0.1, () => b.plate(w - 0.1, d - 0.1, 0x7fbb48, { y0: 0.01 }));
+    for (let i = 0; i < w * d * 0.8; i++) b.ico(0.07, [0xf6d64a, 0xffffff][i % 2], { x: (rnd() - 0.5) * (w - 0.6), y: 0.03, z: (rnd() - 0.5) * (d - 0.6), flat: 0.5 });
+    const F = new MB();
+    rectFence(F, w - 0.1, d - 0.1, { step: 1.1, h: 0.8, post: 0x4a3322, rail: 0x6e4a2e });
+    b.add(F);
+    /* Rundraufe mit Heu */
+    b.at({ x: w / 2 - 1.2, z: d / 2 - 1.1 }, () => {
+      b.cyl(0.45, 0.45, 0.42, 12, 0x2f5d3a, { notop: true });
+      b.noise(0.15, () => b.cyl(0.4, 0.38, 0.5, 12, C.hay, { top: C.hayD }));
+    });
+    b.at({ x: -w / 2 + 2.6, z: d / 2 - 0.45 }, () => {
+      b.box(1.1, 0.32, 0.38, C.stoneD);
+      b.box(1.0, 0.03, 0.29, C.water, { y: 0.29 });
+    });
+    return b;
+  }
+  /* Offener Unterstand für Rinder (2,7 × 1,8) */
+  function beefShelter() {
+    G3.seed(85);
+    const b = new MB();
+    b.noise(0.1, () => b.plate(2.7, 1.8, 0xbfa36e, { y0: 0.01 }));
+    plankWall(b, 2.7, 1.5, 0.12, 0x5c3d24, { z: -0.84 });
+    b.box(0.12, 1.4, 1.8, 0x5c3d24, { x: -1.29 }); b.box(0.12, 1.4, 1.8, 0x5c3d24, { x: 1.29 });
+    [-1.25, 0, 1.25].forEach(x => b.box(0.12, 1.55, 0.12, C.beam, { x, z: 0.85 }));
+    b.noise(0.05, () => b.box(3.0, 0.1, 2.25, 0x3f6f4a, { y: 1.55, rx: 0.12, top: 0x355f3f }));
+    b.noise(0.2, () => b.box(1.3, 0.38, 0.6, C.hay, { x: -0.45, z: -0.45, top: C.hayD }));
+    return b;
+  }
+
+  /* Landfleischerei: Laden mit Markise, Schaufenster mit Würsten, Räucherkamin */
+  function butcher() {
+    G3.seed(63);
+    const b = new MB();
+    b.box(3.0, 0.16, 2.6, C.stoneD);
+    b.at({ y: 0.16, x: -0.2 }, () => {
+      b.box(2.3, 1.85, 2.1, 0xf6f1e8);
+      b.box(2.32, 0.5, 2.12, 0xb8463a, { top: 0xb8463a });
+      for (let i = 0; i < 9; i++) b.box(0.2, 0.2, 0.02, i % 2 ? 0xffffff : 0xe9e4da, { x: -1.0 + i * 0.25, y: 0.55, z: 1.06 });
+      /* Schaufenster mit Würsten */
+      b.box(1.1, 0.75, 0.05, C.white, { x: -0.45, y: 0.62, z: 1.06 });
+      b.box(1.0, 0.65, 0.06, 0xcfe6ef, { x: -0.45, y: 0.67, z: 1.07 });
+      for (let i = 0; i < 6; i++) b.cyl(0.03, 0.03, 0.26, 6, i % 2 ? 0xa8442e : 0xc9683f, { x: -0.85 + i * 0.16, y: 0.95, z: 1.1, rz: 0.06 * (i % 3 - 1) });
+      b.box(0.62, 1.3, 0.06, 0x7a2d26, { x: 0.65, z: 1.06 });
+      b.box(0.06, 0.06, 0.06, 0xe9c34a, { x: 0.45, y: 0.65, z: 1.11 });
+      /* Markise rot-weiß */
+      b.at({ x: -0.1, y: 1.55, z: 1.25 }, () => {
+        for (let i = 0; i < 9; i++) b.box(0.24, 0.05, 0.62, i % 2 ? 0xffffff : 0xc93d32, { x: -0.96 + i * 0.24, rx: 0.42 });
+        b.box(2.2, 0.12, 0.04, 0xc93d32, { y: -0.16, z: 0.28 });
+      });
+      /* Schild mit Schwein */
+      b.at({ x: -0.45, y: 1.68, z: 1.08 }, () => {
+        b.box(0.9, 0.24, 0.04, 0xffffff);
+        b.sphere(0.08, 8, 6, 0xf3aaa2, { z: 0.03, sx: 1.4, sz: 0.4 });
+      });
+      b.at({ y: 1.85 }, () => b.noise(0.04, () => b.roof(2.6, 2.4, 0.95, C.roof, { gable: 0xf6f1e8 })));
+    });
+    /* Räucherkammer mit Kamin */
+    b.at({ x: 1.15, z: -0.35 }, () => {
+      b.noise(0.1, () => b.box(0.7, 1.4, 0.9, C.brick, { top: C.brickD }));
+      b.box(0.3, 1.2, 0.3, C.brickD, { y: 1.4 });
+      b.box(0.38, 0.08, 0.38, C.stoneD, { y: 2.6 });
+      b.box(0.36, 0.5, 0.05, 0x3a2a22, { y: 0.2, z: 0.46 });
+    });
+    /* Kühlaggregat */
+    b.box(0.5, 0.45, 0.35, 0xdfe5e9, { x: 1.2, z: 0.85 });
+    b.cyl(0.14, 0.14, 0.04, 10, 0x8c98a2, { x: 1.2, y: 0.25, z: 1.03, rx: Math.PI / 2 });
+    return b;
+  }
+  const BUTCHER_CHIMNEY = [1.15, 2.75, -0.35];
+  /* Spinnstube: Fachwerkhäuschen mit großem Spinnrad und Körben voll Wolle */
+  function spinnery() {
+    G3.seed(66);
+    const b = new MB();
+    b.box(2.9, 0.16, 2.6, C.stoneD);
+    b.at({ y: 0.16, x: -0.25 }, () => {
+      b.box(2.1, 1.7, 2.0, 0xf3ead6);
+      const fz = 1.01;
+      [-1.03, -0.35, 0.35, 1.03].forEach(x => b.box(0.12, 1.7, 0.05, C.beam, { x, z: fz }));
+      b.box(2.1, 0.12, 0.05, C.beam, { y: 0.85, z: fz }); b.box(2.1, 0.12, 0.05, C.beam, { y: 1.62, z: fz });
+      windowAt(b, -0.68, 0.95, fz + 0.03, 0.42, 0.45, { shutter: 0x3f8f4a, flowers: true });
+      b.box(0.55, 1.05, 0.06, 0x3f8f4a, { x: 0.65, z: fz + 0.01 });
+      b.at({ y: 1.7 }, () => b.noise(0.05, () => b.roof(2.45, 2.35, 1.0, C.slate, { gable: 0xf3ead6 })));
+      /* Wollknäuel-Schild */
+      b.at({ x: 0, y: 1.3, z: fz + 0.05 }, () => { b.box(0.3, 0.3, 0.03, C.white); b.sphere(0.1, 8, 6, 0xd9415a, { z: 0.04, sz: 0.5 }); });
+    });
+    /* Spinnrad vor dem Haus */
+    b.at({ x: 1.05, z: 0.75 }, () => {
+      b.box(0.5, 0.05, 0.14, C.woodD, { y: 0.25 });
+      b.box(0.05, 0.3, 0.05, C.woodD, { x: -0.2 }); b.box(0.05, 0.3, 0.05, C.woodD, { x: 0.2 });
+      b.box(0.05, 0.5, 0.05, C.woodD, { x: 0.05, y: 0.25 });
+      b.at({ x: 0.05, y: 0.72, rz: 0 }, () => {
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; b.box(0.07, 0.04, 0.04, C.wood, { x: Math.cos(a) * 0.28, y: Math.sin(a) * 0.28, rz: a + Math.PI / 2 }); }
+        for (let i = 0; i < 6; i++) b.box(0.02, 0.56, 0.02, C.woodL, { rz: i * Math.PI / 6, y: -0.28 + 0.28, c: true });
+      });
+    });
+    /* Körbe mit bunter Wolle */
+    [[-1.05, 1.0, 0xd9415a], [-0.6, 1.1, 0x3f78c8], [1.1, -0.4, 0xf2c230]].forEach(([x, z, c]) => b.at({ x, z }, () => {
+      b.cyl(0.22, 0.17, 0.2, 10, 0xb08a52, { notop: true });
+      b.sphere(0.1, 8, 6, c, { x: -0.06, y: 0.2, smooth: true }); b.sphere(0.09, 8, 6, 0xf8f5ee, { x: 0.08, y: 0.18, smooth: true });
+    }));
+    return b;
+  }
+
   /* ------------------------------ Fahrzeuge ----------------------------- */
   function cargoBike(color) {
     G3.seed(501);
@@ -946,6 +1205,8 @@ const FM = (() => {
     board, shed, gate, fieldSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,
-    pondR, pondBank, pondWater, pondFoam, pondReeds, pondProps, duck
+    pondR, pondBank, pondWater, pondFoam, pondReeds, pondProps, duck,
+    pig, sheep, beef, woolBall, pigRun, pigHut, sheepPasture, sheepShelter, beefPasture, beefShelter,
+    butcher, BUTCHER_CHIMNEY, spinnery, windowAt, plankWall, wheel, bush, ringBand
   };
 })();

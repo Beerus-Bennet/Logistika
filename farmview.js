@@ -1,10 +1,11 @@
 /* =========================================================================
    LOGISTIKA – farmview.js
-   Die 3D-Hofansicht: Szene aufbauen und mit dem Spielstand abgleichen,
-   Kamera (wischen, zoomen), Antippen, Werkzeuge zum Drüberziehen (Saat,
-   Sichel, Gießkanne, Futter), Bauen und Verschieben, Fenster für Lager,
-   Mühle/Ofen/Molkerei, Ställe, Bestellungen und Laden – dazu Effekte,
-   Töne, Level-Feier und Linas Rundgang über den Hof.
+   Die 3D-Ansicht des Erbes (Hof oder Fischerei): Szene aufbauen und mit
+   dem Spielstand abgleichen, Kamera (wischen, zoomen), Antippen, Werkzeuge
+   zum Drüberziehen (Saat, Sichel, Gießkanne, Futter, Köder, Haken), Bauen
+   und Verschieben, Fenster für Lager, Gebäude mit Rezepten, Ställe und
+   Gehege, Bestellungen und Laden – dazu Effekte, Töne, Level-Feier und
+   Linas Rundgang. Die Küste mit Kutter und Angelsteg steckt in fishview.js.
    ========================================================================= */
 const FV = {
   R: null, on: false, built: false, meshes: {}, nodes: new Map(), ani: new Map(), prod: new Map(),
@@ -28,13 +29,13 @@ function farmDOM() {
   const s = document.createElement("section");
   s.id = "farm";
   s.innerHTML = `
-    <canvas id="farmCv" aria-label="Dein Hof in 3D"></canvas>
+    <canvas id="farmCv" aria-label="Dein Erbe in 3D"></canvas>
     <div id="farmTags"></div>
     <div id="farmFx"></div>
     <div id="farmQuest"></div>
     <div id="farmSide">
       <button class="fbtn" id="fbShop" title="Laden: Felder, Tiere, Gebäude, Deko"><i>🛒</i><span>Laden</span></button>
-      <button class="fbtn" id="fbStore" title="Silo und Scheune"><i>🌾</i><span>Lager</span></button>
+      <button class="fbtn" id="fbStore" title="Lager"><i>🌾</i><span>Lager</span></button>
       <button class="fbtn" id="fbOrders" title="Bestellungen"><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
       <button class="fbtn small" id="fbSnd" title="Ton an/aus"><i>🔊</i></button>
     </div>
@@ -43,12 +44,13 @@ function farmDOM() {
     <div id="farmPop"></div>
     <div id="farmPlace"></div>
     <div id="farmSheet"><div class="fs-in" id="farmSheetIn"></div></div>
+    <div id="farmAngel"></div>
     <div id="farmTut"></div>
     <div id="farmLvl"></div>
     <div id="farmMsg"></div>`;
   document.body.insertBefore(s, $("#mapUI"));
   $("#fbShop").onclick = () => openFarmShop();
-  $("#fbStore").onclick = () => openFarmStore("silo");
+  $("#fbStore").onclick = () => openFarmStore(FSITE.stores[0]);
   $("#fbOrders").onclick = () => openFarmOrders();
   $("#fbSnd").onclick = () => { S.farm.snd = !S.farm.snd; renderFarmUI(); if (S.farm.snd) sfx("pop"); };
   /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
@@ -72,7 +74,7 @@ function farmInit3D() {
   }
   FV.R.onRestore = () => { FV.built = false; FV.nodes.clear(); FV.R.nodes.length = 0; farmBuildScene(); };
   const c = FV.R.cam;
-  c.tx = -1; c.tz = 0; c.dist = innerHeight > innerWidth ? 40 : 32; c.yaw = Math.PI / 4;
+  c.tx = -1; c.tz = FSITE.kind === "fisch" ? -2 : 0; c.dist = innerHeight > innerWidth ? 40 : 32; c.yaw = Math.PI / 4;
   return true;
 }
 
@@ -80,7 +82,7 @@ function farmInit3D() {
 function fmesh(key, fn) { return FV.meshes[key] || (FV.meshes[key] = FV.R.mesh(fn())); }
 function fnode(mesh, o) { return FV.R.node(mesh, o); }
 
-/* Kulisse: Wiese, Zaun, Wege, Teich, Straße, Wald ringsum, Nachbarfelder */
+/* Kulisse des Hofs: Wiese, Zaun, Wege, Teich, Straße, Wald ringsum, Nachbarfelder */
 function farmStatic() {
   const R = FV.R, b = new FM.MB();
   G3.seed(4242);
@@ -144,28 +146,51 @@ function farmStatic() {
   R.nodes.push(fnode(fmesh("gate", FM.gate), { x: 5, z: 13 }));
 }
 
-/* Modell eines Hofobjekts */
+/* Modell eines Objekts */
 function objMesh(o) {
+  const sz = () => farmSize(o);
   switch (o.t) {
-    case "house": return fmesh("house", FM.house);
+    case "house": return FSITE.kind === "fisch" ? fmesh("fhouse", FFM.fhouse) : fmesh("house", FM.house);
     case "barn": return fmesh("barn", FM.barn);
     case "silo": return fmesh("silo", FM.silo);
     case "bakery": return fmesh("bakery", FM.bakery);
     case "mill": return fmesh("mill", FM.mill);
     case "dairy": return fmesh("dairy", FM.dairy);
+    case "butcher": return fmesh("butcher", FM.butcher);
+    case "spinnery": return fmesh("spinnery", FM.spinnery);
     case "board": return fmesh("board", FM.board);
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil", () => FM.fieldSoil(false));
     case "tree": return fmesh("tree:" + o.kind, () => FM.treeMesh(o.kind));
-    case "coop": { const [w, d] = farmSize(o); return fmesh("run:" + w + "x" + d, () => FM.coopRun(w, d)); }
-    case "cows": { const [w, d] = farmSize(o); return fmesh("pasture:" + w + "x" + d, () => FM.pasture(w, d)); }
-    case "deco": return fmesh("deco:" + o.k + ":" + (o.arg || 0), () => FM[o.k](o.arg || 1));
+    case "coop": { const [w, d] = sz(); return fmesh("run:" + w + "x" + d, () => FM.coopRun(w, d)); }
+    case "cows": { const [w, d] = sz(); return fmesh("pasture:" + w + "x" + d, () => FM.pasture(w, d)); }
+    case "pigs": { const [w, d] = sz(); return fmesh("pigrun:" + w + "x" + d, () => FM.pigRun(w, d)); }
+    case "sheep": { const [w, d] = sz(); return fmesh("sheepp:" + w + "x" + d, () => FM.sheepPasture(w, d)); }
+    case "beef": { const [w, d] = sz(); return fmesh("beefp:" + w + "x" + d, () => FM.beefPasture(w, d)); }
+    case "netz": { const [w, d] = sz(); return fmesh("netpen:" + w + "x" + d, () => FFM.netPen(w, d)); }
+    case "kuehl": case "speicher": case "fishhalle": case "smoke": case "feedk": case "deli": case "smith": return fmesh(o.t, FFM[o.t]);
+    case "kutter": return fmesh("kpier", FFM.kutterPier);
+    case "steg": return fmesh("steg", FFM.steg);
+    case "pot": return fmesh("potFrame", FFM.potFrame);
+    case "mline": return fmesh("mline:" + o.kind, () => FFM.mlineBase(o.kind));
+    case "deco": return fmesh("deco:" + o.k + ":" + (o.arg || 0), () => FM[o.k] ? FM[o.k](o.arg || 1) : FFM[o.k]());
   }
   return null;
 }
-function objH(o) {
-  return { house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, coop: 0.7, cows: 0.9, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0 }[o.t] || 1;
-}
+const OBJ_H = {
+  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0,
+  coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
+  kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
+};
+function objH(o) { return o.t === "house" && FSITE.kind === "fisch" ? 4.4 : OBJ_H[o.t] || 1; }
+/* Hütte in der Ecke eines Auslaufs: Modell, Lage und die Ecke, die Tiere meiden */
+const PEN_HUT = {
+  coop:  { key: "coopHut",      fn: () => FM.coopHut(),      x: 1.05, z: 0.85, hx: 2.15, hz: 1.75 },
+  cows:  { key: "cowShed",      fn: () => FM.cowShed(),      x: 1.55, z: 1.1,  hx: 3.0,  hz: 2.15 },
+  pigs:  { key: "pigHut",       fn: () => FM.pigHut(),       x: 1.0,  z: 0.85, hx: 2.0,  hz: 1.7 },
+  sheep: { key: "sheepShelter", fn: () => FM.sheepShelter(), x: 1.15, z: 0.85, hx: 2.3,  hz: 1.7 },
+  beef:  { key: "beefShelter",  fn: () => FM.beefShelter(),  x: 1.6,  z: 1.1,  hx: 3.1,  hz: 2.2 }
+};
 /* Knoten für ein Objekt (samt Kindern) */
 function buildObjNode(o) {
   const R = FV.R;
@@ -181,16 +206,23 @@ function buildObjNode(o) {
     parts.fruit = R.addChild(root, fnode(fmesh("fruit:" + o.kind, () => FM.treeFruit(o.kind)), { visible: false }));
     root.sway = 0.25;
   }
-  if (o.t === "coop") {
-    const [w, d] = farmSize(o);
-    parts.hut = R.addChild(root, fnode(fmesh("coopHut", FM.coopHut), { x: -w / 2 + 1.05, z: -d / 2 + 0.85 }));
+  if (o.t === "mline") parts.fruit = R.addChild(root, fnode(fmesh("mfruit:" + o.kind, () => FFM.mlineFruit(o.kind)), { visible: false }));
+  if (o.t === "pot") parts.st = R.addChild(root, fnode(null, {}));
+  if (PEN_HUT[o.t]) {
+    const H = PEN_HUT[o.t], [w, d] = farmSize(o);
+    parts.hut = R.addChild(root, fnode(fmesh(H.key, H.fn), { x: -w / 2 + H.x, z: -d / 2 + H.z }));
   }
-  if (o.t === "cows") {
+  if (o.t === "netz") {
     const [w, d] = farmSize(o);
-    parts.shed = R.addChild(root, fnode(fmesh("cowShed", FM.cowShed), { x: -w / 2 + 1.55, z: -d / 2 + 1.1 }));
+    parts.water = R.addChild(root, fnode(fmesh("netw:" + w + "x" + d, () => FFM.netWater(w, d)), { water: 1, shadow: false }));
+  }
+  if (o.t === "steg") {
+    parts.angler = R.addChild(root, fnode(fmesh("angler", FFM.angler), { y: 0.06, z: -2.2, ry: Math.PI }));
+    parts.rod = R.addChild(root, fnode(fmesh("rod", FFM.rod), { y: 0.52, z: -2.48, ry: Math.PI, rx: ROD_REST }));
   }
   return { node: root, parts, sig: objSig(o) };
 }
+const ROD_REST = -0.55;
 function objSig(o) { return [o.t, o.x, o.z, o.r, o.lvl || 0, o.kind || "", o.k || ""].join(","); }
 
 function farmBuildScene() {
@@ -198,8 +230,10 @@ function farmBuildScene() {
   if (!R) return;
   R.nodes.length = 0;
   FV.nodes.clear(); FV.ani.clear(); FV.prod.clear();
-  farmStatic();
+  FV.ducks = null; FV.foam = null; FV.leaving = [];
+  if (FSITE.kind === "fisch" && typeof fishStatic === "function") fishStatic(); else farmStatic();
   FV.built = true;
+  FV.builtKind = FSITE.kind;
   FV.parked = null;
   farmSyncScene(true);
 }
@@ -208,6 +242,7 @@ function farmBuildScene() {
 function farmSyncScene(force) {
   const R = FV.R;
   if (!R || !FV.built || !farmOn()) return;
+  if (FV.builtKind !== FSITE.kind) { farmBuildScene(); return; }
   const seen = new Set();
   for (const o of S.farm.objs) {
     seen.add(o.id);
@@ -235,7 +270,7 @@ function farmSyncScene(force) {
   farmSyncState();
   farmSyncVehicles(force);
 }
-/* Zustände ohne Umbau: Saat-Stufen, Früchte, Produkte neben den Tieren */
+/* Zustände ohne Umbau: Saat-Stufen, Reusen, Früchte und Muscheln */
 function farmSyncState() {
   for (const o of S.farm.objs) {
     const e = FV.nodes.get(o.id);
@@ -250,10 +285,18 @@ function farmSyncState() {
       }
       e.node.glow = 0;
     }
-    if (o.t === "tree") {
+    if (o.t === "pot") {
+      const st = potState(o), stage = Math.min(2, Math.max(0, potStage(o)));
+      const key = st === "empty" ? "potEmpty" : st === "ripe" ? "potFull:" + o.kind : "potBuoy:" + stage;
+      if (e.potKey !== key) {
+        e.potKey = key;
+        e.parts.st.mesh = fmesh(key, () => st === "empty" ? FFM.potEmpty() : st === "ripe" ? FFM.potFull(o.kind) : FFM.potBuoy(stage));
+      }
+    }
+    if (o.t === "tree" || o.t === "mline") {
       const ripe = treeRipe(o);
       e.parts.fruit.visible = ripe;
-      const f = Math.min(1, 1 - (o.end - S.time) / FTREES[o.kind].t);
+      const f = Math.min(1, 1 - (o.end - S.time) / treeDef(o).t);
       e.parts.fruit.sx = e.parts.fruit.sy = e.parts.fruit.sz = ripe ? 1 : 0.4 + 0.6 * f;
     }
     if (o.q) machUpdate(o);
@@ -261,12 +304,24 @@ function farmSyncState() {
 }
 
 /* ------------------------------- Tiere -------------------------------- */
+/* Wie Tiere aussehen und sich bewegen: Maßstab, Tempo, Schrittfrequenz,
+   Treffer-Radius beim Antippen, Abstand des Produkts, Modell und Produkt */
+const ANI_VIEW = {
+  huhn:    { s: 1.35, sp: 0.9,  walk: 14, bob: 0.05,  pick: 0.42, pr: 0.2,  mesh: a => ["chicken:" + (a.v || 0), () => FM.chicken(a.v || 0)], prod: ["egg", () => FM.egg()] },
+  kuh:     { s: 1.3,  sp: 0.45, walk: 5,  bob: 0.025, pick: 0.75, pr: 0.45, big: true, mesh: a => ["cow:" + (a.v || 0), () => FM.cow(a.v || 0)], prod: ["milk", () => FM.milkBottle()] },
+  schwein: { s: 1.3,  sp: 0.6,  walk: 9,  bob: 0.03,  pick: 0.55, pr: 0.35, mesh: a => ["pig:" + (a.v || 0), () => FM.pig(a.v || 0)], prod: null },
+  schaf:   { s: 1.3,  sp: 0.55, walk: 8,  bob: 0.03,  pick: 0.55, pr: 0.35,
+             mesh: (a, st) => { const sh = st === "hungry"; return ["sheep:" + (a.v || 0) + (sh ? ":s" : ""), () => FM.sheep(a.v || 0, sh)]; }, prod: ["wool", () => FM.woolBall()] },
+  rind:    { s: 1.35, sp: 0.42, walk: 5,  bob: 0.025, pick: 0.8,  pr: 0.5,  big: true, mesh: a => ["beef:" + (a.v || 0), () => FM.beef(a.v || 0)], prod: null },
+  forelle: { s: 1.0,  fish: true, pick: 0.6, pr: 0, mesh: a => ["school:" + (a.v || 0), () => FFM.fishSchool(a.v || 0)], prod: ["fcrate", () => FFM.fishCrate()] }
+};
+function aniView(kind) { return ANI_VIEW[kind] || ANI_VIEW.huhn; }
 function penArea(o) {
   const [w, d] = farmSize(o), [cx, cz] = farmCenter(o);
-  const cow = o.t === "cows";
+  const H = PEN_HUT[o.t];
   return {
     x0: cx - w / 2 + 0.45, x1: cx + w / 2 - 0.45, z0: cz - d / 2 + 0.45, z1: cz + d / 2 - 0.45,
-    hx: cx - w / 2 + (cow ? 3.0 : 2.15), hz: cz - d / 2 + (cow ? 2.15 : 1.75), cow
+    hx: H ? cx - w / 2 + H.hx : -1e9, hz: H ? cz - d / 2 + H.hz : -1e9, cx, cz, R: Math.min(w, d) / 2 - 0.75
   };
 }
 function penSpot(o) {
@@ -282,13 +337,17 @@ function ensureAnimal(o, a) {
   let s = FV.ani.get(a.id);
   if (s && s.pen === o.id) return s;
   if (s) dropAnimal(a.id);
-  const cow = o.t === "cows";
-  const [x, z] = penSpot(o);
-  const node = fnode(fmesh((cow ? "cow:" : "chicken:") + (a.v || 0), () => cow ? FM.cow(a.v || 0) : FM.chicken(a.v || 0)), { x, z, ry: Math.random() * 6.28, s: cow ? 1.3 : 1.35 });
-  const pn = fnode(fmesh(cow ? "milk" : "egg", cow ? FM.milkBottle : FM.egg), { visible: false });
+  const kind = penKind(o), V = aniView(kind), ar = penArea(o);
+  const [mk, mf] = V.mesh(a, aniState(a));
+  let x, z, rad = 0, ang = 0;
+  if (V.fish) { ang = Math.random() * 6.28; rad = Math.max(0.3, ar.R * (0.35 + Math.random() * 0.6)); x = ar.cx + Math.cos(ang) * rad; z = ar.cz + Math.sin(ang) * rad; }
+  else [x, z] = penSpot(o);
+  const node = fnode(fmesh(mk, mf), { x, z, y: V.fish ? FFM.WY - 0.025 : 0, ry: Math.random() * 6.28, s: V.s });
+  const pn = V.prod ? fnode(fmesh(V.prod[0], V.prod[1]), { visible: false }) : fnode(null, { visible: false });
   FV.R.nodes.push(node, pn);
-  s = { id: a.id, pen: o.id, cow, node, pn, x, z, tx: x, tz: z, h: node.ry, mode: "idle", t: Math.random() * 2, ph: Math.random() * 6 };
-  if (FV.drop && FV.drop === a.id) { s.y = 3; s.vy = 0; FV.drop = null; }
+  s = { id: a.id, pen: o.id, kind, V, cow: !!V.big, fish: !!V.fish, node, pn, mk, x, z, tx: x, tz: z, h: node.ry, mode: "idle",
+        t: Math.random() * 2, ph: Math.random() * 6, ang, rad, dir: Math.random() < 0.5 ? 1 : -1 };
+  if (FV.drop && FV.drop === a.id) { s.y = V.fish ? 1.6 : 3; s.vy = 0; FV.drop = null; }
   FV.ani.set(a.id, s);
   return s;
 }
@@ -303,12 +362,39 @@ function animalById(id) {
   for (const o of S.farm.objs) if (o.animals) { const a = o.animals.find(x => x.id === id); if (a) return [o, a]; }
   return [null, null];
 }
+/* Masttier geht zum Metzger: hüpft hoch, wird kleiner, verschwindet im Staub */
+function animalLeave(id) {
+  const s = FV.ani.get(id);
+  if (!s) return;
+  FV.ani.delete(id);
+  const i = FV.R.nodes.indexOf(s.pn); if (i >= 0) FV.R.nodes.splice(i, 1);
+  (FV.leaving = FV.leaving || []).push({ s, t0: (performance.now() - FV.t0) / 1000 });
+}
+function stepLeaving(time) {
+  const L = FV.leaving || [];
+  for (let k = L.length - 1; k >= 0; k--) {
+    const { s, t0 } = L[k], f = (time - t0) / 0.75, n = s.node;
+    if (f >= 1) {
+      const i = FV.R.nodes.indexOf(n); if (i >= 0) FV.R.nodes.splice(i, 1);
+      FV.R.burst({ x: s.x, y: 0.3, z: s.z, n: 12, col: [0.95, 0.92, 0.85, 0.8], speed: 1.2, up: 1.0, size: 0.16, g: -1 });
+      L.splice(k, 1);
+      continue;
+    }
+    n.y = Math.sin(f * Math.PI) * 0.9;
+    n.ry += 0.2;
+    const sc = s.V.s * (1 - f * f * 0.9);
+    n.sx = n.sy = n.sz = sc;
+  }
+}
 function stepAnimals(dt, time) {
+  stepLeaving(time);
   for (const s of FV.ani.values()) {
     const [o, a] = animalById(s.id);
     if (!o) continue;
     const st = aniState(a);
-    const ar = penArea(o);
+    if (s.fish) { if (typeof stepFish === "function") stepFish(s, o, a, st, dt, time); continue; }
+    const ar = penArea(o), V = s.V;
+    if (s.kind === "schaf") { const [mk, mf] = V.mesh(a, st); if (mk !== s.mk) { s.mk = mk; s.node.mesh = fmesh(mk, mf); } }
     s.t -= dt;
     if (s.y != null) {                                /* frisch gekauft: plumpst rein */
       s.vy -= 18 * dt; s.y += s.vy * dt;
@@ -318,7 +404,7 @@ function stepAnimals(dt, time) {
     else if (s.mode === "sit") s.mode = "idle";
     if (s.mode === "walk") {
       const dx = s.tx - s.x, dz = s.tz - s.z, d = Math.hypot(dx, dz);
-      const sp = (s.cow ? 0.45 : 0.9) * dt;
+      const sp = V.sp * dt;
       if (d < sp || s.t < 0) { s.mode = "idle"; s.t = 1 + Math.random() * 3; }
       else {
         s.x += dx / d * sp; s.z += dz / d * sp;
@@ -332,24 +418,25 @@ function stepAnimals(dt, time) {
         const [x, z] = penSpot(o);
         s.tx = s.x + (x - s.x) * (s.cow ? 0.6 : 0.5); s.tz = s.z + (z - s.z) * (s.cow ? 0.6 : 0.5);
         s.mode = "walk"; s.t = 6;
-      } else { s.mode = s.cow || r < 0.8 ? "peck" : "idle"; s.t = 1.2 + Math.random() * 2.5; }
+      } else { s.mode = s.kind !== "huhn" || r < 0.8 ? "peck" : "idle"; s.t = 1.2 + Math.random() * 2.5; }
     }
     s.x = clamp(s.x, ar.x0, ar.x1); s.z = clamp(s.z, ar.z0, ar.z1);
     if (s.x < ar.hx && s.z < ar.hz) { if (ar.hx - s.x < ar.hz - s.z) s.x = ar.hx; else s.z = ar.hz; }
     const n = s.node;
     n.x = s.x; n.z = s.z; n.ry = s.h;
-    s.ph += dt * (s.mode === "walk" ? (s.cow ? 5 : 14) : 2);
-    n.y = s.y != null ? s.y : s.mode === "walk" ? Math.abs(Math.sin(s.ph)) * (s.cow ? 0.025 : 0.05) : s.mode === "sit" ? (s.cow ? -0.02 : -0.04) : 0;
-    n.rx = s.mode === "peck" ? (s.cow ? 0.08 + Math.sin(s.ph) * 0.03 : Math.max(0, Math.sin(s.ph * 3.2)) * 0.55) : 0;
-    n.rz = s.mode === "walk" && s.cow ? Math.sin(s.ph) * 0.03 : 0;
+    s.ph += dt * (s.mode === "walk" ? V.walk : 2);
+    const chick = s.kind === "huhn";
+    n.y = s.y != null ? s.y : s.mode === "walk" ? Math.abs(Math.sin(s.ph)) * V.bob : s.mode === "sit" ? (chick ? -0.04 : -0.03) : 0;
+    n.rx = s.mode === "peck" ? (chick ? Math.max(0, Math.sin(s.ph * 3.2)) * 0.55 : 0.08 + Math.sin(s.ph) * 0.03) : 0;
+    n.rz = s.mode === "walk" && !chick ? Math.sin(s.ph) * 0.03 : s.mode === "sit" && s.kind === "schwein" ? 0.5 : 0;
     const sq = FV.bounce.get("a" + s.id);
-    const base = s.cow ? 1.3 : 1.35;
+    const base = V.s;
     if (sq) { const k = Math.max(0, 1 - (time - sq) * 3); n.sy = base * (1 + Math.sin((time - sq) * 25) * 0.25 * k); n.sx = n.sz = base * (1 - Math.sin((time - sq) * 25) * 0.1 * k); if (!k) { FV.bounce.delete("a" + s.id); n.sx = n.sy = n.sz = base; } }
     /* Produkt neben dem sitzenden Tier */
-    s.pn.visible = st === "ready";
-    if (st === "ready") {
-      s.pn.x = s.x + Math.sin(s.h + 2.2) * (s.cow ? 0.45 : 0.2);
-      s.pn.z = s.z + Math.cos(s.h + 2.2) * (s.cow ? 0.45 : 0.2);
+    s.pn.visible = st === "ready" && !!V.prod;
+    if (s.pn.visible) {
+      s.pn.x = s.x + Math.sin(s.h + 2.2) * V.pr;
+      s.pn.z = s.z + Math.cos(s.h + 2.2) * V.pr;
       s.pn.y = Math.abs(Math.sin(time * 3 + s.id)) * 0.04;
       s.pn.ry = time;
     }
@@ -454,6 +541,13 @@ function farmEnv() {
   if (key !== FV.skyKey) { FV.skyKey = key; $("#farm").style.background = "linear-gradient(180deg," + css(top) + "," + css(bot) + ")"; }
 }
 
+/* Rauch über arbeitenden Gebäuden: Lage des Schornsteins, Farbe, Größe */
+const CHIMNEYS = {
+  bakery:  { p: () => FM.BAKERY_CHIMNEY,  col: [0.92, 0.92, 0.95, 0.55], life: 2.4, size: 0.55 },
+  butcher: { p: () => FM.BUTCHER_CHIMNEY, col: [0.86, 0.84, 0.82, 0.5],  life: 2.4, size: 0.5 },
+  smoke:   { p: () => FFM.SMOKE_CHIMNEY,  col: [0.78, 0.76, 0.72, 0.62], life: 3.2, size: 0.8 },
+  smith:   { p: () => FFM.SMITH_CHIMNEY,  col: [0.45, 0.43, 0.42, 0.55], life: 2.2, size: 0.55, sparks: true }
+};
 /* ------------------------------ Schleife ------------------------------ */
 function farmLoop(now) {
   if (!FV.on) return;
@@ -480,7 +574,7 @@ function farmLoop(now) {
   for (const o of S.farm.objs) {
     const e = FV.nodes.get(o.id);
     if (!e) continue;
-    if (o.t === "mill") e.parts.sails.rz -= dt * (o.q && o.q.length ? 2.6 : 0.35);
+    if (o.t === "mill" && e.parts.sails) e.parts.sails.rz -= dt * (o.q && o.q.length ? 2.6 : 0.35);
     const b = FV.bounce.get(o.id);
     if (b != null) {
       const k = Math.max(0, 1 - (time - b) * 2.6);
@@ -506,23 +600,27 @@ function farmLoop(now) {
     if (Math.random() < dt * 1.2) R.emit({ x: x - dx * 0.25, y: 0.05, z: z - dz * 0.25, life: 1.4, size: 0.05, size2: 0.22, col: [0.92, 0.96, 1, 0.35], drag: 0 });
   });
   if (FV.foam) FV.foam.alpha = 0.32 + Math.sin(time * 0.9) * 0.08;
-  /* Rauch aus dem Ofen, Funkeln über reifen Feldern */
+  /* Rauch aus Ofen, Räucherkammer, Räucherei und Schmiede, Funkeln über Reifem */
   if (time - FV.smokeAt > 0.22) {
     FV.smokeAt = time;
     S.farm.objs.forEach(o => {
-      if (o.t !== "bakery" || !o.q || !o.q.length) return;
-      const [cx, cz] = farmCenter(o), c = FM.BAKERY_CHIMNEY;
-      R.emit({ x: cx + c[0] + (Math.random() - 0.5) * 0.1, y: c[1] + 0.1, z: cz + c[2], vx: 0.15, vy: 0.7, vz: -0.05, life: 2.4, size: 0.16, size2: 0.55, col: [0.92, 0.92, 0.95, 0.55], drag: 0.3 });
+      const CH = CHIMNEYS[o.t];
+      if (!CH || !o.q || !o.q.length) return;
+      const [cx, cz] = farmCenter(o), c = CH.p();
+      R.emit({ x: cx + c[0] + (Math.random() - 0.5) * 0.1, y: c[1] + 0.1, z: cz + c[2], vx: 0.15, vy: 0.7, vz: -0.05, life: CH.life, size: 0.16, size2: CH.size, col: CH.col, drag: 0.3 });
+      if (CH.sparks && Math.random() < 0.5) R.emit({ x: cx + c[0], y: c[1] + 0.15, z: cz + c[2], vx: (Math.random() - 0.5) * 0.6, vy: 1.6, vz: (Math.random() - 0.5) * 0.6, g: -2, life: 0.8, size: 0.05, size2: 0.01, col: [1, 0.75, 0.3, 1], shape: 1 });
     });
   }
   if (time - FV.sparkAt > 0.5) {
     FV.sparkAt = time;
-    const ripe = S.farm.objs.filter(o => (o.t === "field" && fieldState(o) === "ripe") || (o.t === "tree" && treeRipe(o)));
+    const ripe = S.farm.objs.filter(o => (o.t === "field" && fieldState(o) === "ripe") || ((o.t === "tree" || o.t === "mline") && treeRipe(o)) || (o.t === "pot" && potState(o) === "ripe"));
     if (ripe.length) {
       const o = pick(ripe), [cx, cz] = farmCenter(o);
-      R.emit({ x: cx + (Math.random() - 0.5) * 1.4, y: o.t === "tree" ? 1.4 + Math.random() * 0.6 : 0.5, z: cz + (Math.random() - 0.5) * 1.4, vy: 0.3, life: 0.9, size: 0.09, size2: 0.02, col: [1, 0.95, 0.55, 1], shape: 1 });
+      const y = o.t === "tree" ? 1.4 + Math.random() * 0.6 : o.t === "field" ? 0.5 : 0.25;
+      R.emit({ x: cx + (Math.random() - 0.5) * 1.4, y, z: cz + (Math.random() - 0.5) * 1.4, vy: 0.3, life: 0.9, size: 0.09, size2: 0.02, col: [1, 0.95, 0.55, 1], shape: 1 });
     }
   }
+  if (FSITE.kind === "fisch" && typeof fishStep === "function") fishStep(dt, time);
   farmEnv();
   R.stepParticles(dt);
   R.render(time);
@@ -534,8 +632,13 @@ function farmLoop(now) {
 /* ------------------------------ Kamera -------------------------------- */
 function clampCam() {
   const c = FV.R.cam;
-  c.tx = clamp(c.tx, -FV_BOUNDS, FV_BOUNDS + 5);          /* nach Osten bis zum Teich */
-  c.tz = clamp(c.tz, -FV_BOUNDS, FV_BOUNDS + 3);
+  if (FSITE.kind === "fisch") {                          /* Küste: aufs Meer, zum Leuchtturm und Strand */
+    c.tx = clamp(c.tx, -FV_BOUNDS - 6, FV_BOUNDS + 12);
+    c.tz = clamp(c.tz, -FV_BOUNDS - 9, FV_BOUNDS + 3);
+  } else {
+    c.tx = clamp(c.tx, -FV_BOUNDS, FV_BOUNDS + 5);        /* nach Osten bis zum Teich */
+    c.tz = clamp(c.tz, -FV_BOUNDS, FV_BOUNDS + 3);
+  }
   c.dist = clamp(c.dist, 11, 52);
   c.pitch = 0.8 + (c.dist - 11) / 41 * 0.2;
 }
@@ -595,7 +698,7 @@ function pickAnimal(x, y, pen) {
   for (const s of FV.ani.values()) {
     if (pen && s.pen !== pen.id) continue;
     const d = Math.hypot(s.x - g[0], s.z - g[2]);
-    if (d < (s.cow ? 0.75 : 0.42) && d < bd) { bd = d; best = s; }
+    if (d < s.V.pick && d < bd) { bd = d; best = s; }
   }
   return best;
 }
@@ -630,7 +733,7 @@ function bindFarmInput(cv) {
     FV.lp = setTimeout(() => {
       if (!FV.gesture || FV.gesture.kind !== "tap" || FV.place || FV.tool) return;
       const o = pickObj(x, y);
-      if (o && o.t !== "house") { FV.gesture = null; startMove(o); }
+      if (o && !FFIXED.has(o.t)) { FV.gesture = null; startMove(o); }
     }, 520);
   });
   cv.addEventListener("pointermove", e => {
@@ -705,49 +808,68 @@ function farmTap(x, y) {
 function objAction(o, x, y) {
   closeFarmPop();
   FV.sel = o.id;
-  switch (o.t) {
-    case "field": {
-      const st = fieldState(o);
-      if (st === "empty") openPop(o, "seed");
-      else if (st === "ripe") openPop(o, "sickle");
-      else openPop(o, "grow");
-      break;
-    }
-    case "tree": {
-      if (treeRipe(o)) { doPick(o); FV.sel = null; }
-      else openPop(o, "tree");
-      break;
-    }
-    case "coop": case "cows": {
-      const got = collectPen(o);
-      if (got) { FV.sel = null; break; }
-      const s = x != null ? pickAnimal(x, y, o) : null;
-      if (s) {
-        const [, a] = animalById(s.id);
-        if (a && aniState(a) === "busy" && !a.petted && farmPet(o, a)) {
-          FV.bounce.set("a" + s.id, (performance.now() - FV.t0) / 1000);
-          FV.R.burst({ x: s.x, y: s.cow ? 1.1 : 0.45, z: s.z, n: 5, col: [0.95, 0.3, 0.42, 1], speed: 0.5, up: 1.2, g: 0.6, life: 1.3, size: 0.13, shape: 2 });
-          sfx("pet");
-          floatText(x, y - 30, "♥ Qualität +1", "pet");
-          FV.sel = null; save();
-          break;
-        }
+  if (o.t === "field") {
+    const st = fieldState(o);
+    openPop(o, st === "empty" ? "seed" : st === "ripe" ? "sickle" : "grow");
+    return;
+  }
+  if (o.t === "pot") {
+    const st = potState(o);
+    openPop(o, st === "empty" ? "bait" : st === "ripe" ? "hook" : "potgrow");
+    return;
+  }
+  if (o.t === "tree" || o.t === "mline") {
+    if (treeRipe(o)) { doPick(o); FV.sel = null; }
+    else openPop(o, "tree");
+    return;
+  }
+  if (FPENS[o.t]) {
+    const got = collectPen(o);
+    if (got) { FV.sel = null; return; }
+    const V = aniView(penKind(o));
+    const s = x != null && !V.fish ? pickAnimal(x, y, o) : null;
+    if (s) {
+      const [, a] = animalById(s.id);
+      if (a && aniState(a) === "busy" && !a.petted && farmPet(o, a)) {
+        FV.bounce.set("a" + s.id, (performance.now() - FV.t0) / 1000);
+        FV.R.burst({ x: s.x, y: s.cow ? 1.1 : 0.5, z: s.z, n: 5, col: [0.95, 0.3, 0.42, 1], speed: 0.5, up: 1.2, g: 0.6, life: 1.3, size: 0.13, shape: 2 });
+        sfx("pet");
+        floatText(x, y - 30, "♥ Qualität +1", "pet");
+        FV.sel = null; save();
+        return;
       }
-      openPop(o, "pen");
-      break;
     }
-    case "bakery": case "mill": case "dairy": {
-      const got = farmCollectMach(o);
-      if (got.length) { got.forEach((g, i) => flyGain(o, g, i)); sfx("collect"); FV.sel = null; save(); farmSyncState(); break; }
-      openMachine(o);
-      break;
+    openPop(o, "pen");
+    return;
+  }
+  if (FMACHINES[o.t]) {
+    machUpdate(o);
+    if (o.t === "kutter" && o.done.length && typeof boatDocked === "function" && !boatDocked()) {
+      const [kx, ky] = objScreen(o, 1.2);
+      floatText(kx, ky, "⚓ Die Hertha legt gleich an …", "blue");
+      return;
     }
-    case "silo": openFarmStore("silo"); break;
-    case "barn": openFarmStore("barn"); break;
+    const got = farmCollectMach(o);
+    if (got.length) {
+      got.forEach((g, i) => {
+        flyGain(o, g, i);
+        if (g.by) Object.keys(g.by).forEach((b, k) => { const [sx, sy] = objScreen(o); flyItem(FITEMS[b].i, sx, sy, storeBtn(), 300 + k * 90, g.by[b]); });
+      });
+      sfx(o.t === "kutter" ? "horn" : "collect");
+      if (o.t === "kutter") { const [kx, ky] = objScreen(o, 1.2); floatText(kx, ky - 26, got.length > 1 ? "Volle Kisten!" : "Fang an Land!", "gold"); }
+      FV.sel = null; save(); farmSyncState();
+      return;
+    }
+    openMachine(o);
+    return;
+  }
+  if (FSTORE[o.t]) { openFarmStore(o.t); return; }
+  switch (o.t) {
     case "board": openFarmOrders(); break;
     case "house": openFarmHouse(); break;
     case "shed": openFarmShed(); break;
     case "deco": openPop(o, "deco"); break;
+    case "steg": if (typeof openAngel === "function") openAngel(o); break;
   }
 }
 
@@ -776,13 +898,50 @@ function doPlant(o, crop) {
   farmSyncState();
   return true;
 }
+/* Reuse mit Köder bestücken und versenken */
+function doBait(o, kind) {
+  const r = farmBait(o, kind);
+  if (r !== true) return r;
+  const [cx, cz] = farmCenter(o);
+  splash(cx, cz, 14);
+  sfx("splash");
+  farmSyncState();
+  return true;
+}
+/* volle Reuse hochziehen */
+function doHaul(o, viaDrag) {
+  const r = farmHaul(o);
+  if (!r) return false;
+  const [cx, cz] = farmCenter(o);
+  splash(cx, cz, 18);
+  FV.R.burst({ x: cx, y: 0.2, z: cz, n: 10, col: [[0.85, 0.95, 1, 0.9], [0.7, 0.88, 0.95, 0.9]], speed: 1.4, up: 2.4, size: 0.06 });
+  flyGain(o, r, 0);
+  sfx(viaDrag ? "swish" : "collect");
+  if (r.n > 2) floatText(...objScreen(o, 0.6), "Volle Reuse!", "gold");
+  farmSyncState();
+  return true;
+}
+function splash(x, z, n) {
+  if (!FV.R) return;
+  const y = typeof FFM !== "undefined" ? FFM.WY + 0.02 : 0;
+  for (let i = 0; i < (n || 10); i++) {
+    const a = Math.random() * 6.28, sp = 0.6 + Math.random() * 1.2;
+    FV.R.emit({ x: x + Math.cos(a) * 0.2, y, z: z + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: 1.6 + Math.random() * 1.4, vz: Math.sin(a) * sp, g: -7, life: 0.6, size: 0.07, size2: 0.03, col: [0.88, 0.96, 1, 0.9] });
+  }
+  FV.R.emit({ x, y: y + 0.01, z, life: 0.9, size: 0.15, size2: 0.9, col: [0.95, 0.98, 1, 0.45], drag: 0 });
+}
 function doWater(o) {
   if (!farmWater(o)) return false;
   const [cx, cz] = farmCenter(o);
-  for (let i = 0; i < 16; i++) FV.R.emit({ x: cx + (Math.random() - 0.5) * 1.6, y: o.t === "tree" ? 2.4 : 1.2, z: cz + (Math.random() - 0.5) * 1.6, vy: -2.5, g: -6, life: 0.55, size: 0.06, col: [0.45, 0.72, 1, 0.9] });
-  sfx("water");
+  if (o.t === "mline") {
+    for (let i = 0; i < 14; i++) FV.R.emit({ x: cx + (Math.random() - 0.5) * 1.6, y: 0.0, z: cz + (Math.random() - 0.5) * 1.2, vy: 0.8 + Math.random(), g: -4, life: 0.6, size: 0.06, col: [0.6, 0.85, 0.55, 0.9] });
+    sfx("swish");
+  } else {
+    for (let i = 0; i < 16; i++) FV.R.emit({ x: cx + (Math.random() - 0.5) * 1.6, y: o.t === "tree" ? 2.4 : 1.2, z: cz + (Math.random() - 0.5) * 1.6, vy: -2.5, g: -6, life: 0.55, size: 0.06, col: [0.45, 0.72, 1, 0.9] });
+    sfx("water");
+  }
   const [wx, wy] = objScreen(o, 0.9);
-  floatText(wx, wy - 18, "💧 wächst schneller", "blue");
+  floatText(wx, wy - 18, o.t === "mline" ? "🧽 wächst schneller" : "💧 wächst schneller", "blue");
   xpFly(wx, wy, 1);
   return true;
 }
@@ -790,11 +949,26 @@ function doPick(o) {
   const r = farmPick(o);
   if (!r) return false;
   const time = (performance.now() - FV.t0) / 1000;
-  FV.shake.set(o.id, time);
   const [cx, cz] = farmCenter(o);
-  const col = { apfel: [0.85, 0.2, 0.17, 1], kirsche: [0.66, 0.06, 0.17, 1], birne: [0.78, 0.82, 0.29, 1] }[o.kind];
-  FV.R.burst({ x: cx, y: 1.6, z: cz, n: 10, col: [col, [0.4, 0.7, 0.25, 1]], speed: 1.4, up: 0.6, size: 0.08, g: -7 });
+  if (o.t === "mline") {
+    splash(cx, cz, 16);
+    FV.bounce.set(o.id, time);
+  } else {
+    FV.shake.set(o.id, time);
+    const col = { apfel: [0.85, 0.2, 0.17, 1], kirsche: [0.66, 0.06, 0.17, 1], birne: [0.78, 0.82, 0.29, 1] }[o.kind] || [0.9, 0.3, 0.2, 1];
+    FV.R.burst({ x: cx, y: 1.6, z: cz, n: 10, col: [col, [0.4, 0.7, 0.25, 1]], speed: 1.4, up: 0.6, size: 0.08, g: -7 });
+  }
   flyGain(o, r, 0);
+  (r.extra || []).forEach((e, i) => flyGain(o, e, i + 1));
+  if (r.pearl) {
+    const [px, py] = objScreen(o, 0.5);
+    setTimeout(() => {
+      floatText(px, py - 40, "🦪 Eine Perle!", "gold");
+      flyItem(FITEMS.perle.i, px, py, storeBtn(), 0, 1);
+      FV.R.burst({ x: cx, y: 0.3, z: cz, n: 16, col: [[1, 1, 1, 1], [1, 0.95, 0.8, 1]], speed: 1.0, up: 2.0, size: 0.07, shape: 1 });
+      sfx("pearl");
+    }, 450);
+  }
   sfx("collect");
   farmSyncState();
   return true;
@@ -802,25 +976,31 @@ function doPick(o) {
 function collectPen(o) {
   const ready = o.animals.filter(a => aniState(a) === "ready");
   if (!ready.length) return false;
-  let i = 0;
+  const kind = penKind(o), A = FANIMALS[kind];
+  let i = 0, n = 0;
   for (const a of ready) {
+    const s = FV.ani.get(a.id);
     const r = farmCollect(o, a);
     if (!r) break;
-    const s = FV.ani.get(a.id);
+    n += r.n;
     if (s) {
       const p = FV.R.project(s.x, 0.3, s.z);
-      if (p) flyItem(FITEMS[r.id].i, p[0], p[1], storeBtn(), i * 70);
-      FV.R.burst({ x: s.x, y: 0.2, z: s.z, n: 6, col: s.cow ? [0.95, 0.95, 1, 0.9] : [1, 1, 1, 0.9], speed: 0.8, up: 1.5, size: 0.06, shape: s.cow ? 0 : 1 });
+      if (p) flyItem(FITEMS[r.id].i, p[0], p[1], storeBtn(), i * 70 + (r.gone ? 450 : 0), r.n);
+      if (r.gone) animalLeave(a.id);
+      else if (s.fish) { splash(s.x, s.z, 12); if (typeof fishJump === "function") fishJump(s.x, s.z, s.h); }
+      else FV.R.burst({ x: s.x, y: 0.2, z: s.z, n: 6, col: kind === "kuh" ? [0.95, 0.95, 1, 0.9] : kind === "schaf" ? [1, 1, 0.97, 0.95] : [1, 1, 1, 0.9], speed: 0.8, up: 1.5, size: kind === "schaf" ? 0.1 : 0.06, shape: kind === "huhn" ? 1 : 0 });
     }
     i++;
   }
   if (i) {
     const [x, y] = objScreen(o, 0.8);
-    const id = FANIMALS[o.t === "coop" ? "huhn" : "kuh"].out;
-    floatText(x, y, "+" + famt(id, i) + " " + FITEMS[id].i + "  ·  " + qStars(farmQ(id)), "");
-    xpFly(x, y, FITEMS[id].xp * i);
-    sfx("collect");
+    const id = A.out;
+    if (A.mast) floatText(x, y, "🚚 Ab zum Metzger · +" + famt(id, n) + " " + FITEMS[id].i, "");
+    else floatText(x, y, "+" + famt(id, n) + " " + FITEMS[id].i + "  ·  " + qStars(farmQ(id)), "");
+    xpFly(x, y, FITEMS[id].xp * n);
+    sfx(A.fish ? "splash" : "collect");
     save();
+    if (A.mast && !o.animals.length) setTimeout(() => toast(FPEN_META[o.t].n + " ist leer – im Laden gibt es neue " + (A.young === "Kalb" ? "Kälber" : A.young || A.pl) + ".", "ok"), 900);
   }
   return i > 0;
 }
@@ -830,10 +1010,14 @@ function doFeed(o, a) {
   if (!r) return false;
   const s = FV.ani.get(a.id);
   if (s) {
-    FV.R.burst({ x: s.x, y: 0.15, z: s.z, n: 8, col: s.cow ? [0.45, 0.68, 0.3, 1] : [0.9, 0.78, 0.45, 1], speed: 0.9, up: 1.2, size: 0.05, shape: 1 });
+    if (s.fish) {
+      for (let i = 0; i < 14; i++) FV.R.emit({ x: s.x + (Math.random() - 0.5) * 0.8, y: 0.6, z: s.z + (Math.random() - 0.5) * 0.8, vy: -0.5, g: -6, life: 0.5, size: 0.04, col: [0.55, 0.38, 0.22, 1] });
+      splash(s.x, s.z, 10);
+      s.frenzy = (performance.now() - FV.t0) / 1000;
+    } else FV.R.burst({ x: s.x, y: 0.15, z: s.z, n: 8, col: s.cow ? [0.45, 0.68, 0.3, 1] : [0.9, 0.78, 0.45, 1], speed: 0.9, up: 1.2, size: 0.05, shape: 1 });
     FV.bounce.set("a" + s.id, (performance.now() - FV.t0) / 1000);
   }
-  sfx("feed");
+  sfx(s && s.fish ? "splash" : "feed");
   return true;
 }
 function feedAll(o) {
@@ -845,14 +1029,19 @@ function feedAll(o) {
     if (r) n++;
   }
   if (none && !n) noFeed(o);
-  else if (none) toast("Futter reicht nicht für alle – ab in die Futtermühle!", "warn");
+  else if (none) toast("Futter reicht nicht für alle – ab in die " + feedMachine(FANIMALS[penKind(o)].feed).n + "!", "warn");
   if (n) save();
   return n;
 }
+/* Wo wird dieses Futter gemacht? */
+function feedMachine(id) {
+  for (const k in FMACHINES) { const r = FMACHINES[k].recipes.find(x => x.id === id); if (r) return { k, n: FMACHINES[k].n, r }; }
+  return { k: null, n: "Futterküche", r: null };
+}
 function noFeed(o) {
-  const A = FANIMALS[o.t === "coop" ? "huhn" : "kuh"];
-  const r = FMACHINES.mill.recipes.find(x => x.id === A.feed);
-  toast(FITEMS[A.feed].i + " Kein " + FITEMS[A.feed].n + " mehr. Die Futtermühle macht " + fqty(A.feed, r.out) + " aus " + Object.keys(r.in).map(id => fqty(id, r.in[id])).join(" + ") + ".", "warn");
+  const A = FANIMALS[penKind(o)], M = feedMachine(A.feed);
+  const how = M.r ? " Die " + M.n + " macht " + fqty(A.feed, M.r.out) + " aus " + Object.keys(M.r.in).map(id => fqty(id, M.r.in[id])).join(" + ") + "." : "";
+  toast(FITEMS[A.feed].i + " Kein " + FITEMS[A.feed].n + " mehr." + how, "warn");
 }
 
 /* ------------------------------ Effekte ------------------------------- */
@@ -946,7 +1135,14 @@ function sfx(kind) {
       build: () => { noise(0.1, 0.06, 400); tone(200, 0.12, "triangle", 0.08, 120, 0.05); },
       level: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, "triangle", 0.07, null, i * 0.11)),
       pop: () => tone(700, 0.05, "sine", 0.06, 900),
-      bad: () => tone(220, 0.15, "sawtooth", 0.03, 160)
+      bad: () => tone(220, 0.15, "sawtooth", 0.03, 160),
+      splash: () => { noise(0.28, 0.05, 700); noise(0.12, 0.03, 2600); },
+      horn: () => { tone(98, 0.9, "sawtooth", 0.035); tone(147, 0.9, "sawtooth", 0.02); },
+      pearl: () => [1568, 2093, 2637].forEach((f, i) => tone(f, 0.25, "sine", 0.05, null, i * 0.07)),
+      bite: () => { tone(520, 0.08, "square", 0.04); tone(390, 0.1, "square", 0.04, null, 0.09); },
+      reel: () => { for (let i = 0; i < 7; i++) tone(1800, 0.02, "square", 0.018, null, i * 0.045); },
+      cast: () => { noise(0.18, 0.04, 3200); tone(900, 0.2, "sine", 0.02, 300); },
+      gull: () => { tone(1300, 0.18, "sawtooth", 0.018, 900); tone(1250, 0.2, "sawtooth", 0.015, 850, 0.22); }
     }[kind] || (() => {}))();
   } catch (e) { /* kein Ton */ }
 }
@@ -959,19 +1155,22 @@ function updateFarmTags() {
   for (const o of S.farm.objs) {
     if (o.q) {
       machUpdate(o);
-      if (o.done.length) {
+      /* der Kutter ist erst fertig, wenn er wieder angelegt hat */
+      const sailing = o.t === "kutter" && typeof boatDocked === "function" && !boatDocked();
+      if (o.done.length && !sailing) {
         const ic = [...new Set(o.done.map(d => FITEMS[d.r].i))].slice(0, 3).join("");
         want.push([o, "ready", ic + (o.done.length > 1 ? "<b>" + o.done.length + "</b>" : ""), objH(o) + 0.4]);
-      } else if (o.q.length) {
-        const it = o.q[0], f = clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1);
-        want.push([o, "work", FITEMS[it.r].i + `<i style="--p:${Math.round(f * 100)}%"></i>`, objH(o) + 0.3]);
+      } else if (o.q.length || (sailing && o.done.length)) {
+        const it = o.q[0], f = it ? clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1) : 1;
+        want.push([o, "work", FITEMS[it ? it.r : o.done[0].r].i + `<i style="--p:${Math.round(f * 100)}%"></i>`, objH(o) + 0.3]);
       }
     }
     if (o.animals && o.animals.length) {
       const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
       const ready = o.animals.filter(a => aniState(a) === "ready").length;
-      if (ready) want.push([o, "ready", FITEMS[FANIMALS[o.t === "coop" ? "huhn" : "kuh"].out].i + "<b>" + ready + "</b>", 1.6]);
-      else if (hungry) want.push([o, "hungry", "💭" + FITEMS[FANIMALS[o.t === "coop" ? "huhn" : "kuh"].feed].i, 1.6]);
+      const A = FANIMALS[penKind(o)], th = A.fish ? 1.0 : 1.6;
+      if (ready) want.push([o, "ready", (A.mast ? A.i + "✓" : FITEMS[A.out].i) + "<b>" + ready + "</b>", th]);
+      else if (hungry) want.push([o, "hungry", "💭" + FITEMS[A.feed].i, th]);
     }
     if (o.t === "board") {
       const os = farmOrders(), ok = os.filter(farmOrderReady).length;
@@ -1001,7 +1200,7 @@ function updateFarmTags() {
   /* Hofschild am Tor */
   let sign = box.querySelector(".fsign");
   if (!sign) { sign = document.createElement("div"); sign.className = "fsign"; box.appendChild(sign); }
-  const nm = S.player ? S.player.company : "Hof";
+  const nm = S.player ? S.player.company : FT().short;
   if (sign._t !== nm) { sign.textContent = nm; sign._t = nm; }
   const sp = FV.R.project(5, 1.68, 13.05);
   if (sp) { sign.style.display = ""; sign.style.transform = `translate(${Math.round(sp[0])}px,${Math.round(sp[1])}px) scale(${clamp(22 / FV.R.cam.dist, 0.45, 1.3).toFixed(2)})`; }
@@ -1042,23 +1241,41 @@ function renderFarmPop() {
     h = `<div class="fp-h">${FITEMS[o.crop].i} ${esc(FITEMS[o.crop].n)}<small>reif in <span class="fp-left">${fdur(Math.max(1, left))}</span> · ${qStars(q)}</small></div>
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
         : `<div class="ftool big" data-tool="water"><span class="ic">🚿</span><b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
+  } else if (P.kind === "bait") {
+    const k = farmInv("koeder");
+    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Köder da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
+      + Object.keys(FPOTS).map(id => {
+        const c = FPOTS[id], it = FITEMS[id], lock = c.lv > lv;
+        return `<div class="ftool${lock ? " lock" : ""}" data-tool="bait" data-crop="${id}">
+          <span class="ic">${lock ? "🔒" : it.i}</span><b>${lock ? "Lv " + c.lv : esc(it.n)}</b><small>${lock ? "" : fdur(c.t) + " · 1 Beutel"}</small></div>`;
+      }).join("") + `</div>` + (k ? "" : `<div class="fp-tip">Keine Köder mehr: Die Futterküche macht welche aus Fischabfällen – oder im Laden unter „Einkauf“.</div>`);
+  } else if (P.kind === "hook") {
+    h = `<div class="fp-h">${FITEMS[o.kind].i} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
+      <div class="fp-row"><div class="ftool big" data-tool="hook"><span class="ic">🪝</span><b>Haken</b></div></div>`;
+  } else if (P.kind === "potgrow") {
+    h = `<div class="fp-h">${FITEMS[o.kind].i} ${esc(FPOTS[o.kind].n)} gehen in die Reuse<small>hochziehen in <span class="fp-left">${fdur(Math.max(1, o.end - S.time))}</span></small></div>`;
   } else if (P.kind === "tree") {
-    const T = FTREES[o.kind], left = o.end - S.time;
-    h = `<div class="fp-h">${FITEMS[o.kind].i} ${esc(T.n)}<small>Früchte in <span class="fp-left">${fdur(Math.max(1, left))}</span>${(o.h || 0) >= 3 ? " · alter Baum: +1 ★" : ""}</small></div>
-      <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
-        : `<div class="ftool big" data-tool="water"><span class="ic">🚿</span><b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
+    const T = treeDef(o), line = o.t === "mline", left = o.end - S.time;
+    const ic = line ? T.i : FITEMS[o.kind].i;
+    h = `<div class="fp-h">${ic} ${esc(T.n)}<small>${line ? "erntereif" : "Früchte"} in <span class="fp-left">${fdur(Math.max(1, left))}</span>${(o.h || 0) >= 3 ? (line ? " · gut eingewachsen: +1 ★" : " · alter Baum: +1 ★") : ""}</small></div>
+      <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">${line ? "🧽" : "💧"}</span><b>${line ? "geputzt" : "gegossen"}</b></div>`
+        : `<div class="ftool big" data-tool="water"><span class="ic">${line ? "🧽" : "🚿"}</span><b>${line ? "Leine putzen" : "Gießen"}</b><small>25 % schneller, +1 ★</small></div>`}</div>`
+      + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "");
   } else if (P.kind === "pen") {
-    const pi = penInfo(o), A = pi.A;
+    const pi = penInfo(o), A = pi.A, M = FPEN_META[o.t];
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
     const busy = o.animals.filter(a => aniState(a) === "busy");
     const next = busy.length ? Math.min(...busy.map(a => a.fed)) - S.time : 0;
-    h = `<div class="fp-h">${A.i} ${o.animals.length} ${o.animals.length === 1 ? A.n : (A.n === "Huhn" ? "Hühner" : "Kühe")} · ${qStars(pi.stars)}
-        <small>${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je Tier${busy.length ? " · nächstes " + FITEMS[A.out].i + " in " + fdur(Math.max(1, next)) : ""}</small></div>
+    const per = A.fish ? "Schwarm" : "Tier";
+    const mast = A.mast ? " · Mast " + o.animals.map(a => "●".repeat(Math.min(A.mast, a.g || 0)) + "○".repeat(Math.max(0, A.mast - (a.g || 0)))).join(" ") : "";
+    h = `<div class="fp-h">${A.i} ${o.animals.length} ${o.animals.length === 1 ? A.n : A.pl} · ${qStars(pi.stars)}
+        <small>${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je ${per}${busy.length ? " · " + (A.mast ? "satt" : "nächstes " + FITEMS[A.out].i) + " in " + fdur(Math.max(1, next)) : ""}${mast}</small></div>
       <div class="fp-row">
         ${hungry ? `<div class="ftool big" data-tool="feed"><span class="ic">${FITEMS[A.feed].i}</span><b>Füttern</b><small>${famt(A.feed, farmInv(A.feed))} da · ${hungry} hungrig</small></div>` : ""}
-        <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>Stall</b><small>Platz & Tiere</small></div>
-        ${!o.animals.length ? `<div class="ftool" data-act="buyani"><span class="ic">${A.i}</span><b>Kaufen</b><small>${eur(animalPrice(o.t === "coop" ? "huhn" : "kuh"))}</small></div>` : ""}
-      </div>${busy.length && !hungry ? `<div class="fp-tip">Tipp: Tier antippen und streicheln – ${o.t === "coop" ? "das nächste Ei" : "die nächste Milch"} wird besser.</div>` : ""}`;
+        <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>${A.fish ? "Gehege" : "Stall"}</b><small>Platz & Tiere</small></div>
+        ${o.animals.length < A.max ? `<div class="ftool" data-act="buyani"><span class="ic">${A.i}</span><b>${esc(A.young || "Kaufen")}</b><small>${eur(animalPrice(pi.kind))}</small></div>` : ""}
+      </div>${A.mast ? `<div class="fp-tip">Nach ${A.mast} Mahlzeiten schlachtreif – dann antippen: ab zum Metzger, ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je ${esc(A.n)}.</div>`
+        : busy.length && !hungry && !A.fish ? `<div class="fp-tip">Tipp: Tier antippen und streicheln – ${o.t === "sheep" ? "die nächste Wolle" : o.t === "cows" ? "die nächste Milch" : "das nächste Ei"} wird besser.</div>` : ""}`;
   } else if (P.kind === "deco") {
     const D = FDECO[o.k];
     h = `<div class="fp-h">${D.i} ${esc(D.n)}</div><div class="fp-row">
@@ -1074,7 +1291,7 @@ function renderFarmPop() {
   el.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const a = b.dataset.act;
     if (a === "pen") { closeFarmPop(); openPen(o); }
-    if (a === "buyani") { closeFarmPop(); buyAnimalInto(o.t === "coop" ? "huhn" : "kuh", o); }
+    if (a === "buyani") { closeFarmPop(); buyAnimalInto(penKind(o), o); }
     if (a === "move") { closeFarmPop(); startMove(o); }
     if (a === "sell") { const [x, y] = objScreen(o); if (farmRemove(o)) { coinFly(x, y, Math.round(FDECO[o.k].price * 0.5)); closeFarmPop(); farmSyncScene(); save(); } }
   });
@@ -1094,7 +1311,7 @@ function positionFarmPop() {
   if (y < 56) y = Math.min(H - hgt - 8, p[1] + 40);
   box.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
   const left = el.querySelector(".fp-left");
-  if (left && (P.kind === "grow" || P.kind === "tree")) {
+  if (left && (P.kind === "grow" || P.kind === "tree" || P.kind === "potgrow")) {
     const t = o.end - S.time;
     if (t <= 0) { objAction(o); return; }
     const s = fdur(Math.max(1, t));
@@ -1107,7 +1324,8 @@ function startToolDrag(e, kind, crop, origin) {
   e.preventDefault(); e.stopPropagation();
   const ghost = document.createElement("div");
   ghost.className = "fdrag";
-  ghost.textContent = { seed: FITEMS[crop] ? FITEMS[crop].i : "🌱", sickle: "🌙", water: "🚿", feed: origin && origin.animals ? FITEMS[FANIMALS[origin.t === "coop" ? "huhn" : "kuh"].feed].i : "🥣" }[kind];
+  ghost.textContent = { seed: FITEMS[crop] ? FITEMS[crop].i : "🌱", sickle: "🌙", water: origin && origin.t === "mline" ? "🧽" : "🚿", bait: "🪱", hook: "🪝",
+    feed: origin && origin.animals ? FITEMS[FANIMALS[penKind(origin)].feed].i : "🥣" }[kind];
   $("#farm").appendChild(ghost);
   const T = FV.tool = { kind, crop, origin, ghost, moved: false, x0: e.clientX, y0: e.clientY, done: 0, hit: new Set() };
   const fr = $("#farm").getBoundingClientRect();
@@ -1150,7 +1368,7 @@ function applyToolAt(x, y, T) {
       const [o, a] = animalById(s.id);
       if (!o || !a || aniState(a) !== "hungry") continue;
       const d = Math.hypot(s.x - g[0], s.z - g[2]);
-      if (d < (s.cow ? 1.6 : 1.1) && d < bd) { bd = d; best = s; }
+      if (d < (s.V.big ? 1.6 : s.V.fish ? 1.5 : 1.1) && d < bd) { bd = d; best = s; }
     }
     if (best) {
       const [o, a] = animalById(best.id);
@@ -1168,7 +1386,13 @@ function applyToolTo(o, T) {
   let ok = false;
   if (T.kind === "seed" && o.t === "field" && fieldState(o) === "empty") ok = doPlant(o, T.crop);
   else if (T.kind === "sickle" && o.t === "field" && fieldState(o) === "ripe") ok = doHarvest(o, true);
-  else if (T.kind === "water" && (o.t === "field" || o.t === "tree")) ok = doWater(o);
+  else if (T.kind === "bait" && o.t === "pot" && potState(o) === "empty") {
+    const r = doBait(o, T.crop);
+    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🪱 Keine Köder mehr – die Futterküche macht welche aus Fischabfällen.", "warn"); } }
+    else ok = !!r;
+  }
+  else if (T.kind === "hook" && o.t === "pot" && potState(o) === "ripe") ok = doHaul(o, true);
+  else if (T.kind === "water" && (o.t === "field" || o.t === "tree" || o.t === "mline")) ok = doWater(o);
   else if (T.kind === "feed" && o.animals) ok = feedAll(o) > 0;
   if (ok) {
     T.hit.add(o.id); T.done++;
@@ -1184,7 +1408,7 @@ function startPlace(spec, x, z) {
   cancelPlace();
   const proto = spec.proto;
   const [w, d] = farmSize(proto);
-  const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2) || [FIN0, FIN0]);
+  const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN0, FIN0]);
   const ghost = fnode(objMesh(proto), { alpha: 0.82, shadow: false });
   const mark = fnode(fmesh("mark:" + w + "x" + d, () => FM.tileMarker(w, d)), { alpha: 0.55, shadow: false, y: 0.01 });
   R.nodes.push(mark, ghost);
@@ -1202,14 +1426,14 @@ function movePlace(x, z) {
   const cx = P.x + P.w / 2 - FG / 2, cz = P.z + P.d / 2 - FG / 2;
   P.ghost.x = P.mark.x = cx; P.ghost.z = P.mark.z = cz;
   P.ghost.ry = P.r ? -Math.PI / 2 : 0;
-  P.ok = farmFits(P.x, P.z, P.w, P.d, P.move ? P.move.id : null);
+  P.ok = farmFits(P.x, P.z, P.w, P.d, P.move ? P.move.id : null, P.proto.t, P.proto.k);
   P.mark.tint = P.ok ? [0.3, 0.85, 0.4, 0.75] : [0.95, 0.25, 0.25, 0.75];
   P.ghost.tint = P.ok ? null : [0.95, 0.3, 0.3, 0.35];
   const b = $("#fpOk"); if (b) b.classList.toggle("disabled", !P.ok);
 }
 function rotatePlace() {
   const P = FV.place;
-  if (!P || P.proto.t === "coop" || P.proto.t === "cows" || P.proto.t === "field") return;
+  if (!P || noRotate(P.proto.t)) return;
   P.r = P.r ? 0 : 1;
   P.proto.r = P.r;
   const [w, d] = farmSize(P.proto);
@@ -1241,11 +1465,11 @@ function confirmPlace() {
   const [x, y] = objScreen(o);
   floatText(x, y, "−" + eur(P.spec.price), "red");
   save();
-  /* Felder am Stück: gleich das nächste anbieten */
-  if (o.t === "field" && P.spec.again && shopCount(FSHOP[0]) < shopLimit(FSHOP[0])) {
-    const it = FSHOP[0];
-    const spot = farmFreeSpot(2, 2, P.x + 3, P.z + 1);
-    if (spot && S.money >= shopPrice(it)) setTimeout(() => buyShopItem(it, spot), 250);
+  /* Felder und Reusen am Stück: gleich das nächste anbieten */
+  const again = P.spec.again && FSHOP.find(x => x.id === o.t);
+  if (again && shopCount(again) < shopLimit(again)) {
+    const spot = farmFreeSpot(2, 2, P.x + 3, P.z + 1, o.t);
+    if (spot && S.money >= shopPrice(again)) setTimeout(() => buyShopItem(again, spot), 250);
   }
 }
 function cancelPlace(keep) {
@@ -1261,6 +1485,7 @@ function hideAnimalsOf(o, hide) {
   if (!o.animals) return;
   o.animals.forEach(a => { const s = FV.ani.get(a.id); if (s) { s.node.visible = !hide; if (hide) s.pn.visible = false; } });
 }
+function noRotate(t) { return !!FPENS[t] || ["field", "tree", "pot", "mline", "kutter", "steg"].includes(t); }
 function startMove(o) {
   if (FV.tutLock) return;
   sfx("pop");
@@ -1271,7 +1496,7 @@ function renderPlaceBar() {
   if (!el) return;
   const P = FV.place;
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
-  const rot = !["coop", "cows", "field", "tree"].includes(P.proto.t);
+  const rot = !noRotate(P.proto.t);
   el.className = "on";
   el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
@@ -1342,25 +1567,34 @@ function openMachine(o) {
   const M = FMACHINES[o.t], lv = level();
   const rec = M.recipes.map(r => {
     const lock = r.lv > lv, it = FITEMS[r.id];
-    const ok = !lock && farmHasAll(r.in);
+    const ok = !lock && farmHasAll(r.in) && (!r.cost || S.money >= r.cost);
+    const ins = Object.keys(r.in).map(id => itemChip(id, r.in[id], farmInv(id))).join("")
+      + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">⛽<b>${eur(r.cost)}</b></span>` : "");
+    const by = r.by ? " · dazu " + Object.keys(r.by).map(id => fqty(id, r.by[id])).join(", ") : "";
+    const what = r.trip ? `<em class="fr-trip">${esc(r.trip)}</em>` : r.note ? `<em class="fr-trip">${esc(r.note)}</em>` : "";
     return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${r.id}" ${lock ? "disabled" : ""}>
       <span class="ic">${lock ? "🔒" : it.i}</span>
-      <b>${esc(fqty(r.id, r.out))}</b>
-      <span class="fr-in">${lock ? "ab Level " + r.lv : Object.keys(r.in).map(id => itemChip(id, r.in[id], farmInv(id))).join("")}</span>
-      <small>⏱ ${fdur(r.t)} · Wert ${eur(it.v * r.out)}</small>
+      <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
+      <span class="fr-in">${lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
+      <small>⏱ ${fdur(r.t)} · Wert ${eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
+  const sub = M.trips ? "Wähle eine Fangfahrt – der Kutter fährt eine nach der anderen. Diesel zahlst du beim Ablegen."
+    : "Tippe ein Rezept an, um es in die Warteschlange zu legen.";
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)}</div>
     <div class="fq">${machQueueHTML(o)}</div>
-    <div class="fs-sub">Tippe ein Rezept an, um es in die Warteschlange zu legen.</div>
+    <div class="fs-sub">${sub}</div>
     <div class="frecs">${rec}</div>`, "mach");
   $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = () => {
     const r = farmQueue(o, b.dataset.rec);
     if (r === true) {
-      sfx("pop");
+      sfx(M.trips ? "horn" : "pop");
       farmEvent("queue:" + b.dataset.rec);
-      save(); openMachine(o);
-    } else if (r === "full") { sfx("bad"); toast("Alle Plätze belegt – warte, bis etwas fertig ist, oder kauf einen Platz dazu.", "warn"); }
+      save();
+      if (M.trips) { closeFarmSheet(); const [x, y] = objScreen(o, 1.4); floatText(x, y, "⚓ Leinen los!", "blue"); }
+      else openMachine(o);
+    } else if (r === "full") { sfx("bad"); toast(M.trips ? "Der Kutter ist ausgebucht – erst die nächste Fahrt abwarten oder einen Platz dazukaufen." : "Alle Plätze belegt – warte, bis etwas fertig ist, oder kauf einen Platz dazu.", "warn"); }
+    else if (r === "money") { sfx("bad"); toast("⛽ Für den Diesel fehlt das Geld.", "warn"); }
     else if (r === "missing") {
       sfx("bad");
       const m = farmMissing(recipeOf(o, b.dataset.rec).in).map(x => fqty(x.id, x.need)).join(", ");
@@ -1370,21 +1604,23 @@ function openMachine(o) {
   bindMachQueue(o);
 }
 
-/* Silo & Scheune */
+/* Lager */
 function openFarmStore(st) {
+  if (!FSTORE[st] || !FSITE.stores.includes(st)) st = FSITE.stores[0];
   FV.sheetFn = () => openFarmStore(st);
   const ids = Object.keys(FITEMS).filter(id => FITEMS[id].st === st && farmInv(id) > 0);
   const cap = farmStoreCap(st), used = farmStoreUsed(st), uc = storeUpCost(st);
   const sel = FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
-  openFarmSheet(`<div class="fs-tabs"><button class="${st === "silo" ? "on" : ""}" data-st="silo">🌾 Silo</button><button class="${st === "barn" ? "on" : ""}" data-st="barn">🏚️ Scheune</button></div>
+  openFarmSheet(`<div class="fs-tabs">${FSITE.stores.map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
     <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}"><span>${FITEMS[id].i}</span><b>${famt(id, farmInv(id))}</b><small>${qStars(farmQ(id))}</small></button>`).join("")
-      : `<div class="fs-empty">${st === "silo" ? "Leer. Ernte Felder und Bäume – die Ernte kommt hierher." : "Leer. Eier, Milch, Futter und alles Gebackene landen hier."}</div>`}</div>
+      : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>
     ${sel ? `<div class="fsell"><b>${FITEMS[sel].i} ${esc(fqty(sel, farmInv(sel)))}</b> · ${qStars(farmQ(sel))} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
       <div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(farmSellPrice(sel, n))}</button>`).join("")}</div>
       <small>Großhandel zahlt sofort, aber nur den halben Wert. Über Bestellungen bekommst du deutlich mehr.</small></div>` : ""}
     ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}</button>` : ""}
-    <div class="fs-sub">Die Sterne zeigen die Qualität: Gießen, Fruchtwechsel und viel Platz für die Tiere machen Ware besser – das zahlt sich bei jeder Lieferung aus.</div>`, "store");
+    <div class="fs-sub">${FSITE.kind === "fisch" ? "Die Sterne zeigen die Qualität: ruhige See, frischer Köder, geputzte Leinen und viel Platz im Gehege machen Ware besser – das zahlt sich bei jeder Lieferung aus."
+      : "Die Sterne zeigen die Qualität: Gießen, Fruchtwechsel und viel Platz für die Tiere machen Ware besser – das zahlt sich bei jeder Lieferung aus."}</div>`, "store");
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
   $$("#farmSheetIn [data-sell]").forEach(b => b.onclick = () => {
@@ -1395,12 +1631,14 @@ function openFarmStore(st) {
   if (up) up.onclick = () => { if (farmStoreUp(st)) { sfx("build"); save(); openFarmStore(st); } };
 }
 
-/* Stall: Platz, Haltung, Tiere kaufen und verkaufen, Auslauf vergrößern */
+/* Stall oder Gehege: Platz, Haltung, Tiere kaufen und abgeben, vergrößern */
 function penAnisHTML(o) {
   const A = penInfo(o).A;
   return o.animals.map(a => {
     const st = aniState(a);
-    return `<span class="fani ${st}" title="${st === "hungry" ? "hungrig" : st === "ready" ? "fertig" : "frisst"}">${A.i}<i>${st === "hungry" ? "💭" : st === "ready" ? FITEMS[A.out].i : "⏳"}</i></span>`;
+    const sym = st === "hungry" ? "💭" : st === "ready" ? (A.mast ? "✓" : FITEMS[A.out].i) : "⏳";
+    const g = A.mast ? `<em>${a.g || 0}/${A.mast}</em>` : "";
+    return `<span class="fani ${st}" title="${st === "hungry" ? "hungrig" : st === "ready" ? (A.mast ? "schlachtreif" : "fertig") : "frisst"}">${A.i}<i>${sym}</i>${g}</span>`;
   }).join("");
 }
 function openPen(o) {
@@ -1411,22 +1649,23 @@ function openPen(o) {
     const h = penAnisHTML(o);
     if (el._h !== h) { el.innerHTML = h; el._h = h; }
   };
-  const pi = penInfo(o), A = pi.A, kind = o.t === "coop" ? "huhn" : "kuh";
+  const pi = penInfo(o), A = pi.A, kind = pi.kind, M = FPEN_META[o.t];
   const uc = penUpgradeCost(o), nx = FPENS[o.t][o.lvl];
   const nxPer = nx ? nx.m2 / Math.max(1, o.animals.length) : 0;
   const nxSt = nx ? (FKEEP.find(k => nxPer / A.space >= k.r) || FKEEP[4]).st : 0;
-  const plural = A.n === "Huhn" ? "Hühner" : "Kühe";
   const add1 = o.animals.length < A.max ? (FKEEP.find(k => pi.p.m2 / (o.animals.length + 1) / A.space >= k.r) || FKEEP[4]).st : null;
   const ani = penAnisHTML(o);
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${o.t === "coop" ? "🛖" : "🏚️"}</span>${o.t === "coop" ? "Hühnerstall" : "Kuhstall"} · ${o.animals.length}/${A.max} ${plural}</div>
+  const per = A.fish ? "Schwarm" : "Tier";
+  const what = A.mast ? "das Fleisch" : A.fish ? "die Forellen" : { ei: "die Eier", milch: "die Milch", wolle: "die Wolle" }[A.out] || "die Ware";
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)} · ${o.animals.length}/${A.max} ${esc(A.pl)}</div>
     <div class="fkeep"><div class="fk-st">${qStars(pi.stars)}</div><div><b>${esc(pi.keep)}</b>
-      <small>${fmt(pi.p.m2, 0)} ${A.unit} ${o.t === "coop" ? "Auslauf" : "Weide"} · ${fmt(pi.per, 0)} ${A.unit} je Tier (ideal ab ${fmt(A.space * 2, 0)})</small></div></div>
-    <div class="fanis">${ani || `<div class="fs-empty">Noch keine ${plural}.</div>`}</div>
-    <div class="fs-sub">Je mehr Platz jedes Tier hat, desto besser ${o.t === "coop" ? "die Eier" : "die Milch"}: Mehr Tiere bringen mehr Ware, aber auf engem Raum sinkt die Qualität – und damit der Preis.</div>
+      <small>${fmt(pi.p.m2, 0)} ${A.unit} ${esc(M.area)} · ${fmt(pi.per, 0)} ${A.unit} je ${per} (ideal ab ${fmt(A.space * 2, 0)})</small></div></div>
+    <div class="fanis">${ani || `<div class="fs-empty">Noch keine ${esc(A.pl)}.</div>`}</div>
+    <div class="fs-sub">Je mehr Platz jedes ${per} hat, desto besser ${what}: Mehr Tiere bringen mehr Ware, aber eng gehalten sinkt die Qualität – und damit der Preis.${A.mast ? ` ${esc(A.pl)} brauchen ${A.mast} Mahlzeiten ${esc(FITEMS[A.feed].n)}, dann geht es zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je Tier.` : ""}</div>
     <div class="fpen-b">
-      ${o.animals.length < A.max ? `<button class="btn" id="fpBuy">${A.i} ${A.n} kaufen · ${eur(animalPrice(kind))}<small>danach ${qStars(add1)}</small></button>` : ""}
-      ${o.animals.length ? `<button class="btn ghost" id="fpSell">${A.n} abgeben · +${eur(Math.round(A.price * 0.5))}</button>` : ""}
-      ${uc != null ? `<button class="btn ghost" id="fpUp">📐 ${o.t === "coop" ? "Auslauf" : "Weide"} vergrößern auf ${fmt(nx.m2, 0)} ${A.unit} · ${eur(uc)}<small>dann ${qStars(nxSt)}</small></button>` : ""}
+      ${o.animals.length < A.max ? `<button class="btn" id="fpBuy">${A.i} ${esc(A.young || A.n)} kaufen · ${eur(animalPrice(kind))}<small>danach ${qStars(add1)}</small></button>` : ""}
+      ${o.animals.length ? `<button class="btn ghost" id="fpSell">${esc(A.n)} abgeben · +${eur(Math.round(A.price * 0.5))}</button>` : ""}
+      ${uc != null ? `<button class="btn ghost" id="fpUp">📐 ${esc(M.area)} vergrößern auf ${fmt(nx.m2, 0)} ${A.unit} · ${eur(uc)}<small>dann ${qStars(nxSt)}</small></button>` : ""}
     </div>`, "pen");
   const b = $("#fpBuy"); if (b) b.onclick = () => buyAnimalInto(kind, o, true);
   const s = $("#fpSell"); if (s) s.onclick = () => askConfirm(A.n + " abgeben?", "Du bekommst " + eur(Math.round(A.price * 0.5)) + " zurück. Weniger Tiere haben mehr Platz.", "Abgeben", () => {
@@ -1444,7 +1683,7 @@ function buyAnimalInto(kind, pen, stay) {
   const a = pen.animals[pen.animals.length - 1];
   FV.drop = a.id;
   farmSyncScene();
-  sfx("build");
+  sfx(FANIMALS[kind].fish ? "splash" : "build");
   const [x, y] = objScreen(pen);
   floatText(x, y, FANIMALS[kind].i + " Willkommen!", "");
   save();
@@ -1457,7 +1696,7 @@ function openFarmOrders(sendFor) {
   FV.sendFor = sendFor || null;
   const os = farmOrders().sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || a.created - b.created);
   const atFarm = S.fleet.filter(f => f.at === FARM_NODE && f.phase === "idle");
-  const vehLine = atFarm.length ? atFarm.map(f => vType(f.type).icon).join(" ") + " am Hof" : "Kein Fahrzeug am Hof – es kommt zur Abholung angefahren.";
+  const vehLine = atFarm.length ? atFarm.map(f => vType(f.type).icon).join(" ") + " " + FT().atHere : FT().vehNone;
   const html = os.map(o => {
     const ready = farmOrderReady(o);
     const q = farmOrderQ(o), pf = 1 + (q - 3) * 0.08;
@@ -1469,7 +1708,7 @@ function openFarmOrders(sendFor) {
     if (sendFor === o.id) {
       const opts = farmDispatchOptions(o);
       send = `<div class="fo-send">${opts.length ? opts.slice(0, 4).map((p, i) => `<button class="fo-v${p.late ? " late" : ""}" data-go="${i}">
-          <span>${p.t.icon}</span><b>${esc(p.t.brand)}</b><small>${p.here ? "am Hof" : "kommt von " + esc(N[p.f.at].short)} · ${fdur(Math.round(p.ev.time))} · ${eur(p.ev.cost)}${p.late ? " · zu spät" : ""}</small></button>`).join("")
+          <span>${p.t.icon}</span><b>${esc(p.t.brand)}</b><small>${p.here ? FT().atHere : "kommt von " + esc(N[p.f.at].short)} · ${fdur(Math.round(p.ev.time))} · ${eur(p.ev.cost)}${p.late ? " · zu spät" : ""}</small></button>`).join("")
         : `<div class="fs-empty">Kein freies Fahrzeug schafft das gerade (Gewicht ${kgf(o.weight)}, ${km} km${N[o.to].modes.includes("b") ? "" : ", nur auf der Straße"}). Im Markt gibt es mehr.</div>`}</div>`;
       FV.sendOpts = opts;
     }
@@ -1478,7 +1717,7 @@ function openFarmOrders(sendFor) {
         <button class="btn tiny ghost" data-drop="${o.id}" title="Bestellung ablehnen">🗑️</button></div>${send}</div>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">📋</span>Bestellungen<small>${vehLine}</small></div>
-    <div class="fos">${html || `<div class="fs-empty">Gerade keine Bestellung. Neue kommen von allein – bald auch aus Potsdam und Berlin.</div>`}</div>
+    <div class="fos">${html || `<div class="fs-empty">${esc(FT().noOrders)}</div>`}</div>
     <div class="fs-sub">Bessere Qualität bringt bis zu 16 % mehr. Unterwegs siehst du die Lieferung auf der Karte und unter „Live“.</div>`, "orders");
   $$("#farmSheetIn [data-send]").forEach(b => b.onclick = () => openFarmOrders(FV.sendFor === b.dataset.send ? null : b.dataset.send));
   $$("#farmSheetIn [data-go]").forEach(b => b.onclick = () => {
@@ -1503,36 +1742,36 @@ function openFarmOrders(sendFor) {
 
 /* Laden */
 function openFarmShop(cat) {
-  cat = cat || FV.shopCat || "feld";
+  if (!FSHOP_CATS.some(c => c[0] === cat)) cat = FSHOP_CATS.some(c => c[0] === FV.shopCat) ? FV.shopCat : FSHOP_CATS[0][0];
   FV.shopCat = cat;
   FV.sheetFn = () => openFarmShop(cat);
   const lv = level();
-  const cats = [["feld", "🌱 Felder & Bäume"], ["tier", "🐔 Tiere"], ["bau", "🏗️ Gebäude"], ["deko", "🌷 Deko"]];
   let items;
   if (cat === "deko") {
-    items = Object.keys(FDECO).map(k => {
+    items = Object.keys(FDECO).filter(k => !FDECO[k].s || FDECO[k].s === FSITE.kind).map(k => {
       const D = FDECO[k], lock = D.lv > lv;
-      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}><span class="ic">${lock ? "🔒" : D.i}</span><b>${esc(D.n)}</b><small>${lock ? "ab Level " + D.lv : eur(D.price)}</small></button>`;
+      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}><span class="ic">${lock ? "🔒" : D.i}</span><b>${esc(D.n)}</b><small>${lock ? "ab Level " + D.lv : eur(D.price)}${D.water ? " · im Wasser" : ""}</small></button>`;
     }).join("");
   } else {
     items = FSHOP.filter(it => it.cat === cat).map(it => {
-      const lock = it.lv > lv, n = shopCount(it), lim = shopLimit(it), full = !it.animal && n >= lim;
+      const lock = it.lv > lv, n = shopCount(it), lim = shopLimit(it), full = !it.animal && !it.item && n >= lim;
       const price = shopPrice(it);
-      let note = lock ? "ab Level " + it.lv : full ? "Maximum erreicht" + (it.id === "field" ? " – mehr ab dem nächsten Level" : "") : eur(price);
+      let note = lock ? "ab Level " + it.lv : full ? "Maximum erreicht" + (it.max ? " – mehr ab dem nächsten Level" : "") : eur(price);
       if (it.animal) {
         const pens = S.farm.objs.filter(o => o.t === FANIMALS[it.animal].house);
-        if (!lock && !pens.length) note = "erst Stall bauen";
-        else if (!lock && pens.every(p => p.animals.length >= FANIMALS[it.animal].max)) note = "Stall voll";
+        if (!lock && !pens.length) note = "erst " + FPEN_META[FANIMALS[it.animal].house].n + " bauen";
+        else if (!lock && pens.every(p => p.animals.length >= FANIMALS[it.animal].max)) note = FANIMALS[it.animal].fish ? "Gehege voll" : "Stall voll";
       }
+      if (it.item && !lock) note = eur(price) + " · " + fqty(it.item, it.qty || 1) + " · da: " + famt(it.item, farmInv(it.item));
       return `<button class="fshop${lock || full ? " lock" : S.money < price ? " poor" : ""}" data-shop="${it.id}" ${lock || full ? "disabled" : ""}>
-        <span class="ic">${lock ? "🔒" : it.i}</span><b>${esc(it.n)}</b><small>${note}</small>${!lock && !it.animal && lim < 99 ? `<em>${n}/${lim}</em>` : ""}<p>${esc(it.d)}</p></button>`;
+        <span class="ic">${lock ? "🔒" : it.i}</span><b>${esc(it.n)}</b><small>${note}</small>${!lock && !it.animal && !it.item && lim < 99 ? `<em>${n}/${lim}</em>` : ""}<p>${esc(it.d)}</p></button>`;
     }).join("");
   }
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🛒</span>Laden</div>
-    <div class="fs-tabs">${cats.map(([k, l]) => `<button class="${k === cat ? "on" : ""}" data-cat="${k}">${l}</button>`).join("")}</div>
+    <div class="fs-tabs">${FSHOP_CATS.map(([k, l]) => `<button class="${k === cat ? "on" : ""}" data-cat="${k}">${l}</button>`).join("")}</div>
     <div class="fshops">${items}</div>`, "shop");
   $$("#farmSheetIn [data-cat]").forEach(b => b.onclick = () => openFarmShop(b.dataset.cat));
-  $$("#farmSheetIn [data-shop]").forEach(b => b.onclick = () => buyShopItem(FSHOP.find(x => x.id === b.dataset.shop)));
+  $$("#farmSheetIn [data-shop]").forEach(b => b.onclick = () => buyShopItem(FSHOP.find(x => x.id === b.dataset.shop), null, b));
   $$("#farmSheetIn [data-deco]").forEach(b => b.onclick = () => {
     const k = b.dataset.deco, D = FDECO[k];
     if (S.money < D.price) return toast("Dafür fehlen " + eur(D.price - S.money) + ".", "warn");
@@ -1540,49 +1779,57 @@ function openFarmShop(cat) {
     startPlace({ proto: { t: "deco", k, arg: D.arg, r: 0 }, build: { t: "deco", k }, price: D.price, label: D.n });
   });
 }
-function buyShopItem(it, spot) {
+function buyShopItem(it, spot, btn) {
   if (!it) return;
   const price = shopPrice(it);
   if (it.animal) { closeFarmSheet(); buyAnimalInto(it.animal); return; }
+  /* Einkauf landet gleich im Lager */
+  if (it.item) {
+    if (!farmBuySupply(it)) { sfx("bad"); return; }
+    if (btn) { const r = btn.getBoundingClientRect(), fr = $("#farmFx").getBoundingClientRect(); flyItem(FITEMS[it.item].i, r.left - fr.left + r.width / 2, r.top - fr.top + 10, storeBtn(), 0, it.qty || 1); floatText(r.left - fr.left + r.width / 2, r.top - fr.top, "−" + eur(price), "red"); }
+    sfx("coin"); save(); openFarmShop(FV.shopCat);
+    return;
+  }
   if (S.money < price) { sfx("bad"); return toast("Dafür fehlen " + eur(price - S.money) + ".", "warn"); }
   closeFarmSheet();
   let proto, build;
-  if (it.id === "field") { proto = { t: "field" }; build = { t: "field" }; }
+  if (it.id === "field" || it.id === "pot") { proto = { t: it.id }; build = { t: it.id }; }
   else if (it.tree) { proto = { t: "tree", kind: it.tree }; build = { t: "tree", kind: it.tree }; }
+  else if (it.line) { proto = { t: "mline", kind: it.line }; build = { t: "mline", kind: it.line }; }
   else { proto = { t: it.id, lvl: 1, animals: [] }; build = { t: it.id }; }
-  startPlace({ proto, build, price, label: it.n, again: it.id === "field" }, spot ? spot[0] : null, spot ? spot[1] : null);
+  startPlace({ proto, build, price, label: it.n, again: it.id === "field" || it.id === "pot" }, spot ? spot[0] : null, spot ? spot[1] : null);
 }
 
-/* Wohnhaus: Hof-Übersicht, Notizbuch, Gründen, Verkaufen */
+/* Wohnhaus: Übersicht, Notizbuch/Logbuch, Gründen, Verkaufen */
 function openFarmHouse() {
   FV.sheetFn = openFarmHouse;
-  const F = S.farm, q = farmQuest(), val = farmValue();
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hof ${esc(S.player.company)}<small>Erbe von Opa Hinrich · Werder (Havel)</small></div>
-    ${q ? `<div class="fquest-card${F.qdone ? " done" : ""}"><b>📒 Opas Notizbuch</b><span>${esc(q.t)}</span>
+  const F = S.farm, q = farmQuest(), val = farmValue(), T = FT();
+  const sea = FSITE.kind === "fisch";
+  const stats = sea
+    ? [[F.stats.harvest, "gefangen"], [F.stats.made, "hergestellt"], [F.stats.trips || 0, "Kutterfahrten"], [F.stats.pearls || 0, "Perlen"], [F.stats.deliv, "Lieferungen"]]
+    : [[F.stats.harvest, "geerntet"], [F.stats.made, "hergestellt"], [F.stats.eggs, "Eier"], [F.stats.milk, "Milch"], [F.stats.deliv, "Lieferungen"]];
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${T.pin}</span>${esc(T.title(S.player.company))}<small>${esc(T.heir)} · ${esc(T.where)}</small></div>
+    ${q ? `<div class="fquest-card${F.qdone ? " done" : ""}"><b>${T.bookIcon} ${esc(T.book)}</b><span>${esc(q.t)}</span>
       <i><em style="width:${Math.round(F.qp / q.n * 100)}%"></em></i><small>${F.qp}/${q.n} · Belohnung ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " EP" : ""}</small>
       ${F.qdone ? `<button class="btn tiny" id="fhClaim">Abholen</button>` : ""}</div>` : ""}
-    <div class="fstats">
-      <div><b>${fmt(F.stats.harvest, 0)}</b><small>geerntet</small></div><div><b>${fmt(F.stats.made, 0)}</b><small>hergestellt</small></div>
-      <div><b>${fmt(F.stats.eggs, 0)}</b><small>Eier</small></div><div><b>${fmt(F.stats.milk, 0)}</b><small>Milch</small></div>
-      <div><b>${fmt(F.stats.deliv, 0)}</b><small>Lieferungen</small></div><div><b>${eur(F.stats.earned)}</b><small>Umsatz</small></div>
-    </div>
-    <div class="fval">Hofwert heute: <b>${eur(val)}</b></div>
+    <div class="fstats">${stats.map(([v, l]) => `<div><b>${fmt(v, 0)}</b><small>${l}</small></div>`).join("")}<div><b>${eur(F.stats.earned)}</b><small>Umsatz</small></div></div>
+    <div class="fval">${esc(T.valHead)}: <b>${eur(val)}</b></div>
     <div class="fchaps">${FCHAPTERS.map((C, i) => {
       const qs = FQUESTS.filter(x => x.c === i), first = FQUESTS.indexOf(qs[0]);
       const done = Math.max(0, Math.min(qs.length, F.qi - first)), cur = !farmDone() && farmChapter().c === i;
       return `<div class="fchap${done >= qs.length ? " ok" : cur ? " cur" : ""}"><b>${done >= qs.length ? "✓" : i + 1}</b><div><span>${esc(C.n)}</span><small>${esc(C.t)}</small>
         <i><em style="width:${Math.round(done / qs.length * 100)}%"></em></i></div><small class="fchap-n">${done}/${qs.length}</small></div>`;
     }).join("")}</div>
-    ${farmCanFound() ? `<button class="btn fgo" id="fhFound">🚚 Spedition gründen</button>` : F.logi ? "" : `<div class="fs-sub">Arbeite Opas Notizbuch ab – drei Kapitel. Wenn der Hof läuft, kannst du eine Spedition gründen und auch für andere fahren.</div>`}
-    ${F.logi ? `<div class="fsell-farm"><b>Hof verkaufen?</b><small>Du kannst den Hof behalten und jederzeit über „Hof“ besuchen – oder ihn verkaufen und mit dem Geld die Spedition ausbauen. Ein Verkauf ist endgültig.</small>
+    ${farmCanFound() ? `<button class="btn fgo" id="fhFound">🚚 Spedition gründen</button>` : F.logi ? "" : `<div class="fs-sub">${esc(T.bookHint)}</div>`}
+    ${F.logi ? `<div class="fsell-farm"><b>${esc(T.sellHead)}</b><small>${esc(T.keepText)}</small>
       <button class="btn ghost danger" id="fhSell">Für ${eur(val)} verkaufen</button></div>` : ""}
-    <div class="fletter"><b>Opas Brief</b><p>„Mein liebes Enkelkind, der Hof gehört jetzt dir. Die Hühner wollen morgens ihr Futter, der Ofen braucht Geduld, und die Leute in Werder zahlen gut für ehrliche Ware. Lina hilft dir beim Ausliefern – sie kennt jede Abkürzung. Mach was draus. Dein Opa Hinrich“</p></div>
-    <div class="fs-row"><button class="btn tiny ghost" id="fhSnd">${F.snd ? "🔊 Ton an" : "🔇 Ton aus"}</button><button class="btn tiny ghost" id="fhTut">🎓 Rundgang mit Lina</button></div>`, "house");
+    <div class="fletter"><b>${esc(T.letterHead)}</b><p>„${esc(T.letter)}“</p></div>
+    <div class="fs-row"><button class="btn tiny ghost" id="fhSnd">${F.snd ? "🔊 Ton an" : "🔇 Ton aus"}</button><button class="btn tiny ghost" id="fhTut">${T.tour}</button></div>`, "house");
   const c = $("#fhClaim"); if (c) c.onclick = claimQuest;
   const fd = $("#fhFound"); if (fd) fd.onclick = askFound;
-  const sl = $("#fhSell"); if (sl) sl.onclick = () => askConfirm("Hof verkaufen?", "Für " + eur(val) + " geht der Hof samt Tieren, Feldern und Lager an einen Nachbarn. Fahrzeuge und Spedition bleiben. Das lässt sich nicht rückgängig machen.", "Verkaufen", () => {
+  const sl = $("#fhSell"); if (sl) sl.onclick = () => askConfirm(T.sellHead, T.sellText.replace("{p}", eur(val)), "Verkaufen", () => {
     const p = farmSellAll();
-    if (p) { closeFarmSheet(); sfx("coin"); toast("🏡 Hof verkauft für " + eur(p) + ". Viel Erfolg mit der Spedition!", "ok"); showTab("map"); render(); }
+    if (p) { closeFarmSheet(); sfx("coin"); toast(T.sold + eur(p) + ". Viel Erfolg mit der Spedition!", "ok"); showTab("map"); render(); }
   }, true);
   $("#fhSnd").onclick = () => { F.snd = !F.snd; openFarmHouse(); renderFarmUI(); };
   $("#fhTut").onclick = () => { closeFarmSheet(); S.farm.tut = { step: 0, done: false, replay: true }; farmTutShow(); };
@@ -1594,7 +1841,7 @@ function openFarmShed() {
   const away = S.fleet.filter(f => f.at !== FARM_NODE);
   const row = f => { const t = vType(f.type); return `<div class="fveh"><span>${t.icon}</span><b>${esc(t.name)}</b><small>${kgf(t.cap)} · ${t.speed} km/h · ${phaseLabel(f)}</small></div>`; };
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🛠️</span>Schuppen</div>
-    ${here.length ? here.map(row).join("") : `<div class="fs-empty">Gerade steht kein Fahrzeug am Hof.</div>`}
+    ${here.length ? here.map(row).join("") : `<div class="fs-empty">Gerade steht kein Fahrzeug ${esc(FT().atHere)}.</div>`}
     ${away.length ? `<div class="fs-sub">Unterwegs oder woanders geparkt:</div>` + away.map(row).join("") : ""}
     <div class="fs-row"><button class="btn tiny" id="fsFleet">🚚 Zum Fuhrpark</button><button class="btn tiny ghost" id="fsMkt">🏪 Fahrzeug kaufen</button></div>`, "shed");
   $("#fsFleet").onclick = () => { closeFarmSheet(); showTab("fleet"); };
@@ -1603,7 +1850,7 @@ function openFarmShed() {
 
 /* --------------------------- Spedition gründen ------------------------ */
 function askFound() {
-  askConfirm("Spedition gründen?", "Ab jetzt kommen auch fremde Aufträge: Pakete, Paletten, Express – erst rund um Berlin, später weltweit. Der Hof läuft weiter und liefert wie bisher. Lina zeigt dir, wie Aufträge laufen.", "Gründen", () => {
+  askConfirm("Spedition gründen?", FT().foundText, "Gründen", () => {
     if (!farmFoundLogistics()) return;
     closeFarmSheet();
     sfx("level");
@@ -1625,8 +1872,10 @@ function renderFarmUI() {
   if (sb) sb.firstElementChild.textContent = S.farm.snd ? "🔊" : "🔇";
   const st = $("#fbStore");
   if (st) {
-    const full = farmStoreUsed("silo") >= farmStoreCap("silo") || farmStoreUsed("barn") >= farmStoreCap("barn");
+    const full = FSITE.stores.some(k => farmStoreUsed(k) >= farmStoreCap(k));
     st.classList.toggle("warn", full);
+    const ic = FSTORE[FSITE.stores[0]].i;
+    if (st._ic !== ic) { st._ic = ic; st.firstElementChild.textContent = ic; st.title = FSITE.stores.map(k => FSTORE[k].n).join(" und "); }
   }
   renderFarmQuest();
   const fd = $("#farmFound");
@@ -1634,7 +1883,7 @@ function renderFarmUI() {
     const can = farmCanFound() && S.farm.tut.done;
     if (can !== fd._can) {
       fd._can = can;
-      fd.innerHTML = can ? `<button class="ffound" id="ffGo">🚚 Spedition gründen<small>Der Hof läuft – fahr auch für andere!</small></button>` : "";
+      fd.innerHTML = can ? `<button class="ffound" id="ffGo">🚚 Spedition gründen<small>${esc(FT().The)} läuft – fahr auch für andere!</small></button>` : "";
       if (can) $("#ffGo").onclick = askFound;
     }
   }
@@ -1655,7 +1904,7 @@ function renderFarmQuest() {
   if (el._k === key) return;
   el._k = key;
   const ch = farmChapter();
-  el.innerHTML = `<button class="fq-card${S.farm.qdone ? " done" : ""}" id="fqCard"><span>📒</span><div><em class="fq-ch">Kapitel ${ch.c + 1} · ${esc(FCHAPTERS[ch.c].n)} · ${ch.done + 1}/${ch.n}</em><b>${esc(q.t)}</b>
+  el.innerHTML = `<button class="fq-card${S.farm.qdone ? " done" : ""}" id="fqCard"><span>${FT().bookIcon}</span><div><em class="fq-ch">Kapitel ${ch.c + 1} · ${esc(FCHAPTERS[ch.c].n)} · ${ch.done + 1}/${ch.n}</em><b>${esc(q.t)}</b>
     ${S.farm.qdone ? `<small>Geschafft! Tippen: ${eur(q.r.m)}${q.r.xp ? " + " + q.r.xp + " EP" : ""}</small>` : `<i><em style="width:${Math.round(S.farm.qp / q.n * 100)}%"></em></i><small>${S.farm.qp}/${q.n}</small>`}</div></button>`;
   $("#fqCard").onclick = () => { if (S.farm.qdone) claimQuest(); else openFarmHouse(); };
 }
@@ -1683,13 +1932,13 @@ function farmChapterParty(c, last) {
   closeFarmSheet();
   el.className = "on";
   el.innerHTML = `<div class="flv-wrap"><div class="flv-rays"></div><div class="flv chap">
-    <div class="flv-k">${last ? "Opas Notizbuch" : "Kapitel " + (c + 1)}</div>
-    <div class="flv-n small">${last ? "Der Hof läuft!" : esc(C.n)}</div>
-    <div class="flv-t">${last ? "Alles abgehakt – Opa wäre stolz." : "Kapitel geschafft!"}</div>
-    <div class="fletter mini"><p>„${esc(last ? "Du hast alles geschafft, was ich aufgeschrieben habe. Der Hof ist jetzt deiner, ganz und gar. Und wenn dir das Dorf zu klein wird: Lina kennt jede Straße bis nach Berlin." : C.opa)}“</p></div>
+    <div class="flv-k">${last ? esc(FT().book) : "Kapitel " + (c + 1)}</div>
+    <div class="flv-n small">${last ? esc(FT().doneHead) : esc(C.n)}</div>
+    <div class="flv-t">${last ? esc(FT().doneSub) : "Kapitel geschafft!"}</div>
+    <div class="fletter mini"><p>„${esc(last ? FT().doneQuote : C.opa)}“</p></div>
     <div class="flv-u"><small>Belohnung fürs Kapitel</small><span>${eur(C.r.m)} · +${C.r.xp} EP ⭐</span></div>
     ${last ? `<div class="flv-u"><small>Neu</small><span>🚚 Spedition gründen – fahr auch für andere</span></div>
-      <div class="flv-b"><button class="btn" id="flvFound">🚚 Spedition gründen</button><button class="btn ghost" id="flvOk">Erst noch auf dem Hof bleiben</button></div>`
+      <div class="flv-b"><button class="btn" id="flvFound">🚚 Spedition gründen</button><button class="btn ghost" id="flvOk">Erst noch ${esc(FT().at)} bleiben</button></div>`
     : `<div class="flv-u"><small>Als Nächstes: Kapitel ${c + 2}</small><span>${esc(nx.n)} – ${esc(nx.t)}</span></div><button class="btn" id="flvOk">Weiter</button>`}
   </div></div>`;
   sfx("level");
@@ -1726,7 +1975,7 @@ function farmLevelUp(l) {
 }
 
 /* -------------------------- Linas Rundgang ---------------------------- */
-const FTUT = [
+const FTUT_HOF = [
   { tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina. Ich hab deinem Opa jahrelang beim Ausliefern geholfen – und jetzt gehört der Hof dir. Komm, ich zeig dir alles.` },
   { tx: "Der Weizen ist reif! Tipp ein goldenes Feld an und <b>zieh die Sichel über alle reifen Felder</b>.", target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), wait: "harvestField", n: 3 },
   { tx: "Super Ernte! Die landet im Silo – und für fast alles gibt es ⭐ <b>Erfahrungspunkte (EP)</b>; der Balken oben zeigt, wie weit es bis zum nächsten Level ist. Jetzt neu säen: <b>Tipp ein leeres Feld an und zieh den Weizen über die leeren Felder.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), wait: "plant", n: 2 },
@@ -1737,18 +1986,20 @@ const FTUT = [
   { tx: "Während das Brot backt: Die Äpfel sind reif. <b>Tipp einen Apfelbaum an.</b>", target: () => firstObj(o => o.t === "tree" && treeRipe(o)) || firstObj(o => o.t === "tree"), wait: "harvest:apfel", n: 1 },
   { tx: "Das Brot ist fertig – <b>tipp den Ofen an und hol es raus.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1 },
   { tx: "Das Café Inselblick in Werder wartet auf Brot und Äpfel. <b>Tipp die Bestelltafel an und schick die Lieferung los.</b>", target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder },
-  { tx: "Unterwegs! Auf der Karte siehst du die Fahrt, bei Ankunft gibt’s Geld und EP. Oben links liegt jetzt <b>Opas Notizbuch</b>: drei Kapitel, Aufgabe für Aufgabe. Wenn alles abgehakt ist und der Hof läuft, reden wir übers Fahren für andere. Mehr Felder, Tiere und Gebäude gibt’s im 🛒 Laden. Viel Spaß!" }
+  { tx: "Unterwegs! Auf der Karte siehst du die Fahrt, bei Ankunft gibt’s Geld und EP. Oben links liegt jetzt <b>Opas Notizbuch</b>: vier Kapitel, Aufgabe für Aufgabe. Wenn alles abgehakt ist und der Hof läuft, reden wir übers Fahren für andere. Mehr Felder, Tiere und Gebäude gibt’s im 🛒 Laden. Viel Spaß!" }
 ];
+function farmTutList() { return FSITE.kind === "fisch" && typeof FTUT_FISCH !== "undefined" ? FTUT_FISCH : FTUT_HOF; }
 function firstObj(fn) { return S.farm.objs.find(fn) || null; }
 function farmTutOrder() {
   if (S.orders.some(o => o.tutF)) return;
-  const o = farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
+  const o = FSITE.kind === "fisch" ? farmOrderObj("f-warne", "Fischbude Am Strom", { buckling: 1, krabbe: 2 }, { tutF: true })
+    : farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
   if (o) { o.expire = S.time + 99999; o.deadline = S.time + 99999; S.orders.push(o); }
 }
 function farmTutShow() {
   const el = $("#farmTut");
   if (!el || !S.farm || !S.farm.tut || S.farm.tut.done) { if (el) { el.innerHTML = ""; el.className = ""; } FV.tutLock = false; return; }
-  const T = S.farm.tut, st = FTUT[T.step];
+  const T = S.farm.tut, st = farmTutList()[T.step];
   if (!st) return farmTutEnd();
   if (st.before && !T.replay) st.before();
   T.cnt = T.cnt || 0;
@@ -1759,7 +2010,7 @@ function farmTutShow() {
   el.className = "on" + (st.wait ? " wait" : "");
   if (!wait) el.classList.add("free");
   el.innerHTML = `<div class="ft-box"><div class="ft-fig">${img}</div><div class="ft-tx"><b>Lina</b><p>${tx}</p>
-    ${wait ? `<small class="ft-step">${T.step}/${FTUT.length - 2}${st.n > 1 ? " · " + Math.min(T.cnt, st.n) + "/" + st.n : ""}</small>` : `<button class="btn tiny" id="ftNext">${T.step === FTUT.length - 1 ? "Los geht’s!" : "Weiter"}</button>`}
+    ${wait ? `<small class="ft-step">${T.step}/${farmTutList().length - 2}${st.n > 1 ? " · " + Math.min(T.cnt, st.n) + "/" + st.n : ""}</small>` : `<button class="btn tiny" id="ftNext">${T.step === farmTutList().length - 1 ? "Los geht’s!" : "Weiter"}</button>`}
     ${T.step === 0 ? `<button class="ft-skip" id="ftSkip">Rundgang überspringen</button>` : ""}</div></div><div class="ft-hand" id="ftHand">👆</div>`;
   const nx = $("#ftNext"); if (nx) nx.onclick = () => farmTutNext();
   const sk = $("#ftSkip"); if (sk) sk.onclick = () => farmTutEnd(true);
@@ -1770,7 +2021,7 @@ function farmTutNext() {
   const T = S.farm.tut;
   T.step++; T.cnt = 0;
   sfx("pop");
-  if (T.step >= FTUT.length) return farmTutEnd();
+  if (T.step >= farmTutList().length) return farmTutEnd();
   save();
   farmTutShow();
 }
@@ -1786,12 +2037,13 @@ function farmTutEnd(skip) {
 /* Signale aus der Spiellogik */
 function farmTutSignal(key, n) {
   if (!S.farm || !S.farm.tut || S.farm.tut.done) return;
-  const T = S.farm.tut, st = FTUT[T.step];
+  const T = S.farm.tut, st = farmTutList()[T.step];
   if (!st || !st.wait || T.replay) return;
   const k = key.split(":")[0];
-  const match = st.wait === key || (st.wait === "plant" && k === "plant") || (st.wait === "feed" && k === "feed") || (st.wait === "harvestField" && key === "harvest:weizen");
+  const match = st.wait === key || (st.wait === "plant" && k === "plant") || (st.wait === "feed" && k === "feed") || (st.wait === "bait" && k === "bait")
+    || (st.wait === "harvestField" && key === "harvest:weizen");
   if (!match || T.adv) return;
-  T.cnt = (T.cnt || 0) + (st.wait === "harvestField" ? 1 : n || 1);
+  T.cnt = (T.cnt || 0) + (st.wait === "harvestField" || st.calls ? 1 : n || 1);
   if (T.cnt >= (st.n || 1)) { T.adv = true; setTimeout(() => { T.adv = false; farmTutNext(); }, 650); }
   else farmTutShow();
 }
@@ -1799,7 +2051,7 @@ function farmTutSignal(key, n) {
 function farmTutPoint() {
   const h = $("#ftHand");
   if (!h || !S.farm || !S.farm.tut || S.farm.tut.done) return;
-  const st = FTUT[S.farm.tut.step];
+  const st = farmTutList()[S.farm.tut.step];
   const o = st && st.target && st.target();
   if (!o || FV.sheet || !FV.R) { h.style.display = "none"; return; }
   const [cx, cz] = farmCenter(o);
@@ -1825,6 +2077,7 @@ function farmShow() {
 function farmHide() {
   FV.on = false;
   closeFarmPop();
+  if (typeof closeAngel === "function") closeAngel();
   if (FV.place) cancelPlace();
   document.body.classList.remove("tab-farm");
 }

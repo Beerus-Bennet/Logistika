@@ -301,8 +301,8 @@ function isUnlocked(id) {
   if (!n) return false;
   if (n.home) return !!(S.farm && S.farm.kind === n.home);
   /* Hofphase: nur die Region um den Hof (Dörfer und Potsdam), Berlin liegt noch im Nebel */
-  if (S.farm && !S.farm.logi && !S.farm.sold) return !!n.farmX;
-  if (n.farmX && S.farm) return true;
+  if (S.farm && !S.farm.logi && !S.farm.sold) return !!n.farmX && n.farmX === S.farm.kind;
+  if (n.farmX && S.farm && n.farmX === S.farm.kind) return true;
   return n.stage <= S.stage;
 }
 function unlockedNodes() { return Object.values(N).filter(n => isUnlocked(n.id)); }
@@ -1676,7 +1676,7 @@ function tick(dtMin) {
 
 /* ------------------------------- Etappen -------------------------------- */
 function unlockStage() {
-  if (typeof logiOn === "function" && !logiOn()) return toast("Erst die Spedition gründen – das geht, sobald Opas Notizbuch im Hof abgehakt ist.", "warn");
+  if (typeof logiOn === "function" && !logiOn()) return toast(FT().notYet, "warn");
   const next = STAGES[S.stage];
   if (!next) return toast("Die ganze Welt gehört dir bereits.", "ok");
   if (level() < next.reqLevel) return toast("Dafür brauchst du Level " + next.reqLevel + ".", "warn");
@@ -2557,7 +2557,7 @@ function renderHud() {
   m.textContent = money(S.money);
   m.classList.toggle("bad", S.money < 0);
   $("#hudLevel").textContent = "Lv " + level();
-  $("#hudStage").textContent = typeof farmPhase === "function" && farmPhase() ? "Erbhof · Werder (Havel)" : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
+  $("#hudStage").textContent = typeof farmPhase === "function" && farmPhase() ? FT().hud : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
   $("#hudTime").textContent = stamp(S.time);
   const l = level(), a = xpForLevel(l), b = xpForLevel(l + 1);
   $("#xpFill").style.width = clamp(((S.xp - a) / (b - a)) * 100, 0, 100) + "%";
@@ -3264,7 +3264,7 @@ function infoHTML() {
       </ol>
       <div class="buyrow">
         ${typeof logiOn === "function" && !logiOn()
-          ? `<button class="btn tiny ghost" id="farmTutAgain">🎓 Hof-Rundgang mit Lina</button>`
+          ? `<button class="btn tiny ghost" id="farmTutAgain">${FT().tourMenu}</button>`
           : `<button class="btn tiny ghost" id="tutAgainBtn">🎓 Tutorial mit Lina nochmal</button>
         <button class="btn tiny ghost" data-talk="offices">🏢 Büro-Tutorial</button>`}
         ${S.tutSeen && S.tutSeen.snus ? `<button class="btn tiny ghost" data-talk="snus">${typeof snusLogo === "function" ? snusLogo(16) : "🎩"} Mr. Snus erklärt</button>` : ""}
@@ -3422,6 +3422,7 @@ window.addEventListener("resize", syncHeadH);
 /* --------------------------------- Start -------------------------------- */
 function boot() {
   S = Object.assign(newGame(), load() || {});
+  if (typeof farmUseSite === "function") farmUseSite(S.farm && S.farm.kind);
   lastLevel = level();
   ensureOffices();
   /* Eigene Porträts suchen; gefundene tauchen in der Charaktererstellung auf. */
@@ -3510,7 +3511,7 @@ function boot() {
   const xb = $("#xpBar");
   if (xb) xb.onclick = () => {
     const l = level(), need = xpForLevel(l + 1) - S.xp;
-    toast("⭐ Erfahrungspunkte (EP): noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + ". EP gibt es für Ernten, Backen, Tiere, Lieferungen und Opas Notizbuch.", "ok");
+    toast("⭐ Erfahrungspunkte (EP): noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + ". EP gibt es für Ernte und Fang, Herstellen, Tiere, Lieferungen und " + (typeof FT === "function" ? FT().book : "das Notizbuch") + ".", "ok");
   };
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";

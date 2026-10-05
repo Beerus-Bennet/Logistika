@@ -2256,3 +2256,30 @@ body.farm-phase #controls{display:none}
 .flv-wrap{position:relative;animation:flvin .45s cubic-bezier(.2,1.6,.4,1)}
 .flv-wrap .flv{animation:none;z-index:1}
 .flv-wrap .flv-rays{z-index:0}
+/* =========================================================================
+   v39 – Fischerei an der Ostsee, neue Tiere
+   ========================================================================= */
+body.site-fisch #farm{background:linear-gradient(180deg,#6fb0ec,#cfe8f7)}
+.frec .fr-trip{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--blue);line-height:1.15;margin-top:1px}
+.fchip.free{opacity:.6;border-style:dashed}
+.fani em{position:absolute;left:-5px;bottom:-6px;font-style:normal;font-size:9.5px;font-weight:800;background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:0 3px;line-height:1.3}
+/* Angelsteg */
+#farmAngel{position:absolute;inset:0;z-index:8;pointer-events:none;display:none}
+#farmAngel.on{display:block}
+.fa-box{position:absolute;left:calc(10px + var(--safe-l));right:calc(84px + var(--safe-r));bottom:14px;max-width:420px;pointer-events:auto;
+  background:#f2fbff;border:var(--line);border-radius:16px;box-shadow:var(--shadow);padding:10px 12px 12px;animation:fpop .25s ease}
+.fa-h{font-weight:800;font-size:15px;margin-right:28px}
+.fa-h small{display:block;font-weight:600;font-size:11px;opacity:.7}
+.fa-msg{font-size:12.5px;line-height:1.35;margin:6px 0 9px;min-height:2.6em}
+.fa-msg.ok{color:#1d7a46;font-weight:800}
+.fa-msg.bad{color:#a3213b;font-weight:700}
+.fa-msg.hot{color:#c0392b;font-weight:800;font-size:15px}
+.fa-go{width:100%;display:flex;flex-direction:column;align-items:center;font-size:16px;padding:10px}
+.fa-go small{font-size:10.5px;font-weight:600;opacity:.75}
+.fa-go.hot{background:#ff5a4f;color:#fff;animation:fahot .35s ease-in-out infinite alternate}
+@keyframes fahot{to{transform:scale(1.05)}}
+.fa-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);background:#fff;font-weight:800;cursor:pointer}
+.fa-tip{font-size:10.5px;opacity:.75;margin-top:6px}
+
+body.tab-farm #farmSheet.on~#farmAngel{display:none}
+.fshop b{padding-right:26px}

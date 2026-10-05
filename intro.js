@@ -17,8 +17,8 @@ const ORIGINS = [
     text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." },
   { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 500, gifts: ["v-bullitt", "v-simson"],
     text: "Opa Hinrich hat dir seinen Obsthof bei Werder (Havel) vererbt – mit Feldern, Apfelbäumen, Hühnern, Backofen, einem Lastenrad und seiner alten Simson." },
-  { id: "fisch", name: "Fischerei-Erbe", farm: "fisch", icon: "🐟", soon: true, cash: 1000, gifts: [],
-    text: "Die Fischerei deiner Tante an der Ostsee: Kutter, Räucherei, Muschelbänke und eine kleine Schmiede für Perlenschmuck." }
+  { id: "fisch", name: "Fischerei-Erbe", farm: "fisch", icon: "🐟", cash: 500, gifts: ["v-bullitt", "v-simson"],
+    text: "Tante Gesche hat dir ihre Fischerei in Warnemünde vererbt – mit Kutter, Reusen, Muschelleinen, Netzgehege, Räucherei, einem Lastenrad und ihrer alten Simson. Aus den Perlen machst du später Schmuck." }
 ];
 const ORIGIN_DEFAULT = 3;
 /* Geschenkfahrzeuge als „2× 🚲 Larry vs Harry Bullitt“ */
@@ -101,17 +101,17 @@ function renderIntro() {
       <div class="intro-card">
         <div class="intro-h">Ein Brief vom Notar</div>
         <div class="intro-p">
-          Du hast geerbt! Aus einem kleinen Hof wird Stück für Stück ein Betrieb:
-          erst ernten, backen und ins Dorf ausliefern – später eine Spedition,
-          die Waren um die ganze Welt bringt. Zuerst brauchst du ein Gesicht
-          und einen Namen für deinen Betrieb.
+          Du hast geerbt! Ein Obsthof an der Havel oder eine Fischerei an der Ostsee –
+          daraus wird Stück für Stück ein Betrieb: erst ernten oder fischen und
+          in der Gegend ausliefern, später eine Spedition, die Waren um die ganze
+          Welt bringt. Zuerst brauchst du ein Gesicht und einen Namen für deinen Betrieb.
         </div>
       </div>
       <div class="intro-card greet">
         <div class="greet-fig">${guideFigure(150, "g0")}</div>
         <div class="greet-tx">
-          <b>${GUIDE.name}</b><span>Nachbarin · fährt Opas Ware aus</span>
-          <div class="intro-p">„Moin! Ich hab deinem Opa jahrelang beim Ausliefern geholfen. Ich zeig dir gleich alles.“</div>
+          <b>${GUIDE.name}</b><span>Nachbarin · fährt die Ware aus</span>
+          <div class="intro-p">„Moin! Ich hab deiner Familie jahrelang beim Ausliefern geholfen. Ich zeig dir gleich alles.“</div>
         </div>
       </div>
       <div class="intro-btns"><button class="btn go" id="iNext">Los geht’s</button></div>`;
@@ -405,7 +405,7 @@ function finishFounding() {
     map.setView(FARM_VIEW.center, FARM_VIEW.zoom);
     renderFogNote(fogRadiusKm(S.stage, level()));
     save();
-    toast("🏡 Willkommen auf deinem Hof, " + S.player.name + "!", "ok");
+    toast(FT().welcome(S.player.name), "ok");
     return;
   }
   clearRouteCache();
