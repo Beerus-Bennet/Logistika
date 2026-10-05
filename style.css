@@ -643,6 +643,13 @@ body.guide-art #tutor.compact .tut-box{align-items:flex-end;gap:10px}
   body.guide-art .tut-fig{width:126px}
   #fogNote{right:440px}
   body.tab-map #fogNote,body.tab-map #followBar{right:0;width:100%}
+  /* Hof/Hafen bis ganz nach unten – die Leiste sitzt nur rechts, sonst
+     schaute links unten ein Streifen Karte durch */
+  body.tab-farm #farm{bottom:0}
+  body.tab-farm #farmSide{bottom:calc(var(--nav-h) + 12px)}
+  /* Fenster und Leisten unten mittig in der freien Fläche links der Leiste */
+  body.tab-farm #farm .fs-in{left:calc(50% - 215px);width:min(600px,calc(100% - 450px))}
+  body.tab-farm #farmPlace,body.tab-farm #farmPaused{left:calc(50% - 215px)}
   .modal-inner{border-radius:20px}
   #modal{align-items:center}
 }

@@ -399,7 +399,9 @@ Verkehrsträger.
 
 Unten wechselst du die Ansicht – jede bekommt den ganzen Bildschirm:
 **Karte · Aufträge · Live · Flotte · Markt · Welt**. Auf breiten Bildschirmen
-bleibt die Karte links stehen und die Ansicht dockt rechts an.
+bleibt die Karte links stehen und die Ansicht dockt rechts an. Hof bzw. Hafen
+füllen dort den ganzen Bildschirm bis zum unteren Rand; die Leiste sitzt
+rechts unten darüber, Fenster öffnen sich mittig in der freien Fläche daneben.
 
 | Aktion | Wie |
 |---|---|
