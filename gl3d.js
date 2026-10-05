@@ -285,7 +285,8 @@ const G3 = (() => {
         for (let i = 0; i < seg; i++) {
           const a = (i / seg) * Math.PI * 2, b = ((i + 1) / seg) * Math.PI * 2;
           const ra = r * (1 + (o.wob ? Math.sin(a * 3 + 1) * o.wob : 0)), rb = r * (1 + (o.wob ? Math.sin(b * 3 + 1) * o.wob : 0));
-          this.tri([0, 0, 0], [Math.cos(b) * rb, 0, Math.sin(b) * rb], [Math.cos(a) * ra, 0, Math.sin(a) * ra], color);
+          const y = o.y0 || 0;
+          this.tri([0, y, 0], [Math.cos(b) * rb, y, Math.sin(b) * rb], [Math.cos(a) * ra, y, Math.sin(a) * ra], color);
         }
       });
     }

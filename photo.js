@@ -196,6 +196,91 @@ function comicFilter(id, strong, preset) {
   }
 }
 
+/* ---------------------- Comic-Filter für Autofotos -----------------------
+   Für Fotos mit viel Hintergrund und glänzendem Lack: kräftig glätten (Lack
+   wird Fläche), weiche Tonstufen statt harter Treppen, Tuschelinien aus
+   Helligkeits- UND Farbkanten (rotes Auto vor grauer Wand), aber nur dort,
+   wo wirklich eine Kante ist – Schatten bleiben Fläche. Läuft im Worker
+   (auction.js), deshalb ohne Bezug auf andere Teile des Spiels.         */
+const CAR_FX = { it: 4, rad: 4, ss: 3, sr: 26, sigma: 1.05, k: 1.6, tau: 0.98, eps: -0.010, phi: 90, cedge: 0.8, clean: 4,
+                 soft: 0.55, boost: 1.3, lineA: 0.92, bins: 6, mixQ: 0.65, phiQ: 1.8, con: 1.1, bri: 0.05, sat: 1.4, gmin: 0.02 };
+function comicCar(id, P) {
+  const W = id.width, H = id.height, p = id.data, n = W * H;
+  let rgb = new Float32Array(n * 3);
+  for (let j = 0; j < n; j++) { rgb[j * 3] = p[j * 4]; rgb[j * 3 + 1] = p[j * 4 + 1]; rgb[j * 3 + 2] = p[j * 4 + 2]; }
+  for (let k = 0; k < P.it; k++) rgb = phBilateral(rgb, W, H, P.rad, P.ss, P.sr);
+  const lum = new Float32Array(n);
+  for (let j = 0; j < n; j++) lum[j] = (0.299 * rgb[j * 3] + 0.587 * rgb[j * 3 + 1] + 0.114 * rgb[j * 3 + 2]) / 255;
+  /* Tuschelinien: XDoG auf dem geglätteten Bild … */
+  const g1 = phGauss(lum, W, H, P.sigma), g2 = phGauss(lum, W, H, P.sigma * P.k);
+  const ink = new Float32Array(n);
+  for (let j = 0; j < n; j++) {
+    const D = g1[j] - P.tau * g2[j];
+    ink[j] = D >= P.eps ? 0 : Math.min(1, -Math.tanh(P.phi * (D - P.eps)));
+  }
+  /* nur wo wirklich eine Kante ist – große dunkle Flächen (Schatten) bleiben Fläche */
+  if (P.gmin) for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const j = y * W + x;
+    if (!ink[j]) continue;
+    const gx = g1[j + 1] - g1[j - 1], gy = g1[j + W] - g1[j - W], gm = Math.sqrt(gx * gx + gy * gy);
+    ink[j] *= Math.min(1, Math.max(0, (gm - P.gmin) / P.gmin));
+  }
+  /* … plus Farbkanten (rotes Auto vor grauem Hintergrund hat kaum Helligkeitskante) */
+  if (P.cedge) {
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const j = y * W + x;
+      let g = 0;
+      for (let c = 0; c < 3; c++) {
+        const a = (o) => rgb[(j + o) * 3 + c];
+        const gx = a(-W + 1) + 2 * a(1) + a(W + 1) - a(-W - 1) - 2 * a(-1) - a(W - 1);
+        const gy = a(W - 1) + 2 * a(W) + a(W + 1) - a(-W - 1) - 2 * a(-W) - a(-W + 1);
+        g += gx * gx + gy * gy;
+      }
+      g = Math.sqrt(g) / 255;
+      const e = Math.min(1, Math.max(0, (g - P.cedge) / P.cedge));
+      if (e > ink[j]) ink[j] = e;
+    }
+  }
+  /* Krümel weg */
+  const ink2 = new Float32Array(n);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const j = y * W + x;
+    if (ink[j] < 0.25) continue;
+    let c = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < W && yy < H && ink[yy * W + xx] >= 0.25) c++;
+    }
+    ink2[j] = c >= P.clean ? ink[j] : 0;
+  }
+  /* Linien leicht weichzeichnen (Kantenglättung) */
+  const inkS = P.soft ? phGauss(ink2, W, H, P.soft) : ink2;
+  const INK = [24, 26, 36], bins = P.bins, dq = 1 / bins;
+  for (let j = 0; j < n; j++) {
+    const i = j * 4;
+    let r = rgb[j * 3] / 255, g = rgb[j * 3 + 1] / 255, b = rgb[j * 3 + 2] / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d > 1e-6) {
+      if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+      h /= 6; if (h < 0) h += 1;
+    }
+    let s = mx > 0 ? d / mx : 0, v = mx;
+    const q = Math.min(1 - dq / 2, Math.floor(v / dq) * dq + dq / 2);
+    const vq = q + (dq / 2) * Math.tanh(P.phiQ * (v - q) / (dq / 2));
+    v = v * (1 - P.mixQ) + vq * P.mixQ;
+    v = Math.min(1, Math.max(0, 0.5 + (v - 0.5) * P.con + P.bri));
+    s = Math.min(1, s * P.sat);
+    const k = Math.floor(h * 6), f = h * 6 - k, a1 = v * (1 - s), a2 = v * (1 - f * s), a3 = v * (1 - (1 - f) * s);
+    [r, g, b] = [[v, a3, a1], [a2, v, a1], [a1, v, a3], [a1, a2, v], [a3, a1, v], [v, a1, a2]][((k % 6) + 6) % 6];
+    const t = Math.min(1, inkS[j] * P.lineA * (P.soft ? (P.boost || 1.3) : 1));
+    p[i] = r * 255 * (1 - t) + INK[0] * t;
+    p[i + 1] = g * 255 * (1 - t) + INK[1] * t;
+    p[i + 2] = b * 255 * (1 - t) + INK[2] * t;
+  }
+}
+
 /* ------------------------------- Editor --------------------------------- */
 let photoRaf = 0;
 function photoUpdate(full) {

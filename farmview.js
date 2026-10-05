@@ -1052,17 +1052,27 @@ function flyGain(o, g, i) {
   floatText(x, y - 10, "+" + famt(g.id, g.n) + " " + FITEMS[g.id].i, "");
   if (g.xp) xpFly(x, y, g.xp);
 }
+/* Fliegende Sachen liegen in einer festen Ebene über allem – sonst würden
+   sie am oberen Rand des Hofs abgeschnitten, bevor sie Geld oder EP oben
+   in der Kopfzeile erreichen. x/y kommen relativ zu #farmFx. */
+function fxLayer() {
+  let el = document.getElementById("flyFx");
+  if (!el) { el = document.createElement("div"); el.id = "flyFx"; document.body.appendChild(el); }
+  return el;
+}
 function flyItem(icon, x, y, toEl, delay, n) {
   const fx = $("#farmFx");
   if (!fx || !toEl) return;
+  const layer = fxLayer();
   const fr = fx.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
-  const tx = tr.left + tr.width / 2 - fr.left, ty = tr.top + tr.height / 2 - fr.top;
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  x += fr.left; y += fr.top;
   const count = Math.min(5, n || 1);
   for (let k = 0; k < count; k++) {
     const el = document.createElement("div");
     el.className = "ffly";
     el.textContent = icon;
-    fx.appendChild(el);
+    layer.appendChild(el);
     const sx = x + (Math.random() - 0.5) * 30, sy = y + (Math.random() - 0.5) * 20;
     const mx = (sx + tx) / 2 + (Math.random() - 0.5) * 80, my = Math.min(sy, ty) - 60 - Math.random() * 50;
     const a = el.animate([
@@ -1074,12 +1084,55 @@ function flyItem(icon, x, y, toEl, delay, n) {
     a.onfinish = () => { el.remove(); toEl.classList.remove("ping"); void toEl.offsetWidth; toEl.classList.add("ping"); };
   }
 }
-function xpFly(x, y, n) {
+/* EP wie in Hay Day: ein Stern mit „+N“ springt aus dem Objekt, schwebt kurz
+   und fliegt dann im Bogen zum EP-Balken oben, der beim Ankommen aufleuchtet. */
+const XP_STAR_SVG = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+  '<path d="M20 2.8l5.2 10.6 11.7 1.7-8.5 8.2 2 11.6L20 29.4 9.6 34.9l2-11.6-8.5-8.2 11.7-1.7z" fill="#ffd23a" stroke="#0d1b2a" stroke-width="2.6" stroke-linejoin="round"/>' +
+  '<path d="M20 29.4l10.4 5.5-2-11.6 8.5-8.2" fill="none" stroke="#f0960f" stroke-width="2.4" stroke-linejoin="round" opacity=".9" transform="translate(-1.6 -1.2)"/>' +
+  '<path d="M20 8.6l3 6.3 5.6.8" fill="none" stroke="#fffbe0" stroke-width="2.2" stroke-linecap="round" opacity=".9"/></svg>';
+let xpStack = 0;
+function xpFly(x, y, n, delay) {
   n = Math.round(n || 0);
   if (n < 1) return;
-  const bar = document.querySelector("#hud .xp");
-  floatText(x + 34, y + 6, "+" + n + " EP ⭐", "xp");
-  if (bar) flyItem("⭐", x, y, bar, 200, 1);
+  const fx = $("#farmFx");
+  if (!fx) return;
+  const layer = fxLayer();
+  const bar = $("#xpBar") || document.querySelector("#hud .xp");
+  const fr = fx.getBoundingClientRect();
+  let tx = fr.left + fr.width * 0.5, ty = 12;
+  if (bar) { const tr = bar.getBoundingClientRect(); tx = tr.left + Math.min(26, tr.width / 2); ty = tr.top + tr.height / 2; }
+  // mehrere Sterne kurz hintereinander (z. B. Ernte mehrerer Waren) etwas versetzt
+  const slot = xpStack++; setTimeout(() => { xpStack = Math.max(0, xpStack - 1); }, 700);
+  const sx = fr.left + Math.max(24, Math.min(fr.width - 44, x + 30 + slot * 18)), sy = fr.top + Math.max(40, y + 6 - slot * 24);
+  const el = document.createElement("div");
+  el.className = "fxpstar" + (n >= 10 ? " big" : "");
+  el.innerHTML = XP_STAR_SVG + "<b>+" + n + "</b>";
+  layer.appendChild(el);
+  const up = sy - 40, mx = (sx + tx) / 2 + (sx < tx ? -40 : 40), my = Math.min(up, ty) - 50;
+  const a = el.animate([
+    { transform: `translate(${sx}px,${sy}px) scale(.2) rotate(-40deg)`, opacity: 0 },
+    { transform: `translate(${sx}px,${up - 6}px) scale(1.3) rotate(8deg)`, opacity: 1, offset: 0.13 },
+    { transform: `translate(${sx}px,${up}px) scale(1) rotate(0deg)`, opacity: 1, offset: 0.22 },
+    { transform: `translate(${sx}px,${up - 4}px) scale(1.04) rotate(0deg)`, opacity: 1, offset: 0.42 },
+    { transform: `translate(${mx}px,${my}px) scale(.9) rotate(-10deg)`, opacity: 1, offset: 0.7 },
+    { transform: `translate(${tx}px,${ty}px) scale(.42) rotate(-30deg)`, opacity: 0.95 }
+  ], { duration: 1500, delay: (delay || 120) + slot * 160, easing: "cubic-bezier(.35,.1,.45,1)", fill: "both" });
+  a.onfinish = () => {
+    el.remove();
+    if (!bar) return;
+    bar.classList.remove("xpgain"); void bar.offsetWidth; bar.classList.add("xpgain");
+    // kleines Funkeln am Balken
+    for (let k = 0; k < 5; k++) {
+      const sp = document.createElement("i");
+      sp.className = "fxpspark";
+      layer.appendChild(sp);
+      const ang = (k / 5) * Math.PI * 2 + Math.random() * 0.6, d = 16 + Math.random() * 12;
+      sp.animate([{ transform: `translate(${tx}px,${ty}px) scale(.4)`, opacity: 1 },
+        { transform: `translate(${tx + Math.cos(ang) * d}px,${ty + Math.sin(ang) * d}px) scale(1)`, opacity: 0 }],
+        { duration: 420, easing: "ease-out", fill: "both" }).onfinish = () => sp.remove();
+    }
+    if (typeof sfx === "function") sfx("xp");
+  };
 }
 function coinFly(x, y, amount) {
   floatText(x, y, "+" + eur(amount), "gold");
@@ -1135,6 +1188,7 @@ function sfx(kind) {
       build: () => { noise(0.1, 0.06, 400); tone(200, 0.12, "triangle", 0.08, 120, 0.05); },
       level: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, "triangle", 0.07, null, i * 0.11)),
       pop: () => tone(700, 0.05, "sine", 0.06, 900),
+      xp: () => { tone(1175, 0.06, "sine", 0.035); tone(1568, 0.09, "sine", 0.03, null, 0.05); },
       bad: () => tone(220, 0.15, "sawtooth", 0.03, 160),
       splash: () => { noise(0.28, 0.05, 700); noise(0.12, 0.03, 2600); },
       horn: () => { tone(98, 0.9, "sawtooth", 0.035); tone(147, 0.9, "sawtooth", 0.02); },
@@ -1591,7 +1645,12 @@ function openMachine(o) {
       sfx(M.trips ? "horn" : "pop");
       farmEvent("queue:" + b.dataset.rec);
       save();
-      if (M.trips) { closeFarmSheet(); const [x, y] = objScreen(o, 1.4); floatText(x, y, "⚓ Leinen los!", "blue"); }
+      if (M.trips) {
+        closeFarmSheet();
+        const [x, y] = objScreen(o, 1.4), last = o.q[o.q.length - 1];
+        if (last && last.tut) { floatText(x, y, "⏩ Zeitraffer – schon zurück!", "blue"); setTimeout(() => { machUpdate(o); updateFarmTags(); }, 400); }
+        else floatText(x, y, "⚓ Leinen los!", "blue");
+      }
       else openMachine(o);
     } else if (r === "full") { sfx("bad"); toast(M.trips ? "Der Kutter ist ausgebucht – erst die nächste Fahrt abwarten oder einen Platz dazukaufen." : "Alle Plätze belegt – warte, bis etwas fertig ist, oder kauf einen Platz dazu.", "warn"); }
     else if (r === "money") { sfx("bad"); toast("⛽ Für den Diesel fehlt das Geld.", "warn"); }

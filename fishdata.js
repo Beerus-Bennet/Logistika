@@ -59,7 +59,7 @@ const FKEEP_FISH = ["Bio-Aquakultur", "viel Raum", "artgerecht", "eng", "zu dich
 
 Object.assign(FMACHINES, {
   kutter: { n: "Kutter „Hertha“", i: "🛥️", trips: true, recipes: [
-    { id: "hering",  in: {},            cost: 8,  out: 4, t: 60,  lv: 1, luck: 0.3,  tq: 14, trip: "Heringe vor Warnemünde" },
+    { id: "hering",  in: {},            cost: 8,  out: 4, t: 60,  lv: 1, luck: 0.3,  tq: 0.2, trip: "Heringe vor Warnemünde" },
     { id: "dorsch",  in: { koeder: 1 }, cost: 14, out: 3, t: 120, lv: 2, luck: 0.25, trip: "Dorsch an der Kadetrinne" },
     { id: "garnele", in: {},            cost: 12, out: 4, t: 100, lv: 3, luck: 0.3,  trip: "Garnelen mit der Kurre" }
   ] },
@@ -69,7 +69,7 @@ Object.assign(FMACHINES, {
     { id: "perle",        in: { muschel: 2 }, out: 1, t: 45, lv: 3, note: "Muscheln öffnen" }
   ] },
   smoke: { n: "Räucherei", i: "🔥", recipes: [
-    { id: "buckling",        in: { hering: 1 },  out: 2, t: 60, lv: 1, tq: 10 },
+    { id: "buckling",        in: { hering: 1 },  out: 2, t: 60, lv: 1, tq: 6 },
     { id: "raeucherforelle", in: { forelle: 1 }, out: 4, t: 90, lv: 2 }
   ] },
   feedk: { n: "Futterküche", i: "🪣", recipes: [

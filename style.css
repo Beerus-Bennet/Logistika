@@ -1896,12 +1896,24 @@ body.locked #farm{display:none}
 }
 
 /* fliegende Waren und Zahlen */
+#flyFx{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
 .ffly{position:absolute;left:0;top:0;font-size:26px;margin:-13px 0 0 -13px;filter:drop-shadow(1px 2px 0 rgba(13,27,42,.45));will-change:transform}
 .ffloat{
   position:absolute;white-space:nowrap;font-weight:800;font-size:16px;color:#fff;pointer-events:none;
   text-shadow:0 0 2px var(--ink),1.5px 1.5px 0 var(--ink),-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink)
 }
-.ffloat.xp{color:#8ff0ff;font-size:14px}
+/* EP-Stern wie in Hay Day */
+.fxpstar{position:absolute;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;will-change:transform;
+  filter:drop-shadow(1px 2px 0 rgba(13,27,42,.4))}
+.fxpstar svg{display:block;width:100%;height:100%}
+.fxpstar b{position:absolute;left:24px;top:9px;font-size:15px;font-weight:900;line-height:1;color:#fff;white-space:nowrap;
+  text-shadow:0 0 2px var(--ink),1.5px 1.5px 0 var(--ink),-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),0 2px 0 var(--ink)}
+.fxpstar.big{width:40px;height:40px;margin:-20px 0 0 -20px}
+.fxpstar.big b{left:29px;top:11px;font-size:17px}
+.fxpspark{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
+  background:#fff6b0;box-shadow:0 0 6px 2px rgba(255,214,60,.85)}
+#xpBar.xpgain{animation:fxpgain .5s ease}
+@keyframes fxpgain{30%{transform:scale(1.08);box-shadow:2px 2px 0 var(--ink),0 0 0 3px #ffe36b,0 0 14px 4px rgba(255,214,60,.8)}}
 .ffloat.gold{color:#ffd54a;font-size:18px}
 .ffloat.red{color:#ff9aa8}
 .ffloat.blue{color:#bfe6ff;font-size:14px}
@@ -2172,6 +2184,12 @@ body.tab-farm #farmTut.on~#farmQuest{display:none}
 #farmSheet.on~#farmTut .ft-fig{display:none}
 #farmSheet.on~#farmTut .ft-tx{margin-bottom:0;font-size:12px;padding:7px 10px}
 #farmSheet.on~#farmTut .ft-tx b{font-size:13px}
+/* Angelsteg offen: dasselbe, damit Lina das Angel-Fenster nicht verdeckt */
+#farmAngel.on~#farmTut .ft-box{top:8px;bottom:auto;right:calc(8px + var(--safe-r))}
+#farmAngel.on~#farmTut .ft-fig{display:none}
+#farmAngel.on~#farmTut .ft-tx{margin-bottom:0;font-size:12px;padding:7px 10px}
+#farmAngel.on~#farmTut .ft-tx b{font-size:13px}
+#farmAngel.on~#farmTut .ft-hand{display:none}
 #farmSheet.on .fs-in{max-height:72%}
 /* Linas Blase: Name groß, Hervorhebung nur fett */
 .ft-tx b{font-family:var(--font);font-size:inherit;letter-spacing:0;color:var(--ink);font-weight:800}
@@ -2214,6 +2232,9 @@ body.tab-farm #farmTut.on~#farmQuest{display:none}
 
 /* ---------------------- v37: Autofotos im Comic-Look ---------------------- */
 .carpic img.cx{animation:cxin .45s ease}
+/* Foto wird geladen und gezeichnet: Silhouette pulsiert leicht */
+.carpic.loading .ph{animation:phpulse 1.1s ease-in-out infinite alternate}
+@keyframes phpulse{from{opacity:.55}to{opacity:.95}}
 @keyframes cxin{from{filter:saturate(.3) brightness(1.15)}to{filter:none}}
 .picstat{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 9px;padding:7px 10px;
   background:#fff8e6;border:2px solid var(--ink);border-radius:12px;font-size:12px;font-weight:800}

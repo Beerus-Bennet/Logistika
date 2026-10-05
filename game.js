@@ -223,7 +223,8 @@ function toLegs(edges) {
 }
 
 function plan(from, to, cargoKey, weight, metric) {
-  const key = from + ">" + to + "|" + cargoKey + "|" + weight + "|" + metric + "|" + S.stage;
+  /* in der Hofphase hängt das Netz am Level (neue Orte) – das gehört in den Schlüssel */
+  const key = from + ">" + to + "|" + cargoKey + "|" + weight + "|" + metric + "|" + S.stage + (typeof farmPhase === "function" && farmPhase() ? "|L" + level() : "");
   if (routeMemo.has(key)) return routeMemo.get(key);
   const edges = dijkstra(from, to, unlockedModes(), metric, cargoKey, weight);
   let res = null;
@@ -299,11 +300,30 @@ function unlockedModes() { return STAGES[S.stage - 1].modes; }
 function isUnlocked(id) {
   const n = N[id];
   if (!n) return false;
+  const farming = !!(S.farm && !S.farm.logi && !S.farm.sold);
+  /* Hofphase: nur „meine Orte“ – der Hof und die Orte, aus denen beim
+     aktuellen Level schon Bestellungen kommen. Alles andere liegt im Nebel. */
+  if (farming) return farmOwnPlace(id);
   if (n.home) return !!(S.farm && S.farm.kind === n.home);
-  /* Hofphase: nur die Region um den Hof (Dörfer und Potsdam), Berlin liegt noch im Nebel */
-  if (S.farm && !S.farm.logi && !S.farm.sold) return !!n.farmX && n.farmX === S.farm.kind;
   if (n.farmX && S.farm && n.farmX === S.farm.kind) return true;
   return n.stage <= S.stage;
+}
+function farmOwnPlace(id) {
+  const n = N[id];
+  if (!S.farm || !n) return false;
+  /* nur Orte der eigenen Gegend (Berlin & Co. bleiben bis zur Gründung zu) */
+  if (n.home ? n.home !== S.farm.kind : n.farmX !== S.farm.kind) return false;
+  if (typeof FARM_NODE !== "undefined" && id === FARM_NODE) return true;
+  const t = typeof FTOWNS !== "undefined" ? FTOWNS[id] : null;
+  return !!t && t.lv <= level();
+}
+/* Sichtkreis je Ort: in der Hofphase ist der eigene Betrieb etwas größer,
+   ebenso die großen Städte */
+const FOG_BIG = { potsdam: 1.6, "f-rostock": 1.7, "f-wismar": 1.5, "b-span": 1.5, "b-char": 1.3, "b-kreuz": 1.3 };
+function fogNodeKm(n, km) {
+  if (!(typeof farmPhase === "function" && farmPhase())) return km;
+  if (typeof FARM_NODE !== "undefined" && n.id === FARM_NODE) return km * 1.5;
+  return km * (FOG_BIG[n.id] || 1);
 }
 function unlockedNodes() { return Object.values(N).filter(n => isUnlocked(n.id)); }
 function dailyCost(f) { const t = vType(f.type); return t.daily + (f.lease ? t.price * LEASE_RATE : 0); }
@@ -1584,7 +1604,11 @@ function checkLevel() {
     const party = typeof farmLevelUp === "function" && farmLevelUp(l);
     if (!party) toast("🎉 Level " + l + " erreicht!", "ok");
     if (typeof farmEvent === "function") farmEvent("level");
-    if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
+    if (S.fog && typeof farmPhase === "function" && farmPhase()) {
+      /* auf dem Hof lichtet sich der Nebel über den Orten, die jetzt Kundschaft schicken */
+      const neu = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv === l && N[id]).map(id => N[id].short);
+      if (neu.length) toast("☁️ Neue Kundschaft auf der Karte: " + neu.join(", ") + ".", "ok");
+    } else if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
     const nx = STAGES[S.stage];
     if (nx && l >= nx.reqLevel && (typeof logiOn !== "function" || logiOn())) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
   }
@@ -1855,7 +1879,7 @@ function drawFog(m, ctx) {
      Standorts – dann gibt es keinen Nebel zu zeichnen. */
   const cover = unlockedNodes().some(n => {
     const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
-    const r = Math.max(30, km * pxPerKm) * 0.62, p = m.screenPos(n.lat, n.lon);
+    const r = Math.max(30, fogNodeKm(n, km) * pxPerKm) * 0.62, p = m.screenPos(n.lat, n.lon);
     const dx = Math.max(Math.abs(p[0]), Math.abs(p[0] - W)), dy = Math.max(Math.abs(p[1]), Math.abs(p[1] - H));
     return dx * dx + dy * dy < r * r;
   });
@@ -1864,7 +1888,7 @@ function drawFog(m, ctx) {
   // Lichtkegel um jeden erschlossenen Standort
   unlockedNodes().forEach(n => {
     const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
-    const r = Math.max(30, km * pxPerKm);
+    const r = Math.max(30, fogNodeKm(n, km) * pxPerKm);
     const p = m.screenPos(n.lat, n.lon);
     if (p[0] < -r || p[0] > W + r || p[1] < -r || p[1] > H + r) return;
     anyVisible = true;
@@ -1909,7 +1933,9 @@ function renderFogNote(km) {
   const el = $("#fogNote");
   if (!el) return;
   if (!S.fog) { el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="fog-note">☁️ erschlossen: ${kmf(km)} um jeden Standort</div>`;
+  el.innerHTML = typeof farmPhase === "function" && farmPhase()
+    ? `<div class="fog-note">☁️ sichtbar: nur deine Orte – weitere kommen mit dem Level</div>`
+    : `<div class="fog-note">☁️ erschlossen: ${kmf(km)} um jeden Standort</div>`;
 }
 
 function drawWorld(m, ctx) {

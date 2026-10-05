@@ -118,7 +118,8 @@ function stepBoat(dt, time) {
   const B = FV.boat, o = kutterObj();
   if (!B || !o) return;
   machUpdate(o);
-  const away = o.q.length > 0;
+  /* Zeitraffer-Fahrt im Rundgang: die Hertha bleibt liegen */
+  const away = o.q.some(j => !j.tut);
   const P = boatPath(o);
   if (!B.init) { B.init = true; B.s = away ? P.L : 0; }
   if (away && B.dir !== 1 && B.s < P.L) { if (B.s < 0.05) sfx("horn"); B.dir = 1; }
@@ -326,7 +327,7 @@ function angelPress() {
     if (r.full) { renderAngel("Das Kühlhaus ist voll – der Fisch schwimmt wieder davon.", "bad"); return; }
     if (r.junk) {
       const p = FV.R.project(A.target[0], 0.3, A.target[1]);
-      if (p) floatText(p[0], p[1] - 20, r.i + " " + (r.m ? "+" + eur(r.m) : "+1 EP"), r.m ? "gold" : "");
+      if (p) { floatText(p[0], p[1] - 20, r.i + (r.m ? " +" + eur(r.m) : ""), r.m ? "gold" : ""); xpFly(p[0], p[1], r.xp || 1); }
       splash(A.target[0], A.target[1], 10);
       renderAngel("Oh – " + r.junk + "! " + (r.m ? "Darin steckt ein Zettel und " + eur(r.m) + " Finderlohn." : "Na ja, auch was gefangen."), "");
     } else {
@@ -456,8 +457,8 @@ const FTUT_FISCH = [
   { tx: "Im Netzgehege ist ein Forellenschwarm groß genug. <b>Tipp das Gehege an</b> und fisch ihn ab.", target: () => firstObj(o => o.t === "netz"), wait: "collect:forelle", n: 1 },
   { tx: "Die anderen Forellen haben Hunger. <b>Tipp das Gehege an und zieh das Fischfutter über die Fische.</b> Je mehr Platz sie haben, desto besser die Ware.", target: () => firstObj(o => o.t === "netz"), wait: "feed", n: 1 },
   { tx: "Jetzt geht’s raus! <b>Tipp den Kutter an und schick ihn zum Heringsfang.</b> Tante Gesche hat ihn schon klargemacht – den Diesel zahlst du beim Ablegen.", target: () => firstObj(o => o.t === "kutter"), wait: "queue:hering", n: 1 },
-  { tx: "Während die Hertha draußen ist: Tante Gesche hat noch Hering dagelassen. <b>Tipp die Räucherei an und räuchere Bücklinge.</b>", target: () => firstObj(o => o.t === "smoke"), wait: "queue:buckling", n: 1 },
-  { tx: "Da kommt die Hertha zurück! <b>Tipp den Kutter an, sobald er angelegt hat, und lade den Fang aus.</b>", target: () => firstObj(o => o.t === "kutter"), wait: "make:hering", n: 1, calls: true },
+  { tx: "Zack – die erste Fahrt läuft im Zeitraffer: Die Hertha ist schon mit vollen Kisten zurück. <b>Tipp den Kutter an und lade den Fang aus.</b> Später ist sie dafür eine Weile draußen auf See.", target: () => firstObj(o => o.t === "kutter"), wait: "make:hering", n: 1, calls: true },
+  { tx: "Frischer Hering! Ein Teil davon wird geräuchert. <b>Tipp die Räucherei an und räuchere Bücklinge.</b>", target: () => firstObj(o => o.t === "smoke"), wait: "queue:buckling", n: 1 },
   { tx: "Die Bücklinge sind goldbraun – <b>tipp die Räucherei an und hol sie raus.</b>", target: () => firstObj(o => o.t === "smoke"), wait: "make:buckling", n: 1, calls: true },
   { tx: "Die Fischbude Am Strom wartet auf Bücklinge und Krabben. <b>Tipp die Bestelltafel an und schick die Lieferung los.</b>", target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder },
   { tx: "Unterwegs! Auf der Karte siehst du die Fahrt, bei Ankunft gibt’s Geld und EP. Oben links liegt jetzt <b>Tante Gesches Logbuch</b>: drei Kapitel, Aufgabe für Aufgabe. Und am <b>Angelsteg</b> kannst du selbst die Rute auswerfen – probier’s mal! Mehr Reusen, Leinen und Gebäude gibt’s im 🛒 Laden. Viel Spaß!" }

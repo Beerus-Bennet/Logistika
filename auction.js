@@ -345,7 +345,11 @@ function carDriven(veh, km) {
 }
 
 /* ------------------------------- Fotos -------------------------------- */
-const PIC_KEY = "logistika-carpics-1";
+/* v2: Vorschaubilder in 500 px (eine Standardgröße von Wikimedia, die fast
+   immer schon fertig im Cache liegt – große Sondergrößen werden gedrosselt) */
+const PIC_KEY = "logistika-carpics-2";
+const PIC_W = 500;
+try { localStorage.removeItem("logistika-carpics-1"); } catch (_) { /* egal */ }
 let PICS = (() => { try { return JSON.parse(localStorage.getItem(PIC_KEY)) || {}; } catch (_) { return {}; } })();
 let picsBusy = false;
 function plainText(html) {
@@ -360,6 +364,7 @@ function withTimeout(ms) {
   const t = ac ? setTimeout(() => ac.abort(), ms) : 0;
   return { signal: ac ? ac.signal : undefined, done: () => clearTimeout(t) };
 }
+const errText = e => e && e.name === "AbortError" ? "Zeitüberschreitung" : (e && e.message) || "Netzwerkfehler";
 async function wikiApi(params) {
   const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&" + params;
   const to = withTimeout(15000);
@@ -378,37 +383,52 @@ async function wikiSummary(title) {
     return await r.json();
   } finally { to.done(); }
 }
-/* Titelbild der Wikipedia-Artikel suchen, dann Vorschaubild, Urheber und
-   Lizenz holen – alles gebündelt in wenigen Anfragen, danach gespeichert. */
+const okSrc = u => typeof u === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(u);
+/* Vorschaubild auf eine Standardbreite setzen (nur bei echten Thumbnails) */
+const thumbAt = (u, w) => /\/thumb\//.test(u) ? u.replace(/\/\d+px-([^/]+)$/, "/" + w + "px-$1") : u;
+/* Titelbild der Wikipedia-Artikel samt Vorschaubild holen, dann Urheber und
+   Lizenz – alles gebündelt in wenigen Anfragen, danach gespeichert. Jeder
+   Schritt für sich: scheitert die Urheber-Abfrage, bleiben die Bilder. */
 async function resolvePics(force) {
   if (picsBusy || typeof fetch !== "function") return;
   const now = Date.now();
   if (force) CARS.forEach(c => { if (PICS[c.id] && !PICS[c.id].src) delete PICS[c.id]; });
-  const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 40 * 60e3));
+  const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 10 * 60e3));
   if (!todo.length) return;
   picsBusy = true;
   PIC_STATE.err = "";
-  let apiOk = true;
+  renderPicStatus();
+  const files = {};
   try {
-    const files = {};
     todo.forEach(c => { if (c.file) files[c.id] = c.file; });
+    /* 1. Titelbild + fertiges Vorschaubild je Artikel */
     const wp = todo.filter(c => c.wp && !c.file);
     try {
       for (let i = 0; i < wp.length; i += 40) {
         const batch = wp.slice(i, i + 40);
-        const j = await wikiApi("redirects=1&prop=pageimages&piprop=name&pilicense=free&titles=" + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
+        const j = await wikiApi("redirects=1&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=" + PIC_W + "&pilimit=50&pilicense=free&titles="
+          + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
         const q = j.query || {}, map = {};
         (q.normalized || []).forEach(n => { map[n.from] = n.to; });
         (q.redirects || []).forEach(n => { map[n.from] = n.to; });
         const fin = t => { let x = t, k = 0; while (map[x] && k++ < 4) x = map[x]; return x; };
         const pages = {};
         (q.pages || []).forEach(p => { pages[p.title] = p; });
-        batch.forEach(c => { const p = pages[fin(c.wp)]; if (p && p.pageimage) files[c.id] = p.pageimage.replace(/_/g, " "); });
+        batch.forEach(c => {
+          const p = pages[fin(c.wp)];
+          if (!p) return;
+          if (p.pageimage) files[c.id] = p.pageimage.replace(/_/g, " ");
+          const th = p.thumbnail && p.thumbnail.source;
+          if (okSrc(th)) PICS[c.id] = { src: th, page: "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent((p.pageimage || "").replace(/ /g, "_")), by: "", lic: "", t: now };
+        });
       }
+    } catch (e) { PIC_STATE.err = errText(e); }
+    /* 2. Urheber, Lizenz (und für feste Dateinamen auch das Vorschaubild) */
+    try {
       const ids = Object.keys(files);
       for (let i = 0; i < ids.length; i += 40) {
         const batch = ids.slice(i, i + 40);
-        const j = await wikiApi("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=960&iiextmetadatafilter=Artist%7CLicenseShortName&titles="
+        const j = await wikiApi("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=" + PIC_W + "&iiextmetadatafilter=Artist%7CLicenseShortName&titles="
           + batch.map(id => encodeURIComponent("File:" + files[id])).join("%7C"));
         const q = j.query || {}, map = {};
         (q.normalized || []).forEach(n => { map[n.from] = n.to; });
@@ -417,36 +437,38 @@ async function resolvePics(force) {
         batch.forEach(id => {
           const t0 = "File:" + files[id], p = pages[map[t0] || t0];
           const ii = p && p.imageinfo && p.imageinfo[0];
-          const src = ii && (ii.thumburl || ii.url);
-          if (!src || !/^https:\/\/upload\.wikimedia\.org\//.test(src)) return;
-          const md = ii.extmetadata || {};
-          PICS[id] = { src, page: ii.descriptionurl || "", by: plainText(md.Artist && md.Artist.value).slice(0, 70),
-                       lic: plainText(md.LicenseShortName && md.LicenseShortName.value), t: now };
+          if (!ii) return;
+          const src = ii.thumburl || ii.url, md = ii.extmetadata || {}, old = PICS[id] && PICS[id].src ? PICS[id] : null;
+          if (!old && !okSrc(src)) return;
+          PICS[id] = { src: old ? old.src : src, page: ii.descriptionurl || (old && old.page) || "",
+                       by: plainText(md.Artist && md.Artist.value).slice(0, 70), lic: plainText(md.LicenseShortName && md.LicenseShortName.value), t: now };
         });
       }
-    } catch (e) { apiOk = false; PIC_STATE.err = e && e.name === "AbortError" ? "Zeitüberschreitung" : (e && e.message) || "Netzwerkfehler"; }
-    /* Was noch fehlt: einzeln über die Kurzfassung des Artikels */
+    } catch (e) { if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
+    /* 3. Was noch fehlt: einzeln über die Kurzfassung des Artikels */
     const miss = todo.filter(c => !PICS[c.id] || !PICS[c.id].src).filter(c => c.wp);
     let fails = 0;
     for (const c of miss) {
-      if (fails >= 3) break;
+      if (fails >= 6) break;
       try {
         const j = await wikiSummary(c.wp);
-        const im = j && (j.thumbnail || j.originalimage);
-        if (im && im.source && /^https:\/\/upload\.wikimedia\.org\//.test(im.source)) {
-          PICS[c.id] = { src: im.source.replace(/\/\d+px-/, "/960px-"), page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
-        }
-      } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = (e && e.message) || "Netzwerkfehler"; }
+        const o = j && j.originalimage, th = j && j.thumbnail;
+        let src = null;
+        if (o && okSrc(o.source) && (o.width || 9999) <= 800) src = o.source;
+        else if (th && okSrc(th.source)) src = thumbAt(th.source, PIC_W);
+        if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
+      } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
     }
     todo.forEach(c => { if (!PICS[c.id]) PICS[c.id] = { t: now }; });
-    if (apiOk || CARS.some(c => PICS[c.id] && PICS[c.id].src)) { if (CARS.filter(c => PICS[c.id] && PICS[c.id].src).length > CARS.length * 0.5) PIC_STATE.err = ""; }
-    try { localStorage.setItem(PIC_KEY, JSON.stringify(PICS)); } catch (_) { /* voll */ }
+    if (picCount() > CARS.length * 0.5) PIC_STATE.err = "";
+    savePics();
     applyPics();
-  } catch (e) { PIC_STATE.err = (e && e.message) || "Netzwerkfehler"; }
+  } catch (e) { PIC_STATE.err = errText(e); }
   PIC_STATE.at = Date.now();
   picsBusy = false;
   renderPicStatus();
 }
+function savePics() { try { localStorage.setItem(PIC_KEY, JSON.stringify(PICS)); } catch (_) { /* voll */ } }
 function picCount() { return CARS.filter(c => PICS[c.id] && PICS[c.id].src).length; }
 /* Hinweis im Auktionshaus, wenn Fotos fehlen – mit „Erneut versuchen“ */
 function picStatusHTML() {
@@ -463,7 +485,7 @@ function renderPicStatus() {
 }
 function bindPicRetry(root) {
   root.querySelectorAll("[data-picretry]").forEach(b => b.onclick = () => {
-    COMIC_FAIL.clear();
+    COMIC_FAIL.clear(); COMIC_TRY.clear();
     try { localStorage.removeItem(PIC_KEY); } catch (_) { /* egal */ }
     PICS = {};
     resolvePics(true);
@@ -472,18 +494,20 @@ function bindPicRetry(root) {
 }
 
 /* ------------------- Fotos im Comic-Look (photo.js) ---------------------
-   Das Originalfoto wird einmal geladen, mit dem Comic-Filter der
-   Spielerfotos gezeichnet und als JPEG im Foto-Speicher abgelegt. Bis es
-   fertig ist, steht das Originalfoto da.                               */
-const COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_Q = [];
+   Die Fotos werden nacheinander geladen (nicht alle auf einmal – das mag
+   Wikimedia nicht), mit dem Comic-Filter für Autos gezeichnet und als JPEG
+   im Foto-Speicher abgelegt. Bis dahin steht die gezeichnete Silhouette da;
+   klappt der Filter nicht, kommt das Originalfoto.                      */
+const COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_TRY = new Map(), COMIC_Q = [];
 let comicBusy = false;
-const CAR_FX = { it: 2, sr: 22, bins: 6, phiQ: 2.4, sat: 1.25, sigma: 1.0, eps: -0.010 };
-const comicKey = id => location.origin + "/__carcomic/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
-function wantComic(id) {
-  if (COMIC_URL.has(id) || COMIC_FAIL.has(id) || COMIC_Q.includes(id)) return;
-  if (!PICS[id] || !PICS[id].src || typeof comicFilter !== "function") return;
-  COMIC_Q.push(id);
-  if (!comicBusy) setTimeout(comicNext, 60);
+const comicKey = id => location.origin + "/__carcomic/v2/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
+function wantComic(id, front) {
+  if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) return;
+  if (!PICS[id] || !PICS[id].src || typeof comicCar !== "function") return;
+  const at = COMIC_Q.indexOf(id);
+  if (at >= 0) { if (front && at > 0) { COMIC_Q.splice(at, 1); COMIC_Q.unshift(id); } return; }
+  if (front) COMIC_Q.unshift(id); else COMIC_Q.push(id);
+  if (!comicBusy) setTimeout(comicNext, 30);
 }
 async function loadBitmap(blob) {
   if (typeof createImageBitmap === "function") { try { return await createImageBitmap(blob); } catch (_) { /* weiter unten */ } }
@@ -501,20 +525,48 @@ const comicWait = new Map();
 function comicRun(data, W, H) {
   if (!comicWorker && !comicWorkerBad && typeof Worker === "function") {
     try {
-      const src = "let phRangeTab = null, phRangeSr = 0; const PHOTO_FX = " + JSON.stringify(PHOTO_FX) + ";\n"
-        + phGauss.toString() + "\n" + phBilateral.toString() + "\n" + comicFilter.toString() + "\n"
-        + "onmessage = e => { const d = e.data; comicFilter({ width: d.w, height: d.h, data: d.px }, false, d.P); postMessage({ n: d.n, px: d.px }, [d.px.buffer]); };";
+      const src = "let phRangeTab = null, phRangeSr = 0; const CAR_FX = " + JSON.stringify(CAR_FX) + ";\n"
+        + phGauss.toString() + "\n" + phBilateral.toString() + "\n" + comicCar.toString() + "\n"
+        + "onmessage = e => { const d = e.data; comicCar({ width: d.w, height: d.h, data: d.px }, CAR_FX); postMessage({ n: d.n, px: d.px }, [d.px.buffer]); };";
       comicWorker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
       comicWorker.onmessage = e => { const f = comicWait.get(e.data.n); if (f) { comicWait.delete(e.data.n); f.res(e.data.px); } };
       comicWorker.onerror = () => { comicWorkerBad = true; comicWorker = null; comicWait.forEach(f => f.rej(new Error("worker"))); comicWait.clear(); };
     } catch (_) { comicWorkerBad = true; comicWorker = null; }
   }
-  if (!comicWorker) { comicFilter(data, false, CAR_FX); return Promise.resolve(data.data); }
+  if (!comicWorker) { comicCar(data, CAR_FX); return Promise.resolve(data.data); }
   return new Promise((res, rej) => {
     const n = ++comicSeq, px = new Uint8ClampedArray(data.data);
     comicWait.set(n, { res, rej });
-    comicWorker.postMessage({ n, w: W, h: H, px, P: CAR_FX }, [px.buffer]);
+    comicWorker.postMessage({ n, w: W, h: H, px }, [px.buffer]);
   });
+}
+/* Mögliche Adressen eines Fotos: die gespeicherte, kleinere Standardgröße, Original */
+function picUrls(src) {
+  const out = [src];
+  if (/\/thumb\//.test(src)) {
+    out.push(thumbAt(src, 330));
+    out.push(src.replace(/\/thumb\//, "/").replace(/\/[^/]+$/, ""));
+  }
+  return [...new Set(out)];
+}
+const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+async function fetchPic(src) {
+  let last = null;
+  for (const u of picUrls(src)) {
+    for (let k = 0; k < 3; k++) {
+      const to = withTimeout(20000);
+      try {
+        const r = await fetch(u, { mode: "cors", credentials: "omit", signal: to.signal });
+        if (r.ok) return await r.blob();
+        last = new Error("HTTP " + r.status);
+        /* gedrosselt: kurz warten und nochmal, sonst die nächste Adresse */
+        if (r.status === 429 || r.status === 503) { await sleepMs(1500 * (k + 1) + Math.random() * 600); continue; }
+        break;
+      } catch (e) { last = e; if (e && e.name === "AbortError") break; await sleepMs(800); }
+      finally { to.done(); }
+    }
+  }
+  throw last || new Error("Foto");
 }
 async function comicNext() {
   const id = COMIC_Q.shift();
@@ -527,40 +579,52 @@ async function comicNext() {
     const hit = cache && await cache.match(key).catch(() => null);
     if (hit) blob = await hit.blob();
     else {
-      const to = withTimeout(20000);
-      let r;
-      try { r = await fetch(PICS[id].src, { mode: "cors", credentials: "omit", signal: to.signal }); } finally { to.done(); }
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const bm = await loadBitmap(await r.blob());
-      const W0 = bm.width, H0 = bm.height, k = Math.min(1, 480 / W0);
+      const bm = await loadBitmap(await fetchPic(PICS[id].src));
+      const W0 = bm.width, H0 = bm.height, k = Math.min(1, 640 / W0);
       const W = Math.max(1, Math.round(W0 * k)), H = Math.max(1, Math.round(H0 * k));
       const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
       const c = cv.getContext("2d");
+      c.imageSmoothingQuality = "high";
       c.drawImage(bm, 0, 0, W, H);
       if (bm.close) bm.close();
       const data = c.getImageData(0, 0, W, H);
       const px = await comicRun(data, W, H);
       c.putImageData(new ImageData(new Uint8ClampedArray(px), W, H), 0, 0);
-      blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.86));
+      blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.9));
       if (!blob) throw new Error("JPEG");
       if (cache) cache.put(key, new Response(blob, { headers: { "Content-Type": "image/jpeg" } })).catch(() => {});
     }
     const url = URL.createObjectURL(blob);
     COMIC_URL.set(id, url);
-    document.querySelectorAll(`[data-carpic="${id}"] img`).forEach(im => { im.classList.add("cx"); im.src = url; });
+    showCarPic(id);
   } catch (_) {
-    COMIC_FAIL.add(id);          /* dann bleibt das Originalfoto (ohne Filter) */
+    /* später nochmal (z. B. gedrosselt), nach drei Versuchen bleibt das Originalfoto */
+    const n = (COMIC_TRY.get(id) || 0) + 1;
+    COMIC_TRY.set(id, n);
+    if (n < 3) setTimeout(() => wantComic(id), 4000 * n);
+    else { COMIC_FAIL.add(id); showCarPic(id); }
   }
-  setTimeout(comicNext, 40);
+  setTimeout(comicNext, 120);
+}
+/* Bild in alle Rahmen dieses Autos setzen (Comic, sonst Original) */
+function showCarPic(id) {
+  const p = PICS[id];
+  if (!p || !p.src) return;
+  document.querySelectorAll(`[data-carpic="${id}"]`).forEach(el => {
+    el.classList.remove("loading");
+    const im = el.querySelector("img");
+    if (COMIC_URL.has(id)) {
+      if (im) { im.classList.add("cx"); im.removeAttribute("onerror"); im.src = COMIC_URL.get(id); }
+      else el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
+    } else if (COMIC_FAIL.has(id) && !im) el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
+  });
 }
 function picCredit(p) { return "📷 " + (p.by || "Wikimedia Commons") + (p.lic ? " · " + p.lic : ""); }
 function applyPics() {
   document.querySelectorAll("[data-carpic]").forEach(el => {
     const id = el.dataset.carpic;
-    if (el.querySelector("img")) { wantComic(id); return; }
-    const p = PICS[id];
-    if (!p || !p.src) return;
-    el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
+    if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) showCarPic(id);
+    else wantComic(id, el.classList.contains("big"));
   });
 }
 /* Foto lädt nicht? Der Reihe nach andere Wege probieren, dann aufgeben */
@@ -568,15 +632,13 @@ function picFail(im) {
   const n = +(im.dataset.try || 0) + 1;
   im.dataset.try = n;
   const id = im.closest("[data-carpic]") && im.closest("[data-carpic]").dataset.carpic, p = PICS[id];
-  if (!p || !p.src || n > 3) { const cr = im.nextElementSibling; if (cr && cr.classList.contains("credit")) cr.remove(); im.remove(); return; }
-  if (n === 1) { im.removeAttribute("referrerpolicy"); im.src = p.src + (p.src.includes("?") ? "&" : "?") + "r=1"; }
-  else if (n === 2) im.src = p.src.replace(/\/960px-/, "/500px-");
-  else im.src = p.src.replace(/\/thumb\//, "/").replace(/\/[^/]+$/, "");
+  const urls = p && p.src ? picUrls(p.src) : [];
+  if (!urls[n]) { const cr = im.nextElementSibling; if (cr && cr.classList.contains("credit")) cr.remove(); im.remove(); return; }
+  im.src = urls[n];
 }
 function picImgHTML(id, p) {
-  wantComic(id);
-  const src = COMIC_URL.get(id) || p.src;
-  return `<img src="${esc(src)}" class="${COMIC_URL.has(id) ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer" onerror="picFail(this)">`
+  const comic = COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
+  return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer"${comic ? "" : ` onerror="picFail(this)"`}>`
     + `<span class="credit">${esc(picCredit(p))}</span>`;
 }
 /* Gezeichneter Platzhalter, solange kein Foto da ist (oder offline) */
@@ -598,7 +660,11 @@ function carSilhouette(body, paint) {
 }
 function carPicHTML(c, paint, big) {
   const p = PICS[c.id], col = paint || (CAR_PAINTS[c.b] || [["", "#888"]])[0][1];
-  return `<div class="carpic${big ? " big" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carSilhouette(c.body, col)}${p && p.src ? picImgHTML(c.id, p) : ""}</div>`;
+  /* Comic fertig (oder Filter gescheitert): Bild gleich mit; sonst erst die
+     Silhouette, das Foto kommt aus der Warteschlange nach */
+  const ready = p && p.src && (COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id));
+  if (p && p.src && !ready) wantComic(c.id, big);
+  return `<div class="carpic${big ? " big" : ""}${p && p.src && !ready ? " loading" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carSilhouette(c.body, col)}${ready ? picImgHTML(c.id, p) : ""}</div>`;
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];

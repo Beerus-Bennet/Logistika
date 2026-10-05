@@ -538,7 +538,11 @@ function farmQueue(o, rid) {
   /* Fang: mal gute See, mal mäßig – Qualität und Menge schwanken */
   const q = M.trips ? 3 + (Math.random() < 0.35 ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0) : qn ? qs / qn : 3;
   const n = r.out + (r.luck && Math.random() < r.luck ? 1 : 0);
-  o.q.push({ r: rid, start, end: start + (quick ? r.tq : r.t), q, n, by: r.by || null });
+  const job = { r: rid, start, end: start + (quick ? r.tq : r.t), q, n, by: r.by || null };
+  /* die erste Kutterfahrt im Rundgang läuft im Zeitraffer: sofort fertig,
+     der Kutter bleibt am Kai */
+  if (quick && M.trips) { job.tut = 1; job.end = start; }
+  o.q.push(job);
   return true;
 }
 function farmCollectMach(o) {

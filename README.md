@@ -95,8 +95,12 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   („18 Eier, 4 kg Tomaten“) und zahlen den Hofladenpreis plus Liefergebühr –
   rund 25 bis 35 € statt Fantasiepreisen. Auch Saat, Tiere, Ställe und
   Ausbauten kosten entsprechend weniger.
-* **Nur die Region** – vor der Speditionsgründung zeigt die Karte nur den Hof,
-  die Dörfer und Potsdam; Berlin liegt noch unter dem Nebel.
+* **Nur die eigenen Orte** – vor der Speditionsgründung liegt alles unter
+  dem Nebel außer dem Hof und den Orten, aus denen beim aktuellen Level schon
+  Bestellungen kommen (zum Start Werder und Glindow, ab Level 2 Petzow und
+  Geltow, ab Level 3 Caputh und Potsdam …), jeweils in einem kleinen
+  Sichtkreis von gut 2 km. Mit jedem Level-Aufstieg meldet ein Hinweis die
+  neue Kundschaft auf der Karte; Berlin bleibt bis zur Gründung zu.
 * **Teich** – mit Tiefenverlauf, feinen Wellen, Sandufer, Schilf, Seerosen,
   Steg mit Ruderboot und Enten, die ihre Runden ziehen.
 * **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Schweinestall,
@@ -111,8 +115,11 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   sofort; jedes Kapitel endet mit einer Feier, einem Bonus und einem Satz von
   Opa. Spielstände von v38 machen an derselben Aufgabe weiter.
 * **Erfahrungspunkte (EP)** – für Ernten, Gießen, Backen, Tiere, Lieferungen
-  und das Notizbuch, immer als ganze Zahl mit ⭐. Der Balken oben zeigt, wie
-  viele EP bis zum nächsten Level fehlen; ein Tipp darauf erklärt es.
+  und das Notizbuch, immer als ganze Zahl. Wie in Hay Day springt ein
+  goldener Stern mit „+N“ aus dem Objekt, schwebt kurz und fliegt dann im
+  Bogen in den EP-Balken oben, der beim Ankommen aufleuchtet und funkelt.
+  Der Balken zeigt, wie viele EP bis zum nächsten Level fehlen; ein Tipp
+  darauf erklärt es.
 * **Erfolgsmomente** – fliegende Waren ins Lager, Münzen und EP-Sterne,
   Level-Feier mit allem, was neu freigeschaltet ist, Rauch aus dem Ofen,
   drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
@@ -133,6 +140,8 @@ kreisen, draußen zieht die Fähre vorbei, Fahrwassertonnen schaukeln.
   Kurre (ab Level 3). Diesel zahlt man beim Ablegen. Der Kutter läuft sichtbar
   aus, verschwindet am Horizont und legt mit Möwen im Schlepp wieder an – erst
   dann wird ausgeladen. Fang schwankt: mal eine Kiste mehr, mal bessere See.
+  Im Rundgang läuft die allererste Fahrt im Zeitraffer: Die Hertha bleibt am
+  Kai, der Fang ist sofort da.
 * **Reusen** – wie Felder: antippen, Krabben (ab Level 3 Garnelen) wählen und
   den Köder über die leeren Reusen ziehen; volle Reusen hängen halb aus dem
   Wasser – den **Haken** drüberziehen. Frischer Köder bringt bessere Ware.
@@ -166,8 +175,9 @@ kreisen, draußen zieht die Fähre vorbei, Fahrwassertonnen schaukeln.
   Schmuck für die feinen Hotels). Danach ruft Lina an: Spedition gründen –
   die Fischerei läuft weiter und lässt sich auch verkaufen.
 * **Linas Rundgang am Kai** – Reusen leeren und beködern, Muscheln mit Perle,
-  Forellen abfischen und füttern, Kutter rausschicken, Bücklinge räuchern,
-  Fang ausladen und die erste Lieferung an die Fischbude.
+  Forellen abfischen und füttern, Kutter rausschicken (Zeitraffer) und Fang
+  ausladen, Bücklinge räuchern und die erste Lieferung an die Fischbude. Ist
+  der Angelsteg offen, rückt Lina nach oben und verdeckt ihn nicht.
 
 ### Vom Hof zur Spedition
 
@@ -526,13 +536,18 @@ zu gebrauchte Nutzfahrzeuge aus einer Insolvenzmasse.
   8 % Provision, unverkauft kommt alles zurück.
 
 Die Fotos lädt das Spiel zur Laufzeit von Wikipedia/Wikimedia Commons (das
-Titelbild des jeweiligen Artikels) und zeigt Fotograf und Lizenz direkt am
-Bild. Jedes Foto läuft einmal durch denselben Comic-Filter wie die
-Spielerfotos (im Hintergrund, ohne Ruckeln) und wird danach gespeichert – so
-sind es die echten Autos, aber im Look des Spiels. Klappt ein Weg nicht,
-probiert das Spiel andere (Artikel-Kurzfassung, andere Bildgröße); bleibt
-Wikipedia unerreichbar, sagt ein Hinweis warum und bietet „Erneut versuchen“.
-Bis dahin steht eine gezeichnete Silhouette in der Originalfarbe.
+Titelbild des jeweiligen Artikels als 500-px-Vorschaubild, eine
+Standardgröße, die Wikimedia fertig vorhält) und zeigt Fotograf und Lizenz
+direkt am Bild. Die Fotos kommen **nacheinander** statt alle auf einmal; wird
+Wikimedia gedrosselt (HTTP 429), wartet das Spiel kurz und versucht es
+erneut, sonst über eine kleinere Größe oder das Original. Jedes Foto läuft
+einmal durch einen eigenen **Comic-Filter für Autos** (im Hintergrund, ohne
+Ruckeln): kräftig geglättet, damit Lack zur Fläche wird, weiche Tonstufen
+statt harter Treppen, kräftigere Farben und schwarze Tuschelinien aus
+Helligkeits- und Farbkanten – Schatten bleiben Fläche. Danach wird es
+gespeichert, beim nächsten Mal steht es sofort da. Bleibt Wikipedia
+unerreichbar, sagt ein Hinweis warum und bietet „Erneut versuchen“. Bis dahin
+steht eine leicht pulsierende Silhouette in der Originalfarbe.
 
 ### Zoll
 

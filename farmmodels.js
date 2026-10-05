@@ -37,11 +37,13 @@ const FM = (() => {
     b.box(w + 0.12, h + 0.12, 0.05, fr, { x, y: y - 0.06, z, ry: o.ry || 0 });
     b.at({ x, y, z, ry: o.ry || 0 }, () => {
       b.box(w, h, 0.07, o.lit === false ? C.glass : C.glow, { z: 0.01 });
-      b.box(0.05, h, 0.09, fr, { z: 0.01 });
-      b.box(w, 0.05, 0.09, fr, { y: h / 2 - 0.025, z: 0.01 });
+      /* Sprossen etwas kürzer als die Scheibe, sonst flackern die Kanten */
+      b.box(0.05, h - 0.01, 0.09, fr, { y: 0.005, z: 0.01 });
+      b.box(w - 0.01, 0.05, 0.09, fr, { y: h / 2 - 0.025, z: 0.01 });
       if (o.shutter) {
-        b.box(w * 0.48, h + 0.06, 0.05, o.shutter, { x: -w * 0.76, y: -0.03, z: 0.0 });
-        b.box(w * 0.48, h + 0.06, 0.05, o.shutter, { x: w * 0.76, y: -0.03, z: 0.0 });
+        /* Läden liegen ein Stück vor dem Rahmen (nicht in derselben Ebene) */
+        b.box(w * 0.48, h + 0.06, 0.05, o.shutter, { x: -w * 0.76, y: -0.03, z: 0.012 });
+        b.box(w * 0.48, h + 0.06, 0.05, o.shutter, { x: w * 0.76, y: -0.03, z: 0.012 });
       }
       if (o.flowers) {
         b.box(w + 0.1, 0.14, 0.18, C.woodD, { y: -0.16, z: 0.08 });
@@ -262,8 +264,8 @@ const FM = (() => {
     for (let k = 0; k < 4; k++) {
       b.at({ rz: k * Math.PI / 2 }, () => {
         b.box(0.08, 1.95, 0.06, C.woodD, { y: 0.1, c: false });
-        b.at({ y: 0.35, x: 0.17 }, () => {
-          b.box(0.3, 1.6, 0.02, 0xfaf3e3, { z: 0.02 });
+        b.at({ y: 0.35, x: 0.19 }, () => {
+          b.box(0.3, 1.6, 0.02, 0xfaf3e3, { z: 0.024 });
           for (let i = 0; i < 6; i++) b.box(0.34, 0.03, 0.05, C.wood, { y: i * 0.3 });
         });
       });
@@ -367,8 +369,8 @@ const FM = (() => {
   function board() {
     G3.seed(91);
     const b = new MB();
-    b.box(0.1, 1.5, 0.1, C.woodD, { x: -0.55 });
-    b.box(0.1, 1.5, 0.1, C.woodD, { x: 0.55 });
+    b.box(0.1, 1.5, 0.11, C.woodD, { x: -0.565 });
+    b.box(0.1, 1.5, 0.11, C.woodD, { x: 0.565 });
     b.noise(0.1, () => b.box(1.2, 0.85, 0.08, C.wood, { y: 0.55 }));
     b.box(1.35, 0.06, 0.32, C.red, { y: 1.45, rx: 0.2 });
     [[-0.32, 0.95, 0xffffff], [0.05, 0.98, 0xfff3c2], [0.36, 0.9, 0xffffff], [-0.2, 0.7, 0xffe2e2], [0.25, 0.68, 0xffffff]].forEach(([x, y, c]) =>
@@ -382,11 +384,11 @@ const FM = (() => {
     const b = new MB();
     b.noise(0.1, () => b.plate(2.8, 1.8, 0xb9ab8c, { y0: 0.012 }));
     plankWall(b, 2.8, 1.6, 0.1, C.wood, { z: -0.85 });
-    b.box(0.1, 1.5, 1.8, C.woodD, { x: -1.36 });
-    b.box(0.1, 1.5, 1.8, C.woodD, { x: 1.36 });
-    [-1.35, 1.35].forEach(x => b.box(0.12, 1.45, 0.12, C.beam, { x, z: 0.86 }));
+    b.box(0.1, 1.5, 1.76, C.woodD, { x: -1.36, z: 0.02 });
+    b.box(0.1, 1.5, 1.76, C.woodD, { x: 1.36, z: 0.02 });
+    [-1.37, 1.37].forEach(x => b.box(0.14, 1.45, 0.13, C.beam, { x, z: 0.87 }));
     b.box(3.1, 0.08, 2.2, 0x6f9a8a, { y: 1.55, rx: 0.14 });
-    for (let i = 0; i < 8; i++) b.box(0.04, 0.03, 2.2, 0x5d8577, { x: -1.4 + i * 0.4, y: 1.6, rx: 0.14 });
+    for (let i = 0; i < 8; i++) b.box(0.04, 0.04, 2.2, 0x5d8577, { x: -1.4 + i * 0.4, y: 1.615, rx: 0.14 });
     /* Werkbank */
     b.box(0.9, 0.06, 0.4, C.woodL, { x: 0.8, y: 0.6, z: -0.6 });
     b.box(0.06, 0.6, 0.35, C.woodD, { x: 0.4, z: -0.6 }); b.box(0.06, 0.6, 0.35, C.woodD, { x: 1.2, z: -0.6 });
@@ -736,8 +738,8 @@ const FM = (() => {
     const b = new MB();
     b.noise(0.1, () => b.plate(1.9, 1.3, 0xc9ad78, { y0: 0.012 }));
     plankWall(b, 1.9, 1.0, 0.1, 0x9c6b3e, { z: -0.6 });
-    b.box(0.1, 0.95, 1.3, 0x7a5233, { x: -0.9 }); b.box(0.1, 0.95, 1.3, 0x7a5233, { x: 0.9 });
-    b.box(0.1, 1.05, 0.1, C.beam, { x: -0.9, z: 0.6 }); b.box(0.1, 1.05, 0.1, C.beam, { x: 0.9, z: 0.6 });
+    b.box(0.12, 0.95, 1.24, 0x7a5233, { x: -0.91, z: 0.02 }); b.box(0.12, 0.95, 1.24, 0x7a5233, { x: 0.91, z: 0.02 });
+    b.box(0.15, 1.05, 0.13, C.beam, { x: -0.915, z: 0.62 }); b.box(0.15, 1.05, 0.13, C.beam, { x: 0.915, z: 0.62 });
     b.noise(0.05, () => b.box(2.15, 0.08, 1.65, 0x6b8f6b, { y: 1.05, rx: 0.14, top: 0x5c7d5c }));
     b.noise(0.2, () => b.ico(0.25, C.hay, { x: 0.4, y: 0.08, z: -0.3, flat: 0.6, jitter: 0.4 }));
     return b;
@@ -803,7 +805,7 @@ const FM = (() => {
       b.at({ y: 1.85 }, () => b.noise(0.04, () => b.roof(2.6, 2.4, 0.95, C.roof, { gable: 0xf6f1e8 })));
     });
     /* Räucherkammer mit Kamin */
-    b.at({ x: 1.15, z: -0.35 }, () => {
+    b.at({ x: 1.13, z: -0.35 }, () => {
       b.noise(0.1, () => b.box(0.7, 1.4, 0.9, C.brick, { top: C.brickD }));
       b.box(0.3, 1.2, 0.3, C.brickD, { y: 1.4 });
       b.box(0.38, 0.08, 0.38, C.stoneD, { y: 2.6 });
