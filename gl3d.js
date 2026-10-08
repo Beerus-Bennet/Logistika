@@ -334,7 +334,22 @@ const G3 = (() => {
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR;
   uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight;
   uniform sampler2DShadow uShadow;
+  /* gesperrte Gebiete: Rechteck (x0, z0, x1, z1) wird grau, außer im
+     wachsenden Kreis (cx, cz, Radius, Stärke) – so deckt sich ein Gebiet
+     beim Freischalten Stück für Stück auf */
+  uniform vec4 uLockR[6]; uniform vec4 uLockC[6]; uniform int uLockN;
   out vec4 o;
+  float lockAmt(vec2 p){
+    float g = 0.0;
+    for (int i = 0; i < 6; i++) {
+      if (i >= uLockN) break;
+      vec4 r = uLockR[i], c = uLockC[i];
+      float inside = smoothstep(-1.2, 1.2, min(min(p.x - r.x, r.z - p.x), min(p.y - r.y, r.w - p.y)));
+      float out1 = smoothstep(c.z - 4.0, c.z, distance(p, c.xy));
+      g = max(g, inside * out1 * c.w);
+    }
+    return g;
+  }
   float shadow(){
     vec3 p = vL.xyz / vL.w * 0.5 + 0.5;
     if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 1.0;
@@ -371,6 +386,13 @@ const G3 = (() => {
     float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
     c = mix(c, vCol * 1.15, warm * uNight);
     c = mix(c, uTint.rgb, uTint.a);
+    if (uLockN > 0) {
+      float lk = lockAmt(vW.xz);
+      if (lk > 0.001) {
+        float l = dot(c, vec3(0.3, 0.59, 0.11));
+        c = mix(c, vec3(l) * 0.72 + vec3(0.2, 0.21, 0.24), lk * 0.86);
+      }
+    }
     c += uGlow * vec3(1.0, 0.92, 0.62) * 0.42;
     float f = smoothstep(uFogR.x, uFogR.y, length(vW - uCam));
     c = mix(c, uFog, f);
@@ -438,6 +460,9 @@ const G3 = (() => {
         fog: [0.72, 0.84, 0.95], fogR: [55, 95], night: 0
       },
       shadowBox: opts.shadowBox || 24,
+      /* gesperrte Gebiete: { r: [x0, z0, x1, z1], c: [cx, cz], rad, a } */
+      locks: [],
+      culled: 0,
       V: ID(), P: ID(), VP: ID(), IVP: ID(), LVP: ID(), eye: [0, 0, 0], w: 1, h: 1, dpr: 1,
       time: 0, onRestore: null
     };
@@ -564,14 +589,46 @@ const G3 = (() => {
     }
 
     const NOTINT = [0, 0, 0, 0];
+    /* Sichtkegel: sechs Ebenen aus der Matrix, Kugeltest gegen die Hülle */
+    function planes(M) {
+      const p = [];
+      const row = i => [M[i], M[4 + i], M[8 + i], M[12 + i]];
+      const r0 = row(0), r1 = row(1), r2 = row(2), r3 = row(3);
+      [[1, r0], [-1, r0], [1, r1], [-1, r1], [1, r2], [-1, r2]].forEach(([s, r]) => {
+        const a = r3[0] + s * r[0], b = r3[1] + s * r[1], c = r3[2] + s * r[2], d = r3[3] + s * r[3];
+        const l = Math.hypot(a, b, c) || 1;
+        p.push([a / l, b / l, c / l, d / l]);
+      });
+      return p;
+    }
+    function sphereOf(n) {
+      const b = n.mesh.box, W = n.W;
+      const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2, cz = (b[0][2] + b[1][2]) / 2;
+      const hx = (b[1][0] - b[0][0]) / 2, hy = (b[1][1] - b[0][1]) / 2, hz = (b[1][2] - b[0][2]) / 2;
+      const sx = Math.hypot(W[0], W[1], W[2]), sy = Math.hypot(W[4], W[5], W[6]), sz = Math.hypot(W[8], W[9], W[10]);
+      const r = Math.hypot(hx * sx, hy * sy, hz * sz) + (n.sway ? 0.4 : 0);
+      return [W[0] * cx + W[4] * cy + W[8] * cz + W[12], W[1] * cx + W[5] * cy + W[9] * cz + W[13], W[2] * cx + W[6] * cy + W[10] * cz + W[14], r];
+    }
+    const inside = (P, s) => { for (const q of P) if (q[0] * s[0] + q[1] * s[1] + q[2] * s[2] + q[3] < -s[3]) return false; return true; };
     R.render = function (time) {
       if (lost) return;
       R.time = time;
       R.resize();
       updateCamera();
-      const list = [];
-      collect(R.nodes, list, null, null);
+      const all = [];
+      collect(R.nodes, all, null, null);
       const E = R.env;
+      /* nur zeichnen, was im Bild liegt – große Welt, wenig Arbeit */
+      const PV = planes(R.VP), PL = planes(R.LVP);
+      const list = [], slist = [];
+      for (const it of all) {
+        const n = it[0];
+        if (n.cull === false || !n.mesh.box) { list.push(it); slist.push(it); continue; }
+        const sp = sphereOf(n);
+        if (inside(PV, sp)) list.push(it);
+        if (inside(PL, sp)) slist.push(it);
+      }
+      R.culled = all.length - list.length;
 
       /* 1) Schatten */
       gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
@@ -582,7 +639,7 @@ const G3 = (() => {
       gl.useProgram(shad.p);
       gl.uniformMatrix4fv(shad.u.uLVP, false, R.LVP);
       gl.uniform1f(shad.u.uTime, time);
-      for (const [n, st] of list) {
+      for (const [n, st] of slist) {
         if (!st.shadow || st.alpha < 0.99 || n.water || !n.mesh.vao) continue;
         gl.uniformMatrix4fv(shad.u.uModel, false, n.W);
         gl.uniform1f(shad.u.uSway, n.sway);
@@ -605,6 +662,14 @@ const G3 = (() => {
       gl.uniform3fv(u.uCam, R.eye);
       gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
       gl.uniform1f(u.uNight, E.night || 0);
+      /* Sperrgebiete */
+      const LK = R.locks.filter(l => l.a > 0.001).slice(0, 6);
+      gl.uniform1i(u.uLockN, LK.length);
+      if (LK.length && u["uLockR[0]"]) {
+        const a = new Float32Array(24), b = new Float32Array(24);
+        LK.forEach((l, i) => { a.set(l.r, i * 4); b.set([l.c[0], l.c[1], l.rad || 0, l.a], i * 4); });
+        gl.uniform4fv(u["uLockR[0]"], a); gl.uniform4fv(u["uLockC[0]"], b);
+      }
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.uniform1i(u.uShadow, 0);
       const draw = (n, st) => {

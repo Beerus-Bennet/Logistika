@@ -143,7 +143,7 @@ function packEnd(ok, quit) {
     const f = S.fleet.find(x => x.uid === job.legs[0].veh);
     if (f && f.phase === "load") f.timer *= 0.6;
     job.fastLoad = true;
-    S.xp += 10;
+    addXP(10);
   }
   const el = packEl();
   el.querySelector(".pk-card").insertAdjacentHTML("beforeend", `<div class="pk-res ${ok ? "ok" : ""}">${ok

@@ -67,7 +67,7 @@ function applyPrize(p) {
   let txt = p.desc();
   switch (p.id) {
     case "cash": { const v = luckyCash(); S.money += v; S.revenue += v; logMoney("bonus", "Luckybox: Trinkgeldkasse", v); txt = "+" + money(v); break; }
-    case "xp": S.xp += luckyXP(); checkLevel(); break;
+    case "xp": addXP(luckyXP()); checkLevel(); break;
     case "fuel": P.fuelUntil = S.time + 1440; break;
     case "repair": P.freeRepair = (P.freeRepair || 0) + 1; break;
     case "mood":

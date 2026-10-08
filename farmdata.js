@@ -368,12 +368,12 @@ const FSITES = {
       hud: "Erbhof · Werder (Havel)", where: "Werder (Havel)", heir: "Erbe von Opa Hinrich",
       elder: "Opa", elderName: "Opa Hinrich", book: "Opas Notizbuch", bookShort: "Notizbuch", bookIcon: "📒",
       letterHead: "Opas Brief",
-      letter: "Mein liebes Enkelkind, der Hof gehört jetzt dir. Die Hühner wollen morgens ihr Futter, der Ofen braucht Geduld, und die Leute in Werder zahlen gut für ehrliche Ware. Lina hilft dir beim Ausliefern – sie kennt jede Abkürzung. Mach was draus. Dein Opa Hinrich",
-      doneHead: "Der Hof läuft!", doneSub: "Alles abgehakt – Opa wäre stolz.",
-      doneQuote: "Du hast alles geschafft, was ich aufgeschrieben habe. Der Hof ist jetzt deiner, ganz und gar. Und wenn dir das Dorf zu klein wird: Lina kennt jede Straße bis nach Berlin.",
-      doneMsg: "Chef, Opas Notizbuch ist abgehakt, der Hof läuft wie geschmiert. Die Leute in Werder fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. "
-        + "Wenn du willst, gründen wir eine richtige Spedition – der Hof läuft nebenher weiter. Tipp im Hof auf „Spedition gründen“.",
-      bookHint: "Arbeite Opas Notizbuch ab – vier Kapitel. Wenn der Hof läuft, kannst du eine Spedition gründen und auch für andere fahren.",
+      letter: "Mein liebes Enkelkind, der Hof gehört jetzt dir. Er ist ein bisschen heruntergekommen, aber das Herz ist gut: Die Hühner wollen morgens ihr Futter, der Ofen braucht Geduld, und die Leute in Werder zahlen gut für ehrliche Ware. Hinterm Zaun wartet der Wald, und irgendwann vielleicht auch der See. Lina hilft dir beim Ausliefern – sie kennt jede Abkürzung. Mach was draus. Dein Opa Hinrich",
+      doneHead: "Alles läuft!", doneSub: "Hof, Wald, Sägewerk und See – Opa wäre stolz.",
+      doneQuote: "Du hast alles geschafft, was ich aufgeschrieben habe – und noch viel mehr. Hof, Wald, Sägewerk und die Fischerei am See gehören jetzt dir, ganz und gar. Und wenn dir die Gegend zu klein wird: Lina kennt jede Straße bis nach Berlin.",
+      doneMsg: "Chef, Opas Notizbuch ist abgehakt – Hof, Sägewerk und Fischerei laufen wie geschmiert. Die Leute fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. "
+        + "Wenn du willst, gründen wir eine richtige Spedition – das Erbe läuft nebenher weiter. Tipp im Hof auf „Spedition gründen“.",
+      bookHint: "Arbeite Opas Notizbuch ab – elf Kapitel: erst der Hof, dann Wald, Sägewerk und der See. Wenn alles läuft, kannst du eine Spedition gründen und auch für andere fahren.",
       welcome: n => "🏡 Willkommen auf deinem Hof, " + n + "!",
       noOrders: "Gerade keine Bestellung. Neue kommen von allein – bald auch aus Potsdam und Berlin.",
       atHere: "am Hof", vehNone: "Kein Fahrzeug am Hof – es kommt zur Abholung angefahren.",
@@ -382,7 +382,7 @@ const FSITES = {
       keepText: "Du kannst den Hof behalten und jederzeit über „Hof“ besuchen – oder ihn verkaufen und mit dem Geld die Spedition ausbauen. Ein Verkauf ist endgültig.",
       valHead: "Hofwert heute", tour: "🎓 Rundgang mit Lina", tourMenu: "🎓 Hof-Rundgang mit Lina",
       foundText: "Ab jetzt kommen auch fremde Aufträge: Pakete, Paletten, Express – erst rund um Berlin, später weltweit. Der Hof läuft weiter und liefert wie bisher. Lina zeigt dir, wie Aufträge laufen.",
-      notYet: "Erst die Spedition gründen – das geht, sobald Opas Notizbuch im Hof abgehakt ist."
+      notYet: "Erst die Spedition gründen – das geht, sobald Opas Notizbuch abgehakt ist: Hof, Wald, Sägewerk und See."
     }
   }
 };

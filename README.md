@@ -1,9 +1,11 @@
 # 🌍 LOGISTIKA – Welt der Logistik
 
 Eine Logistik-Simulation im Comic-Look auf einer echten OpenStreetMap-Karte.
-Du erbst einen Obsthof bei Werder (Havel), erntest, backst und lieferst deine
-Ware per Lastenrad und Moped in die Dörfer – und baust daraus Stück für Stück
-eine Spedition, die bis zur weltweiten Containerflotte wächst.
+Du erbst einen heruntergekommenen Obsthof bei Werder (Havel), erntest, backst
+und lieferst deine Ware per Lastenrad und Moped in die Dörfer. Hinter dem Zaun
+warten der Wald, das alte Sägewerk vom Nachbarn und der Glindower See – erst
+wenn Hof, Holz und Fischerei laufen, wird daraus eine Spedition, die bis zur
+weltweiten Containerflotte wächst.
 
 Läuft als **PWA** – installierbar auf iPhone, Android und Desktop, offline
 lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
@@ -25,14 +27,13 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    lässt sich genauso als Bild nehmen oder einfügen. Das Foto verlässt das
    Gerät nicht, gespeichert wird nur das fertige 256-px-Porträt. Im laufenden
    Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
-2. **Erbe antreten** – Name des Betriebs, Hausfarbe und was du geerbt hast:
-   den **Obsthof** von Opa Hinrich bei Werder (Havel) – 500 €, Felder,
-   Apfelbäume, drei Hühner, Backofen, Futtermühle, ein Lastenrad und seine
-   alte Simson – oder die **Fischerei** von Tante Gesche in Warnemünde –
-   500 €, Kutter, Reusen, Muschelleinen, Netzgehege mit Forellen, Fischhalle,
-   Räucherei, Futterküche, ein Lastenrad und ihre Simson. „Erbe antreten“
-   führt direkt hin, ein Fahrzeugkauf ist nicht nötig. (Ältere Spielstände mit
-   Kurierstart laufen unverändert weiter.)
+2. **Erbe antreten** – Name des Betriebs, Hausfarbe – und Opas **Obsthof**
+   bei Werder (Havel): 500 €, ein bisschen heruntergekommen, mit Feldern,
+   Apfelbäumen, drei Hühnern, Backofen, Futtermühle, einem Lastenrad und
+   seiner alten Simson. „Erbe antreten“ führt direkt hin, ein Fahrzeugkauf ist
+   nicht nötig. (Ältere Spielstände mit Kurierstart laufen unverändert weiter;
+   Spielstände mit der früheren Ostsee-Fischerei werden beim Laden zu Opas Hof
+   – mit 5.000 € Ausgleich, behaltener Erfahrung und einer Nachricht von Lina.)
 3. **Fuhrpark kaufen** (nur Kurierstart älterer Spielstände) – ohne Fahrzeug
    keine Spedition. Erst wenn mindestens eins im Hof steht, wird der Betrieb
    angemeldet und Karte wie Auftragsbuch gehen auf.
@@ -125,66 +126,116 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
   kleine Töne (abschaltbar).
 * **Linas Rundgang** – zum Start zeigt Lina mit dem Finger, was zu tun ist:
-  ernten, säen, gießen, Eier holen, füttern, backen, pflücken und die erste
-  Lieferung an die Bäckerei Hahn losschicken.
+  ernten, säen, gießen, Eier holen, füttern, backen, pflücken, die erste
+  Lieferung losschicken und mit Opas Axt den ersten jungen Baum am Teich
+  fällen.
 
-## Die Fischerei (3D)
+## Wald, Sägewerk und See (3D)
 
-Tante Gesches Fischerei liegt am Kai in Warnemünde: im Norden die Ostsee mit
-Mole und grünem Molenfeuer, im Osten Leuchtturm, Teepott, Strand mit
-Strandkörben und Dünen, hinter der Straße die Häuser „Am Strom“. Möwen
-kreisen, draußen zieht die Fähre vorbei, Fahrwassertonnen schaukeln.
+Der Hof ist der Mittelpunkt einer großen Welt: im Norden und Westen der
+Plötziner Forst mit Bach, Brücke und Lichtungen, dahinter der alte Wald, am
+Waldweg Krügers verfallenes Sägewerk und im Süden der Glindower See mit Insel,
+Schilf und Seerosen. Was noch nicht dir gehört, ist **grau** und mit einer
+rot-weißen Schranke gesperrt. Die runden Knöpfe links springen zwischen
+**Hof, Wald, Sägewerk, altem Wald und See**; oben rechts stehen Ausdauer 💪,
+Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
 
-* **Kutter „Hertha“** – Fangfahrten statt Rezepte: Heringe vor Warnemünde,
-  Dorsch an der Kadetrinne (ab Level 2, braucht Köder) und Garnelen mit der
-  Kurre (ab Level 3). Diesel zahlt man beim Ablegen. Der Kutter läuft sichtbar
-  aus, verschwindet am Horizont und legt mit Möwen im Schlepp wieder an – erst
-  dann wird ausgeladen. Fang schwankt: mal eine Kiste mehr, mal bessere See.
-  Im Rundgang läuft die allererste Fahrt im Zeitraffer: Die Hertha bleibt am
-  Kai, der Fang ist sofort da.
-* **Reusen** – wie Felder: antippen, Krabben (ab Level 3 Garnelen) wählen und
-  den Köder über die leeren Reusen ziehen; volle Reusen hängen halb aus dem
-  Wasser – den **Haken** drüberziehen. Frischer Köder bringt bessere Ware.
-* **Muschelleinen** – wie Obstbäume: alle sechs Stunden 6 kg Miesmuscheln,
-  manchmal steckt eine **Perle** drin (in der allerersten immer).
-  **Perlmuschel-Leinen** (ab Level 4) bringen jedes Mal zwei Perlen. Leine
-  putzen macht schneller und besser.
-* **Netzgehege** – Forellenschwärme ziehen ihre Kreise, springen aus dem
-  Wasser und wollen Fischfutter; Platz im Gehege (m³ je Schwarm) bestimmt die
-  Qualität. Zum Abfischen das Gehege antippen.
-* **Verarbeitung** – Fischhalle (Hering- und Dorschfilet, Fischabfälle fallen
-  dabei an; ab Level 3 Muscheln öffnen für Perlen), Räucherei (Bücklinge,
-  Räucherforellen), Futterküche (Köder aus Abfällen, Fischfutter aus Hering),
-  Fischbude (Fisch-, Backfisch- und Krabbenbrötchen, Fischsuppe) und die
-  **Schmiede**: Perlenring, Perlenkette und Perlendiadem aus Perlen und
-  Silberdraht. Brötchen, Silberdraht und Köder gibt es im Laden unter
-  „Einkauf“.
-* **Angelsteg** – kleines Geschicklichkeitsspiel: Köder auswerfen, warten,
-  bis der Schwimmer richtig abtaucht (Zucken zählt nicht!), dann binnen einer
-  Sekunde anschlagen. Mit Glück zappelt ein Hering, Dorsch oder eine
-  Meerforelle am Haken – manchmal nur ein Gummistiefel oder eine Flaschenpost.
-* **Lager** – Kühlhaus für Fang und Feinkost, Netzspeicher für Köder, Futter,
-  Einkauf, Perlen und Schmuck. Wasserobjekte (Reusen, Leinen, Gehege, Jolle,
-  Leuchtboje) stehen nur im Wasser, Gebäude nur an Land, der Kai bleibt frei.
-* **Kundschaft** – Fischbude Am Strom, Hotel, Restaurant und Juwelier in
-  Warnemünde, Campingplatz Markgrafenheide, später Rostock (Fischmarkt
-  Stadthafen, Goldschmiede), Bad Doberan, Graal-Müritz, Kühlungsborn,
-  Heiligendamm (Grandhotel) und Wismar.
-* **Gesches Logbuch** – drei Kapitel: *Ankommen*, *Wachsen* (Fischbude,
-  Dorsch, Räucherforellen, Rostock) und *Meisterbetrieb* (Schmiede, Perlen,
-  Schmuck für die feinen Hotels). Danach ruft Lina an: Spedition gründen –
-  die Fischerei läuft weiter und lässt sich auch verkaufen.
-* **Linas Rundgang am Kai** – Reusen leeren und beködern, Muscheln mit Perle,
-  Forellen abfischen und füttern, Kutter rausschicken (Zeitraffer) und Fang
-  ausladen, Bücklinge räuchern und die erste Lieferung an die Fischbude. Ist
-  der Angelsteg offen, rückt Lina nach oben und verdeckt ihn nicht.
+* **Hof-Ausbau in vier Stufen** – am Anfang grau und verwittert: morscher Zaun
+  mit Lücken, Erdwege voller Unkraut, alte Reifen, Schrott und Bretter zum
+  Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Stufe 2 *Ausgebauter
+  Hof*: frischer Anstrich, neuer Zaun, Kieswege, Traktor, mehr Platz in Silo
+  und Scheune, ein Warteplatz mehr. Stufe 3 *Professioneller Betrieb*:
+  Pflaster, Laternen, Blumen, weißer Zaun. Stufe 4 *Großer Wirtschaftshof*:
+  Steinmauer mit Steintor, Maschinenhalle, das Gelände wächst um zwei Kacheln
+  nach jeder Seite. Ausbau im Wohnhaus unter „🏡 Ausbau“ – mit Holz aus dem Wald
+  und später aus dem Sägewerk.
+* **Der Wald** – sobald das erste Kapitel geschafft ist, drei Bäume am Teich
+  gefällt sind und Level 5 erreicht ist, kommt **Förster Bruno Wendt** ans
+  Westtor: „Der Förster hat einen Weg durch den Wald freigegeben.“ Der Weg
+  wird freigeschnitten, der Wald deckt sich Stück für Stück auf. 175 fällbare
+  Bäume: Birken am Waldrand, Kiefern und Fichten im Westen, Buchen und Eichen
+  im Norden, selten eine blühende Wildkirsche (Edelholz) – klein, mittel,
+  groß und im alten Wald uralt. Gefällte Bäume werden zum Stumpf, treiben aus
+  und wachsen wieder nach.
+* **Axt** – Timing-Minispiel: Die Nadel pendelt, tippen, wenn sie im Grünen
+  steht. Volltreffer zählen mehr, sauber gefällt gibt einen Stamm extra. Jeder
+  Schlag kostet **Ausdauer**; sie kommt langsam zurück oder sofort mit einer
+  Brotzeit aus dem Lager (Brot, Kuchen, Wurst, Fisch …). Wer aufhört, findet
+  den Baum angeschlagen wieder. Die Stahlaxt (Level 3) hat mehr Wucht und
+  schafft große Bäume.
+* **Kettensäge** (Level 7, nach 25 Bäumen) – erst die **Fallrichtung** wählen
+  (frei, nicht auf Bäume, Wege oder den Hof), dann den **Fallkerb** auf
+  Kniehöhe setzen, dann gedrückt halten zum Sägen – ohne den Motor zu
+  **überhitzen**. Gute Richtung bringt mehr Holz, Hängenbleiben kostet
+  Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
+  Hof: Bretter, Pfosten und Brennholz. Die Profi-Säge (Level 13) schafft die
+  uralten Eichen im alten Wald.
+* **Holzhändler** – im Holzplatz-Lager: Rohholz zum vollen Preis, Holzwaren
+  zum halben (Bestellungen zahlen mehr). Neue Kundschaft: Baumarkt,
+  Kaminstudio, Tischlerei, Zimmerei, Werft, Holzhandel, Möbelhaus.
+* **Das alte Sägewerk** – Nachbar **Erwin Krüger** verschenkt es (Level 9,
+  Kettensäge, 30 Bäume). Fünf Reparaturen, jede ein Handwerks-Minispiel:
+  **Dach** (Nägel im richtigen Moment einschlagen), **Elektrik** (Kabel in der
+  richtigen Reihenfolge anklemmen), **Sägemaschine** (Zahnräder auf die
+  passenden Achsen), **Förderband** (Teile in die passenden Lücken),
+  **Motor** (Dreck wegwischen, Teile der Reihe nach einsetzen). Man sieht das
+  Sägewerk mit jeder Reparatur wieder heil werden. Danach: **Kessel** verfeuert
+  Holzreste und Äste zu Strom, die **Gattersäge** macht Bretter, Balken,
+  Holzplatten, Kisten, Pfosten und Eichenbohlen; dazu kaufbar Holzspalter
+  (Brennholz, Kaminholz), Hobelmaschine (Dielen), Trockenkammer (Bauholz),
+  Verpackungsmaschine (Europaletten), Schleifmaschine (Möbelteile,
+  Schatullen) und Fräse (Zaunelemente, Türen) – Laden-Reiter „🪚 Sägewerk“.
+  Ausbau: Blockbandsäge (ein Drittel schneller), größerer Kessel. Krügers
+  alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte.
+* **Der Glindower See** – die Bürgermeisterin verpachtet das Ufer (Level 15,
+  Sägewerk läuft, 40 Holzwaren gemacht). Am Ufer liegen sieben **Bauplätze**:
+  Steg, Fischerhütte, Bootshaus (mit Ruderboot), Fischlager, Räucherei,
+  Kühlhaus und Fischmarkt – jedes braucht Holz aus dem Sägewerk, beim Bauen
+  wird mitgenagelt. Die frühere kleine Fischerei an der Ostsee gibt es nicht
+  mehr.
+* **Angeln** – vom Steg oder mit dem Boot an sechs Stellen (Seerosenbucht,
+  Schilfgürtel, Steinkante, mit dem Motorboot auch Tiefe Mitte und
+  Bachmündung). Was beißt, hängt von **Tageszeit und Wetter** ab: Forellen
+  morgens, Zander und Aal nachts, bei Regen Aale und selten die Gold-Schleie.
+  Auswerfen, auf den Biss warten, anschlagen, dann im **Drill** die Spannung
+  im grünen Bereich halten – zu straff reißt die Schnur, zu locker ist er
+  weg. Ein ruhiger Drill gibt mehr Sterne. Verarbeitung: Filets, Karpfen blau,
+  Räucherforelle und -aal (mit Brennholz aus dem Sägewerk), Konserven,
+  Frischfischkisten (in Holzkisten), Edelfisch-Boxen, Hechtklößchen,
+  Fischbrötchen.
+* **Mitarbeiter** (ab Level 8, im Wohnhaus unter „👷 Team“) – Fahrer/in (mehr
+  Liefergeld), Landwirt/in (gießt mit), Mechaniker/in (Reparaturen und Strom
+  günstiger, keine klemmende Säge), Holzfäller/in (mehr Holz, fällt selbst)
+  und Fischer/in (fischt selbst). Jede Person hat eine Eigenschaft, will
+  täglich Lohn und eine Brotzeit aus dem Lager – und steht sichtbar bei der
+  Arbeit.
+* **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
+  Händler, Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
+  weißer Hirsch (Glücksbringer), kreisende Vögel über einem Schatz
+  (Graben-Minispiel), klemmende Säge (Zahnräder richten), Paket am Tor,
+  Wildschweine mit Pilzen, Reh auf dem Weg. Dazu laufen Rehe, Hasen,
+  Wildschweine, Füchse und Eichhörnchen durch den Wald, Vögel kreisen.
+* **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
+  **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
+  günstig geht schnell, teuer dauert –, später kassieren.
+* **Kleeblätter 🍀 und Extras** – Kleeblätter gibt es fürs Spielen (Level,
+  Kapitel, neue Gebiete, Ereignisse, Tagesbonus). Im Laden unter „🍀 Extras“:
+  Scheune in Taubenblau oder Moosgrün, Schieferdach, grüner Traktor,
+  Haustiere (Hofhund, Katze, Ziege laufen über den Hof), Saison-Deko
+  (Weihnachtsbaum, Kürbislaternen, Maibaum, Schneemann, Osterhase) und Komfort
+  (große Brotdose, Thermoskanne, Werkzeuggürtel). Nichts davon ist nötig zum
+  Weiterkommen. „Kleeblätter kaufen“ und „Bonus-Video“ sind nur Platzhalter.
+* **Opas Notizbuch** hat jetzt **elf Kapitel**: vier auf dem Hof, dann *Der
+  Wald*, *Die Kettensäge*, *Das alte Sägewerk*, *Holzproduktion*, *Am See*,
+  *Fischverarbeitung* und *Wirtschaftshof*. Das Erbe hat ein eigenes Level;
+  nach der Speditionsgründung fängt die Spedition bei Level 1 an.
 
 ### Vom Hof zur Spedition
 
-Erst wird der Hof einmal durchgespielt: Solange Opas Notizbuch nicht
-abgehakt ist, gibt es nur die eigene Ware, und Linas Erklärungen zur
-Spedition warten. Ist das letzte Kapitel geschafft, heißt es „Der Hof
-läuft!“, und Lina ruft an: Die Leute fragen, ob man nicht auch ihre Sachen
+Erst wird das Erbe einmal durchgespielt – Hof, Wald mit Sägewerk und der
+See: Solange Opas Notizbuch nicht abgehakt ist, gibt es nur die eigene Ware,
+und Linas Erklärungen zur Spedition warten. Ist das letzte der elf Kapitel
+geschafft, heißt es „Alles läuft!“, und Lina ruft an: Die Leute fragen, ob man nicht auch ihre Sachen
 mitnimmt. Mit **„Spedition gründen“** kommen
 fremde Aufträge, Büros, Etappen und alles Weitere dazu – Linas
 Dispositions-Tutorial startet. Der Hof läuft weiter und ist jederzeit über den
@@ -747,13 +798,18 @@ snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Ha
 pablo.js                Don Pablo: Angebot, Hangar, Kunden, Interpol-Bericht
 game.js                 Simulation, Routing, Wirtschaft, Oberfläche
 farmdata.js             Hof: Waren, Pflanzen, Tiere, Rezepte, Kundschaft, Notizbuch, Dorfknoten, Erbe-Register (FSITES)
-fishdata.js             Fischerei: Fang, Reusen, Leinen, Gehege, Kutterfahrten, Rezepte, Küstenorte, Logbuch
-farm.js                 Erbe: Spielstand, Ernte und Fang, Tiere mit Platz-Qualität, Mast, Angeln, Bestellungen, Verkauf
-gl3d.js                 eigene kleine WebGL2-Engine: Low-Poly, Schatten, Wasser, Partikel
+fishdata.js             Fischerei am See: Fische, Fischwaren, Gebäude, Boote, Fangplätze, Tageszeit, Wetter
+erbedata.js             große Welt: Holz, Baumarten, Werkzeug, Ausdauer, Sägewerk, Gebiete, Ausbaustufen, Team, Ereignisse, Extras, Kapitel 5–11
+farm.js                 Erbe: Spielstand, Ernte, Tiere mit Platz-Qualität, Mast, Rezepte, Bestellungen, Verkauf, Umwandlung alter Spielstände
+erbe.js                 Spiellogik der großen Welt: Erbe-Level, Gebiete, Bäume, Ausdauer, Sägewerk, Strom, See, Team, Ereignisse, Stand
+gl3d.js                 eigene kleine WebGL2-Engine: Low-Poly, Schatten, Wasser, Partikel, Sichtkegel-Test, Sperrgebiete
 farmmodels.js           alle 3D-Modelle des Hofs, prozedural gebaut
-fishmodels.js           3D-Modelle der Küste: Kutter, Reusen, Gehege, Leuchtturm, Teepott, Strand
+fishmodels.js           3D-Modelle für Räucherei, Kühlhaus, Angler und Rute
+woodmodels.js           3D-Modelle der Welt: Bäume je Art und Größe, Gelände, Wege, Bach, See, Sägewerk, Fischerei, Boote, Tiere, Leute, Deko
 farmview.js             3D-Ansicht des Erbes: Kamera, Gesten, Werkzeuge, Fenster, Effekte, Rundgang
-fishview.js             Küste in Bewegung: Kutterfahrten, Möwen, Fähre, Forellen, Angelspiel
+worldview.js            große Welt in 3D: Kulisse in Kacheln, Sperrgebiete mit Aufdecken, Bäume, Wildtiere, Ereignisse, Wetter, Fenster
+minigames.js            Minispiele: Axt, Kettensäge, Nageln, Kabel, Zahnräder, Förderband, Motor, Graben, Angeln
+fishview.js             See in Bewegung: Angeln vom Steg, Bootsfahrten, Pose und Rute, Enten, springende Fische
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest
@@ -830,8 +886,12 @@ rund 700 Zeilen): flach schattierte Low-Poly-Modelle mit Vertexfarben, Sonne
 mit weichen Schatten (Schattenkarte mit PCF), Himmelslicht, Nebel am Rand,
 Wasser mit Wellen und Glitzern, wiegende Pflanzen und Bäume sowie Partikel
 für Staub, Rauch, Tropfen und Herzen. Alle Modelle entstehen beim Start aus
-Grundkörpern (`farmmodels.js`) – keine einzige Modell- oder Texturdatei. Ohne
-WebGL 2 meldet die Ansicht das; Lager, Kundschaft und Laden gehen trotzdem.
+Grundkörpern (`farmmodels.js`, `woodmodels.js`) – keine einzige Modell- oder
+Texturdatei. Die große Welt (gut 260 × 260 Kacheln, Tausende Kulissenbäume)
+wird in Kacheln direkt in Float32Arrays gebaut; ein Sichtkegel-Test zeichnet
+nur, was im Bild (oder im Schatten) liegt. Gesperrte Gebiete färbt der Shader
+grau, beim Freischalten wächst ein Kreis, der sie aufdeckt. Ohne WebGL 2 meldet
+die Ansicht das; Lager, Kundschaft und Laden gehen trotzdem.
 
 ### Kachelquelle ändern
 

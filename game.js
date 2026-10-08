@@ -293,7 +293,18 @@ function renderPause() {
   b.classList.toggle("paused", halted);
   b.title = halted ? "Spiel fortsetzen" : "Spiel anhalten";
 }
-function level() { return Math.max(1, Math.floor(Math.sqrt(S.xp / 50)) + 1); }
+/* EP-Topf: Vor der Gründung zählt das Erbe (Hof, Wald, Sägewerk, See),
+   danach die Spedition – das Erbe hat dann sein eigenes Level (flv). */
+function xpPool() { return typeof farmPhase === "function" && S && S.farm && farmPhase() ? (S.farm.xp || 0) : S.xp; }
+function level() { return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xpPool()) / 50)) + 1); }
+/* EP gutschreiben – vor der Gründung landet alles beim Erbe */
+function addXP(n) { if (typeof farmPhase === "function" && S.farm && farmPhase()) S.farm.xp = (S.farm.xp || 0) + n; else S.xp += n; }
+/* Was die Kopfzeile zeigt: im Hof-Reiter das Erbe, sonst die Spedition */
+function hudXP() {
+  const farmView = typeof farmOn === "function" && farmOn() && (farmPhase() || activeTab === "farm");
+  const xp = farmView ? (S.farm.xp || 0) : S.xp;
+  return { xp, lv: Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1), farm: farmView };
+}
 function xpForLevel(l) { return Math.round(50 * (l - 1) ** 2); }
 function unlockedModes() { return STAGES[S.stage - 1].modes; }
 /* Hof-Knoten (Werder, Glindow …) gibt es nur in Spielständen mit Hof */
@@ -1589,7 +1600,7 @@ function finishLeg(job, veh) {
     if (typeof farmDelivered === "function") farmDelivered(o, pay);
   } else logMoney("job", o.shipper + " · " + N[o.from].short + " → " + N[o.to].short, pay);
   if (job.cost > 0) logMoney("drive", "Fahrt und Umschlag · " + o.shipper, -job.cost);
-  S.xp += Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2));
+  addXP(Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2)));
   S.jobs = S.jobs.filter(j => j.id !== job.id);
   if (typeof onDelivered === "function") onDelivered(job, pay, late);
   if (late) toast("⏰ Verspätet zugestellt: " + o.shipper, "warn", true);
@@ -1601,6 +1612,7 @@ function checkLevel() {
   const l = level();
   if (l > lastLevel) {
     lastLevel = l;
+    if (typeof farmPhase === "function" && farmPhase() && S.farm) { S.farm.lvSeen = l; if (typeof farmClover === "function") farmClover(3, "Level " + l); }
     const party = typeof farmLevelUp === "function" && farmLevelUp(l);
     if (!party) toast("🎉 Level " + l + " erreicht!", "ok");
     if (typeof farmEvent === "function") farmEvent("level");
@@ -2582,13 +2594,14 @@ function renderHud() {
   const m = $("#hudMoney");
   m.textContent = money(S.money);
   m.classList.toggle("bad", S.money < 0);
-  $("#hudLevel").textContent = "Lv " + level();
+  const HX = hudXP();
+  $("#hudLevel").textContent = (HX.farm && S.farm.logi ? "🏡 " : "") + "Lv " + HX.lv;
   $("#hudStage").textContent = typeof farmPhase === "function" && farmPhase() ? FT().hud : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
   $("#hudTime").textContent = stamp(S.time);
-  const l = level(), a = xpForLevel(l), b = xpForLevel(l + 1);
-  $("#xpFill").style.width = clamp(((S.xp - a) / (b - a)) * 100, 0, 100) + "%";
+  const l = HX.lv, a = xpForLevel(l), b = xpForLevel(l + 1);
+  $("#xpFill").style.width = clamp(((HX.xp - a) / (b - a)) * 100, 0, 100) + "%";
   const xt = $("#xpTxt");
-  if (xt) { const t = "⭐ " + fmt(Math.max(0, Math.round(S.xp - a)), 0) + " / " + fmt(b - a, 0) + " EP"; if (xt.textContent !== t) xt.textContent = t; }
+  if (xt) { const t = "⭐ " + fmt(Math.max(0, Math.round(HX.xp - a)), 0) + " / " + fmt(b - a, 0) + " EP"; if (xt.textContent !== t) xt.textContent = t; }
   const badge = (id, n) => {
     const el = $(id); if (!el) return;
     el.textContent = n > 99 ? "99+" : n;
@@ -3449,6 +3462,8 @@ window.addEventListener("resize", syncHeadH);
 function boot() {
   S = Object.assign(newGame(), load() || {});
   if (typeof farmUseSite === "function") farmUseSite(S.farm && S.farm.kind);
+  /* Erbe zuerst auf den neuen Stand bringen (Ostsee → Hof, Erbe-EP, Welt) */
+  if (S.farm && typeof farmMigrate === "function") { try { farmMigrate(); } catch (e) { console.warn("Erbe-Migration", e); } }
   lastLevel = level();
   ensureOffices();
   /* Eigene Porträts suchen; gefundene tauchen in der Charaktererstellung auf. */
@@ -3536,7 +3551,7 @@ function boot() {
   $("#hudMoney").onclick = openLedger;
   const xb = $("#xpBar");
   if (xb) xb.onclick = () => {
-    const l = level(), need = xpForLevel(l + 1) - S.xp;
+    const HX = hudXP(), l = HX.lv, need = xpForLevel(l + 1) - HX.xp;
     toast("⭐ Erfahrungspunkte (EP): noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + ". EP gibt es für Ernte und Fang, Herstellen, Tiere, Lieferungen und " + (typeof FT === "function" ? FT().book : "das Notizbuch") + ".", "ok");
   };
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };

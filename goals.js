@@ -167,7 +167,7 @@ function missionDelivered(job, late) {
   a.got++;
   if (a.got >= a.need) {
     S.money += a.rew; S.revenue += a.rew; logMoney("bonus", "Mission " + a.title, a.rew);
-    S.xp += 60 + S.stage * 20; repAdd(S.stage, 6); extraStats().missions++;
+    addXP(60 + S.stage * 20); repAdd(S.stage, 6); extraStats().missions++;
     missionState().done.push(a.id); missionState().active = null;
     toast(a.icon + " Mission „" + a.title + "“ geschafft: +" + money(a.rew), "ok");
     phoneMsg({ from: "Lina Sturm", kind: "good", title: "Mission geschafft!", body: "Stark, Chef – „" + a.title + "“ erledigt. " + money(a.rew) + " sind gutgeschrieben." });
@@ -235,14 +235,14 @@ function goalsDelivered(job, pay, late) {
     if (!t.done && t.got >= t.n) {
       t.done = true;
       const r = dailyReward();
-      S.money += r; S.revenue += r; S.xp += 25; logMoney("bonus", "Tagesaufgabe: " + TASKS.find(x => x.id === t.id).label(t), r);
+      S.money += r; S.revenue += r; addXP(25); logMoney("bonus", "Tagesaufgabe: " + TASKS.find(x => x.id === t.id).label(t), r);
       toast("🎯 Tagesaufgabe geschafft: " + TASKS.find(x => x.id === t.id).label(t) + " · +" + money(r), "ok");
     }
   });
   if (!d.claimed && d.tasks.length && d.tasks.every(t => t.done)) {
     d.claimed = true;
     const r = dailyReward() * 2;
-    S.money += r; S.revenue += r; S.xp += 50; extraStats().dailySets++;
+    S.money += r; S.revenue += r; addXP(50); extraStats().dailySets++;
     logMoney("bonus", "Alle Tagesaufgaben", r);
     toast("🏆 Alle drei Tagesaufgaben! Bonus +" + money(r), "ok");
     if (typeof luckyDailySet === "function") luckyDailySet();

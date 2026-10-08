@@ -251,7 +251,7 @@ function submitCustoms(timeout) {
     if (mist === 0) {
       C.green++;
       job.order.pay = Math.round(job.order.pay * 1.04);
-      S.xp += 20 + 10 * S.stage;
+      addXP(20 + 10 * S.stage);
       if (typeof repAdd === "function" && typeof regionOf === "function") repAdd(regionOf(job.order), 1);
     }
   }

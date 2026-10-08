@@ -16,9 +16,10 @@ const ORIGINS = [
   { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"], hidden: true,
     text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." },
   { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 500, gifts: ["v-bullitt", "v-simson"],
-    text: "Opa Hinrich hat dir seinen Obsthof bei Werder (Havel) vererbt – mit Feldern, Apfelbäumen, Hühnern, Backofen, einem Lastenrad und seiner alten Simson." },
-  { id: "fisch", name: "Fischerei-Erbe", farm: "fisch", icon: "🐟", cash: 500, gifts: ["v-bullitt", "v-simson"],
-    text: "Tante Gesche hat dir ihre Fischerei in Warnemünde vererbt – mit Kutter, Reusen, Muschelleinen, Netzgehege, Räucherei, einem Lastenrad und ihrer alten Simson. Aus den Perlen machst du später Schmuck." }
+    text: "Opa Hinrich hat dir seinen Hof bei Werder (Havel) vererbt – klein und etwas heruntergekommen, mit Feldern, Apfelbäumen, Hühnern, Backofen, einer alten Axt, einem Lastenrad und seiner Simson. Hinterm Zaun warten der Wald, ein altes Sägewerk und der Glindower See." },
+  /* frühere Ostsee-Fischerei: nur noch für alte Spielstände (werden zum Hof) */
+  { id: "fisch", name: "Fischerei-Erbe", farm: "hof", icon: "🐟", cash: 500, gifts: ["v-bullitt", "v-simson"], hidden: true,
+    text: "Die frühere Ostsee-Fischerei – heute ist daraus Opas Hof geworden." }
 ];
 const ORIGIN_DEFAULT = 3;
 /* Geschenkfahrzeuge als „2× 🚲 Larry vs Harry Bullitt“ */
@@ -101,10 +102,11 @@ function renderIntro() {
       <div class="intro-card">
         <div class="intro-h">Ein Brief vom Notar</div>
         <div class="intro-p">
-          Du hast geerbt! Ein Obsthof an der Havel oder eine Fischerei an der Ostsee –
-          daraus wird Stück für Stück ein Betrieb: erst ernten oder fischen und
-          in der Gegend ausliefern, später eine Spedition, die Waren um die ganze
-          Welt bringt. Zuerst brauchst du ein Gesicht und einen Namen für deinen Betrieb.
+          Du hast geerbt! Opas kleinen Hof an der Havel – daraus wird Stück für
+          Stück ein ganzes Reich: Felder und Tiere, ein eigener Wald, ein altes
+          Sägewerk und eine Fischerei am See. Und wenn alles läuft, eine Spedition,
+          die Waren um die ganze Welt bringt. Zuerst brauchst du ein Gesicht und
+          einen Namen für deinen Betrieb.
         </div>
       </div>
       <div class="intro-card greet">

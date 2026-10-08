@@ -1,286 +1,159 @@
 /* =========================================================================
    LOGISTIKA – fishdata.js
-   Das zweite Erbe: Tante Gesches Fischerei in Warnemünde. Kutter mit
-   Fangfahrten, Reusen für Krabben und Garnelen, Muschelleinen (mit Perlen),
-   ein Netzgehege für Forellen, Fischhalle, Räucherei, Futterküche,
-   Fischbude und eine Schmiede für Perlenschmuck. Kundschaft an der Küste
-   zwischen Kühlungsborn und Graal-Müritz, Tante Gesches Logbuch in drei
-   Kapiteln. Preise: Direktvermarktung an der Ostseeküste, Stand 2026.
+   Die Fischerei am Glindower See – die dritte große Phase des Erbes.
+   Erst ein Steg, dann Fischerhütte, Bootshaus, Fischlager, Räucherei,
+   Kühlhaus und Fischmarkt; jedes Gebäude braucht Holz aus dem eigenen
+   Sägewerk. Gefischt wird mit der Angel vom Steg oder vom Boot aus an
+   sechs Stellen im See – welche Fische beißen, hängt von Tageszeit und
+   Wetter ab. Verarbeitung: ausnehmen, filetieren, räuchern, veredeln.
+   (Die frühere Ostsee-Fischerei gibt es nicht mehr; alte Spielstände
+   werden beim Laden in einen Hof umgewandelt, siehe farm.js.)
    ========================================================================= */
 
-Object.assign(FITEMS, {
-  /* frischer Fang (Kühlhaus) */
-  hering:          { n: "Hering",            i: "🐟", k: "fang",  a: 2,   u: "kg", pk: "Kiste",     v: 7,    kg: 2,    xp: 2,  st: "kuehl" },
-  dorsch:          { n: "Dorsch",            i: "🐡", k: "fang",  a: 2,   u: "kg", pk: "Kiste",     v: 24,   kg: 2,    xp: 5,  st: "kuehl" },
-  forelle:         { n: "Forellen",          i: "🐠", k: "fang",  a: 4,   u: "",   pk: "Kiste",     v: 18,   kg: 1.4,  xp: 3,  st: "kuehl", sg: "Forelle" },
-  krabbe:          { n: "Krabben",           i: "🦀", k: "fang",  a: 1,   u: "kg", pk: "Kiste",     v: 9,    kg: 1,    xp: 3,  st: "kuehl" },
-  garnele:         { n: "Garnelen",          i: "🦐", k: "fang",  a: 0.5, u: "kg", pk: "Schale",    v: 10,   kg: 0.5,  xp: 4,  st: "kuehl" },
-  muschel:         { n: "Miesmuscheln",      i: "🐚", k: "fang",  a: 2,   u: "kg", pk: "Netz",      v: 9,    kg: 2,    xp: 2,  st: "kuehl" },
-  /* verarbeitet (Kühlhaus) */
-  heringsfilet:    { n: "Heringsfilet",      i: "🍣", k: "filet", a: 1,   u: "kg", pk: "Schale",    v: 10,   kg: 1,    xp: 4,  st: "kuehl" },
-  dorschfilet:     { n: "Dorschfilet",       i: "🍥", k: "filet", a: 1,   u: "kg", pk: "Schale",    v: 28,   kg: 1,    xp: 7,  st: "kuehl" },
-  buckling:        { n: "Bücklinge",         i: "🎏", k: "smoke", a: 4,   u: "",   pk: "4er-Pack",  v: 9,    kg: 1,    xp: 5,  st: "kuehl", sg: "Bückling" },
-  raeucherforelle: { n: "Räucherforellen",   i: "🍢", k: "smoke", a: 1,   u: "",   pk: "Stück",     v: 6.5,  kg: 0.3,  xp: 4,  st: "kuehl", sg: "Räucherforelle" },
-  fischbroetchen:  { n: "Fischbrötchen",     i: "🥪", k: "deli",  a: 6,   u: "",   pk: "Tablett",   v: 27,   kg: 1,    xp: 10, st: "kuehl", sg: "Fischbrötchen" },
-  backfisch:       { n: "Backfischbrötchen", i: "🍤", k: "deli",  a: 6,   u: "",   pk: "Tablett",   v: 36,   kg: 1.2,  xp: 14, st: "kuehl", sg: "Backfischbrötchen" },
-  krabbenbroetchen:{ n: "Krabbenbrötchen",   i: "🥙", k: "deli",  a: 6,   u: "",   pk: "Tablett",   v: 45,   kg: 1,    xp: 16, st: "kuehl", sg: "Krabbenbrötchen" },
-  fischsuppe:      { n: "Fischsuppe",        i: "🍲", k: "deli",  a: 0.5, u: "l",  pk: "Glas",      v: 9,    kg: 0.6,  xp: 6,  st: "kuehl" },
-  /* Speicher: Köder, Futter, Einkauf, Perlen, Schmuck */
-  abfall:          { n: "Fischabfälle",      i: "🦴", k: "waste", a: 1,   u: "kg", pk: "Eimer",     v: 0.4,  kg: 1,    xp: 0,  st: "speicher" },
-  koeder:          { n: "Köder",             i: "🪱", k: "feed",  a: 0.5, u: "kg", pk: "Beutel",    v: 1.5,  kg: 0.5,  xp: 1,  st: "speicher" },
-  fischfutter:     { n: "Fischfutter",       i: "🫘", k: "feed",  a: 2,   u: "kg", pk: "Eimer",     v: 3,    kg: 2,    xp: 1,  st: "speicher" },
-  broetchen:       { n: "Brötchen",          i: "🥖", k: "buy",   a: 6,   u: "",   pk: "6er-Tüte",  v: 2.4,  kg: 0.4,  xp: 0,  st: "speicher", sg: "Brötchen" },
-  silber:          { n: "Silberdraht",       i: "⛓️", k: "buy",   a: 10,  u: "g",  pk: "Rolle",     v: 11,   kg: 0.01, xp: 0,  st: "speicher" },
-  perle:           { n: "Perlen",            i: "🦪", k: "pearl", a: 1,   u: "",   pk: "Stück",     v: 12,   kg: 0.002, xp: 6, st: "speicher", sg: "Perle" },
-  perlring:        { n: "Perlenringe",       i: "💍", k: "jewel", a: 1,   u: "",   pk: "Etui",      v: 65,   kg: 0.05, xp: 20, st: "speicher", sg: "Perlenring" },
-  perlkette:       { n: "Perlenketten",      i: "📿", k: "jewel", a: 1,   u: "",   pk: "Etui",      v: 240,  kg: 0.08, xp: 45, st: "speicher", sg: "Perlenkette" },
-  diadem:          { n: "Perlendiademe",     i: "👑", k: "jewel", a: 1,   u: "",   pk: "Schatulle", v: 520,  kg: 0.2,  xp: 80, st: "speicher", sg: "Perlendiadem" }
+/* ------------------------------- Fische ---------------------------------
+   Je Fisch: kg, Preis (€, Direktvermarktung Havelland 2026), fight =
+   wie stark er beim Drillen zieht (0 … 1). */
+const FFISH = {
+  barsch:  { n: "Barsche",      sg: "Barsch",      i: "🐟", kg: 0.4, v: 4,   xp: 4,  fight: 0.30 },
+  forelle: { n: "Forellen",     sg: "Forelle",     i: "🐠", kg: 0.6, v: 7,   xp: 5,  fight: 0.45 },
+  karpfen: { n: "Karpfen",      sg: "Karpfen",     i: "🎏", kg: 2.5, v: 13,  xp: 8,  fight: 0.55 },
+  hecht:   { n: "Hechte",       sg: "Hecht",       i: "🦈", kg: 3.5, v: 20,  xp: 12, fight: 0.75 },
+  zander:  { n: "Zander",       sg: "Zander",      i: "🐡", kg: 2.0, v: 26,  xp: 14, fight: 0.60 },
+  aal:     { n: "Aale",         sg: "Aal",         i: "🐍", kg: 1.0, v: 30,  xp: 16, fight: 0.70 },
+  wels:    { n: "Welse",        sg: "Wels",        i: "🐋", kg: 9.0, v: 45,  xp: 25, fight: 0.95 },
+  schleie: { n: "Gold-Schleien", sg: "Gold-Schleie", i: "🏆", kg: 1.4, v: 150, xp: 60, fight: 0.50 }
+};
+Object.keys(FFISH).forEach(id => {
+  const f = FFISH[id];
+  FITEMS[id] = { n: f.n, sg: f.sg, i: f.i, k: "fisch", a: 1, u: "", pk: "Stück", v: f.v, kg: f.kg, xp: f.xp, st: "fisch" };
 });
-
-/* Reusen: was man mit Köder fangen kann (wie Saat auf dem Feld) */
-const FPOTS = {
-  krabbe:  { n: "Krabben",  t: 90,  lv: 1, yield: 2 },
-  garnele: { n: "Garnelen", t: 150, lv: 3, yield: 2 }
-};
-/* Muschelleinen (wie Obstbäume): yield je Ernte, pearl = Chance auf eine Perle */
-const FLINES = {
-  miesmuschel: { n: "Miesmuschel-Leine", i: "🐚", out: "muschel", t: 360, yield: 3, price: 40,  lv: 1, pearl: 0.25 },
-  perlmuschel: { n: "Perlmuschel-Leine", i: "🦪", out: "perle",   t: 480, yield: 2, price: 160, lv: 4, extra: { muschel: 1 } }
-};
-
-/* Netzgehege: Forellen schwärmen in Gruppen à 50 Fische */
-FANIMALS.forelle = { n: "Forellenschwarm", pl: "Forellenschwärme", i: "🐠", out: "forelle", feed: "fischfutter", t: 150, price: 45, step: 10, lv: 1,
-  space: 25, house: "netz", max: 8, unit: "m³", act: "abfischen", fish: true };
-FPENS.netz = [{ w: 4, d: 4, m2: 100 }, { w: 5, d: 5, m2: 160 }, { w: 6, d: 6, m2: 240 }, { w: 7, d: 7, m2: 340 }];
-FPEN_COST.netz = [0, 180, 380, 700];
-FPEN_META.netz = { n: "Netzgehege", i: "🕸️", area: "Gehege", val: 4000 };
-/* Haltung im Wasser: Platz je Schwarm in m³ */
+Object.assign(FITEMS, {
+  abfall:          { n: "Fischabfälle",       i: "🦴", k: "waste", a: 1,  u: "kg", pk: "Eimer",    v: 0.3, kg: 1,   xp: 0,  st: "fisch" },
+  koeder:          { n: "Köder",              sg: "Köder", i: "🪱", k: "bait", a: 1, u: "", pk: "Dose", v: 0.4, kg: 0.1, xp: 0, st: "fisch" },
+  barschfilet:     { n: "Barschfilets",       sg: "Barschfilet", i: "🍣", k: "filet", a: 2, u: "", pk: "Schale", v: 7, kg: 0.4, xp: 6, st: "fisch" },
+  forellenfilet:   { n: "Forellenfilets",     sg: "Forellenfilet", i: "🍥", k: "filet", a: 2, u: "", pk: "Schale", v: 9, kg: 0.4, xp: 6, st: "fisch" },
+  karpfenblau:     { n: "Karpfen blau",       i: "🍽️", k: "filet", a: 1,  u: "",   pk: "Stück",    v: 18,  kg: 2,   xp: 9,  st: "fisch", sg: "Karpfen blau" },
+  zanderfilet:     { n: "Zanderfilets",       sg: "Zanderfilet", i: "🍱", k: "filet", a: 2, u: "", pk: "Schale", v: 32, kg: 0.6, xp: 16, st: "fisch" },
+  raeucherforelle: { n: "Räucherforellen",    sg: "Räucherforelle", i: "🍢", k: "smoke", a: 1, u: "", pk: "Stück", v: 11, kg: 0.4, xp: 8, st: "fisch" },
+  raeucheraal:     { n: "Räucheraal",         i: "🍤", k: "smoke", a: 0.5, u: "kg", pk: "Stück",   v: 42,  kg: 0.5, xp: 20, st: "fisch" },
+  fischplatte:     { n: "Räucherfisch-Platten", sg: "Räucherfisch-Platte", i: "🥗", k: "smoke", a: 1, u: "", pk: "Platte", v: 28, kg: 1, xp: 14, st: "fisch" },
+  konserve:        { n: "Fischkonserven",     sg: "Fischkonserve", i: "🥫", k: "deli", a: 1, u: "", pk: "Dose", v: 4.5, kg: 0.3, xp: 5, st: "fisch" },
+  fischkiste:      { n: "Frischfischkisten",  sg: "Frischfischkiste", i: "🧊", k: "deli", a: 1, u: "", pk: "Kiste", v: 26, kg: 6, xp: 10, st: "fisch" },
+  edelbox:         { n: "Edelfisch-Boxen",    sg: "Edelfisch-Box", i: "🎁", k: "deli", a: 1, u: "", pk: "Box", v: 120, kg: 3, xp: 40, st: "fisch" },
+  hechtkloesse:    { n: "Hechtklößchen",      i: "🥟", k: "deli", a: 6,  u: "",   pk: "6er-Schale", v: 7, kg: 0.5, xp: 7, st: "fisch", sg: "Hechtklößchen" },
+  fischbroetchen:  { n: "Fischbrötchen",      sg: "Fischbrötchen", i: "🥪", k: "deli", a: 1, u: "", pk: "Stück", v: 4, kg: 0.2, xp: 4, st: "fisch" }
+});
+/* frühere Ostsee-Tabellen gibt es nicht mehr – leer, damit nichts bricht */
+const FPOTS = {};
+const FLINES = {};
 const FKEEP_FISH = ["Bio-Aquakultur", "viel Raum", "artgerecht", "eng", "zu dicht"];
 
+/* Lager für Fisch: erst eine Kühlkiste in der Hütte, Fischlager und
+   Kühlhaus legen ordentlich drauf */
+FSTORE.fisch = { n: "Kühlkiste", i: "🧊", the: "Die Kühlkiste", base: 24, step: 16, cost: [150, 350, 700, 1200, 1900, 2800],
+  empty: "Leer. Angle vom Steg oder fahr mit dem Boot raus – der Fang kommt hierher." };
+const FFISH_STORE_BONUS = { f_lager: 40, f_kuehl: 60 };
+
+/* ------------------------------ Gebäude ---------------------------------
+   Werden an festen Plätzen am Ufer gebaut: Holz aus dem Sägewerk + Geld,
+   dazu ein kurzes Bau-Minispiel. x/z = Weltmitte, sz = Kacheln. */
+const FFISHERY = {
+  f_steg:   { n: "Steg",         i: "🪵", lv: 15, x: 8,   z: 28.5, sz: [2, 6], need: { bretter: 6, pfosten: 4 },              cost: 150,
+              d: "Ein Holzsteg ins Wasser: hier angelst du, hier legen später die Boote an." },
+  f_huette: { n: "Fischerhütte", i: "🛖", lv: 16, x: 0,   z: 24,   sz: [4, 3], need: { balken: 4, bretter: 6, platten: 2 },   cost: 400,
+              d: "Ausnehmen, filetieren, Köder aus Fischabfällen. Mit Kühlkiste für den Fang." },
+  f_boot:   { n: "Bootshaus",    i: "⛵", lv: 16, x: 18,  z: 27.5, sz: [5, 5], need: { balken: 6, bretter: 8, dielen: 2 },    cost: 900,
+              d: "Mit Ruderboot: raus auf den See zu den besten Stellen." },
+  f_lager:  { n: "Fischlager",   i: "🧊", lv: 17, x: -8,  z: 24,   sz: [4, 3], need: { balken: 4, platten: 4, kisten: 4 },    cost: 700,
+              d: "+40 Plätze für Fisch. Konservenküche und Frischfischkisten." },
+  f_rauch:  { n: "Räucherei",    i: "🔥", lv: 17, x: 27,  z: 24.5, sz: [3, 3], need: { bretter: 4, balken: 2, bohlen: 2 },    cost: 600,
+              d: "Räuchert mit Brennholz aus dem Sägewerk: Räucherforelle, Räucheraal, Fischplatten." },
+  f_kuehl:  { n: "Kühlhaus",     i: "❄️", lv: 18, x: -16, z: 25,   sz: [4, 4], need: { platten: 6, bauholz: 2, tueren: 1 },   cost: 2200,
+              d: "+60 Plätze. Edelfisch-Boxen und Hechtklößchen für die feinen Restaurants." },
+  f_markt:  { n: "Fischmarkt",   i: "🏪", lv: 19, x: 35,  z: 23.5, sz: [5, 3], need: { bauholz: 4, dielen: 4, zaun: 2 },      cost: 1800,
+              d: "Verkaufsstand direkt am See: Fisch bringt hier 15 % mehr. Dazu Fischbrötchen." }
+};
+const FFISHERY_ORDER = ["f_steg", "f_huette", "f_boot", "f_lager", "f_rauch", "f_kuehl", "f_markt"];
+Object.keys(FFISHERY).forEach(t => { FSIZE[t] = FFISHERY[t].sz; FFIXED.add(t); });
+FSIZE.f_plot = [3, 3];
+FFIXED.add("f_plot");
+Object.assign(FBUILD_VAL, { f_steg: 800, f_huette: 2500, f_boot: 5000, f_lager: 3500, f_rauch: 3000, f_kuehl: 9000, f_markt: 7000 });
+
 Object.assign(FMACHINES, {
-  kutter: { n: "Kutter „Hertha“", i: "🛥️", trips: true, recipes: [
-    { id: "hering",  in: {},            cost: 8,  out: 4, t: 60,  lv: 1, luck: 0.3,  tq: 0.2, trip: "Heringe vor Warnemünde" },
-    { id: "dorsch",  in: { koeder: 1 }, cost: 14, out: 3, t: 120, lv: 2, luck: 0.25, trip: "Dorsch an der Kadetrinne" },
-    { id: "garnele", in: {},            cost: 12, out: 4, t: 100, lv: 3, luck: 0.3,  trip: "Garnelen mit der Kurre" }
+  f_huette: { n: "Fischerhütte", i: "🛖", fish: true, recipes: [
+    { id: "barschfilet",   in: { barsch: 3 },  out: 2, t: 20, lv: 16, by: { abfall: 1 } },
+    { id: "forellenfilet", in: { forelle: 2 }, out: 2, t: 25, lv: 16, by: { abfall: 1 } },
+    { id: "karpfenblau",   in: { karpfen: 1 }, out: 1, t: 30, lv: 16, by: { abfall: 1 } },
+    { id: "koeder",        in: { abfall: 1 },  out: 5, t: 10, lv: 16 },
+    { id: "zanderfilet",   in: { zander: 1 },  out: 1, t: 30, lv: 18, by: { abfall: 1 } }
   ] },
-  fishhalle: { n: "Fischhalle", i: "🔪", recipes: [
-    { id: "heringsfilet", in: { hering: 1 },  out: 1, t: 20, lv: 1, by: { abfall: 1 } },
-    { id: "dorschfilet",  in: { dorsch: 1 },  out: 1, t: 30, lv: 2, by: { abfall: 1 } },
-    { id: "perle",        in: { muschel: 2 }, out: 1, t: 45, lv: 3, note: "Muscheln öffnen" }
+  f_rauch: { n: "Räucherei", i: "🔥", fish: true, recipes: [
+    { id: "raeucherforelle", in: { forelle: 1, brennholz: 1 },        out: 2, t: 60, lv: 17 },
+    { id: "raeucheraal",     in: { aal: 1, brennholz: 1 },            out: 2, t: 90, lv: 18 },
+    { id: "fischplatte",     in: { raeucherforelle: 1, barschfilet: 1 }, out: 1, t: 40, lv: 18 }
   ] },
-  smoke: { n: "Räucherei", i: "🔥", recipes: [
-    { id: "buckling",        in: { hering: 1 },  out: 2, t: 60, lv: 1, tq: 6 },
-    { id: "raeucherforelle", in: { forelle: 1 }, out: 4, t: 90, lv: 2 }
+  f_lager: { n: "Fischlager", i: "🧊", fish: true, recipes: [
+    { id: "konserve",   in: { barsch: 2, tomate: 1 },      out: 4, t: 45, lv: 17 },
+    { id: "fischkiste", in: { barschfilet: 2, kisten: 1 }, out: 1, t: 20, lv: 17 }
   ] },
-  feedk: { n: "Futterküche", i: "🪣", recipes: [
-    { id: "koeder",      in: { abfall: 1 }, out: 2, t: 15, lv: 1 },
-    { id: "fischfutter", in: { hering: 1 }, out: 2, t: 25, lv: 1 }
+  f_kuehl: { n: "Kühlhaus", i: "❄️", fish: true, recipes: [
+    { id: "hechtkloesse", in: { hecht: 1, ei: 1, brot: 1 },               out: 3, t: 50, lv: 18 },
+    { id: "edelbox",      in: { zanderfilet: 1, raeucheraal: 1, kisten: 1 }, out: 1, t: 60, lv: 18 }
   ] },
-  deli: { n: "Fischbude", i: "🥪", recipes: [
-    { id: "fischbroetchen",   in: { heringsfilet: 1, broetchen: 1 },             out: 1, t: 25, lv: 2 },
-    { id: "backfisch",        in: { dorschfilet: 1, broetchen: 1 },              out: 1, t: 35, lv: 3 },
-    { id: "krabbenbroetchen", in: { garnele: 2, broetchen: 1 },                  out: 1, t: 30, lv: 4 },
-    { id: "fischsuppe",       in: { dorschfilet: 1, muschel: 1, garnele: 1 },    out: 6, t: 90, lv: 5 }
-  ] },
-  smith: { n: "Schmiede", i: "⚒️", recipes: [
-    { id: "perlring",  in: { perle: 1, silber: 1 },  out: 1, t: 60,  lv: 4 },
-    { id: "perlkette", in: { perle: 6, silber: 2 },  out: 1, t: 180, lv: 5 },
-    { id: "diadem",    in: { perle: 10, silber: 4 }, out: 1, t: 300, lv: 6 }
+  f_markt: { n: "Fischmarkt", i: "🏪", fish: true, recipes: [
+    { id: "fischbroetchen", in: { barschfilet: 1, brot: 1 }, out: 4, t: 15, lv: 19 }
   ] }
 });
-Object.assign(FBUILD_VAL, { deli: 5000, smith: 9000 });
 
-Object.assign(FSTORE, {
-  kuehl:    { n: "Kühlhaus",    i: "🧊", the: "Das Kühlhaus",    base: 50, step: 30, cost: [90, 220, 450, 850, 1350, 2200],
-              empty: "Leer. Fang, Filets, Räucherfisch und alles aus der Fischbude kommt hierher." },
-  speicher: { n: "Netzspeicher", i: "🪢", the: "Der Netzspeicher", base: 40, step: 30, cost: [80, 200, 400, 750, 1200, 2000],
-              empty: "Leer. Köder, Fischfutter, Brötchen, Silber, Perlen und Schmuck lagern hier." }
-});
-
-Object.assign(FSIZE, {
-  kuehl: [4, 3], speicher: [4, 3], fishhalle: [4, 3], smoke: [3, 3], feedk: [2, 2], deli: [3, 3], smith: [3, 3],
-  kutter: [4, 7], steg: [1, 5], pot: [2, 2], mline: [2, 2]
-});
-FFIXED.add("kutter"); FFIXED.add("steg");
-
-Object.assign(FDECO, {
-  anker:       { n: "Anker",          i: "⚓", price: 12, lv: 1, sz: [1, 1], s: "fisch" },
-  fischkisten: { n: "Fischkisten",    i: "📦", price: 5,  lv: 1, sz: [1, 1], s: "fisch" },
-  rettungsring:{ n: "Rettungsring",   i: "🛟", price: 8,  lv: 1, sz: [1, 1], s: "fisch" },
-  bojen:       { n: "Bojenstapel",    i: "🟠", price: 6,  lv: 1, sz: [1, 1], s: "fisch" },
-  strandhafer: { n: "Strandhafer",    i: "🌾", price: 4,  lv: 1, sz: [1, 1], s: "fisch" },
-  strandkorb:  { n: "Strandkorb",     i: "🏖️", price: 25, lv: 2, sz: [1, 1], s: "fisch" },
-  netzgestell: { n: "Netzgestell",    i: "🕸️", price: 15, lv: 2, sz: [2, 1], s: "fisch" },
-  moewenpfahl: { n: "Möwe auf Pfahl", i: "🐦", price: 9,  lv: 2, sz: [1, 1], s: "fisch" },
-  fahnenmast:  { n: "Fahnenmast",     i: "🚩", price: 14, lv: 3, sz: [1, 1], s: "fisch" },
-  leuchtboje:  { n: "Leuchtboje",     i: "🚨", price: 20, lv: 3, sz: [1, 1], s: "fisch", water: true },
-  jolle:       { n: "Jolle",          i: "⛵", price: 60, lv: 4, sz: [2, 2], s: "fisch", water: true }
-});
-
-const FSHOP_FISCH = [
-  { id: "pot",           cat: "wasser", n: "Reuse",             i: "🪤", lv: 1, price: o => 18 + 10 * Math.max(0, o - 4), max: lv => Math.min(16, 4 + lv * 2), d: "Mit Köder bestücken – fängt Krabben, ab Level 3 auch Garnelen." },
-  { id: "l-miesmuschel", cat: "wasser", n: "Miesmuschel-Leine", i: "🐚", lv: 1, line: "miesmuschel", d: "Muscheln wachsen am Seil – alle 6 Stunden 6 kg, manchmal mit Perle." },
-  { id: "l-perlmuschel", cat: "wasser", n: "Perlmuschel-Leine", i: "🦪", lv: 4, line: "perlmuschel", d: "Perlmuscheln: alle 8 Stunden zwei Perlen und ein Netz Muscheln." },
-  { id: "a-forelle",     cat: "tier",   n: "Forellenschwarm",   i: "🐠", lv: 1, animal: "forelle", d: "50 junge Regenbogenforellen fürs Netzgehege – fressen Fischfutter." },
-  { id: "deli",          cat: "bau",    n: "Fischbude",         i: "🥪", lv: 2, price: () => 450,  lim: () => 1, d: "Fischbrötchen, Backfisch, Krabbenbrötchen und Fischsuppe." },
-  { id: "smith",         cat: "bau",    n: "Schmiede",          i: "⚒️", lv: 4, price: () => 1200, lim: () => 1, d: "Silber und Perlen: Ringe, Ketten und ein Diadem." },
-  { id: "netz",          cat: "bau",    n: "Netzgehege",        i: "🕸️", lv: 5, price: () => 600,  lim: lv => lv >= 5 ? 2 : 1, d: "Zweites schwimmendes Gehege für bis zu 8 Schwärme." },
-  { id: "s-koeder",      cat: "kauf",   n: "Köder",             i: "🪱", lv: 1, item: "koeder",    qty: 2, price: () => 4,    d: "2 Beutel aus dem Angelladen. Selbst gemacht in der Futterküche ist es billiger." },
-  { id: "s-broetchen",   cat: "kauf",   n: "Brötchen",          i: "🥖", lv: 2, item: "broetchen", qty: 3, price: () => 7.2,  d: "18 Brötchen vom Bäcker am Kirchplatz – für die Fischbude." },
-  { id: "s-silber",      cat: "kauf",   n: "Silberdraht",       i: "⛓️", lv: 4, item: "silber",    qty: 1, price: () => 11,   d: "10 g Silberdraht vom Edelmetallhandel – für die Schmiede." }
+/* ------------------------------- Boote ---------------------------------- */
+const FBOATS = [
+  null,
+  { n: "Ruderboot", i: "🚣", speed: 3.2, lv: 16 },
+  { n: "Motorboot", i: "🚤", speed: 8,   lv: 19, price: 6500, need: { dielen: 4, bohlen: 2 } }
 ];
-const FSHOP_CATS_FISCH = [["wasser", "🌊 Reusen & Leinen"], ["tier", "🐠 Fische"], ["bau", "🏗️ Gebäude"], ["kauf", "🛍️ Einkauf"], ["deko", "⚓ Deko"]];
+const FBOAT_DOCK = [18, 31.5];
 
-const FUNLOCK_FISCH = {
-  2: ["🐡 Dorschfang mit dem Kutter", "🥪 Fischbude: Fischbrötchen", "🍥 Dorschfilet", "🍢 Räucherforelle", "🏖️ Deko: Strandkorb, Netzgestell"],
-  3: ["🦐 Garnelen: Kutter und Reusen", "🍤 Backfischbrötchen", "🦪 Perlen aus Muscheln (Fischhalle)", "🚨 Leuchtboje"],
-  4: ["⚒️ Schmiede: Perlenringe", "🦪 Perlmuschel-Leine", "🥙 Krabbenbrötchen", "⛵ Jolle"],
-  5: ["📿 Perlenkette", "🍲 Fischsuppe", "🕸️ zweites Netzgehege"],
-  6: ["👑 Perlendiadem"]
-};
-
-const FTOWNS_FISCH = {
-  "f-warne":    { lv: 1, w: 5, cust: [
-    ["Fischbude Am Strom",           ["hering", "buckling", "fischbroetchen", "backfisch", "krabbenbroetchen", "krabbe"]],
-    ["Hotel Seeblick",               ["dorschfilet", "heringsfilet", "muschel", "garnele", "raeucherforelle", "fischsuppe", "forelle"]],
-    ["Restaurant Leuchtfeuer",       ["dorsch", "forelle", "muschel", "krabbe", "garnele", "fischsuppe"]],
-    ["Juwelier Bernstein & Perle",   ["perle", "perlring", "perlkette", "diadem"]]] },
-  "f-markgraf": { lv: 1, w: 3, cust: [
-    ["Campingplatz-Kiosk Heide",     ["fischbroetchen", "buckling", "krabbe", "hering"]],
-    ["Waldhotel Rostocker Heide",    ["forelle", "raeucherforelle", "muschel", "dorschfilet"]]] },
-  "f-rostock":  { lv: 2, w: 4, cust: [
-    ["Fischmarkt Stadthafen",        ["hering", "dorsch", "forelle", "muschel", "krabbe", "garnele", "buckling"]],
-    ["Restaurant Hansekogge",        ["dorschfilet", "heringsfilet", "garnele", "muschel", "fischsuppe", "raeucherforelle"]],
-    ["Feinkost am Neuen Markt",      ["buckling", "raeucherforelle", "krabbenbroetchen", "fischsuppe", "perle"]],
-    ["Goldschmiede am Kröpeliner Tor", ["perlring", "perlkette", "diadem", "perle"]]] },
-  "f-doberan":  { lv: 2, w: 3, cust: [
-    ["Bahnhofscafé an der Molli",    ["fischbroetchen", "krabbenbroetchen", "buckling", "backfisch"]],
-    ["Gasthof am Münster",           ["forelle", "dorschfilet", "raeucherforelle", "fischsuppe"]]] },
-  "f-graal":    { lv: 3, w: 2, cust: [
-    ["Kurhaus-Café Graal",           ["raeucherforelle", "krabbenbroetchen", "fischsuppe", "fischbroetchen"]],
-    ["Strandkiosk Müritz",           ["fischbroetchen", "backfisch", "buckling"]]] },
-  "f-kuehl":    { lv: 3, w: 3, cust: [
-    ["Seebrücken-Imbiss",            ["fischbroetchen", "backfisch", "krabbenbroetchen", "buckling"]],
-    ["Restaurant Bootshafen",        ["dorsch", "muschel", "garnele", "fischsuppe", "dorschfilet"]],
-    ["Schmuck an der Strandpromenade", ["perlring", "perlkette"]]] },
-  "f-heilig":   { lv: 4, w: 2, cust: [
-    ["Grandhotel Weiße Stadt",       ["garnele", "dorschfilet", "raeucherforelle", "fischsuppe", "perlkette", "diadem"]]] },
-  "f-wismar":   { lv: 6, w: 1, cust: [
-    ["Fischmarkt Alter Hafen",       ["hering", "dorsch", "buckling", "forelle", "muschel"]],
-    ["Juwelier am Wismarer Markt",   ["perlkette", "diadem", "perlring"]]] }
-};
-const FTOWN_STREETS_FISCH = {
-  "f-warne":    [["Am Strom", 54.1782, 12.0893], ["Kirchenplatz", 54.1758, 12.0838], ["Mühlenstraße", 54.1772, 12.0852], ["Seestraße", 54.1806, 12.0838], ["Kurhausstraße", 54.1790, 12.0800]],
-  "f-markgraf": [["Budentannenweg", 54.1988, 12.1520], ["Dünenweg", 54.2008, 12.1488]],
-  "f-rostock":  [["Am Stadthafen", 54.0935, 12.1372], ["Kröpeliner Straße", 54.0890, 12.1338], ["Neuer Markt", 54.0887, 12.1405], ["Lange Straße", 54.0912, 12.1362]],
-  "f-doberan":  [["Mollistraße", 54.1062, 11.9101], ["Am Markt", 54.1085, 11.9068], ["Klosterstraße", 54.1098, 11.8995]],
-  "f-graal":    [["Rostocker Straße", 54.2532, 12.2418], ["Seestraße", 54.2575, 12.2352]],
-  "f-kuehl":    [["Ostseeallee", 54.1519, 11.7552], ["Strandstraße", 54.1508, 11.7418], ["Hafenstraße", 54.1527, 11.7383]],
-  "f-heilig":   [["Prof.-Dr.-Vogel-Straße", 54.1441, 11.8441], ["Seedeich", 54.1456, 11.8409]],
-  "f-wismar":   [["Am Alten Hafen", 53.8975, 11.4582], ["Am Markt", 53.8914, 11.4654]]
-};
-
-const FCHAPTERS_FISCH = [
-  { n: "Ankommen",       t: "Der erste Tag an Tante Gesches Kai",           r: { m: 50,  xp: 30 },
-    opa: "Die See gibt, was sie will – aber wer früh rausfährt, hat volle Kisten. Und vergiss die Reusen nicht, die Krabben warten nicht." },
-  { n: "Wachsen",        t: "Fischbrötchen, Dorsch und die ersten Stammkunden", r: { m: 100, xp: 60 },
-    opa: "Ein Fischbrötchen am Strom verkauft sich von allein. Aber nur, wenn der Hering frisch ist – nicht von gestern." },
-  { n: "Meisterbetrieb", t: "Perlen, Schmuck und die feinen Hotels",         r: { m: 250, xp: 100 },
-    opa: "In jeder hundertsten Muschel steckt ein kleines Wunder. Wer Geduld hat, macht daraus Schmuck, den man nicht vergisst." }
+/* ------------------------------ Angelplätze -------------------------------
+   boat: 0 = vom Steg, 1 = Ruderboot reicht, 2 = nur mit Motorboot.
+   fish = Gewicht beim Würfeln (dann noch × Tageszeit × Wetter). */
+const FGROUNDS = [
+  { id: "steg",  n: "Am Steg",        i: "🪵", x: 8,   z: 32.5, boat: 0, fish: { barsch: 50, forelle: 14, karpfen: 22, aal: 4, hecht: 4 } },
+  { id: "rosen", n: "Seerosenbucht",  i: "🪷", x: -9,  z: 40,   boat: 1, fish: { karpfen: 40, barsch: 28, hecht: 8, schleie: 1.2 } },
+  { id: "schilf", n: "Schilfgürtel",  i: "🌾", x: -15, z: 52,   boat: 1, fish: { hecht: 30, karpfen: 24, barsch: 18, aal: 6, schleie: 1.6 } },
+  { id: "stein", n: "Steinkante",     i: "🪨", x: 34,  z: 41,   boat: 1, fish: { barsch: 40, zander: 18, hecht: 12 } },
+  { id: "mitte", n: "Tiefe Mitte",    i: "🌊", x: 14,  z: 50,   boat: 2, fish: { zander: 30, barsch: 24, hecht: 10, wels: 7 } },
+  { id: "bach",  n: "Bachmündung",    i: "🏞️", x: 42,  z: 57,   boat: 2, fish: { forelle: 45, aal: 14, barsch: 14 } }
 ];
-const FQUESTS_FISCH = [
-  /* Kapitel 1 – Ankommen */
-  { c: 0, t: "Hol 6 Kisten Krabben aus den Reusen", ev: "harvest:krabbe",     n: 6, r: { m: 10, xp: 8 } },
-  { c: 0, t: "Fahr 2-mal zum Heringsfang",          ev: "trip:hering",        n: 2, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Räuchere 16 Bücklinge",               ev: "make:buckling",      n: 4, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Liefere 2 Bestellungen aus",          ev: "deliver",            n: 2, r: { m: 25, xp: 15 } },
-  { c: 0, t: "Füttere die Forellen 6-mal",          ev: "feed:fischfutter",   n: 6, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Fische 4 Kisten Forellen ab",         ev: "collect:forelle",    n: 4, r: { m: 20, xp: 12 } },
-  { c: 0, t: "Ernte 12 kg Miesmuscheln",            ev: "harvest:muschel",    n: 6, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Finde 2 Perlen in den Muscheln",      chk: () => (S.farm.stats.pearls || 0) >= 2, n: 1, r: { m: 20, xp: 12 } },
-  { c: 0, t: "Fang einen Fisch an der Angel",       ev: "angel",              n: 1, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Erreiche Level 2",                    ev: "level",              n: 2, r: { m: 20, xp: 0 } },
-  { c: 0, t: "Filetiere 4 kg Hering",               ev: "make:heringsfilet",  n: 4, r: { m: 15, xp: 10 } },
-  { c: 0, t: "Stell eine neue Reuse auf",           chk: () => fcount("pot") >= 5, n: 1, r: { m: 15, xp: 8 } },
-  /* Kapitel 2 – Wachsen */
-  { c: 1, t: "Bau die Fischbude",                   chk: () => fcount("deli") >= 1, n: 1, r: { m: 60, xp: 20 } },
-  { c: 1, t: "Kauf Brötchen beim Bäcker",           ev: "buy:broetchen",      n: 1, r: { m: 10, xp: 5 } },
-  { c: 1, t: "Mach 2 Tabletts Fischbrötchen",       ev: "make:fischbroetchen", n: 2, r: { m: 30, xp: 16 } },
-  { c: 1, t: "Fang 6 kg Dorsch",                    ev: "make:dorsch",        n: 3, r: { m: 30, xp: 16 } },
-  { c: 1, t: "Mach 8 kg Fischfutter",               ev: "make:fischfutter",   n: 4, r: { m: 15, xp: 10 } },
-  { c: 1, t: "Räuchere 8 Forellen",                 ev: "make:raeucherforelle", n: 8, r: { m: 30, xp: 16 } },
-  { c: 1, t: "Erreiche Level 3",                    ev: "level",              n: 3, r: { m: 30, xp: 0 } },
-  { c: 1, t: "Vergrößere das Netzgehege",           chk: () => S.farm.objs.some(o => o.t === "netz" && o.lvl >= 2), n: 1, r: { m: 50, xp: 20 } },
-  { c: 1, t: "Halte 4 Forellenschwärme",            chk: () => fanimals("netz") >= 4, n: 1, r: { m: 40, xp: 16 } },
-  { c: 1, t: "Liefere nach Rostock",                ev: "deliver:f-rostock",  n: 1, r: { m: 50, xp: 25 } },
-  { c: 1, t: "Liefere 8 Bestellungen aus",          ev: "deliver",            n: 8, r: { m: 60, xp: 30 } },
-  { c: 1, t: "Erreiche Level 4",                    ev: "level",              n: 4, r: { m: 60, xp: 0 } },
-  /* Kapitel 3 – Meisterbetrieb */
-  { c: 2, t: "Bau die Schmiede",                    chk: () => fcount("smith") >= 1, n: 1, r: { m: 100, xp: 30 } },
-  { c: 2, t: "Sammle 6 Perlen",                     ev: "pearl",              n: 6, r: { m: 40, xp: 20 } },
-  { c: 2, t: "Schmiede 2 Perlenringe",              ev: "make:perlring",      n: 2, r: { m: 60, xp: 25 } },
-  { c: 2, t: "Häng eine Perlmuschel-Leine aus",     chk: () => S.farm.objs.some(o => o.t === "mline" && o.kind === "perlmuschel"), n: 1, r: { m: 40, xp: 15 } },
-  { c: 2, t: "Hol 6 Schalen Garnelen aus den Reusen", ev: "harvest:garnele",  n: 6, r: { m: 40, xp: 20 } },
-  { c: 2, t: "Mach 2 Tabletts Krabbenbrötchen",     ev: "make:krabbenbroetchen", n: 2, r: { m: 50, xp: 22 } },
-  { c: 2, t: "Bau das Kühlhaus aus",                chk: () => (S.farm.cap.kuehl || 1) >= 2, n: 1, r: { m: 40, xp: 15 } },
-  { c: 2, t: "Erreiche 5 Sterne bei Forellen",      ev: "q5:forelle",         n: 1, r: { m: 80, xp: 30 } },
-  { c: 2, t: "Erreiche Level 5",                    ev: "level",              n: 5, r: { m: 80, xp: 0 } },
-  { c: 2, t: "Koche 3 l Fischsuppe",                ev: "make:fischsuppe",    n: 6, r: { m: 60, xp: 25 } },
-  { c: 2, t: "Fädle eine Perlenkette auf",          ev: "make:perlkette",     n: 1, r: { m: 100, xp: 35 } },
-  { c: 2, t: "Erreiche Level 6",                    ev: "level",              n: 6, r: { m: 100, xp: 0 } },
-  { c: 2, t: "Schmiede ein Perlendiadem",           ev: "make:diadem",        n: 1, r: { m: 150, xp: 50 } },
-  { c: 2, t: "Liefere 15 Bestellungen aus",         ev: "deliver",            n: 15, r: { m: 150, xp: 60 } }
-];
-
-/* Netzknoten an der Küste (Feld 10 = "fisch") */
-NODES.push(
-  ["f-hafen",    "Fischerei",        54.1788, 12.0878, "EUR", 1, "br", "city", "Fischerei",      "fisch"],
-  ["f-warne",    "Warnemünde",       54.1745, 12.0800, "EUR", 1, "br", "city", "Warnemünde",     "fisch"],
-  ["f-markgraf", "Markgrafenheide",  54.1995, 12.1530, "EUR", 1, "br", "city", "Markgrafenheide", "fisch"],
-  ["f-rostock",  "Rostock",          54.0887, 12.1405, "EUR", 1, "br", "city", "Rostock",        "fisch"],
-  ["f-doberan",  "Bad Doberan",      54.1066, 11.9089, "EUR", 1, "br", "city", "Bad Doberan",    "fisch"],
-  ["f-heilig",   "Heiligendamm",     54.1458, 11.8430, "EUR", 1, "br", "city", "Heiligendamm",   "fisch"],
-  ["f-kuehl",    "Kühlungsborn",     54.1505, 11.7460, "EUR", 1, "br", "city", "Kühlungsborn",   "fisch"],
-  ["f-graal",    "Graal-Müritz",     54.2550, 12.2390, "EUR", 1, "br", "city", "Graal-Müritz",   "fisch"],
-  ["f-wismar",   "Wismar",           53.8920, 11.4650, "EUR", 1, "br", "city", "Wismar",         "fisch"]
-);
-CARGO.fang = { name: "Fang & Feinkost", icon: "🐟", req: [], rate: 1.0, minStage: 99, minKg: 0.01, maxKg: 5000 };
-
-/* Wasser liegt auf den Kachelreihen 3 … 11 (Norden), an Land davor */
-const FISH_KAI = 12;
-const FPATH_FISCH = new Set();
-for (let i = 3; i < 29; i++) FPATH_FISCH.add(FISH_KAI * 32 + i);           /* Kai an der Wasserkante */
-for (let j = FISH_KAI + 1; j < 29; j++) { FPATH_FISCH.add(j * 32 + 20); FPATH_FISCH.add(j * 32 + 21); }  /* Weg vom Tor zum Kai */
-
-FSITES.fisch = {
-  kind: "fisch", node: "f-hafen", pt: [54.1788, 12.0878], view: { center: [54.150, 12.000], zoom: 11 },
-  cargo: "fang", stores: ["kuehl", "speicher"], base: 60000, near: null,
-  shop: FSHOP_FISCH, cats: FSHOP_CATS_FISCH, quests: FQUESTS_FISCH, chapters: FCHAPTERS_FISCH,
-  towns: FTOWNS_FISCH, streets: FTOWN_STREETS_FISCH, unlock: FUNLOCK_FISCH,
-  addr: "Am Strom 31", area: "Warnemünde",
-  path: FPATH_FISCH,
-  /* "w" = Wasser, "l" = Land */
-  zone: (x, z) => z < FISH_KAI ? "w" : "l",
-  T: {
-    place: "Fischerei", the: "die Fischerei", The: "Die Fischerei", at: "in der Fischerei", to: "in die Fischerei", of: "von der Fischerei", gen: "der Fischerei",
-    title: c => "Fischerei " + c, short: "Fischerei", pin: "⚓", tab: "Hafen", tabIcon: "⚓", ledger: "Fischerei",
-    hud: "Erbe · Fischerei Warnemünde", where: "Warnemünde", heir: "Erbe von Tante Gesche",
-    elder: "Tante Gesche", elderName: "Tante Gesche", book: "Gesches Logbuch", bookShort: "Logbuch", bookIcon: "📘",
-    letterHead: "Tante Gesches Brief",
-    letter: "Moin! Kutter, Räucherei, Reusen und Leinen gehören jetzt dir. Fahr raus, wenn die See ruhig ist, räuchere mit Buchenholz und geh sorgsam mit den Muscheln um – in manchen steckt ein Schatz. Lina fährt deine Ware aus, die kennt jede Fischbude zwischen Kühlungsborn und Graal-Müritz. Deine Tante Gesche",
-    doneHead: "Die Fischerei läuft!", doneSub: "Alles abgehakt – Tante Gesche wäre stolz.",
-    doneQuote: "Du hast alles geschafft, was in meinem Logbuch steht. Die Fischerei ist jetzt deine, ganz und gar. Und wenn dir die Küste zu klein wird: Lina kennt jede Straße bis nach Berlin.",
-    doneMsg: "Chef, Tante Gesches Logbuch ist abgehakt, die Fischerei läuft. Die Händler am Stadthafen fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. "
-      + "Wenn du willst, gründen wir eine richtige Spedition – die Fischerei läuft nebenher weiter. Tipp am Hafen auf „Spedition gründen“.",
-    bookHint: "Arbeite Tante Gesches Logbuch ab – drei Kapitel. Wenn die Fischerei läuft, kannst du eine Spedition gründen und auch für andere fahren.",
-    welcome: n => "⚓ Willkommen an der Küste, " + n + "!",
-    noOrders: "Gerade keine Bestellung. Neue kommen von allein – bald auch aus Rostock und Kühlungsborn.",
-    atHere: "an der Fischerei", vehNone: "Kein Fahrzeug an der Fischerei – es kommt zur Abholung angefahren.",
-    sellHead: "Fischerei verkaufen?", sold: "⚓ Fischerei verkauft für ",
-    sellText: "Für {p} gehen Kutter, Räucherei, Gehege und Lager an einen Fischer aus dem Ort. Fahrzeuge und Spedition bleiben. Das lässt sich nicht rückgängig machen.",
-    keepText: "Du kannst die Fischerei behalten und jederzeit über „Hafen“ besuchen – oder sie verkaufen und mit dem Geld die Spedition ausbauen. Ein Verkauf ist endgültig.",
-    valHead: "Wert der Fischerei heute", tour: "🎓 Rundgang mit Lina", tourMenu: "🎓 Rundgang an der Fischerei",
-    foundText: "Ab jetzt kommen auch fremde Aufträge: Pakete, Paletten, Express – erst an der Küste und in Berlin, später weltweit. Die Fischerei läuft weiter und liefert wie bisher. Lina zeigt dir, wie Aufträge laufen.",
-    notYet: "Erst die Spedition gründen – das geht, sobald Tante Gesches Logbuch abgehakt ist."
-  }
+/* Tageszeit: Morgen 5–9, Tag 9–17, Abend 17–21, Nacht 21–5 */
+const FFISH_TIME = {
+  barsch:  { tag: 1.3 },
+  forelle: { morgen: 2.0, abend: 1.3 },
+  karpfen: { tag: 1.4, abend: 1.2 },
+  hecht:   { tag: 1.3, morgen: 1.3 },
+  zander:  { abend: 2.2, nacht: 2.6, tag: 0.5 },
+  aal:     { nacht: 4.0, abend: 1.5, tag: 0.3 },
+  wels:    { nacht: 3.0, abend: 1.4, tag: 0.4 },
+  schleie: { morgen: 1.8 }
 };
+/* Wetter */
+const FWEATHER = {
+  sonne:  { n: "Sonne",    i: "☀️", w: 40 },
+  wolken: { n: "Bewölkt",  i: "⛅", w: 30 },
+  regen:  { n: "Regen",    i: "🌧️", w: 20 },
+  nebel:  { n: "Nebel",    i: "🌫️", w: 10 }
+};
+const FFISH_WX = {
+  karpfen: { sonne: 1.4 },
+  hecht:   { wolken: 1.6, regen: 1.2 },
+  zander:  { wolken: 1.5, nebel: 1.8 },
+  aal:     { regen: 2.2 },
+  wels:    { wolken: 1.3, regen: 1.3 },
+  schleie: { regen: 3.0, nebel: 1.5 },
+  forelle: { regen: 1.3 }
+};
+/* was manchmal statt eines Fisches am Haken hängt */
+const FJUNK_FISH = [
+  { junk: "einen alten Gummistiefel", i: "👢", w: 4 },
+  { junk: "ein Büschel Seegras", i: "🌿", w: 5 },
+  { junk: "eine Flaschenpost aus Potsdam", i: "🍾", w: 2, m: 5 }
+];
