@@ -411,36 +411,108 @@ const MG_GAMES = {
     }
   },
 
-  /* ---------------------------- Schatz graben ------------------------------- */
+  /* ---------------------------- Schatz graben -------------------------------
+     Querschnitt durch den Boden unter dem Kreuz: Die Kiste liegt ganz unten.
+     Gegraben wird von oben, immer neben schon offenen Löchern. Erde kostet
+     einen Spatenstich, Lehm und Wurzeln zwei, Steine drei, durch Fels geht
+     nichts. Wer den günstigsten Weg findet, bekommt mehr Münzen. */
   dig: {
+    W: 5, H: 5,
+    T: { erde: { hp: 1, n: "Erde" }, lehm: { hp: 2, n: "Lehm" }, wurzel: { hp: 2, n: "Wurzeln", i: "🌿" }, stein: { hp: 3, n: "Steine", i: "🪨" },
+         fels: { hp: 99, n: "Fels", i: "⛰️" }, kiste: { hp: 1, n: "Kiste", i: "🧰" } },
     start(st) {
-      st.at = Math.floor(Math.random() * 9); st.tries = 0; st.hp = Array(9).fill(2);
-      st.hint = [st.at, (st.at + 1 + Math.floor(Math.random() * 8)) % 9];
-      mgH("🗝️ Da liegt was!", "Wo die Federn liegen, kreisen die Vögel – grab dort");
-      this.draw(st);
-      mgMsg("Zweimal tippen, um ein Loch zu graben.");
-      mgBar("");
+      const G = MG_GAMES.dig;
+      for (let k = 0; k < 40; k++) {
+        G.make(st);
+        const o = G.best(st);
+        if (o && o.cost >= 6 && o.cost <= 12 && o.direct - o.cost >= 2) { st.opt = o.cost; st.path = o.path; break; }
+        if (o && k > 30) { st.opt = o.cost; st.path = o.path; break; }
+      }
+      st.used = 0; st.done = false;
+      mgH("🧰 Schatz ausgraben", "Die Kiste liegt unter dem Kreuz – grab dich mit möglichst wenigen Stichen hinunter");
+      G.draw(st);
+      mgMsg("Erde 1 Stich · Lehm und 🌿 Wurzeln 2 · 🪨 Steine 3 · durch ⛰️ Fels geht’s nicht. Gegraben wird nur neben offenen Löchern.");
+    },
+    make(st) {
+      const G = MG_GAMES.dig, W = G.W, H = G.H;
+      st.cx = 1 + Math.floor(Math.random() * 3);
+      st.cells = [];
+      for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+        let t;
+        if (r === H - 1 && c === st.cx) t = "kiste";
+        else {
+          const x = Math.random();
+          t = x < 0.4 ? "erde" : x < 0.6 ? "lehm" : x < 0.76 ? "wurzel" : x < 0.92 ? "stein" : "fels";
+          if (r === 0 && t === "fels") t = "lehm";
+          /* direkt unter dem Kreuz ist es oft steinig – außen herum lohnt sich */
+          if (c === st.cx && r > 0 && Math.random() < 0.55) t = Math.random() < 0.7 ? "stein" : "fels";
+        }
+        st.cells.push({ t, hp: G.T[t].hp, dug: false });
+      }
+    },
+    /* günstigster Weg von oben zur Kiste (und der Weg senkrecht hinunter zum Vergleich) */
+    best(st) {
+      const G = MG_GAMES.dig, W = G.W, H = G.H, N = W * H, cost = i => st.cells[i].t === "fels" ? Infinity : st.cells[i].hp;
+      const dist = Array(N).fill(Infinity), prev = Array(N).fill(-1), done = Array(N).fill(false);
+      for (let c = 0; c < W; c++) dist[c] = cost(c);
+      for (;;) {
+        let u = -1;
+        for (let i = 0; i < N; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+        if (u < 0) break;
+        done[u] = true;
+        const r = Math.floor(u / W), c = u % W;
+        [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([rr, cc]) => {
+          if (rr < 0 || rr >= H || cc < 0 || cc >= W) return;
+          const v = rr * W + cc, d = dist[u] + cost(v);
+          if (d < dist[v]) { dist[v] = d; prev[v] = u; }
+        });
+      }
+      const goal = (H - 1) * W + st.cx;
+      if (dist[goal] === Infinity) return null;
+      const path = [];
+      for (let v = goal; v >= 0; v = prev[v]) path.unshift(v);
+      let direct = 0;
+      for (let r = 0; r < H; r++) direct += cost(r * W + st.cx);
+      return { cost: dist[goal], path, direct };
+    },
+    open(st, i) {
+      const W = MG_GAMES.dig.W, r = Math.floor(i / W), c = i % W;
+      if (r === 0) return true;
+      return [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].some(([rr, cc]) => rr >= 0 && rr < MG_GAMES.dig.H && cc >= 0 && cc < W && st.cells[rr * W + cc].dug);
     },
     draw(st) {
-      mgStage(`<div class="mg-dig">${st.hp.map((h, i) => `<button class="mg-soil h${h}" data-i="${i}">${h > 0 ? (st.hint.includes(i) && h === 2 ? "🪶" : "") : i === st.at ? "🧰" : "🪨"}</button>`).join("")}</div>`);
-      $$("#mgStage [data-i]").forEach(b => b.onclick = () => this.dig(st, +b.dataset.i));
+      const G = MG_GAMES.dig, W = G.W;
+      const cells = st.cells.map((x, i) => {
+        const D = G.T[x.t], can = !x.dug && x.t !== "fels" && G.open(st, i), seen = x.t !== "kiste" || x.dug || can || st.done;
+        const ic = x.dug ? (x.t === "kiste" ? "🧰" : "") : seen ? (D.i || "") : "❔";
+        const cr = !x.dug && x.hp < D.hp ? " cr" + (D.hp - x.hp) : "";
+        return `<button class="mg-c t-${x.t}${x.dug ? " dug" : ""}${can ? " can" : ""}${cr}" data-i="${i}" aria-label="${D.n}">${ic}</button>`;
+      }).join("");
+      mgStage(`<div class="mg-pit"><div class="mg-grass">${Array.from({ length: W }, (_, c) => `<span>${c === st.cx ? `<b class="mg-x">✖</b>` : ""}</span>`).join("")}</div>
+        <div class="mg-cells">${cells}</div></div>`);
+      $$("#mgStage [data-i]").forEach(b => b.onclick = () => G.dig(st, +b.dataset.i));
+      mgBar(`<div class="mg-count">⛏️ Spatenstiche: <b>${st.used}</b></div>`);
     },
     dig(st, i) {
-      if (st.done || st.hp[i] <= 0) return;
-      st.hp[i]--; sfx("dig");
-      if (st.hp[i] === 0) {
-        st.tries++;
-        if (i === st.at || st.tries >= 4) {
-          st.done = true;
-          if (i !== st.at) { st.hp[st.at] = 0; mgMsg("Da! Gleich daneben – eine alte Kiste!", "ok"); }
-          else mgMsg("🧰 Eine alte Kiste – voller Münzen!", "ok");
-          this.draw(st);
-          setTimeout(() => MG.close({ ok: true }), 900);
-          return;
-        }
-        mgMsg("Nur Steine … weiter suchen.", "");
+      const G = MG_GAMES.dig, x = st.cells[i];
+      if (st.done || !x || x.dug) return;
+      if (x.t === "fels") { sfx("bad"); mgMsg("⛰️ Fels – da kommt kein Spaten durch. Außen herum!", "bad"); return; }
+      if (!G.open(st, i)) { sfx("bad"); mgMsg("Von oben her graben – nur neben einem schon offenen Loch.", "bad"); return; }
+      st.used++; x.hp--; sfx("dig");
+      if (FV && FV.R) FV.touchAt = performance.now();
+      if (x.hp <= 0) x.dug = true;
+      if (x.t === "kiste" && x.dug) {
+        st.done = true;
+        const score = clamp(st.opt / st.used, 0.35, 1), stars = score >= 0.95 ? 3 : score >= 0.75 ? 2 : 1;
+        st.score = score;
+        G.draw(st);
+        mgMsg(`🧰 Die Schatzkiste! ${st.used} Stiche${st.used <= st.opt ? " – besser geht’s nicht" : ", bestmöglich wären " + st.opt + " gewesen"} · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`, "ok");
+        sfx("collect");
+        setTimeout(() => MG.close({ ok: true, score }), 1300);
+        return;
       }
-      this.draw(st);
+      mgMsg(x.dug ? (x.t === "stein" ? "🪨 Die Steine sind raus." : x.t === "wurzel" ? "🌿 Wurzeln durchgestochen." : "Weiter …") : `${G.T[x.t].n}: noch ${x.hp}×`, "");
+      G.draw(st);
     }
   },
 

@@ -2505,11 +2505,25 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-slots span{width:64px;height:58px;border:2px dashed var(--ink);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;font-weight:800;background:#fff8}
 .mg-slots span small{font-size:8.5px}
 .mg-slots span.on{border-style:solid;background:#e9fff0}
-/* Graben */
-.mg-dig{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:250px;margin:0 auto}
-.mg-soil{height:44px;border:2.5px solid var(--ink);border-radius:10px;cursor:pointer;font-size:22px;background:#7fae45}
-.mg-soil.h1{background:#9a7a4a}
-.mg-soil.h0{background:#5a3e22}
+/* Schatz graben: Querschnitt durch den Boden */
+.mg-pit{max-width:300px;margin:0 auto;border:var(--line);border-radius:12px;overflow:hidden;background:#5a3e22}
+.mg-grass{display:grid;grid-template-columns:repeat(5,1fr);height:22px;background:linear-gradient(180deg,#9fd36a,#6fae3f);border-bottom:2px solid var(--ink)}
+.mg-grass span{display:grid;place-items:center}
+.mg-x{color:#d23a2a;font-size:19px;line-height:1;text-shadow:0 1px 0 #fff8}
+.mg-cells{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:3px}
+.mg-c{position:relative;height:46px;border:2px solid #2a1a0e;border-radius:8px;cursor:pointer;font-size:21px;font-family:var(--font);background:#9a6a3c;padding:0;color:#fff}
+.mg-c.t-lehm{background:#c08a4c}
+.mg-c.t-wurzel{background:#8a6036}
+.mg-c.t-stein{background:#9a8f84}
+.mg-c.t-fels{background:#5d6168;cursor:not-allowed}
+.mg-c.t-kiste{background:#a8743e}
+.mg-c.can{box-shadow:inset 0 0 0 3px #ffd23f}
+.mg-c.cr1{background-image:linear-gradient(135deg,transparent 46%,#0005 47% 53%,transparent 54%)}
+.mg-c.cr2{background-image:linear-gradient(135deg,transparent 46%,#0005 47% 53%,transparent 54%),linear-gradient(45deg,transparent 46%,#0005 47% 53%,transparent 54%)}
+.mg-c.dug{background:#2e1d10;border-color:#1c1108;cursor:default}
+.mg-c.dug.t-kiste{background:#ffd23f;border-color:var(--ink);animation:mgchest .5s ease-out}
+@keyframes mgchest{0%{transform:scale(.6)}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+.mg-count b{font-size:15px}
 /* Angeln */
 .mg-water{position:relative;height:84px;border:var(--line);border-radius:12px;overflow:hidden;
   background:linear-gradient(180deg,#8fd0ea,#3f8fc0);display:flex;align-items:center;justify-content:center}

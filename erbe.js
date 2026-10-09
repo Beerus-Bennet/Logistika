@@ -132,6 +132,10 @@ function erbeInit(F, fresh) {
   F.boat = F.boat || 0;
   F.staff = F.staff || [];
   F.ev = F.ev || { cur: null, next: S.time + 12 };
+  /* Schatzkisten: alle drei Tage (die erste kommt noch heute, wenn es nicht zu spät ist) */
+  F.tr = F.tr || { next: Math.floor(S.time / 1440), plan: 0, cur: null, found: 0, zone: null };
+  /* ältere Stände: das zufällige „Vögel kreisen“ gibt es nicht mehr – die Kiste kommt jetzt nach Plan */
+  if (F.ev.cur && F.ev.cur.k === "schatz") { F.ev.cur = null; F.ev.next = S.time + 10; F.tr.next = Math.min(F.tr.next, Math.floor(S.time / 1440)); }
   /* ältere Stände: der Händler blieb zehn Stunden – jetzt eine */
   if (F.ev.cur && FEVENTS[F.ev.cur.k] && F.ev.cur.until - F.ev.cur.t0 > FEVENTS[F.ev.cur.k].dur && F.ev.cur.k === "haendler") F.ev.cur.until = Math.min(F.ev.cur.until, Math.max(S.time + 5, F.ev.cur.t0 + FEVENTS.haendler.dur));
   F.clover = F.clover != null ? F.clover : 5;
@@ -706,7 +710,7 @@ function farmEvStart(k) {
     c.data.items = { [a]: 2 + Math.floor(Math.random() * 3), [b]: 1 + Math.floor(Math.random() * 2) };
   }
   if (k === "haendler") c.data.deals = farmTraderDeals();
-  if (k === "hirsch" || k === "schatz") {
+  if (k === "hirsch") {
     const cl = FWORLD.clearings.filter(q => (q[0] > -58 || q[1] > -58) || farmAreaOpen("altwald"));
     const q = pick(cl);
     c.data.x = q[0] + (Math.random() - 0.5) * 3; c.data.z = q[1] + (Math.random() - 0.5) * 3;
@@ -820,16 +824,6 @@ function farmEvReward(kind) {
     farmClover(1, "Lieferung"); farmXP(10);
     r = { item: g && g[0], n: g && g[1], clover: 1, xp: 10 }; c.until = S.time + 1;
   }
-  if (kind === "schatz" && c.k === "schatz" && !c.data.done) {
-    c.data.done = true;
-    const m = 50 + Math.floor(Math.random() * 150), cl = 1 + Math.floor(Math.random() * 4);
-    S.money += m; S.revenue += m; logMoney("farm", "Schatz im Wald", m);
-    farmClover(cl, "Schatz");
-    farmXP(30);
-    r = { m, clover: cl, xp: 30 };
-    if (Math.random() < 0.35 && farmRoom("edelholz") > 0) { farmAdd("edelholz", 1, 5); r.item = "edelholz"; r.n = 1; }
-    c.until = S.time + 1;
-  }
   return r;
 }
 function farmMushroom(i) {
@@ -843,6 +837,106 @@ function farmMushroom(i) {
   farmXP(3);
   if (c.data.spots.every(x => x.done)) c.until = S.time + 1;
   return { id: "pilze", n: 1, xp: 3 };
+}
+
+/* ------------------------------ Schatzkisten -----------------------------
+   Alle drei Spieltage liegt irgendwo im offenen Gelände eine Kiste
+   vergraben: ein Kreuz im Boden, darüber kreist ein Vogelschwarm. Sie ist
+   drei Stunden lang zu finden (Start zwischen 7 und 15 Uhr), dann ziehen
+   die Vögel weiter. Ausgraben ist ein Minispiel – drin sind Geld und ein
+   Kleeblatt. */
+const FTREASURE = { every: 3, dur: 180, from: 7, to: 15 };
+const FTREASURE_ZONES = [
+  { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [17.5, -14.5, 34, 14], at: [-1, 0] },
+  { id: "see",     area: "see",     n: "über dem Seeufer",            box: [-22, 23.5, 42, 33],     at: [12, 30] },
+  { id: "wald",    area: "wald",    n: "über einer Lichtung im Wald", clear: true,                  at: [-22, -44] },
+  { id: "altwald", area: "altwald", n: "über dem Alten Wald",         clear: true,                  at: [-66, -72] }
+];
+function farmTreasureCur() { const T = S.farm && S.farm.tr, c = T && T.cur; return c && S.time < c.until ? c : null; }
+/* Platz frei? Kein Wasser, kein Weg, kein Baum, kein Gebäude, kein Feld */
+function treasureSpotOk(x, z, area) {
+  const F = S.farm, P = FWORLD.pond, L = FWORLD.lake;
+  if (areaOfPoint(x, z) !== area) return false;
+  if (Math.abs(x) < 17 && Math.abs(z) < 17) return false;
+  if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
+  if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;
+  if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3) return false;
+  if (inYard(x, z, 2)) return false;
+  if (x > -37 && x < -21 && z > -13 && z < 5) return false;          /* Nachbars Feld im Westen */
+  if (x > 33.5 && x < 46.5 && z > -11 && z < 7) return false;        /* und im Osten */
+  if (F.trees.some(t => Math.hypot(t.x - x, t.z - z) < 2.4)) return false;
+  for (const o of F.objs) {
+    const [cx, cz] = farmCenter(o), [w, d] = farmSize(o);
+    if (Math.abs(cx - x) < w / 2 + 1.6 && Math.abs(cz - z) < d / 2 + 1.6) return false;
+  }
+  if (typeof FFISHERY !== "undefined") for (const k in FFISHERY) {
+    const f = FFISHERY[k];
+    if (Math.abs(f.x - x) < f.sz[0] / 2 + 2 && Math.abs(f.z - z) < f.sz[1] / 2 + 2) return false;
+  }
+  const c = F.ev && F.ev.cur;
+  if (c && c.data && c.data.x != null && Math.hypot(c.data.x - x, c.data.z - z) < 4) return false;
+  return true;
+}
+function farmTreasureSpot() {
+  const T = S.farm.tr;
+  let zones = FTREASURE_ZONES.filter(Z => !Z.area || farmAreaOpen(Z.area));
+  if (zones.length > 1 && T.zone) zones = zones.filter(Z => Z.id !== T.zone);      /* nicht zweimal am selben Ort */
+  while (zones.length) {
+    const Z = zones.splice(Math.floor(Math.random() * zones.length), 1)[0];
+    const cl = Z.clear ? FWORLD.clearings.filter(c => areaOfPoint(c[0], c[1]) === Z.area) : null;
+    for (let i = 0; i < 90; i++) {
+      let x, z;
+      /* Lichtung: in der hinteren (nordwestlichen) Hälfte – die Kamera schaut von Südosten, vorne verdecken die Randbäume das Kreuz */
+      if (cl) { const c = pick(cl), a = Math.PI * (0.9 + Math.random() * 0.7), r = Math.sqrt(Math.random()) * (c[2] - 1.2); x = c[0] + Math.cos(a) * r; z = c[1] + Math.sin(a) * r; }
+      else { const b = Z.box; x = b[0] + Math.random() * (b[2] - b[0]); z = b[1] + Math.random() * (b[3] - b[1]); }
+      if (treasureSpotOk(x, z, Z.area)) return { x: +x.toFixed(2), z: +z.toFixed(2), zone: Z.id };
+    }
+  }
+  return null;
+}
+/* Startzeit am Tag d: zufällig zwischen 7 und 15 Uhr */
+function farmTreasurePlan(d) { return d * 1440 + FTREASURE.from * 60 + Math.floor(Math.random() * (FTREASURE.to - FTREASURE.from) * 60); }
+function farmTreasureTick() {
+  const F = S.farm, T = F.tr;
+  if (!T || (F.tut && !F.tut.done)) return;
+  if (T.cur) {
+    if (S.time < T.cur.until) return;
+    const c = T.cur;
+    T.cur = null;
+    if (!c.done && typeof farmTreasureView === "function") farmTreasureView("gone", c);
+    else if (typeof farmTreasureView === "function") farmTreasureView("clear", c);
+    return;
+  }
+  const d = Math.floor(S.time / 1440);
+  if (d < T.next) return;
+  if (!T.plan || T.plan < d * 1440) {
+    let p = farmTreasurePlan(d);
+    if (S.time > d * 1440 + FTREASURE.to * 60) p = farmTreasurePlan(d + 1);          /* heute zu spät → morgen */
+    else if (p < S.time) p = S.time + 5 + Math.floor(Math.random() * 25);
+    T.plan = p;
+  }
+  if (S.time < T.plan) return;
+  const sp = farmTreasureSpot();
+  if (!sp) { T.plan = S.time + 30; return; }
+  T.cur = { t0: S.time, until: S.time + FTREASURE.dur, x: sp.x, z: sp.z, zone: sp.zone, done: false };
+  T.zone = sp.zone; T.plan = 0; T.next = d + FTREASURE.every;
+  if (typeof farmTreasureView === "function") farmTreasureView("start", T.cur);
+}
+/* Ausgegraben: Münzen (je nach Level, gut gegraben gibt mehr) und ein Kleeblatt */
+function farmTreasureDig(score) {
+  const F = S.farm, c = farmTreasureCur();
+  if (!c || c.done) return null;
+  c.done = true;
+  c.until = Math.min(c.until, S.time + 30);                                           /* das offene Loch bleibt noch kurz */
+  const k = 0.8 + Math.random() * 0.25 + clamp(score == null ? 0.6 : score, 0, 1) * 0.3;
+  const m = Math.max(50, Math.round((80 + flv() * 15) * k / 5) * 5);
+  S.money += m; S.revenue += m; F.stats.earned = (F.stats.earned || 0) + m;
+  logMoney("farm", "Schatzkiste", m);
+  farmClover(1, "Schatzkiste");
+  farmXP(20);
+  F.tr.found = (F.tr.found || 0) + 1;
+  F.stats.events++;
+  return { m, clover: 1, xp: 20 };
 }
 
 /* ------------------------- Kleeblätter & Kosmetik ------------------------- */
@@ -929,6 +1023,7 @@ function farmErbeTick(dt) {
   farmAreaCheck();
   farmWeather();
   farmEvTick();
+  farmTreasureTick();
   staffWork();
   stallTick(false, dt || 1);
   stallTick(true, dt || 1);

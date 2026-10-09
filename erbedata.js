@@ -293,7 +293,6 @@ const FEVENTS = {
   holzpreis: { n: "Holzpreise steigen",     i: "📈", area: "wald",  w: 7,  dur: 1800 },
   fischpreis:{ n: "Fischpreise steigen",    i: "📈", area: "see",   w: 7,  dur: 1800 },
   hirsch:    { n: "Ein weißer Hirsch",      i: "🦌", area: "wald",  w: 5,  dur: 90, win: [5, 21] },
-  schatz:    { n: "Vögel kreisen",          i: "🗝️", area: "wald",  w: 6,  dur: 600 },
   defekt:    { n: "Maschine klemmt",        i: "⚠️", area: "saege", w: 6,  dur: 99999, need: () => sawRepaired() },
   lieferung: { n: "Besondere Lieferung",    i: "📦", area: null,   w: 6,  dur: 900 },
   pilze:     { n: "Wildschweine im Wald",   i: "🍄", area: "wald",  w: 8,  dur: 1200 },

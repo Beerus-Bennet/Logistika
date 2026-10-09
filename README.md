@@ -218,8 +218,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Arbeit.
 * **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
   Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
-  weißer Hirsch (Glücksbringer), kreisende Vögel über einem Schatz
-  (Graben-Minispiel), klemmende Säge (Zahnräder richten), Paket am Tor,
+  weißer Hirsch (Glücksbringer), klemmende Säge (Zahnräder richten), Paket am Tor,
   Wildschweine mit Pilzen, Reh auf dem Weg (Reh und Hirsch nicht mitten in
   der Nacht).
 * **Wildtiere je nach Tageszeit** – tagsüber Rehe, Hasen, Eichhörnchen,
@@ -228,8 +227,17 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Augen leuchten, wie die der Füchse), Fledermäuse flattern um die Scheune
   und am Ufer. Jedes Tier zeigt sich nur eine Weile und zieht sich dann
   zurück – im Schnitt sind nur drei, vier gleichzeitig unterwegs. Antippen
-  scheucht sie auf (beim ersten Mal +1 EP). Kreisen über einem Schatz nachts
-  Vögel, sind es die Eulen.
+  scheucht sie auf (beim ersten Mal +1 EP).
+* **Schatzkisten** – alle drei Spieltage ist irgendwo im offenen Gelände eine
+  Kiste vergraben: auf der Wiese am Teich, am Seeufer, auf einer Lichtung im
+  Wald oder im Alten Wald (nur in freigeschalteten Gebieten, nie zweimal
+  hintereinander am selben Ort). Ein rotes Kreuz markiert die Stelle, darüber
+  kreist ein Vogelschwarm. Sie taucht zwischen 7 und 15 Uhr auf und bleibt
+  drei Stunden; die Leiste „🐦 Vogelschwarm“ verrät grob, wo. Kreuz antippen
+  und ausgraben: Im Querschnitt durch den Boden gräbt man sich von oben zur
+  Kiste – Erde kostet einen Spatenstich, Lehm und Wurzeln zwei, Steine drei,
+  durch Fels geht nichts. Wer den günstigsten Weg findet, bekommt mehr
+  Münzen. In der Kiste: Geld (je nach Level) und ein Kleeblatt.
 * **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
   **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
   günstig geht schnell, teuer dauert –, später kassieren.

@@ -10,7 +10,7 @@
    ========================================================================= */
 const WV = {
   trees: new Map(), falling: [], hofKey: "", hof: [], barriers: {}, npc: null, reveal: null,
-  wild: [], fly: [], pres: {}, pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {},
+  wild: [], fly: [], swarm: [], pres: {}, trKey: "", trNodes: [], pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {},
   gust: 0, hit: null, sawBlades: null, popTree: null
 };
 const WGRID = { x0: -160, z0: -160, x1: 104, z1: 104, chunk: 24, cell: 4 };
@@ -172,7 +172,7 @@ class WBuf {
 function worldStatic() {
   const R = FV.R;
   WV.trees.clear(); WV.falling = []; WV.hofKey = ""; WV.hof = []; WV.barriers = {}; WV.npc = null;
-  WV.wild = []; WV.fly = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null;
+  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null;
   const fell = S.farm.trees || [];
   const rnd = wRng(7331);
   const MK = worldMasks(fell);
@@ -745,6 +745,14 @@ function worldMakeWild() {
     const sp = (k === "owl" ? 0.2 : k === "bat" ? 1.05 : 0.5) + (i % 3) * 0.07;
     return { k, D, body, wl, wr, c: [x, z], cc: [x, z], r, h, area, g, a: i * 1.7, sp, f: 0, scare: 0, i };
   });
+  /* der Vogelschwarm über der Schatzkiste */
+  WV.swarm = Array.from({ length: 11 }, (_, i) => {
+    const body = fnode(fmesh("fly:bird", FLY_DEF.bird.mesh), { s: 1.9 + (i % 3) * 0.15, visible: false, alpha: 0 });
+    const wl = R.addChild(body, fnode(fmesh("flyW:bird", FLY_DEF.bird.wing), {}));
+    const wr = R.addChild(body, fnode(fmesh("flyW:bird", FLY_DEF.bird.wing), { sx: -1 }));
+    R.nodes.push(body);
+    return { body, wl, wr, a: i * 0.57, r: 1.6 + (i * 0.37) % 2.8, h: 5 + (i * 0.61) % 2.6, sp: (0.75 + (i % 4) * 0.12) * (i % 5 === 4 ? -1 : 1), f: 0, out: 0, i };
+  });
 }
 function wildHome(w) {
   const a = Math.random() * 6.28, d = Math.random() * w.r;
@@ -787,23 +795,21 @@ function stepWild(dt, time) {
     w.node.ry = Math.atan2(dx, dz);
     w.node.y = w.D.hop ? Math.abs(Math.sin(time * (w.flee > 0 ? 14 : 9) + w.i)) * 0.12 : Math.abs(Math.sin(time * 8 + w.i)) * 0.02;
   }
-  /* Vögel kreisen über dem Wald – beim Schatz über der Fundstelle (nachts die Eulen) */
-  const ev = S.farm.ev && S.farm.ev.cur, sch = ev && ev.k === "schatz" && !ev.data.done ? ev.data : null;
-  const grp = {}, sk = wildWin(FLY_DEF.bird.win, h) ? "bird" : "owl";   /* nachts kreisen die Eulen */
+  /* Vögel kreisen über dem Wald, Eulen und Fledermäuse nachts */
+  const grp = {};
   for (const b of WV.fly) {
     if (grp[b.g] == null) grp[b.g] = wildPres("g" + b.g, dt, wildWin(b.D.win, h));
-    const isB = b.k === "bird", treasure = !!sch && b.k === sk;
-    const on = treasure || (grp[b.g] && (!b.area || farmAreaOpen(b.area)));
+    const isB = b.k === "bird";
+    const on = grp[b.g] && (!b.area || farmAreaOpen(b.area));
     /* ganz weg: beim nächsten Mal woanders auftauchen */
-    if (!on && b.f <= 0 && isB && !sch && Math.random() < dt * 0.5) { b.c = pick(FWORLD.clearings).slice(0, 2); b.cc = b.c.slice(); }
+    if (!on && b.f <= 0 && isB && Math.random() < dt * 0.5) { b.c = pick(FWORLD.clearings).slice(0, 2); b.cc = b.c.slice(); }
     b.f = on ? Math.min(1, b.f + fade) : Math.max(0, b.f - fade);
-    const tc = treasure ? [sch.x, sch.z] : b.c;
     const mv = Math.min(1, dt * 0.8);
-    b.cc[0] += (tc[0] - b.cc[0]) * mv; b.cc[1] += (tc[1] - b.cc[1]) * mv;
+    b.cc[0] += (b.c[0] - b.cc[0]) * mv; b.cc[1] += (b.c[1] - b.cc[1]) * mv;
     const c = b.cc, B = b.body, ox = B.x, oz = B.z;
     if (b.scare > 0) b.scare -= dt;
     const boost = b.scare > 0 ? 2.6 : 1;
-    b.a += dt * b.sp * (treasure ? 1.4 : 1) * boost;
+    b.a += dt * b.sp * boost;
     if (b.k === "bat") {
       /* Fledermäuse: zackiger Zickzackflug */
       B.x = c[0] + Math.cos(b.a) * b.r + Math.sin(b.a * 2.7 + b.i) * 1.3;
@@ -812,9 +818,8 @@ function stepWild(dt, time) {
       const f = Math.sin(time * 26 + b.i) * 0.95;
       b.wl.rz = f; b.wr.rz = -f;
     } else {
-      const r = treasure ? 2.2 + (b.i % 3) * 0.6 : b.r;
-      B.x = c[0] + Math.cos(b.a) * r; B.z = c[1] + Math.sin(b.a) * r;
-      B.y = (treasure ? 4 : b.h) + Math.sin(time * (b.k === "owl" ? 0.7 : 1.3) + b.i) * 0.3 + (b.scare > 0 ? 1.2 : 0);
+      B.x = c[0] + Math.cos(b.a) * b.r; B.z = c[1] + Math.sin(b.a) * b.r;
+      B.y = b.h + Math.sin(time * (b.k === "owl" ? 0.7 : 1.3) + b.i) * 0.3 + (b.scare > 0 ? 1.2 : 0);
       /* Eulen: ein paar Flügelschläge, dann lautlos gleiten */
       const f = b.k === "owl" ? ((time * 0.45 + b.i) % 3 < 1 || b.scare > 0 ? Math.sin(time * 7 + b.i) * 0.55 : 0.06) : Math.sin(time * 12 + b.i) * 0.6;
       b.wl.rz = f; b.wr.rz = -f;
@@ -823,6 +828,81 @@ function stepWild(dt, time) {
     B.alpha = b.f;
     B.visible = b.f > 0 && Math.abs(B.x - cam.tx) < 70 && Math.abs(B.z - cam.tz) < 70;
   }
+  /* Schwarm über der Kiste: wirbelt durcheinander, nach dem Ausgraben fliegt er auseinander */
+  const tr = farmTreasureCur(), live = !!(tr && !tr.done);
+  if (tr) WV.swarmAt = [tr.x, tr.z];
+  const sc = WV.swarmAt;
+  for (const b of WV.swarm) {
+    b.f = live ? Math.min(1, b.f + dt / 2) : Math.max(0, b.f - dt / 2.5);
+    b.out = live ? Math.max(0, b.out - dt) : b.out + dt;
+    const B = b.body;
+    if (!sc || b.f <= 0) { B.visible = false; continue; }
+    const ox = B.x, oz = B.z, r = b.r + Math.sin(time * 0.9 + b.i * 1.3) * 0.6 + b.out * 5;
+    b.a += dt * b.sp * (live ? 1 : 1.8);
+    B.x = sc[0] + Math.cos(b.a) * r; B.z = sc[1] + Math.sin(b.a) * r;
+    B.y = b.h + Math.sin(time * 1.7 + b.i * 2.1) * 0.5 + b.out * 2.5;
+    if (Math.hypot(B.x - ox, B.z - oz) > 1e-4) B.ry = Math.atan2(B.x - ox, B.z - oz);
+    const f = Math.sin(time * 13 + b.i * 1.7) * 0.65;
+    b.wl.rz = f; b.wr.rz = -f;
+    B.alpha = b.f;
+    B.visible = Math.abs(B.x - cam.tx) < 80 && Math.abs(B.z - cam.tz) < 80;
+  }
+}
+/* Kreuz im Boden – nach dem Ausgraben ein offenes Loch mit leerer Kiste */
+function worldSyncTreasure() {
+  const c = farmTreasureCur(), key = c ? c.t0 + ":" + (c.done ? 1 : 0) : "", R = FV.R;
+  if (key === WV.trKey) return;
+  WV.trKey = key;
+  WV.trNodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+  WV.trNodes = [];
+  if (!c) return;
+  const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.trNodes.push(n); return n; };
+  if (!c.done) add(fmesh("trX", () => {
+    const b = new FM.MB();
+    b.disc(0.95, 12, 0x7a5a36, { y0: 0.012, wob: 0.12 });
+    b.noise(0.25, m => { for (let i = 0; i < 6; i++) m.ico(0.09, 0x6a4a2a, { x: Math.cos(i * 1.1) * 0.75, z: Math.sin(i * 1.1) * 0.75, y: 0.02, flat: 0.5, jitter: 0.4 }); });
+    [0.785, -0.785].forEach(ry => b.box(1.5, 0.05, 0.24, 0xd23a2a, { ry, y: 0.02, top: 0xe04634 }));
+    return b;
+  }), { x: c.x, z: c.z, ry: (c.x * 7) % 1, shadow: false });
+  else {
+    add(fmesh("trHole", () => {
+      const b = new FM.MB();
+      b.disc(1.05, 12, 0x8a6a44, { y0: 0.012, wob: 0.15 });
+      b.disc(0.6, 10, 0x3a2614, { y0: 0.02 });
+      b.noise(0.3, m => { for (let i = 0; i < 5; i++) m.ico(0.22, 0x7a5a36, { x: 1.0 + (i % 2) * 0.3, z: -0.5 + i * 0.25, y: 0.04, flat: 0.55, jitter: 0.5 }); });
+      return b;
+    }), { x: c.x, z: c.z, shadow: false });
+    add(fmesh("trChest", () => {
+      const b = new FM.MB(), w = 0x9a6234, d = 0x6e4422, g = 0xe2b33a;
+      b.box(0.62, 0.32, 0.42, w, { top: 0x3a2614 });
+      [-0.24, 0.24].forEach(x => b.box(0.06, 0.34, 0.44, g, { x }));
+      b.box(0.62, 0.08, 0.42, d, { y: 0.36, z: -0.3, rx: -1.25 });
+      b.noise(0.2, m => { for (let i = 0; i < 4; i++) m.box(0.1, 0.04, 0.1, g, { x: -0.18 + i * 0.12, y: 0.28, z: (i % 2) * 0.08 - 0.04 }); });
+      return b;
+    }), { x: c.x + 0.25, z: c.z - 0.15, ry: 0.5 });
+  }
+}
+function worldTreasureDig() {
+  const c = farmTreasureCur();
+  if (!c || c.done) return;
+  farmFocusXZ(c.x, c.z + 3, 18, 600);
+  MG.open("dig", {}, res => {
+    if (!res || !res.ok) return;
+    const r = farmTreasureDig(res.score);
+    if (!r) return;
+    const p = FV.R.project(c.x, 0.4, c.z) || [FV.R.w / 2, FV.R.h / 2];
+    floatText(p[0], p[1] - 24, "Eine Schatzkiste!", "gold");
+    coinFly(p[0], p[1], r.m);
+    xpFly(p[0], p[1] - 10, r.xp, 150);
+    sfx("collect"); save(); farmSyncScene(); renderFarmUI();
+  });
+}
+function farmTreasureView(type, c) {
+  if (!FV.on) return;
+  const Z = FTREASURE_ZONES.find(z => z.id === c.zone);
+  if (type === "start") toast("🐦 Ein Vogelschwarm kreist " + (Z ? Z.n : "über dem Gelände") + " – darunter ist eine Schatzkiste vergraben! Such das rote Kreuz im Boden.", "ok");
+  if (type === "gone") toast("🐦 Der Vogelschwarm ist weitergezogen – die Kiste bleibt diesmal verborgen.", "");
+  farmSyncScene();
 }
 /* Haustiere laufen die Hofwege ab */
 const PET_WAY = [[5, 12], [5, 6], [5, 0], [5, -7.5], [-1, -7.5], [-7, -7.5], [-12, -7.5]];
@@ -882,7 +962,6 @@ function worldSyncEvents() {
   if (c.k === "hirsch") add(fmesh("stag", () => FWM.deer(true)), { x: c.data.x, z: c.data.z, s: 1.25, glow: 0.35 });
   if (c.k === "reh") add(fmesh("wild:deer", () => FWM.deer(false)), { x: c.data.x, z: c.data.z, s: 1.0, ry: 1 });
   if (c.k === "lieferung") add(fmesh("parcel", () => { const b = new FM.MB(); b.box(0.7, 0.5, 0.55, 0xc9955a, { top: 0xd8a868 }); b.box(0.72, 0.08, 0.1, 0xd8332b, { y: 0.42 }); b.box(0.1, 0.08, 0.57, 0xd8332b, { y: 0.42 }); return b; }), { x: c.data.x, z: c.data.z, ry: 0.4 });
-  if (c.k === "schatz") add(fmesh("mound", () => { const b = new FM.MB(); b.ico(0.5, 0x8a6a44, { y: 0.05, flat: 0.3, jitter: 0.4 }); b.box(0.05, 0.6, 0.05, FM.C.woodD, { x: 0.3, rz: 0.4 }); return b; }), { x: c.data.x, z: c.data.z });
   if (c.k === "pilze") c.data.spots.forEach((s, i) => { if (!s.done) add(fmesh("evmush", () => FWM.mushrooms(false)), { x: s.x, z: s.z, s: 1.6, ry: i }); });
 }
 /* Wo sitzt das Ereignis? Für Blase und Kamera */
@@ -896,7 +975,6 @@ function worldEvSpots() {
     case "hirsch": return [{ x: c.data.x, y: 2.4, z: c.data.z, ic: "🦌✨", act: "hirsch", area: "wald" }];
     case "reh": return [{ x: c.data.x, y: 1.9, z: c.data.z, ic: "🦌", act: "reh" }];
     case "lieferung": return [{ x: c.data.x, y: 1.1, z: c.data.z, ic: "📦", act: "lieferung" }];
-    case "schatz": return [{ x: c.data.x, y: 1.4, z: c.data.z, ic: "🗝️", act: "schatz" }];
     case "pilze": return c.data.spots.map((s, i) => s.done ? null : { x: s.x, y: 0.9, z: s.z, ic: "🍄", act: "pilz", i }).filter(Boolean);
     case "schwarm": { const g = FGROUNDS.find(q => q.id === c.data.g); return g ? [{ x: g.x, y: 1.2, z: g.z, ic: "🐟", act: "schwarm" }] : []; }
     case "defekt": { const h = farmObj1("sw_halle"); if (!h) return []; const [x, z] = farmCenter(h); return [{ x, y: 5.2, z, ic: "⚠️", act: "defekt", cls: "hungry" }]; }
@@ -923,9 +1001,6 @@ function worldEvAct(s) {
       if (r) { floatText(p[0], p[1] - 20, s.act === "hirsch" ? "Ein Glücksbringer!" : s.act === "reh" ? "Wie friedlich …" : "Ein Paket für dich!", "gold"); reward(r, p[0], p[1]); }
       break;
     }
-    case "schatz":
-      MG.open("dig", {}, res => { if (res && res.ok) { const r = farmEvReward("schatz"); if (r) { floatText(p[0], p[1] - 20, "Ein Schatz!", "gold"); reward(r, p[0], p[1]); } } });
-      break;
     case "pilz": { const r = farmMushroom(s.i); if (r) { flyItem("🍄", p[0], p[1], storeBtn(), 0, 1); xpFly(p[0], p[1], r.xp); sfx("collect"); save(); farmSyncScene(); } break; }
     case "schwarm": if (typeof openFishingAt === "function") openFishingAt(c.data.g); break;
     case "defekt": {
@@ -993,6 +1068,9 @@ function worldTap(x, y) {
   const near = (wx, wy, wz, px) => { const p = R.project(wx, wy, wz); return p && Math.hypot(p[0] - x, p[1] - y) < px; };
   for (const s of worldEvSpots()) if ((!s.area || farmAreaOpen(s.area)) && near(s.x, s.y * 0.5, s.z, 44)) { worldEvAct(s); return true; }
   if (WV.npc && near(WV.npc.node.x, 1.2, WV.npc.node.z, 46)) { const id = worldVisitor(); if (id) openAreaVisit(id); return true; }
+  /* Schatzkiste: das Kreuz antippen */
+  const tr = farmTreasureCur();
+  if (tr && !tr.done && near(tr.x, 0.05, tr.z, 46)) { worldTreasureDig(); return true; }
   const ho = pickObjT(x, y), ht = pickTree(x, y);
   /* Wildtiere nur, wenn nichts anderes getroffen wurde */
   if (!ho && !ht) for (const w of WV.wild) if (w.node.visible && w.f > 0.5 && near(w.x, 0.4, w.z, 30)) {
@@ -1293,6 +1371,7 @@ function worldSync(force) {
   worldSyncPets();
   worldSyncStaff();
   worldSyncEvents();
+  worldSyncTreasure();
   if (!WV.reveal) worldLocks();
   /* Ware auf dem Verkaufsstand */
   S.farm.objs.forEach(o => {
@@ -1332,19 +1411,29 @@ function worldUI() {
   }
   const sta = Math.floor(farmSta()), mx = farmStaMax(), wx0 = FWEATHER[farmWeather()] || FWEATHER.sonne;
   const wx = wx0 === FWEATHER.sonne && farmTod() === "nacht" ? { n: "Klar", i: "🌙" } : wx0;
-  const ev = F.ev && F.ev.cur && S.time < F.ev.cur.until && !F.ev.cur.data.done ? F.ev.cur : null;
+  const ev = F.ev && F.ev.cur && FEVENTS[F.ev.cur.k] && S.time < F.ev.cur.until && !F.ev.cur.data.done ? F.ev.cur : null;
   const evT = ev ? FEVENTS[ev.k] : null;
   const left = ev ? Math.max(0, Math.ceil(ev.until - S.time)) : 0;
-  const ck = sta + ":" + mx + ":" + F.clover + ":" + wx.n + ":" + farmTod() + ":" + (ev ? ev.k + (ev.k === "defekt" ? "" : Math.ceil(left / 5)) : "");
+  const tr = farmTreasureCur(), trL = tr && !tr.done ? Math.max(0, Math.ceil(tr.until - S.time)) : 0;
+  const ck = sta + ":" + mx + ":" + F.clover + ":" + wx.n + ":" + farmTod() + ":" + (ev ? ev.k + (ev.k === "defekt" ? "" : Math.ceil(left / 5)) : "") + ":" + (trL ? Math.ceil(trL / 5) : "");
   if (C._k !== ck) {
     C._k = ck;
     C.innerHTML = `<button class="fchip2 sta${sta < 15 ? " low" : ""}" id="fcSta" title="Ausdauer – Brotzeit macht wieder fit"><span>💪</span><b>${sta}</b><i><em style="width:${Math.round(sta / mx * 100)}%"></em></i></button>
       <button class="fchip2" id="fcClover" title="Kleeblätter für den Extras-Laden"><span>🍀</span><b>${F.clover || 0}</b></button>
       <button class="fchip2 wx" id="fcWx" title="Wetter und Tageszeit – wichtig fürs Angeln"><span>${wx.i}</span><b>${esc(FTOD_N[farmTod()])}</b></button>
-      ${ev ? `<button class="fchip2 ev" id="fcEv"><span>${evT.i}</span><b>${esc(evT.n)}</b>${ev.k !== "defekt" && left < 999 ? `<small>${fdur(left)}</small>` : ""}</button>` : ""}`;
+      ${ev ? `<button class="fchip2 ev" id="fcEv"><span>${evT.i}</span><b>${esc(evT.n)}</b>${ev.k !== "defekt" && left < 999 ? `<small>${fdur(left)}</small>` : ""}</button>` : ""}
+      ${trL ? `<button class="fchip2 ev tr" id="fcTr" title="Unter dem Vogelschwarm liegt eine Schatzkiste"><span>🐦</span><b>Vogelschwarm</b><small>${fdur(trL)}</small></button>` : ""}`;
     $("#fcSta").onclick = openFood;
     $("#fcClover").onclick = () => openFarmHouse("extras");
     $("#fcWx").onclick = openWeatherInfo;
+    const tb = $("#fcTr");
+    if (tb) tb.onclick = () => {
+      const c = farmTreasureCur(), Z = c && FTREASURE_ZONES.find(z => z.id === c.zone);
+      if (!c || !Z) return;
+      /* nur grob hinschauen – das Kreuz suchen ist Teil des Spaßes */
+      farmFocusXZ((Z.at[0] + c.x * 2) / 3, (Z.at[1] + c.z * 2) / 3 + 4, 40, 900);
+      toast("🐦 Der Schwarm kreist " + Z.n + ". Darunter liegt die Kiste – tipp aufs rote Kreuz und grab sie aus!", "");
+    };
     const eb = $("#fcEv");
     if (eb) eb.onclick = () => {
       const s = worldEvSpots()[0];
@@ -1440,7 +1529,7 @@ function farmEvView(type, c) {
     toast(D.i + " " + ({
       sturm: "Ein Sturm zieht auf! Danach liegen Bäume im Wald.", haendler: "Ein fliegender Händler steht an der Straße.", schwarm: "Ein Fischschwarm ist im See unterwegs!",
       nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Der Holzhändler zahlt 30 % mehr.", fischpreis: "Fischpreise steigen: Am Fischmarkt bringt Fisch 30 % mehr.",
-      hirsch: "Ein weißer Hirsch wurde im Wald gesehen – ein Glücksbringer!", schatz: "Über dem Wald kreisen Vögel … da liegt doch was?", defekt: "Die Säge im Sägewerk klemmt!",
+      hirsch: "Ein weißer Hirsch wurde im Wald gesehen – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
       lieferung: "Ein Paket liegt am Tor.", pilze: "Wildschweine haben Pilze freigewühlt – sammel sie ein!", reh: "Ein Reh steht auf dem Weg."
     }[c.k] || D.n), "");
     farmSyncScene();
