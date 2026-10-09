@@ -1844,8 +1844,9 @@ function shopItemHTML(it, lv) {
     else if (!lock && pens.every(p => p.animals.length >= FANIMALS[it.animal].max)) note = FANIMALS[it.animal].fish ? "Gehege voll" : "Stall voll";
   }
   if (it.item && !lock) note = eur(price) + " · " + fqty(it.item, it.qty || 1) + " · da: " + famt(it.item, farmInv(it.item));
+  const ic = typeof thumbSpan === "function" ? thumbSpan("shop:" + it.id, shopModel(it), it.i, lock) : `<span class="ic">${lock ? "🔒" : it.i}</span>`;
   return `<button class="fshop${lock || full ? " lock" : S.money < price ? " poor" : ""}" data-shop="${it.id}" ${lock || full ? "disabled" : ""}>
-    <span class="ic">${lock ? "🔒" : it.i}</span><b>${esc(it.n)}</b><small>${note}</small>${!lock && !it.animal && !it.item && lim < 99 ? `<em>${n}/${lim}</em>` : ""}<p>${esc(it.d)}</p></button>`;
+    ${ic}<b>${esc(it.n)}</b><small>${note}</small>${!lock && !it.animal && !it.item && lim < 99 ? `<em>${n}/${lim}</em>` : ""}<p>${esc(it.d)}</p></button>`;
 }
 function openFarmShop(cat) {
   if (!FSHOP_CATS.some(c => c[0] === cat)) cat = FSHOP_CATS.some(c => c[0] === FV.shopCat) ? FV.shopCat : FSHOP_CATS[0][0];
@@ -1856,7 +1857,8 @@ function openFarmShop(cat) {
   if (cat === "deko") {
     items = Object.keys(FDECO).filter(k => (!FDECO[k].s || FDECO[k].s === FSITE.kind) && (!FDECO[k].cos || farmCos(FDECO[k].cos))).map(k => {
       const D = FDECO[k], lock = D.lv > lv;
-      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}><span class="ic">${lock ? "🔒" : D.i}</span><b>${esc(D.n)}</b><small>${lock ? "ab Level " + D.lv : D.cos ? "🍀 gehört dir" : eur(D.price)}${D.water ? " · im Wasser" : ""}</small></button>`;
+      const ic = typeof thumbSpan === "function" ? thumbSpan("deco:" + k + ":" + (D.arg || 0), decoModel(k), D.i, lock) : `<span class="ic">${lock ? "🔒" : D.i}</span>`;
+      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}>${ic}<b>${esc(D.n)}</b><small>${lock ? "ab Level " + D.lv : D.cos ? "🍀 gehört dir" : eur(D.price)}${D.water ? " · im Wasser" : ""}</small></button>`;
     }).join("");
   } else if (cat === "werkzeug") {
     items = Object.keys(FTOOLS).filter(id => id !== "axe1").map(id => {
@@ -1870,7 +1872,8 @@ function openFarmShop(cat) {
       + FSHOP_SAW.map(it => {
         const own = fcount(it.id) > 0, lock = it.lv > lv || !rep, price = it.price();
         const need = Object.keys(it.need || {}).map(k => fqty(k, it.need[k])).join(", ");
-        return `<button class="fshop${own ? " own" : lock ? " lock" : S.money < price || !farmHasAll(it.need || {}) ? " poor" : ""}" data-saw="${it.id}" ${own || lock ? "disabled" : ""}><span class="ic">${it.lv > lv ? "🔒" : it.i}</span><b>${esc(it.n)}</b>
+        const ic = typeof thumbSpan === "function" ? thumbSpan("shop:" + it.id, shopModel(it), it.i, it.lv > lv) : `<span class="ic">${it.lv > lv ? "🔒" : it.i}</span>`;
+        return `<button class="fshop${own ? " own" : lock ? " lock" : S.money < price || !farmHasAll(it.need || {}) ? " poor" : ""}" data-saw="${it.id}" ${own || lock ? "disabled" : ""}>${ic}<b>${esc(it.n)}</b>
           <small>${own ? "✓ steht im Sägewerk" : it.lv > lv ? "ab Level " + it.lv : eur(price) + " · " + need}</small><p>${esc(it.d)}</p></button>`;
       }).join("");
   } else if (cat === "extras") {
@@ -1903,6 +1906,7 @@ function openFarmShop(cat) {
     save();
   });
   if (typeof cosShopBind === "function" && cat === "extras") cosShopBind(() => openFarmShop("extras"));
+  if (typeof thumbFill === "function") thumbFill();
 }
 function buyShopItem(it, spot, btn) {
   if (!it) return;
@@ -1971,6 +1975,7 @@ function openFarmHouse(tab) {
   if (tab === "ausbau" && typeof stageBind === "function") stageBind(() => openFarmHouse("ausbau"));
   if (tab === "team" && typeof staffBind === "function") staffBind(() => openFarmHouse("team"));
   if (tab === "extras" && typeof cosShopBind === "function") cosShopBind(() => openFarmHouse("extras"));
+  if (tab === "extras" && typeof thumbFill === "function") thumbFill();
 }
 /* Schuppen: Fahrzeuge am Hof */
 function openFarmShed() {

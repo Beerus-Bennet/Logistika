@@ -848,6 +848,8 @@ const FWM = (() => {
     b.cone(0.06, 0.16, 4, 0xe8eae6, { rx: Math.PI / 2, y: 0.36, z: 0.4 });
     [-1, 1].forEach(s => b.cone(0.04, 0.1, 4, 0xd86a2a, { x: s * 0.05, y: 0.42, z: 0.28 }));
     b.cyl(0.07, 0.03, 0.4, 6, 0xd86a2a, { rx: -1.9, y: 0.3, z: -0.24, top: 0xffffff });
+    /* Augen in der Glutfarbe – leuchten nachts wie echtes Augenleuchten */
+    [-1, 1].forEach(s => b.sphere(0.018, 5, 3, 0xffd47e, { x: s * 0.042, y: 0.37, z: 0.39 }));
     return b;
   }
   function squirrel() {
@@ -867,6 +869,74 @@ const FWM = (() => {
     const b = new MB();
     b.quad([0, 0, 0.05], [0.18, 0.01, 0.02], [0.16, 0.01, -0.06], [0, 0, -0.05], c || 0x3a3a40);
     b.quad([0, 0, -0.05], [0.16, 0.01, -0.06], [0.18, 0.01, 0.02], [0, 0, 0.05], c || 0x3a3a40);
+    return b;
+  }
+  /* Nachtschwärmer: Eule (im Flug, Augen leuchten nachts) und Fledermaus */
+  function owl() {
+    const b = new MB(), c = 0x8a6a48, l = 0xd2bc94;
+    b.sphere(0.12, 8, 6, c, { sz: 1.45, bottom: l });
+    b.sphere(0.1, 8, 6, c, { y: 0.05, z: 0.15 });
+    b.sphere(0.075, 8, 5, l, { y: 0.045, z: 0.2, sz: 0.55 });                       /* Gesichtsschleier */
+    [-1, 1].forEach(s => {
+      b.sphere(0.024, 6, 4, 0xffd47e, { x: s * 0.034, y: 0.065, z: 0.245 });         /* Augen */
+      b.sphere(0.011, 5, 3, 0x1d1d20, { x: s * 0.034, y: 0.065, z: 0.266 });
+      b.cone(0.024, 0.07, 4, c, { x: s * 0.06, y: 0.12, z: 0.12, rz: -s * 0.25 });   /* Federohren */
+    });
+    b.cone(0.016, 0.05, 4, 0x5a4a30, { rx: Math.PI / 2 + 0.5, y: 0.03, z: 0.25 });   /* Schnabel */
+    b.box(0.16, 0.025, 0.14, c, { y: -0.01, z: -0.2, top: 0x7a5a3c });              /* Schwanz */
+    return b;
+  }
+  function owlWing() {
+    const b = new MB(), c = 0x7a5a3c, l = 0xb89a70;
+    b.quad([0, 0, 0.1], [0.24, 0.01, 0.09], [0.34, 0.015, 0.0], [0, 0, -0.08], c);
+    b.tri([0, 0, -0.08], [0.34, 0.015, 0.0], [0.26, 0.012, -0.1], c);
+    b.quad([0, 0, -0.08], [0.34, 0.015, 0.0], [0.24, 0.01, 0.09], [0, 0, 0.1], l);
+    b.tri([0, 0, -0.08], [0.26, 0.012, -0.1], [0.34, 0.015, 0.0], l);
+    [0.1, 0.18, 0.26].forEach(x => b.box(0.012, 0.004, 0.12, 0x5a4028, { x, y: 0.012, z: 0.0 }));
+    return b;
+  }
+  function bat() {
+    const b = new MB(), c = 0x5a4844;
+    b.sphere(0.045, 6, 4, c, { sz: 1.5 });
+    b.sphere(0.034, 6, 4, c, { y: 0.012, z: 0.07 });
+    [-1, 1].forEach(s => b.cone(0.013, 0.045, 3, c, { x: s * 0.018, y: 0.035, z: 0.07 }));
+    return b;
+  }
+  function batWing() {
+    const b = new MB(), c = 0x3e3230;
+    /* Flughaut mit gezackter Hinterkante – von beiden Seiten sichtbar */
+    const P = [[0, 0, 0.035], [0.1, 0.02, 0.05], [0.21, 0.012, 0.025], [0.17, 0, -0.03], [0.125, 0, -0.008], [0.08, 0, -0.05], [0.035, 0, -0.012], [0, 0, -0.04]];
+    for (let i = 1; i < P.length - 1; i++) { b.tri(P[0], P[i], P[i + 1], c); b.tri(P[0], P[i + 1], P[i], c); }
+    b.box(0.2, 0.012, 0.012, 0x2e2422, { x: 0.1, y: 0.012, z: 0.035, rz: -0.08 });   /* Arm */
+    return b;
+  }
+  /* Igel: rundlicher Körper voller Stacheln, helle Schnauze */
+  function hedgehog() {
+    G3.seed(4590);
+    const b = new MB(), sp = 0x5a4a3a;
+    b.sphere(0.12, 8, 5, 0x6a5848, { y: 0.08, sy: 0.65, sz: 1.25 });
+    for (let r = 0; r < 4; r++) for (let k = -2; k <= 2; k++) {
+      const z = 0.08 - r * 0.07, a = k * 0.42;
+      b.cone(0.03, 0.09, 3, r % 2 ? sp : 0x4a3c30, { x: Math.sin(a) * 0.08, y: 0.08 + Math.cos(a) * 0.06, z, rz: -a * 1.2, rx: -0.7 - r * 0.15 });
+    }
+    b.cone(0.055, 0.11, 5, 0xc8aa84, { rx: Math.PI / 2, y: 0.06, z: 0.11 });
+    b.sphere(0.016, 5, 3, 0x1d1d20, { y: 0.06, z: 0.225 });
+    [-1, 1].forEach(s => b.sphere(0.012, 4, 3, 0x1d1d20, { x: s * 0.03, y: 0.09, z: 0.15 }));
+    [[-0.06, -0.06], [0.06, -0.06], [-0.06, 0.07], [0.06, 0.07]].forEach(([x, z]) => b.box(0.03, 0.04, 0.03, 0x4a3c30, { x, z }));
+    return b;
+  }
+  /* Graureiher: steht im flachen Wasser am Seeufer */
+  function heron() {
+    const b = new MB(), g = 0x9aa2ac, w = 0xeceef0, d = 0x3a3c44;
+    [-1, 1].forEach(s => b.box(0.022, 0.44, 0.022, 0xc8a050, { x: s * 0.045 }));
+    b.sphere(0.12, 8, 5, g, { y: 0.54, sz: 1.6, rx: -0.3 });
+    [-1, 1].forEach(s => b.box(0.03, 0.09, 0.28, 0x6a707a, { x: s * 0.105, y: 0.5, z: -0.06, rx: -0.3, top: d })); /* Schwingen */
+    b.box(0.08, 0.03, 0.14, d, { y: 0.48, z: -0.24, rx: -0.5 });                    /* Schwanz */
+    b.cyl(0.032, 0.026, 0.32, 5, w, { y: 0.6, z: 0.14, rx: 0.25 });                  /* Hals */
+    b.sphere(0.05, 6, 4, w, { y: 0.92, z: 0.22, sz: 1.2 });
+    b.box(0.014, 0.014, 0.14, d, { y: 0.95, z: 0.12, rx: 0.3 });                     /* Schopf */
+    b.cone(0.018, 0.17, 4, 0xe0a030, { rx: Math.PI / 2, y: 0.91, z: 0.26 });          /* Schnabel */
+    [-1, 1].forEach(s => b.sphere(0.01, 4, 3, 0x1d1d20, { x: s * 0.04, y: 0.93, z: 0.25 }));
     return b;
   }
   /* Haustiere */
@@ -961,6 +1031,6 @@ const FWM = (() => {
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
-    deer, hare, boar, fox, squirrel, bird, birdWing, dog, cat, goat, person, cosDeco
+    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, cosDeco
   };
 })();

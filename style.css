@@ -1978,7 +1978,7 @@ body.locked #farm{display:none}
 #farmPop.dragging .fp-box{opacity:.35}
 .fp-h{font-weight:800;font-size:14px;margin:0 2px 6px;line-height:1.2}
 .fp-h small{display:block;font-weight:600;font-size:11px;opacity:.7}
-.fp-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.fp-row{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:2px}
 .fp-row::-webkit-scrollbar{display:none}
 .ftool{position:relative;flex:none;width:68px;border:2.5px solid var(--ink);border-radius:13px;background:#fff;padding:5px 3px 4px;text-align:center;
   cursor:grab;touch-action:none;box-shadow:2px 2px 0 var(--ink)}
@@ -2531,3 +2531,9 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fshop .ic.th{display:block;width:56px;height:56px;margin:-4px 0 -4px -6px}
 .fshop .ic.th img{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(1px 2px 0 rgba(13,27,42,.25))}
 .fshops.cos .fshop{grid-template-columns:54px 1fr}
+/* Laden: echte Modelle als Bildchen */
+.fshops .fshop{grid-template-columns:54px 1fr}
+.fshop .ic.th{position:relative;display:grid;place-items:center}
+.fshop .ic.th>b{font-size:30px;font-weight:400;opacity:.5}
+.fshop .ic .th-lk{position:absolute;left:-4px;top:-4px;font-style:normal;font-size:15px;filter:drop-shadow(0 1px 0 #fff)}
+.fshop.lock .ic.th img{filter:grayscale(.6) drop-shadow(1px 2px 0 rgba(13,27,42,.25))}

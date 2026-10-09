@@ -10,7 +10,7 @@
    ========================================================================= */
 const WV = {
   trees: new Map(), falling: [], hofKey: "", hof: [], barriers: {}, npc: null, reveal: null,
-  wild: [], birds: [], pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {},
+  wild: [], fly: [], pres: {}, pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {},
   gust: 0, hit: null, sawBlades: null, popTree: null
 };
 const WGRID = { x0: -160, z0: -160, x1: 104, z1: 104, chunk: 24, cell: 4 };
@@ -172,7 +172,7 @@ class WBuf {
 function worldStatic() {
   const R = FV.R;
   WV.trees.clear(); WV.falling = []; WV.hofKey = ""; WV.hof = []; WV.barriers = {}; WV.npc = null;
-  WV.wild = []; WV.birds = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null;
+  WV.wild = []; WV.fly = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null;
   const fell = S.farm.trees || [];
   const rnd = wRng(7331);
   const MK = worldMasks(fell);
@@ -426,10 +426,10 @@ function thumbR() {
   if (THUMB.R || THUMB.failed) return THUMB.R;
   try {
     const cv = document.createElement("canvas");
-    cv.width = cv.height = 192;
+    cv.width = cv.height = 128;
     const R = G3.create(cv, { keep: true, shadowSize: 1024, shadowBox: 4, maxDpr: 1 });
     if (!R) { THUMB.failed = true; return null; }
-    R.resize = () => { R.w = 192; R.h = 192; R.dpr = 1; };
+    R.resize = () => { R.w = 128; R.h = 128; R.dpr = 1; };
     R.env.fogR = [400, 800];
     THUMB.R = R;
   } catch (e) { THUMB.failed = true; }
@@ -444,10 +444,11 @@ function thumbOf(key, fn) {
     const m = R.mesh(fn()), b = m.box;
     const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2, cz = (b[0][2] + b[1][2]) / 2;
     const r = Math.max(0.3, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) / 2);
+    const flat = (b[1][1] - b[0][1]) < 0.4 * Math.max(b[1][0] - b[0][0], b[1][2] - b[0][2]);
     R.nodes.length = 0;
     R.nodes.push(R.node(m, {}));
     R.locks = [];
-    Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * 3.3, yaw: Math.PI / 4, pitch: 0.55, fov: 0.55 });
+    Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3), yaw: Math.PI / 4, pitch: flat ? 0.85 : 0.55, fov: 0.55 });
     R.shadowBox = r * 1.6;
     R.render(1.5);
     url = R.canvas.toDataURL("image/png");
@@ -455,6 +456,62 @@ function thumbOf(key, fn) {
   } catch (e) { url = null; }
   THUMB.cache[key] = url;
   return url;
+}
+/* Modell eines Laden-Artikels – so, wie er auf dem Hof steht */
+function shopModel(it) {
+  if (it.id === "field") return () => { const b = FM.fieldSoil(false); b.merge(FM.cropMesh("weizen", 3), {}); return b; };
+  if (it.tree) return () => { const b = FM.treeMesh(it.tree); b.merge(FM.treeFruit(it.tree), {}); return b; };
+  if (it.animal) return { huhn: () => FM.chicken(0), kuh: () => FM.cow(0), schwein: () => FM.pig(0), schaf: () => FM.sheep(0, false), rind: () => FM.beef(0) }[it.animal] || null;
+  if (FPENS[it.id] && PEN_HUT[it.id]) {
+    const run = { coop: FM.coopRun, cows: FM.pasture, pigs: FM.pigRun, sheep: FM.sheepPasture, beef: FM.beefPasture }[it.id];
+    if (!run) return null;
+    return () => { const p = FPENS[it.id][0], H = PEN_HUT[it.id], b = run(p.w, p.d); b.merge(H.fn(), { x: -p.w / 2 + H.x, z: -p.d / 2 + H.z }); return b; };
+  }
+  if (FSHOP_SAW.some(x => x.id === it.id)) return () => FWM.machine(it.id);
+  if (typeof FM[it.id] === "function" && FMACHINES[it.id]) return () => FM[it.id]();
+  return null;
+}
+function decoModel(k) {
+  const D = FDECO[k];
+  if (!D) return null;
+  if (FM[k]) return () => FM[k](D.arg || 1);
+  if (D.cos) return () => FWM.cosDeco(k);
+  return typeof FFM !== "undefined" && FFM[k] ? () => FFM[k]() : null;
+}
+/* Bildchen im Laden: erst das Symbol, dann (Bild für Bild) das echte Modell */
+THUMB.fns = {};
+function thumbSpan(key, fn, emoji, lock) {
+  const lk = lock ? `<i class="th-lk">🔒</i>` : "";
+  if (!fn || THUMB.failed || THUMB.cache[key] === null) return `<span class="ic">${lock ? "🔒" : emoji}</span>`;
+  THUMB.fns[key] = fn;
+  const url = THUMB.cache[key];
+  return url ? `<span class="ic th"><img src="${url}" alt="">${lk}</span>` : `<span class="ic th" data-th="${key}"><b>${emoji}</b>${lk}</span>`;
+}
+function thumbFill() {
+  THUMB.queue = $$("#farmSheetIn [data-th]");
+  if (THUMB.queue.length && !THUMB.busy) { THUMB.busy = true; requestAnimationFrame(thumbWork); }
+}
+function thumbWork() {
+  const q = THUMB.queue || [];
+  let n = 0;
+  while (q.length && n < 2) {
+    const el = q.shift();
+    if (!el.isConnected || !el.dataset.th) continue;
+    const k = el.dataset.th, url = thumbOf(k, THUMB.fns[k]);
+    el.removeAttribute("data-th");
+    if (url) { const b = el.querySelector("b"); if (b) b.remove(); el.insertAdjacentHTML("afterbegin", `<img src="${url}" alt="">`); }
+    else el.classList.remove("th");
+    n++;
+  }
+  if (q.length) requestAnimationFrame(thumbWork); else THUMB.busy = false;
+}
+function cosModel(c) {
+  if (c.skin && c.skin.barn) return ["barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn)];
+  if (c.skin && c.skin.house) return ["house:" + c.skin.house, () => skinMB("house", c.skin.house)];
+  if (c.skin && c.skin.tractor) return ["tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor)];
+  if (c.pet) return ["pet:" + c.pet, c.pet === "hund" ? FWM.dog : c.pet === "katze" ? FWM.cat : FWM.goat];
+  if (c.deco) return ["deco:" + c.deco, () => FWM.cosDeco(c.deco)];
+  return [null, null];
 }
 function cosThumb(c) {
   if (c.skin && c.skin.barn) return thumbOf("barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn));
@@ -629,42 +686,92 @@ function stepReveal(dt) {
 }
 
 /* --------------------------- Wildtiere & Co. ----------------------------- */
+/* Tagsüber Rehe, Hasen, Eichhörnchen und ein Reiher am See, in der Dämmerung
+   Wildschweine, nachts Füchse, Igel, Eulen und Fledermäuse. Jedes Tier ist
+   nur einen Teil seiner Zeit zu sehen und zieht sich dazwischen zurück –
+   Sichtungen bleiben so etwas Besonderes. win = Uhrzeit von–bis. */
 const WILD_SPOTS = [
-  ["deer", -12, -36, 4.5, "wald"], ["deer", -48, -42, 5, "wald"], ["deer", 6, -64, 4, "wald"], ["deer", -66, -72, 4.5, "altwald"], ["deer", -40, -84, 3.5, "wald"],
-  ["hare", -19, -12, 3, "wald"], ["hare", 25, 10, 3, null], ["hare", 31, -13, 2.5, null], ["hare", -12, -40, 3, "wald"], ["hare", 30, 31, 3, "see"], ["hare", -26, 28, 3, "see"],
-  ["boar", -60, -36, 4, "wald"], ["boar", -86, -78, 5, "altwald"], ["fox", -4, -48, 5, "wald"], ["fox", 40, 5, 4, null],
-  ["squirrel", -24, -54, 2.5, "wald"], ["squirrel", -36, -46, 2, "wald"], ["squirrel", 18.5, -12, 1.8, null], ["squirrel", -70, -66, 2, "altwald"]
+  ["deer", -12, -36, 4.5, "wald"], ["deer", -48, -42, 5, "wald"], ["deer", -66, -72, 4.5, "altwald"],
+  ["hare", 25, 10, 3, null], ["hare", -19, -12, 3, "wald"], ["hare", -24, 19, 2.5, "see"],
+  ["squirrel", -24, -54, 2.5, "wald"], ["squirrel", 18.5, -12, 1.8, null], ["heron", -3.5, 29.4, 0.8, "see"],
+  ["boar", -60, -36, 4, "wald"], ["boar", -86, -78, 5, "altwald"],
+  ["fox", -4, -48, 5, "wald"], ["fox", 40, 5, 4, null], ["fox", -26, 28, 3, "see"],
+  ["hedgehog", 31, -13, 2.5, null], ["hedgehog", -12, -40, 3, "wald"]
 ];
 const WILD_DEF = {
-  deer: { sp: 1.3, run: 5, s: 1.0, mesh: () => FWM.deer(false) }, hare: { sp: 1.5, run: 5.5, s: 1.3, hop: 1, mesh: FWM.hare },
-  boar: { sp: 0.9, run: 3.5, s: 1.1, mesh: FWM.boar }, fox: { sp: 1.4, run: 5, s: 1.1, mesh: FWM.fox },
-  squirrel: { sp: 1.6, run: 4, s: 1.4, hop: 1, mesh: FWM.squirrel }
+  deer:     { sp: 1.3, run: 5, s: 1.0, win: [5, 20], mesh: () => FWM.deer(false) },
+  hare:     { sp: 1.5, run: 5.5, s: 1.3, hop: 1, win: [6, 20], mesh: FWM.hare },
+  squirrel: { sp: 1.6, run: 4, s: 1.4, hop: 1, win: [7, 18], mesh: FWM.squirrel },
+  heron:    { sp: 0.45, run: 2.5, s: 1.3, still: 1, win: [5, 20], mesh: FWM.heron },
+  boar:     { sp: 0.9, run: 3.5, s: 1.1, win: [17, 1], mesh: FWM.boar },
+  fox:      { sp: 1.4, run: 5, s: 1.1, win: [19, 6], mesh: FWM.fox },
+  hedgehog: { sp: 0.5, run: 1.3, s: 1.6, win: [20, 5], mesh: FWM.hedgehog }
 };
+/* Fliegende: Singvögel am Tag, Eulen und Fledermäuse nachts.
+   [Art, Mitte x, z, Radius, Höhe, Gebiet, Gruppe] – eine Gruppe kommt und geht gemeinsam */
+const FLY_DEF = {
+  bird: { s: 1.6, win: [6, 19], mesh: () => FWM.bird(0x3a3a40), wing: () => FWM.birdWing(0x3a3a40) },
+  owl:  { s: 1.9, win: [20, 5], mesh: FWM.owl, wing: FWM.owlWing },
+  bat:  { s: 2.2, win: [19.5, 5], mesh: FWM.bat, wing: FWM.batWing }
+};
+const FLY_SPOTS = [
+  ["bird", -24, -40, 5, 5, null, 0], ["bird", -24, -40, 6.3, 5.6, null, 0], ["bird", -24, -40, 7.6, 6.2, "wald", 0],
+  ["owl", -18, -30, 9, 6, "wald", 1], ["owl", 8, 2, 11, 6.5, null, 2],
+  ["bat", 2, -4, 3.6, 3.4, null, 3], ["bat", 2, -4, 4.4, 4, null, 3], ["bat", 2, -4, 3, 3, null, 3],
+  ["bat", 6, 24, 4, 3, "see", 4], ["bat", 6, 24, 4.8, 3.6, "see", 4]
+];
+function wildWin(w, h) { return w[0] < w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]; }
+/* Kommen und Gehen: da für 40–85 s, dann 55–150 s weg; außerhalb der Zeit nie */
+function wildPres(key, dt, act) {
+  const p = WV.pres[key] || (WV.pres[key] = { on: Math.random() < 0.45, t: 5 + Math.random() * 60 });
+  if (!act) { p.on = false; if (p.t < 3) p.t = 3 + Math.random() * 45; return false; }
+  p.t -= dt;
+  if (p.t <= 0) { p.on = !p.on; p.t = p.on ? 40 + Math.random() * 45 : 55 + Math.random() * 95; }
+  return p.on;
+}
 function worldMakeWild() {
   const R = FV.R;
   WV.wild = WILD_SPOTS.map(([k, x, z, r, area], i) => {
-    const D = WILD_DEF[k], node = fnode(fmesh("wild:" + k, D.mesh), { x, z, s: D.s, ry: i });
+    const D = WILD_DEF[k], node = fnode(fmesh("wild:" + k, D.mesh), { x, z, s: D.s, ry: i, visible: false, alpha: 0 });
     R.nodes.push(node);
-    return { k, D, home: [x, z], r, area, node, x, z, tx: x, tz: z, wait: Math.random() * 4, flee: 0, i };
+    return { k, D, home: [x, z], r, area, node, x, z, tx: x, tz: z, wait: Math.random() * 4, flee: 0, f: 0, i };
   });
-  WV.birds = [0, 1, 2, 3].map(i => {
-    const body = fnode(fmesh("bird", () => FWM.bird(0x3a3a40)), { s: 1.6 });
-    const wl = R.addChild(body, fnode(fmesh("birdWing", () => FWM.birdWing(0x3a3a40)), {}));
-    const wr = R.addChild(body, fnode(fmesh("birdWing", () => FWM.birdWing(0x3a3a40)), { sx: -1 }));
+  WV.fly = FLY_SPOTS.map(([k, x, z, r, h, area, g], i) => {
+    const D = FLY_DEF[k];
+    const body = fnode(fmesh("fly:" + k, D.mesh), { s: D.s, visible: false, alpha: 0 });
+    const wl = R.addChild(body, fnode(fmesh("flyW:" + k, D.wing), {}));
+    const wr = R.addChild(body, fnode(fmesh("flyW:" + k, D.wing), { sx: -1 }));
     R.nodes.push(body);
-    return { body, wl, wr, a: i * 1.6, r: 5 + i * 1.3, h: 5 + i * 0.6, c: [-24, -40], sp: 0.5 + i * 0.07 };
+    const sp = (k === "owl" ? 0.2 : k === "bat" ? 1.05 : 0.5) + (i % 3) * 0.07;
+    return { k, D, body, wl, wr, c: [x, z], cc: [x, z], r, h, area, g, a: i * 1.7, sp, f: 0, scare: 0, i };
   });
 }
+function wildHome(w) {
+  const a = Math.random() * 6.28, d = Math.random() * w.r;
+  w.x = w.tx = w.home[0] + Math.cos(a) * d; w.z = w.tz = w.home[1] + Math.sin(a) * d;
+  w.node.x = w.x; w.node.z = w.z; w.node.ry = Math.random() * 6.28; w.node.rx = 0;
+  w.wait = 1 + Math.random() * 3; w.flee = 0; w.leave = 0;
+}
 function stepWild(dt, time) {
-  const cam = FV.R.cam;
+  const cam = FV.R.cam, h = (S.time % 1440) / 60, fade = dt / 1.5;
   for (const w of WV.wild) {
-    const show = (!w.area || farmAreaOpen(w.area)) && Math.abs(w.x - cam.tx) < 70 && Math.abs(w.z - cam.tz) < 70;
-    w.node.visible = show;
+    const on = wildPres("w" + w.i, dt, wildWin(w.D.win, h) && (!w.area || farmAreaOpen(w.area)));
+    if (on && w.f <= 0) wildHome(w);
+    if (on) w.leave = 0;
+    /* geht es, läuft es noch ein Stück davon und verblasst dabei */
+    if (!on && w.f > 0 && !w.leave) {
+      w.leave = 1; w.wait = 0;
+      const a = Math.random() * 6.28; w.tx = w.x + Math.cos(a) * 5; w.tz = w.z + Math.sin(a) * 5;
+    }
+    w.f = on ? Math.min(1, w.f + fade) : Math.max(0, w.f - fade);
+    const show = w.f > 0 && Math.abs(w.x - cam.tx) < 70 && Math.abs(w.z - cam.tz) < 70;
+    w.node.visible = show; w.node.alpha = w.f;
     if (!show) continue;
-    if (w.wait > 0 && !w.flee) {
+    if (w.wait > 0 && !w.flee && !w.leave) {
       w.wait -= dt;
       w.node.y = 0;
       if (w.k === "deer") w.node.rx = Math.sin(time * 0.8 + w.i) > 0.6 ? 0.18 : 0;     /* grast */
+      if (w.k === "heron") w.node.rx = Math.sin(time * 0.5 + w.i) > 0.85 ? 0.3 : 0;   /* späht ins Wasser */
       if (w.wait <= 0) {
         const a = Math.random() * 6.28, d = Math.random() * w.r;
         w.tx = w.home[0] + Math.cos(a) * d; w.tz = w.home[1] + Math.sin(a) * d;
@@ -674,25 +781,48 @@ function stepWild(dt, time) {
     const dx = w.tx - w.x, dz = w.tz - w.z, dist = Math.hypot(dx, dz);
     const sp = (w.flee > 0 ? w.D.run : w.D.sp) * dt;
     if (w.flee > 0) w.flee -= dt;
-    if (dist < sp || dist < 0.05) { w.wait = 2 + Math.random() * 5; w.flee = 0; w.node.rx = 0; continue; }
+    if (dist < sp || dist < 0.05) { w.wait = (w.D.still ? 6 : 2) + Math.random() * (w.D.still ? 9 : 5); w.flee = 0; w.node.rx = 0; continue; }
     w.x += dx / dist * sp; w.z += dz / dist * sp;
     w.node.x = w.x; w.node.z = w.z; w.node.rx = 0;
     w.node.ry = Math.atan2(dx, dz);
     w.node.y = w.D.hop ? Math.abs(Math.sin(time * (w.flee > 0 ? 14 : 9) + w.i)) * 0.12 : Math.abs(Math.sin(time * 8 + w.i)) * 0.02;
   }
-  /* Vögel kreisen über dem Wald – beim Schatz über der Fundstelle */
+  /* Vögel kreisen über dem Wald – beim Schatz über der Fundstelle (nachts die Eulen) */
   const ev = S.farm.ev && S.farm.ev.cur, sch = ev && ev.k === "schatz" && !ev.data.done ? ev.data : null;
-  WV.birds.forEach((b, i) => {
-    const c = sch ? [sch.x, sch.z] : b.c;
-    b.a += dt * b.sp * (sch ? 1.4 : 1);
-    const r = sch ? 2.2 + i * 0.6 : b.r;
-    b.body.x = c[0] + Math.cos(b.a) * r; b.body.z = c[1] + Math.sin(b.a) * r; b.body.y = (sch ? 4 : b.h) + Math.sin(time * 1.3 + i) * 0.3;
-    b.body.ry = -b.a;
-    const f = Math.sin(time * 12 + i) * 0.6;
-    b.wl.rz = f; b.wr.rz = -f;
-    b.body.visible = farmAreaOpen("wald") || i < 2;
-  });
-  if (!sch && Math.random() < dt * 0.02) WV.birds.forEach(b => { b.c = pick(FWORLD.clearings).slice(0, 2); });
+  const grp = {}, sk = wildWin(FLY_DEF.bird.win, h) ? "bird" : "owl";   /* nachts kreisen die Eulen */
+  for (const b of WV.fly) {
+    if (grp[b.g] == null) grp[b.g] = wildPres("g" + b.g, dt, wildWin(b.D.win, h));
+    const isB = b.k === "bird", treasure = !!sch && b.k === sk;
+    const on = treasure || (grp[b.g] && (!b.area || farmAreaOpen(b.area)));
+    /* ganz weg: beim nächsten Mal woanders auftauchen */
+    if (!on && b.f <= 0 && isB && !sch && Math.random() < dt * 0.5) { b.c = pick(FWORLD.clearings).slice(0, 2); b.cc = b.c.slice(); }
+    b.f = on ? Math.min(1, b.f + fade) : Math.max(0, b.f - fade);
+    const tc = treasure ? [sch.x, sch.z] : b.c;
+    const mv = Math.min(1, dt * 0.8);
+    b.cc[0] += (tc[0] - b.cc[0]) * mv; b.cc[1] += (tc[1] - b.cc[1]) * mv;
+    const c = b.cc, B = b.body, ox = B.x, oz = B.z;
+    if (b.scare > 0) b.scare -= dt;
+    const boost = b.scare > 0 ? 2.6 : 1;
+    b.a += dt * b.sp * (treasure ? 1.4 : 1) * boost;
+    if (b.k === "bat") {
+      /* Fledermäuse: zackiger Zickzackflug */
+      B.x = c[0] + Math.cos(b.a) * b.r + Math.sin(b.a * 2.7 + b.i) * 1.3;
+      B.z = c[1] + Math.sin(b.a) * b.r + Math.cos(b.a * 3.1 + b.i) * 1.1;
+      B.y = b.h + Math.sin(b.a * 4.3 + b.i) * 0.6 + (b.scare > 0 ? 1.5 : 0);
+      const f = Math.sin(time * 26 + b.i) * 0.95;
+      b.wl.rz = f; b.wr.rz = -f;
+    } else {
+      const r = treasure ? 2.2 + (b.i % 3) * 0.6 : b.r;
+      B.x = c[0] + Math.cos(b.a) * r; B.z = c[1] + Math.sin(b.a) * r;
+      B.y = (treasure ? 4 : b.h) + Math.sin(time * (b.k === "owl" ? 0.7 : 1.3) + b.i) * 0.3 + (b.scare > 0 ? 1.2 : 0);
+      /* Eulen: ein paar Flügelschläge, dann lautlos gleiten */
+      const f = b.k === "owl" ? ((time * 0.45 + b.i) % 3 < 1 || b.scare > 0 ? Math.sin(time * 7 + b.i) * 0.55 : 0.06) : Math.sin(time * 12 + b.i) * 0.6;
+      b.wl.rz = f; b.wr.rz = -f;
+    }
+    if (Math.hypot(B.x - ox, B.z - oz) > 1e-4) B.ry = Math.atan2(B.x - ox, B.z - oz);
+    B.alpha = b.f;
+    B.visible = b.f > 0 && Math.abs(B.x - cam.tx) < 70 && Math.abs(B.z - cam.tz) < 70;
+  }
 }
 /* Haustiere laufen die Hofwege ab */
 const PET_WAY = [[5, 12], [5, 6], [5, 0], [5, -7.5], [-1, -7.5], [-7, -7.5], [-12, -7.5]];
@@ -865,12 +995,19 @@ function worldTap(x, y) {
   if (WV.npc && near(WV.npc.node.x, 1.2, WV.npc.node.z, 46)) { const id = worldVisitor(); if (id) openAreaVisit(id); return true; }
   const ho = pickObjT(x, y), ht = pickTree(x, y);
   /* Wildtiere nur, wenn nichts anderes getroffen wurde */
-  if (!ho && !ht) for (const w of WV.wild) if (w.node.visible && near(w.x, 0.4, w.z, 30)) {
+  if (!ho && !ht) for (const w of WV.wild) if (w.node.visible && w.f > 0.5 && near(w.x, 0.4, w.z, 30)) {
     w.flee = 1.8; w.wait = 0;
     const a = Math.atan2(w.z - R.cam.tz, w.x - R.cam.tx) + (Math.random() - 0.5);
     w.tx = w.x + Math.cos(a) * 6; w.tz = w.z + Math.sin(a) * 6;
     sfx("pop");
     if (!w.seen) { w.seen = true; farmXP(1); xpFly(x, y, 1); }
+    return true;
+  }
+  /* Eulen und Fledermäuse lassen sich aufscheuchen */
+  if (!ho && !ht) for (const b of WV.fly) if (b.k !== "bird" && b.body.visible && b.f > 0.5 && near(b.body.x, b.body.y, b.body.z, 30)) {
+    b.scare = 2.5;
+    sfx("pop");
+    if (!b.seen) { b.seen = true; farmXP(1); xpFly(x, y, 1); }
     return true;
   }
   if (ht && (!ho || ht.d < ho.d - 0.2)) { worldTreeTap(ht.t, x, y); return true; }
@@ -1599,8 +1736,8 @@ function cosShopHTML() {
   const cats = FCOS_CATS.map(([k, l]) => `<div class="fcos-cat">${l}</div>` + FCOSMETIC.filter(c => c.cat === k).map(c => {
     const own = farmCos(c.id);
     const note = own ? (c.deco ? "gehört dir · unter 🌷 Deko aufstellen" : c.pet ? "läuft auf dem Hof herum" : "aktiv") : "🍀 " + c.price;
-    const th = cosThumb(c);
-    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco ? "disabled" : ""}><span class="ic${th ? " th" : ""}">${th ? `<img src="${th}" alt="">` : c.i}</span><b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
+    const [tk, tf] = cosModel(c);
+    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco ? "disabled" : ""}>${thumbSpan(tk, tf, c.i)}<b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
   }).join("")).join("");
   const ph = `<div class="fcos-cat">✨ Bald</div>
     <button class="fshop lock" disabled><span class="ic">🍀</span><b>Kleeblätter kaufen</b><small>kommt bald</small><p>Platzhalter – im Spiel gibt es Kleeblätter fürs Spielen.</p></button>

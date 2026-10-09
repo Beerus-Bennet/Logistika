@@ -53,7 +53,8 @@ Finger, zoomen mit zwei. Auf dem Hof gibt es weder Pause noch Tempo: Bis zur
 Speditionsgründung läuft die Zeit immer in Echtzeit (eine Spielminute pro
 Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
 
-* **Felder** – antippen, Saat wählen und über die leeren Felder **ziehen**.
+* **Felder** – antippen, Saat wählen (alle freigeschalteten Sorten stehen in
+  mehreren Reihen untereinander) und über die leeren Felder **ziehen**.
   Reif? Die **Sichel** über alle goldenen Felder ziehen. Gießen macht 25 %
   schneller und einen Stern besser, **Fruchtwechsel** (andere Sorte als zuletzt)
   bringt noch einen Stern. Je Saat gibt es zwei Ernten, manchmal eine
@@ -103,7 +104,8 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   Sichtkreis von gut 2 km. Mit jedem Level-Aufstieg meldet ein Hinweis die
   neue Kundschaft auf der Karte; Berlin bleibt bis zur Gründung zu.
 * **Teich** – mit Tiefenverlauf, feinen Wellen, Sandufer, Schilf, Seerosen,
-  Steg mit Ruderboot und Enten, die ihre Runden ziehen.
+  Steg mit Ruderboot und Enten, die ihre Runden ziehen. Im Wasser wächst kein
+  Baum – ältere Spielstände rücken solche Bäume ans Ufer.
 * **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Schweinestall,
   Schafweide, Rinderweide, Molkerei, Metzgerei, Spinnstube, zweiter
   Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
@@ -218,8 +220,16 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
   weißer Hirsch (Glücksbringer), kreisende Vögel über einem Schatz
   (Graben-Minispiel), klemmende Säge (Zahnräder richten), Paket am Tor,
-  Wildschweine mit Pilzen, Reh auf dem Weg. Dazu laufen Rehe, Hasen,
-  Wildschweine, Füchse und Eichhörnchen durch den Wald, Vögel kreisen.
+  Wildschweine mit Pilzen, Reh auf dem Weg (Reh und Hirsch nicht mitten in
+  der Nacht).
+* **Wildtiere je nach Tageszeit** – tagsüber Rehe, Hasen, Eichhörnchen,
+  Singvögel und ein Graureiher im flachen Wasser am See; in der Dämmerung
+  Wildschweine; nachts Füchse und Igel, Eulen gleiten über Hof und Wald (ihre
+  Augen leuchten, wie die der Füchse), Fledermäuse flattern um die Scheune
+  und am Ufer. Jedes Tier zeigt sich nur eine Weile und zieht sich dann
+  zurück – im Schnitt sind nur drei, vier gleichzeitig unterwegs. Antippen
+  scheucht sie auf (beim ersten Mal +1 EP). Kreisen über einem Schatz nachts
+  Vögel, sind es die Eulen.
 * **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
   **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
   günstig geht schnell, teuer dauert –, später kassieren.
@@ -230,7 +240,8 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   (Weihnachtsbaum, Kürbislaternen, Maibaum, Schneemann, Osterhase) und Komfort
   (große Brotdose, Thermoskanne, Werkzeuggürtel). Nichts davon ist nötig zum
   Weiterkommen. Die Vorschaubilder sind das echte 3D-Modell, so wie es danach
-  auf dem Hof steht. „Kleeblätter kaufen“ und „Bonus-Video“ sind nur
+  auf dem Hof steht – das gilt im ganzen Laden (Felder, Bäume, Tiere, Ställe,
+  Gebäude, Sägewerk, Deko). „Kleeblätter kaufen“ und „Bonus-Video“ sind nur
   Platzhalter.
 * **Opas Notizbuch** hat jetzt **elf Kapitel**: vier auf dem Hof, dann *Der
   Wald*, *Die Kettensäge*, *Das alte Sägewerk*, *Holzproduktion*, *Am See*,

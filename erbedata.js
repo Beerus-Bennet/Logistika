@@ -283,7 +283,8 @@ const FSTAFF_TRAITS = [
 ];
 
 /* ------------------------------ Ereignisse -------------------------------
-   Kleine Überraschungen alle paar Minuten. area = nötiges Gebiet. */
+   Kleine Überraschungen alle paar Minuten. area = nötiges Gebiet,
+   win = Uhrzeit von–bis (Rehe und Hirsche nicht mitten in der Nacht). */
 const FEVENTS = {
   sturm:     { n: "Sturm",                  i: "⛈️", area: "wald",  w: 8,  dur: 70 },
   haendler:  { n: "Fliegender Händler",     i: "🧑‍💼", area: null,   w: 9,  dur: 60, daily: true },
@@ -291,12 +292,12 @@ const FEVENTS = {
   nachbar:   { n: "Nachbar braucht Holz",   i: "👴", area: "saege", w: 8,  dur: 1800 },
   holzpreis: { n: "Holzpreise steigen",     i: "📈", area: "wald",  w: 7,  dur: 1800 },
   fischpreis:{ n: "Fischpreise steigen",    i: "📈", area: "see",   w: 7,  dur: 1800 },
-  hirsch:    { n: "Ein weißer Hirsch",      i: "🦌", area: "wald",  w: 5,  dur: 90 },
+  hirsch:    { n: "Ein weißer Hirsch",      i: "🦌", area: "wald",  w: 5,  dur: 90, win: [5, 21] },
   schatz:    { n: "Vögel kreisen",          i: "🗝️", area: "wald",  w: 6,  dur: 600 },
   defekt:    { n: "Maschine klemmt",        i: "⚠️", area: "saege", w: 6,  dur: 99999, need: () => sawRepaired() },
   lieferung: { n: "Besondere Lieferung",    i: "📦", area: null,   w: 6,  dur: 900 },
   pilze:     { n: "Wildschweine im Wald",   i: "🍄", area: "wald",  w: 8,  dur: 1200 },
-  reh:       { n: "Ein Reh auf dem Weg",    i: "🦌", area: null,   w: 6,  dur: 120 }
+  reh:       { n: "Ein Reh auf dem Weg",    i: "🦌", area: null,   w: 6,  dur: 120, win: [5, 19] }
 };
 
 /* --------------------------- Kosmetik-Shop ------------------------------

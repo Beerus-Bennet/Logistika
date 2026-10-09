@@ -40,7 +40,7 @@ const FWORLD = {
   clearings: [[-12, -36, 6], [-48, -42, 6.5], [6, -64, 5.5], [-66, -72, 6], [-40, -84, 5]],
   rocks: [-56, -86, 9],
   /* Feldgehölz am Hof: kleine Bäume für die Axt (Ost und am Teich) */
-  hofTrees: [[17.4, -11, "birke", 1], [17.8, -7.5, "birke", 1], [17.6, 6.5, "kiefer", 1], [17.9, 10.5, "birke", 1], [18.4, -13.8, "kiefer", 1],
+  hofTrees: [[17.4, -11, "birke", 1], [16.4, -8.9, "birke", 1], [17.6, 6.5, "kiefer", 1], [17.9, 10.5, "birke", 1], [18.4, -13.8, "kiefer", 1],
              [20.2, -12.8, "birke", 2], [25.5, -11.6, "birke", 1], [29.5, -6.5, "kiefer", 1], [29.8, 2.6, "birke", 1], [26.5, 7.8, "kiefer", 2]]
 };
 function distSeg(px, pz, a, b) {
@@ -146,6 +146,12 @@ function erbeInit(F, fresh) {
   ["felled", "woodSold", "woodMade", "catch", "repairs", "cleared", "stallSold", "events"].forEach(k => { st[k] = st[k] || 0; });
   st.species = st.species || {};
   if (!F.trees || !F.trees.length) F.trees = erbeMakeTrees();
+  /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
+  const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
+  F.trees.forEach(t => {
+    const dx = t.x - P.x, dz = t.z - P.z, d = Math.hypot(dx, dz);
+    if (d < safe) { const k = safe / Math.max(0.1, d); t.x = +(P.x + dx * k).toFixed(2); t.z = +(P.z + dz * k).toFixed(2); }
+  });
   /* Sägewerk steht von Anfang an – verfallen, bis Krüger es verschenkt */
   if (!F.objs.some(o => o.t === "sw_halle")) {
     FSAW.objs.forEach(d => {
@@ -681,6 +687,7 @@ function farmEvTick() {
     if (D.daily && (E.days || {})[k] === staffDay()) return false;   /* der Händler kommt nur einmal am Tag */
     if (D.area && !farmAreaOpen(D.area)) return false;
     if (D.need && !D.need()) return false;
+    if (D.win) { const h = (S.time % 1440) / 60; if (D.win[0] < D.win[1] ? h < D.win[0] || h >= D.win[1] : h < D.win[0] && h >= D.win[1]) return false; }
     if (k === "defekt" && staffPerk("mechaniker")) return false;
     return true;
   });
