@@ -140,6 +140,10 @@ rot-weißen Schranke gesperrt. Die runden Knöpfe links springen zwischen
 **Hof, Wald, Sägewerk, altem Wald und See**; oben rechts stehen Ausdauer 💪,
 Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
 
+* **Fertig? Gelber Rand** – reife Felder und Obstbäume, Ställe mit Eiern,
+  Milch oder Wolle, Gebäude mit fertiger Ware, der Verkaufsstand mit
+  Einnahmen und die Bestelltafel mit lieferbarer Bestellung leuchten mit einem
+  leichten gelben Umriss.
 * **Hof-Ausbau in vier Stufen** – am Anfang grau und verwittert: morscher Zaun
   mit Lücken, Erdwege voller Unkraut, alte Reifen, Schrott und Bretter zum
   Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Stufe 2 *Ausgebauter
@@ -149,16 +153,17 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Steinmauer mit Steintor, Maschinenhalle, das Gelände wächst um zwei Kacheln
   nach jeder Seite. Ausbau im Wohnhaus unter „🏡 Ausbau“ – mit Holz aus dem Wald
   und später aus dem Sägewerk.
-* **Der Wald** – sobald das erste Kapitel geschafft ist, drei Bäume am Teich
-  gefällt sind und Level 5 erreicht ist, kommt **Förster Bruno Wendt** ans
-  Westtor: „Der Förster hat einen Weg durch den Wald freigegeben.“ Der Weg
+* **Der Wald** – sobald drei Bäume am Teich gefällt sind und das Erbe Level 5
+  erreicht hat, kommt **Förster Bruno Wendt** ans Westtor (antippen auf einen
+  gesperrten Knopf zeigt jede Bedingung mit Häkchen und Zähler): „Der Förster hat einen Weg durch den Wald freigegeben.“ Der Weg
   wird freigeschnitten, der Wald deckt sich Stück für Stück auf. 175 fällbare
   Bäume: Birken am Waldrand, Kiefern und Fichten im Westen, Buchen und Eichen
   im Norden, selten eine blühende Wildkirsche (Edelholz) – klein, mittel,
   groß und im alten Wald uralt. Gefällte Bäume werden zum Stumpf, treiben aus
   und wachsen wieder nach.
 * **Axt** – Timing-Minispiel: Die Nadel pendelt, tippen, wenn sie im Grünen
-  steht. Volltreffer zählen mehr, sauber gefällt gibt einen Stamm extra. Jeder
+  steht. Drei Volltreffer im dunkelgrünen Feld oder sieben gute Schläge im
+  hellgrünen fällen den Baum; sauber gefällt gibt einen Stamm extra. Jeder
   Schlag kostet **Ausdauer**; sie kommt langsam zurück oder sofort mit einer
   Brotzeit aus dem Lager (Brot, Kuchen, Wurst, Fisch …). Wer aufhört, findet
   den Baum angeschlagen wieder. Die Stahlaxt (Level 3) hat mehr Wucht und
@@ -210,7 +215,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   täglich Lohn und eine Brotzeit aus dem Lager – und steht sichtbar bei der
   Arbeit.
 * **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
-  Händler, Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
+  Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
   weißer Hirsch (Glücksbringer), kreisende Vögel über einem Schatz
   (Graben-Minispiel), klemmende Säge (Zahnräder richten), Paket am Tor,
   Wildschweine mit Pilzen, Reh auf dem Weg. Dazu laufen Rehe, Hasen,
@@ -224,7 +229,9 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Haustiere (Hofhund, Katze, Ziege laufen über den Hof), Saison-Deko
   (Weihnachtsbaum, Kürbislaternen, Maibaum, Schneemann, Osterhase) und Komfort
   (große Brotdose, Thermoskanne, Werkzeuggürtel). Nichts davon ist nötig zum
-  Weiterkommen. „Kleeblätter kaufen“ und „Bonus-Video“ sind nur Platzhalter.
+  Weiterkommen. Die Vorschaubilder sind das echte 3D-Modell, so wie es danach
+  auf dem Hof steht. „Kleeblätter kaufen“ und „Bonus-Video“ sind nur
+  Platzhalter.
 * **Opas Notizbuch** hat jetzt **elf Kapitel**: vier auf dem Hof, dann *Der
   Wald*, *Die Kettensäge*, *Das alte Sägewerk*, *Holzproduktion*, *Am See*,
   *Fischverarbeitung* und *Wirtschaftshof*. Das Erbe hat ein eigenes Level;

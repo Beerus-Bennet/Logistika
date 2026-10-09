@@ -132,6 +132,8 @@ function erbeInit(F, fresh) {
   F.boat = F.boat || 0;
   F.staff = F.staff || [];
   F.ev = F.ev || { cur: null, next: S.time + 12 };
+  /* ältere Stände: der Händler blieb zehn Stunden – jetzt eine */
+  if (F.ev.cur && FEVENTS[F.ev.cur.k] && F.ev.cur.until - F.ev.cur.t0 > FEVENTS[F.ev.cur.k].dur && F.ev.cur.k === "haendler") F.ev.cur.until = Math.min(F.ev.cur.until, Math.max(S.time + 5, F.ev.cur.t0 + FEVENTS.haendler.dur));
   F.clover = F.clover != null ? F.clover : 5;
   F.cos = F.cos || { own: {}, on: {} };
   F.stall = F.stall || { slots: [], coins: 0 };
@@ -186,7 +188,7 @@ function farmAreaWhy(id) {
   const A = FAREAS[id];
   const parts = [];
   if (flv() < A.lv) parts.push("ab Level " + A.lv);
-  if (A.req && !A.req()) parts.push(A.reqT);
+  (A.reqs || []).forEach(q => { if (q.v() < q.n) parts.push(q.yes ? q.t : q.n + " " + q.t + " (" + Math.min(q.v(), q.n) + "/" + q.n + ")"); });
   return parts.length ? parts.join(" · ") : "gleich ist es so weit";
 }
 /* Bedingungen erfüllt → Ereignis vormerken (die Ansicht zeigt es) */
@@ -676,6 +678,7 @@ function farmEvTick() {
   if (E.cur || S.time < E.next) return;
   const keys = Object.keys(FEVENTS).filter(k => {
     const D = FEVENTS[k];
+    if (D.daily && (E.days || {})[k] === staffDay()) return false;   /* der Händler kommt nur einmal am Tag */
     if (D.area && !farmAreaOpen(D.area)) return false;
     if (D.need && !D.need()) return false;
     if (k === "defekt" && staffPerk("mechaniker")) return false;
@@ -688,6 +691,7 @@ function farmEvTick() {
 function farmEvStart(k) {
   const F = S.farm, D = FEVENTS[k];
   const c = { k, t0: S.time, until: S.time + D.dur, data: {} };
+  if (D.daily) { F.ev.days = F.ev.days || {}; F.ev.days[k] = staffDay(); }
   if (k === "schwarm") { const gs = FGROUNDS.filter(farmGroundOk); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; }
   if (k === "nachbar") {
     const pool = ["bretter", "balken", "kisten", "pfosten", "platten", "brennholz"].filter(id => flv() >= 9);

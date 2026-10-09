@@ -159,7 +159,7 @@ const FAREAS = {
   wald: {
     n: "Plötziner Forst", i: "🌲", lv: 5,
     locks: [[-400, -400, -15.5, 21], [-400, -400, 400, -15.5]], reveal: [-14, -7.5], cam: [-82, -84, 22, 20],
-    req: () => (S.farm.stats.felled || 0) >= 3 && S.farm.qi >= FQ_CH_START(1), reqT: "3 Bäume am Hof gefällt und das erste Kapitel im Notizbuch geschafft",
+    reqs: [{ t: "Bäume gefällt", n: 3, v: () => S.farm.stats.felled || 0 }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster hat einen Weg durch den Wald freigegeben.",
     talk: "Moin! Ich bin Bruno, der Förster hier. Dein Opa hat mir immer mit Brennholz geholfen – jetzt bist du dran. Ich hab einen Weg durch den Plötziner Forst freigeschnitten: Birken am Waldrand, Kiefern im Westen, Buchen und Eichen im Norden. Kleine Bäume schaffst du mit der Axt, für die großen brauchst du besseres Werkzeug. Und denk an die Brotzeit!"
@@ -167,7 +167,7 @@ const FAREAS = {
   saege: {
     n: "Sägewerk Krüger", i: "🪚", lv: 9,
     locks: [[-42, -42, -16, -16]], reveal: [-29, -17], cam: null,
-    req: () => (S.farm.tools.saw || 0) >= 1 && (S.farm.stats.felled || 0) >= 30, reqT: "eine Kettensäge und 30 gefällte Bäume",
+    reqs: [{ t: "Kettensäge gekauft", n: 1, v: () => Math.min(1, S.farm.tools.saw || 0), yes: true }, { t: "Bäume gefällt", n: 30, v: () => S.farm.stats.felled || 0 }],
     who: "Nachbar Erwin Krüger", whoI: "👴", whoRole: "Nachbar",
     msg: "Nachbar Krüger schenkt dir sein altes Sägewerk.",
     talk: "Tach! Erwin Krüger, von nebenan. Ich seh dich ja jeden Tag mit der Säge im Wald – du hast ein Händchen fürs Holz. Mein altes Sägewerk steht seit Jahren still, mir fehlt die Kraft. Ich schenk es dir. Es ist ziemlich heruntergekommen: Dach, Elektrik, die Säge, das Förderband und der Motor – alles muss gerichtet werden. Aber wenn es läuft, machst du aus jedem Stamm das Dreifache."
@@ -175,7 +175,7 @@ const FAREAS = {
   altwald: {
     n: "Alter Wald", i: "🌳", lv: 13,
     locks: [[-400, -400, -58, -58]], reveal: [-50, -62], cam: [-118, -118, 22, 20],
-    req: () => sawRepaired(), reqT: "das Sägewerk läuft wieder",
+    reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster öffnet den alten Wald hinter dem Bach.",
     talk: "Hinter dem Bach liegt der alte Wald – Eichen, älter als das Dorf. Ein paar davon müssen raus, bevor sie umfallen. Das schafft nur eine Profi-Säge, und du brauchst ein Gefühl für die Fallrichtung. Aus so einem Stamm wird das beste Holz weit und breit."
@@ -183,13 +183,18 @@ const FAREAS = {
   see: {
     n: "Glindower See", i: "🎣", lv: 15,
     locks: [[-400, 21, 400, 400]], reveal: [5, 21], cam: [-40, -14.5, 58, 74],
-    req: () => sawRepaired() && (S.farm.stats.woodMade || 0) >= 40, reqT: "das Sägewerk läuft und du hast 40 Holzwaren hergestellt",
+    reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }, { t: "Holzwaren hergestellt", n: 40, v: () => S.farm.stats.woodMade || 0 }],
     who: "Bürgermeisterin Heike Sommer", whoI: "👩‍💼", whoRole: "Bürgermeisterin",
     msg: "Die Gemeinde verpachtet dir das Ufer am Glindower See.",
     talk: "Guten Tag! Heike Sommer, Bürgermeisterin. Die alte Fischerei am Glindower See ist seit Jahren verwaist. Weil Sie so viel für den Ort tun, verpachten wir Ihnen das Ufer. Fangen Sie klein an – ein Steg, eine Hütte. Holz dafür haben Sie ja jetzt genug. Die Restaurants in Werder warten auf frischen Zander!"
   }
 };
 const FAREA_ORDER = ["wald", "saege", "altwald", "see"];
+/* Bedingungen: alle erfüllt? Und als Text („3 Bäume gefällt“) */
+Object.values(FAREAS).forEach(A => {
+  A.req = () => A.reqs.every(q => q.v() >= q.n);
+  A.reqT = A.reqs.map(q => q.yes ? q.t : q.n + " " + q.t).join(" · ");
+});
 /* Kameragrenzen vor jeder Freischaltung: Hof, Teich und ein Blick über den Zaun */
 const FCAM_HOF = [-18.5, -18.5, 22, 20];
 
@@ -281,7 +286,7 @@ const FSTAFF_TRAITS = [
    Kleine Überraschungen alle paar Minuten. area = nötiges Gebiet. */
 const FEVENTS = {
   sturm:     { n: "Sturm",                  i: "⛈️", area: "wald",  w: 8,  dur: 70 },
-  haendler:  { n: "Fliegender Händler",     i: "🧑‍💼", area: null,   w: 9,  dur: 600 },
+  haendler:  { n: "Fliegender Händler",     i: "🧑‍💼", area: null,   w: 9,  dur: 60, daily: true },
   schwarm:   { n: "Fischschwarm",           i: "🐟", area: "see",   w: 9,  dur: 900 },
   nachbar:   { n: "Nachbar braucht Holz",   i: "👴", area: "saege", w: 8,  dur: 1800 },
   holzpreis: { n: "Holzpreise steigen",     i: "📈", area: "wald",  w: 7,  dur: 1800 },

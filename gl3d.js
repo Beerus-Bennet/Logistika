@@ -445,7 +445,7 @@ const G3 = (() => {
   /* ------------------------------ Renderer ------------------------------ */
   function create(canvas, opts) {
     opts = opts || {};
-    const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.keep });
+    const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.keep });
     if (!gl) return null;
     let main, shad, part;
     const meshes = new Set();
@@ -582,7 +582,7 @@ const G3 = (() => {
       for (const n of list) {
         if (!n.visible) continue;
         world(n, parentW);
-        const st = inh ? { tint: n.tint || inh.tint, glow: Math.max(n.glow, inh.glow), alpha: Math.min(n.alpha, inh.alpha), shadow: n.shadow && inh.shadow } : n;
+        const st = inh ? { tint: n.tint || inh.tint, glow: Math.max(n.glow, inh.glow), alpha: Math.min(n.alpha, inh.alpha), shadow: n.shadow && inh.shadow, outline: n.outline || inh.outline } : n;
         if (n.mesh) out.push([n, st]);
         if (n.children.length) collect(n.children, out, n.W, st);
       }
@@ -651,7 +651,7 @@ const G3 = (() => {
       /* 2) Szene */
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
       gl.useProgram(main.p);
       const u = main.u;
       gl.uniformMatrix4fv(u.uVP, false, R.VP);
@@ -683,6 +683,37 @@ const G3 = (() => {
       };
       gl.disable(gl.BLEND);
       for (const [n, st] of list) if (st.alpha >= 0.99 && !n.shadowOnly) draw(n, st);
+      /* Umriss für fertige Sachen: erst die Figur in die Schablone, dann
+         eine etwas größere Kopie in Farbe – nur außerhalb der Figur sichtbar */
+      const OL = list.filter(([n, st]) => st.outline && st.alpha >= 0.99 && n.mesh.vao && n.mesh.box);
+      if (OL.length) {
+        gl.enable(gl.STENCIL_TEST);
+        gl.stencilFunc(gl.ALWAYS, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+        gl.colorMask(false, false, false, false); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
+        for (const [n, st] of OL) draw(n, st);
+        gl.colorMask(true, true, true, true);
+        gl.stencilFunc(gl.NOTEQUAL, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        const P = ID(), Wp = new Float32Array(16);
+        for (const [n, st] of OL) {
+          const b = n.mesh.box, o = st.outline, k = o[4] || 0.13;
+          const hx = Math.max(0.05, (b[1][0] - b[0][0]) / 2), hz = Math.max(0.05, (b[1][2] - b[0][2]) / 2), hy = Math.max(0.05, b[1][1] - b[0][1]);
+          const sx = Math.min(1.6, 1 + k / hx), sz = Math.min(1.6, 1 + k / hz), sy = Math.min(1.6, 1 + k / hy);
+          const cx = (b[0][0] + b[1][0]) / 2, cz = (b[0][2] + b[1][2]) / 2, cy = b[0][1];
+          /* skalieren um die Mitte unten – der Rand bleibt über dem Boden */
+          P[0] = sx; P[5] = sy; P[10] = sz; P[12] = cx - cx * sx; P[13] = cy - cy * sy; P[14] = cz - cz * sz;
+          mul(Wp, n.W, P);
+          gl.uniformMatrix4fv(u.uModel, false, Wp);
+          gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uWater, 0);
+          gl.uniform4f(u.uTint, o[0], o[1], o[2], 1);
+          gl.uniform1f(u.uGlow, 0.4); gl.uniform1f(u.uAlpha, o[3]);
+          gl.bindVertexArray(n.mesh.vao);
+          gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
+        }
+        gl.disable(gl.STENCIL_TEST); gl.disable(gl.BLEND);
+        gl.depthMask(true); gl.depthFunc(gl.LESS);
+      }
       /* halbdurchsichtig (Bauvorschau) zuletzt */
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

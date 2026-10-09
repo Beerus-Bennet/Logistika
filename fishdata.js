@@ -140,7 +140,7 @@ const FWEATHER = {
   sonne:  { n: "Sonne",    i: "☀️", w: 40 },
   wolken: { n: "Bewölkt",  i: "⛅", w: 30 },
   regen:  { n: "Regen",    i: "🌧️", w: 20 },
-  nebel:  { n: "Nebel",    i: "🌫️", w: 10 }
+  nebel:  { n: "Nebel",    i: "🌁", w: 10 }
 };
 const FFISH_WX = {
   karpfen: { sonne: 1.4 },

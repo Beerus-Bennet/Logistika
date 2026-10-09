@@ -2345,6 +2345,7 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .farea-req div{background:#fff;border:2.5px solid var(--ink);border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800}
 .farea-req .ok{background:#e9fff0}
 .farea-req .no{background:#fff}
+.farea-req em{float:right;font-style:normal;font-size:12px;opacity:.7}
 .fvisit{display:flex;gap:10px;align-items:flex-start;margin:4px 0 8px}
 .fv-fig{flex:none;width:70px;height:70px;border-radius:50%;border:var(--line);background:#fff3c4;font-size:42px;display:grid;place-items:center;box-shadow:var(--shadow-sm)}
 .fv-tx{flex:1;background:#fff;border:var(--line);border-radius:16px;padding:8px 11px;position:relative}
@@ -2527,3 +2528,6 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 }
 
 #farmPop.fresh .fp-box{pointer-events:none}
+.fshop .ic.th{display:block;width:56px;height:56px;margin:-4px 0 -4px -6px}
+.fshop .ic.th img{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(1px 2px 0 rgba(13,27,42,.25))}
+.fshops.cos .fshop{grid-template-columns:54px 1fr}

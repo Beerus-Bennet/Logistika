@@ -404,23 +404,65 @@ function worldObjMesh(o) {
   return null;
 }
 /* Gebäude mit Anstrich aus dem Kosmetik-Shop */
-function skinMesh(t) {
-  const on = (S.farm && S.farm.cos && S.farm.cos.on) || {}, C = FM.C;
+function skinMB(t, k) {
+  const C = FM.C;
   if (t === "house") {
-    const k = on.house || "";
-    return fmesh("house:" + k, () => {
-      if (k !== "schiefer") return FM.house();
-      const a = C.roof, b = C.roofD; C.roof = 0x5d6570; C.roofD = 0x464d57;
-      try { return FM.house(); } finally { C.roof = a; C.roofD = b; }
-    });
+    if (k !== "schiefer") return FM.house();
+    const a = C.roof, b = C.roofD; C.roof = 0x5d6570; C.roofD = 0x464d57;
+    try { return FM.house(); } finally { C.roof = a; C.roofD = b; }
   }
-  const k = on.barn || "";
-  return fmesh("barn:" + k, () => {
-    if (!k) return FM.barn();
-    const a = C.red, b = C.redD;
-    if (k === "blau") { C.red = 0x5a86b0; C.redD = 0x47729a; } else { C.red = 0x5f8a4a; C.redD = 0x4c7639; }
-    try { return FM.barn(); } finally { C.red = a; C.redD = b; }
-  });
+  if (!k) return FM.barn();
+  const a = C.red, b = C.redD;
+  if (k === "blau") { C.red = 0x5a86b0; C.redD = 0x47729a; } else { C.red = 0x5f8a4a; C.redD = 0x4c7639; }
+  try { return FM.barn(); } finally { C.red = a; C.redD = b; }
+}
+function skinMesh(t) {
+  const on = (S.farm && S.farm.cos && S.farm.cos.on) || {}, k = on[t] || "";
+  return fmesh(t + ":" + k, () => skinMB(t, k));
+}
+/* Vorschaubilder für den Extras-Laden: das echte 3D-Modell, einmal gerendert */
+const THUMB = { R: null, cache: {}, failed: false };
+function thumbR() {
+  if (THUMB.R || THUMB.failed) return THUMB.R;
+  try {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 192;
+    const R = G3.create(cv, { keep: true, shadowSize: 1024, shadowBox: 4, maxDpr: 1 });
+    if (!R) { THUMB.failed = true; return null; }
+    R.resize = () => { R.w = 192; R.h = 192; R.dpr = 1; };
+    R.env.fogR = [400, 800];
+    THUMB.R = R;
+  } catch (e) { THUMB.failed = true; }
+  return THUMB.R;
+}
+function thumbOf(key, fn) {
+  if (THUMB.cache[key]) return THUMB.cache[key];
+  const R = thumbR();
+  if (!R) return null;
+  let url = null;
+  try {
+    const m = R.mesh(fn()), b = m.box;
+    const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2, cz = (b[0][2] + b[1][2]) / 2;
+    const r = Math.max(0.3, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) / 2);
+    R.nodes.length = 0;
+    R.nodes.push(R.node(m, {}));
+    R.locks = [];
+    Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * 3.3, yaw: Math.PI / 4, pitch: 0.55, fov: 0.55 });
+    R.shadowBox = r * 1.6;
+    R.render(1.5);
+    url = R.canvas.toDataURL("image/png");
+    R.free(m);
+  } catch (e) { url = null; }
+  THUMB.cache[key] = url;
+  return url;
+}
+function cosThumb(c) {
+  if (c.skin && c.skin.barn) return thumbOf("barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn));
+  if (c.skin && c.skin.house) return thumbOf("house:" + c.skin.house, () => skinMB("house", c.skin.house));
+  if (c.skin && c.skin.tractor) return thumbOf("tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor));
+  if (c.pet) return thumbOf("pet:" + c.pet, c.pet === "hund" ? FWM.dog : c.pet === "katze" ? FWM.cat : FWM.goat);
+  if (c.deco) return thumbOf("deco:" + c.deco, () => FWM.cosDeco(c.deco));
+  return null;
 }
 /* Teile an Objekten: Sägeblätter, Angler, Verwitterung */
 function worldObjParts(o, root, parts) {
@@ -861,7 +903,7 @@ function treePopHTML(t) {
   if (t.st === "fallen") return `<div class="fp-h">🌪️ ${esc(S0.n)} – vom Sturm umgeworfen<small>${fqty(S0.log, Z.logs)} und Äste liegen bereit</small></div>
     <div class="fp-row"><div class="ftool big" data-act="takefallen"><span class="ic">🪵</span><b>Aufsammeln</b><small>ohne Fällen</small></div></div>`;
   const tool = treeTool(t), saw = tool === "saw", lvAxe = S.farm.tools.axe || 1;
-  const staCost = saw ? Math.round(4 * Z.sta) : Math.round(Z.hp * Z.sta / (lvAxe >= 2 ? 1.5 : 1));
+  const staCost = saw ? Math.round(4 * Z.sta) : Math.round(5 * Z.sta);
   const grow = t.t && t.sz < t.mx ? ` · wächst: ${FTREE_SIZE[t.sz + 1].n} in ${fdur(Math.max(1, t.t - S.time))}` : "";
   const yieldT = fqty(S0.log, Z.logs) + " · " + fqty("aeste", Z.aeste) + (saw ? " · Holzreste" : "");
   const sta = farmSta();
@@ -1025,6 +1067,33 @@ function worldTags() {
   if (WV.tagEls) for (const [k, el] of WV.tagEls) if (!keep.has(k)) { el.remove(); WV.tagEls.delete(k); }
 }
 
+/* ------------------- Fertig? Dann leicht gelb umrandet ---------------------- */
+function objReady(o) {
+  if (o.area && !farmAreaOpen(o.area)) return false;
+  if (o.t === "field") return fieldState(o) === "ripe";
+  if (o.t === "tree") return treeRipe(o);
+  if (o.animals && o.animals.length) return o.animals.some(a => aniState(a) === "ready");
+  if ((o.t === "stall" || o.t === "f_markt") && stallState(o.t === "f_markt").slots.some(it => it && it.sold)) return true;
+  if (o.q && o.done) { machUpdate(o); return o.done.length > 0; }
+  if (o.t === "board") return farmOrders().some(farmOrderReady);
+  return false;
+}
+function stepOutline(time) {
+  if (!WV.readyAt || time - WV.readyAt > 0.35) {
+    WV.readyAt = time;
+    WV.ready = new Set(S.farm.objs.filter(objReady).map(o => o.id));
+  }
+  const a = 0.74 + Math.sin(time * 3.2) * 0.18;
+  for (const o of S.farm.objs) {
+    const e = FV.nodes.get(o.id);
+    if (!e) continue;
+    if (WV.ready.has(o.id) && !(FV.place && FV.place.move && FV.place.move.id === o.id)) {
+      const ol = e.node.outline || (e.node.outline = [1, 0.84, 0.24, a, o.t === "field" ? 0.11 : 0.15]);
+      ol[3] = a;
+    } else e.node.outline = null;
+  }
+}
+
 /* ------------------------------ Takt -------------------------------------- */
 function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
@@ -1073,6 +1142,7 @@ function worldStep(dt, time) {
     const g = FGROUNDS.find(q => q.id === ev.data.g);
     if (g) FV.R.burst({ x: g.x + (Math.random() - 0.5) * 3, y: 0.06, z: g.z + (Math.random() - 0.5) * 3, n: 4, col: [0.9, 0.96, 1, 0.8], speed: 0.6, up: 1.6, size: 0.08, g: -6, life: 0.7 });
   }
+  stepOutline(time);
   worldTags();
   if (FV.pop && FV.pop.kind === "wtree") positionTreePop($("#farmPop"), FV.pop);
 }
@@ -1123,7 +1193,8 @@ function worldUI() {
     }).join("");
     A.querySelectorAll("[data-area]").forEach(b => b.onclick = () => worldGo(b.dataset.area));
   }
-  const sta = Math.floor(farmSta()), mx = farmStaMax(), wx = FWEATHER[farmWeather()] || FWEATHER.sonne;
+  const sta = Math.floor(farmSta()), mx = farmStaMax(), wx0 = FWEATHER[farmWeather()] || FWEATHER.sonne;
+  const wx = wx0 === FWEATHER.sonne && farmTod() === "nacht" ? { n: "Klar", i: "🌙" } : wx0;
   const ev = F.ev && F.ev.cur && S.time < F.ev.cur.until && !F.ev.cur.data.done ? F.ev.cur : null;
   const evT = ev ? FEVENTS[ev.k] : null;
   const left = ev ? Math.max(0, Math.ceil(ev.until - S.time)) : 0;
@@ -1155,7 +1226,7 @@ function worldUI() {
 
 /* -------------------------------- Fenster --------------------------------- */
 function openAreaInfo(id) {
-  const A = FAREAS[id], S0 = AREA_SPOTS[id], lvOk = flv() >= A.lv, reqOk = !A.req || A.req();
+  const A = FAREAS[id], S0 = AREA_SPOTS[id], lvOk = flv() >= A.lv;
   const pre = id === "saege" || id === "altwald" ? farmAreaOpen("wald") : true;
   FV.sheetFn = () => openAreaInfo(id);
   const ready = worldVisitor() === id;
@@ -1163,7 +1234,7 @@ function openAreaInfo(id) {
     <div class="farea-req">
       ${pre ? "" : `<div class="no">🔒 Erst muss der Wald offen sein</div>`}
       <div class="${lvOk ? "ok" : "no"}">${lvOk ? "✅" : "⭐"} Erbe-Level ${A.lv}${lvOk ? "" : ` · du bist auf Level ${flv()}`}</div>
-      <div class="${reqOk ? "ok" : "no"}">${reqOk ? "✅" : "📋"} ${esc(A.reqT)}</div>
+      ${A.reqs.map(q => { const v = q.v(), ok = v >= q.n; return `<div class="${ok ? "ok" : "no"}">${ok ? "✅" : "📋"} ${q.yes ? esc(q.t) : q.n + " " + esc(q.t)}${q.yes ? "" : `<em>${Math.min(v, q.n)}/${q.n}</em>`}</div>`; }).join("")}
     </div>
     <div class="fs-sub">${ready ? esc(A.who) + " wartet schon am Weg – tipp auf die Figur oder hier unten." : "Sobald alles erfüllt ist, schaut " + esc(A.who) + " vorbei und gibt das Gebiet frei. Die grauen Flächen auf der Karte gehören dann dir."}</div>
     ${ready ? `<button class="btn fgo" id="faVisit">${A.whoI} Mit ${esc(A.who.split(" ").slice(-2).join(" "))} reden</button>` : ""}`, "area");
@@ -1528,7 +1599,8 @@ function cosShopHTML() {
   const cats = FCOS_CATS.map(([k, l]) => `<div class="fcos-cat">${l}</div>` + FCOSMETIC.filter(c => c.cat === k).map(c => {
     const own = farmCos(c.id);
     const note = own ? (c.deco ? "gehört dir · unter 🌷 Deko aufstellen" : c.pet ? "läuft auf dem Hof herum" : "aktiv") : "🍀 " + c.price;
-    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco ? "disabled" : ""}><span class="ic">${c.i}</span><b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
+    const th = cosThumb(c);
+    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco ? "disabled" : ""}><span class="ic${th ? " th" : ""}">${th ? `<img src="${th}" alt="">` : c.i}</span><b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
   }).join("")).join("");
   const ph = `<div class="fcos-cat">✨ Bald</div>
     <button class="fshop lock" disabled><span class="ic">🍀</span><b>Kleeblätter kaufen</b><small>kommt bald</small><p>Platzhalter – im Spiel gibt es Kleeblätter fürs Spielen.</p></button>

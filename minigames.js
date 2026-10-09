@@ -7,6 +7,7 @@
    und Angeln mit Biss und Drill. Ergebnis kommt per Rückruf zurück.
    ========================================================================= */
 const MG = { on: false, kind: null, cb: null, st: null, raf: 0, last: 0 };
+const MG_AXE_HP = 21;
 
 MG.open = function (kind, opts, cb) {
   if (MG.on) MG.close(null, true);
@@ -84,7 +85,9 @@ const MG_GAMES = {
   axe: {
     start(st) {
       const t = st.tree, Z = FTREE_SIZE[t.sz], ax = (S.farm.tools.axe || 1) >= 2 ? 1.5 : 1;
-      st.hp = Z.hp; st.k = ax; st.sta = Z.sta; st.q = 0; st.n = 0; st.p = 0; st.v = 0.75 + t.sz * 0.18; st.dirv = 1;
+      /* 21 Punkte: drei Volltreffer (je 7) oder sieben gute Treffer (je 3) */
+      st.hp = MG_AXE_HP; st.k = ax; st.sta = Z.sta; st.q = 0; st.n = 0; st.p = 0; st.v = 0.75 + t.sz * 0.18; st.dirv = 1;
+      if ((t.dmg || 0) >= MG_AXE_HP) t.dmg = MG_AXE_HP - 3;
       st.c = 0.3 + Math.random() * 0.4; st.good = 0.1; st.okw = 0.26; st.cool = 0;
       mgH("🪓 " + FSPECIES[t.sp].n + " fällen", "Tipp, wenn die Nadel im grünen Feld steht");
       mgStage(`<div class="mg-tbar" id="mgT"><i class="ok" id="mgOk"></i><i class="good" id="mgGood"></i><b id="mgNeedle"></b></div>
@@ -92,7 +95,7 @@ const MG_GAMES = {
       $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.axe.hit(st); };
       MG_GAMES.axe.zone(st);
       MG_GAMES.axe.bar(st);
-      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : "Jeder Schlag kostet Ausdauer. Volltreffer zählen am meisten.");
+      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : "Drei Volltreffer im dunkelgrünen Feld oder sieben gute Schläge im hellgrünen – jeder Schlag kostet Ausdauer.");
       MG_GAMES.axe.hpBar(st);
     },
     bar(st) {
@@ -120,7 +123,7 @@ const MG_GAMES = {
       st.cool = 0.18;
       const d = Math.abs(st.p - st.c), q = d < st.good / 2 ? 1 : d < st.okw / 2 ? 0.6 : 0.15;
       st.q += q === 0.15 ? 0 : q; st.n++;
-      t.dmg = (t.dmg || 0) + q * st.k;
+      t.dmg = (t.dmg || 0) + (q === 1 ? 7 : q > 0.5 ? 3 : 0);
       WV.hit = { id: t.id, t0: wnow() };
       FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: q === 1 ? 10 : 5, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.4, up: 1.6, size: 0.07, shape: 1 });
       sfx(q === 1 ? "chop" : q > 0.5 ? "chop" : "bad");
