@@ -549,6 +549,9 @@ const FFM = (() => {
         b.sphere(0.05, 6, 4, 0xf08c74, { sz: 2.2, sy: 0.7, smooth: true });
         b.cone(0.03, 0.08, 4, 0xe8735c, { z: -0.12, rx: -Math.PI / 2 });
       });
+      else if (kind === "muschel") for (let i = 0; i < 7; i++) b.at({ x: -0.3 + (i % 4) * 0.18, y: 0.33 + (i > 3 ? 0.05 : 0), z: (i % 3 - 1) * 0.12, ry: i * 1.1 }, () => {
+        b.sphere(0.07, 7, 5, i % 2 ? 0x2c3a44 : 0x3d4a3a, { sx: 1.5, sy: 0.45, smooth: true });
+      });
       else for (let i = 0; i < 5; i++) b.at({ x: -0.28 + i * 0.14, y: 0.34 + (i % 2) * 0.05, z: (i % 3 - 1) * 0.1, ry: i * 1.3 }, () => {
         b.sphere(0.075, 7, 5, i % 2 ? 0xd2582e : 0xe0703a, { sy: 0.5, sx: 1.3, smooth: true });
         [1, -1].forEach(s => { b.box(0.07, 0.03, 0.03, 0xc04a24, { x: s * 0.1, z: 0.06, ry: s * 0.6 }); b.box(0.04, 0.04, 0.04, 0xa83a1c, { x: s * 0.13, z: 0.1 }); });

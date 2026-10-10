@@ -522,29 +522,43 @@ const MG_GAMES = {
       st.ph = "idle"; st.res = null;
       const G = FGROUNDS.find(g => g.id === st.gid) || FGROUNDS[0];
       st.G = G;
-      mgH(G.i + " " + G.n, MG_GAMES.fish.sub());
+      st.ufer = uferGround(G.id);
+      mgH(G.i + " " + G.n, MG_GAMES.fish.sub(st));
       MG_GAMES.fish.idle(st);
     },
-    sub() { const wx = FWEATHER[farmWeather()]; return wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · 🪱 " + famt("koeder", farmInv("koeder")) + " Köder"; },
+    sub(st) {
+      const wx = FWEATHER[farmWeather()], head = wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · ";
+      if (st && st.ufer) { const U = uferS(), B = FBAITS[U.bait]; return head + FRODS[U.rod].i + " " + esc(FRODS[U.rod].n) + " · " + B.i + " " + uferBaitN(U.bait) + " Würfe"; }
+      return head + "🪱 " + famt("koeder", farmInv("koeder")) + " Köder";
+    },
+    /* Lehmanns Ufer: Köder wählen – nicht verfügbare grau mit Grund */
+    baits(st) {
+      if (!st.ufer) return "";
+      const U = uferS();
+      return `<div class="mg-baits">${Object.keys(FBAITS).map(b => { const B = FBAITS[b], why = uferBaitWhy(b);
+        return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : uferBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
+    },
     odds(st) {
-      const o = farmFishOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
+      const o = st.ufer ? uferOdds(st.gid) : farmFishOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
       return Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 4).map(id => {
         const p = o[id] / sum;
-        return `<span class="mg-odd">${FITEMS[id].i}<small>${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
+        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${FITEMS[id].i}<small>${st.ufer ? esc(FITEMS[id].sg || FITEMS[id].n) + " · " : ""}${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
       }).join("");
     },
     idle(st) {
       st.ph = "idle";
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub());
-      mgStage(`<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
-      if (!st.res) mgMsg(st.boat ? "Mitten auf dem See. Auswerfen und auf den Biss warten." : "Vom Steg aus angeln: Auswerfen und auf den Biss warten.");
-      mgBar(`<button class="btn fa-go" id="mgGo">🎣 Auswerfen<small>kostet 1 Köder</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">⛵ Zurück</button>` : ""}`);
+      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
+      mgStage(`${MG_GAMES.fish.baits(st)}<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
+      if (!st.res) mgMsg(st.ufer ? "Köder wählen, auswerfen, auf den Biss warten. Bessere Köder locken größere Arten." : st.boat ? "Mitten auf dem See. Auswerfen und auf den Biss warten." : "Vom Steg aus angeln: Auswerfen und auf den Biss warten.");
+      mgBar(`<button class="btn fa-go" id="mgGo">🎣 Auswerfen<small>${st.ufer ? "kostet 1 " + esc(FBAITS[uferS().bait].n) : "kostet 1 Köder"}</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">⛵ Zurück</button>` : ""}`);
       $("#mgGo").onclick = () => MG_GAMES.fish.cast(st);
+      $$("#mgStage [data-bait]").forEach(b => b.onclick = () => { uferS().bait = b.dataset.bait; sfx("tap"); MG_GAMES.fish.idle(st); });
       const bk = $("#mgBack"); if (bk) bk.onclick = () => MG.close({ ok: true, back: true });
     },
     cast(st) {
       if (farmRoom("barsch") < 1) { farmFull("fisch"); return mgMsg("🧊 Die Kühlkiste ist voll – erst verarbeiten oder verkaufen.", "bad"); }
-      if (!farmCast()) {
+      if (!farmCast(st.gid)) {
+        if (st.ufer) { const why = uferBaitWhy(uferS().bait); mgMsg(FBAITS[uferS().bait].i + " " + (why ? "Dieser Köder geht gerade nicht: " + why + "." : "Kein Köder mehr.") + " Wähl einen anderen.", "bad"); return; }
         mgMsg("🪱 Keine Köder mehr. Die Fischerhütte macht welche aus Fischabfällen – oder im Laden unter „Werkzeug“.", "bad");
         return;
       }
@@ -553,7 +567,7 @@ const MG_GAMES = {
       st.wait = (sw ? 1 : 2) + Math.random() * (sw ? 2 : 4.5);
       sfx("cast");
       if (st.onCast) st.onCast();
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub());
+      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
       mgStage(`<div class="mg-water"><span class="mg-bob" id="mgBob">🔴</span></div>`);
       mgMsg("Pssst … warten …");
       mgBar(`<button class="btn fa-go ghost" id="mgGo">… warten</button>`);
@@ -581,10 +595,14 @@ const MG_GAMES = {
     },
     strike(st) {
       st.ph = "reel";
-      const f = st.catch.id ? FFISH[st.catch.id] : null, fight = f ? f.fight : 0.15;
-      Object.assign(st, { ten: 0.45, prog: 0.15, green: 0, total: 0, slack: 0, fight, burst: 0, hold: false, snd: 0 });
+      const f = st.catch.id ? FFISH[st.catch.id] : null;
+      /* Lehmanns Ufer: große Exemplare ziehen stärker, die Rute macht den grünen Bereich breiter */
+      const fight = f ? Math.min(1, f.fight + (st.catch.cm ? 0.15 * st.catch.r : 0)) : 0.15;
+      const z = st.ufer ? FRODS[uferS().rod].zone / 2 : 0;
+      Object.assign(st, { ten: 0.45, prog: 0.15, green: 0, total: 0, slack: 0, fight, burst: 0, hold: false, snd: 0, g0: 0.32 - z, g1: 0.78 + z });
       mgMsg(fight > 0.7 ? "💪 Ein schwerer Brocken! Spannung im grünen Bereich halten." : "Halten zum Kurbeln – Spannung im grünen Bereich halten.", fight > 0.7 ? "hot" : "");
-      mgStage(`<div class="mg-reel"><div class="mg-ten"><i class="g"></i><b id="mgTen"></b></div><div class="mg-hp"><span>🐟</span><i><em id="mgPr"></em></i></div></div>`);
+      const bg = z ? ` style="background:linear-gradient(90deg,#e6edf4 0 ${st.g0 * 100}%,#bfe8a6 ${st.g0 * 100}% ${st.g1 * 100}%,#ffd0d6 ${st.g1 * 100}%)"` : "";
+      mgStage(`<div class="mg-reel"><div class="mg-ten"${bg}><i class="g"></i><b id="mgTen"></b></div><div class="mg-hp"><span>🐟</span><i><em id="mgPr"></em></i></div></div>`);
       const b = mgBar(`<button class="btn fa-go hold" id="mgGo">🎣 Halten zum Kurbeln</button>`).firstChild;
       const on = e => { e.preventDefault(); st.hold = true; b.classList.add("on"); };
       const off = () => { st.hold = false; b.classList.remove("on"); };
@@ -601,7 +619,7 @@ const MG_GAMES = {
       st.prog += (st.hold ? 0.17 - st.fight * 0.08 : -0.02) * dt - pull * dt * 0.12;
       st.ten = clamp(st.ten, 0, 1.2);
       st.prog = clamp(st.prog, 0, 1);
-      if (st.ten > 0.32 && st.ten < 0.78) st.green += dt;
+      if (st.ten > (st.g0 || 0.32) && st.ten < (st.g1 || 0.78)) st.green += dt;
       if (st.hold) { st.snd -= dt; if (st.snd <= 0) { st.snd = 0.35; sfx("reel"); } }
       if (FV) FV.touchAt = performance.now();
       const t = $("#mgTen"), p = $("#mgPr");
@@ -629,9 +647,10 @@ const MG_GAMES = {
       if (!r) mgMsg("Hm, nichts dran.", "");
       else if (r.junk) mgMsg(`${r.i} Nur ${esc(r.junk)}${r.m ? " – mit " + eur(r.m) + " Finderlohn!" : "."}`, "");
       else if (r.full) mgMsg("🧊 Die Kühlkiste ist voll – der Fisch schwimmt wieder.", "bad");
+      else if (r.cm) mgMsg(`${FITEMS[r.id].i} <b>${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}</b> · ${fmt(r.cm, 1)} cm · ${fishKgTxt(r.kg)}<br>${qStars(r.q)} ${esc(fishQName(r.q))} · Wert ${eur(r.val)} · +${r.xp} EP${r.rec ? " · 🏆 Neuer Rekord!" : ""}`, "ok");
       else mgMsg(`${FITEMS[r.id].i} ${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}! ${qStars(r.q)} · +${r.xp} EP`, "ok");
       save();
-      setTimeout(() => { if (MG.on && MG.kind === "fish") MG_GAMES.fish.idle(st); }, 1300);
+      setTimeout(() => { if (MG.on && MG.kind === "fish") MG_GAMES.fish.idle(st); }, r && r.cm ? 2600 : 1300);
     },
     stop(st) { if (st.onStop) st.onStop(); },
     abort() { return { ok: true, back: true }; }

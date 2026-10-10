@@ -36,7 +36,7 @@ function openFishingAt(gid) {
     sfx("bad");
     return toast(G.boat === 0 ? "Erst den Steg bauen." : G.boat === 2 ? "Für " + G.n + " brauchst du das Motorboot." : "Erst das Bootshaus mit Ruderboot bauen.", "warn");
   }
-  if (gid === "steg") return fishStart(G, false);
+  if (gid === "steg" || gid === "u-steg") return fishStart(G, false);
   const B = fishBoatNode();
   if (!B) return;
   if (B.at === gid) return fishStart(G, true);
@@ -44,8 +44,11 @@ function openFishingAt(gid) {
 }
 function fishStart(G, boat) {
   FISH.at = G.id;
-  const st = farmObj1("f_steg");
-  if (!boat && st) { const [x, z] = farmCenter(st); farmFocusXZ(x + 1.5, z + 4, 17, 600); FISH.cast = [x, z + 5.6]; }
+  const st = farmObj1(G.area === "ufer" ? "u_steg" : "f_steg");
+  FISH.steg = st ? st.t : null;
+  /* Lehmanns Steg zeigt nach Westen in den See */
+  if (!boat && st && st.t === "u_steg") { const [x, z] = farmCenter(st); farmFocusXZ(x - 4, z + 1.5, 17, 600); FISH.cast = [x - 5.6, z]; }
+  else if (!boat && st) { const [x, z] = farmCenter(st); farmFocusXZ(x + 1.5, z + 4, 17, 600); FISH.cast = [x, z + 5.6]; }
   else if (FISH.boat) { farmFocusXZ(FISH.boat.x + 1, FISH.boat.z + 2, 18, 500); FISH.cast = [FISH.boat.x + 2.2, FISH.boat.z + 1.8]; }
   if (FISH.boat) FISH.boat.rod.visible = !!boat;
   farmSyncScene();
@@ -168,8 +171,163 @@ function fishStep(dt, time) {
     FISH.bob.y = bite ? -0.03 + Math.sin(time * 28) * 0.05 : 0.05 + Math.sin(time * 2.4) * 0.02;
   }
   /* Rute am Steg und im Boot */
-  const st = farmObj1("f_steg"), e = st && FV.nodes.get(st.id);
+  const st = farmObj1(FISH.steg || "f_steg"), e = st && FV.nodes.get(st.id);
   const rx = ROD_REST + (FISH.bite ? 0.32 + Math.sin(time * 18) * 0.12 : FISH.rod ? -0.1 : 0);
   if (e && e.parts.rod) e.parts.rod.rx = rx;
   if (B) B.rod.rx = rx;
+}
+
+/* ------------------------- Lehmanns Ufergrundstück ------------------------
+   Ein Fenster für alles am Ufer: Angeln mit Köderwahl, Ruten, Reusen,
+   Bert Flomann (Turnier, Würmer, Profi-Köder) und das Fangbuch. */
+const BERT_IMG = "bert.png";
+FV.uferTab = "fish";
+function bertFig() { return `<div class="fv-fig img"><img src="${BERT_IMG}" alt="Bert Flomann"></div>`; }
+function openUfer(tab) {
+  if (!farmAreaOpen("ufer") || !uferS()) return openAreaInfo("ufer");
+  const U = uferS();
+  if (tab) FV.uferTab = tab;
+  FV.sheetFn = () => openUfer();
+  const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"], ["bert", U.tour.done ? "🧔 Bert" : "🏆 Turnier"], ["log", "📖 Fangbuch"]];
+  const body = { fish: uferFishHTML, gear: uferGearHTML, pot: uferPotHTML, bert: uferBertHTML, log: uferLogHTML }[FV.uferTab] || uferFishHTML;
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🛶</span>Lehmanns Ufer<small>${esc(FRODS[U.rod].n)} · ${U.log.length ? U.log.length + " Fänge im Fangbuch" : "noch kein Fang"}</small></div>
+    <div class="fs-tabs">${tabs.map(([k, n]) => `<button data-ut="${k}" class="${FV.uferTab === k ? "on" : ""}">${n}</button>`).join("")}</div>
+    ${body(U)}`, "ufer");
+  const on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(b => b.onclick = () => fn(b));
+  const redo = ok => { if (ok) { sfx("coin"); save(); } else sfx("bad"); openUfer(); renderFarmUI(); };
+  on("[data-ut]", b => { FV.uferTab = b.dataset.ut; sfx("tap"); openUfer(); });
+  on("[data-bait]", b => { U.bait = b.dataset.bait; sfx("tap"); save(); openUfer(); });
+  on("[data-go]", b => { closeFarmSheet(); openFishingAt(b.dataset.go); });
+  on("[data-rod]", b => redo(farmBuyRod(+b.dataset.rod)));
+  on("#ufPotBuy", () => { const ok = uferPotBuy(); if (ok) farmSyncScene(); redo(ok); });
+  on("#ufPotUp", () => redo(uferPotUp()));
+  on("[data-pot]", b => { const o = farmObj(+b.dataset.pot); closeFarmSheet(); if (o) { const [x, z] = farmCenter(o); farmFocusXZ(x, z, 18, 600); } });
+  on("#ufTour", () => openTournament());
+  on("#ufWorms", () => redo(bertWorms()));
+  on("#ufLure", () => redo(bertOrderLures()));
+  on("#ufLureGet", () => { if (bertCollect()) { sfx("collect"); toast("✨ " + FBERT.lures.n + " Profi-Köder abgeholt.", "ok"); save(); } else sfx("bad"); openUfer(); });
+  /* Restzeit von Berts Bestellung läuft mit */
+  const key = () => [U.bert.lureQ ? Math.ceil((U.bert.lureQ.end - S.time) / 5) : "-", Math.floor(S.money / 50), flv()].join("|");
+  const k0 = key();
+  FV.sheetTick = () => { if (FV.sheet === "ufer" && key() !== k0) openUfer(); };
+}
+function uferFishHTML(U) {
+  const w = uferClassW(U.bait, U.rod), cls = { klein: "kleine", mittel: "mittlere", gross: "große" };
+  const chips = Object.keys(FBAITS).map(b => { const B = FBAITS[b], why = uferBaitWhy(b);
+    return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : uferBaitN(b) + " Würfe"}</small></button>`; }).join("");
+  const odds = FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
+  const gs = FGROUNDS.filter(g => g.area === "ufer").map(g => { const ok = farmGroundOk(g);
+    return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? g.i : "🔒"}</span><b>${esc(g.n)}</b><small>${g.boat ? (ok ? "mit dem Boot" : "braucht das Ruderboot aus dem Bootshaus") : "direkt vom Steg"}</small></button>`; }).join("");
+  return `<div class="fs-sub">Köder – bessere Köder locken größere Arten:</div><div class="mg-baits">${chips}</div>
+    <div class="fs-sub">${FRODS[U.rod].i} ${esc(FRODS[U.rod].n)} + ${FBAITS[U.bait].i} ${esc(FBAITS[U.bait].n)}: Es beißen <b>${odds}</b> Fische.</div>
+    <div class="frecs">${gs}</div>
+    <div class="fs-sub">Jeder Fisch hat seine eigene Länge und sein Gewicht. Große, gut genährte Exemplare und ein ruhiger Drill geben mehr Sterne – und Sterne bringen mehr Geld.</div>`;
+}
+function uferGearHTML(U) {
+  const rods = [1, 2, 3].map(n => { const R = FRODS[n], have = U.rod >= n;
+    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "zu wenig Geld" : "";
+    return `<div class="uf-row"><span class="ic">${R.i}</span><div><b>${esc(R.n)}</b><small>${n === 1 ? "von Lehmann geschenkt" : "grüner Bereich +" + Math.round(R.zone * 100) + " % · größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
+      ${n === 1 ? "" : `<button class="btn tiny" data-rod="${n}" ${why ? "disabled" : ""}>${why || eur(R.price)}</button>`}</div>`; }).join("");
+  return `<div class="fs-sub">Ruten</div><div class="uf-list">${rods}</div>
+    <div class="fs-sub">Die bessere Rute schiebt die Chancen zu größeren Arten – zusammen mit dem Köder. Mais bleibt Mais: damit beißen immer nur die Kleinen.</div>`;
+}
+function uferPotHTML(U) {
+  const pots = uferPots(), lv = flv(), nx = FPOT_UP[U.potLvl + 1], pc = FUFER.potCost[pots.length];
+  const rows = pots.map((o, i) => { const st = potState(o);
+    return `<div class="uf-row"><span class="ic">🪤</span><div><b>Reuse ${i + 1}</b><small>${st === "empty" ? "leer – Köder rein" : st === "ripe" ? "voll – hochziehen!" : esc(FPOTS[o.kind].n) + " · noch " + fdur(Math.max(1, o.end - S.time))}</small></div>
+      <button class="btn tiny ghost" data-pot="${o.id}">Zeigen</button></div>`; }).join("");
+  const tiers = Object.keys(FPOTS).map(id => { const P = FPOTS[id];
+    return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}"><span class="ic">${FITEMS[id].i}</span><div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
+  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "zu wenig Geld" : "";
+  return `<div class="uf-list">${rows}</div>
+    ${pc != null && pots.length < FUFER.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>🪤 Weitere Reuse · ${eur(pc)}</button>` : ""}
+    <div class="fs-sub">Reusenstufen</div><div class="uf-list">${tiers}</div>
+    ${nx ? `<button class="btn tiny" id="ufPotUp" ${upWhy ? "disabled" : ""}>${upWhy || "Reusen auf Stufe " + (U.potLvl + 1) + " · " + eur(nx.cost)}</button>` : ""}
+    <div class="fs-sub">Tipp auf eine Reuse im Wasser: Köder (Dose oder eine Portion Mais) rein, später mit dem Haken hochziehen. Jedes Tier hat Größe, Gewicht und Sterne – bessere Reusen fangen größere Tiere.</div>`;
+}
+function uferBertHTML(U) {
+  if (!U.tour.done) {
+    const ok = tourCanStart(), n = Math.min(FTOUR.need, U.cnt.klein);
+    return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Angler-Turnier am Ufer</b><small>du richtest aus</small>
+      <p>Fünf Angler aus dem Dorf: ${FTOUR.members.map(m => esc(m.n)).join(", ")}. Wer nach ${FTOUR.mins} Minuten das meiste Gewicht im Kescher hat, gewinnt. ${FTOUR.members.length} × ${eur(FTOUR.fee)} Startgeld, ${eur(FTOUR.prize)} Preisgeld.</p></div></div>
+      <div class="uf-row"><span class="ic">🐟</span><div><b>Erst selbst üben</b><small>Fang ${FTOUR.need} kleine Fische am Ufer · ${n}/${FTOUR.need}</small></div><span class="uf-bar"><i style="width:${n / FTOUR.need * 100}%"></i></span></div>
+      <button class="btn fgo" id="ufTour" ${ok ? "" : "disabled"}>🏆 Turnier veranstalten</button>`;
+  }
+  const q = U.bert.lureQ, L = FBERT.lures, need = FBERT.lureNeed;
+  let lure;
+  if (!bertLureOk()) lure = `<div class="fs-empty">🧔 „Ich tüftel an was Großem. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
+    <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische am Ufer</small></div>`;
+  else if (!q) lure = `<div class="uf-row"><span class="ic">✨</span><div><b>${L.n} Profi-Köder</b><small>für Hecht, Zander und Wels · ${fdur(L.t)} Arbeit</small></div>
+    <button class="btn tiny" id="ufLure" ${S.money < L.price ? "disabled" : ""}>${eur(L.price)}</button></div>`;
+  else if (S.time >= q.end) lure = `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>Bert hat ${q.n} Stück gebaut</small></div><button class="btn tiny" id="ufLureGet">Abholen</button></div>`;
+  else lure = `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Köder</b><small>noch ${fdur(Math.max(1, q.end - S.time))}</small></div><span class="uf-bar"><i style="width:${Math.round(clamp(1 - (q.end - S.time) / L.t, 0, 1) * 100)}%"></i></span></div>`;
+  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Wurmkasten und Köderwerkstatt</small>
+      <p>„Moin! Für ein kleines Entgelt sammel ich dir Tauwürmer – damit beißen Barsche und Forellen.“</p></div></div>
+    <div class="uf-row"><span class="ic">🪱</span><div><b>${FBERT.worms.n} Tauwürmer</b><small>du hast ${farmInv("wurm")}</small></div>
+      <button class="btn tiny" id="ufWorms" ${S.money < FBERT.worms.price ? "disabled" : ""}>${eur(FBERT.worms.price)}</button></div>
+    ${lure}`;
+}
+function uferLogHTML(U) {
+  const best = Object.keys(U.best).map(id => { const b = U.best[id];
+    return `<div class="uf-row"><span class="ic">${FITEMS[id].i}</span><div><b>${esc(FITEMS[id].sg || FITEMS[id].n)}</b><small>Rekord: ${fmt(b.cm, 1)} cm · ${fishKgTxt(b.kg)} · ${qStars(b.q)}</small></div></div>`; }).join("");
+  const last = U.log.slice(0, 12).map(e => `<div class="uf-row"><span class="ic">${FITEMS[e.sp].i}</span><div><b>${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
+  return U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
+    : `<div class="fs-empty">Noch leer. Jeder Fang am Ufer und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`;
+}
+
+/* ------------------------------ Angler-Turnier ---------------------------- */
+function openTournament() {
+  const res = tourStart();
+  if (!res) return;
+  const T = { min: 0, i: 0, kg: new Map(res.map(p => [p, 0])), log: [] };
+  const feed = [];
+  res.forEach(p => p.catches.forEach(f => feed.push({ p, f })));
+  feed.sort((a, b) => a.f.t - b.f.t);
+  FV.sheetFn = null;
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏆</span>Angler-Turnier<small>Fünf Angler · ${FTOUR.mins} Minuten · das meiste Gewicht gewinnt</small></div>
+    <div class="uf-clock" id="trClock"></div><div class="uf-list" id="trTable"></div><div class="uf-feed" id="trFeed"></div>
+    <div class="fs-row"><button class="btn tiny ghost" id="trSkip">Überspringen ⏩</button></div>`, "tour");
+  const draw = () => {
+    const rows = res.slice().sort((a, b) => T.kg.get(b) - T.kg.get(a));
+    const end = T.min >= FTOUR.mins;
+    $("#trClock").textContent = end ? "Abpfiff!" : "⏱ Minute " + Math.floor(T.min) + " von " + FTOUR.mins;
+    $("#trTable").innerHTML = rows.map((p, i) => `<div class="uf-row${p.bert ? " bert" : ""}"><span class="ic">${i === 0 && end ? "🏆" : p.bert ? `<img src="${BERT_IMG}" alt="">` : p.i}</span>
+      <div><b>${i + 1}. ${esc(p.n)}</b><small>${(n => n + (n === 1 ? " Fang" : " Fänge"))(p.catches.filter(f => f.t <= T.min).length)}</small></div><b>${fishKgTxt(T.kg.get(p))}</b></div>`).join("");
+    $("#trFeed").innerHTML = T.log.slice(-3).reverse().map(x => `<div>${x}</div>`).join("");
+  };
+  const step = () => {
+    while (T.i < feed.length && feed[T.i].f.t <= T.min) {
+      const { p, f } = feed[T.i++];
+      T.kg.set(p, T.kg.get(p) + f.kg);
+      T.log.push(`${FITEMS[f.sp].i} <b>${esc(p.n)}</b>: ${esc(FITEMS[f.sp].sg)} ${fmt(f.cm, 1)} cm${p.bert && f.t >= FTOUR.mins ? " – <b>kapital!</b>" : ""}`);
+      if (p.bert && f.t >= FTOUR.mins) sfx("level");
+    }
+    draw();
+  };
+  const finish = () => {
+    clearInterval(T.iv);
+    T.min = FTOUR.mins + 0.5; step();
+    const b = $("#trSkip"); if (b) b.outerHTML = `<button class="btn fgo" id="trBert">🏆 Zur Siegerehrung</button>`;
+    $("#trBert").onclick = bertTalk;
+  };
+  /* eine Turnierminute ≈ 0,7 s; Fenster zu = Ticker stoppt (das Ergebnis ist gespeichert) */
+  T.iv = setInterval(() => {
+    if (FV.sheet !== "tour") return clearInterval(T.iv);
+    T.min += 0.25; step();
+    if (T.min >= FTOUR.mins + 0.5) finish();
+  }, 175);
+  $("#trSkip").onclick = finish;
+  step();
+}
+function bertTalk() {
+  if (!tourFinish()) return openUfer("bert");
+  save();
+  sfx("coin");
+  FV.uferTab = "bert";
+  openFarmSheet(`<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Sieger des Angler-Turniers</small>
+      <p>„Moin! Bert Flomann. Schönes Turnier – und der Barsch zum Schluss war ein Prachtkerl. Pass auf: Ich hab einen Wurmkasten im Garten. Für ein kleines Entgelt sammel ich dir Tauwürmer – damit beißen auch Barsche und Forellen. Und wenn du ordentlich was rausholst, bau ich dir später richtige Köder für die Großen.“</p></div></div>
+    <div class="fv-msg">🏆 Startgeld ${eur(FTOUR.members.length * FTOUR.fee)} − Preisgeld ${eur(FTOUR.prize)} · +${FTOUR.xp} EP</div>
+    <button class="btn fgo" id="bertOk">🤝 Abgemacht!</button>`, "visit");
+  $("#bertOk").onclick = () => openUfer("bert");
+  renderFarmUI();
 }

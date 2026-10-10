@@ -189,7 +189,17 @@ const FAREAS = {
     talk: "Guten Tag! Heike Sommer, Bürgermeisterin. Die alte Fischerei am Glindower See ist seit Jahren verwaist. Weil Sie so viel für den Ort tun, verpachten wir Ihnen das Ufer. Fangen Sie klein an – ein Steg, eine Hütte. Holz dafür haben Sie ja jetzt genug. Die Restaurants in Werder warten auf frischen Zander!"
   }
 };
-const FAREA_ORDER = ["wald", "saege", "altwald", "see"];
+/* Lehmanns Ufergrundstück: Teilfläche am Ostufer des Glindower Sees. Kein
+   Kaufpreis – Lina vermittelt, sobald der See offen ist (whoImg = Porträt). */
+FAREAS.ufer = {
+  n: "Lehmanns Ufer", i: "🛶", lv: 15,
+  locks: [[46, 22, 400, 400]], reveal: [48, 47], cam: [-40, -14.5, 70, 74],
+  reqs: [{ t: "Der Glindower See ist offen", n: 1, v: () => farmAreaOpen("see") ? 1 : 0, yes: true }],
+  who: "Lina Sturm", whoI: "👩", whoRole: "Disponentin", whoImg: "lina.png",
+  msg: "Lehmanns Ufergrundstück gehört jetzt dir – mit Steg, alter Angel und Platz für Reusen.",
+  talk: "Chef, Neuigkeiten! Der alte Lehmann gibt sein Ufergrundstück am Glindower See auf – Steg, Bucht und seine alte Angel. Er will nichts dafür, Hauptsache, jemand kümmert sich. Und weißt du, worauf die Weißfische dort beißen? Auf Mais – den hast du ja im Silo. Später lohnen sich Würmer und bessere Ruten, und für Reusen ist auch Platz."
+};
+const FAREA_ORDER = ["wald", "saege", "altwald", "see", "ufer"];
 /* Bedingungen: alle erfüllt? Und als Text („3 Bäume gefällt“) */
 Object.values(FAREAS).forEach(A => {
   A.req = () => A.reqs.every(q => q.v() >= q.n);
@@ -351,11 +361,11 @@ Object.assign(FUNLOCK_HOF, {
   12: ["🛤️ Hobelmaschine", "🌡️ Trockenkammer & Bauholz", "⚙️ Blockbandsäge"],
   13: ["🌳 Der alte Wald", "🪚 Profi-Säge", "🗃️ Europaletten"],
   14: ["🪑 Schleifmaschine: Möbelteile & Schatullen", "🚪 Fräse: Türen & Zäune"],
-  15: ["🎣 Der Glindower See", "🪵 Steg"],
+  15: ["🎣 Der Glindower See", "🪵 Steg", "🛶 Lehmanns Ufer: Angeln mit Mais, Reusen für Muscheln"],
   16: ["🛖 Fischerhütte: Filets", "⛵ Bootshaus & Ruderboot", "🎣 Fischer"],
-  17: ["🔥 Räucherei", "🧊 Fischlager & Konserven", "🏡 Hof-Ausbau: Stufe 4"],
+  17: ["🔥 Räucherei", "🧊 Fischlager & Konserven", "🏡 Hof-Ausbau: Stufe 4", "🎣 Spinnrute", "🦀 Reusen Stufe 2: Wollhandkrabben"],
   18: ["❄️ Kühlhaus & Edelfisch-Box", "🍱 Zanderfilet"],
-  19: ["🏪 Fischmarkt", "🚤 Motorboot"],
+  19: ["🏪 Fischmarkt", "🚤 Motorboot", "🪝 Raubfischrute", "🦞 Reusen Stufe 3: Edelkrebse"],
   20: ["🚚 Spedition gründen – sobald das Notizbuch fertig ist"]
 });
 

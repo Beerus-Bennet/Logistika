@@ -170,6 +170,7 @@ function erbeInit(F, fresh) {
     if (p) farmAddObj({ t: "stall", x: p[0], z: p[1], r: 0 });
   }
   if (fresh) erbeJunk(F);
+  if (F.areas.ufer) erbeUferInit(F);
 }
 /* Gerümpel auf dem frisch geerbten Hof */
 function erbeJunk(F) {
@@ -191,6 +192,7 @@ function farmAreaReady(id) {
   if (!A || farmAreaOpen(id)) return false;
   if (id === "altwald" && !farmAreaOpen("wald")) return false;
   if (id === "saege" && !farmAreaOpen("wald")) return false;
+  if (id === "ufer" && !farmAreaOpen("see")) return false;
   return flv() >= A.lv && (!A.req || A.req());
 }
 /* Text, warum ein Gebiet noch zu ist */
@@ -204,7 +206,13 @@ function farmAreaWhy(id) {
 /* Bedingungen erfüllt → Ereignis vormerken (die Ansicht zeigt es) */
 function farmAreaCheck() {
   const F = S.farm;
-  FAREA_ORDER.forEach(id => { if (farmAreaReady(id) && !F.areaQ.includes(id)) F.areaQ.push(id); });
+  FAREA_ORDER.forEach(id => {
+    if (!farmAreaReady(id) || F.areaQ.includes(id)) return;
+    F.areaQ.push(id);
+    /* Lina meldet sich zusätzlich am Telefon – sie wartet dann am Ufer */
+    if (id === "ufer" && typeof phoneMsg === "function") phoneMsg({ from: "Lina Sturm", kind: "info", title: "Lehmanns Ufer ist zu haben",
+      body: "Chef, der alte Lehmann gibt sein Ufergrundstück am Glindower See auf – Steg, Bucht und seine alte Angel, ganz ohne Kaufpreis. Ich warte am Ostufer auf dich!" });
+  });
 }
 function farmAreaUnlock(id) {
   const F = S.farm;
@@ -214,6 +222,7 @@ function farmAreaUnlock(id) {
   farmXP(id === "see" ? 120 : id === "saege" ? 90 : 60);
   farmClover(3, "Neues Gebiet");
   if (id === "see") erbeFishPlots();
+  if (id === "ufer") erbeUferInit(F);
   farmEvent("area:" + id);
   return true;
 }
@@ -520,10 +529,17 @@ function farmFishOdds(gid) {
   }
   return out;
 }
-function farmCast() { if (!farmTake("koeder", 1)) return false; S.farm.stats.casts = (S.farm.stats.casts || 0) + 1; return true; }
+/* Auswerfen: am Glindower See ein Köder aus der Dose, an Lehmanns Ufer der gewählte */
+function farmCast(gid) {
+  const ok = uferGround(gid) ? uferBaitUse(uferS().bait) : farmTake("koeder", 1);
+  if (!ok) return false;
+  S.farm.stats.casts = (S.farm.stats.casts || 0) + 1;
+  return true;
+}
 /* Was hängt am Haken? Beim Biss gewürfelt, damit der Drill zum Fisch passt */
 function farmRollCatch(gid) {
   if (Math.random() < 0.07) return { junk: farmWPick(FJUNK_FISH, x => x.w) };
+  if (uferGround(gid)) return uferRoll(gid);
   const odds = farmFishOdds(gid);
   return { id: farmWPick(Object.keys(odds), x => odds[x]) };
 }
@@ -538,7 +554,8 @@ function farmCatch(gid, q, pre) {
   }
   const id = pre.id;
   if (farmRoom(id) < 1) { farmFull("fisch"); return { full: true, id }; }
-  q = clamp(Math.round(q || 3), 1, 5);
+  /* Lehmanns Ufer: Sterne aus Länge, Gewicht und Drill; sonst nur der Drill */
+  q = pre.cm ? specQ(pre, ((q || 3) - 1) / 4) : clamp(Math.round(q || 3), 1, 5);
   farmAdd(id, 1, q);
   const xp = FITEMS[id].xp + 2;
   farmXP(xp);
@@ -549,10 +566,252 @@ function farmCatch(gid, q, pre) {
   farmEvent("catch:" + id);
   farmEvent("catch:" + gid + ":" + id);
   if (farmWeather() === "regen" || farmTod() === "nacht") farmEvent("catch:hard");
-  return { id, n: 1, q, xp };
+  const r = { id, n: 1, q, xp };
+  if (pre.cm) Object.assign(r, uferLog(id, pre, q, gid));
+  return r;
 }
 /* Fanggründe, die man gerade erreicht */
-function farmGroundOk(g) { return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
+function farmGroundOk(g) {
+  if (g.area && !farmAreaOpen(g.area)) return false;
+  if (g.boat === 0) return g.area ? true : !!farmObj1("f_steg");
+  return (S.farm.boat || 0) >= g.boat;
+}
+
+/* ------------------------- Lehmanns Ufergrundstück ------------------------
+   Rute × Köder bestimmen, welche Klasse beißt; jeder Fang hat Länge,
+   Gewicht und Sterne. Dazu Bert Flomann (Würmer, Profi-Köder), das
+   Angler-Turnier und die Reusen. */
+function uferS() { return S.farm && S.farm.ufer || null; }
+function uferGround(gid) { const G = FGROUNDS.find(g => g.id === gid); return !!(G && G.area === "ufer" && uferS()); }
+/* Kachel für eine Weltmitte (wie die Bauplätze am See) */
+function uferTile(wx, wz, w, d) { return [Math.round(wx - w / 2 + FG / 2), Math.round(wz - d / 2 + FG / 2)]; }
+/* Zustand, Lehmanns alte Angel, sein Steg und die erste Reuse */
+function erbeUferInit(F) {
+  const U = F.ufer || (F.ufer = {});
+  U.rod = U.rod || 1;
+  U.bait = U.bait || "mais";
+  U.mais = U.mais || 0;
+  U.potLvl = U.potLvl || 1;
+  U.tour = U.tour || { done: false, res: null };
+  U.bert = U.bert || { met: false, lureQ: null, call: false };
+  U.log = U.log || [];
+  U.best = U.best || {};
+  U.cnt = U.cnt || { klein: 0, mittel: 0, gross: 0 };
+  if (!F.objs.some(o => o.t === "u_steg")) {
+    const [x, z] = uferTile(FUFER.steg[0], FUFER.steg[1], 6, 2);
+    farmAddObj({ t: "u_steg", x, z, r: 1, area: "ufer" });
+  }
+  if (!uferPots().length) uferPotPlace(0);
+}
+function uferPots() { return S.farm.objs.filter(o => o.t === "pot" && o.area === "ufer"); }
+function uferPotPlace(i) {
+  const p = FUFER.potSpots[i], [x, z] = uferTile(p[0], p[1], 2, 2);
+  return farmAddObj({ t: "pot", kind: null, x, z, r: 0, area: "ufer" });
+}
+/* weitere Reuse an den nächsten Platz */
+function uferPotBuy() {
+  const i = uferPots().length, cost = FUFER.potCost[i];
+  if (cost == null || i >= FUFER.potSpots.length) return false;
+  if (S.money < cost) return toast("Dafür fehlen " + eur(cost - S.money) + ".", "warn"), false;
+  S.money -= cost; S.expense += cost;
+  logMoney("farm", "Reuse für Lehmanns Ufer", -cost);
+  uferPotPlace(i);
+  farmXP(10);
+  farmEvent("buy:pot");
+  return true;
+}
+/* Reusen eine Stufe besser: mehr Arten, größere Tiere */
+function uferPotUp() {
+  const U = uferS(), N0 = U && FPOT_UP[U.potLvl + 1];
+  if (!N0) return false;
+  if (flv() < N0.lv) return toast("Erst ab Level " + N0.lv + ".", "warn"), false;
+  if (S.money < N0.cost) return toast("Dafür fehlen " + eur(N0.cost - S.money) + ".", "warn"), false;
+  S.money -= N0.cost; S.expense += N0.cost;
+  logMoney("farm", "Reusen Stufe " + (U.potLvl + 1), -N0.cost);
+  U.potLvl++;
+  farmXP(20);
+  farmEvent("upgrade:pot");
+  return true;
+}
+function farmBuyRod(n) {
+  const U = uferS(), R = FRODS[n];
+  if (!U || !R || U.rod >= n) return false;
+  if (U.rod < n - 1) return toast("Erst die " + FRODS[n - 1].n + ".", "warn"), false;
+  if (flv() < R.lv) return toast("Erst ab Level " + R.lv + ".", "warn"), false;
+  if (S.money < R.price) return toast("Dafür fehlen " + eur(R.price - S.money) + ".", "warn"), false;
+  S.money -= R.price; S.expense += R.price;
+  logMoney("farm", R.n + " gekauft", -R.price);
+  U.rod = n;
+  farmXP(30);
+  farmEvent("buy:rod");
+  return true;
+}
+/* Köder: wie viele Würfe, und warum gerade keiner geht */
+function uferBaitN(b) {
+  const B = FBAITS[b], U = uferS();
+  return b === "mais" ? (U.mais || 0) + farmInv("mais") * B.per : farmInv(B.item);
+}
+function uferBaitWhy(b) {
+  const B = FBAITS[b], U = uferS();
+  if (B.tour && !U.tour.done) return "nach dem Turnier";
+  if (B.rod && U.rod < B.rod) return "braucht die " + FRODS[B.rod].n;
+  if (uferBaitN(b) > 0) return "";
+  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "bei Bert holen" : "bei Bert bestellen";
+}
+/* Ein Sack Mais reicht für zehn Würfe */
+function uferBaitUse(b) {
+  const B = FBAITS[b], U = uferS();
+  if (uferBaitWhy(b)) return false;
+  if (b !== "mais") return farmTake(B.item, 1);
+  if (U.mais > 0) { U.mais--; return true; }
+  if (!farmTake("mais", 1)) return false;
+  U.mais = B.per - 1;
+  return true;
+}
+/* Rute und Köder gemeinsam: Grundgewichte des Köders, die Rute schiebt
+   Gewicht zur größten erlaubten Klasse. Nicht erlaubte Klassen bleiben 0. */
+function uferClassW(bait, rod) {
+  const w = Object.assign({}, FBAITS[bait].mix), R = FRODS[rod] || FRODS[1];
+  const ks = FCLS.filter(c => w[c] > 0);
+  if (ks.length > 1 && R.shift) {
+    const top = ks[ks.length - 1], rest = ks.slice(0, -1), sum = rest.reduce((s, c) => s + w[c], 0);
+    rest.forEach(c => { const cut = Math.min(w[c] - 0.1, R.shift * w[c] / sum); w[c] -= cut; w[top] += cut; });
+  }
+  return w;
+}
+/* Wer beißt hier – nach Klasse, dann nach Fanggrund × Tageszeit × Wetter */
+function uferOdds(gid) {
+  const U = uferS(), odds = farmFishOdds(gid), w = uferClassW(U.bait, U.rod), out = {};
+  FCLS.forEach(c => {
+    if (!w[c]) return;
+    const ids = Object.keys(odds).filter(id => FFISH[id].cls === c), sum = ids.reduce((s, id) => s + odds[id], 0);
+    ids.forEach(id => { out[id] = w[c] * odds[id] / sum; });
+  });
+  return out;
+}
+function uferRoll(gid) {
+  const U = uferS(), o = uferOdds(gid);
+  const id = farmWPick(Object.keys(o), x => o[x]);
+  return Object.assign({ id }, specRoll(FFISH[id], FRODS[U.rod].size + FBAITS[U.bait].size));
+}
+/* Länge in den Grenzen der Art (bonus schiebt nach oben), Kondition ±15 %,
+   Gewicht daraus. r = Größe 0 … 1 innerhalb der Art. */
+function specRoll(D, bonus) {
+  const r = 1 - Math.pow(1 - Math.random(), 1 + 2 * (bonus || 0));
+  const cm = Math.round((D.cm[0] + (D.cm[1] - D.cm[0]) * r) * 10) / 10;
+  const cond = 0.85 + Math.random() * 0.3;
+  const base = D.k != null ? D.k * Math.pow(cm / 100, 3) : D.kg[0] + (D.kg[1] - D.kg[0]) * r;
+  return { cm, kg: Math.round(base * cond * 1000) / 1000, r, cond };
+}
+/* Sterne: Größe zählt am meisten, dann Kondition und Können (extra 0 … 1) */
+function specQ(s, extra) {
+  const score = 0.6 * s.r + 0.2 * (s.cond - 0.85) / 0.3 + 0.2 * clamp(extra == null ? 0.5 : extra, 0, 1);
+  return 1 + FQCUT.filter(c => score >= c).length;
+}
+/* Wert eines einzelnen Fangs beim Händler (voller Preis, Sterne ±15 %) */
+function specValue(id, q) { return Math.round(FITEMS[id].v * (1 + (q - 3) * 0.15) * 100) / 100; }
+/* Fangbuch: die letzten 50 Fänge, Rekord je Art (nach Gewicht) */
+function uferLog(id, s, q, gid) {
+  const U = uferS(), e = { sp: id, cm: s.cm, kg: s.kg, q, gid, t: S.time };
+  U.log.unshift(e);
+  if (U.log.length > 50) U.log.length = 50;
+  const b = U.best[id], rec = !b || s.kg > b.kg;
+  if (rec) U.best[id] = { cm: s.cm, kg: s.kg, q, t: S.time };
+  const c = FFISH[id] && FFISH[id].cls;
+  if (c && gid && FGROUNDS.some(g => g.id === gid && g.area === "ufer")) U.cnt[c] = (U.cnt[c] || 0) + 1;
+  return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec };
+}
+
+/* ------------------------------ Bert Flomann ------------------------------ */
+function bertLureOk() {
+  const U = uferS();
+  return !!(U && U.tour.done && U.rod >= FBERT.lureNeed.rod && U.cnt.mittel >= FBERT.lureNeed.mittel);
+}
+function bertWorms() {
+  const U = uferS(), W = FBERT.worms;
+  if (!U || !U.tour.done) return false;
+  if (farmRoom("wurm") < W.n) return farmFull("fisch"), false;
+  if (S.money < W.price) return toast("Dafür fehlen " + eur(W.price - S.money) + ".", "warn"), false;
+  S.money -= W.price; S.expense += W.price;
+  logMoney("farm", "Tauwürmer von Bert", -W.price);
+  farmAdd("wurm", W.n, 3);
+  return true;
+}
+function bertOrderLures() {
+  const U = uferS(), L = FBERT.lures;
+  if (!bertLureOk() || U.bert.lureQ) return false;
+  if (S.money < L.price) return toast("Dafür fehlen " + eur(L.price - S.money) + ".", "warn"), false;
+  S.money -= L.price; S.expense += L.price;
+  logMoney("farm", "Profi-Köder bei Bert bestellt", -L.price);
+  U.bert.lureQ = { n: L.n, end: S.time + L.t };
+  return true;
+}
+function bertCollect() {
+  const U = uferS(), Q = U && U.bert.lureQ;
+  if (!Q || S.time < Q.end) return false;
+  if (farmRoom("profikoeder") < Q.n) return farmFull("fisch"), false;
+  farmAdd("profikoeder", Q.n, 3);
+  U.bert.lureQ = null;
+  return true;
+}
+/* im Takt: Bert meldet sich einmal, wenn er Profi-Köder baut */
+function uferTick() {
+  const U = uferS();
+  if (!U || !bertLureOk() || U.bert.call) return;
+  U.bert.call = true;
+  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Neue Köder aus der Werkstatt",
+    body: "Moin! Du holst ja ordentlich Barsche raus. Ich hab in der Garage was gebastelt: Profi-Köder für die richtig Großen – Hecht, Zander, sogar Wels. Mit der Raubfischrute hält das auch. Bestell sie bei mir am Ufer, in zwei Stunden sind sie fertig." });
+}
+
+/* ------------------------------ Angler-Turnier ----------------------------
+   Das Ergebnis steht beim Start fest (und wird gespeichert). Erst die vier
+   anderen, dann Bert – er angelt so lange weiter, bis er sicher vorn liegt. */
+function tourCanStart() { const U = uferS(); return !!(U && !U.tour.done && U.cnt.klein >= FTOUR.need); }
+function tourRoll() {
+  const G = FGROUNDS.find(g => g.id === "u-steg");
+  const ids = c => Object.keys(G.fish).filter(id => FFISH[id].cls === c && id !== "schleie");
+  const one = (c, bonus, t) => { const sp = farmWPick(ids(c), x => G.fish[x]); return Object.assign({ sp, t }, specRoll(FFISH[sp], bonus)); };
+  const sum = p => p.catches.reduce((s, f) => s + f.kg, 0);
+  const res = FTOUR.members.map(m => ({ n: m.n, i: m.i, bert: !!m.bert, catches: [] }));
+  const others = res.filter(p => !p.bert), B = res.find(p => p.bert);
+  others.forEach(p => { const n = 3 + Math.floor(Math.random() * 4); for (let i = 0; i < n; i++) p.catches.push(one(Math.random() < 0.7 ? "klein" : "mittel", 0.2, 1 + Math.floor(Math.random() * 24))); });
+  const best = Math.max(...others.map(sum));
+  for (let i = 0, n = 3 + Math.floor(Math.random() * 3); i < n; i++) B.catches.push(one(Math.random() < 0.6 ? "klein" : "mittel", 0.3, 8 + Math.floor(Math.random() * 17)));
+  /* der kapitale Barsch in der letzten Minute */
+  const big = Object.assign({ sp: "barsch", t: FTOUR.mins }, specRoll(FFISH.barsch, 3));
+  B.catches.push(big);
+  /* ohne Obergrenze: jeder Fang wiegt > 0, also liegt Bert irgendwann vorn */
+  while (sum(B) <= best + 0.05) B.catches.push(one("mittel", 0.8, 10 + Math.floor(Math.random() * 15)));
+  res.forEach(p => { p.catches.sort((a, b) => a.t - b.t); p.total = Math.round(sum(p) * 1000) / 1000; p.top = Math.max(0, ...p.catches.map(f => f.kg)); });
+  res.sort((a, b) => b.total - a.total || b.top - a.top);
+  console.assert(res[0].bert, "Turnier: Bert muss gewinnen");
+  return res;
+}
+function tourStart() {
+  const U = uferS();
+  if (!tourCanStart()) return null;
+  if (!U.tour.res) { U.tour.res = tourRoll(); save(); }
+  return U.tour.res;
+}
+/* Siegerehrung: Startgeld 5 × 40 €, Preisgeld an Bert – einmalig */
+function tourFinish() {
+  const U = uferS();
+  if (!U || U.tour.done || !U.tour.res) return false;
+  U.tour.done = true;
+  U.bert.met = true;
+  const net = FTOUR.members.length * FTOUR.fee - FTOUR.prize;
+  S.money += net; S.revenue += net;
+  logMoney("farm", "Angler-Turnier am Ufer", net);
+  farmXP(FTOUR.xp);
+  farmEvent("tour");
+  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Petri Heil!",
+    body: "Moin! Schönes Turnier war das. Wie versprochen: Für ’n kleines Entgelt sammel ich dir Tauwürmer aus meinem Wurmkasten – damit beißen auch Barsche und Forellen. Komm einfach ans Ufer." });
+  return true;
+}
+
+/* ------------------------------ Reusen am Ufer ---------------------------- */
+/* Wunschziel freigeschaltet? Level und Reusenstufe */
+function farmPotOk(id) { const U = uferS(); return !!(FPOTS[id] && FPOTS[id].lv <= flv() && U && U.potLvl >= FPOTS[id].tier); }
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
 function farmStageNext() { return FHOF_STAGES[(S.farm.stage || 1) + 1] || null; }
@@ -1027,6 +1286,7 @@ function farmErbeTick(dt) {
   staffWork();
   stallTick(false, dt || 1);
   stallTick(true, dt || 1);
+  uferTick();
   const day = staffDay();
   if (F.day == null) F.day = day;
   if (day > F.day) { F.day = day; staffDaily(); }

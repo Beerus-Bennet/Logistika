@@ -197,7 +197,8 @@ const PEN_HUT = {
 function buildObjNode(o) {
   const R = FV.R;
   const [cx, cz] = farmCenter(o);
-  const root = fnode(objMesh(o), { x: cx, z: cz, ry: o.r ? -Math.PI / 2 : 0 });
+  /* Reusen im See: die Modelle rechnen mit dem tieferen Wasser der alten Kaikante */
+  const root = fnode(objMesh(o), { x: cx, z: cz, y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? -Math.PI / 2 : 0 });
   const parts = {};
   if (o.t === "mill") {
     const h = FM.MILL_HUB;
@@ -1317,13 +1318,14 @@ function renderFarmPop() {
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
         : `<div class="ftool big" data-tool="water"><span class="ic">🚿</span><b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
   } else if (P.kind === "bait") {
-    const k = farmInv("koeder");
-    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Köder da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
+    const k = farmInv("koeder"), m = farmInv("mais"), U = typeof uferS === "function" ? uferS() : null;
+    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Köder${m ? " · " + FITEMS.mais.i + " " + famt("mais", m) + " Mais" : ""} da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
       + Object.keys(FPOTS).map(id => {
-        const c = FPOTS[id], it = FITEMS[id], lock = c.lv > lv;
+        const c = FPOTS[id], it = FITEMS[id], lock = !farmPotOk(id);
+        const why = c.lv > lv ? "Lv " + c.lv : "Stufe " + c.tier;
         return `<div class="ftool${lock ? " lock" : ""}" data-tool="bait" data-crop="${id}">
-          <span class="ic">${lock ? "🔒" : it.i}</span><b>${lock ? "Lv " + c.lv : esc(it.n)}</b><small>${lock ? "" : fdur(c.t) + " · 1 Beutel"}</small></div>`;
-      }).join("") + `</div>` + (k ? "" : `<div class="fp-tip">Keine Köder mehr: Die Futterküche macht welche aus Fischabfällen – oder im Laden unter „Einkauf“.</div>`);
+          <span class="ic">${lock ? "🔒" : it.i}</span><b>${lock ? why : esc(it.n)}</b><small>${lock ? (U && c.lv <= lv ? "Reusen ausbauen" : "") : fdur(c.t) + " · " + Object.keys(c.mix).map(x => FITEMS[x].i).join("")}</small></div>`;
+      }).join("") + `</div>` + (k || m ? "" : `<div class="fp-tip">Keine Köder mehr: Die Fischerhütte macht welche aus Fischabfällen, im Laden gibt es Dosen – und eine Portion Mais aus dem Silo geht auch.</div>`);
   } else if (P.kind === "hook") {
     h = `<div class="fp-h">${FITEMS[o.kind].i} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
       <div class="fp-row"><div class="ftool big" data-tool="hook"><span class="ic">🪝</span><b>Haken</b></div></div>`;
@@ -1466,7 +1468,7 @@ function applyToolTo(o, T) {
   else if (T.kind === "sickle" && o.t === "field" && fieldState(o) === "ripe") ok = doHarvest(o, true);
   else if (T.kind === "bait" && o.t === "pot" && potState(o) === "empty") {
     const r = doBait(o, T.crop);
-    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🪱 Keine Köder mehr – die Futterküche macht welche aus Fischabfällen.", "warn"); } }
+    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🪱 Keine Köder mehr – die Fischerhütte macht welche aus Fischabfällen, Mais aus dem Silo geht auch.", "warn"); } }
     else ok = !!r;
   }
   else if (T.kind === "hook" && o.t === "pot" && potState(o) === "ripe") ok = doHaul(o, true);
@@ -1705,8 +1707,12 @@ function openFarmStore(st) {
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>
     ${sel ? (() => {
       const wood = st === "holz" && typeof farmWoodPrice === "function", pr = (id, n) => wood ? farmWoodPrice(id, n) : farmSellPrice(id, n);
+      /* Fisch: eine Zeile je Sternstufe, jede zu ihrem Preis */
+      const qs = farmQsOn(sel) && S.farm.inv[sel].qs;
+      const rows = qs ? [5, 4, 3, 2, 1].filter(q => qs[q]).map(q => `<div class="fsell-q"><span>${qStars(q)} <small>${esc(fishQName(q))} · ${famt(sel, qs[q])}</small></span>
+        ${[1, qs[q]].filter((n, i, a) => a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}" data-q="${q}">${n > 1 ? "alle" : "1"} · ${eur(farmSellPrice(sel, n, q))}</button>`).join("")}</div>`).join("") : "";
       return `<div class="fsell"><b>${FITEMS[sel].i} ${esc(fqty(sel, farmInv(sel)))}</b> · ${qStars(farmQ(sel))} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
-      <div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(pr(sel, n))}</button>`).join("")}</div>
+      ${qs ? rows : `<div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(pr(sel, n))}</button>`).join("")}</div>`}
       <small>${wood ? (FITEMS[sel].raw ? "🧔 Der Holzhändler zahlt für Rohholz den vollen Preis" + (farmEvOn("holzpreis") ? " – gerade sogar 30 % mehr!" : ".") : "🧔 Der Holzhändler nimmt auch Holzwaren – aber nur zum halben Wert. Bestellungen bringen mehr.")
         : "Großhandel zahlt sofort, aber nur den halben Wert. Über Bestellungen bekommst du deutlich mehr."}</small></div>`;
     })() : ""}
@@ -1717,7 +1723,7 @@ function openFarmStore(st) {
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
   $$("#farmSheetIn [data-sell]").forEach(b => b.onclick = () => {
-    const m = st === "holz" && typeof farmSellWood === "function" ? farmSellWood(sel, +b.dataset.sell) : farmSell(sel, +b.dataset.sell);
+    const m = st === "holz" && typeof farmSellWood === "function" ? farmSellWood(sel, +b.dataset.sell) : farmSell(sel, +b.dataset.sell, +b.dataset.q || 0);
     if (m) { const r = b.getBoundingClientRect(), fr = $("#farmFx").getBoundingClientRect(); coinFly(r.left - fr.left + r.width / 2, r.top - fr.top, m); save(); openFarmStore(st); }
   });
   const up = $("#fsUp");

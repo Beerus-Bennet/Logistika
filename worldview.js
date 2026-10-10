@@ -20,21 +20,23 @@ const AREA_SPOTS = {
   wald:    { i: "🌲", n: "Wald",       at: [-22, -44], d: 40, peek: [-16, -15] },
   saege:   { i: "🪚", n: "Sägewerk",   at: [-29, -29], d: 30, peek: [-18, -17] },
   altwald: { i: "🌳", n: "Alter Wald", at: [-72, -76], d: 40, peek: [-48, -55] },
-  see:     { i: "🎣", n: "See",        at: [12, 36],   d: 40, peek: [6, 19] }
+  see:     { i: "🎣", n: "See",        at: [12, 36],   d: 40, peek: [6, 19] },
+  ufer:    { i: "🛶", n: "Ufer",       at: [47, 46],   d: 30, peek: [40, 30] }
 };
-const AREA_NPC = { wald: [-14.2, -5.3], saege: [-27.1, -16.4], altwald: [-53.8, -58.6], see: [7.2, 20.5] };
-const AREA_BAR = { wald: [-14.7, -7.5, Math.PI / 2], saege: [-29, -17.4, 0], altwald: [-56, -61.2, -4.172], see: [5, 20.8, 0] };
+const AREA_NPC = { wald: [-14.2, -5.3], saege: [-27.1, -16.4], altwald: [-53.8, -58.6], see: [7.2, 20.5], ufer: [43.5, 27] };
+const AREA_BAR = { wald: [-14.7, -7.5, Math.PI / 2], saege: [-29, -17.4, 0], altwald: [-56, -61.2, -4.172], see: [5, 20.8, 0], ufer: [45.6, 27.5, Math.PI / 2] };
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   saege:   { shirt: 0x6a7a8a, pants: 0x3a3a4a, hat: "muetze", beard: 0xd8d4cc, seed: 2 },
-  see:     { shirt: 0xb83a4a, pants: 0x2a2a3a, hair: 0x6a3a2a, skin: 0xf0c4a0, seed: 3 }
+  see:     { shirt: 0xb83a4a, pants: 0x2a2a3a, hair: 0x6a3a2a, skin: 0xf0c4a0, seed: 3 },
+  ufer:    { shirt: 0x2f6fb0, pants: 0x2a2a3a, hair: 0xd9b46a, skin: 0xf3cdb0, seed: 4 }
 };
 /* Höhe der Tag-Blasen und Taps für die neuen Objekte */
 Object.assign(OBJ_H, {
   sw_halle: 4.6, sw_lager: 2.6, sw_buero: 2.8, sw_lkw: 2.2, kessel: 3.0, spalter: 1.4, hobel: 1.3, trocken: 2.4, verpack: 1.5,
   schleif: 1.3, fraese: 2.0, saegebock: 1.1, junk: 0.9, stall: 1.8, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
-  f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4
+  f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4, u_steg: 0.9
 });
 /* Rauch über arbeitenden Gebäuden */
 Object.assign(CHIMNEYS, {
@@ -393,7 +395,7 @@ function worldObjMesh(o) {
     case "junk": return fmesh("junk:" + o.k, () => FWM.junk(o.k));
     case "stall": return fmesh("stall", FWM.stall);
     case "f_plot": { const [w, d] = farmSize(o); return fmesh("fplot:" + w + "x" + d, () => FWM.fPlot(w, d)); }
-    case "f_steg": return fmesh("lakeSteg", FWM.lakeSteg);
+    case "f_steg": case "u_steg": return fmesh("lakeSteg", FWM.lakeSteg);
     case "f_huette": return fmesh("fHuette", FWM.fHuette);
     case "f_boot": return fmesh("fBoot", FWM.fBoot);
     case "f_lager": return fmesh("fLager", FWM.fLager);
@@ -526,7 +528,7 @@ function worldObjParts(o, root, parts) {
   const R = FV.R;
   if (WORN_T.has(o.t) && (S.farm.stage || 1) <= 1) root.tint = [0.42, 0.38, 0.32, 0.22];
   if (o.t === "sw_halle" && sawMask() & 4) parts.blades = R.addChild(root, fnode(fmesh("sawBlades", FWM.sawBlades), { x: 0.5, y: 0.73, z: 0 }));
-  if (o.t === "f_steg") {
+  if (o.t === "f_steg" || o.t === "u_steg") {
     parts.angler = R.addChild(root, fnode(fmesh("angler", FFM.angler), { y: 0.17, z: 2.3 }));
     parts.rod = R.addChild(root, fnode(fmesh("rod", FFM.rod), { y: 0.63, z: 2.55, rx: ROD_REST }));
     parts.angler.visible = parts.rod.visible = false;
@@ -656,9 +658,9 @@ function worldUnlock(id) {
   sfx("level");
   toast(A.i + " " + A.msg, "ok");
   const sp = AREA_SPOTS[id];
-  farmFocusXZ(A.reveal[0] + (id === "see" ? 2 : -4), A.reveal[1] + (id === "see" ? 6 : -4), id === "saege" ? 30 : 40, 1300);
+  farmFocusXZ(A.reveal[0] + (id === "see" ? 2 : id === "ufer" ? -2 : -4), A.reveal[1] + (id === "see" ? 6 : id === "ufer" ? -2 : -4), id === "saege" || id === "ufer" ? 30 : 40, 1300);
   /* Staubspur: der Weg wird freigeschnitten */
-  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-29, -18], [-29, -30], [-29, -42]] : id === "altwald" ? FWORLD.paths[4].slice(2) : [[5, 19.4], [5, 21.6], [-20, 21.9]];
+  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-29, -18], [-29, -30], [-29, -42]] : id === "altwald" ? FWORLD.paths[4].slice(2) : id === "ufer" ? [[40, 24], [45.6, 27.5], [48, 36], [48, 46]] : [[5, 19.4], [5, 21.6], [-20, 21.9]];
   WV.dust = { pts: FM.MB ? FWM.smoothLine(path, 5) : path, i: 0, t: 0 };
   worldSyncBarriers();
   farmSyncScene(true);
@@ -1257,6 +1259,11 @@ function worldTags() {
       if (sold) want.push(["st" + o.id, cx, objH(o) + 0.4, cz, "💰<b>" + sold + "</b>", "ready", () => openStall(o.t === "f_markt")]);
     }
     if (o.t === "f_plot" && farmFishBuildCheck(o.k) === true) want.push(["pl" + o.id, cx, 1.3, cz, "🔨" + FFISHERY[o.k].i, "ready", () => openPlot(o)]);
+    /* Lehmanns Steg: Turnier bereit, Berts Köder fertig */
+    if (o.t === "u_steg" && uferS()) {
+      const U = uferS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, tour = tourCanStart();
+      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🛶" + (tour ? "🏆" : "") + (lure ? "✨" : ""), tour || lure ? "ready" : "", () => openUfer(tour || lure ? "bert" : null)]);
+    }
     if (o.t === "sw_halle" && farmAreaOpen("saege") && !sawRepaired()) { const r = sawNext(); if (r && farmRepairCheck(r) === true) want.push(["rp", cx, 5, cz, "🔧" + r.i, "ready", () => openSawRepair()]); }
     if (o.t === "sw_lkw" && farmAreaOpen("saege") && !(F.saw && F.saw.lkw) && farmRepairCheck(FSAW_LKW) === true) want.push(["lkw", cx, 2.6, cz, "🔧🚛", "ready", () => openLkw()]);
   });
@@ -1379,8 +1386,10 @@ function worldSync(force) {
     const e = FV.nodes.get(o.id);
     if (e && e.parts.goods) e.parts.goods.visible = stallState(o.t === "f_markt").slots.some(it => it && !it.sold);
   });
-  const st = farmObj1("f_steg"), e = st && FV.nodes.get(st.id);
-  if (e && e.parts.angler) e.parts.angler.visible = e.parts.rod.visible = !!(typeof FISH !== "undefined" && FISH.at === "steg");
+  [["f_steg", "steg"], ["u_steg", "u-steg"]].forEach(([t, g]) => {
+    const st = farmObj1(t), e = st && FV.nodes.get(st.id);
+    if (e && e.parts.angler) e.parts.angler.visible = e.parts.rod.visible = !!(typeof FISH !== "undefined" && FISH.at === g);
+  });
 }
 
 /* ------------------------- Oberfläche: Knöpfe ----------------------------- */
@@ -1453,12 +1462,12 @@ function worldUI() {
 /* -------------------------------- Fenster --------------------------------- */
 function openAreaInfo(id) {
   const A = FAREAS[id], S0 = AREA_SPOTS[id], lvOk = flv() >= A.lv;
-  const pre = id === "saege" || id === "altwald" ? farmAreaOpen("wald") : true;
+  const pre = id === "saege" || id === "altwald" ? farmAreaOpen("wald") : id === "ufer" ? farmAreaOpen("see") : true;
   FV.sheetFn = () => openAreaInfo(id);
   const ready = worldVisitor() === id;
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">${A.i}</span>${esc(A.n)}<small>${farmAreaOpen(id) ? "offen" : "noch gesperrt"}</small></div>
     <div class="farea-req">
-      ${pre ? "" : `<div class="no">🔒 Erst muss der Wald offen sein</div>`}
+      ${pre ? "" : `<div class="no">🔒 Erst muss ${id === "ufer" ? "der See" : "der Wald"} offen sein</div>`}
       <div class="${lvOk ? "ok" : "no"}">${lvOk ? "✅" : "⭐"} Erbe-Level ${A.lv}${lvOk ? "" : ` · du bist auf Level ${flv()}`}</div>
       ${A.reqs.map(q => { const v = q.v(), ok = v >= q.n; return `<div class="${ok ? "ok" : "no"}">${ok ? "✅" : "📋"} ${q.yes ? esc(q.t) : q.n + " " + esc(q.t)}${q.yes ? "" : `<em>${Math.min(v, q.n)}/${q.n}</em>`}</div>`; }).join("")}
     </div>
@@ -1469,10 +1478,10 @@ function openAreaInfo(id) {
 function openAreaVisit(id) {
   const A = FAREAS[id];
   FV.sheetFn = null;
-  openFarmSheet(`<div class="fvisit"><div class="fv-fig">${A.whoI}</div><div class="fv-tx"><b>${esc(A.who)}</b><small>${esc(A.whoRole)}</small>
+  openFarmSheet(`<div class="fvisit"><div class="fv-fig${A.whoImg ? " img" : ""}">${A.whoImg ? `<img src="${A.whoImg}" alt="${esc(A.who)}">` : A.whoI}</div><div class="fv-tx"><b>${esc(A.who)}</b><small>${esc(A.whoRole)}</small>
       <p>„${esc(A.talk)}“</p></div></div>
     <div class="fv-msg">${A.i} ${esc(A.msg)}</div>
-    <button class="btn fgo" id="fvGo">👍 Los geht’s!</button>`, "visit");
+    <button class="btn fgo" id="fvGo">${id === "ufer" ? "👍 Übernehmen" : "👍 Los geht’s!"}</button>`, "visit");
   $("#fvGo").onclick = () => worldUnlock(id);
 }
 function openFood() {
@@ -1740,6 +1749,7 @@ function worldObjAction(o, x, y) {
       return false;
     case "kessel": if (!(F.saw && F.saw.motor)) { openSawRepair(); return true; } return false;
     case "f_steg": if (typeof openFishingAt === "function") openFishingAt("steg"); return true;
+    case "u_steg": if (typeof openUfer === "function") openUfer(); return true;
     case "f_boot": if (typeof openBoatSheet === "function") openBoatSheet(); return true;
   }
   if (FMACHINES[o.t] && FMACHINES[o.t].saw && !sawRepaired()) { openSawRepair(); return true; }

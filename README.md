@@ -210,6 +210,25 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Räucherforelle und -aal (mit Brennholz aus dem Sägewerk), Konserven,
   Frischfischkisten (in Holzkisten), Edelfisch-Boxen, Hechtklößchen,
   Fischbrötchen.
+* **Lehmanns Ufer** (ab Level 15, sobald der See offen ist) – bis dahin grau
+  am Ostufer. Dann wartet **Lina** dort: Der alte Lehmann gibt sein
+  Ufergrundstück ab, ohne Kaufpreis, mit Steg, alter Angel und einer Reuse.
+  Hier zählen **Rute und Köder**: Mais aus dem Silo lockt nur kleine
+  Weißfische (Rotauge, Rotfeder, Ukelei), Tauwürmer vor allem mittlere
+  (Barsch, Forelle), Profi-Köder an der Raubfischrute vor allem die Großen
+  (Hecht, Zander, Wels). Bessere Ruten (Spinnrute ab Level 17, Raubfischrute
+  ab 19) schieben die Chancen nach oben und machen den grünen Bereich im
+  Drill breiter. Jeder Fang hat **Länge und Gewicht**; Größe, Kondition und
+  der Drill ergeben die Sterne, die Sterne den Preis. Alles landet im
+  **Fangbuch** mit Rekorden.
+* **Angler-Turnier** – nach 10 kleinen Fischen am Ufer. Fünf Leute aus dem
+  Dorf, du richtest aus; das meiste Gesamtgewicht gewinnt – und das ist immer
+  **Bert Flomann**. Danach sammelt er dir Tauwürmer, und wer mit der
+  Spinnrute 10 mittlere Fische fängt, bekommt bei ihm Profi-Köder.
+* **Reusen am Ufer** – Stufe 1 fängt Teichmuscheln, Stufe 2 (Level 17) auch
+  Wollhandkrabben, Stufe 3 (Level 19) auch Edelkrebse. Bis zu drei Reusen.
+* **Fische nach Sternen** – in der Kühlkiste liegen Fische getrennt nach
+  Sternen und werden je Stufe verkauft; Rezepte nehmen die schlechtesten zuerst.
 * **Mitarbeiter** (ab Level 8, im Wohnhaus unter „👷 Team“) – Fahrer/in (mehr
   Liefergeld), Landwirt/in (gießt mit), Mechaniker/in (Reparaturen und Strom
   günstiger, keine klemmende Säge), Holzfäller/in (mehr Holz, fällt selbst)
