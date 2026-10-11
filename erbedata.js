@@ -323,7 +323,7 @@ const FCOS_CATS = [["skin", "🎨 Optik"], ["pet", "🐾 Haustiere"], ["saison",
 /* Laden: neue Reiter für Werkzeug, Sägewerk und Extras (Kleeblätter) */
 FSHOP_CATS_HOF.splice(3, 0, ["werkzeug", "🪓 Werkzeug"], ["saege", "🪚 Sägewerk"]);
 FSHOP_CATS_HOF.push(["extras", "🍀 Extras"]);
-FSHOP_HOF.push({ id: "s-koeder", cat: "werkzeug", n: "Köder", i: "🪱", lv: 15, item: "koeder", qty: 10, price: () => 4, d: "Zehn Dosen Würmer und Maden für die Angel." });
+FSHOP_HOF.push({ id: "s-koeder", cat: "werkzeug", n: "Reusenköder", i: "🥫", lv: 15, item: "koeder", qty: 10, price: () => 4, d: "Zehn Dosen Fischfetzen und Maden für die Reusen." });
 /* Deko aus dem Kosmetik-Shop (nur, wenn gekauft) */
 Object.assign(FDECO, {
   xmas:    { n: "Weihnachtsbaum",  i: "🎄", price: 0, lv: 1, sz: [2, 2], cos: "weihnachtsbaum" },
@@ -351,11 +351,11 @@ Object.assign(FUNLOCK_HOF, {
   12: ["🛤️ Hobelmaschine", "🌡️ Trockenkammer & Bauholz", "⚙️ Blockbandsäge"],
   13: ["🌳 Der alte Wald", "🪚 Profi-Säge", "🗃️ Europaletten"],
   14: ["🪑 Schleifmaschine: Möbelteile & Schatullen", "🚪 Fräse: Türen & Zäune"],
-  15: ["🎣 Der Glindower See", "🪵 Steg"],
+  15: ["🎣 Der Glindower See", "🪵 Steg: Lehmanns alte Angel, Angeln mit Mais, Reusen für Muscheln"],
   16: ["🛖 Fischerhütte: Filets", "⛵ Bootshaus & Ruderboot", "🎣 Fischer"],
-  17: ["🔥 Räucherei", "🧊 Fischlager & Konserven", "🏡 Hof-Ausbau: Stufe 4"],
+  17: ["🔥 Räucherei", "🧊 Fischlager & Konserven", "🏡 Hof-Ausbau: Stufe 4", "🎣 Spinnrute", "🦀 Reusen Stufe 2: Wollhandkrabben"],
   18: ["❄️ Kühlhaus & Edelfisch-Box", "🍱 Zanderfilet"],
-  19: ["🏪 Fischmarkt", "🚤 Motorboot"],
+  19: ["🏪 Fischmarkt", "🚤 Motorboot", "🪝 Raubfischrute", "🦞 Reusen Stufe 3: Edelkrebse"],
   20: ["🚚 Spedition gründen – sobald das Notizbuch fertig ist"]
 });
 
@@ -446,7 +446,7 @@ FQUESTS_HOF.push(
   { c: 8, t: "Filetiere 4 Schalen Barsch",        ev: "make:barschfilet",  n: 4,  r: { m: 100, xp: 45 } },
   { c: 8, t: "Bau das Bootshaus",                 chk: () => fcount("f_boot") >= 1,           n: 1, r: { m: 200, xp: 70 } },
   { c: 8, t: "Fahr mit dem Ruderboot hinaus",     ev: "boat",              n: 1,  r: { m: 60,  xp: 30 } },
-  { c: 8, t: "Fang einen Hecht",                  ev: "catch:hecht",       n: 1,  r: { m: 120, xp: 50 } },
+  { c: 8, t: "Veranstalte das Angler-Turnier",    chk: () => !!(S.farm.angel && S.farm.angel.tour.done), n: 1, r: { m: 120, xp: 50 } },
   { c: 8, t: "Fang 3 Fische bei Regen oder in der Nacht", ev: "catch:hard", n: 3, r: { m: 150, xp: 60 } },
   { c: 8, t: "Erreiche Level 17",                 ev: "level",             n: 17, r: { m: 300, xp: 0 } },
   /* Kapitel 10 – Fischverarbeitung */
@@ -464,6 +464,7 @@ FQUESTS_HOF.push(
   { c: 10, t: "Bau den Hof aus: Stufe 4",         chk: () => (S.farm.stage || 1) >= 4,        n: 1, r: { m: 500, xp: 150 } },
   { c: 10, t: "Kauf das Motorboot",               chk: () => (S.farm.boat || 0) >= 2,         n: 1, r: { m: 300, xp: 100 } },
   { c: 10, t: "Fang einen Zander in der Tiefen Mitte", ev: "catch:mitte:zander", n: 1, r: { m: 250, xp: 90 } },
+  { c: 10, t: "Fang einen Hecht",                 ev: "catch:hecht",       n: 1,  r: { m: 120, xp: 50 } },
   { c: 10, t: "Fang 6 verschiedene Fischarten",   chk: () => Object.keys(S.farm.stats.species || {}).length >= 6, n: 1, r: { m: 300, xp: 110 } },
   { c: 10, t: "Stell 3 Mitarbeiter ein",          chk: () => (S.farm.staff || []).length >= 3, n: 1, r: { m: 300, xp: 100 } },
   { c: 10, t: "Liefere insgesamt 40 Bestellungen aus", chk: () => (S.farm.stats.deliv || 0) >= 40, n: 1, r: { m: 400, xp: 120 } },

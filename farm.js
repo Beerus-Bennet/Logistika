@@ -30,7 +30,7 @@ function farmNew() {
     v: 1, kind, logi: false, sold: null, snd: true, seq: 1,
     objs: [], inv: {}, cap: { silo: 1, barn: 1, holz: 1, fisch: 1 },
     stats: { harvest: 0, made: 0, eggs: 0, milk: 0, deliv: 0, earned: 0, pearls: 0, angel: 0, trips: 0, meat: 0, prod: {} },
-    qi: 0, qp: 0, qdone: false, qv: 4, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
+    qi: 0, qp: 0, qdone: false, qv: 5, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
   };
   S.farm = F;
   S.xp = 0;
@@ -158,17 +158,43 @@ function farmRoom(id) {
   if (it.energy) return Math.max(0, Math.floor((farmEnCap() - (S.farm.en || 0)) / it.energy));
   return farmStoreCap(it.st) - farmStoreUsed(it.st);
 }
+/* Fische liegen nach Sternen getrennt: qs[1 … 5] = Stück je Stufe,
+   n und q (Summe, Durchschnitt) bleiben für alle anderen Leser gleich */
+function farmQsOn(id) { return !!(FITEMS[id] && FITEMS[id].k === "fisch"); }
+function farmQsFix(e) {
+  e.n = e.qs.reduce((a, b) => a + b, 0);
+  e.q = e.n ? e.qs.reduce((a, b, i) => a + b * i, 0) / e.n : 3;
+}
 /* hinzufügen mit Durchschnittsqualität */
 function farmAdd(id, n, q) {
   if (!n) return;
   const e = S.farm.inv[id] || (S.farm.inv[id] = { n: 0, q: 3 });
+  if (farmQsOn(id)) {
+    e.qs = e.qs || [0, 0, 0, 0, 0, 0];
+    e.qs[clamp(Math.round(q || 3), 1, 5)] += n;
+    return farmQsFix(e);
+  }
   e.q = (e.q * e.n + (q || 3) * n) / (e.n + n);
   e.n += n;
 }
+/* Fisch: zuerst die schlechtesten Sterne – die guten bleiben für den Verkauf */
 function farmTake(id, n) {
   const e = S.farm.inv[id];
   if (!e || e.n < n) return false;
-  e.n -= n;
+  if (e.qs) {
+    for (let s = 1, left = n; s <= 5 && left; s++) { const k = Math.min(left, e.qs[s]); e.qs[s] -= k; left -= k; }
+    farmQsFix(e);
+  } else e.n -= n;
+  if (!e.n) delete S.farm.inv[id];
+  return true;
+}
+/* genau eine Sternstufe */
+function farmInvQ(id, q) { const e = S.farm.inv[id]; return e && e.qs ? e.qs[q] || 0 : 0; }
+function farmTakeQ(id, q, n) {
+  const e = S.farm.inv[id];
+  if (!e || !e.qs || (e.qs[q] || 0) < n) return false;
+  e.qs[q] -= n;
+  farmQsFix(e);
   if (!e.n) delete S.farm.inv[id];
   return true;
 }
@@ -225,7 +251,6 @@ function farmCheckLevel() {
 
 /* ---------------------------- Freischaltung --------------------------- */
 function farmCropOk(id) { return FCROPS[id] && FCROPS[id].lv <= flv(); }
-function farmPotOk(id) { return FPOTS[id] && FPOTS[id].lv <= flv(); }
 /* Lässt sich die Ware im Moment überhaupt herstellen (oder kaufen)? */
 function farmCanMake(id, seen) {
   const it = FITEMS[id], lv = flv(), objs = S.farm.objs;
@@ -238,7 +263,7 @@ function farmCanMake(id, seen) {
   /* Rohholz: es steht ein passender Baum, den das Werkzeug schafft */
   if (it.k === "holz") return id === "aeste" || id === "reste" ? true
     : (S.farm.trees || []).some(t => FSPECIES[t.sp].log === id && treeOpen(t) && t.st === "up" && treeTool(t));
-  if (it.k === "fisch") return !!farmObj1("f_steg") && FGROUNDS.some(g => farmGroundOk(g) && g.fish[id]);
+  if (it.k === "fisch") return FGROUNDS.some(g => farmGroundOk(g) && g.fish[id]) || (Object.keys(FPOTS).some(k => farmPotOk(k) && FPOTS[k].mix[id]) && objs.some(o => o.t === "pot"));
   if (it.k === "wild") return farmAreaOpen("wald");
   if (farmPotOk(id) && objs.some(o => o.t === "pot")) return true;
   for (const lk in FLINES) {
@@ -323,29 +348,39 @@ function potStage(o) {
   const f = 1 - left / FPOTS[o.kind].t;
   return f < 0.12 ? 0 : f < 0.5 ? 1 : 2;
 }
-/* Köder rein, Reuse runter – ein Beutel je Reuse */
+/* Köder rein, Reuse runter – ein Beutel je Reuse (Köderdose, sonst eine Portion Mais) */
+function farmBaitItem() { return farmInv("koeder") ? "koeder" : farmInv("mais") ? "mais" : null; }
 function farmBait(o, kind) {
   if (!o || o.t !== "pot" || o.kind || !farmPotOk(kind)) return false;
-  if (!farmInv("koeder")) return "nobait";
-  const q = farmQ("koeder") || 3;
-  farmTake("koeder", 1);
+  const b = farmBaitItem();
+  if (!b) return "nobait";
+  const q = farmQ(b) || 3;
+  farmTake(b, 1);
   o.kind = kind; o.end = S.time + FPOTS[kind].t; o.bq = q;
   farmEvent("bait:" + kind);
   return true;
 }
-/* Reuse hochziehen: 2 Gebinde, manchmal 3; frischer Köder gibt bessere Ware */
+/* Reuse hochziehen: 2 Tiere, manchmal 3. Was drin ist, würfelt die Stufe;
+   jedes Tier hat Länge, Gewicht und Sterne (frischer Köder hilft) */
 function farmHaul(o) {
   if (!o || o.t !== "pot" || potState(o) !== "ripe") return null;
-  const id = o.kind, P = FPOTS[id];
+  const P = FPOTS[o.kind];
   const n = P.yield + (Math.random() < 0.2 ? 1 : 0);
-  if (farmRoom(id) < n) { farmFull(FITEMS[id].st); return null; }
-  const q = Math.min(5, Math.max(3, Math.round(o.bq || 3)) + (Math.random() < 0.25 ? 1 : 0));
-  farmAdd(id, n, q);
+  if (farmStoreCap("fisch") - farmStoreUsed("fisch") < n) { farmFull("fisch"); return null; }
+  const got = [];
+  for (let i = 0; i < n; i++) {
+    const sp = farmWPick(Object.keys(P.mix), x => P.mix[x]);
+    const s = specRoll(FPOTS[sp], (P.tier - 1) * 0.3), q = specQ(s, ((o.bq || 3) - 1) / 4);
+    farmAdd(sp, 1, q);
+    got.push({ sp, q, cm: s.cm, kg: s.kg });
+    if (angelS()) angelLog(sp, s, q, null);
+  }
+  const id = o.kind, xp = got.reduce((a, g) => a + FITEMS[g.sp].xp, 0), q = Math.round(got.reduce((a, g) => a + g.q, 0) / n);
   o.last = id; o.kind = null; o.bq = 0;
   S.farm.stats.harvest += n;
-  farmXP(FITEMS[id].xp * n);
-  farmEvent("harvest:" + id, n);
-  return { id, n, q, xp: FITEMS[id].xp * n };
+  farmXP(xp);
+  got.forEach(g => farmEvent("harvest:" + g.sp));
+  return { id: got[0].sp, n, q, xp, got };
 }
 
 /* --------------------------- Bäume & Leinen --------------------------- */
@@ -608,15 +643,23 @@ function farmStoreUp(st) {
   return true;
 }
 /* Großhandel: sofort Geld, aber nur der halbe Wert */
-function farmSellPrice(id, n) {
-  const q = farmQ(id) || 3;
-  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * 0.08) * 10) / 10);
+/* Fisch: Sterne zählen mehr (±15 % statt ±8 %); q = bestimmte Sternstufe */
+function farmSellPrice(id, n, q) {
+  q = q || farmQ(id) || 3;
+  const f = FITEMS[id].k === "fisch" ? 0.15 : 0.08;
+  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * f) * 10) / 10);
 }
-function farmSell(id, n) {
-  n = Math.min(n, farmInv(id));
+function farmSell(id, n, q) {
+  /* Fisch ohne Stufe: von unten nach oben, jede Stufe zu ihrem Preis */
+  if (!q && farmQsOn(id) && S.farm.inv[id] && S.farm.inv[id].qs) {
+    let m = 0;
+    for (let s = 1, left = Math.min(n, farmInv(id)); s <= 5 && left; s++) { const k = Math.min(left, farmInvQ(id, s)); if (k) { m += farmSell(id, k, s); left -= k; } }
+    return m;
+  }
+  n = Math.min(n, q ? farmInvQ(id, q) : farmInv(id));
   if (!n) return 0;
-  const m = farmSellPrice(id, n);
-  farmTake(id, n);
+  const m = farmSellPrice(id, n, q);
+  if (q) farmTakeQ(id, q, n); else farmTake(id, n);
   S.money += m; S.revenue += m;
   S.farm.stats.earned += m;
   logMoney("farm", "Großhandel · " + fqty(id, n), m);
@@ -708,9 +751,9 @@ function farmMaxKg() {
   S.fleet.forEach(f => { const t = vType(f.type); if (t && (t.mode === "b" || t.mode === "r")) m = Math.max(m, t.cap); });
   return Math.max(25, m * 0.9);
 }
-function farmWPick(list, wf) {
+function farmWPick(list, wf, rng) {
   const tot = list.reduce((s, x) => s + wf(x), 0);
-  let r = Math.random() * tot;
+  let r = (rng || Math.random)() * tot;
   for (const x of list) { r -= wf(x); if (r <= 0) return x; }
   return list[list.length - 1];
 }
@@ -1013,9 +1056,22 @@ function farmMigrate() {
     F.qv = 4;
     if (F.done || F.qi >= FQ_CH_START(4)) { F.done = false; F.qi = Math.max(F.qi, FQ_CH_START(4)); F.qp = 0; F.qdone = false; }
   }
+  if (F.qv < 5) {
+    /* v46: „Fang einen Hecht“ wandert von Kapitel 9 nach Kapitel 11, an seine Stelle
+       tritt das Angler-Turnier – spätere Aufgaben rücken eins nach hinten */
+    F.qv = 5;
+    const hi = FQUESTS_HOF.findIndex(q => q.t === "Fang einen Hecht"), ti = FQUESTS_HOF.findIndex(q => q.t === "Veranstalte das Angler-Turnier");
+    if (!F.done && hi >= 0 && F.qi >= hi) F.qi++;
+    if (F.qi === ti) { F.qp = 0; F.qdone = false; }
+  }
   erbeInit(F, false);
   /* Waren und Objekte, die es nicht mehr gibt, verschwinden */
   for (const id in F.inv) if (!FITEMS[id] || !FITEMS[id].st) delete F.inv[id];
+  /* Fische nach Sternen getrennt: alte Stapel landen in ihrer gerundeten Stufe */
+  for (const id in F.inv) {
+    const e = F.inv[id];
+    if (farmQsOn(id) && !e.qs) { e.qs = [0, 0, 0, 0, 0, 0]; e.qs[clamp(Math.round(e.q || 3), 1, 5)] = e.n; farmQsFix(e); }
+  }
   F.objs = F.objs.filter(farmObjKnown);
   farmBoundsUpdate();
   F.quick = F.quick || {};
@@ -1038,7 +1094,7 @@ function farmMigrate() {
 }
 function farmObjKnown(o) {
   if (o.t === "deco") return !!FDECO[o.k];
-  return !!(FMACHINES[o.t] || FPENS[o.t] || FSIZE[o.t] || FSTORE[o.t] || FFISHERY[o.t] || ["field", "tree", "house", "board", "shed", "junk", "stall", "f_plot"].includes(o.t));
+  return !!(FMACHINES[o.t] || FPENS[o.t] || FSIZE[o.t] || FSTORE[o.t] || FFISHERY[o.t] || ["field", "tree", "house", "board", "shed", "junk", "stall", "f_plot", "pot"].includes(o.t));
 }
 /* Ostsee-Spielstand → Hof bei Werder. Fahrzeuge kommen an den Hof, Aufträge
    an der Küste entfallen, für die Fischerei gibt es einen Verkaufserlös. */

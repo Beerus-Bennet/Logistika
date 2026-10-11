@@ -170,6 +170,13 @@ function erbeInit(F, fresh) {
     if (p) farmAddObj({ t: "stall", x: p[0], z: p[1], r: 0 });
   }
   if (fresh) erbeJunk(F);
+  /* Lehmanns Ufer aus dem Testbuild gehört jetzt zum See; mit Steg gibt es die Angel */
+  if (F.ufer) { F.angel = F.angel || F.ufer; delete F.ufer; }
+  if (F.areas.ufer) delete F.areas.ufer;
+  F.areaQ = F.areaQ.filter(id => FAREAS[id]);
+  F.objs = F.objs.filter(o => o.t !== "u_steg");
+  F.objs.forEach(o => { if (o.area === "ufer") o.area = "see"; });
+  if (F.objs.some(o => o.t === "f_steg")) angelInit(F);
 }
 /* Gerümpel auf dem frisch geerbten Hof */
 function erbeJunk(F) {
@@ -470,6 +477,8 @@ function farmFishBuild(t) {
   const o = farmAddObj({ t, x: Math.round(B.x - w / 2 + FG / 2), z: Math.round(B.z - d / 2 + FG / 2), r: 0, area: "see" });
   if (FMACHINES[t]) { o.q = []; o.done = []; o.slots = 2; }
   if (t === "f_boot") F.boat = Math.max(F.boat || 0, 1);
+  /* mit dem Steg beginnt das Angeln: Lehmanns alte Angel, erste Reuse, Lina meldet sich */
+  if (t === "f_steg") angelInit(F);
   farmXP(60 + Math.round(B.cost / 40));
   farmEvent("build:" + t);
   return o;
@@ -520,14 +529,21 @@ function farmFishOdds(gid) {
   }
   return out;
 }
-function farmCast() { if (!farmTake("koeder", 1)) return false; S.farm.stats.casts = (S.farm.stats.casts || 0) + 1; return true; }
-/* Was hängt am Haken? Beim Biss gewürfelt, damit der Drill zum Fisch passt */
+/* Auswerfen: kostet einen Wurf des gewählten Köders (Angel gibt es ab dem Steg) */
+function farmCast(gid) {
+  const U = angelS();
+  if (!U || !angelBaitUse(U.bait)) return false;
+  S.farm.stats.casts = (S.farm.stats.casts || 0) + 1;
+  return true;
+}
+/* Was hängt am Haken? Beim Biss gewürfelt: Art, Länge, Gewicht, Sterne –
+   daraus ergibt sich, wie schwer der Drill im Kreis wird */
 function farmRollCatch(gid) {
   if (Math.random() < 0.07) return { junk: farmWPick(FJUNK_FISH, x => x.w) };
-  const odds = farmFishOdds(gid);
-  return { id: farmWPick(Object.keys(odds), x => odds[x]) };
+  return angelRoll(gid);
 }
-/* Fang: q = Qualität aus dem Drill (1 … 5), pre = Ergebnis von farmRollCatch */
+/* Fang: pre = Ergebnis von farmRollCatch. Die Sterne kommen aus dem Fisch
+   selbst (Größe und Kondition), nicht aus dem Drill. */
 function farmCatch(gid, q, pre) {
   pre = pre || farmRollCatch(gid);
   if (pre.junk) {
@@ -538,7 +554,7 @@ function farmCatch(gid, q, pre) {
   }
   const id = pre.id;
   if (farmRoom(id) < 1) { farmFull("fisch"); return { full: true, id }; }
-  q = clamp(Math.round(q || 3), 1, 5);
+  q = pre.cm ? specQ(pre) : clamp(Math.round(q || 3), 1, 5);
   farmAdd(id, 1, q);
   const xp = FITEMS[id].xp + 2;
   farmXP(xp);
@@ -549,10 +565,289 @@ function farmCatch(gid, q, pre) {
   farmEvent("catch:" + id);
   farmEvent("catch:" + gid + ":" + id);
   if (farmWeather() === "regen" || farmTod() === "nacht") farmEvent("catch:hard");
-  return { id, n: 1, q, xp };
+  const r = { id, n: 1, q, xp };
+  if (pre.cm) Object.assign(r, angelLog(id, pre, q, gid));
+  return r;
 }
 /* Fanggründe, die man gerade erreicht */
 function farmGroundOk(g) { return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
+
+/* --------------------------------- Angeln ---------------------------------
+   Ab dem Steg: Lehmanns alte Angel, Köder (Mais, Berts Würmer, Profi-Köder)
+   und bessere Ruten bestimmen, welche Klasse beißt; jeder Fang hat Länge,
+   Gewicht und Sterne. Dazu Bert Flomann, das Angler-Turnier und die Reusen. */
+function angelS() { return S.farm && S.farm.angel || null; }
+/* Kachel für eine Weltmitte (wie die Bauplätze am See) */
+function angelTile(wx, wz, w, d) { return [Math.round(wx - w / 2 + FG / 2), Math.round(wz - d / 2 + FG / 2)]; }
+/* Zustand, Lehmanns alte Angel und die erste Reuse; Lina meldet sich einmal */
+function angelInit(F) {
+  const U = F.angel || (F.angel = {});
+  U.rod = U.rod || 1;
+  if (!FBAITS[U.bait]) U.bait = "mais";
+  U.mais = U.mais || 0;
+  U.potLvl = U.potLvl || 1;
+  U.tour = U.tour || { done: false };
+  /* Turnier aus dem ersten Testbuild: Ergebnis lag im Spielstand – weg damit */
+  if ((U.tour.v || 0) < 3) { delete U.tour.res; U.tour.v = 3; }
+  U.bert = U.bert || { met: false, lureQ: null, call: false };
+  U.log = U.log || [];
+  U.best = U.best || {};
+  U.cnt = U.cnt || { klein: 0, mittel: 0, gross: 0 };
+  /* Reusen liegen an festen Plätzen neben dem Steg */
+  F.objs.filter(o => o.t === "pot" && o.area === "see").forEach((o, i) => {
+    const p = FANGEL.potSpots[i];
+    if (p) [o.x, o.z] = angelTile(p[0], p[1], 2, 2);
+  });
+  if (!angelPots().length) angelPotPlace(0);
+  if (!U.linaMsg && typeof phoneMsg === "function") {
+    U.linaMsg = true;
+    phoneMsg({ from: "Lina Sturm", kind: "info", title: "Lehmanns alte Angel",
+      body: "Chef, der Steg steht! Der alte Lehmann hat dir seine Angel dagelassen – sie liegt am Steg. Die Weißfische beißen auf Mais aus deinem Silo. Tipp einfach auf den Steg." });
+  }
+}
+function angelPots() { return S.farm.objs.filter(o => o.t === "pot" && o.area === "see"); }
+function angelPotPlace(i) {
+  const p = FANGEL.potSpots[i], [x, z] = angelTile(p[0], p[1], 2, 2);
+  return farmAddObj({ t: "pot", kind: null, x, z, r: 0, area: "see" });
+}
+/* weitere Reuse an den nächsten Platz */
+function angelPotBuy() {
+  const i = angelPots().length, cost = FANGEL.potCost[i];
+  if (cost == null || i >= FANGEL.potSpots.length) return false;
+  if (S.money < cost) return toast("Dafür fehlen " + eur(cost - S.money) + ".", "warn"), false;
+  S.money -= cost; S.expense += cost;
+  logMoney("farm", "Reuse am Steg", -cost);
+  angelPotPlace(i);
+  farmXP(10);
+  farmEvent("buy:pot");
+  return true;
+}
+/* Reusen eine Stufe besser: mehr Arten, größere Tiere */
+function angelPotUp() {
+  const U = angelS(), N0 = U && FPOT_UP[U.potLvl + 1];
+  if (!N0) return false;
+  if (flv() < N0.lv) return toast("Erst ab Level " + N0.lv + ".", "warn"), false;
+  if (S.money < N0.cost) return toast("Dafür fehlen " + eur(N0.cost - S.money) + ".", "warn"), false;
+  S.money -= N0.cost; S.expense += N0.cost;
+  logMoney("farm", "Reusen Stufe " + (U.potLvl + 1), -N0.cost);
+  U.potLvl++;
+  farmXP(20);
+  farmEvent("upgrade:pot");
+  return true;
+}
+function farmBuyRod(n) {
+  const U = angelS(), R = FRODS[n];
+  if (!U || !R || U.rod >= n) return false;
+  if (U.rod < n - 1) return toast("Erst die " + FRODS[n - 1].n + ".", "warn"), false;
+  if (flv() < R.lv) return toast("Erst ab Level " + R.lv + ".", "warn"), false;
+  if (S.money < R.price) return toast("Dafür fehlen " + eur(R.price - S.money) + ".", "warn"), false;
+  S.money -= R.price; S.expense += R.price;
+  logMoney("farm", R.n + " gekauft", -R.price);
+  U.rod = n;
+  farmXP(30);
+  farmEvent("buy:rod");
+  return true;
+}
+/* Köder: wie viele Würfe, und warum gerade keiner geht */
+function angelBaitN(b) {
+  const B = FBAITS[b], U = angelS();
+  return b === "mais" ? (U.mais || 0) + farmInv("mais") * B.per : farmInv(B.item);
+}
+function angelBaitWhy(b) {
+  const B = FBAITS[b], U = angelS();
+  if (B.tour && !U.tour.done) return "nach dem Turnier";
+  if (B.rod && U.rod < B.rod) return "braucht die " + FRODS[B.rod].n;
+  if (angelBaitN(b) > 0) return "";
+  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "bei Bert holen" : "bei Bert bestellen";
+}
+/* Ein Sack Mais reicht für zehn Würfe */
+function angelBaitUse(b) {
+  const B = FBAITS[b], U = angelS();
+  if (angelBaitWhy(b)) return false;
+  if (b !== "mais") return farmTake(B.item, 1);
+  if (U.mais > 0) { U.mais--; return true; }
+  if (!farmTake("mais", 1)) return false;
+  U.mais = B.per - 1;
+  return true;
+}
+/* Rute und Köder gemeinsam: Grundgewichte des Köders, die Rute schiebt
+   Gewicht zur größten erlaubten Klasse. Nicht erlaubte Klassen bleiben 0. */
+function angelClassW(bait, rod) {
+  const w = Object.assign({}, FBAITS[bait].mix), R = FRODS[rod] || FRODS[1];
+  const ks = FCLS.filter(c => w[c] > 0);
+  if (ks.length > 1 && R.shift) {
+    const top = ks[ks.length - 1], rest = ks.slice(0, -1), sum = rest.reduce((s, c) => s + w[c], 0);
+    rest.forEach(c => { const cut = Math.min(w[c] - 0.1, R.shift * w[c] / sum); w[c] -= cut; w[top] += cut; });
+  }
+  return w;
+}
+/* Wer beißt hier – nach Klasse, dann nach Fanggrund × Tageszeit × Wetter.
+   Hat ein Fanggrund keine Art einer Klasse, rückt die nächstkleinere nach. */
+function angelOdds(gid, bait, rod) {
+  const U = angelS(), odds = farmFishOdds(gid), w = angelClassW(bait || U.bait, rod || U.rod), out = {};
+  let carry = 0;
+  FCLS.slice().reverse().forEach(c => {
+    const ids = Object.keys(odds).filter(id => FFISH[id].cls === c), sum = ids.reduce((s, id) => s + odds[id], 0);
+    const wc = (w[c] || 0) + carry;
+    if (!wc) return;
+    if (!sum) { carry = wc; return; }
+    carry = 0;
+    ids.forEach(id => { out[id] = wc * odds[id] / sum; });
+  });
+  return out;
+}
+function angelRoll(gid, rng) {
+  const U = angelS(), o = angelOdds(gid);
+  const id = farmWPick(Object.keys(o), x => o[x], rng);
+  return Object.assign({ id }, specRoll(FFISH[id], FRODS[U.rod].size + FBAITS[U.bait].size, rng));
+}
+/* Länge in den Grenzen der Art (bonus schiebt nach oben), Kondition ±15 %,
+   Gewicht daraus. r = Größe 0 … 1 innerhalb der Art. */
+function specRoll(D, bonus, rng) {
+  rng = rng || Math.random;
+  const r = 1 - Math.pow(1 - rng(), 1 + 2 * (bonus || 0));
+  const cm = Math.round((D.cm[0] + (D.cm[1] - D.cm[0]) * r) * 10) / 10;
+  const cond = 0.85 + rng() * 0.3;
+  const base = D.k != null ? D.k * Math.pow(cm / 100, 3) : D.kg[0] + (D.kg[1] - D.kg[0]) * r;
+  return { cm, kg: Math.round(base * cond * 1000) / 1000, r, cond };
+}
+/* Sterne: beim Angeln Größe (75 %) und Kondition (25 %); bei Reusen zählt
+   die Köderqualität mit (bait 0 … 1: 60 % Größe, 20 % Kondition, 20 % Köder) */
+function specQ(s, bait) {
+  const c = (s.cond - 0.85) / 0.3;
+  const score = bait == null ? 0.75 * s.r + 0.25 * c : 0.6 * s.r + 0.2 * c + 0.2 * clamp(bait, 0, 1);
+  return 1 + FQCUT.filter(x => score >= x).length;
+}
+/* Wert eines einzelnen Fangs beim Händler (voller Preis, Sterne ±15 %) */
+function specValue(id, q) { return Math.round(FITEMS[id].v * (1 + (q - 3) * 0.15) * 100) / 100; }
+/* Fangbuch: die letzten 50 Fänge, Rekord je Art (nach Gewicht); gid = Angeln */
+function angelLog(id, s, q, gid) {
+  const U = angelS(), e = { sp: id, cm: s.cm, kg: s.kg, q, gid, t: S.time };
+  U.log.unshift(e);
+  if (U.log.length > 50) U.log.length = 50;
+  const b = U.best[id], rec = !b || s.kg > b.kg;
+  if (rec) U.best[id] = { cm: s.cm, kg: s.kg, q, t: S.time };
+  const c = FFISH[id] && FFISH[id].cls;
+  if (c && gid) U.cnt[c] = (U.cnt[c] || 0) + 1;
+  return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec };
+}
+/* Schwierigkeit im Kreis (0 … 1): Kampfkraft der Art, Größe, Sterne */
+function angelDiff(c) {
+  if (!c || !c.id || !FFISH[c.id]) return FRING.junkD;
+  return clamp(0.5 * FFISH[c.id].fight + 0.3 * (c.r || 0) + 0.2 * (specQ(c) - 1) / 4, 0, 1);
+}
+
+/* ------------------------------ Bert Flomann ------------------------------ */
+function bertLureOk() {
+  const U = angelS();
+  return !!(U && U.tour.done && U.rod >= FBERT.lureNeed.rod && U.cnt.mittel >= FBERT.lureNeed.mittel);
+}
+function bertWorms() {
+  const U = angelS(), W = FBERT.worms;
+  if (!U || !U.tour.done) return false;
+  if (farmRoom("wurm") < W.n) return farmFull("fisch"), false;
+  if (S.money < W.price) return toast("Dafür fehlen " + eur(W.price - S.money) + ".", "warn"), false;
+  S.money -= W.price; S.expense += W.price;
+  logMoney("farm", "Tauwürmer von Bert", -W.price);
+  farmAdd("wurm", W.n, 3);
+  return true;
+}
+function bertOrderLures() {
+  const U = angelS(), L = FBERT.lures;
+  if (!bertLureOk() || U.bert.lureQ) return false;
+  if (S.money < L.price) return toast("Dafür fehlen " + eur(L.price - S.money) + ".", "warn"), false;
+  S.money -= L.price; S.expense += L.price;
+  logMoney("farm", "Profi-Köder bei Bert bestellt", -L.price);
+  U.bert.lureQ = { n: L.n, end: S.time + L.t };
+  return true;
+}
+function bertCollect() {
+  const U = angelS(), Q = U && U.bert.lureQ;
+  if (!Q || S.time < Q.end) return false;
+  if (farmRoom("profikoeder") < Q.n) return farmFull("fisch"), false;
+  farmAdd("profikoeder", Q.n, 3);
+  U.bert.lureQ = null;
+  return true;
+}
+/* im Takt: Bert meldet sich einmal, wenn er Profi-Köder baut */
+function angelTick() {
+  const U = angelS();
+  if (!U || !bertLureOk() || U.bert.call) return;
+  U.bert.call = true;
+  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Neue Köder aus der Werkstatt",
+    body: "Moin! Du holst ja ordentlich Barsche raus. Ich hab in der Garage was gebastelt: Profi-Köder für die richtig Großen – Hecht und Wels. Mit der Raubfischrute hält das auch. Bestell sie bei mir am Steg, in zwei Stunden sind sie fertig." });
+}
+
+/* ------------------------------ Angler-Turnier ----------------------------
+   Fünf Angler, alle nach derselben Logik. Erst wird gewertet, dann wird die
+   Gewinnerrolle intern festgelegt: Der Turniersieger (FTOUR_WINNER) erhält die
+   beste Ergebnisliste, deren bisheriger Besitzer seine. Gespeichert wird nur
+   der Seed – das Ergebnis lässt sich daraus jederzeit gleich berechnen. */
+function tourCanStart() { const U = angelS(); return !!(U && !U.tour.done && U.cnt.klein >= FTOUR.need); }
+function tourCost() { return FTOUR.cost + FTOUR.prize; }
+/* ein Angler: 3–7 Fänge, meist kleine Fische, verteilt über 26 Minuten */
+function tourAngler(rng) {
+  const G = FGROUNDS.find(g => g.id === "steg");
+  const ids = c => Object.keys(G.fish).filter(id => FFISH[id].cls === c && id !== "schleie");
+  const n = 3 + Math.floor(rng() * 5), out = [];
+  for (let i = 0; i < n; i++) {
+    const sp = farmWPick(ids(rng() < 0.7 ? "klein" : "mittel"), x => G.fish[x], rng);
+    out.push(Object.assign({ sp, t: 1 + Math.floor(rng() * FTOUR.mins) }, specRoll(FFISH[sp], 0.2, rng)));
+  }
+  out.sort((a, b) => a.t - b.t);
+  const total = Math.round(out.reduce((s, f) => s + f.kg, 0) * 1000) / 1000;
+  return { catches: out, total, top: Math.max(...out.map(f => f.kg)), last: out[out.length - 1].t };
+}
+/* Wertung: Gesamtgewicht, dann größter Fisch, dann früherer letzter Fang,
+   zuletzt die Reihenfolge der ersten Wertung (r) – damit ist sie strikt */
+function tourRank(a, b) { return b.total - a.total || b.top - a.top || a.last - b.last || a.r - b.r; }
+function tourRoll(seed) {
+  const rng = erbeRng(seed);
+  const lists = FTOUR.members.map(() => tourAngler(rng));
+  lists.slice().sort((a, b) => b.total - a.total || b.top - a.top || a.last - b.last).forEach((l, i) => { l.r = i; });
+  /* Gewinnerrolle festlegen: beste Liste und Liste des Siegers tauschen */
+  const w = FTOUR.members.findIndex(m => m.n === FTOUR_WINNER), b = lists.findIndex(l => l.r === 0);
+  if (w >= 0 && b !== w) [lists[w], lists[b]] = [lists[b], lists[w]];
+  const res = FTOUR.members.map((m, i) => Object.assign({ n: m.n, ini: m.ini, from: m.from, about: m.about }, lists[i]));
+  /* Startreihenfolge (Anzeige bei Gleichstand) wird gelost – unabhängig vom Ergebnis */
+  const r2 = erbeRng(seed + 7919);
+  res.map(p => [p, r2()]).sort((a, b) => a[1] - b[1]).forEach(([p], i) => { p.ord = i; });
+  console.assert(res.slice().sort(tourRank)[0].n === FTOUR_WINNER, "Turnier: Sieger falsch");
+  return res;
+}
+/* Turnier veranstalten: 100 € Veranstaltung + 200 € Preisgeld, genau einmal */
+function tourStart() {
+  const U = angelS();
+  if (!tourCanStart()) return null;
+  if (!U.tour.paid) {
+    const c = tourCost();
+    if (S.money < c) { toast("Für das Turnier fehlen " + eur(c - S.money) + ".", "warn"); return null; }
+    S.money -= c; S.expense += c;
+    logMoney("farm", "Angler-Turnier: Veranstaltung", -FTOUR.cost);
+    logMoney("farm", "Angler-Turnier: Preisgeld für den Sieger", -FTOUR.prize);
+    U.tour.paid = true;
+    U.tour.seed = 1 + Math.floor(Math.random() * 2e9);
+    save();
+  }
+  return tourRoll(U.tour.seed);
+}
+function tourResult() { const U = angelS(); return U && U.tour.paid ? tourRoll(U.tour.seed) : null; }
+/* Siegerehrung: kein Geld mehr (ist beim Start bezahlt), EP und Bert – einmalig */
+function tourFinish() {
+  const U = angelS();
+  if (!U || U.tour.done || !U.tour.paid) return false;
+  U.tour.done = true;
+  U.bert.met = true;
+  farmXP(FTOUR.xp);
+  farmEvent("tour");
+  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Petri Heil!",
+    body: "Moin! Schönes Turnier war das. Wie versprochen: Für ein kleines Entgelt sammel ich dir Tauwürmer aus meinem Wurmkasten – damit beißen Barsche, Forellen und Karpfen. Komm einfach an den Steg." });
+  return true;
+}
+
+/* ------------------------------- Reusen ----------------------------------- */
+/* Wunschziel freigeschaltet? Level und Reusenstufe */
+function farmPotOk(id) { const U = angelS(); return !!(FPOTS[id] && FPOTS[id].lv <= flv() && U && U.potLvl >= FPOTS[id].tier); }
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
 function farmStageNext() { return FHOF_STAGES[(S.farm.stage || 1) + 1] || null; }
@@ -1027,6 +1322,7 @@ function farmErbeTick(dt) {
   staffWork();
   stallTick(false, dt || 1);
   stallTick(true, dt || 1);
+  angelTick();
   const day = staffDay();
   if (F.day == null) F.day = day;
   if (day > F.day) { F.day = day; staffDaily(); }

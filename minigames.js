@@ -522,43 +522,56 @@ const MG_GAMES = {
       st.ph = "idle"; st.res = null;
       const G = FGROUNDS.find(g => g.id === st.gid) || FGROUNDS[0];
       st.G = G;
-      mgH(G.i + " " + G.n, MG_GAMES.fish.sub());
+      mgH(G.i + " " + G.n, MG_GAMES.fish.sub(st));
       MG_GAMES.fish.idle(st);
     },
-    sub() { const wx = FWEATHER[farmWeather()]; return wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · 🪱 " + famt("koeder", farmInv("koeder")) + " Köder"; },
+    sub(st) {
+      const wx = FWEATHER[farmWeather()], U = angelS(), B = FBAITS[U.bait];
+      return wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · " + FRODS[U.rod].i + " " + esc(FRODS[U.rod].n) + " · " + B.i + " " + angelBaitN(U.bait) + " Würfe";
+    },
+    /* Köder wählen – nicht verfügbare grau mit Grund */
+    baits(st) {
+      const U = angelS();
+      return `<div class="mg-baits">${Object.keys(FBAITS).map(b => { const B = FBAITS[b], why = angelBaitWhy(b);
+        return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
+    },
     odds(st) {
-      const o = farmFishOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
+      const o = angelOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
       return Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 4).map(id => {
         const p = o[id] / sum;
-        return `<span class="mg-odd">${FITEMS[id].i}<small>${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
+        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${FITEMS[id].i}<small>${esc(FITEMS[id].sg || FITEMS[id].n)} · ${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
       }).join("");
     },
     idle(st) {
       st.ph = "idle";
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub());
-      mgStage(`<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
-      if (!st.res) mgMsg(st.boat ? "Mitten auf dem See. Auswerfen und auf den Biss warten." : "Vom Steg aus angeln: Auswerfen und auf den Biss warten.");
-      mgBar(`<button class="btn fa-go" id="mgGo">🎣 Auswerfen<small>kostet 1 Köder</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">⛵ Zurück</button>` : ""}`);
+      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
+      mgStage(`${MG_GAMES.fish.baits(st)}<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
+      if (!st.res) mgMsg(st.boat ? "Mitten auf dem See. Köder wählen, auswerfen, auf den Biss warten." : "Köder wählen, auswerfen, auf den Biss warten. Bessere Köder locken größere Arten.");
+      mgBar(`<button class="btn fa-go" id="mgGo">🎣 Auswerfen<small>kostet 1 × ${esc(FBAITS[angelS().bait].n)}</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">⛵ Zurück</button>` : ""}`);
       $("#mgGo").onclick = () => MG_GAMES.fish.cast(st);
+      $$("#mgStage [data-bait]").forEach(b => b.onclick = () => { angelS().bait = b.dataset.bait; sfx("tap"); MG_GAMES.fish.idle(st); });
       const bk = $("#mgBack"); if (bk) bk.onclick = () => MG.close({ ok: true, back: true });
     },
     cast(st) {
       if (farmRoom("barsch") < 1) { farmFull("fisch"); return mgMsg("🧊 Die Kühlkiste ist voll – erst verarbeiten oder verkaufen.", "bad"); }
-      if (!farmCast()) {
-        mgMsg("🪱 Keine Köder mehr. Die Fischerhütte macht welche aus Fischabfällen – oder im Laden unter „Werkzeug“.", "bad");
+      if (!farmCast(st.gid)) {
+        const B = FBAITS[angelS().bait], why = angelBaitWhy(angelS().bait);
+        mgMsg(B.i + " " + (why ? esc(B.n) + " geht gerade nicht: " + esc(why) + "." : "Kein Köder mehr.") + " Wähl einen anderen.", "bad");
         return;
       }
       st.ph = "wait"; st.res = null;
-      const sw = farmEvOn("schwarm") && S.farm.ev.cur.data.g === st.gid;
+      const ev = S.farm.ev && S.farm.ev.cur, sw = farmEvOn("schwarm") && ev.data && ev.data.g === st.gid;
       st.wait = (sw ? 1 : 2) + Math.random() * (sw ? 2 : 4.5);
       sfx("cast");
       if (st.onCast) st.onCast();
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub());
+      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
       mgStage(`<div class="mg-water"><span class="mg-bob" id="mgBob">🔴</span></div>`);
       mgMsg("Pssst … warten …");
       mgBar(`<button class="btn fa-go ghost" id="mgGo">… warten</button>`);
       $("#mgGo").onclick = () => { if (st.ph === "wait") { mgMsg("Zu früh – der Köder ist weg.", "bad"); st.ph = "idle"; setTimeout(() => MG_GAMES.fish.idle(st), 700); } else if (st.ph === "bite") MG_GAMES.fish.strike(st); };
-      $("#mgStage").onpointerdown = e => { e.preventDefault(); if (st.ph === "bite") MG_GAMES.fish.strike(st); };
+      const sg = $("#mgStage");
+      sg.onpointermove = sg.onpointerup = sg.onpointercancel = null;
+      sg.onpointerdown = e => { e.preventDefault(); if (st.ph === "bite") MG_GAMES.fish.strike(st); };
     },
     frame(st, dt) {
       const bob = $("#mgBob");
@@ -577,63 +590,107 @@ const MG_GAMES = {
         st.biteT -= dt;
         if (bob) bob.style.transform = `translateY(${10 + Math.sin(st.t * 30) * 5}px)`;
         if (st.biteT <= 0) { st.ph = "idle"; sfx("bad"); mgMsg("Zu spät – der Fisch hat den Köder geklaut.", "bad"); if (st.onEnd) st.onEnd(false); setTimeout(() => MG_GAMES.fish.idle(st), 900); }
-      } else if (st.ph === "reel") MG_GAMES.fish.reelStep(st, dt);
+      } else if (st.ph === "ring") MG_GAMES.fish.ringFrame(st);
     },
+    /* ---- Kreis-Drill: grünen Bogen mit Finger oder Maus zum Fisch ziehen ---- */
     strike(st) {
-      st.ph = "reel";
-      const f = st.catch.id ? FFISH[st.catch.id] : null, fight = f ? f.fight : 0.15;
-      Object.assign(st, { ten: 0.45, prog: 0.15, green: 0, total: 0, slack: 0, fight, burst: 0, hold: false, snd: 0 });
-      mgMsg(fight > 0.7 ? "💪 Ein schwerer Brocken! Spannung im grünen Bereich halten." : "Halten zum Kurbeln – Spannung im grünen Bereich halten.", fight > 0.7 ? "hot" : "");
-      mgStage(`<div class="mg-reel"><div class="mg-ten"><i class="g"></i><b id="mgTen"></b></div><div class="mg-hp"><span>🐟</span><i><em id="mgPr"></em></i></div></div>`);
-      const b = mgBar(`<button class="btn fa-go hold" id="mgGo">🎣 Halten zum Kurbeln</button>`).firstChild;
-      const on = e => { e.preventDefault(); st.hold = true; b.classList.add("on"); };
-      const off = () => { st.hold = false; b.classList.remove("on"); };
-      b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointerleave", off); b.addEventListener("pointercancel", off);
-      const sg = $("#mgStage"); sg.addEventListener("pointerdown", on); sg.addEventListener("pointerup", off); sg.addEventListener("pointerleave", off);
+      const R = FRODS[angelS().rod], d = angelDiff(st.catch);
+      Object.assign(st, { ph: "ring", d, gw: R.gw, fill: R.fill, drain: R.drain, ctrl: R.ctrl,
+        fa: Math.random() * 360, dir: Math.random() < 0.5 ? -1 : 1, fv: 0, ft: 0, spr: 0, p: FRING.start, rt: 0, acc: 0, rl: performance.now(), tgt: null });
+      st.ga = st.fa + 180;
+      ringTurn(st, d, Math.random);
+      const D = st.catch.id ? FFISH[st.catch.id] : null;
+      const icon = D ? (D.cls === "gross" ? "🦈" : D.cls === "mittel" ? "🐠" : "🐟") : "❔";
+      mgMsg(d > 0.6 ? "💪 Ein starker Fisch! Zieh den grünen Bogen mit dem Finger hinterher." : "Zieh den grünen Bogen zum Fisch – solange er drin ist, füllt sich die Leiste.", d > 0.6 ? "hot" : "");
+      const C = 2 * Math.PI * 86;
+      mgStage(`<div class="mg-ring"><svg viewBox="0 0 220 220" id="mgRing" aria-label="Kreis-Drill">
+          <circle cx="110" cy="110" r="86" class="mg-ring-track"/>
+          <circle cx="110" cy="110" r="86" class="mg-ring-arc" id="mgArc" stroke-dasharray="${(st.gw / 360 * C).toFixed(1)} ${C.toFixed(1)}"/>
+          <text id="mgFishR" class="mg-ring-fish" text-anchor="middle" dominant-baseline="central">${icon}</text>
+          <text x="110" y="110" class="mg-ring-mid" text-anchor="middle" dominant-baseline="central" id="mgRingPct">30 %</text>
+        </svg><div class="mg-hp"><span>${icon}</span><i><em id="mgPr"></em></i></div></div>`);
+      mgBar(`<button class="btn fa-go ghost" id="mgGo" disabled>Bogen ziehen · Fisch halten</button>`);
+      const sg = $("#mgStage"), svg = $("#mgRing");
+      const aim = e => { const b = svg.getBoundingClientRect(); st.tgt = Math.atan2(e.clientY - (b.top + b.height / 2), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI; };
+      sg.onpointerdown = e => { e.preventDefault(); st.drag = true; aim(e); try { sg.setPointerCapture(e.pointerId); } catch (x) { /* egal */ } };
+      sg.onpointermove = e => { if (st.drag) aim(e); };
+      sg.onpointerup = sg.onpointercancel = () => { st.drag = false; st.tgt = null; };
+      MG_GAMES.fish.ringDraw(st);
     },
-    reelStep(st, dt) {
-      st.total += dt;
-      /* der Fisch zieht in Stößen */
-      st.burst -= dt;
-      if (st.burst <= 0) { st.burst = 0.6 + Math.random() * 1.4; st.pull = 0.6 + Math.random() * st.fight * 1.4; }
-      const pull = st.burst > 0.25 && st.pull ? st.fight * st.pull * 0.9 : 0;
-      st.ten += (st.hold ? 0.55 : -0.5) * dt + pull * dt;
-      st.prog += (st.hold ? 0.17 - st.fight * 0.08 : -0.02) * dt - pull * dt * 0.12;
-      st.ten = clamp(st.ten, 0, 1.2);
-      st.prog = clamp(st.prog, 0, 1);
-      if (st.ten > 0.32 && st.ten < 0.78) st.green += dt;
-      if (st.hold) { st.snd -= dt; if (st.snd <= 0) { st.snd = 0.35; sfx("reel"); } }
-      if (FV) FV.touchAt = performance.now();
-      const t = $("#mgTen"), p = $("#mgPr");
-      if (t) { t.style.left = Math.min(100, st.ten / 1.0 * 100) + "%"; t.className = st.ten > 0.9 ? "hot" : ""; }
-      if (p) p.style.width = st.prog * 100 + "%";
-      st.slack = st.ten < 0.1 ? st.slack + dt : 0;
-      if (st.ten >= 1) return MG_GAMES.fish.end(st, "snap");
-      if (st.slack > 1.4) return MG_GAMES.fish.end(st, "slack");
-      if (st.prog >= 1) return MG_GAMES.fish.end(st, "ok");
+    /* feste Schrittweite über die echte Zeit – läuft bei 10 fps wie bei 60 fps */
+    ringFrame(st) {
+      const now = performance.now();
+      st.acc += Math.min(0.5, (now - st.rl) / 1000);
+      st.rl = now;
+      while (st.acc >= FRING.step && st.ph === "ring") {
+        st.acc -= FRING.step;
+        ringStep(st, FRING.step, Math.random);
+        if (st.p >= 1) return MG_GAMES.fish.end(st, "ok");
+        if (st.p <= 0) return MG_GAMES.fish.end(st, "slack");
+        if (st.rt >= FRING.maxT) return MG_GAMES.fish.end(st, "snap");
+      }
+      if (FV) FV.touchAt = now;
+      MG_GAMES.fish.ringDraw(st);
+    },
+    ringDraw(st) {
+      const f = $("#mgFishR"), a = $("#mgArc"), p = $("#mgPr"), t = $("#mgRingPct");
+      if (!f) return;
+      const r = st.fa * Math.PI / 180;
+      f.setAttribute("x", (110 + 86 * Math.cos(r)).toFixed(1));
+      f.setAttribute("y", (110 + 86 * Math.sin(r)).toFixed(1));
+      a.setAttribute("transform", `rotate(${(st.ga - st.gw / 2).toFixed(1)} 110 110)`);
+      a.classList.toggle("hit", ringIn(st));
+      p.style.width = (st.p * 100).toFixed(1) + "%";
+      t.textContent = Math.round(st.p * 100) + " %";
     },
     end(st, how) {
       st.ph = "idle";
+      const sg = $("#mgStage");
+      if (sg) sg.onpointermove = sg.onpointerup = sg.onpointercancel = sg.onpointerdown = null;
       if (how !== "ok") {
         sfx("bad");
-        mgMsg(how === "snap" ? "💥 Die Schnur ist gerissen – zu viel Zug!" : "Die Schnur war zu locker – weg ist er.", "bad");
+        mgMsg(how === "snap" ? "💥 Die Schnur ist gerissen – zu lange gedrillt." : "Der Fisch ist entkommen.", "bad");
         if (st.onEnd) st.onEnd(false);
         setTimeout(() => MG_GAMES.fish.idle(st), 1100);
         return;
       }
-      const q = 1 + 4 * clamp(st.green / Math.max(0.5, st.total), 0, 1);
-      const r = farmCatch(st.gid, q, st.catch);
+      const r = farmCatch(st.gid, 3, st.catch);
       st.res = r;
       sfx(r && r.id ? "splash" : "pop");
       if (st.onEnd) st.onEnd(true, r);
       if (!r) mgMsg("Hm, nichts dran.", "");
       else if (r.junk) mgMsg(`${r.i} Nur ${esc(r.junk)}${r.m ? " – mit " + eur(r.m) + " Finderlohn!" : "."}`, "");
       else if (r.full) mgMsg("🧊 Die Kühlkiste ist voll – der Fisch schwimmt wieder.", "bad");
-      else mgMsg(`${FITEMS[r.id].i} ${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}! ${qStars(r.q)} · +${r.xp} EP`, "ok");
+      else mgMsg(`${FITEMS[r.id].i} <b>${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}</b> · ${fmt(r.cm, 1)} cm · ${fishKgTxt(r.kg)}<br>${qStars(r.q)} ${esc(fishQName(r.q))} · Wert ${eur(r.val)} · +${r.xp} EP${r.rec ? " · 🏆 Neuer Rekord!" : ""}`, "ok");
       save();
-      setTimeout(() => { if (MG.on && MG.kind === "fish") MG_GAMES.fish.idle(st); }, 1300);
+      setTimeout(() => { if (MG.on && MG.kind === "fish") MG_GAMES.fish.idle(st); }, r && r.cm ? 2600 : 1300);
     },
     stop(st) { if (st.onStop) st.onStop(); },
     abort() { return { ok: true, back: true }; }
   }
 };
+
+/* ---------------------- Kreis-Drill: reine Rechenschritte -------------------
+   Ohne DOM, damit sich Fisch und Bogen mit festem Zufall (erbeRng) testen lassen. */
+const ringWrap = a => ((a % 360) + 540) % 360 - 180;   /* Winkelabstand −180 … 180 */
+function ringIn(st) { return Math.abs(ringWrap(st.fa - st.ga)) <= st.gw / 2; }
+/* neues Bewegungsmuster: Tempo, Dauer, Richtungswechsel, Sprint */
+function ringTurn(st, d, rng) {
+  const L = (k) => FRING[k][0] + (FRING[k][1] - FRING[k][0]) * d;
+  if (rng() < L("flip")) st.dir = -st.dir;
+  st.fv = L("speed") * (0.8 + rng() * 0.4);
+  st.ft = L("turn") * (0.7 + rng() * 0.6);
+  st.spr = d > FRING.sprint.from && rng() < (d - FRING.sprint.from) * 1.5 ? FRING.sprint.dur : 0;
+}
+function ringStep(st, h, rng) {
+  st.rt += h;
+  st.ft -= h;
+  if (st.ft <= 0) ringTurn(st, st.d, rng);
+  if (st.spr > 0) st.spr -= h;
+  st.fa = (st.fa + st.dir * st.fv * (st.spr > 0 ? FRING.sprint.mult : 1) * h + 360) % 360;
+  if (st.tgt != null) {
+    const diff = ringWrap(st.tgt - st.ga), m = st.ctrl * h;
+    st.ga = (st.ga + clamp(diff, -m, m) + 360) % 360;
+  }
+  st.p = clamp(st.p + (ringIn(st) ? st.fill : -st.drain) * h, 0, 1);
+}

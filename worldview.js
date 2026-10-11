@@ -1257,6 +1257,11 @@ function worldTags() {
       if (sold) want.push(["st" + o.id, cx, objH(o) + 0.4, cz, "💰<b>" + sold + "</b>", "ready", () => openStall(o.t === "f_markt")]);
     }
     if (o.t === "f_plot" && farmFishBuildCheck(o.k) === true) want.push(["pl" + o.id, cx, 1.3, cz, "🔨" + FFISHERY[o.k].i, "ready", () => openPlot(o)]);
+    /* Steg: Turnier bereit, Berts Köder fertig */
+    if (o.t === "f_steg" && angelS()) {
+      const U = angelS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, tour = tourCanStart();
+      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : "") + (lure ? "✨" : ""), tour || lure ? "ready" : "", () => openSteg(tour || lure ? "bert" : null)]);
+    }
     if (o.t === "sw_halle" && farmAreaOpen("saege") && !sawRepaired()) { const r = sawNext(); if (r && farmRepairCheck(r) === true) want.push(["rp", cx, 5, cz, "🔧" + r.i, "ready", () => openSawRepair()]); }
     if (o.t === "sw_lkw" && farmAreaOpen("saege") && !(F.saw && F.saw.lkw) && farmRepairCheck(FSAW_LKW) === true) want.push(["lkw", cx, 2.6, cz, "🔧🚛", "ready", () => openLkw()]);
   });
@@ -1496,7 +1501,7 @@ function openWeatherInfo() {
   if (farmAreaOpen("see")) {
     const gs = FGROUNDS.filter(farmGroundOk);
     odds = gs.map(g => {
-      const o = farmFishOdds(g.id), sum = Object.values(o).reduce((a, b) => a + b, 0);
+      const o = angelS() ? angelOdds(g.id) : farmFishOdds(g.id), sum = Object.values(o).reduce((a, b) => a + b, 0);
       const top = Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 3);
       return `<div class="fwx-g"><b>${g.i} ${esc(g.n)}</b><span>${top.map(id => `${FITEMS[id].i} ${Math.round(o[id] / sum * 100)} %`).join(" · ")}</span></div>`;
     }).join("");
@@ -1739,7 +1744,7 @@ function worldObjAction(o, x, y) {
       if (!sawRepaired()) { openSawRepair(); return true; }
       return false;
     case "kessel": if (!(F.saw && F.saw.motor)) { openSawRepair(); return true; } return false;
-    case "f_steg": if (typeof openFishingAt === "function") openFishingAt("steg"); return true;
+    case "f_steg": if (typeof openSteg === "function") openSteg(); return true;
     case "f_boot": if (typeof openBoatSheet === "function") openBoatSheet(); return true;
   }
   if (FMACHINES[o.t] && FMACHINES[o.t].saw && !sawRepaired()) { openSawRepair(); return true; }
