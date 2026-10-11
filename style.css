@@ -2552,7 +2552,7 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fshop .ic .th-lk{position:absolute;left:-4px;top:-4px;font-style:normal;font-size:15px;filter:drop-shadow(0 1px 0 #fff)}
 .fshop.lock .ic.th img{filter:grayscale(.6) drop-shadow(1px 2px 0 rgba(13,27,42,.25))}
 
-/* ---- Lehmanns Ufer: Porträts, Köder, Listen, Turnier, Sternstufen ---- */
+/* ---- Angeln am Steg: Porträts, Köder, Listen, Turnier, Sternstufen, Kreis-Drill ---- */
 .fv-fig.img{overflow:hidden;background:#dff0e6}
 .fv-fig.img img{width:100%;height:auto;align-self:start;margin-top:4px;transform:scale(2.1);transform-origin:50% 6%}
 .mg-baits{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px}
@@ -2570,7 +2570,6 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .uf-row>div b{display:block;font-size:13px}
 .uf-row>div small{display:block;font-size:10.5px;opacity:.7}
 .uf-row.lock{opacity:.5}
-.uf-row.bert{background:#fff6d6}
 .uf-bar{flex:none;width:70px;height:9px;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:#eef2f6}
 .uf-bar i{display:block;height:100%;background:#7cc66b}
 .uf-clock{text-align:center;font-weight:800;margin:0 0 8px}
@@ -2582,3 +2581,15 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-stage .mg-baits{margin:0 0 6px}
 .mg-stage .mg-bait{min-width:0;flex:1;padding:3px 4px}
 .mg-stage .mg-bait span{font-size:18px}
+.mg-ring{display:flex;flex-direction:column;align-items:center;gap:8px}
+.mg-ring svg{width:min(220px,70vw);height:auto;touch-action:none;cursor:grab;user-select:none}
+.mg-ring-track{fill:#dff0f7;stroke:#9cc3d5;stroke-width:16}
+.mg-ring-arc{fill:none;stroke:#8fd36f;stroke-width:22;stroke-linecap:round;opacity:.9}
+.mg-ring-arc.hit{stroke:#3fae3a}
+.mg-ring-fish{font-size:26px}
+.mg-ring-mid{font:800 22px var(--display,inherit);fill:#0d1b2a}
+.mg-ring .mg-hp{width:100%}
+.uf-ini{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e4ecf3;border:2px solid #0d1b2a;font-size:11px;font-weight:800;letter-spacing:.5px}
+.lk-poster{background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:9px 11px;margin-bottom:8px;font-size:12.5px}
+.lk-poster b{font-size:14px}
+.lk-poster p{margin:4px 0 0}

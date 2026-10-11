@@ -22,22 +22,22 @@ const FFISH = {
   aal:     { n: "Aale",         sg: "Aal",         i: "🐍", kg: 1.0, v: 30,  xp: 16, fight: 0.70 },
   wels:    { n: "Welse",        sg: "Wels",        i: "🐋", kg: 9.0, v: 45,  xp: 25, fight: 0.95 },
   schleie: { n: "Gold-Schleien", sg: "Gold-Schleie", i: "🏆", kg: 1.4, v: 150, xp: 60, fight: 0.50 },
-  /* Weißfische für Lehmanns Ufer: beißen auf Mais */
+  /* Weißfische: beißen auf Mais */
   rotauge:  { n: "Rotaugen",    sg: "Rotauge",     i: "🐟", kg: 0.2, v: 1.5, xp: 2,  fight: 0.15 },
   rotfeder: { n: "Rotfedern",   sg: "Rotfeder",    i: "🐟", kg: 0.2, v: 1.5, xp: 2,  fight: 0.18 },
   ukelei:   { n: "Ukeleis",     sg: "Ukelei",      i: "🐟", kg: 0.05, v: 1, xp: 2,  fight: 0.20 }
 };
-/* Größe je Art (Lehmanns Ufer): cls = Klasse für die Köder, cm = Länge von–bis,
-   k = Gewichtsfaktor (kg = k · (cm/100)³) */
+/* Größe je Art: cls = Klasse für die Köder (Mais klein, Würmer mittel,
+   Profi-Köder groß), cm = Länge von–bis, k = Gewichtsfaktor (kg = k · (cm/100)³) */
 Object.assign(FFISH.rotauge,  { cls: "klein",  cm: [12, 30],  k: 12 });
 Object.assign(FFISH.rotfeder, { cls: "klein",  cm: [12, 32],  k: 13 });
 Object.assign(FFISH.ukelei,   { cls: "klein",  cm: [8, 18],   k: 7 });
 Object.assign(FFISH.barsch,   { cls: "mittel", cm: [15, 45],  k: 14 });
 Object.assign(FFISH.forelle,  { cls: "mittel", cm: [25, 60],  k: 11 });
 Object.assign(FFISH.schleie,  { cls: "mittel", cm: [20, 55],  k: 15 });
-Object.assign(FFISH.karpfen,  { cls: "gross",  cm: [35, 80],  k: 15 });
-Object.assign(FFISH.zander,   { cls: "gross",  cm: [40, 90],  k: 8 });
-Object.assign(FFISH.aal,      { cls: "gross",  cm: [50, 110], k: 1.8 });
+Object.assign(FFISH.karpfen,  { cls: "mittel", cm: [35, 80],  k: 15 });
+Object.assign(FFISH.zander,   { cls: "mittel", cm: [40, 90],  k: 8 });
+Object.assign(FFISH.aal,      { cls: "mittel", cm: [50, 110], k: 1.8 });
 Object.assign(FFISH.hecht,    { cls: "gross",  cm: [50, 120], k: 6.5 });
 Object.assign(FFISH.wels,     { cls: "gross",  cm: [80, 200], k: 7 });
 Object.keys(FFISH).forEach(id => {
@@ -46,7 +46,7 @@ Object.keys(FFISH).forEach(id => {
 });
 Object.assign(FITEMS, {
   abfall:          { n: "Fischabfälle",       i: "🦴", k: "waste", a: 1,  u: "kg", pk: "Eimer",    v: 0.3, kg: 1,   xp: 0,  st: "fisch" },
-  koeder:          { n: "Köder",              sg: "Köder", i: "🪱", k: "bait", a: 1, u: "", pk: "Dose", v: 0.4, kg: 0.1, xp: 0, st: "fisch" },
+  koeder:          { n: "Reusenköder",        sg: "Reusenköder", i: "🥫", k: "bait", a: 1, u: "", pk: "Dose", v: 0.4, kg: 0.1, xp: 0, st: "fisch" },
   barschfilet:     { n: "Barschfilets",       sg: "Barschfilet", i: "🍣", k: "filet", a: 2, u: "", pk: "Schale", v: 7, kg: 0.4, xp: 6, st: "fisch" },
   forellenfilet:   { n: "Forellenfilets",     sg: "Forellenfilet", i: "🍥", k: "filet", a: 2, u: "", pk: "Schale", v: 9, kg: 0.4, xp: 6, st: "fisch" },
   karpfenblau:     { n: "Karpfen blau",       i: "🍽️", k: "filet", a: 1,  u: "",   pk: "Stück",    v: 18,  kg: 2,   xp: 9,  st: "fisch", sg: "Karpfen blau" },
@@ -59,7 +59,7 @@ Object.assign(FITEMS, {
   edelbox:         { n: "Edelfisch-Boxen",    sg: "Edelfisch-Box", i: "🎁", k: "deli", a: 1, u: "", pk: "Box", v: 120, kg: 3, xp: 40, st: "fisch" },
   hechtkloesse:    { n: "Hechtklößchen",      i: "🥟", k: "deli", a: 6,  u: "",   pk: "6er-Schale", v: 7, kg: 0.5, xp: 7, st: "fisch", sg: "Hechtklößchen" },
   fischbroetchen:  { n: "Fischbrötchen",      sg: "Fischbrötchen", i: "🥪", k: "deli", a: 1, u: "", pk: "Stück", v: 4, kg: 0.2, xp: 4, st: "fisch" },
-  /* Lehmanns Ufer: Berts Köder und was in die Reusen geht */
+  /* Berts Köder zum Angeln und was in die Reusen geht */
   wurm:            { n: "Tauwürmer",          sg: "Tauwurm", i: "🪱", k: "bait", a: 1, u: "", pk: "Stück", v: 0.3, kg: 0.01, xp: 0, st: "fisch" },
   profikoeder:     { n: "Profi-Köder",        sg: "Profi-Köder", i: "✨", k: "bait", a: 1, u: "", pk: "Stück", v: 12, kg: 0.02, xp: 0, st: "fisch" },
   muschel:         { n: "Teichmuscheln",      sg: "Teichmuschel", i: "🐚", k: "fisch", a: 1, u: "", pk: "Stück", v: 0.8, kg: 0.08, xp: 1, st: "fisch" },
@@ -69,20 +69,29 @@ Object.assign(FITEMS, {
 /* Muschelleinen der Ostsee gibt es nicht mehr – leer, damit nichts bricht */
 const FLINES = {};
 
-/* ----------------------- Lehmanns Ufergrundstück --------------------------
-   Teilfläche am Ostufer des Glindower Sees (ab Level 15, Lina vermittelt).
-   Dort zählen Rute und Köder: Mais lockt kleine Weißfische, Berts Würmer
-   mittlere, seine Profi-Köder an der Raubfischrute die Großen. */
-const FUFER = { lv: 15, steg: [47.6, 48], potSpots: [[44.6, 43.4], [44.6, 52.6], [42.2, 39.6]], potCost: [0, 600, 1000] };
-/* Ruten: zone = breiterer grüner Bereich im Drill, shift = mehr Gewicht auf
-   der größten Klasse, die der Köder erlaubt, size = Bonus auf die Länge */
+/* --------------------------------- Angeln ---------------------------------
+   Ab dem Steg am Glindower See. Rute und Köder zählen an allen Fanggründen:
+   Mais lockt kleine Weißfische, Berts Würmer mittlere, seine Profi-Köder an
+   der Raubfischrute die Großen. Reusen liegen an festen Plätzen neben dem Steg. */
+const FANGEL = { potSpots: [[2.5, 31.5], [13.5, 33], [4, 36.5]], potCost: [0, 600, 1000] };
+/* Ruten: shift = mehr Gewicht auf der größten Klasse, die der Köder erlaubt,
+   size = Bonus auf die Länge; im Kreis-Drill gw = grüner Bogen (Grad),
+   fill/drain = Fangleiste je Sekunde, ctrl = wie schnell der Bogen folgt (°/s) */
 const FRODS = [
   null,
-  { n: "Lehmanns alte Angel", i: "🎣", zone: 0,    shift: 0,    size: 0 },
-  { n: "Spinnrute",           i: "🎣", zone: 0.04, shift: 0.10, size: 0.3, lv: 17, price: 2400 },
-  { n: "Raubfischrute",       i: "🪝", zone: 0.08, shift: 0.15, size: 0.6, lv: 19, price: 6800 }
+  { n: "Lehmanns alte Angel", i: "🎣", shift: 0,    size: 0,   gw: 70, fill: 0.22, drain: 0.12, ctrl: 250 },
+  { n: "Spinnrute",           i: "🎣", shift: 0.10, size: 0.3, gw: 80, fill: 0.23, drain: 0.11, ctrl: 268, lv: 17, price: 2400 },
+  { n: "Raubfischrute",       i: "🪝", shift: 0.15, size: 0.6, gw: 86, fill: 0.25, drain: 0.10, ctrl: 280, lv: 19, price: 6800 }
 ];
-/* Köder am Ufer: mix = welche Klassen beißen (Grundgewicht) */
+/* Kreis-Drill: Fisch zieht auf einer Kreisbahn. Schwierigkeit d (0 … 1) aus
+   Kampfkraft, Größe und Sternen; d mischt jeweils zwischen [leicht, schwer].
+   speed °/s, turn = Sekunden bis zum nächsten Musterwechsel, flip = Chance
+   auf Richtungswechsel, sprint ab d > from. step = feste Rechenschrittweite. */
+const FRING = {
+  start: 0.30, maxT: 45, step: 1 / 60, junkD: 0.1,
+  speed: [35, 200], turn: [2.4, 0.6], flip: [0.15, 0.65], sprint: { from: 0.6, mult: 1.8, dur: 0.4 }
+};
+/* Köder zum Angeln: mix = welche Klassen beißen (Grundgewicht) */
 const FBAITS = {
   mais:        { item: "mais",        n: "Mais",        i: "🌽", mix: { klein: 1 },                size: 0,    per: 10 },
   wurm:        { item: "wurm",        n: "Tauwürmer",   i: "🪱", mix: { klein: 0.3, mittel: 0.7 }, size: 0.25, per: 1, tour: true },
@@ -104,22 +113,22 @@ const FPOTS = {
 const FPOT_UP = [null, null, { lv: 17, cost: 1500 }, { lv: 19, cost: 4000 }];
 FSIZE.pot = [2, 2];
 FFIXED.add("pot");
-FSIZE.u_steg = [2, 6];
-FFIXED.add("u_steg");
 /* Bert Flomann: Würmer nach dem Turnier, Profi-Köder später */
 const FBERT = { worms: { n: 10, price: 3 }, lures: { n: 5, price: 60, t: 120 }, lureNeed: { rod: 2, mittel: 10 } };
-/* Angler-Turnier: fünf Leute aus dem Dorf, du richtest aus. Es gewinnt das
-   meiste Gesamtgewicht nach 26 Minuten – Bert Flomann gewinnt immer. */
+/* Angler-Turnier: fünf Leute aus der Gegend, du richtest aus (100 € Kosten,
+   200 € Preisgeld). Es gewinnt das meiste Gesamtgewicht nach 26 Minuten.
+   Alle stehen gleichrangig da; die Startreihenfolge wird je Turnier gelost. */
 const FTOUR = {
-  need: 10, fee: 40, prize: 150, xp: 150, mins: 26,
+  need: 10, cost: 100, prize: 200, xp: 150, mins: 26,
   members: [
-    { n: "Bert Flomann", i: "🧔", bert: true },
-    { n: "Olaf Kühn", i: "👨" },
-    { n: "Rüdiger Paschke", i: "👴" },
-    { n: "Gisela Thiel", i: "👩" },
-    { n: "Marten Voigt", i: "🧑" }
+    { n: "Gisela Thiel",    ini: "GT", from: "Geltow",   about: "Vorsitzende des Anglervereins, angelt am liebsten früh morgens." },
+    { n: "Olaf Kühn",       ini: "OK", from: "Glindow",  about: "Busfahrer, fährt jeden Samstag mit dem Fahrrad an den See." },
+    { n: "Bert Flomann",    ini: "BF", from: "Werder",   about: "Angelt seit dem Kindergarten, schwört auf Tauwürmer aus dem eigenen Garten." },
+    { n: "Rüdiger Paschke", ini: "RP", from: "Petzow",   about: "Rentner, kennt jede Seerose der Bucht beim Vornamen." },
+    { n: "Marten Voigt",    ini: "MV", from: "Caputh",   about: "Student, hat die Spinnrute erst seit letztem Sommer." }
   ]
 };
+const FTOUR_WINNER = "Bert Flomann";
 const FKEEP_FISH = ["Bio-Aquakultur", "viel Raum", "artgerecht", "eng", "zu dicht"];
 
 /* Lager für Fisch: erst eine Kühlkiste in der Hütte, Fischlager und
@@ -191,17 +200,12 @@ const FBOAT_DOCK = [18, 31.5];
    boat: 0 = vom Steg, 1 = Ruderboot reicht, 2 = nur mit Motorboot.
    fish = Gewicht beim Würfeln (dann noch × Tageszeit × Wetter). */
 const FGROUNDS = [
-  { id: "steg",  n: "Am Steg",        i: "🪵", x: 8,   z: 32.5, boat: 0, fish: { barsch: 50, forelle: 14, karpfen: 22, aal: 4, hecht: 4 } },
-  { id: "rosen", n: "Seerosenbucht",  i: "🪷", x: -9,  z: 40,   boat: 1, fish: { karpfen: 40, barsch: 28, hecht: 8, schleie: 1.2 } },
-  { id: "schilf", n: "Schilfgürtel",  i: "🌾", x: -15, z: 52,   boat: 1, fish: { hecht: 30, karpfen: 24, barsch: 18, aal: 6, schleie: 1.6 } },
-  { id: "stein", n: "Steinkante",     i: "🪨", x: 34,  z: 41,   boat: 1, fish: { barsch: 40, zander: 18, hecht: 12 } },
-  { id: "mitte", n: "Tiefe Mitte",    i: "🌊", x: 14,  z: 50,   boat: 2, fish: { zander: 30, barsch: 24, hecht: 10, wels: 7 } },
-  { id: "bach",  n: "Bachmündung",    i: "🏞️", x: 42,  z: 57,   boat: 2, fish: { forelle: 45, aal: 14, barsch: 14 } },
-  /* Lehmanns Ufer: hier entscheiden Rute und Köder, welche Klasse beißt */
-  { id: "u-steg",  n: "Lehmanns Steg",  i: "🛶", x: 43.6, z: 48, boat: 0, area: "ufer",
-    fish: { rotauge: 40, rotfeder: 30, ukelei: 30, barsch: 45, forelle: 12, schleie: 1.5, hecht: 25, karpfen: 18, zander: 8, wels: 6 } },
-  { id: "u-bucht", n: "Lehmanns Bucht", i: "🌿", x: 40, z: 36, boat: 1, area: "ufer",
-    fish: { rotfeder: 40, ukelei: 25, rotauge: 15, barsch: 35, forelle: 8, schleie: 2, zander: 16, hecht: 30, aal: 6, wels: 12 } }
+  { id: "steg",  n: "Am Steg",        i: "🪵", x: 8,   z: 32.5, boat: 0, fish: { rotauge: 25, rotfeder: 20, ukelei: 15, barsch: 50, forelle: 14, karpfen: 22, aal: 4, hecht: 4 } },
+  { id: "rosen", n: "Seerosenbucht",  i: "🪷", x: -9,  z: 40,   boat: 1, fish: { rotfeder: 20, rotauge: 15, ukelei: 10, karpfen: 40, barsch: 28, hecht: 8, schleie: 1.2 } },
+  { id: "schilf", n: "Schilfgürtel",  i: "🌾", x: -15, z: 52,   boat: 1, fish: { rotfeder: 15, rotauge: 12, ukelei: 8, hecht: 30, karpfen: 24, barsch: 18, aal: 6, schleie: 1.6 } },
+  { id: "stein", n: "Steinkante",     i: "🪨", x: 34,  z: 41,   boat: 1, fish: { rotauge: 12, ukelei: 10, rotfeder: 8, barsch: 40, zander: 18, hecht: 12 } },
+  { id: "mitte", n: "Tiefe Mitte",    i: "🌊", x: 14,  z: 50,   boat: 2, fish: { ukelei: 10, rotauge: 6, rotfeder: 4, zander: 30, barsch: 24, hecht: 10, wels: 7 } },
+  { id: "bach",  n: "Bachmündung",    i: "🏞️", x: 42,  z: 57,   boat: 2, fish: { ukelei: 12, rotauge: 8, rotfeder: 5, forelle: 45, aal: 14, barsch: 14 } }
 ];
 /* Tageszeit: Morgen 5–9, Tag 9–17, Abend 17–21, Nacht 21–5 */
 const FFISH_TIME = {

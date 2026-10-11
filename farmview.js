@@ -1318,14 +1318,14 @@ function renderFarmPop() {
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
         : `<div class="ftool big" data-tool="water"><span class="ic">🚿</span><b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
   } else if (P.kind === "bait") {
-    const k = farmInv("koeder"), m = farmInv("mais"), U = typeof uferS === "function" ? uferS() : null;
-    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Köder${m ? " · " + FITEMS.mais.i + " " + famt("mais", m) + " Mais" : ""} da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
+    const k = farmInv("koeder"), m = farmInv("mais"), U = typeof angelS === "function" ? angelS() : null;
+    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Reusenköder${m ? " · " + FITEMS.mais.i + " " + famt("mais", m) + " Mais" : ""} da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
       + Object.keys(FPOTS).map(id => {
         const c = FPOTS[id], it = FITEMS[id], lock = !farmPotOk(id);
         const why = c.lv > lv ? "Lv " + c.lv : "Stufe " + c.tier;
         return `<div class="ftool${lock ? " lock" : ""}" data-tool="bait" data-crop="${id}">
           <span class="ic">${lock ? "🔒" : it.i}</span><b>${lock ? why : esc(it.n)}</b><small>${lock ? (U && c.lv <= lv ? "Reusen ausbauen" : "") : fdur(c.t) + " · " + Object.keys(c.mix).map(x => FITEMS[x].i).join("")}</small></div>`;
-      }).join("") + `</div>` + (k || m ? "" : `<div class="fp-tip">Keine Köder mehr: Die Fischerhütte macht welche aus Fischabfällen, im Laden gibt es Dosen – und eine Portion Mais aus dem Silo geht auch.</div>`);
+      }).join("") + `</div>` + (k || m ? "" : `<div class="fp-tip">Kein Reusenköder mehr: Die Fischerhütte macht welchen aus Fischabfällen, im Laden gibt es Dosen – und eine Portion Mais aus dem Silo geht auch.</div>`);
   } else if (P.kind === "hook") {
     h = `<div class="fp-h">${FITEMS[o.kind].i} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
       <div class="fp-row"><div class="ftool big" data-tool="hook"><span class="ic">🪝</span><b>Haken</b></div></div>`;
@@ -1468,7 +1468,7 @@ function applyToolTo(o, T) {
   else if (T.kind === "sickle" && o.t === "field" && fieldState(o) === "ripe") ok = doHarvest(o, true);
   else if (T.kind === "bait" && o.t === "pot" && potState(o) === "empty") {
     const r = doBait(o, T.crop);
-    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🪱 Keine Köder mehr – die Fischerhütte macht welche aus Fischabfällen, Mais aus dem Silo geht auch.", "warn"); } }
+    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🥫 Kein Reusenköder mehr – die Fischerhütte macht welchen aus Fischabfällen, Mais aus dem Silo geht auch.", "warn"); } }
     else ok = !!r;
   }
   else if (T.kind === "hook" && o.t === "pot" && potState(o) === "ripe") ok = doHaul(o, true);

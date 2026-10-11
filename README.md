@@ -200,33 +200,34 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Kühlhaus und Fischmarkt – jedes braucht Holz aus dem Sägewerk, beim Bauen
   wird mitgenagelt. Die frühere kleine Fischerei an der Ostsee gibt es nicht
   mehr.
-* **Angeln** – vom Steg oder mit dem Boot an sechs Stellen (Seerosenbucht,
-  Schilfgürtel, Steinkante, mit dem Motorboot auch Tiefe Mitte und
-  Bachmündung). Was beißt, hängt von **Tageszeit und Wetter** ab: Forellen
-  morgens, Zander und Aal nachts, bei Regen Aale und selten die Gold-Schleie.
-  Auswerfen, auf den Biss warten, anschlagen, dann im **Drill** die Spannung
-  im grünen Bereich halten – zu straff reißt die Schnur, zu locker ist er
-  weg. Ein ruhiger Drill gibt mehr Sterne. Verarbeitung: Filets, Karpfen blau,
-  Räucherforelle und -aal (mit Brennholz aus dem Sägewerk), Konserven,
-  Frischfischkisten (in Holzkisten), Edelfisch-Boxen, Hechtklößchen,
-  Fischbrötchen.
-* **Lehmanns Ufer** (ab Level 15, sobald der See offen ist) – bis dahin grau
-  am Ostufer. Dann wartet **Lina** dort: Der alte Lehmann gibt sein
-  Ufergrundstück ab, ohne Kaufpreis, mit Steg, alter Angel und einer Reuse.
-  Hier zählen **Rute und Köder**: Mais aus dem Silo lockt nur kleine
-  Weißfische (Rotauge, Rotfeder, Ukelei), Tauwürmer vor allem mittlere
-  (Barsch, Forelle), Profi-Köder an der Raubfischrute vor allem die Großen
-  (Hecht, Zander, Wels). Bessere Ruten (Spinnrute ab Level 17, Raubfischrute
-  ab 19) schieben die Chancen nach oben und machen den grünen Bereich im
-  Drill breiter. Jeder Fang hat **Länge und Gewicht**; Größe, Kondition und
-  der Drill ergeben die Sterne, die Sterne den Preis. Alles landet im
-  **Fangbuch** mit Rekorden.
-* **Angler-Turnier** – nach 10 kleinen Fischen am Ufer. Fünf Leute aus dem
-  Dorf, du richtest aus; das meiste Gesamtgewicht gewinnt – und das ist immer
-  **Bert Flomann**. Danach sammelt er dir Tauwürmer, und wer mit der
-  Spinnrute 10 mittlere Fische fängt, bekommt bei ihm Profi-Köder.
-* **Reusen am Ufer** – Stufe 1 fängt Teichmuscheln, Stufe 2 (Level 17) auch
-  Wollhandkrabben, Stufe 3 (Level 19) auch Edelkrebse. Bis zu drei Reusen.
+* **Angeln** – ab dem Steg: Dort hat der alte Lehmann seine einfache Angel
+  dagelassen, und **Lina** meldet sich. Angeln geht vom Steg oder mit dem Boot
+  an sechs Stellen (Seerosenbucht, Schilfgürtel, Steinkante, mit dem
+  Motorboot auch Tiefe Mitte und Bachmündung). **Rute und Köder** entscheiden
+  gemeinsam, was beißt: Mais aus dem Silo lockt nur kleine Weißfische
+  (Rotauge, Rotfeder, Ukelei), Tauwürmer vor allem mittlere (Barsch, Forelle,
+  Karpfen, Zander, Aal), Profi-Köder an der Raubfischrute vor allem die Großen
+  (Hecht, Wels). Bessere Ruten (Spinnrute ab Level 17, Raubfischrute ab 19)
+  schieben die Chancen nach oben. Dazu zählen **Tageszeit und Wetter**:
+  Forellen morgens, Zander und Aal nachts, bei Regen selten die Gold-Schleie.
+  Jeder Fang hat **Länge und Gewicht**; Größe und Kondition ergeben die Sterne,
+  die Sterne den Preis. Alles landet im **Fangbuch** mit Rekorden.
+* **Drill im Kreis** – nach dem Biss zieht der Fisch auf einer Kreisbahn. Mit
+  Finger oder Maus den grünen Bogen hinterherziehen: Solange der Fisch darin
+  ist, füllt sich die Fangleiste, sonst leert sie sich. Große und hochwertige
+  Fische ziehen schneller und wechseln öfter die Richtung; bessere Ruten geben
+  einen breiteren Bogen, füllen schneller und verlieren langsamer.
+  Verarbeitung: Filets, Karpfen blau, Räucherforelle und -aal (mit Brennholz
+  aus dem Sägewerk), Konserven, Frischfischkisten (in Holzkisten),
+  Edelfisch-Boxen, Hechtklößchen, Fischbrötchen.
+* **Angler-Turnier** – nach 10 kleinen Fischen. Fünf Angler aus der Gegend,
+  du richtest aus: 100 € Veranstaltung und 200 € Preisgeld für den Sieger.
+  Das meiste Gesamtgewicht nach 26 Minuten gewinnt. Danach sammelt der Sieger
+  dir Tauwürmer, und wer mit der Spinnrute 10 mittlere Fische fängt, bekommt
+  bei ihm Profi-Köder.
+* **Reusen am Steg** – Stufe 1 fängt Teichmuscheln, Stufe 2 (Level 17) auch
+  Wollhandkrabben, Stufe 3 (Level 19) auch Edelkrebse. Bis zu drei Reusen,
+  Köder sind Reusenköder-Dosen oder eine Portion Mais.
 * **Fische nach Sternen** – in der Kühlkiste liegen Fische getrennt nach
   Sternen und werden je Stufe verkauft; Rezepte nehmen die schlechtesten zuerst.
 * **Mitarbeiter** (ab Level 8, im Wohnhaus unter „👷 Team“) – Fahrer/in (mehr

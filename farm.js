@@ -30,7 +30,7 @@ function farmNew() {
     v: 1, kind, logi: false, sold: null, snd: true, seq: 1,
     objs: [], inv: {}, cap: { silo: 1, barn: 1, holz: 1, fisch: 1 },
     stats: { harvest: 0, made: 0, eggs: 0, milk: 0, deliv: 0, earned: 0, pearls: 0, angel: 0, trips: 0, meat: 0, prod: {} },
-    qi: 0, qp: 0, qdone: false, qv: 4, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
+    qi: 0, qp: 0, qdone: false, qv: 5, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
   };
   S.farm = F;
   S.xp = 0;
@@ -373,7 +373,7 @@ function farmHaul(o) {
     const s = specRoll(FPOTS[sp], (P.tier - 1) * 0.3), q = specQ(s, ((o.bq || 3) - 1) / 4);
     farmAdd(sp, 1, q);
     got.push({ sp, q, cm: s.cm, kg: s.kg });
-    if (uferS()) uferLog(sp, s, q, null);
+    if (angelS()) angelLog(sp, s, q, null);
   }
   const id = o.kind, xp = got.reduce((a, g) => a + FITEMS[g.sp].xp, 0), q = Math.round(got.reduce((a, g) => a + g.q, 0) / n);
   o.last = id; o.kind = null; o.bq = 0;
@@ -751,9 +751,9 @@ function farmMaxKg() {
   S.fleet.forEach(f => { const t = vType(f.type); if (t && (t.mode === "b" || t.mode === "r")) m = Math.max(m, t.cap); });
   return Math.max(25, m * 0.9);
 }
-function farmWPick(list, wf) {
+function farmWPick(list, wf, rng) {
   const tot = list.reduce((s, x) => s + wf(x), 0);
-  let r = Math.random() * tot;
+  let r = (rng || Math.random)() * tot;
   for (const x of list) { r -= wf(x); if (r <= 0) return x; }
   return list[list.length - 1];
 }
@@ -1055,6 +1055,14 @@ function farmMigrate() {
     /* v40: nach „Meisterhof“ geht es weiter – Wald, Sägewerk, See */
     F.qv = 4;
     if (F.done || F.qi >= FQ_CH_START(4)) { F.done = false; F.qi = Math.max(F.qi, FQ_CH_START(4)); F.qp = 0; F.qdone = false; }
+  }
+  if (F.qv < 5) {
+    /* v46: „Fang einen Hecht“ wandert von Kapitel 9 nach Kapitel 11, an seine Stelle
+       tritt das Angler-Turnier – spätere Aufgaben rücken eins nach hinten */
+    F.qv = 5;
+    const hi = FQUESTS_HOF.findIndex(q => q.t === "Fang einen Hecht"), ti = FQUESTS_HOF.findIndex(q => q.t === "Veranstalte das Angler-Turnier");
+    if (!F.done && hi >= 0 && F.qi >= hi) F.qi++;
+    if (F.qi === ti) { F.qp = 0; F.qdone = false; }
   }
   erbeInit(F, false);
   /* Waren und Objekte, die es nicht mehr gibt, verschwinden */
