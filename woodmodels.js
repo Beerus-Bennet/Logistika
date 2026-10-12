@@ -1102,9 +1102,9 @@ const FWM = (() => {
         for (let i = 0; i < 7; i++) b.cyl(0.035, 0.025, 1.1, 5, 0x7a5a3a, { rx: Math.PI / 2 + (rnd() - 0.5) * 0.15, ry: (rnd() - 0.5) * 0.2, x: (i % 4) * 0.07 - 0.1, y: 0.04 + Math.floor(i / 4) * 0.06, z: -0.55 });
         b.box(0.34, 0.03, 0.05, 0xd8b07a, { y: 0.12 }); return b;
       case "reste":
-        b.sphere(0.32, 9, 6, 0xb89a68, { y: 0.3, sy: 1.05, bottom: 0xa88a58 });
-        b.cyl(0.1, 0.14, 0.12, 8, 0xb89a68, { y: 0.6 });
-        for (let i = 0; i < 9; i++) b.box(0.07, 0.02, 0.04, 0xe9cfa0, { x: (rnd() - 0.5) * 0.5, y: 0.02, z: 0.3 + (rnd() - 0.5) * 0.3, ry: rnd() * 3 });
+        sack(b, null, { col: 0xb89a68, dark: 0xa88a58, open: true });
+        for (let i = 0; i < 9; i++) b.box(0.08, 0.025, 0.045, 0xe9cfa0, { x: 0.2 + (rnd() - 0.5) * 0.4, y: 0.02, z: 0.3 + (rnd() - 0.5) * 0.3, ry: rnd() * 3 });
+        for (let i = 0; i < 5; i++) b.box(0.07, 0.02, 0.04, 0xe9cfa0, { x: (rnd() - 0.5) * 0.12, y: 0.81, z: (rnd() - 0.5) * 0.12, ry: rnd() * 3 });
         return b;
       case "brennholz":
         for (let i = 0; i < 9; i++) b.cyl(0.13, 0.13, 0.55, 3, i % 3 ? 0x8a6040 : 0x7a5032, { rx: Math.PI / 2, ry: 0, rz: (i % 2) * 1.05, x: (i % 3 - 1) * 0.22, y: 0.11 + Math.floor(i / 3) * 0.18, z: -0.27, top: 0xe6c99a });
@@ -1174,6 +1174,272 @@ const FWM = (() => {
         b.cyl(0.2, 0.2, 0.6, 10, 0xb8603e, { rz: Math.PI / 2, x: 0.3, y: 0.3, sy: 0.6 });
         b.box(0.62, 0.04, 0.42, 0xf2c230, { y: 0.28 });
         b.box(0.1, 0.12, 0.03, 0xf2c230, { y: 0.24, z: 0.2 });
+        return b;
+    }
+    return goods(id, b);
+  }
+
+  /* ------------------------------ Hofwaren -------------------------------
+     Säcke, Kisten, Schalen, Backwaren, Milch und Fleisch – so, wie sie im
+     Hofladen liegen. Gleiches Licht und gleicher Low-Poly-Stil wie das Holz. */
+  const JUTE = 0xd8bf8c, JUTE_D = 0xc4a874, CARD = 0xcdbf9f, CRATE = 0xc9955a, CRATE_D = 0xa8753e;
+  /* Jutesack: bauchig, oben zugebunden, vorne ein farbiges Etikett */
+  function sack(b, label, o) {
+    o = o || {};
+    const c = o.col || JUTE, d = o.dark || JUTE_D;
+    /* breiter Sack mit Schultern, oben abgebunden und aufgeplustert */
+    b.at({ ry: Math.PI / 4 }, m => {
+      m.noise(0.05, mm => {
+        mm.cyl(0.33, 0.35, 0.46, 10, c, { sz: 0.72, smooth: true, bottom: d });
+        mm.cyl(0.33, 0.12, 0.2, 10, c, { y: 0.46, sz: 0.72, smooth: true });
+      });
+      m.cyl(0.12, 0.12, 0.05, 8, 0x8a6040, { y: 0.64 });
+      m.cyl(0.12, o.open ? 0.22 : 0.17, 0.12, 9, d, { y: 0.68, top: o.open ? 0x6a5030 : d });
+      if (label != null) { m.box(0.34, 0.26, 0.02, 0xfaf4e4, { y: 0.12, z: 0.25 }); m.box(0.26, 0.15, 0.022, label, { y: 0.17, z: 0.255 }); }
+    });
+  }
+  /* flache Obstkiste aus Latten */
+  function crate(b, w, d) {
+    b.box(w, 0.06, d, CRATE_D);
+    [-1, 1].forEach(s => { b.box(w, 0.2, 0.04, CRATE, { y: 0.04, z: s * (d / 2 - 0.02), top: 0xd8a868 }); b.box(0.04, 0.2, d, CRATE, { x: s * (w / 2 - 0.02), y: 0.04, top: 0xd8a868 }); });
+    b.box(w + 0.01, 0.03, 0.045, CRATE_D, { y: 0.13, z: d / 2 - 0.02 });
+  }
+  /* Früchte im Raster auf einer Fläche verteilen */
+  function fill(b, w, d, r, y, fn) {
+    const nx = Math.max(1, Math.floor(w / (r * 2.05))), nz = Math.max(1, Math.floor(d / (r * 2.05)));
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+      const x = (i - (nx - 1) / 2) * r * 2.05 + (rnd() - 0.5) * r * 0.2, z = (j - (nz - 1) / 2) * r * 2.05 + (rnd() - 0.5) * r * 0.2;
+      fn(x, y + (rnd() - 0.5) * r * 0.25, z, i * nz + j);
+    }
+  }
+  /* Pappschale (Erdbeeren, Kirschen) */
+  function punnet(b, w, d, col) { b.cyl(w * 0.62, w * 0.72, 0.16, 4, col, { a0: Math.PI / 4, sz: d / w, top: mix(col, 0x000000, 0.35) }); }
+  function goods(id, b) {
+    switch (id) {
+      case "weizen":
+        sack(b, 0xf0c64a, { open: true });
+        for (let i = 0; i < 7; i++) {
+          const a = (i - 3) * 0.2, x = Math.sin(a) * 0.22, rz = -a * 0.9;
+          b.at({ x: x * 0.4, y: 0.84, z: (i % 2) * 0.05 - 0.02, rz }, m => { m.box(0.016, 0.34, 0.016, 0xc8a040, { y: 0 }); m.cyl(0.035, 0.012, 0.16, 6, 0xf0c64a, { y: 0.32 }); });
+        }
+        return b;
+      case "mais":
+        sack(b, 0xf2c230);
+        [[-0.18, 0.4], [0.16, 0.32]].forEach(([x, ry], i) => b.at({ x, y: 0.08, z: 0.42, ry, rz: Math.PI / 2 - 0.08 }, m => {
+          m.noise(0.12, mm => mm.cyl(0.075, 0.05, 0.42, 8, 0xf2c230, { y: -0.21 }));
+          m.cone(0.09, 0.3, 5, 0x7ab648, { y: -0.27, rz: Math.PI, sz: 0.6 });
+        }));
+        return b;
+      case "tomate":
+        crate(b, 0.82, 0.58);
+        fill(b, 0.7, 0.48, 0.12, 0.2, (x, y, z) => { b.sphere(0.12, 10, 7, 0xe03a2a, { x, y, z, sy: 0.82, smooth: true }); b.box(0.07, 0.02, 0.02, 0x3f8a2a, { x, y: y + 0.1, z, ry: rnd() * 3 }); b.box(0.02, 0.02, 0.07, 0x3f8a2a, { x, y: y + 0.1, z }); });
+        return b;
+      case "karotte":
+        for (let i = 0; i < 6; i++) {
+          const x = (i % 3 - 1) * 0.11, y = 0.07 + Math.floor(i / 3) * 0.1, z = (rnd() - 0.5) * 0.06;
+          b.cone(0.07, 0.62, 7, 0xf2731e, { x, y, z: z - 0.05, rx: Math.PI / 2, smooth: true });
+          for (let k = 0; k < 3; k++) b.box(0.025, 0.025, 0.32, 0x5aa83a, { x: x + (k - 1) * 0.03, y: y + (k - 1) * 0.02, z: z - 0.24, ry: (k - 1) * 0.35, rx: -0.2 });
+        }
+        b.box(0.4, 0.05, 0.05, 0xd8332b, { y: 0.1, z: -0.02 });
+        return b;
+      case "kartoffel":
+        b.noise(0.06, m => m.cyl(0.3, 0.36, 0.55, 10, JUTE, { top: 0x8a6a40 }));
+        b.cyl(0.34, 0.31, 0.08, 10, JUTE_D, { y: 0.52 });
+        b.noise(0.15, m => {
+          fill(m, 0.46, 0.46, 0.1, 0.6, (x, y, z) => m.ico(0.1, 0xc19a5b, { x, y, z, flat: 0.75, jitter: 0.35 }));
+          [[0.34, 0.06, 0.32], [0.12, 0.06, 0.44]].forEach(([x, y, z]) => m.ico(0.1, 0xc19a5b, { x, y, z, flat: 0.7, jitter: 0.35 }));
+        });
+        return b;
+      case "erdbeere":
+        punnet(b, 0.7, 0.5, 0x4f9a52);
+        fill(b, 0.56, 0.38, 0.085, 0.2, (x, y, z) => { b.cone(0.085, 0.14, 7, 0xe0303a, { x, y: y + 0.12, z, rx: Math.PI, smooth: true }); b.cyl(0.07, 0.04, 0.03, 6, 0x3f8a2a, { x, y: y + 0.11, z }); });
+        return b;
+      case "kuerbis":
+        for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; b.sphere(0.24, 9, 7, 0xf08a24, { x: Math.cos(a) * 0.17, y: 0.3, z: Math.sin(a) * 0.17, sy: 1.15, sx: 0.8, ry: -a, smooth: true }); }
+        b.sphere(0.3, 10, 7, 0xe07a1a, { y: 0.3, sy: 0.85, smooth: true });
+        b.cyl(0.05, 0.035, 0.18, 6, 0x6b8f2c, { y: 0.55, rz: 0.25 });
+        return b;
+      case "apfel": case "birne":
+        crate(b, 0.82, 0.58);
+        fill(b, 0.7, 0.48, 0.12, 0.2, (x, y, z, k) => {
+          if (id === "apfel") { b.sphere(0.12, 10, 7, k % 3 ? 0xd8332b : 0x9ac43a, { x, y, z, smooth: true }); b.box(0.015, 0.06, 0.015, 0x6a4a2a, { x, y: y + 0.11, z }); }
+          else { b.sphere(0.11, 9, 7, 0xc8d24a, { x, y, z, smooth: true }); b.sphere(0.07, 8, 6, 0xc8d24a, { x, y: y + 0.12, z, smooth: true }); b.box(0.015, 0.06, 0.015, 0x6a4a2a, { x, y: y + 0.2, z }); }
+        });
+        if (id === "apfel") b.box(0.12, 0.012, 0.06, 0x4f9a3a, { x: 0.05, y: 0.34, z: 0.05, ry: 0.6 });
+        return b;
+      case "kirsche":
+        punnet(b, 0.62, 0.46, 0xf6f1e4);
+        fill(b, 0.5, 0.36, 0.07, 0.19, (x, y, z, k) => {
+          b.sphere(0.07, 9, 6, 0xa3132a, { x, y: y + 0.03, z, smooth: true });
+          if (k % 2 === 0) b.box(0.012, 0.16, 0.012, 0x4a7a2a, { x: x + 0.03, y: y + 0.08, z, rz: -0.4 });
+        });
+        return b;
+      case "ei":
+        b.box(0.66, 0.1, 0.44, CARD, { top: 0xb8aa8a });
+        b.box(0.66, 0.04, 0.44, CARD, { y: 0.1, z: -0.36, rx: -1.1 });
+        for (let i = 0; i < 6; i++) b.sphere(0.085, 9, 7, i === 2 ? 0xf6ead4 : 0xe8c8a0, { x: (i % 3 - 1) * 0.2, y: 0.17, z: (Math.floor(i / 3) - 0.5) * 0.19, sy: 1.25, smooth: true });
+        return b;
+      case "milch": {
+        const st = 0xc8d0d8, st2 = 0xa8b2bc;
+        b.cyl(0.26, 0.26, 0.48, 14, st, { smooth: true });
+        b.cyl(0.26, 0.13, 0.16, 14, st, { y: 0.48, smooth: true });
+        b.cyl(0.13, 0.13, 0.12, 12, st, { y: 0.62, smooth: true });
+        b.cyl(0.16, 0.16, 0.05, 12, st2, { y: 0.72 });
+        b.cyl(0.05, 0.05, 0.04, 8, st2, { y: 0.77 });
+        b.cyl(0.265, 0.265, 0.06, 14, 0x3f78c8, { y: 0.2 });
+        [-1, 1].forEach(sx => b.box(0.04, 0.14, 0.05, st2, { x: sx * 0.27, y: 0.46 }));
+        return b;
+      }
+      case "wolle":
+        b.noise(0.12, m => { for (let i = 0; i < 9; i++) m.ico(0.17 + rnd() * 0.06, i % 2 ? 0xeee3c8 : 0xf6efdc, { x: (i % 3 - 1) * 0.2 + (rnd() - 0.5) * 0.06, y: 0.13 + (i === 4 ? 0.12 : 0), z: (Math.floor(i / 3) - 1) * 0.17, flat: 0.75, jitter: 0.4, bottom: 0xd8c8a4 }); });
+        return b;
+      case "spaket": case "rpaket": {
+        const meat = id === "spaket" ? 0xef9a92 : 0xb3343c, fat = id === "spaket" ? 0xfbe6dc : 0xf2d8d0;
+        b.box(0.72, 0.05, 0.5, 0x2a2a30, { top: 0x3a3a42 });
+        b.noise(0.08, m => m.box(0.6, 0.12, 0.4, meat, { y: 0.05 }));
+        [-0.12, 0.08].forEach(z => b.box(0.58, 0.012, 0.035, fat, { y: 0.17, z, ry: id === "spaket" ? 0 : 0.3 }));
+        if (id === "rpaket") [[-0.15, -0.05], [0.1, 0.1], [0.18, -0.1]].forEach(([x, z]) => b.box(0.08, 0.012, 0.02, fat, { x, y: 0.17, z, ry: rnd() * 3 }));
+        b.box(0.22, 0.012, 0.16, 0xfaf4e4, { x: 0.18, y: 0.175, z: 0.1 });
+        b.box(0.14, 0.013, 0.04, id === "spaket" ? 0xd8332b : 0x2f6fb0, { x: 0.18, y: 0.176, z: 0.12 });
+        return b;
+      }
+      case "hfutter":
+        b.cyl(0.28, 0.34, 0.5, 12, 0xa8b0b8, { top: 0x8a929a });
+        b.noise(0.2, m => m.cyl(0.33, 0.33, 0.03, 12, 0xe8c060, { y: 0.48 }));
+        b.noise(0.2, m => { for (let i = 0; i < 10; i++) m.ico(0.035, 0xd8a840, { x: (rnd() - 0.5) * 0.4, y: 0.52, z: (rnd() - 0.5) * 0.4 }); });
+        b.cyl(0.345, 0.345, 0.04, 12, 0x8a929a, { y: 0.46 });
+        b.at({ y: 0.5 }, m => { m.box(0.02, 0.02, 0.5, 0x6a6a72, { y: 0.22, rx: 0 }); [-1, 1].forEach(s => m.box(0.02, 0.24, 0.02, 0x6a6a72, { z: s * 0.25, rx: s * 0.4 })); });
+        return b;
+      case "kfutter":
+        b.noise(0.14, m => m.box(0.9, 0.46, 0.5, 0xd2c45a, { top: 0xc4b84a }));
+        [-0.2, 0.2].forEach(x => b.box(0.03, 0.47, 0.51, 0xd8332b, { x }));
+        b.noise(0.2, m => { for (let i = 0; i < 6; i++) m.box(0.02, 0.1, 0.02, 0xb8a840, { x: (rnd() - 0.5) * 0.8, y: 0.46, z: (rnd() - 0.5) * 0.4, rz: (rnd() - 0.5) }); });
+        return b;
+      case "sfutter": sack(b, 0xef9a92, { col: 0xc8a06a, dark: 0xb08a58 }); return b;
+      case "schfutter": sack(b, 0x5aa83a, { col: 0xe0d0a8, dark: 0xc8b88e }); return b;
+      case "brot":
+        b.sphere(0.34, 12, 8, 0xc98a3a, { y: 0.17, sy: 0.55, sz: 1.35, bottom: 0xa86a2a, smooth: true });
+        [-0.18, 0, 0.18].forEach(z => b.box(0.24, 0.02, 0.05, 0xf0c88a, { y: 0.335, z, ry: 0.5 }));
+        return b;
+      case "fladen":
+        for (let i = 0; i < 4; i++) {
+          b.noise(0.08, m => m.cyl(0.36, 0.36, 0.045, 14, 0xe8c070, { x: (rnd() - 0.5) * 0.05, y: i * 0.05, z: (rnd() - 0.5) * 0.05, top: 0xf0d088 }));
+        }
+        for (let i = 0; i < 6; i++) b.cyl(0.035, 0.035, 0.006, 6, 0xb8803a, { x: Math.cos(i * 1.1) * 0.2, y: 0.2, z: Math.sin(i * 1.1) * 0.2 });
+        return b;
+      case "apfelkuchen":
+        b.box(0.92, 0.1, 0.64, 0x5a5a62, { top: 0x4a4a52 });
+        b.box(0.86, 0.1, 0.58, 0xe0b060, { y: 0.03, top: 0xe8c070 });
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 6; j++) b.cyl(0.06, 0.06, 0.02, 6, 0xf2d878, { x: -0.36 + j * 0.145, y: 0.13, z: -0.21 + i * 0.14, sz: 0.5 });
+        for (let i = 0; i < 4; i++) b.box(0.86, 0.025, 0.03, 0xc98a3a, { y: 0.15, z: -0.21 + i * 0.14 });
+        return b;
+      case "muffins":
+        b.box(0.72, 0.12, 0.48, 0xf6f1e4, { top: 0xe8e0cc });
+        for (let i = 0; i < 6; i++) {
+          const x = (i % 3 - 1) * 0.22, z = (Math.floor(i / 3) - 0.5) * 0.22;
+          b.cyl(0.08, 0.1, 0.12, 9, 0xf2a531, { x, y: 0.1, z, stripe: 0xe8902a });
+          b.sphere(0.1, 9, 6, 0xc98a3a, { x, y: 0.23, z, sy: 0.7, smooth: true });
+          b.sphere(0.06, 8, 5, 0xfaf6ee, { x, y: 0.28, z, sy: 0.6, smooth: true });
+          b.cone(0.02, 0.06, 5, 0xf2731e, { x, y: 0.31, z, rz: 0.6 });
+        }
+        return b;
+      case "kirschtorte":
+        b.cyl(0.46, 0.46, 0.04, 16, 0xe8e8ec);
+        b.cyl(0.4, 0.4, 0.12, 16, 0x5a3020, { y: 0.04, smooth: true });
+        b.cyl(0.4, 0.4, 0.04, 16, 0xfaf4ee, { y: 0.16, smooth: true });
+        b.cyl(0.4, 0.4, 0.1, 16, 0x5a3020, { y: 0.2, smooth: true });
+        b.cyl(0.41, 0.41, 0.05, 16, 0xfaf4ee, { y: 0.3, smooth: true });
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; b.sphere(0.055, 7, 5, 0xfaf4ee, { x: Math.cos(a) * 0.3, y: 0.37, z: Math.sin(a) * 0.3, sy: 0.8 }); b.sphere(0.045, 7, 5, 0xb3132a, { x: Math.cos(a) * 0.3, y: 0.43, z: Math.sin(a) * 0.3, smooth: true }); }
+        b.noise(0.2, m => { for (let i = 0; i < 9; i++) m.box(0.04, 0.012, 0.015, 0x3a2014, { x: (rnd() - 0.5) * 0.36, y: 0.355, z: (rnd() - 0.5) * 0.36, ry: rnd() * 3 }); });
+        return b;
+      case "pizza":
+        b.cyl(0.52, 0.52, 0.05, 18, 0xc99a5a, { top: 0xd8a868 });
+        b.cyl(0.46, 0.46, 0.05, 16, 0xe8c070, { y: 0.03 });
+        b.cyl(0.4, 0.4, 0.03, 16, 0xd8401e, { y: 0.06 });
+        b.noise(0.1, m => { for (let i = 0; i < 7; i++) m.cyl(0.11, 0.11, 0.012, 7, 0xf8e08a, { x: Math.cos(i * 0.9) * 0.2, y: 0.085, z: Math.sin(i * 0.9) * 0.22, sx: 1.3 }); });
+        for (let i = 0; i < 6; i++) b.cyl(0.07, 0.07, 0.015, 9, 0xa82a2a, { x: Math.cos(i * 1.05 + 0.4) * 0.26, y: 0.095, z: Math.sin(i * 1.05 + 0.4) * 0.26 });
+        [[0.05, 0.05], [-0.15, 0.12], [0.12, -0.18]].forEach(([x, z]) => b.box(0.06, 0.012, 0.04, 0x3f8a2a, { x, y: 0.1, z, ry: x * 9 }));
+        return b;
+      case "butter":
+        b.box(0.5, 0.22, 0.28, 0xf8e27a, { top: 0xfbe98e });
+        b.box(0.3, 0.235, 0.29, 0xe2b33a, { x: 0.105, top: 0xf2c84a });
+        b.box(0.16, 0.1, 0.005, 0x3f78c8, { x: 0.12, y: 0.07, z: 0.147 });
+        return b;
+      case "pudding":
+        b.box(0.66, 0.03, 0.66, 0xe8e0cc);
+        for (let i = 0; i < 4; i++) {
+          const x = (i % 2 - 0.5) * 0.3, z = (Math.floor(i / 2) - 0.5) * 0.3;
+          b.cyl(0.12, 0.14, 0.12, 10, 0xfaf6ee, { x, y: 0.03, z });
+          b.cyl(0.13, 0.1, 0.14, 10, 0xf2d060, { x, y: 0.15, z, top: 0xa0521e, smooth: true });
+          b.sphere(0.035, 6, 4, 0xb3132a, { x, y: 0.31, z });
+        }
+        return b;
+      case "kaese": {
+        b.cyl(0.42, 0.42, 0.28, 18, 0xf2c84a, { top: 0xf6d870, smooth: true });
+        b.cyl(0.425, 0.425, 0.02, 18, 0xd8a838, { y: 0.27 });
+        /* ein Keil davor */
+        const Y = 0xf6d870, h = 0.24;
+        b.at({ x: 0.35, z: 0.42, ry: -0.5 }, m => {
+          m.tri([0, 0, 0], [0.32, 0, -0.1], [0.32, 0, 0.1], Y); m.tri([0, h, 0], [0.32, h, 0.1], [0.32, h, -0.1], Y);
+          m.quad([0, 0, 0], [0, h, 0], [0.32, h, -0.1], [0.32, 0, -0.1], 0xf0c040); m.quad([0, 0, 0], [0.32, 0, 0.1], [0.32, h, 0.1], [0, h, 0], 0xf0c040);
+          m.quad([0.32, 0, -0.1], [0.32, h, -0.1], [0.32, h, 0.1], [0.32, 0, 0.1], 0xd8a838);
+          [[0.12, 0.08, 0.035], [0.22, 0.16, -0.03]].forEach(([x, y, z]) => m.sphere(0.025, 6, 4, 0xd8a838, { x, y, z: z + 0.012 }));
+        });
+        [[0.3, 0.1, 0.2], [-0.25, 0.16, 0.3], [0.05, 0.08, 0.41]].forEach(([x, y, z]) => b.sphere(0.035, 6, 4, 0xd8a838, { x, y, z }));
+        return b;
+      }
+      case "bratwurst":
+        b.box(0.8, 0.04, 0.5, 0xfaf6ee, { top: 0xe8e0cc });
+        for (let i = 0; i < 10; i++) {
+          const z = (i % 5 - 2) * 0.09, y = 0.07 + Math.floor(i / 5) * 0.08;
+          b.cyl(0.042, 0.042, 0.58, 8, 0xc06a3a, { rz: Math.PI / 2, x: 0.29, y, z, smooth: true });
+          [-0.29, 0.29].forEach(x => b.sphere(0.042, 7, 5, 0xb05a32, { x, y, z }));
+        }
+        return b;
+      case "schinken":
+        b.box(0.86, 0.05, 0.56, 0xc99a5a, { top: 0xd8a868 });
+        b.sphere(0.3, 11, 8, 0xd87070, { y: 0.3, sx: 1.25, sz: 0.95, bottom: 0xb85a5a, smooth: true });
+        b.sphere(0.31, 11, 8, 0xa8603a, { x: -0.04, y: 0.33, sx: 1.18, sy: 0.8, sz: 0.9, smooth: true });
+        b.cyl(0.05, 0.05, 0.3, 7, 0xf6efe0, { rz: Math.PI / 2, x: 0.6, y: 0.24 });
+        b.sphere(0.07, 7, 5, 0xf6efe0, { x: 0.6, y: 0.24 });
+        return b;
+      case "gulasch":
+        b.cyl(0.22, 0.22, 0.42, 14, 0x8a2a1a, { smooth: true });
+        b.cyl(0.222, 0.222, 0.2, 14, 0xfaf4e4, { y: 0.11 });
+        b.cyl(0.18, 0.2, 0.06, 14, 0x9a3a2a, { y: 0.42 });
+        b.cyl(0.21, 0.21, 0.07, 14, 0xd8332b, { y: 0.47, top: 0xfaf4ee });
+        b.box(0.14, 0.08, 0.005, 0xa8603a, { y: 0.17, z: 0.223 });
+        return b;
+      case "garn": {
+        const cols = [0xd8332b, 0x3f78c8, 0xf2c230, 0x47b84f, 0xf6f1e4];
+        [[-0.22, 0, 0], [0.22, 0, 0.02], [0, 0, 0.24], [-0.05, 0, -0.2], [0, 0.26, 0.02]].forEach(([x, y, z], i) => {
+          b.sphere(0.17, 10, 7, cols[i], { x, y: y + 0.17, z, smooth: true });
+          for (let k = 0; k < 3; k++) b.cyl(0.175, 0.175, 0.012, 10, mix(cols[i], 0xffffff, 0.3), { x, y: y + 0.17, z, rx: 0.6 + k * 0.5, ry: k });
+        });
+        return b;
+      }
+      case "socken":
+        [[-0.17, 0, 0], [0.17, 0.12, 0.08]].forEach(([x, ry, y]) => b.at({ x, y, ry }, m => {
+          m.box(0.22, 0.1, 0.52, 0xf2ead8, { z: -0.12, top: 0xf8f2e4 });
+          m.box(0.22, 0.1, 0.26, 0xf2ead8, { z: 0.22, x: 0.07, ry: 0.55, top: 0xf8f2e4 });
+          [-0.33, -0.2, -0.07].forEach((z, k) => m.box(0.225, 0.105, 0.06, k === 1 ? 0x3f78c8 : 0xd8332b, { z }));
+          m.box(0.225, 0.105, 0.09, 0xd8332b, { z: 0.3, x: 0.11, ry: 0.55 });
+        }));
+        return b;
+      case "pullover":
+        b.box(0.62, 0.12, 0.56, 0x3f78c8, { top: 0x4a88d8 });
+        [-0.14, 0.02, 0.18].forEach(z => b.box(0.62, 0.005, 0.04, 0xf6f1e4, { y: 0.122, z }));
+        b.cyl(0.11, 0.11, 0.04, 10, 0x2f5f98, { y: 0.11, z: -0.24, sz: 0.6 });
+        [-1, 1].forEach(s => b.box(0.12, 0.13, 0.5, 0x3a70b8, { x: s * 0.22, y: 0.0, z: 0.02, top: 0x4580c8 }));
+        return b;
+      case "pilze":
+        b.cyl(0.36, 0.28, 0.24, 12, 0xb8884a, { top: 0x7a5a3a, stripe: 0xa8783a });
+        b.cyl(0.37, 0.37, 0.04, 12, 0x9a6a3a, { y: 0.24 });
+        b.at({ y: 0.24 }, m => { m.box(0.03, 0.03, 0.72, 0x9a6a3a, { y: 0.32 }); [-1, 1].forEach(s => m.box(0.03, 0.34, 0.03, 0x9a6a3a, { z: s * 0.35, rx: s * 0.05 })); });
+        [[-0.12, 0.05, 0.12], [0.12, 0.0, -0.05], [0.0, 0.08, -0.15], [0.15, 0.1, 0.18]].forEach(([x, dy, z], i) => {
+          b.cyl(0.04, 0.045, 0.12, 6, 0xf6efe0, { x, y: 0.24 + dy, z });
+          b.sphere(0.11, 9, 5, i % 2 ? 0xb87a3a : 0x8a5a2a, { x, y: 0.36 + dy, z, sy: 0.55, smooth: true });
+        });
         return b;
     }
     return null;

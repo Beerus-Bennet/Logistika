@@ -191,7 +191,8 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   passenden Achsen), **Förderband** (Teile in die passenden Lücken),
   **Motor** (Dreck wegwischen, Teile der Reihe nach einsetzen). Man sieht das
   Sägewerk mit jeder Reparatur wieder heil werden. Danach: **Kessel** verfeuert
-  Holzreste und Äste zu Strom, die **Gattersäge** macht Bretter, Balken,
+  Holzreste, Äste oder Brennholz zu Strom – der fließt nach Ablauf von selbst in
+  den Speicher, ohne Abholen (die Karte zeigt „+30 kWh“) –, die **Gattersäge** macht Bretter, Balken,
   Holzplatten, Kisten, Pfosten und Eichenbohlen; dazu kaufbar Holzspalter
   (Brennholz, Kaminholz), Hobelmaschine (Dielen), Trockenkammer (Bauholz),
   Verpackungsmaschine (Europaletten), Schleifmaschine (Möbelteile,
@@ -252,14 +253,26 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   und am Ufer. Jedes Tier zeigt sich nur eine Weile und zieht sich dann
   zurück – im Schnitt sind nur drei, vier gleichzeitig unterwegs. Antippen
   scheucht sie auf (beim ersten Mal +1 EP).
-* **Holzfällen mit Werkzeugwahl** – die Baum-Blase zeigt jedes passende
-  Werkzeug mit Ausdauer, Sprit und Ertrag: Axt (kein Sprit) oder Kettensäge
-  (schneller, dazu Holzreste); die Profi-Säge bringt immer einen Stamm mehr –
-  auch bei einem kleinen Kirschbaum. Die letzte Wahl wird gemerkt.
-* **3D-Bildchen** für Stämme, Bretter, Balken, Platten, Kisten, Paletten,
-  Mehl und für das Werkzeug – in Rezepten, Zutaten-Chips und im Laden, so wie
-  die Sachen im Spiel aussehen. Maschinen im Laden ohne Bodenplatte, lange
-  Namen werden an der Wortfuge getrennt.
+* **Holzfällen mit Werkzeugwahl** – die Baum-Blase zeigt die Baumgröße (●●○○)
+  und für jedes passende Werkzeug Ausdauer, Sprit und Ausbeute: je größer der
+  Baum, desto mehr Stämme (klein 1, mittel 2, groß 4, uralt 7); die Kettensäge
+  bringt einen Stamm mehr und Holzreste, die Profi-Säge noch einen. Die letzte
+  Wahl wird gemerkt.
+* **Fällen mit Treffer** – beim Sägen zählt der Fallkerb nur im grünen
+  Bereich; daneben heißt „Zu hoch!“ / „Zu tief!“ und nochmal (nach drei
+  Fehlversuchen wird der Bereich etwas breiter). Ein Treffer im goldenen Kern
+  ist „PERFEKT!“ und gibt einen Stamm extra. Großer Baum: dickerer Stamm,
+  schmalerer Bereich, längerer Fällschnitt. Mit der Axt braucht ein großer
+  Baum mehr Hiebe (12 / 21 / 30 Punkte); Volltreffer in Serie treffen härter
+  (🔥 ×2, ×3 …). Funken, aufsteigende Zahlen, Konfetti beim Fallen und danach
+  eine Ausbeute-Karte mit allen Extras.
+* **3D-Bildchen** für alle Hof- und Holzwaren – Säcke, Obstkisten, Eierkarton,
+  Milchkanne, Brot, Torte, Pizza, Käse, Wurst, Wolle, Stämme, Bretter, Kisten …
+  – und für das Werkzeug: im Lager, am Verkaufsstand, in Rezepten,
+  Zutaten-Chips, Bestellungen, beim Händler und im Laden. Jedes Bild wird eng
+  zugeschnitten, damit alle gleich groß wirken; in Rezeptkarten stehen die
+  Zutaten in voller Breite unter dem Namen. Maschinen im Laden ohne
+  Bodenplatte, lange Namen werden an der Wortfuge getrennt.
 * **Beladen** – bevor ein Lastenrad, Moped oder Transporter losfährt, fliegen
   Kisten, Säcke und Körbe aus der Scheune hinein; bei Rad und Moped bleibt die
   Ladung obendrauf sichtbar.
@@ -279,7 +292,9 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   und ausgraben: Im Querschnitt durch den Boden gräbt man sich von oben zur
   Kiste – Erde kostet einen Spatenstich, Lehm und Wurzeln zwei, Steine drei,
   durch Fels geht nichts. Wer den günstigsten Weg findet, bekommt mehr
-  Münzen. In der Kiste: Geld (je nach Level) und ein Kleeblatt.
+  Münzen. In der Kiste: Geld (je nach Level) und ein Kleeblatt. Danach liegt
+  die Kiste offen in der Grube, voller Münzen und Edelsteine, mit Erdwall,
+  Erdhaufen und Spaten daneben.
 * **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
   **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
   günstig geht schnell, teuer dauert –, später kassieren.
@@ -312,8 +327,9 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   (und eine schon vergrößerte Seite springt zurück); beim langen Drücken
   (Sägen, Kurbeln) erscheint keine Lupe mehr.
 * **Ereignis-Leisten** (Holzpreise, Wildschweine, Vogelschwarm …) erscheinen
-  kurz ausgeklappt und schrumpfen dann zu einem kleinen Symbol am rechten
-  Rand. Antippen klappt sie wieder auf, nochmal antippen führt hin.
+  kurz ausgeklappt und schrumpfen dann zu einem kleinen runden Knopf am
+  rechten Rand. Antippen klappt sie auf; nochmal antippen zeigt, worum es geht
+  (bzw. führt hin), und klappt sie wieder zum Knopf zusammen.
 
 ### Vom Hof zur Spedition
 

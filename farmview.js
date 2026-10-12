@@ -1656,7 +1656,9 @@ function closeFarmSheet() {
   FV.sel = null;
 }
 function refreshSheet() { if (FV.sheet && FV.sheetTick) FV.sheetTick(); }
-const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}">${typeof itemIc === "function" && ITEM_3D.has(id) ? itemIc(id) : FITEMS[id].i}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
+/* Warenbild: 3D, wo es ein Modell gibt, sonst das Symbol */
+const icOf = (id, lock) => typeof itemIc === "function" ? itemIc(id, lock) : `<span class="ic">${lock ? "🔒" : FITEMS[id].i}</span>`;
+const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}">${icOf(id)}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
 
 /* Mühle, Ofen, Molkerei */
 function machQueueHTML(o) {
@@ -1664,9 +1666,9 @@ function machQueueHTML(o) {
   const slots = [];
   o.q.forEach((it, i) => {
     const f = i === 0 ? clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1) : 0;
-    slots.push(`<div class="fq-s work"><span>${FITEMS[it.r].i}</span><i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small></div>`);
+    slots.push(`<div class="fq-s work">${icOf(it.r)}<i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small></div>`);
   });
-  o.done.forEach(d => slots.push(`<div class="fq-s done" data-collect="1"><span>${FITEMS[d.r].i}</span><small>fertig ✓</small></div>`));
+  o.done.forEach(d => slots.push(`<div class="fq-s done" data-collect="1">${icOf(d.r)}<small>fertig ✓</small></div>`));
   for (let i = slots.length; i < machSlots(o); i++) slots.push(`<div class="fq-s free"><small>frei</small></div>`);
   const sc = slotCost(o);
   return slots.join("") + (sc != null ? `<button class="fq-s buy" id="fqBuy">＋<small>${eur(sc)}</small></button>` : "");
@@ -1697,11 +1699,11 @@ function openMachine(o) {
       + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">⛽<b>${eur(r.cost)}</b></span>` : "");
     const by = r.by ? " · dazu " + Object.keys(r.by).map(id => fqty(id, r.by[id])).join(", ") : "";
     const what = r.trip ? `<em class="fr-trip">${esc(r.trip)}</em>` : r.note ? `<em class="fr-trip">${esc(r.note)}</em>` : "";
-    return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${r.id}" ${lock ? "disabled" : ""}>
-      ${typeof itemIc === "function" ? itemIc(r.id, lock) : `<span class="ic">${lock ? "🔒" : it.i}</span>`}
+    return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${rkey(r)}" ${lock ? "disabled" : ""}>
+      ${icOf(r.id, lock)}
       <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
       <span class="fr-in">${lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
-      <small>⏱ ${fdur(r.t)} · Wert ${eur(it.v * r.out)}${by}</small>
+      <small>⏱ ${fdur(r.t)} · ${it.energy ? "+" + it.energy * r.out + " kWh in den Speicher" : "Wert " + eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
   const sub = M.trips ? "Wähle eine Fangfahrt – der Kutter fährt eine nach der anderen. Diesel zahlst du beim Ablegen."
@@ -1749,7 +1751,7 @@ function openFarmStore(st) {
   const sel = FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
   openFarmSheet(`<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
-    <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}"><span>${FITEMS[id].i}</span><b>${famt(id, farmInv(id))}</b><small>${qStars(farmQ(id))}</small></button>`).join("")
+    <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${qStars(farmQ(id))}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>
     ${sel ? (() => {
       const wood = st === "holz" && typeof farmWoodPrice === "function", pr = (id, n) => wood ? farmWoodPrice(id, n) : farmSellPrice(id, n);
@@ -1900,7 +1902,8 @@ function shopItemHTML(it, lv) {
     else if (!lock && pens.every(p => p.animals.length >= FANIMALS[it.animal].max)) note = FANIMALS[it.animal].fish ? "Gehege voll" : "Stall voll";
   }
   if (it.item && !lock) note = eur(price) + " · " + fqty(it.item, it.qty || 1) + " · da: " + famt(it.item, farmInv(it.item));
-  const ic = typeof thumbSpan === "function" ? thumbSpan("shop:" + it.id, shopModel(it), it.i, lock) : `<span class="ic">${lock ? "🔒" : it.i}</span>`;
+  const ic = it.item && typeof itemIc === "function" && ITEM_3D.has(it.item) ? itemIc(it.item, lock)
+    : typeof thumbSpan === "function" ? thumbSpan("shop:" + it.id, shopModel(it), it.i, lock) : `<span class="ic">${lock ? "🔒" : it.i}</span>`;
   return `<button class="fshop${lock || full ? " lock" : S.money < price ? " poor" : ""}" data-shop="${it.id}" ${lock || full ? "disabled" : ""}>
     ${ic}<b>${shyName(it.n)}</b><small>${note}</small>${!lock && !it.animal && !it.item && lim < 99 ? `<em>${n}/${lim}</em>` : ""}<p>${esc(it.d)}</p></button>`;
 }

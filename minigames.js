@@ -71,6 +71,29 @@ function mgSawImg() {
   return u ? `<img src="${u}" alt="Kettensäge" style="transform:scaleX(-1) rotate(-8deg)">` : "⚙️";
 }
 function mgWin(ic) { const s = $("#mgStage"); if (s) s.insertAdjacentHTML("beforeend", `<div class="mg-win"><b>${ic}</b></div>`); }
+/* aufsteigender Text im Spielfeld („PERFEKT!“, „+7“, „Daneben“) */
+function mgPop(txt, cls, x, y) {
+  const s = $("#mgStage");
+  if (!s) return;
+  const d = document.createElement("div");
+  d.className = "mg-ptxt " + (cls || "");
+  d.textContent = txt;
+  d.style.left = (x == null ? 50 : x) + "%"; d.style.top = (y == null ? 30 : y) + "%";
+  s.appendChild(d); setTimeout(() => d.remove(), 950);
+}
+/* Konfetti aus der Mitte des Spielfelds */
+function mgConfetti(n) {
+  const s = $("#mgStage");
+  if (!s) return;
+  const cols = ["#ffd23f", "#47b84f", "#3f78c8", "#ff6b7d", "#f2731e"];
+  const b = s.getBoundingClientRect();
+  for (let i = 0; i < (n || 26); i++) {
+    const e = document.createElement("i"), a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6, d = 50 + Math.random() * 80;
+    e.className = "mg-spark conf";
+    e.style.cssText = `left:${b.width / 2}px;top:${b.height * 0.55}px;background:${cols[i % cols.length]};--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d + 30).toFixed(1)}px`;
+    s.appendChild(e); setTimeout(() => e.remove(), 900);
+  }
+}
 function mgShuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 /* Ausdauerleiste fürs Holzfällen */
 function mgStaHTML() { const s = Math.floor(farmSta()), m = farmStaMax(); return `<div class="mg-sta"><span>💪</span><i><em style="width:${Math.round(s / m * 100)}%"></em></i><b>${s}</b></div>`; }
@@ -105,17 +128,18 @@ const MG_GAMES = {
   axe: {
     start(st) {
       const t = st.tree, Z = FTREE_SIZE[t.sz], ax = (S.farm.tools.axe || 1) >= 2 ? 1.5 : 1;
-      /* 21 Punkte: drei Volltreffer (je 7) oder sieben gute Treffer (je 3) */
-      st.hp = MG_AXE_HP; st.k = ax; st.sta = Z.sta; st.q = 0; st.n = 0; st.p = 0; st.v = 0.75 + t.sz * 0.18; st.dirv = 1;
-      if ((t.dmg || 0) >= MG_AXE_HP) t.dmg = MG_AXE_HP - 3;
+      /* je größer der Baum, desto mehr Schläge: Volltreffer 7, gut 3 – Volltreffer in Serie geben Extra-Wucht */
+      st.hp = Z.axe || MG_AXE_HP; st.k = ax; st.sta = Z.sta; st.q = 0; st.n = 0; st.p = 0; st.v = 0.75 + t.sz * 0.18; st.dirv = 1; st.combo = 0;
+      if ((t.dmg || 0) >= st.hp) t.dmg = st.hp - 3;
       st.c = 0.3 + Math.random() * 0.4; st.good = 0.1; st.okw = 0.26; st.cool = 0;
-      mgH("🪓 " + FSPECIES[t.sp].n + " fällen", "Tipp, wenn die Nadel im grünen Feld steht");
+      mgH("🪓 " + FSPECIES[t.sp].n + " fällen · " + Z.n, "Tipp, wenn die Nadel im grünen Feld steht");
       mgStage(`<div class="mg-tbar" id="mgT"><i class="ok" id="mgOk"></i><i class="good" id="mgGood"></i><b id="mgNeedle"></b></div>
-        <div class="mg-hp"><span>🌳</span><i><em id="mgHp"></em></i></div><div id="mgStaBox">${mgStaHTML()}</div>`);
+        <div class="mg-hp" id="mgHpBox"><span>🌳</span><i><em id="mgHp"></em></i></div><div id="mgStaBox">${mgStaHTML()}</div>`);
       $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.axe.hit(st); };
       MG_GAMES.axe.zone(st);
       MG_GAMES.axe.bar(st);
-      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : "3 Volltreffer (dunkelgrün) oder 7 gute Schläge (hellgrün) – jeder kostet Ausdauer.");
+      const vt = Math.ceil(st.hp / 7), gt = Math.ceil(st.hp / 3);
+      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : `${Z.n === "klein" ? "Kleiner Baum" : Z.n === "groß" ? "Großer Baum" : "Baum"}: ${vt} Volltreffer (dunkelgrün) oder ${gt} gute Schläge – Serien geben Extra-Wucht.`);
       MG_GAMES.axe.hpBar(st);
     },
     bar(st) {
@@ -143,11 +167,18 @@ const MG_GAMES = {
       st.cool = 0.18;
       const d = Math.abs(st.p - st.c), q = d < st.good / 2 ? 1 : d < st.okw / 2 ? 0.6 : 0.15;
       st.q += q === 0.15 ? 0 : q; st.n++;
-      t.dmg = (t.dmg || 0) + (q === 1 ? 7 : q > 0.5 ? 3 : 0);
+      st.combo = q === 1 ? st.combo + 1 : 0;
+      const bonus = st.combo >= 2 ? Math.min(4, st.combo) : 0, dmg = (q === 1 ? 7 : q > 0.5 ? 3 : 0) + bonus;
+      t.dmg = (t.dmg || 0) + dmg;
       WV.hit = { id: t.id, t0: wnow() };
-      FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: q === 1 ? 10 : 5, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.4, up: 1.6, size: 0.07, shape: 1 });
+      FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: q === 1 ? 10 + bonus * 3 : 5, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.4, up: 1.6, size: 0.07, shape: 1 });
       sfx(q === 1 ? "chop" : q > 0.5 ? "chop" : "bad");
-      mgMsg(q === 1 ? "💥 Volltreffer!" : q > 0.5 ? "👍 Gut getroffen" : "😬 Daneben – kostet trotzdem Kraft", q === 1 ? "ok" : q > 0.5 ? "" : "bad");
+      /* Rückmeldung im Spielfeld: Funken an der Nadel, Zahl steigt auf */
+      const nd = $("#mgNeedle"), stg = $("#mgStage");
+      if (q === 1) { mgSparks(stg, nd, "#ffd23f", 10 + bonus * 3); mgPop(bonus ? `+${dmg} 🔥 ×${st.combo}` : "+7", "gold", st.p * 100, 8); mgFx($("#mgHpBox"), "mg-shake"); if (bonus) sfx("spark"); }
+      else if (q > 0.5) { mgSparks(stg, nd, "#47b84f", 6); mgPop("+3", "green", st.p * 100, 8); }
+      else { mgFx($("#mgT"), "mg-shake"); mgPop("Daneben", "red", st.p * 100, 8); }
+      mgMsg(q === 1 ? (st.combo >= 2 ? `🔥 Serie ×${st.combo} – Extra-Wucht!` : "💥 Volltreffer!") : q > 0.5 ? "👍 Gut getroffen" : "😬 Daneben – kostet trotzdem Kraft", q === 1 ? "ok" : q > 0.5 ? "" : "bad");
       if (FV.R) FV.touchAt = performance.now();
       st.c = 0.18 + Math.random() * 0.64;
       st.v = Math.min(2.2, st.v + 0.04);
@@ -155,9 +186,11 @@ const MG_GAMES = {
       MG_GAMES.axe.hpBar(st);
       if (t.dmg >= st.hp) {
         st.done = true;
-        mgMsg("🌲 Baum fällt!", "ok");
+        const acc = st.n ? st.q / st.n : 0.6;
+        mgMsg(acc > 0.85 ? "🌲 Sauber gefällt – das gibt einen Stamm extra!" : "🌲 Baum fällt!", "ok");
+        mgWin("🌲"); mgConfetti(acc > 0.85 ? 34 : 20); sfx("thud");
         const dir = -2.36 + (Math.random() - 0.5) * 0.8;
-        setTimeout(() => MG.close({ ok: true, acc: st.n ? st.q / st.n : 0.6, dir, dirOk: true }), 380);
+        setTimeout(() => MG.close({ ok: true, acc, dir, dirOk: true }), 850);
       }
     },
     tired(st) {
@@ -176,24 +209,48 @@ const MG_GAMES = {
       const t = st.tree;
       st.ph = 0; st.dirs = mgDirInfo(t); st.prog = 0; st.heat = 0; st.over = 0; st.stall = 0; st.hold = false; st.mk = 0; st.mv = 1; st.snd = 0;
       st.pow = (S.farm.tools.saw || 1) >= 2 ? 1.6 : 1;                 /* Profi-Säge: schneller, wird weniger heiß */
-      mgH("⛓️ " + FSPECIES[t.sp].n + " sägen", "Fallrichtung wählen – ins Freie, nicht auf Bäume oder Wege");
+      mgH("⛓️ " + FSPECIES[t.sp].n + " sägen · " + FTREE_SIZE[t.sz].n, "Fallrichtung wählen – ins Freie, nicht auf Bäume oder Wege");
       const free = st.dirs.filter(d => !d.block).length;
       mgStage(`<div class="mg-dirs">${st.dirs.map((d, i) => `<button class="mg-dir${d.block ? " blk" : " free"}" data-d="${i}"><b>${d.a}</b><small>${d.block ? d.block : "frei"}</small></button>`).join("")}<div class="mg-tree">🌳</div></div>`);
       mgMsg(free ? "Wohin soll der Baum fallen?" : "Überall steht was im Weg – wähl das kleinste Übel.");
       mgBar("");
       $$("#mgStage [data-d]").forEach(b => b.onclick = () => { st.dir = st.dirs[+b.dataset.d]; st.dirOk = !st.dir.block || !free; MG_GAMES.saw.kerb(st); });
     },
+    /* Fallkerb: nur ein Schnitt im grünen Bereich zählt – daneben heißt nochmal.
+       Großer Baum: dicker Stamm, schmalerer Bereich, schnellere Markierung. */
     kerb(st) {
-      st.ph = 1;
-      mgH("⛓️ Fallkerb", "Tipp, wenn die Markierung auf Kniehöhe (grün) ist");
-      mgStage(`<div class="mg-trunk"><i class="tgt"></i><b id="mgMk"></b></div>`);
-      mgMsg(st.dirOk ? "Gute Richtung. Jetzt der Fallkerb – sauber gesetzt gibt’s mehr Holz." : "Hm, da steht was im Weg … pass beim Schnitt gut auf.", st.dirOk ? "ok" : "bad");
+      st.ph = 1; st.miss = 0; st.mk = Math.random() < 0.5 ? 0.95 : 0.6; st.mv = -1;
+      const sz = st.tree.sz;
+      st.zc = 0.28; st.zh = 0.12 - (sz - 1) * 0.015; st.mspd = 0.75 + sz * 0.12;
+      const W = [0, 50, 64, 82, 104][sz], H = [0, 112, 124, 138, 150][sz];
+      mgH("⛓️ Fallkerb", "Tipp, wenn die Markierung im grünen Bereich ist");
+      mgStage(`<div class="mg-trunk" id="mgTr" style="width:${W}px;height:${H}px"><i class="tgt" style="bottom:${(st.zc - st.zh) * 100}%;height:${st.zh * 200}%"><u style="bottom:${(0.5 - 0.35 / 2) * 100}%;height:35%"></u></i><b id="mgMk"></b></div>`);
+      mgMsg(st.dirOk ? "Gute Richtung. Jetzt der Fallkerb – nur im grünen Bereich sägen!" : "Hm, da steht was im Weg … setz den Kerb wenigstens genau.", st.dirOk ? "ok" : "bad");
       mgBar(`<button class="btn fa-go" id="mgGo">✂️ Kerb setzen</button>`);
       const go = () => {
-        if (st.ph !== 1) return;
-        st.p1 = clamp(1 - Math.abs(st.mk - 0.28) / 0.3, 0, 1);
+        if (st.ph !== 1 || st.wait) return;
+        const d = Math.abs(st.mk - st.zc), mk = $("#mgMk"), stg = $("#mgStage");
+        if (d > st.zh) {
+          /* daneben: kein Kerb, nochmal versuchen */
+          st.miss++;
+          sfx("bad");
+          mgFx($("#mgTr"), "mg-shake");
+          mgPop(st.mk > st.zc ? "Zu hoch!" : "Zu tief!", "red", 50, 100 - st.mk * 100 - 10);
+          if (st.miss >= 3 && st.zh < 0.14) { st.zh += 0.02; const tg = $("#mgTr .tgt"); if (tg) { tg.style.bottom = (st.zc - st.zh) * 100 + "%"; tg.style.height = st.zh * 200 + "%"; } }
+          mgMsg(st.miss >= 3 ? "Daneben – der grüne Bereich ist jetzt etwas breiter. Nochmal!" : "Daneben – so fällt der Baum nicht. Nochmal, auf Kniehöhe!", "bad");
+          st.wait = true; setTimeout(() => { st.wait = false; }, 350);
+          return;
+        }
+        const perfect = d <= st.zh * 0.35;
+        st.p1 = clamp((perfect ? 1 : 0.8 - d / st.zh * 0.25) - st.miss * 0.08, 0.35, 1);
         sfx("saw");
-        MG_GAMES.saw.cut(st);
+        if (perfect) { sfx("level"); mgSparks(stg, mk, "#ffd23f", 16); mgPop("PERFEKT!", "gold", 50, 100 - st.mk * 100 - 14); }
+        else { sfx("chop"); mgSparks(stg, mk, "#47b84f", 9); mgPop("Treffer!", "green", 50, 100 - st.mk * 100 - 14); }
+        /* der Kerb bleibt sichtbar im Stamm */
+        const tr = $("#mgTr"); if (tr) tr.insertAdjacentHTML("beforeend", `<i class="notch" style="bottom:${st.mk * 100}%"></i>`);
+        st.ph = 1.5;
+        mgMsg(perfect ? "✂️ Perfekter Kerb – das gibt einen Stamm extra!" : st.miss ? "✂️ Sitzt! Jetzt der Fällschnitt." : "✂️ Sauber gesetzt! Jetzt der Fällschnitt.", "ok");
+        setTimeout(() => { if (MG.on && MG.kind === "saw" && st.ph === 1.5) MG_GAMES.saw.cut(st); }, 750);
       };
       $("#mgGo").onclick = go;
       $("#mgStage").onpointerdown = e => { e.preventDefault(); go(); };
@@ -201,9 +258,10 @@ const MG_GAMES = {
     cut(st) {
       st.ph = 2;
       mgH("⛓️ Fällschnitt", "Gedrückt halten zum Sägen – loslassen kühlt den Motor");
-      mgStage(`<div class="mg-log2 hold" id="mgLog"><div class="mg-trk"><i class="mg-cut" id="mgCut"></i></div><span class="mg-cs" id="mgCs" style="right:calc(50% - 64px)">${mgSawImg()}</span></div>
+      st.tw = [0, 58, 72, 90, 112][st.tree.sz] || 86;
+      mgStage(`<div class="mg-log2 hold" id="mgLog"><div class="mg-trk" style="width:${st.tw}px;margin-left:${-st.tw / 2}px"><i class="mg-cut" id="mgCut"></i><i class="notch" style="top:calc(46% - 2px)"></i></div><span class="mg-cs" id="mgCs" style="right:calc(50% - ${st.tw / 2 + 21}px)">${mgSawImg()}</span></div>
         <div class="mg-hp"><span>🪵</span><i><em id="mgPr" style="width:0%"></em></i></div><div class="mg-heat"><span>🌡️</span><i><em id="mgHeat"></em></i></div>`);
-      mgMsg(st.p1 > 0.7 ? "Sauberer Kerb! Jetzt durchsägen." : "Der Kerb sitzt etwas schief. Jetzt durchsägen.", st.p1 > 0.7 ? "ok" : "");
+      mgMsg(st.tree.sz >= 3 ? "Dicker Stamm – halten zum Sägen, den Motor nicht überhitzen." : "Halten zum Sägen – loslassen kühlt den Motor.", "");
       const b = mgBar(`<button class="btn fa-go hold" id="mgGo">⛓️ Halten zum Sägen</button>`).firstChild;
       const on = e => { e.preventDefault(); st.hold = true; b.classList.add("on"); };
       const off = () => { st.hold = false; b.classList.remove("on"); };
@@ -213,7 +271,7 @@ const MG_GAMES = {
     frame(st, dt) {
       const t = st.tree;
       if (st.ph === 1) {
-        st.mk += st.mv * dt * 0.9;
+        st.mk += st.mv * dt * (st.mspd || 0.9);
         if (st.mk > 1) { st.mk = 1; st.mv = -1; } else if (st.mk < 0) { st.mk = 0; st.mv = 1; }
         const m = $("#mgMk"); if (m) m.style.bottom = st.mk * 100 + "%";
       }
@@ -224,7 +282,7 @@ const MG_GAMES = {
         st.heat += dt * (0.42 + t.sz * 0.05) * (st.pow > 1 ? 0.8 : 1);
         const lg = $("#mgLog");
         if (lg && Math.random() < dt * 30) {
-          const d = document.createElement("i"), r = lg.getBoundingClientRect(), x = r.width / 2 + 43 - Math.min(1, st.prog) * 86;
+          const tw = st.tw || 86, d = document.createElement("i"), r = lg.getBoundingClientRect(), x = r.width / 2 + tw / 2 - Math.min(1, st.prog) * tw;
           d.className = "mg-dust"; d.style.cssText = `left:${x}px;top:${r.height * 0.46}px;--dx:${(Math.random() * 40 - 10).toFixed(0)}px;--dy:${(Math.random() * 30 - 5).toFixed(0)}px`;
           lg.appendChild(d); setTimeout(() => d.remove(), 720);
         }
@@ -238,14 +296,16 @@ const MG_GAMES = {
       const p = $("#mgPr"), h = $("#mgHeat"), cu = $("#mgCut"), cs = $("#mgCs");
       if (p) p.style.width = Math.min(100, st.prog * 100) + "%";
       if (cu) cu.style.width = Math.min(100, st.prog * 100) + "%";
-      if (cs) { cs.style.right = `calc(50% - 64px + ${Math.round(Math.min(1, st.prog) * 86)}px)`; cs.classList.toggle("on", !!st.hold && !(st.stall > 0)); }
+      if (cs) { const tw = st.tw || 86; cs.style.right = `calc(50% - ${tw / 2 + 21}px + ${Math.round(Math.min(1, st.prog) * tw)}px)`; cs.classList.toggle("on", !!st.hold && !(st.stall > 0)); }
       if (h) { h.style.width = Math.min(100, st.heat * 100) + "%"; h.className = st.heat > 0.75 ? "hot" : ""; }
       if (st.prog >= 1) {
         st.done = true;
         const hung = st.over >= 2 || (!st.dirOk && Math.random() < 0.5);
-        const acc = clamp(st.p1 * 0.6 + (1 - st.over * 0.25) * 0.4, 0, 1);
+        /* Stamm extra nur für einen perfekten Kerb (Überhitzen kostet etwas) */
+        const acc = clamp(st.p1 * 0.75 + (1 - st.over * 0.25) * 0.25, 0, 1);
         mgMsg(hung ? "😬 Der Baum hängt kurz fest … aber er fällt." : st.dirOk ? "🌲 Baum fällt – genau wie geplant!" : "🌲 Baum fällt!", hung ? "bad" : "ok");
-        setTimeout(() => MG.close({ ok: true, acc, dir: st.dir.ry, dirOk: st.dirOk, hung }), 450);
+        mgWin("🌲"); mgConfetti(acc > 0.85 ? 34 : 20); sfx("thud");
+        setTimeout(() => MG.close({ ok: true, acc, dir: st.dir.ry, dirOk: st.dirOk, hung }), 900);
       }
     },
     abort(st) { if (st.ph === 2 && st.prog > 0.05) toast("Der Baum bleibt stehen – der Sprit ist leider weg.", "warn"); return { ok: false }; }

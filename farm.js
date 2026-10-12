@@ -536,8 +536,17 @@ function machUpdate(o) {
   if (o.broken) return;                 /* Maschine klemmt: nichts läuft weiter */
   while (o.q.length && o.q[0].end <= S.time) {
     const it = o.q.shift();
+    /* Strom fließt gleich in den Speicher – nichts abzuholen */
+    if (FITEMS[it.r] && FITEMS[it.r].energy) { farmPowerIn(o, it.n); continue; }
     o.done.push({ r: it.r, q: it.q, n: it.n, by: it.by || null });
   }
+}
+function farmPowerIn(o, n) {
+  const F = S.farm, kwh = FITEMS.strom.energy * n, before = F.en || 0;
+  F.en = Math.min(farmEnCap(), before + kwh);
+  farmXP(n);
+  farmEvent("make:strom", n);
+  if (typeof farmPowerFx === "function") farmPowerFx(o, Math.round(F.en - before), F.en >= farmEnCap());
 }
 /* Rezepte mit gleicher Ware (z. B. Brennholz aus Ästen oder Birke) haben einen eigenen Schlüssel */
 const rkey = r => r.key || r.id;
@@ -1065,6 +1074,9 @@ function farmSellAll() {
 function farmTick(dt) {
   if (!farmOn() || (S.farm.tut && !S.farm.tut.done)) return;
   farmErbeTick(dt || 1);
+  /* der Kessel heizt auch, wenn gerade niemand hinschaut */
+  const ks = S.farm.objs.find(o => o.t === "kessel");
+  if (ks && ks.q && ks.q.length) machUpdate(ks);
   farmQuestCheck();
   if (S.time - (S.farm.lastOrd || -999) > 45) {
     S.farm.lastOrd = S.time;
@@ -1244,7 +1256,7 @@ function farmOrderHTML(o) {
   const ready = S.farm && farmOrderReady(o);
   return `<div class="ford">${Object.keys(o.farm.items).map(id => {
     const have = S.farm ? farmInv(id) : 0, need = o.farm.items[id];
-    return `<span class="fchip${have < need ? " miss" : ""}">${FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
+    return `<span class="fchip${have < need ? " miss" : ""}">${typeof itemIc === "function" ? itemIc(id) : FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
   }).join("")}<span class="ford-s">${ready ? "✓ alles da" : "fehlt noch"} · +${o.farm.xp} EP</span></div>`;
 }
 

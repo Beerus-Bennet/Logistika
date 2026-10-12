@@ -426,10 +426,10 @@ function thumbR() {
   if (THUMB.R || THUMB.failed) return THUMB.R;
   try {
     const cv = document.createElement("canvas");
-    cv.width = cv.height = 128;
+    cv.width = cv.height = 160;
     const R = G3.create(cv, { keep: true, shadowSize: 1024, shadowBox: 4, maxDpr: 1 });
     if (!R) { THUMB.failed = true; return null; }
-    R.resize = () => { R.w = 128; R.h = 128; R.dpr = 1; };
+    R.resize = () => { R.w = 160; R.h = 160; R.dpr = 1; };
     R.env.fogR = [400, 800];
     THUMB.R = R;
   } catch (e) { THUMB.failed = true; }
@@ -451,11 +451,29 @@ function thumbOf(key, fn) {
     Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3), yaw: Math.PI / 4, pitch: flat ? 0.85 : 0.55, fov: 0.55 });
     R.shadowBox = r * 1.6;
     R.render(1.5);
-    url = R.canvas.toDataURL("image/png");
+    url = thumbCrop(R.canvas);
     R.free(m);
   } catch (e) { url = null; }
   THUMB.cache[key] = url;
   return url;
+}
+/* Bildchen eng zuschneiden: jedes Modell füllt das Quadrat gleich gut –
+   lange Bretter wie runde Laibe, nichts ragt über den Rand */
+function thumbCrop(src) {
+  const N = 112, w = src.width, h = src.height;
+  try {
+    const a = document.createElement("canvas"); a.width = w; a.height = h;
+    const ax = a.getContext("2d"); ax.drawImage(src, 0, 0);
+    const px = ax.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return src.toDataURL("image/png");
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = (N * 0.9) / Math.max(bw, bh);
+    const o = document.createElement("canvas"); o.width = o.height = N;
+    const ox = o.getContext("2d"); ox.imageSmoothingQuality = "high";
+    ox.drawImage(a, x0, y0, bw, bh, (N - bw * k) / 2, (N - bh * k) / 2, bw * k, bh * k);
+    return o.toDataURL("image/png");
+  } catch (e) { return src.toDataURL("image/png"); }
 }
 /* Modell eines Laden-Artikels – so, wie er auf dem Hof steht */
 function shopModel(it) {
@@ -487,9 +505,13 @@ function thumbSpan(key, fn, emoji, lock) {
   const url = THUMB.cache[key];
   return url ? `<span class="ic th"><img src="${url}" alt="">${lk}</span>` : `<span class="ic th" data-th="${key}"><b>${emoji}</b>${lk}</span>`;
 }
-/* Holzwaren, Stämme und Werkzeug als 3D-Bildchen – so, wie sie im Spiel liegen */
+/* Holz- und Hofwaren, Stämme und Werkzeug als 3D-Bildchen – so, wie sie im Spiel liegen */
 const ITEM_3D = new Set(["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "dielen",
-  "balken", "bauholz", "bohlen", "platten", "kisten", "paletten", "moebel", "tueren", "zaun", "schatulle", "mehl", "maismehl"]);
+  "balken", "bauholz", "bohlen", "platten", "kisten", "paletten", "moebel", "tueren", "zaun", "schatulle", "mehl", "maismehl",
+  /* Hofwaren */
+  "weizen", "mais", "tomate", "karotte", "kartoffel", "erdbeere", "kuerbis", "apfel", "kirsche", "birne", "ei", "milch", "wolle",
+  "spaket", "rpaket", "hfutter", "kfutter", "sfutter", "schfutter", "brot", "fladen", "apfelkuchen", "muffins", "kirschtorte", "pizza",
+  "butter", "pudding", "kaese", "bratwurst", "schinken", "gulasch", "garn", "socken", "pullover", "pilze"]);
 function itemIc(id, lock) {
   const it = FITEMS[id];
   if (!it) return "";
@@ -497,8 +519,11 @@ function itemIc(id, lock) {
   return thumbSpan("item:" + id, () => FWM.item(id), it.i, lock);
 }
 function toolIc(id, lock) { const T = FTOOLS[id]; return thumbSpan("tool:" + id, () => FWM.tool(id), T ? T.i : "🪓", lock); }
+/* auch Listen außerhalb des Hofs (Aufträge) bekommen ihre Bildchen */
+setInterval(() => { if (!THUMB.busy && !THUMB.failed && document.querySelector("[data-th]")) thumbFill(); }, 700);
 function thumbFill() {
-  THUMB.queue = $$("#farmSheetIn [data-th], #farmPop [data-th]");
+  /* zuerst, was gerade offen ist (Fenster, Blase, Ausbeute), dann der Rest */
+  THUMB.queue = [...$$("#farmSheetIn [data-th], #farmPop [data-th], #farmFx [data-th]"), ...$$("[data-th]")];
   if (THUMB.queue.length && !THUMB.busy) { THUMB.busy = true; requestAnimationFrame(thumbWork); }
 }
 function thumbWork() {
@@ -849,6 +874,8 @@ function stepWild(dt, time) {
   const sc = WV.swarmAt;
   /* ab und zu blitzt es golden am Kreuz */
   if (live && Math.random() < dt * 1.4) FV.R.emit({ x: tr.x + (Math.random() - 0.5) * 0.8, y: 0.2, z: tr.z + (Math.random() - 0.5) * 0.8, vy: 1.2, life: 0.9, size: 0.12, size2: 0.02, col: [1, 0.86, 0.3, 1], shape: 1, drag: 1.5 });
+  /* offene Kiste: Goldglanz steigt auf */
+  if (tr && tr.done && Math.random() < dt * 5) FV.R.emit({ x: tr.x + 0.2 + (Math.random() - 0.5) * 0.4, y: 0.32, z: tr.z - 0.1 + (Math.random() - 0.5) * 0.3, vy: 0.9 + Math.random() * 0.6, life: 1.0, size: 0.09, size2: 0.01, col: [1, 0.86, 0.3, 1], shape: 1, drag: 1.2 });
   for (const b of WV.swarm) {
     b.f = live ? Math.min(1, b.f + dt / 2) : Math.max(0, b.f - dt / 2.5);
     b.out = live ? Math.max(0, b.out - dt) : b.out + dt;
@@ -888,21 +915,43 @@ function worldSyncTreasure() {
     return b;
   }), { x: c.x, z: c.z, ry: (c.x * 7) % 1 });
   else {
-    add(fmesh("trHole", () => {
-      const b = new FM.MB();
-      b.disc(1.05, 12, 0x8a6a44, { y0: 0.012, wob: 0.15 });
-      b.disc(0.6, 10, 0x3a2614, { y0: 0.02 });
-      b.noise(0.3, m => { for (let i = 0; i < 5; i++) m.ico(0.22, 0x7a5a36, { x: 1.0 + (i % 2) * 0.3, z: -0.5 + i * 0.25, y: 0.04, flat: 0.55, jitter: 0.5 }); });
+    /* Grube: aufgeworfener Erdwall rundherum, dunkles Loch, Erdhaufen mit Spaten daneben */
+    add(fmesh("trHole2", () => {
+      const b = new FM.MB(), dirt = 0x8a6a44, dirtD = 0x6e5236;
+      b.disc(1.0, 16, 0x9a7a52, { y0: 0.01, wob: 0.06 });
+      b.noise(0.12, m => { for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; m.sphere(0.2, 7, 4, i % 2 ? dirt : dirtD, { x: Math.cos(a) * 0.66, y: 0.0, z: Math.sin(a) * 0.66, sy: 0.38, sx: 1.25, ry: -a }); } });
+      b.disc(0.56, 14, 0x24160a, { y0: 0.03 });
+      b.disc(0.42, 12, 0x1a0f06, { y0: 0.032 });
+      b.noise(0.1, m => m.sphere(0.48, 9, 5, dirt, { x: 1.15, y: 0.0, z: -0.45, sy: 0.55, bottom: dirtD }));
+      b.noise(0.3, m => { for (let i = 0; i < 4; i++) m.ico(0.09, dirtD, { x: 0.75 + i * 0.12, y: 0.03, z: 0.2 + (i % 2) * 0.12, flat: 0.6, jitter: 0.4 }); });
+      b.at({ x: 1.2, y: 0.18, z: -0.5, rz: -0.35, rx: 0.2 }, m => {
+        m.box(0.05, 0.85, 0.05, 0x9a6a3a, { y: 0.15 });
+        m.box(0.22, 0.05, 0.05, 0x9a6a3a, { y: 0.98 });
+        m.box(0.24, 0.3, 0.03, 0xb8c0c8, { y: -0.12 });
+      });
       return b;
     }), { x: c.x, z: c.z, shadow: false });
-    add(fmesh("trChest", () => {
-      const b = new FM.MB(), w = 0x9a6234, d = 0x6e4422, g = 0xe2b33a;
-      b.box(0.62, 0.32, 0.42, w, { top: 0x3a2614 });
-      [-0.24, 0.24].forEach(x => b.box(0.06, 0.34, 0.44, g, { x }));
-      b.box(0.62, 0.08, 0.42, d, { y: 0.36, z: -0.3, rx: -1.25 });
-      b.noise(0.2, m => { for (let i = 0; i < 4; i++) m.box(0.1, 0.04, 0.1, g, { x: -0.18 + i * 0.12, y: 0.28, z: (i % 2) * 0.08 - 0.04 }); });
+    /* Kiste steckt halb im Loch, Deckel offen, voller Münzen */
+    add(fmesh("trChest2", () => {
+      const b = new FM.MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
+      b.box(0.66, 0.42, 0.46, w, { y: -0.16, top: 0x2a1a0c });
+      [-0.18, -0.04].forEach(y => b.box(0.67, 0.025, 0.47, wd, { y }));
+      [-0.3, 0.3].forEach(x => b.box(0.06, 0.44, 0.48, g, { x, y: -0.17 }));
+      b.box(0.12, 0.12, 0.03, g, { y: 0.0, z: 0.235 });
+      /* Münzberg */
+      b.noise(0.15, m => {
+        m.sphere(0.27, 9, 5, gl, { y: 0.24, sy: 0.32, sx: 1.05 });
+        for (let i = 0; i < 9; i++) m.cyl(0.06, 0.06, 0.02, 8, gl, { x: (Math.random() - 0.5) * 0.44, y: 0.27 + Math.random() * 0.04, z: (Math.random() - 0.5) * 0.28, rx: (Math.random() - 0.5) * 0.9, rz: (Math.random() - 0.5) * 0.9, top: 0xffe27a });
+      });
+      b.ico(0.06, 0xd8334a, { x: 0.12, y: 0.33, z: 0.05 });
+      b.ico(0.05, 0x3fa0e0, { x: -0.14, y: 0.32, z: -0.02 });
+      /* Deckel: gewölbt, nach hinten aufgeklappt */
+      b.at({ y: 0.26, z: -0.23, rx: -1.95 }, m => {
+        m.cyl(0.23, 0.23, 0.66, 9, w, { rz: Math.PI / 2, x: 0.33, z: 0.23, sz: 1, top: wd });
+        [-0.3, 0.3].forEach(x => m.cyl(0.24, 0.24, 0.06, 9, g, { rz: Math.PI / 2, x: x + 0.03, z: 0.23 }));
+      });
       return b;
-    }), { x: c.x + 0.25, z: c.z - 0.15, ry: 0.5 });
+    }), { x: c.x + 0.05, z: c.z - 0.05, ry: 0.55 });
   }
 }
 function worldTreasureDig() {
@@ -1150,18 +1199,18 @@ function treePopHTML(t) {
   const staOf = k => k === "saw" ? Math.round(4 * Z.sta) : Math.round(5 * Z.sta);
   const staCost = tool ? staOf(tool) : 0;
   const grow = t.t && t.sz < t.mx ? ` · wächst: ${FTREE_SIZE[t.sz + 1].n} in ${fdur(Math.max(1, t.t - S.time))}` : "";
-  const yieldT = fqty(S0.log, Z.logs) + " · " + fqty("aeste", Z.aeste);
+  const yieldT = "Baum " + Z.n + " – je größer, desto mehr Holz";
   const sta = farmSta();
   const tid = k => k === "saw" ? ((T.saw || 0) >= 2 ? "saw2" : "saw1") : ((T.axe || 1) >= 2 ? "axe2" : "axe1");
   const btn = tools.length
     ? tools.map(k => {
-        const pro = k === "saw" && (T.saw || 0) >= 2;
-        const plus = k === "saw" ? (pro ? "+1 Stamm · Reste" : "+ Holzreste") : "kein Sprit";
+        const H = treeHaul(t, k);
+        const plus = `🪵 ${H.logs} ${H.logs === 1 ? "Stamm" : "Stämme"}${H.reste ? " + Reste" : ""}`;
         return `<div class="ftool big${k === tool && tools.length > 1 ? " pick" : ""}${sta < Math.min(staOf(k), 6) ? " tired" : ""}" data-act="fell" data-tool="${k}">${toolIc(tid(k))}<b>${k === "saw" ? "Sägen" : "Fällen"}</b>
           <small>${esc(FTOOLS[tid(k)].n)} · 💪 ${staOf(k)}${k === "saw" ? " · ⛽ " + eur(FSAW_FUEL[T.saw] || 3) : ""}</small><small class="ft-plus">${plus}</small></div>`;
       }).join("")
     : `<div class="ftool lock"><span class="ic">🔒</span><b>${esc(treeNeedText(t))}</b><small>im Laden</small></div><div class="ftool" data-act="toolshop"><span class="ic">🛒</span><b>Werkzeug</b><small>ansehen</small></div>`;
-  return `<div class="fp-h">${S0.rare ? "💎" : t.sp === "birke" ? "🌳" : t.sp === "eiche" ? "🌰" : t.sp === "buche" ? "🍂" : "🌲"} ${esc(S0.n)} · ${esc(Z.n)}<small>${esc(yieldT)}${grow}</small></div>
+  return `<div class="fp-h">${S0.rare ? "💎" : t.sp === "birke" ? "🌳" : t.sp === "eiche" ? "🌰" : t.sp === "buche" ? "🍂" : "🌲"} ${esc(S0.n)} · ${esc(Z.n)} <span class="fp-sz">${"●".repeat(t.sz)}<i>${"●".repeat(4 - t.sz)}</i></span><small>${esc(yieldT)}${grow}</small></div>
     <div class="fp-row">${btn}${tool && sta < staCost ? `<div class="ftool" data-act="food"><span class="ic">🥪</span><b>Brotzeit</b><small>💪 ${Math.floor(sta)}/${farmStaMax()}</small></div>` : ""}</div>
     ${S0.rare ? `<div class="fp-tip">Seltene Wildkirsche: aus ihr wird kostbares Edelholz.</div>` : t.sz >= 4 ? `<div class="fp-tip">Eine uralte Eiche – manchmal steckt Edelholz drin.</div>` : ""}`;
 }
@@ -1242,12 +1291,37 @@ function worldFell(t, pick) {
     if (!r) return;
     worldTreeFall(t, res.dir);
     const [sx, sy] = treeScreen(t, 0.5);
-    r.got.forEach((g, i) => flyItem(FITEMS[g.id].i, sx, sy, storeBtn(), 700 + i * 120, g.n));
-    xpFly(sx, sy - 10, r.xp, 650);
-    floatText(sx, sy - 40, res.acc > 0.85 ? "Sauber gefällt! +1 Stamm" : tool === "saw" && res.dirOk ? "Perfekte Fallrichtung!" : "Holz!", res.acc > 0.85 || res.dirOk ? "gold" : "");
-    sfx("collect");
+    r.got.forEach((g, i) => flyItem(FITEMS[g.id].i, sx, sy, storeBtn(), 1500 + i * 120, g.n));
+    xpFly(sx, sy - 10, r.xp, 1400);
+    /* Belohnung: Laub und Späne stieben auf, die Ausbeute als Karte */
+    const [cx, cz] = [t.x, t.z];
+    FV.R.burst({ x: cx, y: 1.2, z: cz, n: 26, col: [[0.45, 0.72, 0.3, 1], [0.95, 0.8, 0.35, 1], [0.86, 0.66, 0.4, 1]], speed: 2.6, up: 3.2, size: 0.09, shape: 1, life: 1.1 });
+    fellReward(t, r, res, tool);
+    sfx(r.perfect ? "level" : "collect");
     save(); renderFarmUI();
   });
+}
+/* Ausbeute nach dem Fällen: was es gab und wofür es Extras gab */
+function fellReward(t, r, res, tool) {
+  const fx = $("#farmFx");
+  if (!fx) return;
+  const old = fx.querySelector(".frew"); if (old) old.remove();
+  const S0 = FSPECIES[t.sp], Z = FTREE_SIZE[t.sz] || FTREE_SIZE[1], stars = clamp(Math.round(r.q), 1, 5);
+  const bonus = [];
+  if (r.perfect) bonus.push(tool === "saw" ? "✂️ Perfekter Kerb +1" : "💥 Volltreffer +1");
+  if (r.haul && r.haul.saw) bonus.push((r.haul.pro ? "⛓️ Profi-Säge +2" : "⛓️ Kettensäge +1"));
+  if (tool === "saw" && res.dirOk) bonus.push("🧭 Fallrichtung frei");
+  if (r.crew) bonus.push("🧑‍🌾 Holzfäller +1");
+  const el = document.createElement("div");
+  el.className = "frew" + (r.perfect ? " gold" : "");
+  el.innerHTML = `<b>🌲 ${esc(S0.n)} gefällt!</b><small>${esc(Z.n)} · ${"★".repeat(stars)}<i>${"★".repeat(5 - stars)}</i></small>
+    <div class="frew-it">${r.got.map((g, i) => `<span style="animation-delay:${0.15 + i * 0.12}s">${itemIc(g.id)}<em>×${g.n}</em></span>`).join("")}</div>
+    ${bonus.length ? `<div class="frew-b">${bonus.map(x => `<i>${esc(x)}</i>`).join("")}</div>` : ""}`;
+  fx.appendChild(el);
+  thumbFill();
+  const kill = () => { el.classList.add("out"); setTimeout(() => el.remove(), 320); };
+  el.style.pointerEvents = "auto"; el.onclick = kill;
+  setTimeout(kill, 2600);
 }
 
 /* ------------------------------ Kamera ------------------------------------ */
@@ -1459,7 +1533,8 @@ function worldUI() {
   const left = ev ? Math.max(0, Math.ceil(ev.until - S.time)) : 0;
   const tr = farmTreasureCur(), trL = tr && !tr.done ? Math.max(0, Math.ceil(tr.until - S.time)) : 0;
   /* Ereignis-Leisten: kurz ausgeklappt, dann nur noch ein kleines Symbol am Rand –
-     antippen klappt sie wieder auf, zweites Antippen führt hin */
+     antippen klappt sie auf, nochmal antippen zeigt kurz, worum es geht, und
+     klappt sie wieder zum Knopf zusammen */
   const now = performance.now(), CO = WV.chipOpen || (WV.chipOpen = {});
   const open = k => { if (!CO[k]) CO[k] = now + 7000; return now < CO[k]; };
   const evK = ev ? "ev:" + ev.k + ":" + ev.t0 : "", trK = trL ? "tr:" + tr.t0 : "";
@@ -1476,9 +1551,11 @@ function worldUI() {
     $("#fcClover").onclick = () => openFarmHouse("extras");
     $("#fcWx").onclick = openWeatherInfo;
     const unfold = k => { CO[k] = performance.now() + 6000; C._k = ""; worldUI(); };
+    const fold = (k, b) => { CO[k] = 1; if (b) b.classList.add("fold"); setTimeout(() => { C._k = ""; worldUI(); }, b ? 260 : 0); };
     const tb = $("#fcTr");
     if (tb) tb.onclick = () => {
       if (!trO) return unfold(trK);
+      fold(trK, tb);
       const c = farmTreasureCur(), Z = c && FTREASURE_ZONES.find(z => z.id === c.zone);
       if (!c || !Z) return;
       farmFocusXZ(c.x + 1.6, c.z + 1.6, 28, 900);        /* Kamera schaut von Südosten: so liegt das Kreuz etwas über der Mitte */
@@ -1487,6 +1564,7 @@ function worldUI() {
     const eb = $("#fcEv");
     if (eb) eb.onclick = () => {
       if (!evO) return unfold(evK);
+      fold(evK, eb);
       const s = worldEvSpots()[0];
       if (s) { farmFocusXZ(s.x, s.z + 1, 22, 700); if (s.act === "haendler" || s.act === "nachbar") setTimeout(() => worldEvAct(s), 720); }
       else toast(evT.i + " " + evT.n + (ev.k === "holzpreis" ? ": Der Holzhändler zahlt gerade 30 % mehr für Rohholz." : ev.k === "fischpreis" ? ": Am Fischmarkt bringt Fisch gerade 30 % mehr." : ev.k === "sturm" ? ": Danach liegen Bäume im Wald – aufsammeln!" : ""), "");
@@ -1531,7 +1609,7 @@ function openFood() {
   const sta = Math.floor(farmSta()), mx = farmStaMax(), foods = farmFoods();
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🥪</span>Brotzeit<small>Ausdauer ${sta}/${mx} · kommt auch von selbst langsam zurück</small></div>
     <div class="fcap"><i style="width:${Math.round(sta / mx * 100)}%" class="${sta < 15 ? "full" : ""}"></i><span>💪 ${sta} / ${mx}</span></div>
-    <div class="finv">${foods.length ? foods.map(id => `<button class="fit" data-eat="${id}"><span>${FITEMS[id].i}</span><b>+${FFOOD[id]}</b><small>${famt(id, farmInv(id))}</small></button>`).join("")
+    <div class="finv">${foods.length ? foods.map(id => `<button class="fit" data-eat="${id}">${itemIc(id)}<b>+${FFOOD[id]}</b><small>${famt(id, farmInv(id))}</small></button>`).join("")
       : `<div class="fs-empty">Nichts zu essen im Lager – Äpfel, Brot oder Wurst machen satt.</div>`}</div>
     <div class="fs-sub">Fällen, Sägen und Aufräumen kosten Kraft – gutes Essen gibt mehr Ausdauer.${farmCos("thermos") ? " ☕ Die Thermoskanne hilft beim Erholen." : ""}</div>`, "food");
   $$("#farmSheetIn [data-eat]").forEach(b => b.onclick = () => {
@@ -1634,6 +1712,17 @@ function openLkw() {
   const g = $("#flGo"); if (g) g.onclick = () => worldRepair(R0);
   const f = $("#flFleet"); if (f) f.onclick = () => { closeFarmSheet(); showTab("fleet"); };
 }
+/* Strom kommt im Speicher an: Leiste nachführen, über dem Kessel aufblitzen */
+function farmPowerFx(o, kwh, full) {
+  const fen = document.querySelector("#farmSheetIn .fen");
+  if (fen) fen.outerHTML = energyHTML();
+  if (!FV.R || !document.body.classList.contains("tab-farm") || !kwh) return;
+  const [x, y] = objScreen(o, 2.6);
+  if (x < 0 || y < 0 || x > FV.R.w || y > FV.R.h) return;
+  floatText(x, y, "⚡ +" + kwh + " kWh" + (full ? " · Speicher voll" : ""), "gold");
+  const [cx, cz] = farmCenter(o);
+  FV.R.burst({ x: cx, y: 2.2, z: cz, n: 10, col: [[1, 0.86, 0.2, 1], [1, 0.62, 0.15, 1]], speed: 1.4, up: 2.4, size: 0.08, g: -2, life: 0.8 });
+}
 /* Strom im Kessel */
 function energyHTML() {
   const en = Math.floor(S.farm.en || 0), cap = farmEnCap();
@@ -1684,12 +1773,12 @@ function openStall(market) {
   for (let i = 0; i < cap; i++) {
     const it = St.slots[i];
     if (!it) slots.push(`<button class="fstl free" data-pick="${i}"><span>＋</span><small>Ware einstellen</small></button>`);
-    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}"><span>${FITEMS[it.id].i}</span><b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small></button>`);
+    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}">${itemIc(it.id)}<b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small></button>`);
   }
   let pickH = "";
   if (sel && sel.id == null) {
     const ids = Object.keys(F.inv).filter(id => FITEMS[id] && FITEMS[id].v > 0.2 && farmInv(id) > 0 && FITEMS[id].k !== "energy" && FITEMS[id].k !== "bait" && (!market || FITEMS[id].st === "fisch"));
-    pickH = `<div class="fs-sub">Was soll auf den Stand?</div><div class="finv">${ids.length ? ids.map(id => `<button class="fit" data-sid="${id}"><span>${FITEMS[id].i}</span><b>${famt(id, farmInv(id))}</b><small>${eur(FITEMS[id].v)}</small></button>`).join("") : `<div class="fs-empty">${market ? "Kein Fisch im Lager." : "Das Lager ist leer."}</div>`}</div>`;
+    pickH = `<div class="fs-sub">Was soll auf den Stand?</div><div class="finv">${ids.length ? ids.map(id => `<button class="fit" data-sid="${id}">${itemIc(id)}<b>${famt(id, farmInv(id))}</b><small>${eur(FITEMS[id].v)}</small></button>`).join("") : `<div class="fs-empty">${market ? "Kein Fisch im Lager." : "Das Lager ist leer."}</div>`}</div>`;
   } else if (sel) {
     const max = farmInv(sel.id), n = clamp(sel.n || 1, 1, Math.max(1, max)), base = stallBase(sel.id, n, market), p = Math.round(base * sel.f * 10) / 10;
     const speed = sel.f <= 0.85 ? "schnell weg" : sel.f <= 1.1 ? "normal" : sel.f <= 1.35 ? "dauert länger" : "nur mit Glück";
@@ -1732,7 +1821,7 @@ function openTrader() {
     const it = d.item ? FITEMS[d.item] : null;
     const t = d.kind === "buy" ? `${esc(d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : `${esc(fqty(d.item, d.qty))} verkaufen`;
     const p = d.kind === "sell" ? "+" + eur(Math.round(it.v * d.qty * d.mult * 10) / 10) + " (+" + Math.round((d.mult - 1) * 100) + " %)" : eur(d.price);
-    return `<button class="frec${d.done ? " lock" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}><span class="ic">${d.i}</span><b>${t}</b><small>${d.done ? "erledigt" : p}</small></button>`;
+    return `<button class="frec${d.done ? " lock" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b><small>${d.done ? "erledigt" : p}</small></button>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🧑‍💼</span>Fliegender Händler<small>noch ${fdur(Math.max(1, c.until - S.time))} an der Straße</small></div>
     <div class="frecs">${rows}</div><div class="fs-sub">„Heute nur bei mir – morgen bin ich in Brandenburg an der Havel!“</div>`, "trader");

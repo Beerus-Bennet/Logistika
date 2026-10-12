@@ -294,17 +294,23 @@ function farmEat(id) {
 function farmFoods() { return Object.keys(FFOOD).filter(id => farmInv(id) > 0).sort((a, b) => FFOOD[b] - FFOOD[a]); }
 /* Holzplatz frei? Vor dem Fällen prüfen */
 function treeYieldPreview(t) { const Z = FTREE_SIZE[t.sz]; return { log: FSPECIES[t.sp].log, logs: Z.logs, aeste: Z.aeste }; }
+/* Ertrag je Werkzeug: je größer der Baum, desto mehr Stämme; die Kettensäge
+   bringt einen Stamm mehr und Holzreste, die Profi-Säge noch einen */
+function treeHaul(t, tool) {
+  const Z = FTREE_SIZE[t.sz] || FTREE_SIZE[1], T = S.farm.tools, saw = tool === "saw", pro = saw && (T.saw || 0) >= 2;
+  return { log: FSPECIES[t.sp].log, logs: Z.logs + (saw ? 1 : 0) + (pro ? 1 : 0), aeste: Z.aeste, reste: saw ? Math.max(1, Math.round(t.sz / 2)) + (pro ? 1 : 0) : 0, saw, pro };
+}
 /* Gefällt: res = { acc: 0…1, tool: "axe"|"saw", dirOk } */
 function farmFell(t, res) {
   if (!t || t.st !== "up") return null;
-  const F = S.farm, sp = FSPECIES[t.sp], Z = FTREE_SIZE[t.sz];
+  const F = S.farm, sp = FSPECIES[t.sp];
   const acc = clamp(res.acc || 0, 0, 1);
-  const saw = res.tool === "saw";
-  /* Profi-Säge: immer ein Stamm mehr – auch bei kleinen Bäumen */
-  const pro = saw && (F.tools.saw || 0) >= 2;
-  let logs = Z.logs + (acc > 0.85 ? 1 : 0) + (saw && res.dirOk ? (t.sz >= 3 ? 1 : 0) : 0) + (pro ? 1 : 0);
-  if (staffPerk("holzfaeller") && Math.random() < staffPerk("holzfaeller") * 3) logs++;
-  let aeste = Z.aeste, reste = saw ? Math.max(1, Math.round(t.sz / 2)) + (pro ? 1 : 0) : 0;
+  const H = treeHaul(t, res.tool), saw = H.saw;
+  /* sauber gearbeitet (Volltreffer, perfekter Kerb): ein Stamm extra */
+  const perfect = acc > 0.85;
+  let logs = H.logs + (perfect ? 1 : 0), crew = false;
+  if (staffPerk("holzfaeller") && Math.random() < staffPerk("holzfaeller") * 3) { logs++; crew = true; }
+  let aeste = H.aeste, reste = H.reste;
   let q = clamp(2 + acc * 3 + (saw && res.dirOk ? 0.3 : 0) - (saw && res.hung ? 0.8 : 0), 1, 5);
   const got = [];
   const give = (id, n, qq) => {
@@ -330,7 +336,7 @@ function farmFell(t, res) {
   if (t.sz >= 3) farmEvent("fell:big");
   if (t.sz >= 4) farmEvent("fell:uralt");
   if (saw) farmEvent("fell:saw");
-  return { got, xp, q, logs };
+  return { got, xp, q, logs, perfect, crew, haul: H };
 }
 /* Windwurf nach dem Sturm: liegender Stamm, Holz ohne Fällen */
 function farmTakeFallen(t) {

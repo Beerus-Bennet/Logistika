@@ -2012,7 +2012,7 @@ body.locked #farm{display:none}
 .ftool.big{width:96px;background:#fff3c4}
 .ftool.big .ic{font-size:34px}
 .ftool .ic.th{width:44px;height:40px;margin:0 auto;display:grid;place-items:center}
-.ftool .ic.th img{width:46px;height:46px;object-fit:contain}
+.ftool .ic.th img{width:40px;height:40px;object-fit:contain}
 .ftool.pick{box-shadow:0 0 0 3px #ffd23f,2px 2px 0 var(--ink)}
 .ftool .ft-plus{color:var(--green-d);font-weight:800;opacity:1}
 .ftool.lock{opacity:.45;cursor:default;background:#eef1f4}
@@ -2070,12 +2070,15 @@ body.tab-farm #farmPlace.on~#farmSide{opacity:.3}
 .fq-s.free{border-style:dashed;opacity:.55}
 .fq-s.buy{border-style:dashed;cursor:pointer;font-size:22px;font-weight:800;background:#fffaf0}
 .frecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.frec{display:grid;grid-template-columns:40px 1fr;align-items:center;column-gap:6px;text-align:left;border:2.5px solid var(--ink);border-radius:13px;
-  background:#fff;padding:7px;box-shadow:2px 2px 0 var(--ink);cursor:pointer;font-family:var(--font)}
-.frec .ic{grid-row:span 3;font-size:30px;text-align:center}
-.frec b{font-size:12.5px;line-height:1.15}
-.frec small{font-size:10px;opacity:.7}
-.fr-in{display:flex;flex-wrap:wrap}
+/* Rezeptkarte: Bild und Name oben, Zutaten und Dauer in voller Breite darunter */
+.frec{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;align-content:start;column-gap:7px;text-align:left;border:2.5px solid var(--ink);border-radius:13px;
+  background:#fff;padding:7px;box-shadow:2px 2px 0 var(--ink);cursor:pointer;font-family:var(--font);min-width:0}
+.frec>*{min-width:0}
+.frec>.ic{grid-row:span 2;font-size:30px;text-align:center;align-self:center}
+.frec b{font-size:12.5px;line-height:1.15;overflow-wrap:anywhere}
+.frec small{font-size:10px;opacity:.7;grid-column:1/-1;margin-top:4px;line-height:1.3}
+.frec .fr-in{grid-column:1/-1;margin-top:5px}
+.fr-in{display:flex;flex-wrap:wrap;min-width:0}
 .frec.miss{background:#fbfbfb}
 .frec.lock{opacity:.5;cursor:default;background:#eef1f4}
 .frec:active:not(.lock){transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
@@ -2144,11 +2147,18 @@ body.tab-farm #farmPlace.on~#farmSide{opacity:.3}
 .fshop>*{min-width:0}
 /* kleine 3D-Bildchen in Zutaten-Chips und Rezepten */
 .fchip .ic{display:inline-flex;align-items:center;justify-content:center;font-size:inherit;line-height:1}
-.fchip .ic.th{width:24px;height:24px;margin:-3px 0}
-.fchip .ic.th img{width:26px;height:26px;object-fit:contain}
-.fchip .ic.th b{font-size:15px}
-.frec .ic.th{width:42px;height:42px;display:grid;place-items:center}
-.frec .ic.th img{width:46px;height:46px;object-fit:contain;margin:-2px}
+.fchip .ic.th{width:22px;height:22px;flex:none;margin-right:1px}
+.fchip .ic.th img{width:22px;height:22px;display:block;object-fit:contain}
+.fchip .ic.th b{font-size:15px;line-height:22px}
+.frec>.ic.th{width:44px;height:44px;display:grid;place-items:center}
+.frec>.ic.th img{width:44px;height:44px;object-fit:contain}
+/* Lager, Stand, Warteschlange: alle Waren gleich groß */
+.fit>.ic.th,.fstl>.ic.th{display:block;width:40px;height:40px;margin:0 auto 1px}
+.fit>.ic.th img,.fstl>.ic.th img{width:40px;height:40px;display:block;object-fit:contain}
+.fit>.ic.th b,.fstl>.ic.th b{font-size:28px;line-height:40px}
+.fq-s>.ic.th{width:36px;height:36px;display:block;position:relative;z-index:1}
+.fq-s>.ic.th img{width:36px;height:36px;display:block;object-fit:contain}
+.fq-s>.ic.th b{font-size:26px;line-height:36px}
 .fshop small{font-size:11px;font-weight:800;color:var(--green-d)}
 .fshop p{grid-column:1/-1;margin:5px 0 0;font-size:10.5px;opacity:.72;line-height:1.3}
 .fshop em{position:absolute;top:6px;right:8px;font-style:normal;font-size:10px;font-weight:800;opacity:.6}
@@ -2372,9 +2382,10 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fchip2 i em{display:block;height:100%;background:linear-gradient(90deg,#f2a33c,#20a97a)}
 .fchip2.low{background:#ffe1e5}
 .fchip2.ev{background:#fff3c4;animation:fchipIn .35s cubic-bezier(.2,1.5,.4,1)}
-/* eingeklappt: nur das Symbol mit kleinem Griff – antippen klappt auf */
-.fchip2.ev.mini{position:relative;width:36px;min-height:32px;padding:0;justify-content:center;border-radius:12px 8px 8px 12px;animation:fbob 2.4s ease-in-out infinite}
-.fchip2.ev.mini::before{content:"";position:absolute;left:-7px;top:50%;width:5px;height:14px;margin-top:-7px;border-radius:3px;background:var(--ink);opacity:.55}
+/* eingeklappt: nur das Symbol als runder Knopf – antippen klappt auf, nochmal antippen klappt zu */
+.fchip2.ev.mini{position:relative;width:36px;min-height:32px;padding:0;justify-content:center;border-radius:12px;animation:fbob 2.4s ease-in-out infinite}
+.fchip2.ev.fold{animation:fchipFold .28s ease-in both}
+@keyframes fchipFold{to{transform:translateX(18px) scale(.85);opacity:.4}}
 @keyframes fchipIn{from{transform:translateX(30px) scale(.9);opacity:0}to{transform:none;opacity:1}}
 .fchip2:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
 #farmFound{top:176px}
@@ -2500,7 +2511,12 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-dir:nth-child(4){grid-column:1;grid-row:2}
 .mg-tree{grid-column:2;grid-row:2;font-size:34px}
 .mg-trunk{position:relative;width:64px;height:120px;margin:0 auto;border:var(--line);border-radius:10px;background:repeating-linear-gradient(90deg,#a8653c 0 8px,#93552f 8px 16px)}
-.mg-trunk .tgt{position:absolute;left:-10px;right:-10px;bottom:16%;height:24%;background:rgba(71,184,79,.55);border:2px dashed var(--ink);border-radius:6px}
+.mg-trunk .tgt{position:absolute;left:-10px;right:-10px;bottom:16%;height:24%;background:rgba(71,184,79,.55);border:2px dashed var(--ink);border-radius:6px;transition:bottom .25s,height .25s}
+.mg-trunk .tgt u{position:absolute;left:0;right:0;background:rgba(255,210,63,.75);border-top:1.5px solid #c99a10;border-bottom:1.5px solid #c99a10}
+.mg-trunk{transition:width .2s}
+.mg-trunk .notch,.mg-trk .notch{position:absolute;right:-3px;width:0;height:0;margin-bottom:-10px;border-top:10px solid transparent;border-bottom:10px solid transparent;border-right:20px solid #f0dcb4;
+  filter:drop-shadow(-1px 0 0 var(--ink));animation:mgPop .3s cubic-bezier(.2,1.6,.4,1)}
+.mg-trk .notch{margin-bottom:0;margin-top:-8px;border-top-width:8px;border-bottom-width:8px;border-right-width:14px}
 .mg-trunk b{position:absolute;left:-16px;right:-16px;height:5px;margin-bottom:-2px;background:#e2465f;border:1.5px solid var(--ink);border-radius:3px}
 /* Nageln */
 .mg-board{position:relative;height:130px;border:var(--line);border-radius:10px;overflow:hidden;
@@ -2553,6 +2569,14 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-spark{position:absolute;width:8px;height:8px;margin:-4px;border-radius:50%;pointer-events:none;z-index:5;animation:mgSpark .6s ease-out forwards}
 @keyframes mgSpark{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 .mg-win{position:absolute;inset:0;display:grid;place-items:center;z-index:6;pointer-events:none}
+/* aufsteigende Rückmeldung: PERFEKT!, +7, Daneben */
+.mg-ptxt{position:absolute;z-index:7;pointer-events:none;white-space:nowrap;font-family:var(--display);font-size:22px;letter-spacing:.5px;color:#fff;
+  -webkit-text-stroke:1.2px var(--ink);text-shadow:2px 2px 0 var(--ink);animation:mgPtxt .9s ease-out forwards}
+.mg-ptxt.gold{color:#ffd23f;font-size:26px}
+.mg-ptxt.green{color:#7ee08a}
+.mg-ptxt.red{color:#ff7a8a;font-size:18px}
+@keyframes mgPtxt{0%{transform:translate(-50%,6px) scale(.5);opacity:0}25%{transform:translate(-50%,-6px) scale(1.15);opacity:1}100%{transform:translate(-50%,-34px) scale(1);opacity:0}}
+.mg-spark.conf{width:7px;height:10px;border-radius:2px;animation-duration:.85s}
 .mg-win b{font-size:54px;animation:mgWin .7s cubic-bezier(.2,1.6,.4,1) both;filter:drop-shadow(2px 3px 0 #0003)}
 @keyframes mgWin{0%{transform:scale(.2) rotate(-20deg);opacity:0}60%{transform:scale(1.2) rotate(6deg);opacity:1}100%{transform:scale(1)}}
 /* Elektrik: Kabel zu Klemmen gleicher Farbe */
@@ -2676,8 +2700,8 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 }
 
 #farmPop.fresh .fp-box{pointer-events:none}
-.fshop .ic.th{display:block;width:56px;height:56px;margin:-4px 0 -4px -6px}
-.fshop .ic.th img{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(1px 2px 0 rgba(13,27,42,.25))}
+.fshop .ic.th{display:block;width:50px;height:50px;margin:-2px 0 -2px -4px}
+.fshop .ic.th img{display:block;width:50px;height:50px;object-fit:contain;filter:drop-shadow(1px 2px 0 rgba(13,27,42,.25))}
 .fshops.cos .fshop{grid-template-columns:54px 1fr}
 /* Laden: echte Modelle als Bildchen */
 .fshops .fshop{grid-template-columns:54px 1fr}
@@ -2727,3 +2751,25 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .lk-poster{background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:9px 11px;margin-bottom:8px;font-size:12.5px}
 .lk-poster b{font-size:14px}
 .lk-poster p{margin:4px 0 0}
+
+/* Baum-Blase: Größe als Punkte */
+.fp-sz{font-size:9px;letter-spacing:1px;color:#2f8a4a;vertical-align:2px;margin-left:2px}
+.fp-sz i{font-style:normal;color:#c9d3dc}
+/* Ausbeute nach dem Fällen */
+.frew{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);min-width:200px;max-width:min(260px,calc(100% - 140px));background:#fffaf0;border:2.5px solid var(--ink);
+  border-radius:16px;box-shadow:3px 4px 0 var(--ink);padding:9px 14px 10px;text-align:center;animation:frewIn .45s cubic-bezier(.2,1.5,.4,1) both;cursor:pointer}
+.frew.gold{background:linear-gradient(180deg,#fff6cf,#ffe58a)}
+.frew>b{display:block;font-family:var(--display);font-size:17px;letter-spacing:.3px;font-weight:400;white-space:nowrap}
+.frew>small{display:block;font-size:11px;font-weight:800;color:#d08a00;margin-top:1px}
+.frew>small i{font-style:normal;color:#d8dee5}
+.frew-it{display:flex;justify-content:center;gap:10px;margin-top:6px}
+.frew-it span{display:flex;flex-direction:column;align-items:center;animation:mgPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.frew-it .ic{font-size:30px;line-height:1}
+.frew-it .ic.th{width:42px;height:42px;display:grid;place-items:center}
+.frew-it .ic.th img{width:42px;height:42px;object-fit:contain}
+.frew-it em{font-style:normal;font-weight:800;font-size:13px;margin-top:-2px}
+.frew-b{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:7px}
+.frew-b i{font-style:normal;font-size:10.5px;font-weight:800;background:#e7f6e3;border:1.5px solid #2f8a4a;color:#1f6a36;border-radius:99px;padding:1px 7px}
+.frew.out{animation:frewOut .3s ease-in forwards}
+@keyframes frewIn{from{transform:translate(-50%,24px) scale(.7);opacity:0}to{transform:translate(-50%,0) scale(1);opacity:1}}
+@keyframes frewOut{to{transform:translate(-50%,16px) scale(.9);opacity:0}}

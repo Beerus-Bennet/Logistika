@@ -60,10 +60,10 @@ const FSPECIES = {
 };
 const FTREE_SIZE = [
   null,
-  { n: "klein",  hp: 6,  logs: 1, aeste: 1, tool: { axe: 1 },  sta: 1.0 },
-  { n: "mittel", hp: 11, logs: 2, aeste: 2, tool: { axe: 1 },  sta: 1.2 },
-  { n: "groß",   hp: 18, logs: 3, aeste: 3, tool: { axe: 2 },  sta: 1.5 },
-  { n: "uralt",  hp: 34, logs: 6, aeste: 4, tool: { saw: 2 },  sta: 2.0 }
+  { n: "klein",  hp: 6,  logs: 1, aeste: 1, tool: { axe: 1 },  sta: 1.0, axe: 12 },
+  { n: "mittel", hp: 11, logs: 2, aeste: 2, tool: { axe: 1 },  sta: 1.2, axe: 21 },
+  { n: "groß",   hp: 18, logs: 4, aeste: 3, tool: { axe: 2 },  sta: 1.5, axe: 30 },
+  { n: "uralt",  hp: 34, logs: 7, aeste: 5, tool: { saw: 2 },  sta: 2.0, axe: 40 }
 ];
 /* Eichen brauchen hartes Werkzeug: ab „mittel“ mindestens die Stahlaxt */
 function treeNeeds(t) {
