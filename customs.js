@@ -79,7 +79,7 @@ function customsOnStart(job) {
   const zp = b && typeof rolePower === "function" ? rolePower(b, "zoll") : 0;
   job.customs = { leg: li, st: zp > 0 ? "auto" : "open", zp, cc: nodeCC(job.legs[li].to), from: nodeCC(o.from) };
   if (job.customs.st === "open" && lively())
-    toast("🛃 " + o.shipper + " geht nach " + job.customs.cc + " – Zollanmeldung unter „Live“ prüfen, sonst übernimmt ein Zollagent.", "warn");
+    toast("🛃 " + o.shipper + " → " + job.customs.cc + ": Zollanmeldung unter „Live“ prüfen, sonst macht’s ein Zollagent.", "warn");
 }
 
 /* ------------------------------ Dokumente ----------------------------- */
@@ -208,7 +208,7 @@ function renderCustoms() {
   el.innerHTML = `<div class="cu-stage">
     <div class="cu-head"><b>🛃 Zollanmeldung</b><small>${o ? esc(o.shipper) + " · " + esc(job.customs.from) + " → " + esc(job.customs.cc) : ""}</small>
       <div class="cu-timer"><i id="cuTime" style="width:100%"></i></div><span class="cu-sec" id="cuSec">${Math.ceil(cuGame.left)} s</span></div>
-    <div class="cu-intro">Links die <b>Handelsrechnung</b>, rechts was der Azubi angemeldet hat. Tipp auf jede Angabe, die nicht stimmt.
+    <div class="cu-intro"><b>Rechnung</b> vs. Anmeldung vom Azubi: Tipp jede falsche Angabe an.
       ${g.errs} ${g.errs === 1 ? "Fehler steckt" : "Fehler stecken"} drin.</div>
     ${cuGame.hint ? `<div class="cu-hint">💡 ${esc(cuGame.hint)}</div>` : ""}
     <div class="cu-doc">
@@ -261,11 +261,11 @@ function submitCustoms(timeout) {
 }
 function renderCustomsResult() {
   const el = customsEl(), R = cuGame.res, g = cuGame.g;
-  const st = R.mist === 0 ? ["green", "🟢 Grüne Spur", "Fehlerfrei – der Lkw rollt ohne Halt über die Grenze. Der Kunde legt 4 % drauf."]
-    : R.mist === 1 ? ["check", "🟡 Stichprobe", "Ein Fehler ist durchgerutscht. An der Grenze gibt’s eine kurze Kontrolle – etwa ein, zwei Stunden."]
-    : ["bad", "🔴 Beschau", `${R.mist} Fehler – der Zoll schaut sich die Ladung genau an. Das dauert Stunden und kostet ein Bußgeld.`];
+  const st = R.mist === 0 ? ["green", "🟢 Grüne Spur", "Fehlerfrei – freie Fahrt über die Grenze, Kunde zahlt +4 %."]
+    : R.mist === 1 ? ["check", "🟡 Stichprobe", "1 Fehler durchgerutscht – kurze Kontrolle an der Grenze (1–2 h)."]
+    : ["bad", "🔴 Beschau", `${R.mist} Fehler – Ladung wird gefilzt: Stunden Wartezeit plus Bußgeld.`];
   el.innerHTML = `<div class="cu-stage">
-    <div class="cu-res ${st[0]}"><b>${st[1]}</b><p>${R.timeout ? "⏰ Die Zeit ist abgelaufen. " : ""}${st[2]}</p></div>
+    <div class="cu-res ${st[0]}"><b>${st[1]}</b><p>${R.timeout ? "⏰ Zeit um! " : ""}${st[2]}</p></div>
     <div class="cu-doc">
       ${g.rows.map(r => {
         const cls = r.bad != null ? (r.flag ? "ok" : "miss") : (r.flag ? "wrong" : "");

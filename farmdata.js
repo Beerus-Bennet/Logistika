@@ -15,6 +15,8 @@
 const FITEMS = {
   weizen:      { n: "Weizen",         i: "🌾", k: "crop",  a: 10,  u: "kg",     pk: "Sack",          v: 4,   kg: 10,   xp: 1,  st: "silo" },
   mais:        { n: "Mais",           i: "🌽", k: "crop",  a: 10,  u: "kg",     pk: "Sack",          v: 4.5, kg: 10,   xp: 2,  st: "silo" },
+  mehl:        { n: "Weizenmehl",     i: "🥡", k: "mill",  a: 1,   u: "kg",     pk: "Tüte",          v: 1.5, kg: 1,    xp: 1,  st: "silo" },
+  maismehl:    { n: "Maismehl",       i: "🌽", k: "mill",  a: 1,   u: "kg",     pk: "Tüte",          v: 1.8, kg: 1,    xp: 1,  st: "silo" },
   tomate:      { n: "Tomaten",        i: "🍅", k: "crop",  a: 2,   u: "kg",     pk: "Kiste",         v: 7,   kg: 2,    xp: 3,  st: "silo" },
   karotte:     { n: "Karotten",       i: "🥕", k: "crop",  a: 2,   u: "kg",     pk: "Bund",          v: 5,   kg: 2,    xp: 3,  st: "silo" },
   kartoffel:   { n: "Kartoffeln",     i: "🥔", k: "crop",  a: 5,   u: "kg",     pk: "Sack",          v: 6,   kg: 5,    xp: 4,  st: "silo" },
@@ -38,12 +40,12 @@ const FITEMS = {
   muffins:     { n: "Möhren-Muffins", i: "🧁", k: "bake",  a: 6,   u: "",       pk: "6er-Box",       v: 9,   kg: 0.6,  xp: 10, st: "barn", sg: "Möhren-Muffin" },
   kirschtorte: { n: "Kirschtorten",   i: "🍰", k: "bake",  a: 1,   u: "",       pk: "Torte",         v: 26,  kg: 2,    xp: 16, st: "barn", sg: "Kirschtorte" },
   pizza:       { n: "Pizzen",         i: "🍕", k: "bake",  a: 1,   u: "",       pk: "Stück",         v: 9,   kg: 0.7,  xp: 14, st: "barn", sg: "Pizza" },
-  butter:      { n: "Butter",         i: "🧈", k: "dairy", a: 250, u: "g",      pk: "Stück",         v: 3.2, kg: 0.25, xp: 7,  st: "barn" },
+  butter:      { n: "Butter",         i: "🧈", k: "dairy", a: 250, u: "g",      pk: "Stück",         v: 5.5, kg: 0.25, xp: 7,  st: "barn" },
   pudding:     { n: "Pudding",        i: "🍮", k: "dairy", a: 4,   u: "Becher", pk: "4er-Pack",      v: 5,   kg: 0.5,  xp: 8,  st: "barn" },
   kaese:       { n: "Käse",           i: "🧀", k: "dairy", a: 1,   u: "kg",     pk: "Laib",          v: 16,  kg: 1,    xp: 11, st: "barn" },
   bratwurst:   { n: "Bratwürste",     i: "🌭", k: "deli",  a: 10,  u: "",       pk: "10er-Pack",     v: 15,  kg: 1,    xp: 10, st: "barn", sg: "Bratwurst" },
   schinken:    { n: "Schinken",       i: "🍖", k: "deli",  a: 1,   u: "kg",     pk: "Stück",         v: 24,  kg: 1,    xp: 14, st: "barn" },
-  gulasch:     { n: "Gulasch",        i: "🥘", k: "deli",  a: 400, u: "g",      pk: "Glas",          v: 9,   kg: 0.5,  xp: 8,  st: "barn" },
+  gulasch:     { n: "Gulasch",        i: "🥘", k: "deli",  a: 400, u: "g",      pk: "Glas",          v: 7,   kg: 0.5,  xp: 8,  st: "barn" },
   garn:        { n: "Wollknäuel",     i: "🧶", k: "craft", a: 5,   u: "",       pk: "5er-Pack",      v: 15,  kg: 0.5,  xp: 8,  st: "barn", sg: "Wollknäuel" },
   socken:      { n: "Wollsocken",     i: "🧦", k: "craft", a: 1,   u: "Paar",   pk: "Paar",          v: 14,  kg: 0.1,  xp: 12, st: "barn" },
   pullover:    { n: "Pullover",       i: "🧥", k: "craft", a: 1,   u: "",       pk: "Stück",         v: 85,  kg: 0.6,  xp: 25, st: "barn", sg: "Pullover" }
@@ -106,33 +108,38 @@ const FKEEP = [
    cost = Geld je Durchgang (Diesel), by = Nebenprodukt, luck = Chance auf
    ein Gebinde extra, tq = Dauer beim allerersten Mal im Rundgang.         */
 const FMACHINES = {
-  mill: { n: "Futtermühle", i: "🌬️", recipes: [
+  /* Mengen nach echten Rezepten: 10 kg Weizen geben 7–8 kg Mehl, ein Brot
+     braucht gut 600 g Mehl, eine Pizza 150–170 g, ein Blech Apfelkuchen
+     500 g Mehl, 2 kg Äpfel und 3 Eier; 5 l Milch geben 250 g Butter. */
+  mill: { n: "Mühle", i: "🌬️", recipes: [
+    { id: "mehl",      in: { weizen: 1 },             out: 7, t: 20, lv: 1, luck: 0.5 },
     { id: "hfutter",   in: { weizen: 1, mais: 1 },    out: 4, t: 20, lv: 1 },
+    { id: "maismehl",  in: { mais: 1 },               out: 7, t: 25, lv: 2, luck: 0.5 },
     { id: "kfutter",   in: { weizen: 1, mais: 1 },    out: 1, t: 30, lv: 3 },
-    { id: "sfutter",   in: { mais: 1, karotte: 1 },   out: 2, t: 40, lv: 4 },
-    { id: "schfutter", in: { weizen: 1, karotte: 1 }, out: 2, t: 35, lv: 5 }
+    { id: "sfutter",   in: { mais: 2, karotte: 1 },   out: 1, t: 40, lv: 4 },
+    { id: "schfutter", in: { weizen: 1, karotte: 1 }, out: 1, t: 35, lv: 5 }
   ] },
   bakery: { n: "Backofen", i: "🔥", recipes: [
-    { id: "brot",        in: { weizen: 1 },                                  out: 4, t: 45,  lv: 1, tq: 4 },
-    { id: "fladen",      in: { mais: 1, ei: 1 },                             out: 2, t: 75,  lv: 2 },
-    { id: "apfelkuchen", in: { weizen: 1, apfel: 1, ei: 1 },                 out: 2, t: 120, lv: 3 },
-    { id: "muffins",     in: { weizen: 1, karotte: 1, ei: 1, milch: 1 },     out: 3, t: 100, lv: 4 },
-    { id: "pizza",       in: { weizen: 1, tomate: 1, kaese: 1 },             out: 4, t: 150, lv: 6 },
-    { id: "kirschtorte", in: { weizen: 1, kirsche: 2, ei: 1, butter: 1 },    out: 2, t: 180, lv: 6 }
+    { id: "brot",        in: { mehl: 2 },                                    out: 3, t: 45,  lv: 1, tq: 4 },
+    { id: "fladen",      in: { maismehl: 1, ei: 1 },                         out: 3, t: 75,  lv: 2 },
+    { id: "apfelkuchen", in: { mehl: 1, apfel: 2, ei: 1 },                   out: 2, t: 120, lv: 3 },
+    { id: "muffins",     in: { mehl: 1, karotte: 1, ei: 1, butter: 1 },      out: 4, t: 100, lv: 4 },
+    { id: "pizza",       in: { mehl: 1, tomate: 1, kaese: 1 },               out: 6, t: 150, lv: 6 },
+    { id: "kirschtorte", in: { mehl: 1, kirsche: 2, ei: 1, butter: 2 },      out: 3, t: 180, lv: 6 }
   ] },
   dairy: { n: "Molkerei", i: "🧀", recipes: [
-    { id: "butter",  in: { milch: 1 },        out: 2, t: 60,  lv: 4 },
-    { id: "pudding", in: { milch: 1, ei: 1 }, out: 2, t: 70,  lv: 4 },
+    { id: "butter",  in: { milch: 1 },        out: 1, t: 60,  lv: 4 },
+    { id: "pudding", in: { milch: 1, ei: 1 }, out: 6, t: 70,  lv: 4 },
     { id: "kaese",   in: { milch: 2 },        out: 1, t: 120, lv: 5 }
   ] },
   butcher: { n: "Metzgerei", i: "🔪", recipes: [
-    { id: "bratwurst", in: { spaket: 1 },             out: 4,  t: 60,  lv: 5 },
+    { id: "bratwurst", in: { spaket: 1 },             out: 5,  t: 60,  lv: 5 },
     { id: "schinken",  in: { spaket: 1 },             out: 3,  t: 180, lv: 6 },
-    { id: "gulasch",   in: { rpaket: 1, tomate: 1 },  out: 12, t: 150, lv: 7 }
+    { id: "gulasch",   in: { rpaket: 1, tomate: 1 },  out: 20, t: 150, lv: 7 }
   ] },
   spinnery: { n: "Spinnstube", i: "🧶", recipes: [
-    { id: "garn",     in: { wolle: 1 }, out: 2, t: 60,  lv: 5 },
-    { id: "socken",   in: { garn: 1 },  out: 3, t: 120, lv: 6 },
+    { id: "garn",     in: { wolle: 1 }, out: 3, t: 60,  lv: 5 },
+    { id: "socken",   in: { garn: 1 },  out: 4, t: 120, lv: 6 },
     { id: "pullover", in: { garn: 2 },  out: 1, t: 240, lv: 7 }
   ] }
 };
@@ -145,7 +152,7 @@ const FSTORE = {
   silo: { n: "Silo",    i: "🌾", the: "Das Silo",     base: 60, step: 40, cost: [80, 200, 400, 750, 1200, 2000],
           empty: "Leer. Ernte Felder und Bäume – die Ernte kommt hierher." },
   barn: { n: "Scheune", i: "🏚️", the: "Die Scheune", base: 40, step: 30, cost: [90, 220, 450, 850, 1350, 2200],
-          empty: "Leer. Eier, Milch, Futter und alles aus Ofen, Molkerei und Metzgerei landen hier." }
+          empty: "Leer. Eier, Milch, Futter und Küchenware landen hier." }
 };
 
 /* Kachelgröße der Objekte (Breite × Tiefe) */
@@ -164,9 +171,9 @@ const FSHOP_HOF = [
   { id: "t-birne", cat: "feld", n: "Birnbaum",          i: "🌳", lv: 7, tree: "birne",   d: "Saftige Birnen, alle 9 Stunden." },
   { id: "a-huhn",  cat: "tier", n: "Huhn",              i: "🐔", lv: 1, animal: "huhn",    d: "Legt Eier, frisst Hühnerfutter." },
   { id: "a-kuh",   cat: "tier", n: "Kuh",               i: "🐄", lv: 3, animal: "kuh",     d: "Gibt Milch, frisst Kuhfutter." },
-  { id: "a-schwein", cat: "tier", n: "Ferkel",          i: "🐖", lv: 4, animal: "schwein", d: "Frisst Schweinefutter – nach drei Mahlzeiten geht es zum Metzger: 15 kg Fleisch." },
+  { id: "a-schwein", cat: "tier", n: "Ferkel",          i: "🐖", lv: 4, animal: "schwein", d: "Frisst Schweinefutter, nach 3 Mahlzeiten zum Metzger: 15 kg Fleisch." },
   { id: "a-schaf", cat: "tier", n: "Schaf",             i: "🐑", lv: 5, animal: "schaf",   d: "Frisst Schaffutter und wird geschoren: ein Vlies Rohwolle je Durchgang." },
-  { id: "a-rind",  cat: "tier", n: "Kalb",              i: "🐂", lv: 6, animal: "rind",    d: "Frisst Kuhfutter – nach vier Mahlzeiten geht es zum Metzger: 20 kg Rindfleisch." },
+  { id: "a-rind",  cat: "tier", n: "Kalb",              i: "🐂", lv: 6, animal: "rind",    d: "Frisst Kuhfutter, nach 4 Mahlzeiten zum Metzger: 20 kg Rindfleisch." },
   { id: "coop",    cat: "bau",  n: "Hühnerstall",       i: "🛖", lv: 5, price: () => 300,  lim: lv => lv >= 5 ? 2 : 1, d: "Zweiter Stall mit Auslauf für bis zu 9 Hühner." },
   { id: "cows",    cat: "bau",  n: "Kuhstall mit Weide", i: "🏚️", lv: 3, price: () => 500,  lim: lv => lv >= 8 ? 2 : 1, d: "Unterstand und Weide für bis zu 6 Kühe." },
   { id: "pigs",    cat: "bau",  n: "Schweinestall",     i: "🐷", lv: 4, price: () => 400,  lim: () => 1, d: "Stall mit Suhle und Auslauf für bis zu 8 Schweine." },
@@ -198,7 +205,7 @@ const FDECO = {
 
 /* Freischaltungen je Level (Text für die Level-Feier) */
 const FUNLOCK_HOF = {
-  2: ["🍅 Tomaten", "🫓 Maisfladen", "🌷 Deko: Blumen, Bank, Bäume"],
+  2: ["🍅 Tomaten", "🌽 Maismehl", "🫓 Maisfladen", "🌷 Deko: Blumen, Bank, Bäume"],
   3: ["🥕 Karotten", "🐄 Kuhstall mit Weide", "🌿 Kuhfutter", "🥧 Apfelkuchen"],
   4: ["🐷 Schweinestall & Ferkel", "🍠 Schweinefutter", "🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
   5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse", "🛖 zweiter Hühnerstall"],
@@ -209,7 +216,7 @@ const FUNLOCK_HOF = {
 /* Dörfer und Städte mit Kundschaft. lv = ab Level, w = Gewicht beim Würfeln */
 const FTOWNS_HOF = {
   "w-werder":     { lv: 1, w: 5, cust: [
-    ["Bäckerei Hahn",          ["weizen", "ei", "milch", "butter"]],
+    ["Bäckerei Hahn",          ["weizen", "mehl", "ei", "milch", "butter"]],
     ["Café Inselblick",        ["apfelkuchen", "muffins", "kirschtorte", "pudding", "milch"]],
     ["Edeka Werder",           ["apfel", "tomate", "karotte", "ei", "milch", "brot", "kartoffel", "bratwurst"]],
     ["Gasthaus Zur Havel",     ["tomate", "kartoffel", "ei", "brot", "kaese", "kuerbis", "fladen", "spaket", "gulasch"]]] },
@@ -257,13 +264,13 @@ const FTOWN_STREETS_HOF = {
    schon“) · c = Kapitel · r = Belohnung (€, EP)                          */
 const FCHAPTERS_HOF = [
   { n: "Ankommen",   t: "Der erste Tag auf Opas Hof",                 r: { m: 50,  xp: 30 },
-    opa: "Felder, Hühner, Ofen – das ist das Herz vom Hof. Wenn das läuft, kommen auch die Leute aus dem Dorf von allein." },
+    opa: "Felder, Hühner, Ofen – das Herz vom Hof. Läuft das, kommt die Kundschaft von allein." },
   { n: "Wachsen",    t: "Kühe, Kuchen und die ersten Stammkunden",   r: { m: 100, xp: 60 },
-    opa: "Eine Kuh macht Arbeit, aber ohne Milch kein Kuchen. Und die Potsdamer zahlen gut für ehrliche Ware." },
+    opa: "Ohne Milch kein Kuchen – und die Potsdamer zahlen gut für ehrliche Ware." },
   { n: "Vieh & Handwerk", t: "Schweine, Schafe, Wurst und Wolle",    r: { m: 180, xp: 80 },
-    opa: "Ein Hof lebt von Kreisläufen: Was auf dem Feld wächst, frisst das Vieh – und was das Vieh gibt, macht die Küche zu Geld." },
+    opa: "Das Feld füttert das Vieh, das Vieh füttert die Küche – so lebt ein Hof." },
   { n: "Meisterhof", t: "Molkerei, beste Qualität und volle Regale", r: { m: 250, xp: 100 },
-    opa: "Gute Ware braucht Platz und Geduld. Gib den Tieren Raum, dann schmeckt man es." }
+    opa: "Gib den Tieren Raum – das schmeckt man." }
 ];
 const fcount = t => S.farm.objs.filter(o => o.t === t).length;
 const fanimals = t => S.farm.objs.filter(o => o.t === t).reduce((a, o) => a + o.animals.length, 0);
@@ -368,21 +375,21 @@ const FSITES = {
       hud: "Erbhof · Werder (Havel)", where: "Werder (Havel)", heir: "Erbe von Opa Hinrich",
       elder: "Opa", elderName: "Opa Hinrich", book: "Opas Notizbuch", bookShort: "Notizbuch", bookIcon: "📒",
       letterHead: "Opas Brief",
-      letter: "Mein liebes Enkelkind, der Hof gehört jetzt dir. Er ist ein bisschen heruntergekommen, aber das Herz ist gut: Die Hühner wollen morgens ihr Futter, der Ofen braucht Geduld, und die Leute in Werder zahlen gut für ehrliche Ware. Hinterm Zaun wartet der Wald, und irgendwann vielleicht auch der See. Lina hilft dir beim Ausliefern – sie kennt jede Abkürzung. Mach was draus. Dein Opa Hinrich",
+      letter: "Mein liebes Enkelkind, der Hof gehört jetzt dir – Lina hilft beim Ausliefern. Mach was draus! Dein Opa Hinrich",
       doneHead: "Alles läuft!", doneSub: "Hof, Wald, Sägewerk und See – Opa wäre stolz.",
-      doneQuote: "Du hast alles geschafft, was ich aufgeschrieben habe – und noch viel mehr. Hof, Wald, Sägewerk und die Fischerei am See gehören jetzt dir, ganz und gar. Und wenn dir die Gegend zu klein wird: Lina kennt jede Straße bis nach Berlin.",
-      doneMsg: "Chef, Opas Notizbuch ist abgehakt – Hof, Sägewerk und Fischerei laufen wie geschmiert. Die Leute fragen ständig, ob wir nicht auch ihre Pakete mitnehmen. "
-        + "Wenn du willst, gründen wir eine richtige Spedition – das Erbe läuft nebenher weiter. Tipp im Hof auf „Spedition gründen“.",
-      bookHint: "Arbeite Opas Notizbuch ab – elf Kapitel: erst der Hof, dann Wald, Sägewerk und der See. Wenn alles läuft, kannst du eine Spedition gründen und auch für andere fahren.",
+      doneQuote: "Alles geschafft – Hof, Wald, Sägewerk und See gehören dir. Lina kennt jede Straße bis Berlin.",
+      doneMsg: "Chef, Opas Notizbuch ist abgehakt! "
+        + "Lust auf eine eigene Spedition? Der Hof läuft weiter – tipp auf „Spedition gründen“.",
+      bookHint: "Arbeite Opas Notizbuch ab: Hof, Wald, Sägewerk, See – danach kannst du eine Spedition gründen.",
       welcome: n => "🏡 Willkommen auf deinem Hof, " + n + "!",
-      noOrders: "Gerade keine Bestellung. Neue kommen von allein – bald auch aus Potsdam und Berlin.",
+      noOrders: "Gerade keine Bestellung – neue kommen von allein.",
       atHere: "am Hof", vehNone: "Kein Fahrzeug am Hof – es kommt zur Abholung angefahren.",
       sellHead: "Hof verkaufen?", sold: "🏡 Hof verkauft für ",
-      sellText: "Für {p} geht der Hof samt Tieren, Feldern und Lager an einen Nachbarn. Fahrzeuge und Spedition bleiben. Das lässt sich nicht rückgängig machen.",
-      keepText: "Du kannst den Hof behalten und jederzeit über „Hof“ besuchen – oder ihn verkaufen und mit dem Geld die Spedition ausbauen. Ein Verkauf ist endgültig.",
+      sellText: "Für {p} geht der Hof samt Tieren und Lager weg – Fahrzeuge und Spedition bleiben. Endgültig!",
+      keepText: "Behalte den Hof (über „Hof“ erreichbar) oder verkauf ihn für die Spedition – endgültig.",
       valHead: "Hofwert heute", tour: "🎓 Rundgang mit Lina", tourMenu: "🎓 Hof-Rundgang mit Lina",
-      foundText: "Ab jetzt kommen auch fremde Aufträge: Pakete, Paletten, Express – erst rund um Berlin, später weltweit. Der Hof läuft weiter und liefert wie bisher. Lina zeigt dir, wie Aufträge laufen.",
-      notYet: "Erst die Spedition gründen – das geht, sobald Opas Notizbuch abgehakt ist: Hof, Wald, Sägewerk und See."
+      foundText: "Ab jetzt kommen fremde Aufträge – erst um Berlin, später weltweit. Der Hof läuft weiter.",
+      notYet: "Erst die Spedition gründen – geht, sobald Opas Notizbuch abgehakt ist."
     }
   }
 };

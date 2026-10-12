@@ -180,7 +180,7 @@ function playerBid(l, max) {
   max = Math.round(max);
   const need = l.lead ? l.price + ahInc(l.price) : l.start;
   if (l.lead === "me") {
-    if (max <= l.me.max) return { ok: false, msg: "Du führst bereits mit einem Limit von " + money(l.me.max) + "." };
+    if (max <= l.me.max) return { ok: false, msg: "Du führst schon – Limit " + money(l.me.max) + "." };
     if (max > bidBudget()) return { ok: false, msg: "Dafür reicht das Kapital nicht (inkl. 12 % Aufgeld)." };
     l.me.max = max; save();
     return { ok: true, msg: "Limit erhöht auf " + money(max) + " – du führst weiter." };
@@ -252,7 +252,7 @@ function finishLot(l) {
       if (l.garage) A.garage = A.garage.filter(g => g.uid !== l.garage);
       res = "sold";
       phoneMsg({ from: AH_NAME, kind: "good", title: "Zuschlag für Ihr Los",
-        body: `${name} ging für ${money(l.price)} an ${l.lead}. Nach ${Math.round(AH_COMMISSION * 100)} % Provision überweisen wir Ihnen ${money(net)}.` });
+        body: `${name} ging für ${money(l.price)} an ${l.lead}. Nach ${Math.round(AH_COMMISSION * 100)} % Provision: +${money(net)}.` });
     } else {
       if (l.garage) { const g = garageById(l.garage); if (g) delete g.consigned; }
       if (l.fleetVeh) {
@@ -261,7 +261,7 @@ function finishLot(l) {
       }
       res = "unsold";
       phoneMsg({ from: AH_NAME, kind: "info", title: "Los nicht verkauft",
-        body: `${name}: ${l.lead ? "Das Höchstgebot von " + money(l.price) + " blieb unter Ihrem Mindestpreis." : "Leider hat niemand geboten."} ${l.kind === "car" ? "Der Wagen steht wieder in Ihrer Garage." : "Das Fahrzeug ist zurück in Ihrer Flotte."}` });
+        body: `${name}: ${l.lead ? "Höchstgebot " + money(l.price) + " unter Mindestpreis." : "Kein Gebot."} ${l.kind === "car" ? "Zurück in der Garage." : "Zurück in der Flotte."}` });
     }
   } else if (l.lead === "me" && S.money < Math.round(l.price * (1 + AH_PREMIUM))) {
     /* Zahlung nicht gedeckt: der Zuschlag geht an den Unterbieter */
@@ -269,7 +269,7 @@ function finishLot(l) {
     if (next) { l.lead = next.n; l.price = Math.min(l.price, next.max); } else l.lead = null;
     res = "lost";
     phoneMsg({ from: AH_NAME, kind: "trouble", title: "Zuschlag nicht bezahlt",
-      body: `Für ${name} war Ihr Konto nicht gedeckt (${money(Math.round(l.price * (1 + AH_PREMIUM)))} inkl. Aufgeld). ${next ? "Der Zuschlag geht an " + next.n + "." : "Das Los geht zurück an den Einlieferer."}` });
+      body: `Konto nicht gedeckt für ${name} (${money(Math.round(l.price * (1 + AH_PREMIUM)))} inkl. Aufgeld). ${next ? "Zuschlag geht an " + next.n + "." : "Los geht zurück."}` });
   } else if (l.lead === "me") {
     const cost = Math.round(l.price * (1 + AH_PREMIUM));
     S.money -= cost; S.expense += cost;
@@ -281,8 +281,8 @@ function finishLot(l) {
       S.fleet.push(v);
     }
     res = "won";
-    phoneMsg({ from: AH_NAME, kind: "good", title: "Herzlichen Glückwunsch zum Zuschlag",
-      body: `${name} gehört Ihnen – ${money(l.price)} zuzüglich ${Math.round(AH_PREMIUM * 100)} % Aufgeld, zusammen ${money(cost)}. ${l.kind === "car" ? "Der Wagen steht in Ihrer Garage." : "Das Fahrzeug ist in Ihre Flotte überführt."}` });
+    phoneMsg({ from: AH_NAME, kind: "good", title: "Glückwunsch zum Zuschlag",
+      body: `${name} gehört Ihnen: ${money(l.price)} + ${Math.round(AH_PREMIUM * 100)} % Aufgeld = ${money(cost)}. ${l.kind === "car" ? "Steht in der Garage." : "Ist in der Flotte."}` });
   } else {
     res = l.me.max > 0 ? "lost" : "other";
     if (res === "lost") toast("🔨 " + name + " ging für " + money(l.price) + " an " + l.lead + ".", "warn");
@@ -799,20 +799,20 @@ function renderAuction() {
   if (A.view === "live") {
     const list = liveLots().filter(l => !l.mine && (l.kind === "veh" ? A.brand === "all" : bf(CAR[l.car]))).sort((a, b) => a.ends - b.ends);
     html = `<div class="ah-head"><b>🔨 ${AH_NAME}</b><small>Laufende Auktionen · ${Math.round(AH_PREMIUM * 100)} % Aufgeld · dein Budget ${money(bidBudget())}</small></div>`
-      + (list.length ? list.map(lotCardHTML).join("") : `<div class="empty">Gerade kein Los dieser Marke. Neue Lose kommen laufend dazu.</div>`);
+      + (list.length ? list.map(lotCardHTML).join("") : `<div class="empty">Gerade kein Los dieser Marke – es kommen laufend neue.</div>`);
   } else if (A.view === "mine") {
     const list = liveLots().filter(l => l.me.max > 0 || l.mine).sort((a, b) => a.ends - b.ends);
     html = list.length ? list.map(lotCardHTML).join("")
-      : `<div class="empty">Du bietest gerade nirgends mit. Unter <b>🔴 Live</b> findest du alle Lose.</div>`;
+      : `<div class="empty">Noch keine Gebote – alle Lose unter <b>🔴 Live</b>.</div>`;
     const done = A.past.filter(p => p.res !== "other").slice(0, 8);
     if (done.length) html += `<h3 class="grp">Zuletzt</h3><div class="card">${done.map(pastRowHTML).join("")}</div>`;
   } else if (A.view === "garage") {
     const tot = A.garage.reduce((a, g) => a + gValue(g), 0), paid = A.garage.reduce((a, g) => a + g.paid, 0);
     html = A.garage.length
-      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker gewinnen oft an Wert, neue Sportwagen verlieren eher. Kilometer als Wertkurier drücken den Preis.</small></div>
+      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen fallen – Kurier-Kilometer drücken den Wert.</small></div>
           <div class="meta small"><span>Marktwert ${money(tot)}</span><span>bezahlt ${money(paid)}</span><span class="${tot >= paid ? "up" : "down"}">${tot >= paid ? "+" : "−"}${money(Math.abs(tot - paid))}</span></div></div>`
         + A.garage.map(garageCardHTML).join("")
-      : `<div class="empty">Noch leer. Ersteigere unter <b>🔴 Live</b> dein erstes Auto – von 10.000 € bis zum Bugatti.</div>`;
+      : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;
   } else if (A.view === "cat") {
     const list = CARS.filter(bf);
     html = `<div class="ah-head"><b>📖 Katalog</b><small>${list.length} Modelle · Marktwert bei Zustandsnote 2 · Fotos: Wikipedia/Wikimedia Commons</small></div>`
@@ -874,7 +874,7 @@ function specsHTML(c, l) {
 }
 function creditHTML(c) {
   const p = PICS[c.id];
-  if (!p || !p.src) return `<div class="piccredit">Foto wird von Wikipedia geladen, sobald du online bist.</div>`;
+  if (!p || !p.src) return `<div class="piccredit">Foto lädt, sobald du online bist.</div>`;
   return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}</div>`;
 }
 let lotModal = null;
@@ -890,7 +890,7 @@ function renderLotModal(msg) {
   const c = l.kind === "car" ? CAR[l.car] : null, t = l.kind === "veh" ? vType(l.vt) : null;
   const need = l.lead ? l.price + ahInc(l.price) : l.start, inc = ahInc(l.price);
   const hist = l.hist.slice(0, 8).map(h => `<div class="hrow${h.w === "me" ? " me" : ""}"><span>${esc(h.w === "me" ? "Du" : h.w)}</span><b>${money(h.a)}</b><small>${clock(h.t)}</small></div>`).join("");
-  const limit = l.me.max > 0 ? `<div class="lim">Dein Limit: <b>${money(l.me.max)}</b> – bis dahin bietet das Auktionshaus automatisch für dich.</div>` : "";
+  const limit = l.me.max > 0 ? `<div class="lim">Dein Limit: <b>${money(l.me.max)}</b> – bis dahin bietet das Haus automatisch.</div>` : "";
   $("#modalBody").innerHTML = `<div class="lotm">
     <div class="mhead"><div><div class="mtitle">${esc(lotName(l))}</div>
       <div class="msub">Los ${l.id.slice(1)} · ${esc(l.seller)} · endet ${stamp(l.ends)}</div></div>
@@ -971,8 +971,8 @@ function openConsign(src) {
       <div class="lotm-price"><small>Schätzwert</small><b>${money(nice(val))}</b></div>
       <label class="rsv">Mindestpreis <b id="csvVal">ohne</b>
         <input type="range" id="csv" min="0" max="120" step="5" value="0"></label>
-      <div class="lot-est">Bleibt das Höchstgebot darunter, bekommst du ${g ? "den Wagen" : "das Fahrzeug"} zurück. ${Math.round(AH_COMMISSION * 100)} % Provision beim Verkauf. Die Auktion läuft 8–14 Spielstunden.</div>
-      ${f ? `<div class="lot-est">Zum Vergleich: Der Händler zahlt sofort ${money(Math.round(vType(f.type).price * 0.62 * wearValueFactor(f)))}.</div>` : ""}
+      <div class="lot-est">Gebot darunter? Dann kommt ${g ? "der Wagen" : "das Fahrzeug"} zurück · ${Math.round(AH_COMMISSION * 100)} % Provision · läuft 8–14 h.</div>
+      ${f ? `<div class="lot-est">Händler zahlt sofort ${money(Math.round(vType(f.type).price * 0.62 * wearValueFactor(f)))}.</div>` : ""}
     </div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Abbrechen</button><button class="btn" id="csvGo">Einliefern</button></div>
   </div>`;
@@ -1083,7 +1083,7 @@ function renderHammer(flash) {
   if (R) {
     const txt = R.res === "won" ? `Zugeschlagen – für dich! ${money(R.price)} + ${Math.round(AH_PREMIUM * 100)} % Aufgeld = <b>${money(R.cost)}</b>.`
       : R.res === "sold" ? `Verkauft an ${esc(R.lead)} für <b>${money(R.price)}</b>. Nach Provision: ${money(Math.round(R.price * (1 - AH_COMMISSION)))}.`
-      : R.res === "unsold" ? `Nicht verkauft – ${R.lead ? "das Höchstgebot lag unter deinem Mindestpreis." : "niemand hat geboten."}`
+      : R.res === "unsold" ? `Nicht verkauft – ${R.lead ? "Gebot unter Mindestpreis." : "kein Gebot."}`
       : `Zugeschlagen an ${esc(R.lead || "–")} für <b>${money(R.price)}</b>.`;
     el.innerHTML = `<div class="hm-stage"><div class="hm-top">🔨 ${AH_NAME}</div>
       <div class="hm-res ${R.res === "won" || R.res === "sold" ? "good" : "bad"}"><span class="hm-gavel">🔨</span><b>${R.res === "won" ? "Gewonnen!" : R.res === "sold" ? "Verkauft!" : R.res === "unsold" ? "Kein Zuschlag" : "Leider vorbei"}</b>
@@ -1121,12 +1121,10 @@ function renderHammer(flash) {
 
 /* Lina erklärt das Auktionshaus beim ersten Besuch */
 if (typeof LINA_TALKS === "object") LINA_TALKS.auction = [
-  { tx: "Willkommen im <b>" + AH_NAME + "</b>! Hier kommen Sammlerautos und gebrauchte Nutzfahrzeuge unter den Hammer – vom Porsche 924 bis zum Bugatti.",
+  { tx: "Willkommen im <b>" + AH_NAME + "</b>! Sammlerautos und Nutzfahrzeuge unterm Hammer.",
     target: '#viewTools [data-ahview="live"]' },
-  { tx: "Jedes Los hat einen Schätzpreis und eine Endzeit. Tipp auf „bieten“ für das nächste Gebot oder öffne das Los und setz ein <b>Limit</b>: "
-    + "Bis dahin bietet das Haus automatisch für dich. Auf jeden Zuschlag kommen 12 % Aufgeld.", target: "#tab-market .card.lot" },
-  { tx: "Bietest du mit, wird es am Ende spannend: Die Uhr hält an, der Auktionator ruft „Zum Ersten, zum Zweiten …“ – und du kannst live nachlegen.",
+  { tx: "Tipp „bieten“ oder setz ein <b>Limit</b> – bis dahin bietet das Haus für dich. +12 % Aufgeld.", target: "#tab-market .card.lot" },
+  { tx: "Am Ende ruft der Auktionator „Zum Ersten …“ – dann kannst du live nachlegen.",
     target: "#tab-market .card.lot .lot-left" },
-  { tx: "Ersteigerte Autos stehen in deiner <b>Garage</b>. Klassiker gewinnen oft an Wert, neue Sportwagen verlieren eher. Du kannst sie wieder einliefern – "
-    + "oder als Wertkurier fahren lassen. Flottenfahrzeuge versteigerst du direkt unter „Flotte“.", target: '#viewTools [data-ahview="garage"]' }
+  { tx: "Autos landen in der <b>Garage</b>: einliefern oder als Wertkurier nutzen. Flottenfahrzeuge versteigerst du unter „Flotte“.", target: '#viewTools [data-ahview="garage"]' }
 ];

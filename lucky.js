@@ -27,11 +27,11 @@ const PRIZES = [
   { id: "insure", r: "r", icon: "🛡️", name: "Rundum-Schutz", desc: () => "7 Tage Flottenversicherung gratis" },
   { id: "coupon", r: "r", icon: "🏷️", name: "Händlerrabatt", desc: () => "−20 % auf das nächste gekaufte Fahrzeug" },
   { id: "boost", r: "e", icon: "📈", name: "Hochsaison", desc: () => "24 Stunden lang +20 % auf alle Frachterlöse" },
-  { id: "head", r: "e", icon: "🕴️", name: "Headhunter", desc: () => (S.bases || []).length ? "Eine ★★★★★-Fachkraft in deinen Bewerbungen – ohne Vermittlungsgebühr" : "Noch kein Büro – dafür " + money(luckyCash() * 3) },
-  { id: "vip", r: "e", icon: "✉️", name: "Insider-Tipp", desc: () => level() >= 3 ? "Die nächste Einladung zur Sonderfahrt kommt in den nächsten Stunden" : "Noch zu früh für Einladungen – dafür " + money(luckyCash() * 3) },
+  { id: "head", r: "e", icon: "🕴️", name: "Headhunter", desc: () => (S.bases || []).length ? "Eine ★★★★★-Fachkraft bewirbt sich – ohne Gebühr" : "Noch kein Büro – dafür " + money(luckyCash() * 3) },
+  { id: "vip", r: "e", icon: "✉️", name: "Insider-Tipp", desc: () => level() >= 3 ? "Sonderfahrt-Einladung kommt in wenigen Stunden" : "Noch zu früh für Einladungen – dafür " + money(luckyCash() * 3) },
   { id: "bulli", r: "l", icon: "🏆", name: "Hauptpreis: Goldener Bulli", desc: () => ownsBulli()
       ? "Den hast du schon – dafür der Jackpot: " + money(luckyJackpot())
-      : "VW T1 Samba „Goldstück“: 900 kg, 95 km/h, fährt jede Tour mit +10 % Erlös. Gibt es nicht zu kaufen." }
+      : "VW T1 Samba „Goldstück“: 900 kg, 95 km/h, +10 % Erlös pro Tour. Nicht käuflich." }
 ];
 const LUCKY_ODDS = { std: { c: 55, r: 28, e: 13, l: 4 }, gold: { c: 25, r: 40, e: 27, l: 8 } };
 const luckyCash = () => roundK(rnd(300, 800) * stageK(), 10);
@@ -84,7 +84,7 @@ function applyPrize(p) {
         const c = makeCandidate(false); c.skill = 5; c.fee = 0; c.wage = Math.round(ROLES[c.role].wage * 1.6);
         c.trait = "kommt über den Headhunter – und weiß das auch"; c.hh = true;
         (b.pool = b.pool || []).unshift(c);
-        txt = c.name + " (" + ROLES[c.role].name + ", ★★★★★) wartet in " + N[b.node].short + " – ohne Vermittlungsgebühr.";
+        txt = c.name + " (" + ROLES[c.role].name + ", ★★★★★) wartet in " + N[b.node].short + " – ohne Gebühr.";
       } else { const v = luckyCash() * 3; S.money += v; S.revenue += v; logMoney("bonus", "Luckybox", v); }
       break;
     }
@@ -239,11 +239,11 @@ function luckyShelfHTML() {
   /* Wer gestern nicht alles geschafft hat, fängt wieder bei null an */
   const streak = L.lastSet >= dayOf(S.time) - 1 ? L.streak || 0 : 0;
   return `<div class="lk-shelf${L.boxes.length ? " has" : ""}">
-    <div class="lk-shelf-t"><b>🎁 Luckybox</b><small>Alle drei Tagesaufgaben = 1 Box · 7 Tage in Folge = 💎 goldene Box · pünktliche Sonderfahrt = Dankeschön-Box</small></div>
+    <div class="lk-shelf-t"><b>🎁 Luckybox</b><small>3 Tagesaufgaben = 1 Box · 7 Tage in Folge = 💎 · pünktliche Sonderfahrt = Bonus-Box</small></div>
     <div class="lk-shelf-r"><span class="lk-count">🎁 ${std}</span><span class="lk-count gold">💎 ${gold}</span>
       <button class="btn tiny${L.boxes.length ? "" : " disabled"}" id="lkOpen">Öffnen</button></div>
     <div class="lk-streak">🔥 ${streak} ${streak === 1 ? "Tag" : "Tage"} in Folge alles geschafft · 💎 goldene Box in ${7 - (streak % 7)} ${7 - (streak % 7) === 1 ? "Tag" : "Tagen"}</div>
     ${chips.length ? `<div class="lk-perks">${chips.map(c => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
-    <div class="lk-main">Hauptpreis: 🏆 der <b>Goldene Bulli</b> – VW T1 Samba „Goldstück“, +10 % Erlös auf jeder Tour, nicht käuflich.</div>
+    <div class="lk-main">Hauptpreis: 🏆 <b>Goldener Bulli</b> – +10 % Erlös pro Tour, nicht käuflich.</div>
   </div>`;
 }

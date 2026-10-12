@@ -29,7 +29,7 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
    Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
 2. **Erbe antreten** – Name des Betriebs, Hausfarbe – und Opas **Obsthof**
    bei Werder (Havel): 500 €, ein bisschen heruntergekommen, mit Feldern,
-   Apfelbäumen, drei Hühnern, Backofen, Futtermühle, einem Lastenrad und
+   Apfelbäumen, drei Hühnern, Backofen, Mühle, einem Lastenrad und
    seiner alten Simson. „Erbe antreten“ führt direkt hin, ein Fahrzeugkauf ist
    nicht nötig. (Ältere Spielstände mit Kurierstart laufen unverändert weiter;
    Spielstände mit der früheren Ostsee-Fischerei werden beim Laden zu Opas Hof
@@ -63,7 +63,7 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   Antippen, wenn sie reif sind; alte Bäume tragen bessere Früchte.
 * **Tiere** – Hühner legen Eier, Kühe geben Milch, **Schafe** werden
   geschoren (ein Vlies Rohwolle je Durchgang, danach stehen sie sichtbar
-  „nackt“ da). Futter kommt aus der Futtermühle (Hühner-, Kuh-, Schweine- und
+  „nackt“ da). Futter kommt aus der Mühle (Hühner-, Kuh-, Schweine- und
   Schaffutter). Stall antippen sammelt alles ein, Futter über die Tiere ziehen
   füttert sie. Ein Tier antippen und streicheln: das nächste Produkt wird
   einen Stern besser.
@@ -80,8 +80,12 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   Zaun wächst sichtbar mit.
 * **Backofen, Mühle, Molkerei** – Rezepte antippen, sie laufen nacheinander in
   der Warteschlange: Brot, Maisfladen, Apfelkuchen, Möhren-Muffins, Pizza,
-  Kirschtorte; Butter, Pudding, Käse; Hühner- und Kuhfutter. Weitere Plätze
-  kosten Geld.
+  Kirschtorte; Butter, Pudding, Käse; Mehl, Maismehl, Hühner- und Kuhfutter.
+  Weitere Plätze kosten Geld. Seit v46 stimmen die Mengen mit echten Rezepten
+  überein: Gebacken wird mit **Mehl aus der Mühle** (1 Sack Weizen, 10 kg →
+  7–8 kg Mehl), ein Brot braucht gut 600 g Mehl, eine Pizza rund 170 g, ein
+  Blech Apfelkuchen 500 g Mehl, 2 kg Äpfel und 3 Eier, Muffins kommen mit
+  Butter statt einer ganzen Kanne Milch aus; 5 l Milch geben 250 g Butter.
 * **Silo und Scheune** – zeigen jede Ware mit Menge und Sternen. Volle Lager
   lassen sich ausbauen; der Großhandel kauft sofort, zahlt aber nur den halben
   Wert.
@@ -248,6 +252,24 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   und am Ufer. Jedes Tier zeigt sich nur eine Weile und zieht sich dann
   zurück – im Schnitt sind nur drei, vier gleichzeitig unterwegs. Antippen
   scheucht sie auf (beim ersten Mal +1 EP).
+* **Holzfällen mit Werkzeugwahl** – die Baum-Blase zeigt jedes passende
+  Werkzeug mit Ausdauer, Sprit und Ertrag: Axt (kein Sprit) oder Kettensäge
+  (schneller, dazu Holzreste); die Profi-Säge bringt immer einen Stamm mehr –
+  auch bei einem kleinen Kirschbaum. Die letzte Wahl wird gemerkt.
+* **3D-Bildchen** für Stämme, Bretter, Balken, Platten, Kisten, Paletten,
+  Mehl und für das Werkzeug – in Rezepten, Zutaten-Chips und im Laden, so wie
+  die Sachen im Spiel aussehen. Maschinen im Laden ohne Bodenplatte, lange
+  Namen werden an der Wortfuge getrennt.
+* **Beladen** – bevor ein Lastenrad, Moped oder Transporter losfährt, fliegen
+  Kisten, Säcke und Körbe aus der Scheune hinein; bei Rad und Moped bleibt die
+  Ladung obendrauf sichtbar.
+* **Fliegender Händler** – bunter Marktwagen mit gestreiftem Vordach, Ware auf
+  der Theke und Münzschild; der Händler davor winkt.
+* **Minispiele im Sägewerk** neu: Elektrik (jedes Kabel an die Klemme gleicher
+  Farbe, antippen oder ziehen – die Reihenfolge ist egal), Zahnräder als echte
+  Räder, die sich am Ende drehen, Förderband mit laufendem Band, Motor mit
+  Schwamm und Bläschen und leuchtendem nächsten Teil, Hammer beim Nageln,
+  wachsender Schnitt beim Sägen.
 * **Schatzkisten** – alle drei Spieltage ist irgendwo im offenen Gelände eine
   Kiste vergraben: auf der Wiese am Teich, am Seeufer, auf einer Lichtung im
   Wald oder im Alten Wald (nur in freigeschalteten Gebieten, nie zweimal
@@ -275,6 +297,23 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Wald*, *Die Kettensäge*, *Das alte Sägewerk*, *Holzproduktion*, *Am See*,
   *Fischverarbeitung* und *Wirtschaftshof*. Das Erbe hat ein eigenes Level;
   nach der Speditionsgründung fängt die Spedition bei Level 1 an.
+  Seit v46 laufen drei **Stränge nebeneinander**: Hof (Kapitel 1–4), Wald &
+  Holz (5–8, ab Level 4) und See (9–10, ab Level 13); zum Schluss der
+  Wirtschaftshof. Oben links steht von jedem Strang die nächste Aufgabe als
+  schmale Zeile (einklappbar mit ‹). Gezählt wird alles, was man **je**
+  gemacht hat – wer schon 8 Birken gefällt hat, für den ist „Fälle 8 Birken“
+  sofort erledigt. Fertige Aufgaben hakt das Buch von selbst ab und zahlt aus.
+* **Meldungen** kommen nacheinander statt übereinander, doppelte fallen weg.
+  Ist ein Fenster, Menü oder Minispiel offen, warten Hintergrund-Meldungen,
+  bis es zu ist; Antworten auf den eigenen Tipp kommen sofort.
+* **Kurze Texte** – Lina, Nachbar Krüger, Förster, Bürgermeisterin und alle
+  Anrufer reden seit v46 nur noch das Nötigste (meist ein Satz).
+* **iPhone** – ein schneller Doppeltipp zoomt die Seite nicht mehr hinein
+  (und eine schon vergrößerte Seite springt zurück); beim langen Drücken
+  (Sägen, Kurbeln) erscheint keine Lupe mehr.
+* **Ereignis-Leisten** (Holzpreise, Wildschweine, Vogelschwarm …) erscheinen
+  kurz ausgeklappt und schrumpfen dann zu einem kleinen Symbol am rechten
+  Rand. Antippen klappt sie wieder auf, nochmal antippen führt hin.
 
 ### Vom Hof zur Spedition
 

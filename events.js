@@ -122,12 +122,12 @@ function evNotify(e) {
   const choices = [];
   if (e.type === "stau") {
     const km = hit.reduce((a, x) => a + Math.max(0, (x.f.routeDist || 0) - (x.f.pos || 0)), 0);
-    choices.push({ label: "Umfahren lassen", sub: "kaum Verzug, aber ein Viertel mehr Kilometer", cost: Math.round(km * 0.25 * hit.reduce((a, x) => a + costKmOf(vType(x.f.type)), 0) / hit.length) + 5 });
+    choices.push({ label: "Umfahren lassen", sub: "kaum Verzug, +25 % Kilometer", cost: Math.round(km * 0.25 * hit.reduce((a, x) => a + costKmOf(vType(x.f.type)), 0) / hit.length) + 5 });
   }
-  choices.push({ label: "Abwarten", sub: "kostet nichts, aber Zeit – Fristen können reißen" });
+  choices.push({ label: "Abwarten", sub: "gratis, aber Fristen können reißen" });
   choices.push({ label: "Kunden um Aufschub bitten", sub: "Frist +" + dur(extra) + ", dafür 8 % Nachlass" });
   decisionMsg({ from: "Verkehrsleitstelle", icon: EVENT_DEF[e.type].icon, type: "event", title,
-    body: `Betroffen: ${who}. Die Störung dauert voraussichtlich bis ${clock(e.until)}.`,
+    body: `Betroffen: ${who} · bis ${clock(e.until)}.`,
     choices, def: e.type === "stau" ? 1 : 0, wait: 45, ctx: { ev: e.id, jobs: hit.map(x => x.j.id), extra } });
 }
 DECISIONS.event = {
@@ -142,7 +142,7 @@ DECISIONS.event = {
     }
     if (c.label.startsWith("Kunden")) {
       jobs.forEach(j => { j.order.deadline += m.dec.ctx.extra; j.order.pay = Math.round(j.order.pay * 0.92); });
-      return "Kunden sind einverstanden: Frist verlängert, 8 % Nachlass.";
+      return "Frist verlängert, 8 % Nachlass.";
     }
     return "Wir warten ab.";
   }
@@ -166,53 +166,53 @@ function incidentFor(t, veh, job) {
   if (t.mode === "r") {
     const acc = Math.random() < 0.18, big = t.cap >= 7000 && Math.random() < 0.5;
     return { icon: acc ? "💥" : "🔧", title: acc ? "Unfall" : big ? "Motorschaden" : "Panne", halt: acc ? "Unfall" : "Panne", def: 2, who: "Fahrer",
-      damaged: acc, cut: 0.25, lead: acc ? "Blechschaden, niemand verletzt – aber die Ladung hat was abbekommen. " : big ? "Der Motor hat Öldruck verloren, ich hab sofort abgestellt. " : "",
+      damaged: acc, cut: 0.25, lead: acc ? "Blechschaden – die Ladung hat was abgekriegt. " : big ? "Kein Öldruck, Motor ist aus. " : "",
       choices: [
         { label: "Pannendienst rufen", sub: "meist nach 1 h weiter, sonst Abschleppen", cost: r(Math.max(120 * K + p * 0.004, pay * 0.06)), insurable: true,
           act: { mins: [45, 90], ok: 0.75, fail: [150, 240], failWear: 25, txt: "Der Pannendienst hat's gerichtet.", failTxt: "Pannendienst konnte nicht helfen – abgeschleppt." } },
         { label: "Abschleppen & Werkstatt", sub: "3–5 h, danach wie neu", cost: r(Math.max(380 * K + p * 0.025, pay * 0.15)), insurable: true,
           act: { mins: [180, 300], wear: 35, txt: "Abgeschleppt und repariert." } },
         { label: "Fahrer versucht es selbst", sub: "gratis – halbe Stunde oder halber Tag",
-          act: { mins: [25, 45], ok: 0.5, fail: [200, 360], txt: "Der Fahrer hat es selbst hinbekommen.", failTxt: "Hat länger gedauert – aber es läuft wieder." } }] };
+          act: { mins: [25, 45], ok: 0.5, fail: [200, 360], txt: "Selbst hinbekommen.", failTxt: "Hat länger gedauert – aber es läuft wieder." } }] };
   }
   if (t.mode === "a") {
     const v = pick([
-      ["Triebwerksschaden", "Beim Steigflug ist Triebwerk 2 ausgefallen, wir sind sicher wieder unten. Die Maschine ist AOG – Aircraft on Ground. "],
-      ["Vogelschlag", "Ein Vogelschwarm beim Start, das linke Triebwerk hat Schaufelschäden. Ohne Boroskop-Inspektion darf sie nicht wieder hoch. "],
-      ["Hydraulikleck", "Hydrauliksystem B verliert Druck, wir bleiben am Boden. Das Fahrwerk lässt sich so nicht sicher einfahren. "]]);
+      ["Triebwerksschaden", "Triebwerk 2 ausgefallen, wir sind sicher unten – Maschine ist AOG. "],
+      ["Vogelschlag", "Vogelschwarm beim Start – Triebwerk beschädigt, wir bleiben unten. "],
+      ["Hydraulikleck", "Hydraulik verliert Druck – wir bleiben am Boden. "]]);
     return { icon: "✈️", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 120, who: "Kapitän", choices: [
       { label: "AOG-Team und Ersatzteil einfliegen", sub: "6–12 h, danach wie neu", cost: r(Math.max(900 * K + p * 0.004, pay * 0.3)), insurable: true,
-        act: { mins: [360, 720], wear: 35, txt: "Das AOG-Team hat die Maschine wieder flottgemacht." } },
+        act: { mins: [360, 720], wear: 35, txt: "Das AOG-Team hat sie flottgemacht." } },
       { label: "Fracht per Charter weiterfliegen", sub: "in 2–4 h geht's weiter – teuer, nicht versichert", cost: r(Math.max(pay * 0.75, p * 0.003)),
-        act: { mins: [120, 240], txt: "Die Fracht fliegt mit einer gecharterten Maschine weiter." } },
+        act: { mins: [120, 240], txt: "Die Fracht fliegt per Charter weiter." } },
       { label: "Auf das Ersatzteil warten", sub: "gratis, aber 30–60 h am Boden", act: { mins: [1800, 3600], wear: 20, txt: "Wir warten aufs Ersatzteil." } }] };
   }
   if (t.mode === "s") {
     const v = pick([
-      ["Maschinenschaden auf See", "Die Hauptmaschine ist ausgefallen, wir treiben mit Notstrom. "],
-      ["Ruderanlage ausgefallen", "Die Ruderanlage reagiert nicht mehr, wir halten nur mit dem Bugstrahlruder Kurs. "],
-      ["Brand im Maschinenraum", "Ein Feuer im Maschinenraum ist gelöscht, niemand verletzt – aber ein Hilfsdiesel ist hinüber. "]]);
+      ["Maschinenschaden auf See", "Hauptmaschine aus, wir treiben mit Notstrom. "],
+      ["Ruderanlage ausgefallen", "Ruder tot, wir halten nur mit dem Bugstrahler Kurs. "],
+      ["Brand im Maschinenraum", "Feuer gelöscht, keiner verletzt – aber ein Hilfsdiesel ist hin. "]]);
     return { icon: "🚢", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 120, who: "Kapitänin", choices: [
-      { label: "Hochseeschlepper ordern", sub: "zieht uns in den nächsten Hafen, 18–30 h, dort repariert", cost: r(Math.max(2000 * K + p * 0.005, pay * 0.4)), insurable: true,
+      { label: "Hochseeschlepper ordern", sub: "in den nächsten Hafen, 18–30 h, dort repariert", cost: r(Math.max(2000 * K + p * 0.005, pay * 0.4)), insurable: true,
         act: { mins: [1080, 1800], wear: 25, txt: "Der Schlepper ist längsseits – ab in den Hafen." } },
       { label: "Techniker per Hubschrauber", sub: "8–14 h, klappt meistens", cost: r(Math.max(700 * K + p * 0.0015, pay * 0.15)), insurable: true,
-        act: { mins: [480, 840], ok: 0.75, fail: [1440, 2160], wear: 15, txt: "Die Techniker haben die Maschine wieder zum Laufen gebracht.", failTxt: "Die Techniker brauchen ein Teil vom Festland – das dauert." } },
-      { label: "Mit halber Kraft weiter", sub: "gratis, aber bis zum Ziel nur halbe Geschwindigkeit", act: { mins: [30, 60], limp: 0.5, txt: "Wir laufen mit halber Kraft weiter." } }] };
+        act: { mins: [480, 840], ok: 0.75, fail: [1440, 2160], wear: 15, txt: "Die Maschine läuft wieder.", failTxt: "Ersatzteil kommt vom Festland – das dauert." } },
+      { label: "Mit halber Kraft weiter", sub: "gratis, bis zum Ziel halbes Tempo", act: { mins: [30, 60], limp: 0.5, txt: "Wir laufen mit halber Kraft weiter." } }] };
   }
   if (t.mode === "i") {
     const v = pick([["Ruderschaden", "Das Ruder klemmt, wir liegen an der Spundwand fest. "],
-      ["Grundberührung", "Bei dem Pegel haben wir Grund berührt – Leck ist dicht, aber die Schraube hat was abbekommen. "]]);
+      ["Grundberührung", "Grund berührt – Leck dicht, aber die Schraube hat was abgekriegt. "]]);
     return { icon: "⛴️", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 100, who: "Schiffsführer", choices: [
       { label: "Schlepper anfordern", sub: "6–10 h bis zur Werft, dort repariert", cost: r(Math.max(300 * K + p * 0.01, pay * 0.25)), insurable: true,
         act: { mins: [360, 600], wear: 25, txt: "Der Schlepper bringt uns zur Werft." } },
       { label: "Ladung auf ein Leichterschiff umladen", sub: "4–8 h, dann geht die Fracht weiter", cost: r(Math.max(200 * K + p * 0.006, pay * 0.15)),
         act: { mins: [240, 480], txt: "Umgeladen – es geht weiter." } },
-      { label: "Mit halber Kraft weiter", sub: "gratis, aber bis zum Ziel nur halbe Geschwindigkeit", act: { mins: [20, 40], limp: 0.5, txt: "Wir tuckern mit halber Kraft weiter." } }] };
+      { label: "Mit halber Kraft weiter", sub: "gratis, bis zum Ziel halbes Tempo", act: { mins: [20, 40], limp: 0.5, txt: "Wir tuckern mit halber Kraft weiter." } }] };
   }
   /* Bahn */
-  const v = pick([["Lokschaden", "Die Lok meldet einen Stromrichterfehler und bleibt stehen. "],
-    ["Heißläufer", "Ein Achslager am 14. Wagen ist heißgelaufen – der Wagen muss raus. "],
-    ["Kupplung gerissen", "Mitten auf der Strecke ist eine Kupplung gerissen, der Zug steht in zwei Teilen. "]]);
+  const v = pick([["Lokschaden", "Stromrichterfehler – die Lok steht. "],
+    ["Heißläufer", "Achslager heißgelaufen – ein Wagen muss raus. "],
+    ["Kupplung gerissen", "Kupplung gerissen – der Zug steht in zwei Teilen. "]]);
   return { icon: "🚆", title: v[0], halt: v[0], lead: v[1], def: 2, wait: 100, who: "Lokführer", choices: [
     { label: "Ersatzlok anmieten", sub: "3–6 h, dann weiter", cost: r(Math.max(500 * K + p * 0.008, pay * 0.2)), insurable: true,
       act: { mins: [180, 360], wear: 20, txt: "Die Ersatzlok ist angekuppelt." } },
@@ -231,7 +231,7 @@ function breakdown(veh, job, leg) {
   veh.lastBreak = S.time;
   decisionMsg({ from: drv ? drv.name : sc.who + " · " + t.name, icon: sc.icon, type: "breakdown", ring: true,
     title: sc.title + " bei " + where,
-    body: (sc.lead || "") + `${t.name} steht mit der Ladung für „${job.order.shipper}“. Frist: ${stamp(job.order.deadline)}. Was soll ich machen?`
+    body: (sc.lead || "") + `${t.name} steht mit „${job.order.shipper}“, Frist ${stamp(job.order.deadline)}. Was tun?`
       + (sc.damaged && !isInsured() ? " Ohne Versicherung zieht der Kunde 25 % ab." : ""),
     choices: sc.choices, def: sc.def, wait: sc.wait || 90, ctx: { uid: veh.uid, job: job.id, acc: !!sc.damaged } });
 }
@@ -271,7 +271,7 @@ function maybeStreife(veh, job, leg) {
   veh.halt = { icon: "🚓", label: "wartet – Streife bei " + where, until: WAIT_DECISION };
   decisionMsg({ from: "Fahrer · " + vType(veh.type).name, icon: "🚓", type: "streife", ring: true,
     title: "Streife bei " + where + "!",
-    body: `Zwei Beamte stehen an der Ecke, ich hab ${o.snus.n} Dosen für ${o.shipper} dabei. Was jetzt?`,
+    body: `Zwei Beamte an der Ecke, ich hab ${o.snus.n} Dosen für ${o.shipper} dabei. Was jetzt?`,
     choices: [{ label: "Ganz normal weiterfahren", sub: "35 % Risiko: Kontrolle, Ware weg" },
               { label: "Umweg fahren", sub: "sicher, 20–30 min später" },
               { label: "Übergabe abbrechen", sub: "Ware zurück ins Lager" }],
@@ -292,7 +292,7 @@ DECISIONS.streife = {
       logMoney("snus", "Kontrolle · " + o.snus.n + " Dosen beschlagnahmt", 0);
       parkHere(v); v.phase = "idle"; v.jobId = null; v.legIdx = -1; v.route = null;
       S.jobs = S.jobs.filter(x => x.id !== j.id);
-      toast("🚓 Kontrolle! " + o.snus.n + " Dosen beschlagnahmt – der Fahrer kommt mit einer Verwarnung davon.", "bad");
+      toast("🚓 Kontrolle! " + o.snus.n + " Dosen beschlagnahmt, Fahrer kommt mit Verwarnung davon.", "bad");
       return "Kontrolliert – Ware weg.";
     }
     return "Durchgewunken. Glück gehabt.";
@@ -361,7 +361,9 @@ function drawEvents(m) {
   });
   renderEventBar();
 }
-let evBarKey = "";
+/* Störungen als kleines Klappmenü oben auf der Karte: zu ist es nur eine
+   Pille mit der Anzahl, aufgeklappt eine Liste zum Hinfliegen. */
+let evBarKey = "", evBarOpen = false;
 function renderEventBar() {
   let el = document.getElementById("eventBar");
   if (!el) {
@@ -370,12 +372,20 @@ function renderEventBar() {
     ui.appendChild(el);
   }
   const list = evActive();
-  const key = list.map(e => e.id + e.until).join("|");
+  if (!list.length) evBarOpen = false;
+  const key = list.map(e => e.id + e.until).join("|") + "|" + evBarOpen;
   if (key === evBarKey) return;
   evBarKey = key;
-  el.innerHTML = list.map(e => `<button class="evchip" data-ev="${e.id}">${EVENT_DEF[e.type].icon} ${esc(evTitle(e).split(" – ")[0])}<small>bis ${clock(e.until)}</small></button>`).join("");
+  if (!list.length) { el.innerHTML = ""; return; }
+  const icons = [...new Set(list.map(e => EVENT_DEF[e.type].icon))].slice(0, 3).join("");
+  el.innerHTML = `<button class="evtoggle${evBarOpen ? " open" : ""}" id="evToggle" aria-expanded="${evBarOpen}">
+      ${icons} <b>${list.length} ${list.length === 1 ? "Störung" : "Störungen"}</b><i>▾</i></button>
+    ${evBarOpen ? `<div class="evlist">${list.map(e => `<button class="evchip" data-ev="${e.id}">
+      <span>${EVENT_DEF[e.type].icon}</span><b>${esc(evTitle(e).split(" – ")[0])}</b><small>bis ${clock(e.until)}</small></button>`).join("")}</div>` : ""}`;
+  el.querySelector("#evToggle").onclick = () => { evBarOpen = !evBarOpen; renderEventBar(); };
   el.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => {
     const e = evState().find(x => x.id === b.dataset.ev); if (!e) return;
+    evBarOpen = false; renderEventBar();
     if (!EVENT_DEF[e.type].global) map.flyTo(evCenter(e), Math.max(map.zoom, e.type === "stau" ? 12 : 9), 700);
     toast(EVENT_DEF[e.type].icon + " " + evTitle(e) + " – bis " + clock(e.until) + ".", "warn");
   });

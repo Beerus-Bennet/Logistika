@@ -28,10 +28,10 @@ const OFFICE_TIERS = [
   /* Mehrere Etagen: je Etage bis zu zwölf Plätze, Empfang, Prestige */
   { id: "gebaeude", name: "Bürogebäude", icon: "🏬", floors: 2, st: 2, prestige: 0.03, comfort: 4,
     desks: 24, slots: 60, reach: 15000, buy: 2400000, rent: 3600,
-    info: "Zwei Etagen, Empfang, Konferenzraum – ein echter Firmensitz. +3 % Prestige auf jeden Auftrag." },
+    info: "Zwei Etagen, Empfang, Konferenzraum. +3 % Prestige auf jeden Auftrag." },
   { id: "tower", name: "Konzernzentrale", icon: "🏙️", floors: 3, st: 4, prestige: 0.06, comfort: 8,
     desks: 36, slots: 100, reach: 40000, buy: 9500000, rent: 13000,
-    info: "Drei Etagen mit Blick über die Stadt, Kantine, Vorstandsetage. +6 % Prestige auf jeden Auftrag." }
+    info: "Drei Etagen, Kantine, Vorstandsetage. +6 % Prestige auf jeden Auftrag." }
 ];
 const tierFloors = t => t.floors || 1;
 const perFloor = t => Math.ceil(t.desks / tierFloors(t));
@@ -100,8 +100,8 @@ const INCIDENTS = [
     id: "schichtplan", w: 3,
     need: b => b.staff.length >= 2,
     title: "Streit um den Schichtplan",
-    text: (b, a, c) => `${a.name} und ${c.name} stehen beide für Samstag im Plan und beide haben etwas vor. `
-      + `Seit heute Morgen läuft die Disposition über zwei getrennte Zettel, und keiner weiß mehr, wer welche Rampe hat.`,
+    text: (b, a, c) => `${a.name} und ${c.name} haben Samstag Schicht – und beide was vor. `
+      + `Jetzt läuft die Dispo über zwei Zettel.`,
     hours: [3, 7], mood: -12,
     fix: [
       { label: "Samstagszuschlag zahlen", cost: b => 220 + b.staff.length * 60, mood: 14, cut: 0.8,
@@ -116,9 +116,8 @@ const INCIDENTS = [
     id: "ueberstunden", w: 4,
     need: b => loadRatio(b) > 1.05,
     title: "Lenkzeiten am Anschlag",
-    text: (b, a) => `${a.name} ruft aus der Fahrerkabine an: „Ich habe die Woche voll. `
-      + `Wir fahren ${b.vehicles.length} Fahrzeuge mit ${roleCount(b, "fahr")} Leuten – das geht sich hinten und vorne nicht aus.“ `
-      + `Im Hintergrund hört man den Digitalen Tachographen piepen.`,
+    text: (b, a) => `${a.name} aus der Kabine: „Ich hab die Woche voll. `
+      + `${b.vehicles.length} Fahrzeuge, ${roleCount(b, "fahr")} Leute – das geht nicht.“`,
     hours: [4, 10], mood: -16,
     fix: [
       { label: "Fahrzeuge vorerst stilllegen", cost: 0, mood: 10, cut: 0.6,
@@ -133,9 +132,9 @@ const INCIDENTS = [
     id: "rollenluecke", w: 4,
     need: b => b.staff.length >= 2 && coverage(b) <= 1,
     title: "Alle machen dasselbe",
-    text: (b, a, c) => `Am Standort sitzen ${b.staff.length} Leute – und alle in derselben Rolle. `
-      + `${a.name} und ${c.name} haben sich heute zweimal denselben Auftrag gegriffen, `
-      + `und die Ware stand am Ende trotzdem ungerührt auf der Rampe.`,
+    text: (b, a, c) => `${b.staff.length} Leute, alle in derselben Rolle. `
+      + `${a.name} und ${c.name} greifen sich denselben Auftrag – `
+      + `und die Ware bleibt liegen.`,
     hours: [3, 6], mood: -10,
     fix: [
       { label: "Aufgaben klar verteilen", cost: 0, mood: 8, cut: 0.5,
@@ -148,9 +147,9 @@ const INCIDENTS = [
     id: "einzelkaempfer", w: 3,
     need: b => b.staff.length === 1 && b.vehicles.length >= 3,
     title: "Einer für alles",
-    text: (b, a) => `${a.name} macht hier Disposition, Umschlag und Papierkram in Personalunion. `
-      + `Heute ist ein Anruf liegen geblieben, morgen sind es zwei. `
-      + `„Ich sag’s ungern“, kommt am Telefon, „aber so halte ich das nicht durch.“`,
+    text: (b, a) => `${a.name} macht hier alles allein. `
+      + `Anrufe bleiben liegen: `
+      + `„So halte ich das nicht durch.“`,
     hours: [5, 11], mood: -14,
     fix: [
       { label: "Sofort jemanden dazuholen", cost: 0, mood: 10, cut: 0.4,
@@ -165,8 +164,7 @@ const INCIDENTS = [
     need: b => b.staff.length >= 2 && b.done >= 6,
     title: "Wem gehört die Expressprämie?",
     text: (b, a, c) => `${a.name} hat den Eiltransport disponiert, ${c.name} ist ihn gefahren. `
-      + `Die Prämie steht auf einem Zettel, zwei Namen daneben, ein Pfeil dazwischen. `
-      + `Seit dem Mittag reden die beiden nur noch über dich.`,
+      + `Beide wollen die Prämie.`,
     hours: [2, 5], mood: -9,
     fix: [
       { label: "Prämie teilen", cost: 260, mood: 12, cut: 0.9, note: "Sauber geregelt, Thema erledigt." },
@@ -179,8 +177,8 @@ const INCIDENTS = [
     id: "einarbeitung", w: 3,
     need: b => b.staff.length >= 2 && b.staff.some(s => S.time - s.since < 2600),
     title: "Neue ohne Einweisung",
-    text: (b, a, c) => `${c.name} ist neu und hat einen Lkw an Tor 4 geschickt – Tor 4 gibt es hier nicht. `
-      + `${a.name} hat das vor allen kommentiert, und jetzt redet am Standort keiner mehr mit keinem.`,
+    text: (b, a, c) => `${c.name} ist neu und schickt Lkw an Tor 4 – das gibt’s hier nicht. `
+      + `${a.name} lästert, jetzt redet keiner mehr.`,
     hours: [2, 6], mood: -11,
     fix: [
       { label: "Einarbeitung ansetzen", cost: 180, mood: 13, cut: 0.75,
@@ -193,8 +191,8 @@ const INCIDENTS = [
     id: "ladungssicherung", w: 2,
     need: b => roleCount(b, "ums") >= 1 && b.staff.length >= 2,
     title: "Streit an der Rampe",
-    text: (b, a, c) => `${a.name} wollte die Ladung mit zwei Gurten sichern, ${c.name} hat auf vier bestanden `
-      + `und den Stapler stehen lassen. Am Ende steht die Palette noch da – und beide haben recht behalten wollen.`,
+    text: (b, a, c) => `${a.name} will zwei Gurte, ${c.name} vier `
+      + `– und die Palette steht noch da.`,
     hours: [2, 5], mood: -8,
     fix: [
       { label: "Nach Vorschrift sichern, vier Gurte", cost: 0, mood: 11, cut: 0.7,
@@ -207,8 +205,8 @@ const INCIDENTS = [
     id: "kaffeekueche", w: 2,
     need: b => b.staff.length >= 3,
     title: "Der Kühlschrank",
-    text: (b, a, c) => `Es geht um ein Mittagessen. ${a.name} hat es mitgebracht, ${c.name} hat es gegessen, `
-      + `und inzwischen kleben drei Zettel an der Kühlschranktür. Die Disposition läuft seit einer Stunde auf Sparflamme.`,
+    text: (b, a, c) => `${a.name} brachte Mittagessen mit, ${c.name} hat es gegessen. `
+      + `Drei Zettel am Kühlschrank, die Dispo läuft auf Sparflamme.`,
     hours: [1, 3], mood: -5,
     fix: [
       { label: "Essen für alle bestellen", cost: 140, mood: 12, cut: 0.9, note: "Zettel ab, Thema durch." },
@@ -220,8 +218,8 @@ const INCIDENTS = [
     id: "krank", w: 3,
     need: b => b.staff.length >= 2,
     title: "Zwei Krankmeldungen",
-    text: (b, a, c) => `${a.name} und ${c.name} liegen flach. Der Rest des Teams hält den Laden, `
-      + `aber die angenommenen Aufträge laufen heute im Schneckentempo.`,
+    text: (b, a, c) => `${a.name} und ${c.name} liegen flach – `
+      + `die Aufträge laufen heute im Schneckentempo.`,
     hours: [4, 9], mood: -6,
     fix: [
       { label: "Aushilfe über die Agentur", cost: b => 300 + b.vehicles.length * 40, mood: 8, cut: 0.8,
@@ -233,9 +231,9 @@ const INCIDENTS = [
     id: "zollpapiere", w: 2,
     need: b => roleCount(b, "zoll") === 0 && S.stage >= 3,
     title: "Papiere zurückgewiesen",
-    text: (b, a) => `Die Ausfuhranmeldung kam zurück, und am Standort weiß keiner genau, warum. `
-      + `${a.name} hat es zweimal versucht und dann das Telefon aufgelegt. Ohne jemanden für Zoll und Papiere `
-      + `bleibt das hier jedes Mal hängen.`,
+    text: (b, a) => `Ausfuhranmeldung zurückgewiesen. `
+      + `${a.name} gibt auf – ohne jemanden für Zoll und Papiere `
+      + `hängt das jedes Mal.`,
     hours: [3, 8], mood: -10,
     fix: [
       { label: "Zollagentur beauftragen", cost: 640, mood: 6, cut: 0.85, note: "Diesmal geklärt." },
@@ -246,8 +244,8 @@ const INCIDENTS = [
     id: "parkplatz", w: 1,
     need: b => b.vehicles.length >= 4,
     title: "Der Hof ist zu klein",
-    text: (b, a, c) => `${a.name} hat zugeparkt, ${c.name} kam nicht raus, und die Abfahrt um sechs `
-      + `wurde die Abfahrt um halb acht. Auf dem Hof stehen inzwischen mehr Fahrzeuge, als hier hinpassen.`,
+    text: (b, a, c) => `${a.name} hat ${c.name} zugeparkt – Abfahrt halb acht statt sechs. `
+      + `Der Hof ist zu voll.`,
     hours: [2, 4], mood: -7,
     fix: [
       { label: "Stellplatz nebenan anmieten", cost: 480, mood: 10, cut: 0.85, note: "Platz ist das halbe Leben." },
@@ -258,8 +256,8 @@ const INCIDENTS = [
     id: "funkstille", w: 2,
     need: b => b.staff.length >= 3 && b.mood < 60,
     title: "Es redet keiner mehr",
-    text: (b, a, c) => `Zwischen ${a.name} und ${c.name} läuft seit Tagen alles über Zettel. `
-      + `Was der eine annimmt, plant der andere um. Heute sind zwei Fahrzeuge zur selben Rampe gefahren.`,
+    text: (b, a, c) => `${a.name} und ${c.name} reden nur noch per Zettel. `
+      + `Heute fuhren zwei Fahrzeuge zur selben Rampe.`,
     hours: [3, 7], mood: -12,
     fix: [
       { label: "Beide an einen Tisch holen", cost: 0, mood: 12, cut: 0.6, note: "Unangenehm, aber es wirkt." },
@@ -273,18 +271,18 @@ const INCIDENTS = [
 const GOOD_NEWS = [
   { id: "qualifikation", w: 3, need: b => b.staff.length >= 1,
     title: "Fortbildung bestanden",
-    text: (b, a) => `${a.name} hat die Prüfung bestanden und arbeitet ab sofort eine Stufe souveräner. `
-      + `Am Standort ${N[b.node].name} merkt man das sofort.`,
+    text: (b, a) => `${a.name} hat die Prüfung bestanden – ab sofort eine Stufe besser. `
+      + `Gut für ${N[b.node].name}!`,
     apply: (b, a) => { a.skill = Math.min(5, a.skill + 1); a.wage = Math.round(a.wage * 1.08); } },
   { id: "lob", w: 2, need: b => b.done >= 10,
     title: "Kunde ruft an",
-    text: (b, a) => `Ein Verlader hat sich gemeldet, nur um zu sagen, dass bei euch alles pünktlich war. `
-      + `${a.name} hat den Anruf entgegengenommen und strahlt seitdem.`,
+    text: (b, a) => `Ein Verlader lobt eure Pünktlichkeit. `
+      + `${a.name} strahlt seitdem.`,
     apply: b => { b.mood = Math.min(100, b.mood + 8); } },
   { id: "empfehlung", w: 2, need: b => b.staff.length >= 2,
     title: "Empfehlung aus dem Team",
-    text: (b, a) => `${a.name} kennt jemanden, der zu euch passen würde. Die Bewerbung liegt im Büro – `
-      + `und die Person kommt günstiger rein als über die Agentur.`,
+    text: (b, a) => `${a.name} empfiehlt jemanden – die Bewerbung liegt im Büro, `
+      + `günstiger als über die Agentur.`,
     apply: b => { refreshPool(b, true); } }
 ];
 
@@ -362,8 +360,8 @@ function openBase(nodeId, tierIdx, rent) {
   if (!tierOpen(t)) return toast(t.name + " gibt es ab Etappe " + t.st + ".", "warn");
   if (baseAtNode(nodeId)) return toast("Hier steht bereits ein Standort.", "warn");
   if (S.bases.length >= maxBases())
-    return toast("In Etappe " + S.stage + " kannst du " + maxBases() + " Standort"
-      + (maxBases() > 1 ? "e" : "") + " führen. Die nächste Etappe gibt einen weiteren frei.", "warn");
+    return toast("Etappe " + S.stage + ": höchstens " + maxBases() + " Standort"
+      + (maxBases() > 1 ? "e" : "") + ". Die nächste Etappe gibt einen weiteren frei.", "warn");
   const price = rent ? rentPrice(nodeId, t) * 30 : buyPrice(nodeId, t);
   if (S.money < price) return toast("Dafür fehlen " + money(price - S.money) + ".", "warn");
   S.money -= price; S.expense += price;
@@ -381,8 +379,8 @@ function openBase(nodeId, tierIdx, rent) {
   phoneMsg({
     from: N[nodeId].name, kind: "info", title: "Schlüsselübergabe",
     body: "Der " + t.name + " in " + N[nodeId].name + " gehört jetzt zu " + S.player.company + ". "
-      + "Solange hier niemand arbeitet, passiert allerdings auch nichts: "
-      + "stell Personal ein und ordne dem Standort Fahrzeuge zu.", baseId: b.id
+      + "Jetzt Personal einstellen "
+      + "und Fahrzeuge zuordnen.", baseId: b.id
   });
   save(); render();
   /* Erstes Büro: Lina erklärt Personal, Rollen und Einrichtung */
@@ -456,7 +454,7 @@ function postAd(baseId, role) {
   b.pool = b.pool || [];
   for (let i = 0; i < 3; i++) b.pool.unshift(makeCandidateFor(role));
   if (b.pool.length > 24) b.pool.length = 24;
-  toast("📣 Stellenanzeige geschaltet: drei Bewerbungen für " + ROLES[role].name + " in " + N[b.node].short + ".", "ok");
+  toast("📣 Anzeige geschaltet: drei Bewerbungen für " + ROLES[role].name + " in " + N[b.node].short + ".", "ok");
   save(); render();
 }
 function hire(baseId, candId) {
@@ -536,7 +534,7 @@ function fillBase(baseId, k) {
   const b = baseById(baseId); if (!b) return 0;
   if (dispCap(b) <= 0) { toast("Ohne Disposition betreut " + N[b.node].short + " keine Fahrzeuge – erst jemanden einstellen.", "warn"); return 0; }
   const room = baseRoom(b);
-  if (!room) { toast(N[b.node].short + " ist voll ausgelastet – mehr Disposition oder ein größeres Büro schaffen Platz.", "warn"); return 0; }
+  if (!room) { toast(N[b.node].short + " ist voll – mehr Disposition oder ein größeres Büro nötig.", "warn"); return 0; }
   const here = nodeLL(b.node), reach = reachKm(b);
   const take = freeFleet(k).map(f => ({ f, near: hav(here, nodeLL(f.at)) <= reach, p: vType(f.type).price }))
     .sort((a, c) => (c.near - a.near) || (c.p - a.p)).slice(0, room);
@@ -563,7 +561,7 @@ function distributeFleet(k) {
   const left = freeFleet(k).length;
   toast(n ? "⚡ " + n + " Fahrzeuge verteilt: " + Object.entries(per).map(([id, c]) => N[baseById(id).node].short + " " + c).join(", ")
       + (left ? " · " + left + " bleiben bei dir – mehr Disposition schafft Platz." : ".")
-    : "Alle Büros sind voll ausgelastet – mehr Disposition oder größere Büros schaffen Platz.", n ? "ok" : "warn");
+    : "Alle Büros voll – mehr Disposition oder größere Büros nötig.", n ? "ok" : "warn");
   save(); render();
   return n;
 }
@@ -587,7 +585,7 @@ function autoBoxHTML(b) {
       ${b.vehicles.length ? `<button class="btn tiny ghost" data-autoempty="${b.id}">alle lösen</button>` : ""}
     </div>
     ${dispCap(b) <= 0 ? `<div class="ab-hint">Ohne Disposition betreut das Büro keine Fahrzeuge.</div>`
-      : !room ? `<div class="ab-hint">Voll ausgelastet – mehr Leute in der Disposition oder ein größeres Büro schaffen Platz.</div>` : ""}
+      : !room ? `<div class="ab-hint">Voll – mehr Disposition oder ein größeres Büro nötig.</div>` : ""}
   </div>`;
 }
 
@@ -801,8 +799,8 @@ function renderPhone() {
       ${b && !m.handled && m.kind === "trouble"
         ? `<div class="pmsg-note">Stimmung in ${esc(N[b.node].short)}: ${Math.round(b.mood)} %</div>` : ""}
     </div>`;
-  }).join("") : `<div class="empty">Noch keine Anrufe. Sobald du Standorte mit Personal führst,
-     meldet sich hier dein Team.</div>`;
+  }).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
+     dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
   const calc = phoneTab === "calc";
 
@@ -959,16 +957,16 @@ function baseCard(b) {
     </div>
 
     ${rolePower(b, "disp") > 0 ? `<div class="dispotoggle">
-      <div><b>🗂️ Disposition</b><small>${b.dispOff ? "pausiert – die Fahrzeuge hier teilst du gerade selbst ein"
-        : "nimmt Aufträge im Einzugsgebiet an und schickt das passende Fahrzeug"}</small></div>
+      <div><b>🗂️ Disposition</b><small>${b.dispOff ? "pausiert – du teilst hier selbst ein"
+        : "nimmt Aufträge an und schickt das passende Fahrzeug"}</small></div>
       <button class="toggle ${b.dispOff ? "" : "on"}" data-dispo="${b.id}" aria-label="Disposition an/aus"><i></i></button>
     </div>` : ""}
     ${rolePower(b, "disp") <= 0
-      ? `<div class="hintbox">Ohne Disposition nimmt dieser Standort nichts an – die Fahrzeuge hier fahren dann nur, wenn du sie selbst einteilst. Stell jemanden aus der Disposition ein.</div>`
+      ? `<div class="hintbox">Ohne Disposition nimmt der Standort nichts an – stell jemanden dafür ein.</div>`
       : mine.length > dispCap(b)
-        ? `<div class="hintbox warn">${mine.length} Fahrzeuge, aber die Disposition betreut nur ${dispCap(b)} – der Rest wartet. Mehr oder bessere Disponenten helfen.</div>`
+        ? `<div class="hintbox warn">${mine.length} Fahrzeuge, die Disposition schafft nur ${dispCap(b)} – mehr oder bessere Disponenten helfen.</div>`
         : lr > 1
-          ? `<div class="hintbox warn">Mehr Fahrzeuge als Fahrpersonal – ${mine.length} Fahrzeuge, ${cap} gleichzeitig möglich. Das drückt die Stimmung.</div>`
+          ? `<div class="hintbox warn">Zu wenig Fahrpersonal: ${mine.length} Fahrzeuge, ${cap} gleichzeitig – drückt die Stimmung.</div>`
           : ""}
 
     <div class="sechead sm">Team</div>
@@ -977,7 +975,7 @@ function baseCard(b) {
 
     <div class="sechead sm">Bewerbungen<small>neue jeden Morgen · ${3 + Math.floor(S.stage / 2) + ([0, 1, 2, 3, 5][b.tier] || 0)} pro Tag</small></div>
     ${(b.pool || []).length ? b.pool.map(c => candRow(b, c)).join("")
-                            : `<div class="empty sm">Heute keine Bewerbungen mehr – die nächsten kommen morgen früh. Oder schalte eine Anzeige:</div>`}
+                            : `<div class="empty sm">Heute keine Bewerbungen mehr – morgen früh neue. Oder schalte eine Anzeige:</div>`}
     <div class="assignrow adrow">
       <select data-adrole="${b.id}" aria-label="Gesuchte Stelle">${ROLE_KEYS.map(r => `<option value="${r}"${r === (S.adRole || "disp") ? " selected" : ""}>${ROLES[r].icon} ${esc(ROLES[r].name)}</option>`).join("")}</select>
       <button class="btn tiny ghost${S.money >= adFee() ? "" : " disabled"}" data-ad="${b.id}">📣 Anzeige · ${money(adFee())}</button>
@@ -1030,7 +1028,7 @@ function newBaseCard() {
   return `<div class="card">
     <div class="card-top"><span class="vicon">➕</span>
       <div class="vname">Neuer Standort<small>${(S.bases || []).length} von ${maxBases()} belegt · jede Etappe gibt einen weiteren frei</small></div></div>
-    ${!room ? `<div class="hintbox">Alle Standorte dieser Etappe sind vergeben. Die nächste Etappe schaltet einen weiteren frei.</div>` : `
+    ${!room ? `<div class="hintbox">Alle Standorte dieser Etappe vergeben – die nächste schaltet einen weiteren frei.</div>` : `
       <div class="assignrow">
         <select id="newBaseNode">${free.map(n =>
           `<option value="${n.id}"${n.id === sel ? " selected" : ""}>${TYPE_GLYPH[n.type] || "🏙"} ${esc(n.name)}</option>`).join("")}</select>
@@ -1057,11 +1055,8 @@ function renderBases() {
     (S.bases.length
       ? `<div class="sechead" style="margin-top:0">Deine Standorte</div>` + S.bases.map(baseCard).join("")
       : `<div class="card"><div class="vname">Noch kein eigenes Büro<small>Standorte nehmen dir die Arbeit ab</small></div>
-         <p class="pintro">Ein Standort greift Ausschreibungen in seinem Einzugsgebiet selbst ab, sobald dort jemand
-         aus der <b>Disposition</b> sitzt – das ist die einzige Automatik im Spiel. Alles ohne Büro teilst du selbst ein. <b>Fahrpersonal</b> bestimmt, wie viele der zugeordneten Fahrzeuge
-         gleichzeitig rollen, <b>Umschlag</b> verkürzt die Standzeiten, <b>Zoll &amp; Papiere</b> bringen Zuschlag.
-         Wer die Rollen einseitig besetzt oder zu wenige Leute für zu viele Fahrzeuge hat, bekommt Ärger im Team –
-         das Telefon meldet sich dann.</p></div>`) +
+         <p class="pintro">Mit jemandem in der <b>Disposition</b> nimmt ein Standort selbst Aufträge an – die einzige Automatik.
+         Gemischtes Team, genug Leute – sonst klingelt das Telefon.</p></div>`) +
     `<div class="sechead">Standort eröffnen</div>` + newBaseCard();
 
   $$("#tab-bases [data-adrole]").forEach(sel => sel.onchange = () => { sel.blur(); S.adRole = sel.value; });
@@ -1076,7 +1071,7 @@ function renderBases() {
     const [bid, sid] = b.dataset.fire.split("|");
     const st = baseById(bid).staff.find(x => x.id === sid);
     askConfirm(st.name + " kündigen?",
-      "Die Abfindung beträgt " + money(st.wage * 14) + ". Die Stelle ist danach frei.",
+      "Abfindung: " + money(st.wage * 14) + ". Die Stelle wird frei.",
       "Kündigen", () => fire(bid, sid), true);
   });
   $$("#tab-bases [data-assign]").forEach(b => b.onclick = () => {
@@ -1257,7 +1252,7 @@ function addPlant(baseId, id) {
   const d = decoOf(b), it = PLANTS.find(x => x.id === id);
   if (!it) return;
   if (d.plants.length >= plantSlots(b))
-    return toast("Mehr Platz für Pflanzen ist hier nicht. Ein größeres Büro hätte mehr.", "warn");
+    return toast("Kein Platz mehr für Pflanzen – ein größeres Büro hätte mehr.", "warn");
   if (it.price > S.money) return toast("Dafür fehlen " + money(it.price - S.money) + ".", "warn");
   S.money -= it.price; S.expense += it.price;
   logMoney("deco", it.name + " · " + N[b.node].short, -it.price);
@@ -1453,7 +1448,7 @@ function renderOfficeModal(baseId) {
     ${tierFloors(tierOf(b)) > 1 ? `<div class="vswitch floors">${Array.from({ length: tierFloors(tierOf(b)) }, (_, f) =>
       `<button class="${f === officeFloor ? "on" : ""}" data-floor="${f}">${f === 0 ? "EG" : f + ". OG"}</button>`).join("")}</div>` : ""}
     <div class="planwrap">${officeSVG(b, 360, true, officeFloor)}</div>
-    <div class="planhint2">Möbel, Pflanzen und die Küche lassen sich mit dem Finger verschieben.</div>
+    <div class="planhint2">Möbel, Pflanzen und Küche kannst du mit dem Finger verschieben.</div>
     <div class="vswitch">${tabs.map(([k, n]) =>
       `<button class="${k === decoTab ? "on" : ""}" data-decotab="${k}">${n}</button>`).join("")}</div>
     <div class="decolist">${list}</div>
@@ -1654,7 +1649,7 @@ function handleStaffDrop(payload, target) {
   const s = b.staff.find(x => x.id === staffId); if (!s) return;
   if (target === "fire") {
     askConfirm(s.name + " kündigen?",
-      "Die Abfindung beträgt " + money(s.wage * 14) + ". Die Stelle ist danach frei.",
+      "Abfindung: " + money(s.wage * 14) + ". Die Stelle wird frei.",
       "Kündigen", () => fire(baseId, staffId), true);
     return;
   }

@@ -36,9 +36,9 @@ function offerContract() {
   const c = contractOffer(); if (!c) return;
   const total = c.per * c.days * c.pay;
   decisionMsg({ from: c.client, kind: "contract", icon: "📑", type: "contract", title: "Angebot: Rahmenvertrag über " + c.days + " Tage",
-    body: `Täglich ${c.per}× ${CARGO[c.cargo].name} (${kgf(c.weight)}) von ${N[c.from].short} nach ${N[c.to].short}, je ${money(c.pay)} – `
-      + `zusammen ${money(total)}. Pro ausgefallener Fahrt ${money(c.penalty)} Vertragsstrafe. Wer mindestens 90 % schafft, bekommt 15 % Bonus.`,
-    choices: [{ label: "Vertrag unterschreiben", sub: "ab morgen früh läuft er" }, { label: "Ablehnen" }], def: 1, wait: 240,
+    body: `Täglich ${c.per}× ${CARGO[c.cargo].name} (${kgf(c.weight)}) ${N[c.from].short} → ${N[c.to].short}, je ${money(c.pay)} `
+      + `(gesamt ${money(total)}). Ausfall: −${money(c.penalty)} · ab 90 % erfüllt +15 % Bonus.`,
+    choices: [{ label: "Vertrag unterschreiben", sub: "startet morgen früh" }, { label: "Ablehnen" }], def: 1, wait: 240,
     ctx: { c } });
 }
 DECISIONS.contract = {
@@ -81,10 +81,10 @@ function tickContracts() {
         const bonus = Math.round(n * c.pay * 0.15);
         S.money += bonus; S.revenue += bonus; logMoney("bonus", "Vertragsbonus · " + c.client, bonus);
         repAdd(regionOf(c), 8); extraStats().contracts++;
-        phoneMsg({ from: c.client, kind: "good", title: "Rahmenvertrag erfüllt", body: `${c.done} von ${n} Fahrten pünktlich erledigt. Vielen Dank – als Anerkennung überweisen wir ${money(bonus)} Bonus.` });
+        phoneMsg({ from: c.client, kind: "good", title: "Rahmenvertrag erfüllt", body: `${c.done} von ${n} Fahrten erledigt – danke! ${money(bonus)} Bonus ist überwiesen.` });
       } else {
         repAdd(regionOf(c), -5);
-        phoneMsg({ from: c.client, kind: "info", title: "Vertrag beendet", body: `${c.missed} von ${n} Fahrten sind ausgefallen. Einen Anschlussvertrag wird es so nicht geben.` });
+        phoneMsg({ from: c.client, kind: "info", title: "Vertrag beendet", body: `${c.missed} von ${n} Fahrten ausgefallen – kein Anschlussvertrag.` });
       }
     }
   });
@@ -98,19 +98,19 @@ function contractDelivered(o) {
 /* =============================== Missionen =============================== */
 const MISSIONS = [
   { id: "weihnacht", st: 1, title: "Weihnachtsgeschäft", icon: "🎄", hours: 24, need: 12, test: (j) => ["pak", "express"].includes(j.order.cargo),
-    text: "Chef, die Paketlager platzen. Schaffst du in 24 Stunden {n} Paket- oder Expressaufträge?", rew: 900 },
+    text: "Chef, die Paketlager platzen! {n} Paket- oder Expressaufträge in 24 h?", rew: 900 },
   { id: "gruen", st: 1, title: "Grüne Woche", icon: "🚲", hours: 24, need: 8, test: (j) => j.legs.every(l => l.mode === "b"),
-    text: "Die Stadt feiert die Verkehrswende. Wer in 24 Stunden {n} Lieferungen komplett per Rad fährt, bekommt eine Prämie vom Senat.", rew: 700, needBike: true },
+    text: "Verkehrswende! {n} Lieferungen komplett per Rad in 24 h – der Senat zahlt.", rew: 700, needBike: true },
   { id: "kuehl", st: 1, title: "Kühlkette", icon: "🧊", hours: 36, need: 5, test: (j) => j.order.cargo === "kuehl",
-    text: "Hitzewelle! Die Supermärkte brauchen Nachschub. {n} Kühltransporte in 36 Stunden?", rew: 1100, needFlag: "kuehl" },
+    text: "Hitzewelle! {n} Kühltransporte für die Supermärkte in 36 h?", rew: 1100, needFlag: "kuehl" },
   { id: "hochwasser", st: 2, title: "Hochwasserhilfe Dresden", icon: "🌊", hours: 36, spawn: { to: "dresden", cargo: "pal", n: 3, kg: [3000, 6000], desc: "Sandsäcke und Pumpen für die Deiche" },
-    text: "Die Elbe steigt. Das THW bittet um drei Transporte mit Sandsäcken und Pumpen nach Dresden – innerhalb von 36 Stunden.", rew: 4200 },
+    text: "Die Elbe steigt! 3 Transporte Sandsäcke & Pumpen nach Dresden in 36 h.", rew: 4200 },
   { id: "messe", st: 3, title: "Messe-Marathon Hannover", icon: "🏛️", hours: 48, spawn: { to: "hannover", cargo: "pal", n: 4, kg: [1500, 5000], desc: "Messestand und Exponate" },
-    text: "Vier Aussteller haben ihre Spedition verloren. Bringst du ihre Stände rechtzeitig nach Hannover?", rew: 12000 },
+    text: "4 Aussteller ohne Spedition – bring ihre Stände in 48 h nach Hannover.", rew: 12000 },
   { id: "hafen", st: 4, title: "Rekordwoche im Hafen", icon: "⚓", hours: 72, need: 3, test: (j) => j.legs.some(l => l.mode === "s" || l.mode === "i"),
-    text: "Der Hafen will einen Umschlagrekord. {n} Aufträge mit Schiff in drei Tagen?", rew: 60000, needMode: "is" },
+    text: "Der Hafen will einen Rekord: {n} Aufträge per Schiff in 3 Tagen?", rew: 60000, needMode: "is" },
   { id: "luft", st: 4, title: "Luftbrücke", icon: "✈️", hours: 48, need: 3, test: (j) => j.legs.some(l => l.mode === "a"),
-    text: "Eine Hilfsorganisation braucht dringend Kapazität in der Luft: {n} Luftfrachtaufträge in 48 Stunden.", rew: 80000, needMode: "a" }
+    text: "Hilfsflüge gesucht: {n} Luftfrachtaufträge in 48 h.", rew: 80000, needMode: "a" }
 ];
 function missionState() { if (!S.missions) S.missions = { active: null, done: [], next: 0 }; return S.missions; }
 function missionFits(mi) {
@@ -131,7 +131,7 @@ function offerMission() {
   const mi = pick(pool), n = missionNeed(mi);
   const rew = Math.round(mi.rew * stageK() / (mi.st >= 4 ? 18 : mi.st >= 3 ? 6 : mi.st >= 2 ? 2.5 : 1) / 10) * 10;
   decisionMsg({ from: "Lina Sturm", kind: "mission", icon: mi.icon, type: "mission", title: "Mission: " + mi.title,
-    body: mi.text.replace("{n}", n) + ` Belohnung: ${money(rew)} und ein besserer Ruf.`,
+    body: mi.text.replace("{n}", n) + ` Belohnung: ${money(rew)} + Ruf.`,
     choices: [{ label: "Machen wir!" }, { label: "Diesmal nicht" }], def: 1, wait: 180, ctx: { id: mi.id, n, rew } });
 }
 DECISIONS.mission = {
@@ -170,7 +170,7 @@ function missionDelivered(job, late) {
     addXP(60 + S.stage * 20); repAdd(S.stage, 6); extraStats().missions++;
     missionState().done.push(a.id); missionState().active = null;
     toast(a.icon + " Mission „" + a.title + "“ geschafft: +" + money(a.rew), "ok");
-    phoneMsg({ from: "Lina Sturm", kind: "good", title: "Mission geschafft!", body: "Stark, Chef – „" + a.title + "“ erledigt. " + money(a.rew) + " sind gutgeschrieben." });
+    phoneMsg({ from: "Lina Sturm", kind: "good", title: "Mission geschafft!", body: "Stark, Chef! „" + a.title + "“ erledigt: +" + money(a.rew) + "." });
     checkLevel();
   }
 }
@@ -335,7 +335,7 @@ function renderGoals() {
   if (goalsTab === "today") {
     const T = t => TASKS.find(x => x.id === t.id);
     body = (typeof luckyShelfHTML === "function" ? luckyShelfHTML() : "")
-      + `<div class="gsub">Neue Aufgaben jeden Morgen · je ${money(dailyReward())}, alle drei zusammen +${money(dailyReward() * 2)} und eine 🎁 Luckybox</div>`
+      + `<div class="gsub">Jeden Morgen neu · je ${money(dailyReward())} · alle drei: +${money(dailyReward() * 2)} + 🎁 Luckybox</div>`
       + (d.tasks.length ? d.tasks.map(t => `<div class="gtask${t.done ? " done" : ""}">
           <span class="gi">${T(t).icon}</span>
           <div class="gt"><b>${esc(T(t).label(t))}</b>${bar(Math.min(t.got, t.n), t.n)}
@@ -346,12 +346,12 @@ function renderGoals() {
     const a = ms.active;
     body = (a ? `<div class="gtask mission"><span class="gi">${a.icon}</span><div class="gt"><b>${esc(a.title)}</b>${bar(a.got, a.need)}
         <small>${a.got} von ${a.need} · bis ${stamp(a.until)} · Belohnung ${money(a.rew)}</small></div></div>`
-      : `<div class="empty sm">Gerade keine Mission. Lina meldet sich, wenn es etwas gibt.</div>`)
+      : `<div class="empty sm">Gerade keine Mission – Lina meldet sich.</div>`)
       + `<div class="sechead sm">Rahmenverträge</div>`
       + (activeContracts().length ? activeContracts().map(c => `<div class="gtask"><span class="gi">📑</span>
         <div class="gt"><b>${esc(c.client)}</b>${bar(c.done, c.per * c.days)}
         <small>${c.per}× täglich ${esc(N[c.from].short)} → ${esc(N[c.to].short)} · ${c.done} erledigt, ${c.missed} ausgefallen · ${S.time < c.start ? "startet " + stamp(c.start) : "Tag " + c.day + " von " + c.days}</small></div></div>`).join("")
-        : `<div class="empty sm">Keine laufenden Verträge. Ab Level 4 bieten Großkunden welche an.</div>`);
+        : `<div class="empty sm">Keine Verträge – Angebote kommen ab Level 4.</div>`);
   } else {
     const got = ACHS.filter(a => S.ach && S.ach[a.id]).length;
     body = `<div class="gsub">${got} von ${ACHS.length} freigeschaltet</div><div class="achs">` + ACHS.map(a => {

@@ -221,8 +221,8 @@ function renderLivery() {
     ${L.mode === "sym" ? `<div class="liv-syms">${LOGO_SYMS.map(s => `<button data-sym="${s}" class="${L.sym === s ? "on" : ""}">${s}</button>`).join("")}</div>` : ""}
     <div class="liv-sec">Logo-Hintergrund</div>${sw("lbg", L.bg)}
     <div class="liv-sec">Logo-Schrift</div>${sw("lfg", L.fg)}
-    <label class="liv-auto"><input type="checkbox" id="livAuto" ${d.auto ? "checked" : ""}> Neue Fahrzeuge gleich in Firmenfarben kaufen (kostet die Lackierung extra)</label>
-    <div class="lim">Lackierte Fahrzeuge bringen <b>+2 % Erlös</b> – man kennt deine Farben. Sammlerautos und Sondereditionen bleiben im Original.</div>
+    <label class="liv-auto"><input type="checkbox" id="livAuto" ${d.auto ? "checked" : ""}> Neue Fahrzeuge direkt lackiert kaufen (kostet extra)</label>
+    <div class="lim">Lackiert = <b>+2 % Erlös</b>. Sondereditionen bleiben im Original.</div>
     <div class="mbtns">
       <button class="btn ghost" id="livSave">${changed || !livery().ver ? "Design speichern" : "Gespeichert ✓"}</button>
       <button class="btn${fp.todo.length || changed ? "" : " disabled"}" id="livAll">🎨 Flotte lackieren${(() => {
@@ -273,7 +273,7 @@ function saveLivery() {
   const ver = same && cur.ver ? cur.ver : (cur.ver || 0) + 1;
   S.livery = Object.assign(JSON.parse(JSON.stringify(d)), { ver });
   livDraft = JSON.parse(JSON.stringify(S.livery));
-  if (ver !== cur.ver) toast("🎨 Neues Design gespeichert" + (ver > 1 ? " – bisher lackierte Fahrzeuge tragen noch das alte." : "."), "ok", true);
+  if (ver !== cur.ver) toast("🎨 Neues Design gespeichert" + (ver > 1 ? " – die Flotte trägt noch das alte." : "."), "ok", true);
   logoHudKey = "";
   save(); render();
 }
@@ -297,7 +297,7 @@ function paintFleet() {
     const c = paintVeh(f, true);
     if (c > 0) { n++; sum += c; } else if (c < 0) broke = true;
   });
-  toast(n ? "🎨 " + n + " Fahrzeug" + (n === 1 ? "" : "e") + " in Firmenfarben lackiert (" + money(sum) + ")." + (busy ? " " + busy + " unterwegs – die kommen danach dran." : "")
+  toast(n ? "🎨 " + n + " Fahrzeug" + (n === 1 ? "" : "e") + " in Firmenfarben lackiert (" + money(sum) + ")." + (busy ? " " + busy + " noch unterwegs." : "")
     : broke ? "Für die Lackierung fehlt das Kapital." : busy ? "Alle übrigen Fahrzeuge sind gerade unterwegs." : "Die Flotte trägt schon deine Farben.", n ? "ok" : "warn");
   save(); render();
 }

@@ -252,11 +252,18 @@ function treeUpdate(t) {
 function farmTreesTick() { (S.farm.trees || []).forEach(treeUpdate); }
 function farmTree(id) { return (S.farm.trees || []).find(t => t.id === id) || null; }
 /* Welches Werkzeug passt? Gibt "axe" | "saw" | null (fehlt) zurück */
+/* Welche Werkzeuge passen zu diesem Baum? Der Spieler wählt selbst –
+   die Säge ist schneller und bringt mehr Holz, kostet aber Sprit. */
+function treeTools(t) {
+  const need = treeNeeds(t), T = S.farm.tools, out = [];
+  if (!need.saw && (T.axe || 1) >= (need.axe || 1)) out.push("axe");
+  if ((T.saw || 0) >= (need.saw || 1)) out.push("saw");
+  return out;
+}
 function treeTool(t) {
-  const need = treeNeeds(t), T = S.farm.tools;
-  if (need.saw) return (T.saw || 0) >= need.saw ? "saw" : null;
-  if ((T.saw || 0) >= 1) return "saw";
-  return (T.axe || 1) >= (need.axe || 1) ? "axe" : null;
+  const l = treeTools(t), pref = S.farm.toolPref;
+  if (!l.length) return null;
+  return l.includes(pref) ? pref : l.includes("saw") ? "saw" : l[0];
 }
 function treeNeedText(t) {
   const need = treeNeeds(t);
@@ -293,9 +300,11 @@ function farmFell(t, res) {
   const F = S.farm, sp = FSPECIES[t.sp], Z = FTREE_SIZE[t.sz];
   const acc = clamp(res.acc || 0, 0, 1);
   const saw = res.tool === "saw";
-  let logs = Z.logs + (acc > 0.85 ? 1 : 0) + (saw && res.dirOk ? (t.sz >= 3 ? 1 : 0) : 0);
+  /* Profi-Säge: immer ein Stamm mehr – auch bei kleinen Bäumen */
+  const pro = saw && (F.tools.saw || 0) >= 2;
+  let logs = Z.logs + (acc > 0.85 ? 1 : 0) + (saw && res.dirOk ? (t.sz >= 3 ? 1 : 0) : 0) + (pro ? 1 : 0);
   if (staffPerk("holzfaeller") && Math.random() < staffPerk("holzfaeller") * 3) logs++;
-  let aeste = Z.aeste, reste = saw ? Math.max(1, Math.round(t.sz / 2)) : 0;
+  let aeste = Z.aeste, reste = saw ? Math.max(1, Math.round(t.sz / 2)) + (pro ? 1 : 0) : 0;
   let q = clamp(2 + acc * 3 + (saw && res.dirOk ? 0.3 : 0) - (saw && res.hung ? 0.8 : 0), 1, 5);
   const got = [];
   const give = (id, n, qq) => {
@@ -952,7 +961,7 @@ function staffDaily() {
   S.money -= pay; S.expense += pay;
   logMoney("farm", "Löhne Mitarbeiter", -pay);
   const hungry = F.staff.filter(s => !s.fed).length;
-  if (hungry) toast("👷 " + hungry + " Mitarbeiter ohne Brotzeit – heute nur halb so fleißig. Back was im Ofen!", "warn");
+  if (hungry) toast("👷 " + hungry + " Mitarbeiter ohne Brotzeit – heute nur halb so fleißig.", "warn");
 }
 /* Arbeiten von allein: Holz, Fisch, Gießen */
 function staffWork() {
@@ -1142,7 +1151,7 @@ function farmMushroom(i) {
    Kleeblatt. */
 const FTREASURE = { every: 3, dur: 180, from: 7, to: 15 };
 const FTREASURE_ZONES = [
-  { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [17.5, -14.5, 34, 14], at: [-1, 0] },
+  { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [17.5, -14.5, 29, 14], at: [-1, 0] },
   { id: "see",     area: "see",     n: "über dem Seeufer",            box: [-22, 23.5, 42, 33],     at: [12, 30] },
   { id: "wald",    area: "wald",    n: "über einer Lichtung im Wald", clear: true,                  at: [-22, -44] },
   { id: "altwald", area: "altwald", n: "über dem Alten Wald",         clear: true,                  at: [-66, -72] }
@@ -1152,6 +1161,9 @@ function farmTreasureCur() { const T = S.farm && S.farm.tr, c = T && T.cur; retu
 function treasureSpotOk(x, z, area) {
   const F = S.farm, P = FWORLD.pond, L = FWORLD.lake;
   if (areaOfPoint(x, z) !== area) return false;
+  /* nur dort, wo die Kamera auch hinkommt */
+  const cr = farmCamRect();
+  if (x < cr[0] + 1 || x > cr[2] - 1 || z < cr[1] + 1 || z > cr[3] + 6) return false;
   if (Math.abs(x) < 17 && Math.abs(z) < 17) return false;
   if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
   if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;

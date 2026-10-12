@@ -98,8 +98,8 @@ function pabloOffer() {
     kind: "pablo", from: "Don Pablo", title: "Hola amigo", body: "",
     state: "ask", expires: S.time + rnd(8, 12) * 60, tons,
     thread: [
-      { me: false, t: "Hola amigo. Hier ist Don Pablo." },
-      { me: false, t: "Ich hab " + tons + " Tonnen Kokain, reinste Ware. Interesse?" }
+      { me: false, t: "Hola amigo, Don Pablo hier." },
+      { me: false, t: tons + " Tonnen Kokain, reinste Ware. Interesse?" }
     ],
     toastText: "📞 Don Pablo: „Hola amigo …“"
   });
@@ -159,7 +159,7 @@ function pabloBuy(msgId, tx) {
   m.thread.push({ me: true, t: "Ich nehm " + m.pick + " Tonnen." });
   if (tx) { m.thread.push({ me: true, tx }); pb.sol = (pb.sol || 0) + tx.sol; }
   const hg = pabloHangar();
-  m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : "Hangar 7") + ", " + N[pb.at].name + ". Meine Leute melden sich bei dir." });
+  m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : "Hangar 7") + ", " + N[pb.at].name + ". Meine Leute melden sich." });
   m.state = "done"; m.bought = m.pick;
   const first = !pb.bustFree;
   pb.bustFree = true;
@@ -290,7 +290,7 @@ function pabloMsgHTML(m) {
       <button class="btn tiny ghost" data-pbno="${m.id}">Kein Interesse</button></div>`;
   } else if (m.state === "offer") {
     const k = m.pick || 0, cost = k * 1000 * PABLO_BUY;
-    acts = `<div class="sn-sum">${k} t · <b>${money(cost)}</b>${k && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 0)} SOL</span>` : ""} <small>Kunden zahlen ${money(PABLO_SELL * 1000)}/t · bezahlt wird in Solana</small></div>
+    acts = `<div class="sn-sum">${k} t · <b>${money(cost)}</b>${k && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 0)} SOL</span>` : ""} <small>Kunden zahlen ${money(PABLO_SELL * 1000)}/t · Zahlung in Solana</small></div>
       <div class="sn-acts">
         <button class="btn tiny${k && cost <= S.money ? "" : " disabled"}" data-pbbuy="${m.id}">◎ Bezahlen${k ? " · " + money(cost) : ""}</button>
         <button class="btn tiny ghost" data-pball="${m.id}|${k ? 0 : 1}">${k ? "Nichts" : "Alles"}</button>

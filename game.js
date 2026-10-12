@@ -945,7 +945,7 @@ function missingHelpHTML(leg, o, i) {
   const busyNote = busy.length
     ? `<div class="modenote busynote">⏳ ${busy.slice(0, 2).map(f => vType(f.type).icon + " " + esc(vType(f.type).name) + " · " + esc(phaseLabel(f))).join("<br>")}</div>`
     : "";
-  if (!fit.length) return busyNote + `<div class="modenote">Kein Fahrzeug im Spiel schafft diese Teilstrecke – nimm die andere Route oder einen anderen Auftrag.</div>`;
+  if (!fit.length) return busyNote + `<div class="modenote">Kein Fahrzeug schafft diese Teilstrecke – nimm eine andere Route oder einen anderen Auftrag.</div>`;
   if (!now.length) {
     const st = Math.min(...fit.map(t => Math.max(t.stage, firstStageWith(t.mode))));
     return busyNote + `<button class="btn tiny ghost disabled shopjump">🔒 Passendes Fahrzeug erst ab Etappe ${st}</button>`;
@@ -1307,7 +1307,7 @@ function cancelJob(id) {
   if (o.snus || o.pablo || o.farm) {
     failJob(j, "abgebrochen");
   } else {
-    askConfirm("Auftrag stornieren?", o.shipper + ": Der Auftraggeber berechnet 20 % Vertragsstrafe (" + money(Math.round(o.pay * 0.2)) + "). Das Fahrzeug bleibt, wo es gerade ist.",
+    askConfirm("Auftrag stornieren?", o.shipper + ": 20 % Vertragsstrafe (" + money(Math.round(o.pay * 0.2)) + "). Das Fahrzeug bleibt, wo es ist.",
       "Stornieren", () => { failJob(j, "storniert"); save(); render(); }, true);
     return;
   }
@@ -2542,23 +2542,65 @@ function renderLedger() {
 }
 
 let muteToasts = false;          /* im Zeitraffer (Haft) keine Meldungsflut */
+/* Meldungen laufen über eine Warteschlange: immer nur eine sichtbar, keine
+   doppelten, und solange ein Fenster, Menü oder Minispiel offen ist, warten
+   die Hintergrund-Meldungen (Kunde zufrieden, Tagesaufgabe …), bis es wieder
+   zu ist. Antworten auf einen eigenen Tipp kommen sofort. */
+const TQ = { q: [], cur: null, el: null, tapAt: 0, timer: 0, poll: 0 };
+document.addEventListener("pointerdown", () => { TQ.tapAt = performance.now(); }, true);
+function toastBusy() {
+  const b = document.body.classList;
+  if (b.contains("modal-open") || b.contains("ask-open") || b.contains("tut-talk") || b.contains("report-open")) return true;
+  if (typeof FV !== "undefined" && FV.on && (FV.sheet || FV.place || (typeof MG !== "undefined" && MG.on) || $("#farmLvl.on"))) return true;
+  return false;
+}
 function toast(msg, kind, low) {
   if (muteToasts) return;
   const now = performance.now();
   /* Nebensächliche Meldungen nicht im Sekundentakt stapeln */
   if (low && now - lastToast < 2600) { hiddenToasts++; return; }
   lastToast = now;
-  const box = $("#toasts");
-  const el = document.createElement("div");
-  el.className = "toast " + (kind || "");
   const txt = hiddenToasts && low ? msg + "  (+" + hiddenToasts + ")" : msg;
-  if (txt.includes("[[snus]]") && typeof snusLogo === "function") el.innerHTML = esc(txt).replace("[[snus]]", snusLogo(18));
-  else el.textContent = txt;
   if (low) hiddenToasts = 0;
+  if ((TQ.cur && TQ.cur.txt === txt) || TQ.q.some(x => x.txt === txt)) return;
+  const it = { txt, kind: kind || "", t: now, fb: now - TQ.tapAt < 1200 };
+  if (it.fb) {
+    TQ.q.unshift(it);
+    if (TQ.cur && !TQ.cur.fb) toastEnd(true);              /* eigene Antwort geht vor */
+  } else {
+    TQ.q.push(it);
+    /* nicht ewig sammeln: höchstens fünf Hintergrund-Meldungen */
+    const amb = TQ.q.filter(x => !x.fb);
+    if (amb.length > 5) TQ.q.splice(TQ.q.indexOf(amb[0]), 1);
+  }
+  toastNext();
+}
+function toastNext() {
+  if (TQ.cur) return;
+  const busy = toastBusy(), now = performance.now();
+  /* alte Hintergrund-Meldungen verfallen */
+  TQ.q = TQ.q.filter(x => x.fb || now - x.t < 60000);
+  const i = TQ.q.findIndex(x => x.fb || !busy);
+  if (i < 0) { if (TQ.q.length && !TQ.poll) TQ.poll = setTimeout(() => { TQ.poll = 0; toastNext(); }, 500); return; }
+  const it = TQ.q.splice(i, 1)[0];
+  const box = $("#toasts");
+  if (!box) return;
+  const el = document.createElement("div");
+  el.className = "toast " + it.kind;
+  if (it.txt.includes("[[snus]]") && typeof snusLogo === "function") el.innerHTML = esc(it.txt).replace("[[snus]]", snusLogo(18));
+  else el.textContent = it.txt;
+  box.innerHTML = "";
   box.appendChild(el);
-  while (box.children.length > 2) box.removeChild(box.firstChild);
-  setTimeout(() => el.classList.add("out"), 3000);
-  setTimeout(() => el.remove(), 3600);
+  TQ.cur = it; TQ.el = el;
+  const dur = Math.min(4200, 2300 + it.txt.length * 18);
+  TQ.timer = setTimeout(() => toastEnd(false), dur);
+}
+function toastEnd(fast) {
+  const el = TQ.el;
+  clearTimeout(TQ.timer);
+  TQ.cur = null; TQ.el = null;
+  if (el) { el.classList.add("out"); setTimeout(() => el.remove(), fast ? 120 : 450); }
+  setTimeout(toastNext, fast ? 60 : 380);
 }
 
 function phaseLabel(v) {
@@ -2715,7 +2757,7 @@ function renderOrders() {
   const el = $("#tab-orders");
   if (!S.orders.length) {
     setTools("orders", "");
-    el.innerHTML = `<div class="empty">Gerade keine Ausschreibungen. In ein paar Stunden kommen neue herein.</div>`; return;
+    el.innerHTML = `<div class="empty">Gerade keine Ausschreibungen – bald kommen neue.</div>`; return;
   }
   const mode = S.orderSort || "pay";
   const filt = S.orderFilter || "all";
@@ -2883,14 +2925,14 @@ function renderFleet() {
   const locChips = [...byNode.entries()].sort((a, b) => b[1] - a[1])
     .map(([id, n]) => `<span class="locchip">📍 ${esc(N[id].short)} <b>${n}</b></span>`).join("");
   const head = `<div class="card auto">
-      <div class="card-top"><div class="vname">🗂️ Disposition<small>Von allein fahren nur Fahrzeuge, die einem Büro mit jemandem aus der
-        Disposition gehören. Alle anderen teilst du selbst ein.</small></div></div>
+      <div class="card-top"><div class="vname">🗂️ Disposition<small>Von allein fahren nur Fahrzeuge eines Büros mit
+        Disposition. Den Rest teilst du selbst ein.</small></div></div>
       ${dispoRowsHTML()}
       ${typeof fleetExtraHTML === "function" ? fleetExtraHTML() : ""}
       ${S.fleet.length ? `<div class="meta small"><span>💤 ${idle} von ${S.fleet.length} im Leerlauf</span><span>🅿️ ${money(fix)}/Tag Fixkosten</span></div>` : ""}
       ${S.fleet.length ? `<div class="locrow"><span class="loclbl">Frei stehen:</span>${locChips || `<span class="locchip none">gerade keins – alle unterwegs</span>`}</div>` : ""}
       ${S.fleet.length > 3 && idle > S.fleet.length * 0.6
-        ? `<div class="warnbox">Mehr als die Hälfte der Flotte steht still und kostet trotzdem. Weniger Fahrzeuge oder größere Etappen wären günstiger.</div>` : ""}
+        ? `<div class="warnbox">Über die Hälfte der Flotte steht still – und kostet trotzdem.</div>` : ""}
       </div>`;
   if (!S.fleet.length) {
     setTools("fleet", "");
@@ -3041,7 +3083,7 @@ function askBulkRelease(list) {
   askConfirm(rel.length + " Fahrzeuge abgeben?",
     (own.length ? own.length + " verkaufen für zusammen " + money(sum) + ". " : "")
     + (lease.length ? lease.length + " Leasingverträge beenden. " : "")
-    + "Das spart " + money(perDay) + " Fixkosten am Tag und lässt sich nicht rückgängig machen.",
+    + "Spart " + money(perDay) + " Fixkosten am Tag – endgültig.",
     "Abgeben", () => bulkRelease(rel.map(f => f.uid)), true);
 }
 function bulkRelease(uids) {
@@ -3296,10 +3338,10 @@ function infoHTML() {
     <div class="card"><div class="vname">So spielst du<small>Kurzanleitung</small></div>
       <ol class="how">
         <li>Unter <b>Aufträge</b> eine Ausschreibung antippen.</li>
-        <li>Unter jedem Auftrag steht, welches Fahrzeug ihn übernehmen würde: ✅ steht schon am Abholort, ↩️ müsste erst leer hinfahren.</li>
-        <li>In der Planung zeigt die Minikarte Abholung, Ziel und deine Fahrzeuge – die gestrichelte Linie ist die Leerfahrt.</li>
-        <li>Nach der Zustellung steht das Fahrzeug am Ziel. Ein Auftrag, der genau dort startet, kommt ohne Leerfahrt aus.</li>
-        <li>XP bringen Level, Level und Kapital schalten unter <b>Etappen</b> die nächste Weltregion frei.</li>
+        <li>✅ Fahrzeug steht am Abholort, ↩️ muss erst leer hinfahren.</li>
+        <li>Auf der Minikarte ist die gestrichelte Linie die Leerfahrt.</li>
+        <li>Nimm danach einen Auftrag, der am Ziel startet – ohne Leerfahrt.</li>
+        <li>XP bringen Level – mit Level und Kapital schaltest du unter <b>Etappen</b> neue Regionen frei.</li>
       </ol>
       <div class="buyrow">
         ${typeof logiOn === "function" && !logiOn()
@@ -3335,7 +3377,7 @@ function co2HTML() {
   const modes = Object.keys(MODE_INFO).filter(m => e.byMode[m] > 0.05 || (m === "b" && e.bikeKm > 0));
   const bench = perTkm == null ? "" : perTkm < 60 ? "sehr sauber" : perTkm < 120 ? "ordentlich" : perTkm < 300 ? "viel Straße" : "viel Luftfracht";
   return `<div class="card">
-      <div class="vname">🌱 Klimabilanz<small>CO₂ aus allen gefahrenen Kilometern, Leerfahrten eingeschlossen</small></div>
+      <div class="vname">🌱 Klimabilanz<small>CO₂ aller Kilometer, inkl. Leerfahrten</small></div>
       <div class="kpis co2">
         <div><span>Ausgestoßen</span><b>${co2f(e.kg)}</b></div>
         <div><span>je Tonnenkilometer</span><b>${perTkm == null ? "—" : perTkm + " g"}</b>${bench ? `<small>${bench}</small>` : ""}</div>
@@ -3343,7 +3385,7 @@ function co2HTML() {
         <div><span>Mit dem Rad gespart</span><b class="good">${co2f(saved)}</b><small>${kmf(e.bikeKm)} geradelt</small></div>
       </div>
       ${modes.length ? `<div class="meta small">${modes.map(m => `<span>${MODE_INFO[m].icon} ${co2f(e.byMode[m] || 0)}</span>`).join("")}</div>` : ""}
-      <div class="co2note">Zum Vergleich: Lkw ≈ 80–110 g, Güterzug ≈ 15–30 g, Binnenschiff ≈ 30 g, Containerschiff ≈ 10 g, Luftfracht ≈ 300–600 g je Tonnenkilometer (mit Wirkung in großer Höhe gut das Doppelte). Kleine Lieferwagen liegen wegen der geringen Zuladung weit darüber. E-Lastenräder fahren praktisch emissionsfrei.</div>
+      <div class="co2note">Je Tonnenkilometer: Lkw ≈ 80–110 g, Zug ≈ 15–30 g, Binnenschiff ≈ 30 g, Containerschiff ≈ 10 g, Luftfracht ≈ 300–600 g. E-Lastenräder ≈ 0.</div>
     </div>`;
 }
 
@@ -3364,7 +3406,7 @@ function renderWorld() {
   $$("#tab-world [data-talk]").forEach(b => b.onclick = () => replayTalk(b.dataset.talk));
   const r = $("#resetBtn");
   if (r) r.onclick = () => {
-    askConfirm("Neues Spiel", "Der aktuelle Spielstand wird gelöscht. Das lässt sich nicht rückgängig machen.",
+    askConfirm("Neues Spiel", "Der Spielstand wird endgültig gelöscht.",
       "Löschen und neu starten", wipeAndRestart, true);
   };
 }
@@ -3498,9 +3540,9 @@ function boot() {
       delete S.autoDispatch;
       if (had || S.fleet.length > 1) setTimeout(() => {
         phoneMsg({ from: "Lina Sturm", kind: "info", title: "Disposition jetzt im Büro",
-          body: "Chef, die Auto-Disposition gibt’s nicht mehr extra – das erledigen jetzt die Leute aus der Disposition in deinen Büros. "
-            + "Ordne Fahrzeuge einem Büro mit Disponent zu (geht auch direkt unter „Flotte“), dann fahren sie von allein. "
-            + "Alle anderen teilst du selbst ein. Und die Dispo nimmt jetzt immer das passende Fahrzeug – kein Sattelzug mehr für eine Uhr." });
+          body: "Chef, die Auto-Disposition macht jetzt dein Büro-Team. "
+            + "Ordne Fahrzeuge einem Büro mit Disponent zu (auch unter „Flotte“) – dann fahren sie von allein. "
+            + "Den Rest teilst du selbst ein." });
         save();
       }, 1500);
     }
@@ -3552,7 +3594,7 @@ function boot() {
   const xb = $("#xpBar");
   if (xb) xb.onclick = () => {
     const HX = hudXP(), l = HX.lv, need = xpForLevel(l + 1) - HX.xp;
-    toast("⭐ Erfahrungspunkte (EP): noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + ". EP gibt es für Ernte und Fang, Herstellen, Tiere, Lieferungen und " + (typeof FT === "function" ? FT().book : "das Notizbuch") + ".", "ok");
+    toast("⭐ Noch " + fmt(Math.max(0, Math.round(need)), 0) + " EP bis Level " + (l + 1) + " – für Ernte und Fang, Herstellen, Tiere, Lieferungen und " + (typeof FT === "function" ? FT().book : "das Notizbuch") + ".", "ok");
   };
   $("#hudAvatar").onclick = () => { if (typeof openFigure === "function") openFigure(); };
   $("#hudAvatar").title = "Figur ändern – auch aus einem Foto";
@@ -3574,6 +3616,29 @@ function boot() {
      Pinch auf der Karte. */
   document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
   ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+  /* iOS zoomt bei schnellem Doppeltipp trotzdem – den zweiten Tipp abfangen
+     und selbst als Klick weitergeben (Eingabefelder ausgenommen) */
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", e => {
+    const now = performance.now(), t = e.target;
+    if (now - lastTouchEnd < 330 && e.changedTouches.length === 1 && !(t.closest && t.closest("input,textarea,select,#map,#farmCv"))) {
+      e.preventDefault();
+      if (t.click) t.click();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+  /* Ist die Seite doch einmal vergrößert, zurück auf 100 % */
+  if (window.visualViewport) visualViewport.addEventListener("resize", () => {
+    if (visualViewport.scale > 1.02) {
+      const m = document.querySelector('meta[name="viewport"]');
+      if (m) { const c = m.content; m.content = c.replace(/maximum-scale=[\d.]+/, "maximum-scale=1.0001"); setTimeout(() => { m.content = c; }, 60); }
+    }
+  });
+  /* Langes Drücken (Sägen, Kurbeln): keine Lupe und kein Textmenü von iOS */
+  document.addEventListener("touchstart", e => {
+    const t = e.target;
+    if (t.closest && t.closest(".hold, [data-hold]")) e.preventDefault();
+  }, { passive: false });
   /* Solange ein Finger auf dem Schirm liegt (und kurz danach), wird die
      offene Liste nicht neu gezeichnet – sonst verschwindet die Karte oder
      der Knopf unter dem Finger und der Tipp geht ins Leere. */

@@ -76,7 +76,7 @@ function renderPack() {
     <div class="pk-top"><div><b>📦 Selbst beladen</b><small>${esc(job ? job.order.shipper : "")} · alle Kisten in den Laderaum</small></div>
       <span class="pk-clock" id="pkClock">${pack.left} s</span></div>
     <div class="pk-hold" id="pkHold" style="width:${pack.W * cell}px;height:${pack.H * cell}px;--cell:${cell}px">${placed.map(box).join("")}</div>
-    <div class="pk-hint">Kiste antippen, dann ins Feld tippen – oder ziehen. ↻ dreht die gewählte Kiste, Antippen im Laderaum legt sie zurück.</div>
+    <div class="pk-hint">Kiste wählen, dann ins Feld tippen oder ziehen · ↻ dreht · im Laderaum antippen = zurück</div>
     <div class="pk-tray" id="pkTray">${tray.map(box).join("")}</div>
     <div class="pk-btns"><button class="btn tiny ghost" id="pkRot">↻ drehen</button><button class="btn tiny ghost" id="pkQuit">Fahrer lädt selbst</button></div>
   </div>`;
@@ -148,7 +148,7 @@ function packEnd(ok, quit) {
   const el = packEl();
   el.querySelector(".pk-card").insertAdjacentHTML("beforeend", `<div class="pk-res ${ok ? "ok" : ""}">${ok
     ? `<b>Perfekt verstaut!</b><small>+${Math.round(PACK_BONUS * 100)} % Erlös · schneller beladen</small>`
-    : `<b>${quit ? "Der Fahrer übernimmt." : "Zeit um!"}</b><small>Er lädt wie immer – kein Bonus, keine Strafe.</small>`}</div>`);
+    : `<b>${quit ? "Der Fahrer übernimmt." : "Zeit um!"}</b><small>Kein Bonus, keine Strafe.</small>`}</div>`);
   setTimeout(closePack, ok ? 1400 : 1100);
   save(); render();
 }

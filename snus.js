@@ -43,7 +43,7 @@ const SNUS_RICH_SHARE = 0.16;
 const SNUS_RICH_JOBS = ["Barbershop-Besitzer", "Bauunternehmer", "Clubbetreiber", "Fußballtrainer", "Autohändler",
   "Gastronom", "Berater", "Projektleiter", "Tattoo-Künstler"];
 const SNUS_RICH_LINES = [
-  "Für die ganze Baustelle: {n}× {s}. Ich leg was drauf, wenn's heute noch klappt.",
+  "Für die Baustelle: {n}× {s}. Leg was drauf, wenn's heute klappt.",
   "Hab Geburtstag 🎉 {n}× {s}, Trinkgeld ist drin.",
   "Mein Kumpel Kevin schwört auf dich. {n}× {s}, zahl gern mehr.",
   "Für die Jungs vom Verein: {n}× {s}. Passt schon mit dem Preis."
@@ -255,7 +255,7 @@ function snusBuy(msgId, tx) {
   m.thread.push({ me: true, t: "Nehm ich: " + parts.join(", ") + "." });
   if (tx) m.thread.push({ me: true, tx });
   const shop = snusShop();
-  m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim " + (shop ? shop.t + ", " + N[sn.at].short : "Späti in " + N[sn.at].short) + ". Die Jungs melden sich bei dir." });
+  m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim " + (shop ? shop.t + ", " + N[sn.at].short : "Späti in " + N[sn.at].short) + ". Die Jungs melden sich." });
   m.state = "done";
   m.bought = n;
   /* Die ersten Kunden sind schnell da – und beim allerersten Einkauf echt */
@@ -414,7 +414,7 @@ function jailArrestScreen() {
       <dt>Urteil</dt><dd>${SNUS_JAIL_DAYS} Tage Haft</dd>
     </dl>
     <div class="rp-stamp">U-HAFT</div>
-    <p class="rp-note">Die Zeit läuft weiter – Fixkosten, Löhne und Miete auch. Büros mit Personal arbeiten ohne dich weiter.</p>
+    <p class="rp-note">Kosten laufen weiter, Büros mit Personal arbeiten ohne dich.</p>
     <button class="btn" id="rpGo">Haft antreten</button>
   </div>`);
   $("#rpGo").onclick = () => { S.jail.state = "serving"; save(); jailServe(); };
@@ -496,7 +496,7 @@ function snusMsgHTML(m) {
       <button class="btn tiny ghost" data-snno="${m.id}">Nein, danke mein Akh</button></div>`;
   } else if (m.state === "offer") {
     const n = snusPicked(m), cost = n * SNUS_BUY;
-    acts = `<div class="sn-sum">${n} Dosen · <b>${money(cost)}</b>${n && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 2)} SOL</span>` : ""} <small>Verkauf später ${money(SNUS_SELL)}/Dose · bezahlt wird in Solana</small></div>
+    acts = `<div class="sn-sum">${n} Dosen · <b>${money(cost)}</b>${n && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 2)} SOL</span>` : ""} <small>Verkauf ${money(SNUS_SELL)}/Dose · Zahlung in Solana</small></div>
       <div class="sn-acts">
         <button class="btn tiny${n && cost <= S.money ? "" : " disabled"}" data-snbuy="${m.id}">◎ Bezahlen${n ? " · " + money(cost) : ""}</button>
         <button class="btn tiny ghost" data-snall="${m.id}|${n ? 0 : 1}">${n ? "Nichts" : "Alles"}</button>
@@ -541,7 +541,7 @@ function snusOrderCard(o, previewRow) {
       <span class="pay">${money(o.pay)}</span>
       ${typeof rejectBtnHTML === "function" ? rejectBtnHTML(o.id) : ""}
     </div>
-    ${o.snus.flagged ? `<div class="sn-flag">🕵️ <b>Dispo: verdächtig</b> – ${esc(snusWhy(o))}. Weißes Hemd <b>und</b> glatt rasiert? Dann Finger weg. Sonst einfach ein großzügiger Kunde.</div>` : ""}
+    ${o.snus.flagged ? `<div class="sn-flag">🕵️ <b>Dispo: verdächtig</b> – ${esc(snusWhy(o))}. Weißes Hemd <b>und</b> glatt rasiert = Fahnder, sonst nur großzügig.</div>` : ""}
     <div class="sn-cust">
       <span class="face">${w.av ? avatarSVG(w.av, 40, { uid: "sc" + o.id, bg: true }) : ""}</span>
       <div><b>${esc(w.name)}</b><small>${esc(w.job)}</small></div>
@@ -612,6 +612,6 @@ function shadowBookHTML() {
       <div class="sb-row muted"><span>Im Hangar${t.pb.way ? " + unterwegs" : ""}</span><span>${kgf(t.pb.stock)}</span><b>+${money(pbStock)}</b></div>
     </div>` : ""}
     ${rows ? `<div class="sb-list"><div class="sb-lh">Letzte Buchungen</div>${rows}</div>` : ""}
-    <div class="sb-note">Dieses Buch gibt es offiziell nicht – in der Kasse taucht davon nichts auf.</div>
+    <div class="sb-note">Offiziell gibt’s dieses Buch nicht.</div>
   </div>`;
 }

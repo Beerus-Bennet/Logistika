@@ -51,6 +51,26 @@ function mgH(title, sub) { const h = $("#mgH"); if (h) h.innerHTML = esc(title) 
 function mgMsg(t, cls) { const m = $("#mgMsg"); if (m) { m.innerHTML = t; m.className = "fa-msg" + (cls ? " " + cls : ""); } }
 function mgBar(html) { const b = $("#mgBar"); if (b) b.innerHTML = html; return b; }
 function mgStage(html) { const s = $("#mgStage"); if (s) s.innerHTML = html; return s; }
+/* kleine Effekte: wackeln/aufploppen, Funken, großes Symbol zum Schluss */
+function mgFx(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), 460); }
+function mgSparks(box, el, col, n) {
+  if (!box || !el) return;
+  const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const x = r.left - b.left + r.width / 2, y = r.top - b.top + r.height / 2;
+  for (let i = 0; i < (n || 8); i++) {
+    const s = document.createElement("i"), a = Math.random() * 6.28, d = 16 + Math.random() * 24;
+    s.className = "mg-spark";
+    s.style.cssText = `left:${x}px;top:${y}px;background:${col};--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px`;
+    box.appendChild(s); setTimeout(() => s.remove(), 650);
+  }
+}
+/* die Kettensäge als echtes 3D-Bildchen statt Handsägen-Emoji */
+function mgSawImg() {
+  const id = (S.farm && S.farm.tools && S.farm.tools.saw >= 2) ? "saw2" : "saw1";
+  const u = typeof thumbOf === "function" ? thumbOf("tool:" + id, () => FWM.tool(id)) : null;
+  return u ? `<img src="${u}" alt="Kettensäge" style="transform:scaleX(-1) rotate(-8deg)">` : "⚙️";
+}
+function mgWin(ic) { const s = $("#mgStage"); if (s) s.insertAdjacentHTML("beforeend", `<div class="mg-win"><b>${ic}</b></div>`); }
 function mgShuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 /* Ausdauerleiste fürs Holzfällen */
 function mgStaHTML() { const s = Math.floor(farmSta()), m = farmStaMax(); return `<div class="mg-sta"><span>💪</span><i><em style="width:${Math.round(s / m * 100)}%"></em></i><b>${s}</b></div>`; }
@@ -95,7 +115,7 @@ const MG_GAMES = {
       $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.axe.hit(st); };
       MG_GAMES.axe.zone(st);
       MG_GAMES.axe.bar(st);
-      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : "Drei Volltreffer im dunkelgrünen Feld oder sieben gute Schläge im hellgrünen – jeder Schlag kostet Ausdauer.");
+      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : "3 Volltreffer (dunkelgrün) oder 7 gute Schläge (hellgrün) – jeder kostet Ausdauer.");
       MG_GAMES.axe.hpBar(st);
     },
     bar(st) {
@@ -142,7 +162,7 @@ const MG_GAMES = {
     },
     tired(st) {
       st.tired = true;
-      mgMsg("💪 Keine Kraft mehr. Eine Brotzeit hilft – oder später weitermachen, der Baum bleibt angeschlagen.", "bad");
+      mgMsg("💪 Keine Kraft mehr – iss was oder mach später weiter, der Baum bleibt angeschlagen.", "bad");
       mgBar(mgFoodHTML() + `<button class="btn tiny" id="mgLater">Später weiter</button>`);
       mgBindFood(() => { st.tired = false; MG_GAMES.axe.bar(st); MG_GAMES.axe.hpBar(st); mgMsg("Frisch gestärkt – weiter!", "ok"); });
       $("#mgLater").onclick = () => MG.close({ ok: false });
@@ -155,7 +175,8 @@ const MG_GAMES = {
     start(st) {
       const t = st.tree;
       st.ph = 0; st.dirs = mgDirInfo(t); st.prog = 0; st.heat = 0; st.over = 0; st.stall = 0; st.hold = false; st.mk = 0; st.mv = 1; st.snd = 0;
-      mgH("🪚 " + FSPECIES[t.sp].n + " sägen", "Erst die Fallrichtung wählen – ins Freie, nicht auf Bäume oder Wege");
+      st.pow = (S.farm.tools.saw || 1) >= 2 ? 1.6 : 1;                 /* Profi-Säge: schneller, wird weniger heiß */
+      mgH("⛓️ " + FSPECIES[t.sp].n + " sägen", "Fallrichtung wählen – ins Freie, nicht auf Bäume oder Wege");
       const free = st.dirs.filter(d => !d.block).length;
       mgStage(`<div class="mg-dirs">${st.dirs.map((d, i) => `<button class="mg-dir${d.block ? " blk" : " free"}" data-d="${i}"><b>${d.a}</b><small>${d.block ? d.block : "frei"}</small></button>`).join("")}<div class="mg-tree">🌳</div></div>`);
       mgMsg(free ? "Wohin soll der Baum fallen?" : "Überall steht was im Weg – wähl das kleinste Übel.");
@@ -164,7 +185,7 @@ const MG_GAMES = {
     },
     kerb(st) {
       st.ph = 1;
-      mgH("🪚 Fallkerb", "Tipp, wenn die Markierung auf Kniehöhe (grün) ist");
+      mgH("⛓️ Fallkerb", "Tipp, wenn die Markierung auf Kniehöhe (grün) ist");
       mgStage(`<div class="mg-trunk"><i class="tgt"></i><b id="mgMk"></b></div>`);
       mgMsg(st.dirOk ? "Gute Richtung. Jetzt der Fallkerb – sauber gesetzt gibt’s mehr Holz." : "Hm, da steht was im Weg … pass beim Schnitt gut auf.", st.dirOk ? "ok" : "bad");
       mgBar(`<button class="btn fa-go" id="mgGo">✂️ Kerb setzen</button>`);
@@ -179,10 +200,11 @@ const MG_GAMES = {
     },
     cut(st) {
       st.ph = 2;
-      mgH("🪚 Fällschnitt", "Gedrückt halten zum Sägen – loslassen kühlt den Motor");
-      mgStage(`<div class="mg-hp"><span>🪚</span><i><em id="mgPr" style="width:0%"></em></i></div><div class="mg-heat"><span>🌡️</span><i><em id="mgHeat"></em></i></div>`);
+      mgH("⛓️ Fällschnitt", "Gedrückt halten zum Sägen – loslassen kühlt den Motor");
+      mgStage(`<div class="mg-log2 hold" id="mgLog"><div class="mg-trk"><i class="mg-cut" id="mgCut"></i></div><span class="mg-cs" id="mgCs" style="right:calc(50% - 64px)">${mgSawImg()}</span></div>
+        <div class="mg-hp"><span>🪵</span><i><em id="mgPr" style="width:0%"></em></i></div><div class="mg-heat"><span>🌡️</span><i><em id="mgHeat"></em></i></div>`);
       mgMsg(st.p1 > 0.7 ? "Sauberer Kerb! Jetzt durchsägen." : "Der Kerb sitzt etwas schief. Jetzt durchsägen.", st.p1 > 0.7 ? "ok" : "");
-      const b = mgBar(`<button class="btn fa-go hold" id="mgGo">🪚 Halten zum Sägen</button>`).firstChild;
+      const b = mgBar(`<button class="btn fa-go hold" id="mgGo">⛓️ Halten zum Sägen</button>`).firstChild;
       const on = e => { e.preventDefault(); st.hold = true; b.classList.add("on"); };
       const off = () => { st.hold = false; b.classList.remove("on"); };
       b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointerleave", off); b.addEventListener("pointercancel", off);
@@ -198,8 +220,14 @@ const MG_GAMES = {
       if (st.ph !== 2 || st.done) return;
       if (st.stall > 0) { st.stall -= dt; st.heat = Math.max(0, st.heat - dt * 0.5); if (st.stall <= 0) mgMsg("Motor läuft wieder.", ""); }
       else if (st.hold) {
-        st.prog += dt * (0.28 - t.sz * 0.03) * (st.p1 > 0.6 ? 1.15 : 1);
-        st.heat += dt * (0.42 + t.sz * 0.05);
+        st.prog += dt * (0.34 - t.sz * 0.04) * (st.p1 > 0.6 ? 1.15 : 1) * (st.pow || 1);
+        st.heat += dt * (0.42 + t.sz * 0.05) * (st.pow > 1 ? 0.8 : 1);
+        const lg = $("#mgLog");
+        if (lg && Math.random() < dt * 30) {
+          const d = document.createElement("i"), r = lg.getBoundingClientRect(), x = r.width / 2 + 43 - Math.min(1, st.prog) * 86;
+          d.className = "mg-dust"; d.style.cssText = `left:${x}px;top:${r.height * 0.46}px;--dx:${(Math.random() * 40 - 10).toFixed(0)}px;--dy:${(Math.random() * 30 - 5).toFixed(0)}px`;
+          lg.appendChild(d); setTimeout(() => d.remove(), 720);
+        }
         st.snd -= dt;
         if (st.snd <= 0) { st.snd = 0.22; sfx("saw"); }
         WV.hit = { id: t.id, t0: wnow() - 0.15 };
@@ -207,8 +235,10 @@ const MG_GAMES = {
         if (st.heat >= 1) { st.over++; st.stall = 1.6; st.heat = 0.85; sfx("bad"); mgMsg("🔥 Überhitzt! Der Motor ist aus – kurz warten.", "hot"); }
         if (FV) FV.touchAt = performance.now();
       } else st.heat = Math.max(0, st.heat - dt * 0.65);
-      const p = $("#mgPr"), h = $("#mgHeat");
+      const p = $("#mgPr"), h = $("#mgHeat"), cu = $("#mgCut"), cs = $("#mgCs");
       if (p) p.style.width = Math.min(100, st.prog * 100) + "%";
+      if (cu) cu.style.width = Math.min(100, st.prog * 100) + "%";
+      if (cs) { cs.style.right = `calc(50% - 64px + ${Math.round(Math.min(1, st.prog) * 86)}px)`; cs.classList.toggle("on", !!st.hold && !(st.stall > 0)); }
       if (h) { h.style.width = Math.min(100, st.heat * 100) + "%"; h.className = st.heat > 0.75 ? "hot" : ""; }
       if (st.prog >= 1) {
         st.done = true;
@@ -252,6 +282,9 @@ const MG_GAMES = {
       MG_GAMES.nails.res(st, d < 0.22 ? 1 : d < 0.55 ? 0.6 : 0);
     },
     res(st, q) {
+      const nl = st.cur, bd = $("#mgBoard");
+      if (nl && q && bd) { bd.insertAdjacentHTML("beforeend", `<span class="mg-ham" style="left:${nl.x}%;top:${nl.y}%">🔨</span>`); mgSparks(bd, bd.lastElementChild, "#ffd23f", q === 1 ? 7 : 3); }
+      if (nl && !q && bd) mgFx(bd, "mg-shake");
       if (q === 1) st.good++; else if (q) st.okc++;
       sfx(q ? "hammer" : "bad");
       mgMsg(q === 1 ? "💥 Sitzt!" : q ? "👍 Geht so" : "😬 Krumm – der nächste!", q === 1 ? "ok" : q ? "" : "bad");
@@ -270,145 +303,233 @@ const MG_GAMES = {
     }
   },
 
-  /* --------------------------- Kabel anklemmen ----------------------------- */
+  /* --------------------------- Kabel anklemmen -----------------------------
+     Jedes Kabel an die Klemme mit derselben Farbe – antippen und antippen
+     oder rüberziehen. Die Reihenfolge ist egal. */
   wires: {
-    W: [["pe", "Schutzleiter", "#3fae3a", "#f2d32a"], ["n", "Neutralleiter", "#2f6fd0"], ["l1", "Phase L1", "#7a4a2a"], ["l2", "Phase L2", "#1d1d20"], ["l3", "Phase L3", "#8a8f96"]],
+    W: [["pe", "PE", "#3fae3a", "#f2d32a"], ["n", "N", "#2f6fd0"], ["l1", "L1", "#7a4a2a"], ["l2", "L2", "#1d1d20"], ["l3", "L3", "#8a8f96"]],
+    bg(w) { return w[3] ? `repeating-linear-gradient(90deg,${w[2]} 0 8px,${w[3]} 8px 16px)` : w[2]; },
     start(st) {
-      st.i = 0; st.miss = 0;
-      st.order = mgShuffle(this.W.map((w, i) => i));
-      mgH(st.title || "⚡ Elektrik", "Erst Schutzleiter (grün-gelb), dann Neutralleiter (blau), dann die Phasen L1, L2, L3");
+      st.i = 0; st.miss = 0; st.sel = null; st.done = {};
+      st.ends = mgShuffle([0, 1, 2, 3, 4]); st.terms = mgShuffle([0, 1, 2, 3, 4]);
+      mgH(st.title || "⚡ Elektrik", "Jedes Kabel an die Klemme mit derselben Farbe");
       this.draw(st);
-      mgMsg("Tipp die Kabel in der richtigen Reihenfolge an.");
+      mgMsg("Kabel antippen, dann die passende Klemme – oder rüberziehen.");
       mgBar(`<div class="mg-count" id="mgCnt">0 / 5</div>`);
     },
     draw(st) {
       const W = this.W;
-      mgStage(`<div class="mg-wires">${st.order.map(i => {
-        const w = W[i], done = i < st.i, bg = w[3] ? `repeating-linear-gradient(90deg,${w[2]} 0 10px,${w[3]} 10px 20px)` : w[2];
-        return `<button class="mg-wire${done ? " done" : ""}" data-w="${i}" ${done ? "disabled" : ""}><i style="background:${bg}"></i><span>${done ? "✓ " + w[1] : ""}</span></button>`;
-      }).join("")}</div><div class="mg-term">${W.map((w, i) => `<span class="${i < st.i ? "on" : ""}">${w[0].toUpperCase()}</span>`).join("")}</div>`);
-      $$("#mgStage [data-w]").forEach(b => b.onclick = () => this.pick(st, +b.dataset.w));
+      mgStage(`<div class="mg-elec" id="mgEl"><svg id="mgWs"></svg><span class="mg-bulb${st.i >= 5 ? " on" : ""}">💡</span>
+        <div class="mg-ends">${st.ends.map(i => `<button class="mg-end${st.done[i] ? " done" : ""}${st.sel === i ? " sel" : ""}" data-w="${i}"><i style="background:${this.bg(W[i])}"></i><b></b></button>`).join("")}</div>
+        <div class="mg-terms">${st.terms.map(i => `<button class="mg-tm${st.done[i] ? " done" : ""}" data-t="${i}"><i style="background:${this.bg(W[i])}"></i>${W[i][1]}</button>`).join("")}</div></div>`);
+      this.lines(st);
+      const el = $("#mgEl");
+      $$("#mgEl [data-w]").forEach(b => b.onpointerdown = e => { e.preventDefault(); st.sel = +b.dataset.w; st.drag = true; sfx("tap"); $$("#mgEl .mg-end").forEach(x => x.classList.toggle("sel", +x.dataset.w === st.sel)); });
+      $$("#mgEl [data-t]").forEach(b => b.onclick = () => { if (st.sel != null) this.connect(st, st.sel, +b.dataset.t, b); });
+      el.onpointermove = e => { if (!st.drag || st.sel == null) return; this.temp(st, e); };
+      el.onpointerup = e => {
+        if (!st.drag) return;
+        st.drag = false;
+        const t = document.elementFromPoint(e.clientX, e.clientY), tb = t && t.closest && t.closest("[data-t]");
+        const tmp = $("#mgTmp"); if (tmp) tmp.remove();
+        if (tb && st.sel != null) this.connect(st, st.sel, +tb.dataset.t, tb);
+      };
     },
-    pick(st, i) {
-      if (i === st.i) {
-        st.i++; sfx("clunk");
-        mgMsg("✔️ " + this.W[i][1] + " sitzt.", "ok");
+    pos(el, side) {
+      const r = el.getBoundingClientRect(), b = $("#mgEl").getBoundingClientRect();
+      return side === "end" ? [r.right - b.left - 14, r.top - b.top + r.height / 2] : [r.left - b.left + 2, r.top - b.top + r.height / 2];
+    },
+    path(a, b) { const mx = (a[0] + b[0]) / 2; return `M${a[0]},${a[1]} C${mx},${a[1] + 18} ${mx},${b[1] + 18} ${b[0]},${b[1]}`; },
+    lines(st, fresh) {
+      const sv = $("#mgWs");
+      if (!sv) return;
+      sv.innerHTML = Object.keys(st.done).map(k => {
+        const i = +k, e = $(`#mgEl [data-w="${i}"]`), t = $(`#mgEl [data-t="${i}"]`);
+        if (!e || !t) return "";
+        const w = this.W[i];
+        return `<path class="${fresh === i ? "new" : ""}" d="${this.path(this.pos(e, "end"), this.pos(t, "term"))}" stroke="${w[2]}"/>` + (w[3] ? `<path class="${fresh === i ? "new" : ""}" d="${this.path(this.pos(e, "end"), this.pos(t, "term"))}" stroke="${w[3]}" stroke-dasharray="7 9"/>` : "");
+      }).join("");
+    },
+    temp(st, e) {
+      const sv = $("#mgWs"), en = $(`#mgEl [data-w="${st.sel}"]`);
+      if (!sv || !en) return;
+      const b = $("#mgEl").getBoundingClientRect(), p = [e.clientX - b.left, e.clientY - b.top];
+      let tmp = $("#mgTmp");
+      if (!tmp) { sv.insertAdjacentHTML("beforeend", `<path id="mgTmp" stroke="${this.W[st.sel][2]}" opacity=".7"/>`); tmp = $("#mgTmp"); }
+      tmp.setAttribute("d", this.path(this.pos(en, "end"), p));
+    },
+    connect(st, w, t, tb) {
+      if (st.done[w]) return;
+      if (w === t) {
+        st.done[w] = true; st.i++; st.sel = null; sfx("clunk");
+        const W = this.W[w];
+        mgMsg("✔️ " + W[1] + " sitzt.", "ok");
         const c = $("#mgCnt"); if (c) c.textContent = st.i + " / 5";
-        this.draw(st);
-        if (st.i >= 5) { const score = clamp(1 - st.miss * 0.15, 0.3, 1); mgMsg("💡 Licht an – die Halle hat wieder Strom!", "ok"); setTimeout(() => MG.close({ ok: true, score }), 700); }
+        this.draw(st); this.lines(st, w);
+        const tt = $(`#mgEl [data-t="${t}"]`); if (tt) mgSparks($("#mgEl"), tt, W[2], 8);
+        if (st.i >= 5) {
+          const score = clamp(1 - st.miss * 0.12, 0.3, 1);
+          mgMsg("💡 Licht an – die Halle hat wieder Strom!", "ok"); sfx("level");
+          mgWin("💡");
+          setTimeout(() => MG.close({ ok: true, score }), 900);
+        }
       } else {
         st.miss++; sfx("spark");
-        mgMsg("⚡ Funken! Falsche Reihenfolge – erst " + this.W[st.i][1] + ".", "bad");
+        mgMsg("⚡ Funken! Die Farbe passt nicht.", "bad");
+        if (tb) { mgFx(tb, "mg-shake"); mgSparks($("#mgEl"), tb, "#ffd23f", 10); }
       }
-    }
+    },
+    /* alte Aufrufe (Tests): das nächste Kabel richtig anklemmen */
+    pick(st) { const w = [0, 1, 2, 3, 4].find(i => !st.done[i]); if (w != null) this.connect(st, w, w); }
   },
 
   /* ----------------------- Teile einsetzen (Zahnräder, Band) ---------------- */
   gears: {
-    start(st) {
-      const n = st.quick ? 2 : 4, sizes = [["S", 34], ["M", 46], ["L", 58], ["XL", 70]];
-      st.slots = mgShuffle(sizes).slice(0, n).map(s => ({ k: s[0], px: s[1], ok: false }));
-      st.parts = mgShuffle(st.slots.map(s => s.k).concat(st.quick ? [] : [pick(sizes)[0]]));
-      st.sel = null; st.miss = 0; st.theme = "gear";
-      mgH(st.title || "⚙️ Getriebe", "Rad antippen, dann die passende Achse");
-      MG_GAMES.gears.draw(st);
-      mgMsg("Jedes Rad muss genau auf seine Achse passen.");
-      mgBar("");
+    PX: { S: 38, M: 50, L: 62, XL: 74 },
+    svg(teeth) {
+      const n = teeth, R = 46, r = 37, pts = [];
+      for (let i = 0; i < n * 2; i++) {
+        const a0 = (i / (n * 2)) * Math.PI * 2, a1 = ((i + 1) / (n * 2)) * Math.PI * 2, rr = i % 2 ? r : R;
+        pts.push([Math.cos(a0 + 0.04) * rr, Math.sin(a0 + 0.04) * rr], [Math.cos(a1 - 0.04) * rr, Math.sin(a1 - 0.04) * rr]);
+      }
+      return `<svg class="mg-gsv" viewBox="-50 -50 100 100"><path d="M${pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" L")} Z"/><circle r="9"/></svg>`;
     },
-    draw(st) {
-      const px = k => ({ S: 34, M: 46, L: 58, XL: 70 })[k];
-      mgStage(`<div class="mg-axes">${st.slots.map((s, i) => `<button class="mg-axle${s.ok ? " ok" : ""}" data-s="${i}" style="--d:${s.px}px">${s.ok ? `<span class="mg-gear spin" style="--d:${s.px}px">⚙</span>` : `<i></i>`}<small>${s.k}</small></button>`).join("")}</div>
-        <div class="mg-tray">${st.parts.map((k, i) => k ? `<button class="mg-part${st.sel === i ? " sel" : ""}" data-p="${i}"><span class="mg-gear" style="--d:${px(k) * 0.8}px">⚙</span><small>${k}</small></button>` : "").join("")}</div>`);
-      $$("#mgStage [data-p]").forEach(b => b.onclick = () => { st.sel = +b.dataset.p; sfx("tap"); MG_GAMES.gears.draw(st); });
-      $$("#mgStage [data-s]").forEach(b => b.onclick = () => MG_GAMES.gears.put(st, +b.dataset.s));
-    },
-    put(st, i) {
-      const s = st.slots[i];
-      if (s.ok || st.sel == null) return;
-      if (st.parts[st.sel] === s.k) { s.ok = true; st.parts[st.sel] = null; st.sel = null; sfx("clunk"); mgMsg("✔️ Passt!", "ok"); }
-      else { st.miss++; sfx("bad"); mgMsg("✖️ Zu " + ({ S: 1, M: 2, L: 3, XL: 4 }[st.parts[st.sel]] > { S: 1, M: 2, L: 3, XL: 4 }[s.k] ? "groß" : "klein") + " für diese Achse.", "bad"); }
-      MG_GAMES.gears.draw(st);
-      if (st.slots.every(x => x.ok)) { mgMsg("⚙️ Alles greift ineinander – läuft!", "ok"); setTimeout(() => MG.close({ ok: true, score: clamp(1 - st.miss * 0.15, 0.3, 1) }), 800); }
-    }
-  },
-  belt: {
-    P: [["roll", "🛞", "Rolle"], ["gurt", "▬", "Gurtstück"], ["bolt", "🔩", "Schraube"], ["arm", "📐", "Halter"], ["mot", "⚙️", "Antriebsrad"]],
+    teeth(k) { return { S: 8, M: 10, L: 12, XL: 14 }[k]; },
     start(st) {
-      st.slots = mgShuffle(this.P).map(p => ({ k: p[0], i: p[1], n: p[2], ok: false }));
-      st.parts = mgShuffle(st.slots.map(s => s.k));
+      const n = st.quick ? 2 : 4, sizes = ["S", "M", "L", "XL"];
+      st.slots = mgShuffle(sizes).slice(0, n).map(k => ({ k, px: this.PX[k], ok: false }));
+      st.parts = mgShuffle(st.slots.map(s => s.k).concat(st.quick ? [] : [pick(sizes)]));
       st.sel = null; st.miss = 0;
-      mgH(st.title || "🛞 Förderband", "Teil antippen, dann die passende Lücke");
+      mgH(st.title || "⚙️ Getriebe", "Rad antippen, dann die Achse in derselben Größe");
       this.draw(st);
-      mgMsg("Jede Lücke zeigt den Umriss des Teils, das hinein gehört.");
+      mgMsg("Die Achsen zeigen die Größe – S, M, L, XL.");
       mgBar("");
     },
     draw(st) {
-      const P = this.P, info = k => P.find(p => p[0] === k);
-      mgStage(`<div class="mg-belt">${st.slots.map((s, i) => `<button class="mg-gap${s.ok ? " ok" : ""}" data-s="${i}"><span>${s.i}</span><small>${s.ok ? "✓" : esc(s.n)}</small></button>`).join("")}</div>
-        <div class="mg-tray">${st.parts.map((k, i) => k ? `<button class="mg-part${st.sel === i ? " sel" : ""}" data-p="${i}"><span>${info(k)[1]}</span></button>` : "").join("")}</div>`);
+      mgStage(`<div class="mg-gearbox${st.slots.every(x => x.ok) ? " mg-spin" : ""}">${st.slots.map((s, i) => `<button class="mg-ax${s.ok ? " ok mg-spin" : ""}" data-s="${i}" style="--d:${s.px}px">${s.ok ? this.svg(this.teeth(s.k)) : ""}<small>${s.k}</small></button>`).join("")}</div>
+        <div class="mg-tray">${st.parts.map((k, i) => k ? `<button class="mg-part gp${st.sel === i ? " sel" : ""}" data-p="${i}"><span style="--d:${Math.round(this.PX[k] * 0.72)}px">${this.svg(this.teeth(k))}</span><small>${k}</small></button>` : "").join("")}</div>`);
       $$("#mgStage [data-p]").forEach(b => b.onclick = () => { st.sel = +b.dataset.p; sfx("tap"); this.draw(st); });
       $$("#mgStage [data-s]").forEach(b => b.onclick = () => this.put(st, +b.dataset.s));
     },
     put(st, i) {
       const s = st.slots[i];
       if (s.ok || st.sel == null) return;
-      if (st.parts[st.sel] === s.k) { s.ok = true; st.parts[st.sel] = null; st.sel = null; sfx("clunk"); mgMsg("✔️ " + s.n + " sitzt.", "ok"); }
-      else { st.miss++; sfx("bad"); mgMsg("✖️ Das passt da nicht rein.", "bad"); }
+      const ord = { S: 1, M: 2, L: 3, XL: 4 };
+      if (st.parts[st.sel] === s.k) {
+        s.ok = true; st.parts[st.sel] = null; st.sel = null; sfx("clunk"); mgMsg("✔️ Passt!", "ok");
+        this.draw(st);
+        const b = $(`#mgStage [data-s="${i}"]`); if (b) { mgFx(b, "mg-popin"); mgSparks($("#mgStage"), b, "#ffd23f", 6); }
+      } else {
+        st.miss++; sfx("bad");
+        mgMsg("✖️ Zu " + (ord[st.parts[st.sel]] > ord[s.k] ? "groß" : "klein") + " für diese Achse.", "bad");
+        const b = $(`#mgStage [data-s="${i}"]`); if (b) mgFx(b, "mg-shake");
+      }
+      if (st.slots.every(x => x.ok)) {
+        this.draw(st);
+        mgMsg("⚙️ Alles greift ineinander – läuft!", "ok"); sfx("level");
+        setTimeout(() => MG.close({ ok: true, score: clamp(1 - st.miss * 0.15, 0.3, 1) }), 850);
+      }
+    }
+  },
+  belt: {
+    P: [["roll", "🛞", "Rolle"], ["gurt", "▬", "Gurt"], ["bolt", "🔩", "Schraube"], ["arm", "📐", "Halter"], ["mot", "⚙️", "Antrieb"]],
+    start(st) {
+      st.slots = mgShuffle(this.P).slice(0, 4).map(p => ({ k: p[0], i: p[1], n: p[2], ok: false }));
+      st.parts = mgShuffle(st.slots.map(s => s.k));
+      st.sel = null; st.miss = 0;
+      mgH(st.title || "🛞 Förderband", "Teil antippen, dann die Lücke mit demselben Umriss");
       this.draw(st);
-      if (st.slots.every(x => x.ok)) { mgMsg("🛞 Das Band läuft wieder rund!", "ok"); setTimeout(() => MG.close({ ok: true, score: clamp(1 - st.miss * 0.15, 0.3, 1) }), 800); }
+      mgMsg("Jede Lücke zeigt blass, was hineingehört.");
+      mgBar("");
+    },
+    draw(st) {
+      const info = k => this.P.find(p => p[0] === k), all = st.slots.every(x => x.ok);
+      mgStage(`<div class="mg-conv"><div class="mg-holes">${st.slots.map((s, i) => `<button class="mg-hole${s.ok ? " ok" : ""}" data-s="${i}"><span>${s.i}</span></button>`).join("")}</div>
+        <div class="mg-band${all ? " run" : ""}"></div><i class="mg-roll l"></i><i class="mg-roll r"></i>${all ? `<span class="mg-log">🪵</span>` : ""}</div>
+        <div class="mg-tray">${st.parts.map((k, i) => k ? `<button class="mg-part${st.sel === i ? " sel" : ""}" data-p="${i}"><span>${info(k)[1]}</span><small>${esc(info(k)[2])}</small></button>` : "").join("")}</div>`);
+      $$("#mgStage [data-p]").forEach(b => b.onclick = () => { st.sel = +b.dataset.p; sfx("tap"); this.draw(st); });
+      $$("#mgStage [data-s]").forEach(b => b.onclick = () => this.put(st, +b.dataset.s));
+    },
+    put(st, i) {
+      const s = st.slots[i];
+      if (s.ok || st.sel == null) return;
+      if (st.parts[st.sel] === s.k) {
+        s.ok = true; st.parts[st.sel] = null; st.sel = null; sfx("clunk"); mgMsg("✔️ " + s.n + " sitzt.", "ok");
+        this.draw(st);
+        const b = $(`#mgStage [data-s="${i}"]`); if (b) { mgFx(b, "mg-popin"); mgSparks($("#mgStage"), b, "#ffd23f", 6); }
+      } else {
+        st.miss++; sfx("bad"); mgMsg("✖️ Das passt da nicht rein.", "bad");
+        const b = $(`#mgStage [data-s="${i}"]`); if (b) mgFx(b, "mg-shake");
+      }
+      if (st.slots.every(x => x.ok)) { mgMsg("🛞 Das Band läuft wieder rund!", "ok"); sfx("level"); setTimeout(() => MG.close({ ok: true, score: clamp(1 - st.miss * 0.15, 0.3, 1) }), 900); }
     }
   },
 
   /* --------------------------- Motor richten ------------------------------- */
   motor: {
-    PARTS: [["Kolben", "🛢️"], ["Zündkerze", "🕯️"], ["Luftfilter", "🧽"], ["Ventildeckel", "🔩"]],
+    PARTS: [["Kolben", "🛢️"], ["Zündkerze", "🕯️"], ["Luftfilter", "🧽"], ["Deckel", "🔩"]],
     start(st) {
-      st.ph = 0; st.dirt = Array.from({ length: 8 }, () => ({ x: 8 + Math.random() * 84, y: 12 + Math.random() * 72, hp: 2 })); st.miss = 0; st.i = 0;
-      mgH(st.title || "🔧 Motor", "Erst sauber wischen – dann die Teile der Reihe nach einsetzen");
+      st.ph = 0; st.miss = 0; st.i = 0;
+      st.dirt = Array.from({ length: 6 }, (_, k) => ({ x: 14 + (k % 3) * 34 + Math.random() * 10, y: 22 + Math.floor(k / 3) * 46 + Math.random() * 10, hp: 2 }));
+      mgH(st.title || "🔧 Motor", "Erst sauber wischen, dann die Teile der Reihe nach einsetzen");
       this.draw(st);
-      mgMsg("Wisch über die dreckigen Stellen (antippen oder drüberziehen).");
-      mgBar(`<div class="mg-count" id="mgCnt">Dreck: 8</div>`);
+      mgMsg("🧽 Mit dem Finger über den Dreck wischen.");
+      mgBar(`<div class="mg-count" id="mgCnt">Dreck: ${st.dirt.length}</div>`);
     },
     draw(st) {
       if (st.ph === 0) {
-        mgStage(`<div class="mg-motor" id="mgMot">${st.dirt.map((d, i) => d.hp > 0 ? `<i class="mg-dirt h${d.hp}" data-i="${i}" style="left:${d.x}%;top:${d.y}%"></i>` : "").join("")}<span class="mg-eng">⚙️</span></div>`);
+        mgStage(`<div class="mg-eng2" id="mgMot"><div class="mg-block">${[0, 1, 2, 3].map(k => `<i style="left:${16 + k * 32}px"></i>`).join("")}</div>
+          ${st.dirt.map((d, i) => d.hp > 0 ? `<i class="mg-goo h${d.hp}" data-i="${i}" style="left:${d.x}%;top:${d.y}%"></i>` : "").join("")}<span class="mg-sponge" id="mgSp">🧽</span></div>`);
+        const m = $("#mgMot"), sp = $("#mgSp");
         const scrub = e => {
+          const r = m.getBoundingClientRect();
+          sp.style.display = "block"; sp.style.left = (e.clientX - r.left) + "px"; sp.style.top = (e.clientY - r.top) + "px";
           const el = document.elementFromPoint(e.clientX, e.clientY);
           if (el && el.dataset && el.dataset.i != null) {
             const d = st.dirt[+el.dataset.i];
-            if (d.hp > 0 && (!d.at || performance.now() - d.at > 120)) { d.at = performance.now(); d.hp--; sfx("swish"); this.draw(st); this.check(st); }
+            if (d.hp > 0 && (!d.at || performance.now() - d.at > 110)) {
+              d.at = performance.now(); d.hp--; sfx("swish");
+              for (let k = 0; k < 3; k++) { const b = document.createElement("i"); b.className = "mg-bub"; b.style.left = (e.clientX - r.left + (Math.random() - 0.5) * 24) + "px"; b.style.top = (e.clientY - r.top + (Math.random() - 0.5) * 16) + "px"; m.appendChild(b); setTimeout(() => b.remove(), 750); }
+              if (d.hp > 0) el.className = "mg-goo h" + d.hp; else el.remove();
+              this.check(st);
+            }
           }
         };
-        const m = $("#mgMot");
         m.onpointerdown = e => { e.preventDefault(); st.down = true; scrub(e); };
         m.onpointermove = e => { if (st.down) scrub(e); };
-        m.onpointerup = m.onpointerleave = () => { st.down = false; };
+        m.onpointerup = m.onpointerleave = () => { st.down = false; sp.style.display = "none"; };
       } else {
-        const P = this.PARTS;
-        mgStage(`<div class="mg-slots">${P.map((p, i) => `<span class="${i < st.i ? "on" : ""}">${i < st.i ? p[1] : i + 1}<small>${esc(p[0])}</small></span>`).join("")}</div>
+        const P = this.PARTS, run = st.i >= 4;
+        mgStage(`<div class="mg-eng2${run ? " run" : ""}" style="height:74px"><div class="mg-block" style="top:58%;height:50px;margin-top:-25px">${[0, 1, 2, 3].map(k => `<i style="left:${16 + k * 32}px;height:24px;top:10px"></i>`).join("")}</div>${run ? `<i class="mg-puff"></i><i class="mg-puff" style="animation-delay:.5s"></i>` : ""}</div>
+          <div class="mg-slots">${P.map((p, i) => `<span class="${i < st.i ? "on" : i === st.i ? "next" : ""}">${i < st.i ? p[1] : i + 1}<small>${esc(p[0])}</small></span>`).join("")}</div>
           <div class="mg-tray">${st.tray.map(i => i < st.i ? "" : `<button class="mg-part" data-p="${i}"><span>${P[i][1]}</span><small>${esc(P[i][0])}</small></button>`).join("")}</div>`);
-        $$("#mgStage [data-p]").forEach(b => b.onclick = () => this.put(st, +b.dataset.p));
+        $$("#mgStage [data-p]").forEach(b => b.onclick = () => this.put(st, +b.dataset.p, b));
       }
     },
     check(st) {
       const left = st.dirt.filter(d => d.hp > 0).length;
       const c = $("#mgCnt"); if (c) c.textContent = "Dreck: " + left;
       if (!left) {
-        st.ph = 1; st.tray = mgShuffle([0, 1, 2, 3]);
-        mgMsg("✨ Blitzblank! Jetzt einsetzen: Kolben → Zündkerze → Luftfilter → Ventildeckel.", "ok");
+        st.ph = 1; st.tray = mgShuffle([0, 1, 2, 3]); st.down = false;
+        mgMsg("✨ Blitzblank! Jetzt einsetzen – das leuchtende Feld ist dran.", "ok");
         mgBar(`<div class="mg-count">Teile 0 / 4</div>`);
         this.draw(st);
       }
     },
-    put(st, i) {
+    put(st, i, b) {
       if (i === st.i) {
         st.i++; sfx("clunk");
         mgBar(`<div class="mg-count">Teile ${st.i} / 4</div>`);
         if (st.i >= 4) { this.draw(st); mgMsg("🔧 Brumm … der Motor springt an!", "ok"); sfx("horn"); setTimeout(() => MG.close({ ok: true, score: clamp(1 - st.miss * 0.15, 0.3, 1) }), 900); return; }
         mgMsg("✔️ " + this.PARTS[i][0] + " sitzt.", "ok");
-      } else { st.miss++; sfx("bad"); mgMsg("✖️ Erst " + this.PARTS[st.i][0] + ".", "bad"); }
-      this.draw(st);
-    }
+        this.draw(st);
+      } else {
+        st.miss++; sfx("bad"); mgMsg("✖️ Erst " + this.PARTS[st.i][0] + ".", "bad");
+        if (b) mgFx(b, "mg-shake");
+      }
+    },
+    /* alte Aufrufe (Tests) */
+    dirtAll(st) { st.dirt.forEach(d => { d.hp = 0; }); this.check(st); }
   },
 
   /* ---------------------------- Schatz graben -------------------------------
@@ -429,9 +550,9 @@ const MG_GAMES = {
         if (o && k > 30) { st.opt = o.cost; st.path = o.path; break; }
       }
       st.used = 0; st.done = false;
-      mgH("🧰 Schatz ausgraben", "Die Kiste liegt unter dem Kreuz – grab dich mit möglichst wenigen Stichen hinunter");
+      mgH("🧰 Schatz ausgraben", "Grab dich mit möglichst wenigen Stichen zur Kiste");
       G.draw(st);
-      mgMsg("Erde 1 Stich · Lehm und 🌿 Wurzeln 2 · 🪨 Steine 3 · durch ⛰️ Fels geht’s nicht. Gegraben wird nur neben offenen Löchern.");
+      mgMsg("Erde 1 Stich · Lehm/🌿 Wurzeln 2 · 🪨 Steine 3 · ⛰️ Fels nie. Nur neben offenen Löchern graben.");
     },
     make(st) {
       const G = MG_GAMES.dig, W = G.W, H = G.H;

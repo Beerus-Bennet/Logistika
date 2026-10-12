@@ -533,10 +533,11 @@ const FWM = (() => {
   }
   const KESSEL_CHIMNEY = [-0.8, 2.85, -0.7];
   /* Maschinen zum Dazukaufen */
-  function machine(t) {
+  function machine(t, bare) {
     G3.seed(4100 + t.length);
     const b = new MB();
-    const base = (w, d) => b.box(w, 0.12, d, 0x8a857c);
+    /* bare: ohne Bodenplatte – für die Bildchen im Laden */
+    const base = (w, d) => { if (!bare) b.box(w, 0.12, d, 0x8a857c); };
     if (t === "spalter") {
       base(2, 2);
       b.box(0.5, 0.6, 1.4, 0xd8a028, { y: 0.12 });
@@ -1024,7 +1025,202 @@ const FWM = (() => {
     return b;
   }
 
+  /* ---------------------- Fliegender Händler ---------------------------
+     Bunter Marktwagen: Seitenklappe als gestreiftes Vordach, Theke mit Ware,
+     Wimpelkette und ein großes Münzschild auf dem Dach. Theke zeigt nach −x. */
+  function traderCart() {
+    G3.seed(5600);
+    const b = new MB(), body = 0x7a4ac8, trim = 0xf2c230, dark = 0x2a2a30;
+    [[0.5, 0.75], [-0.5, 0.75], [0.5, -0.8], [-0.5, -0.8]].forEach(([x, z]) => {
+      b.cyl(0.22, 0.22, 0.14, 10, dark, { rz: Math.PI / 2, x: x > 0 ? x + 0.07 : x - 0.07, y: 0.22, z, top: 0x9aa6af });
+    });
+    b.box(1.1, 0.2, 2.3, 0x4a3a5a, { y: 0.24 });
+    /* Fahrerhaus vorn */
+    b.box(1.08, 0.75, 0.6, 0xf3f4f6, { y: 0.42, z: 0.85 });
+    b.box(1.0, 0.3, 0.05, C.glass, { y: 0.82, z: 1.16, rx: -0.25 });
+    b.box(1.1, 0.08, 0.62, trim, { y: 1.17, z: 0.85 });
+    /* Kofferaufbau, links (−x) offen */
+    b.box(1.12, 1.2, 1.6, body, { y: 0.42, z: -0.35, top: 0x6a3ab8 });
+    b.box(0.05, 0.75, 1.5, 0xfff3d6, { x: -0.54, y: 0.62, z: -0.35 });                /* Innenwand hell */
+    b.box(0.3, 0.12, 1.55, 0xc9955a, { x: -0.7, y: 0.78, z: -0.35, top: 0xd8a868 });      /* Theke */
+    b.box(0.05, 0.4, 1.55, 0xb8884a, { x: -0.84, y: 0.4, z: -0.35 });
+    /* Ware: Äpfel, Kürbis, Gläser, Kisten */
+    b.noise(0.12, m => {
+      for (let i = 0; i < 7; i++) m.sphere(0.07, 6, 4, [0xd8332b, 0xf2a531, 0x7ac043][i % 3], { x: -0.7 + (i % 2) * 0.08, y: 0.97, z: -0.95 + i * 0.1 });
+      m.sphere(0.13, 7, 5, 0xe8781e, { x: -0.68, y: 1.0, z: -0.05, sy: 0.75 });
+      [0, 1, 2].forEach(i => { m.cyl(0.05, 0.05, 0.14, 7, 0xf2c230, { x: -0.72, y: 0.9, z: 0.12 + i * 0.12 }); m.cyl(0.055, 0.055, 0.03, 7, 0xd8332b, { x: -0.72, y: 1.04, z: 0.12 + i * 0.12 }); });
+      m.box(0.26, 0.18, 0.3, 0xc9955a, { x: -0.95, y: 0.0, z: -0.6 });
+      m.box(0.24, 0.18, 0.28, 0xb8884a, { x: -1.0, y: 0.0, z: -0.25, ry: 0.3 });
+      for (let i = 0; i < 4; i++) m.sphere(0.06, 6, 4, 0xd8332b, { x: -0.95 + (i % 2) * 0.08, y: 0.22, z: -0.66 + (i >> 1) * 0.1 });
+    });
+    /* Klappe als Vordach, gestreift */
+    for (let i = 0; i < 6; i++) b.box(0.9, 0.05, 0.27, i % 2 ? 0xfff3d6 : 0xd8332b, { x: -0.95, y: 1.55, z: -1.03 + i * 0.27, rz: -0.32 });
+    [-1.08, 0.38].forEach(z => b.box(0.04, 0.85, 0.04, 0x9aa6af, { x: -1.32, y: 0.0, z }));
+    /* Wimpelkette */
+    for (let i = 0; i < 7; i++) {
+      const z = -1.1 + i * 0.25, col = [0xd8332b, 0xf2c230, 0x3f78c8, 0x47b84f][i % 4];
+      b.tri([-1.36, 1.38, z], [-1.36, 1.38, z + 0.2], [-1.36, 1.2, z + 0.1], col);
+      b.tri([-1.36, 1.38, z + 0.2], [-1.36, 1.38, z], [-1.36, 1.2, z + 0.1], col);
+    }
+    /* Münzschild auf dem Dach */
+    b.box(0.06, 0.5, 0.06, dark, { y: 1.62, z: -0.35 });
+    b.cyl(0.36, 0.36, 0.08, 16, trim, { rx: Math.PI / 2, y: 2.25, z: -0.39, top: 0xffd84a });
+    b.cyl(0.24, 0.24, 0.1, 16, 0xe2a91c, { rx: Math.PI / 2, y: 2.25, z: -0.4, top: 0xf2c230 });
+    b.box(0.08, 0.26, 0.04, 0xb8860b, { y: 2.12, z: -0.29 });
+    return b;
+  }
+
+  /* ------------------------ Waren und Werkzeug --------------------------
+     Kleine Modelle für Bildchen in Rezepten, Lager und Laden: Stämme je
+     Holzart, Bretter, Balken, Platten, Kisten … und die Werkzeuge. */
+  const WOOD = { bright: 0xd9b47c, mid: 0xb98550, dark: 0x9a6a3a };
+  const LOG_SP = { birke: "birke", kiefer: "kiefer", buche: "buche", eiche: "eiche", edelholz: "kirsche" };
+  function logs(b, sp, n) {
+    const T = TREE_C[sp] || TREE_C.kiefer, P = [[-0.17, 0.16], [0.17, 0.16], [0, 0.44]].slice(0, n || 3);
+    P.forEach(([x, y]) => {
+      b.cyl(0.16, 0.16, 1.1, 9, T.bark, { rx: Math.PI / 2, x, y, z: -0.55, top: 0xe6c99a });
+      b.cyl(0.1, 0.1, 0.01, 9, 0xd2b07c, { rx: Math.PI / 2, x, y, z: 0.552 });           /* Jahresring */
+      if (sp === "birke") for (let i = 0; i < 5; i++) b.box(0.08, 0.025, 0.12, T.mark, { x: x + 0.13, y: y + 0.04 * (i % 3), z: -0.45 + i * 0.2 });
+    });
+  }
+  function planks(b, n, w, t, l, col, cols) {
+    for (let i = 0; i < n; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      b.box(w, t, l, i % 2 ? col : mix(col, 0xffffff, 0.08), { x: (c - (cols - 1) / 2) * (w + 0.02), y: r * (t + 0.005), z: (rnd() - 0.5) * 0.06 });
+    }
+  }
+  function strap(b, w, h, z) { b.box(w + 0.04, 0.03, 0.06, 0xd8332b, { y: h, z }); [-1, 1].forEach(s => b.box(0.03, h + 0.02, 0.06, 0xd8332b, { x: s * (w / 2 + 0.02), z })); }
+  function item(id) {
+    G3.seed(5100 + id.length * 13 + id.charCodeAt(0));
+    const b = new MB();
+    switch (id) {
+      case "birke": case "kiefer": case "buche": case "eiche": case "edelholz":
+        logs(b, LOG_SP[id]);
+        if (id === "edelholz") [[0.1, 0.62, 0.3], [-0.15, 0.4, -0.2]].forEach(([x, y, z]) => b.ico(0.06, 0xffe066, { x, y, z }));
+        return b;
+      case "aeste":
+        for (let i = 0; i < 7; i++) b.cyl(0.035, 0.025, 1.1, 5, 0x7a5a3a, { rx: Math.PI / 2 + (rnd() - 0.5) * 0.15, ry: (rnd() - 0.5) * 0.2, x: (i % 4) * 0.07 - 0.1, y: 0.04 + Math.floor(i / 4) * 0.06, z: -0.55 });
+        b.box(0.34, 0.03, 0.05, 0xd8b07a, { y: 0.12 }); return b;
+      case "reste":
+        b.sphere(0.32, 9, 6, 0xb89a68, { y: 0.3, sy: 1.05, bottom: 0xa88a58 });
+        b.cyl(0.1, 0.14, 0.12, 8, 0xb89a68, { y: 0.6 });
+        for (let i = 0; i < 9; i++) b.box(0.07, 0.02, 0.04, 0xe9cfa0, { x: (rnd() - 0.5) * 0.5, y: 0.02, z: 0.3 + (rnd() - 0.5) * 0.3, ry: rnd() * 3 });
+        return b;
+      case "brennholz":
+        for (let i = 0; i < 9; i++) b.cyl(0.13, 0.13, 0.55, 3, i % 3 ? 0x8a6040 : 0x7a5032, { rx: Math.PI / 2, ry: 0, rz: (i % 2) * 1.05, x: (i % 3 - 1) * 0.22, y: 0.11 + Math.floor(i / 3) * 0.18, z: -0.27, top: 0xe6c99a });
+        return b;
+      case "kaminholz":
+        for (let i = 0; i < 7; i++) b.cyl(0.1, 0.1, 0.45, 8, TREE_C.buche.bark, { rx: Math.PI / 2, x: [-0.2, 0, 0.2, -0.1, 0.1, -0.2, 0.2][i], y: [0.1, 0.1, 0.1, 0.27, 0.27, 0.27, 0.27][i] + (i > 4 ? 0.0 : 0), z: -0.22, top: 0xe6c99a });
+        for (let i = 0; i < 4; i++) b.box(0.62, 0.03, 0.03, 0xf2731e, { y: 0.06 + i * 0.12, z: 0.24 });
+        for (let i = 0; i < 4; i++) b.box(0.03, 0.42, 0.03, 0xf2731e, { x: -0.27 + i * 0.18, z: 0.24 });
+        return b;
+      case "pfosten":
+        for (let i = 0; i < 4; i++) {
+          const x = (i % 2 - 0.5) * 0.18, y = 0.09 + Math.floor(i / 2) * 0.18;
+          b.box(0.16, 0.16, 1.1, WOOD.mid, { x, y: y - 0.08, z: -0.1 });
+          b.cone(0.11, 0.25, 4, WOOD.bright, { rx: Math.PI / 2, x, y, z: 0.45, a0: Math.PI / 4 });
+        }
+        strap(b, 0.38, 0.38, -0.2); return b;
+      case "bretter": planks(b, 10, 0.26, 0.05, 1.3, WOOD.mid, 2); strap(b, 0.56, 0.27, 0.3); strap(b, 0.56, 0.27, -0.35); return b;
+      case "dielen": planks(b, 8, 0.24, 0.045, 1.4, WOOD.bright, 2); for (let i = 0; i < 4; i++) b.box(0.005, 0.01, 1.4, 0xb8884a, { x: -0.24 + i * 0.16, y: 0.175 }); strap(b, 0.52, 0.19, 0); return b;
+      case "balken": [-0.14, 0.14].forEach(x => b.box(0.24, 0.24, 1.5, WOOD.mid, { x, top: 0xc99560 })); b.box(0.24, 0.24, 1.5, WOOD.mid, { y: 0.25, top: 0xc99560 }); return b;
+      case "bauholz":
+        [-0.13, 0.13].forEach(x => { b.box(0.22, 0.22, 1.5, 0xe0c48e, { x, top: 0xead2a0 }); b.box(0.12, 0.08, 0.005, 0x2f6fb0, { x, y: 0.1, z: 0.752 }); });
+        b.box(0.22, 0.22, 1.5, 0xe0c48e, { y: 0.23, top: 0xead2a0 }); return b;
+      case "bohlen": [0, 0.13].forEach((y, i) => b.box(0.42, 0.11, 1.4, i ? 0x8a5a34 : 0x7a4c2a, { y, z: i * 0.05, top: 0x9a6a40 })); return b;
+      case "platten": for (let i = 0; i < 5; i++) b.box(0.95, 0.06, 0.75, i % 2 ? 0x9a6a3a : 0x8a5a30, { y: i * 0.065, x: (rnd() - 0.5) * 0.05, z: (rnd() - 0.5) * 0.05, top: 0xb98550 }); return b;
+      case "kisten": {
+        const crate = (x, y, z, ry) => b.at({ x, y, z, ry }, m => {
+          m.box(0.5, 0.36, 0.4, 0xc9955a, { top: 0xb8884a });
+          for (let i = 0; i < 3; i++) m.box(0.52, 0.03, 0.42, 0xa8753e, { y: 0.06 + i * 0.12 });
+          m.box(0.46, 0.01, 0.36, 0x6a4a2a, { y: 0.361 });
+        });
+        crate(-0.27, 0, 0, 0.05); crate(0.27, 0, 0.02, -0.04); crate(0, 0.38, 0, 0.1); return b;
+      }
+      case "paletten":
+        for (let k = 0; k < 3; k++) b.at({ y: k * 0.16 }, m => {
+          [-0.42, 0, 0.42].forEach(x => [-0.32, 0, 0.32].forEach(z => m.box(0.13, 0.08, 0.13, 0xc9a06a, { x, z })));
+          for (let i = 0; i < 5; i++) m.box(1.1, 0.03, 0.14, 0xd8b07a, { y: 0.08, z: -0.36 + i * 0.18 });
+          [-0.42, 0, 0.42].forEach(x => m.box(0.13, 0.03, 0.85, 0xc09060, { x, y: 0.11 }));
+        });
+        return b;
+      case "moebel":
+        [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(([x, z]) => b.box(0.06, 0.45, 0.06, 0xb8884a, { x, z }));
+        b.box(0.5, 0.05, 0.5, 0xc9955a, { y: 0.45 });
+        b.box(0.5, 0.45, 0.05, 0xc9955a, { y: 0.5, z: -0.22 });
+        [0.15, 0.3].forEach(y => b.box(0.44, 0.04, 0.03, 0xb8884a, { y: 0.5 + y, z: -0.21 }));
+        b.box(0.06, 0.06, 0.6, 0xc9955a, { x: 0.5, y: 0.03, z: 0.1, ry: 0.4 });
+        return b;
+      case "tueren":
+        b.box(0.7, 1.4, 0.08, 0xa8653c, { top: 0x9a5a34 });
+        [[0.4, 0.35], [0.95, 0.35]].forEach(([y]) => b.box(0.52, 0.42, 0.02, 0x8a5030, { y, z: 0.045 }));
+        b.sphere(0.04, 6, 4, 0xf2c230, { x: 0.26, y: 0.7, z: 0.07 });
+        b.box(0.8, 0.06, 0.12, 0x6a4024, { y: 1.4 });
+        return b;
+      case "zaun":
+        for (let i = 0; i < 6; i++) { b.box(0.1, 0.8, 0.04, 0xd8b07a, { x: -0.5 + i * 0.2 }); b.cone(0.07, 0.1, 4, 0xd8b07a, { x: -0.5 + i * 0.2, y: 0.8, a0: Math.PI / 4, sz: 0.4 }); }
+        [0.18, 0.6].forEach(y => b.box(1.25, 0.08, 0.04, 0xb8884a, { y, z: -0.04 }));
+        return b;
+      case "mehl": case "maismehl": {
+        const c = id === "mehl" ? 0xf1ece0 : 0xf2d77a, d = id === "mehl" ? 0xd8cfb8 : 0xd8b84a;
+        b.box(0.46, 0.62, 0.3, c, { top: d });
+        b.box(0.46, 0.1, 0.22, d, { y: 0.62 });
+        b.box(0.3, 0.2, 0.01, id === "mehl" ? 0x3f78c8 : 0x2f8a4a, { y: 0.22, z: 0.151 });
+        b.cone(0.05, 0.16, 4, 0xf2c230, { y: 0.24, z: 0.16, sz: 0.3 });
+        return b;
+      }
+      case "schatulle":
+        b.box(0.6, 0.3, 0.4, 0xa8553c, { top: 0x9a4a34 });
+        b.cyl(0.2, 0.2, 0.6, 10, 0xb8603e, { rz: Math.PI / 2, x: 0.3, y: 0.3, sy: 0.6 });
+        b.box(0.62, 0.04, 0.42, 0xf2c230, { y: 0.28 });
+        b.box(0.1, 0.12, 0.03, 0xf2c230, { y: 0.24, z: 0.2 });
+        return b;
+    }
+    return null;
+  }
+  /* Werkzeug: Opas Axt, Stahlaxt, Kettensäge, Profi-Säge */
+  function tool(id) {
+    G3.seed(5300 + id.length);
+    const b = new MB();
+    if (id === "axe1" || id === "axe2") {
+      const steel = id === "axe2", L = steel ? 1.25 : 1.0;
+      b.at({ rz: -0.55 }, m => {
+        m.box(0.07, L, 0.06, steel ? 0xc9955a : 0x8a6040, { y: 0 });
+        if (steel) m.box(0.08, 0.22, 0.07, 0xd8332b, { y: 0.02 });
+        m.box(0.12, 0.14, 0.08, steel ? 0x6f7a84 : 0x4a4440, { y: L - 0.14 });
+        m.cone(0.16, 0.3, 4, steel ? 0xc8d0d8 : 0x6a5a4a, { rz: -Math.PI / 2, x: 0.05, y: L - 0.07, sz: 0.3, a0: Math.PI / 4 });
+        if (!steel) m.box(0.05, 0.05, 0.085, 0x8a4a2a, { x: 0.12, y: L - 0.1 });
+      });
+      return b;
+    }
+    if (id === "saw1" || id === "saw2") {
+      const pro = id === "saw2", body = pro ? 0xf2c230 : 0xf2731e, bar = pro ? 1.2 : 0.85;
+      b.box(0.4, 0.36, 0.62, body, { y: 0.0, top: pro ? 0xe2b020 : 0xe2631e });
+      b.box(0.34, 0.14, 0.46, 0x2a2a30, { y: 0.36, z: -0.04 });
+      b.box(0.08, 0.2, 0.34, 0x2a2a30, { y: 0.5, z: -0.12 });                          /* Griff oben */
+      b.box(0.44, 0.07, 0.07, 0x2a2a30, { y: 0.46, z: 0.22 });                          /* Bügel vorn */
+      [-1, 1].forEach(s => b.box(0.07, 0.4, 0.07, 0x2a2a30, { x: s * 0.2, y: 0.1, z: 0.22 }));
+      b.box(0.05, 0.18, bar, 0xd0d6dc, { y: 0.1, z: 0.31 + bar / 2 });                   /* Schwert */
+      b.box(0.07, 0.035, bar, 0x2a2a30, { y: 0.27, z: 0.31 + bar / 2 });                 /* Kette oben */
+      b.box(0.07, 0.035, bar, 0x2a2a30, { y: 0.07, z: 0.31 + bar / 2 });                 /* Kette unten */
+      b.cyl(0.09, 0.09, 0.07, 10, 0x2a2a30, { rz: Math.PI / 2, x: -0.035, y: 0.19, z: 0.31 + bar });
+      if (pro) b.box(0.42, 0.06, 0.2, 0x2a2a30, { y: 0.2, z: -0.24 });
+      return b;
+    }
+    return null;
+  }
+  /* Ladung beim Beladen: Kiste, Sack, Korb */
+  function cargo(k) {
+    G3.seed(5400 + k);
+    const b = new MB();
+    if (k === 1) { b.sphere(0.17, 8, 6, 0xd8c49a, { y: 0.17, sy: 1.1 }); b.cyl(0.05, 0.08, 0.08, 6, 0xd8c49a, { y: 0.34 }); b.box(0.12, 0.02, 0.02, 0x8a6040, { y: 0.35 }); }
+    else if (k === 2) { b.cyl(0.17, 0.14, 0.2, 10, 0xb8884a, { top: 0x8a6040 }); for (let i = 0; i < 5; i++) b.sphere(0.06, 6, 4, [0xd8332b, 0xf2a531, 0x7ac043][i % 3], { x: Math.cos(i * 1.3) * 0.08, y: 0.22, z: Math.sin(i * 1.3) * 0.08 }); }
+    else { b.box(0.32, 0.24, 0.28, 0xc9955a, { top: 0xb8884a }); b.box(0.34, 0.03, 0.3, 0xa8753e, { y: 0.1 }); }
+    return b;
+  }
+
   return {
+    traderCart, item, tool, cargo,
     TREE_C, TH, tree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,

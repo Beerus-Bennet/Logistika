@@ -16,9 +16,9 @@ const CORP = {
   blitz:   { boss: "Doris Hellwig", role: "Geschäftsführerin", hq: "b-tempel", base: 30000, fleet: 4, tier: 0, modes: "rb",
              about: "Junges Kurier-Start-up aus Tempelhof: schnell, billig, chronisch knapp bei Kasse." },
   rabe:    { boss: "Konrad Rabe", role: "Inhaber in dritter Generation", hq: "b-span", base: 24000, fleet: 3, tier: 0, modes: "r",
-             about: "Traditionsspedition seit 1952. Treue Stammkunden, alte Lkw, kein Nachfolger in Sicht." },
+             about: "Traditionsspedition seit 1952: treue Kunden, alte Lkw, kein Nachfolger." },
   nord:    { boss: "Ingrid Søndergaard", role: "Vorstandsvorsitzende", hq: "hamburg", base: 160000, fleet: 6, tier: 1, modes: "rli",
-             about: "Hanseatische Reederei-Tochter mit Lagern im Hafen und guten Kontakten nach Skandinavien." },
+             about: "Hamburger Reederei-Tochter mit Hafenlagern und Draht nach Skandinavien." },
   atlas:   { boss: "Pieter van Dijk", role: "CEO", hq: "rotterdam", base: 420000, fleet: 7, tier: 2, modes: "rlis",
              about: "Europaweit vernetzte Kontraktlogistik mit Zentrale im Rotterdamer Hafen." },
   pacific: { boss: "Mei Lin Tan", role: "Managing Director", hq: "singapur", base: 950000, fleet: 8, tier: 2, modes: "rsa",
@@ -42,6 +42,7 @@ function corpValue(id) {
 }
 /* Voraussetzungen: Level 5 und mindestens so viel Marktanteil wie die andere */
 function corpReady(id) {
+  if (typeof logiOn === "function" && !logiOn()) return { ok: false, why: "erst nach der Speditionsgründung" };
   const sh = shares();
   if (level() < 5) return { ok: false, why: "ab Level 5" };
   if ((sh.me || 0) < (sh[id] || 0)) return { ok: false, why: "erst mehr Marktanteil als " + rivalById(id).name };
@@ -69,7 +70,7 @@ function corpHTML() {
       ${rd.ok ? `<button class="btn tiny" data-corp="${r.id}">🦈 Angebot</button>` : `<span class="cr-st">${esc(rd.why)}</span>`}</div>`;
   }).join("");
   return `<div class="card eco corp">
-    <div class="card-top"><div class="vname">🦈 Übernahmen<small>Kauf eine Konkurrentin: Ihre Flotte, ihr Firmensitz und ihr Marktanteil gehen an dich – und sie schnappt dir keine Aufträge mehr weg.</small></div></div>
+    <div class="card-top"><div class="vname">🦈 Übernahmen<small>Kauf eine Konkurrentin: Flotte, Firmensitz und Marktanteil gehören dann dir.</small></div></div>
     ${rows}
   </div>`;
 }
@@ -86,7 +87,7 @@ function openCorp(id) {
     /* Was sie insgeheim verlangt: je stärker du, desto weicher wird sie */
     const dom = (sh.me || 0) > 2 * (sh[id] || 0) ? 0.94 : 1;
     t = C.talks[id] = { round: 0, val, res: Math.round(val * rnd(0.95, 1.2) * dom), chat: [], ask: null, cool: 0 };
-    t.chat.push({ me: false, t: `Guten Tag. ${c.boss} hier, ${c.role} bei ${r.name}. Ich höre, Sie interessieren sich für unser Haus? Machen Sie mir ein Angebot.` });
+    t.chat.push({ me: false, t: `${c.boss}, ${r.name}. Sie wollen uns kaufen? Machen Sie ein Angebot.` });
   }
   corpOpen = id;
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
@@ -115,7 +116,7 @@ function renderCorp(note) {
       <div><small>Firmensitz</small><b>${esc(N[c.hq].short)} · ${OFFICE_TIERS[c.tier].name}</b></div>
     </div>
     <div class="lim">${t.done ? "✔ Übernommen – Flotte, Firmensitz und Marktanteil gehören jetzt " + esc(S.player.company) + "."
-      : "Mit der Übernahme: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro samt zwei Leuten," : "Erlös aus dem Verkauf des Firmensitzes,") + " ihr Marktanteil und +3 Ruf."}</div>
+      : "Du bekommst: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro + 2 Leute," : "Erlös aus Verkauf des Firmensitzes,") + " Marktanteil, +3 Ruf."}</div>
     <div class="nego-chat corp-chat">${t.chat.map(m => `<div class="bub ${m.me ? "out" : "in"}">${esc(m.t)}</div>`).join("")}</div>
     ${note ? `<div class="lotm-msg">${esc(note)}</div>` : ""}
     ${t.done ? "" : `<div class="lotm-box">
@@ -150,19 +151,19 @@ function corpOffer(id, amount, takeAsk) {
     return renderCorp();
   }
   if (amount < t.res * 0.7) {
-    t.chat.push({ me: false, t: "Das ist eine Frechheit. Melden Sie sich in ein paar Tagen wieder – mit einem ernsthaften Angebot." });
+    t.chat.push({ me: false, t: "Frechheit! Kommen Sie in zwei Tagen mit einem ernsthaften Angebot wieder." });
     t.cool = S.time + 2 * 1440; t.round = 3; t.ask = null;
     save(); return renderCorp();
   }
   if (t.round >= 3) {
-    t.chat.push({ me: false, t: "Wir kommen heute nicht zusammen. Lassen Sie uns das in zwei Tagen noch einmal versuchen." });
+    t.chat.push({ me: false, t: "Heute kommen wir nicht zusammen. In zwei Tagen wieder?" });
     t.cool = S.time + 2 * 1440; t.ask = null;
     save(); return renderCorp();
   }
   t.ask = roundK((amount + t.res * 1.05) / 2, 1000);
   t.chat.push({ me: false, t: amount >= t.res * 0.9
     ? `Wir sind nah dran. Für ${money(t.ask)} gehört ${r.name} Ihnen.`
-    : `Da müssen Sie schon deutlich mehr bieten. Unter ${money(t.ask)} verkaufe ich nicht.` });
+    : `Deutlich zu wenig. Unter ${money(t.ask)} verkaufe ich nicht.` });
   save(); renderCorp();
 }
 function corpClose(id, price) {
@@ -199,7 +200,7 @@ function corpClose(id, price) {
     got.forEach(v => { if (b.vehicles.length < OFFICE_TIERS[b.tier].slots && v.at === at) b.vehicles.push(v.uid); });
     S.bases.push(b);
     refreshPool(b);
-    baseTxt = `Der Firmensitz in ${N[at].name} ist jetzt dein ${OFFICE_TIERS[b.tier].name} – zwei Leute aus Disposition und Fahrpersonal bleiben.`;
+    baseTxt = `Firmensitz ${N[at].name} ist jetzt dein ${OFFICE_TIERS[b.tier].name} – zwei Leute bleiben.`;
   } else {
     const cash = roundK(price * 0.18, 1000);
     S.money += cash; S.revenue += cash;
@@ -208,7 +209,7 @@ function corpClose(id, price) {
   }
   if (typeof repAdd === "function") repAdd(S.stage, 3);
   phoneMsg({ from: c.boss, kind: "good", title: r.name + " gehört jetzt zu " + S.player.company,
-    body: `Die Verträge sind unterschrieben. ${got.length} Fahrzeuge fahren ab heute für Sie – noch in unseren alten Farben, unter „Flotte“ lassen sie sich umlackieren. ${baseTxt}` });
+    body: `Unterschrieben! ${got.length} Fahrzeuge fahren jetzt für Sie – umlackieren unter „Flotte“. ${baseTxt}` });
   toast("🦈 Übernahme: " + r.name + " gehört dir!", "ok");
   if (typeof checkAchievements === "function") checkAchievements();
   save(); render();

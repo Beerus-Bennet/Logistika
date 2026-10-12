@@ -255,7 +255,7 @@ function sendToWorkshop(uid, auto) {
   const free = !auto && P.freeRepair > 0;
   const cost = free ? 0 : repairCost(f);
   if (!auto && cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
-  if (free) { P.freeRepair--; toast("🔧 Werkstattgutschein eingelöst – die Reparatur ist gratis.", "ok", true); }
+  if (free) { P.freeRepair--; toast("🔧 Werkstattgutschein eingelöst – gratis!", "ok", true); }
   else payOut(cost, "repair", "Werkstatt · " + vType(f.type).name);
   f.phase = "service"; f.serviceUntil = S.time + repairMinutes(f);
   extraStats().repairs++;
@@ -306,7 +306,7 @@ function fleetValue() {
 function insurePremium() { return Math.round(fleetValue() * 0.0006); }
 function toggleInsure() {
   S.insure = !S.insure;
-  toast(S.insure ? "🛡️ Flottenversicherung abgeschlossen: " + money(insurePremium()) + " am Tag, übernimmt 80 % bei Pannen und Unfällen."
+  toast(S.insure ? "🛡️ Versichert: " + money(insurePremium()) + "/Tag, zahlt 80 % bei Pannen & Unfällen."
     : "🛡️ Versicherung gekündigt.", "ok");
   save(); render();
 }
@@ -347,7 +347,7 @@ function loanDay() {
   const L = S.loan; if (!L) return;
   payOut(L.daily, "loan", "Kreditrate");
   L.left--; L.rest = Math.max(0, L.rest - L.daily);
-  if (S.money < 0) { repAdd(S.stage, -3); toast("🏦 Mahnung: Das Konto ist im Minus – das spricht sich herum.", "bad"); }
+  if (S.money < 0) { repAdd(S.stage, -3); toast("🏦 Mahnung: Konto im Minus – dein Ruf leidet.", "bad"); }
   if (L.left <= 0) { S.loan = null; extraStats().loans++; toast("🏦 Kredit vollständig zurückgezahlt.", "ok"); }
 }
 
@@ -364,9 +364,8 @@ function taxDay() {
   S.taxFrom = S.time;
   if (tax > 0) payOut(tax, "tax", "Steuern Monat " + month);
   if (lively()) phoneMsg({ from: "Steuerbüro Kranz & Partner", kind: "info", title: "Monatsabschluss " + month,
-    body: `Einnahmen ${money(sums.inc)}, Ausgaben ${money(sums.exp)}, Ergebnis ${money(sums.net)}. `
-      + (tax > 0 ? `Darauf ${Math.round(TAX_RATE * 100)} % Steuern: ${money(tax)} – bereits abgebucht.` : "Kein Gewinn, also keine Steuern.")
-      + " Nebengeschäfte tauchen hier nicht auf." });
+    body: `Ergebnis ${money(sums.net)} (Einnahmen ${money(sums.inc)}, Ausgaben ${money(sums.exp)}). `
+      + (tax > 0 ? `${Math.round(TAX_RATE * 100)} % Steuern: ${money(tax)} – abgebucht.` : "Kein Gewinn, keine Steuern.") });
 }
 
 /* =============================== Ruf ================================== */
@@ -448,14 +447,14 @@ function tickExtras(dtMin) {
   if (typeof tickAuction === "function") tickAuction(dtMin);
   if (calm()) return;
   /* Einmal erklärt Lina, was jetzt alles passieren kann */
-  if (!linaAsked && lively() && level() >= 2 && !(S.tutSeen && S.tutSeen.extras) && typeof linaTalk === "function") {
+  if (!linaAsked && lively() && level() >= 2 && !(S.tutSeen && S.tutSeen.extras) && typeof linaTalk === "function" && !(typeof logiOn === "function" && !logiOn())) {
     linaAsked = true; setTimeout(() => linaTalk("extras"), 1200);
   }
   tickDecisions();
   tickCalls();
   if (typeof tickEvents === "function") tickEvents(dtMin);
   if (typeof tickRivals === "function") tickRivals(dtMin);
-  if (typeof tickVip === "function") tickVip(dtMin);
+  if (typeof tickVip === "function" && !(typeof logiOn === "function" && !logiOn())) tickVip(dtMin);
   if (typeof tickGoals === "function") tickGoals(dtMin);
 }
 function dayExtras(days) {
@@ -491,7 +490,7 @@ function economyHTML() {
   const cur = ledgerSums(S.taxFrom || 0);
   return `
   <div class="card eco">
-    <div class="card-top"><div class="vname">⭐ Ruf<small>Pünktlich hebt ihn, verspätet oder geplatzt senkt ihn. Guter Ruf bringt bessere Preise und mehr Einladungen.</small></div></div>
+    <div class="card-top"><div class="vname">⭐ Ruf<small>Pünktlich hebt ihn, Verspätung senkt ihn – guter Ruf = bessere Preise & mehr Einladungen.</small></div></div>
     <div class="rep-list">${regs}</div>
   </div>
   <div class="card eco">
@@ -502,7 +501,7 @@ function economyHTML() {
       return k === 0 ? "Kilometerkosten wie üblich" : "Kilometerkosten " + (k > 0 ? "+" : "−") + Math.abs(k) + " % ggü. Normalpreis"; })()}</span></div>
   </div>
   <div class="card eco">
-    <div class="card-top"><div class="vname">🏦 Hausbank<small>${L ? "Laufender Kredit – die Rate geht täglich ab." : "Schneller wachsen: Kredit mit " + fmt(LOAN_RATE * 100, 1) + " % Zinsen p. a., " + LOAN_DAYS + " Tage Laufzeit"}</small></div></div>
+    <div class="card-top"><div class="vname">🏦 Hausbank<small>${L ? "Laufender Kredit – die Rate geht täglich ab." : "Kredit: " + fmt(LOAN_RATE * 100, 1) + " % Zinsen p. a., " + LOAN_DAYS + " Tage Laufzeit"}</small></div></div>
     ${bank}
   </div>
   <div class="card eco">

@@ -78,11 +78,11 @@ const FREGROW = { stump: 50, sapling: 70, grow: 160 };
 /* ------------------------------ Werkzeug ------------------------------ */
 const FTOOLS = {
   axe1:  { n: "Axt",            i: "🪓", kind: "axe", lvl: 1, price: 0,    lv: 1,  d: "Opas alte Axt – für kleine und mittlere Bäume." },
-  axe2:  { n: "Stahlaxt",       i: "🪓", kind: "axe", lvl: 2, price: 140,  lv: 3,  d: "Geschmiedeter Kopf, längerer Stiel: 50 % mehr Wucht, auch für große Bäume." },
+  axe2:  { n: "Stahlaxt",       i: "🪓", kind: "axe", lvl: 2, price: 140,  lv: 3,  d: "50 % mehr Wucht – auch für große Bäume." },
   saw1:  { n: "Kettensäge",     i: "🪚", kind: "saw", lvl: 1, price: 480,  lv: 7,  req: () => (S.farm.stats.felled || 0) >= 25, reqT: "25 Bäume gefällt",
-           d: "Schneller, mehr Holz, auch Eichen. Fallrichtung wählen, nicht überhitzen. Sprit je Baum 3 €. Dazu kommt der Sägebock auf den Hof." },
+           d: "Schneller, mehr Holz, auch Eichen. Sprit 3 € je Baum, dazu ein Sägebock für den Hof." },
   saw2:  { n: "Profi-Säge",     i: "🪚", kind: "saw", lvl: 2, price: 1900, lv: 13, req: () => !!(S.farm.areas && S.farm.areas.altwald), reqT: "der alte Wald ist offen",
-           d: "Langes Schwert, starker Motor: für die uralten Eichen im alten Wald." }
+           d: "Für die uralten Eichen im alten Wald." }
 };
 const FSAW_FUEL = [0, 3, 5];          /* Sprit je Baum (€) */
 
@@ -162,7 +162,7 @@ const FAREAS = {
     reqs: [{ t: "Bäume gefällt", n: 3, v: () => S.farm.stats.felled || 0 }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster hat einen Weg durch den Wald freigegeben.",
-    talk: "Moin! Ich bin Bruno, der Förster hier. Dein Opa hat mir immer mit Brennholz geholfen – jetzt bist du dran. Ich hab einen Weg durch den Plötziner Forst freigeschnitten: Birken am Waldrand, Kiefern im Westen, Buchen und Eichen im Norden. Kleine Bäume schaffst du mit der Axt, für die großen brauchst du besseres Werkzeug. Und denk an die Brotzeit!"
+    talk: "Moin! Der Wald ist offen – kleine Bäume schafft die Axt, für große brauchst du mehr."
   },
   saege: {
     n: "Sägewerk Krüger", i: "🪚", lv: 9,
@@ -170,7 +170,7 @@ const FAREAS = {
     reqs: [{ t: "Kettensäge gekauft", n: 1, v: () => Math.min(1, S.farm.tools.saw || 0), yes: true }, { t: "Bäume gefällt", n: 30, v: () => S.farm.stats.felled || 0 }],
     who: "Nachbar Erwin Krüger", whoI: "👴", whoRole: "Nachbar",
     msg: "Nachbar Krüger schenkt dir sein altes Sägewerk.",
-    talk: "Tach! Erwin Krüger, von nebenan. Ich seh dich ja jeden Tag mit der Säge im Wald – du hast ein Händchen fürs Holz. Mein altes Sägewerk steht seit Jahren still, mir fehlt die Kraft. Ich schenk es dir. Es ist ziemlich heruntergekommen: Dach, Elektrik, die Säge, das Förderband und der Motor – alles muss gerichtet werden. Aber wenn es läuft, machst du aus jedem Stamm das Dreifache."
+    talk: "Tach! Mein altes Sägewerk gehört jetzt dir – erst reparieren, dann läuft’s."
   },
   altwald: {
     n: "Alter Wald", i: "🌳", lv: 13,
@@ -178,7 +178,7 @@ const FAREAS = {
     reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster öffnet den alten Wald hinter dem Bach.",
-    talk: "Hinter dem Bach liegt der alte Wald – Eichen, älter als das Dorf. Ein paar davon müssen raus, bevor sie umfallen. Das schafft nur eine Profi-Säge, und du brauchst ein Gefühl für die Fallrichtung. Aus so einem Stamm wird das beste Holz weit und breit."
+    talk: "Hinterm Bach steht der alte Wald – die uralten Eichen schafft nur eine Profi-Säge."
   },
   see: {
     n: "Glindower See", i: "🎣", lv: 15,
@@ -186,7 +186,7 @@ const FAREAS = {
     reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }, { t: "Holzwaren hergestellt", n: 40, v: () => S.farm.stats.woodMade || 0 }],
     who: "Bürgermeisterin Heike Sommer", whoI: "👩‍💼", whoRole: "Bürgermeisterin",
     msg: "Die Gemeinde verpachtet dir das Ufer am Glindower See.",
-    talk: "Guten Tag! Heike Sommer, Bürgermeisterin. Die alte Fischerei am Glindower See ist seit Jahren verwaist. Weil Sie so viel für den Ort tun, verpachten wir Ihnen das Ufer. Fangen Sie klein an – ein Steg, eine Hütte. Holz dafür haben Sie ja jetzt genug. Die Restaurants in Werder warten auf frischen Zander!"
+    talk: "Guten Tag! Die Gemeinde verpachtet Ihnen das Ufer – fangen Sie mit einem Steg an."
   }
 };
 const FAREA_ORDER = ["wald", "saege", "altwald", "see"];
@@ -196,7 +196,7 @@ Object.values(FAREAS).forEach(A => {
   A.reqT = A.reqs.map(q => q.yes ? q.t : q.n + " " + q.t).join(" · ");
 });
 /* Kameragrenzen vor jeder Freischaltung: Hof, Teich und ein Blick über den Zaun */
-const FCAM_HOF = [-18.5, -18.5, 22, 20];
+const FCAM_HOF = [-18.5, -18.5, 30, 20];    /* bis hinter den Teich – dort kann auch eine Schatzkiste liegen */
 
 /* ------------------------------ Sägewerk --------------------------------
    Lage der Gebäude (Weltmitte), Reparaturen (jeweils ein Minispiel) und
@@ -213,15 +213,15 @@ const FSAW = {
 };
 const FSAW_REPAIRS = [
   { id: "dach",  n: "Dach",          i: "🏚️", game: "nails",  need: { bretter: 4, balken: 2 },  cost: 120,
-    d: "Das Dach der Sägehalle ist undicht. Neue Bretter drauf und festnageln – genau dann zuschlagen, wenn der Ring den Nagel trifft." },
+    d: "Dach undicht: Bretter festnageln – zuschlagen, wenn der Ring den Nagel trifft." },
   { id: "strom", n: "Elektrik",      i: "⚡", game: "wires",  need: { pfosten: 1 },               cost: 180,
-    d: "Die alten Kabel sind morsch. Die neuen Leitungen der Reihe nach anklemmen: erst Schutzleiter, dann Neutralleiter, dann die Phasen." },
+    d: "Kabel morsch: erst Schutzleiter, dann Neutralleiter, dann die Phasen anklemmen." },
   { id: "saege", n: "Sägemaschine",  i: "⚙️", game: "gears",  need: { balken: 2 },                cost: 260,
-    d: "Im Getriebe der Gattersäge fehlen Zahnräder. Jedes Rad muss genau auf seine Achse passen, damit alles ineinandergreift." },
+    d: "Im Getriebe fehlen Zahnräder – setz jedes auf die passende Achse." },
   { id: "band",  n: "Förderband",    i: "🛞", game: "belt",   need: { bretter: 2, pfosten: 2 },  cost: 150,
-    d: "Rollen und Gurtstücke liegen verstreut. Setz jedes Teil in die passende Lücke." },
+    d: "Setz Rollen und Gurtstücke in die passenden Lücken." },
   { id: "motor", n: "Motor",         i: "🔧", game: "motor",  need: { reste: 2 },                cost: 220,
-    d: "Der Antriebsmotor ist voller Dreck und Harz. Erst sauber wischen, dann die Teile in der richtigen Reihenfolge einsetzen." }
+    d: "Motor voller Harz: erst sauber wischen, dann die Teile der Reihe nach einsetzen." }
 ];
 /* Krügers alter Unimog: nach der Reparatur ein Fahrzeug der eigenen Flotte */
 if (typeof VEHICLES !== "undefined" && !VEHICLES.some(v => v.id === "v-holzlaster")) {
@@ -230,7 +230,7 @@ if (typeof VEHICLES !== "undefined" && !VEHICLES.some(v => v.id === "v-holzlaste
   if (typeof VEH_CO2 !== "undefined") VEH_CO2["v-holzlaster"] = [0.42, 0.6];
 }
 const FSAW_LKW = { id: "lkw", n: "Alter Holzlaster", i: "🚛", game: "motor", need: { bretter: 2 }, cost: 450, veh: "v-holzlaster",
-  d: "Krügers alter Unimog steht seit Jahren unter der Plane. Motor reinigen, Teile einsetzen – dann fährt er wieder: 2,5 t Nutzlast für deine Holzlieferungen." };
+  d: "Krügers alter Unimog: Motor richten, dann fährt er 2,5 t Holz für dich." };
 /* Maschinen zum Dazukaufen (Laden, Reiter „Sägewerk“) */
 const FSHOP_SAW = [
   { id: "spalter", cat: "saege", n: "Holzspalter",          i: "🪓", lv: 11, price: () => 900,  need: { balken: 1 },             lim: () => 1, d: "Brennholz aus Resten und Birken, Kaminholz aus Buche." },
@@ -380,19 +380,19 @@ const fsaw = id => !!(S.farm.saw && S.farm.saw[id]);
 const farea = id => !!(S.farm.areas && S.farm.areas[id]);
 FCHAPTERS_HOF.push(
   { n: "Der Wald",           t: "Holz aus dem Plötziner Forst",          r: { m: 300,  xp: 150 },
-    opa: "Ein Hof braucht Holz – für den Ofen, für Zäune, für alles. Nimm nie mehr, als nachwächst, dann reicht es für deine Enkel auch noch." },
+    opa: "Nimm nie mehr Holz, als nachwächst – dann reicht es auch für deine Enkel." },
   { n: "Die Kettensäge",     t: "Erste eigene Holzverarbeitung",          r: { m: 450,  xp: 200 },
-    opa: "Aus einem Stamm Bretter zu machen, ist das halbe Handwerk. Die andere Hälfte ist, sie auch gut zu verkaufen." },
+    opa: "Bretter sägen ist das halbe Handwerk – die andere Hälfte ist das Verkaufen." },
   { n: "Das alte Sägewerk",  t: "Krügers Sägewerk wird wieder flott",     r: { m: 700,  xp: 260 },
-    opa: "Krüger war der beste Säger im ganzen Havelland. Wenn seine Säge wieder singt, hört man das bis nach Werder." },
+    opa: "Wenn Krügers Säge wieder singt, hört man das bis nach Werder." },
   { n: "Holzproduktion",     t: "Vom Stamm bis zum Möbelstück",           r: { m: 1000, xp: 360 },
-    opa: "Je mehr Arbeit im Holz steckt, desto mehr ist es wert. Aber ohne gute Leute schafft man das nicht allein." },
+    opa: "Je mehr Arbeit im Holz steckt, desto mehr ist es wert – hol dir gute Leute." },
   { n: "Am See",             t: "Die Fischerei am Glindower See",         r: { m: 1200, xp: 420 },
     opa: "Am See bin ich als Junge jeden Morgen gewesen. Der Zander beißt, wenn es dämmert – und bei Regen kommen die Aale." },
   { n: "Fischverarbeitung",  t: "Räuchern, kühlen, verkaufen",            r: { m: 1600, xp: 520 },
     opa: "Frischer Fisch ist gut, geräucherter ist besser – und in einer Holzkiste aus dem eigenen Sägewerk sieht er am besten aus." },
   { n: "Wirtschaftshof",     t: "Hof, Wald, Sägewerk und See – alles deins", r: { m: 3000, xp: 800 },
-    opa: "Schau dich um: Am Anfang hattest du einen kleinen Hof und eine Axt. Jetzt hast du eine ganze Welt aufgebaut." }
+    opa: "Erst ein kleiner Hof und eine Axt – jetzt eine ganze Welt. Stark!" }
 );
 FQUESTS_HOF.push(
   /* Kapitel 5 – Der Wald */

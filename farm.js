@@ -30,7 +30,7 @@ function farmNew() {
     v: 1, kind, logi: false, sold: null, snd: true, seq: 1,
     objs: [], inv: {}, cap: { silo: 1, barn: 1, holz: 1, fisch: 1 },
     stats: { harvest: 0, made: 0, eggs: 0, milk: 0, deliv: 0, earned: 0, pearls: 0, angel: 0, trips: 0, meat: 0, prod: {} },
-    qi: 0, qp: 0, qdone: false, qv: 5, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
+    qi: 0, qp: 0, qdone: false, qv: 6, qset: {}, tally: {}, flour: 1, econ: 2, lastOrd: -999, tut: { step: 0, done: false }, born: S.time, quick: {}, xp: 0
   };
   S.farm = F;
   S.xp = 0;
@@ -65,7 +65,7 @@ function farmStartHof(add, F) {
   add("deco", 9, 21, { k: "bushes" });
   add("deco", 25, 5, { k: "pine", arg: 1.0 });
   /* Startvorrat aus Opas Scheune */
-  farmAdd("weizen", 6, 3); farmAdd("mais", 4, 3); farmAdd("hfutter", 6, 3); farmAdd("apfel", 2, 3);
+  farmAdd("weizen", 6, 3); farmAdd("mais", 4, 3); farmAdd("mehl", 4, 3); farmAdd("hfutter", 6, 3); farmAdd("apfel", 2, 3);
 }
 function farmAddObj(o) {
   const F = S.farm;
@@ -332,7 +332,7 @@ function farmFull(st) {
   if (performance.now() - farmFullAt < 2500) return;
   farmFullAt = performance.now();
   const S0 = FSTORE[st] || { i: "📦", the: "Das Lager" };
-  toast(S0.i + " " + S0.the + " ist voll – liefere etwas aus, verkauf an den Großhandel oder bau aus.", "warn");
+  toast(S0.i + " " + S0.the + " ist voll – liefern, verkaufen oder ausbauen.", "warn");
   if (typeof farmViewFull === "function") farmViewFull(st);
 }
 
@@ -520,7 +520,7 @@ function farmPenUpgrade(o) {
   if (cost == null) return toast("Größer geht es nicht.", "warn"), false;
   const nx = FPENS[o.t][o.lvl];
   const w = o.r ? nx.d : nx.w, d = o.r ? nx.w : nx.d;
-  if (!farmFits(o.x, o.z, w, d, o.id, o.t)) return toast("Kein Platz: Rechts oder unten steht etwas im Weg. Verschieb es (lange drücken) und versuch es nochmal.", "warn"), false;
+  if (!farmFits(o.x, o.z, w, d, o.id, o.t)) return toast("Kein Platz – rechts oder unten steht was im Weg (lange drücken zum Verschieben).", "warn"), false;
   if (S.money < cost) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn"), false;
   S.money -= cost; S.expense += cost;
   logMoney("farm", FPEN_META[o.t].area + " vergrößert", -cost);
@@ -920,55 +920,97 @@ function farmSend(o, opt) {
   return true;
 }
 
-/* ----------------------- Notizbuch / Logbuch -------------------------- */
-function farmQuest() { return S.farm && !S.farm.sold && FQUESTS[S.farm.qi] || null; }
-/* Wie weit im Notizbuch: Kapitel, erledigt im Kapitel, Aufgaben im Kapitel */
-function farmChapter() {
-  const q = farmQuest(), c = q ? q.c : FCHAPTERS.length - 1;
-  const all = FQUESTS.filter(x => x.c === c), first = FQUESTS.indexOf(all[0]);
-  return { c, done: q ? S.farm.qi - first : all.length, n: all.length };
+/* ----------------------- Notizbuch / Logbuch --------------------------
+   Drei Stränge laufen nebeneinander: Hof (Kapitel 1–4), Wald & Holz (5–8)
+   und See (9–10), am Ende der Wirtschaftshof (11). Von jedem Strang steht die
+   nächste offene Aufgabe oben links. Gezählt wird alles, was man je gemacht
+   hat – wer schon drei Bäume gefällt hat, für den ist „Fälle 3 Bäume“ sofort
+   erledigt. Erledigtes wird von selbst abgehakt und ausgezahlt. */
+const FQ_STRANDS = [
+  { id: "hof",  i: "🌾", n: "Hof",            ch: [0, 1, 2, 3] },
+  { id: "wald", i: "🌲", n: "Wald & Holz",    ch: [4, 5, 6, 7], show: () => flv() >= 4 || farmAreaOpen("wald") },
+  { id: "see",  i: "🎣", n: "See",            ch: [8, 9],       show: () => flv() >= 13 || farmAreaOpen("see") },
+  { id: "end",  i: "⭐", n: "Wirtschaftshof", ch: [10],         show: () => FQUESTS.every((q, k) => q.c >= 10 || farmQDone(k)) }
+];
+function farmStrands() { return FCHAPTERS.length === 11 ? FQ_STRANDS : [{ id: "all", i: "📒", n: "Notizbuch", ch: FCHAPTERS.map((_, i) => i) }]; }
+function farmQDone(i) { return !!(S.farm && S.farm.qset && S.farm.qset[i]); }
+/* Fortschritt: Zustand („steht schon“), Level oder alles, was je gezählt wurde */
+function farmQProg(q) {
+  if (q.chk) return q.chk() ? q.n : 0;
+  if (q.ev === "level") return Math.min(q.n, flv());
+  return Math.min(q.n, (S.farm.tally && S.farm.tally[q.ev]) || 0);
 }
-function farmDone() { return !!(S.farm && !S.farm.sold && (S.farm.done || S.farm.qi >= FQUESTS.length)); }
+/* Die sichtbaren Aufgaben: je Strang die erste offene */
+function farmQActive() {
+  if (!S.farm || S.farm.sold || !S.farm.qset) return [];
+  const out = [];
+  farmStrands().forEach(st => {
+    if (st.show && !st.show()) return;
+    const i = FQUESTS.findIndex((q, k) => st.ch.includes(q.c) && !farmQDone(k));
+    if (i >= 0) out.push({ st, i, q: FQUESTS[i], p: farmQProg(FQUESTS[i]) });
+  });
+  return out;
+}
+function farmQuest() { const a = farmQActive(); return a.length ? a[0].q : null; }
+function farmChapterOf(c) {
+  let done = 0, n = 0;
+  FQUESTS.forEach((q, k) => { if (q.c === c) { n++; if (farmQDone(k)) done++; } });
+  return { c, done, n };
+}
+function farmChapter() { const q = farmQuest(); return farmChapterOf(q ? q.c : FCHAPTERS.length - 1); }
+function farmDone() { return !!(S.farm && !S.farm.sold && (S.farm.done || (S.farm.qset && FQUESTS.every((q, k) => farmQDone(k))))); }
 function farmEvent(key, n) {
   if (!S.farm) return;
   n = n || 1;
-  const q = farmQuest();
-  if (q && !S.farm.qdone && q.ev === key) S.farm.qp += n;
+  const T = S.farm.tally || (S.farm.tally = {});
+  T[key] = (T[key] || 0) + n;
   farmQuestCheck();
   if (typeof farmTutSignal === "function") farmTutSignal(key, n);
 }
-/* Erfüllt? Ereignisse zählen mit, Level und „steht schon“ prüft der Zustand */
+/* Erledigtes abhaken – auch mehrere auf einmal (nachträglich Geschafftes) */
+let farmQBusy = false;
 function farmQuestCheck() {
-  const q = farmQuest();
-  if (!q || S.farm.qdone) return;
-  if (q.ev === "level" && flv() >= q.n) S.farm.qp = q.n;
-  if (q.chk) S.farm.qp = q.chk() ? q.n : 0;
-  if (S.farm.qp >= q.n) { S.farm.qp = q.n; S.farm.qdone = true; if (typeof farmViewQuest === "function") farmViewQuest(true); }
+  const F = S.farm;
+  if (!F || F.sold || !F.qset || farmQBusy) return;
+  if (F.tut && !F.tut.done) return;                              /* erst nach Linas Rundgang */
+  farmQBusy = true;
+  const got = [];
+  try {
+    for (let guard = 0; guard < 90; guard++) {
+      const a = farmQActive().find(x => x.p >= x.q.n);
+      if (!a) break;
+      got.push(farmQClaimI(a.i));
+    }
+  } finally { farmQBusy = false; }
+  if (got.length && typeof farmViewQuest === "function") farmViewQuest(got);
 }
-/* Abholen. Gibt { q, chapter, last } zurück – chapter, wenn damit ein
-   Kapitel fertig ist, last, wenn das ganze Notizbuch abgehakt ist. */
-function farmQuestClaim() {
-  const q = farmQuest();
-  if (!q || !S.farm.qdone) return null;
+function farmQClaimI(i) {
+  const F = S.farm, q = FQUESTS[i];
+  F.qset[i] = 1;
   S.money += q.r.m; S.revenue += q.r.m;
   logMoney("farm", FT().book + ": " + q.t, q.r.m);
-  S.farm.qi++; S.farm.qp = 0; S.farm.qdone = false;
   farmXP(q.r.xp);
-  const nx = farmQuest();
+  const nx = FQUESTS.findIndex((x, k) => !farmQDone(k));
+  F.qi = nx < 0 ? FQUESTS.length : nx;
   let chapter = null;
-  if (!nx || nx.c !== q.c) {
+  if (FQUESTS.every((x, k) => x.c !== q.c || farmQDone(k))) {
     chapter = FCHAPTERS[q.c];
     S.money += chapter.r.m; S.revenue += chapter.r.m;
     logMoney("farm", "Kapitel geschafft: " + chapter.n, chapter.r.m);
     farmXP(chapter.r.xp);
   }
-  if (!nx) {
-    S.farm.done = true;
-    S.farm.doneAt = S.time;
+  const last = nx < 0;
+  if (last && !F.done) {
+    F.done = true;
+    F.doneAt = S.time;
     if (farmPhase() && typeof phoneMsg === "function") setTimeout(() => phoneMsg({ from: "Lina Sturm", kind: "info", title: FT().The + " läuft – und jetzt?", body: FT().doneMsg }), 1500);
   }
-  farmQuestCheck();
-  return { q, chapter, c: q.c, last: !nx };
+  return { q, i, chapter, c: q.c, last };
+}
+/* ältere Aufrufe: die erste fertige Aufgabe abholen */
+function farmQuestClaim() {
+  const a = farmQActive().find(x => x.p >= x.q.n);
+  return a ? farmQClaimI(a.i) : null;
 }
 
 /* --------------------- Spedition gründen, Erbe verkaufen ---------------- */
@@ -1064,6 +1106,33 @@ function farmMigrate() {
     if (!F.done && hi >= 0 && F.qi >= hi) F.qi++;
     if (F.qi === ti) { F.qp = 0; F.qdone = false; }
   }
+  if (F.qv < 6) {
+    /* v48: Notizbuch in drei Strängen, gezählt wird alles bisher Geschaffte */
+    F.qv = 6;
+    const hi = FQUESTS_HOF.findIndex(q => q.t === "Fang einen Hecht"), ti = FQUESTS_HOF.findIndex(q => q.t === "Veranstalte das Angler-Turnier");
+    if (F.qset) {
+      /* Stand aus v46: Häkchen hat er schon, aber der Hecht stand noch in Kapitel 9 */
+      const o = F.qset; F.qset = {};
+      for (const k in o) { const j = +k; F.qset[j === ti ? hi : j >= hi ? j + 1 : j] = 1; }
+    } else {
+      F.qset = {};
+      const upto = F.done ? FQUESTS.length : Math.min(F.qi || 0, FQUESTS.length);
+      for (let i = 0; i < upto; i++) F.qset[i] = 1;
+      const st = F.stats || {}, T = F.tally = F.tally || {};
+      const atLeast = (k, v) => { if (v > (T[k] || 0)) T[k] = v; };
+      atLeast("deliver", st.deliv || 0); atLeast("fell", st.felled || 0); atLeast("catch", st.catch || 0);
+      for (const id in (st.species || {})) atLeast("catch:" + id, st.species[id]);
+      /* gefällte Bäume je Art: Stümpfe und nachwachsende Bäume verraten es */
+      (F.trees || []).forEach(t => {
+        if (t.st === "up" && !(t.mx && t.sz < t.mx)) return;
+        const k = "fell:" + (t.sp === "fichte" ? "kiefer" : t.sp);
+        T[k] = (T[k] || 0) + 1;
+        if (t.mx >= 3) T["fell:big"] = (T["fell:big"] || 0) + 1;
+      });
+      const q = FQUESTS[F.qi];
+      if (q && q.ev && q.ev !== "level") atLeast(q.ev, F.qdone ? q.n : (F.qp || 0));
+    }
+  }
   erbeInit(F, false);
   /* Waren und Objekte, die es nicht mehr gibt, verschwinden */
   for (const id in F.inv) if (!FITEMS[id] || !FITEMS[id].st) delete F.inv[id];
@@ -1079,6 +1148,8 @@ function farmMigrate() {
   ["pearls", "angel", "trips", "meat"].forEach(k => { st[k] = st[k] || 0; });
   st.prod = st.prod || {};
   farmStores().forEach(s => { F.cap[s] = F.cap[s] || 1; });
+  /* v46: Backen braucht jetzt Mehl aus der Mühle – Opa hatte noch welches in der Kammer */
+  if (!F.flour) { F.flour = 1; if (S.farm.objs.some(o => o.t === "bakery")) farmAdd("mehl", Math.min(6, Math.max(0, farmRoom("mehl"))), 3); }
   if (F.econ >= 2) return;
   F.econ = 2;
   S.orders.forEach(o => {
@@ -1088,9 +1159,6 @@ function farmMigrate() {
     o.desc = "Bestellung: " + Object.keys(o.farm.items).map(id => fqty(id, o.farm.items[id])).join(", ");
     o.weight = Math.max(0.3, Math.round(Object.keys(o.farm.items).reduce((s, id) => s + FITEMS[id].kg * o.farm.items[id], 0) * 10) / 10);
   });
-  /* Notizbuch: Aufgaben haben jetzt andere Mengen – Fortschritt deckeln */
-  const q = farmQuest();
-  if (q && F.qp > q.n) F.qp = q.n;
 }
 function farmObjKnown(o) {
   if (o.t === "deco") return !!FDECO[o.k];

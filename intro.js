@@ -16,7 +16,7 @@ const ORIGINS = [
   { id: "erbe", name: "Werkstatterbe", cash: 1000, gifts: ["v-caddy"], hidden: true,
     text: "Der Hof deines Onkels gehört jetzt dir – samt Kastenwagen und Ölflecken." },
   { id: "hof", name: "Obsthof-Erbe", farm: "hof", icon: "🌾", cash: 500, gifts: ["v-bullitt", "v-simson"],
-    text: "Opa Hinrich hat dir seinen Hof bei Werder (Havel) vererbt – klein und etwas heruntergekommen, mit Feldern, Apfelbäumen, Hühnern, Backofen, einer alten Axt, einem Lastenrad und seiner Simson. Hinterm Zaun warten der Wald, ein altes Sägewerk und der Glindower See." },
+    text: "Opa Hinrichs kleiner Hof bei Werder (Havel): Felder, Obst, Hühner – dahinter Wald, Sägewerk und See." },
   /* frühere Ostsee-Fischerei: nur noch für alte Spielstände (werden zum Hof) */
   { id: "fisch", name: "Fischerei-Erbe", farm: "hof", icon: "🐟", cash: 500, gifts: ["v-bullitt", "v-simson"], hidden: true,
     text: "Die frühere Ostsee-Fischerei – heute ist daraus Opas Hof geworden." }
@@ -102,18 +102,15 @@ function renderIntro() {
       <div class="intro-card">
         <div class="intro-h">Ein Brief vom Notar</div>
         <div class="intro-p">
-          Du hast geerbt! Opas kleinen Hof an der Havel – daraus wird Stück für
-          Stück ein ganzes Reich: Felder und Tiere, ein eigener Wald, ein altes
-          Sägewerk und eine Fischerei am See. Und wenn alles läuft, eine Spedition,
-          die Waren um die ganze Welt bringt. Zuerst brauchst du ein Gesicht und
-          einen Namen für deinen Betrieb.
+          Du hast Opas Hof an der Havel geerbt! Felder, Wald, Sägewerk, Fischerei –
+          und später eine Spedition. Zuerst: Gesicht und Name.
         </div>
       </div>
       <div class="intro-card greet">
         <div class="greet-fig">${guideFigure(150, "g0")}</div>
         <div class="greet-tx">
           <b>${GUIDE.name}</b><span>Nachbarin · fährt die Ware aus</span>
-          <div class="intro-p">„Moin! Ich hab deiner Familie jahrelang beim Ausliefern geholfen. Ich zeig dir gleich alles.“</div>
+          <div class="intro-p">„Moin! Ich zeig dir gleich alles.“</div>
         </div>
       </div>
       <div class="intro-btns"><button class="btn go" id="iNext">Los geht’s</button></div>`;
@@ -161,9 +158,8 @@ function renderIntro() {
                title="${esc(sl.label)}"><img src="${playerArtSrc(sl.id)}" alt="${esc(sl.label)}"></button>`).join("")}
           </div>
           <div class="intro-p small">Tipp die Figur an, die du spielen willst.</div>`
-        : `<div class="hintbox">Noch sind keine fertigen Figuren hinterlegt. Leg Bilder als
-             <b>player-w1.png</b> bis <b>player-m4.png</b> ab – sie erscheinen dann hier zur Auswahl.
-             Das Format steht in <b>PLAYER-ART.md</b>.</div>`}
+        : `<div class="hintbox">Keine fertigen Figuren da. Leg <b>player-w1.png</b> bis
+             <b>player-m4.png</b> ab (Format: <b>PLAYER-ART.md</b>).</div>`}
 
         <div class="field">
           <label for="iName">Dein Name</label>
@@ -182,7 +178,7 @@ function renderIntro() {
     body = `
       <div class="intro-card">
         <div class="intro-h">Dein Erbe</div>
-        <div class="intro-p">Name, Hausfarbe und was du geerbt hast. Der Name steht später auch auf deinen Lkw.</div>
+        <div class="intro-p">Name, Hausfarbe und Erbe. Der Name kommt auch auf deine Lkw.</div>
         <div class="field">
           <label for="iFirm">Name deines Betriebs</label>
           <input id="iFirm" maxlength="26" autocomplete="off" spellcheck="false"
@@ -231,12 +227,9 @@ function renderIntro() {
             <div class="intro-p">${esc(S.player.name)} · ${ORIGINS[S.player.origin].name}</div></div>
         </div>
         <div class="intro-p">
-          ${ORIGINS[S.player.origin].farm ? `Im Schuppen stehen Opas Lastenrad und seine Simson – damit bringst du deine
-          Ware nach Werder, Glindow und Potsdam. Viel Geld ist nicht da, den Rest
-          verdient der Hof. Ein Auto kannst du jetzt oder später im Markt kaufen.`
-          : `Deine Fahrzeuge aus der Vorgeschichte stehen schon im Hof. Viel Geld ist
-          nicht da – der Rest kommt über die ersten Aufträge. Mehr Fahrzeuge gibt es
-          jederzeit im Markt.`}
+          ${ORIGINS[S.player.origin].farm ? `Opas Lastenrad und Simson stehen bereit – für Werder, Glindow und Potsdam.
+          Ein Auto gibt’s im Markt.`
+          : `Deine Fahrzeuge stehen schon im Hof. Mehr gibt es jederzeit im Markt.`}
         </div>
         <div class="found-money"><span>Startkapital</span><b>${money(S.money)}</b></div>
         ${startVehicles.map(t => {
@@ -488,15 +481,15 @@ function tutPinRect() {
 }
 
 const TUT_STEPS = [
-  { tx: () => S.farm ? "So, Chef – jetzt wird’s eine richtige Spedition! Ich bin ab heute deine Disponentin. Wir wickeln zusammen den ersten fremden Auftrag ab – "
-      + "Schritt für Schritt. Die Uhr steht so lange still."
-      : "Moin! Ich bin Lina, deine Disponentin. Wir wickeln jetzt zusammen deinen ersten Auftrag ab – "
-      + "Schritt für Schritt. Die Uhr steht so lange still." },
+  { tx: () => S.farm ? "Jetzt wird’s eine Spedition, Chef! Ich bin deine Disponentin – "
+      + "wir machen den ersten Auftrag zusammen. Die Uhr steht still."
+      : "Moin! Ich bin Lina, deine Disponentin – "
+      + "wir machen den ersten Auftrag zusammen. Die Uhr steht still." },
   { tx: () => {
       const f = tutVeh();
-      return "Das ist deine Karte – alles Dunkle ist noch Nebel, der lichtet sich mit jedem Level. "
-        + (f ? `Und hier steht dein ${tvIcon()} ${esc(tvName())} – ${esc(vehSpot(f).t)} in ${esc(N[f.at].short)}. ` : "")
-        + "Merk dir das: <b>Wo ein Fahrzeug steht, entscheidet, ob eine Fahrt Geld bringt oder kostet.</b>";
+      return "Deine Karte – der Nebel lichtet sich mit jedem Level. "
+        + (f ? `Hier steht dein ${tvIcon()} ${esc(tvName())}: ${esc(vehSpot(f).t)}, ${esc(N[f.at].short)}. ` : "")
+        + "<b>Der Standort entscheidet über Gewinn oder Verlust.</b>";
     },
     target: tutVehRect,
     before: () => {
@@ -507,8 +500,8 @@ const TUT_STEPS = [
 
   /* ---------- mit Übungsauftrag ---------- */
   { need: "order",
-    tx: () => "Siehst du die Stecknadeln? <b>Gelb</b> ist eine offene Ausschreibung – genau dort, wo der Auftraggeber sitzt. "
-      + "<b>Orange</b> heißt: angenommen und in Arbeit. Antippen öffnet den Auftrag. Meine Übung wartet gleich neben deinem "
+    tx: () => "Stecknadeln: <b>Gelb</b> = offener Auftrag, "
+      + "<b>Orange</b> = in Arbeit. Meine Übung liegt neben deinem "
       + `${tvIcon()} ${esc(tvName())}.`,
     target: tutPinRect,
     before: () => {
@@ -522,14 +515,14 @@ const TUT_STEPS = [
   { need: "order",
     tx: () => {
       const o = tutOrder();
-      return `Unter „Aufträge“ laufen die Ausschreibungen ein. Ganz oben liegt ein Übungsauftrag von mir ⭐: `
+      return `Unter „Aufträge“ liegt oben meine ⭐ Übung: `
         + `${CARGO[o.cargo].name} von ${esc(N[o.from].short)} nach ${esc(N[o.to].short)}.`;
     },
     target: tutOrderCard, before: () => { showTab("orders"); $("#view .view-body").scrollTop = 0; } },
   { need: "order",
-    tx: () => `Diese Zeile ist dein <b>Leerfahrt-Radar</b>. ✅ Grün: ein freies Fahrzeug steht schon am Abholort – `
-      + `keine Leerfahrt. ↩️ Gelb: es müsste erst leer hinfahren. Das kostet Sprit und Zeit, und keiner bezahlt dich dafür. `
-      + `🚫 Rot: gerade kein passendes Fahrzeug frei.`,
+    tx: () => `Dein <b>Leerfahrt-Radar</b>: ✅ Fahrzeug schon am Abholort. `
+      + `↩️ Muss erst leer hin – das zahlst du. `
+      + `🚫 Keins frei.`,
     target: () => document.querySelector("#tab-orders .card.order.tut .vhintrow") },
   { id: "pick", need: "order",
     tx: "Jetzt du: Tipp auf den ⭐ Übungsauftrag.",
@@ -539,26 +532,26 @@ const TUT_STEPS = [
   { need: "order", inPlanner: true, top: false,
     tx: () => {
       const r = tutRepoSel();
-      return `Das ist die Planung. Die Minikarte zeigt, wo alles liegt: 📦 Abholung, 🏁 Ziel und deine Fahrzeuge. `
+      return `Minikarte: 📦 Abholung, 🏁 Ziel, deine Fahrzeuge. `
         + (r.km < 0.5
-          ? `Dein ${esc(tvName())} steht direkt am Abholort – darum gibt es keine gestrichelte Linie. <b>Keine Linie = keine Leerfahrt.</b>`
-          : `Die gestrichelte Linie ist die Leerfahrt: ${kmf(r.km)}, die du selbst bezahlst.`);
+          ? `Dein ${esc(tvName())} steht schon dort: <b>keine Linie = keine Leerfahrt.</b>`
+          : `Gestrichelt = Leerfahrt: ${kmf(r.km)} auf deine Kosten.`);
     },
     target: "#modalBody .pmap" },
   { need: "order", inPlanner: true, top: false,
     tx: () => tutEligibleCount() > 1
-      ? "Hier wählst du das Fahrzeug. Die Liste ist nach Entfernung sortiert: oben steht, wer am nächsten dran ist – "
-        + "mit Standort und was die Leerfahrt kosten würde. Tipp ruhig mal ein anderes an, dann siehst du die Leerfahrt auf der Karte."
-      : `Hier wählst du das Fahrzeug. Bei jedem steht, wo es gerade parkt und ob es erst leer anfahren müsste. `
+      ? "Fahrzeugwahl: Das nächste steht oben. "
+        + "Tipp ruhig ein anderes an – die Karte zeigt dann die Leerfahrt."
+      : `Hier wählst du das Fahrzeug. `
         + `Dein ${esc(tvName())} ist schon da: ✅ vor Ort.`,
     target: "#modalBody .vpick", allow: () => tutEligibleCount() > 1 },
   { need: "order", inPlanner: true, top: true,
     tx: () => {
       const r = tutRepoSel();
-      return "Unten die Rechnung: Frachterlös minus Fahrtkosten ergibt den <b>Deckungsbeitrag</b>. Grün heißt, die Fahrt lohnt sich. "
+      return "Erlös minus Kosten = <b>Deckungsbeitrag</b>. Grün = lohnt sich. "
         + (r.eur > 0.005
-          ? `Gerade frisst die Leerfahrt ${money(r.eur)} davon – das Fahrzeug vor Ort wäre günstiger.`
-          : "Ohne Leerfahrt bleibt am meisten übrig.");
+          ? `Die Leerfahrt frisst ${money(r.eur)} davon.`
+          : "Ohne Leerfahrt bleibt am meisten.");
     },
     target: "#modalBody .sum" },
   { id: "accept", need: "order", inPlanner: true, top: true,
@@ -566,17 +559,17 @@ const TUT_STEPS = [
     target: "#modalBody #mAccept", waitFor: "orderAccepted" },
 
   { id: "accepted", need: "job",
-    tx: () => `Angenommen – dein erster Auftrag! Unter „Live“ verfolgst du ihn. Sobald wir fertig sind, läuft die Uhr `
-      + `und dein ${tvIcon()} ${esc(tvName())} fährt los.`,
+    tx: () => `Angenommen! Unter „Live“ verfolgst du ihn – `
+      + `gleich fährt dein ${tvIcon()} ${esc(tvName())} los.`,
     target: () => { const j = tutJob(); return j && document.querySelector(`#tab-jobs .card.job[data-job="${j.id}"]`); },
     before: () => showTab("jobs") },
   { need: "job",
     tx: () => {
       const j = tutJob(), nx = S.orders.find(o => o.tutNext);
-      return `Und jetzt der wichtigste Trick gegen Leerfahrten: Nach der Zustellung steht dein ${esc(tvName())} in `
-        + `${esc(N[j.order.to].short)}. <b>Nimm als Nächstes einen Auftrag, der genau dort startet.</b> `
-        + (nx ? `Einen hab ich dir schon reingelegt ⭐ – sobald dein ${esc(tvName())} dort ist, wird sein Hinweis grün. ` : "")
-        + `Mit „📍 Leerfahrt“ oben in der Leiste holst du solche Aufträge nach oben.`;
+      return `Profi-Trick: Danach steht dein ${esc(tvName())} in `
+        + `${esc(N[j.order.to].short)}. <b>Nimm einen Auftrag, der dort startet.</b> `
+        + (nx ? `Einer liegt bereit ⭐ – ist dein ${esc(tvName())} dort, wird er grün. ` : "")
+        + `„📍 Leerfahrt“ oben sortiert solche nach vorn.`;
     },
     target: () => document.querySelector("#tab-orders .card.order.tutnext .vhintrow")
       || document.querySelector('#viewTools [data-sort="near"]'),
@@ -589,25 +582,25 @@ const TUT_STEPS = [
 
   /* ---------- ohne Übungsauftrag (alle Fahrzeuge unterwegs) ---------- */
   { need: "none",
-    tx: "Unter „Aufträge“ laufen die Ausschreibungen ein. Für eine Übungsfahrt ist gerade kein Fahrzeug frei – "
-      + "so liest du die Liste trotzdem:",
+    tx: "Unter „Aufträge“ kommen die Ausschreibungen. Für eine Übung ist kein Fahrzeug frei – "
+      + "also kurz so:",
     target: '[data-tab="orders"]', before: () => showTab("orders") },
   { need: "none",
-    tx: "Unter jedem Auftrag steht dein <b>Leerfahrt-Radar</b>: ✅ ein Fahrzeug steht schon am Abholort, ↩️ es müsste erst leer "
-      + "hinfahren, 🚫 gerade keins frei. Tippst du einen Auftrag an, zeigt dir die Minikarte, wo alles steht – "
-      + "die gestrichelte Linie ist die Leerfahrt.",
+    tx: "<b>Leerfahrt-Radar</b>: ✅ Fahrzeug am Abholort, ↩️ muss erst leer "
+      + "hin, 🚫 keins frei. "
+      + "Gestrichelt auf der Minikarte = Leerfahrt.",
     target: "#tab-orders .card.order .vhintrow" },
 
-  { tx: "Unter „Flotte“ steht bei jedem Fahrzeug, wo es gerade parkt oder hinfährt. Hast du mehrere, verteil sie auf "
-      + "verschiedene Stadtteile – dann ist fast immer eins in der Nähe.",
+  { tx: "„Flotte“ zeigt, wo deine Fahrzeuge stehen. Verteil sie auf "
+      + "Stadtteile – dann ist immer eins nah.",
     target: '[data-tab="fleet"]', before: () => showTab("map") },
-  { tx: "Noch disponierst du jeden Auftrag selbst. Später mietest du unter „Büros“ einen Standort: Wer dort jemanden aus der "
-      + "<b>Disposition</b> einstellt, dessen Fahrzeuge fahren von allein – und er bekommt Anrufe aufs Diensttelefon.",
+  { tx: "Später mietest du unter „Büros“ einen Standort – mit "
+      + "<b>Disposition</b> fahren die Fahrzeuge dort von allein.",
     target: '[data-tab="bases"]', before: () => showTab("map") },
-  { tx: "Das ist dein <b>Diensthandy</b>. Hier melden sich dein Team – und manchmal auch Leute, die du nicht kennst. "
-      + "Aus Sicherheitsgründen löscht es jede Nachricht nach <b>24 Stunden</b>. Lies also zeitnah.",
+  { tx: "Dein <b>Diensthandy</b>: Hier meldet sich dein Team. "
+      + "Nachrichten verschwinden nach <b>24 Stunden</b>.",
     target: "#phoneBtn", top: true, before: () => showTab("map") },
-  { tx: "Das war’s. Mit ⏸ links an der Karte hältst du das Spiel jederzeit an, 1× bis 30× bestimmen das Tempo – ab jetzt läuft die Uhr. Viel Erfolg, und wenn’s brennt, bin ich auf Kanal 1.",
+  { tx: "Fertig! ⏸ links hält an, 1× bis 30× regeln das Tempo. Ab jetzt läuft die Uhr – viel Erfolg!",
     target: '#controls [data-speed="0"]', before: () => showTab("map") }
 ];
 
@@ -951,115 +944,115 @@ function tutRefresh() {
 const baseHead = i => () => $$("#tab-bases .card.base .sechead.sm")[i] || null;
 const LINA_TALKS = {
   snus: [
-    { tx: "Psst, Chef! Auf dem Diensttelefon hat sich gerade <b>Mr. Snus</b> gemeldet. Der verkauft Snus unter der Hand.",
+    { tx: "Psst, Chef! <b>Mr. Snus</b> hat sich auf dem Diensttelefon gemeldet – er verkauft Snus unter der Hand.",
       target: "#phoneBtn", top: true },
-    { tx: () => `So läuft’s: Du kaufst bei ihm für ${money(SNUS_BUY)} die Dose – bar nimmt er nichts, bezahlt wird über die <b>Nachtwallet in Solana</b> ◎ zum aktuellen Kurs. Zum Senden wischst du wie beim Anruf. Die Ware liegt dann in einem Späti in der Stadt. `
-        + `Kunden aus den Siedlungen am Stadtrand melden sich als <b>graue Aufträge</b> und zahlen ${money(SNUS_SELL)} die Dose – geliefert wird mit deiner eigenen Flotte.` },
-    { tx: () => `Aber Vorsicht: Unter den Kunden sind <b>Zivilfahnder</b>. Die zahlen mehr als ${money(SNUS_SELL)} und wollen gleich 20, 30 Dosen. `
-        + `Nur: Manche Stammkunden zahlen auch einfach gern mehr. Der sichere Hinweis ist das Aussehen – <b>weißes Hemd UND glatt rasiert</b>. `
-        + `Hat einer nur eins von beidem, ist er echt.` },
-    { tx: () => `Lieferst du an einen Fahnder, klicken die Handschellen: Ware weg, Geld weg und <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
-        + "Passt dir ein Kunde nicht, blockierst du ihn mit ✕ – kostet nichts. Und eine laufende Übergabe kannst du unter „Live“ abbrechen." },
-    { tx: "Hast du ein Büro mit Disposition, fährt dein Team Snus-Kunden mit. Wer auffällig viel zahlt oder will, den lässt es liegen und sagt dir Bescheid – "
-        + "ob Fahnder oder großzügiger Kunde, entscheidest du dann selbst." }
+    { tx: () => `Einkauf: ${money(SNUS_BUY)} die Dose, nur per <b>Nachtwallet in Solana</b> ◎ (zum Senden wischen). Abholen im Späti. `
+        + `<b>Graue Aufträge</b> zahlen ${money(SNUS_SELL)} die Dose.` },
+    { tx: () => `Vorsicht, <b>Zivilfahnder</b>: zahlen mehr als ${money(SNUS_SELL)} und wollen 20, 30 Dosen. `
+        + `Sicheres Zeichen: <b>weißes Hemd UND glatt rasiert</b>. `
+        + `Nur eins davon? Dann echt.` },
+    { tx: () => `Lieferst du an einen Fahnder: Ware und Geld weg, <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
+        + "✕ blockiert Kunden gratis, unter „Live“ brichst du Übergaben ab." },
+    { tx: "Dein Büro-Team beliefert Snus-Kunden mit – "
+        + "Verdächtige lässt es liegen und fragt dich." }
   ],
   extras: [
-    { tx: "Chef, ab jetzt wird’s lebendig. Hier oben: 🎯 deine <b>Ziele</b> – jeden Morgen drei Tagesaufgaben mit Prämie, dazu Missionen von mir und Erfolge.",
+    { tx: "Hier oben: 🎯 deine <b>Ziele</b> – täglich drei Aufgaben mit Prämie, dazu Missionen und Erfolge.",
       target: "#goalsBtn", top: true },
-    { tx: "Die Konkurrenz schläft nicht: <b>Blitzfracht</b> und <b>Rabe &amp; Söhne</b> schnappen dir Ausschreibungen weg, wenn du zu lange wartest. "
-        + "Auf der Karte des Auftrags steht, wann sie zugreifen. Bei Großaufträgen kannst du im Planer über den Preis verhandeln." },
-    { tx: "Pannen, Staus, Streiks: Dann ruft jemand an und du entscheidest. Solange etwas offen ist, läuft das Spiel höchstens mit 3× – "
-        + "und wer nicht rangeht, für den entscheidet nach einer Weile der Fahrer.", target: "#phoneBtn", top: true },
-    { tx: "Fahrzeuge nutzen sich ab: Unter „Flotte“ siehst du den Zustand und schickst sie in die Werkstatt – alte fallen öfter aus. "
-        + "Unter „Welt“ stehen Ruf, Dieselpreis, Hausbank und der Monatsabschluss mit Steuern." },
-    { tx: "Und manchmal kommt Post mit Siegel: eine <b>Einladung zur Sonderfahrt</b>. Selten, eilig, fürstlich bezahlt – und Chefsache, die Dispo fasst sie nicht an." }
+    { tx: "<b>Blitzfracht</b> und <b>Rabe &amp; Söhne</b> schnappen dir Aufträge weg – die Karte zeigt, wann. "
+        + "Bei Großaufträgen verhandelst du im Planer." },
+    { tx: "Pannen, Staus, Streiks: Dann ruft jemand an. Solange offen, max. 3× – "
+        + "sonst entscheidet bald der Fahrer.", target: "#phoneBtn", top: true },
+    { tx: "Verschleiß: Unter „Flotte“ schickst du Fahrzeuge in die Werkstatt. "
+        + "„Welt“ zeigt Ruf, Diesel, Hausbank und Steuern." },
+    { tx: "Selten kommt eine <b>Einladung zur Sonderfahrt</b>: eilig, fürstlich bezahlt, nur für dich." }
   ],
   pablo: [
-    { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Der spielt in einer ganz anderen Liga: Kokain, tonnenweise.",
+    { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Kokain, tonnenweise.",
       target: "#phoneBtn", top: true },
-    { tx: () => `Er verkauft die Tonne für ${money(PABLO_BUY * 1000)}, bezahlt wird natürlich in Solana ◎ über die Nachtwallet. Die Ware wartet in einem Hangar an einem Flughafen. `
-        + `Seine Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne und nehmen ein paar hundert Kilo bis ein paar Tonnen.` },
-    { tx: "Echte Kunden heißen wie ihre Stadt – <b>Mr. Hamburg</b>, <b>Mr. Paris</b> – und wollen genau dorthin beliefert werden." },
-    { tx: "Heißt einer anders – <b>Mr. Banane</b>, <b>Mr. Schnitzel</b> –, dann ist das Interpol. Lieferst du an so jemanden, "
-        + "ist das Spiel vorbei. Endgültig, mit Bericht und allem." },
+    { tx: () => `Einkauf: ${money(PABLO_BUY * 1000)} pro Tonne, per Nachtwallet in Solana ◎. Ware im Flughafen-Hangar. `
+        + `Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne.` },
+    { tx: "Echte Kunden heißen wie ihre Stadt (<b>Mr. Hamburg</b>, <b>Mr. Paris</b>) und wollen genau dorthin." },
+    { tx: "<b>Mr. Banane</b>, <b>Mr. Schnitzel</b>? Interpol! Lieferst du da hin, "
+        + "ist das Spiel endgültig vorbei." },
     { tx: "Ich hab dich gewarnt. Seine Nachricht liegt auf dem Telefon.", target: "#phoneBtn", top: true }
   ],
   bases: [
-    { tx: "Willkommen in der Standortverwaltung! Ein <b>Büro</b> ist ein Stützpunkt: Dein Team dort nimmt selbst Aufträge an "
-        + "und schickt die Fahrzeuge los, die du ihm zuordnest – auch wenn du gerade woanders beschäftigt bist.",
+    { tx: "Ein <b>Büro</b> ist ein Stützpunkt: Dein Team nimmt dort selbst Aufträge an "
+        + "und schickt die zugeordneten Fahrzeuge los.",
       target: "#tab-bases .card", wait: 420 },
-    { tx: "Pro Etappe darfst du einen Standort betreiben. Hier wählst du den Ort: Stadtteile sind günstig, Häfen, Flughäfen "
-        + "und Terminals kosten mehr, liegen aber an den großen Verkehrswegen.",
+    { tx: "Ein Standort pro Etappe. Stadtteile sind günstig, Häfen, Flughäfen "
+        + "und Terminals teurer, aber besser angebunden.",
       target: "#newBaseNode" },
-    { tx: "Fünf Größen: <b>Kontor</b>, <b>Halle</b>, <b>Zentrum</b> – und später das <b>Bürogebäude</b> und die <b>Konzernzentrale</b> mit mehreren Etagen und Prestige-Zuschlag. 👥 sind die Schreibtische für Personal, 🚚 die Stellplätze "
-        + "für Fahrzeuge und 📡 das Einzugsgebiet, in dem dein Team Ausschreibungen abgreift.",
+    { tx: "Fünf Größen von <b>Kontor</b> bis <b>Konzernzentrale</b>. 👥 Schreibtische, 🚚 Stellplätze, "
+        + "📡 Einzugsgebiet.",
       target: "#tab-bases .tierlist .tier" },
-    { tx: "Kaufen kostet einmal viel Geld. Mieten kostet pro Tag, abgebucht wird einmal im Monat. Mieten kannst du erst, "
-        + "wenn mindestens 30 Tagesmieten auf dem Konto liegen.",
+    { tx: "Kaufen kostet einmalig, Miete wird monatlich abgebucht. Zum Mieten brauchst du "
+        + "30 Tagesmieten auf dem Konto.",
       target: "#tab-bases .tierlist .tier .buyrow" },
-    { tx: "Sobald dein erstes Büro steht, zeig ich dir Personal, Rollen, Fahrzeuge und Einrichtung." }
+    { tx: "Steht dein erstes Büro, zeig ich dir den Rest." }
   ],
   base1: [
-    { tx: () => { const b = S.bases[0]; return `Dein erstes Büro${b ? " in " + esc(N[b.node].name) : ""}! Oben stehen Größe, `
-        + "ob gemietet oder gekauft, und was es im Monat kostet."; },
+    { tx: () => { const b = S.bases[0]; return `Dein erstes Büro${b ? " in " + esc(N[b.node].name) : ""}! Oben: Größe, `
+        + "Miete oder Kauf, Monatskosten."; },
       target: "#tab-bases .card.base .card-top", wait: 420 },
-    { tx: "Das ist der Grundriss von oben. Tipp drauf, um einzurichten: Boden, Wände, Küche, Pflanzen – die Möbel lassen sich "
-        + "verschieben. Jedes Stück macht das Büro behaglicher, und Behaglichkeit hält die Stimmung oben.",
+    { tx: "Der Grundriss: Tipp drauf zum Einrichten. "
+        + "Jedes Möbelstück hebt die Stimmung.",
       target: "#tab-bases .card.base .planpeek" },
-    { tx: "Die <b>Stimmung</b> im Team. Unter 70 % gibt es öfter Ärger: Dann klingelt das Diensttelefon, der Standort steht still, "
-        + "und du entscheidest, wie der Streit gelöst wird – mal kostet das Geld, mal Zeit.",
+    { tx: "Die <b>Stimmung</b>: Unter 70 % gibt’s Streit – "
+        + "dann steht der Standort, bis du entscheidest.",
       target: "#tab-bases .card.base .moodbar" },
-    { tx: "Es gibt vier Stellen im Büro. Die Zahl an jeder zeigt, wie stark sie besetzt ist – die Sterne aller Leute in dieser Rolle zusammen. "
-        + "Ich stell sie dir einzeln vor.", target: "#tab-bases .card.base .covrow" },
+    { tx: "Vier Stellen im Büro – die Zahl ist die Summe der Sterne darin. "
+        + "Kurz einzeln:", target: "#tab-bases .card.base .covrow" },
     { tx: () => ROLE_TEXT.disp, target: '#tab-bases .card.base .cov[data-role="disp"]' },
     { tx: () => ROLE_TEXT.fahr, target: '#tab-bases .card.base .cov[data-role="fahr"]' },
     { tx: () => ROLE_TEXT.ums, target: '#tab-bases .card.base .cov[data-role="ums"]' },
-    { tx: () => ROLE_TEXT.zoll + " Übrigens: Tippst du später auf eine Stelle, erkläre ich sie dir nochmal – mit den Zahlen deines Büros.",
+    { tx: () => ROLE_TEXT.zoll + " Tipp später auf eine Stelle, dann erklär ich sie nochmal.",
       target: '#tab-bases .card.base .cov[data-role="zoll"]' },
-    { tx: "Hier kommen jeden Tag neue <b>Bewerbungen</b> rein. Die Sterne zeigen das Können, darunter stehen Rolle und Tageslohn, "
-        + "rechts die einmalige Vermittlungsgebühr. Tipp auf 🤝, um jemanden einzustellen.",
+    { tx: "Täglich neue <b>Bewerbungen</b>: Sterne = Können, rechts die Gebühr. "
+        + "🤝 stellt ein.",
       target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() },
-    { tx: "Dein <b>Team</b>. Mischung ist wichtig: Wer nur eine Rolle besetzt oder zu wenig Leute für zu viele Fahrzeuge hat, "
-        + "bekommt Streit. Kündigen geht über ✕ oder indem du die Person auf den Mülleimer unten ziehst – "
-        + "die Abfindung sind zwei Wochenlöhne.",
+    { tx: "Dein <b>Team</b>: Misch die Rollen und hab genug Leute, "
+        + "sonst gibt’s Streit. ✕ oder Mülleimer kündigt – "
+        + "Abfindung: zwei Wochenlöhne.",
       target: baseHead(0) },
-    { tx: "Hier ordnest du dem Standort <b>Fahrzeuge</b> zu – oder direkt unter „Flotte“ am Fahrzeug. Mit denen disponiert das Team "
-        + "und nimmt jeweils das passende. Der Rest deiner Flotte bleibt bei dir: Den teilst du selbst ein.",
+    { tx: "Hier ordnest du <b>Fahrzeuge</b> zu (oder unter „Flotte“). "
+        + "Den Rest disponierst du selbst.",
       target: () => $("#tab-bases .card.base .assignrow") || baseHead(2)() },
-    { tx: "Zieh jemanden aus dem Fahrpersonal auf ein Fahrzeug: Dann fährt diese Person es fest und ist schneller unterwegs. "
-        + "Beim Ziehen zeigt dir eine Leiste unten, wo du loslassen kannst.",
+    { tx: "Zieh Fahrpersonal auf ein Fahrzeug – dann fährt es fest und schneller. "
+        + "Die Leiste unten zeigt, wo du loslässt.",
       target: () => $("#tab-bases .card.base .staff.veh") || baseHead(2)() },
-    { tx: "Die Kennzahlen: Plätze, Stellplätze, wie viele Fahrzeuge gleichzeitig fahren können, Einzugsgebiet, Löhne pro Tag "
-        + "und die nächste Miete. Löhne gehen täglich ab, die Miete monatlich – auch wenn gerade nichts läuft.",
+    { tx: "Kennzahlen: Plätze, Fahrzeuge, Gebiet, Löhne (täglich) "
+        + "und Miete (monatlich).",
       target: "#tab-bases .card.base .meta.small" },
-    { tx: "Wird es eng, vergrößerst du hier zum nächsten Gebäude. Kündigen oder verkaufen geht auch – dann sind Team und Einrichtung weg.",
+    { tx: "Hier vergrößerst du. Kündigen oder Verkaufen löscht Team und Einrichtung.",
       target: "#tab-bases .card.base .baserow" },
-    { tx: "Das war’s zu den Büros. Gutes Team, schönes Büro, genug Leute für die Fahrzeuge – dann läuft der Laden fast von allein." }
+    { tx: "Das war’s! Gutes Team, schönes Büro – dann läuft’s fast von allein." }
   ]
 };
 
 /* Die vier Stellen im Büro – Lina erklärt sie im Büro-Rundgang und
    auf Zuruf, wenn man im Büro auf eine Stelle tippt. */
 const ROLE_TEXT = {
-  get disp() { return `${ROLES.disp.icon} <b>Disposition</b> ist das Herz des Büros: Sie nimmt Ausschreibungen im Einzugsgebiet an und schickt jeweils das passende Fahrzeug – `
-    + "aber nur, was pünktlich zu schaffen ist. Ohne Disposition passiert hier gar nichts. Faustregel: Eine ★★★-Disponentin betreut rund zehn Fahrzeuge und schaut alle 25 Minuten nach."; },
-  get fahr() { return `${ROLES.fahr.icon} <b>Fahrpersonal</b> bestimmt, wie viele Fahrzeuge ohne festen Fahrer gleichzeitig rollen. Ziehst du jemanden auf ein Fahrzeug, `
-    + "fährt er es fest – pro Stern 2 % schneller. Zu wenige Leute für zu viele Fahrzeuge drücken die Stimmung."; },
-  get ums() { return `${ROLES.ums.icon} <b>Umschlag</b> belädt und entlädt schneller – bis zu einem Drittel weniger Standzeit an diesem Standort. `
-    + "Lohnt sich vor allem an Häfen, Flughäfen und Terminals, wo viel umgeschlagen wird."; },
-  get zoll() { return `${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b> bringt einen Servicezuschlag auf jeden Auftrag, den das Büro annimmt – bis zu 12 %. `
-    + "Ab Etappe 4 geht es über Zollgrenzen (Schweiz, Norwegen, Großbritannien, Übersee): Dann macht diese Stelle die Zollpapiere für die Fahrten des Büros – "
-    + "und hilft dir bei deinen eigenen mit einem Tipp und zehn Sekunden mehr."; }
+  get disp() { return `${ROLES.disp.icon} <b>Disposition</b> nimmt Aufträge im Einzugsgebiet an und schickt Fahrzeuge – `
+    + "ohne sie läuft nichts. ★★★ schafft rund zehn Fahrzeuge, Check alle 25 Minuten."; },
+  get fahr() { return `${ROLES.fahr.icon} <b>Fahrpersonal</b>: wie viele Fahrzeuge gleichzeitig rollen. Fest zugeteilt `
+    + "pro Stern 2 % schneller. Zu wenige Leute drücken die Stimmung."; },
+  get ums() { return `${ROLES.ums.icon} <b>Umschlag</b>: bis zu ⅓ weniger Standzeit. `
+    + "Lohnt sich an Häfen, Flughäfen, Terminals."; },
+  get zoll() { return `${ROLES.zoll.icon} <b>Zoll &amp; Papiere</b>: bis zu 12 % Zuschlag auf Büro-Aufträge. `
+    + "Ab Etappe 4 macht sie die Zollpapiere – "
+    + "und gibt dir einen Tipp plus 10 Sekunden."; }
 };
 function roleHere(r, b) {
   if (!b) return "";
   const where = esc(N[b.node].short), n = roleCount(b, r), pw = rolePower(b, r);
-  if (!n) return `Hier in ${where} sitzt noch niemand auf dieser Stelle. Unter „Bewerbungen“ findest du Leute – auf die Rolle unter dem Namen achten.`;
+  if (!n) return `In ${where} ist die Stelle noch frei – schau unter „Bewerbungen“.`;
   const who = `${n} ${n === 1 ? "Person" : "Leute"} mit zusammen ${pw} ★`;
-  if (r === "disp") return `Hier in ${where}: ${who}. Das reicht für bis zu <b>${dispCap(b)} Fahrzeuge</b>, das Team schaut alle <b>${dur(dispatchInterval(b))}</b> nach freien.`;
-  if (r === "fahr") return `Hier in ${where}: ${who}. Ohne feste Zuordnung können <b>${driverCap(b)} Fahrzeuge</b> gleichzeitig los. Fest zugeordnet sind ${assignedDriverIds(b).size}.`;
-  if (r === "ums") return `Hier in ${where}: ${who}. Laden und Löschen geht <b>${Math.round((1 - umschlagFactor(b.node)) * 100)} %</b> schneller.`;
-  return `Hier in ${where}: ${who}. Auf jeden Auftrag des Büros kommen <b>+${Math.round(baseBonus(b) * 100)} %</b>${tierOf(b).prestige ? " (inklusive Prestige des Gebäudes)" : ""}.`;
+  if (r === "disp") return `In ${where}: ${who} – reicht für <b>${dispCap(b)} Fahrzeuge</b>, Check alle <b>${dur(dispatchInterval(b))}</b>.`;
+  if (r === "fahr") return `In ${where}: ${who}. <b>${driverCap(b)} Fahrzeuge</b> gleichzeitig, ${assignedDriverIds(b).size} fest zugeordnet.`;
+  if (r === "ums") return `In ${where}: ${who}. Laden und Löschen <b>${Math.round((1 - umschlagFactor(b.node)) * 100)} %</b> schneller.`;
+  return `In ${where}: ${who}. <b>+${Math.round(baseBonus(b) * 100)} %</b> auf jeden Büro-Auftrag${tierOf(b).prestige ? " (inkl. Prestige)" : ""}.`;
 }
 function linaRole(r, baseId) {
   const b = baseById(baseId);

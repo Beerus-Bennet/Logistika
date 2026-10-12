@@ -13,59 +13,59 @@ const VIP_JOBS = [
   { st: 1, org: "Universitätsklinikum Spreebogen", dept: "Institut für Transfusionsmedizin", mono: "US",
     sender: "Prof. Dr. med. Hanna Reimers", role: "Direktorin Transfusionsmedizin",
     from: "b-mitte", to: "b-marz", item: "Blutkonserven der Gruppe 0 negativ", cargo: "kuehl", kg: [8, 14],
-    story: "In der Notaufnahme in Marzahn wird nach einem schweren Unfall jede Minute gezählt. Unsere eigene Fahrbereitschaft ist ausgelastet – wir vertrauen auf Ihre Diskretion und Ihr Tempo." },
+    story: "Schwerer Unfall – die Notaufnahme in Marzahn braucht Blut, jede Minute zählt." },
   { st: 1, org: "Konzerthaus am Lindenplatz", dept: "Intendanz", mono: "KL",
     sender: "Dr. Clara Weinberg", role: "Intendantin",
     from: "b-char", to: "b-mitte", item: "eine Stradivari-Violine (Leihgabe)", cargo: "schmuck", kg: [2, 4],
-    story: "Unser Solist gibt heute Abend sein Debüt in Mitte. Das Instrument liegt noch in der Werkstatt des Geigenbauers in Charlottenburg – versichert, unersetzlich und ab 19 Uhr auf der Bühne erwartet." },
+    story: "Debüt heute Abend – die Geige liegt noch beim Geigenbauer in Charlottenburg." },
   { st: 1, org: "Internationale Filmtage Berlin", dept: "Festivalleitung", mono: "IF",
     sender: "Jonas Vogt", role: "Leiter Filmlogistik",
     from: "b-ber", to: "b-mitte", item: "die Premierenkopie des Eröffnungsfilms", cargo: "express", kg: [14, 24],
-    story: "Die Kopie ist eben am BER gelandet, der rote Teppich liegt schon. Ohne Film keine Weltpremiere – und 1.800 Gäste im Saal." },
+    story: "Die Kopie ist am BER gelandet, 1.800 Gäste warten – ohne Film keine Premiere." },
   { st: 1, org: "Botschaft des Königreichs Nordland", dept: "Kanzlei", mono: "KN",
     sender: "Ingrid Sørensen", role: "Gesandtin",
     from: "b-tempel", to: "b-mitte", item: "versiegelte Dokumentenmappe", cargo: "schmuck", kg: [1, 2],
-    story: "Die Mappe muss vor der Unterzeichnung heute Nachmittag in der Botschaft sein. Kurier des Vertrauens, keine Umwege, keine Fragen." },
+    story: "Die Mappe muss vor der Unterzeichnung heute Nachmittag hier sein. Keine Fragen." },
   { st: 2, org: "Karosseriewerk Havelland", dept: "Werksleitung", mono: "KH",
     sender: "Markus Brandt", role: "Werkleiter",
     from: "leipzig", to: "potsdam", item: "ein Ersatzgetriebe für die Fertigungsstraße", cargo: "express", kg: [180, 320],
-    story: "Das Band steht still – jede Stunde kostet uns ein Vielfaches Ihres Honorars. Das Teil liegt beim Zulieferer in Leipzig bereit." },
+    story: "Das Band steht still – das Teil liegt beim Zulieferer in Leipzig." },
   { st: 2, org: "Opernhaus an der Elbe", dept: "Technische Direktion", mono: "OE",
     sender: "Friederike Lindner", role: "Technische Direktorin",
     from: "b-westh", to: "dresden", item: "das Bühnenbild der Premiere", cargo: "sperrig", kg: [2400, 4200],
-    story: "Unser Bühnenbild wurde in Berlin gefertigt, der Vorhang hebt sich morgen Abend. Wir bitten um Ihre Erfahrung im Umgang mit empfindlicher Übergröße." },
+    story: "Premiere morgen Abend, das Bühnenbild steht noch in Berlin – empfindliche Übergröße." },
   { st: 2, org: "Klinikum am Auensee Leipzig", dept: "Zentrallabor", mono: "KA",
     sender: "Prof. Dr. Yusuf Sahin", role: "Chefarzt Labormedizin",
     from: "halle", to: "leipzig", item: "Proben einer klinischen Studie", cargo: "kuehl", kg: [20, 40],
-    story: "Die Kühlkette darf keine Sekunde reißen. Die Ergebnisse entscheiden über die Zulassung eines Medikaments." },
+    story: "Die Kühlkette darf nicht reißen – es geht um die Zulassung eines Medikaments." },
   { st: 3, org: "Rennstall Grüne Hölle", dept: "Teamleitung", mono: "GH",
     sender: "Bastian Kruse", role: "Teamchef",
     from: "stuttgart", to: "koeln", item: "ein Ersatzmotor fürs Qualifying", cargo: "express", kg: [160, 240],
-    story: "Motorschaden im Training. Morgen früh ist Qualifying – der neue Motor steht beim Werk in Stuttgart." },
+    story: "Motorschaden! Morgen früh ist Qualifying, der Ersatz steht in Stuttgart." },
   { st: 3, org: "Industrieschau Hannover", dept: "Ausstellerservice", mono: "IH",
     sender: "Nele Hansen", role: "Leiterin Ausstellerservice",
     from: "muenchen", to: "hannover", item: "der Prototyp eines Messestands", cargo: "pal", kg: [1800, 3600],
-    story: "Ein Hauptaussteller steht morgen früh ohne Stand da. Wir öffnen um neun – der Vorstand kommt um zehn." },
+    story: "Ein Hauptaussteller hat keinen Stand – wir öffnen morgen um neun." },
   { st: 3, org: "Konzerthalle am Elbkai", dept: "Künstlerisches Betriebsbüro", mono: "KE",
     sender: "Dr. Merle Engel", role: "Betriebsdirektorin",
     from: "frankfurt", to: "hamburg", item: "ein Konzertflügel", cargo: "sperrig", kg: [480, 520],
-    story: "Der Flügel unseres Gastsolisten muss vor der Generalprobe gestimmt im Großen Saal stehen." },
+    story: "Der Flügel muss vor der Generalprobe im Großen Saal stehen." },
   { st: 4, org: "Istituto Vaccinale di Milano", dept: "Direzione Logistica", mono: "IV",
     sender: "Dott.ssa Elena Rossi", role: "Leiterin Distribution",
     from: "fra", to: "milano", item: "Impfstoff für eine Notfallkampagne", cargo: "kuehl", kg: [900, 1600],
-    story: "Eine Kampagne startet übermorgen früh. Die Chargen sind in Frankfurt freigegeben und warten bei plus fünf Grad." },
+    story: "Kampagnenstart übermorgen – die Chargen warten in Frankfurt bei +5 °C." },
   { st: 4, org: "Maison de Couture Paris", dept: "Atelier", mono: "MC",
     sender: "Camille Dubois", role: "Directrice de production",
     from: "b-mitte", to: "paris", item: "die Kollektion für die Modenschau", cargo: "express", kg: [260, 420],
-    story: "Die Show beginnt morgen um 20 Uhr, die Kollektion hängt noch im Berliner Atelier. Knitterfrei, bitte." },
+    story: "Show morgen um 20 Uhr, die Kollektion hängt noch in Berlin. Knitterfrei, bitte." },
   { st: 5, org: "Galerie Whitmore, New York", dept: "Kunsttransport", mono: "GW",
     sender: "Eleanor Whitmore", role: "Galeristin",
     from: "lhr", to: "nyc", item: "ein Gemälde für die Abendauktion", cargo: "schmuck", kg: [60, 120],
-    story: "Das Werk muss heute noch nach Manhattan. Versicherungswert achtstellig – wir erwarten allerhöchste Sorgfalt." },
+    story: "Das Werk muss heute nach Manhattan – Versicherungswert achtstellig." },
   { st: 5, org: "Raumfahrtzentrum Shanghai", dept: "Integration", mono: "RS",
     sender: "Dr. Wei Chen", role: "Programmleiter",
     from: "fra", to: "pvg", item: "ein Satellitenbauteil", cargo: "express", kg: [400, 700],
-    story: "Das Startfenster schließt sich in wenigen Tagen. Das Bauteil ist das letzte fehlende Stück." }
+    story: "Das Startfenster schließt bald – das Bauteil ist das letzte fehlende Stück." }
 ];
 const VIP_MIN = [1400, 4800, 16000, 65000, 190000, 420000];
 
@@ -98,7 +98,7 @@ function tickVip() {
   /* offene Einladung verfällt */
   if (v.open && S.time > v.open.rsvp) {
     const m = S.phone.msgs.find(x => x.id === v.open.msg);
-    if (m && m.dec && !m.dec.done) { m.dec.done = true; m.handled = true; m.result = "Frist verstrichen – die Fahrt ging an jemand anderen."; }
+    if (m && m.dec && !m.dec.done) { m.dec.done = true; m.handled = true; m.result = "Frist verpasst – die Fahrt ging an andere."; }
     toast("✉️ Die Einladung von " + v.open.o.shipper + " ist verfallen.", "warn");
     v.open = null; closeInvite();
   }
@@ -141,8 +141,8 @@ function vipDelivered(job, pay, late) {
   if (!late && typeof luckyGive === "function") luckyGive("std", "Dankeschön für die Sonderfahrt");
   const tpl = VIP_JOBS.find(t => t.org === o.shipper);
   phoneMsg({ from: o.shipper, kind: "good", title: late ? "Angekommen – wenn auch spät" : "Mit großem Dank",
-    body: late ? "Die Lieferung ist angekommen, leider nach der vereinbarten Zeit. Wir werden das bei künftigen Anfragen berücksichtigen."
-      : `Sehr geehrte Damen und Herren, ${tpl ? tpl.item : "die Sendung"} ist rechtzeitig eingetroffen. Wir danken Ihnen für Ihren außergewöhnlichen Einsatz. Hochachtungsvoll, ${tpl ? tpl.sender : "die Geschäftsleitung"}` });
+    body: late ? "Angekommen – leider zu spät. Das merken wir uns."
+      : `Pünktlich angekommen: ${tpl ? tpl.item : "die Sendung"}. Herzlichen Dank! – ${tpl ? tpl.sender : "die Geschäftsleitung"}` });
 }
 
 /* ------------------------------ Einladung (Ansicht) ------------------------------ */
@@ -169,7 +169,7 @@ function openInvite() {
           <h2 class="iv-h">Einladung zur Sonderfahrt</h2>
           <p class="iv-sal">Sehr geehrte Damen und Herren von ${esc(S.player.company)},</p>
           <p class="iv-tx">${esc(tpl.story)}</p>
-          <p class="iv-tx">Wir würden uns freuen, Ihnen diese Fahrt anvertrauen zu dürfen.</p>
+          <p class="iv-tx">Wir zählen auf Sie.</p>
           <dl class="iv-dl">
             <dt>Gegenstand</dt><dd>${esc(tpl.item)} · ${kgf(o.weight)}</dd>
             <dt>Abholung</dt><dd>${addr(oPick(o))}</dd>
@@ -177,11 +177,11 @@ function openInvite() {
             <dt>Frist</dt><dd>${stamp(o.deadline)} Uhr <small>(${dur(o.deadline - S.time)})</small></dd>
           </dl>
           <div class="iv-fee"><small>Honorar</small><b>${money(o.pay)}</b></div>
-          <p class="iv-rsvp">Um Zusage wird gebeten bis ${clock(v.open.rsvp)} Uhr.<br>Chefsache: Diese Fahrt disponieren Sie persönlich.</p>
+          <p class="iv-rsvp">Zusage bis ${clock(v.open.rsvp)} Uhr.<br>Chefsache: Sie disponieren persönlich.</p>
           <div class="iv-sig"><span class="iv-hand">${esc(tpl.sender)}</span><small>${esc(tpl.sender)} · ${esc(tpl.role)}</small>
             <div class="iv-seal"><span>${esc(tpl.mono)}</span></div></div>
           <div class="iv-btns">
-            <button class="iv-yes" id="ivYes">Mit Vergnügen zusagen</button>
+            <button class="iv-yes" id="ivYes">Gern zusagen</button>
             <button class="iv-no" id="ivNo">Höflich absagen</button>
           </div>
         </div>
@@ -287,12 +287,12 @@ function bindNego(o) {
       if (!planState || planState.order !== o) return;
       if (ask <= n.ceil) {
         o.pay = Math.round(o.pay * ask); n.done = true; n.result = "Einigung bei " + money(o.pay);
-        n.chat.push({ me: false, t: "Einverstanden. Wir freuen uns auf die Zusammenarbeit." });
+        n.chat.push({ me: false, t: "Einverstanden. Auf gute Zusammenarbeit!" });
         extraStats().nego++;
         toast("🤝 Einigung: " + money(o.pay), "ok");
       } else if (ask <= n.ceil * 1.12) {
         n.counter = Math.round(o.pay * n.ceil / 10) * 10;
-        n.chat.push({ me: false, t: "So weit können wir nicht gehen. " + money(n.counter) + " – das ist unser letztes Wort." });
+        n.chat.push({ me: false, t: "Zu viel. " + money(n.counter) + " – letztes Wort." });
       } else if (o.rival) {
         n.chat.push({ me: false, t: "Das ist uns zu viel. Dann nehmen wir " + rivalById(o.rival.id).name + "." });
         n.done = true; n.result = "Kunde ging zur Konkurrenz";
@@ -305,7 +305,7 @@ function bindNego(o) {
           render();
         }, 1400);
       } else {
-        n.chat.push({ me: false, t: "Das liegt deutlich über unserem Budget. Es bleibt beim ausgeschriebenen Preis." });
+        n.chat.push({ me: false, t: "Weit über Budget – es bleibt beim ausgeschriebenen Preis." });
         n.done = true; n.result = "Kein Aufschlag – es bleibt beim Preis";
       }
       renderPlanner(false);
@@ -332,7 +332,7 @@ function rivalsHTML() {
     .concat(RIVALS.filter(r => r.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[r.id])).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0 })));
   const tot = rows.reduce((a, r) => a + r.n, 0) || 1;
   return `<div class="card eco">
-    <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Wer zu lange wartet, dem schnappen andere Speditionen die Aufträge weg. Anteil der letzten Tage:</small></div></div>
+    <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Wer zögert, verliert Aufträge an andere. Anteil der letzten Tage:</small></div></div>
     <div class="share">${rows.map(r => `<div class="share-row"><span>${r.icon} ${esc(r.name)}</span>
       <i style="--w:${Math.round(r.n / tot * 100)}%;--c:${r.col}"></i><b>${Math.round(r.n / tot * 100)} %</b></div>`).join("")}</div>
   </div>`;
@@ -350,7 +350,7 @@ function orderExtraHTML(o) {
     h += `<div class="xrow contract">📑 Rahmenvertrag${c ? " · Tag " + c.day + " von " + c.days + " · Ausfall kostet " + money(c.penalty) : ""}</div>`;
   }
   if (o.mission) h += `<div class="xrow mission">🧭 Teil einer Mission – Frist ${stamp(o.deadline)}</div>`;
-  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Großauftrag – im Planer lässt sich über den Preis reden</div>`;
+  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Großauftrag – Preis im Planer verhandelbar</div>`;
   if (o.nego && o.nego.done && o.nego.result) h += `<div class="xrow nego done">🤝 ${esc(o.nego.result)}</div>`;
   return h + rivalBadgeHTML(o);
 }
@@ -367,7 +367,7 @@ function vipCardHTML(o, pv) {
     <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
     <div class="meta small"><span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
       <span class="${o.deadline - S.time < 90 ? "bad" : ""}">⏳ bis ${clock(o.deadline)} · noch ${dur(o.deadline - S.time)}</span></div>
-    <div class="xrow vip">Nur du disponierst diese Fahrt – die Dispo fasst sie nicht an.</div>
+    <div class="xrow vip">Nur du disponierst – die Dispo fasst sie nicht an.</div>
     ${pv}
   </div>`;
 }
