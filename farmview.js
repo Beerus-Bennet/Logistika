@@ -876,15 +876,9 @@ function objAction(o, x, y) {
     const V = aniView(penKind(o));
     const s = x != null && !V.fish ? pickAnimal(x, y, o) : null;
     if (s) {
-      const [, a] = animalById(s.id);
-      if (a && aniState(a) === "busy" && !a.petted && farmPet(o, a)) {
-        FV.bounce.set("a" + s.id, (performance.now() - FV.t0) / 1000);
-        FV.R.burst({ x: s.x, y: s.cow ? 1.1 : 0.5, z: s.z, n: 5, col: [0.95, 0.3, 0.42, 1], speed: 0.5, up: 1.2, g: 0.6, life: 1.3, size: 0.13, shape: 2 });
-        sfx("pet");
-        floatText(x, y - 30, "♥ Qualität +1", "pet");
-        FV.sel = null; save();
-        return;
-      }
+      /* angetipptes Tier hüpft kurz – Qualität kommt vom Platz im Stall, nicht vom Streicheln */
+      FV.bounce.set("a" + s.id, (performance.now() - FV.t0) / 1000);
+      sfx("pet");
     }
     openPop(o, "pen");
     return;
@@ -900,7 +894,7 @@ function objAction(o, x, y) {
     if (got.length) {
       got.forEach((g, i) => {
         flyGain(o, g, i);
-        if (g.by) Object.keys(g.by).forEach((b, k) => { const [sx, sy] = objScreen(o); flyItem(FITEMS[b].i, sx, sy, storeBtn(), 300 + k * 90, g.by[b]); });
+        if (g.by) Object.keys(g.by).forEach((b, k) => { const [sx, sy] = objScreen(o); flyItem(b, sx, sy, storeBtn(), 300 + k * 90, g.by[b]); });
       });
       sfx(o.t === "kutter" ? "horn" : "collect");
       if (o.t === "kutter") { const [kx, ky] = objScreen(o, 1.2); floatText(kx, ky - 26, got.length > 1 ? "Volle Kisten!" : "Fang an Land!", "gold"); }
@@ -1032,7 +1026,7 @@ function collectPen(o) {
     n += r.n;
     if (s) {
       const p = FV.R.project(s.x, 0.3, s.z);
-      if (p) flyItem(FITEMS[r.id].i, p[0], p[1], storeBtn(), i * 70 + (r.gone ? 450 : 0), r.n);
+      if (p) flyItem(r.id, p[0], p[1], storeBtn(), i * 70 + (r.gone ? 450 : 0), r.n);
       if (r.gone) animalLeave(a.id);
       else if (s.fish) { splash(s.x, s.z, 12); if (typeof fishJump === "function") fishJump(s.x, s.z, s.h); }
       else FV.R.burst({ x: s.x, y: 0.2, z: s.z, n: 6, col: kind === "kuh" ? [0.95, 0.95, 1, 0.9] : kind === "schaf" ? [1, 1, 0.97, 0.95] : [1, 1, 1, 0.9], speed: 0.8, up: 1.5, size: kind === "schaf" ? 0.1 : 0.06, shape: kind === "huhn" ? 1 : 0 });
@@ -1047,7 +1041,7 @@ function collectPen(o) {
     xpFly(x, y, FITEMS[id].xp * n);
     sfx(A.fish ? "splash" : "collect");
     save();
-    if (A.mast && !o.animals.length) setTimeout(() => toast(FPEN_META[o.t].n + " ist leer – im Laden gibt es neue " + (A.young === "Kalb" ? "Kälber" : A.young || A.pl) + ".", "ok"), 900);
+    if (A.mast && !o.animals.length) setTimeout(() => toast(FPEN_META[o.t].n + " ist leer – im Laden gibt es neue " + (A.young || A.pl) + ".", "ok"), 900);
   }
   return i > 0;
 }
@@ -1095,8 +1089,8 @@ function noFeed(o) {
 function storeBtn() { return $("#fbStore"); }
 function flyGain(o, g, i) {
   const [x, y] = objScreen(o);
-  flyItem(FITEMS[g.id].i, x, y, storeBtn(), i * 90, g.n);
-  floatText(x, y - 10, "+" + famt(g.id, g.n) + " " + FITEMS[g.id].i, "");
+  flyItem(g.id, x, y, storeBtn(), i * 90, g.n);
+  floatText(x, y - 10, "+" + famt(g.id, g.n), "");
   if (g.xp) xpFly(x, y, g.xp);
 }
 /* Fliegende Sachen liegen in einer festen Ebene über allem – sonst würden
@@ -1118,7 +1112,10 @@ function flyItem(icon, x, y, toEl, delay, n) {
   for (let k = 0; k < count; k++) {
     const el = document.createElement("div");
     el.className = "ffly";
-    el.textContent = icon;
+    /* Waren fliegen als 3D-Bildchen, sonst als Symbol (Münzen, Kleeblatt) */
+    const url = FITEMS[icon] && typeof itemImg === "function" ? itemImg(icon) : null;
+    if (url) el.innerHTML = `<img src="${url}" alt="">`;
+    else el.textContent = FITEMS[icon] ? FITEMS[icon].i : icon;
     layer.appendChild(el);
     const sx = x + (Math.random() - 0.5) * 30, sy = y + (Math.random() - 0.5) * 20;
     const mx = (sx + tx) / 2 + (Math.random() - 0.5) * 80, my = Math.min(sy, ty) - 60 - Math.random() * 50;
@@ -1256,6 +1253,7 @@ function sfx(kind) {
 }
 
 /* ------------------------- Blasen über Objekten ------------------------ */
+const tagIc = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
 function updateFarmTags() {
   const box = $("#farmTags");
   if (!box || !FV.R) return;
@@ -1266,19 +1264,19 @@ function updateFarmTags() {
       /* der Kutter ist erst fertig, wenn er wieder angelegt hat */
       const sailing = o.t === "kutter" && typeof boatDocked === "function" && !boatDocked();
       if (o.done.length && !sailing) {
-        const ic = [...new Set(o.done.map(d => FITEMS[d.r].i))].slice(0, 3).join("");
+        const ic = [...new Set(o.done.map(d => d.r))].slice(0, 3).map(tagIc).join("");
         want.push([o, "ready", ic + (o.done.length > 1 ? "<b>" + o.done.length + "</b>" : ""), objH(o) + 0.4]);
       } else if (o.q.length || (sailing && o.done.length)) {
         const it = o.q[0], f = it ? clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1) : 1;
-        want.push([o, "work", FITEMS[it ? it.r : o.done[0].r].i + `<i style="--p:${Math.round(f * 100)}%"></i>`, objH(o) + 0.3]);
+        want.push([o, "work", tagIc(it ? it.r : o.done[0].r) + `<i style="--p:${Math.round(f * 100)}%"></i>`, objH(o) + 0.3]);
       }
     }
     if (o.animals && o.animals.length) {
       const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
       const ready = o.animals.filter(a => aniState(a) === "ready").length;
       const A = FANIMALS[penKind(o)], th = A.fish ? 1.0 : 1.6;
-      if (ready) want.push([o, "ready", (A.mast ? A.i + "✓" : FITEMS[A.out].i) + "<b>" + ready + "</b>", th]);
-      else if (hungry) want.push([o, "hungry", "💭" + FITEMS[A.feed].i, th]);
+      if (ready) want.push([o, "ready", (A.mast ? (typeof aniHTML === "function" ? aniHTML(penKind(o)) : A.i) + "✓" : tagIc(A.out)) + "<b>" + ready + "</b>", th]);
+      else if (hungry) want.push([o, "hungry", "💭" + tagIc(A.feed), th]);
     }
     if (o.t === "board") {
       const os = farmOrders(), ok = os.filter(farmOrderReady).length;
@@ -1351,16 +1349,16 @@ function renderFarmPop() {
         const c = FCROPS[id], it = FITEMS[id], lock = c.lv > lv;
         const rot = !lock && o.last && o.last !== id ? `<em class="rot" title="Fruchtwechsel: +1 Stern">↻★</em>` : "";
         return `<div class="ftool${lock ? " lock" : ""}" data-tool="seed" data-crop="${id}">
-          <span class="ic">${lock ? "🔒" : it.i}</span>${rot}<b>${lock ? "Lv " + c.lv : esc(it.n)}</b><small>${lock ? "" : fdur(c.t) + " · " + eur(c.seed)}</small></div>`;
+          ${icOf(id, lock)}${rot}<b>${lock ? "Lv " + c.lv : esc(it.n)}</b><small>${lock ? "" : fdur(c.t) + " · " + eur(c.seed)}</small></div>`;
       }).join("") + `</div>`;
   } else if (P.kind === "sickle") {
-    h = `<div class="fp-h">${FITEMS[o.crop].i} ${esc(FITEMS[o.crop].n)} ist reif!<small>Zieh die Sichel über alle reifen Felder</small></div>
-      <div class="fp-row"><div class="ftool big" data-tool="sickle"><span class="ic">🌙</span><b>Sichel</b></div></div>`;
+    h = `<div class="fp-h">${tagIc(o.crop)} ${esc(FITEMS[o.crop].n)} ist reif!<small>Zieh die Sichel über alle reifen Felder</small></div>
+      <div class="fp-row"><div class="ftool big" data-tool="sickle">${typeof toolIc === "function" ? toolIc("sickle") : `<span class="ic">🌙</span>`}<b>Sichel</b></div></div>`;
   } else if (P.kind === "grow") {
     const left = o.end - S.time, q = Math.min(5, 3 + (o.w ? 1 : 0) + (o.rot ? 1 : 0));
-    h = `<div class="fp-h">${FITEMS[o.crop].i} ${esc(FITEMS[o.crop].n)}<small>reif in <span class="fp-left">${fdur(Math.max(1, left))}</span> · ${qStars(q)}</small></div>
+    h = `<div class="fp-h">${tagIc(o.crop)} ${esc(FITEMS[o.crop].n)}<small>reif in <span class="fp-left">${fdur(Math.max(1, left))}</span> · ${qStars(q)}</small></div>
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
-        : `<div class="ftool big" data-tool="water"><span class="ic">🚿</span><b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
+        : `<div class="ftool big" data-tool="water">${typeof toolIc === "function" ? toolIc("water") : `<span class="ic">🚿</span>`}<b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
   } else if (P.kind === "bait") {
     const k = farmInv("koeder"), m = farmInv("mais"), U = typeof angelS === "function" ? angelS() : null;
     h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Reusenköder${m ? " · " + FITEMS.mais.i + " " + famt("mais", m) + " Mais" : ""} da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
@@ -1377,10 +1375,10 @@ function renderFarmPop() {
     h = `<div class="fp-h">${FITEMS[o.kind].i} ${esc(FPOTS[o.kind].n)} gehen in die Reuse<small>hochziehen in <span class="fp-left">${fdur(Math.max(1, o.end - S.time))}</span></small></div>`;
   } else if (P.kind === "tree") {
     const T = treeDef(o), line = o.t === "mline", left = o.end - S.time;
-    const ic = line ? T.i : FITEMS[o.kind].i;
+    const ic = line ? T.i : tagIc(o.kind);
     h = `<div class="fp-h">${ic} ${esc(T.n)}<small>${line ? "erntereif" : "Früchte"} in <span class="fp-left">${fdur(Math.max(1, left))}</span>${(o.h || 0) >= 3 ? (line ? " · gut eingewachsen: +1 ★" : " · alter Baum: +1 ★") : ""}</small></div>
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">${line ? "🧽" : "💧"}</span><b>${line ? "geputzt" : "gegossen"}</b></div>`
-        : `<div class="ftool big" data-tool="water"><span class="ic">${line ? "🧽" : "🚿"}</span><b>${line ? "Leine putzen" : "Gießen"}</b><small>25 % schneller, +1 ★</small></div>`}</div>`
+        : `<div class="ftool big" data-tool="water">${line || typeof toolIc !== "function" ? `<span class="ic">${line ? "🧽" : "🚿"}</span>` : toolIc("water")}<b>${line ? "Leine putzen" : "Gießen"}</b><small>25 % schneller, +1 ★</small></div>`}</div>`
       + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "");
   } else if (P.kind === "pen") {
     const pi = penInfo(o), A = pi.A, M = FPEN_META[o.t];
@@ -1389,14 +1387,13 @@ function renderFarmPop() {
     const next = busy.length ? Math.min(...busy.map(a => a.fed)) - S.time : 0;
     const per = A.fish ? "Schwarm" : "Tier";
     const mast = A.mast ? " · Mast " + o.animals.map(a => "●".repeat(Math.min(A.mast, a.g || 0)) + "○".repeat(Math.max(0, A.mast - (a.g || 0)))).join(" ") : "";
-    h = `<div class="fp-h">${A.i} ${o.animals.length} ${o.animals.length === 1 ? A.n : A.pl} · ${qStars(pi.stars)}
-        <small>${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je ${per}${busy.length ? " · " + (A.mast ? "satt" : "nächstes " + FITEMS[A.out].i) + " in " + fdur(Math.max(1, next)) : ""}${mast}</small></div>
+    h = `<div class="fp-h">${typeof aniHTML === "function" && !A.fish ? aniHTML(pi.kind) : A.i} ${o.animals.length} ${o.animals.length === 1 ? A.n : A.pl} · ${qStars(pi.stars)}
+        <small>${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je ${per}${busy.length ? " · " + (A.mast ? "satt" : "nächstes " + tagIc(A.out)) + " in " + fdur(Math.max(1, next)) : ""}${mast}</small></div>
       <div class="fp-row">
-        ${hungry ? `<div class="ftool big" data-tool="feed"><span class="ic">${FITEMS[A.feed].i}</span><b>Füttern</b><small>${famt(A.feed, farmInv(A.feed))} da · ${hungry} hungrig</small></div>` : ""}
+        ${hungry ? `<div class="ftool big" data-tool="feed">${icOf(A.feed)}<b>Füttern</b><small>${famt(A.feed, farmInv(A.feed))} da · ${hungry} hungrig</small></div>` : ""}
         <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>${A.fish ? "Gehege" : "Stall"}</b><small>Platz & Tiere</small></div>
-        ${o.animals.length < A.max ? `<div class="ftool" data-act="buyani"><span class="ic">${A.i}</span><b>${esc(A.young || "Kaufen")}</b><small>${eur(animalPrice(pi.kind))}</small></div>` : ""}
-      </div>${A.mast ? `<div class="fp-tip">Nach ${A.mast} Mahlzeiten antippen – ab zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je ${esc(A.n)}.</div>`
-        : busy.length && !hungry && !A.fish ? `<div class="fp-tip">Tipp: Tier antippen und streicheln – ${o.t === "sheep" ? "die nächste Wolle" : o.t === "cows" ? "die nächste Milch" : "das nächste Ei"} wird besser.</div>` : ""}`;
+        ${o.animals.length < A.max ? `<div class="ftool" data-act="buyani">${typeof aniIc === "function" && !A.fish ? aniIc(pi.kind) : `<span class="ic">${A.i}</span>`}<b>${esc(A.young || A.n)}</b><small>${eur(animalPrice(pi.kind))}</small></div>` : ""}
+      </div>${A.mast ? `<div class="fp-tip">Nach ${A.mast} Mahlzeiten antippen – ab zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je ${esc(A.n)}.</div>` : ""}`;
   } else if (P.kind === "deco") {
     const D = FDECO[o.k];
     h = `<div class="fp-h">${D.i} ${esc(D.n)}</div><div class="fp-row">
@@ -1450,6 +1447,10 @@ function startToolDrag(e, kind, crop, origin) {
   ghost.className = "fdrag";
   ghost.textContent = { seed: FITEMS[crop] ? FITEMS[crop].i : "🌱", sickle: "🌙", water: origin && origin.t === "mline" ? "🧽" : "🚿", bait: "🪱", hook: "🪝",
     feed: origin && origin.animals ? FITEMS[FANIMALS[penKind(origin)].feed].i : "🥣" }[kind];
+  /* das gezogene Werkzeug als 3D-Bild: Saat, Futter, Sichel, Gießkanne */
+  const gid = kind === "seed" ? crop : kind === "feed" && origin && origin.animals ? FANIMALS[penKind(origin)].feed : null;
+  const gu = typeof itemImg !== "function" ? null : gid ? itemImg(gid) : kind === "sickle" ? toolImg("sickle") : kind === "water" && !(origin && origin.t === "mline") ? toolImg("water") : null;
+  if (gu) ghost.innerHTML = `<img src="${gu}" alt="">`;
   $("#farm").appendChild(ghost);
   const T = FV.tool = { kind, crop, origin, ghost, moved: false, x0: e.clientX, y0: e.clientY, done: 0, hit: new Set() };
   const fr = $("#farm").getBoundingClientRect();
@@ -1676,7 +1677,7 @@ function machQueueHTML(o) {
 function bindMachQueue(o) {
   $$("#farmSheetIn [data-collect]").forEach(b => b.onclick = () => {
     const got = farmCollectMach(o);
-    if (got.length) { const [x, y] = objScreen(o); got.forEach((g, i) => { flyItem(FITEMS[g.id].i, x, y, storeBtn(), i * 80, g.n); xpFly(x, y, g.xp); }); sfx("collect"); save(); }
+    if (got.length) { const [x, y] = objScreen(o); got.forEach((g, i) => { flyItem(g.id, x, y, storeBtn(), i * 80, g.n); xpFly(x, y, g.xp); }); sfx("collect"); save(); }
     openMachine(o);
   });
   const bb = $("#fqBuy");
@@ -1975,7 +1976,7 @@ function buyShopItem(it, spot, btn) {
   /* Einkauf landet gleich im Lager */
   if (it.item) {
     if (!farmBuySupply(it)) { sfx("bad"); return; }
-    if (btn) { const r = btn.getBoundingClientRect(), fr = $("#farmFx").getBoundingClientRect(); flyItem(FITEMS[it.item].i, r.left - fr.left + r.width / 2, r.top - fr.top + 10, storeBtn(), 0, it.qty || 1); floatText(r.left - fr.left + r.width / 2, r.top - fr.top, "−" + eur(price), "red"); }
+    if (btn) { const r = btn.getBoundingClientRect(), fr = $("#farmFx").getBoundingClientRect(); flyItem(it.item, r.left - fr.left + r.width / 2, r.top - fr.top + 10, storeBtn(), 0, it.qty || 1); floatText(r.left - fr.left + r.width / 2, r.top - fr.top, "−" + eur(price), "red"); }
     sfx("coin"); save(); openFarmShop(FV.shopCat);
     return;
   }

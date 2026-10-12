@@ -246,6 +246,10 @@ const FSAW_UPGRADES = {
   kessel2: { n: "Größerer Kessel",            i: "⚡", lv: 11, cost: 800,  need: { bretter: 2 }, d: "Speichert 300 statt 150 kWh." }
 };
 const FENERGY_CAP = [150, 300];
+/* Photovoltaik der Döring GmbH: kommt ab Level 15 für 48 Stunden ans Sägewerk
+   (danach jede Woche wieder, bis das Dach voll ist). Jedes Modul bringt tagsüber
+   kWh je Stunde; mit vollem Dach laufen Kessel und Säge ganz von selbst. */
+const FPV = { lv: 15, price: 180, max: 16, kwh: 2, stay: 2880, again: 7, at: [-23.2, -25.2], who: "Frank Döring", firm: "Döring GmbH" };
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
 const FHOF_STAGES = [

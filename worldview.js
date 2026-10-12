@@ -10,7 +10,7 @@
    ========================================================================= */
 const WV = {
   trees: new Map(), falling: [], hofKey: "", hof: [], barriers: {}, npc: null, reveal: null,
-  wild: [], fly: [], swarm: [], pres: {}, trKey: "", trNodes: [], pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {},
+  wild: [], fly: [], swarm: [], pres: {}, trKey: "", trNodes: [], pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {}, pvKey: "", pvNodes: [],
   gust: 0, hit: null, sawBlades: null, popTree: null
 };
 const WGRID = { x0: -160, z0: -160, x1: 104, z1: 104, chunk: 24, cell: 4 };
@@ -371,7 +371,7 @@ const WORN_T = new Set(["house", "barn", "silo", "mill", "shed", "bakery"]);
 function objVar(o) {
   const F = S.farm;
   if (WORN_T.has(o.t)) return (F.stage || 1) <= 1 ? "w" : "";
-  if (o.t === "sw_halle") return sawMask();
+  if (o.t === "sw_halle") return sawMask() + ":" + (typeof pvN === "function" ? pvN() : 0);
   if (o.t === "kessel") return F.saw && F.saw.motor ? "1" : "0";
   if (o.t === "sw_lager") return sawRepaired() ? "1" : "0";
   if (o.t === "sw_buero") return F.saw && F.saw.strom ? "1" : "0";
@@ -383,7 +383,7 @@ function sawMask() { const s = S.farm.saw || {}; return (s.dach ? 1 : 0) | (s.st
 function worldObjMesh(o) {
   const F = S.farm;
   switch (o.t) {
-    case "sw_halle": { const m = sawMask(); return fmesh("sawHall:" + m, () => FWM.sawHall(m)); }
+    case "sw_halle": { const m = sawMask(), pv = typeof pvN === "function" ? pvN() : 0; return fmesh("sawHall:" + m + ":" + pv, () => FWM.sawHall(m, pv)); }
     case "sw_lager": { const k = sawRepaired() ? 1 : 0; return fmesh("sawLager:" + k, () => FWM.sawLager(k)); }
     case "sw_buero": { const k = F.saw && F.saw.strom ? 1 : 0; return fmesh("sawBuero:" + k, () => FWM.sawBuero(k)); }
     case "sw_lkw": { const k = F.saw && F.saw.lkw ? 1 : 0; return fmesh("sawLkw:" + k, () => FWM.sawLkw(k)); }
@@ -518,7 +518,16 @@ function itemIc(id, lock) {
   if (!ITEM_3D.has(id)) return `<span class="ic">${lock ? "🔒" : it.i}</span>`;
   return thumbSpan("item:" + id, () => FWM.item(id), it.i, lock);
 }
-function toolIc(id, lock) { const T = FTOOLS[id]; return thumbSpan("tool:" + id, () => FWM.tool(id), T ? T.i : "🪓", lock); }
+function toolIc(id, lock) { const T = FTOOLS[id]; return thumbSpan("tool:" + id, () => FWM.tool(id), T ? T.i : ({ sickle: "🌙", water: "🚿" }[id] || "🪓"), lock); }
+/* Bild-Adresse eines 3D-Bildchens (für Blasen, fliegende Sachen, Ziehen) – null, wenn es keins gibt */
+function itemImg(id) { return ITEM_3D.has(id) && !THUMB.failed ? thumbOf("item:" + id, () => FWM.item(id)) : null; }
+function toolImg(id) { return THUMB.failed ? null : thumbOf("tool:" + id, () => FWM.tool(id)); }
+/* kleines Bild im Text (Blasen, Überschriften) – sonst das Symbol */
+function icHTML(id) { const u = itemImg(id); return u ? `<img class="ii" src="${u}" alt="">` : (FITEMS[id] ? FITEMS[id].i : id); }
+/* Tiere als 3D-Modell, im Knopf leicht wippend */
+const ANI_3D = { huhn: () => FM.chicken(0), kuh: () => FM.cow(0), schwein: () => FM.pig(0), schaf: () => FM.sheep(0, false), rind: () => FM.beef(0) };
+function aniIc(kind, lock) { const A = FANIMALS[kind]; return thumbSpan("ani:" + kind, ANI_3D[kind] || null, A ? A.i : "🐾", lock).replace('class="ic th"', 'class="ic th ani"'); }
+function aniHTML(kind) { const fn = ANI_3D[kind], u = fn && !THUMB.failed ? thumbOf("ani:" + kind, fn) : null; return u ? `<img class="ii" src="${u}" alt="">` : FANIMALS[kind].i; }
 /* auch Listen außerhalb des Hofs (Aufträge) bekommen ihre Bildchen */
 setInterval(() => { if (!THUMB.busy && !THUMB.failed && document.querySelector("[data-th]")) thumbFill(); }, 700);
 function thumbFill() {
@@ -976,6 +985,46 @@ function farmTreasureView(type, c) {
   if (type === "gone") toast("🐦 Der Vogelschwarm ist weg – die Kiste bleibt verborgen.", "");
   farmSyncScene();
 }
+/* Döring GmbH: Montagewagen und Herr Döring vor dem Sägewerk */
+function worldSyncPV() {
+  const v = typeof pvVisit === "function" ? pvVisit() : null, key = v ? String(v.t0) : "", R = FV.R;
+  if (key === WV.pvKey) return;
+  WV.pvKey = key;
+  WV.pvNodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+  WV.pvNodes = [];
+  if (!v) return;
+  const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.pvNodes.push(n); return n; };
+  add(fmesh("solarVan", FWM.solarVan), { x: FPV.at[0], z: FPV.at[1], ry: -0.55, s: 1.35 });
+  WV.pvMan = add(fmesh("pvMan", () => FWM.person({ shirt: 0xf2c230, pants: 0x2f4f7a, hat: "helm", seed: 21 })), { x: FPV.at[0] + 1.3, z: FPV.at[1] + 1.2, s: 1.35, ry: 0.7 });
+}
+function farmPvView(type) {
+  if (!FV.on) return;
+  if (type === "start") toast("☀️ Die Döring GmbH steht 48 Stunden am Sägewerk – Solarmodule fürs Hallendach!", "ok");
+  if (type === "gone" && !pvFull()) toast("☀️ Die Döring GmbH ist weitergefahren – in einer Woche kommt sie wieder.", "");
+  farmSyncScene();
+}
+/* Angebot: Module kaufen, sie landen sofort auf dem Hallendach */
+function openPV() {
+  FV.sheetFn = openPV;
+  const P = pvS(), v = pvVisit(), left = FPV.max - P.n, full = pvFull();
+  const hall = farmObj1("sw_halle");
+  if (hall && !FV.sheet) { const [x, z] = farmCenter(hall); farmFocusXZ(x + 3.5, z + 5.5, 30, 700); }
+  const cells = Array.from({ length: FPV.max }, (_, i) => `<i class="${i < P.n ? "on" : ""}"></i>`).join("");
+  const opts = [1, 2, 4, left].filter((k, i, a) => k >= 1 && k <= left && a.indexOf(k) === i);
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">☀️</span>${esc(FPV.firm)}<small>Photovoltaik fürs Sägewerk · ${v ? "noch " + fdur(Math.max(1, v.until - S.time)) + " da" : full ? "Dach ist voll" : "kommt in einer Woche wieder"}</small></div>
+    <div class="fpv"><div class="fpv-roof">${cells}</div>
+      <div><b>${P.n} / ${FPV.max} Module</b><small>${full ? "Volles Dach: Kessel und Säge laufen jetzt ganz von selbst mit Sonnenstrom." : `Jedes Modul bringt tagsüber ${FPV.kwh} kWh pro Stunde. Ist das Dach voll, braucht die Säge keinen Kessel mehr.`}</small></div></div>
+    <div class="fletter mini"><p>„Moin! Ihr Hallendach liegt ideal zur Sonne. Wir montieren die Module ordentlich in Reih und Glied – ${FPV.price} € pro Stück, alles inklusive.“ – ${esc(FPV.who)}</p></div>
+    ${v && left ? `<div class="fs-row fpv-buy">${opts.map(k => `<button class="btn${k === 1 ? "" : " ghost"}" data-pv="${k}">${k === left && k > 1 ? "☀️ Dach voll machen" : k + (k === 1 ? " Modul" : " Module")}<small>${eur(k * FPV.price)}</small></button>`).join("")}</div>` : ""}`, "pv");
+  $$("#farmSheetIn [data-pv]").forEach(b => b.onclick = () => {
+    const k = pvBuy(+b.dataset.pv);
+    if (!k) { sfx("bad"); return; }
+    sfx("build"); save(); farmSyncScene(); renderFarmUI();
+    if (hall) { puff(hall); const [x, y] = objScreen(hall, 4.2); floatText(x, y, "☀️ +" + k + (k === 1 ? " Modul" : " Module"), "gold"); }
+    if (pvFull()) { toast("☀️ Das Dach ist voll! Kessel und Säge laufen jetzt mit Sonnenstrom.", "ok"); sfx("level"); }
+    openPV();
+  });
+}
 /* Haustiere laufen die Hofwege ab */
 const PET_WAY = [[5, 12], [5, 6], [5, 0], [5, -7.5], [-1, -7.5], [-7, -7.5], [-12, -7.5]];
 function worldSyncPets() {
@@ -1067,7 +1116,7 @@ function worldEvAct(s) {
     if (r.clover) farmCloverFlyAt(x, y, r.clover);
     if (r.xp) xpFly(x, y - 10, r.xp, 150);
     if (r.m) coinFly(x, y, r.m);
-    if (r.item) flyItem(FITEMS[r.item].i, x, y, storeBtn(), 250, r.n || 1);
+    if (r.item) flyItem(r.item, x, y, storeBtn(), 250, r.n || 1);
     sfx("collect"); save(); farmSyncScene(); renderFarmUI();
   };
   switch (s.act) {
@@ -1078,7 +1127,7 @@ function worldEvAct(s) {
       if (r) { floatText(p[0], p[1] - 20, s.act === "hirsch" ? "Ein Glücksbringer!" : s.act === "reh" ? "Wie friedlich …" : "Ein Paket für dich!", "gold"); reward(r, p[0], p[1]); }
       break;
     }
-    case "pilz": { const r = farmMushroom(s.i); if (r) { flyItem("🍄", p[0], p[1], storeBtn(), 0, 1); xpFly(p[0], p[1], r.xp); sfx("collect"); save(); farmSyncScene(); } break; }
+    case "pilz": { const r = farmMushroom(s.i); if (r) { flyItem("pilze", p[0], p[1], storeBtn(), 0, 1); xpFly(p[0], p[1], r.xp); sfx("collect"); save(); farmSyncScene(); } break; }
     case "schwarm": if (typeof openFishingAt === "function") openFishingAt(c.data.g); break;
     case "defekt": {
       const h = farmObj1("sw_halle");
@@ -1210,7 +1259,7 @@ function treePopHTML(t) {
           <small>${esc(FTOOLS[tid(k)].n)} · 💪 ${staOf(k)}${k === "saw" ? " · ⛽ " + eur(FSAW_FUEL[T.saw] || 3) : ""}</small><small class="ft-plus">${plus}</small></div>`;
       }).join("")
     : `<div class="ftool lock"><span class="ic">🔒</span><b>${esc(treeNeedText(t))}</b><small>im Laden</small></div><div class="ftool" data-act="toolshop"><span class="ic">🛒</span><b>Werkzeug</b><small>ansehen</small></div>`;
-  return `<div class="fp-h">${S0.rare ? "💎" : t.sp === "birke" ? "🌳" : t.sp === "eiche" ? "🌰" : t.sp === "buche" ? "🍂" : "🌲"} ${esc(S0.n)} · ${esc(Z.n)} <span class="fp-sz">${"●".repeat(t.sz)}<i>${"●".repeat(4 - t.sz)}</i></span><small>${esc(yieldT)}${grow}</small></div>
+  return `<div class="fp-h">${icHTML(S0.log)} ${esc(S0.n)} · ${esc(Z.n)} <span class="fp-sz">${"●".repeat(t.sz)}<i>${"●".repeat(4 - t.sz)}</i></span><small>${esc(yieldT)}${grow}</small></div>
     <div class="fp-row">${btn}${tool && sta < staCost ? `<div class="ftool" data-act="food"><span class="ic">🥪</span><b>Brotzeit</b><small>💪 ${Math.floor(sta)}/${farmStaMax()}</small></div>` : ""}</div>
     ${S0.rare ? `<div class="fp-tip">Seltene Wildkirsche: aus ihr wird kostbares Edelholz.</div>` : t.sz >= 4 ? `<div class="fp-tip">Eine uralte Eiche – manchmal steckt Edelholz drin.</div>` : ""}`;
 }
@@ -1225,7 +1274,7 @@ function renderTreePop(el, P) {
     if (a === "fell") worldFell(t, b.dataset.tool);
     if (a === "takefallen") {
       const r = farmTakeFallen(t);
-      if (r) { const [sx, sy] = treeScreen(t, 0.2); flyItem(FITEMS[r.id].i, sx, sy, storeBtn(), 0, r.n); xpFly(sx, sy, r.xp, 120); sfx("collect"); closeFarmPop(); worldSyncTrees(); save(); }
+      if (r) { const [sx, sy] = treeScreen(t, 0.2); flyItem(r.id, sx, sy, storeBtn(), 0, r.n); xpFly(sx, sy, r.xp, 120); sfx("collect"); closeFarmPop(); worldSyncTrees(); save(); }
     }
     if (a === "toolshop") { closeFarmPop(); openFarmShop("werkzeug"); }
     if (a === "food") { closeFarmPop(); openFood(); }
@@ -1259,7 +1308,7 @@ function worldPopAct(a, o) {
     puff(o);
     const r = farmClearJunk(o);
     if (!r) { sfx("bad"); toast("💪 Zu erschöpft – erst eine Brotzeit (oben auf 💪 tippen).", "warn"); return; }
-    r.got.forEach((g, i) => flyItem(FITEMS[g.id].i, x, y, storeBtn(), i * 100, g.n));
+    r.got.forEach((g, i) => flyItem(g.id, x, y, storeBtn(), i * 100, g.n));
     if (r.m) coinFly(x, y, r.m);
     xpFly(x, y - 10, r.xp, 120);
     sfx("swish");
@@ -1291,7 +1340,7 @@ function worldFell(t, pick) {
     if (!r) return;
     worldTreeFall(t, res.dir);
     const [sx, sy] = treeScreen(t, 0.5);
-    r.got.forEach((g, i) => flyItem(FITEMS[g.id].i, sx, sy, storeBtn(), 1500 + i * 120, g.n));
+    r.got.forEach((g, i) => flyItem(g.id, sx, sy, storeBtn(), 1500 + i * 120, g.n));
     xpFly(sx, sy - 10, r.xp, 1400);
     /* Belohnung: Laub und Späne stieben auf, die Ausbeute als Karte */
     const [cx, cz] = [t.x, t.z];
@@ -1310,7 +1359,6 @@ function fellReward(t, r, res, tool) {
   const bonus = [];
   if (r.perfect) bonus.push(tool === "saw" ? "✂️ Perfekter Kerb +1" : "💥 Volltreffer +1");
   if (r.haul && r.haul.saw) bonus.push((r.haul.pro ? "⛓️ Profi-Säge +2" : "⛓️ Kettensäge +1"));
-  if (tool === "saw" && res.dirOk) bonus.push("🧭 Fallrichtung frei");
   if (r.crew) bonus.push("🧑‍🌾 Holzfäller +1");
   const el = document.createElement("div");
   el.className = "frew" + (r.perfect ? " gold" : "");
@@ -1358,6 +1406,7 @@ function worldTags() {
   if (!box || !FV.R) return;
   const want = [];
   worldEvSpots().forEach((s, i) => { if (!s.area || farmAreaOpen(s.area)) want.push(["e" + i + s.act, s.x, s.y, s.z, s.ic, s.cls || "ready", () => worldEvAct(s)]); });
+  if (typeof pvVisit === "function" && pvVisit()) want.push(["pv", FPV.at[0] + 1.3, 2.9, FPV.at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]);
   if (WV.npc && worldVisitor()) want.push(["npc", WV.npc.node.x, 2.6, WV.npc.node.z, FAREAS[WV.npc.id].whoI + "❗", "ready", () => openAreaVisit(WV.npc.id)]);
   const F = S.farm;
   F.objs.forEach(o => {
@@ -1489,6 +1538,7 @@ function worldSync(force) {
   worldSyncStaff();
   worldSyncEvents();
   worldSyncTreasure();
+  worldSyncPV();
   if (!WV.reveal) worldLocks();
   /* Ware auf dem Verkaufsstand */
   S.farm.objs.forEach(o => {
@@ -1532,21 +1582,23 @@ function worldUI() {
   const evT = ev ? FEVENTS[ev.k] : null;
   const left = ev ? Math.max(0, Math.ceil(ev.until - S.time)) : 0;
   const tr = farmTreasureCur(), trL = tr && !tr.done ? Math.max(0, Math.ceil(tr.until - S.time)) : 0;
+  const pv = typeof pvVisit === "function" ? pvVisit() : null, pvL = pv ? Math.max(0, Math.ceil(pv.until - S.time)) : 0;
   /* Ereignis-Leisten: kurz ausgeklappt, dann nur noch ein kleines Symbol am Rand –
      antippen klappt sie auf, nochmal antippen zeigt kurz, worum es geht, und
      klappt sie wieder zum Knopf zusammen */
   const now = performance.now(), CO = WV.chipOpen || (WV.chipOpen = {});
   const open = k => { if (!CO[k]) CO[k] = now + 7000; return now < CO[k]; };
-  const evK = ev ? "ev:" + ev.k + ":" + ev.t0 : "", trK = trL ? "tr:" + tr.t0 : "";
-  const evO = ev ? open(evK) : false, trO = trL ? open(trK) : false;
-  const ck = sta + ":" + mx + ":" + F.clover + ":" + wx.n + ":" + farmTod() + ":" + (ev ? ev.k + (ev.k === "defekt" ? "" : Math.ceil(left / 5)) + evO : "") + ":" + (trL ? Math.ceil(trL / 5) + ":" + trO : "");
+  const evK = ev ? "ev:" + ev.k + ":" + ev.t0 : "", trK = trL ? "tr:" + tr.t0 : "", pvK = pvL ? "pv:" + pv.t0 : "";
+  const evO = ev ? open(evK) : false, trO = trL ? open(trK) : false, pvO = pvL ? open(pvK) : false;
+  const ck = sta + ":" + mx + ":" + F.clover + ":" + wx.n + ":" + farmTod() + ":" + (ev ? ev.k + (ev.k === "defekt" ? "" : Math.ceil(left / 5)) + evO : "") + ":" + (trL ? Math.ceil(trL / 5) + ":" + trO : "") + ":" + (pvL ? Math.ceil(pvL / 30) + ":" + pvO : "");
   if (C._k !== ck) {
     C._k = ck;
     C.innerHTML = `<button class="fchip2 sta${sta < 15 ? " low" : ""}" id="fcSta" title="Ausdauer – Brotzeit macht wieder fit"><span>💪</span><b>${sta}</b><i><em style="width:${Math.round(sta / mx * 100)}%"></em></i></button>
       <button class="fchip2" id="fcClover" title="Kleeblätter für den Extras-Laden"><span>🍀</span><b>${F.clover || 0}</b></button>
       <button class="fchip2 wx" id="fcWx" title="Wetter und Tageszeit – wichtig fürs Angeln"><span>${wx.i}</span><b>${esc(FTOD_N[farmTod()])}</b></button>
       ${ev ? `<button class="fchip2 ev${evO ? "" : " mini"}" id="fcEv" title="${esc(evT.n)}"><span>${evT.i}</span>${evO ? `<b>${esc(evT.n)}</b>${ev.k !== "defekt" && left < 999 ? `<small>${fdur(left)}</small>` : ""}` : ""}</button>` : ""}
-      ${trL ? `<button class="fchip2 ev tr${trO ? "" : " mini"}" id="fcTr" title="Unter dem Vogelschwarm liegt eine Schatzkiste"><span>🐦</span>${trO ? `<b>Vogelschwarm</b><small>${fdur(trL)}</small>` : ""}</button>` : ""}`;
+      ${trL ? `<button class="fchip2 ev tr${trO ? "" : " mini"}" id="fcTr" title="Unter dem Vogelschwarm liegt eine Schatzkiste"><span>🐦</span>${trO ? `<b>Vogelschwarm</b><small>${fdur(trL)}</small>` : ""}</button>` : ""}
+      ${pvL ? `<button class="fchip2 ev pv${pvO ? "" : " mini"}" id="fcPv" title="Döring GmbH: Solarmodule am Sägewerk"><span>☀️</span>${pvO ? `<b>Döring Solar</b><small>${fdur(pvL)}</small>` : ""}</button>` : ""}`;
     $("#fcSta").onclick = openFood;
     $("#fcClover").onclick = () => openFarmHouse("extras");
     $("#fcWx").onclick = openWeatherInfo;
@@ -1560,6 +1612,12 @@ function worldUI() {
       if (!c || !Z) return;
       farmFocusXZ(c.x + 1.6, c.z + 1.6, 28, 900);        /* Kamera schaut von Südosten: so liegt das Kreuz etwas über der Mitte */
       toast("🐦 Der Schwarm kreist " + Z.n + " – tipp aufs rote Kreuz!", "");
+    };
+    const pb = $("#fcPv");
+    if (pb) pb.onclick = () => {
+      if (!pvO) return unfold(pvK);
+      fold(pvK, pb);
+      openPV();
     };
     const eb = $("#fcEv");
     if (eb) eb.onclick = () => {
@@ -1725,9 +1783,13 @@ function farmPowerFx(o, kwh, full) {
 }
 /* Strom im Kessel */
 function energyHTML() {
-  const en = Math.floor(S.farm.en || 0), cap = farmEnCap();
-  return `<div class="fen"><span>⚡</span><div><b>Strom ${en} / ${cap} kWh</b><i><em style="width:${Math.round(en / cap * 100)}%"></em></i>
-    <small>${S.farm.saw && S.farm.saw.motor ? "Der Kessel verfeuert Holzreste, Äste oder Brennholz." : "Erst den Motor reparieren."}</small></div></div>`;
+  const sun = typeof pvFull === "function" && pvFull(), n = typeof pvN === "function" ? pvN() : 0;
+  const cap = farmEnCap(), en = sun ? cap : Math.floor(S.farm.en || 0);
+  const note = sun ? "☀️ Volles Solardach: Kessel und Säge laufen mit Sonnenstrom – kein Feuer nötig."
+    : !(S.farm.saw && S.farm.saw.motor) ? "Erst den Motor reparieren."
+    : "Der Kessel verfeuert Holzreste, Äste oder Brennholz." + (n ? ` ☀️ ${n}/${FPV.max} Solarmodule: +${n * FPV.kwh} kWh je Stunde am Tag.` : "");
+  return `<div class="fen${sun ? " sun" : ""}"><span>${sun ? "☀️" : "⚡"}</span><div><b>${sun ? "Sonnenstrom" : "Strom " + en + " / " + cap + " kWh"}</b><i><em style="width:${Math.round(en / cap * 100)}%"></em></i>
+    <small>${note}</small></div></div>`;
 }
 /* Zusatz im Gebäude-Fenster (farmview.openMachine) */
 function machExtraHTML(o) {

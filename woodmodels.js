@@ -401,7 +401,7 @@ const FWM = (() => {
 
   /* ------------------------------ Sägewerk ------------------------------ */
   /* Sägehalle: m = Reparaturen (dach, strom, saege, band) als Bits */
-  function sawHall(m) {
+  function sawHall(m, pv) {
     G3.seed(4000);
     const b = new MB();
     const dach = m & 1, strom = m & 2, saege = m & 4, band = m & 8;
@@ -426,6 +426,9 @@ const FWM = (() => {
         b.box(1.4, 0.06, 1.0, 0x5a6268, { x: 1.5, y: -2.8, z: 1.6, ry: 0.5, rz: 0.2 });
       }
     });
+    /* Solarmodule der Döring GmbH auf der vorderen Dachfläche: zwei Reihen,
+       jede mittig – so sieht es mit jeder Zahl von Modulen symmetrisch aus */
+    if (dach && pv) solarRoof(b, pv);
     /* Gattersäge in der Mitte: Rahmen, Sägeblätter, Wagen auf Schienen */
     b.at({ y: 0.18, x: 0.5 }, () => {
       [-0.8, 0.8].forEach(x => b.box(0.22, 2.3, 0.3, saege ? 0x2f6fb0 : 0x7a6a5a, { x }));
@@ -458,6 +461,43 @@ const FWM = (() => {
     /* Sägespäne */
     for (let i = 0; i < 10; i++) b.ico(0.18 + rnd() * 0.15, dach ? 0xe9cfa0 : 0x9a8a72, { x: (rnd() - 0.5) * 8, y: 0.18, z: 1.2 + rnd() * 1.6, flat: 0.25, jitter: 0.4 });
     if (!dach) for (let i = 0; i < 8; i++) b.ico(0.22, 0x5f7f3a, { x: (rnd() - 0.5) * 9.5, y: 0.2, z: 2.6 + rnd() * 0.6, flat: 0.5, jitter: 0.5 });
+    return b;
+  }
+  /* Dach 10,6 × 6,6, First 1,6 hoch: vordere Fläche von der Traufe (z = 3,3) bis zum First */
+  const PV_COLS = 8, PV_ROWS = 2, PV_W = 1.0, PV_L = 1.55, PV_GAP = 0.12;
+  function solarPanel(m) {
+    m.box(PV_W, 0.05, PV_L, 0xc8d0d8, { c: false });                                   /* Rahmen */
+    m.box(PV_W - 0.08, 0.06, PV_L - 0.08, 0x1d3566, { y: 0.0, top: 0x24427e });          /* Zellen */
+    for (let i = 1; i < 3; i++) m.box(0.015, 0.065, PV_L - 0.1, 0x6f8fc8, { x: -PV_W / 2 + i * PV_W / 3 });
+    for (let i = 1; i < 6; i++) m.box(PV_W - 0.1, 0.065, 0.015, 0x6f8fc8, { z: -PV_L / 2 + i * PV_L / 6 });
+  }
+  function solarRoof(b, n) {
+    n = Math.min(n, PV_COLS * PV_ROWS);
+    const a = Math.atan2(1.6, 3.3), per = [Math.ceil(n / 2), Math.floor(n / 2)];
+    b.at({ y: 2.95, z: 3.3, rx: a }, m => {
+      per.forEach((k, r) => {
+        const sAlong = 0.32 + PV_L / 2 + r * (PV_L + 0.1);
+        /* Montageschienen unter der Reihe */
+        if (k) [-PV_L * 0.3, PV_L * 0.3].forEach(dz => m.box(k * (PV_W + PV_GAP), 0.04, 0.05, 0x8a929a, { y: 0.02, z: -sAlong + dz }));
+        for (let i = 0; i < k; i++) m.at({ x: (i - (k - 1) / 2) * (PV_W + PV_GAP), y: 0.05, z: -sAlong }, solarPanel);
+      });
+    });
+  }
+  /* Montagewagen der Döring GmbH: weißer Transporter mit Sonne, Leiter und Modul auf dem Dach */
+  function solarVan() {
+    G3.seed(4810);
+    const b = FM.van(0xf6f6f2);
+    [-1, 1].forEach(sx => {
+      b.cyl(0.2, 0.2, 0.02, 12, 0xf2c230, { rz: Math.PI / 2, x: sx * 0.51, y: 0.78, z: -0.35 });
+      for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; b.box(0.02, 0.05, 0.1, 0xf2a531, { x: sx * 0.515, y: 0.78 + Math.sin(an) * 0.28, z: -0.35 + Math.cos(an) * 0.28, rx: -an }); }
+      b.box(0.02, 0.1, 0.9, 0xf2a531, { x: sx * 0.51, y: 0.42, z: 0.05 });
+    });
+    b.at({ y: 1.2, z: -0.25 }, m => {
+      [-0.38, 0.38].forEach(x => m.box(0.04, 0.05, 1.3, 0x55555c, { x }));
+      m.at({ y: 0.06, rx: 0.05 }, mm => { mm.box(0.9, 0.04, 1.2, 0xc8d0d8); mm.box(0.84, 0.05, 1.14, 0x1d3566, { top: 0x24427e }); });
+      [-0.46, 0.46].forEach(x => m.box(0.04, 0.04, 1.6, 0xb8c0c8, { x, y: 0.12, z: 0.1 }));
+      for (let i = 0; i < 6; i++) m.box(0.92, 0.03, 0.03, 0xb8c0c8, { y: 0.12, z: -0.6 + i * 0.27 });
+    });
     return b;
   }
   const SAW_BLADE = [0.5, 0.73, 0];        /* Lage der Sägeblätter (für die Animation) */
@@ -1473,6 +1513,29 @@ const FWM = (() => {
       if (pro) b.box(0.42, 0.06, 0.2, 0x2a2a30, { y: 0.2, z: -0.24 });
       return b;
     }
+    if (id === "sickle") {
+      /* Sichel: Holzgriff und gebogene Klinge */
+      b.at({ rz: -0.5 }, m => {
+        m.cyl(0.05, 0.045, 0.5, 8, 0x9a6a3a, { y: -0.5 });
+        m.cyl(0.055, 0.055, 0.04, 8, 0x6a4a2a, { y: 0.0 });
+        for (let i = 0; i < 9; i++) {
+          const a0 = Math.PI * 0.05 + i / 9 * Math.PI * 0.95, a1 = Math.PI * 0.05 + (i + 1) / 9 * Math.PI * 0.95, r = 0.36;
+          const x0 = Math.cos(a0) * r - r, y0 = Math.sin(a0) * r + 0.04, x1 = Math.cos(a1) * r - r, y1 = Math.sin(a1) * r + 0.04;
+          const len = Math.hypot(x1 - x0, y1 - y0) + 0.01, w = 0.09 * (1 - i / 11);
+          m.box(len, w, 0.025, 0xc8d0d8, { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - w / 2, rz: Math.atan2(y1 - y0, x1 - x0), top: 0xe6eef2 });
+        }
+      });
+      return b;
+    }
+    if (id === "water") {
+      /* Gießkanne mit Brause */
+      b.cyl(0.26, 0.28, 0.5, 14, 0x3f9a5a, { smooth: true, top: 0x2f7a46 });
+      b.cyl(0.27, 0.27, 0.05, 14, 0x2f7a46, { y: 0.45 });
+      b.cyl(0.04, 0.05, 0.62, 8, 0x3f9a5a, { x: 0.22, y: 0.12, rz: -0.95 });
+      b.cyl(0.07, 0.11, 0.07, 10, 0xd8b84a, { x: 0.5, y: 0.47, rz: -0.95 });
+      b.at({ y: 0.5 }, m => { m.box(0.05, 0.3, 0.05, 0x2f7a46, { x: -0.22 }); m.box(0.05, 0.05, 0.05, 0x2f7a46, { x: -0.15, y: 0.3 }); m.box(0.3, 0.05, 0.05, 0x2f7a46, { x: -0.08, y: 0.3, rz: -0.2 }); });
+      return b;
+    }
     return null;
   }
   /* Ladung beim Beladen: Kiste, Sack, Korb */
@@ -1486,7 +1549,7 @@ const FWM = (() => {
   }
 
   return {
-    traderCart, item, tool, cargo,
+    traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, tree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,

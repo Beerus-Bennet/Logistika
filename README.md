@@ -51,7 +51,11 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
 Der Hof ist eine eigene 3D-Ansicht im Stil von Hay Day – schwenken mit einem
 Finger, zoomen mit zwei. Auf dem Hof gibt es weder Pause noch Tempo: Bis zur
 Speditionsgründung läuft die Zeit immer in Echtzeit (eine Spielminute pro
-Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
+Sekunde, ein Spieltag dauert 24 Minuten). Seit v50 läuft der Hof ruhiger:
+Getreide (Weizen, Mais) wird zweimal am Tag reif, Gemüse und Erdbeeren in 16
+bis 30 Stunden, Obstbäume tragen in 18 bis 24 Stunden; Hühner legen einmal am
+Tag, Kühe geben zweimal am Tag Milch, Schafe werden einmal am Tag geschoren –
+so laufen die Lager nicht ständig über.
 
 * **Felder** – antippen, Saat wählen (alle freigeschalteten Sorten stehen in
   mehreren Reihen untereinander) und über die leeren Felder **ziehen**.
@@ -65,12 +69,13 @@ Sekunde) – Weizen braucht zwei Minuten, ein Ei anderthalb.
   geschoren (ein Vlies Rohwolle je Durchgang, danach stehen sie sichtbar
   „nackt“ da). Futter kommt aus der Mühle (Hühner-, Kuh-, Schweine- und
   Schaffutter). Stall antippen sammelt alles ein, Futter über die Tiere ziehen
-  füttert sie. Ein Tier antippen und streicheln: das nächste Produkt wird
-  einen Stern besser.
+  füttert sie. Die Sterne kommen vom Platz im Stall (Streicheln gibt seit v50
+  keinen Bonus mehr – ein angetipptes Tier hüpft nur kurz). Zum Kaufen zeigt
+  die Stall-Blase das Tier als wippendes 3D-Modell.
 * **Masttiere** – **Schweine** (ab Level 4) und **Rinder** (ab Level 6) wachsen
   mit jeder Mahlzeit; nach drei bzw. vier Mahlzeiten sind sie schlachtreif
   (✓ über dem Stall). Ein Tipp bringt sie zum Metzger: je Schwein drei, je Rind
-  vier Fleischpakete à 5 kg – danach kauft man Ferkel und Kälber nach.
+  vier Fleischpakete à 5 kg – danach kauft man Ferkel und Rinder nach.
 * **Metzgerei und Spinnstube** – Bratwurst, Schinken und Gulasch aus eigenem
   Fleisch; Wollknäuel, Wollsocken und Pullover aus eigener Wolle.
 * **Platz = Qualität** – je mehr Auslauf jedes Tier hat, desto besser die Ware:
@@ -174,11 +179,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Brotzeit aus dem Lager (Brot, Kuchen, Wurst, Fisch …). Wer aufhört, findet
   den Baum angeschlagen wieder. Die Stahlaxt (Level 3) hat mehr Wucht und
   schafft große Bäume.
-* **Kettensäge** (Level 7, nach 25 Bäumen) – erst die **Fallrichtung** wählen
-  (frei, nicht auf Bäume, Wege oder den Hof), dann den **Fallkerb** auf
-  Kniehöhe setzen, dann gedrückt halten zum Sägen – ohne den Motor zu
-  **überhitzen**. Gute Richtung bringt mehr Holz, Hängenbleiben kostet
-  Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
+* **Kettensäge** (Level 7, nach 25 Bäumen) – die **Fallrichtung** sucht das
+  Spiel selbst aus (ins Freie, nicht auf Bäume, Wege oder den Hof); man setzt
+  den **Fallkerb** auf Kniehöhe und hält dann gedrückt zum Sägen – ohne den
+  Motor zu **überhitzen**. Hängenbleiben kostet Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
   Hof: Bretter, Pfosten und Brennholz. Die Profi-Säge (Level 13) schafft die
   uralten Eichen im alten Wald.
 * **Holzhändler** – im Holzplatz-Lager: Rohholz zum vollen Preis, Holzwaren
@@ -199,6 +203,14 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Schatullen) und Fräse (Zaunelemente, Türen) – Laden-Reiter „🪚 Sägewerk“.
   Ausbau: Blockbandsäge (ein Drittel schneller), größerer Kessel. Krügers
   alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte.
+* **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
+  **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
+  (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt
+  sofort auf der vorderen Hallendachfläche, in zwei Reihen, jede mittig –
+  bis zu 16 Module. Jedes bringt tagsüber 2 kWh pro Stunde in den Speicher;
+  ist das Dach voll, laufen Kessel und Säge ganz von selbst mit Sonnenstrom
+  (kein Feuer, kein Stromverbrauch mehr). Wer nicht alles kauft, trifft die
+  Döring GmbH eine Woche später wieder.
 * **Der Glindower See** – die Bürgermeisterin verpachtet das Ufer (Level 15,
   Sägewerk läuft, 40 Holzwaren gemacht). Am Ufer liegen sieben **Bauplätze**:
   Steg, Fischerhütte, Bootshaus (mit Ruderboot), Fischlager, Räucherei,
@@ -268,8 +280,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   eine Ausbeute-Karte mit allen Extras.
 * **3D-Bildchen** für alle Hof- und Holzwaren – Säcke, Obstkisten, Eierkarton,
   Milchkanne, Brot, Torte, Pizza, Käse, Wurst, Wolle, Stämme, Bretter, Kisten …
-  – und für das Werkzeug: im Lager, am Verkaufsstand, in Rezepten,
-  Zutaten-Chips, Bestellungen, beim Händler und im Laden. Jedes Bild wird eng
+  – und für das Werkzeug (auch Sichel und Gießkanne): im Lager, am
+  Verkaufsstand, in Rezepten, Zutaten-Chips, Bestellungen, beim Händler, im
+  Laden, in den Blasen über Feldern, Ställen und Bäumen, beim Ziehen des
+  Werkzeugs und wenn die Ernte zum Lager fliegt. Jedes Bild wird eng
   zugeschnitten, damit alle gleich groß wirken; in Rezeptkarten stehen die
   Zutaten in voller Breite unter dem Namen. Maschinen im Laden ohne
   Bodenplatte, lange Namen werden an der Wortfuge getrennt.

@@ -438,7 +438,7 @@ function farmFeed(o, a) {
   const A = FANIMALS[penKind(o)];
   if (!farmTake(A.feed, 1)) return "nofeed";
   a.fed = S.time + A.t;
-  const q = Math.min(5, penInfo(o).stars + (a.pet ? 1 : 0));
+  const q = Math.min(5, penInfo(o).stars);
   if (a.mast) { a.qs = (a.qs || 0) + q; a.qn = (a.qn || 0) + 1; a.q = a.qs / a.qn; }
   else a.q = q;
   a.pet = false;
@@ -477,14 +477,8 @@ function farmCollect(o, a) {
   if (q >= 5) farmEvent("q5:" + A.out);
   return { id: A.out, n: 1, q, xp: FITEMS[A.out].xp };
 }
-/* Streicheln: das nächste Produkt wird einen Stern besser (einmal je Durchgang) */
-function farmPet(o, a) {
-  if (!a || a.petted) return false;
-  a.petted = true;
-  if (aniState(a) === "busy") a.q = Math.min(5, (a.q || penInfo(o).stars) + 1);
-  else a.pet = true;
-  return true;
-}
+/* Streicheln gibt es nicht mehr als Qualitäts-Trick – die Sterne kommen vom Platz im Stall */
+function farmPet() { return false; }
 function animalPrice(kind) {
   const A = FANIMALS[kind];
   const n = S.farm.objs.filter(o => o.t === A.house).reduce((s, o) => s + o.animals.length, 0);
@@ -567,7 +561,9 @@ function farmQueue(o, rid) {
   if (o.q.length + o.done.length >= machSlots(o)) return "full";
   if (!farmHasAll(r.in)) return "missing";
   if (r.cost && S.money < r.cost) return "money";
-  const en = r.en ? Math.max(1, Math.round(r.en * (1 - staffPerk("mechaniker")))) : 0;
+  /* volles Solardach: die Säge braucht keinen Strom aus dem Kessel mehr */
+  const sun = typeof pvFull === "function" && pvFull();
+  const en = r.en && !sun ? Math.max(1, Math.round(r.en * (1 - staffPerk("mechaniker")))) : 0;
   if (en && (S.farm.en || 0) < en) return "energy";
   if (en) S.farm.en -= en;
   let qs = 0, qn = 0;

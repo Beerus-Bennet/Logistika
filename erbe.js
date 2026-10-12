@@ -428,6 +428,53 @@ function farmRepairDone(rep, score) {
   return true;
 }
 function farmEnCap() { return FENERGY_CAP[S.farm.enLv || 0]; }
+
+/* ------------------------- Photovoltaik (Döring GmbH) ---------------------- */
+function pvS() { const F = S.farm; if (!F) return null; return F.pv || (F.pv = { n: 0, visit: null, next: 0 }); }
+function pvN() { const P = S.farm && S.farm.pv; return P ? P.n || 0 : 0; }
+function pvFull() { return pvN() >= FPV.max; }
+function pvVisit() { const P = S.farm && S.farm.pv, v = P && P.visit; return v && S.time < v.until ? v : null; }
+/* kommt, sobald das Sägewerk ein heiles Dach hat und Level 15 erreicht ist */
+function pvCanCome() { const F = S.farm; return flv() >= FPV.lv && farmAreaOpen("saege") && !!(F.saw && F.saw.dach) && !pvFull(); }
+function pvTick() {
+  const F = S.farm, P = pvS();
+  if (!P) return;
+  /* Sonnenstrom: tagsüber je Modul ein paar kWh, mit vollem Dach immer genug */
+  const t0 = P.t == null ? S.time : P.t;
+  P.t = S.time;
+  if (pvFull()) F.en = farmEnCap();
+  else if (P.n && S.time > t0 && farmTod() !== "nacht") F.en = Math.min(farmEnCap(), (F.en || 0) + P.n * FPV.kwh * (S.time - t0) / 60);
+  /* Besuch: 48 Stunden, danach eine Woche Pause */
+  if (P.visit && S.time >= P.visit.until) {
+    P.visit = null;
+    P.next = Math.floor(S.time / 1440) + FPV.again;
+    if (typeof farmPvView === "function") farmPvView("gone");
+  }
+  if (!P.visit && !(F.tut && !F.tut.done) && pvCanCome() && Math.floor(S.time / 1440) >= (P.next || 0)) {
+    P.visit = { t0: S.time, until: S.time + FPV.stay };
+    if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "info", title: "Solarstrom fürs Sägewerk",
+      body: "Moin! Wir stehen 48 Stunden mit dem Montagewagen am Sägewerk. Pro Modul " + FPV.price + " € – mit vollem Hallendach laufen Kessel und Säge von allein. Gruß, " + FPV.who });
+    if (typeof farmPvView === "function") farmPvView("start");
+  }
+}
+function pvBuy(k) {
+  const P = pvS();
+  k = Math.min(k || 1, FPV.max - P.n);
+  if (!pvVisit() || k < 1) return 0;
+  const cost = k * FPV.price;
+  if (S.money < cost) { toast("Dafür fehlen " + eur(cost - S.money) + ".", "warn"); return 0; }
+  S.money -= cost; S.expense += cost;
+  logMoney("farm", "Photovoltaik · " + k + (k === 1 ? " Modul" : " Module"), -cost);
+  P.n += k;
+  farmXP(4 * k);
+  farmEvent("pv", k);
+  if (pvFull()) {
+    S.farm.en = farmEnCap();
+    farmEvent("pv:full");
+    P.visit.until = Math.min(P.visit.until, S.time + 90);          /* fertig montiert – Döring packt zusammen */
+  }
+  return k;
+}
 /* Maschine im Sägewerk kaufen: steht dann auf ihrem Platz */
 function farmBuySawMachine(it) {
   const t = it.id;
@@ -1337,6 +1384,7 @@ function farmErbeTick(dt) {
   farmWeather();
   farmEvTick();
   farmTreasureTick();
+  pvTick();
   staffWork();
   stallTick(false, dt || 1);
   stallTick(true, dt || 1);

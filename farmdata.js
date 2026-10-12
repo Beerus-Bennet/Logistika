@@ -53,30 +53,31 @@ const FITEMS = {
 
 /* Pflanzen: t = Wachstum, seed = Saatgut je Feld (€), lv = ab Level */
 const FCROPS = {
-  weizen:    { t: 120, seed: 1, lv: 1 },
-  mais:      { t: 240, seed: 2, lv: 1 },
-  tomate:    { t: 360, seed: 3, lv: 2 },
-  karotte:   { t: 420, seed: 3, lv: 3 },
-  kartoffel: { t: 600, seed: 4, lv: 5 },
-  erdbeere:  { t: 720, seed: 6, lv: 6 },
-  kuerbis:   { t: 900, seed: 8, lv: 7 }
+  /* v50: ruhigerer Takt – Getreide zweimal am Spieltag (1 Spieltag = 1440 min) */
+  weizen:    { t: 720,  seed: 1, lv: 1 },
+  mais:      { t: 720,  seed: 2, lv: 1 },
+  tomate:    { t: 960,  seed: 3, lv: 2 },
+  karotte:   { t: 1080, seed: 3, lv: 3 },
+  kartoffel: { t: 1200, seed: 4, lv: 5 },
+  erdbeere:  { t: 1440, seed: 6, lv: 6 },
+  kuerbis:   { t: 1800, seed: 8, lv: 7 }
 };
 /* Obstbäume: t = bis zur nächsten Ernte, yield Früchte je Ernte */
 const FTREES = {
-  apfel:   { n: "Apfelbaum",  t: 360, yield: 3, price: 30, lv: 1 },
-  kirsche: { n: "Kirschbaum", t: 480, yield: 3, price: 60, lv: 4 },
-  birne:   { n: "Birnbaum",   t: 540, yield: 3, price: 90, lv: 7 }
+  apfel:   { n: "Apfelbaum",  t: 1080, yield: 3, price: 30, lv: 1 },
+  kirsche: { n: "Kirschbaum", t: 1260, yield: 3, price: 60, lv: 4 },
+  birne:   { n: "Birnbaum",   t: 1440, yield: 3, price: 90, lv: 7 }
 };
 /* Tiere: Futter je Durchgang, t = bis zum Produkt, space = Platz je Tier für
    volle Qualität, house = Stalltyp, pl = Mehrzahl, act = was man beim
    Abholen tut. Masttiere (mast = Mahlzeiten bis schlachtreif) geben am Ende
    yield × out und gehen zum Metzger; danach kauft man junge Tiere nach. */
 const FANIMALS = {
-  huhn:   { n: "Huhn",   pl: "Hühner",  i: "🐔", out: "ei",     feed: "hfutter",   t: 90,  price: 12,  step: 3,  lv: 1, space: 4,    house: "coop",  max: 9, unit: "m²", act: "Eier einsammeln" },
-  kuh:    { n: "Kuh",    pl: "Kühe",    i: "🐄", out: "milch",  feed: "kfutter",   t: 240, price: 350, step: 50, lv: 3, space: 1500, house: "cows",  max: 6, unit: "m²", act: "melken" },
-  schwein:{ n: "Schwein", pl: "Schweine", i: "🐖", out: "spaket", feed: "sfutter",  t: 150, price: 70,  step: 10, lv: 4, space: 10,   house: "pigs",  max: 8, unit: "m²", mast: 3, yield: 3, young: "Ferkel", act: "zum Metzger bringen" },
-  schaf:  { n: "Schaf",  pl: "Schafe",  i: "🐑", out: "wolle",  feed: "schfutter", t: 200, price: 120, step: 15, lv: 5, space: 250,  house: "sheep", max: 8, unit: "m²", act: "scheren" },
-  rind:   { n: "Rind",   pl: "Rinder",  i: "🐂", out: "rpaket", feed: "kfutter",   t: 240, price: 220, step: 30, lv: 6, space: 2000, house: "beef",  max: 6, unit: "m²", mast: 4, yield: 4, young: "Kalb", act: "zum Metzger bringen" }
+  huhn:   { n: "Huhn",   pl: "Hühner",  i: "🐔", out: "ei",     feed: "hfutter",   t: 1440, price: 12,  step: 3,  lv: 1, space: 4,    house: "coop",  max: 9, unit: "m²", act: "Eier einsammeln" },
+  kuh:    { n: "Kuh",    pl: "Kühe",    i: "🐄", out: "milch",  feed: "kfutter",   t: 720, price: 350, step: 50, lv: 3, space: 1500, house: "cows",  max: 6, unit: "m²", act: "melken" },
+  schwein:{ n: "Schwein", pl: "Schweine", i: "🐖", out: "spaket", feed: "sfutter",  t: 720, price: 70,  step: 10, lv: 4, space: 10,   house: "pigs",  max: 8, unit: "m²", mast: 3, yield: 3, young: "Ferkel", act: "zum Metzger bringen" },
+  schaf:  { n: "Schaf",  pl: "Schafe",  i: "🐑", out: "wolle",  feed: "schfutter", t: 1440, price: 120, step: 15, lv: 5, space: 250,  house: "sheep", max: 8, unit: "m²", act: "scheren" },
+  rind:   { n: "Rind",   pl: "Rinder",  i: "🐂", out: "rpaket", feed: "kfutter",   t: 720, price: 220, step: 30, lv: 6, space: 2000, house: "beef",  max: 6, unit: "m²", mast: 4, yield: 4, act: "zum Metzger bringen" }
 };
 /* Auslauf je Ausbaustufe: Kacheln (w × d) und Fläche in m² (bei Fisch m³) */
 const FPENS = {
@@ -173,7 +174,7 @@ const FSHOP_HOF = [
   { id: "a-kuh",   cat: "tier", n: "Kuh",               i: "🐄", lv: 3, animal: "kuh",     d: "Gibt Milch, frisst Kuhfutter." },
   { id: "a-schwein", cat: "tier", n: "Ferkel",          i: "🐖", lv: 4, animal: "schwein", d: "Frisst Schweinefutter, nach 3 Mahlzeiten zum Metzger: 15 kg Fleisch." },
   { id: "a-schaf", cat: "tier", n: "Schaf",             i: "🐑", lv: 5, animal: "schaf",   d: "Frisst Schaffutter und wird geschoren: ein Vlies Rohwolle je Durchgang." },
-  { id: "a-rind",  cat: "tier", n: "Kalb",              i: "🐂", lv: 6, animal: "rind",    d: "Frisst Kuhfutter, nach 4 Mahlzeiten zum Metzger: 20 kg Rindfleisch." },
+  { id: "a-rind",  cat: "tier", n: "Rind",              i: "🐂", lv: 6, animal: "rind",    d: "Frisst Kuhfutter, nach 4 Mahlzeiten zum Metzger: 20 kg Rindfleisch." },
   { id: "coop",    cat: "bau",  n: "Hühnerstall",       i: "🛖", lv: 5, price: () => 300,  lim: lv => lv >= 5 ? 2 : 1, d: "Zweiter Stall mit Auslauf für bis zu 9 Hühner." },
   { id: "cows",    cat: "bau",  n: "Kuhstall mit Weide", i: "🏚️", lv: 3, price: () => 500,  lim: lv => lv >= 8 ? 2 : 1, d: "Unterstand und Weide für bis zu 6 Kühe." },
   { id: "pigs",    cat: "bau",  n: "Schweinestall",     i: "🐷", lv: 4, price: () => 400,  lim: () => 1, d: "Stall mit Suhle und Auslauf für bis zu 8 Schweine." },
@@ -209,7 +210,7 @@ const FUNLOCK_HOF = {
   3: ["🥕 Karotten", "🐄 Kuhstall mit Weide", "🌿 Kuhfutter", "🥧 Apfelkuchen"],
   4: ["🐷 Schweinestall & Ferkel", "🍠 Schweinefutter", "🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
   5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse", "🛖 zweiter Hühnerstall"],
-  6: ["🐂 Rinderweide & Kälber", "🍖 Schinken", "🧦 Wollsocken", "🍓 Erdbeeren", "🍕 Pizza", "🍰 Kirschtorte"],
+  6: ["🐂 Rinderweide & Rinder", "🍖 Schinken", "🧦 Wollsocken", "🍓 Erdbeeren", "🍕 Pizza", "🍰 Kirschtorte"],
   7: ["🥘 Gulasch", "🧥 Pullover", "🎃 Kürbis", "🍐 Birnbaum"]
 };
 

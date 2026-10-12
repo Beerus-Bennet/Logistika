@@ -1,7 +1,7 @@
 /* =========================================================================
    LOGISTIKA – minigames.js
    Kleine Handwerks-Spiele des Erbes, alle im selben Fenster unten:
-   Axt (Timing mit Ausdauer), Kettensäge (Fallrichtung, Fallkerb, Hitze),
+   Axt (Timing mit Ausdauer), Kettensäge (Fallkerb, Hitze),
    Nageln (Dach, Bauen am See), Kabel anklemmen, Zahnräder einsetzen,
    Förderband flicken, Motor putzen und zusammensetzen, Schatz ausgraben
    und Angeln mit Biss und Drill. Ergebnis kommt per Rückruf zurück.
@@ -209,12 +209,11 @@ const MG_GAMES = {
       const t = st.tree;
       st.ph = 0; st.dirs = mgDirInfo(t); st.prog = 0; st.heat = 0; st.over = 0; st.stall = 0; st.hold = false; st.mk = 0; st.mv = 1; st.snd = 0;
       st.pow = (S.farm.tools.saw || 1) >= 2 ? 1.6 : 1;                 /* Profi-Säge: schneller, wird weniger heiß */
-      mgH("⛓️ " + FSPECIES[t.sp].n + " sägen · " + FTREE_SIZE[t.sz].n, "Fallrichtung wählen – ins Freie, nicht auf Bäume oder Wege");
-      const free = st.dirs.filter(d => !d.block).length;
-      mgStage(`<div class="mg-dirs">${st.dirs.map((d, i) => `<button class="mg-dir${d.block ? " blk" : " free"}" data-d="${i}"><b>${d.a}</b><small>${d.block ? d.block : "frei"}</small></button>`).join("")}<div class="mg-tree">🌳</div></div>`);
-      mgMsg(free ? "Wohin soll der Baum fallen?" : "Überall steht was im Weg – wähl das kleinste Übel.");
-      mgBar("");
-      $$("#mgStage [data-d]").forEach(b => b.onclick = () => { st.dir = st.dirs[+b.dataset.d]; st.dirOk = !st.dir.block || !free; MG_GAMES.saw.kerb(st); });
+      /* die Fallrichtung sucht der Holzfäller selbst aus: ins Freie, nicht auf Bäume, Wege oder Häuser */
+      const free = st.dirs.filter(d => !d.block);
+      st.dir = free.length ? free[Math.floor(Math.random() * free.length)] : st.dirs[0];
+      st.dirOk = !st.dir.block || !free.length;
+      MG_GAMES.saw.kerb(st);
     },
     /* Fallkerb: nur ein Schnitt im grünen Bereich zählt – daneben heißt nochmal.
        Großer Baum: dicker Stamm, schmalerer Bereich, schnellere Markierung. */
@@ -223,9 +222,9 @@ const MG_GAMES = {
       const sz = st.tree.sz;
       st.zc = 0.28; st.zh = 0.12 - (sz - 1) * 0.015; st.mspd = 0.75 + sz * 0.12;
       const W = [0, 50, 64, 82, 104][sz], H = [0, 112, 124, 138, 150][sz];
-      mgH("⛓️ Fallkerb", "Tipp, wenn die Markierung im grünen Bereich ist");
+      mgH("⛓️ " + FSPECIES[st.tree.sp].n + " sägen · " + FTREE_SIZE[sz].n, "Fallkerb: tipp, wenn die Markierung im grünen Bereich ist");
       mgStage(`<div class="mg-trunk" id="mgTr" style="width:${W}px;height:${H}px"><i class="tgt" style="bottom:${(st.zc - st.zh) * 100}%;height:${st.zh * 200}%"><u style="bottom:${(0.5 - 0.35 / 2) * 100}%;height:35%"></u></i><b id="mgMk"></b></div>`);
-      mgMsg(st.dirOk ? "Gute Richtung. Jetzt der Fallkerb – nur im grünen Bereich sägen!" : "Hm, da steht was im Weg … setz den Kerb wenigstens genau.", st.dirOk ? "ok" : "bad");
+      mgMsg("Erst der Fallkerb – nur im grünen Bereich sägen!", "");
       mgBar(`<button class="btn fa-go" id="mgGo">✂️ Kerb setzen</button>`);
       const go = () => {
         if (st.ph !== 1 || st.wait) return;
