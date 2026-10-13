@@ -65,11 +65,11 @@ function mgSparks(box, el, col, n) {
   }
 }
 /* die Kettensäge als echtes 3D-Bildchen statt Handsägen-Emoji */
-/* right = Schwert zeigt nach rechts (Fällschnitt von links auf den Kerb zu; das Bild selbst zeigt nach links) */
-function mgSawImg(right) {
+/* Kettensäge im Fällschnitt: das Schwert zeigt nach links in den Stamm, waagerecht */
+function mgSawImg() {
   const id = (S.farm && S.farm.tools && S.farm.tools.saw >= 2) ? "saw2" : "saw1";
   const u = typeof thumbOf === "function" ? thumbOf("tool:" + id, () => FWM.tool(id)) : null;
-  return u ? `<img src="${u}" alt="Kettensäge" style="transform:${right ? "scaleX(-1) rotate(18deg)" : "rotate(8deg)"}">` : "⚙️";
+  return u ? `<img src="${u}" alt="Kettensäge" style="transform:rotate(30deg)">` : "⚙️";
 }
 function mgWin(ic) { const s = $("#mgStage"); if (s) s.insertAdjacentHTML("beforeend", `<div class="mg-win"><b>${ic}</b></div>`); }
 /* aufsteigender Text im Spielfeld („PERFEKT!“, „+7“, „Daneben“) */
@@ -259,8 +259,8 @@ const MG_GAMES = {
       st.ph = 2;
       mgH("⛓️ Fällschnitt", "Gedrückt halten zum Sägen – loslassen kühlt den Motor");
       st.tw = [0, 58, 72, 90, 112][st.tree.sz] || 86;
-      /* Fällschnitt: von der anderen Seite genau auf Höhe des Kerbs, bis zur Kerbspitze */
-      mgStage(`<div class="mg-log2 hold" id="mgLog"><div class="mg-trk" style="width:${st.tw}px;margin-left:${-st.tw / 2}px"><i class="notch"></i><i class="mg-cut" id="mgCut"></i></div><span class="mg-cs" id="mgCs" style="left:calc(50% - ${st.tw / 2 + 39}px)">${mgSawImg(true)}</span></div>
+      /* Fällschnitt: die Säge setzt rechts in der Kerbspitze an und sägt auf Kerbhöhe quer durch */
+      mgStage(`<div class="mg-log2 hold" id="mgLog"><div class="mg-trk" style="width:${st.tw}px;margin-left:${-st.tw / 2}px"><i class="notch"></i><i class="mg-cut" id="mgCut"></i></div><span class="mg-cs" id="mgCs" style="left:calc(50% + ${st.tw / 2 - 15}px)">${mgSawImg()}</span></div>
         <div class="mg-hp"><span>🪵</span><i><em id="mgPr" style="width:0%"></em></i></div><div class="mg-heat"><span>🌡️</span><i><em id="mgHeat"></em></i></div>`);
       mgMsg(st.tree.sz >= 3 ? "Dicker Stamm – halten zum Sägen, den Motor nicht überhitzen." : "Halten zum Sägen – loslassen kühlt den Motor.", "");
       const b = mgBar(`<button class="btn fa-go hold" id="mgGo">⛓️ Halten zum Sägen</button>`).firstChild;
@@ -283,7 +283,7 @@ const MG_GAMES = {
         st.heat += dt * (0.42 + t.sz * 0.05) * (st.pow > 1 ? 0.8 : 1);
         const lg = $("#mgLog");
         if (lg && Math.random() < dt * 30) {
-          const tw = st.tw || 86, d = document.createElement("i"), r = lg.getBoundingClientRect(), x = r.width / 2 - tw / 2 + 3 + Math.min(1, st.prog) * (tw - 17);
+          const tw = st.tw || 86, d = document.createElement("i"), r = lg.getBoundingClientRect(), x = r.width / 2 + tw / 2 - 11 - Math.min(1, st.prog) * (tw - 14);
           d.className = "mg-dust"; d.style.cssText = `left:${x}px;top:${r.height * 0.46}px;--dx:${(Math.random() * 40 - 10).toFixed(0)}px;--dy:${(Math.random() * 30 - 5).toFixed(0)}px`;
           lg.appendChild(d); setTimeout(() => d.remove(), 720);
         }
@@ -297,8 +297,8 @@ const MG_GAMES = {
       const p = $("#mgPr"), h = $("#mgHeat"), cu = $("#mgCut"), cs = $("#mgCs");
       if (p) p.style.width = Math.min(100, st.prog * 100) + "%";
       const pr = Math.min(1, st.prog);
-      if (cu) cu.style.width = `calc(${(pr * 100).toFixed(1)}% - ${(pr * 11).toFixed(1)}px)`;
-      if (cs) { const tw = st.tw || 86; cs.style.left = `calc(50% - ${tw / 2 + 39}px + ${Math.round(pr * (tw - 17))}px)`; cs.classList.toggle("on", !!st.hold && !(st.stall > 0)); }
+      if (cu) cu.style.width = `calc(${(pr * 100).toFixed(1)}% - ${(pr * 8).toFixed(1)}px)`;
+      if (cs) { const tw = st.tw || 86; cs.style.left = `calc(50% + ${tw / 2 - 15}px - ${Math.round(pr * (tw - 14))}px)`; cs.classList.toggle("on", !!st.hold && !(st.stall > 0)); }
       if (h) { h.style.width = Math.min(100, st.heat * 100) + "%"; h.className = st.heat > 0.75 ? "hot" : ""; }
       if (st.prog >= 1) {
         st.done = true;

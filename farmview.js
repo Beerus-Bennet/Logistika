@@ -843,6 +843,7 @@ function farmTap(x, y) {
     if (tt) movePlace(tt[0] - Math.floor(FV.place.w / 2), tt[1] - Math.floor(FV.place.d / 2));
     return;
   }
+  if (typeof staffTap === "function" && staffTap(x, y)) return;
   if (typeof worldTap === "function" && worldTap(x, y)) return;
   const o = pickObj(x, y);
   if (!o) { closeFarmPop(); FV.sel = null; return; }
@@ -1351,6 +1352,7 @@ function renderFarmPop() {
   const P = FV.pop;
   if (!el || !P) return;
   if (P.kind === "wtree") return renderTreePop(el, P);
+  if (P.kind === "staff") return typeof renderStaffPop === "function" ? renderStaffPop(el, P) : closeFarmPop();
   const o = farmObj(P.id);
   if (!o) return closeFarmPop();
   let h = typeof worldPopHTML === "function" ? worldPopHTML(o, P) : "";
@@ -1433,6 +1435,7 @@ function positionFarmPop() {
   const P = FV.pop, el = $("#farmPop");
   if (!P || !el || !el.firstChild || !FV.R) return;
   if (P.kind === "wtree") return positionTreePop(el, P);
+  if (P.kind === "staff") return typeof positionStaffPop === "function" ? positionStaffPop(el, P) : null;
   const o = farmObj(P.id);
   if (!o) return;
   const [cx, cz] = farmCenter(o);

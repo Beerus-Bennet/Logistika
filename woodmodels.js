@@ -1035,7 +1035,8 @@ const FWM = (() => {
     const shirt = o.shirt || 0x3f78c8, pants = o.pants || 0x3a4a5a, skin = o.skin || 0xf2c9a0, hat = o.hat;
     [-0.07, 0.07].forEach(x => b.box(0.09, 0.42, 0.11, pants, { x }));
     b.box(0.3, 0.38, 0.18, shirt, { y: 0.42 });
-    [-1, 1].forEach(s => b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44, rz: s * 0.08 }));
+    /* armR: false – der rechte Arm kommt als eigenes, bewegliches Teil dazu (arm()) */
+    [-1, 1].forEach(s => { if (s === 1 && o.armR === false) return; b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44, rz: s * 0.08 }); });
     b.sphere(0.12, 8, 6, skin, { y: 0.92 });
     if (o.hair) b.sphere(0.125, 8, 4, o.hair, { y: 0.95, sy: 0.8 });
     if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 }); }
@@ -1044,6 +1045,14 @@ const FWM = (() => {
     if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84, z: 0.1 });
     b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: 0.04, y: 0.95, z: 0.115 }); b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: -0.04, y: 0.95, z: 0.115 });
     if (o.tool === "axt") { b.box(0.03, 0.5, 0.03, C.woodD, { x: 0.22, y: 0.3, rz: 0.2 }); b.box(0.12, 0.08, 0.02, 0x9aa6af, { x: 0.27, y: 0.55, rz: 0.2 }); }
+    return b;
+  }
+  /* Arm zum Bewegen: Drehpunkt an der Schulter, hängt nach unten, mit Hand */
+  function arm(o) {
+    o = o || {};
+    const b = new MB();
+    b.box(0.07, 0.34, 0.08, o.shirt || 0x3f78c8, { y: -0.34 });
+    b.box(0.062, 0.065, 0.072, o.skin || 0xf2c9a0, { y: -0.4 });
     return b;
   }
   /* Saison-Deko */
@@ -1574,6 +1583,6 @@ const FWM = (() => {
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
-    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, cosDeco
+    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, arm, cosDeco
   };
 })();

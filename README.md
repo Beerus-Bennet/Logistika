@@ -187,10 +187,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   schafft große Bäume.
 * **Kettensäge** (Level 7, nach 25 Bäumen) – die **Fallrichtung** sucht das
   Spiel selbst aus (ins Freie, nicht auf Bäume, Wege oder den Hof); man setzt
-  den **Fallkerb** auf Kniehöhe und hält dann gedrückt zum Sägen – der
-  Fällschnitt kommt von der anderen Seite genau auf Kerbhöhe und läuft bis in
-  die Kerbspitze, das Schwert zeigt auf den Kerb – ohne den Motor zu
-  **überhitzen**. Hängenbleiben kostet Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
+  den **Fallkerb** auf Kniehöhe und hält dann gedrückt zum Sägen – die Säge
+  setzt rechts in der Kerbspitze an und sägt auf Kerbhöhe quer durch den
+  Stamm, der Schnitt hat dieselbe helle Holzfarbe wie der Kerb – ohne den
+  Motor zu **überhitzen**. Hängenbleiben kostet Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
   Hof: Bretter, Pfosten und Brennholz. Die Profi-Säge (Level 13) schafft die
   uralten Eichen im alten Wald.
 * **Holzhändler** – im Holzplatz-Lager: Rohholz zum vollen Preis, Holzwaren
@@ -264,7 +264,8 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   * **Hof** (sobald der Wald offen ist): *Landwirt/in* erntet reife Felder und
     Obstbäume, sät nach (was gerade fehlt, mit Fruchtwechsel) und gießt;
     *Tierpfleger/in* füttert, sammelt Eier, Milch und Wolle ein, bringt
-    Masttiere zum Metzger und kauft Jungtiere nach; *Hofmeister/in* holt
+    Masttiere zum Metzger und kauft Jungtiere nach (Masttiere: so viele, wie
+    mit drei Sternen Platz haben – auch in einen neuen, leeren Stall); *Hofmeister/in* holt
     Fertiges aus Mühle, Ofen, Molkerei, Metzgerei und Spinnstube und stellt
     neue Rezepte an (was für Bestellungen und Futter fehlt – Zutaten für
     offene Bestellungen bleiben liegen); *Fahrer/in* schickt fertige
@@ -277,9 +278,32 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   * **Fischerei** (ab Level 19): *Fischer/in* leert und beködert die Reusen
     und angelt vom Steg; *Fischwirt/in* filetiert, räuchert, kühlt und packt
     in den Fischerei-Häusern.
+  **Aufträge als Kette** – jede Kraft hat eine kleine Auftragsliste. Fehlt
+  den Hühnern Futter, gibt der Tierpfleger dem Hofmeister den Auftrag
+  „Hühnerfutter“; fehlen dem Weizen und Mais, gehen Aufträge an den
+  Landwirt, der genau das sät (und die Felder dafür gießt). Der Fahrer nimmt
+  die nächste offene Bestellung und verteilt, was fehlt, an den, der es
+  macht. Steht eine Maschine still, weil für kein Rezept alles da ist,
+  nimmt sich ihre Kraft das nötigste Rezept vor und gibt die Zutaten weiter:
+  Die Räucherei holt sich Brennholz vom Sägewerker und Forellen vom Fischer,
+  der Sägewerker Äste vom Holzfäller. Was für einen Auftrag gebraucht wird,
+  verbraucht niemand für etwas anderes. Gibt es für eine Ware keinen Zuständigen (keine Maschine, noch
+  niemand eingestellt), steht sie im Team-Fenster unter „📋 Für dich“, und
+  Lina schickt eine Nachricht. Hängt ein Auftrag, arbeiten die Leute
+  solange nach eigenem Plan weiter; ohne Fortschritt verfällt er nach einer
+  Weile – so kommt nichts zum Stillstand.
+  **Antippen** – tippt man eine Kraft auf dem Hof an, bleibt sie stehen,
+  dreht sich zu einem um, winkt und zeigt in einer Blase, was sie gerade tut
+  und welche Aufträge sie hat – mit der ganzen Kette, woher sie kommen
+  („von 🥖 Hofmeister Ida (für Hühnerfutter) ← 🐄 Tierpfleger Ole“). Mit ✕
+  löscht man einen Auftrag (er kommt dann eine Weile nicht wieder), mit
+  „＋ Auftrag geben“ verteilt man einen neuen: Saat, Obst, Tierprodukte und
+  Jungtiere, Rezepte der eigenen Maschinen, Holzarten, Fische oder eine
+  Bestellung zum Losschicken. Eigene Aufträge stehen oben und kommen zuerst.
   Je Aufgabe eine Person, jeden Tag neue Bewerbungen. Im Team-Fenster stehen
-  alle als wippende 3D-Figur mit Werkzeug und dem, was sie gerade tun; auf
-  dem Hof laufen sie zu ihrer Arbeit, schwingen Sichel, Axt oder Rute, und
+  alle als wippende 3D-Figur mit Werkzeug, dem, was sie gerade tun, und ihren
+  Aufträgen; auf dem Hof laufen sie zu ihrer Arbeit, schwingen mit dem Arm
+  Sichel, Axt oder Rute, und
   über dem Ort steigt kurz auf, was sie eingebracht haben. Sind alle
   Aufgaben einer Station besetzt, heißt es „✓ läuft von allein“. Jede Person
   hat eine Eigenschaft (bis +18 % schneller), will täglich Lohn und eine
@@ -957,7 +981,7 @@ farmview.js             3D-Ansicht des Erbes: Kamera, Gesten, Werkzeuge, Fenster
 worldview.js            große Welt in 3D: Kulisse in Kacheln, Sperrgebiete mit Aufdecken, Bäume, Wildtiere, Ereignisse, Wetter, Fenster
 minigames.js            Minispiele: Axt, Kettensäge, Nageln, Kabel, Zahnräder, Förderband, Motor, Graben, Angeln
 fishview.js             See in Bewegung: Angeln vom Steg, Bootsfahrten, Pose und Rute, Enten, springende Fische
-team.js                 Personal je Station: Bewerbungen, Arbeit von allein (Felder, Tiere, Maschinen, Bäume, Reusen, Lieferungen), Figuren in 3D
+team.js                 Personal je Station: Bewerbungen, Arbeit von allein, Auftragskette (Tierpfleger → Hofmeister → Landwirt, Fahrer → wer die Ware macht), antippen und Aufträge geben, Figuren in 3D
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest
