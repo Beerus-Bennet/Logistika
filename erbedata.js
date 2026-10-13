@@ -256,11 +256,11 @@ const FHOF_STAGES = [
   null,
   { n: "Kleiner Bauernhof", d: "Ein bisschen heruntergekommen – aber deiner." },
   { n: "Ausgebauter Hof", lv: 6, cost: 900, need: { kiefer: 6, birke: 6 },
-    perks: ["Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
+    perks: ["Der Hof wächst nach allen Seiten: 28 × 28 statt 26 × 26 Felder Platz", "Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
   { n: "Professioneller Betrieb", lv: 11, cost: 3500, need: { bretter: 12, balken: 8, pfosten: 8 },
-    perks: ["Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
+    perks: ["Der Hof wächst wieder: 30 × 30 Felder Platz", "Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
   { n: "Großer Wirtschaftshof", lv: 17, cost: 9000, need: { bauholz: 8, platten: 10, tueren: 2, zaun: 6 },
-    perks: ["Das Gelände wächst – mehr Platz für Felder und Maschinen", "Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
+    perks: ["Das ganze Gelände: 32 × 32 Felder Platz für Felder, Ställe und Maschinen", "Steinmauer, Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
 ];
 /* Gerümpel auf dem Hof am Anfang: wegräumen gibt EP und ein bisschen Holz */
 const FJUNK = {
@@ -271,15 +271,29 @@ const FJUNK = {
   karre:   { n: "Kaputte Karre",  i: "🛒", sta: 14, gain: { aeste: 1, reste: 1 }, m: 4 }
 };
 
-/* ------------------------------ Mitarbeiter ------------------------------- */
+/* ------------------------------ Mitarbeiter -------------------------------
+   Personal je Station. Ist die nächste Etappe offen, kann man für die alte
+   Leute einstellen, die dort alles von allein erledigen – langsamer als man
+   selbst, aber ständig: Hof (ab Wald), Wald & Sägewerk (ab See), Fischerei
+   (ab Level 19). gap = Spielminuten Pause zwischen zwei Handgriffen,
+   work = Minuten am Ort. Je eine Person pro Aufgabe. */
+const FSTAFF_GROUPS = [
+  { id: "hof",  n: "Hof",             i: "🌾", lock: "sobald der Wald offen ist" },
+  { id: "holz", n: "Wald & Sägewerk", i: "🪵", lock: "sobald das Seeufer gepachtet ist" },
+  { id: "see",  n: "Fischerei",       i: "🎣", lock: "ab Level 19, wenn die Fischerei läuft" }
+];
 const FSTAFF_ROLES = {
-  fahrer:      { n: "Fahrer/in",      i: "🚚", lv: 8,  perk: "mehr Liefergeld",                 wage: [26, 42] },
-  farmer:      { n: "Landwirt/in",    i: "🧑‍🌾", lv: 8,  perk: "Pflanzen wachsen schneller, gießt mit", wage: [24, 38] },
-  mechaniker:  { n: "Mechaniker/in",  i: "🔧", lv: 10, perk: "Reparaturen und Strom günstiger", wage: [34, 52] },
-  holzfaeller: { n: "Holzfäller/in",  i: "🪓", lv: 11, perk: "mehr Holz, fällt selbst kleine Bäume", wage: [30, 48] },
-  fischer:     { n: "Fischer/in",     i: "🎣", lv: 16, perk: "mehr Fang, fischt selbst",         wage: [30, 48] }
+  farmer:      { g: "hof",  n: "Landwirt/in",    i: "🧑‍🌾", lv: 8,  gap: 14, work: 4,  job: "erntet Felder und Obstbäume, sät nach und gießt",                 wage: [24, 38] },
+  pfleger:     { g: "hof",  n: "Tierpfleger/in", i: "🐄", lv: 8,  gap: 16, work: 5,  job: "füttert, sammelt Eier, Milch und Wolle, bringt Masttiere zum Metzger", wage: [24, 38] },
+  hofmeister:  { g: "hof",  n: "Hofmeister/in",  i: "🥖", lv: 8,  gap: 18, work: 4,  job: "hält Mühle, Ofen, Molkerei, Metzgerei und Spinnstube am Laufen",  wage: [28, 44] },
+  fahrer:      { g: "hof",  n: "Fahrer/in",      i: "🚚", lv: 8,  gap: 30, work: 3,  job: "schickt fertige Bestellungen los – und es gibt mehr Liefergeld",    wage: [26, 42] },
+  holzfaeller: { g: "holz", n: "Holzfäller/in",  i: "🪓", lv: 10, gap: 70, work: 14, job: "fällt ausgewachsene Bäume im Wald – auch du bekommst mehr Holz",   wage: [30, 48] },
+  saeger:      { g: "holz", n: "Sägewerker/in",  i: "🪚", lv: 10, gap: 18, work: 4,  job: "hält Säge, Sägebock und Maschinen am Laufen und heizt den Kessel", wage: [32, 50] },
+  mechaniker:  { g: "holz", n: "Mechaniker/in",  i: "🔧", lv: 10, gap: 0,  work: 0,  job: "Reparaturen und Strom günstiger, nichts klemmt mehr",              wage: [34, 52] },
+  fischer:     { g: "see",  n: "Fischer/in",     i: "🎣", lv: 16, gap: 35, work: 8,  job: "angelt vom Steg, leert und beködert die Reusen",                   wage: [30, 48] },
+  fischwirt:   { g: "see",  n: "Fischwirt/in",   i: "🐟", lv: 16, gap: 18, work: 4,  job: "filetiert, räuchert, kühlt und packt in den Fischerei-Häusern",     wage: [30, 48] }
 };
-const FSTAFF_SLOTS = [[8, 1], [11, 2], [14, 3], [17, 4], [20, 5]];
+const FSTAFF_SLOTS = [[8, 1]];   /* alt – heute gibt es je Aufgabe eine Stelle */
 const FSTAFF_NAMES = ["Jana", "Ole", "Mira", "Henrik", "Ida", "Paul", "Greta", "Lasse", "Emma", "Bruno", "Lotte", "Theo", "Svenja", "Kalle", "Anni", "Jonte", "Wiebke", "Malte", "Ronja", "Fiete"];
 const FSTAFF_TRAITS = [
   { t: "fleißig", p: 14 }, { t: "erfahren", p: 18 }, { t: "gemütlich", p: 8 }, { t: "lernt schnell", p: 11 },
@@ -313,7 +327,7 @@ const FCOSMETIC = [
   { id: "traktor_gruen", cat: "skin",   n: "Traktor in Grün",        i: "🚜", price: 20, skin: { tractor: "gruen" } },
   { id: "hund",          cat: "pet",    n: "Hofhund Bello",          i: "🐕", price: 40, pet: "hund" },
   { id: "katze",         cat: "pet",    n: "Katze Minka",            i: "🐈", price: 35, pet: "katze" },
-  { id: "ziege",         cat: "pet",    n: "Ziege Heidi",            i: "🐐", price: 30, pet: "ziege" },
+  { id: "ziege",         cat: "pet",    n: "Ziege Tim",              i: "🐐", price: 30, pet: "ziege", d: "Mit schwarzer Hornbrille – Tim behält den Überblick." },
   { id: "weihnachtsbaum", cat: "saison", n: "Weihnachtsbaum",        i: "🎄", price: 15, deco: "xmas" },
   { id: "kuerbislaterne", cat: "saison", n: "Kürbislaternen",        i: "🎃", price: 12, deco: "lantern" },
   { id: "maibaum",       cat: "saison", n: "Maibaum",                i: "🎏", price: 18, deco: "maypole" },

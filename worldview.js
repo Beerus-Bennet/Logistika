@@ -172,7 +172,7 @@ class WBuf {
 function worldStatic() {
   const R = FV.R;
   WV.trees.clear(); WV.falling = []; WV.hofKey = ""; WV.hof = []; WV.barriers = {}; WV.npc = null;
-  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null;
+  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null; WV.pvKey = ""; WV.pvNodes = [];
   const fell = S.farm.trees || [];
   const rnd = wRng(7331);
   const MK = worldMasks(fell);
@@ -322,36 +322,38 @@ function worldSyncHof(force) {
   WV.hofKey = key;
   WV.hof.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
   WV.hof = [];
-  const stage = S.farm.stage || 1, big = stage >= 4, F0 = big ? 15.5 : 13;
+  /* der Zaun wächst mit jeder Ausbaustufe nach allen Seiten (13 → 14 → 15 → 16) */
+  const stage = S.farm.stage || 1, big = stage >= 4, F0 = typeof farmHofR === "function" ? farmHofR() : 13;
   const add = n => { R.nodes.push(n); WV.hof.push(n); return n; };
-  add(fnode(fmesh("hofGround:" + Math.min(stage, 2), () => FWM.hofGround(32, 13, Math.min(stage, 2))), { shadow: false }));
+  add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + F0, () => FWM.hofGround(32, F0, Math.min(stage, 2))), { shadow: false }));
   const b = new FM.MB(), ps = Math.min(3, stage);
-  b.merge(FWM.hofPath(2, big ? 23.5 : 21, ps), { x: 5, z: big ? 3.75 : 2.5 });
-  b.merge(FWM.hofPath(big ? 21.5 : 19, 1, ps), { x: big ? -4.75 : -3.5, z: -7.5 });
+  b.merge(FWM.hofPath(2, F0 + 8, ps), { x: 5, z: (F0 - 8) / 2 });
+  b.merge(FWM.hofPath(F0 + 6, 1, ps), { x: (6 - F0) / 2, z: -7.5 });
   b.merge(FWM.hofPath(2, 17.7 - F0, ps), { x: 5, z: (F0 + 17.7) / 2 });
-  b.merge(FWM.hofPath(Math.max(1, 15.6 - F0 + 0.2), 1.6, ps), { x: -(F0 + 15.6) / 2, z: -7.5 });
+  if (F0 < 15.6) b.merge(FWM.hofPath(15.6 - F0 + 0.2, 1.6, ps), { x: -(F0 + 15.6) / 2, z: -7.5 });
   if (big) {
-    /* Steinmauer ringsum mit Toren im Süden und Westen */
+    /* Steinmauer ringsum mit Toren im Süden und Westen – knapp außerhalb des Baulands */
+    const W = F0 + 0.3;
     const wall = (x0, z0, x1, z1) => {
       const len = Math.hypot(x1 - x0, z1 - z0);
       b.merge(FWM.stoneWall(len), { x: (x0 + x1) / 2, z: (z0 + z1) / 2, ry: -Math.atan2(z1 - z0, x1 - x0) });
     };
-    wall(-15.5, -15.5, 15.5, -15.5); wall(15.5, -15.5, 15.5, 15.5);
-    wall(-15.5, 15.5, 2.6, 15.5); wall(7.4, 15.5, 15.5, 15.5);
-    wall(-15.5, -15.5, -15.5, -8.6); wall(-15.5, -6.4, -15.5, 15.5);
-    b.merge(FWM.stoneGate(), { x: 5, z: 15.5 });
+    wall(-W, -W, W, -W); wall(W, -W, W, W);
+    wall(-W, W, 2.6, W); wall(7.4, W, W, W);
+    wall(-W, -W, -W, -8.6); wall(-W, -6.4, -W, W);
+    b.merge(FWM.stoneGate(), { x: 5, z: W });
   } else {
     const k = stage;
-    FWM.hofFence(b, -13, -13, 13, -13, k, 1);
-    FWM.hofFence(b, 13, -13, 13, 13, k, 2);
-    FWM.hofFence(b, -13, 13, 3, 13, k, 3);
-    FWM.hofFence(b, 7, 13, 13, 13, k, 4);
-    FWM.hofFence(b, -13, -13, -13, -8.6, k, 5);
-    FWM.hofFence(b, -13, -6.4, -13, 13, k, 6);
-    b.merge(FM.gate(), { x: 5, z: 13, ry: stage <= 1 ? 0.06 : 0 });
+    FWM.hofFence(b, -F0, -F0, F0, -F0, k, 1);
+    FWM.hofFence(b, F0, -F0, F0, F0, k, 2);
+    FWM.hofFence(b, -F0, F0, 3, F0, k, 3);
+    FWM.hofFence(b, 7, F0, F0, F0, k, 4);
+    FWM.hofFence(b, -F0, -F0, -F0, -8.6, k, 5);
+    FWM.hofFence(b, -F0, -6.4, -F0, F0, k, 6);
+    b.merge(FM.gate(), { x: 5, z: F0, ry: stage <= 1 ? 0.06 : 0 });
   }
   /* Westtor zum Wald */
-  [-8.7, -6.3].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: -F0, z }));
+  [-8.7, -6.3].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: -F0 - (big ? 0.3 : 0), z }));
   if (stage >= 3) {
     const L = FM.lamp(), fl = FM.flowers();
     [[2.5, F0 + 0.6], [7.5, F0 + 0.6], [-F0 - 0.6, -9.3], [-F0 - 0.6, -5.7], [F0 + 0.6, F0 + 0.6], [-F0 - 0.6, F0 + 0.6], [F0 + 0.6, -F0 - 0.6], [-F0 - 0.6, -F0 - 0.6], [-8, 17.2], [18, 17.2]]
@@ -360,9 +362,10 @@ function worldSyncHof(force) {
   }
   add(fnode(R.mesh(b)));
   if (stage >= 2) {
-    const col = (S.farm.cos && S.farm.cos.on.tractor) || "rot";
-    add(fnode(fmesh("tractor:" + col, () => FWM.tractor(col)), { x: 10.4, z: 16.6, ry: -Math.PI / 2 }));
-    add(fnode(fmesh("trailer", FWM.trailer), { x: 12.6, z: 16.6, ry: -Math.PI / 2 }));
+    /* Traktor vor dem Zaun – im großen Wirtschaftshof vor der Maschinenhalle */
+    const col = (S.farm.cos && S.farm.cos.on.tractor) || "rot", tz = big ? 16.3 : 16.6, tx = big ? 21.4 : 10.4;
+    add(fnode(fmesh("tractor:" + col, () => FWM.tractor(col)), { x: tx, z: tz, ry: -Math.PI / 2 }));
+    add(fnode(fmesh("trailer", FWM.trailer), { x: tx + 2.2, z: tz, ry: -Math.PI / 2 }));
   }
   if (big) add(fnode(fmesh("mhall", FWM.machineHall), { x: 24, z: 12.8, ry: Math.PI }));
 }
@@ -448,10 +451,15 @@ function thumbOf(key, fn) {
     R.nodes.length = 0;
     R.nodes.push(R.node(m, {}));
     R.locks = [];
-    Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3), yaw: Math.PI / 4, pitch: flat ? 0.85 : 0.55, fov: 0.55 });
     R.shadowBox = r * 1.6;
-    R.render(1.5);
-    url = thumbCrop(R.canvas);
+    /* ragt das Modell über den Bildrand (lange Bretter, Kisten über Eck),
+       wird es mit mehr Abstand noch einmal gerendert – nichts wird abgeschnitten */
+    for (const k of [1.3, 1.75, 2.3]) {
+      Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3) * k, yaw: Math.PI / 4, pitch: flat ? 0.85 : 0.55, fov: 0.55 });
+      R.render(1.5);
+      const c = thumbCrop(R.canvas, k < 2.2);
+      if (c) { url = c; break; }
+    }
     R.free(m);
   } catch (e) { url = null; }
   THUMB.cache[key] = url;
@@ -459,7 +467,7 @@ function thumbOf(key, fn) {
 }
 /* Bildchen eng zuschneiden: jedes Modell füllt das Quadrat gleich gut –
    lange Bretter wie runde Laibe, nichts ragt über den Rand */
-function thumbCrop(src) {
+function thumbCrop(src, strict) {
   const N = 112, w = src.width, h = src.height;
   try {
     const a = document.createElement("canvas"); a.width = w; a.height = h;
@@ -468,6 +476,8 @@ function thumbCrop(src) {
     let x0 = w, y0 = h, x1 = -1, y1 = -1;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 < 0) return src.toDataURL("image/png");
+    /* stößt an den Rand: abgeschnitten – lieber mit mehr Abstand neu */
+    if (strict && (x0 <= 1 || y0 <= 1 || x1 >= w - 2 || y1 >= h - 2)) return null;
     const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = (N * 0.9) / Math.max(bw, bh);
     const o = document.createElement("canvas"); o.width = o.height = N;
     const ox = o.getContext("2d"); ox.imageSmoothingQuality = "high";
@@ -549,11 +559,16 @@ function thumbWork() {
   }
   if (q.length) requestAnimationFrame(thumbWork); else THUMB.busy = false;
 }
+/* Haustier im Bildchen leicht zur Kamera gedreht – Ziege Tim zeigt ihre Brille */
+function petThumbFn(k) {
+  const fn = k === "hund" ? FWM.dog : k === "katze" ? FWM.cat : FWM.goat;
+  return () => { const b = new FM.MB(); b.merge(fn(), { ry: 0.5 }); return b; };
+}
 function cosModel(c) {
   if (c.skin && c.skin.barn) return ["barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn)];
   if (c.skin && c.skin.house) return ["house:" + c.skin.house, () => skinMB("house", c.skin.house)];
   if (c.skin && c.skin.tractor) return ["tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor)];
-  if (c.pet) return ["pet:" + c.pet, c.pet === "hund" ? FWM.dog : c.pet === "katze" ? FWM.cat : FWM.goat];
+  if (c.pet) return ["petth:" + c.pet, petThumbFn(c.pet)];
   if (c.deco) return ["deco:" + c.deco, () => FWM.cosDeco(c.deco)];
   return [null, null];
 }
@@ -561,7 +576,7 @@ function cosThumb(c) {
   if (c.skin && c.skin.barn) return thumbOf("barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn));
   if (c.skin && c.skin.house) return thumbOf("house:" + c.skin.house, () => skinMB("house", c.skin.house));
   if (c.skin && c.skin.tractor) return thumbOf("tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor));
-  if (c.pet) return thumbOf("pet:" + c.pet, c.pet === "hund" ? FWM.dog : c.pet === "katze" ? FWM.cat : FWM.goat);
+  if (c.pet) return thumbOf("petth:" + c.pet, petThumbFn(c.pet));
   if (c.deco) return thumbOf("deco:" + c.deco, () => FWM.cosDeco(c.deco));
   return null;
 }
@@ -989,8 +1004,21 @@ function farmTreasureView(type, c) {
 function worldSyncPV() {
   const v = typeof pvVisit === "function" ? pvVisit() : null, key = v ? String(v.t0) : "", R = FV.R;
   if (key === WV.pvKey) return;
+  const had = WV.pvKey, P = S.farm && S.farm.pv, rm = n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); };
   WV.pvKey = key;
-  WV.pvNodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+  /* Dach voll: Döring geht zum Wagen, steigt ein und fährt vom Hof */
+  if (!v && had && WV.pvNodes.length === 2 && P && P.leftAt != null && S.time - P.leftAt < 120 && typeof startDrive === "function") {
+    const [van, man] = WV.pvNodes;
+    WV.pvNodes = []; WV.pvMan = null;
+    startDrive(man, [[man.x, man.z], [van.x + 0.8, van.z + 0.5]], () => rm(man));
+    WV.pvLeave = setTimeout(() => {
+      WV.pvLeave = null;
+      startDrive(van, [[van.x, van.z], [-29, -21], [-29, -11], [-31.5, -3], [-31.5, 18.5], [-48, 18.5]], () => rm(van));
+      FV.drives.forEach(d => { if (d.node === van) d.sp = 7; });
+    }, 1300);
+    return;
+  }
+  WV.pvNodes.forEach(rm);
   WV.pvNodes = [];
   if (!v) return;
   const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.pvNodes.push(n); return n; };
@@ -1021,7 +1049,12 @@ function openPV() {
     if (!k) { sfx("bad"); return; }
     sfx("build"); save(); farmSyncScene(); renderFarmUI();
     if (hall) { puff(hall); const [x, y] = objScreen(hall, 4.2); floatText(x, y, "☀️ +" + k + (k === 1 ? " Modul" : " Module"), "gold"); }
-    if (pvFull()) { toast("☀️ Das Dach ist voll! Kessel und Säge laufen jetzt mit Sonnenstrom.", "ok"); sfx("level"); }
+    if (pvFull()) {
+      toast("☀️ Das Dach ist voll! Kessel und Säge laufen jetzt mit Sonnenstrom – Döring packt ein und fährt los.", "ok"); sfx("level");
+      /* Kamera bleibt auf dem Wagen, bis er losgefahren ist */
+      closeFarmSheet(); farmFocusXZ(FPV.at[0] + 1, FPV.at[1] + 4, 32, 600);
+      return;
+    }
     openPV();
   });
 }
@@ -1049,23 +1082,7 @@ function stepPets(dt, time) {
     p.node.y = Math.abs(Math.sin(time * 10 + p.sp)) * 0.03;
   }
 }
-/* Mitarbeiter stehen bei der Arbeit */
-const STAFF_LOOK = {
-  fahrer: { shirt: 0x2f6fb0, hat: "muetze", at: () => [8.2, 12] }, farmer: { shirt: 0x6a9a3a, hat: "hut", at: () => [-0.8, -2.2] },
-  mechaniker: { shirt: 0x3a4a6a, hat: "helm", at: () => [-24.5, -27] }, holzfaeller: { shirt: 0xc8443a, hat: "helm", tool: "axt", at: () => [-20, -11] },
-  fischer: { shirt: 0x3a6a7a, hat: "muetze", at: () => [-1.2, 26.2] }
-};
-function worldSyncStaff() {
-  const R = FV.R, F = S.farm, ids = new Set((F.staff || []).map(s => s.id));
-  for (const [id, n] of WV.staff) if (!ids.has(id)) { const i = R.nodes.indexOf(n.node); if (i >= 0) R.nodes.splice(i, 1); WV.staff.delete(id); }
-  (F.staff || []).forEach((s, i) => {
-    if (WV.staff.has(s.id)) return;
-    const L = STAFF_LOOK[s.role] || STAFF_LOOK.farmer, p = L.at();
-    const node = fnode(fmesh("staff:" + s.role, () => FWM.person({ shirt: L.shirt, hat: L.hat, tool: L.tool, seed: 10 + i })), { x: p[0] + (i % 2) * 0.8, z: p[1] + Math.floor(i / 2) * 0.7, ry: 0.6 + i, s: 1.3 });
-    R.nodes.push(node);
-    WV.staff.set(s.id, { node, ph: i });
-  });
-}
+/* Mitarbeiter: Figuren, Laufen und Arbeiten siehe team.js */
 
 /* ------------------------------ Ereignisse -------------------------------- */
 function worldEvKey() { const c = S.farm.ev && S.farm.ev.cur; return c ? c.k + ":" + c.t0 + ":" + (c.data.done ? 1 : 0) + ":" + (c.data.spots ? c.data.spots.filter(x => x.done).length : "") : ""; }
@@ -1514,7 +1531,7 @@ function worldStep(dt, time) {
     FV.R.emit({ x: cx, y: 0.75, z: cz, vx: (Math.random() - 0.5) * 1.4, vy: 1.4, vz: (Math.random() - 0.5) * 1.4, g: -4, life: 0.7, size: 0.05, col: [0.95, 0.85, 0.6, 1], shape: 1 });
   }
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
-  for (const s of WV.staff.values()) s.node.y = Math.abs(Math.sin(time * 2.2 + s.ph)) * 0.04;
+  if (typeof stepStaff === "function") stepStaff(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });
   /* Fischschwarm: Blubbern und springende Fische */
@@ -1992,32 +2009,6 @@ function stageBind(again) {
     toast("🏡 " + FHOF_STAGES[S.farm.stage].n + " – sieh dich um!", "ok");
     renderFarmUI();
   };
-}
-function staffFace(c, size) {
-  if (c.av && typeof portraitHTML === "function") { try { return portraitHTML(c.av, size, { label: c.name }); } catch (e) { /* weiter mit Emoji */ } }
-  return `<span class="fst-emo">${FSTAFF_ROLES[c.role].i}</span>`;
-}
-function staffHTML() {
-  const F = S.farm, slots = staffSlots(), nxt = FSTAFF_SLOTS.find(([lv]) => flv() < lv);
-  if (!slots) return `<div class="fs-empty">👷 Ab Level ${FSTAFF_SLOTS[0][0]} kannst du Leute einstellen.</div>`;
-  const hired = F.staff.map(s => {
-    const R0 = FSTAFF_ROLES[s.role];
-    return `<div class="fstaff"><div class="fst-p">${staffFace(s, 44)}</div><div><b>${esc(s.name)} · ${R0.i} ${esc(R0.n)}</b><small>${esc(s.trait)} · ${esc(R0.perk)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}${s.last && FITEMS[s.last] ? " · zuletzt " + FITEMS[s.last].i : ""}</small></div>
-      <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div>`;
-  }).join("");
-  const cands = F.staff.length < slots ? staffCands().map(c => {
-    const R0 = FSTAFF_ROLES[c.role];
-    return `<div class="fstaff cand"><div class="fst-p">${staffFace(c, 44)}</div><div><b>${esc(c.name)} · ${R0.i} ${esc(R0.n)}</b><small>${esc(c.trait)} · ${esc(R0.perk)} +${c.perk} % · ${eur(c.wage)} am Tag</small></div>
-      <button class="btn tiny" data-hire="${c.id}" ${S.money < c.wage * 2 ? "disabled" : ""}>Einstellen<small>${eur(c.wage * 2)}</small></button></div>`;
-  }).join("") : "";
-  return `<div class="fs-sub">👷 ${F.staff.length}/${slots} Plätze${nxt ? " · nächster Platz ab Level " + nxt[0] : ""}</div>
-    ${hired || `<div class="fs-empty">Noch niemand eingestellt.</div>`}
-    ${cands ? `<div class="fs-sub">Bewerbungen von heute:</div>${cands}` : ""}
-    <div class="fs-sub">Täglich Lohn + Brotzeit aus dem Lager – hungrig schaffen sie nur die Hälfte.</div>`;
-}
-function staffBind(again) {
-  $$("#farmSheetIn [data-hire]").forEach(b => b.onclick = () => { if (staffHire(b.dataset.hire)) { sfx("build"); save(); farmSyncScene(); again(); } else sfx("bad"); });
-  $$("#farmSheetIn [data-fire]").forEach(b => b.onclick = () => askConfirm("Wirklich entlassen?", "Die Stelle wird frei – neue Bewerbungen kommen jeden Tag.", "Entlassen", () => { staffFire(b.dataset.fire); save(); farmSyncScene(); again(); }));
 }
 /* Extras-Laden: Kleeblätter statt Geld. Echtgeld und Werbung sind nur Platzhalter. */
 function cosShopHTML() {

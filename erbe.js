@@ -40,7 +40,7 @@ const FWORLD = {
   clearings: [[-12, -36, 6], [-48, -42, 6.5], [6, -64, 5.5], [-66, -72, 6], [-40, -84, 5]],
   rocks: [-56, -86, 9],
   /* Feldgehölz am Hof: kleine Bäume für die Axt (Ost und am Teich) */
-  hofTrees: [[17.4, -11, "birke", 1], [16.4, -8.9, "birke", 1], [17.6, 6.5, "kiefer", 1], [17.9, 10.5, "birke", 1], [18.4, -13.8, "kiefer", 1],
+  hofTrees: [[18.3, -11, "birke", 1], [18.2, 14.2, "birke", 1], [18.4, 6.5, "kiefer", 1], [17.9, 10.5, "birke", 1], [18.4, -13.8, "kiefer", 1],
              [20.2, -12.8, "birke", 2], [25.5, -11.6, "birke", 1], [29.5, -6.5, "kiefer", 1], [29.8, 2.6, "birke", 1], [26.5, 7.8, "kiefer", 2]]
 };
 function distSeg(px, pz, a, b) {
@@ -471,7 +471,10 @@ function pvBuy(k) {
   if (pvFull()) {
     S.farm.en = farmEnCap();
     farmEvent("pv:full");
-    P.visit.until = Math.min(P.visit.until, S.time + 90);          /* fertig montiert – Döring packt zusammen */
+    /* fertig montiert – Döring steigt ein und fährt davon (er kommt nicht wieder) */
+    P.visit = null; P.leftAt = S.time; P.next = 1e9;
+    if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "good", title: "Alle Module montiert",
+      body: "Moin! Ihr Hallendach ist voll – " + FPV.max + " Module, sauber in Reih und Glied. Kessel und Säge laufen jetzt mit Sonnenstrom. Danke für den Auftrag! Gruß, " + FPV.who });
   }
   return k;
 }
@@ -934,10 +937,24 @@ function farmStageUp() {
   farmEvent("stage");
   return true;
 }
-/* Bebaubare Fläche: in Stufe 4 zwei Kacheln mehr nach jeder Seite */
+/* Bebaubare Fläche: jede Ausbaustufe eine Kachel mehr nach jeder Seite –
+   26 × 26, 28 × 28, 30 × 30 und am Ende das ganze Gelände mit 32 × 32 Kacheln.
+   (Weiter geht es nicht: Teich im Osten, Straße im Süden, Wald im Norden und Westen.) */
+const FHOF_R = [13, 13, 14, 15, 16];
+function farmHofR() { return FHOF_R[Math.min(4, (S.farm && S.farm.stage) || 1)]; }
 function farmBoundsUpdate() {
-  const big = S.farm && (S.farm.stage || 1) >= 4;
-  FIN0 = big ? 1 : 3; FIN1 = big ? 31 : 29;
+  const r = farmHofR();
+  FIN0 = FG / 2 - r; FIN1 = FG / 2 + r;
+  /* das Feldgehölz im Osten rückt ein Stück vom neuen Zaun weg – und bleibt trotzdem vom Teich weg */
+  const MOVE = [[17.4, -11, 18.3, -11], [16.4, -8.9, 18.2, 14.2], [17.6, 6.5, 18.4, 6.5]];
+  if (S.farm && S.farm.trees) S.farm.trees.forEach(t => {
+    if (t.area || t.x <= 15 || t.x >= 17.8 || Math.abs(t.z) >= 17) return;
+    const m = MOVE.find(m => Math.abs(t.x - m[0]) < 0.05 && Math.abs(t.z - m[1]) < 0.05);
+    if (m) { t.x = m[2]; t.z = m[3]; return; }
+    t.x = +(17.8 + Math.max(0, t.x - 16.4) * 0.5).toFixed(2);
+    const P = FWORLD.pond, safe = P.r * 1.3 + 1.2, dx = t.x - P.x;
+    if (Math.hypot(dx, t.z - P.z) < safe) t.z = +(P.z + Math.sign(t.z - P.z || -1) * Math.sqrt(Math.max(0, safe * safe - dx * dx))).toFixed(2);
+  });
 }
 function farmStageStoreBonus(st) { const s = S.farm.stage || 1; return st === "silo" || st === "barn" ? [0, 0, 20, 60, 120][s] : 0; }
 function farmStageSlotBonus() { const s = S.farm.stage || 1; return s >= 3 ? 2 : s >= 2 ? 1 : 0; }
@@ -962,80 +979,7 @@ function farmClearJunk(o) {
   return { got, m: J.m || 0, xp: 5 };
 }
 
-/* ------------------------------ Mitarbeiter ------------------------------ */
-function staffSlots() { let n = 0; FSTAFF_SLOTS.forEach(([lv, k]) => { if (flv() >= lv) n = k; }); return n; }
-function staffDay() { return Math.floor(S.time / 1440); }
-function staffCands() {
-  const F = S.farm;
-  if (!F.cand || F.cand.day !== staffDay()) {
-    const roles = Object.keys(FSTAFF_ROLES).filter(r => flv() >= FSTAFF_ROLES[r].lv);
-    const list = [], names = FSTAFF_NAMES.filter(n => !F.staff.some(s => s.name === n));
-    roles.forEach(r => {
-      const R = FSTAFF_ROLES[r], tr = pick(FSTAFF_TRAITS);
-      const name = names.splice(Math.floor(Math.random() * names.length), 1)[0] || pick(FSTAFF_NAMES);
-      const wage = Math.round(R.wage[0] + (R.wage[1] - R.wage[0]) * ((tr.p - 8) / 10) + Math.random() * 4);
-      list.push({ id: "c" + (S.seq++), role: r, name, perk: tr.p, trait: tr.t, wage, av: typeof avRandom === "function" ? avRandom() : null });
-    });
-    F.cand = { day: staffDay(), list };
-  }
-  return F.cand.list.filter(c => !F.staff.some(s => s.id === c.id));
-}
-function staffHire(cid) {
-  const F = S.farm, c = (F.cand && F.cand.list || []).find(x => x.id === cid);
-  if (!c) return false;
-  if (F.staff.length >= staffSlots()) return toast("Mehr Leute gehen gerade nicht – ab dem nächsten Level.", "warn"), false;
-  const fee = c.wage * 2;
-  if (S.money < fee) return toast("Für das Antrittsgeld fehlen " + eur(fee - S.money) + ".", "warn"), false;
-  S.money -= fee; S.expense += fee;
-  logMoney("farm", "Eingestellt: " + c.name + " (" + FSTAFF_ROLES[c.role].n + ")", -fee);
-  F.staff.push(Object.assign({}, c, { since: S.time, fed: true, work: S.time }));
-  farmXP(15);
-  farmEvent("staff");
-  return true;
-}
-function staffFire(id) { const F = S.farm; F.staff = F.staff.filter(s => s.id !== id); }
-/* Bonus einer Rolle (0 … 0,18) – hungrig nur halb */
-function staffPerk(role) {
-  if (!S.farm || !S.farm.staff) return 0;
-  let p = 0;
-  S.farm.staff.forEach(s => { if (s.role === role) p = Math.max(p, (s.perk / 100) * (s.fed === false ? 0.5 : 1)); });
-  return p;
-}
-/* Einmal am Tag: Lohn und Verpflegung */
-function staffDaily() {
-  const F = S.farm;
-  if (!F.staff.length) return;
-  let pay = 0;
-  F.staff.forEach(s => {
-    pay += s.wage;
-    const food = farmFoods().filter(id => FITEMS[id].k !== "fisch").reverse()[0];
-    if (food) { farmTake(food, 1); s.fed = true; } else s.fed = false;
-  });
-  S.money -= pay; S.expense += pay;
-  logMoney("farm", "Löhne Mitarbeiter", -pay);
-  const hungry = F.staff.filter(s => !s.fed).length;
-  if (hungry) toast("👷 " + hungry + " Mitarbeiter ohne Brotzeit – heute nur halb so fleißig.", "warn");
-}
-/* Arbeiten von allein: Holz, Fisch, Gießen */
-function staffWork() {
-  const F = S.farm;
-  F.staff.forEach(s => {
-    const gap = s.role === "holzfaeller" ? 60 : s.role === "fischer" ? 45 : s.role === "farmer" ? 20 : 0;
-    if (!gap || S.time - (s.work || 0) < gap) return;
-    s.work = S.time;
-    if (s.role === "holzfaeller" && farmAreaOpen("wald")) {
-      const id = Math.random() < 0.5 ? "birke" : "kiefer";
-      if (farmRoom(id) > 0) { farmAdd(id, 1, 3); s.last = id; }
-    }
-    if (s.role === "fischer" && farmObj1("f_steg")) {
-      const odds = farmFishOdds("steg"), id = farmWPick(Object.keys(odds), x => odds[x]);
-      if (farmRoom(id) > 0) { farmAdd(id, 1, 3); s.last = id; F.stats.species[id] = (F.stats.species[id] || 0) + 1; }
-    }
-    if (s.role === "farmer") {
-      F.objs.filter(o => o.t === "field" && fieldState(o) === "grow" && !o.w).slice(0, 2).forEach(o => { o.w = true; o.end = S.time + (o.end - S.time) * 0.75; });
-    }
-  });
-}
+/* Mitarbeiter: siehe team.js (Personal je Station, arbeitet von allein) */
 
 /* ------------------------------- Ereignisse ------------------------------- */
 function farmEvOn(k) { const c = S.farm && S.farm.ev && S.farm.ev.cur; return !!(c && c.k === k && S.time < c.until); }
@@ -1386,6 +1330,7 @@ function farmErbeTick(dt) {
   farmTreasureTick();
   pvTick();
   staffWork();
+  if (typeof staffGroupCheck === "function") staffGroupCheck();
   stallTick(false, dt || 1);
   stallTick(true, dt || 1);
   angelTick();

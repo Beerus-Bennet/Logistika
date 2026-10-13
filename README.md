@@ -86,7 +86,10 @@ so laufen die Lager nicht ständig über.
 * **Backofen, Mühle, Molkerei** – Rezepte antippen, sie laufen nacheinander in
   der Warteschlange: Brot, Maisfladen, Apfelkuchen, Möhren-Muffins, Pizza,
   Kirschtorte; Butter, Pudding, Käse; Mehl, Maismehl, Hühner- und Kuhfutter.
-  Weitere Plätze kosten Geld. Seit v46 stimmen die Mengen mit echten Rezepten
+  Weitere Plätze kosten Geld. Ein Tipp holt alles Fertige auf einmal ab: Jede
+  Ware steigt als eigene Zeile mit Menge und Namen auf („+6 Brote“,
+  „+2 Apfelkuchen“, „✓ 3× fertig abgeholt“); passt etwas nicht mehr ins
+  Lager, bleibt es in der Maschine und das wird angezeigt. Seit v46 stimmen die Mengen mit echten Rezepten
   überein: Gebacken wird mit **Mehl aus der Mühle** (1 Sack Weizen, 10 kg →
   7–8 kg Mehl), ein Brot braucht gut 600 g Mehl, eine Pizza rund 170 g, ein
   Blech Apfelkuchen 500 g Mehl, 2 kg Äpfel und 3 Eier, Muffins kommen mit
@@ -157,13 +160,16 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   leichten gelben Umriss.
 * **Hof-Ausbau in vier Stufen** – am Anfang grau und verwittert: morscher Zaun
   mit Lücken, Erdwege voller Unkraut, alte Reifen, Schrott und Bretter zum
-  Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Stufe 2 *Ausgebauter
-  Hof*: frischer Anstrich, neuer Zaun, Kieswege, Traktor, mehr Platz in Silo
-  und Scheune, ein Warteplatz mehr. Stufe 3 *Professioneller Betrieb*:
-  Pflaster, Laternen, Blumen, weißer Zaun. Stufe 4 *Großer Wirtschaftshof*:
-  Steinmauer mit Steintor, Maschinenhalle, das Gelände wächst um zwei Kacheln
-  nach jeder Seite. Ausbau im Wohnhaus unter „🏡 Ausbau“ – mit Holz aus dem Wald
-  und später aus dem Sägewerk.
+  Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Mit jeder Stufe
+  wächst der Hof nach allen Seiten gleich: 26 × 26, 28 × 28, 30 × 30 und am
+  Ende 32 × 32 Kacheln – Zaun, Wege und Bauland rücken mit (weiter geht es
+  nicht: Teich im Osten, Straße im Süden, Wald im Norden und Westen). Stufe 2
+  *Ausgebauter Hof*: frischer Anstrich, neuer Zaun, Kieswege, Traktor, mehr
+  Platz in Silo und Scheune, ein Warteplatz mehr. Stufe 3 *Professioneller
+  Betrieb*: Pflaster, Laternen, Blumen, weißer Zaun. Stufe 4 *Großer
+  Wirtschaftshof*: Steinmauer mit Steintor, Maschinenhalle, der Traktor parkt
+  davor. Ausbau im Wohnhaus unter „🏡 Ausbau“ – mit Holz aus dem Wald und
+  später aus dem Sägewerk.
 * **Der Wald** – sobald drei Bäume am Teich gefällt sind und das Erbe Level 5
   erreicht hat, kommt **Förster Bruno Wendt** ans Westtor (antippen auf einen
   gesperrten Knopf zeigt jede Bedingung mit Häkchen und Zähler): „Der Förster hat einen Weg durch den Wald freigegeben.“ Der Weg
@@ -181,8 +187,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   schafft große Bäume.
 * **Kettensäge** (Level 7, nach 25 Bäumen) – die **Fallrichtung** sucht das
   Spiel selbst aus (ins Freie, nicht auf Bäume, Wege oder den Hof); man setzt
-  den **Fallkerb** auf Kniehöhe und hält dann gedrückt zum Sägen – ohne den
-  Motor zu **überhitzen**. Hängenbleiben kostet Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
+  den **Fallkerb** auf Kniehöhe und hält dann gedrückt zum Sägen – der
+  Fällschnitt kommt von der anderen Seite genau auf Kerbhöhe und läuft bis in
+  die Kerbspitze, das Schwert zeigt auf den Kerb – ohne den Motor zu
+  **überhitzen**. Hängenbleiben kostet Qualität; Sprit 3 € je Baum. Mit der Säge kommt der **Sägebock** auf den
   Hof: Bretter, Pfosten und Brennholz. Die Profi-Säge (Level 13) schafft die
   uralten Eichen im alten Wald.
 * **Holzhändler** – im Holzplatz-Lager: Rohholz zum vollen Preis, Holzwaren
@@ -209,8 +217,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   sofort auf der vorderen Hallendachfläche, in zwei Reihen, jede mittig –
   bis zu 16 Module. Jedes bringt tagsüber 2 kWh pro Stunde in den Speicher;
   ist das Dach voll, laufen Kessel und Säge ganz von selbst mit Sonnenstrom
-  (kein Feuer, kein Stromverbrauch mehr). Wer nicht alles kauft, trifft die
-  Döring GmbH eine Woche später wieder.
+  (kein Feuer, kein Stromverbrauch mehr). Mit dem letzten Modul ist der
+  Auftrag erledigt: Frank Döring bedankt sich per Nachricht, steigt ein und
+  fährt mit dem Montagewagen vom Sägewerk zur Straße davon. Wer nicht alles
+  kauft, trifft die Döring GmbH eine Woche später wieder.
 * **Der Glindower See** – die Bürgermeisterin verpachtet das Ufer (Level 15,
   Sägewerk läuft, 40 Holzwaren gemacht). Am Ufer liegen sieben **Bauplätze**:
   Steg, Fischerhütte, Bootshaus (mit Ruderboot), Fischlager, Räucherei,
@@ -247,12 +257,33 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Köder sind Reusenköder-Dosen oder eine Portion Mais.
 * **Fische nach Sternen** – in der Kühlkiste liegen Fische getrennt nach
   Sternen und werden je Stufe verkauft; Rezepte nehmen die schlechtesten zuerst.
-* **Mitarbeiter** (ab Level 8, im Wohnhaus unter „👷 Team“) – Fahrer/in (mehr
-  Liefergeld), Landwirt/in (gießt mit), Mechaniker/in (Reparaturen und Strom
-  günstiger, keine klemmende Säge), Holzfäller/in (mehr Holz, fällt selbst)
-  und Fischer/in (fischt selbst). Jede Person hat eine Eigenschaft, will
-  täglich Lohn und eine Brotzeit aus dem Lager – und steht sichtbar bei der
-  Arbeit.
+* **Personal je Station** (im Wohnhaus unter „👷 Team“) – ist die nächste
+  Etappe offen, übernehmen Leute die alte Station; Lina sagt per Nachricht
+  Bescheid. Sie arbeiten langsamer als man selbst, aber ohne Pause – auch
+  wenn man gerade nicht hinsieht:
+  * **Hof** (sobald der Wald offen ist): *Landwirt/in* erntet reife Felder und
+    Obstbäume, sät nach (was gerade fehlt, mit Fruchtwechsel) und gießt;
+    *Tierpfleger/in* füttert, sammelt Eier, Milch und Wolle ein, bringt
+    Masttiere zum Metzger und kauft Jungtiere nach; *Hofmeister/in* holt
+    Fertiges aus Mühle, Ofen, Molkerei, Metzgerei und Spinnstube und stellt
+    neue Rezepte an (was für Bestellungen und Futter fehlt – Zutaten für
+    offene Bestellungen bleiben liegen); *Fahrer/in* schickt fertige
+    Bestellungen mit einem freien Fahrzeug los (dazu Trinkgeld).
+  * **Wald & Sägewerk** (sobald das Seeufer gepachtet ist): *Holzfäller/in*
+    fällt ausgewachsene Bäume mit der Axt (keine uralten); *Sägewerker/in* hält
+    Sägebock, Gattersäge und Maschinen am Laufen und heizt den Kessel, wenn
+    der Strom knapp wird; *Mechaniker/in* macht Reparaturen und Strom
+    günstiger, nichts klemmt mehr.
+  * **Fischerei** (ab Level 19): *Fischer/in* leert und beködert die Reusen
+    und angelt vom Steg; *Fischwirt/in* filetiert, räuchert, kühlt und packt
+    in den Fischerei-Häusern.
+  Je Aufgabe eine Person, jeden Tag neue Bewerbungen. Im Team-Fenster stehen
+  alle als wippende 3D-Figur mit Werkzeug und dem, was sie gerade tun; auf
+  dem Hof laufen sie zu ihrer Arbeit, schwingen Sichel, Axt oder Rute, und
+  über dem Ort steigt kurz auf, was sie eingebracht haben. Sind alle
+  Aufgaben einer Station besetzt, heißt es „✓ läuft von allein“. Jede Person
+  hat eine Eigenschaft (bis +18 % schneller), will täglich Lohn und eine
+  Brotzeit aus dem Lager – ohne Brotzeit schafft sie nur die Hälfte.
 * **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
   Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
   weißer Hirsch (Glücksbringer), klemmende Säge (Zahnräder richten), Paket am Tor,
@@ -315,7 +346,8 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
 * **Kleeblätter 🍀 und Extras** – Kleeblätter gibt es fürs Spielen (Level,
   Kapitel, neue Gebiete, Ereignisse, Tagesbonus). Im Laden unter „🍀 Extras“:
   Scheune in Taubenblau oder Moosgrün, Schieferdach, grüner Traktor,
-  Haustiere (Hofhund, Katze, Ziege laufen über den Hof), Saison-Deko
+  Haustiere (Hofhund, Katze und *Ziege Tim* mit schwarzer Hornbrille laufen
+  über den Hof), Saison-Deko
   (Weihnachtsbaum, Kürbislaternen, Maibaum, Schneemann, Osterhase) und Komfort
   (große Brotdose, Thermoskanne, Werkzeuggürtel). Nichts davon ist nötig zum
   Weiterkommen. Die Vorschaubilder sind das echte 3D-Modell, so wie es danach
@@ -925,6 +957,7 @@ farmview.js             3D-Ansicht des Erbes: Kamera, Gesten, Werkzeuge, Fenster
 worldview.js            große Welt in 3D: Kulisse in Kacheln, Sperrgebiete mit Aufdecken, Bäume, Wildtiere, Ereignisse, Wetter, Fenster
 minigames.js            Minispiele: Axt, Kettensäge, Nageln, Kabel, Zahnräder, Förderband, Motor, Graben, Angeln
 fishview.js             See in Bewegung: Angeln vom Steg, Bootsfahrten, Pose und Rute, Enten, springende Fische
+team.js                 Personal je Station: Bewerbungen, Arbeit von allein (Felder, Tiere, Maschinen, Bäume, Reusen, Lieferungen), Figuren in 3D
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest

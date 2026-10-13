@@ -1004,9 +1004,27 @@ const FWM = (() => {
     const b = new MB();
     b.box(0.26, 0.26, 0.55, 0xf2ece0, { y: 0.32 });
     [[-0.08, -0.2], [0.08, -0.2], [-0.08, 0.2], [0.08, 0.2]].forEach(([x, z]) => b.box(0.06, 0.32, 0.06, 0xdcd4c4, { x, z }));
-    b.box(0.16, 0.2, 0.22, 0xf2ece0, { y: 0.56, z: 0.32 });
-    [-1, 1].forEach(s => b.box(0.03, 0.14, 0.03, 0x8a7a6a, { x: s * 0.05, y: 0.72, z: 0.28, rx: -0.5 }));
-    b.box(0.05, 0.08, 0.04, 0xdcd4c4, { y: 0.44, z: 0.42 });
+    /* Kopf (Boxen stehen auf y), Schnauze, Nase und Ziegenbart */
+    const F = 0.45;                                                     /* Vorderseite des Kopfs */
+    b.box(0.18, 0.21, 0.24, 0xf2ece0, { y: 0.55, z: 0.33 });
+    b.box(0.11, 0.09, 0.08, 0xe9e1d2, { y: 0.53, z: F + 0.02 });
+    b.box(0.05, 0.02, 0.012, 0x8a6a5a, { y: 0.595, z: F + 0.065 });
+    b.box(0.04, 0.09, 0.03, 0xd8cfbf, { y: 0.45, z: F + 0.01 });
+    [-1, 1].forEach(s => b.box(0.03, 0.15, 0.03, 0x8a7a6a, { x: s * 0.05, y: 0.74, z: 0.28, rx: -0.5 }));
+    [-1, 1].forEach(s => b.box(0.08, 0.035, 0.05, 0xe3dbcb, { x: s * 0.12, y: 0.69, z: 0.28, rz: s * 0.3 }));
+    /* Ziege Tim: schwarze, eckige Hornbrille – etwas breiter als der Kopf, Augen dahinter */
+    const blk = 0x111113, fz = F + 0.012;
+    [-1, 1].forEach(s => {
+      const x = s * 0.051;
+      b.box(0.064, 0.046, 0.006, 0xe9f4fc, { x, y: 0.638, z: F + 0.004 });                 /* Glas */
+      b.box(0.022, 0.024, 0.008, 0x1d1d20, { x: x - s * 0.007, y: 0.65, z: F + 0.008 });  /* Pupille */
+      b.box(0.096, 0.022, 0.022, blk, { x, y: 0.683, z: fz });                              /* oben kräftig */
+      b.box(0.096, 0.013, 0.02, blk, { x, y: 0.625, z: fz });                               /* unten schmal */
+      b.box(0.017, 0.08, 0.022, blk, { x: x + s * 0.0395, y: 0.625, z: fz });
+      b.box(0.013, 0.08, 0.02, blk, { x: x - s * 0.0415, y: 0.625, z: fz });
+      b.box(0.014, 0.018, 0.2, blk, { x: s * 0.1, y: 0.685, z: F - 0.09 });                /* Bügel */
+    });
+    b.box(0.03, 0.014, 0.02, blk, { y: 0.672, z: fz });                                     /* Steg */
     return b;
   }
   /* Leute: Förster, Nachbar, Bürgermeisterin, Mitarbeiter */

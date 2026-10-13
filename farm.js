@@ -16,7 +16,7 @@ function farmPhase() { return farmOn() && !S.farm.logi; }
 function logiOn() { return !S || !S.farm || !!S.farm.logi || !!S.farm.sold; }
 
 const FG = 32;                         /* Raster 32 × 32 Kacheln */
-let FIN0 = 3, FIN1 = 29;               /* bebaubar: Kacheln 3 … 28 (Ausbaustufe 4: 1 … 30) */
+let FIN0 = 3, FIN1 = 29;               /* bebaubar: Kacheln 3 … 28; jede Ausbaustufe eine Kachel mehr nach jeder Seite (Stufe 4: 0 … 31) */
 /* Objekte, die im Wasser stehen (Fischerei) */
 const FWATER_T = new Set(["pot", "mline", "netz", "kutter", "steg"]);
 function needZone(t, k) { return FWATER_T.has(t) || (t === "deco" && FDECO[k] && FDECO[k].water) ? "w" : "l"; }
@@ -92,8 +92,9 @@ function farmCenter(o) {
 
 /* Kieswege: dort wird nicht gebaut (Hauptweg vom Tor, Querweg vor Haus und Scheune) */
 const FPATH = new Set();
-for (let j = 8; j < 31; j++) { FPATH.add(j * FG + 20); FPATH.add(j * FG + 21); }
-for (let i = 3; i < 22; i++) FPATH.add(8 * FG + i);
+/* v51: bis an den Rand – der Hof wächst mit jeder Ausbaustufe nach allen Seiten */
+for (let j = 8; j < FG; j++) { FPATH.add(j * FG + 20); FPATH.add(j * FG + 21); }
+for (let i = 0; i < 22; i++) FPATH.add(8 * FG + i);
 FSITES.hof.path = FPATH;
 /* Belegung des Rasters (ohne das ausgenommene Objekt); Wege zählen als belegt (-1) */
 function farmOcc(except) {

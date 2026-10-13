@@ -125,7 +125,7 @@ function farmStatic() {
   for (let i = 0; i < 520; i++) {
     const x = (G3.srand() - 0.5) * 58, z = (G3.srand() - 0.5) * 58;
     const m = Math.max(Math.abs(x), Math.abs(z));
-    if (m < 14.6 || busy(x, z)) continue;
+    if (m < 16.8 || busy(x, z)) continue;          /* v51: Platz für den gewachsenen Hof (bis ±16) */
     const k = G3.srand();
     const pick = k < 0.34 ? pine : k < 0.5 ? pine2 : k < 0.7 ? lt : k < 0.8 ? lt2 : k < 0.94 ? bu : rk;
     b.merge(pick, { x, z, ry: G3.srand() * 6.28, s: 0.85 + G3.srand() * 0.4 });
@@ -892,10 +892,8 @@ function objAction(o, x, y) {
     }
     const got = farmCollectMach(o);
     if (got.length) {
-      got.forEach((g, i) => {
-        flyGain(o, g, i);
-        if (g.by) Object.keys(g.by).forEach((b, k) => { const [sx, sy] = objScreen(o); flyItem(b, sx, sy, storeBtn(), 300 + k * 90, g.by[b]); });
-      });
+      flyGains(o, got);
+      if (o.done.length) { const [x, y] = objScreen(o); floatText(x, y + 18, "📦 Lager voll – " + o.done.length + " " + (o.done.length > 1 ? "warten" : "wartet") + " noch", "red"); }
       sfx(o.t === "kutter" ? "horn" : "collect");
       if (o.t === "kutter") { const [kx, ky] = objScreen(o, 1.2); floatText(kx, ky - 26, got.length > 1 ? "Volle Kisten!" : "Fang an Land!", "gold"); }
       FV.sel = null; save(); farmSyncState();
@@ -1087,6 +1085,21 @@ function noFeed(o) {
 
 /* ------------------------------ Effekte ------------------------------- */
 function storeBtn() { return $("#fbStore"); }
+/* Alles Fertige auf einmal abgeholt: gleiche Ware zusammengezählt (auch Nebenprodukte),
+   jede Ware als eigene Zeile übereinander – nichts verdeckt das andere */
+function flyGains(o, got) {
+  const sum = [];
+  const add = (id, n, xp) => { const e = sum.find(x => x.id === id); if (e) { e.n += n; e.xp += xp || 0; } else sum.push({ id, n, xp: xp || 0 }); };
+  got.forEach(g => { add(g.id, g.n, g.xp); if (g.by) for (const b in g.by) add(b, g.by[b], 0); });
+  const [x, y] = objScreen(o), xp = sum.reduce((a, g) => a + g.xp, 0);
+  sum.forEach((g, i) => {
+    flyItem(g.id, x, y, storeBtn(), i * 140, g.n);
+    setTimeout(() => floatText(x, y - 10 - i * 24, "+" + famt(g.id, g.n) + " " + (FITEMS[g.id] ? (g.n === 1 && FITEMS[g.id].sg) || FITEMS[g.id].n : ""), i ? "" : "gain"), i * 220);
+  });
+  if (got.length > 1) setTimeout(() => floatText(x, y - 14 - sum.length * 24, "✓ " + got.length + "× fertig abgeholt", "gold"), sum.length * 220);
+  if (xp) xpFly(x, y, xp);
+  return sum;
+}
 function flyGain(o, g, i) {
   const [x, y] = objScreen(o);
   flyItem(g.id, x, y, storeBtn(), i * 90, g.n);
@@ -1677,7 +1690,8 @@ function machQueueHTML(o) {
 function bindMachQueue(o) {
   $$("#farmSheetIn [data-collect]").forEach(b => b.onclick = () => {
     const got = farmCollectMach(o);
-    if (got.length) { const [x, y] = objScreen(o); got.forEach((g, i) => { flyItem(g.id, x, y, storeBtn(), i * 80, g.n); xpFly(x, y, g.xp); }); sfx("collect"); save(); }
+    if (got.length) { flyGains(o, got); sfx("collect"); save(); }
+    if (o.done.length) { const [x, y] = objScreen(o); floatText(x, y + 18, "📦 Lager voll – " + o.done.length + " " + (o.done.length > 1 ? "warten" : "wartet") + " noch", "red"); }
     openMachine(o);
   });
   const bb = $("#fqBuy");
