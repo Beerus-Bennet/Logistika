@@ -1408,7 +1408,7 @@ function renderFarmPop() {
   const o = farmObj(P.id);
   if (!o) return closeFarmPop();
   let h = typeof worldPopHTML === "function" ? worldPopHTML(o, P) : "";
-  const lv = level();
+  const lv = flv();   /* Erbe-Level – level() ist nach der Gründung das der Spedition */
   if (h) { /* Gerümpel & Co. aus worldview.js */ }
   else if (P.kind === "seed") {
     h = `<div class="fp-h">Was soll wachsen?<small>Zieh die Saat über leere Felder</small></div><div class="fp-row">`
@@ -1833,7 +1833,7 @@ function openMachine(o) {
     const h = machQueueHTML(o);
     if (q._h !== h) { q.innerHTML = h; q._h = h; bindMachQueue(o); }
   };
-  const M = FMACHINES[o.t], lv = level();
+  const M = FMACHINES[o.t], lv = flv();
   const sunOff = r => kesselSunOff(o, r);
   const rec = M.recipes.filter(r => !(r.hide && r.hide())).map(r => {   /* v59: Bert – unentwickelte Spezialköder ausblenden */
     const nok = !!(r.ok && !r.ok()), lock = r.lv > lv || sunOff(r) || nok, it = FITEMS[r.id];
@@ -2113,7 +2113,7 @@ function openFarmShop(cat) {
   if (!FSHOP_CATS.some(c => c[0] === cat)) cat = FSHOP_CATS.some(c => c[0] === FV.shopCat) ? FV.shopCat : FSHOP_CATS[0][0];
   FV.shopCat = cat;
   FV.sheetFn = () => openFarmShop(cat);
-  const lv = level();
+  const lv = flv();   /* Erbe-Level – level() ist nach der Gründung das der Spedition */
   let items;
   if (cat === "deko") {
     items = Object.keys(FDECO).filter(k => (!FDECO[k].s || FDECO[k].s === FSITE.kind) && (!FDECO[k].cos || farmCos(FDECO[k].cos))).map(k => {

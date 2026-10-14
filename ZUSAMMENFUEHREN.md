@@ -32,6 +32,7 @@ Fischer/in angelt nach Spielerregeln (Köder, Fanggrund, Wartegründe), Steg-Rei
 | Bert-Bild nur aus `bert.png` (Ausschnitt per CSS `.fv-fig.img.bert`) | `fishview.js`, `style.css` |
 
 Version: **v59** (`sw.js` und `?v=59` in `index.html`). Alte Spielstände werden beim Laden umgestellt.
+Danach **v60 (Hotfix)**: Hof-Fenster prüfen das Erbe-Level (`flv()`), nicht das der Spedition – siehe `AENDERUNGEN.md`.
 
 ## Stand v48 – erledigt
 
