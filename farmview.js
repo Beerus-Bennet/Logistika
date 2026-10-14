@@ -2026,12 +2026,12 @@ function openFarmOrders(sendFor, area) {
   const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>jede Woche dieselbe Ladung, fester Bonus</small></div>
     ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · jede Woche ${esc(farmAboPal(A))}</small>
       <span class="fo-tag abo">läuft · ${A.n || 0}× geliefert${A.miss ? " · " + A.miss + " verpasst" : ""} · nächste in ${fdur(Math.max(1, A.next - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
-      <div class="fo-b"><span></span><button class="btn tiny ghost" data-abox="${A.id}">Kündigen</button></div></div>`).join("")}
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-b"><span class="fo-hint">${farmAboCanQuit(A) ? "" : "kündbar nach " + FABO_MIN + " Lieferungen (" + (A.n || 0) + "/" + FABO_MIN + ")"}</span><button class="btn tiny ghost" data-abox="${A.id}" ${farmAboCanQuit(A) ? "" : "disabled"}>Kündigen</button></div></div>`).join("")}
     ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will jede Woche ${esc(farmAboPal(A))}</small>
       <span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, A.exp - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
-      <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst – frühestens nach ${FABO_MIN} Lieferungen</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
   const tabs = FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).length > 1 ? `<div class="fo-tabs">${FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).map(a => {
     const n = farmOrders().filter(o => farmOrderArea(o) === a.id), r = n.filter(farmOrderReady).length;
     return `<button class="${a.id === area ? "on" : ""}" data-oarea="${a.id}">${a.i} ${a.n}${r ? ` <b class="ok">${r}✓</b>` : n.length ? ` <b>${n.length}</b>` : ""}</button>`;

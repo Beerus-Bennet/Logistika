@@ -1059,12 +1059,24 @@ function farmAboFit(T) {
 function farmAboOk(T) {
   return FITEMS[T.item] && N[T.town] && (typeof isUnlocked !== "function" || isUnlocked(T.town)) && farmOrderAreaOn(T.area) && (farmCanMake(T.item) || farmInv(T.item) > 0) && flv() >= Math.max(6, T.lv || 0) && farmAboFit(T) >= 2;
 }
+/* v59: fester Preis je Lieferung (Warenwert + Liefergebühr + Bonus) – steht schon im Angebot.
+   Kündbar erst nach FABO_MIN Lieferungen. */
+const FABO_MIN = 2;
+function farmAboPrice(A) {
+  if (A.price != null) return A.price;
+  const n = A.pal * A.per, w = Math.max(0.3, FITEMS[A.item].kg * n);
+  const pr = typeof plan === "function" ? plan(FARM_NODE, A.town, FSITE.cargo || "hof", w, "time") : null;
+  const value = FITEMS[A.item].v * n;
+  A.price = Math.round((Math.max(4, value * 1.13 + 2.5 + (pr ? pr.dist : 0) * 0.45) + A.bonus) * 10) / 10;
+  return A.price;
+}
+function farmAboCanQuit(A) { return (A.n || 0) >= FABO_MIN; }
 /* Wochenbestellung erzeugen (angenommen, ohne Frist bis zur nächsten Woche) */
 function farmAboOrder(A) {
   const o = farmOrderObj(A.town, A.firm, { [A.item]: A.pal * A.per }, { area: A.area, abo: A.id });
   if (!o) return null;
   farmAcceptOrder(o, "abo");
-  o.pay = Math.round((o.pay + A.bonus) * 10) / 10;
+  o.pay = farmAboPrice(A);   /* v59: fester Preis aus dem Angebot */
   o.desc = "Wochenlieferung: " + farmAboPal(A) + " (" + fqty(A.item, A.pal * A.per) + ")";
   o.aboWeek = (A.n || 0) + (A.miss || 0) + 1;
   S.orders.push(o);
@@ -1124,6 +1136,8 @@ function farmAboTake(id) {
   return A;
 }
 function farmAboCancel(id, byFirm) {
+  const A0 = farmAbos().find(x => x.id === id);
+  if (!byFirm && A0 && !farmAboCanQuit(A0)) return toast("Kündbar erst nach " + FABO_MIN + " Lieferungen.", "warn"), false;
   const F = S.farm;
   F.abos = farmAbos().filter(x => x.id !== id);
   S.orders = S.orders.filter(o => o.abo !== id || (o.farm && o.farm.taken));
