@@ -340,7 +340,7 @@ const FCOS_CATS = [["skin", "🎨 Optik"], ["pet", "🐾 Haustiere"], ["saison",
 /* Laden: neue Reiter für Werkzeug, Sägewerk und Extras (Kleeblätter) */
 FSHOP_CATS_HOF.splice(3, 0, ["werkzeug", "🪓 Werkzeug"], ["saege", "🪚 Sägewerk"]);
 FSHOP_CATS_HOF.push(["extras", "🍀 Extras"]);
-FSHOP_HOF.push({ id: "s-koeder", cat: "werkzeug", n: "Reusenköder", i: "🥫", lv: 15, item: "koeder", qty: 10, price: () => 4, d: "Zehn Dosen Fischfetzen und Maden für die Reusen." });
+/* v59: Reusenköder gibt es nicht mehr im Laden – die macht die Fischerhütte aus Fischabfällen (oder Mais in die Reuse) */
 /* Deko aus dem Kosmetik-Shop (nur, wenn gekauft) */
 Object.assign(FDECO, {
   xmas:    { n: "Weihnachtsbaum",  i: "🎄", price: 0, lv: 1, sz: [2, 2], cos: "weihnachtsbaum" },
