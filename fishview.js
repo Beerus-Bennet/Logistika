@@ -279,7 +279,7 @@ function stegTourHTML(U) {
    ganz unten der Knopf zur Köder-Entwicklung (bertDevBtnHTML) */
 function bertTopHTML() {
   return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
-      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Köder, den genau die mögen.“</p></div></div>`;
+      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Spezialköder.“</p></div></div>`;
 }
 function bertWorkHTML(o) {
   const U = angelS();
