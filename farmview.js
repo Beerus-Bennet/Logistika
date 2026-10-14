@@ -1446,9 +1446,7 @@ function renderFarmPop() {
     h = `<div class="fp-h">${ic} ${esc(T.n)}<small>${line ? "erntereif" : "Früchte"} in <span class="fp-left">${fdur(Math.max(1, left))}</span>${(o.h || 0) >= 3 ? (line ? " · gut eingewachsen: +1 ★" : " · alter Baum: +1 ★") : ""}</small></div>
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">${line ? "🧽" : "💧"}</span><b>${line ? "geputzt" : "gegossen"}</b></div>`
         : `<div class="ftool big" data-tool="water">${line || typeof toolIc !== "function" ? `<span class="ic">${line ? "🧽" : "🚿"}</span>` : toolIc("water")}<b>${line ? "Leine putzen" : "Gießen"}</b><small>25 % schneller, +1 ★</small></div>`}</div>`
-      + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "")
-      /* v59: Obstbaum fällen – macht Platz für eine andere Sorte */
-      + (line ? "" : `<div class="fp-row"><div class="ftool" data-act="fell"><span class="ic">🪓</span><b>Fällen</b><small>2 Bündel Äste${o.kind === "kirsche" ? " + Edelholz" : ""}</small></div></div>`);
+      + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "");
   } else if (P.kind === "pen") {
     const pi = penInfo(o), A = pi.A, M = FPEN_META[o.t];
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
@@ -1714,11 +1712,14 @@ function renderPlaceBar() {
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : "auf den Hof"}">${zn === "yard" ? "🪚" : "🏡"}</button>`).join("")}
+    ${P.move && P.move.t === "tree" && typeof fruitFell === "function" ? `<button class="fpl-b" id="fpFell" title="Fällen">🪓</button>` : ""}
     <button class="fpl-b ok${P.ok ? "" : " disabled"}" id="fpOk">✓</button>`;
   $$("#farmPlace [data-zone]").forEach(b => b.onclick = () => placeJump(b.dataset.zone));
   $("#fpNo").onclick = () => cancelPlace();
   $("#fpOk").onclick = confirmPlace;
   const r = $("#fpRot"); if (r) r.onclick = rotatePlace;
+  /* v59: Obstbaum fällen – beim Gedrückthalten statt im Gieß-Popup */
+  const fl = $("#fpFell"); if (fl) fl.onclick = () => { const o = P.move; cancelPlace(); fruitFell(o); };
 }
 /* Wechsel zwischen Hof und Sägewerk: ein Tipp, der Rest wird hingeschoben */
 function placeJumps(P) {
