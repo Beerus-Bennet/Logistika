@@ -791,6 +791,8 @@ function angelInit(F) {
   /* v59: Spezialköder – Arten aus dem Fangbuch gelten als entdeckt; Dauerbestellung Würmer */
   U.spec = U.spec || {};
   for (const id in U.best) if (FSPEC_BAIT[id] && !U.spec[id]) U.spec[id] = { found: U.best[id].t || 0 };
+  for (const id in U.spec) if (!FSPEC_BAIT[id]) delete U.spec[id];   /* keine Spezialköder mehr für Weißfische */
+  if (U.bert.ask && !FSPEC_BAIT[U.bert.ask]) U.bert.ask = null;
   U.bert.keep = U.bert.keep || 0;
   /* Reusen liegen an festen Plätzen neben dem Steg */
   F.objs.filter(o => o.t === "pot" && o.area === "see").forEach((o, i) => {

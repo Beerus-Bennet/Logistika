@@ -127,8 +127,9 @@ FFIXED.add("pot");
 const FBERT = { worms: { n: 10, price: 3 }, lures: { n: 5, price: 60, t: 120 }, lureNeed: { rod: 2, mittel: 10 } };
 /* v59: Spezialköder – je Art einer. Bert entwickelt ihn aus einem Fisch, den du
    selbst gefangen hast (dev Minuten), danach baut er 5 Stück aus 2 Tauwürmern.
-   Preis = 5 Stück. Große Arten brauchen auch damit die Raubfischrute. Keiner für die Gold-Schleie. */
-const FSPEC_BAIT = { rotauge: 1, rotfeder: 1, ukelei: 1, barsch: 3, forelle: 5, aal: 11, karpfen: 10, zander: 22, hecht: 24, wels: 110 };
+   Preis = 5 Stück. Große Arten brauchen auch damit die Raubfischrute. Keiner für die
+   Weißfische (Rotauge, Rotfeder, Ukelei) und die Gold-Schleie – Bert meldet sich bei denen nicht. */
+const FSPEC_BAIT = { barsch: 3, forelle: 5, aal: 11, karpfen: 10, zander: 22, hecht: 24, wels: 110 };
 const FSPEC_DEV = 300;
 /* Dauerbestellung Tauwürmer: Bert hält so viele vorrätig */
 const FBERT_KEEP = [0, 20, 50, 100];
