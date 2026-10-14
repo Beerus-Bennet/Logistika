@@ -182,7 +182,7 @@ function fishStep(dt, time) {
    Angler-Turnier, Bert Flomann (Würmer, Profi-Köder) und das Fangbuch. */
 const BERT_IMG = "bert.png";
 FV.stegTab = "fish";
-function bertFig() { return `<div class="fv-fig img"><img src="${BERT_IMG}" alt="Bert Flomann"></div>`; }
+function bertFig() { return `<div class="fv-fig img bert"><img src="${BERT_IMG}" alt="Bert Flomann"></div>`; }
 /* Lina beim ersten Besuch am Steg: Lehmanns alte Angel */
 function stegLina() {
   const U = angelS(), img = typeof guideArt !== "undefined" && guideArt ? `<img src="${guideArt}" alt="Lina Sturm">` : "👩";

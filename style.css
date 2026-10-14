@@ -2767,6 +2767,9 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 /* ---- Angeln am Steg: Porträts, Köder, Listen, Turnier, Sternstufen, Kreis-Drill ---- */
 .fv-fig.img{overflow:hidden;background:#dff0e6}
 .fv-fig.img img{width:100%;height:auto;align-self:start;margin-top:4px;transform:scale(2.1);transform-origin:50% 6%}
+/* v59: Bert – Kopf mit Hut mittig im Kreis (bert.png ist ein Ganzkörperbild) */
+.fv-fig.img.bert{position:relative;display:block}
+.fv-fig.img.bert img{position:absolute;width:195%;max-width:none;height:auto;left:-51%;top:-9.5%;margin:0;transform:none}
 .mg-baits{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px}
 .mg-bait{display:flex;flex-direction:column;align-items:center;min-width:86px;background:#fff;border:2.5px solid var(--ink);border-radius:12px;padding:4px 8px;cursor:pointer;font:inherit}
 .mg-bait span{font-size:22px;line-height:1.1}
