@@ -229,6 +229,15 @@ function erbeInit(F, fresh) {
   F.objs = F.objs.filter(o => o.t !== "u_steg");
   F.objs.forEach(o => { if (o.area === "ufer") o.area = "see"; });
   if (F.objs.some(o => o.t === "f_steg")) angelInit(F);
+  /* v59: Der Fischmarkt ist nur noch Verkaufsstand – Fischbrötchen aus seiner Warteschlange
+     kommen ins Lager, gekaufte Plätze gibt es zurück */
+  F.objs.filter(o => o.t === "f_markt" && o.q).forEach(o => {
+    const n = o.q.concat(o.done || []).reduce((a, j) => a + (j.n || 0), 0);
+    if (n) farmAdd("fischbroetchen", n, 3);
+    const back = FSLOT_COST.slice(2, o.slots || 2).reduce((a, b) => a + b, 0);
+    if (back) { S.money += back; logMoney("farm", "Fischmarkt: Plätze erstattet", back); }
+    delete o.q; delete o.done; delete o.slots;
+  });
 }
 /* Gerümpel auf dem frisch geerbten Hof */
 function erbeJunk(F) {

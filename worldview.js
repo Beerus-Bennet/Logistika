@@ -2157,7 +2157,6 @@ function machExtraHTML(o) {
     if (!has) h += `<button class="fup2" id="fxUp" ${flv() < U.lv ? "disabled" : ""}><span>${U.i}</span><b>${esc(U.n)}</b><small>${flv() < U.lv ? "ab Level " + U.lv : esc(U.d) + " · " + eur(U.cost) + " · " + Object.keys(U.need).map(k => fqty(k, U.need[k])).join(", ")}</small></button>`;
   }
   if (M.bert && typeof bertWorkHTML === "function") h += bertWorkHTML(o);   /* v59: Bert – Kopf, Dauerbestellung, Köder-Entwicklung */
-  if (o.t === "f_markt") h += `<button class="fup2" id="fxStall"><span>🏪</span><b>Marktstand</b><small>Fisch und Fischwaren direkt am See verkaufen – 15 % mehr</small></button>`;
   if (o.broken) h += `<button class="fup2 warn" id="fxFix"><span>⚠️</span><b>Die Säge klemmt</b><small>Antippen und richten – solange steht alles</small></button>`;
   return h;
 }
@@ -2289,6 +2288,7 @@ function worldObjAction(o, x, y) {
   switch (o.t) {
     case "junk": openPop(o, "junk"); return true;
     case "stall": openStall(false); return true;
+    case "f_markt": openStall(true); return true;   /* v59: Fischmarkt = Verkaufsstand wie an der Straße */
     case "f_plot": openPlot(o); return true;
     case "sw_buero": openSawOffice(); return true;
     case "sw_lager": openFarmStore("holz"); return true;

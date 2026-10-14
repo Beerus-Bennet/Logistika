@@ -188,9 +188,9 @@ const FFISHERY = {
   f_rauch:  { n: "Räucherei",    i: "🔥", lv: 17, x: 27,  z: 24.5, sz: [3, 3], need: { bretter: 4, balken: 2, bohlen: 2 },    cost: 600,
               d: "Räuchert mit Brennholz aus dem Sägewerk: Räucherforelle, Räucheraal, Fischplatten." },
   f_kuehl:  { n: "Kühlhaus",     i: "❄️", lv: 18, x: -16, z: 25,   sz: [4, 4], need: { platten: 6, bauholz: 2, tueren: 1 },   cost: 2200,
-              d: "+60 Plätze. Edelfisch-Boxen und Hechtklößchen für die feinen Restaurants." },
+              d: "+60 Plätze. Edelfisch-Boxen, Hechtklößchen und Fischbrötchen." },
   f_markt:  { n: "Fischmarkt",   i: "🏪", lv: 19, x: 35,  z: 23.5, sz: [5, 3], need: { bauholz: 4, dielen: 4, zaun: 2 },      cost: 1800,
-              d: "Verkaufsstand direkt am See: Fisch bringt hier 15 % mehr. Dazu Fischbrötchen." }
+              d: "Verkaufsstand direkt am See wie der Stand an der Straße: Fisch und Fischwaren bringen hier 15 % mehr." }
 };
 const FFISHERY_ORDER = ["f_steg", "f_huette", "f_boot", "f_lager", "f_rauch", "f_kuehl", "f_markt"];
 Object.keys(FFISHERY).forEach(t => { FSIZE[t] = FFISHERY[t].sz; FFIXED.add(t); });
@@ -217,9 +217,8 @@ Object.assign(FMACHINES, {
   ] },
   f_kuehl: { n: "Kühlhaus", i: "❄️", fish: true, recipes: [
     { id: "hechtkloesse", in: { hecht: 1, ei: 1, brot: 1 },               out: 3, t: 50, lv: 18 },
-    { id: "edelbox",      in: { zanderfilet: 1, raeucheraal: 1, kisten: 1 }, out: 1, t: 60, lv: 18 }
-  ] },
-  f_markt: { n: "Fischmarkt", i: "🏪", fish: true, recipes: [
+    { id: "edelbox",      in: { zanderfilet: 1, raeucheraal: 1, kisten: 1 }, out: 1, t: 60, lv: 18 },
+    /* v59: Fischbrötchen kommen aus dem Kühlhaus – der Fischmarkt ist ein reiner Verkaufsstand */
     { id: "fischbroetchen", in: { barschfilet: 1, brot: 1 }, out: 4, t: 15, lv: 19 }
   ] }
 });
