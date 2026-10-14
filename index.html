@@ -18,7 +18,32 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Baloo+2:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Great+Vibes&display=swap">
 <link rel="preload" as="image" href="lina.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=55">
+<script>
+/* v55: Fehler beim Start sichtbar machen (statt still auf der leeren Karte zu landen).
+   Die Dateien tragen eine Versionsnummer (?v=…), damit nach einem Update nie
+   alte und neue Dateien gemischt aus dem Zwischenspeicher kommen. */
+window.LOGI_V = "55";
+window.LOGI_ERRS = [];
+window.logiErr = function (msg, where) {
+  try {
+    var t = String(msg || "Fehler") + (where ? " · " + where : "");
+    if (window.LOGI_ERRS.indexOf(t) >= 0) return;
+    window.LOGI_ERRS.push(t);
+    localStorage.setItem("logistika.lastError", new Date().toISOString() + " v" + window.LOGI_V + " " + t);
+    var show = function () {
+      var b = document.getElementById("bootErr");
+      if (!b) { b = document.createElement("div"); b.id = "bootErr"; b.onclick = function () { b.remove(); }; document.body.appendChild(b); }
+      b.innerHTML = "<b>⚠️ Fehler im Spiel</b><small>" + window.LOGI_ERRS.slice(-3).map(function (x) { return x.replace(/[<>&]/g, ""); }).join("<br>") + "</small><i>Bitte Screenshot an Claude schicken · antippen zum Schließen</i>";
+    };
+    if (document.body) show(); else document.addEventListener("DOMContentLoaded", show);
+  } catch (e) { /* egal */ }
+};
+window.addEventListener("error", function (e) {
+  var f = e && e.filename ? String(e.filename).split("/").pop().split("?")[0] : "";
+  if (e && e.message && (!f || /\.js$/.test(f))) window.logiErr(e.message, f + (e.lineno ? ":" + e.lineno : ""));
+});
+</script>
 </head>
 <body class="locked">
 
@@ -107,41 +132,41 @@
 <div id="toasts"></div>
 <div id="report"></div>
 
-<script src="data.js"></script>
-<script src="farmdata.js"></script>
-<script src="fishdata.js"></script>
-<script src="erbedata.js"></script>
-<script src="places.js"></script>
-<script src="avatar.js"></script>
-<script src="photo.js"></script>
-<script src="map.js"></script>
-<script src="offices.js"></script>
-<script src="wallet.js"></script>
-<script src="snus.js"></script>
-<script src="pablo.js"></script>
-<script src="extras.js"></script>
-<script src="events.js"></script>
-<script src="vip.js"></script>
-<script src="goals.js"></script>
-<script src="lucky.js"></script>
-<script src="loading.js"></script>
-<script src="game.js"></script>
-<script src="farm.js"></script>
-<script src="erbe.js"></script>
-<script src="intro.js"></script>
-<script src="cars.js"></script>
-<script src="auction.js"></script>
-<script src="customs.js"></script>
-<script src="corp.js"></script>
-<script src="livery.js"></script>
-<script src="gl3d.js"></script>
-<script src="farmmodels.js"></script>
-<script src="fishmodels.js"></script>
-<script src="woodmodels.js"></script>
-<script src="farmview.js"></script>
-<script src="worldview.js"></script>
-<script src="minigames.js"></script>
-<script src="fishview.js"></script>
-<script src="team.js"></script>
+<script src="data.js?v=55"></script>
+<script src="farmdata.js?v=55"></script>
+<script src="fishdata.js?v=55"></script>
+<script src="erbedata.js?v=55"></script>
+<script src="places.js?v=55"></script>
+<script src="avatar.js?v=55"></script>
+<script src="photo.js?v=55"></script>
+<script src="map.js?v=55"></script>
+<script src="offices.js?v=55"></script>
+<script src="wallet.js?v=55"></script>
+<script src="snus.js?v=55"></script>
+<script src="pablo.js?v=55"></script>
+<script src="extras.js?v=55"></script>
+<script src="events.js?v=55"></script>
+<script src="vip.js?v=55"></script>
+<script src="goals.js?v=55"></script>
+<script src="lucky.js?v=55"></script>
+<script src="loading.js?v=55"></script>
+<script src="game.js?v=55"></script>
+<script src="farm.js?v=55"></script>
+<script src="erbe.js?v=55"></script>
+<script src="intro.js?v=55"></script>
+<script src="cars.js?v=55"></script>
+<script src="auction.js?v=55"></script>
+<script src="customs.js?v=55"></script>
+<script src="corp.js?v=55"></script>
+<script src="livery.js?v=55"></script>
+<script src="gl3d.js?v=55"></script>
+<script src="farmmodels.js?v=55"></script>
+<script src="fishmodels.js?v=55"></script>
+<script src="woodmodels.js?v=55"></script>
+<script src="farmview.js?v=55"></script>
+<script src="worldview.js?v=55"></script>
+<script src="minigames.js?v=55"></script>
+<script src="fishview.js?v=55"></script>
+<script src="team.js?v=55"></script>
 </body>
 </html>

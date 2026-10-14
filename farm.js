@@ -1423,8 +1423,14 @@ function farmConvertFisch(old) {
   farmBoundsUpdate();
 }
 function farmBodyClasses() {
-  if (S && S.farm) farmUseSite(S.farm.kind);
-  farmMigrate();
+  /* v55: ein Fehler beim Nachziehen alter Spielstände darf den Hof nicht verstecken */
+  try {
+    if (S && S.farm) farmUseSite(S.farm.kind);
+    farmMigrate();
+  } catch (e) {
+    console.warn("Hof-Umzug:", e);
+    if (typeof logiErr === "function") logiErr("Beim Laden des Hofs: " + (e && e.message), String((e && e.stack) || "").split("\n")[1] || "");
+  }
   if (farmPhase() && S.speed !== 1) { S.speed = 1; lastSpeed = 1; }
   document.body.classList.toggle("has-farm", farmOn());
   document.body.classList.toggle("farm-phase", farmPhase());
