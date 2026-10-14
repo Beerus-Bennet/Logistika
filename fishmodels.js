@@ -1022,6 +1022,308 @@ const FFM = (() => {
     return b;
   }
 
+
+  /* ---------------------- Fische und Fischwaren (v53) ----------------------
+     Für Bildchen, Verkaufsstand und fliegende Ware: jeder Fisch mit eigener
+     Form und Zeichnung (liegend, Flanke nach oben), dazu Filets, Räucherware,
+     Konserven, Kisten, Köder, Muscheln, Krabben und Krebse. */
+  const cmix = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
+  const lerpP = (P, t) => { for (let i = 1; i < P.length; i++) if (t <= P[i][0]) { const a = P[i - 1], c = P[i], f = (t - a[0]) / Math.max(1e-6, c[0] - a[0]); return a[1] + (c[1] - a[1]) * f; } return P[P.length - 1][1]; };
+  /* Arten: Länge, Höhe, Dicke (Anteil der Höhe), Farben, Zeichnung, Flossen */
+  const FISH = {
+    barsch:  { L: 1.0, H: 0.36, k: 0.4, back: 0x4f6c34, side: 0xa6b65a, belly: 0xf2ecd2, fin: 0x55663c, low: 0xe8642a, tail: 0xd06a30, bars: 6, barC: 0x2e4420, spiny: true,
+               prof: [[0, 0.34], [0.12, 0.3], [0.35, 0.82], [0.55, 1], [0.8, 0.8], [0.93, 0.5], [1, 0.22]], dors: [0.32, 0.78], anal: [0.18, 0.34] },
+    forelle: { L: 1.0, H: 0.26, k: 0.45, back: 0x5f6e42, side: 0xc8c0a8, belly: 0xf4f2ec, fin: 0x7a7a58, tail: 0x6e7050, stripe: 0xe8948c, spots: 0x2a2a1c, adipose: true,
+               prof: [[0, 0.4], [0.1, 0.36], [0.35, 0.86], [0.55, 1], [0.8, 0.86], [0.94, 0.52], [1, 0.25]], dors: [0.5, 0.66], anal: [0.18, 0.3] },
+    karpfen: { L: 1.0, H: 0.42, k: 0.42, back: 0x6a4e24, side: 0xc8962a, belly: 0xf0d890, fin: 0x8a5a32, tail: 0x8a5a32, scales: 0xa87a22, barbels: 1,
+               prof: [[0, 0.32], [0.12, 0.3], [0.35, 0.86], [0.5, 1], [0.75, 0.88], [0.92, 0.55], [1, 0.26]], dors: [0.3, 0.72], anal: [0.16, 0.28] },
+    hecht:   { L: 1.3, H: 0.22, k: 0.55, back: 0x34502a, side: 0x7a9a4a, belly: 0xf0f0dc, fin: 0x8a7a3a, tail: 0x7a6a34, lspots: 0xd8d890, snout: 0.09,
+               prof: [[0, 0.42], [0.1, 0.48], [0.3, 0.92], [0.5, 1], [0.75, 0.92], [0.9, 0.62], [1, 0.32]], dors: [0.14, 0.3], anal: [0.13, 0.28] },
+    zander:  { L: 1.15, H: 0.26, k: 0.48, back: 0x55625e, side: 0xb4bcb4, belly: 0xf4f4f0, fin: 0x8a948c, tail: 0x7a847c, bars: 8, barC: 0x4a5652, fspots: 0x2a302c, eye: 0xd8e0c8,
+               prof: [[0, 0.38], [0.1, 0.34], [0.32, 0.86], [0.5, 1], [0.78, 0.86], [0.93, 0.5], [1, 0.24]], dors: [0.3, 0.78], anal: [0.18, 0.32] },
+    aal:     { L: 1.3, H: 0.11, k: 0.85, back: 0x34341e, side: 0x5a5a2a, belly: 0xe0d080, fin: 0x3e3e24, tail: 0x3e3e24, eel: true,
+               prof: [[0, 0.32], [0.12, 0.8], [0.5, 1], [0.86, 0.92], [1, 0.48]], dors: [0.02, 0.6], anal: [0.02, 0.48] },
+    wels:    { L: 1.35, H: 0.26, k: 0.7, back: 0x34342e, side: 0x66604e, belly: 0xd8d0c0, fin: 0x3e3c34, tail: 0x3e3c34, mott: 0x2a2a24, barbels: 3,
+               prof: [[0, 0.26], [0.2, 0.5], [0.5, 0.82], [0.78, 1], [0.92, 0.86], [1, 0.55]], dors: [0.66, 0.72], anal: [0.04, 0.52], wide: 1.25 },
+    schleie: { L: 0.95, H: 0.32, k: 0.48, back: 0x34421e, side: 0x7a7a2a, belly: 0xc8b860, fin: 0x34401e, tail: 0x34401e, eyeR: 0xd84a2a, round: true,
+               prof: [[0, 0.44], [0.12, 0.42], [0.35, 0.86], [0.55, 1], [0.8, 0.84], [0.94, 0.5], [1, 0.26]], dors: [0.42, 0.6], anal: [0.2, 0.32] },
+    rotauge:  { L: 0.8, H: 0.3, k: 0.4, back: 0x405466, side: 0xd8dce2, belly: 0xf8f8f8, fin: 0xd8724e, tail: 0xb87a62, eyeR: 0xd8342a,
+               prof: [[0, 0.32], [0.12, 0.3], [0.35, 0.86], [0.55, 1], [0.8, 0.82], [0.94, 0.48], [1, 0.22]], dors: [0.45, 0.62], anal: [0.18, 0.32] },
+    rotfeder: { L: 0.8, H: 0.32, k: 0.4, back: 0x5e6236, side: 0xe0c870, belly: 0xf8f0dc, fin: 0xe8322a, tail: 0xd83a2a, eyeR: 0xe8a030,
+               prof: [[0, 0.3], [0.12, 0.3], [0.35, 0.88], [0.55, 1], [0.8, 0.8], [0.94, 0.46], [1, 0.22]], dors: [0.38, 0.52], anal: [0.18, 0.34] },
+    ukelei:  { L: 0.62, H: 0.15, k: 0.42, back: 0x56788a, side: 0xe6ecf2, belly: 0xffffff, fin: 0xc8d0d4, tail: 0xb8c4c8,
+               prof: [[0, 0.36], [0.12, 0.34], [0.4, 0.9], [0.55, 1], [0.82, 0.82], [0.95, 0.46], [1, 0.24]], dors: [0.4, 0.52], anal: [0.18, 0.38] }
+  };
+  /* aufrechter Fisch (Länge x, Kopf bei +x, Rücken +y, Flanke ±z) */
+  function fishUp(b, F, pal) {
+    const P = Object.assign({}, F, pal || {});
+    const N = P.eel ? 18 : 12, M = 12, L = P.L, H = P.H;
+    const bend = t => P.eel ? Math.sin(t * Math.PI * 2.2 + 0.5) * 0.09 : 0;
+    const ring = i => {
+      const t = i / N, hh = Math.max(0.004, H / 2 * lerpP(P.prof, t)), ww = hh * P.k * (P.wide && t > 0.7 ? 1 + (P.wide - 1) * (t - 0.7) / 0.3 : 1);
+      return { t, x: (t - 0.5) * L, hh, ww, yc: bend(t) };
+    };
+    const R = []; for (let i = 0; i <= N; i++) R.push(ring(i));
+    const colAt = (t, sn, j) => {
+      let c = sn > 0.42 ? P.back : sn < -0.32 ? P.belly : P.side;
+      if (P.stripe && Math.abs(sn) < 0.16 && t > 0.08 && t < 0.86) c = P.stripe;
+      if (P.bars && sn > -0.25 && t > 0.12 && t < 0.78) { const k = (t - 0.12) / 0.66 * P.bars; if (k - Math.floor(k) < 0.42) c = sn > 0.42 ? cmix(P.barC, 0x000000, 0.2) : P.barC; }
+      if (P.scales && sn > -0.3 && sn < 0.6 && ((Math.floor(t * 14) + j) % 2 === 0)) c = cmix(c, P.scales, 0.45);
+      if (P.mott && ((Math.floor(t * 9) * 7 + j * 3) % 5 === 0) && sn > -0.3) c = P.mott;
+      if (t > 0.79 && t < 0.83 && Math.abs(sn) < 0.75) c = cmix(sn > 0.42 ? P.back : P.side, 0x000000, 0.28);   /* Kiemendeckel */
+      return c;
+    };
+    for (let i = 0; i < N; i++) {
+      const A = R[i], B = R[i + 1];
+      for (let j = 0; j < M; j++) {
+        const a0 = j / M * Math.PI * 2, a1 = (j + 1) / M * Math.PI * 2;
+        const p = (r, a) => [r.x, r.yc + Math.sin(a) * r.hh, Math.cos(a) * r.ww], n = (r, a) => { const v = [0, Math.sin(a) / r.hh, Math.cos(a) / r.ww], l = Math.hypot(v[1], v[2]) || 1; return [0, v[1] / l, v[2] / l]; };
+        const c = colAt((A.t + B.t) / 2, Math.sin((a0 + a1) / 2), j);
+        b.tri(p(A, a0), p(B, a0), p(B, a1), c, n(A, a0), n(B, a0), n(B, a1));
+        b.tri(p(A, a0), p(B, a1), p(A, a1), c, n(A, a0), n(B, a1), n(A, a1));
+      }
+    }
+    /* Schnauze (Hecht: lang und flach) */
+    const E = R[N], nose = [E.x + L * (P.snout || 0.035), E.yc - E.hh * 0.15, 0];
+    for (let j = 0; j < M; j++) {
+      const a0 = j / M * Math.PI * 2, a1 = (j + 1) / M * Math.PI * 2;
+      b.tri([E.x, E.yc + Math.sin(a0) * E.hh, Math.cos(a0) * E.ww], nose, [E.x, E.yc + Math.sin(a1) * E.hh, Math.cos(a1) * E.ww], Math.sin(a0) > 0.3 ? P.back : P.side);
+    }
+    /* Schwanzwurzel zu */
+    const T0 = R[0];
+    for (let j = 0; j < M; j++) { const a0 = j / M * Math.PI * 2, a1 = (j + 1) / M * Math.PI * 2; b.tri([T0.x, T0.yc, 0], [T0.x, T0.yc + Math.sin(a1) * T0.hh, Math.cos(a1) * T0.ww], [T0.x, T0.yc + Math.sin(a0) * T0.hh, Math.cos(a0) * T0.ww], P.side); }
+    const fin2 = (a, c, d, col) => { b.tri(a, c, d, col); b.tri(a, d, c, col); };
+    /* Schwanzflosse */
+    const tx = T0.x, th = T0.hh, ty = T0.yc, tl = P.eel ? 0.07 : L * 0.2, ts = P.eel ? 0.05 : H * (P.round ? 0.5 : 0.56);
+    if (P.round || P.eel) { fin2([tx, ty + th * 0.7, 0], [tx - tl, ty + ts, 0], [tx - tl * 1.15, ty, 0], P.tail); fin2([tx, ty - th * 0.7, 0], [tx - tl * 1.15, ty, 0], [tx - tl, ty - ts, 0], P.tail); fin2([tx, ty + th * 0.7, 0], [tx - tl * 1.15, ty, 0], [tx, ty - th * 0.7, 0], P.tail); }
+    else { fin2([tx, ty + th * 0.8, 0], [tx - tl, ty + ts, 0], [tx - tl * 0.62, ty, 0], P.tail); fin2([tx, ty - th * 0.8, 0], [tx - tl * 0.62, ty, 0], [tx - tl, ty - ts, 0], P.tail); fin2([tx, ty + th * 0.8, 0], [tx - tl * 0.62, ty, 0], [tx, ty - th * 0.8, 0], P.tail); }
+    /* Rücken- und Afterflosse entlang des Körpers */
+    const top = t => { const r = ring(t * N); return [r.x, r.yc + r.hh * 0.96]; }, bot = t => { const r = ring(t * N); return [r.x, r.yc - r.hh * 0.96]; };
+    const fin = (t0, t1, hgt, col, under, spiny) => {
+      const steps = Math.max(2, Math.round((t1 - t0) * 16));
+      for (let k = 0; k < steps; k++) {
+        const u0 = t0 + (t1 - t0) * k / steps, u1 = t0 + (t1 - t0) * (k + 1) / steps, A = under ? bot(u0) : top(u0), B = under ? bot(u1) : top(u1);
+        const f0 = Math.sin(Math.PI * (0.15 + 0.85 * k / steps)) * hgt * (spiny && k % 2 ? 0.7 : 1), f1 = Math.sin(Math.PI * (0.15 + 0.85 * (k + 1) / steps)) * hgt;
+        const s = under ? -1 : 1;
+        fin2([A[0], A[1], 0], [B[0], B[1], 0], [B[0] - 0.02, B[1] + s * f1, 0], col);
+        fin2([A[0], A[1], 0], [B[0] - 0.02, B[1] + s * f1, 0], [A[0] - 0.02, A[1] + s * f0, 0], col);
+      }
+    };
+    const fh = P.eel ? 0.035 : H * 0.32;
+    if (P.spiny) { fin(P.dors[0] + (P.dors[1] - P.dors[0]) * 0.45, P.dors[1], fh * 1.05, P.fin, false, true); fin(P.dors[0], P.dors[0] + (P.dors[1] - P.dors[0]) * 0.42, fh * 0.8, P.fin); }
+    else if (P.fspots) { fin(P.dors[0] + (P.dors[1] - P.dors[0]) * 0.5, P.dors[1], fh, P.fspots, false, true); fin(P.dors[0], P.dors[0] + (P.dors[1] - P.dors[0]) * 0.45, fh * 0.8, P.fin); }
+    else fin(P.dors[0], P.dors[1], fh, P.fin);
+    if (P.adipose) fin(0.2, 0.25, fh * 0.35, P.fin);
+    fin(P.anal[0], P.anal[1], fh * (P.eel ? 1 : 0.7), P.low || P.fin, true);
+    /* Brust- und Bauchflossen (flach an der Flanke) */
+    if (!P.eel) [1, -1].forEach(sd => {
+      const r1 = ring(0.72 * N), r2 = ring(0.5 * N);
+      fin2([r1.x, r1.yc - r1.hh * 0.35, sd * r1.ww * 0.98], [r1.x - L * 0.13, r1.yc - r1.hh * 0.55, sd * r1.ww * 1.05], [r1.x - L * 0.1, r1.yc - r1.hh * 0.85, sd * r1.ww * 0.9], P.low || P.fin);
+      fin2([r2.x, r2.yc - r2.hh * 0.85, sd * r2.ww * 0.7], [r2.x - L * 0.1, r2.yc - r2.hh * 0.95, sd * r2.ww * 0.8], [r2.x - L * 0.08, r2.yc - r2.hh * 1.15, sd * r2.ww * 0.5], P.low || P.fin);
+    });
+    /* Tupfen: Forelle dunkel, Hecht hell */
+    if (P.spots || P.lspots) for (let k = 0; k < 16; k++) {
+      const t = 0.15 + rnd() * 0.65, r = ring(t * N), a = 0.2 + rnd() * 1.1, sd = k % 2 ? 1 : -1;
+      b.sphere(P.spots ? 0.012 : 0.016, 5, 3, P.spots || P.lspots, { x: r.x, y: r.yc + Math.sin(a) * r.hh * 0.98, z: sd * Math.cos(a) * r.ww * 0.98, sx: 1.4 });
+    }
+    /* Auge, Maul, Barteln */
+    const re = ring(0.9 * N), ey = re.yc + re.hh * 0.28, ez = re.ww * 0.82, er = Math.max(0.018, H * (P.fspots ? 0.11 : 0.085));
+    [1, -1].forEach(sd => {
+      b.sphere(er, 8, 6, P.eyeR || P.eye || 0xf4f0e0, { x: re.x, y: ey, z: sd * ez, sz: 0.5 });
+      b.sphere(er * 0.6, 8, 6, 0x101010, { x: re.x + 0.003, y: ey, z: sd * (ez + er * 0.2), sz: 0.5 });
+    });
+    b.box(L * 0.05, 0.008, Math.max(0.02, E.ww * 1.2), 0x2a2018, { x: E.x + L * 0.01, y: E.yc - E.hh * 0.3, c: true, rz: 0.15 });
+    if (P.barbels) {
+      const bl = P.barbels === 3 ? L * 0.32 : L * 0.06;
+      [1, -1].forEach(sd => b.cyl(0.006, 0.003, bl, 4, P.back, { x: E.x + L * 0.02, y: E.yc - E.hh * 0.25, z: sd * E.ww * 0.6, rz: Math.PI / 2 + 0.6, ry: sd * 0.5 }));
+      if (P.barbels === 3) [1, -1].forEach(sd => b.cyl(0.004, 0.002, L * 0.08, 4, P.belly, { x: E.x, y: E.yc - E.hh * 0.6, z: sd * E.ww * 0.3, rz: Math.PI * 0.85 }));
+    }
+    return Math.max(...R.map(r => r.ww)) * (P.wide || 1);
+  }
+  /* liegender Fisch (Flanke nach oben) */
+  function fishLie(b, id, o, pal) {
+    const F = FISH[id] || FISH.forelle, tmp = new MB(), w = fishUp(tmp, F, pal);
+    /* merge kennt keine äußere Lage – also in zwei Schritten: hinlegen, dann an den Platz */
+    const lay = new MB().merge(tmp, { rx: -Math.PI / 2, y: w });
+    b.merge(lay, o || {});
+    return b;
+  }
+  const PAPER = 0xf4efe2, BOARD = 0xc9955a;
+  const lemon = (b, x, z, y) => { b.sphere(0.07, 8, 5, 0xf2d43a, { x, y: (y || 0) + 0.035, z, sy: 0.55, sz: 0.7 }); b.box(0.12, 0.004, 0.01, 0xfff6c0, { x, y: (y || 0) + 0.07, z }); };
+  const herbs = (b, x, z, y, n) => { for (let i = 0; i < (n || 4); i++) b.ico(0.028, i % 2 ? 0x3f8a2a : 0x5aa83a, { x: x + (rnd() - 0.5) * 0.12, y: (y || 0) + 0.03, z: z + (rnd() - 0.5) * 0.12, jitter: 0.4 }); };
+  const dish = (b, r, col, o) => { b.at(o || {}, m => { m.cyl(r * 0.78, r, 0.05, 18, col || 0xf6f6f2, { smooth: true, top: cmix(col || 0xf6f6f2, 0xffffff, 0.3) }); m.cyl(r * 0.7, r * 0.7, 0.002, 18, cmix(col || 0xf6f6f2, 0x000000, 0.06), { y: 0.05 }); }); };
+  /* Filet: flaches, spitz zulaufendes Stück; Haut am Rand */
+  const filet = (b, x, z, ry, meat, skin, len) => b.at({ x, z, ry }, m => {
+    const l = len || 0.5;
+    m.sphere(0.1, 10, 6, meat, { sx: l / 0.2, sy: 0.32, y: 0.03, smooth: true, bottom: skin });
+    for (let k = 0; k < 4; k++) m.box(0.006, 0.004, 0.11, cmix(meat, 0xffffff, 0.35), { x: -l * 0.3 + k * l * 0.18, y: 0.062, ry: 0.5 });
+  });
+  function tin(b, x, z, ry, y, label, open) {
+    b.at({ x, z, ry, y: y || 0 }, m => {
+      m.box(0.36, 0.08, 0.22, 0xc8ccd0, { top: open ? 0x9aa0a6 : 0xd8dce0 });
+      m.box(0.362, 0.05, 0.222, label, { y: 0.015 });
+      m.box(0.12, 0.052, 0.224, 0xf6f1e4, { y: 0.014, x: 0.06 });
+      if (open) { m.box(0.32, 0.01, 0.18, 0xd89a6a, { y: 0.075 }); for (let k = 0; k < 4; k++) m.box(0.07, 0.02, 0.16, k % 2 ? 0xe8b08a : 0xc8885a, { x: -0.12 + k * 0.08, y: 0.08 }); m.box(0.36, 0.006, 0.22, 0xd8dce0, { y: 0.11, z: -0.13, rx: -1.2 }); }
+      else m.cyl(0.03, 0.03, 0.012, 8, 0xb0b4b8, { y: 0.08, x: -0.13 });
+    });
+  }
+  function fishItem(id) {
+    G3.seed(7300 + id.length * 31 + id.charCodeAt(0) * 7 + id.charCodeAt(id.length - 1));
+    const b = new MB();
+    if (FISH[id]) return fishLie(b, id);
+    switch (id) {
+      case "abfall":   /* Eimer mit Gräten und Köpfen */
+        b.cyl(0.22, 0.27, 0.42, 14, 0x9aa4ac, { smooth: true, top: 0x5a5048 });
+        b.cyl(0.275, 0.275, 0.03, 14, 0x7a848c, { y: 0.4 });
+        for (let k = 0; k < 2; k++) b.box(0.01, 0.01, 0.5, 0x6a7078, { y: 0.42 + k * 0.001, rx: 0.9 - k * 1.8, z: 0 });
+        b.at({ y: 0.44, x: -0.02, rz: 0.4 }, m => { m.box(0.32, 0.018, 0.018, 0xf2ecdc); for (let k = 0; k < 6; k++) m.box(0.012, 0.012, 0.12, 0xf2ecdc, { x: -0.12 + k * 0.05 }); });
+        { const t = new MB(); fishUp(t, FISH.barsch); b.merge(new MB().merge(t, { x: -0.3, rx: -0.6 }), { x: 0.08, y: 0.42, z: 0.06, ry: 0.5, s: 0.32 }); }
+        b.sphere(0.06, 6, 4, 0x8a6a5a, { x: -0.08, y: 0.43, z: -0.06, sy: 0.6 });
+        return b;
+      case "koeder":   /* Dose Reusenköder */
+        b.cyl(0.16, 0.16, 0.26, 14, 0xc89a3a, { smooth: true, top: 0x6a4a2a });
+        b.cyl(0.165, 0.165, 0.12, 14, 0x2f6a3a, { y: 0.07 });
+        b.box(0.12, 0.08, 0.01, 0xf6f1e4, { y: 0.09, z: 0.16 });
+        for (let k = 0; k < 7; k++) b.ico(0.035, k % 2 ? 0x7a4a2a : 0x9a6038, { x: (rnd() - 0.5) * 0.18, y: 0.27, z: (rnd() - 0.5) * 0.18, jitter: 0.5 });
+        b.cyl(0.17, 0.17, 0.02, 14, 0xd8b048, { x: 0.25, y: 0.02, rz: 0.15 });
+        return b;
+      case "wurm":     /* Dose mit Erde und Tauwürmern */
+        b.cyl(0.17, 0.17, 0.22, 14, 0xa8aeb4, { smooth: true, top: 0x4a3424 });
+        for (let k = 0; k < 3; k++) b.cyl(0.172, 0.172, 0.012, 14, 0x8a9096, { y: 0.04 + k * 0.07 });
+        for (let w = 0; w < 3; w++) {
+          let x = (rnd() - 0.5) * 0.12, z = (rnd() - 0.5) * 0.12, y = 0.23, a = rnd() * 6;
+          for (let k = 0; k < 9; k++) { b.sphere(0.022, 6, 4, k === 2 ? 0xc86a6a : 0xd88a84, { x, y, z, smooth: true }); a += 0.7 * (w % 2 ? 1 : -1); x += Math.cos(a) * 0.028; z += Math.sin(a) * 0.028; y += k < 4 ? 0.022 : -0.012; }
+        }
+        return b;
+      case "profikoeder":   /* Wobbler: bunter Kunstköder mit Drillingen */
+        b.at({ y: 0.08, rz: 0.15 }, m => {
+          m.sphere(0.07, 10, 6, 0xf2c230, { sx: 2.6, smooth: true, bottom: 0xf6f1e4 });
+          for (let k = 0; k < 3; k++) m.box(0.03, 0.06, 0.142, 0xd8332b, { x: -0.06 + k * 0.06, y: 0.01, c: true });
+          m.box(0.08, 0.012, 0.06, 0x9cc8dc, { x: 0.2, y: -0.03, rz: -0.5 });
+          [1, -1].forEach(s => m.sphere(0.018, 6, 4, 0x111111, { x: 0.13, y: 0.02, z: s * 0.05 }));
+          [-0.08, 0.08].forEach(x => { m.box(0.004, 0.08, 0.004, 0xb0b4b8, { x, y: -0.13 }); [0, 2.1, 4.2].forEach(a => m.box(0.004, 0.004, 0.035, 0xb0b4b8, { x, y: -0.12, ry: a })); });
+          m.cyl(0.012, 0.012, 0.03, 6, 0xb0b4b8, { x: 0.18, y: 0.04, rz: Math.PI / 2 });
+        });
+        for (let k = 0; k < 4; k++) b.box(0.02, 0.02, 0.02, 0xfff6a0, { x: (rnd() - 0.5) * 0.4, y: 0.22 + rnd() * 0.1, z: (rnd() - 0.5) * 0.2, ry: 0.78, rx: 0.78 });
+        return b;
+      case "barschfilet": case "forellenfilet": case "zanderfilet": {
+        const meat = id === "forellenfilet" ? 0xf2946e : id === "barschfilet" ? 0xe8c2ae : 0xe2cec2, skin = id === "forellenfilet" ? 0x8a8a6a : id === "barschfilet" ? 0x6a7a3a : 0x7a8680;
+        /* dunkle Schale, damit die hellen Filets leuchten */
+        b.box(0.74, 0.06, 0.48, 0x2e3a40, { top: 0x37454c });
+        b.box(0.66, 0.01, 0.4, 0x24302a, { y: 0.06 });
+        b.at({ y: 0.04 }, m => {
+          filet(m, -0.02, -0.08, 0.15, meat, skin, 0.52); filet(m, 0.04, 0.1, -0.12, meat, skin, 0.48);
+          lemon(m, 0.28, 0.16, 0.03); herbs(m, -0.26, 0.14, 0.03, 3);
+        });
+        return b;
+      }
+      case "karpfenblau":   /* Karpfen blau: blau gekocht auf dem Teller */
+        dish(b, 0.5);
+        fishLie(b, "karpfen", { y: 0.05, s: 0.82 }, { back: 0x4a6a8c, side: 0x7a96b4, belly: 0xc8d4e0, fin: 0x5a6a80, tail: 0x5a6a80, scales: 0x6a86a8 });
+        lemon(b, 0.32, 0.22, 0.05); lemon(b, -0.3, 0.24, 0.05); herbs(b, 0.0, 0.3, 0.05, 5);
+        return b;
+      case "raeucherforelle":   /* goldbraun geräuchert auf dem Brett */
+        b.box(0.98, 0.05, 0.44, BOARD, { top: 0xd8a868 });
+        fishLie(b, "forelle", { y: 0.05, s: 0.86 }, { back: 0x5a2e14, side: 0xc8822a, belly: 0xe8b060, fin: 0x7a4a24, tail: 0x7a4a24, stripe: 0xd8902e, spots: 0x4a2410 });
+        herbs(b, 0.36, 0.14, 0.05, 3);
+        return b;
+      case "raeucheraal":   /* Aalstücke auf Papier */
+        b.box(0.8, 0.02, 0.44, PAPER, { top: 0xfaf6ea, ry: 0.1 });
+        for (let k = 0; k < 3; k++) b.at({ x: -0.22 + k * 0.22, z: (k - 1) * 0.06, y: 0.07, ry: 0.15 * (k - 1) }, m => {
+          m.cyl(0.06, 0.06, 0.18, 10, 0x8a5a24, { rz: Math.PI / 2, x: 0.09, smooth: true, top: 0xf0d8a8 });
+          m.box(0.18, 0.012, 0.03, 0x3a2a14, { y: 0.055 });
+        });
+        lemon(b, 0.3, 0.16, 0.02);
+        return b;
+      case "fischplatte":
+        b.cyl(0.42, 0.48, 0.05, 20, 0xf6f6f2, { sz: 0.7, smooth: true, top: 0xfafaf6 });
+        filet(b, -0.18, -0.08, 0.3, 0xf2946e, 0x8a8a6a, 0.34); filet(b, 0.08, -0.12, -0.2, 0xf6e6da, 0x7a8a4a, 0.3);
+        b.at({ x: 0.14, z: 0.12, y: 0.05 }, m => { m.cyl(0.05, 0.05, 0.12, 10, 0x8a5a24, { rz: Math.PI / 2, x: 0.06, top: 0xf0d8a8 }); m.cyl(0.05, 0.05, 0.12, 10, 0x8a5a24, { rz: Math.PI / 2, x: -0.08, top: 0xf0d8a8 }); });
+        b.cyl(0.07, 0.06, 0.05, 10, 0xf6f6f2, { x: -0.22, z: 0.14, y: 0.04, top: 0xf0f0e0 });
+        lemon(b, 0.3, -0.02, 0.05); herbs(b, -0.05, 0.1, 0.05, 6);
+        return b;
+      case "konserve":   /* drei Fischdosen, eine offen */
+        tin(b, -0.04, -0.1, 0.1, 0, 0x2f6fb0); tin(b, 0.02, -0.08, -0.05, 0.08, 0xd8332b); tin(b, 0.06, 0.16, 0.25, 0, 0x2f8a4a, true);
+        return b;
+      case "fischkiste":   /* Styroporkiste mit Eis und Fischen */
+        b.box(0.86, 0.26, 0.56, 0xf4f6f8, { top: 0xffffff });
+        b.box(0.78, 0.01, 0.48, 0xdcecf4, { y: 0.24 });
+        for (let k = 0; k < 14; k++) b.ico(0.035, 0xeaf6fc, { x: (rnd() - 0.5) * 0.7, y: 0.25, z: (rnd() - 0.5) * 0.4, jitter: 0.5 });
+        fishLie(b, "forelle", { y: 0.24, z: -0.1, s: 0.66, ry: 0.06 }); fishLie(b, "barsch", { y: 0.25, z: 0.1, x: 0.04, s: 0.6, ry: -0.08 });
+        b.box(0.2, 0.08, 0.01, 0x2f6fb0, { y: 0.08, z: 0.285 });
+        return b;
+      case "edelbox":   /* dunkle Holzbox mit Goldrand, offen: Zander auf Eis */
+        b.box(0.84, 0.2, 0.52, 0x3a2418, { top: 0x2a1810 });
+        b.box(0.86, 0.025, 0.54, 0xd8b048, { y: 0.19 });
+        b.box(0.76, 0.01, 0.44, 0xe6f2f8, { y: 0.2 });
+        for (let k = 0; k < 10; k++) b.ico(0.03, 0xf0f8fc, { x: (rnd() - 0.5) * 0.66, y: 0.21, z: (rnd() - 0.5) * 0.36, jitter: 0.5 });
+        fishLie(b, "zander", { y: 0.2, s: 0.6, x: -0.02 });
+        b.box(0.84, 0.05, 0.52, 0x3a2418, { y: 0.2, z: -0.27, rx: -1.25, top: 0x4a2e20 });
+        b.box(0.06, 0.005, 0.52, 0xd8332b, { y: 0.215, x: 0.3 });
+        return b;
+      case "hechtkloesse":   /* Schüssel mit Hechtklößchen in heller Soße */
+        b.cyl(0.24, 0.36, 0.2, 18, 0xf6f6f2, { smooth: true, top: 0xf2e8c8 });
+        b.cyl(0.34, 0.34, 0.01, 18, 0xf0e2b4, { y: 0.18 });
+        [[-0.1, -0.06], [0.1, -0.08], [0, 0.1], [0.14, 0.12], [-0.13, 0.12]].forEach(([x, z]) => b.sphere(0.08, 10, 6, 0xf2ead2, { x, z, y: 0.2, sx: 1.3, sy: 0.75, smooth: true }));
+        herbs(b, 0, 0, 0.24, 6);
+        return b;
+      case "fischbroetchen":   /* Brötchen mit Fisch, Zwiebel und Salat */
+        b.sphere(0.2, 12, 6, 0xd89a4a, { sx: 1.5, sy: 0.4, smooth: true, bottom: 0xf0d8a0 });
+        b.at({ y: 0.06 }, m => {
+          m.box(0.58, 0.02, 0.3, 0x5ab83a, { ry: 0.05 });
+          m.sphere(0.12, 10, 5, 0xc8ccd4, { sx: 2.2, sy: 0.35, y: 0.04, smooth: true, bottom: 0xf4e6da });
+          [-0.1, 0.06, 0.18].forEach(x => m.cyl(0.05, 0.05, 0.012, 10, 0xf6f2f8, { x, y: 0.08, z: 0.04 }));
+        });
+        b.sphere(0.2, 12, 6, 0xc8822a, { sx: 1.45, sy: 0.55, y: 0.17, smooth: true, bottom: 0xf0d8a0 });
+        for (let k = 0; k < 7; k++) b.box(0.02, 0.006, 0.012, 0xf6f1e4, { x: (rnd() - 0.5) * 0.4, y: 0.27, z: (rnd() - 0.5) * 0.18, ry: rnd() * 3 });
+        return b;
+      case "muschel":   /* drei Teichmuscheln, eine offen */
+        [[-0.16, -0.06, 0.4, 0], [0.12, -0.1, -0.3, 0], [0.02, 0.14, 0.1, 1]].forEach(([x, z, ry, open]) => b.at({ x, z, ry }, m => {
+          m.sphere(0.1, 10, 6, 0x5a5a2e, { sx: 1.9, sy: 0.32, y: 0.03, smooth: true, bottom: 0x4a4a28 });
+          for (let k = 1; k < 4; k++) m.sphere(0.1 - k * 0.022, 10, 4, k % 2 ? 0x6e6a38 : 0x52502a, { sx: 1.9, sy: 0.32, y: 0.035 + k * 0.004, x: -0.04 * k, smooth: true });
+          if (open) { m.sphere(0.1, 10, 6, 0x4a4a28, { sx: 1.9, sy: 0.3, y: 0.1, rz: -0.5, x: -0.04, smooth: true, bottom: 0xd8d0e8 }); m.sphere(0.07, 8, 4, 0xf0a060, { sx: 1.8, sy: 0.3, y: 0.06, smooth: true }); }
+        }));
+        return b;
+      case "krabbe": {   /* Wollhandkrabbe: breiter Panzer, Beine wie Speichen, pelzige Scheren */
+        const limb = (p0, p1, r, col) => {
+          const dx = p1[0] - p0[0], dy = p1[1] - p0[1], dz = p1[2] - p0[2], h = Math.hypot(dx, dz), l = Math.hypot(h, dy);
+          b.at({ x: p0[0], y: p0[1], z: p0[2], ry: Math.atan2(-dz, dx) }, m => m.at({ rz: Math.atan2(dy, h) - Math.PI / 2 }, q => q.cyl(r, r * 0.8, l, 5, col)));
+        };
+        const C1 = 0x6e5a30, C2 = 0x5a4826;
+        b.sphere(0.17, 12, 6, C1, { y: 0.1, sx: 0.95, sz: 1.2, sy: 0.42, smooth: true, bottom: 0xd8c890 });
+        b.box(0.04, 0.01, 0.2, C2, { x: 0.04, y: 0.17 }); b.box(0.12, 0.01, 0.03, C2, { x: -0.02, y: 0.17 });
+        [1, -1].forEach(sd => {
+          for (let k = 0; k < 4; k++) {
+            const a = (-0.55 + k * 0.42) * (sd > 0 ? 1 : 1), bx = Math.sin(a) * 0.14 - 0.02, bz = sd * Math.cos(a) * 0.17;
+            const kx = bx + Math.sin(a) * 0.13, kz = bz + sd * Math.cos(a) * 0.13, fx = kx + Math.sin(a) * 0.1, fz = kz + sd * Math.cos(a) * 0.1;
+            limb([bx, 0.1, bz], [kx, 0.16, kz], 0.022, C2); limb([kx, 0.16, kz], [fx, 0.0, fz], 0.018, C1);
+          }
+          /* Scheren nach vorn, mit dunklem „Fell“ */
+          limb([0.12, 0.1, sd * 0.1], [0.24, 0.13, sd * 0.2], 0.03, C2);
+          b.sphere(0.07, 9, 6, 0x2e2418, { x: 0.3, y: 0.13, z: sd * 0.2, sx: 1.3, smooth: true });
+          b.box(0.1, 0.03, 0.03, 0xe0d0a0, { x: 0.38, y: 0.12, z: sd * 0.17, ry: sd * 0.3, c: true });
+          b.box(0.08, 0.026, 0.026, 0xe0d0a0, { x: 0.37, y: 0.12, z: sd * 0.23, ry: -sd * 0.2, c: true });
+          b.sphere(0.02, 6, 4, 0x111111, { x: 0.15, z: sd * 0.05, y: 0.17 });
+        });
+        return b;
+      }
+      case "krebs":   /* Edelkrebs: Panzer, Schwanz, große Scheren, Fühler */
+        b.at({ y: 0.06 }, m => {
+          m.sphere(0.1, 10, 6, 0x5a2e1e, { sx: 1.7, sy: 0.6, smooth: true, bottom: 0xa8583a });
+          for (let k = 0; k < 5; k++) m.sphere(0.075 - k * 0.008, 10, 5, k % 2 ? 0x6a3622 : 0x5a2e1e, { x: -0.2 - k * 0.07, sx: 0.7, sy: 0.55, smooth: true, bottom: 0xa8583a });
+          [1, -1].forEach(sd => {
+            m.cyl(0.04, 0.0, 0.07, 4, 0x6a3622, { x: -0.56, z: sd * 0.03, rz: Math.PI / 2, sz: 0.3 });
+            m.at({ x: 0.14, z: sd * 0.06, ry: sd * 0.45 }, q => { q.box(0.18, 0.035, 0.035, 0x5a2e1e, { x: 0.09, c: true }); q.sphere(0.06, 8, 5, 0x6a3622, { x: 0.25, sx: 1.8, sy: 0.55, smooth: true, bottom: 0xc84a2a }); q.box(0.1, 0.02, 0.02, 0x5a2e1e, { x: 0.37, z: sd * 0.02, c: true }); });
+            for (let k = 0; k < 4; k++) m.box(0.02, 0.02, 0.16, 0x5a2e1e, { x: -0.05 - k * 0.05, z: sd * 0.1, y: -0.02, ry: sd * (0.3 - k * 0.2), rx: sd * 0.3, c: true });
+            m.cyl(0.004, 0.002, 0.5, 4, 0x8a4a2a, { x: 0.17, z: sd * 0.03, y: 0.02, rz: -Math.PI / 2 + 0.25, ry: sd * 0.35 });
+            m.sphere(0.016, 6, 4, 0x111111, { x: 0.17, z: sd * 0.035, y: 0.04 });
+          });
+        });
+        return b;
+    }
+    return null;
+  }
+
   return {
     K, WY, KAI_Z, ring, bollard, crate,
     fhouse, kuehl, speicher, fishhalle, smoke, SMOKE_CHIMNEY, feedk, deli, smith, SMITH_CHIMNEY,
@@ -1029,6 +1331,7 @@ const FFM = (() => {
     potFrame, potEmpty, potBuoy, potFull, mlineBase, mlineFruit, netPen, netWater, trout, fishSchool, fishCrate,
     gullBody, gullWing, gullSit,
     coastLand, quay, beach, surf, sea, mole, lighthouse, LIGHT_TOP, teepott, strandkorb, dune, townHouse, warehouse, ferry, channelBuoy, picket,
-    anker, fischkisten, rettungsring, bojen, strandhafer, netzgestell, moewenpfahl, fahnenmast, leuchtboje, jolle
+    anker, fischkisten, rettungsring, bojen, strandhafer, netzgestell, moewenpfahl, fahnenmast, leuchtboje, jolle,
+    FISH, fishUp, fishLie, fishItem
   };
 })();

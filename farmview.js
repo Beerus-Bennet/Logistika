@@ -37,8 +37,7 @@ function farmDOM() {
     <div id="farmSide">
       <button class="fbtn" id="fbShop" title="Laden: Felder, Tiere, Gebäude, Deko"><i>🛒</i><span>Laden</span></button>
       <button class="fbtn" id="fbStore" title="Lager"><i>🌾</i><span>Lager</span></button>
-      <button class="fbtn" id="fbOrders" title="Bestellungen"><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
-      <button class="fbtn small" id="fbSnd" title="Ton an/aus"><i>🔊</i></button>
+      <button class="fbtn" id="fbOrders" title="Bestellungen" hidden><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
     </div>
     <button id="farmPaused" hidden>⏸ Spiel angehalten · <b>weiter</b></button>
     <div id="farmFound"></div>
@@ -53,12 +52,14 @@ function farmDOM() {
   $("#fbShop").onclick = () => openFarmShop();
   $("#fbStore").onclick = () => openFarmStore(farmStores()[0]);
   $("#fbOrders").onclick = () => openFarmOrders();
-  $("#fbSnd").onclick = () => { S.farm.snd = !S.farm.snd; renderFarmUI(); if (S.farm.snd) sfx("pop"); };
+  /* v53: Kunden- und Ton-Knopf sind weg – Bestellungen an den Tafeln, Ton im Bauernhaus */
   /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
      falls das Spiel auf der Karte angehalten wurde */
   $("#farmPaused").onclick = () => setSpeed(lastSpeed || 1);
   $("#farmSheet").addEventListener("click", e => { if (e.target.id === "farmSheet") closeFarmSheet(); });
   bindFarmInput($("#farmCv"));
+  /* iOS: langes Drücken auf dem Hof zeigt sonst die Lupe */
+  $("#farmCv").addEventListener("touchstart", e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
   if (typeof worldDOM === "function") worldDOM();
 }
 
@@ -72,6 +73,7 @@ function farmInit3D() {
     FV.failed = true;
     $("#farm").classList.add("nogl");
     $("#farmMsg").innerHTML = `<div class="fmsg">Kein 3D möglich (WebGL 2 fehlt) – Lager, Kunden und Laden gehen über die Knöpfe rechts.</div>`;
+    const ob = $("#fbOrders"); if (ob) ob.hidden = false;
     return false;
   }
   FV.R.onRestore = () => { FV.built = false; FV.nodes.clear(); FV.R.nodes.length = 0; farmBuildScene(); };
@@ -446,66 +448,104 @@ function stepAnimals(dt, time) {
   }
 }
 
-/* -------------------------- Fahrzeuge am Hof --------------------------- */
+/* -------------------------- Fahrzeuge am Hof ---------------------------
+   Kleine Fahrzeuge stehen im Schuppen, der alte Holzlaster auf seinem Platz im
+   Sägewerk. Wer losfährt, hat jemanden am Steuer – war es die Fahrerin aus dem
+   Team, steigt sie selbst ein. */
 const SHED_SLOTS = [[-0.85, 0.05], [0.0, 0.05], [0.85, 0.05]];
-function vehModelKey(t) { return t.mode === "b" ? "bike" : t.cap <= 80 ? "moped" : "van"; }
+const HOLZ_VEH = "v-holzlaster";
+function vehModelKey(t) { return t.id === HOLZ_VEH ? "truck" : t.mode === "b" ? "bike" : t.cap <= 80 ? "moped" : "van"; }
 function vehMesh(t) {
   const k = vehModelKey(t);
-  return fmesh("veh:" + k, () => k === "bike" ? FM.cargoBike() : k === "moped" ? FM.moped() : FM.van());
+  return fmesh("veh:" + k, () => k === "truck" ? FWM.holzTruck() : k === "bike" ? FM.cargoBike() : k === "moped" ? FM.moped() : FM.van());
 }
 function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
+/* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
+function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
+function lkwRoute(p) { return [[p.x, p.z], [p.x, p.z + 5], [-29, p.z + 5.5], [-29, -18.5], [-29, -11], [-31.5, -3], [-31.5, 18.5], [-48, 18.5]]; }
+/* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
+const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
+const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
+function vehDriver(node, k, look) {
+  if (!node || node.driver) return;
+  const L = look || DRIVER_LOOK, at = DRIVER_AT[k] || DRIVER_AT.van;
+  node.driver = FV.R.addChild(node, fnode(fmesh("drv:" + L.shirt + ":" + L.skin + ":" + (L.hair || 0) + ":" + (L.hat || ""), () => FWM.person(L)), at));
+}
+function vehNoDriver(node) {
+  if (!node || !node.driver) return;
+  const i = node.children.indexOf(node.driver); if (i >= 0) node.children.splice(i, 1);
+  node.driver = null;
+}
+/* wer steigt ein? Die Fahrerin aus dem Team, wenn sie diesen Wagen losgeschickt hat */
+function vehRider(uid) { return (S.farm.staff || []).find(s => s.ride && s.ride.uid === uid) || null; }
 function farmSyncVehicles(force) {
   const shed = shedObj();
   if (!shed) return;
-  /* in der Scheune: wer frei ist, wer wartet und wer gerade beladen wird */
-  const here = S.fleet.filter(f => f.at === FARM_NODE && (f.phase === "idle" || f.phase === "reserved" || f.phase === "load")).slice(0, 3);
+  /* im Schuppen: wer frei ist, wer wartet und wer gerade beladen wird – der Holzlaster steht im Sägewerk */
+  const atFarm = S.fleet.filter(f => f.at === FARM_NODE && (f.phase === "idle" || f.phase === "reserved" || f.phase === "load"));
+  const here = atFarm.filter(f => f.type !== HOLZ_VEH).slice(0, 3);
+  const pad = lkwPad(), truck = pad && farmAreaOpen("saege") ? atFarm.find(f => f.type === HOLZ_VEH) : null;
+  if (truck) here.push(truck);
   const ids = new Set(here.map(f => f.uid));
   const [sx, sz] = farmCenter(shed);
   const R = FV.R;
-  /* weggefahren: aus der Scheune zum Tor und auf die Straße */
+  /* weggefahren: aus dem Schuppen zum Tor und auf die Straße (Holzlaster: aus dem Sägewerk über den Waldweg) */
   for (const [uid, v] of FV.veh) {
     if (ids.has(uid)) continue;
     const f = S.fleet.find(x => x.uid === uid);
     FV.veh.delete(uid);
     FV.loading.delete(uid);
-    if (!force && f && f.phase !== "idle" && FV.parked) startDrive(v.node, [[v.node.x, v.node.z], [v.node.x, sz + 1.6], [5, sz + 1.6], [5, 13.5], [5, 18.5], [-30, 18.5]], () => {});
-    else { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); }
+    if (!force && f && f.phase !== "idle" && FV.parked) {
+      const rider = vehRider(uid), k = vehModelKey(vType(f.type));
+      vehDriver(v.node, k, rider ? staffBody(rider) : null);
+      if (rider) rider.ride.gone = S.time;
+      const gate = typeof farmHofR === "function" ? farmHofR() : 13;
+      const route = k === "truck" && pad ? lkwRoute(pad) : [[v.node.x, v.node.z], [v.node.x, sz + 1.6], [5, sz + 1.6], [5, gate + 0.5], [5, 18.5], [-30, 18.5]];
+      startDrive(v.node, route, () => { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); });
+    } else { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); }
   }
-  here.forEach((f, i) => {
+  let slot = 0;
+  here.forEach(f => {
     let v = FV.veh.get(f.uid);
-    const t = vType(f.type);
-    const p = SHED_SLOTS[i];
-    const x = sx + p[0], z = sz + p[1];
+    const t = vType(f.type), k = vehModelKey(t);
+    const isTruck = k === "truck";
+    const p = isTruck ? null : SHED_SLOTS[slot++];
+    const x = isTruck ? pad.x : sx + p[0], z = isTruck ? pad.z : sz + p[1];
     if (!v) {
       const node = fnode(vehMesh(t), { x, z, ry: 0 });
       R.nodes.push(node);
       v = { node };
       FV.veh.set(f.uid, v);
-      /* angekommen: von der Straße durchs Tor in die Scheune */
+      /* angekommen: von der Straße durchs Tor in den Schuppen – mit Fahrer/in, die dann aussteigt */
       if (!force && FV.parked && !FV.parked.has(f.uid)) {
-        node.x = 30; node.z = 18.5;
-        startDrive(node, [[30, 18.5], [5, 18.5], [5, 13.5], [5, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; });
+        const gate = typeof farmHofR === "function" ? farmHofR() : 13;
+        vehDriver(node, k, null);
+        if (isTruck) { const r = lkwRoute(pad).reverse(); node.x = r[0][0]; node.z = r[0][1]; startDrive(node, r, () => { node.ry = 0; vehNoDriver(node); }); }
+        else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [5, 18.5], [5, gate + 0.5], [5, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
       }
     } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = 0; }
     /* Beladen beginnt */
-    if (f.phase === "load" && !FV.loading.has(f.uid)) FV.loading.set(f.uid, { uid: f.uid, node: v.node, k: vehModelKey(t), n: 0, t: 0.3, max: vehModelKey(t) === "van" ? 6 : 3 });
+    if (f.phase === "load" && !FV.loading.has(f.uid)) FV.loading.set(f.uid, { uid: f.uid, node: v.node, k, n: 0, t: 0.3, max: k === "van" || k === "truck" ? 6 : 3 });
   });
   FV.parked = ids;
 }
 /* Kisten, Säcke und Körbe fliegen aus der Scheune ins Fahrzeug */
-const LOAD_AT = { bike: [0, 0.62, 0.42], moped: [0, 0.95, -0.44], van: [0, 0.75, -1.15] };
+const LOAD_AT = { bike: [0, 0.62, 0.42], moped: [0, 0.95, -0.44], van: [0, 0.75, -1.15], truck: [0, 1.15, -1.0] };
 function stepLoading(dt) {
   if (!FV.R || (!FV.loading.size && !FV.loadFly.length)) return;
-  const R = FV.R, barn = S.farm.objs.find(o => o.t === "barn") || shedObj();
-  const src = barn ? farmCenter(barn) : [0, 0];
+  const R = FV.R, barn = S.farm.objs.find(o => o.t === "barn") || shedObj(), lager = farmObj1("sw_lager");
   for (const L of FV.loading.values()) {
     if (L.node.driving || L.n >= L.max) continue;
     L.t -= dt;
     if (L.t > 0) continue;
     L.t = 0.6;
+    /* Holzlaster: Bretter und Balken kommen aus dem Holzlager */
+    const from = L.k === "truck" && lager ? lager : barn;
+    const src = from ? farmCenter(from) : [0, 0];
     const kind = (L.n + (L.k === "van" ? 0 : 1)) % 3, at = LOAD_AT[L.k], ry = L.node.ry || 0;
     const tx = L.node.x + Math.cos(ry) * at[0] + Math.sin(ry) * at[2], tz = L.node.z - Math.sin(ry) * at[0] + Math.cos(ry) * at[2];
-    const node = fnode(fmesh("cargo:" + kind, () => FWM.cargo(kind)), { x: src[0], y: 1.0, z: src[1], s: L.k === "van" ? 1.1 : 0.85 });
+    const ck = L.k === "truck" ? "truck" + (L.n % 2) : "cargo:" + kind;
+    const node = fnode(fmesh(ck, () => L.k === "truck" ? FWM.item(L.n % 2 ? "balken" : "bretter") : FWM.cargo(kind)), { x: src[0], y: 1.0, z: src[1], s: L.k === "van" || L.k === "truck" ? 1.1 : 0.85 });
     R.nodes.push(node);
     FV.loadFly.push({ node, L, a: [src[0] + 0.6, 1.0, src[1] + 0.8], b: [tx, at[1], tz], t: 0, dur: 0.75, stack: L.k !== "van" ? L.n : -1 });
     L.n++;
@@ -778,7 +818,7 @@ function bindFarmInput(cv) {
     FV.lp = setTimeout(() => {
       if (!FV.gesture || FV.gesture.kind !== "tap" || FV.place || FV.tool) return;
       const o = pickObj(x, y);
-      if (o && !FFIXED.has(o.t)) { FV.gesture = null; startMove(o); }
+      if (o && !FFIXED.has(o.t) && !o.fix) { FV.gesture = null; startMove(o); }
     }, 520);
   });
   cv.addEventListener("pointermove", e => {
@@ -905,7 +945,7 @@ function objAction(o, x, y) {
   }
   if (FSTORE[o.t]) { openFarmStore(o.t); return; }
   switch (o.t) {
-    case "board": openFarmOrders(); break;
+    case "board": openFarmOrders(null, o.k || "hof"); break;
     case "house": openFarmHouse(); break;
     case "shed": openFarmShed(); break;
     case "deco": openPop(o, "deco"); break;
@@ -1035,8 +1075,8 @@ function collectPen(o) {
   if (i) {
     const [x, y] = objScreen(o, 0.8);
     const id = A.out;
-    if (A.mast) floatText(x, y, "🚚 Ab zum Metzger · +" + famt(id, n) + " " + FITEMS[id].i, "");
-    else floatText(x, y, "+" + famt(id, n) + " " + FITEMS[id].i + "  ·  " + qStars(farmQ(id)), "");
+    if (A.mast) floatText(x, y, "🚚 Ab zum Metzger · +" + famt(id, n) + " " + FITEMS[id].n, "");
+    else floatText(x, y, "+" + famt(id, n) + " " + ((n === 1 && FITEMS[id].sg) || FITEMS[id].n) + "  ·  " + qStars(farmQ(id)), "");
     xpFly(x, y, FITEMS[id].xp * n);
     sfx(A.fish ? "splash" : "collect");
     save();
@@ -1293,7 +1333,7 @@ function updateFarmTags() {
       else if (hungry) want.push([o, "hungry", "💭" + tagIc(A.feed), th]);
     }
     if (o.t === "board") {
-      const os = farmOrders(), ok = os.filter(farmOrderReady).length;
+      const os = farmOrders().filter(x => farmOrderArea(x) === (o.k || "hof")), ok = os.filter(farmOrderReady).length;
       if (os.length) want.push([o, ok ? "ready" : "info", "📋<b>" + (ok ? ok + " ✓" : os.length) + "</b>", 1.9]);
     }
   }
@@ -1381,13 +1421,13 @@ function renderFarmPop() {
         const c = FPOTS[id], it = FITEMS[id], lock = !farmPotOk(id);
         const why = c.lv > lv ? "Lv " + c.lv : "Stufe " + c.tier;
         return `<div class="ftool${lock ? " lock" : ""}" data-tool="bait" data-crop="${id}">
-          <span class="ic">${lock ? "🔒" : it.i}</span><b>${lock ? why : esc(it.n)}</b><small>${lock ? (U && c.lv <= lv ? "Reusen ausbauen" : "") : fdur(c.t) + " · " + Object.keys(c.mix).map(x => FITEMS[x].i).join("")}</small></div>`;
+          ${icOf(id, lock)}<b>${lock ? why : esc(it.n)}</b><small>${lock ? (U && c.lv <= lv ? "Reusen ausbauen" : "") : fdur(c.t) + " · " + Object.keys(c.mix).map(x => icHTML(x)).join("")}</small></div>`;
       }).join("") + `</div>` + (k || m ? "" : `<div class="fp-tip">Kein Reusenköder mehr: Die Fischerhütte macht welchen aus Fischabfällen, im Laden gibt es Dosen – und eine Portion Mais aus dem Silo geht auch.</div>`);
   } else if (P.kind === "hook") {
-    h = `<div class="fp-h">${FITEMS[o.kind].i} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
+    h = `<div class="fp-h">${icHTML(o.kind)} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
       <div class="fp-row"><div class="ftool big" data-tool="hook"><span class="ic">🪝</span><b>Haken</b></div></div>`;
   } else if (P.kind === "potgrow") {
-    h = `<div class="fp-h">${FITEMS[o.kind].i} ${esc(FPOTS[o.kind].n)} gehen in die Reuse<small>hochziehen in <span class="fp-left">${fdur(Math.max(1, o.end - S.time))}</span></small></div>`;
+    h = `<div class="fp-h">${icHTML(o.kind)} ${esc(FPOTS[o.kind].n)} gehen in die Reuse<small>hochziehen in <span class="fp-left">${fdur(Math.max(1, o.end - S.time))}</span></small></div>`;
   } else if (P.kind === "tree") {
     const T = treeDef(o), line = o.t === "mline", left = o.end - S.time;
     const ic = line ? T.i : tagIc(o.kind);
@@ -1465,7 +1505,8 @@ function startToolDrag(e, kind, crop, origin) {
     feed: origin && origin.animals ? FITEMS[FANIMALS[penKind(origin)].feed].i : "🥣" }[kind];
   /* das gezogene Werkzeug als 3D-Bild: Saat, Futter, Sichel, Gießkanne */
   const gid = kind === "seed" ? crop : kind === "feed" && origin && origin.animals ? FANIMALS[penKind(origin)].feed : null;
-  const gu = typeof itemImg !== "function" ? null : gid ? itemImg(gid) : kind === "sickle" ? toolImg("sickle") : kind === "water" && !(origin && origin.t === "mline") ? toolImg("water") : null;
+  const bid = kind === "bait" ? (typeof farmBaitItem === "function" && farmBaitItem()) || "koeder" : null;
+  const gu = typeof itemImg !== "function" ? null : gid ? itemImg(gid) : bid && FITEMS[bid] ? itemImg(bid) : kind === "sickle" ? toolImg("sickle") : kind === "water" && !(origin && origin.t === "mline") ? toolImg("water") : null;
   if (gu) ghost.innerHTML = `<img src="${gu}" alt="">`;
   $("#farm").appendChild(ghost);
   const T = FV.tool = { kind, crop, origin, ghost, moved: false, x0: e.clientX, y0: e.clientY, done: 0, hit: new Set() };
@@ -1560,10 +1601,23 @@ function startPlace(spec, x, z) {
   renderPlaceBar();
   farmFocus({ t: "field", x: at[0], z: at[1], r: 0 });
 }
+/* v53: in welche Zone darf es? Hof, Sägewerkshof, Straßenrand – die nächste zum Finger */
+function placeZone(P, x, z) {
+  const zs = farmZones(P.proto.t, P.proto.k);
+  let best = zs[0], bd = 1e9;
+  zs.forEach(zn => {
+    const R = farmZoneRect(zn), cx = clamp(x + P.w / 2, R.x0, R.x1), cz = clamp(z + P.d / 2, R.z0, R.z1);
+    const d = Math.hypot(cx - x - P.w / 2, cz - z - P.d / 2);
+    if (d < bd) { bd = d; best = zn; }
+  });
+  return best;
+}
 function movePlace(x, z) {
   const P = FV.place;
   if (!P) return;
-  P.x = clamp(x, FIN0, FIN1 - P.w); P.z = clamp(z, FIN0, FIN1 - P.d);
+  const z0 = P.zone, R = farmZoneRect(P.zone = placeZone(P, x, z));
+  if (z0 && z0 !== P.zone) setTimeout(renderPlaceBar, 0);
+  P.x = clamp(x, R.x0, R.x1 - P.w); P.z = clamp(z, R.z0, R.z1 - P.d);
   const cx = P.x + P.w / 2 - FG / 2, cz = P.z + P.d / 2 - FG / 2;
   P.ghost.x = P.mark.x = cx; P.ghost.z = P.mark.z = cz;
   P.ghost.ry = P.r ? -Math.PI / 2 : 0;
@@ -1590,6 +1644,9 @@ function confirmPlace() {
   if (P.move) {
     const o = P.move;
     o.x = P.x; o.z = P.z; o.r = P.r;
+    /* in den Sägewerkshof gezogen: gehört jetzt zum Sägewerk – und umgekehrt */
+    const zn = farmZoneAt(o.x, o.z, ...farmSize(o));
+    if (zn === "yard") o.area = "saege"; else if (o.area === "saege") delete o.area;
     cancelPlace(true);
     if (o.animals) o.animals.forEach(a => dropAnimal(a.id));
     farmSyncScene();
@@ -1642,10 +1699,27 @@ function renderPlaceBar() {
   el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot">↻</button>` : ""}
+    ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : "auf den Hof"}">${zn === "yard" ? "🪚" : "🏡"}</button>`).join("")}
     <button class="fpl-b ok${P.ok ? "" : " disabled"}" id="fpOk">✓</button>`;
+  $$("#farmPlace [data-zone]").forEach(b => b.onclick = () => placeJump(b.dataset.zone));
   $("#fpNo").onclick = () => cancelPlace();
   $("#fpOk").onclick = confirmPlace;
   const r = $("#fpRot"); if (r) r.onclick = rotatePlace;
+}
+/* Wechsel zwischen Hof und Sägewerk: ein Tipp, der Rest wird hingeschoben */
+function placeJumps(P) {
+  const zs = farmZones(P.proto.t, P.proto.k).filter(z => z !== "road" && (z !== "yard" || farmAreaOpen("saege")));
+  return zs.length > 1 ? zs.filter(z => z !== P.zone) : [];
+}
+function placeJump(zn) {
+  const P = FV.place;
+  if (!P) return;
+  const R = farmZoneRect(zn), cx = zn === "yard" ? -13 : FG / 2, cz = zn === "yard" ? -12 : FG / 2;
+  const q = farmZoneSpot(zn, P.w, P.d, cx, cz, P.proto.t, P.proto.k, P.move ? P.move.id : null) || [R.x0, R.z0];
+  movePlace(q[0], q[1]);
+  renderPlaceBar();
+  farmFocus({ t: "field", x: P.x, z: P.z, r: 0 });
+  sfx("tap");
 }
 function puff(o) {
   const [cx, cz] = farmCenter(o), [w, d] = farmSize(o);
@@ -1675,7 +1749,27 @@ function closeFarmSheet() {
 function refreshSheet() { if (FV.sheet && FV.sheetTick) FV.sheetTick(); }
 /* Warenbild: 3D, wo es ein Modell gibt, sonst das Symbol */
 const icOf = (id, lock) => typeof itemIc === "function" ? itemIc(id, lock) : `<span class="ic">${lock ? "🔒" : FITEMS[id].i}</span>`;
-const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}">${icOf(id)}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
+const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}" data-it="${id}">${icOf(id)}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
+/* v53: Ware antippen → Name darüber (und was im Lager liegt) */
+function itemTip(el) {
+  const id = el.dataset.it, it = FITEMS[id];
+  if (!it) return;
+  let t = $("#itemTip");
+  if (!t) { t = document.createElement("div"); t.id = "itemTip"; document.body.appendChild(t); }
+  t.innerHTML = `${esc(it.n)}${S.farm ? `<small>im Lager: ${esc(famt(id, farmInv(id)))}</small>` : ""}`;
+  const r = el.getBoundingClientRect();
+  t.className = "on";
+  const w = t.offsetWidth;
+  t.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
+  t.style.top = Math.max(6, r.top - t.offsetHeight - 6) + "px";
+  clearTimeout(itemTip.t);
+  itemTip.t = setTimeout(() => { t.className = ""; }, 1800);
+}
+if (typeof document !== "undefined") {
+  document.addEventListener("click", e => { const c = e.target.closest && e.target.closest("[data-it]"); if (c) itemTip(c); }, true);
+  /* kein Bild-Menü, keine Vorschau beim langen Drücken (iOS/Android) – Eingabefelder ausgenommen */
+  document.addEventListener("contextmenu", e => { if (!(e.target.closest && e.target.closest("input,textarea,[contenteditable]"))) e.preventDefault(); });
+}
 
 /* Mühle, Ofen, Molkerei */
 function machQueueHTML(o) {
@@ -1683,12 +1777,13 @@ function machQueueHTML(o) {
   const slots = [];
   o.q.forEach((it, i) => {
     const f = i === 0 ? clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1) : 0;
-    slots.push(`<div class="fq-s work">${icOf(it.r)}<i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small></div>`);
+    slots.push(`<div class="fq-s work">${icOf(it.r)}<i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small>${it.tut ? "" : `<button class="fq-x" data-unq="${i}" aria-label="abbrechen">✕</button>`}</div>`);
   });
   o.done.forEach(d => slots.push(`<div class="fq-s done" data-collect="1">${icOf(d.r)}<small>fertig ✓</small></div>`));
   for (let i = slots.length; i < machSlots(o); i++) slots.push(`<div class="fq-s free"><small>frei</small></div>`);
   const sc = slotCost(o);
-  return slots.join("") + (sc != null ? `<button class="fq-s buy" id="fqBuy">＋<small>${eur(sc)}</small></button>` : "");
+  return slots.join("") + (sc != null ? `<button class="fq-s buy" id="fqBuy">＋<small>${eur(sc)}</small></button>` : "")
+    + (o.q.length > 1 ? `<button class="fq-all" id="fqAll">✕ alle abbrechen</button>` : "");
 }
 function bindMachQueue(o) {
   $$("#farmSheetIn [data-collect]").forEach(b => b.onclick = () => {
@@ -1699,6 +1794,20 @@ function bindMachQueue(o) {
   });
   const bb = $("#fqBuy");
   if (bb) bb.onclick = () => { if (farmBuySlot(o)) { sfx("coin"); save(); openMachine(o); } };
+  /* v53: einzelne Aufträge oder die ganze Schlange abbrechen */
+  const un = i => { const it = o.q[i]; if (it && farmUnqueue(o, i)) { const [x, y] = objScreen(o); floatText(x, y, "↩︎ Zutaten zurück", ""); } };
+  $$("#farmSheetIn [data-unq]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const i = +b.dataset.unq, it = o.q[i];
+    if (!it) return;
+    const go = () => { un(i); sfx("pop"); save(); openMachine(o); };
+    if (i === 0) askConfirm(FITEMS[it.r].n + " abbrechen?", "Läuft schon – die Zutaten kommen zurück, die Zeit ist verloren.", "Abbrechen", go); else go();
+  });
+  const all = $("#fqAll");
+  if (all) all.onclick = () => askConfirm("Ganze Warteschlange abbrechen?", "Alle " + o.q.length + " Aufträge – die Zutaten kommen zurück.", "Alle abbrechen", () => {
+    for (let i = o.q.length - 1; i >= 0; i--) if (!o.q[i].tut) un(i);
+    sfx("pop"); save(); openMachine(o);
+  });
 }
 function openMachine(o) {
   FV.sheetFn = () => openMachine(o);
@@ -1777,7 +1886,7 @@ function openFarmStore(st) {
       const qs = farmQsOn(sel) && S.farm.inv[sel].qs;
       const rows = qs ? [5, 4, 3, 2, 1].filter(q => qs[q]).map(q => `<div class="fsell-q"><span>${qStars(q)} <small>${esc(fishQName(q))} · ${famt(sel, qs[q])}</small></span>
         ${[1, qs[q]].filter((n, i, a) => a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}" data-q="${q}">${n > 1 ? "alle" : "1"} · ${eur(farmSellPrice(sel, n, q))}</button>`).join("")}</div>`).join("") : "";
-      return `<div class="fsell"><b>${FITEMS[sel].i} ${esc(fqty(sel, farmInv(sel)))}</b> · ${qStars(farmQ(sel))} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
+      return `<div class="fsell"><b>${icHTML(sel)} ${esc(fqty(sel, farmInv(sel)))}</b> · ${qStars(farmQ(sel))} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
       ${qs ? rows : `<div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(pr(sel, n))}</button>`).join("")}</div>`}
       <small>${wood ? (FITEMS[sel].raw ? "🧔 Der Holzhändler zahlt für Rohholz den vollen Preis" + (farmEvOn("holzpreis") ? " – gerade sogar 30 % mehr!" : ".") : "🧔 Holzwaren nimmt der Holzhändler nur zum halben Wert – Bestellungen bringen mehr.")
         : "Großhandel zahlt sofort, aber nur den halben Wert – Bestellungen bringen mehr."}</small></div>`;
@@ -1855,18 +1964,28 @@ function buyAnimalInto(kind, pen, stay) {
   if (stay) openPen(pen); else { closeFarmSheet(); farmFocus(pen); }
 }
 
-/* Bestellungen der Dörfer und Losschicken */
-function openFarmOrders(sendFor) {
-  FV.sheetFn = () => openFarmOrders(FV.sendFor);
+/* Bestellungen der Dörfer und Losschicken – v53: eine Tafel je Station (Hof,
+   Sägewerk, Fischerei). Angebote verfallen nach einem Tag; angenommen läuft
+   eine Bestellung ohne Frist. Dazu die Daueraufträge der Station. */
+function openFarmOrders(sendFor, area) {
+  area = area || FV.ordArea || "hof";
+  if (!farmOrderAreaOn(area)) area = "hof";
+  FV.ordArea = area;
+  FV.sheetFn = () => openFarmOrders(FV.sendFor, FV.ordArea);
   FV.sendFor = sendFor || null;
-  const os = farmOrders().sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || a.created - b.created);
+  const A0 = FORD_AREAS.find(a => a.id === area);
+  const mine = farmOrders().filter(o => farmOrderArea(o) === area);
+  const acc = mine.filter(o => o.acc).sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
+  const offs = mine.filter(o => !o.acc).sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
   const atFarm = S.fleet.filter(f => f.at === FARM_NODE && f.phase === "idle");
   const vehLine = atFarm.length ? atFarm.map(f => vType(f.type).icon).join(" ") + " " + FT().atHere : FT().vehNone;
-  const html = os.map(o => {
+  const card = o => {
     const ready = farmOrderReady(o);
     const q = farmOrderQ(o), pf = 1 + (q - 3) * 0.08;
     const km = o.refDist;
-    const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small></div>`;
+    const tag = o.abo ? `<span class="fo-tag abo">📅 Woche ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
+      : `<span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>`;
+    const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small>${tag}</div>`;
     const items = `<div class="fo-it">${Object.keys(o.farm.items).map(id => itemChip(id, o.farm.items[id], farmInv(id))).join("")}</div>`;
     const reward = `<div class="fo-r"><span class="fo-m">${eur(Math.round(o.pay * pf))}</span><span class="fo-x">+${o.farm.xp} EP</span>${ready ? `<span class="fo-q">${qStars(q)}${pf !== 1 ? (pf > 1 ? " +" : " ") + Math.round((pf - 1) * 100) + " %" : ""}</span>` : ""}</div>`;
     let send = "";
@@ -1877,17 +1996,47 @@ function openFarmOrders(sendFor) {
         : `<div class="fs-empty">Kein freies Fahrzeug schafft das gerade (Gewicht ${kgf(o.weight)}, ${km} km${N[o.to].modes.includes("b") ? "" : ", nur auf der Straße"}). Im Markt gibt es mehr.</div>`}</div>`;
       FV.sendOpts = opts;
     }
-    return `<div class="fo${ready ? " ready" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${head}${items}${reward}
-      <div class="fo-b">${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : `<span class="fo-miss">fehlt: ${farmMissing(o.farm.items).map(m => famt(m.id, m.need) + " " + FITEMS[m.id].i).join(" ")}</span>`}
-        <button class="btn tiny ghost" data-drop="${o.id}" title="Bestellung ablehnen">🗑️</button></div>${send}</div>`;
-  }).join("");
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">📋</span>Bestellungen<small>${vehLine}</small></div>
-    <div class="fos">${html || `<div class="fs-empty">${esc(FT().noOrders)}</div>`}</div>
+    const miss = ready ? "" : `<span class="fo-miss">fehlt: ${farmMissing(o.farm.items).map(m => famt(m.id, m.need) + " " + icHTML(m.id)).join(" ")}</span>`;
+    const btns = o.acc
+      ? `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : miss}${o.tutF ? "" : `<button class="btn tiny ghost" data-ret="${o.id}" title="Zurückgeben">↩︎</button>`}`
+      : `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : ""}<button class="btn tiny acc" data-acc="${o.id}">✓ Annehmen</button>${o.tutF ? "" : `<button class="btn tiny ghost" data-drop="${o.id}" title="Ablehnen">🗑️</button>`}`;
+    return `<div class="fo${ready ? " ready" : ""}${o.acc ? " acc" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${head}${items}${reward}
+      ${!o.acc && !ready ? `<div class="fo-mline">${miss}</div>` : ""}<div class="fo-b">${btns}</div>${send}</div>`;
+  };
+  /* Daueraufträge der Station */
+  const F = S.farm, abos = farmAbos().filter(x => x.area === area), aoff = (F.aboOff || []).filter(x => x.area === area);
+  const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>jede Woche dieselbe Ladung, fester Bonus</small></div>
+    ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · jede Woche ${esc(farmAboPal(A))}</small>
+      <span class="fo-tag abo">läuft · ${A.n || 0}× geliefert${A.miss ? " · " + A.miss + " verpasst" : ""} · nächste in ${fdur(Math.max(1, A.next - S.time))}</span></div>
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
+      <div class="fo-b"><span></span><button class="btn tiny ghost" data-abox="${A.id}">Kündigen</button></div></div>`).join("")}
+    ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will jede Woche ${esc(farmAboPal(A))}</small>
+      <span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, A.exp - S.time))}</span></div>
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
+      <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
+  const tabs = FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).length > 1 ? `<div class="fo-tabs">${FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).map(a => {
+    const n = farmOrders().filter(o => farmOrderArea(o) === a.id), r = n.filter(farmOrderReady).length;
+    return `<button class="${a.id === area ? "on" : ""}" data-oarea="${a.id}">${a.i} ${a.n}${r ? ` <b class="ok">${r}✓</b>` : n.length ? ` <b>${n.length}</b>` : ""}</button>`;
+  }).join("")}</div>` : "";
+  const fa = typeof staffOf === "function" && staffOf("fahrer");
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">📋</span>Bestellungen · ${A0.n}<small>${vehLine}</small></div>${tabs}
+    ${acc.length ? `<div class="fo-sec">✓ Angenommen<small>ohne Frist – liefern, wenn alles da ist</small></div><div class="fos">${acc.map(card).join("")}</div>` : ""}
+    <div class="fo-sec">📨 Angebote<small>${fa ? esc(fa.name) + " nimmt die lukrativsten selbst an" : "verfallen nach einem Tag"}</small></div>
+    <div class="fos">${offs.map(card).join("") || `<div class="fs-empty">${esc(FT().noOrders)}</div>`}</div>
+    ${aboHTML}
     <div class="fs-sub">Gute Qualität bringt bis zu 16 % mehr. Lieferungen verfolgst du unter „Live“.</div>`, "orders");
-  $$("#farmSheetIn [data-send]").forEach(b => b.onclick = () => openFarmOrders(FV.sendFor === b.dataset.send ? null : b.dataset.send));
+  const again = () => openFarmOrders(FV.sendFor, FV.ordArea);
+  $$("#farmSheetIn [data-oarea]").forEach(b => b.onclick = () => { sfx("tap"); openFarmOrders(null, b.dataset.oarea); });
+  $$("#farmSheetIn [data-send]").forEach(b => b.onclick = () => openFarmOrders(FV.sendFor === b.dataset.send ? null : b.dataset.send, area));
+  $$("#farmSheetIn [data-acc]").forEach(b => b.onclick = () => {
+    const o = S.orders.find(x => x.id === b.dataset.acc);
+    if (farmAcceptOrder(o)) { sfx("pop"); farmEvent("accept"); save(); renderFarmUI(); }
+    again();
+  });
   $$("#farmSheetIn [data-go]").forEach(b => b.onclick = () => {
     const o = S.orders.find(x => x.id === FV.sendFor), p = FV.sendOpts[+b.dataset.go];
     if (!o || !p) return;
+    farmAcceptOrder(o);
     if (farmSend(o, p)) {
       farmEvent("send");
       sfx("build");
@@ -1901,7 +2050,22 @@ function openFarmOrders(sendFor) {
     if (!o || o.tutF) return;
     S.orders = S.orders.filter(x => x !== o);
     S.farm.lastOrd = S.time - 15;
-    save(); openFarmOrders();
+    save(); again();
+  });
+  $$("#farmSheetIn [data-ret]").forEach(b => b.onclick = () => {
+    const o = S.orders.find(x => x.id === b.dataset.ret);
+    if (!o) return;
+    askConfirm("Bestellung zurückgeben?", o.shipper + " sucht sich jemand anderen – ohne Strafe." + (o.abo ? " Beim Dauerauftrag zählt die Woche als verpasst." : ""), "Zurückgeben", () => { farmReturnOrder(o); save(); renderFarmUI(); again(); });
+  });
+  $$("#farmSheetIn [data-abo]").forEach(b => b.onclick = () => {
+    const A = farmAboTake(b.dataset.abo);
+    if (A) { sfx("coin"); toast("📅 Vertrag mit " + A.firm + ": jede Woche " + farmAboPal(A) + ". Die erste Bestellung steht schon an der Tafel.", "ok"); save(); renderFarmUI(); }
+    again();
+  });
+  $$("#farmSheetIn [data-abox]").forEach(b => b.onclick = () => {
+    const A = farmAbos().find(x => x.id === b.dataset.abox);
+    if (!A) return;
+    askConfirm("Dauerauftrag kündigen?", A.firm + " bekommt dann keine Wochenlieferung mehr. Was schon unterwegs ist, kommt noch an.", "Kündigen", () => { farmAboCancel(A.id); save(); renderFarmUI(); again(); });
   });
 }
 
@@ -2233,7 +2397,7 @@ function firstObj(fn) { return S.farm.objs.find(fn) || null; }
 function farmTutOrder() {
   if (S.orders.some(o => o.tutF)) return;
   const o = farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
-  if (o) { o.expire = S.time + 99999; o.deadline = S.time + 99999; S.orders.push(o); }
+  if (o) { o.acc = "tut"; o.expire = S.time + 99999; o.deadline = S.time + 99999; S.orders.push(o); }
 }
 function farmTutShow() {
   const el = $("#farmTut");

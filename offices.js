@@ -729,7 +729,7 @@ function phoneMsg(m) {
   if (S.phone.msgs.length > 40) S.phone.msgs.length = 40;
   S.phone.unread++;
   renderPhoneBadge(true);
-  toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok");
+  toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok", false, m.go || null);
 }
 /* Sicherheitsmaßnahme: Nachrichten löschen sich nach 24 Spielstunden */
 const PHONE_TTL = 24 * 60;
@@ -794,6 +794,7 @@ function renderPhone() {
       <b>${esc(m.title)}</b>
       <p>${esc(m.body)}</p>
       ${m.note && !m.handled ? `<div class="pmsg-note">${esc(m.note)}</div>` : ""}
+      ${m.go && typeof MSG_GO !== "undefined" && MSG_GO[m.go] ? `<div class="pmsg-acts"><button class="btn tiny" data-msggo="${esc(m.go)}">📍 ${esc(m.goLabel || "Hinführen")}</button></div>` : ""}
       ${m.handled ? `<div class="pmsg-note ok">✔ ${esc(m.result || "erledigt")}</div>`
                   : (acts ? `<div class="pmsg-acts">${acts}</div>` : "")}
       ${b && !m.handled && m.kind === "trouble"
@@ -826,6 +827,7 @@ function renderPhone() {
   if (typeof bindPabloMsgs === "function") bindPabloMsgs();
   if (typeof bindDecisionMsgs === "function") bindDecisionMsgs($("#modalBody"));
   $$("#modalBody [data-openinvite]").forEach(b => b.onclick = () => { closeModal(); openInvite(); });
+  $$("#modalBody [data-msggo]").forEach(b => b.onclick = () => { closeModal(); runMsgGo(b.dataset.msggo); });
 }
 
 function prunePhoneSilent() {

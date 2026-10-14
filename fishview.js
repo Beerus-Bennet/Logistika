@@ -65,7 +65,7 @@ function fishStart(G, boat) {
       if (b) {
         FV.R.burst({ x: b.x, y: 0.05, z: b.z, n: ok ? 16 : 6, col: [0.9, 0.96, 1, 0.9], speed: 1.2, up: 2.4, size: 0.08, g: -6, life: 0.7 });
         b.visible = false;
-        if (ok && r && r.id) { const p = FV.R.project(b.x, 0.4, b.z); if (p) { flyItem(FITEMS[r.id].i, p[0], p[1], storeBtn(), 200, 1); xpFly(p[0], p[1] - 10, r.xp, 350); } }
+        if (ok && r && r.id) { const p = FV.R.project(b.x, 0.4, b.z); if (p) { flyItem(r.id, p[0], p[1], storeBtn(), 200, 1); xpFly(p[0], p[1] - 10, r.xp, 350); } }
       }
       renderFarmUI();
     },
@@ -96,7 +96,7 @@ function openBoatSheet() {
   FV.sheetFn = openBoatSheet;
   const rows = FGROUNDS.filter(g => g.id !== "steg").map(g => {
     const ok = farmGroundOk(g), o = angelS() ? angelOdds(g.id) : farmFishOdds(g.id), sum = Object.values(o).reduce((a, b) => a + b, 0);
-    const top = Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 3).map(id => FITEMS[id].i).join("");
+    const top = Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 3).map(id => icHTML(id)).join("");
     const sw = farmEvOn("schwarm") && F.ev.cur.data.g === g.id;
     const d = Math.round(Math.hypot(g.x - FBOAT_DOCK[0], g.z - FBOAT_DOCK[1]) / ((B.speed || 3) * 1.6));
     return `<button class="frec${ok ? "" : " lock"}" data-g="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? g.i : "🔒"}</span><b>${esc(g.n)}${sw ? " · 🐟 Schwarm!" : ""}</b>
@@ -246,7 +246,7 @@ function stegPotHTML(U) {
     return `<div class="uf-row"><span class="ic">🪤</span><div><b>Reuse ${i + 1}</b><small>${st === "empty" ? "leer – Köder rein" : st === "ripe" ? "voll – hochziehen!" : esc(FPOTS[o.kind].n) + " · noch " + fdur(Math.max(1, o.end - S.time))}</small></div>
       <button class="btn tiny ghost" data-pot="${o.id}">Zeigen</button></div>`; }).join("");
   const tiers = Object.keys(FPOTS).map(id => { const P = FPOTS[id];
-    return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}"><span class="ic">${FITEMS[id].i}</span><div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
+    return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}">${itemIc(id)}<div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
   const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "zu wenig Geld" : "";
   return `<div class="uf-list">${rows}</div>
     ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>🪤 Weitere Reuse · ${eur(pc)}</button>` : ""}
@@ -284,8 +284,8 @@ function stegBertHTML(U) {
 }
 function stegLogHTML(U) {
   const best = Object.keys(U.best).map(id => { const b = U.best[id];
-    return `<div class="uf-row"><span class="ic">${FITEMS[id].i}</span><div><b>${esc(FITEMS[id].sg || FITEMS[id].n)}</b><small>Rekord: ${fmt(b.cm, 1)} cm · ${fishKgTxt(b.kg)} · ${qStars(b.q)}</small></div></div>`; }).join("");
-  const last = U.log.slice(0, 12).map(e => `<div class="uf-row"><span class="ic">${FITEMS[e.sp].i}</span><div><b>${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
+    return `<div class="uf-row">${itemIc(id)}<div><b>${esc(FITEMS[id].sg || FITEMS[id].n)}</b><small>Rekord: ${fmt(b.cm, 1)} cm · ${fishKgTxt(b.kg)} · ${qStars(b.q)}</small></div></div>`; }).join("");
+  const last = U.log.slice(0, 12).map(e => `<div class="uf-row">${itemIc(e.sp)}<div><b>${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
   return U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
     : `<div class="fs-empty">Noch leer. Jeder Fang beim Angeln und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`;
 }
@@ -323,7 +323,7 @@ function openTournament() {
       T.kg.set(p, T.kg.get(p) + f.kg);
       const big = f.kg > T.best;
       if (big) T.best = f.kg;
-      T.log.push(`${FITEMS[f.sp].i} <b>${esc(p.n)}</b>: ${esc(FITEMS[f.sp].sg)} ${fmt(f.cm, 1)} cm${big && T.i > 1 ? " · 🏅 größter Fisch bisher" : ""}`);
+      T.log.push(`${icHTML(f.sp)} <b>${esc(p.n)}</b>: ${esc(FITEMS[f.sp].sg)} ${fmt(f.cm, 1)} cm${big && T.i > 1 ? " · 🏅 größter Fisch bisher" : ""}`);
     }
     draw();
   };

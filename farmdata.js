@@ -82,12 +82,13 @@ const FANIMALS = {
 /* Auslauf je Ausbaustufe: Kacheln (w × d) und Fläche in m² (bei Fisch m³) */
 const FPENS = {
   coop:  [{ w: 4, d: 3, m2: 18 },   { w: 5, d: 4, m2: 32 },   { w: 6, d: 5, m2: 50 },    { w: 7, d: 6, m2: 72 }],
-  cows:  [{ w: 6, d: 5, m2: 3000 }, { w: 7, d: 6, m2: 5000 }, { w: 8, d: 7, m2: 7500 },  { w: 9, d: 8, m2: 10500 }],
+  /* v53: Weiden für Kühe, Schafe und Rinder wachsen weiter – voll belegt gibt es so noch 5 Sterne */
+  cows:  [{ w: 6, d: 5, m2: 3000 }, { w: 7, d: 6, m2: 5000 }, { w: 8, d: 7, m2: 7500 },  { w: 9, d: 8, m2: 10500 }, { w: 10, d: 9, m2: 14000 }, { w: 11, d: 10, m2: 18000 }],
   pigs:  [{ w: 5, d: 4, m2: 60 },   { w: 6, d: 5, m2: 100 },  { w: 7, d: 6, m2: 150 },   { w: 8, d: 7, m2: 220 }],
-  sheep: [{ w: 5, d: 5, m2: 1200 }, { w: 6, d: 5, m2: 1800 }, { w: 7, d: 6, m2: 2600 },  { w: 8, d: 7, m2: 3600 }],
-  beef:  [{ w: 6, d: 5, m2: 6000 }, { w: 7, d: 6, m2: 9000 }, { w: 8, d: 7, m2: 12500 }, { w: 9, d: 8, m2: 16000 }]
+  sheep: [{ w: 5, d: 5, m2: 1200 }, { w: 6, d: 5, m2: 1800 }, { w: 7, d: 6, m2: 2600 },  { w: 8, d: 7, m2: 3600 }, { w: 9, d: 8, m2: 4200 }],
+  beef:  [{ w: 6, d: 5, m2: 6000 }, { w: 7, d: 6, m2: 9000 }, { w: 8, d: 7, m2: 12500 }, { w: 9, d: 8, m2: 16000 }, { w: 10, d: 9, m2: 20000 }, { w: 11, d: 10, m2: 24000 }]
 };
-const FPEN_COST = { coop: [0, 60, 150, 320], cows: [0, 200, 450, 900], pigs: [0, 120, 280, 550], sheep: [0, 150, 320, 600], beef: [0, 250, 500, 950] };
+const FPEN_COST = { coop: [0, 60, 150, 320], cows: [0, 200, 450, 900, 1500, 2200], pigs: [0, 120, 280, 550], sheep: [0, 150, 320, 600, 950], beef: [0, 250, 500, 950, 1500, 2300] };
 /* Namen rund um den Stall: Gebäude, Fläche, Symbol, Wert beim Hofverkauf */
 const FPEN_META = {
   coop:  { n: "Hühnerstall",    i: "🛖", area: "Auslauf", val: 1500 },

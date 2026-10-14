@@ -446,6 +446,9 @@ body.tut-on #toasts{bottom:auto;top:calc(var(--head-h) + 10px)}
 .toast.warn{background:#ffe9c4}
 .toast.bad{background:#ffdde3}
 .toast.out{opacity:0;transform:translateY(-10px)}
+/* antippbare Meldung: führt hin (z. B. zum Döring-Wagen) */
+.toast.go{pointer-events:auto;cursor:pointer}
+.toast.go::after{content:" ›";font-weight:900;opacity:.6}
 @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* ===================== Charaktererstellung & Gründung ================ */
@@ -2844,3 +2847,62 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fpv-buy .btn small{font-size:11px;opacity:.85}
 .fen.sun{background:linear-gradient(180deg,#fff8d6,#ffeaa0)}
 .fen.sun em{background:linear-gradient(90deg,#ffd23f,#f2a531)!important}
+/* v53: Team – Orten und Fortbildung */
+.fst-btns{flex:none;display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.fst-btns .btn{white-space:nowrap}
+.fstaff .fst-train{display:inline-block;margin-top:4px;text-align:left;padding:3px 8px}
+.fstaff .fst-train small{opacity:.7}
+.fstaff .fst-tr{color:#5a4a8a;font-weight:700;opacity:.85}
+.fstaff .fst-tr.away{color:#8a3a9a}
+/* v53: Fällen – verlorene Menge, mühsames Werkzeug */
+.frew-l{font-size:11px;font-weight:800;color:#b0402a;margin-top:3px}
+.ftool.hard{opacity:.86;border-style:dashed}
+.ftool.hard small{color:#a0522d}
+/* v53: rechts nur noch Laden und Lager – gleich groß, sauber übereinander */
+#farmSide{gap:12px}
+#farmSide .fbtn{width:66px;height:66px}
+#farmSide #fbShop{width:72px;height:72px}
+#farmSide .fbtn i{font-size:28px}
+#farmSide .fbtn span{font-size:10.5px}
+#farmSide .fbtn[hidden]{display:none}
+/* v53: Bestelltafeln */
+.fo-tabs{display:flex;gap:6px;margin:0 0 8px;overflow-x:auto}
+.fo-tabs button{flex:1;min-width:0;border:2.5px solid var(--ink);border-radius:12px;background:#fff;font:800 12px var(--font);padding:6px 4px;cursor:pointer;white-space:nowrap}
+.fo-tabs button.on{background:#ffd76a;box-shadow:2px 2px 0 var(--ink)}
+.fo-tabs b{display:inline-block;min-width:16px;padding:0 4px;border-radius:99px;background:var(--ink);color:#fff;font-size:10px}
+.fo-tabs b.ok{background:var(--green)}
+.fo-sec{font-weight:800;font-size:13px;margin:10px 2px 6px}
+.fo-sec small{display:block;font-weight:700;font-size:10.5px;opacity:.65}
+.fo-tag{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:800;background:#fff3c4;border:2px solid var(--ink);border-radius:8px;padding:0 6px}
+.fo-tag.acc{background:#dff7e4}
+.fo-tag.abo{background:#e6e0ff}
+.fo.acc{border-color:#2f7a3a}
+.fo.abo{background:#f6f3ff}
+.fo.abo.on{background:#efeaff}
+.fo-mline{margin-top:4px}
+.fo-miss img.ii{width:18px;height:18px;vertical-align:-4px}
+.fo-hint{font-size:11px;font-weight:700;opacity:.65}
+.fo-b .btn.acc{background:#bff0c6}
+.fo-b{flex-wrap:wrap}
+.fo .fo-it .fo-x{margin-left:6px}
+.fpl-b.zone{background:#ffe9b0;font-size:19px}
+/* v53: kein Kopieren-Menü, keine Bildvorschau, keine Lupe beim langen Drücken */
+*{-webkit-touch-callout:none}
+img{-webkit-user-drag:none;-webkit-user-select:none;user-select:none}
+.ic.th img,img.ii,.fst-p img,.fchip img{pointer-events:none}
+input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+#farmCv{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* v53: Name einer Ware beim Antippen */
+#itemTip{position:fixed;z-index:9999;pointer-events:none;background:var(--ink);color:#fff;border-radius:10px;padding:4px 9px;font-size:12px;font-weight:800;
+  opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s;max-width:70vw;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+#itemTip small{display:block;font-size:10px;font-weight:700;opacity:.75}
+#itemTip.on{opacity:1;transform:none}
+#itemTip::after{content:"";position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:var(--ink)}
+[data-it]{cursor:help}
+/* v53: Warteschlange abbrechen */
+.fq-x{position:absolute;top:2px;right:2px;z-index:3;width:19px;height:19px;border-radius:50%;border:2px solid var(--ink);background:#ffd0d6;
+  font-size:11px;font-weight:900;line-height:1;padding:0;cursor:pointer;display:grid;place-items:center;box-shadow:1px 1px 0 var(--ink)}
+.fq-all{flex-basis:100%;margin-top:2px;border:2px dashed var(--ink);border-radius:10px;background:#fff6f0;font:800 11.5px var(--font);padding:4px 8px;cursor:pointer;color:#a0302a}
+/* v53: Fische als 3D-Bildchen im Fangbuch */
+.uf-row .ic.th{display:grid;place-items:center;height:32px}
+.uf-row .ic.th img{width:32px;height:32px;object-fit:contain;border-radius:0;object-position:50% 50%}

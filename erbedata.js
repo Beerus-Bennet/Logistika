@@ -35,7 +35,6 @@ Object.assign(FITEMS, {
   tueren:    { n: "Holztüren",     sg: "Holztür",      i: "🚪", k: "wood",  a: 1,  u: "",       pk: "Stück",   v: 140, kg: 28,  xp: 22, st: "holz" },
   zaun:      { n: "Zaunelemente",  sg: "Zaunelement",  i: "🚧", k: "wood",  a: 2,  u: "",       pk: "Paar",    v: 60,  kg: 30,  xp: 10, st: "holz" },
   schatulle: { n: "Edelholz-Schatullen", sg: "Edelholz-Schatulle", i: "🗝️", k: "wood", a: 1, u: "", pk: "Stück", v: 95, kg: 1.2, xp: 24, st: "holz" },
-  pilze:     { n: "Waldpilze",     i: "🍄", k: "wild",  a: 0.5, u: "kg",    pk: "Korb",    v: 9,   kg: 0.6, xp: 4,  st: "barn" },
   /* Strom fürs Sägewerk: landet nicht im Lager, sondern im Kessel */
   strom:     { n: "Strom",         i: "⚡", k: "energy", a: 10, u: "kWh",   pk: "Ladung",  v: 0,   kg: 0,   xp: 1,  st: null, energy: 10 }
 });
@@ -92,7 +91,7 @@ const FSAW_FUEL = [0, 3, 5];          /* Sprit je Baum (€) */
 const FSTA = { max: 100, regen: 0.25 };   /* je Spielminute */
 const FFOOD = {
   apfel: 6, birne: 7, brot: 15, fladen: 12, muffins: 25, apfelkuchen: 35, kirschtorte: 45, pizza: 40,
-  bratwurst: 25, schinken: 30, gulasch: 40, kaese: 20, pudding: 15, pilze: 10,
+  bratwurst: 25, schinken: 30, gulasch: 40, kaese: 20, pudding: 15,
   fischbroetchen: 30, raeucherforelle: 25, hechtkloesse: 30, karpfenblau: 35
 };
 
@@ -150,7 +149,8 @@ Object.assign(FSIZE, {
   sw_halle: [10, 6], sw_lager: [6, 4], sw_buero: [3, 3], sw_lkw: [3, 5], kessel: [3, 3],
   spalter: [2, 2], hobel: [3, 2], trocken: [4, 3], verpack: [3, 2], schleif: [3, 2], fraese: [3, 2]
 });
-["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel", "spalter", "hobel", "trocken", "verpack", "schleif", "fraese", "stall"].forEach(t => FFIXED.add(t));
+/* v53: Sägewerksgebäude und Maschinen lassen sich verschieben (im Sägewerk bzw. zwischen Hof und Sägewerk),
+   der Verkaufsstand an der Straße entlang – fest bleiben Wohnhaus und Fischerei */
 
 /* ------------------------------- Gebiete --------------------------------
    locks: Rechtecke [x0, z0, x1, z1], die grau sind, solange das Gebiet zu
@@ -289,7 +289,7 @@ const FSTAFF_ROLES = {
   fahrer:      { g: "hof",  n: "Fahrer/in",      i: "🚚", lv: 8,  gap: 30, work: 3,  job: "schickt fertige Bestellungen los – und es gibt mehr Liefergeld",    wage: [26, 42] },
   holzfaeller: { g: "holz", n: "Holzfäller/in",  i: "🪓", lv: 10, gap: 70, work: 14, job: "fällt ausgewachsene Bäume im Wald – auch du bekommst mehr Holz",   wage: [30, 48] },
   saeger:      { g: "holz", n: "Sägewerker/in",  i: "🪚", lv: 10, gap: 18, work: 4,  job: "hält Säge, Sägebock und Maschinen am Laufen und heizt den Kessel", wage: [32, 50] },
-  mechaniker:  { g: "holz", n: "Mechaniker/in",  i: "🔧", lv: 10, gap: 0,  work: 0,  job: "Reparaturen und Strom günstiger, nichts klemmt mehr",              wage: [34, 52] },
+  mechaniker:  { g: "holz", n: "Mechaniker/in",  i: "🔧", lv: 10, gap: 20, work: 4,  job: "Reparaturen und Strom günstiger, nichts klemmt mehr – nachts heizt er den Kessel für Strom", wage: [34, 52] },
   fischer:     { g: "see",  n: "Fischer/in",     i: "🎣", lv: 16, gap: 35, work: 8,  job: "angelt vom Steg, leert und beködert die Reusen",                   wage: [30, 48] },
   fischwirt:   { g: "see",  n: "Fischwirt/in",   i: "🐟", lv: 16, gap: 18, work: 4,  job: "filetiert, räuchert, kühlt und packt in den Fischerei-Häusern",     wage: [30, 48] }
 };
@@ -313,7 +313,6 @@ const FEVENTS = {
   hirsch:    { n: "Ein weißer Hirsch",      i: "🦌", area: "wald",  w: 5,  dur: 90, win: [5, 21] },
   defekt:    { n: "Maschine klemmt",        i: "⚠️", area: "saege", w: 6,  dur: 99999, need: () => sawRepaired() },
   lieferung: { n: "Besondere Lieferung",    i: "📦", area: null,   w: 6,  dur: 900 },
-  pilze:     { n: "Wildschweine im Wald",   i: "🍄", area: "wald",  w: 8,  dur: 1200 },
   reh:       { n: "Ein Reh auf dem Weg",    i: "🦌", area: null,   w: 6,  dur: 120, win: [5, 19] }
 };
 

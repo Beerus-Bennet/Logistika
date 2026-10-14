@@ -141,6 +141,17 @@ function erbeInit(F, fresh) {
   F.clover = F.clover != null ? F.clover : 5;
   F.cos = F.cos || { own: {}, on: {} };
   F.stall = F.stall || { slots: [], coins: 0 };
+  /* v53: Heuballen vom Weg, Scheune Rand an Rand ans Wohnhaus */
+  if (!F.v53) {
+    F.v53 = 1;
+    F.objs = F.objs.filter(o => !(o.t === "deco" && o.k === "hayBale" && o.x === 15 && o.z === 9));
+    const h = F.objs.find(o => o.t === "house"), b = F.objs.find(o => o.t === "barn");
+    if (h && b && b.x === h.x + 6 && b.z === h.z && !b.r && !h.r && !F.objs.some(o => o !== b && o !== h && o.x <= h.x + 5 && o.x + farmSize(o)[0] > h.x + 5 && o.z < b.z + 4 && o.z + farmSize(o)[1] > b.z)) b.x = h.x + 5;
+  }
+  /* v53: Wildschweine mit Pilzen gibt es nicht mehr – Ereignis, Pilze im Lager und am Stand verschwinden */
+  if (F.ev && F.ev.cur && F.ev.cur.k === "pilze") F.ev.cur = null;
+  if (F.inv && F.inv.pilze) delete F.inv.pilze;
+  if (F.stall.slots) F.stall.slots = F.stall.slots.map(x => x && x.id === "pilze" ? null : x);
   F.mstall = F.mstall || { slots: [], coins: 0 };
   F.wx = F.wx || { k: "sonne", until: S.time + 60 };
   F.wild = F.wild || [];
@@ -164,10 +175,13 @@ function erbeInit(F, fresh) {
         q: FMACHINES[d.t] ? [] : undefined, done: FMACHINES[d.t] ? [] : undefined, slots: FMACHINES[d.t] ? 2 : undefined, lvl: 1 });
     });
   }
-  /* Verkaufsstand am Tor */
+  /* Verkaufsstand an der Straße (v53: nicht mehr im Hof) */
   if (!F.objs.some(o => o.t === "stall")) {
-    const p = farmFits(23, 27, 2, 1, null, "stall") ? [23, 27] : farmFreeSpot(2, 1, 24, 26, "stall");
+    const p = farmZoneSpot("road", 2, 1, 27, 32.5, "stall");
     if (p) farmAddObj({ t: "stall", x: p[0], z: p[1], r: 0 });
+  } else {
+    const st = F.objs.find(o => o.t === "stall");
+    if (farmZoneAt(st.x, st.z, ...farmSize(st)) !== "road") { const p = farmZoneSpot("road", ...farmSize(st), 27, 32.5, "stall", null, st.id); if (p) { st.x = p[0]; st.z = p[1]; } }
   }
   if (fresh) erbeJunk(F);
   /* Lehmanns Ufer aus dem Testbuild gehört jetzt zum See; mit Steg gibt es die Angel */
@@ -258,7 +272,27 @@ function treeTools(t) {
   const need = treeNeeds(t), T = S.farm.tools, out = [];
   if (!need.saw && (T.axe || 1) >= (need.axe || 1)) out.push("axe");
   if ((T.saw || 0) >= (need.saw || 1)) out.push("saw");
+  /* v53: jeder Baum lässt sich fällen – ohne passendes Werkzeug eben mühsam mit der Axt */
+  if (!out.length) out.push("axe");
   return out;
+}
+/* passt das Werkzeug eigentlich nicht? Dann braucht die Axt deutlich mehr Schläge */
+function treeHard(t, tool) {
+  const need = treeNeeds(t), T = S.farm.tools;
+  if (tool === "saw") return false;
+  return !!need.saw || (T.axe || 1) < (need.axe || 1);
+}
+/* Setzling roden: ein Bündel Äste, dann treibt der Stumpf wieder aus */
+function farmFellSapling(t) {
+  if (!t || t.st !== "sapling") return null;
+  if (farmRoom("aeste") < 1) { farmFull("holz"); return null; }
+  if (!farmStaUse(2)) return "tired";
+  farmAdd("aeste", 1, 3);
+  farmXP(2);
+  t.st = "stump"; t.dmg = 0; t.sz = 0;
+  t.t = S.time + FREGROW.stump * FSPECIES[t.sp].regrow;
+  farmEvent("fell:sapling");
+  return { id: "aeste", n: 1, xp: 2 };
 }
 function treeTool(t) {
   const l = treeTools(t), pref = S.farm.toolPref;
@@ -312,10 +346,12 @@ function farmFell(t, res) {
   if (staffPerk("holzfaeller") && Math.random() < staffPerk("holzfaeller") * 3) { logs++; crew = true; }
   let aeste = H.aeste, reste = H.reste;
   let q = clamp(2 + acc * 3 + (saw && res.dirOk ? 0.3 : 0) - (saw && res.hung ? 0.8 : 0), 1, 5);
-  const got = [];
+  const got = [], lost = [];
+  /* was nicht mehr in den Holzplatz passt, wird ehrlich als „liegen gelassen“ gemeldet */
   const give = (id, n, qq) => {
     const room = farmRoom(id), k = Math.min(n, room);
     if (k > 0) { farmAdd(id, k, qq); got.push({ id, n: k, q: qq, xp: FITEMS[id].xp * k }); }
+    if (k < n) lost.push({ id, n: n - k });
     return k;
   };
   /* Uralte Eichen: manchmal steckt Edelholz drin */
@@ -336,7 +372,7 @@ function farmFell(t, res) {
   if (t.sz >= 3) farmEvent("fell:big");
   if (t.sz >= 4) farmEvent("fell:uralt");
   if (saw) farmEvent("fell:saw");
-  return { got, xp, q, logs, perfect, crew, haul: H };
+  return { got, lost, xp, q, logs, perfect, crew, haul: H };
 }
 /* Windwurf nach dem Sturm: liegender Stamm, Holz ohne Fällen */
 function farmTakeFallen(t) {
@@ -433,6 +469,8 @@ function farmEnCap() { return FENERGY_CAP[S.farm.enLv || 0]; }
 function pvS() { const F = S.farm; if (!F) return null; return F.pv || (F.pv = { n: 0, visit: null, next: 0 }); }
 function pvN() { const P = S.farm && S.farm.pv; return P ? P.n || 0 : 0; }
 function pvFull() { return pvN() >= FPV.max; }
+/* v53: Sonnenstrom gibt es nur bei Tag – nachts muss der Kessel ran (das übernimmt der Mechaniker) */
+function pvSun() { return pvFull() && farmTod() !== "nacht"; }
 function pvVisit() { const P = S.farm && S.farm.pv, v = P && P.visit; return v && S.time < v.until ? v : null; }
 /* kommt, sobald das Sägewerk ein heiles Dach hat und Level 15 erreicht ist */
 function pvCanCome() { const F = S.farm; return flv() >= FPV.lv && farmAreaOpen("saege") && !!(F.saw && F.saw.dach) && !pvFull(); }
@@ -442,7 +480,7 @@ function pvTick() {
   /* Sonnenstrom: tagsüber je Modul ein paar kWh, mit vollem Dach immer genug */
   const t0 = P.t == null ? S.time : P.t;
   P.t = S.time;
-  if (pvFull()) F.en = farmEnCap();
+  if (pvSun()) F.en = farmEnCap();
   else if (P.n && S.time > t0 && farmTod() !== "nacht") F.en = Math.min(farmEnCap(), (F.en || 0) + P.n * FPV.kwh * (S.time - t0) / 60);
   /* Besuch: 48 Stunden, danach eine Woche Pause */
   if (P.visit && S.time >= P.visit.until) {
@@ -452,8 +490,8 @@ function pvTick() {
   }
   if (!P.visit && !(F.tut && !F.tut.done) && pvCanCome() && Math.floor(S.time / 1440) >= (P.next || 0)) {
     P.visit = { t0: S.time, until: S.time + FPV.stay };
-    if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "info", title: "Solarstrom fürs Sägewerk",
-      body: "Moin! Wir stehen 48 Stunden mit dem Montagewagen am Sägewerk. Pro Modul " + FPV.price + " € – mit vollem Hallendach laufen Kessel und Säge von allein. Gruß, " + FPV.who });
+    if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "info", title: "Solarstrom fürs Sägewerk", go: "pv", goLabel: "Zum Montagewagen",
+      body: "Moin! Wir stehen 48 Stunden mit dem Montagewagen am Sägewerk. Pro Modul " + FPV.price + " € – tagsüber laufen Kessel und Säge mit Sonnenstrom, nachts hilft der Kessel. Gruß, " + FPV.who });
     if (typeof farmPvView === "function") farmPvView("start");
   }
 }
@@ -491,7 +529,10 @@ function farmBuySawMachine(it) {
   for (const id in (it.need || {})) farmTake(id, it.need[id]);
   logMoney("farm", it.n + " gekauft", -price);
   const p = FSAW.pads[t], [w, d] = FSIZE[t];
-  const o = farmAddObj({ t, x: Math.round(p[0] - w / 2 + FG / 2), z: Math.round(p[1] - d / 2 + FG / 2), r: 0, area: "saege", q: [], done: [], slots: 2 });
+  let x = Math.round(p[0] - w / 2 + FG / 2), z = Math.round(p[1] - d / 2 + FG / 2);
+  /* v53: steht da schon etwas (verschoben), dann daneben */
+  if (!farmFits(x, z, w, d, null, t)) { const q = farmZoneSpot("yard", w, d, x + w / 2, z + d / 2, t); if (q) [x, z] = q; }
+  const o = farmAddObj({ t, x, z, r: 0, area: "saege", q: [], done: [], slots: 2 });
   farmXP(30);
   farmEvent("build:" + t);
   return o;
@@ -513,6 +554,17 @@ function farmSawUpgrade(id) {
   return true;
 }
 function farmObj1(t) { return S.farm.objs.find(o => o.t === t) || null; }
+/* v53: Bestelltafeln am Sägewerk (am Tor im Hof) und an der Fischerei (am Uferweg) */
+const FBOARDS = { saege: { x: -33, z: -22 }, see: { x: 6, z: 20 } };
+function farmBoardsCheck() {
+  const F = S.farm;
+  if (!F || !F.areas || (typeof FSITE !== "undefined" && FSITE.kind !== "hof")) return;
+  for (const a in FBOARDS) {
+    if (!farmAreaOpen(a) || F.objs.some(o => o.t === "board" && o.k === a)) continue;
+    farmAddObj({ t: "board", k: a, area: a, x: FBOARDS[a].x + FG / 2, z: FBOARDS[a].z + FG / 2, r: 0, fix: a === "see" || undefined });
+    if (typeof FV !== "undefined" && FV.on && typeof farmSyncScene === "function") try { farmSyncScene(); } catch (e) { /* egal */ }
+  }
+}
 
 /* ------------------------------- Fischerei ------------------------------- */
 function erbeFishPlots() {
@@ -1016,13 +1068,6 @@ function farmEvStart(k) {
     const q = pick(cl);
     c.data.x = q[0] + (Math.random() - 0.5) * 3; c.data.z = q[1] + (Math.random() - 0.5) * 3;
   }
-  if (k === "pilze") {
-    c.data.spots = [];
-    for (let i = 0; i < 5; i++) {
-      const t = pick(F.trees.filter(t => t.area === "wald"));
-      if (t) c.data.spots.push({ x: t.x + 1.3 * Math.cos(i * 2), z: t.z + 1.3 * Math.sin(i * 2), done: false });
-    }
-  }
   if (k === "reh") {
     const onForest = farmAreaOpen("wald") && Math.random() < 0.6;
     const p = onForest ? pick(FWORLD.paths)[1] : [18 + Math.random() * 8, -14 + Math.random() * 6];
@@ -1126,18 +1171,6 @@ function farmEvReward(kind) {
     r = { item: g && g[0], n: g && g[1], clover: 1, xp: 10 }; c.until = S.time + 1;
   }
   return r;
-}
-function farmMushroom(i) {
-  const c = S.farm.ev.cur;
-  if (!c || c.k !== "pilze") return null;
-  const s = c.data.spots[i];
-  if (!s || s.done) return null;
-  if (farmRoom("pilze") < 1) { farmFull("barn"); return null; }
-  s.done = true;
-  farmAdd("pilze", 1, 4);
-  farmXP(3);
-  if (c.data.spots.every(x => x.done)) c.until = S.time + 1;
-  return { id: "pilze", n: 1, xp: 3 };
 }
 
 /* ------------------------------ Schatzkisten -----------------------------

@@ -65,7 +65,7 @@ function staffFire(id) { const F = S.farm; F.staff = F.staff.filter(s => s.id !=
 function staffPerk(role) {
   if (!S.farm || !S.farm.staff) return 0;
   let p = 0;
-  S.farm.staff.forEach(s => { if (s.role === role) p = Math.max(p, (s.perk / 100) * (s.fed === false ? 0.5 : 1)); });
+  S.farm.staff.forEach(s => { if (s.role === role && !s.away) p = Math.max(p, (s.perk / 100) * (s.fed === false ? 0.5 : 1)); });
   return p;
 }
 /* Einmal am Tag: Lohn und Verpflegung */
@@ -84,17 +84,233 @@ function staffDaily() {
   if (hungry) toast("👷 " + hungry + " Mitarbeiter ohne Brotzeit – heute nur halb so fleißig.", "warn");
 }
 
+/* ------------------------------ Fortbildung ---------------------------------
+   Kostet etwas, die Kraft ist einen Tag weg vom Hof und kommt mit +2 % zurück.
+   Je Kraft höchstens alle zwei Wochen. */
+const STAFF_TRAIN = { away: 1440, every: 20160, plus: 2, cap: 40 };
+function staffTrainCost(s) { return Math.round((150 + s.wage * 3) / 10) * 10; }
+function staffTrainWait(s) { return Math.max(0, (s.trainT != null ? s.trainT : -1e9) + STAFF_TRAIN.every - S.time); }
+function staffTrainOk(s) { return !s.away && !s.ride && staffTrainWait(s) <= 0 && (s.perk || 0) < STAFF_TRAIN.cap && S.money >= staffTrainCost(s); }
+function staffTrain(id) {
+  const s = (S.farm.staff || []).find(x => x.id === id);
+  if (!s || !staffTrainOk(s)) return false;
+  const c = staffTrainCost(s);
+  S.money -= c; S.expense += c;
+  logMoney("farm", "Fortbildung " + s.name, -c);
+  s.away = { t0: S.time, until: S.time + STAFF_TRAIN.away };
+  s.trainT = S.time; s.job = null;
+  s.doing = "auf Fortbildung";
+  return true;
+}
+/* zurück? Dann kommt sie/er von der Straße zu Fuß auf den Hof */
+function staffAwayTick(s, i) {
+  if (S.time < s.away.until) { s.doing = "auf Fortbildung – zurück in " + (typeof fdur === "function" ? fdur(s.away.until - S.time) : Math.ceil((s.away.until - S.time) / 60) + " Std."); return false; }
+  s.away = null;
+  s.perk = Math.min(STAFF_TRAIN.cap, (s.perk || 0) + STAFF_TRAIN.plus);
+  s.px = 5; s.pz = 18.6; s.jobEnd = S.time - 9; s.work = -1e9;
+  if (typeof toast === "function") toast("🎓 " + s.name + " ist zurück von der Fortbildung – jetzt +" + s.perk + " %.", "ok");
+  return true;
+}
+/* ------------------------- Fahrerin im Wagen -------------------------------
+   Sie geht zum Fahrzeug, steigt ein und fährt die Lieferung selbst. Ist die
+   Fahrt durch, kommt sie zu Fuß von der Straße zurück. */
+function staffRideVeh(s) { return s.ride ? S.fleet.find(f => f.uid === s.ride.uid) : null; }
+function staffRideGone(s) {
+  if (!s.ride) return false;
+  if (s.ride.gone) return true;
+  const f = staffRideVeh(s);
+  return !f || f.at !== FARM_NODE || !(f.phase === "reserved" || f.phase === "load" || f.phase === "idle");
+}
+function staffRideTick(s, i) {
+  const f = staffRideVeh(s), el = S.time - s.ride.t0, gone = staffRideGone(s);
+  const back = el > 480 || !f || (el > 3 && f.phase === "idle" && (!f.jobId || f.at !== FARM_NODE) && (gone || f.at === FARM_NODE));
+  if (!back) { s.doing = gone ? "fährt die Lieferung" + (s.ride.to && N[s.ride.to] ? " nach " + N[s.ride.to].short : "") : "lädt mit ein und steigt gleich ein"; return false; }
+  const was = gone;
+  s.ride = null;
+  if (was) { s.px = 5; s.pz = 18.6; s.jobEnd = S.time - 9; }
+  s.work = -1e9;
+  return true;
+}
+/* Platz am Fahrzeug: am Holzlaster im Sägewerk oder vorm Schuppen */
+function staffVehSpot(f) {
+  const o = f && f.type === "v-holzlaster" ? farmObj1("sw_lkw") : farmObj1("shed");
+  if (!o) return null;
+  const p = staffSpot(o, "fahrer");
+  return [p.x, p.z, p.fx, p.fz];
+}
+
 /* ----------------------------- Arbeitsorte -------------------------------- */
 const STAFF_HOME = {
-  farmer: [-0.8, -2.2], pfleger: [2.4, 4.2], hofmeister: [-5.5, 1.5], fahrer: [8.2, 12],
+  farmer: [-0.8, -2.2], pfleger: [2.4, 4.2], hofmeister: [-5.5, 1.5], fahrer: [2.3, 10.4],
   holzfaeller: [-20, -11], saeger: [-24.5, -27], mechaniker: [-26.5, -25.5],
   fischer: [-1.2, 26.2], fischwirt: [2.5, 22.2]
 };
-function staffHome(role, i) { const h = STAFF_HOME[role] || [0, 0]; return [h[0] + ((i || 0) % 2) * 0.7, h[1] + ((i || 0) % 3) * 0.5]; }
-/* Platz neben einem Objekt (zur Kamera hin, also Südosten), Blick darauf */
-function staffSpot(o) {
-  const [cx, cz] = farmCenter(o), [w, d] = farmSize(o);
-  return { x: cx + w / 2 * 0.55 + 0.45, z: cz + d / 2 + 0.55, fx: cx, fz: cz };
+/* Platz, an dem jemand ohne Arbeit steht – nie in einem Gebäude oder Zaun */
+function staffHome(role, i) {
+  const h = STAFF_HOME[role] || [0, 0], x = h[0] + ((i || 0) % 2) * 0.7, z = h[1] + ((i || 0) % 3) * 0.5;
+  if (typeof S === "undefined" || !S.farm || !S.farm.objs) return [x, z];
+  const f = navFree(x, z, role === "farmer" ? "" : role, 6);
+  return f[0] === x && f[1] === z ? [x, z] : [f[0], f[1]];
+}
+/* --------------------------------- Wege -------------------------------------
+   Laufwege der Leute: ein Raster aus 1×1-Feldern über Hof, Wald, Sägewerk und
+   Seeufer. Gebäude, Ställe, Bäume, Wasser und Zäune sind Hindernisse, Felder
+   betritt nur der Landwirt; Wege und Straße laufen sich leichter. Durch Hofzaun
+   und Sägewerkszaun geht es nur an den Toren. Gesucht wird mit A*. */
+const NAV = { x0: -100, z0: -110, x1: 48, z1: 36, key: "", blk: null, cost: null, W: 0, H: 0 };
+function navKey() {
+  const F = S.farm;
+  let h = (F.stage || 1) * 7 + Object.keys(F.areas || {}).length;
+  F.objs.forEach(o => { h = (h * 31 + o.x * 7 + o.z * 13 + (o.r ? 5 : 0) + o.t.length) % 1e9; });
+  (F.trees || []).forEach(t => { if (t.st === "up" || t.st === "sapling") h = (h * 17 + t.id) % 1e9; });
+  return F.objs.length + ":" + h;
+}
+function navIdx(x, z) { return (z - NAV.z0) * NAV.W + (x - NAV.x0); }
+function navIn(x, z) { return x >= NAV.x0 && z >= NAV.z0 && x < NAV.x1 && z < NAV.z1; }
+function navBuild() {
+  const key = navKey();
+  if (NAV.blk && NAV.key === key) return NAV;
+  NAV.key = key;
+  const W = NAV.W = NAV.x1 - NAV.x0, H = NAV.H = NAV.z1 - NAV.z0;
+  const blk = NAV.blk = new Uint8Array(W * H), cost = NAV.cost = new Float32Array(W * H).fill(1);
+  const P = FWORLD.pond, creeks = [FWORLD.creek].concat(typeof LAKE_CREEK !== "undefined" ? [LAKE_CREEK] : []);
+  const bridges = [[-21.8, -64.4], [52.6, 60.3]];
+  const lakePaths = [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
+  for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
+    const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
+    if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
+    if (creeks.some(c => distLine(cx, cz, c) < 1.3) && !bridges.some(b => Math.hypot(cx - b[0], cz - b[1]) < 2.4)) { blk[i] = 1; continue; }
+    /* Nachbars Felder: da läuft keiner durch */
+    if ((cx > -35 && cx < -23 && cz > -5 && cz < 3) || (cx > 35 && cx < 45 && cz > -9 && cz < 5)) { blk[i] = 1; continue; }
+    if (Math.abs(cz - 18.5) < 1.6 && cx > -60 && cx < 46) cost[i] = 0.6;                                   /* Straße */
+    if (nearPath(cx, cz) < 0.95 || lakePaths.some(l => distLine(cx, cz, l) < 0.85)) cost[i] = 0.45;     /* Waldwege, Uferweg */
+  }
+  /* Hofwege */
+  (FSITE.path || FPATH).forEach(k => { const x = (k % FG) - FG / 2, z = Math.floor(k / FG) - FG / 2; if (navIn(x, z)) cost[navIdx(x, z)] = 0.45; });
+  const R0 = typeof farmHofR === "function" ? farmHofR() : 13;
+  for (let z = R0; z < 18; z++) for (let x = 4; x < 6; x++) if (navIn(x, z)) cost[navIdx(x, z)] = 0.45;        /* Weg vom Tor zur Straße */
+  for (let x = -18; x < -R0; x++) for (let z = -8; z < -7; z++) if (navIn(x, z)) cost[navIdx(x, z)] = 0.45;     /* Westtor zum Wald */
+  /* Gebäude, Ställe, Deko … (Felder: 2 – nur der Landwirt) */
+  S.farm.objs.forEach(o => {
+    const [w, d] = farmSize(o), x0 = o.x - FG / 2, z0 = o.z - FG / 2, v = o.t === "field" ? 2 : 1;
+    for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (navIn(x0 + i, z0 + j)) blk[navIdx(x0 + i, z0 + j)] = v;
+  });
+  /* Bäume (auch Setzlinge) */
+  (S.farm.trees || []).forEach(t => { if ((t.st === "up" || t.st === "sapling") && navIn(Math.floor(t.x), Math.floor(t.z))) blk[navIdx(Math.floor(t.x), Math.floor(t.z))] = 1; });
+  return NAV;
+}
+/* Zäune: [senkrecht?, Linie, von, bis, Lücke von, Lücke bis] – durch geht es nur in der Lücke (Tor) */
+function navWalls() {
+  const F0 = typeof farmHofR === "function" ? farmHofR() : 13;
+  return [[1, -F0, -F0, F0, -8.7, -6.3], [1, F0, -F0, F0, 0, 0], [0, -F0, -F0, F0, 0, 0], [0, F0, -F0, F0, 3, 7],
+    [1, -42, -42, -18, -32, -28], [1, -16, -42, -18, 0, 0], [0, -42, -42, -16, -31, -27], [0, -18, -42, -16, -31, -27]];
+}
+/* geht der Schritt von Feld a nach b (Nachbarn, gerade) durch einen Zaun? */
+function navCross(ax, az, bx, bz, walls) {
+  if (ax !== bx) {
+    const lx = Math.max(ax, bx), c = az + 0.5;
+    return walls.some(w => w[0] === 1 && w[1] === lx && c > w[2] && c < w[3] && !(c > w[4] && c < w[5]));
+  }
+  const lz = Math.max(az, bz), c = ax + 0.5;
+  return walls.some(w => w[0] === 0 && w[1] === lz && c > w[2] && c < w[3] && !(c > w[4] && c < w[5]));
+}
+function navOk(i, role, si, ti) { const b = NAV.blk[i]; return !b || i === si || i === ti || (b === 2 && role === "farmer"); }
+/* A* vom Start zum Ziel – gibt die Wegpunkte zurück (oder null) */
+function navPath(sx, sz, tx, tz, role) {
+  navBuild();
+  const ax = Math.floor(sx), az = Math.floor(sz), bx = Math.floor(tx), bz = Math.floor(tz);
+  if (!navIn(ax, az) || !navIn(bx, bz)) return null;
+  const si = navIdx(ax, az), ti = navIdx(bx, bz), W = NAV.W, N = NAV.W * NAV.H, walls = navWalls();
+  if (si === ti) return [[sx, sz], [tx, tz]];
+  const g = new Float32Array(N).fill(1e9), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const heap = [], push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  const h = (x, z) => { const dx = Math.abs(x - bx), dz = Math.abs(z - bz); return (Math.max(dx, dz) + 0.414 * Math.min(dx, dz)) * 0.45; };
+  g[si] = 0; push(h(ax, az), si);
+  let it = 0;
+  while (heap.length && it++ < 60000) {
+    const [, i] = pop();
+    if (done[i]) continue;
+    done[i] = 1;
+    if (i === ti) break;
+    const x = (i % W) + NAV.x0, z = Math.floor(i / W) + NAV.z0;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dz) continue;
+      const nx = x + dx, nz = z + dz;
+      if (!navIn(nx, nz)) continue;
+      const j = navIdx(nx, nz);
+      if (done[j] || !navOk(j, role, si, ti)) continue;
+      if (dx && dz) {
+        /* schräg nur, wenn beide geraden Nachbarn frei sind und kein Zaun dazwischen */
+        const a = navIdx(x + dx, z), b = navIdx(x, z + dz);
+        if (!navOk(a, role, si, ti) || !navOk(b, role, si, ti)) continue;
+        if (navCross(x, z, x + dx, z, walls) || navCross(x, z, x, z + dz, walls) || navCross(x + dx, z, nx, nz, walls) || navCross(x, z + dz, nx, nz, walls)) continue;
+      } else if (navCross(x, z, nx, nz, walls)) continue;
+      const c = (dx && dz ? 1.414 : 1) * NAV.cost[j] * (NAV.blk[j] === 2 ? 2.2 : 1);
+      if (g[i] + c < g[j]) { g[j] = g[i] + c; from[j] = i; push(g[j] + h(nx, nz), j); }
+    }
+  }
+  if (from[ti] < 0) return null;
+  const cells = [];
+  for (let k = ti; k >= 0 && k !== si; k = from[k]) cells.push(k);
+  cells.reverse();
+  /* Wegpunkte: Feldmitten, gerade Stücke zusammengefasst */
+  const pts = [[sx, sz]];
+  let pdx = 99, pdz = 99, px = ax, pz = az;
+  cells.forEach((k, n) => {
+    const x = (k % W) + NAV.x0, z = Math.floor(k / W) + NAV.z0, dx = x - px, dz = z - pz;
+    if (n === cells.length - 1) { pts.push([tx, tz]); return; }
+    if (dx === pdx && dz === pdz && pts.length > 1) pts[pts.length - 1] = [x + 0.5, z + 0.5]; else pts.push([x + 0.5, z + 0.5]);
+    pdx = dx; pdz = dz; px = x; pz = z;
+  });
+  return pts;
+}
+function routeLen(r) { let l = 0; for (let i = 1; i < r.length; i++) l += Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]); return l; }
+function routeAt(r, d) {
+  for (let i = 1; i < r.length; i++) {
+    const l = Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]);
+    if (d <= l || i === r.length - 1) { const f = l ? Math.min(1, d / l) : 1; return [r[i - 1][0] + (r[i][0] - r[i - 1][0]) * f, r[i - 1][1] + (r[i][1] - r[i - 1][1]) * f, Math.atan2(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1])]; }
+    d -= l;
+  }
+  const e = r[r.length - 1]; return [e[0], e[1], 0];
+}
+/* freies Feld in der Nähe (für Startplätze und Arbeitsorte) */
+function navFree(x, z, role, maxR) {
+  navBuild();
+  const fx = Math.floor(x), fz = Math.floor(z);
+  for (let r = 0; r <= (maxR || 5); r++)
+    for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const nx = fx + dx, nz = fz + dz;
+      if (navIn(nx, nz) && navOk(navIdx(nx, nz), role, -1, -1)) return [nx + 0.5, nz + 0.5];
+    }
+  return [x, z];
+}
+/* Arbeitsplatz an einem Objekt: vorn (Süden) in der Mitte, sonst seitlich – nie im Zaun
+   oder im Gebäude; der Landwirt steht auf seinem Feld. Blick aufs Objekt. */
+function staffSpot(o, role) {
+  navBuild();
+  const [cx, cz] = farmCenter(o), [w, d] = farmSize(o), x0 = o.x - FG / 2, z0 = o.z - FG / 2;
+  if (o.t === "field" && role === "farmer") return { x: x0 + 0.5, z: z0 + d - 0.5, fx: cx, fz: cz };
+  const order = n => { const out = [], m = Math.floor((n - 1) / 2); for (let k = 0; k < n; k++) out.push(m + (k % 2 ? -Math.ceil(k / 2) : Math.ceil(k / 2))); return out.filter(v => v >= 0 && v < n); };
+  const cands = [];
+  order(w).forEach(i => cands.push([x0 + i, z0 + d]));
+  order(d).forEach(j => cands.push([x0 + w, z0 + j]));
+  order(d).forEach(j => cands.push([x0 - 1, z0 + j]));
+  order(w).forEach(i => cands.push([x0 + i, z0 - 1]));
+  const ok = cands.find(([x, z]) => navIn(x, z) && navOk(navIdx(x, z), role, -1, -1));
+  const c = ok || [x0 + Math.floor(w / 2), z0 + d];
+  return { x: c[0] + 0.5, z: c[1] + 0.5, fx: cx, fz: cz };
+}
+/* direkt vor dem Baum (Kameraseite zuerst) */
+function staffTreeSpot(t, role) {
+  navBuild();
+  const tx = Math.floor(t.x), tz = Math.floor(t.z);
+  const c = [[1, 1], [1, 0], [0, 1], [-1, 1], [1, -1], [-1, 0], [0, -1], [-1, -1]].map(([a, b]) => [tx + a, tz + b]).find(([x, z]) => navIn(x, z) && navOk(navIdx(x, z), role, -1, -1));
+  const p = c ? [c[0] + 0.5, c[1] + 0.5] : [t.x + 0.75, t.z + 0.75];
+  /* ein Stück zum Stamm hin, damit die Axt den Baum trifft */
+  const dx = t.x - p[0], dz = t.z - p[1], l = Math.hypot(dx, dz) || 1;
+  return { x: p[0] + dx / l * Math.max(0, l - 0.7), z: p[1] + dz / l * Math.max(0, l - 0.7), fx: t.x, fz: t.z };
 }
 const staffDist = (s, x, z) => Math.hypot((s.px == null ? x : s.px) - x, (s.pz == null ? z : s.pz) - z);
 function staffGap(s) { const R = FSTAFF_ROLES[s.role]; return R.gap * (1 - (s.perk || 0) / 100) * (s.fed === false ? 2 : 1); }
@@ -103,7 +319,9 @@ function staffGap(s) { const R = FSTAFF_ROLES[s.role]; return R.gap * (1 - (s.pe
 /* Wie viel soll auf Lager sein? Offene Bestellungen + Futter für die Tiere + ein Grundstock */
 function staffOrderNeed(id) {
   let need = 0;
-  farmOrders().forEach(o => { if (o.farm && !o.farm.taken && o.farm.items[id]) need += o.farm.items[id]; });
+  /* angenommene Bestellungen zählen voll, Angebote nur halb (sie können noch verfallen) */
+  farmOrders().forEach(o => { if (o.farm && !o.farm.taken && o.farm.items[id]) need += o.farm.items[id] * (o.acc ? 1 : 0.5); });
+  need = Math.ceil(need);
   return need;
 }
 /* Was ein Auftrag gerade braucht, bleibt für ihn liegen (Weizen fürs Hühnerfutter wird nicht zu Mehl) */
@@ -190,7 +408,9 @@ function staffMaker(id) {
    erledigt, und nach einer Weile ohne Fortschritt verfällt er.             */
 function staffTaskList() { const F = S.farm; return (F && (F.tasks || (F.tasks = []))) || []; }
 function staffTasksOf(role) {
-  return staffTaskList().filter(T => T.role === role).sort((a, b) => (b.prio - a.prio) || (a.t0 - b.t0));
+  /* Bestellungen: die lukrativste zuerst */
+  const pay = T => { if (!T.item.startsWith("order:")) return 0; const o = S.orders.find(x => x.id === T.item.slice(6)); return o ? o.pay : 0; };
+  return staffTaskList().filter(T => T.role === role).sort((a, b) => (b.prio - a.prio) || (pay(b) - pay(a)) || (a.t0 - b.t0));
 }
 function staffOf(role) { return (S.farm.staff || []).find(s => s.role === role) || null; }
 function staffItemName(item, n) {
@@ -300,7 +520,7 @@ function staffOptions(role) {
   } else if (role === "fischer") {
     if (typeof FGROUNDS !== "undefined") Object.keys(FGROUNDS[0].fish).forEach(add);
   } else if (role === "fahrer") {
-    farmOrders().filter(o => !o.farm.taken).forEach(o => add("order:" + o.id));
+    farmOrders().filter(o => !o.farm.taken).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay).forEach(o => add("order:" + o.id));
   }
   return out.filter(x => x.item.startsWith("order:") || x.item.startsWith("ani:") || FITEMS[x.item]);
 }
@@ -366,13 +586,23 @@ function staffPlan() {
       if (best && !staffTaskList().some(T => T.item === best.id)) staffEnsureTask({ role, item: best.id, n: best.out, from: role, fromId: s.id, note: "für " + staffMachThe(o.t) });
     });
   });
-  /* Fahrer/in: die nächste Bestellung, die noch nicht fertig ist */
+  /* Fahrer/in: nimmt die lukrativsten Angebote selbst an (höchstens drei offen) und
+     arbeitet die angenommenen von oben nach unten ab – die Kette verteilt sie weiter */
   const fa = staffOf("fahrer");
-  if (fa) {
+  if (fa && !fa.away) {
+    const accOpen = farmOrders().filter(x => x.acc && !x.farm.taken && !x.abo).length;
+    if (accOpen < 3) {
+      const o = farmOrders().filter(x => !x.acc && !x.farm.taken && farmOrderAreaOn(farmOrderArea(x)) && Object.keys(x.farm.items).every(id => farmCanMake(id) || farmInv(id) >= x.farm.items[id]))
+        .sort((a, b) => b.pay - a.pay)[0];
+      if (o && farmAcceptOrder(o, "fahrer")) {
+        if (typeof toast === "function") toast("📋 " + fa.name + " hat die Bestellung von " + o.shipper + " angenommen (" + eur(o.pay) + ").", "ok", true);
+        if (typeof renderDirty !== "undefined") renderDirty = true;
+      }
+    }
     const open = staffTasksOf("fahrer").filter(T => T.item.startsWith("order:")).length;
-    if (open < 2) {
-      const o = farmOrders().filter(x => !x.farm.taken && x.deadline > S.time + 60 && !staffTaskList().some(T => T.item === "order:" + x.id))
-        .sort((a, b) => a.deadline - b.deadline)[0];
+    if (open < 3) {
+      const o = farmOrders().filter(x => x.acc && !x.farm.taken && !staffTaskList().some(T => T.item === "order:" + x.id))
+        .sort((a, b) => b.pay - a.pay)[0];
       if (o) staffEnsureTask({ role: "fahrer", item: "order:" + o.id, n: 1, from: "order", fromId: o.id, note: o.shipper });
     }
   }
@@ -387,6 +617,12 @@ function staffCropNeed(c) {
   const growing = S.farm.objs.filter(o => o.t === "field" && o.crop === c && fieldState(o) === "grow").length;
   return growing * 2 < T.n - T.made;
 }
+/* Der Landwirt nimmt bis zu vier Felder auf einem Gang mit (die nächsten zum ersten) */
+function staffBatch(first, list, n) {
+  const [cx, cz] = farmCenter(first);
+  const d = o => { const c = farmCenter(o); return Math.hypot(c[0] - cx, c[1] - cz); };
+  return [first].concat(list.filter(o => o !== first).sort((a, b) => d(a) - d(b)).slice(0, (n || 4) - 1)).map(o => o.id);
+}
 function staffTaskJob(s, T) {
   const F = S.farm, item = T.item, name = staffItemName(item);
   T.wait = "";
@@ -394,17 +630,17 @@ function staffTaskJob(s, T) {
     case "farmer": {
       if (FCROPS[item]) {
         const fields = F.objs.filter(o => o.t === "field");
-        const ripe = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && o.crop === item && farmRoom(item) >= 3))[0];
-        if (ripe) return { k: "field", oid: ripe.id, crop: item, what: "erntet " + name };
+        const ripeL = fields.filter(o => fieldState(o) === "ripe" && o.crop === item && farmRoom(item) >= 3), ripe = staffNear(s, ripeL)[0];
+        if (ripe) return { k: "field", oid: ripe.id, oids: staffBatch(ripe, ripeL, Math.min(4, Math.max(1, Math.floor(farmRoom(item) / 3)))), crop: item, what: "erntet " + name };
         if (!farmCropOk(item)) { T.wait = name + " erst ab Level " + FCROPS[item].lv; return null; }
         if (staffCropNeed(item)) {
-          const empty = staffNear(s, fields.filter(o => fieldState(o) === "empty"))[0];
-          if (empty && S.money >= FCROPS[item].seed) return { k: "field", oid: empty.id, crop: item, what: "sät " + name };
+          const emptyL = fields.filter(o => fieldState(o) === "empty"), empty = staffNear(s, emptyL)[0];
+          if (empty && S.money >= FCROPS[item].seed) return { k: "field", oid: empty.id, oids: staffBatch(empty, emptyL), crop: item, what: "sät " + name };
           const other = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && o.crop !== item && farmRoom(o.crop) >= 3))[0];
           if (other) return { k: "field", oid: other.id, crop: item, what: "erntet " + FITEMS[other.crop].n + ", sät " + name };
         }
-        const dry = staffNear(s, fields.filter(o => o.crop === item && fieldState(o) === "grow" && !o.w))[0];
-        if (dry) return { k: "water", oid: dry.id, what: "gießt den " + name };
+        const dryL = fields.filter(o => o.crop === item && fieldState(o) === "grow" && !o.w), dry = staffNear(s, dryL)[0];
+        if (dry) return { k: "water", oid: dry.id, oids: staffBatch(dry, dryL), what: "gießt den " + name };
         const growing = fields.filter(o => o.crop === item && fieldState(o) === "grow").length;
         if (growing) T.alive = S.time;
         T.wait = growing ? name + " wächst auf " + growing + (growing > 1 ? " Feldern" : " Feld") : "kein Feld frei – das nächste bekommt " + name;
@@ -424,8 +660,10 @@ function staffTaskJob(s, T) {
     }
     case "pfleger": {
       if (item.startsWith("ani:")) {
-        const kind = item.slice(4), A = FANIMALS[kind], pen = staffNear(s, F.objs.filter(o => o.t === A.house && o.animals.length < A.max))[0];
-        if (!pen) { T.wait = F.objs.some(o => o.t === A.house) ? "der Stall ist voll" : "erst den Stall bauen"; return null; }
+        const kind = item.slice(4), A = FANIMALS[kind], pens = F.objs.filter(o => o.t === A.house && o.animals.length < A.max);
+        /* lieber in einen Stall, in dem es bei fünf Sternen bleibt */
+        const pen = staffNear(s, pens.filter(o => o.animals.length < staffPen5(o)))[0] || (T.from === "chef" ? staffNear(s, pens)[0] : null);
+        if (!pen) { T.wait = !F.objs.some(o => o.t === A.house) ? "erst den Stall bauen" : pens.length ? "mehr " + A.pl + " nur mit weniger Sternen – erst den Auslauf vergrößern" : "der Stall ist voll"; return null; }
         if (S.money < animalPrice(kind)) { T.wait = "zu wenig Geld"; return null; }
         return { k: "pen", oid: pen.id, buy: kind, what: "holt " + (A.young || A.n) };
       }
@@ -456,7 +694,7 @@ function staffTaskJob(s, T) {
       if (free <= 0) { T.wait = FMACHINES[o.t].n + " ist voll belegt"; T.alive = S.time; return null; }
       if (farmRoom(item) < r.out) { T.wait = "kein Platz im Lager"; return null; }
       if (r.cost && S.money < r.cost) { T.wait = "zu wenig Geld für Sprit"; return null; }
-      const sun = typeof pvFull === "function" && pvFull();
+      const sun = typeof pvSun === "function" && pvSun();
       if (r.en && !sun && (F.en || 0) < r.en) {
         const k = staffMachJob(s, true);
         if (k) return k;
@@ -488,7 +726,7 @@ function staffTaskJob(s, T) {
       if (!o || o.farm.taken) return null;
       if (farmOrderReady(o)) {
         const opt = farmDispatchOptions(o).find(p => p.here && !p.late) || farmDispatchOptions(o).find(p => p.here);
-        if (opt) { const b = farmObj1("board"); return { k: "send", order: o.id, oid: b ? b.id : null, what: "schickt die Lieferung an " + o.shipper + " los" }; }
+        if (opt) return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
         T.wait = "kein freies Fahrzeug am Hof"; return null;
       }
       const miss = Object.keys(o.farm.items).filter(id => farmInv(id) < o.farm.items[id]);
@@ -505,7 +743,7 @@ function staffTaskJob(s, T) {
 function staffMachJob(s, onlyPower) {
   const list = staffMachines(s.role);
   /* der Kessel zuerst, wenn der Strom knapp wird (ohne volles Solardach) */
-  if (s.role === "saeger" && !(typeof pvFull === "function" && pvFull())) {
+  if ((s.role === "saeger" || s.role === "mechaniker") && !(typeof pvSun === "function" && pvSun())) {
     const k = list.find(o => o.t === "kessel");
     if (k && (S.farm.en || 0) < farmEnCap() * 0.45 && k.q.length < machSlots(k)) {
       const r = FMACHINES.kessel.recipes.find(x => farmHasAll(x.in));
@@ -540,24 +778,35 @@ function staffCrop(o) {
 }
 function staffFarmerJob(s) {
   const F = S.farm, fields = F.objs.filter(o => o.t === "field"), trees = F.objs.filter(o => o.t === "tree");
-  const ripe = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && farmRoom(o.crop) >= 3))[0];
-  if (ripe) return { k: "field", oid: ripe.id, what: "erntet " + FITEMS[ripe.crop].n };
+  const ripeL = fields.filter(o => fieldState(o) === "ripe" && farmRoom(o.crop) >= 3), ripe = staffNear(s, ripeL)[0];
+  if (ripe) {
+    const same = ripeL.filter(o => o.crop === ripe.crop);
+    const ids = staffBatch(ripe, same, Math.min(4, Math.max(1, Math.floor(farmRoom(ripe.crop) / 3))));
+    return { k: "field", oid: ripe.id, oids: ids, what: "erntet " + FITEMS[ripe.crop].n + (ids.length > 1 ? " (" + ids.length + " Felder)" : "") };
+  }
   const fruit = staffNear(s, trees.filter(o => treeRipe(o) && farmRoom(o.kind) >= 4))[0];
   if (fruit) return { k: "pick", oid: fruit.id, what: "pflückt " + FITEMS[fruit.kind].n };
-  const empty = staffNear(s, fields.filter(o => fieldState(o) === "empty" && staffCrop(o)))[0];
-  if (empty) return { k: "field", oid: empty.id, what: "sät " + FITEMS[staffCrop(empty)].n };
-  const dry = staffNear(s, fields.filter(o => fieldState(o) === "grow" && !o.w).concat(trees.filter(o => !treeRipe(o) && !o.w)))[0];
-  if (dry) return { k: "water", oid: dry.id, what: "gießt" };
+  const emptyL = fields.filter(o => fieldState(o) === "empty" && staffCrop(o)), empty = staffNear(s, emptyL)[0];
+  if (empty) { const ids = staffBatch(empty, emptyL); return { k: "field", oid: empty.id, oids: ids, what: "sät " + FITEMS[staffCrop(empty)].n + (ids.length > 1 ? " (" + ids.length + " Felder)" : "") }; }
+  const dryL = fields.filter(o => fieldState(o) === "grow" && !o.w), dryF = staffNear(s, dryL)[0];
+  if (dryF) { const ids = staffBatch(dryF, dryL); return { k: "water", oid: dryF.id, oids: ids, what: "gießt " + (ids.length > 1 ? ids.length + " Felder" : "ein Feld") }; }
+  const dry = staffNear(s, trees.filter(o => !treeRipe(o) && !o.w))[0];
+  if (dry) return { k: "water", oid: dry.id, what: "gießt den " + FTREES[dry.kind].n };
   return null;
 }
-/* Wie viele Tiere soll ein Stall haben? Masttiere: so viele, wie mit drei Sternen
-   Platz haben (oder mehr, wenn du schon mehr hattest); sonst: so viele, wie es schon waren */
+/* Wie viele Tiere soll ein Stall haben? Nie mehr, als mit fünf Sternen Platz haben –
+   die Pflegerin achtet auf beste Haltung. Masttiere: so viele wie 5★ erlaubt;
+   sonst: so viele, wie es schon waren (höchstens bis 5★). */
+function staffPen5(o) {
+  const A = FANIMALS[penKind(o)], P = FPENS[o.t], p = P[Math.min(P.length, o.lvl || 1) - 1];
+  return Math.max(1, Math.floor(p.m2 / (A.space * 2) + 1e-9));
+}
 function staffPenTarget(o) {
   const kind = penKind(o), A = FANIMALS[kind];
   if (!A || A.fish) return 0;
-  if (!A.mast) return Math.min(A.max, o.want || 0);
-  const P = FPENS[o.t], p = P[Math.min(P.length, o.lvl || 1) - 1];
-  return Math.min(A.max, Math.max(o.want || 0, Math.max(1, Math.floor(p.m2 / (A.space * 0.9)))));
+  const five = staffPen5(o);
+  if (!A.mast) return Math.min(A.max, o.want || 0, five);
+  return Math.min(A.max, five);
 }
 function staffPflegerJob(s) {
   const pens = S.farm.objs.filter(o => FPENS[o.t] && o.animals && FANIMALS[penKind(o)] && !FANIMALS[penKind(o)].fish);
@@ -602,15 +851,30 @@ function staffFischerJob(s) {
   return null;
 }
 function staffFahrerJob(s) {
-  const o = farmOrders().find(x => !x.farm.taken && farmOrderReady(x));
+  /* fertige Bestellungen: angenommene zuerst, dann die lukrativste */
+  const ready = farmOrders().filter(x => !x.farm.taken && farmOrderReady(x)).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay);
+  let o = null, opt = null;
+  for (const x of ready) { opt = farmDispatchOptions(x).find(p => p.here && !p.late); if (opt) { o = x; break; } }
   if (!o) return null;
-  const opt = farmDispatchOptions(o).find(p => p.here && !p.late);
-  if (!opt) return null;
-  const b = farmObj1("board");
-  return { k: "send", order: o.id, oid: b ? b.id : null, what: "schickt die Lieferung an " + o.shipper + " los" };
+  farmAcceptOrder(o, "fahrer");
+  return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
+}
+/* Mechaniker/in: nachts (kein Sonnenstrom) oder wenn der Strom knapp wird, den Kessel anheizen */
+function staffMechJob(s) {
+  const k = S.farm.objs.find(o => o.t === "kessel" && o.q && machReady(o) && (!o.area || farmAreaOpen(o.area)));
+  if (!k || (typeof pvSun === "function" && pvSun())) return null;
+  machUpdate(k);
+  const night = farmTod() === "nacht";
+  /* wartet eine Maschine im Sägewerk auf Strom, heizt er auch tagsüber */
+  const wait = staffTaskList().some(T => T.wait === "wartet auf Strom");
+  if (!night && !wait && (S.farm.en || 0) > farmEnCap() * 0.3) return null;
+  if ((S.farm.en || 0) >= farmEnCap() * 0.9 || k.q.length >= machSlots(k)) return null;
+  const r = FMACHINES.kessel.recipes.find(x => farmHasAll(x.in));
+  return r ? { k: "mach", oid: k.id, rid: rkey(r), what: night ? "heizt nachts den Kessel ein" : "heizt den Kessel ein" } : null;
 }
 function staffAutoJob(s) {
   switch (s.role) {
+    case "mechaniker": return staffMechJob(s);
     case "farmer": return staffFarmerJob(s);
     case "pfleger": return staffPflegerJob(s);
     case "hofmeister": case "saeger": case "fischwirt": return staffMachJob(s);
@@ -632,26 +896,53 @@ function staffFind(s) {
 /* Ziel und Dauer: hinlaufen (5 Einheiten je Spielminute), dann arbeiten */
 function staffPlace(s, j) {
   let p = null;
-  if (j.tid != null) { const t = farmTree(j.tid); if (t) p = { x: t.x + 0.75, z: t.z + 0.75, fx: t.x, fz: t.z }; }
-  else if (j.oid != null) { const o = farmObj(j.oid); if (o) p = staffSpot(o); }
-  if (!p) { const h = staffHome(s.role); p = { x: h[0], z: h[1], fx: h[0], fz: h[1] - 1 }; }
+  if (j.k === "home") { const h = staffHome(s.role, j.i); return { x: h[0], z: h[1], fx: h[0], fz: h[1] + 1 }; }
+  if (j.at) return { x: j.at[0], z: j.at[1], fx: j.at[2], fz: j.at[3] };
+  if (j.tid != null) { const t = farmTree(j.tid); if (t) p = staffTreeSpot(t, s.role); }
+  else if (j.oid != null) { const o = farmObj(j.oid); if (o) p = staffSpot(o, s.role); }
+  if (!p) { const h = staffHome(s.role); p = { x: h[0], z: h[1], fx: h[0], fz: h[1] + 1 }; }
   return p;
 }
+/* Losgehen: Weg suchen (A*), Laufzeit nach Weglänge (5 Einheiten je Spielminute) */
+function staffGo(s, i, j) {
+  const R = FSTAFF_ROLES[s.role], h = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
+  const p = staffPlace(s, j);
+  let r = null;
+  try { r = navPath(h[0], h[1], p.x, p.z, s.role); } catch (e) { console.warn("Weg:", e); }
+  const route = (r || [[h[0], h[1]], [p.x, p.z]]).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
+  const len = routeLen(route), home = j.k === "home";
+  const walk = Math.max(home ? 0.4 : 1, len / 5);
+  /* mehrere Felder: eins nach dem anderen (etwas länger, aber ein Gang statt vier) */
+  if (j.oids && j.oids.length > 1) j.spots = j.oids.map(id => { const o = farmObj(id), q = o ? staffSpot(o, s.role) : p; return [q.x, q.z, q.fx, q.fz]; });
+  const work = home ? 0 : R.work * (j.spots ? 1 + 0.55 * (j.spots.length - 1) : 1);
+  s.job = Object.assign(j, p, { route, len, sx: h[0], sz: h[1], t0: S.time, walk, t1: S.time + walk + work });
+  if (!home) { s.jobEnd = s.job.t1; s.doing = j.what; }
+  return s.job;
+}
+/* wo ist jemand gerade auf seinem Weg? */
+function staffRoutePos(j) {
+  const el = S.time - j.t0;
+  if (!j.route) { const f = Math.min(1, Math.max(0, el / j.walk)); return [j.sx + (j.x - j.sx) * f, j.sz + (j.z - j.sz) * f, Math.atan2(j.x - j.sx, j.z - j.sz)]; }
+  return routeAt(j.route, Math.min(1, Math.max(0, el / j.walk)) * (j.len || routeLen(j.route)));
+}
+function staffAtHome(s, i) { if (s.px == null) return true; const h = staffHome(s.role, i); return Math.hypot(s.px - h[0], s.pz - h[1]) < 0.9; }
 /* Erledigen – erst jetzt passiert es wirklich (alles noch einmal prüfen) */
 function staffDo(s, j) {
   const F = S.farm, o = j.oid != null ? farmObj(j.oid) : null, got = [];
   const gain = (id, n) => { if (id && n > 0) { got.push({ id, n }); staffCredit(s.role, id, n); } };
   switch (j.k) {
     case "field":
-      if (!o) break;
-      if (fieldState(o) === "ripe" && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
-      if (fieldState(o) === "empty") {
-        const c = j.crop && farmCropOk(j.crop) && staffCropNeed(j.crop) ? j.crop : staffCrop(o);
-        if (c && S.money >= FCROPS[c].seed) farmPlant(o, c);
-      }
+      (j.oids || [j.oid]).map(farmObj).forEach(o => {
+        if (!o || o.t !== "field") return;
+        if (fieldState(o) === "ripe" && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
+        if (fieldState(o) === "empty") {
+          const c = j.crop && farmCropOk(j.crop) && staffCropNeed(j.crop) ? j.crop : staffCrop(o);
+          if (c && S.money >= FCROPS[c].seed) farmPlant(o, c);
+        }
+      });
       break;
     case "pick": if (o && treeRipe(o) && farmRoom(o.kind) >= 4) { const r = farmPick(o); if (r) gain(r.id, r.n); } break;
-    case "water": if (o) farmWater(o); break;
+    case "water": (j.oids || [j.oid]).map(farmObj).forEach(o => { if (o) farmWater(o); }); break;
     case "pen": {
       if (!o) break;
       const kind = penKind(o), A = FANIMALS[kind];
@@ -704,8 +995,14 @@ function staffDo(s, j) {
     case "send": {
       const ord = S.orders.find(x => x.id === j.order);
       if (!ord || !farmOrderReady(ord)) break;
-      const opt = farmDispatchOptions(ord).find(p => p.here && !p.late) || farmDispatchOptions(ord).find(p => p.here);
-      if (opt && farmSend(ord, opt)) { staffCredit(s.role, "order:" + ord.id, 1); farmEvent("send"); if (typeof farmSyncVehicles === "function" && typeof FV !== "undefined" && FV.on) farmSyncVehicles(false); }
+      const all = farmDispatchOptions(ord);
+      const opt = all.find(p => p.here && p.f.uid === j.veh && !p.late) || all.find(p => p.here && !p.late) || all.find(p => p.here);
+      if (opt && farmSend(ord, opt)) {
+        staffCredit(s.role, "order:" + ord.id, 1); farmEvent("send");
+        /* sie steigt selbst ein */
+        s.ride = { uid: opt.f.uid, t0: S.time, to: ord.to };
+        if (typeof farmSyncVehicles === "function" && typeof FV !== "undefined" && FV.on) farmSyncVehicles(false);
+      }
       break;
     }
   }
@@ -719,23 +1016,38 @@ function staffWork() {
   F.staff.forEach((s, i) => {
     const R = FSTAFF_ROLES[s.role];
     if (!R || !R.gap) { s.doing = R ? "hilft, wo es klemmt" : ""; return; }
+    /* auf Fortbildung: einen Tag weg, danach etwas besser */
+    if (s.away) { if (!staffAwayTick(s, i)) return; }
+    /* Fahrerin unterwegs: kommt zurück, wenn die Lieferung durch ist */
+    if (s.ride) { if (!staffRideTick(s, i)) return; }
     if (s.job) {
-      if (S.time < s.job.t1) return;
       const j = s.job;
-      s.job = null; s.work = S.time; s.px = j.x; s.pz = j.z;
+      if (S.time < j.t1) {
+        /* auf dem Heimweg darf neue Arbeit dazwischenkommen */
+        if (j.k !== "home" || S.time - (s.work || 0) < staffGap(s)) return;
+        const nj = staffFind(s);
+        s.work = S.time;
+        if (!nj) return;
+        const p = staffRoutePos(j); s.px = p[0]; s.pz = p[1];
+        staffGo(s, i, nj);
+        return;
+      }
+      s.job = null; s.px = j.x; s.pz = j.z;
+      if (j.k === "home") return;
+      s.work = S.time;
       try { staffDo(s, j); } catch (e) { console.warn("Mitarbeiter:", e); }
       return;
     }
     if (S.time - (s.work || 0) < staffGap(s)) return;
     const j = staffFind(s);
     s.work = S.time;
-    if (!j) { const T = staffTasksOf(s.role).find(x => x.wait); s.doing = T ? T.wait : staffIdleWhy(s); return; }
-    /* lange nichts getan: steht wieder an seinem Platz */
-    if (S.time - (s.jobEnd || 0) > 25) { const h = staffHome(s.role, i); s.px = h[0]; s.pz = h[1]; }
-    const p = staffPlace(s, j), walk = Math.max(1.5, staffDist(s, p.x, p.z) / 5);
-    s.job = Object.assign(j, p, { sx: s.px == null ? p.x : s.px, sz: s.pz == null ? p.z : s.pz, t0: S.time, walk, t1: S.time + walk + R.work });
-    s.jobEnd = s.job.t1;
-    s.doing = j.what;
+    if (!j) {
+      const T = staffTasksOf(s.role).find(x => x.wait); s.doing = T ? T.wait : staffIdleWhy(s);
+      /* nichts zu tun: auf dem Weg zurück an den eigenen Platz */
+      if (S.time - (s.jobEnd || 0) > 8 && !staffAtHome(s, i)) staffGo(s, i, { k: "home", i });
+      return;
+    }
+    staffGo(s, i, j);
   });
 }
 function staffIdleWhy(s) {
@@ -750,6 +1062,7 @@ function staffIdleWhy(s) {
     case "holzfaeller": return "kein ausgewachsener Baum oder Holzplatz voll";
     case "fischer": return farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen";
     case "fahrer": return "keine fertige Bestellung oder kein Fahrzeug am Hof";
+    case "mechaniker": return typeof pvSun === "function" && pvSun() ? "Sonnenstrom läuft – hilft, wo es klemmt" : "Kessel läuft – hilft, wo es klemmt";
   }
   return "wartet";
 }
@@ -772,15 +1085,15 @@ function staffTool(role) {
   const M = typeof FWM !== "undefined" ? FWM : null;
   if (!M) return null;
   switch (role) {
-    case "farmer": return { fn: () => M.tool("sickle"), s: 0.42 };
+    case "farmer": return { fn: () => M.tool("sickle"), s: 0.42, grip: true };
     case "pfleger": return { fn: () => M.item("hfutter"), s: 0.3 };
     case "hofmeister": return { fn: () => M.item("mehl"), s: 0.32 };
-    case "saeger": return { fn: () => M.tool("saw1"), s: 0.32 };
-    case "holzfaeller": return { fn: () => M.tool("axe2"), s: 0.5 };
+    case "saeger": return { fn: () => M.tool("saw1"), s: 0.32, grip: true };
+    case "holzfaeller": return { fn: () => M.tool("axe2"), s: 0.5, grip: true };
     case "fischer": return typeof FFM !== "undefined" && FFM.rod ? { fn: () => FFM.rod(), s: 0.9, rod: true } : null;
     case "fischwirt": return { fn: () => M.item("kisten"), s: 0.28 };
-    case "mechaniker": return { fn: () => { const b = new FM.MB(); b.box(0.5, 0.3, 0.26, 0xd8332b, { top: 0xb82a24 }); b.box(0.3, 0.06, 0.05, 0x2a2a30, { y: 0.32 }); return b; }, s: 0.45 };
-    case "fahrer": return { fn: () => { const b = new FM.MB(); b.box(0.36, 0.5, 0.04, 0x8a6040); b.box(0.3, 0.38, 0.045, 0xfaf6ee, { y: 0.04 }); return b; }, s: 0.5 };
+    case "mechaniker": return { fn: () => { const b = new FM.MB(); b.box(0.5, 0.3, 0.26, 0xd8332b, { top: 0xb82a24 }); b.box(0.3, 0.06, 0.05, 0x2a2a30, { y: 0.32 }); return b; }, s: 0.45, grip: true };
+    case "fahrer": return { fn: () => { const b = new FM.MB(); b.box(0.36, 0.5, 0.04, 0x8a6040); b.box(0.3, 0.38, 0.045, 0xfaf6ee, { y: 0.04 }); return b; }, s: 0.5, grip: true };
   }
   return null;
 }
@@ -793,7 +1106,22 @@ const staffKey = s => s.role + ":" + (s.look != null ? s.look % 400 : s.name);
 function staffToolAt(T) { return T.rod ? { x: 0.22, y: 0.42, z: 0.1, rx: -0.5, s: T.s } : { x: 0.26, y: 0.3, z: 0.12, s: T.s }; }
 /* … und relativ zur Schulter des beweglichen Arms (auf dem Hof) */
 const STAFF_SHOULDER = { x: 0.19, y: 0.78, z: 0 };
-function staffToolOnArm(T) { return T.rod ? { x: 0.03, y: -0.36, z: 0.1, rx: -0.5, s: T.s } : { x: 0.07, y: -0.48, z: 0.12, s: T.s }; }
+function staffToolOnArm(T) { return T.rod ? { x: 0.03, y: -0.36, z: 0.1, rx: -0.5, s: T.s } : T.grip ? { x: 0.02, y: -0.5, z: 0.02, s: T.s } : { x: 0.07, y: -0.48, z: 0.12, s: T.s }; }
+/* Werkzeug richtig in der Faust (im Arm: Arm zeigt nach unten (−y), vorn ist +z).
+   Sichel: Griff nach vorn, Klinge waagerecht zur Körpermitte; Axt: Stiel nach vorn,
+   Schneide nach unten; Säge hängt am oberen Griff, Schwert nach vorn. */
+function staffGrip(role) {
+  const M = FWM, B = () => new FM.MB();
+  const rot = (m, k, a) => B().merge(m, { [k]: a }), mv = (m, x, y, z) => B().merge(m, { x, y, z });
+  switch (role) {
+    case "farmer": { let m = rot(M.tool("sickle"), "rz", 0.5); m = mv(m, 0, 0.4, 0); return rot(m, "rx", Math.PI / 2); }
+    case "holzfaeller": { let m = rot(M.tool("axe2"), "rz", 0.55); m = mv(m, 0, -0.14, 0); m = rot(m, "rz", -Math.PI / 2); return rot(m, "ry", -Math.PI / 2); }
+    case "saeger": return mv(M.tool("saw1"), 0, -0.62, 0.1);
+    case "mechaniker": { const b = B(); b.box(0.5, 0.3, 0.26, 0xd8332b, { top: 0xb82a24 }); b.box(0.3, 0.06, 0.05, 0x2a2a30, { y: 0.32 }); return mv(b, 0, -0.38, 0); }
+    case "fahrer": { const b = B(); b.box(0.36, 0.5, 0.04, 0x8a6040); b.box(0.3, 0.38, 0.045, 0xfaf6ee, { y: 0.04 }); b.box(0.14, 0.05, 0.06, 0xb0b4b8, { y: 0.47 }); return rot(mv(b, 0, -0.04, 0), "rx", Math.PI / 2); }
+  }
+  return null;
+}
 /* Figur mit Werkzeug als ein Modell (für Bildchen) */
 function staffModel(s) {
   const b = FWM.person(staffBody(s)), T = staffTool(s.role);
@@ -819,7 +1147,7 @@ function worldSyncStaff() {
     R.nodes.push(node);
     const arm = R.addChild(node, fnode(fmesh("starm:" + body.shirt + ":" + body.skin, () => FWM.arm(body)), Object.assign({ rz: 0.08 }, STAFF_SHOULDER)));
     const T = staffTool(s.role);
-    const tool = T ? R.addChild(arm, fnode(fmesh("stool:" + s.role, T.fn), staffToolOnArm(T))) : null;
+    const tool = T ? R.addChild(arm, fnode(fmesh((T.grip ? "sgrip:" : "stool:") + s.role, T.grip ? () => staffGrip(s.role) || T.fn() : T.fn), staffToolOnArm(T))) : null;
     WV.staff.set(s.id, { node, arm, tool, ph: i, x: h[0], z: h[1], fx: 0, wave: null });
   });
 }
@@ -850,18 +1178,33 @@ function stepStaff(dt, time) {
       }
       return;
     }
-    let tx, tz, work = false, face = null;
+    /* unterwegs mit dem Wagen oder auf Fortbildung: nicht auf dem Hof */
+    const off = !!s.away || (s.ride && staffRideGone(s));
+    n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off;
+    if (off) return;
+    let tx, tz, work = false, face = null, onRoute = false, rh = null;
     if (j) {
       const el = S.time - j.t0;
-      if (el < j.walk) { const f = Math.max(0, el / j.walk); tx = j.sx + (j.x - j.sx) * f; tz = j.sz + (j.z - j.sz) * f; }
-      else { tx = j.x; tz = j.z; work = true; face = Math.atan2(j.fx - j.x, j.fz - j.z); }
-    } else if (S.time - (s.jobEnd || 0) > 8) { const h = staffHome(s.role, i); tx = h[0]; tz = h[1]; }
-    else { tx = s.px != null ? s.px : e.x; tz = s.pz != null ? s.pz : e.z; }
+      if (el < j.walk) { const p = staffRoutePos(j); tx = p[0]; tz = p[1]; rh = p[2]; onRoute = true; }
+      else if (j.spots) {
+        /* von Feld zu Feld */
+        const per = (j.t1 - j.t0 - j.walk) / j.spots.length, q = j.spots[Math.min(j.spots.length - 1, Math.floor((el - j.walk) / per))];
+        tx = q[0]; tz = q[1]; work = true; face = Math.atan2(q[2] - q[0], q[3] - q[1]);
+      }
+      else { tx = j.x; tz = j.z; work = j.k !== "home"; face = Math.atan2(j.fx - j.x, j.fz - j.z); }
+    } else { tx = s.px != null ? s.px : e.x; tz = s.pz != null ? s.pz : e.z; }
     const dx = tx - e.x, dz = tz - e.z, d = Math.hypot(dx, dz), sp = 6 * dt;
-    const moving = d > 0.05;
+    let moving = d > 0.05;
     if (d > 40) { e.x = tx; e.z = tz; }
-    else if (moving) { const k = Math.min(1, sp / d); e.x += dx * k; e.z += dz * k; n.ry += angTo(n.ry, Math.atan2(dx, dz)) * Math.min(1, dt * 12); }
+    else if (onRoute && d < 2.5) {
+      /* auf dem Weg: genau der Wegspur folgen (auch bei schneller Uhr) */
+      moving = true;
+      e.x = tx; e.z = tz;
+      if (rh != null) n.ry += angTo(n.ry, rh) * Math.min(1, dt * 12);
+    }
+    else if (moving) { const k = Math.min(1, Math.max(sp, d * dt * 3) / d); e.x += dx * k; e.z += dz * k; n.ry += angTo(n.ry, Math.atan2(dx, dz)) * Math.min(1, dt * 12); }
     else if (face != null) n.ry += angTo(n.ry, face) * Math.min(1, dt * 6);
+    if (work && moving && d > 0.3) work = false;
     n.x = e.x; n.z = e.z;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     if (A) {
@@ -869,9 +1212,11 @@ function stepStaff(dt, time) {
       if (work) {
         const sw = Math.sin(time * (s.role === "holzfaeller" ? 7 : 5) + e.ph);
         if (rod) { A.rx = -0.55 + sw * 0.08; A.rz = 0.1; }
-        else if (s.role === "fahrer") { A.rx = -0.9 + sw * 0.05; A.rz = 0.15; }
-        else if (s.role === "pfleger" || s.role === "hofmeister" || s.role === "fischwirt") { A.rx = -0.35 + sw * 0.35; A.rz = 0.12; }
-        else { A.rx = -0.7 + sw * 0.75; A.rz = 0.12 + sw * 0.1; }       /* Sichel, Axt, Säge */
+        else if (s.role === "fahrer") { A.rx = -0.75 + sw * 0.05; A.rz = 0.12; }
+        else if (s.role === "pfleger" || s.role === "hofmeister" || s.role === "fischwirt" || s.role === "mechaniker") { A.rx = -0.35 + sw * 0.35; A.rz = 0.12; }
+        else if (s.role === "farmer") { A.rx = -0.7 + sw * 0.18; A.rz = 0.3 + sw * 0.28; }   /* Sichel: waagerecht durchs Korn */
+        else if (s.role === "saeger") { A.rx = -0.5 + sw * 0.1; A.rz = 0.1; }               /* Säge: ruhig halten, sie rüttelt */
+        else { A.rx = -1.0 + sw * 1.0; A.rz = 0.1; }                                        /* Axt: von oben nach vorn */
       } else if (moving) { A.rx = Math.sin(time * 11 + e.ph) * 0.5; A.rz = 0.08; }
       else { A.rx += (0 - A.rx) * Math.min(1, dt * 6); A.rz += (0.08 - A.rz) * Math.min(1, dt * 6); }
     }
@@ -945,7 +1290,7 @@ function staffPopHTML(s, P) {
   const cur = s.job && s.job.task ? staffTaskList().find(T => T.id === s.job.task) : null;
   let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(s.name)} · ${R0.i} ${esc(R0.n)}
     <small>${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}${cur ? " · für " + esc(staffWho(cur)) : s.job ? " · eigener Plan" : ""}</small></div></div>`;
-  if (!R0.gap) return h + `<div class="fst-none">Arbeitet ohne Aufträge: Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
+  if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
     : `<div class="fst-none">Kein Auftrag – arbeitet nach eigenem Plan.${s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
   if (P.add) {
@@ -1008,8 +1353,10 @@ function staffHTML() {
         return `<div class="fstaff on"><div class="fst-p">${staffIc(s)}</div><div><b>${esc(s.name)} · ${R0.i} ${esc(R0.n)}</b>
           <small>${esc(R0.job)}</small><em class="fst-do">${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}</em>
           ${ts.length ? `<small class="fst-tl">📋 ${ts.map(T => esc(staffItemName(T.item, T.n)) + " (" + esc(staffWho(T)) + ")").join(" · ")}</small>` : ""}
-          <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small></div>
-          <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div>`;
+          <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small>
+          ${staffTrainHTML(s)}</div>
+          <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${s.away || (s.ride && staffRideGone(s)) ? "disabled" : ""}>📍 Orten</button>
+          <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div></div>`;
       }
       if (!open || flv() < R0.lv) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b><small>${esc(R0.job)}</small><small>🔒 ${open ? "ab Level " + R0.lv : esc(G.lock)}</small></div></div>`;
       const c = cands.find(x => x.role === r);
@@ -1025,7 +1372,47 @@ function staffHTML() {
     ${forYou}${groups}
     <div class="fs-sub">Täglich Lohn + Brotzeit aus dem Lager – hungrig schaffen sie nur die Hälfte.</div>`;
 }
+/* Fortbildung: Knopf oder Hinweis, wann es wieder geht */
+function staffTrainHTML(s) {
+  if (s.away) return `<small class="fst-tr away">🎓 auf Fortbildung – zurück in ${esc(fdur(Math.max(1, s.away.until - S.time)))}</small>`;
+  if ((s.perk || 0) >= STAFF_TRAIN.cap) return `<small class="fst-tr">🎓 Bestform: mehr geht nicht</small>`;
+  const w = staffTrainWait(s);
+  if (w > 0) return `<small class="fst-tr">🎓 nächste Fortbildung in ${Math.ceil(w / 1440)} ${Math.ceil(w / 1440) === 1 ? "Tag" : "Tagen"}</small>`;
+  const c = staffTrainCost(s);
+  return `<button class="btn tiny ghost fst-train" data-train="${s.id}" ${S.money < c || (s.ride && staffRideGone(s)) ? "disabled" : ""}>🎓 Fortbildung · ${eur(c)}<small>1 Tag weg, danach +${STAFF_TRAIN.plus} %</small></button>`;
+}
+/* Wo steckt …? Kamera hin, Blase auf */
+function staffLocate(id) {
+  const s = (S.farm.staff || []).find(x => x.id === id);
+  if (!s) return;
+  if (typeof closeFarmSheet === "function") closeFarmSheet();
+  if (typeof showTab === "function" && !document.body.classList.contains("tab-farm")) showTab("farm");
+  setTimeout(() => {
+    if (typeof FV === "undefined" || !FV.R) return;
+    worldSyncStaff();
+    const e = WV.staff.get(id);
+    if (!e) return;
+    farmFocusXZ(e.x, e.z, Math.min(FV.R.cam.dist, 18), 700);
+    setTimeout(() => {
+      const e2 = WV.staff.get(id);
+      if (!e2) return;
+      e2.wave = wnow(); e2.wr0 = e2.node.ry;
+      closeFarmPop(); FV.sel = null;
+      FV.pop = { kind: "staff", id, add: false };
+      renderFarmPop(); popFresh();
+    }, 720);
+  }, 220);
+}
 function staffBind(again) {
+  $$("#farmSheetIn [data-loc]").forEach(b => b.onclick = () => { sfx("tap"); staffLocate(b.dataset.loc); });
+  $$("#farmSheetIn [data-train]").forEach(b => b.onclick = () => {
+    const s = S.farm.staff.find(x => x.id === b.dataset.train);
+    if (!s) return;
+    askConfirm("Fortbildung für " + s.name + "?", "Kostet " + eur(staffTrainCost(s)) + ". " + s.name + " ist einen Tag weg und kommt mit +" + STAFF_TRAIN.plus + " % zurück. Wieder möglich in zwei Wochen.", "Anmelden", () => {
+      if (staffTrain(s.id)) { sfx("coin"); save(); toast("🎓 " + s.name + " ist auf Fortbildung – morgen zurück.", "ok"); } else sfx("bad");
+      again();
+    });
+  });
   $$("#farmSheetIn [data-hire]").forEach(b => b.onclick = () => { if (staffHire(b.dataset.hire)) { sfx("build"); save(); farmSyncScene(); again(); } else sfx("bad"); });
   $$("#farmSheetIn [data-fire]").forEach(b => b.onclick = () => askConfirm("Wirklich entlassen?", "Die Stelle wird frei – neue Bewerbungen kommen jeden Tag.", "Entlassen", () => { staffFire(b.dataset.fire); save(); farmSyncScene(); again(); }));
   $$("#farmSheetIn [data-tdel]").forEach(b => b.onclick = () => { staffTaskDel(b.dataset.tdel, true); sfx("pop"); save(); again(); });

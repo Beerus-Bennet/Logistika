@@ -42,7 +42,7 @@ function farmNew() {
 }
 function farmStartHof(add, F) {
   add("house", 5, 4);
-  add("barn", 11, 4);
+  add("barn", 10, 4);                     /* v53: Scheune steht Rand an Rand am Wohnhaus */
   add("silo", 16, 5);
   add("mill", 19, 4, { q: [], done: [], slots: 2 });
   add("bakery", 5, 10, { q: [], done: [], slots: 2 });
@@ -59,7 +59,6 @@ function farmStartHof(add, F) {
   add("deco", 17, 12, { k: "scarecrow" });
   add("deco", 4, 9, { k: "flowers" });
   add("deco", 10, 9, { k: "flowers" });
-  add("deco", 15, 9, { k: "hayBale" });
   add("deco", 22, 27, { k: "mailbox" });
   add("deco", 26, 13, { k: "leafTree", arg: 1.1 });
   add("deco", 9, 21, { k: "bushes" });
@@ -117,12 +116,67 @@ function zoneOk(x, z, w, d, t, k) {
   for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (FSITE.zone(x + i, z + j) !== need) return false;
   return true;
 }
+/* ------------------------------ Bauzonen -----------------------------------
+   v53: Neben dem Hof gibt es den Sägewerkshof (innerhalb seines Zauns) und den
+   Straßenrand (nur für den Verkaufsstand). Sägewerksgebäude bleiben im
+   Sägewerk, kleinere Gebäude (Maschinen) dürfen zwischen Hof und Sägewerk
+   wechseln; Wohnhaus und Fischerei bleiben, wo sie sind. Kacheln: Welt + 16. */
+const FYARD = { x0: -25, x1: -1, z0: -25, z1: -3 };              /* Welt x −41 … −17, z −41 … −19 */
+const FROADSIDE = { x0: -14, x1: 60, z0: 32, z1: 33 };           /* Welt z 16 … 17, nördlich der Straße */
+/* vor den Toren bleibt frei (Kacheln) */
+const FYARD_KEEP = [[-15, -11, -6, -3], [-15, -11, -26, -22], [-26, -22, -16, -12],
+  /* Holzstapel und der Platz für Dörings Montagewagen */
+  [-25, -23, -10, -8], [-20, -18, -26, -24], [-4, -2, -12, -10], [-9, -7, -26, -24], [-9, -6, -12, -7]];
+const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
+function farmZones(t, k) {
+  if (t === "stall") return ["road"];
+  if (FSAW_MAIN.has(t) || (t === "board" && k === "saege")) return ["yard"];
+  if (t === "saegebock" || t === "deco" || (FMACHINES[t] && !FMACHINES[t].fish)) return ["hof", "yard"];
+  return ["hof"];
+}
+function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : { x0: FIN0, x1: FIN1, z0: FIN0, z1: FIN1 }; }
+function farmZoneAt(x, z, w, d) {
+  for (const zn of ["hof", "yard", "road"]) { const R = farmZoneRect(zn); if (x >= R.x0 && z >= R.z0 && x + w <= R.x1 && z + d <= R.z1) return zn; }
+  return null;
+}
+/* Rechteck frei? (außerhalb des Hofrasters: gegen alle Objekte prüfen) */
+function farmFreeRect(x, z, w, d, except) {
+  for (const o of S.farm.objs) {
+    if (except && o.id === except) continue;
+    const [ow, od] = farmSize(o);
+    if (x < o.x + ow && o.x < x + w && z < o.z + od && o.z < z + d) return false;
+  }
+  return true;
+}
 function farmFits(x, z, w, d, except, t, k) {
-  if (x < FIN0 || z < FIN0 || x + w > FIN1 || z + d > FIN1) return false;
+  const zn = farmZoneAt(x, z, w, d);
+  if (!zn) return false;
+  if (t && !farmZones(t, k).includes(zn)) return false;
+  if (!t && zn !== "hof") return false;
+  if (zn === "yard") {
+    if (typeof farmAreaOpen === "function" && !farmAreaOpen("saege")) return false;
+    if (FYARD_KEEP.some(([a, b, c, e]) => x < b && a < x + w && z < e && c < z + d)) return false;
+    return farmFreeRect(x, z, w, d, except);
+  }
+  if (zn === "road") {
+    if (x < 24 && x + w > 18) return false;                       /* Einfahrt zum Hof bleibt frei */
+    return farmFreeRect(x, z, w, d, except);
+  }
   if (!zoneOk(x, z, w, d, t, k)) return false;
   const g = farmOcc(except);
   for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (g[(z + j) * FG + x + i]) return false;
   return true;
+}
+/* freier Platz in einer Zone, möglichst nah an (px, pz) – Kacheln */
+function farmZoneSpot(zn, w, d, px, pz, t, k, except) {
+  const R = farmZoneRect(zn);
+  let best = null, bd = Infinity;
+  for (let z = R.z0; z + d <= R.z1; z++) for (let x = R.x0; x + w <= R.x1; x++) {
+    const dd = Math.hypot(x + w / 2 - px, z + d / 2 - pz);
+    if (dd >= bd || !farmFits(x, z, w, d, except, t, k)) continue;
+    bd = dd; best = [x, z];
+  }
+  return best;
 }
 /* freier Platz möglichst nah an (px, pz) */
 function farmFreeSpot(w, d, px, pz, t, k) {
@@ -563,7 +617,7 @@ function farmQueue(o, rid) {
   if (!farmHasAll(r.in)) return "missing";
   if (r.cost && S.money < r.cost) return "money";
   /* volles Solardach: die Säge braucht keinen Strom aus dem Kessel mehr */
-  const sun = typeof pvFull === "function" && pvFull();
+  const sun = typeof pvSun === "function" && pvSun();
   const en = r.en && !sun ? Math.max(1, Math.round(r.en * (1 - staffPerk("mechaniker")))) : 0;
   if (en && (S.farm.en || 0) < en) return "energy";
   if (en) S.farm.en -= en;
@@ -590,6 +644,23 @@ function farmQueue(o, rid) {
      der Kutter bleibt am Kai */
   if (quick && M.trips) { job.tut = 1; job.end = start; }
   o.q.push(job);
+  return true;
+}
+/* v53: Auftrag aus der Warteschlange nehmen – Zutaten kommen zurück (bei Wartenden auch
+   Sprit und Strom); die Nachfolger rücken auf */
+function farmUnqueue(o, i) {
+  machUpdate(o);
+  const job = o.q[i];
+  if (!job) return false;
+  const r = recipeOf(o, job.k);
+  if (r) {
+    for (const id in r.in) farmAdd(id, r.in[id], job.q || 3);
+    if (i > 0 && r.cost) { S.money += r.cost; S.revenue += r.cost; logMoney("farm", "Abgebrochen: " + FMACHINES[o.t].n, r.cost); }
+    if (i > 0 && r.en && !(typeof pvSun === "function" && pvSun())) S.farm.en = Math.min(farmEnCap(), (S.farm.en || 0) + Math.max(1, Math.round(r.en * (1 - staffPerk("mechaniker")))));
+  }
+  o.q.splice(i, 1);
+  let t = i === 0 ? S.time : o.q[i - 1].end;
+  for (let k = i; k < o.q.length; k++) { const d = o.q[k].end - o.q[k].start; o.q[k].start = t; o.q[k].end = t + d; t += d; }
   return true;
 }
 function farmCollectMach(o) {
@@ -752,6 +823,36 @@ function farmAddr() {
 }
 function farmOrderCap() { return Math.min(8, 3 + Math.floor(flv() / 2)); }
 function farmOrders() { return S.orders.filter(o => o.farm); }
+/* v53: jede Station hat ihre eigene Bestelltafel – Hof, Sägewerk, Fischerei */
+const FORD_AREAS = [{ id: "hof", i: "🏡", n: "Hof" }, { id: "saege", i: "🪚", n: "Sägewerk" }, { id: "see", i: "🎣", n: "Fischerei" }];
+function farmItemArea(id) { const it = FITEMS[id]; return !it ? "hof" : it.st === "fisch" ? "see" : it.st === "holz" ? "saege" : "hof"; }
+function farmOrderArea(o) {
+  if (o.area) return o.area;
+  const v = {};
+  Object.keys(o.farm.items).forEach(id => { const a = farmItemArea(id); v[a] = (v[a] || 0) + (FITEMS[id].v || 1) * o.farm.items[id]; });
+  return Object.keys(v).sort((a, b) => v[b] - v[a])[0] || "hof";
+}
+function farmOrderAreaOn(a) { return a === "hof" || (typeof farmAreaOpen === "function" && farmAreaOpen(a)); }
+/* wie viele offene Angebote je Tafel (angenommene zählen nicht mit) */
+function farmAreaCap(a) { return a === "hof" ? farmOrderCap() : Math.min(5, 2 + Math.floor(flv() / 8)); }
+function farmOffers(a) { return farmOrders().filter(o => !o.acc && (!a || farmOrderArea(o) === a)); }
+/* Annehmen: ab jetzt ohne Frist – das Angebot selbst verfällt nach einem Tag */
+const FORD_NOLIMIT = 525600;
+function farmAcceptOrder(o, by) {
+  if (!o || !o.farm || o.acc) return false;
+  o.acc = by || "chef";
+  o.accT = S.time;
+  o.expire = S.time + FORD_NOLIMIT; o.deadline = S.time + FORD_NOLIMIT;
+  return true;
+}
+/* zurückgeben: ohne Strafe, solange noch nichts unterwegs ist */
+function farmReturnOrder(o) {
+  if (!o || !o.farm || o.farm.taken || o.tutF) return false;
+  S.orders = S.orders.filter(x => x !== o);
+  if (o.abo) { const A = (S.farm.abos || []).find(x => x.id === o.abo); if (A) A.miss = (A.miss || 0) + 1; }
+  S.farm.lastOrd = S.time - 15;
+  return true;
+}
 function farmMaxKg() {
   let m = 0;
   S.fleet.forEach(f => { const t = vType(f.type); if (t && (t.mode === "b" || t.mode === "r")) m = Math.max(m, t.cap); });
@@ -777,16 +878,16 @@ function farmOrderQty(id, lv, big) {
   const lo = 1 + big;
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
-function makeFarmOrder() {
+function makeFarmOrder(area) {
   const lv = flv();
   const towns = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv <= lv && N[id] && isUnlocked(id));
   if (!towns.length) return null;
-  const busy = new Set(farmOrders().map(o => o.shipper));
-  for (let tries = 0; tries < 20; tries++) {
+  const busy = new Set(farmOrders().filter(o => !o.acc).map(o => o.shipper));
+  for (let tries = 0; tries < 30; tries++) {
     const town = farmWPick(towns, id => FTOWNS[id].w);
     const c = pick(FTOWNS[town].cust);
     if (busy.has(c[0])) continue;
-    const wants = c[1].filter(id => farmCanMake(id));
+    const wants = c[1].filter(id => FITEMS[id] && (farmCanMake(id) || farmInv(id) > 0) && (!area || farmItemArea(id) === area));
     if (!wants.length) continue;
     const lines = 1 + (lv >= 2 && Math.random() < 0.5 ? 1 : 0) + (lv >= 4 && Math.random() < 0.3 ? 1 : 0);
     const items = {};
@@ -806,7 +907,7 @@ function makeFarmOrder() {
       if (!Object.keys(items).length) break;
     }
     if (!Object.keys(items).length) continue;
-    const order = farmOrderObj(town, c[0], items);
+    const order = farmOrderObj(town, c[0], items, area ? { area } : null);
     if (order) return order;
   }
   return null;
@@ -841,13 +942,112 @@ function farmOrderObj(town, cust, items, extra) {
 function farmSpawnOrders(n) {
   if (!farmOn()) return 0;
   let added = 0;
-  while (farmOrders().length < farmOrderCap() && added < (n || 1)) {
-    const o = makeFarmOrder();
-    if (!o) break;
+  const F = S.farm, areas = FORD_AREAS.map(a => a.id).filter(farmOrderAreaOn);
+  const lim = areas.length * 3;
+  for (let k = 0; k < lim && added < (n || 1) && areas.length; k++) {
+    /* reihum: die Tafel mit den wenigsten Angeboten zuerst */
+    const a = areas.slice().sort((x, y) => farmOffers(x).length / farmAreaCap(x) - farmOffers(y).length / farmAreaCap(y))[0];
+    if (farmOffers(a).length >= farmAreaCap(a)) break;
+    const o = makeFarmOrder(a);
+    if (!o) { areas.splice(areas.indexOf(a), 1); continue; }
     S.orders.push(o); added++;
   }
+  F.ordRot = (F.ordRot || 0) + 1;
   if (added) renderDirty = true;
   return added;
+}
+
+/* ---------------------------- Daueraufträge ---------------------------------
+   Größere Firmen wollen jede Woche dasselbe: z. B. der Baumarkt 6 Paletten
+   Bretter. Fester Bonus je Lieferung, läuft, bis du kündigst. Wird eine Woche
+   nicht geliefert, bleibt die Bestellung stehen – nach drei verpassten Wochen
+   kündigt die Firma. */
+const FABO_WEEK = 10080;
+const FABO = [
+  { area: "saege", firm: "Baumarkt Werder",        town: "w-werder",  item: "bretter",  pal: 6, per: 2, bonus: 140 },
+  { area: "saege", firm: "Zimmerei Geltow",         town: "w-geltow",  item: "balken",   pal: 4, per: 2, bonus: 160 },
+  { area: "saege", firm: "Kaminstudio Werder",      town: "w-werder",  item: "brennholz", pal: 5, per: 3, bonus: 110 },
+  { area: "saege", firm: "Tischlerei Glindow",      town: "w-glindow", item: "dielen",   pal: 4, per: 2, bonus: 170 },
+  { area: "saege", firm: "Palettenwerk Potsdam",    town: "potsdam",   item: "paletten", pal: 6, per: 2, bonus: 150 },
+  { area: "hof",   firm: "Großbäckerei Potsdam",    town: "potsdam",   item: "mehl",     pal: 4, per: 3, bonus: 90 },
+  { area: "hof",   firm: "Frischemarkt Werder",     town: "w-werder",  item: "ei",       pal: 3, per: 4, bonus: 70 },
+  { area: "hof",   firm: "Hotel Havelblick",        town: "w-werder",  item: "milch",    pal: 3, per: 4, bonus: 90 },
+  { area: "hof",   firm: "Mosterei Glindow",        town: "w-glindow", item: "apfel",    pal: 4, per: 4, bonus: 80 },
+  { area: "see",   firm: "Fischrestaurant Potsdam", town: "potsdam",   item: "raeucherforelle", pal: 3, per: 3, bonus: 130 },
+  { area: "see",   firm: "Feinkost Werder",         town: "w-werder",  item: "konserve", pal: 3, per: 4, bonus: 110 },
+  { area: "see",   firm: "Kantine Geltow",          town: "w-geltow",  item: "barschfilet", pal: 3, per: 3, bonus: 100 }
+];
+function farmAboPal(A) { return A.pal + (A.item === "paletten" ? " Stapel " : " Paletten ") + FITEMS[A.item].n; }
+function farmAbos() { const F = S.farm; F.abos = F.abos || []; F.aboOff = F.aboOff || []; return F.abos; }
+/* passt die Ladung aufs größte eigene Fahrzeug? Sonst weniger Paletten */
+function farmAboFit(T) {
+  const kg = FITEMS[T.item].kg * T.per, max = farmMaxKg();
+  return Math.min(T.pal, Math.floor(max / Math.max(1, kg)));
+}
+function farmAboOk(T) {
+  return FITEMS[T.item] && N[T.town] && (typeof isUnlocked !== "function" || isUnlocked(T.town)) && farmOrderAreaOn(T.area) && (farmCanMake(T.item) || farmInv(T.item) > 0) && flv() >= 6 && farmAboFit(T) >= 2;
+}
+/* Wochenbestellung erzeugen (angenommen, ohne Frist bis zur nächsten Woche) */
+function farmAboOrder(A) {
+  const o = farmOrderObj(A.town, A.firm, { [A.item]: A.pal * A.per }, { area: A.area, abo: A.id });
+  if (!o) return null;
+  farmAcceptOrder(o, "abo");
+  o.pay = Math.round((o.pay + A.bonus) * 10) / 10;
+  o.desc = "Wochenlieferung: " + farmAboPal(A) + " (" + fqty(A.item, A.pal * A.per) + ")";
+  o.aboWeek = (A.n || 0) + (A.miss || 0) + 1;
+  S.orders.push(o);
+  return o;
+}
+function farmAboTick() {
+  const F = S.farm, abos = farmAbos();
+  /* Angebot je Station: höchstens eins offen, höchstens zwei laufende Verträge */
+  F.aboOff = F.aboOff.filter(x => x.exp > S.time && farmOrderAreaOn(x.area));
+  if (S.time - (F.aboT || -1e9) > 720) {
+    F.aboT = S.time;
+    FORD_AREAS.forEach(a => {
+      if (F.aboOff.some(x => x.area === a.id) || abos.filter(x => x.area === a.id).length >= 2) return;
+      const pool = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm));
+      if (!pool.length || Math.random() < 0.5) return;
+      const T = pick(pool);
+      F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: farmAboFit(T), exp: S.time + 2880 }));
+    });
+  }
+  /* jede Woche: neue Lieferung – oder die alte steht noch (verpasst) */
+  abos.slice().forEach(A => {
+    if (S.time < A.next) return;
+    A.next += FABO_WEEK;
+    const open = S.orders.find(o => o.abo === A.id && !o.farm.taken);
+    if (open) {
+      A.miss = (A.miss || 0) + 1;
+      if (A.miss >= 3) {
+        farmAboCancel(A.id, true);
+        toast("📅 " + A.firm + " hat den Dauerauftrag gekündigt – drei Wochen nichts geliefert.", "bad");
+      } else toast("📅 " + A.firm + ": Die Lieferung dieser Woche fehlt noch (" + A.miss + "/3).", "warn");
+      return;
+    }
+    farmAboOrder(A);
+    toast("📅 " + A.firm + " bestellt die Wochenlieferung: " + farmAboPal(A) + ".", "ok", true);
+  });
+}
+function farmAboTake(id) {
+  const F = S.farm, T = (F.aboOff || []).find(x => x.id === id);
+  if (!T) return null;
+  F.aboOff = F.aboOff.filter(x => x !== T);
+  const A = Object.assign({}, T, { since: S.time, next: S.time + FABO_WEEK, n: 0, miss: 0 });
+  delete A.exp;
+  farmAbos().push(A);
+  farmAboOrder(A);
+  return A;
+}
+function farmAboCancel(id, byFirm) {
+  const F = S.farm;
+  F.abos = farmAbos().filter(x => x.id !== id);
+  S.orders = S.orders.filter(o => o.abo !== id || (o.farm && o.farm.taken));
+  if (!byFirm) F.aboOff = (F.aboOff || []).filter(x => x.id !== id);
+}
+function farmAboDelivered(o) {
+  const A = o.abo && farmAbos().find(x => x.id === o.abo);
+  if (A) { A.n = (A.n || 0) + 1; A.miss = 0; }
 }
 function farmOrderReady(o) { return o && o.farm && farmHasAll(o.farm.items); }
 function farmOrderQ(o) {
@@ -875,6 +1075,7 @@ function farmGiveBack(o) {
 function farmPayFactor(o) { return o.farm ? 1 + ((o.farm.q || 3) - 3) * 0.08 : 1; }
 function farmDelivered(o, pay) {
   if (!S.farm) return;
+  farmAboDelivered(o);
   S.farm.stats.deliv++;
   S.farm.stats.earned += pay;
   /* Fahrer/in im Team: Trinkgeld obendrauf */
@@ -1079,6 +1280,8 @@ function farmTick(dt) {
     S.farm.lastOrd = S.time;
     farmSpawnOrders(1);
   }
+  farmAboTick();
+  if (typeof farmBoardsCheck === "function") farmBoardsCheck();
 }
 
 /* --------------------------- Landkarte -------------------------------- */
@@ -1253,7 +1456,7 @@ function farmOrderHTML(o) {
   const ready = S.farm && farmOrderReady(o);
   return `<div class="ford">${Object.keys(o.farm.items).map(id => {
     const have = S.farm ? farmInv(id) : 0, need = o.farm.items[id];
-    return `<span class="fchip${have < need ? " miss" : ""}">${typeof itemIc === "function" ? itemIc(id) : FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
+    return `<span class="fchip${have < need ? " miss" : ""}" data-it="${id}">${typeof itemIc === "function" ? itemIc(id) : FITEMS[id].i}<b>${fpair(id, have, need)}</b></span>`;
   }).join("")}<span class="ford-s">${ready ? "✓ alles da" : "fehlt noch"} · +${o.farm.xp} EP</span></div>`;
 }
 

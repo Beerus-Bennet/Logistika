@@ -702,7 +702,8 @@ const G3 = (() => {
           const sx = Math.min(1.6, 1 + k / hx), sz = Math.min(1.6, 1 + k / hz), sy = Math.min(1.6, 1 + k / hy);
           const cx = (b[0][0] + b[1][0]) / 2, cz = (b[0][2] + b[1][2]) / 2, cy = b[0][1];
           /* skalieren um die Mitte unten – der Rand bleibt über dem Boden */
-          P[0] = sx; P[5] = sy; P[10] = sz; P[12] = cx - cx * sx; P[13] = cy - cy * sy; P[14] = cz - cz * sz;
+          /* ein Hauch höher: sonst flimmert der Rand mit gleich hohen Nachbarflächen (Felder) beim Zoomen */
+          P[0] = sx; P[5] = sy; P[10] = sz; P[12] = cx - cx * sx; P[13] = cy - cy * sy + 0.012; P[14] = cz - cz * sz;
           mul(Wp, n.W, P);
           gl.uniformMatrix4fv(u.uModel, false, Wp);
           gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uWater, 0);

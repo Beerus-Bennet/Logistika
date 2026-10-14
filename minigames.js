@@ -101,7 +101,7 @@ function mgStaHTML() { const s = Math.floor(farmSta()), m = farmStaMax(); return
 /* Brotzeit direkt im Spiel */
 function mgFoodHTML() {
   const f = farmFoods().slice(0, 4);
-  return f.length ? f.map(id => `<button class="btn tiny ghost" data-eat="${id}">${FITEMS[id].i} +${FFOOD[id]}</button>`).join("") : `<span class="mg-none">Nichts zu essen im Lager.</span>`;
+  return f.length ? f.map(id => `<button class="btn tiny ghost" data-eat="${id}">${icHTML(id)} +${FFOOD[id]}</button>`).join("") : `<span class="mg-none">Nichts zu essen im Lager.</span>`;
 }
 function mgBindFood(after) {
   $$("#mgBar [data-eat]").forEach(b => b.onclick = () => { if (farmEat(b.dataset.eat)) { sfx("collect"); save(); after(); } });
@@ -131,6 +131,9 @@ const MG_GAMES = {
       const t = st.tree, Z = FTREE_SIZE[t.sz], ax = (S.farm.tools.axe || 1) >= 2 ? 1.5 : 1;
       /* je größer der Baum, desto mehr Schläge: Volltreffer 7, gut 3 – Volltreffer in Serie geben Extra-Wucht */
       st.hp = Z.axe || MG_AXE_HP; st.k = ax; st.sta = Z.sta; st.q = 0; st.n = 0; st.p = 0; st.v = 0.75 + t.sz * 0.18; st.dirv = 1; st.combo = 0;
+      /* eigentlich zu hart für die Axt: geht, braucht aber deutlich mehr Schläge */
+      st.hard = typeof treeHard === "function" && treeHard(t, "axe");
+      if (st.hard) { st.hp = Math.round(st.hp * 1.6); st.sta = Z.sta * 1.3; }
       if ((t.dmg || 0) >= st.hp) t.dmg = st.hp - 3;
       st.c = 0.3 + Math.random() * 0.4; st.good = 0.1; st.okw = 0.26; st.cool = 0;
       mgH("🪓 " + FSPECIES[t.sp].n + " fällen · " + Z.n, "Tipp, wenn die Nadel im grünen Feld steht");
@@ -140,7 +143,7 @@ const MG_GAMES = {
       MG_GAMES.axe.zone(st);
       MG_GAMES.axe.bar(st);
       const vt = Math.ceil(st.hp / 7), gt = Math.ceil(st.hp / 3);
-      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : `${Z.n === "klein" ? "Kleiner Baum" : Z.n === "groß" ? "Großer Baum" : "Baum"}: ${vt} Volltreffer (dunkelgrün) oder ${gt} gute Schläge – Serien geben Extra-Wucht.`);
+      mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : (st.hard ? "Ohne passendes Werkzeug – mühsam, aber es geht: " : "") + `${Z.n === "klein" ? "Kleiner Baum" : Z.n === "groß" ? "Großer Baum" : "Baum"}: ${vt} Volltreffer (dunkelgrün) oder ${gt} gute Schläge – Serien geben Extra-Wucht.`);
       MG_GAMES.axe.hpBar(st);
     },
     bar(st) {
@@ -722,7 +725,7 @@ const MG_GAMES = {
       const o = angelOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
       return Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 4).map(id => {
         const p = o[id] / sum;
-        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${FITEMS[id].i}<small>${esc(FITEMS[id].sg || FITEMS[id].n)} · ${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
+        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${icHTML(id)}<small>${esc(FITEMS[id].sg || FITEMS[id].n)} · ${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
       }).join("");
     },
     idle(st) {
@@ -844,7 +847,7 @@ const MG_GAMES = {
       if (!r) mgMsg("Hm, nichts dran.", "");
       else if (r.junk) mgMsg(`${r.i} Nur ${esc(r.junk)}${r.m ? " – mit " + eur(r.m) + " Finderlohn!" : "."}`, "");
       else if (r.full) mgMsg("🧊 Die Kühlkiste ist voll – der Fisch schwimmt wieder.", "bad");
-      else mgMsg(`${FITEMS[r.id].i} <b>${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}</b> · ${fmt(r.cm, 1)} cm · ${fishKgTxt(r.kg)}<br>${qStars(r.q)} ${esc(fishQName(r.q))} · Wert ${eur(r.val)} · +${r.xp} EP${r.rec ? " · 🏆 Neuer Rekord!" : ""}`, "ok");
+      else mgMsg(`${icHTML(r.id)} <b>${esc(FITEMS[r.id].sg || FITEMS[r.id].n)}</b> · ${fmt(r.cm, 1)} cm · ${fishKgTxt(r.kg)}<br>${qStars(r.q)} ${esc(fishQName(r.q))} · Wert ${eur(r.val)} · +${r.xp} EP${r.rec ? " · 🏆 Neuer Rekord!" : ""}`, "ok");
       save();
       setTimeout(() => { if (MG.on && MG.kind === "fish") MG_GAMES.fish.idle(st); }, r && r.cm ? 2600 : 1300);
     },

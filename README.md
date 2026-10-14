@@ -82,14 +82,18 @@ so laufen die Lager nicht ständig über.
   von „zu eng – Massenhaltung“ (★) über Bodenhaltung und Freilandhaltung bis
   „Bio-Weidehaltung“ (★★★★★). Mehr Tiere bringen mehr Eier, aber auf engem Raum
   sinkt der Preis. Auslauf und Weide lassen sich in drei Stufen vergrößern – der
-  Zaun wächst sichtbar mit.
+  Zaun wächst sichtbar mit. Seit v53 wachsen Kuhstall und Rinderweide zwei,
+  die Schafweide eine Stufe weiter: So bekommen auch voll belegte Ställe aller
+  Tiere noch fünf Sterne.
 * **Backofen, Mühle, Molkerei** – Rezepte antippen, sie laufen nacheinander in
   der Warteschlange: Brot, Maisfladen, Apfelkuchen, Möhren-Muffins, Pizza,
   Kirschtorte; Butter, Pudding, Käse; Mehl, Maismehl, Hühner- und Kuhfutter.
   Weitere Plätze kosten Geld. Ein Tipp holt alles Fertige auf einmal ab: Jede
   Ware steigt als eigene Zeile mit Menge und Namen auf („+6 Brote“,
   „+2 Apfelkuchen“, „✓ 3× fertig abgeholt“); passt etwas nicht mehr ins
-  Lager, bleibt es in der Maschine und das wird angezeigt. Seit v46 stimmen die Mengen mit echten Rezepten
+  Lager, bleibt es in der Maschine und das wird angezeigt. Seit v53 lässt sich
+  jeder Auftrag in der Warteschlange mit ✕ abbrechen (oder alle auf einmal) –
+  die Zutaten kommen zurück, bei wartenden auch Sprit und Strom. Seit v46 stimmen die Mengen mit echten Rezepten
   überein: Gebacken wird mit **Mehl aus der Mühle** (1 Sack Weizen, 10 kg →
   7–8 kg Mehl), ein Brot braucht gut 600 g Mehl, eine Pizza rund 170 g, ein
   Blech Apfelkuchen 500 g Mehl, 2 kg Äpfel und 3 Eier, Muffins kommen mit
@@ -97,12 +101,24 @@ so laufen die Lager nicht ständig über.
 * **Silo und Scheune** – zeigen jede Ware mit Menge und Sternen. Volle Lager
   lassen sich ausbauen; der Großhandel kauft sofort, zahlt aber nur den halben
   Wert.
-* **Kundschaft** – die Bestelltafel am Tor sammelt Bestellungen aus Werder,
-  Glindow, Petzow, Geltow, Caputh, Michendorf und Potsdam (Bäckerei, Café,
-  Kita, Hotel, Wochenmarkt …), Berlin kommt erst mit der Spedition dazu.
-  „Liefern“ zeigt die freien Fahrzeuge mit Fahrzeit und Kosten; die Fahrt
-  läuft danach ganz normal auf der Karte und unter *Live*. Gute Qualität
-  bringt bis zu 16 % mehr.
+* **Kundschaft** – jede Station hat ihre eigene **Bestelltafel**: am Hoftor
+  (Hofwaren), im Sägewerk am Tor (Holz) und an der Fischerei am Uferweg
+  (Fisch). Jede zeigt nur die Bestellungen ihrer Station (oben lässt sich
+  zwischen den Tafeln wechseln). Bestellungen kommen aus Werder, Glindow,
+  Petzow, Geltow, Caputh, Michendorf und Potsdam (Bäckerei, Café, Kita,
+  Hotel, Wochenmarkt, Baumarkt, Zimmerei …), Berlin kommt erst mit der
+  Spedition dazu. Seit v53: Ein **Angebot** verfällt nach einem Tag;
+  **✓ Annehmen** macht daraus eine Bestellung **ohne Frist** – geliefert wird,
+  wenn alles da ist (↩︎ gibt sie ohne Strafe zurück). „Liefern“ zeigt die
+  freien Fahrzeuge mit Fahrzeit und Kosten; die Fahrt läuft danach ganz
+  normal auf der Karte und unter *Live*. Gute Qualität bringt bis zu 16 % mehr.
+  Der Kunden-Knopf rechts ist weg (Ton an/aus steht im Wohnhaus im Buch).
+* **Daueraufträge** (ab Level 6) – größere Firmen bieten an den Tafeln einen
+  Wochenvertrag an, z. B. der Baumarkt Werder: jede Woche 6 Paletten Bretter,
+  dazu ein fester Bonus. Angenommen steht jede Woche eine neue Lieferung an
+  der Tafel, bis man kündigt. Die Menge passt immer aufs größte eigene
+  Fahrzeug. Bleibt eine Woche liegen, zählt sie als verpasst; nach drei
+  verpassten Wochen kündigt die Firma.
 * **Echte Mengen und Preise** – gehandelt wird in üblichen Gebinden: Weizen
   im 10-kg-Sack, Tomaten und Äpfel in 2-kg-Kisten, Eier in 6er-Schachteln,
   Milch in 5-l-Kannen, Butter zu 250 g. Bestellungen zeigen die echte Menge
@@ -121,7 +137,14 @@ so laufen die Lager nicht ständig über.
 * **Laden und Bauen** – Felder, Bäume, Tiere, Kuhstall, Schweinestall,
   Schafweide, Rinderweide, Molkerei, Metzgerei, Spinnstube, zweiter
   Hühnerstall und Deko. Neues erscheint als Vorschau im Raster: hinziehen, ↻
-  drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es.
+  drehen, ✓ setzen. Lange auf ein Objekt drücken verschiebt es. Seit v53
+  lassen sich auch die Sägewerksgebäude (Halle, Holzlager, Büro, Holzlaster-
+  Platz, Kessel) im Sägewerkshof verschieben, und kleinere Gebäude –
+  Maschinen wie Mühle, Ofen, Molkerei, Spalter oder Hobel – wechseln mit
+  einem Tipp auf 🪚 bzw. 🏡 zwischen Hof und Sägewerk. Fest bleiben das
+  Wohnhaus und die Fischerei; vor den Toren des Sägewerks bleibt Platz frei.
+  Der **Verkaufsstand** steht jetzt an der Straße vor dem Hof und lässt sich
+  daran entlang verschieben.
 * **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung,
   aufgeteilt in vier Kapitel: *Ankommen* (Felder, Ofen, Hühner, erste
   Lieferungen), *Wachsen* (Kuhstall, Milch, Kuchen, Potsdam), *Vieh & Handwerk*
@@ -138,7 +161,7 @@ so laufen die Lager nicht ständig über.
 * **Erfolgsmomente** – fliegende Waren ins Lager, Münzen und EP-Sterne,
   Level-Feier mit allem, was neu freigeschaltet ist, Rauch aus dem Ofen,
   drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
-  kleine Töne (abschaltbar).
+  kleine Töne (im Wohnhaus im Buch abschaltbar).
 * **Linas Rundgang** – zum Start zeigt Lina mit dem Finger, was zu tun ist:
   ernten, säen, gießen, Eier holen, füttern, backen, pflücken, die erste
   Lieferung losschicken und mit Opas Axt den ersten jungen Baum am Teich
@@ -210,14 +233,27 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Verpackungsmaschine (Europaletten), Schleifmaschine (Möbelteile,
   Schatullen) und Fräse (Zaunelemente, Türen) – Laden-Reiter „🪚 Sägewerk“.
   Ausbau: Blockbandsäge (ein Drittel schneller), größerer Kessel. Krügers
-  alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte.
+  alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte. Seit
+  v53 steht er als Holzlaster auf seinem Platz im Sägewerk: Beim Losschicken
+  fliegen Bretter und Balken aus dem Holzlager auf die Ladefläche, dann fährt
+  er mit Fahrer über den Waldweg zur Straße. Auch Lastenrad, Moped und
+  Transporter fahren nie mehr leer – am Steuer sitzt jemand (die Fahrerin aus
+  dem Team, wenn sie die Lieferung losgeschickt hat).
+* **Wege und Grafik (v53)** – Waldwege sind durchgehende Bänder ohne
+  Flimmern an Kreuzungen; wo ein Weg endet, liegt eine kleine Lichtung mit
+  Bank. Felder flimmern beim starken Hineinzoomen nicht mehr. Die Heuballen
+  auf dem Weg sind weg, Wohnhaus und Scheune stehen Rand an Rand, und das
+  Firmenschild am Tor wandert beim Hof-Ausbau mit dem Tor nach außen. Nach dem
+  Füttern springt die Kamera nicht mehr in den Wald.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt
   sofort auf der vorderen Hallendachfläche, in zwei Reihen, jede mittig –
   bis zu 16 Module. Jedes bringt tagsüber 2 kWh pro Stunde in den Speicher;
-  ist das Dach voll, laufen Kessel und Säge ganz von selbst mit Sonnenstrom
-  (kein Feuer, kein Stromverbrauch mehr). Mit dem letzten Modul ist der
+  ist das Dach voll, laufen Kessel und Säge **tagsüber** ganz von selbst mit
+  Sonnenstrom (kein Feuer, kein Stromverbrauch). Seit v53 gibt es nachts
+  keinen Sonnenstrom – dann heizt der Mechaniker den Kessel an. Die Nachricht
+  der Döring GmbH antippen führt direkt zum Montagewagen. Mit dem letzten Modul ist der
   Auftrag erledigt: Frank Döring bedankt sich per Nachricht, steigt ein und
   fährt mit dem Montagewagen vom Sägewerk zur Straße davon. Wer nicht alles
   kauft, trifft die Döring GmbH eine Woche später wieder.
@@ -264,17 +300,23 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   * **Hof** (sobald der Wald offen ist): *Landwirt/in* erntet reife Felder und
     Obstbäume, sät nach (was gerade fehlt, mit Fruchtwechsel) und gießt;
     *Tierpfleger/in* füttert, sammelt Eier, Milch und Wolle ein, bringt
-    Masttiere zum Metzger und kauft Jungtiere nach (Masttiere: so viele, wie
-    mit drei Sternen Platz haben – auch in einen neuen, leeren Stall); *Hofmeister/in* holt
+    Masttiere zum Metzger und kauft Jungtiere nach – seit v53 nie mehr, als
+    mit fünf Sternen Platz haben (auch in einen neuen, leeren Stall); *Hofmeister/in* holt
     Fertiges aus Mühle, Ofen, Molkerei, Metzgerei und Spinnstube und stellt
     neue Rezepte an (was für Bestellungen und Futter fehlt – Zutaten für
-    offene Bestellungen bleiben liegen); *Fahrer/in* schickt fertige
-    Bestellungen mit einem freien Fahrzeug los (dazu Trinkgeld).
+    offene Bestellungen bleiben liegen); *Fahrer/in* nimmt die lukrativsten
+    Angebote selbst an (höchstens drei offen), arbeitet die angenommenen von
+    oben nach unten ab, verteilt, was fehlt, an die Kette – auch an Holzfäller,
+    Sägewerker und Mechaniker – und fährt fertige Bestellungen selbst: Sie
+    geht zum Fahrzeug, steigt ein und kommt nach der Lieferung zu Fuß von
+    der Straße zurück (dazu Trinkgeld). Fährt man selbst los, sitzt trotzdem
+    jemand am Steuer.
   * **Wald & Sägewerk** (sobald das Seeufer gepachtet ist): *Holzfäller/in*
     fällt ausgewachsene Bäume mit der Axt (keine uralten); *Sägewerker/in* hält
     Sägebock, Gattersäge und Maschinen am Laufen und heizt den Kessel, wenn
     der Strom knapp wird; *Mechaniker/in* macht Reparaturen und Strom
-    günstiger, nichts klemmt mehr.
+    günstiger, nichts klemmt mehr – und heizt nachts (wenn das Solardach
+    nichts liefert) oder wenn eine Maschine auf Strom wartet den Kessel an.
   * **Fischerei** (ab Level 19): *Fischer/in* leert und beködert die Reusen
     und angelt vom Steg; *Fischwirt/in* filetiert, räuchert, kühlt und packt
     in den Fischerei-Häusern.
@@ -308,11 +350,21 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Aufgaben einer Station besetzt, heißt es „✓ läuft von allein“. Jede Person
   hat eine Eigenschaft (bis +18 % schneller), will täglich Lohn und eine
   Brotzeit aus dem Lager – ohne Brotzeit schafft sie nur die Hälfte.
+  **Seit v53:** Die Leute laufen auf **Wegen** (Hof-, Wald- und Uferwege,
+  Straße) und durch die Tore – nicht mehr durch Gebäude, Ställe, Zäune oder
+  Felder (nur der Landwirt geht aufs Feld). Gearbeitet wird vor dem Gebäude
+  oder direkt vor dem Baum, nie im Zaun. Der Landwirt nimmt bis zu vier
+  Felder auf einem Gang mit und geht von Feld zu Feld; die Sichel hält er
+  richtig herum, die Axt schwingt von oben. Im Team-Fenster: **📍 Orten**
+  (Kamera fährt hin, die Blase geht auf) und **🎓 Fortbildung** – kostet etwas,
+  die Kraft ist einen Tag weg und kommt mit +2 % zurück; je Kraft alle zwei
+  Wochen.
 * **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
   Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
   weißer Hirsch (Glücksbringer), klemmende Säge (Zahnräder richten), Paket am Tor,
-  Wildschweine mit Pilzen, Reh auf dem Weg (Reh und Hirsch nicht mitten in
-  der Nacht).
+  Reh auf dem Weg (Reh und Hirsch nicht mitten in der Nacht). Das
+  Wildschwein-/Pilze-Ereignis gibt es seit v53 nicht mehr (alte Pilze im
+  Lager verschwinden beim Laden).
 * **Wildtiere je nach Tageszeit** – tagsüber Rehe, Hasen, Eichhörnchen,
   Singvögel und ein Graureiher im flachen Wasser am See; in der Dämmerung
   Wildschweine; nachts Füchse und Igel, Eulen gleiten über Hof und Wald (ihre
@@ -324,7 +376,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   und für jedes passende Werkzeug Ausdauer, Sprit und Ausbeute: je größer der
   Baum, desto mehr Stämme (klein 1, mittel 2, groß 4, uralt 7); die Kettensäge
   bringt einen Stamm mehr und Holzreste, die Profi-Säge noch einen. Die letzte
-  Wahl wird gemerkt.
+  Wahl wird gemerkt. Seit v53 lässt sich **jeder** Baum fällen: Ohne passendes
+  Werkzeug geht es „mühsam“ (mehr Schläge, mehr Ausdauer), junge Setzlinge
+  lassen sich roden. Die Ausbeute-Karte zeigt dieselben Mengen wie das Lager;
+  was wegen vollem Holzplatz liegen bleibt, steht rot darunter.
 * **Fällen mit Treffer** – beim Sägen zählt der Fallkerb nur im grünen
   Bereich; daneben heißt „Zu hoch!“ / „Zu tief!“ und nochmal (nach drei
   Fehlversuchen wird der Bereich etwas breiter). Ein Treffer im goldenen Kern
@@ -341,7 +396,15 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Werkzeugs und wenn die Ernte zum Lager fliegt. Jedes Bild wird eng
   zugeschnitten, damit alle gleich groß wirken; in Rezeptkarten stehen die
   Zutaten in voller Breite unter dem Namen. Maschinen im Laden ohne
-  Bodenplatte, lange Namen werden an der Wortfuge getrennt.
+  Bodenplatte, lange Namen werden an der Wortfuge getrennt. Seit v53 haben
+  auch alle Fische (Barsch, Forelle, Karpfen, Hecht, Zander, Aal, Wels,
+  Schleie, Rotauge, Rotfeder, Ukelei – jeder mit eigener Form und Zeichnung)
+  und Fischwaren ein Modell: Filets in der Schale, Karpfen blau, Räucherforelle
+  auf dem Brett, Räucheraal, Fischplatte, Konserven, Frischfisch- und
+  Edelfischkiste, Hechtklößchen, Fischbrötchen, Köderdose, Tauwürmer,
+  Wobbler, Teichmuscheln, Wollhandkrabbe und Edelkrebs. Eine Ware (Chip)
+  antippen zeigt darüber ihren Namen und was im Lager liegt. Langes Drücken
+  öffnet weder Bildvorschau noch Kopier-Menü oder Lupe.
 * **Beladen** – bevor ein Lastenrad, Moped oder Transporter losfährt, fliegen
   Kisten, Säcke und Körbe aus der Scheune hinein; bei Rad und Moped bleibt die
   Ladung obendrauf sichtbar.
@@ -366,7 +429,8 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Erdhaufen und Spaten daneben.
 * **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
   **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
-  günstig geht schnell, teuer dauert –, später kassieren.
+  günstig geht schnell, teuer dauert –, später kassieren. Auf dem Stand
+  liegen die eingestellten Waren als kleine 3D-Modelle.
 * **Kleeblätter 🍀 und Extras** – Kleeblätter gibt es fürs Spielen (Level,
   Kapitel, neue Gebiete, Ereignisse, Tagesbonus). Im Laden unter „🍀 Extras“:
   Scheune in Taubenblau oder Moosgrün, Schieferdach, grüner Traktor,
@@ -396,7 +460,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
 * **iPhone** – ein schneller Doppeltipp zoomt die Seite nicht mehr hinein
   (und eine schon vergrößerte Seite springt zurück); beim langen Drücken
   (Sägen, Kurbeln) erscheint keine Lupe mehr.
-* **Ereignis-Leisten** (Holzpreise, Wildschweine, Vogelschwarm …) erscheinen
+* **Ereignis-Leisten** (Holzpreise, Vogelschwarm …) erscheinen
   kurz ausgeklappt und schrumpfen dann zu einem kleinen runden Knopf am
   rechten Rand. Antippen klappt sie auf; nochmal antippen zeigt, worum es geht
   (bzw. führt hin), und klappt sie wieder zum Knopf zusammen.
@@ -975,13 +1039,13 @@ farm.js                 Erbe: Spielstand, Ernte, Tiere mit Platz-Qualität, Mast
 erbe.js                 Spiellogik der großen Welt: Erbe-Level, Gebiete, Bäume, Ausdauer, Sägewerk, Strom, See, Team, Ereignisse, Stand
 gl3d.js                 eigene kleine WebGL2-Engine: Low-Poly, Schatten, Wasser, Partikel, Sichtkegel-Test, Sperrgebiete
 farmmodels.js           alle 3D-Modelle des Hofs, prozedural gebaut
-fishmodels.js           3D-Modelle für Räucherei, Kühlhaus, Angler und Rute
+fishmodels.js           3D-Modelle für Räucherei, Kühlhaus, Angler und Rute, alle Fische und Fischwaren als Ware
 woodmodels.js           3D-Modelle der Welt: Bäume je Art und Größe, Gelände, Wege, Bach, See, Sägewerk, Fischerei, Boote, Tiere, Leute, Deko
 farmview.js             3D-Ansicht des Erbes: Kamera, Gesten, Werkzeuge, Fenster, Effekte, Rundgang
 worldview.js            große Welt in 3D: Kulisse in Kacheln, Sperrgebiete mit Aufdecken, Bäume, Wildtiere, Ereignisse, Wetter, Fenster
 minigames.js            Minispiele: Axt, Kettensäge, Nageln, Kabel, Zahnräder, Förderband, Motor, Graben, Angeln
 fishview.js             See in Bewegung: Angeln vom Steg, Bootsfahrten, Pose und Rute, Enten, springende Fische
-team.js                 Personal je Station: Bewerbungen, Arbeit von allein, Auftragskette (Tierpfleger → Hofmeister → Landwirt, Fahrer → wer die Ware macht), antippen und Aufträge geben, Figuren in 3D
+team.js                 Personal je Station: Bewerbungen, Arbeit von allein, Auftragskette (Tierpfleger → Hofmeister → Landwirt, Fahrer → wer die Ware macht), antippen und Aufträge geben, Figuren in 3D, Wege (A* mit Toren und Zäunen), Fortbildung, Orten, Fahrerin im Wagen
 intro.js                Charaktererstellung, Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest

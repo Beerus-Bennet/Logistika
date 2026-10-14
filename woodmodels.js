@@ -273,20 +273,51 @@ const FWM = (() => {
     return b;
   }
   /* Band entlang einer Linie (Waldweg, Bach): y über dem Boden */
-  function ribbon(b, pts, w, color, y, edge) {
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1], c = pts[i];
+  /* Band entlang einer Linie: ein durchgehender Streifen mit gemeinsamen Ecken
+     (keine überlappenden Stücke – die flimmerten beim Zoomen), optional mit
+     dunklerem Rand und runden Enden */
+  function ribbon(b, pts, w, color, y, edge, caps) {
+    const n = pts.length;
+    if (n < 2) return;
+    const N = pts.map((p, i) => {
+      const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)];
       const dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1;
-      const nx = -dz / l * w / 2, nz = dx / l * w / 2;
-      const ext = 0.5 * w;
-      const ax = a[0] - dx / l * (i > 1 ? ext * 0.6 : 0), az = a[1] - dz / l * (i > 1 ? ext * 0.6 : 0);
-      const cx = c[0] + dx / l * (i < pts.length - 1 ? ext * 0.6 : 0), cz = c[1] + dz / l * (i < pts.length - 1 ? ext * 0.6 : 0);
-      b.quad([ax + nx, y, az + nz], [cx + nx, y, cz + nz], [cx - nx, y, cz - nz], [ax - nx, y, az - nz], color);
+      /* Gehrung: an Knicken etwas breiter, damit die Breite gleich bleibt (begrenzt) */
+      let k = 1;
+      if (i > 0 && i < n - 1) {
+        const d1x = p[0] - a[0], d1z = p[1] - a[1], l1 = Math.hypot(d1x, d1z) || 1, d2x = c[0] - p[0], d2z = c[1] - p[1], l2 = Math.hypot(d2x, d2z) || 1;
+        const cos = (d1x * d2x + d1z * d2z) / (l1 * l2);
+        k = Math.min(1.6, 1 / Math.max(0.6, Math.sqrt((1 + cos) / 2)));
+      }
+      return [-dz / l * k, dx / l * k];
+    });
+    const at = (i, f) => [pts[i][0] + N[i][0] * f, y, pts[i][1] + N[i][1] * f];
+    const hw = w / 2;
+    for (let i = 1; i < n; i++) {
+      b.quad(at(i - 1, hw), at(i, hw), at(i, -hw), at(i - 1, -hw), color);
       if (edge) {
-        b.quad([ax + nx * 1.25, y - 0.004, az + nz * 1.25], [cx + nx * 1.25, y - 0.004, cz + nz * 1.25], [cx + nx, y - 0.004, cz + nz], [ax + nx, y - 0.004, az + nz], edge);
-        b.quad([ax - nx, y - 0.004, az - nz], [cx - nx, y - 0.004, cz - nz], [cx - nx * 1.25, y - 0.004, cz - nz * 1.25], [ax - nx * 1.25, y - 0.004, az - nz * 1.25], edge);
+        const e1 = (i0, f) => { const q = at(i0, f); q[1] -= 0.004; return q; };
+        b.quad(e1(i - 1, hw * 1.25), e1(i, hw * 1.25), e1(i, hw), e1(i - 1, hw), edge);
+        b.quad(e1(i - 1, -hw), e1(i, -hw), e1(i, -hw * 1.25), e1(i - 1, -hw * 1.25), edge);
       }
     }
+    if (!caps) return;
+    /* runde Enden: Halbkreis in Laufrichtung nach außen */
+    [[0, -1], [n - 1, 1]].forEach(([i, dir]) => {
+      const p = pts[i], nx = N[i][0], nz = N[i][1], l = Math.hypot(nx, nz) || 1, tx = nz / l * dir, tz = -nx / l * dir;
+      const seg = 8, rr = [[hw, color, y]].concat(edge ? [[hw * 1.25, edge, y - 0.004]] : []);
+      rr.reverse().forEach(([r, col, yy]) => {
+        for (let k = 0; k < seg; k++) {
+          const a0 = Math.PI * k / seg, a1 = Math.PI * (k + 1) / seg;
+          /* von der einen Seite (Normale) über die Spitze (Tangente) zur anderen */
+          const P0 = [p[0] + (nx / l * Math.cos(a0) + tx * Math.sin(a0)) * r, yy, p[1] + (nz / l * Math.cos(a0) + tz * Math.sin(a0)) * r];
+          const P1 = [p[0] + (nx / l * Math.cos(a1) + tx * Math.sin(a1)) * r, yy, p[1] + (nz / l * Math.cos(a1) + tz * Math.sin(a1)) * r];
+          const C0 = [p[0], yy, p[1]];
+          const up = (P0[2] - C0[2]) * (P1[0] - C0[0]) - (P0[0] - C0[0]) * (P1[2] - C0[2]);
+          if (up > 0) b.tri(C0, P0, P1, col); else b.tri(C0, P1, P0, col);
+        }
+      });
+    });
   }
   /* Polylinie glätten (Catmull-Rom), damit Wege und Bach weich laufen */
   function smoothLine(pts, n) {
@@ -303,10 +334,22 @@ const FWM = (() => {
     out.push(pts[pts.length - 1]);
     return out;
   }
-  function forestPath(pts, w) {
+  /* o.y: Höhe (jeder Weg etwas anders – an Kreuzungen flimmert dann nichts),
+     o.ends: [Anfang, Ende] laufen in eine kleine Lichtung mit Baumstamm-Bank aus */
+  function forestPath(pts, w, o) {
+    o = o || {};
     G3.seed(3900 + pts.length);
-    const b = new MB(), P = smoothLine(pts, 6);
-    b.noise(0.05, () => ribbon(b, P, w || 1.7, 0xb69a6a, 0.025, 0x8f7c55));
+    const b = new MB(), P = smoothLine(pts, 6), y = o.y || 0.025, W = w || 1.7;
+    (o.ends || []).forEach((on, k) => {
+      if (!on) return;
+      const p = k ? P[P.length - 1] : P[0], q = k ? P[P.length - 2] : P[1];
+      const dx = p[0] - q[0], dz = p[1] - q[1], l = Math.hypot(dx, dz) || 1;
+      b.disc(W * 1.15, 14, 0xa89064, { x: p[0] + dx / l * 0.6, z: p[1] + dz / l * 0.6, y0: y - 0.006 });
+      /* Bank aus einem halben Stamm am Rand der Lichtung */
+      const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2;
+      b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
+    });
+    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, true));
     /* Laub und Steinchen auf dem Weg */
     for (let i = 0; i < P.length; i++) {
       const p = P[Math.floor(rnd() * P.length)];
@@ -534,7 +577,22 @@ const FWM = (() => {
     return b;
   }
   /* Krügers Unimog: unter der Plane und rostig – oder frisch flott */
+  /* Stellplatz des Holzlasters: repariert steht dort nur noch der Platz –
+     der Laster selbst ist ein Fahrzeug (holzTruck) und fährt los */
   function sawLkw(ok) {
+    if (ok) {
+      G3.seed(4031);
+      const b = new MB();
+      b.noise(0.05, () => b.plate(2.6, 4.8, 0x8f8a80, { y0: 0.014 }));
+      [-1.2, 1.2].forEach(x => b.plate(0.08, 4.6, 0xf2efe6, { x, y0: 0.02 }));
+      b.plate(2.4, 0.08, 0xf2efe6, { z: -2.3, y0: 0.02 });
+      b.box(0.5, 0.12, 0.25, 0x8a6040, { x: 0.8, z: -2.1 }); b.box(0.5, 0.12, 0.25, 0x8a6040, { x: -0.8, z: -2.1 });
+      return b;
+    }
+    return holzTruckMB(false);
+  }
+  function holzTruck() { return holzTruckMB(true); }
+  function holzTruckMB(ok) {
     G3.seed(4030);
     const b = new MB();
     const body = ok ? 0x3f7a4a : 0x6a5a48, tire = ok ? 0x1d1d20 : 0x3a3530;
@@ -675,9 +733,19 @@ const FWM = (() => {
     b.box(1.2, 0.3, 0.05, 0xf6f1e6, { y: 1.15, z: -0.33 });
     return b;
   }
-  /* Ware auf dem Stand: Kisten mit Farbe */
-  function stallGoods() {
+  /* Ware auf dem Stand: v53 – die echten Waren als kleine Modelle nebeneinander */
+  function stallGoods(ids, wide) {
     const b = new MB();
+    if (ids && ids.length) {
+      const W = wide ? 3.6 : 1.5, n = ids.length, rows = n > 3 && !wide ? 2 : 1, per = Math.ceil(n / rows);
+      ids.forEach((id, i) => {
+        const m = item(id);
+        if (!m) return;
+        const r = Math.floor(i / per), k = i % per, cnt = Math.min(per, n - r * per);
+        b.merge(m, { x: (k - (cnt - 1) / 2) * (W / Math.max(3, per)), y: 0.7, z: rows > 1 ? (r ? 0.16 : -0.14) : 0, s: wide ? 0.42 : 0.3, ry: (i % 2 ? 0.25 : -0.2) });
+      });
+      return b;
+    }
     [[-0.55, 0xd9332b], [0, 0xf2c230], [0.55, 0x6fae3a]].forEach(([x, c]) => {
       b.box(0.42, 0.14, 0.32, C.woodL, { x, y: 0.7 });
       for (let k = 0; k < 4; k++) b.sphere(0.07, 7, 5, c, { x: x - 0.12 + (k % 2) * 0.24, y: 0.86, z: -0.07 + Math.floor(k / 2) * 0.14 });
@@ -1216,7 +1284,6 @@ const FWM = (() => {
         b.box(0.5, 0.05, 0.5, 0xc9955a, { y: 0.45 });
         b.box(0.5, 0.45, 0.05, 0xc9955a, { y: 0.5, z: -0.22 });
         [0.15, 0.3].forEach(y => b.box(0.44, 0.04, 0.03, 0xb8884a, { y: 0.5 + y, z: -0.21 }));
-        b.box(0.06, 0.06, 0.6, 0xc9955a, { x: 0.5, y: 0.03, z: 0.1, ry: 0.4 });
         return b;
       case "tueren":
         b.box(0.7, 1.4, 0.08, 0xa8653c, { top: 0x9a5a34 });
@@ -1499,17 +1566,9 @@ const FWM = (() => {
         b.cyl(0.11, 0.11, 0.04, 10, 0x2f5f98, { y: 0.11, z: -0.24, sz: 0.6 });
         [-1, 1].forEach(s => b.box(0.12, 0.13, 0.5, 0x3a70b8, { x: s * 0.22, y: 0.0, z: 0.02, top: 0x4580c8 }));
         return b;
-      case "pilze":
-        b.cyl(0.36, 0.28, 0.24, 12, 0xb8884a, { top: 0x7a5a3a, stripe: 0xa8783a });
-        b.cyl(0.37, 0.37, 0.04, 12, 0x9a6a3a, { y: 0.24 });
-        b.at({ y: 0.24 }, m => { m.box(0.03, 0.03, 0.72, 0x9a6a3a, { y: 0.32 }); [-1, 1].forEach(s => m.box(0.03, 0.34, 0.03, 0x9a6a3a, { z: s * 0.35, rx: s * 0.05 })); });
-        [[-0.12, 0.05, 0.12], [0.12, 0.0, -0.05], [0.0, 0.08, -0.15], [0.15, 0.1, 0.18]].forEach(([x, dy, z], i) => {
-          b.cyl(0.04, 0.045, 0.12, 6, 0xf6efe0, { x, y: 0.24 + dy, z });
-          b.sphere(0.11, 9, 5, i % 2 ? 0xb87a3a : 0x8a5a2a, { x, y: 0.36 + dy, z, sy: 0.55, smooth: true });
-        });
-        return b;
     }
-    return null;
+    /* v53: Fische und Fischwaren */
+    return typeof FFM !== "undefined" && FFM.fishItem ? FFM.fishItem(id) : null;
   }
   /* Werkzeug: Opas Axt, Stahlaxt, Kettensäge, Profi-Säge */
   function tool(id) {
@@ -1580,7 +1639,7 @@ const FWM = (() => {
     TREE_C, TH, tree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
-    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
+    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
     deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, arm, cosDeco

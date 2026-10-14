@@ -2554,7 +2554,10 @@ function toastBusy() {
   if (typeof FV !== "undefined" && FV.on && (FV.sheet || FV.place || (typeof MG !== "undefined" && MG.on) || $("#farmLvl.on"))) return true;
   return false;
 }
-function toast(msg, kind, low) {
+/* Ziele für antippbare Meldungen (z. B. Döring-Nachricht → zum Montagewagen) */
+const MSG_GO = {};
+function runMsgGo(go) { try { if (go && MSG_GO[go]) MSG_GO[go](); } catch (e) { console.warn(e); } }
+function toast(msg, kind, low, go) {
   if (muteToasts) return;
   const now = performance.now();
   /* Nebensächliche Meldungen nicht im Sekundentakt stapeln */
@@ -2563,7 +2566,7 @@ function toast(msg, kind, low) {
   const txt = hiddenToasts && low ? msg + "  (+" + hiddenToasts + ")" : msg;
   if (low) hiddenToasts = 0;
   if ((TQ.cur && TQ.cur.txt === txt) || TQ.q.some(x => x.txt === txt)) return;
-  const it = { txt, kind: kind || "", t: now, fb: now - TQ.tapAt < 1200 };
+  const it = { txt, kind: kind || "", t: now, fb: now - TQ.tapAt < 1200, go: go || null };
   if (it.fb) {
     TQ.q.unshift(it);
     if (TQ.cur && !TQ.cur.fb) toastEnd(true);              /* eigene Antwort geht vor */
@@ -2589,6 +2592,7 @@ function toastNext() {
   el.className = "toast " + it.kind;
   if (it.txt.includes("[[snus]]") && typeof snusLogo === "function") el.innerHTML = esc(it.txt).replace("[[snus]]", snusLogo(18));
   else el.textContent = it.txt;
+  if (it.go) { el.classList.add("go"); el.onclick = () => { toastEnd(true); runMsgGo(it.go); }; }
   box.innerHTML = "";
   box.appendChild(el);
   TQ.cur = it; TQ.el = el;
@@ -2736,6 +2740,7 @@ const ORDER_CHIP = { pak: "Pakete", express: "Express", pal: "Paletten", kuehl: 
   adr: "Gefahrgut", sperrig: "Schwerlast", cont: "Container", schmuck: "Schmuck", snus: "Snus", ware: "Don Pablo" };
 function orderMatches(o, p, f) {
   if (f === "all") return true;
+  if (f.startsWith("f:")) return !!o.farm && typeof farmOrderArea === "function" && farmOrderArea(o) === f.slice(2);
   if (f === "ok") return p.ok;
   if (f === "air") return !!o.air;
   return o.cargo === f;
@@ -2745,10 +2750,13 @@ function orderToolsHTML(rows, mode, filt) {
     `<button data-sort="${k}" class="${k === mode ? "on" : ""}"><i>${i}</i>${l}</button>`).join("")}</div>`;
   const n = {};
   rows.forEach(({ o }) => { n[o.cargo] = (n[o.cargo] || 0) + 1; if (o.air) n.air = (n.air || 0) + 1; });
-  const kinds = Object.keys(CARGO).filter(k => n[k] || k === filt);
+  /* Hof, Sägewerk, Fischerei: je Station ein Filter (statt einem für alle Hofwaren) */
+  const areas = typeof FORD_AREAS !== "undefined" ? FORD_AREAS.filter(a => rows.some(({ o }) => o.farm && farmOrderArea(o) === a.id) || filt === "f:" + a.id) : [];
+  const kinds = Object.keys(CARGO).filter(k => (n[k] || k === filt) && !(areas.length && k === (typeof FSITE !== "undefined" && FSITE.cargo || "hof") && rows.every(({ o }) => o.cargo !== k || o.farm)));
   const icon = k => k === "snus" && typeof snusLogo === "function" ? snusLogo(14) : CARGO[k].icon;
   const chips = [chipHTML("data-of", "all", "Alle", rows.length, filt === "all"),
     chipHTML("data-of", "ok", "✅ jetzt machbar", rows.filter(r => r.p.ok).length, filt === "ok")];
+  areas.forEach(a => chips.push(chipHTML("data-of", "f:" + a.id, a.i + " " + a.n, rows.filter(({ o }) => o.farm && farmOrderArea(o) === a.id).length, filt === "f:" + a.id)));
   if (n.air || filt === "air") chips.push(chipHTML("data-of", "air", "✈️ Luftfracht", n.air || 0, filt === "air"));
   kinds.forEach(k => chips.push(chipHTML("data-of", k, icon(k) + " " + (ORDER_CHIP[k] || CARGO[k].name), n[k] || 0, filt === k)));
   return seg + `<div class="chiprow">${chips.join("")}</div>`;
@@ -2796,7 +2804,7 @@ function renderOrders() {
     if (o.vip && typeof vipCardHTML === "function") return vipCardHTML(o, previewHTML(p));
     const cg = CARGO[o.cargo];
     const rest = o.deadline - S.time;
-    const tight = rest < o.refTime * 1.25;
+    const tight = !o.acc && rest < o.refTime * 1.25;
     return `<div class="card order${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
       ${o.tut ? `<div class="tutribbon">⭐ Linas Übungsauftrag</div>` : ""}
       ${o.tutNext ? `<div class="tutribbon">⭐ Anschlussauftrag ab ${esc(N[o.from].short)}</div>` : ""}
@@ -2813,7 +2821,7 @@ function renderOrders() {
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
         ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
-        <span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
+        <span>${o.acc ? (o.abo ? "📅 Wochenlieferung" : "✓ angenommen · ohne Frist") : o.farm ? "⏳ Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "⏳ " + dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
       </div>
       ${previewHTML(p)}
     </div>`;
