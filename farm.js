@@ -125,8 +125,8 @@ const FYARD = { x0: -25, x1: -1, z0: -25, z1: -3 };              /* Welt x −41
 const FROADSIDE = { x0: -14, x1: 60, z0: 32, z1: 33 };           /* Welt z 16 … 17, nördlich der Straße */
 /* vor den Toren bleibt frei (Kacheln) */
 const FYARD_KEEP = [[-15, -11, -6, -3], [-15, -11, -26, -22], [-26, -22, -16, -12],
-  /* Holzstapel und der Platz für Dörings Montagewagen */
-  [-25, -23, -10, -8], [-20, -18, -26, -24], [-4, -2, -12, -10], [-9, -7, -26, -24], [-9, -6, -12, -7]];
+  /* Holzstapel am Rand (Dörings Montagewagen sucht sich selbst einen freien Platz) */
+  [-25, -23, -10, -8], [-20, -18, -26, -24], [-4, -2, -12, -10], [-9, -7, -26, -24]];
 const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
 function farmZones(t, k) {
   if (t === "stall") return ["road"];
@@ -160,12 +160,25 @@ function farmFits(x, z, w, d, except, t, k) {
   }
   if (zn === "road") {
     if (x < 24 && x + w > 18) return false;                       /* Einfahrt zum Hof bleibt frei */
+    const x0 = x - FG / 2, x1 = x0 + w;
+    if (farmRoadKeep().some(([a, b]) => x0 < b && a < x1)) return false;
     return farmFreeRect(x, z, w, d, except);
   }
   if (!zoneOk(x, z, w, d, t, k)) return false;
   const g = farmOcc(except);
   for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (g[(z + j) * FG + x + i]) return false;
   return true;
+}
+/* Straßenrand: was dort schon steht (Welt-x von … bis): Traktor mit Anhänger und der
+   fliegende Händler, ab Stufe 3 Laternen und Blumen vor dem Zaun */
+function farmRoadKeep() {
+  const st = (S.farm && S.farm.stage) || 1, big = st >= 4, F0 = typeof farmHofR === "function" ? farmHofR() : 13, out = [[8.4, 12.2]];
+  if (st >= 2) out.push(big ? [20.0, 25.0] : [9.0, 14.4]);
+  if (st >= 3) {
+    [-8, 18, F0 + 0.6, -F0 - 0.6].forEach(x => out.push([x - 0.6, x + 0.6]));
+    [-10, -6, -2, 10, 12].forEach(x => out.push([x - 0.9, x + 0.9]));
+  }
+  return out;
 }
 /* freier Platz in einer Zone, möglichst nah an (px, pz) – Kacheln */
 function farmZoneSpot(zn, w, d, px, pz, t, k, except) {

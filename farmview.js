@@ -200,7 +200,8 @@ function buildObjNode(o) {
   const R = FV.R;
   const [cx, cz] = farmCenter(o);
   /* Reusen im See: die Modelle rechnen mit dem tieferen Wasser der alten Kaikante */
-  const root = fnode(objMesh(o), { x: cx, z: cz, y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? -Math.PI / 2 : 0 });
+  /* Verkaufsstand am Straßenrand: ein Stück zur Straße hin (nicht in Mauer oder Zaun) */
+  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? -Math.PI / 2 : 0 });
   const parts = {};
   if (o.t === "mill") {
     const h = FM.MILL_HUB;
@@ -455,9 +456,12 @@ function stepAnimals(dt, time) {
 const SHED_SLOTS = [[-0.85, 0.05], [0.0, 0.05], [0.85, 0.05]];
 const HOLZ_VEH = "v-holzlaster";
 function vehModelKey(t) { return t.id === HOLZ_VEH ? "truck" : t.mode === "b" ? "bike" : t.cap <= 80 ? "moped" : "van"; }
-function vehMesh(t) {
-  const k = vehModelKey(t);
-  return fmesh("veh:" + k, () => k === "truck" ? FWM.holzTruck() : k === "bike" ? FM.cargoBike() : k === "moped" ? FM.moped() : FM.van());
+/* v54: lackierte Fahrzeuge fahren in Firmenfarben, alle tragen das Logo */
+function vehMesh(t, f) {
+  const k = vehModelKey(t), L = f && typeof painted === "function" && painted(f) ? S.livery : null;
+  const hex = h => parseInt(String(h).replace("#", ""), 16);
+  const c1 = L && k !== "truck" ? hex(L.c1) : null, c2 = L && k !== "truck" ? hex(L.c2) : null;
+  return fmesh("veh:" + k + (L ? ":" + L.c1 + ":" + L.c2 : ""), () => k === "truck" ? FWM.holzTruck() : k === "bike" ? FM.cargoBike(c1) : k === "moped" ? FM.moped(c1) : FM.van(c1, c2));
 }
 function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
@@ -512,7 +516,8 @@ function farmSyncVehicles(force) {
     const p = isTruck ? null : SHED_SLOTS[slot++];
     const x = isTruck ? pad.x : sx + p[0], z = isTruck ? pad.z : sz + p[1];
     if (!v) {
-      const node = fnode(vehMesh(t), { x, z, ry: 0 });
+      const node = fnode(vehMesh(t, f), { x, z, ry: 0 });
+      if (typeof brandVehicle === "function") brandVehicle(node, k);
       R.nodes.push(node);
       v = { node };
       FV.veh.set(f.uid, v);
@@ -524,6 +529,8 @@ function farmSyncVehicles(force) {
         else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [5, 18.5], [5, gate + 0.5], [5, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
       }
     } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = 0; }
+    /* frisch lackiert: neue Farben */
+    if (v) { const m = vehMesh(t, f); if (v.node.mesh !== m) v.node.mesh = m; }
     /* Beladen beginnt */
     if (f.phase === "load" && !FV.loading.has(f.uid)) FV.loading.set(f.uid, { uid: f.uid, node: v.node, k, n: 0, t: 0.3, max: k === "van" || k === "truck" ? 6 : 3 });
   });
@@ -546,6 +553,8 @@ function stepLoading(dt) {
     const tx = L.node.x + Math.cos(ry) * at[0] + Math.sin(ry) * at[2], tz = L.node.z - Math.sin(ry) * at[0] + Math.cos(ry) * at[2];
     const ck = L.k === "truck" ? "truck" + (L.n % 2) : "cargo:" + kind;
     const node = fnode(fmesh(ck, () => L.k === "truck" ? FWM.item(L.n % 2 ? "balken" : "bretter") : FWM.cargo(kind)), { x: src[0], y: 1.0, z: src[1], s: L.k === "van" || L.k === "truck" ? 1.1 : 0.85 });
+    /* Kartons tragen das Firmenlogo als kleinen Aufkleber */
+    if (L.k !== "truck" && kind !== 1 && kind !== 2 && typeof brandParcel === "function") brandParcel(node, 0.245, 0.141, 0.17);
     R.nodes.push(node);
     FV.loadFly.push({ node, L, a: [src[0] + 0.6, 1.0, src[1] + 0.8], b: [tx, at[1], tz], t: 0, dur: 0.75, stack: L.k !== "van" ? L.n : -1 });
     L.n++;
@@ -1356,8 +1365,10 @@ function updateFarmTags() {
     el.style.transform = `translate(${Math.round(p[0])}px,${Math.round(p[1])}px)`;
   });
   box.querySelectorAll(".ftag").forEach(el => { if (!keep.has(el.dataset.k)) el.remove(); });
-  /* Hofschild am Tor */
+  /* Hofschild am Tor: seit v54 steht der Name auf der Tafel selbst (Bild in 3D) */
+  if (typeof brandSync === "function") brandSync();
   let sign = box.querySelector(".fsign");
+  if (WV.brand && WV.brand.R === FV.R) { if (sign) sign.remove(); return; }
   if (!sign) { sign = document.createElement("div"); sign.className = "fsign"; box.appendChild(sign); }
   const nm = S.player ? S.player.company : FT().short;
   if (sign._t !== nm) { sign.textContent = nm; sign._t = nm; }
@@ -1683,7 +1694,7 @@ function hideAnimalsOf(o, hide) {
   if (!o.animals) return;
   o.animals.forEach(a => { const s = FV.ani.get(a.id); if (s) { s.node.visible = !hide; if (hide) s.pn.visible = false; } });
 }
-function noRotate(t) { return !!FPENS[t] || ["field", "tree", "pot", "mline", "kutter", "steg"].includes(t); }
+function noRotate(t) { return !!FPENS[t] || ["field", "tree", "pot", "mline", "kutter", "steg", "stall"].includes(t); }
 function startMove(o) {
   if (FV.tutLock) return;
   sfx("pop");

@@ -1,5 +1,22 @@
 # Änderungen – kurz für den Kollegen
 
+## v54 (aufbauend auf v53)
+
+- Firmenschild am Hoftor zeigt Name und Logo direkt auf der Tafel (Bild in 3D,
+  vorn und hinten; Stufe 4 auf der Steintafel). Der schwebende Name ist weg.
+- Logo als Aufkleber auf allen Firmenfahrzeugen im Hof (Lastenrad, Moped,
+  Transporter, Holzlaster), lackierte Fahrzeuge in Firmenfarben, Kartons beim
+  Beladen mit kleinem Logo. Logo ändern → alles zieht sofort nach.
+- Technik: `gl3d.js` kann jetzt „Aufkleber“ (Canvas als Bild auf einem
+  Viereck: Knoten mit `decal: { t, w, h }`, Bild über `R.texture(canvas)`).
+  Gemalt wird in `worldview.js` (Abschnitt „Firmenauftritt“).
+- Verkaufsstand startet auf einem freien Platz an der Straße (nicht mehr im
+  Traktor); Maschinen dürfen vor der Sägehalle stehen, Dörings Wagen parkt
+  dann woanders. Holzlaster-Stellplatz flimmert nicht mehr.
+- Fischerei-Dateien unverändert.
+
+Version im Service Worker: **v54**.
+
 ## v53 (aufbauend auf v52)
 
 **Personal**
@@ -46,5 +63,3 @@
 - Spielstände laufen weiter: Pilze verschwinden aus dem Lager, der
   Verkaufsstand zieht an die Straße, Tafeln für Sägewerk und Fischerei
   erscheinen, sobald die Station offen ist.
-
-Version im Service Worker: **v53**.

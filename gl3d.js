@@ -429,6 +429,47 @@ const G3 = (() => {
     o = vec4(vCol.rgb, vCol.a * a);
   }`;
 
+  /* Aufkleber (v54): ein Bild (Canvas) als flaches Viereck auf einer Fläche –
+     Firmenschild, Logo auf Fahrzeugen und Paketen. Licht, Schatten und Nebel
+     wie die übrige Szene. Das Viereck liegt in der x/y-Ebene, Blick nach +z. */
+  const DVS = `#version 300 es
+  layout(location=0) in vec2 aQ;
+  uniform mat4 uModel, uVP, uLVP; uniform vec2 uSize;
+  out vec2 vUV; out vec3 vW; out vec3 vNor; out vec4 vL;
+  void main(){
+    vec4 w = uModel * vec4(aQ.x * uSize.x, aQ.y * uSize.y, 0.0, 1.0);
+    vNor = normalize(mat3(uModel) * vec3(0.0, 0.0, 1.0));
+    vUV = vec2(aQ.x + 0.5, 0.5 - aQ.y);
+    vW = w.xyz;
+    vL = uLVP * vec4(w.xyz + vNor * 0.035, 1.0);
+    gl_Position = uVP * w;
+  }`;
+  const DFS = `#version 300 es
+  precision highp float; precision highp sampler2DShadow;
+  in vec2 vUV; in vec3 vW; in vec3 vNor; in vec4 vL;
+  uniform sampler2D uTex; uniform sampler2DShadow uShadow;
+  uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR; uniform float uAlpha, uTexel, uShadowOn;
+  out vec4 o;
+  float shadow(){
+    vec3 p = vL.xyz / vL.w * 0.5 + 0.5;
+    if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 1.0;
+    float s = 0.0;
+    for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++)
+      s += texture(uShadow, vec3(p.xy + vec2(float(i), float(j)) * uTexel * 1.25, p.z - 0.0018));
+    return s / 9.0;
+  }
+  void main(){
+    vec4 t = texture(uTex, vUV);
+    if (t.a < 0.03) discard;
+    vec3 n = normalize(vNor);
+    float wrap = clamp((dot(n, uSunDir) + 0.2) / 1.2, 0.0, 1.0);
+    float sh = uShadowOn > 0.5 ? shadow() : 1.0;
+    vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);
+    vec3 c = t.rgb * (amb + uSunCol * wrap * sh);
+    c = mix(c, uFog, smoothstep(uFogR.x, uFogR.y, length(vW - uCam)));
+    o = vec4(c, t.a * uAlpha);
+  }`;
+
   function compile(gl, vs, fs) {
     const mk = (t, s) => { const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh);
       if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); return sh; };
@@ -447,7 +488,8 @@ const G3 = (() => {
     opts = opts || {};
     const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.keep });
     if (!gl) return null;
-    let main, shad, part;
+    let main, shad, part, dec, decVAO, decBuf;
+    const texs = new Set();
     const meshes = new Set();
     let shadowFB = null, shadowTex = null;
     const SH = opts.shadowSize || 2048;
@@ -471,6 +513,13 @@ const G3 = (() => {
       main = compile(gl, VS, FS);
       shad = compile(gl, SVS, SFS);
       part = compile(gl, PVS, PFS);
+      dec = compile(gl, DVS, DFS);
+      decBuf = gl.createBuffer(); decVAO = gl.createVertexArray();
+      gl.bindVertexArray(decVAO);
+      gl.bindBuffer(gl.ARRAY_BUFFER, decBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
+      gl.bindVertexArray(null);
       shadowTex = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
       gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, SH, SH);
@@ -537,10 +586,30 @@ const G3 = (() => {
     };
     R.addChild = (p, c) => { c.parent = p; p.children.push(c); return c; };
 
+    /* Bild für Aufkleber: aus einem Canvas; neu hochladen mit R.texUpdate */
+    function texUp(t) {
+      if (lost || !t.canvas) return;
+      if (!t.tex) t.tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t.tex);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, t.canvas);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const ext = gl.getExtension("EXT_texture_filter_anisotropic");
+      if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+    R.texture = function (cv) { const t = { canvas: cv, tex: null }; texs.add(t); texUp(t); return t; };
+    R.texUpdate = function (t) { if (t) texUp(t); };
+
     canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); lost = true; });
     canvas.addEventListener("webglcontextrestored", () => {
       lost = false; init();
       meshes.forEach(upload);
+      texs.forEach(t => { t.tex = null; texUp(t); });
       if (R.onRestore) R.onRestore();
     });
 
@@ -578,12 +647,14 @@ const G3 = (() => {
       return n.W;
     }
 
+    let decals = [];
     function collect(list, out, parentW, inh) {
       for (const n of list) {
         if (!n.visible) continue;
         world(n, parentW);
         const st = inh ? { tint: n.tint || inh.tint, glow: Math.max(n.glow, inh.glow), alpha: Math.min(n.alpha, inh.alpha), shadow: n.shadow && inh.shadow, outline: n.outline || inh.outline } : n;
         if (n.mesh) out.push([n, st]);
+        else if (n.decal) decals.push([n, st]);
         if (n.children.length) collect(n.children, out, n.W, st);
       }
     }
@@ -616,6 +687,7 @@ const G3 = (() => {
       R.resize();
       updateCamera();
       const all = [];
+      decals = [];
       collect(R.nodes, all, null, null);
       const E = R.env;
       /* nur zeichnen, was im Bild liegt – große Welt, wenig Arbeit */
@@ -714,6 +786,36 @@ const G3 = (() => {
         }
         gl.disable(gl.STENCIL_TEST); gl.disable(gl.BLEND);
         gl.depthMask(true); gl.depthFunc(gl.LESS);
+      }
+      /* Aufkleber: Schild, Logos – knapp vor der Fläche, ohne Flimmern */
+      if (decals.length) {
+        gl.useProgram(dec.p);
+        const d = dec.u;
+        gl.uniformMatrix4fv(d.uVP, false, R.VP); gl.uniformMatrix4fv(d.uLVP, false, R.LVP);
+        gl.uniform3fv(d.uSunDir, E.sun); gl.uniform3fv(d.uSunCol, E.sunCol);
+        gl.uniform3fv(d.uSky, E.sky); gl.uniform3fv(d.uGround, E.ground);
+        gl.uniform3fv(d.uFog, E.fog); gl.uniform2fv(d.uFogR, E.fogR); gl.uniform3fv(d.uCam, R.eye);
+        gl.uniform1f(d.uTexel, 1 / SH); gl.uniform1f(d.uShadowOn, 1);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex); gl.uniform1i(d.uShadow, 0);
+        gl.uniform1i(d.uTex, 1);
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
+        gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -4);
+        gl.bindVertexArray(decVAO);
+        for (const [n, st] of decals) {
+          const D = n.decal;
+          if (!D.t || !D.t.tex) continue;
+          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, D.t.tex);
+          gl.uniformMatrix4fv(d.uModel, false, n.W);
+          gl.uniform2f(d.uSize, D.w, D.h);
+          gl.uniform1f(d.uAlpha, st.alpha);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.depthMask(true); gl.depthFunc(gl.LESS);
+        gl.useProgram(main.p);
       }
       /* halbdurchsichtig (Bauvorschau) zuletzt */
       gl.enable(gl.BLEND);

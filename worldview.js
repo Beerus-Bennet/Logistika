@@ -376,6 +376,125 @@ function worldSyncHof(force) {
     add(fnode(fmesh("trailer", FWM.trailer), { x: tx + 2.2, z: tz, ry: -Math.PI / 2 }));
   }
   if (big) add(fnode(fmesh("mhall", FWM.machineHall), { x: 24, z: 12.8, ry: Math.PI }));
+  /* Firmenschild am Tor: Name und Logo stehen auf der Tafel (vorn und hinten) */
+  const T = brandTex();
+  if (T) {
+    const g = big ? { y: 2.7, z: F0 + 0.3 + 0.362, w: 2.52, h: 0.46, ry: 0 } : { y: 1.67, z: F0 + 0.045, w: 2.36, h: 0.47, ry: stage <= 1 ? 0.06 : 0 };
+    const sg = add(R.node(null, { x: 5, y: 0, z: F0 + (big ? 0.3 : 0), ry: g.ry }));
+    R.addChild(sg, R.node(null, { y: g.y, z: g.z - F0 - (big ? 0.3 : 0), decal: { t: big ? T.stone : T.sign, w: g.w, h: g.h } }));
+    if (!big) R.addChild(sg, R.node(null, { y: g.y, z: -0.045, ry: Math.PI, decal: { t: T.sign, w: g.w, h: g.h } }));
+  }
+}
+
+/* --------------------------- Firmenauftritt (v54) ---------------------------
+   Logo und Firmenname aus „Lackierung & Logo“ als Bild: auf dem Schild am
+   Tor, auf allen Firmenfahrzeugen und als kleiner Aufkleber auf den Paketen.
+   Ändert man das Logo, ziehen Schild, Fahrzeuge und Pakete sofort nach. */
+function brandLogo() {
+  if (typeof livery === "function" && S.player) return livery().logo;
+  return { shape: "kreis", mode: "txt", txt: "LG", bg: "#2f6fed", fg: "#ffffff" };
+}
+function brandName() { return S.player ? S.player.company : FT().short; }
+/* Logo wie logoSVG (livery.js), aber direkt auf ein Canvas gemalt */
+function brandDrawLogo(c, L, x, y, size) {
+  c.save();
+  c.translate(x, y); c.scale(size / 100, size / 100);
+  const paths = { schild: "M50 6 L90 18 Q90 64 50 94 Q10 64 10 18 Z", raute: "M50 4 L96 50 L50 96 L4 50 Z", sechs: "M50 5 L89 27.5 L89 72.5 L50 95 L11 72.5 L11 27.5 Z" };
+  let P;
+  if (paths[L.shape]) P = new Path2D(paths[L.shape]);
+  else if (L.shape === "banner") { P = new Path2D(); const r = 14, x0 = 4, y0 = 22, w = 92, h = 56; P.moveTo(x0 + r, y0); P.arcTo(x0 + w, y0, x0 + w, y0 + h, r); P.arcTo(x0 + w, y0 + h, x0, y0 + h, r); P.arcTo(x0, y0 + h, x0, y0, r); P.arcTo(x0, y0, x0 + w, y0, r); P.closePath(); }
+  else { P = new Path2D(); P.arc(50, 50, 44, 0, Math.PI * 2); }
+  c.fillStyle = L.bg || "#2f6fed"; c.fill(P);
+  c.lineJoin = "round"; c.lineWidth = 5; c.strokeStyle = "#0d1b2a"; c.stroke(P);
+  c.save(); c.translate(50, 50); c.scale(0.82, 0.82); c.translate(-50, -50);
+  c.globalAlpha = 0.55; c.lineWidth = 2.2 / 0.82; c.strokeStyle = L.fg || "#fff"; c.stroke(P); c.restore();
+  c.textAlign = "center"; c.textBaseline = "middle";
+  if (L.mode === "sym") {
+    c.font = (L.shape === "banner" ? 40 : 46) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    c.fillText(L.sym || "⭐", 50, 54);
+  } else {
+    const t = String(L.txt || "").slice(0, 3);
+    c.font = (t.length > 2 ? 34 : 44) + 'px Bangers,"Baloo 2",sans-serif';
+    const yy = L.shape === "schild" ? 56 : 54;
+    c.lineWidth = 4.8; c.strokeStyle = "#0d1b2a"; c.strokeText(t, 50, yy);
+    c.fillStyle = L.fg || "#fff"; c.fillText(t, 50, yy);
+  }
+  c.restore();
+}
+function brandLogoCanvas(cv) {
+  cv = cv || document.createElement("canvas");
+  cv.width = cv.height = 256;
+  const c = cv.getContext("2d");
+  c.clearRect(0, 0, 256, 256);
+  brandDrawLogo(c, brandLogo(), 8, 8, 240);
+  return cv;
+}
+/* Tafel am Tor: Holz (bis Stufe 3) oder weiße Steintafel (Stufe 4) – Logo links, Name groß */
+function brandSignCanvas(stone, cv) {
+  cv = cv || document.createElement("canvas");
+  const W = 1024, H = 200;
+  cv.width = W; cv.height = H;
+  const c = cv.getContext("2d");
+  if (stone) {
+    c.fillStyle = "#f6f1e6"; c.fillRect(0, 0, W, H);
+    c.strokeStyle = "#c9c0ae"; c.lineWidth = 10; c.strokeRect(5, 5, W - 10, H - 10);
+  } else {
+    c.fillStyle = "#b57d48"; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 4; i++) { c.fillStyle = i % 2 ? "rgba(90,50,20,.10)" : "rgba(255,230,190,.07)"; c.fillRect(0, i * H / 4, W, H / 4); c.fillStyle = "rgba(70,40,15,.35)"; c.fillRect(0, i * H / 4, W, 3); }
+    c.strokeStyle = "#6e4a2e"; c.lineWidth = 12; c.strokeRect(6, 6, W - 12, H - 12);
+  }
+  brandDrawLogo(c, brandLogo(), 22, 14, 172);
+  const name = brandName(), x0 = 210, max = W - x0 - 30;
+  let fs = 132;
+  c.font = fs + 'px Bangers,"Baloo 2",sans-serif';
+  while (c.measureText(name).width > max && fs > 46) { fs -= 4; c.font = fs + 'px Bangers,"Baloo 2",sans-serif'; }
+  c.textAlign = "center"; c.textBaseline = "middle";
+  const cx = x0 + max / 2, cy = H / 2 + fs * 0.04;
+  c.lineJoin = "round";
+  if (stone) { c.fillStyle = "#2a2f38"; c.fillText(name, cx, cy); }
+  else { c.lineWidth = 12; c.strokeStyle = "#3a2410"; c.strokeText(name, cx, cy); c.fillStyle = "#fff3d6"; c.fillText(name, cx, cy); }
+  return cv;
+}
+/* Bilder einmal je Renderer; brandSync malt sie neu, sobald sich Logo, Name oder Schrift ändern */
+function brandTex() {
+  if (typeof FV === "undefined" || !FV.R || !FV.R.texture || typeof document === "undefined") return null;
+  if (!WV.brand || WV.brand.R !== FV.R) {
+    WV.brand = { R: FV.R, key: "", logo: FV.R.texture(brandLogoCanvas()), sign: FV.R.texture(brandSignCanvas(false)), stone: FV.R.texture(brandSignCanvas(true)) };
+    WV.brand.key = brandKey();
+    if (document.fonts && document.fonts.load) document.fonts.load('80px Bangers').then(() => { WV.brandFont = 1; }).catch(() => {});
+  }
+  return WV.brand;
+}
+function brandKey() { return JSON.stringify(brandLogo()) + "|" + brandName() + "|" + (WV.brandFont || 0); }
+function brandSync() {
+  const T = WV.brand;
+  if (!T || !FV.R || T.R !== FV.R) return;
+  const k = brandKey();
+  if (k === T.key) return;
+  T.key = k;
+  brandLogoCanvas(T.logo.canvas); FV.R.texUpdate(T.logo);
+  brandSignCanvas(false, T.sign.canvas); FV.R.texUpdate(T.sign);
+  brandSignCanvas(true, T.stone.canvas); FV.R.texUpdate(T.stone);
+  if (typeof farmSyncVehicles === "function") farmSyncVehicles(true);
+}
+/* Logo-Aufkleber an ein Fahrzeug: Seiten (und hinten), je Modell passend */
+const BRAND_AT = {
+  van:   [[0.512, 0.6, -0.3, Math.PI / 2, 0.5], [-0.512, 0.6, -0.3, -Math.PI / 2, 0.5], [0, 0.6, -1.012, Math.PI, 0.42]],
+  moped: [[0.183, 0.77, -0.44, Math.PI / 2, 0.24], [-0.183, 0.77, -0.44, -Math.PI / 2, 0.24], [0, 0.77, -0.612, Math.PI, 0.24]],
+  bike:  [[0, 0.47, 0.672, 0, 0.26], [0.242, 0.47, 0.42, Math.PI / 2, 0.24], [-0.242, 0.47, 0.42, -Math.PI / 2, 0.24]],
+  truck: [[0.857, 1.42, 1.4, Math.PI / 2, 0.62], [-0.857, 1.42, 1.4, -Math.PI / 2, 0.62]]
+};
+function brandVehicle(node, k) {
+  const T = brandTex();
+  if (!T || !node || node.brand) return;
+  node.brand = (BRAND_AT[k] || []).map(([x, y, z, ry, s]) => FV.R.addChild(node, FV.R.node(null, { x, y, z, ry, decal: { t: T.logo, w: s, h: s } })));
+}
+/* kleiner Aufkleber auf Paketen und Kartons (oben und vorn) */
+function brandParcel(node, top, front, s) {
+  const T = brandTex();
+  if (!T || !node) return;
+  FV.R.addChild(node, FV.R.node(null, { y: top + 0.003, rx: -Math.PI / 2, decal: { t: T.logo, w: s, h: s } }));
+  if (front) FV.R.addChild(node, FV.R.node(null, { y: top * 0.5, z: front + 0.003, decal: { t: T.logo, w: s * 0.8, h: s * 0.8 } }));
 }
 /* Ausgezeichnete Hofgebäude: in Stufe 1 noch etwas grau und verwittert */
 const WORN_T = new Set(["house", "barn", "silo", "mill", "shed", "bakery"]);
@@ -1034,8 +1153,21 @@ function worldSyncPV() {
   WV.pvNodes = [];
   if (!v) return;
   const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.pvNodes.push(n); return n; };
-  add(fmesh("solarVan", FWM.solarVan), { x: FPV.at[0], z: FPV.at[1], ry: -0.55, s: 1.35 });
-  WV.pvMan = add(fmesh("pvMan", () => FWM.person({ shirt: 0xf2c230, pants: 0x2f4f7a, hat: "helm", seed: 21 })), { x: FPV.at[0] + 1.3, z: FPV.at[1] + 1.2, s: 1.35, ry: 0.7 });
+  const at = pvAt();
+  add(fmesh("solarVan", FWM.solarVan), { x: at[0], z: at[1], ry: -0.55, s: 1.35 });
+  WV.pvMan = add(fmesh("pvMan", () => FWM.person({ shirt: 0xf2c230, pants: 0x2f4f7a, hat: "helm", seed: 21 })), { x: at[0] + 1.3, z: at[1] + 1.2, s: 1.35, ry: 0.7 });
+}
+/* v54: Dörings Wagen parkt vor der Halle – steht dort inzwischen etwas, nimmt er den nächsten freien Platz im Hof */
+function pvAt() {
+  const free = (x, z) => S.farm.objs.every(o => { const [cx, cz] = farmCenter(o), [w, d] = farmSize(o); return Math.abs(cx - x) > w / 2 + 1.6 || Math.abs(cz - z) > d / 2 + 2.2; });
+  if (free(FPV.at[0], FPV.at[1])) return FPV.at;
+  let best = null, bd = 1e9;
+  for (let z = -39; z <= -21; z += 1) for (let x = -39; x <= -19; x += 1) {
+    if (x > -32.5 && x < -25.5 && z > -22.5) continue;                      /* Toreinfahrt frei lassen */
+    const d = Math.hypot(x - FPV.at[0], z - FPV.at[1]);
+    if (d < bd && free(x, z)) { bd = d; best = [x, z]; }
+  }
+  return best || FPV.at;
 }
 function farmPvView(type) {
   if (!FV.on) return;
@@ -1064,7 +1196,7 @@ function openPV() {
     if (pvFull()) {
       toast("☀️ Das Dach ist voll! Kessel und Säge laufen jetzt mit Sonnenstrom – Döring packt ein und fährt los.", "ok"); sfx("level");
       /* Kamera bleibt auf dem Wagen, bis er losgefahren ist */
-      closeFarmSheet(); farmFocusXZ(FPV.at[0] + 1, FPV.at[1] + 4, 32, 600);
+      closeFarmSheet(); { const at = pvAt(); farmFocusXZ(at[0] + 1, at[1] + 4, 32, 600); }
       return;
     }
     openPV();
@@ -1440,7 +1572,7 @@ function worldTags() {
   if (!box || !FV.R) return;
   const want = [];
   worldEvSpots().forEach((s, i) => { if (!s.area || farmAreaOpen(s.area)) want.push(["e" + i + s.act, s.x, s.y, s.z, s.ic, s.cls || "ready", () => worldEvAct(s)]); });
-  if (typeof pvVisit === "function" && pvVisit()) want.push(["pv", FPV.at[0] + 1.3, 2.9, FPV.at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]);
+  if (typeof pvVisit === "function" && pvVisit()) { const at = pvAt(); want.push(["pv", at[0] + 1.3, 2.9, at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]); }
   if (WV.npc && worldVisitor()) want.push(["npc", WV.npc.node.x, 2.6, WV.npc.node.z, FAREAS[WV.npc.id].whoI + "❗", "ready", () => openAreaVisit(WV.npc.id)]);
   const F = S.farm;
   F.objs.forEach(o => {
@@ -1997,7 +2129,7 @@ if (typeof MSG_GO !== "undefined") MSG_GO.pv = () => {
   setTimeout(() => {
     if (!FV.R) return;
     closeFarmSheet();
-    farmFocusXZ(FPV.at[0] + 1, FPV.at[1] + 4, 26, 700);
+    { const at = pvAt(); farmFocusXZ(at[0] + 1, at[1] + 4, 26, 700); }
     if (typeof pvVisit === "function" && pvVisit()) setTimeout(() => { if (FV.on) openPV(); }, 760);
   }, 250);
 };

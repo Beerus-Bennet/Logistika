@@ -885,7 +885,7 @@ const FM = (() => {
     b.box(0.37, 0.05, 0.35, 0xb83420, { y: 0.92, z: -0.44 });
     return b;
   }
-  function van(color) {
+  function van(color, stripe) {
     G3.seed(521);
     const b = new MB();
     const body = color || 0xf3f4f6;
@@ -895,7 +895,7 @@ const FM = (() => {
     b.box(0.96, 0.32, 0.5, body, { y: 0.97, z: 0.55, rx: -0.15 });
     b.box(0.9, 0.3, 0.05, C.glass, { y: 1.0, z: 0.82, rx: -0.35 });
     b.box(0.03, 0.26, 0.5, C.glass, { x: 0.5, y: 1.05, z: 0.35 }); b.box(0.03, 0.26, 0.5, C.glass, { x: -0.5, y: 1.05, z: 0.35 });
-    b.box(1.02, 0.12, 2.02, 0x2f6fed, { y: 0.55 });
+    b.box(1.02, 0.12, 2.02, stripe != null ? stripe : 0x2f6fed, { y: 0.55 });
     b.box(0.9, 0.12, 0.05, 0x55555c, { y: 0.3, z: 1.0 });
     b.box(0.18, 0.1, 0.03, 0xfff5c8, { x: 0.32, y: 0.55, z: 1.01 }); b.box(0.18, 0.1, 0.03, 0xfff5c8, { x: -0.32, y: 0.55, z: 1.01 });
     return b;

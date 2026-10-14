@@ -144,7 +144,10 @@ so laufen die Lager nicht ständig über.
   einem Tipp auf 🪚 bzw. 🏡 zwischen Hof und Sägewerk. Fest bleiben das
   Wohnhaus und die Fischerei; vor den Toren des Sägewerks bleibt Platz frei.
   Der **Verkaufsstand** steht jetzt an der Straße vor dem Hof und lässt sich
-  daran entlang verschieben.
+  daran entlang verschieben – seit v54 immer auf einem freien Platz (nicht im
+  Traktor, nicht vor Laternen, Blumen oder dem Händlerkarren). Maschinen
+  dürfen auch direkt vor der Sägehalle stehen; Dörings Montagewagen parkt
+  dann einfach an einem freien Platz daneben.
 * **Opas Notizbuch** – oben links immer die nächste Aufgabe mit Belohnung,
   aufgeteilt in vier Kapitel: *Ankommen* (Felder, Ofen, Hühner, erste
   Lieferungen), *Wachsen* (Kuhstall, Milch, Kuchen, Potsdam), *Vieh & Handwerk*
@@ -239,6 +242,14 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   er mit Fahrer über den Waldweg zur Straße. Auch Lastenrad, Moped und
   Transporter fahren nie mehr leer – am Steuer sitzt jemand (die Fahrerin aus
   dem Team, wenn sie die Lieferung losgeschickt hat).
+* **Firmenauftritt in 3D (v54)** – Name und Logo aus „Lackierung & Logo“
+  stehen jetzt direkt auf der Tafel am Hoftor (vorn und hinten, ab dem großen
+  Wirtschaftshof auf der Steintafel) statt als schwebende Schrift. Alle
+  Firmenfahrzeuge auf dem Hof tragen das Logo an den Seiten, lackierte
+  Fahrzeuge fahren in den Firmenfarben, und die Kartons, die beim Beladen
+  ins Fahrzeug fliegen, haben das Logo als kleinen Aufkleber. Ändert man das
+  Logo, ziehen Schild, Fahrzeuge und Pakete sofort nach. Der Stellplatz des
+  Holzlasters flimmert nicht mehr.
 * **Wege und Grafik (v53)** – Waldwege sind durchgehende Bänder ohne
   Flimmern an Kreuzungen; wo ein Weg endet, liegt eine kleine Lichtung mit
   Bank. Felder flimmern beim starken Hineinzoomen nicht mehr. Die Heuballen

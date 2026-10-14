@@ -177,11 +177,13 @@ function erbeInit(F, fresh) {
   }
   /* Verkaufsstand an der Straße (v53: nicht mehr im Hof) */
   if (!F.objs.some(o => o.t === "stall")) {
-    const p = farmZoneSpot("road", 2, 1, 27, 32.5, "stall");
+    const p = farmZoneSpot("road", 2, 1, 16, 32.5, "stall");
     if (p) farmAddObj({ t: "stall", x: p[0], z: p[1], r: 0 });
   } else {
     const st = F.objs.find(o => o.t === "stall");
-    if (farmZoneAt(st.x, st.z, ...farmSize(st)) !== "road") { const p = farmZoneSpot("road", ...farmSize(st), 27, 32.5, "stall", null, st.id); if (p) { st.x = p[0]; st.z = p[1]; } }
+    /* v54: nicht im Traktor, nicht vor Laternen – sonst an den nächsten freien Platz */
+    st.r = 0;
+    if (!farmFits(st.x, st.z, ...farmSize(st), st.id, "stall")) { const p = farmZoneSpot("road", ...farmSize(st), 16, 32.5, "stall", null, st.id); if (p) { st.x = p[0]; st.z = p[1]; } }
   }
   if (fresh) erbeJunk(F);
   /* Lehmanns Ufer aus dem Testbuild gehört jetzt zum See; mit Steg gibt es die Angel */
