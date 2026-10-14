@@ -274,25 +274,30 @@ function stegTourHTML(U) {
 /* ------------------------- v59: Berts alter Kombi -------------------------
    Bert steht nach dem Turnier mit seinem Kombi am Ufer. Antippen öffnet direkt die Werkstatt (Tauwürmer,
    Profi-Köder, Spezialköder) mit Dauerbestellung; die Köder-Entwicklung liegt hinter einem Knopf. */
-/* Kopf der Werkstatt (farmview.openMachine → machExtraHTML): Bert, alte Bestellung,
-   Dauerbestellung und der Knopf zur Köder-Entwicklung */
+/* Berts Werkstatt (farmview.openMachine): oben unter dem Titel Bert (bertTopHTML),
+   bei der Warteschlange alte Bestellung und Dauerbestellung (bertWorkHTML über machExtraHTML),
+   ganz unten der Knopf zur Köder-Entwicklung (bertDevBtnHTML) */
+function bertTopHTML() {
+  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
+      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Köder, den genau die mögen.“</p></div></div>`;
+}
 function bertWorkHTML(o) {
   const U = angelS();
   if (!U) return "";
   const keep = U.bert.keep || 0, need = FBERT.lureNeed, old = U.bert.lureQ;
-  const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
-  const dev = Object.keys(FSPEC_BAIT).filter(id => { const s = specS(id); return s && s.dev && !specDone(id); }).length;
   const oldH = !old ? "" : S.time >= old.end
     ? `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>deine alte Bestellung · ${old.n} Stück</small></div><button class="btn tiny" id="bLureGet">Abholen</button></div>`
     : `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Profi-Köder</b><small>deine alte Bestellung · noch ${fdur(Math.max(1, old.end - S.time))}</small></div></div>`;
   const lureH = bertLureOk() ? "" : `<div class="fs-empty">„Für die richtig Großen tüftel ich an Profi-Ködern. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
     <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische</small></div>`;
-  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
-      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Köder, den genau die mögen.“</p></div></div>
-    ${oldH}${lureH}
+  return `${oldH}${lureH}
     <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
-    <div class="fs-row">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>
-    <button class="fup2" id="bDev"><span>🎯</span><b>Köder-Entwicklung</b><small>${ask ? "🐟 " + ask + " Fisch" + (ask > 1 ? "e" : "") + " für Bert bereit" : dev ? "⏳ Bert entwickelt" : "Fisch übergeben – Bert entwickelt einen Köder nur für diese Art"}</small></button>`;
+    <div class="fs-row">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>`;
+}
+function bertDevBtnHTML() {
+  const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
+  const dev = Object.keys(FSPEC_BAIT).filter(id => { const s = specS(id); return s && s.dev && !specDone(id); }).length;
+  return `<button class="fup2" id="bDev"><span>🎯</span><b>Köder-Entwicklung</b><small>${ask ? "🐟 " + ask + " Fisch" + (ask > 1 ? "e" : "") + " für Bert bereit" : dev ? "⏳ Bert entwickelt" : "Fisch übergeben – Bert entwickelt einen Köder nur für diese Art"}</small></button>`;
 }
 function bertWorkBind(o) {
   const U = angelS(), on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(b => b.onclick = () => fn(b));

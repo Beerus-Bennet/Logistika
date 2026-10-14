@@ -1852,10 +1852,12 @@ function openMachine(o) {
   const sub = M.trips ? "Wähle eine Fangfahrt – der Kutter fährt eine nach der anderen. Diesel zahlst du beim Ablegen."
     : "Tipp ein Rezept an – es kommt in die Warteschlange.";
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)}</div>
+    ${M.bert && typeof bertTopHTML === "function" ? bertTopHTML(o) : ""}
     <div class="fq">${machQueueHTML(o)}</div>
     ${typeof machExtraHTML === "function" ? machExtraHTML(o) : ""}
     <div class="fs-sub">${sub}</div>
-    <div class="frecs">${rec}</div>`, "mach");
+    <div class="frecs">${rec}</div>
+    ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}`, "mach");
   if (typeof machExtraBind === "function") machExtraBind(o);
   $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = () => {
     const r = farmQueue(o, b.dataset.rec);
