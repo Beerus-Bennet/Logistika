@@ -243,19 +243,31 @@ function farmRoom(id) {
   return farmStoreCap(it.st) - farmStoreUsed(it.st);
 }
 /* Fische liegen nach Sternen getrennt: qs[1 … 5] = Stück je Stufe,
-   n und q (Summe, Durchschnitt) bleiben für alle anderen Leser gleich */
+   n und q (Summe, Durchschnitt) bleiben für alle anderen Leser gleich.
+   v59: qkg[1 … 5] = Gewicht je Stufe – der Preis richtet sich nach kg */
 function farmQsOn(id) { return !!(FITEMS[id] && FITEMS[id].k === "fisch"); }
 function farmQsFix(e) {
   e.n = e.qs.reduce((a, b) => a + b, 0);
   e.q = e.n ? e.qs.reduce((a, b, i) => a + b * i, 0) / e.n : 3;
 }
-/* hinzufügen mit Durchschnittsqualität */
-function farmAdd(id, n, q) {
+function farmKgAvg(id) { return (FFISH[id] && FFISH[id].kgAvg) || FITEMS[id].kg || 0; }
+function farmQkg(id, e) { if (!e.qkg) e.qkg = e.qs.map(c => c * farmKgAvg(id)); return e.qkg; }
+/* Stück aus einer Stufe nehmen: das Gewicht geht anteilig mit */
+function farmQsCut(id, e, s, k) {
+  const g = farmQkg(id, e), kg = e.qs[s] ? g[s] * k / e.qs[s] : 0;
+  g[s] = e.qs[s] - k > 0 ? Math.max(0, g[s] - kg) : 0;
+  e.qs[s] -= k;
+  return kg;
+}
+/* hinzufügen mit Durchschnittsqualität; kg = Gesamtgewicht der n Stück (Fisch) */
+function farmAdd(id, n, q, kg) {
   if (!n) return;
   const e = S.farm.inv[id] || (S.farm.inv[id] = { n: 0, q: 3 });
   if (farmQsOn(id)) {
     e.qs = e.qs || [0, 0, 0, 0, 0, 0];
-    e.qs[clamp(Math.round(q || 3), 1, 5)] += n;
+    const s = clamp(Math.round(q || 3), 1, 5), g = farmQkg(id, e);
+    g[s] += kg != null ? kg : n * farmKgAvg(id);
+    e.qs[s] += n;
     return farmQsFix(e);
   }
   e.q = (e.q * e.n + (q || 3) * n) / (e.n + n);
@@ -266,7 +278,7 @@ function farmTake(id, n) {
   const e = S.farm.inv[id];
   if (!e || e.n < n) return false;
   if (e.qs) {
-    for (let s = 1, left = n; s <= 5 && left; s++) { const k = Math.min(left, e.qs[s]); e.qs[s] -= k; left -= k; }
+    for (let s = 1, left = n; s <= 5 && left; s++) { const k = Math.min(left, e.qs[s]); if (k) farmQsCut(id, e, s, k); left -= k; }
     farmQsFix(e);
   } else e.n -= n;
   if (!e.n) delete S.farm.inv[id];
@@ -277,10 +289,22 @@ function farmInvQ(id, q) { const e = S.farm.inv[id]; return e && e.qs ? e.qs[q] 
 function farmTakeQ(id, q, n) {
   const e = S.farm.inv[id];
   if (!e || !e.qs || (e.qs[q] || 0) < n) return false;
-  e.qs[q] -= n;
+  farmQsCut(id, e, q, n);
   farmQsFix(e);
   if (!e.n) delete S.farm.inv[id];
   return true;
+}
+/* v59: Durchschnittsgewicht einer Sternstufe im Lager (null = keins da) */
+function farmInvKg(id) { const e = S.farm.inv[id]; return e && e.qs ? farmQkg(id, e).reduce((a, b) => a + b, 0) : 0; }
+function farmKgQ(id, q) { const e = S.farm.inv[id]; return e && e.qs && e.qs[q] ? farmQkg(id, e)[q] / e.qs[q] : null; }
+/* v59: voller Wert von n Stück. Fisch: Stufe q, ohne q von unten nach oben
+   (so wie farmTake nimmt), je Stufe nach ihrem Durchschnittsgewicht */
+function farmStackV(id, n, q) {
+  if (!farmQsOn(id)) return FITEMS[id].v * n;
+  if (q) return fishPrice(id, farmKgQ(id, q), q) * n;
+  let v = 0, left = n;
+  for (let s = 1; s <= 5 && left; s++) { const k = Math.min(left, farmInvQ(id, s)); if (k) { v += fishPrice(id, farmKgQ(id, s), s) * k; left -= k; } }
+  return v + (left ? fishPrice(id, null, 3) * left : 0);
 }
 function farmHasAll(items) { return Object.keys(items).every(id => farmInv(id) >= items[id]); }
 function farmMissing(items) {
@@ -360,7 +384,7 @@ function farmCanMake(id, seen) {
   for (const mk in FMACHINES) {
     if (!objs.some(o => o.t === mk && machReady(o))) continue;
     for (const r of FMACHINES[mk].recipes) {
-      if (r.lv > lv || (r.id !== id && !(r.by && r.by[id]))) continue;
+      if (r.lv > lv || (r.ok && !r.ok()) || (r.id !== id && !(r.by && r.by[id]))) continue;
       if (Object.keys(r.in).every(x => farmCanMake(x, new Set(seen)))) return true;
     }
   }
@@ -446,7 +470,7 @@ function farmBait(o, kind) {
 }
 /* Reuse hochziehen: 2 Tiere, manchmal 3. Was drin ist, würfelt die Stufe;
    jedes Tier hat Länge, Gewicht und Sterne (frischer Köder hilft) */
-function farmHaul(o) {
+function farmHaul(o, staff) {
   if (!o || o.t !== "pot" || potState(o) !== "ripe") return null;
   const P = FPOTS[o.kind];
   const n = P.yield + (Math.random() < 0.2 ? 1 : 0);
@@ -455,15 +479,15 @@ function farmHaul(o) {
   for (let i = 0; i < n; i++) {
     const sp = farmWPick(Object.keys(P.mix), x => P.mix[x]);
     const s = specRoll(FPOTS[sp], (P.tier - 1) * 0.3), q = specQ(s, ((o.bq || 3) - 1) / 4);
-    farmAdd(sp, 1, q);
+    farmAdd(sp, 1, q, s.kg);
     got.push({ sp, q, cm: s.cm, kg: s.kg });
-    if (angelS()) angelLog(sp, s, q, null);
+    if (angelS()) angelLog(sp, s, q, null, staff);
   }
   const id = o.kind, xp = got.reduce((a, g) => a + FITEMS[g.sp].xp, 0), q = Math.round(got.reduce((a, g) => a + g.q, 0) / n);
   o.last = id; o.kind = null; o.bq = 0;
-  S.farm.stats.harvest += n;
+  if (!staff) S.farm.stats.harvest += n;
   farmXP(xp);
-  got.forEach(g => farmEvent("harvest:" + g.sp));
+  if (!staff) got.forEach(g => farmEvent("harvest:" + g.sp)); /* v59: Fischer-Fänge zählen nicht fürs Notizbuch */
   return { id: got[0].sp, n, q, xp, got };
 }
 
@@ -640,7 +664,7 @@ function kesselSunOff(o, r) { return o.t === "kessel" && !!(FITEMS[r.id] && FITE
 function farmQueue(o, rid) {
   machUpdate(o);
   const r = recipeOf(o, rid);
-  if (!r || r.lv > flv()) return "locked";
+  if (!r || r.lv > flv() || (r.ok && !r.ok())) return "locked";   /* v59: r.ok = eigene Sperre (Bert) */
   if (!machReady(o)) return "broken";
   /* v57: speist das volle Solardach ein (tagsüber), heizt der Kessel nicht – Strom aus dem Kessel erst nachts */
   if (kesselSunOff(o, r)) return "sun";
@@ -654,11 +678,12 @@ function farmQueue(o, rid) {
   if (en && (S.farm.en || 0) < en) return "energy";
   if (en) S.farm.en -= en;
   let qs = 0, qn = 0;
-  for (const id in r.in) { qs += farmQ(id) * r.in[id]; qn += r.in[id]; farmTake(id, r.in[id]); }
+  const kg = {};   /* v59: Fisch als Zutat – Gewicht merken, damit Abbrechen es zurückgibt */
+  for (const id in r.in) { qs += farmQ(id) * r.in[id]; qn += r.in[id]; const k0 = farmInvKg(id); farmTake(id, r.in[id]); if (farmQsOn(id)) kg[id] = k0 - farmInvKg(id); }
   const M = FMACHINES[o.t];
   if (r.cost) {
     S.money -= r.cost; S.expense += r.cost;
-    logMoney("farm", (r.trip ? "Diesel · " + r.trip : "Sprit · " + M.n), -r.cost);
+    logMoney("farm", r.costT || (r.trip ? "Diesel · " + r.trip : "Sprit · " + M.n), -r.cost);
   }
   const start = o.q.length ? o.q[o.q.length - 1].end : S.time;
   /* Im Rundgang geht das allererste Mal schnell (Opa hat vorgeheizt,
@@ -672,6 +697,7 @@ function farmQueue(o, rid) {
   const n = r.out + (r.luck && Math.random() < r.luck ? 1 : 0);
   const tk = o.t === "sw_halle" && (o.lvl || 1) >= 2 ? 0.67 : 1;
   const job = { r: r.id, k: rid, start, end: start + (quick ? r.tq : Math.round(r.t * tk)), q, n, by: r.by || null };
+  if (Object.keys(kg).length) job.kg = kg;
   /* die erste Kutterfahrt im Rundgang läuft im Zeitraffer: sofort fertig,
      der Kutter bleibt am Kai */
   if (quick && M.trips) { job.tut = 1; job.end = start; }
@@ -686,7 +712,7 @@ function farmUnqueue(o, i) {
   if (!job) return false;
   const r = recipeOf(o, job.k);
   if (r) {
-    for (const id in r.in) farmAdd(id, r.in[id], job.q || 3);
+    for (const id in r.in) farmAdd(id, r.in[id], job.q || 3, job.kg && job.kg[id]);
     if (i > 0 && r.cost) { S.money += r.cost; S.revenue += r.cost; logMoney("farm", "Abgebrochen: " + FMACHINES[o.t].n, r.cost); }
     if (i > 0 && r.en && !(typeof pvSun === "function" && pvSun())) S.farm.en = Math.min(farmEnCap(), (S.farm.en || 0) + Math.max(1, Math.round(r.en * (1 - staffPerk("mechaniker")))));
   }
@@ -752,12 +778,12 @@ function farmStoreUp(st) {
   return true;
 }
 /* Großhandel: sofort Geld, aber nur der halbe Wert */
-/* Fisch: Sterne zählen mehr (±15 % statt ±8 %); q = bestimmte Sternstufe */
+/* v59: Fisch nach Gewicht (farmStackV), Sterne als Aufschlag; q = bestimmte Sternstufe */
 function farmSellPrice(id, n, q) {
-  q = q || farmQ(id) || 3;
-  const f = FITEMS[id].k === "fisch" ? 0.15 : 0.08;
   const boost = typeof farmPriceBoost === "function" ? farmPriceBoost(id) : 1;   /* v58: Preis-Ereignis */
-  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * f) * boost * 10) / 10);
+  if (farmQsOn(id)) return Math.max(0.1, Math.round(farmStackV(id, n, q) * 0.5 * boost * 10) / 10);
+  q = q || farmQ(id) || 3;
+  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * 0.08) * boost * 10) / 10);
 }
 function farmSell(id, n, q) {
   /* Fisch ohne Stufe: von unten nach oben, jede Stufe zu ihrem Preis */
@@ -858,7 +884,7 @@ function farmOrderCap() { return Math.min(8, 3 + Math.floor(flv() / 2)); }
 function farmOrders() { return S.orders.filter(o => o.farm); }
 /* v53: jede Station hat ihre eigene Bestelltafel – Hof, Sägewerk, Fischerei */
 const FORD_AREAS = [{ id: "hof", i: "🏡", n: "Hof" }, { id: "saege", i: "🪚", n: "Sägewerk" }, { id: "see", i: "🎣", n: "Fischerei" }];
-function farmItemArea(id) { const it = FITEMS[id]; return !it ? "hof" : it.st === "fisch" ? "see" : it.st === "holz" ? "saege" : "hof"; }
+function farmItemArea(id) { const it = FITEMS[id]; return !it ? "hof" : it.st === "fisch" || it.st === "koeder" ? "see" : it.st === "holz" ? "saege" : "hof"; }
 function farmOrderArea(o) {
   if (o.area) return o.area;
   const v = {};
@@ -1002,13 +1028,26 @@ const FABO = [
   { area: "saege", firm: "Kaminstudio Werder",      town: "w-werder",  item: "brennholz", pal: 5, per: 3, bonus: 110 },
   { area: "saege", firm: "Tischlerei Glindow",      town: "w-glindow", item: "dielen",   pal: 4, per: 2, bonus: 170 },
   { area: "saege", firm: "Palettenwerk Potsdam",    town: "potsdam",   item: "paletten", pal: 6, per: 2, bonus: 150 },
+  /* v59: mehr Firmen, manche erst ab einem Level */
+  { area: "saege", firm: "Gartencenter Petzow",     town: "w-petzow",  item: "zaun",     pal: 3, per: 2, bonus: 150, lv: 12 },
+  { area: "saege", firm: "Obsthof Caputh",          town: "w-caputh",  item: "kisten",   pal: 4, per: 3, bonus: 120, lv: 10 },
+  { area: "saege", firm: "Möbelwerkstatt Michendorf", town: "w-michendorf", item: "moebel", pal: 3, per: 2, bonus: 210, lv: 14 },
   { area: "hof",   firm: "Großbäckerei Potsdam",    town: "potsdam",   item: "mehl",     pal: 4, per: 3, bonus: 90 },
   { area: "hof",   firm: "Frischemarkt Werder",     town: "w-werder",  item: "ei",       pal: 3, per: 4, bonus: 70 },
   { area: "hof",   firm: "Hotel Havelblick",        town: "w-werder",  item: "milch",    pal: 3, per: 4, bonus: 90 },
   { area: "hof",   firm: "Mosterei Glindow",        town: "w-glindow", item: "apfel",    pal: 4, per: 4, bonus: 80 },
+  { area: "hof",   firm: "Café am Markt Werder",    town: "w-werder",  item: "apfelkuchen", pal: 2, per: 3, bonus: 110, lv: 8 },
+  { area: "hof",   firm: "Hofladen Petzow",         town: "w-petzow",  item: "butter",   pal: 2, per: 4, bonus: 100, lv: 8 },
+  { area: "hof",   firm: "Käserei-Theke Caputh",    town: "w-caputh",  item: "kaese",    pal: 2, per: 3, bonus: 130, lv: 10 },
+  { area: "hof",   firm: "Pizzeria Geltow",         town: "w-geltow",  item: "pizza",    pal: 2, per: 3, bonus: 120, lv: 12 },
   { area: "see",   firm: "Fischrestaurant Potsdam", town: "potsdam",   item: "raeucherforelle", pal: 3, per: 3, bonus: 130 },
   { area: "see",   firm: "Feinkost Werder",         town: "w-werder",  item: "konserve", pal: 3, per: 4, bonus: 110 },
-  { area: "see",   firm: "Kantine Geltow",          town: "w-geltow",  item: "barschfilet", pal: 3, per: 3, bonus: 100 }
+  { area: "see",   firm: "Kantine Geltow",          town: "w-geltow",  item: "barschfilet", pal: 3, per: 3, bonus: 100 },
+  { area: "see",   firm: "Imbiss am Glindower See", town: "w-glindow", item: "fischbroetchen", pal: 2, per: 4, bonus: 90, lv: 19 },
+  { area: "see",   firm: "Hotelküche Petzow",       town: "w-petzow",  item: "zanderfilet", pal: 2, per: 3, bonus: 170, lv: 18 },
+  { area: "see",   firm: "Restaurant Arielle",      town: "potsdam",   item: "forellenfilet", pal: 2, per: 3, bonus: 120, lv: 16 },
+  { area: "see",   firm: "Fischmarkt Potsdam",      town: "potsdam",   item: "fischkiste", pal: 2, per: 2, bonus: 140, lv: 17 },
+  { area: "see",   firm: "Schlosshotel Caputh",     town: "w-caputh",  item: "edelbox",  pal: 2, per: 1, bonus: 220, lv: 18 }
 ];
 function farmAboPal(A) { return A.pal + (A.item === "paletten" ? " Stapel " : " Paletten ") + FITEMS[A.item].n; }
 function farmAbos() { const F = S.farm; F.abos = F.abos || []; F.aboOff = F.aboOff || []; return F.abos; }
@@ -1018,7 +1057,7 @@ function farmAboFit(T) {
   return Math.min(T.pal, Math.floor(max / Math.max(1, kg)));
 }
 function farmAboOk(T) {
-  return FITEMS[T.item] && N[T.town] && (typeof isUnlocked !== "function" || isUnlocked(T.town)) && farmOrderAreaOn(T.area) && (farmCanMake(T.item) || farmInv(T.item) > 0) && flv() >= 6 && farmAboFit(T) >= 2;
+  return FITEMS[T.item] && N[T.town] && (typeof isUnlocked !== "function" || isUnlocked(T.town)) && farmOrderAreaOn(T.area) && (farmCanMake(T.item) || farmInv(T.item) > 0) && flv() >= Math.max(6, T.lv || 0) && farmAboFit(T) >= 2;
 }
 /* Wochenbestellung erzeugen (angenommen, ohne Frist bis zur nächsten Woche) */
 function farmAboOrder(A) {
@@ -1033,7 +1072,7 @@ function farmAboOrder(A) {
 }
 function farmAboTick() {
   const F = S.farm, abos = farmAbos();
-  /* Angebot je Station: höchstens eins offen, höchstens zwei laufende Verträge */
+  /* Angebot je Station: v59 bis zu zwei offen (1 Tag gültig, Prüfung alle 6 h), höchstens zwei laufende Verträge */
   /* v58: abgelaufene Angebote merken und sofort ersetzen – nicht dieselbe Firma mit neuer Frist */
   F.aboSeen = F.aboSeen || {};
   let gone = false;
@@ -1042,17 +1081,19 @@ function farmAboTick() {
     F.aboSeen[x.firm] = S.time; gone = true;
     return false;
   });
-  if (gone || S.time - (F.aboT || -1e9) > 720) {
+  if (gone || S.time - (F.aboT || -1e9) > 360) {
     F.aboT = S.time;
     FORD_AREAS.forEach(a => {
-      if (F.aboOff.some(x => x.area === a.id) || abos.filter(x => x.area === a.id).length >= 2) return;
-      const all = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm));
+      if (F.aboOff.filter(x => x.area === a.id).length >= 2 || abos.filter(x => x.area === a.id).length >= 2) return;
+      const all = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm) && !F.aboOff.some(x => x.firm === T.firm));
       /* zuletzt abgelaufene Firma nur, wenn es keine andere gibt; am liebsten die am längsten nicht gezeigte */
       const last = all.reduce((m, T) => (F.aboSeen[T.firm] || -1e9) > (F.aboSeen[m] || -1e9) ? T.firm : m, null);
       const pool = all.length > 1 ? all.filter(T => T.firm !== last) : all;
       if (!pool.length || (!gone && Math.random() < 0.5)) return;
       const T = pick(pool);
-      F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: farmAboFit(T), exp: S.time + 2880 }));
+      /* v59: Menge und Bonus wachsen mit dem Level (±25 %) */
+      const k = clamp(1 + (flv() - Math.max(6, T.lv || 0)) * 0.05, 0.75, 1.25);
+      F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: Math.max(2, Math.min(farmAboFit(T), Math.round(T.pal * k))), bonus: Math.round(T.bonus * k), exp: S.time + 1440 }));
     });
   }
   /* jede Woche: neue Lieferung – oder die alte steht noch (verpasst) */
@@ -1295,7 +1336,7 @@ function farmValue() {
     if (o.slots) v += FSLOT_COST.slice(0, o.slots).reduce((a, b) => a + b, 0);
   });
   farmStores().forEach(st => { v += FSTORE[st].cost.slice(0, (S.farm.cap[st] || 1) - 1).reduce((a, b) => a + b, 0); });
-  for (const id in S.farm.inv) v += FITEMS[id].v * S.farm.inv[id].n * 0.8;
+  for (const id in S.farm.inv) v += farmStackV(id, S.farm.inv[id].n) * 0.8;   /* v59: Fisch nach Gewicht */
   return Math.round(v / 500) * 500;
 }
 function farmSellAll() {
@@ -1395,6 +1436,7 @@ function farmMigrate() {
   for (const id in F.inv) {
     const e = F.inv[id];
     if (farmQsOn(id) && !e.qs) { e.qs = [0, 0, 0, 0, 0, 0]; e.qs[clamp(Math.round(e.q || 3), 1, 5)] = e.n; farmQsFix(e); }
+    if (e.qs) farmQkg(id, e);   /* v59: Gewicht je Stufe aus dem Durchschnittsfisch */
   }
   F.objs = F.objs.filter(farmObjKnown);
   farmBoundsUpdate();

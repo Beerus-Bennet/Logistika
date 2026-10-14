@@ -374,11 +374,11 @@ function staffMachThe(t) {
   const n = FMACHINES[t].n, den = ["bakery", "saegebock", "kessel", "spalter", "f_markt"], das = ["f_lager", "f_kuehl"];
   return (den.includes(t) ? "den " : das.includes(t) ? "das " : "die ") + n;
 }
-function staffMachRole(o) { const M = FMACHINES[o.t]; return M.fish ? "fischwirt" : (M.saw || o.t === "saegebock") ? "saeger" : "hofmeister"; }
+function staffMachRole(o) { const M = FMACHINES[o.t]; return M.bert ? "bert" : M.fish ? "fischwirt" : (M.saw || o.t === "saegebock") ? "saeger" : "hofmeister"; }
 function staffMachines(role) {
   return S.farm.objs.filter(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || (o.area && !farmAreaOpen(o.area))) return false;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return false;
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return false;
     return staffMachRole(o) === role;
   });
@@ -388,7 +388,7 @@ function staffRecipeFor(id, role) {
   let best = null;
   S.farm.objs.forEach(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || (o.area && !farmAreaOpen(o.area))) return;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return;
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return;
     const mr = staffMachRole(o);
     if (role && mr !== role) return;
@@ -1022,7 +1022,7 @@ function staffDo(s, j) {
     }
     case "haul": case "bait":
       /* Reuse hochziehen und gleich wieder beködert runterlassen */
-      if (o && j.k === "haul" && potState(o) === "ripe") { const r = farmHaul(o); if (r) (r.got || [{ sp: r.id }]).forEach(g => gain(g.sp, 1)); }
+      if (o && j.k === "haul" && potState(o) === "ripe") { const r = farmHaul(o, true); if (r) (r.got || [{ sp: r.id }]).forEach(g => gain(g.sp, 1)); }
       if (o && potState(o) === "empty" && farmBaitItem()) { const k = j.kind && farmPotOk(j.kind) ? j.kind : o.last && farmPotOk(o.last) ? o.last : Object.keys(FPOTS).find(farmPotOk); if (k) farmBait(o, k); }
       break;
     case "fish": {
@@ -1031,10 +1031,11 @@ function staffDo(s, j) {
       const c = staffFishCatch(j.gid || "steg", j.bait || "mais");
       if (!c) break;
       const id = c.id;
-      farmAdd(id, 1, c.q);
-      F.stats.species = F.stats.species || {};
-      F.stats.species[id] = (F.stats.species[id] || 0) + 1; F.stats.catch = (F.stats.catch || 0) + 1;
-      farmXP(FITEMS[id].xp); farmEvent("catch");
+      farmAdd(id, 1, c.q, c.s.kg);
+      /* v59: eigene Statistik – Notizbuch-Aufgaben zählen nur deine Fänge */
+      F.stats.staffSpecies = F.stats.staffSpecies || {};
+      F.stats.staffSpecies[id] = (F.stats.staffSpecies[id] || 0) + 1; F.stats.staffCatch = (F.stats.staffCatch || 0) + 1;
+      farmXP(FITEMS[id].xp);
       angelLog(id, c.s, c.q, null, true);
       gain(id, 1);
       break;

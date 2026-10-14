@@ -136,7 +136,7 @@ const MG_GAMES = {
       if (st.hard) { st.hp = Math.round(st.hp * 1.6); st.sta = Z.sta * 1.3; }
       if ((t.dmg || 0) >= st.hp) t.dmg = st.hp - 3;
       st.c = 0.3 + Math.random() * 0.4; st.good = 0.1; st.okw = 0.26; st.cool = 0;
-      mgH("🪓 " + FSPECIES[t.sp].n + " fällen · " + Z.n, "Tipp, wenn die Nadel im grünen Feld steht");
+      mgH("🪓 " + (t.n || FSPECIES[t.sp].n) + " fällen · " + Z.n, "Tipp, wenn die Nadel im grünen Feld steht");   /* v59: t.n = Obstbaum */
       mgStage(`<div class="mg-tbar" id="mgT"><i class="ok" id="mgOk"></i><i class="good" id="mgGood"></i><b id="mgNeedle"></b></div>
         <div class="mg-hp" id="mgHpBox"><span>🌳</span><i><em id="mgHp"></em></i></div><div id="mgStaBox">${mgStaHTML()}</div>`);
       $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.axe.hit(st); };
@@ -718,7 +718,7 @@ const MG_GAMES = {
     /* Köder wählen – nicht verfügbare grau mit Grund */
     baits(st) {
       const U = angelS();
-      return `<div class="mg-baits">${Object.keys(FBAITS).map(b => { const B = FBAITS[b], why = angelBaitWhy(b);
+      return `<div class="mg-baits">${Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b, st.gid);
         return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
     },
     odds(st) {
@@ -741,7 +741,7 @@ const MG_GAMES = {
     cast(st) {
       if (farmRoom("barsch") < 1) { farmFull("fisch"); return mgMsg("🧊 Die Kühlkiste ist voll – erst verarbeiten oder verkaufen.", "bad"); }
       if (!farmCast(st.gid)) {
-        const B = FBAITS[angelS().bait], why = angelBaitWhy(angelS().bait);
+        const B = FBAITS[angelS().bait], why = angelBaitWhy(angelS().bait, st.gid);
         mgMsg(B.i + " " + (why ? esc(B.n) + " geht gerade nicht: " + esc(why) + "." : "Kein Köder mehr.") + " Wähl einen anderen.", "bad");
         return;
       }

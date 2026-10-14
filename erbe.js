@@ -186,7 +186,7 @@ function erbeInit(F, fresh) {
   F.wx = F.wx || { k: "sonne", until: S.time + 60 };
   F.wild = F.wild || [];
   F.cap = F.cap || {};
-  ["silo", "barn", "holz", "fisch"].forEach(s => { F.cap[s] = F.cap[s] || 1; });
+  ["silo", "barn", "holz", "fisch", "koeder"].forEach(s => { F.cap[s] = F.cap[s] || 1; });
   const st = F.stats || (F.stats = {});
   ["felled", "woodSold", "woodMade", "catch", "repairs", "cleared", "stallSold", "events"].forEach(k => { st[k] = st[k] || 0; });
   st.species = st.species || {};
@@ -240,6 +240,8 @@ function erbeJunk(F) {
 function farmStores() {
   const s = ["silo", "barn", "holz"];
   if (S.farm && (farmAreaOpen("see") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "fisch"))) s.push("fisch");
+  /* v59: Köderkiste, sobald der Steg steht (oder schon Köder im Lager liegen) */
+  if (S.farm && (S.farm.objs.some(o => o.t === "f_steg") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "koeder"))) s.push("koeder");
   return s;
 }
 
@@ -724,7 +726,7 @@ function farmFishOdds(gid) {
 /* Auswerfen: kostet einen Wurf des gewählten Köders (Angel gibt es ab dem Steg) */
 function farmCast(gid) {
   const U = angelS();
-  if (!U || !angelBaitUse(U.bait)) return false;
+  if (!U || !angelBaitUse(U.bait, gid)) return false;
   S.farm.stats.casts = (S.farm.stats.casts || 0) + 1;
   return true;
 }
@@ -747,7 +749,8 @@ function farmCatch(gid, q, pre) {
   const id = pre.id;
   if (farmRoom(id) < 1) { farmFull("fisch"); return { full: true, id }; }
   q = pre.cm ? specQ(pre) : clamp(Math.round(q || 3), 1, 5);
-  farmAdd(id, 1, q);
+  farmAdd(id, 1, q, pre.kg);
+  specFound(id);   /* v59: nur eigener Fang entdeckt eine Art für Bert */
   const xp = FITEMS[id].xp + 2;
   farmXP(xp);
   const F = S.farm;
@@ -785,6 +788,10 @@ function angelInit(F) {
   U.log = U.log || [];
   U.best = U.best || {};
   U.cnt = U.cnt || { klein: 0, mittel: 0, gross: 0 };
+  /* v59: Spezialköder – Arten aus dem Fangbuch gelten als entdeckt; Dauerbestellung Würmer */
+  U.spec = U.spec || {};
+  for (const id in U.best) if (FSPEC_BAIT[id] && !U.spec[id]) U.spec[id] = { found: U.best[id].t || 0 };
+  U.bert.keep = U.bert.keep || 0;
   /* Reusen liegen an festen Plätzen neben dem Steg */
   F.objs.filter(o => o.t === "pot" && o.area === "see").forEach((o, i) => {
     const p = FANGEL.potSpots[i];
@@ -845,17 +852,22 @@ function angelBaitN(b) {
   const B = FBAITS[b], U = angelS();
   return b === "mais" ? (U.mais || 0) + farmInv("mais") * B.per : farmInv(B.item);
 }
-function angelBaitWhy(b) {
+function angelBaitWhy(b, gid) {
   const B = FBAITS[b], U = angelS();
   if (B.tour && !U.tour.done) return "nach dem Turnier";
   if (B.rod && U.rod < B.rod) return "braucht die " + FRODS[B.rod].n;
+  /* v59: Spezialköder nur, wo es die Art gibt */
+  if (B.spec && gid && !specHere(B.spec, gid)) return "keine " + FFISH[B.spec].n + " hier – nur an: " + FGROUNDS.filter(g => g.fish[B.spec]).map(g => g.n).join(", ");
   if (angelBaitN(b) > 0) return "";
-  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "bei Bert holen" : "bei Bert bestellen";
+  return b === "mais" ? "kein Mais im Silo" : "bei Bert am Kombi bestellen";
 }
+/* v59: Spezialköder erst zeigen, wenn Bert ihn entwickelt hat (oder noch welche da sind) */
+function angelBaitShow(b) { const B = FBAITS[b]; return !B.spec || farmInv(B.item) > 0 || specDone(B.spec); }
+function specHere(id, gid) { const G = FGROUNDS.find(g => g.id === gid); return !!(G && G.fish[id]); }
 /* Ein Sack Mais reicht für zehn Würfe */
-function angelBaitUse(b) {
+function angelBaitUse(b, gid) {
   const B = FBAITS[b], U = angelS();
-  if (angelBaitWhy(b)) return false;
+  if (angelBaitWhy(b, gid)) return false;
   if (b !== "mais") return farmTake(B.item, 1);
   if (U.mais > 0) { U.mais--; return true; }
   if (!farmTake("mais", 1)) return false;
@@ -876,7 +888,10 @@ function angelClassW(bait, rod) {
 /* Wer beißt hier – nach Klasse, dann nach Fanggrund × Tageszeit × Wetter.
    Hat ein Fanggrund keine Art einer Klasse, rückt die nächstkleinere nach. */
 function angelOdds(gid, bait, rod) {
-  const U = angelS(), odds = farmFishOdds(gid), w = angelClassW(bait || U.bait, rod || U.rod), out = {};
+  const U = angelS(), B = FBAITS[bait || U.bait];
+  /* v59: Spezialköder – es beißt nur die Zielart (wenn es sie hier gibt) */
+  if (B && B.spec) return specHere(B.spec, gid) ? { [B.spec]: 1 } : {};
+  const odds = farmFishOdds(gid), w = angelClassW(bait || U.bait, rod || U.rod), out = {};
   let carry = 0;
   FCLS.slice().reverse().forEach(c => {
     const ids = Object.keys(odds).filter(id => FFISH[id].cls === c), sum = ids.reduce((s, id) => s + odds[id], 0);
@@ -910,8 +925,16 @@ function specQ(s, bait) {
   const score = bait == null ? 0.75 * s.r + 0.25 * c : 0.6 * s.r + 0.2 * c + 0.2 * clamp(bait, 0, 1);
   return 1 + FQCUT.filter(x => score >= x).length;
 }
-/* Wert eines einzelnen Fangs beim Händler (voller Preis, Sterne ±15 %) */
-function specValue(id, q) { return Math.round(FITEMS[id].v * (1 + (q - 3) * 0.15) * 100) / 100; }
+/* v59: Fischpreis nach Gewicht – kg × echter €/kg × 0,5; Sterne nur noch als
+   Aufschlag (4★ +5 %, 5★ +10 %), kein Abzug für 1–2★. Ohne €/kg (Gold-Schleie,
+   Reusentiere) zählt der Stückpreis mit demselben Aufschlag. Mindestens 0,30 €. */
+function fishQF(q) { q = Math.round(q || 3); return q >= 5 ? 1.10 : q === 4 ? 1.05 : 1; }
+function fishPrice(id, kg, q) {
+  const f = FFISH[id], base = f && f.ekg ? (kg != null ? kg : f.kgAvg) * f.ekg * FPRICE_KG : FITEMS[id].v;
+  return Math.max(0.3, Math.round(base * fishQF(q) * 100) / 100);
+}
+/* Wert eines einzelnen Fangs beim Händler (voller Preis) */
+function specValue(id, q, kg) { return fishPrice(id, kg, q); }
 /* Fangbuch: die letzten 50 Fänge, Rekord je Art (nach Gewicht); gid = Angeln */
 function angelLog(id, s, q, gid, staff) {
   const U = angelS(), e = { sp: id, cm: s.cm, kg: s.kg, q, gid, t: S.time };
@@ -920,12 +943,12 @@ function angelLog(id, s, q, gid, staff) {
   if (U.log.length > 50) U.log.length = 50;
   /* v58: Fänge der Fischerin/des Fischers stehen im Fangbuch (👷), zählen aber nicht für deine
      Rekorde und nicht für die Schwellen von Turnier und Profi-Ködern */
-  if (staff) return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec: false };
+  if (staff) return { cm: s.cm, kg: s.kg, val: specValue(id, q, s.kg), rec: false };
   const b = U.best[id], rec = !b || s.kg > b.kg;
   if (rec) U.best[id] = { cm: s.cm, kg: s.kg, q, t: S.time };
   const c = FFISH[id] && FFISH[id].cls;
   if (c && gid) U.cnt[c] = (U.cnt[c] || 0) + 1;
-  return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec };
+  return { cm: s.cm, kg: s.kg, val: specValue(id, q, s.kg), rec };
 }
 
 /* ------------------------- Fischer/in (Personal) --------------------------
@@ -954,7 +977,7 @@ function staffBaitWhy(b) {
   const B = FBAITS[b], U = angelS();
   if (B.tour && !U.tour.done) return B.n + " erst nach dem Turnier";
   if (B.rod && U.rod < B.rod) return B.n + " brauchen die " + FRODS[B.rod].n;
-  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "keine Tauwürmer – bei Bert holen" : "keine Profi-Köder – bei Bert bestellen";
+  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "keine Tauwürmer – Dauerbestellung bei Bert" : "keine Profi-Köder – bei Bert am Kombi bestellen";
 }
 /* Köder, die für eine Klasse taugen – der beste zuerst */
 const STAFF_BAITS = { klein: ["mais", "wurm"], mittel: ["wurm", "profikoeder"], gross: ["profikoeder"] };
@@ -971,7 +994,9 @@ function staffFishPlan(target) {
   const ok = has.filter(farmGroundOk);
   if (!ok.length) return { why: has.length ? (Math.min(...has.map(g => g.boat)) >= 2 ? "braucht das Motorboot" : "braucht das Ruderboot") : "gibt es hier nicht" };
   const list = STAFF_BAITS[D.cls] || [];
-  const b = list.find(staffBaitOk);
+  /* v59: Spezialköder der bestellten Art zuerst – der fängt nur sie */
+  const sk = FBAITS["sk_" + target] && staffBaitOk("sk_" + target) ? "sk_" + target : null;
+  const b = sk || list.find(staffBaitOk);
   if (!b) return { why: staffBaitWhy(list[0] || "mais") };
   /* bester Fanggrund für die Art mit diesem Köder */
   let best = null, bp = -1;
@@ -999,40 +1024,98 @@ function bertLureOk() {
   const U = angelS();
   return !!(U && U.tour.done && U.rod >= FBERT.lureNeed.rod && U.cnt.mittel >= FBERT.lureNeed.mittel);
 }
-function bertWorms() {
-  const U = angelS(), W = FBERT.worms;
-  if (!U || !U.tour.done) return false;
-  if (farmRoom("wurm") < W.n) return farmFull("fisch"), false;
-  if (S.money < W.price) return toast("Dafür fehlen " + eur(W.price - S.money) + ".", "warn"), false;
-  S.money -= W.price; S.expense += W.price;
-  logMoney("farm", "Tauwürmer von Bert", -W.price);
-  farmAdd("wurm", W.n, 3);
-  return true;
-}
-function bertOrderLures() {
-  const U = angelS(), L = FBERT.lures;
-  if (!bertLureOk() || U.bert.lureQ) return false;
-  if (S.money < L.price) return toast("Dafür fehlen " + eur(L.price - S.money) + ".", "warn"), false;
-  S.money -= L.price; S.expense += L.price;
-  logMoney("farm", "Profi-Köder bei Bert bestellt", -L.price);
-  U.bert.lureQ = { n: L.n, end: S.time + L.t };
-  return true;
-}
+/* v59: Würmer und Profi-Köder macht Bert jetzt in seinem Kombi (FMACHINES.bert_car).
+   Eine alte Profi-Köder-Bestellung aus v58 (bert.lureQ) bleibt abholbar. */
 function bertCollect() {
   const U = angelS(), Q = U && U.bert.lureQ;
   if (!Q || S.time < Q.end) return false;
-  if (farmRoom("profikoeder") < Q.n) return farmFull("fisch"), false;
+  if (farmRoom("profikoeder") < Q.n) return farmFull("koeder"), false;
   farmAdd("profikoeder", Q.n, 3);
   U.bert.lureQ = null;
   return true;
 }
-/* im Takt: Bert meldet sich einmal, wenn er Profi-Köder baut */
+function bertCar() { return farmObj1("bert_car"); }
+/* Berts Kombi parkt nach dem Turnier am Ufer zwischen Steg und Bootshaus */
+const FBERT_CAR_SPOTS = [[12.5, 23.5], [12.5, 21.5], [13.5, 19.5], [5, 22]];
+function bertCarPlace() {
+  const U = angelS();
+  if (!U || !U.tour.done || bertCar() || !farmObj1("f_steg")) return null;
+  const [w, d] = FSIZE.bert_car;
+  for (const p of FBERT_CAR_SPOTS) {
+    const [x, z] = angelTile(p[0], p[1], w, d);
+    const g = farmOcc();
+    let free = true;
+    for (let i = 0; i < w && free; i++) for (let j = 0; j < d; j++) { const k = fgi(x + i, z + j); if (k >= 0 && g[k]) { free = false; break; } }
+    if (!free) continue;
+    return bertCarAdd(x, z);
+  }
+  const [x, z] = angelTile(FBERT_CAR_SPOTS[0][0], FBERT_CAR_SPOTS[0][1], w, d);
+  return bertCarAdd(x, z);
+}
+function bertCarAdd(x, z) {
+  const o = farmAddObj({ t: "bert_car", x, z, r: 0, area: "see", q: [], done: [], slots: 2 });
+  if (typeof farmSyncScene === "function") farmSyncScene();
+  return o;
+}
+/* ------------------------------- Spezialköder ------------------------------
+   Je Art: found (erster eigener Fang), dev { end } (Bert entwickelt), done. */
+function specS(id) { const U = angelS(); return U && U.spec ? U.spec[id] || null : null; }
+function specDone(id) { const s = specS(id); return !!(s && (s.done || (s.dev && S.time >= s.dev.end))); }
+/* eigener Fang (nicht Fischer): Art entdeckt – Bert fragt nach dem Fisch */
+function specFound(id) {
+  const U = angelS();
+  if (!U || !FSPEC_BAIT[id]) return;
+  U.spec = U.spec || {};
+  if (U.spec[id]) return;
+  U.spec[id] = { found: S.time };
+  if (!U.tour.done) return;
+  U.bert.ask = id;
+  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Guter Fang: " + FFISH[id].sg,
+    body: "Guter Fang! Gib mir so einen, dann schau ich, ob ich einen Köder bauen kann, den die besonders mögen. Ich steh mit dem Kombi am Steg." });
+}
+/* Fisch an Bert geben: der mit den wenigsten Sternen. Erst dann läuft die Entwicklung. */
+function specWhy(id) {
+  const s = specS(id);
+  if (!s) return "noch nicht selbst gefangen";
+  if (s.dev || s.done) return "schon bei Bert";
+  if (farmInv(id) < 1) return "Kein " + FFISH[id].sg + " im Lager";
+  return "";
+}
+function specGive(id) {
+  if (specWhy(id)) return false;
+  if (!farmTake(id, 1)) return false;
+  specS(id).dev = { end: S.time + FSPEC_DEV };
+  farmXP(10);
+  return true;
+}
+/* Dauerbestellung: Bert hält Tauwürmer vorrätig – holt Fertiges ab, reiht neu ein */
+function bertKeepTick() {
+  const U = angelS(), o = bertCar(), keep = U && U.bert.keep || 0;
+  if (!o || !keep || !U.tour.done) return;
+  machUpdate(o);
+  while (o.done.length && o.done[0].r === "wurm" && farmRoom("wurm") >= o.done[0].n) { const d = o.done.shift(); farmAdd("wurm", d.n, d.q); farmEvent("make:wurm", d.n); }
+  const queued = () => o.q.concat(o.done).filter(j => j.r === "wurm").reduce((a, j) => a + j.n, 0);
+  for (let i = 0; i < 4 && farmInv("wurm") + queued() < keep; i++) if (farmQueue(o, "wurm") !== true) break;
+}
+/* im Takt: Kombi aufstellen, Profi-Köder-Anruf, fertige Entwicklungen, Dauerbestellung */
 function angelTick() {
   const U = angelS();
-  if (!U || !bertLureOk() || U.bert.call) return;
-  U.bert.call = true;
-  if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Neue Köder aus der Werkstatt",
-    body: "Moin! Du holst ja ordentlich Barsche raus. Ich hab in der Garage was gebastelt: Profi-Köder für die richtig Großen – Hecht und Wels. Mit der Raubfischrute hält das auch. Bestell sie bei mir am Steg, in zwei Stunden sind sie fertig." });
+  if (!U) return;
+  if (U.tour.done && !bertCar()) bertCarPlace();
+  if (bertLureOk() && !U.bert.call) {
+    U.bert.call = true;
+    if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Neue Köder aus der Werkstatt",
+      body: "Moin! Du holst ja ordentlich Barsche raus. Ich hab im Kombi was gebastelt: Profi-Köder für die richtig Großen – Hecht und Wels. Mit der Raubfischrute hält das auch. Bestell sie bei mir am Auto, in zwei Stunden sind sie fertig." });
+  }
+  for (const id in U.spec || {}) {
+    const s = U.spec[id];
+    if (s.dev && !s.done && S.time >= s.dev.end) {
+      s.done = true;
+      if (typeof phoneMsg === "function") phoneMsg({ from: "Bert Flomann", kind: "info", title: "Köder fertig: " + FFISH[id].sg,
+        body: "Hat geklappt! Der " + FFISH[id].sg + "-Köder ist fertig. Ich bau dir welche, wenn du magst – 5 Stück aus 2 Tauwürmern. Damit beißt nur noch " + FFISH[id].sg + "." });
+    }
+  }
+  bertKeepTick();
 }
 
 /* ------------------------------ Angler-Turnier ----------------------------
@@ -1303,7 +1386,7 @@ function farmTraderDeal(i) {
     if (d.kind === "buy") farmAdd(d.item, d.qty, 5); else farmClover(d.qty, "Händler");
   } else {
     if (farmInv(d.item) < d.qty) return toast("Davon ist nicht mehr genug da.", "warn"), false;
-    const m = Math.round(FITEMS[d.item].v * d.qty * d.mult * 10) / 10;
+    const m = Math.round(farmStackV(d.item, d.qty) * d.mult * 10) / 10;   /* v59: Fisch nach Gewicht */
     farmTake(d.item, d.qty);
     S.money += m; S.revenue += m; S.farm.stats.earned += m;
     logMoney("farm", "Fliegender Händler · " + fqty(d.item, d.qty), m);
@@ -1479,15 +1562,29 @@ function farmDailyBonus() {
 function stallObj(market) { return market ? farmObj1("f_markt") : farmObj1("stall"); }
 function stallState(market) { return market ? S.farm.mstall : S.farm.stall; }
 function stallCap(market) { return market ? FSTALL.market : FSTALL.slots[(S.farm.stage || 1) - 1]; }
-function stallBase(id, n, market) { return FITEMS[id].v * n * (market && FITEMS[id].st === "fisch" ? 1 + FSTALL.premium : 1) * farmPriceBoost(id); }
+/* v59: v = voller Wert der Ware (Fisch nach Gewicht und Sternen); ohne v der Durchschnitt */
+function stallBase(id, n, market, v) {
+  if (v == null) v = farmQsOn(id) ? fishPrice(id, null, 3) * n : FITEMS[id].v * n;
+  return v * (market && FITEMS[id].st === "fisch" ? 1 + FSTALL.premium : 1) * farmPriceBoost(id);
+}
 function stallPut(market, id, n, price) {
   const St = stallState(market);
   if (St.slots.filter(Boolean).length >= stallCap(market)) return toast("Alle Plätze im Stand sind belegt.", "warn"), false;
   if (farmInv(id) < n) return false;
-  farmTake(id, n);
-  const q = 3;
+  const v = farmStackV(id, n);
+  /* v59: Fisch behält Sterne und Gewicht – von unten nach oben, wie farmTake */
+  let parts = null;
+  if (farmQsOn(id) && S.farm.inv[id].qs) {
+    parts = [];
+    for (let s = 1, left = n; s <= 5 && left; s++) {
+      const k = Math.min(left, farmInvQ(id, s));
+      if (k) { parts.push({ q: s, n: k, kg: farmKgQ(id, s) * k }); farmTakeQ(id, s, k); left -= k; }
+    }
+  } else farmTake(id, n);
+  const q = parts ? Math.round(parts.reduce((a, p) => a + p.q * p.n, 0) / n) : 3;
   const free = St.slots.findIndex(x => !x);
-  const it = { id, n, p: Math.round(price * 10) / 10, t: S.time, q };
+  const it = { id, n, p: Math.round(price * 10) / 10, t: S.time, q, v };
+  if (parts) it.parts = parts;
   if (free >= 0) St.slots[free] = it; else St.slots.push(it);
   farmEvent("stall:put");
   return true;
@@ -1497,7 +1594,8 @@ function stallTake(market, i) {
   if (!it) return false;
   if (it.sold) { S.money += it.p; S.revenue += it.p; S.farm.stats.earned += it.p; logMoney("farm", (market ? "Fischmarkt" : "Verkaufsstand") + " · " + fqty(it.id, it.n), it.p); St.slots[i] = null; return it.p; }
   if (farmRoom(it.id) < it.n) return farmFull(FITEMS[it.id].st), false;
-  farmAdd(it.id, it.n, it.q || 3); St.slots[i] = null;
+  if (it.parts) it.parts.forEach(p => farmAdd(it.id, p.n, p.q, p.kg)); else farmAdd(it.id, it.n, it.q || 3);
+  St.slots[i] = null;
   return true;
 }
 function stallCollectAll(market) {
@@ -1512,7 +1610,7 @@ function stallTick(market, dt) {
   if (market && !stallObj(true)) return;
   St.slots.forEach(it => {
     if (!it || it.sold) return;
-    const base = stallBase(it.id, it.n, market);
+    const base = stallBase(it.id, it.n, market, it.v);
     const r = it.p / Math.max(0.1, base);
     const chance = 0.045 * clamp(1.9 - r, 0.08, 1.4) * dt;
     if (Math.random() < chance) {

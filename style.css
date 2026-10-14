@@ -2788,7 +2788,7 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fsell-q>span{flex:1;min-width:140px}
 .fsell-q small{display:inline;opacity:.7;margin:0}
 .mg-stage .mg-baits{margin:0 0 6px}
-.mg-stage .mg-bait{min-width:0;flex:1;padding:3px 4px}
+.mg-stage .mg-bait{min-width:0;flex:1 0 70px;padding:3px 4px}
 .mg-stage .mg-bait span{font-size:18px}
 .mg-ring{display:flex;flex-direction:column;align-items:center;gap:8px}
 .mg-ring svg{width:min(220px,70vw);height:auto;touch-action:none;cursor:grab;user-select:none}

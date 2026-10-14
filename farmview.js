@@ -1446,7 +1446,9 @@ function renderFarmPop() {
     h = `<div class="fp-h">${ic} ${esc(T.n)}<small>${line ? "erntereif" : "Früchte"} in <span class="fp-left">${fdur(Math.max(1, left))}</span>${(o.h || 0) >= 3 ? (line ? " · gut eingewachsen: +1 ★" : " · alter Baum: +1 ★") : ""}</small></div>
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">${line ? "🧽" : "💧"}</span><b>${line ? "geputzt" : "gegossen"}</b></div>`
         : `<div class="ftool big" data-tool="water">${line || typeof toolIc !== "function" ? `<span class="ic">${line ? "🧽" : "🚿"}</span>` : toolIc("water")}<b>${line ? "Leine putzen" : "Gießen"}</b><small>25 % schneller, +1 ★</small></div>`}</div>`
-      + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "");
+      + (line && T.pearl ? `<div class="fp-tip">Mit etwas Glück steckt in der Ernte eine Perle.</div>` : "")
+      /* v59: Obstbaum fällen – macht Platz für eine andere Sorte */
+      + (line ? "" : `<div class="fp-row"><div class="ftool" data-act="fell"><span class="ic">🪓</span><b>Fällen</b><small>2 Bündel Äste${o.kind === "kirsche" ? " + Edelholz" : ""}</small></div></div>`);
   } else if (P.kind === "pen") {
     const pi = penInfo(o), A = pi.A, M = FPEN_META[o.t];
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
@@ -1832,17 +1834,17 @@ function openMachine(o) {
   };
   const M = FMACHINES[o.t], lv = level();
   const sunOff = r => kesselSunOff(o, r);
-  const rec = M.recipes.map(r => {
-    const lock = r.lv > lv || sunOff(r), it = FITEMS[r.id];
+  const rec = M.recipes.filter(r => !(r.hide && r.hide())).map(r => {   /* v59: Bert – unentwickelte Spezialköder ausblenden */
+    const nok = !!(r.ok && !r.ok()), lock = r.lv > lv || sunOff(r) || nok, it = FITEMS[r.id];
     const ok = !lock && farmHasAll(r.in) && (!r.cost || S.money >= r.cost);
     const ins = Object.keys(r.in).map(id => itemChip(id, r.in[id], farmInv(id))).join("")
-      + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">⛽<b>${eur(r.cost)}</b></span>` : "");
+      + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">${r.costT ? "💶" : "⛽"}<b>${eur(r.cost)}</b></span>` : "");
     const by = r.by ? " · dazu " + Object.keys(r.by).map(id => fqty(id, r.by[id])).join(", ") : "";
     const what = r.trip ? `<em class="fr-trip">${esc(r.trip)}</em>` : r.note ? `<em class="fr-trip">${esc(r.note)}</em>` : "";
     return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${rkey(r)}" ${lock ? "disabled" : ""}>
       ${icOf(r.id, lock)}
       <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
-      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
+      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : nok && r.lv <= lv ? esc(r.why || "gesperrt") : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
       <small>⏱ ${fdur(r.t)} · ${it.energy ? "+" + it.energy * r.out + " kWh in den Speicher" : "Wert " + eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
@@ -1868,7 +1870,7 @@ function openMachine(o) {
       }
       else openMachine(o);
     } else if (r === "full") { sfx("bad"); toast(M.trips ? "Der Kutter ist ausgebucht – erst die nächste Fahrt abwarten oder einen Platz dazukaufen." : "Alle Plätze belegt – warte oder kauf einen Platz dazu.", "warn"); }
-    else if (r === "money") { sfx("bad"); toast("⛽ Für den Sprit fehlt das Geld.", "warn"); }
+    else if (r === "money") { sfx("bad"); toast(M.bert ? "💶 Dafür fehlt das Geld." : "⛽ Für den Sprit fehlt das Geld.", "warn"); }
     else if (r === "energy") { sfx("bad"); toast("⚡ Zu wenig Strom – heiz den Kessel mit Holzresten oder Ästen an.", "warn"); }
     else if (r === "sun") { sfx("bad"); toast("☀️ Tagsüber liefert das Solardach den Strom – der Kessel heizt erst nachts.", "warn"); }
     else if (r === "broken") { sfx("bad"); toast("🔧 Erst reparieren – Krügers Sägewerk läuft noch nicht.", "warn"); }
@@ -1907,7 +1909,8 @@ function openFarmStore(st) {
     })() : ""}
     ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}</button>` : ""}
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
-      : st === "fisch" ? "Die Sterne zeigen die Qualität: Ein ruhiger Drill macht den Fang besser. Fischlager und Kühlhaus schaffen mehr Platz."
+      : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
+      : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
