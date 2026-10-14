@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v60 (Hotfix)
+
+- **Hof-Laden, Gebäude-Fenster, Saat-Auswahl gesperrt trotz Level** (`farmview.js`): Die drei Fenster nahmen
+  `level()` – das ist nach der Gründung der Spedition deren Level, nicht das des Erbes. Jetzt `flv()` (Erbe-Level),
+  wie überall sonst im Hof (`farmQueue`, `farmCanMake`, `farmCropOk`). Der Fehler war schon vor v58 im Code und zeigt
+  sich bei Spielständen, deren Spedition ein niedrigeres Level hat als der Hof.
+- Version: **v60** (`sw.js` und `?v=60` in `index.html`).
+
 ## v59 (aufbauend auf v58) – Größere Spielmechaniken (Branch `teil2-mechaniken`)
 
 - **Köderkiste** (`fishdata.js` `FSTORE.koeder`): Reusenköder, Tauwürmer, Profi- und Spezialköder haben
