@@ -960,6 +960,11 @@ const FWM = (() => {
     G3.seed(4410);
     const b = new MB();
     b.noise(0.12, () => { for (let i = 0; i < 20; i++) b.box(1.7, 0.07, 0.27, i % 3 ? C.wood : C.woodL, { y: 0.1, z: -2.85 + i * 0.3 }); });
+    /* v59: Anlauf an Land – das Ufer endet vor dem Steg, also sechs Bohlen mehr bis auf den Sand,
+       eine Schwelle im Boden und zwei Stützen (nur Optik, die Kachelfläche bleibt 2 × 6) */
+    b.noise(0.12, () => { for (let i = 1; i <= 6; i++) b.box(1.7, 0.07, 0.27, i % 3 ? C.wood : C.woodL, { y: 0.1, z: -2.85 - i * 0.3 }); });
+    b.box(1.9, 0.12, 0.3, C.woodD, { y: 0, z: -4.7 });
+    [-0.8, 0.8].forEach(x => b.cyl(0.07, 0.07, 0.3, 6, C.woodD, { x, y: -0.2, z: -3.7 }));
     for (let i = 0; i < 4; i++) [-0.8, 0.8].forEach(x => b.cyl(0.07, 0.07, 0.9, 6, C.woodD, { x, y: -0.7, z: -2.6 + i * 1.75 }));
     [-0.82, 0.82].forEach(x => b.box(0.06, 0.06, 2.6, C.woodD, { x, y: 0.55, z: 1.6 }));
     [-0.82, 0.82].forEach(x => [0.3, 2.9].forEach(z => b.box(0.06, 0.45, 0.06, C.woodD, { x, y: 0.12, z })));
