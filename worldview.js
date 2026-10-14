@@ -1725,7 +1725,7 @@ function worldTags() {
     /* Steg: Turnier bereit, Berts Köder fertig */
     if (o.t === "f_steg" && angelS()) {
       const U = angelS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, tour = tourCanStart();
-      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : "") + (lure ? "✨" : ""), tour || lure ? "ready" : "", () => openSteg(tour || lure ? "bert" : null)]);
+      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : "") + (lure ? "✨" : ""), tour || lure ? "ready" : "", () => openSteg(tour ? "tour" : lure ? "bert" : null)]);
     }
     if (o.t === "sw_halle" && farmAreaOpen("saege") && !sawRepaired()) { const r = sawNext(); if (r && farmRepairCheck(r) === true) want.push(["rp", cx, 5, cz, "🔧" + r.i, "ready", () => openSawRepair()]); }
     if (o.t === "sw_lkw" && farmAreaOpen("saege") && !(F.saw && F.saw.lkw) && farmRepairCheck(FSAW_LKW) === true) want.push(["lkw", cx, 2.6, cz, "🔧🚛", "ready", () => openLkw()]);
@@ -1934,7 +1934,7 @@ function worldUI() {
       fold(evK, eb);
       const s = worldEvSpots()[0];
       if (s) { farmFocusXZ(s.x, s.z + 1, 22, 700); if (s.act === "haendler" || s.act === "nachbar") setTimeout(() => worldEvAct(s), 720); }
-      else toast(evT.i + " " + evT.n + (ev.k === "holzpreis" ? ": Der Holzhändler zahlt gerade 30 % mehr für Rohholz." : ev.k === "fischpreis" ? ": Am Fischmarkt bringt Fisch gerade 30 % mehr." : ev.k === "sturm" ? ": Danach liegen Bäume im Wald – aufsammeln!" : ""), "");
+      else toast(evT.i + " " + evT.n + (ev.k === "holzpreis" ? ": Rohholz bringt beim Holzhändler und im Großhandel gerade 30 % mehr." : ev.k === "fischpreis" ? ": Ganze Fische bringen im Großhandel gerade 30 % mehr, am Stand steigt der Preisvorschlag." : ev.k === "sturm" ? ": Danach liegen Bäume im Wald – aufsammeln!" : ""), "");
     };
   }
   /* Besucher wartet: einmal pro Sitzung von selbst zeigen */
@@ -2026,7 +2026,7 @@ function farmEvView(type, c) {
   if (type === "start") {
     toast(D.i + " " + ({
       sturm: "Ein Sturm zieht auf! Danach liegen Bäume im Wald.", haendler: "Ein fliegender Händler steht an der Straße.", schwarm: "Ein Fischschwarm ist im See unterwegs!",
-      nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Der Holzhändler zahlt 30 % mehr.", fischpreis: "Fischpreise steigen: Am Fischmarkt bringt Fisch 30 % mehr.",
+      nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Rohholz bringt 30 % mehr – für ein paar Stunden.", fischpreis: "Fischpreise steigen: Ganze Fische bringen 30 % mehr – für ein paar Stunden.",
       hirsch: "Ein weißer Hirsch im Wald – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
       lieferung: "Ein Paket liegt mitten auf dem Hof.", reh: "Ein Reh steht auf dem Weg."
     }[c.k] || D.n), "");
@@ -2292,7 +2292,8 @@ function worldShow() {
 function stageHTML() {
   const F = S.farm, cur = F.stage || 1, nx = farmStageNext(), chk = farmStageCheck();
   const list = FHOF_STAGES.slice(1).map((st, i) => {
-    const k = i + 1, on = k === cur, done = k < cur;
+    /* v58: erreichte Stufen grün mit ✓ (auch die letzte), die nächste kaufbare gelb */
+    const k = i + 1, done = k <= cur, on = !!nx && k === cur + 1;
     return `<div class="fstage${on ? " cur" : done ? " ok" : ""}"><b>${done ? "✓" : k}</b><div><span>${esc(st.n)}</span>${st.perks ? `<small>${st.perks.map(esc).join(" · ")}</small>` : `<small>${esc(st.d)}</small>`}</div></div>`;
   }).join("");
   let next = "";

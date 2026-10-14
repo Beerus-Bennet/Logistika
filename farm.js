@@ -756,7 +756,8 @@ function farmStoreUp(st) {
 function farmSellPrice(id, n, q) {
   q = q || farmQ(id) || 3;
   const f = FITEMS[id].k === "fisch" ? 0.15 : 0.08;
-  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * f) * 10) / 10);
+  const boost = typeof farmPriceBoost === "function" ? farmPriceBoost(id) : 1;   /* v58: Preis-Ereignis */
+  return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * f) * boost * 10) / 10);
 }
 function farmSell(id, n, q) {
   /* Fisch ohne Stufe: von unten nach oben, jede Stufe zu ihrem Preis */
@@ -1033,13 +1034,23 @@ function farmAboOrder(A) {
 function farmAboTick() {
   const F = S.farm, abos = farmAbos();
   /* Angebot je Station: höchstens eins offen, höchstens zwei laufende Verträge */
-  F.aboOff = F.aboOff.filter(x => x.exp > S.time && farmOrderAreaOn(x.area));
-  if (S.time - (F.aboT || -1e9) > 720) {
+  /* v58: abgelaufene Angebote merken und sofort ersetzen – nicht dieselbe Firma mit neuer Frist */
+  F.aboSeen = F.aboSeen || {};
+  let gone = false;
+  F.aboOff = F.aboOff.filter(x => {
+    if (x.exp > S.time && farmOrderAreaOn(x.area)) return true;
+    F.aboSeen[x.firm] = S.time; gone = true;
+    return false;
+  });
+  if (gone || S.time - (F.aboT || -1e9) > 720) {
     F.aboT = S.time;
     FORD_AREAS.forEach(a => {
       if (F.aboOff.some(x => x.area === a.id) || abos.filter(x => x.area === a.id).length >= 2) return;
-      const pool = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm));
-      if (!pool.length || Math.random() < 0.5) return;
+      const all = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm));
+      /* zuletzt abgelaufene Firma nur, wenn es keine andere gibt; am liebsten die am längsten nicht gezeigte */
+      const last = all.reduce((m, T) => (F.aboSeen[T.firm] || -1e9) > (F.aboSeen[m] || -1e9) ? T.firm : m, null);
+      const pool = all.length > 1 ? all.filter(T => T.firm !== last) : all;
+      if (!pool.length || (!gone && Math.random() < 0.5)) return;
       const T = pick(pool);
       F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: farmAboFit(T), exp: S.time + 2880 }));
     });

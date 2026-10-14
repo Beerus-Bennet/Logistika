@@ -1,5 +1,40 @@
 # Änderungen – kurz für den Kollegen
 
+## v58 (aufbauend auf v57) – Fehler und Optik (Branch `teil1-fehler-optik`)
+
+- **Hofausbau** (`worldview.js` `stageHTML`): erreichte Stufen grün mit ✓ (auch Stufe 4), die
+  nächste kaufbare gelb. Vorher blieb die aktuelle Stufe immer gelb.
+- **Tagesaufgabe „Ohne Leerfahrt“ entfernt** (`goals.js` `TASKS`, Zählung in `goalsDelivered`).
+  `dailyState()` ersetzt Aufgaben mit unbekannter ID aus alten Ständen.
+- **Preis-Ereignisse** (`erbe.js` `farmPriceBoost(id)`): „Fischpreise steigen“ = ganze Fische ×1,3,
+  „Holzpreise steigen“ = Rohholz ×1,3 – in `farmSellPrice` (Großhandel), `farmWoodPrice`,
+  `farmPileValue` und `stallBase` (Preisvorschlag am Stand). Vorher erhöhte das Fisch-Ereignis nur
+  die Verkaufschance am Fischmarkt, keinen Preis; der doppelte Faktor in `stallTick` ist raus.
+  `FEVENTS`: Dauer 240 statt 1800 Minuten, Gewicht 3 statt 7, neu `gap` (2 Spieltage Abstand je Sorte,
+  `F.ev.last`). Meldungen in `worldview.js` angepasst.
+- **Daueraufträge** (`farm.js` `farmAboTick`): Abgelaufene Angebote werden sofort ersetzt, und zwar nicht
+  durch dieselbe Firma, solange es eine andere gibt (`F.aboSeen`).
+- **Fischer/in** (`team.js`, neue Helfer in `erbe.js` hinter `angelLog`):
+  - `staffOptions("fischer")`: Fehler behoben (Listenposition aus `forEach` landete als „gesperrt“
+    in `add`). Wählbar sind alle Arten aller Fanggründe (gesperrt ohne Boot) und die Reusentiere.
+  - `staffMaker`: Fisch irgendeines Fanggrunds und Reusentiere → Fischer (vorher nur „Am Steg“, deshalb
+    „Zander macht niemand“ bei Zanderfilet-Aufträgen).
+  - Angeln nach Spielerregeln: `staffFishPlan` wählt den besten Köder für die Art des Auftrags
+    (Mais → klein, Tauwürmer → mittel, Profi-Köder nur mit Raubfischrute) und den Fanggrund mit der besten
+    Chance; `staffFishCatch` verbraucht 1 Köder je Wurf (eigener Mais-Zähler `angel.staffMais`) und würfelt
+    wie beim Spieler. Gefangen wird, was beißt; gutgeschrieben wird nur die bestellte Art.
+  - Er bleibt am Stegende auf den Planken (`staffStegSpot`, Blick aufs Wasser) und bearbeitet die
+    Reusen von dort; Reusenaufträge beködern gezielt (`j.kind`).
+  - Wartemeldung mit echtem Grund (`s.fwhy`: Boot, Köder, Reusenstufe, Kühlkiste).
+  - Fänge stehen im Fangbuch mit 👷 (`angelLog(..., staff)`), zählen nicht für Rekorde, Turnier- und
+    Profi-Köder-Schwellen.
+- **Steg-Fenster** (`fishview.js`): Reiter „🏆 Turnier“ nur bis zur Siegerehrung, danach „🧔 Bert“;
+  Turnier steht im Fangbuch (`angel.tour.at`). „Zu wenig Geld – benötigt: …“ bei Ruten, Reusenstufe
+  und weiterer Reuse.
+- **Modelle**: Barsch- und Zanderfilet unterscheidbar (`fishmodels.js` `fishItem`), Ruderboot als
+  Karve (`woodmodels.js` `rowboat`).
+- Version: **v58** (`sw.js` und `?v=58` in `index.html`).
+
 ## v57 (aufbauend auf v56)
 
 - **Kessel:** Bei vollem Solardach tagsüber gesperrt – `farmQueue` liefert

@@ -449,10 +449,19 @@ function farmBuyTool(id) {
 }
 
 /* ---------------------------- Holzhändler -------------------------------- */
+/* v58: Preis-Ereignisse an einer Stelle – „Fischpreise steigen“ gilt für ganze Fische, „Holzpreise
+   steigen“ für Rohholz; beim Großhandel, Holzhändler, Holzstapel und Preisvorschlag am Verkaufsstand */
+function farmPriceBoost(id) {
+  const it = FITEMS[id];
+  if (!it) return 1;
+  if (it.k === "fisch" && farmEvOn("fischpreis")) return 1.3;
+  if (it.raw && farmEvOn("holzpreis")) return 1.3;
+  return 1;
+}
 function farmWoodPrice(id, n) {
   const it = FITEMS[id], q = farmQ(id) || 3;
   const k = it.raw ? 1 : 0.5;
-  const boom = farmEvOn("holzpreis") && it.raw ? 1.3 : 1;
+  const boom = farmPriceBoost(id);
   return Math.max(0.5, Math.round(it.v * k * n * (1 + (q - 3) * 0.08) * boom * 10) / 10);
 }
 function farmSellWood(id, n) {
@@ -475,7 +484,7 @@ function farmPile(i) {
   if (!p || (S.farm.piles || {})[i]) return null;
   return { i, x: p[0], z: p[1], n: p[3], sp: p[4], id: FSPECIES[p[4]].log };
 }
-function farmPileValue(P) { return Math.max(1, Math.round(FITEMS[P.id].v * P.n * (farmEvOn("holzpreis") ? 1.3 : 1) * 10) / 10); }
+function farmPileValue(P) { return Math.max(1, Math.round(FITEMS[P.id].v * P.n * farmPriceBoost(P.id) * 10) / 10); }
 function farmPileTake(i, sell) {
   const P = farmPile(i), F = S.farm;
   if (!P || !farmAreaOpen("saege")) return null;
@@ -904,15 +913,80 @@ function specQ(s, bait) {
 /* Wert eines einzelnen Fangs beim Händler (voller Preis, Sterne ±15 %) */
 function specValue(id, q) { return Math.round(FITEMS[id].v * (1 + (q - 3) * 0.15) * 100) / 100; }
 /* Fangbuch: die letzten 50 Fänge, Rekord je Art (nach Gewicht); gid = Angeln */
-function angelLog(id, s, q, gid) {
+function angelLog(id, s, q, gid, staff) {
   const U = angelS(), e = { sp: id, cm: s.cm, kg: s.kg, q, gid, t: S.time };
+  if (staff) e.by = "staff";
   U.log.unshift(e);
   if (U.log.length > 50) U.log.length = 50;
+  /* v58: Fänge der Fischerin/des Fischers stehen im Fangbuch (👷), zählen aber nicht für deine
+     Rekorde und nicht für die Schwellen von Turnier und Profi-Ködern */
+  if (staff) return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec: false };
   const b = U.best[id], rec = !b || s.kg > b.kg;
   if (rec) U.best[id] = { cm: s.cm, kg: s.kg, q, t: S.time };
   const c = FFISH[id] && FFISH[id].cls;
   if (c && gid) U.cnt[c] = (U.cnt[c] || 0) + 1;
   return { cm: s.cm, kg: s.kg, val: specValue(id, q), rec };
+}
+
+/* ------------------------- Fischer/in (Personal) --------------------------
+   v58: Angelt nach denselben Regeln wie du – deine Rute (nur gelesen), eigener
+   Köder aus dem Lager, eigener Mais-Zähler. Bei einem Auftrag nimmt er den besten
+   Köder, den er für die bestellte Art hat, und den Fanggrund mit der besten
+   Chance – gefangen wird trotzdem, was beißt; zählen tut nur die bestellte Art. */
+function staffBaitOk(b) {
+  const B = FBAITS[b], U = angelS();
+  if (!B || !U) return false;
+  if (B.tour && !U.tour.done) return false;
+  if (B.rod && U.rod < B.rod) return false;
+  return b === "mais" ? (U.staffMais || 0) > 0 || farmInv("mais") > 0 : farmInv(B.item) > 0;
+}
+function staffBaitUse(b) {
+  const B = FBAITS[b], U = angelS();
+  if (!staffBaitOk(b)) return false;
+  if (b !== "mais") return farmTake(B.item, 1);
+  if ((U.staffMais || 0) > 0) { U.staffMais--; return true; }
+  if (!farmTake("mais", 1)) return false;
+  U.staffMais = B.per - 1;
+  return true;
+}
+/* Warum geht ein Köder nicht? (für die Wartemeldung) */
+function staffBaitWhy(b) {
+  const B = FBAITS[b], U = angelS();
+  if (B.tour && !U.tour.done) return B.n + " erst nach dem Turnier";
+  if (B.rod && U.rod < B.rod) return B.n + " brauchen die " + FRODS[B.rod].n;
+  return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "keine Tauwürmer – bei Bert holen" : "keine Profi-Köder – bei Bert bestellen";
+}
+/* Köder, die für eine Klasse taugen – der beste zuerst */
+const STAFF_BAITS = { klein: ["mais", "wurm"], mittel: ["wurm", "profikoeder"], gross: ["profikoeder"] };
+/* Plan für einen Gang: { gid, bait } – oder { why } */
+function staffFishPlan(target) {
+  const U = angelS();
+  if (!U || !farmObj1("f_steg")) return { why: "erst den Steg bauen" };
+  const D = target && FFISH[target];
+  if (!D) {
+    const b = ["mais", "wurm"].find(staffBaitOk);
+    return b ? { gid: "steg", bait: b } : { why: "kein Köder (Mais oder Tauwürmer)" };
+  }
+  const has = FGROUNDS.filter(g => g.fish[target]);
+  const ok = has.filter(farmGroundOk);
+  if (!ok.length) return { why: has.length ? (Math.min(...has.map(g => g.boat)) >= 2 ? "braucht das Motorboot" : "braucht das Ruderboot") : "gibt es hier nicht" };
+  const list = STAFF_BAITS[D.cls] || [];
+  const b = list.find(staffBaitOk);
+  if (!b) return { why: staffBaitWhy(list[0] || "mais") };
+  /* bester Fanggrund für die Art mit diesem Köder */
+  let best = null, bp = -1;
+  ok.forEach(g => { const o = angelOdds(g.id, b, U.rod), sum = Object.values(o).reduce((a, x) => a + x, 0), p = sum ? (o[target] || 0) / sum : 0; if (p > bp) { bp = p; best = g; } });
+  if (!best || bp <= 0) return { why: "beißt mit " + FBAITS[b].n + " nicht" };
+  return { gid: best.id, bait: b };
+}
+/* ein Wurf: Köder weg, Fisch gewürfelt (gleiche Formel wie beim Spieler) */
+function staffFishCatch(gid, bait, rng) {
+  const U = angelS();
+  if (!staffBaitUse(bait)) return null;
+  const o = angelOdds(gid, bait, U.rod);
+  const id = farmWPick(Object.keys(o), x => o[x], rng);
+  const s = Object.assign({ id }, specRoll(FFISH[id], FRODS[U.rod].size + FBAITS[bait].size, rng));
+  return { id, s, q: specQ(s) };
 }
 /* Schwierigkeit im Kreis (0 … 1): Kampfkraft der Art, Größe, Sterne */
 function angelDiff(c) {
@@ -1020,6 +1094,7 @@ function tourFinish() {
   const U = angelS();
   if (!U || U.tour.done || !U.tour.paid) return false;
   U.tour.done = true;
+  U.tour.at = S.time;
   U.bert.met = true;
   farmXP(FTOUR.xp);
   farmEvent("tour");
@@ -1129,6 +1204,7 @@ function farmEvTick() {
   const keys = Object.keys(FEVENTS).filter(k => {
     const D = FEVENTS[k];
     if (D.daily && (E.days || {})[k] === staffDay()) return false;   /* der Händler kommt nur einmal am Tag */
+    if (D.gap && (E.last || {})[k] != null && S.time - E.last[k] < D.gap) return false;   /* v58: Preis-Ereignisse nur alle 2 Tage */
     if (D.area && !farmAreaOpen(D.area)) return false;
     if (D.need && !D.need()) return false;
     if (D.win) { const h = (S.time % 1440) / 60; if (D.win[0] < D.win[1] ? h < D.win[0] || h >= D.win[1] : h < D.win[0] && h >= D.win[1]) return false; }
@@ -1143,6 +1219,7 @@ function farmEvStart(k) {
   const F = S.farm, D = FEVENTS[k];
   const c = { k, t0: S.time, until: S.time + D.dur, data: {} };
   if (D.daily) { F.ev.days = F.ev.days || {}; F.ev.days[k] = staffDay(); }
+  if (D.gap) { F.ev.last = F.ev.last || {}; F.ev.last[k] = S.time; }
   if (k === "schwarm") { const gs = FGROUNDS.filter(farmGroundOk); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; }
   if (k === "nachbar") {
     const pool = ["bretter", "balken", "kisten", "pfosten", "platten", "brennholz"].filter(id => flv() >= 9);
@@ -1402,7 +1479,7 @@ function farmDailyBonus() {
 function stallObj(market) { return market ? farmObj1("f_markt") : farmObj1("stall"); }
 function stallState(market) { return market ? S.farm.mstall : S.farm.stall; }
 function stallCap(market) { return market ? FSTALL.market : FSTALL.slots[(S.farm.stage || 1) - 1]; }
-function stallBase(id, n, market) { return FITEMS[id].v * n * (market && FITEMS[id].st === "fisch" ? 1 + FSTALL.premium : 1); }
+function stallBase(id, n, market) { return FITEMS[id].v * n * (market && FITEMS[id].st === "fisch" ? 1 + FSTALL.premium : 1) * farmPriceBoost(id); }
 function stallPut(market, id, n, price) {
   const St = stallState(market);
   if (St.slots.filter(Boolean).length >= stallCap(market)) return toast("Alle Plätze im Stand sind belegt.", "warn"), false;
@@ -1435,7 +1512,7 @@ function stallTick(market, dt) {
   if (market && !stallObj(true)) return;
   St.slots.forEach(it => {
     if (!it || it.sold) return;
-    const base = stallBase(it.id, it.n, market) * (market && farmEvOn("fischpreis") ? 1.3 : 1);
+    const base = stallBase(it.id, it.n, market);
     const r = it.p / Math.max(0.1, base);
     const chance = 0.045 * clamp(1.9 - r, 0.08, 1.4) * dt;
     if (Math.random() < chance) {

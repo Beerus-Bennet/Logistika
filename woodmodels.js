@@ -1021,18 +1021,47 @@ const FWM = (() => {
     b.box(0.8, 0.1, 0.02, 0x2f6fb0, { y: 1.65, z: 1.28 });
     return b;
   }
+  /* v58: Ruderboot als kleine nordische Karve – spitz an beiden Enden, Klinkerplanken
+     (drei überlappende Gänge, dunkle Fugen), hochgezogene geschwungene Steven, geteertes Holz */
   function rowboat() {
     G3.seed(4460);
     const b = new MB();
-    const S = [[-1.0, 0.15], [-0.7, 0.38], [0, 0.45], [0.7, 0.38], [1.05, 0.05]];
+    const S = [[-1.12, 0.04], [-0.85, 0.3], [-0.35, 0.45], [0.35, 0.45], [0.85, 0.3], [1.12, 0.04]];
+    /* drei Plankengänge je Seite: Höhe unten/oben, Breitenfaktor unten/oben */
+    const strakes = [[-0.06, 0.08, 0.62, 0.8, 0x5e3f26], [0.08, 0.2, 0.82, 0.94, 0x6e4a2c], [0.2, 0.32, 0.95, 1.04, 0x7a5232]];
+    /* Planke als flacher Quader von (x0, z0) nach (x1, z1) – von allen Seiten sichtbar */
+    const plank = (x0, z0, x1, z1, y, h, t, col, tilt) => {
+      const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz) + 0.02;
+      b.at({ x: (x0 + x1) / 2, y, z: (z0 + z1) / 2, ry: Math.atan2(dx, dz) }, m => m.box(t, h, len, col, { rz: tilt || 0 }));
+    };
     for (let i = 0; i < S.length - 1; i++) {
       const [z0, w0] = S[i], [z1, w1] = S[i + 1];
-      [1, -1].forEach(s => b.quad([s * w0, 0.3, z0], [s * w1, 0.3, z1], [s * w1 * 0.7, -0.05, z1], [s * w0 * 0.7, -0.05, z0], i % 2 ? 0x2f6fb0 : 0x3f78c8));
-      b.quad([-w0 * 0.7, -0.05, z0], [w0 * 0.7, -0.05, z0], [w1 * 0.7, -0.05, z1], [-w1 * 0.7, -0.05, z1], 0xc9955a);
-      b.quad([-w0 * 0.85, 0.08, z0], [w0 * 0.85, 0.08, z0], [w1 * 0.85, 0.08, z1], [-w1 * 0.85, 0.08, z1], 0xc9955a);
+      strakes.forEach(([y0, y1, f0, f1, col]) => [1, -1].forEach(s => {
+        const f = (f0 + f1) / 2;
+        plank(s * w0 * f, z0, s * w1 * f, z1, (y0 + y1) / 2, y1 - y0 + 0.02, 0.035, col, -s * 0.35);
+        /* dunkle Fuge an der Oberkante: der nächste Gang überlappt */
+        plank(s * w0 * (f1 + 0.01), z0, s * w1 * (f1 + 0.01), z1, y1, 0.018, 0.02, 0x2e2016);
+      }));
+      plank(0, z0, 0, z1, -0.05, 0.04, Math.max(0.12, (w0 + w1) * 0.62), 0x3a2a1c);     /* Kiel/Boden außen */
+      plank(0, z0, 0, z1, 0.07, 0.02, Math.max(0.1, (w0 + w1) * 0.78), 0x8a6a44);       /* Bodenbretter innen */
     }
-    b.box(0.85, 0.05, 0.22, C.woodL, { y: 0.22, z: -0.1 });
-    [-1, 1].forEach(s => b.box(0.04, 0.04, 1.2, C.woodL, { x: s * 0.55, y: 0.28, z: 0, ry: s * 0.25 }));
+    /* Spanten innen und Dollbord oben */
+    [-0.6, -0.2, 0.2, 0.6].forEach(z => b.box(0.82, 0.03, 0.04, 0x5a3c24, { y: 0.1, z }));
+    /* zwei Ruderbänke */
+    [-0.1, 0.62].forEach(z => b.box(0.84, 0.045, 0.2, 0x8a6440, { y: 0.24, z }));
+    /* Steven vorn und hinten: steigen auf und rollen sich am Ende nach innen */
+    [1, -1].forEach(s => {
+      for (let k = 0; k < 6; k++) {
+        const t = k / 5, y = 0.08 + t * 0.52, z = s * (1.1 + Math.sin(t * Math.PI * 0.9) * 0.14 - t * t * 0.08);
+        b.box(0.07, 0.12, 0.07, k % 2 ? 0x3a2a1c : 0x4a3424, { y, z, rx: -s * (0.2 + t * 0.9) });
+      }
+      b.sphere(0.05, 6, 4, 0x3a2a1c, { y: 0.64, z: s * 1.08 });
+    });
+    /* zwei Riemen mit Blättern, schräg an den Seiten */
+    [-1, 1].forEach(s => b.at({ x: s * 0.58, y: 0.3, ry: s * 0.25 }, m => {
+      m.box(0.035, 0.035, 1.3, C.woodL);
+      m.box(0.05, 0.012, 0.26, 0xb08458, { z: -0.62 });
+    }));
     return b;
   }
   function motorboat() {

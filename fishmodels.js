@@ -1206,8 +1206,37 @@ const FFM = (() => {
         });
         for (let k = 0; k < 4; k++) b.box(0.02, 0.02, 0.02, 0xfff6a0, { x: (rnd() - 0.5) * 0.4, y: 0.22 + rnd() * 0.1, z: (rnd() - 0.5) * 0.2, ry: 0.78, rx: 0.78 });
         return b;
-      case "barschfilet": case "forellenfilet": case "zanderfilet": {
-        const meat = id === "forellenfilet" ? 0xf2946e : id === "barschfilet" ? 0xe8c2ae : 0xe2cec2, skin = id === "forellenfilet" ? 0x8a8a6a : id === "barschfilet" ? 0x6a7a3a : 0x7a8680;
+      case "barschfilet": {
+        /* v58: Barsch auf dem Holzbrett – rosiges Fleisch, grün-goldene Haut mit dunklen Querstreifen */
+        const meat = 0xeeb3a2, skin = 0x7a8a3a;
+        b.box(0.76, 0.05, 0.5, 0xb88450, { top: 0xc9955a });
+        b.at({ y: 0.05 }, m => {
+          [[-0.02, -0.09, 0.15, 0.52], [0.04, 0.1, -0.12, 0.48]].forEach(([x, z, ry, l]) => {
+            filet(m, x, z, ry, meat, skin, l);
+            /* Hautstreifen sichtbar an der Kante, mit den Barsch-Binden */
+            m.at({ x, z, ry }, k => { k.box(l * 0.95, 0.02, 0.03, skin, { y: 0.02, z: 0.085 }); for (let s = 0; s < 4; s++) k.box(0.035, 0.024, 0.034, 0x2e3a1e, { x: -l * 0.3 + s * l * 0.2, y: 0.022, z: 0.086 }); });
+          });
+          lemon(m, 0.29, 0.17, 0.03); herbs(m, -0.27, 0.15, 0.03, 3);
+        });
+        return b;
+      }
+      case "zanderfilet": {
+        /* v58: Zander auf dunkler Schale – fast weißes Fleisch, silbergraue Haut, Zitronenscheiben */
+        const meat = 0xf8f2ea, skin = 0x9aa4a8;
+        b.box(0.74, 0.06, 0.48, 0x2e3a40, { top: 0x37454c });
+        b.box(0.66, 0.01, 0.4, 0x24302a, { y: 0.06 });
+        b.at({ y: 0.04 }, m => {
+          [[-0.02, -0.08, 0.15, 0.56], [0.04, 0.1, -0.12, 0.5]].forEach(([x, z, ry, l]) => {
+            filet(m, x, z, ry, meat, skin, l);
+            m.at({ x, z, ry }, k => k.box(l * 0.95, 0.02, 0.03, skin, { y: 0.02, z: 0.085 }));
+          });
+          [0.24, 0.3].forEach((x, i) => m.cyl(0.055, 0.055, 0.012, 10, 0xf6dc4a, { x, y: 0.035 + i * 0.006, z: 0.16 - i * 0.03, top: 0xfff2a0 }));
+          herbs(m, -0.27, 0.15, 0.03, 3);
+        });
+        return b;
+      }
+      case "forellenfilet": {
+        const meat = 0xf2946e, skin = 0x8a8a6a;
         /* dunkle Schale, damit die hellen Filets leuchten */
         b.box(0.74, 0.06, 0.48, 0x2e3a40, { top: 0x37454c });
         b.box(0.66, 0.01, 0.4, 0x24302a, { y: 0.06 });

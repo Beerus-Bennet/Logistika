@@ -197,8 +197,11 @@ function openSteg(tab) {
   if (!U.linaSeen) return stegLina();
   if (tab) FV.stegTab = tab;
   FV.sheetFn = () => openSteg();
-  const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"], ["bert", "🏆 Turnier & Köder"], ["log", "📖 Fangbuch"]];
-  const body = { fish: stegFishHTML, gear: stegGearHTML, pot: stegPotHTML, bert: stegBertHTML, log: stegLogHTML }[FV.stegTab] || stegFishHTML;
+  /* v58: Turnier ist ein eigener Reiter, solange es noch aussteht; Bert erst danach */
+  if (FV.stegTab === "tour" && U.tour.done) FV.stegTab = "bert";
+  if (FV.stegTab === "bert" && !U.tour.done) FV.stegTab = "tour";
+  const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"], U.tour.done ? ["bert", "🧔 Bert"] : ["tour", "🏆 Turnier"], ["log", "📖 Fangbuch"]];
+  const body = { fish: stegFishHTML, gear: stegGearHTML, pot: stegPotHTML, tour: stegTourHTML, bert: stegBertHTML, log: stegLogHTML }[FV.stegTab] || stegFishHTML;
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🪵</span>Am Steg<small>${esc(FRODS[U.rod].n)} · ${U.log.length ? U.log.length + " Fänge im Fangbuch" : "noch kein Fang"}</small></div>
     <div class="fs-tabs">${tabs.map(([k, n]) => `<button data-ut="${k}" class="${FV.stegTab === k ? "on" : ""}">${n}</button>`).join("")}</div>
     ${body(U)}`, "steg");
@@ -234,7 +237,7 @@ function stegFishHTML(U) {
 }
 function stegGearHTML(U) {
   const rods = [1, 2, 3].map(n => { const R = FRODS[n], have = U.rod >= n;
-    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "zu wenig Geld" : "";
+    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "Zu wenig Geld – benötigt: " + eur(R.price) : "";
     return `<div class="uf-row"><span class="ic">${R.i}</span><div><b>${esc(R.n)}</b><small>grüner Bogen ${R.gw}° · ${n === 1 ? "von Lehmann geschenkt" : "größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
       ${n === 1 ? "" : `<button class="btn tiny" data-rod="${n}" ${why ? "disabled" : ""}>${why || eur(R.price)}</button>`}</div>`; }).join("");
   return `<div class="fs-sub">Ruten</div><div class="uf-list">${rods}</div>
@@ -247,9 +250,9 @@ function stegPotHTML(U) {
       <button class="btn tiny ghost" data-pot="${o.id}">Zeigen</button></div>`; }).join("");
   const tiers = Object.keys(FPOTS).map(id => { const P = FPOTS[id];
     return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}">${itemIc(id)}<div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
-  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "zu wenig Geld" : "";
+  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "Zu wenig Geld – benötigt: " + eur(nx.cost) : "";
   return `<div class="uf-list">${rows}</div>
-    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>🪤 Weitere Reuse · ${eur(pc)}</button>` : ""}
+    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>${S.money < pc ? "Zu wenig Geld – benötigt: " + eur(pc) : "🪤 Weitere Reuse · " + eur(pc)}</button>` : ""}
     <div class="fs-sub">Reusenstufen</div><div class="uf-list">${tiers}</div>
     ${nx ? `<button class="btn tiny" id="ufPotUp" ${upWhy ? "disabled" : ""}>${upWhy || "Reusen auf Stufe " + (U.potLvl + 1) + " · " + eur(nx.cost)}</button>` : ""}
     <div class="fs-sub">Tipp auf eine Reuse im Wasser: Reusenköder (oder eine Portion Mais) rein, später mit dem Haken hochziehen. Jedes Tier hat Größe, Gewicht und Sterne – bessere Reusen fangen größere Tiere.</div>`;
@@ -259,7 +262,11 @@ function tourMemberRow(m, extra) {
   return `<div class="uf-row"><span class="ic"><span class="uf-ini">${esc(m.ini)}</span></span><div><b>${esc(m.n)}</b><small>${esc(m.from)} · ${esc(m.about)}</small></div>${extra || ""}</div>`;
 }
 function stegBertHTML(U) {
-  if (!U.tour.done) {
+  if (!U.tour.done) return stegTourHTML(U);
+  return stegBertShopHTML(U);
+}
+function stegTourHTML(U) {
+  {
     const ok = tourCanStart(), n = Math.min(FTOUR.need, U.cnt.klein), c = tourCost(), miss = U.tour.paid ? 0 : c - S.money;
     const btn = U.tour.paid ? "🏆 Turnier fortsetzen" : !ok ? "🏆 Turnier veranstalten" : miss > 0 ? "Es fehlen " + eur(miss) : "🏆 Turnier veranstalten · " + eur(c);
     return `<div class="lk-poster"><b>🏆 Angler-Turnier am Glindower See</b>
@@ -268,6 +275,8 @@ function stegBertHTML(U) {
       <div class="uf-row"><span class="ic">🐟</span><div><b>Erst selbst üben</b><small>Fang ${FTOUR.need} kleine Fische · ${n}/${FTOUR.need}</small></div><span class="uf-bar"><i style="width:${n / FTOUR.need * 100}%"></i></span></div>
       <button class="btn fgo" id="ufTour" ${U.tour.paid || (ok && miss <= 0) ? "" : "disabled"}>${btn}</button>`;
   }
+}
+function stegBertShopHTML(U) {
   const q = U.bert.lureQ, L = FBERT.lures, need = FBERT.lureNeed;
   let lure;
   if (!bertLureOk()) lure = `<div class="fs-empty">„Ich tüftel an was Großem. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
@@ -285,9 +294,11 @@ function stegBertHTML(U) {
 function stegLogHTML(U) {
   const best = Object.keys(U.best).map(id => { const b = U.best[id];
     return `<div class="uf-row">${itemIc(id)}<div><b>${esc(FITEMS[id].sg || FITEMS[id].n)}</b><small>Rekord: ${fmt(b.cm, 1)} cm · ${fishKgTxt(b.kg)} · ${qStars(b.q)}</small></div></div>`; }).join("");
-  const last = U.log.slice(0, 12).map(e => `<div class="uf-row">${itemIc(e.sp)}<div><b>${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
-  return U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
-    : `<div class="fs-empty">Noch leer. Jeder Fang beim Angeln und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`;
+  const last = U.log.slice(0, 12).map(e => `<div class="uf-row">${itemIc(e.sp)}<div><b>${e.by === "staff" ? "👷 " : ""}${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
+  /* v58: abgeschlossenes Turnier steht im Fangbuch */
+  const tour = U.tour.done ? `<div class="uf-list"><div class="uf-row"><span class="ic">🏆</span><div><b>Angler-Turnier veranstaltet</b><small>${U.tour.at != null ? esc(stamp(U.tour.at)) + " · " : ""}abgeschlossen</small></div></div></div>` : "";
+  return tour + (U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
+    : `<div class="fs-empty">Noch leer. Jeder Fang beim Angeln und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`);
 }
 
 /* ------------------------------ Angler-Turnier ----------------------------
