@@ -681,6 +681,8 @@ const ITEM_3D = new Set(["birke", "kiefer", "buche", "eiche", "edelholz", "aeste
   "barsch", "forelle", "karpfen", "hecht", "zander", "aal", "wels", "schleie", "rotauge", "rotfeder", "ukelei",
   "abfall", "koeder", "barschfilet", "forellenfilet", "karpfenblau", "zanderfilet", "raeucherforelle", "raeucheraal", "fischplatte",
   "konserve", "fischkiste", "edelbox", "hechtkloesse", "fischbroetchen", "wurm", "profikoeder", "muschel", "krabbe", "krebs"]);
+/* v59: Berts Spezialköder (Köderdose mit der Art davor) */
+if (typeof FSPEC_BAIT !== "undefined") Object.keys(FSPEC_BAIT).forEach(id => ITEM_3D.add("sk_" + id));
 function itemIc(id, lock) {
   const it = FITEMS[id];
   if (!it) return "";

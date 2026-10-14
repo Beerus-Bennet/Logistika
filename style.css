@@ -2771,6 +2771,7 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-bait small{font-size:9.5px;opacity:.7}
 .mg-bait.on{background:var(--blue);color:#fff}
 .mg-bait:disabled{opacity:.45;cursor:default}
+.mg-bait .ii{width:30px;height:30px;vertical-align:middle}
 .uf-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 .uf-row{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:6px 9px}
 .uf-row .ic{flex:none;width:32px;font-size:24px;text-align:center}

@@ -1167,10 +1167,25 @@ const FFM = (() => {
       else m.cyl(0.03, 0.03, 0.012, 8, 0xb0b4b8, { y: 0.08, x: -0.13 });
     });
   }
+  /* v59: Berts Spezialköder – offene Köderdose, Etikett und Lockteig in den Farben
+     der Art, davor die Art in klein, damit man sie auf einen Blick erkennt */
+  function specBait(b, sp) {
+    const F = FISH[sp], paste = cmix(F.side, 0x7a4a2a, 0.35);
+    b.at({ x: 0.16, z: -0.12, s: 0.85 }, m => {
+      m.cyl(0.15, 0.15, 0.2, 14, 0x9aa0a6, { smooth: true, top: 0x5a4030 });
+      m.cyl(0.152, 0.152, 0.1, 14, F.side, { y: 0.05 });
+      m.cyl(0.153, 0.153, 0.02, 14, F.back, { y: 0.15 });
+      m.cyl(0.035, 0.035, 0.01, 10, 0xd8332b, { rx: Math.PI / 2, y: 0.1, z: 0.152 });
+      for (let k = 0; k < 6; k++) m.ico(0.04, k % 2 ? paste : cmix(paste, 0xffffff, 0.25), { x: (rnd() - 0.5) * 0.16, y: 0.21, z: (rnd() - 0.5) * 0.16, jitter: 0.4 });
+    });
+    fishLie(b, sp, { x: -0.04, z: 0.16, ry: 0.25, s: 0.5 });
+    return b;
+  }
   function fishItem(id) {
     G3.seed(7300 + id.length * 31 + id.charCodeAt(0) * 7 + id.charCodeAt(id.length - 1));
     const b = new MB();
     if (FISH[id]) return fishLie(b, id);
+    if (id.startsWith("sk_") && FISH[id.slice(3)]) return specBait(b, id.slice(3));
     switch (id) {
       case "abfall":   /* Eimer mit Gräten und Köpfen */
         b.cyl(0.22, 0.27, 0.42, 14, 0x9aa4ac, { smooth: true, top: 0x5a5048 });

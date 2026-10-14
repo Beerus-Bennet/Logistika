@@ -719,7 +719,7 @@ const MG_GAMES = {
     baits(st) {
       const U = angelS();
       return `<div class="mg-baits">${Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b, st.gid);
-        return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
+        return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
     },
     odds(st) {
       const o = angelOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
