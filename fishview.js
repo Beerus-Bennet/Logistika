@@ -200,7 +200,7 @@ function openSteg(tab) {
   if (tab) FV.stegTab = tab;
   FV.sheetFn = () => openSteg();
   /* v58: Turnier ist ein eigener Reiter, solange es noch aussteht.
-     v59: Bert hat keinen Reiter mehr – er steht mit dem Kombi am Ufer (openBert) */
+     v59: Bert hat keinen Reiter mehr – er steht mit dem Kombi am Ufer (Werkstatt) */
   if ((FV.stegTab === "tour" && U.tour.done) || FV.stegTab === "bert") FV.stegTab = "fish";
   const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"]].concat(U.tour.done ? [] : [["tour", "🏆 Turnier"]], [["log", "📖 Fangbuch"]]);
   const body = { fish: stegFishHTML, gear: stegGearHTML, pot: stegPotHTML, tour: stegTourHTML, log: stegLogHTML }[FV.stegTab] || stegFishHTML;
@@ -272,20 +272,39 @@ function stegTourHTML(U) {
   }
 }
 /* ------------------------- v59: Berts alter Kombi -------------------------
-   Bert steht nach dem Turnier mit seinem Kombi am Ufer: Werkstatt (Tauwürmer,
-   Profi-Köder, Spezialköder), Dauerbestellung und die Spezialköder-Liste. */
-function openBert() {
-  const U = angelS(), o = bertCar();
-  if (!U || !o) return;
-  FV.sheetFn = openBert;
-  machUpdate(o);
+   Bert steht nach dem Turnier mit seinem Kombi am Ufer. Antippen öffnet direkt die Werkstatt (Tauwürmer,
+   Profi-Köder, Spezialköder) mit Dauerbestellung; die Köder-Entwicklung liegt hinter einem Knopf. */
+/* Kopf der Werkstatt (farmview.openMachine → machExtraHTML): Bert, alte Bestellung,
+   Dauerbestellung und der Knopf zur Köder-Entwicklung */
+function bertWorkHTML(o) {
+  const U = angelS();
+  if (!U) return "";
   const keep = U.bert.keep || 0, need = FBERT.lureNeed, old = U.bert.lureQ;
-  const work = o.done.length ? "📦 " + o.done.length + " fertig – abholen" : o.q.length ? "⏳ " + o.q.length + " in Arbeit" : "Tauwürmer, Profi-Köder und Spezialköder bestellen";
+  const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
+  const dev = Object.keys(FSPEC_BAIT).filter(id => { const s = specS(id); return s && s.dev && !specDone(id); }).length;
   const oldH = !old ? "" : S.time >= old.end
     ? `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>deine alte Bestellung · ${old.n} Stück</small></div><button class="btn tiny" id="bLureGet">Abholen</button></div>`
     : `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Profi-Köder</b><small>deine alte Bestellung · noch ${fdur(Math.max(1, old.end - S.time))}</small></div></div>`;
   const lureH = bertLureOk() ? "" : `<div class="fs-empty">„Für die richtig Großen tüftel ich an Profi-Ködern. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
     <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische</small></div>`;
+  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
+      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Köder, den genau die mögen.“</p></div></div>
+    ${oldH}${lureH}
+    <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
+    <div class="fs-row">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>
+    <button class="fup2" id="bDev"><span>🎯</span><b>Köder-Entwicklung</b><small>${ask ? "🐟 " + ask + " Fisch" + (ask > 1 ? "e" : "") + " für Bert bereit" : dev ? "⏳ Bert entwickelt" : "Fisch übergeben – Bert entwickelt einen Köder nur für diese Art"}</small></button>`;
+}
+function bertWorkBind(o) {
+  const U = angelS(), on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(b => b.onclick = () => fn(b));
+  on("#bLureGet", () => { if (bertCollect()) { sfx("collect"); toast("✨ " + FBERT.lures.n + " Profi-Köder abgeholt.", "ok"); save(); } else sfx("bad"); openMachine(o); });
+  on("[data-keep]", b => { U.bert.keep = +b.dataset.keep; sfx("tap"); bertKeepTick(); save(); openMachine(o); });
+  on("#bDev", () => { sfx("tap"); openBertDev(); });
+}
+/* Köder-Entwicklung: alle Arten – ❓, entdeckt (Fisch übergeben), in Arbeit, fertig */
+function openBertDev() {
+  const U = angelS(), o = bertCar();
+  if (!U || !o) return;
+  FV.sheetFn = openBertDev;
   const spec = Object.keys(FSPEC_BAIT).map(id => {
     const s = specS(id), f = FFISH[id];
     if (!s) return `<div class="uf-row lock"><span class="ic">❓</span><div><b>???</b><small>noch nicht selbst gefangen</small></div></div>`;
@@ -293,34 +312,22 @@ function openBert() {
     if (specDone(id)) { const n = farmInv("sk_" + id); st = "✓ entwickelt" + (n ? " · " + n + " im Lager" : "") + " · in der Werkstatt bestellen"; }
     else if (s.dev) { st = "⏳ Bert entwickelt – noch " + fdur(Math.max(1, s.dev.end - S.time)); right = `<span class="uf-bar"><i style="width:${Math.round(clamp(1 - (s.dev.end - S.time) / FSPEC_DEV, 0, 1) * 100)}%"></i></span>`; }
     else { const why = specWhy(id); st = "entdeckt · Entwicklung " + fdur(FSPEC_DEV); right = `<button class="btn tiny" data-give="${id}" ${why ? "disabled" : ""}>${why ? esc(why) : "🐟 übergeben"}</button>`; }
-    return `<div class="uf-row">${itemIc(id)}<div><b>${esc(f.sg)}-Köder</b><small>${st}<br>5 Stück ${eur(FSPEC_BAIT[id])} + 2 Tauwürmer${f.cls === "gross" ? " · braucht die " + esc(FRODS[3].n) : ""}</small></div>${right}</div>`;
+    return `<div class="uf-row">${itemIc(specDone(id) ? "sk_" + id : id)}<div><b>${esc(f.sg)}-Köder</b><small>${st}<br>5 Stück ${eur(FSPEC_BAIT[id])} + 2 Tauwürmer${f.cls === "gross" ? " · braucht die " + esc(FRODS[3].n) : ""}</small></div>${right}</div>`;
   }).join("");
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🚙</span>Berts alter Kombi<small>Köderwerkstatt im Kofferraum</small></div>
-    <div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Wurmkasten und Köderwerkstatt</small>
-      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Köder, den genau die mögen.“</p></div></div>
-    <button class="fup2" id="bWork"><span>🛠️</span><b>Werkstatt</b><small>${work}</small></button>
-    ${oldH}${lureH}
-    <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
-    <div class="fs-row">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>
-    <div class="fs-sub">🎯 Spezialköder: Bring Bert einen Fisch, den du selbst gefangen hast – er entwickelt einen Köder, auf den nur diese Art beißt.</div>
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🎯</span>Köder-Entwicklung<small>Berts alter Kombi</small></div>
+    <button class="btn tiny ghost" id="bBack">‹ Zurück zur Werkstatt</button>
+    <div class="fs-sub">Bring Bert einen Fisch, den du selbst gefangen hast – in ${fdur(FSPEC_DEV)} entwickelt er einen Köder, auf den nur diese Art beißt.</div>
     <div class="uf-list">${spec}</div>`, "bert");
-  const on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(b => b.onclick = () => fn(b));
-  on("#bWork", () => {
-    const got = farmCollectMach(o);
-    if (got.length) { flyGains(o, got); sfx("collect"); save(); }
-    openMachine(o);
-  });
-  on("#bLureGet", () => { if (bertCollect()) { sfx("collect"); toast("✨ " + FBERT.lures.n + " Profi-Köder abgeholt.", "ok"); save(); } else sfx("bad"); openBert(); });
-  on("[data-keep]", b => { U.bert.keep = +b.dataset.keep; sfx("tap"); bertKeepTick(); save(); openBert(); });
-  on("[data-give]", b => {
+  $("#bBack").onclick = () => { sfx("tap"); openMachine(o); };
+  $$("#farmSheetIn [data-give]").forEach(b => b.onclick = () => {
     const id = b.dataset.give;
     if (specGive(id)) { sfx("coin"); toast("🐟 Bert hat den " + FFISH[id].sg + " – in " + fdur(FSPEC_DEV) + " ist der Köder fertig.", "ok"); save(); renderFarmUI(); } else sfx("bad");
-    openBert();
+    openBertDev();
   });
   /* Restzeiten laufen mit */
-  const key = () => [o.q.length, o.done.length, Object.values(U.spec || {}).map(s => s.dev ? Math.ceil((s.dev.end - S.time) / 5) : "").join(","), U.bert.lureQ ? Math.ceil((U.bert.lureQ.end - S.time) / 5) : "-", farmInv("wurm")].join("|");
+  const key = () => Object.values(U.spec || {}).map(s => s.dev ? Math.ceil((s.dev.end - S.time) / 5) : "").join(",");
   const k0 = key();
-  FV.sheetTick = () => { if (FV.sheet === "bert" && key() !== k0) openBert(); };
+  FV.sheetTick = () => { if (FV.sheet === "bert" && key() !== k0) openBertDev(); };
 }
 /* Nach dem Angeln: Bert fragt nach einer neu entdeckten Art */
 function bertAskOpen() {

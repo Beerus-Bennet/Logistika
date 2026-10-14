@@ -23,8 +23,9 @@
   - Rezeptwerte: Zanderfilet 40 € (vorher 32), Hechtklößchen 13 € (vorher 7).
 - **Berts alter Kombi** (`FMACHINES.bert_car`, `bert: true`, `hof: false`): steht nach dem Turnier am Ufer
   zwischen Steg und Bootshaus (`bertCarPlace` in `erbe.js`, Modell `FFM.bertCar` in `fishmodels.js` – älterer
-  Kombi, erinnert an einen Mercedes, kein Logo). Antippen → `openBert()` (`fishview.js`): Werkstatt,
-  Dauerbestellung, Spezialköder. Der Reiter „🧔 Bert“ am Steg und der Sofortkauf von Würmern sind weg.
+  Kombi, erinnert an einen Mercedes, kein Logo). Antippen öffnet direkt die Werkstatt; oben Bert, die
+  Dauerbestellung und der Knopf „🎯 Köder-Entwicklung“ (`bertWorkHTML`/`bertWorkBind` über `machExtraHTML`,
+  Liste in `openBertDev`, `fishview.js`). Der Reiter „🧔 Bert“ am Steg und der Sofortkauf von Würmern sind weg.
   - Werkstatt-Rezepte: Tauwürmer (10 Stück, 3 €, 20 min, nach dem Turnier), Profi-Köder (5 Stück, 60 €,
     120 min, `bertLureOk`), Spezialköder `sk_<art>` (5 Stück aus 2 Tauwürmern, 60 min, Preis je Art).
   - `farmQueue`: optional `r.ok()` (sonst „locked“, Grund `r.why` im Fenster), `r.costT` statt „Sprit · …“

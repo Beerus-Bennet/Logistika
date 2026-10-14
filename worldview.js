@@ -1767,7 +1767,7 @@ function worldTags() {
        aus v58 fertig (✨) oder Bert wartet auf einen Fisch (🐟) */
     if (o.t === "bert_car" && angelS()) {
       const U = angelS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, ask = Object.keys(FSPEC_BAIT).some(id => specS(id) && !specWhy(id));
-      if (lure || ask) want.push(["bc" + o.id, cx, objH(o) + 1.2, cz, "🧔" + (lure ? "✨" : "") + (ask ? "🐟" : ""), "ready", () => openBert()]);
+      if (lure || ask) want.push(["bc" + o.id, cx, objH(o) + 1.2, cz, "🧔" + (lure ? "✨" : "") + (ask ? "🐟" : ""), "ready", () => ask && !lure ? openBertDev() : openMachine(o)]);
     }
     if (o.t === "sw_halle" && farmAreaOpen("saege") && !sawRepaired()) { const r = sawNext(); if (r && farmRepairCheck(r) === true) want.push(["rp", cx, 5, cz, "🔧" + r.i, "ready", () => openSawRepair()]); }
     if (o.t === "sw_lkw" && farmAreaOpen("saege") && !(F.saw && F.saw.lkw) && farmRepairCheck(FSAW_LKW) === true) want.push(["lkw", cx, 2.6, cz, "🔧🚛", "ready", () => openLkw()]);
@@ -2156,6 +2156,7 @@ function machExtraHTML(o) {
     const has = id === "saege2" ? (o.lvl || 1) >= 2 : (S.farm.enLv || 0) >= 1;
     if (!has) h += `<button class="fup2" id="fxUp" ${flv() < U.lv ? "disabled" : ""}><span>${U.i}</span><b>${esc(U.n)}</b><small>${flv() < U.lv ? "ab Level " + U.lv : esc(U.d) + " · " + eur(U.cost) + " · " + Object.keys(U.need).map(k => fqty(k, U.need[k])).join(", ")}</small></button>`;
   }
+  if (M.bert && typeof bertWorkHTML === "function") h += bertWorkHTML(o);   /* v59: Bert – Kopf, Dauerbestellung, Köder-Entwicklung */
   if (o.t === "f_markt") h += `<button class="fup2" id="fxStall"><span>🏪</span><b>Marktstand</b><small>Fisch und Fischwaren direkt am See verkaufen – 15 % mehr</small></button>`;
   if (o.broken) h += `<button class="fup2 warn" id="fxFix"><span>⚠️</span><b>Die Säge klemmt</b><small>Antippen und richten – solange steht alles</small></button>`;
   return h;
@@ -2164,6 +2165,7 @@ function machExtraBind(o) {
   const u = $("#fxUp");
   if (u) u.onclick = () => { if (farmSawUpgrade(o.t === "sw_halle" ? "saege2" : "kessel2")) { sfx("build"); puff(o); save(); farmSyncScene(); openMachine(o); } else sfx("bad"); };
   const s = $("#fxStall"); if (s) s.onclick = () => openStall(true);
+  if (FMACHINES[o.t].bert && typeof bertWorkBind === "function") bertWorkBind(o);
   const f = $("#fxFix"); if (f) f.onclick = () => { closeFarmSheet(); const sp = worldEvSpots().find(x => x.act === "defekt"); if (sp) worldEvAct(sp); else { farmMachFix(o); save(); } };
 }
 /* Krügers Büro: Überblick, Ausbau, Holzhändler */
@@ -2298,7 +2300,6 @@ function worldObjAction(o, x, y) {
     case "kessel": if (!(F.saw && F.saw.motor)) { openSawRepair(); return true; } return false;
     case "f_steg": if (typeof openSteg === "function") openSteg(); return true;
     case "f_boot": if (typeof openBoatSheet === "function") openBoatSheet(); return true;
-    case "bert_car": machUpdate(o); if (o.done.length) return false; if (typeof openBert === "function") openBert(); return true;   /* Fertiges: erst einsammeln wie bei jeder Maschine */
   }
   if (FMACHINES[o.t] && FMACHINES[o.t].saw && !sawRepaired()) { openSawRepair(); return true; }
   return false;
