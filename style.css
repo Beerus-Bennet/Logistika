@@ -2402,6 +2402,9 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .farea-req .no{background:#fff}
 .farea-req em{float:right;font-style:normal;font-size:12px;opacity:.7}
 .fvisit{display:flex;gap:10px;align-items:flex-start;margin:4px 0 8px}
+.bert-top{display:flex;flex-direction:column;gap:10px;margin:4px 0 12px}
+.bert-top .fvisit{margin:0}
+.fs-row.bert-keep{margin-top:6px}
 .fv-fig{flex:none;width:70px;height:70px;border-radius:50%;border:var(--line);background:#fff3c4;font-size:42px;display:grid;place-items:center;box-shadow:var(--shadow-sm)}
 .fv-tx{flex:1;background:#fff;border:var(--line);border-radius:16px;padding:8px 11px;position:relative}
 .fv-tx b{font-family:var(--display);font-size:18px;letter-spacing:1px;color:var(--blue);font-weight:400}

@@ -278,21 +278,23 @@ function stegTourHTML(U) {
    bei der Warteschlange alte Bestellung und Dauerbestellung (bertWorkHTML über machExtraHTML),
    ganz unten der Knopf zur Köder-Entwicklung (bertDevBtnHTML) */
 function bertTopHTML() {
-  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
-      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Spezialköder.“</p></div></div>`;
+  const U = angelS(), need = FBERT.lureNeed;
+  /* Profi-Köder-Hinweis direkt unter der Sprechblase, beides mit gleichem Abstand */
+  const lureH = !U || bertLureOk() ? "" : `<div class="fs-empty">„Für die richtig Großen tüftel ich an Profi-Ködern. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
+    <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische</small></div>`;
+  return `<div class="bert-top"><div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
+      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Spezialköder.“</p></div></div>${lureH}</div>`;
 }
 function bertWorkHTML(o) {
   const U = angelS();
   if (!U) return "";
-  const keep = U.bert.keep || 0, need = FBERT.lureNeed, old = U.bert.lureQ;
+  const keep = U.bert.keep || 0, old = U.bert.lureQ;
   const oldH = !old ? "" : S.time >= old.end
     ? `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>deine alte Bestellung · ${old.n} Stück</small></div><button class="btn tiny" id="bLureGet">Abholen</button></div>`
     : `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Profi-Köder</b><small>deine alte Bestellung · noch ${fdur(Math.max(1, old.end - S.time))}</small></div></div>`;
-  const lureH = bertLureOk() ? "" : `<div class="fs-empty">„Für die richtig Großen tüftel ich an Profi-Ködern. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
-    <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische</small></div>`;
-  return `${oldH}${lureH}
+  return `${oldH}
     <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
-    <div class="fs-row">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>`;
+    <div class="fs-row bert-keep">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>`;
 }
 function bertDevBtnHTML() {
   const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
