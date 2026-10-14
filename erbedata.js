@@ -158,7 +158,7 @@ Object.assign(FSIZE, {
 const FAREAS = {
   wald: {
     n: "Plötziner Forst", i: "🌲", lv: 5,
-    locks: [[-400, -400, -15.5, 21], [-400, -400, 400, -15.5]], reveal: [-14, -7.5], cam: [-82, -84, 22, 20],
+    locks: [[-400, -400, -27, 21], [-400, -400, 400, -30], [27, -30, 400, -19]], reveal: [-27, -9.5], cam: [-94, -96, 42, 20],
     reqs: [{ t: "Bäume gefällt", n: 3, v: () => S.farm.stats.felled || 0 }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster hat einen Weg durch den Wald freigegeben.",
@@ -166,7 +166,7 @@ const FAREAS = {
   },
   saege: {
     n: "Sägewerk Krüger", i: "🪚", lv: 9,
-    locks: [[-42, -42, -16, -16]], reveal: [-29, -17], cam: null,
+    locks: [[-54, -54, -28, -28]], reveal: [-41, -29], cam: null,
     reqs: [{ t: "Kettensäge gekauft", n: 1, v: () => Math.min(1, S.farm.tools.saw || 0), yes: true }, { t: "Bäume gefällt", n: 30, v: () => S.farm.stats.felled || 0 }],
     who: "Nachbar Erwin Krüger", whoI: "👴", whoRole: "Nachbar",
     msg: "Nachbar Krüger schenkt dir sein altes Sägewerk.",
@@ -174,7 +174,7 @@ const FAREAS = {
   },
   altwald: {
     n: "Alter Wald", i: "🌳", lv: 13,
-    locks: [[-400, -400, -58, -58]], reveal: [-50, -62], cam: [-118, -118, 22, 20],
+    locks: [[-400, -400, -70, -70]], reveal: [-62, -74], cam: [-130, -130, 42, 20],
     reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster öffnet den alten Wald hinter dem Bach.",
@@ -196,20 +196,20 @@ Object.values(FAREAS).forEach(A => {
   A.reqT = A.reqs.map(q => q.yes ? q.t : q.n + " " + q.t).join(" · ");
 });
 /* Kameragrenzen vor jeder Freischaltung: Hof, Teich und ein Blick über den Zaun */
-const FCAM_HOF = [-18.5, -18.5, 30, 20];    /* bis hinter den Teich – dort kann auch eine Schatzkiste liegen */
+const FCAM_HOF = [-27, -30, 42, 20];        /* v56: der ganze (größte) Hof und bis hinter den Teich – dort kann auch eine Schatzkiste liegen */
 
 /* ------------------------------ Sägewerk --------------------------------
    Lage der Gebäude (Weltmitte), Reparaturen (jeweils ein Minispiel) und
    Plätze für die Maschinen, die man nach und nach dazukauft.           */
 const FSAW = {
   objs: [
-    { t: "sw_halle", x: -29, z: -31 },
-    { t: "sw_lager", x: -37, z: -22 },
-    { t: "sw_buero", x: -20.5, z: -21.5 },
-    { t: "sw_lkw",   x: -20.5, z: -31.5, r: 0 },
-    { t: "kessel",   x: -38.5, z: -32.5 }
+    { t: "sw_halle", x: -41, z: -43 },
+    { t: "sw_lager", x: -49, z: -34 },
+    { t: "sw_buero", x: -32.5, z: -33.5 },
+    { t: "sw_lkw",   x: -32.5, z: -43.5, r: 0 },
+    { t: "kessel",   x: -50.5, z: -45.5 }
   ],
-  pads: { spalter: [-24, -21], hobel: [-31.5, -23.5], trocken: [-22, -38], verpack: [-28, -38.5], schleif: [-34, -38.5], fraese: [-38.5, -38] }
+  pads: { spalter: [-36, -33], hobel: [-43.5, -35.5], trocken: [-34, -50], verpack: [-40, -50.5], schleif: [-46, -50.5], fraese: [-50.5, -50] }
 };
 const FSAW_REPAIRS = [
   { id: "dach",  n: "Dach",          i: "🏚️", game: "nails",  need: { bretter: 4, balken: 2 },  cost: 120,
@@ -249,18 +249,18 @@ const FENERGY_CAP = [150, 300];
 /* Photovoltaik der Döring GmbH: kommt ab Level 15 für 48 Stunden ans Sägewerk
    (danach jede Woche wieder, bis das Dach voll ist). Jedes Modul bringt tagsüber
    kWh je Stunde; mit vollem Dach laufen Kessel und Säge ganz von selbst. */
-const FPV = { lv: 15, price: 180, max: 16, kwh: 2, stay: 2880, again: 7, at: [-23.2, -25.2], who: "Frank Döring", firm: "Döring GmbH" };
+const FPV = { lv: 15, price: 180, max: 16, kwh: 2, stay: 2880, again: 7, at: [-35.2, -37.2], who: "Frank Döring", firm: "Döring GmbH" };
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
 const FHOF_STAGES = [
   null,
   { n: "Kleiner Bauernhof", d: "Ein bisschen heruntergekommen – aber deiner." },
   { n: "Ausgebauter Hof", lv: 6, cost: 900, need: { kiefer: 6, birke: 6 },
-    perks: ["Der Hof wächst nach allen Seiten: 28 × 28 statt 26 × 26 Felder Platz", "Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
+    perks: ["Der Hof wächst nach Westen, Norden und Osten: 36 × 35 statt 30 × 32 Felder Platz", "Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
   { n: "Professioneller Betrieb", lv: 11, cost: 3500, need: { bretter: 12, balken: 8, pfosten: 8 },
-    perks: ["Der Hof wächst wieder: 30 × 30 Felder Platz", "Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
+    perks: ["Der Hof wächst wieder: 42 × 38 Felder Platz", "Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
   { n: "Großer Wirtschaftshof", lv: 17, cost: 9000, need: { bauholz: 8, platten: 10, tueren: 2, zaun: 6 },
-    perks: ["Das ganze Gelände: 32 × 32 Felder Platz für Felder, Ställe und Maschinen", "Steinmauer, Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
+    perks: ["Das ganze Gelände: 48 × 41 Felder Platz für Felder, Ställe und Maschinen", "Steinmauer, Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
 ];
 /* Gerümpel auf dem Hof am Anfang: wegräumen gibt EP und ein bisschen Holz */
 const FJUNK = {

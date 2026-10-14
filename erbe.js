@@ -22,27 +22,56 @@ function erbeRng(seed) {
 
 /* ------------------------------ Welt-Layout ------------------------------
    Wege (Polylinien) und Sperrflächen für Bäume – gebraucht beim Erzeugen
-   der Bäume und beim Bau der Kulisse. */
+   der Bäume und beim Bau der Kulisse.
+   v56: Weltumbau – der Hof ist größer und liegt zwei Felder weiter von der
+   Straße weg (die Straße bleibt bei z = 18,5), der Teich ist nach Osten
+   gerückt (+11,5), Sägewerk und der ganze Wald dahinter nach Nordwesten
+   (−12 / −12). See und Fischerei sind unverändert. Weltkoordinaten:
+   1 Einheit = 1 Kachel, Süden = +z, Hofkachel = Welt + 16. */
 const FWORLD = {
-  pond: { x: 22.5, z: -3, r: 5.6 },
+  pond: { x: 34, z: -3, r: 5.6 },
   lake: { x: 14, z: 48, rx: 36, rz: 22 },
-  yard: [-42, -42, -16, -18],                      /* Sägewerkshof x0, z0, x1, z1 */
-  /* Weg vom Westtor zum Sägewerk, von dort in den Wald (Hauptweg nach Norden, Abzweig nach Westen) */
+  yard: [-54, -54, -28, -30],                      /* Sägewerkshof x0, z0, x1, z1 */
+  /* Weg vom Westtor zum Sägewerk, von dort in den Wald (Hauptweg nach Norden, Abzweig nach Westen);
+     der letzte ist der Feldweg vom Westtor hinunter zur Straße (Holzlaster) */
   paths: [
-    [[-13, -7.5], [-22, -7.5], [-29, -11], [-29, -18]],
-    [[-29, -42], [-28, -52], [-24, -60], [-20, -68], [-22, -80], [-30, -92], [-38, -104]],
-    [[-42, -30], [-52, -30], [-60, -36], [-70, -40], [-78, -44]],
-    [[-24, -60], [-12, -58], [0, -54], [10, -46], [16, -38], [18, -26]],
-    [[-20, -68], [-34, -70], [-48, -66], [-58, -60]]
+    [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
+    [[-41, -54], [-40, -64], [-36, -72], [-32, -80], [-34, -92], [-42, -104], [-50, -116]],
+    [[-54, -42], [-64, -42], [-72, -48], [-82, -52], [-90, -56]],
+    [[-36, -72], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26]],
+    [[-32, -80], [-46, -82], [-60, -78], [-70, -72]],
+    [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.4]]
   ],
   /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg */
-  creek: [[30, -82], [14, -76], [0, -72], [-14, -66], [-24, -64], [-36, -60], [-48, -52], [-62, -50], [-80, -46], [-96, -48]],
-  clearings: [[-12, -36, 6], [-48, -42, 6.5], [6, -64, 5.5], [-66, -72, 6], [-40, -84, 5]],
-  rocks: [-56, -86, 9],
-  /* Feldgehölz am Hof: kleine Bäume für die Axt (Ost und am Teich) */
-  hofTrees: [[18.3, -11, "birke", 1], [18.2, 14.2, "birke", 1], [18.4, 6.5, "kiefer", 1], [17.9, 10.5, "birke", 1], [18.4, -13.8, "kiefer", 1],
-             [20.2, -12.8, "birke", 2], [25.5, -11.6, "birke", 1], [29.5, -6.5, "kiefer", 1], [29.8, 2.6, "birke", 1], [26.5, 7.8, "kiefer", 2]]
+  creek: [[18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60]],
+  bridge: [-33.8, -76.4],
+  clearings: [[-24, -48, 6], [-60, -54, 6.5], [-6, -76, 5.5], [-78, -84, 6], [-52, -96, 5]],
+  rocks: [-68, -98, 9],
+  /* Nachbars Felder (Mitte x, z, Breite, Tiefe): im Westen Getreide, im Osten Wiese */
+  fields: [[-42, 1, 12, 8], [51.5, -2, 10, 14]],
+  /* Holzstapel auf dem Sägewerkshof (x, z, Drehung, Stämme, Holz) – lassen sich verkaufen */
+  piles: [[-52, -36.5, 0, 5, "buche"], [-47, -52.5, 1.57, 7, "kiefer"], [-30.2, -39, 0.2, 9, "buche"], [-35.2, -52.6, 1.57, 11, "kiefer"]],
+  /* Feldgehölz am Hof: kleine Bäume für die Axt (am Ostzaun und am Teich) */
+  hofTrees: [[26.4, -11, "birke", 1], [26.5, 3.5, "birke", 1], [26.4, 6.8, "kiefer", 1], [26.6, -13.8, "kiefer", 1], [28.4, -12.8, "birke", 2],
+             [37, -11.6, "birke", 1], [41, -6.5, "kiefer", 1], [41.3, 2.6, "birke", 1], [38, 7.8, "kiefer", 2], [30.5, -15.6, "birke", 1]]
 };
+/* Hofgrenzen je Ausbaustufe (Weltkoordinaten der Zaunlinien x0, z0, x1, z1): der
+   Südzaun bleibt an der Straße stehen, jede Stufe gibt drei Kacheln mehr nach
+   Westen, Norden und Osten – 30 × 32, 36 × 35, 42 × 38 und 48 × 41 Felder. */
+const FHOF_B = [null, [-15, -18, 15, 14], [-18, -21, 18, 14], [-21, -24, 21, 14], [-24, -27, 24, 14]];
+const FHOF_MAX = { x0: -24, z0: -27, x1: 24, z1: 14 };
+/* Tore: Südtor (Mitte x) zur Straße, Westtor (Mitte z) zum Wald */
+const FGATE = { x: 5, wz: -9.5 };
+function farmHofB(st) { const b = FHOF_B[Math.max(1, Math.min(4, st || (S.farm && S.farm.stage) || 1))]; return { x0: b[0], z0: b[1], x1: b[2], z1: b[3] }; }
+/* Wald: alles außerhalb der Hofwiese (größter Hof + 3) und der Teichwiese – Tiefe > 0 heißt Wald */
+function forestDepth(x, z) {
+  const a = Math.max(-27 - x, x - 27, -30 - z), b = Math.max(27 - x, -19 - z);
+  return Math.min(a, b);
+}
+function inForest(x, z) { return z < 19 && forestDepth(x, z) > 0; }
+/* im (größten) Hof oder knapp davor? */
+function inHofMax(x, z, m) { const B = FHOF_MAX; m = m || 0; return x > B.x0 - m && x < B.x1 + m && z > B.z0 - m && z < B.z1 + m; }
+function inFieldN(x, z, m) { return FWORLD.fields.some(([fx, fz, w, d]) => Math.abs(x - fx) < w / 2 + (m || 0) && Math.abs(z - fz) < d / 2 + (m || 0)); }
 function distSeg(px, pz, a, b) {
   const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
   const t = clamp(((px - a[0]) * dx + (pz - a[1]) * dz) / l2, 0, 1);
@@ -54,30 +83,30 @@ function inYard(x, z, m) { const y = FWORLD.yard; m = m || 0; return x > y[0] - 
 function inLake(x, z, m) { const L = FWORLD.lake; const a = (x - L.x) / (L.rx + (m || 0)), b = (z - L.z) / (L.rz + (m || 0)); return a * a + b * b < 1; }
 /* Wo im Wald? Für Baumarten und Freischaltung */
 function forestZone(x, z) {
-  if (x < -58 && z < -58) return "alt";
-  if (x > -45 && z > -50 && (x < -15.5 || z < -15.5)) return "birke";
-  if (x < -45) return "kiefer";
+  if (x < -70 && z < -70) return "alt";
+  if (x > -57 && z > -62 && inForest(x, z)) return "birke";
+  if (x < -57) return "kiefer";
   return "misch";
 }
 function areaOfPoint(x, z) {
   if (z > 21) return "see";
-  if (x < -58 && z < -58) return "altwald";
+  if (x < -70 && z < -70) return "altwald";
   if (inYard(x, z)) return "saege";
-  if (x < -15.5 || z < -15.5) return "wald";
+  if (inForest(x, z)) return "wald";
   return null;
 }
 /* Freier Platz für einen Baum? (Wege, Bach, Hof, Teich, Lichtungen, Felsen) */
 function treeSpotOk(x, z, pathGap) {
-  if (Math.abs(x) < 16 && Math.abs(z) < 16) return false;
+  if (inHofMax(x, z, 1)) return false;
   if (z > 19.5) return false;                                       /* Straße und See */
   if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.8) return false;
-  if (x > 14 && x < 33 && z > -17 && z < 17) return false;          /* Teichwiese: dort steht das Feldgehölz extra */
+  if (x > 25 && x < 45 && z > -17 && z < 17) return false;          /* Teichwiese: dort steht das Feldgehölz extra */
   if (inYard(x, z, 2)) return false;
   if (nearPath(x, z) < (pathGap || 2.4)) return false;
   if (distLine(x, z, FWORLD.creek) < 2.6) return false;
   for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < c[2]) return false;
   if (Math.hypot(x - FWORLD.rocks[0], z - FWORLD.rocks[1]) < FWORLD.rocks[2] * 0.7) return false;
-  if (x < -22 && x > -36 && z > -12 && z < 4) return false;         /* Nachbars Feld im Westen */
+  if (inFieldN(x, z, 1.2)) return false;                            /* Nachbars Felder */
   return true;
 }
 /* Fällbare Bäume: am Hof, entlang der Waldwege, an Lichtungen. Feste
@@ -96,7 +125,7 @@ function erbeMakeTrees() {
   };
   let tries = 0;
   while (out.length < 175 && tries++ < 12000) {
-    const x = -96 + rnd() * 128, z = -112 + rnd() * 124;
+    const x = -108 + rnd() * 144, z = -124 + rnd() * 120;
     if (!treeSpotOk(x, z, 2.2)) continue;
     const zone = forestZone(x, z);
     /* fällbar nur in Wegnähe oder am Rand einer Lichtung */
@@ -127,6 +156,7 @@ function erbeInit(F, fresh) {
   F.tools = F.tools || { axe: 1, saw: 0 };
   if (F.sta == null) { F.sta = FSTA.max; F.staT = S.time; }
   F.stage = F.stage || (fresh ? 1 : 2);
+  if (S.farm === F) farmBoundsUpdate();
   F.saw = F.saw || {};
   F.en = F.en || 0; F.enLv = F.enLv || 0;
   F.boat = F.boat || 0;
@@ -161,6 +191,10 @@ function erbeInit(F, fresh) {
   ["felled", "woodSold", "woodMade", "catch", "repairs", "cleared", "stallSold", "events"].forEach(k => { st[k] = st[k] || 0; });
   st.species = st.species || {};
   if (!F.trees || !F.trees.length) F.trees = erbeMakeTrees();
+  F.bgCut = F.bgCut || {};
+  F.piles = F.piles || {};
+  /* v56: neue Welt – ältere Stände ziehen um (neue Spiele fangen schon richtig an) */
+  if (!F.v56) { F.v56 = 1; if (!fresh) erbeMove56(F); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {
@@ -196,7 +230,7 @@ function erbeInit(F, fresh) {
 }
 /* Gerümpel auf dem frisch geerbten Hof */
 function erbeJunk(F) {
-  [["reifen", 24, 14], ["unkraut", 8, 23], ["schrott", 26, 20], ["bretter", 3, 12], ["karre", 12, 24], ["unkraut", 25, 4]].forEach(([k, x, z]) => {
+  [["reifen", 24, 12], ["unkraut", 8, 21], ["schrott", 26, 18], ["bretter", 3, 10], ["karre", 12, 22], ["unkraut", 27, 0]].forEach(([k, x, z]) => {
     if (farmFits(x, z, 2, 2, null, "junk")) farmAddObj({ t: "junk", k, x, z, r: 0 });
   });
 }
@@ -406,7 +440,7 @@ function farmBuyTool(id) {
   farmEvent("tool:" + id);
   /* Mit der Kettensäge kommt der Sägebock auf den Hof */
   if (id === "saw1" && !S.farm.objs.some(o => o.t === "saegebock")) {
-    const p = farmFreeSpot(2, 2, 25, 22);
+    const p = farmFreeSpot(2, 2, 25, 20);
     if (p) farmAddObj({ t: "saegebock", x: p[0], z: p[1], r: 0, q: [], done: [], slots: 2 });
   }
   return true;
@@ -430,6 +464,34 @@ function farmSellWood(id, n) {
   logMoney("farm", "Holzhändler · " + fqty(id, n), m);
   farmEvent("sellwood", Math.round(m));
   return m;
+}
+
+/* v56: Krügers alte Holzstapel auf dem Sägewerkshof (FWORLD.piles) – verkaufen oder ins
+   Holzlager. Weg ist weg: danach ist der Platz zum Bauen frei. */
+function farmPile(i) {
+  const p = FWORLD.piles[i];
+  if (!p || (S.farm.piles || {})[i]) return null;
+  return { i, x: p[0], z: p[1], n: p[3], sp: p[4], id: FSPECIES[p[4]].log };
+}
+function farmPileValue(P) { return Math.max(1, Math.round(FITEMS[P.id].v * P.n * (farmEvOn("holzpreis") ? 1.3 : 1) * 10) / 10); }
+function farmPileTake(i, sell) {
+  const P = farmPile(i), F = S.farm;
+  if (!P || !farmAreaOpen("saege")) return null;
+  if (sell) {
+    const m = farmPileValue(P);
+    S.money += m; S.revenue += m;
+    F.stats.earned += m; F.stats.woodSold += m;
+    logMoney("farm", "Holzstapel · " + fqty(P.id, P.n), m);
+    farmEvent("sellwood", Math.round(m));
+    F.piles[i] = S.time;
+    farmXP(5);
+    return { m, P };
+  }
+  if (farmRoom(P.id) < P.n) return { full: true, P };
+  farmAdd(P.id, P.n, 3);
+  F.piles[i] = S.time;
+  farmXP(5);
+  return { got: P.n, P };
 }
 
 /* ------------------------------- Sägewerk -------------------------------- */
@@ -557,7 +619,7 @@ function farmSawUpgrade(id) {
 }
 function farmObj1(t) { return S.farm.objs.find(o => o.t === t) || null; }
 /* v53: Bestelltafeln am Sägewerk (am Tor im Hof) und an der Fischerei (am Uferweg) */
-const FBOARDS = { saege: { x: -33, z: -22 }, see: { x: 6, z: 20 } };
+const FBOARDS = { saege: { x: -45, z: -34 }, see: { x: 6, z: 20 } };
 function farmBoardsCheck() {
   const F = S.farm;
   if (!F || !F.areas || (typeof FSITE !== "undefined" && FSITE.kind !== "hof")) return;
@@ -991,24 +1053,43 @@ function farmStageUp() {
   farmEvent("stage");
   return true;
 }
-/* Bebaubare Fläche: jede Ausbaustufe eine Kachel mehr nach jeder Seite –
-   26 × 26, 28 × 28, 30 × 30 und am Ende das ganze Gelände mit 32 × 32 Kacheln.
-   (Weiter geht es nicht: Teich im Osten, Straße im Süden, Wald im Norden und Westen.) */
-const FHOF_R = [13, 13, 14, 15, 16];
-function farmHofR() { return FHOF_R[Math.min(4, (S.farm && S.farm.stage) || 1)]; }
+/* Bebaubare Fläche (v56): der Südzaun bleibt zwei Felder vor der Straße stehen,
+   jede Ausbaustufe gibt drei Kacheln mehr nach Westen, Norden und Osten –
+   30 × 32, 36 × 35, 42 × 38 und am Ende 48 × 41 Kacheln (FHOF_B oben). */
 function farmBoundsUpdate() {
-  const r = farmHofR();
-  FIN0 = FG / 2 - r; FIN1 = FG / 2 + r;
-  /* das Feldgehölz im Osten rückt ein Stück vom neuen Zaun weg – und bleibt trotzdem vom Teich weg */
-  const MOVE = [[17.4, -11, 18.3, -11], [16.4, -8.9, 18.2, 14.2], [17.6, 6.5, 18.4, 6.5]];
-  if (S.farm && S.farm.trees) S.farm.trees.forEach(t => {
-    if (t.area || t.x <= 15 || t.x >= 17.8 || Math.abs(t.z) >= 17) return;
-    const m = MOVE.find(m => Math.abs(t.x - m[0]) < 0.05 && Math.abs(t.z - m[1]) < 0.05);
-    if (m) { t.x = m[2]; t.z = m[3]; return; }
-    t.x = +(17.8 + Math.max(0, t.x - 16.4) * 0.5).toFixed(2);
-    const P = FWORLD.pond, safe = P.r * 1.3 + 1.2, dx = t.x - P.x;
-    if (Math.hypot(dx, t.z - P.z) < safe) t.z = +(P.z + Math.sign(t.z - P.z || -1) * Math.sqrt(Math.max(0, safe * safe - dx * dx))).toFixed(2);
+  const B = farmHofB();
+  FIN = { x0: B.x0 + FG / 2, z0: B.z0 + FG / 2, x1: B.x1 + FG / 2, z1: B.z1 + FG / 2 };
+}
+/* alt: Abstand Mitte → Südzaun */
+function farmHofR() { return farmHofB().z1; }
+
+/* ------------------------------ v56: Umzug ---------------------------------
+   Ältere Spielstände ziehen in die neue Welt um: der Hof samt allem darauf zwei
+   Kacheln nach Norden, das Sägewerk 12 / 12 nach Nordwesten, Bäume neu (alle
+   wieder ausgewachsen), Leute laufen von zu Hause los. */
+function erbeMove56(F) {
+  const inOldYard = (o, w, d) => o.x >= -25 && o.z >= -25 && o.x + w <= -1 && o.z + d <= -3;
+  F.objs.forEach(o => {
+    const [w, d] = farmSize(o);
+    if (o.t === "stall" || o.area === "see" || o.fix) return;
+    if (o.area === "saege" || inOldYard(o, w, d)) {
+      o.x -= 12; o.z -= 12;
+      /* der Kessel stand eine Kachel in der Einfahrt vom Westtor */
+      if (o.t === "kessel" && o.x === -36 && o.z === -30) o.z = -31;
+      return;
+    }
+    if (o.x >= -1 && o.z >= -1 && o.x + w <= 33 && o.z + d <= 33) o.z -= 2;
   });
+  F.trees = erbeMakeTrees();
+  F.bgCut = {};
+  if (F.tr && F.tr.cur && !F.tr.cur.done) {
+    const c = F.tr.cur;
+    if (c.zone === "teich") c.x = +(c.x + 11.5).toFixed(2);
+    else if (c.zone === "wald" || c.zone === "altwald") { c.x -= 12; c.z -= 12; }
+  }
+  if (F.ev && F.ev.cur && F.ev.cur.data && F.ev.cur.data.x != null && F.ev.cur.k !== "lieferung") { F.ev.cur = null; F.ev.next = S.time + 10; }
+  (F.staff || []).forEach(s => { s.px = s.pz = null; s.job = null; });
+  (F.wild || []).length = 0;
 }
 function farmStageStoreBonus(st) { const s = S.farm.stage || 1; return st === "silo" || st === "barn" ? [0, 0, 20, 60, 120][s] : 0; }
 function farmStageSlotBonus() { const s = S.farm.stage || 1; return s >= 3 ? 2 : s >= 2 ? 1 : 0; }
@@ -1066,13 +1147,13 @@ function farmEvStart(k) {
   }
   if (k === "haendler") c.data.deals = farmTraderDeals();
   if (k === "hirsch") {
-    const cl = FWORLD.clearings.filter(q => (q[0] > -58 || q[1] > -58) || farmAreaOpen("altwald"));
+    const cl = FWORLD.clearings.filter(q => (q[0] > -70 || q[1] > -70) || farmAreaOpen("altwald"));
     const q = pick(cl);
     c.data.x = q[0] + (Math.random() - 0.5) * 3; c.data.z = q[1] + (Math.random() - 0.5) * 3;
   }
   if (k === "reh") {
     const onForest = farmAreaOpen("wald") && Math.random() < 0.6;
-    const p = onForest ? pick(FWORLD.paths)[1] : [18 + Math.random() * 8, -14 + Math.random() * 6];
+    const p = onForest ? pick(FWORLD.paths.slice(0, 5))[1] : [29.5 + Math.random() * 8, -14 + Math.random() * 6];
     c.data.x = p[0]; c.data.z = p[1];
   }
   if (k === "lieferung") { c.data.x = 5 + (Math.random() - 0.5) * 2; c.data.z = 15.2; }
@@ -1183,10 +1264,10 @@ function farmEvReward(kind) {
    Kleeblatt. */
 const FTREASURE = { every: 3, dur: 180, from: 7, to: 15 };
 const FTREASURE_ZONES = [
-  { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [17.5, -14.5, 29, 14], at: [-1, 0] },
+  { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [27.5, -14.5, 40.5, 14], at: [-1, -2] },
   { id: "see",     area: "see",     n: "über dem Seeufer",            box: [-22, 23.5, 42, 33],     at: [12, 30] },
-  { id: "wald",    area: "wald",    n: "über einer Lichtung im Wald", clear: true,                  at: [-22, -44] },
-  { id: "altwald", area: "altwald", n: "über dem Alten Wald",         clear: true,                  at: [-66, -72] }
+  { id: "wald",    area: "wald",    n: "über einer Lichtung im Wald", clear: true,                  at: [-34, -56] },
+  { id: "altwald", area: "altwald", n: "über dem Alten Wald",         clear: true,                  at: [-78, -84] }
 ];
 function farmTreasureCur() { const T = S.farm && S.farm.tr, c = T && T.cur; return c && S.time < c.until ? c : null; }
 /* Platz frei? Kein Wasser, kein Weg, kein Baum, kein Gebäude, kein Feld */
@@ -1196,13 +1277,13 @@ function treasureSpotOk(x, z, area) {
   /* nur dort, wo die Kamera auch hinkommt */
   const cr = farmCamRect();
   if (x < cr[0] + 1 || x > cr[2] - 1 || z < cr[1] + 1 || z > cr[3] + 6) return false;
-  if (Math.abs(x) < 17 && Math.abs(z) < 17) return false;
+  if (inHofMax(x, z, 1)) return false;
   if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
   if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;
   if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3) return false;
   if (inYard(x, z, 2)) return false;
-  if (x > -37 && x < -21 && z > -13 && z < 5) return false;          /* Nachbars Feld im Westen */
-  if (x > 33.5 && x < 46.5 && z > -11 && z < 7) return false;        /* und im Osten */
+  if (inFieldN(x, z, 2)) return false;                                /* Nachbars Felder */
+  if (x > 27.5 && x < 34.5 && z > 9 && z < 17) return false;          /* Maschinenhalle und Traktor (Stufe 4) */
   if (F.trees.some(t => Math.hypot(t.x - x, t.z - z) < 2.4)) return false;
   for (const o of F.objs) {
     const [cx, cz] = farmCenter(o), [w, d] = farmSize(o);

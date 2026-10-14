@@ -1,5 +1,50 @@
 # Änderungen – kurz für den Kollegen
 
+## v56 (aufbauend auf v55)
+
+**Weltumbau** (Welt = 1 Einheit je Kachel, Süden = +z, Hofkachel = Welt + 16)
+- Der Hof liegt zwei Kacheln weiter von der Straße weg und ist größer. Grenzen
+  je Ausbaustufe stehen in `erbe.js` als `FHOF_B` (Zaunlinien x0, z0, x1, z1):
+  30 × 32, 36 × 35, 42 × 38, 48 × 41. Der Südzaun (z = 14) bleibt, jede Stufe
+  gibt drei Kacheln nach Westen, Norden und Osten (Pflöcke mit roter Spitze
+  zeigen auf der Wiese die nächste Stufe). Helfer: `farmHofB()`, `FHOF_MAX`,
+  `FGATE` (Südtor x = 5, Westtor z = −9,5).
+- `farm.js`: statt `FIN0/FIN1` gibt es `FIN = { x0, z0, x1, z1 }`, das
+  Belegungsraster geht über `fgi(x, z)` (Kacheln −16 … 47), `FPATH` speichert
+  `fgi`-Schlüssel (`fgXZ(k)` rechnet zurück). `FG` = 32 bleibt nur für die
+  Umrechnung Welt ↔ Kachel.
+- Teich +11,5 nach Osten, Sägewerk samt Wald, Bach, Lichtungen, Felsen und
+  altem Wald −12 / −12 nach Nordwesten (`FWORLD`, `FSAW`, `FYARD`,
+  `FAREAS`). Neu: Feldweg vom Westtor zur Straße (letzter Eintrag in
+  `FWORLD.paths`), Nachbarfelder in `FWORLD.fields`.
+- **See und Fischerei sind unverändert** – `fishdata.js`, `fishview.js`,
+  `fishmodels.js` nicht angefasst.
+- Alte Spielstände ziehen beim Laden einmal um (`erbeMove56`, Merker
+  `F.v56`): Hofobjekte z − 2, Sägewerk −12 / −12, Bäume neu (alle wieder
+  gewachsen), Leute starten zu Hause.
+
+**Bäume**
+- Jeder Baum im Wald ist fällbar: Kulissenbäume liegen je Kachel in
+  `WV.bgChunks` (`worldview.js`); Antippen macht daraus einen echten Baum in
+  `S.farm.trees` (`bg` = Schlüssel, `S.farm.bgCut` merkt sich die Stelle).
+- Neue, artgerechte Modelle in `woodmodels.js`: `tree(sp, sz, v)` und
+  `bgTree(sp, v)` (wenige Dreiecke), Farben in `TREE_C`, Höhen in `TREE_H`.
+
+**Sägewerk**
+- Krügers Holzstapel (`FWORLD.piles`) sind antippbar: verkaufen oder ins
+  Holzlager (`farmPileTake`, Merker `S.farm.piles`); danach ist der Platz frei.
+- Waldwege enden an den Toren gerade am Zaun (keine runde Kappe mehr im Hof).
+
+Version: **v56** (Service Worker und `?v=56` in `index.html`).
+
+## v55 (Hotfix)
+
+- `erbedata.js` war auf GitHub leer hochgeladen – dadurch startete der Hof
+  nicht. Die Datei ist wieder vollständig.
+- Fehler beim Start erscheinen als roter Hinweis oben (`window.logiErr`),
+  der Hof-Start ist abgesichert, alle Dateien werden mit `?v=…` geladen
+  (kein Mischen alter und neuer Dateien aus dem Cache).
+
 ## v54 (aufbauend auf v53)
 
 - Firmenschild am Hoftor zeigt Name und Logo direkt auf der Tafel (Bild in 3D,

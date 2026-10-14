@@ -2845,6 +2845,13 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fpv small{display:block;font-size:11px;opacity:.75;line-height:1.35;margin-top:2px}
 .fpv-buy .btn{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;padding:7px 6px;font-size:13px}
 .fpv-buy .btn small{font-size:11px;opacity:.85}
+/* v56: Holzstapel im Sägewerk */
+.fpile{display:flex;align-items:center;gap:12px;background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:10px 12px}
+.fpile .ii{width:46px;height:46px;flex:none}
+.fpile b{display:block;font-size:14px}
+.fpile small{display:block;font-size:11px;opacity:.75;line-height:1.35;margin-top:2px}
+#farmSheet.pile .fs-row .btn{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;padding:7px 6px;font-size:13px}
+#farmSheet.pile .fs-row .btn small{font-size:11px;opacity:.85}
 .fen.sun{background:linear-gradient(180deg,#fff8d6,#ffeaa0)}
 .fen.sun em{background:linear-gradient(90deg,#ffd23f,#f2a531)!important}
 /* v53: Team – Orten und Fortbildung */

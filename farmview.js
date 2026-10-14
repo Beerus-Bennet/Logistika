@@ -15,7 +15,7 @@ const FV = {
   vel: [0, 0], shake: new Map(), bounce: new Map(), parked: null, drives: [], loading: new Map(), loadFly: []
 };
 const FV_BOUNDS = 14.5;
-const POND = { x: 22.5, z: -3, r: 5.6 };
+const POND = typeof FWORLD !== "undefined" ? FWORLD.pond : { x: 34, z: -3, r: 5.6 };   /* v56: Teich weiter östlich (erbe.js) */
 /* Zeiten knapp („2 h“, „1 h 15 min“); Beträge über eur() aus farm.js */
 function fdur(min) {
   min = Math.max(1, Math.round(min));
@@ -466,7 +466,7 @@ function vehMesh(t, f) {
 function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
 function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
-function lkwRoute(p) { return [[p.x, p.z], [p.x, p.z + 5], [-29, p.z + 5.5], [-29, -18.5], [-29, -11], [-31.5, -3], [-31.5, 18.5], [-48, 18.5]]; }
+function lkwRoute(p) { return [[p.x, p.z], [p.x, p.z + 5], [-41, p.z + 5.5]].concat(SAW_ROAD); }
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -503,8 +503,8 @@ function farmSyncVehicles(force) {
       const rider = vehRider(uid), k = vehModelKey(vType(f.type));
       vehDriver(v.node, k, rider ? staffBody(rider) : null);
       if (rider) rider.ride.gone = S.time;
-      const gate = typeof farmHofR === "function" ? farmHofR() : 13;
-      const route = k === "truck" && pad ? lkwRoute(pad) : [[v.node.x, v.node.z], [v.node.x, sz + 1.6], [5, sz + 1.6], [5, gate + 0.5], [5, 18.5], [-30, 18.5]];
+      const gate = farmHofB().z1;
+      const route = k === "truck" && pad ? lkwRoute(pad) : [[v.node.x, v.node.z], [v.node.x, sz + 1.6], [FGATE.x, sz + 1.6], [FGATE.x, gate + 0.5], [FGATE.x, 18.5], [-30, 18.5]];
       startDrive(v.node, route, () => { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); });
     } else { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); }
   }
@@ -523,10 +523,10 @@ function farmSyncVehicles(force) {
       FV.veh.set(f.uid, v);
       /* angekommen: von der Straße durchs Tor in den Schuppen – mit Fahrer/in, die dann aussteigt */
       if (!force && FV.parked && !FV.parked.has(f.uid)) {
-        const gate = typeof farmHofR === "function" ? farmHofR() : 13;
+        const gate = farmHofB().z1, GX = FGATE.x;
         vehDriver(node, k, null);
         if (isTruck) { const r = lkwRoute(pad).reverse(); node.x = r[0][0]; node.z = r[0][1]; startDrive(node, r, () => { node.ry = 0; vehNoDriver(node); }); }
-        else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [5, 18.5], [5, gate + 0.5], [5, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
+        else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [GX, 18.5], [GX, gate + 0.5], [GX, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
       }
     } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = 0; }
     /* frisch lackiert: neue Farben */
@@ -595,7 +595,8 @@ function stepDrives(dt) {
       n.x = tgt[0]; n.z = tgt[1]; d.i++;
       if (d.i >= d.pts.length - 1) {
         n.driving = false; FV.drives.splice(k, 1);
-        if (Math.abs(n.x) > 25) { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); }
+        /* weggefahren: auf der Straße aus dem Bild */
+        if (Math.abs(n.x) > 25 && Math.abs(n.z - 18.5) < 0.6) { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); }
         if (d.done) d.done();
       }
       continue;
@@ -767,7 +768,7 @@ function tileAt(x, y) {
   return [Math.floor(g[0] + FG / 2), Math.floor(g[2] + FG / 2), g];
 }
 function objAtTile(tx, tz) {
-  if (tx < 0 || tz < 0 || tx >= FG || tz >= FG) return null;
+  if (fgi(tx, tz) < 0) return null;
   for (const o of S.farm.objs) {
     const [w, d] = farmSize(o);
     if (tx >= o.x && tx < o.x + w && tz >= o.z && tz < o.z + d) return o;
@@ -1601,7 +1602,7 @@ function startPlace(spec, x, z) {
   cancelPlace();
   const proto = spec.proto;
   const [w, d] = farmSize(proto);
-  const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN0, FIN0]);
+  const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN.x0, FIN.z0]);
   const ghost = fnode(objMesh(proto), { alpha: 0.82, shadow: false });
   const mark = fnode(fmesh("mark:" + w + "x" + d, () => FM.tileMarker(w, d)), { alpha: 0.55, shadow: false, y: 0.01 });
   R.nodes.push(mark, ghost);
@@ -1725,7 +1726,7 @@ function placeJumps(P) {
 function placeJump(zn) {
   const P = FV.place;
   if (!P) return;
-  const R = farmZoneRect(zn), cx = zn === "yard" ? -13 : FG / 2, cz = zn === "yard" ? -12 : FG / 2;
+  const R = farmZoneRect(zn), cx = zn === "yard" ? -25 : FG / 2, cz = zn === "yard" ? -24 : 14;
   const q = farmZoneSpot(zn, P.w, P.d, cx, cz, P.proto.t, P.proto.k, P.move ? P.move.id : null) || [R.x0, R.z0];
   movePlace(q[0], q[1]);
   renderPlaceBar();

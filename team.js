@@ -141,8 +141,8 @@ function staffVehSpot(f) {
 
 /* ----------------------------- Arbeitsorte -------------------------------- */
 const STAFF_HOME = {
-  farmer: [-0.8, -2.2], pfleger: [2.4, 4.2], hofmeister: [-5.5, 1.5], fahrer: [2.3, 10.4],
-  holzfaeller: [-20, -11], saeger: [-24.5, -27], mechaniker: [-26.5, -25.5],
+  farmer: [-0.8, -4.2], pfleger: [2.4, 2.2], hofmeister: [-5.5, -0.5], fahrer: [2.3, 8.4],
+  holzfaeller: [-33, -15], saeger: [-36.5, -39], mechaniker: [-38.5, -37.5],
   fischer: [-1.2, 26.2], fischwirt: [2.5, 22.2]
 };
 /* Platz, an dem jemand ohne Arbeit steht – nie in einem Gebäude oder Zaun */
@@ -157,7 +157,7 @@ function staffHome(role, i) {
    Seeufer. Gebäude, Ställe, Bäume, Wasser und Zäune sind Hindernisse, Felder
    betritt nur der Landwirt; Wege und Straße laufen sich leichter. Durch Hofzaun
    und Sägewerkszaun geht es nur an den Toren. Gesucht wird mit A*. */
-const NAV = { x0: -100, z0: -110, x1: 48, z1: 36, key: "", blk: null, cost: null, W: 0, H: 0 };
+const NAV = { x0: -120, z0: -125, x1: 60, z1: 36, key: "", blk: null, cost: null, W: 0, H: 0 };
 function navKey() {
   const F = S.farm;
   let h = (F.stage || 1) * 7 + Object.keys(F.areas || {}).length;
@@ -174,22 +174,22 @@ function navBuild() {
   const W = NAV.W = NAV.x1 - NAV.x0, H = NAV.H = NAV.z1 - NAV.z0;
   const blk = NAV.blk = new Uint8Array(W * H), cost = NAV.cost = new Float32Array(W * H).fill(1);
   const P = FWORLD.pond, creeks = [FWORLD.creek].concat(typeof LAKE_CREEK !== "undefined" ? [LAKE_CREEK] : []);
-  const bridges = [[-21.8, -64.4], [52.6, 60.3]];
+  const bridges = [FWORLD.bridge, [52.6, 60.3]];
   const lakePaths = [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
     if (creeks.some(c => distLine(cx, cz, c) < 1.3) && !bridges.some(b => Math.hypot(cx - b[0], cz - b[1]) < 2.4)) { blk[i] = 1; continue; }
     /* Nachbars Felder: da läuft keiner durch */
-    if ((cx > -35 && cx < -23 && cz > -5 && cz < 3) || (cx > 35 && cx < 45 && cz > -9 && cz < 5)) { blk[i] = 1; continue; }
-    if (Math.abs(cz - 18.5) < 1.6 && cx > -60 && cx < 46) cost[i] = 0.6;                                   /* Straße */
+    if (inFieldN(cx, cz)) { blk[i] = 1; continue; }
+    if (Math.abs(cz - 18.5) < 1.6 && cx > -60 && cx < 60) cost[i] = 0.6;                                   /* Straße */
     if (nearPath(cx, cz) < 0.95 || lakePaths.some(l => distLine(cx, cz, l) < 0.85)) cost[i] = 0.45;     /* Waldwege, Uferweg */
   }
   /* Hofwege */
-  (FSITE.path || FPATH).forEach(k => { const x = (k % FG) - FG / 2, z = Math.floor(k / FG) - FG / 2; if (navIn(x, z)) cost[navIdx(x, z)] = 0.45; });
-  const R0 = typeof farmHofR === "function" ? farmHofR() : 13;
-  for (let z = R0; z < 18; z++) for (let x = 4; x < 6; x++) if (navIn(x, z)) cost[navIdx(x, z)] = 0.45;        /* Weg vom Tor zur Straße */
-  for (let x = -18; x < -R0; x++) for (let z = -8; z < -7; z++) if (navIn(x, z)) cost[navIdx(x, z)] = 0.45;     /* Westtor zum Wald */
+  (FSITE.path || FPATH).forEach(k => { if (k < 0) return; const t = fgXZ(k), x = t[0] - FG / 2, z = t[1] - FG / 2; if (navIn(x, z)) cost[navIdx(x, z)] = 0.45; });
+  const B = farmHofB(), wz = Math.floor(FGATE.wz);
+  for (let z = B.z1; z < 18; z++) for (let x = FGATE.x - 1; x < FGATE.x + 1; x++) if (navIn(x, z)) cost[navIdx(x, z)] = 0.45;   /* Weg vom Tor zur Straße */
+  for (let x = -26; x < B.x0; x++) if (navIn(x, wz)) cost[navIdx(x, wz)] = 0.45;                                                    /* Westtor zum Wald */
   /* Gebäude, Ställe, Deko … (Felder: 2 – nur der Landwirt) */
   S.farm.objs.forEach(o => {
     const [w, d] = farmSize(o), x0 = o.x - FG / 2, z0 = o.z - FG / 2, v = o.t === "field" ? 2 : 1;
@@ -201,9 +201,9 @@ function navBuild() {
 }
 /* Zäune: [senkrecht?, Linie, von, bis, Lücke von, Lücke bis] – durch geht es nur in der Lücke (Tor) */
 function navWalls() {
-  const F0 = typeof farmHofR === "function" ? farmHofR() : 13;
-  return [[1, -F0, -F0, F0, -8.7, -6.3], [1, F0, -F0, F0, 0, 0], [0, -F0, -F0, F0, 0, 0], [0, F0, -F0, F0, 3, 7],
-    [1, -42, -42, -18, -32, -28], [1, -16, -42, -18, 0, 0], [0, -42, -42, -16, -31, -27], [0, -18, -42, -16, -31, -27]];
+  const B = farmHofB(), W = FGATE.wz, G = FGATE.x, Y = FWORLD.yard, gx = (Y[0] + Y[2]) / 2, gz = (Y[1] + Y[3]) / 2;
+  return [[1, B.x0, B.z0, B.z1, W - 1.2, W + 1.2], [1, B.x1, B.z0, B.z1, 0, 0], [0, B.z0, B.x0, B.x1, 0, 0], [0, B.z1, B.x0, B.x1, G - 2, G + 2],
+    [1, Y[0], Y[1], Y[3], gz - 2, gz + 2], [1, Y[2], Y[1], Y[3], 0, 0], [0, Y[1], Y[0], Y[2], gx - 2, gx + 2], [0, Y[3], Y[0], Y[2], gx - 2, gx + 2]];
 }
 /* geht der Schritt von Feld a nach b (Nachbarn, gerade) durch einen Zaun? */
 function navCross(ax, az, bx, bz, walls) {

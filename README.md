@@ -186,10 +186,14 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   leichten gelben Umriss.
 * **Hof-Ausbau in vier Stufen** – am Anfang grau und verwittert: morscher Zaun
   mit Lücken, Erdwege voller Unkraut, alte Reifen, Schrott und Bretter zum
-  Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Mit jeder Stufe
-  wächst der Hof nach allen Seiten gleich: 26 × 26, 28 × 28, 30 × 30 und am
-  Ende 32 × 32 Kacheln – Zaun, Wege und Bauland rücken mit (weiter geht es
-  nicht: Teich im Osten, Straße im Süden, Wald im Norden und Westen). Stufe 2
+  Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Seit v56 liegt der
+  Hof zwei Felder weiter von der Straße weg (dazwischen ist Platz für den
+  Verkaufsstand) und ist deutlich größer: Mit jeder Stufe kommen drei Kacheln
+  nach Westen, Norden und Osten dazu – 30 × 32, 36 × 35, 42 × 38 und am Ende
+  48 × 41 Kacheln; der Südzaun an der Straße bleibt stehen, Zaun, Wege und
+  Bauland rücken mit. Pflöcke mit roter Spitze auf der Wiese zeigen, wie weit
+  der nächste Ausbau reicht. Rundherum liegt Wiese, der Teich und das Sägewerk sind
+  dafür ein gutes Stück weggerückt. Stufe 2
   *Ausgebauter Hof*: frischer Anstrich, neuer Zaun, Kieswege, Traktor, mehr
   Platz in Silo und Scheune, ein Warteplatz mehr. Stufe 3 *Professioneller
   Betrieb*: Pflaster, Laternen, Blumen, weißer Zaun. Stufe 4 *Großer
@@ -235,7 +239,12 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   (Brennholz, Kaminholz), Hobelmaschine (Dielen), Trockenkammer (Bauholz),
   Verpackungsmaschine (Europaletten), Schleifmaschine (Möbelteile,
   Schatullen) und Fräse (Zaunelemente, Türen) – Laden-Reiter „🪚 Sägewerk“.
-  Ausbau: Blockbandsäge (ein Drittel schneller), größerer Kessel. Krügers
+  Ausbau: Blockbandsäge (ein Drittel schneller), größerer Kessel. Auf dem
+  Sägewerkshof liegen noch vier alte **Holzstapel** von Krüger: antippen, dann
+  verkaufen (Geld sofort) oder ins Holzlager – danach ist der Platz frei zum
+  Bauen (v56). Seit v56 liegt das Sägewerk weiter im Nordwesten; der Waldweg
+  endet an den Toren sauber am Zaun, vom Westtor führt ein Feldweg hinunter zur
+  Straße (dort fährt der Holzlaster). Krügers
   alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte. Seit
   v53 steht er als Holzlaster auf seinem Platz im Sägewerk: Beim Losschicken
   fliegen Bretter und Balken aus dem Holzlager auf die Ladefläche, dann fährt
@@ -389,7 +398,13 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   bringt einen Stamm mehr und Holzreste, die Profi-Säge noch einen. Die letzte
   Wahl wird gemerkt. Seit v53 lässt sich **jeder** Baum fällen: Ohne passendes
   Werkzeug geht es „mühsam“ (mehr Schläge, mehr Ausdauer), junge Setzlinge
-  lassen sich roden. Die Ausbeute-Karte zeigt dieselben Mengen wie das Lager;
+  lassen sich roden. Seit v56 gilt das für **jeden Baum im Wald** – auch die
+  Tausende im Hintergrund: Antippen macht ihn zu einem echten Baum mit Blase.
+  Die Arten sind am Aussehen zu erkennen: Birke (weiß mit schwarzen Flecken,
+  luftige hängende Krone), Kiefer (oben fuchsroter Stamm, flache Schirmkrone),
+  Fichte (dunkler Kegel), Buche (glatt silbergrau, runde dichte Krone), Eiche
+  (dicker Stamm, knorrige Äste, breite Krone) und Wildkirsche (geringelte
+  rotbraune Rinde, weiße Blüten). Die Ausbeute-Karte zeigt dieselben Mengen wie das Lager;
   was wegen vollem Holzplatz liegen bleibt, steht rot darunter.
 * **Fällen mit Treffer** – beim Sägen zählt der Fallkerb nur im grünen
   Bereich; daneben heißt „Zu hoch!“ / „Zu tief!“ und nochmal (nach drei

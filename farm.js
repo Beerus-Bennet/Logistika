@@ -15,8 +15,12 @@ function farmOn() { return !!(S && S.farm && !S.farm.sold); }
 function farmPhase() { return farmOn() && !S.farm.logi; }
 function logiOn() { return !S || !S.farm || !!S.farm.logi || !!S.farm.sold; }
 
-const FG = 32;                         /* Raster 32 × 32 Kacheln */
-let FIN0 = 3, FIN1 = 29;               /* bebaubar: Kacheln 3 … 28; jede Ausbaustufe eine Kachel mehr nach jeder Seite (Stufe 4: 0 … 31) */
+const FG = 32;                         /* Hofkachel = Welt + FG/2 (das alte 32er-Raster bestimmt nur noch die Umrechnung) */
+/* bebaubar (Kacheln, x0/z0 inklusiv, x1/z1 exklusiv) – farmBoundsUpdate() setzt es je Ausbaustufe (erbe.js) */
+let FIN = { x0: 1, z0: -2, x1: 31, z1: 30 };
+/* Belegungsraster: Kacheln −16 … 47 (Welt −32 … 31) – darin hat auch der größte Hof Platz */
+const FGO = -16, FGN = 64;
+function fgi(x, z) { x -= FGO; z -= FGO; return x < 0 || z < 0 || x >= FGN || z >= FGN ? -1 : z * FGN + x; }
 /* Objekte, die im Wasser stehen (Fischerei) */
 const FWATER_T = new Set(["pot", "mline", "netz", "kutter", "steg"]);
 function needZone(t, k) { return FWATER_T.has(t) || (t === "deco" && FDECO[k] && FDECO[k].water) ? "w" : "l"; }
@@ -41,28 +45,29 @@ function farmNew() {
   return F;
 }
 function farmStartHof(add, F) {
-  add("house", 5, 4);
-  add("barn", 10, 4);                     /* v53: Scheune steht Rand an Rand am Wohnhaus */
-  add("silo", 16, 5);
-  add("mill", 19, 4, { q: [], done: [], slots: 2 });
-  add("bakery", 5, 10, { q: [], done: [], slots: 2 });
+  /* v56: alles zwei Kacheln weiter von der Straße weg (der Hof ist nach Norden gerückt) */
+  add("house", 5, 2);
+  add("barn", 10, 2);                     /* v53: Scheune steht Rand an Rand am Wohnhaus */
+  add("silo", 16, 3);
+  add("mill", 19, 2, { q: [], done: [], slots: 2 });
+  add("bakery", 5, 8, { q: [], done: [], slots: 2 });
   /* Hühnerstall: drei Hühner, eines hat schon gelegt */
-  const coop = add("coop", 4, 16, { lvl: 1, animals: [] });
+  const coop = add("coop", 4, 14, { lvl: 1, animals: [] });
   for (let i = 0; i < 3; i++) coop.animals.push({ id: F.seq++, v: i % 3, fed: S.time - 1, q: 3 });
   /* Felder: drei reif mit Weizen, drei leer */
-  [[11, 11], [13, 11], [15, 11], [11, 13], [13, 13], [15, 13]].forEach(([x, z], i) =>
+  [[11, 9], [13, 9], [15, 9], [11, 11], [13, 11], [15, 11]].forEach(([x, z], i) =>
     add("field", x, z, i < 3 ? { crop: "weizen", end: S.time - 1, w: false, rot: 0, last: null } : { crop: null, last: "mais" }));
-  add("tree", 21, 9, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
-  add("tree", 23, 9, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
-  add("board", 19, 25);
-  add("shed", 23, 25);
-  add("deco", 17, 12, { k: "scarecrow" });
-  add("deco", 4, 9, { k: "flowers" });
-  add("deco", 10, 9, { k: "flowers" });
-  add("deco", 22, 27, { k: "mailbox" });
-  add("deco", 26, 13, { k: "leafTree", arg: 1.1 });
-  add("deco", 9, 21, { k: "bushes" });
-  add("deco", 25, 5, { k: "pine", arg: 1.0 });
+  add("tree", 21, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
+  add("tree", 23, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
+  add("board", 19, 23);
+  add("shed", 23, 23);
+  add("deco", 17, 10, { k: "scarecrow" });
+  add("deco", 4, 7, { k: "flowers" });
+  add("deco", 10, 7, { k: "flowers" });
+  add("deco", 22, 25, { k: "mailbox" });
+  add("deco", 26, 11, { k: "leafTree", arg: 1.1 });
+  add("deco", 9, 19, { k: "bushes" });
+  add("deco", 25, 3, { k: "pine", arg: 1.0 });
   /* Startvorrat aus Opas Scheune */
   farmAdd("weizen", 6, 3); farmAdd("mais", 4, 3); farmAdd("mehl", 4, 3); farmAdd("hfutter", 6, 3); farmAdd("apfel", 2, 3);
 }
@@ -89,22 +94,24 @@ function farmCenter(o) {
   return [o.x + w / 2 - FG / 2, o.z + d / 2 - FG / 2];
 }
 
-/* Kieswege: dort wird nicht gebaut (Hauptweg vom Tor, Querweg vor Haus und Scheune) */
+/* Kieswege: dort wird nicht gebaut (Hauptweg vom Südtor, Querweg vor Haus und Scheune zum Westtor).
+   v56: Welt z −10 … −9 (Querweg) und x 4 … 6 (Hauptweg), bis an den Rand des größten Hofs.
+   Schlüssel: fgi(x, z) – fgXZ(k) rechnet zurück in Kacheln. */
 const FPATH = new Set();
-/* v51: bis an den Rand – der Hof wächst mit jeder Ausbaustufe nach allen Seiten */
-for (let j = 8; j < FG; j++) { FPATH.add(j * FG + 20); FPATH.add(j * FG + 21); }
-for (let i = 0; i < 22; i++) FPATH.add(8 * FG + i);
+for (let j = 6; j < 30; j++) { FPATH.add(fgi(20, j)); FPATH.add(fgi(21, j)); }
+for (let i = -8; i < 22; i++) FPATH.add(fgi(i, 6));
 FSITES.hof.path = FPATH;
+function fgXZ(k) { return [(k % FGN) + FGO, Math.floor(k / FGN) + FGO]; }
 /* Belegung des Rasters (ohne das ausgenommene Objekt); Wege zählen als belegt (-1) */
 function farmOcc(except) {
-  const g = new Int32Array(FG * FG);
-  (FSITE.path || FPATH).forEach(k => { g[k] = -1; });
+  const g = new Int32Array(FGN * FGN);
+  (FSITE.path || FPATH).forEach(k => { if (k >= 0) g[k] = -1; });
   S.farm.objs.forEach(o => {
     if (except && o.id === except) return;
     const [w, d] = farmSize(o);
     for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) {
-      const x = o.x + i, z = o.z + j;
-      if (x >= 0 && z >= 0 && x < FG && z < FG) g[z * FG + x] = o.id;
+      const k = fgi(o.x + i, o.z + j);
+      if (k >= 0) g[k] = o.id;
     }
   });
   return g;
@@ -120,13 +127,24 @@ function zoneOk(x, z, w, d, t, k) {
    v53: Neben dem Hof gibt es den Sägewerkshof (innerhalb seines Zauns) und den
    Straßenrand (nur für den Verkaufsstand). Sägewerksgebäude bleiben im
    Sägewerk, kleinere Gebäude (Maschinen) dürfen zwischen Hof und Sägewerk
-   wechseln; Wohnhaus und Fischerei bleiben, wo sie sind. Kacheln: Welt + 16. */
-const FYARD = { x0: -25, x1: -1, z0: -25, z1: -3 };              /* Welt x −41 … −17, z −41 … −19 */
+   wechseln; Wohnhaus und Fischerei bleiben, wo sie sind. Kacheln: Welt + 16.
+   v56: der Sägewerkshof liegt 12 Kacheln weiter im Nordwesten. */
+const FYARD = { x0: -37, x1: -13, z0: -37, z1: -15 };            /* Welt x −53 … −29, z −53 … −31 */
 const FROADSIDE = { x0: -14, x1: 60, z0: 32, z1: 33 };           /* Welt z 16 … 17, nördlich der Straße */
 /* vor den Toren bleibt frei (Kacheln) */
-const FYARD_KEEP = [[-15, -11, -6, -3], [-15, -11, -26, -22], [-26, -22, -16, -12],
-  /* Holzstapel am Rand (Dörings Montagewagen sucht sich selbst einen freien Platz) */
-  [-25, -23, -10, -8], [-20, -18, -26, -24], [-4, -2, -12, -10], [-9, -7, -26, -24]];
+const FYARD_KEEP = [[-27, -23, -18, -15], [-27, -23, -38, -34], [-38, -34, -28, -24]];
+/* Holzstapel am Rand (FWORLD.piles) – solange sie liegen; verkauft ist der Platz frei */
+function farmYardKeep() {
+  const out = FYARD_KEEP.slice(), sold = (S.farm && S.farm.piles) || {};
+  if (typeof FWORLD !== "undefined") FWORLD.piles.forEach((p, i) => { if (!sold[i]) out.push(pileTiles(p)); });
+  return out;
+}
+/* Kacheln unter einem Holzstapel [x0, x1, z0, z1] (Stämme liegen längs z, gedreht um ry) */
+function pileTiles([x, z, ry]) {
+  const c = Math.cos(ry), s = Math.sin(ry), xs = [], zs = [];
+  [[-0.45, -1.45], [0.65, -1.45], [-0.45, 0.05], [0.65, 0.05]].forEach(([a, b]) => { xs.push(x + c * a + s * b); zs.push(z - s * a + c * b); });
+  return [Math.floor(Math.min(...xs) + FG / 2), Math.ceil(Math.max(...xs) + FG / 2), Math.floor(Math.min(...zs) + FG / 2), Math.ceil(Math.max(...zs) + FG / 2)];
+}
 const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
 function farmZones(t, k) {
   if (t === "stall") return ["road"];
@@ -134,7 +152,7 @@ function farmZones(t, k) {
   if (t === "saegebock" || t === "deco" || (FMACHINES[t] && !FMACHINES[t].fish)) return ["hof", "yard"];
   return ["hof"];
 }
-function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : { x0: FIN0, x1: FIN1, z0: FIN0, z1: FIN1 }; }
+function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : FIN; }
 function farmZoneAt(x, z, w, d) {
   for (const zn of ["hof", "yard", "road"]) { const R = farmZoneRect(zn); if (x >= R.x0 && z >= R.z0 && x + w <= R.x1 && z + d <= R.z1) return zn; }
   return null;
@@ -155,7 +173,7 @@ function farmFits(x, z, w, d, except, t, k) {
   if (!t && zn !== "hof") return false;
   if (zn === "yard") {
     if (typeof farmAreaOpen === "function" && !farmAreaOpen("saege")) return false;
-    if (FYARD_KEEP.some(([a, b, c, e]) => x < b && a < x + w && z < e && c < z + d)) return false;
+    if (farmYardKeep().some(([a, b, c, e]) => x < b && a < x + w && z < e && c < z + d)) return false;
     return farmFreeRect(x, z, w, d, except);
   }
   if (zn === "road") {
@@ -166,18 +184,16 @@ function farmFits(x, z, w, d, except, t, k) {
   }
   if (!zoneOk(x, z, w, d, t, k)) return false;
   const g = farmOcc(except);
-  for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (g[(z + j) * FG + x + i]) return false;
+  for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) { const k = fgi(x + i, z + j); if (k < 0 || g[k]) return false; }
   return true;
 }
 /* Straßenrand: was dort schon steht (Welt-x von … bis): Traktor mit Anhänger und der
    fliegende Händler, ab Stufe 3 Laternen und Blumen vor dem Zaun */
 function farmRoadKeep() {
-  const st = (S.farm && S.farm.stage) || 1, big = st >= 4, F0 = typeof farmHofR === "function" ? farmHofR() : 13, out = [[8.4, 12.2]];
-  if (st >= 2) out.push(big ? [20.0, 25.0] : [9.0, 14.4]);
-  if (st >= 3) {
-    [-8, 18, F0 + 0.6, -F0 - 0.6].forEach(x => out.push([x - 0.6, x + 0.6]));
-    [-10, -6, -2, 10, 12].forEach(x => out.push([x - 0.9, x + 0.9]));
-  }
+  const st = (S.farm && S.farm.stage) || 1, big = st >= 4, out = [[8.4, 12.2]];
+  /* v56: Laternen und Blumen stehen jetzt am Zaun, zwei Kacheln vor der Straße – frei bleiben Traktor und die Laternen an der Straße */
+  if (st >= 2) out.push(big ? [26.0, 31.4] : [9.0, 14.4]);
+  if (st >= 3) [-8, 18].forEach(x => out.push([x - 0.6, x + 0.6]));
   return out;
 }
 /* freier Platz in einer Zone, möglichst nah an (px, pz) – Kacheln */
@@ -195,12 +211,12 @@ function farmZoneSpot(zn, w, d, px, pz, t, k, except) {
 function farmFreeSpot(w, d, px, pz, t, k) {
   const g = farmOcc();
   let best = null, bd = Infinity;
-  for (let z = FIN0; z + d <= FIN1; z++)
-    for (let x = FIN0; x + w <= FIN1; x++) {
+  for (let z = FIN.z0; z + d <= FIN.z1; z++)
+    for (let x = FIN.x0; x + w <= FIN.x1; x++) {
       let ok = zoneOk(x, z, w, d, t, k);
-      for (let i = 0; i < w && ok; i++) for (let j = 0; j < d; j++) if (g[(z + j) * FG + x + i]) { ok = false; break; }
+      for (let i = 0; i < w && ok; i++) for (let j = 0; j < d; j++) { const q = fgi(x + i, z + j); if (q < 0 || g[q]) { ok = false; break; } }
       if (!ok) continue;
-      const dd = Math.hypot(x + w / 2 - (px == null ? 16 : px), z + d / 2 - (pz == null ? 16 : pz));
+      const dd = Math.hypot(x + w / 2 - (px == null ? 16 : px), z + d / 2 - (pz == null ? 14 : pz));
       if (dd < bd) { bd = dd; best = [x, z]; }
     }
   return best;

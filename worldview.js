@@ -14,16 +14,21 @@ const WV = {
   gust: 0, hit: null, sawBlades: null, popTree: null
 };
 const WGRID = { x0: -160, z0: -160, x1: 104, z1: 104, chunk: 24, cell: 4 };
+/* Hofwiese (größter Hof, aufs 4er-Raster gerundet): dort liegt statt Gelände FWM.hofGround */
+const HOFG = { x0: -24, z0: -28, x1: 24, z1: 16 };
+/* Weg vom Südtor des Sägewerks über den Waldweg und den Feldweg zur Straße (Holzlaster, Döring) */
+const SAW_ROAD = [[-41, -30.5], [-41, -21], [-37, -14], [-31, -9.5], [-31, -1], [-31.5, 8], [-31, 18.5], [-48, 18.5]];
 /* Reiseziele der Gebietsknöpfe (Kamera) – peek: wohin bei gesperrtem Gebiet */
 const AREA_SPOTS = {
-  hof:     { i: "🏡", n: "Hof",        at: [-1, 0],    d: 32 },
-  wald:    { i: "🌲", n: "Wald",       at: [-22, -44], d: 40, peek: [-16, -15] },
-  saege:   { i: "🪚", n: "Sägewerk",   at: [-29, -29], d: 30, peek: [-18, -17] },
-  altwald: { i: "🌳", n: "Alter Wald", at: [-72, -76], d: 40, peek: [-48, -55] },
+  hof:     { i: "🏡", n: "Hof",        at: [-1, -2],   d: 34 },
+  wald:    { i: "🌲", n: "Wald",       at: [-34, -56], d: 40, peek: [-26, -16] },
+  saege:   { i: "🪚", n: "Sägewerk",   at: [-41, -41], d: 30, peek: [-32, -27] },
+  altwald: { i: "🌳", n: "Alter Wald", at: [-84, -88], d: 40, peek: [-60, -67] },
   see:     { i: "🎣", n: "See",        at: [12, 36],   d: 40, peek: [6, 19] }
 };
-const AREA_NPC = { wald: [-14.2, -5.3], saege: [-27.1, -16.4], altwald: [-53.8, -58.6], see: [7.2, 20.5] };
-const AREA_BAR = { wald: [-14.7, -7.5, Math.PI / 2], saege: [-29, -17.4, 0], altwald: [-56, -61.2, -4.172], see: [5, 20.8, 0] };
+/* v56: Förster und Schranke am Waldrand auf dem Weg vom Westtor, Krüger am Tor des Sägewerks */
+const AREA_NPC = { wald: [-27.2, -7.3], saege: [-39.1, -28.4], altwald: [-65.8, -70.6], see: [7.2, 20.5] };
+const AREA_BAR = { wald: [-27.7, -9.5, Math.PI / 2], saege: [-41, -29.4, 0], altwald: [-68, -73.2, -4.172], see: [5, 20.8, 0] };
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
@@ -49,7 +54,7 @@ function wMix(a, b, t) { const A = G3.col(a), B = G3.col(b); t = clamp(t, 0, 1);
 /* Wie sehr ist hier Wald? 0 … 1 (weich am Waldrand) */
 function forestK(x, z) {
   if (z > 19) return 0;
-  const depth = Math.max(-15.5 - x, -15.5 - z);
+  const depth = forestDepth(x, z);
   let f = clamp((depth + 1.5) / 4.5, 0, 1);
   if (z > 14) f *= clamp((19 - z) / 5, 0, 1);
   return f;
@@ -62,7 +67,7 @@ function worldGroundCol(x, z) {
   let c = v > 0.35 ? C.grassD : v > -0.2 ? C.grass2 : C.grass;
   const f = forestK(x, z);
   if (f > 0) {
-    const alt = x < -58 && z < -58;
+    const alt = x < -70 && z < -70;
     let fc = alt ? 0x4f7a2e : v > 0.3 ? 0x5e8a34 : v < -0.3 ? 0x6c8f3c : 0x64903a;
     if (v2 > 0.55) fc = wMix(fc, 0x7d6a42, (v2 - 0.55) * 1.6);
     c = wMix(c, fc, f);
@@ -79,9 +84,15 @@ function worldGroundCol(x, z) {
   if (e < 1.25) c = wMix(c, 0xd9c48a, clamp((1.25 - e) / 0.2, 0, 1));
   if (e < 0.98) c = wMix(0xd9c48a, 0x3d6f86, clamp((0.98 - e) / 0.12, 0, 1));
   /* Nachbarfelder */
-  if (Math.abs(x + 29) < 6.4 && Math.abs(z + 1) < 4.4) c = wMix(c, 0xd3b76a, 0.6);
-  if (Math.abs(x - 40) < 5.4 && Math.abs(z + 2) < 7.4) c = wMix(c, 0xb9d466, 0.6);
+  FWORLD.fields.forEach(([fx, fz, w, d], i) => { if (Math.abs(x - fx) < w / 2 + 0.4 && Math.abs(z - fz) < d / 2 + 0.4) c = wMix(c, i ? 0xb9d466 : 0xd3b76a, 0.6); });
   return c;
+}
+/* Geländefarbe wie im Kachelgitter (4er-Raster, zwei Dreiecke je Zelle) – für die Wiese um den Hof */
+function wGroundAt(x, z) {
+  const c = WGRID.cell, x0 = Math.floor(x / c) * c, z0 = Math.floor(z / c) * c, u = (x - x0) / c, v = (z - z0) / c;
+  const g = (a, b) => G3.col(worldGroundCol(a, b)), c00 = g(x0, z0), c01 = g(x0, z0 + c), c10 = g(x0 + c, z0), c11 = g(x0 + c, z0 + c);
+  const f = (k) => v >= u ? c00[k] + (c11[k] - c01[k]) * u + (c01[k] - c00[k]) * v : c00[k] + (c10[k] - c00[k]) * u + (c11[k] - c10[k]) * v;
+  return [f(0), f(1), f(2)];
 }
 function wRng(seed) { return typeof erbeRng === "function" ? erbeRng(seed) : (() => { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; })(); }
 /* Schnelle Nachschlage-Gitter für den Kulissenbau: Nähe zu Wegen und
@@ -120,13 +131,12 @@ function worldMasks(fell) {
 }
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
-  if (Math.abs(x) < 16.5 && Math.abs(z) < 16.5) return false;
-  if (x > 13 && x < 35 && z > -17.5 && z < 17.5) return false;
+  if (inHofMax(x, z, 1.5)) return false;
+  if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
   if (inYard(x, z, 1.8)) return false;
-  if (Math.abs(x + 29) < 7 && Math.abs(z + 1) < 5) return false;
-  if (Math.abs(x - 40) < 6 && Math.abs(z + 2) < 8) return false;
+  if (inFieldN(x, z, 1)) return false;
   if (M.at(x, z) & 5) return false;
   if (z > 20 && lakeE(x, z) < 1.18) return false;
   for (const c of FWORLD.clearings) if (Math.abs(x - c[0]) < c[2] && Math.abs(z - c[1]) < c[2] && Math.hypot(x - c[0], z - c[1]) < c[2] - 0.5) return false;
@@ -172,8 +182,8 @@ class WBuf {
 function worldStatic() {
   const R = FV.R;
   WV.trees.clear(); WV.falling = []; WV.hofKey = ""; WV.hof = []; WV.barriers = {}; WV.npc = null;
-  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null; WV.pvKey = ""; WV.pvNodes = [];
-  const fell = S.farm.trees || [];
+  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null; WV.pvKey = ""; WV.pvNodes = []; WV.piles = new Map();
+  const fell = (S.farm.trees || []).filter(t => !t.bg);       /* angetippte Kulissenbäume stehen schon in bgCut */
   const rnd = wRng(7331);
   const MK = worldMasks(fell);
   /* Gelände und Kulissenwald in Kacheln – was nicht im Bild ist, wird nicht
@@ -183,7 +193,7 @@ function worldStatic() {
   const chunkOf = (x, z) => {
     const i = Math.floor((x - WGRID.x0) / CH), j = Math.floor((z - WGRID.z0) / CH), k = i + "," + j;
     let c = chunks.get(k);
-    if (!c) { c = { g: new WBuf(), d: new WBuf() }; chunks.set(k, c); }
+    if (!c) { c = { g: new WBuf(), d: new WBuf(), trees: [] }; chunks.set(k, c); }
     return c;
   };
   /* Bodenfarben einmal je Gitterpunkt */
@@ -193,18 +203,28 @@ function worldStatic() {
   for (let i = 0; i < nx; i++)
     for (let j = 0; j < nz; j++) {
       const x = WGRID.x0 + i * cell, z = WGRID.z0 + j * cell;
-      if (x >= -16 && x + cell <= 16 && z >= -16 && z + cell <= 16) continue;     /* Hofwiese kommt extra */
+      if (x >= HOFG.x0 && x + cell <= HOFG.x1 && z >= HOFG.z0 && z + cell <= HOFG.z1) continue;     /* Hofwiese kommt extra */
       if (lakeE(x + cell / 2, z + cell / 2) < 0.8) continue;                          /* unter Wasser */
       const g = chunkOf(x + 0.1, z + 0.1).g;
       const c00 = GC[j * (nx + 1) + i], c10 = GC[j * (nx + 1) + i + 1], c01 = GC[(j + 1) * (nx + 1) + i], c11 = GC[(j + 1) * (nx + 1) + i + 1];
       g.quad(x, z, cell, c00, c10, c01, c11);
     }
-  /* Kulissenbäume: dichter Wald, lockere Bäume am See und im Osten */
+  /* Kulissenbäume: dichter Wald, lockere Bäume am See und im Osten. v56: jeder hat eine Art
+     (Birke, Kiefer, Fichte, Buche, Eiche, Kirsche) und lässt sich antippen – dann wird er ein
+     echter Baum (bgPromote). Die Bäume je Kachel liegen in WV.bgChunks, damit nur diese Kachel
+     neu gebaut werden muss. */
   const F32 = mb => new Float32Array(mb.v);
-  const P = [0, 1, 2].map(v => F32(FWM.bgPine(v))), L = [0, 1, 2, 3].map(v => F32(FWM.bgLeaf(v))), B = [0, 1].map(v => F32(FWM.bgBirch(v)));
+  WV.bgm = {}; ["birke", "kiefer", "fichte", "buche", "eiche", "kirsche"].forEach(sp => { WV.bgm[sp] = [0, 1, 2].map(v => F32(FWM.bgTree(sp, v))); });
   const fern = F32(FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog()), bush = F32(FM.bushes());
   const rocks = [0.9, 1.4, 2.0].map(k => F32(FWM.boulder(k)));
-  const step = 3.2;
+  const cut = S.farm.bgCut || {}, step = 3.2;
+  const pickSp = (zone, edge, r) => {
+    if (edge) return r < 0.3 ? "buche" : r < 0.45 ? "eiche" : r < 0.62 ? "kiefer" : r < 0.88 ? "birke" : r < 0.96 ? "fichte" : "kirsche";
+    if (zone === "birke") return r < 0.45 ? "birke" : r < 0.68 ? "kiefer" : r < 0.8 ? "fichte" : r < 0.95 ? "buche" : "kirsche";
+    if (zone === "kiefer") return r < 0.55 ? "kiefer" : r < 0.78 ? "fichte" : r < 0.9 ? "birke" : "buche";
+    if (zone === "alt") return r < 0.6 ? "eiche" : r < 0.85 ? "buche" : "fichte";
+    return r < 0.3 ? "buche" : r < 0.45 ? "eiche" : r < 0.7 ? "fichte" : r < 0.85 ? "kiefer" : r < 0.97 ? "birke" : "kirsche";
+  };
   for (let gx = WGRID.x0; gx < WGRID.x1; gx += step)
     for (let gz = WGRID.z0; gz < WGRID.z1; gz += step) {
       const x = gx + rnd() * step * 0.8, z = gz + rnd() * step * 0.8;
@@ -212,7 +232,7 @@ function worldStatic() {
       let p;
       if (f > 0.5) p = 0.86;
       else if (z > 22) p = z > 74 ? 0.55 : 0.1;
-      else if (x > 34) p = 0.1;
+      else if (x > 46) p = 0.1;
       else p = f * 0.6;
       const r0 = rnd(), r1 = rnd(), r2 = rnd();
       if (r0 > p) {
@@ -226,16 +246,11 @@ function worldStatic() {
         }
         continue;
       }
-      if (!bgTreeOk(x, z, MK)) continue;
-      const zone = forestZone(x, z), alt = zone === "alt";
-      let m;
-      if (f < 0.5) m = r1 < 0.5 ? L[Math.floor(r2 * 4)] : r1 < 0.8 ? P[Math.floor(r2 * 3)] : B[Math.floor(r2 * 2)];
-      else if (zone === "birke") m = r1 < 0.45 ? B[Math.floor(r2 * 2)] : r1 < 0.75 ? P[Math.floor(r2 * 3)] : L[Math.floor(r2 * 4)];
-      else if (zone === "kiefer") m = r1 < 0.72 ? P[Math.floor(r2 * 3)] : r1 < 0.85 ? B[Math.floor(r2 * 2)] : L[Math.floor(r2 * 4)];
-      else if (alt) m = r1 < 0.72 ? L[Math.floor(r2 * 4)] : P[Math.floor(r2 * 3)];
-      else m = r1 < 0.5 ? L[Math.floor(r2 * 4)] : r1 < 0.85 ? P[Math.floor(r2 * 3)] : B[Math.floor(r2 * 2)];
+      const k = Math.round((gx - WGRID.x0) / step) * 1000 + Math.round((gz - WGRID.z0) / step);
+      if (cut[k] || !bgTreeOk(x, z, MK)) continue;
+      const zone = forestZone(x, z), alt = zone === "alt", sp = pickSp(zone, f < 0.5, r1);
       const sc = alt ? 1.55 + r2 * 0.7 : f > 0.5 ? 1.05 + r2 * 0.6 : 0.9 + r2 * 0.4;
-      chunkOf(x, z).d.add(m, x, z, r1 * 6.28, sc);
+      chunkOf(x, z).trees.push({ k, sp, v: Math.floor(r2 * 3), x, z, ry: r1 * 6.28, s: sc });
     }
   /* Felsen im Wald */
   for (let i = 0; i < 14; i++) {
@@ -243,18 +258,23 @@ function worldStatic() {
     const x = FWORLD.rocks[0] + Math.cos(a) * d, z = FWORLD.rocks[1] + Math.sin(a) * d;
     chunkOf(x, z).d.add(rocks[i % 3], x, z, rnd() * 6.28, 0.8 + rnd() * 0.5);
   }
-  for (const c of chunks.values()) {
+  WV.bgChunks = new Map();
+  for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
     if (c.d.n) R.nodes.push(fnode(R.mesh(c.d.out())));
+    if (c.trees.length) { const [i, j] = key.split(",").map(Number); WV.bgChunks.set(key, { trees: c.trees, node: null, x0: WGRID.x0 + i * CH, z0: WGRID.z0 + j * CH }); }
   }
+  for (const c of WV.bgChunks.values()) bgChunkBuild(c);
   /* Wege, Bach mit Brücke, Straße */
   const lines = new FM.MB();
   /* Waldwege: jeder auf eigener Höhe (Kreuzungen flimmern nicht), lose Enden laufen
      in eine kleine Lichtung mit Bank aus; der Weg zum Hof beginnt erst vor dem Tor */
+  /* v56: an den Toren des Sägewerks endet der Weg gerade am Zaun (keine runde Kappe im Hof) */
   FWORLD.paths.forEach((p, i) => {
-    const pts = p.map((q, k) => k === 0 && i === 0 ? [Math.min(q[0], -16.6), q[1]] : q);
-    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !(Math.abs(q[0]) < 18 && Math.abs(q[1]) < 18);
-    lines.merge(FWM.forestPath(pts, 1.8, { y: 0.024 + i * 0.003, ends: [loose(p[0]), loose(p[p.length - 1])] }), {});
+    const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
+    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q);
+    const a = p[0], e = p[p.length - 1];
+    lines.merge(FWM.forestPath(p, 1.8, { y: 0.024 + i * 0.003, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a), !gate(e) && !road(e)] }), {});
   });
   lines.merge(FWM.creekBank(FWORLD.creek), {});
   lines.merge(FWM.creekBank(LAKE_CREEK), {});
@@ -262,7 +282,7 @@ function worldStatic() {
   const cw = new FM.MB();
   cw.merge(FWM.creekWater(FWORLD.creek), {}); cw.merge(FWM.creekWater(LAKE_CREEK), {});
   R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false }));
-  R.nodes.push(fnode(fmesh("wbridge", FWM.bridge), { x: -21.8, y: 0, z: -64.4, ry: -Math.atan2(-8, 4) }));
+  R.nodes.push(fnode(fmesh("wbridge", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: -Math.atan2(-8, 4) }));
   R.nodes.push(fnode(fmesh("wbridge", FWM.bridge), { x: 52.6, y: 0, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }));
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
@@ -276,16 +296,16 @@ function worldStatic() {
     for (let i = 0; i < Math.floor(d / 0.6); i++) m.plate(w - 0.2, 0.22, c2, { z: -d / 2 + 0.4 + i * 0.6, y0: 0.03 });
     st.merge(m, { x, z });
   };
-  nf(-29, -1, 12, 8, 0xe3c35a, 0xd0ac43);
-  nf(40, -2, 10, 14, 0xb9d466, 0x9fc055);
+  FWORLD.fields.forEach(([x, z, w, d], i) => nf(x, z, w, d, i ? 0xb9d466 : 0xe3c35a, i ? 0x9fc055 : 0xd0ac43));
   /* Sägewerkshof: Schotter, Holzstapel, Zaun */
-  st.merge(FWM.yard(26, 24), { x: -29, z: -30 });
-  [[-40, -24.5, 0], [-35, -40.5, 1.57], [-18.2, -27, 0.2], [-23.2, -40.6, 1.57]].forEach(([x, z, ry], i) => st.merge(FWM.logPile(5 + i * 2, i % 2 ? "kiefer" : "buche"), { x, z, ry }));
+  /* Sägewerkshof: Schotter und Zaun mit Toren im Süden, Norden und Westen (die Holzstapel: worldSyncPiles) */
+  const Y = FWORLD.yard, gx = (Y[0] + Y[2]) / 2, gz = (Y[1] + Y[3]) / 2;
+  st.merge(FWM.yard(Y[2] - Y[0], Y[3] - Y[1]), { x: (Y[0] + Y[2]) / 2, z: (Y[1] + Y[3]) / 2 });
   const yf = new FM.MB(), fo = { step: 1.2, h: 0.7, post: 0x6e4a2e, rail: 0x9a6a3e };
-  FM.fenceLine(yf, -42, -42, -31, -42, fo); FM.fenceLine(yf, -27, -42, -16, -42, fo);
-  FM.fenceLine(yf, -42, -42, -42, -32, fo); FM.fenceLine(yf, -42, -28, -42, -18, fo);
-  FM.fenceLine(yf, -16, -42, -16, -18, fo);
-  FM.fenceLine(yf, -42, -18, -31, -18, fo); FM.fenceLine(yf, -27, -18, -16, -18, fo);
+  FM.fenceLine(yf, Y[0], Y[1], gx - 2, Y[1], fo); FM.fenceLine(yf, gx + 2, Y[1], Y[2], Y[1], fo);
+  FM.fenceLine(yf, Y[0], Y[1], Y[0], gz - 2, fo); FM.fenceLine(yf, Y[0], gz + 2, Y[0], Y[3], fo);
+  FM.fenceLine(yf, Y[2], Y[1], Y[2], Y[3], fo);
+  FM.fenceLine(yf, Y[0], Y[3], gx - 2, Y[3], fo); FM.fenceLine(yf, gx + 2, Y[3], Y[2], Y[3], fo);
   st.add(yf);
   /* Teich im Osten */
   st.merge(FM.pondBank(POND.r), { x: POND.x, z: POND.z });
@@ -328,59 +348,66 @@ function worldSyncHof(force) {
   WV.hofKey = key;
   WV.hof.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
   WV.hof = [];
-  /* der Zaun wächst mit jeder Ausbaustufe nach allen Seiten (13 → 14 → 15 → 16) */
-  const stage = S.farm.stage || 1, big = stage >= 4, F0 = typeof farmHofR === "function" ? farmHofR() : 13;
+  /* der Zaun wächst mit jeder Ausbaustufe nach Westen, Norden und Osten (v56: FHOF_B); der Südzaun bleibt */
+  const stage = S.farm.stage || 1, big = stage >= 4, B = farmHofB(), F0 = B.z1, GX = FGATE.x, WZ = FGATE.wz;
   const add = n => { R.nodes.push(n); WV.hof.push(n); return n; };
-  add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + F0, () => FWM.hofGround(32, F0, Math.min(stage, 2))), { shadow: false }));
+  add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + stage, () => FWM.hofGround(HOFG, B, Math.min(stage, 2), wGroundAt)), { shadow: false }));
   const b = new FM.MB(), ps = Math.min(3, stage);
-  b.merge(FWM.hofPath(2, F0 + 8, ps), { x: 5, z: (F0 - 8) / 2 });
-  /* Querweg endet am Hauptweg (nicht darüber – sonst flimmert die Kreuzung) */
-  b.merge(FWM.hofPath(F0 + 4, 1, ps), { x: (4 - F0) / 2, z: -7.5 });
-  b.merge(FWM.hofPath(2, 17.7 - F0, ps), { x: 5, z: (F0 + 17.7) / 2 });
-  /* vor dem Westtor bis zum Waldweg */
-  b.merge(FWM.hofPath(16.9 - F0, 1.6, ps), { x: -(F0 + 16.9) / 2, z: -7.5 });
+  /* Hauptweg vom Querweg zum Südtor, Querweg zum Westtor (endet am Hauptweg – sonst flimmert die Kreuzung) */
+  b.merge(FWM.hofPath(2, F0 - WZ + 0.5, ps), { x: GX, z: (F0 + WZ - 0.5) / 2 });
+  b.merge(FWM.hofPath(GX - 1 - B.x0, 1, ps), { x: (GX - 1 + B.x0) / 2, z: WZ });
+  b.merge(FWM.hofPath(2, 17.7 - F0, ps), { x: GX, z: (F0 + 17.7) / 2 });
+  /* vor dem Westtor bis zum Waldweg (der beginnt am Tor des größten Hofs) */
+  b.merge(FWM.hofPath(B.x0 + 24.9, 1.6, ps), { x: (B.x0 - 24.9) / 2, z: WZ });
+  const wg = [WZ - 1.1, WZ + 1.1];
   if (big) {
     /* Steinmauer ringsum mit Toren im Süden und Westen – knapp außerhalb des Baulands */
-    const W = F0 + 0.3;
-    const wall = (x0, z0, x1, z1) => {
-      const len = Math.hypot(x1 - x0, z1 - z0);
-      b.merge(FWM.stoneWall(len), { x: (x0 + x1) / 2, z: (z0 + z1) / 2, ry: -Math.atan2(z1 - z0, x1 - x0) });
+    const x0 = B.x0 - 0.3, z0 = B.z0 - 0.3, x1 = B.x1 + 0.3, z1 = B.z1 + 0.3;
+    const wall = (ax, az, bx, bz) => {
+      const len = Math.hypot(bx - ax, bz - az);
+      b.merge(FWM.stoneWall(len), { x: (ax + bx) / 2, z: (az + bz) / 2, ry: -Math.atan2(bz - az, bx - ax) });
     };
-    wall(-W, -W, W, -W); wall(W, -W, W, W);
-    wall(-W, W, 2.6, W); wall(7.4, W, W, W);
-    wall(-W, -W, -W, -8.6); wall(-W, -6.4, -W, W);
-    b.merge(FWM.stoneGate(), { x: 5, z: W });
+    wall(x0, z0, x1, z0); wall(x1, z0, x1, z1);
+    wall(x0, z1, GX - 2.4, z1); wall(GX + 2.4, z1, x1, z1);
+    wall(x0, z0, x0, wg[0]); wall(x0, wg[1], x0, z1);
+    b.merge(FWM.stoneGate(), { x: GX, z: z1 });
   } else {
     const k = stage;
-    FWM.hofFence(b, -F0, -F0, F0, -F0, k, 1);
-    FWM.hofFence(b, F0, -F0, F0, F0, k, 2);
-    FWM.hofFence(b, -F0, F0, 3, F0, k, 3);
-    FWM.hofFence(b, 7, F0, F0, F0, k, 4);
-    FWM.hofFence(b, -F0, -F0, -F0, -8.6, k, 5);
-    FWM.hofFence(b, -F0, -6.4, -F0, F0, k, 6);
-    b.merge(FM.gate(), { x: 5, z: F0, ry: stage <= 1 ? 0.06 : 0 });
+    FWM.hofFence(b, B.x0, B.z0, B.x1, B.z0, k, 1);
+    FWM.hofFence(b, B.x1, B.z0, B.x1, B.z1, k, 2);
+    FWM.hofFence(b, B.x0, B.z1, GX - 2, B.z1, k, 3);
+    FWM.hofFence(b, GX + 2, B.z1, B.x1, B.z1, k, 4);
+    FWM.hofFence(b, B.x0, B.z0, B.x0, wg[0], k, 5);
+    FWM.hofFence(b, B.x0, wg[1], B.x0, B.z1, k, 6);
+    b.merge(FM.gate(), { x: GX, z: F0, ry: stage <= 1 ? 0.06 : 0 });
   }
   /* Westtor zum Wald */
-  [-8.7, -6.3].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: -F0 - (big ? 0.3 : 0), z }));
+  [wg[0] - 0.1, wg[1] + 0.1].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: B.x0 - (big ? 0.3 : 0), z }));
   if (stage >= 3) {
-    const L = FM.lamp(), fl = FM.flowers();
-    [[2.5, F0 + 0.6], [7.5, F0 + 0.6], [-F0 - 0.6, -9.3], [-F0 - 0.6, -5.7], [F0 + 0.6, F0 + 0.6], [-F0 - 0.6, F0 + 0.6], [F0 + 0.6, -F0 - 0.6], [-F0 - 0.6, -F0 - 0.6], [-8, 17.2], [18, 17.2]]
+    const L = FM.lamp(), fl = FM.flowers(), xa = B.x0 - 0.6, xb = B.x1 + 0.6, za = B.z0 - 0.6, zb = F0 + 0.6;
+    [[GX - 2.5, zb], [GX + 2.5, zb], [xa, WZ - 1.8], [xa, WZ + 1.8], [xb, zb], [xa, zb], [xb, za], [xa, za], [-8, 17.2], [18, 17.2]]
       .forEach(([x, z]) => b.merge(L, { x, z }));
     [-10, -6, -2, 10, 12].forEach(x => b.merge(fl, { x, z: F0 + 0.9 }));
   }
+  /* v56: Vermessungspflöcke zeigen, bis wohin der Hof mit dem nächsten Ausbau wächst */
+  if (stage < 4) {
+    const N = farmHofB(stage + 1), stake = (x, z) => { b.box(0.08, 0.46, 0.08, 0xb08a5a, { x, z }); b.box(0.1, 0.1, 0.1, 0xd8332b, { x, y: 0.4, z }); };
+    for (let x = N.x0; x <= N.x1 + 0.01; x += (N.x1 - N.x0) / Math.round((N.x1 - N.x0) / 4)) stake(x, N.z0);
+    for (let z = N.z0 + 4; z < N.z1 - 1; z += 4) if (Math.abs(z - WZ) > 1.6) { stake(N.x0, z); stake(N.x1, z); }
+  }
   add(fnode(R.mesh(b)));
   if (stage >= 2) {
-    /* Traktor vor dem Zaun – im großen Wirtschaftshof vor der Maschinenhalle */
-    const col = (S.farm.cos && S.farm.cos.on.tractor) || "rot", tz = big ? 16.3 : 16.6, tx = big ? 21.4 : 10.4;
+    /* Traktor vor dem Zaun – im großen Wirtschaftshof vor der Maschinenhalle östlich vom Hof */
+    const col = (S.farm.cos && S.farm.cos.on.tractor) || "rot", tz = big ? 16.3 : 16.6, tx = big ? 27.4 : 10.4;
     add(fnode(fmesh("tractor:" + col, () => FWM.tractor(col)), { x: tx, z: tz, ry: -Math.PI / 2 }));
     add(fnode(fmesh("trailer", FWM.trailer), { x: tx + 2.2, z: tz, ry: -Math.PI / 2 }));
   }
-  if (big) add(fnode(fmesh("mhall", FWM.machineHall), { x: 24, z: 12.8, ry: Math.PI }));
+  if (big) add(fnode(fmesh("mhall", FWM.machineHall), { x: 31, z: 11.5, ry: Math.PI }));
   /* Firmenschild am Tor: Name und Logo stehen auf der Tafel (vorn und hinten) */
   const T = brandTex();
   if (T) {
     const g = big ? { y: 2.7, z: F0 + 0.3 + 0.362, w: 2.52, h: 0.46, ry: 0 } : { y: 1.67, z: F0 + 0.045, w: 2.36, h: 0.47, ry: stage <= 1 ? 0.06 : 0 };
-    const sg = add(R.node(null, { x: 5, y: 0, z: F0 + (big ? 0.3 : 0), ry: g.ry }));
+    const sg = add(R.node(null, { x: GX, y: 0, z: F0 + (big ? 0.3 : 0), ry: g.ry }));
     R.addChild(sg, R.node(null, { y: g.y, z: g.z - F0 - (big ? 0.3 : 0), decal: { t: big ? T.stone : T.sign, w: g.w, h: g.h } }));
     if (!big) R.addChild(sg, R.node(null, { y: g.y, z: -0.045, ry: Math.PI, decal: { t: T.sign, w: g.w, h: g.h } }));
   }
@@ -756,7 +783,7 @@ function worldSyncTrees(force) {
     n.visible = true;
   }
 }
-function treeH(t) { return t.st === "up" ? (1.0 + FWM.TH[t.sz] * 1.7) * (t.s || 1) : t.st === "fallen" ? 0.8 : 0.5; }
+function treeH(t) { return t.st === "up" ? (FWM.TREE_H[t.sp] || 2.8) * FWM.TH[t.sz] * (t.s || 1) : t.st === "fallen" ? 0.8 : 0.5; }
 /* Baum unter dem Finger (Abstand entlang des Strahls) */
 function pickTree(x, y) {
   const R = FV.R, r = R.ray(x, y);
@@ -774,6 +801,48 @@ function pickTree(x, y) {
     if (d != null && d < bt) { bt = d; best = t; }
   }
   return best ? { t: best, d: bt } : null;
+}
+/* ------------------- v56: jeder Waldbaum lässt sich fällen -------------------
+   Kulissenbäume sind zusammengefasst je Kachel gezeichnet. Tippt man einen an,
+   wird er zu einem echten Baum (S.farm.trees, mit bg = Schlüssel) und die Kachel
+   ohne ihn neu gebaut; bgCut merkt sich, welche schon „echt“ sind. */
+const BG_R = { birke: 0.55, kiefer: 0.75, fichte: 0.75, buche: 1.0, eiche: 1.05, kirsche: 0.75 };
+function bgChunkBuild(c) {
+  const R = FV.R, w = new WBuf();
+  c.trees.forEach(t => w.add(WV.bgm[t.sp][t.v], t.x, t.z, t.ry, t.s));
+  if (c.node) { const i = R.nodes.indexOf(c.node); if (i >= 0) R.nodes.splice(i, 1); if (c.node.mesh && R.free) R.free(c.node.mesh); c.node = null; }
+  if (w.n) { c.node = fnode(R.mesh(w.out()), {}); R.nodes.push(c.node); }
+}
+function bgPick(x, y) {
+  const R = FV.R, g = R.ground(x, y, 0);
+  if (!g || !WV.bgChunks) return null;
+  const r = R.ray(x, y), CH = WGRID.chunk;
+  let best = null, bt = 1e9;
+  for (const c of WV.bgChunks.values()) {
+    if (g[0] < c.x0 - 14 || g[0] > c.x0 + CH + 14 || g[2] < c.z0 - 14 || g[2] > c.z0 + CH + 14) continue;
+    for (const t of c.trees) {
+      if (Math.abs(t.x - g[0]) > 14 || Math.abs(t.z - g[2]) > 14) continue;
+      const k = (BG_R[t.sp] || 0.8) * t.s * 0.85;
+      const d = R.hitBox(r, [t.x - k, 0, t.z - k], [t.x + k, FWM.TREE_H[t.sp] * t.s, t.z + k]);
+      if (d != null && d < bt) { bt = d; best = { c, t }; }
+    }
+  }
+  return best ? { c: best.c, b: best.t, d: bt } : null;
+}
+function bgArea(b) { const a = areaOfPoint(b.x, b.z); return a === "saege" ? "wald" : a; }
+function bgPromote(hit) {
+  const F = S.farm, b = hit.b, Sx = FSPECIES[b.sp] || FSPECIES.buche, area = bgArea(b);
+  let sz = 1, bd = 1e9;
+  for (let i = 1; i <= Math.min(4, Sx.max); i++) { const d = Math.abs(FWM.TH[i] - b.s); if (d < bd) { bd = d; sz = i; } }
+  if (b.sp === "eiche" && area !== "altwald") sz = Math.min(sz, 3);
+  const id = F.trees.reduce((m, t) => Math.max(m, t.id), 0) + 1;
+  const t = { id, sp: b.sp, sz, mx: sz, x: +b.x.toFixed(2), z: +b.z.toFixed(2), ry: +b.ry.toFixed(2), s: +clamp(b.s / FWM.TH[sz], 0.8, 1.25).toFixed(2), st: "up", t: 0, dmg: 0, area, bg: b.k };
+  F.trees.push(t);
+  F.bgCut = F.bgCut || {}; F.bgCut[b.k] = 1;
+  hit.c.trees.splice(hit.c.trees.indexOf(b), 1);
+  bgChunkBuild(hit.c);
+  worldSyncTrees();
+  return t;
 }
 function treeScreen(t, f) { const p = FV.R.project(t.x, treeH(t) * (f == null ? 0.6 : f), t.z); return p ? [p[0], p[1]] : [FV.R.w / 2, FV.R.h / 2]; }
 /* gefällter Baum kippt in die gewählte Richtung */
@@ -848,7 +917,7 @@ function worldUnlock(id) {
   const sp = AREA_SPOTS[id];
   farmFocusXZ(A.reveal[0] + (id === "see" ? 2 : -4), A.reveal[1] + (id === "see" ? 6 : -4), id === "saege" ? 30 : 40, 1300);
   /* Staubspur: der Weg wird freigeschnitten */
-  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-29, -18], [-29, -30], [-29, -42]] : id === "altwald" ? FWORLD.paths[4].slice(2) : [[5, 19.4], [5, 21.6], [-20, 21.9]];
+  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-41, -30], [-41, -42], [-41, -54]] : id === "altwald" ? FWORLD.paths[4].slice(2) : [[5, 19.4], [5, 21.6], [-20, 21.9]];
   WV.dust = { pts: FM.MB ? FWM.smoothLine(path, 5) : path, i: 0, t: 0 };
   worldSyncBarriers();
   farmSyncScene(true);
@@ -881,12 +950,12 @@ function stepReveal(dt) {
    nur einen Teil seiner Zeit zu sehen und zieht sich dazwischen zurück –
    Sichtungen bleiben so etwas Besonderes. win = Uhrzeit von–bis. */
 const WILD_SPOTS = [
-  ["deer", -12, -36, 4.5, "wald"], ["deer", -48, -42, 5, "wald"], ["deer", -66, -72, 4.5, "altwald"],
-  ["hare", 25, 10, 3, null], ["hare", -19, -12, 3, "wald"], ["hare", -24, 19, 2.5, "see"],
-  ["squirrel", -24, -54, 2.5, "wald"], ["squirrel", 18.5, -12, 1.8, null], ["heron", -3.5, 29.4, 0.8, "see"],
-  ["boar", -60, -36, 4, "wald"], ["boar", -86, -78, 5, "altwald"],
-  ["fox", -4, -48, 5, "wald"], ["fox", 40, 5, 4, null], ["fox", -26, 28, 3, "see"],
-  ["hedgehog", 31, -13, 2.5, null], ["hedgehog", -12, -40, 3, "wald"]
+  ["deer", -24, -48, 4.5, "wald"], ["deer", -60, -54, 5, "wald"], ["deer", -78, -84, 4.5, "altwald"],
+  ["hare", 38, 12, 3, null], ["hare", -33, -20, 3, "wald"], ["hare", -24, 19, 2.5, "see"],
+  ["squirrel", -36, -66, 2.5, "wald"], ["squirrel", 27.5, -12, 1.8, null], ["heron", -3.5, 29.4, 0.8, "see"],
+  ["boar", -72, -48, 4, "wald"], ["boar", -98, -90, 5, "altwald"],
+  ["fox", -16, -60, 5, "wald"], ["fox", 48, 9, 4, null], ["fox", -26, 28, 3, "see"],
+  ["hedgehog", 42, -13, 2.5, null], ["hedgehog", -24, -52, 3, "wald"]
 ];
 const WILD_DEF = {
   deer:     { sp: 1.3, run: 5, s: 1.0, win: [5, 20], mesh: () => FWM.deer(false) },
@@ -905,9 +974,9 @@ const FLY_DEF = {
   bat:  { s: 2.2, win: [19.5, 5], mesh: FWM.bat, wing: FWM.batWing }
 };
 const FLY_SPOTS = [
-  ["bird", -24, -40, 5, 5, null, 0], ["bird", -24, -40, 6.3, 5.6, null, 0], ["bird", -24, -40, 7.6, 6.2, "wald", 0],
-  ["owl", -18, -30, 9, 6, "wald", 1], ["owl", 8, 2, 11, 6.5, null, 2],
-  ["bat", 2, -4, 3.6, 3.4, null, 3], ["bat", 2, -4, 4.4, 4, null, 3], ["bat", 2, -4, 3, 3, null, 3],
+  ["bird", -36, -52, 5, 5, null, 0], ["bird", -36, -52, 6.3, 5.6, null, 0], ["bird", -36, -52, 7.6, 6.2, "wald", 0],
+  ["owl", -30, -42, 9, 6, "wald", 1], ["owl", 8, 0, 11, 6.5, null, 2],
+  ["bat", 2, -6, 3.6, 3.4, null, 3], ["bat", 2, -6, 4.4, 4, null, 3], ["bat", 2, -6, 3, 3, null, 3],
   ["bat", 6, 24, 4, 3, "see", 4], ["bat", 6, 24, 4.8, 3.6, "see", 4]
 ];
 function wildWin(w, h) { return w[0] < w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]; }
@@ -1144,7 +1213,7 @@ function worldSyncPV() {
     startDrive(man, [[man.x, man.z], [van.x + 0.8, van.z + 0.5]], () => rm(man));
     WV.pvLeave = setTimeout(() => {
       WV.pvLeave = null;
-      startDrive(van, [[van.x, van.z], [-29, -21], [-29, -11], [-31.5, -3], [-31.5, 18.5], [-48, 18.5]], () => rm(van));
+      startDrive(van, [[van.x, van.z], [-41, -33]].concat(SAW_ROAD), () => rm(van));
       FV.drives.forEach(d => { if (d.node === van) d.sp = 7; });
     }, 1300);
     return;
@@ -1162,8 +1231,8 @@ function pvAt() {
   const free = (x, z) => S.farm.objs.every(o => { const [cx, cz] = farmCenter(o), [w, d] = farmSize(o); return Math.abs(cx - x) > w / 2 + 1.6 || Math.abs(cz - z) > d / 2 + 2.2; });
   if (free(FPV.at[0], FPV.at[1])) return FPV.at;
   let best = null, bd = 1e9;
-  for (let z = -39; z <= -21; z += 1) for (let x = -39; x <= -19; x += 1) {
-    if (x > -32.5 && x < -25.5 && z > -22.5) continue;                      /* Toreinfahrt frei lassen */
+  for (let z = -51; z <= -33; z += 1) for (let x = -51; x <= -31; x += 1) {
+    if (x > -44.5 && x < -37.5 && z > -34.5) continue;                      /* Toreinfahrt frei lassen */
     const d = Math.hypot(x - FPV.at[0], z - FPV.at[1]);
     if (d < bd && free(x, z)) { bd = d; best = [x, z]; }
   }
@@ -1202,8 +1271,62 @@ function openPV() {
     openPV();
   });
 }
+/* --------------------- v56: Holzstapel im Sägewerk ------------------------
+   Krügers alte Stämme liegen auf dem Hof – antippen, dann verkaufen oder ins
+   Holzlager (erbe.js: farmPileTake). Verkaufte Stapel verschwinden. */
+function worldSyncPiles() {
+  const R = FV.R, sold = S.farm.piles || {};
+  WV.piles = WV.piles || new Map();
+  for (const [i, n] of WV.piles) if (sold[i] || n.R !== R) { const k = R.nodes.indexOf(n); if (k >= 0) R.nodes.splice(k, 1); WV.piles.delete(i); }
+  FWORLD.piles.forEach(([x, z, ry, n, sp], i) => {
+    if (sold[i] || WV.piles.has(i)) return;
+    const node = fnode(fmesh("pile:" + n + ":" + sp, () => FWM.logPile(n, sp)), { x, z, ry });
+    node.R = R;
+    R.nodes.push(node);
+    WV.piles.set(i, node);
+  });
+}
+function pickPile(x, y) {
+  const R = FV.R, r = R.ray(x, y);
+  let best = null, bt = 1e9;
+  FWORLD.piles.forEach((p, i) => {
+    if (!farmPile(i)) return;
+    const T = pileTiles(p), lo = [T[0] - FG / 2, 0, T[2] - FG / 2], hi = [T[1] - FG / 2, 0.85, T[3] - FG / 2];
+    const d = R.hitBox(r, lo, hi);
+    if (d != null && d < bt) { bt = d; best = i; }
+  });
+  return best != null ? { i: best, d: bt } : null;
+}
+function openPile(i) {
+  const P = farmPile(i);
+  if (!P) return closeFarmSheet();
+  FV.sheetFn = () => openPile(i);
+  const it = FITEMS[P.id], room = farmRoom(P.id), m = farmPileValue(P);
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🪵</span>Holzstapel<small>${P.n} Stämme ${esc(it.n)} · von Krüger liegen gelassen</small></div>
+    <div class="fpile">${icHTML(P.id)}<div><b>${fqty(P.id, P.n)}</b><small>Verkaufen bringt gleich Geld, im Holzlager wird daraus Bauholz. Danach ist der Platz frei.</small></div></div>
+    <div class="fs-row">
+      <button class="btn" id="fpSell">💰 Verkaufen<small>${eur(m)}</small></button>
+      <button class="btn ghost${room < P.n ? " disabled" : ""}" id="fpStore">🏚️ Ins Holzlager<small>${room < P.n ? "nur noch " + Math.max(0, room) + " Platz" : "Platz ist da"}</small></button>
+    </div>`, "pile");
+  const done = (r) => {
+    const n = WV.piles && WV.piles.get(i), p = n ? FV.R.project(n.x, 0.6, n.z) : null;
+    if (p) {
+      if (r.m) { floatText(p[0], p[1] - 20, "+" + eur(r.m), "gold"); sfx("coin"); }
+      else { flyItem(P.id, p[0], p[1], storeBtn(), 0, r.got); sfx("collect"); }
+      FV.R.burst({ x: n.x, y: 0.4, z: n.z, n: 18, col: [[0.75, 0.6, 0.4, 1], [0.9, 0.8, 0.6, 1]], speed: 1.8, up: 1.6, size: 0.1, shape: 1 });
+    }
+    closeFarmSheet(); worldSyncPiles(); renderFarmUI(); save();
+  };
+  $("#fpSell").onclick = () => { const r = farmPileTake(i, true); if (r) done(r); };
+  $("#fpStore").onclick = () => {
+    const r = farmPileTake(i, false);
+    if (!r) return;
+    if (r.full) { sfx("bad"); toast("Im Holzlager ist nicht genug Platz – erst etwas verkaufen oder verarbeiten.", "warn"); return; }
+    done(r);
+  };
+}
 /* Haustiere laufen die Hofwege ab */
-const PET_WAY = [[5, 12], [5, 6], [5, 0], [5, -7.5], [-1, -7.5], [-7, -7.5], [-12, -7.5]];
+const PET_WAY = [[5, 10], [5, 4], [5, -2], [5, -9.5], [-1, -9.5], [-7, -9.5], [-12, -9.5]];
 function worldSyncPets() {
   const R = FV.R, own = {};
   FCOSMETIC.filter(c => c.pet && farmCos(c.id)).forEach(c => { own[c.pet] = 1; });
@@ -1245,7 +1368,7 @@ function worldSyncEvents() {
     add(fmesh("traderCart", FWM.traderCart), { x: 10.2, z: 17.5, ry: Math.PI / 2, s: 1.15 });
     WV.trader = add(fmesh("trader", () => FWM.person({ shirt: 0x8a3ac8, hat: "hut", seed: 7 })), { x: 8.6, z: 19.2, s: 1.35, ry: 0.6 });
   } else WV.trader = null;
-  if (c.k === "nachbar") add(fmesh("npc:saege", () => FWM.person(NPC_LOOK.saege)), { x: -20.5, z: -19.4, ry: 0.4, s: 1.35 });
+  if (c.k === "nachbar") add(fmesh("npc:saege", () => FWM.person(NPC_LOOK.saege)), { x: -32.5, z: -31.4, ry: 0.4, s: 1.35 });
   if (c.k === "hirsch") add(fmesh("stag", () => FWM.deer(true)), { x: c.data.x, z: c.data.z, s: 1.25, glow: 0.35 });
   if (c.k === "reh") add(fmesh("wild:deer", () => FWM.deer(false)), { x: c.data.x, z: c.data.z, s: 1.0, ry: 1 });
   if (c.k === "lieferung") add(fmesh("parcel", () => { const b = new FM.MB(); b.box(0.7, 0.5, 0.55, 0xc9955a, { top: 0xd8a868 }); b.box(0.72, 0.08, 0.1, 0xd8332b, { y: 0.42 }); b.box(0.1, 0.08, 0.57, 0xd8332b, { y: 0.42 }); return b; }), { x: c.data.x, z: c.data.z, ry: 0.4 });
@@ -1257,7 +1380,7 @@ function worldEvSpots() {
   const D = FEVENTS[c.k];
   switch (c.k) {
     case "haendler": return [{ x: 9.4, y: 3.1, z: 18.4, ic: "🧑‍💼", act: "haendler" }];
-    case "nachbar": return [{ x: -20.5, y: 2.3, z: -19.4, ic: "👴💬", act: "nachbar" }];
+    case "nachbar": return [{ x: -32.5, y: 2.3, z: -31.4, ic: "👴💬", act: "nachbar" }];
     case "hirsch": return [{ x: c.data.x, y: 2.4, z: c.data.z, ic: "🦌✨", act: "hirsch", area: "wald" }];
     case "reh": return [{ x: c.data.x, y: 1.9, z: c.data.z, ic: "🦌", act: "reh" }];
     case "lieferung": return [{ x: c.data.x, y: 1.1, z: c.data.z, ic: "📦", act: "lieferung" }];
@@ -1356,6 +1479,12 @@ function worldTap(x, y) {
   const tr = farmTreasureCur();
   if (tr && !tr.done && near(tr.x, 0.05, tr.z, 46)) { worldTreasureDig(); return true; }
   const ho = pickObjT(x, y), ht = pickTree(x, y);
+  /* Holzstapel im Sägewerk */
+  const hp = pickPile(x, y);
+  if (hp && (!ho || hp.d < ho.d - 0.2) && (!ht || hp.d < ht.d - 0.2)) {
+    if (!farmAreaOpen("saege")) { openAreaInfo("saege"); return true; }
+    sfx("tap"); openPile(hp.i); return true;
+  }
   /* Wildtiere nur, wenn nichts anderes getroffen wurde */
   if (!ho && !ht) for (const w of WV.wild) if (w.node.visible && w.f > 0.5 && near(w.x, 0.4, w.z, 30)) {
     w.flee = 1.8; w.wait = 0;
@@ -1373,6 +1502,15 @@ function worldTap(x, y) {
     return true;
   }
   if (ht && (!ho || ht.d < ho.d - 0.2)) { worldTreeTap(ht.t, x, y); return true; }
+  /* Kulissenbaum: wird zum echten Baum (im gesperrten Gebiet: erst die Info) */
+  const hb = bgPick(x, y);
+  if (hb && (!ho || hb.d < ho.d - 0.2)) {
+    const a = bgArea(hb.b);
+    if (a && !farmAreaOpen(a)) { openAreaInfo(a); return true; }
+    worldTreeTap(bgPromote(hb), x, y);
+    save();
+    return true;
+  }
   if (ho) {
     const o = ho.o;
     if (o.area && !farmAreaOpen(o.area)) { openAreaInfo(o.area); return true; }
@@ -1705,6 +1843,7 @@ function worldSync(force) {
   worldSyncEvents();
   worldSyncTreasure();
   worldSyncPV();
+  worldSyncPiles();
   if (!WV.reveal) worldLocks();
   /* Ware auf dem Verkaufsstand */
   S.farm.objs.forEach(o => {
@@ -2135,7 +2274,7 @@ if (typeof MSG_GO !== "undefined") MSG_GO.pv = () => {
 };
 /* letzte Berührung merken (für Kamera-Fahrten, die nicht stören sollen) */
 if (typeof document !== "undefined") document.addEventListener("pointerdown", () => { WV.lastInput = performance.now(); }, true);
-function worldGateSign() { const r = typeof farmHofR === "function" ? farmHofR() : 13; return (S.farm.stage || 1) >= 4 ? [5, 2.65, r + 0.65] : [5, 1.68, r + 0.05]; }
+function worldGateSign() { const r = farmHofB().z1; return (S.farm.stage || 1) >= 4 ? [FGATE.x, 2.65, r + 0.65] : [FGATE.x, 1.68, r + 0.05]; }
 /* beim Öffnen des Hofs */
 function worldShow() {
   const F = S.farm;
@@ -2162,7 +2301,7 @@ function stageHTML() {
     next = `<div class="fs-sub">Nächste Stufe: <b>${esc(nx.n)}</b>${flv() < nx.lv ? " · ab Level " + nx.lv : ""}</div><div class="fr-in">${need}</div>
       <button class="btn fgo" id="fsStage" ${chk === true ? "" : "disabled"}>🏡 Hof ausbauen</button>`;
   } else next = `<div class="fs-sub">Größer geht’s nicht – ein echter Wirtschaftshof! 🎉</div>`;
-  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Ausbauen braucht Holz aus Wald und Sägewerk.</div>`;
+  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Ausbauen braucht Holz aus Wald und Sägewerk.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
 }
 function stageBind(again) {
   const b = $("#fsStage");
@@ -2174,7 +2313,7 @@ function stageBind(again) {
     const h = S.farm.objs.find(o => o.t === "house");
     if (h) { puff(h); farmFocus(h, 34); }
     const R = FV.R;
-    for (let i = 0; i < 90; i++) R.emit({ x: (Math.random() - 0.5) * 26, y: 6 + Math.random() * 3, z: (Math.random() - 0.5) * 26, vx: (Math.random() - 0.5) * 2, vy: -0.5, vz: (Math.random() - 0.5) * 2, g: -2.2, drag: 0.6, life: 3, size: 0.13, shape: 1, fade: false,
+    for (let i = 0; i < 90; i++) R.emit({ x: (Math.random() - 0.5) * 26, y: 6 + Math.random() * 3, z: (Math.random() - 0.5) * 26 - 2, vx: (Math.random() - 0.5) * 2, vy: -0.5, vz: (Math.random() - 0.5) * 2, g: -2.2, drag: 0.6, life: 3, size: 0.13, shape: 1, fade: false,
       col: [[0.95, 0.3, 0.35, 1], [0.3, 0.6, 0.95, 1], [0.98, 0.82, 0.25, 1], [0.35, 0.8, 0.45, 1]][i % 4] });
     toast("🏡 " + FHOF_STAGES[S.farm.stage].n + " – sieh dich um!", "ok");
     renderFarmUI();

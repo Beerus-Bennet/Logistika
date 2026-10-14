@@ -16,80 +16,199 @@ const FWM = (() => {
 
   /* ------------------------------- Bäume -------------------------------- */
   const TH = [0, 1.0, 1.55, 2.15, 3.0];        /* Höhenfaktor je Größe */
+  /* v56: Farben nach den echten Bäumen – Birke weiß mit schwarzen Flecken, Kiefer oben fuchsrot,
+     Fichte dunkel blaugrün, Buche glatt silbergrau, Eiche dunkel und rissig, Kirsche rotbraun geringelt */
   const TREE_C = {
-    birke:   { bark: 0xeeeae0, mark: 0x2c2a28, leaf: 0x8cc84b, leaf2: 0xa2d35a },
-    kiefer:  { bark: 0xa8653c, mark: 0x7a4426, leaf: 0x3d7a3a, leaf2: 0x4a8a42 },
-    fichte:  { bark: 0x6b4a30, mark: 0x4a3322, leaf: 0x2c6236, leaf2: 0x336e3d },
-    buche:   { bark: 0x9b9a92, mark: 0x7c7b74, leaf: 0x5ea53b, leaf2: 0x6fb845 },
-    eiche:   { bark: 0x6b4a30, mark: 0x4e3523, leaf: 0x4f8f30, leaf2: 0x5c9e37 },
-    kirsche: { bark: 0x7a3d2c, mark: 0x5a2a1e, leaf: 0x5aa640, leaf2: 0xf4c6d6 }
+    birke:   { bark: 0xefece3, mark: 0x26241f, base: 0x4d4943, leaf: 0x92c652, leaf2: 0xaad460, leaf3: 0x78ad46 },
+    kiefer:  { bark: 0xc9743f, mark: 0x7a4426, base: 0x6e5646, leaf: 0x3f6d4b, leaf2: 0x4e7e58, leaf3: 0x335d40 },
+    fichte:  { bark: 0x5e4232, mark: 0x4a3322, base: 0x4a3426, leaf: 0x24502f, leaf2: 0x2d5d39, leaf3: 0x1c4327 },
+    buche:   { bark: 0xa8a79f, mark: 0x8a8981, base: 0x8f8e86, leaf: 0x5ea63b, leaf2: 0x72b84a, leaf3: 0x4c9231 },
+    eiche:   { bark: 0x5b4535, mark: 0x3d2d21, base: 0x4a382b, leaf: 0x4b7c2b, leaf2: 0x5b8e35, leaf3: 0x3d6923 },
+    kirsche: { bark: 0x6c3631, mark: 0xa27560, base: 0x5a2e2a, leaf: 0x5a9c3d, leaf2: 0x6aac46, leaf3: 0x4a8a32, bloom: 0xfbe6ee, fruit: 0xc0242c }
   };
+  /* Gesamthöhe je Art bei Größe 1 (für Tippfläche, Blasen und die Kulissenbäume) */
+  const TREE_H = { birke: 2.7, kiefer: 3.0, fichte: 3.1, buche: 2.8, eiche: 2.5, kirsche: 2.5 };
   function trunk(b, r0, r1, h, c, o) { b.cyl(r0, r1, h, 7, c, Object.assign({ top: c }, o || {})); }
+  /* schräger Ast von (0, y) in Richtung a (um y) mit Neigung e (0 = waagrecht, 1.57 = senkrecht) */
+  function limb(b, y, a, e, len, r, c) {
+    b.at({ y, ry: -a }, () => b.cyl(r, r * 0.55, len, 5, c, { rz: -(Math.PI / 2 - e), notop: true, nobot: true }));
+    return [Math.cos(a) * Math.cos(e) * len, y + Math.sin(e) * len, Math.sin(a) * Math.cos(e) * len];
+  }
   function tree(sp, sz, v) {
-    G3.seed(3000 + sz * 97 + (v || 0) * 13 + sp.length * 7);
-    const b = new MB(), T = TREE_C[sp] || TREE_C.buche, k = TH[sz] || 1;
+    v = v || 0;
+    G3.seed(3000 + sz * 97 + v * 13 + sp.length * 7);
+    const b = new MB(), T = TREE_C[sp] || TREE_C.buche, k = TH[sz] || 1, H = (TREE_H[sp] || 2.8) * k;
+    const lean = (rnd() - 0.5) * 0.05;
     if (sp === "birke") {
-      const h = 2.0 * k;
-      trunk(b, 0.11 * k, 0.07 * k, h, T.bark);
-      for (let i = 0; i < 5 + sz * 2; i++) b.box(0.07 * k + 0.02, 0.035, 0.03, T.mark, { y: 0.2 + rnd() * h * 0.9, ry: rnd() * 6.28, z: 0.1 * k, c: true });
-      b.noise(0.16, () => {
-        b.ico(0.62 * k, T.leaf, { y: h * 0.82, jitter: 0.35, flat: 1.25 });
-        b.ico(0.42 * k, T.leaf2, { x: 0.32 * k, y: h * 0.62, z: 0.12 * k, jitter: 0.35 });
-        b.ico(0.4 * k, T.leaf, { x: -0.28 * k, y: h * 0.7, z: -0.2 * k, jitter: 0.35 });
+      /* schlank, weiße Rinde mit schwarzen Querflecken, unten dunkel und rissig; lockere, luftige Krone mit hängenden Zweigen */
+      const h = H * 0.84, r = 0.07 * k + 0.02;
+      b.at({ rz: lean * 2 }, () => {
+        trunk(b, r * 1.15, r * 0.45, h, T.bark);
+        b.cyl(r * 1.24, r * 1.06, h * 0.16, 7, T.base, { notop: true, nobot: true });
+        for (let i = 0; i < 5 + sz * 2; i++) {
+          const y = h * (0.2 + rnd() * 0.65), a = rnd() * 6.28, rr = r * (1.12 - (y / h) * 0.6);
+          b.box(rr * (1.0 + rnd() * 0.6), 0.03 + rnd() * 0.035, 0.03, T.mark, { x: Math.cos(a) * rr, y, z: Math.sin(a) * rr, ry: -a + Math.PI / 2, c: true });
+        }
+        const ends = [];
+        for (let i = 0; i < 4; i++) ends.push(limb(b, h * (0.42 + i * 0.12), i * 2.2 + v, 0.85, (0.55 - i * 0.06) * k, 0.028 * k + 0.008, T.bark));
+        ends.push([0, h, 0]);
+        b.noise(0.16, () => {
+          ends.forEach((p, i) => {
+            const c = i % 3 === 0 ? T.leaf2 : i % 3 === 1 ? T.leaf : T.leaf3, rr = (0.33 - i * 0.015) * k + 0.05;
+            b.ico(rr, c, { x: p[0], y: p[1] + 0.05 * k, z: p[2], jitter: 0.5, flat: 1.45 });
+            /* hängende Zweige: schmale Spitzen nach unten */
+            for (let j = 0; j < 2; j++) {
+              const a = j * 3.1 + i, d = rr * 0.8;
+              b.cone(0.09 * k + 0.02, 0.42 * k, 5, j ? T.leaf3 : T.leaf, { x: p[0] + Math.cos(a) * d, y: p[1] - 0.1 * k, z: p[2] + Math.sin(a) * d, rx: Math.PI, nobot: true });
+            }
+          });
+          b.ico(0.16 * k + 0.03, T.leaf2, { x: 0.05 * k, y: h + 0.22 * k, jitter: 0.35, flat: 1.6 });
+        });
       });
     } else if (sp === "kiefer") {
-      const h = 2.6 * k;
-      trunk(b, 0.14 * k, 0.09 * k, h, T.bark);
-      b.noise(0.14, () => {
-        b.ico(0.7 * k, T.leaf, { y: h + 0.1 * k, jitter: 0.3, flat: 0.55 });
-        b.ico(0.5 * k, T.leaf2, { x: 0.45 * k, y: h - 0.25 * k, z: 0.15 * k, jitter: 0.35, flat: 0.6 });
-        b.ico(0.48 * k, T.leaf, { x: -0.4 * k, y: h - 0.15 * k, z: -0.25 * k, jitter: 0.35, flat: 0.6 });
-        if (sz >= 2) b.box(0.05 * k, 0.05 * k, 0.6 * k, T.bark, { y: h * 0.72, ry: rnd() * 3, rx: 0.4 });
+      /* hoher, gerader Stamm: unten graubraun, oben fuchsrot; Krone nur ganz oben – flache, schirmartige Nadelwolken */
+      const h = H * 0.86, r = 0.1 * k + 0.02;
+      b.at({ rz: lean }, () => {
+        trunk(b, r * 1.1, r * 0.55, h, T.bark);
+        b.cyl(r * 1.16, r * 0.82, h * 0.42, 7, T.base, { notop: true, nobot: true });
+        for (let i = 0; i < 2 + sz; i++) {
+          const y = h * (0.35 + rnd() * 0.3), a = rnd() * 6.28;
+          b.box(0.03 * k + 0.01, 0.03 * k + 0.01, 0.22 * k, T.mark, { x: Math.cos(a) * r * 0.9, y, z: Math.sin(a) * r * 0.9, ry: -a, rx: 0.5 });
+        }
+        b.noise(0.14, () => {
+          const n = 3 + Math.min(sz, 3);
+          for (let i = 0; i < n; i++) {
+            const a = i * 2.4 + v * 1.3, y = h * (0.72 + (i / n) * 0.2), len = (0.38 + rnd() * 0.25) * k, e = 0.35 + rnd() * 0.3;
+            const p = limb(b, y, a, e, len, 0.035 * k, T.bark);
+            b.ico((0.36 + rnd() * 0.12) * k, i % 2 ? T.leaf2 : T.leaf, { x: p[0], y: p[1] + 0.05 * k, z: p[2], jitter: 0.4, flat: 0.42 });
+            b.ico(0.24 * k, T.leaf3, { x: p[0] * 0.8, y: p[1] - 0.12 * k, z: p[2] * 0.8, jitter: 0.4, flat: 0.4 });
+          }
+          b.ico(0.46 * k, T.leaf, { y: h + 0.06 * k, jitter: 0.35, flat: 0.45 });
+          b.ico(0.3 * k, T.leaf2, { x: 0.15 * k, y: h + 0.2 * k, z: -0.1 * k, jitter: 0.35, flat: 0.45 });
+        });
       });
     } else if (sp === "fichte") {
-      trunk(b, 0.12 * k, 0.1 * k, 0.6 * k, T.bark);
-      b.noise(0.12, () => {
-        const L = 3 + Math.min(2, sz);
+      /* dicht und kegelförmig bis fast zum Boden, dunkel blaugrün, Äste hängen etwas, Spitze schmal */
+      const r = 0.08 * k + 0.02;
+      trunk(b, r * 1.2, r, 0.5 * k, T.bark);
+      b.noise(0.1, () => {
+        const L = 5 + Math.min(3, sz), hb = 0.28 * k, ht = H - hb;
         for (let i = 0; i < L; i++) {
-          const f = 1 - i / L;
-          b.cone((0.85 - i * 0.05) * k * (0.55 + f * 0.45), 1.05 * k, 7, i % 2 ? T.leaf2 : T.leaf, { y: 0.35 * k + i * 0.62 * k, a0: i * 0.4 });
+          const f = i / L, y = hb + f * ht * 0.92, rad = (0.78 * (1 - f) + 0.12) * k, hh = (0.52 + 0.1 * (1 - f)) * k;
+          const c = i % 3 === 0 ? T.leaf : i % 3 === 1 ? T.leaf2 : T.leaf3;
+          /* hängende Astspitzen: der Kegel beginnt ein Stück tiefer und hat unten einen Kranz */
+          b.cone(rad, hh, 9, c, { y: y - 0.06 * k, a0: i * 0.7 + v, nobot: true });
+          b.cyl(rad * 1.04, rad * 0.86, 0.1 * k, 9, T.leaf3, { y: y - 0.13 * k, a0: i * 0.7 + v, notop: true, nobot: true });
+        }
+        b.cone(0.07 * k + 0.02, 0.45 * k, 5, T.leaf2, { y: H - 0.42 * k });
+      });
+    } else if (sp === "buche") {
+      /* glatter silbergrauer Stamm, teilt sich in steile Äste; dichte, breite, eiförmige Krone in frischem Grün */
+      const h = H * 0.3, r = 0.12 * k + 0.02;
+      b.at({ rz: lean }, () => {
+        trunk(b, r * 1.2, r * 0.9, h, T.bark);
+        b.cyl(r * 1.5, r * 1.15, 0.12, 7, T.bark, { notop: true });
+        const tops = [0, 1, 2].map(i => limb(b, h * 0.92, i * 2.1 + v, 1.08, 0.7 * k, r * 0.6, T.bark));
+        b.noise(0.13, () => {
+          b.ico(0.9 * k, T.leaf, { y: H * 0.6, jitter: 0.18, flat: 1.0, detail: 1, bottom: T.leaf3 });
+          for (let i = 0; i < 4; i++) {
+            const a = i * 1.57 + v * 0.7, d = 0.62 * k;
+            b.ico(0.55 * k, i % 2 ? T.leaf2 : T.leaf, { x: Math.cos(a) * d, y: H * (0.5 + (i % 2) * 0.08), z: Math.sin(a) * d, jitter: 0.25, flat: 0.95, bottom: T.leaf3 });
+          }
+          b.ico(0.52 * k, T.leaf2, { x: tops[0][0] * 0.3, y: H * 0.84, z: tops[0][2] * 0.3, jitter: 0.25, flat: 0.95 });
+        });
+      });
+    } else if (sp === "eiche") {
+      /* kurzer, dicker, rissiger Stamm; knorrige, weit ausladende Äste; breite, unregelmäßige Krone mit Lücken */
+      const big = sz >= 4, h = H * 0.36, r = (big ? 0.24 : 0.16) * k + 0.03;
+      trunk(b, r * 1.25, r * 0.85, h, T.bark);
+      for (let i = 0; i < 6; i++) b.box(0.035 * k + 0.01, h * 0.8, 0.03 * k + 0.01, T.mark, { x: Math.cos(i * 1.05) * r * 1.05, y: 0.05, z: Math.sin(i * 1.05) * r * 1.05, ry: -i * 1.05 });
+      if (big) for (let i = 0; i < 5; i++) b.box(0.45 * k, 0.14, 0.16, T.base, { x: Math.cos(i * 1.3) * r * 1.2, y: 0.03, z: Math.sin(i * 1.3) * r * 1.2, ry: -i * 1.3, rz: 0.15 });
+      const n = 4 + (big ? 1 : 0), ends = [];
+      for (let i = 0; i < n; i++) {
+        const a = i * (6.28 / n) + v + rnd() * 0.4, e = 0.38 + rnd() * 0.35, len = (0.75 + rnd() * 0.3) * k;
+        const p = limb(b, h * 0.92, a, e, len, r * 0.55, T.bark);
+        /* ein Knick: der Ast biegt nach oben */
+        b.at({ x: p[0], y: p[1], z: p[2] }, () => limb(b, 0, a + 0.5, 0.95, 0.35 * k, r * 0.3, T.bark));
+        ends.push(p);
+      }
+      if (big) for (let i = 0; i < 4; i++) b.ico(0.13 * k, 0x3f6b2a, { x: Math.cos(i * 1.6) * r, y: 0.2 + rnd() * h * 0.6, z: Math.sin(i * 1.6) * r, flat: 0.5, jitter: 0.4 });
+      b.noise(0.16, () => {
+        ends.forEach((p, i) => {
+          b.ico((0.62 + rnd() * 0.15) * k, i % 2 ? T.leaf2 : T.leaf, { x: p[0] * 1.05, y: p[1] + 0.35 * k, z: p[2] * 1.05, jitter: 0.38, flat: 0.72, bottom: T.leaf3 });
+          b.ico(0.38 * k, T.leaf3, { x: p[0] * 0.75, y: p[1] + 0.05 * k, z: p[2] * 0.75, jitter: 0.4, flat: 0.7 });
+        });
+        b.ico(0.7 * k, T.leaf, { y: H * 0.78, jitter: 0.35, flat: 0.7, bottom: T.leaf3 });
+      });
+    } else if (sp === "kirsche") {
+      /* rotbrauner Stamm mit hellen Querbändern; aufrechte, eiförmige Krone voller weißer Blüten */
+      const h = H * 0.4, r = 0.1 * k + 0.02;
+      b.at({ rz: lean }, () => {
+        trunk(b, r * 1.1, r * 0.8, h, T.bark);
+        for (let i = 0; i < 4 + sz; i++) b.cyl(r * 1.13 - i * 0.004, r * 1.1 - i * 0.004, 0.03, 7, T.mark, { y: 0.15 + i * (h * 0.8) / (4 + sz), notop: true, nobot: true });
+        const tops = [0, 1, 2].map(i => limb(b, h * 0.92, i * 2.1 + v, 1.0, 0.5 * k, r * 0.55, T.bark));
+        const clumps = [[0, H * 0.62, 0, 0.62]].concat(tops.map(p => [p[0] * 1.15, p[1] + 0.22 * k, p[2] * 1.15, 0.42]), [[0, H * 0.84, 0, 0.4]]);
+        b.noise(0.14, () => clumps.forEach(([x, y, z, rr], i) => b.ico(rr * k, i % 2 ? T.leaf2 : T.leaf, { x, y, z, jitter: 0.28, flat: 1.12, bottom: T.leaf3 })));
+        /* Blüten in weißen Tupfen außen auf der Krone – so erkennt man die seltene Wildkirsche schon von Weitem */
+        b.noise(0.08, () => clumps.forEach(([x, y, z, rr], i) => {
+          for (let j = 0; j < 3; j++) {
+            const a = j * 2.1 + i * 1.3 + v, e = 0.15 + j * 0.3, d = rr * k * 0.92;
+            b.ico(0.11 * k + 0.03, j === 1 ? 0xffffff : T.bloom, { x: x + Math.cos(a) * Math.cos(e) * d, y: y + Math.sin(e) * d, z: z + Math.sin(a) * Math.cos(e) * d, flat: 0.6, jitter: 0.3 });
+          }
+        }));
+      });
+    }
+    return b;
+  }
+  /* Kulissenbaum (nicht einzeln gezeichnet, Tausende im Wald): dieselbe Gestalt und Farbe wie
+     tree(sp, 1), aber nur ein paar Dutzend Dreiecke. Höhe = TREE_H[sp]. */
+  function bgTree(sp, v) {
+    v = v || 0;
+    G3.seed(3850 + v * 11 + sp.length * 31);
+    const b = new MB(), T = TREE_C[sp] || TREE_C.buche, H = TREE_H[sp] || 2.8;
+    const tr = (r0, r1, h, c) => b.cyl(r0, r1, h, 5, c, { notop: true, nobot: true });
+    if (sp === "birke") {
+      tr(0.09, 0.04, H * 0.86, T.bark);
+      b.box(0.11, 0.04, 0.03, T.mark, { y: H * 0.36, z: 0.065, nobot: true });
+      b.cyl(0.1, 0.09, H * 0.15, 5, T.base, { notop: true, nobot: true });
+      b.noise(0.14, () => {
+        b.ico(0.4, [T.leaf, T.leaf2, T.leaf3][v % 3], { y: H * 0.6, x: 0.12, jitter: 0.45, flat: 1.5 });
+        b.ico(0.34, T.leaf2, { y: H * 0.84, x: -0.05, z: -0.06, jitter: 0.45, flat: 1.45 });
+        b.cone(0.16, 0.55, 4, T.leaf3, { x: -0.26, y: H * 0.6, rx: Math.PI, nobot: true });
+      });
+    } else if (sp === "kiefer") {
+      tr(0.12, 0.07, H * 0.88, T.bark);
+      tr(0.125, 0.1, H * 0.4, T.base);
+      b.noise(0.12, () => {
+        b.ico(0.62, T.leaf, { y: H * 0.9, jitter: 0.35, flat: 0.45 });
+        b.ico(0.44, v % 2 ? T.leaf2 : T.leaf3, { x: 0.4, y: H * 0.78, z: 0.12 * (v - 1), jitter: 0.35, flat: 0.45 });
+      });
+    } else if (sp === "fichte") {
+      tr(0.09, 0.08, 0.5, T.bark);
+      b.noise(0.1, () => {
+        const L = 3, hb = 0.3, ht = H - hb;
+        for (let i = 0; i < L; i++) {
+          const f = i / L, y = hb + f * ht * 0.82, rad = 0.8 * (1 - f) + 0.16;
+          b.cone(rad, ht * 0.46, 7, i % 2 ? T.leaf2 : T.leaf, { y, a0: i * 0.6 + v, nobot: true });
         }
       });
     } else if (sp === "buche") {
-      const h = 1.7 * k;
-      trunk(b, 0.15 * k, 0.11 * k, h, T.bark);
-      b.box(0.06 * k, 0.06 * k, 0.55 * k, T.bark, { y: h * 0.8, ry: 0.6, rx: -0.6 });
-      b.noise(0.15, () => {
-        b.ico(0.95 * k, T.leaf, { y: h + 0.4 * k, jitter: 0.25, detail: 1 });
-        b.ico(0.62 * k, T.leaf2, { x: 0.6 * k, y: h + 0.15 * k, z: 0.25 * k, jitter: 0.3 });
-        b.ico(0.6 * k, T.leaf, { x: -0.55 * k, y: h + 0.25 * k, z: -0.3 * k, jitter: 0.3 });
+      tr(0.13, 0.1, H * 0.4, T.bark);
+      b.noise(0.12, () => {
+        b.ico(0.86, [T.leaf, T.leaf2, T.leaf][v % 3], { y: H * 0.62, jitter: 0.22, flat: 1.05, bottom: T.leaf3, sx: 1.12, sz: 1.12 });
+        b.ico(0.45, T.leaf3, { x: 0.45 * (v - 1), y: H * 0.45, z: 0.3, jitter: 0.25 });
       });
     } else if (sp === "eiche") {
-      const h = 1.45 * k, big = sz >= 4;
-      trunk(b, (big ? 0.34 : 0.2) * k, (big ? 0.2 : 0.14) * k, h, T.bark);
-      /* knorrige Äste */
-      for (let i = 0; i < 3; i++) b.cyl(0.08 * k, 0.04 * k, 0.9 * k, 5, T.bark, { y: h * 0.85, ry: i * 2.1, rz: 0.9, top: T.bark });
-      if (big) for (let i = 0; i < 5; i++) b.ico(0.16 * k, 0x3f6b2a, { x: Math.cos(i * 1.3) * 0.32 * k, y: 0.1 + rnd() * h * 0.6, z: Math.sin(i * 1.3) * 0.32 * k, flat: 0.5, jitter: 0.4 });
-      b.noise(0.17, () => {
-        b.ico(0.95 * k, T.leaf, { y: h + 0.55 * k, jitter: 0.32, flat: 0.75, detail: 1 });
-        b.ico(0.7 * k, T.leaf2, { x: 0.75 * k, y: h + 0.3 * k, z: 0.3 * k, jitter: 0.35, flat: 0.8 });
-        b.ico(0.7 * k, T.leaf, { x: -0.7 * k, y: h + 0.35 * k, z: -0.35 * k, jitter: 0.35, flat: 0.8 });
-        b.ico(0.6 * k, T.leaf2, { x: 0.1 * k, y: h + 0.4 * k, z: 0.78 * k, jitter: 0.35, flat: 0.8 });
+      tr(0.2, 0.15, H * 0.4, T.bark);
+      b.noise(0.14, () => {
+        b.ico(0.72, T.leaf, { x: -0.38, y: H * 0.7, z: 0.15 * (v - 1), jitter: 0.38, flat: 0.68, bottom: T.leaf3 });
+        b.ico(0.66, v % 2 ? T.leaf2 : T.leaf3, { x: 0.42, y: H * 0.66, z: -0.12, jitter: 0.38, flat: 0.7 });
       });
-      if (big) for (let i = 0; i < 4; i++) b.box(0.5 * k, 0.12, 0.14, T.bark, { x: Math.cos(i * 1.6) * 0.35 * k, y: 0.04, z: Math.sin(i * 1.6) * 0.35 * k, ry: -i * 1.6, rz: 0.12 });
-    } else if (sp === "kirsche") {
-      const h = 1.5 * k;
-      trunk(b, 0.13 * k, 0.09 * k, h, T.bark);
-      for (let i = 0; i < 4; i++) b.cyl(0.135 * k, 0.135 * k, 0.03, 7, T.mark, { y: 0.25 + i * h * 0.22, notop: true, nobot: true });
-      b.noise(0.15, () => {
-        b.ico(0.78 * k, T.leaf, { y: h + 0.35 * k, jitter: 0.3 });
-        b.ico(0.5 * k, T.leaf, { x: 0.45 * k, y: h + 0.15 * k, z: 0.2 * k, jitter: 0.3 });
-      });
-      /* Blüten: daran erkennt man die seltene Wildkirsche schon von Weitem */
-      for (let i = 0; i < 12; i++) {
-        const a = rnd() * 6.28, e = rnd() * 1.2 - 0.2, r = 0.8 * k, q = 0.09 * k + 0.04;
-        b.box(q, q, q, i % 3 ? 0xfbe3ec : 0xffffff, { x: Math.cos(a) * Math.cos(e) * r, y: h + 0.35 * k + Math.sin(e) * r * 0.9, z: Math.sin(a) * Math.cos(e) * r, ry: a, rx: e, c: true });
-      }
+    } else {
+      tr(0.12, 0.09, H * 0.44, T.bark);
+      b.cyl(0.13, 0.13, 0.04, 5, T.mark, { y: H * 0.2, notop: true, nobot: true });
+      b.noise(0.12, () => b.ico(0.66, T.leaf, { y: H * 0.68, jitter: 0.25, flat: 1.2, bottom: T.leaf3 }));
+      for (let i = 0; i < 4; i++) { const a = i * 1.57 + v, e = (i % 2) * 0.5; b.box(0.2, 0.08, 0.2, i % 2 ? 0xffffff : T.bloom, { x: Math.cos(a) * Math.cos(e) * 0.6, y: H * 0.68 + Math.sin(e) * 0.72, z: Math.sin(a) * Math.cos(e) * 0.6, ry: a, nobot: true }); }
     }
     return b;
   }
@@ -170,7 +289,7 @@ const FWM = (() => {
     return b;
   }
 
-  /* Kulissenbäume (nicht fällbar): sehr wenige Dreiecke, weil es Tausende sind */
+  /* alte Kulissenbäume (nur noch für die Insel im See) */
   function bgPine(v) {
     G3.seed(3850 + v);
     const b = new MB(), c = [0x2c6236, 0x336e3d, 0x2f7a3a][v % 3];
@@ -196,14 +315,22 @@ const FWM = (() => {
 
   /* --------------------------- Hof je Ausbaustufe ------------------------ */
   /* Wiese im Hof: Stufe 1 trocken und fleckig, danach sattes Grün */
-  function hofGround(size, inner, stage) {
+  /* v56: G = Fläche (Welt, ganze Kacheln), B = Hof innerhalb des Zauns; außerhalb Wiese mit den
+     Farben des Geländes (ground(x, z) → [r, g, b], gleiche Dreiecke – keine Kante am Rand) */
+  function hofGround(G, B, stage, ground) {
     G3.seed(900);
-    const b = new MB(), h = size / 2;
+    const b = new MB();
     const noise = (x, z) => Math.sin(x * 0.37 + z * 0.21) * 0.5 + Math.sin(x * 0.11 - z * 0.43) * 0.5 + Math.sin((x + z) * 0.9) * 0.15;
-    for (let i = 0; i < size; i++)
-      for (let j = 0; j < size; j++) {
-        const x = -h + i + 0.5, z = -h + j + 0.5, v = noise(x, z);
-        const inside = Math.abs(x) < inner && Math.abs(z) < inner;
+    for (let i = 0; i < G.x1 - G.x0; i++)
+      for (let j = 0; j < G.z1 - G.z0; j++) {
+        const x = G.x0 + i + 0.5, z = G.z0 + j + 0.5, v = noise(x, z);
+        const inside = x > B.x0 && x < B.x1 && z > B.z0 && z < B.z1;
+        if (!inside && ground) {
+          const xa = x - 0.5, za = z - 0.5, xb = xa + 1, zb = za + 1;
+          b.triV([xa, 0, za], [xa, 0, zb], [xb, 0, zb], ground(xa, za), ground(xa, zb), ground(xb, zb));
+          b.triV([xa, 0, za], [xb, 0, zb], [xb, 0, za], ground(xa, za), ground(xb, zb), ground(xb, za));
+          continue;
+        }
         let c;
         if (inside && stage <= 1) c = v > 0.55 ? 0xb5a46a : (i + j) % 2 ? 0x9cbf55 : 0x95b84f;
         else if (inside) c = (i + j) % 2 ? 0x8cc650 : 0x86c04b;
@@ -302,8 +429,9 @@ const FWM = (() => {
       }
     }
     if (!caps) return;
-    /* runde Enden: Halbkreis in Laufrichtung nach außen */
-    [[0, -1], [n - 1, 1]].forEach(([i, dir]) => {
+    /* runde Enden: Halbkreis in Laufrichtung nach außen (caps: true oder [Anfang, Ende]) */
+    [[0, -1], [n - 1, 1]].forEach(([i, dir], e) => {
+      if (Array.isArray(caps) && !caps[e]) return;
       const p = pts[i], nx = N[i][0], nz = N[i][1], l = Math.hypot(nx, nz) || 1, tx = nz / l * dir, tz = -nx / l * dir;
       const seg = 8, rr = [[hw, color, y]].concat(edge ? [[hw * 1.25, edge, y - 0.004]] : []);
       rr.reverse().forEach(([r, col, yy]) => {
@@ -349,7 +477,7 @@ const FWM = (() => {
       const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2;
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
-    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, true));
+    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true));
     /* Laub und Steinchen auf dem Weg */
     for (let i = 0; i < P.length; i++) {
       const p = P[Math.floor(rnd() * P.length)];
@@ -1637,7 +1765,7 @@ const FWM = (() => {
 
   return {
     traderCart, solarVan, item, tool, cargo,
-    TREE_C, TH, tree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
+    TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
