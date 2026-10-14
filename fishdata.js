@@ -40,28 +40,38 @@ Object.assign(FFISH.zander,   { cls: "mittel", cm: [40, 90],  k: 8 });
 Object.assign(FFISH.aal,      { cls: "mittel", cm: [50, 110], k: 1.8 });
 Object.assign(FFISH.hecht,    { cls: "gross",  cm: [50, 120], k: 6.5 });
 Object.assign(FFISH.wels,     { cls: "gross",  cm: [80, 200], k: 7 });
+/* v59: Fischpreis nach Gewicht. ekg = echter Ladenpreis €/kg (Havelland 2026),
+   im Spiel zählt die Hälfte davon (FPRICE_KG). kgAvg = mittleres Fanggewicht,
+   damit alte Lagerbestände ein Gewicht bekommen. Die Gold-Schleie bleibt beim Stückpreis. */
+const FPRICE_KG = 0.5;
+const FFISH_KG = {
+  rotauge: [0.17, 3], rotfeder: [0.21, 3], ukelei: [0.02, 3], barsch: [0.61, 15], forelle: [1.23, 13],
+  karpfen: [4.07, 8], zander: [3.14, 22], aal: [1.30, 28], hecht: [5.87, 13], wels: [28.66, 12], schleie: [1.23, 0]
+};
+Object.keys(FFISH_KG).forEach(id => { FFISH[id].kgAvg = FFISH_KG[id][0]; FFISH[id].ekg = FFISH_KG[id][1]; });
 Object.keys(FFISH).forEach(id => {
   const f = FFISH[id];
+  if (f.ekg) f.v = Math.max(0.3, Math.round(f.kgAvg * f.ekg * FPRICE_KG * 100) / 100);   /* v59: Richtwert = Durchschnittsfisch */
   FITEMS[id] = { n: f.n, sg: f.sg, i: f.i, k: "fisch", a: 1, u: "", pk: "Stück", v: f.v, kg: f.kg, xp: f.xp, st: "fisch" };
 });
 Object.assign(FITEMS, {
   abfall:          { n: "Fischabfälle",       i: "🦴", k: "waste", a: 1,  u: "kg", pk: "Eimer",    v: 0.3, kg: 1,   xp: 0,  st: "fisch" },
-  koeder:          { n: "Reusenköder",        sg: "Reusenköder", i: "🥫", k: "bait", a: 1, u: "", pk: "Dose", v: 0.4, kg: 0.1, xp: 0, st: "fisch" },
+  koeder:          { n: "Reusenköder",        sg: "Reusenköder", i: "🥫", k: "bait", a: 1, u: "", pk: "Dose", v: 0.4, kg: 0.1, xp: 0, st: "koeder" },
   barschfilet:     { n: "Barschfilets",       sg: "Barschfilet", i: "🍣", k: "filet", a: 2, u: "", pk: "Schale", v: 7, kg: 0.4, xp: 6, st: "fisch" },
   forellenfilet:   { n: "Forellenfilets",     sg: "Forellenfilet", i: "🍥", k: "filet", a: 2, u: "", pk: "Schale", v: 9, kg: 0.4, xp: 6, st: "fisch" },
   karpfenblau:     { n: "Karpfen blau",       i: "🍽️", k: "filet", a: 1,  u: "",   pk: "Stück",    v: 18,  kg: 2,   xp: 9,  st: "fisch", sg: "Karpfen blau" },
-  zanderfilet:     { n: "Zanderfilets",       sg: "Zanderfilet", i: "🍱", k: "filet", a: 2, u: "", pk: "Schale", v: 32, kg: 0.6, xp: 16, st: "fisch" },
+  zanderfilet:     { n: "Zanderfilets",       sg: "Zanderfilet", i: "🍱", k: "filet", a: 2, u: "", pk: "Schale", v: 40, kg: 0.6, xp: 16, st: "fisch" },
   raeucherforelle: { n: "Räucherforellen",    sg: "Räucherforelle", i: "🍢", k: "smoke", a: 1, u: "", pk: "Stück", v: 11, kg: 0.4, xp: 8, st: "fisch" },
   raeucheraal:     { n: "Räucheraal",         i: "🍤", k: "smoke", a: 0.5, u: "kg", pk: "Stück",   v: 42,  kg: 0.5, xp: 20, st: "fisch" },
   fischplatte:     { n: "Räucherfisch-Platten", sg: "Räucherfisch-Platte", i: "🥗", k: "smoke", a: 1, u: "", pk: "Platte", v: 28, kg: 1, xp: 14, st: "fisch" },
   konserve:        { n: "Fischkonserven",     sg: "Fischkonserve", i: "🥫", k: "deli", a: 1, u: "", pk: "Dose", v: 4.5, kg: 0.3, xp: 5, st: "fisch" },
   fischkiste:      { n: "Frischfischkisten",  sg: "Frischfischkiste", i: "🧊", k: "deli", a: 1, u: "", pk: "Kiste", v: 26, kg: 6, xp: 10, st: "fisch" },
   edelbox:         { n: "Edelfisch-Boxen",    sg: "Edelfisch-Box", i: "🎁", k: "deli", a: 1, u: "", pk: "Box", v: 120, kg: 3, xp: 40, st: "fisch" },
-  hechtkloesse:    { n: "Hechtklößchen",      i: "🥟", k: "deli", a: 6,  u: "",   pk: "6er-Schale", v: 7, kg: 0.5, xp: 7, st: "fisch", sg: "Hechtklößchen" },
+  hechtkloesse:    { n: "Hechtklößchen",      i: "🥟", k: "deli", a: 6,  u: "",   pk: "6er-Schale", v: 13, kg: 0.5, xp: 7, st: "fisch", sg: "Hechtklößchen" },
   fischbroetchen:  { n: "Fischbrötchen",      sg: "Fischbrötchen", i: "🥪", k: "deli", a: 1, u: "", pk: "Stück", v: 4, kg: 0.2, xp: 4, st: "fisch" },
   /* Berts Köder zum Angeln und was in die Reusen geht */
-  wurm:            { n: "Tauwürmer",          sg: "Tauwurm", i: "🪱", k: "bait", a: 1, u: "", pk: "Stück", v: 0.3, kg: 0.01, xp: 0, st: "fisch" },
-  profikoeder:     { n: "Profi-Köder",        sg: "Profi-Köder", i: "✨", k: "bait", a: 1, u: "", pk: "Stück", v: 12, kg: 0.02, xp: 0, st: "fisch" },
+  wurm:            { n: "Tauwürmer",          sg: "Tauwurm", i: "🪱", k: "bait", a: 1, u: "", pk: "Stück", v: 0.3, kg: 0.01, xp: 0, st: "koeder" },
+  profikoeder:     { n: "Profi-Köder",        sg: "Profi-Köder", i: "✨", k: "bait", a: 1, u: "", pk: "Stück", v: 12, kg: 0.02, xp: 0, st: "koeder" },
   muschel:         { n: "Teichmuscheln",      sg: "Teichmuschel", i: "🐚", k: "fisch", a: 1, u: "", pk: "Stück", v: 0.8, kg: 0.08, xp: 1, st: "fisch" },
   krabbe:          { n: "Wollhandkrabben",    sg: "Wollhandkrabbe", i: "🦀", k: "fisch", a: 1, u: "", pk: "Stück", v: 3, kg: 0.2, xp: 3, st: "fisch" },
   krebs:           { n: "Edelkrebse",         sg: "Edelkrebs", i: "🦞", k: "fisch", a: 1, u: "", pk: "Stück", v: 6, kg: 0.12, xp: 6, st: "fisch" }
@@ -115,6 +125,29 @@ FSIZE.pot = [2, 2];
 FFIXED.add("pot");
 /* Bert Flomann: Würmer nach dem Turnier, Profi-Köder später */
 const FBERT = { worms: { n: 10, price: 3 }, lures: { n: 5, price: 60, t: 120 }, lureNeed: { rod: 2, mittel: 10 } };
+/* v59: Spezialköder – je Art einer. Bert entwickelt ihn aus einem Fisch, den du
+   selbst gefangen hast (dev Minuten), danach baut er 5 Stück aus 2 Tauwürmern.
+   Preis = 5 Stück. Große Arten brauchen auch damit die Raubfischrute. Keiner für die
+   Weißfische (Rotauge, Rotfeder, Ukelei) und die Gold-Schleie – Bert meldet sich bei denen nicht. */
+const FSPEC_BAIT = { barsch: 3, forelle: 5, aal: 11, karpfen: 10, zander: 22, hecht: 24, wels: 110 };
+const FSPEC_DEV = 300;
+/* Dauerbestellung Tauwürmer: Bert hält so viele vorrätig */
+const FBERT_KEEP = [0, 20, 50, 100];
+Object.keys(FSPEC_BAIT).forEach(id => {
+  const f = FFISH[id], k = "sk_" + id;
+  FITEMS[k] = { n: "Spezialköder " + f.sg, sg: "Spezialköder " + f.sg, i: "🎯", k: "bait", a: 1, u: "", pk: "Stück", v: FSPEC_BAIT[id] / 5, kg: 0.01, xp: 0, st: "koeder" };
+  FBAITS[k] = { item: k, n: f.sg + "-Köder", i: "🎯", mix: {}, spec: id, size: f.cls === "gross" ? 0.5 : 0.25, per: 1, tour: true, rod: f.cls === "gross" ? 3 : 0 };
+});
+/* Berts Werkstatt im alten Kombi: keine Hof-Maschine (kein Personal, kein Stufen-Bonus) */
+FSIZE.bert_car = [2, 3];
+FFIXED.add("bert_car");
+FMACHINES.bert_car = { n: "Berts alter Kombi", i: "🚙", bert: true, hof: false, recipes: [
+  { id: "wurm", in: {}, out: FBERT.worms.n, t: 20, lv: 15, cost: FBERT.worms.price, costT: "Bert · Tauwürmer",
+    ok: () => { const U = angelS(); return !!(U && U.tour.done); }, why: "erst nach dem Turnier" },
+  { id: "profikoeder", in: {}, out: FBERT.lures.n, t: FBERT.lures.t, lv: 15, cost: FBERT.lures.price, costT: "Bert · Profi-Köder",
+    ok: () => bertLureOk(), why: "Spinnrute und " + FBERT.lureNeed.mittel + " mittlere Fische" }
+].concat(Object.keys(FSPEC_BAIT).map(id => ({ id: "sk_" + id, in: { wurm: 2 }, out: 5, t: 60, lv: 15, cost: FSPEC_BAIT[id], costT: "Bert · Spezialköder",
+  ok: () => specDone(id), hide: () => !specDone(id), why: "erst entwickeln" }))) };
 /* Angler-Turnier: fünf Leute aus der Gegend, du richtest aus (100 € Kosten,
    200 € Preisgeld). Es gewinnt das meiste Gesamtgewicht nach 26 Minuten.
    Alle stehen gleichrangig da; die Startreihenfolge wird je Turnier gelost. */
@@ -136,6 +169,9 @@ const FKEEP_FISH = ["Bio-Aquakultur", "viel Raum", "artgerecht", "eng", "zu dich
 FSTORE.fisch = { n: "Kühlkiste", i: "🧊", the: "Die Kühlkiste", base: 24, step: 16, cost: [150, 350, 700, 1200, 1900, 2800],
   empty: "Leer. Angle vom Steg oder fahr mit dem Boot raus – der Fang kommt hierher." };
 const FFISH_STORE_BONUS = { f_lager: 40, f_kuehl: 60 };
+/* v59: Köder liegen in einer eigenen Köderkiste – sie belegen keine Kühlkisten-Plätze mehr */
+FSTORE.koeder = { n: "Köderkiste", i: "🪱", the: "Die Köderkiste", base: 60, step: 40, cost: [100, 250, 500],
+  empty: "Leer. Tauwürmer, Profi- und Spezialköder macht Bert in seinem alten Kombi, Reusenköder die Fischerhütte." };
 
 /* ------------------------------ Gebäude ---------------------------------
    Werden an festen Plätzen am Ufer gebaut: Holz aus dem Sägewerk + Geld,
@@ -152,9 +188,9 @@ const FFISHERY = {
   f_rauch:  { n: "Räucherei",    i: "🔥", lv: 17, x: 27,  z: 24.5, sz: [3, 3], need: { bretter: 4, balken: 2, bohlen: 2 },    cost: 600,
               d: "Räuchert mit Brennholz aus dem Sägewerk: Räucherforelle, Räucheraal, Fischplatten." },
   f_kuehl:  { n: "Kühlhaus",     i: "❄️", lv: 18, x: -16, z: 25,   sz: [4, 4], need: { platten: 6, bauholz: 2, tueren: 1 },   cost: 2200,
-              d: "+60 Plätze. Edelfisch-Boxen und Hechtklößchen für die feinen Restaurants." },
+              d: "+60 Plätze. Edelfisch-Boxen, Hechtklößchen und Fischbrötchen." },
   f_markt:  { n: "Fischmarkt",   i: "🏪", lv: 19, x: 35,  z: 23.5, sz: [5, 3], need: { bauholz: 4, dielen: 4, zaun: 2 },      cost: 1800,
-              d: "Verkaufsstand direkt am See: Fisch bringt hier 15 % mehr. Dazu Fischbrötchen." }
+              d: "Verkaufsstand direkt am See wie der Stand an der Straße: Fisch und Fischwaren bringen hier 15 % mehr." }
 };
 const FFISHERY_ORDER = ["f_steg", "f_huette", "f_boot", "f_lager", "f_rauch", "f_kuehl", "f_markt"];
 Object.keys(FFISHERY).forEach(t => { FSIZE[t] = FFISHERY[t].sz; FFIXED.add(t); });
@@ -181,9 +217,8 @@ Object.assign(FMACHINES, {
   ] },
   f_kuehl: { n: "Kühlhaus", i: "❄️", fish: true, recipes: [
     { id: "hechtkloesse", in: { hecht: 1, ei: 1, brot: 1 },               out: 3, t: 50, lv: 18 },
-    { id: "edelbox",      in: { zanderfilet: 1, raeucheraal: 1, kisten: 1 }, out: 1, t: 60, lv: 18 }
-  ] },
-  f_markt: { n: "Fischmarkt", i: "🏪", fish: true, recipes: [
+    { id: "edelbox",      in: { zanderfilet: 1, raeucheraal: 1, kisten: 1 }, out: 1, t: 60, lv: 18 },
+    /* v59: Fischbrötchen kommen aus dem Kühlhaus – der Fischmarkt ist ein reiner Verkaufsstand */
     { id: "fischbroetchen", in: { barschfilet: 1, brot: 1 }, out: 4, t: 15, lv: 19 }
   ] }
 });

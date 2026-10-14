@@ -374,11 +374,11 @@ function staffMachThe(t) {
   const n = FMACHINES[t].n, den = ["bakery", "saegebock", "kessel", "spalter", "f_markt"], das = ["f_lager", "f_kuehl"];
   return (den.includes(t) ? "den " : das.includes(t) ? "das " : "die ") + n;
 }
-function staffMachRole(o) { const M = FMACHINES[o.t]; return M.fish ? "fischwirt" : (M.saw || o.t === "saegebock") ? "saeger" : "hofmeister"; }
+function staffMachRole(o) { const M = FMACHINES[o.t]; return M.bert ? "bert" : M.fish ? "fischwirt" : (M.saw || o.t === "saegebock") ? "saeger" : "hofmeister"; }
 function staffMachines(role) {
   return S.farm.objs.filter(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || (o.area && !farmAreaOpen(o.area))) return false;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return false;
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return false;
     return staffMachRole(o) === role;
   });
@@ -388,7 +388,7 @@ function staffRecipeFor(id, role) {
   let best = null;
   S.farm.objs.forEach(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || (o.area && !farmAreaOpen(o.area))) return;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return;
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return;
     const mr = staffMachRole(o);
     if (role && mr !== role) return;
@@ -408,7 +408,9 @@ function staffMaker(id) {
   if (id === "aeste" || Object.keys(FSPECIES).some(sp => FSPECIES[sp].log === id)) return { role: "holzfaeller" };
   const m = staffRecipeFor(id);
   if (m) return { role: m.role };
-  if (FITEMS[id] && FITEMS[id].st === "fisch" && typeof FGROUNDS !== "undefined" && FGROUNDS[0].fish[id]) return { role: "fischer" };
+  /* v58: jede Fischart irgendeines Fanggrunds und die Reusentiere – nicht die Köder (auch Lager „fisch“) */
+  if (typeof FGROUNDS !== "undefined" && FGROUNDS.some(g => g.fish[id])) return { role: "fischer" };
+  if (typeof FPOTS !== "undefined" && FPOTS[id]) return { role: "fischer" };
   return null;
 }
 
@@ -533,7 +535,13 @@ function staffOptions(role) {
     if ((T0.axe || 1) >= 2) add(FSPECIES.eiche.log);
     add("aeste");
   } else if (role === "fischer") {
-    if (typeof FGROUNDS !== "undefined") Object.keys(FGROUNDS[0].fish).forEach(add);
+    /* v58: alle Arten aller Fanggründe (gesperrt, wenn das Boot fehlt) und die Reusentiere –
+       vorher landete die Listenposition von forEach als „gesperrt“ in add() */
+    if (typeof FGROUNDS !== "undefined") {
+      const ids = [...new Set(FGROUNDS.flatMap(g => Object.keys(g.fish)))];
+      ids.forEach(id => add(id, !FGROUNDS.some(g => g.fish[id] && farmGroundOk(g))));
+    }
+    if (typeof FPOTS !== "undefined") Object.keys(FPOTS).forEach(k => add(k, !(farmPotOk(k) && staffPotsOn())));
   } else if (role === "fahrer") {
     farmOrders().filter(o => !o.farm.taken).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay).forEach(o => add("order:" + o.id));
   }
@@ -729,10 +737,10 @@ function staffTaskJob(s, T) {
       return null;
     }
     case "fischer": {
-      /* welcher Fisch anbeißt, ist Glück – kommt lange keiner, verfällt der Auftrag */
-      const j = staffFischerJob(s);
+      /* v58: gezielt für die bestellte Art – bester Köder, bester Fanggrund; was beißt, bleibt Glück */
+      const j = staffFischerJob(s, item);
       if (j) { T.wait = ""; return j; }
-      T.wait = "Kühlkiste voll";
+      T.wait = s.fwhy || "Kühlkiste voll";
       return null;
     }
     case "fahrer": {
@@ -853,17 +861,38 @@ function staffFellerJob(s, want) {
   const t = cand[Math.floor(Math.random() * Math.min(4, cand.length))];
   return { k: "fell", tid: t.id, what: "fällt eine " + FSPECIES[t.sp].n };
 }
-function staffFischerJob(s) {
+/* v58: Der Fischer bleibt am Ende des Stegs (auf den Planken, Blick aufs Wasser) – die Reusen
+   bearbeitet er von dort aus, ohne übers Wasser zu laufen */
+function staffPotsOn() { return S.farm.objs.some(o => o.t === "pot" && (!o.area || farmAreaOpen(o.area))); }
+function staffStegSpot(steg) {
+  const [cx, cz] = farmCenter(steg), [, d] = farmSize(steg);
+  return [cx, cz + d / 2 - 0.6, cx, cz + d / 2 + 3];
+}
+function staffFischerJob(s, target) {
+  s.fwhy = "";
   const steg = farmObj1("f_steg");
-  if (!steg) return null;
+  if (!steg) { s.fwhy = "erst den Steg bauen"; return null; }
+  const at = staffStegSpot(steg);
   const pots = S.farm.objs.filter(o => o.t === "pot" && (!o.area || farmAreaOpen(o.area)));
   const room = farmStoreCap("fisch") - farmStoreUsed("fisch");
-  const ripe = pots.find(o => potState(o) === "ripe");
-  if (ripe && room >= 4) return { k: "haul", oid: ripe.id, what: "leert eine Reuse" };
-  const empty = pots.find(o => potState(o) === "empty");
-  if (empty && farmBaitItem() && Object.keys(FPOTS).some(farmPotOk)) return { k: "bait", oid: empty.id, what: "beködert eine Reuse" };
-  if (room >= 2) return { k: "fish", oid: steg.id, what: "angelt vom Steg" };
-  return null;
+  const potT = target && FPOTS[target];
+  if (!target || potT) {
+    /* Reusen: bei einem Auftrag nur die, in denen die bestellte Art stecken kann */
+    const ripe = pots.find(o => potState(o) === "ripe" && (!potT || (FPOTS[o.kind] && FPOTS[o.kind].mix[target])));
+    if (ripe && room >= 4) return { k: "haul", oid: ripe.id, at, what: "leert eine Reuse" };
+    const kind = potT ? Object.keys(FPOTS).filter(k => farmPotOk(k) && FPOTS[k].mix[target]).sort((a, b) => FPOTS[b].mix[target] - FPOTS[a].mix[target])[0] : null;
+    const empty = pots.find(o => potState(o) === "empty");
+    if (empty && farmBaitItem() && (potT ? kind : Object.keys(FPOTS).some(farmPotOk))) return { k: "bait", oid: empty.id, kind, at, what: "beködert eine Reuse" };
+    if (potT) {
+      s.fwhy = !pots.length ? "keine Reuse am Steg" : !kind ? "dafür fehlt die Reusenstufe" : !farmBaitItem() ? "kein Reusenköder" : room < 4 ? "Kühlkiste voll" : "Reusen liegen noch im Wasser";
+      return null;
+    }
+  }
+  if (room < 2) { s.fwhy = "Kühlkiste voll"; return null; }
+  const P = staffFishPlan(target);
+  if (P.why) { s.fwhy = P.why; return null; }
+  const G = FGROUNDS.find(g => g.id === P.gid);
+  return { k: "fish", oid: steg.id, gid: P.gid, bait: P.bait, at, what: G && G.boat ? "angelt (" + G.n + ")" : "angelt vom Steg" };
 }
 function staffFahrerJob(s) {
   /* fertige Bestellungen: angenommene zuerst, dann die lukrativste */
@@ -993,18 +1022,22 @@ function staffDo(s, j) {
     }
     case "haul": case "bait":
       /* Reuse hochziehen und gleich wieder beködert runterlassen */
-      if (o && j.k === "haul" && potState(o) === "ripe") { const r = farmHaul(o); if (r) (r.got || [{ sp: r.id }]).forEach(g => gain(g.sp, 1)); }
-      if (o && potState(o) === "empty" && farmBaitItem()) { const k = o.last && farmPotOk(o.last) ? o.last : Object.keys(FPOTS).find(farmPotOk); if (k) farmBait(o, k); }
+      if (o && j.k === "haul" && potState(o) === "ripe") { const r = farmHaul(o, true); if (r) (r.got || [{ sp: r.id }]).forEach(g => gain(g.sp, 1)); }
+      if (o && potState(o) === "empty" && farmBaitItem()) { const k = j.kind && farmPotOk(j.kind) ? j.kind : o.last && farmPotOk(o.last) ? o.last : Object.keys(FPOTS).find(farmPotOk); if (k) farmBait(o, k); }
       break;
     case "fish": {
-      const odds = farmFishOdds("steg"), id = farmWPick(Object.keys(odds), x => odds[x]);
-      if (id && FITEMS[id] && farmRoom(id) > 0) {
-        farmAdd(id, 1, 2 + Math.floor(Math.random() * 3));
-        F.stats.species = F.stats.species || {};
-        F.stats.species[id] = (F.stats.species[id] || 0) + 1; F.stats.catch = (F.stats.catch || 0) + 1;
-        farmXP(FITEMS[id].xp); farmEvent("catch");
-        gain(id, 1);
-      }
+      /* v58: ein Wurf = ein Köder; Art, Länge, Gewicht und Sterne wie beim Spieler */
+      if (farmStoreCap("fisch") - farmStoreUsed("fisch") < 1 || typeof staffFishCatch !== "function") break;
+      const c = staffFishCatch(j.gid || "steg", j.bait || "mais");
+      if (!c) break;
+      const id = c.id;
+      farmAdd(id, 1, c.q, c.s.kg);
+      /* v59: eigene Statistik – Notizbuch-Aufgaben zählen nur deine Fänge */
+      F.stats.staffSpecies = F.stats.staffSpecies || {};
+      F.stats.staffSpecies[id] = (F.stats.staffSpecies[id] || 0) + 1; F.stats.staffCatch = (F.stats.staffCatch || 0) + 1;
+      farmXP(FITEMS[id].xp);
+      angelLog(id, c.s, c.q, null, true);
+      gain(id, 1);
       break;
     }
     case "send": {
@@ -1075,7 +1108,7 @@ function staffIdleWhy(s) {
     }
     case "hofmeister": case "saeger": case "fischwirt": return staffMachines(s.role).length ? "Lager reicht oder Zutaten fehlen" : "noch keine Maschinen";
     case "holzfaeller": return "kein ausgewachsener Baum oder Holzplatz voll";
-    case "fischer": return farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen";
+    case "fischer": return s.fwhy || (farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen");
     case "fahrer": return "keine fertige Bestellung oder kein Fahrzeug am Hof";
     case "mechaniker": return typeof pvSun === "function" && pvSun() ? "Sonnenstrom läuft – hilft, wo es klemmt" : "Kessel läuft – hilft, wo es klemmt";
   }

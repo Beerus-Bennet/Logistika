@@ -1167,10 +1167,25 @@ const FFM = (() => {
       else m.cyl(0.03, 0.03, 0.012, 8, 0xb0b4b8, { y: 0.08, x: -0.13 });
     });
   }
+  /* v59: Berts Spezialköder – offene Köderdose, Etikett und Lockteig in den Farben
+     der Art, davor die Art in klein, damit man sie auf einen Blick erkennt */
+  function specBait(b, sp) {
+    const F = FISH[sp], paste = cmix(F.side, 0x7a4a2a, 0.35);
+    b.at({ x: 0.16, z: -0.12, s: 0.85 }, m => {
+      m.cyl(0.15, 0.15, 0.2, 14, 0x9aa0a6, { smooth: true, top: 0x5a4030 });
+      m.cyl(0.152, 0.152, 0.1, 14, F.side, { y: 0.05 });
+      m.cyl(0.153, 0.153, 0.02, 14, F.back, { y: 0.15 });
+      m.cyl(0.035, 0.035, 0.01, 10, 0xd8332b, { rx: Math.PI / 2, y: 0.1, z: 0.152 });
+      for (let k = 0; k < 6; k++) m.ico(0.04, k % 2 ? paste : cmix(paste, 0xffffff, 0.25), { x: (rnd() - 0.5) * 0.16, y: 0.21, z: (rnd() - 0.5) * 0.16, jitter: 0.4 });
+    });
+    fishLie(b, sp, { x: -0.04, z: 0.16, ry: 0.25, s: 0.5 });
+    return b;
+  }
   function fishItem(id) {
     G3.seed(7300 + id.length * 31 + id.charCodeAt(0) * 7 + id.charCodeAt(id.length - 1));
     const b = new MB();
     if (FISH[id]) return fishLie(b, id);
+    if (id.startsWith("sk_") && FISH[id.slice(3)]) return specBait(b, id.slice(3));
     switch (id) {
       case "abfall":   /* Eimer mit Gräten und Köpfen */
         b.cyl(0.22, 0.27, 0.42, 14, 0x9aa4ac, { smooth: true, top: 0x5a5048 });
@@ -1206,8 +1221,37 @@ const FFM = (() => {
         });
         for (let k = 0; k < 4; k++) b.box(0.02, 0.02, 0.02, 0xfff6a0, { x: (rnd() - 0.5) * 0.4, y: 0.22 + rnd() * 0.1, z: (rnd() - 0.5) * 0.2, ry: 0.78, rx: 0.78 });
         return b;
-      case "barschfilet": case "forellenfilet": case "zanderfilet": {
-        const meat = id === "forellenfilet" ? 0xf2946e : id === "barschfilet" ? 0xe8c2ae : 0xe2cec2, skin = id === "forellenfilet" ? 0x8a8a6a : id === "barschfilet" ? 0x6a7a3a : 0x7a8680;
+      case "barschfilet": {
+        /* v58: Barsch auf dem Holzbrett – rosiges Fleisch, grün-goldene Haut mit dunklen Querstreifen */
+        const meat = 0xeeb3a2, skin = 0x7a8a3a;
+        b.box(0.76, 0.05, 0.5, 0xb88450, { top: 0xc9955a });
+        b.at({ y: 0.05 }, m => {
+          [[-0.02, -0.09, 0.15, 0.52], [0.04, 0.1, -0.12, 0.48]].forEach(([x, z, ry, l]) => {
+            filet(m, x, z, ry, meat, skin, l);
+            /* Hautstreifen sichtbar an der Kante, mit den Barsch-Binden */
+            m.at({ x, z, ry }, k => { k.box(l * 0.95, 0.02, 0.03, skin, { y: 0.02, z: 0.085 }); for (let s = 0; s < 4; s++) k.box(0.035, 0.024, 0.034, 0x2e3a1e, { x: -l * 0.3 + s * l * 0.2, y: 0.022, z: 0.086 }); });
+          });
+          lemon(m, 0.29, 0.17, 0.03); herbs(m, -0.27, 0.15, 0.03, 3);
+        });
+        return b;
+      }
+      case "zanderfilet": {
+        /* v58: Zander auf dunkler Schale – fast weißes Fleisch, silbergraue Haut, Zitronenscheiben */
+        const meat = 0xf8f2ea, skin = 0x9aa4a8;
+        b.box(0.74, 0.06, 0.48, 0x2e3a40, { top: 0x37454c });
+        b.box(0.66, 0.01, 0.4, 0x24302a, { y: 0.06 });
+        b.at({ y: 0.04 }, m => {
+          [[-0.02, -0.08, 0.15, 0.56], [0.04, 0.1, -0.12, 0.5]].forEach(([x, z, ry, l]) => {
+            filet(m, x, z, ry, meat, skin, l);
+            m.at({ x, z, ry }, k => k.box(l * 0.95, 0.02, 0.03, skin, { y: 0.02, z: 0.085 }));
+          });
+          [0.24, 0.3].forEach((x, i) => m.cyl(0.055, 0.055, 0.012, 10, 0xf6dc4a, { x, y: 0.035 + i * 0.006, z: 0.16 - i * 0.03, top: 0xfff2a0 }));
+          herbs(m, -0.27, 0.15, 0.03, 3);
+        });
+        return b;
+      }
+      case "forellenfilet": {
+        const meat = 0xf2946e, skin = 0x8a8a6a;
         /* dunkle Schale, damit die hellen Filets leuchten */
         b.box(0.74, 0.06, 0.48, 0x2e3a40, { top: 0x37454c });
         b.box(0.66, 0.01, 0.4, 0x24302a, { y: 0.06 });
@@ -1324,7 +1368,85 @@ const FFM = (() => {
     return null;
   }
 
+  /* v59: Berts alter Kombi – älterer Kombi mit langem Dach, Chromstoßstangen,
+     Rundscheinwerfern und Dachreling. Erinnert nur an einen Mercedes, kein Logo
+     (vorn nur eine schlichte runde Plakette). Länge entlang z, vorn = +z. */
+  function bertCar() {
+    G3.seed(731);
+    const b = new MB();
+    const P = 0x2f5a46, PD = 0x234536, CH = 0xc9ced3, CHD = 0x8f959b, TY = 0x1d1d20, GL = 0x8fb8cc, IN = 0x3a3330;
+    /* im Maßstab der anderen Fahrzeuge (etwa 2,4 lang) */
+    b.at({ s: 0.62 }, () => {
+      /* Räder mit Chrom-Radkappen */
+      [[0.74, 1.15], [-0.74, 1.15], [0.74, -1.2], [-0.74, -1.2]].forEach(([x, z]) => b.at({ x, y: 0.3, z }, () => {
+        b.cyl(0.3, 0.3, 0.2, 12, TY, { rz: Math.PI / 2, x: 0.1 * Math.sign(x), top: 0x3a3a3e });
+        b.cyl(0.16, 0.16, 0.21, 10, CH, { rz: Math.PI / 2, x: 0.105 * Math.sign(x), top: CH });
+      }));
+      /* Unterbau, Radläufe dunkel */
+      b.box(1.56, 0.5, 3.7, P, { y: 0.28 });
+      b.box(1.58, 0.06, 3.72, PD, { y: 0.26 });
+      [[1.15], [-1.2]].forEach(([z]) => { b.box(1.6, 0.12, 0.74, PD, { y: 0.58, z }); });
+      /* Motorhaube, leicht abfallend, mit Längssicke */
+      b.box(1.5, 0.1, 1.05, P, { y: 0.78, z: 1.28, rx: 0.06 });
+      b.box(0.04, 0.02, 1.0, PD, { y: 0.885, z: 1.28, rx: 0.06 });
+      /* langer Aufbau bis ganz hinten (Kombi) */
+      b.box(1.46, 0.08, 2.55, P, { y: 0.78, z: -0.52 });
+      b.box(1.4, 0.48, 2.45, GL, { y: 0.86, z: -0.55 });
+      /* Säulen und Dach */
+      [[0.66], [-0.66]].forEach(([x]) => {
+        b.box(0.08, 0.5, 0.1, P, { x, y: 0.85, z: 0.66, rx: -0.42 });
+        b.box(0.08, 0.48, 0.1, P, { x, y: 0.86, z: -0.1 });
+        b.box(0.08, 0.48, 0.12, P, { x, y: 0.86, z: -0.95 });
+        b.box(0.1, 0.48, 0.14, P, { x, y: 0.86, z: -1.72 });
+      });
+      b.box(1.46, 0.08, 2.6, P, { y: 1.33, z: -0.5 });
+      /* Frontscheibe schräg, Heckklappe senkrecht */
+      b.box(1.3, 0.5, 0.04, GL, { y: 0.84, z: 0.72, rx: -0.42 });
+      b.box(1.34, 0.42, 0.04, GL, { y: 0.88, z: -1.79 });
+      b.box(1.46, 0.36, 0.06, P, { y: 0.42, z: -1.82 });
+      /* Innenraum durch die Scheiben: dunkle Sitze */
+      b.box(1.2, 0.3, 0.4, IN, { y: 0.8, z: 0.15 });
+      b.box(1.2, 0.3, 0.4, IN, { y: 0.8, z: -0.6 });
+      /* Dachreling mit Stützen, darauf eine Angelrute */
+      [[0.6], [-0.6]].forEach(([x]) => {
+        b.box(0.04, 0.04, 2.3, CH, { x, y: 1.47, z: -0.5 });
+        [0.55, -1.55].forEach(z => b.box(0.05, 0.08, 0.06, CHD, { x, y: 1.41, z }));
+      });
+      b.box(0.03, 0.03, 2.9, 0x6b4a2b, { x: 0.35, y: 1.52, z: -0.3 });
+      b.box(0.08, 0.08, 0.1, 0x2b2b30, { x: 0.35, y: 1.5, z: -1.55 });
+      /* Chromstoßstangen vorn und hinten */
+      b.box(1.66, 0.13, 0.12, CH, { y: 0.34, z: 1.88 });
+      b.box(1.66, 0.13, 0.12, CH, { y: 0.34, z: -1.9 });
+      b.box(0.12, 0.13, 0.3, CH, { x: 0.78, y: 0.34, z: 1.76 }); b.box(0.12, 0.13, 0.3, CH, { x: -0.78, y: 0.34, z: 1.76 });
+      /* Kühlergrill hochkant mit Chromrahmen, Plakette als schlichte Scheibe */
+      b.box(0.5, 0.3, 0.05, CH, { y: 0.48, z: 1.83 });
+      b.box(0.42, 0.24, 0.05, 0x2a2c30, { y: 0.51, z: 1.845 });
+      for (let i = -2; i <= 2; i++) b.box(0.02, 0.22, 0.02, CHD, { x: i * 0.08, y: 0.52, z: 1.87 });
+      b.cyl(0.06, 0.06, 0.03, 10, CH, { rx: Math.PI / 2, y: 0.85, z: 1.82 });
+      /* Rundscheinwerfer mit Chromring, Blinker */
+      [[0.52], [-0.52]].forEach(([x]) => {
+        b.cyl(0.13, 0.13, 0.04, 12, CH, { rx: Math.PI / 2, x, y: 0.55, z: 1.84 });
+        b.cyl(0.1, 0.1, 0.05, 12, 0xfff3c4, { rx: Math.PI / 2, x, y: 0.55, z: 1.85 });
+        b.box(0.14, 0.06, 0.04, 0xf2a03a, { x: x * 1.38, y: 0.43, z: 1.84 });
+      });
+      /* Rückleuchten, Kennzeichen hell ohne Schrift */
+      b.box(0.2, 0.26, 0.04, 0xb8322a, { x: 0.62, y: 0.5, z: -1.86 }); b.box(0.2, 0.26, 0.04, 0xb8322a, { x: -0.62, y: 0.5, z: -1.86 });
+      b.box(0.5, 0.12, 0.03, 0xeeeeea, { y: 0.48, z: -1.87 });
+      b.box(0.5, 0.12, 0.03, 0xeeeeea, { y: 0.3, z: 1.95 });
+      /* Zierleiste und Türgriffe */
+      [[0.79], [-0.79]].forEach(([x]) => {
+        b.box(0.02, 0.04, 3.3, CH, { x, y: 0.55, z: 0 });
+        b.box(0.02, 0.4, 0.02, PD, { x, y: 0.36, z: 0.3 });
+        b.box(0.02, 0.4, 0.02, PD, { x, y: 0.36, z: -0.55 });
+        [0.2, -0.65].forEach(z => b.box(0.03, 0.03, 0.12, CH, { x: x * 1.01, y: 0.68, z }));
+        b.box(0.05, 0.08, 0.1, PD, { x: x * 1.05, y: 0.82, z: 0.55 });
+      });
+    });
+    return b;
+  }
+
   return {
+    bertCar,
     K, WY, KAI_Z, ring, bollard, crate,
     fhouse, kuehl, speicher, fishhalle, smoke, SMOKE_CHIMNEY, feedk, deli, smith, SMITH_CHIMNEY,
     kutterPier, kutterBoat, steg, angler, rod, ROD_TIP, bobber, lineSeg,

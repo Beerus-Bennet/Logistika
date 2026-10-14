@@ -39,7 +39,7 @@ const NPC_LOOK = {
 Object.assign(OBJ_H, {
   sw_halle: 4.6, sw_lager: 2.6, sw_buero: 2.8, sw_lkw: 2.2, kessel: 3.0, spalter: 1.4, hobel: 1.3, trocken: 2.4, verpack: 1.5,
   schleif: 1.3, fraese: 2.0, saegebock: 1.1, junk: 0.9, stall: 1.8, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
-  f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4
+  f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4, bert_car: 1.1
 });
 /* Rauch über arbeitenden Gebäuden */
 Object.assign(CHIMNEYS, {
@@ -557,6 +557,7 @@ function worldObjMesh(o) {
     case "f_rauch": return fmesh("smoke", FFM.smoke);
     case "f_kuehl": return fmesh("kuehl", FFM.kuehl);
     case "f_markt": return fmesh("fMarkt", FWM.fMarkt);
+    case "bert_car": return fmesh("bertCar", FFM.bertCar);
   }
   return null;
 }
@@ -680,6 +681,8 @@ const ITEM_3D = new Set(["birke", "kiefer", "buche", "eiche", "edelholz", "aeste
   "barsch", "forelle", "karpfen", "hecht", "zander", "aal", "wels", "schleie", "rotauge", "rotfeder", "ukelei",
   "abfall", "koeder", "barschfilet", "forellenfilet", "karpfenblau", "zanderfilet", "raeucherforelle", "raeucheraal", "fischplatte",
   "konserve", "fischkiste", "edelbox", "hechtkloesse", "fischbroetchen", "wurm", "profikoeder", "muschel", "krabbe", "krebs"]);
+/* v59: Berts Spezialköder (Köderdose mit der Art davor) */
+if (typeof FSPEC_BAIT !== "undefined") Object.keys(FSPEC_BAIT).forEach(id => ITEM_3D.add("sk_" + id));
 function itemIc(id, lock) {
   const it = FITEMS[id];
   if (!it) return "";
@@ -1605,7 +1608,40 @@ function worldPopHTML(o, P) {
   }
   return "";
 }
+/* v59: Obstbaum fällen – gleiches Axt-Minispiel wie im Wald (Hilfsbaum nur für die
+   Anzeige), reife Früchte vorher ernten, dann verschwindet der Baum: 2 Bündel Äste,
+   Kirschbaum zusätzlich 1 Edelholzstamm. Der Platz im Raster und im Limit wird frei. */
+function fruitFell(o) {
+  if (!o || o.t !== "tree" || FV.felling) return;
+  const F = S.farm, Z = FTREE_SIZE[1];
+  if (treeRipe(o) && !doPick(o)) return;
+  const got = [["aeste", 2]].concat(o.kind === "kirsche" ? [["edelholz", 1]] : []);
+  if (got.some(([id, n]) => farmRoom(id) < n)) { farmFull("holz"); return toast("🪵 Holzplatz voll – verkauf Holz oder bau ihn aus.", "warn"); }
+  if (farmSta() < Z.sta) { openFood(); return toast("💪 Zu erschöpft – erst eine Brotzeit.", "warn"); }
+  closeFarmPop();
+  const [cx, cz] = farmCenter(o), T = treeDef(o);
+  const t = { id: "fruit" + o.id, sp: o.kind === "kirsche" ? "kirsche" : "birke", n: T.n, sz: 1, x: cx, z: cz, dmg: 0 };
+  const port = innerHeight > innerWidth;
+  farmFocusXZ(cx + (port ? 2.6 : 1.2), cz + (port ? 2.6 : 1.2), port ? 23 : 19, 500);
+  FV.felling = true;
+  MG.open("axe", { tree: t }, res => {
+    FV.felling = false;
+    if (!res || !res.ok || !F.objs.includes(o)) { save(); return; }
+    F.objs = F.objs.filter(x => x !== o);
+    (F.staff || []).forEach(s => { const j = s.job; if (j && (j.oid === o.id || (j.oids || []).includes(o.id))) s.job = null; });
+    got.forEach(([id, n]) => farmAdd(id, n, 3));
+    farmXP(4);
+    farmEvent("fell:fruit");
+    FV.R.burst({ x: cx, y: 1.2, z: cz, n: 26, col: [[0.45, 0.72, 0.3, 1], [0.36, 0.62, 0.25, 1], [0.86, 0.66, 0.4, 1]], speed: 2.4, up: 3, size: 0.09, shape: 1, life: 1.1 });
+    const p = FV.R.project(cx, 0.8, cz);
+    if (p) { got.forEach(([id, n], i) => flyItem(id, p[0], p[1], storeBtn(), 300 + i * 120, n)); xpFly(p[0], p[1] - 10, 4, 400); }
+    sfx("thud");
+    toast("🪓 " + T.n + " gefällt – der Platz ist frei.", "ok");
+    farmSyncScene(); save(); renderFarmUI();
+  });
+}
 function worldPopAct(a, o) {
+  if (a === "fell") { fruitFell(o); return; }
   if (a === "clear") {
     const [x, y] = objScreen(o);
     puff(o);
@@ -1722,10 +1758,16 @@ function worldTags() {
       if (sold) want.push(["st" + o.id, cx, objH(o) + 0.4, cz, "💰<b>" + sold + "</b>", "ready", () => openStall(o.t === "f_markt")]);
     }
     if (o.t === "f_plot" && farmFishBuildCheck(o.k) === true) want.push(["pl" + o.id, cx, 1.3, cz, "🔨" + FFISHERY[o.k].i, "ready", () => openPlot(o)]);
-    /* Steg: Turnier bereit, Berts Köder fertig */
+    /* Steg: Turnier bereit */
     if (o.t === "f_steg" && angelS()) {
-      const U = angelS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, tour = tourCanStart();
-      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : "") + (lure ? "✨" : ""), tour || lure ? "ready" : "", () => openSteg(tour || lure ? "bert" : null)]);
+      const tour = tourCanStart();
+      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : ""), tour ? "ready" : "", () => openSteg(tour ? "tour" : null)]);
+    }
+    /* v59: Berts Kombi – fertige Köder zeigt die Maschinen-Blase; hier: alte Bestellung
+       aus v58 fertig (✨) oder Bert wartet auf einen Fisch (🐟) */
+    if (o.t === "bert_car" && angelS()) {
+      const U = angelS(), lure = U.bert.lureQ && S.time >= U.bert.lureQ.end, ask = Object.keys(FSPEC_BAIT).some(id => specS(id) && !specWhy(id));
+      if (lure || ask) want.push(["bc" + o.id, cx, objH(o) + 1.2, cz, "🧔" + (lure ? "✨" : "") + (ask ? "🐟" : ""), "ready", () => ask && !lure ? openBertDev() : openMachine(o)]);
     }
     if (o.t === "sw_halle" && farmAreaOpen("saege") && !sawRepaired()) { const r = sawNext(); if (r && farmRepairCheck(r) === true) want.push(["rp", cx, 5, cz, "🔧" + r.i, "ready", () => openSawRepair()]); }
     if (o.t === "sw_lkw" && farmAreaOpen("saege") && !(F.saw && F.saw.lkw) && farmRepairCheck(FSAW_LKW) === true) want.push(["lkw", cx, 2.6, cz, "🔧🚛", "ready", () => openLkw()]);
@@ -1934,7 +1976,7 @@ function worldUI() {
       fold(evK, eb);
       const s = worldEvSpots()[0];
       if (s) { farmFocusXZ(s.x, s.z + 1, 22, 700); if (s.act === "haendler" || s.act === "nachbar") setTimeout(() => worldEvAct(s), 720); }
-      else toast(evT.i + " " + evT.n + (ev.k === "holzpreis" ? ": Der Holzhändler zahlt gerade 30 % mehr für Rohholz." : ev.k === "fischpreis" ? ": Am Fischmarkt bringt Fisch gerade 30 % mehr." : ev.k === "sturm" ? ": Danach liegen Bäume im Wald – aufsammeln!" : ""), "");
+      else toast(evT.i + " " + evT.n + (ev.k === "holzpreis" ? ": Rohholz bringt beim Holzhändler und im Großhandel gerade 30 % mehr." : ev.k === "fischpreis" ? ": Ganze Fische bringen im Großhandel gerade 30 % mehr, am Stand steigt der Preisvorschlag." : ev.k === "sturm" ? ": Danach liegen Bäume im Wald – aufsammeln!" : ""), "");
     };
   }
   /* Besucher wartet: einmal pro Sitzung von selbst zeigen */
@@ -2026,7 +2068,7 @@ function farmEvView(type, c) {
   if (type === "start") {
     toast(D.i + " " + ({
       sturm: "Ein Sturm zieht auf! Danach liegen Bäume im Wald.", haendler: "Ein fliegender Händler steht an der Straße.", schwarm: "Ein Fischschwarm ist im See unterwegs!",
-      nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Der Holzhändler zahlt 30 % mehr.", fischpreis: "Fischpreise steigen: Am Fischmarkt bringt Fisch 30 % mehr.",
+      nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Rohholz bringt 30 % mehr – für ein paar Stunden.", fischpreis: "Fischpreise steigen: Ganze Fische bringen 30 % mehr – für ein paar Stunden.",
       hirsch: "Ein weißer Hirsch im Wald – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
       lieferung: "Ein Paket liegt mitten auf dem Hof.", reh: "Ein Reh steht auf dem Weg."
     }[c.k] || D.n), "");
@@ -2114,7 +2156,7 @@ function machExtraHTML(o) {
     const has = id === "saege2" ? (o.lvl || 1) >= 2 : (S.farm.enLv || 0) >= 1;
     if (!has) h += `<button class="fup2" id="fxUp" ${flv() < U.lv ? "disabled" : ""}><span>${U.i}</span><b>${esc(U.n)}</b><small>${flv() < U.lv ? "ab Level " + U.lv : esc(U.d) + " · " + eur(U.cost) + " · " + Object.keys(U.need).map(k => fqty(k, U.need[k])).join(", ")}</small></button>`;
   }
-  if (o.t === "f_markt") h += `<button class="fup2" id="fxStall"><span>🏪</span><b>Marktstand</b><small>Fisch und Fischwaren direkt am See verkaufen – 15 % mehr</small></button>`;
+  if (M.bert && typeof bertWorkHTML === "function") h += bertWorkHTML(o);   /* v59: Bert – Kopf, Dauerbestellung, Köder-Entwicklung */
   if (o.broken) h += `<button class="fup2 warn" id="fxFix"><span>⚠️</span><b>Die Säge klemmt</b><small>Antippen und richten – solange steht alles</small></button>`;
   return h;
 }
@@ -2122,6 +2164,7 @@ function machExtraBind(o) {
   const u = $("#fxUp");
   if (u) u.onclick = () => { if (farmSawUpgrade(o.t === "sw_halle" ? "saege2" : "kessel2")) { sfx("build"); puff(o); save(); farmSyncScene(); openMachine(o); } else sfx("bad"); };
   const s = $("#fxStall"); if (s) s.onclick = () => openStall(true);
+  if (FMACHINES[o.t].bert && typeof bertWorkBind === "function") bertWorkBind(o);
   const f = $("#fxFix"); if (f) f.onclick = () => { closeFarmSheet(); const sp = worldEvSpots().find(x => x.act === "defekt"); if (sp) worldEvAct(sp); else { farmMachFix(o); save(); } };
 }
 /* Krügers Büro: Überblick, Ausbau, Holzhändler */
@@ -2153,9 +2196,9 @@ function openStall(market) {
   let pickH = "";
   if (sel && sel.id == null) {
     const ids = Object.keys(F.inv).filter(id => FITEMS[id] && FITEMS[id].v > 0.2 && farmInv(id) > 0 && FITEMS[id].k !== "energy" && FITEMS[id].k !== "bait" && (!market || FITEMS[id].st === "fisch"));
-    pickH = `<div class="fs-sub">Was soll auf den Stand?</div><div class="finv">${ids.length ? ids.map(id => `<button class="fit" data-sid="${id}">${itemIc(id)}<b>${famt(id, farmInv(id))}</b><small>${eur(FITEMS[id].v)}</small></button>`).join("") : `<div class="fs-empty">${market ? "Kein Fisch im Lager." : "Das Lager ist leer."}</div>`}</div>`;
+    pickH = `<div class="fs-sub">Was soll auf den Stand?</div><div class="finv">${ids.length ? ids.map(id => `<button class="fit" data-sid="${id}">${itemIc(id)}<b>${famt(id, farmInv(id))}</b><small>${eur(farmStackV(id, 1))}</small></button>`).join("") : `<div class="fs-empty">${market ? "Kein Fisch im Lager." : "Das Lager ist leer."}</div>`}</div>`;
   } else if (sel) {
-    const max = farmInv(sel.id), n = clamp(sel.n || 1, 1, Math.max(1, max)), base = stallBase(sel.id, n, market), p = Math.round(base * sel.f * 10) / 10;
+    const max = farmInv(sel.id), n = clamp(sel.n || 1, 1, Math.max(1, max)), base = stallBase(sel.id, n, market, farmStackV(sel.id, n)), p = Math.round(base * sel.f * 10) / 10;
     const speed = sel.f <= 0.85 ? "schnell weg" : sel.f <= 1.1 ? "normal" : sel.f <= 1.35 ? "dauert länger" : "nur mit Glück";
     pickH = `<div class="fstl-cfg"><b>${icHTML(sel.id)} ${esc(fqty(sel.id, n))}</b>
       <div class="fs-row">${[1, 5, 10, max].filter((k, i, a) => k <= max && a.indexOf(k) === i).map(k => `<button class="btn tiny${k === n ? "" : " ghost"}" data-n="${k}">${k === max && k > 1 ? "alles" : famt(sel.id, k)}</button>`).join("")}</div>
@@ -2174,7 +2217,7 @@ function openStall(market) {
   $$("#farmSheetIn [data-f]").forEach(b => b.onclick = () => { sel.f = clamp(Math.round((sel.f + +b.dataset.f) * 10) / 10, 0.6, 1.8); openStall(market); });
   const put = $("#fsPut");
   if (put) put.onclick = () => {
-    const n = clamp(sel.n || 1, 1, farmInv(sel.id)), p = stallBase(sel.id, n, market) * sel.f;
+    const n = clamp(sel.n || 1, 1, farmInv(sel.id)), p = stallBase(sel.id, n, market, farmStackV(sel.id, n)) * sel.f;
     if (stallPut(market, sel.id, n, p)) { FV.stallSel = null; sfx("pop"); save(); farmSyncScene(); openStall(market); }
   };
   $$("#farmSheetIn [data-slot]").forEach(b => b.onclick = () => {
@@ -2195,7 +2238,7 @@ function openTrader() {
   const rows = c.data.deals.map((d, i) => {
     const it = d.item ? FITEMS[d.item] : null;
     const t = d.kind === "buy" ? `${esc(d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : `${esc(fqty(d.item, d.qty))} verkaufen`;
-    const p = d.kind === "sell" ? "+" + eur(Math.round(it.v * d.qty * d.mult * 10) / 10) + " (+" + Math.round((d.mult - 1) * 100) + " %)" : eur(d.price);
+    const p = d.kind === "sell" ? "+" + eur(Math.round(farmStackV(d.item, d.qty) * d.mult * 10) / 10) + " (+" + Math.round((d.mult - 1) * 100) + " %)" : eur(d.price);
     return `<button class="frec${d.done ? " lock" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b><small>${d.done ? "erledigt" : p}</small></button>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🧑‍💼</span>Fliegender Händler<small>noch ${fdur(Math.max(1, c.until - S.time))} an der Straße</small></div>
@@ -2245,6 +2288,7 @@ function worldObjAction(o, x, y) {
   switch (o.t) {
     case "junk": openPop(o, "junk"); return true;
     case "stall": openStall(false); return true;
+    case "f_markt": openStall(true); return true;   /* v59: Fischmarkt = Verkaufsstand wie an der Straße */
     case "f_plot": openPlot(o); return true;
     case "sw_buero": openSawOffice(); return true;
     case "sw_lager": openFarmStore("holz"); return true;
@@ -2292,7 +2336,8 @@ function worldShow() {
 function stageHTML() {
   const F = S.farm, cur = F.stage || 1, nx = farmStageNext(), chk = farmStageCheck();
   const list = FHOF_STAGES.slice(1).map((st, i) => {
-    const k = i + 1, on = k === cur, done = k < cur;
+    /* v58: erreichte Stufen grün mit ✓ (auch die letzte), die nächste kaufbare gelb */
+    const k = i + 1, done = k <= cur, on = !!nx && k === cur + 1;
     return `<div class="fstage${on ? " cur" : done ? " ok" : ""}"><b>${done ? "✓" : k}</b><div><span>${esc(st.n)}</span>${st.perks ? `<small>${st.perks.map(esc).join(" · ")}</small>` : `<small>${esc(st.d)}</small>`}</div></div>`;
   }).join("");
   let next = "";

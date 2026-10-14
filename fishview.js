@@ -75,6 +75,8 @@ function fishStart(G, boat) {
     if (FISH.boat) FISH.boat.rod.visible = false;
     farmSyncScene();
     if (boat && FISH.boat && FISH.boat.at && FISH.boat.at !== "dock") fishSail(null);
+    /* v59: neue Art gefangen – Bert fragt nach dem Fisch */
+    setTimeout(bertAskOpen, 350);
   });
 }
 /* Boot fahren: zum Fangplatz oder (G = null) zurück an den Anleger */
@@ -180,7 +182,7 @@ function fishStep(dt, time) {
    Angler-Turnier, Bert Flomann (Würmer, Profi-Köder) und das Fangbuch. */
 const BERT_IMG = "bert.png";
 FV.stegTab = "fish";
-function bertFig() { return `<div class="fv-fig img"><img src="${BERT_IMG}" alt="Bert Flomann"></div>`; }
+function bertFig() { return `<div class="fv-fig img bert"><img src="${BERT_IMG}" alt="Bert Flomann"></div>`; }
 /* Lina beim ersten Besuch am Steg: Lehmanns alte Angel */
 function stegLina() {
   const U = angelS(), img = typeof guideArt !== "undefined" && guideArt ? `<img src="${guideArt}" alt="Lina Sturm">` : "👩";
@@ -197,8 +199,11 @@ function openSteg(tab) {
   if (!U.linaSeen) return stegLina();
   if (tab) FV.stegTab = tab;
   FV.sheetFn = () => openSteg();
-  const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"], ["bert", "🏆 Turnier & Köder"], ["log", "📖 Fangbuch"]];
-  const body = { fish: stegFishHTML, gear: stegGearHTML, pot: stegPotHTML, bert: stegBertHTML, log: stegLogHTML }[FV.stegTab] || stegFishHTML;
+  /* v58: Turnier ist ein eigener Reiter, solange es noch aussteht.
+     v59: Bert hat keinen Reiter mehr – er steht mit dem Kombi am Ufer (Werkstatt) */
+  if ((FV.stegTab === "tour" && U.tour.done) || FV.stegTab === "bert") FV.stegTab = "fish";
+  const tabs = [["fish", "🎣 Angeln"], ["gear", "🛠️ Ruten"], ["pot", "🪤 Reusen"]].concat(U.tour.done ? [] : [["tour", "🏆 Turnier"]], [["log", "📖 Fangbuch"]]);
+  const body = { fish: stegFishHTML, gear: stegGearHTML, pot: stegPotHTML, tour: stegTourHTML, log: stegLogHTML }[FV.stegTab] || stegFishHTML;
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🪵</span>Am Steg<small>${esc(FRODS[U.rod].n)} · ${U.log.length ? U.log.length + " Fänge im Fangbuch" : "noch kein Fang"}</small></div>
     <div class="fs-tabs">${tabs.map(([k, n]) => `<button data-ut="${k}" class="${FV.stegTab === k ? "on" : ""}">${n}</button>`).join("")}</div>
     ${body(U)}`, "steg");
@@ -212,29 +217,26 @@ function openSteg(tab) {
   on("#ufPotUp", () => redo(angelPotUp()));
   on("[data-pot]", b => { const o = farmObj(+b.dataset.pot); closeFarmSheet(); if (o) { const [x, z] = farmCenter(o); farmFocusXZ(x, z, 18, 600); } });
   on("#ufTour", () => { if (!U.tour.paid && !tourStart()) return redo(false); renderFarmUI(); openTournament(); });
-  on("#ufWorms", () => redo(bertWorms()));
-  on("#ufLure", () => redo(bertOrderLures()));
-  on("#ufLureGet", () => { if (bertCollect()) { sfx("collect"); toast("✨ " + FBERT.lures.n + " Profi-Köder abgeholt.", "ok"); save(); } else sfx("bad"); openSteg(); });
-  /* Restzeit von Berts Bestellung läuft mit */
-  const key = () => [U.bert.lureQ ? Math.ceil((U.bert.lureQ.end - S.time) / 5) : "-", Math.floor(S.money / 50), flv()].join("|");
+  /* Geld und Level ändern die Knöpfe */
+  const key = () => [Math.floor(S.money / 50), flv()].join("|");
   const k0 = key();
   FV.sheetTick = () => { if (FV.sheet === "steg" && key() !== k0) openSteg(); };
 }
 function stegFishHTML(U) {
   const w = angelClassW(U.bait, U.rod), cls = { klein: "kleine", mittel: "mittlere", gross: "große" };
-  const chips = Object.keys(FBAITS).map(b => { const B = FBAITS[b], why = angelBaitWhy(b);
-    return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${B.i}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("");
-  const odds = FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
+  const chips = Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b);
+    return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("");
+  const sp = FBAITS[U.bait].spec, odds = sp ? "nur " + esc(FFISH[sp].n) : FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
   const gs = FGROUNDS.map(g => { const ok = farmGroundOk(g);
     return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? g.i : "🔒"}</span><b>${esc(g.n)}</b><small>${g.boat === 0 ? "direkt vom Steg" : ok ? "mit dem Boot" : g.boat === 2 ? "braucht das Motorboot" : "braucht das Ruderboot"}</small></button>`; }).join("");
   return `<div class="fs-sub">Köder – bessere Köder locken größere Arten:</div><div class="mg-baits">${chips}</div>
-    <div class="fs-sub">${FRODS[U.rod].i} ${esc(FRODS[U.rod].n)} + ${FBAITS[U.bait].i} ${esc(FBAITS[U.bait].n)}: Es beißen <b>${odds}</b> Fische.</div>
+    <div class="fs-sub">${FRODS[U.rod].i} ${esc(FRODS[U.rod].n)} + ${FBAITS[U.bait].i} ${esc(FBAITS[U.bait].n)}: Es beißen <b>${odds}</b>${sp ? "" : " Fische"}.</div>
     <div class="frecs">${gs}</div>
     <div class="fs-sub">Jeder Fisch hat seine eigene Länge und sein Gewicht – daraus kommen die Sterne. Große Fische ziehen im Kreis schneller und sprunghafter; eine bessere Rute macht den grünen Bogen breiter.</div>`;
 }
 function stegGearHTML(U) {
   const rods = [1, 2, 3].map(n => { const R = FRODS[n], have = U.rod >= n;
-    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "zu wenig Geld" : "";
+    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "Zu wenig Geld – benötigt: " + eur(R.price) : "";
     return `<div class="uf-row"><span class="ic">${R.i}</span><div><b>${esc(R.n)}</b><small>grüner Bogen ${R.gw}° · ${n === 1 ? "von Lehmann geschenkt" : "größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
       ${n === 1 ? "" : `<button class="btn tiny" data-rod="${n}" ${why ? "disabled" : ""}>${why || eur(R.price)}</button>`}</div>`; }).join("");
   return `<div class="fs-sub">Ruten</div><div class="uf-list">${rods}</div>
@@ -247,9 +249,9 @@ function stegPotHTML(U) {
       <button class="btn tiny ghost" data-pot="${o.id}">Zeigen</button></div>`; }).join("");
   const tiers = Object.keys(FPOTS).map(id => { const P = FPOTS[id];
     return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}">${itemIc(id)}<div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
-  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "zu wenig Geld" : "";
+  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "Zu wenig Geld – benötigt: " + eur(nx.cost) : "";
   return `<div class="uf-list">${rows}</div>
-    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>🪤 Weitere Reuse · ${eur(pc)}</button>` : ""}
+    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>${S.money < pc ? "Zu wenig Geld – benötigt: " + eur(pc) : "🪤 Weitere Reuse · " + eur(pc)}</button>` : ""}
     <div class="fs-sub">Reusenstufen</div><div class="uf-list">${tiers}</div>
     ${nx ? `<button class="btn tiny" id="ufPotUp" ${upWhy ? "disabled" : ""}>${upWhy || "Reusen auf Stufe " + (U.potLvl + 1) + " · " + eur(nx.cost)}</button>` : ""}
     <div class="fs-sub">Tipp auf eine Reuse im Wasser: Reusenköder (oder eine Portion Mais) rein, später mit dem Haken hochziehen. Jedes Tier hat Größe, Gewicht und Sterne – bessere Reusen fangen größere Tiere.</div>`;
@@ -258,8 +260,8 @@ function stegPotHTML(U) {
 function tourMemberRow(m, extra) {
   return `<div class="uf-row"><span class="ic"><span class="uf-ini">${esc(m.ini)}</span></span><div><b>${esc(m.n)}</b><small>${esc(m.from)} · ${esc(m.about)}</small></div>${extra || ""}</div>`;
 }
-function stegBertHTML(U) {
-  if (!U.tour.done) {
+function stegTourHTML(U) {
+  {
     const ok = tourCanStart(), n = Math.min(FTOUR.need, U.cnt.klein), c = tourCost(), miss = U.tour.paid ? 0 : c - S.money;
     const btn = U.tour.paid ? "🏆 Turnier fortsetzen" : !ok ? "🏆 Turnier veranstalten" : miss > 0 ? "Es fehlen " + eur(miss) : "🏆 Turnier veranstalten · " + eur(c);
     return `<div class="lk-poster"><b>🏆 Angler-Turnier am Glindower See</b>
@@ -268,26 +270,101 @@ function stegBertHTML(U) {
       <div class="uf-row"><span class="ic">🐟</span><div><b>Erst selbst üben</b><small>Fang ${FTOUR.need} kleine Fische · ${n}/${FTOUR.need}</small></div><span class="uf-bar"><i style="width:${n / FTOUR.need * 100}%"></i></span></div>
       <button class="btn fgo" id="ufTour" ${U.tour.paid || (ok && miss <= 0) ? "" : "disabled"}>${btn}</button>`;
   }
-  const q = U.bert.lureQ, L = FBERT.lures, need = FBERT.lureNeed;
-  let lure;
-  if (!bertLureOk()) lure = `<div class="fs-empty">„Ich tüftel an was Großem. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
+}
+/* ------------------------- v59: Berts alter Kombi -------------------------
+   Bert steht nach dem Turnier mit seinem Kombi am Ufer. Antippen öffnet direkt die Werkstatt (Tauwürmer,
+   Profi-Köder, Spezialköder) mit Dauerbestellung; die Köder-Entwicklung liegt hinter einem Knopf. */
+/* Berts Werkstatt (farmview.openMachine): oben unter dem Titel Bert (bertTopHTML),
+   bei der Warteschlange alte Bestellung und Dauerbestellung (bertWorkHTML über machExtraHTML),
+   ganz unten der Knopf zur Köder-Entwicklung (bertDevBtnHTML) */
+function bertTopHTML() {
+  const U = angelS(), need = FBERT.lureNeed;
+  /* Profi-Köder-Hinweis direkt unter der Sprechblase, beides mit gleichem Abstand */
+  const lureH = !U || bertLureOk() ? "" : `<div class="fs-empty">„Für die richtig Großen tüftel ich an Profi-Ködern. Zeig mir erst, dass du mit der Spinnrute umgehen kannst.“<br>
     <small>${U.rod < need.rod ? "Spinnrute fehlt · " : ""}${Math.min(need.mittel, U.cnt.mittel)}/${need.mittel} mittlere Fische</small></div>`;
-  else if (!q) lure = `<div class="uf-row"><span class="ic">✨</span><div><b>${L.n} Profi-Köder</b><small>für Hecht und Wels · ${fdur(L.t)} Arbeit</small></div>
-    <button class="btn tiny" id="ufLure" ${S.money < L.price ? "disabled" : ""}>${eur(L.price)}</button></div>`;
-  else if (S.time >= q.end) lure = `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>Bert hat ${q.n} Stück gebaut</small></div><button class="btn tiny" id="ufLureGet">Abholen</button></div>`;
-  else lure = `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Köder</b><small>noch ${fdur(Math.max(1, q.end - S.time))}</small></div><span class="uf-bar"><i style="width:${Math.round(clamp(1 - (q.end - S.time) / L.t, 0, 1) * 100)}%"></i></span></div>`;
-  return `<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Wurmkasten und Köderwerkstatt</small>
-      <p>„Moin! Für ein kleines Entgelt sammel ich dir Tauwürmer – damit beißen Barsche, Forellen und Karpfen.“</p></div></div>
-    <div class="uf-row"><span class="ic">🪱</span><div><b>${FBERT.worms.n} Tauwürmer</b><small>du hast ${farmInv("wurm")}</small></div>
-      <button class="btn tiny" id="ufWorms" ${S.money < FBERT.worms.price ? "disabled" : ""}>${eur(FBERT.worms.price)}</button></div>
-    ${lure}`;
+  return `<div class="bert-top"><div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Turniersieger · Köderwerkstatt im Kofferraum</small>
+      <p>„Moin! Was darf's sein? Würmer hab ich immer, und bring mir ruhig mal einen Fisch vorbei – dann bau ich dir einen Spezialköder.“</p></div></div>${lureH}</div>`;
+}
+function bertWorkHTML(o) {
+  const U = angelS();
+  if (!U) return "";
+  const keep = U.bert.keep || 0, old = U.bert.lureQ;
+  const oldH = !old ? "" : S.time >= old.end
+    ? `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>deine alte Bestellung · ${old.n} Stück</small></div><button class="btn tiny" id="bLureGet">Abholen</button></div>`
+    : `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Profi-Köder</b><small>deine alte Bestellung · noch ${fdur(Math.max(1, old.end - S.time))}</small></div></div>`;
+  return `${oldH}
+    <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
+    <div class="fs-row bert-keep">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>`;
+}
+function bertDevBtnHTML() {
+  const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
+  const dev = Object.keys(FSPEC_BAIT).filter(id => { const s = specS(id); return s && s.dev && !specDone(id); }).length;
+  return `<button class="fup2" id="bDev"><span>🎯</span><b>Köder-Entwicklung</b><small>${ask ? "🐟 " + ask + " Fisch" + (ask > 1 ? "e" : "") + " für Bert bereit" : dev ? "⏳ Bert entwickelt" : "Fisch übergeben – Bert entwickelt einen Köder nur für diese Art"}</small></button>`;
+}
+function bertWorkBind(o) {
+  const U = angelS(), on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(b => b.onclick = () => fn(b));
+  on("#bLureGet", () => { if (bertCollect()) { sfx("collect"); toast("✨ " + FBERT.lures.n + " Profi-Köder abgeholt.", "ok"); save(); } else sfx("bad"); openMachine(o); });
+  on("[data-keep]", b => { U.bert.keep = +b.dataset.keep; sfx("tap"); bertKeepTick(); save(); openMachine(o); });
+  on("#bDev", () => { sfx("tap"); openBertDev(); });
+}
+/* Köder-Entwicklung: alle Arten – ❓, entdeckt (Fisch übergeben), in Arbeit, fertig */
+function openBertDev() {
+  const U = angelS(), o = bertCar();
+  if (!U || !o) return;
+  FV.sheetFn = openBertDev;
+  const spec = Object.keys(FSPEC_BAIT).map(id => {
+    const s = specS(id), f = FFISH[id];
+    if (!s) return `<div class="uf-row lock"><span class="ic">❓</span><div><b>???</b><small>noch nicht selbst gefangen</small></div></div>`;
+    let st, right = "";
+    if (specDone(id)) { const n = farmInv("sk_" + id); st = "✓ entwickelt" + (n ? " · " + n + " im Lager" : "") + " · in der Werkstatt bestellen"; }
+    else if (s.dev) { st = "⏳ Bert entwickelt – noch " + fdur(Math.max(1, s.dev.end - S.time)); right = `<span class="uf-bar"><i style="width:${Math.round(clamp(1 - (s.dev.end - S.time) / FSPEC_DEV, 0, 1) * 100)}%"></i></span>`; }
+    else { const why = specWhy(id); st = "entdeckt · Entwicklung " + fdur(FSPEC_DEV); right = `<button class="btn tiny" data-give="${id}" ${why ? "disabled" : ""}>${why ? esc(why) : "🐟 übergeben"}</button>`; }
+    return `<div class="uf-row">${itemIc(specDone(id) ? "sk_" + id : id)}<div><b>${esc(f.sg)}-Köder</b><small>${st}<br>5 Stück ${eur(FSPEC_BAIT[id])} + 2 Tauwürmer${f.cls === "gross" ? " · braucht die " + esc(FRODS[3].n) : ""}</small></div>${right}</div>`;
+  }).join("");
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🎯</span>Köder-Entwicklung<small>Berts alter Kombi</small></div>
+    <button class="btn tiny ghost" id="bBack">‹ Zurück zur Werkstatt</button>
+    <div class="fs-sub">Bring Bert einen Fisch, den du selbst gefangen hast – in ${fdur(FSPEC_DEV)} entwickelt er einen Köder, auf den nur diese Art beißt.</div>
+    <div class="uf-list">${spec}</div>`, "bert");
+  $("#bBack").onclick = () => { sfx("tap"); openMachine(o); };
+  $$("#farmSheetIn [data-give]").forEach(b => b.onclick = () => {
+    const id = b.dataset.give;
+    if (specGive(id)) { sfx("coin"); toast("🐟 Bert hat den " + FFISH[id].sg + " – in " + fdur(FSPEC_DEV) + " ist der Köder fertig.", "ok"); save(); renderFarmUI(); } else sfx("bad");
+    openBertDev();
+  });
+  /* Restzeiten laufen mit */
+  const key = () => Object.values(U.spec || {}).map(s => s.dev ? Math.ceil((s.dev.end - S.time) / 5) : "").join(",");
+  const k0 = key();
+  FV.sheetTick = () => { if (FV.sheet === "bert" && key() !== k0) openBertDev(); };
+}
+/* Nach dem Angeln: Bert fragt nach einer neu entdeckten Art */
+function bertAskOpen() {
+  const U = angelS(), id = U && U.bert.ask;
+  if (!id) return;
+  U.bert.ask = null;
+  save();
+  const s = specS(id);
+  if (!bertCar() || !s || s.dev || s.done) return;
+  const why = specWhy(id);
+  FV.sheetFn = null;
+  openFarmSheet(`<div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>am Kombi</small>
+      <p>„Guter Fang! Gib mir so einen, dann schau ich, ob ich einen Köder bauen kann, den die besonders mögen.“</p></div></div>
+    <div class="fv-msg">${itemIc(id)} ${esc(FFISH[id].sg)} · Entwicklung ${fdur(FSPEC_DEV)}</div>
+    <button class="btn fgo" id="baGive" ${why ? "disabled" : ""}>${why ? esc(why) : "🐟 Fisch übergeben"}</button>
+    <button class="btn tiny ghost" id="baLater">Später</button>`, "visit");
+  $("#baGive").onclick = () => {
+    if (specGive(id)) { sfx("coin"); toast("🐟 Bert hat den " + FFISH[id].sg + " – in " + fdur(FSPEC_DEV) + " ist der Köder fertig.", "ok"); save(); renderFarmUI(); closeFarmSheet(); }
+    else sfx("bad");
+  };
+  $("#baLater").onclick = () => { sfx("tap"); closeFarmSheet(); };
 }
 function stegLogHTML(U) {
   const best = Object.keys(U.best).map(id => { const b = U.best[id];
     return `<div class="uf-row">${itemIc(id)}<div><b>${esc(FITEMS[id].sg || FITEMS[id].n)}</b><small>Rekord: ${fmt(b.cm, 1)} cm · ${fishKgTxt(b.kg)} · ${qStars(b.q)}</small></div></div>`; }).join("");
-  const last = U.log.slice(0, 12).map(e => `<div class="uf-row">${itemIc(e.sp)}<div><b>${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q))}</small></div>`).join("");
-  return U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
-    : `<div class="fs-empty">Noch leer. Jeder Fang beim Angeln und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`;
+  const last = U.log.slice(0, 12).map(e => `<div class="uf-row">${itemIc(e.sp)}<div><b>${e.by === "staff" ? "👷 " : ""}${esc(FITEMS[e.sp].sg || FITEMS[e.sp].n)}</b><small>${fmt(e.cm, 1)} cm · ${fishKgTxt(e.kg)} · ${qStars(e.q)} ${esc(fishQName(e.q))}</small></div><small>${eur(specValue(e.sp, e.q, e.kg))}</small></div>`).join("");
+  /* v58: abgeschlossenes Turnier steht im Fangbuch */
+  const tour = U.tour.done ? `<div class="uf-list"><div class="uf-row"><span class="ic">🏆</span><div><b>Angler-Turnier veranstaltet</b><small>${U.tour.at != null ? esc(stamp(U.tour.at)) + " · " : ""}abgeschlossen</small></div></div></div>` : "";
+  return tour + (U.log.length ? `<div class="fs-sub">🏆 Rekorde</div><div class="uf-list">${best}</div><div class="fs-sub">Letzte Fänge</div><div class="uf-list">${last}</div>`
+    : `<div class="fs-empty">Noch leer. Jeder Fang beim Angeln und aus den Reusen landet hier – mit Länge, Gewicht und Sternen.</div>`);
 }
 
 /* ------------------------------ Angler-Turnier ----------------------------
@@ -345,15 +422,16 @@ function openTournament() {
 /* Siegerehrung: erst hier zeigt sich der Sieger mit Bild */
 function tourCeremony(res) {
   const w = res.slice().sort(tourRank)[0];
-  if (!tourFinish()) return openSteg("bert");
+  if (!tourFinish()) return openSteg("fish");
   save();
   sfx("level");
-  FV.stegTab = "bert";
+  FV.stegTab = "fish";
+  bertCarPlace();   /* v59: Bert parkt seinen Kombi am Ufer */
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏆</span>Siegerehrung<small>${esc(w.n)} gewinnt mit ${fishKgTxt(w.total)}</small></div>
     <div class="fvisit">${bertFig()}<div class="fv-tx"><b>Bert Flomann</b><small>Sieger des Angler-Turniers</small>
-      <p>„Moin! Bert Flomann. Schönes Turnier – hat Spaß gemacht. Pass auf: Ich hab einen Wurmkasten im Garten. Für ein kleines Entgelt sammel ich dir Tauwürmer – damit beißen Barsche, Forellen und Karpfen. Und wenn du ordentlich was rausholst, bau ich dir später richtige Köder für die Großen.“</p></div></div>
+      <p>„Moin! Bert Flomann. Schönes Turnier – hat Spaß gemacht. Pass auf: Ich hab einen Wurmkasten im Garten. Für ein kleines Entgelt sammel ich dir Tauwürmer – damit beißen Barsche, Forellen und Karpfen. Und wenn du ordentlich was rausholst, bau ich dir später richtige Köder für die Großen. Du findest mich mit meinem alten Kombi am Ufer.“</p></div></div>
     <div class="fv-msg">🏆 ${eur(FTOUR.prize)} Preisgeld an ${esc(w.n)} · ${eur(FTOUR.cost)} Veranstaltungskosten · +${FTOUR.xp} EP</div>
     <button class="btn fgo" id="bertOk">🤝 Abgemacht!</button>`, "visit");
-  $("#bertOk").onclick = () => openSteg("bert");
+  $("#bertOk").onclick = () => { closeFarmSheet(); const c = bertCar(); if (c) { const [x, z] = farmCenter(c); farmFocusXZ(x, z, 18, 700); } toast("🚙 Bert parkt seinen Kombi am Ufer – tipp ihn an.", "ok"); };
   renderFarmUI();
 }

@@ -195,7 +195,6 @@ const TASKS = [
   { id: "n", icon: "📦", make: () => ({ n: clamp(3 + S.stage + Math.floor(S.fleet.length * 1.2), 3, 40) }), label: t => `${t.n} Aufträge zustellen`, on: "done" },
   { id: "bike", icon: "🚲", ok: () => S.fleet.some(f => vType(f.type).mode === "b"), make: () => ({ n: 3 + Math.floor(Math.random() * 3) }), label: t => `${t.n} Lieferungen komplett per Rad`, on: "bike" },
   { id: "jewel", icon: "💎", ok: () => S.fleet.some(f => vType(f.type).flags.includes("kurier")) && !(typeof logiOn === "function" && !logiOn()), make: () => ({ n: 2 }), label: t => `${t.n} Wertkurier-Fahrten`, on: "jewel" },
-  { id: "norepo", icon: "✅", make: () => ({ n: 3 }), label: t => `${t.n} Aufträge ohne Leerfahrt`, on: "norepo" },
   { id: "rev", icon: "💶", make: () => ({ n: roundK(Math.max(600 * stageK(), (S.revY || 0) * 1.15), 50) }), label: t => `${money(t.n)} Frachterlös an einem Tag`, on: "rev", money: true },
   { id: "mode", icon: "🚢", ok: () => S.fleet.some(f => "isla".includes(vType(f.type).mode)), make: () => {
       const m = pick([...new Set(S.fleet.map(f => vType(f.type).mode).filter(x => "isla".includes(x)))]);
@@ -204,7 +203,17 @@ const TASKS = [
   { id: "punct", icon: "⏰", make: () => ({ n: 4 }), label: t => `${t.n} Zustellungen in Folge pünktlich`, on: "punct" },
   { id: "kuehl", icon: "🧊", ok: () => S.fleet.some(f => vType(f.type).flags.includes("kuehl")), make: () => ({ n: 2 }), label: t => `${t.n} Kühltransporte`, on: "kuehl" }
 ];
-function dailyState() { if (!S.daily) S.daily = { day: -1, tasks: [], rev: 0, streak: 0, claimed: false }; return S.daily; }
+function dailyState() {
+  if (!S.daily) S.daily = { day: -1, tasks: [], rev: 0, streak: 0, claimed: false };
+  /* v58: gestrichene Aufgaben („Ohne Leerfahrt“) aus alten Ständen ersetzen */
+  const d = S.daily;
+  if (d.tasks.some(t => !TASKS.some(x => x.id === t.id))) {
+    d.tasks = d.tasks.filter(t => TASKS.some(x => x.id === t.id));
+    const pool = TASKS.filter(t => (!t.ok || t.ok()) && !d.tasks.some(x => x.id === t.id)).sort(() => Math.random() - 0.5);
+    while (d.tasks.length < 3 && pool.length) { const t = pool.shift(); d.tasks.push(Object.assign({ id: t.id, got: 0, done: false }, t.make())); }
+  }
+  return d;
+}
 function newDaily() {
   const d = dailyState();
   S.revY = d.rev;
@@ -226,7 +235,6 @@ function goalsDelivered(job, pay, late) {
   inc("n");
   if (job.legs.every(l => l.mode === "b")) inc("bike");
   if (o.jewel) inc("jewel");
-  if ((job.repo0 || 0) < 0.5) inc("norepo");
   inc("rev", d.rev);
   d.tasks.forEach(t => { if (t.id === "mode" && !t.done && job.legs.some(l => l.mode === t.m)) t.got++; });
   inc("punct", d.streak);

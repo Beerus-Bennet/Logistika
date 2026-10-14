@@ -1712,11 +1712,14 @@ function renderPlaceBar() {
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : "auf den Hof"}">${zn === "yard" ? "🪚" : "🏡"}</button>`).join("")}
+    ${P.move && P.move.t === "tree" && typeof fruitFell === "function" ? `<button class="fpl-b" id="fpFell" title="Fällen">🪓</button>` : ""}
     <button class="fpl-b ok${P.ok ? "" : " disabled"}" id="fpOk">✓</button>`;
   $$("#farmPlace [data-zone]").forEach(b => b.onclick = () => placeJump(b.dataset.zone));
   $("#fpNo").onclick = () => cancelPlace();
   $("#fpOk").onclick = confirmPlace;
   const r = $("#fpRot"); if (r) r.onclick = rotatePlace;
+  /* v59: Obstbaum fällen – beim Gedrückthalten statt im Gieß-Popup */
+  const fl = $("#fpFell"); if (fl) fl.onclick = () => { const o = P.move; cancelPlace(); fruitFell(o); };
 }
 /* Wechsel zwischen Hof und Sägewerk: ein Tipp, der Rest wird hingeschoben */
 function placeJumps(P) {
@@ -1832,27 +1835,29 @@ function openMachine(o) {
   };
   const M = FMACHINES[o.t], lv = level();
   const sunOff = r => kesselSunOff(o, r);
-  const rec = M.recipes.map(r => {
-    const lock = r.lv > lv || sunOff(r), it = FITEMS[r.id];
+  const rec = M.recipes.filter(r => !(r.hide && r.hide())).map(r => {   /* v59: Bert – unentwickelte Spezialköder ausblenden */
+    const nok = !!(r.ok && !r.ok()), lock = r.lv > lv || sunOff(r) || nok, it = FITEMS[r.id];
     const ok = !lock && farmHasAll(r.in) && (!r.cost || S.money >= r.cost);
     const ins = Object.keys(r.in).map(id => itemChip(id, r.in[id], farmInv(id))).join("")
-      + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">⛽<b>${eur(r.cost)}</b></span>` : "");
+      + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">${r.costT ? "💶" : "⛽"}<b>${eur(r.cost)}</b></span>` : "");
     const by = r.by ? " · dazu " + Object.keys(r.by).map(id => fqty(id, r.by[id])).join(", ") : "";
     const what = r.trip ? `<em class="fr-trip">${esc(r.trip)}</em>` : r.note ? `<em class="fr-trip">${esc(r.note)}</em>` : "";
     return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${rkey(r)}" ${lock ? "disabled" : ""}>
       ${icOf(r.id, lock)}
       <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
-      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
+      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : nok && r.lv <= lv ? esc(r.why || "gesperrt") : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
       <small>⏱ ${fdur(r.t)} · ${it.energy ? "+" + it.energy * r.out + " kWh in den Speicher" : "Wert " + eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
   const sub = M.trips ? "Wähle eine Fangfahrt – der Kutter fährt eine nach der anderen. Diesel zahlst du beim Ablegen."
     : "Tipp ein Rezept an – es kommt in die Warteschlange.";
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)}</div>
+    ${M.bert && typeof bertTopHTML === "function" ? bertTopHTML(o) : ""}
     <div class="fq">${machQueueHTML(o)}</div>
     ${typeof machExtraHTML === "function" ? machExtraHTML(o) : ""}
     <div class="fs-sub">${sub}</div>
-    <div class="frecs">${rec}</div>`, "mach");
+    <div class="frecs">${rec}</div>
+    ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}`, "mach");
   if (typeof machExtraBind === "function") machExtraBind(o);
   $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = () => {
     const r = farmQueue(o, b.dataset.rec);
@@ -1868,7 +1873,7 @@ function openMachine(o) {
       }
       else openMachine(o);
     } else if (r === "full") { sfx("bad"); toast(M.trips ? "Der Kutter ist ausgebucht – erst die nächste Fahrt abwarten oder einen Platz dazukaufen." : "Alle Plätze belegt – warte oder kauf einen Platz dazu.", "warn"); }
-    else if (r === "money") { sfx("bad"); toast("⛽ Für den Sprit fehlt das Geld.", "warn"); }
+    else if (r === "money") { sfx("bad"); toast(M.bert ? "💶 Dafür fehlt das Geld." : "⛽ Für den Sprit fehlt das Geld.", "warn"); }
     else if (r === "energy") { sfx("bad"); toast("⚡ Zu wenig Strom – heiz den Kessel mit Holzresten oder Ästen an.", "warn"); }
     else if (r === "sun") { sfx("bad"); toast("☀️ Tagsüber liefert das Solardach den Strom – der Kessel heizt erst nachts.", "warn"); }
     else if (r === "broken") { sfx("bad"); toast("🔧 Erst reparieren – Krügers Sägewerk läuft noch nicht.", "warn"); }
@@ -1907,7 +1912,8 @@ function openFarmStore(st) {
     })() : ""}
     ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}</button>` : ""}
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
-      : st === "fisch" ? "Die Sterne zeigen die Qualität: Ein ruhiger Drill macht den Fang besser. Fischlager und Kühlhaus schaffen mehr Platz."
+      : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
+      : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
@@ -2022,12 +2028,12 @@ function openFarmOrders(sendFor, area) {
   const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>jede Woche dieselbe Ladung, fester Bonus</small></div>
     ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · jede Woche ${esc(farmAboPal(A))}</small>
       <span class="fo-tag abo">läuft · ${A.n || 0}× geliefert${A.miss ? " · " + A.miss + " verpasst" : ""} · nächste in ${fdur(Math.max(1, A.next - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
-      <div class="fo-b"><span></span><button class="btn tiny ghost" data-abox="${A.id}">Kündigen</button></div></div>`).join("")}
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-b"><span class="fo-hint">${farmAboCanQuit(A) ? "" : "kündbar nach " + FABO_MIN + " Lieferungen (" + (A.n || 0) + "/" + FABO_MIN + ")"}</span><button class="btn tiny ghost" data-abox="${A.id}" ${farmAboCanQuit(A) ? "" : "disabled"}>Kündigen</button></div></div>`).join("")}
     ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will jede Woche ${esc(farmAboPal(A))}</small>
       <span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, A.exp - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">+${eur(A.bonus)} Bonus je Woche</span></div>
-      <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
+      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst – frühestens nach ${FABO_MIN} Lieferungen</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
   const tabs = FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).length > 1 ? `<div class="fo-tabs">${FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).map(a => {
     const n = farmOrders().filter(o => farmOrderArea(o) === a.id), r = n.filter(farmOrderReady).length;
     return `<button class="${a.id === area ? "on" : ""}" data-oarea="${a.id}">${a.i} ${a.n}${r ? ` <b class="ok">${r}✓</b>` : n.length ? ` <b>${n.length}</b>` : ""}</button>`;

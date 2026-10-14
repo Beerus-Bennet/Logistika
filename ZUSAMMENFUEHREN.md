@@ -1,5 +1,38 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v59 – Fischerei-Folgeauftrag in `main` (Teil 1 = v58, Teil 2 = v59)
+
+Gearbeitet wurde auf zwei Branches, die nacheinander aufeinander aufbauen:
+`teil1-fehler-optik` (v58) → `teil2-mechaniken` (v59). Beide sind jetzt in `main`
+zusammengeführt. **Alle Einzelheiten mit Funktionsnamen stehen in `AENDERUNGEN.md`
+unter v58 und v59** – hier nur der Überblick.
+
+**Teil 1 (v58) – Fehler und Optik:** Hofausbau-Anzeige, Tagesaufgabe „Ohne Leerfahrt“ entfernt,
+Preis-Ereignisse wirken wirklich auf Preise, Daueraufträge ohne direkte Wiederholung,
+Fischer/in angelt nach Spielerregeln (Köder, Fanggrund, Wartegründe), Steg-Reiter, Filet-Modelle, Ruderboot.
+
+**Teil 2 (v59) – Mechaniken:**
+- Köderkiste (eigenes Lager für Köder), Notizbuch zählt nur eigene Fänge
+- Fischpreise nach Gewicht (kg × €/kg × 0,5), Sterne nur noch Aufschlag; Lager merkt kg je Sternstufe
+- Berts alter Kombi am Ufer = Werkstatt (Würmer, Profi-Köder, Spezialköder), Dauerbestellung Würmer,
+  Köder-Entwicklung (eigener Fang → Fisch an Bert → Spezialköder nur für diese Art; nicht für Weißfische)
+- Obstbäume fällen (Gedrückthalten → 🪓 in der Verschieben-Leiste)
+- Fischmarkt ist ein Verkaufsstand wie an der Straße, Fischbrötchen macht das Kühlhaus
+- Daueraufträge: mehr Firmen, Preis je Lieferung schon im Angebot, kündbar erst nach 2 Lieferungen
+- Reusenköder nicht mehr im Laden, Steg reicht bis aufs Ufer, 3D-Bilder für Spezialköder
+
+**Darauf achten, wenn du in denselben Dateien arbeitest:**
+| Thema | Wo |
+|---|---|
+| Fischlager hat neben `qs[1…5]` jetzt `qkg[1…5]` – Fisch immer über `farmAdd`/`farmTake`/`farmTakeQ` ändern, nie `qs` direkt | `farm.js` |
+| Fischwert über `fishPrice`/`farmStackV`, nicht `FITEMS[fisch].v × n` | `erbe.js`, `farm.js` |
+| Neue Spielstand-Felder: `angel.spec`, `angel.bert.keep`, `stats.staffCatch/staffSpecies`, `F.cap.koeder`, Stand-Partien `it.parts/it.v` | `erbe.js` (`angelInit`, `erbeInit`), `farm.js` (`farmMigrate`) |
+| Rezepte können `ok()`, `why`, `hide()`, `costT` haben (Bert) | `farm.js` `farmQueue`, `farmview.js` `openMachine` |
+| `FMACHINES.f_markt` gibt es nicht mehr; alte Stände werden in `erbeInit` umgestellt | `fishdata.js`, `erbe.js` |
+| Bert-Bild nur aus `bert.png` (Ausschnitt per CSS `.fv-fig.img.bert`) | `fishview.js`, `style.css` |
+
+Version: **v59** (`sw.js` und `?v=59` in `index.html`). Alte Spielstände werden beim Laden umgestellt.
+
 ## Stand v48 – erledigt
 
 v48 = v46 (Feinschliff, Notizbuch-Stränge, Rezepte, Minispiele …) **plus**
