@@ -636,11 +636,14 @@ function machReady(o) {
   if (FMACHINES[o.t] && FMACHINES[o.t].saw) return sawRepaired();
   return true;
 }
+function kesselSunOff(o, r) { return o.t === "kessel" && !!(FITEMS[r.id] && FITEMS[r.id].energy) && typeof pvSun === "function" && pvSun(); }
 function farmQueue(o, rid) {
   machUpdate(o);
   const r = recipeOf(o, rid);
   if (!r || r.lv > flv()) return "locked";
   if (!machReady(o)) return "broken";
+  /* v57: speist das volle Solardach ein (tagsüber), heizt der Kessel nicht – Strom aus dem Kessel erst nachts */
+  if (kesselSunOff(o, r)) return "sun";
   if (o.broken) return "jam";
   if (o.q.length + o.done.length >= machSlots(o)) return "full";
   if (!farmHasAll(r.in)) return "missing";

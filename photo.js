@@ -358,7 +358,8 @@ function openFigure() {
   renderFigure();
 }
 function renderFigure() {
-  const a = S.player.avatar;
+  /* v57: fertige Figur oder Foto – selbst gestalten gibt es nicht mehr */
+  const a = S.player.avatar, slots = typeof PLAYER_ART_SLOTS !== "undefined" ? PLAYER_ART_SLOTS.filter(sl => playerArtSrc(sl.id)) : [];
   $("#modalBody").innerHTML = `
     <div class="mhead">
       <div><div class="mtitle">🧑 Deine Figur</div>
@@ -366,16 +367,16 @@ function renderFigure() {
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
     <div class="av-stage"><div class="frame" id="figFrame">${portraitHTML(a, 170, { uid: "fig", bgColor: COMPANY_COLORS[S.player.color] + "33" })}</div></div>
+    ${slots.length ? `<div class="artgrid">${slots.map(sl => `<button class="artpick${!a.photo && a.art === sl.id ? " on" : ""}" data-art="${sl.id}" title="${esc(sl.label)}"><img src="${playerArtSrc(sl.id)}" alt="${esc(sl.label)}"></button>`).join("")}</div>
+      <div class="msub">Tipp eine fertige Figur an – oder nimm ein Foto.</div>` : ""}
     ${photoEditorHTML(!!a.photo)}
     <div class="mbtns">
-      ${a.photo ? `<button class="btn ghost" id="figDrawn">Gezeichnete Figur</button>` : ""}
       <button class="btn" id="figDone">Fertig</button>
     </div>`;
   const close = () => { photoForget(); closeModal(); hudAvatarKey = ""; renderHud(); save(); };
   $("#mClose").onclick = close;
   $("#figDone").onclick = close;
-  const drawn = $("#figDrawn");
-  if (drawn) drawn.onclick = () => { delete a.photo; photoForget(); hudAvatarKey = ""; renderHud(); save(); renderFigure(); };
+  $$("#modalBody [data-art]").forEach(b => b.onclick = () => { a.art = b.dataset.art; delete a.photo; photoForget(); hudAvatarKey = ""; renderHud(); save(); renderFigure(); });
   bindPhotoEditor($("#figFrame"), (url, full) => {
     a.photo = url;
     const img = $("#figFrame img.pt-photo");

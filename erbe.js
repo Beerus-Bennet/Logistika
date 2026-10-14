@@ -195,6 +195,8 @@ function erbeInit(F, fresh) {
   F.piles = F.piles || {};
   /* v56: neue Welt – ältere Stände ziehen um (neue Spiele fangen schon richtig an) */
   if (!F.v56) { F.v56 = 1; if (!fresh) erbeMove56(F); }
+  /* v57: laufende „Besondere Lieferung“ vom Tor mitten auf den Hof */
+  if (F.ev && F.ev.cur && F.ev.cur.k === "lieferung" && F.ev.cur.data && F.ev.cur.data.z > 8) farmParcelSpot(F.ev.cur);
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {
@@ -555,7 +557,7 @@ function pvTick() {
   if (!P.visit && !(F.tut && !F.tut.done) && pvCanCome() && Math.floor(S.time / 1440) >= (P.next || 0)) {
     P.visit = { t0: S.time, until: S.time + FPV.stay };
     if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "info", title: "Solarstrom fürs Sägewerk", go: "pv", goLabel: "Zum Montagewagen",
-      body: "Moin! Wir stehen 48 Stunden mit dem Montagewagen am Sägewerk. Pro Modul " + FPV.price + " € – tagsüber laufen Kessel und Säge mit Sonnenstrom, nachts hilft der Kessel. Gruß, " + FPV.who });
+      body: "Moin! Wir stehen 48 Stunden mit dem Montagewagen am Sägewerk. Pro Modul " + FPV.price + " € – tagsüber laufen die Maschinen mit Sonnenstrom, nachts hilft der Kessel. Gruß, " + FPV.who });
     if (typeof farmPvView === "function") farmPvView("start");
   }
 }
@@ -576,7 +578,7 @@ function pvBuy(k) {
     /* fertig montiert – Döring steigt ein und fährt davon (er kommt nicht wieder) */
     P.visit = null; P.leftAt = S.time; P.next = 1e9;
     if (typeof phoneMsg === "function") phoneMsg({ from: FPV.firm, kind: "good", title: "Alle Module montiert",
-      body: "Moin! Ihr Hallendach ist voll – " + FPV.max + " Module, sauber in Reih und Glied. Kessel und Säge laufen jetzt mit Sonnenstrom. Danke für den Auftrag! Gruß, " + FPV.who });
+      body: "Moin! Ihr Hallendach ist voll – " + FPV.max + " Module, sauber in Reih und Glied. Tagsüber laufen die Maschinen jetzt mit Sonnenstrom, nur nachts braucht es noch den Kessel. Danke für den Auftrag! Gruß, " + FPV.who });
   }
   return k;
 }
@@ -1117,6 +1119,8 @@ function farmClearJunk(o) {
 /* Mitarbeiter: siehe team.js (Personal je Station, arbeitet von allein) */
 
 /* ------------------------------- Ereignisse ------------------------------- */
+/* Pause nach jedem Ereignis (Spielminuten von–bis) */
+const FEV_PAUSE = [150, 300];
 function farmEvOn(k) { const c = S.farm && S.farm.ev && S.farm.ev.cur; return !!(c && c.k === k && S.time < c.until); }
 function farmEvTick() {
   const F = S.farm, E = F.ev;
@@ -1156,12 +1160,19 @@ function farmEvStart(k) {
     const p = onForest ? pick(FWORLD.paths.slice(0, 5))[1] : [29.5 + Math.random() * 8, -14 + Math.random() * 6];
     c.data.x = p[0]; c.data.z = p[1];
   }
-  if (k === "lieferung") { c.data.x = 5 + (Math.random() - 0.5) * 2; c.data.z = 15.2; }
+  if (k === "lieferung") farmParcelSpot(c);
   if (k === "defekt") { const h = farmObj1("sw_halle"); if (h) h.broken = S.time; }
   if (k === "sturm") c.data.hit = false;
   F.ev.cur = c;
   F.stats.events++;
   if (typeof farmEvView === "function") farmEvView("start", c);
+}
+/* v57: Das Paket liegt mitten im Hof auf einem freien Fleck – genau da, wohin die Kamera beim
+   Öffnen schaut (Welt −1 / 0), statt unten am Tor hinter den Knöpfen */
+function farmParcelSpot(c) {
+  const p = farmFreeSpot(1, 1, FG / 2 - 0.5, FG / 2 + 1.5);
+  if (p) { c.data.x = p[0] - FG / 2 + 0.5; c.data.z = p[1] - FG / 2 + 0.5; }
+  else { c.data.x = FGATE.x - 0.4; c.data.z = 1; }
 }
 function farmEvEnd() {
   const F = S.farm, c = F.ev.cur;
@@ -1169,7 +1180,8 @@ function farmEvEnd() {
   if (c.k === "sturm" && !c.data.hit) farmStormHit(c);
   if (c.k === "defekt") { const h = farmObj1("sw_halle"); if (h && h.broken) farmMachFix(h); }
   F.ev.cur = null;
-  F.ev.next = S.time + 8 + Math.floor(Math.random() * 7);
+  /* v57: danach Ruhe – das nächste Ereignis frühestens in zweieinhalb bis fünf Stunden */
+  F.ev.next = S.time + FEV_PAUSE[0] + Math.floor(Math.random() * (FEV_PAUSE[1] - FEV_PAUSE[0]));
   if (typeof farmEvView === "function") farmEvView("end", c);
 }
 /* Sturm vorbei: ein paar Bäume liegen am Boden */
@@ -1223,7 +1235,8 @@ function farmTraderDeal(i) {
   farmXP(5);
   return true;
 }
-/* Nachbar holt die Ware selbst ab: guter Preis, ein Kleeblatt dazu */
+/* Nachbar holt die Ware selbst ab: guter Preis, zwei Kleeblätter dazu (Text in der Blase: openNeighbor) */
+const FNEIGHBOR_CLOVER = 2;
 function farmNeighborDeliver() {
   const c = S.farm.ev.cur;
   if (!c || c.k !== "nachbar") return false;
@@ -1233,7 +1246,7 @@ function farmNeighborDeliver() {
   S.money += m; S.revenue += m; S.farm.stats.earned += m;
   logMoney("farm", "Nachbar Krüger", m);
   farmXP(25);
-  farmClover(2, "Nachbar");
+  farmClover(FNEIGHBOR_CLOVER, "Nachbar");
   farmEvent("deliver:wood");
   c.until = S.time;
   return m;

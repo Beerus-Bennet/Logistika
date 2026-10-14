@@ -14,19 +14,18 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
 
 ## Der Start
 
-1. **Charakter bauen** – Frisur, Haarfarbe, Hautton, Kleidung, Zubehör und ein
-   Name. Die Figuren sind halbrealistisch gezeichnet: Gesichtsanatomie,
-   Hautschattierung, Haarsträhnen mit Glanz – alles als reines SVG, ohne eine
-   einzige Bilddatei. Aus der Sicht dieser Figur läuft das ganze Spiel.
-   Alternativ zehn **fertig gezeichnete Figuren** zur Auswahl (unter
-   „🧑 Fertige Figur“) – eigene lassen sich nach [PLAYER-ART.md](PLAYER-ART.md)
-   ergänzen.
+1. **Figur wählen** – zehn **fertig gezeichnete Figuren** zur Auswahl
+   („🧑 Fertige Figur“, die erste ist vorgewählt) und ein Name. Aus der Sicht
+   dieser Figur läuft das ganze Spiel. Eigene Figuren lassen sich nach
+   [PLAYER-ART.md](PLAYER-ART.md) ergänzen. Das Selbstgestalten mit Reglern
+   gibt es seit v57 nicht mehr.
    **📸 Aus Foto:** Selfie aufnehmen oder ein Bild wählen – das Spiel zeichnet
    daraus direkt im Browser ein Comic-Porträt (Stile: Comic, Comic kräftig,
    Original; mit Zoom und Verschieben). Ein gespeichertes Memoji oder Bitmoji
    lässt sich genauso als Bild nehmen oder einfügen. Das Foto verlässt das
    Gerät nicht, gespeichert wird nur das fertige 256-px-Porträt. Im laufenden
-   Spiel genügt ein Tipp aufs eigene Porträt oben links, um die Figur zu ändern.
+   Spiel genügt ein Tipp aufs eigene Porträt oben links, um eine andere
+   fertige Figur zu wählen oder ein Foto zu nehmen.
 2. **Erbe antreten** – Name des Betriebs, Hausfarbe – und Opas **Obsthof**
    bei Werder (Havel): 500 €, ein bisschen heruntergekommen, mit Feldern,
    Apfelbäumen, drei Hühnern, Backofen, Mühle, einem Lastenrad und
@@ -272,7 +271,10 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   bis zu 16 Module. Jedes bringt tagsüber 2 kWh pro Stunde in den Speicher;
   ist das Dach voll, laufen Kessel und Säge **tagsüber** ganz von selbst mit
   Sonnenstrom (kein Feuer, kein Stromverbrauch). Seit v53 gibt es nachts
-  keinen Sonnenstrom – dann heizt der Mechaniker den Kessel an. Die Nachricht
+  keinen Sonnenstrom – dann heizt der Mechaniker den Kessel an. Seit v57
+  lässt sich der Kessel bei vollem Solardach tagsüber gar nicht anheizen (die
+  Strom-Rezepte sind dann ausgegraut, „🌙 erst nachts“); ohne oder mit halb
+  belegtem Dach geht es weiter wie bisher. Die Nachricht
   der Döring GmbH antippen führt direkt zum Montagewagen. Mit dem letzten Modul ist der
   Auftrag erledigt: Frank Döring bedankt sich per Nachricht, steigt ein und
   fährt mit dem Montagewagen vom Sägewerk zur Straße davon. Wer nicht alles
@@ -378,11 +380,15 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   richtig herum, die Axt schwingt von oben. Im Team-Fenster: **📍 Orten**
   (Kamera fährt hin, die Blase geht auf) und **🎓 Fortbildung** – kostet etwas,
   die Kraft ist einen Tag weg und kommt mit +2 % zurück; je Kraft alle zwei
-  Wochen.
+  Wochen. Seit v57 springt währenddessen ein Freund oder eine Freundin ein
+  (Meldung nach dem Anmelden): gleiche Arbeit, gleicher Lohn, auf dem Hof als
+  eigene Figur „Tom (für Svenja)“.
 * **Ereignisse** – Sturm (danach liegen Bäume zum Aufsammeln), fliegender
   Händler (höchstens einmal am Tag, eine Stunde an der Straße), Fischschwarm, Nachbar braucht Holz, Holz- und Fischpreise steigen,
-  weißer Hirsch (Glücksbringer), klemmende Säge (Zahnräder richten), Paket am Tor,
-  Reh auf dem Weg (Reh und Hirsch nicht mitten in der Nacht). Das
+  weißer Hirsch (Glücksbringer), klemmende Säge (Zahnräder richten), Paket
+  mitten auf dem Hof (seit v57 dort, wohin die Kamera beim Öffnen schaut),
+  Reh auf dem Weg (Reh und Hirsch nicht mitten in der Nacht). Seit v57 ist nach
+  jedem Ereignis zweieinhalb bis fünf Spielstunden Ruhe. Das
   Wildschwein-/Pilze-Ereignis gibt es seit v53 nicht mehr (alte Pilze im
   Lager verschwinden beim Laden).
 * **Wildtiere je nach Tageszeit** – tagsüber Rehe, Hasen, Eichhörnchen,
@@ -1036,7 +1042,7 @@ CSS-Datei, ein Service Worker.
 index.html              Aufbau der Oberfläche
 style.css               Comic-Design in Blau, Ansichten, Dialoge
 data.js                 Weltdaten: Knoten, Strecken, Fahrzeuge, Ladungen, Etappen, Nebel
-avatar.js               Charakter-Baukasten: Porträts und Brustbilder als reines SVG
+avatar.js               Porträts und Brustbilder als reines SVG (Fallback und Leute im Spiel), fertige Figuren
 photo.js                Figur aus Foto: Selfie/Bild → Comic-Porträt, alles im Browser
 places.js               Adressen: Berliner Straßen, Terminals, Siedlungen am Stadtrand
 lina.png, ART.md        optionale eigene Artwork für die Disponentin
@@ -1072,7 +1078,7 @@ worldview.js            große Welt in 3D: Kulisse in Kacheln, Sperrgebiete mit 
 minigames.js            Minispiele: Axt, Kettensäge, Nageln, Kabel, Zahnräder, Förderband, Motor, Graben, Angeln
 fishview.js             See in Bewegung: Angeln vom Steg, Bootsfahrten, Pose und Rute, Enten, springende Fische
 team.js                 Personal je Station: Bewerbungen, Arbeit von allein, Auftragskette (Tierpfleger → Hofmeister → Landwirt, Fahrer → wer die Ware macht), antippen und Aufträge geben, Figuren in 3D, Wege (A* mit Toren und Zäunen), Fortbildung, Orten, Fahrerin im Wagen
-intro.js                Charaktererstellung, Firmengründung, Tutorial
+intro.js                Figurwahl (fertig oder aus Foto), Firmengründung, Tutorial
 sw.js                   Service Worker: App offline, Kacheln im Cache
 manifest.webmanifest    PWA-Manifest
 icon-*.png, favicon-64.png   App-Symbole

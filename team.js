@@ -88,6 +88,19 @@ function staffDaily() {
    Kostet etwas, die Kraft ist einen Tag weg vom Hof und kommt mit +2 % zurück.
    Je Kraft höchstens alle zwei Wochen. */
 const STAFF_TRAIN = { away: 1440, every: 20160, plus: 2, cap: 40 };
+/* v57: Während der Fortbildung springt ein Freund / eine Freundin ein – gleiche Arbeit,
+   gleicher Lohn (der Lohn läuft einfach weiter). Name und Aussehen stehen in s.away.sub. */
+const STAFF_FRIENDS = [["Tom", "m"], ["Lena", "f"], ["Finn", "m"], ["Nele", "f"], ["Jannik", "m"], ["Merle", "f"], ["Bent", "m"], ["Frieda", "f"], ["Mats", "m"], ["Hanna", "f"], ["Lukas", "m"], ["Maja", "f"]];
+function staffStandIn(s) { return s && s.away && s.away.sub ? s.away.sub : null; }
+/* Name, wie er auf dem Hof gerade zu sehen ist */
+function staffName(s) { const b = staffStandIn(s); return b ? b.name + " (für " + s.name + ")" : s.name; }
+/* die eigene Kraft (ohne Vertretung) – für Bild und Name im Team-Fenster */
+function staffSelf(s) { return s && s.away ? Object.assign({}, s, { away: null }) : s; }
+function staffMakeSub(s) {
+  const used = new Set((S.farm.staff || []).map(x => x.name)), free = STAFF_FRIENDS.filter(f => !used.has(f[0]));
+  const f = (free.length ? free : STAFF_FRIENDS)[Math.floor(Math.random() * (free.length || STAFF_FRIENDS.length))];
+  return { name: f[0], g: f[1], look: ((s.look || 0) + 211 + Math.floor(Math.random() * 300)) % 1000 };
+}
 function staffTrainCost(s) { return Math.round((150 + s.wage * 3) / 10) * 10; }
 function staffTrainWait(s) { return Math.max(0, (s.trainT != null ? s.trainT : -1e9) + STAFF_TRAIN.every - S.time); }
 function staffTrainOk(s) { return !s.away && !s.ride && staffTrainWait(s) <= 0 && (s.perk || 0) < STAFF_TRAIN.cap && S.money >= staffTrainCost(s); }
@@ -97,18 +110,20 @@ function staffTrain(id) {
   const c = staffTrainCost(s);
   S.money -= c; S.expense += c;
   logMoney("farm", "Fortbildung " + s.name, -c);
-  s.away = { t0: S.time, until: S.time + STAFF_TRAIN.away };
+  s.away = { t0: S.time, until: S.time + STAFF_TRAIN.away, sub: staffMakeSub(s) };
   s.trainT = S.time; s.job = null;
-  s.doing = "auf Fortbildung";
-  return true;
+  s.doing = "übernimmt die Arbeit";
+  return s.away.sub;
 }
-/* zurück? Dann kommt sie/er von der Straße zu Fuß auf den Hof */
+/* Fortbildung läuft: die Vertretung arbeitet ganz normal weiter (true). Ist der Tag um,
+   übergibt sie/er an Ort und Stelle wieder an die eigene Kraft. */
 function staffAwayTick(s, i) {
-  if (S.time < s.away.until) { s.doing = "auf Fortbildung – zurück in " + (typeof fdur === "function" ? fdur(s.away.until - S.time) : Math.ceil((s.away.until - S.time) / 60) + " Std."); return false; }
+  if (!s.away.sub) s.away.sub = staffMakeSub(s);        /* ältere Stände: jemand springt nachträglich ein */
+  if (S.time < s.away.until) return true;
+  const sub = s.away.sub;
   s.away = null;
   s.perk = Math.min(STAFF_TRAIN.cap, (s.perk || 0) + STAFF_TRAIN.plus);
-  s.px = 5; s.pz = 18.6; s.jobEnd = S.time - 9; s.work = -1e9;
-  if (typeof toast === "function") toast("🎓 " + s.name + " ist zurück von der Fortbildung – jetzt +" + s.perk + " %.", "ok");
+  if (typeof toast === "function") toast("🎓 " + s.name + " ist zurück von der Fortbildung – jetzt +" + s.perk + " %. Danke, " + sub.name + "!", "ok");
   return true;
 }
 /* ------------------------- Fahrerin im Wagen -------------------------------
@@ -589,13 +604,13 @@ function staffPlan() {
   /* Fahrer/in: nimmt die lukrativsten Angebote selbst an (höchstens drei offen) und
      arbeitet die angenommenen von oben nach unten ab – die Kette verteilt sie weiter */
   const fa = staffOf("fahrer");
-  if (fa && !fa.away) {
+  if (fa) {
     const accOpen = farmOrders().filter(x => x.acc && !x.farm.taken && !x.abo).length;
     if (accOpen < 3) {
       const o = farmOrders().filter(x => !x.acc && !x.farm.taken && farmOrderAreaOn(farmOrderArea(x)) && Object.keys(x.farm.items).every(id => farmCanMake(id) || farmInv(id) >= x.farm.items[id]))
         .sort((a, b) => b.pay - a.pay)[0];
       if (o && farmAcceptOrder(o, "fahrer")) {
-        if (typeof toast === "function") toast("📋 " + fa.name + " hat die Bestellung von " + o.shipper + " angenommen (" + eur(o.pay) + ").", "ok", true);
+        if (typeof toast === "function") toast("📋 " + staffName(fa) + " hat die Bestellung von " + o.shipper + " angenommen (" + eur(o.pay) + ").", "ok", true);
         if (typeof renderDirty !== "undefined") renderDirty = true;
       }
     }
@@ -1098,10 +1113,10 @@ function staffTool(role) {
   return null;
 }
 function staffBody(s) {
-  const L = STAFF_LOOK[s.role] || STAFF_LOOK.farmer, k = s.look != null ? s.look : (s.name || "x").length * 37;
+  const b = staffStandIn(s), L = STAFF_LOOK[s.role] || STAFF_LOOK.farmer, k = b ? b.look : s.look != null ? s.look : (s.name || "x").length * 37;
   return Object.assign({}, L, { skin: STAFF_SKIN[k % STAFF_SKIN.length], hair: L.hat ? null : STAFF_HAIR[(k >> 2) % STAFF_HAIR.length], seed: k % 50 });
 }
-const staffKey = s => s.role + ":" + (s.look != null ? s.look % 400 : s.name);
+const staffKey = s => { const b = staffStandIn(s); return s.role + ":" + (b ? "v" + b.look : s.look != null ? s.look % 400 : s.name); };
 /* Werkzeug in der Hand (relativ zur Figur – für das Bildchen) */
 function staffToolAt(T) { return T.rod ? { x: 0.22, y: 0.42, z: 0.1, rx: -0.5, s: T.s } : { x: 0.26, y: 0.3, z: 0.12, s: T.s }; }
 /* … und relativ zur Schulter des beweglichen Arms (auf dem Hof) */
@@ -1141,14 +1156,17 @@ function worldSyncStaff() {
   const R = FV.R, F = S.farm, ids = new Set((F.staff || []).map(s => s.id));
   for (const [id, n] of WV.staff) if (!ids.has(id)) { const i = R.nodes.indexOf(n.node); if (i >= 0) R.nodes.splice(i, 1); WV.staff.delete(id); }
   (F.staff || []).forEach((s, i) => {
-    if (WV.staff.has(s.id)) return;
-    const h = s.px != null ? [s.px, s.pz] : staffHome(s.role, i), body = staffBody(s);
+    const old = WV.staff.get(s.id), key = staffKey(s);
+    if (old && old.key === key) return;
+    /* v57: Vertretung kommt oder geht – neue Figur an derselben Stelle */
+    if (old) { const k = R.nodes.indexOf(old.node); if (k >= 0) R.nodes.splice(k, 1); WV.staff.delete(s.id); }
+    const h = old ? [old.x, old.z] : s.px != null ? [s.px, s.pz] : staffHome(s.role, i), body = staffBody(s);
     const node = fnode(fmesh("staffb:" + staffKey(s), () => FWM.person(Object.assign({}, body, { armR: false }))), { x: h[0], z: h[1], ry: 0.6 + i, s: 1.45 });
     R.nodes.push(node);
     const arm = R.addChild(node, fnode(fmesh("starm:" + body.shirt + ":" + body.skin, () => FWM.arm(body)), Object.assign({ rz: 0.08 }, STAFF_SHOULDER)));
     const T = staffTool(s.role);
     const tool = T ? R.addChild(arm, fnode(fmesh((T.grip ? "sgrip:" : "stool:") + s.role, T.grip ? () => staffGrip(s.role) || T.fn() : T.fn), staffToolOnArm(T))) : null;
-    WV.staff.set(s.id, { node, arm, tool, ph: i, x: h[0], z: h[1], fx: 0, wave: null });
+    WV.staff.set(s.id, { node, arm, tool, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key });
   });
 }
 const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1157,7 +1175,7 @@ function stepStaff(dt, time) {
   const F = S.farm;
   if (!F || !F.staff) return;
   /* neu eingestellt (oder nach dem Laden): Figur nachziehen */
-  if (WV.staff.size !== F.staff.length && FV.R) worldSyncStaff();
+  if (FV.R && (WV.staff.size !== F.staff.length || F.staff.some(s => { const e = WV.staff.get(s.id); return e && e.key !== staffKey(s); }))) worldSyncStaff();
   if (!WV.staff.size) return;
   const now = wnow();
   F.staff.forEach((s, i) => {
@@ -1178,8 +1196,8 @@ function stepStaff(dt, time) {
       }
       return;
     }
-    /* unterwegs mit dem Wagen oder auf Fortbildung: nicht auf dem Hof */
-    const off = !!s.away || (s.ride && staffRideGone(s));
+    /* unterwegs mit dem Wagen: nicht auf dem Hof (auf Fortbildung arbeitet die Vertretung) */
+    const off = !!(s.ride && staffRideGone(s));
     n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off;
     if (off) return;
     let tx, tz, work = false, face = null, onRoute = false, rh = null;
@@ -1288,16 +1306,16 @@ function staffTaskRow(T, now) {
 function staffPopHTML(s, P) {
   const R0 = FSTAFF_ROLES[s.role], tasks = staffTasksOf(s.role).filter(T => !staffTaskDone(T));
   const cur = s.job && s.job.task ? staffTaskList().find(T => T.id === s.job.task) : null;
-  let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(s.name)} · ${R0.i} ${esc(R0.n)}
+  let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(staffName(s))} · ${R0.i} ${esc(R0.n)}
     <small>${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}${cur ? " · für " + esc(staffWho(cur)) : s.job ? " · eigener Plan" : ""}</small></div></div>`;
   if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
     : `<div class="fst-none">Kein Auftrag – arbeitet nach eigenem Plan.${s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
   if (P.add) {
     const opts = staffOptions(s.role);
-    h += `<div class="fst-add-h">Was soll ${esc(s.name)} machen?<small>Nochmal tippen = mehr</small></div><div class="fp-row fst-opts">`
+    h += `<div class="fst-add-h">Was soll ${esc(staffStandIn(s) ? staffStandIn(s).name : s.name)} machen?<small>Nochmal tippen = mehr</small></div><div class="fp-row fst-opts">`
       + (opts.length ? opts.map(o => `<div class="ftool${o.lock ? " lock" : ""}" data-tgive="${esc(o.item)}">${staffItemIcNow(o.item)}<b>${esc(staffItemName(o.item, 2))}</b><small>${o.lock ? "noch nicht" : "×" + staffDefaultN(o.item)}</small></div>`).join("")
-        : `<div class="fst-none">Gerade gibt es nichts, was ${esc(s.name)} machen kann.</div>`) + `</div>`;
+        : `<div class="fst-none">Gerade gibt es nichts, was ${esc(staffStandIn(s) ? staffStandIn(s).name : s.name)} machen kann.</div>`) + `</div>`;
   } else h += `<button class="btn tiny fst-give" data-tadd="1">＋ Auftrag geben</button>`;
   return h;
 }
@@ -1350,12 +1368,12 @@ function staffHTML() {
       const R0 = FSTAFF_ROLES[r], s = F.staff.find(x => x.role === r);
       if (s) {
         const ts = staffTasksOf(r).filter(T => !staffTaskDone(T));
-        return `<div class="fstaff on"><div class="fst-p">${staffIc(s)}</div><div><b>${esc(s.name)} · ${R0.i} ${esc(R0.n)}</b>
+        return `<div class="fstaff on"><div class="fst-p">${staffIc(staffSelf(s))}</div><div><b>${esc(s.name)} · ${R0.i} ${esc(R0.n)}</b>
           <small>${esc(R0.job)}</small><em class="fst-do">${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}</em>
           ${ts.length ? `<small class="fst-tl">📋 ${ts.map(T => esc(staffItemName(T.item, T.n)) + " (" + esc(staffWho(T)) + ")").join(" · ")}</small>` : ""}
           <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small>
           ${staffTrainHTML(s)}</div>
-          <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${s.away || (s.ride && staffRideGone(s)) ? "disabled" : ""}>📍 Orten</button>
+          <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${s.ride && staffRideGone(s) ? "disabled" : ""}>📍 Orten</button>
           <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div></div>`;
       }
       if (!open || flv() < R0.lv) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b><small>${esc(R0.job)}</small><small>🔒 ${open ? "ab Level " + R0.lv : esc(G.lock)}</small></div></div>`;
@@ -1374,7 +1392,7 @@ function staffHTML() {
 }
 /* Fortbildung: Knopf oder Hinweis, wann es wieder geht */
 function staffTrainHTML(s) {
-  if (s.away) return `<small class="fst-tr away">🎓 auf Fortbildung – zurück in ${esc(fdur(Math.max(1, s.away.until - S.time)))}</small>`;
+  if (s.away) return `<small class="fst-tr away">🎓 auf Fortbildung – zurück in ${esc(fdur(Math.max(1, s.away.until - S.time)))}${staffStandIn(s) ? " · " + esc(staffStandIn(s).name) + " springt ein" : ""}</small>`;
   if ((s.perk || 0) >= STAFF_TRAIN.cap) return `<small class="fst-tr">🎓 Bestform: mehr geht nicht</small>`;
   const w = staffTrainWait(s);
   if (w > 0) return `<small class="fst-tr">🎓 nächste Fortbildung in ${Math.ceil(w / 1440)} ${Math.ceil(w / 1440) === 1 ? "Tag" : "Tagen"}</small>`;
@@ -1409,14 +1427,28 @@ function staffBind(again) {
     const s = S.farm.staff.find(x => x.id === b.dataset.train);
     if (!s) return;
     askConfirm("Fortbildung für " + s.name + "?", "Kostet " + eur(staffTrainCost(s)) + ". " + s.name + " ist einen Tag weg und kommt mit +" + STAFF_TRAIN.plus + " % zurück. Wieder möglich in zwei Wochen.", "Anmelden", () => {
-      if (staffTrain(s.id)) { sfx("coin"); save(); toast("🎓 " + s.name + " ist auf Fortbildung – morgen zurück.", "ok"); } else sfx("bad");
-      again();
+      const sub = staffTrain(s.id);
+      if (!sub) { sfx("bad"); again(); return; }
+      sfx("coin"); save();
+      staffSubPopup(s, again);
     });
   });
   $$("#farmSheetIn [data-hire]").forEach(b => b.onclick = () => { if (staffHire(b.dataset.hire)) { sfx("build"); save(); farmSyncScene(); again(); } else sfx("bad"); });
   $$("#farmSheetIn [data-fire]").forEach(b => b.onclick = () => askConfirm("Wirklich entlassen?", "Die Stelle wird frei – neue Bewerbungen kommen jeden Tag.", "Entlassen", () => { staffFire(b.dataset.fire); save(); farmSyncScene(); again(); }));
   $$("#farmSheetIn [data-tdel]").forEach(b => b.onclick = () => { staffTaskDel(b.dataset.tdel, true); sfx("pop"); save(); again(); });
   if (typeof thumbFill === "function") thumbFill();
+}
+/* v57: Meldung nach dem Anmelden – ein Freund / eine Freundin springt für den Tag ein */
+function staffSubPopup(s, back) {
+  const b = staffStandIn(s), R0 = FSTAFF_ROLES[s.role];
+  if (!b) { if (back) back(); return; }
+  const fr = b.g === "f" ? "meine Freundin " + b.name : "meinen Kumpel " + b.name, pr = b.g === "f" ? "Sie" : "Er";
+  FV.sheetFn = null;
+  openFarmSheet(`<div class="fvisit"><div class="fv-fig">${staffIc(staffSelf(s))}</div><div class="fv-tx"><b>${esc(s.name)}</b><small>${R0.i} ${esc(R0.n)} · ab zur Fortbildung</small>
+      <p>„Danke, Chef! Damit morgen nichts liegen bleibt, hab ich ${esc(fr)} gefragt. ${pr} macht meine Arbeit für denselben Lohn – bis ich zurück bin.“</p></div></div>
+    <div class="fv-msg">🎓 ${esc(s.name)} ist einen Tag weg und kommt mit +${STAFF_TRAIN.plus} % zurück. Bis dahin arbeitet ${esc(b.name)} als Vertretung auf dem Hof.</div>
+    <button class="btn fgo" id="fsSubOk">👍 Alles klar</button>`, "visit");
+  $("#fsSubOk").onclick = () => { if (back) back(); else closeFarmSheet(); };
 }
 /* Neue Station fürs Personal offen: Lina sagt Bescheid (einmal je Station) */
 function staffGroupCheck() {

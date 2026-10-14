@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v57 (aufbauend auf v56)
+
+- **Kessel:** Bei vollem Solardach tagsüber gesperrt – `farmQueue` liefert
+  dann `"sun"` (`kesselSunOff(o, r)` in `farm.js`), im Fenster steht
+  „🌙 erst nachts“. Ohne oder mit halb belegtem Dach wie bisher.
+- **Fortbildung:** Ein Freund / eine Freundin springt ein (`team.js`:
+  `s.away.sub`, `staffStandIn(s)`, `staffName(s)` = „Tom (für Svenja)“,
+  Meldung `staffSubPopup`). Die Kraft arbeitet während der Fortbildung
+  weiter (mit dem Aussehen der Vertretung), der Lohn läuft weiter, ohne den
+  Fortbildungsbonus.
+- **Figur:** Selbstgestalten (Regler, Würfeln) ist raus – `intro.js` kennt
+  nur noch „Fertige Figur“ (Standard, erste vorgewählt) und „Aus Foto“;
+  im Spiel (Tipp aufs Porträt, `photo.js`) lassen sich fertige Figuren wählen.
+- **Ereignisse:** Nach jedem Ereignis 2½–5 Spielstunden Pause (`FEV_PAUSE`
+  in `erbe.js`). Die „Besondere Lieferung“ liegt auf einem freien Fleck mitten
+  im Hof, wohin die Kamera beim Öffnen schaut (`farmParcelSpot`).
+- **Krüger:** Blase sagt jetzt „zwei Kleeblätter“ (`FNEIGHBOR_CLOVER`).
+- Fischerei-Dateien unverändert. Version: **v57**.
+
 ## v56 (aufbauend auf v55)
 
 **Weltumbau** (Welt = 1 Einheit je Kachel, Süden = +z, Hofkachel = Welt + 16)

@@ -1254,7 +1254,7 @@ function openPV() {
   const opts = [1, 2, 4, left].filter((k, i, a) => k >= 1 && k <= left && a.indexOf(k) === i);
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">☀️</span>${esc(FPV.firm)}<small>Photovoltaik fürs Sägewerk · ${v ? "noch " + fdur(Math.max(1, v.until - S.time)) + " da" : full ? "Dach ist voll" : "kommt in einer Woche wieder"}</small></div>
     <div class="fpv"><div class="fpv-roof">${cells}</div>
-      <div><b>${P.n} / ${FPV.max} Module</b><small>${full ? "Volles Dach: Kessel und Säge laufen jetzt ganz von selbst mit Sonnenstrom." : `Jedes Modul bringt tagsüber ${FPV.kwh} kWh pro Stunde. Ist das Dach voll, braucht die Säge keinen Kessel mehr.`}</small></div></div>
+      <div><b>${P.n} / ${FPV.max} Module</b><small>${full ? "Volles Dach: tagsüber laufen die Maschinen ganz von selbst mit Sonnenstrom, der Kessel heizt nur nachts." : `Jedes Modul bringt tagsüber ${FPV.kwh} kWh pro Stunde. Ist das Dach voll, braucht die Säge keinen Kessel mehr.`}</small></div></div>
     <div class="fletter mini"><p>„Moin! Ihr Hallendach liegt ideal zur Sonne. Wir montieren die Module ordentlich in Reih und Glied – ${FPV.price} € pro Stück, alles inklusive.“ – ${esc(FPV.who)}</p></div>
     ${v && left ? `<div class="fs-row fpv-buy">${opts.map(k => `<button class="btn${k === 1 ? "" : " ghost"}" data-pv="${k}">${k === left && k > 1 ? "☀️ Dach voll machen" : k + (k === 1 ? " Modul" : " Module")}<small>${eur(k * FPV.price)}</small></button>`).join("")}</div>` : ""}`, "pv");
   $$("#farmSheetIn [data-pv]").forEach(b => b.onclick = () => {
@@ -1263,7 +1263,7 @@ function openPV() {
     sfx("build"); save(); farmSyncScene(); renderFarmUI();
     if (hall) { puff(hall); const [x, y] = objScreen(hall, 4.2); floatText(x, y, "☀️ +" + k + (k === 1 ? " Modul" : " Module"), "gold"); }
     if (pvFull()) {
-      toast("☀️ Das Dach ist voll! Kessel und Säge laufen jetzt mit Sonnenstrom – Döring packt ein und fährt los.", "ok"); sfx("level");
+      toast("☀️ Das Dach ist voll! Tagsüber laufen die Maschinen jetzt mit Sonnenstrom – Döring packt ein und fährt los.", "ok"); sfx("level");
       /* Kamera bleibt auf dem Wagen, bis er losgefahren ist */
       closeFarmSheet(); { const at = pvAt(); farmFocusXZ(at[0] + 1, at[1] + 4, 32, 600); }
       return;
@@ -2028,7 +2028,7 @@ function farmEvView(type, c) {
       sturm: "Ein Sturm zieht auf! Danach liegen Bäume im Wald.", haendler: "Ein fliegender Händler steht an der Straße.", schwarm: "Ein Fischschwarm ist im See unterwegs!",
       nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Der Holzhändler zahlt 30 % mehr.", fischpreis: "Fischpreise steigen: Am Fischmarkt bringt Fisch 30 % mehr.",
       hirsch: "Ein weißer Hirsch im Wald – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
-      lieferung: "Ein Paket liegt am Tor.", reh: "Ein Reh steht auf dem Weg."
+      lieferung: "Ein Paket liegt mitten auf dem Hof.", reh: "Ein Reh steht auf dem Weg."
     }[c.k] || D.n), "");
     farmSyncScene();
   } else {
@@ -2097,7 +2097,7 @@ function energyHTML() {
   const sun = typeof pvSun === "function" && pvSun(), full = typeof pvFull === "function" && pvFull(), n = typeof pvN === "function" ? pvN() : 0;
   const cap = farmEnCap(), en = sun ? cap : Math.floor(S.farm.en || 0);
   const mech = typeof staffHas === "function" && staffHas("mechaniker");
-  const note = sun ? "☀️ Volles Solardach: tagsüber laufen Kessel und Säge mit Sonnenstrom – kein Feuer nötig. Nachts braucht es den Kessel" + (mech ? " – das übernimmt der Mechaniker." : ".")
+  const note = sun ? "☀️ Volles Solardach: tagsüber laufen die Maschinen mit Sonnenstrom – der Kessel bleibt aus. Erst nachts, wenn keine Sonne scheint, heizt er wieder" + (mech ? " – das übernimmt der Mechaniker." : ".")
     : full ? "🌙 Nacht: kein Sonnenstrom. Der Kessel verfeuert Holzreste, Äste oder Brennholz" + (mech ? " – der Mechaniker heizt ein." : " – oder stell einen Mechaniker ein, der nachts einheizt.")
     : !(S.farm.saw && S.farm.saw.motor) ? "Erst den Motor reparieren."
     : "Der Kessel verfeuert Holzreste, Äste oder Brennholz." + (n ? ` ☀️ ${n}/${FPV.max} Solarmodule: +${n * FPV.kwh} kWh je Stunde am Tag.` : "");
@@ -2208,9 +2208,9 @@ function openNeighbor() {
   FV.sheetFn = openNeighbor;
   const m = Math.round(Object.keys(c.data.items).reduce((s, id) => s + FITEMS[id].v * c.data.items[id], 0) * 1.5);
   openFarmSheet(`<div class="fvisit"><div class="fv-fig">👴</div><div class="fv-tx"><b>Erwin Krüger</b><small>Nachbar</small>
-    <p>„Hast du Holz für mich? Ich zahl gut – plus ein Kleeblatt obendrauf!“</p></div></div>
+    <p>„Hast du Holz für mich? Ich zahl gut – plus ${FNEIGHBOR_CLOVER === 1 ? "ein Kleeblatt" : (["", "", "zwei", "drei", "vier"][FNEIGHBOR_CLOVER] || FNEIGHBOR_CLOVER) + " Kleeblätter"} obendrauf!“</p></div></div>
     <div class="fr-in">${Object.keys(c.data.items).map(id => itemChip(id, c.data.items[id], farmInv(id))).join("")}</div>
-    <button class="btn fgo" id="fnGo" ${farmHasAll(c.data.items) ? "" : "disabled"}>🤝 Übergeben · ${eur(m)} + 🍀 2</button>
+    <button class="btn fgo" id="fnGo" ${farmHasAll(c.data.items) ? "" : "disabled"}>🤝 Übergeben · ${eur(m)} + 🍀 ${FNEIGHBOR_CLOVER}</button>
     <div class="fs-sub">Noch ${fdur(Math.max(1, c.until - S.time))} – dann fragt er woanders.</div>`, "visit");
   $("#fnGo").onclick = () => { const r = farmNeighborDeliver(); if (r) { closeFarmSheet(); const fr = $("#farmFx").getBoundingClientRect(); coinFly(fr.width / 2, fr.height / 2, r); sfx("coin"); save(); farmSyncScene(); renderFarmUI(); } else sfx("bad"); };
 }

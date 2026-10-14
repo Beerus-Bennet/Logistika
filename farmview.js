@@ -1831,8 +1831,9 @@ function openMachine(o) {
     if (q._h !== h) { q.innerHTML = h; q._h = h; bindMachQueue(o); }
   };
   const M = FMACHINES[o.t], lv = level();
+  const sunOff = r => kesselSunOff(o, r);
   const rec = M.recipes.map(r => {
-    const lock = r.lv > lv, it = FITEMS[r.id];
+    const lock = r.lv > lv || sunOff(r), it = FITEMS[r.id];
     const ok = !lock && farmHasAll(r.in) && (!r.cost || S.money >= r.cost);
     const ins = Object.keys(r.in).map(id => itemChip(id, r.in[id], farmInv(id))).join("")
       + (r.cost ? `<span class="fchip${S.money < r.cost ? " miss" : ""}">⛽<b>${eur(r.cost)}</b></span>` : "");
@@ -1841,7 +1842,7 @@ function openMachine(o) {
     return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${rkey(r)}" ${lock ? "disabled" : ""}>
       ${icOf(r.id, lock)}
       <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
-      <span class="fr-in">${lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
+      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
       <small>⏱ ${fdur(r.t)} · ${it.energy ? "+" + it.energy * r.out + " kWh in den Speicher" : "Wert " + eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
@@ -1869,6 +1870,7 @@ function openMachine(o) {
     } else if (r === "full") { sfx("bad"); toast(M.trips ? "Der Kutter ist ausgebucht – erst die nächste Fahrt abwarten oder einen Platz dazukaufen." : "Alle Plätze belegt – warte oder kauf einen Platz dazu.", "warn"); }
     else if (r === "money") { sfx("bad"); toast("⛽ Für den Sprit fehlt das Geld.", "warn"); }
     else if (r === "energy") { sfx("bad"); toast("⚡ Zu wenig Strom – heiz den Kessel mit Holzresten oder Ästen an.", "warn"); }
+    else if (r === "sun") { sfx("bad"); toast("☀️ Tagsüber liefert das Solardach den Strom – der Kessel heizt erst nachts.", "warn"); }
     else if (r === "broken") { sfx("bad"); toast("🔧 Erst reparieren – Krügers Sägewerk läuft noch nicht.", "warn"); }
     else if (r === "jam") { sfx("bad"); toast("⚠️ Die Säge klemmt – tipp auf das ⚠️ über der Halle.", "warn"); }
     else if (r === "missing") {

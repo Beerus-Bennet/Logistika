@@ -118,16 +118,11 @@ function renderIntro() {
 
   /* ---------- 1: Charakter ---------- */
   if (INTRO.step === 1) {
-    const pick = (key, label, value) => `
-      <div class="picker">
-        <button data-dec="${key}" aria-label="zurück">‹</button>
-        <div class="lbl"><span>${label}</span><b>${value}</b></div>
-        <button data-inc="${key}" aria-label="weiter">›</button>
-      </div>`;
     const a = d.avatar;
-    const male = AV.sexes[avWrap(a, "sex")] === "m";
     const slots = PLAYER_ART_SLOTS.filter(sl => playerArtSrc(sl.id));
-    const mode = d.mode === "preset" || d.mode === "photo" ? d.mode : "build";
+    /* v57: kein Selbstgestalten mehr – fertige Figur (Standard) oder aus einem Foto */
+    const mode = d.mode === "photo" ? "photo" : "preset";
+    if (mode === "preset" && !a.art && slots.length) a.art = slots[0].id;
     body = `
       <div class="intro-card">
         <div class="intro-h">Wer bist du?</div>
@@ -135,31 +130,17 @@ function renderIntro() {
         <div class="av-stage"><div class="frame">${portraitHTML(a, 170, { uid: "big", bgColor: COMPANY_COLORS[d.color] + "33" })}</div></div>
 
         <div class="modeswitch">
-          <button data-mode="build" class="${mode === "build" ? "on" : ""}">✏️ Selbst gestalten</button>
           <button data-mode="preset" class="${mode === "preset" ? "on" : ""}">🧑 Fertige Figur</button>
           <button data-mode="photo" class="${mode === "photo" ? "on" : ""}">📸 Aus Foto</button>
         </div>
 
-        ${mode === "photo" ? photoEditorHTML(!!a.photo) : mode === "build" ? `<div class="pickers">
-          ${pick("sex", "Typ", AV_LABEL.sex[AV.sexes[avWrap(a, "sex")]])}
-          ${pick("hair", "Frisur", AV_LABEL.hair[avHairList(a)[avWrap(a, "hair")]])}
-          ${pick("hairColor", "Haarfarbe", AV_LABEL.hairColor[AV.hairColors[avWrap(a, "hairColor")].id])}
-          ${pick("eyes", "Augenfarbe", AV_LABEL.eyes[AV.eyeColors[avWrap(a, "eyes")].id])}
-          ${pick("skin", "Hautton", AV_LABEL.skin[AV.skins[avWrap(a, "skin")].id])}
-          ${male ? pick("beard", "Bart", AV_LABEL.beard[AV.beards[avWrap(a, "beard")]]) : ""}
-          ${pick("outfit", "Kleidung", AV.outfits[avWrap(a, "outfit")].name)}
-          ${pick("acc", "Zubehör", AV_LABEL.acc[AV.accessories[avWrap(a, "acc")]])}
-        </div>
-        <div class="intro-btns" style="margin-top:10px">
-          <button class="btn ghost" id="iDice">🎲 Würfeln</button>
-        </div>`
+        ${mode === "photo" ? photoEditorHTML(!!a.photo)
         : slots.length ? `<div class="artgrid">
             ${slots.map(sl => `<button class="artpick${a.art === sl.id ? " on" : ""}" data-art="${sl.id}"
                title="${esc(sl.label)}"><img src="${playerArtSrc(sl.id)}" alt="${esc(sl.label)}"></button>`).join("")}
           </div>
           <div class="intro-p small">Tipp die Figur an, die du spielen willst.</div>`
-        : `<div class="hintbox">Keine fertigen Figuren da. Leg <b>player-w1.png</b> bis
-             <b>player-m4.png</b> ab (Format: <b>PLAYER-ART.md</b>).</div>`}
+        : `<div class="hintbox">Die Figuren werden geladen …</div>`}
 
         <div class="field">
           <label for="iName">Dein Name</label>
@@ -268,17 +249,10 @@ function bindIntro() {
   if (nameEl) nameEl.oninput = () => { d.name = nameEl.value; };
   if (firmEl) firmEl.oninput = () => { d.company = firmEl.value; };
 
-  const step = (k, dir) => {
-    const len = avLen(d.avatar, k);
-    d.avatar[k] = (avWrap(d.avatar, k) + dir + len) % len;
-    /* Frisurenlisten sind je Typ verschieden – Index sauber halten */
-    if (k === "sex") d.avatar.hair = Math.min(d.avatar.hair, avHairList(d.avatar).length - 1);
-    renderIntro();
-  };
   $$("#intro [data-mode]").forEach(b => b.onclick = () => {
     INTRO.draft.mode = b.dataset.mode;
     if (b.dataset.mode !== "photo") { delete INTRO.draft.avatar.photo; photoForget(); }
-    if (b.dataset.mode === "build" || b.dataset.mode === "photo") INTRO.draft.avatar.art = null;
+    if (b.dataset.mode === "photo") INTRO.draft.avatar.art = null;
     else if (!INTRO.draft.avatar.art) {
       const first = PLAYER_ART_SLOTS.find(sl => playerArtSrc(sl.id));
       if (first) INTRO.draft.avatar.art = first.id;
@@ -298,10 +272,6 @@ function bindIntro() {
     INTRO.draft.avatar.art = b.dataset.art || null;
     renderIntro();
   });
-  $$("#intro [data-inc]").forEach(b => b.onclick = () => step(b.dataset.inc, 1));
-  $$("#intro [data-dec]").forEach(b => b.onclick = () => step(b.dataset.dec, -1));
-  const dice = $("#iDice");
-  if (dice) dice.onclick = () => { d.avatar = avRandom(d.avatar.sex); renderIntro(); };
 
   $$("#intro [data-color]").forEach(b => b.onclick = () => { d.color = +b.dataset.color; renderIntro(); });
   $$("#intro [data-origin]").forEach(b => b.onclick = () => { if (ORIGINS[+b.dataset.origin].soon) return; d.origin = +b.dataset.origin; renderIntro(); });
