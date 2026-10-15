@@ -242,6 +242,10 @@ const FGROUNDS = [
   { id: "mitte", n: "Tiefe Mitte",    i: "🌊", x: 14,  z: 50,   boat: 2, fish: { ukelei: 10, rotauge: 6, rotfeder: 4, zander: 30, barsch: 24, hecht: 10, wels: 7 } },
   { id: "bach",  n: "Bachmündung",    i: "🏞️", x: 42,  z: 57,   boat: 2, fish: { ukelei: 12, rotauge: 8, rotfeder: 5, forelle: 45, aal: 14, barsch: 14 } }
 ];
+/* v69.4: Liegeplatz des Bootes je Fanggrund – frei von Seerosen, Schilf und Steinen (sonst x − 1,6 / z − 1,2) */
+Object.assign(FGROUNDS.find(g => g.id === "rosen"), { bx: -5.5, bz: 36.5 });
+Object.assign(FGROUNDS.find(g => g.id === "schilf"), { bx: -9.5, bz: 49.5 });
+Object.assign(FGROUNDS.find(g => g.id === "stein"), { bx: 29, bz: 44.5 });
 /* Tageszeit: Morgen 5–9, Tag 9–17, Abend 17–21, Nacht 21–5 */
 const FFISH_TIME = {
   barsch:  { tag: 1.3 },

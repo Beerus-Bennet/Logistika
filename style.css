@@ -2348,6 +2348,9 @@ body.site-fisch #farm{background:linear-gradient(180deg,#6fb0ec,#cfe8f7)}
   background:#f2fbff;border:var(--line);border-radius:16px;box-shadow:var(--shadow);padding:10px 12px 12px;animation:fpop .25s ease}
 .fa-h{font-weight:800;font-size:15px;margin-right:28px}
 .fa-h small{display:block;font-weight:600;font-size:11px;opacity:.7}
+/* v69.4: 3D-Bildchen in der Kopfzeile (Fanggrund groß, Rute und Köder in der Zeile darunter) */
+.fa-h > .ii{width:34px;height:34px;vertical-align:-10px;margin-right:2px}
+.fa-h small .ii{width:22px;height:22px;vertical-align:-6px}
 .fa-msg{font-size:12.5px;line-height:1.35;margin:6px 0 9px;min-height:2.6em}
 .fa-msg.ok{color:#1d7a46;font-weight:800}
 .fa-msg.bad{color:#a3213b;font-weight:700}

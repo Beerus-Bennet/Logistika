@@ -489,6 +489,62 @@ const FFM = (() => {
     return b;
   }
   const ROD_TIP = 1.86;
+  /* v69.4: Bildchen für die Rute im Angel-Fenster – 1 Lehmanns alte Angel (Holz), 2 Spinnrute (blau),
+     3 Raubfischrute (schwarz-gold); schräg liegend mit Rolle, Griff und Schnur */
+  function rodIcon(n) {
+    G3.seed(4880 + n);
+    const b = new MB();
+    const C = [null, { blank: 0x8a5a32, grip: 0x5a3a22, reel: 0x9aa6af, ring: 0xd8b060 },
+      { blank: 0x2f5f98, grip: 0x2a2a2e, reel: 0xc8ccd0, ring: 0xe8e8ea }, { blank: 0x1d1d20, grip: 0x3a2a1a, reel: 0xd8b048, ring: 0xd8b048 }][n] || null;
+    if (!C) return b;
+    /* fürs Bildchen kräftiger als die echte Rute – sonst wird sie zum Strich */
+    b.at({ ry: -0.785, rx: -0.6 }, m => {   /* quer zur Bildkamera (Blick von 45°), Spitze nach oben */
+      m.box(0.16, 0.16, 0.45, C.grip, { z: -0.05 });
+      m.cyl(0.2, 0.2, 0.16, 12, C.reel, { rz: Math.PI / 2, x: 0.18, y: -0.16, z: 0.12 });
+      m.cyl(0.07, 0.07, 0.2, 8, C.ring, { rz: Math.PI / 2, x: 0.3, y: -0.16, z: 0.12 });
+      m.box(0.09, 0.09, 1.25, C.blank, { z: 0.82 });
+      for (let i = 0; i < 3; i++) m.box(0.14, 0.14, 0.04, C.ring, { y: 0.02, z: 0.45 + i * 0.35 });
+      m.box(0.06, 0.06, 0.1, 0xe8452f, { z: 1.48 });
+    });
+    return b;
+  }
+  /* v69.4: Bildchen je Fanggrund – ein Stück Wasser mit dem, was dort zu sehen ist */
+  function groundIcon(id) {
+    G3.seed(4900 + id.length * 7 + id.charCodeAt(0));
+    const b = new MB();
+    const water = (r, col) => b.disc(r, 18, col || 0x3f8fc0, { y0: 0.04, wob: 0.06 });
+    const stone = (x, z, s, col) => b.ico(s, col || 0x9a948a, { x, y: s * 0.35, z, jitter: 0.45, flat: 0.7 });
+    switch (id) {
+      case "steg":
+        water(1.4);
+        b.at({ x: 0.2, z: -0.1, ry: 0.6, s: 0.38 }, m => { for (let i = 0; i < 10; i++) m.box(1.7, 0.07, 0.27, i % 3 ? 0xa86f3c : 0xc08048, { y: 0.25, z: -1.4 + i * 0.3 }); [-0.8, 0.8].forEach(x => [-1.2, 0.2, 1.4].forEach(z => m.cyl(0.07, 0.07, 0.5, 6, 0x6a4a2a, { x, y: -0.1, z }))); });
+        break;
+      case "rosen":
+        water(1.4);
+        for (let i = 0; i < 7; i++) { const a = i * 0.9, r = 0.35 + (i % 3) * 0.3; b.disc(0.2 + (i % 2) * 0.06, 9, i % 2 ? 0x4f9a35 : 0x5daa3c, { x: Math.cos(a) * r, z: Math.sin(a) * r, y0: 0.06 }); }
+        b.ico(0.11, 0xf6b3cf, { x: 0.1, y: 0.12, z: 0.1 }); b.ico(0.09, 0xffffff, { x: -0.5, y: 0.1, z: 0.4 });
+        break;
+      case "schilf":
+        water(1.4);
+        for (let i = 0; i < 16; i++) { const x = (rnd() - 0.5) * 1.6, z = (rnd() - 0.5) * 1.1, h = 0.7 + rnd() * 0.5; b.box(0.04, h, 0.04, rnd() < 0.5 ? 0x6b8f2c : 0x7da23a, { x, z, rz: (rnd() - 0.5) * 0.3 }); if (rnd() < 0.45) b.box(0.07, 0.17, 0.07, 0x7a5233, { x, y: h, z }); }
+        break;
+      case "stein":
+        water(1.4);
+        stone(0, 0, 0.55); stone(0.55, 0.3, 0.32, 0x8a847a); stone(-0.5, 0.35, 0.26); b.ico(0.12, 0x5f8a3a, { y: 0.45, flat: 0.3, jitter: 0.5 });
+        break;
+      case "mitte":
+        water(1.4, 0x2a6f9e); b.disc(0.9, 18, 0x1f5f8f, { y0: 0.05 });
+        b.cyl(0.14, 0.18, 0.3, 10, 0xf2762e, { y: 0.05 }); b.cyl(0.05, 0.05, 0.25, 6, 0xffffff, { y: 0.35 });
+        break;
+      case "bach":
+        water(1.4);
+        b.box(0.5, 0.02, 1.6, 0x8fd0ea, { x: 0.5, y: 0.05, z: -0.4, ry: 0.5 });
+        stone(-0.3, 0.5, 0.18); stone(0.1, -0.6, 0.14, 0x8a847a); stone(0.9, 0.1, 0.16);
+        for (let i = 0; i < 6; i++) b.box(0.035, 0.6 + rnd() * 0.3, 0.035, 0x6b8f2c, { x: -0.8 + rnd() * 0.3, z: -0.3 + rnd() * 0.6 });
+        break;
+    }
+    return b;
+  }
   function bobber() {
     const b = new MB();
     b.sphere(0.055, 8, 6, 0xe8452f, { y: 0.0, smooth: true, bottom: 0xffffff });
@@ -1449,7 +1505,7 @@ const FFM = (() => {
     bertCar,
     K, WY, KAI_Z, ring, bollard, crate,
     fhouse, kuehl, speicher, fishhalle, smoke, SMOKE_CHIMNEY, feedk, deli, smith, SMITH_CHIMNEY,
-    kutterPier, kutterBoat, steg, angler, rod, ROD_TIP, bobber, lineSeg,
+    kutterPier, kutterBoat, steg, angler, rod, rodIcon, groundIcon, ROD_TIP, bobber, lineSeg,
     potFrame, potEmpty, potBuoy, potFull, mlineBase, mlineFruit, netPen, netWater, trout, fishSchool, fishCrate,
     gullBody, gullWing, gullSit,
     coastLand, quay, beach, surf, sea, mole, lighthouse, LIGHT_TOP, teepott, strandkorb, dune, townHouse, warehouse, ferry, channelBuoy, picket,
