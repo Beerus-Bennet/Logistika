@@ -1540,15 +1540,13 @@ function staffPopHTML(s, P) {
   } else h += `<button class="btn tiny fst-give" data-tadd="1">＋ Auftrag geben</button>`;
   return h;
 }
-/* v68: Kachel-Name – Spezialköder mit der Art vorn („Forelle-Köder“), sonst hieße jeder nur „Spezialkö…“ */
-function staffWlName(id) { const B = typeof FBAITS !== "undefined" && FBAITS[id]; return B && B.spec && FFISH[B.spec] ? FFISH[B.spec].sg + "-Köder" : staffItemName(id, 2); }
 /* v61: Freigabe-Kacheln – an (grün, ✓), aus (blass) oder gesperrt (mit Grund) */
 function staffWlHTML(s) {
   const role = s.role, c = staffWlCtx(role), name = esc(staffStandIn(s) ? staffStandIn(s).name : s.name);
   const items = staffWlAll(role).map(id => ({ id, lock: staffWlLock(role, id, c), on: staffWlHas(role, id) }));
   const n = items.filter(x => x.on && !x.lock).length, free = items.filter(x => !x.lock).length;
   return `<div class="fst-add-h">${role === "fischer" ? "Welche Köder darf " + name + " nehmen?" : "Was darf " + name + " machen?"}<small>${n} von ${free} an · antippen = an/aus</small></div><div class="fp-row fst-opts">`
-    + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffWlName(x.id))}</b>`
+    + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffItemName(x.id, 2))}</b>`
       + `<small>${x.lock ? esc(x.lock) : role === "fischer" && x.id === "koeder" ? (x.on ? "✓ füllt Reusen" : "aus · Reusen bleiben leer") : x.on ? "✓ an" : x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus"}</small></div>`).join("") + `</div>`;
 }
 /* v61: Fahrer/in – genau ein Modus */
