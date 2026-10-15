@@ -798,6 +798,8 @@ function pickAnimal(x, y, pen) {
   return best;
 }
 
+/* v69.5: Auf der Fahrt zum Fanggrund folgt die Kamera dem Boot fest – Ziehen, Zoomen und Mausrad bleiben solange aus */
+function farmCamLocked() { return typeof FISH !== "undefined" && !!FISH.trip && FISH.trip.gid !== "dock"; }
 function bindFarmInput(cv) {
   cv.addEventListener("pointerdown", e => {
     if (!FV.R) return;
@@ -838,6 +840,7 @@ function bindFarmInput(cv) {
     p.x = x; p.y = y;
     const G = FV.gesture;
     if (!G) return;
+    if (G.kind === "pinch" && farmCamLocked()) return;
     if (G.kind === "pinch" && FV.ptr.size >= 2) {
       const [a, b] = [...FV.ptr.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -851,6 +854,7 @@ function bindFarmInput(cv) {
       return;
     }
     if (G.kind === "tap" && Math.hypot(x - G.x0, y - G.y0) > 7) { G.kind = "pan"; clearTimeout(FV.lp); closeFarmPop(); }
+    if (G.kind === "pan" && farmCamLocked()) { FV.vel = [0, 0]; return; }
     if (G.kind === "pan" && G.g0) {
       const g = groundAt(x, y);
       if (!g) return;
@@ -880,7 +884,7 @@ function bindFarmInput(cv) {
   cv.addEventListener("pointercancel", up);
   cv.addEventListener("wheel", e => {
     e.preventDefault();
-    if (!FV.R) return;
+    if (!FV.R || farmCamLocked()) return;
     FV.R.cam.dist *= Math.exp(e.deltaY * 0.0012);
     clampCam();
   }, { passive: false });
