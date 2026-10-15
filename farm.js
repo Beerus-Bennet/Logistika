@@ -250,7 +250,7 @@ function farmQsFix(e) {
   e.n = e.qs.reduce((a, b) => a + b, 0);
   e.q = e.n ? e.qs.reduce((a, b, i) => a + b * i, 0) / e.n : 3;
 }
-function farmKgAvg(id) { return (FFISH[id] && FFISH[id].kgAvg) || FITEMS[id].kg || 0; }
+function farmKgAvg(id) { const f = FFISH[id] || (typeof FPOTS !== "undefined" && FPOTS[id]); return (f && f.kgAvg) || FITEMS[id].kg || 0; }
 function farmQkg(id, e) { if (!e.qkg) e.qkg = e.qs.map(c => c * farmKgAvg(id)); return e.qkg; }
 /* Stück aus einer Stufe nehmen: das Gewicht geht anteilig mit */
 function farmQsCut(id, e, s, k) {
@@ -481,7 +481,7 @@ function farmHaul(o, staff) {
   const got = [];
   for (let i = 0; i < n; i++) {
     const sp = farmWPick(Object.keys(P.mix), x => P.mix[x]);
-    const s = specRoll(FPOTS[sp], (P.tier - 1) * 0.3), q = specQ(s, ((o.bq || 3) - 1) / 4);
+    const s = specRoll(FPOTS[sp], (P.tier - 1) * 0.3), q = specQ(s);   /* v69.7: Sterne nur aus Größe und Kondition, nicht mehr vom Köder */
     farmAdd(sp, 1, q, s.kg);
     got.push({ sp, q, cm: s.cm, kg: s.kg });
     if (angelS()) angelLog(sp, s, q, null, staff);
@@ -781,8 +781,8 @@ function farmStoreUp(st) {
   return true;
 }
 /* v69.6: Angelköder (Tauwürmer, Profi-, Spezialköder) haben keine Qualität – beim Angeln zählen nur Größe und
-   Kondition des Fischs. Reusenköder behalten sie: die Sterne gehen in die Reuse und in den Fang (farmHaul). */
-function farmHasQ(id) { const it = FITEMS[id]; return !(it && it.k === "bait" && id !== "koeder"); }
+   Kondition des Fischs. Seit v69.7 auch Reusenköder: Reusentiere bekommen ihre Sterne wie Fische (farmHaul). */
+function farmHasQ(id) { const it = FITEMS[id]; return !(it && it.k === "bait"); }   /* v69.7: auch Reusenköder ohne Sterne */
 /* Großhandel: sofort Geld, aber nur der halbe Wert */
 /* v59: Fisch nach Gewicht (farmStackV), Sterne als Aufschlag; q = bestimmte Sternstufe */
 function farmSellPrice(id, n, q) {

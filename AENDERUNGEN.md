@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.7 – Reusentiere nach Gewicht, Reusenköder ohne Qualität
+
+- **Reusentiere wie Fische** (`fishdata.js` `FPOTS.*.kgAvg/ekg`, `erbe.js` `fishPrice`, `farm.js` `farmKgAvg`, `farmHaul`):
+  Teichmuscheln, Wollhandkrabben und Edelkrebse bekommen ihre Sterne nur noch aus Größe und Kondition (`specQ(s)`), der
+  Köder zählt nicht mehr. Der Preis richtet sich nach dem Gewicht (18 / 27 / 83 €/kg, Faktor 0,5 wie bei Fisch; ein Tier
+  mittlerer Größe bringt so viel wie vorher). Höhere Reusenstufen fangen größere Tiere – die sind jetzt mehr wert.
+- **Reusenköder ohne Sterne** (`farmHasQ`): wie die Angelköder seit v69.6.
+- Version: **v69.7** (`sw.js` und `?v=69.7` in `index.html`).
+
 ## v69.6 – Angelköder ohne Qualität
 
 - **Keine Sterne mehr bei Angelködern** (`farm.js` `farmHasQ`, `farmSellPrice`; `farmview.js` Lager-Kacheln und Verkaufszeile):
