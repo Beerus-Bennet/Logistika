@@ -34,6 +34,11 @@ Fischer/in angelt nach Spielerregeln (Köder, Fanggrund, Wartegründe), Steg-Rei
 Version: **v59** (`sw.js` und `?v=59` in `index.html`). Alte Spielstände werden beim Laden umgestellt.
 Danach **v60 (Hotfix)**: Hof-Fenster prüfen das Erbe-Level (`flv()`), nicht das der Spedition – siehe `AENDERUNGEN.md`.
 
+**v61 – Freigaben für Arbeiter:** „＋ Auftrag geben“ ist für Landwirt, Tierpfleger, Hofmeister, Holzfäller, Sägewerker,
+Fischwirt und Fahrer durch dauerhafte Freigaben ersetzt (`S.farm.wl`, `S.farm.fahrMode`, alles in `team.js`). Wer an
+Arbeiter-Logik arbeitet: neue Automatik immer über `staffWlHas(role, id)` bzw. `staffFahrOk(o)` prüfen. Fischer unverändert.
+Einzelheiten: `AENDERUNGEN.md` v61.
+
 ## Stand v48 – erledigt
 
 v48 = v46 (Feinschliff, Notizbuch-Stränge, Rezepte, Minispiele …) **plus**

@@ -349,17 +349,18 @@ function staffWant(id) {
   const need = staffOrderNeed(id);
   if (FITEMS[id] && FITEMS[id].k === "feed") {
     let eat = 0;
-    S.farm.objs.forEach(o => { if (o.animals && o.animals.length) { const A = FANIMALS[penKind(o)]; if (A && A.feed === id) eat += o.animals.length; } });
+    /* v61: Futter nur für Tierarten, die der Pfleger versorgen darf */
+    S.farm.objs.forEach(o => { if (o.animals && o.animals.length) { const A = FANIMALS[penKind(o)]; if (A && A.feed === id && staffKindOn(penKind(o))) eat += o.animals.length; } });
     return need + eat * 2 + 2;
   }
   return need + 6;
 }
 /* Bestes Rezept für eine Maschine (ohne Auftrag): was am meisten fehlt, Zutaten da, Platz im Lager */
-function staffPickRecipe(o) {
+function staffPickRecipe(o, role) {   /* v61: role = wessen Freigaben gelten */
   const M = FMACHINES[o.t];
   let best = null, bs = 0;
   M.recipes.forEach(r => {
-    if (r.lv > flv() || !farmHasAll(r.in) || (r.cost && S.money < r.cost + 50)) return;
+    if (r.lv > flv() || (role && !staffWlHas(role, r.id)) || !farmHasAll(r.in) || (r.cost && S.money < r.cost + 50)) return;
     /* was für Bestellungen und Aufträge gebraucht wird, bleibt liegen */
     if (Object.keys(r.in).some(id => farmInv(id) - r.in[id] < staffReserve(id))) return;
     if (FITEMS[r.id].energy) return;
@@ -547,6 +548,76 @@ function staffOptions(role) {
   }
   return out.filter(x => x.item.startsWith("order:") || x.item.startsWith("ani:") || FITEMS[x.item]);
 }
+/* ------------------------------ v61: Freigaben ------------------------------
+   Statt einzelner Aufträge legst du je Beruf fest, was die Kraft machen darf. Gilt für den
+   eigenen Plan und für Aufträge der Kollegen. Gespeichert je Beruf in S.farm.wl[role] – nur die
+   abgeschalteten Einträge (id: false), alles andere ist an (auch neu Verfügbares).
+   Fahrer/in: Modus S.farm.fahrMode = "all" | "ready" | "abo". Fischer/in und Mechaniker/in: keine Freigaben. */
+const STAFF_WL = ["farmer", "pfleger", "hofmeister", "holzfaeller", "saeger", "fischwirt"];
+const STAFF_FAHR = { all: "Alle Aufträge", ready: "Nur lieferbare", abo: "Nur Daueraufträge" };
+function staffWlOn(role) { return STAFF_WL.includes(role); }
+function staffWl(role) { const F = S.farm; F.wl = F.wl || {}; return F.wl[role] || (F.wl[role] = {}); }
+function staffWlHas(role, id) { return !staffWlOn(role) || staffWl(role)[id] !== false; }
+function staffWlSet(role, id, on) { const W = staffWl(role); if (on) delete W[id]; else W[id] = false; }
+function staffFahrMode() { return STAFF_FAHR[S.farm.fahrMode] ? S.farm.fahrMode : "all"; }
+/* Darf der Fahrer diese Bestellung bedienen? (B: nur fertige – das prüft der Aufrufer zusätzlich) */
+function staffFahrOk(o) { return staffFahrMode() !== "abo" || !!o.abo; }
+/* Tierarten zu einem Produkt – zentral aus FANIMALS */
+function staffKindsOf(product) { return Object.keys(FANIMALS).filter(k => FANIMALS[k].out === product && !FANIMALS[k].fish); }
+function staffKindOn(kind) { const A = FANIMALS[kind]; return !!A && staffWlHas("pfleger", A.out); }
+/* Alle Einträge eines Berufs aus den Daten (nicht aus dem, was gerade auf dem Hof steht) */
+function staffWlAll(role) {
+  const uniq = a => [...new Set(a)];
+  if (role === "farmer") return Object.keys(FCROPS).concat(Object.keys(FTREES));
+  if (role === "pfleger") return uniq(Object.keys(FANIMALS).filter(k => !FANIMALS[k].fish).map(k => FANIMALS[k].out));
+  if (role === "holzfaeller") return uniq(Object.keys(FSPECIES).map(sp => FSPECIES[sp].log));
+  const out = [];
+  for (const t in FMACHINES) {
+    const M = FMACHINES[t];
+    if (M.trips || M.bert || staffMachRole({ t }) !== role) continue;
+    M.recipes.forEach(r => { if (FITEMS[r.id] && !FITEMS[r.id].energy) out.push(r.id); });
+  }
+  return uniq(out);
+}
+/* Warum (noch) nicht? Leer = verfügbar. ctx wird je Zeichnen einmal berechnet. */
+function staffWlCtx(role) {
+  const F = S.farm, c = { logs: new Set(), mach: new Set() };
+  if (role === "holzfaeller") (F.trees || []).forEach(t => { if (t.st === "up" && treeOpen(t)) c.logs.add(FSPECIES[t.sp].log); });
+  else F.objs.forEach(o => { if (FMACHINES[o.t] && o.q && (!o.area || farmAreaOpen(o.area)) && machReady(o)) c.mach.add(o.t); });
+  return c;
+}
+function staffWlLock(role, id, c) {
+  const F = S.farm;
+  if (role === "farmer") {
+    if (FCROPS[id]) return farmCropOk(id) ? "" : "ab Level " + FCROPS[id].lv;
+    return F.objs.some(o => o.t === "tree" && o.kind === id) ? "" : "kein Baum";
+  }
+  if (role === "pfleger") {
+    const ks = staffKindsOf(id);
+    if (ks.every(k => FANIMALS[k].lv > flv())) return "ab Level " + Math.min(...ks.map(k => FANIMALS[k].lv));
+    return ks.some(k => F.objs.some(o => o.t === FANIMALS[k].house)) ? "" : "kein Stall";
+  }
+  if (role === "holzfaeller") {
+    if (id === FSPECIES.eiche.log && ((F.tools || {}).axe || 1) < 2) return "braucht Stahlaxt";
+    return c.logs.has(id) ? "" : "kein Baum erreichbar";
+  }
+  let lv = 99, built = false;
+  for (const t in FMACHINES) {
+    const M = FMACHINES[t];
+    if (M.trips || M.bert || staffMachRole({ t }) !== role) continue;
+    const r = M.recipes.find(x => x.id === id);
+    if (!r) continue;
+    lv = Math.min(lv, r.lv || 1);
+    if (c.mach.has(t)) built = true;
+  }
+  return lv > flv() ? "ab Level " + lv : built ? "" : "Maschine fehlt";
+}
+/* Laden: deine alten Einzelaufträge an Berufe mit Freigaben verschwinden (es gibt keinen Knopf mehr dafür) */
+function staffWlInit(F) {
+  if (F.wlV) return;
+  F.wlV = 1;
+  F.tasks = (F.tasks || []).filter(T => !(T.from === "chef" && (staffWlOn(T.role) || T.role === "fahrer")));
+}
 /* Für dich: Lina sagt Bescheid, wenn die Kette an etwas hängt, das keiner macht */
 function staffChefNote(T) {
   const F = S.farm;
@@ -584,7 +655,7 @@ function staffPlan() {
   /* Tierpfleger: wie viele Tiere sollen es sein? Und fehlt Futter? */
   const pf = staffOf("pfleger");
   F.objs.forEach(o => { if (FPENS[o.t] && o.animals) o.want = Math.max(o.want || 0, o.animals.length); });
-  if (pf) F.objs.filter(o => FPENS[o.t] && o.animals && o.animals.length).forEach(o => {
+  if (pf) F.objs.filter(o => FPENS[o.t] && o.animals && o.animals.length && staffKindOn(penKind(o))).forEach(o => {   /* v61: nur freigegebene Arten */
     const A = FANIMALS[penKind(o)];
     if (!A || A.fish) return;
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length, inv = farmInv(A.feed);
@@ -602,7 +673,7 @@ function staffPlan() {
     if (!s || staffTasksOf(role).length >= 3) return;
     staffMachines(role).forEach(o => {
       if (o.t === "kessel" || o.q.length || o.done.length || o.broken) return;
-      const M = FMACHINES[o.t], ok = r => r.lv <= flv() && !FITEMS[r.id].energy && farmRoom(r.id) >= r.out;
+      const M = FMACHINES[o.t], ok = r => r.lv <= flv() && !FITEMS[r.id].energy && staffWlHas(role, r.id) && farmRoom(r.id) >= r.out;
       if (M.recipes.some(r => ok(r) && farmHasAll(r.in))) return;
       let best = null, bs = 0;
       M.recipes.forEach(r => { if (!ok(r)) return; const sc = staffWant(r.id) - farmInv(r.id); if (sc > bs) { bs = sc; best = r; } });
@@ -613,8 +684,12 @@ function staffPlan() {
      arbeitet die angenommenen von oben nach unten ab – die Kette verteilt sie weiter */
   const fa = staffOf("fahrer");
   if (fa) {
+    /* v61: Modus – „Alle“ wie bisher; „Nur lieferbare“ nimmt nichts vorab an und lässt nichts für
+       Bestellungen produzieren; „Nur Daueraufträge“ bedient nur die Wochenlieferungen */
+    const mode = staffFahrMode();
+    F.tasks = F.tasks.filter(T => T.role !== "fahrer" || !T.item.startsWith("order:") || (mode !== "ready" && staffFahrOk(S.orders.find(x => x.id === T.item.slice(6)) || {})));
     const accOpen = farmOrders().filter(x => x.acc && !x.farm.taken && !x.abo).length;
-    if (accOpen < 3) {
+    if (mode === "all" && accOpen < 3) {
       const o = farmOrders().filter(x => !x.acc && !x.farm.taken && farmOrderAreaOn(farmOrderArea(x)) && Object.keys(x.farm.items).every(id => farmCanMake(id) || farmInv(id) >= x.farm.items[id]))
         .sort((a, b) => b.pay - a.pay)[0];
       if (o && farmAcceptOrder(o, "fahrer")) {
@@ -623,8 +698,8 @@ function staffPlan() {
       }
     }
     const open = staffTasksOf("fahrer").filter(T => T.item.startsWith("order:")).length;
-    if (open < 3) {
-      const o = farmOrders().filter(x => x.acc && !x.farm.taken && !staffTaskList().some(T => T.item === "order:" + x.id))
+    if (mode !== "ready" && open < 3) {
+      const o = farmOrders().filter(x => x.acc && !x.farm.taken && staffFahrOk(x) && !staffTaskList().some(T => T.item === "order:" + x.id))
         .sort((a, b) => b.pay - a.pay)[0];
       if (o) staffEnsureTask({ role: "fahrer", item: "order:" + o.id, n: 1, from: "order", fromId: o.id, note: o.shipper });
     }
@@ -648,6 +723,8 @@ function staffBatch(first, list, n) {
 }
 function staffTaskJob(s, T) {
   const F = S.farm, item = T.item, name = staffItemName(item);
+  /* v61: Freigaben gelten auch für Aufträge der Kollegen */
+  if (staffWlOn(s.role) && !item.startsWith("ani:") && !staffWlHas(s.role, item)) { T.wait = name + " – bei " + s.name + " nicht freigegeben"; return null; }
   T.wait = "";
   switch (s.role) {
     case "farmer": {
@@ -659,7 +736,7 @@ function staffTaskJob(s, T) {
         if (staffCropNeed(item)) {
           const emptyL = fields.filter(o => fieldState(o) === "empty"), empty = staffNear(s, emptyL)[0];
           if (empty && S.money >= FCROPS[item].seed) return { k: "field", oid: empty.id, oids: staffBatch(empty, emptyL), crop: item, what: "sät " + name };
-          const other = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && o.crop !== item && farmRoom(o.crop) >= 3))[0];
+          const other = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && o.crop !== item && staffWlHas("farmer", o.crop) && farmRoom(o.crop) >= 3))[0];
           if (other) return { k: "field", oid: other.id, crop: item, what: "erntet " + FITEMS[other.crop].n + ", sät " + name };
         }
         const dryL = fields.filter(o => o.crop === item && fieldState(o) === "grow" && !o.w), dry = staffNear(s, dryL)[0];
@@ -731,7 +808,7 @@ function staffTaskJob(s, T) {
       return null;
     }
     case "holzfaeller": {
-      const j = staffFellerJob(s, t => item === "aeste" || FSPECIES[t.sp].log === item);
+      const j = staffFellerJob(s, t => staffWlHas("holzfaeller", FSPECIES[t.sp].log) && (item === "aeste" || FSPECIES[t.sp].log === item));
       if (j) return j;
       T.wait = "gerade kein ausgewachsener Baum dafür";
       return null;
@@ -746,7 +823,7 @@ function staffTaskJob(s, T) {
     case "fahrer": {
       if (!item.startsWith("order:")) return null;
       const o = S.orders.find(x => x.id === item.slice(6));
-      if (!o || o.farm.taken) return null;
+      if (!o || o.farm.taken || !staffFahrOk(o) || staffFahrMode() === "ready") return null;   /* v61 */
       if (farmOrderReady(o)) {
         const opt = farmDispatchOptions(o).find(p => p.here && !p.late) || farmDispatchOptions(o).find(p => p.here);
         if (opt) return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
@@ -781,7 +858,7 @@ function staffMachJob(s, onlyPower) {
   }
   if (!pickO) for (const o of list) {
     if (o.t === "kessel" || o.broken || o.q.length + o.done.length >= machSlots(o)) continue;
-    const r = staffPickRecipe(o);
+    const r = staffPickRecipe(o, s.role);
     if (r) { pickO = o; rid = rkey(r); what = "macht " + FITEMS[r.id].n; break; }
   }
   if (!pickO) return null;
@@ -791,9 +868,10 @@ function staffMachJob(s, onlyPower) {
 function staffCrop(o) {
   let best = null, bs = -1e9;
   const feed = {};
-  S.farm.objs.forEach(x => { if (x.animals && x.animals.length) { const A = FANIMALS[penKind(x)]; const m = A && staffRecipeFor(A.feed); if (m) for (const id in m.r.in) feed[id] = 1; } });
+  /* v61: Futter-Getreide nur für Tierarten, die der Pfleger versorgen darf */
+  S.farm.objs.forEach(x => { if (x.animals && x.animals.length) { const k = penKind(x), A = FANIMALS[k]; const m = A && staffKindOn(k) && staffRecipeFor(A.feed); if (m) for (const id in m.r.in) feed[id] = 1; } });
   Object.keys(FCROPS).forEach(c => {
-    if (!farmCropOk(c) || S.money < FCROPS[c].seed + 20) return;
+    if (!farmCropOk(c) || !staffWlHas("farmer", c) || S.money < FCROPS[c].seed + 20) return;
     const sc = (staffCropNeed(c) ? 50 : 0) + staffWant(c) - farmInv(c) + (feed[c] ? 6 : 0) + (o.last && o.last !== c ? 0.6 : 0) - FCROPS[c].t / 2000;
     if (sc > bs) { bs = sc; best = c; }
   });
@@ -801,19 +879,21 @@ function staffCrop(o) {
 }
 function staffFarmerJob(s) {
   const F = S.farm, fields = F.objs.filter(o => o.t === "field"), trees = F.objs.filter(o => o.t === "tree");
-  const ripeL = fields.filter(o => fieldState(o) === "ripe" && farmRoom(o.crop) >= 3), ripe = staffNear(s, ripeL)[0];
+  /* v61: nur freigegebene Früchte ernten, gießen, pflücken */
+  const on = c => staffWlHas("farmer", c);
+  const ripeL = fields.filter(o => fieldState(o) === "ripe" && on(o.crop) && farmRoom(o.crop) >= 3), ripe = staffNear(s, ripeL)[0];
   if (ripe) {
     const same = ripeL.filter(o => o.crop === ripe.crop);
     const ids = staffBatch(ripe, same, Math.min(4, Math.max(1, Math.floor(farmRoom(ripe.crop) / 3))));
     return { k: "field", oid: ripe.id, oids: ids, what: "erntet " + FITEMS[ripe.crop].n + (ids.length > 1 ? " (" + ids.length + " Felder)" : "") };
   }
-  const fruit = staffNear(s, trees.filter(o => treeRipe(o) && farmRoom(o.kind) >= 4))[0];
+  const fruit = staffNear(s, trees.filter(o => treeRipe(o) && on(o.kind) && farmRoom(o.kind) >= 4))[0];
   if (fruit) return { k: "pick", oid: fruit.id, what: "pflückt " + FITEMS[fruit.kind].n };
   const emptyL = fields.filter(o => fieldState(o) === "empty" && staffCrop(o)), empty = staffNear(s, emptyL)[0];
   if (empty) { const ids = staffBatch(empty, emptyL); return { k: "field", oid: empty.id, oids: ids, what: "sät " + FITEMS[staffCrop(empty)].n + (ids.length > 1 ? " (" + ids.length + " Felder)" : "") }; }
-  const dryL = fields.filter(o => fieldState(o) === "grow" && !o.w), dryF = staffNear(s, dryL)[0];
+  const dryL = fields.filter(o => fieldState(o) === "grow" && !o.w && on(o.crop)), dryF = staffNear(s, dryL)[0];
   if (dryF) { const ids = staffBatch(dryF, dryL); return { k: "water", oid: dryF.id, oids: ids, what: "gießt " + (ids.length > 1 ? ids.length + " Felder" : "ein Feld") }; }
-  const dry = staffNear(s, trees.filter(o => !treeRipe(o) && !o.w))[0];
+  const dry = staffNear(s, trees.filter(o => !treeRipe(o) && !o.w && on(o.kind)))[0];
   if (dry) return { k: "water", oid: dry.id, what: "gießt den " + FTREES[dry.kind].n };
   return null;
 }
@@ -832,7 +912,8 @@ function staffPenTarget(o) {
   return Math.min(A.max, five);
 }
 function staffPflegerJob(s) {
-  const pens = S.farm.objs.filter(o => FPENS[o.t] && o.animals && FANIMALS[penKind(o)] && !FANIMALS[penKind(o)].fish);
+  /* v61: nur Tierarten, deren Produkt freigegeben ist – sammeln, füttern und nachkaufen */
+  const pens = S.farm.objs.filter(o => FPENS[o.t] && o.animals && FANIMALS[penKind(o)] && !FANIMALS[penKind(o)].fish && staffKindOn(penKind(o)));
   for (const o of pens) {
     const A = FANIMALS[penKind(o)];
     const ready = o.animals.filter(a => aniState(a) === "ready");
@@ -895,12 +976,12 @@ function staffFischerJob(s, target) {
   return { k: "fish", oid: steg.id, gid: P.gid, bait: P.bait, at, what: G && G.boat ? "angelt (" + G.n + ")" : "angelt vom Steg" };
 }
 function staffFahrerJob(s) {
+  /* v61: angenommen wird erst beim Losschicken (staffDo „send“) – Moduswechsel unterwegs nimmt nichts an */
   /* fertige Bestellungen: angenommene zuerst, dann die lukrativste */
-  const ready = farmOrders().filter(x => !x.farm.taken && farmOrderReady(x)).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay);
+  const ready = farmOrders().filter(x => !x.farm.taken && staffFahrOk(x) && farmOrderReady(x)).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay);
   let o = null, opt = null;
   for (const x of ready) { opt = farmDispatchOptions(x).find(p => p.here && !p.late); if (opt) { o = x; break; } }
   if (!o) return null;
-  farmAcceptOrder(o, "fahrer");
   return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
 }
 /* Mechaniker/in: nachts (kein Sonnenstrom) oder wenn der Strom knapp wird, den Kessel anheizen */
@@ -922,7 +1003,7 @@ function staffAutoJob(s) {
     case "farmer": return staffFarmerJob(s);
     case "pfleger": return staffPflegerJob(s);
     case "hofmeister": case "saeger": case "fischwirt": return staffMachJob(s);
-    case "holzfaeller": return staffFellerJob(s);
+    case "holzfaeller": return staffFellerJob(s, t => staffWlHas("holzfaeller", FSPECIES[t.sp].log));   /* v61 */
     case "fischer": return staffFischerJob(s);
     case "fahrer": return staffFahrerJob(s);
   }
@@ -978,25 +1059,26 @@ function staffDo(s, j) {
     case "field":
       (j.oids || [j.oid]).map(farmObj).forEach(o => {
         if (!o || o.t !== "field") return;
-        if (fieldState(o) === "ripe" && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
+        if (fieldState(o) === "ripe" && staffWlHas("farmer", o.crop) && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
         if (fieldState(o) === "empty") {
-          const c = j.crop && farmCropOk(j.crop) && staffCropNeed(j.crop) ? j.crop : staffCrop(o);
+          const c = j.crop && farmCropOk(j.crop) && staffWlHas("farmer", j.crop) && staffCropNeed(j.crop) ? j.crop : staffCrop(o);
           if (c && S.money >= FCROPS[c].seed) farmPlant(o, c);
         }
       });
       break;
-    case "pick": if (o && treeRipe(o) && farmRoom(o.kind) >= 4) { const r = farmPick(o); if (r) gain(r.id, r.n); } break;
-    case "water": (j.oids || [j.oid]).map(farmObj).forEach(o => { if (o) farmWater(o); }); break;
+    case "pick": if (o && treeRipe(o) && staffWlHas("farmer", o.kind) && farmRoom(o.kind) >= 4) { const r = farmPick(o); if (r) gain(r.id, r.n); } break;
+    case "water": (j.oids || [j.oid]).map(farmObj).forEach(o => { if (o && staffWlHas("farmer", o.t === "field" ? o.crop : o.kind)) farmWater(o); }); break;   /* v61: nur Freigegebenes */
     case "pen": {
       if (!o) break;
       const kind = penKind(o), A = FANIMALS[kind];
+      if (!staffKindOn(kind)) break;   /* v61: Freigabe kann sich unterwegs geändert haben */
       o.animals.filter(a => aniState(a) === "ready").forEach(a => { if (farmRoom(A.out) >= (A.mast ? A.yield : 1)) { const r = farmCollect(o, a); if (r) gain(r.id, r.n); } });
       o.animals.filter(a => aniState(a) === "hungry").forEach(a => { if (farmInv(A.feed) > 0) farmFeed(o, a); });
       if (j.buy) {
         /* bis zu zwei Tiere je Gang (eigener Plan), auf deinen Auftrag genau eins */
         const B = FANIMALS[j.buy], times = j.auto ? 2 : 1;
         for (let k = 0; k < times; k++) {
-          if (o.t !== B.house || o.animals.length >= B.max || S.money < animalPrice(j.buy) + (j.auto ? 100 : 0)) break;
+          if (o.t !== B.house || !staffKindOn(j.buy) || o.animals.length >= B.max || S.money < animalPrice(j.buy) + (j.auto ? 100 : 0)) break;
           if (j.auto && o.animals.length >= staffPenTarget(o)) break;
           if (farmBuyAnimal(j.buy, o)) staffCredit(s.role, "ani:" + j.buy, 1);
         }
@@ -1007,7 +1089,7 @@ function staffDo(s, j) {
       if (!o) break;
       farmCollectMach(o).forEach(g => { if (!FITEMS[g.id].energy) gain(g.id, g.n); });
       const r = j.rid ? recipeOf(o, j.rid) : null;
-      if (r && farmHasAll(r.in) && (FITEMS[r.id].energy || farmRoom(r.id) >= r.out)) { if (farmQueue(o, j.rid) === true) o.lastR = j.rid; }
+      if (r && staffWlHas(s.role, r.id) && farmHasAll(r.in) && (FITEMS[r.id].energy || farmRoom(r.id) >= r.out)) { if (farmQueue(o, j.rid) === true) o.lastR = j.rid; }
       break;
     }
     case "fell": {
@@ -1042,9 +1124,10 @@ function staffDo(s, j) {
     }
     case "send": {
       const ord = S.orders.find(x => x.id === j.order);
-      if (!ord || !farmOrderReady(ord)) break;
+      if (!ord || !farmOrderReady(ord) || !staffFahrOk(ord)) break;   /* v61: Modus kann sich unterwegs geändert haben */
       const all = farmDispatchOptions(ord);
       const opt = all.find(p => p.here && p.f.uid === j.veh && !p.late) || all.find(p => p.here && !p.late) || all.find(p => p.here);
+      if (opt && !ord.acc) farmAcceptOrder(ord, "fahrer");
       if (opt && farmSend(ord, opt)) {
         staffCredit(s.role, "order:" + ord.id, 1); farmEvent("send");
         /* sie steigt selbst ein */
@@ -1060,6 +1143,7 @@ function staffDo(s, j) {
 function staffWork() {
   const F = S.farm;
   if (!F || !F.staff) return;
+  staffWlInit(F);
   if (F.staff.length && S.time - (F.taskT || 0) >= 3) { F.taskT = S.time; try { staffPlan(); } catch (e) { console.warn("Aufträge:", e); } }
   F.staff.forEach((s, i) => {
     const R = FSTAFF_ROLES[s.role];
@@ -1099,17 +1183,20 @@ function staffWork() {
   });
 }
 function staffIdleWhy(s) {
+  /* v61: ganz ohne Freigabe sagt die Kraft das auch */
+  if (staffWlOn(s.role) && s.role !== "pfleger" && !staffWlAll(s.role).some(id => staffWlHas(s.role, id))) return s.role === "holzfaeller" ? "keine Holzart freigegeben" : "nichts freigegeben";
   switch (s.role) {
     case "farmer": return "alles bestellt – wartet auf die Ernte";
     case "pfleger": {
-      const hungry = S.farm.objs.find(o => FPENS[o.t] && o.animals && o.animals.some(a => aniState(a) === "hungry"));
+      if (!staffWlAll("pfleger").some(p => staffWlHas("pfleger", p))) return "kein Tierprodukt freigegeben";
+      const hungry = S.farm.objs.find(o => FPENS[o.t] && o.animals && staffKindOn(penKind(o)) && o.animals.some(a => aniState(a) === "hungry"));
       if (hungry) return "wartet auf " + staffItemName(FANIMALS[penKind(hungry)].feed);
       return "die Tiere sind versorgt";
     }
     case "hofmeister": case "saeger": case "fischwirt": return staffMachines(s.role).length ? "Lager reicht oder Zutaten fehlen" : "noch keine Maschinen";
-    case "holzfaeller": return "kein ausgewachsener Baum oder Holzplatz voll";
+    case "holzfaeller": return "kein ausgewachsener Baum der freigegebenen Arten oder Holzplatz voll";
     case "fischer": return s.fwhy || (farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen");
-    case "fahrer": return "keine fertige Bestellung oder kein Fahrzeug am Hof";
+    case "fahrer": return (staffFahrMode() === "abo" ? "kein fertiger Dauerauftrag" : "keine fertige Bestellung") + " oder kein Fahrzeug am Hof";
     case "mechaniker": return typeof pvSun === "function" && pvSun() ? "Sonnenstrom läuft – hilft, wo es klemmt" : "Kessel läuft – hilft, wo es klemmt";
   }
   return "wartet";
@@ -1342,8 +1429,12 @@ function staffPopHTML(s, P) {
   let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(staffName(s))} · ${R0.i} ${esc(R0.n)}
     <small>${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}${cur ? " · für " + esc(staffWho(cur)) : s.job ? " · eigener Plan" : ""}</small></div></div>`;
   if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
+  const wl = staffWlOn(s.role), fahr = s.role === "fahrer";
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
-    : `<div class="fst-none">Kein Auftrag – arbeitet nach eigenem Plan.${s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
+    : `<div class="fst-none">Kein Auftrag – arbeitet ${wl || fahr ? "nach deinen Freigaben" : "nach eigenem Plan"}.${s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
+  /* v61: Freigaben statt „Auftrag geben“ (Fischer/in behält den Knopf) */
+  if (wl) return h + staffWlHTML(s);
+  if (fahr) return h + staffFahrHTML(s);
   if (P.add) {
     const opts = staffOptions(s.role);
     h += `<div class="fst-add-h">Was soll ${esc(staffStandIn(s) ? staffStandIn(s).name : s.name)} machen?<small>Nochmal tippen = mehr</small></div><div class="fp-row fst-opts">`
@@ -1351,6 +1442,23 @@ function staffPopHTML(s, P) {
         : `<div class="fst-none">Gerade gibt es nichts, was ${esc(staffStandIn(s) ? staffStandIn(s).name : s.name)} machen kann.</div>`) + `</div>`;
   } else h += `<button class="btn tiny fst-give" data-tadd="1">＋ Auftrag geben</button>`;
   return h;
+}
+/* v61: Freigabe-Kacheln – an (grün, ✓), aus (blass) oder gesperrt (mit Grund) */
+function staffWlHTML(s) {
+  const role = s.role, c = staffWlCtx(role), name = esc(staffStandIn(s) ? staffStandIn(s).name : s.name);
+  const items = staffWlAll(role).map(id => ({ id, lock: staffWlLock(role, id, c), on: staffWlHas(role, id) }));
+  const n = items.filter(x => x.on && !x.lock).length, free = items.filter(x => !x.lock).length;
+  return `<div class="fst-add-h">Was darf ${name} machen?<small>${n} von ${free} an · antippen = an/aus</small></div><div class="fp-row fst-opts">`
+    + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffItemName(x.id, 2))}</b>`
+      + `<small>${x.lock ? esc(x.lock) : x.on ? "✓ an" : x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus"}</small></div>`).join("") + `</div>`;
+}
+/* v61: Fahrer/in – genau ein Modus */
+function staffFahrHTML(s) {
+  const m = staffFahrMode(), name = esc(staffStandIn(s) ? staffStandIn(s).name : s.name);
+  const tip = { all: "nimmt lukrative Angebote an und liefert alles, was fertig ist – auch Daueraufträge",
+    ready: "liefert nur, was gerade komplett im Lager ist – nimmt nichts vorab an", abo: "liefert nur Daueraufträge" }[m];
+  return `<div class="fst-add-h">Was soll ${name} liefern?<small>${tip}</small></div>
+    <div class="fs-row fst-mode">${Object.keys(STAFF_FAHR).map(k => `<button class="btn tiny${k === m ? "" : " ghost"}" data-fmode="${k}">${STAFF_FAHR[k]}</button>`).join("")}</div>`;
 }
 /* nur neu zeichnen, wenn sich etwas geändert hat (sonst flackert die Blase) – force nach deinem Tippen */
 function renderStaffPop(el, P, force) {
@@ -1364,6 +1472,18 @@ function renderStaffPop(el, P, force) {
   el.innerHTML = `<div class="fp-box fstp">${h}</div>`;
   el.querySelectorAll("[data-tdel]").forEach(b => b.onclick = ev => { ev.stopPropagation(); if (staffTaskDel(b.dataset.tdel, true)) { sfx("pop"); save(); } renderStaffPop(el, P, true); });
   el.querySelectorAll("[data-tadd]").forEach(b => b.onclick = ev => { ev.stopPropagation(); P.add = true; renderStaffPop(el, P, true); });
+  /* v61: Freigabe umschalten / Fahrer-Modus wählen – gilt sofort und bleibt gespeichert */
+  el.querySelectorAll("[data-wl]").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    if (b.classList.contains("lock")) { sfx("bad"); return; }
+    staffWlSet(s.role, b.dataset.wl, !staffWlHas(s.role, b.dataset.wl));
+    sfx("tap"); save(); renderStaffPop(el, P, true);
+  });
+  el.querySelectorAll("[data-fmode]").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    S.farm.fahrMode = b.dataset.fmode;
+    sfx("tap"); save(); renderStaffPop(el, P, true);
+  });
   el.querySelectorAll("[data-tgive]").forEach(b => b.onclick = ev => {
     ev.stopPropagation();
     if (b.classList.contains("lock")) { sfx("bad"); return; }
@@ -1419,7 +1539,7 @@ function staffHTML() {
     const auto = open && roles.filter(r => FSTAFF_ROLES[r].gap).every(staffHas);
     return `<div class="fteam${open ? "" : " lock"}"><div class="fteam-h"><span>${G.i}</span><b>${esc(G.n)}</b><small>${open ? (auto ? "✓ läuft von allein" : hired + "/" + roles.length + " eingestellt") : "🔒 " + esc(G.lock)}</small></div>${rows}</div>`;
   }).join("");
-  return `<div class="fs-sub">👷 Ist die nächste Etappe offen, übernehmen deine Leute die alte Station – langsamer als du, aber ohne Pause. Tipp eine Kraft auf dem Hof an: Sie zeigt ihren Auftrag, und du kannst einen neuen geben.</div>
+  return `<div class="fs-sub">👷 Ist die nächste Etappe offen, übernehmen deine Leute die alte Station – langsamer als du, aber ohne Pause. Tipp eine Kraft auf dem Hof an: Sie zeigt ihre Aufträge, und du legst fest, was sie machen darf.</div>
     ${forYou}${groups}
     <div class="fs-sub">Täglich Lohn + Brotzeit aus dem Lager – hungrig schaffen sie nur die Hälfte.</div>`;
 }
