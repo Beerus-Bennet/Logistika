@@ -120,6 +120,11 @@ const FPOTS = {
   krabbe:  { n: "Wollhandkrabben", lv: 17, tier: 2, t: 150, yield: 2, cm: [5, 9],   kg: [0.10, 0.35], mix: { muschel: 0.5, krabbe: 0.5 } },
   krebs:   { n: "Edelkrebse",      lv: 19, tier: 3, t: 180, yield: 2, cm: [10, 18], kg: [0.04, 0.25], mix: { muschel: 0.2, krabbe: 0.4, krebs: 0.4 } }
 };
+/* v69.7: Reusentiere nach Gewicht wie Fische – kgAvg = Mitte der Spanne, ekg (€/kg) so, dass ein Durchschnittstier
+   so viel bringt wie vorher (0,80 / 3 / 6 €); Sterne nur noch aus Größe und Kondition */
+Object.assign(FPOTS.muschel, { kgAvg: 0.09, ekg: 18 });
+Object.assign(FPOTS.krabbe, { kgAvg: 0.225, ekg: 27 });
+Object.assign(FPOTS.krebs, { kgAvg: 0.145, ekg: 83 });
 const FPOT_UP = [null, null, { lv: 17, cost: 1500 }, { lv: 19, cost: 4000 }];
 FSIZE.pot = [2, 2];
 FFIXED.add("pot");

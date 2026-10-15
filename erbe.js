@@ -941,7 +941,7 @@ function specQ(s, bait) {
    Reusentiere) zählt der Stückpreis mit demselben Aufschlag. Mindestens 0,30 €. */
 function fishQF(q) { q = Math.round(q || 3); return q >= 5 ? 1.10 : q === 4 ? 1.05 : 1; }
 function fishPrice(id, kg, q) {
-  const f = FFISH[id], base = f && f.ekg ? (kg != null ? kg : f.kgAvg) * f.ekg * FPRICE_KG : FITEMS[id].v;
+  const f = FFISH[id] || (typeof FPOTS !== "undefined" && FPOTS[id]), base = f && f.ekg ? (kg != null ? kg : f.kgAvg) * f.ekg * FPRICE_KG : FITEMS[id].v;   /* v69.7: auch Reusentiere */
   return Math.max(0.3, Math.round(base * fishQF(q) * 100) / 100);
 }
 /* Wert eines einzelnen Fangs beim Händler (voller Preis) */
