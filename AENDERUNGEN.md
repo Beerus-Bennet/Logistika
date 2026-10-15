@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.1 – Angel-Minispiel: alle möglichen Fische sichtbar
+
+- **Fische im Wasser** (`style.css` `.mg-water:has(.mg-odds)`, `.mg-water .mg-odd`): Die Wasserfläche hatte feste 84 px und
+  schnitt die zweite Reihe ab. Jetzt wächst sie mit; die Kacheln sind kompakter (Bild neben dem Text).
+- Version: **v69.1** (`sw.js` und `?v=69.1` in `index.html`).
+
 ## v69 – v68 zurückgenommen
 
 - Die Änderungen aus v68 (Spezialköder-Namen „Forelle-Köder“, Wartegründe des Fischers) sind wieder raus – auf Wunsch,
