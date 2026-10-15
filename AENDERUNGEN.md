@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v67 – Produzieren bis das Lager voll ist
+
+- **15 % Luft wieder raus** (`team.js` `staffPickRecipe`): Freigegebenes wird produziert, bis das Lager wirklich voll ist
+  (Netto-Platz und laufende Warteschlangen zählen weiter, v65/v66).
+- **Wartegrund nennt das Lager** (`staffMachWhy`): z. B. „Köderkiste voll“, „Kühlkiste und Köderkiste voll“,
+  „Zutaten fehlen: Forellen · Köderkiste voll“ – vorher „Lager fast voll“, auch wenn nur die Köderkiste voll war.
+- Version: **v67** (`sw.js` und `?v=67` in `index.html`).
+
 ## v66 – Arbeiter füllen die Warteschlange
 
 - **Warteschlange füllen** (`team.js` `staffDo` „mach“): Bei jedem Gang füllt die Kraft alle freien Plätze der Maschine –
@@ -16,7 +24,7 @@
   Maschine mit einem machbaren Rezept – die Fischerhütte fraß alle Forellen, bevor die Räucherei drankam; die Gattersäge
   machte nur Bretter. Jetzt zählt, was im Verhältnis zum Bedarf am wenigsten da ist; volle Warteschlangen zählen weniger.
 - **Lagerplatz netto** (`staffRoomFor`): Zutaten aus demselben Lager machen beim Start Platz (Bretter → Paletten).
-- **15 % Luft** (`staffPickRecipe`): Über den Grundstock hinaus wird nur produziert, solange 15 % des Lagers frei bleiben –
+- **15 % Luft** (`staffPickRecipe`, in v67 wieder entfernt): Über den Grundstock hinaus wird nur produziert, solange 15 % des Lagers frei bleiben –
   Platz zum Weiterverarbeiten. Wartegrund dann „Lager fast voll – Platz zum Weiterverarbeiten bleibt frei“.
 - **Zwischenprodukte** (`staffTaskJob`, `staffDo` „mach“): Braucht ein freigegebenes Rezept eine Zutat, die dieselbe Kraft
   macht (Balken für Paletten), macht sie diese im nötigen Umfang – auch wenn die Kachel aus ist (nur eigene Ketten-Aufträge
