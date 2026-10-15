@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v68 – Fischer: Köder-Namen und klare Wartegründe
+
+- **Kachel-Namen** (`team.js` `staffWlName`): Spezialköder heißen jetzt „Forelle-Köder“, „Zander-Köder“ … statt alle
+  „Spezialköder …“ (auf dem Handy abgeschnitten zu „Spezialkö…“ – nicht zu unterscheiden).
+- **Wartegründe** (`erbe.js` `staffFishPlan`): Ist ein Spezialköder an und da, aber die Art nur per Boot erreichbar:
+  „Zander-Köder: Zander nur mit Ruderboot“ (vorher „kein freigegebener Köder da“). Bei einem Auftrag ohne passenden
+  freigegebenen Köder werden alle passenden genannt: „Forelle-Köder, Tauwürmer, Profi-Köder nicht freigegeben“.
+- Version: **v68** (`sw.js` und `?v=68` in `index.html`).
+
 ## v67 – Produzieren bis das Lager voll ist
 
 - **15 % Luft wieder raus** (`team.js` `staffPickRecipe`): Freigegebenes wird produziert, bis das Lager wirklich voll ist
