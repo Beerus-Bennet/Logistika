@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.2 – Eindeutige Knöpfe im Bestätigungsfenster
+
+- **Bestätigungsfenster** (`game.js` `askConfirm`): Der Knopf zum Schließen heißt jetzt „Zurück“ statt „Abbrechen“ – gilt für
+  alle Rückfragen. Beim Abbrechen in der Warteschlange (`farmview.js`) heißt die Aktion „Ja, abbrechen“ bzw.
+  „Ja, alle abbrechen“. Vorher stand zweimal „Abbrechen“ nebeneinander.
+- Version: **v69.2** (`sw.js` und `?v=69.2` in `index.html`).
+
 ## v69.1 – Angel-Minispiel: alle möglichen Fische sichtbar
 
 - **Fische im Wasser** (`style.css` `.mg-water:has(.mg-odds)`, `.mg-water .mg-odd`): Die Wasserfläche hatte feste 84 px und
