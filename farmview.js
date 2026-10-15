@@ -1913,7 +1913,7 @@ function openFarmStore(st) {
   const sel = FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
   openFarmSheet(`<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
-    <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${qStars(farmQ(id))}</small></button>`).join("")
+    <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>
     ${sel ? (() => {
       const wood = st === "holz" && typeof farmWoodPrice === "function", pr = (id, n) => wood ? farmWoodPrice(id, n) : farmSellPrice(id, n);
@@ -1921,7 +1921,7 @@ function openFarmStore(st) {
       const qs = farmQsOn(sel) && S.farm.inv[sel].qs;
       const rows = qs ? [5, 4, 3, 2, 1].filter(q => qs[q]).map(q => `<div class="fsell-q"><span>${qStars(q)} <small>${esc(fishQName(q))} · ${famt(sel, qs[q])}</small></span>
         ${[1, qs[q]].filter((n, i, a) => a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}" data-q="${q}">${n > 1 ? "alle" : "1"} · ${eur(farmSellPrice(sel, n, q))}</button>`).join("")}</div>`).join("") : "";
-      return `<div class="fsell"><b>${icHTML(sel)} ${esc(fqty(sel, farmInv(sel)))}</b> · ${qStars(farmQ(sel))} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
+      return `<div class="fsell"><b>${icHTML(sel)} ${esc(fqty(sel, farmInv(sel)))}</b>${farmHasQ(sel) ? " · " + qStars(farmQ(sel)) : ""} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
       ${qs ? rows : `<div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(pr(sel, n))}</button>`).join("")}</div>`}
       <small>${wood ? (FITEMS[sel].raw ? "🧔 Der Holzhändler zahlt für Rohholz den vollen Preis" + (farmEvOn("holzpreis") ? " – gerade sogar 30 % mehr!" : ".") : "🧔 Holzwaren nimmt der Holzhändler nur zum halben Wert – Bestellungen bringen mehr.")
         : "Großhandel zahlt sofort, aber nur den halben Wert – Bestellungen bringen mehr."}</small></div>`;

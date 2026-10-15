@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.6 – Angelköder ohne Qualität
+
+- **Keine Sterne mehr bei Angelködern** (`farm.js` `farmHasQ`, `farmSellPrice`; `farmview.js` Lager-Kacheln und Verkaufszeile):
+  Tauwürmer, Profi-Köder und Spezialköder hatten Sterne, die nirgends wirkten (beim Angeln zählen nur Größe und Kondition
+  des Fischs) – nur der Großhandelspreis schwankte ±8 % je Stern. Jetzt ohne Sterne, Preis neutral.
+- **Reusenköder behalten ihre Sterne**: die Köderqualität geht in die Reuse (`o.bq`) und in die Sterne des Fangs (`farmHaul`).
+- Version: **v69.6** (`sw.js` und `?v=69.6` in `index.html`).
+
 ## v69.5 – Kamera bei der Bootsfahrt
 
 - **Hinweg** (`farmview.js` `farmCamLocked`, `fishview.js` `fishStep`): Auf der Fahrt zum Fanggrund folgt die Kamera dem Boot
