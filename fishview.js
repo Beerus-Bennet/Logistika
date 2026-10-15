@@ -227,7 +227,7 @@ function openSteg(tab) {
 }
 function stegFishHTML(U) {
   const w = angelClassW(U.bait, U.rod), cls = { klein: "kleine", mittel: "mittlere", gross: "große" };
-  const chips = Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b);
+  const chips = Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b, null, true);
     return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("");
   const sp = FBAITS[U.bait].spec, odds = sp ? "nur " + esc(FFISH[sp].n) : FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
   const gs = FGROUNDS.map(g => { const ok = farmGroundOk(g);

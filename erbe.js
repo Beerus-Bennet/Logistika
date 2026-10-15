@@ -863,14 +863,14 @@ function angelBaitN(b) {
   const B = FBAITS[b], U = angelS();
   return b === "mais" ? (U.mais || 0) + farmInv("mais") * B.per : farmInv(B.item);
 }
-function angelBaitWhy(b, gid) {
+function angelBaitWhy(b, gid, short) {
   const B = FBAITS[b], U = angelS();
   if (B.tour && !U.tour.done) return "nach dem Turnier";
   if (B.rod && U.rod < B.rod) return "braucht die " + FRODS[B.rod].n;
   /* v59: Spezialköder nur, wo es die Art gibt */
-  if (B.spec && gid && !specHere(B.spec, gid)) return "keine " + FFISH[B.spec].n + " hier – nur an: " + FGROUNDS.filter(g => g.fish[B.spec]).map(g => g.n).join(", ");
+  if (B.spec && gid && !specHere(B.spec, gid)) return "keine " + FFISH[B.spec].n + " hier" + (short ? "" : " – nur an: " + FGROUNDS.filter(g => g.fish[B.spec]).map(g => g.n).join(", "));
   if (angelBaitN(b) > 0) return "";
-  return b === "mais" ? "kein Mais im Silo" : "bei Bert am Kombi bestellen";
+  return b === "mais" ? "kein Mais im Silo" : (short ? "bei Bert bestellen" : "bei Bert am Kombi bestellen");
 }
 /* v59: Spezialköder erst zeigen, wenn Bert ihn entwickelt hat (oder noch welche da sind) */
 function angelBaitShow(b) { const B = FBAITS[b]; return !B.spec || farmInv(B.item) > 0 || specDone(B.spec); }

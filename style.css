@@ -2809,9 +2809,13 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fsell-q{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
 .fsell-q>span{flex:1;min-width:140px}
 .fsell-q small{display:inline;opacity:.7;margin:0}
-.mg-stage .mg-baits{margin:0 0 6px}
-.mg-stage .mg-bait{min-width:0;flex:1 0 70px;padding:3px 4px}
-.mg-stage .mg-bait span{font-size:18px}
+.mg-stage .mg-baits{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:4px;margin:0 0 6px}
+.mg-stage .mg-bait{min-width:0;padding:2px 2px 3px;border-width:2px;border-radius:10px;justify-content:flex-start}
+.mg-stage .mg-bait span{font-size:16px;line-height:1}
+.mg-stage .mg-bait .ii{width:24px;height:24px}
+.mg-stage .mg-bait b{font-size:10.5px;line-height:1.1;height:2.2em;display:flex;align-items:center;text-align:center;overflow:hidden;max-width:100%}
+.mg-stage .mg-bait small{font-size:8.5px;line-height:1.15;height:2.3em;overflow:hidden;text-align:center}
+#mgMsg:empty{min-height:0;margin:0}
 .mg-ring{display:flex;flex-direction:column;align-items:center;gap:8px}
 .mg-ring svg{width:min(220px,70vw);height:auto;touch-action:none;cursor:grab;user-select:none}
 .mg-ring-track{fill:#dff0f7;stroke:#9cc3d5;stroke-width:16}

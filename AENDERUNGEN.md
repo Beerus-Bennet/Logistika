@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.10 – Köderauswahl beim Angeln kompakter
+- **Köder-Kacheln einheitlich:** feste Kachelgröße im Raster (4 pro Zeile), Namen brechen sauber um statt die Kacheln zu verziehen.
+- **Kurze Gründe auf den Kacheln:** `angelBaitWhy(b, gid, short)` hat einen Kurz-Modus („keine Karpfen hier“ ohne Ortsliste, „bei Bert bestellen“). Die lange Variante bleibt für die Meldung beim Auswerfen (minigames.js `cast`). Gilt auch für die Steg-Ansicht (fishview.js).
+- **Hinweistext entfernt:** „Mitten auf dem See … / Köder wählen, auswerfen …“ fällt weg, leeres Meldungsfeld nimmt keinen Platz ein (`#mgMsg:empty`). Das Fenster ist kürzer, die Kopfzeile mit Ort bleibt sichtbar.
+
 ## v69.9 – Spezialköder: „immer“
 
 - **Angel-Minispiel** (`minigames.js` `odds`): Beißt sicher nur eine Art (Spezialköder), steht dort „Wels · immer“ statt „oft“.
