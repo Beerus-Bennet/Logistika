@@ -355,17 +355,29 @@ function staffWant(id) {
   }
   return need + 6;
 }
-/* Bestes Rezept für eine Maschine (ohne Auftrag): was am meisten fehlt, Zutaten da, Platz im Lager */
+/* v66: was noch in Warteschlangen steckt und später ins Lager kommt (Hauptware + Nebenprodukte) */
+function staffPending(st, id) {   /* id: nur diese Ware */
+  let n = 0;
+  S.farm.objs.forEach(o => {
+    if (!o.q) return;
+    o.q.concat(o.done || []).forEach(j => {
+      if (FITEMS[j.r] && FITEMS[j.r].st === st && !FITEMS[j.r].energy && (!id || j.r === id)) n += j.n;
+      if (j.by) for (const b in j.by) if (FITEMS[b] && FITEMS[b].st === st && (!id || b === id)) n += j.by[b];
+    });
+  });
+  return n;
+}
 /* v65: Passt das Ergebnis ins Lager? Zutaten aus demselben Lager machen beim Start Platz
    (Bretter → Paletten geht auch bei vollem Holzplatz) */
 function staffRoomFor(r) {
   const st = FITEMS[r.id].st;
   let freed = 0;
   for (const id in r.in) if (FITEMS[id] && FITEMS[id].st === st) freed += r.in[id];
-  return farmStoreCap(st) - farmStoreUsed(st) + freed >= r.out;
+  return farmStoreCap(st) - farmStoreUsed(st) - staffPending(st) + freed >= r.out;
 }
 /* v65: Wie dringend? Was im Verhältnis zum Bedarf am wenigsten da ist, zuerst */
-function staffRecipeScore(o, r) { return staffWant(r.id) - farmInv(r.id) + (o.lastR === rkey(r) ? 0.5 : 0); }
+function staffRecipeScore(o, r) { return staffWant(r.id) - farmInv(r.id) - staffPending(FITEMS[r.id].st, r.id) + (o.lastR === rkey(r) ? 0.5 : 0); }   /* v66: auch was schon läuft */
+/* Bestes Rezept für eine Maschine (ohne Auftrag): was am meisten fehlt, Zutaten da, Platz im Lager */
 function staffPickRecipe(o, role) {   /* v61: role = wessen Freigaben gelten */
   const M = FMACHINES[o.t];
   /* v63: mit Freigaben gilt „freigegeben = bitte machen“ – solange Zutaten und Lagerplatz da sind,
@@ -379,7 +391,7 @@ function staffPickRecipe(o, role) {   /* v61: role = wessen Freigaben gelten */
     if (!staffRoomFor(r)) return;
     const sc = staffRecipeScore(o, r);
     /* v65: über den Grundstock hinaus nur, solange 15 % des Lagers frei bleiben – Platz fürs Weiterverarbeiten */
-    if (sc <= 0 && role && staffWlOn(role)) { const st = FITEMS[r.id].st, cap = farmStoreCap(st), freed = Object.keys(r.in).reduce((a, id) => a + (FITEMS[id] && FITEMS[id].st === st ? r.in[id] : 0), 0); if (cap - farmStoreUsed(st) + freed - r.out < cap * 0.15) return; }
+    if (sc <= 0 && role && staffWlOn(role)) { const st = FITEMS[r.id].st, cap = farmStoreCap(st), freed = Object.keys(r.in).reduce((a, id) => a + (FITEMS[id] && FITEMS[id].st === st ? r.in[id] : 0), 0); if (cap - farmStoreUsed(st) - staffPending(st) + freed - r.out < cap * 0.15) return; }
     if (sc > bs) { bs = sc; best = r; }
   });
   return best;
@@ -1143,6 +1155,13 @@ function staffDo(s, j) {
       /* v65: Zwischenprodukt für ein eigenes freigegebenes Rezept ist erlaubt (siehe staffTaskJob) */
       const own = j.task && staffTaskList().some(T => T.id === j.task && T.from === s.role && T.parent);
       if (r && (staffWlHas(s.role, r.id) || own) && farmHasAll(r.in) && (FITEMS[r.id].energy || staffRoomFor(r))) { if (farmQueue(o, j.rid) === true) o.lastR = j.rid; }
+      /* v66: gleich die freien Plätze der Warteschlange füllen – je Platz neu entscheiden, was am dringendsten ist
+         (gleiche Regeln: Freigabe, Zutaten, Reserve für Bestellungen, Lagerplatz, 15 % Luft) */
+      if (o.t !== "kessel" && !o.broken && FMACHINES[o.t] && !FMACHINES[o.t].trips) for (let k = 0; k < 12 && o.q.length + o.done.length < machSlots(o); k++) {
+        const r2 = staffPickRecipe(o, s.role);
+        if (!r2 || farmQueue(o, rkey(r2)) !== true) break;
+        o.lastR = rkey(r2);
+      }
       break;
     }
     case "fell": {
