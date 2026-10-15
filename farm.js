@@ -458,9 +458,12 @@ function potStage(o) {
 }
 /* Köder rein, Reuse runter – ein Beutel je Reuse (Köderdose, sonst eine Portion Mais) */
 function farmBaitItem() { return farmInv("koeder") ? "koeder" : farmInv("mais") ? "mais" : null; }
-function farmBait(o, kind) {
-  if (!o || o.t !== "pot" || o.kind || !farmPotOk(kind)) return false;
-  const b = farmBaitItem();
+/* v64: Die Reuse fängt immer mit der besten freigeschalteten Stufe – du wählst nur den Köder */
+function farmPotBest() { return Object.keys(FPOTS).filter(farmPotOk).sort((a, b) => FPOTS[b].tier - FPOTS[a].tier)[0] || null; }
+function farmBait(o, kind, bait) {
+  kind = kind || farmPotBest();
+  if (!o || o.t !== "pot" || o.kind || !kind || !farmPotOk(kind)) return false;
+  const b = bait ? (farmInv(bait) ? bait : null) : farmBaitItem();
   if (!b) return "nobait";
   const q = farmQ(b) || 3;
   farmTake(b, 1);

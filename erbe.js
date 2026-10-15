@@ -970,6 +970,7 @@ function angelLog(id, s, q, gid, staff) {
 function staffBaitOk(b) {
   const B = FBAITS[b], U = angelS();
   if (!B || !U) return false;
+  if (typeof staffWlHas === "function" && !staffWlHas("fischer", b)) return false;   /* v64: Köder-Freigabe */
   if (B.tour && !U.tour.done) return false;
   if (B.rod && U.rod < B.rod) return false;
   return b === "mais" ? (U.staffMais || 0) > 0 || farmInv("mais") > 0 : farmInv(B.item) > 0;
@@ -986,6 +987,7 @@ function staffBaitUse(b) {
 /* Warum geht ein Köder nicht? (für die Wartemeldung) */
 function staffBaitWhy(b) {
   const B = FBAITS[b], U = angelS();
+  if (typeof staffWlHas === "function" && !staffWlHas("fischer", b)) return B.n + " nicht freigegeben";   /* v64 */
   if (B.tour && !U.tour.done) return B.n + " erst nach dem Turnier";
   if (B.rod && U.rod < B.rod) return B.n + " brauchen die " + FRODS[B.rod].n;
   return b === "mais" ? "kein Mais im Silo" : b === "wurm" ? "keine Tauwürmer – Dauerbestellung bei Bert" : "keine Profi-Köder – bei Bert am Kombi bestellen";
@@ -998,8 +1000,22 @@ function staffFishPlan(target) {
   if (!U || !farmObj1("f_steg")) return { why: "erst den Steg bauen" };
   const D = target && FFISH[target];
   if (!D) {
-    const b = ["mais", "wurm"].find(staffBaitOk);
-    return b ? { gid: "steg", bait: b } : { why: "kein Köder (Mais oder Tauwürmer)" };
+    /* v64: ohne Auftrag – der beste freigegebene Köder, der da ist (Spezialköder, Profi-Köder, Würmer, Mais),
+       am erreichbaren Fanggrund mit dem höchsten Durchschnittswert; Spezialköder nur, wo es die Art gibt */
+    const order = Object.keys(FBAITS).filter(b => FBAITS[b].spec).concat(["profikoeder", "wurm", "mais"]);
+    for (const b of order) {
+      if (!staffBaitOk(b)) continue;
+      const B = FBAITS[b];
+      let best = null, bv = -1;
+      FGROUNDS.filter(g => farmGroundOk(g) && (!B.spec || g.fish[B.spec])).forEach(g => {
+        const o = angelOdds(g.id, b, U.rod), sum = Object.values(o).reduce((a, x) => a + x, 0);
+        if (!sum) return;
+        const v = Object.keys(o).reduce((a, id) => a + o[id] * fishPrice(id, null, 3), 0) / sum;
+        if (v > bv) { bv = v; best = g; }
+      });
+      if (best) return { gid: best.id, bait: b };
+    }
+    return { why: "kein freigegebener Köder da" };
   }
   const has = FGROUNDS.filter(g => g.fish[target]);
   const ok = has.filter(farmGroundOk);

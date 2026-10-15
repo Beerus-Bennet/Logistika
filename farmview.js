@@ -989,8 +989,8 @@ function doPlant(o, crop) {
   return true;
 }
 /* Reuse mit Köder bestücken und versenken */
-function doBait(o, kind) {
-  const r = farmBait(o, kind);
+function doBait(o, bait) {   /* v64: gewählter Köder, Stufe automatisch */
+  const r = FITEMS[bait] && !FPOTS[bait] ? farmBait(o, null, bait) : farmBait(o, bait);
   if (r !== true) return r;
   const [cx, cz] = farmCenter(o);
   splash(cx, cz, 14);
@@ -1427,14 +1427,14 @@ function renderFarmPop() {
       <div class="fp-row">${o.w ? `<div class="ftool done"><span class="ic">💧</span><b>gegossen</b></div>`
         : `<div class="ftool big" data-tool="water">${typeof toolIc === "function" ? toolIc("water") : `<span class="ic">🚿</span>`}<b>Gießen</b><small>25 % schneller, +1 ★</small></div>`}</div>`;
   } else if (P.kind === "bait") {
-    const k = farmInv("koeder"), m = farmInv("mais"), U = typeof angelS === "function" ? angelS() : null;
-    h = `<div class="fp-h">Was soll in die Reuse?<small>${FITEMS.koeder.i} ${famt("koeder", k)} Reusenköder${m ? " · " + FITEMS.mais.i + " " + famt("mais", m) + " Mais" : ""} da · zieh ihn über leere Reusen</small></div><div class="fp-row">`
-      + Object.keys(FPOTS).map(id => {
-        const c = FPOTS[id], it = FITEMS[id], lock = !farmPotOk(id);
-        const why = c.lv > lv ? "Lv " + c.lv : "Stufe " + c.tier;
+    /* v64: du wählst den Köder – die Reuse fängt mit der besten freigeschalteten Stufe (farmPotBest) */
+    const best = farmPotBest(), P0 = best && FPOTS[best];
+    h = `<div class="fp-h">Welcher Köder kommt in die Reuse?<small>${P0 ? "Stufe " + P0.tier + ": " + Object.keys(P0.mix).map(x => icHTML(x)).join("") + " · " + fdur(P0.t) : "Reusen noch nicht bereit"} · zieh ihn über leere Reusen</small></div><div class="fp-row">`
+      + ["koeder", "mais"].map(id => {
+        const n = farmInv(id), lock = !n || !P0;
         return `<div class="ftool${lock ? " lock" : ""}" data-tool="bait" data-crop="${id}">
-          ${icOf(id, lock)}<b>${lock ? why : esc(it.n)}</b><small>${lock ? (U && c.lv <= lv ? "Reusen ausbauen" : "") : fdur(c.t) + " · " + Object.keys(c.mix).map(x => icHTML(x)).join("")}</small></div>`;
-      }).join("") + `</div>` + (k || m ? "" : `<div class="fp-tip">Kein Reusenköder mehr: Die Fischerhütte macht welchen aus Fischabfällen, im Laden gibt es Dosen – und eine Portion Mais aus dem Silo geht auch.</div>`);
+          ${icOf(id, lock)}<b>${esc(id === "koeder" ? "Reusenköder" : "Mais")}</b><small>${n ? famt(id, n) + " da" : "keiner da"}</small></div>`;
+      }).join("") + `</div>` + (farmInv("koeder") || farmInv("mais") ? "" : `<div class="fp-tip">Kein Köder mehr: Die Fischerhütte macht Reusenköder aus Fischabfällen – eine Portion Mais aus dem Silo geht auch.</div>`);
   } else if (P.kind === "hook") {
     h = `<div class="fp-h">${icHTML(o.kind)} Die Reuse ist voll!<small>Zieh den Haken über alle vollen Reusen</small></div>
       <div class="fp-row"><div class="ftool big" data-tool="hook"><span class="ic">🪝</span><b>Haken</b></div></div>`;
@@ -1517,7 +1517,7 @@ function startToolDrag(e, kind, crop, origin) {
     feed: origin && origin.animals ? FITEMS[FANIMALS[penKind(origin)].feed].i : "🥣" }[kind];
   /* das gezogene Werkzeug als 3D-Bild: Saat, Futter, Sichel, Gießkanne */
   const gid = kind === "seed" ? crop : kind === "feed" && origin && origin.animals ? FANIMALS[penKind(origin)].feed : null;
-  const bid = kind === "bait" ? (typeof farmBaitItem === "function" && farmBaitItem()) || "koeder" : null;
+  const bid = kind === "bait" ? (FITEMS[crop] ? crop : (typeof farmBaitItem === "function" && farmBaitItem()) || "koeder") : null;
   const gu = typeof itemImg !== "function" ? null : gid ? itemImg(gid) : bid && FITEMS[bid] ? itemImg(bid) : kind === "sickle" ? toolImg("sickle") : kind === "water" && !(origin && origin.t === "mline") ? toolImg("water") : null;
   if (gu) ghost.innerHTML = `<img src="${gu}" alt="">`;
   $("#farm").appendChild(ghost);
@@ -1582,7 +1582,7 @@ function applyToolTo(o, T) {
   else if (T.kind === "sickle" && o.t === "field" && fieldState(o) === "ripe") ok = doHarvest(o, true);
   else if (T.kind === "bait" && o.t === "pot" && potState(o) === "empty") {
     const r = doBait(o, T.crop);
-    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast("🥫 Kein Reusenköder mehr – die Fischerhütte macht welchen aus Fischabfällen, Mais aus dem Silo geht auch.", "warn"); } }
+    if (r === "nobait") { if (!T.nobait) { T.nobait = true; sfx("bad"); toast(T.crop === "mais" ? "🌽 Kein Mais mehr im Silo." : "🥫 Kein Reusenköder mehr – die Fischerhütte macht welchen aus Fischabfällen, Mais aus dem Silo geht auch.", "warn"); } }
     else ok = !!r;
   }
   else if (T.kind === "hook" && o.t === "pot" && potState(o) === "ripe") ok = doHaul(o, true);
