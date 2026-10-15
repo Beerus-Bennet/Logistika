@@ -48,6 +48,11 @@ MG.close = function (res, silent) {
   if (cb && !silent) cb(res);
 };
 function mgH(title, sub) { const h = $("#mgH"); if (h) h.innerHTML = esc(title) + (sub ? `<small>${sub}</small>` : ""); }
+/* v69.4: Kopfzeile mit Bild (fertiges HTML) und 3D-Bildchen für Fanggrund und Rute – sonst das Symbol */
+function mgHtml(titleHtml, sub) { const h = $("#mgH"); if (h) h.innerHTML = titleHtml + (sub ? `<small>${sub}</small>` : ""); }
+function fishThumb(key, fn, emoji) { const u = typeof thumbOf === "function" && typeof THUMB !== "undefined" && !THUMB.failed ? thumbOf(key, fn) : null; return u ? `<img class="ii" src="${u}" alt="">` : emoji; }
+function fishGroundIc(G) { return fishThumb("ground:" + G.id, () => FFM.groundIcon(G.id), G.i); }
+function fishRodIc(n) { return fishThumb("rod:" + n, () => FFM.rodIcon(n), FRODS[n].i); }
 function mgMsg(t, cls) { const m = $("#mgMsg"); if (m) { m.innerHTML = t; m.className = "fa-msg" + (cls ? " " + cls : ""); } }
 function mgBar(html) { const b = $("#mgBar"); if (b) b.innerHTML = html; return b; }
 function mgStage(html) { const s = $("#mgStage"); if (s) s.innerHTML = html; return s; }
@@ -708,12 +713,12 @@ const MG_GAMES = {
       st.ph = "idle"; st.res = null;
       const G = FGROUNDS.find(g => g.id === st.gid) || FGROUNDS[0];
       st.G = G;
-      mgH(G.i + " " + G.n, MG_GAMES.fish.sub(st));
+      mgHtml(fishGroundIc(G) + " " + esc(G.n), MG_GAMES.fish.sub(st));
       MG_GAMES.fish.idle(st);
     },
     sub(st) {
       const wx = FWEATHER[farmWeather()], U = angelS(), B = FBAITS[U.bait];
-      return wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · " + FRODS[U.rod].i + " " + esc(FRODS[U.rod].n) + " · " + B.i + " " + angelBaitN(U.bait) + " Würfe";
+      return wx.i + " " + esc(wx.n) + " · " + esc(FTOD_N[farmTod()]) + " · " + fishRodIc(U.rod) + " " + esc(FRODS[U.rod].n) + " · " + icHTML(B.item) + " " + angelBaitN(U.bait) + " Würfe";
     },
     /* Köder wählen – nicht verfügbare grau mit Grund */
     baits(st) {
@@ -730,10 +735,10 @@ const MG_GAMES = {
     },
     idle(st) {
       st.ph = "idle";
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
+      mgHtml(fishGroundIc(st.G) + " " + esc(st.G.n), MG_GAMES.fish.sub(st));
       mgStage(`${MG_GAMES.fish.baits(st)}<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
       if (!st.res) mgMsg(st.boat ? "Mitten auf dem See. Köder wählen, auswerfen, auf den Biss warten." : "Köder wählen, auswerfen, auf den Biss warten. Bessere Köder locken größere Arten.");
-      mgBar(`<button class="btn fa-go" id="mgGo">🎣 Auswerfen<small>kostet 1 × ${esc(FBAITS[angelS().bait].n)}</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">⛵ Zurück</button>` : ""}`);
+      mgBar(`<button class="btn fa-go" id="mgGo">Auswerfen<small>kostet 1 × ${esc(FBAITS[angelS().bait].n)}</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">Zurück</button>` : ""}`);
       $("#mgGo").onclick = () => MG_GAMES.fish.cast(st);
       $$("#mgStage [data-bait]").forEach(b => b.onclick = () => { angelS().bait = b.dataset.bait; sfx("tap"); MG_GAMES.fish.idle(st); });
       const bk = $("#mgBack"); if (bk) bk.onclick = () => MG.close({ ok: true, back: true });
@@ -750,7 +755,7 @@ const MG_GAMES = {
       st.wait = (sw ? 1 : 2) + Math.random() * (sw ? 2 : 4.5);
       sfx("cast");
       if (st.onCast) st.onCast();
-      mgH(st.G.i + " " + st.G.n, MG_GAMES.fish.sub(st));
+      mgHtml(fishGroundIc(st.G) + " " + esc(st.G.n), MG_GAMES.fish.sub(st));
       mgStage(`<div class="mg-water"><span class="mg-bob" id="mgBob">🔴</span></div>`);
       mgMsg("Pssst … warten …");
       mgBar(`<button class="btn fa-go ghost" id="mgGo">… warten</button>`);

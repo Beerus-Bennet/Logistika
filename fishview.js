@@ -83,7 +83,7 @@ function fishStart(G, boat) {
 function fishSail(G, done) {
   const B = fishBoatNode();
   if (!B) return;
-  const to = G ? [G.x - 1.6, G.z - 1.2] : FBOAT_DOCK;
+  const to = G ? (G.bx != null ? [G.bx, G.bz] : [G.x - 1.6, G.z - 1.2]) : FBOAT_DOCK;   /* v69.4: eigener Liegeplatz */
   const sp = (FBOATS[S.farm.boat] || FBOATS[1]).speed * 1.6;
   FISH.trip = { from: [B.x, B.z], to, sp, done, gid: G ? G.id : "dock" };
   B.at = null;
@@ -101,7 +101,7 @@ function openBoatSheet() {
     const top = Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 3).map(id => icHTML(id)).join("");
     const sw = farmEvOn("schwarm") && F.ev.cur.data.g === g.id;
     const d = Math.round(Math.hypot(g.x - FBOAT_DOCK[0], g.z - FBOAT_DOCK[1]) / ((B.speed || 3) * 1.6));
-    return `<button class="frec${ok ? "" : " lock"}" data-g="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? g.i : "🔒"}</span><b>${esc(g.n)}${sw ? " · 🐟 Schwarm!" : ""}</b>
+    return `<button class="frec${ok ? "" : " lock"}" data-g="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? fishGroundIc(g) : "🔒"}</span><b>${esc(g.n)}${sw ? " · 🐟 Schwarm!" : ""}</b>
       <span class="fr-in"><span class="fchip">${top}</span></span><small>${ok ? "⛵ ca. " + d + " s Fahrt" : "nur mit dem Motorboot"}</small></button>`;
   }).join("");
   const canM = F.boat < 2;
@@ -228,7 +228,7 @@ function stegFishHTML(U) {
     return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("");
   const sp = FBAITS[U.bait].spec, odds = sp ? "nur " + esc(FFISH[sp].n) : FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
   const gs = FGROUNDS.map(g => { const ok = farmGroundOk(g);
-    return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? g.i : "🔒"}</span><b>${esc(g.n)}</b><small>${g.boat === 0 ? "direkt vom Steg" : ok ? "mit dem Boot" : g.boat === 2 ? "braucht das Motorboot" : "braucht das Ruderboot"}</small></button>`; }).join("");
+    return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? fishGroundIc(g) : "🔒"}</span><b>${esc(g.n)}</b><small>${g.boat === 0 ? "direkt vom Steg" : ok ? "mit dem Boot" : g.boat === 2 ? "braucht das Motorboot" : "braucht das Ruderboot"}</small></button>`; }).join("");
   return `<div class="fs-sub">Köder – bessere Köder locken größere Arten:</div><div class="mg-baits">${chips}</div>
     <div class="fs-sub">${FRODS[U.rod].i} ${esc(FRODS[U.rod].n)} + ${FBAITS[U.bait].i} ${esc(FBAITS[U.bait].n)}: Es beißen <b>${odds}</b>${sp ? "" : " Fische"}.</div>
     <div class="frecs">${gs}</div>
@@ -237,7 +237,7 @@ function stegFishHTML(U) {
 function stegGearHTML(U) {
   const rods = [1, 2, 3].map(n => { const R = FRODS[n], have = U.rod >= n;
     const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "Zu wenig Geld – benötigt: " + eur(R.price) : "";
-    return `<div class="uf-row"><span class="ic">${R.i}</span><div><b>${esc(R.n)}</b><small>grüner Bogen ${R.gw}° · ${n === 1 ? "von Lehmann geschenkt" : "größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
+    return `<div class="uf-row"><span class="ic">${fishRodIc(n)}</span><div><b>${esc(R.n)}</b><small>grüner Bogen ${R.gw}° · ${n === 1 ? "von Lehmann geschenkt" : "größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
       ${n === 1 ? "" : `<button class="btn tiny" data-rod="${n}" ${why ? "disabled" : ""}>${why || eur(R.price)}</button>`}</div>`; }).join("");
   return `<div class="fs-sub">Ruten</div><div class="uf-list">${rods}</div>
     <div class="fs-sub">Die bessere Rute schiebt die Chancen zu größeren Arten und macht den Drill leichter: breiterer Bogen, Leiste füllt sich schneller und leert sich langsamer. Mais bleibt Mais – damit beißen nur die Kleinen.</div>`;

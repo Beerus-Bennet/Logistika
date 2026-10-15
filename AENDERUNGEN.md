@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.4 – Angel-Fenster: Bilder statt Emojis, Boot nicht mehr in Steinen und Seerosen
+
+- **Liegeplätze** (`fishdata.js` `FGROUNDS[].bx/bz`, `fishview.js` `fishSail`): Seerosenbucht, Schilfgürtel und Steinkante haben
+  eigene Liegeplätze im freien Wasser – vorher lag das Boot in Seerosen, Schilf oder Steinen.
+- **3D-Bildchen** (`fishmodels.js` `groundIcon(id)`, `rodIcon(n)`; `minigames.js` `fishGroundIc`, `fishRodIc`, `mgHtml`):
+  Fanggrund in der Kopfzeile, Rute und Köder in der Zeile darunter (vor „… Würfe“ das Köder-Bild); auch im Steg-Fenster
+  (Fanggründe, Ruten). Drei Ruten unterscheidbar: Holz, blau, schwarz-gold.
+- **Knöpfe**: „Auswerfen“ und „Zurück“ ohne Emoji.
+- Version: **v69.4** (`sw.js` und `?v=69.4` in `index.html`).
+
 ## v69.3 – Namens-Blase bleibt über der Ware
 
 - **Namens-Blase** (`farmview.js` `itemTip`): Nach dem Antippen einer Ware baut sich das Fenster oft neu auf und rutscht
