@@ -555,7 +555,7 @@ function staffOptions(role) {
    eigenen Plan und für Aufträge der Kollegen. Gespeichert je Beruf in S.farm.wl[role] – nur die
    abgeschalteten Einträge (id: false), alles andere ist an (auch neu Verfügbares).
    Fahrer/in: Modus S.farm.fahrMode = "all" | "ready" | "abo". Fischer/in und Mechaniker/in: keine Freigaben. */
-const STAFF_WL = ["farmer", "pfleger", "hofmeister", "holzfaeller", "saeger", "fischwirt"];
+const STAFF_WL = ["farmer", "pfleger", "hofmeister", "holzfaeller", "saeger", "fischwirt", "fischer"];   /* v64: Fischer = Köder */
 const STAFF_FAHR = { all: "Alle Aufträge", ready: "Nur lieferbare", abo: "Nur Daueraufträge" };
 function staffWlOn(role) { return STAFF_WL.includes(role); }
 function staffWl(role) { const F = S.farm; F.wl = F.wl || {}; return F.wl[role] || (F.wl[role] = {}); }
@@ -573,6 +573,8 @@ function staffWlAll(role) {
   if (role === "farmer") return Object.keys(FCROPS).concat(Object.keys(FTREES));
   if (role === "pfleger") return uniq(Object.keys(FANIMALS).filter(k => !FANIMALS[k].fish).map(k => FANIMALS[k].out));
   if (role === "holzfaeller") return uniq(Object.keys(FSPECIES).map(sp => FSPECIES[sp].log));
+  /* v64: Fischer/in – welche Köder; „Reusenköder“ schaltet das Beködern der Reusen */
+  if (role === "fischer") return ["mais", "wurm", "profikoeder"].concat(Object.keys(FSPEC_BAIT).map(k => "sk_" + k), ["koeder"]);
   const out = [];
   for (const t in FMACHINES) {
     const M = FMACHINES[t];
@@ -599,6 +601,16 @@ function staffWlLock(role, id, c) {
     if (ks.every(k => FANIMALS[k].lv > flv())) return "ab Level " + Math.min(...ks.map(k => FANIMALS[k].lv));
     return ks.some(k => F.objs.some(o => o.t === FANIMALS[k].house)) ? "" : "kein Stall";
   }
+  if (role === "fischer") {
+    const U = angelS(), B = FBAITS[id];
+    if (!U) return "erst den Steg bauen";
+    if (id === "koeder") return F.objs.some(o => o.t === "pot") ? "" : "keine Reuse";
+    if (!B) return "";
+    if (B.tour && !U.tour.done) return "nach dem Turnier";
+    if (B.spec && !specDone(B.spec)) return "erst bei Bert entwickeln";
+    if (B.rod && U.rod < B.rod) return "braucht die " + FRODS[B.rod].n;
+    return "";
+  }
   if (role === "holzfaeller") {
     if (id === FSPECIES.eiche.log && ((F.tools || {}).axe || 1) < 2) return "braucht Stahlaxt";
     return c.logs.has(id) ? "" : "kein Baum erreichbar";
@@ -616,8 +628,8 @@ function staffWlLock(role, id, c) {
 }
 /* Laden: deine alten Einzelaufträge an Berufe mit Freigaben verschwinden (es gibt keinen Knopf mehr dafür) */
 function staffWlInit(F) {
-  if (F.wlV) return;
-  F.wlV = 1;
+  if ((F.wlV || 0) >= 2) return;   /* v64: 2 = auch die Fischer-Aufträge */
+  F.wlV = 2;
   F.tasks = (F.tasks || []).filter(T => !(T.from === "chef" && (staffWlOn(T.role) || T.role === "fahrer")));
 }
 /* Für dich: Lina sagt Bescheid, wenn die Kette an etwas hängt, das keiner macht */
@@ -951,6 +963,12 @@ function staffStegSpot(steg) {
   const [cx, cz] = farmCenter(steg), [, d] = farmSize(steg);
   return [cx, cz + d / 2 - 0.6, cx, cz + d / 2 + 3];
 }
+/* v64: Köder für die Reusen – nur wenn „Reusenköder“ freigegeben ist; sonst bleiben die Reusen leer.
+   Ohne Dosen nimmt er Mais, falls auch Mais freigegeben ist. */
+function staffPotBait() {
+  if (!staffWlHas("fischer", "koeder")) return null;
+  return farmInv("koeder") ? "koeder" : staffWlHas("fischer", "mais") && farmInv("mais") ? "mais" : null;
+}
 function staffFischerJob(s, target) {
   s.fwhy = "";
   const steg = farmObj1("f_steg");
@@ -965,9 +983,9 @@ function staffFischerJob(s, target) {
     if (ripe && room >= 4) return { k: "haul", oid: ripe.id, at, what: "leert eine Reuse" };
     const kind = potT ? Object.keys(FPOTS).filter(k => farmPotOk(k) && FPOTS[k].mix[target]).sort((a, b) => FPOTS[b].mix[target] - FPOTS[a].mix[target])[0] : null;
     const empty = pots.find(o => potState(o) === "empty");
-    if (empty && farmBaitItem() && (potT ? kind : Object.keys(FPOTS).some(farmPotOk))) return { k: "bait", oid: empty.id, kind, at, what: "beködert eine Reuse" };
+    if (empty && staffPotBait() && (potT ? kind : Object.keys(FPOTS).some(farmPotOk))) return { k: "bait", oid: empty.id, kind, at, what: "beködert eine Reuse" };
     if (potT) {
-      s.fwhy = !pots.length ? "keine Reuse am Steg" : !kind ? "dafür fehlt die Reusenstufe" : !farmBaitItem() ? "kein Reusenköder" : room < 4 ? "Kühlkiste voll" : "Reusen liegen noch im Wasser";
+      s.fwhy = !pots.length ? "keine Reuse am Steg" : !kind ? "dafür fehlt die Reusenstufe" : !staffWlHas("fischer", "koeder") ? "Reusenköder nicht freigegeben" : !staffPotBait() ? "kein Reusenköder" : room < 4 ? "Kühlkiste voll" : "Reusen liegen noch im Wasser";
       return null;
     }
   }
@@ -1118,7 +1136,7 @@ function staffDo(s, j) {
     case "haul": case "bait":
       /* Reuse hochziehen und gleich wieder beködert runterlassen */
       if (o && j.k === "haul" && potState(o) === "ripe") { const r = farmHaul(o, true); if (r) (r.got || [{ sp: r.id }]).forEach(g => gain(g.sp, 1)); }
-      if (o && potState(o) === "empty" && farmBaitItem()) { const k = j.kind && farmPotOk(j.kind) ? j.kind : o.last && farmPotOk(o.last) ? o.last : Object.keys(FPOTS).find(farmPotOk); if (k) farmBait(o, k); }
+      { const b = staffPotBait(); if (o && potState(o) === "empty" && b) { const k = j.kind && farmPotOk(j.kind) ? j.kind : farmPotBest(); if (k) farmBait(o, k, b); } }   /* v64: beste Stufe, freigegebener Köder */
       break;
     case "fish": {
       /* v58: ein Wurf = ein Köder; Art, Länge, Gewicht und Sterne wie beim Spieler */
@@ -1486,9 +1504,9 @@ function staffWlHTML(s) {
   const role = s.role, c = staffWlCtx(role), name = esc(staffStandIn(s) ? staffStandIn(s).name : s.name);
   const items = staffWlAll(role).map(id => ({ id, lock: staffWlLock(role, id, c), on: staffWlHas(role, id) }));
   const n = items.filter(x => x.on && !x.lock).length, free = items.filter(x => !x.lock).length;
-  return `<div class="fst-add-h">Was darf ${name} machen?<small>${n} von ${free} an · antippen = an/aus</small></div><div class="fp-row fst-opts">`
+  return `<div class="fst-add-h">${role === "fischer" ? "Welche Köder darf " + name + " nehmen?" : "Was darf " + name + " machen?"}<small>${n} von ${free} an · antippen = an/aus</small></div><div class="fp-row fst-opts">`
     + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffItemName(x.id, 2))}</b>`
-      + `<small>${x.lock ? esc(x.lock) : x.on ? "✓ an" : x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus"}</small></div>`).join("") + `</div>`;
+      + `<small>${x.lock ? esc(x.lock) : role === "fischer" && x.id === "koeder" ? (x.on ? "✓ füllt Reusen" : "aus · Reusen bleiben leer") : x.on ? "✓ an" : x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus"}</small></div>`).join("") + `</div>`;
 }
 /* v61: Fahrer/in – genau ein Modus */
 function staffFahrHTML(s) {

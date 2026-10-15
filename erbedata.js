@@ -380,13 +380,15 @@ Object.assign(FUNLOCK_HOF, {
 (function () {
   const add = (town, cust) => { if (FTOWNS_HOF[town]) FTOWNS_HOF[town].cust.push(...cust); };
   add("w-werder", [["Baumarkt Werder", ["bretter", "pfosten", "kisten", "zaun", "brennholz"]], ["Kaminstudio Werder", ["brennholz", "kaminholz"]],
+    ["Gartenteich-Center Werder", ["muschel"]],   /* v64: Reusentiere */
     ["Fischrestaurant Arielle", ["zanderfilet", "forellenfilet", "raeucheraal", "hechtkloesse"]]]);
   add("w-glindow", [["Tischlerei Glindow", ["platten", "dielen", "moebel", "bohlen", "schatulle"]], ["Imbiss am Glindower See", ["fischbroetchen", "raeucherforelle", "barschfilet", "konserve"]]]);
   add("w-petzow", [["Bootsverleih Petzow", ["bretter", "dielen", "pfosten"]], ["Schlosshotel Petzow", ["zanderfilet", "edelbox", "kaminholz", "schatulle"]]]);
   add("w-geltow", [["Zimmerei Geltow", ["balken", "bauholz", "bretter", "pfosten"]], ["Räucherkate Geltow", ["raeucherforelle", "raeucheraal", "fischplatte"]]]);
-  add("w-caputh", [["Werft Caputh", ["bohlen", "dielen", "bretter", "balken"]], ["Fischerhütte Caputh", ["karpfenblau", "barschfilet", "fischkiste"]]]);
+  add("w-caputh", [["Werft Caputh", ["bohlen", "dielen", "bretter", "balken"]], ["Fischerhütte Caputh", ["karpfenblau", "barschfilet", "fischkiste"]], ["Asia-Markt Caputh", ["krabbe"]]]);
   add("w-michendorf", [["Holzhandel Michendorf", ["bretter", "balken", "platten", "paletten", "bauholz"]], ["Getränkehandel Michendorf", ["paletten", "kisten"]]]);
   add("potsdam", [["Möbelhaus am Bassin", ["moebel", "tueren", "schatulle"]], ["Fischmarkt Potsdam", ["karpfenblau", "konserve", "fischkiste", "hechtkloesse", "edelbox"]],
+    ["Feinkost am Holländerviertel", ["krebs", "krabbe", "zanderfilet"]],
     ["Baustoffe Potsdam-West", ["bauholz", "tueren", "zaun", "paletten"]]]);
 })();
 
