@@ -390,8 +390,6 @@ function staffPickRecipe(o, role) {   /* v61: role = wessen Freigaben gelten */
     if (FITEMS[r.id].energy) return;
     if (!staffRoomFor(r)) return;
     const sc = staffRecipeScore(o, r);
-    /* v65: über den Grundstock hinaus nur, solange 15 % des Lagers frei bleiben – Platz fürs Weiterverarbeiten */
-    if (sc <= 0 && role && staffWlOn(role)) { const st = FITEMS[r.id].st, cap = farmStoreCap(st), freed = Object.keys(r.in).reduce((a, id) => a + (FITEMS[id] && FITEMS[id].st === st ? r.in[id] : 0), 0); if (cap - farmStoreUsed(st) - staffPending(st) + freed - r.out < cap * 0.15) return; }
     if (sc > bs) { bs = sc; best = r; }
   });
   return best;
@@ -1258,6 +1256,7 @@ function staffMachWhy(s) {
   const list = staffMachines(s.role).filter(o => o.t !== "kessel");
   if (!list.length) return "noch keine Maschinen";
   let free = false, room = false, ok = false, money = false;
+  const full = new Set();   /* v67: welches Lager ist voll? */
   const need = new Set();
   list.forEach(o => {
     machUpdate(o);
@@ -1265,7 +1264,7 @@ function staffMachWhy(s) {
     free = true;
     FMACHINES[o.t].recipes.forEach(r => {
       if (r.lv > flv() || FITEMS[r.id].energy || !staffWlHas(s.role, r.id)) return;
-      if (!staffRoomFor(r)) { room = true; return; }
+      if (!staffRoomFor(r)) { room = true; full.add(FITEMS[r.id].st); return; }
       const miss = Object.keys(r.in).filter(id => farmInv(id) - r.in[id] < staffReserve(id));
       if (miss.length) { miss.forEach(id => need.add(id)); return; }
       if (r.cost && S.money < r.cost + 50) { money = true; return; }
@@ -1273,11 +1272,10 @@ function staffMachWhy(s) {
     });
   });
   if (!free) return "alle Plätze belegt";
-  /* v65: alles Freigegebene über dem Grundstock und das Lager zu 85 % voll */
-  if (ok && !list.some(o => !o.broken && o.q.length + o.done.length < machSlots(o) && staffPickRecipe(o, s.role))) return "Lager fast voll – Platz zum Weiterverarbeiten bleibt frei";
   if (ok) return "fängt gleich an";
-  if (need.size) return "Zutaten fehlen: " + [...need].slice(0, 3).map(id => staffItemName(id)).join(", ") + (room ? " · Lager teils voll" : "");
-  if (room) return "Lager voll";
+  const fullTxt = [...full].map(st => FSTORE[st] ? FSTORE[st].n : st).join(" und ") + " voll";
+  if (need.size) return "Zutaten fehlen: " + [...need].slice(0, 3).map(id => staffItemName(id)).join(", ") + (room ? " · " + fullTxt : "");
+  if (room) return fullTxt;
   if (money) return "zu wenig Geld";
   return "nichts freigegeben";
 }
