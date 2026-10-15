@@ -730,7 +730,7 @@ const MG_GAMES = {
       const o = angelOdds(st.gid), sum = Object.values(o).reduce((a, b) => a + b, 0);
       return Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 4).map(id => {
         const p = o[id] / sum;
-        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${icHTML(id)}<small>${esc(FITEMS[id].sg || FITEMS[id].n)} · ${p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
+        return `<span class="mg-odd" title="${esc(FITEMS[id].sg || FITEMS[id].n)}">${icHTML(id)}<small>${esc(FITEMS[id].sg || FITEMS[id].n)} · ${p > 0.999 ? "immer" : p > 0.35 ? "oft" : p > 0.15 ? "mal" : p > 0.04 ? "selten" : "sehr selten"}</small></span>`;
       }).join("");
     },
     idle(st) {

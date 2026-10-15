@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.9 – Spezialköder: „immer“
+
+- **Angel-Minispiel** (`minigames.js` `odds`): Beißt sicher nur eine Art (Spezialköder), steht dort „Wels · immer“ statt „oft“.
+- Version: **v69.9** (`sw.js` und `?v=69.9` in `index.html`).
+
 ## v69.8 – „Zuletzt“ zeigt die echte Arbeit
 
 - **Arbeiter-Popup** (`team.js` `staffDo` → `s.lastTxt`, `staffPopHTML`): Statt „Zuletzt erledigt“ (letzte abgeschlossene
