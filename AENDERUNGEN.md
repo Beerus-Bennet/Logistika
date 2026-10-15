@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v63 (Hotfix zu v61) – Freigegeben heißt „bitte machen“
+
+- **Hofmeister, Sägewerker, Fischwirt** (`team.js` `staffPickRecipe`): Mit Freigaben produzieren sie freigegebene Rezepte,
+  solange Zutaten und Lagerplatz da sind – auch über den alten Grundstock (Bedarf + 6) hinaus; was am meisten fehlt, zuerst.
+  Für Bestellungen reservierte Zutaten bleiben geschützt (`staffReserve`). Vorher standen sie mit „Lager reicht“ still.
+- **Wartegrund** (`staffMachWhy`): statt „Lager reicht oder Zutaten fehlen“ jetzt der echte Grund – „Lager voll“,
+  „Zutaten fehlen: …“, „alle Plätze belegt“, „zu wenig Geld“, „noch keine Maschinen“.
+- Version: **v63** (`sw.js` und `?v=63` in `index.html`).
+
 ## v62 (Hotfix zu v61) – Fahrer nutzt auch Fahrzeuge von unterwegs
 
 - **Fahrer/in** (`team.js` `staffSendOpt`, `staffSendJob`): Steht kein Fahrzeug am Hof, schickt die Kraft ein freies von
