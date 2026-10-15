@@ -154,10 +154,13 @@ function fishStep(dt, time) {
         B.x += dx / d * s; B.z += dz / d * s;
         B.node.ry = Math.atan2(dx, dz);
         if (Math.random() < dt * 10) R.emit({ x: B.x - dx / d * 0.9, y: 0.06, z: B.z - dz / d * 0.9, vx: (Math.random() - 0.5) * 0.4, vz: (Math.random() - 0.5) * 0.4, life: 1.4, size: 0.1, size2: 0.35, col: [0.92, 0.96, 1, 0.45], drag: 0.5 });
-        const c = R.cam;
-        c.tx += (B.x + 1 - c.tx) * Math.min(1, dt * 3); c.tz += (B.z + 2 - c.tz) * Math.min(1, dt * 3);
-        clampCam();
-        FV.touchAt = performance.now();
+        /* v69.5: nur auf dem Hinweg folgt die Kamera (fest), zurück zum Bootshaus bleibt sie frei */
+        if (T.gid !== "dock") {
+          const c = R.cam;
+          c.tx += (B.x + 1 - c.tx) * Math.min(1, dt * 3); c.tz += (B.z + 2 - c.tz) * Math.min(1, dt * 3);
+          clampCam();
+          FV.touchAt = performance.now(); FV.vel = [0, 0];
+        }
       }
       B.man.rx = Math.sin(time * 5) * 0.15;
     } else if (!B.at || B.at === "dock") { B.node.ry = Math.PI; B.x = FBOAT_DOCK[0]; B.z = FBOAT_DOCK[1]; }

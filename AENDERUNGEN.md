@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.5 – Kamera bei der Bootsfahrt
+
+- **Hinweg** (`farmview.js` `farmCamLocked`, `fishview.js` `fishStep`): Auf der Fahrt zum Fanggrund folgt die Kamera dem Boot
+  fest – Ziehen, Zoomen (zwei Finger) und Mausrad sind so lange gesperrt.
+- **Rückweg** zum Bootshaus: Die Kamera folgt nicht mehr und ist frei beweglich (vorher folgte sie auch zurück).
+- Version: **v69.5** (`sw.js` und `?v=69.5` in `index.html`).
+
 ## v69.4 – Angel-Fenster: Bilder statt Emojis, Boot nicht mehr in Steinen und Seerosen
 
 - **Liegeplätze** (`fishdata.js` `FGROUNDS[].bx/bz`, `fishview.js` `fishSail`): Seerosenbucht, Schilfgürtel und Steinkante haben
