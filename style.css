@@ -2517,6 +2517,12 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fst-opts{max-height:168px;overflow-y:auto}
 .fst-opts .ftool{cursor:pointer;touch-action:auto}
 .fst-opts .ftool.lock{opacity:.45}
+/* v61: Freigaben – an: grün mit Häkchen, aus: blass */
+.fst-opts .ftool.wl{opacity:.6;background:#f1f3f5}
+.fst-opts .ftool.wl.wl-on{opacity:1;background:#e3f6e1;border-color:#2f9a4a;box-shadow:0 0 0 2px #2f9a4a inset}
+.fst-opts .ftool.wl.wl-on small{color:#227a38;font-weight:700}
+.fst-opts .ftool.wl.lock{opacity:.4}
+.fst-mode{margin-top:6px}
 .fteam.you{background:#fff6e2}
 .fteam.you .fst-t{margin-bottom:5px}
 .fstaff .fst-tl{opacity:.85;color:#2c4f80}
