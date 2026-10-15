@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v66 – Arbeiter füllen die Warteschlange
+
+- **Warteschlange füllen** (`team.js` `staffDo` „mach“): Bei jedem Gang füllt die Kraft alle freien Plätze der Maschine –
+  je Platz neu entschieden (`staffPickRecipe`), mit denselben Regeln: Freigabe, Zutaten, Reserve für Bestellungen,
+  Lagerplatz, 15 % Luft. Vorher kam je Gang nur ein Rezept in die Schlange.
+- **Was schon läuft, zählt mit** (`staffPending(st, id)`): Erzeugnisse in Warteschlangen (auch Nebenprodukte) gelten beim
+  Lagerplatz, bei den 15 % Luft und bei der Dringlichkeit (`staffRecipeScore`) als schon da – so läuft das Lager beim
+  Abholen nicht über, und eine Maschine wird nicht nur mit derselben Ware gefüllt.
+- Version: **v66** (`sw.js` und `?v=66` in `index.html`).
+
 ## v65 – Maschinen-Kräfte verteilen die Arbeit
 
 - **Über alle Maschinen das Dringendste** (`team.js` `staffMachJob`, `staffRecipeScore`): Vorher nahm die Kraft immer die erste
