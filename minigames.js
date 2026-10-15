@@ -723,7 +723,7 @@ const MG_GAMES = {
     /* Köder wählen – nicht verfügbare grau mit Grund */
     baits(st) {
       const U = angelS();
-      return `<div class="mg-baits">${Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b, st.gid);
+      return `<div class="mg-baits">${Object.keys(FBAITS).filter(angelBaitShow).map(b => { const B = FBAITS[b], why = angelBaitWhy(b, st.gid, true);
         return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("")}</div>`;
     },
     odds(st) {
@@ -737,7 +737,7 @@ const MG_GAMES = {
       st.ph = "idle";
       mgHtml(fishGroundIc(st.G) + " " + esc(st.G.n), MG_GAMES.fish.sub(st));
       mgStage(`${MG_GAMES.fish.baits(st)}<div class="mg-water"><div class="mg-odds">${MG_GAMES.fish.odds(st)}</div></div>`);
-      if (!st.res) mgMsg(st.boat ? "Mitten auf dem See. Köder wählen, auswerfen, auf den Biss warten." : "Köder wählen, auswerfen, auf den Biss warten. Bessere Köder locken größere Arten.");
+      if (!st.res) mgMsg("");
       mgBar(`<button class="btn fa-go" id="mgGo">Auswerfen<small>kostet 1 × ${esc(FBAITS[angelS().bait].n)}</small></button>${st.boat ? `<button class="btn tiny ghost" id="mgBack">Zurück</button>` : ""}`);
       $("#mgGo").onclick = () => MG_GAMES.fish.cast(st);
       $$("#mgStage [data-bait]").forEach(b => b.onclick = () => { angelS().bait = b.dataset.bait; sfx("tap"); MG_GAMES.fish.idle(st); });
