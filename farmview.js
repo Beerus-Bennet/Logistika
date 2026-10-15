@@ -1772,13 +1772,25 @@ function itemTip(el) {
   let t = $("#itemTip");
   if (!t) { t = document.createElement("div"); t.id = "itemTip"; document.body.appendChild(t); }
   t.innerHTML = `${esc(it.n)}${S.farm ? `<small>im Lager: ${esc(famt(id, farmInv(id)))}</small>` : ""}`;
-  const r = el.getBoundingClientRect();
   t.className = "on";
-  const w = t.offsetWidth;
-  t.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
-  t.style.top = Math.max(6, r.top - t.offsetHeight - 6) + "px";
+  /* v69.3: Nach dem Antippen baut sich das Fenster oft neu auf und rutscht (Verkaufsfeld, Fenster-Animation) –
+     die Blase folgt ihrer Ware, solange sie zu sehen ist, statt an der alten Stelle zu bleiben */
+  const place = () => {
+    let e = el.isConnected ? el : null;
+    if (!e) e = [...document.querySelectorAll('[data-it="' + id + '"]')].find(x => x.offsetParent) || null;
+    if (!e) return;
+    el = e;
+    const r = e.getBoundingClientRect(), w = t.offsetWidth;
+    t.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
+    t.style.top = Math.max(6, r.top - t.offsetHeight - 6) + "px";
+  };
+  place();
+  const until = performance.now() + 1800;
+  cancelAnimationFrame(itemTip.raf);
+  const follow = () => { place(); if (performance.now() < until) itemTip.raf = requestAnimationFrame(follow); };
+  itemTip.raf = requestAnimationFrame(follow);
   clearTimeout(itemTip.t);
-  itemTip.t = setTimeout(() => { t.className = ""; }, 1800);
+  itemTip.t = setTimeout(() => { t.className = ""; cancelAnimationFrame(itemTip.raf); }, 1800);
 }
 if (typeof document !== "undefined") {
   document.addEventListener("click", e => { const c = e.target.closest && e.target.closest("[data-it]"); if (c) itemTip(c); }, true);
