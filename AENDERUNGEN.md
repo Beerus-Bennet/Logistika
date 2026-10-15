@@ -1,5 +1,18 @@
 # Änderungen – kurz für den Kollegen
 
+## v65 – Maschinen-Kräfte verteilen die Arbeit
+
+- **Über alle Maschinen das Dringendste** (`team.js` `staffMachJob`, `staffRecipeScore`): Vorher nahm die Kraft immer die erste
+  Maschine mit einem machbaren Rezept – die Fischerhütte fraß alle Forellen, bevor die Räucherei drankam; die Gattersäge
+  machte nur Bretter. Jetzt zählt, was im Verhältnis zum Bedarf am wenigsten da ist; volle Warteschlangen zählen weniger.
+- **Lagerplatz netto** (`staffRoomFor`): Zutaten aus demselben Lager machen beim Start Platz (Bretter → Paletten).
+- **15 % Luft** (`staffPickRecipe`): Über den Grundstock hinaus wird nur produziert, solange 15 % des Lagers frei bleiben –
+  Platz zum Weiterverarbeiten. Wartegrund dann „Lager fast voll – Platz zum Weiterverarbeiten bleibt frei“.
+- **Zwischenprodukte** (`staffTaskJob`, `staffDo` „mach“): Braucht ein freigegebenes Rezept eine Zutat, die dieselbe Kraft
+  macht (Balken für Paletten), macht sie diese im nötigen Umfang – auch wenn die Kachel aus ist (nur eigene Ketten-Aufträge
+  mit `parent`, `from` = eigene Rolle).
+- Version: **v65** (`sw.js` und `?v=65` in `index.html`).
+
 ## v64 – Fischer mit Köder-Freigaben, Reusen nach Köder, Bestellungen für Reusentiere
 
 - **Fischer/in bekommt Freigaben – für Köder** (`team.js`, `STAFF_WL` + „fischer“): Mais, Tauwürmer, Profi-Köder,
