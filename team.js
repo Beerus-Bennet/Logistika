@@ -825,9 +825,9 @@ function staffTaskJob(s, T) {
       const o = S.orders.find(x => x.id === item.slice(6));
       if (!o || o.farm.taken || !staffFahrOk(o) || staffFahrMode() === "ready") return null;   /* v61 */
       if (farmOrderReady(o)) {
-        const opt = farmDispatchOptions(o).find(p => p.here && !p.late) || farmDispatchOptions(o).find(p => p.here);
-        if (opt) return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
-        T.wait = "kein freies Fahrzeug am Hof"; return null;
+        const opt = staffSendOpt(o);
+        if (opt) return staffSendJob(o, opt);
+        T.wait = "kein freies Fahrzeug – alle unterwegs oder zu klein"; return null;
       }
       const miss = Object.keys(o.farm.items).filter(id => farmInv(id) < o.farm.items[id]);
       miss.forEach(id => staffSub(T, s, id, o.farm.items[id] - farmInv(id), o.farm.items[id]));
@@ -975,14 +975,25 @@ function staffFischerJob(s, target) {
   const G = FGROUNDS.find(g => g.id === P.gid);
   return { k: "fish", oid: steg.id, gid: P.gid, bait: P.bait, at, what: G && G.boat ? "angelt (" + G.n + ")" : "angelt vom Steg" };
 }
+/* v61: Fahrzeug für eine Lieferung – am liebsten eins am Hof (dann fährt die Kraft mit), sonst ein freies
+   von unterwegs, das pünktlich ankommt (es holt die Ware am Hof ab – genau wie bei „Liefern“ von Hand) */
+function staffSendOpt(o, veh) {
+  const all = farmDispatchOptions(o);
+  return all.find(p => p.here && p.f.uid === veh && !p.late) || all.find(p => p.here && !p.late) || all.find(p => p.here)
+    || all.find(p => p.f.uid === veh && !p.late) || all.find(p => !p.late) || null;
+}
+function staffSendJob(o, opt) {
+  const from = !opt.here && N[opt.f.at] ? " (" + opt.t.brand + " kommt von " + N[opt.f.at].short + ")" : "";
+  return { k: "send", order: o.id, veh: opt.f.uid, at: opt.here ? staffVehSpot(opt.f) : null, what: (opt.here ? "fährt die Lieferung an " : "schickt die Lieferung an ") + o.shipper + from };
+}
 function staffFahrerJob(s) {
   /* v61: angenommen wird erst beim Losschicken (staffDo „send“) – Moduswechsel unterwegs nimmt nichts an */
   /* fertige Bestellungen: angenommene zuerst, dann die lukrativste */
   const ready = farmOrders().filter(x => !x.farm.taken && staffFahrOk(x) && farmOrderReady(x)).sort((a, b) => (!!b.acc - !!a.acc) || b.pay - a.pay);
   let o = null, opt = null;
-  for (const x of ready) { opt = farmDispatchOptions(x).find(p => p.here && !p.late); if (opt) { o = x; break; } }
+  for (const x of ready) { opt = staffSendOpt(x); if (opt && !opt.late) { o = x; break; } }
   if (!o) return null;
-  return { k: "send", order: o.id, veh: opt.f.uid, at: staffVehSpot(opt.f), what: "fährt die Lieferung an " + o.shipper };
+  return staffSendJob(o, opt);
 }
 /* Mechaniker/in: nachts (kein Sonnenstrom) oder wenn der Strom knapp wird, den Kessel anheizen */
 function staffMechJob(s) {
@@ -1125,13 +1136,12 @@ function staffDo(s, j) {
     case "send": {
       const ord = S.orders.find(x => x.id === j.order);
       if (!ord || !farmOrderReady(ord) || !staffFahrOk(ord)) break;   /* v61: Modus kann sich unterwegs geändert haben */
-      const all = farmDispatchOptions(ord);
-      const opt = all.find(p => p.here && p.f.uid === j.veh && !p.late) || all.find(p => p.here && !p.late) || all.find(p => p.here);
+      const opt = staffSendOpt(ord, j.veh);
       if (opt && !ord.acc) farmAcceptOrder(ord, "fahrer");
       if (opt && farmSend(ord, opt)) {
         staffCredit(s.role, "order:" + ord.id, 1); farmEvent("send");
-        /* sie steigt selbst ein */
-        s.ride = { uid: opt.f.uid, t0: S.time, to: ord.to };
+        /* sie steigt selbst ein – nur wenn das Fahrzeug am Hof steht */
+        if (opt.here) s.ride = { uid: opt.f.uid, t0: S.time, to: ord.to };
         if (typeof farmSyncVehicles === "function" && typeof FV !== "undefined" && FV.on) farmSyncVehicles(false);
       }
       break;
@@ -1196,7 +1206,7 @@ function staffIdleWhy(s) {
     case "hofmeister": case "saeger": case "fischwirt": return staffMachines(s.role).length ? "Lager reicht oder Zutaten fehlen" : "noch keine Maschinen";
     case "holzfaeller": return "kein ausgewachsener Baum der freigegebenen Arten oder Holzplatz voll";
     case "fischer": return s.fwhy || (farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen");
-    case "fahrer": return (staffFahrMode() === "abo" ? "kein fertiger Dauerauftrag" : "keine fertige Bestellung") + " oder kein Fahrzeug am Hof";
+    case "fahrer": return (staffFahrMode() === "abo" ? "kein fertiger Dauerauftrag" : "keine fertige Bestellung") + " oder kein freies Fahrzeug";
     case "mechaniker": return typeof pvSun === "function" && pvSun() ? "Sonnenstrom läuft – hilft, wo es klemmt" : "Kessel läuft – hilft, wo es klemmt";
   }
   return "wartet";
