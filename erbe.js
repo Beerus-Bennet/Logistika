@@ -1003,7 +1003,6 @@ function staffFishPlan(target) {
     /* v64: ohne Auftrag – der beste freigegebene Köder, der da ist (Spezialköder, Profi-Köder, Würmer, Mais),
        am erreichbaren Fanggrund mit dem höchsten Durchschnittswert; Spezialköder nur, wo es die Art gibt */
     const order = Object.keys(FBAITS).filter(b => FBAITS[b].spec).concat(["profikoeder", "wurm", "mais"]);
-    let far = "";
     for (const b of order) {
       if (!staffBaitOk(b)) continue;
       const B = FBAITS[b];
@@ -1015,10 +1014,8 @@ function staffFishPlan(target) {
         if (v > bv) { bv = v; best = g; }
       });
       if (best) return { gid: best.id, bait: b };
-      /* v68: Köder da und freigegeben, aber kein erreichbarer Fanggrund (z. B. Zander ohne Boot) */
-      if (B.spec && !far) { const gs = FGROUNDS.filter(g => g.fish[B.spec]); far = B.n + ": " + FFISH[B.spec].n + " nur mit " + (Math.min(...gs.map(g => g.boat)) >= 2 ? "Motorboot" : "Ruderboot"); }
     }
-    return { why: far || "kein freigegebener Köder da" };
+    return { why: "kein freigegebener Köder da" };
   }
   const has = FGROUNDS.filter(g => g.fish[target]);
   const ok = has.filter(farmGroundOk);
@@ -1027,12 +1024,7 @@ function staffFishPlan(target) {
   /* v59: Spezialköder der bestellten Art zuerst – der fängt nur sie */
   const sk = FBAITS["sk_" + target] && staffBaitOk("sk_" + target) ? "sk_" + target : null;
   const b = sk || list.find(staffBaitOk);
-  if (!b) {
-    /* v68: alle passenden Köder aus? Dann alle nennen */
-    const cand = (FBAITS["sk_" + target] ? ["sk_" + target] : []).concat(list);
-    if (typeof staffWlHas === "function" && cand.length && cand.every(x => !staffWlHas("fischer", x))) return { why: cand.map(x => FBAITS[x].n).join(", ") + " nicht freigegeben" };
-    return { why: staffBaitWhy(list[0] || "mais") };
-  }
+  if (!b) return { why: staffBaitWhy(list[0] || "mais") };
   /* bester Fanggrund für die Art mit diesem Köder */
   let best = null, bp = -1;
   ok.forEach(g => { const o = angelOdds(g.id, b, U.rod), sum = Object.values(o).reduce((a, x) => a + x, 0), p = sum ? (o[target] || 0) / sum : 0; if (p > bp) { bp = p; best = g; } });
