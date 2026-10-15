@@ -358,7 +358,9 @@ function staffWant(id) {
 /* Bestes Rezept für eine Maschine (ohne Auftrag): was am meisten fehlt, Zutaten da, Platz im Lager */
 function staffPickRecipe(o, role) {   /* v61: role = wessen Freigaben gelten */
   const M = FMACHINES[o.t];
-  let best = null, bs = 0;
+  /* v63: mit Freigaben gilt „freigegeben = bitte machen“ – solange Zutaten und Lagerplatz da sind,
+     auch über den Grundstock hinaus (was am meisten fehlt, zuerst) */
+  let best = null, bs = role && staffWlOn(role) ? -Infinity : 0;
   M.recipes.forEach(r => {
     if (r.lv > flv() || (role && !staffWlHas(role, r.id)) || !farmHasAll(r.in) || (r.cost && S.money < r.cost + 50)) return;
     /* was für Bestellungen und Aufträge gebraucht wird, bleibt liegen */
@@ -1192,6 +1194,32 @@ function staffWork() {
     staffGo(s, i, j);
   });
 }
+/* v63: Warum steht die Maschinen-Kraft? Der echte Grund statt „Lager reicht oder Zutaten fehlen“ */
+function staffMachWhy(s) {
+  const list = staffMachines(s.role).filter(o => o.t !== "kessel");
+  if (!list.length) return "noch keine Maschinen";
+  let free = false, room = false, ok = false, money = false;
+  const need = new Set();
+  list.forEach(o => {
+    machUpdate(o);
+    if (o.broken || o.q.length + o.done.length >= machSlots(o)) return;
+    free = true;
+    FMACHINES[o.t].recipes.forEach(r => {
+      if (r.lv > flv() || FITEMS[r.id].energy || !staffWlHas(s.role, r.id)) return;
+      if (farmRoom(r.id) < r.out) { room = true; return; }
+      const miss = Object.keys(r.in).filter(id => farmInv(id) - r.in[id] < staffReserve(id));
+      if (miss.length) { miss.forEach(id => need.add(id)); return; }
+      if (r.cost && S.money < r.cost + 50) { money = true; return; }
+      ok = true;
+    });
+  });
+  if (!free) return "alle Plätze belegt";
+  if (ok) return "fängt gleich an";
+  if (need.size) return "Zutaten fehlen: " + [...need].slice(0, 3).map(id => staffItemName(id)).join(", ") + (room ? " · Lager teils voll" : "");
+  if (room) return "Lager voll";
+  if (money) return "zu wenig Geld";
+  return "nichts freigegeben";
+}
 function staffIdleWhy(s) {
   /* v61: ganz ohne Freigabe sagt die Kraft das auch */
   if (staffWlOn(s.role) && s.role !== "pfleger" && !staffWlAll(s.role).some(id => staffWlHas(s.role, id))) return s.role === "holzfaeller" ? "keine Holzart freigegeben" : "nichts freigegeben";
@@ -1203,7 +1231,7 @@ function staffIdleWhy(s) {
       if (hungry) return "wartet auf " + staffItemName(FANIMALS[penKind(hungry)].feed);
       return "die Tiere sind versorgt";
     }
-    case "hofmeister": case "saeger": case "fischwirt": return staffMachines(s.role).length ? "Lager reicht oder Zutaten fehlen" : "noch keine Maschinen";
+    case "hofmeister": case "saeger": case "fischwirt": return staffMachWhy(s);
     case "holzfaeller": return "kein ausgewachsener Baum der freigegebenen Arten oder Holzplatz voll";
     case "fischer": return s.fwhy || (farmObj1("f_steg") ? "Kühlkiste voll" : "erst den Steg bauen");
     case "fahrer": return (staffFahrMode() === "abo" ? "kein fertiger Dauerauftrag" : "keine fertige Bestellung") + " oder kein freies Fahrzeug";
