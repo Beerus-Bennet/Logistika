@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.3 – Namens-Blase bleibt über der Ware
+
+- **Namens-Blase** (`farmview.js` `itemTip`): Nach dem Antippen einer Ware baut sich das Fenster oft neu auf und rutscht
+  (Verkaufsfeld erscheint, Fenster-Animation) – die Blase blieb an der alten Stelle stehen und sprang. Jetzt folgt sie ihrer
+  Ware, solange sie zu sehen ist (auch wenn das Element neu gezeichnet wurde).
+- Version: **v69.3** (`sw.js` und `?v=69.3` in `index.html`).
+
 ## v69.2 – Eindeutige Knöpfe im Bestätigungsfenster
 
 - **Bestätigungsfenster** (`game.js` `askConfirm`): Der Knopf zum Schließen heißt jetzt „Zurück“ statt „Abbrechen“ – gilt für
