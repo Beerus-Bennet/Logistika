@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v69.8 – „Zuletzt“ zeigt die echte Arbeit
+
+- **Arbeiter-Popup** (`team.js` `staffDo` → `s.lastTxt`, `staffPopHTML`): Statt „Zuletzt erledigt“ (letzte abgeschlossene
+  Aufträge – seit den Freigaben selten und oft veraltet) steht dort „Zuletzt: …“ mit den letzten drei Ergebnissen der Kraft,
+  neueste zuerst – Fänge, Erzeugnisse, Ernten, Lieferungen („Lieferung an …“). Alte Spielstände zeigen bis zur ersten
+  neuen Arbeit noch die alte Zeile.
+- Version: **v69.8** (`sw.js` und `?v=69.8` in `index.html`).
+
 ## v69.7 – Reusentiere nach Gewicht, Reusenköder ohne Qualität
 
 - **Reusentiere wie Fische** (`fishdata.js` `FPOTS.*.kgAvg/ekg`, `erbe.js` `fishPrice`, `farm.js` `farmKgAvg`, `farmHaul`):

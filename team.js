@@ -1199,6 +1199,7 @@ function staffDo(s, j) {
       if (opt && !ord.acc) farmAcceptOrder(ord, "fahrer");
       if (opt && farmSend(ord, opt)) {
         staffCredit(s.role, "order:" + ord.id, 1); farmEvent("send");
+        s.lastTxt = (s.lastTxt || []).concat("Lieferung an " + ord.shipper).slice(-3);   /* v69.8 */
         /* sie steigt selbst ein – nur wenn das Fahrzeug am Hof steht */
         if (opt.here) s.ride = { uid: opt.f.uid, t0: S.time, to: ord.to };
         if (typeof farmSyncVehicles === "function" && typeof FV !== "undefined" && FV.on) farmSyncVehicles(false);
@@ -1206,6 +1207,8 @@ function staffDo(s, j) {
       break;
     }
   }
+  /* v69.8: „Zuletzt“ im Popup = was die Kraft wirklich gebracht hat (neueste zuerst, höchstens drei) */
+  if (got.length) s.lastTxt = (s.lastTxt || []).concat(got.map(g => staffItemName(g.id, g.n))).slice(-3);
   if (got.length) { s.last = got[0].id; if (typeof staffFx === "function") staffFx(s, j, got[0]); }
 }
 /* Arbeitstakt: läuft mit dem Erbe-Takt, auch ohne Blick auf den Hof */
@@ -1528,7 +1531,7 @@ function staffPopHTML(s, P) {
   if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
   const wl = staffWlOn(s.role), fahr = s.role === "fahrer";
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
-    : `<div class="fst-none">Kein Auftrag – arbeitet ${wl || fahr ? "nach deinen Freigaben" : "nach eigenem Plan"}.${s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
+    : `<div class="fst-none">Kein Auftrag – arbeitet ${wl || fahr ? "nach deinen Freigaben" : "nach eigenem Plan"}.${s.lastTxt && s.lastTxt.length ? `<br>Zuletzt: ${esc(s.lastTxt.slice().reverse().join(", "))}` : s.doneT && s.doneT.length ? `<br>Zuletzt erledigt: ${esc(s.doneT.slice(-2).join(", "))}` : ""}</div>`;
   /* v61: Freigaben statt „Auftrag geben“ (Fischer/in behält den Knopf) */
   if (wl) return h + staffWlHTML(s);
   if (fahr) return h + staffFahrHTML(s);
