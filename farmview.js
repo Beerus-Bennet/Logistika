@@ -1816,10 +1816,10 @@ function bindMachQueue(o) {
     const i = +b.dataset.unq, it = o.q[i];
     if (!it) return;
     const go = () => { un(i); sfx("pop"); save(); openMachine(o); };
-    if (i === 0) askConfirm(FITEMS[it.r].n + " abbrechen?", "Läuft schon – die Zutaten kommen zurück, die Zeit ist verloren.", "Abbrechen", go); else go();
+    if (i === 0) askConfirm(FITEMS[it.r].n + " abbrechen?", "Läuft schon – die Zutaten kommen zurück, die Zeit ist verloren.", "Ja, abbrechen", go); else go();
   });
   const all = $("#fqAll");
-  if (all) all.onclick = () => askConfirm("Ganze Warteschlange abbrechen?", "Alle " + o.q.length + " Aufträge – die Zutaten kommen zurück.", "Alle abbrechen", () => {
+  if (all) all.onclick = () => askConfirm("Ganze Warteschlange abbrechen?", "Alle " + o.q.length + " Aufträge – die Zutaten kommen zurück.", "Ja, alle abbrechen", () => {
     for (let i = o.q.length - 1; i >= 0; i--) if (!o.q[i].tut) un(i);
     sfx("pop"); save(); openMachine(o);
   });

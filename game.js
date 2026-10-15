@@ -871,7 +871,7 @@ function askConfirm(title, text, okLabel, onOk, danger) {
     <div class="ask-t">${esc(title)}</div>
     <div class="ask-x">${esc(text)}</div>
     <div class="ask-b">
-      <button class="btn ghost" id="askNo">Abbrechen</button>
+      <button class="btn ghost" id="askNo">Zurück</button>
       <button class="btn${danger ? " danger-solid" : ""}" id="askYes">${esc(okLabel)}</button>
     </div>`;
   $("#ask").classList.add("on");
