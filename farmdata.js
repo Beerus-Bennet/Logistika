@@ -149,11 +149,11 @@ const FSLOT_COST = [0, 0, 60, 180, 450, 1000];   /* Preis für Platz 3, 4, 5 …
 /* Wert eines Gebäudes beim Verkauf des Hofs */
 const FBUILD_VAL = { dairy: 6000, butcher: 7000, spinnery: 4500 };
 
-/* Lager: Grundgröße, Zuwachs und Preise je Ausbaustufe */
+/* Lager: Grundgröße, Zuwachs und Preise je Ausbaustufe – v70: zehn Stufen (neun Ausbauten) für jedes Lager */
 const FSTORE = {
-  silo: { n: "Silo",    i: "🌾", the: "Das Silo",     base: 60, step: 40, cost: [80, 200, 400, 750, 1200, 2000],
+  silo: { n: "Silo",    i: "🌾", the: "Das Silo",     base: 60, step: 40, cost: [80, 200, 400, 750, 1200, 2000, 3000, 4400, 6200],
           empty: "Leer. Ernte Felder und Bäume – die Ernte kommt hierher." },
-  barn: { n: "Scheune", i: "🏚️", the: "Die Scheune", base: 40, step: 30, cost: [90, 220, 450, 850, 1350, 2200],
+  barn: { n: "Scheune", i: "🏚️", the: "Die Scheune", base: 40, step: 30, cost: [90, 220, 450, 850, 1350, 2200, 3300, 4800, 6800],
           empty: "Leer. Eier, Milch, Futter und Küchenware landen hier." }
 };
 

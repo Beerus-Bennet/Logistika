@@ -1585,3 +1585,91 @@ function farmNodeAddr(nodeId, kind) {
   return { lat: +(s[1] + rnd(-0.0012, 0.0012)).toFixed(5), lon: +(s[2] + rnd(-0.0018, 0.0018)).toFixed(5),
     t: kind === "yard" ? "Stellplatz, " + t : kind === "spaeti" ? "Späti, " + t : t, a: N[nodeId].short };
 }
+
+/* ---------------------- v70: Straßen rund um den Hof -----------------------
+   Auf der Karte fuhren die Fahrzeuge vom Hof aus schnurgerade zu den Kunden –
+   auch quer über den Glindower See. Jetzt folgen sie den echten Straßen
+   (nachgezeichnet aus der Karte: L 90 Glindow, Glindow – Werder, B1 über
+   Baumgartenbrück nach Geltow und Potsdam, Petzow, Caputh, Michendorf).
+   Nur die Darstellung ändert sich: Fahrzeit, Kilometer und Kosten rechnen
+   weiter mit der alten Strecke – das Fahrzeug fährt den Straßenweg im selben
+   Zeitraum ab. Außerhalb des Kastens (Berlin, weiter weg) bleibt alles gerade. */
+const ROADS_HOF = {
+  l90: [[52.36020, 12.91280], [52.36020, 12.90994], [52.36355, 12.91005], [52.36635, 12.91028], [52.36998, 12.91028]],
+  gld: [[52.37005, 12.90307], [52.36775, 12.90227], [52.36530, 12.90136], [52.36286, 12.90090]],
+  glw: [[52.36970, 12.89907], [52.37005, 12.90307], [52.36998, 12.91028], [52.37019, 12.91509], [52.37005, 12.91887], [52.36935, 12.92390], [52.36866, 12.92573], [52.36845, 12.92768], [52.36740, 12.92939], [52.36614, 12.93111], [52.36460, 12.93340], [52.36390, 12.93569], [52.36307, 12.93912], [52.36272, 12.94049]],
+  b1: [[52.36272, 12.94049], [52.36181, 12.94255], [52.36041, 12.94599], [52.35936, 12.94942], [52.35852, 12.95228], [52.35726, 12.95629], [52.35650, 12.95926], [52.35761, 12.96201], [52.35936, 12.96373], [52.36132, 12.96487], [52.36286, 12.96659], [52.36341, 12.97002], [52.36334, 12.97403], [52.36321, 12.97918], [52.36334, 12.98433], [52.36460, 12.98604], [52.36600, 12.98719], [52.36775, 12.99119], [52.36949, 12.99634], [52.37194, 13.00092], [52.37369, 13.00435], [52.37508, 13.00779], [52.37788, 13.01294], [52.38102, 13.01751], [52.38382, 13.02152], [52.38591, 13.02438]],
+  wer: [[52.36272, 12.94049], [52.36495, 12.94004], [52.36740, 12.93935], [52.37054, 12.93889], [52.37404, 12.93683], [52.37753, 12.93512], [52.38102, 12.93340], [52.38451, 12.93054], [52.38675, 12.92768]],
+  pet: [[52.35650, 12.95926], [52.35503, 12.95915], [52.35377, 12.95858], [52.35307, 12.95686], [52.35237, 12.95400], [52.35167, 12.95171], [52.35097, 12.94942], [52.34958, 12.94713], [52.34818, 12.94599], [52.34678, 12.94542], [52.34552, 12.94461], [52.34433, 12.94313]],
+  cap: [[52.36334, 12.97403], [52.36146, 12.97517], [52.35936, 12.97689], [52.35831, 12.97860], [52.35657, 12.98032], [52.35517, 12.98089], [52.35307, 12.98032], [52.35167, 12.98146], [52.35027, 12.98261], [52.34923, 12.98375], [52.34818, 12.98490], [52.34748, 12.98661], [52.34678, 12.98948], [52.34706, 12.99405], [52.34734, 12.99978], [52.34692, 13.00378]],
+  mic: [[52.34692, 13.00378], [52.34538, 13.00664], [52.34328, 13.00893], [52.34084, 13.00950], [52.33944, 13.01122], [52.33734, 13.01408], [52.33559, 13.01637], [52.33349, 13.01923], [52.33175, 13.02152], [52.32895, 13.02438]]
+};
+const ROADS_BOX = [52.322, 12.885, 52.392, 13.03];          /* lat0, lon0, lat1, lon1 */
+let ROADG = null;
+const ROADC = new WeakMap();
+function roadOn() { return typeof FSITE !== "undefined" && FSITE.kind === "hof"; }
+function roadIn(p) { return !!p && p[0] > ROADS_BOX[0] && p[0] < ROADS_BOX[2] && p[1] > ROADS_BOX[1] && p[1] < ROADS_BOX[3]; }
+function roadGraph() {
+  if (ROADG) return ROADG;
+  const P = [], E = [], key = new Map();
+  const id = p => { const k = p[0].toFixed(5) + "," + p[1].toFixed(5); if (!key.has(k)) { key.set(k, P.length); P.push(p); E.push([]); } return key.get(k); };
+  Object.values(ROADS_HOF).forEach(w => {
+    for (let i = 1; i < w.length; i++) {
+      const a = id(w[i - 1]), b = id(w[i]), d = hav(w[i - 1], w[i]);
+      E[a].push([b, d]); E[b].push([a, d]);
+    }
+  });
+  return (ROADG = { P, E });
+}
+function roadNode(p) {
+  const G = roadGraph();
+  let best = 0, bd = Infinity;
+  G.P.forEach((q, i) => { const d = hav(p, q); if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+/* kürzester Weg im Netz (Dijkstra, das Netz ist klein) */
+function roadNodes(a, b) {
+  const G = roadGraph(), n = G.P.length, dist = new Array(n).fill(Infinity), prev = new Array(n).fill(-1), done = new Array(n).fill(false);
+  dist[a] = 0;
+  for (;;) {
+    let u = -1, du = Infinity;
+    for (let i = 0; i < n; i++) if (!done[i] && dist[i] < du) { du = dist[i]; u = i; }
+    if (u < 0 || u === b) break;
+    done[u] = true;
+    for (const [v, d] of G.E[u]) if (du + d < dist[v]) { dist[v] = du + d; prev[v] = u; }
+  }
+  const out = [];
+  for (let u = b; u >= 0; u = prev[u]) { out.unshift(u); if (u === a) break; }
+  return out[0] === a ? out : [a, b];
+}
+/* Linie einer Strecke, so wie sie auf der Karte gefahren wird */
+function roadDisp(pts) {
+  if (!pts || pts.length < 2 || !roadOn()) return pts;
+  const c = ROADC.get(pts);
+  if (c) return c.pts;
+  const ins = pts.map(roadIn);
+  let out = pts;
+  const i0 = ins.indexOf(true), i1 = ins.lastIndexOf(true);
+  if (i0 >= 0 && !(i0 === i1 && i0 > 0 && i0 < pts.length - 1)) {
+    const pre = pts.slice(0, i0), post = pts.slice(i1 + 1), a = pts[i0], b = pts[i1];
+    const na = roadNode(pre.length ? pre[pre.length - 1] : a), nb = roadNode(post.length ? post[0] : b);
+    const G = roadGraph(), mid = roadNodes(na, nb).map(i => G.P[i]);
+    if (!pre.length) mid.unshift(a);
+    if (!post.length) mid.push(b);
+    if (pre.length && !mid.length) mid.push(a);
+    out = pre.concat(mid, post);
+    /* doppelte Punkte raus */
+    out = out.filter((p, i) => i === 0 || p[0] !== out[i - 1][0] || p[1] !== out[i - 1][1]);
+    if (out.length < 2) out = pts;
+  }
+  ROADC.set(pts, { pts: out, len: out === pts ? 0 : pathLen(out), tot: pathLen(pts) });
+  return out;
+}
+/* Position auf der Straße: gleicher Anteil der Strecke wie auf der alten Linie */
+function roadDispAt(route, pos) {
+  const D = roadDisp(route);
+  if (!D || D === route) return null;
+  const c = ROADC.get(route);
+  if (!c || !c.len || !c.tot) return null;
+  return routePointAt(D, Math.max(0, Math.min(1, pos / c.tot)) * c.len);
+}

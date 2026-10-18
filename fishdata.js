@@ -171,11 +171,11 @@ const FKEEP_FISH = ["Bio-Aquakultur", "viel Raum", "artgerecht", "eng", "zu dich
 
 /* Lager für Fisch: erst eine Kühlkiste in der Hütte, Fischlager und
    Kühlhaus legen ordentlich drauf */
-FSTORE.fisch = { n: "Kühlkiste", i: "🧊", the: "Die Kühlkiste", base: 24, step: 16, cost: [150, 350, 700, 1200, 1900, 2800],
+FSTORE.fisch = { n: "Kühlkiste", i: "🧊", the: "Die Kühlkiste", base: 24, step: 16, cost: [150, 350, 700, 1200, 1900, 2800, 4000, 5600, 7600],
   empty: "Leer. Angle vom Steg oder fahr mit dem Boot raus – der Fang kommt hierher." };
 const FFISH_STORE_BONUS = { f_lager: 40, f_kuehl: 60 };
 /* v59: Köder liegen in einer eigenen Köderkiste – sie belegen keine Kühlkisten-Plätze mehr */
-FSTORE.koeder = { n: "Köderkiste", i: "🪱", the: "Die Köderkiste", base: 60, step: 40, cost: [100, 250, 500],
+FSTORE.koeder = { n: "Köderkiste", i: "🪱", the: "Die Köderkiste", base: 60, step: 40, cost: [100, 250, 500, 800, 1200, 1700, 2300, 3000, 3800],
   empty: "Leer. Tauwürmer, Profi- und Spezialköder macht Bert in seinem alten Kombi, Reusenköder die Fischerhütte." };
 
 /* ------------------------------ Gebäude ---------------------------------

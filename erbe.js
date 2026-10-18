@@ -33,12 +33,13 @@ const FWORLD = {
   lake: { x: 14, z: 48, rx: 36, rz: 22 },
   yard: [-54, -54, -28, -30],                      /* Sägewerkshof x0, z0, x1, z1 */
   /* Weg vom Westtor zum Sägewerk, von dort in den Wald (Hauptweg nach Norden, Abzweig nach Westen);
-     der letzte ist der Feldweg vom Westtor hinunter zur Straße (Holzlaster) */
+     der letzte ist der Feldweg vom Westtor hinunter zur Straße (Holzlaster).
+     v70: der Weg von der Brücke nach Osten läuft am Teich vorbei bis zur Straße */
   paths: [
     [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
     [[-41, -54], [-40, -64], [-36, -72], [-32, -80], [-34, -92], [-42, -104], [-50, -116]],
     [[-54, -42], [-64, -42], [-72, -48], [-82, -52], [-90, -56]],
-    [[-36, -72], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26]],
+    [[-36, -72], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.6, 12.2], [39, 17.6]],
     [[-32, -80], [-46, -82], [-60, -78], [-70, -72]],
     [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.4]]
   ],
@@ -56,13 +57,19 @@ const FWORLD = {
              [37, -11.6, "birke", 1], [41, -6.5, "kiefer", 1], [41.3, 2.6, "birke", 1], [38, 7.8, "kiefer", 2], [30.5, -15.6, "birke", 1]]
 };
 /* Hofgrenzen je Ausbaustufe (Weltkoordinaten der Zaunlinien x0, z0, x1, z1): der
-   Südzaun bleibt an der Straße stehen, jede Stufe gibt drei Kacheln mehr nach
-   Westen, Norden und Osten – 30 × 32, 36 × 35, 42 × 38 und 48 × 41 Felder. */
-const FHOF_B = [null, [-15, -18, 15, 14], [-18, -21, 18, 14], [-21, -24, 21, 14], [-24, -27, 24, 14]];
+   Südzaun bleibt an der Straße stehen. v70: zehn Ausbaustufen (S.farm.hl), jede
+   gibt eine Kachel mehr nach Westen, Norden und Osten – von 30 × 32 bis 48 × 41
+   Felder. Die Stufen 4, 7 und 10 bringen dazu das neue Aussehen (S.farm.stage 2, 3, 4,
+   wie bisher: Anstrich und Traktor, Pflaster und Laternen, Steinmauer und Halle). */
+const FHOF_HL = 10, FHOF_TIER_HL = [1, 1, 4, 7, 10];
+const FHOF_B = [null].concat(Array.from({ length: FHOF_HL }, (_, i) => [-15 - i, -18 - i, 15 + i, 14]));
+function hofTier(h) { return h >= 10 ? 4 : h >= 7 ? 3 : h >= 4 ? 2 : 1; }
+/* aktuelle Ausbaustufe 1 … 10 (ältere Stände kennen nur stage 1 … 4) */
+function farmHl() { const F = typeof S !== "undefined" && S.farm; return F ? Math.max(F.hl || 1, FHOF_TIER_HL[Math.min(4, F.stage || 1)]) : 1; }
 const FHOF_MAX = { x0: -24, z0: -27, x1: 24, z1: 14 };
 /* Tore: Südtor (Mitte x) zur Straße, Westtor (Mitte z) zum Wald */
 const FGATE = { x: 5, wz: -9.5 };
-function farmHofB(st) { const b = FHOF_B[Math.max(1, Math.min(4, st || (S.farm && S.farm.stage) || 1))]; return { x0: b[0], z0: b[1], x1: b[2], z1: b[3] }; }
+function farmHofB(h) { const b = FHOF_B[Math.max(1, Math.min(FHOF_HL, h || farmHl()))]; return { x0: b[0], z0: b[1], x1: b[2], z1: b[3] }; }
 /* Wald: alles außerhalb der Hofwiese (größter Hof + 3) und der Teichwiese – Tiefe > 0 heißt Wald */
 function forestDepth(x, z) {
   const a = Math.max(-27 - x, x - 27, -30 - z), b = Math.max(27 - x, -19 - z);
@@ -156,6 +163,10 @@ function erbeInit(F, fresh) {
   F.tools = F.tools || { axe: 1, saw: 0 };
   if (F.sta == null) { F.sta = FSTA.max; F.staT = S.time; }
   F.stage = F.stage || (fresh ? 1 : 2);
+  /* v70: zehn Ausbaustufen – alte Stufen 1 … 4 entsprechen 1, 4, 7 und 10 (gleiche Größe) */
+  /* wer stage direkt setzt (Umzug von der Ostsee: Stufe 2), bekommt die passende Größe */
+  F.hl = Math.max(F.hl || 1, FHOF_TIER_HL[Math.min(4, F.stage)]);
+  F.stage = hofTier(F.hl);
   if (S.farm === F) farmBoundsUpdate();
   F.saw = F.saw || {};
   F.en = F.en || 0; F.enLv = F.enLv || 0;
@@ -171,6 +182,7 @@ function erbeInit(F, fresh) {
   F.clover = F.clover != null ? F.clover : 5;
   F.cos = F.cos || { own: {}, on: {} };
   F.stall = F.stall || { slots: [], coins: 0 };
+  F.hay = F.hay || { n: FHAY.max, t: S.time };            /* v70: Heuballen an der Scheune */
   /* v53: Heuballen vom Weg, Scheune Rand an Rand ans Wohnhaus */
   if (!F.v53) {
     F.v53 = 1;
@@ -514,6 +526,34 @@ function farmPileTake(i, sell) {
   F.piles[i] = S.time;
   farmXP(5);
   return { got: P.n, P };
+}
+
+/* ------------------- v70: Heuballen an der Scheune ------------------------
+   Eigenes Heu von der Hofwiese: zwei Ballen stehen am Scheunentor, antippen und
+   verkaufen. Alle 12 Spielstunden wird ein neuer Ballen gepresst (höchstens zwei). */
+const FHAY = { max: 2, every: 720, price: 8 };
+const HAY_AT = [[1.325, 2.1, 0], [1.125, 2.55, 0.4]];          /* Lage an der Scheune (Mitte, ungedreht) */
+function farmHayTick() {
+  const H = S.farm && S.farm.hay;
+  if (!H) return;
+  if (H.n >= FHAY.max) { H.t = S.time; return; }
+  while (H.n < FHAY.max && S.time - H.t >= FHAY.every) { H.n++; H.t += FHAY.every; }
+}
+function farmHaySell() {
+  const F = S.farm, H = F.hay;
+  if (!H || !H.n || !F.objs.some(o => o.t === "barn")) return null;
+  const n = H.n, m = n * FHAY.price;
+  S.money += m; S.revenue += m; F.stats.earned += m;
+  logMoney("farm", "Heuballen · " + n + " Stück", m);
+  farmEvent("sellhay", n);
+  H.n = 0; H.t = S.time;
+  farmXP(n);
+  return { n, m };
+}
+/* Weltlage der Ballen an einer Scheune */
+function hayWorld(o) {
+  const [cx, cz] = farmCenter(o), ry = o.r ? -Math.PI / 2 : 0, c = Math.cos(ry), s = Math.sin(ry);
+  return HAY_AT.map(([x, z, r]) => ({ x: cx + x * c + z * s, z: cz - x * s + z * c, ry: ry + r }));
 }
 
 /* ------------------------------- Sägewerk -------------------------------- */
@@ -1218,7 +1258,7 @@ function tourFinish() {
 function farmPotOk(id) { const U = angelS(); return !!(FPOTS[id] && FPOTS[id].lv <= flv() && U && U.potLvl >= FPOTS[id].tier); }
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
-function farmStageNext() { return FHOF_STAGES[(S.farm.stage || 1) + 1] || null; }
+function farmStageNext() { return FHOF_STAGES[farmHl() + 1] || null; }
 function farmStageCheck() {
   const N0 = farmStageNext();
   if (!N0) return "max";
@@ -1233,16 +1273,20 @@ function farmStageUp() {
   S.money -= N0.cost; S.expense += N0.cost;
   for (const id in N0.need) farmTake(id, N0.need[id]);
   logMoney("farm", "Hof ausgebaut: " + N0.n, -N0.cost);
-  F.stage = (F.stage || 1) + 1;
+  const tier0 = F.stage || 1;
+  F.hl = farmHl() + 1;
+  F.stage = hofTier(F.hl);
   farmBoundsUpdate();
-  farmXP(60 + F.stage * 40);
-  farmClover(4, "Hof ausgebaut");
+  /* große Stufe (neues Aussehen) oder nur mehr Land */
+  const big = F.stage > tier0;
+  farmXP(big ? 60 + F.stage * 40 : 20 + F.hl * 4);
+  farmClover(big ? 4 : 1, "Hof ausgebaut");
   farmEvent("stage");
   return true;
 }
 /* Bebaubare Fläche (v56): der Südzaun bleibt zwei Felder vor der Straße stehen,
-   jede Ausbaustufe gibt drei Kacheln mehr nach Westen, Norden und Osten –
-   30 × 32, 36 × 35, 42 × 38 und am Ende 48 × 41 Kacheln (FHOF_B oben). */
+   v70: jede der zehn Ausbaustufen gibt eine Kachel mehr nach Westen, Norden und
+   Osten – 30 × 32 bis am Ende 48 × 41 Kacheln (FHOF_B oben). */
 function farmBoundsUpdate() {
   const B = farmHofB();
   FIN = { x0: B.x0 + FG / 2, z0: B.z0 + FG / 2, x1: B.x1 + FG / 2, z1: B.z1 + FG / 2 };
@@ -1654,6 +1698,7 @@ function farmErbeTick(dt) {
   const F = S.farm;
   if (!F || F.sold) return;
   farmSta();
+  farmHayTick();
   farmTreesTick();
   farmAreaCheck();
   farmWeather();

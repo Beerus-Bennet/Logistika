@@ -70,7 +70,11 @@ so laufen die Lager nicht ständig über.
   Schaffutter). Stall antippen sammelt alles ein, Futter über die Tiere ziehen
   füttert sie. Die Sterne kommen vom Platz im Stall (Streicheln gibt seit v50
   keinen Bonus mehr – ein angetipptes Tier hüpft nur kurz). Zum Kaufen zeigt
-  die Stall-Blase das Tier als wippendes 3D-Modell.
+  die Stall-Blase das Tier als wippendes 3D-Modell. Seit v70 zeigt das
+  Stall-Fenster die Tiere wie eine Warteschlange: jedes Tier in 3D (es kaut,
+  hungrige zappeln), darunter der Fortschritt bis zur nächsten Ware;
+  antippen füttert ein hungriges Tier oder sammelt Fertiges ein. Über dem
+  Stall zeigt eine Blase mit Ladebalken, wann die nächste Ware fertig ist.
 * **Masttiere** – **Schweine** (ab Level 4) und **Rinder** (ab Level 6) wachsen
   mit jeder Mahlzeit; nach drei bzw. vier Mahlzeiten sind sie schlachtreif
   (✓ über dem Stall). Ein Tipp bringt sie zum Metzger: je Schwein drei, je Rind
@@ -98,8 +102,12 @@ so laufen die Lager nicht ständig über.
   Blech Apfelkuchen 500 g Mehl, 2 kg Äpfel und 3 Eier, Muffins kommen mit
   Butter statt einer ganzen Kanne Milch aus; 5 l Milch geben 250 g Butter.
 * **Silo und Scheune** – zeigen jede Ware mit Menge und Sternen. Volle Lager
-  lassen sich ausbauen; der Großhandel kauft sofort, zahlt aber nur den halben
-  Wert.
+  lassen sich ausbauen – seit v70 jedes Lager (Silo, Scheune, Holzplatz,
+  Kühlkiste, Köderkiste) in **zehn Stufen**; der Großhandel kauft sofort, zahlt
+  aber nur den halben Wert.
+* **Heuballen (v70)** – am Scheunentor liegen zwei Rundballen vom eigenen Heu:
+  antippen und verkaufen (je 8 €). Alle 12 Spielstunden wird ein neuer
+  gepresst, höchstens zwei.
 * **Kundschaft** – jede Station hat ihre eigene **Bestelltafel**: am Hoftor
   (Hofwaren), im Sägewerk am Tor (Holz) und an der Fischerei am Uferweg
   (Fisch). Jede zeigt nur die Bestellungen ihrer Station (oben lässt sich
@@ -183,22 +191,24 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Milch oder Wolle, Gebäude mit fertiger Ware, der Verkaufsstand mit
   Einnahmen und die Bestelltafel mit lieferbarer Bestellung leuchten mit einem
   leichten gelben Umriss.
-* **Hof-Ausbau in vier Stufen** – am Anfang grau und verwittert: morscher Zaun
+* **Hof-Ausbau in zehn Stufen** – am Anfang grau und verwittert: morscher Zaun
   mit Lücken, Erdwege voller Unkraut, alte Reifen, Schrott und Bretter zum
   Wegräumen (kostet Ausdauer, bringt Holzreste und EP). Seit v56 liegt der
   Hof zwei Felder weiter von der Straße weg (dazwischen ist Platz für den
-  Verkaufsstand) und ist deutlich größer: Mit jeder Stufe kommen drei Kacheln
-  nach Westen, Norden und Osten dazu – 30 × 32, 36 × 35, 42 × 38 und am Ende
-  48 × 41 Kacheln; der Südzaun an der Straße bleibt stehen, Zaun, Wege und
-  Bauland rücken mit. Pflöcke mit roter Spitze auf der Wiese zeigen, wie weit
-  der nächste Ausbau reicht. Rundherum liegt Wiese, der Teich und das Sägewerk sind
-  dafür ein gutes Stück weggerückt. Stufe 2
-  *Ausgebauter Hof*: frischer Anstrich, neuer Zaun, Kieswege, Traktor, mehr
-  Platz in Silo und Scheune, ein Warteplatz mehr. Stufe 3 *Professioneller
-  Betrieb*: Pflaster, Laternen, Blumen, weißer Zaun. Stufe 4 *Großer
-  Wirtschaftshof*: Steinmauer mit Steintor, Maschinenhalle, der Traktor parkt
-  davor. Ausbau im Wohnhaus unter „🏡 Ausbau“ – mit Holz aus dem Wald und
-  später aus dem Sägewerk.
+  Verkaufsstand) und ist deutlich größer. Seit v70 gibt es **zehn
+  Ausbaustufen**, jede milder: eine Kachel mehr nach Westen, Norden und Osten
+  – von 30 × 32 bis am Ende 48 × 41 Kacheln; der Südzaun an der Straße bleibt
+  stehen, Zaun, Wege und Bauland rücken mit. Pflöcke mit roter Spitze auf der
+  Wiese zeigen, wie weit der nächste Ausbau reicht. Rundherum liegt Wiese, der
+  Teich und das Sägewerk sind dafür ein gutes Stück weggerückt. Die kleinen
+  Stufen (2, 3, 5, 6, 8, 9) kosten nur Geld und bringen Land, die großen
+  bringen dazu das neue Aussehen: Stufe 4 *Ausgebauter Hof*: frischer
+  Anstrich, neuer Zaun, Kieswege, Traktor, mehr Platz in Silo und Scheune,
+  ein Warteplatz mehr. Stufe 7 *Professioneller Betrieb*: Pflaster, Laternen,
+  Blumen, weißer Zaun. Stufe 10 *Großer Wirtschaftshof*: Steinmauer mit
+  Steintor, Maschinenhalle, der Traktor parkt davor. Ausbau im Wohnhaus unter
+  „🏡 Ausbau“ – die großen Stufen mit Holz aus dem Wald und später aus dem
+  Sägewerk.
 * **Der Wald** – sobald drei Bäume am Teich gefällt sind und das Erbe Level 5
   erreicht hat, kommt **Förster Bruno Wendt** ans Westtor (antippen auf einen
   gesperrten Knopf zeigt jede Bedingung mit Häkchen und Zähler): „Der Förster hat einen Weg durch den Wald freigegeben.“ Der Weg
@@ -245,9 +255,12 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   endet an den Toren sauber am Zaun, vom Westtor führt ein Feldweg hinunter zur
   Straße (dort fährt der Holzlaster). Krügers
   alter **Unimog** läuft nach der Motor-Reparatur in der eigenen Flotte. Seit
-  v53 steht er als Holzlaster auf seinem Platz im Sägewerk: Beim Losschicken
-  fliegen Bretter und Balken aus dem Holzlager auf die Ladefläche, dann fährt
-  er mit Fahrer über den Waldweg zur Straße. Auch Lastenrad, Moped und
+  v53 steht er als Holzlaster auf seinem Platz im Sägewerk. Seit v70 steht er
+  dort immer **leer** (Holzboden, Bordwände); beim Losschicken fliegen sechs
+  volle Paletten mit dem Hoflogo aus dem Holzlager auf die Ladefläche – zwei
+  nebeneinander, drei Reihen, symmetrisch –, dann fährt er mit Fahrer über den
+  Waldweg zur Straße. Kommt er zurück und muss gleich wieder los, wendet er
+  (früher blieb er dann mitten im Wald stehen). Auch Lastenrad, Moped und
   Transporter fahren nie mehr leer – am Steuer sitzt jemand (die Fahrerin aus
   dem Team, wenn sie die Lieferung losgeschickt hat).
 * **Firmenauftritt in 3D (v54)** – Name und Logo aus „Lackierung & Logo“
@@ -261,9 +274,16 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
 * **Wege und Grafik (v53)** – Waldwege sind durchgehende Bänder ohne
   Flimmern an Kreuzungen; wo ein Weg endet, liegt eine kleine Lichtung mit
   Bank. Felder flimmern beim starken Hineinzoomen nicht mehr. Die Heuballen
-  auf dem Weg sind weg, Wohnhaus und Scheune stehen Rand an Rand, und das
+  auf dem Weg sind weg, Wohnhaus und Scheune stehen Rand an Rand (seit v70
+  wirklich Wand an Wand und Traufe an Traufe, Fronten in einer Flucht), und das
   Firmenschild am Tor wandert beim Hof-Ausbau mit dem Tor nach außen. Nach dem
-  Füttern springt die Kamera nicht mehr in den Wald.
+  Füttern springt die Kamera nicht mehr in den Wald. Seit v70 laufen Abzweige
+  ohne Kante ineinander (alle Wegränder liegen unter allen Wegflächen), der
+  Weg von der Brücke nach Osten führt am Teich vorbei bis zur Straße, die
+  Wildkirschen tragen runde rote Kirschen statt eckiger Blüten, das Steintor
+  hat kein rotes Teil mehr oben und die Laternen stehen frei neben den
+  Torpfeilern. Die Blase über arbeitenden Gebäuden ist deckend, der
+  Ladebalken hat runde Enden.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt
@@ -330,6 +350,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
     Angebote selbst an (höchstens drei offen), arbeitet die angenommenen von
     oben nach unten ab, verteilt, was fehlt, an die Kette – auch an Holzfäller,
     Sägewerker und Mechaniker – und fährt fertige Bestellungen selbst: Sie
+
     geht zum Fahrzeug, steigt ein und kommt nach der Lieferung zu Fuß von
     der Straße zurück (dazu Trinkgeld). Fährt man selbst los, sitzt trotzdem
     jemand am Steuer.
@@ -486,7 +507,12 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   sofort erledigt. Fertige Aufgaben hakt das Buch von selbst ab und zahlt aus.
 * **Meldungen** kommen nacheinander statt übereinander, doppelte fallen weg.
   Ist ein Fenster, Menü oder Minispiel offen, warten Hintergrund-Meldungen,
-  bis es zu ist; Antworten auf den eigenen Tipp kommen sofort.
+  bis es zu ist; Antworten auf den eigenen Tipp kommen sofort. Seit v70
+  stehen Meldungen bei offenem Hof-Fenster oben – sie verdecken keine Knöpfe
+  mehr (z. B. „Ton an/aus“ im Notizbuch). Der Warenname über einem
+  angetippten Artikel verschwindet beim Scrollen oder beim nächsten Tipp.
+* **Minispiele (v70)** – stehen mittig über allem, der Rest ist abgedunkelt
+  und nicht antippbar: voller Fokus aufs Spiel.
 * **Kurze Texte** – Lina, Nachbar Krüger, Förster, Bürgermeisterin und alle
   Anrufer reden seit v46 nur noch das Nötigste (meist ein Satz).
 * **iPhone** – ein schneller Doppeltipp zoomt die Seite nicht mehr hinein
@@ -569,6 +595,12 @@ Antippen zoomt hinein. Stehen mehrere Aufträge an genau derselben Adresse,
 erscheint stattdessen eine kleine Auswahl. Fahrzeuge fahren bis vor die Tür, laden dort und parken
 nach der Zustellung beim Empfänger. Eigene Büros stehen als kleines Haus in der
 Firmenfarbe an ihrer Adresse.
+
+Rund um den Hof (Glindow, Werder, Petzow, Geltow, Caputh bis Richtung Potsdam
+und Michendorf) fahren die Fahrzeuge seit v70 auf den **echten Straßen** – L 90,
+Glindow–Werder, B1 über Baumgartenbrück, die Straßen nach Petzow und Caputh –
+statt quer über den Glindower See. Fahrzeit, Kilometer und Kosten bleiben
+dieselben; nur der Weg auf der Karte folgt der Straße.
 
 ### Mr. Snus
 

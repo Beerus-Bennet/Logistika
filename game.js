@@ -1410,6 +1410,9 @@ function addCO2(veh, t, km, loadKg) {
 function co2f(kg) { return kg >= 1000 ? fmt(kg / 1000, kg >= 1e5 ? 0 : 1) + " t" : fmt(kg, kg < 10 ? 1 : 0) + " kg"; }
 
 /* ------------------------------- Simulation ----------------------------- */
+/* v70: Linie auf der Karte – rund um den Hof entlang der Straßen (farm.js roadDisp) */
+function roadLine(pts) { return typeof roadDisp === "function" ? roadDisp(pts) : pts; }
+function legDisp(leg) { return roadLine(legCoords(leg)); }
 function legCoords(leg) {
   /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
   if (!leg._c) leg._c = unwrapLons(pathPts(leg.nodes, leg.a, leg.b));
@@ -1465,7 +1468,11 @@ function vehSpot(v) {
   return v.spot;
 }
 function vehPoint(v) {
-  if ((v.phase === "repo" || v.phase === "haul") && v.route) return routePointAt(v.route, v.pos);
+  if ((v.phase === "repo" || v.phase === "haul") && v.route) {
+    /* v70: rund um den Hof auf den echten Straßen (farm.js roadDispAt) – gleiche Fahrzeit */
+    const q = typeof roadDispAt === "function" ? roadDispAt(v.route, v.pos) : null;
+    return q || routePointAt(v.route, v.pos);
+  }
   return addrPt(vehSpot(v));
 }
 function pathLen(route) {
@@ -1510,7 +1517,7 @@ function beginLeg(job, idx) {
 function parkHere(f) {
   const moving = (f.phase === "repo" || f.phase === "haul") && f.route;
   if (!moving) return;
-  const p = routePointAt(f.route, f.pos);
+  const p = (typeof roadDispAt === "function" && roadDispAt(f.route, f.pos)) || routePointAt(f.route, f.pos);
   const job = S.jobs.find(j => j.id === f.jobId), leg = job && job.legs[f.legIdx];
   const cands = leg ? [f.at, leg.from, leg.to] : [f.at];
   let best = f.at, bd = Infinity;
@@ -1916,7 +1923,7 @@ function drawFog(m, ctx) {
   f.lineCap = "round"; f.lineJoin = "round";
   f.lineWidth = Math.max(16, Math.min(46, 8 + m.zoom * 3));
   S.jobs.forEach(job => job.legs.forEach(l => {
-    const runs = m.screenRuns(legCoords(l), f.lineWidth + 10);   /* nur das sichtbare Stück */
+    const runs = m.screenRuns(legDisp(l), f.lineWidth + 10);   /* nur das sichtbare Stück */
     if (!runs.length) return;
     m.tracePath(f, runs);
     f.stroke();
@@ -1963,7 +1970,7 @@ function drawWorld(m, ctx) {
     job.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
       const active = !l.done && i === job.curLeg;
-      m.line(legCoords(l), {
+      m.line(legDisp(l), {
         color: mi.color, width: l.done ? 3 : (active ? 5.5 : 4),
         alpha: l.done ? 0.3 : (active ? 1 : 0.6),
         dash: active ? [13, 9] : [], dashOffset: active ? dashOff : 0,
@@ -1977,7 +1984,7 @@ function drawWorld(m, ctx) {
     const v = planState.variants[planState.vi], o = planState.order, n = v.legs.length;
     v.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
-      m.line(unwrapLons(legPts(l, o, i, n)), {
+      m.line(roadLine(unwrapLons(legPts(l, o, i, n))), {
         color: mi.color, width: 5, dash: [10, 8],
         dashOffset: -(performance.now() / 45) % 18,
         outline: "rgba(16,34,47,0.6)", outlineWidth: 3

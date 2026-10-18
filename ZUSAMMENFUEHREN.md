@@ -1,5 +1,23 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v70 – Liste „Logistika 2.1“ auf `main` (v69.10) aufgesetzt
+
+v70 baut direkt auf dem aktuellen `main` (v69.10) auf – dein Stand bis v69.10 ist drin (Freigaben,
+Fahrer-Modus, Produktion, Angeln, Namens-Blase). Einzelheiten
+in `AENDERUNGEN.md` unter v70. **Darauf achten, wenn du in denselben Dateien arbeitest:**
+
+| Thema | Wo |
+|---|---|
+| Hofgröße kommt aus `S.farm.hl` (1 … 10) über `farmHl()`/`farmHofB()`; `S.farm.stage` ist nur noch die Optik-Stufe 1 … 4 | `erbe.js`, `erbedata.js` (`FHOF_STAGES` mit zehn Einträgen) |
+| Lager haben zehn Stufen – in `fishdata.js` nur die `cost`-Reihen von Kühl- und Köderkiste verlängert | `farmdata.js`, `erbedata.js`, `fishdata.js` |
+| Minispiele (auch Angeln) stehen mittig, Rest abgedunkelt – CSS `#farmAngel.mg` | `style.css` |
+| Karte: Fahrzeugposition rund um den Hof über `roadDispAt`, Linien über `legDisp`/`roadLine` – Fahrzeit unverändert | `farm.js` (Ende), `game.js` |
+| Neues Spielstand-Feld `S.farm.hay` (Heuballen an der Scheune) | `erbe.js` |
+| `startDrive` ersetzt eine laufende Fahrt desselben Fahrzeugs | `farmview.js` |
+| `team.js` nur eine Zeile: `navKey` nimmt die Hofgröße aus `farmHl()` – Fahrerin unverändert wie in `main` | `team.js` |
+
+Version: **v70**.
+
 ## Stand v59 – Fischerei-Folgeauftrag in `main` (Teil 1 = v58, Teil 2 = v59)
 
 Gearbeitet wurde auf zwei Branches, die nacheinander aufeinander aufbauen:

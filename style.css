@@ -436,6 +436,8 @@ body:not(.tab-map) #mapUI{display:none}
 /* Im Tutorial weicht die Statusmeldung der Sprechblase aus: steht die Blase
    unten, geht die Meldung nach oben – und umgekehrt. */
 body.tut-on #toasts{bottom:auto;top:calc(var(--head-h) + 10px)}
+/* v70: Bei offenem Hof-Fenster stehen Meldungen oben – sonst verdecken sie Knöpfe wie „Ton an/aus“ */
+body.tab-farm.fsheet-on #toasts{bottom:auto;top:calc(var(--head-h) + 10px)}
 #tutor.top ~ #toasts{top:auto;bottom:calc(var(--nav-h) + 14px)}
 .toast{
   background:var(--paper);border:var(--line);border-radius:12px;padding:6px 12px;
@@ -1895,9 +1897,12 @@ body.locked #farm{display:none}
 .ftag b{font-size:12px;font-weight:800;margin-left:2px}
 .ftag.ready{background:#c8f7d6;animation:fbob 1.1s ease-in-out infinite}
 .ftag.hungry{background:#fff3c4;animation:fbob 1.6s ease-in-out infinite}
-.ftag.work{background:#ffffffe8;font-size:15px;padding:3px 6px}
-.ftag.work i{display:block;width:30px;height:7px;border:2px solid var(--ink);border-radius:9px;margin-left:4px;
-  background:linear-gradient(90deg,var(--amber) var(--p),#e6edf4 var(--p))}
+/* v70: Blase deckend (die Spitze überdeckt den Rand sauber, kein Viereck mehr) und
+   der Füllstand mit runden Enden statt einer harten Kante */
+.ftag.work{background:#fff;font-size:15px;padding:3px 6px}
+.ftag.work i{position:relative;display:block;width:30px;height:7px;border:2px solid var(--ink);border-radius:9px;margin-left:4px;
+  background:#e6edf4;overflow:hidden;box-sizing:content-box}
+.ftag.work i::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p);min-width:5px;border-radius:9px;background:var(--amber)}
 .ftag.info{background:#fff;font-size:16px}
 @keyframes fbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .fsign{
@@ -2103,6 +2108,7 @@ body.tab-farm #farmPlace.on~#farmSide{opacity:.3}
 .fsell-b{display:flex;gap:6px;flex-wrap:wrap}
 .fsell-b .btn{margin-top:6px}
 .fup{margin-top:12px;width:100%;text-align:center;font-size:13px}
+.fup small{display:block;font-size:10.5px;font-weight:700;opacity:.75}
 
 /* Stall */
 .fkeep{display:flex;align-items:center;gap:10px;background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:8px 10px}
@@ -2468,6 +2474,9 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fstage.ok>b{background:var(--green);color:#fff}
 .fstage.cur{opacity:1;background:#fff8e0;box-shadow:2px 3px 0 var(--ink)}
 .fstage.cur>b{background:var(--amber)}
+.fstage.small{padding:5px 9px 5px 22px}
+.fstage.small>b{width:22px;height:22px;font-size:11.5px}
+.fstage.small span{font-size:12px;font-weight:700}
 .fstaff{display:flex;align-items:center;gap:9px;background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:6px 8px;margin-bottom:6px}
 .fstaff.cand{background:#f6fbff;border-style:dashed}
 .fst-p{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid var(--ink);background:#e2f0ff;display:grid;place-items:center}
@@ -2539,6 +2548,10 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 
 /* ---------------------------- Minispiele ----------------------------- */
 #farmAngel.mg .fa-box{max-width:460px;background:#fffaf0}
+/* v70: Minispiele mittig über allen Knöpfen, der Rest abgedunkelt */
+#farmAngel.mg.on{display:flex;align-items:center;justify-content:center;pointer-events:auto;background:rgba(13,27,42,.38);
+  padding:10px calc(10px + var(--safe-r)) 10px calc(10px + var(--safe-l))}
+#farmAngel.mg .fa-box{position:relative;left:auto;right:auto;bottom:auto;width:100%;max-height:100%;overflow-y:auto;overscroll-behavior:contain}
 .mg-stage{position:relative;margin:8px 0 2px;min-height:96px;touch-action:none;-webkit-user-select:none;user-select:none}
 .mg-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .mg-bar .fa-go{flex:1}
@@ -2945,3 +2958,16 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
 #bootErr b{display:block;font-size:13px;color:#c22c46}
 #bootErr small{display:block;margin:3px 0;word-break:break-word;font-size:11px}
 #bootErr i{display:block;font-size:10px;opacity:.65;font-style:normal}
+
+/* v70: Tiere im Stall als Warteschlange (3D-Bild, Fortschritt, antippen) */
+.fq-s.fani2{cursor:pointer;overflow:visible}
+.fq-s.fani2>i{border-radius:10px}
+.fq-s.fani2.hungry{background:#fff3c4}
+.fq-s.fani2.hungry>.ic{animation:aniHungry 2.4s ease-in-out infinite}
+.fq-s.fani2.work>.ic{animation:aniChew 1.8s ease-in-out infinite;transform-origin:50% 90%}
+.fq-s.fani2 .fa-out{position:absolute;right:-7px;top:-8px;z-index:2;font-size:15px;line-height:1}
+.fq-s.fani2 .fa-out .ic.th,.fq-s.fani2 .fa-out .ic.th img{width:24px;height:24px;display:block}
+.fq-s.fani2 .fa-out .ic.th b{font-size:15px;line-height:24px}
+.fq-s.fani2 em{position:absolute;left:-6px;bottom:-7px;z-index:2;font-style:normal;font-size:9.5px;font-weight:800;background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:0 3px;line-height:1.3}
+@keyframes aniChew{0%,100%{transform:rotate(0) translateY(0)}30%{transform:rotate(-4deg) translateY(1px)}60%{transform:rotate(3deg) translateY(0)}}
+@keyframes aniHungry{0%,70%,100%{transform:translateX(0)}76%{transform:translateX(-2px)}82%{transform:translateX(2px)}88%{transform:translateX(-1px)}}

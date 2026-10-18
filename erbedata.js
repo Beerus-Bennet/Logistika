@@ -41,7 +41,7 @@ Object.assign(FITEMS, {
 
 /* Lager für Holz: Holzplatz am Schuppen, später das Holzlager im Sägewerk */
 Object.assign(FSTORE, {
-  holz: { n: "Holzplatz", i: "🪵", the: "Der Holzplatz", base: 30, step: 25, cost: [120, 300, 600, 1000, 1600, 2400],
+  holz: { n: "Holzplatz", i: "🪵", the: "Der Holzplatz", base: 30, step: 25, cost: [120, 300, 600, 1000, 1600, 2400, 3500, 5000, 7000],
           empty: "Leer. Fäll Bäume mit der Axt – Stämme und Äste kommen hierher." }
 });
 
@@ -252,15 +252,24 @@ const FENERGY_CAP = [150, 300];
 const FPV = { lv: 15, price: 180, max: 16, kwh: 2, stay: 2880, again: 7, at: [-35.2, -37.2], who: "Frank Döring", firm: "Döring GmbH" };
 
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
+/* v70: zehn Ausbaustufen – jede gibt eine Kachel mehr nach Westen, Norden und Osten
+   (Größe zeigt das Fenster selbst an, aus FHOF_B). Die großen Stufen 4, 7 und 10
+   (big) bringen wie bisher neues Aussehen und mehr Lager; die kleinen nur Land. */
 const FHOF_STAGES = [
   null,
   { n: "Kleiner Bauernhof", d: "Ein bisschen heruntergekommen – aber deiner." },
-  { n: "Ausgebauter Hof", lv: 6, cost: 900, need: { kiefer: 6, birke: 6 },
-    perks: ["Der Hof wächst nach Westen, Norden und Osten: 36 × 35 statt 30 × 32 Felder Platz", "Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
-  { n: "Professioneller Betrieb", lv: 11, cost: 3500, need: { bretter: 12, balken: 8, pfosten: 8 },
-    perks: ["Der Hof wächst wieder: 42 × 38 Felder Platz", "Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
-  { n: "Großer Wirtschaftshof", lv: 17, cost: 9000, need: { bauholz: 8, platten: 10, tueren: 2, zaun: 6 },
-    perks: ["Das ganze Gelände: 48 × 41 Felder Platz für Felder, Ställe und Maschinen", "Steinmauer, Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
+  { n: "Weideland dazu", lv: 3, cost: 300, need: {}, perks: ["Ein Streifen Wiese rundherum"] },
+  { n: "Neue Koppel", lv: 5, cost: 600, need: {}, perks: ["Noch ein Streifen – Platz für den nächsten Stall"] },
+  { n: "Ausgebauter Hof", big: true, lv: 6, cost: 900, need: { kiefer: 6, birke: 6 },
+    perks: ["Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
+  { n: "Obstwiese dazu", lv: 8, cost: 1500, need: {}, perks: ["Mehr Platz für Bäume und Felder"] },
+  { n: "Feldrand gepachtet", lv: 10, cost: 2400, need: {}, perks: ["Mehr Platz für Felder und Ställe"] },
+  { n: "Professioneller Betrieb", big: true, lv: 11, cost: 3500, need: { bretter: 12, balken: 8, pfosten: 8 },
+    perks: ["Pflasterwege, Laternen und Blumen", "+40 Plätze in Silo und Scheune", "Verkaufsstand mit 5 Plätzen", "+1 Warteplatz in allen Hofgebäuden"] },
+  { n: "Mehr Ackerland", lv: 13, cost: 5000, need: {}, perks: ["Mehr Platz für Felder und Maschinen"] },
+  { n: "Großes Wiesenstück", lv: 15, cost: 6800, need: {}, perks: ["Fast das ganze Gelände"] },
+  { n: "Großer Wirtschaftshof", big: true, lv: 17, cost: 9000, need: { bauholz: 8, platten: 10, tueren: 2, zaun: 6 },
+    perks: ["Das ganze Gelände für Felder, Ställe und Maschinen", "Steinmauer, Hoftor aus Stein und Maschinenhalle", "+60 Plätze in Silo und Scheune", "Verkaufsstand mit 6 Plätzen"] }
 ];
 /* Gerümpel auf dem Hof am Anfang: wegräumen gibt EP und ein bisschen Holz */
 const FJUNK = {
@@ -422,7 +431,7 @@ FQUESTS_HOF.push(
   { c: 4, t: "Verkauf Holz für 200 € an den Holzhändler", chk: () => (S.farm.stats.woodSold || 0) >= 200, n: 1, r: { m: 40, xp: 25 } },
   { c: 4, t: "Kauf die Stahlaxt",                 chk: () => (S.farm.tools.axe || 1) >= 2,   n: 1, r: { m: 30,  xp: 20 } },
   { c: 4, t: "Fälle einen großen Baum",           ev: "fell:big",          n: 1,  r: { m: 50,  xp: 30 } },
-  { c: 4, t: "Bau den Hof aus: Stufe 2",          chk: () => (S.farm.stage || 1) >= 2,        n: 1, r: { m: 80,  xp: 50 } },
+  { c: 4, t: "Bau den Hof aus: Stufe 4",          chk: () => (S.farm.stage || 1) >= 2,        n: 1, r: { m: 80,  xp: 50 } },
   { c: 4, t: "Erreiche Level 7",                  ev: "level",             n: 7,  r: { m: 80,  xp: 0 } },
   /* Kapitel 6 – Die Kettensäge */
   { c: 5, t: "Kauf die Kettensäge",               chk: () => (S.farm.tools.saw || 0) >= 1,    n: 1, r: { m: 60,  xp: 30 } },
@@ -452,7 +461,7 @@ FQUESTS_HOF.push(
   { c: 7, t: "Hoble 3 Bund Dielen",               ev: "make:dielen",       n: 3,  r: { m: 90,  xp: 40 } },
   { c: 7, t: "Kauf die Trockenkammer",            chk: () => fcount("trocken") >= 1,          n: 1, r: { m: 120, xp: 50 } },
   { c: 7, t: "Trockne 4 Paar Kanthölzer",         ev: "make:bauholz",      n: 4,  r: { m: 110, xp: 50 } },
-  { c: 7, t: "Bau den Hof aus: Stufe 3",          chk: () => (S.farm.stage || 1) >= 3,        n: 1, r: { m: 200, xp: 80 } },
+  { c: 7, t: "Bau den Hof aus: Stufe 7",          chk: () => (S.farm.stage || 1) >= 3,        n: 1, r: { m: 200, xp: 80 } },
   { c: 7, t: "Öffne den alten Wald",              chk: () => farea("altwald"),                n: 1, r: { m: 80,  xp: 40 } },
   { c: 7, t: "Fälle eine uralte Eiche",           ev: "fell:uralt",        n: 1,  r: { m: 200, xp: 90 } },
   { c: 7, t: "Mach 2 Sätze Möbelteile",           ev: "make:moebel",       n: 2,  r: { m: 150, xp: 60 } },
@@ -480,7 +489,7 @@ FQUESTS_HOF.push(
   { c: 9, t: "Verkauf 10 Sachen am Verkaufsstand", ev: "stall:sold",       n: 10, r: { m: 200, xp: 70 } },
   { c: 9, t: "Erreiche Level 19",                 ev: "level",             n: 19, r: { m: 400, xp: 0 } },
   /* Kapitel 11 – Wirtschaftshof */
-  { c: 10, t: "Bau den Hof aus: Stufe 4",         chk: () => (S.farm.stage || 1) >= 4,        n: 1, r: { m: 500, xp: 150 } },
+  { c: 10, t: "Bau den Hof aus: Stufe 10",        chk: () => (S.farm.stage || 1) >= 4,        n: 1, r: { m: 500, xp: 150 } },
   { c: 10, t: "Kauf das Motorboot",               chk: () => (S.farm.boat || 0) >= 2,         n: 1, r: { m: 300, xp: 100 } },
   { c: 10, t: "Fang einen Zander in der Tiefen Mitte", ev: "catch:mitte:zander", n: 1, r: { m: 250, xp: 90 } },
   { c: 10, t: "Fang einen Hecht",                 ev: "catch:hecht",       n: 1,  r: { m: 120, xp: 50 } },

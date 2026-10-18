@@ -149,11 +149,16 @@ const FWM = (() => {
         const tops = [0, 1, 2].map(i => limb(b, h * 0.92, i * 2.1 + v, 1.0, 0.5 * k, r * 0.55, T.bark));
         const clumps = [[0, H * 0.62, 0, 0.62]].concat(tops.map(p => [p[0] * 1.15, p[1] + 0.22 * k, p[2] * 1.15, 0.42]), [[0, H * 0.84, 0, 0.4]]);
         b.noise(0.14, () => clumps.forEach(([x, y, z, rr], i) => b.ico(rr * k, i % 2 ? T.leaf2 : T.leaf, { x, y, z, jitter: 0.28, flat: 1.12, bottom: T.leaf3 })));
-        /* Blüten in weißen Tupfen außen auf der Krone – so erkennt man die seltene Wildkirsche schon von Weitem */
-        b.noise(0.08, () => clumps.forEach(([x, y, z, rr], i) => {
-          for (let j = 0; j < 3; j++) {
-            const a = j * 2.1 + i * 1.3 + v, e = 0.15 + j * 0.3, d = rr * k * 0.92;
-            b.ico(0.11 * k + 0.03, j === 1 ? 0xffffff : T.bloom, { x: x + Math.cos(a) * Math.cos(e) * d, y: y + Math.sin(e) * d, z: z + Math.sin(a) * Math.cos(e) * d, flat: 0.6, jitter: 0.3 });
+        /* v70: runde rote Kirschen (paarweise am Stiel) außen auf der Krone – so erkennt man die
+           seltene Wildkirsche schon von Weitem (vorher eckige weiße Blüten) */
+        b.noise(0.05, () => clumps.forEach(([x, y, z, rr], i) => {
+          for (let j = 0; j < 2; j++) {
+            const a = j * 3.1 + i * 1.3 + v, e = 0.2 + j * 0.35, d = rr * k * 0.96, s = 0.042 * k + 0.026;
+            const cx = x + Math.cos(a) * Math.cos(e) * d, cy = y + Math.sin(e) * d, cz = z + Math.sin(a) * Math.cos(e) * d;
+            const ox = -Math.sin(a) * s * 0.95, oz = Math.cos(a) * s * 0.95;
+            b.sphere(s, 7, 5, T.fruit, { x: cx + ox, y: cy - s * 0.3, z: cz + oz, smooth: true });
+            b.sphere(s, 7, 5, j === 1 ? 0x9a1422 : T.fruit, { x: cx - ox, y: cy - s * 0.6, z: cz - oz, smooth: true });
+            b.box(0.014, s * 1.5, 0.014, 0x4a6a2a, { x: cx, y: cy + s * 0.35, z: cz });
           }
         }));
       });
@@ -208,7 +213,8 @@ const FWM = (() => {
       tr(0.12, 0.09, H * 0.44, T.bark);
       b.cyl(0.13, 0.13, 0.04, 5, T.mark, { y: H * 0.2, notop: true, nobot: true });
       b.noise(0.12, () => b.ico(0.66, T.leaf, { y: H * 0.68, jitter: 0.25, flat: 1.2, bottom: T.leaf3 }));
-      for (let i = 0; i < 4; i++) { const a = i * 1.57 + v, e = (i % 2) * 0.5; b.box(0.2, 0.08, 0.2, i % 2 ? 0xffffff : T.bloom, { x: Math.cos(a) * Math.cos(e) * 0.6, y: H * 0.68 + Math.sin(e) * 0.72, z: Math.sin(a) * Math.cos(e) * 0.6, ry: a, nobot: true }); }
+      /* v70: runde Kirschen statt eckiger Blüten */
+      for (let i = 0; i < 4; i++) { const a = i * 1.57 + v, e = (i % 2) * 0.5; b.sphere(0.085, 7, 4, i % 2 ? 0x9a1422 : T.fruit, { x: Math.cos(a) * Math.cos(e) * 0.64, y: H * 0.68 + Math.sin(e) * 0.74, z: Math.sin(a) * Math.cos(e) * 0.64, smooth: true }); }
     }
     return b;
   }
@@ -403,7 +409,9 @@ const FWM = (() => {
   /* Band entlang einer Linie: ein durchgehender Streifen mit gemeinsamen Ecken
      (keine überlappenden Stücke – die flimmerten beim Zoomen), optional mit
      dunklerem Rand und runden Enden */
-  function ribbon(b, pts, w, color, y, edge, caps) {
+  /* ey (v70): eigene Höhe für den Rand – liegt er unter allen Wegflächen, laufen Abzweige sauber ineinander */
+  function ribbon(b, pts, w, color, y, edge, caps, ey) {
+    const yE = ey != null ? ey : y - 0.004;
     const n = pts.length;
     if (n < 2) return;
     const N = pts.map((p, i) => {
@@ -423,7 +431,7 @@ const FWM = (() => {
     for (let i = 1; i < n; i++) {
       b.quad(at(i - 1, hw), at(i, hw), at(i, -hw), at(i - 1, -hw), color);
       if (edge) {
-        const e1 = (i0, f) => { const q = at(i0, f); q[1] -= 0.004; return q; };
+        const e1 = (i0, f) => { const q = at(i0, f); q[1] = yE; return q; };
         b.quad(e1(i - 1, hw * 1.25), e1(i, hw * 1.25), e1(i, hw), e1(i - 1, hw), edge);
         b.quad(e1(i - 1, -hw), e1(i, -hw), e1(i, -hw * 1.25), e1(i - 1, -hw * 1.25), edge);
       }
@@ -433,7 +441,7 @@ const FWM = (() => {
     [[0, -1], [n - 1, 1]].forEach(([i, dir], e) => {
       if (Array.isArray(caps) && !caps[e]) return;
       const p = pts[i], nx = N[i][0], nz = N[i][1], l = Math.hypot(nx, nz) || 1, tx = nz / l * dir, tz = -nx / l * dir;
-      const seg = 8, rr = [[hw, color, y]].concat(edge ? [[hw * 1.25, edge, y - 0.004]] : []);
+      const seg = 8, rr = [[hw, color, y]].concat(edge ? [[hw * 1.25, edge, yE]] : []);
       rr.reverse().forEach(([r, col, yy]) => {
         for (let k = 0; k < seg; k++) {
           const a0 = Math.PI * k / seg, a1 = Math.PI * (k + 1) / seg;
@@ -477,11 +485,11 @@ const FWM = (() => {
       const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2;
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
-    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true));
+    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true, o.ey));
     /* Laub und Steinchen auf dem Weg */
     for (let i = 0; i < P.length; i++) {
       const p = P[Math.floor(rnd() * P.length)];
-      b.plate(0.14, 0.1, rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, { x: p[0] + (rnd() - 0.5) * 1.2, z: p[1] + (rnd() - 0.5) * 1.2, ry: rnd() * 3, y0: 0.032 });
+      b.plate(0.14, 0.1, rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, { x: p[0] + (rnd() - 0.5) * 1.2, z: p[1] + (rnd() - 0.5) * 1.2, ry: rnd() * 3, y0: Math.max(0.032, y + 0.006) });
     }
     return b;
   }
@@ -721,6 +729,16 @@ const FWM = (() => {
     return holzTruckMB(false);
   }
   function holzTruck() { return holzTruckMB(true); }
+  /* v70: volle Palette fürs Beladen – Europalette mit Bretterstapel und zwei Spanngurten */
+  function palletLoad() {
+    G3.seed(4060);
+    const b = new MB();
+    [-0.3, 0, 0.3].forEach(x => b.box(0.12, 0.08, 0.76, 0xb08a58, { x }));
+    for (let i = 0; i < 5; i++) b.box(0.76, 0.03, 0.12, 0xc9a06a, { y: 0.08, z: -0.32 + i * 0.16 });
+    b.noise(0.05, () => { for (let j = 0; j < 4; j++) b.box(0.72, 0.1, 0.72, j % 2 ? 0xe2c18e : 0xd6b07a, { y: 0.11 + j * 0.105, top: 0xf0d6a8 }); });
+    [-0.22, 0.22].forEach(z => b.box(0.745, 0.44, 0.035, 0x2a5aa0, { y: 0.108, z }));
+    return b;
+  }
   function holzTruckMB(ok) {
     G3.seed(4030);
     const b = new MB();
@@ -731,7 +749,14 @@ const FWM = (() => {
       b.box(1.7, 1.2, 1.4, body, { y: 0.25, z: 1.4, top: ok ? 0x356a3f : 0x5a4a3a });
       b.box(1.5, 0.5, 0.05, ok ? C.glass : 0x3a3530, { y: 0.85, z: 2.11 });
       b.box(1.8, 0.4, 2.6, body, { y: 0.25, z: -0.9 });
-      if (ok) for (let i = 0; i < 3; i++) b.cyl(0.18, 0.18, 2.6, 7, 0xa8653c, { rx: Math.PI / 2, x: -0.45 + i * 0.45, y: 0.85, z: -2.2, top: 0xe6c99a });
+      /* v70: leere Ladefläche mit Holzboden und niedrigen Bordwänden – beladen wird
+         erst auf dem Stellplatz, mit Paletten (palletLoad, Logo als Aufkleber) */
+      if (ok) {
+        b.noise(0.06, () => { for (let i = 0; i < 6; i++) b.box(0.29, 0.03, 2.56, i % 2 ? 0x8a6a48 : 0x7d5f40, { x: -0.725 + i * 0.29, y: 0.65, z: -0.9 }); });
+        [-0.87, 0.87].forEach(x => b.box(0.06, 0.16, 2.6, 0x2e5c38, { x, y: 0.65, z: -0.9 }));
+        b.box(1.8, 0.16, 0.06, 0x2e5c38, { y: 0.65, z: -2.17 });
+        b.box(1.8, 0.5, 0.08, 0x2e5c38, { y: 0.65, z: 0.36 });
+      }
       [-0.55, 0.55].forEach(x => b.box(0.22, 0.14, 0.04, ok ? 0xfff5c8 : 0x55504a, { x, y: 0.5, z: 2.11 }));
     });
     if (!ok) {
@@ -926,7 +951,6 @@ const FWM = (() => {
     [-2.1, 2.1].forEach(x => b.noise(0.1, () => b.box(0.6, 2.4, 0.6, 0xb8b0a2, { x, top: 0x9a948a })));
     b.box(4.8, 0.4, 0.6, 0xa8a094, { y: 2.4 });
     b.box(2.6, 0.5, 0.06, 0xf6f1e6, { y: 2.45, z: 0.32 });
-    b.box(0.06, 0.06, 0.8, 0xd8332b, { x: 2.1, y: 2.9, z: 0, ry: 0 });
     return b;
   }
 
@@ -1802,7 +1826,7 @@ const FWM = (() => {
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
-    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
+    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
     deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, arm, cosDeco

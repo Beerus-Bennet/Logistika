@@ -29,6 +29,8 @@ const AREA_SPOTS = {
 /* v56: Förster und Schranke am Waldrand auf dem Weg vom Westtor, Krüger am Tor des Sägewerks */
 const AREA_NPC = { wald: [-27.2, -7.3], saege: [-39.1, -28.4], altwald: [-65.8, -70.6], see: [7.2, 20.5] };
 const AREA_BAR = { wald: [-27.7, -9.5, Math.PI / 2], saege: [-41, -29.4, 0], altwald: [-68, -73.2, -4.172], see: [5, 20.8, 0] };
+/* v70: zweite Schranke am Ostweg (Teich → Wald), solange der Wald zu ist */
+const AREA_BAR2 = { wald: [35.1, -19.5, Math.PI / 4] };
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
@@ -274,7 +276,8 @@ function worldStatic() {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
     const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q);
     const a = p[0], e = p[p.length - 1];
-    lines.merge(FWM.forestPath(p, 1.8, { y: 0.024 + i * 0.003, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a), !gate(e) && !road(e)] }), {});
+    /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über */
+    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a), !gate(e) && !road(e)] }), {});
   });
   lines.merge(FWM.creekBank(FWORLD.creek), {});
   lines.merge(FWM.creekBank(LAKE_CREEK), {});
@@ -287,8 +290,8 @@ function worldStatic() {
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Weg von der Straße hinunter zum See und am Ufer entlang */
-  st.merge(FWM.forestPath([[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], 1.6, { y: 0.026 }), {});
-  st.merge(FWM.forestPath([[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]], 1.6, { y: 0.029 }), {});
+  st.merge(FWM.forestPath([[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], 1.6, { y: 0.026, ey: 0.019 }), {});
+  st.merge(FWM.forestPath([[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]], 1.6, { y: 0.029, ey: 0.02 }), {});
   /* Nachbarfelder */
   const nf = (x, z, w, d, c1, c2) => {
     const m = new FM.MB();
@@ -341,7 +344,7 @@ function worldStatic() {
 }
 
 /* --------------------------- Hof je Ausbaustufe ------------------------- */
-function worldHofKey() { const F = S.farm; return (F.stage || 1) + ":" + ((F.cos && F.cos.on && F.cos.on.tractor) || ""); }
+function worldHofKey() { const F = S.farm; return (F.stage || 1) + ":" + farmHl() + ":" + ((F.cos && F.cos.on && F.cos.on.tractor) || ""); }
 function worldSyncHof(force) {
   const R = FV.R, key = worldHofKey();
   if (!force && key === WV.hofKey) return;
@@ -351,7 +354,7 @@ function worldSyncHof(force) {
   /* der Zaun wächst mit jeder Ausbaustufe nach Westen, Norden und Osten (v56: FHOF_B); der Südzaun bleibt */
   const stage = S.farm.stage || 1, big = stage >= 4, B = farmHofB(), F0 = B.z1, GX = FGATE.x, WZ = FGATE.wz;
   const add = n => { R.nodes.push(n); WV.hof.push(n); return n; };
-  add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + stage, () => FWM.hofGround(HOFG, B, Math.min(stage, 2), wGroundAt)), { shadow: false }));
+  add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + stage + ":" + farmHl(), () => FWM.hofGround(HOFG, B, Math.min(stage, 2), wGroundAt)), { shadow: false }));
   const b = new FM.MB(), ps = Math.min(3, stage);
   /* Hauptweg vom Querweg zum Südtor, Querweg zum Westtor (endet am Hauptweg – sonst flimmert die Kreuzung) */
   b.merge(FWM.hofPath(2, F0 - WZ + 0.5, ps), { x: GX, z: (F0 + WZ - 0.5) / 2 });
@@ -384,14 +387,16 @@ function worldSyncHof(force) {
   /* Westtor zum Wald */
   [wg[0] - 0.1, wg[1] + 0.1].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: B.x0 - (big ? 0.3 : 0), z }));
   if (stage >= 3) {
-    const L = FM.lamp(), fl = FM.flowers(), xa = B.x0 - 0.6, xb = B.x1 + 0.6, za = B.z0 - 0.6, zb = F0 + 0.6;
-    [[GX - 2.5, zb], [GX + 2.5, zb], [xa, WZ - 1.8], [xa, WZ + 1.8], [xb, zb], [xa, zb], [xb, za], [xa, za], [-8, 17.2], [18, 17.2]]
+    /* v70: an der Steinmauer stehen die Laternen weiter draußen – nicht mehr im Torpfeiler oder in der Mauer */
+    const m = big ? 0.8 : 0.6, L = FM.lamp(), fl = FM.flowers(), xa = B.x0 - m, xb = B.x1 + m, za = B.z0 - m, zb = F0 + m;
+    const gl = big ? [[GX - 2.95, F0 + 1.05], [GX + 2.95, F0 + 1.05]] : [[GX - 2.5, zb], [GX + 2.5, zb]];
+    gl.concat([[xa, WZ - 1.8], [xa, WZ + 1.8], [xb, zb], [xa, zb], [xb, za], [xa, za], [-8, 17.2], [18, 17.2]])
       .forEach(([x, z]) => b.merge(L, { x, z }));
     [-10, -6, -2, 10, 12].forEach(x => b.merge(fl, { x, z: F0 + 0.9 }));
   }
   /* v56: Vermessungspflöcke zeigen, bis wohin der Hof mit dem nächsten Ausbau wächst */
-  if (stage < 4) {
-    const N = farmHofB(stage + 1), stake = (x, z) => { b.box(0.08, 0.46, 0.08, 0xb08a5a, { x, z }); b.box(0.1, 0.1, 0.1, 0xd8332b, { x, y: 0.4, z }); };
+  if (farmHl() < FHOF_HL) {
+    const N = farmHofB(farmHl() + 1), stake = (x, z) => { b.box(0.08, 0.46, 0.08, 0xb08a5a, { x, z }); b.box(0.1, 0.1, 0.1, 0xd8332b, { x, y: 0.4, z }); };
     for (let x = N.x0; x <= N.x1 + 0.01; x += (N.x1 - N.x0) / Math.round((N.x1 - N.x0) / 4)) stake(x, N.z0);
     for (let z = N.z0 + 4; z < N.z1 - 1; z += 4) if (Math.abs(z - WZ) > 1.6) { stake(N.x0, z); stake(N.x1, z); }
   }
@@ -522,6 +527,14 @@ function brandParcel(node, top, front, s) {
   if (!T || !node) return;
   FV.R.addChild(node, FV.R.node(null, { y: top + 0.003, rx: -Math.PI / 2, decal: { t: T.logo, w: s, h: s } }));
   if (front) FV.R.addChild(node, FV.R.node(null, { y: top * 0.5, z: front + 0.003, decal: { t: T.logo, w: s * 0.8, h: s * 0.8 } }));
+}
+/* v70: Paletten auf dem Holzlaster tragen das Hoflogo – sides: 1 rechts, -1 links, 0 hinten */
+function brandPallet(node, sides) {
+  const T = brandTex();
+  if (!T || !node) return;
+  (sides || [1, -1, 0]).forEach(k => FV.R.addChild(node, FV.R.node(null, k === 0
+    ? { y: 0.33, z: -0.378, ry: Math.PI, decal: { t: T.logo, w: 0.3, h: 0.3 } }
+    : { x: 0.378 * k, y: 0.33, ry: k * Math.PI / 2, decal: { t: T.logo, w: 0.3, h: 0.3 } })));
 }
 /* Ausgezeichnete Hofgebäude: in Stufe 1 noch etwas grau und verwittert */
 const WORN_T = new Set(["house", "barn", "silo", "mill", "shed", "bakery"]);
@@ -888,13 +901,14 @@ function worldSyncBarriers() {
   FAREA_ORDER.forEach(id => {
     const open = farmAreaOpen(id), n = WV.barriers[id];
     if (!open && !n) {
-      const p = AREA_BAR[id];
-      WV.barriers[id] = fnode(fmesh("barrier", FWM.barrier), { x: p[0], z: p[1], ry: p[2] });
-      R.nodes.push(WV.barriers[id]);
+      WV.barriers[id] = [AREA_BAR[id], AREA_BAR2[id]].filter(Boolean).map(p => fnode(fmesh("barrier", FWM.barrier), { x: p[0], z: p[1], ry: p[2] }));
+      WV.barriers[id].forEach(b => R.nodes.push(b));
     } else if (open && n) {
-      const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1);
       delete WV.barriers[id];
-      for (let k = 0; k < 18; k++) R.emit({ x: n.x + (Math.random() - 0.5) * 2, y: 0.3, z: n.z + (Math.random() - 0.5) * 2, vx: (Math.random() - 0.5) * 2, vy: 1, vz: (Math.random() - 0.5) * 2, life: 0.9, size: 0.2, size2: 0.45, col: [0.95, 0.92, 0.85, 0.7], drag: 2 });
+      n.forEach(n => {
+        const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1);
+        for (let k = 0; k < 18; k++) R.emit({ x: n.x + (Math.random() - 0.5) * 2, y: 0.3, z: n.z + (Math.random() - 0.5) * 2, vx: (Math.random() - 0.5) * 2, vy: 1, vz: (Math.random() - 0.5) * 2, life: 0.9, size: 0.2, size2: 0.45, col: [0.95, 0.92, 0.85, 0.7], drag: 2 });
+      });
     }
   });
 }
@@ -1328,6 +1342,40 @@ function openPile(i) {
     done(r);
   };
 }
+/* ------------------- v70: Heuballen an der Scheune verkaufen ------------------- */
+function pickHay(x, y) {
+  const n = (S.farm.hay && S.farm.hay.n) || 0;
+  if (!n || typeof hayWorld !== "function") return null;
+  const R = FV.R, r = R.ray(x, y);
+  let best = null;
+  S.farm.objs.filter(o => o.t === "barn").forEach(o => hayWorld(o).slice(0, n).forEach(p => {
+    const d = R.hitBox(r, [p.x - 0.42, 0, p.z - 0.42], [p.x + 0.42, 0.72, p.z + 0.42]);
+    if (d != null && (!best || d < best.d)) best = { o, d };
+  }));
+  return best;
+}
+function hayIc() { return typeof thumbSpan === "function" ? thumbSpan("barnHay", () => FM.barnHay(), "🟨") : `<span class="ic">🟨</span>`; }
+function openHay() {
+  const H = S.farm.hay || { n: 0 };
+  if (!H.n) return closeFarmSheet();
+  FV.sheetFn = openHay;
+  const m = H.n * FHAY.price;
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🟨</span>Heuballen<small>${H.n} Ballen von der eigenen Wiese · alle 12 Stunden wird ein neuer gepresst</small></div>
+    <div class="fpile">${hayIc()}<div><b>${H.n} × ${eur(FHAY.price)}</b><small>Verkaufen bringt gleich Geld. Danach ist der Platz vor der Scheune frei, bis frisches Heu gepresst ist.</small></div></div>
+    <div class="fs-row"><button class="btn" id="fhaySell">💰 Verkaufen<small>${eur(m)}</small></button></div>`, "pile");
+  $("#fhaySell").onclick = () => {
+    const barn = S.farm.objs.find(o => o.t === "barn"), at = barn ? hayWorld(barn)[0] : null;
+    const r = farmHaySell();
+    if (!r) return closeFarmSheet();
+    const p = at && FV.R ? FV.R.project(at.x, 0.6, at.z) : null;
+    if (p) {
+      floatText(p[0], p[1] - 20, "+" + eur(r.m), "gold");
+      FV.R.burst({ x: at.x, y: 0.4, z: at.z, n: 16, col: [[0.93, 0.8, 0.4, 1], [0.8, 0.66, 0.3, 1]], speed: 1.6, up: 1.4, size: 0.08, shape: 1 });
+    }
+    sfx("coin");
+    closeFarmSheet(); farmSyncState(); renderFarmUI(); save();
+  };
+}
 /* Haustiere laufen die Hofwege ab */
 const PET_WAY = [[5, 10], [5, 4], [5, -2], [5, -9.5], [-1, -9.5], [-7, -9.5], [-12, -9.5]];
 function worldSyncPets() {
@@ -1482,6 +1530,9 @@ function worldTap(x, y) {
   const tr = farmTreasureCur();
   if (tr && !tr.done && near(tr.x, 0.05, tr.z, 46)) { worldTreasureDig(); return true; }
   const ho = pickObjT(x, y), ht = pickTree(x, y);
+  /* v70: Heuballen an der Scheune */
+  const hh = pickHay(x, y);
+  if (hh && (!ho || hh.d < ho.d + 0.4)) { sfx("tap"); openHay(); return true; }
   /* Holzstapel im Sägewerk */
   const hp = pickPile(x, y);
   if (hp && (!ho || hp.d < ho.d - 0.2) && (!ht || hp.d < ht.d - 0.2)) {
@@ -2334,11 +2385,14 @@ function worldShow() {
 
 /* ---------------------- Wohnhaus: Ausbau, Team, Extras --------------------- */
 function stageHTML() {
-  const F = S.farm, cur = F.stage || 1, nx = farmStageNext(), chk = farmStageCheck();
+  const F = S.farm, cur = farmHl(), nx = farmStageNext(), chk = farmStageCheck();
+  const size = k => { const B = farmHofB(k); return (B.x1 - B.x0) + " × " + (B.z1 - B.z0); };
   const list = FHOF_STAGES.slice(1).map((st, i) => {
-    /* v58: erreichte Stufen grün mit ✓ (auch die letzte), die nächste kaufbare gelb */
+    /* v58: erreichte Stufen grün mit ✓ (auch die letzte), die nächste kaufbare gelb.
+       v70: zehn Stufen, die großen (neues Aussehen) fett */
     const k = i + 1, done = k <= cur, on = !!nx && k === cur + 1;
-    return `<div class="fstage${on ? " cur" : done ? " ok" : ""}"><b>${done ? "✓" : k}</b><div><span>${esc(st.n)}</span>${st.perks ? `<small>${st.perks.map(esc).join(" · ")}</small>` : `<small>${esc(st.d)}</small>`}</div></div>`;
+    const perks = (k > 1 ? ["Platz: " + size(k) + " Felder (je 1 Kachel nach Westen, Norden und Osten)"] : ["Platz: " + size(1) + " Felder"]).concat(st.perks || [st.d]);
+    return `<div class="fstage${on ? " cur" : done ? " ok" : ""}${st.big || k === 1 ? " big" : " small"}"><b>${done ? "✓" : k}</b><div><span>${esc(st.n)}</span><small>${perks.map(esc).join(" · ")}</small></div></div>`;
   }).join("");
   let next = "";
   if (nx) {
@@ -2346,7 +2400,7 @@ function stageHTML() {
     next = `<div class="fs-sub">Nächste Stufe: <b>${esc(nx.n)}</b>${flv() < nx.lv ? " · ab Level " + nx.lv : ""}</div><div class="fr-in">${need}</div>
       <button class="btn fgo" id="fsStage" ${chk === true ? "" : "disabled"}>🏡 Hof ausbauen</button>`;
   } else next = `<div class="fs-sub">Größer geht’s nicht – ein echter Wirtschaftshof! 🎉</div>`;
-  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Ausbauen braucht Holz aus Wald und Sägewerk.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
+  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Die großen Stufen (4, 7, 10) brauchen Holz aus Wald und Sägewerk, dazwischen kaufst du nur Land.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
 }
 function stageBind(again) {
   const b = $("#fsStage");
@@ -2360,7 +2414,7 @@ function stageBind(again) {
     const R = FV.R;
     for (let i = 0; i < 90; i++) R.emit({ x: (Math.random() - 0.5) * 26, y: 6 + Math.random() * 3, z: (Math.random() - 0.5) * 26 - 2, vx: (Math.random() - 0.5) * 2, vy: -0.5, vz: (Math.random() - 0.5) * 2, g: -2.2, drag: 0.6, life: 3, size: 0.13, shape: 1, fade: false,
       col: [[0.95, 0.3, 0.35, 1], [0.3, 0.6, 0.95, 1], [0.98, 0.82, 0.25, 1], [0.35, 0.8, 0.45, 1]][i % 4] });
-    toast("🏡 " + FHOF_STAGES[S.farm.stage].n + " – sieh dich um!", "ok");
+    toast("🏡 " + FHOF_STAGES[farmHl()].n + " – sieh dich um!", "ok");
     renderFarmUI();
   };
 }

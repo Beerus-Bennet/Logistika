@@ -1,5 +1,79 @@
 # Änderungen – kurz für den Kollegen
 
+## v70 (aufbauend auf v69.10 von `main`) – Liste „Logistika 2.1“
+
+Alles auf dem Stand von `main` (v58–v69.10 bleiben erhalten, auch Freigaben, Fahrer-Modus und die
+Namens-Blase aus v69.3). Fischerei-Logik nicht angefasst; in Fischerei-Dateien nur zwei Zahlenreihen
+(siehe unten). Die Fahrerin (Punkt 7 der Liste) bleibt bewusst wie in `main` – `team.js` ist bis auf
+eine Zeile (`navKey` nimmt die Hofgröße aus `farmHl()`) unverändert.
+
+**Bedienung**
+- **Ton an/aus bei Meldung** (`farmview.js`, `style.css`): Bei offenem Hof-Fenster stehen
+  Meldungen oben (`body.fsheet-on`, gesetzt in `openFarmSheet`/`closeFarmSheet`). Vorher lag die
+  Meldung genau über „🔊 Ton an“ – antippbare Meldungen (mit „›“) fingen den Tipp ab.
+- **Warenname** (`itemTip`): verschwindet, sobald man scrollt (Finger oder Mausrad), wischt oder etwas
+  anderes antippt (`itemTipHide`, Listener auf `wheel`/`touchmove`/`pointerdown`) und beim Schließen des
+  Fensters. Baut sich das Fenster nach dem Antippen neu auf, folgt die Blase wie in v69.3 ihrer Ware.
+- **Minispiele mittig** (`style.css` `#farmAngel.mg`): Box mittig, Rest abgedunkelt und nicht
+  antippbar. Gilt für alle Spiele über `MG.open`, auch das Angeln (eigenes Wasser in der Box).
+
+**Welt**
+- **Feldweg zur Straße** (`erbe.js` `FWORLD.paths[3]`): Der Weg von der Brücke nach Osten endete
+  auf der Wiese, jetzt läuft er östlich am Teich vorbei bis zur Straße (x ≈ 39). Solange der Wald zu
+  ist, steht dort eine zweite Schranke (`AREA_BAR2` in `worldview.js`).
+- **Wege sauber verbunden** (`woodmodels.js` `ribbon(…, ey)`, `forestPath` `o.ey`): Alle Wegränder
+  liegen unter allen Wegflächen – an Abzweigen (Brücke, Feldweg am Westtor, Uferweg) läuft der
+  Rand nicht mehr quer über den anderen Weg.
+- **Kirschen rund** (`woodmodels.js` `tree`/`bgTree` „kirsche“): rote Kirschen paarweise am Stiel
+  statt eckiger weißer Blüten; Obstbaum-Kirschen auf dem Hof runder (`farmmodels.js` `treeFruit`).
+- **Häuser Wand an Wand** (`farmmodels.js` `house`/`barn`): Wohnhaus und Scheune füllen ihre
+  Kacheln (Wände 4,9 bzw. 3,9 breit, beide 3,3 tief, Dächer 3,9 tief) – nebeneinander Traufe an
+  Traufe, Fronten in einer Flucht. Seitenfenster des Hauses nach Westen, Fachwerkstreben und
+  Torkreuz der Scheune ragen nicht mehr heraus, Heuboden-Luke unter der Traufe.
+- **Steintor** (`woodmodels.js` `stoneGate`): rotes Kästchen oben entfernt. Laternen an der
+  Steinmauer stehen frei neben den Pfeilern (`worldview.js` `worldSyncHof`).
+- **Ladebalken** (`style.css` `.ftag.work`): Blase deckend (die Spitze überdeckt den Rand sauber),
+  Füllstand als eigenes Element mit runden Enden.
+
+**Fahrzeuge**
+- **Holzlaster** (`woodmodels.js` `holzTruckMB`, `palletLoad`; `farmview.js` `TRUCK_SLOTS`,
+  `stepLoading`; `worldview.js` `brandPallet`): steht immer leer (Holzboden, Bordwände). Beim
+  Beladen kommen sechs volle Paletten (Bretterstapel, Spanngurte) aus dem Holzlager, zwei
+  nebeneinander in drei Reihen, mit dem Hoflogo als Aufkleber außen und hinten.
+- **Holzlaster bleibt nicht mehr im Wald stehen** (`farmview.js` `startDrive`): Kam er noch an,
+  als er schon wieder losmusste, liefen zwei Fahrten gegeneinander. Jetzt gilt je Fahrzeug nur
+  die neueste Fahrt, und sie beginnt dort, wo es gerade steht.
+- **Karte: echte Straßen** (`farm.js` Abschnitt „Straßen rund um den Hof“: `ROADS_HOF`,
+  `roadDisp`, `roadDispAt`; `game.js`: `vehPoint`, `parkHere`, `legDisp`/`roadLine` beim Zeichnen):
+  Rund um den Hof folgen Fahrzeug und Linie den Straßen (L 90, Glindow–Werder, B1 über
+  Baumgartenbrück und Geltow, Petzow, Caputh, Michendorf; nachgezeichnet aus der Karte). Nur
+  Darstellung – Fahrzeit, Kilometer und Kosten rechnen weiter mit `veh.route`/`routeDist`.
+  Außerhalb von `ROADS_BOX` (Potsdam-Mitte, Berlin) geht es wie bisher geradeaus weiter.
+
+**Mechanik**
+- **Heuballen verkaufen** (`erbe.js` `FHAY`, `farmHaySell`, `hayWorld`; `farmview.js` Knoten
+  `parts.hay` an der Scheune; `worldview.js` `pickHay`/`openHay`; Modell `FM.barnHay`): zwei
+  Ballen am Scheunentor, antippen → verkaufen (je 8 €), alle 12 Spielstunden ein neuer (max. 2).
+  Neues Spielstand-Feld `S.farm.hay = { n, t }`.
+- **Tiere als Warteschlange in 3D** (`farmview.js` `penAnisHTML`, `bindPenAnis`): Stall-Fenster
+  zeigt jedes Tier als 3D-Bild in einem Platz wie bei den Maschinen, mit Fortschritt (Mast: bis
+  zum Metzger), Animation (kauen, hungrig zappeln, fertig hüpfen). Antippen: füttern bzw.
+  einsammeln. Kopf zeigt das Tier in 3D. Über dem Stall steht – wenn alle satt sind – eine Blase
+  mit Ware und Ladebalken wie bei den Maschinen (`farmview.js`, Blasen-Schleife).
+- **Lager mit zehn Stufen**: `FSTORE[*].cost` hat jetzt neun Ausbauten – Silo, Scheune
+  (`farmdata.js`), Holzplatz (`erbedata.js`), **Kühlkiste und Köderkiste (`fishdata.js`, nur die
+  beiden `cost`-Reihen verlängert)**. Das Lager-Fenster zeigt „Stufe x von 10“.
+- **Hofausbau in zehn milderen Stufen** (`erbe.js`): neues Feld `S.farm.hl` (1 … 10), jede Stufe
+  eine Kachel nach Westen, Norden und Osten (`FHOF_B` hat zehn Einträge, 30 × 32 … 48 × 41,
+  Endgröße wie bisher). `S.farm.stage` bleibt die **Optik-Stufe** 1 … 4 (`hofTier`: ab 4, 7, 10) –
+  aller Code, der `stage` fragt (Zaun, Laternen, Mauer, Lagerbonus, Warteplätze, Verkaufsstand),
+  verhält sich wie vorher. Größe immer über `farmHl()`/`farmHofB()`. `FHOF_STAGES` (erbedata.js)
+  hat zehn Einträge; die großen (4, 7, 10) haben die alten Bedingungen, die kleinen kosten nur
+  Geld. Alte Stände: Stufe 1/2/3/4 → `hl` 1/4/7/10 (gleiche Größe, keine Umzüge).
+  Notizbuch-Texte „Bau den Hof aus: Stufe 4/7/10“ (Bedingung unverändert).
+
+Version: **v70** (`sw.js`, `?v=70` und `window.LOGI_V` in `index.html` – das stand noch auf 57).
+
 ## v69.10 – Köderauswahl beim Angeln kompakter
 - **Köder-Kacheln einheitlich:** feste Kachelgröße im Raster (4 pro Zeile), Namen brechen sauber um statt die Kacheln zu verziehen.
 - **Kurze Gründe auf den Kacheln:** `angelBaitWhy(b, gid, short)` hat einen Kurz-Modus („keine Karpfen hier“ ohne Ortsliste, „bei Bert bestellen“). Die lange Variante bleibt für die Meldung beim Auswerfen (minigames.js `cast`). Gilt auch für die Steg-Ansicht (fishview.js).

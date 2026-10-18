@@ -208,6 +208,8 @@ function buildObjNode(o) {
     parts.sails = R.addChild(root, fnode(fmesh("sails", FM.millSails), { x: h[0], y: h[1], z: h[2] }));
   }
   if (o.t === "field") parts.crop = R.addChild(root, fnode(null, { sway: 0.6 }));
+  /* v70: Heuballen am Scheunentor – eigene Knoten, verschwinden beim Verkaufen */
+  if (o.t === "barn" && typeof HAY_AT !== "undefined") parts.hay = HAY_AT.map(([x, z, r]) => R.addChild(root, fnode(fmesh("barnHay", FM.barnHay), { x, z, ry: r })));
   if (o.t === "tree") {
     parts.fruit = R.addChild(root, fnode(fmesh("fruit:" + o.kind, () => FM.treeFruit(o.kind)), { visible: false }));
     root.sway = 0.25;
@@ -281,6 +283,7 @@ function farmSyncState() {
   for (const o of S.farm.objs) {
     const e = FV.nodes.get(o.id);
     if (!e) continue;
+    if (e.parts.hay) { const n = (S.farm.hay && S.farm.hay.n) || 0; e.parts.hay.forEach((h, i) => { h.visible = i < n; }); }
     if (o.t === "field") {
       const st = fieldStage(o);
       const key = st < 0 ? "" : "crop:" + o.crop + ":" + st;
@@ -538,6 +541,8 @@ function farmSyncVehicles(force) {
 }
 /* Kisten, Säcke und Körbe fliegen aus der Scheune ins Fahrzeug */
 const LOAD_AT = { bike: [0, 0.62, 0.42], moped: [0, 0.95, -0.44], van: [0, 0.75, -1.15], truck: [0, 1.15, -1.0] };
+/* v70: Holzlaster – sechs Paletten, zwei nebeneinander, von vorn nach hinten (symmetrisch) */
+const TRUCK_SLOTS = [[-0.42, -0.18], [0.42, -0.18], [-0.42, -0.98], [0.42, -0.98], [-0.42, -1.78], [0.42, -1.78]], TRUCK_DECK = 1.285;
 function stepLoading(dt) {
   if (!FV.R || (!FV.loading.size && !FV.loadFly.length)) return;
   const R = FV.R, barn = S.farm.objs.find(o => o.t === "barn") || shedObj(), lager = farmObj1("sw_lager");
@@ -549,14 +554,16 @@ function stepLoading(dt) {
     /* Holzlaster: Bretter und Balken kommen aus dem Holzlager */
     const from = L.k === "truck" && lager ? lager : barn;
     const src = from ? farmCenter(from) : [0, 0];
-    const kind = (L.n + (L.k === "van" ? 0 : 1)) % 3, at = LOAD_AT[L.k], ry = L.node.ry || 0;
+    const kind = (L.n + (L.k === "van" ? 0 : 1)) % 3, ry = L.node.ry || 0, truck = L.k === "truck";
+    const at = truck ? [TRUCK_SLOTS[L.n % 6][0], TRUCK_DECK, TRUCK_SLOTS[L.n % 6][1]] : LOAD_AT[L.k];
     const tx = L.node.x + Math.cos(ry) * at[0] + Math.sin(ry) * at[2], tz = L.node.z - Math.sin(ry) * at[0] + Math.cos(ry) * at[2];
-    const ck = L.k === "truck" ? "truck" + (L.n % 2) : "cargo:" + kind;
-    const node = fnode(fmesh(ck, () => L.k === "truck" ? FWM.item(L.n % 2 ? "balken" : "bretter") : FWM.cargo(kind)), { x: src[0], y: 1.0, z: src[1], s: L.k === "van" || L.k === "truck" ? 1.1 : 0.85 });
-    /* Kartons tragen das Firmenlogo als kleinen Aufkleber */
-    if (L.k !== "truck" && kind !== 1 && kind !== 2 && typeof brandParcel === "function") brandParcel(node, 0.245, 0.141, 0.17);
+    const ck = truck ? "pallet" : "cargo:" + kind;
+    const node = fnode(fmesh(ck, () => truck ? FWM.palletLoad() : FWM.cargo(kind)), { x: src[0], y: 1.0, z: src[1], s: L.k === "van" ? 1.1 : truck ? 1 : 0.85 });
+    /* Kartons tragen das Firmenlogo als kleinen Aufkleber, Paletten auf allen Seiten */
+    if (truck && typeof brandPallet === "function") brandPallet(node);
+    else if (kind !== 1 && kind !== 2 && typeof brandParcel === "function") brandParcel(node, 0.245, 0.141, 0.17);
     R.nodes.push(node);
-    FV.loadFly.push({ node, L, a: [src[0] + 0.6, 1.0, src[1] + 0.8], b: [tx, at[1], tz], t: 0, dur: 0.75, stack: L.k !== "van" ? L.n : -1 });
+    FV.loadFly.push({ node, L, a: [src[0] + 0.6, 1.0, src[1] + 0.8], b: [tx, at[1], tz], t: 0, dur: truck ? 0.9 : 0.75, stack: L.k !== "van" ? L.n : -1, ry0: ry });
     L.n++;
   }
   for (let k = FV.loadFly.length - 1; k >= 0; k--) {
@@ -565,15 +572,22 @@ function stepLoading(dt) {
     const u = Math.min(1, F.t / F.dur);
     n.x = F.a[0] + (F.b[0] - F.a[0]) * u; n.z = F.a[2] + (F.b[2] - F.a[2]) * u;
     n.y = F.a[1] + (F.b[1] - F.a[1]) * u + Math.sin(u * Math.PI) * 1.8;
-    n.ry = u * 5; n.rx = Math.sin(u * Math.PI) * 0.4;
+    if (F.L.k === "truck") { n.ry = F.ry0 + (1 - u) * 1.6; n.rx = 0; }       /* Palette dreht sich gerade ein */
+    else { n.ry = u * 5; n.rx = Math.sin(u * Math.PI) * 0.4; }
     if (u < 1) continue;
     FV.loadFly.splice(k, 1);
     const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1);
     const V = F.L.node;
     /* Rad und Moped: die Ladung bleibt sichtbar obendrauf */
     if (F.stack >= 0 && V && FV.loading.has(F.L.uid)) {
-      const at = LOAD_AT[F.L.k];
-      R.addChild(V, fnode(n.mesh, { x: (F.stack % 2 - 0.5) * 0.12, y: at[1] + 0.02 + Math.floor(F.stack / 2) * 0.2, z: at[2], s: 0.75, ry: F.stack }));
+      if (F.L.k === "truck") {
+        /* v70: Palette steht gerade auf ihrem Platz, Logo nach außen (und hinten in der letzten Reihe) */
+        const [sx, sz] = TRUCK_SLOTS[F.stack % 6], p = R.addChild(V, fnode(n.mesh, { x: sx, y: TRUCK_DECK, z: sz }));
+        if (typeof brandPallet === "function") brandPallet(p, F.stack >= 4 ? [sx > 0 ? 1 : -1, 0] : [sx > 0 ? 1 : -1]);
+      } else {
+        const at = LOAD_AT[F.L.k];
+        R.addChild(V, fnode(n.mesh, { x: (F.stack % 2 - 0.5) * 0.12, y: at[1] + 0.02 + Math.floor(F.stack / 2) * 0.2, z: at[2], s: 0.75, ry: F.stack }));
+      }
     }
     if (V) { V.sy = 0.9; setTimeout(() => { V.sy = 1; }, 120); }            /* federt beim Einladen */
     R.burst({ x: F.b[0], y: F.b[1], z: F.b[2], n: 6, col: [[0.86, 0.78, 0.6, 1]], speed: 1.2, up: 1, size: 0.06, shape: 1 });
@@ -581,8 +595,22 @@ function stepLoading(dt) {
   }
 }
 function startDrive(node, pts, done) {
+  /* v70: nie zwei Fahrten am selben Fahrzeug – kam der Holzlaster noch an, als er schon
+     wieder losmusste, zogen beide Fahrten gegeneinander und er blieb mitten im Wald stehen.
+     Jetzt gilt nur die neue Fahrt, und sie beginnt dort, wo das Fahrzeug gerade ist. */
+  FV.drives = FV.drives.filter(d => d.node !== node);
+  let i = 0;
+  if (pts.length > 2 && Math.hypot(node.x - pts[0][0], node.z - pts[0][1]) > 0.5) {
+    let bd = Infinity;
+    for (let k = 0; k < pts.length - 1; k++) {
+      const a = pts[k], b = pts[k + 1], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+      const t = clamp(((node.x - a[0]) * dx + (node.z - a[1]) * dz) / l2, 0, 1);
+      const d = Math.hypot(node.x - a[0] - dx * t, node.z - a[1] - dz * t);
+      if (d < bd - 1e-6) { bd = d; i = k; }
+    }
+  }
   node.driving = true;
-  FV.drives.push({ node, pts, i: 0, done, sp: 4.2 });
+  FV.drives.push({ node, pts, i, done, sp: 4.2 });
 }
 function stepDrives(dt) {
   const R = FV.R;
@@ -1345,6 +1373,14 @@ function updateFarmTags() {
       const A = FANIMALS[penKind(o)], th = A.fish ? 1.0 : 1.6;
       if (ready) want.push([o, "ready", (A.mast ? (typeof aniHTML === "function" ? aniHTML(penKind(o)) : A.i) + "✓" : tagIc(A.out)) + "<b>" + ready + "</b>", th]);
       else if (hungry) want.push([o, "hungry", "💭" + tagIc(A.feed), th]);
+      else {
+        /* v70: alle satt – Blase mit Fortschritt bis zur nächsten Ware, wie bei den Maschinen */
+        const busy = o.animals.filter(a => aniState(a) === "busy" && a.fed != null);
+        if (busy.length) {
+          const left = Math.min(...busy.map(a => a.fed - S.time)), f = clamp(1 - left / Math.max(1, A.t), 0, 1);
+          want.push([o, "work", (A.mast ? (typeof aniHTML === "function" ? aniHTML(penKind(o)) : A.i) : tagIc(A.out)) + `<i style="--p:${Math.round(f * 100)}%"></i>`, th]);
+        }
+      }
     }
     if (o.t === "board") {
       const os = farmOrders().filter(x => farmOrderArea(x) === (o.k || "hof")), ok = os.filter(farmOrderReady).length;
@@ -1757,11 +1793,14 @@ function openFarmSheet(html, cls) {
   s.className = "on " + (cls || "");
   $("#fsX").onclick = closeFarmSheet;
   FV.sheet = cls || "x";
+  document.body.classList.add("fsheet-on");                 /* v70: Meldungen dann oben, nicht über den Knöpfen */
   if (typeof thumbFill === "function") thumbFill();        /* 3D-Bildchen nach und nach */
 }
 function closeFarmSheet() {
   const s = $("#farmSheet");
   if (s) s.className = "";
+  document.body.classList.remove("fsheet-on");
+  itemTipHide();
   FV.sheet = null; FV.sheetFn = null; FV.sheetTick = null;
   FV.sel = null;
 }
@@ -1796,8 +1835,19 @@ function itemTip(el) {
   clearTimeout(itemTip.t);
   itemTip.t = setTimeout(() => { t.className = ""; cancelAnimationFrame(itemTip.raf); }, 1800);
 }
+/* v70: Name verschwindet, sobald man scrollt (Finger oder Mausrad), wischt oder etwas anderes antippt –
+   Verrutschen durch Neuaufbau des Fensters fängt v69.3 ab (die Blase folgt ihrer Ware) */
+function itemTipHide() {
+  clearTimeout(itemTip.t);
+  cancelAnimationFrame(itemTip.raf);
+  const t = document.getElementById("itemTip");
+  if (t && t.className) t.className = "";
+}
 if (typeof document !== "undefined") {
   document.addEventListener("click", e => { const c = e.target.closest && e.target.closest("[data-it]"); if (c) itemTip(c); }, true);
+  document.addEventListener("wheel", itemTipHide, { capture: true, passive: true });
+  document.addEventListener("touchmove", itemTipHide, { capture: true, passive: true });
+  document.addEventListener("pointerdown", e => { if (!(e.target.closest && e.target.closest("[data-it]"))) itemTipHide(); }, true);
   /* kein Bild-Menü, keine Vorschau beim langen Drücken (iOS/Android) – Eingabefelder ausgenommen */
   document.addEventListener("contextmenu", e => { if (!(e.target.closest && e.target.closest("input,textarea,[contenteditable]"))) e.preventDefault(); });
 }
@@ -1926,7 +1976,7 @@ function openFarmStore(st) {
       <small>${wood ? (FITEMS[sel].raw ? "🧔 Der Holzhändler zahlt für Rohholz den vollen Preis" + (farmEvOn("holzpreis") ? " – gerade sogar 30 % mehr!" : ".") : "🧔 Holzwaren nimmt der Holzhändler nur zum halben Wert – Bestellungen bringen mehr.")
         : "Großhandel zahlt sofort, aber nur den halben Wert – Bestellungen bringen mehr."}</small></div>`;
     })() : ""}
-    ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}</button>` : ""}
+    ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}<small>Stufe ${(S.farm.cap[st] || 1) + 1} von ${FSTORE[st].cost.length + 1}</small></button>` : `<div class="fs-sub">${esc(FSTORE[st].n)}: höchste Stufe (${FSTORE[st].cost.length + 1}) erreicht.</div>`}
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
       : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
@@ -1942,14 +1992,36 @@ function openFarmStore(st) {
 }
 
 /* Stall oder Gehege: Platz, Haltung, Tiere kaufen und abgeben, vergrößern */
+/* v70: Tiere als Warteschlange wie bei den Maschinen – jedes Tier in 3D, darunter der
+   Fortschritt bis zum nächsten Ei / zur nächsten Kanne (Mast: bis zum Metzger).
+   Antippen: hungrig → füttern, fertig → einsammeln. */
 function penAnisHTML(o) {
-  const A = penInfo(o).A;
-  return o.animals.map(a => {
-    const st = aniState(a);
-    const sym = st === "hungry" ? "💭" : st === "ready" ? (A.mast ? "✓" : FITEMS[A.out].i) : "⏳";
-    const g = A.mast ? `<em>${a.g || 0}/${A.mast}</em>` : "";
-    return `<span class="fani ${st}" title="${st === "hungry" ? "hungrig" : st === "ready" ? (A.mast ? "schlachtreif" : "fertig") : "frisst"}">${A.i}<i>${sym}</i>${g}</span>`;
+  const pi = penInfo(o), A = pi.A, kind = pi.kind;
+  const img = typeof aniIc === "function" && !A.fish ? aniIc(kind) : `<span class="ic">${A.i}</span>`;
+  return o.animals.map((a, i) => {
+    const st = aniState(a), left = a.fed != null ? Math.max(0, a.fed - S.time) : 0;
+    const cur = st === "busy" ? clamp(1 - left / Math.max(1, A.t), 0, 1) : 0;
+    const f = A.mast ? clamp(((a.g || 0) + cur) / A.mast, 0, 1) : st === "ready" ? 1 : cur;
+    const lab = st === "hungry" ? "hungrig" : st === "ready" ? (A.mast ? "zum Metzger ✓" : "fertig ✓") : fdur(Math.max(1, left));
+    const cls = st === "ready" ? "done" : st === "hungry" ? "hungry" : "work";
+    return `<div class="fq-s fani2 ${cls}" data-ani="${i}" title="${st === "hungry" ? "hungrig – antippen zum Füttern" : st === "ready" ? "fertig – antippen zum Einsammeln" : "frisst"}">`
+      + `<i style="width:${Math.round(f * 100)}%"></i>${img}`
+      + (st === "ready" && !A.mast ? `<span class="fa-out">${icOf(A.out)}</span>` : st === "hungry" ? `<span class="fa-out">💭</span>` : "")
+      + `<small>${lab}</small>${A.mast ? `<em>${a.g || 0}/${A.mast}</em>` : ""}</div>`;
   }).join("");
+}
+function bindPenAnis(o) {
+  $$("#farmSheetIn [data-ani]").forEach(el => el.onclick = () => {
+    const a = o.animals[+el.dataset.ani];
+    if (!a) return;
+    const st = aniState(a);
+    if (st === "ready") collectPen(o);
+    else if (st === "hungry") { const r = doFeed(o, a); if (r === "nofeed") noFeed(o); else if (r) save(); }
+    else return;
+    const q = $("#farmSheetIn .fanis");
+    if (q) { q.innerHTML = penAnisHTML(o); q._h = q.innerHTML; bindPenAnis(o); if (typeof thumbFill === "function") thumbFill(); }
+    farmSyncState();
+  });
 }
 function openPen(o) {
   FV.sheetFn = () => openPen(o);
@@ -1957,7 +2029,7 @@ function openPen(o) {
     const el = $("#farmSheetIn .fanis");
     if (!el || !o.animals.length) return;
     const h = penAnisHTML(o);
-    if (el._h !== h) { el.innerHTML = h; el._h = h; }
+    if (el._h !== h) { el.innerHTML = h; el._h = h; bindPenAnis(o); if (typeof thumbFill === "function") thumbFill(); }
   };
   const pi = penInfo(o), A = pi.A, kind = pi.kind, M = FPEN_META[o.t];
   const uc = penUpgradeCost(o), nx = FPENS[o.t][o.lvl];
@@ -1967,16 +2039,18 @@ function openPen(o) {
   const ani = penAnisHTML(o);
   const per = A.fish ? "Schwarm" : "Tier";
   const what = A.mast ? "das Fleisch" : A.fish ? "die Forellen" : { ei: "die Eier", milch: "die Milch", wolle: "die Wolle" }[A.out] || "die Ware";
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)} · ${o.animals.length}/${A.max} ${esc(A.pl)}</div>
+  const hic = typeof aniHTML === "function" && !A.fish ? aniHTML(kind) : M.i;
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${hic}</span>${esc(M.n)}<small>${o.animals.length} von ${A.max} ${esc(A.pl)} · Tier antippen: hungrig → füttern, fertig → einsammeln</small></div>
     <div class="fkeep"><div class="fk-st">${qStars(pi.stars)}</div><div><b>${esc(pi.keep)}</b>
       <small>${fmt(pi.p.m2, 0)} ${A.unit} ${esc(M.area)} · ${fmt(pi.per, 0)} ${A.unit} je ${per} (ideal ab ${fmt(A.space * 2, 0)})</small></div></div>
-    <div class="fanis">${ani || `<div class="fs-empty">Noch keine ${esc(A.pl)}.</div>`}</div>
+    <div class="fanis fq">${ani || `<div class="fs-empty">Noch keine ${esc(A.pl)}.</div>`}</div>
     <div class="fs-sub">Je mehr Platz je ${per}, desto besser ${what} – zu eng drückt den Preis.${A.mast ? ` ${esc(A.pl)} brauchen ${A.mast} Mahlzeiten ${esc(FITEMS[A.feed].n)}, dann ab zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je Tier.` : ""}</div>
     <div class="fpen-b">
       ${o.animals.length < A.max ? `<button class="btn" id="fpBuy">${A.i} ${esc(A.young || A.n)} kaufen · ${eur(animalPrice(kind))}<small>danach ${qStars(add1)}</small></button>` : ""}
       ${o.animals.length ? `<button class="btn ghost" id="fpSell">${esc(A.n)} abgeben · +${eur(Math.round(A.price * 0.5))}</button>` : ""}
       ${uc != null ? `<button class="btn ghost" id="fpUp">📐 ${esc(M.area)} vergrößern auf ${fmt(nx.m2, 0)} ${A.unit} · ${eur(uc)}<small>dann ${qStars(nxSt)}</small></button>` : ""}
     </div>`, "pen");
+  bindPenAnis(o);
   const b = $("#fpBuy"); if (b) b.onclick = () => buyAnimalInto(kind, o, true);
   const s = $("#fpSell"); if (s) s.onclick = () => askConfirm(A.n + " abgeben?", "Du bekommst " + eur(Math.round(A.price * 0.5)) + " zurück. Weniger Tiere haben mehr Platz.", "Abgeben", () => {
     const a = farmSellAnimal(o);
@@ -2215,7 +2289,7 @@ function openFarmHouse(tab) {
   FV.sheetFn = () => openFarmHouse(tab);
   const F = S.farm, T = FT();
   const tabs = `<div class="fs-tabs">${HOUSE_TABS.map(([k, l]) => `<button class="${k === tab ? "on" : ""}" data-htab="${k}">${l}${k === "ausbau" && typeof farmStageCheck === "function" && farmStageCheck() === true ? " ❗" : ""}</button>`).join("")}</div>`;
-  const head = `<div class="fs-h"><span class="fs-ic">${T.pin}</span>${esc(T.title(S.player.company))}<small>${esc(T.heir)} · ${esc(T.where)} · ${esc((FHOF_STAGES[F.stage || 1] || {}).n || "")}</small></div>`;
+  const head = `<div class="fs-h"><span class="fs-ic">${T.pin}</span>${esc(T.title(S.player.company))}<small>${esc(T.heir)} · ${esc(T.where)} · ${esc((FHOF_STAGES[farmHl()] || {}).n || "")}</small></div>`;
   let body = "";
   if (tab === "buch") {
     const A = farmQActive(), val = farmValue();

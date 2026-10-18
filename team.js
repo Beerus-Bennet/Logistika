@@ -175,7 +175,7 @@ function staffHome(role, i) {
 const NAV = { x0: -120, z0: -125, x1: 60, z1: 36, key: "", blk: null, cost: null, W: 0, H: 0 };
 function navKey() {
   const F = S.farm;
-  let h = (F.stage || 1) * 7 + Object.keys(F.areas || {}).length;
+  let h = farmHl() * 7 + Object.keys(F.areas || {}).length;   /* v70: Hofgröße aus der Ausbaustufe 1 … 10 */
   F.objs.forEach(o => { h = (h * 31 + o.x * 7 + o.z * 13 + (o.r ? 5 : 0) + o.t.length) % 1e9; });
   (F.trees || []).forEach(t => { if (t.st === "up" || t.st === "sapling") h = (h * 17 + t.id) % 1e9; });
   return F.objs.length + ":" + h;

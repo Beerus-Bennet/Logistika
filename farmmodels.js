@@ -87,11 +87,14 @@ const FM = (() => {
   }
 
   /* ----------------------------- Gebäude -------------------------------- */
+  /* v70: Wohnhaus und Scheune füllen ihre Kacheln bis an den Rand (Wände 4,9 bzw. 3,9 breit,
+     beide 3,3 tief, Dächer 3,9 tief) – nebeneinander gestellt stehen sie Wand an Wand und
+     Traufe an Traufe, die Fronten in einer Flucht */
   function house() {
     G3.seed(11);
     const b = new MB();
-    b.noise(0.06, () => b.box(4.6, 0.32, 3.5, C.stone, { top: C.stoneD }));
-    b.at({ y: 0.32 }, () => {
+    b.noise(0.06, () => b.box(4.98, 0.32, 3.5, C.stone, { top: C.stoneD }));
+    b.at({ y: 0.32, sx: 4.9 / 4.3, sz: 3.3 / 3.2 }, () => {
       b.box(4.3, 2.3, 3.2, C.cream);
       /* Fachwerk vorn (+z) und an den Seiten */
       const fz = 1.61;
@@ -99,7 +102,7 @@ const FM = (() => {
       b.box(4.3, 0.14, 0.05, C.beam, { y: 1.12, z: fz });
       b.box(4.3, 0.14, 0.05, C.beam, { y: 2.18, z: fz });
       b.box(4.3, 0.14, 0.05, C.beam, { y: 0.02, z: fz });
-      [[-1.6, 0.5], [1.6, -0.5]].forEach(([x, s]) => b.box(0.12, 1.25, 0.05, C.beam, { x, y: 1.13, z: fz, rz: s }));
+      [[-1.6, 0.5], [1.6, -0.5]].forEach(([x, s]) => b.box(0.12, 1.08, 0.05, C.beam, { x, y: 1.13, z: fz, rz: s }));   /* v70: kürzer – ragte oben über die Hausecke */
       [-1.0, 1.0].forEach(z => b.box(0.05, 2.3, 0.14, C.beam, { x: 2.16, z }));
       b.box(0.05, 0.14, 3.2, C.beam, { x: 2.16, y: 1.12 });
       [-1.0, 1.0].forEach(z => b.box(0.05, 2.3, 0.14, C.beam, { x: -2.16, z }));
@@ -109,17 +112,17 @@ const FM = (() => {
       windowAt(b, 1.55, 0.6, fz + 0.03, 0.55, 0.62, { shutter: C.green, flowers: true });
       windowAt(b, -0.55, 1.55, fz + 0.03, 0.5, 0.5, { shutter: C.green });
       windowAt(b, 0.55, 1.55, fz + 0.03, 0.5, 0.5, { shutter: C.green });
-      windowAt(b, 2.18, 0.6, 0, 0.5, 0.58, { ry: Math.PI / 2, shutter: C.green });
+      windowAt(b, -2.18, 0.6, 0, 0.5, 0.58, { ry: -Math.PI / 2, shutter: C.green });   /* v70: Seitenfenster nach Westen – im Osten steht die Scheune Wand an Wand */
       /* Tür */
       b.box(0.82, 1.42, 0.06, C.white, { x: 0.12, z: fz + 0.02 });
       b.noise(0.1, () => b.box(0.7, 1.35, 0.08, C.woodD, { x: 0.12, z: fz + 0.03 }));
       b.box(0.06, 0.06, 0.06, 0xe9c34a, { x: 0.38, y: 0.7, z: fz + 0.09 });
     });
-    b.box(1.1, 0.16, 0.5, C.stoneD, { x: 0.12, z: 1.95 });
+    b.box(1.1, 0.16, 0.5, C.stoneD, { x: 0.12 * 4.9 / 4.3, z: 1.95 });
     /* Dach mit Überstand und Schornstein */
     b.at({ y: 2.62 }, () => {
-      b.noise(0.05, () => b.roof(4.9, 3.9, 1.95, C.roof, { gable: C.cream, thick: 0.1 }));
-      [-0.5, 0.5].forEach(z => b.box(4.92, 0.05, 0.05, C.roofD, { y: 1.95 * (1 - Math.abs(z) * 2 / 3.9 * 0.9) * 0.0 }));
+      b.noise(0.05, () => b.roof(4.84, 3.9, 1.95, C.roof, { gable: C.cream, thick: 0.1 }));   /* mit Kante genau 5 breit */
+      [-0.5, 0.5].forEach(z => b.box(4.98, 0.05, 0.05, C.roofD, { y: 1.95 * (1 - Math.abs(z) * 2 / 3.9 * 0.9) * 0.0 }));
       b.box(0.42, 1.5, 0.42, C.brick, { x: 1.3, y: 0.6, z: -0.6, top: C.brickD });
       b.box(0.5, 0.12, 0.5, C.stoneD, { x: 1.3, y: 2.1, z: -0.6 });
       /* Gaube */
@@ -130,7 +133,7 @@ const FM = (() => {
       });
     });
     /* Bank neben der Tür */
-    b.at({ x: 1.35, z: 1.95 }, () => {
+    b.at({ x: 1.5, z: 1.95 }, () => {
       b.box(0.9, 0.06, 0.28, C.wood, { y: 0.3 });
       b.box(0.06, 0.3, 0.24, C.woodD, { x: -0.38 }); b.box(0.06, 0.3, 0.24, C.woodD, { x: 0.38 });
     });
@@ -140,8 +143,8 @@ const FM = (() => {
   function barn() {
     G3.seed(21);
     const b = new MB();
-    b.box(3.7, 0.18, 3.5, C.stoneD);
-    b.at({ y: 0.18 }, () => {
+    b.box(3.98, 0.18, 3.5, C.stoneD);
+    b.at({ y: 0.18, sx: 3.9 / 3.5 }, () => {
       plankWall(b, 3.5, 2.3, 3.3, C.red);
       /* weiße Kanten */
       [[-1.75, -1.65], [1.75, -1.65], [-1.75, 1.65], [1.75, 1.65]].forEach(([x, z]) => b.box(0.14, 2.3, 0.14, C.white, { x, z }));
@@ -151,20 +154,19 @@ const FM = (() => {
         b.box(1.9, 1.75, 0.06, C.white);
         b.noise(0.1, () => b.box(1.75, 1.62, 0.07, C.redD, { y: 0.0 }));
         b.box(0.08, 1.62, 0.09, C.white, {});
-        [[-0.45, 0.82], [0.45, -0.82]].forEach(([x, r]) => {
-          b.box(0.08, 2.05, 0.09, C.white, { x, y: -0.2, rz: r * 0.55 + (r > 0 ? 0.06 : -0.06) });
-        });
-        /* Heuboden-Luke */
-        b.box(0.8, 0.62, 0.06, C.white, { y: 2.0 });
-        b.box(0.66, 0.5, 0.08, C.hay, { y: 2.06 });
-        b.noise(0.2, () => { for (let i = 0; i < 6; i++) b.box(0.06, 0.18, 0.04, C.hayD, { x: -0.25 + i * 0.1, y: 2.04, z: 0.06, rz: (rnd() - 0.5) * 0.6 }); });
+        /* v70: Kreuzstreben je Torflügel von der unteren Außenecke zur oberen Mitte – ragen nicht mehr aus dem Tor */
+        [[-0.84, -0.5], [0.84, 0.5]].forEach(([x, r]) => b.box(0.08, 1.72, 0.09, C.white, { x, y: 0.06, rz: r }));
+        /* Heuboden-Luke – v70: unter der Traufe (stach vorher durchs Dach) */
+        b.box(0.72, 0.4, 0.06, C.white, { y: 1.8 });
+        b.box(0.6, 0.3, 0.08, C.hay, { y: 1.85 });
+        b.noise(0.2, () => { for (let i = 0; i < 6; i++) b.box(0.05, 0.14, 0.04, C.hayD, { x: -0.25 + i * 0.1, y: 1.84, z: 0.06, rz: (rnd() - 0.5) * 0.6 }); });
       });
       windowAt(b, 1.77, 1.1, 0.6, 0.45, 0.45, { ry: Math.PI / 2, lit: false });
       windowAt(b, 1.77, 1.1, -0.6, 0.45, 0.45, { ry: Math.PI / 2, lit: false });
     });
     b.at({ y: 2.48 }, () => {
-      b.noise(0.04, () => b.gambrel(3.9, 3.8, 1.9, C.slate, { gable: C.red }));
-      b.box(3.95, 0.08, 0.1, 0x4a434d, { y: 1.88 });
+      b.noise(0.04, () => b.gambrel(3.98, 3.9, 1.9, C.slate, { gable: C.red }));
+      b.box(4.0, 0.08, 0.1, 0x4a434d, { y: 1.88 });
       /* Wetterhahn */
       b.at({ x: 0, y: 1.9 }, () => {
         b.box(0.04, 0.55, 0.04, C.black);
@@ -174,9 +176,14 @@ const FM = (() => {
         b.box(0.07, 0.1, 0.03, C.black, { x: 0.12, y: 0.6 });
       });
     });
-    /* Heuballen am Tor */
-    b.cyl(0.32, 0.32, 0.55, 10, C.hay, { rz: Math.PI / 2, x: 1.6, y: 0.32, z: 2.1, top: C.hayD });
-    b.cyl(0.32, 0.32, 0.55, 10, C.hay, { rz: Math.PI / 2, x: 1.4, y: 0.32, z: 2.55, ry: 0.4, top: C.hayD });
+    /* v70: die Heuballen am Tor sind eigene Knoten (worldview.js: worldSyncHay) – man kann sie verkaufen */
+    return b;
+  }
+  /* Rundballen, liegend, Mitte im Ursprung, mit zwei Garnbändern */
+  function barnHay() {
+    const b = new MB();
+    b.noise(0.05, () => b.cyl(0.32, 0.32, 0.55, 14, C.hay, { rz: Math.PI / 2, x: 0.275, y: 0.32, top: C.hayD, smooth: true }));
+    [0.13, 0.42].forEach(x => b.cyl(0.326, 0.326, 0.03, 14, 0xb98f3c, { rz: Math.PI / 2, x: x - 0.275 + 0.015, y: 0.32, smooth: true }));
     return b;
   }
 
@@ -512,7 +519,7 @@ const FM = (() => {
     const spots = [[0.45, 1.25, 0.35], [-0.35, 1.05, 0.42], [0.1, 1.0, 0.6], [-0.55, 1.4, 0.05], [0.55, 1.55, -0.1], [0.2, 1.75, 0.45],
       [-0.25, 1.65, 0.42], [0.62, 1.05, -0.2], [-0.15, 1.35, 0.6], [0.3, 1.45, 0.55]];
     spots.forEach(([x, y, z]) => {
-      if (T.pair) { b.sphere(0.06, 6, 5, T.fruit, { x: x - 0.04, y, z, smooth: true }); b.sphere(0.06, 6, 5, T.fruit, { x: x + 0.05, y: y - 0.03, z, smooth: true }); b.box(0.015, 0.1, 0.015, 0x4a7a2a, { x, y: y + 0.04, z }); }
+      if (T.pair) { b.sphere(0.065, 9, 7, T.fruit, { x: x - 0.045, y, z, smooth: true }); b.sphere(0.065, 9, 7, T.fruit, { x: x + 0.055, y: y - 0.03, z, smooth: true }); b.box(0.015, 0.1, 0.015, 0x4a7a2a, { x, y: y + 0.05, z }); }
       else if (T.pear) { b.sphere(0.09, 7, 6, T.fruit, { x, y, z, sy: 1.3, smooth: true }); }
       else { b.sphere(0.1, 7, 6, T.fruit, { x, y, z, smooth: true }); b.box(0.015, 0.06, 0.015, 0x5a3a20, { x, y: y + 0.1, z }); }
     });
@@ -1203,7 +1210,7 @@ const FM = (() => {
   }
 
   return {
-    C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
+    C, house, barn, barnHay, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
     board, shed, gate, fieldSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,
