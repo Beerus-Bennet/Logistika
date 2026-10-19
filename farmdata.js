@@ -202,7 +202,15 @@ const FDECO = {
   well:      { n: "Brunnen",       i: "⛲", price: 45, lv: 4, sz: [2, 2], s: "hof" },
   beehive:   { n: "Bienenkasten",  i: "🐝", price: 24, lv: 5, sz: [1, 1], s: "hof" },
   mailbox:   { n: "Briefkasten",   i: "📮", price: 8,  lv: 1, sz: [1, 1] },
-  rock:      { n: "Findling",      i: "🪨", price: 3,  lv: 1, sz: [1, 1], arg: 1.2 }
+  rock:      { n: "Findling",      i: "🪨", price: 3,  lv: 1, sz: [1, 1], arg: 1.2 },
+  /* v71: Dekowege – Feld für Feld mit dem Finger legen (Preis je Feld). Sie schließen von selbst an
+     Nachbarwege und Hofwege an; Haustiere spazieren darauf, das Personal ist dort schneller.
+     Fahrzeuge nehmen sie nicht. */
+  wegKies:     { n: "Kiesweg",        i: "🪨", price: 3, lv: 2, sz: [1, 1], weg: 1, s: "hof" },
+  wegRinde:    { n: "Rindenmulch",    i: "🟫", price: 2, lv: 2, sz: [1, 1], weg: 1, s: "hof" },
+  wegPlatten:  { n: "Trittplatten",   i: "🔘", price: 3, lv: 3, sz: [1, 1], weg: 1, s: "hof" },
+  wegHolz:     { n: "Holzbohlenweg",  i: "🪵", price: 4, lv: 4, sz: [1, 1], weg: 1, s: "hof" },
+  wegPflaster: { n: "Pflasterweg",    i: "🧱", price: 5, lv: 5, sz: [1, 1], weg: 1, s: "hof" }
 };
 
 /* Freischaltungen je Level (Text für die Level-Feier) */

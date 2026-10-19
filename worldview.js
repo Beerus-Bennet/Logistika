@@ -31,6 +31,8 @@ const AREA_NPC = { wald: [-27.2, -7.3], saege: [-39.1, -28.4], altwald: [-65.8, 
 const AREA_BAR = { wald: [-27.7, -9.5, Math.PI / 2], saege: [-41, -29.4, 0], altwald: [-68, -73.2, -4.172], see: [5, 20.8, 0] };
 /* v70: zweite Schranke am Ostweg (Teich → Wald), solange der Wald zu ist */
 const AREA_BAR2 = { wald: [35.1, -19.5, Math.PI / 4] };
+/* v71: Uferweg nach Osten, am Ende senkrecht hoch zur Straße (das Ende liegt unter dem Asphalt) */
+const LAKE_WAY2 = [[5, 21.6], [14, 22.1], [26, 22.1], [35, 21.9], [39.2, 21.1], [40, 20.2], [40, 19.45]];
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
@@ -275,9 +277,11 @@ function worldStatic() {
   FWORLD.paths.forEach((p, i) => {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
     const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q);
-    const a = p[0], e = p[p.length - 1];
-    /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über */
-    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a), !gate(e) && !road(e)] }), {});
+    const a = p[0], e = p[p.length - 1], hof = q => inHofMax(q[0], q[1], 1.5);
+    /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über.
+       v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
+    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a) && !hof(a), !gate(e) && !road(e) && !hof(e)],
+      leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 }), {});
   });
   lines.merge(FWM.creekBank(FWORLD.creek), {});
   lines.merge(FWM.creekBank(LAKE_CREEK), {});
@@ -291,7 +295,8 @@ function worldStatic() {
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Weg von der Straße hinunter zum See und am Ufer entlang */
   st.merge(FWM.forestPath([[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], 1.6, { y: 0.026, ey: 0.019 }), {});
-  st.merge(FWM.forestPath([[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]], 1.6, { y: 0.029, ey: 0.02 }), {});
+  /* v71: der Uferweg biegt bei x = 40 zur Straße ab – genau gegenüber dem Weg vom Teich (Kreuzung) */
+  st.merge(FWM.forestPath(LAKE_WAY2, 1.6, { y: 0.029, ey: 0.02, caps: [true, false], leafOk: (x, z) => z > 19.8 }), {});
   /* Nachbarfelder */
   const nf = (x, z, w, d, c1, c2) => {
     const m = new FM.MB();
@@ -358,10 +363,12 @@ function worldSyncHof(force) {
   const b = new FM.MB(), ps = Math.min(3, stage);
   /* Hauptweg vom Querweg zum Südtor, Querweg zum Westtor (endet am Hauptweg – sonst flimmert die Kreuzung) */
   b.merge(FWM.hofPath(2, F0 - WZ + 0.5, ps), { x: GX, z: (F0 + WZ - 0.5) / 2 });
-  b.merge(FWM.hofPath(GX - 1 - B.x0, 1, ps), { x: (GX - 1 + B.x0) / 2, z: WZ });
+  const we = big ? 0.48 : 0;                         /* v71: Pflaster bis zur Außenkante der Steinmauer */
+  b.merge(FWM.hofPath(GX - 1 - B.x0 + we, 1, ps), { x: (GX - 1 + B.x0 - we) / 2, z: WZ });
   b.merge(FWM.hofPath(2, 17.7 - F0, ps), { x: GX, z: (F0 + 17.7) / 2 });
-  /* vor dem Westtor bis zum Waldweg (der beginnt am Tor des größten Hofs) */
-  b.merge(FWM.hofPath(B.x0 + 24.9, 1.6, ps), { x: (B.x0 - 24.9) / 2, z: WZ });
+  /* vor dem Westtor bis zum Waldweg (der beginnt am Tor des größten Hofs) – v71: als Feldweg, gerade
+     am Tor abgeschnitten und unter dem Anfang des Waldwegs (gleiche Farbe, kein Laub aufs Pflaster) */
+  b.merge(FWM.forestPath([[B.x0 - we, WZ], [-24.9, WZ]], 1.8, { y: 0.0275, ey: 0.0155, caps: [false, false], leaves: false }), {});
   const wg = [WZ - 1.1, WZ + 1.1];
   if (big) {
     /* Steinmauer ringsum mit Toren im Süden und Westen – knapp außerhalb des Baulands */
@@ -540,6 +547,7 @@ function brandPallet(node, sides) {
 const WORN_T = new Set(["house", "barn", "silo", "mill", "shed", "bakery"]);
 function objVar(o) {
   const F = S.farm;
+  if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg && typeof wegMask === "function") return "m" + wegMask(o);   /* v71: Nachbarn → Ränder */
   if (WORN_T.has(o.t)) return (F.stage || 1) <= 1 ? "w" : "";
   if (o.t === "sw_halle") return sawMask() + ":" + (typeof pvN === "function" ? pvN() : 0);
   if (o.t === "kessel") return F.saw && F.saw.motor ? "1" : "0";
@@ -670,6 +678,8 @@ function shopModel(it) {
 function decoModel(k) {
   const D = FDECO[k];
   if (!D) return null;
+  /* v71: Dekoweg im Laden – drei Felder am Stück */
+  if (D.weg) return () => { const m = new FM.MB(); [[-1, 2], [0, 10], [1, 8]].forEach(([x, mk]) => m.merge(FWM.decoWeg(k, mk), { x })); return m; };
   if (FM[k]) return () => FM[k](D.arg || 1);
   if (D.cos) return () => FWM.cosDeco(k);
   return typeof FFM !== "undefined" && FFM[k] ? () => FFM[k]() : null;
@@ -1376,8 +1386,63 @@ function openHay() {
     closeFarmSheet(); farmSyncState(); renderFarmUI(); save();
   };
 }
-/* Haustiere laufen die Hofwege ab */
+/* Haustiere laufen die Hofwege ab.
+   v71: Gibt es Dekowege, spazieren sie darauf – Ziege Tim und Katze Minka nur auf den
+   Dekowegen, Hofhund Bello auch auf den festen Hofwegen. Sie folgen dem Weg Feld für Feld
+   (an Abzweigen zufällig), bleiben mal stehen und wechseln ab und zu auf ein anderes Wegstück.
+   Ohne Dekowege bleibt es bei der festen Runde (PET_WAY). Fahrzeuge nutzen die Dekowege nie. */
 const PET_WAY = [[5, 10], [5, 4], [5, -2], [5, -9.5], [-1, -9.5], [-7, -9.5], [-12, -9.5]];
+const PET_OFF = { hund: -0.18, katze: 0.2, ziege: 0 };
+function petTiles(k) {
+  const m = typeof farmWegMap === "function" ? farmWegMap() : new Map();
+  if (!WV.petG || WV.petG.m !== m) WV.petG = { m, t: {} };
+  const C = WV.petG.t;
+  if (!(k in C)) {
+    const s = new Set(m.keys());
+    if (k === "hund" && FSITE.kind === "hof") (FSITE.path || FPATH).forEach(i => { if (i >= 0) { const t = fgXZ(i); s.add(t[0] + "," + t[1]); } });
+    C[k] = m.size >= 2 && s.size >= 3 ? s : null;
+    /* zusammenhängende Wegstücke – gewechselt wird nur zu einem anderen Stück */
+    if (C[k]) {
+      const comp = new Map(); let id = 0;
+      s.forEach(key => {
+        if (comp.has(key)) return;
+        const q = [key]; comp.set(key, ++id);
+        while (q.length) { const [x, z] = q.pop().split(",").map(Number); [[x, z - 1], [x + 1, z], [x, z + 1], [x - 1, z]].forEach(n => { const nk = n[0] + "," + n[1]; if (s.has(nk) && !comp.has(nk)) { comp.set(nk, id); q.push(nk); } }); }
+      });
+      C[k].comp = comp; C[k].parts = id;
+    }
+  }
+  return C[k];
+}
+const petXZ = key => { const t = key.split(",").map(Number); return [t[0] - FG / 2 + 0.5, t[1] - FG / 2 + 0.5]; };
+function petNext(k, p, G) {
+  if (!G) {
+    p.tk = null;
+    p.wi = clamp((p.wi == null ? 0 : p.wi) + (Math.random() < 0.5 ? -1 : 1), 0, PET_WAY.length - 1);
+    p.tgt = [PET_WAY[p.wi][0] + PET_OFF[k], PET_WAY[p.wi][1]];
+    return;
+  }
+  let next = null;
+  if (!p.tk || !G.has(p.tk)) {
+    /* erst einmal zum nächsten Wegfeld */
+    let bd = 1e9;
+    G.forEach(key => { const q = petXZ(key), d = Math.hypot(q[0] - p.x, q[1] - p.z); if (d < bd) { bd = d; next = key; } });
+  } else if (G.parts > 1 && Math.random() < 0.04) {
+    /* mal auf ein anderes Wegstück */
+    const here = G.comp.get(p.tk), all = [...G].filter(q => G.comp.get(q) !== here);
+    next = all[Math.floor(Math.random() * all.length)];
+  } else {
+    const [x, z] = p.tk.split(",").map(Number);
+    const nb = [[x, z - 1], [x + 1, z], [x, z + 1], [x - 1, z]].map(q => q[0] + "," + q[1]).filter(q => G.has(q));
+    const fw = nb.filter(q => q !== p.prev);
+    /* am liebsten geradeaus weiter */
+    const st = p.prev ? (() => { const a = p.prev.split(",").map(Number); return (2 * x - a[0]) + "," + (2 * z - a[1]); })() : null;
+    next = st && fw.includes(st) && Math.random() < 0.65 ? st : (fw.length ? fw : nb)[Math.floor(Math.random() * (fw.length || nb.length))] || p.tk;
+  }
+  p.prev = p.tk; p.tk = next;
+  const q = petXZ(next);
+  p.tgt = [q[0] + PET_OFF[k] * (Math.random() < 0.5 ? 1 : -0.6), q[1] + (Math.random() - 0.5) * 0.25];
+}
 function worldSyncPets() {
   const R = FV.R, own = {};
   FCOSMETIC.filter(c => c.pet && farmCos(c.id)).forEach(c => { own[c.pet] = 1; });
@@ -1387,14 +1452,22 @@ function worldSyncPets() {
     const fn = k === "hund" ? FWM.dog : k === "katze" ? FWM.cat : FWM.goat;
     const j = i * 2 % PET_WAY.length, node = fnode(fmesh("pet:" + k, fn), { x: PET_WAY[j][0], z: PET_WAY[j][1], s: 1.4 });
     R.nodes.push(node);
-    WV.pets.set(k, { node, i: j, to: j, x: PET_WAY[j][0], z: PET_WAY[j][1], wait: 1 + i, sp: k === "hund" ? 1.8 : k === "katze" ? 1.1 : 0.8 });
+    WV.pets.set(k, { node, wi: j, tgt: null, tk: null, prev: null, x: PET_WAY[j][0], z: PET_WAY[j][1], wait: 1 + i, sp: k === "hund" ? 1.8 : k === "katze" ? 1.1 : 0.8 });
   });
 }
 function stepPets(dt, time) {
   for (const [k, p] of WV.pets) {
-    if (p.wait > 0) { p.wait -= dt; p.node.y = 0; if (p.wait <= 0) p.to = clamp(p.i + (Math.random() < 0.5 ? -1 : 1), 0, PET_WAY.length - 1); continue; }
-    const t = PET_WAY[p.to], dx = t[0] + (k === "katze" ? 0.5 : -0.4) - p.x, dz = t[1] - p.z, d = Math.hypot(dx, dz), s = p.sp * dt;
-    if (d < s) { p.i = p.to; p.wait = Math.random() < 0.3 ? 4 + Math.random() * 6 : 0.4; continue; }
+    const G = petTiles(k);
+    if (p.wait > 0) { p.wait -= dt; p.node.y = 0; if (p.wait <= 0) petNext(k, p, G); continue; }
+    if (!p.tgt || (G && p.tk && !G.has(p.tk)) || (!G && p.tk)) petNext(k, p, G);
+    const t = p.tgt, dx = t[0] - p.x, dz = t[1] - p.z, d = Math.hypot(dx, dz), s = p.sp * dt;
+    if (d < s) {
+      p.x = t[0]; p.z = t[1]; p.tgt = null;
+      /* stehen bleiben: Tim grast, Minka setzt sich, Bello schnuppert kurz */
+      const r = G ? (k === "ziege" ? 0.2 : k === "katze" ? 0.18 : 0.06) : 0.3;
+      if (Math.random() < r) p.wait = (G ? 2.5 : 4) + Math.random() * 6;
+      continue;
+    }
     p.x += dx / d * s; p.z += dz / d * s;
     p.node.x = p.x; p.node.z = p.z; p.node.ry = Math.atan2(dx, dz);
     p.node.y = Math.abs(Math.sin(time * 10 + p.sp)) * 0.03;

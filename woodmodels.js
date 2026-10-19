@@ -346,6 +346,62 @@ const FWM = (() => {
     return b;
   }
   /* Weg: Stufe 1 Erde mit Unkraut, 2 Kies, 3+ Pflaster */
+  /* v71: Dekowege – ein Feld (1 × 1, Mitte 0/0). mask: Nachbarweg im 1 Norden, 2 Osten, 4 Süden,
+     8 Westen. Zum Nachbarn hin reicht der Belag bis an die Feldkante (nahtlos), sonst ist er
+     etwas schmaler und hat einen Rand. */
+  const WEG_C = {
+    wegKies:     { base: 0xcfbf95, edge: 0xa3946f, dot: [0xe6dab8, 0xab9b76] },
+    wegRinde:    { base: 0x6b4830, edge: 0x4a3222, dot: [0x93684a, 0x553824] },
+    wegPflaster: { base: 0x948e84, edge: 0xd6cec0, st: [0xc8c0b2, 0xb6ae9f] },
+    wegHolz:     { base: 0x4a3a2a, edge: 0x5e4630, pl: [0xb98b5a, 0xa77b4d] },
+    wegPlatten:  { st: [0xbdb6a9, 0xa8a296], top: [0xcdc6b9, 0xb9b3a7] }
+  };
+  function decoWeg(k, mask) {
+    const m = mask || 0;
+    G3.seed(4700 + k.length * 7 + m);
+    const b = new MB(), T = WEG_C[k] || WEG_C.wegKies;
+    const N = m & 1, E = m & 2, S = m & 4, W = m & 8, I = 0.4, y = 0.021;
+    if (k === "wegPlatten") {
+      /* Trittplatten: eine in der Mitte, dazu je eine auf der Kante nach Osten und Süden (die
+         Platte auf der Westkante legt das westliche Feld) – so liegen sie im halben Feld-Abstand */
+      const slab = (x, z, r, i) => b.cyl(r, r * 0.96, 0.035, 7, T.st[i % 2], { x, z, y: y - 0.01, sx: 0.9 + rnd() * 0.2, ry: rnd() * 3, top: T.top[i % 2] });
+      slab((rnd() - 0.5) * 0.06, (rnd() - 0.5) * 0.06, 0.27, 0);
+      if (E) slab(0.5, (rnd() - 0.5) * 0.05, 0.19, 1);
+      if (S) slab((rnd() - 0.5) * 0.05, 0.5, 0.19, 1);
+      return b;
+    }
+    const x0 = W ? -0.5 : -I, x1 = E ? 0.5 : I, z0 = N ? -0.5 : -I, z1 = S ? 0.5 : I;
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
+    b.noise(k === "wegRinde" ? 0.1 : 0.05, () => b.plate(w, d, T.base, { x: cx, z: cz, y0: y }));
+    if (k === "wegPflaster") {
+      const nx = Math.max(1, Math.round(w / 0.5)), nz = Math.max(1, Math.round(d / 0.5)), sx = w / nx, sz = d / nz;
+      b.noise(0.1, () => { for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++)
+        b.plate(sx - 0.06, sz - 0.06, T.st[(i + j) % 2], { x: x0 + (i + 0.5) * sx, z: z0 + (j + 0.5) * sz, y0: y + 0.004 }); });
+    } else if (k === "wegHolz") {
+      /* Bohlen quer zur Laufrichtung */
+      const alongX = (E || W) && !(N || S), n = Math.max(3, Math.round((alongX ? w : d) / 0.17)), step = (alongX ? w : d) / n;
+      b.noise(0.12, () => { for (let i = 0; i < n; i++) {
+        const c = T.pl[i % 2];
+        if (alongX) b.box(step - 0.025, 0.03, d - 0.02, c, { x: x0 + (i + 0.5) * step, y, z: cz });
+        else b.box(w - 0.02, 0.03, step - 0.025, c, { x: cx, y, z: z0 + (i + 0.5) * step });
+      } });
+    } else {
+      /* Kies und Rindenmulch: ein paar Steinchen bzw. Holzstückchen */
+      for (let i = 0; i < 6; i++) {
+        const px = cx + (rnd() - 0.5) * (w - 0.12), pz = cz + (rnd() - 0.5) * (d - 0.12), c = T.dot[i % 2];
+        if (k === "wegRinde") b.box(0.1, 0.012, 0.045, c, { x: px, y: y + 0.002, z: pz, ry: rnd() * 3 });
+        else b.ico(0.035, c, { x: px, y: y + 0.006, z: pz, flat: 0.45, jitter: 0.3 });
+      }
+    }
+    /* Rand nur an offenen Seiten: Bordstein (Pflaster), Kantholz (Holz), sonst ein dunkler Saum */
+    const e = 0.07, high = k === "wegPflaster" || k === "wegHolz", eh = high ? 0.045 : 0.006, ey = high ? y - 0.005 : y + 0.003;
+    const edge = (ex, ez, ew, ed) => high ? b.box(ew, eh, ed, T.edge, { x: ex, y: ey, z: ez }) : b.plate(ew, ed, T.edge, { x: ex, z: ez, y0: ey });
+    if (!N) edge(cx, z0 + e / 2, w, e);
+    if (!S) edge(cx, z1 - e / 2, w, e);
+    if (!W) edge(x0 + e / 2, cz, e, d);
+    if (!E) edge(x1 - e / 2, cz, e, d);
+    return b;
+  }
   function hofPath(w, d, stage) {
     G3.seed(910 + w * 3 + d + stage);
     const b = new MB();
@@ -486,10 +542,11 @@ const FWM = (() => {
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
     b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true, o.ey));
-    /* Laub und Steinchen auf dem Weg */
-    for (let i = 0; i < P.length; i++) {
-      const p = P[Math.floor(rnd() * P.length)];
-      b.plate(0.14, 0.1, rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, { x: p[0] + (rnd() - 0.5) * 1.2, z: p[1] + (rnd() - 0.5) * 1.2, ry: rnd() * 3, y0: Math.max(0.032, y + 0.006) });
+    /* Laub und Steinchen auf dem Weg – v71: nicht auf Hofpflaster oder Straße (o.leafOk), abschaltbar (o.leaves) */
+    for (let i = 0; i < P.length && o.leaves !== false; i++) {
+      const p = P[Math.floor(rnd() * P.length)], lx = p[0] + (rnd() - 0.5) * 1.2, lz = p[1] + (rnd() - 0.5) * 1.2, c = rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, ry = rnd() * 3;
+      if (o.leafOk && !o.leafOk(lx, lz)) continue;
+      b.plate(0.14, 0.1, c, { x: lx, z: lz, ry, y0: Math.max(0.032, y + 0.006) });
     }
     return b;
   }
@@ -1826,7 +1883,7 @@ const FWM = (() => {
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
-    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
+    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
     deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, arm, cosDeco

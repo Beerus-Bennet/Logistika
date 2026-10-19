@@ -190,7 +190,7 @@ function navBuild() {
   const blk = NAV.blk = new Uint8Array(W * H), cost = NAV.cost = new Float32Array(W * H).fill(1);
   const P = FWORLD.pond, creeks = [FWORLD.creek].concat(typeof LAKE_CREEK !== "undefined" ? [LAKE_CREEK] : []);
   const bridges = [FWORLD.bridge, [52.6, 60.3]];
-  const lakePaths = [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
+  const lakePaths = [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], typeof LAKE_WAY2 !== "undefined" ? LAKE_WAY2 : [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
@@ -208,6 +208,8 @@ function navBuild() {
   /* Gebäude, Ställe, Deko … (Felder: 2 – nur der Landwirt) */
   S.farm.objs.forEach(o => {
     const [w, d] = farmSize(o), x0 = o.x - FG / 2, z0 = o.z - FG / 2, v = o.t === "field" ? 2 : 1;
+    /* v71: Dekowege sind kein Hindernis – man läuft am liebsten darauf */
+    if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg) { if (navIn(x0, z0)) cost[navIdx(x0, z0)] = 0.4; return; }
     for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (navIn(x0 + i, z0 + j)) blk[navIdx(x0 + i, z0 + j)] = v;
   });
   /* Bäume (auch Setzlinge) */
@@ -281,6 +283,19 @@ function navPath(sx, sz, tx, tz, role) {
   return pts;
 }
 function routeLen(r) { let l = 0; for (let i = 1; i < r.length; i++) l += Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]); return l; }
+/* v71: Laufzeit – Stücke auf Dekowegen zählen nur 70 % (dort ist man gut ein Drittel schneller) */
+function staffWalkLen(r) {
+  if (typeof farmWegAt !== "function") return routeLen(r);
+  let l = 0;
+  for (let i = 1; i < r.length; i++) {
+    const a = r[i - 1], b = r[i], s = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(s / 0.5));
+    for (let k = 0; k < n; k++) {
+      const f = (k + 0.5) / n, x = a[0] + (b[0] - a[0]) * f, z = a[1] + (b[1] - a[1]) * f;
+      l += s / n * (farmWegAt(Math.floor(x + FG / 2), Math.floor(z + FG / 2)) ? 0.7 : 1);
+    }
+  }
+  return l;
+}
 function routeAt(r, d) {
   for (let i = 1; i < r.length; i++) {
     const l = Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]);
@@ -1097,7 +1112,7 @@ function staffGo(s, i, j) {
   try { r = navPath(h[0], h[1], p.x, p.z, s.role); } catch (e) { console.warn("Weg:", e); }
   const route = (r || [[h[0], h[1]], [p.x, p.z]]).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
   const len = routeLen(route), home = j.k === "home";
-  const walk = Math.max(home ? 0.4 : 1, len / 5);
+  const walk = Math.max(home ? 0.4 : 1, staffWalkLen(route) / 5);   /* v71: auf Dekowegen schneller */
   /* mehrere Felder: eins nach dem anderen (etwas länger, aber ein Gang statt vier) */
   if (j.oids && j.oids.length > 1) j.spots = j.oids.map(id => { const o = farmObj(id), q = o ? staffSpot(o, s.role) : p; return [q.x, q.z, q.fx, q.fz]; });
   const work = home ? 0 : R.work * (j.spots ? 1 + 0.55 * (j.spots.length - 1) : 1);

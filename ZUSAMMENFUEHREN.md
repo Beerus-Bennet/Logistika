@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v71 – Weganschlüsse und Dekowege (auf v70)
+
+| Thema | Wo |
+|---|---|
+| Dekowege = Deko-Objekte 1 × 1 mit `FDECO[k].weg`; alle Wegfelder über `farmWegMap()`/`farmWegAt(x, z)`, Ränder über `wegMask(o)` | `farmdata.js`, `farm.js` (Ende), `woodmodels.js` `decoWeg` |
+| Wegebau-Modus `FV.weg` (eigene Geste „weg“, Zwei-Finger-Pan nur dort), Leiste in `#farmPlace` | `farmview.js` |
+| `team.js`: `navBuild` (Dekowege kein Hindernis, Kosten 0,4; Uferweg aus `LAKE_WAY2`), `staffWalkLen` in `staffGo` (30 % schneller auf Dekowegen) – Fahrerin unverändert | `team.js` |
+| Haustiere laufen auf Wegen (`petTiles`, `petNext`) | `worldview.js` |
+
 ## Stand v70 – Liste „Logistika 2.1“ auf `main` (v69.10) aufgesetzt
 
 v70 baut direkt auf dem aktuellen `main` (v69.10) auf – dein Stand bis v69.10 ist drin (Freigaben,

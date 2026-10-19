@@ -1,5 +1,44 @@
 # Änderungen – kurz für den Kollegen
 
+## v71 (aufbauend auf v70) – Weganschlüsse und Dekowege
+
+**Wege sauber verbunden**
+- **Westtor** (`worldview.js` `worldSyncHof`, Paths-Schleife in `worldStatic`): Der Waldweg endete mit einer runden
+  Kappe, die aufs Hofpflaster ragte, dazu lagen Laub und Steinchen auf dem Pflaster. Jetzt: Pflaster bis zur
+  Außenkante der Steinmauer (bzw. bis zum Zaun), davor ein gerade abgeschnittener Feldweg bis zum Waldweg
+  (`forestPath` mit `leaves: false`), Waldweg-Enden am Hof ohne Kappe. Gilt für alle zehn Ausbaustufen.
+- **Straße im Osten** (`erbe.js` `FWORLD.paths[3]`, `worldview.js` `LAKE_WAY2`): Der Weg vom Teich trifft die
+  Straße jetzt senkrecht bei x = 40 und endet an der Bordsteinkante; der Uferweg biegt genau gegenüber zur
+  Straße ab – eine Kreuzung statt eines schrägen Endes und einer Sackgasse mit runder Kappe.
+- `woodmodels.js` `forestPath`: neue Optionen `leaves: false` und `leafOk(x, z)` – kein Laub auf Pflaster und
+  Straße (auch am Feldweg zur Straße). `team.js` `navBuild` nimmt den neuen Uferweg (`LAKE_WAY2`).
+
+**Dekowege** (Laden → 🌷 Deko)
+- Fünf Sorten in `FDECO` (`farmdata.js`, Merkmal `weg: 1`, Preis je Feld): Kiesweg 3 €, Rindenmulch 2 €,
+  Trittplatten 3 €, Holzbohlenweg 4 €, Pflasterweg 5 € (ab Level 2–5). Jedes Feld ist ein Deko-Objekt 1 × 1.
+- **Wegebau** (`farmview.js` `startWeg`, `wegStroke`, `renderWegBar`, `endWeg`): Ein Finger zieht Weg Feld für
+  Feld (nur gerade Schritte – auch schräg gezogen bleibt alles verbunden). Fängt der Strich auf einem Weg
+  derselben Sorte an, nimmt er ihn weg (halber Preis zurück); eine andere Sorte drüberziehen tauscht. Zwei
+  Finger (oder ✋) bewegen die Karte – setzt der zweite Finger gleich nach dem ersten auf, wird das erste Feld
+  zurückgenommen (`wegUndoStroke`). Sorten wechseln in der Leiste, ✓ beendet: ein Eintrag im Kassenbuch, EP
+  (1 je 4 Felder), Notizbuch „buy:deco“ (`farm.js` `farmWegFinish`).
+- **Ränder von selbst** (`woodmodels.js` `decoWeg(k, mask)`, `farm.js` `wegMask`): Zu Nachbarwegen – auch zu den
+  festen Hofwegen (`FPATH`) – reicht der Belag bis an die Feldkante, nur offene Seiten bekommen einen Rand
+  (Bordstein, Kantholz, Saum). Die Maske steckt in `objVar` → Nachbarn werden beim Legen neu gezeichnet.
+- Weg antippen: Popup „🖌️ Wege bauen“ / „🗑️ Entfernen“. Laden zeigt drei Felder am Stück als Bild.
+- **Wozu?**
+  - **Haustiere** (`worldview.js` `petTiles`, `petNext`, `stepPets`): Ziege Tim und Katze Minka spazieren auf den
+    Dekowegen (Feld für Feld, an Abzweigen zufällig, bleiben mal stehen), Hofhund Bello auch auf den Hofwegen.
+    Ohne Dekowege die alte Runde (`PET_WAY`).
+  - **Personal** (`team.js` `navBuild`, `staffWalkLen`, `staffGo`): Dekowege sind kein Hindernis mehr, die Leute
+    nehmen sie am liebsten (Kosten 0,4) und brauchen darauf 30 % weniger Laufzeit.
+  - **Fahrzeuge** fahren weiter nur ihre festen Wege (Tor, Straße, Waldweg) – nie über Dekowege.
+- Meldungen weichen beim Bauen und im Wegebau nach oben aus (`body.fplace-on`).
+- Wichtig: `farmWegMap()` (farm.js) liefert alle Wegfelder (Schlüssel „x,z“ in Kacheln) und wird nur neu gebaut,
+  wenn sich Objekte ändern.
+
+Version: **v71** (`sw.js`, `?v=71` und `window.LOGI_V` in `index.html`).
+
 ## v70 (aufbauend auf v69.10 von `main`) – Liste „Logistika 2.1“
 
 Alles auf dem Stand von `main` (v58–v69.10 bleiben erhalten, auch Freigaben, Fahrer-Modus und die

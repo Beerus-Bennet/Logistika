@@ -105,6 +105,14 @@ so laufen die Lager nicht ständig über.
   lassen sich ausbauen – seit v70 jedes Lager (Silo, Scheune, Holzplatz,
   Kühlkiste, Köderkiste) in **zehn Stufen**; der Großhandel kauft sofort, zahlt
   aber nur den halben Wert.
+* **Dekowege (v71)** – im Laden unter 🌷 Deko: Kiesweg, Rindenmulch, Trittplatten,
+  Holzbohlen- und Pflasterweg, bezahlt wird je Feld. Antippen öffnet den **Wegebau**:
+  mit dem Finger ziehen legt Weg Feld für Feld, auf einem Weg derselben Sorte anfangen
+  nimmt ihn wieder weg (halber Preis zurück), zwei Finger oder ✋ bewegen die Karte,
+  ✓ beendet. Die Wege schließen von selbst aneinander und an die Hofwege an, Ränder gibt
+  es nur an offenen Seiten. Ziege Tim und Katze Minka spazieren auf den Dekowegen,
+  Hofhund Bello auch auf den Hofwegen; das Personal nimmt die Wege gern und ist darauf
+  ein Drittel schneller. Fahrzeuge fahren nie darüber.
 * **Heuballen (v70)** – am Scheunentor liegen zwei Rundballen vom eigenen Heu:
   antippen und verkaufen (je 8 €). Alle 12 Spielstunden wird ein neuer
   gepresst, höchstens zwei.
@@ -283,7 +291,9 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Wildkirschen tragen runde rote Kirschen statt eckiger Blüten, das Steintor
   hat kein rotes Teil mehr oben und die Laternen stehen frei neben den
   Torpfeilern. Die Blase über arbeitenden Gebäuden ist deckend, der
-  Ladebalken hat runde Enden.
+  Ladebalken hat runde Enden. Seit v71 endet der Waldweg am Westtor gerade an
+  der Mauer (dahinter Pflaster, kein Laub darauf), und an der Straße im Osten
+  treffen sich Teichweg und Uferweg senkrecht zu einer Kreuzung.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt

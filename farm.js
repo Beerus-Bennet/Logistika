@@ -1673,3 +1673,62 @@ function roadDispAt(route, pos) {
   if (!c || !c.len || !c.tot) return null;
   return routePointAt(D, Math.max(0, Math.min(1, pos / c.tot)) * c.len);
 }
+
+/* ---------------------------- v71: Dekowege ---------------------------------
+   Ein Dekoweg ist ein Deko-Objekt von 1 × 1 Feld (FDECO[k].weg). Gelegt wird im
+   Wegebau (farmview.js startWeg): Finger ziehen legt Feld für Feld, auf einem Weg
+   derselben Sorte anfangen nimmt ihn wieder weg (halber Preis zurück). Nachbarn –
+   auch die festen Hofwege (FPATH) – bestimmen, wo ein Rand gezeichnet wird. */
+let FWEG_C = { key: "", objs: null, map: new Map() };
+function farmWegMap() {
+  const objs = S.farm ? S.farm.objs : [], now = typeof performance !== "undefined" ? performance.now() : 0;
+  /* in einem Zug (Szene abgleichen, Haustiere, Laufwege) nicht jedes Mal neu zählen */
+  if (FWEG_C.objs === objs && FWEG_C.len === objs.length && now - FWEG_C.at < 40) return FWEG_C.map;
+  let h = 0, n = 0;
+  for (const o of objs) if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg) { h = (h * 31 + o.x * 97 + o.z * 13 + o.k.length) % 1e9; n++; }
+  const key = objs.length + ":" + n + ":" + h;
+  if (FWEG_C.key === key && FWEG_C.objs === objs) { FWEG_C.at = now; FWEG_C.len = objs.length; return FWEG_C.map; }
+  const m = new Map();
+  for (const o of objs) if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg) m.set(o.x + "," + o.z, o);
+  FWEG_C = { key, objs, map: m, at: now, len: objs.length };
+  return m;
+}
+function farmWegAt(x, z) { return farmWegMap().get(x + "," + z) || null; }
+/* Weg auf diesem Feld? Dekoweg oder fester Hofweg */
+function farmWegTile(x, z) { if (farmWegAt(x, z)) return true; const P = FSITE.path || FPATH, k = fgi(x, z); return k >= 0 && P.has(k); }
+/* Nachbarn: 1 Norden, 2 Osten, 4 Süden, 8 Westen */
+function wegMask(o) { return (farmWegTile(o.x, o.z - 1) ? 1 : 0) | (farmWegTile(o.x + 1, o.z) ? 2 : 0) | (farmWegTile(o.x, o.z + 1) ? 4 : 0) | (farmWegTile(o.x - 1, o.z) ? 8 : 0); }
+const wegBack = k => Math.round(FDECO[k].price * 0.5);
+/* ein Feld legen (andere Sorte wird getauscht) – W zählt mit (gelegt, Kosten) */
+function farmWegLay(tx, tz, k, W) {
+  const D = FDECO[k];
+  if (!D || !D.weg) return false;
+  const old = farmWegAt(tx, tz);
+  if (old && old.k === k) return false;
+  if (old) {
+    if (S.money + wegBack(old.k) < D.price) { W.poor = true; return false; }
+    farmWegDel(old, W);
+  } else {
+    if (!farmFits(tx, tz, 1, 1, null, "deco", k)) return false;
+    if (S.money < D.price) { W.poor = true; return false; }
+  }
+  S.money -= D.price; S.expense += D.price;
+  W.spent += D.price; W.n++;
+  farmAddObj({ t: "deco", k, x: tx, z: tz, r: 0 });
+  return true;
+}
+function farmWegDel(o, W) {
+  if (!o) return false;
+  const back = wegBack(o.k);
+  S.money += back;
+  if (W) { W.back += back; W.del++; }
+  S.farm.objs = S.farm.objs.filter(x => x !== o);
+  return true;
+}
+/* Wegebau fertig: Kassenbuch, EP, Notizbuch */
+function farmWegFinish(W) {
+  if (!W) return;
+  if (W.spent) logMoney("farm", "Dekowege · " + W.n + " Felder gelegt", -W.spent);
+  if (W.back) logMoney("farm", "Dekowege · " + W.del + " Felder zurückgegeben", W.back);
+  if (W.n) { farmXP(Math.max(1, Math.round(W.n / 4))); farmEvent("buy:deco"); }
+}

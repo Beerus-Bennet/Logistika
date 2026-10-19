@@ -177,7 +177,11 @@ function objMesh(o) {
     case "steg": return fmesh("steg", FFM.steg);
     case "pot": return fmesh("potFrame", FFM.potFrame);
     case "mline": return fmesh("mline:" + o.kind, () => FFM.mlineBase(o.kind));
-    case "deco": return fmesh("deco:" + o.k + ":" + (o.arg || 0), () => FM[o.k] ? FM[o.k](o.arg || 1) : FDECO[o.k] && FDECO[o.k].cos ? FWM.cosDeco(o.k) : FFM[o.k]());
+    case "deco": {
+      /* v71: Dekoweg – Rand nur dort, wo kein Nachbarweg anschließt */
+      if (FDECO[o.k] && FDECO[o.k].weg && typeof wegMask === "function") { const m = o.id != null ? wegMask(o) : 10; return fmesh("weg:" + o.k + ":" + m, () => FWM.decoWeg(o.k, m)); }
+      return fmesh("deco:" + o.k + ":" + (o.arg || 0), () => FM[o.k] ? FM[o.k](o.arg || 1) : FDECO[o.k] && FDECO[o.k].cos ? FWM.cosDeco(o.k) : FFM[o.k]());
+    }
   }
   return typeof worldObjMesh === "function" ? worldObjMesh(o) : null;
 }
@@ -186,7 +190,7 @@ const OBJ_H = {
   coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
   kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
 };
-function objH(o) { return o.t === "house" && FSITE.kind === "fisch" ? 4.4 : OBJ_H[o.t] || 1; }
+function objH(o) { return o.t === "house" && FSITE.kind === "fisch" ? 4.4 : o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg ? 0.12 : OBJ_H[o.t] || 1; }
 /* Hütte in der Ecke eines Auslaufs: Modell, Lage und die Ecke, die Tiere meiden */
 const PEN_HUT = {
   coop:  { key: "coopHut",      fn: () => FM.coopHut(),      x: 1.05, z: 0.85, hx: 2.15, hz: 1.75 },
@@ -839,12 +843,16 @@ function bindFarmInput(cv) {
     FV.focusId = (FV.focusId || 0) + 1; FV.focusing = false;
     if (FV.ptr.size === 2) {
       clearTimeout(FV.lp);
+      if (FV.weg && FV.gesture && FV.gesture.kind === "weg") wegUndoStroke();
       const [a, b] = [...FV.ptr.values()];
-      FV.gesture = { kind: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y), dist0: FV.R.cam.dist };
+      /* v71: im Wegebau verschieben zwei Finger auch die Karte */
+      FV.gesture = { kind: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y), dist0: FV.R.cam.dist, c0: FV.weg ? groundAt((a.x + b.x) / 2, (a.y + b.y) / 2) : null };
       return;
     }
     if (FV.ptr.size > 2) return;
     FV.gesture = { kind: "tap", t0: e.timeStamp, x0: x, y0: y, g0: groundAt(x, y), lastT: performance.now(), lx: x, ly: y };
+    /* v71: Wegebau – ein Finger legt (oder nimmt) Weg, Feld für Feld */
+    if (FV.weg && !FV.weg.pan) { clearTimeout(FV.lp); FV.gesture = { kind: "weg" }; wegStroke(x, y, true); return; }
     /* Bauen: am Objekt anfassen und schieben */
     if (FV.place) {
       const tt = tileAt(x, y), P = FV.place;
@@ -856,7 +864,7 @@ function bindFarmInput(cv) {
     /* lange drücken: verschieben */
     clearTimeout(FV.lp);
     FV.lp = setTimeout(() => {
-      if (!FV.gesture || FV.gesture.kind !== "tap" || FV.place || FV.tool) return;
+      if (!FV.gesture || FV.gesture.kind !== "tap" || FV.place || FV.tool || FV.weg) return;
       const o = pickObj(x, y);
       if (o && !FFIXED.has(o.t) && !o.fix) { FV.gesture = null; startMove(o); }
     }, 520);
@@ -874,8 +882,10 @@ function bindFarmInput(cv) {
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       FV.R.cam.dist = G.dist0 * (G.d0 / Math.max(20, d));
       clampCam();
+      if (G.c0) { const g = groundAt((a.x + b.x) / 2, (a.y + b.y) / 2); if (g) { FV.R.cam.tx += G.c0[0] - g[0]; FV.R.cam.tz += G.c0[2] - g[2]; clampCam(); } }
       return;
     }
+    if (G.kind === "weg") { wegStroke(x, y, false); return; }
     if (G.kind === "ghost") {
       const tt = tileAt(x, y);
       if (tt) movePlace(tt[0] - G.ox, tt[1] - G.oz);
@@ -906,6 +916,7 @@ function bindFarmInput(cv) {
     if (!G) return;
     if (G.kind === "pan") { if (performance.now() - G.lastT > 90) FV.vel = [0, 0]; return; }
     FV.vel = [0, 0];
+    if (G.kind === "weg") { if (FV.weg) { FV.weg.last = null; if (FV.weg.poor) { FV.weg.poor = false; toast("Das Geld reicht nicht für mehr Weg.", "warn"); } } return; }
     if (G.kind === "tap" && e.timeStamp - G.t0 < 700) farmTap(p.x, p.y);
   };
   cv.addEventListener("pointerup", up);
@@ -920,6 +931,7 @@ function bindFarmInput(cv) {
 
 /* ------------------------------ Antippen ------------------------------ */
 function farmTap(x, y) {
+  if (FV.weg) return;                                   /* v71: im Wegebau zählt nur das Ziehen */
   if (FV.place) {
     const tt = tileAt(x, y);
     if (tt) movePlace(tt[0] - Math.floor(FV.place.w / 2), tt[1] - Math.floor(FV.place.d / 2));
@@ -1501,6 +1513,11 @@ function renderFarmPop() {
         <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>${A.fish ? "Gehege" : "Stall"}</b><small>Platz & Tiere</small></div>
         ${o.animals.length < A.max ? `<div class="ftool" data-act="buyani">${typeof aniIc === "function" && !A.fish ? aniIc(pi.kind) : `<span class="ic">${A.i}</span>`}<b>${esc(A.young || A.n)}</b><small>${eur(animalPrice(pi.kind))}</small></div>` : ""}
       </div>${A.mast ? `<div class="fp-tip">Nach ${A.mast} Mahlzeiten antippen – ab zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je ${esc(A.n)}.</div>` : ""}`;
+  } else if (P.kind === "deco" && FDECO[o.k].weg) {
+    const D = FDECO[o.k];
+    h = `<div class="fp-h">🛤️ ${esc(D.n)}<small>Haustiere spazieren hier, das Team läuft hier schneller</small></div><div class="fp-row">
+      <div class="ftool" data-act="wegbau"><span class="ic">🖌️</span><b>Wege bauen</b><small>ziehen</small></div>
+      <div class="ftool" data-act="sell"><span class="ic">🗑️</span><b>Entfernen</b><small>+${eur(Math.round(D.price * 0.5))}</small></div></div>`;
   } else if (P.kind === "deco") {
     const D = FDECO[o.k];
     h = `<div class="fp-h">${D.i} ${esc(D.n)}</div><div class="fp-row">
@@ -1518,6 +1535,7 @@ function renderFarmPop() {
     if (a === "pen") { closeFarmPop(); openPen(o); }
     if (a === "buyani") { closeFarmPop(); buyAnimalInto(penKind(o), o); }
     if (a === "move") { closeFarmPop(); startMove(o); }
+    if (a === "wegbau") { closeFarmPop(); startWeg(o.k); }
     if (a === "sell") { const [x, y] = objScreen(o); if (farmRemove(o)) { coinFly(x, y, Math.round(FDECO[o.k].price * 0.5)); closeFarmPop(); farmSyncScene(); save(); } }
     if (typeof worldPopAct === "function") worldPopAct(a, o);
   });
@@ -1636,6 +1654,93 @@ function applyToolTo(o, T) {
 }
 
 /* ----------------------------- Bauen & Schieben ----------------------- */
+/* ------------------------------ v71: Wegebau ------------------------------
+   Aus dem Deko-Laden (oder vom Weg-Popup): ein Finger zieht Weg, Feld für Feld –
+   auch über Ecken (der Strich geht nur gerade Schritte, damit alles verbunden ist).
+   Fängt der Strich auf einem Weg derselben Sorte an, nimmt er ihn weg. Zwei Finger
+   oder ✋ bewegen die Karte, ✓ beendet. Kasse und EP am Ende (farmWegFinish). */
+function startWeg(k) {
+  if (!FV.R || !FDECO[k] || !FDECO[k].weg) return;
+  if (FV.place) cancelPlace();
+  if (FV.weg) endWeg(true);
+  closeFarmPop();
+  FV.weg = { k, n: 0, del: 0, spent: 0, back: 0, pan: false, last: null, mode: null, sfx: 0 };
+  renderWegBar();
+  FV.touchAt = performance.now();
+}
+function endWeg(silent) {
+  const W = FV.weg;
+  if (!W) return;
+  FV.weg = null;
+  farmWegFinish(W);
+  renderPlaceBar();
+  renderFarmUI();
+  if (W.n || W.del) {
+    save();
+    if (!silent) toast("🛤️ " + (W.n ? W.n + " " + (W.n === 1 ? "Feld" : "Felder") + " Weg gelegt (−" + eur(W.spent) + ")" : "") + (W.n && W.del ? ", " : "") + (W.del ? W.del + " weggenommen (+" + eur(W.back) + ")" : ""), "ok");
+  }
+}
+function renderWegBar() {
+  const el = $("#farmPlace"), W = FV.weg;
+  if (!el || !W) return;
+  const D = FDECO[W.k], lv = flv();
+  document.body.classList.add("fplace-on");
+  const kinds = Object.keys(FDECO).filter(k => FDECO[k].weg && FDECO[k].lv <= lv && (!FDECO[k].s || FDECO[k].s === FSITE.kind));
+  const done = W.n || W.del ? W.n + " gelegt" + (W.del ? " · " + W.del + " weg" : "") + " · " : "";
+  el.className = "on weg";
+  el.innerHTML = `<div class="fpl-t">🛤️ ${esc(D.n)} · ${eur(D.price)} je Feld<small>${done}${W.pan ? "Karte bewegen · ✋ nochmal: weiterbauen" : "Ziehen: Weg legen · auf dem Weg starten: wegnehmen"}</small>
+      <div class="fwk">${kinds.map(k => `<button class="${k === W.k ? "on" : ""}" data-wk="${k}" title="${esc(FDECO[k].n)}">${FDECO[k].i}</button>`).join("")}</div></div>
+    <button class="fpl-b${W.pan ? " on" : ""}" id="fwPan" title="Karte bewegen">✋</button>
+    <button class="fpl-b ok" id="fwOk" title="Fertig">✓</button>`;
+  $$("#farmPlace [data-wk]").forEach(b => b.onclick = () => { W.k = b.dataset.wk; W.pan = false; sfx("tap"); renderWegBar(); });
+  $("#fwPan").onclick = () => { W.pan = !W.pan; sfx("tap"); renderWegBar(); };
+  $("#fwOk").onclick = () => endWeg();
+}
+function wegStroke(x, y, first) {
+  const W = FV.weg, tt = tileAt(x, y);
+  if (!W || !tt) return;
+  if (first) { const e = farmWegAt(tt[0], tt[1]); W.mode = e && e.k === W.k ? "del" : "lay"; W.last = null; W.sk = { t0: performance.now(), ops: [] }; }
+  const pts = [];
+  if (!W.last) pts.push([tt[0], tt[1]]);
+  else {
+    /* nur gerade Schritte – sonst hängen schräge Striche nur an den Ecken zusammen */
+    let cx = W.last[0], cz = W.last[1], g = 0;
+    while ((cx !== tt[0] || cz !== tt[1]) && g++ < 80) {
+      if (Math.abs(tt[0] - cx) >= Math.abs(tt[1] - cz)) cx += Math.sign(tt[0] - cx); else cz += Math.sign(tt[1] - cz);
+      pts.push([cx, cz]);
+    }
+  }
+  W.last = [tt[0], tt[1]];
+  let ch = 0;
+  pts.forEach(([tx, tz]) => {
+    const old = farmWegAt(tx, tz);
+    const ok = W.mode === "del" ? farmWegDel(old, W) : farmWegLay(tx, tz, W.k, W);
+    if (!ok) return;
+    ch++;
+    if (W.sk) W.sk.ops.push(W.mode === "del" ? { del: old } : { o: farmWegAt(tx, tz), old });
+  });
+  if (!ch) return;
+  farmSyncScene();
+  const now = performance.now();
+  if (now - W.sfx > 90) { W.sfx = now; sfx(W.mode === "del" ? "pop" : "tap"); }
+  const g = tt[2];
+  if (g) FV.R.burst({ x: g[0], y: 0.1, z: g[2], n: 4, col: [[0.85, 0.78, 0.62, 1]], speed: 0.6, up: 0.8, size: 0.05, shape: 1 });
+  renderWegBar();
+}
+/* kommt gleich ein zweiter Finger (Karte bewegen), war der erste Strich nicht gemeint: zurück */
+function wegUndoStroke() {
+  const W = FV.weg, sk = W && W.sk;
+  if (!sk || performance.now() - sk.t0 > 450) return;
+  const F = S.farm;
+  sk.ops.slice().reverse().forEach(op => {
+    if (op.del) { F.objs.push(op.del); const b = wegBack(op.del.k); S.money -= b; W.back -= b; W.del--; return; }
+    F.objs = F.objs.filter(x => x !== op.o);
+    const p = FDECO[op.o.k].price; S.money += p; S.expense -= p; W.spent -= p; W.n--;
+    if (op.old) { F.objs.push(op.old); const b = wegBack(op.old.k); S.money -= b; W.back -= b; W.del--; }
+  });
+  W.sk = null; W.last = null;
+  farmSyncScene(); renderWegBar();
+}
 function startPlace(spec, x, z) {
   const R = FV.R;
   if (!R) return;
@@ -1745,6 +1850,9 @@ function renderPlaceBar() {
   const el = $("#farmPlace");
   if (!el) return;
   const P = FV.place;
+  /* v71: Meldungen weichen der Leiste nach oben aus (Bauen und Wegebau) */
+  document.body.classList.toggle("fplace-on", !!(P || FV.weg));
+  if (!P && FV.weg) return renderWegBar();
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
   const rot = !noRotate(P.proto.t);
   el.className = "on";
@@ -2209,7 +2317,7 @@ function openFarmShop(cat) {
     items = Object.keys(FDECO).filter(k => (!FDECO[k].s || FDECO[k].s === FSITE.kind) && (!FDECO[k].cos || farmCos(FDECO[k].cos))).map(k => {
       const D = FDECO[k], lock = D.lv > lv;
       const ic = typeof thumbSpan === "function" ? thumbSpan("deco:" + k + ":" + (D.arg || 0), decoModel(k), D.i, lock) : `<span class="ic">${lock ? "🔒" : D.i}</span>`;
-      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}>${ic}<b>${shyName(D.n)}</b><small>${lock ? "ab Level " + D.lv : D.cos ? "🍀 gehört dir" : eur(D.price)}${D.water ? " · im Wasser" : ""}</small></button>`;
+      return `<button class="fshop${lock ? " lock" : S.money < D.price ? " poor" : ""}${D.weg ? " weg" : ""}" data-deco="${k}" ${lock ? "disabled" : ""}>${ic}<b>${shyName(D.n)}</b><small>${lock ? "ab Level " + D.lv : D.cos ? "🍀 gehört dir" : eur(D.price) + (D.weg ? " je Feld" : "")}${D.water ? " · im Wasser" : ""}</small>${D.weg ? `<p>Weg – mit dem Finger ziehen</p>` : ""}</button>`;
     }).join("");
   } else if (cat === "werkzeug") {
     items = Object.keys(FTOOLS).filter(id => id !== "axe1").map(id => {
@@ -2240,6 +2348,7 @@ function openFarmShop(cat) {
     const k = b.dataset.deco, D = FDECO[k];
     if (S.money < D.price) return toast("Dafür fehlen " + eur(D.price - S.money) + ".", "warn");
     closeFarmSheet();
+    if (D.weg) return startWeg(k);                      /* v71: Wege werden gezogen, nicht einzeln gesetzt */
     startPlace({ proto: { t: "deco", k, arg: D.arg, r: 0 }, build: { t: "deco", k }, price: D.price, label: D.n });
   });
   $$("#farmSheetIn [data-ftool]").forEach(b => b.onclick = () => {
@@ -2593,7 +2702,8 @@ function farmHide() {
   closeFarmPop();
   if (typeof MG !== "undefined" && MG.on) MG.close({ ok: false });
   if (FV.place) cancelPlace();
-  document.body.classList.remove("tab-farm");
+  if (FV.weg) endWeg();
+  document.body.classList.remove("tab-farm", "fplace-on");
 }
 /* nach außen: Zustand geändert (Lieferung, Kauf aus anderem Reiter) */
 function farmRefresh() { if (FV.on) { farmSyncScene(); renderFarmUI(); } }
