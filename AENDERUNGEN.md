@@ -1,5 +1,34 @@
 # Änderungen – kurz für den Kollegen
 
+## v72 (aufbauend auf v71) – Brücke, Wegende am Bach, Straßeneinmündungen
+
+Drei Stellen mit unsauberen Wegverbindungen (Screenshots vom 19.10.), alle in `worldview.js`, `woodmodels.js`, `erbe.js`:
+
+1. **Brücke im Wald** (`woodmodels.js` `bridge`, `erbe.js` `FWORLD.paths[1]`, `worldview.js`):
+   - Die alte Brücke war 3,1 Felder lang – kürzer als Bach plus Ufer – und lag schräg (Wegrichtung, Bach kreuzte im
+     45°-Winkel). Der Belag verschwand halb im Ufer, der Weg lief unter dem Brückenende durch.
+   - Jetzt: Brücke 5,8 lang, **leicht gewölbt** (Enden auf Wegniveau, Mitte 0,3 höher), Längsbalken folgen der
+     Wölbung, Pfosten und Geländer ebenso, an beiden Enden ein Querbalken als Auflager. Planken 2,0 breit (Weg 1,8).
+   - **Hauptweg läuft gerade über die Brücke** (x = −33,8, Nord–Süd): Die Wegpunkte von Weg 1 wurden neu gelegt,
+     die Abzweige (Weg 3 nach Osten, Weg 4 nach Westen) sitzen jetzt 3 bzw. 5 Felder vom Brückenende entfernt.
+     Die Brücke ist über `ry = π/2` in die Wegachse gedreht. Cache-Schlüssel `wbridge2`.
+2. **Waldweg am Bach** (Westweg, `FWORLD.paths[2]`): Er endete mitten im Wasser; die „lose Ende“-Lichtung mit Bank
+   lag im Bach. Jetzt endet er **3,6 Felder vor dem Bach** (nahe am Bach gibt es keine lose-Ende-Lichtung mehr:
+   `loose()` prüft `distLine(creek) > 7`), läuft auf einen neuen **Angelsteg** (`FWM.jetty`, 4,2 lang) und eine Bank
+   steht am Ufer mit Blick aufs Wasser.
+3. **Wege an der Straße** (`woodmodels.js` `forestPath` mit Option `mouth`, neu `mouthFillet`):
+   - Die Wege endeten 0,03–0,14 Felder vor dem Bordstein (eckig abgeschnitten, Rand lief als Keil aus).
+     Jetzt enden alle genau an der Bordsteinkante (`z = 17,48` nördlich, `19,52` südlich) und **weiten sich mit
+     zwei Viertelkreis-Ausrundungen** (Radius 1,1) zur Straße auf – Belag und Rand (`ey` unter allen Wegflächen).
+     Schmaler Überlapp entlang der Wegkante, damit keine Haarrisse durchblitzen.
+   - Betrifft: Feldweg vom Westtor (x = −31), Hauptweg Ost (x = 40) und der Uferweg gegenüber, Abzweig zum See (x = 5).
+   - Der Weg zum See (`LAKE_WAY1`, neu, auch in `team.js` `navBuild` und im „See“-Staubspur) beginnt am Bordstein,
+     läuft 1,7 Felder gerade und biegt dann in einem weiten Bogen nach Westen; der Ostast zweigt bei (5 | 21) ab.
+     Letzte Wegpunkte vor der Straße liegen auf einer Geraden, damit die Ausrundung sauber ansetzt.
+- Navigation (`navBuild`): Wege und Brücke bleiben begehbar; Weglängen vom Hof zu Sägewerk, Altem Wald, Ufer und See
+  geprüft (gleich wie vorher, ±3 Felder).
+- `index.html`/`sw.js`: v72.
+
 ## v71 (aufbauend auf v70) – Weganschlüsse und Dekowege
 
 **Wege sauber verbunden**

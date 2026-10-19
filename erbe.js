@@ -35,18 +35,20 @@ const FWORLD = {
   /* Weg vom Westtor zum Sägewerk, von dort in den Wald (Hauptweg nach Norden, Abzweig nach Westen);
      der letzte ist der Feldweg vom Westtor hinunter zur Straße (Holzlaster).
      v70: der Weg von der Brücke nach Osten läuft am Teich vorbei bis zur Straße
-     v71: … und trifft sie senkrecht bei x = 40, genau gegenüber vom Uferweg (Kreuzung) */
+     v71: … und trifft sie senkrecht bei x = 40, genau gegenüber vom Uferweg (Kreuzung)
+     v72: der Hauptweg läuft gerade über die Brücke (x = −33,8); der Weg nach Westen endet vor dem Bach (Steg);
+     alle Wege enden genau am Bordstein der Straße (z = 17,48) */
   paths: [
     [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
-    [[-41, -54], [-40, -64], [-36, -72], [-32, -80], [-34, -92], [-42, -104], [-50, -116]],
-    [[-54, -42], [-64, -42], [-72, -48], [-82, -52], [-90, -56]],
-    [[-36, -72], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.8, 11.2], [40.3, 14.6], [40, 16.5], [40, 17.47]],
-    [[-32, -80], [-46, -82], [-60, -78], [-70, -72]],
-    [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.4]]
+    [[-41, -54], [-40, -63], [-37.2, -67.8], [-34.2, -70.6], [-33.8, -73.5], [-33.8, -76.4], [-33.8, -79.3], [-33.8, -84], [-34, -92], [-42, -104], [-50, -116]],
+    [[-54, -42], [-64, -42], [-72, -48], [-79.5, -50.6], [-83.5, -52.4], [-85.5, -54.2], [-86, -55.6]],
+    [[-34.2, -70.6], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.8, 11.2], [40.3, 14.6], [40, 16.2], [40, 17.48]],
+    [[-33.8, -84], [-46, -82], [-60, -78], [-70, -72]],
+    [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.48]]
   ],
   /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg */
   creek: [[18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60]],
-  bridge: [-33.8, -76.4],
+  bridge: [-33.8, -76.4],   /* Mitte der Brücke – Gehrichtung Nord–Süd */
   clearings: [[-24, -48, 6], [-60, -54, 6.5], [-6, -76, 5.5], [-78, -84, 6], [-52, -96, 5]],
   rocks: [-68, -98, 9],
   /* Nachbars Felder (Mitte x, z, Breite, Tiefe): im Westen Getreide, im Osten Wiese */

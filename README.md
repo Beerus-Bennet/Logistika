@@ -293,7 +293,9 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Torpfeilern. Die Blase über arbeitenden Gebäuden ist deckend, der
   Ladebalken hat runde Enden. Seit v71 endet der Waldweg am Westtor gerade an
   der Mauer (dahinter Pflaster, kein Laub darauf), und an der Straße im Osten
-  treffen sich Teichweg und Uferweg senkrecht zu einer Kreuzung.
+  treffen sich Teichweg und Uferweg senkrecht zu einer Kreuzung. Seit v72 liegt im Wald eine längere, leicht gewölbte
+  Brücke genau in der Wegachse, der Westweg endet vor dem Bach an einem Angelsteg,
+  und alle Wege münden mit runden Ecken am Bordstein in die Straße.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt

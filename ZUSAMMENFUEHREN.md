@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v72 – Brücke, Wegende am Bach, Straßeneinmündungen (auf v71)
+
+| Thema | Wo |
+|---|---|
+| Neue gewölbte Brücke `FWM.bridge` (5,8 lang), Hauptweg gerade darüber (`FWORLD.paths[1]`, [3], [4] neu gelegt) | `woodmodels.js`, `erbe.js`, `worldview.js` |
+| Westweg endet vor dem Bach mit Angelsteg `FWM.jetty` + Bank | `erbe.js` `paths[2]`, `worldview.js` |
+| `forestPath(…, { mouth: [Anfang, Ende] })` + `mouthFillet` = Ausrundung an der Straße; Wegenden am Bordstein (17,48 / 19,52) | `woodmodels.js`, `erbe.js`, `worldview.js` |
+| `LAKE_WAY1` (neu) wie `LAKE_WAY2` global in `worldview.js`, `team.js` nutzt beide | `worldview.js`, `team.js` |
+
 ## Stand v71 – Weganschlüsse und Dekowege (auf v70)
 
 | Thema | Wo |

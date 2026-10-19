@@ -511,6 +511,28 @@ const FWM = (() => {
       });
     });
   }
+  /* v72: Ausrundung an einer Einmündung. p = Wegende am Bordstein, q = Punkt davor (gibt die Laufrichtung).
+     Je Seite ein Viertelkreis-Zwickel in Wegfarbe (Höhe y) und darunter ein Randstreifen (Höhe yE) entlang des Bogens */
+  function mouthFillet(b, p, q, W, y, yE, r) {
+    const dx = p[0] - q[0], dz = p[1] - q[1], l = Math.hypot(dx, dz) || 1, tx = dx / l, tz = dz / l, nx = -tz, nz = tx;
+    const hw = W / 2, rim = hw * 0.25, seg = 8, cu = -r, cv = hw + r;
+    const up3 = (A, B, C, col) => { const c = (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]); if (c > 0) b.tri(A, B, C, col); else b.tri(A, C, B, col); };
+    [-1, 1].forEach(sd => {
+      const P3 = (u, v, yy) => [p[0] + tx * u + nx * v * sd, yy, p[1] + tz * u + nz * v * sd];
+      const arc = (rr, yy, a) => P3(cu + rr * Math.cos(a), cv + rr * Math.sin(a), yy);
+      const K = P3(0, hw, y);
+      /* schmaler Überlapp entlang der Wegkante: sonst blitzt der dunkle Rand an der Naht zum Weg durch */
+      const o1 = P3(-r - 0.02, hw - 0.05, y + 0.0003), o2 = P3(0, hw - 0.05, y + 0.0003), o3 = P3(0, hw + 0.03, y + 0.0003), o4 = P3(-r - 0.02, hw + 0.03, y + 0.0003);
+      up3(o1, o2, o3, 0xb69a6a); up3(o1, o3, o4, 0xb69a6a);
+      for (let i = 0; i < seg; i++) {
+        const a0 = -Math.PI / 2 + Math.PI / 2 * i / seg, a1 = -Math.PI / 2 + Math.PI / 2 * (i + 1) / seg;
+        up3(K, arc(r, y, a0), arc(r, y, a1), 0xb69a6a);
+        /* Rand: Ring innerhalb des Bogens (unter allen Wegflächen) */
+        up3(arc(r, yE, a0), arc(r - rim, yE, a0), arc(r - rim, yE, a1), 0x8f7c55);
+        up3(arc(r, yE, a0), arc(r - rim, yE, a1), arc(r, yE, a1), 0x8f7c55);
+      }
+    });
+  }
   /* Polylinie glätten (Catmull-Rom), damit Wege und Bach weich laufen */
   function smoothLine(pts, n) {
     if (pts.length < 3) return pts;
@@ -542,6 +564,9 @@ const FWM = (() => {
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
     b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true, o.ey));
+    /* v72: Einmündung in die Straße – das Wegende liegt genau am Bordstein (o.mouth = [Anfang, Ende]) und
+       weitet sich mit zwei runden Ecken (Radius o.mouthR) zur Straße hin auf, statt eckig abzubrechen */
+    (o.mouth || []).forEach((on, k) => { if (on) mouthFillet(b, k ? P[P.length - 1] : P[0], k ? P[P.length - 2] : P[1], W, y, o.ey != null ? o.ey : y - 0.004, o.mouthR || 1.1); });
     /* Laub und Steinchen auf dem Weg – v71: nicht auf Hofpflaster oder Straße (o.leafOk), abschaltbar (o.leaves) */
     for (let i = 0; i < P.length && o.leaves !== false; i++) {
       const p = P[Math.floor(rnd() * P.length)], lx = p[0] + (rnd() - 0.5) * 1.2, lz = p[1] + (rnd() - 0.5) * 1.2, c = rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, ry = rnd() * 3;
@@ -566,12 +591,41 @@ const FWM = (() => {
     ribbon(b, P, 2.3, 0x3f8fc0, 0.03);
     return b;
   }
+  /* v72: Brücke als Teil des Weges. Länge 5,8 (vorher 3,1 – kürzer als Bach plus Ufer), leicht gewölbt:
+     die Enden liegen auf Wegniveau und gehen mit Rampe in den Belag über; Balken, Pfosten und Geländer folgen
+     der Wölbung; an beiden Enden ein Querbalken als Auflager. Lokale x-Achse = Gehrichtung. */
   function bridge() {
     G3.seed(3920);
     const b = new MB();
-    b.noise(0.1, () => { for (let i = 0; i < 9; i++) b.box(0.32, 0.08, 2.2, i % 2 ? C.wood : C.woodL, { x: -1.35 + i * 0.34, y: 0.22 }); });
-    [-1.5, 1.5].forEach(x => [-1.05, 1.05].forEach(z => b.box(0.1, 0.75, 0.1, C.woodD, { x, z })));
-    [-1.05, 1.05].forEach(z => b.box(3.1, 0.07, 0.07, C.woodD, { y: 0.68, z }));
+    const HL = 2.9, A = 0.3, h = x => 0.03 + A * (1 - (x / HL) * (x / HL)), sl = x => -2 * A * x / (HL * HL);
+    const n = 19, pitch = 2 * HL / n;
+    b.noise(0.1, () => { for (let i = 0; i < n; i++) { const x = -HL + (i + 0.5) * pitch; b.box(pitch - 0.02, 0.07, 2.0, i % 2 ? C.wood : C.woodL, { x, y: h(x), rz: Math.atan(sl(x)) }); } });
+    /* Längsbalken unter dem Belag, folgen der Wölbung */
+    [-0.88, 0.88].forEach(z => { for (let i = 0; i < n; i += 1) { const x = -HL + (i + 0.5) * pitch; b.box(pitch + 0.02, 0.1, 0.12, C.woodD, { x, y: h(x) - 0.1, z, rz: Math.atan(sl(x)) }); } });
+    /* Auflager: Querbalken (Stamm) an den Enden */
+    [-HL - 0.02, HL + 0.02].forEach(x => b.cyl(0.13, 0.13, 2.1, 8, C.woodD, { x, y: 0.1, z: -1.05, rx: Math.PI / 2, top: 0x7a5a38 }));
+    /* Pfosten und Handlauf */
+    const PX = [-2.6, -1.3, 0, 1.3, 2.6];
+    [-1.02, 1.02].forEach(z => {
+      PX.forEach(x => b.box(0.1, 0.62, 0.1, C.woodD, { x, y: h(x) - 0.02, z }));
+      for (let i = 0; i < PX.length - 1; i++) {
+        const xa = PX[i], xb = PX[i + 1], ya = h(xa) + 0.58, yb = h(xb) + 0.58, len = Math.hypot(xb - xa, yb - ya);
+        const mx = (xa + xb) / 2, my = (ya + yb) / 2, ang = Math.atan2(yb - ya, xb - xa);
+        b.box(len + 0.08, 0.07, 0.07, C.woodD, { x: mx, y: my, z, rz: ang, c: true });
+        b.box(len, 0.05, 0.05, C.woodD, { x: mx, y: my - 0.26, z, rz: ang, c: true });
+      }
+    });
+    return b;
+  }
+  /* v72: kleiner Angelsteg am Ende des Westwegs – der Weg läuft auf den Steg und endet im Bach, nicht mehr im Wasser.
+     Lokale x-Achse = Länge (vom Ufer ins Wasser) */
+  function jetty() {
+    G3.seed(3950);
+    const b = new MB(), L = 4.2, n = 14, pitch = L / n;
+    b.noise(0.1, () => { for (let i = 0; i < n; i++) b.box(pitch - 0.03, 0.06, 1.1, i % 2 ? C.wood : C.woodL, { x: -L / 2 + (i + 0.5) * pitch, y: 0.11 }); });
+    [-0.4, 0.4].forEach(z => b.box(L, 0.09, 0.1, C.woodD, { y: 0.03, z }));
+    [-1, 1].forEach(sx => [-0.6, 0.6].forEach(z => b.box(0.1, 0.52, 0.1, C.woodD, { x: sx * (L / 2 - 0.12), z })));
+    [-0.6, 0.6].forEach(z => b.box(L - 0.2, 0.06, 0.06, C.woodD, { y: 0.52, z }));
     return b;
   }
   /* rot-weiße Schranke an gesperrten Wegen, mit Schild */
@@ -1881,7 +1935,7 @@ const FWM = (() => {
   return {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, barrier,
+    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

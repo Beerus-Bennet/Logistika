@@ -32,7 +32,10 @@ const AREA_BAR = { wald: [-27.7, -9.5, Math.PI / 2], saege: [-41, -29.4, 0], alt
 /* v70: zweite Schranke am Ostweg (Teich → Wald), solange der Wald zu ist */
 const AREA_BAR2 = { wald: [35.1, -19.5, Math.PI / 4] };
 /* v71: Uferweg nach Osten, am Ende senkrecht hoch zur Straße (das Ende liegt unter dem Asphalt) */
-const LAKE_WAY2 = [[5, 21.6], [14, 22.1], [26, 22.1], [35, 21.9], [39.2, 21.1], [40, 20.2], [40, 19.45]];
+/* v72: Uferweg: beginnt am Bordstein (z = 19,52), biegt in sanftem Bogen nach Westen; der Ostast zweigt bei (5 | 21) ab
+   und trifft die Straße bei x = 40 senkrecht – beide enden am Bordstein und weiten sich mit runden Ecken auf */
+const LAKE_WAY1 = [[5, 19.52], [5, 21.2], [4.2, 21.95], [1.6, 22.2], [-2, 22.2], [-20, 21.9]];
+const LAKE_WAY2 = [[5, 21.0], [6.4, 21.75], [10, 22.1], [14, 22.1], [26, 22.1], [35, 21.9], [39.3, 21.3], [40, 20.5], [40, 19.52]];
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
@@ -276,11 +279,12 @@ function worldStatic() {
   /* v56: an den Toren des Sägewerks endet der Weg gerade am Zaun (keine runde Kappe im Hof) */
   FWORLD.paths.forEach((p, i) => {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
-    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q);
+    /* v72: kein „loses Ende“ mit Lichtung und Bank in der Nähe des Bachs (dort endet der Weg am Steg) */
+    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q) && distLine(q[0], q[1], FWORLD.creek) > 7;
     const a = p[0], e = p[p.length - 1], hof = q => inHofMax(q[0], q[1], 1.5);
     /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über.
        v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
-    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a) && !hof(a), !gate(e) && !road(e) && !hof(e)],
+    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a) && !hof(a), !gate(e) && !road(e) && !hof(e)], mouth: [road(a), road(e)],
       leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 }), {});
   });
   lines.merge(FWM.creekBank(FWORLD.creek), {});
@@ -289,14 +293,18 @@ function worldStatic() {
   const cw = new FM.MB();
   cw.merge(FWM.creekWater(FWORLD.creek), {}); cw.merge(FWM.creekWater(LAKE_CREEK), {});
   R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false }));
-  R.nodes.push(fnode(fmesh("wbridge", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: -Math.atan2(-8, 4) }));
-  R.nodes.push(fnode(fmesh("wbridge", FWM.bridge), { x: 52.6, y: 0, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }));
+  /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
+  R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: Math.PI / 2 }));
+  R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: 52.6, y: 0, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }));
+  /* v72: Wegende am Bach (Westweg): Steg ins Wasser und eine Bank am Ufer mit Blick auf den Bach */
+  R.nodes.push(fnode(fmesh("wjetty", FWM.jetty), { x: -86.05, y: 0, z: -57.7, ry: Math.PI / 2 }));
+  R.nodes.push(fnode(fmesh("wbench", FM.bench), { x: -83.2, y: 0, z: -55.4, ry: Math.PI }));
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Weg von der Straße hinunter zum See und am Ufer entlang */
-  st.merge(FWM.forestPath([[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], 1.6, { y: 0.026, ey: 0.019 }), {});
+  st.merge(FWM.forestPath(LAKE_WAY1, 1.6, { y: 0.026, ey: 0.019, caps: [false, true], mouth: [true, false], leafOk: (x, z) => z > 19.8 }), {});
   /* v71: der Uferweg biegt bei x = 40 zur Straße ab – genau gegenüber dem Weg vom Teich (Kreuzung) */
-  st.merge(FWM.forestPath(LAKE_WAY2, 1.6, { y: 0.029, ey: 0.02, caps: [true, false], leafOk: (x, z) => z > 19.8 }), {});
+  st.merge(FWM.forestPath(LAKE_WAY2, 1.6, { y: 0.029, ey: 0.02, caps: [false, false], mouth: [false, true], leafOk: (x, z) => z > 19.8 }), {});
   /* Nachbarfelder */
   const nf = (x, z, w, d, c1, c2) => {
     const m = new FM.MB();
@@ -944,7 +952,7 @@ function worldUnlock(id) {
   const sp = AREA_SPOTS[id];
   farmFocusXZ(A.reveal[0] + (id === "see" ? 2 : -4), A.reveal[1] + (id === "see" ? 6 : -4), id === "saege" ? 30 : 40, 1300);
   /* Staubspur: der Weg wird freigeschnitten */
-  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-41, -30], [-41, -42], [-41, -54]] : id === "altwald" ? FWORLD.paths[4].slice(2) : [[5, 19.4], [5, 21.6], [-20, 21.9]];
+  const path = id === "wald" ? FWORLD.paths[0].concat(FWORLD.paths[1].slice(0, 3)) : id === "saege" ? [[-41, -30], [-41, -42], [-41, -54]] : id === "altwald" ? FWORLD.paths[4].slice(2) : LAKE_WAY1;
   WV.dust = { pts: FM.MB ? FWM.smoothLine(path, 5) : path, i: 0, t: 0 };
   worldSyncBarriers();
   farmSyncScene(true);
