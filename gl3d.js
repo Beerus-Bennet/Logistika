@@ -420,10 +420,13 @@ const G3 = (() => {
     float a;
     if (vShape < 0.5) a = smoothstep(1.0, 0.55, length(vK));                 /* weicher Punkt */
     else if (vShape < 1.5) a = step(max(abs(vK.x), abs(vK.y)), 0.75);        /* Schnipsel */
-    else {                                                                    /* Herz */
+    else if (vShape < 2.5) {                                                  /* Herz */
       vec2 p = vK * 1.25; p.y = -p.y + 0.25;
       float x = p.x, y = p.y - sqrt(abs(x)) * 0.55;
       a = smoothstep(1.05, 0.9, x * x + y * y * 1.6);
+    } else {                                                                  /* v73: Funkel-Stern (vier Zacken, heller Kern) */
+      float d = sqrt(abs(vK.x)) + sqrt(abs(vK.y));
+      a = max(smoothstep(1.0, 0.6, d), smoothstep(0.5, 0.0, length(vK)));
     }
     if (a < 0.02) discard;
     o = vec4(vCol.rgb, vCol.a * a);

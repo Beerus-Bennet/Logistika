@@ -295,7 +295,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   der Mauer (dahinter Pflaster, kein Laub darauf), und an der Straße im Osten
   treffen sich Teichweg und Uferweg senkrecht zu einer Kreuzung. Seit v72 liegt im Wald eine längere, leicht gewölbte
   Brücke genau in der Wegachse, der Westweg endet vor dem Bach an einem Angelsteg,
-  und alle Wege münden mit runden Ecken am Bordstein in die Straße.
+  und alle Wege münden mit runden Ecken am Bordstein in die Straße. Seit v73 bringt ein Lieferwagen die „Besondere Lieferung“ als leuchtende Lootkiste direkt vor das Hoftor; beim Öffnen gibt es je nach Seltenheit (Gut bis Legendär) Lichtblitz, Münz-Fontäne, Banner und fliegende Belohnungen.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt

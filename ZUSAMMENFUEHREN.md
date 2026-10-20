@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v73 – Lootkiste „Besondere Lieferung“ (auf v72)
+
+| Thema | Wo |
+|---|---|
+| Kiste fest vor dem Südtor (`FPARCEL_AT`), Migration alter Lieferungen | `erbe.js` |
+| Seltenheiten `FPARCEL` + `farmParcelRoll`, neue Belohnung in `farmEvReward("lieferung")` | `erbe.js` |
+| Lieferwagen-Ankunft, Leuchtfeuer, Öffnungs-Animation (`worldParcel*`, `stepParcel*`) | `worldview.js` |
+| Modelle `lootCrate`, `lootLid`, `lootBeam`, `lootRing` | `woodmodels.js` |
+| Partikelform 3 (Stern) im Shader | `gl3d.js` |
+| `.lootbanner`, `.lootflash` | `style.css` |
+
 ## Stand v72 – Brücke, Wegende am Bach, Straßeneinmündungen (auf v71)
 
 | Thema | Wo |

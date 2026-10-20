@@ -1,5 +1,28 @@
 # Änderungen – kurz für den Kollegen
 
+## v73 (aufbauend auf v72) – Lootkiste: vor dem Hoftor, mit Lieferwagen und großer Öffnungs-Animation
+
+Zufallsereignis „Besondere Lieferung“ (`FEVENTS.lieferung`, 📦). Die Kiste lag als schlichter Karton mitten auf dem Hof
+(`farmParcelSpot` suchte ein freies Feld im Hof) und gab beim Antippen sofort die Belohnung.
+
+- **Platz** (`erbe.js` `FPARCEL_AT`, `farmParcelSpot`): feste Stelle **direkt vor dem Südtor** (`FGATE.x + 0.45 | 15.9`), also
+  immer sichtbar und nie im Weg von Gebäuden. Alte Spielstände mit laufender Lieferung werden in `erbeInit` einmal
+  umgesetzt (`data.v73`).
+- **Ankunft** (`worldview.js` `worldParcelIntro`/`stepParcelIntro`): Ein gelber Lieferwagen fährt auf der Straße an,
+  die Kiste hüpft in einem Bogen vor das Tor (Staub, Poltern), die Kamera folgt über `farmFocusXZ`.
+- **Leuchtfeuer** (`stepParcel`): goldene Lichtsäulen (`FWM.lootBeam`), pulsierende Ringe am Boden, Funken
+  (neue Partikelform 3 = Stern in `gl3d.js`), die Kiste wippt und hüpft alle ~3,4 s. Die Blase ist über der Kiste.
+- **Öffnen** (`worldParcelOpen`/`stepParcelOpen`): Wackeln → Deckel springt mit Überschlag auf (`FWM.lootLid`) →
+  Lichtblitz, Fontäne aus Münzen und Sternen, Ring-Schockwelle → Kiste löst sich in Funken auf.
+- **Seltenheit** (`erbe.js` `FPARCEL`, `farmParcelRoll`): Gut 58 % / Selten 28 % / Episch 11 % / Legendär 3 %. Höhere
+  Stufe = mehr Geschenke (Brot, Apfelkuchen, Bretter, Köder, Brennholz – nur was ins Lager passt), Geld
+  (Buchung „Besondere Lieferung“), 1–3 🍀 und mehr EP. Die Belohnung wird in `farmEvReward("lieferung")` genau
+  einmal vergeben, bevor die Animation startet.
+- **Belohnungs-Show**: farbiges Banner mit Seltenheit und Chips der Beute (`.lootbanner`, `.lootflash` in `style.css`),
+  danach fliegen Items, Münzen, 🍀 und EP nacheinander zur Leiste (`flyItem`, `coinFly`, `farmCloverFlyAt`, `xpFly`).
+- Die Schatzkiste (Grabungs-Minispiel) ist unverändert.
+- Neu: `woodmodels.js` `lootCrate`, `lootLid`, `lootBeam`, `lootRing`. `index.html`/`sw.js`: v73.
+
 ## v72 (aufbauend auf v71) – Brücke, Wegende am Bach, Straßeneinmündungen
 
 Drei Stellen mit unsauberen Wegverbindungen (Screenshots vom 19.10.), alle in `worldview.js`, `woodmodels.js`, `erbe.js`:

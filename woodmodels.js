@@ -628,6 +628,49 @@ const FWM = (() => {
     [-0.6, 0.6].forEach(z => b.box(L - 0.2, 0.06, 0.06, C.woodD, { y: 0.52, z }));
     return b;
   }
+  /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
+     Teil mit dem Gelenk im Ursprung (hinten), damit er beim Öffnen aufklappen kann. */
+  function lootCrate() {
+    G3.seed(3960);
+    const b = new MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
+    b.noise(0.1, () => {
+      b.box(0.9, 0.5, 0.62, w, { top: 0x3a2412 });
+      [0.12, 0.25, 0.38].forEach(y => b.box(0.905, 0.018, 0.625, wd, { y }));
+    });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.08, 0.52, 0.08, g, { x: sx * 0.41, z: sz * 0.27, y: -0.01 }));
+    [-0.22, 0.22].forEach(x => b.box(0.07, 0.505, 0.635, g, { x, y: -0.002 }));
+    b.box(0.15, 0.17, 0.04, gl, { y: 0.27, z: 0.325 });
+    b.box(0.05, 0.07, 0.05, 0x3a2412, { y: 0.32, z: 0.335 });
+    return b;
+  }
+  function lootLid() {
+    G3.seed(3961);
+    const b = new MB(), w = 0x9a6234, wl = 0xb9783f, g = 0xe2b33a, gl = 0xf6d24a;
+    b.noise(0.1, () => {
+      b.box(0.92, 0.12, 0.64, w, { z: 0.32 });
+      b.box(0.84, 0.09, 0.56, wl, { y: 0.12, z: 0.32 });
+    });
+    [-0.22, 0.22].forEach(x => b.box(0.07, 0.125, 0.645, g, { x, z: 0.32 }));
+    /* Stern auf dem Deckel */
+    b.box(0.17, 0.02, 0.17, gl, { y: 0.205, z: 0.32, ry: 0.785 });
+    b.box(0.17, 0.02, 0.17, gl, { y: 0.206, z: 0.32 });
+    return b;
+  }
+  /* Lichtsäule (Zylinder, nach oben schmaler) und Bodenring – werden halbdurchsichtig gezeichnet */
+  function lootBeam(r1, r2, h, col) {
+    const b = new MB();
+    b.cyl(r1, r2, h, 12, col || 0xfff1b0, { nobot: true, notop: true });
+    return b;
+  }
+  function lootRing(r1, r2, col) {
+    const b = new MB(), seg = 28, y = 0.04;
+    const up3 = (A, B, C) => { const c = (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]); if (c > 0) b.tri(A, B, C, col); else b.tri(A, C, B, col); };
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, P = (r, a) => [Math.cos(a) * r, y, Math.sin(a) * r];
+      up3(P(r1, a0), P(r2, a0), P(r2, a1)); up3(P(r1, a0), P(r2, a1), P(r1, a1));
+    }
+    return b;
+  }
   /* rot-weiße Schranke an gesperrten Wegen, mit Schild */
   function barrier() {
     G3.seed(3930);
@@ -1935,7 +1978,7 @@ const FWM = (() => {
   return {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, barrier,
+    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, lootCrate, lootLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

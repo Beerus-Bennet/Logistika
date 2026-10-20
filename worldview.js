@@ -1488,9 +1488,11 @@ function worldEvKey() { const c = S.farm.ev && S.farm.ev.cur; return c ? c.k + "
 function worldSyncEvents() {
   const key = worldEvKey(), R = FV.R;
   if (key === WV.evKey) return;
+  /* v73: Beim Öffnen der Lieferkiste bleiben die Knoten stehen, bis die Animation fertig ist */
+  if (WV.parcelOpen) { WV.evKey = key; return; }
   WV.evKey = key;
   WV.evNodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
-  WV.evNodes = [];
+  WV.evNodes = []; WV.parcel = null;
   const c = S.farm.ev && S.farm.ev.cur;
   if (!c || c.data.done) return;
   const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.evNodes.push(n); return n; };
@@ -1503,7 +1505,8 @@ function worldSyncEvents() {
   if (c.k === "nachbar") add(fmesh("npc:saege", () => FWM.person(NPC_LOOK.saege)), { x: -32.5, z: -31.4, ry: 0.4, s: 1.35 });
   if (c.k === "hirsch") add(fmesh("stag", () => FWM.deer(true)), { x: c.data.x, z: c.data.z, s: 1.25, glow: 0.35 });
   if (c.k === "reh") add(fmesh("wild:deer", () => FWM.deer(false)), { x: c.data.x, z: c.data.z, s: 1.0, ry: 1 });
-  if (c.k === "lieferung") add(fmesh("parcel", () => { const b = new FM.MB(); b.box(0.7, 0.5, 0.55, 0xc9955a, { top: 0xd8a868 }); b.box(0.72, 0.08, 0.1, 0xd8332b, { y: 0.42 }); b.box(0.1, 0.08, 0.57, 0xd8332b, { y: 0.42 }); return b; }), { x: c.data.x, z: c.data.z, ry: 0.4 });
+  /* v73: Lieferkiste vorm Hoftor – kommt erst, wenn der Lieferwagen sie abgestellt hat */
+  if (c.k === "lieferung" && !(WV.parcelIntro && WV.parcelIntro.t0 === c.t0 && !WV.parcelIntro.landed)) worldParcelNodes(c, add);
 }
 /* Wo sitzt das Ereignis? Für Blase und Kamera */
 function worldEvSpots() {
@@ -1515,7 +1518,7 @@ function worldEvSpots() {
     case "nachbar": return [{ x: -32.5, y: 2.3, z: -31.4, ic: "👴💬", act: "nachbar" }];
     case "hirsch": return [{ x: c.data.x, y: 2.4, z: c.data.z, ic: "🦌✨", act: "hirsch", area: "wald" }];
     case "reh": return [{ x: c.data.x, y: 1.9, z: c.data.z, ic: "🦌", act: "reh" }];
-    case "lieferung": return [{ x: c.data.x, y: 1.1, z: c.data.z, ic: "📦", act: "lieferung" }];
+    case "lieferung": return WV.parcelOpen || (WV.parcelIntro && !WV.parcelIntro.landed) ? [] : [{ x: c.data.x, y: 1.5, z: c.data.z, ic: "📦", act: "lieferung" }];
     case "schwarm": { const g = FGROUNDS.find(q => q.id === c.data.g); return g ? [{ x: g.x, y: 1.2, z: g.z, ic: "🐟", act: "schwarm" }] : []; }
     case "defekt": { const h = farmObj1("sw_halle"); if (!h) return []; const [x, z] = farmCenter(h); return [{ x, y: 5.2, z, ic: "⚠️", act: "defekt", cls: "hungry" }]; }
   }
@@ -1536,7 +1539,8 @@ function worldEvAct(s) {
   switch (s.act) {
     case "haendler": openTrader(); break;
     case "nachbar": openNeighbor(); break;
-    case "hirsch": case "reh": case "lieferung": {
+    case "lieferung": worldParcelOpen(); break;
+    case "hirsch": case "reh": {
       const r = farmEvReward(s.act);
       if (r) { floatText(p[0], p[1] - 20, s.act === "hirsch" ? "Ein Glücksbringer!" : s.act === "reh" ? "Wie friedlich …" : "Ein Paket für dich!", "gold"); reward(r, p[0], p[1]); }
       break;
@@ -1548,6 +1552,191 @@ function worldEvAct(s) {
       break;
     }
   }
+}
+
+/* ------------------------- v73: Lieferkiste vorm Hoftor -------------------------
+   Ein Lieferwagen kommt die Straße entlang und hält am Tor, die Kiste hüpft vom Wagen auf den Weg vorm Hoftor und
+   landet mit Staubwolke. Dann: Lichtsäule, pulsierende Bodenringe, Funkeln und ab und zu ein Hüpfer. Antippen:
+   Kamera fährt ran, die Kiste rüttelt sich hoch, der Deckel springt auf, Lichtstoß in der Farbe der Seltenheit
+   (Gut · Selten · Episch · Legendär), die Belohnungen fliegen heraus, Funkenregen – dann löst sich die Kiste auf. */
+const PARCEL_COL = [[1, 0.9, 0.5, 1], [0.4, 0.82, 1, 1], [0.8, 0.5, 1, 1], [1, 0.66, 0.15, 1]];
+const PARCEL_CSS = ["#f6d24a", "#5cc8ff", "#c48aff", "#ffae2e"];
+const PARCEL_TXT = ["Gut gepackt!", "Selten!", "Episch!", "Legendär!"];
+function worldParcelNodes(c, add) {
+  const R = FV.R, x = c.data.x, z = c.data.z;
+  const P = WV.parcel = { x, z, t0: c.t0 };
+  P.body = add(fmesh("lootBody", FWM.lootCrate), { x, z, ry: -0.3, s: 1.25 });
+  P.lid = R.addChild(P.body, fnode(fmesh("lootLid", FWM.lootLid), { y: 0.5, z: -0.31 }));
+  P.lit = R.addChild(P.body, fnode(fmesh("lootLit", () => { const b = new FM.MB(); b.plate(0.8, 0.52, 0xfff0a0, { y0: 0.01 }); return b; }), { y: 0.495, alpha: 0.8, glow: 1, visible: false }));
+  P.b1 = add(fmesh("lootBeam1", () => FWM.lootBeam(0.5, 0.22, 8, 0xffd25a)), { x, z, alpha: 0.14, glow: 1, shadow: false });
+  P.b2 = add(fmesh("lootBeam2", () => FWM.lootBeam(0.26, 0.1, 8, 0xfff6c8)), { x, z, alpha: 0.28, glow: 1, shadow: false });
+  P.r1 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0.5, glow: 1, shadow: false });
+  P.r2 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0.5, glow: 1, shadow: false });
+}
+/* Lieferwagen kommt von Osten die Straße entlang, hält vorm Tor, wirft die Kiste ab und fährt nach Westen weiter */
+function worldParcelIntroEnd() {
+  const I = WV.parcelIntro, R = FV.R;
+  if (!I) return;
+  [I.van, I.fly].forEach(n => { if (!n) return; const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); FV.drives = FV.drives.filter(d => d.node !== n); });
+  WV.parcelIntro = null;
+}
+function worldParcelIntro(c) {
+  const R = FV.R;
+  if (!R) return;
+  worldParcelIntroEnd();
+  const I = WV.parcelIntro = { t0: c.t0, ph: 0, t: 0, landed: false };
+  const van = I.van = fnode(fmesh("lieferwagen", () => FM.van(0xf4c542, 0xd8332b)), { x: 40, y: 0, z: 17.9, s: 1.3, ry: -Math.PI / 2 });
+  R.nodes.push(van);
+  startDrive(van, [[40, 17.9], [8.4, 17.9]], () => { I.ph = 1; I.t = 0; sfx("clunk"); });
+  FV.drives.forEach(d => { if (d.node === van) d.sp = 10; });
+  sfx("horn");
+}
+function stepParcelIntro(I, dt) {
+  const R = FV.R, c = S.farm.ev && S.farm.ev.cur;
+  if (!c || c.k !== "lieferung" || c.t0 !== I.t0 || c.data.done) { worldParcelIntroEnd(); return; }
+  if (I.ph === 0) return;
+  I.t += dt;
+  const x1 = c.data.x, z1 = c.data.z, v = I.van;
+  if (I.ph === 1) {
+    /* Kiste hüpft vom Wagen (Heck zeigt nach Osten) in hohem Bogen auf den Weg vorm Tor */
+    if (!I.fly && I.t >= 0.35) I.fly = (R.nodes.push(fnode(fmesh("lootBody", FWM.lootCrate), { x: v.x + 1.3, y: 0.9, z: v.z, s: 1.25, shadow: true })), R.nodes[R.nodes.length - 1]);
+    if (I.fly) {
+      const u = Math.min(1, (I.t - 0.35) / 0.95), e = u * u * (3 - 2 * u), sx = v.x + 1.3, sz = v.z;
+      I.fly.x = sx + (x1 - sx) * u; I.fly.z = sz + (z1 - sz) * u;
+      I.fly.y = 0.9 * (1 - e) + Math.sin(u * Math.PI) * 2.3;
+      I.fly.ry = -0.3 + (1 - u) * 6.28; I.fly.rz = Math.sin(u * 14) * 0.12 * (1 - u);
+      if (u < 1 && Math.random() < dt * 40) R.emit({ x: I.fly.x, y: I.fly.y + 0.3, z: I.fly.z, vy: 0.4, life: 0.5, size: 0.1, size2: 0.01, col: [1, 0.9, 0.5, 1], shape: 3, drag: 1 });
+      if (u >= 1) {
+        const i = R.nodes.indexOf(I.fly); if (i >= 0) R.nodes.splice(i, 1);
+        I.fly = null; I.landed = true; I.ph = 2; I.t = 0;
+        sfx("thud");
+        R.burst({ x: x1, y: 0.1, z: z1, n: 26, speed: 2.8, flat: true, up: 0.9, life: 0.8, size: 0.3, size2: 0.8, col: [[0.86, 0.8, 0.68, 0.6], [0.78, 0.72, 0.6, 0.5]], g: -1.5, drag: 2.2 });
+        R.burst({ x: x1, y: 0.4, z: z1, n: 24, speed: 2.2, up: 4, life: 1.1, size: 0.13, size2: 0.01, col: [PARCEL_COL[0], [1, 1, 1, 1]], shape: 3, g: -7 });
+        WV.evKey = null; farmSyncScene();
+        if (WV.parcel) { WV.parcel.body.sy = 0.55; WV.parcel.body.sx = WV.parcel.body.sz = 1.45; WV.parcel.land = 0; }
+      }
+    }
+  } else if (I.ph === 2 && I.t > 1.0) {
+    I.ph = 3;
+    startDrive(v, [[v.x, v.z], [-34, 17.9]], () => worldParcelIntroEnd());
+    FV.drives.forEach(d => { if (d.node === v) d.sp = 10; });
+  }
+}
+function stepParcel(dt, time) {
+  const I = WV.parcelIntro;
+  if (I) stepParcelIntro(I, dt);
+  const P = WV.parcel;
+  if (!P || !P.body) return;
+  const R = FV.R;
+  if (WV.parcelOpen) return stepParcelOpen(WV.parcelOpen, P, dt, time);
+  /* gelandet: kurzes Nachfedern (Stauchen und Strecken) */
+  if (P.land != null) {
+    P.land += dt;
+    const k = Math.max(0, 1 - P.land * 2.2), s = Math.sin(P.land * 24) * 0.22 * k;
+    P.body.sy = 1.25 * (1 - s); P.body.sx = P.body.sz = 1.25 * (1 + s * 0.5);
+    if (!k) { P.land = null; P.body.sx = P.body.sy = P.body.sz = 1.25; }
+  }
+  /* Lichtsäule atmet, Ringe laufen nach außen, es funkelt */
+  P.b1.alpha = 0.22 + Math.sin(time * 2.1) * 0.05; P.b2.alpha = 0.4 + Math.sin(time * 3.3 + 1) * 0.08;
+  P.b1.sx = P.b1.sz = 1 + Math.sin(time * 1.7) * 0.07; P.b2.sx = P.b2.sz = 1 + Math.sin(time * 2.6) * 0.1;
+  [P.r1, P.r2].forEach((r, i) => { const u = (time * 0.55 + i * 0.5) % 1; r.sx = r.sz = 0.7 + u * 1.6; r.alpha = 0.6 * (1 - u) * Math.min(1, u * 6); });
+  /* ab und zu ein Hüpfer: „tipp mich an!“ */
+  const k = time % 3.4;
+  if (P.land == null) {
+    if (k < 0.7) { const u = k / 0.7; P.body.y = Math.sin(u * Math.PI) * 0.3; P.body.rz = Math.sin(u * 22) * 0.07 * (1 - u); P.lid.rx = -Math.sin(u * Math.PI) * 0.3; P.hop = 1; }
+    else {
+      P.body.y = 0; P.body.rz = 0; P.lid.rx = 0;
+      if (P.hop) { P.hop = 0; R.burst({ x: P.x, y: 0.1, z: P.z, n: 7, speed: 1.2, flat: true, up: 0.5, life: 0.5, size: 0.18, size2: 0.45, col: [[0.86, 0.8, 0.68, 0.5]], g: -1, drag: 2.2 }); }
+    }
+  }
+  if (Math.random() < dt * 7) R.emit({ x: P.x + (Math.random() - 0.5) * 1.0, y: 0.25 + Math.random() * 0.5, z: P.z + (Math.random() - 0.5) * 0.8, vy: 0.7 + Math.random() * 0.8, life: 1.1, size: 0.11, size2: 0.01, col: Math.random() < 0.3 ? [1, 1, 1, 1] : [1, 0.86, 0.3, 1], shape: 3, drag: 1.2 });
+}
+/* Antippen: Kamera fährt heran, danach läuft die Öffnungs-Animation (stepParcelOpen) */
+function worldParcelOpen() {
+  const c = S.farm.ev && S.farm.ev.cur, P = WV.parcel;
+  if (!c || c.k !== "lieferung" || c.data.done || !P || WV.parcelOpen) return;
+  farmParcelRoll(c);
+  WV.parcelOpen = { t: 0, rar: c.data.rar, ph: 0, ticks: 0, r: null };
+  farmFocusXZ(P.x, P.z + 0.5, 9.5, 650);
+  sfx("tap");
+}
+function stepParcelOpen(O, P, dt, time) {
+  O.t += dt;
+  const t = O.t, R = FV.R, x = P.x, z = P.z, col = PARCEL_COL[O.rar], T0 = 0.7, SH = 1.1;
+  if (O.ph === 0) {
+    /* Rütteln: wird immer wilder, Funken ziehen nach innen, die Säule schwillt an */
+    const u = Math.max(0, t - T0) / SH, a = u * u;
+    P.body.rz = Math.sin(t * 46) * 0.1 * a; P.body.rx = Math.sin(t * 37 + 1) * 0.07 * a; P.body.y = Math.abs(Math.sin(t * 19)) * 0.1 * a;
+    P.body.sx = P.body.sz = 1.25 * (1 + 0.06 * u); P.body.sy = 1.25 * (1 - 0.03 * u); P.body.glow = 0.75 * u;
+    P.b1.alpha = 0.14 + u * 0.32; P.b2.alpha = 0.28 + u * 0.45; P.b1.sx = P.b1.sz = 1 + u * 0.9; P.b2.sx = P.b2.sz = 1 + u * 0.6;
+    [P.r1, P.r2].forEach((r, i) => { const w = (time * (0.55 + u * 1.6) + i * 0.5) % 1; r.sx = r.sz = 0.7 + w * 1.6; r.alpha = 0.6 * (1 - w) * Math.min(1, w * 6); });
+    if (t > T0) {
+      const n = Math.random() < dt * (14 + 90 * u) ? 1 : 0;
+      for (let i = 0; i < n; i++) { const an = Math.random() * 6.28, d = 1.3 + Math.random() * 0.6; R.emit({ x: x + Math.cos(an) * d, y: 0.1 + Math.random() * 0.9, z: z + Math.sin(an) * d, vx: -Math.cos(an) * 2.4, vz: -Math.sin(an) * 2.4, vy: 0.5, life: 0.55, size: 0.1, size2: 0.02, col, shape: 3, drag: 0 }); }
+      const tk = [0, 0.28, 0.5, 0.68, 0.82, 0.93]; while (O.ticks < tk.length && t - T0 >= tk[O.ticks]) { sfx("pop"); O.ticks++; }
+    }
+    if (t >= T0 + SH) {
+      /* Deckel springt auf: Lichtstoß, Banner, Belohnungen */
+      O.ph = 1; O.tb = t;
+      const r = O.r = farmEvReward("lieferung");
+      P.lit.visible = true; P.body.rz = P.body.rx = 0; P.body.y = 0;
+      sfx("thud");
+      if (O.rar === 0) sfx("collect"); else if (O.rar === 1) sfx("pearl"); else { sfx("level"); setTimeout(() => sfx("pearl"), 350); if (O.rar === 3) setTimeout(() => sfx("level"), 700); }
+      try { if (navigator.vibrate) navigator.vibrate(O.rar > 1 ? [40, 30, 90] : 25); } catch (e) { /* kein Rütteln */ }
+      R.burst({ x, y: 0.55, z, n: 46 + O.rar * 16, speed: 3.4, up: 7, life: 1.4, size: 0.16, size2: 0.01, col: [col, [1, 1, 1, 1], PARCEL_COL[0]], shape: 3, g: -6.5, drag: 0.8 });
+      R.burst({ x, y: 0.5, z, n: 18, speed: 2.4, up: 5, life: 1.2, size: 0.12, size2: 0.05, col: [[1, 0.86, 0.3, 1]], g: -9, drag: 0.5 });
+      R.burst({ x, y: 0.08, z, n: 20, speed: 3.2, flat: true, up: 0.6, life: 0.7, size: 0.3, size2: 0.9, col: [[col[0], col[1], col[2], 0.55]], g: -0.5, drag: 2.4 });
+      worldParcelReward(O, r, P);
+      save(); renderFarmUI();
+    }
+    return;
+  }
+  /* Phase 1: Deckel klappt auf (mit Überschwingen), Fontäne, Ringe, Säule schießt hoch – dann löst sich alles auf */
+  const u = t - O.tb;
+  const kk = Math.min(1, u / 0.45), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
+  P.lid.rx = -2.15 * e;
+  P.body.glow = Math.max(0, 0.7 * (1 - u / 1.6)); P.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.2) + Math.sin(time * 18) * 0.05;
+  P.b1.alpha = 0.46 * Math.max(0, 1 - u / 2.4); P.b2.alpha = 0.7 * Math.max(0, 1 - u / 2.0);
+  P.b1.sx = P.b1.sz = 1.8 + u * 0.6; P.b2.sx = P.b2.sz = 1.5 + u * 0.4;
+  const rw = Math.min(1, u / 0.9);
+  P.r1.sx = P.r1.sz = 0.8 + rw * 5.5; P.r1.alpha = 0.9 * (1 - rw);
+  const rw2 = Math.max(0, Math.min(1, (u - 0.25) / 0.9)); P.r2.sx = P.r2.sz = 0.8 + rw2 * 4; P.r2.alpha = 0.7 * (1 - rw2) * (u > 0.25 ? 1 : 0);
+  if (u < 1.6) {
+    /* Fontäne aus der Kiste: goldene Münzen und Funken in der Farbe der Seltenheit */
+    const n = Math.random() < dt * 80 ? 1 : 0;
+    for (let i = 0; i < n; i++) R.emit({ x: x + (Math.random() - 0.5) * 0.5, y: 0.55, z: z + (Math.random() - 0.5) * 0.35, vx: (Math.random() - 0.5) * 2.2, vz: (Math.random() - 0.5) * 2.2, vy: 4 + Math.random() * 3.5, g: -8, drag: 0.3, life: 1.2, size: 0.1 + Math.random() * 0.06, size2: 0.03, col: Math.random() < 0.55 ? [1, 0.84, 0.25, 1] : col, shape: Math.random() < 0.6 ? 3 : 0 });
+  }
+  if (u > 2.0) {
+    /* Kiste löst sich in Funken auf */
+    const k = Math.min(1, (u - 2.0) / 0.5);
+    P.body.sx = P.body.sz = 1.25 * (1 - k); P.body.sy = 1.25 * (1 - k * 0.6); P.body.y = k * 0.4;
+    if (!O.gone) { O.gone = 1; sfx("pop"); R.burst({ x, y: 0.4, z, n: 24, speed: 2, up: 3, life: 1, size: 0.12, size2: 0.01, col: [col, [1, 1, 1, 1]], shape: 3, g: -3, drag: 1 }); R.burst({ x, y: 0.3, z, n: 14, speed: 1.6, flat: true, up: 1, life: 0.9, size: 0.25, size2: 0.7, col: [[0.9, 0.9, 0.95, 0.5]], g: -0.6, drag: 1.6 }); }
+  }
+  if (u > 2.7) { WV.parcelOpen = null; WV.evKey = null; farmSyncScene(); renderFarmUI(); }
+}
+/* Banner (Seltenheit), Lichtblitz und die Belohnungen, die der Reihe nach aus der Kiste fliegen */
+function worldParcelReward(O, r, P) {
+  const R = FV.R, fx = $("#farmFx");
+  const p = R.project(P.x, 0.9, P.z) || [R.w / 2, R.h / 2], px = p[0], py = p[1];
+  if (fx && r) {
+    const chips = [];
+    (r.items || []).forEach(([id, n]) => chips.push((FITEMS[id].i || "📦") + " " + n + "× " + FITEMS[id].n));
+    if (r.m) chips.push("💶 " + eur(r.m));
+    chips.push("🍀 " + r.clover, "⭐ " + r.xp + " EP");
+    const fl = document.createElement("div"); fl.className = "lootflash"; fl.style.setProperty("--c", PARCEL_CSS[O.rar]); fl.style.setProperty("--x", px + "px"); fl.style.setProperty("--y", py + "px");
+    fx.appendChild(fl); setTimeout(() => fl.remove(), 900);
+    const el = document.createElement("div"); el.className = "lootbanner r" + O.rar; el.style.setProperty("--c", PARCEL_CSS[O.rar]);
+    el.innerHTML = `<small>Besondere Lieferung</small><b>${O.rar > 1 ? "✨ " : ""}${PARCEL_TXT[O.rar]}${O.rar > 1 ? " ✨" : ""}</b><span>${chips.map(c => `<i>${esc(c)}</i>`).join("")}</span>`;
+    fx.appendChild(el); setTimeout(() => el.remove(), 3200);
+  }
+  if (!r) return;
+  let d = 450;
+  (r.items || []).forEach(([id, n], i) => {
+    setTimeout(() => { if (!FV.on) return; flyItem(id, px + (i - ((r.items.length - 1) / 2)) * 26, py, storeBtn(), 0, n); sfx("collect"); }, d); d += 240;
+  });
+  if (r.m) { const dd = d; setTimeout(() => { if (FV.on) { coinFly(px, py, r.m); sfx("coin"); } }, dd); d += 260; }
+  { const dd = d; setTimeout(() => { if (FV.on) { farmCloverFlyAt(px, py, r.clover); } }, dd); d += 240; }
+  setTimeout(() => { if (FV.on) xpFly(px, py - 10, r.xp, 0); }, d);
 }
 
 /* ------------------------------ Wetter ------------------------------------ */
@@ -1954,13 +2143,14 @@ function stepOutline(time) {
 }
 
 /* ------------------------------ Takt -------------------------------------- */
-function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
+function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
   stepFalling();
   stepReveal(dt);
   stepWild(dt, time);
   stepPets(dt, time);
+  stepParcel(dt, time);
   stepWeather(dt, time);
   const now = wnow();
   /* Baum wippt nach dem Antippen oder wenn er gewachsen ist */
@@ -2202,8 +2392,9 @@ function farmEvView(type, c) {
       sturm: "Ein Sturm zieht auf! Danach liegen Bäume im Wald.", haendler: "Ein fliegender Händler steht an der Straße.", schwarm: "Ein Fischschwarm ist im See unterwegs!",
       nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Rohholz bringt 30 % mehr – für ein paar Stunden.", fischpreis: "Fischpreise steigen: Ganze Fische bringen 30 % mehr – für ein paar Stunden.",
       hirsch: "Ein weißer Hirsch im Wald – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
-      lieferung: "Ein Paket liegt mitten auf dem Hof.", reh: "Ein Reh steht auf dem Weg."
+      lieferung: "Ein Lieferwagen hat eine Kiste vor dem Hoftor abgestellt – tipp sie an!", reh: "Ein Reh steht auf dem Weg."
     }[c.k] || D.n), "");
+    if (c.k === "lieferung") worldParcelIntro(c);
     farmSyncScene();
   } else {
     if (c.k === "sturm" && c.data.fallen && c.data.fallen.length) toast("🌪️ Der Sturm ist vorbei – " + c.data.fallen.length + " Bäume liegen im Wald. Holz zum Aufsammeln!", "");

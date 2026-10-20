@@ -210,8 +210,8 @@ function erbeInit(F, fresh) {
   F.piles = F.piles || {};
   /* v56: neue Welt – ältere Stände ziehen um (neue Spiele fangen schon richtig an) */
   if (!F.v56) { F.v56 = 1; if (!fresh) erbeMove56(F); }
-  /* v57: laufende „Besondere Lieferung“ vom Tor mitten auf den Hof */
-  if (F.ev && F.ev.cur && F.ev.cur.k === "lieferung" && F.ev.cur.data && F.ev.cur.data.z > 8) farmParcelSpot(F.ev.cur);
+  /* v73: laufende „Besondere Lieferung“ (lag seit v57 mitten auf dem Hof) kommt vors Hoftor */
+  if (F.ev && F.ev.cur && F.ev.cur.k === "lieferung" && F.ev.cur.data && !F.ev.cur.data.v73) farmParcelSpot(F.ev.cur);
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {
@@ -1401,12 +1401,11 @@ function farmEvStart(k) {
   F.stats.events++;
   if (typeof farmEvView === "function") farmEvView("start", c);
 }
-/* v57: Das Paket liegt mitten im Hof auf einem freien Fleck – genau da, wohin die Kamera beim
-   Öffnen schaut (Welt −1 / 0), statt unten am Tor hinter den Knöpfen */
+/* v73: Die Lieferkiste steht vor dem Hoftor (Südtor) auf dem Weg zur Straße – gut zu sehen, nicht mehr
+   mitten im Hof zwischen Feldern und Gebäuden. Der Lieferwagen hält daneben an der Straße (worldview.js). */
+const FPARCEL_AT = [FGATE.x + 0.45, 15.9];
 function farmParcelSpot(c) {
-  const p = farmFreeSpot(1, 1, FG / 2 - 0.5, FG / 2 + 1.5);
-  if (p) { c.data.x = p[0] - FG / 2 + 0.5; c.data.z = p[1] - FG / 2 + 0.5; }
-  else { c.data.x = FGATE.x - 0.4; c.data.z = 1; }
+  c.data.x = FPARCEL_AT[0]; c.data.z = FPARCEL_AT[1]; c.data.v73 = 1;
 }
 function farmEvEnd() {
   const F = S.farm, c = F.ev.cur;
@@ -1485,6 +1484,21 @@ function farmNeighborDeliver() {
   c.until = S.time;
   return m;
 }
+/* v73: Lieferkiste – der Inhalt ist eine Überraschung: Seltenheit wird beim Antippen ausgewürfelt (c.data.rar) */
+const FPARCEL = [
+  { id: "gut",       n: "Gut",       w: 58, gifts: 1, mult: 1,   m: [0, 0],     clover: 1, xp: 10 },
+  { id: "selten",    n: "Selten",    w: 28, gifts: 2, mult: 1.5, m: [20, 40],   clover: 1, xp: 18 },
+  { id: "episch",    n: "Episch",    w: 11, gifts: 2, mult: 2,   m: [60, 110],  clover: 2, xp: 30 },
+  { id: "legendaer", n: "Legendär",  w: 3,  gifts: 3, mult: 3,   m: [150, 300], clover: 3, xp: 50 }
+];
+function farmParcelRoll(c) {
+  if (c.data.rar == null) {
+    let r = Math.random() * FPARCEL.reduce((a, p) => a + p.w, 0), i = 0;
+    for (; i < FPARCEL.length - 1; i++) { r -= FPARCEL[i].w; if (r < 0) break; }
+    c.data.rar = i;
+  }
+  return FPARCEL[c.data.rar];
+}
 /* Belohnungen der kleinen Ereignisse */
 function farmEvReward(kind) {
   const c = S.farm.ev.cur;
@@ -1493,12 +1507,26 @@ function farmEvReward(kind) {
   if (kind === "hirsch" && c.k === "hirsch" && !c.data.done) { c.data.done = true; farmClover(3, "Weißer Hirsch"); farmXP(25); r = { clover: 3, xp: 25 }; c.until = S.time + 1; }
   if (kind === "reh" && c.k === "reh" && !c.data.done) { c.data.done = true; farmXP(5); r = { xp: 5 }; c.until = S.time + 1; }
   if (kind === "lieferung" && c.k === "lieferung" && !c.data.done) {
+    const P = farmParcelRoll(c);
     c.data.done = true;
-    const gifts = [["brot", 3], ["apfelkuchen", 1], ["bretter", 1], ["koeder", 6], ["brennholz", 2]].filter(([id]) => FITEMS[id] && FITEMS[id].st && farmRoom(id) > 0);
-    const g = gifts.length ? pick(gifts) : null;
-    if (g) farmAdd(g[0], Math.min(g[1], farmRoom(g[0])), 4);
-    farmClover(1, "Lieferung"); farmXP(10);
-    r = { item: g && g[0], n: g && g[1], clover: 1, xp: 10 }; c.until = S.time + 1;
+    /* Geschenke aus dem Lager-Pool (nur was ins Lager passt), höhere Seltenheit = mehr Stück und mehr Sorten */
+    const pool = [["brot", 3], ["apfelkuchen", 1], ["bretter", 1], ["koeder", 6], ["brennholz", 2]].filter(([id]) => FITEMS[id] && FITEMS[id].st && farmRoom(id) > 0);
+    const items = [];
+    for (let i = 0; i < P.gifts && pool.length; i++) {
+      const g = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], n = Math.min(Math.ceil(g[1] * P.mult), farmRoom(g[0]));
+      if (n > 0) { farmAdd(g[0], n, 4); items.push([g[0], n]); }
+    }
+    let m = 0;
+    if (P.m[1] > 0) {
+      m = Math.max(5, Math.round((P.m[0] + Math.random() * (P.m[1] - P.m[0])) * (1 + flv() * 0.03) / 5) * 5);
+      S.money += m; S.revenue += m; S.farm.stats.earned = (S.farm.stats.earned || 0) + m;
+      logMoney("farm", "Besondere Lieferung", m);
+    }
+    /* Kleeblätter ohne eigenen Flug (farmClover): das Öffnen zeigt sie selbst aus der Kiste */
+    S.farm.clover = (S.farm.clover || 0) + P.clover;
+    farmXP(P.xp);
+    r = { rar: c.data.rar, items, m, clover: P.clover, xp: P.xp };
+    c.until = S.time + 1;
   }
   return r;
 }
