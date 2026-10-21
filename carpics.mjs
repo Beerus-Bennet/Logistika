@@ -78,7 +78,7 @@ for (const c of todo) {
   try {
     const j = await get("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(c.wp.replace(/ /g, "_")) + "?redirect=true", true);
     const u = (j.originalimage && j.originalimage.source) || (j.thumbnail && j.thumbnail.source);
-    if (u && /upload\.wikimedia\.org/.test(u)) { file[c.id] = fileFromUrl(u); viaSummary++; }
+    if (u && /(upload|thumb)\.wikimedia\.org/.test(u)) { file[c.id] = fileFromUrl(u); viaSummary++; }
   } catch (e) { console.warn("Kurzinfo", c.id, e.message); }
   await sleep(150);
 }
@@ -109,10 +109,11 @@ for (let i = 0; i < ids.length; i += 40) {
 let ok = 0, miss = [];
 for (const c of todo) {
   const I = info[c.id];
-  if (!I || !/^https:\/\/upload\.wikimedia\.org\//.test(I.src)) { miss.push(c.id); continue; }
+  if (!I || !/^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(I.src)) { miss.push(c.id); continue; }
   try {
-    const buf = await get(I.src, false);
-    const ext = /\.png$/i.test(I.src) ? ".png" : /\.webp$/i.test(I.src) ? ".webp" : ".jpg";
+    const buf = await get(I.src.split("?")[0], false);
+    const bare = I.src.split("?")[0];
+    const ext = /\.png$/i.test(bare) ? ".png" : /\.webp$/i.test(bare) ? ".webp" : ".jpg";
     const f = c.id + ext;
     fs.writeFileSync(path.join(OUT, f), buf);
     credits[c.id] = { f, by: I.by, lic: I.lic, licUrl: I.licUrl, page: I.page, file: file[c.id] };

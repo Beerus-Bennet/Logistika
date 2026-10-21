@@ -383,7 +383,8 @@ async function wikiSummary(title) {
     return await r.json();
   } finally { to.done(); }
 }
-const okSrc = u => typeof u === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(u);
+/* v78: Wikimedia liefert Vorschaubilder inzwischen von thumb.wikimedia.org – beide Hosts sind in Ordnung */
+const okSrc = u => typeof u === "string" && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(u);
 /* Vorschaubild auf eine Standardbreite setzen (nur bei echten Thumbnails) */
 const thumbAt = (u, w) => /\/thumb\//.test(u) ? u.replace(/\/\d+px-([^/]+)$/, "/" + w + "px-$1") : u;
 /* Titelbild der Wikipedia-Artikel samt Vorschaubild holen, dann Urheber und

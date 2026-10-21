@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v78 (aufbauend auf v77) – Autofotos: Wikimedia-Bilder werden wieder akzeptiert
+
+- **Ursache für „Bilder laden nicht“ gefunden:** Wikipedia liefert Vorschaubilder inzwischen von `thumb.wikimedia.org`
+  statt `upload.wikimedia.org`. Die Adressprüfung `okSrc` (`auction.js`) ließ nur `upload.…` zu und verwarf damit alle
+  77 Fotos. Jetzt sind beide Hosts erlaubt; der Service Worker (`sw.js`) legt auch `thumb.…` in den Foto-Cache.
+- **`carpics.mjs`:** gleiche Korrektur (die Aktion „Autofotos holen“ hatte aus demselben Grund 0 Fotos geholt); entfernt
+  die `?utm_…`-Anhänge der Bild-Adressen, zweiter Weg über die Wikipedia-Kurzinfo, Diagnose-Ausgabe im Protokoll und
+  roter Lauf, wenn kein Foto geholt wurde.
+
 ## v77 (aufbauend auf v76) – Autofotos, Karte nur so weit wie erschlossen, Steg ohne Flimmern, Wege sauber
 
 1. **Auktionshaus: Fotos zuverlässig** (`auction.js`, neu `carpics.mjs`, `carpics-workflow.yml`):
