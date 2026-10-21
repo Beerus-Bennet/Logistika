@@ -56,6 +56,7 @@ const wp = todo.filter(c => c.wp && !c.file);
 for (let i = 0; i < wp.length; i += 40) {
   const batch = wp.slice(i, i + 40);
   const j = await api("redirects=1&prop=pageimages&piprop=name&pilicense=free&pilimit=50&titles=" + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
+  if (i === 0) console.log("Abfrage 1, Antwort:", JSON.stringify(j).slice(0, 500));
   const q = j.query || {}, map = {};
   (q.normalized || []).concat(q.redirects || []).forEach(n => { map[n.from] = n.to; });
   const fin = t => { let x = t, k = 0; while (map[x] && k++ < 4) x = map[x]; return x; };
@@ -64,6 +65,25 @@ for (let i = 0; i < wp.length; i += 40) {
   batch.forEach(c => { const p = pages[fin(c.wp)]; if (p && p.pageimage) file[c.id] = p.pageimage.replace(/_/g, " "); });
 }
 
+/* 1b. Zweiter Weg für Autos ohne Titelbild: Kurzinfo-Schnittstelle (REST), Dateiname aus der Bild-Adresse */
+const fileFromUrl = u => {
+  const seg = u.split("?")[0].split("/");
+  const thumb = seg.indexOf("thumb") > -1;
+  const name = decodeURIComponent(thumb ? seg[seg.length - 2] : seg[seg.length - 1]);
+  return name.replace(/_/g, " ");
+};
+let viaSummary = 0;
+for (const c of todo) {
+  if (file[c.id] || !c.wp) continue;
+  try {
+    const j = await get("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(c.wp.replace(/ /g, "_")) + "?redirect=true", true);
+    const u = (j.originalimage && j.originalimage.source) || (j.thumbnail && j.thumbnail.source);
+    if (u && /upload\.wikimedia\.org/.test(u)) { file[c.id] = fileFromUrl(u); viaSummary++; }
+  } catch (e) { console.warn("Kurzinfo", c.id, e.message); }
+  await sleep(150);
+}
+console.log(`Titelbild gefunden: ${Object.keys(file).length} von ${todo.length} (davon ${viaSummary} über die Kurzinfo)`);
+
 /* 2. Vorschaubild in 500 px, Urheber und Lizenz */
 const info = {};
 const ids = Object.keys(file);
@@ -71,6 +91,7 @@ for (let i = 0; i < ids.length; i += 40) {
   const batch = ids.slice(i, i + 40);
   const j = await api("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=" + W + "&iiextmetadatafilter=Artist%7CLicenseShortName%7CLicenseUrl&titles="
     + batch.map(id => encodeURIComponent("File:" + file[id])).join("%7C"));
+  if (i === 0) console.log("Abfrage 2, Antwort:", JSON.stringify(j).slice(0, 500));
   const q = j.query || {}, map = {};
   (q.normalized || []).forEach(n => { map[n.from] = n.to; });
   const pages = {};
@@ -104,3 +125,4 @@ const sorted = {};
 Object.keys(credits).sort().forEach(k => { sorted[k] = credits[k]; });
 fs.writeFileSync(credPath, JSON.stringify(sorted, null, 1) + "\n");
 console.log(`fertig: ${ok} neu, ${Object.keys(sorted).length} insgesamt` + (miss.length ? `, ohne Foto: ${miss.join(", ")}` : ""));
+if (ok === 0 && todo.length) { console.error("Kein einziges Foto geholt – siehe Ausgaben oben."); process.exit(1); }
