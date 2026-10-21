@@ -398,16 +398,24 @@ const G3 = (() => {
     c = mix(c, uFog, f);
     o = vec4(c, uAlpha);
   }`;
+  /* v75: Bodenschicht wirft keinen Schatten. Flache, nach oben zeigende Flächen dicht am Boden (Wege, Pflaster,
+     Felder, Ausrundungen, Dekowege, Bauplätze: Weltschicht unter y = 0,07 mit Normale nach oben) werden im
+     Schattenpass verworfen. Vorher warf z. B. das Hofpflaster einen haarfeinen Schatten neben sich aufs Gras und
+     sah aus, als schwebe es. Senkrechte Flächen (Wände, Zäune, Stämme) werfen weiter ab dem Boden Schatten –
+     so entsteht kein Spalt am Fuß (das Gegenstück zu polygonOffset/Render-Layern in Three.js). */
   const SVS = `#version 300 es
-  layout(location=0) in vec3 aPos;
+  layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
   uniform mat4 uModel, uLVP; uniform float uTime, uSway;
+  out float vG;
   void main(){
     vec4 w = uModel * vec4(aPos, 1.0);
+    vec3 nw = mat3(uModel) * aNor;
     if (uSway > 0.0) { float h = max(0.0, aPos.y); w.x += sin(uTime * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway; w.z += cos(uTime * 1.25 + w.x * 0.6) * 0.035 * h * uSway; }
+    vG = (w.y < 0.07 && nw.y > 0.85 * length(nw)) ? 1.0 : 0.0;
     gl_Position = uLVP * w;
   }`;
   const SFS = `#version 300 es
-  precision mediump float; out vec4 o; void main(){ o = vec4(1.0); }`;
+  precision mediump float; in float vG; out vec4 o; void main(){ if (vG > 0.5) discard; o = vec4(1.0); }`;
   /* Partikel: Billboards, rund und weich */
   const PVS = `#version 300 es
   layout(location=0) in vec3 aC; layout(location=1) in vec2 aK; layout(location=2) in float aS; layout(location=3) in vec4 aCol; layout(location=4) in float aShape;

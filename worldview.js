@@ -29,13 +29,26 @@ const AREA_SPOTS = {
 /* v56: Förster und Schranke am Waldrand auf dem Weg vom Westtor, Krüger am Tor des Sägewerks */
 const AREA_NPC = { wald: [-27.2, -7.3], saege: [-39.1, -28.4], altwald: [-65.8, -70.6], see: [7.2, 20.5] };
 const AREA_BAR = { wald: [-27.7, -9.5, Math.PI / 2], saege: [-41, -29.4, 0], altwald: [-68, -73.2, -4.172], see: [5, 20.8, 0] };
-/* v70: zweite Schranke am Ostweg (Teich → Wald), solange der Wald zu ist */
-const AREA_BAR2 = { wald: [35.1, -19.5, Math.PI / 4] };
+/* v70: zweite Schranke am Ostweg (Teich → Wald), solange der Wald zu ist.
+   v75: Liste je Gebiet – der See hat zwei weitere Zugänge (Uferweg bei x = −31, Ostuferweg bei x = 40) */
+const AREA_BAR2 = { wald: [[35.1, -19.5, Math.PI / 4]], see: [[-31, 20.95, 0], [40, 20.95, 0]] };
 /* v71: Uferweg nach Osten, am Ende senkrecht hoch zur Straße (das Ende liegt unter dem Asphalt) */
-/* v72: Uferweg: beginnt am Bordstein (z = 19,52), biegt in sanftem Bogen nach Westen; der Ostast zweigt bei (5 | 21) ab
-   und trifft die Straße bei x = 40 senkrecht – beide enden am Bordstein und weiten sich mit runden Ecken auf */
-const LAKE_WAY1 = [[5, 19.52], [5, 21.2], [4.2, 21.95], [1.6, 22.2], [-2, 22.2], [-20, 21.9]];
-const LAKE_WAY2 = [[5, 21.0], [6.4, 21.75], [10, 22.1], [14, 22.1], [26, 22.1], [35, 21.9], [39.3, 21.3], [40, 20.5], [40, 19.52]];
+/* v75: Wegenetz am See als Knoten und Kanten (statt zwei ineinander geschobener Wege):
+   – LAKE_STEM: Stichweg vom Südtor über die Straße (x = 5) bis zum Uferweg – unten eine T-Kreuzung
+   – LAKE_WAY:  Uferweg von Straße zu Straße. Im Westen (x = −31) biegt er hinter dem Kühlhaus in einem
+                Bogen (r = 1,6) zur Straße ab – genau gegenüber dem Feldweg vom Westtor (Kreuzung, vorher endete
+                er als Zunge vor dem Kühlhaus). Im Osten mündet er als T in den Ostuferweg.
+   – LAKE_EAST: Ostuferweg: an der Straße bei x = 40 genau gegenüber dem Teichweg (Kreuzung), am Ostufer
+                entlang über die Brücke am Bach zum See und in eine kleine Lichtung mit Bank.
+   Alle Mündungen laufen senkrecht auf den Bordstein (Kanten-Snap in FWM.forestPath) und haben Ausrundungen. */
+const LAKE_STEM = [[5, 19.52], [5, 20.8], [5, 22.15]];
+const LAKE_WAY = [[-31, 19.52], [-31, 20.3], [-31, 21.0], [-30.88, 21.61], [-30.53, 22.13], [-30.01, 22.48], [-29.4, 22.6], [-27, 22.6], [-23.5, 22.25], [-20, 21.9],
+  [-2, 22.2], [1.6, 22.2], [5, 22.15], [10, 22.1], [14, 22.1], [26, 22.1], [35, 21.9], [37, 21.95], [38.6, 22.3], [40, 22.35]];
+const LAKE_EAST = [[40, 19.52], [40, 20.6], [40, 22.35], [40, 23.6], [40.5, 25.4], [41.6, 27.4], [44.2, 31.4], [47.6, 35.8], [50.8, 40.6], [52.9, 45.6], [53.7, 50.4],
+  [53.75, 54.2], [53.65, 56.96], [52.6, 60.3], [51.55, 63.64], [50.9, 66.6], [50.2, 69.2]];
+/* ältere Namen (team.js, Staubspur): Stich + Westteil, Ostteil */
+const LAKE_WAY1 = LAKE_STEM.concat(LAKE_WAY.slice(0, 12).reverse());
+const LAKE_WAY2 = LAKE_WAY.slice(12).concat(LAKE_EAST.slice(0, 2).reverse());
 const NPC_LOOK = {
   wald:    { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
   altwald: { shirt: 0x4a6a3a, pants: 0x3a4a3a, hat: "hut", beard: 0x7a5a3a, seed: 1, tool: "axt" },
@@ -122,6 +135,8 @@ function worldMasks(fell) {
     }
   };
   FWORLD.paths.forEach(p => { stamp(p, 2.2, 1); stamp(p, 6, 2); });
+  /* v75: auch die Wege am See halten Kulissenbäume fern (der neue Ostuferweg läuft durch lockeren Baumbestand) */
+  [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
   stamp(FWORLD.creek, 2.7, 4); stamp(LAKE_CREEK, 2.3, 4);
   const at = (x, z) => { const gx = Math.floor(x) - x0, gz = Math.floor(z) - z0; return gx < 0 || gz < 0 || gx >= W || gz >= H ? 0 : g[gz * W + gx]; };
   const hash = new Map();
@@ -152,7 +167,8 @@ function bgTreeOk(x, z, M) {
   return !M.nearTree(x, z);
 }
 /* Bach, der von Osten in den See fließt (Bachmündung) */
-const LAKE_CREEK = [[48.5, 59], [58, 62], [70, 60], [84, 66], [100, 64]];
+/* v75: beginnt im See und läuft bis über den Kartenrand (x = 104) – kein offenes Ende */
+const LAKE_CREEK = [[45.2, 58], [48.5, 59], [58, 62], [70, 60], [84, 66], [100, 64], [112, 65]];
 
 /* Schneller Puffer für Kulissen: Kopien eines Modells (nur Drehung um y,
    gleichmäßige Größe) direkt in ein Float32Array – ohne MB-Umweg */
@@ -183,6 +199,35 @@ class WBuf {
     this.n = o;
   }
   out() { return this.f.slice(0, this.n); }
+}
+
+/* v75: Lage des Angelstegs aus dem Bachverlauf: Fußpunkt auf der (geglätteten) Bachlinie nahe dem Ende des
+   Westwegs, Normale zum Weg hin. Auflager 2,3 vor der Bachmitte (am Kies), der Steg ist 1,9 lang und endet 0,4
+   vor der Bachmitte – das andere Ufer bleibt frei. Der Weg wird in FWM.forestPath auf diesen Punkt ausgerichtet. */
+function worldPierFrame() {
+  const P = FWM.smoothLine(FWORLD.creek, 6), w = FWORLD.paths[2], q = w[w.length - 1];
+  let best = 1e9, F = null, m = null;
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], c = P[i], dx = c[0] - a[0], dz = c[1] - a[1], l2 = dx * dx + dz * dz || 1;
+    const k = clamp(((q[0] - a[0]) * dx + (q[1] - a[1]) * dz) / l2, 0, 1), fx = a[0] + dx * k, fz = a[1] + dz * k, d = Math.hypot(q[0] - fx, q[1] - fz);
+    if (d < best) { best = d; F = [fx, fz]; const l = Math.sqrt(l2); m = [dx / l, dz / l]; }
+  }
+  if (!F || best > 6) return null;
+  let n = [-m[1], m[0]];
+  if (n[0] * (q[0] - F[0]) + n[1] * (q[1] - F[1]) < 0) n = [-n[0], -n[1]];
+  const x = F[0] + n[0] * 2.3, z = F[1] + n[1] * 2.3, dx = -n[0], dz = -n[1];
+  return { x, z, dx, dz, ry: Math.atan2(-dz, dx) };
+}
+/* v75: Edge-Check – kein Bach darf offen auf der Wiese enden: jedes Ende liegt am Kartenrand, im See
+   oder an einer Quelle (FWORLD.spring). Gibt die offenen Enden zurück (und warnt in der Konsole). */
+function worldWaterCheck() {
+  const open = [], edge = p => p[0] <= WGRID.x0 + 0.5 || p[0] >= WGRID.x1 - 0.5 || p[1] <= WGRID.z0 + 0.5 || p[1] >= WGRID.z1 - 0.5;
+  [FWORLD.creek, LAKE_CREEK].forEach(c => [c[0], c[c.length - 1]].forEach(p => {
+    const spring = FWORLD.spring && Math.hypot(p[0] - FWORLD.spring[0], p[1] - FWORLD.spring[1]) < 0.5;
+    if (!spring && !edge(p) && lakeE(p[0], p[1]) >= 1) open.push(p);
+  }));
+  if (open.length) console.warn("Bach endet offen bei " + JSON.stringify(open));
+  return open;
 }
 
 /* --------------------------- Kulisse bauen ----------------------------- */
@@ -277,34 +322,70 @@ function worldStatic() {
   /* Waldwege: jeder auf eigener Höhe (Kreuzungen flimmern nicht), lose Enden laufen
      in eine kleine Lichtung mit Bank aus; der Weg zum Hof beginnt erst vor dem Tor */
   /* v56: an den Toren des Sägewerks endet der Weg gerade am Zaun (keine runde Kappe im Hof) */
-  FWORLD.paths.forEach((p, i) => {
+  /* v75: Knoten je Wegende: Mündung (Straße), Abzweig (liegt auf einem Knick eines anderen Weges), Tor, Hof,
+     Steg (Westweg) – sonst lose (Lichtung mit Bank). Weiche Ränder über die Bodenfarbe (wGroundAt). */
+  const teeOf = (q, i) => FWORLD.paths.findIndex((o, j) => j !== i && o.slice(1, -1).some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 0.05));
+  const PIER = worldPierFrame();
+  /* 1) Optionen und Stützpunkte je Weg: Abzweig-Stellen auf dem Hauptweg gerade ziehen, dann Kanten-Snap */
+  const WAYS = FWORLD.paths.map((p, i) => {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
     /* v72: kein „loses Ende“ mit Lichtung und Bank in der Nähe des Bachs (dort endet der Weg am Steg) */
     const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q) && distLine(q[0], q[1], FWORLD.creek) > 7;
     const a = p[0], e = p[p.length - 1], hof = q => inHofMax(q[0], q[1], 1.5);
+    const tee = [teeOf(a, i), teeOf(e, i)];
+    /* Westweg: das Ende sitzt auf dem Steg-Auflager und läuft in der Achse des Stegs an */
+    const pier = q => PIER && Math.hypot(q[0] - PIER.x, q[1] - PIER.z) < 1.5;
+    const snap = [pier(a) ? { at: [PIER.x, PIER.z], dir: [-PIER.dx, -PIER.dz], L: 1.4 } : null, pier(e) ? { at: [PIER.x, PIER.z], dir: [PIER.dx, PIER.dz], L: 1.4 } : null];
     /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über.
        v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
-    lines.merge(FWM.forestPath(p, 1.8, { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a), loose(e)], caps: [!gate(a) && !road(a) && !hof(a), !gate(e) && !road(e) && !hof(e)], mouth: [road(a), road(e)],
-      leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 }), {});
+    const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k];
+    const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0, loose(e) && tee[1] < 0], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
+      snap, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 };
+    return { p, o, tee };
   });
-  lines.merge(FWM.creekBank(FWORLD.creek), {});
-  lines.merge(FWM.creekBank(LAKE_CREEK), {});
+  WAYS.forEach((W, i) => {
+    let q = W.p;
+    WAYS.forEach((V, j) => V.tee.forEach((t, k) => { if (t === i) q = FWM.wayStraightAt(q, k ? V.p[V.p.length - 1] : V.p[0], 1.4); }));
+    W.raw = FWM.wayRaw(q, W.o);
+  });
+  /* 2) zeichnen – Abzweige kennen die fertige Linie ihres Hauptweges */
+  WAYS.forEach(W => {
+    const tee = W.tee.map(j => j < 0 ? null : { pts: WAYS[j].raw, w: 1.8 });
+    lines.merge(FWM.forestPath(W.raw, 1.8, Object.assign({}, W.o, { tee, prepared: true })), {});
+  });
+  /* v75: Bach – im Osten aus einer Quelle (verjüngt sich auf den letzten 9 Einheiten), im Westen bis an den
+     Kartenrand; der Seebach fließt in den See und im Osten bis über den Kartenrand. Ufer laufen weich ins Gras. */
+  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: wGroundAt };
+  lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
+  lines.merge(FWM.creekBank(LAKE_CREEK, CL), {});
+  const SP = FWORLD.spring;
+  if (SP) lines.merge(FWM.springBed(SP[0], SP[1], wGroundAt), {});
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
   const cw = new FM.MB();
-  cw.merge(FWM.creekWater(FWORLD.creek), {}); cw.merge(FWM.creekWater(LAKE_CREEK), {});
+  cw.merge(FWM.creekWater(FWORLD.creek, CR), {}); cw.merge(FWM.creekWater(LAKE_CREEK, CL), {});
+  if (SP) cw.merge(FWM.springPool(SP[0], SP[1]), {});
   R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false }));
+  if (SP) { const q = FWORLD.creek[1]; R.nodes.push(fnode(fmesh("wspring", FWM.springRocks), { x: SP[0], z: SP[1], ry: Math.atan2(-(q[1] - SP[1]), q[0] - SP[0]) })); }
+  worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
   R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: Math.PI / 2 }));
+  /* Brücke am Seebach – v75: der Ostuferweg läuft in ihrer Achse darüber (vorher führte kein Weg hin) */
   R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: 52.6, y: 0, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }));
-  /* v72: Wegende am Bach (Westweg): Steg ins Wasser und eine Bank am Ufer mit Blick auf den Bach */
-  R.nodes.push(fnode(fmesh("wjetty", FWM.jetty), { x: -86.05, y: 0, z: -57.7, ry: Math.PI / 2 }));
+  /* v75: Angelsteg am Ende des Westwegs – senkrecht zum Bach, beginnt am Wegende und endet mitten im Wasser */
+  if (PIER) R.nodes.push(fnode(fmesh("wpier", FWM.pier), { x: PIER.x, y: 0, z: PIER.z, ry: PIER.ry }));
   R.nodes.push(fnode(fmesh("wbench", FM.bench), { x: -83.2, y: 0, z: -55.4, ry: Math.PI }));
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
-  /* Weg von der Straße hinunter zum See und am Ufer entlang */
-  st.merge(FWM.forestPath(LAKE_WAY1, 1.6, { y: 0.026, ey: 0.019, caps: [false, true], mouth: [true, false], leafOk: (x, z) => z > 19.8 }), {});
-  /* v71: der Uferweg biegt bei x = 40 zur Straße ab – genau gegenüber dem Weg vom Teich (Kreuzung) */
-  st.merge(FWM.forestPath(LAKE_WAY2, 1.6, { y: 0.029, ey: 0.02, caps: [false, false], mouth: [false, true], leafOk: (x, z) => z > 19.8 }), {});
+  /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
+  const LO = { gnd: wGroundAt, roadCol: 0x7c7f86, mouthR: 0.75, teeR: 0.6, leafOk: (x, z) => z > 19.8 };
+  const oW = Object.assign({ y: 0.027, ey: 0.0185, caps: [false, false], mouth: [true, false] }, LO);
+  const oS = Object.assign({ y: 0.0295, ey: 0.0192, caps: [false, false], mouth: [true, false] }, LO);
+  const oE = Object.assign({ y: 0.0315, ey: 0.0198, caps: [false, true], ends: [false, true], mouth: [true, false] }, LO);
+  const rW = FWM.wayRaw(FWM.wayStraightAt(LAKE_WAY, LAKE_STEM[LAKE_STEM.length - 1], 1.4), oW);
+  const rE = FWM.wayRaw(FWM.wayStraightAt(LAKE_EAST, LAKE_WAY[LAKE_WAY.length - 1], 1.4), oE);
+  st.merge(FWM.forestPath(rW, 1.6, Object.assign({}, oW, { prepared: true, tee: [null, { pts: rE, w: 1.6 }] })), {});
+  st.merge(FWM.forestPath(FWM.wayRaw(LAKE_STEM, oS), 1.6, Object.assign({}, oS, { prepared: true, tee: [null, { pts: rW, w: 1.6 }] })), {});
+  st.merge(FWM.forestPath(rE, 1.6, Object.assign({}, oE, { prepared: true })), {});
   /* Nachbarfelder */
   const nf = (x, z, w, d, c1, c2) => {
     const m = new FM.MB();
@@ -373,10 +454,13 @@ function worldSyncHof(force) {
   b.merge(FWM.hofPath(2, F0 - WZ + 0.5, ps), { x: GX, z: (F0 + WZ - 0.5) / 2 });
   const we = big ? 0.48 : 0;                         /* v71: Pflaster bis zur Außenkante der Steinmauer */
   b.merge(FWM.hofPath(GX - 1 - B.x0 + we, 1, ps), { x: (GX - 1 + B.x0 - we) / 2, z: WZ });
-  b.merge(FWM.hofPath(2, 17.7 - F0, ps), { x: GX, z: (F0 + 17.7) / 2 });
+  /* v75: die Zufahrt endet am Bordstein (vorher 0,2 auf dem Asphalt) und weitet sich mit zwei Ausrundungen */
+  b.merge(FWM.hofPath(2, 17.48 - F0, ps), { x: GX, z: (F0 + 17.48) / 2 });
+  const dc = ps <= 1 ? 0xb59b6e : ps === 2 ? FM.C.gravel : 0xb8b0a2;
+  [-1, 1].forEach(sd => FWM.fillet(b, [GX + sd, 17.48], [0, -1], [sd, 0], 0.7, { y: 0.027, yE: 0.02, col: dc }));
   /* vor dem Westtor bis zum Waldweg (der beginnt am Tor des größten Hofs) – v71: als Feldweg, gerade
      am Tor abgeschnitten und unter dem Anfang des Waldwegs (gleiche Farbe, kein Laub aufs Pflaster) */
-  b.merge(FWM.forestPath([[B.x0 - we, WZ], [-24.9, WZ]], 1.8, { y: 0.0275, ey: 0.0155, caps: [false, false], leaves: false }), {});
+  b.merge(FWM.forestPath([[B.x0 - we, WZ], [-24.9, WZ]], 1.8, { y: 0.0275, ey: 0.0155, caps: [false, false], leaves: false, gnd: wGroundAt }), {});
   const wg = [WZ - 1.1, WZ + 1.1];
   if (big) {
     /* Steinmauer ringsum mit Toren im Süden und Westen – knapp außerhalb des Baulands */
@@ -919,7 +1003,7 @@ function worldSyncBarriers() {
   FAREA_ORDER.forEach(id => {
     const open = farmAreaOpen(id), n = WV.barriers[id];
     if (!open && !n) {
-      WV.barriers[id] = [AREA_BAR[id], AREA_BAR2[id]].filter(Boolean).map(p => fnode(fmesh("barrier", FWM.barrier), { x: p[0], z: p[1], ry: p[2] }));
+      WV.barriers[id] = [AREA_BAR[id]].concat(AREA_BAR2[id] || []).filter(Boolean).map(p => fnode(fmesh("barrier", FWM.barrier), { x: p[0], z: p[1], ry: p[2] }));
       WV.barriers[id].forEach(b => R.nodes.push(b));
     } else if (open && n) {
       delete WV.barriers[id];

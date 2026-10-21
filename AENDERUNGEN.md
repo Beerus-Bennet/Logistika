@@ -1,5 +1,52 @@
 # Änderungen – kurz für den Kollegen
 
+## v75 (aufbauend auf v74) – Wegenetz, Einmündungen, Bachenden, Angelsteg, Bodenschatten
+
+Umsetzung der sechs Fehlerbilder aus „Map & Graphics Refactoring“ (Screenshots vom 21.10.). Unsere Engine ist
+eigenes WebGL (`gl3d.js`), kein Three.js – die geforderten Ansätze sind darauf übertragen (siehe jeweils „Wo“).
+
+1. **Wegzunge am Kühlhaus ohne Anschluss** (`worldview.js` `LAKE_WAY`): Der Uferweg endete als runde Zunge vor dem
+   Kühlhaus. Jetzt läuft er weiter nach Westen und biegt in einem Bogen (r = 1,6) bei **x = −31** zur Straße ab –
+   genau gegenüber dem Feldweg vom Westtor: eine echte **Kreuzung**.
+2. **Einmündungen in die Straße** (`woodmodels.js` `wayMouth`, `fillet`, `snapEnd`):
+   - **Kanten-Snap**: die letzten ~1,5 Einheiten jedes Weges laufen exakt senkrecht auf die Bordsteinkante zu
+     (vorher schräg → eine Rundung ragte auf den Asphalt, die andere war abgehackt).
+   - **Ausrundungen mit berechnetem Radius**: Tangentenlänge `t = r / tan(θ/2)`, Mittelpunkt auf der
+     Winkelhalbierenden (`r / sin(θ/2)`) – funktioniert für jeden Winkel. Radien jetzt 0,85 (Waldwege) bzw. 0,75 (Wege am See).
+   - **Staubfächer** auf dem Asphalt vor jeder Mündung: Vertex-Farben laufen von leicht kiesfarben exakt in die
+     Straßenfarbe aus (statt harter Kante „Schotter auf Asphalt“). Der helle Bordstein bleibt als saubere Linie sichtbar.
+   - **Glättung zentripetal** (`smoothLine(pts, n, true)`, Barry–Goldman): die alte Catmull-Rom-Glättung schoss vor
+     kurzen geraden Stücken über das Wegende hinaus und zurück – dadurch knickten die Ränder an den Mündungen.
+   - Zufahrt vom Südtor endet jetzt am Bordstein (vorher 0,2 auf dem Asphalt) und hat gepflasterte Ausrundungen.
+3. **Wegenetz als Knoten** (Abzweige, `wayTee`, `wayStraightAt`, `wayRaw`): Wegenden werden klassifiziert – Mündung
+   (Straße), Abzweig (liegt auf einem Stützpunkt eines anderen Weges), Steg, Tor/Hof, sonst Lichtung. Abzweige bekommen
+   Ausrundungen zwischen den Wegkanten (T- und Y-Kreuzungen, z. B. Westtor, Brücke/Ostweg, Altwaldweg). Der Hauptweg
+   wird am Abzweig für die Darstellung gerade gezogen, damit die Ausrundung sauber an seiner Kante liegt.
+   - Am See jetzt drei Wege statt zwei ineinander geschobener: `LAKE_STEM` (Südtor → T-Kreuzung), `LAKE_WAY` (Uferweg
+     x = −31 … x = 40), `LAKE_EAST` (**neuer Ostuferweg**: Straße bei x = 40, genau gegenüber dem Teichweg → am Ostufer
+     entlang **über die Brücke am Seebach**, die bisher an keinem Weg lag → Lichtung mit Bank). Die alte grüne „Insel“
+     zwischen Abzweig und Bogen bei x = 5 ist weg.
+   - Schranken am See (solange er gesperrt ist) jetzt auch an den Zugängen x = −31 und x = 40 (`AREA_BAR2` = Liste).
+   - `team.js`: Laufwege nutzen die drei neuen Wege. Kulissenbäume halten Abstand zu den Seewegen.
+4. **Weiche Ränder** (`softEdge`): statt des harten, dunklen Streifens (wirkte wie ein Schatten → „schwebender“ Weg)
+   ein schmaler ruhiger Randstreifen und ein kurzer Verlauf exakt in die Bodenfarbe darunter (`o.gnd = wGroundAt`,
+   dieselbe Interpolation wie das Gelände). Gilt für Wege, Ausrundungen, Kappen, Lichtungen und das Bachufer.
+5. **Angelsteg statt „Brücke ins Nichts“** (`woodmodels.js` `pier`, `worldview.js` `worldPierFrame`): Der alte Steg
+   war 4,2 lang und lag auf dem anderen Ufer auf. Jetzt wird seine Lage aus dem Bachverlauf berechnet (senkrecht zum
+   Bach, Auflager am Kies), er ist 1,9 lang mit breiterem Kopf, endet vor der Bachmitte, hat Poller, Eimer und Angel,
+   kein Brückengeländer. Der Westweg wird beim Zeichnen genau auf das Auflager und in die Stegachse ausgerichtet.
+6. **Bach endet nicht mehr auf der Wiese** (`erbe.js` `FWORLD.creek`, `FWORLD.spring`; `woodmodels.js` `creekScale`,
+   `springBed`, `springPool`, `springRocks`): im Nordosten entspringt er an einer **Quelle mit Felsen** und Quelltopf und
+   verjüngt sich auf den letzten 9 Einheiten; im Westen läuft er bis über den Kartenrand (x = −160). Der Seebach beginnt
+   im See und endet hinter dem Kartenrand. **Edge-Check** `worldWaterCheck()` warnt in der Konsole, falls ein Bach je
+   wieder offen endet (Kartenrand, See oder Quelle sind erlaubt).
+7. **Bodenschicht wirft keine Schatten** (`gl3d.js` Schattenpass): flache, nach oben zeigende Flächen unter y = 0,07
+   werden im Schattenpass verworfen (Wege, Pflaster, Felder, Dekowege …) – kein Haarschatten neben dem Pflaster mehr.
+   Wände, Zäune, Stämme werfen weiter ab dem Boden Schatten (kein Spalt am Fuß). Entspricht polygonOffset/Render-Layern.
+- Tafel am See steht eine Kachel weiter östlich neben dem Stichweg (alte Spielstände werden einmal verschoben).
+- Fällbare Bäume eines neuen Spiels sind unverändert (Weg- und Bachdaten so gewählt, geprüft).
+- `index.html`/`sw.js`: v75.
+
 ## v74 (aufbauend auf v73) – Schatzkiste: Erscheinen, Leuchtfeuer und große Öffnungs-Show
 
 Zufallsereignis „Schatzkiste“ (Vogelschwarm + rotes Kreuz, Grabungs-Minispiel `MG dig` unverändert). Vorher: nur ein Toast,

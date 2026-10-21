@@ -37,6 +37,8 @@ const FWORLD = {
      v70: der Weg von der Brücke nach Osten läuft am Teich vorbei bis zur Straße
      v71: … und trifft sie senkrecht bei x = 40, genau gegenüber vom Uferweg (Kreuzung)
      v72: der Hauptweg läuft gerade über die Brücke (x = −33,8); der Weg nach Westen endet vor dem Bach (Steg);
+     v75: … am Auflager des Angelstegs (worldPierFrame, senkrecht zum Bach) – das Ende wird beim Zeichnen dorthin
+     ausgerichtet; die Daten bleiben, damit die fällbaren Bäume eines neuen Spiels dieselben bleiben;
      alle Wege enden genau am Bordstein der Straße (z = 17,48) */
   paths: [
     [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
@@ -46,8 +48,11 @@ const FWORLD = {
     [[-33.8, -84], [-46, -82], [-60, -78], [-70, -72]],
     [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.48]]
   ],
-  /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg */
-  creek: [[18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60]],
+  /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg.
+     v75: er endet nirgends mehr offen auf der Wiese – im Nordosten entspringt er an einer Quelle mit Felsen
+     (spring, der Bach verjüngt sich dorthin), im Westen läuft er bis über den Kartenrand (x = −160) */
+  creek: [[31.2, -105.6], [26, -100.5], [18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60], [-124, -63], [-140, -61.5], [-164, -64]],
+  spring: [31.2, -105.6],
   bridge: [-33.8, -76.4],   /* Mitte der Brücke – Gehrichtung Nord–Süd */
   clearings: [[-24, -48, 6], [-60, -54, 6.5], [-6, -76, 5.5], [-78, -84, 6], [-52, -96, 5]],
   rocks: [-68, -98, 9],
@@ -212,6 +217,8 @@ function erbeInit(F, fresh) {
   if (!F.v56) { F.v56 = 1; if (!fresh) erbeMove56(F); }
   /* v73: laufende „Besondere Lieferung“ (lag seit v57 mitten auf dem Hof) kommt vors Hoftor */
   if (F.ev && F.ev.cur && F.ev.cur.k === "lieferung" && F.ev.cur.data && !F.ev.cur.data.v73) farmParcelSpot(F.ev.cur);
+  /* v75: Tafel am See neben den Stichweg (vorher stand sie auf der Wegkante) */
+  { const bd = (F.objs || []).find(o => o.t === "board" && o.k === "see"); if (bd && bd.x === 6 + FG / 2 && bd.z === 20 + FG / 2) bd.x += 1; }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {
@@ -684,7 +691,8 @@ function farmSawUpgrade(id) {
 }
 function farmObj1(t) { return S.farm.objs.find(o => o.t === t) || null; }
 /* v53: Bestelltafeln am Sägewerk (am Tor im Hof) und an der Fischerei (am Uferweg) */
-const FBOARDS = { saege: { x: -45, z: -34 }, see: { x: 6, z: 20 } };
+/* v75: die Tafel am See steht eine Kachel weiter östlich – neben dem Stichweg statt auf seiner Kante */
+const FBOARDS = { saege: { x: -45, z: -34 }, see: { x: 7, z: 20 } };
 function farmBoardsCheck() {
   const F = S.farm;
   if (!F || !F.areas || (typeof FSITE !== "undefined" && FSITE.kind !== "hof")) return;

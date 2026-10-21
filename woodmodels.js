@@ -461,12 +461,44 @@ const FWM = (() => {
     }
     return b;
   }
-  /* Band entlang einer Linie (Waldweg, Bach): y über dem Boden */
-  /* Band entlang einer Linie: ein durchgehender Streifen mit gemeinsamen Ecken
-     (keine überlappenden Stücke – die flimmerten beim Zoomen), optional mit
-     dunklerem Rand und runden Enden */
-  /* ey (v70): eigene Höhe für den Rand – liegt er unter allen Wegflächen, laufen Abzweige sauber ineinander */
-  function ribbon(b, pts, w, color, y, edge, caps, ey) {
+  /* =========================================================================
+     v75: Wegenetz. Ein Weg ist eine Polylinie (geglättet), seine Enden sind Knoten:
+       – Mündung (o.mouth): das Ende liegt an der Bordsteinkante. Kanten-Snap (snapEnd): die
+         letzten Meter laufen genau senkrecht auf die Kante zu; je Seite eine Ausrundung (fillet),
+         deren Tangentenlänge aus dem Winkel berechnet wird (t = r / tan(θ/2)); davor auf dem
+         Asphalt ein weicher Staubfächer (Vertex-Farben von Kies zu Asphalt).
+       – Abzweig (o.tee): das Ende liegt auf der Mittellinie eines anderen Weges – Ausrundungen
+         zwischen den beiden Wegkanten, egal in welchem Winkel (T- und Y-Kreuzung).
+       – Steg/Brückenkopf (o.snap mit Richtung): das Ende wird auf den Knotenpunkt gelegt und läuft
+         in dessen Achse an.
+       – sonst: runde Kappe (oder gerade abgeschnitten, z. B. am Tor).
+     Ränder (o.gnd = Bodenfarbe je Punkt): statt eines harten dunklen Streifens ein Verlauf von
+     Kiesbraun zur Bodenfarbe darunter – der Weg liegt sichtbar AUF dem Boden und „schwebt“ nicht.
+     ========================================================================= */
+  const WAY_COL = 0xb69a6a, WAY_RIM = 0x8f7c55;
+  /* Dreiecke immer mit Normale nach oben (Reihenfolge wird geprüft), mit und ohne Farbverlauf */
+  const up3 = (b, A, B, Cc, col) => { const k = (B[2] - A[2]) * (Cc[0] - A[0]) - (B[0] - A[0]) * (Cc[2] - A[2]); if (k > 0) b.tri(A, B, Cc, col); else b.tri(A, Cc, B, col); };
+  const triUp = (b, A, B, Cc, ca, cb, cc) => { const k = (B[2] - A[2]) * (Cc[0] - A[0]) - (B[0] - A[0]) * (Cc[2] - A[2]); if (k > 0) b.triV(A, B, Cc, ca, cb, cc); else b.triV(A, Cc, B, ca, cc, cb); };
+  const quadUp = (b, A, B, Cc, D, ca, cb, cc, cd) => { triUp(b, A, B, Cc, ca, cb, cc); triUp(b, A, Cc, D, ca, cc, cd); };
+  const lerp3 = (a, c, t) => [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t, a[2] + (c[2] - a[2]) * t];
+  const unit = (x, z) => { const l = Math.hypot(x, z) || 1; return [x / l, z / l]; };
+  /* weicher Rand zwischen zwei Punkten der Kante (a, c) mit Richtung nach außen (da, dc): innen ein schmaler,
+     ruhiger Streifen (Randton, etwas zur Bodenfarbe hin gemischt – kein schwarzer „Schatten“), außen ein kurzer
+     Verlauf genau in die Bodenfarbe. So bleibt die Kante im Low-Poly-Stil klar, aber der Weg liegt auf dem Boden. */
+  const RIM_IN = 0.15, RIM_OUT = 0.15;
+  function softEdge(b, a, c, da, dc, y, EC, gnd) {
+    const m = (p, d, k) => [p[0] + d[0] * k, y, p[1] + d[1] * k];
+    const A0 = m(a, da, 0), C0 = m(c, dc, 0), A1 = m(a, da, RIM_IN), C1 = m(c, dc, RIM_IN), A2 = m(a, da, RIM_IN + RIM_OUT), C2 = m(c, dc, RIM_IN + RIM_OUT);
+    const g = q => G3.col(gnd(q[0], q[2])), gA1 = g(A1), gC1 = g(C1), tA = lerp3(EC, gA1, 0.3), tC = lerp3(EC, gC1, 0.3);
+    quadUp(b, A0, C0, C1, A1, tA, tC, tC, tA);
+    quadUp(b, A1, C1, C2, A2, tA, tC, g(C2), g(A2));
+  }
+
+  /* Band entlang einer Linie: ein durchgehender Streifen mit gemeinsamen Ecken (keine überlappenden
+     Stücke – die flimmerten beim Zoomen), optional mit Rand und runden Enden.
+     ey (v70): eigene Höhe für den Rand – liegt er unter allen Wegflächen, laufen Abzweige sauber ineinander.
+     gnd (v75): Bodenfarbe je Punkt → weicher Rand (Verlauf vom Randton zur Bodenfarbe) */
+  function ribbon(b, pts, w, color, y, edge, caps, ey, gnd) {
     const yE = ey != null ? ey : y - 0.004;
     const n = pts.length;
     if (n < 2) return;
@@ -483,90 +515,228 @@ const FWM = (() => {
       return [-dz / l * k, dx / l * k];
     });
     const at = (i, f) => [pts[i][0] + N[i][0] * f, y, pts[i][1] + N[i][1] * f];
-    const hw = w / 2;
+    const hw = w / 2, soft = !!(gnd && edge != null), rimW = hw * 0.25;
+    const EC = edge != null ? G3.col(edge) : null;
+    const e1 = (i0, f) => { const q = at(i0, f); q[1] = yE; return q; };
     for (let i = 1; i < n; i++) {
       b.quad(at(i - 1, hw), at(i, hw), at(i, -hw), at(i - 1, -hw), color);
-      if (edge) {
-        const e1 = (i0, f) => { const q = at(i0, f); q[1] = yE; return q; };
-        b.quad(e1(i - 1, hw * 1.25), e1(i, hw * 1.25), e1(i, hw), e1(i - 1, hw), edge);
-        b.quad(e1(i - 1, -hw), e1(i, -hw), e1(i, -hw * 1.25), e1(i - 1, -hw * 1.25), edge);
+      if (edge == null) continue;
+      if (soft) [1, -1].forEach(s => {
+        const A = e1(i - 1, s * hw), B = e1(i, s * hw);
+        softEdge(b, [A[0], A[2]], [B[0], B[2]], [N[i - 1][0] * s, N[i - 1][1] * s], [N[i][0] * s, N[i][1] * s], yE, EC, gnd);
+      });
+      else {
+        b.quad(e1(i - 1, hw + rimW), e1(i, hw + rimW), e1(i, hw), e1(i - 1, hw), edge);
+        b.quad(e1(i - 1, -hw), e1(i, -hw), e1(i, -hw - rimW), e1(i - 1, -hw - rimW), edge);
       }
     }
     if (!caps) return;
     /* runde Enden: Halbkreis in Laufrichtung nach außen (caps: true oder [Anfang, Ende]) */
     [[0, -1], [n - 1, 1]].forEach(([i, dir], e) => {
       if (Array.isArray(caps) && !caps[e]) return;
-      const p = pts[i], nx = N[i][0], nz = N[i][1], l = Math.hypot(nx, nz) || 1, tx = nz / l * dir, tz = -nx / l * dir;
-      const seg = 8, rr = [[hw, color, y]].concat(edge ? [[hw * 1.25, edge, yE]] : []);
-      rr.reverse().forEach(([r, col, yy]) => {
-        for (let k = 0; k < seg; k++) {
-          const a0 = Math.PI * k / seg, a1 = Math.PI * (k + 1) / seg;
-          /* von der einen Seite (Normale) über die Spitze (Tangente) zur anderen */
-          const P0 = [p[0] + (nx / l * Math.cos(a0) + tx * Math.sin(a0)) * r, yy, p[1] + (nz / l * Math.cos(a0) + tz * Math.sin(a0)) * r];
-          const P1 = [p[0] + (nx / l * Math.cos(a1) + tx * Math.sin(a1)) * r, yy, p[1] + (nz / l * Math.cos(a1) + tz * Math.sin(a1)) * r];
-          const C0 = [p[0], yy, p[1]];
-          const up = (P0[2] - C0[2]) * (P1[0] - C0[0]) - (P0[0] - C0[0]) * (P1[2] - C0[2]);
-          if (up > 0) b.tri(C0, P0, P1, col); else b.tri(C0, P1, P0, col);
+      const p = pts[i], nx = N[i][0], nz = N[i][1], l = Math.hypot(nx, nz) || 1, tx = nz / l * dir, tz = -nx / l * dir, seg = 10;
+      const pt = (a, r, yy) => [p[0] + (nx / l * Math.cos(a) + tx * Math.sin(a)) * r, yy, p[1] + (nz / l * Math.cos(a) + tz * Math.sin(a)) * r];
+      for (let k = 0; k < seg; k++) {
+        const a0 = Math.PI * k / seg, a1 = Math.PI * (k + 1) / seg;
+        if (edge != null) {
+          if (soft) { const p0 = pt(a0, hw, yE), p1 = pt(a1, hw, yE); softEdge(b, [p0[0], p0[2]], [p1[0], p1[2]], unit(p0[0] - p[0], p0[2] - p[1]), unit(p1[0] - p[0], p1[2] - p[1]), yE, EC, gnd); }
+          else up3(b, [p[0], yE, p[1]], pt(a0, hw + rimW, yE), pt(a1, hw + rimW, yE), edge);
         }
-      });
-    });
-  }
-  /* v72: Ausrundung an einer Einmündung. p = Wegende am Bordstein, q = Punkt davor (gibt die Laufrichtung).
-     Je Seite ein Viertelkreis-Zwickel in Wegfarbe (Höhe y) und darunter ein Randstreifen (Höhe yE) entlang des Bogens */
-  function mouthFillet(b, p, q, W, y, yE, r) {
-    const dx = p[0] - q[0], dz = p[1] - q[1], l = Math.hypot(dx, dz) || 1, tx = dx / l, tz = dz / l, nx = -tz, nz = tx;
-    const hw = W / 2, rim = hw * 0.25, seg = 8, cu = -r, cv = hw + r;
-    const up3 = (A, B, C, col) => { const c = (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]); if (c > 0) b.tri(A, B, C, col); else b.tri(A, C, B, col); };
-    [-1, 1].forEach(sd => {
-      const P3 = (u, v, yy) => [p[0] + tx * u + nx * v * sd, yy, p[1] + tz * u + nz * v * sd];
-      const arc = (rr, yy, a) => P3(cu + rr * Math.cos(a), cv + rr * Math.sin(a), yy);
-      const K = P3(0, hw, y);
-      /* schmaler Überlapp entlang der Wegkante: sonst blitzt der dunkle Rand an der Naht zum Weg durch */
-      const o1 = P3(-r - 0.02, hw - 0.05, y + 0.0003), o2 = P3(0, hw - 0.05, y + 0.0003), o3 = P3(0, hw + 0.03, y + 0.0003), o4 = P3(-r - 0.02, hw + 0.03, y + 0.0003);
-      up3(o1, o2, o3, 0xb69a6a); up3(o1, o3, o4, 0xb69a6a);
-      for (let i = 0; i < seg; i++) {
-        const a0 = -Math.PI / 2 + Math.PI / 2 * i / seg, a1 = -Math.PI / 2 + Math.PI / 2 * (i + 1) / seg;
-        up3(K, arc(r, y, a0), arc(r, y, a1), 0xb69a6a);
-        /* Rand: Ring innerhalb des Bogens (unter allen Wegflächen) */
-        up3(arc(r, yE, a0), arc(r - rim, yE, a0), arc(r - rim, yE, a1), 0x8f7c55);
-        up3(arc(r, yE, a0), arc(r - rim, yE, a1), arc(r, yE, a1), 0x8f7c55);
+        up3(b, [p[0], y, p[1]], pt(a0, hw, y), pt(a1, hw, y), color);
       }
     });
   }
-  /* Polylinie glätten (Catmull-Rom), damit Wege und Bach weich laufen */
-  function smoothLine(pts, n) {
+  /* Ausrundung in der Ecke Cn zwischen zwei Kanten. u1, u2 = Richtungen entlang der beiden Kanten, weg
+     von der Ecke (Einheitsvektoren). Winkel θ zwischen ihnen → Tangentenlänge t = r / tan(θ/2), Mittelpunkt
+     auf der Winkelhalbierenden im Abstand r / sin(θ/2). Gefüllt wird das Stück zwischen Ecke und Bogen
+     (Wegfarbe, Höhe o.y), am Bogen ein weicher Rand ins Gras (Höhe o.yE, unter allen Wegflächen).
+     Schmale Überlappstreifen entlang beider Kanten, damit an den Nähten nichts durchblitzt. */
+  function fillet(b, Cn, u1, u2, r, o) {
+    const cosT = Math.max(-0.985, Math.min(0.985, u1[0] * u2[0] + u1[1] * u2[1])), th = Math.acos(cosT);
+    const t = r / Math.tan(th / 2), d = r / Math.sin(th / 2), bi = unit(u1[0] + u2[0], u1[1] + u2[1]);
+    const O = [Cn[0] + bi[0] * d, Cn[1] + bi[1] * d];
+    const T1 = [Cn[0] + u1[0] * t, Cn[1] + u1[1] * t], T2 = [Cn[0] + u2[0] * t, Cn[1] + u2[1] * t];
+    const a1 = Math.atan2(T1[1] - O[1], T1[0] - O[0]);
+    let da = Math.atan2(T2[1] - O[1], T2[0] - O[0]) - a1;
+    while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    const seg = Math.max(4, Math.ceil(Math.abs(da) / (Math.PI / 18)));
+    const y = o.y, yE = o.yE, fc = o.col != null ? o.col : WAY_COL, EC = G3.col(o.rim != null ? o.rim : WAY_RIM);
+    const K = [Cn[0], y + 0.0004, Cn[1]], P = k => { const a = a1 + da * k / seg; return [O[0] + Math.cos(a) * r, O[1] + Math.sin(a) * r]; };
+    for (let k = 0; k < seg; k++) {
+      const p0 = P(k), p1 = P(k + 1);
+      up3(b, K, [p0[0], y + 0.0004, p0[1]], [p1[0], y + 0.0004, p1[1]], fc);
+      if (o.gnd) softEdge(b, p0, p1, unit(O[0] - p0[0], O[1] - p0[1]), unit(O[0] - p1[0], O[1] - p1[1]), yE, EC, o.gnd);
+    }
+    /* Überlapp: je Kante ein 0,06 breiter Streifen von der Ecke bis zum Tangentenpunkt, halb in den Weg hinein */
+    [[u1, u2, t], [u2, u1, t]].forEach(([u, v, len]) => {
+      const A = [Cn[0] - v[0] * 0.05, Cn[1] - v[1] * 0.05], B = [A[0] + u[0] * len, A[1] + u[1] * len], Cc = [B[0] + v[0] * 0.08, B[1] + v[1] * 0.08], D = [A[0] + v[0] * 0.08, A[1] + v[1] * 0.08];
+      quadUp(b, [A[0], y + 0.0004, A[1]], [B[0], y + 0.0004, B[1]], [Cc[0], y + 0.0004, Cc[1]], [D[0], y + 0.0004, D[1]], G3.col(fc), G3.col(fc), G3.col(fc), G3.col(fc));
+    });
+    return { T1, T2, O, t };
+  }
+  /* Kanten-Snap: das Ende (end = 0 Anfang, 1 Ende) läuft auf den letzten L Einheiten genau in Richtung n
+     (Einheitsvektor zum Knoten hin) an. Punkte in dieser Zone fallen weg, zwei neue liegen auf der Achse
+     (der zweite hält die Glättung gerade). at: Knotenpunkt (sonst bleibt der Endpunkt). */
+  function snapEnd(pts, end, L, n, at) {
+    const P = end ? pts.slice() : pts.slice().reverse();
+    const e = at ? [at[0], at[1]] : P[P.length - 1];
+    P[P.length - 1] = e;
+    let dir = n;
+    if (!dir) { const q = P[P.length - 2]; dir = unit(e[0] - q[0], e[1] - q[1]); }
+    while (P.length > 2) { const q = P[P.length - 2]; if ((e[0] - q[0]) * dir[0] + (e[1] - q[1]) * dir[1] < L) P.splice(P.length - 2, 1); else break; }
+    P.splice(P.length - 1, 0, [e[0] - dir[0] * L, e[1] - dir[1] * L], [e[0] - dir[0] * L * 0.5, e[1] - dir[1] * L * 0.5]);
+    return end ? P : P.reverse();
+  }
+  /* Mündung in die Straße: Ende p liegt am Bordstein, die Kante läuft in Richtung edge (Standard: Straße
+     entlang x). Zwei Ausrundungen (Wegfarbe) und vor der Kante ein Staubfächer auf dem Asphalt. */
+  function wayMouth(b, P, end, W, o) {
+    const p = end ? P[P.length - 1] : P[0], q = end ? P[P.length - 2] : P[1];
+    const t = unit(p[0] - q[0], p[1] - q[1]), e = o.mouthEdge || [1, 0], hw = W / 2, r = o.mouthR || 0.85;
+    let nx = -e[1], nz = e[0]; if (nx * t[0] + nz * t[1] < 0) { nx = -nx; nz = -nz; }
+    const dn = nx * t[0] + nz * t[1] || 1;
+    [-1, 1].forEach(sd => {
+      const sx = p[0] - t[1] * hw * sd, sz = p[1] + t[0] * hw * sd;
+      const lam = -((sx - p[0]) * nx + (sz - p[1]) * nz) / dn, Cn = [sx + t[0] * lam, sz + t[1] * lam];
+      let u2 = [e[0], e[1]]; if ((Cn[0] - p[0]) * u2[0] + (Cn[1] - p[1]) * u2[1] < 0) u2 = [-u2[0], -u2[1]];
+      fillet(b, Cn, [-t[0], -t[1]], u2, r, o);
+    });
+    if (o.roadCol == null) return;
+    /* Staubfächer: beginnt hinter dem Bordstein (o.curbW), 0,42 tief, höchstens 30 % Kiesfarbe; läuft zur Straßenfarbe aus */
+    const base = G3.col(o.roadCol), dust = mix(o.roadCol, WAY_COL, 0.3), L = hw + r * 0.6, D = 0.42, c0 = o.curbW || 0.12, Y = 0.033;
+    const pt = (u, v) => [p[0] + e[0] * u * L + nx * (c0 + v * D), Y, p[1] + e[1] * u * L + nz * (c0 + v * D)];
+    const cw = (u, v) => { const k = Math.max(0, 1 - u * u) * (1 - v); return lerp3(base, dust, k * k * (3 - 2 * k)); };
+    const NU = 10, NV = 3;
+    for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
+      const ua = -1 + 2 * i / NU, ub = -1 + 2 * (i + 1) / NU, va = j / NV, vb = (j + 1) / NV;
+      quadUp(b, pt(ua, va), pt(ub, va), pt(ub, vb), pt(ua, vb), cw(ua, va), cw(ub, va), cw(ub, vb), cw(ua, vb));
+    }
+  }
+  /* Abzweig: Ende p liegt auf der Mittellinie des Hauptweges M (geglättet, Breite mW). Für beide Seiten des
+     Abzweigs: Schnitt der Seitenlinie mit der Kante des Hauptweges = Ecke, dort eine Ausrundung. */
+  function wayTee(b, P, end, W, M, mW, o) {
+    const p = end ? P[P.length - 1] : P[0], q = end ? P[P.length - 2] : P[1];
+    const t = unit(p[0] - q[0], p[1] - q[1]), hw = W / 2, r = o.teeR || 0.7;
+    /* nächster Punkt der Mittellinie des Hauptweges und die Richtung dort */
+    const near = (x, z) => {
+      let best = 1e9, F = null, m = null;
+      for (let i = 1; i < M.length; i++) {
+        const a = M[i - 1], c = M[i], dx = c[0] - a[0], dz = c[1] - a[1], l2 = dx * dx + dz * dz || 1;
+        const k = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)), fx = a[0] + dx * k, fz = a[1] + dz * k, d = Math.hypot(x - fx, z - fz);
+        if (d < best - 1e-6) { best = d; F = [fx, fz]; m = unit(dx, dz); }
+      }
+      return { F, m };
+    };
+    /* Ecke = Schnitt der Seitenlinie des Abzweigs mit der Kante des Hauptweges (Kante = Mittellinie + mW/2) */
+    const corner = (sx, sz, F, m) => {
+      let nM = [-m[1], m[0]]; if (nM[0] * (q[0] - F[0]) + nM[1] * (q[1] - F[1]) < 0) nM = [-nM[0], -nM[1]];
+      const E0 = [F[0] + nM[0] * mW / 2, F[1] + nM[1] * mW / 2], dn = nM[0] * t[0] + nM[1] * t[1];
+      if (Math.abs(dn) < 0.15) return null;                    /* fast parallel – kein sauberer Abzweig */
+      const lam = -((sx - E0[0]) * nM[0] + (sz - E0[1]) * nM[1]) / dn;
+      return [sx + t[0] * lam, sz + t[1] * lam];
+    };
+    const N0 = near(p[0], p[1]);
+    if (!N0.F) return;
+    [-1, 1].forEach(sd => {
+      const sx = p[0] - t[1] * hw * sd, sz = p[1] + t[0] * hw * sd;
+      let Cn = corner(sx, sz, N0.F, N0.m);
+      if (!Cn) return;
+      /* Richtung entlang der Kante weg vom Abzweig; dann die Kante dort neu messen, wo das Fillet anliegt
+         (Mitte des Schenkels) – so liegt es auch an einer leicht gebogenen Kante sauber an */
+      let u2 = [N0.m[0], N0.m[1]]; if ((Cn[0] - p[0]) * u2[0] + (Cn[1] - p[1]) * u2[1] < 0) u2 = [-u2[0], -u2[1]];
+      const N1 = near(Cn[0] + u2[0] * r * 0.6, Cn[1] + u2[1] * r * 0.6), C1 = N1.F && corner(sx, sz, N1.F, N1.m);
+      if (C1) { Cn = C1; u2 = [N1.m[0], N1.m[1]]; if ((Cn[0] - p[0]) * u2[0] + (Cn[1] - p[1]) * u2[1] < 0) u2 = [-u2[0], -u2[1]]; }
+      fillet(b, Cn, [-t[0], -t[1]], u2, r, o);
+    });
+  }
+  /* Polylinie glätten (Catmull-Rom), damit Wege und Bach weich laufen.
+     v75: cen = zentripetal (Barry–Goldman, α = 0,5): kein Überschwingen, wenn kurze und lange Stücke
+     aufeinander folgen – vorher schlug die Kurve vor einer kurzen geraden Einmündung kurz über das Ende hinaus
+     und zurück, die Wegränder knickten dort ab („abgehackte“ Rundungen). Enden werden gespiegelt verlängert,
+     damit der Weg am Ende genau in Richtung des letzten Stücks läuft. */
+  function smoothLine(pts, n, cen) {
     if (pts.length < 3) return pts;
-    const out = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const out = [], N = pts.length;
+    for (let i = 0; i < N - 1; i++) {
+      const p1 = pts[i], p2 = pts[i + 1];
+      if (!cen) {
+        const p0 = pts[Math.max(0, i - 1)], p3 = pts[Math.min(N - 1, i + 2)];
+        for (let k = 0; k < n; k++) {
+          const t = k / n, t2 = t * t, t3 = t2 * t;
+          const f = (a, b2, c, d) => 0.5 * (2 * b2 + (-a + c) * t + (2 * a - 5 * b2 + 4 * c - d) * t2 + (-a + 3 * b2 - 3 * c + d) * t3);
+          out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+        }
+        continue;
+      }
+      const p0 = i > 0 ? pts[i - 1] : [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]], p3 = i < N - 2 ? pts[i + 2] : [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]];
+      const dt = (a, c) => Math.max(1e-4, Math.sqrt(Math.hypot(c[0] - a[0], c[1] - a[1])));
+      const t0 = 0, t1 = t0 + dt(p0, p1), t2 = t1 + dt(p1, p2), t3 = t2 + dt(p2, p3);
+      const L = (a, c, ta, tb, t) => [a[0] + (c[0] - a[0]) * (t - ta) / (tb - ta), a[1] + (c[1] - a[1]) * (t - ta) / (tb - ta)];
       for (let k = 0; k < n; k++) {
-        const t = k / n, t2 = t * t, t3 = t2 * t;
-        const f = (a, b2, c, d) => 0.5 * (2 * b2 + (-a + c) * t + (2 * a - 5 * b2 + 4 * c - d) * t2 + (-a + 3 * b2 - 3 * c + d) * t3);
-        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+        const t = t1 + (t2 - t1) * k / n;
+        const A1 = L(p0, p1, t0, t1, t), A2 = L(p1, p2, t1, t2, t), A3 = L(p2, p3, t2, t3, t);
+        const B1 = L(A1, A2, t0, t2, t), B2 = L(A2, A3, t1, t3, t);
+        out.push(L(B1, B2, t1, t2, t));
       }
     }
-    out.push(pts[pts.length - 1]);
+    out.push(pts[N - 1]);
     return out;
   }
-  /* o.y: Höhe (jeder Weg etwas anders – an Kreuzungen flimmert dann nichts),
-     o.ends: [Anfang, Ende] laufen in eine kleine Lichtung mit Baumstamm-Bank aus */
+  /* v75: Stützpunkte eines Weges nach dem Kanten-Snap – an der Straße läuft der Weg senkrecht an (Straße entlang x),
+     an Knoten (Steg, Brückenkopf) in deren Achse. worldview braucht sie auch für Abzweige (die Kante des Hauptweges). */
+  function wayRaw(pts, o) {
+    let raw = pts;
+    (o.mouth || []).forEach((on, k) => {
+      if (!on || o.snapRoad === false) return;
+      const e = k ? raw[raw.length - 1] : raw[0], q = k ? raw[raw.length - 2] : raw[1];
+      raw = snapEnd(raw, k, (o.mouthR || 0.85) + 0.7, [0, e[1] > q[1] ? 1 : -1]);
+    });
+    (o.snap || []).forEach((S, k) => { if (S) raw = snapEnd(raw, k, S.L || 1.4, S.dir, S.at); });
+    return raw;
+  }
+  /* v75: Hauptweg an einem Abzweig gerade ziehen: Q ist ein Stützpunkt (oft ein Knick), an dem ein anderer Weg
+     beginnt. Davor und dahinter kommt je ein Punkt auf der mittleren Richtung dazu – die Glättung läuft dort gerade
+     durch und die Ausrundungen des Abzweigs liegen sauber an der Wegkante (sonst blieb am Knick ein Grasspalt). */
+  function wayStraightAt(pts, Q, L) {
+    const i = pts.findIndex(r => Math.hypot(r[0] - Q[0], r[1] - Q[1]) < 0.05);
+    if (i <= 0 || i >= pts.length - 1) return pts;
+    const a = pts[i - 1], c = pts[i + 1], q = pts[i], d1 = unit(q[0] - a[0], q[1] - a[1]), d2 = unit(c[0] - q[0], c[1] - q[1]), m = unit(d1[0] + d2[0], d1[1] + d2[1]);
+    const k = Math.min(L || 1.4, Math.hypot(q[0] - a[0], q[1] - a[1]) * 0.4, Math.hypot(c[0] - q[0], c[1] - q[1]) * 0.4);
+    return pts.slice(0, i).concat([[q[0] - m[0] * k, q[1] - m[1] * k], q, [q[0] + m[0] * k, q[1] + m[1] * k]], pts.slice(i + 1));
+  }
+  /* Waldweg. o.y: Höhe (jeder Weg etwas anders – an Kreuzungen flimmert dann nichts),
+     o.ends: [Anfang, Ende] laufen in eine kleine Lichtung mit Baumstamm-Bank aus,
+     o.mouth: [Anfang, Ende] münden in die Straße (o.mouthR Radius, o.roadCol für den Staubfächer),
+     o.tee: [Anfang, Ende] = { pts, w } Hauptweg, auf dessen Mittellinie das Ende liegt,
+     o.snap: [Anfang, Ende] = { at, dir, L } Knoten (Steg, Brückenkopf), auf den das Ende ausgerichtet wird,
+     o.gnd: Bodenfarbe je Punkt (weiche Ränder), o.prepared: pts sind schon durch wayRaw gelaufen */
   function forestPath(pts, w, o) {
     o = o || {};
     G3.seed(3900 + pts.length);
-    const b = new MB(), P = smoothLine(pts, 6), y = o.y || 0.025, W = w || 1.7;
+    const W = w || 1.7, y = o.y || 0.025, yE = o.ey != null ? o.ey : y - 0.004;
+    const raw = o.prepared ? pts : wayRaw(pts, o);
+    const b = new MB(), P = smoothLine(raw, 6, true);
     (o.ends || []).forEach((on, k) => {
       if (!on) return;
       const p = k ? P[P.length - 1] : P[0], q = k ? P[P.length - 2] : P[1];
       const dx = p[0] - q[0], dz = p[1] - q[1], l = Math.hypot(dx, dz) || 1;
-      b.disc(W * 1.15, 14, 0xa89064, { x: p[0] + dx / l * 0.6, z: p[1] + dz / l * 0.6, y0: y - 0.006 });
+      const cx = p[0] + dx / l * 0.6, cz = p[1] + dz / l * 0.6, R0 = W * 1.15, sg = 16;
+      if (o.gnd) {
+        /* v75: Lichtung mit weichem Rand wie die Wege */
+        const EC = G3.col(WAY_RIM), PC = G3.col(0xa89064), Q = a => [cx + Math.cos(a) * R0, cz + Math.sin(a) * R0];
+        for (let k2 = 0; k2 < sg; k2++) {
+          const a0 = k2 / sg * Math.PI * 2, a1 = (k2 + 1) / sg * Math.PI * 2, q0 = Q(a0), q1 = Q(a1);
+          triUp(b, [cx, y - 0.006, cz], [q0[0], y - 0.006, q0[1]], [q1[0], y - 0.006, q1[1]], PC, PC, PC);
+          softEdge(b, q0, q1, [Math.cos(a0), Math.sin(a0)], [Math.cos(a1), Math.sin(a1)], y - 0.0065, lerp3(EC, PC, 0.4), o.gnd);
+        }
+      } else b.disc(R0, 14, 0xa89064, { x: cx, z: cz, y0: y - 0.006 });
       /* Bank aus einem halben Stamm am Rand der Lichtung */
       const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2;
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
-    b.noise(0.012, () => ribbon(b, P, W, 0xb69a6a, y, 0x8f7c55, o.caps || true, o.ey));
-    /* v72: Einmündung in die Straße – das Wegende liegt genau am Bordstein (o.mouth = [Anfang, Ende]) und
-       weitet sich mit zwei runden Ecken (Radius o.mouthR) zur Straße hin auf, statt eckig abzubrechen */
-    (o.mouth || []).forEach((on, k) => { if (on) mouthFillet(b, k ? P[P.length - 1] : P[0], k ? P[P.length - 2] : P[1], W, y, o.ey != null ? o.ey : y - 0.004, o.mouthR || 1.1); });
+    b.noise(0.012, () => ribbon(b, P, W, WAY_COL, y, WAY_RIM, o.caps || true, yE, o.gnd));
+    const fo = { y, yE, gnd: o.gnd, roadCol: o.roadCol, mouthR: o.mouthR, teeR: o.teeR, mouthEdge: o.mouthEdge };
+    (o.mouth || []).forEach((on, k) => { if (on) wayMouth(b, P, k, W, fo); });
+    (o.tee || []).forEach((T, k) => { if (T) wayTee(b, P, k, W, smoothLine(T.pts, 6, true), T.w || 1.8, fo); });
     /* Laub und Steinchen auf dem Weg – v71: nicht auf Hofpflaster oder Straße (o.leafOk), abschaltbar (o.leaves) */
     for (let i = 0; i < P.length && o.leaves !== false; i++) {
       const p = P[Math.floor(rnd() * P.length)], lx = p[0] + (rnd() - 0.5) * 1.2, lz = p[1] + (rnd() - 0.5) * 1.2, c = rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, ry = rnd() * 3;
@@ -575,22 +745,88 @@ const FWM = (() => {
     }
     return b;
   }
-  /* Bach: Ufer (Kies) und Wasser getrennt, damit das Wasser glitzern kann */
-  function creekBank(pts) {
+
+  /* ------------------------------- Bach ----------------------------------
+     v75: Breite je Punkt (Verjüngung zur Quelle hin), Kiesufer mit weichem Übergang ins Gras,
+     Quelle mit Felsen. o.taper = [Anfang, Ende]: Länge, auf der die Breite bis o.min (Anteil) schrumpft. */
+  function creekScale(P, o) {
+    const T = (o && o.taper) || [0, 0], mn = (o && o.min) || 0.4, n = P.length, L = [0];
+    for (let i = 1; i < n; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    const tot = L[n - 1], ease = u => u * u * (3 - 2 * u);
+    return L.map(s => {
+      let f = 1;
+      if (T[0] > 0 && s < T[0]) f = Math.min(f, mn + (1 - mn) * ease(s / T[0]));
+      if (T[1] > 0 && tot - s < T[1]) f = Math.min(f, mn + (1 - mn) * ease((tot - s) / T[1]));
+      return f;
+    });
+  }
+  /* Band mit Breite je Punkt (w · f[i]); fade > 0: außen ein Verlauf zur Bodenfarbe (gnd) */
+  function bandW(b, P, f, w, color, y, gnd, fade, onlyFade) {
+    const n = P.length, cc = G3.col(color);
+    const N = P.map((p, i) => { const a = P[Math.max(0, i - 1)], c = P[Math.min(n - 1, i + 1)]; const u = unit(c[0] - a[0], c[1] - a[1]); return [-u[1], u[0]]; });
+    const at = (i, s) => [P[i][0] + N[i][0] * s, y, P[i][1] + N[i][1] * s];
+    for (let i = 1; i < n; i++) {
+      const h0 = w / 2 * f[i - 1], h1 = w / 2 * f[i];
+      if (!onlyFade) b.quad(at(i - 1, h0), at(i, h1), at(i, -h1), at(i - 1, -h0), color);
+      if (fade && gnd) [1, -1].forEach(s => {
+        const A = at(i - 1, s * h0), B = at(i, s * h1), Cc = at(i, s * (h1 + fade)), D = at(i - 1, s * (h0 + fade));
+        quadUp(b, A, B, Cc, D, cc, cc, G3.col(gnd(Cc[0], Cc[2])), G3.col(gnd(D[0], D[2])));
+      });
+    }
+  }
+  function creekBank(pts, o) {
     G3.seed(3910);
-    const b = new MB(), P = smoothLine(pts, 6);
-    b.noise(0.06, () => ribbon(b, P, 3.6, 0xb7a78a, 0.012));
+    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o);
+    b.noise(0.06, () => bandW(b, P, f, 3.6, 0xb7a78a, 0.012, null, 0));
+    if (o && o.gnd) bandW(b, P, f, 3.6, 0xb7a78a, 0.012, o.gnd, 0.35, true);
     for (let i = 0; i < P.length * 0.6; i++) {
-      const p = P[Math.floor(rnd() * P.length)], s = rnd() < 0.5 ? 1 : -1;
-      b.ico(0.12 + rnd() * 0.12, rnd() < 0.5 ? 0x9a948b : 0xaaa498, { x: p[0] + s * (1.3 + rnd() * 0.5), y: 0.05, z: p[1] + (rnd() - 0.5) * 0.8, flat: 0.55, jitter: 0.4 });
+      const k = Math.floor(rnd() * P.length), p = P[k], s = rnd() < 0.5 ? 1 : -1;
+      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * f[k]), rnd() < 0.5 ? 0x9a948b : 0xaaa498, { x: p[0] + s * (1.3 + rnd() * 0.5) * f[k], y: 0.05, z: p[1] + (rnd() - 0.5) * 0.8, flat: 0.55, jitter: 0.4 });
     }
     return b;
   }
-  function creekWater(pts) {
-    const b = new MB(), P = smoothLine(pts, 6);
-    ribbon(b, P, 2.3, 0x3f8fc0, 0.03);
+  function creekWater(pts, o) {
+    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o);
+    bandW(b, P, f, 2.3, 0x3f8fc0, 0.03, null, 0);
     return b;
   }
+  /* Quelle am Bachanfang: Kiesbett und Quelltopf (Weltkoordinaten, damit der Rand weich ins Gras läuft) */
+  function springBed(x, z, gnd) {
+    const b = new MB(), seg = 24, R1 = 2.2, R2 = 2.8, y = 0.0125, sand = G3.col(0xb7a78a);
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3);
+      const P = (a, r) => [x + Math.cos(a) * r * wob(a), y, z + Math.sin(a) * r * wob(a)];
+      triUp(b, [x, y, z], P(a0, R1), P(a1, R1), sand, sand, sand);
+      if (gnd) { const q0 = P(a0, R2), q1 = P(a1, R2); quadUp(b, P(a0, R1), P(a1, R1), q1, q0, sand, sand, G3.col(gnd(q1[0], q1[2])), G3.col(gnd(q0[0], q0[2]))); }
+    }
+    return b;
+  }
+  function springPool(x, z) {
+    const b = new MB();
+    b.disc(1.45, 18, 0x3f8fc0, { x, z, y0: 0.03, wob: 0.08 });
+    return b;
+  }
+  /* Felsen hinter dem Quelltopf (lokal: der Bach läuft nach +x weg, die Felsen liegen bei −x) */
+  function springRocks() {
+    G3.seed(3975);
+    const b = new MB(), g1 = 0x8f8a80, g2 = 0xa39e94, moss = 0x5f8a3a;
+    b.noise(0.12, () => {
+      b.ico(1.05, g1, { x: -1.7, y: 0.35, z: 0.1, flat: 0.75, jitter: 0.35 });
+      b.ico(0.75, g2, { x: -1.35, y: 0.95, z: -0.55, flat: 0.8, jitter: 0.35 });
+      b.ico(0.6, g1, { x: -1.2, y: 0.2, z: 1.15, flat: 0.7, jitter: 0.4 });
+      b.ico(0.55, g2, { x: -0.9, y: 0.15, z: -1.35, flat: 0.65, jitter: 0.4 });
+      b.ico(0.38, g1, { x: 0.1, y: 0.08, z: 1.5, flat: 0.6, jitter: 0.4 });
+      b.ico(0.32, g2, { x: 0.3, y: 0.06, z: -1.45, flat: 0.6, jitter: 0.4 });
+      /* Moospolster und Farn */
+      b.ico(0.42, moss, { x: -1.9, y: 1.0, z: 0.25, flat: 0.45, jitter: 0.3 });
+      b.ico(0.3, moss, { x: -1.0, y: 0.38, z: 1.25, flat: 0.45, jitter: 0.3 });
+    });
+    /* das Wasser rinnt über den vorderen Stein in den Topf */
+    b.box(0.5, 0.04, 0.24, 0x6fb7e0, { x: -0.9, y: 0.5, z: 0.05, rz: -0.85 });
+    b.box(0.3, 0.04, 0.16, 0xbfe4f6, { x: -0.62, y: 0.26, z: 0.03, rz: -0.6 });
+    return b;
+  }
+
   /* v72: Brücke als Teil des Weges. Länge 5,8 (vorher 3,1 – kürzer als Bach plus Ufer), leicht gewölbt:
      die Enden liegen auf Wegniveau und gehen mit Rampe in den Belag über; Balken, Pfosten und Geländer folgen
      der Wölbung; an beiden Enden ein Querbalken als Auflager. Lokale x-Achse = Gehrichtung. */
@@ -617,15 +853,28 @@ const FWM = (() => {
     });
     return b;
   }
-  /* v72: kleiner Angelsteg am Ende des Westwegs – der Weg läuft auf den Steg und endet im Bach, nicht mehr im Wasser.
-     Lokale x-Achse = Länge (vom Ufer ins Wasser) */
-  function jetty() {
-    G3.seed(3950);
-    const b = new MB(), L = 4.2, n = 14, pitch = L / n;
-    b.noise(0.1, () => { for (let i = 0; i < n; i++) b.box(pitch - 0.03, 0.06, 1.1, i % 2 ? C.wood : C.woodL, { x: -L / 2 + (i + 0.5) * pitch, y: 0.11 }); });
-    [-0.4, 0.4].forEach(z => b.box(L, 0.09, 0.1, C.woodD, { y: 0.03, z }));
-    [-1, 1].forEach(sx => [-0.6, 0.6].forEach(z => b.box(0.1, 0.52, 0.1, C.woodD, { x: sx * (L / 2 - 0.12), z })));
-    [-0.6, 0.6].forEach(z => b.box(L - 0.2, 0.06, 0.06, C.woodD, { y: 0.52, z }));
+  /* v75: Angelsteg statt „Brücke ins Nichts“. Lokale x-Achse = vom Ufer (x = 0, Wegende) ins Wasser.
+     Schmaler Laufsteg (1,15) und ein breiterer Kopf (0,75 × 2,0) – er endet mitten im Bach, das andere Ufer
+     bleibt frei. Kein Geländer am Laufsteg (sonst sieht er aus wie eine Brücke), dafür Poller, Eimer und Angel. */
+  function pier() {
+    G3.seed(3951);
+    const b = new MB(), LW = 1.15, LH = 0.75, L = LW + LH, top = 0.15;
+    const deck = (x0, x1, w) => { const n = Math.max(1, Math.round((x1 - x0) / 0.27)), p = (x1 - x0) / n; for (let i = 0; i < n; i++) b.box(p - 0.025, 0.05, w, i % 2 ? C.wood : C.woodL, { x: x0 + (i + 0.5) * p, y: top - 0.05 }); };
+    b.noise(0.1, () => { deck(0.12, LW, 1.1); deck(LW, L, 2.0); });
+    /* Längsbalken und Querbalken unter dem Belag */
+    [-0.42, 0.42].forEach(z => b.box(L - 0.1, 0.08, 0.1, C.woodD, { x: (L + 0.1) / 2, y: top - 0.13, z }));
+    b.box(0.12, 0.08, 2.0, C.woodD, { x: LW + 0.05, y: top - 0.13 });
+    b.box(0.12, 0.08, 2.0, C.woodD, { x: L - 0.06, y: top - 0.13 });
+    /* Auflager am Ufer: ein Stamm quer, halb im Boden – der Weg endet genau hier */
+    b.cyl(0.11, 0.11, 1.3, 8, C.woodD, { x: 0.06, y: 0.03, z: -0.65, rx: Math.PI / 2, top: 0x7a5a38 });
+    /* Pfähle (stehen im Wasser, nur oben sichtbar) */
+    [[0.7, -0.5], [0.7, 0.5], [LW + 0.05, -0.92], [LW + 0.05, 0.92], [L - 0.06, -0.92], [L - 0.06, 0.92]].forEach(([x, z]) => b.cyl(0.06, 0.06, top + 0.25, 6, C.woodD, { x, y: -0.25, z }));
+    /* Poller an den äußeren Ecken, Tau am einen */
+    [[L - 0.08, -0.95], [L - 0.08, 0.95]].forEach(([x, z]) => { b.cyl(0.075, 0.075, 0.42, 7, 0x6a4a2e, { x, y: top - 0.02, z, top: 0x8a6a48 }); });
+    b.cyl(0.085, 0.085, 0.06, 7, 0xd8c8a0, { x: L - 0.08, y: top + 0.26, z: 0.95 });
+    /* Eimer und eine angelehnte Angel */
+    b.cyl(0.11, 0.13, 0.2, 9, 0x6c8fa8, { x: LW + 0.35, y: top, z: -0.6, top: 0x3f8fc0 });
+    b.box(0.025, 0.025, 1.5, 0x5a4030, { x: LW + 0.5, y: top + 0.35, z: 0.25, rx: 0.5, ry: 0.4 });
     return b;
   }
   /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
@@ -2007,7 +2256,7 @@ const FWM = (() => {
   return {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

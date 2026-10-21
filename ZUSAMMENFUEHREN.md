@@ -1,5 +1,17 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v75 – Wegenetz, Bachenden, Angelsteg (auf v74)
+
+| Thema | Wo |
+|---|---|
+| Wegbau neu: `ribbon` (weicher Rand `softEdge`), `fillet`, `snapEnd`, `wayMouth`, `wayTee`, `wayRaw`, `wayStraightAt`, `smoothLine(…, true)` zentripetal | `woodmodels.js` (Abschnitt „v75: Wegenetz“) |
+| `forestPath`-Optionen neu: `gnd`, `roadCol`, `tee`, `snap`, `prepared`, `mouthR`, `teeR` | `woodmodels.js` |
+| Wege am See: `LAKE_STEM`, `LAKE_WAY`, `LAKE_EAST` (alte Namen `LAKE_WAY1/2` bleiben als Alias) | `worldview.js`, `team.js` |
+| Bach: `FWORLD.creek` länger, `FWORLD.spring`; `creekBank/creekWater(pts, o)` mit `taper`; Quelle; `worldWaterCheck` | `erbe.js`, `woodmodels.js`, `worldview.js` |
+| Angelsteg `FWM.pier` + `worldPierFrame` (statt `FWM.jetty`) | `woodmodels.js`, `worldview.js` |
+| Schattenpass verwirft flache Bodenflächen (y < 0,07, Normale oben) | `gl3d.js` (SVS/SFS) |
+| `AREA_BAR2` ist jetzt eine Liste je Gebiet | `worldview.js` |
+
 ## Stand v74 – Schatzkiste-Show (auf v73)
 
 | Thema | Wo |

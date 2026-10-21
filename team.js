@@ -190,7 +190,8 @@ function navBuild() {
   const blk = NAV.blk = new Uint8Array(W * H), cost = NAV.cost = new Float32Array(W * H).fill(1);
   const P = FWORLD.pond, creeks = [FWORLD.creek].concat(typeof LAKE_CREEK !== "undefined" ? [LAKE_CREEK] : []);
   const bridges = [FWORLD.bridge, [52.6, 60.3]];
-  const lakePaths = [typeof LAKE_WAY1 !== "undefined" ? LAKE_WAY1 : [[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], typeof LAKE_WAY2 !== "undefined" ? LAKE_WAY2 : [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
+  /* v75: Wege am See: Stich vom Südtor, Uferweg (Straße bei x = −31 bis Ostuferweg), Ostuferweg (Straße bei x = 40 bis zur Bank) */
+  const lakePaths = typeof LAKE_WAY !== "undefined" ? [LAKE_STEM, LAKE_WAY, LAKE_EAST] : [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
