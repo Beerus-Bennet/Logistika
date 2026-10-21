@@ -1,5 +1,36 @@
 # Änderungen – kurz für den Kollegen
 
+## v76 (aufbauend auf v75) – „jetzt machbar“, Tutorial-Spotlight, kürzeres Tutorial, Lina-Tipps
+
+1. **Filter „✅ jetzt machbar“** (`game.js` `orderDoable`): zählt und zeigt nur noch, was sofort losfahren kann –
+   passendes Fahrzeug frei **und** bei Hofware die ganze Bestellung im Lager (vorher zählten Bestellungen mit
+   „fehlt noch 3/13“ mit, weil nur das Fahrzeug geprüft wurde). Die Sortierung „📍 Leerfahrt“ nimmt dieselbe Regel.
+2. **Spotlight im Tutorial** (`intro.js` `renderTutStep`, `tutScrollBind`, `tutFollow`):
+   - Das Ziel wird jetzt auch im großen Tutorial in die Liste gescrollt und **mittig in den freien Teil neben Lina**
+     gerückt (vorher nur bei den späteren Gesprächen – darum lag der Auftrag unter „Live“ halb hinter der Leiste).
+     Unten in der Liste gibt es im Tutorial Platz (`padding-bottom: 45vh`), damit auch die letzte Karte in die Mitte kann.
+   - **Wischen und Mausrad** auf den Sperrscheiben scrollen die Liste bzw. den Planer; das Leuchtfenster läuft sofort
+     mit. Tippen bleibt gesperrt (außer „Weiter“ und das leuchtende Feld).
+3. **Tutorial gekürzt** (`intro.js` `TUT_STEPS`): von 15 auf **5 Blasen** (2 davon zum Mitmachen):
+   Fahrzeug zeigen → Übung antippen → annehmen (mit einem Satz zum Deckungsbeitrag) → unter „Live“ zuschauen → Uhr.
+   Raus: Stecknadel-Farben, Leerfahrt-Radar, Minikarte, Fahrzeugwahl, Profi-Trick, Flotte, Büros, Diensthandy.
+   Neu: Schrittzähler („2/5“) und „Kenn ich schon – überspringen“ in der ersten Blase.
+4. **Linas Gespräche gekürzt**: Mr. Snus 5 → 2, Ziele/Konkurrenz 5 → 2, Don Pablo 5 → 2, Büros 5 → 2,
+   erstes Büro 14 → 3, Auktionshaus 4 → 2. Übrig bleibt, was man wissen muss, um nicht in eine Falle zu laufen
+   (Fahnder, Interpol, Stimmung unter 70 %, ohne Disposition läuft nichts). Die Stellen im Büro erklärt Lina
+   weiter auf Zuruf; unter „Welt“ lässt sich alles wiederholen.
+5. **Hof-Rundgang gekürzt** (`farmview.js` `FTUT_HOF`): 12 → 9 Schritte – Gießen, Füttern und Bäumefällen sind raus.
+   Alte Spielstände mitten im Rundgang werden auf die neue Schrittfolge umgerechnet (`T.v76`).
+6. **Neu: Lina-Tipps** (`intro.js` `linaHint`): kleine Blase mit Linas Gesicht, blockiert nichts, die Uhr läuft weiter,
+   Tipp drauf schließt, nach ein paar Sekunden geht sie von allein; jeder Tipp nur einmal (`S.tutSeen.h_*`). Sie bringen
+   das Weggelassene genau dann, wenn es passt:
+   - erste Zustellung → Anschlussauftrag am Ziel ohne Leerfahrt (`game.js`),
+   - zweites Fahrzeug → auf Stadtteile verteilen (`game.js` `acquire`),
+   - erster Anruf → Diensthandy (`offices.js` `phoneMsg`),
+   - Hof: erstes Säen nach dem Rundgang → Gießen, erste Eier → Füttern (`farmview.js` `farmHintFor`).
+   Während eines Tutorials/Gesprächs warten sie; Meldungen unten rücken für die Blase nach oben.
+- `index.html`/`sw.js`: v76.
+
 ## v75 (aufbauend auf v74) – Wegenetz, Einmündungen, Bachenden, Angelsteg, Bodenschatten
 
 Umsetzung der sechs Fehlerbilder aus „Map & Graphics Refactoring“ (Screenshots vom 21.10.). Unsere Engine ist

@@ -2596,20 +2596,20 @@ function farmLevelUp(l) {
   return true;
 }
 
-/* -------------------------- Linas Rundgang ---------------------------- */
+/* -------------------------- Linas Rundgang ----------------------------
+   v76: kürzer – Gießen, Füttern und Bäumefällen sind raus aus dem Rundgang. Gießen und Füttern erklärt Lina
+   später mit einem kurzen Tipp, wenn es zum ersten Mal passt (farmHintFor); das Fällen mit Opas Axt
+   entdeckt man selbst. */
 const FTUT_HOF = [
-  { tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina – der Hof gehört jetzt dir. Komm, ich zeig dir alles.` },
+  { tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina – der Hof gehört jetzt dir. Komm, ich zeig dir das Wichtigste.` },
   { tx: "Der Weizen ist reif! <b>Tipp ein goldenes Feld an und zieh die Sichel über alle.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), wait: "harvestField", n: 3 },
   { tx: "Super, das gibt ⭐ <b>EP</b>! Jetzt säen: <b>Tipp ein leeres Feld an und zieh den Weizen drüber.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), wait: "plant", n: 2 },
-  { tx: "Gießen macht’s schneller und besser: <b>Tipp ein frisch gesätes Feld an und gieß es.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "grow" && !o.w), wait: "water", n: 1 },
   { tx: "Die Hühner haben gelegt! <b>Tipp den Hühnerstall an.</b>", target: () => firstObj(o => o.t === "coop"), wait: "collect:ei", n: 1 },
-  { tx: "Jetzt haben sie Hunger: <b>Tipp den Stall an und zieh das Futter über die Hühner.</b>", target: () => firstObj(o => o.t === "coop"), wait: "feed", n: 1 },
   { tx: "Zeit zum Backen! <b>Tipp den Backofen an und leg Brot hinein.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "queue:brot", n: 1 },
   { tx: "Die Äpfel sind reif: <b>Tipp einen Apfelbaum an.</b>", target: () => firstObj(o => o.t === "tree" && treeRipe(o)) || firstObj(o => o.t === "tree"), wait: "harvest:apfel", n: 1 },
   { tx: "Das Brot ist fertig – <b>tipp den Ofen an und hol es raus.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1 },
   { tx: "Café Inselblick will Brot und Äpfel: <b>Tipp die Bestelltafel an und schick die Lieferung los.</b>", target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder },
-  { tx: "Hinterm Teich stehen junge Bäume: <b>Tipp einen an und fäll ihn mit Opas Axt</b> – tippen, wenn die Nadel im Grünen ist.", target: () => { const t = (S.farm.trees || []).find(x => !x.area && x.st === "up" && x.sz === 1); return t ? { t: "tree", x: t.x + 15, z: t.z + 15 } : null; }, wait: "fell", n: 1 },
-  { tx: "Stark! Fällen kostet 💪 Ausdauer, Essen macht fit. Deine Aufgaben stehen oben links in <b>Opas Notizbuch</b>." }
+  { tx: "Klasse – der Hof läuft! Den Rest entdeckst du selbst. Deine nächsten Aufgaben stehen oben links in <b>Opas Notizbuch</b>." }
 ];
 function farmTutList() { return FTUT_HOF; }
 function firstObj(fn) { return S.farm.objs.find(fn) || null; }
@@ -2621,7 +2621,10 @@ function farmTutOrder() {
 function farmTutShow() {
   const el = $("#farmTut");
   if (!el || !S.farm || !S.farm.tut || S.farm.tut.done) { if (el) { el.innerHTML = ""; el.className = ""; } FV.tutLock = false; return; }
-  const T = S.farm.tut, st = farmTutList()[T.step];
+  const T = S.farm.tut;
+  /* v76: alte Spielstände mitten im (längeren) Rundgang auf die neue Schrittfolge umrechnen */
+  if (!T.v76) { T.v76 = 1; const m = [0, 1, 2, 3, 3, 4, 4, 5, 6, 7, 8, 8]; if (T.step > 0 && m[T.step] != null) T.step = m[T.step]; }
+  const st = farmTutList()[T.step];
   if (!st) return farmTutEnd();
   if (st.before && !T.replay) st.before();
   T.cnt = T.cnt || 0;
@@ -2657,7 +2660,14 @@ function farmTutEnd(skip) {
   save();
 }
 /* Signale aus der Spiellogik */
+/* v76: Lina-Tipps auf dem Hof, wenn es zum ersten Mal passt (statt im Rundgang) */
+function farmHintFor(key) {
+  if (typeof linaHint !== "function") return;
+  if (key.split(":")[0] === "plant") linaHint("f_water", "<b>Gießen</b> macht frisch gesäte Felder schneller und besser: Feld antippen und gießen.");
+  if (key === "collect:ei") linaHint("f_feed", "Die Hühner haben jetzt Hunger: <b>Stall antippen und das Futter über die Hühner ziehen</b> – dann legen sie wieder.");
+}
 function farmTutSignal(key, n) {
+  if (S.farm && S.farm.tut && S.farm.tut.done && !S.farm.tut.replay) farmHintFor(key);
   if (!S.farm || !S.farm.tut || S.farm.tut.done) return;
   const T = S.farm.tut, st = farmTutList()[T.step];
   if (!st || !st.wait || T.replay) return;

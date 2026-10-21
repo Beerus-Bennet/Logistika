@@ -1121,10 +1121,7 @@ function renderHammer(flash) {
 
 /* Lina erklärt das Auktionshaus beim ersten Besuch */
 if (typeof LINA_TALKS === "object") LINA_TALKS.auction = [
-  { tx: "Willkommen im <b>" + AH_NAME + "</b>! Sammlerautos und Nutzfahrzeuge unterm Hammer.",
-    target: '#viewTools [data-ahview="live"]' },
-  { tx: "Tipp „bieten“ oder setz ein <b>Limit</b> – bis dahin bietet das Haus für dich. +12 % Aufgeld.", target: "#tab-market .card.lot" },
-  { tx: "Am Ende ruft der Auktionator „Zum Ersten …“ – dann kannst du live nachlegen.",
-    target: "#tab-market .card.lot .lot-left" },
-  { tx: "Autos landen in der <b>Garage</b>: einliefern oder als Wertkurier nutzen. Flottenfahrzeuge versteigerst du unter „Flotte“.", target: '#viewTools [data-ahview="garage"]' }
+  { tx: "Willkommen im <b>" + AH_NAME + "</b>! Tipp „bieten“ oder setz ein <b>Limit</b> – bis dahin bietet das Haus für dich (+12 % Aufgeld).",
+    target: "#tab-market .card.lot" },
+  { tx: "Ersteigerte Autos landen in der <b>Garage</b>. Den Rest – „Zum Ersten …“ – erlebst du am besten live.", target: '#viewTools [data-ahview="garage"]' }
 ];

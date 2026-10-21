@@ -730,6 +730,8 @@ function phoneMsg(m) {
   S.phone.unread++;
   renderPhoneBadge(true);
   toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok", false, m.go || null);
+  /* v76: beim ersten Anruf erklärt Lina das Diensthandy (früher ein Tutorial-Schritt) */
+  if (typeof linaHint === "function") linaHint("phone", "Dein <b>Diensthandy</b> 📞 klingelt – hier meldet sich dein Team. Tipp oben drauf; Nachrichten löschen sich nach 24 Stunden.", { top: true });
 }
 /* Sicherheitsmaßnahme: Nachrichten löschen sich nach 24 Spielstunden */
 const PHONE_TTL = 24 * 60;

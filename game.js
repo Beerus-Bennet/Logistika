@@ -690,6 +690,9 @@ function acquire(typeId, lease, deliverTo, deliverAddr) {
   }
   S.fleet.push(v);
   if (typeof onAcquire === "function") onAcquire(v);
+  /* v76: Lina-Tipp beim zweiten Fahrzeug (früher im Tutorial unter „Flotte“) */
+  if (S.fleet.length === 2 && typeof linaHint === "function")
+    linaHint("fleet", "Zweites Fahrzeug! Verteil deine Fahrzeuge auf verschiedene Stadtteile – dann ist bei jedem Auftrag eins in der Nähe. Wo sie stehen, siehst du unter „Flotte“.");
   toast((lease ? "Geleast: " : "Gekauft: ") + t.name + " – stationiert in " + N[v.at].name, "ok");
   render();
   return v;
@@ -1610,6 +1613,12 @@ function finishLeg(job, veh) {
   addXP(Math.max(3, Math.round(Math.pow(Math.max(1, pay), 0.55) / 2.2)));
   S.jobs = S.jobs.filter(j => j.id !== job.id);
   if (typeof onDelivered === "function") onDelivered(job, pay, late);
+  /* v76: Lina-Tipp zur ersten Zustellung (früher Teil des Tutorials): Anschluss am Ziel ohne Leerfahrt */
+  if (S.done === 1 && typeof linaHint === "function" && !o.farm) {
+    const f = S.fleet.find(x => x.uid === job.legs[job.legs.length - 1].veh);
+    if (f) linaHint("follow", () => `Zugestellt! Dein ${vType(f.type).icon} ${esc(vType(f.type).brand)} steht jetzt in <b>${esc(N[o.to].short)}</b>. `
+      + "Nimm einen Auftrag, der dort startet – dann gibt’s keine Leerfahrt. „📍 Leerfahrt“ sortiert solche nach vorn.");
+  }
   if (late) toast("⏰ Verspätet zugestellt: " + o.shipper, "warn", true);
   checkLevel();
 }
@@ -2745,10 +2754,17 @@ const chipHTML = (attr, key, label, n, on, extra) =>
 const ORDER_SORTS = [["pay", "💶", "Erlös"], ["near", "📍", "Leerfahrt"], ["due", "⏳", "Frist"]];
 const ORDER_CHIP = { pak: "Pakete", express: "Express", pal: "Paletten", kuehl: "Kühlware", schuett: "Schüttgut",
   adr: "Gefahrgut", sperrig: "Schwerlast", cont: "Container", schmuck: "Schmuck", snus: "Snus", ware: "Don Pablo" };
+/* v76: „jetzt machbar“ heißt wirklich: sofort losfahrbar. Ein passendes Fahrzeug ist frei UND alles ist da –
+   bei Hofware die ganze Bestellung im Lager (vorher zählten auch Bestellungen mit „fehlt noch 3/13“ mit). */
+function orderDoable(o, p) {
+  if (!(p || dispatchPreview(o)).ok) return false;
+  if (o.farm && (o.farm.taken || (typeof farmOrderReady === "function" && !farmOrderReady(o)))) return false;
+  return true;
+}
 function orderMatches(o, p, f) {
   if (f === "all") return true;
   if (f.startsWith("f:")) return !!o.farm && typeof farmOrderArea === "function" && farmOrderArea(o) === f.slice(2);
-  if (f === "ok") return p.ok;
+  if (f === "ok") return orderDoable(o, p);
   if (f === "air") return !!o.air;
   return o.cargo === f;
 }
@@ -2762,7 +2778,7 @@ function orderToolsHTML(rows, mode, filt) {
   const kinds = Object.keys(CARGO).filter(k => (n[k] || k === filt) && !(areas.length && k === (typeof FSITE !== "undefined" && FSITE.cargo || "hof") && rows.every(({ o }) => o.cargo !== k || o.farm)));
   const icon = k => k === "snus" && typeof snusLogo === "function" ? snusLogo(14) : CARGO[k].icon;
   const chips = [chipHTML("data-of", "all", "Alle", rows.length, filt === "all"),
-    chipHTML("data-of", "ok", "✅ jetzt machbar", rows.filter(r => r.p.ok).length, filt === "ok")];
+    chipHTML("data-of", "ok", "✅ jetzt machbar", rows.filter(r => orderDoable(r.o, r.p)).length, filt === "ok")];
   areas.forEach(a => chips.push(chipHTML("data-of", "f:" + a.id, a.i + " " + a.n, rows.filter(({ o }) => o.farm && farmOrderArea(o) === a.id).length, filt === "f:" + a.id)));
   if (n.air || filt === "air") chips.push(chipHTML("data-of", "air", "✈️ Luftfracht", n.air || 0, filt === "air"));
   kinds.forEach(k => chips.push(chipHTML("data-of", k, icon(k) + " " + (ORDER_CHIP[k] || CARGO[k].name), n[k] || 0, filt === k)));
@@ -2780,7 +2796,7 @@ function renderOrders() {
   const by = {
     pay: (a, b) => b.o.pay - a.o.pay,
     /* Fahrbare zuerst, darunter nach Leerfahrt, bei Gleichstand der Gewinn */
-    near: (a, b) => (a.p.ok ? 0 : 1) - (b.p.ok ? 0 : 1)
+    near: (a, b) => (orderDoable(a.o, a.p) ? 0 : 1) - (orderDoable(b.o, b.p) ? 0 : 1)
       || (a.p.ok ? (a.p.repoKm - b.p.repoKm) || (b.p.profit - a.p.profit) : b.o.pay - a.o.pay),
     due: (a, b) => a.o.deadline - b.o.deadline
   }[mode] || ((a, b) => b.o.pay - a.o.pay);

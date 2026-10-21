@@ -36,12 +36,15 @@ lauffähig, ohne Framework, ohne Build-Schritt, ohne externe Bibliothek.
 3. **Fuhrpark kaufen** (nur Kurierstart älterer Spielstände) – ohne Fahrzeug
    keine Spedition. Erst wenn mindestens eins im Hof steht, wird der Betrieb
    angemeldet und Karte wie Auftragsbuch gehen auf.
-4. **Interaktives Tutorial** – Disponentin Lina Sturm geht mit dir einen
-   echten Übungsauftrag durch, der genau dort startet, wo dein Fahrzeug steht:
-   Auftrag finden, Leerfahrt-Hinweis lesen, Planung mit Minikarte verstehen,
-   annehmen, verfolgen – und danach wartet ein Anschlussauftrag am Zielort.
-   Die Uhr steht so lange still, und außer Linas „Weiter“ bzw. dem leuchtenden
-   Feld ist alles gesperrt – kein Scrollen, kein Danebentippen, kein Überspringen.
+4. **Interaktives Tutorial** – Disponentin Lina Sturm fährt mit dir in fünf
+   kurzen Schritten einen echten Übungsauftrag, der genau dort startet, wo dein
+   Fahrzeug steht: Fahrzeug zeigen, Auftrag antippen, annehmen, unter „Live“
+   zuschauen, Uhr. Alles andere entdeckt man selbst; ein paar Dinge erklärt Lina
+   später mit einem kurzen **Lina-Tipp** genau dann, wenn sie passieren (erste
+   Zustellung → Anschlussauftrag ohne Leerfahrt, zweites Fahrzeug, erster Anruf).
+   Die Uhr steht still, getippt werden kann nur „Weiter“ bzw. das leuchtende Feld,
+   gewischt werden darf (die Liste scrollt, das Leuchtfenster läuft mit); das Ziel
+   rückt mittig neben Lina. Wer sich auskennt, überspringt gleich in der ersten Blase.
    Wer mittendrin neu lädt, macht dort weiter. Unter *Welt* lässt sich das Tutorial jederzeit
    wiederholen. Eigene Artwork für Lina: `lina.png` ersetzen, siehe [ART.md](ART.md).
 
@@ -181,9 +184,9 @@ so laufen die Lager nicht ständig über.
   drehende Mühlenflügel, Tag und Nacht mit leuchtenden Fenstern, dazu
   kleine Töne (im Wohnhaus im Buch abschaltbar).
 * **Linas Rundgang** – zum Start zeigt Lina mit dem Finger, was zu tun ist:
-  ernten, säen, gießen, Eier holen, füttern, backen, pflücken, die erste
-  Lieferung losschicken und mit Opas Axt den ersten jungen Baum am Teich
-  fällen.
+  ernten, säen, Eier holen, backen, pflücken und die erste Lieferung
+  losschicken. Gießen und Füttern erklärt sie später mit einem kurzen Tipp,
+  wenn es zum ersten Mal passt; Opas Axt entdeckt man selbst.
 
 ## Wald, Sägewerk und See (3D)
 
@@ -775,7 +778,8 @@ rechts unten darüber, Fenster öffnen sich mittig in der freien Fläche daneben
 | Nebel ein-/ausblenden | ☁️ |
 
 Über den **Aufträgen** sitzt eine feste Leiste: oben sortieren (💶 Erlös,
-📍 Leerfahrt, ⏳ Frist), darunter filtern – alle, nur jetzt machbare oder nach
+📍 Leerfahrt, ⏳ Frist), darunter filtern – alle, nur jetzt machbare (freies
+passendes Fahrzeug **und** bei Hofware die ganze Bestellung im Lager) oder nach
 Ladungsart, jeweils mit Anzahl. Der **Fahrzeugmarkt** hat dieselbe Leiste:
 Kategorie (Rad, Moped, Transporter, Lkw, Binnenschiff, Schiene, Seeschiff,
 Flugzeug), Sortierung (Preis, Nutzlast, € je km, € je Tag, Tempo, Reichweite)
@@ -968,9 +972,9 @@ Neue Pflanzen stellt das Büro paarweise in die unteren Ecken, dann nach oben
 
 ### Die Stellen im Büro
 
-Im Büro-Rundgang stellt Lina jede der vier Stellen einzeln vor – Disposition,
-Fahrpersonal, Umschlag, Zoll & Papiere. Tippt man später im Büro auf eine
-Stelle, erklärt sie sie noch einmal, mit den Zahlen genau dieses Büros (wie
+Im (seit v76 kurzen) Büro-Rundgang nennt Lina nur, dass es ohne Disposition
+nicht geht. Tippt man im Büro auf eine Stelle (Disposition, Fahrpersonal,
+Umschlag, Zoll & Papiere), erklärt sie diese mit den Zahlen genau dieses Büros (wie
 viele Fahrzeuge die Dispo schafft, wie viele gleichzeitig fahren können, wie
 viel schneller umgeschlagen wird, wie viel Zuschlag es gibt).
 

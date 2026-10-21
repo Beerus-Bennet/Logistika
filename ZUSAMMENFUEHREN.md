@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v76 – Tutorial kurz, Lina-Tipps, „jetzt machbar“ (auf v75)
+
+| Thema | Wo |
+|---|---|
+| `orderDoable(o, p)` für Filter und Sortierung | `game.js` |
+| `TUT_STEPS` (5 Schritte), `tutCount`, Überspringen, Zentrieren, `tutScrollBind`/`tutFollow` | `intro.js` |
+| `LINA_TALKS` gekürzt (snus, extras, pablo, bases, base1), Auktion | `intro.js`, `auction.js` |
+| `linaHint(key, text, {top})` + Aufrufe | `intro.js`; `game.js` (Zustellung, `acquire`), `offices.js` (`phoneMsg`), `farmview.js` (`farmHintFor`) |
+| `FTUT_HOF` 9 Schritte, Umrechnung `T.v76` | `farmview.js` |
+| `.tut-n`, `.tut-skipl`, `#linaHint`, `#spot.drag`, Platz unter der Liste | `style.css` |
+
 ## Stand v75 – Wegenetz, Bachenden, Angelsteg (auf v74)
 
 | Thema | Wo |

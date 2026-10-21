@@ -450,16 +450,17 @@ function tutPinRect() {
   return { left: h.x - 17, top: h.y - 17, width: 34, height: 46, right: h.x + 17, bottom: h.y + 29 };
 }
 
+/* v76: kurz und zum Mitmachen. Vorher 15 Erklärschritte (Stecknadeln, Leerfahrt-Radar, Minikarte,
+   Fahrzeugwahl, Deckungsbeitrag, Profi-Trick, Flotte, Büros, Diensthandy …) – jetzt nur das, ohne das man
+   nicht losspielen kann: wo steht mein Fahrzeug, Auftrag antippen, annehmen, zuschauen, Uhr. Alles andere
+   entdeckt man selbst; ein paar Dinge erklärt Lina später genau dann, wenn sie passieren (linaHint). */
 const TUT_STEPS = [
-  { tx: () => S.farm ? "Jetzt wird’s eine Spedition, Chef! Ich bin deine Disponentin – "
-      + "wir machen den ersten Auftrag zusammen. Die Uhr steht still."
-      : "Moin! Ich bin Lina, deine Disponentin – "
-      + "wir machen den ersten Auftrag zusammen. Die Uhr steht still." },
-  { tx: () => {
+  { id: "hello", skip: true,
+    tx: () => {
       const f = tutVeh();
-      return "Deine Karte – der Nebel lichtet sich mit jedem Level. "
-        + (f ? `Hier steht dein ${tvIcon()} ${esc(tvName())}: ${esc(vehSpot(f).t)}, ${esc(N[f.at].short)}. ` : "")
-        + "<b>Der Standort entscheidet über Gewinn oder Verlust.</b>";
+      return (S.farm ? "Jetzt wird’s eine Spedition, Chef! " : "Moin, ich bin Lina – deine Disponentin! ")
+        + (f ? `Das ist dein ${tvIcon()} ${esc(tvName())}. ` : "")
+        + "<b>Steht es nah am Abholort, bleibt am meisten hängen.</b> Wir fahren den ersten Auftrag zusammen – die Uhr steht so lange still.";
     },
     target: tutVehRect,
     before: () => {
@@ -469,111 +470,78 @@ const TUT_STEPS = [
     } },
 
   /* ---------- mit Übungsauftrag ---------- */
-  { need: "order",
-    tx: () => "Stecknadeln: <b>Gelb</b> = offener Auftrag, "
-      + "<b>Orange</b> = in Arbeit. Meine Übung liegt neben deinem "
-      + `${tvIcon()} ${esc(tvName())}.`,
-    target: tutPinRect,
-    before: () => {
-      /* Nah genug heran, dass Nadel und Fahrzeug nebeneinander zu sehen sind */
-      const o = tutOrder(), f = tutVeh();
-      if (!o || !f) return;
-      const a = oPick(o), v = vehPoint(f);
-      showTab("map");
-      map.setView([(a.lat + v[0]) / 2 + 0.0012, (a.lon + v[1]) / 2], 14.3);
-    } },
-  { need: "order",
-    tx: () => {
-      const o = tutOrder();
-      return `Unter „Aufträge“ liegt oben meine ⭐ Übung: `
-        + `${CARGO[o.cargo].name} von ${esc(N[o.from].short)} nach ${esc(N[o.to].short)}.`;
-    },
-    target: tutOrderCard, before: () => { showTab("orders"); $("#view .view-body").scrollTop = 0; } },
-  { need: "order",
-    tx: () => `Dein <b>Leerfahrt-Radar</b>: ✅ Fahrzeug schon am Abholort. `
-      + `↩️ Muss erst leer hin – das zahlst du. `
-      + `🚫 Keins frei.`,
-    target: () => document.querySelector("#tab-orders .card.order.tut .vhintrow") },
   { id: "pick", need: "order",
-    tx: "Jetzt du: Tipp auf den ⭐ Übungsauftrag.",
+    tx: () => `Unter „Aufträge“ liegt meine ⭐ Übung. ✅ heißt: dein ${esc(tvName())} steht schon dort, also keine Leerfahrt. <b>Tipp drauf.</b>`,
     target: tutOrderCard, waitFor: "openPlanner",
     before: () => { if (activeTab !== "orders") showTab("orders"); $("#view .view-body").scrollTop = 0; },
     already: () => planState && planState.order.id === tutOrderId },
-  { need: "order", inPlanner: true, top: false,
-    tx: () => {
-      const r = tutRepoSel();
-      return `Minikarte: 📦 Abholung, 🏁 Ziel, deine Fahrzeuge. `
-        + (r.km < 0.5
-          ? `Dein ${esc(tvName())} steht schon dort: <b>keine Linie = keine Leerfahrt.</b>`
-          : `Gestrichelt = Leerfahrt: ${kmf(r.km)} auf deine Kosten.`);
-    },
-    target: "#modalBody .pmap" },
-  { need: "order", inPlanner: true, top: false,
-    tx: () => tutEligibleCount() > 1
-      ? "Fahrzeugwahl: Das nächste steht oben. "
-        + "Tipp ruhig ein anderes an – die Karte zeigt dann die Leerfahrt."
-      : `Hier wählst du das Fahrzeug. `
-        + `Dein ${esc(tvName())} ist schon da: ✅ vor Ort.`,
-    target: "#modalBody .vpick", allow: () => tutEligibleCount() > 1 },
-  { need: "order", inPlanner: true, top: true,
-    tx: () => {
-      const r = tutRepoSel();
-      return "Erlös minus Kosten = <b>Deckungsbeitrag</b>. Grün = lohnt sich. "
-        + (r.eur > 0.005
-          ? `Die Leerfahrt frisst ${money(r.eur)} davon.`
-          : "Ohne Leerfahrt bleibt am meisten.");
-    },
-    target: "#modalBody .sum" },
   { id: "accept", need: "order", inPlanner: true, top: true,
-    tx: "Passt? Dann tipp auf „Auftrag annehmen“.",
-    target: "#modalBody #mAccept", waitFor: "orderAccepted" },
-
-  { id: "accepted", need: "job",
-    tx: () => `Angenommen! Unter „Live“ verfolgst du ihn – `
-      + `gleich fährt dein ${tvIcon()} ${esc(tvName())} los.`,
-    target: () => { const j = tutJob(); return j && document.querySelector(`#tab-jobs .card.job[data-job="${j.id}"]`); },
-    before: () => showTab("jobs") },
-  { need: "job",
     tx: () => {
-      const j = tutJob(), nx = S.orders.find(o => o.tutNext);
-      return `Profi-Trick: Danach steht dein ${esc(tvName())} in `
-        + `${esc(N[j.order.to].short)}. <b>Nimm einen Auftrag, der dort startet.</b> `
-        + (nx ? `Einer liegt bereit ⭐ – ist dein ${esc(tvName())} dort, wird er grün. ` : "")
-        + `„📍 Leerfahrt“ oben sortiert solche nach vorn.`;
+      const r = tutRepoSel();
+      return "Hier planst du die Fahrt. Unten steht die Rechnung: Erlös minus Kosten = <b>Deckungsbeitrag</b>"
+        + (r.eur > 0.005 ? `, die Leerfahrt kostet ${money(r.eur)}.` : ".") + " Grün? Dann <b>„Auftrag annehmen“</b>.";
     },
-    target: () => document.querySelector("#tab-orders .card.order.tutnext .vhintrow")
-      || document.querySelector('#viewTools [data-sort="near"]'),
+    target: "#modalBody #mAccept", waitFor: "orderAccepted" },
+  { id: "accepted", need: "job",
+    tx: () => `Läuft! Unter „Live“ siehst du, wie dein ${tvIcon()} ${esc(tvName())} fährt.`,
+    target: () => { const j = tutJob(); return j && document.querySelector(`#tab-jobs .card.job[data-job="${j.id}"]`); },
     before: () => {
+      /* der Anschlussauftrag am Ziel liegt schon bereit – erklärt wird er erst, wenn das Fahrzeug ankommt */
       const j = tutJob();
       if (j && !S.orders.some(o => o.tutNext) && typeof makeFollowupOrder === "function") makeFollowupOrder(j);
-      showTab("orders");
-      $("#view .view-body").scrollTop = 0;
+      showTab("jobs");
     } },
 
   /* ---------- ohne Übungsauftrag (alle Fahrzeuge unterwegs) ---------- */
   { need: "none",
-    tx: "Unter „Aufträge“ kommen die Ausschreibungen. Für eine Übung ist kein Fahrzeug frei – "
-      + "also kurz so:",
+    tx: "Gerade ist kein Fahrzeug frei – dann ohne Übung: Unter „Aufträge“ tippst du eine Ausschreibung mit ✅ an und nimmst sie an.",
     target: '[data-tab="orders"]', before: () => showTab("orders") },
-  { need: "none",
-    tx: "<b>Leerfahrt-Radar</b>: ✅ Fahrzeug am Abholort, ↩️ muss erst leer "
-      + "hin, 🚫 keins frei. "
-      + "Gestrichelt auf der Minikarte = Leerfahrt.",
-    target: "#tab-orders .card.order .vhintrow" },
 
-  { tx: "„Flotte“ zeigt, wo deine Fahrzeuge stehen. Verteil sie auf "
-      + "Stadtteile – dann ist immer eins nah.",
-    target: '[data-tab="fleet"]', before: () => showTab("map") },
-  { tx: "Später mietest du unter „Büros“ einen Standort – mit "
-      + "<b>Disposition</b> fahren die Fahrzeuge dort von allein.",
-    target: '[data-tab="bases"]', before: () => showTab("map") },
-  { tx: "Dein <b>Diensthandy</b>: Hier meldet sich dein Team. "
-      + "Nachrichten verschwinden nach <b>24 Stunden</b>.",
-    target: "#phoneBtn", top: true, before: () => showTab("map") },
-  { tx: "Fertig! ⏸ links hält an, 1× bis 30× regeln das Tempo. Ab jetzt läuft die Uhr – viel Erfolg!",
+  { tx: () => {
+      const c = document.querySelector('#controls [data-speed="0"]'), vis = !!(c && c.offsetParent);
+      return "Ab jetzt läuft die Uhr" + (vis ? ": ⏸ hält an, 1× bis 30× macht schneller" : "")
+        + ". Den Rest entdeckst du selbst – wenn’s was Neues gibt, melde ich mich. Viel Erfolg!";
+    },
     target: '#controls [data-speed="0"]', before: () => showTab("map") }
 ];
 
+/* ============================== Lina-Tipps ================================
+   v76: Kurze Hinweise genau in dem Moment, in dem sie gebraucht werden – statt alles vorab im Tutorial.
+   Sie blockieren nichts, die Uhr läuft weiter, ein Tipp auf die Blase schließt sie, nach ein paar
+   Sekunden geht sie von allein. Jeder Tipp kommt nur einmal (S.tutSeen["h_" + key]).            */
+let hintQ = [], hintT = 0, hintOn = null;
+function linaHint(key, tx, o) {
+  if (typeof S === "undefined" || !S) return;
+  const seen = (S.tutSeen = S.tutSeen || {});
+  if (seen["h_" + key] || hintQ.some(h => h.key === key) || (hintOn && hintOn.key === key)) return;
+  hintQ.push({ key, tx, o: o || {} });
+  if (!hintOn && !hintT) hintNext();
+}
+function hintBusy() {
+  const b = document.body.classList;
+  return tutorialRunning() || b.contains("report-open") || b.contains("locked") || !!(typeof S !== "undefined" && (S.jail || S.over))
+    || !!document.querySelector("#farmTut.on:not(.free)");
+}
+function hintNext() {
+  hintT = 0;
+  if (!hintQ.length) return;
+  if (hintBusy()) { hintT = setTimeout(hintNext, 2500); return; }
+  const h = hintQ.shift();
+  const tx = typeof h.tx === "function" ? h.tx() : h.tx;
+  if (!tx) return hintNext();
+  (S.tutSeen = S.tutSeen || {})["h_" + h.key] = 1;
+  if (typeof save === "function") save();
+  let el = $("#linaHint");
+  if (!el) { el = document.createElement("div"); el.id = "linaHint"; document.body.appendChild(el); }
+  const face = guideArt ? `<img src="${guideArt}" alt="">` : avatarFigureSVG(GUIDE.avatar, 60, { uid: "hint", label: GUIDE.name });
+  el.innerHTML = `<button class="lh-box" type="button"><span class="lh-face">${face}</span><span class="lh-tx"><b>Lina-Tipp</b>${tx}</span><span class="lh-x" aria-label="Schließen">✕</span></button>`;
+  el.className = "on" + (h.o.top ? " top" : "");
+  document.body.classList.toggle("hint-bot", !h.o.top);
+  hintOn = h;
+  const close = () => { if (hintOn !== h) return; hintOn = null; el.className = "off" + (h.o.top ? " top" : ""); document.body.classList.remove("hint-bot"); setTimeout(hintNext, 500); };
+  el.querySelector(".lh-box").onclick = () => { close(); if (typeof sfx === "function") sfx("tap"); };
+  setTimeout(close, h.o.ms || Math.min(14000, 6000 + tx.replace(/<[^>]+>/g, "").length * 45));
+}
 
 /* Wolkenkontur: einmal im Uhrzeigersinn um das Textfeld, jede Kante aus
    gleich großen Bögen. Die Bogenzahl richtet sich nach der Kantenlänge,
@@ -693,6 +661,8 @@ function showTutStep() {
   if (st.waitFor && st.already && st.already()) { tutStep++; return showTutStep(); }
 
   clearTimeout(tutTimer);
+  /* ein offener Lina-Tipp macht dem Gespräch Platz */
+  if (hintOn) { hintOn = null; const lh = $("#linaHint"); if (lh) lh.className = ""; document.body.classList.remove("hint-bot"); }
   document.body.classList.add("tut-on");
   /* Bei Linas späteren Gesprächen stören Meldungen oben nur (sie liegen
      sonst genau über dem, was sie gerade zeigt). */
@@ -725,9 +695,34 @@ function showTutStep() {
    ist auch das abgedeckt. Scrollen ist währenddessen aus, damit das
    Fenster nicht vom Inhalt wegrutschen kann.                             */
 let tutAskedAt = 0, tutWatchT = 0, tutPlaced = null;
+/* v76: Durch die Sperrscheiben hindurch scrollen (Wischen, Mausrad) – die Liste bzw. der Planer bewegt
+   sich, das Leuchtfenster läuft mit. Tippen bleibt gesperrt. */
+function tutScrollBox() {
+  const st = tutList[tutStep], el = st && tutResolve(st);
+  const b = el && el.nodeType === 1 && el.closest(".modal-inner, .view-body");
+  return b || document.querySelector("#modal.on .modal-inner") || (activeTab !== "map" ? $("#view .view-body") : null);
+}
+function tutFollow() {
+  const st = tutList[tutStep];
+  if (!st || !$("#tutor").classList.contains("on")) return;
+  const g = tutGeom(st);
+  tutPlaced = g.r ? { top: g.r.top, left: g.r.left, width: g.r.width, height: g.r.height } : null;
+  tutBlock(g.hole, tutOpen(st) && g.ok, g.ring);
+}
+function tutScrollBind(spot) {
+  if (spot._scroll) return;
+  spot._scroll = true;
+  const by = d => { const b = tutScrollBox(); if (!b) return false; b.scrollTop += d; spot.classList.add("drag"); clearTimeout(spot._dt); spot._dt = setTimeout(() => spot.classList.remove("drag"), 260); tutFollow(); return true; };
+  spot.addEventListener("wheel", e => { if (by(e.deltaY)) e.preventDefault(); }, { passive: false });
+  let ty = null;
+  spot.addEventListener("touchstart", e => { ty = e.touches[0].clientY; }, { passive: true });
+  spot.addEventListener("touchmove", e => { if (ty == null) return; const y = e.touches[0].clientY; if (by(ty - y)) e.preventDefault(); ty = y; }, { passive: false });
+  spot.addEventListener("touchend", () => { ty = null; }, { passive: true });
+}
 function tutBlock(hole, open, ring, keep) {
   const spot = $("#spot");
   if (!spot.querySelector("b")) spot.innerHTML = `<i></i><b></b><b></b><b></b><b></b>`;
+  tutScrollBind(spot);
   spot.classList.add("on");
   const W = innerWidth, H = innerHeight;
   const i = spot.querySelector("i"), bs = spot.querySelectorAll("b");
@@ -826,12 +821,13 @@ function renderTutStep(st, fresh) {
         <div class="tut-bubble">
           <svg class="tut-cloud" aria-hidden="true" preserveAspectRatio="none"></svg>
           <div class="tut-in">
-            <div class="tut-who">${GUIDE.name} · ${GUIDE.role}</div>
+            <div class="tut-who">${GUIDE.name} · ${GUIDE.role}${tutCount() ? `<span class="tut-n">${tutCount()}</span>` : ""}</div>
             <div class="tut-tx">${tutText(st)}</div>
             <div class="tut-row">
               ${st.waitFor && !stuck
                 ? `<span class="tut-wait">👉 Tipp auf das leuchtende Feld</span>`
                 : `<button class="btn" id="tutNext">${last ? "Alles klar" : "Weiter"}</button>`}
+              ${st.skip && tutKey === "main" ? `<button class="tut-skipl" id="tutSkip">Kenn ich schon – überspringen</button>` : ""}
             </div>
           </div>
         </div>
@@ -840,6 +836,8 @@ function renderTutStep(st, fresh) {
        einmal nachmessen, damit Lina sicher nicht aufs Ziel rutscht. */
     const fig = tutor.querySelector("img.guide-art");
     if (fig && !fig.complete) fig.onload = () => tutRefresh();
+    const skipBtn = $("#tutSkip");
+    if (skipBtn) skipBtn.onclick = () => endTutorial();
     const nextBtn = $("#tutNext");
     if (nextBtn) {
       let used = false;                 /* ein Tipp = ein Schritt, auch bei Doppeltipp */
@@ -853,15 +851,15 @@ function renderTutStep(st, fresh) {
      den späteren Gesprächen (Büros, Mr. Snus, Don Pablo). */
   tutor.classList.toggle("compact", inModal || (inView && tutKey !== "main"));
 
-  /* Ziel im Planer bzw. in der Liste so scrollen, dass es neben der Blase frei liegt */
-  if (fresh && (inModal || (inView && tutKey !== "main"))) {
-    const box = el.closest(".modal-inner, .view-body");
-    if (box) {
-      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect();
-      box.scrollTop += st.top ? (er.bottom - br.bottom + 14) : (er.top - br.top - 12);
-    }
+  /* Ziel im Planer bzw. in der Liste erst einmal grob in die Mitte holen (v76: auch im großen Tutorial –
+     vorher lag z. B. der Auftrag unter „Live“ halb hinter der Leiste); fein ausgerichtet wird unten,
+     sobald feststeht, wo Lina steht. */
+  const sbox = fresh && (inModal || inView) ? el.closest(".modal-inner, .view-body") : null;
+  if (sbox) {
+    const br = sbox.getBoundingClientRect(), er = el.getBoundingClientRect();
+    sbox.scrollTop += (er.top + er.height / 2) - (br.top + br.height / 2);
   }
-  const g = tutGeom(st);
+  let g = tutGeom(st);
   const r = g.r, ok = g.ok;
   tutPlaced = r ? { top: r.top, left: r.left, width: r.width, height: r.height } : null;
 
@@ -890,10 +888,28 @@ function renderTutStep(st, fresh) {
   else top = ok ? (ct < cb || (ct === cb && r.top + r.height / 2 > innerHeight * 0.55)) : false;
   tutor.classList.toggle("top", top);
   tutor.classList.remove("measure");
+  /* v76: Ziel mittig in den freien Teil neben Lina rücken (über oder unter ihr) */
+  if (sbox && ok) {
+    const br = sbox.getBoundingClientRect(), lr = bx.getBoundingClientRect(), er = el.getBoundingClientRect();
+    const f0 = top ? Math.max(br.top, lr.bottom + 10) : br.top + 6, f1 = top ? br.bottom - 6 : Math.min(br.bottom, lr.top - 10);
+    if (f1 - f0 > 40) {
+      const d = er.height > f1 - f0 - 16 ? er.top - f0 - 8 : (er.top + er.height / 2) - (f0 + f1) / 2;
+      if (Math.abs(d) > 2) { sbox.scrollTop += d; g = tutGeom(st); }
+      tutPlaced = g.r ? { top: g.r.top, left: g.r.left, width: g.r.width, height: g.r.height } : null;
+    }
+  }
   drawCloud();
   requestAnimationFrame(drawCloud);
 
-  tutBlock(g.hole, tutOpen(st) && ok && !stuck, g.ring);
+  tutBlock(g.hole, tutOpen(st) && g.ok && !stuck, g.ring);
+}
+/* v76: Schritt-Zähler („2/5“) – zeigt, dass es kurz ist */
+function tutCount() {
+  const has = !!(tutOrder() || tutJob());
+  const vis = [];
+  tutList.forEach((s, i) => { if (tutKey !== "main" || !s.need || (has ? s.need !== "none" : s.need === "none")) vis.push(i); });
+  const k = vis.indexOf(tutStep) + 1;
+  return vis.length > 1 && k > 0 ? k + "/" + vis.length : "";
 }
 
 /* Planer neu gezeichnet (anderes Fahrzeug gewählt) oder Fenster gedreht:
@@ -912,92 +928,46 @@ function tutRefresh() {
    die Büros (einmal ohne, einmal mit erstem Standort). Jedes nur einmal –
    unter „Welt“ lassen sie sich wiederholen. Die Uhr steht dabei still.  */
 const baseHead = i => () => $$("#tab-bases .card.base .sechead.sm")[i] || null;
+/* v76: alle Gespräche gekürzt (vorher 5 bis 14 Blasen) – nur noch, was man wissen MUSS, um nicht in
+   eine Falle zu laufen oder festzustecken. Der Rest erklärt sich beim Ausprobieren; die Stellen im Büro
+   erklärt Lina auf Zuruf (Tipp auf eine Stelle), unter „Welt“ lässt sich alles wiederholen. */
 const LINA_TALKS = {
   snus: [
-    { tx: "Psst, Chef! <b>Mr. Snus</b> hat sich auf dem Diensttelefon gemeldet – er verkauft Snus unter der Hand.",
+    { tx: () => `Psst, Chef! <b>Mr. Snus</b> hat sich gemeldet – Snus unter der Hand. Einkauf per <b>Nachtwallet in Solana</b> ◎, `
+        + `<b>graue Aufträge</b> zahlen ${money(SNUS_SELL)} die Dose.`,
       target: "#phoneBtn", top: true },
-    { tx: () => `Einkauf: ${money(SNUS_BUY)} die Dose, nur per <b>Nachtwallet in Solana</b> ◎ (zum Senden wischen). Abholen im Späti. `
-        + `<b>Graue Aufträge</b> zahlen ${money(SNUS_SELL)} die Dose.` },
-    { tx: () => `Vorsicht, <b>Zivilfahnder</b>: zahlen mehr als ${money(SNUS_SELL)} und wollen 20, 30 Dosen. `
-        + `Sicheres Zeichen: <b>weißes Hemd UND glatt rasiert</b>. `
-        + `Nur eins davon? Dann echt.` },
-    { tx: () => `Lieferst du an einen Fahnder: Ware und Geld weg, <b>${SNUS_JAIL_DAYS} Tage Haft</b>. `
-        + "✕ blockiert Kunden gratis, unter „Live“ brichst du Übergaben ab." },
-    { tx: "Dein Büro-Team beliefert Snus-Kunden mit – "
-        + "Verdächtige lässt es liegen und fragt dich." }
+    { tx: () => `Vorsicht, <b>Zivilfahnder</b>: zahlen auffällig viel und wollen 20, 30 Dosen. Sicheres Zeichen: `
+        + `<b>weißes Hemd UND glatt rasiert</b>. Lieferst du an einen: Ware und Geld weg, <b>${SNUS_JAIL_DAYS} Tage Haft</b>. ✕ blockiert Kunden gratis.` }
   ],
   extras: [
-    { tx: "Hier oben: 🎯 deine <b>Ziele</b> – täglich drei Aufgaben mit Prämie, dazu Missionen und Erfolge.",
-      target: "#goalsBtn", top: true },
-    { tx: "<b>Blitzfracht</b> und <b>Rabe &amp; Söhne</b> schnappen dir Aufträge weg – die Karte zeigt, wann. "
-        + "Bei Großaufträgen verhandelst du im Planer." },
-    { tx: "Pannen, Staus, Streiks: Dann ruft jemand an. Solange offen, max. 3× – "
-        + "sonst entscheidet bald der Fahrer.", target: "#phoneBtn", top: true },
-    { tx: "Verschleiß: Unter „Flotte“ schickst du Fahrzeuge in die Werkstatt. "
-        + "„Welt“ zeigt Ruf, Diesel, Hausbank und Steuern." },
-    { tx: "Selten kommt eine <b>Einladung zur Sonderfahrt</b>: eilig, fürstlich bezahlt, nur für dich." }
+    { tx: "Ab jetzt wird’s lebendig: Konkurrenz, Pannen, Staus. Wenn’s brennt, <b>klingelt dein Diensthandy</b> – entscheidest du nicht, tut’s der Fahrer.",
+      target: "#phoneBtn", top: true },
+    { tx: "Und hier oben: 🎯 deine <b>Ziele</b> – täglich drei Aufgaben mit Prämie.",
+      target: "#goalsBtn", top: true }
   ],
   pablo: [
-    { tx: "Chef … <b>Don Pablo</b> ist am Telefon. Kokain, tonnenweise.",
+    { tx: () => `Chef … <b>Don Pablo</b> ist am Telefon. Kokain, tonnenweise: Einkauf per Nachtwallet ◎, Ware im Flughafen-Hangar, `
+        + `Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne.`,
       target: "#phoneBtn", top: true },
-    { tx: () => `Einkauf: ${money(PABLO_BUY * 1000)} pro Tonne, per Nachtwallet in Solana ◎. Ware im Flughafen-Hangar. `
-        + `Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne.` },
-    { tx: "Echte Kunden heißen wie ihre Stadt (<b>Mr. Hamburg</b>, <b>Mr. Paris</b>) und wollen genau dorthin." },
-    { tx: "<b>Mr. Banane</b>, <b>Mr. Schnitzel</b>? Interpol! Lieferst du da hin, "
-        + "ist das Spiel endgültig vorbei." },
-    { tx: "Ich hab dich gewarnt. Seine Nachricht liegt auf dem Telefon.", target: "#phoneBtn", top: true }
+    { tx: "Echte Kunden heißen wie ihre Stadt (<b>Mr. Hamburg</b>) und wollen genau dorthin. <b>Mr. Banane</b>, <b>Mr. Schnitzel</b>? "
+        + "Interpol – lieferst du da hin, ist das Spiel endgültig vorbei. Ich hab dich gewarnt." }
   ],
   bases: [
-    { tx: "Ein <b>Büro</b> ist ein Stützpunkt: Dein Team nimmt dort selbst Aufträge an "
-        + "und schickt die zugeordneten Fahrzeuge los.",
+    { tx: "Ein <b>Büro</b> ist ein Stützpunkt: Dein Team nimmt dort selbst Aufträge an und schickt die Fahrzeuge los. "
+        + "Ein Standort pro Etappe – Häfen und Flughäfen sind teurer, aber besser angebunden.",
       target: "#tab-bases .card", wait: 420 },
-    { tx: "Ein Standort pro Etappe. Stadtteile sind günstig, Häfen, Flughäfen "
-        + "und Terminals teurer, aber besser angebunden.",
-      target: "#newBaseNode" },
-    { tx: "Fünf Größen von <b>Kontor</b> bis <b>Konzernzentrale</b>. 👥 Schreibtische, 🚚 Stellplätze, "
-        + "📡 Einzugsgebiet.",
-      target: "#tab-bases .tierlist .tier" },
-    { tx: "Kaufen kostet einmalig, Miete wird monatlich abgebucht. Zum Mieten brauchst du "
-        + "30 Tagesmieten auf dem Konto.",
-      target: "#tab-bases .tierlist .tier .buyrow" },
-    { tx: "Steht dein erstes Büro, zeig ich dir den Rest." }
+    { tx: "Kaufen kostet einmal, Miete läuft monatlich (30 Tagesmieten müssen auf dem Konto sein). Steht dein erstes Büro, zeig ich dir das Nötigste.",
+      target: "#tab-bases .tierlist .tier" }
   ],
   base1: [
-    { tx: () => { const b = S.bases[0]; return `Dein erstes Büro${b ? " in " + esc(N[b.node].name) : ""}! Oben: Größe, `
-        + "Miete oder Kauf, Monatskosten."; },
-      target: "#tab-bases .card.base .card-top", wait: 420 },
-    { tx: "Der Grundriss: Tipp drauf zum Einrichten. "
-        + "Jedes Möbelstück hebt die Stimmung.",
-      target: "#tab-bases .card.base .planpeek" },
-    { tx: "Die <b>Stimmung</b>: Unter 70 % gibt’s Streit – "
-        + "dann steht der Standort, bis du entscheidest.",
-      target: "#tab-bases .card.base .moodbar" },
-    { tx: "Vier Stellen im Büro – die Zahl ist die Summe der Sterne darin. "
-        + "Kurz einzeln:", target: "#tab-bases .card.base .covrow" },
-    { tx: () => ROLE_TEXT.disp, target: '#tab-bases .card.base .cov[data-role="disp"]' },
-    { tx: () => ROLE_TEXT.fahr, target: '#tab-bases .card.base .cov[data-role="fahr"]' },
-    { tx: () => ROLE_TEXT.ums, target: '#tab-bases .card.base .cov[data-role="ums"]' },
-    { tx: () => ROLE_TEXT.zoll + " Tipp später auf eine Stelle, dann erklär ich sie nochmal.",
-      target: '#tab-bases .card.base .cov[data-role="zoll"]' },
-    { tx: "Täglich neue <b>Bewerbungen</b>: Sterne = Können, rechts die Gebühr. "
-        + "🤝 stellt ein.",
-      target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() },
-    { tx: "Dein <b>Team</b>: Misch die Rollen und hab genug Leute, "
-        + "sonst gibt’s Streit. ✕ oder Mülleimer kündigt – "
-        + "Abfindung: zwei Wochenlöhne.",
-      target: baseHead(0) },
-    { tx: "Hier ordnest du <b>Fahrzeuge</b> zu (oder unter „Flotte“). "
-        + "Den Rest disponierst du selbst.",
-      target: () => $("#tab-bases .card.base .assignrow") || baseHead(2)() },
-    { tx: "Zieh Fahrpersonal auf ein Fahrzeug – dann fährt es fest und schneller. "
-        + "Die Leiste unten zeigt, wo du loslässt.",
-      target: () => $("#tab-bases .card.base .staff.veh") || baseHead(2)() },
-    { tx: "Kennzahlen: Plätze, Fahrzeuge, Gebiet, Löhne (täglich) "
-        + "und Miete (monatlich).",
-      target: "#tab-bases .card.base .meta.small" },
-    { tx: "Hier vergrößerst du. Kündigen oder Verkaufen löscht Team und Einrichtung.",
-      target: "#tab-bases .card.base .baserow" },
-    { tx: "Das war’s! Gutes Team, schönes Büro – dann läuft’s fast von allein." }
+    { tx: () => { const b = S.bases[0]; return `Dein erstes Büro${b ? " in " + esc(N[b.node].name) : ""}! Tipp auf den Grundriss zum Einrichten – `
+        + "jedes Möbelstück hebt die Stimmung. <b>Unter 70 %</b> gibt’s Streit, dann steht der Standort."; },
+      target: "#tab-bases .card.base .planpeek", wait: 420 },
+    { tx: () => `Vier Stellen – ohne ${ROLES.disp.icon} <b>Disposition</b> läuft nichts. Tipp auf eine Stelle, dann erklär ich sie dir.`,
+      target: "#tab-bases .card.base .covrow" },
+    { tx: "Täglich neue <b>Bewerbungen</b>: Sterne = Können, 🤝 stellt ein. Alles Weitere – Fahrzeuge zuordnen, Fahrpersonal "
+        + "auf Fahrzeuge ziehen, ausbauen – probierst du am besten selbst aus.",
+      target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() }
   ]
 };
 

@@ -575,6 +575,10 @@ body.guide-art .greet-fig{
 #spot b{position:absolute;display:none;pointer-events:auto;touch-action:none;background:transparent}
 /* Während Lina erklärt, scrollt nichts – das Leuchtfenster bleibt auf dem Ziel */
 body.tut-on #view .view-body,body.tut-on .modal-inner{overflow:hidden!important;touch-action:none;overscroll-behavior:none}
+/* v76: Wischen auf den Sperrscheiben scrollt die Liste (tutScrollBind) – das Fenster läuft ohne Verzögerung mit.
+   Unten Platz, damit auch die letzte Karte in die Bildmitte rücken kann. */
+#spot.drag i{transition:none}
+body.tut-on #view .view-body{padding-bottom:45vh}
 body.tut-on #map{touch-action:none}
 #tutor{
   position:fixed;z-index:80;left:0;right:0;bottom:calc(var(--nav-h) + 14px);display:none;
@@ -619,6 +623,27 @@ body.guide-art .tut-fig{
 .tut-row{display:flex;gap:7px;margin-top:9px;align-items:center}
 .tut-row .btn{padding:6px 13px;font-size:13px}
 .tut-wait{font-size:12px;font-weight:800;color:var(--cyan);animation:tutpulse 1.3s ease-in-out infinite}
+/* v76: Schrittzähler und „überspringen“ */
+.tut-n{display:inline-block;margin-left:7px;padding:0 6px;border-radius:8px;background:var(--ink);color:var(--paper);font-size:9.5px;letter-spacing:.3px;opacity:.9}
+.tut-skipl{background:none;border:0;padding:4px 2px;font:inherit;font-size:11.5px;font-weight:700;color:var(--ink);opacity:.55;text-decoration:underline;cursor:pointer}
+/* v76: Lina-Tipp – kleine Blase, blockiert nichts, verschwindet von allein */
+#linaHint{position:fixed;z-index:86;left:0;right:0;bottom:calc(var(--nav-h) + 12px);display:none;pointer-events:none;
+  padding:0 calc(12px + var(--safe-r)) 0 calc(12px + var(--safe-l))}
+#linaHint.top{bottom:auto;top:calc(var(--head-h) + 10px)}
+body.hint-bot #toasts{bottom:calc(var(--nav-h) + 96px)}
+#linaHint.on,#linaHint.off{display:block}
+#linaHint .lh-box{pointer-events:auto;display:flex;align-items:center;gap:10px;max-width:440px;margin:0 auto;width:100%;text-align:left;
+  background:var(--paper);color:var(--ink);border:2.5px solid var(--ink);border-radius:16px;padding:8px 34px 8px 8px;position:relative;
+  box-shadow:3px 4px 0 rgba(13,27,42,.35);font:inherit;cursor:pointer;animation:lhin .34s cubic-bezier(.2,1.5,.4,1)}
+#linaHint.off .lh-box{animation:lhout .3s ease-in forwards}
+.lh-face{flex:none;width:50px;height:50px;border-radius:50%;overflow:hidden;border:2.5px solid var(--ink);background:#bfe3f2;display:block}
+.lh-face img{display:block;width:150%;height:auto;margin:-2px 0 0 -25%}
+.lh-face svg{display:block;width:100%;height:auto}
+.lh-tx{font-size:12.5px;line-height:1.38;display:block}
+.lh-tx b:first-child{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.7px;opacity:.6;font-weight:800}
+.lh-x{position:absolute;right:10px;top:8px;font-size:12px;opacity:.5}
+@keyframes lhin{0%{opacity:0;transform:translateY(14px) scale(.92)}100%{opacity:1;transform:none}}
+@keyframes lhout{to{opacity:0;transform:translateY(10px) scale(.96)}}
 @keyframes tutpulse{0%,100%{opacity:.55}50%{opacity:1}}
 .tut-tx b{font-weight:800}
 /* Beim Ausmessen keine Aufploppen-Animation, sonst stimmt die Größe nicht */
