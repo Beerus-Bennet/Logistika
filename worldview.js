@@ -98,7 +98,7 @@ function worldGroundCol(x, z) {
   }
   if (inYard(x, z, 1.5)) {
     const y = FWORLD.yard, d = Math.min(x - y[0], y[2] - x, z - y[1], y[3] - z);
-    c = wMix(c, 0xb5a98e, clamp((d + 1.5) / 2, 0, 1));
+    c = wMix(c, FWM.YARD_COL, clamp((d + 1.5) / 2, 0, 1));     /* v77: dieselbe Farbe wie der Schotter im Hof */
   }
   const e = lakeE(x, z);
   if (e < 1.25) c = wMix(c, 0xd9c48a, clamp((1.25 - e) / 0.2, 0, 1));
@@ -151,6 +151,25 @@ function worldMasks(fell) {
   };
   return { at, nearTree };
 }
+/* v77: Abstand zur nächsten Wegmitte (Waldwege und Wege am See) – Kronen und Büsche ragen nicht über den Schotter */
+function wayGap(x, z) {
+  let d = 1e9;
+  for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p));
+  for (const p of [LAKE_STEM, LAKE_WAY, LAKE_EAST]) d = Math.min(d, distLine(x, z, p));
+  return d;
+}
+/* … auf der Kameraseite (Südosten) des nächsten Weges verdeckt eine Krone ihn früher: bis 0,9 mehr Abstand */
+function wayCamSide(x, z) {
+  let d = 1e9, px = x, pz = z;
+  for (const p of FWORLD.paths.concat([LAKE_STEM, LAKE_WAY, LAKE_EAST])) for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+    const t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1), qx = a[0] + dx * t, qz = a[1] + dz * t, e = Math.hypot(x - qx, z - qz);
+    if (e < d) { d = e; px = qx; pz = qz; }
+  }
+  return d > 0.01 ? 0.9 * Math.max(0, ((x - px) + (z - pz)) / d * 0.7071) : 0;
+}
+/* Kronenradius der Kulissenbäume (Maßstab 1, breiteste Variante) */
+const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24, kirsche: 0.74 };
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
   if (inHofMax(x, z, 1.5)) return false;
@@ -290,11 +309,11 @@ function worldStatic() {
       if (r0 > p) {
         /* Waldboden: Farn, Pilze, Totholz – nur in Wegnähe, wo man hinsieht */
         if (f > 0.5 && r0 < 0.98 && (MK.at(x, z) & 2) && bgTreeOk(x, z, MK)) {
-          const c = chunkOf(x, z).d;
-          if (r1 < 0.35) c.add(fern, x, z, r2 * 6.28, 0.9 + r2 * 0.5);
-          else if (r1 < 0.4) c.add(r2 < 0.5 ? mush : mush2, x, z, r2 * 6.28, 1);
-          else if (r1 < 0.44) c.add(dlog, x, z, r2 * 6.28, 1);
-          else if (r1 < 0.5) c.add(bush, x, z, r2 * 6.28, 0.9 + r2);
+          const c = chunkOf(x, z).d, g = wayGap(x, z);     /* v77: Busch und Totholz liegen neben dem Weg, nicht darauf */
+          if (r1 < 0.35) { if (g > 1.0 + 0.23 * (0.9 + r2 * 0.5)) c.add(fern, x, z, r2 * 6.28, 0.9 + r2 * 0.5); }
+          else if (r1 < 0.4) { if (g > 1.2) c.add(r2 < 0.5 ? mush : mush2, x, z, r2 * 6.28, 1); }
+          else if (r1 < 0.44) { if (g > 1.0 + 0.82) c.add(dlog, x, z, r2 * 6.28, 1); }
+          else if (r1 < 0.5) { if (g > 1.0 + 0.47 * (0.9 + r2)) c.add(bush, x, z, r2 * 6.28, 0.9 + r2); }
         }
         continue;
       }
@@ -302,6 +321,8 @@ function worldStatic() {
       if (cut[k] || !bgTreeOk(x, z, MK)) continue;
       const zone = forestZone(x, z), alt = zone === "alt", sp = pickSp(zone, f < 0.5, r1);
       const sc = alt ? 1.55 + r2 * 0.7 : f > 0.5 ? 1.05 + r2 * 0.6 : 0.9 + r2 * 0.4;
+      /* v77: die Krone darf nicht über den Weg ragen (vorher nur 2,2 Abstand zur Wegmitte, egal wie groß der Baum) */
+      if ((MK.at(x, z) & 2 || z > 19) && wayGap(x, z) < 1 + (BG_CR[sp] || 1) * sc + wayCamSide(x, z)) continue;
       chunkOf(x, z).trees.push({ k, sp, v: Math.floor(r2 * 3), x, z, ry: r1 * 6.28, s: sc });
     }
   /* Felsen im Wald */
@@ -339,18 +360,26 @@ function worldStatic() {
     /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über.
        v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
     const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k];
+    /* v77: am Tor läuft der Weg 1 Einheit in den Hof hinein und dort in den Schotter aus (fade) */
+    const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : null];
     const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0, loose(e) && tee[1] < 0], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
-      snap, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 };
+      snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
     return { p, o, tee };
   });
   WAYS.forEach((W, i) => {
     let q = W.p;
     WAYS.forEach((V, j) => V.tee.forEach((t, k) => { if (t === i) q = FWM.wayStraightAt(q, k ? V.p[V.p.length - 1] : V.p[0], 1.4); }));
     W.raw = FWM.wayRaw(q, W.o);
+    /* v77: Torenden ein Stück in den Hof verlängern (der Übergang liegt dann im Tor, nicht davor) */
+    W.o.fade.forEach((F, k) => {
+      if (!F) return;
+      const R = W.raw, e = k ? R[R.length - 1] : R[0], p = k ? R[R.length - 2] : R[1], l = Math.hypot(e[0] - p[0], e[1] - p[1]) || 1, x = [e[0] + (e[0] - p[0]) / l, e[1] + (e[1] - p[1]) / l];
+      W.raw = k ? R.concat([x]) : [x].concat(R);
+    });
   });
   /* 2) zeichnen – Abzweige kennen die fertige Linie ihres Hauptweges */
   WAYS.forEach(W => {
-    const tee = W.tee.map(j => j < 0 ? null : { pts: WAYS[j].raw, w: 1.8 });
+    const tee = W.tee.map(j => j < 0 ? null : { pts: WAYS[j].raw, w: 1.8, ey: WAYS[j].o.ey });
     lines.merge(FWM.forestPath(W.raw, 1.8, Object.assign({}, W.o, { tee, prepared: true })), {});
   });
   /* v75: Bach – im Osten aus einer Quelle (verjüngt sich auf den letzten 9 Einheiten), im Westen bis an den
@@ -383,8 +412,8 @@ function worldStatic() {
   const oE = Object.assign({ y: 0.0315, ey: 0.0198, caps: [false, true], ends: [false, true], mouth: [true, false] }, LO);
   const rW = FWM.wayRaw(FWM.wayStraightAt(LAKE_WAY, LAKE_STEM[LAKE_STEM.length - 1], 1.4), oW);
   const rE = FWM.wayRaw(FWM.wayStraightAt(LAKE_EAST, LAKE_WAY[LAKE_WAY.length - 1], 1.4), oE);
-  st.merge(FWM.forestPath(rW, 1.6, Object.assign({}, oW, { prepared: true, tee: [null, { pts: rE, w: 1.6 }] })), {});
-  st.merge(FWM.forestPath(FWM.wayRaw(LAKE_STEM, oS), 1.6, Object.assign({}, oS, { prepared: true, tee: [null, { pts: rW, w: 1.6 }] })), {});
+  st.merge(FWM.forestPath(rW, 1.6, Object.assign({}, oW, { prepared: true, tee: [null, { pts: rE, w: 1.6, ey: oE.ey }] })), {});
+  st.merge(FWM.forestPath(FWM.wayRaw(LAKE_STEM, oS), 1.6, Object.assign({}, oS, { prepared: true, tee: [null, { pts: rW, w: 1.6, ey: oW.ey }] })), {});
   st.merge(FWM.forestPath(rE, 1.6, Object.assign({}, oE, { prepared: true })), {});
   /* Nachbarfelder */
   const nf = (x, z, w, d, c1, c2) => {

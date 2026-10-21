@@ -389,8 +389,30 @@ const thumbAt = (u, w) => /\/thumb\//.test(u) ? u.replace(/\/\d+px-([^/]+)$/, "/
 /* Titelbild der Wikipedia-Artikel samt Vorschaubild holen, dann Urheber und
    Lizenz – alles gebündelt in wenigen Anfragen, danach gespeichert. Jeder
    Schritt für sich: scheitert die Urheber-Abfrage, bleiben die Bilder. */
+/* v77: eigene Fotos im Spiel selbst (Ordner cars/, siehe carpics.mjs und die GitHub-Aktion
+   „Autofotos holen“): cars/credits.json nennt je Auto Datei, Urheber und Lizenz. Die liegen auf derselben
+   Seite wie das Spiel – kein Umweg über Wikipedia, klappt auch, wenn Wikipedia blockiert ist. */
+let localPics = null;                       /* null: noch nicht gefragt, sonst { id: {...} } (leer, wenn es keine gibt) */
+async function loadLocalPics() {
+  if (localPics) return localPics;
+  try {
+    const r = await fetch("cars/credits.json?v=" + (window.LOGI_V || ""), { cache: "no-cache" });
+    localPics = r.ok ? await r.json() : {};
+  } catch (_) { localPics = {}; }
+  if (!localPics || typeof localPics !== "object") localPics = {};
+  let n = 0;
+  Object.entries(localPics).forEach(([id, p]) => {
+    if (!CAR[id] || !p || !p.f) return;
+    PICS[id] = { src: "cars/" + p.f, page: p.page || "", by: p.by || "", lic: p.lic || "", t: Date.now(), local: 1 };
+    n++;
+  });
+  if (n) { savePics(); applyPics(); renderPicStatus(); }
+  return localPics;
+}
+let picRetryT = 0, picRetryN = 0;
 async function resolvePics(force) {
   if (picsBusy || typeof fetch !== "function") return;
+  if (!localPics) { picsBusy = true; try { await loadLocalPics(); } finally { picsBusy = false; } }
   const now = Date.now();
   if (force) CARS.forEach(c => { if (PICS[c.id] && !PICS[c.id].src) delete PICS[c.id]; });
   const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 10 * 60e3));
@@ -459,8 +481,14 @@ async function resolvePics(force) {
         if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
       } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
     }
-    todo.forEach(c => { if (!PICS[c.id]) PICS[c.id] = { t: now }; });
+    /* v77: nur merken, dass es für ein Auto kein Foto gibt, wenn die Abfrage selbst geklappt hat – vorher sperrte ein
+       Fehlschlag (z. B. kurz offline) alle 77 Autos für zehn Minuten („0 von 77 Fotos geladen“, ohne Fehlermeldung) */
+    const gotAny = todo.some(c => PICS[c.id] && PICS[c.id].src);
+    if (gotAny && !PIC_STATE.err) todo.forEach(c => { if (!PICS[c.id]) PICS[c.id] = { t: now }; });
     if (picCount() > CARS.length * 0.5) PIC_STATE.err = "";
+    /* nichts bekommen: in 45 s, 2 und 5 Minuten noch einmal (solange das Spiel offen ist) */
+    if (!gotAny && picRetryN < 3 && !picRetryT) picRetryT = setTimeout(() => { picRetryT = 0; picRetryN++; resolvePics(true); }, [45e3, 120e3, 300e3][picRetryN]);
+    if (gotAny) picRetryN = 0;
     savePics();
     applyPics();
   } catch (e) { PIC_STATE.err = errText(e); }
@@ -474,9 +502,10 @@ function picCount() { return CARS.filter(c => PICS[c.id] && PICS[c.id].src).leng
 function picStatusHTML() {
   const n = picCount();
   if (n >= CARS.length * 0.9 && !PIC_STATE.err) return "";
+  /* v77: ohne Fotos zeigt das Auktionshaus gezeichnete Autos – der Hinweis bleibt klein */
   const txt = picsBusy ? "📷 Fotos werden geladen …"
-    : PIC_STATE.err ? "📷 Fotos von Wikipedia gerade nicht erreichbar (" + PIC_STATE.err + ")"
-    : "📷 " + n + " von " + CARS.length + " Fotos geladen";
+    : PIC_STATE.err ? "📷 Wikipedia gerade nicht erreichbar (" + PIC_STATE.err + ") – bis dahin gezeichnete Autos"
+    : n ? "📷 " + n + " von " + CARS.length + " Fotos geladen" : "📷 Fotos noch nicht geladen – bis dahin gezeichnete Autos";
   return `<div class="picstat"><span>${esc(txt)}</span>${picsBusy ? "" : `<button class="btn tiny ghost" data-picretry="1">↻ Erneut versuchen</button>`}</div>`;
 }
 function renderPicStatus() {
@@ -487,7 +516,7 @@ function bindPicRetry(root) {
   root.querySelectorAll("[data-picretry]").forEach(b => b.onclick = () => {
     COMIC_FAIL.clear(); COMIC_TRY.clear();
     try { localStorage.removeItem(PIC_KEY); } catch (_) { /* egal */ }
-    PICS = {};
+    PICS = {}; localPics = null; picRetryN = 0; if (picRetryT) { clearTimeout(picRetryT); picRetryT = 0; }
     resolvePics(true);
     renderPicStatus();
   });
@@ -543,6 +572,7 @@ function comicRun(data, W, H) {
 /* Mögliche Adressen eines Fotos: die gespeicherte, kleinere Standardgröße, Original */
 function picUrls(src) {
   const out = [src];
+  if (!/^https?:/.test(src)) return out;                 /* eigenes Foto (cars/…) */
   if (/\/thumb\//.test(src)) {
     out.push(thumbAt(src, 330));
     out.push(src.replace(/\/thumb\//, "/").replace(/\/[^/]+$/, ""));
@@ -641,21 +671,87 @@ function picImgHTML(id, p) {
   return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer"${comic ? "" : ` onerror="picFail(this)"`}>`
     + `<span class="credit">${esc(picCredit(p))}</span>`;
 }
-/* Gezeichneter Platzhalter, solange kein Foto da ist (oder offline) */
-const BODY_PATH = {
-  coupe:    "M20 100 L30 83 Q60 76 100 72 L142 50 Q176 40 212 48 L252 68 Q290 74 300 86 L304 100 Z",
-  roadster: "M20 100 L28 84 Q70 78 120 74 L148 62 Q168 58 184 70 L250 72 Q292 76 302 88 L304 100 Z",
-  suv:      "M22 104 L24 76 Q30 64 60 62 L100 38 L222 38 Q242 40 264 62 L292 66 Q302 70 302 86 L302 104 Z",
-  kombi:    "M20 100 L26 82 Q50 74 90 70 L120 46 L262 44 Q280 46 292 64 L300 70 L302 100 Z",
-  limo:     "M20 100 L26 82 Q50 74 92 70 L126 46 L214 46 L252 68 Q290 72 300 84 L302 100 Z",
-  classic:  "M24 100 Q26 80 60 76 Q80 60 110 58 L150 46 Q185 40 215 52 L240 66 Q290 70 298 86 L300 100 Z"
+/* Gezeichnetes Auto, solange kein Foto da ist (oder offline). v77: statt einer einfachen Silhouette eine
+   Seitenansicht im Comic-Stil – Bauform je Modell (Coupé, flacher Mittelmotor-Keil, Roadster, SUV, Kombi,
+   Limousine, Klassiker), Lack mit Glanzverlauf, Scheiben, Radhäuser, Felgen, Scheinwerfer und Rückleuchten.
+   Front rechts. viewBox 320 × 140, Boden bei y ≈ 121. */
+const CAR_ART = {
+  coupe:    { body: "M16 96 Q14 84 24 80 Q60 66 104 52 Q132 44 158 44 Q186 45 206 56 L236 70 Q276 74 296 80 Q306 84 305 96 L303 102 Q301 105 294 105 L24 105 Q16 105 16 96 Z",
+              win: "M98 64 Q130 51 158 51 Q184 51 200 60 L222 71 L104 69 Z", pil: [[168, 51, 167, 70]], wh: [70, 250], r: 19, door: [128, 206], head: "e", hx: 293, hy: 85,
+              shine: "M36 84 Q110 66 200 70 Q262 74 292 82" },
+  wedge:    { body: "M14 94 Q14 84 24 80 L70 74 Q110 70 128 64 Q156 48 184 46 Q204 46 216 54 L240 66 Q284 72 300 82 Q308 86 306 96 L304 102 Q302 105 294 105 L22 105 Q14 105 14 94 Z",
+              win: "M136 64 Q160 52 184 51 Q200 51 210 58 L228 67 Q182 66 136 66 Z", pil: [], wh: [72, 250], r: 20, door: [150, 222], head: "slim", hx: 292, hy: 84,
+              intake: "M98 82 L132 75 L139 93 L105 97 Z", shine: "M30 84 Q120 72 200 70 Q262 72 296 84" },
+  roadster: { body: "M14 94 Q14 84 26 80 Q60 76 96 76 L150 75 Q168 74 186 72 L240 72 Q282 74 298 82 Q307 86 305 96 L303 102 Q301 105 294 105 L24 105 Q14 105 14 94 Z",
+              shield: "M184 73 L206 54 L213 55 L195 74 Z", hump: "M100 77 Q110 62 126 63 Q136 65 138 76 Z", seat: "M140 76 Q152 66 172 67 L186 73 Z",
+              wh: [70, 250], r: 19, door: [150, 214], head: "e", hx: 292, hy: 85, shine: "M34 86 Q130 78 230 76 Q270 76 294 84" },
+  suv:      { ty: 70, th: 12, body: "M18 104 L18 74 Q18 64 30 62 L58 60 Q70 46 92 40 Q100 38 112 38 L210 38 Q224 38 236 48 L258 64 Q290 68 300 74 Q306 78 306 92 L306 104 Z",
+              win: "M64 61 Q76 50 94 46 L208 46 Q218 46 226 52 L245 64 Z", pil: [[112, 46, 112, 63], [166, 46, 166, 64]], wh: [74, 254], r: 22, wy: 103, door: [118, 222], head: "box", hx: 292, hy: 76,
+              rail: "M72 35 H212", clad: "M18 95 H306 V104 H18 Z", shine: "M30 74 Q160 66 296 74" },
+  kombi:    { ty: 70, th: 12, body: "M16 100 L16 66 Q16 52 30 50 L72 46 L194 46 Q206 46 214 52 L240 70 Q284 74 298 80 Q306 84 306 96 L304 102 Q302 105 294 105 L24 105 Q16 105 16 100 Z",
+              win: "M26 66 L28 57 Q30 53 36 53 L192 53 Q201 53 206 57 L226 70 Z", pil: [[72, 53, 72, 68], [126, 53, 126, 69], [178, 53, 178, 70]], wh: [70, 252], r: 19, door: [130, 214], head: "slim", hx: 292, hy: 85,
+              shine: "M26 76 Q150 70 292 80" },
+  limo:     { ty: 79, tx: 16, body: "M14 96 Q14 84 24 80 L56 76 L84 74 Q100 54 112 50 Q118 48 128 48 L196 48 Q208 48 216 54 L242 72 Q284 74 298 80 Q307 84 305 96 L303 102 Q301 105 294 105 L22 105 Q14 105 14 96 Z",
+              win: "M92 73 Q104 57 114 55 Q119 54 128 54 L194 54 Q204 54 210 59 L228 72 Z", pil: [[160, 54, 160, 72]], wh: [68, 250], r: 19, door: [112, 220], head: "box", hx: 292, hy: 84,
+              shine: "M24 84 Q150 74 294 82" },
+  classic:  { ty: 81, tx: 20, body: "M20 100 Q14 88 26 82 Q46 76 84 74 Q104 58 130 52 Q156 46 184 50 Q206 54 222 70 Q262 70 286 76 Q304 82 304 96 Q303 104 294 104 L28 104 Q22 104 20 100 Z",
+              win: "M96 72 Q110 60 130 56 Q156 51 182 55 Q200 59 212 71 Z", pil: [[156, 53, 156, 72]], wh: [74, 248], r: 18, door: [112, 214], head: "round", hx: 291, hy: 83,
+              chrome: 1, shine: "M34 86 Q120 74 220 76 Q266 77 296 86" }
 };
-function carSilhouette(body, paint) {
-  const wy = body === "suv" ? 102 : 100;
-  return `<svg class="ph" viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <ellipse cx="162" cy="${wy + 18}" rx="140" ry="7" fill="rgba(0,0,0,.25)"/>
-    <path d="${BODY_PATH[body] || BODY_PATH.coupe}" fill="${paint}" stroke="#0d1b2a" stroke-width="4" stroke-linejoin="round"/>
-    ${[82, 248].map(x => `<circle cx="${x}" cy="${wy}" r="19" fill="#1b2330" stroke="#0d1b2a" stroke-width="4"/><circle cx="${x}" cy="${wy}" r="8" fill="#aab4bf"/>`).join("")}
+let carArtN = 0;
+function hexMix(a, b, t) {
+  const p = h => { h = String(h).replace("#", ""); if (h.length === 3) h = h.split("").map(x => x + x).join(""); const n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const A = p(a), B = p(b);
+  return "#" + A.map((x, i) => Math.round(x + (B[i] - x) * t).toString(16).padStart(2, "0")).join("");
+}
+function carArtShape(c) {
+  const b = (c && c.body) || "coupe";
+  if (b === "coupe" && c && (c.cls === "super" || c.cls === "hyper" || c.b === "lambo" || c.b === "bugatti" || (c.b === "ferrari" && c.cls !== "classic"))) return "wedge";
+  return CAR_ART[b] ? b : "coupe";
+}
+function carArt(c, paint) {
+  const S = CAR_ART[carArtShape(c)], u = "ca" + (++carArtN), P = paint || "#888", ink = "#0d1b2a";
+  const wy = S.wy || 102, R = S.r, dark = hexMix(P, "#000000", 0.32), lite = hexMix(P, "#ffffff", 0.38);
+  const wheel = x => {
+    const sp = [0, 1, 2, 3, 4].map(k => { const a = k / 5 * Math.PI * 2 - Math.PI / 2; return `M${x} ${wy} L${(x + Math.cos(a) * R * 0.52).toFixed(1)} ${(wy + Math.sin(a) * R * 0.52).toFixed(1)}`; }).join(" ");
+    return `<circle cx="${x}" cy="${wy}" r="${R}" fill="#1b2330" stroke="${ink}" stroke-width="3.5"/>`
+      + (S.chrome ? `<circle cx="${x}" cy="${wy}" r="${(R * 0.74).toFixed(1)}" fill="none" stroke="#eef1f4" stroke-width="3"/>` : "")
+      + `<circle cx="${x}" cy="${wy}" r="${(R * 0.56).toFixed(1)}" fill="${S.chrome ? "#e6eaee" : "#c3ccd5"}" stroke="${ink}" stroke-width="2"/>`
+      + (S.chrome ? "" : `<path d="${sp}" stroke="#7d8996" stroke-width="3" stroke-linecap="round"/>`)
+      + `<circle cx="${x}" cy="${wy}" r="${(R * 0.17).toFixed(1)}" fill="#6d7885"/>`;
+  };
+  const head = S.head === "slim" ? `<path d="M${S.hx - 10} ${S.hy - 4} l18 4 l-2 4 l-17 -3 Z" fill="#fff6d0" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/>`
+    : S.head === "box" ? `<rect x="${S.hx - 9}" y="${S.hy - 4}" width="15" height="8" rx="2" fill="#fff6d0" stroke="${ink}" stroke-width="2"/>`
+    : S.head === "round" ? `<circle cx="${S.hx}" cy="${S.hy}" r="6" fill="#fff6d0" stroke="${ink}" stroke-width="2"/>`
+    : `<ellipse cx="${S.hx}" cy="${S.hy}" rx="8" ry="5" fill="#fff6d0" stroke="${ink}" stroke-width="2"/>`;
+  const glass = d => `<path d="${d}" fill="url(#${u}g)" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>`;
+  return `<svg class="ph art" viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <defs>
+      <linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${lite}"/><stop offset=".48" stop-color="${P}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
+      <linearGradient id="${u}g" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#d9ebf4"/><stop offset="1" stop-color="#5f7f96"/></linearGradient>
+      <clipPath id="${u}c"><path d="${S.body}"/></clipPath>
+    </defs>
+    <ellipse cx="162" cy="${wy + R - 1}" rx="146" ry="7" fill="rgba(13,27,42,.22)"/>
+    ${S.chrome ? `<path d="M8 92 Q8 86 16 86 L28 86 L28 97 L16 97 Q8 97 8 92 Z" fill="#dfe4e9" stroke="${ink}" stroke-width="2.5"/>` : ""}
+    <path d="${S.body}" fill="url(#${u}p)"/>
+    ${S.clad ? `<path d="${S.clad}" fill="rgba(13,27,42,.28)" clip-path="url(#${u}c)"/>` : ""}
+    <g clip-path="url(#${u}c)">${S.wh.map(x => `<circle cx="${x}" cy="${wy}" r="${R + 5}" fill="#141b24"/>`).join("")}
+      <path d="M20 ${wy - 2} H300" stroke="rgba(13,27,42,.3)" stroke-width="4"/></g>
+    <path d="${S.body}" fill="none" stroke="${ink}" stroke-width="4" stroke-linejoin="round"/>
+    ${S.hump ? `<path d="${S.hump}" fill="${dark}" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>` : ""}
+    ${S.seat ? `<path d="${S.seat}" fill="#2a2f38" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>` : ""}
+    ${S.win ? glass(S.win) : ""}${S.shield ? glass(S.shield) : ""}
+    ${(S.pil || []).map(q => `<path d="M${q[0]} ${q[1]} L${q[2]} ${q[3]}" stroke="${dark}" stroke-width="5"/>`).join("")}
+    ${S.win ? `<path d="${S.win}" fill="none" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>` : ""}
+    ${S.rail ? `<path d="${S.rail}" stroke="${ink}" stroke-width="3.5" stroke-linecap="round"/>` : ""}
+    ${S.intake ? `<path d="${S.intake}" fill="#1b2330" stroke="${ink}" stroke-width="2.5" stroke-linejoin="round"/>` : ""}
+    <path d="${S.shine}" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="4" stroke-linecap="round"/>
+    <path d="M${S.door[0]} 74 L${S.door[0] + 2} ${wy - 4} M${S.door[1]} 74 L${S.door[1] - 2} ${wy - 4}" stroke="rgba(13,27,42,.45)" stroke-width="2"/>
+    <path d="M${S.door[1] - 26} 80 h12" stroke="rgba(13,27,42,.55)" stroke-width="3" stroke-linecap="round"/>
+    ${S.chrome ? `<path d="M36 89 H282" stroke="#eef1f4" stroke-width="2.5"/><path d="M294 88 L306 88 Q313 88 313 93 Q313 98 306 98 L294 98 Z" fill="#dfe4e9" stroke="${ink}" stroke-width="2.5"/>` : ""}
+    ${head}
+    <path d="M${S.tx || 17} ${S.ty || 84} l11 -2 l1 ${S.th || 7} l-12 1 Z" fill="#d8333a" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/>
+    ${S.wh.map(wheel).join("")}
   </svg>`;
 }
 function carPicHTML(c, paint, big) {
@@ -664,7 +760,7 @@ function carPicHTML(c, paint, big) {
      Silhouette, das Foto kommt aus der Warteschlange nach */
   const ready = p && p.src && (COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id));
   if (p && p.src && !ready) wantComic(c.id, big);
-  return `<div class="carpic${big ? " big" : ""}${p && p.src && !ready ? " loading" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carSilhouette(c.body, col)}${ready ? picImgHTML(c.id, p) : ""}</div>`;
+  return `<div class="carpic${big ? " big" : ""}${p && p.src && !ready ? " loading" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carArt(c, col)}${ready ? picImgHTML(c.id, p) : ""}</div>`;
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];
@@ -874,7 +970,7 @@ function specsHTML(c, l) {
 }
 function creditHTML(c) {
   const p = PICS[c.id];
-  if (!p || !p.src) return `<div class="piccredit">Foto lädt, sobald du online bist.</div>`;
+  if (!p || !p.src) return `<div class="piccredit">✏️ Zeichnung – das Foto kommt, sobald es geladen ist.</div>`;
   return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}</div>`;
 }
 let lotModal = null;

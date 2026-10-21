@@ -102,19 +102,18 @@ body:not(.tab-map) #mapUI{display:none}
   background:repeating-linear-gradient(45deg,var(--cyan),var(--cyan) 6px,#7fe3ee 6px,#7fe3ee 12px)}
 
 /* -------------------------- Kartensteuerung ------------------------- */
-#controls,#controls2{
+#controls{
   position:fixed;z-index:15;display:flex;flex-direction:column;gap:5px;
   top:calc(var(--head-h) + 8px);
 }
 #controls{left:calc(8px + var(--safe-l))}
-#controls2{right:calc(8px + var(--safe-r))}
-#controls button,#controls2 button{
+#controls button{
   width:40px;height:36px;border:var(--line);border-radius:11px;background:var(--paper);
   font-weight:800;font-size:14px;box-shadow:var(--shadow-sm);cursor:pointer;padding:0;
 }
-#controls button.on,#controls2 button.on{background:var(--blue);color:#fff;
+#controls button.on{background:var(--blue);color:#fff;
   transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-#controls button:active,#controls2 button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+#controls button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 
 /* Hinweis auf unerschlossenes Gebiet */
 #fogNote{
@@ -666,7 +665,6 @@ body.guide-art #tutor.compact .tut-box{align-items:flex-end;gap:10px}
   }
   #nav{left:auto;width:430px;right:0;border-left:var(--line)}
   .navbtn{font-size:10.5px}
-  #controls2{right:auto;left:calc(56px + var(--safe-l))}
   #inspector{left:calc(104px + var(--safe-l));right:auto;margin:0;max-width:360px}
   #toasts{left:14px;right:auto;width:min(420px,46vw);bottom:16px}
   #followBar{right:auto;left:0;width:calc(100% - 430px)}

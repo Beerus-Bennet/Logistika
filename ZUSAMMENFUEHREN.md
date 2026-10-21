@@ -1,5 +1,21 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v77 – Autofotos, Kartengrenzen, Z-Fighting, Wegübergänge (auf v76)
+
+| Thema | Wo |
+|---|---|
+| Eigene Fotos `cars/credits.json` + `cars/<id>.jpg` (`loadLocalPics`), kein Sperren nach Fehlschlag, Wiederholung | `auction.js` (Abschnitt „Fotos“) |
+| Gezeichnete Autos `CAR_ART`, `carArt`, `carArtShape`, `hexMix` (statt `BODY_PATH`/`carSilhouette`) | `auction.js` |
+| Foto-Import `carpics.mjs`, Aktion `.github/workflows/carpics.yml` (Vorlage `carpics-workflow.yml`) | Hauptverzeichnis |
+| `/cars/*.jpg` im Foto-Cache | `sw.js` |
+| `#controls2` (☁️/📡) entfernt, `fog = true` beim Laden, `mapBoundsUpdate` | `index.html`, `style.css`, `game.js` |
+| `setBounds`, `clampBounds`, `boundsMinZoom` | `map.js` |
+| Z-Fighting behoben: `pier`, `lootCrate`, `lootLid`, `goldLid`, `solarVan`; `cowShed`, `cart`, `pigHut`, `barn`, `cow`; `bertCar`, `beach` | `woodmodels.js`, `farmmodels.js`, `fishmodels.js` |
+| Prüfwerkzeug `zcheck()`, `zrender(mb)`, `zcheckMB(mb)` | `zcheck.js` (nicht in `index.html`) |
+| Bogenrand über dem Wegrand (`yE2`, `tee.ey`), `wayFade` + `o.fade`, `YARD_COL` | `woodmodels.js`, `worldview.js` |
+| `nearPathPt`, `FTREE_CR`, `treeCrown`, `treeWayNeed`, `treeOffPath`, Umzug `v77t` | `erbe.js` |
+| `wayGap`, `wayCamSide`, `BG_CR` (Kulissenbäume, Büsche, Totholz) | `worldview.js` |
+
 ## Stand v76 – Tutorial kurz, Lina-Tipps, „jetzt machbar“ (auf v75)
 
 | Thema | Wo |

@@ -147,7 +147,7 @@ const FM = (() => {
     b.at({ y: 0.18, sx: 3.9 / 3.5 }, () => {
       plankWall(b, 3.5, 2.3, 3.3, C.red);
       /* weiße Kanten */
-      [[-1.75, -1.65], [1.75, -1.65], [-1.75, 1.65], [1.75, 1.65]].forEach(([x, z]) => b.box(0.14, 2.3, 0.14, C.white, { x, z }));
+      [[-1.75, -1.65], [1.75, -1.65], [-1.75, 1.65], [1.75, 1.65]].forEach(([x, z]) => b.box(0.14, 2.29, 0.14, C.white, { x, z }));
       b.box(3.6, 0.12, 0.08, C.white, { y: 2.22, z: 1.66 });
       /* großes Tor mit Kreuz */
       b.at({ z: 1.67 }, () => {
@@ -351,8 +351,9 @@ const FM = (() => {
     const b = new MB();
     b.noise(0.1, () => b.plate(2.6, 1.8, 0xc9ad78, { y0: 0.01 }));
     plankWall(b, 2.6, 1.5, 0.12, C.woodD, { z: -0.84 });
-    b.box(0.12, 1.4, 1.8, C.woodD, { x: -1.24 });
-    b.box(0.12, 1.4, 1.8, C.woodD, { x: 1.24 });
+    /* v77: Seitenwände hinten 2 cm kürzer – ihre Rückseite lag bündig in der Bretterwand (Z-Fighting) */
+    b.box(0.12, 1.4, 1.78, C.woodD, { x: -1.24, z: 0.01 });
+    b.box(0.12, 1.4, 1.78, C.woodD, { x: 1.24, z: 0.01 });
     [-1.2, 0, 1.2].forEach(x => b.box(0.12, 1.55, 0.12, C.beam, { x, z: 0.85 }));
     b.noise(0.05, () => b.box(2.95, 0.1, 2.25, C.red, { y: 1.55, rx: 0.12, top: C.redD }));
     /* Heu im Unterstand */
@@ -576,7 +577,7 @@ const FM = (() => {
       b.at({ z: 0.55, y: 0.1, rx: 0.25 }, () => {
         b.box(0.3, 0.3, 0.32, base, { c: true });
         b.box(0.18, 0.012, 0.1, spot, { y: 0.152, z: -0.02 });
-        b.box(0.3, 0.16, 0.12, 0xf1b3a8, { c: true, z: 0.2, y: -0.06 });
+        b.box(0.31, 0.16, 0.12, 0xf1b3a8, { c: true, z: 0.2, y: -0.06 });
         b.box(0.04, 0.03, 0.02, 0x7a4a44, { x: 0.07, z: 0.265, y: -0.04 }); b.box(0.04, 0.03, 0.02, 0x7a4a44, { x: -0.07, z: 0.265, y: -0.04 });
         b.box(0.04, 0.05, 0.02, C.black, { x: 0.1, y: 0.06, z: 0.165 }); b.box(0.04, 0.05, 0.02, C.black, { x: -0.1, y: 0.06, z: 0.165 });
         b.box(0.14, 0.06, 0.04, base, { x: 0.2, y: 0.08, rz: -0.3 }); b.box(0.14, 0.06, 0.04, base, { x: -0.2, y: 0.08, rz: 0.3 });
@@ -712,7 +713,7 @@ const FM = (() => {
     G3.seed(76);
     const b = new MB();
     plankWall(b, 1.5, 0.75, 0.08, C.woodL, { z: -0.6 });
-    b.box(0.08, 0.75, 1.2, C.woodD, { x: -0.72 }); b.box(0.08, 0.75, 1.2, C.woodD, { x: 0.72 });
+    b.box(0.08, 0.75, 1.16, C.woodD, { x: -0.72, z: 0.02 }); b.box(0.08, 0.75, 1.16, C.woodD, { x: 0.72, z: 0.02 });
     for (let i = 0; i <= 8; i++) {
       const a = i / 8 * Math.PI, a2 = (i + 1) / 8 * Math.PI;
       if (i === 8) break;
@@ -1001,7 +1002,7 @@ const FM = (() => {
     b.noise(0.1, () => b.box(1.0, 0.1, 0.7, C.woodL, { y: 0.38 }));
     plankWall(b, 1.0, 0.25, 0.05, C.wood, { y: 0.48, z: 0.33 });
     plankWall(b, 1.0, 0.25, 0.05, C.wood, { y: 0.48, z: -0.33 });
-    b.box(0.05, 0.25, 0.7, C.wood, { y: 0.48, x: 0.48 });
+    b.box(0.05, 0.25, 0.6, C.wood, { y: 0.48, x: 0.48 });
     b.box(0.05, 0.05, 0.9, C.woodD, { y: 0.4, x: -0.4, z: 0.7, ry: 0.0, rz: 0 });
     [[0, 0, 0xd9332b], [0.2, 0.1, 0xd9332b], [-0.2, -0.1, 0xe8452f], [0.1, -0.15, 0xf28a2e]].forEach(([x, z, c]) => b.sphere(0.1, 7, 5, c, { x, y: 0.55, z }));
     return b;

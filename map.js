@@ -300,7 +300,34 @@ function createMap(canvas, opts) {
     clampCam();
     if (!silent) requestDraw();
   }
+  /* v77: Grenzen (Weltkoordinaten) – Verschieben und Herauszoomen enden am erschlossenen Gebiet */
+  let bounds = null;
+  function boundsMinZoom() {
+    if (!bounds || !W || !H) return minZoom;
+    const aw = Math.max(50, W - padRight), ah = Math.max(50, H - padBottom);
+    return Math.max(minZoom, Math.min(maxZoom - 1, Math.log2(Math.min(aw / (bounds.x1 - bounds.x0), ah / (bounds.y1 - bounds.y0)))));
+  }
+  function clampBounds() {
+    if (!bounds) return;
+    const zm = boundsMinZoom();
+    if (cam.zoom < zm) cam.zoom = zm;
+    const s = scale(), hx = midX() / s, hy = midY() / s;
+    const k = Math.round((cam.x - (bounds.x0 + bounds.x1) / 2) / WORLD) * WORLD, x0 = bounds.x0 + k, x1 = bounds.x1 + k;
+    cam.x = x1 - x0 > 2 * hx ? Math.max(x0 + hx, Math.min(x1 - hx, cam.x)) : (x0 + x1) / 2;
+    cam.y = bounds.y1 - bounds.y0 > 2 * hy ? Math.max(bounds.y0 + hy, Math.min(bounds.y1 - hy, cam.y)) : (bounds.y0 + bounds.y1) / 2;
+  }
+  /* pts: Eckpunkte [lat, lon]; marg: Rand als Anteil der größeren Ausdehnung (null = keine Grenzen) */
+  function setBounds(pts, marg) {
+    if (!pts || !pts.length) { bounds = null; return; }
+    const un = unwrapLons(pts);
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    un.forEach(p => { const x = projX(p[1]), y = projY(p[0]); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+    const m = Math.max(x1 - x0, y1 - y0) * (marg == null ? 0.15 : marg) + 1e-4;
+    bounds = { x0: x0 - m, x1: x1 + m, y0: y0 - m, y1: y1 + m };
+    if (!anim) { clampCam(); requestDraw(); }
+  }
   function clampCam() {
+    clampBounds();
     const up = midY() / scale(), down = (H - midY()) / scale();
     cam.y = Math.max(up, Math.min(WORLD - down, cam.y));
     if (WORLD * scale() < H) cam.y = WORLD / 2;
@@ -502,7 +529,8 @@ function createMap(canvas, opts) {
     zoomBy: (d) => zoomAround(midX(), midY(), d),
     setPadding: (bottom, right) => { padBottom = bottom || 0; padRight = right || 0; requestDraw(); },
     setSource: (k) => { if (TILE_SOURCES[k]) { source = TILE_SOURCES[k]; tiles.clear(); requestDraw(); } },
-    setZoomRange: (a, b) => { minZoom = a; maxZoom = b; }
+    setZoomRange: (a, b) => { minZoom = a; maxZoom = b; },
+    setBounds, getBounds: () => bounds && Object.assign({}, bounds)
   };
 
   window.addEventListener("resize", resize);

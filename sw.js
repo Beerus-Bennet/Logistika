@@ -2,54 +2,54 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v76";
+const VERSION = "v77";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
 /* Fotos der Auktionsautos (Wikimedia) – versionsunabhängig, bleiben erhalten */
 const PICS = "logistika-carpics";
-const MAX_PICS = 160;
+const MAX_PICS = 260;
 
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=76",
-  "./data.js?v=76",
-  "./farmdata.js?v=76",
-  "./fishdata.js?v=76",
-  "./erbedata.js?v=76",
-  "./places.js?v=76",
-  "./avatar.js?v=76",
-  "./photo.js?v=76",
-  "./map.js?v=76",
-  "./offices.js?v=76",
-  "./wallet.js?v=76",
-  "./snus.js?v=76",
-  "./pablo.js?v=76",
-  "./extras.js?v=76",
-  "./events.js?v=76",
-  "./vip.js?v=76",
-  "./goals.js?v=76",
-  "./lucky.js?v=76",
-  "./loading.js?v=76",
-  "./game.js?v=76",
-  "./farm.js?v=76",
-  "./erbe.js?v=76",
-  "./intro.js?v=76",
-  "./cars.js?v=76",
-  "./auction.js?v=76",
-  "./customs.js?v=76",
-  "./corp.js?v=76",
-  "./livery.js?v=76",
-  "./gl3d.js?v=76",
-  "./farmmodels.js?v=76",
-  "./fishmodels.js?v=76",
-  "./woodmodels.js?v=76",
-  "./farmview.js?v=76",
-  "./worldview.js?v=76",
-  "./minigames.js?v=76",
-  "./fishview.js?v=76",
-  "./team.js?v=76",
+  "./style.css?v=77",
+  "./data.js?v=77",
+  "./farmdata.js?v=77",
+  "./fishdata.js?v=77",
+  "./erbedata.js?v=77",
+  "./places.js?v=77",
+  "./avatar.js?v=77",
+  "./photo.js?v=77",
+  "./map.js?v=77",
+  "./offices.js?v=77",
+  "./wallet.js?v=77",
+  "./snus.js?v=77",
+  "./pablo.js?v=77",
+  "./extras.js?v=77",
+  "./events.js?v=77",
+  "./vip.js?v=77",
+  "./goals.js?v=77",
+  "./lucky.js?v=77",
+  "./loading.js?v=77",
+  "./game.js?v=77",
+  "./farm.js?v=77",
+  "./erbe.js?v=77",
+  "./intro.js?v=77",
+  "./cars.js?v=77",
+  "./auction.js?v=77",
+  "./customs.js?v=77",
+  "./corp.js?v=77",
+  "./livery.js?v=77",
+  "./gl3d.js?v=77",
+  "./farmmodels.js?v=77",
+  "./fishmodels.js?v=77",
+  "./woodmodels.js?v=77",
+  "./farmview.js?v=77",
+  "./worldview.js?v=77",
+  "./minigames.js?v=77",
+  "./fishview.js?v=77",
+  "./team.js?v=77",
   "./manifest.webmanifest",
   "./favicon-64.png",
   "./icon-180.png",
@@ -116,8 +116,9 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  /* Autofotos von Wikimedia: einmal geladen, danach auch offline da */
-  if (url.hostname === "upload.wikimedia.org") {
+  /* Autofotos von Wikimedia (v77: und die eigenen im Ordner cars/): einmal geladen, danach auch offline da –
+     über Versionen hinweg, damit sie nach einem Update nicht neu geladen werden */
+  if (url.hostname === "upload.wikimedia.org" || (url.origin === self.location.origin && /\/cars\/[^/]+\.(jpe?g|png|webp)$/i.test(url.pathname))) {
     e.respondWith((async () => {
       const cache = await caches.open(PICS);
       const hit = await cache.match(req);

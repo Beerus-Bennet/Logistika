@@ -298,7 +298,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   der Mauer (dahinter Pflaster, kein Laub darauf), und an der Straße im Osten
   treffen sich Teichweg und Uferweg senkrecht zu einer Kreuzung. Seit v72 liegt im Wald eine längere, leicht gewölbte
   Brücke genau in der Wegachse, der Westweg endet vor dem Bach an einem Angelsteg,
-  und alle Wege münden mit runden Ecken am Bordstein in die Straße. Seit v75 laufen alle Wege senkrecht und mit berechneten Rundungen in die Straße, Abzweige haben runde Ecken, die Wegränder gehen weich ins Gras über; der Uferweg führt vom Kühlhaus weiter bis zur Straße gegenüber dem Westtor-Feldweg, ein neuer Ostuferweg läuft über die Brücke am Seebach, am Westweg liegt ein echter Angelsteg und der Bach entspringt im Nordosten an einer Quelle und fließt im Westen bis zum Kartenrand. Seit v73 bringt ein Lieferwagen die „Besondere Lieferung“ als leuchtende Lootkiste direkt vor das Hoftor; beim Öffnen gibt es je nach Seltenheit (Gut bis Legendär) Lichtblitz, Münz-Fontäne, Banner und fliegende Belohnungen.
+  und alle Wege münden mit runden Ecken am Bordstein in die Straße. Seit v75 laufen alle Wege senkrecht und mit berechneten Rundungen in die Straße, Abzweige haben runde Ecken, die Wegränder gehen weich ins Gras über; der Uferweg führt vom Kühlhaus weiter bis zur Straße gegenüber dem Westtor-Feldweg, ein neuer Ostuferweg läuft über die Brücke am Seebach, am Westweg liegt ein echter Angelsteg und der Bach entspringt im Nordosten an einer Quelle und fließt im Westen bis zum Kartenrand. Seit v73 bringt ein Lieferwagen die „Besondere Lieferung“ als leuchtende Lootkiste direkt vor das Hoftor; beim Öffnen gibt es je nach Seltenheit (Gut bis Legendär) Lichtblitz, Münz-Fontäne, Banner und fliegende Belohnungen. Seit v77 laufen die Wege an den Toren des Sägewerkshofs weich in den Schotter aus, an Mündungen und Abzweigen blitzt kein Gras mehr durch, und Bäume halten mit ihrer ganzen Krone Abstand vom Weg.
 * **Solardach** – ab Level 15 (Sägewerk mit heilem Dach) kommt die
   **Döring GmbH** mit ihrem Montagewagen ans Sägewerk und bleibt 48 Stunden
   (Leiste „☀️ Döring Solar“, Blase am Wagen). Ein Modul kostet 180 €; es liegt
@@ -682,8 +682,10 @@ Auftauchen; unter *Welt* lassen sich die Erklärungen wiederholen.
 Was du noch nicht erschlossen hast, liegt im Dunkeln. Um jeden erschlossenen
 Standort liegt ein Lichtkegel, dessen Radius mit **Level und Etappe** wächst –
 von 16 km rund um Berlin bis zu mehreren tausend Kilometern am Ende. Deine
-laufenden Routen und deine Fahrzeuge leuchten sich zusätzlich frei. Wer lieber
-alles sieht, schaltet den Nebel mit ☁️ ab.
+laufenden Routen und deine Fahrzeuge leuchten sich zusätzlich frei. Die Karte
+reicht genau so weit, wie du gespielt hast: Verschieben und Herauszoomen enden
+am Rand des erschlossenen Gebiets (seit v77, der Nebel lässt sich nicht mehr
+abschalten).
 
 ### Die sechs Etappen
 
@@ -772,10 +774,9 @@ rechts unten darüber, Fenster öffnen sich mittig in der freien Fläche daneben
 |---|---|
 | Karte bewegen | Ziehen, zwei Finger zum Zoomen, Mausrad |
 | Station oder Fahrzeug ansehen | Antippen |
-| Fahrzeug live verfolgen | Fahrzeug antippen → *live verfolgen*, oder 📡 |
+| Fahrzeug live verfolgen | Fahrzeug antippen → *live verfolgen*, oder unter *Live* |
 | Verfolgung beenden | Karte ziehen oder ✕ am Live-Band |
 | Tempo | Leiste links an der Karte: ⏸ (hält an / läuft weiter), 1×, 3×, 10×, 30× |
-| Nebel ein-/ausblenden | ☁️ |
 
 Über den **Aufträgen** sitzt eine feste Leiste: oben sortieren (💶 Erlös,
 📍 Leerfahrt, ⏳ Frist), darunter filtern – alle, nur jetzt machbare (freies
@@ -914,8 +915,18 @@ Ruckeln): kräftig geglättet, damit Lack zur Fläche wird, weiche Tonstufen
 statt harter Treppen, kräftigere Farben und schwarze Tuschelinien aus
 Helligkeits- und Farbkanten – Schatten bleiben Fläche. Danach wird es
 gespeichert, beim nächsten Mal steht es sofort da. Bleibt Wikipedia
-unerreichbar, sagt ein Hinweis warum und bietet „Erneut versuchen“. Bis dahin
-steht eine leicht pulsierende Silhouette in der Originalfarbe.
+unerreichbar, sagt ein Hinweis warum und bietet „Erneut versuchen“ (das Spiel
+versucht es außerdem nach 45 s, 2 und 5 Minuten selbst). Bis dahin steht das
+Auto **gezeichnet** da: eine Seitenansicht im Comic-Stil je Bauform (Coupé,
+Mittelmotor-Keil, Roadster, SUV, Kombi, Limousine, Klassiker) in der
+Originalfarbe.
+
+**Fotos fest im Spiel (seit v77):** Die GitHub-Aktion „Autofotos holen“
+(`.github/workflows/carpics.yml`, Vorlage `carpics-workflow.yml`, startet das
+Skript `carpics.mjs`) lädt die 77 Fotos einmal von Wikimedia Commons nach
+`cars/` und schreibt Urheber und Lizenz nach `cars/credits.json`. Liegen sie
+dort, nimmt das Spiel sie zuerst – ganz ohne Wikipedia, auch wenn das im
+Netz des Spielers gesperrt ist.
 
 ### Zoll
 
@@ -1104,7 +1115,9 @@ vip.js                  Einladungen zur Sonderfahrt, Konkurrenz, Verhandeln
 goals.js                Rahmenverträge, Missionen, Tagesaufgaben, Erfolge
 lucky.js                Luckybox: Preise, Preisband, Goldener Bulli, Vorteile
 cars.js                 Sammlerautos fürs Auktionshaus: 77 reale Modelle mit Daten
-auction.js              Auktionshaus: Lose, Bieten, Zuschlag live, Garage, Einliefern, Fotos
+auction.js              Auktionshaus: Lose, Bieten, Zuschlag live, Garage, Einliefern, Fotos, gezeichnete Autos
+carpics.mjs             holt die Autofotos einmal nach cars/ (GitHub-Aktion „Autofotos holen“, Vorlage carpics-workflow.yml)
+zcheck.js               Entwicklerwerkzeug: findet Z-Fighting (deckungsgleiche Flächen) in den 3D-Modellen
 customs.js              Zoll: Grenzen, Zollanmeldung als Minispiel, Grüne Spur, Beschau
 corp.js                 Übernahmen der Konkurrenz: Firmenwert, Verhandlung, Übergabe
 livery.js               Firmen-Lackierung und Logo: Editor, Kosten, Kartenfarben
@@ -1134,7 +1147,13 @@ icon-*.png, favicon-64.png   App-Symbole
 
 Alle Dateien liegen bewusst flach im Hauptverzeichnis (keine Unterordner) –
 so lässt sich das Projekt auch vom Handy aus per „Add file → Upload files“
-auf GitHub pflegen, ohne dass eine Ordnerstruktur verloren geht.
+auf GitHub pflegen, ohne dass eine Ordnerstruktur verloren geht. Ausnahmen:
+`cars/` (legt die Aktion „Autofotos holen“ selbst an) und die Aktion selbst
+unter `.github/workflows/` (einmal per „Add file → Create new file“ anlegen).
+
+Entwicklerwerkzeuge (vom Spiel nicht geladen): `zcheck.js` findet flimmernde,
+deckungsgleiche Flächen in allen 3D-Modellen (Konsole: Skript laden, dann
+`zcheck()`), `carpics.mjs` holt die Autofotos.
 
 **Karte** – eine selbst geschriebene Kartenengine auf einem einzigen
 `<canvas>`: Web-Mercator-Projektion, Kachel-Nachladen mit Rückfall auf gröbere

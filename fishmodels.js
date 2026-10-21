@@ -801,7 +801,7 @@ const FFM = (() => {
       b.triV(a, c, d, cs[i], cs[i + 1], cs[i + 1]);
     }
     /* Muscheln und Tang */
-    for (let i = 0; i < 70; i++) b.box(0.08, 0.01, 0.05, i % 3 ? 0xf3ead6 : 0x6f7a46, { x: x0 + rnd() * (x1 - x0), y: 0.005, z: -1.5 + rnd() * 3.5, ry: rnd() * 3 });
+    for (let i = 0; i < 70; i++) b.box(0.08, 0.01, 0.05, i % 3 ? 0xf3ead6 : 0x6f7a46, { x: x0 + rnd() * (x1 - x0), y: 0.005 + (i % 4) * 0.002, z: -1.5 + rnd() * 3.5, ry: rnd() * 3 });
     return b;
   }
   /* Schaumsaum, wo die Wellen am Strand auslaufen */
@@ -1450,9 +1450,10 @@ const FFM = (() => {
       b.box(1.4, 0.48, 2.45, GL, { y: 0.86, z: -0.55 });
       /* Säulen und Dach */
       [[0.66], [-0.66]].forEach(([x]) => {
-        b.box(0.08, 0.5, 0.1, P, { x, y: 0.85, z: 0.66, rx: -0.42 });
-        b.box(0.08, 0.48, 0.1, P, { x, y: 0.86, z: -0.1 });
-        b.box(0.08, 0.48, 0.12, P, { x, y: 0.86, z: -0.95 });
+        /* v77: Säulen 1 cm nach außen – ihre Außenseite lag bündig auf der Scheibe (Z-Fighting) */
+        b.box(0.08, 0.5, 0.1, P, { x: x * 1.015, y: 0.85, z: 0.66, rx: -0.42 });
+        b.box(0.08, 0.48, 0.1, P, { x: x * 1.015, y: 0.86, z: -0.1 });
+        b.box(0.08, 0.48, 0.12, P, { x: x * 1.015, y: 0.86, z: -0.95 });
         b.box(0.1, 0.48, 0.14, P, { x, y: 0.86, z: -1.72 });
       });
       b.box(1.46, 0.08, 2.6, P, { y: 1.33, z: -0.5 });
@@ -1475,7 +1476,7 @@ const FFM = (() => {
       b.box(1.66, 0.13, 0.12, CH, { y: 0.34, z: -1.9 });
       b.box(0.12, 0.13, 0.3, CH, { x: 0.78, y: 0.34, z: 1.76 }); b.box(0.12, 0.13, 0.3, CH, { x: -0.78, y: 0.34, z: 1.76 });
       /* Kühlergrill hochkant mit Chromrahmen, Plakette als schlichte Scheibe */
-      b.box(0.5, 0.3, 0.05, CH, { y: 0.48, z: 1.83 });
+      b.box(0.5, 0.29, 0.05, CH, { y: 0.48, z: 1.83 });
       b.box(0.42, 0.24, 0.05, 0x2a2c30, { y: 0.51, z: 1.845 });
       for (let i = -2; i <= 2; i++) b.box(0.02, 0.22, 0.02, CHD, { x: i * 0.08, y: 0.52, z: 1.87 });
       b.cyl(0.06, 0.06, 0.03, 10, CH, { rx: Math.PI / 2, y: 0.85, z: 1.82 });

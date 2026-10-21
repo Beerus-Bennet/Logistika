@@ -565,7 +565,10 @@ const FWM = (() => {
     for (let k = 0; k < seg; k++) {
       const p0 = P(k), p1 = P(k + 1);
       up3(b, K, [p0[0], y + 0.0004, p0[1]], [p1[0], y + 0.0004, p1[1]], fc);
-      if (o.gnd) softEdge(b, p0, p1, unit(O[0] - p0[0], O[1] - p0[1]), unit(O[0] - p1[0], O[1] - p1[1]), yE, EC, o.gnd);
+      /* v77: der Bogenrand liegt eine Spur ÜBER dem Rand des Weges (und am Abzweig über dem des Hauptweges):
+         am Tangentenpunkt überlappen sich beide Ränder – lagen sie gleich hoch, gewann der äußere, grasfarbene
+         Teil des Wegrands und es blitzte ein heller Keil ins Gras („Zacken“ an Mündungen und Abzweigen) */
+      if (o.gnd) softEdge(b, p0, p1, unit(O[0] - p0[0], O[1] - p0[1]), unit(O[0] - p1[0], O[1] - p1[1]), Math.max(yE, o.yE2 || 0) + 0.0006, EC, o.gnd);
     }
     /* Überlapp: je Kante ein 0,06 breiter Streifen von der Ecke bis zum Tangentenpunkt, halb in den Weg hinein */
     [[u1, u2, t], [u2, u1, t]].forEach(([u, v, len]) => {
@@ -647,6 +650,38 @@ const FWM = (() => {
       if (C1) { Cn = C1; u2 = [N1.m[0], N1.m[1]]; if ((Cn[0] - p[0]) * u2[0] + (Cn[1] - p[1]) * u2[1] < 0) u2 = [-u2[0], -u2[1]]; }
       fillet(b, Cn, [-t[0], -t[1]], u2, r, o);
     });
+  }
+  /* v77: Übergang in eine Fläche (Tor des Sägewerkshofs): auf den letzten F.L Einheiten läuft der Weg samt
+     Rand in die Farbe der Fläche (F.col) aus – eine Schicht knapp über dem Weg, am Ende einfarbig wie der Schotter
+     des Hofs. Vorher endete der Weg mit harter Kante und dunklem Rand mitten im Tor. */
+  const YARD_COL = 0xbfb196;
+  function wayFade(b, P0, end, W, F, y, gnd) {
+    const P = end ? P0 : P0.slice().reverse(), n = P.length, hw = W / 2, L = F.L || 2;
+    const T = G3.col(F.col != null ? F.col : YARD_COL), FC = G3.col(WAY_COL), EC = G3.col(WAY_RIM), Y = y + 0.0008;
+    const S = new Array(n); S[n - 1] = 0;
+    for (let i = n - 2; i >= 0; i--) S[i] = S[i + 1] + Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]);
+    let i0 = n - 1; while (i0 > 0 && S[i0 - 1] < L) i0--;
+    const pts = [], ss = [];
+    if (i0 > 0) { const a = P[i0 - 1], c = P[i0], u = (S[i0 - 1] - L) / ((S[i0 - 1] - S[i0]) || 1); pts.push([a[0] + (c[0] - a[0]) * u, a[1] + (c[1] - a[1]) * u]); ss.push(L); }
+    for (let i = i0; i < n; i++) { pts.push(P[i]); ss.push(S[i]); }
+    const m = pts.length;
+    if (m < 2) return;
+    const N = pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], c = pts[Math.min(m - 1, i + 1)], u = unit(c[0] - a[0], c[1] - a[1]); return [-u[1], u[0]]; });
+    const K = s => { const t = Math.max(0, Math.min(1, 1 - s / L)); return t * t * (3 - 2 * t); };
+    const at = (i, f) => [pts[i][0] + N[i][0] * f, Y, pts[i][1] + N[i][1] * f];
+    const g = q => G3.col(gnd(q[0], q[2]));
+    for (let i = 1; i < m; i++) {
+      const k0 = K(ss[i - 1]), k1 = K(ss[i]), f0 = lerp3(FC, T, k0), f1 = lerp3(FC, T, k1);
+      quadUp(b, at(i - 1, -hw), at(i, -hw), at(i, hw), at(i - 1, hw), f0, f1, f1, f0);
+      if (!gnd) continue;
+      [1, -1].forEach(sd => {
+        const A0 = at(i - 1, sd * hw), B0 = at(i, sd * hw), A1 = at(i - 1, sd * (hw + RIM_IN)), B1 = at(i, sd * (hw + RIM_IN));
+        const A2 = at(i - 1, sd * (hw + RIM_IN + RIM_OUT)), B2 = at(i, sd * (hw + RIM_IN + RIM_OUT));
+        const tA = lerp3(lerp3(EC, g(A1), 0.3), T, k0), tB = lerp3(lerp3(EC, g(B1), 0.3), T, k1);
+        quadUp(b, A0, B0, B1, A1, tA, tB, tB, tA);
+        quadUp(b, A1, B1, B2, A2, tA, tB, g(B2), g(A2));
+      });
+    }
   }
   /* Polylinie glätten (Catmull-Rom), damit Wege und Bach weich laufen.
      v75: cen = zentripetal (Barry–Goldman, α = 0,5): kein Überschwingen, wenn kurze und lange Stücke
@@ -735,8 +770,9 @@ const FWM = (() => {
     });
     b.noise(0.012, () => ribbon(b, P, W, WAY_COL, y, WAY_RIM, o.caps || true, yE, o.gnd));
     const fo = { y, yE, gnd: o.gnd, roadCol: o.roadCol, mouthR: o.mouthR, teeR: o.teeR, mouthEdge: o.mouthEdge };
+    (o.fade || []).forEach((F, k) => { if (F) wayFade(b, P, k, W, F, y, o.gnd); });
     (o.mouth || []).forEach((on, k) => { if (on) wayMouth(b, P, k, W, fo); });
-    (o.tee || []).forEach((T, k) => { if (T) wayTee(b, P, k, W, smoothLine(T.pts, 6, true), T.w || 1.8, fo); });
+    (o.tee || []).forEach((T, k) => { if (T) wayTee(b, P, k, W, smoothLine(T.pts, 6, true), T.w || 1.8, Object.assign({}, fo, { yE2: T.ey || 0 })); });
     /* Laub und Steinchen auf dem Weg – v71: nicht auf Hofpflaster oder Straße (o.leafOk), abschaltbar (o.leaves) */
     for (let i = 0; i < P.length && o.leaves !== false; i++) {
       const p = P[Math.floor(rnd() * P.length)], lx = p[0] + (rnd() - 0.5) * 1.2, lz = p[1] + (rnd() - 0.5) * 1.2, c = rnd() < 0.5 ? 0xc49a52 : 0x9a8f7a, ry = rnd() * 3;
@@ -868,12 +904,14 @@ const FWM = (() => {
     /* Auflager am Ufer: ein Stamm quer, halb im Boden – der Weg endet genau hier */
     b.cyl(0.11, 0.11, 1.3, 8, C.woodD, { x: 0.06, y: 0.03, z: -0.65, rx: Math.PI / 2, top: 0x7a5a38 });
     /* Pfähle (stehen im Wasser, nur oben sichtbar) */
-    [[0.7, -0.5], [0.7, 0.5], [LW + 0.05, -0.92], [LW + 0.05, 0.92], [L - 0.06, -0.92], [L - 0.06, 0.92]].forEach(([x, z]) => b.cyl(0.06, 0.06, top + 0.25, 6, C.woodD, { x, y: -0.25, z }));
+    /* v77: die Pfähle enden 5 mm unter dem Belag – vorher lagen ihre Köpfe genau in der Belagfläche und flimmerten
+       (Z-Fighting, geprüft mit zcheck.js) */
+    [[0.7, -0.5], [0.7, 0.5], [LW + 0.05, -0.92], [LW + 0.05, 0.92], [L - 0.06, -0.92], [L - 0.06, 0.92]].forEach(([x, z]) => b.cyl(0.06, 0.06, top + 0.25 - 0.055, 6, C.woodD, { x, y: -0.25, z }));
     /* Poller an den äußeren Ecken, Tau am einen */
     [[L - 0.08, -0.95], [L - 0.08, 0.95]].forEach(([x, z]) => { b.cyl(0.075, 0.075, 0.42, 7, 0x6a4a2e, { x, y: top - 0.02, z, top: 0x8a6a48 }); });
     b.cyl(0.085, 0.085, 0.06, 7, 0xd8c8a0, { x: L - 0.08, y: top + 0.26, z: 0.95 });
     /* Eimer und eine angelehnte Angel */
-    b.cyl(0.11, 0.13, 0.2, 9, 0x6c8fa8, { x: LW + 0.35, y: top, z: -0.6, top: 0x3f8fc0 });
+    b.cyl(0.11, 0.13, 0.2, 9, 0x6c8fa8, { x: LW + 0.35, y: top + 0.003, z: -0.6, top: 0x3f8fc0 });
     b.box(0.025, 0.025, 1.5, 0x5a4030, { x: LW + 0.5, y: top + 0.35, z: 0.25, rx: 0.5, ry: 0.4 });
     return b;
   }
@@ -886,7 +924,8 @@ const FWM = (() => {
       b.box(0.9, 0.5, 0.62, w, { top: 0x3a2412 });
       [0.12, 0.25, 0.38].forEach(y => b.box(0.905, 0.018, 0.625, wd, { y }));
     });
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.08, 0.52, 0.08, g, { x: sx * 0.41, z: sz * 0.27, y: -0.01 }));
+    /* v77: Eckbeschläge 5 mm vor den Seitenflächen (lagen bündig darauf und flimmerten) */
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.08, 0.52, 0.08, g, { x: sx * 0.415, z: sz * 0.275, y: -0.01 }));
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.505, 0.635, g, { x, y: -0.002 }));
     b.box(0.15, 0.17, 0.04, gl, { y: 0.27, z: 0.325 });
     b.box(0.05, 0.07, 0.05, 0x3a2412, { y: 0.32, z: 0.335 });
@@ -902,7 +941,7 @@ const FWM = (() => {
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.125, 0.645, g, { x, z: 0.32 }));
     /* Stern auf dem Deckel */
     b.box(0.17, 0.02, 0.17, gl, { y: 0.205, z: 0.32, ry: 0.785 });
-    b.box(0.17, 0.02, 0.17, gl, { y: 0.206, z: 0.32 });
+    b.box(0.17, 0.02, 0.17, gl, { y: 0.209, z: 0.32 });
     return b;
   }
   /* v74: Schatztruhe aus der Grube – dunkles Holz, Goldbeschläge, Edelsteine; Deckel stufig gewölbt, Scharnier im Ursprung */
@@ -930,7 +969,8 @@ const FWM = (() => {
       b.box(0.94, 0.09, 0.52, wl, { y: 0.1, z: 0.32 });
       b.box(0.94, 0.08, 0.34, w, { y: 0.19, z: 0.32 });
     });
-    [-0.24, 0.24].forEach(x => { b.box(0.08, 0.1, 0.65, g, { x, z: 0.32 }); b.box(0.08, 0.09, 0.53, g, { x, y: 0.1, z: 0.32 }); b.box(0.08, 0.08, 0.35, g, { x, y: 0.19, z: 0.32 }); });
+    /* v77: die Goldbänder stehen 6 mm über den Stufen (ihre Oberseiten lagen genau in den Stufenflächen) */
+    [-0.24, 0.24].forEach(x => { b.box(0.08, 0.106, 0.65, g, { x, z: 0.32 }); b.box(0.08, 0.096, 0.53, g, { x, y: 0.1, z: 0.32 }); b.box(0.08, 0.086, 0.35, g, { x, y: 0.19, z: 0.32 }); });
     b.ico(0.08, 0x3fe09a, { y: 0.3, z: 0.32 });
     return b;
   }
@@ -1099,7 +1139,7 @@ const FWM = (() => {
     G3.seed(4810);
     const b = FM.van(0xf6f6f2);
     [-1, 1].forEach(sx => {
-      b.cyl(0.2, 0.2, 0.02, 12, 0xf2c230, { rz: Math.PI / 2, x: sx * 0.51, y: 0.78, z: -0.35 });
+      b.cyl(0.2, 0.2, 0.02, 12, 0xf2c230, { rz: -sx * Math.PI / 2, x: sx * 0.515, y: 0.78, z: -0.35 });   /* v77: vor dem Zierstreifen, nicht darin */
       for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; b.box(0.02, 0.05, 0.1, 0xf2a531, { x: sx * 0.515, y: 0.78 + Math.sin(an) * 0.28, z: -0.35 + Math.cos(an) * 0.28, rx: -an }); }
       b.box(0.02, 0.1, 0.9, 0xf2a531, { x: sx * 0.51, y: 0.42, z: 0.05 });
     });
@@ -1277,7 +1317,7 @@ const FWM = (() => {
   function yard(w, d) {
     G3.seed(4210);
     const b = new MB();
-    b.noise(0.07, () => b.plate(w, d, 0xbfb196, { y0: 0.014 }));
+    b.plate(w, d, YARD_COL, { y0: 0.014 });          /* v77: einfarbig – die Wege laufen am Tor genau in diese Farbe aus */
     for (let i = 0; i < w * d * 0.12; i++) b.plate(0.22, 0.16, rnd() < 0.5 ? 0xe9cfa0 : 0xa59a84, { x: (rnd() - 0.5) * (w - 1), z: (rnd() - 0.5) * (d - 1), ry: rnd() * 3, y0: 0.02 });
     return b;
   }
@@ -2256,7 +2296,7 @@ const FWM = (() => {
   return {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

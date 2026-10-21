@@ -1,5 +1,43 @@
 # Änderungen – kurz für den Kollegen
 
+## v77 (aufbauend auf v76) – Autofotos, Karte nur so weit wie erschlossen, Steg ohne Flimmern, Wege sauber
+
+1. **Auktionshaus: Fotos zuverlässig** (`auction.js`, neu `carpics.mjs`, `carpics-workflow.yml`):
+   - **Eigene Fotos im Spiel:** liegt `cars/credits.json` (mit `cars/<id>.jpg`) im Repository, nimmt das Spiel diese
+     Fotos zuerst (`loadLocalPics`) – gleiche Seite wie das Spiel, kein Wikipedia nötig, auch wenn es blockiert ist.
+     Der Service Worker hält sie versionsübergreifend im Foto-Cache (`sw.js`). Der Comic-Filter läuft wie gehabt.
+   - **Holen per GitHub-Aktion „Autofotos holen“**: `carpics.mjs` fragt Wikipedia nach dem Titelbild jedes der 77 Autos,
+     lädt es in 500 px, schreibt Urheber und Lizenz nach `cars/credits.json` und legt alles als Commit ab. Die Aktion
+     muss einmal als `.github/workflows/carpics.yml` angelegt werden (Vorlage `carpics-workflow.yml`, Inhalt kopieren).
+   - **Kein Zehn-Minuten-Aus mehr:** Schlug die Abfrage fehl, merkte sich das Spiel für alle 77 Autos „kein Foto“ –
+     daher „0 von 77 Fotos geladen“ ohne Fehler. Jetzt nur noch, wenn die Abfrage selbst geklappt hat; sonst neuer
+     Versuch nach 45 s, 2 und 5 Minuten.
+   - **Gezeichnete Autos** statt Silhouette (`carArt`, `CAR_ART`): Seitenansicht im Comic-Stil je Bauform (Coupé,
+     flacher Mittelmotor-Keil für Super-/Hypercars, Roadster, SUV, Kombi, Limousine, Klassiker mit Chrom und
+     Weißwandreifen), Lack mit Glanzverlauf in der Originalfarbe, Scheiben, Radhäuser, Felgen, Lichter.
+2. **Karte** (`index.html`, `game.js`, `map.js`): die Knöpfe ☁️ und 📡 oben rechts sind weg. Der Nebel ist immer an
+   (`load` setzt `fog = true`); live verfolgt man über „Live“ oder das Fahrzeug. **Verschieben und Herauszoomen enden am
+   erschlossenen Gebiet** (`mapBoundsUpdate` → `map.setBounds`): Sichtkreise der freigeschalteten Orte plus Fahrzeuge,
+   18 % Rand. Auf dem Hof ist das die Gegend um Hof und Kundschaft, mit jeder Etappe/jedem Level mehr.
+3. **Angelsteg flimmerte** (`woodmodels.js` `pier`): die Pfahlköpfe lagen genau in der Belagfläche (y = 0,15) –
+   jetzt enden sie 5 mm darunter. **Neues Prüfwerkzeug `zcheck.js`** (wird vom Spiel nicht geladen): zeichnet jedes
+   Modell aus der Spielkamera von vier Seiten und findet Flächen, die gleichauf liegen (Tiefentextur, MIN/MAX-Blend).
+   Damit gefunden und behoben: Lieferkiste (Eckbeschläge), Schatztruhen-Deckel (Goldbänder), Deckelstern,
+   Kuhunterstand, Schweinehütte, Handwagen, Scheune (Eckleisten), Kuh (Maul), Solar-Bulli, Bert-Kombi (Säulen, Grill),
+   Strand (Muscheln). Vor jeder Ausgabe: `zcheck()` in der Konsole – übrig bleiben nur zufällige Schilfhalme.
+4. **Wege: Übergänge und Ränder** (`woodmodels.js`, `worldview.js`):
+   - An Mündungen und Abzweigen blitzte am Ansatz jeder Rundung ein heller Keil ins Gras: Bogenrand und Wegrand lagen
+     gleich hoch, der äußere (grasfarbene) Teil des Wegrands gewann. Der Bogenrand liegt jetzt eine Spur darüber
+     (am Abzweig auch über dem Rand des Hauptweges, `tee.ey`).
+   - **Tore des Sägewerkshofs:** der Weg reicht 1 Einheit in den Hof und läuft dort samt Rand in die Schotterfarbe aus
+     (`wayFade`, `o.fade`); Hofschotter und Boden rundherum haben dieselbe Farbe (`FWM.YARD_COL`). Kein Laub im Tor.
+5. **Bäume auf den Wegen** (`erbe.js`, `worldview.js`): Bäume standen nur 2,2 vom Weg – egal wie groß die Krone.
+   Jetzt muss die ausgewachsene Krone neben dem Schotter bleiben (`FTREE_CR` je Art und Größe, Kameraseite +0,9).
+   Fällbare Bäume rücken bis 2,5 weg oder fallen weg (`treeOffPath`; neue Spiele gleich, alte Stände einmal `v77t`;
+   die übrigen Bäume behalten ihre Nummern). Kulissenbäume, Büsche und Totholz halten ebenso Abstand (`wayGap`).
+   Betroffen u. a. die große Eiche am Westtor des Hofs und die Kiefer am Teichweg nordöstlich des Hofs.
+- `index.html`/`sw.js`: v77.
+
 ## v76 (aufbauend auf v75) – „jetzt machbar“, Tutorial-Spotlight, kürzeres Tutorial, Lina-Tipps
 
 1. **Filter „✅ jetzt machbar“** (`game.js` `orderDoable`): zählt und zeigt nur noch, was sofort losfahren kann –

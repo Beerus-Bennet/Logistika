@@ -94,6 +94,35 @@ function distSeg(px, pz, a, b) {
 }
 function distLine(px, pz, line) { let d = 1e9; for (let i = 1; i < line.length; i++) d = Math.min(d, distSeg(px, pz, line[i - 1], line[i])); return d; }
 function nearPath(x, z) { let d = 1e9; for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p)); return d; }
+/* v77: nächster Punkt auf einem Waldweg (für das Wegrücken der Bäume) */
+function nearPathPt(x, z) {
+  let best = { d: 1e9, x, z };
+  for (const p of FWORLD.paths) for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+    const t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1), px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz);
+    if (d < best.d) best = { d, x: px, z: pz };
+  }
+  return best;
+}
+/* v77: Kronenradius je Art und Größe 1 … 4 (gemessen an FWM.tree, breiteste Variante). Ein Baum steht so weit
+   vom Weg, dass seine Krone im ausgewachsenen Zustand nicht über den Schotter ragt (Wegmitte bis Kante 0,9). */
+const FTREE_CR = { birke: [0.86, 1.26, 1.77, 2.48], kiefer: [1.05, 1.55, 2.38, 3.01], fichte: [0.77, 1.27, 1.79, 2.7],
+  buche: [1.24, 1.83, 2.7, 3.67], eiche: [1.63, 2.65, 3.71, 5.13], kirsche: [0.81, 1.24, 1.71, 2.37] };
+function treeCrown(sp, sz) { const a = FTREE_CR[sp] || FTREE_CR.buche; return a[clamp(Math.round(sz || 1), 1, 4) - 1]; }
+/* ux, uz: Richtung Weg → Baum. Die Kamera schaut von Südosten – ein Baum auf dieser Seite des Weges verdeckt
+   mit seiner Krone den Weg schon früher, er braucht bis zu 0,9 mehr Abstand */
+function treeWayNeed(t, ux, uz) { const k = ux == null ? 0 : Math.max(0, (ux + uz) * 0.7071); return 1 + treeCrown(t.sp, Math.max(t.mx || 1, t.sz || 1)) * (t.s || 1) + 0.9 * k; }
+/* rückt einen Baum, dessen Krone über einen Weg ragt, vom Weg weg (höchstens 2,5 Einheiten, nur auf einen
+   freien Platz); false: er kann hier nicht stehen und wird weggenommen */
+function treeOffPath(t, all) {
+  const n = nearPathPt(t.x, t.z), l = Math.max(0.01, n.d), ux = (t.x - n.x) / l, uz = (t.z - n.z) / l, need = treeWayNeed(t, ux, uz);
+  if (n.d >= need) return true;
+  const x = n.x + ux * (need + 0.15), z = n.z + uz * (need + 0.15);
+  if (Math.hypot(x - t.x, z - t.z) > 2.5 || !treeSpotOk(x, z, need - 0.9) || nearPathPt(x, z).d < need) return false;
+  if (all.some(o => o !== t && Math.hypot(o.x - x, o.z - z) < 2.2)) return false;
+  t.x = +x.toFixed(2); t.z = +z.toFixed(2);
+  return true;
+}
 function inYard(x, z, m) { const y = FWORLD.yard; m = m || 0; return x > y[0] - m && x < y[2] + m && z > y[1] - m && z < y[3] + m; }
 function inLake(x, z, m) { const L = FWORLD.lake; const a = (x - L.x) / (L.rx + (m || 0)), b = (z - L.z) / (L.rz + (m || 0)); return a * a + b * b < 1; }
 /* Wo im Wald? Für Baumarten und Freischaltung */
@@ -155,7 +184,9 @@ function erbeMakeTrees() {
     if (sp === "eiche" && zone !== "alt") sz = Math.min(sz, 3);
     add(sp, sz, x, z, zone === "alt" ? "altwald" : "wald");
   }
-  return out;
+  /* v77: Kronen über dem Weg – Baum ein Stück wegrücken oder weglassen (die Ziehung oben bleibt dieselbe,
+     damit die übrigen Bäume ihre Nummern behalten; ältere Stände bekommen dasselbe in erbeInit) */
+  return out.filter(t => treeOffPath(t, out));
 }
 
 /* -------------------------------- Init ----------------------------------- */
@@ -210,7 +241,7 @@ function erbeInit(F, fresh) {
   const st = F.stats || (F.stats = {});
   ["felled", "woodSold", "woodMade", "catch", "repairs", "cleared", "stallSold", "events"].forEach(k => { st[k] = st[k] || 0; });
   st.species = st.species || {};
-  if (!F.trees || !F.trees.length) F.trees = erbeMakeTrees();
+  if (!F.trees || !F.trees.length) { F.trees = erbeMakeTrees(); F.v77t = 1; }
   F.bgCut = F.bgCut || {};
   F.piles = F.piles || {};
   /* v56: neue Welt – ältere Stände ziehen um (neue Spiele fangen schon richtig an) */
@@ -219,6 +250,8 @@ function erbeInit(F, fresh) {
   if (F.ev && F.ev.cur && F.ev.cur.k === "lieferung" && F.ev.cur.data && !F.ev.cur.data.v73) farmParcelSpot(F.ev.cur);
   /* v75: Tafel am See neben den Stichweg (vorher stand sie auf der Wegkante) */
   { const bd = (F.objs || []).find(o => o.t === "board" && o.k === "see"); if (bd && bd.x === 6 + FG / 2 && bd.z === 20 + FG / 2) bd.x += 1; }
+  /* v77: keine Bäume mehr auf den Wegen – Kronen, die über den Schotter ragen, rücken weg oder der Baum fällt weg */
+  if (!F.v77t) { F.v77t = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {

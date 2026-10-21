@@ -1966,8 +1966,28 @@ function renderFogNote(km) {
     : `<div class="fog-note">☁️ erschlossen: ${kmf(km)} um jeden Standort</div>`;
 }
 
+/* v77: Die Karte reicht so weit, wie man gespielt hat: Verschieben und Herauszoomen enden am erschlossenen
+   Gebiet (Sichtkreise der freigeschalteten Orte und die Fahrzeuge, mit etwas Rand). Vor der Gründung frei. */
+let mapBoundsKey = "";
+function mapBoundsUpdate(m) {
+  m = m || map;
+  if (!m || !m.setBounds) return;
+  const nodes = typeof playing === "function" && playing() ? unlockedNodes() : [];
+  if (!nodes.length) { if (mapBoundsKey) { mapBoundsKey = ""; m.setBounds(null); } return; }
+  const km = fogRadiusKm(S.stage, level()), pts = [];
+  const add = (lat, lon, r) => { const dLat = r / 111.32, dLon = r / (111.32 * Math.max(0.2, Math.cos(lat * Math.PI / 180))); pts.push([lat - dLat, lon - dLon], [lat + dLat, lon + dLon]); };
+  nodes.forEach(n => add(n.lat, n.lon, fogNodeKm(n, km)));
+  S.fleet.forEach(v => { const p = vehPos(v); if (p) add(p[0], p[1], 1.5); });
+  let a = 90, b = 180, c = -90, d = -180;
+  pts.forEach(p => { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); });
+  const key = [a, b, c, d].map(x => x.toFixed(3)).join(",");
+  if (key === mapBoundsKey) return;
+  mapBoundsKey = key;
+  m.setBounds([[a, b], [c, d]], 0.18);
+}
 function drawWorld(m, ctx) {
   const z = m.zoom;
+  mapBoundsUpdate(m);
   drawFog(m, ctx);
 
   // 1. Das Verkehrsnetz als Linienteppich bleibt aus (der Schalter ist weg) –
@@ -3505,6 +3525,7 @@ function load() {
     if (!("dispoMoved" in d)) d.dispoMoved = false;   /* Stand vor der Büro-Disposition */
     d.jobs = (d.jobs || []).filter(j => j.legs && j.legs.every(l => N[l.from] && N[l.to]));
     d.orders = (d.orders || []).filter(o => N[o.from] && N[o.to] && CARGO[o.cargo]);
+    d.fog = true;                                      /* v77: kein Schalter mehr – der Nebel gehört zum Spiel */
     return d;
   } catch (e) { return null; }
 }
@@ -3609,16 +3630,8 @@ function boot() {
   });
   if (S.speed > 0) lastSpeed = S.speed;
   renderPause();
-  $("#fogBtn").classList.toggle("on", S.fog);
-  $("#fogBtn").onclick = () => {
-    S.fog = !S.fog;
-    $("#fogBtn").classList.toggle("on", S.fog);
-    lastFogKm = 0;
-    renderFogNote(fogRadiusKm(S.stage, level()));
-    if (!S.fog) $("#fogNote").innerHTML = "";
-    mapRedraw();
-  };
-  $("#liveBtn").onclick = followNext;
+  /* v77: die Schalter für Nebel (☁️) und Live-Verfolgung (📡) oben rechts sind weg – der Nebel ist immer an,
+     die Karte zeigt nur das erschlossene Gebiet; Fahrzeuge verfolgt man über „Live“ */
   $("#phoneBtn").onclick = openPhone;
   const gbtn = $("#goalsBtn"); if (gbtn) gbtn.onclick = () => { if (typeof openGoals === "function") openGoals(); };
   $("#hudMoney").onclick = openLedger;
