@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v79 (aufbauend auf v78) – Autos im Auktionshaus als KI-Zeichnungen (Comic-Vektor-Stil)
+
+- **Zeichnungen gehen den Fotos vor** (`auction.js`, `loadLocalPics`): `cars/art.json` nennt je Auto eine Datei in
+  `cars/art/` (`{ "f458": "art/f458.webp?v=<Größe>" }`). Das Spiel zeigt sie direkt, **ohne Comic-Filter**; Credit
+  „🎨 KI-Illustration“. Fehlt eine Zeichnung, gilt wie bisher Foto → Comic-Filter → gezeichnete Silhouette. Wird eine
+  Zeichnung aus der Liste genommen, räumt das Spiel sie auf. `sw.js` hält `cars/art/…` im Foto-Cache; das `?v=` in
+  der Liste sorgt dafür, dass ein neu gemachtes Bild den Cache ersetzt.
+- **`carart.mjs` + Aktion „Autozeichnungen erzeugen“** (`carart-workflow.yml` → `.github/workflows/carart.yml`):
+  fragt die Gemini-Bild-KI (`gemini-2.5-flash-image`, 16:9) je Auto mit einer festen Stilvorgabe (saubere Konturen,
+  flache Farben, Dreiviertelansicht, hellgrauer Grund, nur das Auto), verkleinert auf 960 px WebP (`sharp`) und legt
+  alles als Commit ab. Der Schlüssel liegt als Repository-Geheimnis `GEMINI_API_KEY` (nie im Code/Protokoll, Header
+  statt URL). „limit 3“ zum Ausprobieren, „limit 0“ für alle. Bei Fehlern (Modell/Schlüssel) listet das Protokoll die
+  Bild-Modelle des Schlüssels. Auch selbst gemachte Bilder (`cars/art/<Kürzel>.png|jpg|webp`) werden beim Hochladen
+  automatisch in `art.json` aufgenommen (Push-Auslöser der Aktion).
+- `autobilder-prompts.txt`: die 77 fertigen Bildanweisungen zum Selbstmachen in der Gemini-App (`node carart.mjs --prompts`).
+
 ## v78 (aufbauend auf v77) – Autofotos: Wikimedia-Bilder werden wieder akzeptiert
 
 - **Ursache für „Bilder laden nicht“ gefunden:** Wikipedia liefert Vorschaubilder inzwischen von `thumb.wikimedia.org`

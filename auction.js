@@ -407,6 +407,20 @@ async function loadLocalPics() {
     PICS[id] = { src: "cars/" + p.f, page: p.page || "", by: p.by || "", lic: p.lic || "", t: Date.now(), local: 1 };
     n++;
   });
+  /* v79: KI-Zeichnungen (cars/art.json: { id: "art/<id>.png?v=…" }) gehen den Fotos vor und brauchen keinen Comic-Filter */
+  let art = {};
+  try {
+    const r = await fetch("cars/art.json?v=" + (window.LOGI_V || ""), { cache: "no-cache" });
+    art = r.ok ? await r.json() : {};
+  } catch (_) { art = {}; }
+  if (!art || typeof art !== "object") art = {};
+  Object.keys(PICS).forEach(id => { if (PICS[id] && PICS[id].art && !(typeof art[id] === "string")) { delete PICS[id]; COMIC_URL.delete(id); COMIC_FAIL.delete(id); n++; } });
+  Object.entries(art).forEach(([id, f]) => {
+    if (!CAR[id] || typeof f !== "string" || !/^art\/[\w.\-]+(\?v=\d+)?$/.test(f)) return;
+    PICS[id] = { src: "cars/" + f, by: "KI-Illustration", lic: "", t: Date.now(), local: 1, art: 1 };
+    COMIC_URL.delete(id); COMIC_FAIL.delete(id);
+    n++;
+  });
   if (n) { savePics(); applyPics(); renderPicStatus(); }
   return localPics;
 }
@@ -533,6 +547,7 @@ let comicBusy = false;
 const comicKey = id => location.origin + "/__carcomic/v2/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
 function wantComic(id, front) {
   if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) return;
+  if (PICS[id] && PICS[id].art && PICS[id].src) { COMIC_URL.set(id, PICS[id].src); showCarPic(id); return; }   /* v79: Zeichnung – kein Filter */
   if (!PICS[id] || !PICS[id].src || typeof comicCar !== "function") return;
   const at = COMIC_Q.indexOf(id);
   if (at >= 0) { if (front && at > 0) { COMIC_Q.splice(at, 1); COMIC_Q.unshift(id); } return; }
@@ -650,7 +665,7 @@ function showCarPic(id) {
     } else if (COMIC_FAIL.has(id) && !im) el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
   });
 }
-function picCredit(p) { return "📷 " + (p.by || "Wikimedia Commons") + (p.lic ? " · " + p.lic : ""); }
+function picCredit(p) { if (p.art) return "🎨 KI-Illustration"; return "📷 " + (p.by || "Wikimedia Commons") + (p.lic ? " · " + p.lic : ""); }
 function applyPics() {
   document.querySelectorAll("[data-carpic]").forEach(el => {
     const id = el.dataset.carpic;
@@ -669,7 +684,7 @@ function picFail(im) {
 }
 function picImgHTML(id, p) {
   const comic = COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
-  return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer"${comic ? "" : ` onerror="picFail(this)"`}>`
+  return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer"${p.art ? ` onerror="this.nextElementSibling&&this.nextElementSibling.remove();this.remove()"` : comic ? "" : ` onerror="picFail(this)"`}>`
     + `<span class="credit">${esc(picCredit(p))}</span>`;
 }
 /* Gezeichnetes Auto, solange kein Foto da ist (oder offline). v77: statt einer einfachen Silhouette eine
@@ -759,8 +774,8 @@ function carPicHTML(c, paint, big) {
   const p = PICS[c.id], col = paint || (CAR_PAINTS[c.b] || [["", "#888"]])[0][1];
   /* Comic fertig (oder Filter gescheitert): Bild gleich mit; sonst erst die
      Silhouette, das Foto kommt aus der Warteschlange nach */
-  const ready = p && p.src && (COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id));
-  if (p && p.src && !ready) wantComic(c.id, big);
+  let ready = p && p.src && (COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id));
+  if (p && p.src && !ready) { wantComic(c.id, big); ready = COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id); }
   return `<div class="carpic${big ? " big" : ""}${p && p.src && !ready ? " loading" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carArt(c, col)}${ready ? picImgHTML(c.id, p) : ""}</div>`;
 }
 function vehPicHTML(t) {
@@ -972,6 +987,7 @@ function specsHTML(c, l) {
 function creditHTML(c) {
   const p = PICS[c.id];
   if (!p || !p.src) return `<div class="piccredit">✏️ Zeichnung – das Foto kommt, sobald es geladen ist.</div>`;
+  if (p.art) return `<div class="piccredit">🎨 KI-Illustration (Gemini)</div>`;
   return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}</div>`;
 }
 let lotModal = null;

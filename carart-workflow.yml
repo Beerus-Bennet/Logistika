@@ -1,0 +1,59 @@
+# LOGISTIKA – Autos im Auktionshaus von der Gemini-Bild-KI zeichnen lassen.
+# Einmal einrichten: Settings → Secrets and variables → Actions → New repository secret,
+# Name GEMINI_API_KEY, Wert = dein Schlüssel aus Google AI Studio (aistudio.google.com/apikey).
+# Dann Actions → „Autozeichnungen erzeugen“ → Run workflow. „limit 3“ zeichnet erst nur 3 Autos zum
+# Ausprobieren; danach „limit 0“ für alle übrigen. Die Bilder landen in cars/art/ (960 px, WebP),
+# cars/art.json nennt sie dem Spiel. Selbst gemachte Bilder (cars/art/<Kürzel>.png) werden beim
+# Hochladen automatisch in die Liste aufgenommen.
+name: Autozeichnungen erzeugen
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "So viele Autos zeichnen (0 = alle, die noch fehlen)"
+        default: "3"
+      force:
+        description: "Auch vorhandene Zeichnungen neu machen"
+        type: boolean
+        default: false
+      model:
+        description: "Gemini-Bildmodell"
+        default: "gemini-2.5-flash-image"
+  push:
+    paths:
+      - "cars/art/**"
+permissions:
+  contents: write
+concurrency:
+  group: carart
+  cancel-in-progress: false
+jobs:
+  carart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Bildbibliothek
+        run: npm install --no-save --no-audit --no-fund sharp
+      - name: Zeichnen
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIMIT: ${{ inputs.limit }}
+          MODEL: ${{ inputs.model }}
+          FORCE: ${{ inputs.force }}
+        run: node carart.mjs --need-key --limit "$LIMIT" --model "$MODEL" $([ "$FORCE" = "true" ] && echo --force)
+      - name: Liste der Zeichnungen
+        if: github.event_name == 'push'
+        run: node carart.mjs --manifest
+      - name: Ins Repository legen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cars
+          if git diff --cached --quiet; then echo "Nichts Neues."; exit 0; fi
+          git commit -m "Autozeichnungen fürs Auktionshaus"
+          git pull --rebase --autostash
+          git push
