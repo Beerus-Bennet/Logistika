@@ -1536,7 +1536,7 @@ function farmEvReward(kind) {
    vergraben: ein Kreuz im Boden, darüber kreist ein Vogelschwarm. Sie ist
    drei Stunden lang zu finden (Start zwischen 7 und 15 Uhr), dann ziehen
    die Vögel weiter. Ausgraben ist ein Minispiel – drin sind Geld und ein
-   Kleeblatt. */
+   Kleeblatt (bei 3 ★ zwei). */
 const FTREASURE = { every: 3, dur: 180, from: 7, to: 15 };
 const FTREASURE_ZONES = [
   { id: "teich",   area: null,      n: "über der Wiese am Teich",     box: [27.5, -14.5, 40.5, 14], at: [-1, -2] },
@@ -1623,15 +1623,18 @@ function farmTreasureDig(score) {
   if (!c || c.done) return null;
   c.done = true;
   c.until = Math.min(c.until, S.time + 30);                                           /* das offene Loch bleibt noch kurz */
-  const k = 0.8 + Math.random() * 0.25 + clamp(score == null ? 0.6 : score, 0, 1) * 0.3;
+  const sc = clamp(score == null ? 0.6 : score, 0, 1), stars = sc >= 0.95 ? 3 : sc >= 0.75 ? 2 : 1;      /* wie die Sterne im Minispiel */
+  const k = 0.8 + Math.random() * 0.25 + sc * 0.3;
   const m = Math.max(50, Math.round((80 + flv() * 15) * k / 5) * 5);
   S.money += m; S.revenue += m; F.stats.earned = (F.stats.earned || 0) + m;
   logMoney("farm", "Schatzkiste", m);
-  farmClover(1, "Schatzkiste");
-  farmXP(20);
+  /* v74: Meisterhaft gegraben (3 ★) bringt ein zweites Kleeblatt und mehr EP; das Kleeblatt fliegt erst in der Öffnungs-Show */
+  const clover = stars === 3 ? 2 : 1, xp = [0, 20, 26, 35][stars];
+  F.clover = (F.clover || 0) + clover;
+  farmXP(xp);
   F.tr.found = (F.tr.found || 0) + 1;
   F.stats.events++;
-  return { m, clover: 1, xp: 20 };
+  return { m, clover, xp, stars };
 }
 
 /* ------------------------- Kleeblätter & Kosmetik ------------------------- */

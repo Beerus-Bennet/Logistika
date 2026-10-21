@@ -656,6 +656,35 @@ const FWM = (() => {
     b.box(0.17, 0.02, 0.17, gl, { y: 0.206, z: 0.32 });
     return b;
   }
+  /* v74: Schatztruhe aus der Grube – dunkles Holz, Goldbeschläge, Edelsteine; Deckel stufig gewölbt, Scharnier im Ursprung */
+  function goldChest() {
+    G3.seed(3970);
+    const b = new MB(), w = 0x7a4a26, wd = 0x5c3517, g = 0xe2b33a, gl = 0xf6d24a;
+    b.noise(0.08, () => {
+      b.box(0.9, 0.5, 0.62, w, { top: 0x2a1a0c });
+      [0.1, 0.22, 0.34].forEach(y => b.box(0.905, 0.018, 0.625, wd, { y }));
+    });
+    b.box(0.94, 0.06, 0.66, g, { y: 0.0 });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.09, 0.54, 0.09, g, { x: sx * 0.41, z: sz * 0.27, y: -0.02 }));
+    [-0.24, 0.24].forEach(x => b.box(0.08, 0.505, 0.635, g, { x, y: -0.002 }));
+    b.box(0.17, 0.2, 0.04, gl, { y: 0.27, z: 0.325 });
+    b.box(0.06, 0.08, 0.05, 0x3a2412, { y: 0.31, z: 0.335 });
+    b.ico(0.06, 0xd8334a, { x: -0.33, y: 0.3, z: 0.325 });
+    b.ico(0.06, 0x3fa0e0, { x: 0.33, y: 0.3, z: 0.325 });
+    return b;
+  }
+  function goldLid() {
+    G3.seed(3971);
+    const b = new MB(), w = 0x7a4a26, wl = 0x93602f, g = 0xe2b33a, gl = 0xf6d24a;
+    b.noise(0.08, () => {
+      b.box(0.94, 0.1, 0.64, w, { z: 0.32 });
+      b.box(0.94, 0.09, 0.52, wl, { y: 0.1, z: 0.32 });
+      b.box(0.94, 0.08, 0.34, w, { y: 0.19, z: 0.32 });
+    });
+    [-0.24, 0.24].forEach(x => { b.box(0.08, 0.1, 0.65, g, { x, z: 0.32 }); b.box(0.08, 0.09, 0.53, g, { x, y: 0.1, z: 0.32 }); b.box(0.08, 0.08, 0.35, g, { x, y: 0.19, z: 0.32 }); });
+    b.ico(0.08, 0x3fe09a, { y: 0.3, z: 0.32 });
+    return b;
+  }
   /* Lichtsäule (Zylinder, nach oben schmaler) und Bodenring – werden halbdurchsichtig gezeichnet */
   function lootBeam(r1, r2, h, col) {
     const b = new MB();
@@ -1978,7 +2007,7 @@ const FWM = (() => {
   return {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, lootCrate, lootLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, creekBank, creekWater, bridge, jetty, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

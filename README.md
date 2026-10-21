@@ -491,7 +491,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   durch Fels geht nichts. Wer den günstigsten Weg findet, bekommt mehr
   Münzen. In der Kiste: Geld (je nach Level) und ein Kleeblatt. Danach liegt
   die Kiste offen in der Grube, voller Münzen und Edelsteine, mit Erdwall,
-  Erdhaufen und Spaten daneben.
+  Erdhaufen und Spaten daneben. Seit v74 stürzt der Schwarm beim Erscheinen von weit her heran und eine goldene Lichtsäule markiert die Stelle; nach dem Graben bricht eine Truhe aus der Grube, kreist, springt auf und lässt Münzen, Sterne und Edelsteine regnen (2 ★ Goldregen, 3 ★ zusätzlich zweites 🍀 und eine zweite Edelstein-Explosion).
 * **Verkaufsstand** an der Straße (3 bis 6 Plätze je Ausbaustufe) und
   **Fischmarkt** am See (Fisch +15 %): Ware einstellen, Preis wählen –
   günstig geht schnell, teuer dauert –, später kassieren. Auf dem Stand

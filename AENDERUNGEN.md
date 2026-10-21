@@ -1,5 +1,29 @@
 # Änderungen – kurz für den Kollegen
 
+## v74 (aufbauend auf v73) – Schatzkiste: Erscheinen, Leuchtfeuer und große Öffnungs-Show
+
+Zufallsereignis „Schatzkiste“ (Vogelschwarm + rotes Kreuz, Grabungs-Minispiel `MG dig` unverändert). Vorher: nur ein Toast,
+beim Ausgraben ein Textchen und Münzflug. Jetzt:
+
+- **Erscheinen** (`worldview.js` `worldTreasureIntro`, aufgerufen aus `farmTreasureView("start")`): Der Schwarm stürzt von
+  weit her aus großer Höhe heran (`b.out`), am Kreuz schießt ein Goldfunken-Ausbruch auf, eine **goldene Lichtsäule wächst
+  aus dem Boden** und ein Banner „🐦 Schatz gesichtet!“ nennt die Fundstelle. Die Kamera fährt zur Fundstelle, aber nur,
+  wenn der Spieler sie gerade nicht bedient (`FV.touchAt`). Nur wenn die Ansicht offen ist und kein Minispiel läuft.
+- **Leuchtfeuer** (`worldSyncTreasure` → `WV.trFx`, `stepTreasure`): Solange die Kiste liegt, steht über dem Kreuz eine
+  schmale, atmende Lichtsäule (schon von weitem zu sehen), Ping-Ringe laufen über den Boden, ab und zu blitzt ein großer
+  Stern auf, goldene Funken steigen auf.
+- **Öffnen** (`worldTreasureReveal`/`stepTreasureReveal`, nach dem Minispiel): Die Truhe (`FWM.goldChest`/`goldLid`, dunkles Holz,
+  Goldbeschläge, Edelsteine) **bricht rumpelnd aus der Grube** (Dreck fliegt, Säule wächst), **schwebt, dreht sich in drei immer
+  schnelleren Umdrehungen** und zieht Funken an, dann **springt der Deckel mit Überschlag auf**: Lichtblitz, Schockwellen-Ringe,
+  Fontäne aus Münzen, Sternen und bunten Edelsteinen. Danach löst sich die schwebende Truhe in Funken auf, die offene Truhe
+  in der Grube bleibt wie bisher.
+- **Sterne = Show-Stufe** (aus `res.score` des Minispiels, `erbe.js` `farmTreasureDig` liefert jetzt `stars`):
+  1 ★ „Schatz gefunden!“; 2 ★ „Prächtiger Schatz!“ + **Goldregen**; 3 ★ „Meisterhaft gegraben!“ + stärkerer Goldregen, zweite
+  Edelstein-Explosion, pulsierendes Banner. **3 ★ geben 2 🍀 und 35 EP** (2 ★: 26 EP, 1 ★: 20 EP); Geld wie bisher.
+- Das Kleeblatt wird in `farmTreasureDig` direkt gutgeschrieben (kein eigener Flug mehr); die Show fliegt Münzen, 🍀 und EP
+  nacheinander zur Leiste. Banner/Blitz laufen jetzt über den gemeinsamen Helfer `worldLootShow` (auch die Lieferkiste).
+- Neu: `woodmodels.js` `goldChest`, `goldLid`. `index.html`/`sw.js`: v74.
+
 ## v73 (aufbauend auf v72) – Lootkiste: vor dem Hoftor, mit Lieferwagen und großer Öffnungs-Animation
 
 Zufallsereignis „Besondere Lieferung“ (`FEVENTS.lieferung`, 📦). Die Kiste lag als schlichter Karton mitten auf dem Hof

@@ -10,7 +10,7 @@
    ========================================================================= */
 const WV = {
   trees: new Map(), falling: [], hofKey: "", hof: [], barriers: {}, npc: null, reveal: null,
-  wild: [], fly: [], swarm: [], pres: {}, trKey: "", trNodes: [], pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {}, pvKey: "", pvNodes: [],
+  wild: [], fly: [], swarm: [], pres: {}, trKey: "", trNodes: [], trFx: null, trChest: null, trReveal: null, trIntro: null, pets: new Map(), staff: new Map(), evKey: "", evNodes: [], visitSeen: {}, pvKey: "", pvNodes: [],
   gust: 0, hit: null, sawBlades: null, popTree: null
 };
 const WGRID = { x0: -160, z0: -160, x1: 104, z1: 104, chunk: 24, cell: 4 };
@@ -189,7 +189,7 @@ class WBuf {
 function worldStatic() {
   const R = FV.R;
   WV.trees.clear(); WV.falling = []; WV.hofKey = ""; WV.hof = []; WV.barriers = {}; WV.npc = null;
-  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null; WV.pvKey = ""; WV.pvNodes = []; WV.piles = new Map();
+  WV.wild = []; WV.fly = []; WV.swarm = []; WV.trKey = ""; WV.trNodes = []; WV.trFx = null; WV.trChest = null; WV.trReveal = null; WV.trIntro = null; WV.pets.clear(); WV.staff.clear(); WV.evKey = ""; WV.evNodes = []; WV.sawBlades = null; WV.pvKey = ""; WV.pvNodes = []; WV.piles = new Map();
   const fell = (S.farm.trees || []).filter(t => !t.bg);       /* angetippte Kulissenbäume stehen schon in bgCut */
   const rnd = wRng(7331);
   const MK = worldMasks(fell);
@@ -1157,9 +1157,17 @@ function worldSyncTreasure() {
   if (key === WV.trKey) return;
   WV.trKey = key;
   WV.trNodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
-  WV.trNodes = [];
+  WV.trNodes = []; WV.trFx = null; WV.trChest = null;
   if (!c) return;
   const add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); WV.trNodes.push(n); return n; };
+  /* v74: Leuchtfeuer über dem Kreuz – goldene Säule und Ping-Ringe, schon von weitem zu sehen */
+  if (!c.done) WV.trFx = {
+    x: c.x, z: c.z,
+    b1: add(fmesh("trBeam1", () => FWM.lootBeam(0.2, 0.08, 10, 0xffd25a)), { x: c.x, z: c.z, alpha: 0.12, glow: 1, shadow: false }),
+    b2: add(fmesh("trBeam2", () => FWM.lootBeam(0.09, 0.035, 10, 0xfff6c8)), { x: c.x, z: c.z, alpha: 0.26, glow: 1, shadow: false }),
+    r1: add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x: c.x, z: c.z, alpha: 0.4, glow: 1, shadow: false }),
+    r2: add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x: c.x, z: c.z, alpha: 0.4, glow: 1, shadow: false })
+  };
   if (!c.done) add(fmesh("trX2", () => {
     const b = new FM.MB();
     b.disc(1.05, 14, 0x7a5a36, { y0: 0.04, wob: 0.12 });
@@ -1191,7 +1199,7 @@ function worldSyncTreasure() {
       return b;
     }), { x: c.x, z: c.z, shadow: false });
     /* Kiste steckt halb im Loch, Deckel offen, voller Münzen */
-    add(fmesh("trChest2", () => {
+    WV.trChest = add(fmesh("trChest2", () => {
       const b = new FM.MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
       b.box(0.66, 0.42, 0.46, w, { y: -0.16, top: 0x2a1a0c });
       [-0.18, -0.04].forEach(y => b.box(0.67, 0.025, 0.47, wd, { y }));
@@ -1211,29 +1219,188 @@ function worldSyncTreasure() {
       });
       return b;
     }), { x: c.x + 0.05, z: c.z - 0.05, ry: 0.55 });
+    if (WV.trReveal) WV.trChest.visible = false;
   }
 }
 function worldTreasureDig() {
   const c = farmTreasureCur();
-  if (!c || c.done) return;
+  if (!c || c.done || WV.trReveal) return;
   farmFocusXZ(c.x + 1.5, c.z + 1.5, 18, 600);
   MG.open("dig", {}, res => {
     if (!res || !res.ok) return;
     const r = farmTreasureDig(res.score);
     if (!r) return;
-    const p = FV.R.project(c.x, 0.4, c.z) || [FV.R.w / 2, FV.R.h / 2];
-    floatText(p[0], p[1] - 24, "Eine Schatzkiste!", "gold");
-    coinFly(p[0], p[1], r.m);
-    xpFly(p[0], p[1] - 10, r.xp, 150);
-    sfx("collect"); save(); farmSyncScene(); renderFarmUI();
+    save();
+    /* v74: Truhe steigt aus der Grube – die Belohnung ist schon verbucht, die Show zeigt sie */
+    if (FV.R) worldTreasureReveal(c, r);
+    farmSyncScene(); renderFarmUI();
   });
 }
 function farmTreasureView(type, c) {
   if (!FV.on) return;
   const Z = FTREASURE_ZONES.find(z => z.id === c.zone);
   if (type === "start") toast("🐦 Ein Vogelschwarm kreist " + (Z ? Z.n : "über dem Gelände") + " – darunter liegt eine Schatzkiste! Such das rote Kreuz.", "ok");
+  if (type === "start") worldTreasureIntro(c, Z);
   if (type === "gone") toast("🐦 Der Vogelschwarm ist weg – die Kiste bleibt verborgen.", "");
   farmSyncScene();
+}
+/* ---------------- v74: Schatzkiste – Erscheinen, Leuchtfeuer, große Öffnungs-Show ---------------- */
+const TR_CSS = ["#f6d24a", "#ffae2e", "#ffe27a"];
+const TR_COL = [[1, 0.84, 0.3, 1], [1, 0.68, 0.18, 1], [1, 0.92, 0.5, 1]];
+const TR_TXT = ["Schatz gefunden!", "Prächtiger Schatz!", "Meisterhaft gegraben!"];
+const TR_GEM = [[0.95, 0.2, 0.3, 1], [0.25, 0.65, 1, 1], [0.3, 0.95, 0.6, 1], [0.8, 0.45, 1, 1]];
+const TR_GOLD = [1, 0.84, 0.25, 1], TR_DIRT = [[0.55, 0.4, 0.25, 1], [0.45, 0.32, 0.2, 1], [0.66, 0.5, 0.32, 1]];
+/* Der Schwarm stürzt von weit her heran, ein Goldfunke schießt aus dem Boden, ein Banner meldet den Fund */
+function worldTreasureIntro(c, Z) {
+  const R = FV.R;
+  if (!R || (typeof MG !== "undefined" && MG.on)) return;
+  WV.trIntro = { t: 0, t0: c.t0, shot: false };
+  WV.swarm.forEach(b => { b.out = 6 + (b.i % 3) * 0.6; b.f = 0; });
+  /* Kamera nur mitnehmen, wenn der Spieler sie gerade nicht anfasst */
+  if (!FV.touchAt || performance.now() - FV.touchAt > 4000) farmFocusXZ(c.x + 1, c.z + 1.5, 24, 1300);
+  worldLootShow(R.w / 2, R.h / 2, { sub: Z ? Z.n : "Neue Fundstelle", title: "🐦 Schatz gesichtet!", chips: ["Such das rote Kreuz", "3 Stunden Zeit"], r: 1, css: "#ffd25a", ms: 3600 });
+  sfx("horn"); setTimeout(() => sfx("pearl"), 260);
+}
+function stepTreasure(dt, time) {
+  const R = FV.R, Rv = WV.trReveal;
+  if (Rv) return stepTreasureReveal(Rv, dt, time);
+  const X = WV.trFx, tr = farmTreasureCur();
+  if (!X || !tr || tr.done) { if (WV.trIntro && (!tr || tr.done)) WV.trIntro = null; return; }
+  const I = WV.trIntro, x = X.x, z = X.z;
+  let boost = 0, grow = 1;
+  if (I) {
+    I.t += dt;
+    if (!I.shot) {
+      I.shot = true;
+      R.burst({ x, y: 0.3, z, n: 46, speed: 3.4, up: 4.2, life: 1.3, size: 0.17, size2: 0.02, col: [TR_GOLD, [1, 1, 1, 1]], shape: 3, g: -4, drag: 0.6 });
+      R.burst({ x, y: 0.15, z, n: 16, speed: 2, flat: true, up: 0.6, life: 0.9, size: 0.25, size2: 0.7, col: [[0.8, 0.65, 0.4, 0.5]], g: -0.6, drag: 1.6 });
+    }
+    grow = Math.min(1, I.t / 1.1); grow = 1 - Math.pow(1 - grow, 3);
+    boost = Math.max(0, 1 - I.t / 2.2);
+    if (I.t > 3.5) WV.trIntro = null;
+  }
+  const pulse = Math.sin(time * 2.4) * 0.03;
+  X.b1.sy = X.b2.sy = Math.max(0.02, grow);
+  X.b1.alpha = 0.13 + pulse + boost * 0.4; X.b2.alpha = 0.26 + pulse * 2 + boost * 0.55;
+  X.b1.sx = X.b1.sz = 1 + Math.sin(time * 1.7) * 0.12 + boost * 1.2; X.b2.sx = X.b2.sz = 1 + Math.sin(time * 2.9) * 0.15;
+  [X.r1, X.r2].forEach((r, i) => {
+    const u = (time * 0.36 + i * 0.5) % 1;
+    r.sx = r.sz = 0.5 + u * 2.6; r.alpha = (0.5 + boost * 0.3) * (1 - u) * Math.min(1, u * 6);
+  });
+  /* Glitzern im Boden: ab und zu blitzt ein großer Stern auf */
+  if (Math.random() < dt * 1.1) R.emit({ x: x + (Math.random() - 0.5) * 0.9, y: 0.3 + Math.random() * 0.3, z: z + (Math.random() - 0.5) * 0.7, vy: 0.3, life: 0.8, size: 0.5, size2: 0.05, col: [1, 0.95, 0.6, 1], shape: 3 });
+  if (Math.random() < dt * (5 + boost * 30)) R.emit({ x: x + (Math.random() - 0.5) * 1.4, y: 0.1, z: z + (Math.random() - 0.5) * 1.2, vy: 1.2 + Math.random() * 1.6, life: 1.2, size: 0.1, size2: 0.01, col: Math.random() < 0.3 ? [1, 1, 1, 1] : TR_GOLD, shape: Math.random() < 0.6 ? 3 : 0 });
+}
+function worldTreasureRevealEnd() {
+  const Rv = WV.trReveal, R = FV.R;
+  if (!Rv) return;
+  Rv.nodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+  WV.trReveal = null;
+  if (WV.trChest) WV.trChest.visible = true;
+}
+/* Nach dem Graben: Truhe bricht aus der Grube, kreist und springt auf – je nach Sternen größer */
+function worldTreasureReveal(c, r) {
+  const R = FV.R, x = c.x + 0.05, z = c.z - 0.05, st = r.stars || 1;
+  worldTreasureRevealEnd();
+  const nodes = [], add = (mesh, o) => { const n = fnode(mesh, o); R.nodes.push(n); nodes.push(n); return n; };
+  const Rv = WV.trReveal = { t: 0, ph: 0, r, st, c, nodes, x, z, ticks: 0, cx: c.x, cz: c.z };
+  Rv.body = add(fmesh("goldBody", FWM.goldChest), { x, z, y: -0.65, ry: 0.55, s: 1.15 });
+  Rv.lid = R.addChild(Rv.body, fnode(fmesh("goldLid", FWM.goldLid), { y: 0.5, z: -0.31 }));
+  Rv.lit = R.addChild(Rv.body, fnode(fmesh("lootLit", () => { const b = new FM.MB(); b.plate(0.8, 0.52, 0xfff0a0, { y0: 0.01 }); return b; }), { y: 0.495, alpha: 0.8, glow: 1, visible: false }));
+  Rv.b1 = add(fmesh("trBeamB1", () => FWM.lootBeam(0.55, 0.24, 11, 0xffd25a)), { x: c.x, z: c.z, alpha: 0.0, glow: 1, shadow: false, sy: 0.02 });
+  Rv.b2 = add(fmesh("trBeamB2", () => FWM.lootBeam(0.28, 0.1, 11, 0xfff6c8)), { x: c.x, z: c.z, alpha: 0.0, glow: 1, shadow: false, sy: 0.02 });
+  Rv.r1 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
+  Rv.r2 = add(fmesh("lootRingW", () => FWM.lootRing(0.85, 1.0, 0xfff6c8)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
+  Rv.r3 = add(fmesh("lootRingB", () => FWM.lootRing(0.85, 1.0, 0x7ad6ff)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
+  farmFocusXZ(c.x, c.z + 0.4, 9, 2000);
+  R.burst({ x: c.x, y: 0.1, z: c.z, n: 22, speed: 2.2, flat: true, up: 0.7, life: 0.9, size: 0.3, size2: 0.8, col: [[0.72, 0.58, 0.4, 0.55]], g: -0.5, drag: 1.5 });
+  sfx("thud");
+}
+function stepTreasureReveal(Rv, dt, time) {
+  Rv.t += dt;
+  const t = Rv.t, R = FV.R, x = Rv.x, z = Rv.z, st = Rv.st, col = TR_COL[st - 1], B = Rv.body, cx = Rv.cx, cz = Rv.cz;
+  const TA = 1.4, TB = 0.9, TC = TA + TB;
+  if (!farmTreasureCur() && t < TC) { worldTreasureRevealEnd(); return; }
+  if (t < TC) {
+    if (t < TA) {
+      /* A: die Truhe bricht rumpelnd aus der Erde, Dreck fliegt, die Säule wächst aus dem Loch */
+      const u = t / TA, e = 1 - Math.pow(1 - u, 3);
+      B.y = -0.65 + e * 1.0; B.rz = Math.sin(t * 52) * 0.07 * (1 - u * 0.6); B.rx = Math.sin(t * 41 + 1) * 0.05 * (1 - u * 0.6);
+      B.x = x + Math.sin(t * 63) * 0.03 * (1 - u); B.z = z + Math.cos(t * 57) * 0.03 * (1 - u);
+      Rv.b1.sy = Rv.b2.sy = Math.max(0.02, e); Rv.b1.alpha = 0.34 * e; Rv.b2.alpha = 0.5 * e;
+      const n = Math.random() < dt * 70 ? 1 : 0;
+      for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, d = 0.3 + Math.random() * 0.5; R.emit({ x: cx + Math.cos(a) * d, y: 0.1, z: cz + Math.sin(a) * d, vx: Math.cos(a) * 1.2, vz: Math.sin(a) * 1.2, vy: 2.5 + Math.random() * 3, g: -9, life: 1.0, size: 0.08 + Math.random() * 0.07, size2: 0.05, col: TR_DIRT[(Math.random() * 3) | 0], shape: 1, fade: false }); }
+      while (Rv.ticks < 4 && t >= Rv.ticks * 0.33) { sfx("dig"); Rv.ticks++; }
+      [Rv.r1, Rv.r2].forEach((r, i) => { const w = (t * 0.9 + i * 0.5) % 1; r.sx = r.sz = 0.6 + w * 1.8; r.alpha = 0.55 * (1 - w) * Math.min(1, w * 6); });
+    } else {
+      /* B: Aufladen – die Truhe schwebt, dreht sich immer schneller (drei Umdrehungen), Funken strömen hinein */
+      const u = (t - TA) / TB, a = u * u;
+      if (Rv.ticks < 4) Rv.ticks = 4;
+      B.y = 0.35 + u * 0.42 + Math.sin(t * 14) * 0.02 * u; B.rz = Math.sin(t * 46) * 0.05 * a; B.rx = Math.sin(t * 37) * 0.04 * a; B.x = x; B.z = z;
+      B.ry = 0.55 + Math.PI * 6 * u * u;
+      B.glow = 0.9 * u; B.sx = B.sy = B.sz = 1.15 * (1 + 0.07 * u);
+      Rv.b1.alpha = 0.34 + u * 0.4; Rv.b2.alpha = 0.5 + u * 0.4; Rv.b1.sx = Rv.b1.sz = 1 + u * 0.8; Rv.b2.sx = Rv.b2.sz = 1 + u * 0.5;
+      [Rv.r1, Rv.r2, Rv.r3].forEach((r, i) => { const w = (t * (1.2 + u * 2.4) + i * 0.33) % 1; r.sx = r.sz = 0.6 + w * 2.0 * (1 - u * 0.3); r.alpha = (0.45 + u * 0.3) * (1 - w) * Math.min(1, w * 6); });
+      const n = Math.random() < dt * (30 + 110 * u) ? 1 : 0;
+      for (let i = 0; i < n; i++) { const an = Math.random() * 6.28, d = 1.6 + Math.random() * 0.8; R.emit({ x: cx + Math.cos(an) * d, y: 0.2 + Math.random() * 1.3, z: cz + Math.sin(an) * d, vx: -Math.cos(an) * 3, vz: -Math.sin(an) * 3, vy: 0.4, life: 0.5, size: 0.14, size2: 0.02, col: Math.random() < 0.3 ? [1, 1, 1, 1] : col, shape: 3 }); }
+      const tk = [0, 0.2, 0.36, 0.5, 0.62, 0.72, 0.8, 0.87]; while (Rv.ticks - 4 < tk.length && Rv.ticks >= 4 && u * TB >= tk[Rv.ticks - 4]) { sfx("pop"); Rv.ticks++; }
+    }
+    return;
+  }
+  if (Rv.ph === 0) {
+    /* C: Deckel springt auf – Lichtstoß, Fontäne, Schockwellen */
+    Rv.ph = 1; Rv.tb = t;
+    B.ry = 0.55; B.rz = B.rx = 0; B.glow = 1; Rv.lit.visible = true;
+    sfx("thud"); sfx("level"); setTimeout(() => sfx("pearl"), 260); [0, 160, 320].forEach(d => setTimeout(() => sfx("coin"), 420 + d));
+    if (st === 3) { setTimeout(() => sfx("level"), 700); setTimeout(() => sfx("pearl"), 950); }
+    try { if (navigator.vibrate) navigator.vibrate(st > 1 ? [40, 30, 90, 30, 60] : 30); } catch (e) { /* kein Rütteln */ }
+    R.burst({ x, y: 0.9, z, n: 40 + st * 14, speed: 4.2, up: 6, life: 1.6, size: 0.17, size2: 0.02, col: [col, TR_GOLD, [1, 1, 1, 1]], shape: 3, g: -7, drag: 0.4 });
+    R.burst({ x, y: 0.9, z, n: 36, speed: 3.6, up: 5.5, life: 1.8, size: 0.1, size2: 0.06, col: [TR_GOLD, [1, 0.74, 0.18, 1]], shape: 0, g: -9, drag: 0.3 });
+    R.burst({ x, y: 0.9, z, n: 22 + st * 6, speed: 3.2, up: 5, life: 1.8, size: 0.2, size2: 0.05, col: TR_GEM, shape: 3, g: -6, drag: 0.5 });
+    R.burst({ x, y: 0.15, z, n: 18, speed: 2.6, flat: true, up: 0.5, life: 1.0, size: 0.3, size2: 0.9, col: [[1, 0.95, 0.75, 0.55]], g: -0.5, drag: 1.4 });
+    const px = FV.R.project(cx, 0.9, cz) || [R.w / 2, R.h / 2];
+    const r = Rv.r, chips = ["💶 " + eur(r.m), "🍀 " + r.clover, "⭐ " + r.xp + " EP"];
+    worldLootShow(px[0], px[1], { sub: "Schatzkiste · " + "★".repeat(st) + "☆".repeat(3 - st), title: (st > 1 ? "✨ " : "") + TR_TXT[st - 1] + (st > 1 ? " ✨" : ""), chips, r: st === 3 ? 3 : st, css: TR_CSS[st - 1] });
+    let d = 500;
+    setTimeout(() => { if (FV.on) { coinFly(px[0], px[1], r.m); sfx("coin"); } }, d); d += 420;
+    setTimeout(() => { if (FV.on) farmCloverFlyAt(px[0], px[1], r.clover); }, d); d += 300;
+    setTimeout(() => { if (FV.on) xpFly(px[0], px[1] - 10, r.xp, 0); }, d);
+  }
+  const u = t - Rv.tb;
+  const kk = Math.min(1, u / 0.5), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
+  Rv.lid.rx = -2.2 * e;
+  B.y = 0.77 - Math.min(1, u / 0.8) * 0.47 + Math.sin(u * 5) * 0.03;
+  B.glow = Math.max(0, 0.9 * (1 - u / 1.8)); Rv.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.4) + Math.sin(time * 18) * 0.05;
+  Rv.b1.alpha = 0.55 * Math.max(0, 1 - u / 2.6); Rv.b2.alpha = 0.8 * Math.max(0, 1 - u / 2.2);
+  Rv.b1.sx = Rv.b1.sz = 1.8 + u * 0.7; Rv.b2.sx = Rv.b2.sz = 1.5 + u * 0.4;
+  const rw = Math.min(1, u / 0.9); Rv.r1.sx = Rv.r1.sz = 0.8 + rw * 6.5; Rv.r1.alpha = 0.9 * (1 - rw);
+  const rw2 = Math.max(0, Math.min(1, (u - 0.2) / 0.9)); Rv.r2.sx = Rv.r2.sz = 0.8 + rw2 * 5; Rv.r2.alpha = 0.7 * (1 - rw2) * (u > 0.2 ? 1 : 0);
+  const rw3 = Math.max(0, Math.min(1, (u - 0.4) / 0.9)); Rv.r3.sx = Rv.r3.sz = 0.8 + rw3 * 4; Rv.r3.alpha = 0.6 * (1 - rw3) * (u > 0.4 && st > 1 ? 1 : 0);
+  if (u < 1.9) {
+    /* Fontäne aus Münzen, Sternen und Edelsteinen */
+    const n = Math.random() < dt * (55 + st * 25) ? 1 : 0;
+    for (let i = 0; i < n; i++) {
+      const gem = Math.random() < 0.18;
+      R.emit({ x: x + (Math.random() - 0.5) * 0.5, y: 0.8, z: z + (Math.random() - 0.5) * 0.35, vx: (Math.random() - 0.5) * 2.6, vz: (Math.random() - 0.5) * 2.6, vy: 4.5 + Math.random() * 4, g: -9, drag: 0.3, life: 1.4, size: gem ? 0.17 : 0.1 + Math.random() * 0.06, size2: 0.03, col: gem ? TR_GEM[(Math.random() * 4) | 0] : Math.random() < 0.6 ? TR_GOLD : col, shape: gem ? 3 : Math.random() < 0.5 ? 3 : 0 });
+    }
+  }
+  if (st >= 2 && u < 2.4) {
+    /* Goldregen von oben */
+    const n = Math.random() < dt * (st === 3 ? 80 : 36) ? 1 : 0;
+    for (let i = 0; i < n; i++) R.emit({ x: cx + (Math.random() - 0.5) * 5, y: 5 + Math.random() * 2.5, z: cz + (Math.random() - 0.5) * 5, vx: (Math.random() - 0.5) * 0.4, vy: -(1.5 + Math.random() * 2), g: -1.5, life: 2.2, size: 0.09 + Math.random() * 0.06, size2: 0.05, col: st === 3 && Math.random() < 0.35 ? TR_GEM[(Math.random() * 4) | 0] : TR_GOLD, shape: Math.random() < 0.5 ? 3 : 0 });
+  }
+  if (st === 3 && !Rv.b2nd && u > 0.6) {
+    Rv.b2nd = 1; sfx("collect");
+    R.burst({ x, y: 1.0, z, n: 50, speed: 4.8, up: 5.5, life: 1.7, size: 0.22, size2: 0.03, col: TR_GEM, shape: 3, g: -5, drag: 0.5 });
+    R.burst({ x, y: 1.0, z, n: 40, speed: 3.4, up: 7.5, life: 1.8, size: 0.14, size2: 0.02, col: [TR_GOLD, [1, 1, 1, 1]], shape: 3, g: -6, drag: 0.4 });
+  }
+  if (u > 2.3) {
+    /* Truhe löst sich in Funken auf – die offene Truhe in der Grube bleibt */
+    const k = Math.min(1, (u - 2.3) / 0.5);
+    B.sx = B.sz = 1.15 * (1 - k); B.sy = 1.15 * (1 - k * 0.6); B.y = 0.3 + k * 0.4;
+    if (!Rv.gone) { Rv.gone = 1; sfx("pop"); R.burst({ x, y: 0.5, z, n: 26, speed: 2.2, up: 3, life: 1, size: 0.13, size2: 0.01, col: [col, [1, 1, 1, 1]], shape: 3, g: -3, drag: 1 }); if (WV.trChest) WV.trChest.visible = true; }
+  }
+  if (u > 3.1) { worldTreasureRevealEnd(); renderFarmUI(); }
 }
 /* Döring GmbH: Montagewagen und Herr Döring vor dem Sägewerk */
 function worldSyncPV() {
@@ -1714,6 +1881,18 @@ function stepParcelOpen(O, P, dt, time) {
   }
   if (u > 2.7) { WV.parcelOpen = null; WV.evKey = null; farmSyncScene(); renderFarmUI(); }
 }
+/* Gemeinsame Show: Lichtblitz an (px|py) und Banner mit Titel und Beute-Chips */
+function worldLootShow(px, py, o) {
+  const fx = $("#farmFx");
+  if (!fx) return;
+  const ms = o.ms || 3200;
+  const fl = document.createElement("div"); fl.className = "lootflash"; fl.style.setProperty("--c", o.css); fl.style.setProperty("--x", px + "px"); fl.style.setProperty("--y", py + "px");
+  fx.appendChild(fl); setTimeout(() => fl.remove(), 900);
+  const el = document.createElement("div"); el.className = "lootbanner r" + (o.r || 0); el.style.setProperty("--c", o.css);
+  if (o.ms) el.style.animationDuration = (o.ms / 1000 - 0.1).toFixed(2) + "s";
+  el.innerHTML = `<small>${esc(o.sub || "")}</small><b>${esc(o.title)}</b><span>${(o.chips || []).map(c => `<i>${esc(c)}</i>`).join("")}</span>`;
+  fx.appendChild(el); setTimeout(() => el.remove(), ms);
+}
 /* Banner (Seltenheit), Lichtblitz und die Belohnungen, die der Reihe nach aus der Kiste fliegen */
 function worldParcelReward(O, r, P) {
   const R = FV.R, fx = $("#farmFx");
@@ -1723,11 +1902,7 @@ function worldParcelReward(O, r, P) {
     (r.items || []).forEach(([id, n]) => chips.push((FITEMS[id].i || "📦") + " " + n + "× " + FITEMS[id].n));
     if (r.m) chips.push("💶 " + eur(r.m));
     chips.push("🍀 " + r.clover, "⭐ " + r.xp + " EP");
-    const fl = document.createElement("div"); fl.className = "lootflash"; fl.style.setProperty("--c", PARCEL_CSS[O.rar]); fl.style.setProperty("--x", px + "px"); fl.style.setProperty("--y", py + "px");
-    fx.appendChild(fl); setTimeout(() => fl.remove(), 900);
-    const el = document.createElement("div"); el.className = "lootbanner r" + O.rar; el.style.setProperty("--c", PARCEL_CSS[O.rar]);
-    el.innerHTML = `<small>Besondere Lieferung</small><b>${O.rar > 1 ? "✨ " : ""}${PARCEL_TXT[O.rar]}${O.rar > 1 ? " ✨" : ""}</b><span>${chips.map(c => `<i>${esc(c)}</i>`).join("")}</span>`;
-    fx.appendChild(el); setTimeout(() => el.remove(), 3200);
+    worldLootShow(px, py, { sub: "Besondere Lieferung", title: (O.rar > 1 ? "✨ " : "") + PARCEL_TXT[O.rar] + (O.rar > 1 ? " ✨" : ""), chips, r: O.rar, css: PARCEL_CSS[O.rar] });
   }
   if (!r) return;
   let d = 450;
@@ -2143,7 +2318,7 @@ function stepOutline(time) {
 }
 
 /* ------------------------------ Takt -------------------------------------- */
-function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
+function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
   stepFalling();
@@ -2151,6 +2326,7 @@ function worldStep(dt, time) {
   stepWild(dt, time);
   stepPets(dt, time);
   stepParcel(dt, time);
+  stepTreasure(dt, time);
   stepWeather(dt, time);
   const now = wnow();
   /* Baum wippt nach dem Antippen oder wenn er gewachsen ist */

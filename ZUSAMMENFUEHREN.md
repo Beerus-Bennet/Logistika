@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v74 – Schatzkiste-Show (auf v73)
+
+| Thema | Wo |
+|---|---|
+| Intro (Schwarm-Sturzflug, Banner, Lichtsäule), Leuchtfeuer `WV.trFx`, Öffnungs-Show `worldTreasureReveal`/`stepTreasureReveal` | `worldview.js` (Abschnitt „v74: Schatzkiste“, vor „Döring GmbH“) |
+| `farmTreasureDig` liefert `stars`; 3 ★ = 2 🍀, mehr EP; Kleeblatt ohne eigenen Flug | `erbe.js` |
+| Modelle `goldChest`, `goldLid` | `woodmodels.js` |
+| Gemeinsamer Banner-Helfer `worldLootShow` (auch `worldParcelReward`) | `worldview.js` |
+
 ## Stand v73 – Lootkiste „Besondere Lieferung“ (auf v72)
 
 | Thema | Wo |
