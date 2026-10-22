@@ -195,18 +195,21 @@ const LAKE_CREEK = [[45.2, 58], [48.5, 59], [58, 62], [70, 60], [84, 66], [100, 
 /* v88: Vegetation – Qualität und Windanimation.
    Basis ist statisch (kein Sway, keine Schatten von Gras und Büschen). Der Wind der Grasbüschel läuft als
    gemeinsamer Vertex-Shader (uSway/uSwayT in gl3d.js), nicht per JS pro Halm; ein Knoten je Chunk, vom Frustum-Culling
-   mit erledigt. Moduswahl: ?veg=static|wind|auto, localStorage "logistika_veg" oder WV.vegMode(…); „auto“ schaltet den Wind
-   erst zu, wenn die Bildrate unter Last tatsächlich reicht, und bei Einbruch wieder ab. */
+   mit erledigt. Moduswahl: ?veg=static|wind|auto, localStorage "logistika_veg" oder WV.vegMode(…).
+   v92: Gras, Blumen und Farn biegen sich (Pflanzenwind in gl3d.js, uPlant/uWind) statt starr geschert zu werden. „auto“ startet
+   mit Wind (die Rechnung im Vertex-Shader kostet fast nichts) und schaltet erst bei echtem Einbruch (< 25 Bilder/s) ab.
+   Stärke nach Wetter (still bei Nebel, kräftiger bei Regen und Sturm), Amplituden blenden weich ein und aus. */
 const VEGQ = {
   mode: "auto",            /* static | wind | auto */
-  grassSway: 2.0,          /* Amplitude: 0,045 · Höhe · 2,0 ≈ 0,03 Einheiten bei 0,3 hohem Büschel */
-  swayT: 0.4,              /* Zeitfaktor des Shaders: Periode ≈ 10 s */
-  range: 28,               /* Wind nur für Chunks innerhalb dieser Entfernung zum Kamerazentrum */
-  idleOff: 90000,          /* ohne Berührung nach 90 s: Wind aus */
+  grassSway: 0.5,          /* Amplitude des Pflanzenwinds: Spitze einer 0,45 hohen Blume ≈ ± 0,07 (in der Böe bis 0,13) */
+  swayT: 1,                /* Zeitfaktor des Shaders: Grundschwingung ≈ 2,7 s, Böen ≈ 11 s */
+  range: 40,               /* Wind nur für Chunks innerhalb dieser Entfernung zum Kamerazentrum */
   bushShadow: false,       /* Büsche werfen keinen dynamischen Schatten (statisches Shading) */
   on: false, why: "start", nodes: [], samples: [], prev: 0, good: 0, banUntil: 0, t0: 0, checkAt: 0,
-  fps: 0
+  fps: 0, wind: 0.85, last: 0
 };
+/* Windstärke je Wetter (uWind.z) */
+const WIND_WX = { sonne: 0.85, wolken: 1.1, regen: 1.45, nebel: 0.5, sturm: 2.3 };
 (function vegInit() {
   try {
     const q = new URLSearchParams(location.search).get("veg"), ls = localStorage.getItem("logistika_veg");
@@ -222,18 +225,28 @@ class WBuf {
   constructor() { this.f = new Float32Array(9 * 3 * 256); this.n = 0; }
   grow(k) { if (this.n + k <= this.f.length) return; let L = this.f.length * 2; while (L < this.n + k) L *= 2; const g = new Float32Array(L); g.set(this.f.subarray(0, this.n)); this.f = g; }
   /* v86: sy = eigene Höhenskalierung (Büsche: Breite und Höhe unabhängig), k = Helligkeitsfaktor (Farbvariante) */
-  add(m, x, z, ry, s, sy, k) {
+  add(m, x, z, ry, s, sy, k, y0) {
     this.grow(m.length);
     const f = this.f, c = Math.cos(ry), sn = Math.sin(ry), sh = sy == null ? s : sy;
     let o = this.n;
     for (let i = 0; i < m.length; i += 9) {
       const px = m[i], py = m[i + 1], pz = m[i + 2], qx = m[i + 3], qz = m[i + 5];
-      f[o] = x + (c * px + sn * pz) * s; f[o + 1] = py * sh; f[o + 2] = z + (-sn * px + c * pz) * s;
+      f[o] = x + (c * px + sn * pz) * s; f[o + 1] = py * sh + (y0 || 0); f[o + 2] = z + (-sn * px + c * pz) * s;
       f[o + 3] = c * qx + sn * qz; f[o + 4] = m[i + 4]; f[o + 5] = -sn * qx + c * qz;
       if (k) { f[o + 6] = Math.min(1, m[i + 6] * k); f[o + 7] = Math.min(1, m[i + 7] * k); f[o + 8] = Math.min(1, m[i + 8] * k); }
       else { f[o + 6] = m[i + 6]; f[o + 7] = m[i + 7]; f[o + 8] = m[i + 8]; }
       o += 9;
     }
+    this.n = o;
+  }
+  /* einzelnes Blatt (zwei Dreiecke, flach) */
+  leafBit(x, z, rot, sz, col, y) {
+    this.grow(54);
+    const f = this.f, c = Math.cos(rot) * sz, s = Math.sin(rot) * sz;
+    let o = this.n;
+    const v = (px, pz) => { f[o] = px; f[o + 1] = y; f[o + 2] = pz; f[o + 3] = 0; f[o + 4] = 1; f[o + 5] = 0; f[o + 6] = col[0]; f[o + 7] = col[1]; f[o + 8] = col[2]; o += 9; };
+    const a = [x - c, z - s], b = [x - s * 0.45, z + c * 0.45], d = [x + c, z + s], e = [x + s * 0.45, z - c * 0.45];
+    v(a[0], a[1]); v(b[0], b[1]); v(d[0], d[1]); v(a[0], a[1]); v(d[0], d[1]); v(e[0], e[1]);
     this.n = o;
   }
   /* Bodenkachel mit Farbe je Ecke (zwei Dreiecke, Normale nach oben) */
@@ -284,7 +297,26 @@ function worldWaterCheck() {
    Lichtungen bleiben überwiegend offen; Gras (BUSH.grass): Büschel an Birken u. a.
    Positionen kommen aus festen Samen (gleiche Welt → gleiche Vegetation). Gültig ist ein Standort im Wald, der von Hof,
    Feldern, Wegen, Bach, See, Teich, Lagerplatz, Lichtungsmitte, Bäumen, Felsen, Totholz und anderen Büschen frei ist. */
-function worldBushes(trees, MK, extra, rocks) {
+/* v91: freier Boden – nicht auf Hof, Wegen, Wasser, Lichtungsmitte (gemeinsam für Büsche und Waldboden) */
+function wFreeGround(x, z, r, MK) {
+  if (inHofMax(x, z, 1.5 + r)) return false;
+  if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
+  if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
+  if (z > 15.8 - r && z < 22.5 + r) return false;
+  if (z > 20 && z < 34 && x > -24 && x < 44) return false;
+  if (inYard(x, z, 1.8 + r) || inFieldN(x, z, 1 + r)) return false;
+  if (MK.at(x, z) & 4) return false;                                      /* Bachufer */
+  if (z > 20 && lakeE(x, z) < 1.18) return false;
+  if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.5 + r) return false;
+  for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < 1.8 + r) return false;     /* Mitte der Lichtung (Bank, Feuer) bleibt frei */
+  return wayGap(x, z) > 1.0 + r * 0.9;                                    /* Wegbreite 1,8 – nichts ragt auf den Schotter */
+}
+/* Wassernähe 0 … 1 (Bach, Bachmündung, Teich, See) – macht den Boden feuchter */
+function wWet(x, z) {
+  const d = Math.min(distLine(x, z, FWORLD.creek), distLine(x, z, LAKE_CREEK), Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) - FWORLD.pond.r, (lakeE(x, z) - 1) * 22);
+  return clamp(1 - d / 14, 0, 1);
+}
+function worldBushes(trees, MK, extra, rocks, hidden) {
   const hash = new Map(), HC = 4;
   trees.forEach(t => { const k = Math.floor(t.x / HC) + "," + Math.floor(t.z / HC); (hash.get(k) || hash.set(k, []).get(k)).push(t); });
   const near = (x, z, rad, fn) => {
@@ -306,22 +338,11 @@ function worldBushes(trees, MK, extra, rocks) {
     for (let i = 0; i < 14; i++) { const x = W.x0 + rr() * (W.x1 - W.x0), z = W.z0 + rr() * (W.z1 - W.z0); if (forestK(x, z) > 0.2) return { x, z }; }
     return null;
   };
-  const ok = (x, z, r) => {
-    if (inHofMax(x, z, 1.5 + r)) return false;
-    if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
-    if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
-    if (z > 15.8 - r && z < 22.5 + r) return false;
-    if (z > 20 && z < 34 && x > -24 && x < 44) return false;
-    if (inYard(x, z, 1.8 + r) || inFieldN(x, z, 1 + r)) return false;
-    if (MK.at(x, z) & 4) return false;                                      /* Bachufer */
-    if (z > 20 && lakeE(x, z) < 1.18) return false;
-    if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.5 + r) return false;
-    for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < 1.8 + r) return false;     /* Mitte der Lichtung (Bank, Feuer) bleibt frei */
-    return wayGap(x, z) > 1.0 + r * 0.9;                                    /* Wegbreite 1,8 – kein Busch ragt auf den Schotter */
-  };
+  const ok = (x, z, r) => wFreeGround(x, z, r, MK);
   /* Lichtungen: die ausdrücklich angelegten (FWORLD.clearings) plus freie Flächen aus der Baumdichte – ein Punkt, an dem im Umkreis
      von mindestens 4,0 Einheiten kein Baum steht (Kulissenbäume stehen im dichten Kern im Schnitt alle 3,4); der Steinbereich im Altwald wird als eigene Art markiert */
   const clearings = FWORLD.clearings.map(c => ({ x: c[0], z: c[1], r: c[2] - 0.5, explicit: true }));
+  (hidden || []).forEach(h => clearings.push({ x: h.x, z: h.z, r: h.r, hidden: true }));      /* v91: versteckte Lichtungen und Senken (FOREST.plan) */
   {
     const cand = [];
     for (let x = W.x0 + 2; x < W.x1; x += 3) for (let z = W.z0 + 2; z < W.z1 - 85; z += 3) {
@@ -370,6 +391,311 @@ function worldBushes(trees, MK, extra, rocks) {
   return res;
 }
 
+
+/* ===================== v91: Waldboden, besondere Orte, Entdeckungen (forest.js) ===================== */
+/* Der Seed legt Komposition und alle Plätze fest (Standard 7331 = „Lichtungswald“). Zum Vergleichen: ?fseed=7330…7333 in der Adresse (vier Kompositionen). */
+function forestSeed() { try { const q = +new URLSearchParams(location.search).get("fseed"); if (q > 0) return q | 0; } catch (e) {} return 7331; }
+/* Maßstab der kleinen Dinge – groß genug, dass sie aus der Spielkamera lesbar sind (Kameraabstand 22–50) */
+const FSCALE = { stone: 1.35, roots: 1, stick: 1.5, bark: 1.4, mosslog: 1, mush: 1.9, flowers: 1.7, fern: 1.2, stump: 1, lost: 1.8, paw: 1.5, fruit: 1.5, berry: 1.5, nest: 1.9 };
+function worldForest(chunks, res, plan, MK, chunkOf, rockObs, gcAt) {
+  const t0 = performance.now(), ftr = [];
+  for (const c of chunks.values()) c.trees.forEach(t => ftr.push(t));
+  (S.farm.trees || []).forEach(t => ftr.push(t));
+  const dims = b => { const T = BUSH.BY_ID[b.typeId]; return { r: (T.w[0] + T.w[1]) / 4 * b.scale[0], h: (T.h[0] + T.h[1]) / 2 * b.scale[1] }; };
+  const W = WGRID;
+  const F = FOREST.generate({ seed: forestSeed(), area: { x0: W.x0, z0: W.z0, x1: W.x1, z1: W.z1 - 85 }, trees: ftr, bushes: res.instances, dims,
+    inForest: (x, z) => forestK(x, z) > 0.2, forestK, ok: (x, z, r) => wFreeGround(x, z, r, MK), wayGap, wet: wWet, clearings: res.clearings, rocks: rockObs || [], plan });
+  /* Büsche: größere/dunklere Exemplare, zweite Büsche für Durchblicke */
+  const inst = res.instances;
+  for (const k in F.bushMods.scale) { const b = inst[k], m = F.bushMods.scale[k]; b.scale = [+(b.scale[0] * m[0]).toFixed(3), +(b.scale[1] * m[1]).toFixed(3), +(b.scale[2] * m[0]).toFixed(3)]; if (F.bushMods.tint[k]) b.tint = F.bushMods.tint[k]; }
+  F.bushMods.extra.forEach(e => {
+    const o = inst[e.clone];
+    inst.push(Object.assign({}, o, { id: "bx" + inst.length, position: [e.x, 0, e.z], rotationY: e.ry, scale: [+(o.scale[0] * e.k).toFixed(3), +(o.scale[1] * e.k).toFixed(3), +(o.scale[2] * e.k).toFixed(3)], variantSeed: (o.variantSeed + 7) % 1000003, group: -1 }));
+  });
+  worldForestBuild(F, chunkOf, gcAt);
+  /* Lebendigkeit: wo Tiere, Falter, Lichtschächte und fallende Blätter hingehören */
+  const L = { peek: [], homes: [], shafts: [], oldTrees: [], trees: ftr.filter(t => FOREST.isBroad(t.sp) && t.s >= 1.1) };
+  F.disc.forEach(D => { if (D.type === "hedgehog" && D.face != null) L.peek.push({ x: D.x, z: D.z, face: D.face, r: D.r }); });
+  const logs = [];
+  F.places.forEach(p => {
+    if (p.type === "sun" || p.type === "hidden" || p.type === "field") L.homes.push({ x: p.x, z: p.z, r: Math.min(p.r || 3, 3.4) });
+    if (p.type === "sun") L.shafts.push({ x: p.x + 0.4, z: p.z + 0.2 });
+    if (p.type === "log") logs.push(p);
+  });
+  /* Vogelsitz: der Moosstamm, vor dem (von der Spielkamera im Südosten aus gesehen) am wenigsten Kronen stehen */
+  let bestC = 1e9;
+  logs.forEach(p => { let n = 0; for (const t of ftr) { const d = Math.hypot(t.x - (p.x + 2.5), t.z - (p.z + 2.5)); if (d < 4.5) n += (t.s || 1); } if (n < bestC) { bestC = n; L.perch = { x: p.x, z: p.z }; } });
+  ftr.forEach(t => { if (FOREST.isOldB(t)) L.oldTrees.push(t); });
+  F.life = L;
+  F.ms = +(performance.now() - t0).toFixed(0);
+  return F;
+}
+/* Flecken, Dinge und Entdeckungen in die Boden-Kacheln schreiben (ohne Schatten, kein eigener Knoten je Ding) */
+function worldForestBuild(F, chunkOf, gcAt) {
+  const md = {}, fm = (key, fn) => md[key] || (md[key] = new Float32Array(fn().v)), col = h => G3.col(h);
+  /* v92: die Flecken selbst sind Teil der Bodenfarbe (worldGround). Hier nur die einzelnen Blätter der Laubschicht –
+     jedes auf eigener Höhe, damit sich überlappende Blätter nie die gleiche Tiefe teilen */
+  let lb = 0;
+  const LG = new Map(), lkey = (x, z) => (Math.floor(x) + 2048) * 8192 + Math.floor(z) + 2048;
+  const lfree = (x, z) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const L = LG.get(lkey(x + i, z + j)); if (L) for (const q of L) if (Math.hypot(q[0] - x, q[1] - z) < 0.32) return false; } return true; };
+  F.patches.forEach(p => {
+    if (!p.bits) return;
+    const buf = chunkOf(p.x, p.z).g;
+    for (let i = 0; i < p.bits; i++) {
+      const h1 = Math.sin(p.seed * 0.13 + i * 4.1) * 43758.5, h2 = Math.sin(p.seed * 0.71 + i * 9.7) * 24634.6, h3 = Math.sin(p.seed * 0.29 + i * 2.3) * 12345.6;
+      const a = (h1 - Math.floor(h1)) * 6.283, d = Math.sqrt(h2 - Math.floor(h2)) * p.r * 0.8, lc = FOREST.LEAF_COLS[Math.floor((h3 - Math.floor(h3)) * 4) % 4];
+      const x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+      if (!lfree(x, z)) continue;                         /* Blätter liegen nie übereinander (keine zwei Flächen in derselben Tiefe) */
+      const k = lkey(x, z); let L = LG.get(k); if (!L) LG.set(k, L = []); L.push([x, z]);
+      buf.leafBit(x, z, a * 3, 0.1 + 0.05 * (h3 - Math.floor(h3)), col(lc), 0.006 + 0.0012 * (lb++ % 6));
+    }
+  });
+  F.items.forEach(it => {
+    const g = chunkOf(it.x, it.z).g, S0 = FSCALE[it.k] || 1, s = (it.s || 1) * S0;
+    let m;
+    switch (it.k) {
+      case "stone": m = fm("st" + (it.v % 3) + (it.moss ? "m" : ""), () => FWM.stone(it.v % 3, !!it.moss)); break;
+      case "roots": m = fm("ro" + it.sp, () => FWM.roots(it.sp)); break;
+      case "stick": m = fm("sti", () => FWM.stick()); break;
+      case "bark": m = fm("bar", () => FWM.bark()); break;
+      case "mosslog": m = fm("ml" + (it.v % 2), () => FWM.mosslog(it.v % 2)); break;
+      case "mush": m = fm("mu" + it.mk, () => FWM.mushGroup(it.mk)); break;
+      case "flowers": {
+        /* v92: Farbe aus dem Generator, Form (Sternblüten / Ähren) fest aus dem Ort; Pflanzen kommen in die Wind-Kachel */
+        const fv = (it.v % 4) + 4 * (Math.floor(Math.abs(Math.sin(it.x * 12.9898 + it.z * 78.233)) * 43758.5) % 2);
+        chunkOf(it.x, it.z).v.add(fm("fl" + fv, () => FWM.flowers(fv)), it.x, it.z, it.ry, s);
+        return;
+      }
+      case "fern": chunkOf(it.x, it.z).v.add(fm("fern", () => FWM.fern2()), it.x, it.z, it.ry, s); return;
+      case "stump": m = fm("stp" + it.sp, () => FWM.stump(it.sp, 1)); break;
+      case "lost": m = fm("lo" + it.lk, () => FWM.lost(it.lk)); break;
+      case "paw": m = fm("paw", () => FWM.paw()); break;
+      case "fruit": m = fm("fr" + it.col, () => FWM.fruit(it.col)); break;
+      default: return;
+    }
+    g.add(m, it.x, it.z, it.ry, s);
+  });
+  F.disc.forEach(D => {
+    if (D.type === "berries") D.berries.forEach(b => chunkOf(b[0], b[2]).g.add(fm("be" + D.bc, () => FWM.berry(D.bc)), b[0], b[2], 0, 1.4, 1.4, null, b[1]));
+    else if (D.type === "nest") chunkOf(D.nx, D.nz).g.add(fm("nest", () => FWM.nest()), D.nx, D.nz, D.ry, 1.9, 1.9, null, D.ny);
+    else if (D.type === "gap") chunkOf(D.lx, D.lz).g.add(fm("lo" + D.lk, () => FWM.lost(D.lk)), D.lx, D.lz, D.ry, 1.8);
+  });
+}
+
+
+/* ===================== v91: kleines Leben im Wald ===================== */
+/* Alles an Orten, wo es hingehört: Igel schauen aus ihren Büschen, Falter über Blumenwiesen und Lichtinseln, ein Vogel sitzt auf dem
+   Moosstamm, Laub fällt nur von alten Laubbäumen, Lichtschächte stehen in den Lichtinseln. Nichts davon läuft gleichzeitig oder im Takt:
+   jede Gruppe hat eigene Kommen-und-Gehen-Zeiten (wildPres), Bewegungen laufen mit eigener Phase. Gerechnet wird nur in Kameranähe. */
+const LIFE_BFLY = [[0xf2c230, 0xc77a1e], [0xe8e4d8, 0xaec2e0], [0x5f9ee6, 0x2c5aa0], [0xe0703a, 0x7a2a18]];
+function worldMakeLife() {
+  try { worldMakeLife0(); } catch (e) { console.warn("Waldleben:", e); WV.life = null; }
+}
+function worldMakeLife0() {
+  const R = FV.R, F = WV.forest;
+  WV.life = null;
+  if (!F || !F.life) return;
+  const L = F.life, Lf = { peek: [], bfly: [], shafts: [], bird: null, leafT: 0, near: [], nearT: 0 };
+  L.peek.forEach((p, i) => {
+    const off = Math.max(0.3, p.r * 0.6), n = fnode(fmesh("wild:hedgehog", FWM.hedgehog), { s: 2.7, ry: Math.PI / 2 - p.face, visible: false });
+    R.nodes.push(n);
+    Lf.peek.push({ i, p, n, f: 0, bx: p.x + Math.cos(p.face) * off, bz: p.z + Math.sin(p.face) * off, dx: Math.cos(p.face), dz: Math.sin(p.face), hide: 0, seen: false });
+  });
+  L.homes.forEach((h, k) => {
+    for (let j = 0; j < 2; j++) {
+      const i = k * 2 + j, cl = LIFE_BFLY[(i * 7 + k) % 4];
+      const body = fnode(fmesh("bfly", () => FWM.butterfly()), { s: 3.4, visible: false });
+      const wl = R.addChild(body, fnode(fmesh("bflyW" + (i * 7 + k) % 4, () => FWM.butterflyWing(cl[0], cl[1])), {}));
+      const wr = R.addChild(body, fnode(fmesh("bflyW" + (i * 7 + k) % 4, () => FWM.butterflyWing(cl[0], cl[1])), { sx: -1 }));
+      R.nodes.push(body);
+      Lf.bfly.push({ i, h, body, wl, wr, a: i * 2.3, sp: 0.35 + (i % 4) * 0.09, rr: h.r * (0.5 + (i % 3) * 0.2), hh: 0.5 + (i % 4) * 0.25, f: 0 });
+    }
+  });
+  if (L.perch) {
+    const body = fnode(fmesh("perch:bird", () => FWM.bird(0x8a6a4a)), { s: 2.6, x: L.perch.x + 0.15, z: L.perch.z, y: 0.42, ry: 1.2, visible: false });
+    R.addChild(body, fnode(fmesh("perchW:bird", () => FWM.birdWing(0x6a5240)), { rz: 1.25 }));
+    R.addChild(body, fnode(fmesh("perchW:bird", () => FWM.birdWing(0x6a5240)), { sx: -1, rz: -1.25 }));
+    R.nodes.push(body);
+    Lf.bird = { body, f: 0, p: L.perch };
+  }
+  L.shafts.forEach((p, i) => {
+    const n = fnode(fmesh("lshaft", () => FWM.lightShaft()), { x: p.x, z: p.z, s: 1, alpha: 0, visible: false, shadow: false });
+    R.nodes.push(n);
+    Lf.shafts.push({ i, n, x: p.x, z: p.z });
+  });
+  WV.life = Lf;
+}
+function lifeRain() { const F = S.farm; return !!(F && F.wx && (F.wx.k === "regen" || farmEvOn("sturm"))); }
+function stepLife(dt, time) {
+  const Lf = WV.life, F = WV.forest;
+  if (!Lf) return;
+  const cam = FV.R.cam, h = (S.time % 1440) / 60, rain = lifeRain(), day = h >= 7 && h < 20.5, fade = dt / 1.2;
+  const nearCam = (x, z, r) => Math.abs(x - cam.tx) < r && Math.abs(z - cam.tz) < r;
+  /* Igel: schieben sich aus dem Busch, bleiben ein Weilchen, ziehen sich wieder zurück */
+  for (const q of Lf.peek) {
+    const on = wildPres("hp" + q.i, dt, !rain && h >= 6 && h < 22) && q.hide <= 0;
+    if (q.hide > 0) q.hide -= dt;
+    q.f = on ? Math.min(1, q.f + dt / 1.6) : Math.max(0, q.f - dt / 1.1);
+    const show = q.f > 0 && nearCam(q.bx, q.bz, 60);
+    q.n.visible = show;
+    if (!show) continue;
+    const e = q.f * q.f * (3 - 2 * q.f), back = (1 - e) * 0.55;                    /* weich heraus-/hineingleiten */
+    q.n.x = q.bx - q.dx * back; q.n.z = q.bz - q.dz * back; q.n.y = 0;
+    q.n.ry = Math.PI / 2 - q.p.face + Math.sin(time * 0.7 + q.i * 2.1) * 0.12 * (q.f > 0.95 ? 1 : 0);   /* schnuppert: Kopf pendelt leicht */
+    q.n.rx = q.f > 0.95 ? Math.max(0, Math.sin(time * 1.9 + q.i)) * 0.06 : 0;
+  }
+  /* Falter: unregelmäßige Schleifen über der Wiese, nur bei Tag und trockenem Wetter */
+  for (const b of Lf.bfly) {
+    const on = wildPres("bf" + b.i, dt, !rain && h >= 8 && h < 19.5);
+    b.f = on ? Math.min(1, b.f + fade) : Math.max(0, b.f - fade);
+    const B = b.body, show = b.f > 0 && nearCam(b.h.x, b.h.z, 46);
+    B.visible = show;
+    if (!show) continue;
+    const ox = B.x, oz = B.z;
+    b.a += dt * b.sp * (0.8 + 0.4 * Math.sin(time * 0.43 + b.i * 1.9));
+    B.x = b.h.x + Math.cos(b.a) * b.rr + Math.sin(b.a * 2.3 + b.i) * 0.7;
+    B.z = b.h.z + Math.sin(b.a * 0.9) * b.rr * 0.8 + Math.cos(b.a * 1.7 + b.i) * 0.6;
+    B.y = b.hh + Math.sin(time * 1.6 + b.i * 2) * 0.22 + Math.sin(b.a * 3.3) * 0.12;
+    if (Math.hypot(B.x - ox, B.z - oz) > 1e-4) B.ry = Math.atan2(B.x - ox, B.z - oz);
+    const fl = Math.sin(time * (17 + b.i % 3) + b.i * 1.3) * 0.85 * (Math.sin(time * 0.9 + b.i * 3) > -0.55 ? 1 : 0.15);      /* zwischendurch segeln sie */
+    b.wl.rz = fl; b.wr.rz = -fl;
+  }
+  /* Vogel auf dem Moosstamm: dreht den Kopf, pickt, ist nicht immer da */
+  if (Lf.bird) {
+    const v = Lf.bird, on = wildPres("pb", dt, !rain && h >= 6 && h < 19);
+    v.f = on ? Math.min(1, v.f + fade) : Math.max(0, v.f - fade);
+    v.body.visible = v.f > 0.02 && nearCam(v.p.x, v.p.z, 46);
+    if (v.body.visible) { v.body.ry = 1.2 + Math.sin(time * 0.6) * 0.5 * (Math.sin(time * 0.23) > 0 ? 1 : 0.2); v.body.rx = Math.max(0, Math.sin(time * 1.4)) > 0.9 ? 0.35 : 0; v.body.y = 0.42 - (1 - v.f) * 0.3; v.body.alpha = v.f; }
+  }
+  /* Lichtschächte: nur bei Sonne, atmen langsam, jeder in eigener Phase */
+  const sun = rain ? 0 : Math.max(0, Math.sin((h - 6.5) / 14 * Math.PI)) * (h > 6.5 && h < 20.5 ? 1 : 0);
+  for (const sh of Lf.shafts) {
+    const a = sun * 0.1 * (0.8 + 0.2 * Math.sin(time * 0.17 + sh.i * 2.4)), n = sh.n;
+    n.visible = a > 0.01 && nearCam(sh.x, sh.z, 60); n.alpha = a;
+  }
+  /* fallendes Laub: einzelne Blätter von alten Laubbäumen in Kameranähe */
+  Lf.nearT -= dt;
+  if (Lf.nearT <= 0) { Lf.nearT = 2; Lf.near = F.life.oldTrees.filter(t => nearCam(t.x, t.z, 30)); }
+  Lf.leafT -= dt;
+  if (Lf.leafT <= 0 && Lf.near.length) {
+    Lf.leafT = 0.8 + Math.random() * 2.2;
+    if (!rain || Math.random() < 0.3) {
+      const t = Lf.near[Math.floor(Math.random() * Lf.near.length)], hh = 2.6 + (t.s || 1.5) * 1.6, c = FOREST.LEAF_COLS[Math.floor(Math.random() * 3)];
+      FV.R.emit({ x: t.x + (Math.random() - 0.5) * 2, y: hh, z: t.z + (Math.random() - 0.5) * 2, vx: 0.2 + Math.random() * 0.3, vz: (Math.random() - 0.5) * 0.3, vy: -0.5, life: hh / 0.5, size: 0.13, size2: 0.12,
+        col: [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255, 1], fade: false, shape: 1 });
+    }
+  }
+}
+
+
+
+/* v77/v92: Krone eines Kulissenbaums ragt nicht über den Weg (auf der Kameraseite etwas mehr Abstand) */
+function bgWayOk(x, z, sp, sc, MK) {
+  return !((MK.at(x, z) & 2 || z > 19) && wayGap(x, z) < 1 + (BG_CR[sp] || 1) * sc + wayCamSide(x, z));
+}
+/* v92: Kulissenbäume standen seit v89 über die volle Zellbreite gestreut ohne Abstandsprüfung untereinander – manche Stämme
+   steckten im Nachbarn, Kronen ineinander. Jetzt: die fällbaren Bäume (in ausgewachsener Größe) und die Felsen stehen fest,
+   dann kommen die Kulissenbäume von groß nach klein. Wer mit einem schon stehenden Baum ineinandersteht, probiert feste
+   Ausweichstellen (Richtung aus seinem Schlüssel, bis ≈ 2 Einheiten), sonst entfällt er. Maße: treeBody / FTREE_DIM (erbe.js),
+   Regel: treeClash. Gleiche Welt → gleiches Ergebnis; Schlüssel (bgCut) bleiben gültig. */
+function worldTreeSpace(chunks, chunkOf, MK, rockObs) {
+  const C = 6, H = new Map(), key = (i, j) => (i + 1000) * 4096 + j + 1000;
+  const put = B => { const k = key(Math.floor(B.x / C), Math.floor(B.z / C)); let L = H.get(k); if (!L) H.set(k, L = []); L.push(B); };
+  const hits = B => {
+    const R = B.cr + 6, i0 = Math.floor((B.x - R) / C), i1 = Math.floor((B.x + R) / C), j0 = Math.floor((B.z - R) / C), j1 = Math.floor((B.z + R) / C);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const L = H.get(key(i, j)); if (L) for (const o of L) if (o.rock ? Math.hypot(o.x - B.x, o.z - B.z) < o.r + B.tr + 0.35 : treeClash(B, o)) return true; }
+    return false;
+  };
+  (S.farm.trees || []).forEach(t => put(treeBody(t.sp, Math.max(t.mx || 1, t.sz || 1), t.s || 1, t.x, t.z)));
+  rockObs.forEach(r => put({ rock: 1, x: r[0], z: r[1], r: r[2], cr: r[2] }));
+  const all = [];
+  for (const c of chunks.values()) for (const t of c.trees) { bgFinal(t); all.push({ t, c, B: treeBody(t.sp, t.fz, t.fs, t.x, t.z) }); }
+  all.sort((a, b) => b.B.y1 - a.B.y1 || a.t.k - b.t.k);
+  let moved = 0, dropped = 0;
+  for (const e of all) {
+    const t = e.t;
+    if (!hits(e.B)) { put(e.B); continue; }
+    let ok = false;
+    for (let i = 0; i < 6 && !ok; i++) {
+      const [x, z] = treeNudge(t.k, i, t.x, t.z, 0.55);
+      const B = treeBody(t.sp, t.fz, t.fs, x, z);
+      if (!bgTreeOk(x, z, MK) || !bgWayOk(x, z, t.sp, t.s, MK) || hits(B)) continue;
+      t.x = t.fx = +x.toFixed(2); t.z = t.fzz = +z.toFixed(2); e.B = B; ok = true; moved++;
+      const c2 = chunkOf(t.x, t.z);
+      if (c2 !== e.c) { e.c.trees.splice(e.c.trees.indexOf(t), 1); c2.trees.push(t); }
+    }
+    if (ok) { put(e.B); continue; }
+    e.c.trees.splice(e.c.trees.indexOf(t), 1); dropped++;
+  }
+  return { trees: all.length, moved, dropped };
+}
+
+/* ===================== v92: Gelände mit eingebautem Waldboden ===================== */
+/* Grundfarben liegen auf dem 4er-Gitter (GC). Wo Waldbodenflecken liegen, wird die Kachel in 3 × 3 Teilkacheln (1⅓ m) geteilt
+   und der Fleck geht als Farbfeld in die Eckfarben ein: weiche, unregelmäßige Ränder, keine zweite Fläche über dem Boden.
+   (v91 legte jeden Fleck als eigenes 7-Eck knapp über den Boden; sein Rand lief zur Grundfarbe statt zum Fleck darunter aus –
+   daher harte Kanten, helle Ränder und übereinanderliegende Flächen.) Kanten zu ungeteilten Nachbarn bleiben nahtlos: Der Einfluss
+   eines Flecks endet innerhalb der markierten Kacheln, dort ist die Farbe genau die Dreiecks-Interpolation der groben Kachel. */
+const GROUND_SUB = 3;
+const GROUND_A = { moss: 0.72, damp: 0.7, leaf: 0.78, needle: 0.72, earth: 0.8, glade: 0.42 };     /* Deckkraft je Bodenart */
+function worldGround(chunkOf, GC, nx, nz, cell, gcAt, F) {
+  const W = WGRID, N = GROUND_SUB, sc = cell / N, col = h => G3.col(h);
+  const prep = [];
+  if (F && typeof FOREST !== "undefined") F.patches.forEach(p => {
+    const D = FOREST.PATCH[p.k], base = col(D.cols[Math.min(D.cols.length - 1, Math.floor(p.tone * D.cols.length))]);
+    const br = 0.94 + 0.12 * ((p.seed % 97) / 97), warm = p.warm ? 1.05 : 1, ex = Math.sqrt(p.ecc), h = p.seed * 0.0137;
+    prep.push({ x: p.x, z: p.z, r: p.r, ex, ez: 1 / ex, c: Math.cos(p.rot), s: Math.sin(p.rot), R: p.r * ex * 1.33 + 0.02,
+      s1: h % 6.283, s2: (h * 1.7) % 6.283, s3: (h * 2.9) % 6.283, a: GROUND_A[p.k] || 0.7,
+      col: [Math.min(1, base[0] * br * warm), Math.min(1, base[1] * br * warm), Math.min(1, base[2] * br)] });
+  });
+  /* Kacheln, die ein Fleck berührt (Bereich inklusive Rand), mit ihren Flecken */
+  const cellP = new Map();
+  prep.forEach((q, n) => {
+    const i0 = Math.max(0, Math.floor((q.x - q.R - W.x0) / cell)), i1 = Math.min(nx - 1, Math.floor((q.x + q.R - W.x0) / cell));
+    const j0 = Math.max(0, Math.floor((q.z - q.R - W.z0) / cell)), j1 = Math.min(nz - 1, Math.floor((q.z + q.R - W.z0) / cell));
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const k = j * nx + i; let L = cellP.get(k); if (!L) cellP.set(k, L = []); L.push(n); }
+  });
+  /* Farbe eines Punktes: Grundfarbe, darüber die Flecken in fester Reihenfolge (Mitte deckend, Rand weich, Umriss mit Wellen) */
+  const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const colAt = (x, z, L) => {
+    const g = gcAt(x, z), c = [g[0], g[1], g[2]];
+    for (const n of L) {
+      const q = prep[n], dx = x - q.x, dz = z - q.z;
+      if (dx > q.R || dx < -q.R || dz > q.R || dz < -q.R) continue;
+      const u = (q.c * dx + q.s * dz) / (q.r * q.ex), v = (-q.s * dx + q.c * dz) / (q.r * q.ez), d = Math.sqrt(u * u + v * v);
+      if (d > 1.33) continue;
+      const t = Math.atan2(v, u), m = 1 + 0.16 * Math.sin(3 * t + q.s1) + 0.1 * Math.sin(5 * t + q.s2) + 0.06 * Math.sin(2 * t + q.s3);
+      const w = 1 - ss(0.3, 1, d / m);
+      if (w <= 0) continue;
+      const a = w * q.a;
+      c[0] += (q.col[0] - c[0]) * a; c[1] += (q.col[1] - c[1]) * a; c[2] += (q.col[2] - c[2]) * a;
+    }
+    return c;
+  };
+  /* Eckfarben des feinen Gitters einmal je Punkt (gemeinsame Kanten haben so garantiert dieselbe Farbe) */
+  const FX = nx * N + 1, vc = new Map();
+  const vAt = (I, J, L) => { const k = J * FX + I; let c = vc.get(k); if (!c) { c = colAt(W.x0 + I * sc, W.z0 + J * sc, L); vc.set(k, c); } return c; };
+  let fine = 0, coarse = 0;
+  for (let i = 0; i < nx; i++)
+    for (let j = 0; j < nz; j++) {
+      const x = W.x0 + i * cell, z = W.z0 + j * cell;
+      if (x >= HOFG.x0 && x + cell <= HOFG.x1 && z >= HOFG.z0 && z + cell <= HOFG.z1) continue;     /* Hofwiese kommt extra */
+      if (lakeE(x + cell / 2, z + cell / 2) < 0.8) continue;                          /* unter Wasser */
+      const g = chunkOf(x + 0.1, z + 0.1).g, L = cellP.get(j * nx + i);
+      if (!L) {
+        const c00 = GC[j * (nx + 1) + i], c10 = GC[j * (nx + 1) + i + 1], c01 = GC[(j + 1) * (nx + 1) + i], c11 = GC[(j + 1) * (nx + 1) + i + 1];
+        g.quad(x, z, cell, c00, c10, c01, c11); coarse++;
+        continue;
+      }
+      for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) {
+        const I = i * N + a, J = j * N + b;
+        g.quad(x + a * sc, z + b * sc, sc, vAt(I, J, L), vAt(I + 1, J, L), vAt(I, J + 1, L), vAt(I + 1, J + 1, L));
+      }
+      fine++;
+    }
+  WV.groundInfo = { coarse, fine, sub: N, verts: vc.size };
+}
+
 /* --------------------------- Kulisse bauen ----------------------------- */
 function worldStatic() {
   const R = FV.R;
@@ -392,22 +718,20 @@ function worldStatic() {
   const nx = Math.round((WGRID.x1 - WGRID.x0) / cell), nz = Math.round((WGRID.z1 - WGRID.z0) / cell);
   const GC = new Array((nx + 1) * (nz + 1));
   for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) GC[j * (nx + 1) + i] = G3.col(worldGroundCol(WGRID.x0 + i * cell, WGRID.z0 + j * cell));
-  for (let i = 0; i < nx; i++)
-    for (let j = 0; j < nz; j++) {
-      const x = WGRID.x0 + i * cell, z = WGRID.z0 + j * cell;
-      if (x >= HOFG.x0 && x + cell <= HOFG.x1 && z >= HOFG.z0 && z + cell <= HOFG.z1) continue;     /* Hofwiese kommt extra */
-      if (lakeE(x + cell / 2, z + cell / 2) < 0.8) continue;                          /* unter Wasser */
-      const g = chunkOf(x + 0.1, z + 0.1).g;
-      const c00 = GC[j * (nx + 1) + i], c10 = GC[j * (nx + 1) + i + 1], c01 = GC[(j + 1) * (nx + 1) + i], c11 = GC[(j + 1) * (nx + 1) + i + 1];
-      g.quad(x, z, cell, c00, c10, c01, c11);
-    }
+  /* Bodenfarbe aus dem Gitter (dieselbe Dreiecksaufteilung wie die Kacheln, ohne die Rauschfunktionen neu zu rechnen) – für weiche Ränder der Bodenflecken */
+  const gcAt = (x, z) => {
+    const fi = (x - WGRID.x0) / cell, fj = (z - WGRID.z0) / cell, i = clamp(Math.floor(fi), 0, nx - 1), j = clamp(Math.floor(fj), 0, nz - 1), u = clamp(fi - i, 0, 1), v = clamp(fj - j, 0, 1);
+    const c00 = GC[j * (nx + 1) + i], c10 = GC[j * (nx + 1) + i + 1], c01 = GC[(j + 1) * (nx + 1) + i], c11 = GC[(j + 1) * (nx + 1) + i + 1];
+    return [0, 1, 2].map(k => v >= u ? c00[k] + (c11[k] - c01[k]) * u + (c01[k] - c00[k]) * v : c00[k] + (c10[k] - c00[k]) * u + (c11[k] - c10[k]) * v);
+  };
+  /* v92: die Bodenkacheln selbst entstehen erst nach dem Waldboden (worldGround) – dessen Flecken gehen in die Eckfarben ein */
   /* Kulissenbäume: dichter Wald, lockere Bäume am See und im Osten. v56: jeder hat eine Art
      (Birke, Kiefer, Fichte, Buche, Eiche, Kirsche) und lässt sich antippen – dann wird er ein
      echter Baum (bgPromote). Die Bäume je Kachel liegen in WV.bgChunks.
      v90: Kulissenbäume stehen von Anfang an in ihrer endgültigen Form (dasselbe Modell wie nach dem
      Antippen) und werden als Instanzen gezeichnet – siehe bgFinal / bgChunkBuild. */
   const F32 = mb => new Float32Array(mb.v);
-  const fern = F32(FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog());
+  const fern = F32(FWM.fern2 ? FWM.fern2() : FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog());
   /* v86: sieben Buscharten (bushes.js) – je Typ drei Formvarianten, von allen Büschen gemeinsam genutzt */
   WV.bushm = {}; WV.bushes = []; WV.bushInfo = null; WV.grass = []; WV.grassm = [];
   if (typeof BUSH !== "undefined") WV.grassm = [0, 1, 2].map(v => F32(FWM.grassTuft(v)));
@@ -441,7 +765,7 @@ function worldStatic() {
         /* Waldboden: Farn, Pilze, Totholz – nur in Wegnähe, wo man hinsieht */
         if (f > 0.5 && r0 < 0.98 && (MK.at(x, z) & 2) && bgTreeOk(x, z, MK)) {
           const c = chunkOf(x, z).d, g = wayGap(x, z);     /* v77: Busch und Totholz liegen neben dem Weg, nicht darauf */
-          if (r1 < 0.35) { if (g > 1.0 + 0.23 * (0.9 + r2 * 0.5)) c.add(fern, x, z, r2 * 6.28, 0.9 + r2 * 0.5); }
+          if (r1 < 0.35) { if (g > 1.0 + 0.23 * (0.9 + r2 * 0.5)) chunkOf(x, z).v.add(fern, x, z, r2 * 6.28, 0.75 + r2 * 0.4); }     /* v92: Farn in die Wind-Kachel */
           else if (r1 < 0.4) { if (g > 1.2) c.add(r2 < 0.5 ? mush : mush2, x, z, r2 * 6.28, 1); }
           else if (r1 < 0.44) { if (g > 1.0 + 0.82) { c.add(dlog, x, z, r2 * 6.28, 1); logObs.push([x, z, 0.9]); } }
           /* v86: der einzelne alte Busch (r1 < 0,5) entfällt – Büsche kommen aus dem Buschsystem (worldBushes, Verhältnis 7 : 1) */
@@ -453,7 +777,7 @@ function worldStatic() {
       const zone = forestZone(x, z), alt = zone === "alt", sp = pickSp(zone, f < 0.5, r1);
       const sc = alt ? 1.55 + r2 * 0.7 : f > 0.5 ? 1.05 + r2 * 0.6 : 0.9 + r2 * 0.4;
       /* v77: die Krone darf nicht über den Weg ragen (vorher nur 2,2 Abstand zur Wegmitte, egal wie groß der Baum) */
-      if ((MK.at(x, z) & 2 || z > 19) && wayGap(x, z) < 1 + (BG_CR[sp] || 1) * sc + wayCamSide(x, z)) continue;
+      if (!bgWayOk(x, z, sp, sc, MK)) continue;
       chunkOf(x, z).trees.push({ k, sp, v: Math.floor(r2 * 3), x, z, ry: r1 * 6.28, s: sc });
     }
   /* Felsen im Wald */
@@ -463,13 +787,31 @@ function worldStatic() {
     chunkOf(x, z).d.add(rocks[i % 3], x, z, ry, sc);
     rockObs.push([x, z, 0.55 * [0.9, 1.4, 2.0][i % 3] * sc]);
   }
+  /* v92: Kulissenbäume entzerren – je Art und Größe, mit fällbaren Bäumen und Felsen als festen Hindernissen */
+  WV.spaceInfo = worldTreeSpace(chunks, chunkOf, MK, rockObs);
+  /* v91: versteckte Lichtungen und Senken planen – die Kulissenbäume dort werden entnommen, die Büsche setzen sich an den Rand */
+  let fplan = null;
+  WV.forest = null;
+  if (typeof FOREST !== "undefined") {
+    try {
+      const ftr = []; for (const c of chunks.values()) c.trees.forEach(t => ftr.push(t));
+      fplan = FOREST.plan({ seed: forestSeed(), area: { x0: WGRID.x0, z0: WGRID.z0, x1: WGRID.x1, z1: WGRID.z1 - 85 }, trees: ftr, inForest: (x, z) => forestK(x, z) > 0.2, forestK, wayGap,
+        ok: (x, z, r) => wFreeGround(x, z, r, MK), wet: wWet, clearings: FWORLD.clearings.map(c => ({ x: c[0], z: c[1], r: c[2] })) });
+      const gone = fplan.hidden.concat(fplan.hollow);
+      for (const c of chunks.values()) if (c.trees.length) c.trees = c.trees.filter(t => !gone.some(h => Math.hypot(t.x - h.x, t.z - h.z) < h.r + 0.5));
+    } catch (e) { console.warn("Waldplan:", e); fplan = null; }
+  }
   /* v86–v89: Büsche (eignungsgesteuert, Menge ergibt sich aus der Waldsituation – keine feste Zahl pro Baum) und Grasbüschel */
   if (typeof BUSH !== "undefined") {
     const trees = [];
     for (const c of chunks.values()) c.trees.forEach(t => trees.push(t));
     (S.farm.trees || []).forEach(t => trees.push(t));
     const tB = performance.now();
-    const res = worldBushes(trees, MK, logObs.concat(rockObs), rockObs);
+    const res = worldBushes(trees, MK, logObs.concat(rockObs), rockObs, fplan ? fplan.hidden.concat(fplan.hollow) : null);
+    /* v91: Waldboden, Ökologie, besondere Orte, Büsche mit Überraschungen (forest.js) */
+    if (typeof FOREST !== "undefined" && fplan) {
+      try { WV.forest = worldForest(chunks, res, fplan, MK, chunkOf, rockObs, gcAt); } catch (e) { console.warn("Waldboden:", e); WV.forest = null; }
+    }
     res.ms = performance.now() - tB;
     WV.bushes = res.instances; WV.grass = res.grass.instances;
     WV.bushInfo = { trees: trees.length, ms: +res.ms.toFixed(0), placed: res.placed, byType: res.byType, groups: res.groups, singles: res.singles, kinds: res.kinds,
@@ -477,7 +819,8 @@ function worldStatic() {
     res.instances.forEach(b => (VEGQ.bushShadow ? chunkOf(b.position[0], b.position[2]).d : chunkOf(b.position[0], b.position[2]).g).add(WV.bushm[b.typeId][b.variantSeed % BUSH.VARIANTS], b.position[0], b.position[2], b.rotationY, b.scale[0], b.scale[1], b.tint));
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
-  WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = false; VEGQ.why = "start";
+  worldGround(chunkOf, GC, nx, nz, cell, gcAt, WV.forest);
+  WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
   R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map();
   for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
@@ -485,7 +828,7 @@ function worldStatic() {
     if (c.v.n) {
       /* v88: Gras je Chunk in einem eigenen Knoten – ohne Schattenwurf, Wind über den gemeinsamen Shader (sway = 0 im statischen Betrieb) */
       const [i, j] = key.split(",").map(Number);
-      const vn = fnode(R.mesh(c.v.out()), { shadow: false, sway: 0, swayT: VEGQ.swayT });
+      const vn = fnode(R.mesh(c.v.out()), { shadow: false, sway: 0, swayT: VEGQ.swayT, plant: 1 });
       R.nodes.push(vn);
       VEGQ.nodes.push({ node: vn, x: WGRID.x0 + (i + 0.5) * CH, z: WGRID.z0 + (j + 0.5) * CH });
     }
@@ -623,6 +966,7 @@ function worldStatic() {
   worldSyncBarriers();
   worldLocks();
   worldMakeWild();
+  worldMakeLife();
 }
 
 /* --------------------------- Hof je Ausbaustufe ------------------------- */
@@ -2314,6 +2658,12 @@ function worldTap(x, y) {
     if (!w.seen) { w.seen = true; farmXP(1); xpFly(x, y, 1); }
     return true;
   }
+  /* v91: Igel im Busch – zieht sich zurück, ein Fund gibt einmal 1 EP */
+  if (!ho && !ht && WV.life) for (const q of WV.life.peek) if (q.n.visible && q.f > 0.5 && near(q.n.x, 0.25, q.n.z, 30)) {
+    q.hide = 25; sfx("pop");
+    if (!q.seen) { q.seen = true; farmXP(1); xpFly(x, y, 1); }
+    return true;
+  }
   /* Eulen und Fledermäuse lassen sich aufscheuchen */
   if (!ho && !ht) for (const b of WV.fly) if (b.k !== "bird" && b.body.visible && b.f > 0.5 && near(b.body.x, b.body.y, b.body.z, 30)) {
     b.scare = 2.5;
@@ -2652,7 +3002,7 @@ function vegMode(m) {
   if (m === "static") vegSet(false, "manuell statisch"); else if (m === "wind") vegSet(true, "manuell Wind");
   return m;
 }
-function vegSet(on, why) { VEGQ.on = on; VEGQ.why = why; if (!on) for (const e of VEGQ.nodes) e.node.sway = 0; }
+function vegSet(on, why) { VEGQ.on = on; VEGQ.why = why; }
 function vegInfo() {
   return { mode: VEGQ.mode, on: VEGQ.on, why: VEGQ.why, fps: Math.round(VEGQ.fps), chunks: VEGQ.nodes.length, animated: VEGQ.nodes.filter(e => e.node.sway > 0).length,
     grassTris: VEGQ.nodes.reduce((a, e) => a + e.node.mesh.count / 3, 0) };
@@ -2671,26 +3021,30 @@ function vegStep(now) {
       VEGQ.samples.length = 0; VEGQ.fps = 1000 / mean;
       if (VEGQ.mode === "auto") {
         if (!VEGQ.on) {
-          /* Wind erst nach 6 s Laufzeit und zwei guten Fenstern in Folge: im Mittel ≥ 50 Bilder/s (≤ 20 ms) */
-          VEGQ.good = (mean <= 20 && t - VEGQ.t0 > 6000 && t > VEGQ.banUntil) ? VEGQ.good + 1 : 0;
+          /* nach einer Sperre wieder an, wenn zwei Fenster in Folge flüssig sind (im Mittel ≥ 36 Bilder/s) */
+          VEGQ.good = (mean <= 28 && t > VEGQ.banUntil) ? VEGQ.good + 1 : 0;
           if (VEGQ.good >= 2) { vegSet(true, "auto: " + Math.round(1000 / mean) + " Bilder/s"); VEGQ.good = 0; }
-        } else if (mean > 30) {
-          /* Einbruch unter ~33 Bilder/s: Wind aus und 60 s Sperre */
+        } else if (mean > 40) {
+          /* echter Einbruch unter 25 Bilder/s: Wind sanft aus und 60 s Sperre */
           vegSet(false, "auto: aus bei " + Math.round(1000 / mean) + " Bilder/s"); VEGQ.banUntil = t + 60000;
         }
       }
     }
   }
   VEGQ.prev = FV.busy ? t : 0;
-  /* Amplitude je Chunk: nur nah an der Kamera, im Sturm kräftiger, nach langer Ruhe aus */
-  if (t < VEGQ.checkAt) return;
-  VEGQ.checkAt = t + 400;
-  if (!VEGQ.on) return;
-  const c = FV.R.cam, idle = t - (FV.touchAt || VEGQ.t0) > VEGQ.idleOff && !(typeof worldBusy === "function" && worldBusy());
-  const A = idle ? 0 : VEGQ.grassSway * (1 + Math.min(1, WV.gust || 0) * 1.2);
+  /* Wind: Stärke folgt dem Wetter in einigen Sekunden, die Richtung dreht sehr langsam */
+  const dt = Math.min(0.1, VEGQ.last ? (t - VEGQ.last) / 1000 : 0); VEGQ.last = t;
+  const F = S.farm, wk = typeof farmEvOn === "function" && farmEvOn("sturm") ? "sturm" : F && F.wx ? F.wx.k : "sonne";
+  VEGQ.wind += ((WIND_WX[wk] || 0.85) - VEGQ.wind) * Math.min(1, dt * 0.35);
+  const wa = 0.64 + 0.3 * Math.sin(t / 97000), E = FV.R.env;
+  E.wind = [Math.cos(wa), Math.sin(wa), VEGQ.wind, 0];
+  /* Amplitude je Chunk: nah an der Kamera voll, sonst aus – immer weich überblendet (≈ 1,5 s), nie hart */
+  const c = FV.R.cam, A = VEGQ.on ? VEGQ.grassSway : 0, k = Math.min(1, dt * 1.6);
   for (const e of VEGQ.nodes) {
-    const d = Math.hypot(e.x - c.tx, e.z - c.tz);
-    e.node.sway = d < VEGQ.range + 12 ? A : 0;     /* Chunkmitte + halbe Diagonale ≈ 17 */
+    const goal = Math.hypot(e.x - c.tx, e.z - c.tz) < VEGQ.range + 12 ? A : 0;
+    const n = e.node;
+    n.sway += (goal - n.sway) * k;
+    if (n.sway < 0.002 && goal === 0) n.sway = 0;
   }
 }
 function worldBusy() { return !!(WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
@@ -2700,6 +3054,7 @@ function worldStep(dt, time) {
   stepFalling();
   stepReveal(dt);
   stepWild(dt, time);
+  stepLife(dt, time);
   stepPets(dt, time);
   stepParcel(dt, time);
   stepTreasure(dt, time);

@@ -1,5 +1,73 @@
 # Änderungen – kurz für den Kollegen
 
+## v92 (aufbauend auf v91) – Waldsanierung: Boden ohne Überlagerungen, Bäume nicht mehr ineinander, Blumen und Wind
+
+**Befunde (aus dem Code und Messungen, nicht vermutet):**
+1. **Bodenfehler** (seit v91): Jeder Waldbodenfleck war ein eigenes 7-Eck knapp über dem Boden. Flecken lagen übereinander, und der Rand jedes Flecks lief zur *Grundfarbe* aus statt zum Fleck darunter. Das gab harte Kanten, helle Ränder und eckige Formen. Prüfung aller waagrechten Bodenflächen: **3 775 exakt übereinanderliegende Dreiecke und 49 393 mit weniger als 4 mm Abstand**. Die flach gedrückten Moospolster lasen sich von oben als helle Scherben.
+2. **Helle Stellen unter Blumen:** Die Blumen standen absichtlich auf dem hellen „Lichtboden“-Fleck (hellstes Grün, noch um 8 % aufgehellt). Jede Blumengruppe hatte außerdem ein hellgrünes Blatt flach am Fuß, das voll in der Sonne lag. Kleine Steine waren zu hell grau und mit einem Moosstück in der Mitte, von oben ein weißer Ring.
+3. **Bäume ineinander** (seit v89): Kulissenbäume wurden über die volle Zellbreite (3,2) gestreut, **ohne jede Abstandsprüfung untereinander**. Zu fällbaren Bäumen galt pauschal 2,2, unabhängig von der Größe; eine uralte Eiche hat aber 5,1 Kronenradius. Fällbare Bäume untereinander hatten pauschal 2,6. Gemessen mit den echten Modellmaßen: **28 Stamm-in-Stamm, 28 Stämme mitten in fremder Krone, 307 starke Kronenüberschneidungen** (Kulisse/Kulisse), dazu 20 Kulisse/fällbar und 6 fällbar/fällbar.
+4. **Wind:** Der Shader verschob die Pflanzen linear mit der Höhe, also als starre Scherung. Die ganze Pflanze hatte eine Phase, die Spitze rund 3 cm Ausschlag. Im Auto-Modus kam der Wind erst ab ≥ 50 Bildern/s und ging nach 90 s ohne Berührung aus. Blumen und Farn (v91) waren gar nicht animiert.
+
+**Behebung:**
+- **Waldboden als Farbfeld im Gelände** (`worldGround`): Wo Flecken liegen, wird die 4er-Bodenkachel in 3 × 3 Teilkacheln (1⅓) geteilt, und die Flecken gehen in die Eckfarben ein. Mitte deckend, Rand weich, Umriss gewellt, Deckkraft je Bodenart; der Lichtboden ist nur noch ein Hauch. **Keine zweite Fläche mehr über dem Boden.** Kanten zu ungeteilten Nachbarkacheln sind nahtlos: Der Einfluss endet innerhalb der markierten Kacheln, dort gilt genau die Dreiecks-Interpolation der groben Kachel. Jede Ecke wird einmal berechnet. Laubblätter liegen nie übereinander. Prüfung danach: **0 übereinanderliegende Dreiecke (auch nicht unter 4 mm)**. `WBuf.blob` und die Moospolster sind entfernt; Moos ist Bodenfarbe, in Senken liegen bemooste Steine.
+- **Blumen neu** (`FWM.flowers`): 8 Varianten (4 Farben × Sternblüten/Ähren). Klare, nach oben gerichtete Blüte, dreikantiger Stängel, Blatt am Stängel, **dunkle** Rosette am Boden statt hellem Blatt. **Farn neu** (`fern2`): 6 gefiederte Wedel. Steine dunkler, Moos deckt die Oberseite.
+- **Baumabstände je Art und Größe:**
+  - Maße aus den Modellen in `FTREE_DIM` (erbe.js): Kronenradius, Stammradius, Kronenunter- und -oberkante. Ein Node-Test rechnet sie aus `FWM.tree` nach.
+  - Regel `treeClash`: Stämme brauchen ≥ 0,3 Luft. Kronen auf gleicher Höhe dürfen höchstens 80 % des kleineren Radius ineinandergreifen (gleich große: Abstand ≥ 1,2 r). Ein kleiner Baum darf unter den Rand einer höher ansetzenden Krone, aber nicht an deren Stamm.
+  - Kulissenbäume (`worldTreeSpace`): Fällbare Bäume (in ausgewachsener Größe) und Felsen stehen fest, dann kommen die Kulissenbäume von groß nach klein. Bei Konflikt gibt es feste Ausweichstellen aus dem Baumschlüssel, sonst entfällt der Baum. Ergebnis: von 3 080 sind 418 verschoben und 271 entfallen.
+  - Fällbare Bäume (`erbeSpaceTrees`): bei neuen Spielen und einmal für alte Stände (`F.v92s`). Der spätere rückt aus, keiner wird entfernt.
+  - Reproduzierbar, `bgCut`-Schlüssel bleiben gültig, Antippen/Befördern geprüft.
+- **Pflanzenwind** (gl3d.js, `uPlant`/`uWind`, eine Erweiterung des vorhandenen Wind-Shaders):
+  - Die Pflanzen biegen sich statt geschert zu werden: Fuß fest, Auslenkung überproportional zur Höhe, die Spitze schwingt verzögert nach (Phase sinkt mit der Höhe).
+  - Phase aus einer glatten Funktion des Ortes; eine Pflanze bleibt ganz, Nachbarn schwingen verschieden.
+  - Böen laufen als langsame Welle über die Fläche, mit einer kleinen Querbewegung. Beim Biegen sinkt die Spitze, nichts wird länger.
+  - Stärke nach Wetter (`WIND_WX`: Nebel 0,5 … Sturm 2,3), weich überblendet; Amplituden blenden je Kachel weich ein und aus.
+  - Blumen, Farn und Farn am Wegrand liegen jetzt in den Wind-Kacheln (ohne eigenen Schattenwurf, wie das Gras). Auto-Modus: Wind gleich an, aus erst unter 25 Bildern/s (60 s Sperre, danach wieder an). Kein Ausschalten nach Ruhe mehr.
+  - Bäume (Instanzen) behalten ihren bisherigen Wind.
+
+### Messung (Handy-Emulation 390 × 800, DSF 2, CPU 4× gedrosselt, SwiftShader; Wetter und Zeit fest)
+| Größe | v90 | v91 | v92 |
+|---|---|---|---|
+| Dreiecke, Ausschnitt (−60, 10) / dichter Wald (−125, −20) / Lichtung (−60, −55) | 35 725 / 45 253 / 25 075 | 80 634 / 91 362 / 62 457 | 65 160 / 74 435 / 70 327 |
+| Draw Calls | 33 / 31 / 21 | 33 / 31 / 24 | 36 / 36 / 27 |
+| Schatten-Dreiecke | 46 879 / 82 720 / 44 772 | 46 879 / 82 947 / 46 038 | 45 242 / 82 052 / 44 251 (weniger Bäume) |
+| Aufbau Waldboden (gedrosselt) | – | 1 954 ms | 1 540 ms |
+| übereinanderliegende Bodendreiecke (< 4 mm) | – | 53 168 | 0 |
+| Baum-Konflikte Stamm / Krone stark (gemessen am v91-Stand, Kulisse wie v90) | 28 / 307 (+26 mit fällbaren) | 28 / 307 (+26 mit fällbaren) | 0 / 0 Kulisse; 2 fällbar/fällbar (uralte Eichen) |
+Die zusätzlichen Draw Calls kommen von Wind-Kacheln, die jetzt Blumen/Farn tragen (vorher nur Gras). Zeiten aus dem Software-Renderer sind keine Handy-Werte; belastbar sind die Zähler.
+
+**Getestet:** `node tests/trees.test.js` (7: Maße = Modelle, Abstandsregel, reproduzierbar, kein Stamm im Stamm, Ausweichen ohne Entfernen), `node tests/forest.test.js` (15), `node tests/bushes.test.js` (30). Browser: keine Fehler, Bodenprüfung (überlagerte Flächen) und Baumprüfung wie oben, Befördern eines verschobenen Kulissenbaums, vier Seeds, Bilder aus der Spielkamera (Neigung wie im Spiel) an Waldrand, Lichtung, Senke, dichtem Wald, bei Nacht; Bildfolge zum Wind.
+**Nicht verifiziert / offen:** Wie sich der Wind auf einem echten Handy anfühlt (Stärke über `VEGQ.grassSway`, `WIND_WX` einstellbar). Flimmern beim Bewegen auf Geräten mit 16-Bit-Tiefenpuffer: geometrisch gibt es keine überlagerten Flächen mehr, auf einem echten Gerät nicht geprüft. Zwei uralte Eichen-Paare (fällbar) finden keinen freien Platz und überlappen weiter. Büsche bewegen sich weiterhin nicht im Wind.
+
+## v91 (aufbauend auf v90) – Lebendiger Wald: Waldboden, besondere Orte, Entdeckungen, kleines Leben
+
+**Befund (v90):** Der Boden war eine einzige grüne Fläche mit ein paar Farn-/Pilz-/Totholz-Stücken nur direkt an den Wegen (`worldStatic`, feste Wahrscheinlichkeiten). Büsche, Gras und Bäume waren gut verteilt, aber nichts verband sie mit dem Boden: kein Moos im Schatten, kein Laub unter alten Laubbäumen, keine Nadelschicht unter Fichten, keine offenen Lichtinseln, keine kleinen Orte zum Entdecken. Aus der Spielkamera (Südost, Abstand 22–50) wirkte der Wald deshalb flach und gleichförmig.
+
+**Jetzt – ein Regelwerk statt Streuung** (`forest.js`, rein und ohne Engine, in Node testbar; Aufbau in `worldview.js`):
+- **Ökologie je Punkt** (`feat`): Schatten (Baumdichte), Feuchte (Rauschen + Wassernähe + Schatten), Nadel-/Laubanteil, alter Laubbaum in der Nähe, Offenheit/Lichtung, Wegabstand, Buschnähe. Daraus entscheidet jedes Stück Boden, was dort wächst – keine freie Streuung.
+- **Bodenarten (Flecken, weiche Ränder zum Untergrund):** Moos (Schatten + feucht), feuchter Waldboden (nur Schatten + feucht, häufiger am Wasser), Laubschicht (unter Laubbäumen, besonders unter alten, mit einzelnen gelben/rostbraunen/dunkelbraunen Blättern), Nadelboden (unter Fichten/Kiefern), nackte Erde (an Wegen, Felsen, Buschfüßen, Waldrändern), heller Lichtboden (Lichtungen und offene Stellen). Je Fleck 7 Ecken mit gestörtem Radius, in die Länge gezogen, gedreht; Mitte in Bodenart-Farbe, Rand in der Farbe des darunterliegenden Bodens (`WBuf.blob`, Farbe aus dem Boden-Farbgitter).
+- **Inhalte, an Bodenart und Ort gebunden:** Moospolster und Farn auf Moos, Zweige/Rinde/Pilze auf Laub, rote Pilze im Nadelwald, braune/gelbe/weiße Pilze unter Laubbäumen, Kiesel und Steine auf Erde, Blumen (weiß/gelb/violett/rosa) nur im Licht, Steine mit Moos, Wurzelanläufe an alten Bäumen. Pilze stehen in Gruppen und häufiger auf feuchtem Boden.
+- **Vegetationszonen:** dichter Wald (wenig Unterwuchs), lichter Wald, dichter Unterwuchs (Büsche mit feuchtem Fuß), natürliche Ränder – kommen aus Baumdichte und Waldmaske, nicht aus Kacheln.
+- **Besondere Orte** (je nach Komposition 2–9 je Art, mit Schutzkreis gegen Überlappung): *verstecktes Lichtungsstück* (Bäume werden vor dem Buschaufbau entnommen, Büsche setzen sich an den Rand, Blumen, Steine, weiße Pilze, ab und zu ein Fundstück), *moosige Senke*, *alter Baum mit Wurzeln*, *umgestürzter Moosstamm mit Farn und Pilzen*, *Blumenwiese/Pilz-Farn-Feld*, *Sonnenplatz mit Lichtschacht*, *ungewöhnlich großer Busch*.
+- **Büsche als Entdeckungsorte** (rund 10 % der Büsche, der Rest bleibt normal; Obergrenzen je Art): Igel schaut aus dem Busch (auf die Kamera zugewandter Seite, mit Pfotenspur), Beeren (Farbe je Busch), Vogelnest mit Eiern, Spuren, extra dichter Busch, Laubhaufen (Blätter, Zweige, Früchte), Durchblick (zweiter Busch daneben, dahinter Stiefel/Laterne/Korb).
+- **Kleines Leben, nur an passenden Orten** (`stepLife`): Igel schieben sich aus ihrem Busch, bleiben und gehen wieder (eigene Zeiten je Tier über `wildPres`; nur bei Trockenheit; Antippen → zieht sich zurück, einmalig 1 EP); Falter schweben unregelmäßig über Blumenwiesen/Lichtinseln/versteckten Lichtungen (nur Tag, trocken, zwischendurch Segelflug); ein Vogel sitzt auf einem Moosstamm; vereinzelt fallendes Laub von alten Laubbäumen in Kameranähe; Lichtschächte nur bei Sonne, „atmen“ langsam. Kein Takt, keine Dauerpartikel, keine neuen dynamischen Schatten.
+- **Wiederholung vermeiden:** vier Kompositionen (`COMP`: Moosgrund, Laubwald, Nadelhang, Lichtungswald), gewählt über den Seed (`?fseed=7328…7331`, Standard 7331 = Lichtungswald); Fleckgrößen/-formen/-töne, Drehung und Maßstab je Ding, Schwerpunkte (je Komposition fünf Stellen, an denen eine Bodenart verstärkt wird) und Jitter-Raster statt festem Gitter. Ergebnis ist deterministisch (gleicher Seed → identisches Ergebnis).
+
+**Leistung:** Alles Statische steckt in den vorhandenen Boden-Kacheln (`chunk.g`, ohne Schatten) – **für die statischen Teile keine neuen Knoten, keine neuen Draw Calls, keine JS-Schleifen je Bild**. Das kleine Leben besteht aus rund 65 winzigen Knoten (Igel, Falter mit Flügeln, Vogel, Schächte), die nur in Kameranähe sichtbar geschaltet werden; `stepLife` rechnet nur für diese. Modelle bewusst grob (Blumen 42, Farn 21, Pilze 81, Moospolster 20, Zweig 18 Dreiecke; Farn vorher 84). Räumliche Abfragen mit numerischen Zellschlüsseln.
+
+### Messung (v90 → v91, Chromium/SwiftShader, Handy-Emulation 390×800, DSF 2, CPU 4× gedrosselt, Wetter/Uhrzeit fest)
+| Größe | v90 | v91 |
+|---|---|---|
+| Dreiecke Hauptdurchgang, Ausschnitt (−60, 10) / dichter Wald (−125, −20) | 35 725 / 45 253 | 80 634 / 91 362 |
+| Dreiecke Schattendurchgang | 46 879 / 82 720 | 46 879 / 82 947 (unverändert) |
+| Draw Calls | 33 / 31 | 33 / 31 |
+| Boden-Flecken / -Dinge im ganzen Wald (Standard-Seed) | – | ≈ 6 200 Flecken (≈ 144 000 Dreiecke inkl. Laubblättchen) / ≈ 7 800 Dinge (≈ 229 000 Dreiecke) |
+| Aufbau (`FOREST.generate` + Bau), Messumgebung gedrosselt 4× | – | ≈ 1,7–2,4 s, im Ladescreen versteckt (ungedrosselt ≈ 0,6–0,9 s) |
+**Grenzen:** Messwerte stammen vom Software-Renderer, nicht von einem Handy; belastbar sind Zähler (Dreiecke, Aufrufe). Im sichtbaren Ausschnitt verdoppelt der Waldboden die Dreiecke ohne zusätzliche Aufrufe – auf einem echten Handy bitte Bildrate im dichten Wald prüfen. Falls nötig: `FSCALE`/Dichte in `FOREST.COMP` senken (`flowers`, `cushion`) oder Flecken-Ecken in `WBuf.blob` weiter reduzieren.
+
+**Getestet:** `node tests/forest.test.js` (15 Tests: Determinismus, vier verschiedene Kompositionen, keine Dinge auf Wegen/Teich/Lichtungsmitte/Felsen/Stämmen, Ökologie-Regeln mit Zahlen, Entdeckungsgrenzen, Muster, Menge, Rechenzeit), `node tests/bushes.test.js` (30, unverändert). Browser: Aufbau ohne Fehler, Bilder aus der Spielkamera an allen Ortsarten, Antippen eines Igels, Falter/Lichtschacht/Vogel sichtbar, vier Seeds.
+**Noch nicht geprüft (bitte auf dem Handy ansehen):** Bildrate im dichten Wald, Gesamteindruck der Bodenfarben bei Abend/Nacht, ob der Igel/Vogel im echten Tagesverlauf oft genug zu sehen ist (Zeiten stehen in `stepLife`/`wildPres`), Gefühl der Menge an Entdeckungen.
+
 ## v90 (aufbauend auf v89) – Alle Waldbäume von Anfang an in Endform, Ladescreen
 
 **Vorher:** Kulissenbäume waren je Kachel zu einem Mesh aus der *einfachen* `FWM.bgTree`-Form (31–208 Dreiecke) verschmolzen, ohne Wind. Erst beim Antippen (`bgPromote`) wurde daraus ein echter Baum mit `FWM.tree` (200–1510 Dreiecke, anderer Größenklasse, Wind) – man sah den Wechsel.

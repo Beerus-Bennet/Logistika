@@ -315,14 +315,31 @@ const G3 = (() => {
   /* ------------------------------ Shader -------------------------------- */
   const VS = `#version 300 es
   layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor; layout(location=2) in vec3 aCol;
-  uniform mat4 uModel, uVP, uLVP; uniform float uTime, uSway, uSwayT, uWater;
+  uniform mat4 uModel, uVP, uLVP; uniform float uTime, uSway, uSwayT, uWater, uPlant; uniform vec4 uWind;
   out vec3 vNor; out vec3 vCol; out vec3 vW; out vec4 vL;
   void main(){
     vec4 w = uModel * vec4(aPos, 1.0);
     if (uSway > 0.0) {
       float h = max(0.0, aPos.y);
-      w.x += sin(uTime * uSwayT * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
-      w.z += cos(uTime * uSwayT * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
+      if (uPlant > 0.5) {
+        /* v92: Pflanzenwind (Gras, Blumen, Farn in den Boden-Kacheln; aPos.y = Höhe über dem Boden).
+           Biegung statt Scherung: der Fuß bleibt stehen, die Auslenkung wächst überproportional mit der Höhe, die Spitze
+           schwingt verzögert nach (Phase sinkt mit der Höhe). Die Phase kommt aus einer glatten Funktion des Ortes – Nachbarpflanzen
+           schwingen verschieden, eine Pflanze bleibt in sich ganz. Böen laufen als langsame Welle in Windrichtung über die Fläche.
+           uWind = (Richtung x, z, Stärke nach Wetter, –); uSway = Amplitude des Knotens (sanft ein-/ausgeblendet). */
+        vec2 p = w.xz, dir = uWind.xy;
+        float t = uTime * uSwayT;
+        float ph = dot(p, vec2(0.92, 0.61)) + 1.6 * sin(p.x * 0.37 - p.y * 0.53);
+        float gust = 0.55 + 0.45 * sin(t * 0.55 - dot(p, dir) * 0.11) * (0.7 + 0.3 * sin(t * 0.23 + p.x * 0.05 - p.y * 0.04));
+        float a = uSway * uWind.z * h * h / (h + 0.35);
+        float sw = sin(t * 2.3 + ph - h * 3.0) * 0.6 + sin(t * 3.9 + ph * 1.7 - h * 5.0) * 0.22;
+        vec2 d = dir * (0.45 * gust + sw * (0.35 + 0.65 * gust)) * a + vec2(-dir.y, dir.x) * sin(t * 3.1 + ph * 1.3 - h * 4.0) * 0.18 * a;
+        w.xz += d;
+        w.y -= dot(d, d) / max(h, 0.05) * 0.5;      /* beim Biegen sinkt die Spitze etwas – nichts wird länger */
+      } else {
+        w.x += sin(uTime * uSwayT * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
+        w.z += cos(uTime * uSwayT * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
+      }
     }
     vW = w.xyz; vNor = mat3(uModel) * aNor; vCol = aCol;
     vL = uLVP * vec4(w.xyz + normalize(vNor) * 0.035, 1.0);   /* Normal-Offset: keine Schattenakne */
@@ -517,7 +534,7 @@ const G3 = (() => {
       cam: { tx: 0, ty: 0, tz: 0, dist: 30, yaw: Math.PI / 4, pitch: 0.92, fov: 0.55 },
       env: {
         sun: norm([0.55, 0.85, 0.35]), sunCol: [1.0, 0.94, 0.82], sky: [0.66, 0.78, 0.92], ground: [0.42, 0.40, 0.32],
-        fog: [0.72, 0.84, 0.95], fogR: [55, 95], night: 0
+        fog: [0.72, 0.84, 0.95], fogR: [55, 95], night: 0, wind: [0.8, 0.6, 1, 0]
       },
       shadowBox: opts.shadowBox || 24,
       /* gesperrte Gebiete: { r: [x0, z0, x1, z1], c: [cx, cz], rad, a } */
@@ -600,7 +617,7 @@ const G3 = (() => {
     /* Knoten: Mesh + Lage. Kinder erben die Lage der Eltern. */
     R.node = function (mesh, o) {
       const n = Object.assign({ mesh, x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, sx: 1, sy: 1, sz: 1, visible: true,
-        tint: null, glow: 0, alpha: 1, sway: 0, swayT: 1, water: 0, shadow: true, children: [], parent: null, W: ID() }, o || {});
+        tint: null, glow: 0, alpha: 1, sway: 0, swayT: 1, plant: 0, water: 0, shadow: true, children: [], parent: null, W: ID() }, o || {});
       if (o && o.s != null) { n.sx = n.sy = n.sz = o.s; }
       return n;
     };
@@ -853,6 +870,8 @@ const G3 = (() => {
         gl.uniform3fv(u.uCam, R.eye);
         gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
         gl.uniform1f(u.uNight, E.night || 0);
+        if (u.uWind) gl.uniform4fv(u.uWind, E.wind || [0.8, 0.6, 1, 0]);
+        if (u.uPlant) gl.uniform1f(u.uPlant, 0);
         /* Sperrgebiete */
         gl.uniform1i(u.uLockN, LK.length);
         if (LK.length && u["uLockR[0]"]) { gl.uniform4fv(u["uLockR[0]"], lkA); gl.uniform4fv(u["uLockC[0]"], lkB); }
@@ -865,7 +884,7 @@ const G3 = (() => {
       const draw = (n, st) => {
         if (!n.mesh.vao) return;
         gl.uniformMatrix4fv(u.uModel, false, n.W);
-        gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, n.water);
+        gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, n.water); gl.uniform1f(u.uPlant, n.plant || 0);
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
         gl.bindVertexArray(n.mesh.vao);
@@ -920,7 +939,7 @@ const G3 = (() => {
           P[0] = sx; P[5] = sy; P[10] = sz; P[12] = cx - cx * sx; P[13] = cy - cy * sy + 0.012; P[14] = cz - cz * sz;
           mul(Wp, n.W, P);
           gl.uniformMatrix4fv(u.uModel, false, Wp);
-          gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, 0);
+          gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, 0); gl.uniform1f(u.uPlant, n.plant || 0);
           gl.uniform4f(u.uTint, o[0], o[1], o[2], 1);
           gl.uniform1f(u.uGlow, 0.4); gl.uniform1f(u.uAlpha, o[3]);
           gl.bindVertexArray(n.mesh.vao);

@@ -104,11 +104,61 @@ function nearPathPt(x, z) {
   }
   return best;
 }
-/* v77: Kronenradius je Art und Größe 1 … 4 (gemessen an FWM.tree, breiteste Variante). Ein Baum steht so weit
-   vom Weg, dass seine Krone im ausgewachsenen Zustand nicht über den Schotter ragt (Wegmitte bis Kante 0,9). */
-const FTREE_CR = { birke: [0.86, 1.26, 1.77, 2.48], kiefer: [1.05, 1.55, 2.38, 3.01], fichte: [0.77, 1.27, 1.79, 2.7],
-  buche: [1.24, 1.83, 2.7, 3.67], eiche: [1.63, 2.65, 3.71, 5.13], kirsche: [0.81, 1.24, 1.71, 2.37] };
+/* v92: Maße je Art und Größe 1 … 4 bei Maßstab 1, gemessen an FWM.tree (breiteste der drei Varianten; tests/trees.test.js
+   rechnet sie aus den Modellen nach): [Kronenradius, Stammradius am Fuß, Unterkante der Krone, Höhe].
+   Ein Baum steht so weit vom Weg, dass seine Krone im ausgewachsenen Zustand nicht über den Schotter ragt (Wegmitte bis Kante 0,9). */
+const FTREE_DIM = {
+  birke:   [[0.86, 0.1, 0.81, 2.81], [1.26, 0.15, 1.26, 4.31], [1.77, 0.2, 1.75, 5.92], [2.48, 0.26, 2.44, 8.26]],
+  kiefer:  [[1.05, 0.13, 1.82, 2.91], [1.55, 0.19, 2.83, 4.51], [2.38, 0.26, 3.92, 6.25], [3.01, 0.35, 5.41, 8.72]],
+  fichte:  [[0.94, 0.12, 0.15, 3.13], [1.45, 0.17, 0.23, 4.85], [2.01, 0.23, 0.32, 6.73], [2.81, 0.31, 0.45, 9.39]],
+  buche:   [[1.24, 0.17, 0.71, 2.81], [1.83, 0.25, 1.14, 4.37], [2.7, 0.33, 1.56, 6.08], [3.67, 0.46, 2.16, 8.23]],
+  eiche:   [[1.63, 0.24, 0.73, 2.42], [2.65, 0.35, 1.14, 3.74], [3.71, 0.47, 1.59, 5.22], [5.13, 0.94, 0.12, 7.29]],
+  kirsche: [[0.81, 0.13, 0.88, 2.54], [1.24, 0.19, 1.37, 3.92], [1.71, 0.26, 1.91, 5.42], [2.37, 0.35, 2.62, 7.5]]
+};
+const FTREE_CR = Object.fromEntries(Object.entries(FTREE_DIM).map(([k, a]) => [k, a.map(e => e[0])]));
 function treeCrown(sp, sz) { const a = FTREE_CR[sp] || FTREE_CR.buche; return a[clamp(Math.round(sz || 1), 1, 4) - 1]; }
+/* Platzbedarf eines Baums an (x, z): Krone, Stamm und Höhenbereich der Krone, mit Maßstab s */
+function treeBody(sp, sz, s, x, z) {
+  const e = (FTREE_DIM[sp] || FTREE_DIM.buche)[clamp(Math.round(sz || 1), 1, 4) - 1];
+  return { x, z, cr: e[0] * s, tr: e[1] * s, y0: e[2] * s, y1: e[3] * s };
+}
+/* v92: Stehen zwei Bäume ineinander? Stämme brauchen Luft; Kronen auf gleicher Höhe dürfen sich berühren und ein Stück
+   überlappen (Kronendach), aber nicht ineinanderstecken. Ein kleiner Baum, dessen Krone ganz unter der des großen bleibt,
+   darf unter dessen Rand stehen – nur nicht mit seiner Krone am Stamm. */
+const TREE_GAP = { crown: 0.8, trunk: 0.3, under: 0.85 };
+function treeClash(a, b) {
+  const d = Math.hypot(a.x - b.x, a.z - b.z);
+  if (d < a.tr + b.tr + TREE_GAP.trunk) return true;
+  /* gleiche Höhe: die Kronen greifen höchstens 80 % des kleineren Kronenradius ineinander (gleich große: Abstand ≥ 1,2 r) */
+  if (Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 0.25) return a.cr + b.cr - d > TREE_GAP.crown * Math.min(a.cr, b.cr);
+  const lo = a.y1 < b.y1 ? a : b, hi = lo === a ? b : a;
+  return d < lo.cr * TREE_GAP.under + hi.tr;
+}
+/* Ausweichstelle Nr. i (fest je Baum): Richtung aus der Nummer, Weite wächst mit i */
+function treeNudge(seed, i, x, z, step) {
+  const h = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453, a = (h - Math.floor(h)) * 6.2832 + i * 2.4, r = step * (1 + i * 0.55);
+  return [x + Math.cos(a) * r, z + Math.sin(a) * r];
+}
+/* v92: fällbare Bäume untereinander entzerren (feste Reihenfolge nach id, also reproduzierbar): wer mit einem früheren
+   Baum ineinandersteht, rückt auf die nächste freie Ausweichstelle (Weite nach Kronengröße, bei großen Eichen bis ≈ 8 Einheiten). Kein Baum wird weggenommen. */
+function erbeSpaceTrees(trees) {
+  const done = [], moved = [];
+  trees.slice().sort((a, b) => a.id - b.id).forEach(t => {
+    const sz = Math.max(t.mx || 1, t.sz || 1), s = t.s || 1;
+    let B = treeBody(t.sp, sz, s, t.x, t.z);
+    if (done.some(o => treeClash(B, o))) {
+      for (let i = 0; i < 24; i++) {
+        const [x, z] = treeNudge(t.id, i, t.x, t.z, Math.max(0.6, B.cr * 0.16));
+        const C = treeBody(t.sp, sz, s, x, z);
+        if (!treeSpotOk(x, z, 2.4) || campTree({ x, z }) || nearPathPt(x, z).d < treeWayNeed(t) || done.some(o => treeClash(C, o))) continue;
+        t.x = +x.toFixed(2); t.z = +z.toFixed(2); B = C; moved.push(t.id);
+        break;
+      }
+    }
+    done.push(B);
+  });
+  return moved;
+}
 /* ux, uz: Richtung Weg → Baum. Die Kamera schaut von Südosten – ein Baum auf dieser Seite des Weges verdeckt
    mit seiner Krone den Weg schon früher, er braucht bis zu 0,9 mehr Abstand */
 function treeWayNeed(t, ux, uz) { const k = ux == null ? 0 : Math.max(0, (ux + uz) * 0.7071); return 1 + treeCrown(t.sp, Math.max(t.mx || 1, t.sz || 1)) * (t.s || 1) + 0.9 * k; }
@@ -188,7 +238,9 @@ function erbeMakeTrees() {
   /* v77: Kronen über dem Weg – Baum ein Stück wegrücken oder weglassen (die Ziehung oben bleibt dieselbe,
      damit die übrigen Bäume ihre Nummern behalten; ältere Stände bekommen dasselbe in erbeInit) */
   /* v81: Lagerfeuerplatz – dort stehen keine fällbaren Bäume (wieder erst nach der Ziehung weglassen) */
-  return out.filter(t => treeOffPath(t, out) && !campTree(t));
+  const keep = out.filter(t => treeOffPath(t, out) && !campTree(t));
+  erbeSpaceTrees(keep);
+  return keep;
 }
 
 /* -------------------------------- Init ----------------------------------- */
@@ -243,7 +295,7 @@ function erbeInit(F, fresh) {
   const st = F.stats || (F.stats = {});
   ["felled", "woodSold", "woodMade", "catch", "repairs", "cleared", "stallSold", "events"].forEach(k => { st[k] = st[k] || 0; });
   st.species = st.species || {};
-  if (!F.trees || !F.trees.length) { F.trees = erbeMakeTrees(); F.v77t = 1; }
+  if (!F.trees || !F.trees.length) { F.trees = erbeMakeTrees(); F.v77t = 1; F.v92s = 1; }
   F.bgCut = F.bgCut || {};
   F.piles = F.piles || {};
   /* v56: neue Welt – ältere Stände ziehen um (neue Spiele fangen schon richtig an) */
@@ -258,6 +310,8 @@ function erbeInit(F, fresh) {
   if (!F.v81u) { F.v81u = 1; F.trees = F.trees.filter(t => !campTree(t)); }
   /* v82: Weg zum Lagerfeuer läuft gerade auf den Platz zu – Bäume auf der neuen Linie weg oder beiseite */
   if (!F.v83p) { F.v83p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
+  /* v92: fällbare Bäume, die ineinanderstehen (große Eichen im Altwald), rücken auseinander */
+  if (!F.v92s) { F.v92s = 1; erbeSpaceTrees(F.trees); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {

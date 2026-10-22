@@ -551,6 +551,12 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Waldsanierung (v92)
+Waldbodenflecken sind Teil der Bodenfarbe (`worldGround`, feineres Gitter nur dort, wo Flecken liegen), es liegen keine Flächen übereinander. Bäume stehen nach Art und Größe auseinander (`FTREE_DIM`, `treeClash`; Kulisse: `worldTreeSpace`, fällbare: `erbeSpaceTrees`). Gras, Blumen und Farn biegen sich im Wind (Pflanzenwind im Shader, Stärke nach Wetter). Tests: `node tests/trees.test.js`.
+
+### Lebendiger Wald: Waldboden, besondere Orte, Entdeckungen (v91)
+`forest.js` leitet aus der Waldsituation (Schatten, Feuchte, Nadel-/Laubanteil, alte Laubbäume, Lichtungen, Wege, Wasser) Bodenflecken (Moos, feuchter Boden, Laub, Nadeln, Erde, Lichtboden), Pilze, Farn, Blumen, Steine, Zweige und Wurzeln ab, dazu besondere Orte (verstecktes Lichtungsstück, moosige Senke, alter Baum mit Wurzeln, Moosstamm, Blumenwiese, Sonnenplatz mit Lichtschacht, großer Busch) und Entdeckungen an Büschen (Igel, Beeren, Nest, Spuren, Durchblick). Vier Kompositionen über den Seed (`?fseed=7328…7331`). Gebaut wird in die vorhandenen Boden-Kacheln (`worldForest`), kleines Leben läuft in `stepLife`. Tests: `node tests/forest.test.js`.
+
 ### Alle Waldbäume von Anfang an in Endform (v90)
 Kulissenbäume haben schon beim Start ihre endgültige Form (`bgFinal`, dieselbe wie nach dem Antippen) und werden per Instancing gezeichnet (`R.instGroup`, `bgChunkBuild`). Beim ersten Öffnen des Hofs zeigt ein Ladescreen (`farmBoot`) den Aufbau.
 

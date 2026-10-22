@@ -1,5 +1,27 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v92 – Waldsanierung: Boden, Baumabstände, Blumen, Pflanzenwind (auf v91)
+
+| Teil | Datei |
+|---|---|
+| Pflanzenwind (`uPlant`, `uWind`, Knoten-Eigenschaft `plant`, `env.wind`) | `gl3d.js` |
+| `FTREE_DIM`, `treeBody`, `treeClash`, `treeNudge`, `erbeSpaceTrees`, Umzug `F.v92s` | `erbe.js` |
+| `worldGround` (Waldboden in den Eckfarben), `worldTreeSpace`, `bgWayOk`, Blätter ohne Überlappung, Blumen/Farn in Wind-Kacheln, `VEGQ`/`vegStep`/`WIND_WX`; `WBuf.blob` entfernt | `worldview.js` |
+| Blumen (8 Varianten), Farn, Steine; Moospolster entfernt | `forestmodels.js` |
+| Moospolster raus, Erd-/Lichtbodenflecken | `forest.js` |
+| Tests | `tests/trees.test.js` (neu), `tests/forest.test.js` |
+| Version 92 | `index.html`, `sw.js` |
+
+## Stand v91 – Lebendiger Wald: Waldboden, Orte, Entdeckungen, kleines Leben (auf v90)
+
+| Teil | Datei |
+|---|---|
+| Ökologie, Bodenflecken, Dinge, besondere Orte, Entdeckungen, Kompositionen (rein, Node-testbar) | `forest.js` (neu) |
+| Modelle: Steine, Moospolster, Wurzeln, Zweige, Rinde, Moosstamm, Pilzgruppen, Blumen, Farn (leicht), Beeren, Nest, Fundstücke, Pfoten, Falter, Lichtschacht | `forestmodels.js` (neu) |
+| `WBuf.blob`/`leafBit`/`add(y0)`, `wFreeGround`, `wWet`, `worldForest`/`worldForestBuild`, Plan und Entnahme der Bäume, Buschhooks (`hidden`), `worldMakeLife`/`stepLife`, Tippen auf Igel | `worldview.js` |
+| Skript-Tags und Precache (`forestmodels.js`, `forest.js`), Version 91 | `index.html`, `sw.js` |
+| Tests | `tests/forest.test.js` (neu) |
+
 ## Stand v90 – Waldbäume in Endform per Instancing, Ladescreen (auf v89)
 
 | Teil | Datei |
