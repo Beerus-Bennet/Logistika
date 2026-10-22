@@ -231,6 +231,7 @@ function treeSpotOk(x, z, pathGap) {
 /* Fällbare Bäume: am Hof, entlang der Waldwege, an Lichtungen. Feste
    Saat, damit jeder Spielstand dieselbe Welt hat. */
 const campTree = t => typeof CAMP !== "undefined" && CAMP.clear(t.x, t.z, "tree");
+const huntTree = t => typeof HUNT !== "undefined" && HUNT.clear(t.x, t.z, "tree");      /* v107: Wildwiese am Hochsitz */
 function erbeMakeTrees() {
   const rnd = erbeRng(90210), out = [];
   let id = 1;
@@ -263,7 +264,7 @@ function erbeMakeTrees() {
   /* v77: Kronen über dem Weg – Baum ein Stück wegrücken oder weglassen (die Ziehung oben bleibt dieselbe,
      damit die übrigen Bäume ihre Nummern behalten; ältere Stände bekommen dasselbe in erbeInit) */
   /* v81: Lagerfeuerplatz – dort stehen keine fällbaren Bäume (wieder erst nach der Ziehung weglassen) */
-  const keep = out.filter(t => treeOffPath(t, out) && treeOffFence(t, out) && !campTree(t));
+  const keep = out.filter(t => treeOffPath(t, out) && treeOffFence(t, out) && !campTree(t) && !huntTree(t));
   erbeSpaceTrees(keep);
   return keep;
 }
@@ -333,6 +334,7 @@ function erbeInit(F, fresh) {
   if (!F.v77t) { F.v77t = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* v81: Lagerfeuerplatz – Bäume im Platz weg (ältere Stände) */
   if (!F.v81u) { F.v81u = 1; F.trees = F.trees.filter(t => !campTree(t)); }
+  if (!F.v107h) { F.v107h = 1; F.trees = F.trees.filter(t => !huntTree(t)); }
   /* v82: Weg zum Lagerfeuer läuft gerade auf den Platz zu – Bäume auf der neuen Linie weg oder beiseite */
   if (!F.v83p) { F.v83p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* v92: fällbare Bäume, die ineinanderstehen (große Eichen im Altwald), rücken auseinander */
@@ -395,6 +397,8 @@ function farmStores() {
   if (S.farm && (farmAreaOpen("see") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "fisch"))) s.push("fisch");
   /* v59: Köderkiste, sobald der Steg steht (oder schon Köder im Lager liegen) */
   if (S.farm && (S.farm.objs.some(o => o.t === "f_steg") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "koeder"))) s.push("koeder");
+  /* v107: Trophäen vom Hochsitz, sobald der Wald offen ist */
+  if (S.farm && FSTORE.troph && (farmAreaOpen("wald") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "troph"))) s.push("troph");
   return s;
 }
 

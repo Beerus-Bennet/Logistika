@@ -3343,7 +3343,9 @@ function renderMarket() {
   });
   if (!mf && !VEHICLES.some(pass)) html += `<div class="empty">Kein Fahrzeug passt zu diesen Filtern.
     <button class="btn tiny ghost" id="mfReset">Filter zurücksetzen</button></div>`;
+  if (!mf && typeof HUNT !== "undefined") html = HUNT.marketHTML() + html;      /* v107: Trophäen-Sammler */
   $("#tab-market").innerHTML = html;
+  if (typeof HUNT !== "undefined") HUNT.marketBind();
   const mr = $("#mfReset");
   if (mr) mr.onclick = () => { Object.assign(f, { cat: "all", avail: false, afford: false, flags: [] }); save(); renderMarket(); };
   /* Im Fokus: Kauf wird an den Ladeort überführt, danach zurück zum Auftrag */

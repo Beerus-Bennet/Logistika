@@ -96,6 +96,7 @@ function worldGroundCol(x, z) {
     const d = Math.hypot(x - q[0], z - q[1]);
     if (d < q[2] + 2) c = wMix(c, v > 0 ? 0x93c957 : 0x8cc650, clamp((q[2] + 2 - d) / 2.5, 0, 1));
   }
+  if (typeof HUNT !== "undefined") c = HUNT.ground(x, z, c, v);                                   /* v107: Wildwiese */
   if (inYard(x, z, 1.5)) {
     const y = FWORLD.yard, d = Math.min(x - y[0], y[2] - x, z - y[1], y[3] - z);
     c = wMix(c, FWM.YARD_COL, clamp((d + 1.5) / 2, 0, 1));     /* v77: dieselbe Farbe wie der Schotter im Hof */
@@ -174,6 +175,7 @@ const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24
 function bgTreeOk(x, z, M) {
   if (inHofMax(x, z, 3.2)) return false;      /* v99: Krone soll nicht im Hofzaun stehen (vorher 1,5) */
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
+  if (typeof HUNT !== "undefined" && HUNT.clear(x, z, "bg")) return false;      /* v107: Wildwiese am Hochsitz */
   if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -301,6 +303,7 @@ function worldWaterCheck() {
 function wFreeGround(x, z, r, MK) {
   if (inHofMax(x, z, 1.5 + r)) return false;
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
+  if (typeof HUNT !== "undefined" && r > 0.25 && HUNT.clear(x, z, "bush")) return false;     /* v107: Wildwiese bleibt offen (Gras und Blumen dürfen) */
   if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
   if (z > 15.8 - r && z < 22.5 + r) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -905,6 +908,8 @@ function worldStatic() {
   R.nodes.push(fnode(fmesh("wbench", FM.bench), { x: -83.2, y: 0, z: -55.4, ry: Math.PI }));
   /* v81: Lagerfeuerplatz am Ende des Hauptwegs (camp.js) */
   if (typeof CAMP !== "undefined") CAMP.attach(R);
+  /* v107: Hochsitz an der Wildwiese (hunt.js) */
+  if (typeof HUNT !== "undefined") HUNT.attach(R);
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
@@ -1916,7 +1921,7 @@ const TR_GOLD = [1, 0.84, 0.25, 1], TR_DIRT = [[0.55, 0.4, 0.25, 1], [0.45, 0.32
 /* Der Schwarm stürzt von weit her heran, ein Goldfunke schießt aus dem Boden, ein Banner meldet den Fund */
 function worldTreasureIntro(c, Z) {
   const R = FV.R;
-  if (!R || (typeof MG !== "undefined" && MG.on)) return;
+  if (!R || FV.fp || (typeof MG !== "undefined" && MG.on)) return;
   WV.trIntro = { t: 0, t0: c.t0, shot: false };
   WV.swarm.forEach(b => { b.out = 6 + (b.i % 3) * 0.6; b.f = 0; });
   /* Kamera nur mitnehmen, wenn der Spieler sie gerade nicht anfasst */
@@ -2652,6 +2657,9 @@ function worldTap(x, y) {
   const tr = farmTreasureCur();
   if (tr && !tr.done && near(tr.x, 0.05, tr.z, 46)) { worldTreasureDig(); return true; }
   const ho = pickObjT(x, y), ht = pickTree(x, y);
+  /* v107: Hochsitz */
+  const hu = typeof HUNT !== "undefined" ? HUNT.pick(x, y) : null;
+  if (hu && (!ho || hu.d < ho.d) && (!ht || hu.d < ht.d + 0.5)) { sfx("tap"); HUNT.sheet(); return true; }
   /* v70: Heuballen an der Scheune */
   const hh = pickHay(x, y);
   if (hh && (!ho || hh.d < ho.d + 0.4)) { sfx("tap"); openHay(); return true; }
@@ -2899,7 +2907,7 @@ function fellReward(t, r, res, tool) {
 
 /* ------------------------------ Kamera ------------------------------------ */
 function farmFocusXZ(x, z, dist, ms) {
-  if (!FV.R) return;
+  if (!FV.R || FV.fp) return;              /* v107: in der Ich-Perspektive (Sägen, Hochsitz) führt die Sitzung die Kamera */
   const c = FV.R.cam, s = { tx: c.tx, tz: c.tz, d: c.dist }, e = { tx: x, tz: z, d: dist || c.dist };
   const t0 = performance.now(), id = (FV.focusId || 0) + 1, dur = ms || 650;
   FV.focusId = id; FV.focusing = true;
@@ -2932,6 +2940,7 @@ function worldTags() {
   const want = [];
   worldEvSpots().forEach((s, i) => { if (!s.area || farmAreaOpen(s.area)) want.push(["e" + i + s.act, s.x, s.y, s.z, s.ic, s.cls || "ready", () => worldEvAct(s)]); });
   if (typeof pvVisit === "function" && pvVisit()) { const at = pvAt(); want.push(["pv", at[0] + 1.3, 2.9, at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]); }
+  { const hg = typeof HUNT !== "undefined" ? HUNT.tagInfo() : null; if (hg) want.push(["hunt", hg.x, hg.y, hg.z, hg.html, hg.cls, () => HUNT.sheet()]); }
   if (WV.npc && worldVisitor()) want.push(["npc", WV.npc.node.x, 2.6, WV.npc.node.z, FAREAS[WV.npc.id].whoI + "❗", "ready", () => openAreaVisit(WV.npc.id)]);
   const F = S.farm;
   F.objs.forEach(o => {
@@ -3105,6 +3114,7 @@ function worldStep(dt, time) {
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
+  if (typeof HUNT !== "undefined") HUNT.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });

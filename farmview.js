@@ -668,6 +668,7 @@ function farmEnv() {
   if (key !== FV.skyKey) { FV.skyKey = key; $("#farm").style.background = "linear-gradient(180deg," + css(top) + "," + css(bot) + ")"; }
   /* v101: Ich-Perspektive – Nebel und Licht passen zur Aussicht hinter der Welt (vista.js) */
   if (FV.fp && typeof VISTA !== "undefined") VISTA.env(E, h);
+  if (FV.fp && FV.fp.fogR) E.fogR = FV.fp.fogR;          /* v107: vom Hochsitz weiter sehen */
 }
 
 /* Rauch über arbeitenden Gebäuden: Lage des Schornsteins, Farbe, Größe */
@@ -774,7 +775,7 @@ function clampCam() {
   c.pitch = 0.8 + (c.dist - 11) / 43 * 0.2;
 }
 function farmFocus(o, dist) {
-  if (!FV.R || !o) return;
+  if (!FV.R || !o || FV.fp) return;
   const [cx, cz] = farmCenter(o);
   const c = FV.R.cam;
   const s = { tx: c.tx, tz: c.tz, d: c.dist }, e = { tx: cx, tz: cz + 1, d: dist || c.dist };
@@ -2086,12 +2087,14 @@ function openFarmStore(st) {
       return `<div class="fsell"><b>${icHTML(sel)} ${esc(fqty(sel, farmInv(sel)))}</b>${farmHasQ(sel) ? " · " + qStars(farmQ(sel)) : ""} · ${esc(FITEMS[sel].pk)} à ${esc(famt(sel, 1))} · ${eur(FITEMS[sel].v)}
       ${qs ? rows : `<div class="fsell-b">${[1, 5, farmInv(sel)].filter((n, i, a) => n <= farmInv(sel) && a.indexOf(n) === i).map(n => `<button class="btn tiny ghost" data-sell="${n}">${n === farmInv(sel) && n > 1 ? "alles" : famt(sel, n)} · ${eur(pr(sel, n))}</button>`).join("")}</div>`}
       <small>${wood ? (FITEMS[sel].raw ? "🧔 Der Holzhändler zahlt für Rohholz den vollen Preis" + (farmEvOn("holzpreis") ? " – gerade sogar 30 % mehr!" : ".") : "🧔 Holzwaren nimmt der Holzhändler nur zum halben Wert – Bestellungen bringen mehr.")
+        : FITEMS[sel].k === "troph" ? "🧐 Sammler zahlen den vollen Wert – Diamant bringt am meisten."
         : "Großhandel zahlt sofort, aber nur den halben Wert – Bestellungen bringen mehr."}</small></div>`;
     })() : ""}
     ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step} Plätze · ${eur(uc)}<small>Stufe ${(S.farm.cap[st] || 1) + 1} von ${FSTORE[st].cost.length + 1}</small></button>` : `<div class="fs-sub">${esc(FSTORE[st].n)}: höchste Stufe (${FSTORE[st].cost.length + 1}) erreicht.</div>`}
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
       : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
+      : st === "troph" ? "Trophäen vom Hochsitz an der Wildwiese: Herz- und Lungenschüsse bringen die besten Medaillen. Sammler kaufen auch auf dem Markt."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });

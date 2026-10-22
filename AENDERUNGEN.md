@@ -1,5 +1,44 @@
 # Änderungen – kurz für den Kollegen
 
+## v107 (aufbauend auf v106) – Jagd: Hochsitz an der Wildwiese, Trophäen
+
+Neues Minispiel nach dem Vorbild „The Hunter: Call of the Wild“, im Low-Poly-Stil und in unserer eigenen Engine (`gl3d.js`, kein Three.js). Alles steckt in der **neuen Datei `hunt.js`** (`HUNT`).
+
+**Welt**
+- **Wildwiese** westlich vom Sägewerk (Mitte x −78, z −24, Radius ~14), am Ostrand ein **Hochsitz** aus Rundholz (vier Stämme, Kreuzstreben, Kanzel mit Dach, Gewehrauflage, Leiter).
+- Auf der Wiese stehen keine Bäume und Büsche, Gras und Blumen schon. Fällbare Bäume dort werden einmalig entfernt (`F.v107h`).
+- Hochsitz antippen → Fenster mit Wildbestand, Schüssen, Trophäen, „Hinaufsteigen“. Über dem Turm eine Blase 🔭 mit der Zahl der Tiere. Voraussetzung: der Wald ist freigeschaltet.
+
+**Ich-Perspektive** (wie beim Sägen, `FV.fp`)
+- Die Kamera fährt in 1,7 s auf die Plattform. Ziehen = Umsehen, die Brüstung ist unten im Bild. Fernsicht mit der Aussicht aus v101.
+- **Fernglas** (4×): Doppelkreis mit weichem Rand. Wild in der Mitte wird nach 0,35 s **gespottet**: Art, Entfernung, Verhalten, mögliche Medaille, Sammlerwert. Danach eine Markierung über dem Tier.
+- **Zielfernrohr**: Mil-Dot-Absehen, roter Punkt, Zoom 2×/4×/8× (Knopf oder Mausrad), Entfernungsanzeige. Das Bild schwankt leicht. **Atem halten** (Knopf gedrückt halten oder Leertaste) beruhigt es für höchstens 3 s, danach wackelt es kurz stärker.
+- **Schuss**: Strahl durch die Bildmitte gegen **Trefferzonen** in Tierkoordinaten (Herz, Lunge, Kopf, Träger, Körper, Lauf). Stämme halten die Kugel auf. Knall mit Echo, Repetieren, Mündungsrauch, Rückstoß.
+
+**Wild** (2–4 Tiere, je nach Bestand)
+- **Rothirsch**: äst, sichert (Kopf hoch), zieht über die Wiese, flüchtet bei Schuss und schnellem Umsehen. Geweih mit 6–16 Enden je nach Güte.
+- **Keiler**: bricht im Boden, wechselt unberechenbar die Richtung, sehr wachsam.
+- **Fasan**: pickt auf der Wiese, fliegt bei Unruhe im Bogen über die Baumkronen. Ab und zu Überflüge, auch im Flug schießbar.
+- Bestand: höchstens 4, jede Trophäe kostet eins, alle 90 Spielminuten kommt eins zurück. Geflüchtetes Wild kommt wieder.
+
+**Treffer und Trophäe**
+- Herz/Lunge/Kopf/Träger: das Stück liegt nach wenigen Metern, dann fährt die Kamera hin und **kreist um das Stück**.
+- Weichschuss (höchstens Silber) und Laufschuss (höchstens Bronze): es flüchtet und hinterlässt eine Schweißfährte. „🩸 Nachsuche“ geht die Fährte ab bis zum Stück.
+- Vorbei: das Wild auf der Wiese flüchtet.
+- **Trophäen-Karte**: Tierart, Gewicht, Treffer und Entfernung, Trophäe (z. B. „12-Ender Geweih“, „Keilerwaffen · 18 cm“, „Fasanenfeder · 50 cm“), Bewertung, Medaille (Bronze/Silber/Gold/Diamant), Sammlerwert. Knopf „Trophäe ins Lager legen“, bei voller Trophäenwand gleich verkaufen.
+- Medaille aus Güte (0–1) plus Bonus für kritische Treffer: Diamant ≥ 0,9, Gold ≥ 0,72, Silber ≥ 0,5.
+
+**Lager und Markt**
+- Neuer Lager-Reiter **🏆 Trophäen** (`FSTORE.troph`, 24 Plätze, ausbaubar), zwölf Trophäen (Art × Medaille) mit eigenem 3D-Bildchen (Brett mit Geweih, Waffen oder Feder, Medaille).
+- Sammler zahlen den **vollen Wert** (`farm.js` `farmSellPrice`), im Lager und auf dem **Markt** (Karte „Trophäen-Sammler“ über den Fahrzeugen). Preise: Hirsch 180/420/950/2.600 €, Keiler 120/300/700/1.900 €, Fasan 40/90/200/520 €.
+
+**Nebenbei**
+- Telefonat-Arm aus v106 neu gebaut: Oberarm hängt, Unterarm angewinkelt zum Ohr, Handy mit heller Rückseite (`team.js` `staffPhoneArm`).
+- Kamera-Fahrten anderer Ereignisse (z. B. Schatz-Intro) unterbrechen die Ich-Perspektive nicht mehr (`farmFocusXZ`, `farmFocus`).
+- Leere Lager zeigen den Hinweis über die ganze Breite.
+
+**Geprüft** im Software-Browser: Hochsitz und Wiese in der Welt, Antippen, Kamerafahrt, Fernglas mit Spotten, Zielfernrohr, Herzschuss mit Diamant-Trophäe, Weichschuss mit Nachsuche, Fasan im Flug, Fehlschuss mit Flucht, Ziehen zum Umsehen, Lager-Reiter, Markt-Karte, Verlassen. Neue Tests `tests/hunt.test.js` (8) und alle alten Tests grün. **Nicht geprüft:** auf einem echten Handy (Bildrate, Touch), Töne (im Testbrowser stumm), Jagd bei Nacht und Regen.
+
 ## v106 (aufbauend auf v105) – Sprechblasen über dem Kopf, Telefonat mit dem Büro
 
 **Sprechblase „Mittagspause“** (`team.js`, `style.css`): kleine Kapsel mit Symbol statt des großen weißen Quadrats. Sie sitzt über dem Kopf **der angetippten Figur**, folgt ihr jedes Bild und blendet nach etwa 3 Sekunden aus.

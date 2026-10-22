@@ -1426,13 +1426,13 @@ function staffIc(s) {
    so kann er Sichel, Axt oder Rute schwingen, beim Laufen pendeln und winken. */
 /* v106: Arm mit Handy am Ohr (Ellbogen angewinkelt) – Drehpunkt wie arm(): an der Schulter */
 function staffPhoneArm(o) {
+  /* MB.box steht auf seiner Grundfläche (y = 0 unten); Drehungen wirken um diesen Punkt. Schulter = Ursprung, +z = vorn */
   const b = new FM.MB(), shirt = o.shirt || 0x3f78c8, skin = o.skin || 0xf2c9a0;
-  b.box(0.07, 0.2, 0.08, shirt, { x: 0.005, y: -0.1, rz: -0.12 });                 /* Oberarm: nach unten, etwas nach außen */
-  b.box(0.065, 0.3, 0.075, shirt, { x: -0.02, y: -0.06, z: 0.045, rz: 0.36 });     /* Unterarm: vom Ellbogen hoch zum Ohr */
-  b.box(0.062, 0.06, 0.07, skin, { x: -0.068, y: 0.075, z: 0.05 });                /* Hand */
-  b.box(0.02, 0.135, 0.062, 0x2b3340, { x: -0.1, y: 0.085, z: 0.05 });              /* Handy am Ohr: dunkler Rahmen, helle Rückseite */
-  b.box(0.008, 0.115, 0.05, 0xe9edf2, { x: -0.11, y: 0.085, z: 0.05 });
-  b.box(0.01, 0.02, 0.02, 0x2b3340, { x: -0.115, y: 0.13, z: 0.04 });
+  b.at({ rx: -0.5 }, m => m.box(0.07, 0.2, 0.08, shirt, { y: -0.2 }));                       /* Oberarm: hängt, etwas nach vorn → Ellbogen */
+  b.box(0.064, 0.31, 0.074, shirt, { y: -0.176, z: 0.096, rx: -0.284, rz: 0.097 });            /* Unterarm: vom Ellbogen hoch zum Ohr */
+  b.box(0.06, 0.065, 0.07, skin, { x: -0.03, y: 0.12, z: 0.01, c: true });                     /* Hand am Ohr */
+  b.box(0.016, 0.13, 0.055, 0x232a36, { x: -0.062, y: 0.125, z: 0.02, rx: 0.35, c: true });    /* Handy: dunkler Rahmen … */
+  b.box(0.006, 0.11, 0.045, 0xe9edf2, { x: -0.05, y: 0.125, z: 0.02, rx: 0.35, c: true });     /* … helle Rückseite nach außen */
   return b;
 }
 function worldSyncStaff() {
@@ -1548,7 +1548,7 @@ function stepStaff(dt, time) {
     if (A && calling) {
       /* am Ohr, ruhig; beim Reden wippt er leicht und dreht sich ein wenig hin und her */
       const k2 = Math.min(1, dt * 6);
-      A.rx += (-0.1 + Math.sin(time * 1.3 + e.ph) * 0.03 - A.rx) * k2; A.rz += (0.12 - A.rz) * k2;
+      A.rx += (Math.sin(time * 1.3 + e.ph) * 0.025 - A.rx) * k2; A.rz += (0 - A.rz) * k2;
       n.y = Math.abs(Math.sin(time * 2.6 + e.ph)) * 0.012;
       n.ry += Math.sin(time * 0.7 + e.ph * 2) * 0.004;
     } else if (A) {

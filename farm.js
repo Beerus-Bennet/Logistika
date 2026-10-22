@@ -782,13 +782,14 @@ function farmStoreUp(st) {
 }
 /* v69.6: Angelköder (Tauwürmer, Profi-, Spezialköder) haben keine Qualität – beim Angeln zählen nur Größe und
    Kondition des Fischs. Seit v69.7 auch Reusenköder: Reusentiere bekommen ihre Sterne wie Fische (farmHaul). */
-function farmHasQ(id) { const it = FITEMS[id]; return !(it && it.k === "bait"); }   /* v69.7: auch Reusenköder ohne Sterne */
+function farmHasQ(id) { const it = FITEMS[id]; return !(it && (it.k === "bait" || it.k === "troph")); }   /* v107: Trophäen haben Medaillen statt Sterne */   /* v69.7: auch Reusenköder ohne Sterne */
 /* Großhandel: sofort Geld, aber nur der halbe Wert */
 /* v59: Fisch nach Gewicht (farmStackV), Sterne als Aufschlag; q = bestimmte Sternstufe */
 function farmSellPrice(id, n, q) {
   const boost = typeof farmPriceBoost === "function" ? farmPriceBoost(id) : 1;   /* v58: Preis-Ereignis */
   if (farmQsOn(id)) return Math.max(0.1, Math.round(farmStackV(id, n, q) * 0.5 * boost * 10) / 10);
   q = farmHasQ(id) ? q || farmQ(id) || 3 : 3;   /* v69.6: Angelköder ohne Sterne-Auf- oder -Abschlag */
+  if (FITEMS[id].k === "troph") return Math.round(FITEMS[id].v * n);   /* v107: Trophäen – Sammler zahlen den vollen Wert */
   return Math.max(0.1, Math.round(FITEMS[id].v * 0.5 * n * (1 + (q - 3) * 0.08) * boost * 10) / 10);
 }
 function farmSell(id, n, q) {

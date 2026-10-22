@@ -1,5 +1,20 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v107 – Jagd: Hochsitz, Wild, Trophäen (auf v106)
+
+| Teil | Datei |
+|---|---|
+| Neue Datei: Wildwiese, Hochsitz, Hirsch/Keiler/Fasan, Ich-Perspektive, Fernglas, Zielfernrohr, Trefferzonen, Nachsuche, Trophäen-Karte, Trophäen im Lager, Markt-Karte | `hunt.js` |
+| Wiese frei von Kulissenbäumen und Büschen, Bodenfarbe, Hochsitz einbauen (`attach`/`step`), Antippen, Blase, keine fremden Kamerafahrten in der Ich-Perspektive | `worldview.js` |
+| Nebel weiter weg in der Ich-Perspektive, Lager-Text für Trophäen, `farmFocus` gesperrt bei `FV.fp` | `farmview.js` |
+| Lager-Reiter „Trophäen“, keine fällbaren Bäume auf der Wiese (`huntTree`, `F.v107h`) | `erbe.js` |
+| Sammler zahlen den vollen Wert, Trophäen ohne Sterne | `farm.js` |
+| Karte „Trophäen-Sammler“ im Markt | `game.js` |
+| Telefonat-Arm angewinkelt | `team.js` |
+| Aussehen der Jagd | `style.css` |
+| Tests | `tests/hunt.test.js` (neu) |
+| Skript einbinden, Version 107 | `index.html`, `sw.js` |
+
 ## Stand v101 – Aussicht in der Ich-Perspektive (auf v100)
 
 | Teil | Datei |
