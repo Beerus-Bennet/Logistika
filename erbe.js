@@ -173,6 +173,31 @@ function treeOffPath(t, all) {
   t.x = +x.toFixed(2); t.z = +z.toFixed(2);
   return true;
 }
+/* v99: Zäune – größter Hofzaun (Stufe 10) und Sägewerkszaun. Nächster Punkt auf einer Zaunlinie und Abstand dahin */
+function fenceNear(x, z) {
+  let best = { d: 1e9, x: 0, z: 0 };
+  [[FHOF_MAX.x0, FHOF_MAX.z0, FHOF_MAX.x1, FHOF_MAX.z1], FWORLD.yard].forEach(([x0, z0, x1, z1]) => {
+    const cx = clamp(x, x0, x1), cz = clamp(z, z0, z1);
+    let px = cx, pz = cz, d;
+    if (cx === x && cz === z) { const q = [[x - x0, x0, z], [x1 - x, x1, z], [z - z0, x, z0], [z1 - z, x, z1]].sort((a, b) => a[0] - b[0])[0]; d = q[0]; px = q[1]; pz = q[2]; }
+    else d = Math.hypot(x - cx, z - cz);
+    if (d < best.d) best = { d, x: px, z: pz };
+  });
+  return best;
+}
+/* Baum und Zaun: Stamm und Krone sollen nicht im Zaun stehen – Abstand = 0,8 + Kronenradius (wie beim Weg). Rückt den Baum nach
+   außen (höchstens 2,5 Einheiten, nur auf freien Platz). false: kein Platz. */
+function treeFenceNeed(t) { return 0.8 + treeCrown(t.sp, Math.max(t.mx || 1, t.sz || 1)) * (t.s || 1); }
+function treeOffFence(t, all) {
+  const n = fenceNear(t.x, t.z), need = treeFenceNeed(t);
+  if (n.d >= need) return true;
+  const l = Math.max(0.01, n.d), ux = (t.x - n.x) / l, uz = (t.z - n.z) / l;
+  const x = n.x + ux * (need + 0.15), z = n.z + uz * (need + 0.15);
+  if (Math.hypot(x - t.x, z - t.z) > 2.5 || !treeSpotOk(x, z, 1.4) || fenceNear(x, z).d < need || nearPathPt(x, z).d < treeWayNeed(t)) return false;
+  if (all.some(o => o !== t && Math.hypot(o.x - x, o.z - z) < 2.2)) return false;
+  t.x = +x.toFixed(2); t.z = +z.toFixed(2);
+  return true;
+}
 function inYard(x, z, m) { const y = FWORLD.yard; m = m || 0; return x > y[0] - m && x < y[2] + m && z > y[1] - m && z < y[3] + m; }
 function inLake(x, z, m) { const L = FWORLD.lake; const a = (x - L.x) / (L.rx + (m || 0)), b = (z - L.z) / (L.rz + (m || 0)); return a * a + b * b < 1; }
 /* Wo im Wald? Für Baumarten und Freischaltung */
@@ -238,7 +263,7 @@ function erbeMakeTrees() {
   /* v77: Kronen über dem Weg – Baum ein Stück wegrücken oder weglassen (die Ziehung oben bleibt dieselbe,
      damit die übrigen Bäume ihre Nummern behalten; ältere Stände bekommen dasselbe in erbeInit) */
   /* v81: Lagerfeuerplatz – dort stehen keine fällbaren Bäume (wieder erst nach der Ziehung weglassen) */
-  const keep = out.filter(t => treeOffPath(t, out) && !campTree(t));
+  const keep = out.filter(t => treeOffPath(t, out) && treeOffFence(t, out) && !campTree(t));
   erbeSpaceTrees(keep);
   return keep;
 }
@@ -312,6 +337,8 @@ function erbeInit(F, fresh) {
   if (!F.v83p) { F.v83p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* v92: fällbare Bäume, die ineinanderstehen (große Eichen im Altwald), rücken auseinander */
   if (!F.v92s) { F.v92s = 1; erbeSpaceTrees(F.trees); }
+  /* v99: Bäume stehen nicht mehr im Zaun (Hofzaun, Sägewerkszaun) – ältere Stände: ein Stück nach außen rücken (nie wegnehmen) */
+  if (!F.v99f) { F.v99f = 1; const all = F.trees.slice(); F.trees.forEach(t => { if (t.st === "up" || t.st === "sapling") treeOffFence(t, all); }); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {

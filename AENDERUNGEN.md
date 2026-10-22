@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v99 (aufbauend auf v98) – Bäume stehen nicht mehr im Zaun
+
+- **Fällbare Bäume** (`erbe.js`): Neu `fenceNear` (nächster Punkt auf dem größten Hofzaun, Stufe 10, und dem Sägewerkszaun) und `treeOffFence`. Jeder Baum hält Abstand 0,8 + Kronenradius zur Zaunlinie (vorher nur 1 Einheit Rand, die Krone und bei großen Bäumen der Stamm standen im Zaun).
+  - Zu nahe Bäume rücken nach außen (höchstens 2,5 Einheiten, nur auf freien Platz, nicht auf Wege oder in andere Bäume). In einer neuen Welt fällt ein Baum weg, wenn kein Platz ist, die übrigen behalten ihre Nummern (wie bei den Wegen, v77).
+  - **Ältere Stände:** einmalig (`F.v99f`) rücken die vorhandenen Bäume nach außen. Es wird nie ein Baum entfernt.
+- **Kulissenbäume** (`worldview.js`, `bgTreeOk`): Abstand zum Hofzaun jetzt 3,2 (vorher 1,5), zum Sägewerkszaun 3,4 (vorher 1,8). Die Zufallszahlen der Kulisse bleiben gleich, es entfallen nur Bäume dicht am Zaun.
+- **Gemessen** im Browser (neue Welt): bei allen 168 fällbaren Bäumen liegt der Abstand zum Zaun mindestens beim geforderten Wert (kleinster Überschuss 0,03).
+- **Nicht getestet:** ein vorhandener Spielstand auf dem Telefon, und die Kulissenbäume habe ich nur über die Regel geändert, nicht einzeln nachgemessen.
+
 ## v98 (aufbauend auf v97) – Schatztruhe aus der Grube: wie die Lieferkiste
 
 Gilt für die Schatzsuche (Truhe nach dem Graben, `worldview.js`: `worldTreasureReveal`, `stepTreasureReveal`, `stepTreasure`).

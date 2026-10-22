@@ -172,12 +172,12 @@ function wayCamSide(x, z) {
 const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24, kirsche: 0.74 };
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
-  if (inHofMax(x, z, 1.5)) return false;
+  if (inHofMax(x, z, 3.2)) return false;      /* v99: Krone soll nicht im Hofzaun stehen (vorher 1,5) */
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
   if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
-  if (inYard(x, z, 1.8)) return false;
+  if (inYard(x, z, 3.4)) return false;        /* v99: Sägewerkszaun (vorher 1,8) */
   if (inFieldN(x, z, 1)) return false;
   if (M.at(x, z) & 5) return false;
   if (z > 20 && lakeE(x, z) < 1.18) return false;
