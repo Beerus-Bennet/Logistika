@@ -31,18 +31,19 @@ const CAMP = (() => {
   ];
   /* Haltung je Platz: Drehung (rad) weg vom Feuer, Arm (rx vor/zurück, rz zur Seite), Neigung – keine zwei gleich */
   const POSES = [
-    { turn: 0.16, arm: -0.55, az: 0.1, lean: 0.03 }, { turn: -0.12, arm: -1.05, az: 0.2, lean: -0.04 }, { turn: 0.22, arm: -0.25, az: 0.06, lean: 0.06 },
-    { turn: -0.10, arm: -0.9, az: 0.14, lean: 0.02 }, { turn: 0.06, arm: -0.4, az: 0.3, lean: -0.05 }, { turn: 0.2, arm: -1.15, az: 0.08, lean: 0.04 },
-    { turn: -0.2, arm: -0.65, az: 0.18, lean: 0.05 }, { turn: 0.1, arm: -0.2, az: 0.1, lean: -0.03 }, { turn: -0.14, arm: -0.95, az: 0.24, lean: 0.01 }
+    { turn: 0.16, arm: -0.8, az: 0.1, lean: 0.03 }, { turn: -0.12, arm: -1.0, az: 0.14, lean: -0.04 }, { turn: 0.22, arm: -0.7, az: 0.08, lean: 0.06 },
+    { turn: -0.10, arm: -0.95, az: 0.12, lean: 0.02 }, { turn: 0.06, arm: -0.85, az: 0.18, lean: -0.05 }, { turn: 0.2, arm: -1.05, az: 0.08, lean: 0.04 },
+    { turn: -0.2, arm: -0.75, az: 0.14, lean: 0.05 }, { turn: 0.1, arm: -0.9, az: 0.1, lean: -0.03 }, { turn: -0.14, arm: -0.8, az: 0.16, lean: 0.01 }
   ];
   const SIT_Y = 0.04;            /* Standhöhe der sitzenden Figur (Kies) */
+  const SEAT_OFF = 0.10;         /* v95: Sitzmitte der Figur liegt so weit vor der Sofamitte (Richtung Feuer) */
   const slots = SEATS.map((s, i) => {
-    const a = rad(s[2]), r = s[1] + 0.1;                 /* Becken etwas hinter der Sitzmitte */
+    const a = rad(s[2]), r = s[1] - SEAT_OFF;            /* v95: Becken vorn auf der Sitzfläche – die Unterschenkel hängen vor der Sofakante frei */
     const lx = Math.cos(a) * r, lz = -Math.sin(a) * r, w = toW(lx, lz), f = toW(0, 0);
     return {
       id: "worker_slot_" + String(i + 1).padStart(2, "0"), n: i + 1, group: s[0], seat: s[0] + "_" + (SEATS.slice(0, i + 1).filter(q => q[0] === s[0]).length),
       lx: +lx.toFixed(3), lz: +lz.toFixed(3), x: +w[0].toFixed(3), z: +w[1].toFixed(3), fx: f[0], fz: f[1],
-      ry: Math.atan2(f[0] - w[0], f[1] - w[1]), pose: POSES[i]
+      ry: Math.atan2(f[0] - w[0], f[1] - w[1]), pose: POSES[i], R: s[1], ang: s[2]
     };
   });
   const byId = id => slots.find(s => s.id === id) || null;
@@ -71,6 +72,99 @@ const CAMP = (() => {
   }
   /* Haltung für die Figur (team.js ruft das je Bild auf) */
   function pose(sl) { return sl.pose; }
+
+  /* ------------- v95: Wege im Lagerplatz – ums Feuer herum, nie hindurch ------------- */
+  /* Von außen (Tor, vorn offen) bis zum Ring um die Feuerstelle (Halbmesser RING, außerhalb der Steine und
+     Flammen, innerhalb der Füße der Sitzenden), dort auf dem Bogen zum Platz und zuletzt auf den Standpunkt
+     direkt vor der Sofakante. Der Weg zurück ist derselbe rückwärts. Alles örtlich (Feuer im Ursprung). */
+  const RING = 1.5, STAND = 0.62, IN_Z = 5.4, OUT_Z = 8.2;
+  const polar = (a, r) => [Math.cos(a) * r, -Math.sin(a) * r];
+  const angOf = (lx, lz) => Math.atan2(-lz, lx);
+  const normA = d => { d = (d + Math.PI) % (2 * Math.PI); if (d <= 0) d += 2 * Math.PI; return d - Math.PI; };
+  function arcPts(a0, a1, r) {
+    const d = normA(a1 - a0), n = Math.max(1, Math.ceil(Math.abs(d) / rad(14))), o = [];
+    for (let i = 1; i <= n; i++) o.push(polar(a0 + d * i / n, r));
+    return o;
+  }
+  const wpts = L => L.map(q => { const w = toW(q[0], q[1]); return [+w[0].toFixed(2), +w[1].toFixed(2)]; });
+  /* Hindernisse für die Wegsuche (A*): Platz mit Wänden und Sofas ist von außen gesperrt, hinein führen nur die Wege oben */
+  function blockedL(lx, lz) { return Math.abs(lx) < 7.6 && lz > -6.4 && lz < 7.0; }
+  function blockedW(x, z) { const l = toL(x, z); return blockedL(l[0], l[1]); }
+  function gate() { const w = toW(0, OUT_Z); return [w[0], w[1]]; }
+  function standPt(sl) { return polar(rad(sl.ang), sl.R - STAND); }
+  function slotAt(x, z, d) {
+    let b = null, bd = d || 0.9;
+    slots.forEach(s => { const q = Math.hypot(s.x - x, s.z - z); if (q < bd) { bd = q; b = s; } });
+    return b;
+  }
+  function routeIn(sl) {
+    const a0 = -Math.PI / 2, L = [[0, OUT_Z], [0, IN_Z], polar(a0, RING)].concat(arcPts(a0, rad(sl.ang), RING));
+    L.push(standPt(sl));
+    return wpts(L);
+  }
+  function routeOut(x, z) {
+    const l = toL(x, z), sl = slotAt(x, z), a0 = -Math.PI / 2, L = [[l[0], l[1]]];
+    if (sl) { L.push(standPt(sl)); }
+    if (sl || l[1] < IN_Z - 0.3) {
+      const a = sl ? rad(sl.ang) : angOf(l[0], l[1]);
+      L.push(polar(a, RING));
+      arcPts(a, a0, RING).forEach(q => L.push(q));
+      L.push([0, IN_Z]);
+    }
+    L.push([0, OUT_Z]);
+    return wpts(L);
+  }
+
+  /* ------------- v95: Gespräch der Sitzenden (Blick, Nicken, Kopfschütteln) -------------
+     Eine Regie für alle, die gerade sitzen: abwechselnd spricht einer (unregelmäßig lang, manchmal Pause);
+     die anderen schauen meist zum Sprecher, manchmal zu einem Nachbarn oder ins Feuer, nicken zwischendurch,
+     selten schütteln sie den Kopf. Ergebnis je Platz: Kopfdrehung/-neigung (relativ zum Körper) und Armgeste. */
+  const TK = { sp: null, spT: 0, pause: 0, st: {} };
+  const rr = (a, b) => a + Math.random() * (b - a);
+  function talkOf(id) {
+    return TK.st[id] || (TK.st[id] = { tg: null, tg0: 0, yaw: 0, pit: 0, roll: 0, nodT: -9, nodA: 0, shkT: -9, shkA: 0, gesT: -9, gesA: 0, lag: rr(0.7, 1.5), ph: rr(0, 6), nod: 0, shk: 0, ges: 0 });
+  }
+  function talkReset() { TK.sp = null; TK.spT = 0; TK.st = {}; }
+  function talkStep(dt, time, ids) {
+    if (!ids.length) { TK.sp = null; return; }
+    if (time > TK.spT || (TK.sp && !ids.includes(TK.sp))) {
+      const pausing = !TK.sp ? false : Math.random() < 0.18;
+      const others = ids.filter(i => i !== TK.sp);
+      TK.sp = pausing || !others.length ? null : others[Math.floor(Math.random() * others.length)];
+      TK.spT = time + (TK.sp ? rr(2.4, 7.5) : rr(0.8, 2));
+    }
+    ids.forEach(id => {
+      const sl = byId(id), g = talkOf(id), me = id === TK.sp;
+      if (time > g.tg0) {
+        const others = ids.filter(i => i !== id), r = Math.random();
+        if (!others.length || r > 0.93) g.tg = "fire";
+        else if (me) g.tg = others[Math.floor(Math.random() * others.length)];
+        else if (TK.sp && r < 0.72) g.tg = TK.sp;
+        else if (r < 0.9) g.tg = others[Math.floor(Math.random() * others.length)];
+        else g.tg = "fire";
+        g.tg0 = time + (me ? rr(1.2, 3.2) : rr(1.0, 3.6)) * (g.tg === "fire" ? 0.6 : 1);
+      }
+      if (g.tg !== "fire" && !ids.includes(g.tg)) g.tg0 = 0;
+      let tx = sl.fx, tz = sl.fz, pit = 0.16;
+      if (g.tg && g.tg !== "fire") { const o = byId(g.tg); tx = o.x; tz = o.z; pit = 0.02; }
+      const body = sl.ry + sl.pose.turn, want = Math.max(-1.1, Math.min(1.1, normA(Math.atan2(tx - sl.x, tz - sl.z) - body)));
+      const k = Math.min(1, dt * 3.4 / g.lag);
+      g.yaw += (want - g.yaw) * k;
+      /* Sprecher: lebhaft (kleine Nick-Wellen, hin und wieder eine Handbewegung); Zuhörer: ruhig */
+      const live = me ? Math.sin(time * 2.1 + g.ph) * 0.05 + Math.sin(time * 3.7 + g.ph * 2) * 0.03 : Math.sin(time * 0.9 + g.ph) * 0.018;
+      g.pit += (pit + live - g.pit) * Math.min(1, dt * 4);
+      g.roll += ((me ? Math.sin(time * 1.3 + g.ph) * 0.05 : 0) - g.roll) * Math.min(1, dt * 3);
+      /* Nicken (Zuhörer, wenn der Sprecher spricht), Kopfschütteln selten, Handbewegung des Sprechers */
+      if (!me && TK.sp && g.tg === TK.sp && time - g.nodT > 1.6 && Math.random() < dt * 0.16) { g.nodT = time; g.nodA = rr(0.1, 0.2); }
+      if (!me && TK.sp && time - g.shkT > 25 && Math.random() < dt * 0.012) { g.shkT = time; g.shkA = rr(0.16, 0.26); }
+      if (me && time - g.gesT > 1.2 && Math.random() < dt * 0.45) { g.gesT = time; g.gesA = rr(0.25, 0.6); }
+      const a = time - g.nodT, b = time - g.shkT, c = time - g.gesT;
+      g.nod = a < 1.1 ? Math.sin(a * 8) * g.nodA * Math.exp(-a * 2.6) : 0;
+      g.shk = b < 1.4 ? Math.sin(b * 9) * g.shkA * Math.exp(-b * 2.0) : 0;
+      g.ges = c < 1.3 ? Math.sin(Math.min(1, c / 1.3) * Math.PI) * g.gesA : 0;
+      g.speaking = me;
+    });
+  }
 
   /* ------------------------- Freihalten für die Welt ------------------------ */
   function near(x, z, r) { return Math.hypot(x - CX, z - CZ) < r; }
@@ -367,5 +461,5 @@ const CAMP = (() => {
     }
   }
 
-  return { GRAVEL: K.gr1, CX, CZ, RY, slots, SIT_Y, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
+  return { GRAVEL: K.gr1, CX, CZ, RY, slots, SIT_Y, SEAT_OFF, RING, gate, routeIn, routeOut, standPt, slotAt, blockedL, blockedW, talkStep, talkOf, talkReset, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
 })();

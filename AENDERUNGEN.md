@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v95 (aufbauend auf v94) – Lagerfeuer: Sitzende mit Beinen, Gespräch, Wege ums Feuer
+
+- **Sitzen:** Die Sitzfigur sitzt vorn auf der Sitzfläche (Becken 0,10 vor der Sofamitte statt dahinter). Die Oberschenkel liegen waagerecht auf Sitzhöhe, die Unterschenkel hängen mit Schuhen vor der Sofakante frei. Man sieht die ganze Beinpartie (`woodmodels.js`, `person({sit:true})`).
+- **Kein Werkzeug:** Am Lagerfeuer trägt niemand mehr etwas in der Hand. Das Werkzeug bleibt unsichtbar (auch die Axt am Körper der Holzfäller entfällt beim Sitzen). Die Arme liegen auf den Knien (statt waagerecht nach vorn zu stehen, was wie ein Stock aussah).
+- **Kopf als eigenes Teil:** Die Sitzfigur wird ohne Kopf gebaut (`noHead`), der Kopf (`FWM.head`, Drehpunkt Nacken, Höhe 0,8) hängt als Kind der Figur. Die Regie dreht ihn: Blick, Nicken, Kopfschütteln.
+- **Gespräch** (`CAMP.talkStep`, `talkOf`): Eine Regie für alle, die sitzen.
+  - Abwechselnd spricht einer, 2,4–7,5 s lang, danach manchmal eine Pause. Wer dran kommt und wie lange, ist zufällig (keine feste Reihenfolge, kein Takt).
+  - Zuhörer schauen zu 72 % zum Sprecher, sonst zu einem Nachbarn oder ins Feuer; der Sprecher blickt reihum. Jeder hat eine eigene Reaktionszeit.
+  - Zuhörer nicken (während der Sprecher spricht), selten schütteln sie den Kopf, der Sprecher bewegt Kopf und Hand (Geste).
+  - Kopfdrehung höchstens ±1,1 rad (Nacken), Körper bleibt zum Feuer.
+- **Wege:** Niemand läuft mehr durchs Feuer, durch Sofas oder Wände.
+  - Der Lagerplatz ist für die Wegsuche (A*) gesperrt. Hinein führen nur das Tor vorn (`CAMP.gate`) und der Mittelgang.
+  - Dann auf einem Ring (Radius 1,5) außen ums Feuer herum, auf dem kürzeren Bogen zum Platz, zuletzt auf den Standpunkt vor der Sofakante. Zum Hinsetzen geht die Figur rückwärts auf den Sitz und dreht sich zum Feuer.
+  - Zurück (`CAMP.routeOut`) derselbe Weg rückwärts bis zum Tor, danach normale Wegsuche. Wer mitten im Platz unterbrochen wird, geht ebenso über den Ring hinaus.
+  - Die Vorlaufzeit zum Mittag ist 2 Minuten länger, weil der Weg etwas länger ist.
+- **Tests:** `node tests/camp.test.js` (9): Füße ≥ 1,7 vom Feuer, Wege nie näher als 1,45 ans Feuer, nur Mittelgang/Ring/Endstück, Tor frei, Sprecherwechsel unregelmäßig, Blick beiderseits, Nicken ≫ Kopfschütteln, Zuhörer schauen überwiegend zum Sprecher.
+- **Im Browser geprüft (Software-Grafik):** alle neun sitzen auf ihren Plätzen mit sichtbaren Beinen, kleinster Abstand der Gehenden zum Feuer in der Messung 1,49, keine Wegpunkte außerhalb der freien Wege.
+- **Nicht getestet:** auf einem echten Telefon.
+
 ## v94 (aufbauend auf v93) – Ausdauerleiste aus der Ansicht entfernt, Axt-Karte tiefer
 
 - Die Ausdauer-Anzeige (💪) ist weg: der Chip oben rechts im Hof (`fcSta`) und die Kraftleiste im Axtspiel (`mgStaBox`).

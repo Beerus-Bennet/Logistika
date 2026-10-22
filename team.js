@@ -215,6 +215,8 @@ function navBuild() {
   });
   /* Bäume (auch Setzlinge) */
   (S.farm.trees || []).forEach(t => { if ((t.st === "up" || t.st === "sapling") && navIn(Math.floor(t.x), Math.floor(t.z))) blk[navIdx(Math.floor(t.x), Math.floor(t.z))] = 1; });
+  /* v95: Lagerplatz (Feuer, Sofas, Wände) ist für die Wegsuche gesperrt – hinein führt nur CAMP.routeIn über das Tor */
+  if (typeof CAMP !== "undefined" && CAMP.blockedW) for (let z = Math.floor(CAMP.CZ) - 14; z < CAMP.CZ + 14; z++) for (let x = Math.floor(CAMP.CX) - 14; x < CAMP.CX + 14; x++) if (navIn(x, z) && CAMP.blockedW(x + 0.5, z + 0.5)) blk[navIdx(x, z)] = 1;
   return NAV;
 }
 /* Zäune: [senkrecht?, Linie, von, bis, Lücke von, Lücke bis] – durch geht es nur in der Lücke (Tor) */
@@ -1110,7 +1112,16 @@ function staffGo(s, i, j) {
   const R = FSTAFF_ROLES[s.role], h = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
   const p = staffPlace(s, j);
   let r = null;
-  try { r = navPath(h[0], h[1], p.x, p.z, s.role); } catch (e) { console.warn("Weg:", e); }
+  try {
+    const C = typeof CAMP !== "undefined" ? CAMP : null, inC = C && C.blockedW(h[0], h[1]), toC = C && j.k === "lunch" && C.slotAt(p.x, p.z);
+    if (inC || toC) {
+      /* v95: im Lagerplatz nur über das Tor und den Ring ums Feuer (nie durchs Feuer, Sofas oder Wände) */
+      const g = C.gate();
+      let head = inC ? C.routeOut(h[0], h[1]) : (navPath(h[0], h[1], g[0], g[1], s.role) || [[h[0], h[1]], g]);
+      if (toC) r = head.concat(C.routeIn(toC).slice(1));
+      else r = head.concat((navPath(g[0], g[1], p.x, p.z, s.role) || [g, [p.x, p.z]]).slice(1));
+    } else r = navPath(h[0], h[1], p.x, p.z, s.role);
+  } catch (e) { console.warn("Weg:", e); }
   const route = (r || [[h[0], h[1]], [p.x, p.z]]).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
   const len = routeLen(route), home = j.k === "home";
   const walk = Math.max(home ? 0.4 : 1, staffWalkLen(route) / 5);   /* v71: auf Dekowegen schneller */
@@ -1240,7 +1251,7 @@ function staffLunch(s, i) {
   const sl = CAMP.slotFor(s, Object.keys(FSTAFF_ROLES).indexOf(s.role));
   if (!sl) { s.lunchDay = day; return false; }
   const p = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
-  if (m < LUNCH0 - (Math.hypot(p[0] - sl.x, p[1] - sl.z) * 1.3 / 5 + 1)) return false;
+  if (m < LUNCH0 - (Math.hypot(p[0] - sl.x, p[1] - sl.z) * 1.3 / 5 + 3)) return false;
   s.lunchDay = day;
   if (s.job) { const q = staffRoutePos(s.job); s.px = q[0]; s.pz = q[1]; s.job = null; }
   staffGo(s, i, { k: "lunch", what: "Mittagspause", at: [sl.x, sl.z, sl.fx, sl.fz] });
@@ -1423,7 +1434,10 @@ function worldSyncStaff() {
     const arm = R.addChild(node, fnode(fmesh("starm:" + body.shirt + ":" + body.skin, () => FWM.arm(body)), Object.assign({ rz: 0.08 }, STAFF_SHOULDER)));
     const T = staffTool(s.role);
     const tool = T ? R.addChild(arm, fnode(fmesh((T.grip ? "sgrip:" : "stool:") + s.role, T.grip ? () => staffGrip(s.role) || T.fn() : T.fn), staffToolOnArm(T))) : null;
-    WV.staff.set(s.id, { node, arm, tool, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key });
+    /* v95: Kopf als eigenes Teil (sitzend: Blick, Nicken, Kopfschütteln) – nur sichtbar, solange die Sitzfigur ohne Kopf gezeigt wird */
+    const head = R.addChild(node, fnode(fmesh("sthead:" + staffKey(s), () => FWM.head(body)), { y: 0.8 }));
+    head.visible = false;
+    WV.staff.set(s.id, { node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key });
   });
 }
 const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1435,6 +1449,12 @@ function stepStaff(dt, time) {
   if (FV.R && (WV.staff.size !== F.staff.length || F.staff.some(s => { const e = WV.staff.get(s.id); return e && e.key !== staffKey(s); }))) worldSyncStaff();
   if (!WV.staff.size) return;
   const now = wnow();
+  /* v95: Gespräch der Sitzenden – eine Regie für alle am Feuer */
+  if (typeof CAMP !== "undefined") {
+    const ids = [];
+    F.staff.forEach(s => { const e = WV.staff.get(s.id), sl = e && e.isSit && CAMP.slotOf(s.id); if (sl) ids.push(sl.id); });
+    CAMP.talkStep(dt, time, ids);
+  }
   F.staff.forEach((s, i) => {
     const e = WV.staff.get(s.id);
     if (!e) return;
@@ -1443,11 +1463,13 @@ function stepStaff(dt, time) {
     const sl = j && j.k === "lunch" && S.time - j.t0 >= j.walk && typeof CAMP !== "undefined" ? CAMP.slotOf(s.id) : null;
     if (sl && !e.isSit) {
       e.isSit = true; e.mStand = n.mesh;
-      n.mesh = fmesh("staffs:" + e.key, () => FWM.person(Object.assign({}, staffBody(s), { armR: false, sit: true })));
+      n.mesh = fmesh("staffs:" + e.key, () => FWM.person(Object.assign({}, staffBody(s), { armR: false, sit: true, noHead: true })));
       if (A) A.y = STAFF_SHOULDER.y - 0.08; if (e.tool) e.tool.visible = false;
+      if (e.head) { e.head.visible = true; e.head.rx = e.head.ry = e.head.rz = 0; }
     } else if (!sl && e.isSit) {
       e.isSit = false; n.mesh = e.mStand || n.mesh; n.rx = 0;
       if (A) A.y = STAFF_SHOULDER.y; if (e.tool) e.tool.visible = true;
+      if (e.head) e.head.visible = false;
     }
     /* angetippt: stehen bleiben, zu dir drehen, einmal winken */
     const wv = e.wave != null ? now - e.wave : 99;
@@ -1465,14 +1487,16 @@ function stepStaff(dt, time) {
     }
     /* unterwegs mit dem Wagen: nicht auf dem Hof (auf Fortbildung arbeitet die Vertretung) */
     const off = !!(s.ride && staffRideGone(s));
-    n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off;
+    n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off; if (e.head) e.head.visible = !off && !!e.isSit;
     if (off) return;
     if (sl) {
-      const P = CAMP.pose(sl), k = Math.min(1, dt * 5);
-      e.x = sl.x; e.z = sl.z; n.x = sl.x; n.z = sl.z; if (e.tool) e.tool.visible = false;
+      const P = CAMP.pose(sl), k = Math.min(1, dt * 5), G = CAMP.talkOf(sl.id), kx = Math.min(1, dt * 4);
+      /* v95: vom Standpunkt vor dem Sofa rückwärts auf den Sitz, dabei zum Feuer umdrehen */
+      e.x += (sl.x - e.x) * kx; e.z += (sl.z - e.z) * kx; n.x = e.x; n.z = e.z; if (e.tool) e.tool.visible = false;
       n.ry += angTo(n.ry, sl.ry + P.turn) * Math.min(1, dt * 6);
-      n.y = CAMP.SIT_Y + Math.sin(time * 1.6 + e.ph) * 0.006; n.rx += (P.lean - n.rx) * k;
-      if (A) { A.rx += (P.arm + Math.sin(time * 0.8 + e.ph) * 0.05 - A.rx) * k; A.rz += (0.08 + P.az - A.rz) * k; }
+      n.y += (CAMP.SIT_Y + Math.sin(time * 1.6 + e.ph) * 0.006 - n.y) * Math.min(1, dt * 8); n.rx += (P.lean - n.rx) * k;
+      if (e.head) { e.head.visible = true; e.head.ry = G.yaw + G.shk; e.head.rx = G.pit + G.nod; e.head.rz = G.roll; }
+      if (A) { A.rx += (P.arm - G.ges * 0.9 + Math.sin(time * 0.8 + e.ph) * 0.05 - A.rx) * k; A.rz += (0.08 + P.az + G.ges * 0.25 - A.rz) * k; }
       return;
     }
     let tx, tz, work = false, face = null, onRoute = false, rh = null;

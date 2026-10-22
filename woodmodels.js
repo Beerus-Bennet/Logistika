@@ -1896,32 +1896,47 @@ const FWM = (() => {
     b.box(0.03, 0.014, 0.02, blk, { y: 0.672, z: fz });                                     /* Steg */
     return b;
   }
+  /* Kopf mit Haar, Mütze/Hut/Helm, Bart und Augen; yo = Versatz in y (0 = Lage am Körper, −0,8 = um den Hals) */
+  function headParts(b, o, yo) {
+    const skin = o.skin || 0xf2c9a0, hat = o.hat;
+    b.sphere(0.12, 8, 6, skin, { y: 0.92 + yo });
+    if (o.hair) b.sphere(0.125, 8, 4, o.hair, { y: 0.95 + yo, sy: 0.8 });
+    if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 + yo }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 + yo }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 + yo }); }
+    if (hat === "muetze") b.sphere(0.13, 8, 4, 0x2f6fb0, { y: 1.0 + yo, sy: 0.6 });
+    if (hat === "helm") b.sphere(0.135, 8, 4, 0xf2a531, { y: 1.0 + yo, sy: 0.65 });
+    if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84 + yo, z: 0.1 });
+    b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: 0.04, y: 0.95 + yo, z: 0.115 }); b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: -0.04, y: 0.95 + yo, z: 0.115 });
+  }
+  /* v95: der Kopf allein, Drehpunkt am Hals (Ursprung = Halsansatz, y = 0,8 am Körper) – für Gespräch, Nicken, Kopfschütteln */
+  function head(o) {
+    o = o || {};
+    G3.seed(4600 + (o.seed || 0));
+    const b = new MB();
+    headParts(b, o, -0.8);
+    return b;
+  }
   /* Leute: Förster, Nachbar, Bürgermeisterin, Mitarbeiter */
   function person(o) {
     o = o || {};
     G3.seed(4600 + (o.seed || 0));
     const b = new MB();
     const shirt = o.shirt || 0x3f78c8, pants = o.pants || 0x3a4a5a, skin = o.skin || 0xf2c9a0, hat = o.hat;
-    /* v81: o.sit – sitzend (Oberschenkel waagerecht, Unterschenkel nach unten, Körper 0,08 tiefer) */
-    const dy = o.sit ? -0.08 : 0;
+    /* v81: o.sit – sitzend. v95: Oberschenkel waagerecht in Höhe 0,317–0,417 (= Sitzhöhe 0,46 bei Maßstab 1,45), die Unterschenkel
+       hängen senkrecht nach unten bis zum Boden, die Füße stehen davor; der Körper bleibt in Standhöhe (dy = 0). Die Beine sind lang genug,
+       um vor der Sofakante frei zu hängen. o.noHead – Kopf als eigenes Teil (head()), damit er sich drehen und nicken kann. */
+    const dy = 0;
     if (o.sit) {
       [-0.07, 0.07].forEach(x => {
-        b.box(0.09, 0.24, 0.1, pants, { x, z: 0.2 });
-        b.box(0.09, 0.1, 0.28, pants, { x, y: 0.24, z: 0.07 });
-        b.box(0.095, 0.05, 0.14, 0x2a2a30, { x, z: 0.25 });
+        b.box(0.09, 0.317, 0.1, pants, { x, z: 0.24 });
+        b.box(0.09, 0.1, 0.35, pants, { x, y: 0.317, z: 0.115 });
+        b.box(0.095, 0.05, 0.15, 0x2a2a30, { x, z: 0.275 });
       });
     } else [-0.07, 0.07].forEach(x => b.box(0.09, 0.42, 0.11, pants, { x }));
     b.box(0.3, 0.38, 0.18, shirt, { y: 0.42 + dy });
     /* armR: false – der rechte Arm kommt als eigenes, bewegliches Teil dazu (arm()) */
     [-1, 1].forEach(s => { if (s === 1 && o.armR === false) return; b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44 + dy, rz: s * 0.08 }); });
-    b.sphere(0.12, 8, 6, skin, { y: 0.92 + dy });
-    if (o.hair) b.sphere(0.125, 8, 4, o.hair, { y: 0.95 + dy, sy: 0.8 });
-    if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 + dy }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 + dy }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 + dy }); }
-    if (hat === "muetze") b.sphere(0.13, 8, 4, 0x2f6fb0, { y: 1.0 + dy, sy: 0.6 });
-    if (hat === "helm") b.sphere(0.135, 8, 4, 0xf2a531, { y: 1.0 + dy, sy: 0.65 });
-    if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84 + dy, z: 0.1 });
-    b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: 0.04, y: 0.95 + dy, z: 0.115 }); b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: -0.04, y: 0.95 + dy, z: 0.115 });
-    if (o.tool === "axt") { b.box(0.03, 0.5, 0.03, C.woodD, { x: 0.22, y: 0.3 + dy, rz: 0.2 }); b.box(0.12, 0.08, 0.02, 0x9aa6af, { x: 0.27, y: 0.55 + dy, rz: 0.2 }); }
+    if (!o.noHead) headParts(b, o, 0);
+    if (o.tool === "axt" && !o.sit) { b.box(0.03, 0.5, 0.03, C.woodD, { x: 0.22, y: 0.3 + dy, rz: 0.2 }); b.box(0.12, 0.08, 0.02, 0x9aa6af, { x: 0.27, y: 0.55 + dy, rz: 0.2 }); }
     return b;
   }
   /* Arm zum Bewegen: Drehpunkt an der Schulter, hängt nach unten, mit Hand */
@@ -2451,6 +2466,6 @@ const FWM = (() => {
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
-    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, arm, cosDeco
+    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, head, arm, cosDeco
   };
 })();

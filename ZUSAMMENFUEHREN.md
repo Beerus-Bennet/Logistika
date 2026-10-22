@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v95 – Lagerfeuer: Sitzende mit Beinen, Gespräch, Wege ums Feuer (auf v94)
+
+| Teil | Datei |
+|---|---|
+| Sitzfigur: längere Unterschenkel, `noHead`, `headParts`, neues `FWM.head`, Axt am Körper nicht beim Sitzen | `woodmodels.js` |
+| Sitzplätze (Becken vorn, `R`/`ang` je Platz), Arme auf den Knien, Wege `gate`/`routeIn`/`routeOut`/`slotAt`/`blockedW`, Gesprächs-Regie `talkStep`/`talkOf`/`talkReset` | `camp.js` |
+| Lagerplatz in der Wegsuche gesperrt (`navBuild`), Routen über Tor und Ring (`staffGo`), Kopf-Knoten und Regie-Anwendung (`worldSyncStaff`, `stepStaff`), 2 min mehr Vorlauf zum Mittag | `team.js` |
+| Tests | `tests/camp.test.js` (neu) |
+| Version 95 | `index.html`, `sw.js` |
+
 ## Stand v93 – Fällen mit der Axt in der Ich-Perspektive (auf v92)
 
 | Teil | Datei |
