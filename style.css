@@ -3051,13 +3051,13 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
 #farmAngel.mg3d .fa-box>*:not(.fa-x){display:none!important}
 #farmAngel.mg3d .fa-x{display:block;pointer-events:auto;right:10px;top:10px}
 /* v93: Axt in der Ich-Perspektive – Nadel, Baum- und Kraftleiste als schmale Karte unten, der Hinweis oben, der Stamm bleibt frei */
-#farmAngel.mg3d.mga .fa-box{display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;padding:0 calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));box-sizing:border-box}
-#farmAngel.mg3d.mga .fa-box>.mg-stage{display:block!important;width:100%;max-width:440px;min-height:0;margin:0;padding:6px 10px 8px;box-sizing:border-box;pointer-events:auto;
+#farmAngel.mg3d.mga .fa-box{display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;padding:0 calc(10px + var(--safe-r)) 2px calc(10px + var(--safe-l));box-sizing:border-box;gap:4px}
+#farmAngel.mg3d.mga .fa-box>.mg-stage{display:block!important;width:100%;max-width:440px;min-height:0;margin:0;padding:5px 10px 6px;box-sizing:border-box;pointer-events:auto;
   background:rgba(255,250,240,.93);border:var(--line);border-radius:14px;box-shadow:var(--shadow)}
-#farmAngel.mg3d.mga .mg-tbar{height:28px;margin-top:0}
-#farmAngel.mg3d.mga .mg-hp,#farmAngel.mg3d.mga .mg-sta{margin-top:5px}
+#farmAngel.mg3d.mga .mg-tbar{height:24px;margin-top:0}
+#farmAngel.mg3d.mga .mg-hp,#farmAngel.mg3d.mga .mg-sta{margin-top:4px}
 #farmAngel.mg3d.mga .fa-box>.mg-bar{display:flex!important;width:100%;max-width:440px;pointer-events:auto}
-#farmAngel.mg3d.mga .mg-bar .fa-go{padding:7px;font-size:15px}
+#farmAngel.mg3d.mga .mg-bar .fa-go{padding:6px;font-size:15px}
 #farmAngel.mg3d.mga .mg-bar .fa-go small{display:none}
 #farmAngel.mg3d.mga .fa-box>.fa-msg{display:block!important;position:absolute;left:50%;top:12px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 110px);margin:0;min-height:0;
   padding:6px 14px;border-radius:16px;background:rgba(255,250,240,.92);border:2px solid var(--ink);font-size:13px;text-align:center;pointer-events:none}

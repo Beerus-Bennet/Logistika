@@ -145,7 +145,7 @@ const MG_GAMES = {
       st.c = 0.3 + Math.random() * 0.4; st.good = 0.1; st.okw = 0.26; st.cool = 0;
       mgH("🪓 " + (t.n || FSPECIES[t.sp].n) + " fällen · " + Z.n, "Tipp, wenn die Nadel im grünen Feld steht");   /* v59: t.n = Obstbaum */
       mgStage(`<div class="mg-tbar" id="mgT"><i class="ok" id="mgOk"></i><i class="good" id="mgGood"></i><b id="mgNeedle"></b></div>
-        <div class="mg-hp" id="mgHpBox"><span>🌳</span><i><em id="mgHp"></em></i></div><div id="mgStaBox">${mgStaHTML()}</div>`);
+        <div class="mg-hp" id="mgHpBox"><span>🌳</span><i><em id="mgHp"></em></i></div>`);
       $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.axe.hit(st); };
       MG_GAMES.axe.zone(st);
       MG_GAMES.axe.bar(st);
@@ -173,7 +173,7 @@ const MG_GAMES = {
       o.style.left = (st.c - st.okw / 2) * 100 + "%"; o.style.width = st.okw * 100 + "%";
       g.style.left = (st.c - st.good / 2) * 100 + "%"; g.style.width = st.good * 100 + "%";
     },
-    hpBar(st) { const h = $("#mgHp"); if (h) h.style.width = Math.max(0, 100 - (st.tree.dmg || 0) / st.hp * 100) + "%"; const s = $("#mgStaBox"); if (s) s.innerHTML = mgStaHTML(); },
+    hpBar(st) { const h = $("#mgHp"); if (h) h.style.width = Math.max(0, 100 - (st.tree.dmg || 0) / st.hp * 100) + "%"; },
     frame(st, dt) {
       if (st.tired) return;
       st.p += st.dirv * st.v * dt;

@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v94 (aufbauend auf v93) – Ausdauerleiste aus der Ansicht entfernt, Axt-Karte tiefer
+
+- Die Ausdauer-Anzeige (💪) ist weg: der Chip oben rechts im Hof (`fcSta`) und die Kraftleiste im Axtspiel (`mgStaBox`).
+- Die Axt-Karte (Nadel, Baumleiste, „Hacken!“) sitzt jetzt direkt über der unteren Leiste und ist kompakter (ohne Kraftzeile rund 55 px niedriger). Die Schlaganimation hat mehr Platz.
+- **Unverändert:** Die Ausdauer selbst läuft weiter (Schläge kosten Kraft, bei 0 erscheint „Keine Kraft mehr“ mit Brotzeit). Nur die Anzeige fehlt. Die Brotzeit-Karte zeigt weiter 💪 x / y.
+
 ## v93 (aufbauend auf v92) – Fällen mit der Axt in der Ich-Perspektive
 
 **Hinweis Technik:** Das Spiel nutzt kein Three.js, sondern die eigene Engine `gl3d.js`. Die Wünsche aus dem Auftrag sind dort mit den Entsprechungen umgesetzt:

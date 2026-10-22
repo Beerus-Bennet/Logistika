@@ -2813,7 +2813,7 @@ function worldPopAct(a, o) {
     const [x, y] = objScreen(o);
     puff(o);
     const r = farmClearJunk(o);
-    if (!r) { sfx("bad"); toast("💪 Zu erschöpft – erst eine Brotzeit (oben auf 💪 tippen).", "warn"); return; }
+    if (!r) { sfx("bad"); toast("💪 Zu erschöpft – erst eine Brotzeit.", "warn"); return; }
     r.got.forEach((g, i) => flyItem(g.id, x, y, storeBtn(), i * 100, g.n));
     if (r.m) coinFly(x, y, r.m);
     xpFly(x, y - 10, r.xp, 120);
@@ -3176,13 +3176,11 @@ function worldUI() {
   const ck = sta + ":" + mx + ":" + F.clover + ":" + wx.n + ":" + farmTod() + ":" + (ev ? ev.k + (ev.k === "defekt" ? "" : Math.ceil(left / 5)) + evO : "") + ":" + (trL ? Math.ceil(trL / 5) + ":" + trO : "") + ":" + (pvL ? Math.ceil(pvL / 30) + ":" + pvO : "");
   if (C._k !== ck) {
     C._k = ck;
-    C.innerHTML = `<button class="fchip2 sta${sta < 15 ? " low" : ""}" id="fcSta" title="Ausdauer – Brotzeit macht wieder fit"><span>💪</span><b>${sta}</b><i><em style="width:${Math.round(sta / mx * 100)}%"></em></i></button>
-      <button class="fchip2" id="fcClover" title="Kleeblätter für den Extras-Laden"><span>🍀</span><b>${F.clover || 0}</b></button>
+    C.innerHTML = `<button class="fchip2" id="fcClover" title="Kleeblätter für den Extras-Laden"><span>🍀</span><b>${F.clover || 0}</b></button>
       <button class="fchip2 wx" id="fcWx" title="Wetter und Tageszeit – wichtig fürs Angeln"><span>${wx.i}</span><b>${esc(FTOD_N[farmTod()])}</b></button>
       ${ev ? `<button class="fchip2 ev${evO ? "" : " mini"}" id="fcEv" title="${esc(evT.n)}"><span>${evT.i}</span>${evO ? `<b>${esc(evT.n)}</b>${ev.k !== "defekt" && left < 999 ? `<small>${fdur(left)}</small>` : ""}` : ""}</button>` : ""}
       ${trL ? `<button class="fchip2 ev tr${trO ? "" : " mini"}" id="fcTr" title="Unter dem Vogelschwarm liegt eine Schatzkiste"><span>🐦</span>${trO ? `<b>Vogelschwarm</b><small>${fdur(trL)}</small>` : ""}</button>` : ""}
       ${pvL ? `<button class="fchip2 ev pv${pvO ? "" : " mini"}" id="fcPv" title="Döring GmbH: Solarmodule am Sägewerk"><span>☀️</span>${pvO ? `<b>Döring Solar</b><small>${fdur(pvL)}</small>` : ""}</button>` : ""}`;
-    $("#fcSta").onclick = openFood;
     $("#fcClover").onclick = () => openFarmHouse("extras");
     $("#fcWx").onclick = openWeatherInfo;
     const unfold = k => { CO[k] = performance.now() + 6000; C._k = ""; worldUI(); };
