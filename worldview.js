@@ -363,7 +363,7 @@ function worldStatic() {
        v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
     const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k];
     /* v77: am Tor läuft der Weg 1 Einheit in den Hof hinein und dort in den Schotter aus (fade) */
-    const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : null];
+    const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(a) ? { L: 7, col: CAMP.GRAVEL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(e) ? { L: 7, col: CAMP.GRAVEL } : null];   /* v83: der Weg läuft in den Kies des Lagerfeuerplatzes aus */
     const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0 && !campEnd(a), loose(e) && tee[1] < 0 && !campEnd(e)], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
       snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
     return { p, o, tee };

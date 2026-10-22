@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v84 (aufbauend auf v83) – Weg gestreckt, sauberer Übergang, ein großer Lichtkreis
+
+- **Wegverlauf gestreckt** (`erbe.js` `FWORLD.paths[1]`): die letzten ~15 Einheiten laufen schnurgerade (Bildschirm senkrecht)
+  auf den Platz zu, die Kurve liegt weiter hinten und ist flacher (Umzug `F.v83p` für Bäume auf der neuen Linie).
+- **Fehler in der Wegzusammensetzung behoben:** der zusätzliche Kiesstreifen (`funnel`) lag als eigene Ebene über dem
+  Weg – mit Farbstufe und harter Kante. Weg: jetzt über die vorhandene Auslauf-Funktion `fade` (`worldview.js`,
+  `wayFade`) – die letzten 7 Einheiten gehen samt Rand weich in die Kiesfarbe des Platzes über (`CAMP.GRAVEL`).
+  Nur ein paar Kiesel bleiben am Wegende liegen.
+- **Beleuchtung nachts:** statt vieler kleiner Lampenkreise ein großer, gleichmäßiger warmer Lichtkreis um das Feuer über
+  den ganzen Platz (sieben weiche Stufen, flackert leicht). Die Lampen behalten ihre leuchtende Birne.
+- `index.html`/`sw.js`: v84.
+
 ## v83 (aufbauend auf v82) – Weg gerade auf den Lagerfeuerplatz, Pflanzen nicht mehr durch die Wand
 
 - **Wegverlauf:** der Hauptweg (`erbe.js` `FWORLD.paths[1]`, letzte Punkte) läuft jetzt in der Blickrichtung gerade auf den

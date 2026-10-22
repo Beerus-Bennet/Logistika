@@ -42,7 +42,7 @@ const FWORLD = {
      alle Wege enden genau am Bordstein der Straße (z = 17,48) */
   paths: [
     [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
-    [[-41, -54], [-40, -63], [-37.2, -67.8], [-34.2, -70.6], [-33.8, -73.5], [-33.8, -76.4], [-33.8, -79.3], [-33.8, -84], [-34, -92], [-37.8, -101], [-42.3, -109.8], [-45.9, -113.4], [-49.4, -116.9]],
+    [[-41, -54], [-40, -63], [-37.2, -67.8], [-34.2, -70.6], [-33.8, -73.5], [-33.8, -76.4], [-33.8, -79.3], [-33.8, -84], [-34, -92], [-34.6, -98], [-36.6, -103], [-39.2, -106.7], [-43, -110.5], [-49.4, -116.9]],
     [[-54, -42], [-64, -42], [-72, -48], [-79.5, -50.6], [-83.5, -52.4], [-85.5, -54.2], [-86, -55.6]],
     [[-34.2, -70.6], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.8, 11.2], [40.3, 14.6], [40, 16.2], [40, 17.48]],
     [[-33.8, -84], [-46, -82], [-60, -78], [-70, -72]],
@@ -257,7 +257,7 @@ function erbeInit(F, fresh) {
   /* v81: Lagerfeuerplatz – Bäume im Platz weg (ältere Stände) */
   if (!F.v81u) { F.v81u = 1; F.trees = F.trees.filter(t => !campTree(t)); }
   /* v82: Weg zum Lagerfeuer läuft gerade auf den Platz zu – Bäume auf der neuen Linie weg oder beiseite */
-  if (!F.v82p) { F.v82p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
+  if (!F.v83p) { F.v83p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {
