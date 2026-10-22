@@ -681,10 +681,11 @@ function farmLoop(now) {
   if (!FV.on) return;
   requestAnimationFrame(farmLoop);
   const R = FV.R;
-  if (!R || R.lost()) return;
+  if (!R || R.lost() || document.hidden) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
   /* Akku schonen: ohne Berührung reichen ~30 Bilder pro Sekunde */
   const busy = FV.ptr.size || FV.focusing || FV.tool || FV.place || FV.drives.length || now - (FV.touchAt || 0) < 1500
     || Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01 || (typeof worldBusy === "function" && worldBusy());
+  FV.busy = !!busy;
   if (!busy && now - (FV.last || 0) < 30) return;
   const dt = Math.min(0.05, (now - (FV.last || now)) / 1000);
   FV.last = now;

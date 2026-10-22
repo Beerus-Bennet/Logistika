@@ -192,6 +192,32 @@ const LAKE_CREEK = [[45.2, 58], [48.5, 59], [58, 62], [70, 60], [84, 66], [100, 
 
 /* Schneller Puffer für Kulissen: Kopien eines Modells (nur Drehung um y,
    gleichmäßige Größe) direkt in ein Float32Array – ohne MB-Umweg */
+/* v88: Vegetation – Qualität und Windanimation.
+   Basis ist statisch (kein Sway, keine Schatten von Gras und Büschen). Der Wind der Grasbüschel läuft als
+   gemeinsamer Vertex-Shader (uSway/uSwayT in gl3d.js), nicht per JS pro Halm; ein Knoten je Chunk, vom Frustum-Culling
+   mit erledigt. Moduswahl: ?veg=static|wind|auto, localStorage "logistika_veg" oder WV.vegMode(…); „auto“ schaltet den Wind
+   erst zu, wenn die Bildrate unter Last tatsächlich reicht, und bei Einbruch wieder ab. */
+const VEGQ = {
+  mode: "auto",            /* static | wind | auto */
+  grassSway: 2.0,          /* Amplitude: 0,045 · Höhe · 2,0 ≈ 0,03 Einheiten bei 0,3 hohem Büschel */
+  swayT: 0.4,              /* Zeitfaktor des Shaders: Periode ≈ 10 s */
+  range: 28,               /* Wind nur für Chunks innerhalb dieser Entfernung zum Kamerazentrum */
+  idleOff: 90000,          /* ohne Berührung nach 90 s: Wind aus */
+  bushShadow: false,       /* Büsche werfen keinen dynamischen Schatten (statisches Shading) */
+  on: false, why: "start", nodes: [], samples: [], prev: 0, good: 0, banUntil: 0, t0: 0, checkAt: 0,
+  fps: 0
+};
+(function vegInit() {
+  try {
+    const q = new URLSearchParams(location.search).get("veg"), ls = localStorage.getItem("logistika_veg");
+    const m = q || ls;
+    if (m === "static" || m === "wind" || m === "auto") VEGQ.mode = m;
+    else if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) VEGQ.mode = "static";
+    if (new URLSearchParams(location.search).get("vegshadow") === "1" || localStorage.getItem("logistika_vegshadow") === "1") VEGQ.bushShadow = true;
+  } catch (e) {}
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => { VEGQ.prev = 0; VEGQ.samples.length = 0; VEGQ.good = 0; });
+})();
+
 class WBuf {
   constructor() { this.f = new Float32Array(9 * 3 * 256); this.n = 0; }
   grow(k) { if (this.n + k <= this.f.length) return; let L = this.f.length * 2; while (L < this.n + k) L *= 2; const g = new Float32Array(L); g.set(this.f.subarray(0, this.n)); this.f = g; }
@@ -353,7 +379,7 @@ function worldStatic() {
   const chunkOf = (x, z) => {
     const i = Math.floor((x - WGRID.x0) / CH), j = Math.floor((z - WGRID.z0) / CH), k = i + "," + j;
     let c = chunks.get(k);
-    if (!c) { c = { g: new WBuf(), d: new WBuf(), trees: [] }; chunks.set(k, c); }
+    if (!c) { c = { g: new WBuf(), d: new WBuf(), v: new WBuf(), trees: [] }; chunks.set(k, c); }
     return c;
   };
   /* Bodenfarben einmal je Gitterpunkt */
@@ -435,13 +461,20 @@ function worldStatic() {
     WV.bushes = res.instances; WV.grass = res.grass.instances;
     WV.bushInfo = { trees: trees.length, target: res.target, placed: res.placed, shortfall: res.shortfall, byType: res.byType, groups: res.groups, singles: res.singles, kinds: res.kinds,
       clearings: res.clearings.length, grass: res.grass.instances.length, birchTufted: res.grass.birchTufted, birchTotal: res.grass.birchTotal };
-    res.instances.forEach(b => chunkOf(b.position[0], b.position[2]).d.add(WV.bushm[b.typeId][b.variantSeed % BUSH.VARIANTS], b.position[0], b.position[2], b.rotationY, b.scale[0], b.scale[1], b.tint));
-    res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).d.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
+    res.instances.forEach(b => (VEGQ.bushShadow ? chunkOf(b.position[0], b.position[2]).d : chunkOf(b.position[0], b.position[2]).g).add(WV.bushm[b.typeId][b.variantSeed % BUSH.VARIANTS], b.position[0], b.position[2], b.rotationY, b.scale[0], b.scale[1], b.tint));
+    res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
-  WV.bgChunks = new Map();
+  WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = false; VEGQ.why = "start";
   for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
     if (c.d.n) R.nodes.push(fnode(R.mesh(c.d.out())));
+    if (c.v.n) {
+      /* v88: Gras je Chunk in einem eigenen Knoten – ohne Schattenwurf, Wind über den gemeinsamen Shader (sway = 0 im statischen Betrieb) */
+      const [i, j] = key.split(",").map(Number);
+      const vn = fnode(R.mesh(c.v.out()), { shadow: false, sway: 0, swayT: VEGQ.swayT });
+      R.nodes.push(vn);
+      VEGQ.nodes.push({ node: vn, x: WGRID.x0 + (i + 0.5) * CH, z: WGRID.z0 + (j + 0.5) * CH });
+    }
     if (c.trees.length) { const [i, j] = key.split(",").map(Number); WV.bgChunks.set(key, { trees: c.trees, node: null, x0: WGRID.x0 + i * CH, z0: WGRID.z0 + j * CH }); }
   }
   for (const c of WV.bgChunks.values()) bgChunkBuild(c);
@@ -2569,9 +2602,60 @@ function stepOutline(time) {
 }
 
 /* ------------------------------ Takt -------------------------------------- */
+/* v88: Windanimation des Grases – Schaltlogik (kein JS pro Halm; nur ein Uniform-Wert je sichtbarem Chunk-Knoten).
+   Stichproben der Bildabstände nur bei voller Bildrate (FV.busy) und sichtbarem Fenster. */
+function vegMode(m) {
+  if (m !== "static" && m !== "wind" && m !== "auto") return VEGQ.mode;
+  VEGQ.mode = m; VEGQ.samples.length = 0; VEGQ.good = 0; VEGQ.banUntil = 0;
+  try { localStorage.setItem("logistika_veg", m); } catch (e) {}
+  if (m === "static") vegSet(false, "manuell statisch"); else if (m === "wind") vegSet(true, "manuell Wind");
+  return m;
+}
+function vegSet(on, why) { VEGQ.on = on; VEGQ.why = why; if (!on) for (const e of VEGQ.nodes) e.node.sway = 0; }
+function vegInfo() {
+  return { mode: VEGQ.mode, on: VEGQ.on, why: VEGQ.why, fps: Math.round(VEGQ.fps), chunks: VEGQ.nodes.length, animated: VEGQ.nodes.filter(e => e.node.sway > 0).length,
+    grassTris: VEGQ.nodes.reduce((a, e) => a + e.node.mesh.count / 3, 0) };
+}
+function vegStep(now) {
+  if (!VEGQ.nodes.length) return;
+  if (typeof document !== "undefined" && document.hidden) { VEGQ.prev = 0; return; }
+  const t = performance.now();
+  if (!VEGQ.t0) VEGQ.t0 = t;
+  if (VEGQ.mode === "wind" && !VEGQ.on) VEGQ.on = true, VEGQ.why = "Modus wind";
+  /* Messung: nur Bilder bei voller Rate zählen; Ruhephasen (30 Bilder/s) und Pausen verfälschen sonst */
+  if (FV.busy && VEGQ.prev && t - VEGQ.prev < 200) {
+    VEGQ.samples.push(t - VEGQ.prev);
+    if (VEGQ.samples.length >= 90) {
+      const a = VEGQ.samples.slice().sort((x, y) => x - y), mean = a.reduce((x, y) => x + y, 0) / a.length, best = a[Math.floor(a.length * 0.1)];
+      VEGQ.samples.length = 0; VEGQ.fps = 1000 / mean;
+      if (VEGQ.mode === "auto") {
+        if (!VEGQ.on) {
+          /* Wind erst nach 6 s Laufzeit und zwei guten Fenstern in Folge: im Mittel ≥ 50 Bilder/s (≤ 20 ms) */
+          VEGQ.good = (mean <= 20 && t - VEGQ.t0 > 6000 && t > VEGQ.banUntil) ? VEGQ.good + 1 : 0;
+          if (VEGQ.good >= 2) { vegSet(true, "auto: " + Math.round(1000 / mean) + " Bilder/s"); VEGQ.good = 0; }
+        } else if (mean > 30) {
+          /* Einbruch unter ~33 Bilder/s: Wind aus und 60 s Sperre */
+          vegSet(false, "auto: aus bei " + Math.round(1000 / mean) + " Bilder/s"); VEGQ.banUntil = t + 60000;
+        }
+      }
+    }
+  }
+  VEGQ.prev = FV.busy ? t : 0;
+  /* Amplitude je Chunk: nur nah an der Kamera, im Sturm kräftiger, nach langer Ruhe aus */
+  if (t < VEGQ.checkAt) return;
+  VEGQ.checkAt = t + 400;
+  if (!VEGQ.on) return;
+  const c = FV.R.cam, idle = t - (FV.touchAt || VEGQ.t0) > VEGQ.idleOff && !(typeof worldBusy === "function" && worldBusy());
+  const A = idle ? 0 : VEGQ.grassSway * (1 + Math.min(1, WV.gust || 0) * 1.2);
+  for (const e of VEGQ.nodes) {
+    const d = Math.hypot(e.x - c.tx, e.z - c.tz);
+    e.node.sway = d < VEGQ.range + 12 ? A : 0;     /* Chunkmitte + halbe Diagonale ≈ 17 */
+  }
+}
 function worldBusy() { return !!(WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
+  vegStep(time);
   stepFalling();
   stepReveal(dt);
   stepWild(dt, time);

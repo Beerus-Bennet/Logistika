@@ -1,5 +1,47 @@
 # Änderungen – kurz für den Kollegen
 
+## v88 (aufbauend auf v87) – Mobile-Performance und Vegetationsanimation
+
+**Ziel:** Der Wald soll auf schwachen Handys laufen. Bäume und Büsche bleiben statisch, nur Grasbüschel dürfen sehr langsam und schwach wehen –
+und nur, wenn die Bildrate es hergibt. (Architektur-Hinweis wie v86: eigene Engine `gl3d.js`; keine React-Renders, keine Three.js-Instanzen –
+die „Instanzen“ sind je Kachel zusammengefasste Meshes, Wind läuft im gemeinsamen Vertex-Shader.)
+
+- **Gemeinsamer Wind-Shader (`gl3d.js`):** der vorhandene Sway-Shader (Teichschilf, Felder, Bäume) bekommt einen eigenen Zeitfaktor je Knoten (`swayT`, Uniform `uSwayT`;
+  Standard 1 = bisheriges Verhalten). Die Auslenkung ist proportional zur Höhe über dem Boden und hängt von der Weltposition ab → benachbarte Büschel schwingen **phasenversetzt**,
+  kein Gummi-Effekt. Gras: `sway = 2,0` (≈ 0,03 Einheiten bei einem 0,3 hohen Büschel, die Spitze bewegt sich um ~10 % der Büschelhöhe), `swayT = 0,4` (Periode ≈ 10 s).
+  **Kein JS pro Halm, Büschel oder Busch** – pro sichtbarem Gras-Knoten wird nur ein Uniform-Wert gesetzt.
+- **Gras in eigenen Chunk-Knoten (`worldview.js`):** je 24-Einheiten-Kachel ein Knoten (68 Stück, 874 Büschel, ≈ 36 600 Dreiecke, 3,8 MB Vertexdaten), **ohne Schattenwurf**.
+  Das bestehende Frustum-Culling der Engine (Kugeltest je Knoten) zählt sie mit – Gras außerhalb des Bildes kostet nichts (weder Zeichnen noch Schatten noch Wind).
+- **Büsche werfen keinen dynamischen Schatten mehr** (`VEGQ.bushShadow = false`): sie sitzen jetzt im ohnehin schattenlosen Bodenpuffer der Kachel (kein zusätzlicher Draw Call);
+  sie empfangen weiter Schatten und haben ihr statisches Shading (Vertexfarben). Wieder einschalten: `?vegshadow=1` oder `localStorage.logistika_vegshadow = "1"`.
+- **Statische Basis + Auto-Zuschalten (`VEGQ`, `vegStep`):** Standard ist `auto` – zuerst **statisch**. Der Wind wird erst eingeschaltet, wenn unter Last (nur Bilder mit voller Rate, nicht der
+  30-Bilder-Ruhemodus) zweimal in Folge 90 Bilder im Mittel ≤ 20 ms brauchten (≥ 50 Bilder/s) und die Szene ≥ 6 s läuft; fällt die Rate unter ~33 Bilder/s, geht er wieder aus (60 s Sperre).
+  Manuell: `?veg=static|wind|auto`, `localStorage.logistika_veg` oder `vegMode("static")` in der Konsole; `prefers-reduced-motion` startet statisch. `vegInfo()` zeigt Zustand und Grund.
+- **Pause/Reduzierung:** Tab im Hintergrund → `farmLoop` rechnet und zeichnet nichts (zusätzlich zum Browser-Stopp von `requestAnimationFrame`), Stichproben werden verworfen;
+  Wind nur für Kacheln im Umkreis von ~28 Einheiten um die Kamera; nach 90 s ohne Berührung (und ohne laufende Aktion) Wind aus; im Sturm bis 2,2-fache Amplitude.
+- **Zähler (`R.stats`):** Draw Calls, Dreiecke (Haupt-/Schattendurchgang), Knoten, sichtbare Knoten, schwingende Knoten je Bild.
+
+### Messung (ehrlich)
+Es gibt **kein echtes Handy und keinen GPU-Zähler eines Mobilchips** in dieser Umgebung. Gemessen wurde in Chromium/Playwright mit dem **Software-Renderer SwiftShader**
+(Viewport 390 × 844, Touch-Profil, DPR 1), drei Waldansichten (Spielkamera, Abstand 22–26), je ~7 s. Bildrate und „GPU-Zeit“ (Timer-Query `EXT_disjoint_timer_query_webgl2`) beschreiben deshalb
+die Software-Rasterisierung, **nicht** ein Handy; belastbar sind vor allem die Zähler (deterministisch). Schwankung von Lauf zu Lauf: grob ± 10–15 %.
+
+| Größe (Ansicht 1 / 2 / 3) | v87 | v88 statisch | v88 Wind |
+|---|---|---|---|
+| Draw Calls (Hauptdurchgang) | 20 / 21 / 25 | 17 / 21 / 25 | 17 / 21 / 26 |
+| Dreiecke Schattendurchgang | 72 863 / 74 557 / 84 073 | 43 462 / 43 398 / 58 449 | 43 462 / 43 398 / 58 449 |
+| Dreiecke Hauptdurchgang | 39 564 / 41 826 / 41 084 | 38 624 / 41 742 / 40 878 | 38 624 / 41 742 / 41 202 |
+| GPU-Zeit je Bild (SwiftShader), Mittel ms | 200 / 207 / 222 | 175 / 184 / 226 | 172 / 193 / 200 |
+| CPU-Zeit `R.render` (JS), Mittel ms | 3,1 / 1,3 / 1,8 | 1,9 / 1,3 / 1,3 | 1,5 / 1,7 / 1,8 |
+| Bildrate (SwiftShader) | 2,5 / 2,4 / 2,1 | 2,7 / 2,6 / 2,2 | 2,4 / 2,5 / 2,4 |
+| JS-Heap MB | 70 / 87 / 61 | 71 / 61 / 59 | 72 / 66 / 60 |
+
+- Sicher: **Schatten-Dreiecke −40 % / −42 % / −30 %** (Büsche und Gras werfen keinen Schatten mehr), Hauptdurchgang praktisch unverändert (Gras und Büsche werden weiter gezeichnet), Draw Calls gleich oder −3.
+  Vertexdaten insgesamt unverändert 53,8 MB (nur verschoben). Der Wind kostet in der Messung nichts Messbares (Unterschiede statisch ↔ Wind liegen im Rauschen; im Bild schwingen nur 1–3 Gras-Knoten).
+- Nicht belegt: eine Verbesserung der Bildrate oder GPU-Zeit **auf einem Handy**. In SwiftShader liegen die Unterschiede (−12 %, −11 %, +2 % GPU-Zeit) im Rauschen. Nicht gemessen: GPU-Auslastung in %, Akku, echter Speicher auf dem Gerät.
+- Auto-Schaltung getestet mit künstlich schnellem bzw. langsamem Render: schaltet bei ~87 Bilder/s zu, bei 23 Bilder/s ab (kein Handy-Test).
+- Sicht: Vergleichsbilder v87/v88 (zwei Waldansichten) ohne sichtbaren Unterschied; die Büsche sitzen weiter am Boden.
+
 ## v87 (aufbauend auf v86) – Vegetation nach Zonen: Buschgruppen, Lichtungen, Einzelbüsche, Gras an Birken
 
 **Warum es vorher unnatürlich aussah:** In v86 wählte `BUSH.generate` für jeden Busch einen gleichverteilten Zufallspunkt im ganzen Waldgebiet

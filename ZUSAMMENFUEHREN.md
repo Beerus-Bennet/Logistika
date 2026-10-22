@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v88 – Performance, Gras-Wind (auf v87)
+
+| Teil | Datei |
+|---|---|
+| `uSwayT`/`swayT`, `R.stats` (Zähler) | `gl3d.js` |
+| `VEGQ`, `vegMode`, `vegInfo`, `vegStep`, Gras-Chunk-Knoten, Büsche im Bodenpuffer | `worldview.js` |
+| `FV.busy`, Pause bei verstecktem Tab | `farmview.js` |
+
 ## Stand v87 – Vegetation nach Zonen, Gras an Birken (auf v86)
 
 | Teil | Datei |

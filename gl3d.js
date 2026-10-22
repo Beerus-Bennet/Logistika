@@ -315,14 +315,14 @@ const G3 = (() => {
   /* ------------------------------ Shader -------------------------------- */
   const VS = `#version 300 es
   layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor; layout(location=2) in vec3 aCol;
-  uniform mat4 uModel, uVP, uLVP; uniform float uTime, uSway, uWater;
+  uniform mat4 uModel, uVP, uLVP; uniform float uTime, uSway, uSwayT, uWater;
   out vec3 vNor; out vec3 vCol; out vec3 vW; out vec4 vL;
   void main(){
     vec4 w = uModel * vec4(aPos, 1.0);
     if (uSway > 0.0) {
       float h = max(0.0, aPos.y);
-      w.x += sin(uTime * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
-      w.z += cos(uTime * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
+      w.x += sin(uTime * uSwayT * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway;
+      w.z += cos(uTime * uSwayT * 1.25 + w.x * 0.6) * 0.035 * h * uSway;
     }
     vW = w.xyz; vNor = mat3(uModel) * aNor; vCol = aCol;
     vL = uLVP * vec4(w.xyz + normalize(vNor) * 0.035, 1.0);   /* Normal-Offset: keine Schattenakne */
@@ -405,12 +405,12 @@ const G3 = (() => {
      so entsteht kein Spalt am Fuß (das Gegenstück zu polygonOffset/Render-Layern in Three.js). */
   const SVS = `#version 300 es
   layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
-  uniform mat4 uModel, uLVP; uniform float uTime, uSway;
+  uniform mat4 uModel, uLVP; uniform float uTime, uSway, uSwayT;
   out float vG;
   void main(){
     vec4 w = uModel * vec4(aPos, 1.0);
     vec3 nw = mat3(uModel) * aNor;
-    if (uSway > 0.0) { float h = max(0.0, aPos.y); w.x += sin(uTime * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway; w.z += cos(uTime * 1.25 + w.x * 0.6) * 0.035 * h * uSway; }
+    if (uSway > 0.0) { float h = max(0.0, aPos.y); w.x += sin(uTime * uSwayT * 1.6 + w.z * 0.7 + w.x * 0.3) * 0.045 * h * uSway; w.z += cos(uTime * uSwayT * 1.25 + w.x * 0.6) * 0.035 * h * uSway; }
     vG = (w.y < 0.07 && nw.y > 0.85 * length(nw)) ? 1.0 : 0.0;
     gl_Position = uLVP * w;
   }`;
@@ -591,7 +591,7 @@ const G3 = (() => {
     /* Knoten: Mesh + Lage. Kinder erben die Lage der Eltern. */
     R.node = function (mesh, o) {
       const n = Object.assign({ mesh, x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, sx: 1, sy: 1, sz: 1, visible: true,
-        tint: null, glow: 0, alpha: 1, sway: 0, water: 0, shadow: true, children: [], parent: null, W: ID() }, o || {});
+        tint: null, glow: 0, alpha: 1, sway: 0, swayT: 1, water: 0, shadow: true, children: [], parent: null, W: ID() }, o || {});
       if (o && o.s != null) { n.sx = n.sy = n.sz = o.s; }
       return n;
     };
@@ -692,6 +692,7 @@ const G3 = (() => {
       return [W[0] * cx + W[4] * cy + W[8] * cz + W[12], W[1] * cx + W[5] * cy + W[9] * cz + W[13], W[2] * cx + W[6] * cy + W[10] * cz + W[14], r];
     }
     const inside = (P, s) => { for (const q of P) if (q[0] * s[0] + q[1] * s[1] + q[2] * s[2] + q[3] < -s[3]) return false; return true; };
+    R.stats = { draws: 0, tris: 0, sDraws: 0, sTris: 0, sway: 0, nodes: 0, visible: 0 };
     R.render = function (time) {
       if (lost) return;
       R.time = time;
@@ -712,6 +713,8 @@ const G3 = (() => {
         if (inside(PL, sp)) slist.push(it);
       }
       R.culled = all.length - list.length;
+      /* v88: Zähler je Bild (Aufrufe, Dreiecke in Haupt- und Schattendurchgang) – nur ein paar Additionen */
+      const ST = R.stats; ST.draws = ST.tris = ST.sDraws = ST.sTris = ST.sway = 0; ST.nodes = all.length; ST.visible = list.length;
 
       /* 1) Schatten */
       gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
@@ -725,9 +728,10 @@ const G3 = (() => {
       for (const [n, st] of slist) {
         if (!st.shadow || st.alpha < 0.99 || n.water || !n.mesh.vao) continue;
         gl.uniformMatrix4fv(shad.u.uModel, false, n.W);
-        gl.uniform1f(shad.u.uSway, n.sway);
+        gl.uniform1f(shad.u.uSway, n.sway); gl.uniform1f(shad.u.uSwayT, n.swayT);
         gl.bindVertexArray(n.mesh.vao);
         gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
+        ST.sDraws++; ST.sTris += n.mesh.count / 3;
       }
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -758,11 +762,12 @@ const G3 = (() => {
       const draw = (n, st) => {
         if (!n.mesh.vao) return;
         gl.uniformMatrix4fv(u.uModel, false, n.W);
-        gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uWater, n.water);
+        gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, n.water);
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
         gl.bindVertexArray(n.mesh.vao);
         gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
+        ST.draws++; ST.tris += n.mesh.count / 3; if (n.sway) ST.sway++;
       };
       gl.disable(gl.BLEND);
       for (const [n, st] of list) if (st.alpha >= 0.99 && !n.shadowOnly) draw(n, st);
@@ -789,7 +794,7 @@ const G3 = (() => {
           P[0] = sx; P[5] = sy; P[10] = sz; P[12] = cx - cx * sx; P[13] = cy - cy * sy + 0.012; P[14] = cz - cz * sz;
           mul(Wp, n.W, P);
           gl.uniformMatrix4fv(u.uModel, false, Wp);
-          gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uWater, 0);
+          gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, 0);
           gl.uniform4f(u.uTint, o[0], o[1], o[2], 1);
           gl.uniform1f(u.uGlow, 0.4); gl.uniform1f(u.uAlpha, o[3]);
           gl.bindVertexArray(n.mesh.vao);

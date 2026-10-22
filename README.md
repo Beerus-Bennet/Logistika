@@ -551,6 +551,10 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Vegetation: Performance und Gras-Wind (v88)
+Gras sitzt in eigenen Chunk-Knoten ohne Schattenwurf; Büsche werfen keinen dynamischen Schatten. Grasbüschel wehen nur schwach und langsam im gemeinsamen
+Vertex-Shader (`swayT`), standardmäßig erst, wenn die Bildrate unter Last reicht (`?veg=static|wind|auto`, `vegInfo()`); Tab im Hintergrund pausiert alles.
+
 ### Büsche, Lichtungen und Gras im Wald (v86/v87)
 Büsche stehen überwiegend in kleinen Gruppen auf Lichtungen, an Wegrändern und Waldrändern; wenige kleine Einzelbüsche füllen
 Übergänge (`BUSH.generate`). Birken tragen vereinzelt Grasbüschel (`BUSH.grass`, `grass_tuft`, zählt nicht zum 7 : 1).
