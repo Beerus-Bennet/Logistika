@@ -60,7 +60,7 @@ function farmStartHof(add, F) {
   add("tree", 21, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
   add("tree", 23, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
   add("board", 19, 23);
-  add("shed", 23, 23);
+  add("shed", 30, 31);                              /* v105: Fuhrpark-Schuppen vor dem Hof an der Straße (Welt x 14…17, z 15…17) */
   add("deco", 17, 10, { k: "scarecrow" });
   add("deco", 4, 7, { k: "flowers" });
   add("deco", 10, 7, { k: "flowers" });

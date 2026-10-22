@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v105 (aufbauend auf v104) – Fuhrpark-Schuppen vor dem Hof, Fahrzeuge fahren nicht mehr durch den Hof
+
+Die Lieferfahrzeuge fuhren durchs Hoftor mitten über den Hof zum Schuppen. Jetzt:
+- **Schuppen** steht vor dem Hof an der Straße (Grasstreifen zwischen Hofmauer und Straße, östlich vom Tor; Kachel 30 / 31, Welt x 14…17, z 15…17), Öffnung zur Straße (`farm.js` Startstand).
+- **Fahrzeuge** kommen von der Straße direkt in den Schuppen und fahren von dort wieder auf die Straße. Der Weg durch Tor und Hof ist weg (`farmview.js` `farmSyncVehicles`, Stellplätze etwas weiter vorn).
+- **Fest:** der Schuppen lässt sich nicht mehr verschieben (`FFIXED` in `farmdata.js`), sonst stünde er wieder im Hof.
+- **Alte Spielstände:** ziehen einmalig um (`F.v105s` in `erbe.js`).
+- **Geprüft** im Browser: Schuppen und Stellplätze an der neuen Stelle, Abfahrtsroute `[Schuppen → Straße → Westen]`; Tests grün. **Nicht geprüft:** ganze Fahrt mit allen Aufträgen, Fahrer/in, die zum neuen Schuppen laufen (Wegsuche außerhalb des Hofs), echtes Handy.
+
 ## v104 (aufbauend auf v103) – Stumpf bleibt beim Sägen fest stehen
 
 Beim Sägen und Fällen in der Ich-Perspektive neigte sich der ganze Stamm samt Stumpf um den Fuß. Jetzt (`fpsaw.js`):

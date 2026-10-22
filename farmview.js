@@ -460,7 +460,7 @@ function stepAnimals(dt, time) {
    Kleine Fahrzeuge stehen im Schuppen, der alte Holzlaster auf seinem Platz im
    Sägewerk. Wer losfährt, hat jemanden am Steuer – war es die Fahrerin aus dem
    Team, steigt sie selbst ein. */
-const SHED_SLOTS = [[-0.85, 0.05], [0.0, 0.05], [0.85, 0.05]];
+const SHED_SLOTS = [[-0.85, 0.2], [0.0, 0.2], [0.85, 0.2]];
 const HOLZ_VEH = "v-holzlaster";
 function vehModelKey(t) { return t.id === HOLZ_VEH ? "truck" : t.mode === "b" ? "bike" : t.cap <= 80 ? "moped" : "van"; }
 /* v54: lackierte Fahrzeuge fahren in Firmenfarben, alle tragen das Logo */
@@ -510,8 +510,8 @@ function farmSyncVehicles(force) {
       const rider = vehRider(uid), k = vehModelKey(vType(f.type));
       vehDriver(v.node, k, rider ? staffBody(rider) : null);
       if (rider) rider.ride.gone = S.time;
-      const gate = farmHofB().z1;
-      const route = k === "truck" && pad ? lkwRoute(pad) : [[v.node.x, v.node.z], [v.node.x, sz + 1.6], [FGATE.x, sz + 1.6], [FGATE.x, gate + 0.5], [FGATE.x, 18.5], [-30, 18.5]];
+      /* v105: der Schuppen steht vor dem Hof – aus dem Schuppen direkt auf die Straße, nicht mehr durch den Hof */
+      const route = k === "truck" && pad ? lkwRoute(pad) : [[v.node.x, v.node.z], [v.node.x, 18.5], [-30, 18.5]];
       startDrive(v.node, route, () => { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); });
     } else { const i = R.nodes.indexOf(v.node); if (i >= 0) R.nodes.splice(i, 1); }
   }
@@ -530,10 +530,9 @@ function farmSyncVehicles(force) {
       FV.veh.set(f.uid, v);
       /* angekommen: von der Straße durchs Tor in den Schuppen – mit Fahrer/in, die dann aussteigt */
       if (!force && FV.parked && !FV.parked.has(f.uid)) {
-        const gate = farmHofB().z1, GX = FGATE.x;
         vehDriver(node, k, null);
         if (isTruck) { const r = lkwRoute(pad).reverse(); node.x = r[0][0]; node.z = r[0][1]; startDrive(node, r, () => { node.ry = 0; vehNoDriver(node); }); }
-        else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [GX, 18.5], [GX, gate + 0.5], [GX, sz + 1.6], [x, sz + 1.6], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
+        else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [x, 18.5], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
       }
     } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = 0; }
     /* frisch lackiert: neue Farben */

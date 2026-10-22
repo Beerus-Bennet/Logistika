@@ -163,7 +163,7 @@ const FSIZE = {
   shed: [3, 2], board: [1, 1], gate: [4, 1], field: [2, 2], tree: [2, 2]
 };
 /* lassen sich nicht verschieben */
-const FFIXED = new Set(["house"]);
+const FFIXED = new Set(["house", "shed"]);     /* v105: der Schuppen steht fest vor dem Hof */
 
 /* Laden: was es zu kaufen gibt (cat = Reiter) */
 const FSHOP_HOF = [

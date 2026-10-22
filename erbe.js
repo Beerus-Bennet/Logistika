@@ -338,6 +338,8 @@ function erbeInit(F, fresh) {
   /* v92: fällbare Bäume, die ineinanderstehen (große Eichen im Altwald), rücken auseinander */
   if (!F.v92s) { F.v92s = 1; erbeSpaceTrees(F.trees); }
   /* v99: Bäume stehen nicht mehr im Zaun (Hofzaun, Sägewerkszaun) – ältere Stände: ein Stück nach außen rücken (nie wegnehmen) */
+  /* v105: Fuhrpark-Schuppen zieht vor den Hof an die Straße – Lieferfahrzeuge fahren nicht mehr durch den Hof */
+  if (!F.v105s) { F.v105s = 1; const sh = F.objs.find(o => o.t === "shed"); if (sh) { sh.x = 30; sh.z = 31; sh.r = 0; } }
   if (!F.v99f) { F.v99f = 1; const all = F.trees.slice(); F.trees.forEach(t => { if (t.st === "up" || t.st === "sapling") treeOffFence(t, all); }); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
