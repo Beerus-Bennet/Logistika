@@ -47,8 +47,16 @@ const FWM = (() => {
         b.cyl(r * 1.24, r * 1.06, h * 0.16, 7, T.base, { notop: true, nobot: true });
         for (let i = 0; i < 5 + sz * 2; i++) {
           const y = h * (0.2 + rnd() * 0.65), a = rnd() * 6.28, rr = r * (1.12 - (y / h) * 0.6);
-          b.box(rr * (1.0 + rnd() * 0.6), 0.03 + rnd() * 0.035, 0.03, T.mark, { x: Math.cos(a) * rr, y, z: Math.sin(a) * rr, ry: -a + Math.PI / 2, c: true });
+          /* v85: schwarze Querstreifen statt Quadrate – drei überlappende, flache Sechseck-Scheiben ergeben einen dünnen, langen Strich mit Spitzen */
+          const mw = rr * (0.9 + rnd() * 0.9), mh = 0.012 + rnd() * 0.016, mr = Math.max(0.014, mh * 1.25);
+          b.at({ x: Math.cos(a) * rr, y, z: Math.sin(a) * rr, ry: -a + Math.PI / 2 }, () => {
+            const sp = Math.max(0, mw * 0.6 - mr);
+            b.cyl(mr * 0.8, mr * 0.7, 0.016, 6, T.mark, { x: -sp, rx: Math.PI / 2, y: 0, nobot: true });
+            b.cyl(mr, mr * 0.9, 0.016, 6, T.mark, { x: 0, rx: Math.PI / 2, y: 0, nobot: true });
+            b.cyl(mr * 0.8, mr * 0.7, 0.016, 6, T.mark, { x: sp, rx: Math.PI / 2, y: 0, nobot: true });
+          });
         }
+        b.tk = b.v.length; b.tp = [r * 1.15, r * 0.45, h, lean * 2];       /* v85: Stammteil endet hier (r unten, r oben, Höhe, Neigung) – die Ego-Sicht übernimmt die Krone */
         const ends = [];
         for (let i = 0; i < 4; i++) ends.push(limb(b, h * (0.42 + i * 0.12), i * 2.2 + v, 0.85, (0.55 - i * 0.06) * k, 0.028 * k + 0.008, T.bark));
         ends.push([0, h, 0]);
@@ -75,6 +83,7 @@ const FWM = (() => {
           const y = h * (0.35 + rnd() * 0.3), a = rnd() * 6.28;
           b.box(0.03 * k + 0.01, 0.03 * k + 0.01, 0.22 * k, T.mark, { x: Math.cos(a) * r * 0.9, y, z: Math.sin(a) * r * 0.9, ry: -a, rx: 0.5 });
         }
+        b.tk = b.v.length; b.tp = [r * 1.1, r * 0.55, h, lean];
         b.noise(0.14, () => {
           const n = 3 + Math.min(sz, 3);
           for (let i = 0; i < n; i++) {
@@ -91,6 +100,7 @@ const FWM = (() => {
       /* dicht und kegelförmig bis fast zum Boden, dunkel blaugrün, Äste hängen etwas, Spitze schmal */
       const r = 0.08 * k + 0.02;
       trunk(b, r * 1.2, r, 0.5 * k, T.bark);
+      b.tk = b.v.length; b.tp = [r * 1.2, r, 0.5 * k, 0];
       b.noise(0.1, () => {
         const L = 5 + Math.min(3, sz), hb = 0.28 * k, ht = H - hb;
         for (let i = 0; i < L; i++) {
@@ -108,6 +118,7 @@ const FWM = (() => {
       b.at({ rz: lean }, () => {
         trunk(b, r * 1.2, r * 0.9, h, T.bark);
         b.cyl(r * 1.5, r * 1.15, 0.12, 7, T.bark, { notop: true });
+        b.tk = b.v.length; b.tp = [r * 1.2, r * 0.9, h, lean];
         const tops = [0, 1, 2].map(i => limb(b, h * 0.92, i * 2.1 + v, 1.08, 0.7 * k, r * 0.6, T.bark));
         b.noise(0.13, () => {
           b.ico(0.9 * k, T.leaf, { y: H * 0.6, jitter: 0.18, flat: 1.0, detail: 1, bottom: T.leaf3 });
@@ -124,6 +135,7 @@ const FWM = (() => {
       trunk(b, r * 1.25, r * 0.85, h, T.bark);
       for (let i = 0; i < 6; i++) b.box(0.035 * k + 0.01, h * 0.8, 0.03 * k + 0.01, T.mark, { x: Math.cos(i * 1.05) * r * 1.05, y: 0.05, z: Math.sin(i * 1.05) * r * 1.05, ry: -i * 1.05 });
       if (big) for (let i = 0; i < 5; i++) b.box(0.45 * k, 0.14, 0.16, T.base, { x: Math.cos(i * 1.3) * r * 1.2, y: 0.03, z: Math.sin(i * 1.3) * r * 1.2, ry: -i * 1.3, rz: 0.15 });
+      b.tk = b.v.length; b.tp = [r * 1.25, r * 0.85, h, 0];
       const n = 4 + (big ? 1 : 0), ends = [];
       for (let i = 0; i < n; i++) {
         const a = i * (6.28 / n) + v + rnd() * 0.4, e = 0.38 + rnd() * 0.35, len = (0.75 + rnd() * 0.3) * k;
@@ -146,6 +158,7 @@ const FWM = (() => {
       b.at({ rz: lean }, () => {
         trunk(b, r * 1.1, r * 0.8, h, T.bark);
         for (let i = 0; i < 4 + sz; i++) b.cyl(r * 1.13 - i * 0.004, r * 1.1 - i * 0.004, 0.03, 7, T.mark, { y: 0.15 + i * (h * 0.8) / (4 + sz), notop: true, nobot: true });
+        b.tk = b.v.length; b.tp = [r * 1.1, r * 0.8, h, lean];
         const tops = [0, 1, 2].map(i => limb(b, h * 0.92, i * 2.1 + v, 1.0, 0.5 * k, r * 0.55, T.bark));
         const clumps = [[0, H * 0.62, 0, 0.62]].concat(tops.map(p => [p[0] * 1.15, p[1] + 0.22 * k, p[2] * 1.15, 0.42]), [[0, H * 0.84, 0, 0.4]]);
         b.noise(0.14, () => clumps.forEach(([x, y, z, rr], i) => b.ico(rr * k, i % 2 ? T.leaf2 : T.leaf, { x, y, z, jitter: 0.28, flat: 1.12, bottom: T.leaf3 })));

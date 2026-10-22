@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v85 – Sägen als 3D-Ego-Minispiel (auf v84)
+
+| Teil | Datei |
+|---|---|
+| neues Modul `SAW3D` | `fpsaw.js` (neu, in `index.html` nach `minigames.js`) |
+| Saw-Minispiel anbinden (`st.fp`, `SAW3D.ev`) | `minigames.js` |
+| `worldFell`, `stepFalling` (Holzstapel), `worldBusy` | `worldview.js` |
+| `clampCam` bei `FV.fp` | `farmview.js` |
+| `.mg3d`-Styles | `style.css` |
+
 ## Stand v81 – Lagerfeuerplatz und Mittagspause (auf v80)
 
 | Änderung | Datei |

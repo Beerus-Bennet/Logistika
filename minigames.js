@@ -1,3 +1,5 @@
+/* v85: iOS-Lupe/Textauswahl beim langen Halten unterbinden (außer in Eingabefeldern) */
+document.addEventListener("selectstart", e => { const el = e.target && (e.target.closest ? e.target : e.target.parentElement); if (!el || !el.closest("input,textarea,[contenteditable]")) e.preventDefault(); });
 /* =========================================================================
    LOGISTIKA – minigames.js
    Kleine Handwerks-Spiele des Erbes, alle im selben Fenster unten:
@@ -222,6 +224,14 @@ const MG_GAMES = {
       const free = st.dirs.filter(d => !d.block);
       st.dir = free.length ? free[Math.floor(Math.random() * free.length)] : st.dirs[0];
       st.dirOk = !st.dir.block || !free.length;
+      /* v85: Ich-Perspektive (fpsaw.js) – ohne Engine oder in einer anderen Ansicht bleibt es das 2D-Fenster */
+      st.fp = null;
+      if (typeof SAW3D !== "undefined" && SAW3D.can()) {
+        st.fp = SAW3D.begin(t, (S.farm.tools.saw || 1) >= 2 ? "saw2" : "saw1");
+        const el = $("#farmAngel"); if (el && st.fp) el.classList.add("mg3d");
+        /* 3D: der Kerb zeigt nach rechts – der Baum fällt dorthin; steht dort etwas im Weg, kann er hängen bleiben */
+        if (st.fp) { st.dir = { ry: st.fp.fallRy, block: st.fp.fallBlock }; st.dirOk = !st.fp.fallBlock; }
+      }
       MG_GAMES.saw.kerb(st);
     },
     /* Fallkerb: nur ein Schnitt im grünen Bereich zählt – daneben heißt nochmal.
@@ -247,21 +257,35 @@ const MG_GAMES = {
           if (st.miss >= 3 && st.zh < 0.14) { st.zh += 0.02; const tg = $("#mgTr .tgt"); if (tg) { tg.style.bottom = (st.zc - st.zh) * 100 + "%"; tg.style.height = st.zh * 200 + "%"; } }
           mgMsg(st.miss >= 3 ? "Daneben – der grüne Bereich ist jetzt etwas breiter. Nochmal!" : "Daneben – so fällt der Baum nicht. Nochmal, auf Kniehöhe!", "bad");
           st.wait = true; setTimeout(() => { st.wait = false; }, 350);
+          if (st.fp) SAW3D.ev("miss", st);
           return;
         }
         const perfect = d <= st.zh * 0.35;
         st.p1 = clamp((perfect ? 1 : 0.8 - d / st.zh * 0.25) - st.miss * 0.08, 0.35, 1);
+        /* 3D: der V-Kerb braucht zwei Treffer – jeder dringt tiefer in den Stamm (kerbProgress) */
+        st.hits = (st.hits || 0) + 1; st.p1sum = (st.p1sum || 0) + st.p1; st.need = st.fp ? 2 : 1;
         sfx("saw");
         if (perfect) { sfx("level"); mgSparks(stg, mk, "#ffd23f", 16); mgPop("PERFEKT!", "gold", 50, 100 - st.mk * 100 - 14); }
         else { sfx("chop"); mgSparks(stg, mk, "#47b84f", 9); mgPop("Treffer!", "green", 50, 100 - st.mk * 100 - 14); }
+        if (st.hits < st.need) {
+          if (st.fp) SAW3D.ev("notch", st);
+          mgMsg("✂️ Erster Schnitt sitzt – noch einmal, tiefer!", "ok");
+          st.wait = true; st.mspd *= 1.2; st.zh *= 0.9; st.mv = st.mk > st.zc ? -1 : 1;
+          setTimeout(() => { st.wait = false; }, 650);
+          return;
+        }
+        st.p1 = st.p1sum / st.hits;
         /* der Kerb bleibt sichtbar im Stamm */
         const tr = $("#mgTr"); if (tr) tr.insertAdjacentHTML("beforeend", `<i class="notch" style="bottom:${st.mk * 100}%"></i>`);
         st.ph = 1.5;
+        if (st.fp) SAW3D.ev("notch", st);
         mgMsg(perfect ? "✂️ Perfekter Kerb – das gibt einen Stamm extra!" : st.miss ? "✂️ Sitzt! Jetzt der Fällschnitt." : "✂️ Sauber gesetzt! Jetzt der Fällschnitt.", "ok");
         setTimeout(() => { if (MG.on && MG.kind === "saw" && st.ph === 1.5) MG_GAMES.saw.cut(st); }, 750);
       };
       $("#mgGo").onclick = go;
       $("#mgStage").onpointerdown = e => { e.preventDefault(); go(); };
+      /* 3D: irgendwo auf dem Bild tippen */
+      if (st.fp) $("#farmAngel").onpointerdown = e => { if (e.target.closest(".fa-box")) return; e.preventDefault(); go(); };
     },
     cut(st) {
       st.ph = 2;
@@ -276,6 +300,11 @@ const MG_GAMES = {
       const off = () => { st.hold = false; b.classList.remove("on"); };
       b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointerleave", off); b.addEventListener("pointercancel", off);
       $("#mgStage").addEventListener("pointerdown", on); $("#mgStage").addEventListener("pointerup", off); $("#mgStage").addEventListener("pointerleave", off);
+      if (st.fp) {
+        const ov = $("#farmAngel");
+        ov.onpointerdown = e => { if (e.target.closest(".fa-box")) return; on(e); };
+        ov.onpointerup = off; ov.onpointercancel = off;
+      }
     },
     frame(st, dt) {
       const t = st.tree;
@@ -299,7 +328,7 @@ const MG_GAMES = {
         if (st.snd <= 0) { st.snd = 0.22; sfx("saw"); }
         WV.hit = { id: t.id, t0: wnow() - 0.15 };
         if (Math.random() < dt * 14) FV.R.emit({ x: t.x + 0.35, y: 0.35, z: t.z + 0.35, vx: (Math.random() - 0.3) * 2, vy: 1.2, vz: (Math.random() - 0.3) * 2, g: -4, life: 0.6, size: 0.05, col: [0.95, 0.85, 0.6, 1], shape: 1 });
-        if (st.heat >= 1) { st.over++; st.stall = 1.6; st.heat = 0.85; sfx("bad"); mgMsg("🔥 Überhitzt! Der Motor ist aus – kurz warten.", "hot"); }
+        if (st.heat >= 1) { st.over++; st.stall = 1.6; st.heat = 0.85; sfx("bad"); if (st.fp) SAW3D.ev("stall", st); mgMsg("🔥 Überhitzt! Der Motor ist aus – kurz warten.", "hot"); }
         if (FV) FV.touchAt = performance.now();
       } else st.heat = Math.max(0, st.heat - dt * 0.65);
       const p = $("#mgPr"), h = $("#mgHeat"), cu = $("#mgCut"), cs = $("#mgCs");
@@ -315,8 +344,12 @@ const MG_GAMES = {
         const acc = clamp(st.p1 * 0.75 + (1 - st.over * 0.25) * 0.25, 0, 1);
         mgMsg(hung ? "😬 Der Baum hängt kurz fest … aber er fällt." : st.dirOk ? "🌲 Baum fällt – genau wie geplant!" : "🌲 Baum fällt!", hung ? "bad" : "ok");
         mgWin("🌲"); mgConfetti(acc > 0.85 ? 34 : 20); sfx("thud");
-        setTimeout(() => MG.close({ ok: true, acc, dir: st.dir.ry, dirOk: st.dirOk, hung }), 900);
+        setTimeout(() => MG.close({ ok: true, acc, dir: st.dir.ry, dirOk: st.dirOk, hung }), st.fp ? 450 : 900);
       }
+    },
+    stop(st) {
+      const el = $("#farmAngel"); if (el) { el.onpointerdown = el.onpointerup = el.onpointercancel = null; }
+      if (st.fp && typeof SAW3D !== "undefined") SAW3D.end(!!st.done);
     },
     abort(st) { if (st.ph === 2 && st.prog > 0.05) toast("Der Baum bleibt stehen – der Sprit ist leider weg.", "warn"); return { ok: false }; }
   },

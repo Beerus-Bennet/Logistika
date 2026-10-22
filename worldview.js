@@ -904,6 +904,7 @@ function worldObjParts(o, root, parts) {
 
 /* ------------------------------- Bäume ---------------------------------- */
 function treeMeshOf(t) {
+  if (t.st === "stump" && t.cut && typeof SAW3D !== "undefined") return fmesh("wsc:" + t.id + ":" + t.cut.q + ":" + Math.round(t.cut.ny * 100), () => SAW3D.stumpMesh(t.cut));   /* v85: Sägeschnitt mit Sohle + Bruchstufe */
   if (t.st === "stump") return fmesh("ws:" + t.sp + ":" + t.sz, () => FWM.stump(t.sp, t.sz));
   if (t.st === "sapling") return fmesh("wsap:" + t.sp, () => FWM.sapling(t.sp));
   if (t.st === "fallen") return fmesh("wf:" + t.sp + ":" + t.sz, () => FWM.fallen(t.sp, t.sz));
@@ -928,8 +929,9 @@ function worldSyncTrees(force) {
     const n = e.node;
     n.mesh = treeMeshOf(t);
     n.x = t.x; n.z = t.z; n.y = 0; n.rx = 0; n.rz = 0;
-    n.ry = t.st === "fallen" ? (t.fall || 0) : t.ry;
-    n.sx = n.sy = n.sz = t.s || 1;
+    const cs = t.st === "stump" && t.cut;
+    n.ry = cs ? t.cut.ry : t.st === "fallen" ? (t.fall || 0) : t.ry;
+    n.sx = n.sy = n.sz = cs ? t.cut.sc : t.s || 1;
     n.sway = t.st === "up" ? 0.22 : 0;
     n.visible = true;
   }
@@ -1001,21 +1003,43 @@ function worldTreeFall(t, dir) {
   const e = WV.trees.get(t.id);
   if (!e) return;
   e.falling = true;
+  /* v85: in der Ego-Sicht fällt der Nahaufnahme-Baum selbst (fpsaw.js) – hier nur das Aufschlag-Ende */
+  if (typeof SAW3D !== "undefined" && SAW3D.fall(t, dir, () => treeLanded({ e, t, ry: dir }, wnow()))) return;
   WV.falling.push({ e, t, t0: wnow(), ry: dir != null ? dir : Math.random() * 6.28 });
 }
 function stepFalling() {
   const now = wnow();
   for (let i = WV.falling.length - 1; i >= 0; i--) {
     const F = WV.falling[i], k = clamp((now - F.t0) / 1.0, 0, 1), n = F.e.node;
-    n.ry = F.ry; n.rx = k * k * Math.PI / 2 * 0.97; n.sway = 0;
+    /* langsames Ankippen, dann beschleunigt, am Boden ein kleiner Nachfederer */
+    const kk = k < 1 ? Math.pow(k, 2.4) : 1, bn = k > 0.9 ? Math.sin((k - 0.9) * 10 * Math.PI) * 0.02 * (1 - k) * 10 : 0;
+    n.ry = F.ry; n.rx = kk * Math.PI / 2 * 0.97 + bn; n.sway = 0;
     if (k >= 1) {
       WV.falling.splice(i, 1);
-      F.e.falling = false; F.e.key = "";
-      const len = treeH({ st: "up", sz: F.t.sz, s: F.t.s }) * 0.7;
-      FV.R.burst({ x: F.t.x + Math.sin(F.ry) * len, y: 0.2, z: F.t.z + Math.cos(F.ry) * len, n: 26, col: [[0.75, 0.68, 0.55, 0.9], [0.55, 0.75, 0.35, 1]], speed: 2.2, up: 1.4, size: 0.12, flat: true, spread: 2 });
-      sfx("thud");
-      worldSyncTrees(false);
+      treeLanded(F, now);
     }
+  }
+  stepLogs(now);
+}
+/* Aufschlag: Staub, Schlag, der Stamm zerfällt in einen kurz sichtbaren Holzstapel */
+function treeLanded(F, now) {
+  F.e.falling = false; F.e.key = "";
+  const len = treeH({ st: "up", sz: F.t.sz, s: F.t.s }) * 0.7;
+  FV.R.burst({ x: F.t.x + Math.sin(F.ry) * len, y: 0.2, z: F.t.z + Math.cos(F.ry) * len, n: 26, col: [[0.75, 0.68, 0.55, 0.9], [0.55, 0.75, 0.35, 1]], speed: 2.2, up: 1.4, size: 0.12, flat: true, spread: 2 });
+  FV.R.burst({ x: F.t.x + Math.sin(F.ry) * len, y: 0.3, z: F.t.z + Math.cos(F.ry) * len, n: 18, col: [[0.95, 0.82, 0.45, 1], [0.78, 0.58, 0.32, 1]], speed: 2.6, up: 2.2, size: 0.07, shape: 1, life: 1 });
+  sfx("thud");
+  worldSyncTrees(false);
+  try {
+    const R = FV.R, sp = F.t.sp || "kiefer", nd = fnode(fmesh("pile:3:" + sp, () => FWM.logPile(3, sp)), { x: F.t.x + Math.sin(F.ry) * len * 0.55, z: F.t.z + Math.cos(F.ry) * len * 0.55, ry: F.ry, s: 0.4 });
+    R.nodes.push(nd); (WV.logfx = WV.logfx || []).push({ nd, R, t0: now });
+  } catch (e) { /* egal */ }
+}
+function stepLogs(now) {
+  const L = WV.logfx;
+  if (L) for (let i = L.length - 1; i >= 0; i--) {
+    const f = L[i], a = now - f.t0, g = clamp(a / 0.35, 0, 1);
+    f.nd.s = a < 1.3 ? 0.4 + 0.6 * (1 - Math.pow(1 - g, 3)) : Math.max(0.01, 1 - (a - 1.3) / 0.4);
+    if (a > 1.7) { const k2 = f.R.nodes.indexOf(f.nd); if (k2 >= 0) f.R.nodes.splice(k2, 1); L.splice(i, 1); }
   }
 }
 
@@ -2285,7 +2309,8 @@ function worldFell(t, pick) {
   closeFarmPop();
   /* Baum oben im Bild, das Minispiel unten */
   const port = innerHeight > innerWidth;
-  farmFocusXZ(t.x + (port ? 2.6 : 1.2), t.z + (port ? 2.6 : 1.2), port ? 23 : 19, 500);
+  /* v85: die Säge fährt die Kamera selbst vor den Stamm (fpsaw.js), sonst wie bisher oben der Baum, unten das Spiel */
+  if (!(tool === "saw" && typeof SAW3D !== "undefined" && SAW3D.can())) farmFocusXZ(t.x + (port ? 2.6 : 1.2), t.z + (port ? 2.6 : 1.2), port ? 23 : 19, 500);
   MG.open(tool === "saw" ? "saw" : "axe", { tree: t }, res => {
     if (!res || !res.ok) { save(); return; }
     const r = farmFell(t, { acc: res.acc, tool, dirOk: res.dirOk, hung: res.hung });
@@ -2320,8 +2345,11 @@ function fellReward(t, r, res, tool) {
     ${r.lost && r.lost.length ? `<div class="frew-l">📦 Holzplatz voll – liegen gelassen: ${r.lost.map(l => esc(famt(l.id, l.n) + " " + ((l.n === 1 && FITEMS[l.id].sg) || FITEMS[l.id].n))).join(", ")}</div>` : ""}`;
   fx.appendChild(el);
   thumbFill();
-  const kill = () => { el.classList.add("out"); setTimeout(() => el.remove(), 320); };
+  /* v85: ein Tipp irgendwo auf dem Bild schließt die Karte (der Tipp geht trotzdem durch); sonst nach 2,6 s von selbst */
+  const onTap = () => kill();
+  const kill = () => { document.removeEventListener("pointerdown", onTap, true); el.classList.add("out"); setTimeout(() => el.remove(), 320); };
   el.style.pointerEvents = "auto"; el.onclick = kill;
+  setTimeout(() => { if (el.isConnected) document.addEventListener("pointerdown", onTap, true); }, 350);
   setTimeout(kill, 2600);
 }
 
@@ -2435,7 +2463,7 @@ function stepOutline(time) {
 }
 
 /* ------------------------------ Takt -------------------------------------- */
-function worldBusy() { return !!(WV.falling.length || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
+function worldBusy() { return !!(WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
   stepFalling();
@@ -2477,6 +2505,7 @@ function worldStep(dt, time) {
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
+  if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });
   /* Fischschwarm: Blubbern und springende Fische */

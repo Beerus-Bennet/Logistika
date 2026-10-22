@@ -551,6 +551,10 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Sägen in 3D-Ego-Sicht (v85)
+Das Sägen-Minispiel läuft jetzt in 3D (`fpsaw.js`, Modul `SAW3D`): Kamerafahrt zum Stamm, Säge im Vordergrund,
+Zielzone als Ring am Stamm, Späne, Wackeln bei Fehlschlag, Baumfall mit Holzstapel und Rückfahrt. Fallback: 2D.
+
 ### Lagerfeuerplatz und Mittagspause (v81)
 Am Ende des Hauptwegs im Wald liegt ein Lagerfeuerplatz (`camp.js`): runde Feuerstelle, drei Sofas im offenen U, dunkle
 Holzwand, Pflanzen, Kies und Gartenlampen. **Von 12 bis 13 Uhr machen alle Mitarbeiter dort Pause** – jede Kraft hat einen

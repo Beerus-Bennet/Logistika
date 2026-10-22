@@ -1,5 +1,101 @@
 # Änderungen – kurz für den Kollegen
 
+## v85 (aufbauend auf v84) – Sägen als 3D-Ego-Minispiel
+
+- **Neu `fpsaw.js` (Modul `SAW3D`)**: Beim Fällen mit der Säge fliegt die Kamera in 0,95 s weich vom Hof-Blick direkt vor den
+  Stamm (Ego-Sicht, leichte Zoom-/FOV-Änderung). Die Low-Poly-Säge steht im Vordergrund und zielt auf die Schnittstelle.
+  (Eigene Engine `gl3d.js`, kein Three.js.)
+- **Fallkerb in 3D:** grüne Zielzone (gelbe Perfekt-Zone) als Ring am Stamm, die rote Markierung pendelt darüber –
+  der Button / Tippen auf den Bildschirm setzt den Kerb. Treffer: Säge stößt vor, Kamerawackeln, Späne (kleine gelb-braune
+  Würfel), Kerb sichtbar im Stamm. Fehlschlag: Säge prallt zurück, kräftiges Wackeln, Ausdauer sinkt, kein Fortschritt.
+- **Fällschnitt:** halten = Säge vibriert, Schlitz wächst quer über den Stamm, Späne fliegen; Überhitzen = Säge stockt, Rauch.
+- **Abschluss:** Kamera schwenkt in 1,25 s zurück, der Baum kippt (langsames Ankippen, Aufprall mit Nachfedern), zerfällt in
+  einen kurzen Holzstapel, der verschwindet; danach Belohnung wie bisher.
+- **Überarbeitung (Ego-Sicht ohne Menü):** Die Fenster-Leiste ist in 3D komplett weg (nur ✕ bleibt); Tippen/Halten irgendwo
+  auf dem Bild. Überhitzung = Balken an der Säge (grün/orange/rot) plus Rauch, kurzer Hinweis oben. Der Baum verrät den Fall:
+  ab ca. 25 % neigt er sich in Fallrichtung und zittert stärker. In der Ego-Sicht sind alle Meldungen, Chips und
+  Seitenleisten ausgeblendet (`body.fp3d`).
+- **Nachbesserung:** Hitze-Anzeige als großer Thermometer-Balken links im Bild (pulsiert bei Überhitzung); in der Ego-Sicht
+  steht ein klarer Nahaufnahme-Stamm in Rindenfarbe vor dem Baum (Äste/Nadeln verdecken die Zone nicht mehr); der Fällschnitt
+  hat einen dunklen Schlitz mit hellem Holzrand, der sich quer über den Stamm zieht.
+- **Kerbe/Zittern:** Die Kerbe ist ein dunkler Keil mit hellem Holzrand (klar erkennbar). Der Baum zittert nicht mehr, er neigt
+  sich nur noch gleichmäßig (max. 0,13 rad); Kerbe und Schnitt wandern mit der Neigung mit.
+- **V-Kerb als echte 3D-Geometrie** (`fpsaw.js`, `notchMesh`): Stamm besteht aus drei Teilen (unten / Kerb / oben). Der Kerb-Teil ist
+  ein Zylinder, der an einer 58°-Dachebene beschnitten ist (schräger Oberschnitt) und eine waagerechte Sohle (Kreissegment) hat;
+  Rinde außen, frisches Holz (#F2D9AC / #E8C590, leuchtend) innen. `kerbProgress` (`X.kpv`, 0…1, Ziel `X.kpT`) bestimmt die
+  Tiefe bis 65 % des Durchmessers; Mesh wird in 20 Stufen gecacht. Zwei Treffer nötig (3D): 1. Treffer 0,3, 2. Treffer 0,6,
+  im Fällschnitt vertieft die Säge bis 1,0. Sägeschiene zielt in die Kerbtiefe. Kamera-Neigung 0,3 (Sohle sichtbar).
+- **Kerbe für alle Bäume:** echter Stammradius je Art/Größe (`trunkR`, wie `woodmodels.js`), Kamera-Abstand skaliert mit dem Stamm;
+  der echte Baum (Krone/Nadeln) ist in der Ego-Sicht ausgeblendet, stattdessen Nahaufnahme-Stamm + einfache Krone (kein
+  Zugewuchert-Sein bei Fichten). Kerbe steiler (KS 1,9), Innenholz mit Farbverlauf (dunkel an der Spitze → hell an der Öffnung,
+  leuchtend), wächst gleichmäßig mit Spänen am Maul; Kamera fährt nach dem 1. Treffer näher an die Kerbe heran.
+- **Stamm aus einem Stück:** unteres Stück, Kerb und oberes Stück sind jetzt EIN Mesh (gleiche Punkte an den Nahtstellen) –
+  keine Farbunterschiede oder Fugen mehr zwischen den beiden Baumhälften; Stamm gerade statt verjüngt.
+- **Nadelbäume (Fichte/Kiefer):** statt Kugelkrone eine Krone aus gestaffelten Kegeln, damit sie in der Ego-Sicht wie Tannen wirken.
+- **Sichtschutz:** Vor der Kamerafahrt prüft `pickView` 13 Blickrichtungen um den Baum (Abstand/Korridor zu echten und
+  Kulissenbäumen) und wählt die mit dem wenigsten Hindernis (nächstliegende bevorzugt, kürzester Drehweg). Steht trotzdem noch ein
+  Baum im Weg, wird er für die Dauer des Minispiels ausgeblendet (echte Bäume unsichtbar, Kulissenbäume aus der Kachel genommen)
+  und danach zurückgesetzt.
+- **Eichen & breite Bäume:** Die Ersatz-Krone liegt jetzt immer über der Bildoberkante (aus Kamerahöhe/-abstand berechnet, Größe
+  nach Stammradius); der Nahaufnahme-Stamm reicht bis dorthin. Dicke Eichen verdecken die Kerbe nicht mehr.
+- **Fehler behoben (Anflug):** Die Ersatz-Krone/-Stamm waren schon während der Zoom-Fahrt sichtbar (jeder Baum wurde kurz zur
+  „Tanne“ in seiner Farbe). Jetzt wird erst kurz vor der Ankunft (>92 % der Fahrt) getauscht; im Anflug sieht man den echten
+  Baum. Ausgeblendete Kulissenbäume werden ebenfalls erst dann aus der Kachel genommen.
+- **Kerb rechts, Fall nach rechts:** Der V-Kerb sitzt (aus Spielersicht) auf der rechten Stammseite – Öffnung nach rechts, die Spitze
+  wandert beim Sägen nach links in den Stamm (`faceOf`, 75° von der Blickachse nach rechts, damit man das helle Innenholz noch sieht).
+  Die Säge arbeitet sich von rechts nach links in den Kerb. Die Fallrichtung ist genau diese Richtung (`st.dir`); die Kamera-Blickrichtung
+  wird so gewählt, dass rechts möglichst frei ist (`fallBlocked`, sonst „Baum hängt“-Chance wie bisher).
+- **Fall-Animation (`SAW3D.fall`/`fallStep`):** Stumpf bleibt stehen, oberes Stück + Krone knicken an der Kerbsohle ab (Drehpunkt unten
+  rechts), Winkel beschleunigt θ ∝ t^2,2 (langsamer Beginn, schneller Aufschlag), danach rutscht der Stamm auf den Boden. Aufschlag:
+  Kamerawackeln, Staub und Holzspäne (Würfel), Holzstapel (`treeLanded`/`stepLogs` in `worldview.js`) und die Kamera schwenkt zurück.
+- **Säge aus Sicht des Waldarbeiters (Referenzfoto):** Das Gehäuse hängt fest im Kameraraum vorn unten im Bild (von hinten/oben gesehen,
+  hinterer Griff zum Spieler; Tiefe hinter der Nahebene, Größe skaliert mit der Tiefe, Breite abhängig vom Seitenverhältnis). Die Schiene läuft
+  leicht schräg nach vorne in den Kerbmund und liegt flach auf der Sohle; sie ist ein eigenes Teil mit Einheitslänge, das so weit gestreckt wird,
+  dass die Spitze (eigenes Teil, runde Nase) im Kerb steckt. Dachschnitt (1. Treffer): Rolle um die Längsachse (`ROOF_ANG`, 35°), damit die Platte
+  in der Dachfläche liegt; Sohlen- und Fällschnitt flach. Beim Sägen schiebt sich die ganze Säge entlang der Schiene tiefer (Kerbtiefe + kleines
+  Vor/Zurück), in Ruhe ein Stück zurück; Vibration seitlich/oben. Sägemehl fliegt vom Kerbmund zum Spieler/seitlich weg.
+  Kamera unverändert gegenüber der letzten Runde (niedriger, Blick leicht auf die Kerbseite). Das gemeinsame `FWM.tool` bleibt unverändert.
+- **Säge erscheint erst beim Sägen:** Während der Anflug-Kamera ist die Säge unsichtbar; erst wenn die Kamera angekommen ist, blendet sie
+  in 0,4 s ein und gleitet leicht von unten ins Bild (`X.app`; Zeichenreihenfolge Spitze → Schiene → Gehäuse, damit das Einblenden sauber aussieht).
+  Vor dem 1. Treffer zielt sie ruhig auf die Mitte des grünen Bereichs statt der wandernden Markierung hinterher.
+- **Keine iOS-Lupe mehr:** Langes Halten (Sägen) hat auf der Ergebniskarte Text markiert und die Lupe gezeigt. Jetzt ist Textauswahl überall aus
+  (`*{user-select:none}`, Eingabefelder ausgenommen) und `selectstart` wird abgefangen (`minigames.js`).
+- **Stämme wie im restlichen Spiel:** Der Nahaufnahme-Stamm (vor und nach dem ersten Treffer, samt bleibendem Stumpf) hat jetzt je Art dieselbe
+  Rindenzeichnung wie die Spielbäume (`barkStyle`, `plainTrunk`): Birke weiß mit dunklem Fuß und schwarzen Flecken, Kiefer unten graubraun/oben
+  fuchsrot, Eiche mit dunklen Streifen, Kirsche mit hellen Ringen, Fichte/Buche einfarbig wie im Spiel. Wände werden an den Farbwechseln geteilt;
+  `t.cut` speichert dafür zusätzlich `sp`/`sz`.
+- **Stumpf als eigenes, bleibendes Mesh:** `notchMesh(…, "low")` hat jetzt die fertige Bruchform: flache Sohle rechts (Kerbseite), links eine
+  unregelmäßig erhöhte Bruchleiste mit senkrechter Stufe (`STEP`, `lh()`); das obere Stück (`"up"`) bekommt dazu die formgleiche Unterseite.
+  Beim Fall kippt nur `upB/upW` (+ Krone), der Stumpf bleibt stehen. `SAW3D.fall` vermerkt die Form am Baum (`t.cut = {q, ny, sc, ry, bark}`),
+  `worldview.js` baut daraus den bleibenden Stumpf (`SAW3D.stumpMesh`, Rinde + Holz in einem Mesh, `wood === 2`) – bis der Setzling
+  nachwächst (`treeUpdate` löscht `cut`). Spielstände ohne `cut` zeigen weiter den alten Stumpf.
+- **Rindenfarbe bleibt beim Ansetzen der Säge gleich:** Das Rindenmuster hing bisher an der Segmentnummer, und der glatte Stamm war anders
+  gedreht als der Kerb-Stamm – beim ersten Treffer sprangen Flecken/Bänder. Jetzt richtet sich die Farbe nach Höhe und absolutem Winkel
+  (14 Sektoren, `barkStyle().bf(y, Winkel)`), der glatte Stamm hat dieselbe Drehung (`ry = fryN`), und alle Ringe des Kerb-Meshs liegen auf
+  denselben Facettengrenzen (`angs()`/`strip()` in `notchMesh`) wie `plainTrunk`. Nachgemessen: Kiefer/Kirsche 0 Abweichungen,
+  Birke/Eiche nur wenige Randdreiecke an der Kerböffnung.
+- **Kamera meidet Zäune, Mauern und Gebäude:** `pickView` prüft jetzt nicht nur Bäume, sondern auch Hofzaun/Steinmauer (mit Toren), Sägewerkszaun,
+  Gebäude und Ausläufe (`obstacles()`, `sightCost()`: Sichtlinien vom Auge zu Stammfuß, Mitte und seitlich – vor und nach dem 1. Treffer).
+  Neben der Blickrichtung (13 Winkel) werden auch Abstand (100/80/65 %) und Neigung (+0,15/+0,3) variiert; auch ein Zaun, über den man nur
+  hinwegsieht, kostet Punkte. Man sägt nicht mehr „durch den Zaun“.
+- **Fallender Baum sieht aus wie der Spielbaum:** Krone und Äste des Baums (`woodmodels.js tree()` merkt sich dafür `b.tk` = Ende des Stammteils
+  und `b.tp` = Radius unten/oben, Höhe, Neigung) werden unverändert übernommen (`crownMesh`) statt der Ersatzkrone; sie stehen im selben Bezugssystem
+  wie die Stammteile, neigen sich mit und kippen im Fall um dieselbe Achse. Der Ersatz-Stamm hat jetzt Verjüngung und Neigung wie der echte
+  (`taperB`), Höhe wie am Spielbaum (mind. 2,1) und die Rindenzeichnung nach Baumgröße `t.s`. Fichten: die untersten Äste (unter 1,3) entfallen
+  in der Ego-Sicht, sonst verdecken sie die Schnittstelle. `t.cut` speichert zusätzlich `s`.
+- **Birke: keine Zacken am Fuß, stabile Querstreifen:** Die Zacken am Übergang dunkler Fuß → weiße Rinde entstanden, wenn Dreiecke des Kerb-Meshs
+  über die Farbgrenze reichten (je Dreieck nur eine Farbe). Rindendreiecke werden jetzt an den Farbgrenzen der Art geschnitten (`emitBark`,
+  `splitF`) – die Kante ist gerade. Die Birkenmaserung sind schwarze, querliegende Streifen mit spitzen Enden wie bei echter Birkenrinde (teils
+  lang um den Stamm, teils kurze Striche, in Reihen; je Baum eigene Verteilung über `t.id`). Sie werden an einem **festen Gitter** (Höhe × Winkel)
+  geschnitten und mit Farbe je Ecke ausgegeben – das Gitter hängt nicht von der Form des Kerb-Meshs ab, deshalb bleibt das Muster beim Sägen,
+  Kippen, Fallen und am Stumpf exakt gleich (vorher änderten sich die Flecken mit jedem neuen Mesh). Am Spielbaum (`woodmodels.js`) sind die
+  Marken ebenfalls dünne, lange Striche aus drei überlappenden Sechseck-Scheiben (Zufallsfolge unverändert, Kronen bleiben gleich).
+- **Beute-Karte („Birke gefällt!“) schließt per Tipp:** Ein Tipp irgendwo auf dem Bild (oder auf die Karte) blendet sie aus; der Tipp geht
+  trotzdem durch. Sonst weiterhin automatisch nach 2,6 s (`fellReward` in `worldview.js`).
+- Fallback: ist die Ansicht nicht verfügbar, läuft das alte 2D-Minispiel. Axt bleibt 2D.
+- Geändert: `minigames.js`, `worldview.js` (`worldFell`, `stepFalling`, `worldBusy`), `farmview.js` (`clampCam` bei `FV.fp`),
+  `style.css` (`.mg3d`), `index.html`, `sw.js`. Neu: `fpsaw.js`.
+
 ## v84 (aufbauend auf v83) – Weg gestreckt, sauberer Übergang, ein großer Lichtkreis
 
 - **Wegverlauf gestreckt** (`erbe.js` `FWORLD.paths[1]`): die letzten ~15 Einheiten laufen schnurgerade (Bildschirm senkrecht)

@@ -366,7 +366,7 @@ function treeUpdate(t) {
   const sp = FSPECIES[t.sp];
   let guard = 6;
   while (guard-- > 0 && t.t && S.time >= t.t) {
-    if (t.st === "stump") { t.st = "sapling"; t.t = t.t + FREGROW.sapling * sp.regrow; }
+    if (t.st === "stump") { delete t.cut; t.st = "sapling"; t.t = t.t + FREGROW.sapling * sp.regrow; }
     else if (t.st === "sapling") { t.st = "up"; t.sz = 1; t.dmg = 0; t.t = t.sz < t.mx ? t.t + FREGROW.grow * sp.regrow : 0; }
     else if (t.st === "fallen") { t.st = "stump"; t.t = t.t + FREGROW.stump * sp.regrow; }
     else if (t.st === "up" && t.sz < t.mx) { t.sz++; t.t = t.sz < t.mx ? t.t + FREGROW.grow * sp.regrow : 0; }

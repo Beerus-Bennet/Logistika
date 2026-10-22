@@ -2959,6 +2959,8 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 *{-webkit-touch-callout:none}
 img{-webkit-user-drag:none;-webkit-user-select:none;user-select:none}
 .ic.th img,img.ii,.fst-p img,.fchip img{pointer-events:none}
+/* v85: nirgends Text markieren – sonst zeigt iOS beim langen Halten (Sägen) die Lupe */
+*{-webkit-user-select:none;user-select:none}
 input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 #farmCv{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 /* v53: Name einer Ware beim Antippen */
@@ -3042,3 +3044,21 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
 #farmPop .fp-box.lunchb i{font:italic 500 15px/1.15 Georgia,"Times New Roman",serif;color:#9a9a9a;letter-spacing:.2px}
 #farmPop .fp-box.lunchb::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:#fff;border:3px solid #141414;
   border-top:0;border-left:0;border-radius:0 0 5px 0;transform:translateX(-50%) rotate(45deg)}
+
+/* v85: Sägen in der Ich-Perspektive – das Fenster wird eine schmale Leiste unten, der Stamm bleibt im Bild frei */
+#farmAngel.mg.mg3d.on{display:block;background:transparent}
+#farmAngel.mg3d .fa-box{position:absolute;inset:0;max-width:none;max-height:none;padding:0;background:none;border:0;box-shadow:none;pointer-events:none;overflow:visible}
+#farmAngel.mg3d .fa-box>*:not(.fa-x){display:none!important}
+#farmAngel.mg3d .fa-x{display:block;pointer-events:auto;right:10px;top:10px}
+.fp-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:calc(100% - 100px);padding:6px 14px;border-radius:16px;background:rgba(255,250,240,.92);border:2px solid var(--ink);font-weight:800;font-size:13px;text-align:center;pointer-events:none;transition:opacity .3s}
+.fp-hint.off{opacity:0}
+.fp-hint.hot{background:#ffdde3}
+body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas,body.fp3d #farmChips,body.fp3d #toasts,body.fp3d #linaHint,body.fp3d #tutor,body.fp3d #spot,body.fp3d #farmPop,body.fp3d #farmTags,body.fp3d #farmMsg,body.fp3d #farmTut,body.fp3d #farmLvl{display:none!important}
+
+.fp-gauge{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:34px;padding:6px 5px 8px;border-radius:17px;background:rgba(255,250,240,.94);border:3px solid var(--ink);display:none;flex-direction:column;align-items:center;gap:5px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.fp-gauge.on{display:flex}
+.fp-gauge span{font-size:17px;line-height:1}
+.fp-gauge i{position:relative;display:block;width:16px;height:130px;border-radius:8px;background:#2a2a30;overflow:hidden}
+.fp-gauge em{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,#47b84f 0%,#ffa21f 62%,#e2331f 85%);background-size:100% 130px;background-position:bottom;transition:height .08s linear}
+.fp-gauge.hot{animation:fpg .35s ease-in-out infinite alternate;border-color:#e2331f}
+@keyframes fpg{to{transform:translateY(-50%) scale(1.08)}}

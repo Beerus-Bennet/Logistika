@@ -761,6 +761,7 @@ function farmLoop(now) {
 
 /* ------------------------------ Kamera -------------------------------- */
 function clampCam() {
+  if (FV.fp) return;      /* v85: Ich-Perspektive beim Sägen führt die Kamera selbst (fpsaw.js) */
   const c = FV.R.cam;
   /* Hof und alles, was schon freigeschaltet ist (Wald, Sägewerk, See) */
   const r = typeof farmCamRect === "function" && S.farm ? farmCamRect() : [-FV_BOUNDS, -FV_BOUNDS, FV_BOUNDS + 5, FV_BOUNDS + 3];
