@@ -1,5 +1,45 @@
 # Änderungen – kurz für den Kollegen
 
+## v89 (aufbauend auf v88) – Natürlicher Wald: Büsche ohne 7:1, aus der Waldsituation; Baumdichte in Flecken
+
+**Ursache der künstlichen Wirkung (aus dem Code, nicht geraten):**
+1. *Bäume:* `worldStatic` setzte pro 3,2-Zelle mit **überall gleicher Wahrscheinlichkeit 0,86** einen Baum an eine um bis zu 0,8 Zellbreite versetzte Stelle – ein gejittertes Raster, das im Kernwald überall gleich dicht ist (Clark-Evans-Index 1,25 = gleichmäßiger als Zufall; 1 = zufällig). Keine Haine, keine Lücken.
+2. *Büsche:* v86/v87 starteten mit einer **Sollzahl `floor(Bäume / 7)`** und füllten sie, bis sie erreicht war (Gruppen aus 3–7, Obergrenzen je Art, am Ende „dritter Durchgang ohne Grenzen“, damit 533/533 stimmt). Wo keine Stelle gut war, wurde trotzdem gesetzt; Gruppen waren ähnlich groß und kompakt (Mittelpunkt + Lappen) – „Buschinseln“. Alle Lichtungen (13) wurden als gleichwertige Gruppenplätze behandelt, 85 % bekamen Büsche.
+3. Die Typwahl **glich auf die Gewichte 30/18/12/… aus** (`corr`), statt dem Standort zu folgen. Die 2.5D-Kamera/Tiefensortierung ist nicht die Ursache: die Draufsicht zeigte dasselbe Muster (Gruppen gleicher Größe auf freien Punkten).
+4. Neuerzeugen häuft nichts an: Instanzen entstehen einmal je Weltaufbau in neuen Puffern (kein Altbestand).
+
+**Was sich geändert hat**
+- **Kein 7:1, keine Sollzahl, keine feste Gruppengröße** (`BUSH.targetCount`, `TREES_PER_BUSH`, `target`, `shortfall` entfernt). Die Menge ergibt sich aus der Eignung; wo nichts passt, bleibt der Boden frei.
+- **Eignung (`BUSH.suitability`)** je Punkt aus der lokalen Waldsituation (`feat` in `worldBushes`): Baumdichte im Umkreis von 5 relativ zum Kernwald (`rho`), Übergang (`edge`: Waldrand oder deutlicher Dichteunterschied zwischen nahem und weitem Umkreis), Nähe Lichtung/Felsen/Weg/Wasser, Nadelbäume. Kurve: im dichten Bestand (rho > 0,85) sehr wenig, im lockeren Bestand und in Übergängen am meisten; Übergang/Felsen/Weg/Lichtungsnähe erhöhen. Dazu ein **fleckiges Bewuchsfeld** (Wertrauschen, Seed 7331): großflächig bewachsen ↔ leer.
+- **Platzierung:** Kandidatenraster (2,4) → Eignung × Bewuchsfeld → Keimpunkte mit zufälliger Abstandssperre (3–7,5) → jeder Keimpunkt wird **Einzelbusch oder wächst als kleine Gruppe** (Wahrscheinlichkeit und Obergrenze je Standortart: dicht 0,1/1 · locker 0,35/3 · Übergang 0,45/4 · Weg 0,3/3 · Fels 0,55/4 · Lichtungsrand 0,45/3; Begleiter geometrisch verteilt; selten +3 in sehr bewachsenen Flecken). Das Wachstum läuft Schritt für Schritt von einem stehenden Busch aus entlang einer Vorzugsrichtung → längliche, unregelmäßige Formen ohne Mittelpunkt; Größe und Abstand variieren; die Gruppengröße folgt dem verfügbaren Platz.
+- **Lichtungen bleiben offen:** je Lichtung seedbasiert *offen* (Rand, nur gelegentlich ein Strauch), *leicht bewachsen* (1–3 kleine Gruppen an gewählten Randstellen, ungleichmäßig verteilt) oder *junger Bewuchs* (lockerer Sektor aus Jungwuchs/Farn). Die Mitte (38 % des Radius) bleibt immer frei. Abgeleitete Lichtungen erst ab 4,0 freiem Radius (vorher 3,4).
+- **Typen nach Standort** (`BUSH.KIND`, Faktor auf das Grundgewicht, **kein Ausgleich auf Gesamtanteile mehr**): dicht → Farn/Nadel/jung; locker → rund/jung; Übergang → breit/rund/Beere/jung; Weg → Beere/saisonal/rund; Fels → breit/Farn; Lichtungsrand → rund/Beere/jung. Nadelsträucher nur bei Nadelbäumen, saisonale Farbbüsche selten und nie dicht beieinander. 40 % der Begleiter gleicher Art wie der Nachbar, sonst gemischt.
+- **Baumdichte (Abschnitt 4 der Aufgabe):** `treeDens` – glattes Dichtefeld (zwei Oktaven, feste Samen) moduliert die Setzwahrscheinlichkeit der Kulissenbäume (`p = 0,30 + 0,85·dm` im Kern statt 0,86; am Rand `f·0,6·(0,4+1,2·dm)`), Streuung innerhalb der Zelle jetzt volle Zellbreite. Der Zufallsstrom bleibt unverändert (gleiche `rnd()`-Aufrufe), nur die Annahme ändert sich. Folge: dichte Haine, lockere Stücke, natürliche Lücken; **Baumzahl 3731 → 3247 (−13 %)**. Gefällte Kulissenbäume (`bgCut`) bleiben je Zelle verknüpft; stehende, schon hochgestufte Bäume sind unberührt.
+- **Gras** an Birken, Lichtungsrändern, Felsen unverändert (Hash je Birke); keine Flächendeckung. `FWM.bush`/`grassTuft` unverändert.
+- **Performance:** weniger Bäume und Büsche (siehe Messung), Erzeugung einmal beim Weltaufbau (≈ 150 ms für `BUSH.generate`, ≈ 200 ms gesamt `worldBushes` inkl. Gras, gemessen in Chromium/Node-Harness ohne Drosselung), kein Rechnen pro Frame.
+
+### Messung (v87 → v89, derselbe Seed/dieselbe Welt, Auswertung im Spiel)
+| Größe | v87 | v89 |
+|---|---|---|
+| Bäume (Kulisse + Hof) | 3731 | 3247 |
+| Büsche | 533 (erzwungen = ⌊Bäume/7⌋) | 346 (ergibt sich) |
+| Einzelbüsche / Gruppen | 108 / 96 | 137 / 79 (Größen 2:47 · 3:16 · 4:13 · 5:3) |
+| Büsche je 100 Einheiten² bei Baumdichte <0,3 / 0,3–0,6 / 0,6–0,85 / >0,85 | 1,98 / 3,21 / 1,89 / 0,93 | 0,06 / 0,99 / 0,95 / 0,33 |
+| Clark-Evans-Index Bäume (1 = zufällig, >1 gleichmäßiger) | 1,25 | 1,16 |
+| Clark-Evans-Index Büsche (<1 = geklumpt) | 0,41 | 0,55 |
+| Anteil Waldfläche ohne Busch im Umkreis (Radius + 1,2) | 93 % | 97 % |
+| Lichtungen (abgeleitet + 5 ausdrückliche) | 13 (laut v87-Doku) | 30 (offen 16 · leicht 9 · jung 5), größter Bewuchsanteil 2 % der Fläche |
+| Mindestabstand Busch-Rand ↔ Wegmitte / ↔ Stammmitte | 0,96 / 0,30 | 0,99 / 0,48 |
+| Hash der Vegetation, zweimal erzeugt | gleich | gleich (−342153307) |
+| Draw Calls Hauptdurchgang (3 Ansichten, SwiftShader-Harness) | 17 / 21 / 25 (v88) | 18 / 21 / 27 |
+| Dreiecke Hauptdurchgang | 38 624 / 41 742 / 40 878 (v88) | 25 005 / 31 077 / 33 418 |
+| Dreiecke Schattendurchgang | 43 462 / 43 398 / 58 449 (v88) | 40 503 / 42 085 / 53 353 |
+| „GPU“-Zeit je Bild (SwiftShader-Software-Renderer!) | 175 / 184 / 226 ms (v88) | 152 / 178 / 194 ms |
+
+Bildrate und GPU-Zeit stammen vom Software-Renderer (kein Handy); belastbar sind die Zähler. Spielkamera geprüft: 10 Ansichten an verschiedenen Waldstellen (dist 20–30, Pitch 0,95), je Lichtungsart eine; Draufsicht-Plot mit allen Bäumen, Büschen, Gras und Lichtungen.
+
+**Einschränkungen:** Die Waldfläche am Rand der Karte ist sehr locker und bekommt wenig Büsche (gewollt, aber „leer“ wirkend, wenn man dort hinzoomt). Die Baumzahl sinkt um 13 %, Bestandsspielstände behalten gefällte Kulissenbäume je Zelle, einzelne Zellen tragen aber jetzt keinen Baum mehr. Jungbäume wurden nicht ergänzt (keine passende Variante). Die Kamera-Verdeckung wird nur über Wegabstand und Größenbereiche begrenzt, nicht über Blickrichtung.
+
 ## v88 (aufbauend auf v87) – Mobile-Performance und Vegetationsanimation
 
 **Ziel:** Der Wald soll auf schwachen Handys laufen. Bäume und Büsche bleiben statisch, nur Grasbüschel dürfen sehr langsam und schwach wehen –

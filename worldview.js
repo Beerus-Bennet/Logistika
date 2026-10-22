@@ -279,8 +279,9 @@ function worldWaterCheck() {
 }
 
 /* --------------------------- v86/v87: Vegetation platzieren ----------------------------- */
-/* Büsche (BUSH.generate): Zahl aus BUSH.targetCount (Bäume / 7, abgerundet), verteilt auf Gruppen (Lichtungen, Wegränder,
-   Waldränder, Steine, Schatten, lockerer Bestand) und wenige Einzelbüsche; Gras (BUSH.grass): Büschel an Birken u. a.
+/* Büsche (BUSH.generate, v89): keine feste Zahl und kein Verhältnis zu den Bäumen – Eignung aus lokaler Baumdichte, Übergängen,
+   Lichtungsrändern, Felsen und Wegen, dazu ein fleckiges Bewuchsfeld; Einzelbüsche und kleine, unterschiedlich große Gruppen,
+   Lichtungen bleiben überwiegend offen; Gras (BUSH.grass): Büschel an Birken u. a.
    Positionen kommen aus festen Samen (gleiche Welt → gleiche Vegetation). Gültig ist ein Standort im Wald, der von Hof,
    Feldern, Wegen, Bach, See, Teich, Lagerplatz, Lichtungsmitte, Bäumen, Felsen, Totholz und anderen Büschen frei ist. */
 function worldBushes(trees, MK, extra, rocks) {
@@ -319,14 +320,14 @@ function worldBushes(trees, MK, extra, rocks) {
     return wayGap(x, z) > 1.0 + r * 0.9;                                    /* Wegbreite 1,8 – kein Busch ragt auf den Schotter */
   };
   /* Lichtungen: die ausdrücklich angelegten (FWORLD.clearings) plus freie Flächen aus der Baumdichte – ein Punkt, an dem im Umkreis
-     von mindestens 3,4 Einheiten kein Baum steht (Kulissenbäume stehen im Schnitt alle 3,4); der Steinbereich im Altwald wird als eigene Art markiert */
+     von mindestens 4,0 Einheiten kein Baum steht (Kulissenbäume stehen im dichten Kern im Schnitt alle 3,4); der Steinbereich im Altwald wird als eigene Art markiert */
   const clearings = FWORLD.clearings.map(c => ({ x: c[0], z: c[1], r: c[2] - 0.5, explicit: true }));
   {
     const cand = [];
     for (let x = W.x0 + 2; x < W.x1; x += 3) for (let z = W.z0 + 2; z < W.z1 - 85; z += 3) {
       if (forestK(x, z) < 0.5 || !ok(x, z, 2)) continue;
       const r = nearestTree(x, z, 8) - 0.4;
-      if (r >= 3.4) cand.push({ x, z, r: Math.min(r, 7) });
+      if (r >= 4.0) cand.push({ x, z, r: Math.min(r, 7) });
     }
     cand.sort((a, b) => b.r - a.r || a.x - b.x || a.z - b.z);
     const got = [];
@@ -340,16 +341,21 @@ function worldBushes(trees, MK, extra, rocks) {
   const pathLines = FWORLD.paths.concat([LAKE_STEM, LAKE_WAY, LAKE_EAST]);
   const segs = []; let segLen = 0;
   pathLines.forEach(p => { for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (l > 0.1) { segs.push([p[i - 1], p[i], l]); segLen += l; } } });
+  /* Standortmerkmale: rho = lokale Baumdichte im Umkreis von 5 relativ zum dichten Kernwald (1 = Kernwald, 0 = keine Bäume),
+     edge = Übergang (Waldrand oder deutlicher Dichteunterschied zwischen nahem und weitem Umkreis) */
+  const REF = 0.084, PI = Math.PI;
   const feat = (x, z) => {
     const f = forestK(x, z), gap = wayGap(x, z);
     let cd = 1e9; for (const c of clearings) cd = Math.min(cd, Math.hypot(x - c.x, z - c.z) - c.r);
     const rd = Math.hypot(x - FWORLD.rocks[0], z - FWORLD.rocks[1]) - FWORLD.rocks[2], wd = distLine(x, z, FWORLD.creek);
+    const rho = near(x, z, 5) / (PI * 25 * REF), rs = near(x, z, 3.2) / (PI * 10.24 * REF), rl = near(x, z, 8) / (PI * 64 * REF);
     return {
-      edge: c01((0.7 - f) / 0.5), shade: c01(near(x, z, 3.5) / 6), dens: c01(near(x, z, 4) / 6), conifer: c01(near(x, z, 5, t => t.sp === "fichte" || t.sp === "kiefer") / 3),
+      rho, edge: Math.max(c01((0.7 - f) / 0.5), c01(2.2 * Math.abs(rs - rl))), conifer: c01(near(x, z, 5, t => t.sp === "fichte" || t.sp === "kiefer") / 3),
       path: c01(1 - (gap - 1) / 4), clearing: c01(1 - cd / 5), rock: c01(1 - rd / 6), water: c01(1 - wd / 10)
     };
   };
-  const res = BUSH.generate({ treeCount: trees.length, rng: wRng(7331 + 4242), sample, ok, feat, clearings, obstacles: treeObs.concat(extra || []), trunks });
+  const res = BUSH.generate({ rng: wRng(7331 + 4242), seed: 7331, area: { x0: W.x0, z0: W.z0, x1: W.x1, z1: W.z1 }, inForest: (x, z) => forestK(x, z) > 0.2, ok, feat, clearings,
+    rocks: rocks || [], obstacles: treeObs.concat(extra || []), trunks });
   /* Gras: Birken (Stammradius je Quelle), Lichtungsränder, Steine, sonnige Wegränder, Übergänge – zählt nicht zum 7:1 */
   const birches = trees.filter(t => t.sp === "birke" && (t.st == null || t.st === "up")).map(t => ({ x: t.x, z: t.z, s: t.s || 1, r: t.sz ? (0.07 * FWM.TH[t.sz] + 0.02) * 1.15 * (t.s || 1) : 0.11 * (t.s || 1) }));
   const sampleEdge = rr => {
@@ -409,6 +415,11 @@ function worldStatic() {
   const logObs = [], rockObs = [];
   const rocks = [0.9, 1.4, 2.0].map(k => F32(FWM.boulder(k)));
   const cut = S.farm.bgCut || {}, step = 3.2;
+  /* v89: Baumdichte-Feld (glatter Wertrauschen, feste Samen → reproduzierbar): 0 = Lücke/Lichtung, 1 = dichter Hain */
+  const tH = (i, j, k) => { const v = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453; return v - Math.floor(v); };
+  const tV = (x, z, k) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+    return tH(i, j, k) * (1 - u) * (1 - v) + tH(i + 1, j, k) * u * (1 - v) + tH(i, j + 1, k) * (1 - u) * v + tH(i + 1, j + 1, k) * u * v; };
+  const treeDens = (x, z) => { const q = clamp(0.62 * tV(x / 30, z / 30, 11) + 0.38 * tV(x / 12, z / 12, 23), 0, 1), t = clamp((q - 0.2) / 0.65, 0, 1); return Math.pow(t * t * (3 - 2 * t), 0.7); };
   const pickSp = (zone, edge, r) => {
     if (edge) return r < 0.3 ? "buche" : r < 0.45 ? "eiche" : r < 0.62 ? "kiefer" : r < 0.88 ? "birke" : r < 0.96 ? "fichte" : "kirsche";
     if (zone === "birke") return r < 0.45 ? "birke" : r < 0.68 ? "kiefer" : r < 0.8 ? "fichte" : r < 0.95 ? "buche" : "kirsche";
@@ -418,13 +429,13 @@ function worldStatic() {
   };
   for (let gx = WGRID.x0; gx < WGRID.x1; gx += step)
     for (let gz = WGRID.z0; gz < WGRID.z1; gz += step) {
-      const x = gx + rnd() * step * 0.8, z = gz + rnd() * step * 0.8;
-      const f = forestK(x, z);
+      const x = gx + rnd() * step, z = gz + rnd() * step;       /* v89: volle Zellbreite Streuung (vorher 0,8) – weniger Rasterwirkung */
+      const f = forestK(x, z), dm = treeDens(x, z);
       let p;
-      if (f > 0.5) p = 0.86;
+      if (f > 0.5) p = 0.30 + 0.85 * dm;                       /* v89: Dichte wechselt in Flecken – dichte Haine, lockere Stücke, natürliche Lücken (vorher überall 0,86) */
       else if (z > 22) p = z > 74 ? 0.55 : 0.1;
       else if (x > 46) p = 0.1;
-      else p = f * 0.6;
+      else p = f * 0.6 * (0.4 + 1.2 * dm);
       const r0 = rnd(), r1 = rnd(), r2 = rnd();
       if (r0 > p) {
         /* Waldboden: Farn, Pilze, Totholz – nur in Wegnähe, wo man hinsieht */
@@ -452,15 +463,17 @@ function worldStatic() {
     chunkOf(x, z).d.add(rocks[i % 3], x, z, ry, sc);
     rockObs.push([x, z, 0.55 * [0.9, 1.4, 2.0][i % 3] * sc]);
   }
-  /* v86/v87: Büsche (Gruppen + wenige Einzelbüsche, Zahl aus der platzierten Baumzahl) und Grasbüschel – Zahl der Büsche = floor(Bäume / 7) */
+  /* v86–v89: Büsche (eignungsgesteuert, Menge ergibt sich aus der Waldsituation – keine feste Zahl pro Baum) und Grasbüschel */
   if (typeof BUSH !== "undefined") {
     const trees = [];
     for (const c of chunks.values()) c.trees.forEach(t => trees.push(t));
     (S.farm.trees || []).forEach(t => trees.push(t));
+    const tB = performance.now();
     const res = worldBushes(trees, MK, logObs.concat(rockObs), rockObs);
+    res.ms = performance.now() - tB;
     WV.bushes = res.instances; WV.grass = res.grass.instances;
-    WV.bushInfo = { trees: trees.length, target: res.target, placed: res.placed, shortfall: res.shortfall, byType: res.byType, groups: res.groups, singles: res.singles, kinds: res.kinds,
-      clearings: res.clearings.length, grass: res.grass.instances.length, birchTufted: res.grass.birchTufted, birchTotal: res.grass.birchTotal };
+    WV.bushInfo = { trees: trees.length, ms: +res.ms.toFixed(0), placed: res.placed, byType: res.byType, groups: res.groups, singles: res.singles, kinds: res.kinds,
+      clearings: res.clearings.length, clearingTypes: res.clearingTypes, grass: res.grass.instances.length, birchTufted: res.grass.birchTufted, birchTotal: res.grass.birchTotal };
     res.instances.forEach(b => (VEGQ.bushShadow ? chunkOf(b.position[0], b.position[2]).d : chunkOf(b.position[0], b.position[2]).g).add(WV.bushm[b.typeId][b.variantSeed % BUSH.VARIANTS], b.position[0], b.position[2], b.rotationY, b.scale[0], b.scale[1], b.tint));
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }

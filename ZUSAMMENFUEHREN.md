@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v89 – Natürlicher Wald, Büsche ohne 7:1 (auf v88)
+
+| Teil | Datei |
+|---|---|
+| `BUSH.generate` eignungsgesteuert (Bewuchsfeld, Einzelbüsche/Gruppen, offene Lichtungen), `suitability`, `zoneOf`; `targetCount`/`TREES_PER_BUSH` entfernt | `bushes.js` |
+| `worldBushes` (`feat` mit `rho`/`edge`, neuer Aufruf), `treeDens` (Baumdichte in Flecken, Streuung volle Zelle) | `worldview.js` |
+| neue Tests | `tests/bushes.test.js` |
+
 ## Stand v88 – Performance, Gras-Wind (auf v87)
 
 | Teil | Datei |

@@ -551,6 +551,11 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Natürlicher Wald: Büsche aus der Waldsituation (v89)
+Büsche haben **kein festes Verhältnis zu den Bäumen mehr**: Eignung aus lokaler Baumdichte, Übergängen, Lichtungsrändern, Felsen, Wegen und einem fleckigen Bewuchsfeld
+(`BUSH.generate`, `BUSH.suitability`). Einzelbüsche und kleine, unterschiedlich große Gruppen, Lichtungen überwiegend offen, dichter Wald zurückhaltend. Die Kulissenbäume stehen in dichteren und
+lockereren Flecken (`treeDens`). Tests: `node tests/bushes.test.js`.
+
 ### Vegetation: Performance und Gras-Wind (v88)
 Gras sitzt in eigenen Chunk-Knoten ohne Schattenwurf; Büsche werfen keinen dynamischen Schatten. Grasbüschel wehen nur schwach und langsam im gemeinsamen
 Vertex-Shader (`swayT`), standardmäßig erst, wenn die Bildrate unter Last reicht (`?veg=static|wind|auto`, `vegInfo()`); Tab im Hintergrund pausiert alles.
@@ -559,10 +564,8 @@ Vertex-Shader (`swayT`), standardmäßig erst, wenn die Bildrate unter Last reic
 Büsche stehen überwiegend in kleinen Gruppen auf Lichtungen, an Wegrändern und Waldrändern; wenige kleine Einzelbüsche füllen
 Übergänge (`BUSH.generate`). Birken tragen vereinzelt Grasbüschel (`BUSH.grass`, `grass_tuft`, zählt nicht zum 7 : 1).
 
-### Büsche im Wald (v86)
-Auf sieben Bäume kommt ein Busch (`BUSH.targetCount`), verteilt auf sieben Arten nach Gewicht (rund 30 %, breit 18 %, Nadel 12 %,
-Farn 12 %, Beere 10 %, jung 10 %, saisonal 8 %). Standorte sind seedbasiert und frei von Wegen, Gebäuden, Wasser und Bäumen
-(`bushes.js`, `worldBushes` in `worldview.js`, Modelle `FWM.bush`). Tests: `node tests/bushes.test.js`.
+### Büsche im Wald (v86, überholt durch v89)
+Sieben Buscharten nach Gewicht (rund 30 %, breit 18 %, Nadel 12 %, Farn 12 %, Beere 10 %, jung 10 %, saisonal 8 %) als Grundvorrang der Typwahl (`bushes.js`, `worldBushes`, `FWM.bush`). Das feste Verhältnis 7 : 1 aus v86/v87 gilt seit v89 nicht mehr.
 
 ### Sägen in 3D-Ego-Sicht (v85)
 Das Sägen-Minispiel läuft jetzt in 3D (`fpsaw.js`, Modul `SAW3D`): Kamerafahrt zum Stamm, Säge im Vordergrund,
