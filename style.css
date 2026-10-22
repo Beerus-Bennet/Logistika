@@ -3038,12 +3038,15 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
   @keyframes xpshine{to{transform:translateX(100%)}}
 }
 
-/* v81: Sprechblase „Mittagspause“ – quadratisch, weiß, schwarzer Rand, runde Ecken, blasse Kursivschrift */
-#farmPop .fp-box.lunchb{width:96px;height:96px;display:flex;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;
-  background:#fff;border:3px solid #141414;border-radius:20px;box-shadow:0 5px 14px rgba(0,0,0,.28);overflow:visible;text-align:center}
-#farmPop .fp-box.lunchb i{font:italic 500 15px/1.15 Georgia,"Times New Roman",serif;color:#9a9a9a;letter-spacing:.2px}
-#farmPop .fp-box.lunchb::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:#fff;border:3px solid #141414;
-  border-top:0;border-left:0;border-radius:0 0 5px 0;transform:translateX(-50%) rotate(45deg)}
+/* v106: kleine Sprechblase über dem Kopf (Mittagspause, Im Telefonat): Kapsel mit Symbol, folgt der Figur und blendet aus */
+#farmPop .fp-box.saym{display:flex;align-items:center;gap:6px;padding:4px 11px 4px 4px;box-sizing:border-box;width:auto;max-width:none;white-space:nowrap;
+  background:#fffaf0;border:2.5px solid var(--ink);border-radius:999px;box-shadow:0 3px 0 rgba(20,20,20,.16),0 6px 14px rgba(0,0,0,.2);
+  pointer-events:none;overflow:visible;transition:opacity .35s ease}
+#farmPop .fp-box.saym.out{opacity:0}
+#farmPop .fp-box.saym .si{flex:none;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-size:12px;line-height:1;background:#ffe39a;border:2px solid var(--ink)}
+#farmPop .fp-box.saym b{font-weight:800;font-size:12.5px;line-height:1;letter-spacing:.1px;color:var(--ink)}
+#farmPop .fp-box.saym::after{content:"";position:absolute;left:50%;bottom:-7px;width:9px;height:9px;background:#fffaf0;border:2.5px solid var(--ink);
+  border-top:0;border-left:0;border-radius:0 0 3px 0;transform:translateX(-50%) rotate(45deg)}
 
 /* v85: Sägen in der Ich-Perspektive – das Fenster wird eine schmale Leiste unten, der Stamm bleibt im Bild frei */
 #farmAngel.mg.mg3d.on{display:block;background:transparent}

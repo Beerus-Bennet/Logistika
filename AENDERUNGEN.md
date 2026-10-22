@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v106 (aufbauend auf v105) – Sprechblasen über dem Kopf, Telefonat mit dem Büro
+
+**Sprechblase „Mittagspause“** (`team.js`, `style.css`): kleine Kapsel mit Symbol statt des großen weißen Quadrats. Sie sitzt über dem Kopf **der angetippten Figur**, folgt ihr jedes Bild und blendet nach etwa 3 Sekunden aus.
+**Antippen am Feuer:** Sitzende werden mit ihrer wirklichen (niedrigeren) Höhe getroffen und nur, wenn sie sichtbar sind. Vorher traf ein Tipp ins Feuer eine Figur weiter vorn (außerhalb des Bildes), und die Blase stand mitten im Feuer.
+**Telefonat mit dem Büro:** Bekommt eine Kraft einen Auftrag, ruft das Büro an und erklärt ihn, **10 Spielminuten** lang. Die Figur steht dabei am Platz und hält ein Handy ans Ohr (Arm mit angewinkeltem Ellbogen, `staffPhoneArm`), wippt leicht, Werkzeug ist weg. Danach geht sie los. Der Text in der Team-Liste heißt dabei „Telefonat mit dem Büro“.
+**Antippen im Telefonat:** kleine Blase „Im Telefonat“ (📞) über der Figur, kein Winken.
+**Regeln:** nur bei Aufträgen (nicht Mittagspause, Heimweg oder eigener Plan); derselbe Auftrag wird innerhalb von 10 Spielstunden nur einmal angerufen. Technisch: `staffGo` verschiebt `t0`/`t1` um `STAFF_CALL`, `job.cT1` markiert das Ende des Anrufs, `staffCalling(s)`.
+- **Geprüft** im Browser: Blase über der richtigen Figur (jede Person am Feuer liefert beim Tippen die eigene Blase, ein Tipp ins Feuer trifft keine), Telefonierhaltung von mehreren Seiten, Auftrag startet nach 10 Min, Blase blendet aus; Tests grün. **Nicht geprüft:** Handy in Bewegung (Wippen), Zusammenspiel mit vielen Aufträgen über einen ganzen Spieltag, echtes Handy.
+
 ## v105 (aufbauend auf v104) – Fuhrpark-Schuppen vor dem Hof, Fahrzeuge fahren nicht mehr durch den Hof
 
 Die Lieferfahrzeuge fuhren durchs Hoftor mitten über den Hof zum Schuppen. Jetzt:

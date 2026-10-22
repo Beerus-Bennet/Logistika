@@ -1108,6 +1108,8 @@ function staffPlace(s, j) {
   return p;
 }
 /* Losgehen: Weg suchen (A*), Laufzeit nach Weglänge (5 Einheiten je Spielminute) */
+const STAFF_CALL = 10, STAFF_CALL_TXT = "Telefonat mit dem Büro";   /* v106: Spielminuten, Anzeigetext */
+const staffCalling = s => !!(s && s.job && s.job.cT1 != null && S.time < s.job.cT1 && s.job.k !== "lunch");
 function staffGo(s, i, j) {
   const R = FSTAFF_ROLES[s.role], h = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
   const p = staffPlace(s, j);
@@ -1128,8 +1130,12 @@ function staffGo(s, i, j) {
   /* mehrere Felder: eins nach dem anderen (etwas länger, aber ein Gang statt vier) */
   if (j.oids && j.oids.length > 1) j.spots = j.oids.map(id => { const o = farmObj(id), q = o ? staffSpot(o, s.role) : p; return [q.x, q.z, q.fx, q.fz]; });
   const work = home ? 0 : R.work * (j.spots ? 1 + 0.55 * (j.spots.length - 1) : 1);
-  s.job = Object.assign(j, p, { route, len, sx: h[0], sz: h[1], t0: S.time, walk, t1: S.time + walk + work });
-  if (!home) { s.jobEnd = s.job.t1; s.doing = j.what; }
+  /* v106: Das Büro ruft an und erklärt die Aufgabe (10 Spielminuten) – erst danach geht es los.
+     Nur bei Aufträgen, und nur wenn für diesen Auftrag heute noch nicht angerufen wurde. */
+  const ckey = j.k + ":" + (j.task || ""), call = !!(j.task && j.k !== "lunch" && !home && !(s.callKey === ckey && S.time - (s.callAt || -1e9) < 600)) ? STAFF_CALL : 0;
+  if (call) { s.callKey = ckey; s.callAt = S.time; }
+  s.job = Object.assign(j, p, { route, len, sx: h[0], sz: h[1], t0: S.time + call, walk, t1: S.time + call + walk + work, cT1: call ? S.time + call : null });
+  if (!home) { s.jobEnd = s.job.t1; s.doing = call ? STAFF_CALL_TXT : j.what; }
   return s.job;
 }
 /* wo ist jemand gerade auf seinem Weg? */
@@ -1418,6 +1424,17 @@ function staffIc(s) {
 /* --------------------------- Auf dem Hof: Figuren --------------------------
    Körper ohne rechten Arm; der Arm hängt als eigenes Teil an der Schulter –
    so kann er Sichel, Axt oder Rute schwingen, beim Laufen pendeln und winken. */
+/* v106: Arm mit Handy am Ohr (Ellbogen angewinkelt) – Drehpunkt wie arm(): an der Schulter */
+function staffPhoneArm(o) {
+  const b = new FM.MB(), shirt = o.shirt || 0x3f78c8, skin = o.skin || 0xf2c9a0;
+  b.box(0.07, 0.2, 0.08, shirt, { x: 0.005, y: -0.1, rz: -0.12 });                 /* Oberarm: nach unten, etwas nach außen */
+  b.box(0.065, 0.3, 0.075, shirt, { x: -0.02, y: -0.06, z: 0.045, rz: 0.36 });     /* Unterarm: vom Ellbogen hoch zum Ohr */
+  b.box(0.062, 0.06, 0.07, skin, { x: -0.068, y: 0.075, z: 0.05 });                /* Hand */
+  b.box(0.02, 0.135, 0.062, 0x2b3340, { x: -0.1, y: 0.085, z: 0.05 });              /* Handy am Ohr: dunkler Rahmen, helle Rückseite */
+  b.box(0.008, 0.115, 0.05, 0xe9edf2, { x: -0.11, y: 0.085, z: 0.05 });
+  b.box(0.01, 0.02, 0.02, 0x2b3340, { x: -0.115, y: 0.13, z: 0.04 });
+  return b;
+}
 function worldSyncStaff() {
   if (typeof FV === "undefined" || !FV.R) return;
   const R = FV.R, F = S.farm, ids = new Set((F.staff || []).map(s => s.id));
@@ -1432,12 +1449,13 @@ function worldSyncStaff() {
     const node = fnode(fmesh("staffb:" + staffKey(s), () => FWM.person(Object.assign({}, body, { armR: false }))), { x: h[0], z: h[1], ry: 0.6 + i, s: 1.45 });
     R.nodes.push(node);
     const arm = R.addChild(node, fnode(fmesh("starm:" + body.shirt + ":" + body.skin, () => FWM.arm(body)), Object.assign({ rz: 0.08 }, STAFF_SHOULDER)));
+    const armM = arm.mesh, armPh = fmesh("starmph:" + body.shirt + ":" + body.skin, () => staffPhoneArm(body));
     const T = staffTool(s.role);
     const tool = T ? R.addChild(arm, fnode(fmesh((T.grip ? "sgrip:" : "stool:") + s.role, T.grip ? () => staffGrip(s.role) || T.fn() : T.fn), staffToolOnArm(T))) : null;
     /* v95: Kopf als eigenes Teil (sitzend: Blick, Nicken, Kopfschütteln) – nur sichtbar, solange die Sitzfigur ohne Kopf gezeigt wird */
     const head = R.addChild(node, fnode(fmesh("sthead:" + staffKey(s), () => FWM.head(body)), { y: 0.8 }));
     head.visible = false;
-    WV.staff.set(s.id, { node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key });
+    WV.staff.set(s.id, { node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key, armM, armPh });
   });
 }
 const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1458,7 +1476,9 @@ function stepStaff(dt, time) {
   F.staff.forEach((s, i) => {
     const e = WV.staff.get(s.id);
     if (!e) return;
-    const j = s.job, n = e.node, A = e.arm;
+    const j = s.job, n = e.node, A = e.arm, calling = staffCalling(s);
+    /* v106: Telefonat mit dem Büro – Anzeigetext folgt dem Zustand */
+    if (calling) s.doing = STAFF_CALL_TXT; else if (j && s.doing === STAFF_CALL_TXT) s.doing = j.what;
     /* v81: Mittagspause – angekommen: hinsetzen (Sitzfigur), danach wieder aufstehen */
     const sl = j && j.k === "lunch" && S.time - j.t0 >= j.walk && typeof CAMP !== "undefined" ? CAMP.slotOf(s.id) : null;
     if (sl && !e.isSit) {
@@ -1472,7 +1492,7 @@ function stepStaff(dt, time) {
       if (e.head) e.head.visible = false;
     }
     /* angetippt: stehen bleiben, zu dir drehen, einmal winken */
-    const wv = e.wave != null ? now - e.wave : 99;
+    const wv = e.wave != null && !calling ? now - e.wave : 99;
     if (wv < 1.9) {
       const eye = FV.R.eye || [FV.R.cam.tx + 20, 0, FV.R.cam.tz + 20];
       const r0 = e.wr0 != null ? e.wr0 : n.ry, k = Math.min(1, wv / 0.3);
@@ -1524,7 +1544,14 @@ function stepStaff(dt, time) {
     if (work && moving && d > 0.3) work = false;
     n.x = e.x; n.z = e.z;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
-    if (A) {
+    if (A && e.armPh) { const want = calling ? e.armPh : e.armM; if (A.mesh !== want) A.mesh = want; if (e.tool) e.tool.visible = !calling && !e.isSit; }
+    if (A && calling) {
+      /* am Ohr, ruhig; beim Reden wippt er leicht und dreht sich ein wenig hin und her */
+      const k2 = Math.min(1, dt * 6);
+      A.rx += (-0.1 + Math.sin(time * 1.3 + e.ph) * 0.03 - A.rx) * k2; A.rz += (0.12 - A.rz) * k2;
+      n.y = Math.abs(Math.sin(time * 2.6 + e.ph)) * 0.012;
+      n.ry += Math.sin(time * 0.7 + e.ph * 2) * 0.004;
+    } else if (A) {
       const rod = s.role === "fischer";
       if (work) {
         const sw = Math.sin(time * (s.role === "holzfaeller" ? 7 : 5) + e.ph);
@@ -1544,7 +1571,17 @@ function stepStaff(dt, time) {
     }
   });
   /* offene Blase über einer Kraft: Text aktuell halten */
-  if (FV.pop && FV.pop.kind === "staff" && now - (WV.staffPopAt || 0) > 0.5) { WV.staffPopAt = now; renderStaffPop($("#farmPop"), FV.pop); }
+  if (FV.pop && FV.pop.kind === "staff") {
+    const P = FV.pop, el = $("#farmPop");
+    /* v106: kleine Sprechblase folgt der Figur jedes Bild, nach kurzer Zeit blendet sie aus */
+    if (P.sayT != null && el && el.firstChild) {
+      const age = now - P.sayT;
+      if (age > 2.9) { closeFarmPop(); return; }
+      if (age > 2.5) el.firstChild.classList.add("out");
+      positionStaffPop(el, P);
+    }
+    if (FV.pop && now - (WV.staffPopAt || 0) > 0.5) { WV.staffPopAt = now; renderStaffPop($("#farmPop"), FV.pop); }
+  }
 }
 /* fertig: kleiner Effekt am Ort, wenn man hinsieht */
 function staffFx(s, j, fx) {
@@ -1561,7 +1598,9 @@ function staffTap(x, y) {
   if (typeof FV === "undefined" || !FV.R || !WV.staff.size) return false;
   let best = null, bd = 1e9;
   for (const [id, e] of WV.staff) {
-    const top = FV.R.project(e.x, 1.75, e.z), bot = FV.R.project(e.x, 0, e.z);
+    if (!e.node.visible) continue;
+    /* v106: Sitzende sind niedriger – sonst trifft der Finger am Feuer eine Figur weiter vorn, die man gar nicht sieht */
+    const y0 = e.node.y || 0, top = FV.R.project(e.x, y0 + (e.isSit ? 1.2 : 1.75), e.z), bot = FV.R.project(e.x, y0, e.z);
     if (!top || !bot) continue;
     /* eng um die Figur – wer daneben auf ein Gebäude tippt, meint das Gebäude */
     const h = Math.max(20, bot[1] - top[1]), w = Math.max(13, h * 0.3);
@@ -1570,8 +1609,8 @@ function staffTap(x, y) {
     if (d < bd) { bd = d; best = id; }
   }
   if (best == null) return false;
-  const e = WV.staff.get(best);
-  e.wave = wnow(); e.wr0 = e.node.ry;
+  const e = WV.staff.get(best), sB = (S.farm.staff || []).find(x => x.id === best);
+  if (!staffCalling(sB) && !(sB && sB.job && sB.job.k === "lunch")) { e.wave = wnow(); e.wr0 = e.node.ry; }
   closeFarmPop();
   FV.sel = null;
   FV.pop = { kind: "staff", id: best, add: false };
@@ -1644,11 +1683,13 @@ function renderStaffPop(el, P, force) {
   if (!el) return;
   const s = (S.farm.staff || []).find(x => x.id === P.id);
   if (!s) return closeFarmPop();
-  /* v81: in der Mittagspause (unterwegs dorthin oder am Feuer) zeigt jede Kraft nur diese Sprechblase */
-  if (s.job && s.job.k === "lunch") {
-    if (force !== true && el._sh === "lunch" && el.querySelector(".lunchb")) { positionStaffPop(el, P); return; }
-    el._sh = "lunch"; el.classList.add("on");
-    el.innerHTML = `<div class="fp-box lunchb"><i>Mittagspause</i></div>`;
+  /* v81/v106: in der Mittagspause oder im Telefonat zeigt jede Kraft nur eine kleine Sprechblase über ihrem Kopf (folgt kurz, dann weg) */
+  const say = s.job && s.job.k === "lunch" ? { k: "lunch", ic: "🍽️", tx: "Mittagspause" } : staffCalling(s) ? { k: "call", ic: "📞", tx: "Im Telefonat" } : null;
+  if (say) {
+    if (P.sayT == null) P.sayT = wnow();
+    if (force !== true && el._sh === "say:" + say.k && el.querySelector(".saym")) { positionStaffPop(el, P); return; }
+    el._sh = "say:" + say.k; el.classList.add("on");
+    el.innerHTML = `<div class="fp-box saym"><span class="si">${say.ic}</span><b>${say.tx}</b></div>`;
     positionStaffPop(el, P);
     return;
   }
@@ -1683,10 +1724,10 @@ function renderStaffPop(el, P, force) {
 function positionStaffPop(el, P) {
   const e = WV.staff.get(P.id), box = el && el.firstChild;
   if (!e || !box || !FV.R) return;
-  const lunch = box.classList.contains("lunchb"), p = FV.R.project(e.x, lunch ? 1.9 : 2.35, e.z), f = FV.R.project(e.x, 0, e.z);
+  const say = box.classList.contains("saym"), y0 = e.node.y || 0, p = FV.R.project(e.x, y0 + (say ? 1.62 : 2.35), e.z), f = FV.R.project(e.x, y0, e.z);
   if (!p) return;
   const w = box.offsetWidth, hgt = box.offsetHeight, W = FV.R.w, H = FV.R.h;
-  let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - (lunch ? 16 : 10);
+  let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - (say ? 9 : 10);
   /* oben kein Platz: unter die Füße, damit die Kraft sichtbar bleibt */
   if (y < 56) y = Math.min(H - hgt - 8, (f ? f[1] : p[1] + 70) + 14);
   y = clamp(y, 8, Math.max(8, H - hgt - 8));
