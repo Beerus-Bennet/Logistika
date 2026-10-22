@@ -107,4 +107,18 @@ test("Baumaterial: nur vorhandene Holzsorten aus Wald und Sägewerk", () => {
   assert.deepStrictEqual(Object.keys(H.NEED).sort(), ["aeste", "balken", "bretter", "kiefer", "pfosten"]);
   Object.values(H.NEED).forEach(n => assert.ok(n > 0 && n <= 10));
 });
+test("Wiesenwild: Wiese ↔ Revier – gleicher Winkel zum Hochsitz, Rückweg trifft den Ausgangspunkt, im Feld", () => {
+  const aCT = Math.atan2(H.TW.z - H.CZ, H.TW.x - H.CX);
+  for (let i = 0; i < 60; i++) {
+    const a = i / 60 * Math.PI * 2, d = H.CR * (0.05 + (i % 7) * 0.1), x = H.CX + Math.cos(a) * d, z = H.CZ + Math.sin(a) * d;
+    const [rx, rz] = H.toRv(x, z), [bx, bz] = H.fromRv(rx, rz);
+    assert.ok(H.fieldE(rx, rz) <= 0.801, "im Feld");
+    assert.ok(Math.hypot(rx - H.EYER[0], rz - H.EYER[2]) * H.M_PER_U >= 100, "weit genug weg vom Hochsitz");
+    assert.ok(Math.hypot(bx - x, bz - z) < 0.01, "Rückweg " + Math.hypot(bx - x, bz - z));
+  }
+  /* ein Tier auf der Hochsitz-Seite der Wiese steht im Revier nah am Hochsitz, eines auf der Gegenseite weit weg */
+  const near = H.toRv(H.CX + Math.cos(aCT) * 8, H.CZ + Math.sin(aCT) * 8), far = H.toRv(H.CX - Math.cos(aCT) * 8, H.CZ - Math.sin(aCT) * 8);
+  const dn = Math.hypot(near[0] - H.EYER[0], near[1] - H.EYER[2]), df = Math.hypot(far[0] - H.EYER[0], far[1] - H.EYER[2]);
+  assert.ok(dn < df, "nah " + dn.toFixed(0) + " < fern " + df.toFixed(0));
+});
 console.log(n + " Tests bestanden");

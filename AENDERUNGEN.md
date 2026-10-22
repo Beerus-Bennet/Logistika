@@ -1,5 +1,19 @@
 # Änderungen – kurz für den Kollegen
 
+## v111 (aufbauend auf v110) – Wild auf der Wildwiese, saubere Bäume im Fernglas
+
+**Wild auf der Wiese (`hunt.js`, Abschnitt „Wild auf der Wildwiese“):**
+- Steht der Hochsitz und ist Wild im Revier (Punkte oben), zieht hin und wieder ein **Hirsch oder Keiler** über die Wildwiese auf der Karte (Abstand 55–125 s, erstes Mal nach ca. 10 s). Tagsüber meist Hirsch, abends gemischt, nachts Keiler. Das Tier tritt vom Waldrand ein (blendet ein), äst 25–60 s mit kleinen Schritten und zieht auf der anderen Seite wieder ab. Das Hochsitz-Symbol zeigt 🦌/🐗, solange eines da ist.
+- **Aufstieg:** genau dieses Tier steht dann im Revier (gleiche Art, gleiche Güte/Trophäenwerte, gleicher Winkel zum Hochsitz, gleiche Blickrichtung, äst oder geht wie vorher). Kein zusätzlicher Zufallsspawn gleich danach.
+- **Abstieg:** lebt es noch und ist ruhig, steht es wieder auf der Wiese. Wurde es geschossen, ist geflüchtet oder aufgescheucht, ist es fort (neues Wild nach der Pause).
+- Umrechnung Wiese ↔ Revier: `toRv`/`fromRv` (Winkel relativ zur Richtung Mitte→Hochsitz, Randfaktor bleibt, Revier-Ellipse). `spawn(k, enter, pre)` nimmt eine Vorgabe.
+- Test: `tests/hunt.test.js` (Rückweg trifft den Ausgangspunkt, Tier im Feld, Hochsitz-Seite näher als Gegenseite).
+
+**Bäume im Fernglas:**
+- Ursache 1: Tiefenpuffer. Die Kamera sah im Revier von 0,35 bis 300 – in der Ferne zerreißen dann nah beieinander liegende Flächen (Stamm/Manschette, Rindenflecken). Jetzt `c.near` je Ansicht: Fernglas/Zielfernrohr 3,2, Ich-Sicht 1,1, sonst 0,6 (`hunt.js`, `step`).
+- Ursache 2: Geometrie. Kiefer: die dunkle Manschette am Stammfuß war oben schmaler als der Stamm → der Stamm stach zackig heraus (jetzt 0,9 r). Birke: schwarze Rindenflecken lagen teils im Stamm → jetzt knapp außerhalb der Rinde (`woodmodels.js`). Das gilt auch für die Bäume im Wald der Karte.
+- **Nicht geprüft:** echtes Handy (der Fehler zeigte sich im Testbrowser nicht eindeutig, die Behebung zielt auf die zwei sicheren Ursachen); die Tiefe-Ursache hängt von der Tiefenpuffer-Bitzahl des Geräts ab.
+
 ## v110 (aufbauend auf v109) – Luckybox: Gewinnchancen oben als Balken + Kacheln
 
 - `lucky.js` `openLucky`: Die Chancen stehen jetzt **direkt unter Titel und Unterzeile** statt als Textzeile ganz unten. Oben ein Balken, dessen vier Abschnitte so breit sind wie die Chance (Gewöhnlich/Selten/Episch/Legendär in den Seltenheitsfarben), darunter vier Kacheln mit Prozentzahl in Farbe und Name. Werte kommen weiter aus `LUCKY_ODDS` (normale und goldene Box).

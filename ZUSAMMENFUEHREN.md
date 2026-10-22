@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v111 – Wild auf der Wildwiese (Karte ↔ Revier), Fernglas: Tiefenpuffer und Baumgeometrie (auf v110)
+
+| Teil | Datei |
+|---|---|
+| Wiesenwild `mwSpawn/mwStep/mwToRevier/mwFromRevier`, `toRv/fromRv`, `spawn(k, enter, pre)`, nahe Ebene je Ansicht | `hunt.js` |
+| Kiefernmanschette, Birkenflecken | `woodmodels.js` |
+| Test Wiese ↔ Revier | `tests/hunt.test.js` |
+| Version 111 | `index.html`, `sw.js` |
+
 ## Stand v110 – Luckybox: Gewinnchancen oben als Balken + Kacheln (auf v109)
 
 | Teil | Datei |

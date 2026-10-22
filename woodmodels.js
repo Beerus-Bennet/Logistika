@@ -46,7 +46,7 @@ const FWM = (() => {
         trunk(b, r * 1.15, r * 0.45, h, T.bark);
         b.cyl(r * 1.24, r * 1.06, h * 0.16, 7, T.base, { notop: true, nobot: true });
         for (let i = 0; i < 5 + sz * 2; i++) {
-          const y = h * (0.2 + rnd() * 0.65), a = rnd() * 6.28, rr = r * (1.12 - (y / h) * 0.6);
+          const y = h * (0.2 + rnd() * 0.65), a = rnd() * 6.28, rr = r * (1.15 - (y / h) * 0.7) + 0.012;   /* v111: knapp außerhalb der Rinde (vorher teils innen/deckungsgleich → Flimmern) */
           /* v85: schwarze Querstreifen statt Quadrate – drei überlappende, flache Sechseck-Scheiben ergeben einen dünnen, langen Strich mit Spitzen */
           const mw = rr * (0.9 + rnd() * 0.9), mh = 0.012 + rnd() * 0.016, mr = Math.max(0.014, mh * 1.25);
           b.at({ x: Math.cos(a) * rr, y, z: Math.sin(a) * rr, ry: -a + Math.PI / 2 }, () => {
@@ -78,7 +78,8 @@ const FWM = (() => {
       const h = H * 0.86, r = 0.1 * k + 0.02;
       b.at({ rz: lean }, () => {
         trunk(b, r * 1.1, r * 0.55, h, T.bark);
-        b.cyl(r * 1.16, r * 0.82, h * 0.42, 7, T.base, { notop: true, nobot: true });
+        /* v111: Manschette folgt dem Stammverlauf (Radius oben ≥ Stammradius dort), sonst stach der Stamm oben zackig heraus */
+        b.cyl(r * 1.16, r * 0.9, h * 0.42, 7, T.base, { notop: true, nobot: true });
         for (let i = 0; i < 2 + sz; i++) {
           const y = h * (0.35 + rnd() * 0.3), a = rnd() * 6.28;
           b.box(0.03 * k + 0.01, 0.03 * k + 0.01, 0.22 * k, T.mark, { x: Math.cos(a) * r * 0.9, y, z: Math.sin(a) * r * 0.9, ry: -a, rx: 0.5 });

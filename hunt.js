@@ -469,7 +469,7 @@ const HUNT = (() => {
     if (!unlocked()) return null;
     const H = st();
     if (!H.built) { const ok = !missing().length; return { x: TW.x, y: 2.2, z: TW.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
-    return { x: TW.x, y: PH + 3.2, z: TW.z, html: "🔭" + (H.stock ? "<b>" + H.stock + "</b>" : ""), cls: H.stock ? "ready" : "" };
+    return { x: TW.x, y: PH + 3.2, z: TW.z, html: "🔭" + (H.stock ? "<b>" + H.stock + "</b>" : "") + (MW.A && MW.A.node.visible && !X ? (MW.A.k === "hirsch" ? "🦌" : "🐗") : ""), cls: H.stock ? "ready" : "" };
   }
   const dots = n => "●".repeat(n) + "○".repeat(Math.max(0, 2 - n));
   function sheet() {
@@ -531,12 +531,102 @@ const HUNT = (() => {
     if (!W.root) return;
     W.chk -= dt;
     if (W.chk <= 0) { W.chk = 1.5; syncWorld(); announce(); }
+    mwStep(dt, W.tm = (W.tm || 0) + dt);
     if (W.grow) {                                        /* der Hochsitz wächst aus dem Boden und federt nach */
       const G = W.grow; G.t += dt;
       const k = G.t / 1.1, e = k < 1 ? 1 - Math.pow(1 - k, 3) : 1 + Math.sin((k - 1) * 9) * 0.06 * Math.max(0, 1 - (k - 1) * 2.5);
       W.root.sy = Math.max(0.05, e); W.root.sx = W.root.sz = 1 + (1 - Math.min(1, k)) * 0.15;
       if (G.t > 2) { W.root.sx = W.root.sy = W.root.sz = 1; W.grow = null; }
     }
+  }
+
+  /* ------------------------ Wild auf der Wildwiese (v111) ------------------ */
+  /* Wenn der Hochsitz steht und Wild im Revier ist, zieht hin und wieder ein Hirsch oder Keiler über die Wiese
+     auf der Karte: tritt vom Waldrand herein, äst ein paar Dutzend Sekunden, zieht wieder ab. Steigt man in
+     dieser Zeit auf den Hochsitz, steht genau dieses Tier (gleiche Art, gleiche Güte, gleiche Lage zum Hochsitz)
+     im Revier vor dir. Bleibt es dort unversehrt, ist es beim Abstieg wieder auf der Wiese. */
+  const MW = { A: null, t: 10 };
+  const A_CT = Math.atan2(TW.z - CZ, TW.x - CX);                          /* Wiesenmitte → Hochsitz */
+  let rvAng = null;
+  const aCR = () => rvAng != null ? rvAng : (rvAng = Math.atan2(EYER[2] - FC.z, EYER[0] - FC.x));
+  /* Wiese → Revier: gleicher Winkel zum Hochsitz, gleicher Randfaktor */
+  function toRv(x, z, emax) {
+    const dx = x - CX, dz = z - CZ, e = Math.min(Math.hypot(dx, dz) / CR, emax || 0.8);
+    return fieldPt(e, Math.atan2(dz, dx) - A_CT + aCR());
+  }
+  function fromRv(x, z) {
+    const e = Math.min(fieldE(x, z), 0.95), a = Math.atan2((z - FC.z) / FRZ, (x - FC.x) / FRX) - aCR() + A_CT;
+    return [CX + Math.cos(a) * e * CR, CZ + Math.sin(a) * e * CR];
+  }
+  function mwSpawn() {
+    const hr = (S.time % 1440) / 60;
+    const k = hr >= 21 || hr < 5 ? "keiler" : hr >= 17 ? (rnd() < 0.55 ? "hirsch" : "keiler") : (rnd() < 0.78 ? "hirsch" : "keiler");
+    const score = drawScore(), a = A_CT + Math.PI + (rnd() - 0.5) * 2.2, a2 = a + Math.PI + (rnd() - 0.5) * 1.4, d2 = CR * (0.15 + rnd() * 0.45);
+    const x = CX + Math.cos(a) * CR * 1.22, z = CZ + Math.sin(a) * CR * 1.22, tx = CX + Math.cos(a2) * d2, tz = CZ + Math.sin(a2) * d2;
+    const s = k === "hirsch" ? 1.05 + score * 0.3 : 1.05 + score * 0.25;
+    const mesh = k === "hirsch" ? fmesh("wild:deer", () => FWM.deer(false)) : fmesh("wild:boar", FWM.boar);
+    const node = fnode(mesh, { x, z, s, ry: Math.atan2(tx - x, tz - z), visible: false, alpha: 0 });
+    FV.R.nodes.push(node);
+    MW.A = { k, score, node, x, z, tx, tz, st: "walk", t: 0, stay: 25 + rnd() * 35, leaving: false, ph: rnd() * 6.28 };
+  }
+  function mwDrop() {
+    const M = MW.A; if (!M) return;
+    const i = FV.R ? FV.R.nodes.indexOf(M.node) : -1; if (i >= 0) FV.R.nodes.splice(i, 1);
+    MW.A = null; MW.t = 55 + rnd() * 70;
+  }
+  function mwStep(dt, time) {
+    if (!FV.R || typeof S === "undefined" || !S.farm) return;
+    const H = st(), M = MW.A, farm = FV.on && document.body.classList.contains("tab-farm");
+    if (!H || !H.built) { if (M) mwDrop(); return; }
+    if (!M) {
+      if (X || FV.fp || !farm || H.stock <= 0) return;
+      MW.t -= dt; if (MW.t <= 0) mwSpawn();
+      return;
+    }
+    const n = M.node;
+    if (X || FV.fp) { n.visible = false; return; }                          /* oben auf dem Hochsitz: das Tier steht im Revier */
+    if (M.leaving && H.stock <= 0) M.stay = 0;
+    M.stay -= dt;
+    const e = Math.hypot(M.x - CX, M.z - CZ) / CR;
+    if (M.st === "graze") {
+      M.t -= dt;
+      n.x = M.x; n.z = M.z;
+      n.y = M.k === "keiler" ? Math.abs(Math.sin(time * 5 + M.ph)) * 0.015 : 0;
+      n.rx = M.k === "hirsch" ? (Math.sin(time * 0.6 + M.ph) > -0.35 ? 0.2 : 0) : 0.08;
+      if (M.t <= 0) {
+        if (M.stay <= 0) { const a = A_CT + Math.PI + (rnd() - 0.5) * 2.6; M.tx = CX + Math.cos(a) * CR * 1.3; M.tz = CZ + Math.sin(a) * CR * 1.3; M.leaving = true; M.st = "walk"; }
+        else { const b = rnd() * 6.28, l = 3 + rnd() * 5; let tx = M.x + Math.cos(b) * l, tz = M.z + Math.sin(b) * l; if (Math.hypot(tx - CX, tz - CZ) > CR * 0.72) { tx = CX + (tx - CX) * 0.5; tz = CZ + (tz - CZ) * 0.5; } M.tx = tx; M.tz = tz; M.st = "walk"; }
+      }
+    } else {
+      const dx = M.tx - M.x, dz = M.tz - M.z, dist = Math.hypot(dx, dz), sp = (M.k === "hirsch" ? 1.25 : 0.95) * dt;
+      if (dist < sp * 1.2) { if (M.leaving) { mwDrop(); return; } M.st = "graze"; M.t = 5 + rnd() * 9; n.rx = 0; }
+      else {
+        M.x += dx / dist * sp; M.z += dz / dist * sp; n.x = M.x; n.z = M.z;
+        const want = Math.atan2(dx, dz); n.ry += angN(want - n.ry) * Math.min(1, dt * 3);
+        n.y = Math.abs(Math.sin(time * 7.5 + M.ph)) * 0.025; n.rx = 0;
+      }
+    }
+    const al = clamp((1.2 - e) / 0.22, 0, 1), cam = FV.R.cam;
+    n.alpha = al; n.visible = al > 0 && Math.abs(M.x - cam.tx) < 70 && Math.abs(M.z - cam.tz) < 70;
+  }
+  /* Aufstieg: das Tier von der Wiese ins Revier setzen */
+  function mwToRevier() {
+    const M = MW.A; if (!M || !X) return false;
+    const [x, z] = toRv(M.x, M.z), [tx, tz] = toRv(M.tx, M.tz), grazing = M.st === "graze";
+    const A = spawn(M.k, false, { score: M.score, x, z, tx, tz, st: grazing ? "graze" : "walk", t: grazing ? Math.max(3, M.t) : 0, ry: Math.atan2(tx - x, tz - z) });
+    M.xfer = A.id; M.node.visible = false;
+    X.spawnT = 45 + rnd() * 40; X.firstSpawn = false;
+    return true;
+  }
+  /* Abstieg: lebt das Tier noch und ist ruhig, steht es wieder auf der Wiese – sonst ist es fort */
+  function mwFromRevier() {
+    const M = MW.A; if (!M || !M.xfer || !X) return;
+    const A = X.animals.find(a => a.id === M.xfer);
+    M.xfer = null;
+    if (!A || !alive(A) || !["graze", "look", "walk", "root", "peck"].includes(A.st) || A.kept) { mwDrop(); return; }
+    const [x, z] = fromRv(A.x, A.z), [tx, tz] = fromRv(A.tx, A.tz);
+    M.x = x; M.z = z; M.tx = tx; M.tz = tz; M.node.x = x; M.node.z = z;
+    M.st = A.st === "walk" ? "walk" : "graze"; M.t = 4 + rnd() * 6; M.leaving = false; M.stay = Math.max(M.stay, 15);
   }
 
   /* ------------------------------ Revier ---------------------------------- */
@@ -649,13 +739,14 @@ const HUNT = (() => {
     X.inRv = true; X.fogR = [70, 230];
     c.near = NEAR; c.far = FAR;
     revBuild();
-    if (H.stock && rnd() < 0.4) spawn(null, false);
+    if (!mwToRevier() && H.stock && rnd() < 0.4) spawn(null, false);
     X.spawnT = X.animals.length ? 35 + rnd() * 45 : 12 + rnd() * 22;
     if (!H.stock) msg("Das Revier ist ruhig – das Wild kommt in " + fdur(Math.max(1, Math.ceil(120 - (S.time - H.at)))) + " zurück.", 6);
     else msg(X.animals.length ? "Da draußen steht Wild – such es mit dem Fernglas." : "Warten und beobachten … such den Waldrand mit dem Fernglas ab.", 6);
   }
   function leaveRevier() {
     const c = FV.R.cam;
+    mwFromRevier();
     X.animals.forEach(unbuild); X.animals = [];
     X.drops.forEach(d => rmNode(d.n)); X.drops = [];
     revClear();
@@ -684,14 +775,17 @@ const HUNT = (() => {
     }
     return [FC.x - 6, FC.z, FC.x - 6, FC.z];
   }
-  function spawn(k, enter) {
+  function spawn(k, enter, pre) {
     if (!k) { const r = rnd(); k = r < 0.58 ? "hirsch" : r < 0.92 ? "keiler" : "fasan"; }
-    const S0 = SP[k], score = drawScore(), T = traits(k, score), s = lerp(S0.s0, S0.s1, score);
-    const p = spawnPoint(null, enter);
+    const S0 = SP[k], score = pre && pre.score != null ? pre.score : drawScore(), T = traits(k, score), s = lerp(S0.s0, S0.s1, score);
+    const p = pre ? [pre.x, pre.z] : spawnPoint(null, enter);
     const A = { id: ++X.aid, k, score, T, s, x: p[0], z: p[1], y: 0, ry: rnd() * 6.28, rx: 0, rz: 0, v: 0, vT: 0, vx: 0, vz: 0, ph: rnd(), gw: 0, gr: 0,
       st: enter ? "walk" : k === "fasan" ? "peck" : k === "keiler" ? "root" : "graze", t: 2 + rnd() * 5, tx: p[0], tz: p[1], alert: 0, seen: false, hits: [], dist: 0,
       sp: {}, ear: [{ f: 0, k: 0, t: 1 }, { f: 0, k: 0, t: 2 }], cautious: enter, pause: 0, jolt: 0, legsA: [[0, 0], [0, 0], [0, 0], [0, 0]], seed: rnd() * 100, fly: null };
     if (enter) { A.tx = p[2]; A.tz = p[3]; A.ry = Math.atan2(A.tx - A.x, A.tz - A.z); }
+    if (pre) {                                         /* v111: das Tier von der Wiese – gleiche Art, gleiche Güte, gleiche Lage und Blickrichtung */
+      A.mw = true; A.st = pre.st; A.t = pre.t; A.cautious = false; A.tx = pre.tx; A.tz = pre.tz; A.ry = pre.ry;
+    }
     build(A);
     X.animals.push(A);
     return A;
@@ -1328,6 +1422,9 @@ const HUNT = (() => {
     }
     if (X.dbgCam) goal = typeof X.dbgCam === "function" ? X.dbgCam() : X.dbgCam;          /* nur für Tests (Kamera frei setzen) */
     CAM_KEYS.forEach(k => { c[k] = goal[k]; });
+    /* v111: nahe Ebene je nach Ansicht weit nach hinten – im Fernglas/Zielfernrohr ist nichts näher als 6 m im Bild,
+       dafür bleibt der Tiefenpuffer fein genug, dass Stämme und Äste in der Ferne nicht mehr flimmern oder zerreißen */
+    if (X.inRv) { c.near = X.view === "bino" || X.view === "scope" ? 3.2 : X.view === "eye" ? 1.1 : 0.6; c.far = FAR; }
     FV.touchAt = performance.now();
     /* Wild: wenig, weit weg – und man muss warten */
     if (X.inRv && X.mode === "hold") {
@@ -1450,7 +1547,7 @@ const HUNT = (() => {
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
-    _spawn: (k, enter) => X && X.inRv && spawn(k, enter), _fire: () => fire(), _view: v => setView(v)
+    _spawn: (k, enter) => X && X.inRv && spawn(k, enter), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v)
   };
 })();
 if (typeof module !== "undefined") module.exports = HUNT;
