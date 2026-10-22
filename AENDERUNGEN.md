@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v96 (aufbauend auf v95) – Lupe nach dem Fällen weg
+
+- Die iOS-Lupe erschien, wenn der Finger beim Weiterhacken auf der Ergebniskarte („… gefällt!“) lag und länger hielt. Die Karte nimmt jetzt keine Berührung mehr an (`pointer-events:none`, in `worldview.js` und `style.css`), der Finger landet auf dem Bild, wo Textauswahl und Lupe schon unterbunden sind.
+- Ein Tipp irgendwo schließt die Karte weiter wie bisher (er geht durch), sonst nach 2,6 s.
+- Nicht auf einem echten iPhone getestet (hier nur Software-Browser).
+
 ## v95 (aufbauend auf v94) – Lagerfeuer: Sitzende mit Beinen, Gespräch, Wege ums Feuer
 
 - **Sitzen:** Die Sitzfigur sitzt vorn auf der Sitzfläche (Becken 0,10 vor der Sofamitte statt dahinter). Die Oberschenkel liegen waagerecht auf Sitzhöhe, die Unterschenkel hängen mit Schuhen vor der Sofakante frei. Man sieht die ganze Beinpartie (`woodmodels.js`, `person({sit:true})`).

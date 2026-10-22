@@ -3087,3 +3087,6 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 @keyframes fbBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
 @keyframes fbSlide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
 @media (prefers-reduced-motion:reduce){#farmBoot .fbIcon,#farmBoot .fbBar i{animation:none}}
+
+/* v96: Ergebniskarte nach dem Fällen nimmt keine Berührung an – keine iOS-Lupe */
+.frew,.frew *{pointer-events:none!important;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

@@ -2879,7 +2879,8 @@ function fellReward(t, r, res, tool) {
   /* v85: ein Tipp irgendwo auf dem Bild schließt die Karte (der Tipp geht trotzdem durch); sonst nach 2,6 s von selbst */
   const onTap = () => kill();
   const kill = () => { document.removeEventListener("pointerdown", onTap, true); el.classList.add("out"); setTimeout(() => el.remove(), 320); };
-  el.style.pointerEvents = "auto"; el.onclick = kill;
+  /* v96: Karte fängt keine Berührung ab (sonst zeigt iOS beim langen Halten die Textlupe); jeder Tipp aufs Bild schließt sie ohnehin */
+  el.style.pointerEvents = "none";
   setTimeout(() => { if (el.isConnected) document.addEventListener("pointerdown", onTap, true); }, 350);
   setTimeout(kill, 2600);
 }
