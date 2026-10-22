@@ -3062,3 +3062,16 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 .fp-gauge em{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,#47b84f 0%,#ffa21f 62%,#e2331f 85%);background-size:100% 130px;background-position:bottom;transition:height .08s linear}
 .fp-gauge.hot{animation:fpg .35s ease-in-out infinite alternate;border-color:#e2331f}
 @keyframes fpg{to{transform:translateY(-50%) scale(1.08)}}
+
+/* v90: Ladescreen beim ersten Aufbau des Hofs */
+#farmBoot{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(180deg,#6fb0ec,#bfe0f5);transition:opacity .4s}
+#farmBoot.out{opacity:0;pointer-events:none}
+#farmBoot .fbBox{text-align:center;max-width:290px;padding:18px 18px 14px;background:#fff;border:var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+#farmBoot .fbIcon{font-size:46px;line-height:1.1;animation:fbBob 1.1s ease-in-out infinite}
+#farmBoot b{display:block;font-size:17px;margin-top:4px}
+#farmBoot small{display:block;font-size:12px;opacity:.7;line-height:1.3}
+#farmBoot .fbBar{height:12px;margin:10px 0;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper)}
+#farmBoot .fbBar i{display:block;height:100%;width:40%;background:var(--green);animation:fbSlide 1.3s linear infinite}
+@keyframes fbBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+@keyframes fbSlide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){#farmBoot .fbIcon,#farmBoot .fbBar i{animation:none}}

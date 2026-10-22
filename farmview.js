@@ -2701,6 +2701,28 @@ function farmShow() {
   farmDOM();
   document.body.classList.add("tab-farm");
   if (!farmInit3D()) { renderFarmUI(); return; }
+  if (FV.boot) return;
+  if (!FV.built) { farmBoot(); return; }
+  farmShowGo();
+}
+/* v90: erster Aufbau des Hofs mit Ladescreen. Der Aufbau (Wald, Wege, Büsche, alle Bäume in Endform) blockiert den
+   Hauptthread; der Schirm wird deshalb erst gemalt, dann gebaut. Die Animation läuft auf dem Compositor weiter. */
+function farmBoot() {
+  FV.boot = true;
+  const el = document.createElement("div");
+  el.id = "farmBoot";
+  el.innerHTML = `<div class="fbBox"><div class="fbIcon">🌲</div><b>Dein Wald wird gepflanzt …</b><div class="fbBar"><i></i></div><small>Alle Bäume wachsen einmal ganz an – danach läuft alles flüssig.</small></div>`;
+  $("#farm").appendChild(el);
+  const t0 = performance.now();
+  requestAnimationFrame(() => setTimeout(() => {
+    FV.boot = false;
+    if (document.body.classList.contains("tab-farm")) farmShowGo();
+    FV.bootMs = Math.round(performance.now() - t0);
+    /* zwei Bilder abwarten (Shader, erste Zeichnung), dann ausblenden – mindestens kurz sichtbar, damit nichts flackert */
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 450); }, Math.max(0, 500 - (performance.now() - t0)))));
+  }, 40));
+}
+function farmShowGo() {
   if (!FV.built) farmBuildScene();
   FV.on = true;
   FV.last = performance.now();

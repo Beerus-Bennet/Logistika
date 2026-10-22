@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v90 – Waldbäume in Endform per Instancing, Ladescreen (auf v89)
+
+| Teil | Datei |
+|---|---|
+| Instanz-Shader (`instVS`), `R.instGroup`/`instClear`, Instanz-Durchgänge in Schatten und Haupt, `setScene`, Zähler `inst`/`sInst` | `gl3d.js` |
+| `bgFinal`, `bgChunkBuild` (Instanzen), `bgPromote` (gleiche Werte, `v`), `treeMeshOf` (`t.v`), Gruppen in `worldStatic`, Böen für Gruppen; `WV.bgm` entfällt | `worldview.js` |
+| `farmBoot`/`farmShowGo` (Ladescreen) | `farmview.js` |
+| `#farmBoot` | `style.css` |
+
 ## Stand v89 – Natürlicher Wald, Büsche ohne 7:1 (auf v88)
 
 | Teil | Datei |

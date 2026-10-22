@@ -416,6 +416,13 @@ const G3 = (() => {
   }`;
   const SFS = `#version 300 es
   precision mediump float; in float vG; out vec4 o; void main(){ if (vG > 0.5) discard; o = vec4(1.0); }`;
+  /* v90: Instanzen – viele gleiche Modelle (Kulissenbäume) in einem Aufruf. Je Instanz ein vec4(x, z, cos·s, sin·s):
+     Drehung um die Hochachse und gleichmäßiger Maßstab, Fußpunkt auf dem Boden (y = 0). Gleiche Shader wie oben,
+     nur die Modellmatrix kommt aus dem Attribut (in Three.js: InstancedMesh; hier per Hand mit vertexAttribDivisor). */
+  const instVS = src => src
+    .replace("layout(location=1) in vec3 aNor;", "layout(location=1) in vec3 aNor; layout(location=3) in vec4 aInst;")
+    .replace("vec4 w = uModel * vec4(aPos, 1.0);", "mat3 IM = mat3(aInst.z, 0.0, -aInst.w, 0.0, length(aInst.zw), 0.0, aInst.w, 0.0, aInst.z); vec4 w = vec4(IM * aPos + vec3(aInst.x, 0.0, aInst.y), 1.0);")
+    .split("mat3(uModel)").join("IM");
   /* Partikel: Billboards, rund und weich */
   const PVS = `#version 300 es
   layout(location=0) in vec3 aC; layout(location=1) in vec2 aK; layout(location=2) in float aS; layout(location=3) in vec4 aCol; layout(location=4) in float aShape;
@@ -499,7 +506,7 @@ const G3 = (() => {
     opts = opts || {};
     const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.keep });
     if (!gl) return null;
-    let main, shad, part, dec, decVAO, decBuf;
+    let main, shad, mainI, shadI, part, dec, decVAO, decBuf;
     const texs = new Set();
     const meshes = new Set();
     let shadowFB = null, shadowTex = null;
@@ -523,6 +530,8 @@ const G3 = (() => {
     function init() {
       main = compile(gl, VS, FS);
       shad = compile(gl, SVS, SFS);
+      mainI = compile(gl, instVS(VS), FS);
+      shadI = compile(gl, instVS(SVS), SFS);
       part = compile(gl, PVS, PFS);
       dec = compile(gl, DVS, DFS);
       decBuf = gl.createBuffer(); decVAO = gl.createVertexArray();
@@ -597,6 +606,74 @@ const G3 = (() => {
     };
     R.addChild = (p, c) => { c.parent = p; p.children.push(c); return c; };
 
+    /* v90: Instanzgruppe – ein Mesh, viele Plätze (x, z, Drehung, Maßstab). Je Bild werden die Instanzen im Sichtkegel
+       (und im Schattenausschnitt) ausgewählt und in einem Aufruf gezeichnet. */
+    const igroups = new Set();
+    let iscratch = new Float32Array(4096);
+    function gUpload(g) {
+      if (!g.mesh.buf) return;
+      const mk = () => {
+        const vao = gl.createVertexArray(), buf = gl.createBuffer();
+        gl.bindVertexArray(vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, g.mesh.buf);
+        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0);
+        gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12);
+        gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, Math.max(16, g.cap * 16), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 16, 0); gl.vertexAttribDivisor(3, 1);
+        gl.bindVertexArray(null);
+        return [vao, buf];
+      };
+      [g.vaoM, g.bufM] = mk(); [g.vaoS, g.bufS] = mk(); g.capM = g.capS = g.cap;
+    }
+    function gFree(g) {
+      if (g.vaoM) { gl.deleteVertexArray(g.vaoM); gl.deleteBuffer(g.bufM); gl.deleteVertexArray(g.vaoS); gl.deleteBuffer(g.bufS); }
+      g.vaoM = g.vaoS = g.bufM = g.bufS = null;
+    }
+    R.instGroup = function (mesh, o) {
+      const b = mesh.box, hx = (b[1][0] - b[0][0]) / 2, hy = (b[1][1] - b[0][1]) / 2, hz = (b[1][2] - b[0][2]) / 2;
+      const cx = (b[0][0] + b[1][0]) / 2, cz = (b[0][2] + b[1][2]) / 2;
+      const g = Object.assign({ mesh, n: 0, cap: 0, src: new Float32Array(0), sc: new Float32Array(0), keys: [], idx: new Map(),
+        sway: 0, swayT: 1, shadow: true, tint: null, cy: (b[0][1] + b[1][1]) / 2, rr: Math.hypot(hx, hy, hz) + Math.hypot(cx, cz),
+        vaoM: null, bufM: null, vaoS: null, bufS: null, capM: 0, capS: 0 }, o || {});
+      g.add = (key, x, z, ry, s) => {
+        if (g.idx.has(key)) return;
+        if (g.n === g.cap) {
+          const nc = Math.max(16, g.cap * 2), ns = new Float32Array(nc * 4), nsc = new Float32Array(nc);
+          ns.set(g.src); nsc.set(g.sc); g.src = ns; g.sc = nsc; g.cap = nc;
+        }
+        const i = g.n++;
+        g.src[i * 4] = x; g.src[i * 4 + 1] = z; g.src[i * 4 + 2] = Math.cos(ry) * s; g.src[i * 4 + 3] = Math.sin(ry) * s; g.sc[i] = s;
+        g.keys[i] = key; g.idx.set(key, i);
+      };
+      g.remove = key => {
+        const i = g.idx.get(key);
+        if (i == null) return false;
+        const l = --g.n;
+        if (i !== l) { g.src.copyWithin(i * 4, l * 4, l * 4 + 4); g.sc[i] = g.sc[l]; g.keys[i] = g.keys[l]; g.idx.set(g.keys[i], i); }
+        g.keys.length = l; g.idx.delete(key);
+        return true;
+      };
+      igroups.add(g);
+      return g;
+    };
+    R.instClear = function () { igroups.forEach(gFree); igroups.clear(); };
+    R.instGroups = igroups;
+    /* Sichtprüfung: Kugel um jede Instanz gegen die sechs Ebenen → kompakte Liste in iscratch */
+    function icull(g, P) {
+      const n = g.n, src = g.src, sc = g.sc, r0 = g.rr, cy0 = g.cy, pad = g.sway > 0 ? 0.4 : 0.05;
+      if (iscratch.length < n * 4) iscratch = new Float32Array(g.cap * 4);
+      let o = 0;
+      for (let i = 0; i < n; i++) {
+        const s = sc[i], x = src[i * 4], z = src[i * 4 + 1], y = cy0 * s, r = r0 * s + pad;
+        let ok = true;
+        for (let k = 0; k < 6; k++) { const q = P[k]; if (q[0] * x + q[1] * y + q[2] * z + q[3] < -r) { ok = false; break; } }
+        if (ok) { iscratch[o++] = x; iscratch[o++] = z; iscratch[o++] = src[i * 4 + 2]; iscratch[o++] = src[i * 4 + 3]; }
+      }
+      return o / 4;
+    }
+
     /* Bild für Aufkleber: aus einem Canvas; neu hochladen mit R.texUpdate */
     function texUp(t) {
       if (lost || !t.canvas) return;
@@ -620,6 +697,7 @@ const G3 = (() => {
     canvas.addEventListener("webglcontextrestored", () => {
       lost = false; init();
       meshes.forEach(upload);
+      igroups.forEach(gUpload);
       texs.forEach(t => { t.tex = null; texUp(t); });
       if (R.onRestore) R.onRestore();
     });
@@ -692,7 +770,7 @@ const G3 = (() => {
       return [W[0] * cx + W[4] * cy + W[8] * cz + W[12], W[1] * cx + W[5] * cy + W[9] * cz + W[13], W[2] * cx + W[6] * cy + W[10] * cz + W[14], r];
     }
     const inside = (P, s) => { for (const q of P) if (q[0] * s[0] + q[1] * s[1] + q[2] * s[2] + q[3] < -s[3]) return false; return true; };
-    R.stats = { draws: 0, tris: 0, sDraws: 0, sTris: 0, sway: 0, nodes: 0, visible: 0 };
+    R.stats = { draws: 0, tris: 0, sDraws: 0, sTris: 0, sway: 0, nodes: 0, visible: 0, inst: 0, sInst: 0 };
     R.render = function (time) {
       if (lost) return;
       R.time = time;
@@ -714,7 +792,7 @@ const G3 = (() => {
       }
       R.culled = all.length - list.length;
       /* v88: Zähler je Bild (Aufrufe, Dreiecke in Haupt- und Schattendurchgang) – nur ein paar Additionen */
-      const ST = R.stats; ST.draws = ST.tris = ST.sDraws = ST.sTris = ST.sway = 0; ST.nodes = all.length; ST.visible = list.length;
+      const ST = R.stats; ST.draws = ST.tris = ST.sDraws = ST.sTris = ST.sway = ST.inst = ST.sInst = 0; ST.nodes = all.length; ST.visible = list.length;
 
       /* 1) Schatten */
       gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
@@ -733,32 +811,57 @@ const G3 = (() => {
         gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
         ST.sDraws++; ST.sTris += n.mesh.count / 3;
       }
+      if (igroups.size) {
+        gl.useProgram(shadI.p);
+        gl.uniformMatrix4fv(shadI.u.uLVP, false, R.LVP);
+        gl.uniform1f(shadI.u.uTime, time);
+        for (const g of igroups) {
+          if (!g.n || !g.shadow) continue;
+          if (!g.vaoS) gUpload(g);
+          if (!g.vaoS) continue;
+          const nv = icull(g, PL);
+          if (!nv) continue;
+          gl.uniform1f(shadI.u.uSway, g.sway); gl.uniform1f(shadI.u.uSwayT, g.swayT);
+          gl.bindVertexArray(g.vaoS);
+          gl.bindBuffer(gl.ARRAY_BUFFER, g.bufS);
+          if (g.capS !== g.cap) { gl.bufferData(gl.ARRAY_BUFFER, g.cap * 16, gl.DYNAMIC_DRAW); g.capS = g.cap; }
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, iscratch, 0, nv * 4);
+          gl.drawArraysInstanced(gl.TRIANGLES, 0, g.mesh.count, nv);
+          ST.sDraws++; ST.sTris += nv * g.mesh.count / 3; ST.sInst += nv;
+        }
+        gl.bindVertexArray(null);
+      }
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
       /* 2) Szene */
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+      const LK = R.locks.filter(l => l.a > 0.001).slice(0, 6);
+      let lkA = null, lkB = null;
+      if (LK.length) {
+        lkA = new Float32Array(24); lkB = new Float32Array(24);
+        LK.forEach((l, i) => { lkA.set(l.r, i * 4); lkB.set([l.c[0], l.c[1], l.rad || 0, l.a], i * 4); });
+      }
+      /* gemeinsame Szenen-Uniforms – für das Hauptprogramm und die Instanzvariante (v90) */
+      const setScene = u => {
+        gl.uniformMatrix4fv(u.uVP, false, R.VP);
+        gl.uniformMatrix4fv(u.uLVP, false, R.LVP);
+        gl.uniform3fv(u.uSunDir, E.sun); gl.uniform3fv(u.uSunCol, E.sunCol);
+        gl.uniform3fv(u.uSky, E.sky); gl.uniform3fv(u.uGround, E.ground);
+        gl.uniform3fv(u.uFog, E.fog); gl.uniform2fv(u.uFogR, E.fogR);
+        gl.uniform3fv(u.uCam, R.eye);
+        gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
+        gl.uniform1f(u.uNight, E.night || 0);
+        /* Sperrgebiete */
+        gl.uniform1i(u.uLockN, LK.length);
+        if (LK.length && u["uLockR[0]"]) { gl.uniform4fv(u["uLockR[0]"], lkA); gl.uniform4fv(u["uLockC[0]"], lkB); }
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+        gl.uniform1i(u.uShadow, 0);
+      };
       gl.useProgram(main.p);
       const u = main.u;
-      gl.uniformMatrix4fv(u.uVP, false, R.VP);
-      gl.uniformMatrix4fv(u.uLVP, false, R.LVP);
-      gl.uniform3fv(u.uSunDir, E.sun); gl.uniform3fv(u.uSunCol, E.sunCol);
-      gl.uniform3fv(u.uSky, E.sky); gl.uniform3fv(u.uGround, E.ground);
-      gl.uniform3fv(u.uFog, E.fog); gl.uniform2fv(u.uFogR, E.fogR);
-      gl.uniform3fv(u.uCam, R.eye);
-      gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
-      gl.uniform1f(u.uNight, E.night || 0);
-      /* Sperrgebiete */
-      const LK = R.locks.filter(l => l.a > 0.001).slice(0, 6);
-      gl.uniform1i(u.uLockN, LK.length);
-      if (LK.length && u["uLockR[0]"]) {
-        const a = new Float32Array(24), b = new Float32Array(24);
-        LK.forEach((l, i) => { a.set(l.r, i * 4); b.set([l.c[0], l.c[1], l.rad || 0, l.a], i * 4); });
-        gl.uniform4fv(u["uLockR[0]"], a); gl.uniform4fv(u["uLockC[0]"], b);
-      }
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
-      gl.uniform1i(u.uShadow, 0);
+      setScene(u);
       const draw = (n, st) => {
         if (!n.mesh.vao) return;
         gl.uniformMatrix4fv(u.uModel, false, n.W);
@@ -771,6 +874,29 @@ const G3 = (() => {
       };
       gl.disable(gl.BLEND);
       for (const [n, st] of list) if (st.alpha >= 0.99 && !n.shadowOnly) draw(n, st);
+      /* v90: Instanzgruppen (Kulissenbäume) – vollständige Modelle, ein Aufruf je Gruppe */
+      if (igroups.size) {
+        gl.useProgram(mainI.p);
+        const ui = mainI.u;
+        setScene(ui);
+        gl.uniform1f(ui.uWater, 0); gl.uniform1f(ui.uGlow, 0); gl.uniform1f(ui.uAlpha, 1);
+        for (const g of igroups) {
+          if (!g.n) continue;
+          if (!g.vaoM) gUpload(g);
+          if (!g.vaoM) continue;
+          const nv = icull(g, PV);
+          if (!nv) continue;
+          gl.uniform1f(ui.uSway, g.sway); gl.uniform1f(ui.uSwayT, g.swayT);
+          gl.uniform4fv(ui.uTint, g.tint || NOTINT);
+          gl.bindVertexArray(g.vaoM);
+          gl.bindBuffer(gl.ARRAY_BUFFER, g.bufM);
+          if (g.capM !== g.cap) { gl.bufferData(gl.ARRAY_BUFFER, g.cap * 16, gl.DYNAMIC_DRAW); g.capM = g.cap; }
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, iscratch, 0, nv * 4);
+          gl.drawArraysInstanced(gl.TRIANGLES, 0, g.mesh.count, nv);
+          ST.draws++; ST.tris += nv * g.mesh.count / 3; ST.inst += nv; if (g.sway) ST.sway++;
+        }
+        gl.useProgram(main.p);
+      }
       /* Umriss für fertige Sachen: erst die Figur in die Schablone, dann
          eine etwas größere Kopie in Farbe – nur außerhalb der Figur sichtbar */
       const OL = list.filter(([n, st]) => st.outline && st.alpha >= 0.99 && n.mesh.vao && n.mesh.box);

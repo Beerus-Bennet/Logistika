@@ -1,5 +1,31 @@
 # Änderungen – kurz für den Kollegen
 
+## v90 (aufbauend auf v89) – Alle Waldbäume von Anfang an in Endform, Ladescreen
+
+**Vorher:** Kulissenbäume waren je Kachel zu einem Mesh aus der *einfachen* `FWM.bgTree`-Form (31–208 Dreiecke) verschmolzen, ohne Wind. Erst beim Antippen (`bgPromote`) wurde daraus ein echter Baum mit `FWM.tree` (200–1510 Dreiecke, anderer Größenklasse, Wind) – man sah den Wechsel.
+
+**Jetzt:**
+- Jeder Kulissenbaum steht von Beginn an **in genau der Form, die er nach dem Antippen hätte**: gleiche Art, Größenklasse (`fz`), Maßstab (`fs`), Variante (`fv`), gleiche gerundete Lage, gleicher Wind (0,22 + Böen). Die Berechnung steckt in `bgFinal(b)`; `bgPromote` verwendet dieselben Werte → **kein Wechsel mehr**.
+- Gezeichnet per **GPU-Instancing** (`R.instGroup` in `gl3d.js`, `drawArraysInstanced`, je Instanz `vec4(x, z, cos·s, sin·s)`): je Art/Größe/Variante *ein* Mesh (45 Typen, zusammen ≈ 2 MB), geteilt mit den echten Bäumen (`fmesh("wt:…")`). Ein Verschmelzen aller Bäume in Endform hätte ≈ 1,3 Mio. Dreiecke und ≈ 139 MB Vertexdaten bedeutet.
+- Je Bild wird pro Instanz im Sichtkegel bzw. im Schattenausschnitt geprüft (nur sichtbare gehen an die GPU); eigene Instanz-Shader (gleicher Code wie die normalen, nur die Modellmatrix kommt aus dem Attribut), Schatten und Nebel wie bisher, Kontextverlust stellt die Gruppen wieder her.
+- `bgChunkBuild(c)` gleicht jetzt die Instanzen mit `c.trees` ab (angetippt / im Säge-Minispiel ausgeblendet → Instanz weg; zurück → wieder da) – `fpsaw.js` bleibt unverändert.
+- Die Variante eines Kulissenbaums kommt aus dem Schlüssel (`t.v`, gespeichert am echten Baum); `treeMeshOf` nimmt `t.v`, sonst wie bisher `id % 3` (alte Spielstände, selbst gepflanzte Bäume).
+- **Ladescreen** (`farmBoot` in `farmview.js`, Stil in `style.css`): beim ersten Öffnen des Hofs wird erst der Schirm gemalt, dann gebaut (der Aufbau blockiert den Hauptthread); Animation läuft auf dem Compositor weiter; mindestens 0,5 s sichtbar, dann ausgeblendet, nachdem zwei Bilder gezeichnet sind.
+- Aufbauzeit: `bgChunkBuild` für alle 3077 Bäume ≈ 143 ms beim ersten Mal (45 Meshes erzeugen), ≈ 21 ms danach; der gesamte Weltaufbau liegt weiter bei ≈ 2 s in der Messumgebung (vorher ebenso).
+
+### Messung (v89 → v90, Chromium/SwiftShader-Harness, dichtester Waldausschnitt bei (−120, −20), Kamera nah/mittel/weit)
+| Größe | v89 | v90 |
+|---|---|---|
+| Dreiecke Hauptdurchgang | 50 919 / 45 148 / 41 381 | 66 367 / 75 492 / 92 240 |
+| Dreiecke Schattendurchgang | 26 518 / 26 518 / 26 518 | 83 591 / 83 591 / 83 453 |
+| Draw Calls Hauptdurchgang | 29 / 29 / 28 | 38 / 39 / 40 |
+| sichtbare Baum-Instanzen (Haupt / Schatten) | – | 126 / 163 / 215 · 250 |
+| JS-Heap | 54,7 / 63,9 / 71,4 MB | 43,0 / 47,7 / 51,9 MB |
+| „GPU“-Zeit (SwiftShader-Software-Renderer, kein Handy!) | 273 / 276 / 270 ms | 493 / 503 / 535 ms |
+
+Pixelvergleich *vor/nach dem Antippen* eines Waldbaums (Zeit und Sonne eingefroren): identisch außerhalb der Bedienelemente. Geprüft: Antippen/Promotion, Ausblenden und Zurücksetzen im Säge-Minispiel, Weltneuaufbau (Instanzen 3077 = 3077), Kontextverlust und Wiederherstellung (gleiche Zähler), alter Spielstand ohne `t.v`.
+**Grenzen:** Messwerte stammen vom Software-Renderer, nicht von einem Handy; belastbar sind Zähler (Dreiecke, Aufrufe, Speicher). Im dichtesten Ausschnitt sind es rund 2,5- bis 3-mal so viele Dreiecke wie bei v89, dafür deutlich weniger Speicher.
+
 ## v89 (aufbauend auf v88) – Natürlicher Wald: Büsche ohne 7:1, aus der Waldsituation; Baumdichte in Flecken
 
 **Ursache der künstlichen Wirkung (aus dem Code, nicht geraten):**

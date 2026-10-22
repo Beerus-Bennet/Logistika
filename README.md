@@ -551,6 +551,9 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Alle Waldbäume von Anfang an in Endform (v90)
+Kulissenbäume haben schon beim Start ihre endgültige Form (`bgFinal`, dieselbe wie nach dem Antippen) und werden per Instancing gezeichnet (`R.instGroup`, `bgChunkBuild`). Beim ersten Öffnen des Hofs zeigt ein Ladescreen (`farmBoot`) den Aufbau.
+
 ### Natürlicher Wald: Büsche aus der Waldsituation (v89)
 Büsche haben **kein festes Verhältnis zu den Bäumen mehr**: Eignung aus lokaler Baumdichte, Übergängen, Lichtungsrändern, Felsen, Wegen und einem fleckigen Bewuchsfeld
 (`BUSH.generate`, `BUSH.suitability`). Einzelbüsche und kleine, unterschiedlich große Gruppen, Lichtungen überwiegend offen, dichter Wald zurückhaltend. Die Kulissenbäume stehen in dichteren und

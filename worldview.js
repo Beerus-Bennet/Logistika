@@ -403,10 +403,10 @@ function worldStatic() {
     }
   /* Kulissenbäume: dichter Wald, lockere Bäume am See und im Osten. v56: jeder hat eine Art
      (Birke, Kiefer, Fichte, Buche, Eiche, Kirsche) und lässt sich antippen – dann wird er ein
-     echter Baum (bgPromote). Die Bäume je Kachel liegen in WV.bgChunks, damit nur diese Kachel
-     neu gebaut werden muss. */
+     echter Baum (bgPromote). Die Bäume je Kachel liegen in WV.bgChunks.
+     v90: Kulissenbäume stehen von Anfang an in ihrer endgültigen Form (dasselbe Modell wie nach dem
+     Antippen) und werden als Instanzen gezeichnet – siehe bgFinal / bgChunkBuild. */
   const F32 = mb => new Float32Array(mb.v);
-  WV.bgm = {}; ["birke", "kiefer", "fichte", "buche", "eiche", "kirsche"].forEach(sp => { WV.bgm[sp] = [0, 1, 2].map(v => F32(FWM.bgTree(sp, v))); });
   const fern = F32(FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog());
   /* v86: sieben Buscharten (bushes.js) – je Typ drei Formvarianten, von allen Büschen gemeinsam genutzt */
   WV.bushm = {}; WV.bushes = []; WV.bushInfo = null; WV.grass = []; WV.grassm = [];
@@ -478,6 +478,7 @@ function worldStatic() {
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = false; VEGQ.why = "start";
+  R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map();
   for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
     if (c.d.n) R.nodes.push(fnode(R.mesh(c.d.out())));
@@ -488,9 +489,11 @@ function worldStatic() {
       R.nodes.push(vn);
       VEGQ.nodes.push({ node: vn, x: WGRID.x0 + (i + 0.5) * CH, z: WGRID.z0 + (j + 0.5) * CH });
     }
-    if (c.trees.length) { const [i, j] = key.split(",").map(Number); WV.bgChunks.set(key, { trees: c.trees, node: null, x0: WGRID.x0 + i * CH, z0: WGRID.z0 + j * CH }); }
+    if (c.trees.length) { const [i, j] = key.split(",").map(Number); WV.bgChunks.set(key, { trees: c.trees, all: c.trees.slice(), x0: WGRID.x0 + i * CH, z0: WGRID.z0 + j * CH }); }
   }
-  for (const c of WV.bgChunks.values()) bgChunkBuild(c);
+  { const tB = performance.now(); for (const c of WV.bgChunks.values()) bgChunkBuild(c);
+    let n = 0; WV.bgG.forEach(g => { n += g.n; });
+    WV.bgInfo = { trees: n, types: WV.bgG.size, ms: +(performance.now() - tB).toFixed(0) }; }
   /* Wege, Bach mit Brücke, Straße */
   const lines = new FM.MB();
   /* Waldwege: jeder auf eigener Höhe (Kreuzungen flimmern nicht), lose Enden laufen
@@ -1060,7 +1063,7 @@ function treeMeshOf(t) {
   if (t.st === "stump") return fmesh("ws:" + t.sp + ":" + t.sz, () => FWM.stump(t.sp, t.sz));
   if (t.st === "sapling") return fmesh("wsap:" + t.sp, () => FWM.sapling(t.sp));
   if (t.st === "fallen") return fmesh("wf:" + t.sp + ":" + t.sz, () => FWM.fallen(t.sp, t.sz));
-  const v = t.id % 3;
+  const v = t.v != null ? t.v : t.id % 3;       /* v90: Kulissenbäume bringen ihre Variante mit */
   return fmesh("wt:" + t.sp + ":" + t.sz + ":" + v, () => FWM.tree(t.sp, t.sz, v));
 }
 function treeKey(t) { return t.st + ":" + t.sz; }
@@ -1112,11 +1115,37 @@ function pickTree(x, y) {
    wird er zu einem echten Baum (S.farm.trees, mit bg = Schlüssel) und die Kachel
    ohne ihn neu gebaut; bgCut merkt sich, welche schon „echt“ sind. */
 const BG_R = { birke: 0.55, kiefer: 0.75, fichte: 0.75, buche: 1.0, eiche: 1.05, kirsche: 0.75 };
+/* v90: endgültige Form eines Kulissenbaums – genau das, was bgPromote beim Antippen erzeugt (Größenklasse, Maßstab,
+   Variante, gerundete Lage). Wird einmal je Baum berechnet und am Baum gemerkt. Die Variante kommt aus dem Schlüssel
+   (nicht mehr aus der Baum-Nummer), damit sie schon vor dem Antippen feststeht. */
+function bgFinal(b) {
+  if (b.fz) return b;
+  const Sx = FSPECIES[b.sp] || FSPECIES.buche, area = bgArea(b);
+  let sz = 1, bd = 1e9;
+  for (let i = 1; i <= Math.min(4, Sx.max); i++) { const d = Math.abs(FWM.TH[i] - b.s); if (d < bd) { bd = d; sz = i; } }
+  if (b.sp === "eiche" && area !== "altwald") sz = Math.min(sz, 3);
+  b.fz = sz; b.fa = area;
+  b.fs = +clamp(b.s / FWM.TH[sz], 0.8, 1.25).toFixed(2);
+  b.fv = (((b.k * 2654435761) >>> 0) >>> 11) % 3;
+  b.fx = +b.x.toFixed(2); b.fzz = +b.z.toFixed(2); b.fry = +b.ry.toFixed(2);
+  return b;
+}
+/* Kachel mit WV.bgInst abgleichen: Bäume in c.trees stehen als Instanz, alle anderen (angetippt, im Nahaufnahme-Minispiel
+   ausgeblendet) nicht. Je Art/Größe/Variante gibt es eine Gruppe mit dem Mesh des echten Baums. */
 function bgChunkBuild(c) {
-  const R = FV.R, w = new WBuf();
-  c.trees.forEach(t => w.add(WV.bgm[t.sp][t.v], t.x, t.z, t.ry, t.s));
-  if (c.node) { const i = R.nodes.indexOf(c.node); if (i >= 0) R.nodes.splice(i, 1); if (c.node.mesh && R.free) R.free(c.node.mesh); c.node = null; }
-  if (w.n) { c.node = fnode(R.mesh(w.out()), {}); R.nodes.push(c.node); }
+  const have = new Set();
+  for (const t of c.trees) have.add(t.k);
+  for (const t of c.all || c.trees) {
+    const g0 = WV.bgInst.get(t.k), want = have.has(t.k);
+    if (want && !g0) {
+      bgFinal(t);
+      const key = t.sp + ":" + t.fz + ":" + t.fv;
+      let g = WV.bgG.get(key);
+      if (!g) { g = FV.R.instGroup(fmesh("wt:" + key, () => FWM.tree(t.sp, t.fz, t.fv)), { sway: 0.22 }); WV.bgG.set(key, g); }
+      g.add(t.k, t.fx, t.fzz, t.fry, t.fs);
+      WV.bgInst.set(t.k, g);
+    } else if (!want && g0) { g0.remove(t.k); WV.bgInst.delete(t.k); }
+  }
 }
 function bgPick(x, y) {
   const R = FV.R, g = R.ground(x, y, 0);
@@ -1136,12 +1165,9 @@ function bgPick(x, y) {
 }
 function bgArea(b) { const a = areaOfPoint(b.x, b.z); return a === "saege" ? "wald" : a; }
 function bgPromote(hit) {
-  const F = S.farm, b = hit.b, Sx = FSPECIES[b.sp] || FSPECIES.buche, area = bgArea(b);
-  let sz = 1, bd = 1e9;
-  for (let i = 1; i <= Math.min(4, Sx.max); i++) { const d = Math.abs(FWM.TH[i] - b.s); if (d < bd) { bd = d; sz = i; } }
-  if (b.sp === "eiche" && area !== "altwald") sz = Math.min(sz, 3);
+  const F = S.farm, b = bgFinal(hit.b);
   const id = F.trees.reduce((m, t) => Math.max(m, t.id), 0) + 1;
-  const t = { id, sp: b.sp, sz, mx: sz, x: +b.x.toFixed(2), z: +b.z.toFixed(2), ry: +b.ry.toFixed(2), s: +clamp(b.s / FWM.TH[sz], 0.8, 1.25).toFixed(2), st: "up", t: 0, dmg: 0, area, bg: b.k };
+  const t = { id, sp: b.sp, sz: b.fz, mx: b.fz, x: b.fx, z: b.fzz, ry: b.fry, s: b.fs, st: "up", t: 0, dmg: 0, area: b.fa, bg: b.k, v: b.fv };
   F.trees.push(t);
   F.bgCut = F.bgCut || {}; F.bgCut[b.k] = 1;
   hit.c.trees.splice(hit.c.trees.indexOf(b), 1);
@@ -2232,7 +2258,9 @@ function stepWeather(dt, time) {
     const c = FV.R.cam;
     FV.R.emit({ x: c.tx + (Math.random() - 0.5) * 20, y: 3, z: c.tz + (Math.random() - 0.5) * 20, vx: -4, vy: 0.5, vz: 1, life: 2, size: 0.08, col: [0.45, 0.62, 0.25, 1], g: -0.6, shape: 1 });
   }
-  if (WV.gust > 0.05) for (const e of WV.trees.values()) if (e.node.sway) e.node.sway = 0.22 + WV.gust * 0.9;
+  { const sw = 0.22 + WV.gust * 0.9;
+    if (WV.bgG) for (const g of WV.bgG.values()) g.sway = sw;
+    if (WV.gust > 0.05) for (const e of WV.trees.values()) if (e.node.sway) e.node.sway = sw; }
 }
 
 /* --------------------------- Antippen ------------------------------------ */
