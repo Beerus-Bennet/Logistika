@@ -248,7 +248,9 @@ function plan(from, to, cargoKey, weight, metric) {
 function clearRouteCache() { routeMemo.clear(); refMemo.clear(); repoMemo.clear(); }
 
 /* ------------------------------ Spielstand ------------------------------ */
-const SAVE_KEY = "logistika.save.v3";
+/* v102: Testmodus – index.html?test=100 startet einen eigenen Spielstand (Level 100, 1 Mio. €), der echte Stand bleibt unberührt */
+const TEST_MODE = /[?&]test(=|&|$)/.test(location.search);
+const SAVE_KEY = TEST_MODE ? "logistika.test.v3" : "logistika.save.v3";
 let S = null;
 
 function newGame() {
@@ -3571,6 +3573,10 @@ window.addEventListener("resize", syncHeadH);
 /* --------------------------------- Start -------------------------------- */
 function boot() {
   S = Object.assign(newGame(), load() || {});
+  if (TEST_MODE && !S.testSeed) {                      /* Testmodus: einmalig 1 Mio. € und Level 100 */
+    S.testSeed = true; S.money = Math.max(S.money, 1000000); S.xp = Math.max(S.xp || 0, 490050);
+    if (S.farm) S.farm.xp = Math.max(S.farm.xp || 0, 490050);
+  }
   if (typeof farmUseSite === "function") farmUseSite(S.farm && S.farm.kind);
   /* Erbe zuerst auf den neuen Stand bringen (Ostsee → Hof, Erbe-EP, Welt) */
   if (S.farm && typeof farmMigrate === "function") { try { farmMigrate(); } catch (e) { console.warn("Erbe-Migration", e); } }
@@ -3744,3 +3750,20 @@ function boot() {
   }
 }
 document.addEventListener("DOMContentLoaded", boot);
+
+/* v103 Testmodus: der Hof wird erst nach der Charaktererstellung angelegt (farmNew setzt EP zurück) –
+   darum die Testwerte (1 Mio. €, Level 100) setzen, sobald Spieler und Hof da sind. */
+if (TEST_MODE) {
+  setInterval(() => {
+    if (typeof S === "undefined" || !S || !S.farm || !S.player || S.testDone) return;
+    S.testDone = true;
+    S.money = Math.max(S.money || 0, 1000000);
+    S.xp = Math.max(S.xp || 0, 490050);
+    S.farm.xp = Math.max(S.farm.xp || 0, 490050);
+    if (typeof lvOfXp === "function") S.farm.lvSeen = lvOfXp(S.farm.xp);
+    lastLevel = level();
+    if (typeof renderHud === "function") renderHud();
+    if (typeof renderFarm === "function") { try { renderFarm(); } catch (e) { /* egal */ } }
+    save();
+  }, 700);
+}

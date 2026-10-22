@@ -294,7 +294,7 @@ const SAW3D = (() => {
   }
   function notchMesh(q, bark, wood, nyU, hU, part, sty) {
     nyU = nyU || 0; hU = hU || 0;
-    const inLow = part !== "up", inUp = part !== "low";
+    const inLow = part !== "up" && part !== "up0", inUp = part !== "low" && part !== "low0", brk = part === "low" || part === "up";   /* "low0"/"up0": nur geteilt (Neigung), ohne Bruchstufe */
     /* Bruchstufe: hinter der Kerbe (links im Bild) reißt das Haltestück ab – dort bleibt eine unregelmäßig erhöhte Leiste stehen */
     const STEP = 0.2, cl = (v, a, c) => Math.max(a, Math.min(c, v));
     const d = KMAX * q / KQ, zc = 1 - d, ym = d * KS, R = 6, M = 14, b0 = new G3.MB(), b = taperB(b0, sty);
@@ -339,7 +339,7 @@ const SAW3D = (() => {
         if (stepI) T(A, B2, C, bark, o); else T(A, B2, C, bark, o);
       }
     };
-    const lh = p => part ? STEP * (0.85 + 0.45 * cl((zc - p[2]) / (zc + 1), 0, 1) + 0.3 * (Math.sin(p[0] * 23.1 + p[2] * 11.7) * 0.5 + 0.5)) : 0;
+    const lh = p => brk ? STEP * (0.85 + 0.45 * cl((zc - p[2]) / (zc + 1), 0, 1) + 0.3 * (Math.sin(p[0] * 23.1 + p[2] * 11.7) * 0.5 + 0.5)) : 0;
     let prev = ring(0, zc);
     for (let j = 1; j <= R && inUp; j++) {
       const y = ym * j / R, cur = ring(y, zc + y / KS);
@@ -371,7 +371,7 @@ const SAW3D = (() => {
         WALL(p, n, p1, n1, o, 1);
       }
     }
-    if (wood && part) {
+    if (wood && brk) {
       /* Bruchfläche hinter der Sohle: Unterseite des oberen Stücks passt formgleich auf die Leiste des Stumpfs */
       const arc = ring(0, zc).map(p => [p[0], p[1] + lh(p), p[2]]), cy = (arc[0][1] + arc[arc.length - 1][1]) / 2, Cc = [0, cy, zc];
       for (let i = 0; i < arc.length - 1; i++) {
@@ -622,6 +622,9 @@ const SAW3D = (() => {
     if (info) X.keys.push("fp_crw_" + t.id + "_" + t.sp);
     X.nt = add(fmesh("fp_tk_dummy", () => notchMesh(1, T.bark)), { visible: false, cull: false });
     X.ntw = add(fmesh("fp_tw_dummy", () => notchMesh(1, T.bark, true)), { visible: false, cull: false, glow: 1 });
+    /* v104: unterer Teil (Stumpf) bleibt beim Neigen fest stehen – nur das obere Stück neigt sich um die Kerbsohle */
+    X.nl = add(fmesh("fp_tk_dummy", () => notchMesh(1, T.bark)), { visible: false, cull: false });
+    X.nlw = add(fmesh("fp_tw_dummy", () => notchMesh(1, T.bark, true)), { visible: false, cull: false, glow: 1 });
     X.bark = T.bark; X.kpv = X.kpT = isAxe ? clampN(opt.kp || 0, 0, 1) : 0;        /* angeschlagener Baum: der Kerb ist schon da */
     if (isAxe) {
       /* Entsprechung zu camera.add(axeGroup): ein Knoten ohne Mesh folgt der Kamera (Lage = Auge, Drehung = Blickrichtung),
@@ -999,7 +1002,9 @@ const SAW3D = (() => {
     X.crown.visible = swap;
     if (X.realCrown) {       /* echte Krone: neigt sich wie die Stammteile um den Fuß */
       const T1 = X.tiltT || 0, d1 = (X.tiltR != null ? X.tiltR : 0) - fry, cn = X.crown;
-      cn.x = t.x; cn.z = t.z; cn.y = 0; cn.ry = fry; cn.rx = T1 * Math.cos(d1); cn.rz = -T1 * Math.sin(d1);
+      cn.ry = fry; cn.rx = T1 * Math.cos(d1); cn.rz = -T1 * Math.sin(d1);
+      const pc = X.pivY ? rotV([0, X.pivY, 0], cn.rx, cn.ry, cn.rz) : [0, 0, 0];
+      cn.x = t.x - pc[0]; cn.z = t.z - pc[2]; cn.y = X.pivY ? X.pivY - pc[1] : 0;
     } else { X.crown.x = t.x + Math.sin(X.tiltR || 0) * X.crownY * Math.sin(X.tiltT || 0); X.crown.z = t.z + Math.cos(X.tiltR || 0) * X.crownY * Math.sin(X.tiltT || 0); }
     /* Der Baum verrät den Fall: neigt sich in Fallrichtung, knarrt/zittert, kurz vorm Fallen deutlich */
     if (X.axe && X.mode !== "out") { X.tiltR = X.fallRy; X.tiltT = X.kpv > 0.8 ? Math.pow((X.kpv - 0.8) / 0.2, 2) * 0.05 : 0; }  /* v93: Axt – die letzten Schläge lassen ihn sich neigen */
@@ -1015,7 +1020,7 @@ const SAW3D = (() => {
     /* Stamm aus drei Teilen: unten, V-Kerb, oben – alle neigen sich mit dem Baum */
     const usePts = ny != null && X.kpv > 0.02 && swap;
     const sc = r * 1.04, q = Math.max(1, Math.min(KQ, Math.round(X.kpv * KQ)));
-    [X.nt, X.ntw].forEach(n => { n.visible = usePts; });
+    [X.nt, X.ntw, X.nl, X.nlw].forEach(n => { n.visible = usePts; });
     X.trunk.visible = !usePts && swap;
     if (X.trunk.visible) { X.trunk.x = t.x; X.trunk.z = t.z; }
     if (usePts) {
@@ -1023,12 +1028,16 @@ const SAW3D = (() => {
       if (X.key !== key) {
         X.key = key;
         const k1 = "fp_tk_" + key, k2 = "fp_tw_" + key;
-        X.nt.mesh = fmesh(k1, () => notchMesh(q, X.bark, false, nyU, hU, undefined, X.sty)); X.ntw.mesh = fmesh(k2, () => notchMesh(q, X.bark, true, nyU, hU, undefined, X.sty));
-        X.keys.push(k1, k2);
+        X.nt.mesh = fmesh(k1, () => notchMesh(q, X.bark, false, nyU, hU, "up0", X.sty)); X.ntw.mesh = fmesh(k2, () => notchMesh(q, X.bark, true, nyU, hU, "up0", X.sty));
+        X.nl.mesh = fmesh(k1 + "L", () => notchMesh(q, X.bark, false, nyU, hU, "low0", X.sty)); X.nlw.mesh = fmesh(k2 + "L", () => notchMesh(q, X.bark, true, nyU, hU, "low0", X.sty));
+        X.keys.push(k1, k2, k1 + "L", k2 + "L");
       }
       const T0 = X.tiltT || 0, dl2 = (X.tiltR != null ? X.tiltR : 0) - fry;
       const trx = T0 * Math.cos(dl2), trz = -T0 * Math.sin(dl2);
-      [X.nt, X.ntw].forEach(n => { n.x = t.x; n.z = t.z; n.y = 0; n.ry = fry; n.rx = trx; n.rz = trz; n.sx = n.sy = n.sz = sc; });
+      X.pivY = ny;
+      const pv = rotV([0, ny, 0], trx, fry, trz);                  /* Drehung um die Kerbsohle statt um den Fuß */
+      [X.nt, X.ntw].forEach(n => { n.x = t.x - pv[0]; n.z = t.z - pv[2]; n.y = ny - pv[1]; n.ry = fry; n.rx = trx; n.rz = trz; n.sx = n.sy = n.sz = sc; });
+      [X.nl, X.nlw].forEach(n => { n.x = t.x; n.z = t.z; n.y = 0; n.ry = fry; n.rx = 0; n.rz = 0; n.sx = n.sy = n.sz = sc; });
     }  }
   const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -1065,7 +1074,7 @@ const SAW3D = (() => {
       const n = fnode(fmesh(key, () => notchMesh(q, X.bark, wood, nyU, hU, part, X.sty)), Object.assign({ shadow: false, cull: false, x: t.x, z: t.z, ry: X.fryN, s: sc }, o || {}));
       R.nodes.push(n); X.nodes.push(n); return n;
     };
-    X.nt.visible = X.ntw.visible = false; X.trunk.visible = false;
+    X.nt.visible = X.ntw.visible = X.nl.visible = X.nlw.visible = false; X.trunk.visible = false;
     /* der Stumpf bleibt: Form (Sohle + Bruchstufe) wird am Baum vermerkt, die Welt baut daraus den bleibenden Stumpf */
     t.cut = { sp: t.sp, sz: t.sz, s: t.s || 1, id: t.id, q, ny: Math.round(ny * 1000) / 1000, sc: Math.round(sc * 1000) / 1000, ry: Math.round(X.fryN * 1000) / 1000, bark: X.bark };
     X.fall = {

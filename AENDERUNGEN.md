@@ -1,5 +1,19 @@
 # Änderungen – kurz für den Kollegen
 
+## v104 (aufbauend auf v103) – Stumpf bleibt beim Sägen fest stehen
+
+Beim Sägen und Fällen in der Ich-Perspektive neigte sich der ganze Stamm samt Stumpf um den Fuß. Jetzt (`fpsaw.js`):
+- Der **untere Teil** (Stumpf bis zur Kerbsohle) bleibt senkrecht stehen. Nur das **obere Stück mit Krone** neigt sich, und zwar um die Kerbsohle (Scharnier), nicht um den Fuß.
+- Technisch: `notchMesh` kennt die Teile `"low0"`/`"up0"` (Teilung ohne Bruchstufe), neue Knoten `X.nl`/`X.nlw` für den festen unteren Teil; der obere Teil und die Krone werden mit `rotV` um den Punkt (0, ny, 0) gedreht. Der Fall selbst (Stumpf mit Bruchstufe bleibt) war schon so.
+- **Geprüft:** Tests grün (axe 4, trees 7, forest 15, bushes 30, camp 9), Drehpunkt rechnerisch. **Nicht im Bild bestätigt:** die Neigung beim echten Sägen (im Testbrowser nicht auslösbar), nichts auf einem echten Handy.
+- **v103:** Testmodus (`?test=1`) setzt 1 Mio. € und Level 100, sobald Spieler und Hof existieren.
+
+## v102 (aufbauend auf v101) – Testmodus
+
+- **`index.html?test=1`** startet einen **eigenen Test-Spielstand** (`logistika.test.v3`) mit **1.000.000 €** und **Level 100** (`game.js`: `TEST_MODE`, Start in `boot`). Der echte Spielstand wird nicht gelesen und nicht verändert. Ohne `?test` verhält sich das Spiel wie vorher.
+- Zurücksetzen: Browserdaten der Seite löschen.
+- **Geprüft:** Geld 1.000.000, Level 100, echter Spielstand bleibt leer. **Nicht geprüft:** jede Funktion auf Level 100 durchgespielt, echtes Handy.
+
 ## v101 (aufbauend auf v100) – Aussicht in der Ich-Perspektive (Sonnenuntergang)
 
 Wer in der Ich-Perspektive (Säge/Axt) an den Kartenrand blickte, sah ins Leere. Jetzt gibt es dort eine Aussicht, die **nur** in der Ich-Perspektive erscheint:
