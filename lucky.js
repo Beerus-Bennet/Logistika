@@ -152,12 +152,15 @@ function openLucky() {
   document.body.classList.add("lucky-open");
   el.innerHTML = `<div class="lk-stage">
     <div class="lk-top"><b>${box.kind === "gold" ? "💎 Goldene Luckybox" : "🎁 Luckybox"}</b><small>${esc(box.why)}${L.boxes.length > 1 ? " · noch " + (L.boxes.length - 1) + " weitere" : ""}</small></div>
+    <div class="lk-odds" aria-label="Gewinnchancen">
+      <div class="lk-oddbar">${["c", "r", "e", "l"].map(k => `<i style="flex:${LUCKY_ODDS[box.kind][k]};--rc:${RARITY[k].col}"></i>`).join("")}</div>
+      <div class="lk-oddlist">${["c", "r", "e", "l"].map(k => `<span style="--rc:${RARITY[k].col}"><b>${LUCKY_ODDS[box.kind][k]} %</b><small>${RARITY[k].name}</small></span>`).join("")}</div>
+    </div>
     <div class="lk-box" id="lkBox"><div class="lk-lid"></div><div class="lk-body"></div><div class="lk-rib"></div><div class="lk-bow"><i></i><i></i></div></div>
     <div class="lk-hint" id="lkHint">Antippen zum Öffnen</div>
     <div class="lk-reel" id="lkReel"><div class="lk-strip" id="lkStrip"></div><div class="lk-mark"></div></div>
     <div class="lk-prize" id="lkPrize"></div>
     <button class="wl-cancel" id="lkLater">Später öffnen</button>
-    <div class="lk-odds">${["c", "r", "e", "l"].map(k => `<span>${RARITY[k].name} ${LUCKY_ODDS[box.kind][k]} %</span>`).join(" · ")}</div>
   </div>`;
   $("#lkBox").onclick = () => spinLucky();
   $("#lkLater").onclick = () => closeLucky();

@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v110 – Luckybox: Gewinnchancen oben als Balken + Kacheln (auf v109)
+
+| Teil | Datei |
+|---|---|
+| Chancen-Anzeige oben statt Textzeile unten | `lucky.js`, `style.css` |
+| Version 110 | `index.html`, `sw.js` |
+
 ## Stand v109 – Wegsuche: Wege bevorzugt, Brücken nur über die Planken, Bäume und Büsche als Hindernis (auf v108)
 
 | Teil | Datei |

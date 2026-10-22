@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v110 (aufbauend auf v109) – Luckybox: Gewinnchancen oben als Balken + Kacheln
+
+- `lucky.js` `openLucky`: Die Chancen stehen jetzt **direkt unter Titel und Unterzeile** statt als Textzeile ganz unten. Oben ein Balken, dessen vier Abschnitte so breit sind wie die Chance (Gewöhnlich/Selten/Episch/Legendär in den Seltenheitsfarben), darunter vier Kacheln mit Prozentzahl in Farbe und Name. Werte kommen weiter aus `LUCKY_ODDS` (normale und goldene Box).
+- `style.css`: `.lk-odds`, `.lk-oddbar`, `.lk-oddlist`. Die alte Textzeile unten ist entfernt.
+- **Nicht geprüft:** echtes Handy.
+
 ## v109 (aufbauend auf v108) – Mitarbeiter laufen auf Wegen, nicht durch alles hindurch
 
 Wegsuche der Mitarbeiter (`team.js` `navBuild`, A* auf dem 1×1-Raster):
