@@ -97,19 +97,11 @@ const CAMP = (() => {
   const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
 
   /* Eingang: der Kies läuft als schmaler werdender Streifen in den Sandweg aus (Farbverlauf), mit weniger Steinen nach außen */
-  const PATH_COL = 0xb29b6c;
   function funnel(b) {
-    const Y = 0.034, st = [[-1.2, 2.7], [0, 2.3], [1.1, 1.75], [2.2, 1.35], [3.4, 1.1], [4.8, 0.95], [6.2, 0.9]];
+    const st = [[-1.2, 2.7], [0, 2.3], [1.1, 1.75], [2.2, 1.35], [3.4, 1.1], [4.8, 0.95], [6.2, 0.9]];
     const P = L => [0, 5.3 + L];
-    const colAt = L => mixc(K.gr1, PATH_COL, Math.min(1, Math.max(0, (L + 0.2) / 5.5)));
-    for (let i = 0; i < st.length - 1; i++) {
-      const [L0, w0] = st[i], [L1, w1] = st[i + 1], p0 = P(L0), p1 = P(L1);
-      const NL = [p1[0] - w1, Y, p1[1]], NR = [p1[0] + w1, Y, p1[1]], FR = [p0[0] + w0, Y, p0[1]], FL = [p0[0] - w0, Y, p0[1]];
-      const c0 = colAt(L0), c1 = colAt(L1);
-      b.triV(NL, NR, FR, c1, c1, c0); b.triV(NL, FR, FL, c1, c0, c0);
-    }
     for (let i = 0; i < 26; i++) {
-      const L = -0.5 + Math.pow(rnd(), 1.4) * 5.5, p = P(L), w = st.reduce((m, q) => (q[0] <= L ? q[1] : m), 2.7) * 0.8, r = 0.04 + rnd() * 0.05;
+      const L = -0.5 + Math.pow(rnd(), 1.4) * 5.5, p = P(L), w = st.reduce((m, q) => (q[0] <= L ? q[1] : m), 2.7) * 0.7, r = 0.04 + rnd() * 0.05;
       b.ico(r, [K.gr2, K.gr3, K.gr4][i % 3], { x: p[0] + (rnd() * 2 - 1) * w, y: 0.036, z: p[1], jitter: 0.3, flat: 0.45, ry: rnd() * 6 });
     }
   }
@@ -319,9 +311,11 @@ const CAMP = (() => {
     LAMPS.forEach(([x, z]) => [[1.6, 0.0], [1.15, 0.002], [0.7, 0.004], [0.34, 0.006]].forEach(([r, dy]) => b.disc(r, 16, 0xffbf66, { x, z, y0: 0.058 + dy + (k % 3) * 0.0002, wob: 0.06 })), k++);
     return b;
   }
+  /* Ein großer, gleichmäßiger Lichtkreis vom Feuer über den ganzen Platz (statt vieler kleiner Lampenkreise):
+     sieben ineinanderliegende Scheiben, außen schwach, innen stärker – weicher Verlauf */
   function fireGlowMesh() {
     const b = new G3.MB();
-    [[3.5, 0], [2.7, 0.002], [2.0, 0.004], [1.4, 0.006]].forEach(([r, dy]) => b.disc(r, 22, 0xff8a2a, { y0: 0.075 + dy, wob: 0.05 }));
+    [6.6, 5.8, 5.0, 4.2, 3.4, 2.6, 1.9].forEach((r, i) => b.disc(r, 28, 0xff9a3a, { y0: 0.075 + i * 0.002, wob: 0.03 }));
     return b;
   }
   function flame(r, h, col) { const b = new G3.MB(); b.cone(r, h, 7, col, { top: col }); return b; }
@@ -350,7 +344,6 @@ const CAMP = (() => {
     ST.fl.push(add("camp_fl3", () => flame(0.2, 0.7, 0xff7a1a), { x: 0.22, y: 0.24, z: 0.1, alpha: 0.85, glow: 1 }));
     ST.fl.push(add("camp_fl4", () => flame(0.18, 0.62, 0xff9a26), { x: -0.2, y: 0.24, z: -0.12, alpha: 0.85, glow: 1 }));
     add("camp_embers", () => { const m = new G3.MB(); m.disc(0.55, 12, 0xff5a12, { y0: 0.215 }); m.disc(0.3, 10, 0xffb040, { y0: 0.218 }); return m; }, { glow: 1 });
-    ST.halo = add("camp_halo", lampHalo, { alpha: 0.05, glow: 1, visible: false });
     ST.bulbs = add("camp_bulbs", lampBulbs, { glow: 1 });
     return ST.root;
   }
@@ -366,8 +359,7 @@ const CAMP = (() => {
     });
     const fl = 1 + 0.09 * Math.sin(t * 9.1) + 0.05 * Math.sin(t * 23.7);
     const night = R.env && R.env.night != null ? R.env.night : 0;
-    if (ST.fglow) ST.fglow.alpha = (0.05 + 0.15 * night) * fl;
-    if (ST.halo) { ST.halo.visible = night > 0.03; ST.halo.alpha = 0.1 * night; }
+    if (ST.fglow) ST.fglow.alpha = (0.035 + 0.085 * night) * fl;
     ST.sp += dt;
     if (ST.sp > 0.16) {
       ST.sp = 0;
@@ -375,5 +367,5 @@ const CAMP = (() => {
     }
   }
 
-  return { CX, CZ, RY, slots, SIT_Y, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
+  return { GRAVEL: K.gr1, CX, CZ, RY, slots, SIT_Y, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
 })();
