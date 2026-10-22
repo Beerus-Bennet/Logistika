@@ -77,8 +77,8 @@ const CAMP = (() => {
   /* kind "tree": fällbarer Baum (Kreis), "bg": Kulissenbaum (Kreis + Sichtkeil zur Kamera) */
   function clear(x, z, kind) {
     const l = toL(x, z);
-    if (kind === "tree") return near(x, z, 7.2) || (l[1] > 0 && l[1] < 12 && Math.abs(l[0]) < 6.5);
-    if (near(x, z, 8.6)) return true;
+    if (kind === "tree") return near(x, z, 7.2) || (l[1] > -8.2 && l[1] < 7.6 && Math.abs(l[0]) < 9.2) || (l[1] > 0 && l[1] < 12 && Math.abs(l[0]) < 6.5);
+    if (near(x, z, 8.6) || (l[1] > -10 && l[1] < 8.5 && Math.abs(l[0]) < 10.6)) return true;
     return l[1] > 0 && l[1] < 17 && Math.abs(l[0]) < 10.5;           /* Sicht vom Weg her auf die Sofas */
   }
 
@@ -96,6 +96,23 @@ const CAMP = (() => {
   const rnd = () => G3.srand();
   const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
 
+  /* Eingang: der Kies läuft als schmaler werdender Streifen in den Sandweg aus (Farbverlauf), mit weniger Steinen nach außen */
+  const PATH_COL = 0xa89064;
+  function funnel(b) {
+    const Y = 0.034, st = [[-1.2, 2.7], [0, 2.3], [1.1, 1.75], [2.2, 1.35], [3.4, 1.1], [4.8, 0.95], [6.2, 0.9]];
+    const P = L => [-1.06 - 0.196 * L, 5.3 + 0.98 * L];
+    const colAt = L => mixc(K.gr1, PATH_COL, Math.min(1, Math.max(0, (L + 0.2) / 5.5)));
+    for (let i = 0; i < st.length - 1; i++) {
+      const [L0, w0] = st[i], [L1, w1] = st[i + 1], p0 = P(L0), p1 = P(L1);
+      const NL = [p1[0] - w1, Y, p1[1]], NR = [p1[0] + w1, Y, p1[1]], FR = [p0[0] + w0, Y, p0[1]], FL = [p0[0] - w0, Y, p0[1]];
+      const c0 = colAt(L0), c1 = colAt(L1);
+      b.triV(NL, NR, FR, c1, c1, c0); b.triV(NL, FR, FL, c1, c0, c0);
+    }
+    for (let i = 0; i < 26; i++) {
+      const L = -0.5 + Math.pow(rnd(), 1.4) * 5.5, p = P(L), w = st.reduce((m, q) => (q[0] <= L ? q[1] : m), 2.7) * 0.8, r = 0.04 + rnd() * 0.05;
+      b.ico(r, [K.gr2, K.gr3, K.gr4][i % 3], { x: p[0] + (rnd() * 2 - 1) * w, y: 0.036, z: p[1], jitter: 0.3, flat: 0.45, ry: rnd() * 6 });
+    }
+  }
   /* Kies: unregelmäßiger Platz, Steinrand mit Öffnung zum Weg, kleine Steine */
   function gravel(b) {
     G3.seed(8101);
@@ -114,19 +131,11 @@ const CAMP = (() => {
     const N = 38;
     for (let i = 0; i < N; i++) {
       const a = (i / N) * Math.PI * 2 + rnd() * 0.05, px = Math.cos(a), pz = Math.sin(a);
-      if (pz > 0.6 && Math.abs(px + 0.2) < 0.33) continue;                      /* Zugang */
+      if (pz > 0.45 && Math.abs(px + 0.2) < 0.46) continue;                      /* Zugang */
       const r = 0.2 + rnd() * 0.12, d = R0 + 0.05 + rnd() * 0.12;
       b.ico(r, mixc(K.stone, K.rim, rnd() * 0.6), { x: px * d, y: Y - r * 0.15, z: pz * d, jitter: 0.22, flat: 0.55, ry: rnd() * 6, sx: 1.2 });
     }
-    /* dunkle, geschwungene Steinkante im Vordergrund (links und rechts vom Zugang) */
-    [[-0.95, -0.2, 32], [0.15, 0.95, 32]].forEach(([from, to, n]) => {
-      for (let i = 0; i < 12; i++) {
-        const t = from + (to - from) * (i / 11), a = Math.PI / 2 + t * 1.0 - 0.2, d = R0 + 0.7;
-        const px = Math.cos(a) * d, pz = Math.sin(a) * d;
-        if (Math.abs(px + 1.0) < 1.15 && pz > 0) continue;
-        b.box(0.62, 0.1, 0.34, mixc(K.anthD, K.anth, rnd()), { x: px, y: 0, z: pz, ry: -a + Math.PI / 2 + (rnd() - 0.5) * 0.2, top: K.stone });
-      }
-    });
+    funnel(b);
   }
 
   /* Feuerstelle: Ring aus dunklem Naturstein, hellere Deckplatten, Asche, Holzscheite */
@@ -186,14 +195,19 @@ const CAMP = (() => {
   /* Rückwand: senkrechte, dunkle Holzlatten (Walnuss / Kastanie im Wechsel) mit Deckbalken */
   function wall(b) {
     G3.seed(8103);
-    const Z = -5.5, X0 = -6.6, X1 = 6.6, w = 0.3;
-    for (let x = X0, i = 0; x < X1; x += w + 0.015, i++) {
-      const h = 2.55 + (rnd() - 0.5) * 0.12;
-      b.box(w, h, 0.14, i % 3 === 0 ? K.chest : i % 3 === 1 ? K.wal : K.walD, { x: x + w / 2, y: 0, z: Z + (rnd() - 0.5) * 0.02, top: K.walD });
-    }
-    b.box(X1 - X0 + 0.5, 0.1, 0.26, K.walD, { x: (X0 + X1) / 2, y: 2.58, z: Z });
-    b.box(X1 - X0 + 0.3, 0.14, 0.2, K.walD, { x: (X0 + X1) / 2, y: 0, z: Z + 0.1 });
-    [X0, X1].forEach(x => b.box(0.18, 2.7, 0.3, K.walD, { x, y: 0, z: Z }));
+    const Z = -5.5, XW = 7.1, ZF = 5.7, w = 0.3, col = i => i % 3 === 0 ? K.chest : i % 3 === 1 ? K.wal : K.walD;
+    /* Rückwand */
+    for (let x = -XW + 0.2, i = 0; x < XW - 0.2; x += w + 0.015, i++) b.box(w, 2.55 + (rnd() - 0.5) * 0.12, 0.14, col(i), { x: x + w / 2, y: 0, z: Z + (rnd() - 0.5) * 0.02, top: K.walD });
+    b.box(2 * XW + 0.4, 0.1, 0.26, K.walD, { y: 2.58, z: Z });
+    b.box(2 * XW + 0.2, 0.14, 0.2, K.walD, { z: Z + 0.1 });
+    /* Seitenwände links und rechts: docken an die Rückwand an, nur die Blickseite bleibt offen */
+    [-1, 1].forEach(sd => {
+      for (let z = Z + 0.2, i = 0; z < ZF; z += w + 0.015, i++) b.box(0.14, 2.55 + (rnd() - 0.5) * 0.12, w, col(i + 1), { x: sd * XW, y: 0, z: z + w / 2, top: K.walD });
+      b.box(0.26, 0.1, ZF - Z + 0.3, K.walD, { x: sd * XW, y: 2.58, z: (Z + ZF) / 2 });
+      b.box(0.2, 0.14, ZF - Z, K.walD, { x: sd * XW - sd * 0.1, z: (Z + ZF) / 2 });
+      b.box(0.3, 2.7, 0.3, K.walD, { x: sd * XW, z: ZF });                                    /* Endpfosten vorn */
+    });
+    b.box(0.36, 2.72, 0.38, K.walD, { x: -XW, z: Z - 0.03 }); b.box(0.36, 2.72, 0.38, K.walD, { x: XW, z: Z - 0.03 });
   }
 
   /* ---------------------------- Pflanzen (Tiefen) ---------------------------- */
@@ -232,7 +246,7 @@ const CAMP = (() => {
     G3.seed(8104);
     const ok = (x, z) => Math.hypot(x, z) > 4.1 && !(z > 3.2 && Math.abs(x + 1) < 1.9);
     /* hinten, vor der Wand: Pflanzenband ohne Gleichmaß */
-    for (let x = -6.2, i = 0; x < 6.3; x += 0.75 + rnd() * 0.55, i++) {
+    for (let x = -6.4, i = 0; x < 6.5; x += 0.75 + rnd() * 0.55, i++) {
       const z = -4.4 - rnd() * 0.8, k = i % 6;
       if (k === 0) tropical(b, x, z - 0.1, 1.0 + rnd() * 0.45);
       else if (k === 1) shrub(b, x, z + 0.2, 0.55 + rnd() * 0.3);
@@ -244,7 +258,7 @@ const CAMP = (() => {
     /* seitlich links / rechts */
     [-1, 1].forEach(sd => {
       for (let i = 0; i < 12; i++) {
-        const x = sd * (4.4 + rnd() * 2.2), z = -3.6 + i * 0.62 + (rnd() - 0.5) * 0.4;
+        const x = sd * (4.4 + rnd() * 1.8), z = -3.6 + i * 0.62 + (rnd() - 0.5) * 0.4;
         if (!ok(x, z) || z > 3.4) continue;
         const k = (i + (sd > 0 ? 2 : 0)) % 5;
         if (k === 0) tropical(b, x, z, 0.9 + rnd() * 0.4);
@@ -262,7 +276,6 @@ const CAMP = (() => {
       else grass(b, x, z, 0.9 + rnd() * 0.5);
     }
     /* hängende Zweige an der Wand */
-    [-4.8, -3.1, -0.9, 1.6, 3.7, 5.3].forEach((x, i) => hanging(b, x, -5.35, 0.7 + (i % 3) * 0.35));
   }
 
   /* Korbsessel links vorn und Steine / kleiner Tisch rechts vorn */

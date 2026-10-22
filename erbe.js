@@ -255,7 +255,7 @@ function erbeInit(F, fresh) {
   /* v77: keine Bäume mehr auf den Wegen – Kronen, die über den Schotter ragen, rücken weg oder der Baum fällt weg */
   if (!F.v77t) { F.v77t = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* v81: Lagerfeuerplatz – Bäume im Platz weg (ältere Stände) */
-  if (!F.v81t) { F.v81t = 1; F.trees = F.trees.filter(t => !campTree(t)); }
+  if (!F.v81u) { F.v81u = 1; F.trees = F.trees.filter(t => !campTree(t)); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {

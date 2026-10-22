@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v82 (aufbauend auf v81) – Lagerfeuerplatz: Wand, Eingang, Seitenwände
+
+- **Hängezweige von der Wand entfernt** (die grünen „Steine“ und dünnen Stäbe in der Holzwand).
+- **Eingang läuft fließend in den Weg:** der Kies verjüngt sich als Streifen mit Farbverlauf (Kiesgrau → Wegsand) in den
+  Waldweg, nach außen immer weniger Steine; die dunklen Kantenplatten vorn sind weg (`camp.js` `funnel`).
+- **Zwei Seitenwände** docken links und rechts an die Rückwand an und reichen bis vorn; nur die Blickseite bleibt offen.
+  Bäume und Kulisse im Wandbereich sind entfernt (`CAMP.clear`, Umzug `F.v81u` für bestehende Stände).
+- `index.html`/`sw.js`: v82.
+
 ## v81 (aufbauend auf v80) – Lagerfeuerplatz und Mittagspause
 
 **Neu: `camp.js`** (eigenes Modul, in `index.html`/`sw.js` eingetragen) – der Lagerfeuerplatz am Ende des Hauptwegs im Wald
