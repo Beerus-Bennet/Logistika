@@ -1,5 +1,21 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v87 – Vegetation nach Zonen, Gras an Birken (auf v86)
+
+| Teil | Datei |
+|---|---|
+| `BUSH.generate` zonenbasiert (Gruppen, Einzelbüsche, Lichtungen), `BUSH.grass`, `BUSH.KIND` | `bushes.js` |
+| `FWM.grassTuft` | `woodmodels.js` |
+| `worldBushes` (Lichtungen, Merkmale, Gras), Einbau, `WV.grass` | `worldview.js` |
+
+## Stand v86 – Buschsystem (auf v85)
+
+| Teil | Datei |
+|---|---|
+| neues Modul `BUSH` (Typtabelle, Generator, 7 : 1) | `bushes.js` (neu, in `index.html`/`sw.js` vor `woodmodels.js`), Tests `tests/bushes.test.js` |
+| sieben Buschmodelle `FWM.bush(typ, variante)` | `woodmodels.js` |
+| `worldBushes`, Einbau in `worldStatic`, `WBuf.add(…, sy, k)`, alter Einzelbusch entfällt | `worldview.js` |
+
 ## Stand v85 – Sägen als 3D-Ego-Minispiel (auf v84)
 
 | Teil | Datei |

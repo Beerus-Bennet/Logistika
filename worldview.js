@@ -195,15 +195,17 @@ const LAKE_CREEK = [[45.2, 58], [48.5, 59], [58, 62], [70, 60], [84, 66], [100, 
 class WBuf {
   constructor() { this.f = new Float32Array(9 * 3 * 256); this.n = 0; }
   grow(k) { if (this.n + k <= this.f.length) return; let L = this.f.length * 2; while (L < this.n + k) L *= 2; const g = new Float32Array(L); g.set(this.f.subarray(0, this.n)); this.f = g; }
-  add(m, x, z, ry, s) {
+  /* v86: sy = eigene Höhenskalierung (Büsche: Breite und Höhe unabhängig), k = Helligkeitsfaktor (Farbvariante) */
+  add(m, x, z, ry, s, sy, k) {
     this.grow(m.length);
-    const f = this.f, c = Math.cos(ry), sn = Math.sin(ry);
+    const f = this.f, c = Math.cos(ry), sn = Math.sin(ry), sh = sy == null ? s : sy;
     let o = this.n;
     for (let i = 0; i < m.length; i += 9) {
       const px = m[i], py = m[i + 1], pz = m[i + 2], qx = m[i + 3], qz = m[i + 5];
-      f[o] = x + (c * px + sn * pz) * s; f[o + 1] = py * s; f[o + 2] = z + (-sn * px + c * pz) * s;
+      f[o] = x + (c * px + sn * pz) * s; f[o + 1] = py * sh; f[o + 2] = z + (-sn * px + c * pz) * s;
       f[o + 3] = c * qx + sn * qz; f[o + 4] = m[i + 4]; f[o + 5] = -sn * qx + c * qz;
-      f[o + 6] = m[i + 6]; f[o + 7] = m[i + 7]; f[o + 8] = m[i + 8];
+      if (k) { f[o + 6] = Math.min(1, m[i + 6] * k); f[o + 7] = Math.min(1, m[i + 7] * k); f[o + 8] = Math.min(1, m[i + 8] * k); }
+      else { f[o + 6] = m[i + 6]; f[o + 7] = m[i + 7]; f[o + 8] = m[i + 8]; }
       o += 9;
     }
     this.n = o;
@@ -250,6 +252,92 @@ function worldWaterCheck() {
   return open;
 }
 
+/* --------------------------- v86/v87: Vegetation platzieren ----------------------------- */
+/* Büsche (BUSH.generate): Zahl aus BUSH.targetCount (Bäume / 7, abgerundet), verteilt auf Gruppen (Lichtungen, Wegränder,
+   Waldränder, Steine, Schatten, lockerer Bestand) und wenige Einzelbüsche; Gras (BUSH.grass): Büschel an Birken u. a.
+   Positionen kommen aus festen Samen (gleiche Welt → gleiche Vegetation). Gültig ist ein Standort im Wald, der von Hof,
+   Feldern, Wegen, Bach, See, Teich, Lagerplatz, Lichtungsmitte, Bäumen, Felsen, Totholz und anderen Büschen frei ist. */
+function worldBushes(trees, MK, extra, rocks) {
+  const hash = new Map(), HC = 4;
+  trees.forEach(t => { const k = Math.floor(t.x / HC) + "," + Math.floor(t.z / HC); (hash.get(k) || hash.set(k, []).get(k)).push(t); });
+  const near = (x, z, rad, fn) => {
+    const i0 = Math.floor((x - rad) / HC), i1 = Math.floor((x + rad) / HC), j0 = Math.floor((z - rad) / HC), j1 = Math.floor((z + rad) / HC);
+    let n = 0;
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const L = hash.get(i + "," + j); if (L) for (const t of L) if ((t.x - x) * (t.x - x) + (t.z - z) * (t.z - z) < rad * rad && (!fn || fn(t))) n++; }
+    return n;
+  };
+  const nearestTree = (x, z, rad) => {
+    let d = rad;
+    const i0 = Math.floor((x - rad) / HC), i1 = Math.floor((x + rad) / HC), j0 = Math.floor((z - rad) / HC), j1 = Math.floor((z + rad) / HC);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const L = hash.get(i + "," + j); if (L) for (const t of L) d = Math.min(d, Math.hypot(t.x - x, t.z - z)); }
+    return d;
+  };
+  const treeObs = trees.map(t => [t.x, t.z, 0.2 + 0.1 * (t.s || 1)]);
+  const trunks = trees.map(t => [t.x, t.z, 0.4 + 0.1 * (t.s || 1)]);
+  const W = WGRID, c01 = v => clamp(v, 0, 1);
+  const sample = rr => {
+    for (let i = 0; i < 14; i++) { const x = W.x0 + rr() * (W.x1 - W.x0), z = W.z0 + rr() * (W.z1 - W.z0); if (forestK(x, z) > 0.2) return { x, z }; }
+    return null;
+  };
+  const ok = (x, z, r) => {
+    if (inHofMax(x, z, 1.5 + r)) return false;
+    if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
+    if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
+    if (z > 15.8 - r && z < 22.5 + r) return false;
+    if (z > 20 && z < 34 && x > -24 && x < 44) return false;
+    if (inYard(x, z, 1.8 + r) || inFieldN(x, z, 1 + r)) return false;
+    if (MK.at(x, z) & 4) return false;                                      /* Bachufer */
+    if (z > 20 && lakeE(x, z) < 1.18) return false;
+    if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.5 + r) return false;
+    for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < 1.8 + r) return false;     /* Mitte der Lichtung (Bank, Feuer) bleibt frei */
+    return wayGap(x, z) > 1.0 + r * 0.9;                                    /* Wegbreite 1,8 – kein Busch ragt auf den Schotter */
+  };
+  /* Lichtungen: die ausdrücklich angelegten (FWORLD.clearings) plus freie Flächen aus der Baumdichte – ein Punkt, an dem im Umkreis
+     von mindestens 3,4 Einheiten kein Baum steht (Kulissenbäume stehen im Schnitt alle 3,4); der Steinbereich im Altwald wird als eigene Art markiert */
+  const clearings = FWORLD.clearings.map(c => ({ x: c[0], z: c[1], r: c[2] - 0.5, explicit: true }));
+  {
+    const cand = [];
+    for (let x = W.x0 + 2; x < W.x1; x += 3) for (let z = W.z0 + 2; z < W.z1 - 85; z += 3) {
+      if (forestK(x, z) < 0.5 || !ok(x, z, 2)) continue;
+      const r = nearestTree(x, z, 8) - 0.4;
+      if (r >= 3.4) cand.push({ x, z, r: Math.min(r, 7) });
+    }
+    cand.sort((a, b) => b.r - a.r || a.x - b.x || a.z - b.z);
+    const got = [];
+    cand.forEach(c => {
+      if (clearings.some(o => Math.hypot(o.x - c.x, o.z - c.z) < o.r + c.r * 0.6) || got.some(o => Math.hypot(o.x - c.x, o.z - c.z) < (o.r + c.r) * 0.9)) return;
+      if (Math.hypot(c.x - FWORLD.rocks[0], c.z - FWORLD.rocks[1]) < FWORLD.rocks[2]) c.kind = "rock";
+      got.push(c);
+    });
+    got.forEach(c => clearings.push(c));
+  }
+  const pathLines = FWORLD.paths.concat([LAKE_STEM, LAKE_WAY, LAKE_EAST]);
+  const segs = []; let segLen = 0;
+  pathLines.forEach(p => { for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (l > 0.1) { segs.push([p[i - 1], p[i], l]); segLen += l; } } });
+  const feat = (x, z) => {
+    const f = forestK(x, z), gap = wayGap(x, z);
+    let cd = 1e9; for (const c of clearings) cd = Math.min(cd, Math.hypot(x - c.x, z - c.z) - c.r);
+    const rd = Math.hypot(x - FWORLD.rocks[0], z - FWORLD.rocks[1]) - FWORLD.rocks[2], wd = distLine(x, z, FWORLD.creek);
+    return {
+      edge: c01((0.7 - f) / 0.5), shade: c01(near(x, z, 3.5) / 6), dens: c01(near(x, z, 4) / 6), conifer: c01(near(x, z, 5, t => t.sp === "fichte" || t.sp === "kiefer") / 3),
+      path: c01(1 - (gap - 1) / 4), clearing: c01(1 - cd / 5), rock: c01(1 - rd / 6), water: c01(1 - wd / 10)
+    };
+  };
+  const res = BUSH.generate({ treeCount: trees.length, rng: wRng(7331 + 4242), sample, ok, feat, clearings, obstacles: treeObs.concat(extra || []), trunks });
+  /* Gras: Birken (Stammradius je Quelle), Lichtungsränder, Steine, sonnige Wegränder, Übergänge – zählt nicht zum 7:1 */
+  const birches = trees.filter(t => t.sp === "birke" && (t.st == null || t.st === "up")).map(t => ({ x: t.x, z: t.z, s: t.s || 1, r: t.sz ? (0.07 * FWM.TH[t.sz] + 0.02) * 1.15 * (t.s || 1) : 0.11 * (t.s || 1) }));
+  const sampleEdge = rr => {
+    let x = rr() * segLen, S = segs[0]; for (const g of segs) { if (x < g[2]) { S = g; break; } x -= g[2]; }
+    const t = x / S[2], px = S[0][0] + (S[1][0] - S[0][0]) * t, pz = S[0][1] + (S[1][1] - S[0][1]) * t, nx = -(S[1][1] - S[0][1]) / S[2], nz = (S[1][0] - S[0][0]) / S[2], o = (rr() < 0.5 ? -1 : 1) * (1.3 + rr() * 0.9);
+    const X = px + nx * o, Z = pz + nz * o; return forestK(X, Z) > 0.15 && ok(X, Z, 0.1) ? { x: X, z: Z } : null;
+  };
+  const sampleTrans = rr => { const p = sample(rr); if (!p) return null; const f = forestK(p.x, p.z); return f > 0.2 && f < 0.65 ? p : null; };
+  const gr = BUSH.grass({ birches, seed: 7331, ok: (x, z) => ok(x, z, 0.1) && forestK(x, z) > 0.1, sp: res.spacing, clearings, rocks, sampleEdge, sampleTrans });
+  res.grass = gr;
+  res.clearings = clearings;
+  return res;
+}
+
 /* --------------------------- Kulisse bauen ----------------------------- */
 function worldStatic() {
   const R = FV.R;
@@ -287,7 +375,12 @@ function worldStatic() {
      neu gebaut werden muss. */
   const F32 = mb => new Float32Array(mb.v);
   WV.bgm = {}; ["birke", "kiefer", "fichte", "buche", "eiche", "kirsche"].forEach(sp => { WV.bgm[sp] = [0, 1, 2].map(v => F32(FWM.bgTree(sp, v))); });
-  const fern = F32(FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog()), bush = F32(FM.bushes());
+  const fern = F32(FWM.fern()), mush = F32(FWM.mushrooms(true)), mush2 = F32(FWM.mushrooms(false)), dlog = F32(FWM.deadLog());
+  /* v86: sieben Buscharten (bushes.js) – je Typ drei Formvarianten, von allen Büschen gemeinsam genutzt */
+  WV.bushm = {}; WV.bushes = []; WV.bushInfo = null; WV.grass = []; WV.grassm = [];
+  if (typeof BUSH !== "undefined") WV.grassm = [0, 1, 2].map(v => F32(FWM.grassTuft(v)));
+  if (typeof BUSH !== "undefined") BUSH.TYPES.forEach(t => { WV.bushm[t.id] = [0, 1, 2].map(v => F32(FWM.bush(t.id, v))); });
+  const logObs = [], rockObs = [];
   const rocks = [0.9, 1.4, 2.0].map(k => F32(FWM.boulder(k)));
   const cut = S.farm.bgCut || {}, step = 3.2;
   const pickSp = (zone, edge, r) => {
@@ -313,8 +406,8 @@ function worldStatic() {
           const c = chunkOf(x, z).d, g = wayGap(x, z);     /* v77: Busch und Totholz liegen neben dem Weg, nicht darauf */
           if (r1 < 0.35) { if (g > 1.0 + 0.23 * (0.9 + r2 * 0.5)) c.add(fern, x, z, r2 * 6.28, 0.9 + r2 * 0.5); }
           else if (r1 < 0.4) { if (g > 1.2) c.add(r2 < 0.5 ? mush : mush2, x, z, r2 * 6.28, 1); }
-          else if (r1 < 0.44) { if (g > 1.0 + 0.82) c.add(dlog, x, z, r2 * 6.28, 1); }
-          else if (r1 < 0.5) { if (g > 1.0 + 0.47 * (0.9 + r2)) c.add(bush, x, z, r2 * 6.28, 0.9 + r2); }
+          else if (r1 < 0.44) { if (g > 1.0 + 0.82) { c.add(dlog, x, z, r2 * 6.28, 1); logObs.push([x, z, 0.9]); } }
+          /* v86: der einzelne alte Busch (r1 < 0,5) entfällt – Büsche kommen aus dem Buschsystem (worldBushes, Verhältnis 7 : 1) */
         }
         continue;
       }
@@ -329,8 +422,21 @@ function worldStatic() {
   /* Felsen im Wald */
   for (let i = 0; i < 14; i++) {
     const a = rnd() * 6.28, d = rnd() * FWORLD.rocks[2] * 0.7;
-    const x = FWORLD.rocks[0] + Math.cos(a) * d, z = FWORLD.rocks[1] + Math.sin(a) * d;
-    chunkOf(x, z).d.add(rocks[i % 3], x, z, rnd() * 6.28, 0.8 + rnd() * 0.5);
+    const x = FWORLD.rocks[0] + Math.cos(a) * d, z = FWORLD.rocks[1] + Math.sin(a) * d, ry = rnd() * 6.28, sc = 0.8 + rnd() * 0.5;
+    chunkOf(x, z).d.add(rocks[i % 3], x, z, ry, sc);
+    rockObs.push([x, z, 0.55 * [0.9, 1.4, 2.0][i % 3] * sc]);
+  }
+  /* v86/v87: Büsche (Gruppen + wenige Einzelbüsche, Zahl aus der platzierten Baumzahl) und Grasbüschel – Zahl der Büsche = floor(Bäume / 7) */
+  if (typeof BUSH !== "undefined") {
+    const trees = [];
+    for (const c of chunks.values()) c.trees.forEach(t => trees.push(t));
+    (S.farm.trees || []).forEach(t => trees.push(t));
+    const res = worldBushes(trees, MK, logObs.concat(rockObs), rockObs);
+    WV.bushes = res.instances; WV.grass = res.grass.instances;
+    WV.bushInfo = { trees: trees.length, target: res.target, placed: res.placed, shortfall: res.shortfall, byType: res.byType, groups: res.groups, singles: res.singles, kinds: res.kinds,
+      clearings: res.clearings.length, grass: res.grass.instances.length, birchTufted: res.grass.birchTufted, birchTotal: res.grass.birchTotal };
+    res.instances.forEach(b => chunkOf(b.position[0], b.position[2]).d.add(WV.bushm[b.typeId][b.variantSeed % BUSH.VARIANTS], b.position[0], b.position[2], b.rotationY, b.scale[0], b.scale[1], b.tint));
+    res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).d.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
   WV.bgChunks = new Map();
   for (const [key, c] of chunks) {

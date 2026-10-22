@@ -1,5 +1,82 @@
 # Änderungen – kurz für den Kollegen
 
+## v87 (aufbauend auf v86) – Vegetation nach Zonen: Buschgruppen, Lichtungen, Einzelbüsche, Gras an Birken
+
+**Warum es vorher unnatürlich aussah:** In v86 wählte `BUSH.generate` für jeden Busch einen gleichverteilten Zufallspunkt im ganzen Waldgebiet
+(nur die „Eignung“ entschied zwischen 5 Kandidaten), Gruppen gab es nur als gelegentliches Paar (25 %). Dadurch stand der Großteil als
+Einzelbusch irgendwo zwischen den Bäumen – gleichmäßig über die ganze Karte, ohne Bezug zu Lichtungen, Wegen oder Steinen. (Architektur-Hinweis wie
+v86: eigene Engine `gl3d.js`, keine Three.js/React-Instanzen; Kulissenobjekte sind je Kachel zusammengefasste Meshes.)
+
+- **Zonen (Schritt 2):** `worldBushes` (worldview.js) bestimmt Lichtungen aus den vorhandenen Daten: die fünf ausdrücklichen (`FWORLD.clearings`)
+  plus freie Flächen aus der Baumdichte (Raster 3 × 3, im Umkreis von ≥ 3,4 Einheiten – der mittlere Baumabstand beträgt 3,4 – kein Baum, zulässiger
+  Boden; Überlappungen zusammengelegt; der Steinbereich im Altwald trägt die Art `rock`). Im aktuellen Wald: 13 Lichtungen. Zusätzlich liefert
+  `feat()` je Punkt Merkmale 0…1: Waldrand, Schatten/Baumdichte, Nadelbäume, Wegnähe, Lichtungsnähe, Felsen, Wasser.
+- **Gruppen (Schritt 3):** `BUSH.generate` plant zuerst Lichtungen (85 % bekommen Büsche; Art offen = 1–2 kleine Gruppen am Rand, Buschlichtung = 2–4
+  Gruppen, junge Bewuchsfläche = eine lockere Gruppe aus Jungwuchs/Farn; die Art folgt dem Seed und der Größe, jede Lichtung wird anders), dann
+  weitere Gruppen an Wegrändern, Waldrändern/Übergängen, neben Steinen, in Schattenbereichen und lockerem Bestand (Obergrenzen je Art, damit keine Art
+  überwiegt). Eine Gruppe hat 2–7 Büsche (an kleine Budgets angepasst), einen Mittelpunkt, einen variablen Radius, eine unregelmäßige Kontur (Lappen), bei ≥ 5 Büschen
+  zwei versetzte Teilgruppen, runde Büsche im Kern, breite Unterholzbüsche außen; innerhalb der Gruppe dürfen die Büsche enger stehen (0,72) als zu anderen Gruppen (1,0).
+  Die Mitte jeder Lichtung (38 % des Radius) bleibt frei; Gruppen sitzen am Rand (52–88 % des Radius).
+- **Typwahl nach Standort:** gewichtetes Los aus globalem Gewicht × Faktor je Standortart (`BUSH.KIND`: z. B. Buschlichtung vor allem rund/breit/Beere, junge Fläche
+  Jungwuchs + Farn, Steine breit + Farn, Schatten Nadel + Farn, Wegrand Beere/saisonal/rund, Nadelsträucher nur bei Nadelbäumen) × Ausgleich, der die Gesamtanteile
+  nahe den Gewichten hält (jetzt 36/15/15/12/7/9/6 % statt 30/18/12/12/10/10/8 – bewusst abweichend, weil die Standorte die Typen mitbestimmen).
+- **Einzelbüsche (Schritt 4):** 20 % des Budgets (nie über 35 %, falls Gruppen keinen Platz finden), kleiner (× 0,9), bevorzugt Waldrand/mittlere Baumdichte/Steine/Lichtungsnähe,
+  ≥ 6 Einheiten Abstand zueinander, Abstand zu Stämmen (0,4 + 0,1·s + Radius), überwiegend die kompakten Typen.
+- **7 : 1:** unverändert `floor(Bäume / 7)` = 533 bei 3731 Bäumen – Gruppen und Einzelbüsche zählen zusammen zum Budget, 533/533 gesetzt (96 Gruppen mit 425 Büschen, 108 Einzelbüsche). Gras zählt nicht.
+- **Gras `grass_tuft` (Schritt 5, `BUSH.grass`, `FWM.grassTuft`):** 6–8 schlanke, gebogene Halme in zwei Segmenten (Rückseite dunkler), 36–48 Dreiecke, drei Varianten, gedämpfte Oliv-/Grüntöne.
+  Birken werden an `sp === "birke"` erkannt; ob und wie viel Gras eine Birke bekommt, kommt aus einem **Hash ihrer Lage** (nicht aus einer laufenden Zufallsfolge) – dieselbe Birke bekommt immer dasselbe,
+  auch wenn Bäume dazukommen oder gefällt werden. Rund 40 % der Birken (228 von 592) haben 2–5 Büschel im lockeren Halbkreis (Winkel ± 70–110°), 0,15–0,55 vom Stammrand entfernt;
+  kein Halm im Stamm, Abstand zu Büschen, Wegen, Hof, Wasser gewahrt. Zusätzlich vereinzelt an Lichtungsrändern, neben Steinen, an Wegrändern und in Übergängen (insgesamt 874 Büschel ≈ 31 000 Dreiecke).
+- **Rendering:** wie v86 (gemeinsame Modelle, Einfügen in die Chunk-Puffer, keine Animation), Vegetation einmal beim Aufbau der Welt; alle Daten in `WV.bushes`, `WV.grass`, `WV.bushInfo`.
+- **Tests:** `node tests/bushes.test.js` – 31 Tests (v86-Tests angepasst + Gruppen/Einzelbüsche/Lichtungen/Typwahl/kleine Budgets/Gras). Browser: keine Konsolenfehler, Aufbau reproduzierbar (zweimal identischer Hash),
+  keine Büsche/Gräser auf Hof, Feldern, Wegen, Wasser; Bildkontrolle im Handy-Format (430 × 900) und 900 × 900 an Lichtungen, Steinen, Birken.
+- **Grenzen:** die Vegetation ist statisch (Aufbau der Welt); fallen Bäume, bleiben Büsche und Gras stehen (Stumpf/Setzling zählen weiter). Derzeit gibt es nur 13 Lichtungen – der Großteil der Gruppen
+  steht deshalb an Wegrändern, Waldrändern und in Schattenbereichen (37 % der Gruppenbüsche in dichtem Schatten, als Rückfall, wenn andere Standorte voll sind). Terrain ist flach (y = 0), deshalb keine Bodenhöhe.
+  Kronen großer Bäume verdecken in der Draufsicht einen Teil der Büsche. Version v87; Dateien: `bushes.js`, `woodmodels.js`, `worldview.js`, `tests/bushes.test.js`, `index.html`, `sw.js`.
+
+## v86 (aufbauend auf v85) – Buschsystem im Wald: sieben Arten, Verhältnis 7 Bäume : 1 Busch
+
+Die Aufgabe war für Three.js/React Native formuliert; LOGISTIKA läuft auf der eigenen Engine `gl3d.js` (kein Three.js, kein
+React). Umgesetzt ist es deshalb in der vorhandenen Architektur: Kulissenobjekte werden je Kachel (Chunk) zu einem Mesh
+zusammengefasst (`WBuf`), gemeinsame Modelle werden nur kopiert. Es gibt kein `InstancedMesh`, die Chunk-Meshes sind der Ersatz.
+
+- **Neu `bushes.js` (Modul `BUSH`, reine Logik, läuft auch in Node):** zentrale Typtabelle `BUSH.TYPES` (Typname, Gewicht,
+  Höhen-/Breitenbereich, Farbpalette, bevorzugte Standorte, Abstandsfaktor, `resource`-Kennzeichen für Beerenstrauch),
+  gewichtete Typwahl `pickType`, Abstandsgitter `Spacing` und der Generator `BUSH.generate`.
+- **Sieben Arten** (Anteile an allen Büschen): `round_shrub` 30 % · `spreading_shrub` 18 % · `evergreen_shrub` 12 % ·
+  `fern_shrub` 12 % · `berry_shrub` 10 % · `young_shrub` 10 % · `seasonal_shrub` 8 %. Modelle in `woodmodels.js`
+  (`FWM.bush(typ, variante)`): Ikosaeder-Cluster (rund, breit, saisonal), versetzte Kegelschichten (Nadelstrauch), Fiederwedel aus
+  flachen Dreiecken (Farn), Zweige mit Laubbüscheln (jung), verzweigt mit Oktaeder-Beeren (Beere). Je Typ drei Formvarianten,
+  alle auf das Nennmaß (Mitte der Bereiche) gebracht; Höhe und Breite je Busch kommen aus der Skalierung.
+- **7 : 1:** `BUSH.targetCount(Bäume) = floor(Bäume / 7)` (700 → 100, 140 → 20, 35 → 5). Grundlage ist die **tatsächlich
+  platzierte** Baumzahl: Kulissenbäume (Kacheln) plus alle Einträge in `S.farm.trees` (angetippte Kulissenbäume stehen dort, nicht
+  mehr in den Kacheln – so wird jeder Baum genau einmal gezählt; Stumpf/Setzling/Windwurf bleiben in der Liste). Es gibt keine
+  Wahrscheinlichkeit je Busch: der Generator setzt genau so viele Büsche, wie das Ziel verlangt, solange gültige Standorte da
+  sind. Im aktuellen Wald: 3731 Bäume → Ziel 533 → 533 gesetzt (0 Fehlplatzierungen).
+- **Platzierung:** Zufallspunkte im Waldgebiet (`forestK > 0,2`), je Busch bis zu 16 Versuche, aus den gültigen Kandidaten gewinnt
+  der mit der besten Eignung für den Typ (Waldrand, Schatten/dichter Bestand, Nadelbäume, Wegnähe, Lichtung, Felsen, Wasser – Gewichte
+  je Typ in der Tabelle). Gültig = nicht auf/neben Hof, Feldern, Hofgelände, Sägewerk-Hof, Straße, Bach, See, Teich, Lagerplatz, Lichtungsmitte,
+  mindestens 1,0 + 0,9 · Radius von der Wegmitte (kein Busch ragt auf den Schotter), Abstand zu Stämmen, Felsen, Totholz und anderen
+  Büschen (größere Büsche halten mehr Abstand). Ein Viertel der Büsche steht als Paar neben einem Einzelbusch (Gruppen, ändert
+  die Gesamtzahl nicht). Findet sich kein Platz, bleibt die Zahl darunter (`WV.bushInfo.shortfall`) – es wird nichts erzwungen.
+- **Reproduzierbar:** alle Zufallswerte kommen aus `wRng(7331 + 4242)` und werden beim Aufbau der Welt einmal bestimmt und in
+  `WV.bushes` gespeichert (`{ id, typeId, position, rotationY, scale[w,h,w], variantSeed, tint }`) – kein `Math.random`, nichts wird je
+  Frame neu gewürfelt. Gleiche Welt → gleiche Büsche (zweimal gebaut: identischer Hash).
+- **Performance:** je Typ drei gemeinsame Modelle (Float32Array), je Instanz nur Drehung, Breite/Höhe und Helligkeitsfaktor beim
+  Einfügen in den Chunk-Puffer (`WBuf.add(m, x, z, ry, s, sy, k)` – neu: eigene Höhenskalierung und Farbfaktor); keine Materialien je Busch,
+  keine Animation, kein Licht, kein Objekt je Frame. 533 Büsche ≈ 110 000 Dreiecke über die ganze Karte (Ø 208 je Busch, davon nur
+  die sichtbaren Kacheln im Bild), Beeren sind Oktaeder (8 Dreiecke). Der alte einzelne Waldboden-Busch (`FM.bushes()` an Wegen) entfällt,
+  Farn/Pilze/Totholz bleiben; die Zufallsfolge des Kulissenbaus ist unverändert (Bäume bleiben wo sie waren).
+- **Tests:** `node tests/bushes.test.js` (17 Tests: Typtabelle und Größen, 7:1 mit 700/140/35, gewichtete Typwahl, Reproduzierbarkeit,
+  Unabhängigkeit von der Baumreihenfolge, keine Überlappung, gesperrte Flächen, Fehlschlag ohne Erzwingen, Gruppen, bevorzugte Standorte).
+  Außerdem im Browser-Test (Playwright/SwiftShader): keine Konsolenfehler, Aufbau reproduzierbar, alle Büsche außerhalb gesperrter Flächen,
+  Bildkontrolle im Handy-Format (430 × 900) und eine Galerie aller 7 Typen × 3 Varianten.
+- **Grenzen:** die Buschzahl wird beim Aufbau der Welt bestimmt und ändert sich nicht, wenn einzelne Bäume später fallen
+  (sie bleiben als Stumpf/Setzling in `S.farm.trees` und zählen weiter); beim nächsten Aufbau der Welt kommt dieselbe Menge heraus. Die
+  Kronen großer Bäume verdecken in der Draufsicht einen Teil der Büsche – das ist so gewollt (Unterholz). Ein Sammelmechanismus für
+  den Beerenstrauch existiert nicht (nur `resource: true` in der Tabelle). Neue Dateien: `bushes.js`, `tests/bushes.test.js`; geändert:
+  `woodmodels.js`, `worldview.js`, `index.html`, `sw.js` (Version v86).
+
 ## v85 (aufbauend auf v84) – Sägen als 3D-Ego-Minispiel
 
 - **Neu `fpsaw.js` (Modul `SAW3D`)**: Beim Fällen mit der Säge fliegt die Kamera in 0,95 s weich vom Hof-Blick direkt vor den

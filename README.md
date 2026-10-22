@@ -551,6 +551,15 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Büsche, Lichtungen und Gras im Wald (v86/v87)
+Büsche stehen überwiegend in kleinen Gruppen auf Lichtungen, an Wegrändern und Waldrändern; wenige kleine Einzelbüsche füllen
+Übergänge (`BUSH.generate`). Birken tragen vereinzelt Grasbüschel (`BUSH.grass`, `grass_tuft`, zählt nicht zum 7 : 1).
+
+### Büsche im Wald (v86)
+Auf sieben Bäume kommt ein Busch (`BUSH.targetCount`), verteilt auf sieben Arten nach Gewicht (rund 30 %, breit 18 %, Nadel 12 %,
+Farn 12 %, Beere 10 %, jung 10 %, saisonal 8 %). Standorte sind seedbasiert und frei von Wegen, Gebäuden, Wasser und Bäumen
+(`bushes.js`, `worldBushes` in `worldview.js`, Modelle `FWM.bush`). Tests: `node tests/bushes.test.js`.
+
 ### Sägen in 3D-Ego-Sicht (v85)
 Das Sägen-Minispiel läuft jetzt in 3D (`fpsaw.js`, Modul `SAW3D`): Kamerafahrt zum Stamm, Säge im Vordergrund,
 Zielzone als Ring am Stamm, Späne, Wackeln bei Fehlschlag, Baumfall mit Holzstapel und Rückfahrt. Fallback: 2D.

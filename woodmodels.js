@@ -300,6 +300,135 @@ const FWM = (() => {
     b.ico(0.12, 0x4f7f33, { x: 0.2, y: 0.28, flat: 0.5, jitter: 0.4 });
     return b;
   }
+  /* ------------------------------- Büsche (v86) -------------------------------
+     Sieben Typen (Tabelle: BUSH.TYPES in bushes.js). bush(id, v) baut Formvariante v (0…2) des Typs auf Nenngröße
+     (Mitte der Höhen- und Breitenbereiche); Höhe/Breite je Busch kommen aus der Instanz-Skalierung.
+     Alle aus wenigen Ikosaedern/Kegeln/Zylindern bzw. flachen Dreiecken (Farn) – gemeinsame Farbtabelle je Typ. */
+  const BUSH_ORDER = ["round_shrub", "spreading_shrub", "evergreen_shrub", "fern_shrub", "berry_shrub", "young_shrub", "seasonal_shrub"];
+  function bush(id, v) {
+    v = v || 0;
+    const T = BUSH.BY_ID[id];
+    if (!T) return new MB();
+    G3.seed(5200 + BUSH_ORDER.indexOf(id) * 131 + v * 17);
+    const P = T.palette, b = new MB(), R = (a, c) => a + (c - a) * rnd(), pick = arr => arr[Math.floor(rnd() * arr.length) % arr.length];
+    const blob = (r, c, x, y, z, o) => b.ico(r, c, Object.assign({ x, y, z, jitter: 0.35, flat: 0.85 }, o || {}));
+    /* Zweig von (x,0,z) mit Neigung e (0 = waagrecht … 1,57 = senkrecht) in Richtung a; Rückgabe Spitze */
+    const twig = (a, e, len, r, c, x0, y0, z0) => {
+      x0 = x0 || 0; y0 = y0 || 0; z0 = z0 || 0;
+      b.at({ x: x0, y: y0, z: z0, ry: -a }, () => b.cyl(r, r * 0.6, len, 5, c, { rz: -(Math.PI / 2 - e), notop: true, nobot: true }));
+      return [x0 + Math.cos(a) * Math.cos(e) * len, y0 + Math.sin(e) * len, z0 + Math.sin(a) * Math.cos(e) * len];
+    };
+    /* Beere: Oktaeder (8 Dreiecke) */
+    const berry = (x, y, z, r, c) => b.at({ x, y, z }, () => {
+      const t = [0, r, 0], u = [0, -r, 0], q = [[r, 0, 0], [0, 0, r], [-r, 0, 0], [0, 0, -r]];
+      for (let i = 0; i < 4; i++) { b.tri(t, q[(i + 1) % 4], q[i], c); b.tri(u, q[i], q[(i + 1) % 4], c); }
+    });
+    if (id === "round_shrub") {
+      /* kompakt, kugelig bis abgeflacht: ein großes, drei bis vier mittlere, zwei bis vier kleine Volumen */
+      const cs = [P.mid, P.mid, P.dark, P.light];
+      blob(R(0.32, 0.37), P.mid, R(-0.03, 0.03), 0.3, R(-0.03, 0.03), { jitter: 0.3 });
+      const n = 3 + (v % 2), a0 = rnd() * 6.28;
+      for (let i = 0; i < n; i++) { const a = a0 + (i + R(-0.25, 0.25)) * 6.28 / n, d = R(0.15, 0.24); blob(R(0.2, 0.27), i % 2 ? P.dark : pick(cs), Math.cos(a) * d, R(0.17, 0.3), Math.sin(a) * d); }
+      const m = 2 + Math.floor(rnd() * 3);
+      for (let i = 0; i < m; i++) { const a = rnd() * 6.28, d = R(0.05, 0.3); blob(R(0.11, 0.16), i === 0 ? P.light : pick(cs), Math.cos(a) * d, R(0.42, 0.52), Math.sin(a) * d, { flat: 0.9 }); }
+    } else if (id === "spreading_shrub") {
+      /* niedrig und breit: seitlich ausladende, flache Cluster, dunkler Kern, einzelne sichtbare Äste */
+      blob(0.3, P.dark, 0, 0.1, 0, { flat: 0.5, sx: 1.7, sz: 1.2, jitter: 0.3 });
+      const n = 5 + (v % 2), a0 = rnd() * 6.28;
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + R(-0.2, 0.2)) * 6.28 / n, d = R(0.3, 0.52);
+        blob(R(0.17, 0.26), i % 3 === 0 ? P.olive : P.mid, Math.cos(a) * d, R(0.1, 0.22), Math.sin(a) * d * 0.7, { flat: R(0.5, 0.65), sx: R(1.4, 1.9), sz: R(0.9, 1.25), ry: R(0, 3.1) });
+      }
+      blob(0.18, P.olive, R(-0.15, 0.15), R(0.26, 0.32), R(-0.1, 0.1), { flat: 0.55, sx: 1.4, ry: R(0, 3) });
+      for (let i = 0; i < 3; i++) { const a = a0 + 0.8 + i * 2.1 + R(-0.3, 0.3); twig(a, R(0.35, 0.7), R(0.4, 0.55), 0.022, P.twig, Math.cos(a) * 0.12, 0.05, Math.sin(a) * 0.1); }
+    } else if (id === "evergreen_shrub") {
+      /* gestaffelte, leicht versetzte Zweigschichten mit gezackter Kontur – keine glatte Kegelform */
+      b.cyl(0.035, 0.03, 0.18, 5, P.trunk, { nobot: true });
+      const n = 4 + (v % 2), cs = [P.dark, P.fir, P.dark, P.light, P.fir];
+      for (let i = 0; i < n; i++) {
+        const t = i / (n - 1), r = (0.42 - 0.3 * t) * R(0.9, 1.12);
+        b.cone(r, R(0.3, 0.38), 6 + (i + v) % 2, cs[(i + v) % cs.length], { y: 0.12 + i * 0.15, x: R(-0.05, 0.05), z: R(-0.05, 0.05), ry: R(0, 3), sx: R(0.88, 1.15), sz: R(0.88, 1.15) });
+      }
+      for (let i = 0; i < 3; i++) { const a = R(0, 6.28); b.at({ x: Math.cos(a) * 0.26, y: 0.14 + R(0, 0.15), z: Math.sin(a) * 0.26, ry: -a }, () => b.cone(0.11, 0.3, 5, P.dark, { rz: -R(0.6, 0.9) })); }
+      b.cone(0.07, 0.2, 5, P.light, { y: 0.12 + n * 0.15 + 0.02 });
+    } else if (id === "fern_shrub") {
+      /* Wedel aus einem Mittelpunkt: je Segment zwei Fiederblättchen (oben hell, unten dunkel), zwei Ebenen */
+      const leaf = (p, q, side, w, top, bot) => {
+        const m = [p[0] + (q[0] - p[0]) * 0.85, p[1] + (q[1] - p[1]) * 0.85 + 0.012, side * w];
+        if (side > 0) { b.tri(p, m, q, top); b.tri(p, q, m, bot); } else { b.tri(p, q, m, top); b.tri(p, m, q, bot); }
+      };
+      const nf = 9 + (v % 2), a0 = rnd() * 6.28;
+      for (let f = 0; f < nf; f++) {
+        const a = a0 + (f + R(-0.2, 0.2)) * 6.28 / nf, inner = f % 3 === 0, len = (inner ? R(0.26, 0.34) : R(0.38, 0.5)), lift = inner ? 0.34 : 0.22, wd = R(0.07, 0.09);
+        const top = f % 2 ? P.fresh : P.light, segs = 6;
+        b.at({ ry: -a, y: 0.03 + (inner ? 0.04 : 0) }, () => {
+          const pts = []; for (let i = 0; i <= segs; i++) { const t = i / segs; pts.push([t * len, lift * t * (1.15 - 0.75 * t), 0]); }
+          for (let i = 0; i < segs; i++) {
+            const w = wd * Math.sin(Math.PI * (i + 0.7) / (segs + 0.9)) + 0.012;
+            leaf(pts[i], pts[i + 1], 1, w, top, P.dark); leaf(pts[i], pts[i + 1], -1, w, top, P.dark);
+          }
+          const e = pts[segs]; b.tri(e, [e[0] - 0.04, e[1] + 0.005, 0.02], [e[0] - 0.04, e[1] + 0.005, -0.02], top); b.tri(e, [e[0] - 0.04, e[1] + 0.005, -0.02], [e[0] - 0.04, e[1] + 0.005, 0.02], P.dark);
+        });
+      }
+      blob(0.06, P.dark, 0, 0.04, 0, { flat: 0.7, jitter: 0.2 });
+    } else if (id === "berry_shrub") {
+      /* verzweigt, mitteldicht, wenige kleine Beeren (je Cluster zwei bis drei) */
+      const n = 4 + (v % 2), a0 = rnd() * 6.28, cl = [];
+      blob(R(0.17, 0.2), P.dark, 0, 0.24, 0, { jitter: 0.35 });
+      cl.push([0, 0.3, 0, 0.19]);
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + R(-0.2, 0.2)) * 6.28 / n, e = R(0.85, 1.25), len = R(0.32, 0.46), tip = twig(a, e, len, 0.02, P.twig);
+        const rr = R(0.14, 0.2); blob(rr, i % 2 ? P.mid : P.dark, tip[0], tip[1] + 0.02, tip[2], { flat: 0.85 }); cl.push([tip[0], tip[1] + 0.02, tip[2], rr]);
+        if (i % 2 === 0) blob(0.1, P.mid, tip[0] * 0.5, tip[1] * 0.55, tip[2] * 0.5, { flat: 0.9 });
+      }
+      cl.forEach(([x, y, z, r], i) => {
+        const k = 2 + ((i + v) % 2);
+        for (let j = 0; j < k; j++) { const an = rnd() * 6.28, up = R(0.2, 0.9), d = r * 0.98; berry(x + Math.cos(an) * d * (1 - up * 0.6), y + up * d * 0.8, z + Math.sin(an) * d * (1 - up * 0.6), 0.034, j % 2 ? P.berry : P.berry2); }
+      });
+    } else if (id === "young_shrub") {
+      /* offen und luftig: dünne Triebe in verschiedene Richtungen, kleine Laubbüschel an den Spitzen und in halber Höhe */
+      const n = 6 + (v % 2), a0 = rnd() * 6.28;
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + R(-0.3, 0.3)) * 6.28 / n, e = R(0.9, 1.45), len = R(0.35, 0.8) * (i % 3 === 0 ? 0.65 : 1), tip = twig(a, e, len, 0.016, P.twig, R(-0.04, 0.04), 0, R(-0.04, 0.04));
+        blob(R(0.075, 0.12), i % 2 ? P.light : P.mid, tip[0], tip[1] + 0.02, tip[2], { flat: 0.75, jitter: 0.4 });
+        const t = R(0.45, 0.65); blob(R(0.05, 0.08), i % 2 ? P.mid : P.light, tip[0] * t + R(-0.03, 0.03), tip[1] * t, tip[2] * t + R(-0.03, 0.03), { flat: 0.7, jitter: 0.4 });
+      }
+    } else if (id === "seasonal_shrub") {
+      /* kompakt, klumpig: Cluster in Olivgrün, Goldgelb, Rost und Bronze */
+      const seq = [P.gold, P.rust, P.olive, P.olive, P.gold, P.bronze, P.olive, P.gold];
+      blob(R(0.24, 0.28), P.olive, 0, 0.24, 0, { jitter: 0.42, flat: 0.95 });
+      const n = 6 + (v % 2), a0 = rnd() * 6.28;
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + R(-0.3, 0.3)) * 6.28 / n, d = R(0.1, 0.3), y = R(0.14, 0.46);
+        blob(R(0.12, 0.2), seq[(i + v) % seq.length], Math.cos(a) * d * (1.3 - y), y, Math.sin(a) * d * (1.3 - y), { jitter: 0.45, flat: R(0.85, 1.1) });
+      }
+    }
+    /* auf Nennmaß bringen: Höhe = Mitte des Höhenbereichs, größte Breite = Mitte des Breitenbereichs */
+    const Hn = (T.h[0] + T.h[1]) / 2, Wn = (T.w[0] + T.w[1]) / 2;
+    let xa = 1e9, xb = -1e9, za = 1e9, zb = -1e9, yb = 0;
+    for (let i = 0; i < b.v.length; i += 9) { const x = b.v[i], y = b.v[i + 1], z = b.v[i + 2]; if (x < xa) xa = x; if (x > xb) xb = x; if (z < za) za = z; if (z > zb) zb = z; if (y > yb) yb = y; }
+    const kw = Wn / Math.max(xb - xa, zb - za, 0.01), kh = Hn / Math.max(yb, 0.01);
+    for (let i = 0; i < b.v.length; i += 9) { b.v[i] = (b.v[i] - (xa + xb) / 2) * kw; b.v[i + 1] = Math.max(0, b.v[i + 1] * kh); b.v[i + 2] = (b.v[i + 2] - (za + zb) / 2) * kw; }
+    return b;
+  }
+  /* Grasbüschel (grass_tuft, v87): sechs bis acht schlanke, leicht gebogene Halme, je zwei Segmente (unten olivgrün, oben heller), beidseitig
+     (Rückseite dunkler) – 36–48 Dreiecke, drei Varianten. Nennmaß 0,3 hoch, 0,26 breit (Instanz skaliert 0,75–1,35 × 0,85–1,5). */
+  function grassTuft(v) {
+    v = v || 0;
+    G3.seed(5600 + v * 23);
+    const P = BUSH.GRASS.palette, b = new MB(), R = (a, c) => a + (c - a) * rnd();
+    const n = 6 + (v % 3), a0 = rnd() * 6.28;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i + R(-0.25, 0.25)) * 6.28 / n, h = R(0.22, 0.38) * (i % 3 === 0 ? 1.2 : 1), lean = R(0.06, 0.15), rb = R(0, 0.04);
+      const ox = Math.cos(a), oz = Math.sin(a), px = -oz, pz = ox, w = R(0.05, 0.07);
+      const at = (d, y, k) => [rb * ox + ox * d + px * k, y, rb * oz + oz * d + pz * k];
+      const L = at(0, 0, -w / 2), Rr = at(0, 0, w / 2), ML = at(lean * 0.45, h * 0.55, -w * 0.32), MR = at(lean * 0.45, h * 0.55, w * 0.32), T = at(lean * 1.3, h, 0);
+      const cLo = i % 2 ? P.mid : P.olive, cHi = i % 2 ? P.light : P.mid, dk = x => mix(x, 0x30401a, 0.35);
+      b.tri(L, Rr, MR, cLo); b.tri(L, MR, ML, cLo); b.tri(ML, MR, T, cHi);
+      b.tri(L, MR, Rr, dk(cLo)); b.tri(L, ML, MR, dk(cLo)); b.tri(ML, T, MR, dk(cHi));
+    }
+    return b;
+  }
   function boulder(s) {
     G3.seed(3830 + Math.round(s * 10));
     const b = new MB();
@@ -2316,7 +2445,7 @@ const FWM = (() => {
 
   return {
     traderCart, solarVan, item, tool, cargo,
-    TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
+    TREE_C, TH, TREE_H, tree, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
