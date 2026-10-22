@@ -97,10 +97,10 @@ const CAMP = (() => {
   const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
 
   /* Eingang: der Kies läuft als schmaler werdender Streifen in den Sandweg aus (Farbverlauf), mit weniger Steinen nach außen */
-  const PATH_COL = 0xa89064;
+  const PATH_COL = 0xb29b6c;
   function funnel(b) {
     const Y = 0.034, st = [[-1.2, 2.7], [0, 2.3], [1.1, 1.75], [2.2, 1.35], [3.4, 1.1], [4.8, 0.95], [6.2, 0.9]];
-    const P = L => [-1.06 - 0.196 * L, 5.3 + 0.98 * L];
+    const P = L => [0, 5.3 + L];
     const colAt = L => mixc(K.gr1, PATH_COL, Math.min(1, Math.max(0, (L + 0.2) / 5.5)));
     for (let i = 0; i < st.length - 1; i++) {
       const [L0, w0] = st[i], [L1, w1] = st[i + 1], p0 = P(L0), p1 = P(L1);
@@ -131,7 +131,7 @@ const CAMP = (() => {
     const N = 38;
     for (let i = 0; i < N; i++) {
       const a = (i / N) * Math.PI * 2 + rnd() * 0.05, px = Math.cos(a), pz = Math.sin(a);
-      if (pz > 0.45 && Math.abs(px + 0.2) < 0.46) continue;                      /* Zugang */
+      if (pz > 0.45 && Math.abs(px) < 0.46) continue;                      /* Zugang */
       const r = 0.2 + rnd() * 0.12, d = R0 + 0.05 + rnd() * 0.12;
       b.ico(r, mixc(K.stone, K.rim, rnd() * 0.6), { x: px * d, y: Y - r * 0.15, z: pz * d, jitter: 0.22, flat: 0.55, ry: rnd() * 6, sx: 1.2 });
     }
@@ -247,7 +247,7 @@ const CAMP = (() => {
     const ok = (x, z) => Math.hypot(x, z) > 4.1 && !(z > 3.2 && Math.abs(x + 1) < 1.9);
     /* hinten, vor der Wand: Pflanzenband ohne Gleichmaß */
     for (let x = -6.4, i = 0; x < 6.5; x += 0.75 + rnd() * 0.55, i++) {
-      const z = -4.4 - rnd() * 0.8, k = i % 6;
+      const z = -3.9 - rnd() * 0.6, k = i % 6;
       if (k === 0) tropical(b, x, z - 0.1, 1.0 + rnd() * 0.45);
       else if (k === 1) shrub(b, x, z + 0.2, 0.55 + rnd() * 0.3);
       else if (k === 2) fernC(b, x, z + 0.3, 1.1);
@@ -278,6 +278,16 @@ const CAMP = (() => {
     /* hängende Zweige an der Wand */
   }
 
+  /* Alles, was über die Wände ragt, wird abgeschnitten: Dreiecke mit einer Ecke hinter der Rückwand oder außerhalb der Seitenwände entfallen */
+  function trim(m) {
+    const out = new G3.MB(), v = m.v, ZB = -5.36, XB = 6.94;
+    for (let i = 0; i + 26 < v.length; i += 27) {
+      let bad = false;
+      for (let k = 0; k < 3; k++) { const x = v[i + k * 9], z = v[i + k * 9 + 2]; if (z < ZB || Math.abs(x) > XB) bad = true; }
+      if (!bad) for (let j = 0; j < 27; j++) out.v.push(v[i + j]);
+    }
+    return out;
+  }
   /* Korbsessel links vorn und Steine / kleiner Tisch rechts vorn */
   function furniture(b) {
     G3.seed(8105);
@@ -323,7 +333,8 @@ const CAMP = (() => {
     sofa(b, 2.5, [205, 180, 155], { cush: [[0, K.slate, 0.2], [2, K.sand, -0.15]] });
     sofa(b, 2.9, [116, 90, 64], { cush: [[0, K.sand, 0.1], [1, K.slate, -0.2], [2, K.slateD, 0.15]] });
     sofa(b, 2.4, [24, 0, -24], { cush: [[1, K.slate, 0.1]] });
-    wall(b); plants(b); furniture(b); lampPosts(b);
+    const pl = new G3.MB(); plants(pl); b.add(trim(pl));
+    wall(b); furniture(b); lampPosts(b);
     return b;
   }
 

@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v83 (aufbauend auf v82) – Weg gerade auf den Lagerfeuerplatz, Pflanzen nicht mehr durch die Wand
+
+- **Wegverlauf:** der Hauptweg (`erbe.js` `FWORLD.paths[1]`, letzte Punkte) läuft jetzt in der Blickrichtung gerade auf den
+  Platz zu – auf dem Bildschirm senkrecht und mittig zum Eingang; der Kiesstreifen (`camp.js` `funnel`) sitzt in derselben
+  Achse, Endfarbe an den Weg angeglichen. Bäume auf der neuen Linie weichen oder entfallen (Umzug `F.v82p`).
+- **Pflanzen:** stehen etwas weiter von der Wand weg; alles, was über die Rück- oder Seitenwände hinausragt, wird
+  abgeschnitten (`camp.js` `trim`: Dreiecke mit einer Ecke hinter der Wand entfallen).
+- `index.html`/`sw.js`: v83.
+
 ## v82 (aufbauend auf v81) – Lagerfeuerplatz: Wand, Eingang, Seitenwände
 
 - **Hängezweige von der Wand entfernt** (die grünen „Steine“ und dünnen Stäbe in der Holzwand).
