@@ -2392,16 +2392,18 @@ function worldEvAct(s) {
 const PARCEL_COL = [[1, 0.9, 0.5, 1], [0.4, 0.82, 1, 1], [0.8, 0.5, 1, 1], [1, 0.66, 0.15, 1]];
 const PARCEL_CSS = ["#f6d24a", "#5cc8ff", "#c48aff", "#ffae2e"];
 const PARCEL_TXT = ["Gut gepackt!", "Selten!", "Episch!", "Legendär!"];
+/* v97: Vorderseite (Schloss, +z) zeigt zur Kamera: Auge liegt bei (cos yaw, sin yaw), +z gedreht um ry zeigt nach (sin ry, cos ry) */
+const parcelFace = () => Math.PI / 2 - (FV.R && FV.R.cam ? FV.R.cam.yaw : Math.PI / 4);
 function worldParcelNodes(c, add) {
   const R = FV.R, x = c.data.x, z = c.data.z;
   const P = WV.parcel = { x, z, t0: c.t0 };
-  P.body = add(fmesh("lootBody", FWM.lootCrate), { x, z, ry: -0.3, s: 1.25 });
+  P.body = add(fmesh("lootBody", FWM.lootCrate), { x, z, ry: parcelFace(), s: 1.25 });
   P.lid = R.addChild(P.body, fnode(fmesh("lootLid", FWM.lootLid), { y: 0.5, z: -0.31 }));
   P.lit = R.addChild(P.body, fnode(fmesh("lootLit", () => { const b = new FM.MB(); b.plate(0.8, 0.52, 0xfff0a0, { y0: 0.01 }); return b; }), { y: 0.495, alpha: 0.8, glow: 1, visible: false }));
-  P.b1 = add(fmesh("lootBeam1", () => FWM.lootBeam(0.5, 0.22, 8, 0xffd25a)), { x, z, alpha: 0.14, glow: 1, shadow: false });
-  P.b2 = add(fmesh("lootBeam2", () => FWM.lootBeam(0.26, 0.1, 8, 0xfff6c8)), { x, z, alpha: 0.28, glow: 1, shadow: false });
-  P.r1 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0.5, glow: 1, shadow: false });
-  P.r2 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0.5, glow: 1, shadow: false });
+  P.b1 = add(fmesh("lootBeam1", () => FWM.lootBeam(0.5, 0.22, 8, 0xffd25a)), { x, z, alpha: 0, glow: 1, shadow: false });
+  P.b2 = add(fmesh("lootBeam2", () => FWM.lootBeam(0.26, 0.1, 8, 0xfff6c8)), { x, z, alpha: 0, glow: 1, shadow: false });
+  P.r1 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0, glow: 1, shadow: false });
+  P.r2 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x, z, alpha: 0, glow: 1, shadow: false });
 }
 /* Lieferwagen kommt von Osten die Straße entlang, hält vorm Tor, wirft die Kiste ab und fährt nach Westen weiter */
 function worldParcelIntroEnd() {
@@ -2434,7 +2436,7 @@ function stepParcelIntro(I, dt) {
       const u = Math.min(1, (I.t - 0.35) / 0.95), e = u * u * (3 - 2 * u), sx = v.x + 1.3, sz = v.z;
       I.fly.x = sx + (x1 - sx) * u; I.fly.z = sz + (z1 - sz) * u;
       I.fly.y = 0.9 * (1 - e) + Math.sin(u * Math.PI) * 2.3;
-      I.fly.ry = -0.3 + (1 - u) * 6.28; I.fly.rz = Math.sin(u * 14) * 0.12 * (1 - u);
+      I.fly.ry = parcelFace() + (1 - u) * 6.28; I.fly.rz = Math.sin(u * 14) * 0.12 * (1 - u);
       if (u < 1 && Math.random() < dt * 40) R.emit({ x: I.fly.x, y: I.fly.y + 0.3, z: I.fly.z, vy: 0.4, life: 0.5, size: 0.1, size2: 0.01, col: [1, 0.9, 0.5, 1], shape: 3, drag: 1 });
       if (u >= 1) {
         const i = R.nodes.indexOf(I.fly); if (i >= 0) R.nodes.splice(i, 1);
@@ -2466,10 +2468,8 @@ function stepParcel(dt, time) {
     P.body.sy = 1.25 * (1 - s); P.body.sx = P.body.sz = 1.25 * (1 + s * 0.5);
     if (!k) { P.land = null; P.body.sx = P.body.sy = P.body.sz = 1.25; }
   }
-  /* Lichtsäule atmet, Ringe laufen nach außen, es funkelt */
-  P.b1.alpha = 0.22 + Math.sin(time * 2.1) * 0.05; P.b2.alpha = 0.4 + Math.sin(time * 3.3 + 1) * 0.08;
-  P.b1.sx = P.b1.sz = 1 + Math.sin(time * 1.7) * 0.07; P.b2.sx = P.b2.sz = 1 + Math.sin(time * 2.6) * 0.1;
-  [P.r1, P.r2].forEach((r, i) => { const u = (time * 0.55 + i * 0.5) % 1; r.sx = r.sz = 0.7 + u * 1.6; r.alpha = 0.6 * (1 - u) * Math.min(1, u * 6); });
+  /* v97: im Stand kein Leuchten mehr (keine Lichtsäule, keine Ringe, kein Funkeln) – die Kiste dreht sich sanft zur Kamera */
+  P.body.ry += angTo(P.body.ry, parcelFace()) * Math.min(1, dt * 5);
   /* ab und zu ein Hüpfer: „tipp mich an!“ */
   const k = time % 3.4;
   if (P.land == null) {
@@ -2479,7 +2479,6 @@ function stepParcel(dt, time) {
       if (P.hop) { P.hop = 0; R.burst({ x: P.x, y: 0.1, z: P.z, n: 7, speed: 1.2, flat: true, up: 0.5, life: 0.5, size: 0.18, size2: 0.45, col: [[0.86, 0.8, 0.68, 0.5]], g: -1, drag: 2.2 }); }
     }
   }
-  if (Math.random() < dt * 7) R.emit({ x: P.x + (Math.random() - 0.5) * 1.0, y: 0.25 + Math.random() * 0.5, z: P.z + (Math.random() - 0.5) * 0.8, vy: 0.7 + Math.random() * 0.8, life: 1.1, size: 0.11, size2: 0.01, col: Math.random() < 0.3 ? [1, 1, 1, 1] : [1, 0.86, 0.3, 1], shape: 3, drag: 1.2 });
 }
 /* Antippen: Kamera fährt heran, danach läuft die Öffnungs-Animation (stepParcelOpen) */
 function worldParcelOpen() {
@@ -2492,13 +2491,16 @@ function worldParcelOpen() {
 }
 function stepParcelOpen(O, P, dt, time) {
   O.t += dt;
-  const t = O.t, R = FV.R, x = P.x, z = P.z, col = PARCEL_COL[O.rar], T0 = 0.7, SH = 1.1;
+  const t = O.t, R = FV.R, x = P.x, z = P.z, col = PARCEL_COL[O.rar], T0 = 0.7, SH = 1.5, TS = 6.9, face = parcelFace();
   if (O.ph === 0) {
     /* Rütteln: wird immer wilder, Funken ziehen nach innen, die Säule schwillt an */
     const u = Math.max(0, t - T0) / SH, a = u * u;
-    P.body.rz = Math.sin(t * 46) * 0.1 * a; P.body.rx = Math.sin(t * 37 + 1) * 0.07 * a; P.body.y = Math.abs(Math.sin(t * 19)) * 0.1 * a;
+    /* v97 wie bei der Schatztruhe: die Kiste hebt ab und dreht sich immer schneller (zwei Umdrehungen), dabei rüttelt sie */
+    const e0 = 1 - Math.pow(1 - Math.min(1, u * 1.6), 2);
+    P.body.rz = Math.sin(t * 46) * 0.1 * a; P.body.rx = Math.sin(t * 37 + 1) * 0.07 * a; P.body.y = e0 * 0.55 + Math.sin(t * 14) * 0.02 * u;
+    P.body.ry = face + Math.PI * 4 * a;
     P.body.sx = P.body.sz = 1.25 * (1 + 0.06 * u); P.body.sy = 1.25 * (1 - 0.03 * u); P.body.glow = 0.75 * u;
-    P.b1.alpha = 0.14 + u * 0.32; P.b2.alpha = 0.28 + u * 0.45; P.b1.sx = P.b1.sz = 1 + u * 0.9; P.b2.sx = P.b2.sz = 1 + u * 0.6;
+    P.b1.alpha = u * 0.46; P.b2.alpha = u * 0.73; P.b1.sx = P.b1.sz = 1 + u * 0.9; P.b2.sx = P.b2.sz = 1 + u * 0.6;
     [P.r1, P.r2].forEach((r, i) => { const w = (time * (0.55 + u * 1.6) + i * 0.5) % 1; r.sx = r.sz = 0.7 + w * 1.6; r.alpha = 0.6 * (1 - w) * Math.min(1, w * 6); });
     if (t > T0) {
       const n = Math.random() < dt * (14 + 90 * u) ? 1 : 0;
@@ -2509,7 +2511,7 @@ function stepParcelOpen(O, P, dt, time) {
       /* Deckel springt auf: Lichtstoß, Banner, Belohnungen */
       O.ph = 1; O.tb = t;
       const r = O.r = farmEvReward("lieferung");
-      P.lit.visible = true; P.body.rz = P.body.rx = 0; P.body.y = 0;
+      P.lit.visible = true; P.body.rz = P.body.rx = 0; P.body.ry = face; O.y0 = P.body.y;
       sfx("thud");
       if (O.rar === 0) sfx("collect"); else if (O.rar === 1) sfx("pearl"); else { sfx("level"); setTimeout(() => sfx("pearl"), 350); if (O.rar === 3) setTimeout(() => sfx("level"), 700); }
       try { if (navigator.vibrate) navigator.vibrate(O.rar > 1 ? [40, 30, 90] : 25); } catch (e) { /* kein Rütteln */ }
@@ -2525,7 +2527,11 @@ function stepParcelOpen(O, P, dt, time) {
   const u = t - O.tb;
   const kk = Math.min(1, u / 0.45), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
   P.lid.rx = -2.15 * e;
-  P.body.glow = Math.max(0, 0.7 * (1 - u / 1.6)); P.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.2) + Math.sin(time * 18) * 0.05;
+  /* v97: Kiste setzt wieder auf (Staub) und bleibt offen stehen – ohne Leuchten, zur Kamera gewandt */
+  const dn = Math.min(1, u / 0.7);
+  if (u < TS) { P.body.y = (O.y0 || 0) * (1 - dn * dn) + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.02 * (1 - dn)); P.body.ry += angTo(P.body.ry, face) * Math.min(1, dt * 5); }
+  if (dn >= 1 && !O.landed) { O.landed = 1; sfx("thud"); R.burst({ x, y: 0.1, z, n: 14, speed: 2.2, flat: true, up: 0.6, life: 0.8, size: 0.25, size2: 0.7, col: [[0.86, 0.8, 0.68, 0.5]], g: -1, drag: 2.2 }); }
+  P.body.glow = Math.max(0, 0.7 * (1 - u / 1.6)); P.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.2) + Math.sin(time * 18) * 0.05; if (u > 2.3) P.lit.visible = false;
   P.b1.alpha = 0.46 * Math.max(0, 1 - u / 2.4); P.b2.alpha = 0.7 * Math.max(0, 1 - u / 2.0);
   P.b1.sx = P.b1.sz = 1.8 + u * 0.6; P.b2.sx = P.b2.sz = 1.5 + u * 0.4;
   const rw = Math.min(1, u / 0.9);
@@ -2536,13 +2542,13 @@ function stepParcelOpen(O, P, dt, time) {
     const n = Math.random() < dt * 80 ? 1 : 0;
     for (let i = 0; i < n; i++) R.emit({ x: x + (Math.random() - 0.5) * 0.5, y: 0.55, z: z + (Math.random() - 0.5) * 0.35, vx: (Math.random() - 0.5) * 2.2, vz: (Math.random() - 0.5) * 2.2, vy: 4 + Math.random() * 3.5, g: -8, drag: 0.3, life: 1.2, size: 0.1 + Math.random() * 0.06, size2: 0.03, col: Math.random() < 0.55 ? [1, 0.84, 0.25, 1] : col, shape: Math.random() < 0.6 ? 3 : 0 });
   }
-  if (u > 2.0) {
+  if (u > TS) {
     /* Kiste löst sich in Funken auf */
-    const k = Math.min(1, (u - 2.0) / 0.5);
+    const k = Math.min(1, (u - TS) / 0.5);
     P.body.sx = P.body.sz = 1.25 * (1 - k); P.body.sy = 1.25 * (1 - k * 0.6); P.body.y = k * 0.4;
     if (!O.gone) { O.gone = 1; sfx("pop"); R.burst({ x, y: 0.4, z, n: 24, speed: 2, up: 3, life: 1, size: 0.12, size2: 0.01, col: [col, [1, 1, 1, 1]], shape: 3, g: -3, drag: 1 }); R.burst({ x, y: 0.3, z, n: 14, speed: 1.6, flat: true, up: 1, life: 0.9, size: 0.25, size2: 0.7, col: [[0.9, 0.9, 0.95, 0.5]], g: -0.6, drag: 1.6 }); }
   }
-  if (u > 2.7) { WV.parcelOpen = null; WV.evKey = null; farmSyncScene(); renderFarmUI(); }
+  if (u > TS + 0.7) { WV.parcelOpen = null; WV.evKey = null; farmSyncScene(); renderFarmUI(); }
 }
 /* Gemeinsame Show: Lichtblitz an (px|py) und Banner mit Titel und Beute-Chips */
 function worldLootShow(px, py, o) {

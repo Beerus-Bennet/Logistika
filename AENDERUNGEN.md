@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v97 (aufbauend auf v96) – Lieferkiste: Öffnen wie bei der Schatztruhe, danach offen ohne Leuchten, zum Spieler gedreht
+
+Gilt für die „Besondere Lieferung“ (Kiste vorm Hoftor, `worldview.js`).
+- **Im Stand kein Leuchten mehr:** keine Lichtsäule, keine Bodenringe, kein Funkeln. Nur der kleine „Tipp mich an“-Hüpfer bleibt.
+- **Zum Spieler gedreht:** Die Vorderseite (Schloss) zeigt zur Kamera (`parcelFace()`), auch beim Hereinhüpfen vom Lieferwagen. Dreht man die Kamera, dreht sich die Kiste sanft mit.
+- **Öffnen wie bei der Schatztruhe:** Nach dem Antippen hebt die Kiste ab, rüttelt und dreht sich immer schneller (zwei Umdrehungen), dabei bauen sich Licht und Funken auf. Dann springt der Deckel auf (Fontäne, Banner, Belohnungen wie bisher).
+- **Danach bleibt die offene Kiste kurz stehen** (rund 4,5 s nach dem Ausblenden der Effekte), mit Staubwolke beim Aufsetzen, ohne jedes Leuchten, zur Kamera gewandt, und löst sich dann in Funken auf (vorher sofort nach 2 s).
+- Die Belohnung wird wie bisher beim Öffnen verbucht, das Stehenbleiben ändert nichts daran.
+- **Im Browser geprüft** (Software-Grafik, Zeitraffer der Phasen): Stand ohne Licht, Abheben/Drehen, offen stehend, Auflösen. **Nicht getestet:** auf dem echten Telefon, und die Schatztruhe aus der Grube (Schatzsuche) habe ich nicht verändert.
+
 ## v96 (aufbauend auf v95) – Lupe nach dem Fällen weg
 
 - Die iOS-Lupe erschien, wenn der Finger beim Weiterhacken auf der Ergebniskarte („… gefällt!“) lag und länger hielt. Die Karte nimmt jetzt keine Berührung mehr an (`pointer-events:none`, in `worldview.js` und `style.css`), der Finger landet auf dem Bild, wo Textauswahl und Lupe schon unterbunden sind.
