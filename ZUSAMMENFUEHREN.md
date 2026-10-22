@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v81 – Lagerfeuerplatz und Mittagspause (auf v80)
+
+| Änderung | Datei |
+|---|---|
+| Neues Modul `CAMP` (Szene, 9 Plätze, Belegung, `clear`, `attach`, `step`) | `camp.js` (neu; `index.html`, `sw.js`) |
+| `person({ sit })` Sitzfigur | `woodmodels.js` |
+| `staffLunch`, Job `lunch`, Sitzen/Aufstehen in `stepStaff`, Blase `.lunchb`, `CAMP.tidy` | `team.js`, `style.css` |
+| Lichtung am Wegende 1 entfällt (`campEnd`), `CAMP.attach/step`, `bgTreeOk` | `worldview.js` |
+| `campTree`, Umzug `v81t` | `erbe.js` |
+
 ## Stand v77 – Autofotos, Kartengrenzen, Z-Fighting, Wegübergänge (auf v76)
 
 | Thema | Wo |

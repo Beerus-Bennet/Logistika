@@ -155,6 +155,7 @@ function treeSpotOk(x, z, pathGap) {
 }
 /* Fällbare Bäume: am Hof, entlang der Waldwege, an Lichtungen. Feste
    Saat, damit jeder Spielstand dieselbe Welt hat. */
+const campTree = t => typeof CAMP !== "undefined" && CAMP.clear(t.x, t.z, "tree");
 function erbeMakeTrees() {
   const rnd = erbeRng(90210), out = [];
   let id = 1;
@@ -186,7 +187,8 @@ function erbeMakeTrees() {
   }
   /* v77: Kronen über dem Weg – Baum ein Stück wegrücken oder weglassen (die Ziehung oben bleibt dieselbe,
      damit die übrigen Bäume ihre Nummern behalten; ältere Stände bekommen dasselbe in erbeInit) */
-  return out.filter(t => treeOffPath(t, out));
+  /* v81: Lagerfeuerplatz – dort stehen keine fällbaren Bäume (wieder erst nach der Ziehung weglassen) */
+  return out.filter(t => treeOffPath(t, out) && !campTree(t));
 }
 
 /* -------------------------------- Init ----------------------------------- */
@@ -252,6 +254,8 @@ function erbeInit(F, fresh) {
   { const bd = (F.objs || []).find(o => o.t === "board" && o.k === "see"); if (bd && bd.x === 6 + FG / 2 && bd.z === 20 + FG / 2) bd.x += 1; }
   /* v77: keine Bäume mehr auf den Wegen – Kronen, die über den Schotter ragen, rücken weg oder der Baum fällt weg */
   if (!F.v77t) { F.v77t = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
+  /* v81: Lagerfeuerplatz – Bäume im Platz weg (ältere Stände) */
+  if (!F.v81t) { F.v81t = 1; F.trees = F.trees.filter(t => !campTree(t)); }
   /* kein Baum im Teich: zu nah am Ufer → ein Stück vom Wasser weg */
   const P = FWORLD.pond, safe = P.r * 1.3 + 1.2;
   F.trees.forEach(t => {

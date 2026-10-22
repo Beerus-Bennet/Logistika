@@ -1133,6 +1133,7 @@ function staffDo(s, j) {
   const F = S.farm, o = j.oid != null ? farmObj(j.oid) : null, got = [];
   const gain = (id, n) => { if (id && n > 0) { got.push({ id, n }); staffCredit(s.role, id, n); } };
   switch (j.k) {
+    case "lunch": return;   /* v81: Mittagspause am Lagerfeuer – nichts zu erledigen */
     case "field":
       (j.oids || [j.oid]).map(farmObj).forEach(o => {
         if (!o || o.t !== "field") return;
@@ -1228,6 +1229,24 @@ function staffDo(s, j) {
   if (got.length) { s.last = got[0].id; if (typeof staffFx === "function") staffFx(s, j, got[0]); }
 }
 /* Arbeitstakt: läuft mit dem Erbe-Takt, auch ohne Blick auf den Hof */
+/* v81: Mittagspause 12–13 Uhr am Lagerfeuer (camp.js). Wer weit weg ist, geht früher los und kommt gegen 12 an;
+   wer gerade arbeitet, macht das noch fertig. Jede Kraft hat einen festen Platz (worker_slot_01 … 09). */
+const LUNCH0 = 720, LUNCH1 = 780;
+function staffLunch(s, i) {
+  if (typeof CAMP === "undefined") return false;
+  const day = Math.floor(S.time / 1440), m = S.time % 1440;
+  if (m < 660 || m >= LUNCH1 - 3 || s.lunchDay === day || (s.job && s.job.k === "lunch")) return false;
+  if (s.job && s.job.k !== "home") return false;
+  const sl = CAMP.slotFor(s, Object.keys(FSTAFF_ROLES).indexOf(s.role));
+  if (!sl) { s.lunchDay = day; return false; }
+  const p = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
+  if (m < LUNCH0 - (Math.hypot(p[0] - sl.x, p[1] - sl.z) * 1.3 / 5 + 1)) return false;
+  s.lunchDay = day;
+  if (s.job) { const q = staffRoutePos(s.job); s.px = q[0]; s.pz = q[1]; s.job = null; }
+  staffGo(s, i, { k: "lunch", what: "Mittagspause", at: [sl.x, sl.z, sl.fx, sl.fz] });
+  s.job.t1 = day * 1440 + LUNCH1; s.jobEnd = s.job.t1; s.work = S.time; s.doing = "Mittagspause";
+  return true;
+}
 function staffWork() {
   const F = S.farm;
   if (!F || !F.staff) return;
@@ -1236,6 +1255,7 @@ function staffWork() {
   F.staff.forEach((s, i) => {
     const R = FSTAFF_ROLES[s.role];
     if (!R || !R.gap) { s.doing = R ? "hilft, wo es klemmt" : ""; return; }
+    if (!s.away && !s.ride && staffLunch(s, i)) return;
     /* auf Fortbildung: einen Tag weg, danach etwas besser */
     if (s.away) { if (!staffAwayTick(s, i)) return; }
     /* Fahrerin unterwegs: kommt zurück, wenn die Lieferung durch ist */
@@ -1390,6 +1410,7 @@ function staffIc(s) {
 function worldSyncStaff() {
   if (typeof FV === "undefined" || !FV.R) return;
   const R = FV.R, F = S.farm, ids = new Set((F.staff || []).map(s => s.id));
+  if (typeof CAMP !== "undefined") CAMP.tidy(ids);
   for (const [id, n] of WV.staff) if (!ids.has(id)) { const i = R.nodes.indexOf(n.node); if (i >= 0) R.nodes.splice(i, 1); WV.staff.delete(id); }
   (F.staff || []).forEach((s, i) => {
     const old = WV.staff.get(s.id), key = staffKey(s);
@@ -1418,13 +1439,23 @@ function stepStaff(dt, time) {
     const e = WV.staff.get(s.id);
     if (!e) return;
     const j = s.job, n = e.node, A = e.arm;
+    /* v81: Mittagspause – angekommen: hinsetzen (Sitzfigur), danach wieder aufstehen */
+    const sl = j && j.k === "lunch" && S.time - j.t0 >= j.walk && typeof CAMP !== "undefined" ? CAMP.slotOf(s.id) : null;
+    if (sl && !e.isSit) {
+      e.isSit = true; e.mStand = n.mesh;
+      n.mesh = fmesh("staffs:" + e.key, () => FWM.person(Object.assign({}, staffBody(s), { armR: false, sit: true })));
+      if (A) A.y = STAFF_SHOULDER.y - 0.08; if (e.tool) e.tool.visible = false;
+    } else if (!sl && e.isSit) {
+      e.isSit = false; n.mesh = e.mStand || n.mesh; n.rx = 0;
+      if (A) A.y = STAFF_SHOULDER.y; if (e.tool) e.tool.visible = true;
+    }
     /* angetippt: stehen bleiben, zu dir drehen, einmal winken */
     const wv = e.wave != null ? now - e.wave : 99;
     if (wv < 1.9) {
       const eye = FV.R.eye || [FV.R.cam.tx + 20, 0, FV.R.cam.tz + 20];
       const r0 = e.wr0 != null ? e.wr0 : n.ry, k = Math.min(1, wv / 0.3);
       n.ry = r0 + angTo(r0, Math.atan2(eye[0] - e.x, eye[2] - e.z)) * (1 - (1 - k) * (1 - k));
-      n.y = 0;
+      n.y = e.isSit ? CAMP.SIT_Y : 0;
       if (A) {
         const up = Math.min(1, wv / 0.25, (1.9 - wv) / 0.3);
         A.rz = 0.08 + up * (2.45 + Math.sin(wv * 13) * 0.35);
@@ -1436,6 +1467,14 @@ function stepStaff(dt, time) {
     const off = !!(s.ride && staffRideGone(s));
     n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off;
     if (off) return;
+    if (sl) {
+      const P = CAMP.pose(sl), k = Math.min(1, dt * 5);
+      e.x = sl.x; e.z = sl.z; n.x = sl.x; n.z = sl.z; if (e.tool) e.tool.visible = false;
+      n.ry += angTo(n.ry, sl.ry + P.turn) * Math.min(1, dt * 6);
+      n.y = CAMP.SIT_Y + Math.sin(time * 1.6 + e.ph) * 0.006; n.rx += (P.lean - n.rx) * k;
+      if (A) { A.rx += (P.arm + Math.sin(time * 0.8 + e.ph) * 0.05 - A.rx) * k; A.rz += (0.08 + P.az - A.rz) * k; }
+      return;
+    }
     let tx, tz, work = false, face = null, onRoute = false, rh = null;
     if (j) {
       const el = S.time - j.t0;
@@ -1581,6 +1620,14 @@ function renderStaffPop(el, P, force) {
   if (!el) return;
   const s = (S.farm.staff || []).find(x => x.id === P.id);
   if (!s) return closeFarmPop();
+  /* v81: in der Mittagspause (unterwegs dorthin oder am Feuer) zeigt jede Kraft nur diese Sprechblase */
+  if (s.job && s.job.k === "lunch") {
+    if (force !== true && el._sh === "lunch" && el.querySelector(".lunchb")) { positionStaffPop(el, P); return; }
+    el._sh = "lunch"; el.classList.add("on");
+    el.innerHTML = `<div class="fp-box lunchb"><i>Mittagspause</i></div>`;
+    positionStaffPop(el, P);
+    return;
+  }
   const h = staffPopHTML(s, P);
   if (force !== true && el._sh === h && el.querySelector(".fstp")) { positionStaffPop(el, P); return; }
   el._sh = h;
@@ -1612,10 +1659,10 @@ function renderStaffPop(el, P, force) {
 function positionStaffPop(el, P) {
   const e = WV.staff.get(P.id), box = el && el.firstChild;
   if (!e || !box || !FV.R) return;
-  const p = FV.R.project(e.x, 2.35, e.z), f = FV.R.project(e.x, 0, e.z);
+  const lunch = box.classList.contains("lunchb"), p = FV.R.project(e.x, lunch ? 1.9 : 2.35, e.z), f = FV.R.project(e.x, 0, e.z);
   if (!p) return;
   const w = box.offsetWidth, hgt = box.offsetHeight, W = FV.R.w, H = FV.R.h;
-  let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - 10;
+  let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - (lunch ? 16 : 10);
   /* oben kein Platz: unter die Füße, damit die Kraft sichtbar bleibt */
   if (y < 56) y = Math.min(H - hgt - 8, (f ? f[1] : p[1] + 70) + 14);
   y = clamp(y, 8, Math.max(8, H - hgt - 8));

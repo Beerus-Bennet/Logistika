@@ -3035,3 +3035,10 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
     background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.85) 50%,transparent 70%)}
   @keyframes xpshine{to{transform:translateX(100%)}}
 }
+
+/* v81: Sprechblase „Mittagspause“ – quadratisch, weiß, schwarzer Rand, runde Ecken, blasse Kursivschrift */
+#farmPop .fp-box.lunchb{width:96px;height:96px;display:flex;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;
+  background:#fff;border:3px solid #141414;border-radius:20px;box-shadow:0 5px 14px rgba(0,0,0,.28);overflow:visible;text-align:center}
+#farmPop .fp-box.lunchb i{font:italic 500 15px/1.15 Georgia,"Times New Roman",serif;color:#9a9a9a;letter-spacing:.2px}
+#farmPop .fp-box.lunchb::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:#fff;border:3px solid #141414;
+  border-top:0;border-left:0;border-radius:0 0 5px 0;transform:translateX(-50%) rotate(45deg)}

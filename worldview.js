@@ -173,6 +173,7 @@ const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
   if (inHofMax(x, z, 1.5)) return false;
+  if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
   if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -348,6 +349,7 @@ function worldStatic() {
   const teeOf = (q, i) => FWORLD.paths.findIndex((o, j) => j !== i && o.slice(1, -1).some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 0.05));
   const PIER = worldPierFrame();
   /* 1) Optionen und Stützpunkte je Weg: Abzweig-Stellen auf dem Hauptweg gerade ziehen, dann Kanten-Snap */
+  const campEnd = q => typeof CAMP !== "undefined" && CAMP.near(q[0], q[1], 7);
   const WAYS = FWORLD.paths.map((p, i) => {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
     /* v72: kein „loses Ende“ mit Lichtung und Bank in der Nähe des Bachs (dort endet der Weg am Steg) */
@@ -362,7 +364,7 @@ function worldStatic() {
     const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k];
     /* v77: am Tor läuft der Weg 1 Einheit in den Hof hinein und dort in den Schotter aus (fade) */
     const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : null];
-    const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0, loose(e) && tee[1] < 0], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
+    const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0 && !campEnd(a), loose(e) && tee[1] < 0 && !campEnd(e)], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
       snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
     return { p, o, tee };
   });
@@ -403,6 +405,8 @@ function worldStatic() {
   /* v75: Angelsteg am Ende des Westwegs – senkrecht zum Bach, beginnt am Wegende und endet mitten im Wasser */
   if (PIER) R.nodes.push(fnode(fmesh("wpier", FWM.pier), { x: PIER.x, y: 0, z: PIER.z, ry: PIER.ry }));
   R.nodes.push(fnode(fmesh("wbench", FM.bench), { x: -83.2, y: 0, z: -55.4, ry: Math.PI }));
+  /* v81: Lagerfeuerplatz am Ende des Hauptwegs (camp.js) */
+  if (typeof CAMP !== "undefined") CAMP.attach(R);
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
@@ -2472,6 +2476,7 @@ function worldStep(dt, time) {
   }
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
+  if (typeof CAMP !== "undefined") CAMP.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });
   /* Fischschwarm: Blubbern und springende Fische */

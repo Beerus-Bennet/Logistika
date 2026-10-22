@@ -1,5 +1,32 @@
 # Änderungen – kurz für den Kollegen
 
+## v81 (aufbauend auf v80) – Lagerfeuerplatz und Mittagspause
+
+**Neu: `camp.js`** (eigenes Modul, in `index.html`/`sw.js` eingetragen) – der Lagerfeuerplatz am Ende des Hauptwegs im Wald
+(Weg 1, Welt ≈ −53 / −120,5; die alte Lichtung mit Baumstamm ist dort ersetzt, `worldview.js` `campEnd`).
+- **Szene:** runde Feuerstelle aus dunklem Naturstein (hellere Deckplatten, Scheite, Asche, animierte Flammen + Funken +
+  Lichtschein), drei geschwungene Sofas im offenen U zur Kamera (links, hinten, rechts, taupe/greige, Anthrazit-Rahmen,
+  Zierkissen), dunkle Holzwand (Walnuss/Kastanie, senkrechte Latten), Pflanzen in mehreren Tiefen (große Blätter, Farne,
+  Büsche, Gräser, Weinrot-Akzent, Bodendecker, Hängezweige – nichts im Sitzbereich), Kies mit Randsteinen und freiem
+  Zugang vom Weg, Korbsessel links vorn, Steine/Hocker rechts vorn, sieben Gartenlampen. Nachts leuchten Lampen (Lichtinseln)
+  und Feuer; es gibt keine dynamischen Lichter, kein Nebel, keine Tiefenschärfe (Handy-tauglich: ein starres Modell
+  ≈ 14 500 Dreiecke, 9 kleine bewegliche Knoten; `zcheck` ohne Befund).
+- **Neun feste Plätze** `worker_slot_01 … 09` (`CAMP.slots`: id, Gruppe, Sitz, Welt-/Ortsposition, Blickrichtung zum
+  Feuer, Haltung). Belegung `S.farm.camp.slots = { slotId: staffId }` (gespeichert, springt nie um); `CAMP.assign / remove /
+  slotOf / workerOf / free / slotFor`. Leere Plätze = leeres Sofa (kein Platzhalter, keine unsichtbaren Figuren).
+  Haltung je Platz in `CAMP.POSES` (Drehung, Arm, Neigung – keine zwei gleich), `CAMP.pose(slot)` ist die Stelle, an der
+  später eine Animation einsteigt.
+- **Mittagspause 12–13 Uhr** (`team.js` `staffLunch`, Job `k:"lunch"`): jede Kraft (außer auf Fortbildung/Fahrt) läuft
+  über das normale Wegenetz (A*) zum eigenen Platz – wer weit weg ist, geht ab 11:00 früher los, wer arbeitet, macht erst fertig –,
+  setzt sich (Sitzfigur: `FWM.person({ sit: true })`, Werkzeug weg), schaut zum Feuer und steht um 13:00 auf, dann
+  weiter wie gewohnt. Rolle → Platz in der Reihenfolge der Rollen (Landwirt 1 … Fischwirt 9), Vertretungen nehmen den ersten
+  freien. Entlassene geben ihren Platz frei. Weniger als neun Leute: nur diese Plätze sind besetzt.
+- **Sprechblase:** Antippen einer Kraft in der Pause zeigt eine quadratische weiße Blase, schwarzer Rand, runde Ecken, mit
+  „*Mittagspause*“ in blasser Kursivschrift (`style.css` `.lunchb`); außerhalb der Pause bleibt die bisherige Blase.
+- **Freihalten:** keine fällbaren Bäume (Umzug `F.v81t` für alte Stände; neue Welt: nach der Ziehung gefiltert, Nummern
+  bleiben) und keine Kulissenbäume/-pflanzen im Platz und im Sichtkeil zur Kamera (`CAMP.clear` in `bgTreeOk`).
+- `woodmodels.js` `person`: Option `sit`. `index.html`/`sw.js`: v81.
+
 ## v80 (aufbauend auf v79) – Erbe-Level und Spedition-Level auseinanderhalten
 
 Nach der Gründung hat das Erbe (Hof, Wald, Sägewerk, See) sein eigenes Level und die Spedition ein eigenes (je eigene

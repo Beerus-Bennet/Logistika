@@ -551,6 +551,12 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Lagerfeuerplatz und Mittagspause (v81)
+Am Ende des Hauptwegs im Wald liegt ein Lagerfeuerplatz (`camp.js`): runde Feuerstelle, drei Sofas im offenen U, dunkle
+Holzwand, Pflanzen, Kies und Gartenlampen. **Von 12 bis 13 Uhr machen alle Mitarbeiter dort Pause** – jede Kraft hat einen
+festen Platz (`worker_slot_01 … 09`), läuft hin, setzt sich zum Feuer und steht um 13 Uhr wieder auf. Wer in der Pause
+angetippt wird, zeigt eine Sprechblase „Mittagspause“.
+
 ## Spielprinzip
 
 Du bist Spediteur. Verlader schreiben Transporte aus, du planst die Kette und

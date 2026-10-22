@@ -1,0 +1,355 @@
+/* =========================================================================
+   LOGISTIKA – camp.js  (v81)
+   Der Lagerfeuerplatz am Ende des Waldwegs (Weg 1, nach Nordwesten):
+   runde Feuerstelle, drei geschwungene Sofas im offenen U zur Kamera hin, dunkle
+   Holzwand, Pflanzen in mehreren Tiefen, Kies, Gartenlampen, Korbsessel.
+   Hier machen alle Mitarbeiter von 12 bis 13 Uhr Mittagspause (team.js).
+
+   Aufbau (alles austauschbar, nichts verteilt sich übers Spiel):
+     CAMP.slots      neun feste Sitzplätze worker_slot_01 … worker_slot_09
+     CAMP.build()    Modelle (Kies, Feuerstelle, Sofas, Wand, Pflanzen, Lampen …)
+     CAMP.attach(R)  Szene in die Welt setzen   CAMP.step(dt,t)  Feuer, Funken, Lampen
+     CAMP.assign / remove / slotOf / free   Belegung (gespeichert in S.farm.camp)
+     CAMP.pose(slot) Sitzhaltung – hier kann später eine Animation einsteigen
+     CAMP.near(x,z,r) / CAMP.clear(x,z,kind)   Freihalten von Bäumen und Kulisse
+   Örtliche Achsen: x = Bildschirm rechts, z = zur Kamera hin (Süd-Ost), Feuer im Ursprung;
+   der Platz hängt an einem Knoten bei (CX,CZ) mit Drehung π/4.
+   ========================================================================= */
+const CAMP = (() => {
+  "use strict";
+  const CX = -53, CZ = -120.5, RY = Math.PI / 4, S2 = Math.SQRT1_2;
+  const toW = (lx, lz) => [CX + (lx + lz) * S2, CZ + (lz - lx) * S2];
+  const toL = (x, z) => { const dx = x - CX, dz = z - CZ; return [(dx - dz) * S2, (dx + dz) * S2]; };
+  const rad = d => d * Math.PI / 180;
+
+  /* ------------------------------ Sitzplätze ------------------------------ */
+  /* Gruppe, Radius um die Feuerstelle, Winkel (0° = rechts, 90° = hinten) */
+  const SEATS = [
+    ["left", 2.5, 205], ["left", 2.5, 180], ["left", 2.5, 155],
+    ["back", 2.9, 116], ["back", 2.9, 90], ["back", 2.9, 64],
+    ["right", 2.4, 24], ["right", 2.4, 0], ["right", 2.4, -24]
+  ];
+  /* Haltung je Platz: Drehung (rad) weg vom Feuer, Arm (rx vor/zurück, rz zur Seite), Neigung – keine zwei gleich */
+  const POSES = [
+    { turn: 0.16, arm: -0.55, az: 0.1, lean: 0.03 }, { turn: -0.12, arm: -1.05, az: 0.2, lean: -0.04 }, { turn: 0.22, arm: -0.25, az: 0.06, lean: 0.06 },
+    { turn: -0.10, arm: -0.9, az: 0.14, lean: 0.02 }, { turn: 0.06, arm: -0.4, az: 0.3, lean: -0.05 }, { turn: 0.2, arm: -1.15, az: 0.08, lean: 0.04 },
+    { turn: -0.2, arm: -0.65, az: 0.18, lean: 0.05 }, { turn: 0.1, arm: -0.2, az: 0.1, lean: -0.03 }, { turn: -0.14, arm: -0.95, az: 0.24, lean: 0.01 }
+  ];
+  const SIT_Y = 0.04;            /* Standhöhe der sitzenden Figur (Kies) */
+  const slots = SEATS.map((s, i) => {
+    const a = rad(s[2]), r = s[1] + 0.1;                 /* Becken etwas hinter der Sitzmitte */
+    const lx = Math.cos(a) * r, lz = -Math.sin(a) * r, w = toW(lx, lz), f = toW(0, 0);
+    return {
+      id: "worker_slot_" + String(i + 1).padStart(2, "0"), n: i + 1, group: s[0], seat: s[0] + "_" + (SEATS.slice(0, i + 1).filter(q => q[0] === s[0]).length),
+      lx: +lx.toFixed(3), lz: +lz.toFixed(3), x: +w[0].toFixed(3), z: +w[1].toFixed(3), fx: f[0], fz: f[1],
+      ry: Math.atan2(f[0] - w[0], f[1] - w[1]), pose: POSES[i]
+    };
+  });
+  const byId = id => slots.find(s => s.id === id) || null;
+
+  /* Belegung: S.farm.camp.slots = { slotId: staffId } – fest gespeichert, nichts springt zufällig um */
+  function store() { const F = typeof S !== "undefined" && S.farm; if (!F) return null; F.camp = F.camp || {}; F.camp.slots = F.camp.slots || {}; return F.camp.slots; }
+  function slotOf(staffId) { const m = store(); if (!m) return null; const id = Object.keys(m).find(k => m[k] === staffId); return id ? byId(id) : null; }
+  function workerOf(slotId) { const m = store(); return m ? m[slotId] || null : null; }
+  function free() { const m = store() || {}; return slots.filter(s => !m[s.id]); }
+  function assign(slotId, staffId) {
+    const m = store(), sl = byId(slotId);
+    if (!m || !sl || (m[slotId] && m[slotId] !== staffId)) return false;
+    Object.keys(m).forEach(k => { if (m[k] === staffId) delete m[k]; });
+    m[slotId] = staffId; return true;
+  }
+  function remove(slotId) { const m = store(); if (!m || !m[slotId]) return false; delete m[slotId]; return true; }
+  /* Wer weg ist (entlassen, ersetzt), gibt den Platz frei */
+  function tidy(ids) { const m = store(); if (!m) return; Object.keys(m).forEach(k => { if (!ids.has(m[k])) delete m[k]; }); }
+  /* Platz für eine Kraft: der eigene, sonst der zur Rolle passende (Reihenfolge der Rollen), sonst der erste freie */
+  function slotFor(s, roleIdx) {
+    let sl = slotOf(s.id);
+    if (sl) return sl;
+    const pref = slots[roleIdx] && !workerOf(slots[roleIdx].id) ? slots[roleIdx] : free()[0];
+    if (pref && assign(pref.id, s.id)) return pref;
+    return null;
+  }
+  /* Haltung für die Figur (team.js ruft das je Bild auf) */
+  function pose(sl) { return sl.pose; }
+
+  /* ------------------------- Freihalten für die Welt ------------------------ */
+  function near(x, z, r) { return Math.hypot(x - CX, z - CZ) < r; }
+  /* kind "tree": fällbarer Baum (Kreis), "bg": Kulissenbaum (Kreis + Sichtkeil zur Kamera) */
+  function clear(x, z, kind) {
+    const l = toL(x, z);
+    if (kind === "tree") return near(x, z, 7.2) || (l[1] > 0 && l[1] < 12 && Math.abs(l[0]) < 6.5);
+    if (near(x, z, 8.6)) return true;
+    return l[1] > 0 && l[1] < 17 && Math.abs(l[0]) < 10.5;           /* Sicht vom Weg her auf die Sofas */
+  }
+
+  /* -------------------------------- Farben -------------------------------- */
+  const K = {
+    anth: 0x3b3e43, anthD: 0x2c2f33, rim: 0x777b81, stone: 0x4a4d52, ash: 0x1e1b19,
+    wal: 0x4a3224, chest: 0x654431, walD: 0x39251b,
+    taupe: 0xa6978a, greige: 0xb7ad9e, sand: 0xcfc3aa, slate: 0x6d7987, slateD: 0x58636f,
+    gr1: 0x77828f, gr2: 0x8a95a1, gr3: 0x636e7a, gr4: 0x9aa4ae,
+    leafD: 0x2e4a2b, moss: 0x4b6c35, olive: 0x5d6b2f, leaf: 0x3a7a3b, leaf2: 0x2f6a34, fernC: 0x558a3a, wine: 0x7a2f3a,
+    wicker: 0x9d7b52, wickerD: 0x7e5f3c, warm: 0xfff0c8
+  };
+
+  /* ------------------------------ Bausteine ------------------------------- */
+  const rnd = () => G3.srand();
+  const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
+
+  /* Kies: unregelmäßiger Platz, Steinrand mit Öffnung zum Weg, kleine Steine */
+  function gravel(b) {
+    G3.seed(8101);
+    const R0 = 5.1, Y = 0.04;
+    b.disc(R0, 36, K.gr1, { y0: Y, wob: 0.045 });
+    for (let i = 0; i < 16; i++) {
+      const a = rnd() * 6.28, d = Math.sqrt(rnd()) * (R0 - 1.4), r = 0.55 + rnd() * 1.1;
+      b.disc(r, 12, [K.gr2, K.gr3, K.gr4, K.gr1][i % 4], { x: Math.cos(a) * d, z: Math.sin(a) * d, y0: Y + 0.002 * (1 + (i % 4)), wob: 0.18 });
+    }
+    for (let i = 0; i < 110; i++) {
+      const a = rnd() * 6.28, d = 1.5 + Math.sqrt(rnd()) * (R0 - 1.7), r = 0.05 + rnd() * 0.07;
+      if (d < 1.55) continue;
+      b.ico(r, [K.gr2, K.gr3, K.gr4, 0x70798a][i % 4], { x: Math.cos(a) * d, y: Y + r * 0.1, z: Math.sin(a) * d, jitter: 0.3, flat: 0.45, ry: rnd() * 6 });
+    }
+    /* Randsteine – offen zum Weg (vorn, leicht links) */
+    const N = 38;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2 + rnd() * 0.05, px = Math.cos(a), pz = Math.sin(a);
+      if (pz > 0.6 && Math.abs(px + 0.2) < 0.33) continue;                      /* Zugang */
+      const r = 0.2 + rnd() * 0.12, d = R0 + 0.05 + rnd() * 0.12;
+      b.ico(r, mixc(K.stone, K.rim, rnd() * 0.6), { x: px * d, y: Y - r * 0.15, z: pz * d, jitter: 0.22, flat: 0.55, ry: rnd() * 6, sx: 1.2 });
+    }
+    /* dunkle, geschwungene Steinkante im Vordergrund (links und rechts vom Zugang) */
+    [[-0.95, -0.2, 32], [0.15, 0.95, 32]].forEach(([from, to, n]) => {
+      for (let i = 0; i < 12; i++) {
+        const t = from + (to - from) * (i / 11), a = Math.PI / 2 + t * 1.0 - 0.2, d = R0 + 0.7;
+        const px = Math.cos(a) * d, pz = Math.sin(a) * d;
+        if (Math.abs(px + 1.0) < 1.15 && pz > 0) continue;
+        b.box(0.62, 0.1, 0.34, mixc(K.anthD, K.anth, rnd()), { x: px, y: 0, z: pz, ry: -a + Math.PI / 2 + (rnd() - 0.5) * 0.2, top: K.stone });
+      }
+    });
+  }
+
+  /* Feuerstelle: Ring aus dunklem Naturstein, hellere Deckplatten, Asche, Holzscheite */
+  function pit(b) {
+    G3.seed(8102);
+    const N = 15, R = 0.98;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2, px = Math.cos(a) * R, pz = Math.sin(a) * R, ry = -a + Math.PI / 2;
+      const h = 0.4 + rnd() * 0.07;
+      b.box(0.52, h, 0.42, mixc(K.anthD, K.anth, rnd()), { x: px, y: 0.04, z: pz, ry, top: K.stone });
+      b.box(0.56, 0.07, 0.46, mixc(K.rim, 0x8a8e94, rnd() * 0.6), { x: px, y: 0.04 + h, z: pz, ry });
+    }
+    b.disc(0.9, 18, K.ash, { y0: 0.2 });
+    b.disc(0.55, 12, 0x3b2c22, { y0: 0.202 });
+    for (let i = 0; i < 7; i++) {                                           /* gegeneinander gelehnte Scheite */
+      const a = (i / 7) * Math.PI * 2 + 0.3, r = 0.46 + (i % 2) * 0.12;
+      b.at({ x: Math.cos(a) * r, y: 0.2, z: Math.sin(a) * r, ry: Math.PI - a }, () =>
+        b.cyl(0.085 - (i % 3) * 0.008, 0.07, 0.95 - (i % 2) * 0.12, 7, [0x5b4030, 0x4a3326, 0x6b4a36][i % 3], { rz: -0.5 - (i % 3) * 0.06, top: 0x8a6a4a }));
+    }
+    for (let i = 0; i < 4; i++) {                                           /* liegende Holzstücke außen */
+      const a = rnd() * 6.28, r = 0.55 + rnd() * 0.2;
+      b.cyl(0.07, 0.07, 0.5, 6, 0x4a3326, { x: Math.cos(a) * r, y: 0.27, z: Math.sin(a) * r, rz: Math.PI / 2, ry: rnd() * 3, top: 0x7a5a3e });
+    }
+    /* Außenstein-Kranz im Kies, damit die Stelle sitzt */
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.28 + 0.2, r = 1.55 + rnd() * 0.15; b.ico(0.14 + rnd() * 0.05, K.stone, { x: Math.cos(a) * r, y: 0.04, z: Math.sin(a) * r, jitter: 0.25, flat: 0.5, ry: rnd() * 6 }); }
+  }
+
+  /* Sofa: n Plätze auf einem Kreisbogen (Radius R, Mittenwinkel phi0, Abstand dphi in Grad) */
+  function sofa(b, R, phis, opt) {
+    opt = opt || {};
+    const dphi = Math.abs(phis[1] - phis[0]), last = phis.length - 1;
+    const wAt = r => 2 * r * Math.sin(rad(dphi) / 2) * 0.985;
+    phis.forEach((ph, i) => {
+      const a = rad(ph), ry = a + Math.PI / 2, P = r => [Math.cos(a) * r, -Math.sin(a) * r];
+      let [x, z] = P(R);
+      b.box(wAt(R + 0.02), 0.26, 0.86, K.anthD, { x, z, y: 0.04, ry, top: K.anth });                           /* Rahmen / Sockel */
+      b.box(wAt(R) * 0.97, 0.2, 0.78, opt.seat || K.taupe, { x, z, y: 0.3, ry, top: mixc(opt.seat || K.taupe, 0xffffff, 0.08) });  /* Sitzkissen */
+      [x, z] = P(R + 0.4);
+      b.box(wAt(R + 0.4) * 0.99, 0.28, 0.22, K.anthD, { x, z, y: 0.3, ry });                                    /* Rückenrahmen */
+      b.at({ x, y: 0.506, z, ry }, () => b.box(wAt(R + 0.4) * 0.93, 0.48, 0.2, opt.back || K.greige, { rx: -0.16, top: mixc(K.greige, 0xffffff, 0.1) }));  /* Rückenkissen */
+      /* Füße */
+      [-1, 1].forEach(s => { const q = P(R + (s > 0 ? 0.35 : -0.3)); b.box(0.09, 0.06, 0.09, 0x1d1f22, { x: q[0], z: q[1], y: 0, ry }); });
+    });
+    /* Armlehnen an beiden Enden */
+    [[phis[0], Math.sign(phis[0] - phis[1])], [phis[last], Math.sign(phis[last] - phis[last - 1])]].forEach(([ph, s]) => {
+      const a = rad(ph + s * (dphi / 2 + 1.5)), ry = a + Math.PI / 2, x = Math.cos(a) * (R + 0.08), z = -Math.sin(a) * (R + 0.08);
+      b.box(0.17, 0.48, 0.98, K.anth, { x, z, y: 0.04, ry, top: K.anthD });
+      b.box(0.2, 0.05, 1.02, K.wal, { x, z, y: 0.526, ry });
+    });
+    /* lose Zierkissen */
+    (opt.cush || []).forEach(([k, col, t]) => {
+      const a = rad(phis[k]), r = R + 0.22, ry = a + Math.PI / 2;
+      b.at({ x: Math.cos(a) * r, y: 0.508, z: -Math.sin(a) * r, ry }, () => b.box(0.42, 0.4, 0.14, col, { rx: -0.35, rz: t }));
+    });
+  }
+
+  /* Rückwand: senkrechte, dunkle Holzlatten (Walnuss / Kastanie im Wechsel) mit Deckbalken */
+  function wall(b) {
+    G3.seed(8103);
+    const Z = -5.5, X0 = -6.6, X1 = 6.6, w = 0.3;
+    for (let x = X0, i = 0; x < X1; x += w + 0.015, i++) {
+      const h = 2.55 + (rnd() - 0.5) * 0.12;
+      b.box(w, h, 0.14, i % 3 === 0 ? K.chest : i % 3 === 1 ? K.wal : K.walD, { x: x + w / 2, y: 0, z: Z + (rnd() - 0.5) * 0.02, top: K.walD });
+    }
+    b.box(X1 - X0 + 0.5, 0.1, 0.26, K.walD, { x: (X0 + X1) / 2, y: 2.58, z: Z });
+    b.box(X1 - X0 + 0.3, 0.14, 0.2, K.walD, { x: (X0 + X1) / 2, y: 0, z: Z + 0.1 });
+    [X0, X1].forEach(x => b.box(0.18, 2.7, 0.3, K.walD, { x, y: 0, z: Z }));
+  }
+
+  /* ---------------------------- Pflanzen (Tiefen) ---------------------------- */
+  function leaf(b, x, z, ry, len, w, tilt, col, y0) {
+    b.at({ x, y: y0 || 0, z, ry }, () => {
+      b.at({ rx: -tilt }, () => {
+        b.box(w, 0.025, len, col, { z: len / 2 });
+        b.box(0.03, 0.03, len * 0.96, mixc(col, 0x203a1e, 0.45), { z: len / 2, y: 0.018 });
+      });
+    });
+  }
+  function tropical(b, x, z, s) {                                           /* große Blätter, Bananen-Art */
+    const n = 6 + Math.floor(rnd() * 3);
+    for (let i = 0; i < n; i++) leaf(b, x, z, (i / n) * 6.28 + rnd() * 0.5, (1.1 + rnd() * 0.6) * s, 0.42 * s, 0.7 + rnd() * 0.5, mixc(K.leaf, K.leaf2, rnd()), 0.08);
+    b.cyl(0.05 * s, 0.07 * s, 0.35 * s, 5, K.moss, { x, z });
+  }
+  function fernC(b, x, z, s) {
+    const n = 11;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 6.28 + rnd() * 0.3;
+      leaf(b, x, z, a, (0.7 + rnd() * 0.3) * s, 0.12 * s, 0.35 + rnd() * 0.5, mixc(K.fernC, K.moss, rnd() * 0.6), 0.04);
+    }
+  }
+  function shrub(b, x, z, r, col) { b.ico(r, col || mixc(K.leafD, K.moss, rnd()), { x, y: r * 0.25, z, jitter: 0.32, flat: 0.8, detail: 1, ry: rnd() * 6 }); }
+  function grass(b, x, z, s, col) {
+    for (let i = 0; i < 9; i++) { const a = rnd() * 6.28, d = rnd() * 0.12 * s; b.cone(0.025, (0.45 + rnd() * 0.35) * s, 4, col || mixc(K.olive, 0x8fa24a, rnd()), { x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, rz: (rnd() - 0.5) * 0.5, rx: (rnd() - 0.5) * 0.5 }); }
+  }
+  function accent(b, x, z, s) {                                             /* Blattschmuckpflanze mit Weinrot */
+    for (let i = 0; i < 7; i++) leaf(b, x, z, (i / 7) * 6.28, 0.5 * s, 0.2 * s, 0.9 + rnd() * 0.3, mixc(K.wine, 0x9a4a55, rnd()), 0.06);
+  }
+  function hanging(b, x, z, h) {                                            /* hängende Zweige an der Wand */
+    b.cyl(0.015, 0.01, h, 4, K.walD, { x, y: 2.6 - h, z });
+    for (let i = 0; i < 6; i++) b.ico(0.07 + rnd() * 0.04, mixc(K.leaf, K.moss, rnd()), { x: x + (rnd() - 0.5) * 0.14, y: 2.6 - h + rnd() * h, z: z + (rnd() - 0.5) * 0.1, jitter: 0.3, flat: 0.5 });
+  }
+  function plants(b) {
+    G3.seed(8104);
+    const ok = (x, z) => Math.hypot(x, z) > 4.1 && !(z > 3.2 && Math.abs(x + 1) < 1.9);
+    /* hinten, vor der Wand: Pflanzenband ohne Gleichmaß */
+    for (let x = -6.2, i = 0; x < 6.3; x += 0.75 + rnd() * 0.55, i++) {
+      const z = -4.4 - rnd() * 0.8, k = i % 6;
+      if (k === 0) tropical(b, x, z - 0.1, 1.0 + rnd() * 0.45);
+      else if (k === 1) shrub(b, x, z + 0.2, 0.55 + rnd() * 0.3);
+      else if (k === 2) fernC(b, x, z + 0.3, 1.1);
+      else if (k === 3) grass(b, x, z + 0.4, 1.3);
+      else if (k === 4) shrub(b, x, z, 0.7 + rnd() * 0.3, mixc(K.olive, K.leafD, rnd()));
+      else accent(b, x, z + 0.5, 1.0);
+    }
+    /* seitlich links / rechts */
+    [-1, 1].forEach(sd => {
+      for (let i = 0; i < 12; i++) {
+        const x = sd * (4.4 + rnd() * 2.2), z = -3.6 + i * 0.62 + (rnd() - 0.5) * 0.4;
+        if (!ok(x, z) || z > 3.4) continue;
+        const k = (i + (sd > 0 ? 2 : 0)) % 5;
+        if (k === 0) tropical(b, x, z, 0.9 + rnd() * 0.4);
+        else if (k === 1) shrub(b, x, z, 0.5 + rnd() * 0.3);
+        else if (k === 2) fernC(b, x, z, 1.0);
+        else if (k === 3) grass(b, x, z, 1.2);
+        else shrub(b, x, z, 0.4 + rnd() * 0.25, mixc(K.moss, K.olive, rnd()));
+      }
+    });
+    /* Bodendecker und Gräser vor dem Kiesrand */
+    for (let i = 0; i < 46; i++) {
+      const a = rnd() * 6.28, d = 5.55 + rnd() * 1.6, x = Math.cos(a) * d, z = Math.sin(a) * d * 0.95;
+      if (z > 3.0 && Math.abs(x + 1) < 1.9) continue;
+      if (i % 3 === 0) b.ico(0.22 + rnd() * 0.2, mixc(K.moss, K.leafD, rnd()), { x, y: 0.05, z, jitter: 0.3, flat: 0.4, ry: rnd() * 6 });
+      else grass(b, x, z, 0.9 + rnd() * 0.5);
+    }
+    /* hängende Zweige an der Wand */
+    [-4.8, -3.1, -0.9, 1.6, 3.7, 5.3].forEach((x, i) => hanging(b, x, -5.35, 0.7 + (i % 3) * 0.35));
+  }
+
+  /* Korbsessel links vorn und Steine / kleiner Tisch rechts vorn */
+  function furniture(b) {
+    G3.seed(8105);
+    b.at({ x: -4.1, z: 2.7, ry: Math.atan2(4.1, -2.7) + Math.PI }, () => {                     /* Sessel schaut zum Feuer */
+      b.box(0.9, 0.12, 0.85, K.wickerD, { y: 0.14 });
+      b.box(0.8, 0.14, 0.75, K.sand, { y: 0.26, top: 0xdacdb4 });
+      b.box(0.84, 0.62, 0.12, K.wicker, { y: 0.26, z: -0.4, rx: -0.14 });
+      [-1, 1].forEach(s => { b.box(0.1, 0.34, 0.8, K.wicker, { x: s * 0.46, y: 0.2 }); b.box(0.13, 0.05, 0.84, K.wickerD, { x: s * 0.46, y: 0.54 }); });
+      [[-0.38, -0.34], [0.38, -0.34], [-0.38, 0.34], [0.38, 0.34]].forEach(([x, z]) => b.cyl(0.04, 0.04, 0.16, 5, K.wickerD, { x, z }));
+      b.box(0.36, 0.34, 0.12, K.slate, { y: 0.4, z: -0.2, x: 0.1, rx: -0.4, rz: 0.15 });
+    });
+    [[4.5, 2.4, 0.38], [4.95, 3.1, 0.26], [4.1, 3.2, 0.2]].forEach(([x, z, r]) => b.ico(r, mixc(K.stone, K.rim, rnd() * 0.5), { x, y: r * 0.1, z, jitter: 0.25, flat: 0.7, ry: rnd() * 6 }));
+    b.cyl(0.3, 0.3, 0.42, 10, K.wal, { x: 3.7, z: 2.4, top: K.chest });                      /* Hocker / Beistelltisch */
+    b.cyl(0.15, 0.15, 0.06, 8, K.anth, { x: 3.7, y: 0.42, z: 2.4 });
+  }
+
+  /* Lampen: Pfosten + Schirm (starr) – Birnen und Lichtinseln sind eigene Knoten */
+  const LAMPS = [[-4.3, -2.6, 0.95], [4.3, -2.2, 0.85], [-1.9, -4.5, 0.75], [2.4, -4.5, 0.9], [-4.8, 1.8, 0.7], [4.7, 1.2, 0.8], [-3.3, 4.0, 0.6]];
+  function lampPosts(b) {
+    LAMPS.forEach(([x, z, h]) => {
+      b.cyl(0.035, 0.045, h, 6, 0x24262a, { x, z });
+      b.cone(0.16, 0.14, 8, 0x2b2d31, { x, y: h, z });
+      b.cyl(0.03, 0.03, 0.05, 6, 0x24262a, { x, y: h - 0.02, z });
+    });
+  }
+  function lampBulbs() { const b = new G3.MB(); LAMPS.forEach(([x, z, h]) => b.sphere(0.09, 7, 5, K.warm, { x, y: h - 0.06, z })); return b; }
+  function lampHalo() {
+    const b = new G3.MB(); let k = 0;
+    LAMPS.forEach(([x, z]) => [[1.6, 0.0], [1.15, 0.002], [0.7, 0.004], [0.34, 0.006]].forEach(([r, dy]) => b.disc(r, 16, 0xffbf66, { x, z, y0: 0.058 + dy + (k % 3) * 0.0002, wob: 0.06 })), k++);
+    return b;
+  }
+  function fireGlowMesh() {
+    const b = new G3.MB();
+    [[3.5, 0], [2.7, 0.002], [2.0, 0.004], [1.4, 0.006]].forEach(([r, dy]) => b.disc(r, 22, 0xff8a2a, { y0: 0.075 + dy, wob: 0.05 }));
+    return b;
+  }
+  function flame(r, h, col) { const b = new G3.MB(); b.cone(r, h, 7, col, { top: col }); return b; }
+
+  /* ------------------------------ Gesamtes Modell ----------------------------- */
+  function build() {
+    const b = new G3.MB();
+    gravel(b); pit(b);
+    sofa(b, 2.5, [205, 180, 155], { cush: [[0, K.slate, 0.2], [2, K.sand, -0.15]] });
+    sofa(b, 2.9, [116, 90, 64], { cush: [[0, K.sand, 0.1], [1, K.slate, -0.2], [2, K.slateD, 0.15]] });
+    sofa(b, 2.4, [24, 0, -24], { cush: [[1, K.slate, 0.1]] });
+    wall(b); plants(b); furniture(b); lampPosts(b);
+    return b;
+  }
+
+  /* --------------------------------- Szene --------------------------------- */
+  const ST = { root: null, fl: [], halo: null, fglow: null, bulbs: null, sp: 0, ph: 0 };
+  function attach(R) {
+    ST.fl = []; ST.root = fnode(fmesh("camp_v81", build), { x: CX, y: 0, z: CZ, ry: RY });
+    R.nodes.push(ST.root);
+    const add = (key, fn, o) => R.addChild(ST.root, fnode(fmesh(key, fn), Object.assign({ shadow: false }, o)));
+    ST.fglow = add("camp_fglow", fireGlowMesh, { alpha: 0.1, glow: 1 });
+    [[0.38, 0.95, 0xff6a1a, 0.9], [0.26, 0.78, 0xffa52e, 0.95], [0.14, 0.58, 0xffe58a, 1.0]].forEach(([r, h, c, a], i) =>
+      ST.fl.push(add("camp_fl" + i, () => flame(r, h, c), { y: 0.24, alpha: a, glow: 1 })));
+    ST.fl.push(add("camp_fl3", () => flame(0.2, 0.7, 0xff7a1a), { x: 0.22, y: 0.24, z: 0.1, alpha: 0.85, glow: 1 }));
+    ST.fl.push(add("camp_fl4", () => flame(0.18, 0.62, 0xff9a26), { x: -0.2, y: 0.24, z: -0.12, alpha: 0.85, glow: 1 }));
+    add("camp_embers", () => { const m = new G3.MB(); m.disc(0.55, 12, 0xff5a12, { y0: 0.215 }); m.disc(0.3, 10, 0xffb040, { y0: 0.218 }); return m; }, { glow: 1 });
+    ST.halo = add("camp_halo", lampHalo, { alpha: 0.05, glow: 1, visible: false });
+    ST.bulbs = add("camp_bulbs", lampBulbs, { glow: 1 });
+    return ST.root;
+  }
+  /* je Bild: Flammen züngeln, Funken, Lichtinseln nachts */
+  function step(dt, time) {
+    if (!ST.root || typeof FV === "undefined" || !FV.R) return;
+    const R = FV.R, c = R.cam, near2 = c && Math.hypot(c.tx - CX, c.tz - CZ) < 60;
+    if (!near2) return;
+    const t = time || 0;
+    ST.fl.forEach((n, i) => {
+      const f = 0.86 + 0.16 * Math.sin(t * (7 + i * 1.7) + i * 2.1) + 0.07 * Math.sin(t * 17.3 + i);
+      n.sy = f; n.sx = n.sz = 0.94 + 0.08 * Math.sin(t * (5.3 + i) + i); n.ry = Math.sin(t * 2.3 + i) * 0.5; n.rz = Math.sin(t * 3.1 + i * 1.3) * 0.05;
+    });
+    const fl = 1 + 0.09 * Math.sin(t * 9.1) + 0.05 * Math.sin(t * 23.7);
+    const night = R.env && R.env.night != null ? R.env.night : 0;
+    if (ST.fglow) ST.fglow.alpha = (0.05 + 0.15 * night) * fl;
+    if (ST.halo) { ST.halo.visible = night > 0.03; ST.halo.alpha = 0.1 * night; }
+    ST.sp += dt;
+    if (ST.sp > 0.16) {
+      ST.sp = 0;
+      R.burst({ x: CX + (Math.random() - 0.5) * 0.4, y: 0.7, z: CZ + (Math.random() - 0.5) * 0.4, n: 1, col: [[1, 0.72, 0.25, 1], [1, 0.5, 0.15, 1]], speed: 0.35, up: 1.7, size: 0.045, shape: 1, life: 1.3 });
+    }
+  }
+
+  return { CX, CZ, RY, slots, SIT_Y, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
+})();
