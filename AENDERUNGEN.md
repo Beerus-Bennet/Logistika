@@ -1,5 +1,16 @@
 # Änderungen – kurz für den Kollegen
 
+## v100 (aufbauend auf v99) – Etappen-Karten und Hinweise präziser formuliert
+
+Auf der Welt-Seite („Welt & Kontor“, `game.js` `stagesHTML`) hieß der gesperrte Knopf „noch Level 8 nötig“. Das las sich, als fehlten 8 Level. Jetzt:
+- **Knopf (nächste Etappe):** „Erst ab Level 8 – noch 4 Level“ (fehlende Level = Pflichtlevel − dein Level) · „Dir fehlen noch 82.607 €“ · „Freischalten für 120.000 €“ (statt „Kapital fehlt: …“ und „freischalten“).
+- **Kopfzeile jeder Etappe:** „🚦 ab Level 8“ und „💰 Kosten 120.000 €“ (vorher „Level 8“ und nur die Summe).
+- **Weitere Etappen** (ab der übernächsten, vorher ohne Hinweis): „Gesperrt – erst Etappe 3 freischalten (ab Level 13)“.
+- **Stand:** „Aktuelle Etappe – freigeschaltet“ (vorher „aktuell freigespielt“), frühere Etappen „Freigeschaltet“ (vorher „abgeschlossen“).
+- **Hinweise beim Antippen:** „Diese Etappe gibt es erst ab Level 8 – dir fehlen noch 4 Level (du bist Level 4).“ und „Die Freischaltung kostet 120.000 € – dir fehlen noch 82.607 €.“ (vorher „Dafür brauchst du Level 8.“ und „Investition von … nötig.“).
+- **Hof und Fischerei:** „Erst ab Level N.“ nennt jetzt auch, wie viele Level fehlen („… – dir fehlen noch k Level.“, `erbe.js`, sechs Stellen). „Zu wenig Geld – benötigt: X“ heißt jetzt „Dir fehlen noch Y“ mit dem echten Fehlbetrag (`fishview.js`, drei Stellen).
+- **Geprüft** im Browser: Karten für Stufe 2 mit Level 4 / Level 9 und zu wenig Geld. **Nicht geprüft:** jede einzelne Meldung im Spiel durchgeklickt. Weitere Texte mit „ab Level N“ blieben, sie sind eindeutig.
+
 ## v99 (aufbauend auf v98) – Bäume stehen nicht mehr im Zaun
 
 - **Fällbare Bäume** (`erbe.js`): Neu `fenceNear` (nächster Punkt auf dem größten Hofzaun, Stufe 10, und dem Sägewerkszaun) und `treeOffFence`. Jeder Baum hält Abstand 0,8 + Kronenradius zur Zaunlinie (vorher nur 1 Einheit Rand, die Krone und bei großen Bäumen der Stamm standen im Zaun).

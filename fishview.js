@@ -239,7 +239,7 @@ function stegFishHTML(U) {
 }
 function stegGearHTML(U) {
   const rods = [1, 2, 3].map(n => { const R = FRODS[n], have = U.rod >= n;
-    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "Zu wenig Geld – benötigt: " + eur(R.price) : "";
+    const why = have ? "✓ deine" : U.rod < n - 1 ? "erst " + FRODS[n - 1].n : flv() < R.lv ? "ab Level " + R.lv : S.money < R.price ? "Dir fehlen noch " + eur(R.price - S.money) : "";
     return `<div class="uf-row"><span class="ic">${fishRodIc(n)}</span><div><b>${esc(R.n)}</b><small>grüner Bogen ${R.gw}° · ${n === 1 ? "von Lehmann geschenkt" : "größere Fische"}${n === 3 ? " · nötig für Profi-Köder" : ""}</small></div>
       ${n === 1 ? "" : `<button class="btn tiny" data-rod="${n}" ${why ? "disabled" : ""}>${why || eur(R.price)}</button>`}</div>`; }).join("");
   return `<div class="fs-sub">Ruten</div><div class="uf-list">${rods}</div>
@@ -252,9 +252,9 @@ function stegPotHTML(U) {
       <button class="btn tiny ghost" data-pot="${o.id}">Zeigen</button></div>`; }).join("");
   const tiers = Object.keys(FPOTS).map(id => { const P = FPOTS[id];
     return `<div class="uf-row${U.potLvl >= P.tier ? "" : " lock"}">${itemIc(id)}<div><b>Stufe ${P.tier}: ${esc(P.n)}</b><small>${Object.keys(P.mix).map(x => Math.round(P.mix[x] * 100) + " % " + FITEMS[x].n).join(" · ")}</small></div></div>`; }).join("");
-  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "Zu wenig Geld – benötigt: " + eur(nx.cost) : "";
+  const upWhy = !nx ? "" : lv < nx.lv ? "ab Level " + nx.lv : S.money < nx.cost ? "Dir fehlen noch " + eur(nx.cost - S.money) : "";
   return `<div class="uf-list">${rows}</div>
-    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>${S.money < pc ? "Zu wenig Geld – benötigt: " + eur(pc) : "🪤 Weitere Reuse · " + eur(pc)}</button>` : ""}
+    ${pc != null && pots.length < FANGEL.potSpots.length ? `<button class="btn tiny" id="ufPotBuy" ${S.money < pc ? "disabled" : ""}>${S.money < pc ? "Dir fehlen noch " + eur(pc - S.money) : "🪤 Weitere Reuse · " + eur(pc)}</button>` : ""}
     <div class="fs-sub">Reusenstufen</div><div class="uf-list">${tiers}</div>
     ${nx ? `<button class="btn tiny" id="ufPotUp" ${upWhy ? "disabled" : ""}>${upWhy || "Reusen auf Stufe " + (U.potLvl + 1) + " · " + eur(nx.cost)}</button>` : ""}
     <div class="fs-sub">Tipp auf eine Reuse im Wasser: Reusenköder (oder eine Portion Mais) rein, später mit dem Haken hochziehen. Jedes Tier hat Größe, Gewicht und Sterne – bessere Reusen fangen größere Tiere.</div>`;

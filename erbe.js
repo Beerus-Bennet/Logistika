@@ -585,7 +585,7 @@ function farmToolOwned(id) { const T = FTOOLS[id], o = S.farm.tools; return T.ki
 function farmBuyTool(id) {
   const T = FTOOLS[id];
   if (!T || farmToolOwned(id)) return false;
-  if (flv() < T.lv) { toast("Erst ab Level " + T.lv + ".", "warn"); return false; }
+  if (flv() < T.lv) { toast("Erst ab Level " + T.lv + " – dir fehlen noch " + (T.lv - flv()) + " Level.", "warn"); return false; }
   if (T.req && !T.req()) { toast("Dafür brauchst du erst: " + T.reqT + ".", "warn"); return false; }
   if (S.money < T.price) { toast("Dafür fehlen " + eur(T.price - S.money) + ".", "warn"); return false; }
   S.money -= T.price; S.expense += T.price;
@@ -777,7 +777,7 @@ function farmBuySawMachine(it) {
   const t = it.id;
   if (!farmAreaOpen("saege") || !sawRepaired()) { toast("Erst das Sägewerk reparieren.", "warn"); return null; }
   if (S.farm.objs.some(o => o.t === t)) return null;
-  if (flv() < it.lv) { toast("Erst ab Level " + it.lv + ".", "warn"); return null; }
+  if (flv() < it.lv) { toast("Erst ab Level " + it.lv + " – dir fehlen noch " + (it.lv - flv()) + " Level.", "warn"); return null; }
   const price = it.price(), miss = farmMissing(it.need || {});
   if (miss.length) { toast("Es fehlt: " + miss.map(m => fqty(m.id, m.need)).join(", "), "warn"); return null; }
   if (S.money < price) { toast("Dafür fehlen " + eur(price - S.money) + ".", "warn"); return null; }
@@ -796,7 +796,7 @@ function farmBuySawMachine(it) {
 function farmSawUpgrade(id) {
   const U = FSAW_UPGRADES[id], F = S.farm;
   if (!U || (id === "saege2" && (farmObj1("sw_halle") || {}).lvl >= 2) || (id === "kessel2" && F.enLv >= 1)) return false;
-  if (flv() < U.lv) return toast("Erst ab Level " + U.lv + ".", "warn"), false;
+  if (flv() < U.lv) return toast("Erst ab Level " + U.lv + " – dir fehlen noch " + (U.lv - flv()) + " Level.", "warn"), false;
   const miss = farmMissing(U.need);
   if (miss.length) return toast("Es fehlt: " + miss.map(m => fqty(m.id, m.need)).join(", "), "warn"), false;
   if (S.money < U.cost) return toast("Dafür fehlen " + eur(U.cost - S.money) + ".", "warn"), false;
@@ -861,7 +861,7 @@ function farmBuyBoat() {
   const B = FBOATS[2], F = S.farm;
   if ((F.boat || 0) >= 2) return false;
   if (!farmObj1("f_boot")) return toast("Erst das Bootshaus bauen.", "warn"), false;
-  if (flv() < B.lv) return toast("Erst ab Level " + B.lv + ".", "warn"), false;
+  if (flv() < B.lv) return toast("Erst ab Level " + B.lv + " – dir fehlen noch " + (B.lv - flv()) + " Level.", "warn"), false;
   const miss = farmMissing(B.need);
   if (miss.length) return toast("Es fehlt: " + miss.map(m => fqty(m.id, m.need)).join(", "), "warn"), false;
   if (S.money < B.price) return toast("Dafür fehlen " + eur(B.price - S.money) + ".", "warn"), false;
@@ -1007,7 +1007,7 @@ function angelPotBuy() {
 function angelPotUp() {
   const U = angelS(), N0 = U && FPOT_UP[U.potLvl + 1];
   if (!N0) return false;
-  if (flv() < N0.lv) return toast("Erst ab Level " + N0.lv + ".", "warn"), false;
+  if (flv() < N0.lv) return toast("Erst ab Level " + N0.lv + " – dir fehlen noch " + (N0.lv - flv()) + " Level.", "warn"), false;
   if (S.money < N0.cost) return toast("Dafür fehlen " + eur(N0.cost - S.money) + ".", "warn"), false;
   S.money -= N0.cost; S.expense += N0.cost;
   logMoney("farm", "Reusen Stufe " + (U.potLvl + 1), -N0.cost);
@@ -1020,7 +1020,7 @@ function farmBuyRod(n) {
   const U = angelS(), R = FRODS[n];
   if (!U || !R || U.rod >= n) return false;
   if (U.rod < n - 1) return toast("Erst die " + FRODS[n - 1].n + ".", "warn"), false;
-  if (flv() < R.lv) return toast("Erst ab Level " + R.lv + ".", "warn"), false;
+  if (flv() < R.lv) return toast("Erst ab Level " + R.lv + " – dir fehlen noch " + (R.lv - flv()) + " Level.", "warn"), false;
   if (S.money < R.price) return toast("Dafür fehlen " + eur(R.price - S.money) + ".", "warn"), false;
   S.money -= R.price; S.expense += R.price;
   logMoney("farm", R.n + " gekauft", -R.price);

@@ -1731,8 +1731,8 @@ function unlockStage() {
   if (typeof logiOn === "function" && !logiOn()) return toast(FT().notYet, "warn");
   const next = STAGES[S.stage];
   if (!next) return toast("Die ganze Welt gehört dir bereits.", "ok");
-  if (level() < next.reqLevel) return toast("Dafür brauchst du Level " + next.reqLevel + ".", "warn");
-  if (S.money < next.cost) return toast("Investition von " + money(next.cost) + " nötig.", "warn");
+  if (level() < next.reqLevel) return toast("Diese Etappe gibt es erst ab Level " + next.reqLevel + " – dir fehlen noch " + (next.reqLevel - level()) + " Level (du bist Level " + level() + ").", "warn");
+  if (S.money < next.cost) return toast("Die Freischaltung kostet " + money(next.cost) + " – dir fehlen noch " + money(next.cost - S.money) + ".", "warn");
   S.money -= next.cost; S.expense += next.cost; S.stage++;
   logMoney("stage", "Etappe " + next.name + " freigeschaltet", -next.cost);
   clearRouteCache(); buildNetBuffers();
@@ -3365,19 +3365,20 @@ function stagesHTML() {
   return STAGES.map(st => {
     const state = st.n < S.stage ? "done" : st.n === S.stage ? "cur" : "lock";
     const next = st.n === S.stage + 1;
-    const okLvl = level() >= st.reqLevel, okMoney = S.money >= st.cost;
+    const okLvl = level() >= st.reqLevel, okMoney = S.money >= st.cost, gap = st.reqLevel - level();
     return `<div class="card stage ${state}">
       <div class="card-top"><span class="stnum">${st.n}</span>
         <div class="vname">${esc(st.name)}<small>${esc(st.info)}</small></div></div>
       <div class="meta small">
-        <span>🚦 Level ${st.reqLevel}</span>
-        <span>💰 ${st.cost ? money(st.cost) : "kostenlos"}</span>
+        <span>🚦 ab Level ${st.reqLevel}</span>
+        <span>💰 ${st.cost ? "Kosten " + money(st.cost) : "kostenlos"}</span>
         <span>🧭 ${st.modes.split("").map(m => MODE_INFO[m].icon).join(" ")}</span>
       </div>
       ${next ? `<button class="btn tiny${okLvl && okMoney ? "" : " disabled"}" id="unlockBtn">
-        ${okLvl ? (okMoney ? "freischalten" : "Kapital fehlt: " + money(st.cost - S.money)) : "noch Level " + st.reqLevel + " nötig"}</button>` : ""}
-      ${state === "cur" ? `<div class="lockrow ok">aktuell freigespielt</div>` : ""}
-      ${state === "done" ? `<div class="lockrow ok">abgeschlossen</div>` : ""}
+        ${okLvl ? (okMoney ? "Freischalten für " + money(st.cost) : "Dir fehlen noch " + money(st.cost - S.money)) : "Erst ab Level " + st.reqLevel + " – noch " + gap + " Level"}</button>` : ""}
+      ${state === "cur" ? `<div class="lockrow ok">Aktuelle Etappe – freigeschaltet</div>` : ""}
+      ${state === "done" ? `<div class="lockrow ok">Freigeschaltet</div>` : ""}
+      ${state === "lock" && !next ? `<div class="lockrow">Gesperrt – erst Etappe ${st.n - 1} freischalten (ab Level ${st.reqLevel})</div>` : ""}
     </div>`;
   }).join("");
 }
