@@ -667,6 +667,8 @@ function farmEnv() {
   const css = c => "rgb(" + c.map(v => Math.round(Math.min(1, v) * 255)).join(",") + ")";
   const key = css(top) + css(bot);
   if (key !== FV.skyKey) { FV.skyKey = key; $("#farm").style.background = "linear-gradient(180deg," + css(top) + "," + css(bot) + ")"; }
+  /* v101: Ich-Perspektive – Nebel und Licht passen zur Aussicht hinter der Welt (vista.js) */
+  if (FV.fp && typeof VISTA !== "undefined") VISTA.env(E, h);
 }
 
 /* Rauch über arbeitenden Gebäuden: Lage des Schornsteins, Farbe, Größe */
@@ -755,6 +757,7 @@ function farmLoop(now) {
   farmEnv();
   R.stepParticles(dt);
   R.render(time);
+  if (typeof VISTA !== "undefined") VISTA.draw(R, time);       /* v101: Aussicht hinter der Welt, nur in der Ich-Perspektive */
   updateFarmTags();
   positionFarmPop();
   farmTutPoint();

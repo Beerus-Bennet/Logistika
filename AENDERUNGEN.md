@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v101 (aufbauend auf v100) – Aussicht in der Ich-Perspektive (Sonnenuntergang)
+
+Wer in der Ich-Perspektive (Säge/Axt) an den Kartenrand blickte, sah ins Leere. Jetzt gibt es dort eine Aussicht, die **nur** in der Ich-Perspektive erscheint:
+- **Neue Datei `vista.js`** (`VISTA`): zeichnet hinter das 3D-Bild (`#fpVista`, Canvas halber Auflösung) Himmel, Sterne/Mond, Sonne mit Hof, Wolken (abends lange rote Bänder), ferne Berge, einen See mit Sonnenspiegelung, Hügel und Wiese. Ein heller Schein (`#fpGlow`) liegt darüber.
+- **Tageszeit:** Farbverlauf nach Uhrzeit (Nacht, Morgenrot, Tag, goldene Stunde, **rotes Abendrot um 19:30–20:30**, Dämmerung, Nacht mit Sternen). Regen/Nebel/Sturm graut den Himmel ein.
+- **Nebel passend:** `VISTA.env` färbt den 3D-Nebel in der Ich-Perspektive zum Horizontdunst, damit die Landschaft weich in die Aussicht übergeht.
+- **Sonne** steht beim ersten Hinsehen leicht rechts vor dir; im Bergrücken ist an ihrer Stelle eine Senke.
+- **Einbindung:** `farmview.js` (`VISTA.draw` nach `R.render`, `VISTA.env` am Ende von `farmEnv`), `index.html`, `sw.js`.
+- **Geprüft** im Software-Browser: Himmel, Berge, See, Sonne und Sterne zu mehreren Uhrzeiten (3D ausgeblendet), Abendrot in der echten Szene; alle Tests grün (axe 4, trees 7, forest 15, bushes 30, camp 9). **Nicht geprüft:** auf einem echten Handy, Leistung dort; Baumkronen können die Aussicht verdecken.
+
 ## v100 (aufbauend auf v99) – Etappen-Karten und Hinweise präziser formuliert
 
 Auf der Welt-Seite („Welt & Kontor“, `game.js` `stagesHTML`) hieß der gesperrte Knopf „noch Level 8 nötig“. Das las sich, als fehlten 8 Level. Jetzt:

@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v101 – Aussicht in der Ich-Perspektive (auf v100)
+
+| Teil | Datei |
+|---|---|
+| Neue Datei: Himmel, Sonne, Berge, See, Wolken nach Uhrzeit (`VISTA.draw`, `VISTA.env`) | `vista.js` |
+| Aufruf nach `R.render` und am Ende von `farmEnv` | `farmview.js` |
+| Skript einbinden, Version 101 | `index.html`, `sw.js` |
+
 ## Stand v95 – Lagerfeuer: Sitzende mit Beinen, Gespräch, Wege ums Feuer (auf v94)
 
 | Teil | Datei |
