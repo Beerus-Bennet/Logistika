@@ -1,5 +1,16 @@
 # Änderungen – kurz für den Kollegen
 
+## v80 (aufbauend auf v79) – Erbe-Level und Spedition-Level auseinanderhalten
+
+Nach der Gründung hat das Erbe (Hof, Wald, Sägewerk, See) sein eigenes Level und die Spedition ein eigenes (je eigene
+EP) – das war in der Kopfleiste nicht zu unterscheiden („warum nur Level 3?“). Jetzt (`game.js` `renderHud`, `style.css`):
+- **Hof-Reiter = Erbe:** grüne Kopfleiste, Level-Chip „🏡 Lv 12“ in Gold, goldener EP-Balken mit „🌾 40 / 1.150 EP“,
+  rechts „Erbhof · Werder“. **Karte, Aufträge, Flotte … = Spedition:** blaue Kopfleiste, „🚚 Lv 3“ in Türkis,
+  türkiser Balken mit „⭐ 2 / 250 EP“, „Etappe 1 · Berlin“. Antippen/Halten am Chip zeigt einen Hinweis (title).
+- **Farbanimation beim Wechsel:** die grüne Schicht blendet weich ein/aus (0,6 s), der Level-Chip klappt um, über den
+  EP-Balken läuft ein Glanzstreifen (nur ohne „weniger Bewegung“-Einstellung). Vor der Gründung (nur Erbe) bleibt alles
+  wie bisher.
+
 ## v79 (aufbauend auf v78) – Autos im Auktionshaus als KI-Zeichnungen (Comic-Vektor-Stil)
 
 - **Zeichnungen gehen den Fotos vor** (`auction.js`, `loadLocalPics`): `cars/art.json` nennt je Auto eine Datei in

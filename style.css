@@ -3018,3 +3018,20 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
 @keyframes lootbanner{0%{opacity:0;transform:translateX(-50%) scale(.3)}12%{opacity:1;transform:translateX(-50%) scale(1.18)}20%{transform:translateX(-50%) scale(1)}84%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-16px) scale(1)}}
 @keyframes lootchip{from{opacity:0;transform:translateY(8px) scale(.8)}to{opacity:1;transform:none}}
 @keyframes lootpulse{to{transform:scale(1.07)}}
+
+/* v80: zwei Level, zwei Farben – Erbe (Hof-Reiter: grün/golden) und Spedition (blau/türkis).
+   Die grüne Kopfleiste liegt als Schicht über der blauen und blendet weich ein/aus. */
+#hud::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .6s ease;
+  background:linear-gradient(170deg,#2f8f45 0%,#47a850 55%,#7fc65f 100%)}
+#hud[data-mode="erbe"]::before{opacity:1}
+.chip.lvl{transition:background-color .5s ease,color .5s ease}
+#hud[data-mode="erbe"] .chip.lvl{background:#f6c445;color:#4a2f00}
+#hud[data-mode="erbe"] .xp{background:#f3ead0}
+#hud[data-mode="erbe"] .xp i{background:repeating-linear-gradient(45deg,#f2a33c,#f2a33c 6px,#ffd873 6px,#ffd873 12px)}
+@media (prefers-reduced-motion:no-preference){
+  #hud.swap .chip.lvl{animation:lvflip .7s ease}
+  @keyframes lvflip{0%{transform:perspective(220px) rotateX(0)}50%{transform:perspective(220px) rotateX(90deg) scale(1.15)}100%{transform:perspective(220px) rotateX(0)}}
+  #hud.swap .xp::after{content:"";position:absolute;inset:0;pointer-events:none;transform:translateX(-100%);animation:xpshine .85s ease .1s;
+    background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.85) 50%,transparent 70%)}
+  @keyframes xpshine{to{transform:translateX(100%)}}
+}

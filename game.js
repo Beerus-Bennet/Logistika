@@ -2677,13 +2677,28 @@ function renderHud() {
   m.textContent = money(S.money);
   m.classList.toggle("bad", S.money < 0);
   const HX = hudXP();
-  $("#hudLevel").textContent = (HX.farm && S.farm.logi ? "🏡 " : "") + "Lv " + HX.lv;
-  $("#hudStage").textContent = typeof farmPhase === "function" && farmPhase() ? FT().hud : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
+  /* v80: Gibt es Erbe UND Spedition, hat jedes sein eigenes Level (eigene EP). Damit man sie nicht verwechselt:
+     Erbe (Hof-Reiter) = grüne Kopfleiste, 🏡, goldener EP-Balken · Spedition = blaue Kopfleiste, 🚚, türkiser Balken.
+     Beim Wechsel läuft eine kurze Farbanimation. */
+  const both = !!(S.farm && S.farm.logi), mode = both ? (HX.farm ? "erbe" : "sped") : "";
+  const hudEl = $("#hud");
+  if (hudEl && hudEl.dataset.mode !== mode) {
+    const first = hudEl.dataset.mode === undefined;
+    hudEl.dataset.mode = mode;
+    if (!first && mode) {
+      hudEl.classList.remove("swap"); void hudEl.offsetWidth; hudEl.classList.add("swap");
+      clearTimeout(renderHud.swapT); renderHud.swapT = setTimeout(() => hudEl.classList.remove("swap"), 1000);
+    }
+  }
+  const lvEl = $("#hudLevel");
+  lvEl.textContent = (both ? (HX.farm ? "🏡 " : "🚚 ") : "") + "Lv " + HX.lv;
+  lvEl.title = both ? (HX.farm ? "Erbe-Level (Hof, Wald, Sägewerk, See) – eigene EP" : "Spedition-Level – eigene EP") : "";
+  $("#hudStage").textContent = typeof farmPhase === "function" && (farmPhase() || mode === "erbe") ? FT().hud : "Etappe " + S.stage + " · " + STAGES[S.stage - 1].name;
   $("#hudTime").textContent = stamp(S.time);
   const l = HX.lv, a = xpForLevel(l), b = xpForLevel(l + 1);
   $("#xpFill").style.width = clamp(((HX.xp - a) / (b - a)) * 100, 0, 100) + "%";
   const xt = $("#xpTxt");
-  if (xt) { const t = "⭐ " + fmt(Math.max(0, Math.round(HX.xp - a)), 0) + " / " + fmt(b - a, 0) + " EP"; if (xt.textContent !== t) xt.textContent = t; }
+  if (xt) { const t = (mode === "erbe" ? "🌾 " : "⭐ ") + fmt(Math.max(0, Math.round(HX.xp - a)), 0) + " / " + fmt(b - a, 0) + " EP"; if (xt.textContent !== t) xt.textContent = t; }
   const badge = (id, n) => {
     const el = $(id); if (!el) return;
     el.textContent = n > 99 ? "99+" : n;
