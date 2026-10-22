@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v98 (aufbauend auf v97) – Schatztruhe aus der Grube: wie die Lieferkiste
+
+Gilt für die Schatzsuche (Truhe nach dem Graben, `worldview.js`: `worldTreasureReveal`, `stepTreasureReveal`, `stepTreasure`).
+- **Zum Spieler gedreht:** Die Truhe schaut zur Kamera (`parcelFace()`, wie bei der Lieferkiste), beim Aufsteigen, Drehen und Stehen. Die offene Truhe in der Grube, die danach bleibt, dreht sich ebenfalls sanft zur Kamera mit.
+- **Öffnen:** unverändert (aus der Erde brechen, schweben, drei Umdrehungen, Deckel springt auf, Fontäne, Banner).
+- **Danach offen stehen, ohne Leuchten:** Statt nach 2,3 s zu verschwinden, setzt die Truhe mit Staubwolke auf und bleibt rund 4,5 s offen stehen. Licht, Glühen und Ringe sind dann aus. Danach löst sie sich in Funken auf, und die offene Truhe in der Grube bleibt wie bisher.
+- **Unverändert:** Die Lichtsäule und die Ringe über dem roten Kreuz **vor** dem Graben bleiben, damit man die Stelle findet.
+- **Im Browser geprüft** (Software-Grafik, Zeitraffer): Aufsteigen, Drehen, offen stehend, Auflösen, Grubentruhe zur Kamera. **Nicht getestet:** auf dem echten Telefon.
+
 ## v97 (aufbauend auf v96) – Lieferkiste: Öffnen wie bei der Schatztruhe, danach offen ohne Leuchten, zum Spieler gedreht
 
 Gilt für die „Besondere Lieferung“ (Kiste vorm Hoftor, `worldview.js`).
