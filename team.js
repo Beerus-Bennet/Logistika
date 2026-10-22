@@ -178,7 +178,10 @@ function navKey() {
   let h = farmHl() * 7 + Object.keys(F.areas || {}).length;   /* v70: Hofgröße aus der Ausbaustufe 1 … 10 */
   F.objs.forEach(o => { h = (h * 31 + o.x * 7 + o.z * 13 + (o.r ? 5 : 0) + o.t.length) % 1e9; });
   (F.trees || []).forEach(t => { if (t.st === "up" || t.st === "sapling") h = (h * 17 + t.id) % 1e9; });
-  return F.objs.length + ":" + h;
+  /* v109: Kulissenbäume, Büsche und der Hochsitz zählen mit – sie entstehen erst mit der Welt */
+  const w = typeof WV !== "undefined" ? (WV.bgChunks ? WV.bgChunks.size : 0) + "/" + (WV.bushes ? WV.bushes.length : 0) + "/" + (WV.forest && WV.forest.items ? WV.forest.items.length : 0) : "";
+  const hu = typeof HUNT !== "undefined" ? (HUNT.built() ? 2 : HUNT.unlocked() ? 1 : 0) : 0;
+  return F.objs.length + ":" + h + ":" + w + ":" + hu;
 }
 function navIdx(x, z) { return (z - NAV.z0) * NAV.W + (x - NAV.x0); }
 function navIn(x, z) { return x >= NAV.x0 && z >= NAV.z0 && x < NAV.x1 && z < NAV.z1; }
@@ -189,13 +192,18 @@ function navBuild() {
   const W = NAV.W = NAV.x1 - NAV.x0, H = NAV.H = NAV.z1 - NAV.z0;
   const blk = NAV.blk = new Uint8Array(W * H), cost = NAV.cost = new Float32Array(W * H).fill(1);
   const P = FWORLD.pond, creeks = [FWORLD.creek].concat(typeof LAKE_CREEK !== "undefined" ? [LAKE_CREEK] : []);
-  const bridges = [FWORLD.bridge, [52.6, 60.3]];
+  /* v109: über einen Bach nur über die Planken der Brücke (Länge ±3,3, Breite ±0,85 um die Mitte) */
+  const decks = [{ x: FWORLD.bridge[0], z: FWORLD.bridge[1], ry: Math.PI / 2 }, { x: 52.6, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }];
+  const onDeck = (cx, cz) => decks.some(b => { const dx = cx - b.x, dz = cz - b.z, al = dx * Math.cos(b.ry) - dz * Math.sin(b.ry), ac = dx * Math.sin(b.ry) + dz * Math.cos(b.ry); return Math.abs(al) <= 3.3 && Math.abs(ac) <= 0.85; });
+  const fK = typeof forestK === "function" ? forestK : () => 0;
   /* v75: Wege am See: Stich vom Südtor, Uferweg (Straße bei x = −31 bis Ostuferweg), Ostuferweg (Straße bei x = 40 bis zur Bank) */
   const lakePaths = typeof LAKE_WAY !== "undefined" ? [LAKE_STEM, LAKE_WAY, LAKE_EAST] : [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
-    if (creeks.some(c => distLine(cx, cz, c) < 1.3) && !bridges.some(b => Math.hypot(cx - b[0], cz - b[1]) < 2.4)) { blk[i] = 1; continue; }
+    if (creeks.some(c => distLine(cx, cz, c) < 1.5)) { if (onDeck(cx, cz)) { cost[i] = 0.45; continue; } blk[i] = 1; continue; }
+    /* v109: Wege lohnen sich – quer durch den Wald ist teuer, über die Wiese etwas teurer, im Hof fast gleich */
+    cost[i] = inHofMax(cx, cz, 0) ? 1.1 : fK(cx, cz) > 0.35 ? 2.6 : 1.4;
     /* Nachbars Felder: da läuft keiner durch */
     if (inFieldN(cx, cz)) { blk[i] = 1; continue; }
     if (Math.abs(cz - 18.5) < 1.6 && cx > -60 && cx < 60) cost[i] = 0.6;                                   /* Straße */
@@ -215,6 +223,14 @@ function navBuild() {
   });
   /* Bäume (auch Setzlinge) */
   (S.farm.trees || []).forEach(t => { if ((t.st === "up" || t.st === "sapling") && navIn(Math.floor(t.x), Math.floor(t.z))) blk[navIdx(Math.floor(t.x), Math.floor(t.z))] = 1; });
+  /* v109: auch nicht durch Kulissenbäume, Büsche, Baumstümpfe, Totholz und den Hochsitz – aber nie auf einem Weg sperren */
+  const stop = (x, z) => { const fx = Math.floor(x), fz = Math.floor(z); if (navIn(fx, fz)) { const k = navIdx(fx, fz); if (NAV.cost[k] > 0.5) blk[k] = 1; } };
+  if (typeof WV !== "undefined") {
+    if (WV.bgChunks) for (const c of WV.bgChunks.values()) c.trees.forEach(t => stop(t.fx != null ? t.fx : t.x, t.fzz != null ? t.fzz : t.z));
+    (WV.bushes || []).forEach(b => { const p = b.position; if (!p || (b.r || 0) < 0.3) return; stop(p[0], p[2]); if (b.r > 0.75) { stop(p[0] + 0.6, p[2]); stop(p[0] - 0.6, p[2]); stop(p[0], p[2] + 0.6); stop(p[0], p[2] - 0.6); } });
+    if (WV.forest && WV.forest.items) WV.forest.items.forEach(o => { if (o.k === "mosslog" || o.k === "stump" || o.k === "roots") stop(o.x, o.z); });
+  }
+  if (typeof HUNT !== "undefined" && (HUNT.built() || HUNT.unlocked())) for (let dz = -1.2; dz <= 1.2; dz += 0.6) for (let dx = -1.2; dx <= 1.2; dx += 0.6) stop(HUNT.TW.x + dx, HUNT.TW.z + dz);
   /* v95: Lagerplatz (Feuer, Sofas, Wände) ist für die Wegsuche gesperrt – hinein führt nur CAMP.routeIn über das Tor */
   if (typeof CAMP !== "undefined" && CAMP.blockedW) for (let z = Math.floor(CAMP.CZ) - 14; z < CAMP.CZ + 14; z++) for (let x = Math.floor(CAMP.CX) - 14; x < CAMP.CX + 14; x++) if (navIn(x, z) && CAMP.blockedW(x + 0.5, z + 0.5)) blk[navIdx(x, z)] = 1;
   return NAV;
@@ -245,10 +261,10 @@ function navPath(sx, sz, tx, tz, role) {
   const g = new Float32Array(N).fill(1e9), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
   const heap = [], push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
   const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
-  const h = (x, z) => { const dx = Math.abs(x - bx), dz = Math.abs(z - bz); return (Math.max(dx, dz) + 0.414 * Math.min(dx, dz)) * 0.45; };
+  const h = (x, z) => { const dx = Math.abs(x - bx), dz = Math.abs(z - bz); return (Math.max(dx, dz) + 0.414 * Math.min(dx, dz)) * 0.4; };
   g[si] = 0; push(h(ax, az), si);
   let it = 0;
-  while (heap.length && it++ < 60000) {
+  while (heap.length && it++ < 300000) {
     const [, i] = pop();
     if (done[i]) continue;
     done[i] = 1;

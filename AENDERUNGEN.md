@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v109 (aufbauend auf v108) – Mitarbeiter laufen auf Wegen, nicht durch alles hindurch
+
+Wegsuche der Mitarbeiter (`team.js` `navBuild`, A* auf dem 1×1-Raster):
+- **Wege lohnen sich:** quer durch den Wald kostet 2,6, über die Wiese 1,4, im Hof 1,1, Wege und Straße 0,45/0,6 (vorher alles außer Wegen 1). So nehmen die Leute den Weg, solange der Umweg nicht riesig ist. Gemessen: Hof → Wald hinter der Brücke 97 % auf Wegen, Hof → Sägewerk 85 %, Hof → Hochsitz 72 %.
+- **Brücken:** über einen Bach geht es nur noch über die Planken (±3,3 längs, ±0,85 quer, Hauptbrücke und Seebach-Brücke). Vorher war ein Kreis von 2,4 um die Brückenmitte frei, deshalb liefen Leute neben dem Geländer durchs Wasser.
+- **Hindernisse:** Kulissenbäume (Stamm), größere Büsche, Baumstümpfe, Totholz, Wurzeln und der Hochsitz/Bauplatz sperren ihr Feld. Wegfelder werden nie gesperrt.
+- Der Raster-Schlüssel (`navKey`) enthält jetzt auch Kulissenbäume, Büsche und Hochsitz, die Suche darf länger rechnen (300 000 Schritte, Schätzung mit 0,4).
+- **Geprüft** im Software-Browser: Wege zwischen Hof, Wald, Sägewerk, Schuppen, Fischerei und Hochsitz (Anteil auf Wegen, kein gesperrtes Feld, Bach nur auf der Brücke), Route über die Brücke im Bild, 4 Stunden Arbeit simuliert ohne Fehler; alle Tests grün. **Nicht geprüft:** echtes Handy (Rechenzeit der Wegsuche dort), jeder einzelne Arbeitsort.
+
 ## v108 (aufbauend auf v107) – Jagd: Bau des Hochsitzes, weites Revier (180 m), strengere Jagd, Hirsch mit Gelenken, Kino-Einsammeln
 
 Alles in `hunt.js`, dazu eine kleine Engine-Erweiterung in `gl3d.js`. Weiterhin kein Three.js: gezeichnet wird mit `gl3d.js` (WebGL im HTML5-Canvas), die Jagd-Oberfläche ist DOM/CSS/SVG.

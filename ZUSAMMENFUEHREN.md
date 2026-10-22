@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v109 – Wegsuche: Wege bevorzugt, Brücken nur über die Planken, Bäume und Büsche als Hindernis (auf v108)
+
+| Teil | Datei |
+|---|---|
+| Kosten je Gelände, Brückenplanken, Kulissenbäume/Büsche/Totholz/Hochsitz gesperrt, `navKey` erweitert | `team.js` |
+| Version 109 | `index.html`, `sw.js` |
+
 ## Stand v108 – Jagd: Bau, weites Revier, strengere Jagd, Hirsch-Animation, Kino-Einsammeln (auf v107)
 
 | Teil | Datei |
