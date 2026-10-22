@@ -732,7 +732,8 @@ const G3 = (() => {
       const cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
       R.eye = [c.tx + Math.cos(c.yaw) * cp * c.dist, c.ty + sp * c.dist, c.tz + Math.sin(c.yaw) * cp * c.dist];
       lookAt(R.V, R.eye, [c.tx, c.ty, c.tz], [0, 1, 0]);
-      persp(R.P, c.fov, R.w / R.h, Math.max(0.5, c.dist * 0.2), c.dist * 4 + 60);
+      /* v108: Ich-Perspektive darf nahe/ferne Ebene selbst setzen (c.near, c.far) – sonst wie bisher aus dem Abstand */
+      persp(R.P, c.fov, R.w / R.h, c.near || Math.max(0.5, c.dist * 0.2), c.far || c.dist * 4 + 60);
       mul(R.VP, R.P, R.V);
       invert(R.IVP, R.VP);
       /* Sonnenkamera: feste Ausrichtung, der Ausschnitt folgt der Kamera und

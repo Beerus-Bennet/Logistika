@@ -11,40 +11,51 @@ ctx.window = ctx; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, "hunt.js"), "utf8") + "\n;this.HUNT = HUNT;", ctx, { filename: "hunt.js" });
 const H = ctx.HUNT;
 const shoot = (pose, y, z, k) => H.zoneHit(k || "hirsch", pose, [6, y, z], [-1, 0, 0]);       /* von der Seite (+x), Tier schaut nach +z */
-const P0 = { x: 0, y: 0, z: 0, ry: 0, s: 1, hrx: -0.3, hry: 0, legs: [0, 0, 0, 0] };
+const P0 = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: -0.35, nry: 0, hrx: 0.2, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
 
 test("Hirsch breitseits: Lunge, Herz, Weichschuss, Lauf, Kopf, vorbei", () => {
-  assert.strictEqual(shoot(P0, 0.98, 0.2).zone, "lunge");
-  assert.strictEqual(shoot(P0, 0.86, 0.3).zone, "herz");
-  assert.strictEqual(shoot(P0, 0.96, -0.32).zone, "koerper");
+  assert.strictEqual(shoot(P0, 1.0, 0.18).zone, "lunge");
+  assert.strictEqual(shoot(P0, 0.88, 0.28).zone, "herz");
+  assert.strictEqual(shoot(P0, 0.98, -0.32).zone, "koerper");
   assert.strictEqual(shoot(P0, 0.3, 0.34).zone, "lauf");
-  const hc = H.rot([0, 0.46, 0.4], -0.3, 0, 0), head = [0, 1.0 + hc[1], 0.42 + hc[2]];
+  const S0 = H.SP.hirsch, hp = H.rot([0, 0, 0.18], P0.hrx, 0, 0), np = H.rot([S0.headP[0] + hp[0], S0.headP[1] + hp[1], S0.headP[2] + hp[2]], P0.nrx, 0, 0);
+  const head = [0, S0.neckP[1] + np[1], S0.neckP[2] + np[2]];
   assert.strictEqual(shoot(P0, head[1], head[2]).zone, "kopf");
-  assert.strictEqual(shoot(P0, 2.2, 0), null);
-  assert.strictEqual(shoot(P0, 0.96, 1.4), null);
+  assert.strictEqual(shoot(P0, 2.4, 0), null);
+  assert.strictEqual(shoot(P0, 0.98, 1.6), null);
+});
+test("Lauf mit gebeugtem Knie: Treffer am Unterlauf zählt als Laufschuss", () => {
+  const pose = Object.assign({}, P0, { legs: [[-0.4, 0.9], [0, 0], [0, 0], [0, 0]] });
+  const L = H.SP.hirsch.legs[0], up = H.rot([0, -L.lu, 0], -0.4, 0, 0), lo = H.rot([0, -L.ll * 0.5, 0], 0.9, 0, 0), knee = [L.h[0] + up[0], L.h[1] + up[1], L.h[2] + up[2]];
+  const p = H.rot([0, -L.lu + lo[1], lo[2]], -0.4, 0, 0), foot = [L.h[0] + p[0], L.h[1] + p[1], L.h[2] + p[2]];
+  const r = H.zoneHit("hirsch", pose, [6, foot[1], foot[2]], [-1, 0, 0]);
+  assert.ok(r && r.zone === "lauf", JSON.stringify(r) + " " + knee.map(v => v.toFixed(2)));
 });
 test("verschoben, gedreht, größer: Strahl durch die Lunge bleibt kritisch, hinten bleibt Weichschuss", () => {
-  const pose = { x: 10, y: 0, z: -5, ry: 1.2, s: 1.1, hrx: -0.3, hry: 0, legs: [0.3, -0.3, -0.3, 0.3] };
+  const pose = { x: 10, y: 0, z: -5, ry: 1.2, s: 1.1, nrx: -0.35, nry: 0, hrx: 0.2, legs: [[0.3, 0.2], [-0.3, 0], [-0.3, 0], [0.3, 0.2]] };
   const W = l => { const p = H.rot(l.map(v => v * pose.s), 0, pose.ry, 0); return [pose.x + p[0], p[1], pose.z + p[2]]; };
   const side = H.rot([1, 0, 0], 0, pose.ry, 0);                         /* Flanke des Tiers */
   const ray = c => { const o = [c[0] + side[0] * 6, c[1], c[2] + side[2] * 6]; return H.zoneHit("hirsch", pose, o, [-side[0], 0, -side[2]]); };
-  assert.ok(["lunge", "herz"].includes(ray(W([0, 0.94, 0.26])).zone));
-  assert.strictEqual(ray(W([0, 0.96, -0.34])).zone, "koerper");
-  assert.ok(ray(W([0, 0.96, -0.34])).t > 4 && ray(W([0, 0.96, -0.34])).t < 6.1, "Abstand stimmt");
+  assert.ok(["lunge", "herz"].includes(ray(W([0, 0.96, 0.24])).zone));
+  assert.strictEqual(ray(W([0, 0.98, -0.34])).zone, "koerper");
+  assert.ok(ray(W([0, 0.98, -0.34])).t > 4 && ray(W([0, 0.98, -0.34])).t < 6.1, "Abstand stimmt");
 });
 test("Keiler und Fasan: kritische Zonen, Vogel stets Treffer im Flug", () => {
-  const pose = { x: 0, y: 0, z: 0, ry: 0, s: 1, hrx: 0, hry: 0, legs: [0, 0, 0, 0] };
+  const pose = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: 0, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
   assert.ok(["lunge", "herz"].includes(shoot(pose, 0.5, 0.2, "keiler").zone));
   assert.strictEqual(shoot(pose, 0.53, -0.3, "keiler").zone, "koerper");
   assert.strictEqual(shoot(pose, 0.24, -0.02, "fasan").zone, "vogel");
 });
-test("Medaillen: Güte entscheidet, Weichschuss höchstens Silber, Laufschuss Bronze", () => {
+test("Medaillen streng: nur Herz/Lunge/Kopf/Träger erlegen, Kopf höchstens Silber, Träger höchstens Gold", () => {
   assert.strictEqual(H.medalOf(0.95, "lunge"), 4);
-  assert.strictEqual(H.medalOf(0.8, "herz"), 3);
-  assert.strictEqual(H.medalOf(0.55, "kopf"), 2);
+  assert.strictEqual(H.medalOf(0.86, "herz"), 4);
+  assert.strictEqual(H.medalOf(0.86, "lunge"), 3);
+  assert.strictEqual(H.medalOf(0.95, "kopf"), 2);
+  assert.strictEqual(H.medalOf(0.95, "hals"), 3);
   assert.strictEqual(H.medalOf(0.3, "herz"), 1);
-  assert.strictEqual(H.medalOf(0.95, "koerper"), 2);
-  assert.strictEqual(H.medalOf(0.95, "lauf"), 1);
+  assert.strictEqual(H.medalOf(0.95, "koerper"), 0);
+  assert.strictEqual(H.medalOf(0.95, "lauf"), 0);
+  assert.ok(!H.ZONE.koerper.kill && !H.ZONE.lauf.kill && H.ZONE.herz.kill && H.ZONE.lunge.kill);
   for (let s = 0; s <= 1; s += 0.05) assert.ok(H.medalOf(s, "lunge") >= H.medalOf(Math.max(0, s - 0.05), "lunge"));
 });
 test("Preise steigen mit der Medaille, Diamant bringt mindestens das Zehnfache von Bronze", () => {
@@ -65,11 +76,35 @@ test("Lichtung frei, Hochsitz am Rand, weit weg kein Einfluss", () => {
   assert.ok(d > H.CR * 0.95 && d < H.CR * 1.35, "Hochsitz am Wiesenrand " + d.toFixed(1));
   assert.ok(H.EYEP[1] > 5.5 && H.EYEP[1] < 6.5);
 });
+test("Revier: weit außerhalb der Karte, Wild 150–240 m vom Hochsitz, im Feld", () => {
+  assert.ok(H.RV.x < -300, "außerhalb der Karte");
+  const r = (() => { let s = 3; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })();
+  for (let i = 0; i < 300; i++) {
+    const p = H.spawnPoint(r, false), m = Math.hypot(p[0] - H.EYER[0], p[1] - H.EYER[2]) * H.M_PER_U;
+    assert.ok(m >= 150 && m <= 242, "Entfernung " + m.toFixed(0)); assert.ok(H.fieldE(p[0], p[1]) < 0.88);
+    const q = H.spawnPoint(r, true); assert.ok(H.fieldE(q[0], q[1]) > 1.0, "kommt vom Waldrand"); assert.ok(H.fieldE(q[2], q[3]) < 0.88);
+  }
+  assert.ok(H.fieldE(H.EYER[0], H.EYER[2]) > 0.98, "Hochsitz am Feldrand");
+});
+test("Wind: Seitenwind versetzt, Rückenwind nicht; Haltepunkte gegen den Wind", () => {
+  const aim = Math.PI;                                                 /* Blick nach Westen */
+  assert.ok(Math.abs(H.windDrift(5, aim, aim)) < 1e-9, "Rückenwind");
+  const d = H.windDrift(5, aim + Math.PI / 2, aim);                     /* Wind von der Seite */
+  assert.ok(Math.abs(d) > 0.0025 && Math.abs(d) < 0.0035, d);
+  assert.ok(Math.sign(H.holdDots(d)) === -Math.sign(d), "gegen die Abdrift halten");
+  assert.ok(Math.abs(H.holdDots(d)) > 1 && Math.abs(H.holdDots(d)) < 2);
+});
 test("Ich-Kamera: aus den Kamerawerten ergibt sich genau das Auge auf dem Hochsitz", () => {
   [[0.3, -0.2], [-2.8, 0.1], [1.4, -0.6]].forEach(([th, ph]) => {
-    const c = H.camLook(H.EYEP, th, ph, 0.9);
-    const cp = Math.cos(c.pitch), eye = [c.tx + Math.cos(c.yaw) * cp * c.dist, c.ty + Math.sin(c.pitch) * c.dist, c.tz + Math.sin(c.yaw) * cp * c.dist];
-    eye.forEach((v, i) => assert.ok(Math.abs(v - H.EYEP[i]) < 1e-9));
+    [H.EYEP, H.EYER].forEach(E => {
+      const c = H.camLook(E, th, ph, 0.9);
+      const cp = Math.cos(c.pitch), eye = [c.tx + Math.cos(c.yaw) * cp * c.dist, c.ty + Math.sin(c.pitch) * c.dist, c.tz + Math.sin(c.yaw) * cp * c.dist];
+      eye.forEach((v, i) => assert.ok(Math.abs(v - E[i]) < 1e-9));
+    });
   });
+});
+test("Baumaterial: nur vorhandene Holzsorten aus Wald und Sägewerk", () => {
+  assert.deepStrictEqual(Object.keys(H.NEED).sort(), ["aeste", "balken", "bretter", "kiefer", "pfosten"]);
+  Object.values(H.NEED).forEach(n => assert.ok(n > 0 && n <= 10));
 });
 console.log(n + " Tests bestanden");

@@ -1,5 +1,57 @@
 # Änderungen – kurz für den Kollegen
 
+## v108 (aufbauend auf v107) – Jagd: Bau des Hochsitzes, weites Revier (180 m), strengere Jagd, Hirsch mit Gelenken, Kino-Einsammeln
+
+Alles in `hunt.js`, dazu eine kleine Engine-Erweiterung in `gl3d.js`. Weiterhin kein Three.js: gezeichnet wird mit `gl3d.js` (WebGL im HTML5-Canvas), die Jagd-Oberfläche ist DOM/CSS/SVG.
+
+**Freischaltung und Bau**
+- Der Hochsitz taucht erst auf, wenn das **Sägewerk fertig repariert** ist (`sawRepaired()`). Vorher gibt es keinen Turm, keine Blase, keinen Lager-Reiter „Trophäen“ und keine Markt-Karte.
+- Danach ruft **Förster Bruno Wendt** an („Ein Hochsitz für die Wildwiese“, Knopf „Zum Bauplatz“). An der Wildwiese steht ein abgesteckter **Bauplatz** (Pflöcke, Flatterband, Stämme, Bretter, Schild) mit Blase 🔨.
+- **Material:** 6 Kiefernstämme, 8 Balken, 30 Bretter, 8 Holzpfosten, 10 Bündel Äste (`HUNT.NEED`).
+- „Hochsitz bauen“ nimmt das Material, Staubwolken, der Hochsitz **wächst aus dem Boden** und federt nach, +40 EP.
+- Wer in v107 schon gejagt hat, behält seinen Hochsitz.
+
+**Weites Revier in der Ich-Perspektive**
+- Die Wiese auf der Karte bleibt so klein wie sie ist. Beim Hinaufsteigen fährt die Kamera auf die Plattform, **blendet ab** und steht im **Revier**: einer großen Wiese (Ellipse 88 × 64 Einheiten) mit Waldrand, Einzelbäumen, Gras, Farn, Steinen und Totholz, dahinter die Aussicht aus v101.
+- Das Revier liegt weit außerhalb der Karte (x −470) und wird nur in der Ich-Perspektive gebaut: Instanzen kommen hinzu und werden beim Verlassen wieder entfernt.
+- `gl3d.js`: die Kamera darf nahe und ferne Ebene selbst setzen (`cam.near`, `cam.far`), damit man 300 Einheiten weit sieht und trotzdem die Brüstung vorn im Bild hat.
+- Das Wild steht **150–240 m** entfernt (Anzeige: Einheiten × 4).
+
+**Schwierigere, realistischere Jagd**
+- **Wenig Wild:** höchstens 2 Tiere, Bestand 2, alle 120 Spielminuten kommt eins zurück. Oft steht anfangs nichts da: das erste kommt nach 12–34 s aus dem Wald, das zweite deutlich später.
+- **Zielfernrohr 4×/8×/12×**, Haltepunkte im Absehen wachsen mit dem Zoom (1 Punkt = 2 mrad).
+- **Schwanken** spürbar stärker. Ohne „Atem anhalten“ ist ein Treffer auf 180 m Glückssache, mit angehaltenem Atem (höchstens 3 s) liegt das Absehen fast ruhig. Danach zittert es kurz.
+- **Wind** in Stärke und Richtung, mit Böen. Er versetzt das Geschoss; der Entfernungsmesser sagt „4,6 m/s von hinten links · 0,5 Pkt. links halten“. Weht der Wind vom Hochsitz zum Tier, wittert es dich langsam.
+- **Geschossflugzeit** (820 m/s): laufendes Wild muss man vorhalten.
+- **Strenge Zonen:** erlegt wird nur mit **Herz** (Diamant möglich), **Lunge**, **Träger** (höchstens Gold) oder **Kopf** (höchstens Silber, Haupt beschädigt). **Körper- oder Laufschuss:** das Stück flüchtet krank in den Wald und ist verloren, keine Trophäe, Bestand −1. Lunge und Herz sind kleiner als in v107.
+- Die Nachsuche aus v107 entfällt.
+
+**Hirsch mit Gelenken**
+- **Aufbau:** Rumpf, Träger (Hals), Haupt mit Geweih, zwei Lauscher, Wedel, vier Läufe aus Ober- und Unterteil (Knie).
+- **Gänge:** im Schritt mit Viertaktgang, im Galopp mit Flugphase; der Übergang richtet sich weich nach dem Tempo.
+- **Federn** (kritisch gedämpft) für Hals, Kopf, Lauscher und Wedel: alles bewegt sich weich, beim Aufschrecken schnell.
+- **Äsen:** Hals tief, Äser am Boden, Zupfen, ab und zu ein Schritt.
+- **Aufschrecken:** Ruck, Kopf hoch, Blick und Lauscher zum Geräusch, Wedel hoch, starr sichern.
+- **Ohrenspiel:** jede Lauscher zuckt für sich.
+- **Vorsichtiges Ziehen** mit Pausen, ein Vorderlauf bleibt dabei in der Luft.
+- **Flucht:** Absprung, schneller Galopp (10,5 Einheiten/s) mit Haken quer über das Feld, weißer Spiegel unter dem hochgestellten Wedel.
+
+**Kino-Einsammeln, freie Sicht**
+- **Ablauf:** Abblende, Schnitt nah ans Stück, dann fährt die Kamera in 5,5 s zurück in die **Totale** (Hirsch 8,6 Einheiten) und schwenkt dabei um das Stück.
+- **Funken:** goldene Lichtpunkte steigen auf.
+- **Medaille:** blendet groß mit drehenden Lichtstrahlen auf und wandert dann weg.
+- **Leisten statt Karte:** oben Name, Trophäe und Gewicht, unten Treffer, Entfernung, Bewertung, Wert und „Trophäe ins Lager legen“. Die Mitte mit dem Tier bleibt frei.
+- Danach Abblende und zurück auf den Hochsitz.
+
+**Geprüft** im Software-Browser:
+- Vor der Freischaltung ist nichts zu sehen. Danach kommen Anruf, Bauplatz, Material, Bau-Animation und der Lager-Reiter.
+- Im Revier: Fernglas (184 m), Zielfernrohr mit Windhinweis, Lungenschuss Hirsch, Herzschuss Keiler (Gold) und Hirsch (Diamant).
+- Medaillen-Aufblendung, Leisten, Trophäe im Lager, Weichschuss mit Verlust, Verlassen (Kamera wieder normal).
+- Hirsch-Posen von der Seite (Äsen, Aufschrecken, Ziehen, Pause mit gehobenem Lauf, Galopp).
+- Tests: `tests/hunt.test.js` (12) und alle alten grün.
+
+**Nicht geprüft:** auf einem echten Handy (Bildrate im großen Revier, Touch), Töne, Jagd bei Nacht und Regen, Fasan-Überflug im Revier.
+
 ## v107 (aufbauend auf v106) – Jagd: Hochsitz an der Wildwiese, Trophäen
 
 Neues Minispiel nach dem Vorbild „The Hunter: Call of the Wild“, im Low-Poly-Stil und in unserer eigenen Engine (`gl3d.js`, kein Three.js). Alles steckt in der **neuen Datei `hunt.js`** (`HUNT`).

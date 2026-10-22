@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v108 – Jagd: Bau, weites Revier, strengere Jagd, Hirsch-Animation, Kino-Einsammeln (auf v107)
+
+| Teil | Datei |
+|---|---|
+| Freischaltung nach fertigem Sägewerk, Förster-Anruf, Bauplatz und Bau, Revier nur in der Ich-Perspektive, Wind und Flugzeit, strenge Zonen, Hirsch mit Gelenken und Federn, Kino-Einsammeln | `hunt.js` |
+| Kamera darf nahe/ferne Ebene setzen (`cam.near`, `cam.far`) | `gl3d.js` |
+| Lager-Reiter „Trophäen“ erst mit gebautem Hochsitz | `erbe.js` |
+| Überblendung, Wind, Medaillen-Aufblendung, Leisten, Bauplatz | `style.css` |
+| Tests | `tests/hunt.test.js` |
+| Version 108 | `index.html`, `sw.js` |
+
 ## Stand v107 – Jagd: Hochsitz, Wild, Trophäen (auf v106)
 
 | Teil | Datei |
