@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v93 – Fällen mit der Axt in der Ich-Perspektive (auf v92)
+
+| Teil | Datei |
+|---|---|
+| Axtmodell `axeMesh`, Kamera-Knoten (`X.rig`), Schlagablauf `axeTool`/`axeHit`, Treffpunkt `axeTarget`/`kerbW`, Splitter `axeChips`/`stepChips`, `ev("swing")`, `begin(t, "axe1"|"axe2", { kp })`, `pickView(…, op)`, `ready`, Testhilfen `_freeze`/`_axeMath` | `fpsaw.js` |
+| Axtspiel: 3D starten, Tippen überall, Ton/Späne beim Einschlag, Fallrichtung aus 3D, `stop()` | `minigames.js` |
+| Kein Draufsicht-Zoom, wenn die Ego-Sicht geht | `worldview.js` (`worldFell`) |
+| Karte unten links, Hinweis oben (`#farmAngel.mg3d.mga`) | `style.css` |
+| Tests | `tests/axe.test.js` (neu) |
+| Version 93 | `index.html`, `sw.js`, `test.html` |
+
 ## Stand v92 – Waldsanierung: Boden, Baumabstände, Blumen, Pflanzenwind (auf v91)
 
 | Teil | Datei |

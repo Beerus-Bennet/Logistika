@@ -1,5 +1,72 @@
 # Änderungen – kurz für den Kollegen
 
+## v93 (aufbauend auf v92) – Fällen mit der Axt in der Ich-Perspektive
+
+**Hinweis Technik:** Das Spiel nutzt kein Three.js, sondern die eigene Engine `gl3d.js`. Die Wünsche aus dem Auftrag sind dort mit den Entsprechungen umgesetzt:
+- `camera.add(axeGroup)` → ein Kamera-Knoten ohne Mesh (`X.rig`) übernimmt Augpunkt und Blickrichtung, die Axt hängt als Kind (`R.addChild`) daran.
+- `BoxGeometry`-Splitter → kleine Quader-Knoten.
+- Tweening → eigene Ablaufsteuerung mit Quaternion-Übergängen.
+
+**Was neu ist:**
+- **Axtmodell** (`axeMesh`, ein Mesh = ein Zeichenaufruf): Achsen +y = Stiel, −z = Schneide.
+  - Ovaler Stiel mit Knauf, Kopf mit Auge, Blatt mit Bart, blanker Fase und kurzem Nacken hinten.
+  - Stahlaxt mit hellem Stiel und rotem Band, Opas Axt dunkler.
+  - Die Schneide zeigt nach vorne zum Stamm, der Nacken nach hinten (Test).
+- **Kamera:** Der Waldarbeiter steht eine Armlänge plus Stiel vor dem Stamm.
+  - Abstand 1,42 m + 0,5·Stammradius, Neigung 0,5, Augenhöhe ≈ 1,25 m, fov 0,9.
+  - Der Kerb sitzt wie bei der Säge rechts am Stamm, 75° von der Blickachse; der Blick ist leicht nach rechts versetzt.
+  - Die Blickrichtung wählt dieselbe Hindernissuche (`pickView`, jetzt mit Optionen für kürzeren Abstand).
+- **Ruhelage:** Die Hände sind unten am Bildrand rechts der Mitte, der Stiel geht schräg nach vorn-oben, die Schneide zeigt auf die nächste Kerbstelle.
+  - Die Lage wird aus dem Bildausschnitt gerechnet, nicht als feste Meter: Die Werte aus dem Auftrag (0,3 / −0,35 / −0,5) gelten für Three.js mit 75° im Querformat und lägen im Hochformat außerhalb des Bilds.
+  - Nicht näher als 0,66 m, weil die Nahebene bei 0,5 m liegt.
+- **Schlag** (`ev("swing", st, { q, kp })` je Tipp, Ablauf in `axeTool`):
+  1. **Ausholen** 0,15 s: Hände 15 cm höher, die Axt halb in die Lage des Schnitttyps gedreht und 0,32 rad zurückgekippt. Sie bleibt im Bild.
+  2. **Schlag** 0,10 s: beschleunigt (k^1,8) im Bogen um die Hände bis zum Treffer, die Hände gehen nach vorn.
+  3. **Treffer:**
+     - Die Schneidenmitte sitzt 12 mm tief im Holz. Der Treffpunkt wird aus der echten Kerbform gerechnet (gleiche Rechnung wie `notchMesh`, mit Verjüngung und Neigung).
+     - Der Kerb springt auf die neue Tiefe.
+     - 9–12 Splitter fliegen, und es gibt einen kurzen Ruck auf der Hochachse.
+     - Ton „chop“ erst jetzt; der Stiel federt 60 ms nach.
+  4. **Zurück** 0,3 s weich in die Ruhelage.
+  - **Daneben:** Die Axt trifft die Rinde über bzw. unter dem Kerb und prallt ab. Es fliegen Rindensplitter, und der Kerb bleibt.
+- **Dach/Sohle im Wechsel:**
+  - Erster Treffer Dachschnitt: Die Schneide kommt 45° von oben rechts und trifft die Mitte der schrägen Dachfläche.
+  - Zweiter Sohlenschnitt: waagerecht an die Kerbspitze.
+  - Nur Treffer schalten weiter.
+- **kerbProgress** = Schaden/Lebenspunkte des Baums (dieselbe Regel wie bisher: Volltreffer 7, gut 3, Serien-Bonus). Ein angeschlagener Baum zeigt seinen Kerb schon beim Hinsehen. Ab 80 % neigt sich der Baum leicht zur Fallseite.
+- **Splitter** (`axeChips`/`stepChips`): echte kleine Quader (3–5,5 × 0,6–1,1 × 1,6–3,2 cm) aus hellem Holz `#E5C396`, etwa jeder fünfte mit Rinde.
+  - Sie fliegen seitlich aus dem Kerbmund, drehen sich, springen am Boden auf, liegen und schrumpfen weg.
+  - Höchstens 36 gleichzeitig, Knoten werden wiederverwendet, kein Schatten.
+- **Fällung:** Bei vollem Kerb kippt der obere Teil wie bei der Säge um den Drehpunkt an der Kerbsohle zur Kerbseite (rechts im Bild).
+  - Der Stumpf mit Sohle und Bruchleiste bleibt (`t.cut`, `stumpMesh`), die Kamera schwenkt in 1,25 s zurück.
+  - Schließt das Fenster, bevor der letzte Schwung das Holz erreicht (langsames Gerät), zählt sein Treffer trotzdem.
+- **Bedienung:** Die Nadel-, Baum- und Kraftleiste bleiben als schmale Karte unten links (`.mga`), der Hinweis steht oben.
+  - Getippt wird überall im Bild oder auf „Hacken!“.
+  - Zwischen zwei Schlägen liegen mindestens 0,3 s (vorher 0,18 s), weil ein Schwung 0,25 s bis ins Holz braucht.
+  - Ohne Kraft erscheinen Essen und „Später weiter“ wie im 2D-Fenster.
+  - Ohne 3D (andere Ansicht) bleibt das alte 2D-Axtspiel.
+
+**Getestet:**
+- `node tests/axe.test.js` (4, neu):
+  - Lage → Winkel für gl3d ergibt dieselbe Drehung, 2000 Zufallslagen.
+  - Die Schneide zeigt exakt in Schlagrichtung, der Stiel steht senkrecht dazu, keine Spiegelung.
+  - Übergänge zwischen Lagen sind sauber.
+  - Axtmodell: Schneide vorn, Trefferpunkt mittig auf der Schneide.
+- Weiterhin `trees` (7), `forest` (15) und `bushes` (30) grün.
+- Im Browser (SwiftShader, Hochformat 390 × 844 und 1100 × 760), keine Fehler:
+  - Gemessen aus der gezeichneten Weltmatrix der Axt gegen das echte Kerb-Mesh: Die Schneide liegt im tiefen Kerb 4 mm (Dach) bzw. 6 mm (Sohle) an der Holzfläche, vor dem ersten Treffer 5–12 mm in der Rinde.
+  - Die Schneidenrichtung stimmt exakt mit der Schlagrichtung überein (Skalarprodukt 1,000).
+  - Keine Ecke der Axt wird an der Nahebene sichtbar abgeschnitten (nächster Punkt 0,68 m).
+  - Bilder: Ruhe, Ausholen, Schlag und Treffer je Dach/Sohle, Splitter, Fehlschlag, kein Kraft mehr, Fall, Stumpf.
+  - Säge-Ego-Sicht weiterhin in Ordnung (Bild und Kerb-Treffer).
+- Zeichenaufrufe in der Ego-Sicht etwa wie bei der Säge (Axt 56 / 113 000 Dreiecke, Säge am selben Baum 62 / 86 000), dazu kurz bis zu 12 Splitter.
+
+**Nicht verifiziert / offen:**
+- Wie sich Tempo und Wucht des Schlags auf einem echten Handy anfühlen; der Software-Renderer läuft nur mit wenigen Bildern pro Sekunde.
+- Der Ruck beim Treffer dauert rund 0,1 s statt 20 ms: 20 ms sind bei 60 Bildern/s nur ein Bild und wären nicht zu sehen. Die Wirkung ist auf die ersten ~30 ms gelegt.
+- Hände/Arme sind nicht modelliert; der Stiel läuft unten aus dem Bild.
+- Die Fallrichtung ist wie bei der Säge die Kerbseite. Steht dort ein Baum, bleibt es beim bisherigen Hinweis, eine Ausweichrichtung gibt es nicht.
+
 ## v92 (aufbauend auf v91) – Waldsanierung: Boden ohne Überlagerungen, Bäume nicht mehr ineinander, Blumen und Wind
 
 **Befunde (aus dem Code und Messungen, nicht vermutet):**

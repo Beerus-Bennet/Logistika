@@ -152,6 +152,16 @@ const MG_GAMES = {
       const vt = Math.ceil(st.hp / 7), gt = Math.ceil(st.hp / 3);
       mgMsg(t.dmg ? "Weiter geht’s – der Baum ist schon angeschlagen." : (st.hard ? "Ohne passendes Werkzeug – mühsam, aber es geht: " : "") + `${Z.n === "klein" ? "Kleiner Baum" : Z.n === "groß" ? "Großer Baum" : "Baum"}: ${vt} Volltreffer (dunkelgrün) oder ${gt} gute Schläge – Serien geben Extra-Wucht.`);
       MG_GAMES.axe.hpBar(st);
+      /* v93: Ich-Perspektive mit der Axt (fpsaw.js) – Nadel und Leisten bleiben als schmale Karte unten, getippt wird überall */
+      st.fp = null;
+      if (typeof SAW3D !== "undefined" && SAW3D.can()) {
+        st.fp = SAW3D.begin(t, (S.farm.tools.axe || 1) >= 2 ? "axe2" : "axe1", { kp: clamp((t.dmg || 0) / st.hp, 0, 1) });
+        const el = $("#farmAngel");
+        if (el && st.fp) {
+          el.classList.add("mg3d", "mga");
+          el.onpointerdown = e => { if (e.target.closest(".fa-box")) return; e.preventDefault(); MG_GAMES.axe.hit(st); };
+        }
+      }
     },
     bar(st) {
       mgBar(`<button class="btn fa-go" id="mgGo">🪓 Hacken!<small>oder irgendwo oben tippen</small></button>`);
@@ -173,17 +183,21 @@ const MG_GAMES = {
     },
     hit(st) {
       if (st.tired || st.cool > 0 || st.done) return;
+      if (st.fp && !SAW3D.ready) return;                 /* erst wenn die Axt in der Hand ist */
       const t = st.tree;
       if (!farmStaUse(st.sta)) { MG_GAMES.axe.tired(st); return; }
-      st.cool = 0.18;
+      st.cool = st.fp ? 0.3 : 0.18;                      /* 3D: ein Schwung braucht 0,25 s bis ins Holz */
       const d = Math.abs(st.p - st.c), q = d < st.good / 2 ? 1 : d < st.okw / 2 ? 0.6 : 0.15;
       st.q += q === 0.15 ? 0 : q; st.n++;
       st.combo = q === 1 ? st.combo + 1 : 0;
       const bonus = st.combo >= 2 ? Math.min(4, st.combo) : 0, dmg = (q === 1 ? 7 : q > 0.5 ? 3 : 0) + bonus;
       t.dmg = (t.dmg || 0) + dmg;
-      WV.hit = { id: t.id, t0: wnow() };
-      FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: q === 1 ? 10 + bonus * 3 : 5, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.4, up: 1.6, size: 0.07, shape: 1 });
-      sfx(q === 1 ? "chop" : q > 0.5 ? "chop" : "bad");
+      if (st.fp) SAW3D.ev("swing", st, { q, kp: clamp(t.dmg / st.hp, 0, 1) });      /* Späne, Ton und Kerb erst beim Einschlag */
+      else {
+        WV.hit = { id: t.id, t0: wnow() };
+        FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: q === 1 ? 10 + bonus * 3 : 5, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.4, up: 1.6, size: 0.07, shape: 1 });
+        sfx(q === 1 ? "chop" : q > 0.5 ? "chop" : "bad");
+      }
       /* Rückmeldung im Spielfeld: Funken an der Nadel, Zahl steigt auf */
       const nd = $("#mgNeedle"), stg = $("#mgStage");
       if (q === 1) { mgSparks(stg, nd, "#ffd23f", 10 + bonus * 3); mgPop(bonus ? `+${dmg} 🔥 ×${st.combo}` : "+7", "gold", st.p * 100, 8); mgFx($("#mgHpBox"), "mg-shake"); if (bonus) sfx("spark"); }
@@ -199,9 +213,11 @@ const MG_GAMES = {
         st.done = true;
         const acc = st.n ? st.q / st.n : 0.6;
         mgMsg(acc > 0.85 ? "🌲 Sauber gefällt – das gibt einen Stamm extra!" : "🌲 Baum fällt!", "ok");
-        mgWin("🌲"); mgConfetti(acc > 0.85 ? 34 : 20); sfx("thud");
-        const dir = -2.36 + (Math.random() - 0.5) * 0.8;
-        setTimeout(() => MG.close({ ok: true, acc, dir, dirOk: true }), 850);
+        mgWin("🌲"); mgConfetti(acc > 0.85 ? 34 : 20);
+        if (!st.fp) sfx("thud");                         /* 3D: der Aufschlag kommt, wenn der Baum liegt */
+        /* 3D: er kippt zur Kerbseite (rechts im Bild) */
+        const dir = st.fp ? st.fp.fallRy : -2.36 + (Math.random() - 0.5) * 0.8;
+        setTimeout(() => MG.close({ ok: true, acc, dir, dirOk: st.fp ? !st.fp.fallBlock : true }), st.fp ? 700 : 850);
       }
     },
     tired(st) {
@@ -210,6 +226,10 @@ const MG_GAMES = {
       mgBar(mgFoodHTML() + `<button class="btn tiny" id="mgLater">Später weiter</button>`);
       mgBindFood(() => { st.tired = false; MG_GAMES.axe.bar(st); MG_GAMES.axe.hpBar(st); mgMsg("Frisch gestärkt – weiter!", "ok"); });
       $("#mgLater").onclick = () => MG.close({ ok: false });
+    },
+    stop(st) {
+      const el = $("#farmAngel"); if (el) el.onpointerdown = null;
+      if (st.fp && typeof SAW3D !== "undefined") SAW3D.end(!!st.done);
     },
     abort() { return { ok: false }; }
   },

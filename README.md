@@ -551,6 +551,9 @@ Reiter **Hof** erreichbar. Im Wohnhaus lässt er sich auch **verkaufen**: Der
 Hofwert (Land, Felder, Bäume, Tiere, Ställe, Lager und Level) kommt auf einen
 Schlag aufs Konto – endgültig, aber ein kräftiger Schub für die Spedition.
 
+### Fällen mit der Axt in der Ich-Perspektive (v93)
+Wie bei der Kettensäge fährt die Kamera vor den Stamm. Die Axt hängt an einem Kamera-Knoten; jeder Tipp holt aus und trifft abwechselnd Dach und Sohle des V-Kerbs rechts am Stamm. Holzsplitter fliegen, der Kerb wird mit dem Schaden tiefer, und bei vollem Kerb kippt der Baum zur Kerbseite, der Stumpf bleibt (`fpsaw.js`, `MG_GAMES.axe`). Tests: `node tests/axe.test.js`.
+
 ### Waldsanierung (v92)
 Waldbodenflecken sind Teil der Bodenfarbe (`worldGround`, feineres Gitter nur dort, wo Flecken liegen), es liegen keine Flächen übereinander. Bäume stehen nach Art und Größe auseinander (`FTREE_DIM`, `treeClash`; Kulisse: `worldTreeSpace`, fällbare: `erbeSpaceTrees`). Gras, Blumen und Farn biegen sich im Wind (Pflanzenwind im Shader, Stärke nach Wetter). Tests: `node tests/trees.test.js`.
 

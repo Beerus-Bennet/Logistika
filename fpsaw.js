@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – fpsaw.js  (v85)
+   LOGISTIKA – fpsaw.js  (v85, Axt seit v93)
    Sägen in der Ich-Perspektive. Die Kamera schwenkt aus der Vogelperspektive vor den Stamm
    des gewählten Baums, die Säge hängt im Vordergrund. Der Fallkerb-Schnitt wird am Stamm
    selbst getimt: ein grüner Ring (Zielzone), ein gelber Ring (perfekt) und eine rote Marke,
@@ -11,6 +11,10 @@
      SAW3D.step(dt, time)   je Bild: Kamera, Säge, Ringe, Kerb, Schnitt nachführen
      SAW3D.end(done)        Kamera zurück in die Hauptansicht, Hilfsteile weg
    Die Engine ist die eigene (gl3d.js), kein Three.js: Knoten mit Netzen, R.emit für Späne (Würfel).
+   v93: dasselbe mit der Axt (begin(t, "axe1"|"axe2")): die Kamera steht nah am Stamm, die Axt hängt an einem
+   Kamera-Knoten (wie camera.add), jeder Schlag holt aus, trifft abwechselnd Dach und Sohle des V-Kerbs,
+   wirft Holzsplitter (echte kleine Quader) und vertieft den Kerb; Fall und Stumpf wie bei der Säge.
+   Die Regeln (Nadel, Treffer, Kraft) bleiben in minigames.js (MG_GAMES.axe), ev("swing", st, { q, kp }) je Schlag.
    ========================================================================= */
 const SAW3D = (() => {
   "use strict";
@@ -53,6 +57,93 @@ const SAW3D = (() => {
     return [cy * x + sy * z, y, -sy * x + cy * z];
   }
   const GY0 = 0.12, GH = 1.0;                       /* Messbereich am Stamm: von GY0 bis GY0 + GH */
+
+  /* ---- v93: Zweihand-Axt für die Ego-Sicht ----
+     Lokalachsen der Axt: +y = Stiel nach oben (Ursprung = untere Hand), −z = Schneide (zeigt nach vorne zum Stamm),
+     +z = Nacken/Rücken des Kopfs, x = Blattdicke. Stiel und Kopf sind ein Mesh (ein Zeichenaufruf). */
+  const AXE_EDGE = [0, 0.775, -0.175];               /* Mitte der Schneide – dieser Punkt trifft den Kerb */
+  const v3 = {
+    add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+    sc: (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+    cr: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+    n: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+    lerp: (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]
+  };
+  /* 3×3-Matrizen zeilenweise (m[r*3+c]), Quaternionen [x, y, z, w] */
+  const m3cols = (a, b, c) => [a[0], b[0], c[0], a[1], b[1], c[1], a[2], b[2], c[2]];
+  const m3v = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
+  const m3tv = (m, v) => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]];
+  /* Matrix → Winkel für gl3d (R = Ry·Rx·Rz) */
+  const eulOf = m => ({ rx: Math.asin(Math.max(-1, Math.min(1, -m[5]))), ry: Math.atan2(m[2], m[8]), rz: Math.atan2(m[3], m[4]) });
+  function qOfM(m) {
+    const t = m[0] + m[4] + m[8];
+    let x, y, z, w;
+    if (t > 0) { const s = Math.sqrt(t + 1) * 2; w = s / 4; x = (m[7] - m[5]) / s; y = (m[2] - m[6]) / s; z = (m[3] - m[1]) / s; }
+    else if (m[0] > m[4] && m[0] > m[8]) { const s = Math.sqrt(1 + m[0] - m[4] - m[8]) * 2; w = (m[7] - m[5]) / s; x = s / 4; y = (m[1] + m[3]) / s; z = (m[2] + m[6]) / s; }
+    else if (m[4] > m[8]) { const s = Math.sqrt(1 + m[4] - m[0] - m[8]) * 2; w = (m[2] - m[6]) / s; x = (m[1] + m[3]) / s; y = s / 4; z = (m[5] + m[7]) / s; }
+    else { const s = Math.sqrt(1 + m[8] - m[0] - m[4]) * 2; w = (m[3] - m[1]) / s; x = (m[2] + m[6]) / s; y = (m[5] + m[7]) / s; z = s / 4; }
+    return [x, y, z, w];
+  }
+  function mOfQ(q) {
+    const [x, y, z, w] = q;
+    return [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w),
+      2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w),
+      2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)];
+  }
+  const qMul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+    a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  const qAx = (ax, a) => { const s = Math.sin(a / 2); return [ax[0] * s, ax[1] * s, ax[2] * s, Math.cos(a / 2)]; };
+  function qSlerp(a, b, t) {
+    let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+    if (d < 0) { b = b.map(v => -v); d = -d; }
+    if (d > 0.9995) { const r = a.map((v, i) => v + (b[i] - v) * t), l = Math.hypot(...r); return r.map(v => v / l); }
+    const th = Math.acos(d), s = Math.sin(th), ka = Math.sin((1 - t) * th) / s, kb = Math.sin(t * th) / s;
+    return a.map((v, i) => v * ka + b[i] * kb);
+  }
+  /* Lage aus Stielrichtung h und Schneidenrichtung e: hKeep = Stiel bleibt exakt (Ruhe), sonst bleibt die Schneide exakt (Schlag) */
+  function frameQ(h, e, hKeep) {
+    h = v3.n(h); e = v3.n(e);
+    if (hKeep) e = v3.n(v3.sub(e, v3.sc(h, v3.dot(e, h))));
+    else h = v3.n(v3.sub(h, v3.sc(e, v3.dot(h, e))));
+    const z = v3.sc(e, -1), x = v3.cr(h, z);
+    return qOfM(m3cols(x, h, z));
+  }
+  /* Fläche mit Windung nach außen (vom Mittelpunkt cen weg) */
+  function faceOut(b, pts, col, cen) {
+    const n = v3.cr(v3.sub(pts[1], pts[0]), v3.sub(pts[2], pts[0])), m = pts.reduce((s, p) => v3.add(s, v3.sc(p, 1 / pts.length)), [0, 0, 0]);
+    const q = v3.dot(n, v3.sub(m, cen)) < 0 ? pts.slice().reverse() : pts;
+    for (let i = 1; i + 1 < q.length; i++) b.tri(q[0], q[i], q[i + 1], col);
+  }
+  /* verjüngter Block zwischen hinterer Fläche (z0) und vorderer (z1): je Seite [y oben, y unten, halbe Dicke] */
+  function slab(b, z0, k0, z1, k1, c) {
+    const P = [[-k0[2], k0[0], z0], [k0[2], k0[0], z0], [k0[2], k0[1], z0], [-k0[2], k0[1], z0],
+      [-k1[2], k1[0], z1], [k1[2], k1[0], z1], [k1[2], k1[1], z1], [-k1[2], k1[1], z1]];
+    const cen = P.reduce((s, p) => v3.add(s, v3.sc(p, 1 / 8)), [0, 0, 0]);
+    faceOut(b, [P[0], P[1], P[2], P[3]], c.back || c.side, cen);
+    faceOut(b, [P[4], P[5], P[6], P[7]], c.front || c.side, cen);
+    faceOut(b, [P[0], P[1], P[5], P[4]], c.top || c.side, cen);
+    faceOut(b, [P[3], P[2], P[6], P[7]], c.bot || c.side, cen);
+    faceOut(b, [P[0], P[3], P[7], P[4]], c.side, cen);
+    faceOut(b, [P[1], P[2], P[6], P[5]], c.side, cen);
+  }
+  function axeMesh(id) {
+    const b = new G3.MB(), steel = id === "axe2";
+    const wood = steel ? 0xd2a066 : 0x9a6a44, knob = steel ? 0xb88850 : 0x7a5232;
+    const head = steel ? 0x6c7682 : 0x56504a, cheek = steel ? 0x7a8592 : 0x625b54, bevel = steel ? 0xe3e8ec : 0xbfc3c6, poll = steel ? 0x5a636e : 0x48433f;
+    /* Stiel: leicht abgeflacht (oval), unten ein Knauf, oben steckt er im Auge des Kopfs */
+    b.at({ sz: 0.74 }, m => {
+      m.cyl(0.025, 0.021, 0.05, 7, knob, { y: -0.1 });
+      m.cyl(0.021, 0.0175, 0.46, 7, wood, { y: -0.05, notop: true, nobot: true });
+      m.cyl(0.0175, 0.0195, 0.47, 7, wood, { y: 0.41, nobot: true });
+      if (steel) m.cyl(0.0215, 0.0215, 0.08, 7, 0xd8332b, { y: 0.02 });
+    });
+    /* Kopf: Auge (um den Stiel), Blatt nach vorn (−z) mit Bart nach unten, blanke Fase an der Schneide, kurzer Nacken hinten */
+    slab(b, 0.026, [0.846, 0.756, 0.024], -0.026, [0.846, 0.756, 0.024], { side: head });
+    slab(b, -0.026, [0.846, 0.758, 0.02], -0.12, [0.872, 0.7, 0.0085], { side: cheek, top: head, bot: head });
+    slab(b, -0.12, [0.872, 0.7, 0.0085], -0.175, [0.89, 0.66, 0.0012], { side: bevel, top: bevel, bot: bevel, front: bevel });
+    slab(b, 0.05, [0.838, 0.764, 0.021], 0.026, [0.842, 0.76, 0.023], { side: poll });
+    return b;
+  }
 
   /* ---- V-Kerb als echte Geometrie (Einheitsradius 1, Sohle bei y = 0, Vorderseite = +z) ----
      Querschnitt von der Seite: waagerechte Sohle (hell), schräger Dachschnitt 45° (hell, etwas dunkler);
@@ -443,13 +534,15 @@ const SAW3D = (() => {
     return cost;
   }
   /* Blickrichtung, Abstand und Neigung wählen: freie Sicht auf den Stamm (auch über Zäune hinweg), Kerbseite frei, wenig Umweg */
-  function pickView(t, yaw0, dist, pitch) {
+  function pickView(t, yaw0, dist, pitch, op) {
     const list = blockers(t), len = (typeof treeH === "function" ? treeH(t) : 3) * 0.85, O = obstacles(), r = trunkR(t), sz = t.sz || 1;
     const ty0 = 0.5 + 0.05 * sz;
+    op = op || {};
+    const minHd = op.minHd != null ? op.minHd : r + 1.3;          /* v93: die Axt steht näher am Stamm als die Säge */
     let best = null;
-    for (const ds of [1, 0.8, 0.65]) for (const pit of [pitch, pitch + 0.15, pitch + 0.3]) {
+    for (const ds of op.ds || [1, 0.8, 0.65]) for (const pit of [pitch, pitch + 0.15, pitch + 0.3]) {
       const dd = dist * ds, hd = dd * Math.cos(pit);
-      if (hd < r + 1.3) continue;
+      if (hd < minHd) continue;
       for (let k = 0; k <= 6; k++) for (const sg of k ? [1, -1] : [1]) {
         const yaw = yaw0 + sg * k * Math.PI / 6, ex = t.x + Math.cos(yaw) * hd, ez = t.z + Math.sin(yaw) * hd, fn = faceOf(yaw);
         let n = 0, fb = 0; const bl = [];
@@ -471,20 +564,28 @@ const SAW3D = (() => {
     return best;
   }
 
-  function begin(t, toolId) {
+  function begin(t, toolId, opt) {
     if (!can()) return null;
+    opt = opt || {};
+    const isAxe = /^axe/.test(toolId || "");                       /* v93: axe1/axe2 = Axt, sonst Kettensäge */
     const R = FV.R, c = R.cam, sz = t.sz || 1, e = WV.trees.get(t.id);
     FV.focusId = (FV.focusId || 0) + 1; FV.focusing = false;
     const saved = camOf(c);
     saved.fov = c.fov || 0.55;
     const r = trunkR(t);
-    const goal = { tx: t.x, ty: 0.5 + 0.05 * sz, tz: t.z, dist: 2.5 + 0.25 * sz + 3.4 * r, pitch: 0.17, yaw: c.yaw, fov: 0.85 };
-    const view = pickView(t, c.yaw, goal.dist, goal.pitch);
+    /* Axt: der Waldarbeiter steht eine Armlänge plus Stiel vor dem Stamm und schaut leicht von oben auf die Kerbe (Kniehöhe) */
+    const ny0 = Math.round((0.34 + 0.03 * sz) * 50) / 50;
+    const goal = isAxe ? { tx: t.x, ty: ny0 + 0.12, tz: t.z, dist: 1.42 + 0.5 * r, pitch: 0.5, yaw: c.yaw, fov: 0.9 }
+      : { tx: t.x, ty: 0.5 + 0.05 * sz, tz: t.z, dist: 2.5 + 0.25 * sz + 3.4 * r, pitch: 0.17, yaw: c.yaw, fov: 0.85 };
+    const view = pickView(t, c.yaw, goal.dist, goal.pitch, isAxe ? { minHd: r + 0.7, ds: [1, 1.15] } : null);
     goal.dist = view.dist; goal.pitch = view.pitch;
     goal.yaw = c.yaw + Math.atan2(Math.sin(view.yaw - c.yaw), Math.cos(view.yaw - c.yaw));     /* kürzester Weg */
     const fn = faceOf(goal.yaw);
-    goal.tx += fn[0] * r * 0.9; goal.tz += fn[1] * r * 0.9;     /* Blick leicht nach rechts auf die Kerbseite */
-    X = { t, e, saved, goal, r, mode: "in", p: 0, cur: Object.assign({}, saved), sh: null, kick: 0, lunge: 0, notchY: null, nodes: [], toolId, dirx: fn[0], dirz: fn[1], nfx: fn[0], nfz: fn[1], fryN: Math.atan2(fn[0], fn[1]), fallRy: Math.atan2(fn[0], fn[1]), fallBlock: view.fb > 0, vib: 0 };
+    const sh0 = r * (isAxe ? 1.25 : 0.9);
+    goal.tx += fn[0] * sh0; goal.tz += fn[1] * sh0;     /* Blick leicht nach rechts auf die Kerbseite (Axt: etwas mehr, der Stamm ist nah) */
+    X = { t, e, saved, goal, r, mode: "in", p: 0, cur: Object.assign({}, saved), sh: null, kick: 0, lunge: 0, notchY: null, nodes: [], toolId, dirx: fn[0], dirz: fn[1], nfx: fn[0], nfz: fn[1], fryN: Math.atan2(fn[0], fn[1]), fallRy: Math.atan2(fn[0], fn[1]), fallBlock: view.fb > 0, vib: 0,
+      axe: isAxe, cutN: 0, chips: [], sw: null, at: 0 };
+    if (isAxe) X.notchY = ny0;
     FV.fp = X;
     X.hideReal = []; X.hideBg = [];
     view.bl.forEach(b => {
@@ -521,11 +622,18 @@ const SAW3D = (() => {
     if (info) X.keys.push("fp_crw_" + t.id + "_" + t.sp);
     X.nt = add(fmesh("fp_tk_dummy", () => notchMesh(1, T.bark)), { visible: false, cull: false });
     X.ntw = add(fmesh("fp_tw_dummy", () => notchMesh(1, T.bark, true)), { visible: false, cull: false, glow: 1 });
-    X.bark = T.bark; X.kpv = 0; X.kpT = 0;
+    X.bark = T.bark; X.kpv = X.kpT = isAxe ? clampN(opt.kp || 0, 0, 1) : 0;        /* angeschlagener Baum: der Kerb ist schon da */
+    if (isAxe) {
+      /* Entsprechung zu camera.add(axeGroup): ein Knoten ohne Mesh folgt der Kamera (Lage = Auge, Drehung = Blickrichtung),
+         die Axt hängt als Kind daran und wird in Kamera-Koordinaten bewegt (x rechts, y oben, −z nach vorn). */
+      X.rig = add(null, { cull: false, visible: false });
+      X.axG = R.addChild(X.rig, fnode(fmesh("fp93_" + toolId, () => axeMesh(toolId)), { cull: false, shadow: false, glow: 0.18 }));
+    } else {
     /* Reihenfolge = Zeichenreihenfolge beim Einblenden (durchsichtig): erst Spitze, dann Schiene, zuletzt das nahe Gehäuse */
     X.nose = add(fmesh("fp4_nose", sawNose), { cull: false, shadow: false, s: 0.4, visible: false });
     X.bar = add(fmesh("fp4_bar", sawBar), { cull: false, shadow: false, s: 0.4, visible: false });
     X.tool = add(fmesh("fp4_" + toolId, () => sawBody(toolId)), { cull: false, shadow: false, s: 0.4, visible: false });
+    }
     X.zone = add(unit("fp_u_g", 0x47b84f), { alpha: 0.42, glow: 0.5, visible: false });
     X.perf = add(unit("fp_u_y", 0xffd23f), { alpha: 0.6, glow: 0.7, visible: false });
     X.mark = add(unit("fp_u_r", 0xe2465f), { alpha: 0.95, glow: 0.4, visible: false });
@@ -565,6 +673,13 @@ const SAW3D = (() => {
       chips(st.p1 > 0.95 ? 16 : 10, X.notchY, 0);
     }
     else if (name === "stall") { X.sh = { t0: now, amp: 0.05 }; X.kick = 1; smoke(); }
+    else if (name === "swing" && X.axe) {
+      /* v93: neuer Axtschlag. Hat der vorige das Holz noch nicht erreicht, zählt sein Treffer sofort (nichts geht verloren). */
+      const info = arguments[2] || {};
+      if (X.sw && (X.sw.ph === "wind" || X.sw.ph === "strike")) axeHit(X.sw);
+      const miss = !(info.q > 0.5);
+      X.sw = { ph: "wind", t: 0, q: info.q || 0, kp: info.kp || 0, T: axeTarget(X.cutN % 2 ? "sole" : "roof", miss), from: X.pose || null };
+    }
   }
   /* Späne: kleine gelb-braune Würfel (shape 1) an der Vorderseite des Stamms */
   function front(lat) {
@@ -582,14 +697,161 @@ const SAW3D = (() => {
     for (let i = 0; i < 5; i++) FV.R.emit({ x: p.x, y: p.y + 0.2, z: p.z, vx: (Math.random() - 0.5) * 0.4, vy: 0.8, vz: (Math.random() - 0.5) * 0.4, life: 0.9, size: 0.1, size2: 0.35, col: [0.55, 0.55, 0.58, 0.6], drag: 0.3 });
   }
 
+  /* ---- v93: Axtschlag ----
+     Je Schlag: Ausholen (0,15 s – Axt nach oben-rechts zurück, Hände 15 cm höher) → Schlag (0,10 s, beschleunigt im Bogen
+     um die Hände, Hände 25 cm nach vorn) → Treffer (Späne, kurzes Wackeln, Kerb tiefer) → zurück in die Ruhelage (0,3 s).
+     Abwechselnd Dachschnitt (Schneide kommt 45° von oben rechts) und Sohlenschnitt (waagerecht). Alle Lagen sind
+     Kamera-Koordinaten; der Trefferpunkt kommt aus der echten Kerbform (gleiche Rechnung wie notchMesh). */
+  const AX_T = { wind: 0.15, strike: 0.1, hit: 0.06, back: 0.3 };
+  function kerbDepth() { const q = X.kpv > 0.02 ? Math.max(1, Math.min(KQ, Math.round(X.kpv * KQ))) : 0; return KMAX * q / KQ; }
+  /* Punkt am Kerb-Stamm (Einheiten wie notchMesh: Höhe über der Sohle, Tiefe z; 1 = Rinde) → Welt, mit Verjüngung und Neigung */
+  function kerbW(yOffU, zU) {
+    const sc = X.r * 1.04, yU = X.notchY / sc + yOffU, tp = X.sty && X.sty.tp;
+    let x = 0, z = zU;
+    if (tp) { x = tp.lx * yU; z = zU * tp.f(yU) + tp.lz * yU; }
+    const T0 = X.tiltT || 0, d = (X.tiltR != null ? X.tiltR : 0) - X.fryN;
+    const v = rotV([x * sc, yU * sc, z * sc], T0 * Math.cos(d), X.fryN, -T0 * Math.sin(d));
+    return [X.t.x + v[0], v[1], X.t.z + v[2]];
+  }
+  /* Ziel eines Schlags: Dach = Mitte der schrägen Dachfläche, Sohle = Mitte der waagerechten Sohle; daneben = Rinde über/unter dem Kerb */
+  function axeTarget(kind, miss) {
+    const sc = X.r * 1.04, d = kerbDepth(), ym = d * KS, zc = 1 - d, nf = [X.nfx, 0, X.nfz];
+    let P, e;
+    if (kind === "roof") {
+      const y = miss ? ym + 0.15 / sc : Math.max(0.03 / sc, ym * 0.55);
+      P = kerbW(y, miss ? 1 : zc + y / KS); e = v3.n([-nf[0], -1, -nf[2]]);
+    } else {
+      const y = miss ? -0.13 / sc : 0.02 / sc;
+      P = kerbW(y, miss ? 1 : zc + Math.min(d, 0.03 / sc)); e = [-nf[0], 0, -nf[2]];      /* waagerecht an die Kerbspitze */
+    }
+    return { P, e, kind, miss };
+  }
+  const camOfB = B => m3cols(B.rt, B.up, v3.sc(B.f, -1));              /* Kameraraum → Welt (Spalten: rechts, oben, hinten) */
+  const blendP = (p, q, k) => ({ H: v3.lerp(p.H, q.H, k), Q: qSlerp(p.Q, q.Q, k) });
+  /* Ruhelage: Hände unten am Bildrand rechts der Mitte, Stiel schräg nach vorn-oben, Schneide zeigt auf den Kerb */
+  function axeIdle(C, B, T, tf, asp) {
+    const zH = 0.66, br = Math.sin(X.at * 1.7), H = [Math.max(0.06, 0.42 * zH * tf * asp), -1.0 * zH * tf + 0.005 * br, -zH];
+    const head = [H[0] + 0.12, 0.03 + 0.006 * br, -1.24], K = m3tv(C, v3.sub(T.P, B.eye));
+    return { H, Q: frameQ(v3.sub(head, H), v3.sub(K, head), true) };
+  }
+  /* Treffer: die Mitte der Schneide sitzt 12 mm tief im Holz, die Schneide zeigt genau in Schlagrichtung */
+  function axeImpact(C, B, T, idle) {
+    const P = m3tv(C, v3.sub(v3.add(T.P, v3.sc(T.e, 0.012)), B.eye)), e = v3.n(m3tv(C, T.e));
+    const Hp = v3.add(idle.H, [0.02, -0.02, -0.25]);
+    const Q = frameQ(v3.sub(P, Hp), e, false);
+    return { H: v3.sub(P, m3v(mOfQ(Q), AXE_EDGE)), Q, e };
+  }
+  /* Ausholen: kurz und im Bild – Hände 15 cm höher (etwas nach rechts/zurück), die Axt halb in die Lage des Schnitttyps gedreht
+     (Dach: Schneide 45° nach unten, Sohle: waagerecht) und dann um die Hände zurückgekippt (gegen die Schlagrichtung) */
+  const WIND_MIX = 0.6, WIND_BACK = 0.32;
+  function axeWind(imp, idle) {
+    const h = m3v(mOfQ(imp.Q), [0, 1, 0]), a = v3.n(v3.cr(h, imp.e));
+    return { H: v3.add(idle.H, [0.01, 0.15, 0.03]), Q: qMul(qAx(a, -WIND_BACK), qSlerp(idle.Q, imp.Q, WIND_MIX)) };
+  }
+  function axeHit(sw) {
+    if (sw.done) return;
+    sw.done = true;
+    const T = sw.T;
+    if (!T.miss) { X.kpT = Math.max(X.kpT, sw.kp); X.kpv = X.kpT; X.cutN++; }
+    X.sh = { t0: performance.now() / 1000, amp: T.miss ? 0.016 : sw.q === 1 ? 0.013 : 0.009, dur: 0.1, y: true };
+    axeChips(T, T.miss ? 5 : sw.q === 1 ? 12 : 9, T.miss);
+    if (typeof sfx === "function") sfx(T.miss ? "bad" : "chop");
+  }
+  function axeTool(dt, B) {
+    const R = FV.R, c = R.cam, C = camOfB(B), tf = Math.tan((c.fov || 0.9) / 2), asp = (R.w && R.h) ? R.w / R.h : 0.6;
+    X.at += dt;
+    const idle = axeIdle(C, B, axeTarget(X.cutN % 2 ? "sole" : "roof", false), tf, asp);
+    let pose = idle;
+    const sw = X.sw;
+    if (sw) {
+      if (!sw.from) sw.from = idle;
+      sw.t += dt;
+      const imp = axeImpact(C, B, sw.T, idle), wind = axeWind(imp, idle), h = m3v(mOfQ(imp.Q), [0, 1, 0]), a = v3.n(v3.cr(h, imp.e));
+      const tHit = sw.T.miss ? 0.03 : AX_T.hit, tBack = sw.T.miss ? 0.24 : AX_T.back;
+      if (sw.ph === "wind") { const k = Math.min(1, sw.t / AX_T.wind); pose = blendP(sw.from, wind, ss(k)); if (k >= 1) { sw.ph = "strike"; sw.t -= AX_T.wind; } }
+      if (sw.ph === "strike") { const k = Math.min(1, sw.t / AX_T.strike); pose = blendP(wind, imp, Math.pow(k, 1.8)); if (k >= 1) { sw.ph = "hit"; sw.t -= AX_T.strike; axeHit(sw); } }
+      if (sw.ph === "hit") {
+        const k = Math.min(1, sw.t / tHit);
+        pose = { H: imp.H, Q: qMul(qAx(a, 0.035 * Math.sin(sw.t * 95) * (1 - k)), imp.Q) };     /* Stiel federt im Holz nach */
+        if (k >= 1) { sw.ph = "back"; sw.t -= tHit; }
+      }
+      if (sw.ph === "back") {
+        const k = Math.min(1, sw.t / tBack);
+        pose = blendP(imp, idle, ss(k));
+        if (sw.T.miss) pose.Q = qMul(qAx(a, -0.5 * Math.sin(Math.PI * Math.min(1, k * 1.6))), pose.Q);   /* daneben: prallt ab */
+        if (k >= 1) X.sw = null;
+      }
+    }
+    /* Testhilfe: feste Lage (Phase, Anteil) für Standbilder */
+    if (X.freeze) {
+      const fz = X.freeze, T = fz.T || (fz.T = axeTarget(fz.kind || "roof", !!fz.miss)), imp = axeImpact(C, B, T, idle), wind = axeWind(imp, idle);
+      pose = fz.ph === "wind" ? blendP(idle, wind, ss(fz.k)) : fz.ph === "strike" ? blendP(wind, imp, Math.pow(fz.k, 1.8)) : fz.ph === "hit" ? imp : idle;
+      X.dbg = { T, imp, C, eye: B.eye };
+    }
+    X.pose = pose;
+    const ready = X.mode === "hold" || (X.mode === "in" && X.p >= 1);
+    X.app = clampN((X.app || 0) + (ready ? dt / 0.4 : -dt / 0.2), 0, 1);
+    const ap = 1 - Math.pow(1 - X.app, 3), rg = X.rig, ax = X.axG, E = eulOf(mOfQ(pose.Q));
+    rg.visible = X.mode !== "out" && X.app > 0.01;
+    rg.x = B.eye[0]; rg.y = B.eye[1]; rg.z = B.eye[2];
+    rg.rx = Math.asin(clampN(B.f[1], -1, 1)); rg.ry = Math.atan2(-B.f[0], -B.f[2]); rg.rz = 0;
+    ax.x = pose.H[0]; ax.y = pose.H[1] - (1 - ap) * 0.4; ax.z = pose.H[2];
+    ax.rx = E.rx; ax.ry = E.ry; ax.rz = E.rz; ax.alpha = ap > 0.99 ? 1 : ap;
+  }
+  /* Holzsplitter: echte kleine Quader (helles Holz #E5C396, einige mit Rinde), fliegen seitlich aus dem Kerbmund,
+     drehen sich, fallen, springen kurz auf und bleiben liegen, dann schrumpfen sie weg. Höchstens 36 gleichzeitig. */
+  function axeChips(T, n, miss) {
+    const o = [X.nfx, 0, X.nfz], tg = [-X.nfz, 0, X.nfx], R = FV.R;
+    const mW = fmesh("fp93_chip", () => { const b = new G3.MB(); b.box(1, 1, 1, 0xe5c396, { c: true, top: 0xecd0a8 }); return b; });
+    const mB = fmesh("fp93_chipb_" + X.bark, () => { const b = new G3.MB(); b.box(1, 1, 1, 0xe5c396, { c: true, top: X.bark }); return b; });
+    for (let i = 0; i < n; i++) {
+      let c = X.chips.find(k => !(k.life > 0));
+      if (!c) {
+        if (X.chips.length >= 36) c = X.chips.reduce((a, b) => (a.t / a.life > b.t / b.life ? a : b));
+        else { c = { n: fnode(mW, { shadow: false, cull: false, glow: 0.45 }) };       /* leicht selbstleuchtend wie das Kerbholz – sonst wirken sie im Gegenlicht grau */ R.nodes.push(c.n); X.nodes.push(c.n); X.chips.push(c); }
+      }
+      const bark = miss || Math.random() < 0.2, rnd = Math.random;
+      c.n.mesh = bark ? mB : mW;
+      const sp = (miss ? 0.8 : 1.4) + rnd() * 1.3, sd = (rnd() - 0.5) * 1.8, up = (T.kind === "roof" ? 0.3 : 0.9) + rnd() * 1.3;
+      c.p = v3.add(T.P, v3.add(v3.sc(o, 0.02), v3.sc(tg, (rnd() - 0.5) * 0.06)));
+      c.v = [o[0] * sp + tg[0] * sd, up, o[2] * sp + tg[2] * sd];
+      c.r = [rnd() * 6.3, rnd() * 6.3, rnd() * 6.3]; c.w = [(rnd() - 0.5) * 34, (rnd() - 0.5) * 20, (rnd() - 0.5) * 34];
+      const k = miss ? 0.7 : 1;
+      c.s = [(0.03 + rnd() * 0.025) * k, (0.006 + rnd() * 0.005) * k, (0.016 + rnd() * 0.016) * k];
+      c.t = 0; c.life = 0.85 + rnd() * 0.5; c.rest = false;
+    }
+  }
+  function stepChips(dt) {
+    for (const c of X.chips) {
+      if (!(c.life > 0)) continue;
+      c.t += dt;
+      const n = c.n;
+      if (c.t >= c.life) { c.life = 0; n.visible = false; continue; }
+      if (!c.rest) {
+        c.v[1] -= 9.81 * dt;
+        const k = Math.max(0, 1 - 0.6 * dt); c.v[0] *= k; c.v[2] *= k;
+        c.p = v3.add(c.p, v3.sc(c.v, dt)); c.r = v3.add(c.r, v3.sc(c.w, dt));
+        const fl = c.s[1] * 0.5 + 0.004;
+        if (c.p[1] < fl) {
+          c.p[1] = fl;
+          if (Math.abs(c.v[1]) < 0.7) { c.rest = true; c.r[0] = Math.round(c.r[0] / Math.PI) * Math.PI; c.r[2] = Math.round(c.r[2] / Math.PI) * Math.PI; }
+          else { c.v[1] *= -0.3; c.v[0] *= 0.5; c.v[2] *= 0.5; c.w = v3.sc(c.w, 0.5); }
+        }
+      }
+      const f = Math.min(1, (c.life - c.t) / 0.25);
+      n.visible = true; n.x = c.p[0]; n.y = c.p[1]; n.z = c.p[2]; n.rx = c.r[0]; n.ry = c.r[1]; n.rz = c.r[2];
+      n.sx = c.s[0] * f; n.sy = c.s[1] * f; n.sz = c.s[2] * f;
+    }
+  }
+
   function step(dt, time) {
     if (!X) return;
-    const R = FV.R, c = R.cam, t = X.t, st = typeof MG !== "undefined" && MG.on && MG.kind === "saw" ? MG.st : null;
+    const R = FV.R, c = R.cam, t = X.t, st = typeof MG !== "undefined" && MG.on && (MG.kind === "saw" || MG.kind === "axe") ? MG.st : null;
     /* Kamera: hin – halten – zurück */
     if (X.mode === "in") { X.p = Math.min(1, X.p + dt / 0.95); CAM_KEYS.forEach(k => { X.cur[k] = lerp(X.saved[k], X.goal[k], ss(X.p)); }); if (X.p >= 1) X.mode = "hold"; }
     else if (X.mode === "hold") {
       /* nach dem ersten Treffer näher an die Kerbe heranfahren */
-      if (X.notchY != null) { X.goal.ty = X.notchY + 0.04; X.goal.dist = (X.dist0 || (X.dist0 = X.goal.dist)) * 0.78; }
+      if (X.notchY != null && !X.axe) { X.goal.ty = X.notchY + 0.04; X.goal.dist = (X.dist0 || (X.dist0 = X.goal.dist)) * 0.78; }
       CAM_KEYS.forEach(k => { X.cur[k] += (X.goal[k] - X.cur[k]) * Math.min(1, dt * 3); });
     }
     else if (X.mode === "out") {
@@ -600,13 +862,16 @@ const SAW3D = (() => {
     /* Kamerawackeln (Fehlschlag, Kerb, Überhitzen) */
     let sx = 0, sy = 0;
     if (X.sh) {
-      const a = (performance.now() / 1000 - X.sh.t0), k = Math.max(0, 1 - a / 0.45);
-      if (!k) X.sh = null; else { sx = Math.sin(a * 55) * X.sh.amp * k; sy = Math.cos(a * 47) * X.sh.amp * 0.7 * k; }
+      const a = (performance.now() / 1000 - X.sh.t0), k = Math.max(0, 1 - a / (X.sh.dur || 0.45));
+      if (!k) X.sh = null;
+      else if (X.sh.y) sy = Math.sin(a * 130) * X.sh.amp * k * k;      /* v93 Axt: kurzer Ruck auf der Hochachse, nach ~30 ms fast weg */
+      else { sx = Math.sin(a * 55) * X.sh.amp * k; sy = Math.cos(a * 47) * X.sh.amp * 0.7 * k; }
     }
     CAM_KEYS.forEach(k => { c[k] = X.cur[k]; });
     const B0 = basis(c);
     c.tx += B0.rt[0] * sx; c.tz += B0.rt[2] * sx; c.ty += sy;
     FV.touchAt = performance.now();
+    if (X.chips.length) stepChips(dt);
     if (X.fall) { fallStep(dt); return; }
     const B = basis(c);
     X.rtx = B.rt[0]; X.rtz = B.rt[2];
@@ -629,7 +894,7 @@ const SAW3D = (() => {
     if (cutting) X.kpT = Math.max(X.kpT, 0.6 + 0.4 * pr);
     const dk = X.kpT - X.kpv;
     X.kpv += Math.sign(dk) * Math.min(Math.abs(dk), dt * (0.35 + Math.abs(dk) * 2.2));    /* gleichmäßig tiefer, am Ende weich */
-    if (Math.abs(dk) > 0.01 && ny != null && !cutting) { if (Math.random() < dt * 14) chips(1, ny + X.kpv * KMAX * r * KS * 0.45, (Math.random() - 0.5) * r); X.sh = X.sh || { t0: performance.now() / 1000, amp: 0.012 }; }
+    if (Math.abs(dk) > 0.01 && ny != null && !cutting && !X.axe) { if (Math.random() < dt * 14) chips(1, ny + X.kpv * KMAX * r * KS * 0.45, (Math.random() - 0.5) * r); X.sh = X.sh || { t0: performance.now() / 1000, amp: 0.012 }; }
     X.slit.visible = X.rim.visible = X.notchD.visible = X.notchL.visible = false;
     const depthW = X.kpv * KMAX * r * 1.04;               /* Tiefe in Metern */
     let aim;
@@ -641,6 +906,7 @@ const SAW3D = (() => {
       const y = kerb ? GY0 + st.mk * GH : ny != null ? ny : GY0 + 0.35, fp = front(0);
       aim = [fp[0], y, fp[1]];
     }
+    if (!X.axe) {
     /* Säge: unten rechts im Bild, die Schiene zeigt auf die Zielstelle */
     X.kick = Math.max(0, X.kick - dt * 3.2); X.lunge = Math.max(0, X.lunge - dt * 2.6);
     const lg = X.lunge > 0 ? Math.sin(Math.min(1, X.lunge) * Math.PI) : 0;
@@ -691,6 +957,8 @@ const SAW3D = (() => {
     X.nose.x = tipW[0]; X.nose.y = tipW[1]; X.nose.z = tipW[2];
     [X.tool, X.bar, X.nose].forEach(n => { n.rx = rx; n.ry = ry; n.rz = rz; n.sx = n.sy = n.sz = sS; n.alpha = ap > 0.99 ? 1 : ap; });
     X.bar.sz = X.barL;
+      if (work && Math.random() < dt * 28) R.emit({ x: fm[0], y: yT + 0.03, z: fm[1], vx: -d[0] * (1.0 + Math.random()) + B.rt[0] * (0.5 + Math.random() * 0.8), vy: 0.2 + Math.random() * 0.45, vz: -d[2] * (1.0 + Math.random()) + B.rt[2] * (0.5 + Math.random() * 0.8), g: -4, life: 0.6, size: 0.045, col: [0.95, 0.82, 0.5, 1], shape: 1 });
+    } else axeTool(dt, B);                                   /* v93: Axt in der Hand statt Säge */
     /* Hitze-Anzeige (nur im Fällschnitt) */
     const showH = false, showG = show && ph === 2, heat = st ? clampN(st.heat || 0, 0, 1) : 0, stl = st && st.stall > 0;
     const hw = 0.5, hc = [B.eye[0] + B.f[0] * 1.1 + B.rt[0] * 0.3, B.eye[1] + B.f[1] * 1.1 + B.up[1] * 0.02, B.eye[2] + B.f[2] * 1.1 + B.rt[2] * 0.3];
@@ -734,6 +1002,7 @@ const SAW3D = (() => {
       cn.x = t.x; cn.z = t.z; cn.y = 0; cn.ry = fry; cn.rx = T1 * Math.cos(d1); cn.rz = -T1 * Math.sin(d1);
     } else { X.crown.x = t.x + Math.sin(X.tiltR || 0) * X.crownY * Math.sin(X.tiltT || 0); X.crown.z = t.z + Math.cos(X.tiltR || 0) * X.crownY * Math.sin(X.tiltT || 0); }
     /* Der Baum verrät den Fall: neigt sich in Fallrichtung, knarrt/zittert, kurz vorm Fallen deutlich */
+    if (X.axe && X.mode !== "out") { X.tiltR = X.fallRy; X.tiltT = X.kpv > 0.8 ? Math.pow((X.kpv - 0.8) / 0.2, 2) * 0.05 : 0; }  /* v93: Axt – die letzten Schläge lassen ihn sich neigen */
     if (X.e && X.e.node && st && st.dir) {
       const nd = X.e.node, p = ph === 2 ? Math.min(1, st.prog || 0) : 0, tl = p > 0.25 ? Math.pow((p - 0.25) / 0.75, 2) : 0;
       nd.sway = 0;
@@ -743,7 +1012,6 @@ const SAW3D = (() => {
         X.tilted = true;
       } else if (X.tilted && X.mode !== "out") { nd.ry = X.t0ry; nd.rx = X.t0rx; X.tiltT = 0; X.tilted = false; }
     }
-    if (work && Math.random() < dt * 28) R.emit({ x: fm[0], y: yT + 0.03, z: fm[1], vx: -d[0] * (1.0 + Math.random()) + B.rt[0] * (0.5 + Math.random() * 0.8), vy: 0.2 + Math.random() * 0.45, vz: -d[2] * (1.0 + Math.random()) + B.rt[2] * (0.5 + Math.random() * 0.8), g: -4, life: 0.6, size: 0.045, col: [0.95, 0.82, 0.5, 1], shape: 1 });
     /* Stamm aus drei Teilen: unten, V-Kerb, oben – alle neigen sich mit dem Baum */
     const usePts = ny != null && X.kpv > 0.02 && swap;
     const sc = r * 1.04, q = Math.max(1, Math.min(KQ, Math.round(X.kpv * KQ)));
@@ -818,8 +1086,8 @@ const SAW3D = (() => {
     };
     F.up.forEach(n => place(n, 0));
     X.crown.visible = !F.landed; place(X.crown, X.realCrown ? 0 : X.crownY);
-    X.tool.visible = X.bar.visible = X.nose.visible = false;
-    [X.lowB, X.lowW].forEach(() => {});
+    if (X.tool) X.tool.visible = X.bar.visible = X.nose.visible = false;
+    if (X.rig) X.rig.visible = false;
     F.lowB.visible = F.lowW.visible = !F.landed;
     if (el >= 1 && !F.landed) {
       F.landed = true;
@@ -833,6 +1101,7 @@ const SAW3D = (() => {
 
   function end(done) {
     if (!X) return;
+    if (X.axe && X.sw && !X.sw.done) axeHit(X.sw);          /* v93: der letzte Schlag zählt, auch wenn das Fenster schon schließt */
     if (done) { X.keepStand = true; X.endAt = performance.now() / 1000; }
     if (X.e && X.e.node && !done) X.e.node.visible = X.vis0 !== false;
     if (X.e && X.e.node && !done) { X.e.node.sway = X.sway0 != null ? X.sway0 : 0.22; if (X.t0ry != null) { X.e.node.ry = X.t0ry; X.e.node.rx = X.t0rx; } }
@@ -844,5 +1113,7 @@ const SAW3D = (() => {
   }
   /* bleibender Stumpf (Rinde + Holz in einem Mesh), wird von worldview.js für gefällte Bäume benutzt */
   function stumpMesh(c) { return notchMesh(c.q, c.bark, 2, c.ny / c.sc, 1, "low", barkStyle(c.sp, c.sz, c.sc, c.s || 1, { tp: trunkParams(c.sp, c.sz), seed: (c.id || 0) * 0.731 })); }
-  return { stumpMesh, can, begin, ev, step, end, fall, pick: pickView, get on() { return !!X; } };
+  /* Testhilfe (v93): feste Axtlage für Standbilder – SAW3D._freeze({ ph: "wind"|"strike"|"hit"|"idle", k, kind, miss }) bzw. null */
+  function freeze(f) { if (X) X.freeze = f; return X ? X.dbg || null : null; }
+  return { stumpMesh, can, begin, ev, step, end, fall, pick: pickView, _freeze: freeze, _axeMath: { frameQ, mOfQ, eulOf, qSlerp, axeMesh, rotV, AXE_EDGE }, get on() { return !!X; }, get ready() { return !!X && (X.app || 0) > 0.5; } };
 })();

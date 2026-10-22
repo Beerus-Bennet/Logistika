@@ -2840,7 +2840,8 @@ function worldFell(t, pick) {
   /* Baum oben im Bild, das Minispiel unten */
   const port = innerHeight > innerWidth;
   /* v85: die Säge fährt die Kamera selbst vor den Stamm (fpsaw.js), sonst wie bisher oben der Baum, unten das Spiel */
-  if (!(tool === "saw" && typeof SAW3D !== "undefined" && SAW3D.can())) farmFocusXZ(t.x + (port ? 2.6 : 1.2), t.z + (port ? 2.6 : 1.2), port ? 23 : 19, 500);
+  /* v93: auch die Axt fährt die Kamera selbst vor den Stamm */
+  if (!(typeof SAW3D !== "undefined" && SAW3D.can())) farmFocusXZ(t.x + (port ? 2.6 : 1.2), t.z + (port ? 2.6 : 1.2), port ? 23 : 19, 500);
   MG.open(tool === "saw" ? "saw" : "axe", { tree: t }, res => {
     if (!res || !res.ok) { save(); return; }
     const r = farmFell(t, { acc: res.acc, tool, dirOk: res.dirOk, hung: res.hung });
