@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v119 – Atem+Schuss, Wasser, Trophäen (auf v118)
+
+| Teil | Datei |
+|---|---|
+| Atem-Finger-ID, Schuss per `pointerdown`, Listener-Aufräumen in `end()`; `trophyMesh` neu | `hunt.js` |
+| Wasser-Shader: wandernde Wellenbänder + Lichtfunken | `gl3d.js` |
+| Test „Trophäen (v119)“ | `tests/hunt.test.js` |
+| Version 119 | `index.html`, `sw.js` |
+
 ## Stand v118 – Wildwiesen-Farbe (auf v117)
 
 | Teil | Datei |

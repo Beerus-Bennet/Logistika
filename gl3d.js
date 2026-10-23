@@ -398,6 +398,13 @@ const G3 = (() => {
       float fr = 0.12 + 0.6 * pow(1.0 - max(dot(n, v), 0.0), 4.0);        /* Himmel spiegelt sich */
       c = mix(c, uSky * 1.25 + vec3(0.06, 0.08, 0.1), fr);
       c += pow(max(dot(n, h), 0.0), 180.0) * 1.6 * sh * uSunCol;           /* Glitzern */
+      /* v119: sichtbare, ruhige Wasserbewegung auch von oben: wandernde helle/dunkle Wellenbänder (Farbe, nicht nur Normale)
+         und vereinzelte Lichtfunken. Alles langsam und leicht, damit das Wasser lebt, aber nicht unruhig wirkt. */
+      vec2 q = vW.xz;
+      float w1 = sin(q.x * 1.7 + q.y * 1.1 - uTime * 0.9), w2 = sin(q.x * 2.9 - q.y * 2.3 + uTime * 1.3), w3 = sin(q.x * 0.9 - q.y * 1.9 + uTime * 0.6 + w1);
+      c *= 1.0 + 0.085 * (w1 * w2 + 0.6 * w3);
+      float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + uTime * 1.7) * sin(q.y * 4.7 - uTime * 1.3 + w2));
+      c += gl * 0.13 * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
     float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);

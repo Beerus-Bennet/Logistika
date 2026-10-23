@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v119 (aufbauend auf v118) – Jagd: Atem + Schuss gleichzeitig, bewegtes Wasser, neue Trophäen
+
+- **Atem halten und schießen:** Vorher beendete *jedes* `pointerup` (auch das des zweiten Fingers auf „Schuss“) den Atem, und der Schuss kam erst über `click`, den iOS bei gedrücktem ersten Finger oft verschluckt. Jetzt merkt sich „Atem“ seine eigene Finger-ID (`breathId`) und endet nur damit; „Schuss“ löst schon beim Auflegen aus (`pointerdown`), der folgende `click` wird unterdrückt (kein Doppelschuss). Fenster-Listener werden in `end()` wieder entfernt. Im Browser mit synthetischen Touch-Events getestet (ein Schuss, Atem bleibt, endet nur mit Finger 1) – nicht auf einem echten Handy.
+- **Wasser:** Fragment-Shader (`gl3d.js`, Wasserzweig): zusätzlich zu den Kräuselnormalen wandern langsame helle/dunkle Wellenbänder über die Fläche und vereinzelte Lichtfunken. Gilt für Bach, Teich, See; ruhig, kein Mehraufwand an Geometrie.
+- **Trophäen (`hunt.js`, `trophyMesh`):** Eichenschild mit gewölbtem Kopf, dunklem Rahmen und Maserung; Messingschild mit Gravurzeilen und Schrauben; darunter Medaille am rot-weißen Band. Hirsch: Schädelplatte mit Geweih (Enden wachsen mit der Stufe); Keiler: zwei gebogene Waffen auf Schädelplatte; Fasan: Federfächer mit Binden. Stufen: Bronze, Silber (Eckbeschläge), Gold (mehr Beschläge, goldenes Schild), Diamant (Edelsteine, Diamant in der Medaille).
+- Test: `tests/hunt.test.js` neu „Trophäen (v119)“ (15 Tests).
+- Dateien: `hunt.js`, `gl3d.js`, `tests/hunt.test.js`, `index.html`, `sw.js`.
+
 ## v118 (aufbauend auf v117) – Wildwiese: eckiger heller Fleck weg
 
 - **Fehler:** Auf der Wildwiese (Karte) lag ein großer, eckiger, heller Fleck mit geraden Kanten. **Ursache:** `HUNT.ground` (`hunt.js`) wählte die Wiesenfarbe je Gitterpunkt des 4er-Bodenrasters hart zwischen drei deutlich verschiedenen Grüntönen (`0xa6c95a` / `0x93c452` / `0x86ba4a`); die Dreiecke des Rasters zeichneten daraus kantige Flächen.

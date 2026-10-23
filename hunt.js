@@ -362,23 +362,72 @@ const HUNT = (() => {
       empty: "Noch keine Trophäen. Steig auf den Hochsitz an der Wildwiese." };
   }
   registerItems();
-  /* Trophäe als 3D-Bildchen: Brett mit Geweih, Waffen oder Feder, Medaille unten */
+  /* Trophäe als 3D-Bildchen (v119): Eichenschild mit dunklem Rahmen und Maserung, Messingschild mit Gravurzeilen, darüber das
+     Stück selbst – Hirsch: Schädelplatte mit Geweih (mehr Enden je Stufe); Keiler: gebogene Waffen auf Schädelplatte; Fasan: Federfächer.
+     Die Stufe zeigt sich an Schildfarbe, Eckbeschlägen und der Medaille am Band (Bronze, Silber, Gold, Diamant mit Edelstein). */
   function trophyMesh(id) {
     const it = typeof FITEMS !== "undefined" && FITEMS[id], k = it ? it.hunt : "hirsch", m = it ? it.medal : 1;
     G3.seed(5400 + m);
-    const b = MB(), mc = [0, 0xc47a3a, 0xb9c2cc, 0xe8b02a, 0x52c8e8][m];
-    b.at({ rx: -0.35 }, q => {
-      q.cyl(0.42, 0.42, 0.08, 7, 0x6b4428, { rx: Math.PI / 2, a0: Math.PI / 14, top: 0x7d5232 });
-      q.cyl(0.12, 0.12, 0.1, 10, mc, { rx: Math.PI / 2, y: -0.3, top: mc });
-      if (k === "hirsch") q.at({ y: -0.42, z: 0.05, s: 1.15 }, r => antlers(r, m * 2 + 6, 0.35 + m * 0.15));
-      else if (k === "keiler") [-1, 1].forEach(s => beam(q, [s * 0.06, -0.05, 0.08], [s * 0.3, 0.32, 0.12], 0.035, BC.tusk, true));
-      else { beam(q, [0.1, -0.25, 0.08], [-0.12, 0.45, 0.1], 0.04, FCc.tail, false); beam(q, [0.11, -0.25, 0.1], [-0.11, 0.45, 0.12], 0.018, FCc.tailD, false); }
+    const b = MB(), mc = [0, 0xc47a3a, 0xc9d1da, 0xe8b02a, 0xe8b02a][m], mcD = [0, 0x8f5424, 0x8d97a3, 0xa87812, 0xa87812][m];
+    const wood = 0x91623a, woodL = 0xa87445, woodD = 0x4b2f1a, grain = 0x7e5230, bone = 0xe9dfc6, boneD = 0xc9bc9a;
+    b.at({ rx: -0.22 }, q => {
+      /* Rahmen (hinten) und Fläche (vorn): oben gewölbt, unten gerade */
+      q.cyl(0.47, 0.47, 0.09, 14, woodD, { rx: Math.PI / 2, y: 0.12, top: woodD });
+      q.box(0.94, 0.66, 0.09, woodD, { y: -0.2, z: 0.045, c: true });
+      q.cyl(0.41, 0.41, 0.115, 14, wood, { rx: Math.PI / 2, y: 0.12, top: woodL });
+      q.box(0.82, 0.58, 0.115, wood, { y: -0.2, z: 0.058, c: true });
+      [-0.24, -0.07, 0.12, 0.28].forEach((x, i) => q.box(0.012, 0.62 + (i % 2) * 0.2, 0.004, grain, { x, y: -0.02 - (i % 2) * 0.06, z: 0.118, c: true }));
+      /* Messingschild mit zwei Gravurzeilen und Schrauben */
+      q.box(0.5, 0.12, 0.03, mc, { y: -0.37, z: 0.13, c: true });
+      q.box(0.34, 0.016, 0.034, mcD, { y: -0.35, z: 0.13, c: true }); q.box(0.22, 0.014, 0.034, mcD, { y: -0.395, z: 0.13, c: true });
+      [-1, 1].forEach(sx => q.sphere(0.011, 5, 3, mcD, { x: sx * 0.23, y: -0.37, z: 0.148 }));
+      /* Eckbeschläge ab Silber, Edelsteine beim Diamanten */
+      if (m >= 2) [-1, 1].forEach(sx => q.sphere(0.04, 6, 4, mc, { x: sx * 0.36, y: -0.43, z: 0.135 }));
+      if (m >= 3) [-1, 1].forEach(sx => q.sphere(0.04, 6, 4, mc, { x: sx * 0.34, y: 0.27, z: 0.135 }));
+      if (m === 4) [-1, 1].forEach(sx => q.sphere(0.05, 4, 2, 0x52c8e8, { x: sx * 0.39, y: -0.03, z: 0.14 }));
+      /* Medaille am rot-weißen Band unter dem Schild */
+      q.at({ y: -0.46, z: 0.15 }, r => {
+        r.box(0.07, 0.2, 0.012, 0xb3202a, { x: -0.04, y: -0.07, rz: 0.32, c: true }); r.box(0.07, 0.2, 0.012, 0xf1ece0, { x: 0.04, y: -0.07, rz: -0.32, c: true });
+        r.cyl(0.115, 0.115, 0.035, 14, mc, { rx: Math.PI / 2, y: -0.2, top: mc });
+        r.cyl(0.085, 0.085, 0.045, 14, mcD, { rx: Math.PI / 2, y: -0.2, top: m === 4 ? mcD : mc });
+        if (m === 4) r.sphere(0.075, 4, 2, 0x52c8e8, { y: -0.2, z: 0.06 });
+        else r.sphere(0.03, 6, 4, mc, { y: -0.2, z: 0.05 });
+      });
+      if (k === "hirsch") {
+        /* Schädelplatte */
+        q.box(0.24, 0.27, 0.05, bone, { y: 0.07, z: 0.15, c: true });
+        q.sphere(0.13, 9, 6, bone, { y: 0.19, z: 0.155 });
+        q.box(0.1, 0.1, 0.05, boneD, { y: -0.09, z: 0.15, c: true });
+        [[0, 0], [0.012, 0.01], [-0.012, 0.01]].forEach(o => q.at({ x: o[0], y: 0.12, z: 0.1 + o[1], s: 1.0 }, r => antlers(r, m * 2 + 6, 0.45 + m * 0.14, [0, 0.0, 0.08])));
+      } else if (k === "keiler") {
+        q.box(0.3, 0.2, 0.06, bone, { y: -0.14, z: 0.15, c: true });
+        q.sphere(0.12, 9, 6, bone, { y: -0.04, z: 0.16 });
+        q.box(0.16, 0.08, 0.07, boneD, { y: -0.24, z: 0.16, c: true });
+        [-1, 1].forEach(sx => {
+          let p = null;
+          for (let i = 0; i <= 6; i++) {
+            const t = i / 6, a = t * 1.45, pt = [sx * (0.1 + 0.27 * Math.sin(a)), -0.12 + 0.52 * (1 - Math.cos(a)), 0.19];
+            if (p) beam(q, p, pt, 0.046 * (1 - t * 0.72), i < 5 ? 0xf3ecd9 : 0xfffaf0, true);
+            p = pt;
+          }
+          q.sphere(0.052, 6, 4, boneD, { x: sx * 0.1, y: -0.12, z: 0.19 });
+        });
+      } else {
+        const n = m >= 3 ? 7 : 5;
+        for (let i = 0; i < n; i++) {
+          const f = i - (n - 1) / 2, ang = f * 0.25, L = 0.8 - Math.abs(f) * 0.08;
+          q.at({ y: -0.2, z: 0.145 + (i % 2) * 0.012, rz: -ang }, r => {
+            r.box(0.105, L, 0.012, i % 2 ? 0xc08040 : 0xb5602c, { y: L / 2, c: true });
+            r.box(0.014, L, 0.016, 0x5e3e22, { y: L / 2, c: true });
+            for (let j = 0; j < 6; j++) r.box(0.108, 0.02, 0.014, 0x5e3e22, { y: 0.12 + j * (L - 0.2) / 6, c: true });
+            r.box(0.1, 0.05, 0.013, 0xf1e7d0, { y: L - 0.02, c: true });
+          });
+        }
+        q.box(0.16, 0.07, 0.04, woodD, { y: -0.2, z: 0.17, c: true });
+        q.sphere(0.034, 6, 4, mc, { y: -0.2, z: 0.2 });
+      }
     });
     return b;
-  }
-  if (typeof FWM !== "undefined" && FWM.item && !FWM.__huntItem) {
-    const base = FWM.item; FWM.item = id => /^tro_/.test(id) ? trophyMesh(id) : base(id); FWM.__huntItem = true;
-    if (typeof ITEM_3D !== "undefined") Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => ITEM_3D.add(trophyId(k, m))));
   }
   if (typeof FWM !== "undefined" && FWM.item && !FWM.__huntItem) {
     const base = FWM.item; FWM.item = id => /^tro_/.test(id) ? trophyMesh(id) : base(id); FWM.__huntItem = true;
@@ -1127,9 +1176,22 @@ const HUNT = (() => {
       if (a === "keep") return keepTrophy();
       if (a === "sell") return keepTrophy(true);
     });
-    el.addEventListener("pointerdown", e => { const b = e.target.closest('[data-hu="breath"]'); if (!b || !X) return; e.preventDefault(); e.stopPropagation(); breath(true); });
-    const rel = () => { if (X && X.breath.on) breath(false); };
-    el.addEventListener("pointerup", rel); el.addEventListener("pointercancel", rel); el.addEventListener("pointerleave", rel);
+    /* v119: Atem halten und gleichzeitig schießen. Vorher löste JEDES pointerup (auch das des zweiten Fingers auf „Schuss“) den
+       Atem wieder, und der Schuss kam erst über „click“, den iOS bei gedrücktem ersten Finger oft verschluckt. Jetzt: Atem merkt sich
+       seinen eigenen Finger (id) und endet nur mit ihm; „Schuss“ löst schon beim Auflegen des Fingers aus (pointerdown). */
+    let breathId = null, fireAt = 0;
+    el.addEventListener("pointerdown", e => {
+      const f = e.target.closest('[data-hu="fire"]');
+      if (f && X) { e.preventDefault(); e.stopPropagation(); fireAt = performance.now(); fire(); return; }
+      const b = e.target.closest('[data-hu="breath"]'); if (!b || !X) return;
+      e.preventDefault(); e.stopPropagation(); breathId = e.pointerId; breath(true);
+    });
+    /* Klick auf „Schuss“ nach einem pointerdown-Schuss nicht noch einmal auslösen (Maus/Tastatur-Klick bleibt möglich) */
+    el.addEventListener("click", e => { if (e.target.closest('[data-hu="fire"]') && performance.now() - fireAt < 700) e.stopImmediatePropagation(); }, true);
+    const rel = e => { if (X && X.breath.on && e.pointerId === breathId) { breathId = null; breath(false); } };
+    el.addEventListener("pointerup", rel); el.addEventListener("pointercancel", rel);
+    window.addEventListener("pointerup", rel); window.addEventListener("pointercancel", rel);
+    X.rel = rel;
     X.key = e => {
       if (!X) return;
       if (e.code === "Space") { e.preventDefault(); breath(e.type === "keydown"); }
@@ -1560,6 +1622,7 @@ const HUNT = (() => {
     delete c.near; delete c.far;
     X.nodes.slice().forEach(rmNode);
     if (X.ui && X.ui.parentNode) X.ui.parentNode.removeChild(X.ui);
+    if (X.rel) { window.removeEventListener("pointerup", X.rel); window.removeEventListener("pointercancel", X.rel); }
     if (X.key) { window.removeEventListener("keydown", X.key); window.removeEventListener("keyup", X.key); }
     document.body.classList.remove("fp3d", "fphunt");
     FV.fp = null; X = null;

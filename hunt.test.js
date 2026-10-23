@@ -141,4 +141,21 @@ test("Nahsicht-Bäume (v117): fünf Arten, Höhe wie das Standardmodell, keine N
   }));
   assert.ok(W.treeRv("kirsche", 2, 0).v.length === W.tree("kirsche", 2, 0).v.length, "Kirsche bleibt das Standardmodell");
 });
+test("Trophäen (v119): 12 Schilder, ganze Dreiecke, keine NaN, Stufen unterscheiden sich, Hirschgeweih wächst mit der Stufe", () => {
+  const C3 = { console, Math, Object, Array, JSON, Map, Set, Float32Array, Uint8Array, Uint16Array, Int32Array, Date, performance: { now: () => Date.now() }, navigator: { userAgent: "node" }, localStorage: { getItem: () => null, setItem() {} } };
+  C3.window = C3; C3.self = C3; vm.createContext(C3);
+  vm.runInContext("function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); } var FITEMS = {};", C3);
+  ["gl3d.js", "farmmodels.js", "woodmodels.js", "hunt.js"].forEach(f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n;this.__l = 1;", C3, { filename: f }));
+  vm.runInContext("this.HUNT = HUNT;", C3);
+  const HH = C3.HUNT, sizes = {};
+  ["hirsch", "keiler", "fasan"].forEach(k => [1, 2, 3, 4].forEach(m => {
+    const b = HH.trophyMesh(HH.trophyId(k, m));
+    assert.ok(b.v.length % 27 === 0 && b.v.length > 0, k + m + " ganze Dreiecke");
+    for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(k + m + " NaN bei " + i);
+    sizes[k + m] = b.v.length / 27;
+    assert.ok(sizes[k + m] > 150 && sizes[k + m] < 4000, k + m + " Dreiecke " + sizes[k + m]);
+  }));
+  assert.ok(sizes.hirsch4 > sizes.hirsch1, "mehr Enden bei höherer Stufe");
+  assert.ok(sizes.hirsch1 !== sizes.keiler1 && sizes.keiler1 !== sizes.fasan1, "Arten verschieden");
+});
 console.log(n + " Tests bestanden");
