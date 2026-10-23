@@ -1,5 +1,19 @@
 # Änderungen – kurz für den Kollegen
 
+## v113 (aufbauend auf v112) – Bäume im Fernglas: eigenes Nahsicht-Modell
+
+**Ursache:** Im Fernglas (7×) und Zielfernrohr sieht man die Bäume stark vergrößert. Die Standardmodelle haben nur wenige große Flächen: Kronen wie Felsbrocken, Fichte ein glatter Kegel, Stämme wie Kisten (7 Ecken, starre Streifen, lose „Marken“-Latten an der Kiefer). Die Birke war schon feiner und fiel deshalb nicht auf.
+
+**Behebung (`woodmodels.js` `treeRv`, `hunt.js`):**
+- Neues Modell `FWM.treeRv(art, größe, variante)` für Kiefer, Fichte, Buche, Eiche (Birke bleibt `tree`). Gleiche Höhe und Farben wie `tree`.
+  - Stamm: Wurzelanlauf, Rillen, Farbverlauf (Kiefer unten grau, oben fuchsrot).
+  - Äste mit Zweig sichtbar; Kronen aus 20–30 kleinen Laubpolstern (oben hell, unten dunkel) statt weniger Klumpen.
+  - Fichte aus Quirlen hängender Astfächer um einen dunklen Kern, oben kürzer und aufrecht.
+  - Kiefer: kurze Aststummel statt loser Latten, flache Nadelpolster mit hängenden Büscheln.
+- `hunt.js` `revBuild`: Bäume bis `TREE_HI` = 80 Einheiten vom Hochsitz nutzen `treeRv`, weiter entfernte das Standardmodell (Nebel ab 70). Etwa 530–850 statt 230–560 Dreiecke je Baum.
+- Test `tests/hunt.test.js`: alle Arten/Größen ohne NaN, Höhe ±20 %, Dreiecksbudget, Birke unverändert (14 Tests grün; alle Suiten grün).
+- **Geprüft** im Software-Browser: Fernglas-Bilder mit Eiche, Buche, Fichte, Kiefer (deutlich feiner). **Nicht geprüft:** echtes Handy (Bildrate mit mehr Dreiecken, ggf. `TREE_HI` senken), Zielfernrohr-Ansicht, Nachtlicht.
+
 ## v112 (aufbauend auf v111) – Lager: Kleidung/Frisuren je Beruf, gebeugte Arme, Werkzeugplane, realistischer Pausenübergang
 
 **Aussehen (`woodmodels.js`, `team.js`):**

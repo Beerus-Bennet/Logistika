@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v113 – Fernglas: feines Nahsicht-Baummodell (auf v112)
+
+| Teil | Datei |
+|---|---|
+| `treeRv` (Kiefer, Fichte, Buche, Eiche) | `woodmodels.js` |
+| Nahe Bäume nutzen `treeRv` (`TREE_HI`) | `hunt.js` |
+| Test Nahsicht-Bäume | `tests/hunt.test.js` |
+| Version 113 | `index.html`, `sw.js` |
+
 ## Stand v112 – Lager: Outfits/Frisuren, gebeugte Arme, Werkzeugplane, Sessel entfernt (auf v111)
 
 | Teil | Datei |

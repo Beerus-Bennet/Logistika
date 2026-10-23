@@ -40,7 +40,7 @@ const HUNT = (() => {
   const RV = { x: -470, z: -40 }, RVRY = -Math.PI / 2;               /* Hochsitz im Revier, schaut nach Westen (−x) */
   const FC = { x: RV.x - 50, z: RV.z }, FRX = 44, FRZ = 32;           /* Feld: Ellipse vor dem Hochsitz */
   const FOV = 0.95, BINO = 7, ZOOMS = [4, 8, 12];
-  const CAMD = 2.5, NEAR = 0.35, FAR = 300;
+  const CAMD = 2.5, NEAR = 0.35, FAR = 300, TREE_HI = 80;
   const V0 = 820;                                     /* Mündungsgeschwindigkeit m/s */
   const WIND_K = 5.85e-4;                             /* Abdrift: rad je m/s Seitenwind */
   const DOT = 0.002;                                  /* Haltepunkt-Abstand im Absehen (rad) */
@@ -692,7 +692,8 @@ const HUNT = (() => {
     X.rv.ground = addNode(fmesh("hunt_rv_ground", revGround), { x: FC.x, y: 0, z: FC.z, shadow: false });
     X.rv.tower = addNode(fmesh("hunt_tower_v107", towerMesh), { x: RV.x, y: 0, z: RV.z, ry: RVRY });
     const put = (g, k, x, z, ry, s) => { g.add(k, x, z, ry, s); X.rv.keys.push([g, k]); };
-    L.trees.forEach((t, i) => put(rgroup("wt:" + t.sp + ":" + t.sz + ":" + t.v, () => FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 }), "hu" + i, t.x, t.z, t.ry, t.s));
+    /* v113: nahe Bäume (bis TREE_HI Einheiten vom Hochsitz) mit dem fein gebauten Nahsicht-Modell – im Fernglas sah das grobe Standardmodell wie Felsbrocken/Kisten aus */
+    L.trees.forEach((t, i) => { const hi = FWM.treeRv && Math.hypot(t.x - EYER[0], t.z - EYER[2]) < TREE_HI; put(rgroup((hi ? "wr:" : "wt:") + t.sp + ":" + t.sz + ":" + t.v, () => hi ? FWM.treeRv(t.sp, t.sz, t.v) : FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 }), "hu" + i, t.x, t.z, t.ry, t.s); });
     if (FWM.grassTuft) L.grass.forEach((t, i) => put(rgroup("hu_gt" + t.v, () => FWM.grassTuft(t.v), { sway: 0.3, shadow: false }), "hg" + i, t.x, t.z, t.ry, t.s));
     if (FWM.fern) L.ferns.forEach((t, i) => put(rgroup("hu_fern", () => FWM.fern(), { sway: 0.2, shadow: false }), "hf" + i, t.x, t.z, t.ry, t.s));
     if (FWM.boulder) L.rocks.forEach((t, i) => put(rgroup("hu_rock", () => FWM.boulder(1), {}), "hr" + i, t.x, t.z, t.ry, t.s));
