@@ -683,7 +683,7 @@ function farmLoop(now) {
   if (!FV.on) return;
   requestAnimationFrame(farmLoop);
   const R = FV.R;
-  if (!R || R.lost() || document.hidden) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
+  if (!R || R.lost() || document.hidden || document.body.classList.contains("jl-open")) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
   /* Akku schonen: ohne Berührung reichen ~30 Bilder pro Sekunde */
   const busy = FV.ptr.size || FV.focusing || FV.tool || FV.place || FV.drives.length || now - (FV.touchAt || 0) < 1500
     || Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01 || (typeof worldBusy === "function" && worldBusy());

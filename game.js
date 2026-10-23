@@ -3738,7 +3738,7 @@ function boot() {
       if (selected) renderInspector();
       renderFollowBar();
     }
-    if (activeTab !== "farm") mapRedraw();
+    if (activeTab !== "farm" && !document.body.classList.contains("jl-open")) mapRedraw();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

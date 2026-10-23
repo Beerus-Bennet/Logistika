@@ -398,9 +398,9 @@ function reportShow(html) {
   document.body.classList.add("report-open");
 }
 function reportHide() {
-  $("#report").classList.remove("on");
+  $("#report").classList.remove("on", "jl-on");
   $("#report").innerHTML = "";
-  document.body.classList.remove("report-open");
+  document.body.classList.remove("report-open", "jl-open");
 }
 function jailArrestScreen() {
   const j = S.jail, s = snusSort(j.sort);
@@ -419,32 +419,53 @@ function jailArrestScreen() {
   </div>`);
   $("#rpGo").onclick = () => { S.jail.state = "serving"; save(); jailServe(); };
 }
-/* Die 14 Tage im Schnelldurchlauf, mit Fortschrittsbalken */
+/* Die 14 Tage im Schnelldurchlauf. v114: 3D-Zelle (jail.js) mit Figur im Hochbett; ohne WebGL der alte Balken.
+   JAIL_MS = Mindestdauer der Anzeige in Millisekunden (die Spielzeit läuft im Schnelldurchlauf mit). */
+const JAIL_MS = (typeof window !== "undefined" && window.JAIL_MS_TEST) || 9000;
 function jailServe() {
   const j = S.jail;
-  reportShow(`<div class="rp jail">
+  const ctl = typeof JAIL3D !== "undefined" && typeof G3 !== "undefined" ? jailScene(j) : null;
+  if (!ctl) reportShow(`<div class="rp jail">
     <div class="rp-head"><b>🔒 Haft</b><span>JVA Moabit · Zelle 214</span></div>
     <div class="rp-days" id="rpDays">Tag 1 von ${SNUS_JAIL_DAYS}</div>
     <div class="rp-bar"><i id="rpBar"></i></div>
     <p class="rp-note">Hofgang, Kantine, Warten.</p>
   </div>`);
   const total = j.until - j.from;
-  const t0 = performance.now(), minMs = 2800;
+  const t0 = performance.now(), minMs = ctl ? (window.JAIL_MS_TEST || JAIL_MS) : 2800;
   muteToasts = true;
+  let lastSave = performance.now();
   const step = () => {
-    if (!S.jail) return;
+    if (!S.jail) { if (ctl) ctl.close(); return; }
     const target = j.from + total * Math.min(1, (performance.now() - t0) / minMs);
-    let guard = 0;
-    while (S.time < Math.min(target, j.until) && guard++ < 400) tick(Math.min(10, j.until - S.time));
+    /* Zeitbudget statt fester Anzahl: das Bild bleibt flüssig, die Spielzeit holt auf */
+    const tb = performance.now();
+    while (S.time < Math.min(target, j.until) && performance.now() - tb < 10) tick(Math.min(10, j.until - S.time));
+    if (performance.now() - lastSave > 2000) { lastSave = performance.now(); try { save(); } catch (e) {} }
     const k = (S.time - j.from) / total;
+    if (ctl) ctl.update({ k, money: S.money, moneyTxt: money(S.money), jobs: Math.max(0, S.done - j.done0) });
     const bar = $("#rpBar"), days = $("#rpDays");
     if (bar) bar.style.width = Math.round(Math.min(1, k) * 100) + "%";
     if (days) days.textContent = "Tag " + Math.min(SNUS_JAIL_DAYS, 1 + Math.floor(k * SNUS_JAIL_DAYS)) + " von " + SNUS_JAIL_DAYS;
     if (S.time < j.until - 0.01) return requestAnimationFrame(step);
     muteToasts = false;
-    jailOut();
+    if (ctl) ctl.finish(() => { ctl.close(); $("#report").classList.remove("jl-on"); document.body.classList.remove("jl-open"); jailRefresh(); jailOut(); });
+    else jailOut();
   };
   requestAnimationFrame(step);
+}
+function jailScene(j) {
+  const el = $("#report");
+  el.classList.add("on", "jl-on");
+  document.body.classList.add("report-open", "jl-open");
+  const ctl = JAIL3D.open(el, { days: SNUS_JAIL_DAYS });
+  if (!ctl) { el.classList.remove("jl-on"); document.body.classList.remove("jl-open"); return null; }
+  return ctl;
+}
+/* Nach der Haft alles auf den neuen Stand ziehen (Kosten, Aufträge, Fahrzeuge, Farm-Szene) */
+function jailRefresh() {
+  const run = (fn, ...a) => { try { if (typeof fn === "function") fn(...a); } catch (e) { console.warn("jailRefresh", e); } };
+  run(renderHud); run(farmSyncScene, true); run(renderFarmUI); run(mapRedraw); run(save);
 }
 function jailOut() {
   const j = S.jail;
@@ -462,7 +483,7 @@ function jailOut() {
   </div>`);
   $("#rpGo").onclick = () => {
     S.jail = null; jailUI = false;
-    reportHide(); save();
+    reportHide(); jailRefresh();
     if (typeof renderPause === "function") renderPause();
     render();
   };

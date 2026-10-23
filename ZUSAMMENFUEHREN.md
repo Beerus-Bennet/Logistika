@@ -1,5 +1,26 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v115 – Gefängnis-Feinschliff (auf v114)
+
+| Teil | Datei |
+|---|---|
+| Sitzpose, Glatze, Licht, God Rays, Tasse/Buch, Kalender-UI | `jail.js`, `style.css` |
+| Zeitbudget, Zwischenspeichern, `jl-open`, `jailRefresh` | `snus.js` |
+| Pause von Farmszene/Karte während der Zelle | `farmview.js`, `game.js` |
+| Test (`SIT_Y`, `SEAT.ry`) | `tests/jail.test.js` |
+| Version 115 | `index.html`, `sw.js` |
+
+## Stand v114 – Haft: 3D-Zelle als Wartebild (auf v113)
+
+| Teil | Datei |
+|---|---|
+| Neu: Zelle, Figur, Tiere, Fortschritt (`JAIL3D`) | `jail.js` |
+| `jailServe`/`jailScene`, `JAIL_MS`, `reportHide` | `snus.js` |
+| `person()`: `noLegs`, `noArms` | `woodmodels.js` |
+| `.jl3`, `.jl-*` | `style.css` |
+| Test | `tests/jail.test.js` |
+| Skript `jail.js` nach `team.js`, Version 114 | `index.html`, `sw.js` |
+
 ## Stand v113 – Fernglas: feines Nahsicht-Baummodell (auf v112)
 
 | Teil | Datei |

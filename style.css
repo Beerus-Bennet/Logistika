@@ -3240,3 +3240,49 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 .hu-need b{font-size:12px;font-weight:800;line-height:1.2}
 .hu-need small{font-size:10.5px;font-weight:700;opacity:.7}
 @media (prefers-reduced-motion:reduce){#huntUI .hu-rays{animation:none}#huntUI .hu-reveal.go,#huntUI .hu-banner,#huntUI .hu-strip{animation-duration:.01s}}
+
+/* ================= v114: Haftzelle (3D-Wartebild) ================= */
+#report.jl-on{padding:0;background:#07090d;overflow:hidden;display:block}
+.jl3{position:absolute;inset:0;overflow:hidden;background:#0b0e14;color:#eef1f5;font-family:var(--font)}
+.jl3 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+.jl-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 100%)}
+.jl-top{position:absolute;left:0;right:0;top:0;padding:calc(14px + var(--safe-t)) 16px 0;text-align:center;pointer-events:none;
+  background:linear-gradient(#0a0d13 0%,rgba(10,13,19,.85) 55%,rgba(10,13,19,0) 100%);padding-bottom:26px}
+.jl-plate{display:inline-flex;align-items:center;gap:12px;padding:8px 22px 8px 16px;border:3px solid #596273;border-radius:10px;
+  background:linear-gradient(#2b3140,#1c212c);box-shadow:inset 0 0 0 2px #0e1219,0 3px 0 #0a0d12}
+.jl-plate b{font-family:var(--display);font-size:clamp(26px,7.4vw,40px);letter-spacing:2px;color:#f1efe8;text-shadow:0 2px 0 #000}
+.jl-bars{display:inline-flex;gap:3px;padding:4px 5px;border:2px solid #aab2bf;border-radius:3px;height:30px}
+.jl-bars u{display:block;width:3px;background:#aab2bf;border-radius:2px}
+.jl-top p{margin:10px 0 2px;font-size:clamp(14px,3.9vw,19px);font-weight:700;color:#c9d0dc;line-height:1.25}
+.jl-top p b{font-family:var(--display);font-size:clamp(26px,7.6vw,38px);color:#f7b733;letter-spacing:1px;text-shadow:0 2px 0 #000}
+.jl-top small{display:block;margin-top:4px;font-size:11.5px;font-weight:700;letter-spacing:.6px;color:#8d96a6;text-transform:uppercase}
+.jl-bot{position:absolute;left:0;right:0;bottom:0;padding:34px 16px calc(14px + var(--safe-b));pointer-events:none;
+  background:linear-gradient(rgba(12,16,24,0) 0%,rgba(12,16,24,.9) 26%,#0c1018 100%)}
+.jl-bar{position:relative;height:18px;border:3px solid #596273;border-radius:99px;background:#1a2029;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.jl-bar i{display:block;height:100%;width:0;border-radius:99px;
+  background:repeating-linear-gradient(45deg,#f7b733,#f7b733 8px,#e29a1a 8px,#e29a1a 16px)}
+.jl-bar::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/14 - 1.5px),rgba(10,14,20,.55) calc(100%/14 - 1.5px),rgba(10,14,20,.55) calc(100%/14))}
+.jl-days{margin:8px 0 6px;text-align:center;font-family:var(--display);font-size:clamp(22px,6vw,30px);letter-spacing:1px;color:#f1efe8;text-shadow:0 2px 0 #000}
+.jl-days b{color:#f7b733;font-weight:inherit}
+.jl-cells{display:grid;grid-template-columns:repeat(14,1fr);margin:0 3px}
+.jl-cells span{position:relative;margin:0 1.5px;height:24px;display:grid;place-items:center;border-radius:5px;background:#1f2631;border:1.5px solid #3a4352;
+  font-size:10.5px;font-weight:800;color:#7f8999;transition:background .3s,color .3s}
+.jl-cells span.cur{border-color:#f7b733;color:#f7b733;animation:jlcur 1.6s ease-in-out infinite}
+.jl-cells span.x{background:linear-gradient(#f7b733,#e29a1a);border-color:#f7b733;color:transparent}
+.jl-cells span.x::after{content:"✕";position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;color:#2a1a05;animation:jlx .35s ease-out}
+@keyframes jlcur{0%,100%{box-shadow:0 0 0 0 rgba(247,183,51,0)}50%{box-shadow:0 0 8px 1px rgba(247,183,51,.55)}}
+@keyframes jlx{0%{transform:scale(2.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.jl-stats{display:flex;justify-content:space-between;gap:10px;margin:10px 2px 8px;font-size:11.5px;font-weight:700;color:#8d96a6}
+.jl-stats b{color:#e9edf3;margin-left:4px}
+.jl-tip{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1.5px solid #343c4b;border-radius:10px;background:rgba(24,30,41,.85)}
+.jl-tip>i{font-style:normal;font-size:24px;flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:8px;background:#161b24}
+.jl-tip div{font-size:13px;line-height:1.35;color:#c4ccd8;transition:opacity .25s}
+.jl-tip div b{display:block;color:#f7b733;font-size:13.5px;margin-bottom:1px}
+.jl-tip div.sw{opacity:0}
+.jl-say{position:absolute;transform:translate(-50%,-100%);padding:5px 10px;border-radius:10px 10px 10px 2px;background:#fbfaf6;color:#1b1f26;font-size:13px;font-weight:800;
+  opacity:0;pointer-events:none;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.5)}
+.jl-say.on{animation:jlsay 1.9s ease-out forwards}
+@keyframes jlsay{0%{opacity:0;margin-top:8px}12%{opacity:1;margin-top:0}80%{opacity:1}100%{opacity:0;margin-top:-14px}}
+.jl-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .55s ease-in}
+.jl-flash.on{opacity:1}
+@media (orientation:landscape){.jl-top{padding-bottom:12px}.jl-plate b{font-size:28px}.jl-top p{font-size:14px;margin:6px 0 0}.jl-top p br{display:none}.jl-top p b{font-size:20px}.jl-top small{display:none}}

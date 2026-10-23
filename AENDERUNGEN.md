@@ -1,5 +1,28 @@
 # Änderungen – kurz für den Kollegen
 
+## v115 (aufbauend auf v114) – Gefängnis-Feinschliff und saubere Entlassung
+
+- **Sitzpose:** Oberschenkel liegen jetzt flach auf der Matratze (Hüfte `SIT_Y = UM + 0.115`), Figur sitzt an der Bettkante (`SEAT` x −0,3 / z −0,93, leicht gedreht), Unterschenkel hängen an der Kante herunter, Hände ruhen auf den Oberschenkeln.
+- **Kopf:** glatte Low-Poly-Glatze wie die Standardfiguren; Brauen-/Mundstriche und Bart entfernt (die dunklen Ringe waren Haar und Striche).
+- **Licht/Farben:** hellere Ziegel, Sockel, Fliesen, Matratze und Decke; wärmeres, stärkeres Sonnenlicht und hellerer Himmel. Neu `raysMesh()`: vier gelbe God-Ray-Streifen zwischen den Gitterstäben zusätzlich zum Lichtkegel, Farbe und Stärke wandern mit der Tageszeit.
+- **Details:** Tasse mit aufsteigendem Dampf auf dem Boden, Buch auf dem oberen Bett (`cupMesh`, `bookMesh`). Tropfhahn, Maus, Staub waren schon da.
+- **UI:** Kalenderfelder passen zum Balken: gleiche Amber-Farbe mit dunklem ✕ statt rot, 14 Spalten genau unter den 14 Strichen im Balken, aktueller Tag pulsiert amber, Tagzahl in „Tag **6** / 14 (36 %)“ amber.
+- **Hintergrundprozesse:** `jailServe` rechnet mit Zeitbudget (10 ms je Bild statt fester 400 Schritte) und speichert alle 2 s. Während der Zelle (`body.jl-open`) pausieren Farmszene (`farmLoop`) und Karte (`mapRedraw`). Bei Entlassung ruft `jailRefresh()` HUD, Farmszene, Farm-UI, Karte und `save()` auf (auch beim Klick auf „Zurück an die Arbeit“).
+- Dateien: `jail.js`, `snus.js`, `farmview.js`, `game.js`, `style.css`, `tests/jail.test.js`, `index.html`, `sw.js`.
+
+## v114 (aufbauend auf v113) – Haft: 3D-Zelle als Wartebild (neu `jail.js`)
+
+**Vorher:** Beim Haftantritt kam nur ein Dialog mit grauem Balken (2,8 s). **Jetzt** eine eigene 3D-Szene (eigene Engine `gl3d.js`, nicht Three.js), die das Haftfenster füllt:
+- **Zelle:** Ziegel- und Sockelwände, Fliesenboden, Doppelstockbett, Tisch mit Büchern, Waschbecken/Klo aus Edelstahl, Regal mit Pflanze, Gitterwand als Tür, Poster, Bild, Zettel, Rohr mit Ventil. Fenster in der linken Wand: der Lichtstrahl fällt schräg über das Bett, die Gitterstäbe werfen echte Schatten auf den Boden (Sonnen-Schattenkarte).
+- **Figur:** sitzt im oberen Bett, Beine baumeln. Hautfarbe, Haarfarbe und Bart kommen aus dem Charakter des Spielers (Frau: Zopf, Mann: Bürstenschnitt). Teile einzeln animiert: Atmen, Beine, Kopf, Arme. Posen im Wechsel: Hände auf den Knien, rechts/links schauen, seufzen, strecken, grübeln, zum Fenster schauen; Antippen = winken.
+- **Damit es nicht langweilig wird:** Ratte „Hubert“ kommt aus dem Mauseloch, knabbert, schaut sich um und flieht, wenn man sie antippt; Wasserhahn tropft (Spritzer); Staub tanzt im Lichtstrahl; Vogel fliegt am Fenster vorbei; Wärter mit Taschenlampe läuft draußen am Gitter vorbei; Lampe flackert; Himmel und Licht wechseln über die Haft von Morgen zu Abend. Antippbar: Figur, Ratte, Hahn, Fenster (Sprechblase).
+- **Fortschritt:** Balken, „Tag n / 14 (x %)“, 14 Kalenderfelder (je Tag ein rotes ✕) und eine Strichliste an der Rückwand (je Tag ein Kreidestrich, Fünferbündel, Kreidewölkchen). Dazu live Kontostand und „Ohne dich zugestellt“ sowie wechselnde Tipps.
+- Ablauf in `snus.js`: `jailServe` zeigt die Szene (`jailScene`), Mindestdauer `JAIL_MS` = 9 s (vorher 2,8 s; Spielzeit läuft im Schnelldurchlauf mit), am Ende Blitz, dann wie bisher „Entlassen“. Ohne WebGL 2 bleibt der alte Balken.
+- `woodmodels.js` `person()`: neue Optionen `noLegs`, `noArms` (Teile einzeln animieren).
+- `style.css`: `.jl3`, `.jl-*` (Vollbild, Titelschild, Balken, Kalender, Tipp).
+- Test `tests/jail.test.js` (6 Tests: Modelle ohne NaN, Dreiecksbudget, Strahl im Raum, Figur sitzt, Texte, Aussehen); alle Suiten grün.
+- **Geprüft** im Software-Browser (Hochformat 430×900 und Querformat 1100×800): Szene, Posen, Fortschritt, Antippen von Figur/Hahn, Übergang zu „Entlassen“. **Nicht geprüft:** echtes Handy (Bildrate: Zelle ca. 4 700 Dreiecke, Schatten 1024 px, Pixeldichte max. 1,75), Ton gibt es keinen.
+
 ## v113 (aufbauend auf v112) – Bäume im Fernglas: eigenes Nahsicht-Modell
 
 **Ursache:** Im Fernglas (7×) und Zielfernrohr sieht man die Bäume stark vergrößert. Die Standardmodelle haben nur wenige große Flächen: Kronen wie Felsbrocken, Fichte ein glatter Kegel, Stämme wie Kisten (7 Ecken, starre Streifen, lose „Marken“-Latten an der Kiefer). Die Birke war schon feiner und fiel deshalb nicht auf.
