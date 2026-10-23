@@ -341,8 +341,6 @@ const FCOSMETIC = [
   { id: "maibaum",       cat: "saison", n: "Maibaum",                i: "🎏", price: 18, deco: "maypole" },
   { id: "schneemann",    cat: "saison", n: "Schneemann",             i: "⛄", price: 10, deco: "snowman" },
   { id: "osterhase",     cat: "saison", n: "Osterhase aus Holz",     i: "🐰", price: 10, deco: "easter" },
-  { id: "brotdose",      cat: "komfort", n: "Große Brotdose",        i: "🥪", price: 30, d: "+25 maximale Ausdauer" },
-  { id: "thermos",       cat: "komfort", n: "Thermoskanne",          i: "☕", price: 35, d: "Ausdauer kommt 50 % schneller zurück" },
   { id: "werkzeugguertel", cat: "komfort", n: "Werkzeuggürtel",      i: "🧰", price: 60, d: "+1 Warteplatz in allen Gebäuden" }
 ];
 const FCOS_CATS = [["skin", "🎨 Optik"], ["pet", "🐾 Haustiere"], ["saison", "🎄 Saison"], ["komfort", "☕ Komfort"]];

@@ -3328,3 +3328,7 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 
 /* v122: Waren in der Ausbeute-Leiste (Paket, Schatz) als 3D-Bildchen */
 .lootbanner .lb-it .ii{width:26px;height:26px;vertical-align:-8px;margin:-4px 1px -4px -4px}
+
+/* v124: angesprungene Telefon-Nachricht kurz hervorheben */
+.pmsg.focus{animation:pmfocus 2.2s ease-out}
+@keyframes pmfocus{0%,35%{box-shadow:0 0 0 3px #f5b83d,0 0 18px #f5b83daa}100%{box-shadow:0 0 0 0 transparent}}

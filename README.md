@@ -505,7 +505,7 @@ Kleeblätter 🍀, Wetter mit Tageszeit und das laufende Ereignis.
   Haustiere (Hofhund, Katze und *Ziege Tim* mit schwarzer Hornbrille laufen
   über den Hof), Saison-Deko
   (Weihnachtsbaum, Kürbislaternen, Maibaum, Schneemann, Osterhase) und Komfort
-  (große Brotdose, Thermoskanne, Werkzeuggürtel). Nichts davon ist nötig zum
+  (Werkzeuggürtel). Nichts davon ist nötig zum
   Weiterkommen. Die Vorschaubilder sind das echte 3D-Modell, so wie es danach
   auf dem Hof steht – das gilt im ganzen Laden (Felder, Bäume, Tiere, Ställe,
   Gebäude, Sägewerk, Deko). „Kleeblätter kaufen“ und „Bonus-Video“ sind nur

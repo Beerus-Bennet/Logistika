@@ -300,6 +300,12 @@ function erbeInit(F, fresh) {
   if (F.ev.cur && FEVENTS[F.ev.cur.k] && F.ev.cur.until - F.ev.cur.t0 > FEVENTS[F.ev.cur.k].dur && F.ev.cur.k === "haendler") F.ev.cur.until = Math.min(F.ev.cur.until, Math.max(S.time + 5, F.ev.cur.t0 + FEVENTS.haendler.dur));
   F.clover = F.clover != null ? F.clover : 5;
   F.cos = F.cos || { own: {}, on: {} };
+  /* v123: Große Brotdose und Thermoskanne gibt es nicht mehr – bereits gekaufte werden in 🍀 erstattet */
+  if (!F.v123) {
+    F.v123 = 1;
+    [["brotdose", 30], ["thermos", 35]].forEach(([id, p]) => { if (F.cos.own[id]) { F.clover += p; } delete F.cos.own[id]; delete F.cos.on[id]; });
+    if (F.sta > FSTA.max) F.sta = FSTA.max;
+  }
   F.stall = F.stall || { slots: [], coins: 0 };
   F.hay = F.hay || { n: FHAY.max, t: S.time };            /* v70: Heuballen an der Scheune */
   /* v53: Heuballen vom Weg, Scheune Rand an Rand ans Wohnhaus */
@@ -502,11 +508,10 @@ function treeNeedText(t) {
   return need.axe >= 2 ? "Stahlaxt" : "Axt";
 }
 /* Ausdauer: kommt von selbst langsam zurück */
-function farmStaMax() { return FSTA.max + (farmCos("brotdose") ? 25 : 0); }
+function farmStaMax() { return FSTA.max; }
 function farmSta() {
   const F = S.farm;
-  const k = farmCos("thermos") ? 1.5 : 1;
-  F.sta = Math.min(farmStaMax(), F.sta + Math.max(0, S.time - (F.staT || S.time)) * FSTA.regen * k);
+  F.sta = Math.min(farmStaMax(), F.sta + Math.max(0, S.time - (F.staT || S.time)) * FSTA.regen);
   F.staT = S.time;
   return F.sta;
 }

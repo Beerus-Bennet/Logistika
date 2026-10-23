@@ -729,7 +729,7 @@ function phoneMsg(m) {
   if (S.phone.msgs.length > 40) S.phone.msgs.length = 40;
   S.phone.unread++;
   renderPhoneBadge(true);
-  toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok", false, m.go || null);
+  toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok", false, m.go || "msg:" + m.id);
   /* v76: beim ersten Anruf erklärt Lina das Diensthandy (früher ein Tutorial-Schritt) */
   if (typeof linaHint === "function") linaHint("phone", "Dein <b>Diensthandy</b> 📞 klingelt – hier meldet sich dein Team. Tipp oben drauf; Nachrichten löschen sich nach 24 Stunden.", { top: true });
 }
@@ -764,22 +764,23 @@ function renderPhoneBadge(ring) {
   const b = $("#phoneCount");
   if (b) { b.textContent = n > 9 ? "9+" : n; b.style.display = n ? "" : "none"; }
 }
-function openPhone() {
+function openPhone(focusId) {
   ensureOffices();
+  if (typeof closeModal === "function" && $("#modal").classList.contains("open") && !phoneOpen()) closeModal();
   phoneTab = "msgs";                     /* der Rechner bleibt versteckt, bis man ihn antippt */
   S.phone.unread = 0;
   renderPhoneBadge();
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
-  renderPhone();
+  renderPhone(focusId);
   save();
   /* Solana-Kurs schon mal holen, damit Angebote gleich in SOL dastehen */
-  if (typeof solFetch === "function") solFetch().then(() => { if (phoneOpen()) renderPhone(); });
+  if (typeof solFetch === "function") solFetch().then(() => { if (phoneOpen()) renderPhone(focusId); });
 }
-function renderPhone() {
+function renderPhone(focusId) {
   if (!$("#modal").classList.contains("open")) return;
   prunePhoneSilent();
   const msgs = S.phone.msgs;
-  const body = msgs.length ? msgs.map(m => {
+  const body = msgs.length ? msgs.map(m => (html => html.replace(/^(\s*<div)/, `$1 data-mid="${m.id}"`))((m => {
     if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
     if (m.kind === "pablo" && typeof pabloMsgHTML === "function") return pabloMsgHTML(m);
     if (m.kind === "invite" && typeof inviteMsgHTML === "function") return inviteMsgHTML(m);
@@ -802,7 +803,7 @@ function renderPhone() {
       ${b && !m.handled && m.kind === "trouble"
         ? `<div class="pmsg-note">Stimmung in ${esc(N[b.node].short)}: ${Math.round(b.mood)} %</div>` : ""}
     </div>`;
-  }).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
+  })(m))).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
      dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
   const calc = phoneTab === "calc";
@@ -820,6 +821,10 @@ function renderPhone() {
     <div class="phone-list">${calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
   $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
+  if (focusId) {                                /* v124: Tipp auf die Meldung → genau diese Nachricht zeigen */
+    const el = $(`#modalBody [data-mid="${focusId}"]`);
+    if (el) { el.scrollIntoView({ block: "start" }); $(".phone-list").scrollTop = Math.max(0, $(".phone-list").scrollTop - 6); el.classList.add("focus"); setTimeout(() => el.classList.remove("focus"), 2200); }
+  }
   $("#mClose").onclick = closeModal;
   $("#mCancel").onclick = closeModal;
   $$("#modalBody [data-ptab]").forEach(b => b.onclick = () => { phoneTab = b.dataset.ptab; $(".phone-list").scrollTop = 0; renderPhone(); });

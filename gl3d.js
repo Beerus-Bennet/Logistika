@@ -377,14 +377,17 @@ const G3 = (() => {
   }
   void main(){
     vec3 n = normalize(vNor);
+    float tt = uWater > 1.5 ? uTime : 0.0;      /* v125: nur Wasser mit Wert 2 (Fluss) bewegt sich */
     if (uWater > 0.5) {
       /* kleine Kräuselwellen aus vier Richtungen */
+      /* v125: nur der nördliche Fluss (uWater = 2) bewegt sich – alle Wellen laufen von Osten nach Westen (−x);
+         alle anderen Gewässer stehen still (Zeit 0) */
       vec2 p = vW.xz, g = vec2(0.0);
-      vec2 d1 = vec2(0.8, 0.6), d2 = vec2(-0.5, 0.86), d3 = vec2(0.95, -0.31), d4 = vec2(-0.7, -0.71);
-      g += d1 * cos(dot(p, d1) * 2.1 + uTime * 1.2) * 0.030;
-      g += d2 * cos(dot(p, d2) * 3.6 + uTime * 1.6) * 0.022;
-      g += d3 * cos(dot(p, d3) * 6.3 + uTime * 2.3) * 0.014;
-      g += d4 * cos(dot(p, d4) * 10.1 + uTime * 3.0) * 0.009;
+      vec2 d1 = vec2(0.97, 0.24), d2 = vec2(0.95, -0.31), d3 = vec2(0.99, 0.12), d4 = vec2(0.9, 0.43);
+      g += d1 * cos(dot(p, d1) * 2.1 + tt * 1.2) * 0.030;
+      g += d2 * cos(dot(p, d2) * 3.6 + tt * 1.6) * 0.022;
+      g += d3 * cos(dot(p, d3) * 6.3 + tt * 2.3) * 0.014;
+      g += d4 * cos(dot(p, d4) * 10.1 + tt * 3.0) * 0.009;
       n = normalize(vec3(-g.x, 1.0, -g.y));
     }
     float d = dot(n, uSunDir);
@@ -401,9 +404,9 @@ const G3 = (() => {
       /* v119: sichtbare, ruhige Wasserbewegung auch von oben: wandernde helle/dunkle Wellenbänder (Farbe, nicht nur Normale)
          und vereinzelte Lichtfunken. Alles langsam und leicht, damit das Wasser lebt, aber nicht unruhig wirkt. */
       vec2 q = vW.xz;
-      float w1 = sin(q.x * 1.7 + q.y * 1.1 - uTime * 0.9), w2 = sin(q.x * 2.9 - q.y * 2.3 + uTime * 1.3), w3 = sin(q.x * 0.9 - q.y * 1.9 + uTime * 0.6 + w1);
+      float w1 = sin(q.x * 1.7 + q.y * 0.4 + tt * 0.9), w2 = sin(q.x * 2.9 - q.y * 0.9 + tt * 1.3), w3 = sin(q.x * 0.9 - q.y * 0.7 + tt * 0.6 + w1);
       c *= 1.0 + 0.085 * (w1 * w2 + 0.6 * w3);
-      float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + uTime * 1.7) * sin(q.y * 4.7 - uTime * 1.3 + w2));
+      float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 + tt * 0.6 + w2));
       c += gl * 0.13 * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */

@@ -893,8 +893,11 @@ function worldStatic() {
   const SP = FWORLD.spring;
   if (SP) lines.merge(FWM.springBed(SP[0], SP[1], wGroundAt), {});
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
+  /* v125: nur der nördliche Fluss fließt (water: 2, von Osten nach Westen); Seebach und Quelltümpel stehen still */
+  const cr = new FM.MB(); cr.merge(FWM.creekWater(FWORLD.creek, CR), {});
+  R.nodes.push(fnode(R.mesh(cr), { water: 2, shadow: false }));
   const cw = new FM.MB();
-  cw.merge(FWM.creekWater(FWORLD.creek, CR), {}); cw.merge(FWM.creekWater(LAKE_CREEK, CL), {});
+  cw.merge(FWM.creekWater(LAKE_CREEK, CL), {});
   if (SP) cw.merge(FWM.springPool(SP[0], SP[1]), {});
   R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false }));
   if (SP) { const q = FWORLD.creek[1]; R.nodes.push(fnode(fmesh("wspring", FWM.springRocks), { x: SP[0], z: SP[1], ry: Math.atan2(-(q[1] - SP[1]), q[0] - SP[0]) })); }
@@ -1915,7 +1918,7 @@ function worldSyncTreasure() {
     /* Kiste steckt halb im Loch, Deckel offen, voller Münzen */
     WV.trChest = add(fmesh("trChest2", () => {
       const b = new FM.MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
-      b.box(0.66, 0.42, 0.46, w, { y: -0.16, top: 0x2a1a0c });
+      b.box(0.66, 0.42, 0.46, w, { y: -0.16, top: 0x8c2434 });
       [-0.18, -0.04].forEach(y => b.box(0.67, 0.025, 0.47, wd, { y }));
       [-0.3, 0.3].forEach(x => b.box(0.06, 0.44, 0.48, g, { x, y: -0.17 }));
       b.box(0.12, 0.12, 0.03, g, { y: 0.0, z: 0.235 });
@@ -2083,7 +2086,7 @@ function stepTreasureReveal(Rv, dt, time) {
   }
   const u = t - Rv.tb;
   const kk = Math.min(1, u / 0.5), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
-  Rv.lid.rx = -2.2 * e;
+  Rv.lid.rx = -2.2 * e; Rv.lid.glow = 0.22;
   /* v98: Truhe setzt auf, bleibt offen und ohne Leuchten kurz stehen, zur Kamera gewandt – dann löst sie sich auf, die offene Truhe in der Grube bleibt */
   const TSd = 2.3 + 4.5, dn = Math.min(1, u / 0.9);
   B.y = 0.77 - dn * 0.65 + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.03 * (1 - dn));
@@ -2583,7 +2586,7 @@ function stepParcelOpen(O, P, dt, time) {
   /* Phase 1: Deckel klappt auf (mit Überschwingen), Fontäne, Ringe, Säule schießt hoch – dann löst sich alles auf */
   const u = t - O.tb;
   const kk = Math.min(1, u / 0.45), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
-  P.lid.rx = -2.15 * e;
+  P.lid.rx = -2.15 * e; P.lid.glow = 0.22;                  /* v124: offener Deckel (Unterseite) nicht im Schatten */
   /* v97: Kiste setzt wieder auf (Staub) und bleibt offen stehen – ohne Leuchten, zur Kamera gewandt */
   const dn = Math.min(1, u / 0.7);
   if (u < TS) { P.body.y = (O.y0 || 0) * (1 - dn * dn) + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.02 * (1 - dn)); P.body.ry += angTo(P.body.ry, face) * Math.min(1, dt * 5); }
@@ -3322,7 +3325,7 @@ function openFood() {
     <div class="fcap"><i style="width:${Math.round(sta / mx * 100)}%" class="${sta < 15 ? "full" : ""}"></i><span>💪 ${sta} / ${mx}</span></div>
     <div class="finv">${foods.length ? foods.map(id => `<button class="fit" data-eat="${id}">${itemIc(id)}<b>+${FFOOD[id]}</b><small>${famt(id, farmInv(id))}</small></button>`).join("")
       : `<div class="fs-empty">Nichts zu essen im Lager – Äpfel, Brot oder Wurst machen satt.</div>`}</div>
-    <div class="fs-sub">Fällen, Sägen und Aufräumen kosten Kraft – gutes Essen gibt mehr Ausdauer.${farmCos("thermos") ? " ☕ Die Thermoskanne hilft beim Erholen." : ""}</div>`, "food");
+    <div class="fs-sub">Fällen, Sägen und Aufräumen kosten Kraft – gutes Essen gibt mehr Ausdauer.</div>`, "food");
   $$("#farmSheetIn [data-eat]").forEach(b => b.onclick = () => {
     const v = farmEat(b.dataset.eat);
     if (v) { const r = b.getBoundingClientRect(), fr = $("#farmFx").getBoundingClientRect(); floatText(r.left - fr.left + r.width / 2, r.top - fr.top, "+" + v + " 💪", "gold"); sfx("collect"); save(); openFood(); renderFarmUI(); }

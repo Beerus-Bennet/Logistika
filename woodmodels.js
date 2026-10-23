@@ -1371,7 +1371,7 @@ const FWM = (() => {
      bleibt frei. Kein Geländer am Laufsteg (sonst sieht er aus wie eine Brücke), dafür Poller, Eimer und Angel. */
   function pier() {
     G3.seed(3951);
-    const b = new MB(), LW = 1.15, LH = 0.75, L = LW + LH, top = 0.15;
+    const b = new MB(), LW = 1.3, LH = 0.95, L = LW + LH, top = 0.15;
     const deck = (x0, x1, w) => { const n = Math.max(1, Math.round((x1 - x0) / 0.27)), p = (x1 - x0) / n; for (let i = 0; i < n; i++) b.box(p - 0.025, 0.05, w, i % 2 ? C.wood : C.woodL, { x: x0 + (i + 0.5) * p, y: top - 0.05 }); };
     b.noise(0.1, () => { deck(0.12, LW, 1.1); deck(LW, L, 2.0); });
     /* Längsbalken und Querbalken unter dem Belag */
@@ -1390,6 +1390,49 @@ const FWM = (() => {
     /* Eimer und eine angelehnte Angel */
     b.cyl(0.11, 0.13, 0.2, 9, 0x6c8fa8, { x: LW + 0.35, y: top + 0.003, z: -0.6, top: 0x3f8fc0 });
     b.box(0.025, 0.025, 1.5, 0x5a4030, { x: LW + 0.5, y: top + 0.35, z: 0.25, rx: 0.5, ry: 0.4 });
+    /* v125: klar als Angelsteg erkennbar – Schild mit Fisch, Laterne, Angeln mit Schnur und Pose, Fischeimer, Kiste mit Netz,
+       Rettungsring, Ruderboot am Steg */
+    const SG = 0xe9d6a8, FB = 0x3f8fc0;
+    /* Schild am Stegbeginn (zeigt zum Weg, −x): Pfosten, Brett, Fisch aus Quadern */
+    b.cyl(0.04, 0.04, 1.05, 6, C.woodD, { x: 0.42, y: top - 0.05, z: -0.72 });
+    b.box(0.05, 0.36, 0.66, SG, { x: 0.42, y: top + 0.78, z: -0.72 });
+    b.box(0.055, 0.045, 0.7, C.woodD, { x: 0.42, y: top + 1.12, z: -0.72 });
+    b.box(0.03, 0.1, 0.3, FB, { x: 0.385, y: top + 0.88, z: -0.72 });
+    b.box(0.03, 0.06, 0.1, 0x5ab0e0, { x: 0.385, y: top + 0.9, z: -0.72 });
+    b.box(0.03, 0.14, 0.08, FB, { x: 0.385, y: top + 0.86, z: -0.5 });
+    b.box(0.032, 0.03, 0.03, 0x1a1a1a, { x: 0.37, y: top + 0.93, z: -0.82 });
+    b.box(0.03, 0.05, 0.5, 0xb55a3a, { x: 0.385, y: top + 0.77, z: -0.72 });
+    /* Laterne auf Pfosten (nachts warm leuchtend) */
+    b.cyl(0.035, 0.035, 0.95, 6, C.woodD, { x: 0.42, y: top - 0.05, z: 0.72 });
+    b.box(0.13, 0.17, 0.13, 0xffd67d, { x: 0.42, y: top + 0.9, z: 0.72 });
+    b.box(0.17, 0.035, 0.17, 0x2a2a2a, { x: 0.42, y: top + 1.07, z: 0.72 });
+    b.box(0.17, 0.03, 0.17, 0x2a2a2a, { x: 0.42, y: top + 0.87, z: 0.72 });
+    /* zwei Angeln in Haltern am Kopf, Schnur und rot-weiße Pose im Wasser */
+    [[LW + 0.28, 0.82], [LW + 0.78, 0.86]].forEach(([x, z], i) => {
+      b.box(0.05, 0.28, 0.05, C.woodD, { x, y: top, z: z - 0.04 });
+      b.box(0.022, 0.022, 1.45, 0x6a4a2e, { x, y: top + 0.36, z: z + 0.5, rx: -0.32 });
+      b.box(0.006, 0.55, 0.006, 0xe8e8e8, { x, y: top - 0.2, z: z + 1.15 });
+      b.ico(0.032, 0xd8334a, { x, y: top - 0.16, z: z + 1.15 });
+      b.ico(0.02, 0xffffff, { x, y: top - 0.12, z: z + 1.15 });
+    });
+    /* Fischeimer mit zwei Fischen, Kiste mit Netz */
+    [[0.0, 0.09, 0x7fa8c0], [0.07, -0.1, 0xd9a24a]].forEach(([dz, rz, c]) => b.box(0.045, 0.15, 0.04, c, { x: LW + 0.32, y: top + 0.2, z: -0.6 + dz, rz }));
+    b.box(0.34, 0.2, 0.26, 0xa87a46, { x: LW + 0.3, y: top, z: -0.15, ry: 0.2 });
+    b.box(0.36, 0.03, 0.28, 0x7a5a38, { x: LW + 0.3, y: top + 0.2, z: -0.15, ry: 0.2 });
+    b.box(0.26, 0.035, 0.2, 0x4f9a5a, { x: LW + 0.3, y: top + 0.235, z: -0.15, ry: 0.2 });
+    /* Rettungsring flach am Kopf */
+    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2; b.box(0.09, 0.035, 0.05, k % 2 ? 0xf2f2f2 : 0xd8334a, { x: L - 0.38 + Math.cos(an) * 0.15, y: top, z: -0.62 + Math.sin(an) * 0.15, ry: -an }); }
+    /* Ruderboot am Steg (liegt im Wasser, Bug zeigt flussauf) */
+    const bx = L - 0.55, bz = 1.55;
+    b.box(0.58, 0.13, 1.5, 0x2d6f94, { x: bx, y: -0.07, z: bz });
+    b.box(0.045, 0.16, 1.5, 0x2d6f94, { x: bx - 0.3, y: -0.03, z: bz });
+    b.box(0.045, 0.16, 1.5, 0x2d6f94, { x: bx + 0.3, y: -0.03, z: bz });
+    b.box(0.56, 0.16, 0.05, 0x2d6f94, { x: bx, y: -0.03, z: bz - 0.76 });
+    b.box(0.56, 0.16, 0.05, 0x2d6f94, { x: bx, y: -0.03, z: bz + 0.76 });
+    b.box(0.5, 0.03, 1.4, 0xcfa46a, { x: bx, y: 0.045, z: bz });
+    b.box(0.5, 0.035, 0.16, 0xa87a46, { x: bx, y: 0.09, z: bz + 0.1 });
+    b.box(0.015, 0.015, 0.9, 0x8a6a48, { x: bx + 0.18, y: 0.12, z: bz - 0.25, ry: 0.25 });
+    b.box(0.01, 0.01, 0.8, 0xd8c8a0, { x: L - 0.2, y: top + 0.25, z: 1.1 });
     return b;
   }
   /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
@@ -1397,10 +1440,17 @@ const FWM = (() => {
   function lootCrate() {
     G3.seed(3960);
     const b = new MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
+    /* v124: offen sichtbar – der Korpus ist innen hohl (Futter, Münzhaufen, Rahmenbretter), vorher schwarze Fläche */
     b.noise(0.1, () => {
-      b.box(0.9, 0.5, 0.62, w, { top: 0x3a2412 });
+      b.box(0.9, 0.44, 0.62, w, { top: 0xb98a52 });
       [0.12, 0.25, 0.38].forEach(y => b.box(0.905, 0.018, 0.625, wd, { y }));
+      b.box(0.9, 0.06, 0.06, w, { y: 0.44, z: 0.28, top: wd });
+      b.box(0.9, 0.06, 0.06, w, { y: 0.44, z: -0.28, top: wd });
+      b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: 0.42, top: wd });
+      b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: -0.42, top: wd });
     });
+    b.box(0.74, 0.035, 0.46, 0xe8b830, { y: 0.44, top: 0xffd75a });
+    [[-0.2, -0.1, 0xd8334a], [0.05, 0.08, 0x3fa0e0], [0.24, -0.06, 0x58d68d], [-0.05, -0.14, 0xffe27a]].forEach(([x, z, c]) => b.ico(0.045, c, { x, y: 0.478, z }));
     /* v77: Eckbeschläge 5 mm vor den Seitenflächen (lagen bündig darauf und flimmerten) */
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.08, 0.52, 0.08, g, { x: sx * 0.415, z: sz * 0.275, y: -0.01 }));
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.505, 0.635, g, { x, y: -0.002 }));
@@ -1412,7 +1462,7 @@ const FWM = (() => {
     G3.seed(3961);
     const b = new MB(), w = 0x9a6234, wl = 0xb9783f, g = 0xe2b33a, gl = 0xf6d24a;
     b.noise(0.1, () => {
-      b.box(0.92, 0.12, 0.64, w, { z: 0.32 });
+      b.box(0.92, 0.12, 0.64, w, { z: 0.32, bot: 0xc9985c });          /* v124: Deckel-Unterseite hell (Futter) statt fast schwarz */
       b.box(0.84, 0.09, 0.56, wl, { y: 0.12, z: 0.32 });
     });
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.125, 0.645, g, { x, z: 0.32 }));
@@ -1425,10 +1475,17 @@ const FWM = (() => {
   function goldChest() {
     G3.seed(3970);
     const b = new MB(), w = 0x7a4a26, wd = 0x5c3517, g = 0xe2b33a, gl = 0xf6d24a;
+    /* v124: Korpus innen hohl mit rotem Futter, Rahmenbrettern und Münzhaufen (vorher schwarze Fläche) */
     b.noise(0.08, () => {
-      b.box(0.9, 0.5, 0.62, w, { top: 0x2a1a0c });
+      b.box(0.9, 0.44, 0.62, w, { top: 0x8c2434 });
       [0.1, 0.22, 0.34].forEach(y => b.box(0.905, 0.018, 0.625, wd, { y }));
+      b.box(0.9, 0.06, 0.06, w, { y: 0.44, z: 0.28, top: wd });
+      b.box(0.9, 0.06, 0.06, w, { y: 0.44, z: -0.28, top: wd });
+      b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: 0.42, top: wd });
+      b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: -0.42, top: wd });
     });
+    b.box(0.74, 0.04, 0.46, 0xe8b830, { y: 0.44, top: 0xffd75a });
+    [[-0.22, -0.1, 0xd8334a], [0.04, 0.1, 0x3fa0e0], [0.26, -0.05, 0x58d68d], [-0.04, -0.15, 0xffe27a], [0.14, -0.14, 0xd8334a]].forEach(([x, z, c]) => b.ico(0.05, c, { x, y: 0.482, z }));
     b.box(0.94, 0.06, 0.66, g, { y: 0.0 });
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.09, 0.54, 0.09, g, { x: sx * 0.41, z: sz * 0.27, y: -0.02 }));
     [-0.24, 0.24].forEach(x => b.box(0.08, 0.505, 0.635, g, { x, y: -0.002 }));
@@ -1442,7 +1499,7 @@ const FWM = (() => {
     G3.seed(3971);
     const b = new MB(), w = 0x7a4a26, wl = 0x93602f, g = 0xe2b33a, gl = 0xf6d24a;
     b.noise(0.08, () => {
-      b.box(0.94, 0.1, 0.64, w, { z: 0.32 });
+      b.box(0.94, 0.1, 0.64, w, { z: 0.32, bot: 0x8c2434 });            /* v124: Deckel-Unterseite rotes Futter */
       b.box(0.94, 0.09, 0.52, wl, { y: 0.1, z: 0.32 });
       b.box(0.94, 0.08, 0.34, w, { y: 0.19, z: 0.32 });
     });

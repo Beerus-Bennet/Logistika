@@ -1,5 +1,30 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v125 – Angelsteg, Fluss-Wasser, offene Kisten (auf v124; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Angelsteg, Kisten-Korpus/Deckel | `woodmodels.js` |
+| Wasser-Shader (`water: 2` = Fluss, sonst still) | `gl3d.js` |
+| Fluss als eigener Knoten, Deckel-Glow, Grubenkiste | `worldview.js` |
+
+## Stand v124 – Telefon-Meldung öffnet den Chat (auf v123; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| `runMsgGo` mit `msg:`-Ziel | `game.js` |
+| `phoneMsg`-Toast mit Ziel, `openPhone/renderPhone(focusId)`, `data-mid` | `offices.js` |
+| `.pmsg.focus` | `style.css` |
+
+## Stand v123 – Brotdose/Thermoskanne entfernt (auf v122; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| beide Artikel raus | `erbedata.js` |
+| Ausdauer ohne Boni, Migration mit Erstattung | `erbe.js` |
+| Hinweistext im Essen-Dialog | `worldview.js` |
+| README | `README.md` |
+
 ## Stand v122 – alle Warenbildchen + Werkzeuge, Einsammeln (auf v121; ein ZIP mit allem seit v120)
 
 | Teil | Datei |

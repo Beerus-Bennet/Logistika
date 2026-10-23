@@ -2594,7 +2594,12 @@ function toastBusy() {
 }
 /* Ziele für antippbare Meldungen (z. B. Döring-Nachricht → zum Montagewagen) */
 const MSG_GO = {};
-function runMsgGo(go) { try { if (go && MSG_GO[go]) MSG_GO[go](); } catch (e) { console.warn(e); } }
+function runMsgGo(go) {
+  try {
+    if (go && go.startsWith("msg:")) { if (typeof openPhone === "function") openPhone(go.slice(4)); return; }   /* v124: Telefon-Meldung → direkt in den Chat */
+    if (go && MSG_GO[go]) MSG_GO[go]();
+  } catch (e) { console.warn(e); }
+}
 function toast(msg, kind, low, go) {
   if (muteToasts) return;
   const now = performance.now();

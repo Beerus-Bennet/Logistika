@@ -1,5 +1,25 @@
 # Änderungen – kurz für den Kollegen
 
+## v125 – Angelsteg, Wasser nur im Fluss in Bewegung (Ost→West), Belohnungs-/Schatzkiste offen sauber
+
+- **Angelsteg (`woodmodels.js` `pier`):** etwas länger; Schild mit Fisch am Stegbeginn, Laterne (nachts warm), zwei Angeln in Haltern mit Schnur und rot-weißer Pose, Fischeimer mit Fischen, Kiste mit Netz, Rettungsring, Ruderboot am Steg.
+- **Wasser (`gl3d.js`, `worldview.js`):** `water: 1` = still (Zeit 0 im Shader: Teich, See, Seebach, Quelltümpel, Netzgehege), `water: 2` = Fluss. Nur der nördliche Fluss (`FWORLD.creek`, eigener Knoten) bewegt sich; Wellen, Bänder und Funken laufen jetzt von Osten nach Westen (−x). Nur die Richtungen der Terme geändert, Tempo/Stärke gleich.
+- **Belohnungskiste vorm Hoftor / Schatztruhe aus der Grube:** offen sah der Korpus wie eine schwarze Fläche aus und der Deckel innen fast schwarz. Jetzt hohler Korpus mit Futter, Rahmenbrettern, Münzhaufen und Edelsteinen; Deckel-Unterseite hell bzw. rot, leichtes Eigenleuchten des offenen Deckels. Auch die Kiste, die in der Grube stehen bleibt, hat rotes Futter.
+- Enthält v124 bis v121 – ein Upload genügt (alle Dateien seit v120).
+
+## v124 – Telefon-Meldung antippen → direkt in den Chat
+
+- Die Meldung unten (z. B. „💬 Mr. Snus: „Jo brauchst du Snus?““, ebenso Don Pablo, Entscheidungen, Teamanrufe) ist jetzt antippbar: öffnet das Diensttelefon, scrollt zu genau dieser Nachricht/diesem Chat und hebt sie kurz mit goldenem Rahmen hervor.
+- Technik: `phoneMsg` gibt dem Toast das Ziel `"msg:"+id` (eigenes `m.go` bleibt vorrangig), `runMsgGo` (`game.js`) erkennt das Präfix, `openPhone(focusId)`/`renderPhone(focusId)` (`offices.js`) springen per `data-mid`-Anker; `.pmsg.focus` in `style.css`.
+- Enthält v123, v122, v121 – ein Upload genügt (alle Dateien seit v120).
+
+## v123 – Große Brotdose und Thermoskanne entfernt
+
+- Beide Komfort-Artikel sind aus dem Laden (`erbedata.js`) und aus der Spiellogik (`erbe.js`: Ausdauer-Maximum wieder fest 100, Erholung ohne Faktor) sowie dem Essen-Dialog (`worldview.js`) und der README entfernt.
+- **Alte Spielstände:** einmalige Migration (`F.v123`): wer eine der beiden gekauft hatte, bekommt die 🍀 zurück (30 bzw. 35), Besitz-/Aktiv-Eintrag wird gelöscht, Ausdauer auf höchstens 100 gekappt.
+- Der Werkzeuggürtel bleibt die einzige Komfort-Karte.
+- Enthält v122 und v121 – ein Upload genügt (ZIP mit allen Dateien seit v120).
+
 ## v122 (aufbauend auf v121) – alle übrigen Warenbildchen neu, Werkzeuge neu, Einsammeln zeigt die 3D-Bildchen
 
 Enthält v121 vollständig – **ein Upload genügt** (ZIP mit allen Dateien, die sich seit v120 geändert haben).
