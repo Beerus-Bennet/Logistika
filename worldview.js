@@ -1230,22 +1230,26 @@ function skinMesh(t) {
 }
 /* Vorschaubilder für den Extras-Laden: das echte 3D-Modell, einmal gerendert */
 const THUMB = { R: null, cache: {}, failed: false };
-function thumbR() {
-  if (THUMB.R || THUMB.failed) return THUMB.R;
+/* v120: zweiter, größerer Zeichner für große Bilder (Trophäenwand) – 320 px statt 160 px */
+function thumbR(big) {
+  const K = big ? "RB" : "R", N = big ? 320 : 160;
+  if (THUMB[K] || THUMB.failed) return THUMB[K];
   try {
     const cv = document.createElement("canvas");
-    cv.width = cv.height = 160;
+    cv.width = cv.height = N;
     const R = G3.create(cv, { keep: true, shadowSize: 1024, shadowBox: 4, maxDpr: 1 });
-    if (!R) { THUMB.failed = true; return null; }
-    R.resize = () => { R.w = 160; R.h = 160; R.dpr = 1; };
+    if (!R) { if (!big) THUMB.failed = true; return null; }
+    R.resize = () => { R.w = N; R.h = N; R.dpr = 1; };
     R.env.fogR = [400, 800];
-    THUMB.R = R;
-  } catch (e) { THUMB.failed = true; }
-  return THUMB.R;
+    THUMB[K] = R;
+  } catch (e) { if (!big) THUMB.failed = true; }
+  return THUMB[K];
 }
-function thumbOf(key, fn) {
+/* o (v120, optional): { yaw, pitch, big } – eigene Blickrichtung (Trophäen von vorn) und großes Bild */
+function thumbOf(key, fn, o) {
   if (THUMB.cache[key]) return THUMB.cache[key];
-  const R = thumbR();
+  o = o || THUMB.opts[key] || {};
+  const R = thumbR(o.big);
   if (!R) return null;
   let url = null;
   try {
@@ -1260,9 +1264,9 @@ function thumbOf(key, fn) {
     /* ragt das Modell über den Bildrand (lange Bretter, Kisten über Eck),
        wird es mit mehr Abstand noch einmal gerendert – nichts wird abgeschnitten */
     for (const k of [1.3, 1.75, 2.3]) {
-      Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3) * k, yaw: Math.PI / 4, pitch: flat ? 0.85 : 0.55, fov: 0.55 });
+      Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3) * k, yaw: o.yaw != null ? o.yaw : Math.PI / 4, pitch: o.pitch != null ? o.pitch : flat ? 0.85 : 0.55, fov: 0.55 });
       R.render(1.5);
-      const c = thumbCrop(R.canvas, k < 2.2);
+      const c = thumbCrop(R.canvas, k < 2.2, o.big ? 288 : 112);
       if (c) { url = c; break; }
     }
     R.free(m);
@@ -1272,8 +1276,9 @@ function thumbOf(key, fn) {
 }
 /* Bildchen eng zuschneiden: jedes Modell füllt das Quadrat gleich gut –
    lange Bretter wie runde Laibe, nichts ragt über den Rand */
-function thumbCrop(src, strict) {
-  const N = 112, w = src.width, h = src.height;
+function thumbCrop(src, strict, N) {
+  N = N || 112;
+  const w = src.width, h = src.height;
   try {
     const a = document.createElement("canvas"); a.width = w; a.height = h;
     const ax = a.getContext("2d"); ax.drawImage(src, 0, 0);
@@ -1315,10 +1320,12 @@ function decoModel(k) {
 }
 /* Bildchen im Laden: erst das Symbol, dann (Bild für Bild) das echte Modell */
 THUMB.fns = {};
-function thumbSpan(key, fn, emoji, lock) {
+THUMB.opts = {};
+function thumbSpan(key, fn, emoji, lock, o) {
   const lk = lock ? `<i class="th-lk">🔒</i>` : "";
   if (!fn || THUMB.failed || THUMB.cache[key] === null) return `<span class="ic">${lock ? "🔒" : emoji}</span>`;
   THUMB.fns[key] = fn;
+  if (o) THUMB.opts[key] = o;
   const url = THUMB.cache[key];
   return url ? `<span class="ic th"><img src="${url}" alt="">${lk}</span>` : `<span class="ic th" data-th="${key}"><b>${emoji}</b>${lk}</span>`;
 }
@@ -1339,11 +1346,13 @@ function itemIc(id, lock) {
   const it = FITEMS[id];
   if (!it) return "";
   if (!ITEM_3D.has(id)) return `<span class="ic">${lock ? "🔒" : it.i}</span>`;
-  return thumbSpan("item:" + id, () => FWM.item(id), it.i, lock);
+  return thumbSpan("item:" + id, () => FWM.item(id), it.i, lock, itemView(id));
 }
+/* v120: Trophäen von vorn und leicht von der Seite zeigen (statt schräg von oben wie Waren) */
+function itemView(id) { return /^tro_/.test(id) ? { yaw: Math.PI / 2 - 0.42, pitch: 0.1 } : null; }
 function toolIc(id, lock) { const T = FTOOLS[id]; return thumbSpan("tool:" + id, () => FWM.tool(id), T ? T.i : ({ sickle: "🌙", water: "🚿" }[id] || "🪓"), lock); }
 /* Bild-Adresse eines 3D-Bildchens (für Blasen, fliegende Sachen, Ziehen) – null, wenn es keins gibt */
-function itemImg(id) { return ITEM_3D.has(id) && !THUMB.failed ? thumbOf("item:" + id, () => FWM.item(id)) : null; }
+function itemImg(id) { return ITEM_3D.has(id) && !THUMB.failed ? thumbOf("item:" + id, () => FWM.item(id), itemView(id)) : null; }
 function toolImg(id) { return THUMB.failed ? null : thumbOf("tool:" + id, () => FWM.tool(id)); }
 /* kleines Bild im Text (Blasen, Überschriften) – sonst das Symbol */
 function icHTML(id) { const u = itemImg(id); return u ? `<img class="ii" src="${u}" alt="">` : (FITEMS[id] ? FITEMS[id].i : id); }

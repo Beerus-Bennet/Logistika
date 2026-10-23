@@ -25,6 +25,10 @@
      das Stück, goldene Funken, die Medaille blendet groß auf, dann schmale
      Leisten oben und unten – die Mitte bleibt frei.
 
+   v120 – Hirsch, Keiler und Trophäen neu: organische Modelle (skin über Querschnitts-Ringe, Eckfarben, weiche Normalen,
+   gleiches Skelett wie vorher), Geweih nach Enden/Güte/Variante, Trophäen als Kopfpräparate je erlegtem Stück
+   (S.farm.hunt.coll), Trophäenwand mit großen Bildern und Drehansicht im Lager.
+
    Begriffe für Three.js-Kenner: Szene = FV.R.nodes, Mesh = fmesh() + fnode(),
    Gruppe/Bone = Kind-Knoten (R.addChild), InstancedMesh = R.instGroup,
    Raycaster = zoneHit (Strahl gegen Kugeln/Ellipsoid im Tier), Tween = ss/lerp. */
@@ -189,88 +193,370 @@ const HUNT = (() => {
   const FC_ = { body: 0xb5602c, bodyD: 0x8c4520, neck: 0x1c4c57, head: 0x173b45, red: 0xd2281e, ring: 0xf4f1e8, beak: 0xdcc58b, tail: 0x9b6a3b, tailD: 0x5e3e22, wing: 0xa27648, leg: 0x7d7468 };
   const FCc = FC_;
 
-  /* Rothirsch mit Gelenken: Rumpf · Träger (Hals) · Haupt (Kopf) · Lauscher · Wedel · Läufe (Ober- und Unterteil) */
-  function deerBody() {
-    G3.seed(5101);
-    const b = MB();
-    b.noise(0.07, m => {
-      m.sphere(0.5, 10, 7, DC.coat, { y: 0.98, sx: 0.42, sy: 0.45, sz: 1.0, bottom: DC.belly });
-      m.sphere(0.27, 8, 6, DC.coatD, { y: 0.97, z: 0.3, sx: 0.82, sy: 0.9, sz: 1.0 });
-      m.sphere(0.12, 7, 5, DC.rump, { y: 0.99, z: -0.41, sx: 1.35, sy: 1.2, sz: 0.55 });          /* Spiegel (heller Fleck am Hinterteil) */
+  /* ======================= v120: organische Tiermodelle ======================
+     Warum neu: Der Hirsch bestand aus Kugeln, Quadern und Stäben (Kastenkopf, Stockbeine, Stockgeweih). Jetzt ist jedes
+     Teil eine durchgehende Haut über Querschnitts-Ringe (skin): Profil-Tabellen geben Rückenlinie, Bauchlinie und Breite vor,
+     die Normalen sind weich, die Fellfarbe wird je Ecke berechnet (Rücken dunkler, Bauch heller, Spiegel, Mähne, Läufe).
+     Das Skelett (Gelenkpunkte, Längen der Läufe, Hals- und Kopfdrehpunkt) bleibt exakt wie bisher – Trefferzonen und
+     Animation passen also weiter. Alles bleibt im Stil der Engine: Dreiecke mit Eckfarben, keine Texturen, kein Fell-Shader. */
+  const RGB = c => Array.isArray(c) ? c : [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+  const mixc = (a, b, t) => { a = RGB(a); b = RGB(b); t = clamp(t, 0, 1); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
+  const mulc = (c, f) => [Math.min(1, c[0] * f), Math.min(1, c[1] * f), Math.min(1, c[2] * f)];
+  const hsh = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+  /* ruhige Fellschattierung: zwei weiche Wellen und feines Korn – kein sichtbares Muster */
+  const fur = (p, k) => 1 + (k == null ? 1 : k) * (0.04 * Math.sin(p[0] * 21 + p[1] * 13 + 1.3) * Math.sin(p[2] * 17 - p[1] * 23) + 0.03 * Math.sin(p[2] * 7.1 + p[1] * 4.3) + 0.04 * (hsh(p[0], p[1], p[2]) - 0.5));
+  /* Profil-Tabelle [[x, a, b, …], …]: weich (Catmull-Rom) zwischen den Stützstellen */
+  function prof(T, x) {
+    const n = T.length;
+    if (x <= T[0][0]) return T[0].slice(1);
+    if (x >= T[n - 1][0]) return T[n - 1].slice(1);
+    let i = 0; while (i < n - 2 && x > T[i + 1][0]) i++;
+    const a = T[Math.max(0, i - 1)], b = T[i], c = T[i + 1], d = T[Math.min(n - 1, i + 2)], t = (x - b[0]) / (c[0] - b[0]), t2 = t * t, t3 = t2 * t;
+    const o = [];
+    for (let k = 1; k < b.length; k++) { const p0 = a[k], p1 = b[k], p2 = c[k], p3 = d[k]; o.push(0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)); }
+    return o;
+  }
+  const v3sub = (a, c) => [a[0] - c[0], a[1] - c[1], a[2] - c[2]];
+  const v3crs = (a, c) => [a[1] * c[2] - a[2] * c[1], a[2] * c[0] - a[0] * c[2], a[0] * c[1] - a[1] * c[0]];
+  const v3n = a => { const l = Math.hypot(a[0], a[1], a[2]); return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0]; };
+  const v3dot = (a, c) => a[0] * c[0] + a[1] * c[1] + a[2] * c[2];
+  /* Haut über Ringe: P[i][j] = Ring i, Punkt j rundum (geschlossen), C[i][j] = Farbe [r,g,b].
+     Normalen aus den Nachbarpunkten (weich), nach außen gerichtet; Dreiecke werden so gewendet, dass die Vorderseite außen liegt.
+     o.cap0 / o.cap1: Enden mit einem Fächer schließen (o.tip0 / o.tip1: Spitze statt Mittelpunkt).
+     o.ref(i, j, p): Richtung, in die die Normale zeigen soll (für flache Ringe, z. B. die Brettfläche) – sonst vom Ringmittelpunkt weg. */
+  function skin(b, P, C, o) {
+    o = o || {};
+    const n = P.length, m = P[0].length, M = b.M, v = b.v;
+    const cen = P.map(R => { let x = 0, y = 0, z = 0; for (const p of R) { x += p[0]; y += p[1]; z += p[2]; } return [x / m, y / m, z / m]; });
+    const axis = i => v3n(v3sub(cen[Math.min(n - 1, i + 1)], cen[Math.max(0, i - 1)]));
+    const N = P.map((R, i) => R.map((p, j) => {
+      const ti = v3sub(P[Math.min(n - 1, i + 1)][j], P[Math.max(0, i - 1)][j]), tj = v3sub(R[(j + 1) % m], R[(j + m - 1) % m]);
+      let q = v3n(v3crs(tj, ti));
+      if (!q[0] && !q[1] && !q[2]) q = i === 0 ? v3n(v3sub(cen[0], cen[1])) : axis(i);
+      if (v3dot(q, o.ref ? o.ref(i, j, p) : v3sub(p, cen[i])) < 0) q = [-q[0], -q[1], -q[2]];
+      return q;
+    }));
+    const put = (p, q, c) => {
+      v.push(M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14]);
+      const x = M[0] * q[0] + M[4] * q[1] + M[8] * q[2], y = M[1] * q[0] + M[5] * q[1] + M[9] * q[2], z = M[2] * q[0] + M[6] * q[1] + M[10] * q[2], l = Math.hypot(x, y, z) || 1;
+      v.push(x / l, y / l, z / l, c[0], c[1], c[2]);
+    };
+    const tri = (pa, na, ca, pb, nb, cb, pc, nc, cc) => {
+      const g = v3crs(v3sub(pb, pa), v3sub(pc, pa));
+      if (Math.abs(g[0]) + Math.abs(g[1]) + Math.abs(g[2]) < 1e-14) return;
+      if (v3dot(g, [na[0] + nb[0] + nc[0], na[1] + nb[1] + nc[1], na[2] + nb[2] + nc[2]]) < 0) { put(pa, na, ca); put(pc, nc, cc); put(pb, nb, cb); }
+      else { put(pa, na, ca); put(pb, nb, cb); put(pc, nc, cc); }
+    };
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < m; j++) {
+      const j1 = (j + 1) % m;
+      tri(P[i][j], N[i][j], C[i][j], P[i + 1][j], N[i + 1][j], C[i + 1][j], P[i + 1][j1], N[i + 1][j1], C[i + 1][j1]);
+      tri(P[i][j], N[i][j], C[i][j], P[i + 1][j1], N[i + 1][j1], C[i + 1][j1], P[i][j1], N[i][j1], C[i][j1]);
+    }
+    [[0, o.cap0, o.tip0, 1, o.n0], [n - 1, o.cap1, o.tip1, n - 2, o.n1]].forEach(([i, cap, tip, k, nq]) => {
+      if (!cap) return;
+      const c = tip || cen[i], q = nq || v3n(v3sub(cen[i], cen[k])), cc = C[i][0];
+      for (let j = 0; j < m; j++) { const j1 = (j + 1) % m; tri(c, q, cc, P[i][j], N[i][j], C[i][j], P[i][j1], N[i][j1], C[i][j1]); }
     });
     return b;
   }
-  function deerNeck() {
-    const b = MB();
-    b.noise(0.06, m => {
-      beam(m, [0, -0.05, -0.03], [0, 0.5, 0.22], 0.1, DC.neck, false);
-      m.sphere(0.14, 7, 5, DC.neck, { y: 0.1, z: 0.04, sx: 0.95, sy: 1.35, sz: 1.0 });   /* Mähne am Widerrist */
-    });
-    return b;
+  /* Ring aus Mitte c, Achsen U/V, Halbachsen hu, hv (oben/unten getrennt), Superellipse e; f(j, cos, sin) → Faktor oder [Faktor U, Faktor V] */
+  function ring(c, U, V, hu, hvT, hvB, m, e, f) {
+    const R = [], ex = 2 / (e || 2);
+    for (let j = 0; j < m; j++) {
+      const t = (j / m) * Math.PI * 2, cu = Math.cos(t), sv = Math.sin(t);
+      const a = Math.sign(cu) * Math.pow(Math.abs(cu), ex), bb = Math.sign(sv) * Math.pow(Math.abs(sv), ex), k = f ? f(j, cu, sv) : 1;
+      const ku = Array.isArray(k) ? k[0] : k, kv = Array.isArray(k) ? k[1] : k, h = (sv > 0 ? hvT : hvB) * kv, w = hu * ku;
+      R.push([c[0] + U[0] * a * w + V[0] * bb * h, c[1] + U[1] * a * w + V[1] * bb * h, c[2] + U[2] * a * w + V[2] * bb * h]);
+    }
+    return R;
   }
-  function antlers(b, P, sc, base) {
-    base = base || [0, 0.62, 0.3];
-    const n = Math.max(3, Math.round(P / 2)), L = 0.42 + sc * 0.34, th = 0.026 + sc * 0.014;
-    [-1, 1].forEach(s => {
-      const pts = [[base[0] + s * 0.06, base[1], base[2]]];
-      const dirs = [[s * 0.55, 0.75, -0.25], [s * 0.3, 0.92, -0.2], [s * 0.1, 0.98, -0.12], [-s * 0.15, 0.95, 0.1]];
-      dirs.forEach((d, i) => { const l = Math.hypot(...d), q = pts[i]; pts.push([q[0] + d[0] / l * L * 0.27, q[1] + d[1] / l * L * 0.27, q[2] + d[2] / l * L * 0.27]); });
-      for (let i = 0; i < 4; i++) beam(b, pts[i], pts[i + 1], th * (1 - i * 0.14), i < 3 ? DC.ant : DC.antT, true);
-      for (let k = 0; k < n - 1; k++) {
-        const u = (k + 0.6) / (n - 0.3), seg = Math.min(3, Math.floor(u * 4)), f = u * 4 - seg;
-        const a = pts[seg], e = pts[seg + 1], q = [lerp(a[0], e[0], f), lerp(a[1], e[1], f), lerp(a[2], e[2], f)];
-        const crown = u > 0.72, len = (k === 0 ? 0.17 : crown ? 0.11 : 0.14) * (0.8 + sc * 0.45);
-        const dir = k === 0 ? [s * 0.05, 0.35, 0.95] : crown ? [s * (0.2 + k * 0.05), 0.9, k % 2 ? 0.35 : -0.25] : [s * 0.12, 0.55, 0.8];
-        const dl = Math.hypot(...dir);
-        beam(b, q, [q[0] + dir[0] / dl * len, q[1] + dir[1] / dl * len, q[2] + dir[2] / dl * len], th * 0.72, DC.antT, true);
+  /* Ellipsoid (weich, korrekte Normalen auch bei starker Stauchung) */
+  function ell(b, c, r, col, m, nr, o) {
+    m = m || 10; nr = nr || 7; o = o || {};
+    const P = [], C = [];
+    for (let i = 1; i < nr; i++) {
+      const th = (i / nr) * Math.PI, y = Math.cos(th), s = Math.sin(th), R = [], Cc = [];
+      for (let j = 0; j < m; j++) { const t = (j / m) * Math.PI * 2, p = [c[0] + Math.cos(t) * s * r[0], c[1] + y * r[1], c[2] + Math.sin(t) * s * r[2]]; R.push(p); Cc.push(typeof col === "function" ? col(p, y) : RGB(col)); }
+      P.push(R); C.push(Cc);
+    }
+    return skin(b, P, C, { cap0: true, cap1: true, tip0: [c[0], c[1] + r[1], c[2]], tip1: [c[0], c[1] - r[1], c[2]] });
+  }
+  /* Röhre entlang eines Pfades (Geweih, Waffen): Radius je Punkt, Farbe je Punkt; Rahmen ohne Verdrehen (Parallel-Transport) */
+  function tube(b, pts, rad, cols, m, o) {
+    o = o || {};
+    const n = pts.length, P = [], C = [];
+    let U = null;
+    for (let i = 0; i < n; i++) {
+      const T = v3n(v3sub(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]));
+      if (!U) { const ref = Math.abs(T[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]; U = v3n(v3crs(T, ref)); }
+      else { const d = v3dot(U, T); U = v3n([U[0] - T[0] * d, U[1] - T[1] * d, U[2] - T[2] * d]); }
+      const V = v3crs(T, U), r = rad[i], R = [], Cc = [];
+      for (let j = 0; j < m; j++) {
+        const t = (j / m) * Math.PI * 2, k = o.rough ? 1 + (hsh(i * 3.1, j * 1.7, o.rough) - 0.5) * 0.35 : 1;
+        R.push([pts[i][0] + (U[0] * Math.cos(t) + V[0] * Math.sin(t)) * r * k, pts[i][1] + (U[1] * Math.cos(t) + V[1] * Math.sin(t)) * r * k, pts[i][2] + (U[2] * Math.cos(t) + V[2] * Math.sin(t)) * r * k]);
+        Cc.push(typeof cols[i] === "function" ? cols[i](j) : cols[i]);
       }
-    });
+      P.push(R); C.push(Cc);
+    }
+    return skin(b, P, C, { cap0: o.cap0, cap1: o.cap1 !== false, tip1: o.tip ? pts[n - 1] : null });
   }
-  function deerHead(P, sc) {
-    G3.seed(5102 + P);
-    const b = MB();
-    b.noise(0.06, m => {
-      m.box(0.15, 0.16, 0.28, DC.coat, { y: 0.02, z: 0.13, c: true });
-      m.box(0.1, 0.1, 0.16, DC.coatD, { y: -0.03, z: 0.31, c: true });
-      m.box(0.07, 0.05, 0.04, DC.nose, { y: -0.02, z: 0.395, c: true });
-      [-1, 1].forEach(s => m.box(0.028, 0.03, 0.02, 0x15120f, { x: s * 0.07, y: 0.05, z: 0.16, c: true }));
-      antlers(m, P, sc, [0, 0.09, 0.04]);
+  /* Punkte auf einer Catmull-Rom-Kurve durch K (gleichmäßig im Parameter) */
+  function curve(K, n) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const u = (i / (n - 1)) * (K.length - 1), s = Math.min(K.length - 2, Math.floor(u)), t = u - s;
+      const a = K[Math.max(0, s - 1)], p1 = K[s], p2 = K[s + 1], d = K[Math.min(K.length - 1, s + 2)], t2 = t * t, t3 = t2 * t;
+      out.push([0, 1, 2].map(k => 0.5 * (2 * p1[k] + (-a[k] + p2[k]) * t + (2 * a[k] - 5 * p1[k] + 4 * p2[k] - d[k]) * t2 + (-a[k] + 3 * p1[k] - 3 * p2[k] + d[k]) * t3)));
+    }
+    return out;
+  }
+  const at3 = (pts, u) => { const f = clamp(u, 0, 1) * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f)), t = f - i; return [lerp(pts[i][0], pts[i + 1][0], t), lerp(pts[i][1], pts[i + 1][1], t), lerp(pts[i][2], pts[i + 1][2], t)]; };
+
+  /* Rothirsch v120 – Farben: Spätsommer-/Herbstdecke, rotbraun, Rücken dunkler, Bauch graubeige, Spiegel cremefarben mit dunklem Saum,
+     Hals mit dunkler Brunftmähne, Läufe dunkelbraun, Schalen (Hufe) fast schwarz */
+  const DEER = { coat: 0x93603a, back: 0x5f3a24, belly: 0xc0a988, leg: 0x553b2a, legD: 0x3c2a1c, mane: 0x47301f, maneL: 0x6d4b30, nape: 0x5f3e28,
+    rump: 0xdcc59c, rumpB: 0x4a3120, face: 0x86603f, brow: 0x6b4730, muzzle: 0x9a7a5b, chin: 0xd3c1a6, nose: 0x1f1814, lip: 0x3a2b21,
+    ring: 0xad8f6e, gland: 0x2e2018, hoof: 0x1b1511, earIn: 0xdcc2a6, earRim: 0x3d2b1f, eye: 0x170f0a };
+  /* Rumpf: z (hinten → vorn), Rückenlinie, Bauchlinie, halbe Breite. Widerrist bei z≈0,24, Keule hinten tief herabgezogen,
+     Bauch hinter den Rippen aufgezogen, tiefe Brust vorn. Passt in die Trefferzone (Ellipsoid 0,2 × 0,22 × 0,5 um y 0,98). */
+  const TORSO = [[-0.605, 1.0, 0.955, 0.02], [-0.592, 1.055, 0.885, 0.07], [-0.572, 1.095, 0.83, 0.105], [-0.545, 1.125, 0.775, 0.132], [-0.5, 1.152, 0.71, 0.153], [-0.45, 1.168, 0.675, 0.166], [-0.36, 1.18, 0.655, 0.177], [-0.24, 1.17, 0.73, 0.172],
+    [-0.1, 1.16, 0.73, 0.188], [0.04, 1.168, 0.7, 0.196], [0.17, 1.2, 0.675, 0.19], [0.28, 1.228, 0.665, 0.174], [0.38, 1.205, 0.69, 0.16], [0.46, 1.135, 0.75, 0.14], [0.51, 1.07, 0.81, 0.118], [0.545, 1.01, 0.87, 0.085], [0.565, 0.97, 0.91, 0.045], [0.575, 0.945, 0.93, 0.015]];
+  function torsoCol(p, sv, z) {
+    let c = mixc(DEER.coat, DEER.back, ss((sv - 0.3) / 0.55));
+    c = mixc(c, DEER.belly, ss((-sv - 0.42) / 0.38) * (1 - ss((z + 0.36) / -0.12)));
+    c = mixc(c, DEER.mane, ss((z - 0.38) / 0.16) * 0.55);                        /* zur Mähne hin dunkler */
+    /* Muskelzeichnung ohne Textur: Schulter und Keule etwas heller, die Flanke dahinter etwas dunkler */
+    const sh = (1 - ss(Math.abs(z - 0.25) / 0.12)) * (1 - ss(Math.abs(sv - 0.15) / 0.5)), ha = (1 - ss(Math.abs(z + 0.4) / 0.13)) * (1 - ss(Math.abs(sv + 0.05) / 0.55));
+    const fl = (1 - ss(Math.abs(z + 0.13) / 0.12)) * (1 - ss(Math.abs(sv + 0.25) / 0.45));
+    c = mulc(c, 1 + 0.07 * sh + 0.06 * ha - 0.08 * fl);
+    /* Spiegel um den Wedel: heller Fleck auf der Rückseite mit dunklem Saum (Abstand zum Wedelansatz) */
+    const rp = Math.hypot(p[0] / 0.125, (p[1] - 0.99) / 0.19, (z + 0.61) / 0.1);
+    c = mixc(c, DEER.rumpB, ss((rp - 0.9) / 0.1) * (1 - ss((rp - 1.18) / 0.1)) * 0.55);
+    c = mixc(c, DEER.rump, 1 - ss((rp - 0.8) / 0.14));
+    return mulc(c, fur(p));
+  }
+  function deerBodyInto(b) {
+    const P = [], C = [], m = 20, nZ = 26;
+    for (let i = 0; i <= nZ; i++) {
+      const u = i / nZ, z = lerp(TORSO[0][0], TORSO[TORSO.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45),    /* an den Enden dichter: runde Keulen, runde Brust */ [top, bot, hw] = prof(TORSO, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
+      const haunch = 1 - ss(Math.abs(z + 0.36) / 0.16), shoulder = 1 - ss(Math.abs(z - 0.27) / 0.12), elbow = 1 - ss(Math.abs(z - 0.33) / 0.1);
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.35, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) + 0.12 * haunch * Math.max(0, -sv) * (1 - Math.abs(sv)) + 0.05 * shoulder * Math.max(0, 1 - Math.abs(sv - 0.2) * 1.5) + 0.1 * elbow * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2, 1]);
+      P.push(R); C.push(R.map((p, j) => torsoCol(p, Math.sin((j / m) * Math.PI * 2), z)));
+    }
+    return skin(b, P, C, { cap0: true, cap1: true });
+  }
+  function deerBody() { G3.seed(5101); return deerBodyInto(MB()); }
+  /* Träger (Hals): kräftig, unten die lange dunkle Brunftmähne mit unruhiger Kante, oben der Nacken */
+  /* Halsprofil: t (Ansatz im Rumpf → Kopf), halbe Breite, Tiefe vorn (Kehle/Mähne), Tiefe hinten (Nacken) */
+  const NECK = [[0, 0.11, 0.15, 0.13], [0.2, 0.148, 0.225, 0.185], [0.45, 0.12, 0.19, 0.148], [0.72, 0.092, 0.135, 0.105], [0.9, 0.075, 0.1, 0.085], [1, 0.062, 0.078, 0.07]];
+  function deerNeckInto(b, t0) {
+    const P = [], C = [], m = 16, n = 13, A = [0, -0.2, -0.12], B = [0, 0.535, 0.205];
+    for (let i = 0; i <= n; i++) {
+      const t = lerp(t0 || 0, 1, i / n), c = [0, lerp(A[1], B[1], t), lerp(A[2], B[2], t) + Math.sin(t * Math.PI) * 0.03];
+      const dz = (B[2] - A[2]) + Math.cos(t * Math.PI) * 0.03 * Math.PI, dy = B[1] - A[1], l = Math.hypot(dy, dz), V = [0, -dz / l, dy / l];
+      const [hw, hF, hB] = prof(NECK, t), mane = 0.34 * Math.sin(Math.PI * Math.min(1, t / 0.78)) * (t < 0.12 ? t / 0.12 : 1);
+      const R = ring(c, [1, 0, 0], V, hw, hF, hB, m, 2.0, (j, cu, sv) => [1, sv > 0 ? 1 + Math.pow(sv, 2) * mane * (0.7 + 0.6 * hsh(i, j, 3)) : 1 - 0.04 * Math.pow(-sv, 3)]);
+      P.push(R);
+      C.push(R.map((p, j) => {
+        const sv = Math.sin((j / m) * Math.PI * 2);
+        let c0 = mixc(DEER.nape, DEER.mane, ss((sv + 0.25) / 0.6));
+        if (sv > 0.3) c0 = mixc(c0, DEER.maneL, hsh(i, j, 5) * 0.55 * Math.min(1, mane * 3));          /* hellere Haarspitzen in der Mähne */
+        c0 = mixc(c0, mixc(DEER.coat, DEER.back, 0.35), ss((0.22 - t) / 0.12) * 0.75);                /* am Ansatz in die Decke übergehen */
+        return mulc(c0, fur(p, 1.3));
+      }));
+    }
+    return skin(b, P, C, { cap0: true, cap1: true });
+  }
+  function deerNeck() { G3.seed(5103); return deerNeckInto(MB()); }
+  /* Haupt (Kopf): z nach vorn, Drehpunkt am Hinterhaupt. Stirn, Augenbögen, schmaler werdender Äser, dunkler Windfang (Nase) */
+  const HEAD = [[-0.075, 0.035, -0.045, 0.03], [-0.045, 0.078, -0.09, 0.066], [0.0, 0.1, -0.118, 0.082], [0.065, 0.104, -0.124, 0.09], [0.125, 0.088, -0.116, 0.091],
+    [0.185, 0.064, -0.104, 0.074], [0.245, 0.045, -0.094, 0.06], [0.305, 0.031, -0.086, 0.051], [0.36, 0.019, -0.081, 0.048], [0.405, 0.006, -0.076, 0.047], [0.435, -0.004, -0.069, 0.044], [0.452, -0.018, -0.058, 0.034], [0.462, -0.034, -0.05, 0.016]];
+  const DEYE = [0.073, 0.03, 0.15];
+  function headCol(p, sv, z) {
+    let c = mixc(DEER.face, DEER.brow, ss((sv - 0.35) / 0.4) * (1 - ss((z - 0.22) / 0.12)));
+    c = mixc(c, DEER.mane, ss((0.02 - z) / 0.07) * 0.6);
+    c = mixc(c, DEER.muzzle, ss((z - 0.24) / 0.08) * (1 - Math.abs(sv)) );
+    c = mixc(c, DEER.chin, ss((-sv - 0.5) / 0.3) * ss((z - 0.26) / 0.08));
+    c = mixc(c, DEER.lip, (1 - ss(Math.abs(sv + 0.5) / 0.1)) * ss((z - 0.33) / 0.05) * 0.85);
+    c = mixc(c, DEER.nose, ss((z - 0.39) / 0.03) * ss((sv + 0.42) / 0.12));
+    const de = Math.hypot(Math.abs(p[0]) - DEYE[0], p[1] - DEYE[1], p[2] - DEYE[2]);
+    c = mixc(c, DEER.ring, (1 - ss((de - 0.018) / 0.02)) * 0.8);                   /* heller Augenring */
+    const dg = Math.hypot(Math.abs(p[0]) - 0.066, p[1] - 0.032, p[2] - 0.2);
+    c = mixc(c, DEER.gland, 1 - ss((dg - 0.006) / 0.014));                         /* Tränengrube vor dem Auge */
+    return mulc(c, fur(p, 0.8));
+  }
+  function deerHeadInto(b, P_, sc, vr) {
+    const P = [], C = [], m = 16, nZ = 20;
+    for (let i = 0; i <= nZ; i++) {
+      const z = lerp(HEAD[0][0], HEAD[HEAD.length - 1][0], i / nZ), [top, bot, hw] = prof(HEAD, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
+      const eyeK = 1 - ss(Math.abs(z - DEYE[2]) / 0.05);
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.3, (j, cu, sv) => [1 - 0.12 * Math.max(0, sv) * Math.max(0, sv) + 0.07 * eyeK * Math.max(0, 1 - Math.abs(sv - 0.45) * 2), 1]);
+      P.push(R); C.push(R.map((p, j) => headCol(p, Math.sin((j / m) * Math.PI * 2), z)));
+    }
+    skin(b, P, C, { cap0: true, cap1: true });
+    [-1, 1].forEach(s => {
+      /* Auge: liegt seitlich im Schädel, nur die Wölbung schaut heraus; dunkelbraun mit kleinem Glanzlicht, darüber ein Lidwulst */
+      ell(b, [s * DEYE[0], DEYE[1], DEYE[2]], [0.016, 0.0145, 0.019], DEER.eye, 8, 6);
+      ell(b, [s * (DEYE[0] + 0.0115), DEYE[1] + 0.006, DEYE[2] + 0.006], [0.0035, 0.0035, 0.0035], 0xf0ebe2, 5, 3);
+      ell(b, [s * (DEYE[0] - 0.002), DEYE[1] + 0.013, DEYE[2] - 0.002], [0.018, 0.007, 0.022], DEER.brow, 7, 4);
+      ell(b, [s * 0.021, -0.03, 0.455], [0.008, 0.012, 0.006], 0x0b0806, 6, 4);                                       /* Nüstern */
     });
+    antlersInto(b, P_, sc, vr);
     return b;
   }
-  function deerEar(s) { const b = MB(); b.at({ rz: -s * 0.85, rx: -0.15 }, q => { q.box(0.055, 0.14, 0.022, DC.coat); q.box(0.035, 0.1, 0.006, DC.earIn, { y: 0.02, z: 0.013 }); }); return b; }
-  function deerTail() { const b = MB(); b.box(0.07, 0.14, 0.05, DC.coatD, { y: -0.14 }); b.box(0.06, 0.12, 0.012, DC.rump, { y: -0.13, z: -0.028 }); return b; }
-  function deerUpper(front) { const b = MB(); b.noise(0.05, m => { if (front) m.box(0.1, 0.42, 0.11, DC.coatD, { y: -0.4 }); else { m.box(0.13, 0.44, 0.15, DC.coat, { y: -0.42 }); } }); return b; }
-  function deerLower(front) { const b = MB(); b.box(0.055, 0.4, 0.06, DC.coatD, { y: -0.4 }); b.box(0.072, 0.06, 0.085, DC.hoof, { y: front ? -0.44 : -0.44, z: 0.01 }); return b; }
-  function boarBody() {
-    G3.seed(5201);
-    const b = MB();
-    b.noise(0.12, m => {
-      m.sphere(0.5, 9, 7, BC.coat, { y: 0.5, sx: 0.4, sy: 0.4, sz: 0.95, bottom: BC.belly });     /* Rumpf */
-      m.sphere(0.27, 8, 6, BC.coatD, { y: 0.55, z: 0.22, sx: 0.8, sy: 0.85, sz: 1.15, bottom: BC.belly });   /* hohe Schulter */
-      beam(m, [0, 0.77, 0.32], [0, 0.71, -0.2], 0.022, BC.ridge, false);                        /* Borstenkamm */
-      for (let i = 0; i < 6; i++) m.box(0.035, 0.07, 0.05, BC.ridge, { y: 0.76 - i * 0.012, z: 0.3 - i * 0.1, rx: -0.3 });
-      m.box(0.025, 0.16, 0.025, BC.ridge, { y: 0.44, z: -0.46, rx: 0.5 });                       /* Pürzel */
-    });
-    return b;
-  }
-  function boarLeg() { const b = MB(); b.box(0.09, 0.26, 0.1, BC.coatD, { y: -0.3 }); b.box(0.07, 0.05, 0.08, BC.hoof, { y: -0.34 }); return b; }
-  function boarHead(sc) {
-    G3.seed(5202);
-    const b = MB(), tl = 0.06 + sc * 0.06;
-    b.noise(0.1, m => {
-      /* Kopf als langer Keil, leicht nach unten; vorn die helle Scheibe (Wurf) */
-      m.at({ y: 0.02, z: 0.08, rx: Math.PI / 2 + 0.38 }, q => q.cyl(0.17, 0.07, 0.52, 6, BC.coatD, { a0: Math.PI / 6, top: BC.snout }));
-      m.box(0.15, 0.12, 0.035, BC.snout, { y: -0.2, z: 0.57, c: true, front: 0xb29384 });
-      [-1, 1].forEach(s => {
-        m.box(0.022, 0.022, 0.02, 0x0e0b09, { x: s * 0.075, y: 0.0, z: 0.3, c: true });
-        m.at({ x: s * 0.1, y: 0.1, z: 0.12, rz: -s * 0.55, rx: -0.3 }, q => q.box(0.07, 0.13, 0.03, BC.coatD));
-        /* Waffen: aus dem Unterkiefer nach außen und oben */
-        beam(m, [s * 0.065, -0.2, 0.5], [s * (0.1 + tl * 0.35), -0.2 + tl * 0.85, 0.47 + tl * 0.15], 0.013 + sc * 0.006, BC.tusk, true);
+  function deerHead(P, sc, vr) { G3.seed(5102 + P); return deerHeadInto(MB(), P, sc, vr); }
+
+  /* Geweih v120: Rosenstock, Rose, Stange in Leierform (aus, zurück, oben wieder nach vorn), Augsprosse, ab 10 Enden die Eissprosse,
+     Mittelsprosse, oben Gabel oder Krone (12-Ender: 3 Kronenenden, 14: 4, 16: 5). Jede Stange ist etwas anders – fester Seed aus
+     Enden, Güte und Variante: dasselbe Stück sieht im Revier und an der Wand immer gleich aus. */
+  const ANT = { base: 0x4c3a28, mid: 0x6a5136, tip: 0xeadfc6, burr: 0x45352a, ped: 0x6b4a32 };
+  function antlerPlan(P) { const n = Math.max(3, Math.round(P / 2)), t = ["aug"]; if (n >= 5) t.push("eis"); t.push("mittel"); return { n, tines: t, crown: n - t.length - 1 }; }
+  function antlersInto(b, P, sc, vr) {
+    const plan = antlerPlan(P), r = mulberry(P * 131 + (vr || 0) * 977 + Math.round((sc || 0) * 40) * 7 + 11);
+    const Ls0 = 0.5 + 0.36 * clamp(sc, 0, 1), r0 = 0.027 + 0.016 * clamp(sc, 0, 1);
+    const acol = (t, f) => { const k = hsh(t * 9.1, f || 0, 2.7); let c = t < 0.5 ? mixc(ANT.base, ANT.mid, t / 0.5) : mixc(ANT.mid, ANT.tip, ss((t - 0.62) / 0.34)); return mulc(c, 0.88 + k * 0.24); };
+    [-1, 1].forEach(s => {
+      const Ls = Ls0 * (1 + (r() - 0.5) * 0.08), spread = 1 + (r() - 0.5) * 0.14, lean = (r() - 0.5) * 0.08;
+      const p0 = [s * 0.045, 0.094, 0.032], K = [[0, 0, 0], [0.19, 0.2, -0.19], [0.41, 0.47, -0.31], [0.5 + lean, 0.75, -0.24], [0.43 + lean, 0.98, 0.0]]
+        .map(q => [p0[0] + s * q[0] * spread * Ls, p0[1] + q[1] * Ls, p0[2] + q[2] * Ls]);
+      const pts = curve(K, 11), rad = pts.map((_, i) => { const u = i / 10; return u > 0.92 ? r0 * 0.4 * (1 - (u - 0.92) / 0.08) + 0.0035 : r0 * (1 - 0.52 * u); });
+      /* Rosenstock (kurz, behaart) und Rose (rauer Kranz) */
+      tube(b, [[s * 0.026, 0.045, 0.03], [s * 0.038, 0.08, 0.032], p0], [r0 * 1.0, r0 * 1.05, r0 * 1.02], [RGB(DEER.brow), RGB(DEER.brow), RGB(ANT.ped)], 7, { cap1: false });
+      const d0 = v3n(v3sub(pts[1], pts[0]));
+      tube(b, [[p0[0] - d0[0] * 0.006, p0[1] - d0[1] * 0.006, p0[2] - d0[2] * 0.006], [p0[0] + d0[0] * 0.012, p0[1] + d0[1] * 0.012, p0[2] + d0[2] * 0.012]], [r0 * 1.5, r0 * 1.42], [RGB(ANT.burr), RGB(ANT.burr)], 9, { cap0: true, cap1: true, rough: 3 + s });
+      tube(b, pts, rad, pts.map((_, i) => acol(i / 10, s)), 7, { tip: true });
+      /* Sprossen */
+      const tines = [];
+      plan.tines.forEach(k => tines.push(k === "aug" ? { u: 0.07, d: [0.16, 0.32, 0.93], l: 0.36 } : k === "eis" ? { u: 0.15, d: [0.24, 0.44, 0.86], l: 0.27 } : { u: 0.47, d: [0.34, 0.2, 0.92], l: 0.31 }));
+      const CR = [{ u: 0.79, d: [0.4, 0.72, 0.56], l: 0.22 }, { u: 0.84, d: [-0.34, 0.78, 0.52], l: 0.2 }, { u: 0.88, d: [0.6, 0.7, -0.3], l: 0.19 }, { u: 0.92, d: [-0.2, 0.72, -0.62], l: 0.17 }];
+      if (plan.crown === 1) tines.push({ u: 0.84, d: [0.1, 0.7, 0.7], l: 0.21 });
+      else for (let k = 0; k < plan.crown; k++) tines.push(CR[k]);
+      tines.forEach((T, ti) => {
+        const q = at3(pts, T.u), rb = r0 * (1 - 0.52 * T.u) * 0.84, l = Ls * T.l * (1 + (r() - 0.5) * 0.3);
+        const d = v3n([s * T.d[0] + (r() - 0.5) * 0.16, T.d[1] + (r() - 0.5) * 0.12, T.d[2] + (r() - 0.5) * 0.12]);
+        const up = T.u > 0.7 ? [-s * 0.15, 0.4, 0] : [0, 1, 0], tp = [], tr = [], tc = [];
+        for (let k = 0; k <= 4; k++) {
+          const t = k / 4, bend = l * 0.24 * t * t;
+          tp.push([q[0] + d[0] * (l * t - rb * 0.4) + up[0] * bend, q[1] + d[1] * (l * t - rb * 0.4) + up[1] * bend, q[2] + d[2] * (l * t - rb * 0.4) + up[2] * bend]);
+          tr.push(k === 4 ? 0.003 : rb * (1 - t * 0.72));
+          tc.push(acol(lerp(Math.max(0.3, T.u), 1, t), ti));
+        }
+        tube(b, tp, tr, tc, 5, { tip: true });
       });
     });
     return b;
   }
+  /* Lauscher: Blatt, außen Decke, innen hell mit dunklem Rand */
+  function deerEarInto(b, s) {
+    b.at({ rz: -s * 0.95, rx: -0.2 }, q => {
+      ell(q, [0, 0.094, 0], [0.036, 0.096, 0.017], (p, y) => mulc(mixc(DEER.face, DEER.earRim, ss((y - 0.5) / 0.45)), fur(p, 0.6)), 10, 8);
+      ell(q, [0, 0.09, 0.0095], [0.024, 0.074, 0.0085], (p, y) => mixc(DEER.earIn, DEER.earRim, Math.max(ss((Math.abs(p[0]) / 0.024 - 0.65) / 0.35), ss((y - 0.6) / 0.4))), 8, 6);
+    });
+    return b;
+  }
+  function deerEar(s) { return deerEarInto(MB(), s); }
+  function deerTail() { const b = MB(); ell(b, [0, -0.07, -0.02], [0.036, 0.085, 0.03], (p, y) => mulc(mixc(DEER.back, DEER.rumpB, ss((-y + 0.2) / 0.8)), fur(p)), 8, 6); return b; }
+  /* Läufe: oben kräftig (Unterarm/Keule), Vorderfußwurzel- bzw. Sprunggelenk als Verdickung, schlanker Röhrenknochen,
+     Fesselgelenk, schräge Fessel, gespaltene Schalen, Afterklauen. Länge und Gelenkpunkte wie bisher. */
+  const LEG_FU = [[0, 0.044, 0.074, 0], [-0.1, 0.047, 0.068, 0.006], [-0.2, 0.042, 0.05, 0.005], [-0.3, 0.029, 0.035, 0], [-0.362, 0.031, 0.039, 0.002], [-0.41, 0.026, 0.031, 0]];
+  const LEG_HU = [[0, 0.08, 0.115, -0.01], [-0.1, 0.07, 0.1, -0.012], [-0.2, 0.048, 0.07, -0.01], [-0.3, 0.031, 0.048, -0.008], [-0.37, 0.027, 0.046, -0.016], [-0.405, 0.026, 0.034, -0.008], [-0.43, 0.025, 0.03, 0]];
+  const LEG_LO = [[0.01, 0.031, 0.037, 0], [-0.06, 0.022, 0.026, 0], [-0.24, 0.021, 0.025, 0], [-0.305, 0.027, 0.032, -0.002], [-0.345, 0.023, 0.027, 0.01], [-0.383, 0.026, 0.032, 0.018], [-0.41, 0.03, 0.038, 0.024], [-0.44, 0.033, 0.043, 0.028]];
+  function legInto(b, T, colAt, cap1) {
+    const P = [], C = [], m = 8, n = 11, y0 = T[0][0], y1 = T[T.length - 1][0], TA = T.slice().reverse();   /* prof braucht aufsteigende Stützstellen */
+    for (let i = 0; i <= n; i++) {
+      const y = lerp(y0, y1, i / n), [hx, hz, dz] = prof(TA, y), R = ring([0, y, dz], [1, 0, 0], [0, 0, 1], hx, hz, hz, m, 2.1);
+      P.push(R); C.push(R.map(p => colAt(p, y)));
+    }
+    return skin(b, P, C, { cap0: true, cap1 });
+  }
+  function deerUpper(front) {
+    const b = MB();
+    legInto(b, front ? LEG_FU : LEG_HU, (p, y) => mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), false);
+    if (!front) ell(b, [0, -0.37, -0.05], [0.022, 0.03, 0.022], DEER.leg, 6, 4);                  /* Fersenhöcker am Sprunggelenk */
+    return b;
+  }
+  function deerLower(front) {
+    const b = MB();
+    legInto(b, LEG_LO, (p, y) => {
+      if (y < -0.388) return mulc(RGB(DEER.hoof), 1 + 0.6 * ss((-0.388 - y) / 0.05) * 0.3);                              /* Schalen */
+      return mulc(mixc(DEER.leg, DEER.legD, ss((-y - 0.28) / 0.08)), fur(p, 0.6));
+    }, true);
+    ell(b, [0, -0.335, -0.03], [0.012, 0.014, 0.012], DEER.hoof, 6, 4);                              /* Afterklauen */
+    void front;
+    return b;
+  }
+  /* Keiler v120: gleiche Bauweise wie der Hirsch – keilförmiger Rumpf mit hoher Schulter und Borstenkamm, Kopf mit langem
+     Gebrech (Rüssel), heller Rüsselscheibe, kleinen Lichtern, spitzen Tellern (Ohren) und gebogenen Waffen (Gewehre unten,
+     Haderer oben). Die Waffenlänge folgt den gespeicherten Zentimetern – dasselbe Stück hat im Revier und an der Wand dieselben. */
+  const BOAR = { hair: 0x3d322a, hairL: 0x6f5e4c, ridge: 0x231c17, belly: 0x2f2620, cheek: 0x55473a, snout: 0x4e4037, disc: 0x7d6559, discD: 0x3e2d26,
+    lip: 0x2a201a, hoof: 0x17120f, tusk: 0xf1e9d4, tuskB: 0xd6c6a0, eye: 0x120c08 };
+  const boarHair = (p, sv, k) => { const g = hsh(p[0] * 1.3, p[1] * 1.7, p[2] * 1.9); return mulc(mixc(BOAR.hair, BOAR.hairL, g * g * (k == null ? 0.6 : k)), 0.94 + 0.12 * hsh(p[2], p[0], p[1])); };
+  const BOAR_T = [[-0.52, 0.55, 0.45, 0.03], [-0.49, 0.63, 0.37, 0.12], [-0.4, 0.69, 0.31, 0.18], [-0.22, 0.73, 0.3, 0.2], [0.0, 0.77, 0.3, 0.212],
+    [0.18, 0.815, 0.31, 0.214], [0.31, 0.835, 0.33, 0.198], [0.41, 0.8, 0.37, 0.172], [0.49, 0.71, 0.43, 0.13], [0.535, 0.63, 0.49, 0.06], [0.55, 0.58, 0.52, 0.02]];
+  function boarBody() {
+    G3.seed(5201);
+    const b = MB(), P = [], C = [], m = 20, nZ = 24;
+    for (let i = 0; i <= nZ; i++) {
+      const u = i / nZ, z = lerp(BOAR_T[0][0], BOAR_T[BOAR_T.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45), [top, bot, hw] = prof(BOAR_T, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
+      const crest = ss((z + 0.25) / 0.5) * (1 - ss((z - 0.45) / 0.08));
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.2, (j, cu, sv) => [1 - 0.22 * Math.pow(Math.max(0, sv), 2), 1 + (sv > 0.9 ? 0.07 * crest * (0.6 + 0.8 * hsh(i, j, 7)) : 0) + (Math.abs(sv) < 0.95 ? 0.025 * (hsh(i, j, 9) - 0.5) : 0)]);
+      P.push(R);
+      C.push(R.map((p, j) => { const sv = Math.sin((j / m) * Math.PI * 2); let c = boarHair(p, sv); c = mixc(c, BOAR.ridge, ss((sv - 0.82) / 0.15) * crest); return mixc(c, BOAR.belly, ss((-sv - 0.5) / 0.4)); }));
+    }
+    skin(b, P, C, { cap0: true, cap1: true });
+    /* Pürzel (Schwanz) mit Quaste */
+    tube(b, [[0, 0.55, -0.5], [0, 0.5, -0.545], [0, 0.42, -0.56], [0, 0.36, -0.555]], [0.016, 0.013, 0.01, 0.004], [RGB(BOAR.hair), RGB(BOAR.hair), RGB(BOAR.ridge), RGB(BOAR.ridge)], 5, { tip: true });
+    ell(b, [0, 0.37, -0.556], [0.02, 0.04, 0.015], BOAR.ridge, 6, 4);
+    return b;
+  }
+  const BLEG = [[0, 0.064, 0.08, 0], [-0.12, 0.052, 0.064, 0.002], [-0.22, 0.036, 0.042, 0.002], [-0.27, 0.031, 0.036, 0.004], [-0.31, 0.03, 0.036, 0.01], [-0.335, 0.034, 0.044, 0.016], [-0.36, 0.036, 0.048, 0.02]];
+  function boarLeg() {
+    const b = MB();
+    legInto(b, BLEG, (p, y) => y < -0.318 ? RGB(BOAR.hoof) : mulc(mixc(BOAR.hair, BOAR.ridge, ss((-y - 0.12) / 0.15)), 0.95 + 0.1 * hsh(p[0], p[1], p[2])), true);
+    ell(b, [0, -0.3, -0.035], [0.012, 0.014, 0.012], BOAR.hoof, 6, 4);
+    return b;
+  }
+  const BOAR_H = [[-0.13, 0.1, -0.15, 0.08], [-0.08, 0.165, -0.2, 0.145], [0.0, 0.175, -0.205, 0.158], [0.085, 0.15, -0.185, 0.14], [0.17, 0.11, -0.155, 0.105],
+    [0.255, 0.072, -0.12, 0.078], [0.335, 0.046, -0.092, 0.061], [0.4, 0.031, -0.076, 0.054], [0.445, 0.025, -0.07, 0.055], [0.465, 0.017, -0.062, 0.048], [0.473, 0.0, -0.046, 0.031]];
+  /* Kopf im eigenen Rahmen: z nach vorn; außen um 0,38 nach unten geneigt wie bisher (Haltungen der Animation bleiben gleich) */
+  function boarHeadInto(b, sc, cm) {
+    b.at({ rx: 0.38 }, q => {
+      const P = [], C = [], m = 18, nZ = 20;
+      for (let i = 0; i <= nZ; i++) {
+        const z = lerp(BOAR_H[0][0], BOAR_H[BOAR_H.length - 1][0], i / nZ), [top, bot, hw] = prof(BOAR_H, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
+        const back = 1 - ss((z - 0.02) / 0.14);
+        const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.4, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) + 0.06 * back * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2, 1 + (sv > 0.85 ? 0.12 * back * hsh(i, j, 11) : 0) + 0.03 * (hsh(i, j, 13) - 0.5) * (z < 0.45 ? 1 : 0)]);
+        P.push(R);
+        C.push(R.map((p, j) => {
+          const sv = Math.sin((j / m) * Math.PI * 2);
+          let c = boarHair(p, sv, 0.75);
+          c = mixc(c, BOAR.cheek, (1 - ss(Math.abs(z - 0.08) / 0.1)) * ss((-sv + 0.1) / 0.5) * 0.7);
+          c = mixc(c, BOAR.snout, ss((z - 0.25) / 0.1));
+          c = mixc(c, BOAR.lip, (1 - ss(Math.abs(sv + 0.42) / 0.12)) * ss((z - 0.22) / 0.06) * 0.8);
+          c = mixc(c, BOAR.disc, ss((z - 0.452) / 0.012));
+          return c;
+        }));
+      }
+      skin(q, P, C, { cap0: true, cap1: true });
+      [-1, 1].forEach(s => {
+        ell(q, [s * 0.017, -0.026, 0.473], [0.01, 0.013, 0.004], BOAR.discD, 6, 4);                                  /* Nasenlöcher */
+        ell(q, [s * 0.084, 0.083, 0.15], [0.011, 0.01, 0.013], BOAR.eye, 7, 5);                                      /* Lichter */
+        ell(q, [s * 0.092, 0.087, 0.155], [0.003, 0.003, 0.003], 0xe9e4da, 4, 3);
+        q.at({ x: s * 0.095, y: 0.165, z: -0.03, rz: -s * 0.55, rx: -0.45 }, e => {                                 /* Teller (Ohren) */
+          ell(e, [0, 0.06, 0], [0.042, 0.07, 0.018], (p, y) => boarHair(p, 0, 0.9), 8, 6);
+          ell(e, [0, 0.055, 0.012], [0.026, 0.05, 0.007], 0x4a3a30, 6, 4);
+        });
+        /* Waffen: Gewehre aus dem Unterkiefer nach außen und oben, Haderer darüber kürzer */
+        const L = (0.045 + 0.0055 * (cm || 8 + sc * 16)) / 0.13, w = L;
+        const G = [[0, 0, 0], [0.03, 0.025, 0.016], [0.05, 0.062, 0.012], [0.055, 0.097, -0.01], [0.044, 0.122, -0.036]].map(p => [s * (0.05 + p[0] * w), -0.07 + p[1] * w, 0.34 + p[2] * w]);
+        tube(q, G, [0.014, 0.012, 0.009, 0.005, 0.0015].map(r => r * (0.8 + 0.25 * L)), [RGB(BOAR.tuskB), mixc(BOAR.tuskB, BOAR.tusk, 0.5), RGB(BOAR.tusk), RGB(BOAR.tusk), RGB(0xfffbf0)], 6, { tip: true, cap0: true });
+        const Hd = [[0, 0, 0], [0.022, 0.018, -0.004], [0.032, 0.036, -0.022]].map(p => [s * (0.056 + p[0] * w), -0.032 + p[1] * w, 0.318 + p[2] * w]);
+        tube(q, Hd, [0.01, 0.007, 0.0015], [RGB(BOAR.tuskB), RGB(BOAR.tusk), RGB(0xfffbf0)], 5, { tip: true, cap0: true });
+      });
+    });
+    return b;
+  }
+  function boarHead(sc, cm) { G3.seed(5202); return boarHeadInto(MB(), sc, cm); }
   /* Fasanenhahn */
   function phBody() {
     G3.seed(5301);
@@ -362,76 +648,164 @@ const HUNT = (() => {
       empty: "Noch keine Trophäen. Steig auf den Hochsitz an der Wildwiese." };
   }
   registerItems();
-  /* Trophäe als 3D-Bildchen (v119): Eichenschild mit dunklem Rahmen und Maserung, Messingschild mit Gravurzeilen, darüber das
-     Stück selbst – Hirsch: Schädelplatte mit Geweih (mehr Enden je Stufe); Keiler: gebogene Waffen auf Schädelplatte; Fasan: Federfächer.
-     Die Stufe zeigt sich an Schildfarbe, Eckbeschlägen und der Medaille am Band (Bronze, Silber, Gold, Diamant mit Edelstein). */
-  function trophyMesh(id) {
-    const it = typeof FITEMS !== "undefined" && FITEMS[id], k = it ? it.hunt : "hirsch", m = it ? it.medal : 1;
-    G3.seed(5400 + m);
-    const b = MB(), mc = [0, 0xc47a3a, 0xc9d1da, 0xe8b02a, 0xe8b02a][m], mcD = [0, 0x8f5424, 0x8d97a3, 0xa87812, 0xa87812][m];
-    const wood = 0x91623a, woodL = 0xa87445, woodD = 0x4b2f1a, grain = 0x7e5230, bone = 0xe9dfc6, boneD = 0xc9bc9a;
-    b.at({ rx: -0.22 }, q => {
-      /* Rahmen (hinten) und Fläche (vorn): oben gewölbt, unten gerade */
-      q.cyl(0.47, 0.47, 0.09, 14, woodD, { rx: Math.PI / 2, y: 0.12, top: woodD });
-      q.box(0.94, 0.66, 0.09, woodD, { y: -0.2, z: 0.045, c: true });
-      q.cyl(0.41, 0.41, 0.115, 14, wood, { rx: Math.PI / 2, y: 0.12, top: woodL });
-      q.box(0.82, 0.58, 0.115, wood, { y: -0.2, z: 0.058, c: true });
-      [-0.24, -0.07, 0.12, 0.28].forEach((x, i) => q.box(0.012, 0.62 + (i % 2) * 0.2, 0.004, grain, { x, y: -0.02 - (i % 2) * 0.06, z: 0.118, c: true }));
-      /* Messingschild mit zwei Gravurzeilen und Schrauben */
-      q.box(0.5, 0.12, 0.03, mc, { y: -0.37, z: 0.13, c: true });
-      q.box(0.34, 0.016, 0.034, mcD, { y: -0.35, z: 0.13, c: true }); q.box(0.22, 0.014, 0.034, mcD, { y: -0.395, z: 0.13, c: true });
-      [-1, 1].forEach(sx => q.sphere(0.011, 5, 3, mcD, { x: sx * 0.23, y: -0.37, z: 0.148 }));
-      /* Eckbeschläge ab Silber, Edelsteine beim Diamanten */
-      if (m >= 2) [-1, 1].forEach(sx => q.sphere(0.04, 6, 4, mc, { x: sx * 0.36, y: -0.43, z: 0.135 }));
-      if (m >= 3) [-1, 1].forEach(sx => q.sphere(0.04, 6, 4, mc, { x: sx * 0.34, y: 0.27, z: 0.135 }));
-      if (m === 4) [-1, 1].forEach(sx => q.sphere(0.05, 4, 2, 0x52c8e8, { x: sx * 0.39, y: -0.03, z: 0.14 }));
-      /* Medaille am rot-weißen Band unter dem Schild */
-      q.at({ y: -0.46, z: 0.15 }, r => {
-        r.box(0.07, 0.2, 0.012, 0xb3202a, { x: -0.04, y: -0.07, rz: 0.32, c: true }); r.box(0.07, 0.2, 0.012, 0xf1ece0, { x: 0.04, y: -0.07, rz: -0.32, c: true });
-        r.cyl(0.115, 0.115, 0.035, 14, mc, { rx: Math.PI / 2, y: -0.2, top: mc });
-        r.cyl(0.085, 0.085, 0.045, 14, mcD, { rx: Math.PI / 2, y: -0.2, top: m === 4 ? mcD : mc });
-        if (m === 4) r.sphere(0.075, 4, 2, 0x52c8e8, { y: -0.2, z: 0.06 });
-        else r.sphere(0.03, 6, 4, mc, { y: -0.2, z: 0.05 });
-      });
-      if (k === "hirsch") {
-        /* Schädelplatte */
-        q.box(0.24, 0.27, 0.05, bone, { y: 0.07, z: 0.15, c: true });
-        q.sphere(0.13, 9, 6, bone, { y: 0.19, z: 0.155 });
-        q.box(0.1, 0.1, 0.05, boneD, { y: -0.09, z: 0.15, c: true });
-        [[0, 0], [0.012, 0.01], [-0.012, 0.01]].forEach(o => q.at({ x: o[0], y: 0.12, z: 0.1 + o[1], s: 1.0 }, r => antlers(r, m * 2 + 6, 0.45 + m * 0.14, [0, 0.0, 0.08])));
-      } else if (k === "keiler") {
-        q.box(0.3, 0.2, 0.06, bone, { y: -0.14, z: 0.15, c: true });
-        q.sphere(0.12, 9, 6, bone, { y: -0.04, z: 0.16 });
-        q.box(0.16, 0.08, 0.07, boneD, { y: -0.24, z: 0.16, c: true });
-        [-1, 1].forEach(sx => {
-          let p = null;
-          for (let i = 0; i <= 6; i++) {
-            const t = i / 6, a = t * 1.45, pt = [sx * (0.1 + 0.27 * Math.sin(a)), -0.12 + 0.52 * (1 - Math.cos(a)), 0.19];
-            if (p) beam(q, p, pt, 0.046 * (1 - t * 0.72), i < 5 ? 0xf3ecd9 : 0xfffaf0, true);
-            p = pt;
-          }
-          q.sphere(0.052, 6, 4, boneD, { x: sx * 0.1, y: -0.12, z: 0.19 });
-        });
-      } else {
-        const n = m >= 3 ? 7 : 5;
-        for (let i = 0; i < n; i++) {
-          const f = i - (n - 1) / 2, ang = f * 0.25, L = 0.8 - Math.abs(f) * 0.08;
-          q.at({ y: -0.2, z: 0.145 + (i % 2) * 0.012, rz: -ang }, r => {
-            r.box(0.105, L, 0.012, i % 2 ? 0xc08040 : 0xb5602c, { y: L / 2, c: true });
-            r.box(0.014, L, 0.016, 0x5e3e22, { y: L / 2, c: true });
-            for (let j = 0; j < 6; j++) r.box(0.108, 0.02, 0.014, 0x5e3e22, { y: 0.12 + j * (L - 0.2) / 6, c: true });
-            r.box(0.1, 0.05, 0.013, 0xf1e7d0, { y: L - 0.02, c: true });
-          });
-        }
-        q.box(0.16, 0.07, 0.04, woodD, { y: -0.2, z: 0.17, c: true });
-        q.sphere(0.034, 6, 4, mc, { y: -0.2, z: 0.2 });
-      }
-    });
+  /* ============================ Trophäen v120 ===============================
+     Jede Trophäe gehört zu einem erlegten Stück: beim Einlagern wird ein Datensatz gespeichert (S.farm.hunt.coll) mit Art,
+     Medaille, Güte s (daraus folgen Enden, Waffen- bzw. Federlänge, Gewicht und Name – genau wie im Revier), Variante vr
+     (Form der Stangen) sowie Zeit, Treffer und Entfernung. Daraus wird das Modell immer gleich gebaut (fester Seed).
+     Die Lagerware bleibt wie bisher (tro_<art>_<medaille>, Preis nach Medaille) – Markt, Lagerplätze und alte Spielstände
+     funktionieren unverändert; collSync() hält Datensätze und Lagerbestand deckungsgleich. */
+  const WOOD = { a: 0xa36e3c, b: 0x7a4e29, rim: 0x5a391e, back: 0x452c17 };
+  const METAL = [null, { c: 0xb8763a, d: 0x7d4d22 }, { c: 0xd3dae2, d: 0x8e98a4 }, { c: 0xeab52c, d: 0xa77a12 }, { c: 0xeab52c, d: 0xa77a12 }];
+  const BRASS = { c: 0xcaa552, d: 0x7c6227 };
+  const woodCol = (p, k) => { const g = Math.sin(p[0] * 52 + Math.sin(p[1] * 6.3) * 2.2 + Math.sin(p[1] * 17 + p[0] * 3) * 0.5); return mulc(mixc(WOOD.a, WOOD.b, 0.5 + 0.5 * g), (k || 1) * (0.94 + 0.12 * hsh(p[0], p[1], 3))); };
+  /* Umriss: oben gewölbt, unten zur weichen Spitze (Wappenschild) – oder oval */
+  function shieldOutline(w, h, n, kind) {
+    const pts = [];
+    for (let j = 0; j < n; j++) {
+      const t = (j / n) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      if (kind === "oval") { pts.push([c * w / 2, s * h / 2]); continue; }
+      if (s >= 0) { const e = 2 / 2.8; pts.push([Math.sign(c) * Math.pow(Math.abs(c), e) * w / 2, h * 0.12 + Math.pow(s, e) * h * 0.38]); }
+      else { const q = -s; pts.push([Math.sign(c) * Math.pow(Math.abs(c), 0.85) * w / 2 * (1 - 0.2 * q * q), h * 0.12 - Math.pow(q, 0.95) * h * 0.62]); }
+    }
+    return pts;
+  }
+  /* Brett: gefaste Kante, gemaserte Fläche, erhabener Spiegel, Zierleiste in der Farbe der Medaille (ab Silber Metall) */
+  function shieldInto(b, o) {
+    const n = 44, OL = shieldOutline(o.w, o.h, n, o.kind), T = o.t || 0.06, m = o.m || 1;
+    const lay = (rings, col, ref) => {
+      const P = rings.map(([k, z]) => OL.map(([x, y]) => [x * k, y * k, z]));
+      skin(b, P, P.map((R, i) => R.map(p => col(p, i))), { cap0: rings[0][0] === 1, cap1: true, tip0: [0, 0, rings[0][1]], tip1: [0, 0, rings[rings.length - 1][1]], ref, n0: [0, 0, -1], n1: [0, 0, 1] });
+    };
+    lay([[1, 0], [1, T * 0.72], [0.975, T * 0.95], [0.945, T], [0.8, T], [0.6, T], [0.4, T], [0.2, T]],
+      (p, i) => i < 3 ? mulc(RGB(WOOD.rim), 0.92 + 0.14 * hsh(p[0], p[1], 1)) : woodCol(p, 0.92), (i, j, p) => i <= 1 ? [p[0], p[1], 0] : i === 2 ? [p[0], p[1], 0.7] : [0, 0, 1]);
+    const T2 = T + 0.014;
+    const P2 = [[0.82, T - 0.002], [0.8, T2 - 0.004], [0.78, T2], [0.6, T2], [0.4, T2], [0.2, T2]].map(([k, z]) => OL.map(([x, y]) => [x * k, y * k, z]));
+    skin(b, P2, P2.map(R => R.map(p => woodCol(p, 1.05))), { cap1: true, tip1: [0, 0, T2], n1: [0, 0, 1], ref: (i, j, p) => i === 0 ? [p[0], p[1], 0.3] : i === 1 ? [p[0], p[1], 1] : [0, 0, 1] });
+    /* Zierleiste */
+    const M = m >= 2 ? METAL[m] : { c: WOOD.rim, d: WOOD.back }, lp = OL.map(([x, y]) => [x * 0.885, y * 0.885, T + 0.004]);
+    lp.push(lp[0]);
+    tube(b, lp, lp.map(() => 0.0075), lp.map(() => RGB(M.c)), 5, { cap1: false });
+    if (m === 4) [[-0.36, 0.2], [0.36, 0.2], [0, 0.44]].forEach(([x, y]) => ell(b, [x * o.w, y * o.h, T2 + 0.006], [0.022, 0.022, 0.012], 0x5fd3f0, 4, 3));
+    if (m >= 3) [[-0.3, -0.18], [0.3, -0.18]].forEach(([x, y]) => ell(b, [x * o.w, y * o.h, T2 + 0.004], [0.016, 0.016, 0.01], METAL[m].c, 6, 4));
     return b;
   }
+  /* Messingschild mit zwei Gravurzeilen und Schrauben */
+  function plateInto(b, x, y, z, w) {
+    b.box(w, 0.075, 0.012, BRASS.c, { x, y, z: z + 0.006, c: true, front: 0xd8b766 });
+    b.box(w * 0.68, 0.009, 0.014, BRASS.d, { x, y: y + 0.013, z: z + 0.007, c: true });
+    b.box(w * 0.46, 0.008, 0.014, BRASS.d, { x, y: y - 0.014, z: z + 0.007, c: true });
+    [-1, 1].forEach(s => ell(b, [x + s * (w / 2 - 0.016), y, z + 0.013], [0.006, 0.006, 0.004], BRASS.d, 5, 3));
+  }
+  /* Medaille am rot-weißen Band (Bronze, Silber, Gold; Diamant mit geschliffenem Stein) */
+  function medalInto(b, x, y, z, m) {
+    const M = METAL[m];
+    b.at({ x, y, z }, r => {
+      r.box(0.045, 0.13, 0.008, 0xb3202a, { x: -0.024, y: -0.05, rz: 0.3, c: true }); r.box(0.045, 0.13, 0.008, 0xf1ece0, { x: 0.024, y: -0.05, rz: -0.3, c: true });
+      r.cyl(0.072, 0.072, 0.02, 18, M.c, { rx: Math.PI / 2, y: -0.13, top: M.c });
+      r.cyl(0.054, 0.054, 0.026, 18, M.d, { rx: Math.PI / 2, y: -0.13, top: m === 4 ? M.d : M.c });
+      if (m === 4) ell(r, [0, -0.13, 0.034], [0.042, 0.042, 0.026], 0x5fd3f0, 4, 3);
+      else ell(r, [0, -0.13, 0.03], [0.022, 0.022, 0.012], M.c, 7, 5);
+    });
+  }
+  /* Fasanenfeder: lanzettlich, braun-oliv mit dunklen Querbinden, dunkler Kiel, leicht gebogen */
+  function featherInto(b, L, W, bend, seed) {
+    const n = 14, P = [], C = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, w = W * Math.pow(Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95)), 0.7) * (t > 0.85 ? 1 - (t - 0.85) / 0.15 * 0.85 : 1) + 0.002;
+      const c = [bend * t * t * L, t * L, 0.004 * Math.sin(t * 3)], R = ring(c, [1, 0, 0], [0, 0, 1], w, 0.0035, 0.0035, 6, 2);
+      P.push(R);
+      C.push(R.map((p, j) => {
+        const bar = Math.sin(t * L * 80 + seed) > 0.72 ? 1 : 0, edge = Math.abs(Math.cos((j / 6) * Math.PI * 2)) > 0.9;
+        let c0 = mixc(0xc29a5c, 0x9a7a45, t * 0.7);
+        if (bar) c0 = mixc(c0, 0x2e2216, 0.75);
+        if (!edge) c0 = mixc(c0, 0x4a3520, 0.2);
+        return mulc(c0, 0.92 + 0.16 * hsh(i, j, seed));
+      }));
+    }
+    return skin(b, P, C, { cap0: true, cap1: true });
+  }
+  /* Stück aus einem Datensatz bauen */
+  const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
+  const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
+  const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
+  function trophyKey(r) { const T = traits(r.k, r.s); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_v120"; }
+  function trophyBuild(r) {
+    const k = r.k, m = r.m || 1, T = traits(k, r.s), sc = qS(r.s), b = MB();
+    G3.seed(5400 + m);
+    if (k === "hirsch") {
+      shieldInto(b, { w: 0.6, h: 0.78, m });
+      plateInto(b, 0, -0.305, 0.074, 0.2);
+      medalInto(b, 0, -0.4, 0.04, m);
+      /* Kopfpräparat: kurzer Träger aus dem Brett, Haupt leicht zur Seite gedreht, Äser etwas gesenkt – mit genau dem Geweih des Stücks */
+      b.at({ y: -0.06, z: 0.0, ry: 0.22 }, q => q.at({ rx: 0.95 }, n => {
+        deerNeckInto(n, 0.18);
+        n.at({ y: 0.5, z: 0.22, rx: -0.42 }, h => {
+          deerHeadInto(h, T.P, sc, r.vr || 0);
+          [-1, 1].forEach(s => h.at({ x: s * 0.075, y: 0.08, z: 0.02, ry: s * 0.35, rz: -s * 0.15 }, e => deerEarInto(e, s)));
+        });
+      }));
+    } else if (k === "keiler") {
+      shieldInto(b, { w: 0.62, h: 0.74, m });
+      plateInto(b, 0, -0.26, 0.074, 0.24);
+      medalInto(b, 0, -0.36, 0.04, m);
+      b.at({ y: 0.02, z: 0.05, ry: 0.2 }, q => {
+        /* Halsansatz: Borstenkragen aus dem Brett */
+        const P = [], C = [];
+        for (let i = 0; i <= 6; i++) { const t = i / 6, R = ring([0, -0.02 + t * 0.03, -0.02 + t * 0.12], [1, 0, 0], [0, 1, 0], lerp(0.2, 0.16, t), lerp(0.24, 0.19, t), lerp(0.24, 0.2, t), 18, 2.2, (j) => 1 + 0.06 * (hsh(i, j, 21) - 0.5));
+          P.push(R); C.push(R.map((p, j) => boarHair(p, Math.sin(j / 18 * Math.PI * 2), 0.8))); }
+        skin(q, P, C, { cap0: true, cap1: true });
+        q.at({ y: 0.02, z: 0.1, rx: -0.08 }, h => boarHeadInto(h, sc, T.cm));
+      });
+    } else {
+      shieldInto(b, { w: 0.4, h: 0.56, kind: "oval", m });
+      plateInto(b, 0, -0.19, 0.074, 0.2);
+      medalInto(b, 0, -0.27, 0.04, m);
+      /* Stoß: lange Schwanzfedern im Fächer, die längste so lang wie das Stück (cm), dazu kurze grün schimmernde Halsfedern */
+      const rr = mulberry(Math.round(T.cm) * 31 + (r.vr || 0) * 7 + 5), nF = 3 + m, Lmax = T.cm * 0.0105;
+      for (let i = 0; i < nF; i++) {
+        const f = i - (nF - 1) / 2, ang = f * 0.21 + (rr() - 0.5) * 0.05, L = Lmax * (1 - Math.abs(f) * 0.09 - rr() * 0.06);
+        b.at({ y: -0.09, z: 0.09 + i * 0.004, rz: -ang }, q => featherInto(q, L, 0.026, Math.sign(f) * 0.08 + (rr() - 0.5) * 0.08, i * 3 + 1));
+      }
+      [-1, 1].forEach(s => b.at({ x: s * 0.03, y: -0.08, z: 0.12, rz: s * 0.9 }, q => featherInto(q, 0.12, 0.018, 0, 9)));
+      [-1, 1].forEach(s => ell(b, [s * 0.035, -0.04, 0.115], [0.03, 0.05, 0.01], 0x1d5a4f, 6, 4));
+      b.at({ y: -0.1, z: 0.11 }, q => { q.cyl(0.04, 0.034, 0.06, 12, BRASS.c, { rx: Math.PI / 2, top: BRASS.c }); });
+    }
+    return b;
+  }
+  function trophyMesh(id) { const it = typeof FITEMS !== "undefined" && FITEMS[id]; return trophyBuild(repRec(it ? it.hunt : "hirsch", it ? it.medal : 1)); }
   if (typeof FWM !== "undefined" && FWM.item && !FWM.__huntItem) {
     const base = FWM.item; FWM.item = id => /^tro_/.test(id) ? trophyMesh(id) : base(id); FWM.__huntItem = true;
     if (typeof ITEM_3D !== "undefined") Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => ITEM_3D.add(trophyId(k, m))));
+  }
+  /* Datensätze ↔ Lagerbestand */
+  const uid = () => "t" + Date.now().toString(36) + Math.floor(rnd() * 1e6).toString(36);
+  function collSync() {
+    const H = st();
+    if (!H) return [];
+    if (!Array.isArray(H.coll)) H.coll = [];
+    if (typeof farmInv !== "function") return H.coll;
+    Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => {
+      const id = trophyId(k, m), have = farmInv(id) || 0, mine = H.coll.filter(r => r.k === k && r.m === m);
+      if (mine.length > have) mine.sort((a, b) => a.s - b.s).slice(0, mine.length - have).forEach(r => H.coll.splice(H.coll.indexOf(r), 1));
+      else if (mine.length < have) {
+        /* Altbestand (vor v120): aus dem Jagdbuch nehmen, was dazu passt – sonst ein Musterstück der Medaille */
+        const logs = (H.log || []).filter(L => L.k === k && L.m === m && L.s != null && !H.coll.some(r => r.t === L.t && r.s === L.s));
+        for (let i = mine.length; i < have; i++) {
+          const L = logs.shift();
+          H.coll.push(L ? { u: uid(), k, m, s: L.s, vr: Math.floor(L.s * 997) % 6, t: L.t, zone: L.zone, dm: L.dm, old: 1 } : { u: uid(), k, m, s: REP_S[m], vr: i % 6, old: 2 });
+        }
+      }
+    }));
+    return H.coll;
+  }
+  const recOf = u => collSync().find(r => r.u === u);
+  function sellRec(u) {
+    const H = st(), r = recOf(u);
+    if (!r || typeof farmSell !== "function") return 0;
+    const i = H.coll.indexOf(r); H.coll.splice(i, 1);
+    const got = farmSell(trophyId(r.k, r.m), 1);
+    if (!got) { H.coll.splice(i, 0, r); return 0; }
+    return got;
   }
 
   /* --------------------------- Treffertest -------------------------------- */
@@ -866,11 +1240,12 @@ const HUNT = (() => {
   }
   function spawn(k, enter, pre) {
     if (!k) { const r = rnd(); k = r < 0.58 ? "hirsch" : r < 0.92 ? "keiler" : "fasan"; }
-    const S0 = SP[k], score = pre && pre.score != null ? pre.score : drawScore(), T = traits(k, score), s = lerp(S0.s0, S0.s1, score);
+    /* v120: Güte auf drei Stellen gerundet – genau dieser Wert landet im Trophäen-Datensatz, Modell im Revier und an der Wand sind gleich */
+    const S0 = SP[k], score = Math.round((pre && pre.score != null ? pre.score : drawScore()) * 1000) / 1000, T = traits(k, score), s = lerp(S0.s0, S0.s1, score);
     const p = pre ? [pre.x, pre.z] : spawnPoint(null, enter);
     const A = { id: ++X.aid, k, score, T, s, x: p[0], z: p[1], y: 0, ry: rnd() * 6.28, rx: 0, rz: 0, v: 0, vT: 0, vx: 0, vz: 0, ph: rnd(), gw: 0, gr: 0,
       st: enter ? "walk" : k === "fasan" ? "peck" : k === "keiler" ? "root" : "graze", t: 2 + rnd() * 5, tx: p[0], tz: p[1], alert: 0, seen: false, hits: [], dist: 0,
-      sp: {}, ear: [{ f: 0, k: 0, t: 1 }, { f: 0, k: 0, t: 2 }], cautious: enter, pause: 0, jolt: 0, legsA: [[0, 0], [0, 0], [0, 0], [0, 0]], seed: rnd() * 100, fly: null };
+      sp: {}, ear: [{ f: 0, k: 0, t: 1 }, { f: 0, k: 0, t: 2 }], cautious: enter, pause: 0, jolt: 0, legsA: [[0, 0], [0, 0], [0, 0], [0, 0]], seed: rnd() * 100, fly: null, vr: pre && pre.vr != null ? pre.vr : Math.floor(rnd() * 6) };
     if (enter) { A.tx = p[2]; A.tz = p[3]; A.ry = Math.atan2(A.tx - A.x, A.tz - A.z); }
     if (pre) {                                         /* v111: das Tier von der Wiese – gleiche Art, gleiche Güte, gleiche Lage und Blickrichtung */
       A.mw = true; A.st = pre.st; A.t = pre.t; A.cautious = false; A.tx = pre.tx; A.tz = pre.tz; A.ry = pre.ry;
@@ -880,17 +1255,17 @@ const HUNT = (() => {
     return A;
   }
   function build(A) {
-    const k = A.k, S0 = SP[k], key = "hu8_" + k;
+    const k = A.k, S0 = SP[k], key = "hu9_" + k;
     if (k === "hirsch") {
       A.node = addNode(fmesh(key + "_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
       A.neck = addNode(fmesh(key + "_n", deerNeck), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.head = addNode(fmesh(key + "_h" + A.T.P + "_" + Math.round(A.score * 10), () => deerHead(A.T.P, A.score)), { x: S0.headP[0], y: S0.headP[1], z: S0.headP[2] }, A.neck);
+      A.head = addNode(fmesh(key + "_h" + A.T.P + "_" + Math.round(A.score * 20) + "_" + A.vr, () => deerHead(A.T.P, Math.round(A.score * 20) / 20, A.vr)), { x: S0.headP[0], y: S0.headP[1], z: S0.headP[2] }, A.neck);
       A.ears = [-1, 1].map(s => addNode(fmesh(key + "_e" + s, () => deerEar(s)), { x: s * 0.075, y: 0.08, z: 0.02 }, A.head));
-      A.tail = addNode(fmesh(key + "_t", deerTail), { x: 0, y: 1.07, z: -0.5 }, A.node);
+      A.tail = addNode(fmesh(key + "_t", deerTail), { x: 0, y: 1.07, z: -0.578 }, A.node);
       A.legN = S0.legs.map(L => { const up = addNode(fmesh(key + "_u" + L.f, () => deerUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(fmesh(key + "_l" + L.f, () => deerLower(!!L.f)), { y: -L.lu }, up) }; });
     } else if (k === "keiler") {
       A.node = addNode(fmesh(key + "_b", boarBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = A.head = addNode(fmesh(key + "_h" + Math.round(A.score * 10), () => boarHead(A.score)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.neck = A.head = addNode(fmesh(key + "_h" + A.T.cm + "_" + Math.round(A.score * 20), () => boarHead(qS(A.score), A.T.cm)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
       A.legN = S0.legs.map(L => ({ up: addNode(fmesh(key + "_l", boarLeg), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node), lo: null }));
     } else {
       A.node = addNode(fmesh(key + "_b", phBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
@@ -964,9 +1339,9 @@ const HUNT = (() => {
       }
       case "peck": A.vT = 0; neckT = 0.9 + Math.max(0, Math.sin(time * 9 + A.seed)) * 0.6; if (A.t <= 0) { if (rnd() < 0.5) { A.st = "look"; A.t = 1 + rnd() * 1.5; } else pickWalk(A); } break;
       case "root": A.vT = 0.22; neckT = 0.6 + Math.sin(time * 6 + A.seed) * 0.08; steer(A, A.tx, A.tz, 1.2, dt); if (A.t <= 0) pickWalk(A); break;
-      case "look": A.vT = 0; neckT = 0.05; headT = 0.2; nyT = Math.sin(time * 0.6 + A.seed) * 0.75; earT = 0.05; if (A.t <= 0 && A.alert < 0.5) { if (A.k === "fasan") { A.st = "peck"; A.t = 2 + rnd() * 3; } else if (A.k === "keiler") pickWalk(A); else { A.st = "graze"; A.t = 5 + rnd() * 8; } } break;
+      case "look": A.vT = 0; neckT = A.k === "hirsch" ? 0.42 : 0.05; headT = A.k === "hirsch" ? 0.24 : 0.2; nyT = Math.sin(time * 0.6 + A.seed) * 0.75; earT = 0.05; if (A.t <= 0 && A.alert < 0.5) { if (A.k === "fasan") { A.st = "peck"; A.t = 2 + rnd() * 3; } else if (A.k === "keiler") pickWalk(A); else { A.st = "graze"; A.t = 5 + rnd() * 8; } } break;
       case "alert": {                                   /* Aufschrecken: Kopf hoch, starr, Lauscher nach vorn – zum Geräusch hin */
-        A.vT = 0; neckT = -0.15; headT = 0.3; earT = -0.08; tailT = -0.3; stiff = 11;
+        A.vT = 0; neckT = A.k === "hirsch" ? 0.2 : -0.15; headT = 0.3; earT = -0.08; tailT = -0.3; stiff = 11;
         const src = A.src || [EYER[0], EYER[2]];
         nyT = clamp(angN(Math.atan2(src[0] - A.x, src[1] - A.z) - A.ry), -1.1, 1.1);
         if (A.t <= 0) { if (A.alert > 0.7) fleeFrom(A, src); else { A.st = "look"; A.t = 1.5 + rnd(); } }
@@ -974,10 +1349,10 @@ const HUNT = (() => {
       }
       case "walk": {
         A.vT = A.cautious ? S0.sneak : A.k === "keiler" && A.trot ? 2.1 : S0.walk;
-        neckT = A.k === "hirsch" ? 0.45 : 0.4; headT = 0.12;
+        neckT = A.k === "hirsch" ? 0.78 : 0.4; headT = A.k === "hirsch" ? 0.2 : 0.12;
         if (A.cautious && A.k === "hirsch") {
           /* vorsichtig: mitten im Schritt stehen bleiben (ein Vorderlauf in der Luft), sichern, weiter */
-          if (A.pause > 0) { A.pause -= dt; A.vT = 0; neckT = 0.0; nyT = Math.sin(time * 0.9 + A.seed) * 0.6; earT = 0.02; }
+          if (A.pause > 0) { A.pause -= dt; A.vT = 0; neckT = 0.3; nyT = Math.sin(time * 0.9 + A.seed) * 0.6; earT = 0.02; }
           else if (rnd() < dt * 0.25) A.pause = 0.7 + rnd() * 1.3;
         }
         const d = steer(A, A.tx, A.tz, 1.5, dt);
@@ -987,7 +1362,7 @@ const HUNT = (() => {
       }
       case "flee": case "hit": case "wounded": {
         A.vT = A.st === "hit" ? S0.run * 0.75 : A.st === "wounded" ? S0.run * 0.85 : S0.run;
-        neckT = A.k === "hirsch" ? 0.9 : 0.3; headT = A.k === "hirsch" ? -0.35 : -0.15; earT = 0.55; tailT = -0.95; nyT = 0;
+        neckT = A.k === "hirsch" ? 1.0 : 0.3; headT = A.k === "hirsch" ? -0.2 : -0.15; earT = 0.55; tailT = -0.95; nyT = 0;
         /* Haken schlagen */
         A.zig -= dt; if (A.zig <= 0) { A.zig = 0.7 + rnd() * 1.1; A.zigA = (rnd() - 0.5) * 0.9; }
         const dx = A.tx - A.x, dz = A.tz - A.z;
@@ -1092,6 +1467,9 @@ const HUNT = (() => {
       n.y = (bobW + gal * 0.2 + lp * 0.42 + A.jolt * 0.05) * A.s;
       n.rx = wR * Math.sin(A.ph * Math.PI * 2 + 1.2) * 0.1 - lp * 0.22 + (A.st === "graze" && A.k === "hirsch" ? 0.08 : 0) - A.jolt * 0.04;
       n.sy = 1 + Math.sin(time * 2.4 + A.seed) * 0.006;
+      /* v120: im Stehen leichtes Verlagern des Gewichts (kaum sichtbar, aber das Tier wirkt nicht eingefroren) */
+      const idle = clamp(1 - A.gw * 3, 0, 1);
+      if (idle > 0 && A.k !== "fasan") { n.rz = A.rz + Math.sin(time * 0.37 + A.seed) * 0.011 * idle; n.y += (Math.sin(time * 0.74 + A.seed * 2) * 0.004 - 0.002) * idle * A.s; }
     }
   }
   function steer(A, tx, tz, turn, dt) {
@@ -1428,13 +1806,15 @@ const HUNT = (() => {
     const M = MEDALS[A.medal], zone = A.zone || "lunge", id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal], room = typeof farmRoom === "function" ? farmRoom(id) : 1;
     const hitsTxt = A.hits.map(z => ZONE[z].n).filter((v, i, a) => a.indexOf(v) === i).join(" + ");
     const note = A.capW ? "Erst krank geschossen – höchstens Bronze." : ZONE[zone] && ZONE[zone].note ? ZONE[zone].note : "";
-    X.banner.innerHTML = `<span class="hu-bm" style="--mc:${M.c}">${M.i}</span><div><small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(A.T.troph)} · ${A.k === "fasan" ? String(A.T.kg).replace(".", ",") : A.T.kg} kg</em></div>`;
+    const rec = { k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0 };
+    X.banner.innerHTML = `<span class="hu-tro">${recThumb(rec, true)}<i style="--mc:${M.c}">${M.i}</i></span><div><small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(A.T.troph)} · ${A.k === "fasan" ? String(A.T.kg).replace(".", ",") : A.T.kg} kg</em></div>`;
     X.strip.innerHTML = `<div class="hu-chips"><span><small>Treffer</small><b>${esc(hitsTxt)}</b></span><span><small>Entfernung</small><b>${A.dm || "?"} m</b></span>
         <span><small>Bewertung</small><b>${String(Math.round(A.score * 1000) / 10).replace(".", ",")}</b></span><span><small>Wert</small><b>${eur(price)}</b></span></div>
       ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
       ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe ins Lager legen</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenwand voll – an Sammler verkaufen · ${eur(price)}</button>`}`;
     X.reveal.classList.add("away");
     X.banner.hidden = false; X.strip.hidden = false;
+    if (typeof thumbFill === "function") thumbFill();
   }
   function keepTrophy(sell) {
     const A = X && X.hrv && X.hrv.A;
@@ -1442,7 +1822,7 @@ const HUNT = (() => {
     A.kept = true;
     const H = st(), id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal];
     if (sell) { S.money += price; if (typeof logMoney === "function") logMoney("farm", "Trophäe an Sammler: " + A.T.troph, price); }
-    else farmAdd(id, 1, 3);
+    else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push({ u: uid(), k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0, t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4) }); }
     H.kills++; H.stock = Math.max(0, H.stock - 1);
     H.best = Math.max(H.best || 0, A.medal);
     H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: Math.round(A.score * 1000) / 1000 });
@@ -1454,6 +1834,82 @@ const HUNT = (() => {
     msg((sell ? "Verkauft: " : "Im Lager: ") + A.T.troph + " " + MEDALS[A.medal].i, 3.5, "good");
     X.view = "back"; X.back = { t: 0, A };
     X.target = null;
+  }
+
+
+  /* ---------------------------- Trophäenwand (v120) ----------------------------
+     Im Lager-Reiter „Trophäen“: jedes Stück einzeln als großes Bild (das echte 3D-Modell, von vorn), Name, Enden bzw. Länge,
+     Medaille, Wert. Antippen öffnet die Nahansicht: das Präparat dreht sich langsam hin und her (eigener kleiner Zeichner,
+     läuft nur, solange die Ansicht offen ist), dazu Bewertung, Gewicht, Treffer, Entfernung und Tag des Erlegens. */
+  const TVIEW = { yaw: Math.PI / 2 - 0.42, pitch: 0.1 };
+  const WALL = { sel: null };
+  const what = (k, T) => k === "hirsch" ? T.P + "-Ender" : k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
+  const fnum = (v, d) => String(Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).replace(".", ",");
+  function recThumb(r, big) {
+    if (typeof thumbSpan !== "function") return `<span class="ic">${MEDALS[r.m].i}</span>`;
+    return thumbSpan("tro:" + trophyKey(r) + (big ? ":b" : ""), () => trophyBuild(r), SP[r.k].i, false, Object.assign({ big: !!big }, TVIEW));
+  }
+  function wallHTML() {
+    const C = collSync().slice().sort((a, b) => b.m - a.m || b.s - a.s || (b.t || 0) - (a.t || 0));
+    if (!C.length) return null;
+    const sum = C.reduce((t, r) => t + PRICE[r.k][r.m], 0), sel = C.find(r => r.u === WALL.sel);
+    if (!sel) WALL.sel = null;
+    let det = "";
+    if (sel) {
+      const T = traits(sel.k, sel.s), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? ZONE[sel.zone].n : null;
+      const rows = [["Bewertung", fnum(sel.s * 100, 1)], ["Gewicht", (sel.k === "fasan" ? fnum(T.kg, 1) : T.kg) + " kg"], z ? ["Treffer", z] : null, sel.dm ? ["Entfernung", sel.dm + " m"] : null,
+        sel.t != null && typeof dayOf === "function" ? ["Erlegt", "Tag " + dayOf(sel.t) + (typeof clock === "function" ? ", " + clock(sel.t) : "")] : null].filter(Boolean);
+      det = `<div class="tw-det" style="--mc:${M.c}">
+        <div class="tw-stage" id="twStage"><span class="tw-badge">${M.i} ${esc(M.n)}</span></div>
+        <div class="tw-info"><b>${esc(T.name)}</b><small>${esc(T.troph)}</small>
+          <div class="tw-rows">${rows.map(([a, v]) => `<span><small>${a}</small><b>${esc(String(v))}</b></span>`).join("")}</div>
+          ${sel.old === 2 ? `<p class="tw-note">Altbestand – Werte geschätzt.</p>` : ""}
+          <div class="tw-btns"><button class="btn tiny ghost" data-twx="1">Schließen</button><button class="btn tiny" data-twsell="${sel.u}">💰 An Sammler · ${eur(PRICE[sel.k][sel.m])}</button></div></div></div>`;
+    }
+    return `<div class="tw"><div class="tw-head"><b>🏆 Trophäenwand</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>${det}
+      <div class="tw-grid">${C.map(r => { const T = traits(r.k, r.s), M = MEDALS[r.m];
+        return `<button class="tw-c${r.u === WALL.sel ? " on" : ""}" data-tw="${r.u}" style="--mc:${M.c}"><span class="tw-img">${recThumb(r, true)}</span><span class="tw-md">${M.i}</span>
+          <b>${esc(T.name)}</b><small>${esc(what(r.k, T))}</small><em>${eur(PRICE[r.k][r.m])}</em></button>`; }).join("")}</div></div>`;
+  }
+  function wallBind(redraw) {
+    $$("#farmSheetIn [data-tw]").forEach(el => el.onclick = () => { WALL.sel = WALL.sel === el.dataset.tw ? null : el.dataset.tw; snd("tap"); redraw(); });
+    $$("#farmSheetIn [data-twx]").forEach(el => el.onclick = () => { WALL.sel = null; redraw(); });
+    $$("#farmSheetIn [data-twsell]").forEach(el => el.onclick = () => {
+      const got = sellRec(el.dataset.twsell);
+      if (got) { snd("coin"); WALL.sel = null; save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + eur(got), "good"); redraw(); }
+    });
+    const host = $("#twStage"), r = WALL.sel && recOf(WALL.sel);
+    if (host && r) turntable(host, r);
+    if (typeof thumbFill === "function") thumbFill();
+  }
+  /* Drehansicht: ein Zeichner für alle Trophäen, Leinwand wird nur umgehängt; Schleife endet, sobald die Ansicht zu ist */
+  const TT = { R: null, cv: null, key: null, mesh: null, raf: 0, box: null };
+  function turntable(host, r) {
+    if (typeof G3 === "undefined") return;
+    if (!TT.cv) { TT.cv = document.createElement("canvas"); TT.cv.className = "tw-cv"; }
+    host.insertBefore(TT.cv, host.firstChild);
+    try {
+      if (!TT.R) { TT.R = G3.create(TT.cv, { shadowSize: 1024, shadowBox: 3, maxDpr: 2 }); if (TT.R) TT.R.env.fogR = [400, 800]; }
+    } catch (e) { TT.R = null; }
+    const R = TT.R;
+    if (!R) { host.classList.add("nogl"); host.insertAdjacentHTML("beforeend", recThumb(r, true)); return; }
+    const key = trophyKey(r);
+    if (TT.key !== key) {
+      if (TT.mesh) R.free(TT.mesh);
+      TT.mesh = R.mesh(trophyBuild(r)); TT.key = key; R.nodes.length = 0; R.nodes.push(R.node(TT.mesh, {}));
+      const b = TT.mesh.box; TT.box = { c: [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2], r: Math.max(0.3, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) / 2) };
+      R.shadowBox = TT.box.r * 1.6;
+    }
+    const t0 = performance.now(), B = TT.box;
+    cancelAnimationFrame(TT.raf);
+    const loop = now => {
+      if (!TT.cv.isConnected) { TT.raf = 0; return; }
+      const t = (now - t0) / 1000;
+      Object.assign(R.cam, { tx: B.c[0], ty: B.c[1], tz: B.c[2], dist: B.r * 3.05, yaw: Math.PI / 2 - 0.2 + Math.sin(t * 0.5) * 0.42, pitch: 0.1 + Math.sin(t * 0.33) * 0.03, fov: 0.55 });
+      R.render(t);
+      TT.raf = requestAnimationFrame(loop);
+    };
+    TT.raf = requestAnimationFrame(loop);
   }
 
   /* ------------------------------ Hinweise -------------------------------- */
@@ -1637,21 +2093,27 @@ const HUNT = (() => {
     if (!ids.length) return "";
     ids.sort((a, b) => FITEMS[b].v - FITEMS[a].v);
     const sum = ids.reduce((t, id) => t + farmSellPrice(id, farmInv(id)), 0);
-    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert – Diamant bringt am meisten</small></div><span class="price">${money(sum)}</span></div>
+    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert – verkauft wird jeweils das schwächste Stück der Stufe</small></div><span class="price">${money(sum)}</span></div>
       <div class="hu-mrows">${ids.map(id => `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}</small></span><button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1))}</button></div>`).join("")}</div></div>`;
   }
   function marketBind() {
     $$("#tab-market [data-husell]").forEach(b => b.onclick = () => {
       const m = farmSell(b.dataset.husell, 1);
-      if (m) { snd("coin"); save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + money(m), "good"); renderMarket(); }
+      if (m) { collSync(); snd("coin"); save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + money(m), "good"); renderMarket(); }
     });
   }
   return {
     CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
+    wallHTML, wallBind, collSync, trophyBuild, trophyKey,
+    _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr) => deerHead(P, sc, vr), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
+      boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: () => boarLeg(), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
-    _spawn: (k, enter) => X && X.inRv && spawn(k, enter), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI
+    _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
+    _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _collSync: () => collSync(), _sellRec: u => sellRec(u),
+    _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
+      const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
   };
 })();
 if (typeof module !== "undefined") module.exports = HUNT;

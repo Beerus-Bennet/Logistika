@@ -2073,11 +2073,13 @@ function openFarmStore(st) {
   FV.sheetFn = () => openFarmStore(st);
   const ids = Object.keys(FITEMS).filter(id => FITEMS[id].st === st && farmInv(id) > 0);
   const cap = farmStoreCap(st), used = farmStoreUsed(st), uc = storeUpCost(st);
-  const sel = FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
+  /* v120: Trophäen als Wand mit Einzelstücken (jedes zum erlegten Tier) statt Raster gleicher Symbole */
+  const wall = st === "troph" && typeof HUNT !== "undefined" && HUNT.wallHTML ? HUNT.wallHTML() : null;
+  const sel = wall == null && FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
   openFarmSheet(`<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
-    <div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
-      : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>
+    ${wall != null ? wall : `<div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
+      : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>`}
     ${sel ? (() => {
       const wood = st === "holz" && typeof farmWoodPrice === "function", pr = (id, n) => wood ? farmWoodPrice(id, n) : farmSellPrice(id, n);
       /* Fisch: eine Zeile je Sternstufe, jede zu ihrem Preis */
@@ -2094,7 +2096,7 @@ function openFarmStore(st) {
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
       : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
-      : st === "troph" ? "Trophäen vom Hochsitz an der Wildwiese: Herz- und Lungenschüsse bringen die besten Medaillen. Sammler kaufen auch auf dem Markt."
+      : st === "troph" ? "Jede Trophäe stammt von deinem erlegten Stück – Enden, Waffen und Federn wie im Revier. Herz- und Lungenschüsse bringen die besten Medaillen; Sammler kaufen auch auf dem Markt."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
@@ -2104,6 +2106,7 @@ function openFarmStore(st) {
   });
   const up = $("#fsUp");
   if (up) up.onclick = () => { if (farmStoreUp(st)) { sfx("build"); save(); openFarmStore(st); } };
+  if (wall != null) HUNT.wallBind(() => openFarmStore(st));
 }
 
 /* Stall oder Gehege: Platz, Haltung, Tiere kaufen und abgeben, vergrößern */

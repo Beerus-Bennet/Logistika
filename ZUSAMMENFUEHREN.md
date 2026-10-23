@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v120 – Hirsch/Keiler neu, Trophäen je Stück, Trophäenwand (auf v119)
+
+| Teil | Datei |
+|---|---|
+| `skin/ring/ell/tube/curve/prof`, Hirsch-, Geweih-, Keilermodelle, Trophäen-Datensätze (`collSync`, `sellRec`), `trophyBuild`, Trophäenwand + Drehansicht, Haltung/Leerlauf | `hunt.js` |
+| `thumbR(big)`, `thumbOf(key, fn, o)`, `thumbCrop(…, N)`, `THUMB.opts`, `itemView` | `worldview.js` |
+| `openFarmStore`: Reiter „Trophäen“ zeigt die Wand | `farmview.js` |
+| `.tw-*`, `#huntUI .hu-tro` | `style.css` |
+| 5 neue Tests | `tests/hunt.test.js` |
+| Version 120 | `index.html`, `sw.js` |
+
 ## Stand v119 – Atem+Schuss, Wasser, Trophäen (auf v118)
 
 | Teil | Datei |
