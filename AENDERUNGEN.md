@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v118 (aufbauend auf v117) – Wildwiese: eckiger heller Fleck weg
+
+- **Fehler:** Auf der Wildwiese (Karte) lag ein großer, eckiger, heller Fleck mit geraden Kanten. **Ursache:** `HUNT.ground` (`hunt.js`) wählte die Wiesenfarbe je Gitterpunkt des 4er-Bodenrasters hart zwischen drei deutlich verschiedenen Grüntönen (`0xa6c95a` / `0x93c452` / `0x86ba4a`); die Dreiecke des Rasters zeichneten daraus kantige Flächen.
+- **Fix:** ein gleichmäßiger Wiesenton mit sanfter Schwankung (`0x8cc04e` bis `0x96c654`), weiche Ränder. Gras und Blumen liefern weiter die Lebendigkeit.
+- Dateien: `hunt.js`, `index.html`, `sw.js`.
+
 ## v117 (aufbauend auf v116) – Fernglas/Zielfernrohr: Bäume neu und realistischer (alle fünf Arten)
 
 **Warum es vorher nicht passte:** Das v113-Nahsicht-Modell galt nur bis 80 Einheiten vom Hochsitz. Im Fernglas (7-fach) sieht man meist weiter, dort kamen wieder die groben Standardbäume. Die Birke hatte gar kein Nahsicht-Modell. Und auch das v113-Modell bestand aus wenigen großen Laubklumpen, die vergrößert wie Felsflächen wirkten.

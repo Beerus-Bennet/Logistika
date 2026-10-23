@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v118 – Wildwiesen-Farbe (auf v117)
+
+| Teil | Datei |
+|---|---|
+| `HUNT.ground`: sanfter Wiesenton statt harter Dreifarb-Umschaltung | `hunt.js` |
+| Version 118 | `index.html`, `sw.js` |
+
 ## Stand v117 – Fernglas-Bäume neu (auf v116)
 
 | Teil | Datei |

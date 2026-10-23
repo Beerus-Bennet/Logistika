@@ -92,7 +92,11 @@ const HUNT = (() => {
     if (p.d > e + 3) return c;
     const k = clamp((e + 3 - p.d) / 3.5, 0, 1);
     const w = Math.sin(x * 0.45 + z * 0.2) * Math.cos(z * 0.38 - x * 0.12);
-    return mixC(c, w > 0.35 ? 0xa6c95a : v > 0.1 ? 0x93c452 : 0x86ba4a, k);
+    /* v118: Wiesenfarbe nur noch sehr sanft schwanken lassen. Vorher wechselte sie je Gitterpunkt (4er-Raster) zwischen
+       drei deutlich verschiedenen Grüntönen – das ergab große, eckige helle Flecken mitten auf der Wiese. Jetzt ein
+       gleichmäßiger Ton mit feiner Abweichung (±3 %), weiche Ränder und die Gräser/Blumen liefern die Lebendigkeit. */
+    const n = clamp(0.5 + 0.5 * w * 0.8 + (v > 0.1 ? 0.08 : 0) - 0.04, 0, 1);
+    return mixC(c, mixC(0x8cc04e, 0x96c654, n), k);
   }
   /* Feld im Revier: 0 = Mitte, 1 = Waldrand (unregelmäßig) */
   function fieldE(x, z) {
