@@ -3325,3 +3325,6 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 #huntUI .hu-tro .ic.th{width:100%;height:100%;display:grid;place-items:center}
 #huntUI .hu-tro img{width:52px;height:52px;object-fit:contain}
 #huntUI .hu-tro i{position:absolute;right:-7px;bottom:-7px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--mc));border:2px solid var(--ink)}
+
+/* v122: Waren in der Ausbeute-Leiste (Paket, Schatz) als 3D-Bildchen */
+.lootbanner .lb-it .ii{width:26px;height:26px;vertical-align:-8px;margin:-4px 1px -4px -4px}

@@ -1103,7 +1103,7 @@ function doPick(o) {
     const [px, py] = objScreen(o, 0.5);
     setTimeout(() => {
       floatText(px, py - 40, "🦪 Eine Perle!", "gold");
-      flyItem(FITEMS.perle.i, px, py, storeBtn(), 0, 1);
+      flyItem(FITEMS.perle ? "perle" : "🦪", px, py, storeBtn(), 0, 1);   /* v122: Ware als 3D-Bildchen (wenn es sie gibt) */
       FV.R.burst({ x: cx, y: 0.3, z: cz, n: 16, col: [[1, 1, 1, 1], [1, 0.95, 0.8, 1]], speed: 1.0, up: 2.0, size: 0.07, shape: 1 });
       sfx("pearl");
     }, 450);

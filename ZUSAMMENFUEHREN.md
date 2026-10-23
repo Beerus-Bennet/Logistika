@@ -1,5 +1,26 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v122 – alle Warenbildchen + Werkzeuge, Einsammeln (auf v121; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| `skinV`, `sLathe`, `sEll`, `rrect`, `ringXZ`, `slatCrate`, `paperBag`, `feedSack`, `tray`, `bucket`, Obst/Gemüse, `sock`, `goodsItem` (36 Hof- und 3 Fischwaren), `toolNew` (6 Werkzeuge), Jutesack-Etikett | `woodmodels.js` |
+| `ITEM_VIEW` erweitert, Ausbeute-Leiste mit 3D-Bildchen | `worldview.js` |
+| Perle fliegt als Ware | `farmview.js` |
+| `.lootbanner .lb-it` | `style.css` |
+| 2 neue Tests | `tests/icons.test.js` |
+| Version 122 | `index.html`, `sw.js` |
+
+## Stand v121 – Icon-Regelwerk + Holzwaren neu (auf v120)
+
+| Teil | Datei |
+|---|---|
+| Holz-Bausatz (`lumber`, `logPiece`, `splitPiece`, `extrude`, `lathe`, `rope`, `band`, `jutesack`), `woodItem` für alle 22 Holzartikel, `FWM._wk` | `woodmodels.js` |
+| `THUMB_N/THUMB_NB`, Licht `thumbSun` + Icon-Umgebung, Kontur + Kontaktschatten in `thumbCrop`, `thumbURL` (WebP), `ITEM_VIEW` | `worldview.js` |
+| Trophäenbilder ohne Bodenschatten (`TVIEW.noShadow`) | `hunt.js` |
+| neue Tests | `tests/icons.test.js` |
+| Version 121 | `index.html`, `sw.js` |
+
 ## Stand v120 – Hirsch/Keiler neu, Trophäen je Stück, Trophäenwand (auf v119)
 
 | Teil | Datei |

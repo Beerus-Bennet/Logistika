@@ -2475,6 +2475,932 @@ const FWM = (() => {
     return b;
   }
 
+  /* ===================== v121: Holz-Bausatz für die Warenbildchen =====================
+     Stil bleibt Low-Poly mit flachen Facetten (wie die ganze Welt), aber jede Fläche bekommt Farbverläufe je Ecke (triV):
+     • Langholz: ruhige Maserstreifen in Faserrichtung, jedes Brett etwas anders getönt
+     • Hirnholz (Schnittflächen): heller, mit Jahresringen als feine Linien um den Kern, bei Balken ein Schwundriss
+     • Fasen an allen Kanten, etwas heller als die Flächen – das ist die Glanzkante, die das Stück plastisch macht
+     • Rinde je Holzart (Birke weiß mit Querstrichen, Kiefer rotbraun geschuppt, Buche glatt grau, Eiche tief gefurcht,
+       Kirsche rotbraun mit hellen Querbändern)
+     Alles deterministisch (G3.seed je Ware), ohne Texturen; Licht und Kontur kommen einheitlich aus thumbOf/thumbCrop. */
+  const WT = {
+    fichte: { a: 0xe2bf84, b: 0xc79c5e, ring: 0xa97b42, hirn: 0xeccf9c, core: 0xd4ad72 },
+    kiefer: { a: 0xdcae6e, b: 0xbd8649, ring: 0x9a6534, hirn: 0xe8c68e, core: 0xc68c50 },
+    buche:  { a: 0xdcb086, b: 0xc29168, ring: 0xa8764e, hirn: 0xe6c29a, core: 0xd3a074 },
+    eiche:  { a: 0xc99a5e, b: 0xa67a43, ring: 0x86592c, hirn: 0xd8b07a, core: 0xa87440 },
+    kirsche: { a: 0xc0744c, b: 0x9e5534, ring: 0x7a3c22, hirn: 0xcf8a62, core: 0x8f4a2c },
+    birke:  { a: 0xe8d3a6, b: 0xcfb27e, ring: 0xb9976a, hirn: 0xefdcb4, core: 0xdcc196 },
+    alt:    { a: 0xb98c5c, b: 0x9a6f44, ring: 0x6f4b2c, hirn: 0xcca170, core: 0x8f6440 }
+  };
+  const BARK = {
+    birke:  { a: 0xf1eee6, b: 0xdcd8cc, mark: 0x2a2722, rim: 0x6f675a },
+    kiefer: { a: 0xc9743f, b: 0x8a4a28, mark: 0x5e3420, rim: 0x6a3a22 },
+    buche:  { a: 0xb2b1a9, b: 0x8f8e86, mark: 0x7a7972, rim: 0x6f6d66 },
+    eiche:  { a: 0x6a5240, b: 0x3e2f24, mark: 0x2c2119, rim: 0x3a2b20 },
+    kirsche: { a: 0x7a3b33, b: 0x562621, mark: 0xb98a6e, rim: 0x4a201c },
+    ast:    { a: 0x7d6a54, b: 0x5a4a3a, mark: 0x4a3c2e, rim: 0x4e3f30 }
+  };
+  const cv = c => G3.col(c);
+  const lerpC = (a, b, t) => { a = cv(a); b = cv(b); t = t < 0 ? 0 : t > 1 ? 1 : t; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
+  const mulC = (c, f) => { c = cv(c); return [Math.min(1, c[0] * f), Math.min(1, c[1] * f), Math.min(1, c[2] * f)]; };
+  const hs = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+  /* Viereck A-B-C-D (gegen den Uhrzeigersinn von außen) mit Farbe je Ecke */
+  function q4(b, A, B, C, D, ca, cb, cc, cd) { b.triV(A, B, C, ca, cb, cc); b.triV(A, C, D, ca, cc, cd); }
+  /* Strang: Querschnitt-Polygone R[i] (gleich viele Punkte, gegen den Uhrzeigersinn von +z gesehen) an z[i] (aufsteigend) → Mantel;
+     col(i, j, s, p, jv): Farbe für Ring i, Seitenfläche j, s = 0/1 (Anfangs-/Endpunkt der Kante), Punkt p, Eckindex jv */
+  function extrude(b, R, Z, col, o) {
+    o = o || {};
+    const n = R.length, m = R[0].length;
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < m; j++) {
+      const j1 = (j + 1) % m, A = [R[i][j][0], R[i][j][1], Z[i]], B = [R[i][j1][0], R[i][j1][1], Z[i]], Cc = [R[i + 1][j1][0], R[i + 1][j1][1], Z[i + 1]], D = [R[i + 1][j][0], R[i + 1][j][1], Z[i + 1]];
+      /* Außen ist rechts von der Kante (Polygon gegen den Uhrzeigersinn): A, B, C, D reicht schon richtig herum */
+      q4(b, A, B, Cc, D, col(i, j, 0, A, j), col(i, j, 1, B, j1), col(i + 1, j, 1, Cc, j1), col(i + 1, j, 0, D, j));
+    }
+    if (o.cap0) capPoly(b, R[0], Z[0], -1, o.cap0);
+    if (o.cap1) capPoly(b, R[n - 1], Z[n - 1], 1, o.cap1);
+    return b;
+  }
+  /* Deckel eines Polygons (Fächer vom Schwerpunkt), dir = +1 schaut nach +z, −1 nach −z; col(p) */
+  function capPoly(b, P, z, dir, col) {
+    let cx = 0, cy = 0; P.forEach(p => { cx += p[0]; cy += p[1]; }); cx /= P.length; cy /= P.length;
+    const c = [cx, cy, z], cc = col(c);
+    for (let j = 0; j < P.length; j++) {
+      const p = [P[j][0], P[j][1], z], q = [P[(j + 1) % P.length][0], P[(j + 1) % P.length][1], z];
+      if (dir > 0) b.triV(c, p, q, cc, col(p), col(q)); else b.triV(c, q, p, cc, col(q), col(p));
+    }
+  }
+  /* Linie auf einer Fläche z = const (Jahresring, Riss): Punkte L in (x, y), Breite w, Farbe c, leicht vor der Fläche */
+  function lineZ(b, L, z, dir, w, c) {
+    for (let k = 0; k < L.length - 1; k++) {
+      const a = L[k], e = L[k + 1], dx = e[0] - a[0], dy = e[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w / 2, ny = dx / l * w / 2, zz = z + dir * 0.0025;
+      const A = [a[0] - nx, a[1] - ny, zz], B = [e[0] - nx, e[1] - ny, zz], Cc = [e[0] + nx, e[1] + ny, zz], D = [a[0] + nx, a[1] + ny, zz];
+      if (dir > 0) q4(b, A, B, Cc, D, c, c, c, c); else q4(b, A, D, Cc, B, c, c, c, c);
+    }
+  }
+  /* Jahresringe auf einem Hirnholz-Rechteck [x0,x1]×[y0,y1] um den Kern (px, py) – Kreisbögen, an den Rändern abgeschnitten */
+  function ringsRect(b, x0, x1, y0, y1, z, dir, px, py, radii, w, c) {
+    const ins = 0.012;
+    radii.forEach(r => {
+      let L = [];
+      for (let k = 0; k <= 48; k++) {
+        const a = (k / 48) * Math.PI * 2, x = px + Math.cos(a) * r, y = py + Math.sin(a) * r;
+        if (x > x0 + ins && x < x1 - ins && y > y0 + ins && y < y1 - ins) L.push([x, y]);
+        else { if (L.length > 1) lineZ(b, L, z, dir, w, c); L = []; }
+      }
+      if (L.length > 1) lineZ(b, L, z, dir, w, c);
+    });
+  }
+  /* Querschnitt mit Fase c: Rechteck w × h (x mittig, y von 0 bis h); Hauptflächen in nx bzw. ny Abschnitte geteilt
+     (damit die Maser quer über die Fläche laufen kann). Rückgabe: Punkte P und je Seitenfläche, ob sie eine Fase ist (hi) */
+  function chamRect(w, h, c, nx, ny) {
+    nx = nx || 1; ny = ny || 1;
+    const P = [], hi = [], seg = (a, e, n, fase) => { for (let k = 0; k < n; k++) { P.push([a[0] + (e[0] - a[0]) * k / n, a[1] + (e[1] - a[1]) * k / n]); hi.push(fase); } };
+    seg([-w / 2 + c, 0], [w / 2 - c, 0], nx, false); seg([w / 2 - c, 0], [w / 2, c], 1, true);
+    seg([w / 2, c], [w / 2, h - c], ny, false); seg([w / 2, h - c], [w / 2 - c, h], 1, true);
+    seg([w / 2 - c, h], [-w / 2 + c, h], nx, false); seg([-w / 2 + c, h], [-w / 2, h - c], 1, true);
+    seg([-w / 2, h - c], [-w / 2, c], ny, false); seg([-w / 2, c], [-w / 2 + c, 0], 1, true);
+    return { P, hi };
+  }
+  /* Kantholz / Brett / Balken in Faserrichtung z, Mitte bei z = 0. o: { w, h, l, ch, wt (Holzton), tone, seg, pith: [x, y] relativ, rings, crack, saw, stamp } */
+  function lumber(b, o) {
+    const W = WT[o.wt || "fichte"], w = o.w, h = o.h, l = o.l, ch = o.ch != null ? o.ch : Math.min(w, h) * 0.08, tone = o.tone || 1, seg = o.seg || 6;
+    const CR = o.prof || chamRect(w, h, ch, o.nx || 5, o.ny || (h > w * 0.5 ? 4 : 1)), P = CR.P, R = [], Z = [];
+    for (let i = 0; i <= seg; i++) { R.push(P); Z.push(-l / 2 + (l * i) / seg); }
+    const ph = (o.seed || 1) * 3.7;
+    const grain = (p, s) => {
+      /* Maser: Streifen quer zur Faser, sanft gewellt entlang z */
+      const u = (Math.abs(p[1] - h) < 1e-6 || p[1] < 1e-6 ? p[0] : p[1]) * 34 + Math.sin(p[2] * 2.3 + ph) * 1.6 + ph;
+      let c = lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(u));
+      if (Math.sin(u * 0.53 + 2.1) > 0.82) c = lerpC(c, W.ring, 0.45);                          /* einzelne dunkle Maserlinien */
+      if (o.saw) c = mulC(c, 1 - 0.06 * (0.5 + 0.5 * Math.sin(p[2] * 38 + ph)));                 /* Sägespuren quer */
+      return mulC(c, tone * (0.97 + 0.06 * hs(p[0] * 3, p[1] * 3, p[2] * 2 + ph)));
+    };
+    extrude(b, R, Z, (i, j, s, p) => { const c = o.colAt ? o.colAt(p, j, CR.hi[j]) : grain(p, s); return CR.hi[j] ? mulC(c, 1.09) : c; }, {});          /* Fasen = Glanzkanten */
+    /* Hirnholz beider Enden */
+    const hirn = p => mulC(lerpC(W.hirn, W.ring, 0.12 + 0.1 * hs(p[0] * 9, p[1] * 9, ph)), tone);
+    capPoly(b, P, l / 2, 1, hirn); capPoly(b, P, -l / 2, -1, hirn);
+    const px = o.pith ? o.pith[0] * w : (hs(ph, 1, 2) - 0.5) * w * 0.6, py = o.pith ? o.pith[1] * h : -h * (0.8 + hs(ph, 3, 4) * 1.5);
+    const rr = o.rings || (() => { const d = Math.hypot(px, py - h / 2), out = []; for (let k = 1; k <= 14; k++) { const r = d - Math.max(w, h) * 0.9 + k * Math.max(w, h) * 0.16; if (r > 0.01) out.push(r); } return out; })();
+    [1, -1].forEach(dir => ringsRect(b, -w / 2, w / 2, 0, h, dir * l / 2, dir, px, py, rr, Math.max(0.004, Math.min(w, h) * 0.035), mulC(W.ring, tone)));
+    if (o.crack) [1, -1].forEach(dir => lineZ(b, [[px, py], [px + w * 0.05, h - ch * 0.5]], dir * l / 2, dir, Math.min(w, h) * 0.04, mulC(W.ring, 0.6)));
+    if (o.crack) { const c = mulC(W.ring, 0.55); q4(b, [px - 0.004, h + 0.002, -l * 0.38], [px + 0.004, h + 0.002, -l * 0.38], [px + 0.01, h + 0.002, l * 0.3], [px + 0.002, h + 0.002, l * 0.3], c, c, c, c); }
+    return b;
+  }
+  /* Stamm: Rinde je Art, Hirnholz mit Kern, Splint, Ringen, Rindenrand und Trockenriss */
+  function logPiece(b, o) {
+    const sp = o.sp, K = BARK[sp] || BARK.kiefer, W = WT[sp === "edel" ? "kirsche" : sp] || WT.kiefer, r = o.r, l = o.l, seg = 14, nL = 6, ph = (o.seed || 1) * 1.37;
+    const R = [], Z = [];
+    for (let i = 0; i <= nL; i++) {
+      const z = -l / 2 + (l * i) / nL, P = [];
+      for (let j = 0; j < seg; j++) {
+        const a = (j / seg) * Math.PI * 2, furrow = sp === "eiche" ? (j % 2 ? 0.93 : 1.02) : sp === "kiefer" ? (j % 3 === 0 ? 0.95 : 1.01) : 1;
+        const rr = r * furrow * (1 + (hs(i * 1.3 + ph, j * 2.1, 5) - 0.5) * (sp === "buche" ? 0.02 : 0.06)) * (1 - 0.03 * (z / l));
+        P.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+      }
+      R.push(P); Z.push(z);
+    }
+    extrude(b, R, Z, (i, j0, s, p, j) => {
+      const n = hs(i * 1.7 + ph, j * 0.9, 9);
+      let c;
+      if (sp === "birke") c = lerpC(K.a, K.b, n * 0.6);
+      else if (sp === "kiefer") c = lerpC(K.a, K.b, j % 3 === 0 ? 0.85 : n * 0.45);
+      else if (sp === "eiche") c = lerpC(K.a, K.b, j % 2 ? 0.95 : n * 0.4);
+      else if (sp === "kirsche") c = lerpC(K.a, K.b, n * 0.5);
+      else c = lerpC(K.a, K.b, n * 0.35);
+      return mulC(c, 0.96 + 0.08 * hs(p[0] * 7, p[1] * 7, p[2] * 5 + ph));
+    }, {});
+    /* Querstriche der Birke, helle Korkbänder der Kirsche: schmale Streifen dicht auf der Rinde */
+    if (sp === "birke" || sp === "kirsche") {
+      const nM = sp === "birke" ? 9 : 6;
+      for (let k = 0; k < nM; k++) {
+        const z = -l / 2 + l * (0.08 + 0.84 * hs(k, ph, 1)), a0 = hs(k, 2, ph) * Math.PI * 2, span = sp === "birke" ? 0.5 + hs(k, 3, ph) * 0.7 : 1.4, dz = sp === "birke" ? 0.022 : 0.012, rr = r * 1.012;
+        for (let s2 = 0; s2 < 4; s2++) {
+          const a1 = a0 + (s2 / 4) * span, a2 = a0 + ((s2 + 1) / 4) * span, c = cv(K.mark);
+          q4(b, [Math.cos(a1) * rr, Math.sin(a1) * rr, z - dz], [Math.cos(a2) * rr, Math.sin(a2) * rr, z - dz], [Math.cos(a2) * rr, Math.sin(a2) * rr, z + dz], [Math.cos(a1) * rr, Math.sin(a1) * rr, z + dz], c, c, c, c);
+        }
+      }
+    }
+    /* Hirnholz: Kern dunkler, Splint heller, Rindenrand */
+    [[nL, 1], [0, -1]].forEach(([i, dir]) => {
+      const P = R[i], z = Z[i];
+      const inner = P.map(p => [p[0] * 0.86, p[1] * 0.86]);
+      /* Rindenring */
+      for (let j = 0; j < seg; j++) {
+        const j1 = (j + 1) % seg, A = [P[j][0], P[j][1], z], B = [P[j1][0], P[j1][1], z], Cc = [inner[j1][0], inner[j1][1], z], D = [inner[j][0], inner[j][1], z], c = cv(K.rim);
+        if (dir > 0) q4(b, A, B, Cc, D, c, c, c, c); else q4(b, D, Cc, B, A, c, c, c, c);
+      }
+      capPoly(b, inner, z, dir, p => { const d = Math.hypot(p[0], p[1]) / (r * 0.86); return lerpC(W.core, W.hirn, Math.min(1, d * 1.25)); });
+      const rings = [0.22, 0.4, 0.56, 0.7].map(k => k * r);
+      rings.forEach(rr => { const L = []; for (let k = 0; k <= 28; k++) { const a = (k / 28) * Math.PI * 2, w = 1 + (hs(k, rr * 50, ph) - 0.5) * 0.06; L.push([Math.cos(a) * rr * w, Math.sin(a) * rr * w]); } L[28] = L[0]; lineZ(b, L, z, dir, r * 0.035, W.ring); });
+      const a = ph * 2.3 + dir;
+      lineZ(b, [[Math.cos(a) * r * 0.08, Math.sin(a) * r * 0.08], [Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62]], z, dir, r * 0.05, mulC(W.ring, 0.62));
+    });
+    return b;
+  }
+  /* Scheit: Viertel eines Stamms (Keil mit Rinde außen), Spaltflächen hell mit Faser, Hirnholz mit Ringbögen um die Spitze */
+  function splitPiece(b, o) {
+    const sp = o.sp || "buche", K = BARK[sp] || BARK.buche, W = WT[sp] || WT.buche, r = o.r, l = o.l, ang = o.ang || 1.5, seg = 6, ph = (o.seed || 1) * 2.1;
+    const P = [[0, 0]];
+    for (let j = 0; j <= seg; j++) { const a = -ang / 2 + (ang * j) / seg; P.push([Math.cos(a) * r * (1 + (hs(j, ph, 1) - 0.5) * 0.06), Math.sin(a) * r * (1 + (hs(j, ph, 1) - 0.5) * 0.06)]); }
+    /* Polygon gegen den Uhrzeigersinn: Spitze, dann den Bogen entlang */
+    const R = [P, P, P], Z = [-l / 2, 0, l / 2];
+    extrude(b, R, Z, (i, j, s, p, jv) => {
+      if (j >= 1 && j <= seg) return mulC(lerpC(K.a, K.b, hs(i, jv, ph) * 0.5), 0.95 + 0.1 * hs(p[2] * 5, jv, ph));     /* Rinde */
+      const u = Math.hypot(p[0], p[1]) * 30 + Math.sin(p[2] * 3 + ph) * 1.2;
+      return mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(u)), 1.04);
+    }, {});
+    const hirn = p => lerpC(W.core, W.hirn, Math.min(1, Math.hypot(p[0], p[1]) / r * 1.2));
+    capPoly(b, P, l / 2, 1, hirn); capPoly(b, P, -l / 2, -1, hirn);
+    [1, -1].forEach(dir => [0.35, 0.58, 0.8].forEach(k => { const L = []; for (let q = 0; q <= 8; q++) { const a = -ang / 2 * 0.86 + (ang * 0.86 * q) / 8; L.push([Math.cos(a) * r * k, Math.sin(a) * r * k]); } lineZ(b, L, dir * l / 2, dir, r * 0.05, W.ring); }));
+    return b;
+  }
+  /* Röhre entlang Punkten (Seil, Netz, Zweig), flach schattiert */
+  function rope(b, pts, rad, col, sides) {
+    sides = sides || 5;
+    const n = pts.length, rings = [];
+    let U = null;
+    for (let i = 0; i < n; i++) {
+      const a = pts[Math.max(0, i - 1)], e = pts[Math.min(n - 1, i + 1)];
+      let T = [e[0] - a[0], e[1] - a[1], e[2] - a[2]]; const tl = Math.hypot(T[0], T[1], T[2]) || 1; T = [T[0] / tl, T[1] / tl, T[2] / tl];
+      if (!U) { const ref = Math.abs(T[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]; U = [T[1] * ref[2] - T[2] * ref[1], T[2] * ref[0] - T[0] * ref[2], T[0] * ref[1] - T[1] * ref[0]]; }
+      else { const d = U[0] * T[0] + U[1] * T[1] + U[2] * T[2]; U = [U[0] - T[0] * d, U[1] - T[1] * d, U[2] - T[2] * d]; }
+      const ul = Math.hypot(U[0], U[1], U[2]) || 1; U = [U[0] / ul, U[1] / ul, U[2] / ul];
+      const V = [T[1] * U[2] - T[2] * U[1], T[2] * U[0] - T[0] * U[2], T[0] * U[1] - T[1] * U[0]], r = Array.isArray(rad) ? rad[i] : rad, R = [];
+      for (let k = 0; k < sides; k++) { const t = (k / sides) * Math.PI * 2; R.push([pts[i][0] + (U[0] * Math.cos(t) + V[0] * Math.sin(t)) * r, pts[i][1] + (U[1] * Math.cos(t) + V[1] * Math.sin(t)) * r, pts[i][2] + (U[2] * Math.cos(t) + V[2] * Math.sin(t)) * r]); }
+      rings.push(R);
+    }
+    for (let i = 0; i < n - 1; i++) for (let k = 0; k < sides; k++) {
+      const k1 = (k + 1) % sides, A = rings[i][k], B = rings[i][k1], Cc = rings[i + 1][k1], D = rings[i + 1][k];
+      const ca = typeof col === "function" ? col(i, k) : cv(col), cc = typeof col === "function" ? col(i + 1, k) : ca;
+      /* Richtung prüfen: Normale soll von der Achse weg zeigen */
+      const g = [(B[1] - A[1]) * (Cc[2] - A[2]) - (B[2] - A[2]) * (Cc[1] - A[1]), (B[2] - A[2]) * (Cc[0] - A[0]) - (B[0] - A[0]) * (Cc[2] - A[2]), (B[0] - A[0]) * (Cc[1] - A[1]) - (B[1] - A[1]) * (Cc[0] - A[0])];
+      const out = [A[0] - pts[i][0], A[1] - pts[i][1], A[2] - pts[i][2]];
+      if (g[0] * out[0] + g[1] * out[1] + g[2] * out[2] >= 0) q4(b, A, B, Cc, D, ca, ca, cc, cc); else q4(b, A, D, Cc, B, ca, cc, cc, ca);
+    }
+    return b;
+  }
+  /* Drehkörper um y: Profil [[y, r], …], Farbe col(y, a) – Sack, Drechselbein */
+  function lathe(b, prof, seg, col, rm) {
+    const R = prof.map(([y, r]) => { const P = []; for (let j = 0; j < seg; j++) { const a = (j / seg) * Math.PI * 2, k = rm ? rm(y, a) : 1; P.push([Math.cos(a) * r * k, y, Math.sin(a) * r * k]); } return P; });
+    for (let i = 0; i < R.length - 1; i++) for (let j = 0; j < seg; j++) {
+      const j1 = (j + 1) % seg, A = R[i][j], B = R[i][j1], Cc = R[i + 1][j1], D = R[i + 1][j];
+      const a = (j / seg) * Math.PI * 2, a1 = ((j + 1) / seg) * Math.PI * 2;
+      /* von außen gegen den Uhrzeigersinn: A (unten), D (oben) … */
+      q4(b, A, D, Cc, B, col(prof[i][0], a, i, j), col(prof[i + 1][0], a, i + 1, j), col(prof[i + 1][0], a1, i + 1, j1), col(prof[i][0], a1, i, j1));
+    }
+    return b;
+  }
+  /* Spannband (rot) um ein Bündel: Rechteck w × h ab y0, an z */
+  function band(b, w, h, y0, z, col) {
+    const c = col || 0xd8332b, t = 0.012, d = 0.05;
+    b.box(w + 2 * t, t, d, c, { y: y0 + h, z: z - d / 2 + d / 2 }); b.box(w + 2 * t, t, d, c, { y: y0 - t, z });
+    [-1, 1].forEach(s => b.box(t, h + 2 * t, d, c, { x: s * (w / 2 + t / 2), y: y0 - t, z }));
+    b.box(0.05, 0.03, d * 1.15, 0xb02a24, { y: y0 + h - 0.005, z });                                  /* Plombe */
+  }
+
+  /* v121: Holzwaren-Bildchen – alle 22 Holzartikel des Lagers (Stämme, Äste, Reste, Brennholz, Kaminholz, Pfosten, Bretter,
+     Dielen, Balken, Kantholz, Bohlen, Platten, Kisten, Paletten, Möbelteile, Türen, Zaun, Schatulle). */
+  const LOGSP = { birke: "birke", kiefer: "kiefer", buche: "buche", eiche: "eiche", edelholz: "kirsche" };
+  const JUTE2 = { a: 0xd9c08c, b: 0xbfa36e, d: 0x9c8254, seam: 0xa88c5c };
+  function jutesack(b, o) {
+    /* gefüllter Jutesack: unten breit und etwas zusammengesackt, oben offen mit umgeschlagenem Rand, Inhalt schaut heraus;
+       Webstruktur als feines Karo, eine Naht, weiche Falten */
+    const prof = [[0, 0.27], [0.03, 0.335], [0.12, 0.37], [0.26, 0.365], [0.38, 0.34], [0.47, 0.31], [0.52, 0.3], [0.545, 0.315], [0.565, 0.32], [0.58, 0.3]];
+    const rm = (y, a) => 1 + 0.05 * Math.sin(2 * a + 0.6) * (1 - y) + 0.035 * Math.sin(3 * a + 1.7) + (y < 0.1 ? 0.03 * Math.sin(5 * a) : 0);
+    lathe(b, prof, 18, (y, a, i, j) => {
+      const fold = 0.5 + 0.5 * Math.sin(a * 5 + y * 4), weave = ((i + j) % 2) * 0.06;
+      let c = lerpC(JUTE2.a, JUTE2.b, fold * 0.5 + weave);
+      if (y > 0.5) c = lerpC(c, 0xcbb07a, 0.4);                                                   /* umgeschlagener Rand */
+      if (Math.abs(Math.sin(a - 0.9)) < 0.1 && y < 0.5) c = lerpC(c, JUTE2.seam, 0.6);            /* Naht */
+      return mulC(c, y < 0.04 ? 0.82 : 1);
+    }, rm);
+    const ring = (y, r) => { const P = []; for (let j = 0; j < 18; j++) { const a = (j / 18) * Math.PI * 2, k = rm(y, a); P.push([Math.cos(a) * r * k, y, Math.sin(a) * r * k]); } return P; };
+    const B = ring(0, 0.27); for (let j = 0; j < 18; j++) b.triV([0, 0, 0], B[j], B[(j + 1) % 18], JUTE2.d, JUTE2.d, JUTE2.d);
+    /* Innenrand (dunkel) bis zur Füllung */
+    const T = ring(0.58, 0.3), I = ring(0.5, 0.27);
+    for (let j = 0; j < 18; j++) { const j1 = (j + 1) % 18; q4(b, T[j], T[j1], I[j1], I[j], 0x8a7046, 0x8a7046, 0x5a4428, 0x5a4428); }
+    /* Füllung: flacher Hügel (Farbe je Inhalt) */
+    const fc = (o && o.fillCol) || [0x9a7448, 0x7a5a36];
+    const F = ring(0.53, 0.27); for (let j = 0; j < 18; j++) b.triV([0, 0.6, 0], F[(j + 1) % 18], F[j], fc[0], fc[1], fc[1]);
+    /* v122: aufgenähtes Etikett vorn (gebogen wie der Sack), mit Farbband */
+    if (o && o.label) {
+      const rAt = y => { for (let k = 0; k < prof.length - 1; k++) if (y >= prof[k][0] && y <= prof[k + 1][0]) return prof[k][1] + (prof[k + 1][1] - prof[k][1]) * (y - prof[k][0]) / (prof[k + 1][0] - prof[k][0]); return prof[prof.length - 1][1]; };
+      const pt = (y, a) => { const r = rAt(y) * rm(y, a) * 1.015; return [Math.cos(a) * r, y, Math.sin(a) * r]; };
+      const na = 6, ny = 4, a0 = Math.PI / 2 - 0.5, a1 = Math.PI / 2 + 0.5, y0 = 0.14, y1 = 0.36;
+      for (let i = 0; i < ny; i++) for (let j = 0; j < na; j++) {
+        const ya = y0 + (y1 - y0) * i / ny, yb = y0 + (y1 - y0) * (i + 1) / ny, aa = a0 + (a1 - a0) * j / na, ab = a0 + (a1 - a0) * (j + 1) / na;
+        const c = (i === 1 || i === 2) ? o.label.band : o.label.col;
+        q4(b, pt(ya, ab), pt(ya, aa), pt(yb, aa), pt(yb, ab), c, c, c, c);
+      }
+    }
+    if (o && o.fill) o.fill(b);
+  }
+  /* Schatulle-, Tür- und Möbel-Messing */
+  const BRASS2 = { a: 0xe8c25a, b: 0xb88a2a, d: 0x7a5a1a };
+  function woodItem(id, b) {
+    switch (id) {
+      case "birke": case "kiefer": case "buche": case "eiche": case "edelholz": {
+        const sp = LOGSP[id];
+        [[-0.165, 0.155, 0.155, 1.1, 0.0], [0.165, 0.155, 0.15, 1.06, 0.04], [0.0, 0.43, 0.148, 1.12, -0.03]].forEach(([x, y, r, l, z], i) => b.at({ x, y, z }, m => logPiece(m, { sp, r, l, seed: i + 1 + id.length })));
+        if (id === "edelholz") [[0.12, 0.66, 0.18], [-0.2, 0.42, 0.42]].forEach(([x, y, z]) => b.at({ x, y, z }, m => { const g = 0xffe27a; [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([dx, dy]) => m.triV([0, 0, 0], [dx * 0.07 - dy * 0.012, dy * 0.07 + dx * 0.012, 0], [dx * 0.07 + dy * 0.012, dy * 0.07 - dx * 0.012, 0], g, 0xfff4c0, 0xfff4c0)); }));
+        return true;
+      }
+      case "aeste": {
+        /* Bündel krummer Äste mit Zweigstummeln, zweimal mit Hanfschnur gebunden */
+        for (let i = 0; i < 9; i++) {
+          const x = ((i % 3) - 1) * 0.075 + (hs(i, 1, 2) - 0.5) * 0.03, y = 0.05 + Math.floor(i / 3) * 0.065, r0 = 0.03 + hs(i, 2, 3) * 0.012, L = 1.05 + hs(i, 4, 5) * 0.2, pts = [], rr = [];
+          for (let k = 0; k <= 5; k++) { const t = k / 5; pts.push([x + Math.sin(t * 5 + i) * 0.018, y + Math.sin(t * 4 + i * 2) * 0.015, -L / 2 + L * t]); rr.push(r0 * (1 - t * 0.45)); }
+          rope(b, pts, rr, (k) => lerpC(BARK.ast.a, BARK.ast.b, hs(i, k, 7) * 0.6), 6);
+          /* helle Schnittflächen */
+          [[pts[0], rr[0], -1], [pts[5], rr[5], 1]].forEach(([p, r, d]) => b.at({ x: p[0], y: p[1], z: p[2] }, m => { const P = []; for (let j = 0; j < 6; j++) { const a = (j / 6) * Math.PI * 2; P.push([Math.cos(a) * r, Math.sin(a) * r]); } capPoly(m, P, 0, d, () => cv(0xe4c896)); }));
+          if (i % 3 === 1) { const p = pts[2 + (i % 2)], d = i % 2 ? 1 : -1; rope(b, [p, [p[0] + d * 0.09, p[1] + 0.05, p[2] + 0.1], [p[0] + d * 0.14, p[1] + 0.09, p[2] + 0.13]], [0.012, 0.009, 0.004], BARK.ast.b, 5); }
+        }
+        [-0.26, 0.24].forEach(z => { const L = []; for (let k = 0; k <= 14; k++) { const a = (k / 14) * Math.PI * 2; L.push([Math.cos(a) * 0.15, 0.115 + Math.sin(a) * 0.105, z]); } rope(b, L, 0.011, 0xc9a46a, 5); });
+        return true;
+      }
+      case "reste":
+        jutesack(b, { fill: m => {
+          /* Abschnitte schauen oben heraus, ein paar liegen davor */
+          [[0.06, 0.6, 0.02, 0.5, 0.2], [-0.09, 0.61, -0.04, -0.6, 1.2], [0.02, 0.64, 0.1, 0.3, 2.1], [-0.03, 0.6, -0.12, 0.9, 0.6], [0.12, 0.6, -0.08, -0.3, 2.7], [-0.12, 0.58, 0.1, 0.2, 0.9]].forEach(([x, y, z, rx, ry], i) => m.at({ x, y, z, rx, ry }, q => lumber(q, { w: 0.07 + (i % 3) * 0.015, h: 0.035, l: 0.15 + (i % 4) * 0.025, wt: i % 2 ? "fichte" : "kiefer", seed: i + 3, seg: 1, nx: 1, ny: 1 })));
+          [[0.32, 0.0, 0.26, 0.4], [0.42, 0.0, 0.1, 1.9], [0.24, 0.035, 0.34, 1.1]].forEach(([x, y, z, ry], i) => m.at({ x, y, z, ry }, q => lumber(q, { w: 0.08, h: 0.035, l: 0.15 + i * 0.03, wt: "fichte", seed: i + 7, seg: 1, nx: 1, ny: 1 })));
+        } });
+        return true;
+      case "brennholz": {
+        /* ordentlich gestapelte Scheite, alle parallel; jedes Scheit anders gedreht – Rinde, Spaltflächen und dreieckiges Hirnholz */
+        const rows = [[4, 0.0], [3, 0.19], [2, 0.38]];
+        let k = 0;
+        rows.forEach(([n, y]) => { for (let i = 0; i < n; i++, k++) { const x = (i - (n - 1) / 2) * 0.215, rot = hs(k, 2, 7) * Math.PI * 2;
+          b.at({ x, y: y + 0.1, z: (hs(k, 1, 1) - 0.5) * 0.1, rz: rot }, m => m.at({ x: -0.075 }, q => splitPiece(q, { sp: k % 3 === 2 ? "eiche" : "buche", r: 0.15, l: 0.56 + hs(k, 3, 3) * 0.08, ang: 1.65 + hs(k, 4, 4) * 0.35, seed: k + 1 }))); } });
+        return true;
+      }
+      case "kaminholz": {
+        /* Netzsack mit Buchenscheiten, liegend: vorn sieht man die hellen Hirnholz-Dreiecke, das orange Netz läuft in Ringen
+           und Längsfäden darüber und ist hinten zugebunden (Clip und Etikett) */
+        const C7 = [[0, 0.165], [-0.15, 0.09], [0.15, 0.09], [-0.15, 0.24], [0.15, 0.24], [0, 0.315], [0, 0.0]].slice(0, 6), Lg = 0.5;
+        C7.forEach(([x, y], i) => b.at({ x: x * 0.95, y: y + 0.11, z: (hs(i, 1, 1) - 0.5) * 0.05, rz: hs(i, 2, 2) * Math.PI * 2 }, m => m.at({ x: -0.07 }, q => splitPiece(q, { sp: "buche", r: 0.14, l: Lg + hs(i, 3, 3) * 0.05, ang: 1.6, seed: i + 4 }))));
+        const NET = 0xf2731e, cx = 0, cy = 0.27, rx = 0.285, ry = 0.255;
+        for (let k = 0; k < 5; k++) { const z = -0.22 + k * 0.11, L = []; for (let t = 0; t <= 16; t++) { const a = (t / 16) * Math.PI * 2; L.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, z + Math.sin(a * 2 + k) * 0.01]); } rope(b, L, 0.0075, NET, 4); }
+        for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2 + 0.3, L = []; for (let t = 0; t <= 6; t++) { const z = 0.29 - t * 0.098, w = Math.sin(t * 1.3 + k) * 0.05, f = t === 0 ? 0.8 : 1; L.push([cx + Math.cos(a + w) * rx * f, cy + Math.sin(a + w) * ry * f, z]); }
+          L.push([cx + Math.cos(a) * rx * 0.3, cy + Math.sin(a) * ry * 0.3, -0.4]); rope(b, L, 0.0065, NET, 4); }
+        rope(b, [[0, cy, -0.4], [0, cy, -0.47]], 0.03, 0xd8551a, 6);
+        b.at({ x: 0.05, y: cy - 0.1, z: -0.47, ry: 0.4 }, m => { m.box(0.16, 0.11, 0.008, 0xfaf4e4, { c: true }); m.box(0.12, 0.024, 0.01, NET, { y: 0.025, c: true }); m.box(0.08, 0.012, 0.01, 0x6a5a4a, { y: -0.02, c: true }); });
+        return true;
+      }
+      case "pfosten": {
+        /* Rundpfosten, geschält, angespitzt, Bund mit Spannband */
+        for (let i = 0; i < 4; i++) {
+          const x = (i % 2 - 0.5) * 0.19, y = 0.095 + Math.floor(i / 2) * 0.175, r = 0.088, L = 1.0, zz = (hs(i, 3, 1) - 0.5) * 0.05;
+          b.at({ x, y, z: zz }, m => {
+            const R = [], Z = [];
+            for (let k = 0; k <= 4; k++) { const t = k / 4, P = []; for (let j = 0; j < 10; j++) { const a = (j / 10) * Math.PI * 2, rr = r * (1 + (hs(i, j, k) - 0.5) * 0.05); P.push([Math.cos(a) * rr, Math.sin(a) * rr]); } R.push(P); Z.push(-L / 2 + L * t); }
+            /* Spitze: sechs Beilflächen */
+            const tip = 0.26, A = [], ZA = [L / 2, L / 2 + tip * 0.55, L / 2 + tip];
+            [1, 0.45, 0.04].forEach((k) => { const P = []; for (let j = 0; j < 10; j++) { const a = (j / 10) * Math.PI * 2; P.push([Math.cos(a) * r * k, Math.sin(a) * r * k]); } A.push(P); });
+            const W = WT.kiefer;
+            extrude(m, R, Z, (ii, j, s, p) => mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(j * 1.9 + i)), 0.95 + 0.08 * hs(p[2] * 4, j, i)), {});
+            extrude(m, A, ZA, (ii, j) => mulC(cv(W.hirn), j % 2 ? 1.04 : 0.94), {});
+            capPoly(m, R[0], -L / 2, -1, p => lerpC(W.core, W.hirn, Math.hypot(p[0], p[1]) / r));
+            [0.3, 0.55, 0.8].forEach(k => { const Lr = []; for (let q = 0; q <= 20; q++) { const a = (q / 20) * Math.PI * 2; Lr.push([Math.cos(a) * r * k, Math.sin(a) * r * k]); } lineZ(m, Lr, -L / 2, -1, 0.004, W.ring); });
+          });
+        }
+        band(b, 0.38, 0.35, 0.007, -0.25); band(b, 0.38, 0.35, 0.007, 0.2);
+        return true;
+      }
+      case "bretter": {
+        for (let i = 0; i < 10; i++) { const r = Math.floor(i / 2), c = i % 2; b.at({ x: (c - 0.5) * 0.275, y: r * 0.052, z: (hs(i, 1, 2) - 0.5) * 0.07 }, m => lumber(m, { w: 0.265, h: 0.048, l: 1.3, wt: i % 3 === 1 ? "kiefer" : "fichte", tone: 0.95 + hs(i, 2, 3) * 0.1, seed: i + 1, ch: 0.006, nx: 6 })); }
+        band(b, 0.56, 0.27, 0.0, 0.32); band(b, 0.56, 0.27, 0.0, -0.36);
+        return true;
+      }
+      case "dielen": {
+        /* Hobeldielen mit Nut und Feder (an der Stirnseite zu sehen), glatt und hell */
+        const w = 0.23, h = 0.042, t = 0.012, P = [[-w / 2, 0], [w / 2, 0], [w / 2, h * 0.34], [w / 2 + t, h * 0.38], [w / 2 + t, h * 0.66], [w / 2, h * 0.7], [w / 2, h], [-w / 2, h], [-w / 2, h * 0.7], [-w / 2 + t, h * 0.66], [-w / 2 + t, h * 0.38], [-w / 2, h * 0.34]];
+        const sub = []; P.forEach((p, i) => { const q = P[(i + 1) % P.length]; const n = (i === 0 || i === 6) ? 5 : 1; for (let k = 0; k < n; k++) sub.push([p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n]); });
+        const prof = { P: sub, hi: sub.map(() => false) };
+        for (let i = 0; i < 8; i++) { const r = Math.floor(i / 2), c = i % 2; b.at({ x: (c - 0.5) * (w + t + 0.01), y: r * 0.046, z: (hs(i, 5, 2) - 0.5) * 0.05 }, m => lumber(m, { w, h, l: 1.4, wt: "fichte", tone: 1.02 + hs(i, 2, 3) * 0.05, seed: i + 11, prof })); }
+        band(b, 0.52, 0.19, 0.0, 0.0, 0x2f78c8);
+        return true;
+      }
+      case "balken": {
+        /* zwei kräftige, sägeraue Balken mit Kern in der Mitte (Ringe rundum) und Schwundriss oben */
+        [[-0.14, 0, 0], [0.14, 0, 0.06]].forEach(([x, y, z], i) => b.at({ x, y, z }, m => lumber(m, { w: 0.26, h: 0.26, l: 1.5, wt: "alt", tone: 1 - i * 0.05, seed: i + 21, ch: 0.018, pith: [0.04 - i * 0.08, 0.48], rings: [0.03, 0.06, 0.09, 0.12, 0.15, 0.18], saw: true, crack: true, nx: 5, ny: 5 })));
+        b.at({ y: 0.262, z: -0.03, ry: 0.06 }, m => lumber(m, { w: 0.26, h: 0.26, l: 1.45, wt: "alt", tone: 0.97, seed: 23, ch: 0.018, pith: [0.5, 0.5], rings: [0.03, 0.06, 0.09, 0.12, 0.15, 0.18], saw: true, crack: true, nx: 5, ny: 5 }));
+        return true;
+      }
+      case "bauholz": {
+        /* Konstruktionsvollholz: gehobelt, hell, scharfe kleine Fasen, blauer Prüfstempel, als Paar gebunden */
+        [[-0.115, 0], [0.115, 0]].forEach(([x], i) => b.at({ x, z: i * 0.04 }, m => {
+          lumber(m, { w: 0.22, h: 0.22, l: 1.5, wt: "fichte", tone: 1.03 - i * 0.03, seed: i + 31, ch: 0.01, pith: [0.1 - i * 0.2, 0.5], rings: [0.04, 0.075, 0.11, 0.145], nx: 5, ny: 5 });
+          m.box(0.12, 0.004, 0.17, 0x2f6fb0, { y: 0.22, z: 0.42 }); m.box(0.08, 0.005, 0.02, 0xeaf2fa, { y: 0.22, z: 0.45 }); m.box(0.08, 0.005, 0.02, 0xeaf2fa, { y: 0.22, z: 0.39 });
+        }));
+        band(b, 0.46, 0.22, 0.0, 0.3); band(b, 0.46, 0.22, 0.0, -0.35);
+        return true;
+      }
+      case "bohlen": {
+        /* unbesäumte Eichenbohlen: eine Kante gerade, die andere mit welliger Baumkante und Rindenstreifen */
+        [0, 1].forEach(i => b.at({ y: i * 0.1, z: i * 0.14, x: -i * 0.07, ry: i * 0.07 }, m => {
+          const w = 0.42, h = 0.085, L = 1.4, nL = 8, R = [], Z = [];
+          for (let k = 0; k <= nL; k++) {
+            const t = k / nL, wav = 0.03 * Math.sin(t * 5.3 + i * 2) + 0.015 * Math.sin(t * 13 + i), xr = w / 2 + wav;
+            R.push([[-w / 2, 0], [-w / 2 + w * 0.25, 0], [-w / 2 + w * 0.5, 0], [-w / 2 + w * 0.75, 0], [xr - 0.03, 0], [xr, h * 0.35], [xr - 0.012, h * 0.75], [xr - 0.035, h], [-w / 2 + w * 0.75, h], [-w / 2 + w * 0.5, h], [-w / 2 + w * 0.25, h], [-w / 2, h]]);
+            Z.push(-L / 2 + L * t);
+          }
+          const W = WT.eiche, K = BARK.eiche;
+          extrude(m, R, Z, (ii, j, s, p) => {
+            if (j === 4 || j === 5 || j === 6) return mulC(lerpC(K.a, K.b, hs(ii, j, i) * 0.6), 1.05);             /* Rinde an der Baumkante */
+            const u = (j < 4 || j > 6) && Math.abs(p[1] - h) > 1e-4 && p[1] > 1e-4 ? p[1] * 60 : p[0] * 28 + Math.sin(p[2] * 2 + i) * 1.4;
+            return mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(u)), 0.96 + 0.08 * hs(p[0] * 5, p[2] * 3, i));
+          }, {});
+          const hirn = p => lerpC(W.hirn, W.ring, 0.15 + 0.1 * hs(p[0] * 9, p[1] * 9, i));
+          capPoly(m, R[nL], L / 2, 1, hirn); capPoly(m, R[0], -L / 2, -1, hirn);
+          [1, -1].forEach(d => ringsRect(m, -w / 2, w / 2 - 0.04, 0, h, d * L / 2, d, 0.02, -0.22, [0.24, 0.27, 0.3, 0.33, 0.36], 0.005, W.ring));
+        }));
+        return true;
+      }
+      case "platten": {
+        /* Sperrholzplatten: Deckfurnier mit Maser, an den Kanten die hellen und dunklen Lagen */
+        for (let i = 0; i < 5; i++) b.at({ y: i * 0.066, x: (hs(i, 1, 1) - 0.5) * 0.05, z: (hs(i, 2, 2) - 0.5) * 0.05, ry: (hs(i, 3, 3) - 0.5) * 0.05 }, m => {
+          const w = 0.95, l = 0.75, h = 0.064, nb = 3, W = { a: 0xdcbd84, b: 0xc29a5f, ring: 0x9a7040 };
+          /* Kanten als Lagen */
+          const layer = (y0, y1, k) => { const c = k % 2 ? cv(0x9c7444) : cv(0xe2c48e), cc = mulC(c, 0.92);
+            q4(m, [-w / 2, y0, l / 2], [w / 2, y0, l / 2], [w / 2, y1, l / 2], [-w / 2, y1, l / 2], c, c, c, c);
+            q4(m, [w / 2, y0, -l / 2], [-w / 2, y0, -l / 2], [-w / 2, y1, -l / 2], [w / 2, y1, -l / 2], cc, cc, cc, cc);
+            q4(m, [w / 2, y0, l / 2], [w / 2, y0, -l / 2], [w / 2, y1, -l / 2], [w / 2, y1, l / 2], cc, cc, cc, cc);
+            q4(m, [-w / 2, y0, -l / 2], [-w / 2, y0, l / 2], [-w / 2, y1, l / 2], [-w / 2, y1, -l / 2], c, c, c, c); };
+          for (let k = 0; k < nb; k++) layer(h * k / nb, h * (k + 1) / nb, k);
+          /* Deckfläche mit Maser (Streifen in x) */
+          const nx = 6, nz = 10, tone = 0.95 + hs(i, 4, 4) * 0.08;
+          for (let a = 0; a < nx; a++) for (let c2 = 0; c2 < nz; c2++) {
+            const x0 = -w / 2 + w * a / nx, x1 = -w / 2 + w * (a + 1) / nx, z0 = -l / 2 + l * c2 / nz, z1 = -l / 2 + l * (c2 + 1) / nz;
+            const g = (x, z) => { const u = z * 22 + Math.sin(x * 4 + i) * 2 + i; let c = lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(u)); if (Math.sin(u * 0.6 + 1) > 0.85) c = lerpC(c, W.ring, 0.35); return mulC(c, tone); };
+            q4(m, [x0, h, z1], [x1, h, z1], [x1, h, z0], [x0, h, z0], g(x0, z1), g(x1, z1), g(x1, z0), g(x0, z0));
+          }
+          m.box(w, 0.002, l, 0xa8885a, {});
+        });
+        return true;
+      }
+      case "kisten": {
+        /* Lattenkisten: Eckleisten, je Seite zwei Latten mit Spalt, Griffloch an den Stirnseiten, Boden innen dunkler */
+        const crate = (x, y, z, ry, s) => b.at({ x, y, z, ry }, m => {
+          const W = 0.5, D = 0.38, H = 0.3, t = 0.024, sl = 0.11;
+          m.box(W - 0.02, 0.02, D - 0.02, 0x7a5a36, { y: 0.01 });
+          [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sz]) => m.at({ x: sx * (W / 2 - 0.025), z: sz * (D / 2 - 0.025), y: H / 2 }, q => q.at({ rx: Math.PI / 2 }, r => lumber(r, { w: 0.05, h: 0.05, l: H, wt: "kiefer", seed: s + sx + sz * 3, ch: 0.006, seg: 1, nx: 1, ny: 1 }))));
+          [0.035, 0.175].forEach((y0, k) => [-1, 1].forEach(sd => {
+            m.at({ z: sd * (D / 2 + t / 2 - 0.004), y: y0, ry: Math.PI / 2 }, q => lumber(q, { w: t, h: sl, l: W - 0.02, wt: "fichte", tone: 0.96 + k * 0.05, seed: s + k + sd, ch: 0.004, seg: 2, nx: 1, ny: 3 }));
+            m.at({ x: sd * (W / 2 + t / 2 - 0.004), y: y0 }, q => lumber(q, { w: t, h: sl, l: D - 0.02, wt: "fichte", tone: 0.98 + k * 0.04, seed: s + k + sd + 9, ch: 0.004, seg: 2, nx: 1, ny: 3 }));
+          }));
+          /* Grifflöcher */
+          [-1, 1].forEach(sd => m.box(0.012, 0.035, 0.12, 0x3a2a18, { x: sd * (W / 2 + t - 0.002), y: 0.24, c: true }));
+        });
+        crate(-0.27, 0, 0, 0.05, 1); crate(0.27, 0, 0.02, -0.04, 5); crate(0, 0.305, 0, 0.1, 9);
+        return true;
+      }
+      case "paletten": {
+        /* Europaletten: 3 Kufen, 9 Klötze (außen mit Brandstempel), 3 Querbretter, 5 Deckbretter (außen breit) */
+        for (let k = 0; k < 3; k++) b.at({ y: k * 0.172, x: (hs(k, 1, 1) - 0.5) * 0.04, z: (hs(k, 2, 2) - 0.5) * 0.04 }, m => {
+          const L = 1.2, Wd = 0.8;
+          [-0.36, 0, 0.36].forEach((z, i) => m.at({ z, y: 0 }, q => q.at({ ry: Math.PI / 2 }, r => lumber(r, { w: 0.1, h: 0.022, l: L, wt: "fichte", seed: k * 9 + i, ch: 0.004, seg: 2, nx: 2 }))));
+          [-0.52, 0, 0.52].forEach((x, i) => [-0.36, 0, 0.36].forEach((z, j) => m.at({ x, z, y: 0.022 }, q => {
+            lumber(q, { w: 0.145, h: 0.078, l: j === 1 ? 0.145 : 0.1, wt: "kiefer", tone: 0.92, seed: k * 3 + i + j, ch: 0.005, seg: 1, nx: 1, ny: 1 });
+            if (i !== 1 && j !== 1) q.box(0.07, 0.03, 0.003, 0x4a3420, { x: 0, y: 0.024, z: (j === 1 ? 0.145 : 0.1) / 2 + 0.001 });
+          })));
+          [-0.52, 0, 0.52].forEach((x, i) => m.at({ x, y: 0.1 }, q => lumber(q, { w: 0.145, h: 0.022, l: Wd, wt: "fichte", tone: 0.97, seed: k * 5 + i + 40, ch: 0.004, seg: 2, nx: 2 })));
+          [[-0.34, 0.145], [-0.17, 0.1], [0, 0.145], [0.17, 0.1], [0.34, 0.145]].forEach(([z, w], i) => m.at({ z, y: 0.122 }, q => q.at({ ry: Math.PI / 2 }, r => lumber(r, { w, h: 0.022, l: L, wt: "fichte", tone: 0.98 + hs(k, i, 5) * 0.06, seed: k * 7 + i + 60, ch: 0.004, seg: 3, nx: 3 }))));
+        });
+        return true;
+      }
+      case "moebel": {
+        /* Stuhl aus Buche: gedrechselte Beine, Sitz mit runder Vorderkante, Lehne mit drei Sprossen; daneben ein loses Bein */
+        const W = WT.buche, legC = (y, a, i) => mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(a * 3 + y * 9)), 0.97 + (i % 2) * 0.05);
+        const leg = (x, z, h, back) => b.at({ x, z }, m => lathe(m, back ? [[0, 0.024], [0.05, 0.026], h > 0.6 ? [0.3, 0.022] : [0.3, 0.022], [h * 0.62, 0.028], [h * 0.68, 0.02], [h - 0.02, 0.022], [h, 0.012]] : [[0, 0.022], [0.05, 0.025], [0.2, 0.019], [0.26, 0.027], [0.32, 0.02], [0.43, 0.024], [0.45, 0.012]], 8, legC));
+        leg(0.19, 0.19, 0.45); leg(-0.19, 0.19, 0.45); leg(0.19, -0.19, 0.95, true); leg(-0.19, -0.19, 0.95, true);
+        b.at({ y: 0.43 }, m => lumber(m, { w: 0.48, h: 0.05, l: 0.46, wt: "buche", seed: 3, ch: 0.014, nx: 6, seg: 3 }));
+        [0.6, 0.72, 0.84].forEach((y, i) => b.at({ y, z: -0.19 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: 0.03, h: i === 2 ? 0.08 : 0.04, l: 0.38, wt: "buche", seed: 5 + i, ch: 0.006, seg: 2, nx: 1, ny: 2 }))));
+        [0.16].forEach(y => [[-1, 0], [1, 0]].forEach(([sx]) => b.at({ x: sx * 0.19, y }, m => lumber(m, { w: 0.02, h: 0.02, l: 0.36, wt: "buche", seed: 9, ch: 0.004, seg: 1, nx: 1, ny: 1 }))));
+        b.at({ x: 0.42, y: 0.025, z: 0.15, rz: Math.PI / 2, ry: 0.35 }, m => lathe(m, [[0, 0.022], [0.05, 0.025], [0.2, 0.019], [0.26, 0.027], [0.32, 0.02], [0.43, 0.024], [0.45, 0.012]], 8, legC));
+        return true;
+      }
+      case "tueren": {
+        /* Kassettentür: Rahmen, vier erhabene Füllungen, Messingdrücker mit Schild, drei Bänder links */
+        const W = 0.72, H = 1.45, T = 0.07, Wt = WT.eiche;
+        b.at({ y: H / 2, z: 0 }, m => m.at({ rx: Math.PI / 2 }, q => lumber(q, { w: W, h: T, l: H, wt: "eiche", tone: 0.92, seed: 41, ch: 0.01, nx: 6, seg: 6, pith: [0.5, -3], rings: [] })));
+        /* Füllungen */
+        [[0.3, 0.42], [0.92, 0.5]].forEach(([y, hh]) => [-1, 1].forEach(sx => b.at({ x: sx * 0.165, y, z: T + 0.001 }, m => {
+          const w = 0.24, h = hh, s = 0.03;
+          const c0 = mulC(cv(Wt.a), 0.9), c1 = mulC(cv(Wt.a), 1.08), c2 = mulC(cv(Wt.b), 0.85), c3 = cv(Wt.b);
+          const P = [[-w / 2, 0, 0], [w / 2, 0, 0], [w / 2, h, 0], [-w / 2, h, 0]], I = [[-w / 2 + s, s, 0.015], [w / 2 - s, s, 0.015], [w / 2 - s, h - s, 0.015], [-w / 2 + s, h - s, 0.015]];
+          q4(m, P[0], P[1], I[1], I[0], c2, c2, c2, c2); q4(m, P[1], P[2], I[2], I[1], c3, c3, c3, c3); q4(m, P[2], P[3], I[3], I[2], c1, c1, c1, c1); q4(m, P[3], P[0], I[0], I[3], c1, c1, c1, c1);
+          q4(m, I[0], I[1], I[2], I[3], c0, c0, mulC(c0, 1.04), mulC(c0, 1.04));
+        })));
+        /* Drücker */
+        b.box(0.05, 0.16, 0.012, BRASS2.b, { x: 0.27, y: 0.72, z: T + 0.006, c: true });
+        rope(b, [[0.27, 0.75, T + 0.012], [0.27, 0.75, T + 0.05], [0.18, 0.75, T + 0.055]], 0.011, BRASS2.a, 6);
+        b.box(0.016, 0.022, 0.01, 0x2a2218, { x: 0.27, y: 0.67, z: T + 0.013, c: true });
+        [0.2, 0.72, 1.25].forEach(y => b.box(0.03, 0.1, 0.03, 0x4a4a4a, { x: -W / 2 - 0.006, y, z: T / 2, c: true }));
+        return true;
+      }
+      case "zaun": {
+        /* Zaunelement: Latten mit Spitze, zwei Riegel und eine Strebe (Z) dahinter */
+        const W = WT.kiefer;
+        for (let i = 0; i < 7; i++) {
+          const x = -0.54 + i * 0.18, h = 0.86 + (hs(i, 1, 1) - 0.5) * 0.02, w = 0.11, t = 0.028, P = [[-w / 2, 0], [w / 2, 0], [w / 2, h], [0, h + 0.09], [-w / 2, h]];
+          b.at({ x, z: 0 }, m => {
+            const sub = []; P.forEach((p, k) => { const q = P[(k + 1) % P.length]; const n = k === 1 || k === 4 ? 4 : 1; for (let a = 0; a < n; a++) sub.push([p[0] + (q[0] - p[0]) * a / n, p[1] + (q[1] - p[1]) * a / n]); });
+            const R = [sub, sub], Z = [-t / 2, t / 2];
+            extrude(m, R, Z, (ii, j, s, p) => mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(p[0] * 80 + i)), 0.95), {});
+            const fc = p => mulC(lerpC(W.a, W.b, 0.5 + 0.5 * Math.sin(p[0] * 70 + Math.sin(p[1] * 6 + i) * 1.5 + i)), 1.02);
+            capPoly(m, sub, t / 2, 1, fc); capPoly(m, sub, -t / 2, -1, fc);
+          });
+        }
+        [0.16, 0.66].forEach((y, i) => b.at({ y, z: -0.04 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: 0.04, h: 0.085, l: 1.3, wt: "kiefer", tone: 0.9, seed: 50 + i, ch: 0.006, seg: 3, nx: 1, ny: 2 }))));
+        b.at({ y: 0.41, z: -0.045, rz: -0.38 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: 0.035, h: 0.07, l: 1.16, wt: "kiefer", tone: 0.86, seed: 53, ch: 0.006, seg: 3, nx: 1, ny: 2 })));
+        return true;
+      }
+      case "schatulle": {
+        /* Edelholz-Schatulle: Kirschbaum, Deckel mit Fase und heller Einlegeader, Messingecken, Schlossblech, Füße */
+        const W = 0.62, D = 0.42, H = 0.24, Kt = WT.kirsche;
+        b.at({ y: 0.03 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: D, h: H, l: W, wt: "kirsche", seed: 61, ch: 0.012, nx: 6, ny: 3, pith: [0.5, -2], rings: [] })));
+        b.at({ y: 0.03 + H }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: D + 0.02, h: 0.09, l: W + 0.02, wt: "kirsche", tone: 1.06, seed: 62, ch: 0.03, nx: 6, ny: 1, pith: [0.5, -2], rings: [] })));
+        const top = 0.03 + H + 0.09 + 0.002, c = cv(0xf0d6a8);
+        [[-W / 2 + 0.06, -D / 2 + 0.06, W / 2 - 0.06, -D / 2 + 0.072], [-W / 2 + 0.06, D / 2 - 0.072, W / 2 - 0.06, D / 2 - 0.06], [-W / 2 + 0.06, -D / 2 + 0.06, -W / 2 + 0.072, D / 2 - 0.06], [W / 2 - 0.072, -D / 2 + 0.06, W / 2 - 0.06, D / 2 - 0.06]]
+          .forEach(([x0, z0, x1, z1]) => q4(b, [x0, top, z1], [x1, top, z1], [x1, top, z0], [x0, top, z0], c, c, c, c));
+        [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sz]) => {
+          b.box(0.05, 0.05, 0.05, BRASS2.b, { x: sx * (W / 2 - 0.02), y: 0, z: sz * (D / 2 - 0.02), c: false, top: BRASS2.a });
+          b.box(0.035, H + 0.085, 0.035, BRASS2.b, { x: sx * (W / 2 - 0.006), y: 0.03, z: sz * (D / 2 - 0.006), top: BRASS2.a });
+        });
+        b.box(0.09, 0.11, 0.012, BRASS2.a, { y: 0.03 + H - 0.08, z: D / 2 + 0.006, c: false });
+        b.box(0.014, 0.035, 0.014, 0x2a1d10, { y: 0.03 + H - 0.055, z: D / 2 + 0.013, c: false });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* ===================== v122: Hofwaren-, Fisch- und Werkzeug-Bildchen =====================
+     Gleicher Stil und gleicher Bausatz wie die Holzwaren (v121): Low-Poly-Grundform, Farbe je Ecke für Materialien
+     (Jute-Karo, Papier, Kunststoffschale, Zink, Stahl mit heller Schneide), weiche Normalen für Rundes (Obst, Gemüse,
+     Säcke, Kannen) über skinV. Licht, Kontur und Schatten kommen einheitlich aus thumbOf/thumbCrop. */
+  /* Haut über Ringe (wie in der Jagd): weiche Normalen aus den Nachbarpunkten, Farbe je Ecke, Kappen mit Spitze */
+  function skinV(b, P, Cc, o) {
+    o = o || {};
+    const n = P.length, m = P[0].length, M = b.M, v = b.v;
+    const sub = (a, c) => [a[0] - c[0], a[1] - c[1], a[2] - c[2]], crs = (a, c) => [a[1] * c[2] - a[2] * c[1], a[2] * c[0] - a[0] * c[2], a[0] * c[1] - a[1] * c[0]];
+    const nrm = a => { const l = Math.hypot(a[0], a[1], a[2]); return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0]; }, dot = (a, c) => a[0] * c[0] + a[1] * c[1] + a[2] * c[2];
+    const cen = P.map(R => { let x = 0, y = 0, z = 0; for (const p of R) { x += p[0]; y += p[1]; z += p[2]; } return [x / m, y / m, z / m]; });
+    const N = P.map((R, i) => R.map((p, j) => {
+      let q = nrm(crs(sub(R[(j + 1) % m], R[(j + m - 1) % m]), sub(P[Math.min(n - 1, i + 1)][j], P[Math.max(0, i - 1)][j])));
+      if (!q[0] && !q[1] && !q[2]) q = nrm(sub(cen[Math.min(n - 1, i + 1)], cen[Math.max(0, i - 1)]));
+      if (dot(q, o.ref ? o.ref(i, j, p) : sub(p, cen[i])) < 0) q = [-q[0], -q[1], -q[2]];
+      return q;
+    }));
+    const put = (p, q, c) => {
+      c = cv(c);
+      v.push(M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14]);
+      const x = M[0] * q[0] + M[4] * q[1] + M[8] * q[2], y = M[1] * q[0] + M[5] * q[1] + M[9] * q[2], z = M[2] * q[0] + M[6] * q[1] + M[10] * q[2], l = Math.hypot(x, y, z) || 1;
+      v.push(x / l, y / l, z / l, c[0], c[1], c[2]);
+    };
+    const tri = (pa, na, ca, pb, nb, cb, pc, nc, cc) => {
+      const g = crs(sub(pb, pa), sub(pc, pa));
+      if (Math.abs(g[0]) + Math.abs(g[1]) + Math.abs(g[2]) < 1e-14) return;
+      if (dot(g, [na[0] + nb[0] + nc[0], na[1] + nb[1] + nc[1], na[2] + nb[2] + nc[2]]) < 0) { put(pa, na, ca); put(pc, nc, cc); put(pb, nb, cb); } else { put(pa, na, ca); put(pb, nb, cb); put(pc, nc, cc); }
+    };
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < m; j++) { const j1 = (j + 1) % m;
+      tri(P[i][j], N[i][j], Cc[i][j], P[i + 1][j], N[i + 1][j], Cc[i + 1][j], P[i + 1][j1], N[i + 1][j1], Cc[i + 1][j1]);
+      tri(P[i][j], N[i][j], Cc[i][j], P[i + 1][j1], N[i + 1][j1], Cc[i + 1][j1], P[i][j1], N[i][j1], Cc[i][j1]); }
+    [[0, o.cap0, o.tip0, 1, o.n0, o.c0], [n - 1, o.cap1, o.tip1, n - 2, o.n1, o.c1]].forEach(([i, cap, tip, k, nq, cc]) => {
+      if (!cap) return;
+      const c = tip || cen[i], q = nq || nrm(sub(cen[i], cen[k])), col = cc != null ? cc : Cc[i][0];
+      for (let j = 0; j < m; j++) { const j1 = (j + 1) % m; tri(c, q, col, P[i][j], N[i][j], Cc[i][j], P[i][j1], N[i][j1], Cc[i][j1]); }
+    });
+    return b;
+  }
+  /* weicher Drehkörper um y: prof [[y, r]] (unten → oben), col(p, y, a, i, j), rm(y, a) Radius-Faktor (Rippen, Dellen) */
+  function sLathe(b, prof, seg, col, rm, o) {
+    o = o || {};
+    const P = [], Cc = [];
+    prof.forEach(([y, r], i) => { const R = [], C2 = []; for (let j = 0; j < seg; j++) { const a = (j / seg) * Math.PI * 2, k = rm ? rm(y, a) : 1, p = [Math.cos(a) * r * k, y, Math.sin(a) * r * k]; R.push(p); C2.push(col(p, y, a, i, j)); } P.push(R); Cc.push(C2); });
+    const y0 = prof[0][0], y1 = prof[prof.length - 1][0];
+    return skinV(b, P, Cc, { cap0: o.cap0 !== false, cap1: o.cap1 !== false, tip0: o.tip0 || [0, y0, 0], tip1: o.tip1 || [0, y1, 0], n0: [0, -1, 0], n1: o.n1 || [0, 1, 0], c0: o.c0, c1: o.c1 });
+  }
+  /* Ellipsoid mit Farbe je Ecke und optionaler Beule (jit) */
+  function sEll(b, c, r, col, m, n, jit, seed) {
+    m = m || 10; n = n || 7; jit = jit || 0; seed = seed || 1;
+    const P = [], Cc = [];
+    for (let i = 1; i < n; i++) {
+      const th = (i / n) * Math.PI, yy = Math.cos(th), s = Math.sin(th), R = [], C2 = [];
+      for (let j = 0; j < m; j++) { const t = (j / m) * Math.PI * 2, k = 1 + (hs(i * 1.3 + seed, j * 2.7, seed) - 0.5) * jit, p = [c[0] + Math.cos(t) * s * r[0] * k, c[1] + yy * r[1] * k, c[2] + Math.sin(t) * s * r[2] * k]; R.push(p); C2.push(typeof col === "function" ? col(p, yy, t, i, j) : cv(col)); }
+      P.push(R); Cc.push(C2);
+    }
+    return skinV(b, P, Cc, { cap0: true, cap1: true, tip0: [c[0], c[1] + r[1], c[2]], tip1: [c[0], c[1] - r[1], c[2]] });
+  }
+  /* abgerundetes Rechteck (x, z) mit n Punkten je Ecke */
+  function rrect(w, d, rr, n) {
+    const P = []; n = n || 3;
+    [[w / 2 - rr, d / 2 - rr, 0], [-w / 2 + rr, d / 2 - rr, Math.PI / 2], [-w / 2 + rr, -d / 2 + rr, Math.PI], [w / 2 - rr, -d / 2 + rr, Math.PI * 1.5]].forEach(([cx, cz, a0]) => { for (let k = 0; k <= n; k++) { const a = a0 + (k / n) * Math.PI / 2; P.push([cx + Math.cos(a) * rr, cz + Math.sin(a) * rr]); } });
+    return P;
+  }
+  /* Ringe aus einem Umriss (x, z) auf Höhe y mit Skalierung kx, kz – für Tüten, Schalen, Ballen, Säcke */
+  const ringXZ = (OL, y, kx, kz, ox, oz) => OL.map(([x, z]) => [(ox || 0) + x * kx, y, (oz || 0) + z * (kz == null ? kx : kz)]);
+  /* Lattenkiste (offen) – auch für Tomaten, Äpfel, Birnen */
+  function slatCrate(b, W, D, H, s, o) {
+    o = o || {};
+    b.box(W - 0.02, 0.02, D - 0.02, 0x7a5a36, { y: 0.01 });
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sz]) => b.at({ x: sx * (W / 2 - 0.025), z: sz * (D / 2 - 0.025), y: H / 2 }, q => q.at({ rx: Math.PI / 2 }, r => lumber(r, { w: 0.05, h: 0.05, l: H, wt: "kiefer", seed: s + sx + sz * 3, ch: 0.006, seg: 1, nx: 1, ny: 1 }))));
+    const t = 0.024, sl = o.slat || 0.11, ys = o.ys || [0.035, 0.175];
+    ys.forEach((y0, k) => [-1, 1].forEach(sd => {
+      b.at({ z: sd * (D / 2 + t / 2 - 0.004), y: y0, ry: Math.PI / 2 }, q => lumber(q, { w: t, h: sl, l: W - 0.02, wt: "fichte", tone: 0.96 + k * 0.05, seed: s + k + sd, ch: 0.004, seg: 2, nx: 1, ny: 3 }));
+      b.at({ x: sd * (W / 2 + t / 2 - 0.004), y: y0 }, q => lumber(q, { w: t, h: sl, l: D - 0.02, wt: "fichte", tone: 0.98 + k * 0.04, seed: s + k + sd + 9, ch: 0.004, seg: 2, nx: 1, ny: 3 }));
+    }));
+    if (o.handles !== false) [-1, 1].forEach(sd => b.box(0.012, 0.035, 0.12, 0x3a2a18, { x: sd * (W / 2 + t - 0.002), y: ys[ys.length - 1] + sl * 0.6, c: true }));
+  }
+  /* Füllung in Reihen: fn(x, y, z, k) */
+  function rows(nx, nz, dx, dz, y, fn, jit) { let k = 0; for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++, k++) fn((i - (nx - 1) / 2) * dx + (hs(i, j, 3) - 0.5) * (jit || 0), y + (hs(j, i, 5) - 0.5) * (jit || 0) * 0.5, (j - (nz - 1) / 2) * dz + (hs(i + 4, j, 7) - 0.5) * (jit || 0), k); }
+  /* --- Obst und Gemüse --- */
+  function tomato(b, x, y, z, r, k) {
+    sEll(b, [x, y, z], [r, r * 0.82, r], (p, yy, t) => mulC(lerpC(0xe8402c, 0xc22a1e, 0.5 - 0.5 * yy + 0.15 * Math.sin(t * 5)), 0.97 + 0.06 * hs(p[0] * 40, p[2] * 40, k)), 12, 8, 0.05, k + 1);
+    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + k; b.at({ x, y: y + r * 0.8, z, ry: -a }, m => sEll(m, [r * 0.32, 0, 0], [r * 0.34, r * 0.06, r * 0.09], 0x3f8a2a, 5, 4)); }
+    rope(b, [[x, y + r * 0.8, z], [x + r * 0.05, y + r * 1.05, z]], r * 0.07, 0x4f7a2a, 5);
+  }
+  function apple(b, x, y, z, r, k, pear) {
+    const prof = pear ? [[0, 0.25], [0.06, 0.62], [0.2, 0.92], [0.38, 0.96], [0.55, 0.78], [0.72, 0.52], [0.88, 0.42], [1.02, 0.3], [1.1, 0.12]] : [[0, 0.3], [0.05, 0.62], [0.18, 0.92], [0.38, 1.0], [0.58, 0.97], [0.75, 0.84], [0.86, 0.6], [0.9, 0.3]];
+    const red = k % 3 !== 2;
+    b.at({ x, y: y - r * (pear ? 0.1 : 0.5), z, ry: pear ? hs(k, 3, 3) * 6.28 : 0 }, mm => mm.at({ rz: pear ? Math.PI / 2 - 0.15 : (hs(k, 1, 1) - 0.5) * 0.4, rx: (hs(k, 2, 2) - 0.5) * 0.4, x: pear ? r * 0.5 : 0 }, m => sLathe(m, prof.map(([yy, rr]) => [yy * r, rr * r]), 12, (p, yy, a) => {
+      if (pear) return mulC(lerpC(0xc8cf52, 0xa8a838, 0.5 + 0.5 * Math.sin(a * 3 + k)), hs(p[0] * 60, p[1] * 60, k) > 0.9 ? 0.78 : 1);
+      const blush = 0.5 + 0.5 * Math.sin(a + k * 2.1);
+      return red ? lerpC(lerpC(0xc8202a, 0x9c1420, 0.5 - 0.5 * Math.sin(a * 3 + k)), 0xd8b040, (1 - blush) * 0.22 * (yy / r < 0.4 ? 1 : 0.5)) : lerpC(0x8ab83a, 0xc8cc48, blush * 0.5);
+    }, null, { tip1: [0, (pear ? 1.06 : 0.82) * r, 0] })));
+    if (!pear) { rope(b, [[x, y + r * 0.32, z], [x + r * 0.12, y + r * 0.6, z]], r * 0.06, 0x6a4a2a, 4);
+      if (k % 4 === 0) b.at({ x: x + r * 0.15, y: y + r * 0.5, z, rz: -0.6 }, m => sEll(m, [r * 0.3, 0, 0], [r * 0.35, r * 0.05, r * 0.16], 0x4f9a3a, 6, 4)); }
+  }
+  function strawberry(b, x, y, z, r, k) {
+    b.at({ x, y, z, ry: hs(k, 5, 6) * Math.PI * 2 }, mm => mm.at({ rx: Math.PI / 2 + (hs(k, 1, 2) - 0.5) * 0.6, y: 0, z: -r * 0.6 }, m => {
+      sLathe(m, [[-r * 0.15, 0.0], [0, r * 0.22], [r * 0.4, r * 0.62], [r * 0.85, r * 0.86], [r * 1.12, r * 0.78], [r * 1.28, r * 0.42], [r * 1.32, r * 0.2]], 14, (p, yy, a, i, j) => (i * 3 + j) % 5 === 0 && i > 0 && i < 6 ? cv(0xf2d050) : mulC(cv(0xd8202e), 0.88 + 0.14 * (yy / r)), null, {});
+      for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + k; m.at({ ry: -a, y: r * 1.2 }, q => sEll(q, [r * 0.3, 0, 0], [r * 0.36, r * 0.05, r * 0.13], 0x3f9a3a, 5, 4)); }
+      rope(m, [[0, r * 1.2, 0], [r * 0.05, r * 1.45, 0]], r * 0.06, 0x4f8a2a, 4);
+    }));
+  }
+  function corncob(b, len, r, husk) {
+    /* Kolben: Körner als Raster aus hellen und dunklen Ecken, an beiden Enden rund; Lieschblätter halb zurückgeschlagen */
+    const prof = [[0, r * 0.4], [len * 0.04, r * 0.85], [len * 0.12, r], [len * 0.5, r * 1.02], [len * 0.82, r * 0.88], [len * 0.95, r * 0.55], [len, r * 0.15]], P = [];
+    for (let i = 0; i <= 16; i++) { const yy = (i / 16) * len; let rr = prof[0][1]; for (let k = 0; k < prof.length - 1; k++) if (yy >= prof[k][0] && yy <= prof[k + 1][0]) rr = prof[k][1] + (prof[k + 1][1] - prof[k][1]) * (yy - prof[k][0]) / (prof[k + 1][0] - prof[k][0]); P.push([yy, rr]); }
+    sLathe(b, P, 14, (p, yy, a, i, j) => ((i + j) % 2 ? cv(0xf6c832) : cv(0xe8a81e)), (yy, a) => 1 + 0.04 * Math.cos(a * 14), {});
+    if (husk) for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; b.at({ ry: -a, y: len * 0.05 }, m => m.at({ rz: -0.25 - i * 0.08 }, q => sEll(q, [r * 1.05, len * 0.3, 0], [r * 0.22, len * 0.34, r * 0.7], (p, yy) => lerpC(0x8ab848, 0xd8d08a, 0.5 - yy * 0.5), 6, 6))); }
+  }
+  function wheatEar(b, len, k) {
+    rope(b, [[0, 0, 0], [0.01, len * 0.5, 0], [0.025, len * 0.66, 0]], 0.009, 0xdcc070, 4);
+    for (let i = 0; i < 7; i++) [-1, 1].forEach(s => { const t = 0.68 + i * 0.045; b.at({ x: 0.025 + s * 0.018, y: len * t, z: 0, rz: s * 0.35 }, m => sEll(m, [0, 0, 0], [0.018, 0.03, 0.016], k % 2 ? 0xe8aa30 : 0xd89a28, 5, 4)); });
+    for (let i = 0; i < 5; i++) rope(b, [[0.025 + (i - 2) * 0.008, len * 0.98, 0], [0.025 + (i - 2) * 0.03, len * 1.22, 0]], 0.003, 0xeccf80, 3);
+  }
+  /* Papiertüte (Mehl): gerade Wände mit leichter Wölbung, oben gefalzt, vorne Etikett-Band und Bild */
+  function paperBag(b, o) {
+    const OL = rrect(0.36, 0.24, 0.03, 2), H = 0.5, R = [], Cc = [];
+    const ys = [0, 0.02, 0.1, 0.2, 0.3, 0.4, 0.46, 0.5, 0.54, 0.58];
+    ys.forEach((y, i) => {
+      const bulge = i === 0 ? 0.94 : i < 7 ? 1 + 0.035 * Math.sin((y / H) * Math.PI) : 1, kz = i < 7 ? 1 : i === 7 ? 0.7 : i === 8 ? 0.25 : 0.12;
+      const r = ringXZ(OL, y, bulge, bulge * kz); R.push(r);
+      Cc.push(r.map(p => { let c = cv(o.paper); if (y > o.band[0] && y < o.band[1] && p[2] > 0.06) c = cv(o.bandC); if (y > 0.5) c = mulC(c, 0.96); return mulC(c, 0.97 + 0.05 * hs(p[0] * 30, y * 30, 1)); }));
+    });
+    skinV(b, R, Cc, { cap0: true, cap1: true, n0: [0, -1, 0], n1: [0, 1, 0] });
+    b.box(0.37, 0.05, 0.035, mulC(cv(o.paper), 0.92), { y: 0.56, c: false });                         /* Falz oben */
+    o.emblem(b, 0, (o.band[0] + o.band[1]) / 2, 0.128);
+  }
+  /* Futtersack (gewebter Kunststoff): kissenförmig, oben vernäht, Farbband und Tierbild */
+  function feedSack(b, o) {
+    const OL = rrect(0.5, 0.26, 0.11, 3), R = [], Cc = [], ys = [0, 0.03, 0.12, 0.26, 0.385, 0.4, 0.5, 0.515, 0.6, 0.64, 0.66], nb = ys.indexOf(0.6);
+    ys.forEach((y, i) => {
+      const k = i === 0 ? 0.82 : i < nb ? 1 + 0.06 * Math.sin((y / 0.6) * Math.PI) : i === nb ? 0.98 : i === nb + 1 ? 0.95 : 0.93, kz = i < nb ? 1 : i === nb ? 0.55 : i === nb + 1 ? 0.18 : 0.06;
+      const r = ringXZ(OL, y, k, k * kz); R.push(r);
+      Cc.push(r.map((p, j) => { let c = cv(o.sack); if (y >= o.band[0] && y <= o.band[1]) c = cv(o.bandC); if ((Math.round(p[0] * 60) + Math.round(y * 60)) % 2) c = mulC(c, 0.95); return c; }));
+    });
+    skinV(b, R, Cc, { cap0: true, cap1: true, n0: [0, -1, 0], n1: [0, 1, 0] });
+    for (let i = 0; i < 9; i++) b.box(0.03, 0.012, 0.03, 0x8a8a8a, { x: -0.22 + i * 0.055, y: 0.63, rz: i % 2 ? 0.5 : -0.5, c: true });  /* Naht */
+    b.box(0.3, 0.22, 0.01, 0xfaf6ee, { y: 0.12, z: 0.158, c: false });                                             /* Etikett */
+    b.at({ x: 0, y: 0.24, z: 0.166, s: 1.5 }, m => o.emblem(m, 0, 0, 0));
+    [0.16, 0.14].forEach((y, k) => b.box(0.2 - k * 0.06, 0.012, 0.004, 0x6a6a6a, { y, z: 0.165, c: true }));
+  }
+  /* Kunststoffschale mit Rand (Fleisch, Erdbeeren) */
+  function tray(b, w, d, h, col, rim) {
+    const OL = rrect(w, d, 0.05, 2), Ri = [ringXZ(OL, 0, 0.88), ringXZ(OL, h, 1), ringXZ(OL, h + 0.012, 1.03), ringXZ(OL, h, 0.93), ringXZ(OL, 0.015, 0.84)];
+    skinV(b, Ri, Ri.map((r, i) => r.map(() => i === 2 ? cv(rim || col) : i >= 3 ? mulC(cv(col), 0.75) : cv(col))), { cap0: true, cap1: true, n0: [0, -1, 0], n1: [0, 1, 0], c1: mulC(cv(col), 0.7), ref: (i, j, p) => i >= 3 ? [-p[0], 0.3, -p[2]] : i === 2 ? [p[0], 1, p[2]] : [p[0], -0.2, p[2]] });
+  }
+  /* Zinkeimer */
+  function bucket(b, r0, r1, h, o) {
+    o = o || {};
+    sLathe(b, [[0, r0 * 0.96], [0.01, r0], [h * 0.3, lerp1(r0, r1, 0.3)], [h * 0.31, lerp1(r0, r1, 0.3) * 1.02], [h * 0.33, lerp1(r0, r1, 0.33)], [h * 0.7, lerp1(r0, r1, 0.7)], [h * 0.71, lerp1(r0, r1, 0.7) * 1.02], [h * 0.73, lerp1(r0, r1, 0.73)], [h, r1], [h + 0.015, r1 * 1.03]], 16,
+      (p, y, a) => mulC(lerpC(o.col || 0xa8b2ba, o.dark || 0x7d8890, 0.5 + 0.5 * Math.sin(a * 2 + 0.8)), 0.96 + 0.08 * hs(p[0] * 20, y * 20, 2)), null, { cap1: false });
+    const I = [], In = []; for (let j = 0; j < 16; j++) { const a = (j / 16) * Math.PI * 2; I.push([Math.cos(a) * r1 * 0.98, h, Math.sin(a) * r1 * 0.98]); In.push([Math.cos(a) * r1 * 0.9, h - 0.08, Math.sin(a) * r1 * 0.9]); }
+    skinV(b, [I, In], [I.map(() => cv(0x6a737a)), In.map(() => cv(0x4a5258))], { ref: (i, j, p) => [-p[0], 0.2, -p[2]] });
+    const L = []; for (let k = 0; k <= 12; k++) { const a = (k / 12) * Math.PI; L.push([Math.cos(a) * r1 * 1.02, h + Math.sin(a) * r1 * 0.75, 0]); } rope(b, L, 0.008, 0x5a6268, 5);
+  }
+  const lerp1 = (a, c, t) => a + (c - a) * t;
+  /* Tierbilder für Etiketten (stark vereinfacht, gut lesbar) */
+  const embPig = (b, x, y, z) => b.at({ x, y, z }, m => { sEll(m, [0, 0, 0], [0.06, 0.05, 0.012], 0xf2a0a0, 8, 5); sEll(m, [0, -0.008, 0.012], [0.022, 0.016, 0.006], 0xe07a80, 6, 4); [-1, 1].forEach(s => sEll(m, [s * 0.04, 0.045, 0], [0.016, 0.02, 0.006], 0xe88a90, 4, 3)); });
+  const embSheep = (b, x, y, z) => b.at({ x, y, z }, m => { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; sEll(m, [Math.cos(a) * 0.035, Math.sin(a) * 0.025, 0], [0.028, 0.025, 0.01], 0xffffff, 6, 4); } sEll(m, [0.05, -0.005, 0.01], [0.02, 0.016, 0.008], 0x3a3a3a, 6, 4); });
+  const embEar = col => (b, x, y, z) => b.at({ x, y, z }, m => { sEll(m, [0, 0, -0.002], [0.07, 0.05, 0.006], 0xfaf4e4, 10, 5); m.at({ y: -0.035, z: 0.004, s: 0.55 }, q => wheatEar(q, 0.1, 1)); void col; });
+  const embCorn = (b, x, y, z) => b.at({ x, y, z }, m => { sEll(m, [0, 0, -0.002], [0.07, 0.05, 0.006], 0xfaf4e4, 10, 5); m.at({ x: -0.035, y: -0.01, z: 0.006, rz: -1.2 }, q => corncob(q, 0.08, 0.016, false)); });
+  /* --- Textil --- */
+  function sock(b, col, cuff) {
+    /* flach liegende Wollsocke (Umriss wie ein Socken-Symbol): Bündchen mit Rippen, Ferse und Spitze andersfarbig, Strickmuster */
+    const OUT = [[-0.075, 0.42], [-0.075, 0.3], [-0.075, 0.15], [-0.06, 0.06], [-0.02, 0.01], [0.04, -0.005], [0.12, -0.005], [0.2, -0.005], [0.28, 0.0], [0.33, 0.04], [0.34, 0.08], [0.32, 0.115], [0.27, 0.13], [0.2, 0.133], [0.12, 0.135], [0.08, 0.15], [0.075, 0.22], [0.075, 0.3], [0.075, 0.42], [0.025, 0.42], [-0.025, 0.42]];
+    const t = 0.045, colAt = (x, y) => { if (y > 0.35) return mulC(cv(cuff), Math.round(x * 90) % 2 ? 0.86 : 1); if ((y < 0.1 && x < 0.06) || x > 0.26) return cv(cuff); return mulC(cv(col), (Math.round(x * 50) + Math.round(y * 50)) % 2 ? 0.94 : 1.02); };
+    b.at({ rx: -Math.PI / 2 }, m => {
+      extrude(m, [OUT, OUT], [0, t], (i, j, s2, p) => mulC(colAt(p[0], p[1]), 0.9), {});
+      const LEG = [[-0.075, 0.15], [0.075, 0.15], [0.075, 0.22], [0.075, 0.3], [0.075, 0.42], [0.025, 0.42], [-0.025, 0.42], [-0.075, 0.42], [-0.075, 0.3]];
+      const FOOT = [[-0.075, 0.15], [-0.06, 0.06], [-0.02, 0.01], [0.04, -0.005], [0.12, -0.005], [0.2, -0.005], [0.28, 0.0], [0.33, 0.04], [0.34, 0.08], [0.32, 0.115], [0.27, 0.13], [0.2, 0.133], [0.12, 0.135], [0.08, 0.15], [0.075, 0.15]];
+      [LEG, FOOT].forEach(P => { capPoly(m, P, t, 1, p => colAt(p[0], p[1])); capPoly(m, P, 0, -1, p => mulC(colAt(p[0], p[1]), 0.8)); });
+    });
+  }
+  function goodsItem(id, b) {
+    switch (id) {
+      case "mehl": paperBag(b, { paper: 0xf4efe3, band: [0.14, 0.36], bandC: 0x3f78c8, emblem: embEar(0) }); return true;
+      case "maismehl": paperBag(b, { paper: 0xd8b986, band: [0.14, 0.36], bandC: 0x2f8a4a, emblem: embCorn }); return true;
+      case "weizen":
+        jutesack(b, { label: { col: 0xfaf4e4, band: 0xf0b83a }, fillCol: [0xe8c060, 0xc89a3a], fill: m => {
+          for (let i = 0; i < 7; i++) { const a = (i - 3) * 0.2; m.at({ x: Math.sin(a) * 0.07 + (i % 2) * 0.03, y: 0.5, z: (i % 3 - 1) * 0.05, rz: -a * 0.9, ry: i * 0.9, s: 1.75 }, q => wheatEar(q, 0.26 + (i % 3) * 0.02, i)); }
+        } });
+        return true;
+      case "mais":
+        jutesack(b, { label: { col: 0xfaf4e4, band: 0x2f8a4a }, fillCol: [0xf2c032, 0xd89a1e], fill: m => {
+          [[-0.1, 0.5, 0.0, 0.35, 0.2], [0.06, 0.52, 0.06, -0.3, 1.8], [0.0, 0.5, -0.1, 0.1, 3]].forEach(([x, y, z, rz, ry]) => m.at({ x, y, z, rz, ry }, q => corncob(q, 0.34, 0.06, true)));
+          m.at({ x: 0.34, y: 0.06, z: 0.28, rz: Math.PI / 2 - 0.05, ry: 0.5 }, q => corncob(q, 0.36, 0.062, true));
+        } });
+        return true;
+      case "kartoffel": {
+        const pot = (m, x, y, z, k, s) => sEll(m, [x, y, z], [0.085 * s, 0.065 * s, 0.07 * s], (p) => hs(p[0] * 50, p[1] * 50, p[2] * 50 + k) > 0.92 ? cv(0x7a5a30) : mulC(lerpC(0xc9a062, 0xa8834a, hs(p[0] * 9, p[2] * 9, k)), 1), 9, 6, 0.22, k + 3);
+        jutesack(b, { fillCol: [0xb08a50, 0x8a6a3a], fill: m => { rows(3, 3, 0.15, 0.15, 0.6, (x, y, z, k) => pot(m, x, y, z, k, 1), 0.04); pot(m, 0.03, 0.66, 0.02, 11, 1.05);
+          [[0.36, 0.06, 0.28, 1], [0.2, 0.055, 0.4, 2], [0.45, 0.05, 0.08, 3]].forEach(([x, y, z, k]) => pot(m, x, y, z, k + 20, 0.95)); } });
+        return true;
+      }
+      case "tomate":
+        slatCrate(b, 0.82, 0.58, 0.24, 21, { ys: [0.03, 0.125], slat: 0.09 });
+        rows(4, 3, 0.19, 0.17, 0.15, (x, y, z, k) => tomato(b, x, y, z, 0.1, k), 0.02);
+        [[0.05, 0.27, 0.03, 30], [-0.15, 0.27, -0.05, 31]].forEach(([x, y, z, k]) => tomato(b, x, y, z, 0.1, k));
+        return true;
+      case "apfel": case "birne":
+        slatCrate(b, 0.82, 0.58, 0.24, 25, { ys: [0.03, 0.125], slat: 0.09 });
+        rows(4, 3, 0.19, 0.17, 0.15, (x, y, z, k) => apple(b, x, y, z, id === "birne" ? 0.095 : 0.1, k, id === "birne"), 0.02);
+        [[0.04, 0.27, 0.02, 40], [-0.16, 0.26, -0.06, 41]].forEach(([x, y, z, k]) => apple(b, x, y, z, 0.1, k, id === "birne"));
+        return true;
+      case "erdbeere": {
+        /* grüne Pappschale, schräge Wände, gefüllt mit Erdbeeren (gelbe Nüsschen, grüner Kelch) */
+        const OL = rrect(0.64, 0.46, 0.04, 2), G = 0x4f9a52, R = [ringXZ(OL, 0, 0.86), ringXZ(OL, 0.16, 1), ringXZ(OL, 0.175, 1.02), ringXZ(OL, 0.16, 0.95), ringXZ(OL, 0.03, 0.82)];
+        skinV(b, R, R.map((r, i) => r.map(p => i >= 3 ? mulC(cv(G), 0.7) : mulC(cv(G), 0.95 + 0.08 * hs(p[0] * 30, p[2] * 30, i)))), { cap0: true, cap1: true, n0: [0, -1, 0], n1: [0, 1, 0], c1: mulC(cv(G), 0.6), ref: (i, j, p) => i >= 3 ? [-p[0], 0.3, -p[2]] : i === 2 ? [p[0], 1, p[2]] : [p[0], -0.2, p[2]] });
+        rows(4, 3, 0.15, 0.14, 0.22, (x, y, z, k) => strawberry(b, x, y, z, 0.085, k), 0.02);
+        [[0.03, 0.3, 0.02, 30], [-0.13, 0.29, -0.04, 31], [0.15, 0.29, 0.06, 32]].forEach(([x, y, z, k]) => strawberry(b, x, y, z, 0.085, k));
+        return true;
+      }
+      case "kirsche": {
+        const OL = rrect(0.58, 0.42, 0.04, 2), W = 0xf3eee2, R = [ringXZ(OL, 0, 0.86), ringXZ(OL, 0.15, 1), ringXZ(OL, 0.165, 1.02), ringXZ(OL, 0.15, 0.95), ringXZ(OL, 0.03, 0.82)];
+        skinV(b, R, R.map((r, i) => r.map(() => i >= 3 ? mulC(cv(W), 0.8) : cv(W))), { cap0: true, cap1: true, n0: [0, -1, 0], n1: [0, 1, 0], c1: mulC(cv(W), 0.75), ref: (i, j, p) => i >= 3 ? [-p[0], 0.3, -p[2]] : i === 2 ? [p[0], 1, p[2]] : [p[0], -0.2, p[2]] });
+        b.box(0.2, 0.06, 0.006, 0xd8332b, { y: 0.06, z: 0.215, c: false });
+        rows(4, 3, 0.12, 0.12, 0.18, (x, y, z, k) => {
+          sEll(b, [x, y, z], [0.058, 0.055, 0.058], (p, yy, t) => lerpC(0xb3132a, 0x6a0a18, 0.5 - 0.5 * yy + 0.2 * Math.sin(t + k)), 9, 6, 0.04, k);
+          if (k % 2 === 0) rope(b, [[x, y + 0.05, z], [x + 0.02, y + 0.12, z + 0.02], [x + 0.06, y + 0.17, z + 0.04]], 0.006, 0x5a7a2a, 4);
+        }, 0.015);
+        return true;
+      }
+      case "karotte":
+        for (let i = 0; i < 6; i++) {
+          const x = (i % 3 - 1) * 0.1, y = 0.07 + Math.floor(i / 3) * 0.09, z = (hs(i, 1, 1) - 0.5) * 0.06;
+          b.at({ x, y, z: z + 0.25, rx: -Math.PI / 2 }, m => sLathe(m, [[0, 0.004], [0.06, 0.02], [0.2, 0.04], [0.38, 0.058], [0.5, 0.066], [0.54, 0.06]], 10, (p, yy, a, ii) => mulC(cv(0xf2731e), ii % 2 ? 0.92 : 1.03), (yy, a) => 1 + 0.03 * Math.sin(a * 3 + yy * 30)));
+          for (let k = 0; k < 4; k++) { const a = (k - 1.5) * 0.25 + i * 0.4, L = 0.22 + hs(i, k, 2) * 0.1; rope(b, [[x, y, z - 0.29], [x + Math.sin(a) * 0.05, y + 0.03, z - 0.29 - L * 0.5], [x + Math.sin(a) * 0.12, y + 0.06 + k * 0.01, z - 0.29 - L]], 0.008, 0x4f9a32, 4);
+            b.at({ x: x + Math.sin(a) * 0.12, y: y + 0.06, z: z - 0.29 - L }, m => sEll(m, [0, 0, 0], [0.04, 0.012, 0.06], k % 2 ? 0x5aa83a : 0x4a9030, 6, 4)); }
+        }
+        b.box(0.38, 0.03, 0.035, 0xd8332b, { y: 0.1, z: -0.27, c: true });
+        return true;
+      case "kuerbis": {
+        b.at({ y: 0 }, m => sLathe(m, [[0, 0.06], [0.04, 0.2], [0.13, 0.33], [0.28, 0.37], [0.43, 0.34], [0.53, 0.24], [0.57, 0.1], [0.56, 0.03]], 20, (p, yy, a) => mulC(lerpC(0xf08a24, 0xd8661a, 0.5 + 0.5 * Math.cos(a * 10)), 0.95 + 0.08 * hs(p[0] * 20, p[1] * 20, 1)), (yy, a) => 1 + 0.07 * Math.cos(a * 10), { tip1: [0, 0.52, 0] }));
+        rope(b, [[0, 0.52, 0], [0.02, 0.6, 0], [0.07, 0.66, 0.01]], [0.035, 0.03, 0.024], 0x6b7a2c, 6);
+        b.at({ x: -0.12, y: 0.54, z: 0.08, rz: 0.4, ry: 0.6 }, m => sEll(m, [0.08, 0, 0], [0.11, 0.015, 0.09], 0x5a8a2c, 8, 4));
+        return true;
+      }
+      case "wolle": {
+        /* Rohwolle: lockiges Vlies, cremeweiß mit dunkleren Spitzen, mit Schnur gebunden */
+        sEll(b, [0, 0.2, 0], [0.42, 0.2, 0.3], (p, yy) => lerpC(0xf3ead6, 0xd8c8a4, 0.5 - 0.5 * yy), 14, 9, 0.12, 4);
+        for (let i = 0; i < 34; i++) { const t = hs(i, 1, 9) * Math.PI * 2, u = hs(i, 2, 9), ph = u * Math.PI * 0.5, x = Math.cos(t) * Math.cos(ph) * 0.4, z = Math.sin(t) * Math.cos(ph) * 0.28, y = 0.2 + Math.sin(ph) * 0.19;
+          sEll(b, [x, y, z], [0.085, 0.06, 0.085], (p, yy) => lerpC(0xfbf5e6, 0xb9a47c, 0.55 - 0.55 * yy + hs(i, 3, 3) * 0.15), 8, 6, 0.35, i); }
+        const L = []; for (let k = 0; k <= 16; k++) { const a = (k / 16) * Math.PI * 2; L.push([0.02, 0.21 + Math.sin(a) * 0.23, Math.cos(a) * 0.33]); } rope(b, L, 0.012, 0xb8925a, 5);
+        return true;
+      }
+      case "spaket": case "rpaket": {
+        /* Fleisch in der Schale: Kotelett mit Fettrand (Schwein) bzw. Steak mit Marmorierung (Rind), Folienglanz, Etikett */
+        const pork = id === "spaket";
+        tray(b, 0.78, 0.54, 0.05, 0x2e2e34, 0x45454e);
+        for (let i = 0; i < 2; i++) b.at({ x: -0.15 + i * 0.29, y: 0.055, z: (i - 0.5) * 0.04, ry: (i - 0.5) * 0.5 + 0.2 }, m => {
+          sEll(m, [0, 0.035, 0], [0.16, 0.045, 0.21], (p, yy) => {
+            const fat = pork && p[2] < -0.13 + 0.03 * Math.sin(p[0] * 20), marb = Math.sin(p[0] * 46 + Math.sin(p[2] * 30) * 2.5) > (pork ? 0.92 : 0.8);
+            if (fat) return mulC(cv(0xfbeee4), 0.95 + 0.05 * yy);
+            return mulC(marb ? cv(pork ? 0xf8cfc4 : 0xe8c0b8) : cv(pork ? 0xe88f86 : 0xa8222c), 0.86 + 0.16 * yy);
+          }, 14, 6, 0.1, i + 2);
+          if (pork) rope(m, [[0.02, 0.07, 0.08], [0.03, 0.075, -0.05]], 0.016, 0xf6efe4, 5);                    /* Knochen */
+        });
+        [[-0.2, 0.0, 0.6], [0.1, 0.06, 0.6]].forEach(([x, z, ry]) => b.box(0.22, 0.004, 0.012, 0xe6eaee, { x, y: 0.135, z, ry, c: true }));   /* Folienglanz */
+        b.box(0.24, 0.006, 0.16, 0xfaf4e4, { x: 0.2, y: 0.14, z: 0.16, c: true });
+        b.box(0.24, 0.007, 0.04, pork ? 0xd8332b : 0x2f6fb0, { x: 0.2, y: 0.142, z: 0.2, c: true });
+        [0.15, 0.12].forEach((z, k) => b.box(0.15 - k * 0.04, 0.007, 0.012, 0x6a6a6a, { x: 0.18, y: 0.142, z, c: true }));
+        return true;
+      }
+      case "hfutter":
+        bucket(b, 0.26, 0.33, 0.44);
+        sEll(b, [0, 0.42, 0], [0.31, 0.07, 0.31], (p) => { const h = hs(p[0] * 60, p[2] * 60, 1); return h > 0.85 ? cv(0x9a7a3a) : h > 0.5 ? cv(0xd8b46a) : cv(0xe8d08a); }, 16, 6, 0.1, 3);
+        for (let i = 0; i < 30; i++) { const t = hs(i, 1, 1) * Math.PI * 2, r = Math.sqrt(hs(i, 2, 2)) * 0.26; sEll(b, [Math.cos(t) * r, 0.47 + hs(i, 3, 3) * 0.02, Math.sin(t) * r], [0.02, 0.013, 0.016], [0xe8c060, 0xb8782a, 0xf2e2a8][i % 3], 5, 3); }
+        b.at({ x: 0.18, y: 0.47, z: 0.1, rz: -0.3, ry: 0.6 }, m => { sLathe(m, [[0, 0.06], [0.05, 0.07], [0.06, 0.07]], 10, () => cv(0xd8332b), null, { cap1: false }); rope(m, [[0.06, 0.03, 0], [0.2, 0.06, 0]], 0.014, 0xd8332b, 5); });
+        return true;
+      case "kfutter": {
+        /* Heuballen: Halme längs (unruhige Strohfarbe), runde Kanten, abstehende Halme an den Stirnseiten, zwei Bindegarne */
+        const OL0 = rrect(0.46, 0.42, 0.06, 2), OL = []; OL0.forEach((p, i) => { const q = OL0[(i + 1) % OL0.length]; for (let k = 0; k < 3; k++) OL.push([p[0] + (q[0] - p[0]) * k / 3, p[1] + (q[1] - p[1]) * k / 3]); });
+        const R = [], Cc = [], xs = [-0.4, -0.39, -0.25, -0.1, 0.1, 0.25, 0.39, 0.4];
+        xs.forEach((x, i) => { const k = i === 0 || i === xs.length - 1 ? 0.9 : 1, r = OL.map(([z, y]) => [x, y * k + 0.21, z * k]); R.push(r); Cc.push(r.map((p, j) => mulC(lerpC(0xeedc8e, 0x96883a, hs(j, 1, 1)), 0.94 + 0.12 * hs(p[0] * 10, j, 3)))); });
+        skinV(b, R, Cc, { cap0: true, cap1: true, n0: [-1, 0, 0], n1: [1, 0, 0], c0: cv(0xc8b050), c1: cv(0xc8b050) });
+        for (let i = 0; i < 40; i++) { const sd = i % 2 ? 1 : -1, z = (hs(i, 1, 1) - 0.5) * 0.42, y = 0.03 + hs(i, 2, 2) * 0.38; rope(b, [[sd * 0.39, y, z], [sd * (0.44 + hs(i, 3, 3) * 0.07), y + (hs(i, 4, 4) - 0.5) * 0.1, z + (hs(i, 5, 5) - 0.5) * 0.1]], 0.005, i % 3 ? 0xe6d07a : 0xbfb060, 3); }
+        for (let i = 0; i < 24; i++) { const x = (hs(i, 6, 6) - 0.5) * 0.7, z = (hs(i, 7, 7) - 0.5) * 0.4; rope(b, [[x, 0.42, z], [x + (hs(i, 8, 8) - 0.5) * 0.14, 0.44, z + (hs(i, 9, 9) - 0.5) * 0.1]], 0.004, 0xe6d07a, 3); }
+        [-0.2, 0.2].forEach(x => { const L = ringXZ(OL, 0, 1.04).map(([z, , zz]) => [x, 0, 0]); void L; const P = OL.map(([z, y]) => [x, y * 1.04 + 0.21, z * 1.04]); P.push(P[0]); rope(b, P, 0.008, 0xd8551a, 4); });
+        return true;
+      }
+      case "sfutter": feedSack(b, { sack: 0xf2eee4, band: [0.4, 0.5], bandC: 0xe06a7a, emblem: embPig }); return true;
+      case "schfutter": feedSack(b, { sack: 0xe8dcbc, band: [0.4, 0.5], bandC: 0x4f9a3a, emblem: embSheep }); return true;
+      case "brot": {
+        /* Laib: Kruste braun, oben Mehlstaub und drei schräge, hellere Einschnitte */
+        const R = [], Cc = [];
+        for (let i = 0; i <= 14; i++) { const t = i / 14, z = -0.38 + t * 0.76, s = Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.5) / 0.5, 2))) * 0.96 + 0.04, ring = [], col = [];
+          for (let j = 0; j < 16; j++) { const a = (j / 16) * Math.PI * 2, sv = Math.sin(a), p = [Math.cos(a) * 0.24 * s, (sv > 0 ? sv * 0.2 : sv * 0.03) * s + 0.03 * s + 0.0, z]; p[1] = Math.max(p[1], 0) + 0.002; ring.push(p);
+            const cut = sv > 0.55 && Math.abs(Math.sin((z * 1 + p[0] * 0.8) * 10.5)) < 0.32; col.push(cut ? cv(0xf0cf8a) : sv > 0.6 ? lerpC(0xb8742c, 0xe6d6b8, hs(i, j, 4) * 0.35) : sv < -0.1 ? cv(0x8a5420) : cv(0xc07a32)); }
+          R.push(ring); Cc.push(col); }
+        skinV(b, R, Cc, { cap0: true, cap1: true });
+        [-0.2, 0, 0.2].forEach(z => b.at({ y: 0.225, z, ry: 0.6 }, m => sEll(m, [0, 0, 0], [0.11, 0.018, 0.03], (p, yy) => lerpC(0xf2d494, 0xe0b46a, 0.5 - 0.5 * yy), 8, 4)));
+        return true;
+      }
+      case "butter": {
+        /* Butterblock: links offen (blassgelb), rechts in Goldfolie mit blauem Etikett */
+        b.at({ x: -0.14 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: 0.26, h: 0.2, l: 0.2, ch: 0.02, seg: 2, nx: 3, ny: 2, colAt: (p) => mulC(cv(0xf8e48a), 0.97 + 0.05 * hs(p[0] * 20, p[1] * 20, 1)), pith: [0.5, -3], rings: [] })));
+        b.at({ x: 0.08 }, m => m.at({ ry: Math.PI / 2 }, q => lumber(q, { w: 0.27, h: 0.212, l: 0.3, ch: 0.022, seg: 5, nx: 4, ny: 3, colAt: (p) => mulC(lerpC(0xecc24e, 0xc8962a, 0.5 + 0.5 * Math.sin(p[0] * 34 + p[2] * 21 + p[1] * 17)), 1), pith: [0.5, -3], rings: [] })));
+        b.box(0.18, 0.12, 0.006, 0x2f6fb0, { x: 0.1, y: 0.05, z: 0.136, c: false });
+        b.box(0.12, 0.03, 0.007, 0xfaf4e4, { x: 0.1, y: 0.1, z: 0.137, c: false });
+        b.box(0.18, 0.006, 0.14, 0x2f6fb0, { x: 0.1, y: 0.212, z: 0, c: false });
+        return true;
+      }
+      case "kaese": {
+        /* Laib mit Rinde, davor ein Keil mit Löchern */
+        sLathe(b, [[0, 0.36], [0.02, 0.4], [0.06, 0.42], [0.2, 0.42], [0.24, 0.4], [0.26, 0.36]], 22, (p, y) => y < 0.03 || y > 0.24 ? cv(0xf2cc58) : lerpC(0xe8a838, 0xd8902a, hs(p[0] * 20, y * 20, 1) * 0.5), null, { c1: cv(0xf6d468) });
+        [[0.15, 0.262, 0.1, 0.03], [-0.12, 0.262, -0.08, 0.025], [0.02, 0.262, 0.2, 0.02]].forEach(([x, y, z, r]) => { const P = []; for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; P.push([x + Math.cos(a) * r, y, z + Math.sin(a) * r]); } for (let k = 0; k < 8; k++) b.triV([x, y, z], P[(k + 1) % 8], P[k], 0xd8a838, 0xe0b040, 0xe0b040); });
+        b.at({ x: 0.52, z: 0.12, ry: -1.1 }, m => {
+          const h = 0.22, A = [0, 0, 0], B2 = [0.34, 0, -0.11], C2 = [0.34, 0, 0.11], At = [0, h, 0], Bt = [0.34, h, -0.11], Ct = [0.34, h, 0.11], P = 0xf6d468, Pd = 0xeec254, Rd = 0xe0a034;
+          m.triV(At, Ct, Bt, P, P, P); m.triV(A, B2, C2, Pd, Pd, Pd);
+          q4(m, A, At, Bt, B2, Pd, P, P, Pd); q4(m, A, C2, Ct, At, Pd, Pd, P, P); q4(m, B2, Bt, Ct, C2, Rd, Rd, Rd, Rd);
+          [[0.16, 0.09, 1, 0.024], [0.25, 0.15, 1, 0.018], [0.22, 0.06, -1, 0.02], [0.3, 0.14, -1, 0.015]].forEach(([x, y, sd, r]) => sEll(m, [x, y, sd * 0.323 * x], [r, r, r * 0.35], 0xd09a2e, 6, 4));
+          [[0.15, 0.03], [0.25, -0.05]].forEach(([x, z]) => sEll(m, [x, h + 0.001, z], [0.02, 0.004, 0.02], 0xd09a2e, 6, 3));
+        });
+        return true;
+      }
+      case "socken":
+        b.at({ x: -0.1, ry: 0.25, y: 0 }, m => sock(m, 0xf0e6d2, 0xc8323a));
+        b.at({ x: 0.06, ry: -0.05, y: 0.046, z: 0.06 }, m => sock(m, 0xece0c8, 0xc8323a));
+        return true;
+      case "pullover": {
+        /* zusammengelegter Strickpullover: Rippen längs, Norwegerband in Weiß, Rollkragen oben, Ärmel eingeschlagen, Rippbund unten */
+        const B = 0x3a72c0;
+        b.at({}, m => lumber(m, { w: 0.62, h: 0.12, l: 0.58, ch: 0.045, seg: 22, nx: 14, ny: 2, colAt: (p) => {
+          let c = mulC(cv(B), Math.round(p[0] * 52) % 2 ? 0.88 : 1.0);
+          if (p[2] < -0.08 && p[2] > -0.17) c = (Math.round(p[0] * 26 + Math.abs(p[2] + 0.125) * 40) % 3 === 0) ? cv(0xe6eef6) : cv(0xf4f6fa);
+          if (p[2] > 0.22) c = mulC(cv(B), Math.round(p[0] * 70) % 2 ? 0.78 : 0.9);
+          return c; }, pith: [0.5, -3], rings: [] }));
+        b.at({ z: -0.24, y: 0.12 }, m => sLathe(m, [[0, 0.12], [0.03, 0.12], [0.05, 0.11]], 16, (p, y, a, i, j) => mulC(cv(0x2f5f98), j % 2 ? 0.85 : 1), (y, a) => (Math.sin(a) > 0 ? 0.9 : 0.55), { cap0: false, c1: cv(0x1f3f68) }));
+        [-1, 1].forEach(s => b.at({ x: s * 0.17, y: 0.12, z: 0.05, ry: s * 0.35 }, m => lumber(m, { w: 0.12, h: 0.03, l: 0.42, ch: 0.012, seg: 4, nx: 3, ny: 1, colAt: (p) => p[2] > 0.15 ? mulC(cv(B), 0.8) : mulC(cv(B), Math.round(p[0] * 52) % 2 ? 0.86 : 0.97), pith: [0.5, -3], rings: [] })));
+        return true;
+      }
+      case "koeder": {
+        /* Dose Reusenköder: Blechdose mit grünem Etikett, Deckel aufgebogen, braune Köderpellets */
+        sLathe(b, [[0, 0.15], [0.012, 0.16], [0.03, 0.158], [0.07, 0.158], [0.2, 0.158], [0.25, 0.158], [0.27, 0.163], [0.28, 0.16]], 16, (p, y, a) => y >= 0.07 && y <= 0.2 ? mulC(cv(0x2f6a3a), 0.95 + 0.08 * Math.sin(a * 2)) : mulC(lerpC(0xd8b458, 0xa8823a, 0.5 + 0.5 * Math.sin(a * 2 + 0.6)), 1), null, { c1: cv(0x5a3a22) });
+        b.box(0.12, 0.07, 0.006, 0xf6f1e4, { y: 0.105, z: 0.158, c: false });
+        for (let k = 0; k < 14; k++) { const t = hs(k, 1, 1) * Math.PI * 2, r = Math.sqrt(hs(k, 2, 2)) * 0.13; sEll(b, [Math.cos(t) * r, 0.29 + hs(k, 3, 3) * 0.02, Math.sin(t) * r], [0.025, 0.018, 0.02], k % 2 ? 0x7a4a2a : 0x9a6038, 6, 4, 0.3, k); }
+        b.at({ x: 0.2, y: 0.25, z: -0.05, rz: -1.1 }, m => sLathe(m, [[0, 0.16], [0.012, 0.165], [0.018, 0.15]], 16, () => cv(0xd8b458), null, { c1: cv(0xc8a248) }));
+        return true;
+      }
+      case "wurm": {
+        /* Dose mit Erde und Tauwürmern: Zinkdose mit Sicken, krümelige Erde, rosige Würmer mit Ringeln */
+        sLathe(b, [[0, 0.16], [0.012, 0.17], [0.06, 0.17], [0.065, 0.176], [0.07, 0.17], [0.13, 0.17], [0.135, 0.176], [0.14, 0.17], [0.21, 0.17], [0.225, 0.176]], 16, (p, y, a) => mulC(lerpC(0xb8c0c6, 0x8a949a, 0.5 + 0.5 * Math.sin(a * 2 + 0.8)), 1), null, { c1: cv(0x4a3424) });
+        sEll(b, [0, 0.215, 0], [0.165, 0.03, 0.165], (p) => hs(p[0] * 50, p[2] * 50, 2) > 0.7 ? cv(0x6a4a30) : cv(0x3e2a1c), 14, 5, 0.15, 3);
+        for (let w = 0; w < 3; w++) {
+          const P = []; let x = (hs(w, 1, 1) - 0.5) * 0.1, z = (hs(w, 2, 2) - 0.5) * 0.1, y = 0.23, a = hs(w, 3, 3) * 6;
+          for (let k = 0; k < 10; k++) { P.push([x, y, z]); a += 0.6 * (w % 2 ? 1 : -1); x += Math.cos(a) * 0.03; z += Math.sin(a) * 0.03; y += k < 4 ? 0.025 : k < 7 ? -0.01 : -0.02; }
+          rope(b, P, P.map((_, k) => 0.016 * (k === 0 || k === 9 ? 0.6 : 1)), (k) => k === 3 ? cv(0xc8646a) : k % 2 ? cv(0xd88a84) : cv(0xe09a92), 6);
+        }
+        return true;
+      }
+      case "abfall": {
+        /* Eimer mit Fischabfall: Gräte mit Rippen, Kopf, Schwanzflosse */
+        bucket(b, 0.22, 0.28, 0.42);
+        sEll(b, [0, 0.4, 0], [0.26, 0.04, 0.26], 0x6a5a4e, 12, 4);
+        b.at({ y: 0.45, rz: 0.35, ry: 0.4 }, m => { rope(m, [[-0.18, 0, 0], [0.18, 0, 0]], 0.012, 0xf2ecdc, 5); for (let k = 0; k < 7; k++) { const x = -0.13 + k * 0.045; rope(m, [[x, 0, 0], [x - 0.02, 0, 0.07]], 0.005, 0xf2ecdc, 3); rope(m, [[x, 0, 0], [x - 0.02, 0, -0.07]], 0.005, 0xf2ecdc, 3); } });
+        if (typeof FFM !== "undefined" && FFM.fishUp && FFM.FISH) { const t = new MB(); FFM.fishUp(t, FFM.FISH.barsch); b.merge(new MB().merge(t, { x: -0.3, rx: -0.6 }), { x: 0.08, y: 0.42, z: 0.06, ry: 0.5, s: 0.32 }); }
+        return true;
+      }
+      case "garn": {
+        const cols = [0xd8332b, 0x3f78c8, 0xf2c230, 0x47b84f, 0xf6f1e4];
+        [[-0.22, 0, 0], [0.22, 0, 0.02], [0, 0, 0.24], [-0.05, 0, -0.2], [0, 0.26, 0.02]].forEach(([x, y, z], i) => {
+          b.at({ x, y: y + 0.17, z, rx: i * 0.7, ry: i * 1.3 }, m => sEll(m, [0, 0, 0], [0.17, 0.17, 0.17], (p, yy, t) => mulC(cv(cols[i]), 0.82 + 0.24 * (0.5 + 0.5 * Math.sin(Math.atan2(p[1], p[0]) * 9 + yy * 3))), 18, 12, 0.03, i));
+          for (let k = 0; k < 3; k++) { const L = []; for (let q = 0; q <= 14; q++) { const a = (q / 14) * Math.PI * 2; L.push([Math.cos(a) * 0.172, Math.sin(a) * 0.172 * Math.cos(k * 0.9 + i), Math.sin(a) * 0.172 * Math.sin(k * 0.9 + i)]); } b.at({ x, y: y + 0.17, z }, m => rope(m, L, 0.008, mulC(cv(cols[i]), 1.12), 4)); }
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+  /* --- Werkzeug (v122): Stiel mit Maser, geschmiedeter Kopf mit heller Schneide, Säge mit Kettenschwert und Zähnen --- */
+  function toolNew(id) {
+    const b = new MB();
+    if (id === "axe1" || id === "axe2") {
+      const steel = id === "axe2", L = steel ? 1.2 : 1.0;
+      b.at({ rz: -0.55 }, m => {
+        /* Stiel: leicht geschwungen, unten verdickt (Knauf) */
+        const pts = [], rr = []; for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push([Math.sin(t * Math.PI) * 0.025 - t * 0.01, t * L, 0]); rr.push(t < 0.08 ? 0.045 : 0.034 - t * 0.004); }
+        rope(m, pts, rr, (k) => steel ? mulC(cv(0xc9955a), k % 2 ? 0.94 : 1.03) : mulC(cv(0x8a6040), k % 2 ? 0.92 : 1.02), 7);
+        if (steel) rope(m, [[0, 0.1, 0], [0, 0.32, 0]], 0.042, 0xd8332b, 7);
+        /* Kopf: Nacken, Wange, breite Schneide */
+        const P = [[-0.07, -0.06], [0.06, -0.06], [0.22, -0.12], [0.26, -0.13], [0.27, 0.13], [0.23, 0.12], [0.06, 0.06], [-0.07, 0.06]];
+        m.at({ y: L - 0.07, z: 0 }, q => q.at({ rx: 0 }, r => { const Z = [-0.032, 0.032]; extrude(r, [P.map(([x, y]) => [x, y * 0.95]), P.map(([x, y]) => [x, y * 0.95])], Z, (i, j) => j === 3 ? cv(steel ? 0xf4f8fb : 0xd8d2c8) : steel ? mulC(cv(0x8a96a0), j % 2 ? 0.9 : 1.05) : mulC(cv(0x5a5048), j % 2 ? 0.9 : 1.05), {
+          cap0: p => p[0] > 0.18 ? cv(steel ? 0xe2e8ee : 0xb8b0a4) : cv(steel ? 0x9aa6b0 : 0x6a5e54), cap1: p => p[0] > 0.18 ? cv(steel ? 0xe2e8ee : 0xb8b0a4) : cv(steel ? 0x9aa6b0 : 0x6a5e54) }); }));
+        if (!steel) m.box(0.03, 0.03, 0.07, 0x6a4a2a, { x: -0.075, y: L - 0.09, c: false });
+      });
+      return b;
+    }
+    if (id === "saw1" || id === "saw2") {
+      const pro = id === "saw2", body = pro ? 0xf2c230 : 0xf2731e, bar = pro ? 1.15 : 0.82;
+      b.at({ y: 0.02 }, m => lumber(m, { w: 0.34, h: 0.34, l: 0.6, ch: 0.06, seg: 3, nx: 3, ny: 3, colAt: (p) => p[1] > 0.22 ? mulC(cv(body), 1.05) : p[1] < 0.06 ? cv(0x2a2a30) : cv(body), pith: [0.5, -3], rings: [] }));
+      b.at({ x: 0.0, y: 0.36, z: -0.08 }, m => lumber(m, { w: 0.24, h: 0.08, l: 0.36, ch: 0.025, seg: 2, nx: 2, ny: 1, colAt: () => cv(0x2a2a30), pith: [0.5, -3], rings: [] }));
+      rope(b, [[0, 0.4, -0.28], [0, 0.56, -0.22], [0, 0.58, -0.02], [0, 0.42, 0.05]], 0.03, 0x2a2a30, 6);                 /* Griff oben */
+      rope(b, [[-0.2, 0.1, 0.24], [-0.21, 0.42, 0.24], [0, 0.5, 0.24], [0.21, 0.42, 0.24], [0.2, 0.1, 0.24]], 0.025, 0x2a2a30, 6);   /* Bügel */
+      b.at({ y: 0.08, z: 0.3 + bar / 2 }, m => {
+        m.box(0.03, 0.17, bar, 0xd8dde2, { c: true, y: 0.085 });
+        for (let k = 0; k < Math.round(bar / 0.05); k++) { const z = -bar / 2 + k * 0.05 + 0.02; m.box(0.045, 0.02, 0.03, 0x2a2a30, { y: 0.177, z, c: false }); m.box(0.045, 0.02, 0.03, 0x2a2a30, { y: -0.02, z, c: false }); }
+        rope(m, [[0, 0.085, bar / 2], [0, 0.085, bar / 2 + 0.01]], 0.095, 0x2a2a30, 10);
+      });
+      b.box(0.36, 0.1, 0.01, pro ? 0x2a2a30 : 0xfaf4e4, { y: 0.14, z: 0.302, c: false });
+      if (pro) b.box(0.2, 0.05, 0.012, 0xf2c230, { y: 0.15, z: 0.31, c: false });
+      return b;
+    }
+    if (id === "sickle") {
+      b.at({ rz: -0.5 }, m => {
+        sLathe(m, [[-0.52, 0.04], [-0.5, 0.048], [-0.3, 0.043], [-0.1, 0.045], [-0.02, 0.05], [0, 0.05]], 9, (p, y, a, i) => mulC(cv(0x9a6a3a), i % 2 ? 0.94 : 1.04), null, {});
+        rope(m, [[0, -0.02, 0], [0, 0.04, 0]], 0.055, 0x6a4a2a, 8);
+        /* Klinge als gebogener Streifen: innen helle Schneide */
+        const N = 14, outer = [], inner = [];
+        for (let i = 0; i <= N; i++) { const a = Math.PI * 0.05 + (i / N) * Math.PI * 0.95, r = 0.36, w = 0.09 * (1 - i / (N + 3)); outer.push([Math.cos(a) * r - r, Math.sin(a) * r + 0.04]); inner.push([Math.cos(a) * (r - w) - r, Math.sin(a) * (r - w) + 0.04]); }
+        for (let i = 0; i < N; i++) [0.013, -0.013].forEach((z, s) => { const A = [outer[i][0], outer[i][1], z], B2 = [outer[i + 1][0], outer[i + 1][1], z], C2 = [inner[i + 1][0], inner[i + 1][1], z], D = [inner[i][0], inner[i][1], z];
+          if (s === 0) q4(m, A, B2, C2, D, 0xc8d0d8, 0xc8d0d8, 0xf2f6f8, 0xf2f6f8); else q4(m, A, D, C2, B2, 0xa8b0b8, 0xe2e8ec, 0xe2e8ec, 0xa8b0b8); });
+      });
+      return b;
+    }
+    if (id === "water") {
+      const G = 0x3f9a5a, Gd = 0x2f7a46;
+      sLathe(b, [[0, 0.25], [0.02, 0.27], [0.06, 0.28], [0.4, 0.27], [0.44, 0.26], [0.48, 0.2], [0.5, 0.12]], 16, (p, y, a) => y > 0.12 && y < 0.17 || y > 0.41 && y < 0.45 ? cv(Gd) : mulC(cv(G), 0.95 + 0.08 * Math.sin(a * 2)), null, { c1: cv(Gd) });
+      rope(b, [[0.2, 0.1, 0], [0.38, 0.3, 0], [0.5, 0.48, 0]], [0.045, 0.035, 0.03], G, 8);
+      b.at({ x: 0.53, y: 0.52, rz: -0.7 }, m => sLathe(m, [[0, 0.03], [0.04, 0.08], [0.06, 0.09], [0.065, 0.085]], 12, (p, y) => y > 0.06 ? cv(0xb89a3a) : cv(0xd8b84a), null, { c1: cv(0x8a7a3a) }));
+      rope(b, [[-0.24, 0.42, 0], [-0.3, 0.6, 0], [-0.1, 0.68, 0], [0.12, 0.52, 0]], 0.028, Gd, 7);
+      return b;
+    }
+    return null;
+  }
+
   /* ------------------------ Waren und Werkzeug --------------------------
      Kleine Modelle für Bildchen in Rezepten, Lager und Laden: Stämme je
      Holzart, Bretter, Balken, Platten, Kisten … und die Werkzeuge. */
@@ -2498,6 +3424,7 @@ const FWM = (() => {
   function item(id) {
     G3.seed(5100 + id.length * 13 + id.charCodeAt(0));
     const b = new MB();
+    if (woodItem(id, b) || goodsItem(id, b)) return b;              /* v121: Holzwaren neu, v122: Hofwaren neu */
     switch (id) {
       case "birke": case "kiefer": case "buche": case "eiche": case "edelholz":
         logs(b, LOG_SP[id]);
@@ -2843,6 +3770,7 @@ const FWM = (() => {
   /* Werkzeug: Opas Axt, Stahlaxt, Kettensäge, Profi-Säge */
   function tool(id) {
     G3.seed(5300 + id.length);
+    const nb = toolNew(id); if (nb) return nb;                       /* v122: Werkzeug neu */
     const b = new MB();
     if (id === "axe1" || id === "axe2") {
       const steel = id === "axe2", L = steel ? 1.25 : 1.0;
@@ -2905,6 +3833,7 @@ const FWM = (() => {
   }
 
   return {
+    _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,

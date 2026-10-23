@@ -1,5 +1,42 @@
 # Änderungen – kurz für den Kollegen
 
+## v122 (aufbauend auf v121) – alle übrigen Warenbildchen neu, Werkzeuge neu, Einsammeln zeigt die 3D-Bildchen
+
+Enthält v121 vollständig – **ein Upload genügt** (ZIP mit allen Dateien, die sich seit v120 geändert haben).
+
+- **Bausatz erweitert (`woodmodels.js`):** `skinV` (weiche Haut über Ringe, Farbe je Ecke), `sLathe` (weicher Drehkörper mit Rippen/Dellen), `sEll` (Ellipsoid mit Beule), `rrect`/`ringXZ` (abgerundete Umrisse), `slatCrate` (Lattenkiste), `paperBag`, `feedSack`, `tray`, `bucket`, Obst- und Gemüseteile (`tomato`, `apple`, `strawberry`, `corncob`, `wheatEar`), `sock`. Jutesack mit aufgenähtem Etikett und Füllfarbe.
+- **Neu gebaut (Hof):** Weizenmehl und Maismehl als Papiertüte mit Falz, Farbband und Bild; Weizen und Mais im offenen Jutesack mit Ähren bzw. Kolben (Körnerraster, Lieschblätter); Kartoffeln im Sack mit Augen; Tomaten, Äpfel (rot/grün), Birnen (liegend) in der Lattenkiste; Erdbeeren (Nüsschen, Kelch) in der grünen Schale; Kirschen mit Stielen; Karottenbund mit Laub; gerippter Kürbis mit Stiel und Blatt; Rohwolle als lockiges Vlies mit Schnur; Schweine-/Rindfleisch in der Schale (Kotelett mit Fettrand und Knochen bzw. marmoriertes Steak, Folienglanz, Etikett); Hühnerfutter im Zinkeimer mit Körnermix und Schaufel; Kuhfutter als Heuballen (Halme, Garne); Schweine- und Schaffutter im Futtersack mit Farbband, Etikett und Tierbild; Brot mit Einschnitten und Mehlstaub; Butter halb in Goldfolie; Käselaib mit Keil und Löchern; Wollknäuel mit Wicklungen; Wollsocken flach (Bündchen, Ferse, Spitze); Pullover mit Rippen, Norwegerband, Kragen, eingeschlagenen Ärmeln.
+- **Fisch:** Fische und Fischgerichte waren schon detailliert (v58) und bekommen das neue Licht/Kontur; neu gebaut: Reusenköder-Dose, Wurmdose (Erde, Würmer mit Ringeln), Abfalleimer (Zink, Gräte, Kopf).
+- **Werkzeug:** Äxte (geschwungener Stiel mit Maser, geschmiedeter Kopf, helle Schneide), Kettensägen (Gehäuse, Griffe, Schwert mit Kettengliedern), Sichel (gedrechselter Griff, Klinge mit heller Schneide), Gießkanne (Drehkörper, Rohr, Brause, Bügel). Gleicher Bezugsrahmen wie vorher – die Mitarbeiter halten sie richtig (geprüft).
+- **Blickwinkel-Ausnahmen** (`ITEM_VIEW`): Käse, Fladen flacher; Socken, Pullover steiler.
+- **Einsammeln:** fliegende Waren nutzen schon `itemImg` (3D-Bildchen) – jetzt auch die Ausbeute-Leiste bei Paketen (vorher Emoji-Chips) und die Perle (vorher Emoji). Münzen, Kleeblätter und EP bleiben bewusst Symbole.
+- Tests: `tests/icons.test.js` 5 Tests (neu: alle übrigen 3D-Waren heil und im Budget, Werkzeuge heil und im alten Rahmen).
+- Dateien v122: `woodmodels.js`, `worldview.js`, `farmview.js`, `style.css`, `tests/icons.test.js`, `index.html`, `sw.js`.
+
+## v121 (aufbauend auf v120) – Warenbildchen: neues Icon-Regelwerk für alle, Holzwaren komplett neu
+
+**Wie die Icons entstehen (unverändert):** keine Bilddateien. Jedes Warenbildchen wird einmal zur Laufzeit aus dem 3D-Modell gerendert (`thumbOf` in `worldview.js`, Modelle in `FWM.item` / `woodmodels.js`), zugeschnitten und als Daten-URL zwischengespeichert. Angezeigt wird es in Lager (40 px), Rezepten (44 px), Warteschlangen (36 px), Chips/Aufträgen (22 px), Markt, Blasen und fliegenden Waren. Bestand: 88 Waren mit 3D-Bildchen (davon 22 Holz), dazu Köder, Trophäen, Werkzeuge, Tiere, Personal, Laden-Gebäude.
+
+**Gemeinsames Regelwerk (wirkt auf alle Bildchen):**
+- **Schärfe:** gerendert 288 px, ausgegeben 144 px (vorher 160 → 112 px). Glatte Kanten und scharf bei 3-facher Pixeldichte (40 px Zelle = 120 Gerätepixel; vorher wurde hochgezogen). Großer Zeichner (Trophäenwand) 576 → 288 px.
+- **Licht fest zur Kamera:** Hauptlicht oben links leicht von vorn (`thumbSun`), egal wie das Modell gedreht ist → Oberseite hell, linke Fläche im Licht, rechte im Halbschatten. Gedämpfte Belichtung (keine ausgebrannten hellen Hölzer mehr), kühler Himmel, warmer dunkler Boden.
+- **Freistellung:** dezente warme Comic-Kontur rundum (liest sich auf hellem und dunklem Grund) und ein weicher Kontaktschatten unter dem Gegenstand (an der Wand hängende Trophäen ohne). Beides einmal ins Bild gerechnet, kostet beim Anzeigen nichts.
+- **Komposition:** Gegenstand füllt 86 % des Quadrats, leicht nach oben gesetzt (Platz für den Schatten). Blickwinkel einheitlich schräg von vorn oben; Ausnahmen nur, wo sonst das Wichtigste verdeckt wäre (`ITEM_VIEW`: Tür und Zaun von vorn, Schatulle steiler).
+- **Dateigröße:** WebP, wo der Browser es schreiben kann (Chrome/Android ~9 KB je Bildchen, vorher PNG ~11 KB); sonst PNG (~30 KB).
+
+**Holzwaren neu (alle 22 Artikel), eigener Bausatz in `woodmodels.js`:** `lumber` (Kantholz/Brett mit Fasen als Glanzkanten, Maserstreifen und dunklen Maserlinien, Hirnholz mit Jahresringen um den Kern, optional Sägespuren und Schwundriss), `logPiece` (Rinde je Holzart, Hirnholz mit Kern, Splint, Ringen, Rindenrand und Trockenriss), `splitPiece` (Scheit), `extrude`, `lathe`, `rope`, `band`, `jutesack`.
+- Stämme: Birke weiß mit schwarzen Querstrichen, Kiefer rotbraun geschuppt, Buche glatt grau, Eiche dunkel gefurcht, Edelholz (Kirsche) rotbraun mit hellen Korkbändern und zwei kleinen Funkeln.
+- Äste: krummes Bündel mit Zweigstummeln und hellen Schnittflächen, zweimal mit Hanfschnur gebunden.
+- Holzreste: gefüllter Jutesack (Webstruktur, Naht, umgeschlagener Rand), Abschnitte schauen heraus und liegen davor.
+- Brennholz: gestapelte Scheite mit Rinde, Spaltflächen und dreieckigem Hirnholz. Kaminholz: liegender oranger Netzsack mit Buchenscheiten, hinten zugebunden mit Etikett.
+- Pfosten: geschälte, angespitzte Rundpfosten mit Beilflächen, Bund mit Spannband.
+- Bretter (Bund, Spannbänder), Hobeldielen (Nut und Feder an der Stirn, glatter, blaues Band), Balken (sägerau, Kern mittig, Schwundriss), Kantholz (hell, gehobelt, blauer Prüfstempel), Eichenbohlen (unbesäumt: wellige Baumkante mit Rindenstreifen), Holzplatten (Sperrholz: Deckfurnier mit Maser, Lagen an der Kante).
+- Kisten: Lattenkisten mit Eckleisten, Spalten, Grifflöchern. Europaletten: 3 Kufen, 9 Klötze mit Brandstempel, 3 Querbretter, 5 Deckbretter.
+- Möbelteile: Buchenstuhl mit gedrechselten Beinen, Sitz mit Fase, Lehne mit Sprossen, ein loses Bein daneben. Tür: Kassettentür mit vier Füllungen, Messingdrücker und Bändern. Zaun: Latten mit Spitze, zwei Riegel, Z-Strebe. Schatulle: Kirschbaum, Deckel mit Fase und heller Einlegeader, Messingecken, Schlossblech.
+- Item-IDs, Mengen, Preise, Lager-, Markt- und Rezeptlogik unverändert.
+- Tests: neu `tests/icons.test.js` (alle 22 Holzartikel haben ein eigenes heiles Modell im Budget, sind als 3D-Bildchen eingetragen, deterministisch, Holzarten unterscheidbar; Bauteile zeigen nach außen).
+- Dateien: `woodmodels.js`, `worldview.js`, `hunt.js` (Trophäen ohne Bodenschatten), `tests/icons.test.js`, `index.html`, `sw.js`.
+
 ## v120 (aufbauend auf v119) – Hirsch neu modelliert, Trophäen als Kopfpräparate je erlegtem Stück, Trophäenwand
 
 **Technik (unverändert):** eigene WebGL2-Engine `gl3d.js`, alles prozedural im Code (Dreiecke mit Eckfarben, keine Texturen, keine Modelldateien). Der Hirsch war aus Kugeln, Quadern und Stäben gebaut (Kastenkopf, Stockbeine, Stockgeweih), die Trophäe nur ein Brett mit Symbol und hing nur an der Medaille.

@@ -1230,9 +1230,12 @@ function skinMesh(t) {
 }
 /* Vorschaubilder für den Extras-Laden: das echte 3D-Modell, einmal gerendert */
 const THUMB = { R: null, cache: {}, failed: false };
-/* v120: zweiter, größerer Zeichner für große Bilder (Trophäenwand) – 320 px statt 160 px */
+/* v120: zweiter, größerer Zeichner für große Bilder (Trophäenwand).
+   v121: gerendert wird doppelt so groß wie ausgegeben (288 → 144 px, groß 576 → 288 px): glatte Kanten und scharf auf
+   Handys mit 3-facher Pixeldichte (Lagerzelle 40 px = 120 Gerätepixel – vorher wurden 112 px hochgezogen und wirkten weich). */
+const THUMB_N = 144, THUMB_NB = 288;
 function thumbR(big) {
-  const K = big ? "RB" : "R", N = big ? 320 : 160;
+  const K = big ? "RB" : "R", N = big ? THUMB_NB * 2 : THUMB_N * 2;
   if (THUMB[K] || THUMB.failed) return THUMB[K];
   try {
     const cv = document.createElement("canvas");
@@ -1241,6 +1244,8 @@ function thumbR(big) {
     if (!R) { if (!big) THUMB.failed = true; return null; }
     R.resize = () => { R.w = N; R.h = N; R.dpr = 1; };
     R.env.fogR = [400, 800];
+    /* v121 Icon-Licht: neutral-warmes Hauptlicht, kühler Himmel, warmer dunkler Boden (Unterseiten setzen sich ab) */
+    R.env.sunCol = [0.86, 0.82, 0.74]; R.env.sky = [0.55, 0.59, 0.67]; R.env.ground = [0.29, 0.265, 0.24];
     THUMB[K] = R;
   } catch (e) { if (!big) THUMB.failed = true; }
   return THUMB[K];
@@ -1265,8 +1270,9 @@ function thumbOf(key, fn, o) {
        wird es mit mehr Abstand noch einmal gerendert – nichts wird abgeschnitten */
     for (const k of [1.3, 1.75, 2.3]) {
       Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3) * k, yaw: o.yaw != null ? o.yaw : Math.PI / 4, pitch: o.pitch != null ? o.pitch : flat ? 0.85 : 0.55, fov: 0.55 });
+      R.env.sun = thumbSun(R.cam.yaw, R.cam.pitch);
       R.render(1.5);
-      const c = thumbCrop(R.canvas, k < 2.2, o.big ? 288 : 112);
+      const c = thumbCrop(R.canvas, k < 2.2, o.big ? THUMB_NB : THUMB_N, o);
       if (c) { url = c; break; }
     }
     R.free(m);
@@ -1274,10 +1280,24 @@ function thumbOf(key, fn, o) {
   THUMB.cache[key] = url;
   return url;
 }
+/* v121: Licht für alle Bildchen gleich – fest zur Kamera (oben links, leicht von vorn), egal wie das Modell gedreht ist.
+   Oberseite hell, linke Fläche im Licht, rechte im Halbschatten: klare Plastizität in jedem Bildchen. */
+function thumbSun(yaw, pitch) {
+  const cp = Math.cos(pitch), E = [Math.cos(yaw) * cp, Math.sin(pitch), Math.sin(yaw) * cp], rt = [E[2], 0, -E[0]];
+  const l = Math.hypot(rt[0], rt[2]) || 1, v = [-0.55 * rt[0] / l + 0.42 * E[0], 0.9 + 0.42 * E[1], -0.55 * rt[2] / l + 0.42 * E[2]], n = Math.hypot(v[0], v[1], v[2]);
+  return [v[0] / n, v[1] / n, v[2] / n];
+}
+/* v121: WebP, wo der Browser es schreiben kann (Chrome/Android: etwa ein Drittel der PNG-Größe), sonst PNG */
+function thumbURL(cv) {
+  if (THUMB.webp !== false) { try { const u = cv.toDataURL("image/webp", 0.9); if (u.indexOf("data:image/webp") === 0) { THUMB.webp = true; return u; } } catch (e) { /* weiter mit PNG */ } THUMB.webp = false; }
+  return cv.toDataURL("image/png");
+}
 /* Bildchen eng zuschneiden: jedes Modell füllt das Quadrat gleich gut –
-   lange Bretter wie runde Laibe, nichts ragt über den Rand */
-function thumbCrop(src, strict, N) {
-  N = N || 112;
+   lange Bretter wie runde Laibe, nichts ragt über den Rand.
+   v121 Freistellung: dezente dunkle Kontur (Comic-Look, liest sich auf hellem wie dunklem Grund) und ein weicher
+   Kontaktschatten unter dem Gegenstand – beides wird einmal ins Bild gerechnet, kostet beim Anzeigen nichts. */
+function thumbCrop(src, strict, N, opt) {
+  N = N || THUMB_N; opt = opt || {};
   const w = src.width, h = src.height;
   try {
     const a = document.createElement("canvas"); a.width = w; a.height = h;
@@ -1288,11 +1308,23 @@ function thumbCrop(src, strict, N) {
     if (x1 < 0) return src.toDataURL("image/png");
     /* stößt an den Rand: abgeschnitten – lieber mit mehr Abstand neu */
     if (strict && (x0 <= 1 || y0 <= 1 || x1 >= w - 2 || y1 >= h - 2)) return null;
-    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = (N * 0.9) / Math.max(bw, bh);
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = (N * 0.86) / Math.max(bw, bh), dw = bw * k, dh = bh * k;
+    const dx = (N - dw) / 2, dy = (N - dh) / 2 - N * 0.012;
     const o = document.createElement("canvas"); o.width = o.height = N;
     const ox = o.getContext("2d"); ox.imageSmoothingQuality = "high";
-    ox.drawImage(a, x0, y0, bw, bh, (N - bw * k) / 2, (N - bh * k) / 2, bw * k, bh * k);
-    return o.toDataURL("image/png");
+    /* Kontaktschatten: flache, weiche Ellipse am Fuß */
+    const sx = dx + dw / 2, sy = Math.min(N - N * 0.035, dy + dh - N * 0.012), rx = Math.max(N * 0.12, dw * 0.42), ry = Math.max(N * 0.025, Math.min(N * 0.06, dh * 0.08));
+    if (!opt.noShadow) { ox.save(); ox.translate(sx, sy); ox.scale(1, ry / rx);
+    const g = ox.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, "rgba(30,22,14,0.30)"); g.addColorStop(0.6, "rgba(30,22,14,0.14)"); g.addColorStop(1, "rgba(30,22,14,0)");
+    ox.fillStyle = g; ox.beginPath(); ox.arc(0, 0, rx, 0, Math.PI * 2); ox.fill(); ox.restore(); }
+    /* Kontur: Silhouette rundum leicht versetzt, eingefärbt, darunter gelegt */
+    const t = document.createElement("canvas"); t.width = t.height = N;
+    const tx = t.getContext("2d"), ow = Math.max(1, N * 0.011);
+    for (let i = 0; i < 12; i++) { const an = i / 12 * Math.PI * 2; tx.drawImage(a, x0, y0, bw, bh, dx + Math.cos(an) * ow, dy + Math.sin(an) * ow, dw, dh); }
+    tx.globalCompositeOperation = "source-in"; tx.fillStyle = "rgba(38,26,16,0.62)"; tx.fillRect(0, 0, N, N);
+    ox.drawImage(t, 0, 0);
+    ox.drawImage(a, x0, y0, bw, bh, dx, dy, dw, dh);
+    return thumbURL(o);
   } catch (e) { return src.toDataURL("image/png"); }
 }
 /* Modell eines Laden-Artikels – so, wie er auf dem Hof steht */
@@ -1349,7 +1381,12 @@ function itemIc(id, lock) {
   return thumbSpan("item:" + id, () => FWM.item(id), it.i, lock, itemView(id));
 }
 /* v120: Trophäen von vorn und leicht von der Seite zeigen (statt schräg von oben wie Waren) */
-function itemView(id) { return /^tro_/.test(id) ? { yaw: Math.PI / 2 - 0.42, pitch: 0.1 } : null; }
+function itemView(id) { return /^tro_/.test(id) ? { yaw: Math.PI / 2 - 0.42, pitch: 0.1, noShadow: true } : ITEM_VIEW[id] || null; }
+/* v121: Ausnahmen vom Standard-Blick (schräg von vorn oben) – nur wo sonst das Wichtigste verdeckt wäre:
+   Tür und Zaun von vorn (Füllungen, Latten), Schatulle etwas steiler (Deckel mit Einlage) */
+const ITEM_VIEW = { tueren: { yaw: Math.PI / 2 - 0.5, pitch: 0.28 }, zaun: { yaw: Math.PI / 2 - 0.45, pitch: 0.3 }, schatulle: { yaw: Math.PI / 4 + 0.15, pitch: 0.62 },
+  /* v122: Käselaib und Fladen nicht steil von oben (sonst nur eine gelbe Scheibe), Socken/Pullover etwas steiler (liegen flach) */
+  kaese: { pitch: 0.5 }, fladen: { pitch: 0.55 }, socken: { pitch: 0.9 }, pullover: { pitch: 0.75 } };
 function toolIc(id, lock) { const T = FTOOLS[id]; return thumbSpan("tool:" + id, () => FWM.tool(id), T ? T.i : ({ sickle: "🌙", water: "🚿" }[id] || "🪓"), lock); }
 /* Bild-Adresse eines 3D-Bildchens (für Blasen, fliegende Sachen, Ziehen) – null, wenn es keins gibt */
 function itemImg(id) { return ITEM_3D.has(id) && !THUMB.failed ? thumbOf("item:" + id, () => FWM.item(id), itemView(id)) : null; }
@@ -2579,7 +2616,7 @@ function worldLootShow(px, py, o) {
   fx.appendChild(fl); setTimeout(() => fl.remove(), 900);
   const el = document.createElement("div"); el.className = "lootbanner r" + (o.r || 0); el.style.setProperty("--c", o.css);
   if (o.ms) el.style.animationDuration = (o.ms / 1000 - 0.1).toFixed(2) + "s";
-  el.innerHTML = `<small>${esc(o.sub || "")}</small><b>${esc(o.title)}</b><span>${(o.chips || []).map(c => `<i>${esc(c)}</i>`).join("")}</span>`;
+  el.innerHTML = `<small>${esc(o.sub || "")}</small><b>${esc(o.title)}</b><span>${(o.chips || []).map(c => typeof c === "string" ? `<i>${esc(c)}</i>` : `<i class="lb-it">${c.html}</i>`).join("")}</span>`;
   fx.appendChild(el); setTimeout(() => el.remove(), ms);
 }
 /* Banner (Seltenheit), Lichtblitz und die Belohnungen, die der Reihe nach aus der Kiste fliegen */
@@ -2588,7 +2625,8 @@ function worldParcelReward(O, r, P) {
   const p = R.project(P.x, 0.9, P.z) || [R.w / 2, R.h / 2], px = p[0], py = p[1];
   if (fx && r) {
     const chips = [];
-    (r.items || []).forEach(([id, n]) => chips.push((FITEMS[id].i || "📦") + " " + n + "× " + FITEMS[id].n));
+    /* v122: Waren in der Ausbeute-Leiste als 3D-Bildchen statt Emoji */
+    (r.items || []).forEach(([id, n]) => chips.push({ html: icHTML(id) + " " + esc(n + "× " + FITEMS[id].n) }));
     if (r.m) chips.push("💶 " + eur(r.m));
     chips.push("🍀 " + r.clover, "⭐ " + r.xp + " EP");
     worldLootShow(px, py, { sub: "Besondere Lieferung", title: (O.rar > 1 ? "✨ " : "") + PARCEL_TXT[O.rar] + (O.rar > 1 ? " ✨" : ""), chips, r: O.rar, css: PARCEL_CSS[O.rar] });

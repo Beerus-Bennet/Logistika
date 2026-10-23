@@ -1841,7 +1841,7 @@ const HUNT = (() => {
      Im Lager-Reiter „Trophäen“: jedes Stück einzeln als großes Bild (das echte 3D-Modell, von vorn), Name, Enden bzw. Länge,
      Medaille, Wert. Antippen öffnet die Nahansicht: das Präparat dreht sich langsam hin und her (eigener kleiner Zeichner,
      läuft nur, solange die Ansicht offen ist), dazu Bewertung, Gewicht, Treffer, Entfernung und Tag des Erlegens. */
-  const TVIEW = { yaw: Math.PI / 2 - 0.42, pitch: 0.1 };
+  const TVIEW = { yaw: Math.PI / 2 - 0.42, pitch: 0.1, noShadow: true };            /* hängt an der Wand: kein Bodenschatten */
   const WALL = { sel: null };
   const what = (k, T) => k === "hirsch" ? T.P + "-Ender" : k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
   const fnum = (v, d) => String(Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).replace(".", ",");
