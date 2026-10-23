@@ -40,7 +40,7 @@ const HUNT = (() => {
   const RV = { x: -470, z: -40 }, RVRY = -Math.PI / 2;               /* Hochsitz im Revier, schaut nach Westen (−x) */
   const FC = { x: RV.x - 50, z: RV.z }, FRX = 44, FRZ = 32;           /* Feld: Ellipse vor dem Hochsitz */
   const FOV = 0.95, BINO = 7, ZOOMS = [4, 8, 12];
-  const CAMD = 2.5, NEAR = 0.35, FAR = 300, TREE_HI = 80;
+  const CAMD = 2.5, NEAR = 0.35, FAR = 300, TREE_HI = 40;
   const V0 = 820;                                     /* Mündungsgeschwindigkeit m/s */
   const WIND_K = 5.85e-4;                             /* Abdrift: rad je m/s Seitenwind */
   const DOT = 0.002;                                  /* Haltepunkt-Abstand im Absehen (rad) */
@@ -692,15 +692,50 @@ const HUNT = (() => {
     X.rv.ground = addNode(fmesh("hunt_rv_ground", revGround), { x: FC.x, y: 0, z: FC.z, shadow: false });
     X.rv.tower = addNode(fmesh("hunt_tower_v107", towerMesh), { x: RV.x, y: 0, z: RV.z, ry: RVRY });
     const put = (g, k, x, z, ry, s) => { g.add(k, x, z, ry, s); X.rv.keys.push([g, k]); };
-    /* v113: nahe Bäume (bis TREE_HI Einheiten vom Hochsitz) mit dem fein gebauten Nahsicht-Modell – im Fernglas sah das grobe Standardmodell wie Felsbrocken/Kisten aus */
-    L.trees.forEach((t, i) => { const hi = FWM.treeRv && Math.hypot(t.x - EYER[0], t.z - EYER[2]) < TREE_HI; put(rgroup((hi ? "wr:" : "wt:") + t.sp + ":" + t.sz + ":" + t.v, () => hi ? FWM.treeRv(t.sp, t.sz, t.v) : FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 }), "hu" + i, t.x, t.z, t.ry, t.s); });
+    /* v117: Bäume mit zwei Stufen – fein (Nahsicht-Modell, je Art und Variante einmal gebaut und auf die Größe skaliert)
+       und grob (Standardmodell). Mit bloßem Auge fein bis TREE_HI, im Fernglas/Zielfernrohr und bei der Bergung alle fein
+       (dort schneidet der enge Sichtkegel fast alles weg, die Grafikkarte zeichnet nur die sichtbaren) – siehe revLod */
+    X.rv.trees = L.trees.map((t, i) => ({ t, key: "hu" + i, d: Math.hypot(t.x - EYER[0], t.z - EYER[2]), hi: null, g: null }));
+    /* feine Modelle nach und nach bauen (je Bild ein paar Millisekunden) – erst die für nahe Bäume, dann der Rest fürs Fernglas */
+    const seen = new Set();
+    X.rv.queue = X.rv.trees.slice().sort((a, b) => a.d - b.d).map(e => e.t.sp + ":" + e.t.v).filter(k => !seen.has(k) && seen.add(k));
+    revLod(false);
     if (FWM.grassTuft) L.grass.forEach((t, i) => put(rgroup("hu_gt" + t.v, () => FWM.grassTuft(t.v), { sway: 0.3, shadow: false }), "hg" + i, t.x, t.z, t.ry, t.s));
     if (FWM.fern) L.ferns.forEach((t, i) => put(rgroup("hu_fern", () => FWM.fern(), { sway: 0.2, shadow: false }), "hf" + i, t.x, t.z, t.ry, t.s));
     if (FWM.boulder) L.rocks.forEach((t, i) => put(rgroup("hu_rock", () => FWM.boulder(1), {}), "hr" + i, t.x, t.z, t.ry, t.s));
     if (FWM.deadLog) L.logs.forEach((t, i) => put(rgroup("hu_log", () => FWM.deadLog(), {}), "hl" + i, t.x, t.z, t.ry, t.s));
   }
+  const hiKey = t => "wh:" + t.sp + ":" + t.v;
+  /* Bau-Warteschlange abarbeiten: höchstens ~8 ms je Bild (mindestens ein Modell), danach fertige Modelle einsetzen */
+  function revBuildStep() {
+    const Q = X && X.rv && X.rv.queue;
+    if (!Q || !Q.length) return;
+    if (typeof FWM.treeRv !== "function") { Q.length = 0; return; }
+    const t0 = performance.now();
+    do {
+      const [sp, v] = Q.shift().split(":");
+      try { fmesh("wh:" + sp + ":" + v, () => FWM.treeRv(sp, 3, +v)); } catch (e) { (X.rv.bad = X.rv.bad || new Set()).add(sp + ":" + v); console.warn("treeRv", sp, e); }
+    } while (Q.length && performance.now() - t0 < 8);
+    revLod(X.rv.far);
+  }
+  function revLod(far) {
+    if (!X || !X.rv || !X.rv.trees) return;
+    X.rv.far = far;
+    for (const e of X.rv.trees) {
+      const t = e.t, want = typeof FWM.treeRv === "function" && (far || e.d < TREE_HI), ready = !!FV.meshes[hiKey(t)], hi = want && ready;
+      const qk = t.sp + ":" + t.v;
+      if (want && !ready && X.rv.queue && !X.rv.queue.includes(qk) && !(X.rv.bad && X.rv.bad.has(qk))) X.rv.queue.push(qk);
+      if (e.hi === hi) continue;
+      if (e.g) e.g.remove(e.key);
+      e.g = hi ? rgroup(hiKey(t), () => FWM.treeRv(t.sp, 3, t.v), { sway: 0.22 })
+               : rgroup("wt:" + t.sp + ":" + t.sz + ":" + t.v, () => FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 });
+      e.g.add(e.key, t.x, t.z, t.ry, hi ? t.s * FWM.TH[t.sz] / FWM.TH[3] : t.s);
+      e.hi = hi;
+    }
+  }
   function revClear() {
     if (!X || !X.rv) return;
+    if (X.rv.trees) X.rv.trees.forEach(e => e.g && e.g.remove(e.key));
     X.rv.keys.forEach(([g, k]) => g.remove(k));
     [X.rv.ground, X.rv.tower].forEach(n => n && rmNode(n));
     X.rv = null;
@@ -1426,6 +1461,7 @@ const HUNT = (() => {
     /* v111: nahe Ebene je nach Ansicht weit nach hinten – im Fernglas/Zielfernrohr ist nichts näher als 6 m im Bild,
        dafür bleibt der Tiefenpuffer fein genug, dass Stämme und Äste in der Ferne nicht mehr flimmern oder zerreißen */
     if (X.inRv) { c.near = X.view === "bino" || X.view === "scope" ? 3.2 : X.view === "eye" ? 1.1 : 0.6; c.far = FAR; }
+    if (X.inRv && X.rv && X.rv.trees) { const far = X.view !== "eye"; if (X.rv.far !== far) revLod(far); revBuildStep(); }
     FV.touchAt = performance.now();
     /* Wild: wenig, weit weg – und man muss warten */
     if (X.inRv && X.mode === "hold") {
@@ -1548,7 +1584,7 @@ const HUNT = (() => {
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
-    _spawn: (k, enter) => X && X.inRv && spawn(k, enter), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v)
+    _spawn: (k, enter) => X && X.inRv && spawn(k, enter), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI
   };
 })();
 if (typeof module !== "undefined") module.exports = HUNT;

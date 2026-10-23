@@ -121,21 +121,24 @@ test("Wiesenwild: Wiese ↔ Revier – gleicher Winkel zum Hochsitz, Rückweg tr
   const dn = Math.hypot(near[0] - H.EYER[0], near[1] - H.EYER[2]), df = Math.hypot(far[0] - H.EYER[0], far[1] - H.EYER[2]);
   assert.ok(dn < df, "nah " + dn.toFixed(0) + " < fern " + df.toFixed(0));
 });
-test("Nahsicht-Bäume (v113): vier Arten, Höhe wie das Standardmodell, keine NaN, Dreiecksbudget", () => {
+test("Nahsicht-Bäume (v117): fünf Arten, Höhe wie das Standardmodell, keine NaN, Dreiecksbudget, Kirsche bleibt Standard", () => {
   const C2 = { console, Math, Object, Array, JSON, Map, Set, Float32Array, Uint8Array, Uint16Array, Int32Array, Date, performance: { now: () => Date.now() }, navigator: { userAgent: "node" }, localStorage: { getItem: () => null, setItem() {} } };
   C2.window = C2; C2.self = C2; vm.createContext(C2);
   vm.runInContext("function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }", C2);
   ["gl3d.js", "farmmodels.js", "woodmodels.js"].forEach(f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n;this.__l = 1;", C2, { filename: f }));
   vm.runInContext("this.FWM = FWM;", C2);
   const W = C2.FWM, top = b => { let m = 0; for (let i = 1; i < b.v.length; i += 9) m = Math.max(m, b.v[i]); return m; };
-  ["kiefer", "fichte", "buche", "eiche"].forEach(sp => [2, 3, 4].forEach(sz => {
+  ["kiefer", "fichte", "buche", "eiche", "birke"].forEach(sp => [2, 3, 4].forEach(sz => {
     const a = W.tree(sp, sz, 1), r = W.treeRv(sp, sz, 1);
-    assert.ok(r.v.every(x => Number.isFinite(x)), sp + " NaN");
+    assert.ok(r.v.length % 27 === 0, sp + " ganze Dreiecke");
+    for (let i = 0; i < r.v.length; i++) if (!Number.isFinite(r.v[i])) assert.fail(sp + sz + " NaN bei " + i);
     const tris = r.v.length / 27;
-    assert.ok(tris > a.v.length / 27 && tris < 1500, sp + sz + " Dreiecke " + tris);
+    assert.ok(tris > 3 * a.v.length / 27 && tris < 7500, sp + sz + " Dreiecke " + tris);
     const ha = top(a), hr = top(r);
     assert.ok(Math.abs(hr - ha) < 0.2 * ha, sp + sz + " Höhe " + hr.toFixed(2) + " vs " + ha.toFixed(2));
+    /* Licht-Normalen sind Einheitsvektoren */
+    for (let i = 3; i < r.v.length; i += 9 * 37) { const l = Math.hypot(r.v[i], r.v[i + 1], r.v[i + 2]); assert.ok(Math.abs(l - 1) < 0.02, sp + " Normale " + l); }
   }));
-  assert.ok(W.treeRv("birke", 2, 0).v.length === W.tree("birke", 2, 0).v.length, "Birke bleibt das Standardmodell");
+  assert.ok(W.treeRv("kirsche", 2, 0).v.length === W.tree("kirsche", 2, 0).v.length, "Kirsche bleibt das Standardmodell");
 });
 console.log(n + " Tests bestanden");

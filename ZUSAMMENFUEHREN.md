@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v117 – Fernglas-Bäume neu (auf v116)
+
+| Teil | Datei |
+|---|---|
+| `treeRv` neu (5 Arten, Blatt-/Nadelkronen, Röhrenstämme), `icoUnit` | `woodmodels.js` |
+| `revLod`, `revBuildStep`, `TREE_HI` 40, Export `_rv` | `hunt.js` |
+| Test Nahsicht-Bäume (v117) | `tests/hunt.test.js` |
+| Version 117 | `index.html`, `sw.js` |
+
 ## Stand v116 – Stumpf-Maßstab beim Antippen (auf v115)
 
 | Teil | Datei |

@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v117 (aufbauend auf v116) – Fernglas/Zielfernrohr: Bäume neu und realistischer (alle fünf Arten)
+
+**Warum es vorher nicht passte:** Das v113-Nahsicht-Modell galt nur bis 80 Einheiten vom Hochsitz. Im Fernglas (7-fach) sieht man meist weiter, dort kamen wieder die groben Standardbäume. Die Birke hatte gar kein Nahsicht-Modell. Und auch das v113-Modell bestand aus wenigen großen Laubklumpen, die vergrößert wie Felsflächen wirkten.
+
+- **`woodmodels.js` `treeRv(sp, sz, v)` komplett neu** (Buche, Eiche, Birke, Kiefer, Fichte; Kirsche bleibt Standard):
+  - Kronen aus vielen kleinen Blättern (Rauten) bzw. Nadeln statt großer Klumpen. Die Licht-Normalen zeigen von der Kronenmitte nach außen, so wird die Krone wie ein Volumen beleuchtet. Ein dunkler, weich schattierter Kern mit denselben Beulen verhindert Durchblick und schwarze Löcher.
+  - Stämme als gewachsene Röhren mit Wurzelanlauf, Furchen (Eiche, Kiefer unten), weichen Normalen und leichter Biegung. Äste als gebogene Röhren, Eiche mit Knick.
+  - **Birke:** weiße Rinde mit feinen schwarzen Querstrichen, dunkler rissiger Fuß, dünne Äste, lichte Krone mit hängenden Zweigen.
+  - **Kiefer:** unten graubraun gefurcht, oben fuchsrot; flache Nadelpolster an krummen Ästen; tote Aststummel.
+  - **Fichte:** 15–18 Astquirle mit hängendem Nadelvorhang, fein gezackt, helle Oberseite und Triebspitzen; Leittrieb.
+  - Gleiche Höhe, Farben und Fußpunkt wie das Standardmodell. Etwa 4 000–6 400 Dreiecke je Baum, Bauzeit je Modell ca. 10–30 ms (Rechner).
+- **`hunt.js` Detailstufen:** Feine Modelle werden je Art und Variante einmal gebaut (bei Größe 3) und auf die Baumgröße skaliert, also 15 Modelle statt 45. Im Fernglas, im Zielfernrohr und bei der Bergung sind **alle** Bäume fein; der enge Sichtkegel schneidet fast alles weg, gezeichnet werden nur die sichtbaren. Mit bloßem Auge bleiben sie fein bis 40 Einheiten (`TREE_HI`), weiter weg Standard. Gebaut wird nach und nach über eine Warteschlange (≤ 8 ms je Bild, nahe Bäume zuerst) – kein Hänger beim Wechsel ins Fernglas. Fehlertolerant: scheitert ein Modell, bleibt der Standardbaum.
+- Gemessen im Test-Browser: Fernglas 86 000–174 000 Dreiecke je Bild, bloßes Auge ca. 70 000.
+- Test `tests/hunt.test.js`: fünf Arten, Höhe, NaN, Normalen, Dreiecksbudget.
+- Dateien: `woodmodels.js`, `hunt.js`, `tests/hunt.test.js`, `index.html`, `sw.js`.
+
 ## v116 (aufbauend auf v115) – Baumstumpf wird beim Antippen nicht mehr riesig
 
 - **Ursache:** Beim Antippen wippt ein Baum kurz (`worldview.js`, Wipp-Schleife). Sie setzte danach den Maßstab auf `t.s` zurück. Ein per Säge gekappter Stumpf (`t.cut`) wird aber mit `t.cut.sc` skaliert, sein Mesh ist darauf gerechnet. Nach dem Tippen wuchs er daher auf den Maßstab des ganzen Baums.

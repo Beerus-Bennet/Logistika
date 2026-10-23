@@ -180,111 +180,337 @@ const FWM = (() => {
     return b;
   }
 
-  /* v113: Bäume für die Nahsicht (Fernglas/Zielfernrohr im Revier). Das Standardmodell hat wenige große Flächen –
-     im Fernglas wirkten Kronen wie Felsbrocken, Fichten wie glatte Kegel, Stämme wie Kisten. Hier: gewachsener Stamm
-     (Wurzelanlauf, Rindenrillen, Farbverlauf), sichtbare Äste und Kronen aus vielen kleinen Laub-/Nadelpolstern.
-     Gleiche Höhe, gleiche Farben, gleicher Fußpunkt wie tree(sp, sz, v). */
+  /* v117: Bäume für die Nahsicht (Fernglas/Zielfernrohr im Revier) – ersetzt das v113-Modell.
+     Bei 7-facher Vergrößerung wirkten große Laubklumpen wie Felsflächen. Jetzt: Kronen aus vielen kleinen Blättern
+     bzw. Nadelbüscheln; ihre Licht-Normalen zeigen von der Kronenmitte nach außen, so wird die Krone wie ein Volumen
+     beleuchtet und die Blätter geben Struktur und eine ausgefranste Silhouette. Ein dunkler Kern verhindert Durchblick.
+     Stämme sind gewachsene Röhren (Wurzelanlauf, Furchen, weiche Normalen), Äste gebogene Röhren. Alle fünf Waldarten;
+     gleiche Höhe, Farben und Fußpunkt wie tree(sp, sz, v). */
+  /* Einheits-Ikosaeder, einmal unterteilt (80 Flächen) – Kern der Laubwolken (einmal berechnet) */
+  let ICO1 = null;
+  function icoUnit() {
+    if (ICO1) return ICO1;
+    const t = (1 + Math.sqrt(5)) / 2, nz = p => { const l = Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]); return [p[0] / l, p[1] / l, p[2] / l]; };
+    const V = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map(nz);
+    const F0 = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+      [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]], cache = {}, F = [];
+    const mid = (a, b) => { const k = a < b ? a + "_" + b : b + "_" + a; if (cache[k] == null) { V.push(nz([(V[a][0] + V[b][0]) / 2, (V[a][1] + V[b][1]) / 2, (V[a][2] + V[b][2]) / 2])); cache[k] = V.length - 1; } return cache[k]; };
+    F0.forEach(([a, b, c]) => { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); F.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); });
+    return (ICO1 = { V, F });
+  }
   function treeRv(sp, sz, v) {
     v = v || 0;
-    if (sp !== "kiefer" && sp !== "fichte" && sp !== "buche" && sp !== "eiche") return tree(sp, sz, v);
-    G3.seed(5000 + sz * 97 + v * 13 + sp.length * 7);
+    if (!TREE_C[sp] || sp === "kirsche") return tree(sp, sz, v);
+    G3.seed(7000 + sz * 97 + v * 13 + sp.length * 7);
     const b = new MB(), T = TREE_C[sp], k = TH[sz] || 1, H = TREE_H[sp] * k, PI = Math.PI;
-    const lean = (rnd() - 0.5) * 0.05;
-    const dark = (c, f) => mix(c, 0x1a120c, f);
-    /* Stamm: gestapelte Abschnitte mit Wurzelanlauf, Rillen (stripe) und optionalem Farbverlauf */
-    const bole = (r0, r1, h, o) => {
+    const add = (a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], sub = (a, c) => [a[0] - c[0], a[1] - c[1], a[2] - c[2]];
+    const scl = (a, s) => [a[0] * s, a[1] * s, a[2] * s], dot = (a, c) => a[0] * c[0] + a[1] * c[1] + a[2] * c[2];
+    const crs = (a, c) => [a[1] * c[2] - a[2] * c[1], a[2] * c[0] - a[0] * c[2], a[0] * c[1] - a[1] * c[0]];
+    const nrm = a => { const l = Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+    const ru = () => nrm([rnd() - 0.5, rnd() - 0.5, rnd() - 0.5]);
+    const bri = (c, f) => { const a = G3.col(c); return [Math.min(1, a[0] * f), Math.min(1, a[1] * f), Math.min(1, a[2] * f)]; };
+    /* Dreieck so gewendet, dass es zur Seite o sichtbar ist (Rückseiten werden ausgelesen); Licht-Normale n */
+    /* schnelles Schreiben direkt in den Puffer (das Modell liegt im Ursprung, keine Transformation nötig) */
+    let F = new Float32Array(9 * 3 * 6000), nF = 0;
+    const cc = c => typeof c === "number" ? G3.col(c) : c;
+    const v3 = (P, N, q) => { F[nF++] = P[0]; F[nF++] = P[1]; F[nF++] = P[2]; F[nF++] = N[0]; F[nF++] = N[1]; F[nF++] = N[2]; F[nF++] = q[0]; F[nF++] = q[1]; F[nF++] = q[2]; };
+    const put = (A, B, C, c, na, nb, nc) => {
+      if (nF + 27 > F.length) { const G = new Float32Array(F.length * 2); G.set(F); F = G; }
+      const q = cc(c); v3(A, na, q); v3(B, nb, q); v3(C, nc, q);
+    };
+    const face = (A, B, C, c, n, o) => {
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], wx = C[0] - A[0], wy = C[1] - A[1], wz = C[2] - A[2], r = o || n;
+      if ((uy * wz - uz * wy) * r[0] + (uz * wx - ux * wz) * r[1] + (ux * wy - uy * wx) * r[2] < 0) put(A, C, B, c, n, n, n); else put(A, B, C, c, n, n, n);
+    };
+    const face3 = (A, B, C, c, na, nb, nc, o) => {
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], wx = C[0] - A[0], wy = C[1] - A[1], wz = C[2] - A[2];
+      if ((uy * wz - uz * wy) * o[0] + (uz * wx - ux * wz) * o[1] + (ux * wy - uy * wx) * o[2] < 0) put(A, C, B, c, na, nc, nb); else put(A, B, C, c, na, nb, nc);
+    };
+    /* Röhre entlang P mit Radien Rr: weiche Normalen, Farbe je Abschnitt/Ecke, optional Furchen (wob) */
+    const tube = (P, Rr, seg, colAt, o) => {
       o = o || {};
-      const n = o.n || 5, seg = o.seg || 9, fl = o.flare == null ? 0.6 : o.flare;
-      const rad = t => (r0 + (r1 - r0) * t) * (1 + fl * Math.pow(1 - t, 5));
-      b.noise(0.1, () => {
-        for (let i = 0; i < n; i++) {
-          const t0 = i / n, t1 = (i + 1) / n, c = o.col ? o.col(t0 + 0.5 / n) : T.bark;
-          b.cyl(rad(t0), rad(t1), h / n * 1.02, seg, c, { y: t0 * h, a0: i * 0.4, stripe: dark(c, 0.28), top: c, notop: i < n - 1, nobot: true });
-        }
-      });
-    };
-    /* Ast mit Zweig am Ende; liefert Endpunkt */
-    const branch = (y, a, e, len, r) => {
-      const p = limb(b, y, a, e, len, r, T.bark), a2 = a + 0.55 * (rnd() < 0.5 ? 1 : -1);
-      const q = [0, 0, 0];
-      b.at({ x: p[0], y: p[1], z: p[2] }, () => { const t = limb(b, 0, a2, Math.min(1.2, e + 0.3), len * 0.55, r * 0.5, T.bark); q[0] = t[0]; q[1] = t[1]; q[2] = t[2]; });
-      return { p, q: [p[0] + q[0], p[1] + q[1], p[2] + q[2]] };
-    };
-    /* Laubpolster auf einer Ellipsoidschale (oben hell, unten dunkel) */
-    const crown = (cx, cy, cz, rx, ry, rz, n, r0, r1, flat) => {
+      const n = P.length, rings = [];
+      let t0 = nrm(sub(P[1], P[0])), U = Math.abs(t0[1]) < 0.9 ? nrm(crs(t0, [0, 1, 0])) : nrm(crs(t0, [1, 0, 0]));
       for (let i = 0; i < n; i++) {
-        const f = (i + 0.5) / n, y = 1 - 2 * f, rr = Math.sqrt(1 - y * y), a = i * 2.399 + v * 0.7, sh = 0.6 + rnd() * 0.4, hf = (y + 1) / 2;
-        const c = hf < 0.3 ? T.leaf3 : hf < 0.65 ? (i % 2 ? T.leaf : T.leaf3) : (i % 2 ? T.leaf2 : T.leaf);
-        b.ico((r0 + rnd() * (r1 - r0)) * k, c, { x: cx + Math.cos(a) * rr * rx * sh, y: cy + y * ry * sh, z: cz + Math.sin(a) * rr * rz * sh, jitter: 0.3, flat: flat || 0.85, bottom: T.leaf3 });
+        const Ti = nrm(sub(P[Math.min(n - 1, i + 1)], P[Math.max(0, i - 1)]));
+        U = nrm(sub(U, scl(Ti, dot(U, Ti))));
+        const W = crs(Ti, U), ring = [];
+        for (let j = 0; j < seg; j++) {
+          const a = j / seg * 2 * PI + (o.a0 || 0), d = add(scl(U, Math.cos(a)), scl(W, Math.sin(a)));
+          ring.push([add(P[i], scl(d, Rr[i] * (o.wob ? o.wob(i / (n - 1), j, a) : 1))), d]);
+        }
+        rings.push(ring);
+      }
+      for (let i = 0; i < n - 1; i++) for (let j = 0; j < seg; j++) {
+        const j2 = (j + 1) % seg, A = rings[i][j], B = rings[i][j2], C = rings[i + 1][j2], D = rings[i + 1][j], c = colAt(i, j);
+        const out = nrm(add(add(A[1], B[1]), add(C[1], D[1])));
+        face3(A[0], B[0], C[0], c, A[1], B[1], C[1], out);
+        face3(A[0], C[0], D[0], c, A[1], C[1], D[1], out);
+      }
+      if (o.cap) { const L = rings[n - 1], top = P[n - 1], up = nrm(sub(P[n - 1], P[n - 2])); for (let j = 0; j < seg; j++) face(top, L[j][0], L[(j + 1) % seg][0], colAt(n - 2, j), up); }
+      return rings;
+    };
+    /* Ast: gebogene Röhre von p0 in Richtung (a, e), biegt sich nach oben; liefert Punkte */
+    const bough = (p0, a, e, len, r0, r1, bend, col, seg) => {
+      const d = [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], P = [], R = [], m = 4;
+      const wig = ru();
+      for (let i = 0; i <= m; i++) {
+        const t = i / m;
+        P.push(add(add(p0, scl(d, len * t)), [wig[0] * len * 0.08 * Math.sin(t * PI), bend * len * t * t, wig[2] * len * 0.08 * Math.sin(t * PI)]));
+        R.push(r0 + (r1 - r0) * t);
+      }
+      tube(P, R, seg || 5, (i) => bri(col, 0.92 + 0.12 * (i % 2)), {});
+      return P;
+    };
+    /* Stamm: leicht geneigt und gebogen, Wurzelanlauf, Furchen */
+    const stem = (r0, r1, h, o) => {
+      o = o || {};
+      const n = o.n || 8, seg = o.seg || 10, fl = o.flare == null ? 0.6 : o.flare, lx = (rnd() - 0.5) * (o.lean || 0.05) * h, lz = (rnd() - 0.5) * (o.lean || 0.05) * h;
+      const P = [], R = [];
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        P.push([lx * t * t + Math.sin(t * 5 + v) * (o.wig || 0.01) * h, t * h - (i === 0 ? 0.04 : 0), lz * t * t + Math.cos(t * 4 + v) * (o.wig || 0.01) * h]);
+        R.push((r0 + (r1 - r0) * t) * (1 + fl * Math.pow(1 - t, 6)));
+      }
+      tube(P, R, seg, o.col, { wob: o.wob, cap: o.cap });
+      return { P, R, at: t => { const f = t * n, i = Math.min(n - 1, Math.floor(f)), u = f - i; return [P[i][0] + (P[i + 1][0] - P[i][0]) * u, P[i][1] + (P[i + 1][1] - P[i][1]) * u, P[i][2] + (P[i + 1][2] - P[i][2]) * u]; },
+        rad: t => { const f = t * n, i = Math.min(n - 1, Math.floor(f)), u = f - i; return R[i] + (R[i + 1] - R[i]) * u; } };
+    };
+    /* Wurzelanläufe: kurze, flach auslaufende Röhren am Stammfuß */
+    const roots = (r, nr, col) => {
+      for (let i = 0; i < nr; i++) {
+        const a = i / nr * 2 * PI + rnd() * 0.5 + v, d = [Math.cos(a), 0, Math.sin(a)], L = r * (1.6 + rnd() * 0.8);
+        const P = [[d[0] * r * 0.3, r * 0.9, d[2] * r * 0.3], [d[0] * r * 0.8, r * 0.38, d[2] * r * 0.8], [d[0] * L, 0.02, d[2] * L]];
+        tube(P, [r * 0.42, r * 0.3, r * 0.08], 5, () => bri(col, 0.9 + rnd() * 0.15), {});
       }
     };
+    /* ein Blatt (kleines Dreieck), zur Außenseite N gewendet, leicht verdreht */
+    const leafAt = (p, N, s, c, el, tilt) => {
+      const m = nrm(add(N, scl(ru(), tilt == null ? 0.55 : tilt)));
+      const e1 = nrm(crs(m, Math.abs(m[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), rot = rnd() * PI * 2;
+      const u = add(scl(e1, Math.cos(rot)), scl(crs(m, e1), Math.sin(rot))), w = crs(m, u), L = s * (el || 1.25);
+      /* Raute: Spitze, Seite, Stiel, Seite – runder als ein Dreieck, wirkt wie ein Blatt */
+      const A = add(p, scl(u, L)), B = add(p, scl(w, s * 0.55)), C = add(p, scl(u, -L * 0.7)), D = add(p, scl(w, -s * 0.55));
+      const n = nrm(add(N, scl(m, 0.3)));
+      face(A, B, C, c, n, m); face(A, C, D, bri(c, 0.94), n, m);
+    };
+    /* Laubwolke: Ellipsoid (c, R) aus n Blättern der Größe s; Farben [hell, mittel, dunkel].
+       Heißer Pfad (Tausende Blätter je Baum): reine Zahlen statt kleiner Felder, direkt in den Puffer */
+    const cloud = (c, R, n, s, cols, o) => {
+      o = o || {};
+      const ph = rnd() * 6.28, ph2 = rnd() * 6.28, lump = o.lump == null ? 0.2 : o.lump;
+      const sh = (x, y, z) => 1 + lump * Math.sin(x * 3.3 + ph) * Math.cos(z * 2.9 + ph2) + lump * 0.6 * Math.sin(y * 4.1 + ph2);
+      const cx = c[0], cy = c[1], cz = c[2], Rx = R[0], Ry = R[1], Rz = R[2];
+      if (o.core !== false) {
+        /* Kern: etwas dunkler als das Laub, rund, mit denselben Beulen wie die Blätter – Lücken zeigen Laubschatten
+           statt Himmel oder schwarzer Löcher */
+        const kc = o.coreK || 0.82, I = icoUnit(), cT = cc(cols[2]), cM = cc(cols[1]);
+        const P = I.V.map(d => { const f = kc * sh(d[0], d[1], d[2]) * (1 + (rnd() - 0.5) * 0.1); return [cx + d[0] * Rx * f, cy + d[1] * Ry * f, cz + d[2] * Rz * f]; });
+        /* weiche Normalen (Ellipsoid) – der Kern wirkt wie Laubschatten hinter den Blättern, nicht wie große Flächen */
+        const Nn = I.V.map(d => nrm([d[0] / Rx, d[1] / Ry, d[2] / Rz]));
+        for (const [i, j, l] of I.F) {
+          const A = P[i], B = P[j], C = P[l], hy = (I.V[i][1] + I.V[j][1] + I.V[l][1]) / 3, q = rnd();
+          const col = bri(mix(cT, cM, q * 0.45), (hy < -0.3 ? 0.52 : 0.7) * (0.88 + rnd() * 0.2));
+          face3(A, B, C, col, Nn[i], Nn[j], Nn[l], nrm(sub(scl(add(add(A, B), C), 1 / 3), c)));
+        }
+      }
+      const C0 = cc(cols[0]), C1 = cc(cols[1]), C2 = cc(cols[2]), SUN = o.sun != null ? cc(o.sun) : null;
+      const tl = (o.tilt == null ? 0.55 : o.tilt) * 2, EL = o.el || 1.25, upN = o.upN || 0.15, Bs = o.basis || null, one = !!o.one;
+      for (let i = 0; i < n; i++) {
+        const yy = 1 - 2 * (i + rnd()) / n, rr = Math.sqrt(Math.max(0, 1 - yy * yy)), a = i * 2.39996 + rnd() * 0.6;
+        if (o.cutLow != null && yy < o.cutLow) continue;
+        const dx = Math.cos(a) * rr, dy = yy, dz = Math.sin(a) * rr;
+        const t = (0.86 + 0.2 * Math.sqrt(rnd())) * sh(dx, dy, dz);
+        let px = cx + dx * Rx * t, py = cy + dy * Ry * t, pz = cz + dz * Rz * t;
+        let Nx = dx / Rx, Ny = dy / Ry + upN, Nz = dz / Rz, l;
+        if (Bs) {   /* gedrehte Wolke (Basis Bs = [x-Achse, y-Achse, z-Achse]) */
+          const ox = px - cx, oy = py - cy, oz = pz - cz;
+          px = cx + Bs[0][0] * ox + Bs[1][0] * oy + Bs[2][0] * oz; py = cy + Bs[0][1] * ox + Bs[1][1] * oy + Bs[2][1] * oz; pz = cz + Bs[0][2] * ox + Bs[1][2] * oy + Bs[2][2] * oz;
+          const qx = Nx, qy = Ny, qz = Nz;
+          Nx = Bs[0][0] * qx + Bs[1][0] * qy + Bs[2][0] * qz; Ny = Bs[0][1] * qx + Bs[1][1] * qy + Bs[2][1] * qz; Nz = Bs[0][2] * qx + Bs[1][2] * qy + Bs[2][2] * qz;
+        }
+        l = Math.sqrt(Nx * Nx + Ny * Ny + Nz * Nz); Nx /= l; Ny /= l; Nz /= l;
+        /* Farbe: unten dunkel, Mitte gemischt, oben hell; selten ein Sonnenfleck */
+        const hf = (yy + 1) / 2, q = rnd();
+        let A0 = C2, A1 = C1, f = q * 0.5;
+        if (hf >= 0.62) { A0 = C0; A1 = C1; f = q * 0.55; } else if (hf >= 0.3) { A0 = C1; A1 = q < 0.5 ? C2 : C0; f = q * 0.6; }
+        let cr = A0[0] + (A1[0] - A0[0]) * f, cg = A0[1] + (A1[1] - A0[1]) * f, cb = A0[2] + (A1[2] - A0[2]) * f;
+        if (q > 0.92 && SUN) { cr += (SUN[0] - cr) * 0.45; cg += (SUN[1] - cg) * 0.45; cb += (SUN[2] - cb) * 0.45; }
+        const br = (0.86 + 0.4 * (t - 0.86)) * (0.92 + rnd() * 0.16);
+        cr = Math.min(1, cr * br); cg = Math.min(1, cg * br); cb = Math.min(1, cb * br);
+        /* Blattebene: Normale m = N + Zufall (zur Außenseite gekippt) */
+        let mx = Nx + (rnd() - 0.5) * tl, my = Ny + (rnd() - 0.5) * tl, mz = Nz + (rnd() - 0.5) * tl;
+        if (mx * Nx + my * Ny + mz * Nz < 0.25) { mx += Nx; my += Ny; mz += Nz; }
+        l = Math.sqrt(mx * mx + my * my + mz * mz); mx /= l; my /= l; mz /= l;
+        /* e1 ⟂ m, dann um m gedreht */
+        let ex, ey, ez;
+        if (Math.abs(my) < 0.9) { ex = -mz; ey = 0; ez = mx; } else { ex = 0; ey = mz; ez = -my; }
+        l = Math.sqrt(ex * ex + ey * ey + ez * ez); ex /= l; ey /= l; ez /= l;
+        const fx = my * ez - mz * ey, fy = mz * ex - mx * ez, fz = mx * ey - my * ex, rot = rnd() * 6.2832, co = Math.cos(rot), si = Math.sin(rot);
+        const ux = ex * co + fx * si, uy = ey * co + fy * si, uz = ez * co + fz * si;
+        const wx = my * uz - mz * uy, wy = mz * ux - mx * uz, wz = mx * uy - my * ux;
+        const ss = s * (0.7 + rnd() * 0.6), L = ss * EL, W = ss * 0.55;
+        let nx = Nx + mx * 0.3, ny = Ny + my * 0.3, nz = Nz + mz * 0.3; l = Math.sqrt(nx * nx + ny * ny + nz * nz); nx /= l; ny /= l; nz /= l;
+        if (nF + 54 > F.length) { const G = new Float32Array(F.length * 2); G.set(F); F = G; }
+        /* Raute A (Spitze), B, C (Stiel), D; (u, w, m) ist rechtshändig → A, B, C zeigt zu m */
+        const Ax = px + ux * L, Ay = py + uy * L, Az = pz + uz * L, Bx = px + wx * W, By = py + wy * W, Bz = pz + wz * W;
+        const Cx = px - ux * L * 0.7, Cy = py - uy * L * 0.7, Cz = pz - uz * L * 0.7, Dx = px - wx * W, Dy = py - wy * W, Dz = pz - wz * W;
+        const w9 = (x, y, z, k2) => { F[nF++] = x; F[nF++] = y; F[nF++] = z; F[nF++] = nx; F[nF++] = ny; F[nF++] = nz; F[nF++] = cr * k2; F[nF++] = cg * k2; F[nF++] = cb * k2; };
+        if (one) { w9(Ax, Ay, Az, 1); w9(Bx, By, Bz, 1); w9(Dx, Dy, Dz, 0.9); continue; }   /* Nadel: ein schmales Dreieck */
+        w9(Ax, Ay, Az, 1); w9(Bx, By, Bz, 1); w9(Cx, Cy, Cz, 1);
+        w9(Ax, Ay, Az, 0.94); w9(Cx, Cy, Cz, 0.94); w9(Dx, Dy, Dz, 0.94);
+      }
+    };
+    const LC = [T.leaf2, T.leaf, T.leaf3];
+
     if (sp === "buche") {
-      const h = H * 0.34, r = 0.12 * k + 0.03;
-      b.at({ rz: lean }, () => {
-        bole(r * 1.1, r * 0.78, h, { flare: 0.75 });
-        const ends = [];
-        for (let i = 0; i < 5; i++) ends.push(branch(h * 0.9, i * 1.26 + v + rnd() * 0.3, 0.95 + rnd() * 0.2, (0.5 + rnd() * 0.25) * k, r * 0.5));
-        b.noise(0.14, () => {
-          b.ico(0.5 * k, T.leaf3, { y: H * 0.56, jitter: 0.25, flat: 0.9 });
-          crown(0, H * 0.62, 0, 0.9 * k, 0.78 * k, 0.9 * k, 24, 0.27, 0.4);
-          ends.forEach((e, i) => b.ico(0.3 * k, i % 2 ? T.leaf2 : T.leaf, { x: e.q[0] * 1.05, y: e.q[1] + 0.1 * k, z: e.q[2] * 1.05, jitter: 0.3, flat: 0.9 }));
-        });
-      });
+      /* glatter, silbergrauer Stamm mit leichter Fleckung; steile Äste; dichte, breite, eiförmige Krone, frisches Grün */
+      const h = H * 0.36, r = 0.12 * k + 0.03;
+      const S = stem(r * 1.12, r * 0.82, h, { flare: 0.7, seg: 12, n: 6, col: (i, j) => bri(mix(mix(T.bark, 0x6f7a6a, 0.35), (i + j * 3) % 7 === 0 ? 0x6f7068 : T.base, ((i * 5 + j * 3) % 4) * 0.08), 0.95 + ((i * 7 + j * 11) % 5) * 0.03) });
+      roots(r, 5, T.bark);
+      const top = S.at(1), ends = [];
+      for (let i = 0; i < 5; i++) {
+        const a = i * 1.26 + v + rnd() * 0.3, P = bough(S.at(0.86 + rnd() * 0.1), a, 1.0 + rnd() * 0.25, (0.6 + rnd() * 0.25) * k, r * 0.5, r * 0.18, 0.2, T.bark, 6);
+        ends.push(P[P.length - 1]);
+      }
+      const cy = H * 0.64;
+      cloud([top[0], cy, top[2]], [0.95 * k, 0.72 * k, 0.95 * k], 1000, 0.072 * k, LC, { lump: 0.16, sun: 0xb8d870 });
+      ends.forEach((e, i) => cloud([e[0] * 1.15, Math.max(e[1] + 0.16 * k, H * 0.52), e[2] * 1.15], [0.48 * k, 0.4 * k, 0.48 * k], 220, 0.068 * k, LC, { lump: 0.22, sun: 0xb8d870 }));
+      cloud([top[0] + 0.1 * k, H * 0.82, top[2] - 0.06 * k], [0.55 * k, 0.32 * k, 0.55 * k], 240, 0.068 * k, LC, { lump: 0.2, sun: 0xb8d870 });
     } else if (sp === "eiche") {
-      const big = sz >= 4, h = H * 0.34, r = (big ? 0.22 : 0.15) * k + 0.03;
-      bole(r * 1.2, r * 0.8, h, { flare: 1.0, n: 4, seg: 10 });
+      /* kurzer, dicker Stamm mit tiefen Längsfurchen; knorrige, weit ausladende Äste mit Knick; unregelmäßige Krone mit Lücken */
+      const big = sz >= 4, h = H * 0.34, r = (big ? 0.21 : 0.15) * k + 0.03;
+      const S = stem(r * 1.18, r * 0.85, h, { flare: 0.9, seg: 12, n: 6, lean: 0.12, wig: 0.025,
+        wob: (t, j) => 1 + ((j % 2) ? -0.07 : 0.05) * (1 - t * 0.3), col: (i, j) => j % 2 ? bri(T.mark, 0.9 + ((i + j) % 3) * 0.06) : bri(T.bark, 0.95 + ((i * 3 + j) % 4) * 0.05) });
+      roots(r, 6, T.base);
+      const n = 5 + (big ? 1 : 0), ends = [];
+      for (let i = 0; i < n; i++) {
+        const a = i * (6.28 / n) + v + rnd() * 0.5, e = 0.32 + rnd() * 0.35, len = (0.7 + rnd() * 0.3) * k;
+        const P = bough(S.at(0.84 + rnd() * 0.14), a, e, len, r * 0.55, r * 0.3, 0.25, T.bark, 6);
+        const p = P[P.length - 1], Q = bough(p, a + (rnd() - 0.5) * 1.0, 0.7 + rnd() * 0.4, len * 0.55, r * 0.3, r * 0.12, 0.15, T.bark, 5);
+        ends.push([p, Q[Q.length - 1]]);
+      }
+      const OC = [T.leaf2, T.leaf, T.leaf3];
+      ends.forEach(([p, q], i) => {
+        cloud([q[0], q[1] + 0.12 * k, q[2]], [(0.5 + rnd() * 0.12) * k, (0.36 + rnd() * 0.08) * k, (0.5 + rnd() * 0.12) * k], 270, 0.072 * k, OC, { lump: 0.26, sun: 0xa8c060 });
+        cloud([(p[0] + q[0]) * 0.45, p[1] + 0.05 * k, (p[2] + q[2]) * 0.45], [0.36 * k, 0.26 * k, 0.36 * k], 120, 0.068 * k, OC, { lump: 0.26 });
+      });
+      cloud([0, H * 0.8, 0], [0.62 * k, 0.32 * k, 0.62 * k], 320, 0.072 * k, OC, { lump: 0.24, sun: 0xa8c060 });
+    } else if (sp === "birke") {
+      /* schlank, weiße Rinde mit schwarzen Querstrichen, Fuß dunkel und rissig; dünne, aufstrebende Äste, lichte Krone mit hängenden Zweigen */
+      const h = H * 0.9, r = 0.07 * k + 0.02;
+      const baseT = 0.14 + rnd() * 0.04, jag = j => baseT + ((j * 7 + v * 3) % 5) * 0.012;
+      const S = stem(r * 1.12, r * 0.38, h, { flare: 0.35, seg: 10, n: 10, lean: 0.09, wig: 0.012,
+        col: (i, j) => (i / 10 < jag(j)) ? ((j % 2) ? bri(T.mark, 1.4) : bri(T.base, 1 + (i % 2) * 0.1)) : bri(T.bark, 0.96 + ((i * 3 + j * 5) % 4) * 0.02) });
+      /* schwarze Querstriche (Lentizellen): dünne, waagrechte Striche mit spitzen Enden, dicht auf der Rinde; oben mehr */
+      for (let i = 0; i < 64; i++) {
+        const t = baseT + 0.03 + Math.pow(rnd(), 0.8) * 0.78, a0 = rnd() * 6.28, span = 0.3 + rnd() * 0.8, hh = (0.005 + rnd() * 0.008) * k, c = S.at(t), rr = S.rad(t) * 1.02 + 0.004;
+        const m = 4, pt = (a, y) => [c[0] + Math.cos(a) * rr, c[1] + y, c[2] + Math.sin(a) * rr];
+        for (let q = 0; q < m; q++) {
+          const a1 = a0 + span * q / m, a2 = a0 + span * (q + 1) / m, t1 = hh * Math.sin(PI * q / m) + 0.0015, t2 = hh * Math.sin(PI * (q + 1) / m) + 0.0015;
+          const nn = nrm([Math.cos((a1 + a2) / 2), 0, Math.sin((a1 + a2) / 2)]);
+          face(pt(a1, -t1), pt(a2, -t2), pt(a2, t2), T.mark, nn); face(pt(a1, -t1), pt(a2, t2), pt(a1, t1), T.mark, nn);
+        }
+      }
       const ends = [];
-      for (let i = 0; i < 5; i++) ends.push(branch(h * 0.9, i * 1.26 + v + rnd() * 0.4, 0.3 + rnd() * 0.3, (0.8 + rnd() * 0.3) * k, r * 0.5));
-      b.noise(0.15, () => {
-        b.ico(0.55 * k, T.leaf3, { y: H * 0.66, jitter: 0.3, flat: 0.7 });
-        ends.forEach((e, i) => {
-          [[e.p, 0.36], [e.q, 0.42]].forEach(([q, rr], j) => {
-            b.ico(rr * k, (i + j) % 2 ? T.leaf2 : T.leaf, { x: q[0] * 1.05, y: q[1] + 0.2 * k, z: q[2] * 1.05, jitter: 0.32, flat: 0.72, bottom: T.leaf3 });
-            b.ico(0.28 * k, T.leaf3, { x: q[0] * 0.8, y: q[1] - 0.02 * k, z: q[2] * 0.8, jitter: 0.32, flat: 0.7 });
-          });
-        });
-        crown(0, H * 0.74, 0, 1.0 * k, 0.42 * k, 1.0 * k, 12, 0.28, 0.4, 0.7);
+      for (let i = 0; i < 6; i++) {
+        const t = 0.42 + i * 0.09 + rnd() * 0.04, a = i * 2.3 + v + rnd() * 0.4;
+        const P = bough(S.at(t), a, 0.75 + rnd() * 0.35, (0.5 - i * 0.04) * k, 0.028 * k + 0.006, 0.008 * k + 0.003, 0.1, T.bark, 5);
+        ends.push(P[P.length - 1]);
+      }
+      const top = S.at(1); ends.push(top);
+      const BC = [T.leaf2, T.leaf, T.leaf3];
+      ends.forEach((e, i) => {
+        const rr = (0.34 - i * 0.012) * k;
+        cloud([e[0], e[1] + 0.05 * k, e[2]], [rr, rr * 1.2, rr], 210, 0.056 * k, BC, { lump: 0.36, sun: 0xd8e88a, coreK: 0.55, tilt: 0.8 });
+        /* hängende Zweige mit Blättchen */
+        for (let j = 0; j < 5; j++) {
+          const a = j * 1.26 + i + rnd() * 0.6, d0 = rr * (0.6 + rnd() * 0.4);
+          let p = [e[0] + Math.cos(a) * d0, e[1] - rr * 0.1, e[2] + Math.sin(a) * d0];
+          const L = (0.28 + rnd() * 0.22) * k, st = 6;
+          tube([p, add(p, [Math.cos(a) * L * 0.12, -L * 0.5, Math.sin(a) * L * 0.12]), add(p, [Math.cos(a) * L * 0.24, -L, Math.sin(a) * L * 0.24])], [0.006 * k, 0.004 * k, 0.002], 3, () => 0x5a4a3c, {});
+          for (let q = 0; q < st; q++) {
+            const p2 = add(p, [Math.cos(a) * L * 0.04, -L / st, Math.sin(a) * L * 0.04]);
+            const N = nrm([Math.cos(a), 0.2, Math.sin(a)]);
+            leafAt(add(p2, scl(ru(), 0.02 * k)), N, 0.048 * k, bri(BC[(q + j) % 3], 0.9 + rnd() * 0.18), 1.3, 0.9);
+            leafAt(add(p2, scl(ru(), 0.03 * k)), N, 0.042 * k, bri(BC[(q + j + 1) % 3], 0.9 + rnd() * 0.18), 1.3, 0.9);
+            p = p2;
+          }
+        }
       });
     } else if (sp === "kiefer") {
-      const h = H * 0.86, r = 0.1 * k + 0.02;
-      b.at({ rz: lean }, () => {
-        bole(r * 1.05, r * 0.55, h, { n: 8, seg: 8, flare: 0.5, col: t => t < 0.38 ? T.base : t < 0.52 ? mix(T.base, T.bark, (t - 0.38) / 0.14) : T.bark });
-        for (let i = 0; i < 3 + sz; i++) {       /* kurze Aststummel, kein loses Holz */
-          const a = i * 2.1 + v, y = h * (0.28 + rnd() * 0.38);
-          b.at({ y, ry: -a }, () => b.cone(0.022 * k + 0.01, 0.16 * k, 4, T.mark, { rz: -(PI / 2 - 0.25), nobot: true }));
-        }
-        b.noise(0.14, () => {
-          const n = 4 + Math.min(sz, 3);
-          for (let i = 0; i < n; i++) {
-            const a = i * 2.4 + v * 1.3, y = h * (0.7 + (i / n) * 0.25), e = 0.3 + rnd() * 0.3, len = (0.42 + rnd() * 0.25) * k;
-            const br = branch(y, a, e, len, 0.03 * k);
-            [[br.q, 0.34], [br.p, 0.26]].forEach(([q, rr], j) => {
-              b.ico((rr + rnd() * 0.08) * k, (i + j) % 2 ? T.leaf2 : T.leaf, { x: q[0], y: q[1] + 0.05 * k, z: q[2], jitter: 0.38, flat: 0.4 });
-              b.cone(0.045 * k + 0.01, 0.2 * k, 5, T.leaf3, { x: q[0] * 0.9, y: q[1] - 0.04 * k, z: q[2] * 0.9, rx: PI, nobot: true });
-            });
-          }
-          b.ico(0.42 * k, T.leaf, { y: h + 0.04 * k, jitter: 0.35, flat: 0.45 });
-          b.ico(0.28 * k, T.leaf2, { x: 0.14 * k, y: h + 0.18 * k, z: -0.1 * k, jitter: 0.35, flat: 0.45 });
-          b.ico(0.2 * k, T.leaf3, { x: -0.18 * k, y: h - 0.14 * k, z: 0.1 * k, jitter: 0.35, flat: 0.45 });
-        });
-      });
+      /* hoher, gerader Stamm: unten graubraun und grob gefurcht, oben fuchsrot und glatter; Krone nur oben – flache, schirmartige Nadelpolster */
+      const h = H * 0.84, r = 0.1 * k + 0.02;
+      const S = stem(r * 1.05, r * 0.5, h, { flare: 0.45, seg: 10, n: 10, lean: 0.08, wig: 0.012,
+        wob: (t, j) => t < 0.45 ? 1 + ((j % 2) ? -0.06 : 0.04) : 1,
+        col: (i, j) => { const t = i / 10; return t < 0.38 ? (j % 2 ? bri(T.mark, 0.75) : bri(T.base, 1 + (i % 2) * 0.08)) : t < 0.5 ? mix(T.base, T.bark, (t - 0.38) / 0.12) : bri(T.bark, 0.94 + ((i + j) % 3) * 0.05); } });
+      for (let i = 0; i < 3 + sz; i++) {       /* abgestorbene Aststummel am Schaft */
+        const t = 0.3 + rnd() * 0.35, a = rnd() * 6.28;
+        bough(S.at(t), a, -0.1 + rnd() * 0.3, 0.16 * k, 0.018 * k + 0.006, 0.006 * k, 0, T.mark, 4);
+      }
+      const NC = [T.leaf2, T.leaf, T.leaf3];
+      /* Nadelpolster: flache Wolke aus vielen schmalen, langen Nadelbüscheln, oben heller */
+      const tuft = (c, rx, ry, n) => cloud(c, [rx, ry, rx], n, 0.042 * k, NC, { lump: 0.18, el: 2.7, tilt: 0.85, upN: 0.35, coreK: 0.62, sun: 0x7aa070 });
+      const nb = 5 + Math.min(sz, 3);
+      for (let i = 0; i < nb; i++) {
+        const t = 0.68 + (i / nb) * 0.3, a = i * 2.4 + v * 1.3, e = 0.2 + rnd() * 0.45, len = (0.45 + rnd() * 0.3) * k * (1.1 - (i / nb) * 0.4);
+        const P = bough(S.at(t), a, e, len, 0.04 * k, 0.015 * k, 0.15, T.bark, 5), q = P[P.length - 1], m2 = P[2];
+        tuft([q[0], q[1] + 0.06 * k, q[2]], (0.32 + rnd() * 0.1) * k, 0.16 * k, 210);
+        if (i % 2 === 0) tuft([m2[0], m2[1] + 0.05 * k, m2[2]], 0.2 * k, 0.1 * k, 70);
+      }
+      const top = S.at(1);
+      tuft([top[0], top[1] + 0.1 * k, top[2]], 0.36 * k, 0.19 * k, 230);
+      tuft([top[0] + 0.12 * k, top[1] + 0.26 * k, top[2] - 0.08 * k], 0.2 * k, 0.12 * k, 80);
     } else {
-      /* Fichte: Quirle aus hängenden Astfächern um einen dunklen Kern; unten lang, oben kurz und aufrecht */
-      const r = 0.08 * k + 0.02, hb = 0.22 * k, ht = H - hb;
-      bole(r * 1.3, r * 0.85, hb + 0.5 * k, { n: 3, seg: 8, flare: 0.5 });
-      b.noise(0.12, () => {
-        const L = 9 + Math.min(3, sz);
-        for (let i = 0; i < L; i++) {
-          const f = i / L, y = hb + f * ht * 0.9, len = (0.85 * (1 - f) + 0.14) * k, e = -0.5 + 0.9 * f, nb = Math.max(5, Math.round(9 * (1 - f * 0.55)));
-          b.cone(len * 0.55, ht / L * 1.5, 8, T.leaf3, { y: y - 0.04 * k, a0: i * 0.7 + v, nobot: true });
-          for (let j = 0; j < nb; j++) {
-            const a = j * (2 * PI / nb) + i * 0.9 + v + rnd() * 0.25, c = (i + j) % 3 === 0 ? T.leaf : (i + j) % 3 === 1 ? T.leaf2 : T.leaf3;
-            b.at({ y: y + (rnd() - 0.5) * 0.05 * k, ry: -a }, () => b.cone((0.17 * (1 - f * 0.5) + 0.02) * k, len * (0.9 + rnd() * 0.2), 5, c, { rz: -(PI / 2 - e), sz: 1.7, nobot: true }));
+      /* Fichte: Quirle aus hängenden Ästen mit Nadelfransen um einen dunklen Kern; unten lang, oben kurz und aufrecht */
+      const r = 0.08 * k + 0.02, hb = 0.2 * k, ht = H - hb;
+      const S = stem(r * 1.3, r * 0.12, H * 0.88, { flare: 0.5, seg: 8, n: 6, lean: 0.02, wig: 0.004, col: (i, j) => j % 2 ? bri(T.mark, 0.95) : bri(T.bark, 0.95 + (i % 2) * 0.08) });
+      const FC = [T.leaf2, T.leaf, T.leaf3];
+      b.cone(0.4 * k, ht * 0.95, 9, bri(T.leaf3, 0.62), { y: hb + 0.05 * k, a0: v, nobot: true });
+      const L = 15 + Math.min(3, sz);
+      for (let i = 0; i < L; i++) {
+        const f = i / L, y = hb + f * (H * 0.86 - hb), len = (0.86 * Math.pow(1 - f, 0.95) + 0.08) * k, nb = Math.max(5, Math.round(8 * (1 - f * 0.4)));
+        for (let j = 0; j < nb; j++) {
+          const a = j * (2 * PI / nb) + i * 0.83 + v + (rnd() - 0.5) * 0.45, dir = [Math.cos(a), 0, Math.sin(a)];
+          const droop = (0.3 - f * 0.28) * (0.8 + rnd() * 0.4), ll = len * (0.82 + rnd() * 0.32), w = (0.15 + 0.08 * (1 - f)) * k;
+          const p0 = add(S.at(Math.min(1, y / (H * 0.88))), scl(dir, r * 0.5)), m = 4, Sp = [];
+          for (let q = 0; q <= m; q++) { const t = q / m; Sp.push(add(p0, [dir[0] * ll * t, (-droop * (1.7 * t - 0.9 * t * t) + 0.03 * t) * ll + (rnd() - 0.5) * 0.02 * k, dir[2] * ll * t])); }
+          if (f < 0.6) tube([Sp[0], Sp[2], Sp[4]], [0.014 * k, 0.009 * k, 0.003], 3, () => bri(T.bark, 0.8), {});
+          const sd = nrm(crs(dir, [0, 1, 0]));
+          const Nt = nrm([dir[0] * 0.6, 1, dir[2] * 0.6]), Nh = nrm([dir[0], -0.1, dir[2]]);
+          const c0 = bri(FC[(i + j) % 3], 0.8 + 0.25 * f + rnd() * 0.12);
+          for (const s of [1, -1]) {
+            /* hängender Nadelvorhang, Unterkante fein gezackt (je Abschnitt zwei Zacken), nach außen gewendet */
+            const E = Sp.map((P, q) => { const t = q / m, ww = w * (1 - 0.6 * t) * (0.8 + rnd() * 0.4); return add(add(add(P, scl(sd, s * ww * 0.75)), scl(dir, ww * 0.2)), [0, -ww * (0.6 + rnd() * 0.35), 0]); });
+            const o = nrm(add(add(dir, scl(sd, s * 0.9)), [0, -0.15, 0]));
+            for (let q = 0; q < m; q++) {
+              const c = bri(c0, 0.9 + 0.05 * q);
+              face(Sp[q], Sp[q + 1], E[q + 1], c, Nh, o); face(Sp[q], E[q + 1], E[q], bri(c, 0.95), Nh, o);
+              const M = scl(add(E[q], E[q + 1]), 0.5), dz = w * (1 - 0.6 * q / m);
+              face(E[q], M, add(scl(add(E[q], M), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.86), Nh, o);
+              face(M, E[q + 1], add(scl(add(M, E[q + 1]), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.9), Nh, o);
+              /* Oberseite: aufgestellte, hellere Nadeln */
+              const U = add(add(scl(add(Sp[q], Sp[q + 1]), 0.5), scl(sd, s * dz * 0.75)), [0, w * 0.22, 0]);
+              face(Sp[q], Sp[q + 1], U, bri(c, 1.14), Nt, nrm(add([0, 1, 0], scl(sd, s * 0.5))));
+            }
           }
+          /* helle Triebspitze */
+          const tp = Sp[m];
+          face(add(tp, scl(sd, 0.035 * k)), add(tp, scl(sd, -0.035 * k)), add(add(tp, scl(dir, 0.12 * k)), [0, 0.035 * k, 0]), bri(T.leaf2, 1.25), Nt, [0, 1, 0]);
         }
-        b.cone(0.06 * k + 0.02, 0.5 * k, 5, T.leaf2, { y: H - 0.46 * k });
-      });
+      }
+      /* Leittrieb */
+      const tp = S.at(1);
+      for (let j = 0; j < 6; j++) {
+        const a = j * 1.05 + v, d = [Math.cos(a), 0, Math.sin(a)], hh = (0.14 + (j % 2) * 0.06) * k;
+        face(add(tp, scl(d, 0.035 * k)), add(tp, scl([-d[2], 0, d[0]], 0.03 * k)), add(add(tp, scl(d, 0.012 * k)), [0, hh, 0]), bri(T.leaf2, 1.3), nrm([d[0], 0.5, d[2]]), d);
+        face(add(tp, scl(d, 0.035 * k)), add(tp, scl([d[2], 0, -d[0]], 0.03 * k)), add(add(tp, scl(d, 0.012 * k)), [0, hh, 0]), bri(T.leaf2, 1.15), nrm([d[0], 0.5, d[2]]), d);
+      }
     }
+    /* Grundkörper (Kerne, Kegel) aus b.v und die direkt geschriebenen Dreiecke zusammenlegen */
+    const out = new Float32Array(b.v.length + nF);
+    out.set(b.v); out.set(F.subarray(0, nF), b.v.length);
+    b.v = out;
     return b;
   }
   /* Kulissenbaum (nicht einzeln gezeichnet, Tausende im Wald): dieselbe Gestalt und Farbe wie
@@ -2129,7 +2355,8 @@ const FWM = (() => {
        hängen senkrecht nach unten bis zum Boden, die Füße stehen davor; der Körper bleibt in Standhöhe (dy = 0). Die Beine sind lang genug,
        um vor der Sofakante frei zu hängen. o.noHead – Kopf als eigenes Teil (head()), damit er sich drehen und nicken kann. */
     const dy = 0;
-    if (o.sit) {
+    if (o.noLegs) { /* v114: Beine als eigene Teile (Haftzelle: Beine baumeln) */ }
+    else if (o.sit) {
       [-0.07, 0.07].forEach(x => {
         b.box(0.09, 0.317, 0.1, pants, { x, z: 0.24 });
         b.box(0.09, 0.1, 0.35, pants, { x, y: 0.317, z: 0.115 });
@@ -2144,7 +2371,7 @@ const FWM = (() => {
     if (o.garb) garbParts(b, o);
     /* armR: false – der rechte Arm kommt als eigenes, bewegliches Teil dazu (arm()) */
     [-1, 1].forEach(s => {
-      if (s === 1 && o.armR === false) return;
+      if (o.noArms || (s === 1 && o.armR === false)) return;
       if (o.sit) bentArm(b, o, s, s * 0.19, 0.78);                                                  /* v112: sitzend – gebeugt, Hand auf dem Oberschenkel */
       else b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44 + dy, rz: s * 0.08 });
     });
