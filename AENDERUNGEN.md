@@ -1,5 +1,26 @@
 # Änderungen – kurz für den Kollegen
 
+## v112 (aufbauend auf v111) – Lager: Kleidung/Frisuren je Beruf, gebeugte Arme, Werkzeugplane, realistischer Pausenübergang
+
+**Aussehen (`woodmodels.js`, `team.js`):**
+- Arme im Sitzen jetzt **angewinkelt** (Oberarm, Unterarm nach vorn, leicht nach innen; `bentArm`, `armSit`) statt gestreckt.
+- Kleidung je Beruf (`STAFF_LOOK`): Landwirt Latzhose + Strohhut, Pfleger Weste ohne Hut, Hofmeister Schürze + Bäckermütze, Fahrer Warnweste + Kappe + Cargotaschen, Holzfäller Karohemd + Helm, Säger Lederschürze + Helm, Mechaniker Overall ohne Hut, Fischer Wathose + Strickmütze, Fischwirt Kittel + Schürze ohne Hut. Dazu Taschen (`cargo`, Schürzen/Westen) und Stiefel.
+- **Frisuren** (`hairdo`): wo kein Hut passt, sieht man Haare (verschiedene Schnitte/Farben/Bärte, Hauttöne). Annahme: „Friseur“ = Frisuren.
+
+**Lager (`camp.js`):**
+- Der Korbsessel ist entfernt.
+- **Werkzeugplane** (Segeltuch, 4 Randsteine) vor der Feuerstelle (`tarp`); je Sitzplatz eine eigene Ablagebahn (`LANES`, `toolSpot`).
+- Weg zum Platz: Tor → Standreihe → Werkzeug **ablegen** (Stopp „drop“, beugt sich) → Ring/Bogen → Hinsetzen. Weg zurück: aufstehen → Standreihe → Werkzeug **aufnehmen** (Stopp „pick“) → Tor.
+- Lücke im Randsteinkranz („Zugang“) vor der Plane.
+
+**Ablauf (`team.js`):**
+- `staffGo` kennt Stopps (Verweilzeit als Wegäquivalent `STAFF_STOP_W`=4), `staffRoutePos` liefert Verweilfortschritt; im Verweilen beugt sich die Figur (`rx`, `y`), Arm greift zur Plane.
+- Werkzeug in der Hand wird beim Ablegen unsichtbar und liegt als Bodenknoten (`gt`) auf der Plane; beim Aufnehmen umgekehrt.
+- Weiches Hinsetzen/Aufstehen (`staffSitDown`, `staffRise`).
+- Mittagsende: Arbeit startet unmittelbar (`s.work`/`s.jobEnd` gesetzt), kein langes Herumsitzen mehr.
+- `tests/camp.test.js`: Standreihe, neun eigene Bahnen, Stopps drop/pick (10 Tests grün; alle Suiten grün).
+- **Geprüft** im Software-Browser: Stopp je Mittagsjob, Werkzeuge liegen auf der Plane und sind danach wieder in der Hand, Beugen im Einzelbild, Outfits in der Reihe. **Nicht geprüft:** Aufstehen/Arme in Nahaufnahme, Gedränge bei allen 9 gleichzeitig, echtes Handy.
+
 ## v111 (aufbauend auf v110) – Wild auf der Wildwiese, saubere Bäume im Fernglas
 
 **Wild auf der Wiese (`hunt.js`, Abschnitt „Wild auf der Wildwiese“):**

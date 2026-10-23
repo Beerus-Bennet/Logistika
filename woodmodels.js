@@ -1897,14 +1897,39 @@ const FWM = (() => {
     b.box(0.03, 0.014, 0.02, blk, { y: 0.672, z: fz });                                     /* Steg */
     return b;
   }
-  /* Kopf mit Haar, Mütze/Hut/Helm, Bart und Augen; yo = Versatz in y (0 = Lage am Körper, −0,8 = um den Hals) */
+  /* Kopf mit Haar, Mütze/Hut/Helm, Bart und Augen; yo = Versatz in y (0 = Lage am Körper, −0,8 = um den Hals)
+     v112: Frisuren o.hs (kurz, scheitel, pferd, lang, dutt, locken, buzz, glatze) – nur ohne Kopfbedeckung sichtbar;
+     Kopfbedeckungen: hut, stroh, cap, baecker, strick, muetze, helm, helmf (Gehörschutz), helmg (Schutzbrille) */
+  function hairdo(b, o, yo) {
+    const h = o.hair, hs = o.hs || "kurz";
+    if (h == null || hs === "glatze") return;
+    const hc = mix(h, 0x000000, 0.12);
+    if (hs === "buzz") { b.sphere(0.123, 8, 4, h, { y: 0.94 + yo, sy: 0.78 }); return; }
+    b.sphere(0.127, 8, 4, h, { y: 0.95 + yo, sy: 0.82 });                                  /* Kappe */
+    if (hs === "scheitel") { b.box(0.16, 0.05, 0.2, hc, { x: 0.035, y: 1.0 + yo, z: 0.0, rz: -0.18 }); b.box(0.03, 0.07, 0.17, hc, { x: -0.115, y: 0.9 + yo }); }
+    else if (hs === "pferd") { b.sphere(0.05, 6, 4, hc, { y: 0.985 + yo, z: -0.115 }); b.box(0.05, 0.18, 0.05, h, { y: 0.8 + yo, z: -0.145, rx: 0.14 }); b.box(0.06, 0.02, 0.06, 0xd8332b, { y: 0.97 + yo, z: -0.125 }); }
+    else if (hs === "lang") { b.box(0.26, 0.3, 0.06, h, { y: 0.66 + yo, z: -0.1 }); [-1, 1].forEach(q => b.box(0.04, 0.2, 0.1, hc, { x: q * 0.12, y: 0.78 + yo, z: -0.04 })); }
+    else if (hs === "dutt") { b.sphere(0.065, 7, 5, hc, { y: 1.075 + yo, z: -0.03 }); b.box(0.03, 0.06, 0.1, h, { y: 0.9 + yo, z: -0.115 }); }
+    else if (hs === "locken") { for (let i = 0; i < 9; i++) { const q = i / 9 * 6.283, up = i % 3; b.sphere(0.052, 6, 4, i % 2 ? h : hc, { x: Math.cos(q) * 0.105, y: 0.98 + yo + up * 0.02, z: Math.sin(q) * 0.105 }); } b.sphere(0.06, 6, 4, h, { y: 1.05 + yo }); }
+    else { b.box(0.05, 0.05, 0.02, hc, { x: 0.05, y: 1.0 + yo, z: 0.12, rz: 0.4 }); }       /* kurz: Stirnsträhne */
+  }
   function headParts(b, o, yo) {
     const skin = o.skin || 0xf2c9a0, hat = o.hat;
     b.sphere(0.12, 8, 6, skin, { y: 0.92 + yo });
-    if (o.hair) b.sphere(0.125, 8, 4, o.hair, { y: 0.95 + yo, sy: 0.8 });
+    if (o.hair && !hat) hairdo(b, o, yo);
     if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 + yo }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 + yo }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 + yo }); }
+    if (hat === "stroh") { b.cyl(0.235, 0.235, 0.02, 12, 0xe2c870, { y: 1.0 + yo }); b.cyl(0.125, 0.115, 0.1, 10, 0xe8d080, { y: 1.01 + yo }); b.cyl(0.128, 0.128, 0.03, 10, 0x9a3a2a, { y: 1.03 + yo, notop: true, nobot: true }); }
+    if (hat === "cap") { b.sphere(0.13, 8, 4, o.hatC || 0x2f6fb0, { y: 1.0 + yo, sy: 0.62 }); b.box(0.17, 0.02, 0.12, mix(o.hatC || 0x2f6fb0, 0x000000, 0.2), { y: 1.0 + yo, z: 0.15, rx: 0.12 }); }
+    if (hat === "baecker") { b.cyl(0.125, 0.125, 0.07, 10, 0xf6f4ee, { y: 1.0 + yo }); b.sphere(0.15, 9, 5, 0xfaf8f2, { y: 1.06 + yo, sy: 0.55 }); }
+    if (hat === "strick") { b.sphere(0.13, 8, 4, o.hatC || 0x2b4a6a, { y: 0.995 + yo, sy: 0.72 }); b.cyl(0.133, 0.133, 0.035, 9, mix(o.hatC || 0x2b4a6a, 0xffffff, 0.2), { y: 0.985 + yo, notop: true, nobot: true }); b.sphere(0.03, 5, 4, 0xe8e8e0, { y: 1.1 + yo }); }
     if (hat === "muetze") b.sphere(0.13, 8, 4, 0x2f6fb0, { y: 1.0 + yo, sy: 0.6 });
-    if (hat === "helm") b.sphere(0.135, 8, 4, 0xf2a531, { y: 1.0 + yo, sy: 0.65 });
+    if (hat === "helm" || hat === "helmf" || hat === "helmg") {
+      const hc = o.hatC || (hat === "helmg" ? 0xf2c231 : 0xf2a531);
+      b.sphere(0.135, 8, 4, hc, { y: 1.0 + yo, sy: 0.65 });
+      b.box(0.2, 0.02, 0.05, mix(hc, 0x000000, 0.18), { y: 1.0 + yo, z: 0.12 });                       /* Krempe vorn */
+      if (hat === "helmf") [-1, 1].forEach(q => { b.box(0.05, 0.09, 0.08, 0x2f5a3a, { x: q * 0.135, y: 0.9 + yo }); b.box(0.01, 0.02, 0.07, 0x2a2a2e, { x: q * 0.07, y: 1.07 + yo }); });    /* Gehörschutz */
+      if (hat === "helmg") { b.box(0.19, 0.05, 0.03, 0x2a2e36, { y: 0.98 + yo, z: 0.125 }); [-1, 1].forEach(q => b.box(0.07, 0.035, 0.012, 0xcfe8f4, { x: q * 0.045, y: 0.985 + yo, z: 0.143 })); }   /* Schutzbrille */
+    }
     if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84 + yo, z: 0.1 });
     b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: 0.04, y: 0.95 + yo, z: 0.115 }); b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: -0.04, y: 0.95 + yo, z: 0.115 });
   }
@@ -1916,12 +1941,82 @@ const FWM = (() => {
     headParts(b, o, -0.8);
     return b;
   }
+  /* v112: Arbeitskleidung je Beruf. o.garb: bib (Latzhose/Wathose), apron (Schürze), leather (Lederschürze), vest (Weste mit Taschen),
+     hivis (Warnweste), plaid (Flanell mit Hosenträgern), overall (Overall mit Brusttasche und Werkzeuggürtel), kittel (Kittel mit blauer Schürze);
+     o.gc = Farbe des Kleidungsstücks, o.boots = Stiefelfarbe, o.cargo = aufgesetzte Hosentaschen */
+  function garbParts(b, o) {
+    const T = 0.095, gc = o.gc || 0x3f5f8f, dk = mix(gc, 0x000000, 0.25), lt = mix(gc, 0xffffff, 0.18);
+    switch (o.garb) {
+      case "bib": {
+        b.box(0.31, 0.11, 0.19, gc, { y: 0.4 });
+        b.box(0.2, 0.26, 0.02, gc, { y: 0.42, z: T });
+        [-1, 1].forEach(q => {
+          b.box(0.04, 0.2, 0.02, gc, { x: q * 0.07, y: 0.62, z: T });
+          b.box(0.04, 0.016, 0.2, gc, { x: q * 0.07, y: 0.8 });
+          b.box(0.04, 0.34, 0.016, gc, { x: q * 0.07, y: 0.46, z: -T });
+          b.box(0.026, 0.026, 0.01, 0xe8c04a, { x: q * 0.07, y: 0.66, z: T + 0.012 });
+        });
+        b.box(0.1, 0.075, 0.012, dk, { y: 0.52, z: T + 0.012 });
+        b.box(0.1, 0.012, 0.014, lt, { y: 0.585, z: T + 0.012 });
+        break;
+      }
+      case "apron": case "leather": case "kittel": {
+        const long = o.garb !== "apron", y0 = long ? 0.2 : 0.27;
+        if (o.garb === "kittel") { b.box(0.02, 0.37, 0.19, 0xcfd2d4, { y: 0.43 }); b.box(0.07, 0.06, 0.012, 0xe6e8ea, { x: 0.08, y: 0.64, z: T + 0.01 }); b.box(0.045, 0.012, 0.012, 0x3a78b8, { x: 0.08, y: 0.685, z: T + 0.012 }); }
+        b.box(0.25, 0.66 - y0, 0.022, gc, { y: y0, z: T + 0.006 });
+        [-1, 1].forEach(q => b.box(0.03, 0.17, 0.02, gc, { x: q * 0.065, y: 0.64, z: T }));
+        b.box(0.04, 0.016, 0.2, gc, { x: 0, y: 0.8 });
+        b.box(0.31, 0.03, 0.19, dk, { y: 0.46 });
+        b.box(0.15, 0.085, 0.014, dk, { y: y0 + 0.07, z: T + 0.02 });
+        if (o.garb === "leather") { b.box(0.18, 0.02, 0.015, lt, { y: y0 + 0.17, z: T + 0.02 }); b.box(0.02, 0.07, 0.02, 0xb8bcc4, { x: 0.11, y: 0.4, z: T }); }
+        break;
+      }
+      case "vest": case "hivis": {
+        [-1, 1].forEach(q => {
+          b.box(0.1, 0.36, 0.02, gc, { x: q * 0.085, y: 0.43, z: T });
+          b.box(0.08, 0.016, 0.2, gc, { x: q * 0.1, y: 0.8 });
+          b.box(0.07, 0.07, 0.016, dk, { x: q * 0.09, y: 0.46, z: T + 0.012 });
+          b.box(0.06, 0.06, 0.016, dk, { x: q * 0.09, y: 0.58, z: T + 0.012 });
+        });
+        b.box(0.31, 0.36, 0.02, gc, { y: 0.43, z: -T });
+        if (o.garb === "hivis") { b.box(0.312, 0.03, 0.192, 0xe8ebe0, { y: 0.52 }); b.box(0.312, 0.03, 0.192, 0xe8ebe0, { y: 0.66 }); }
+        else b.box(0.03, 0.06, 0.01, 0xe8d8a0, { x: -0.09, y: 0.7, z: T + 0.014 });
+        break;
+      }
+      case "plaid": {
+        const st = dk;
+        for (let i = -2; i <= 2; i++) b.box(0.022, 0.38, 0.19, st, { x: i * 0.06, y: 0.42 });
+        [0.5, 0.64].forEach(y => b.box(0.31, 0.024, 0.19, st, { y }));
+        [-1, 1].forEach(q => { b.box(0.032, 0.4, 0.192, 0x2a2a30, { x: q * 0.075, y: 0.42 }); b.box(0.034, 0.03, 0.01, 0xb8bcc4, { x: q * 0.075, y: 0.45, z: T + 0.014 }); });
+        break;
+      }
+      case "overall": {
+        b.box(0.1, 0.075, 0.014, dk, { x: 0.06, y: 0.6, z: T + 0.012 });
+        b.box(0.012, 0.09, 0.016, 0xc8ccd2, { x: 0.085, y: 0.63, z: T + 0.018 });                           /* Schraubenschlüssel in der Tasche */
+        b.box(0.31, 0.04, 0.19, 0x6a4a2a, { y: 0.45 });                                                       /* Werkzeuggürtel */
+        b.box(0.04, 0.03, 0.02, 0xd8b050, { y: 0.455, z: T + 0.01 });
+        [[-0.17, 0.03], [0.17, 0.03]].forEach(([x, z]) => { b.box(0.06, 0.1, 0.07, 0x7a5a3a, { x, y: 0.35, z }); });
+        b.box(0.02, 0.1, 0.02, 0xd8332b, { x: 0.17, y: 0.44, z: 0.03, rz: -0.2 });                           /* Schraubendreher */
+        [-1, 1].forEach(q => b.box(0.034, 0.016, 0.2, dk, { x: q * 0.08, y: 0.8 }));
+        break;
+      }
+    }
+    if (o.cargo) [-1, 1].forEach(q => b.box(0.022, 0.1, 0.075, mix(o.pants || 0x3a4a5a, 0x000000, 0.2), { x: q * 0.119, y: 0.2 }));
+  }
+  /* Arm gebeugt (sitzend): Oberarm hängt, Unterarm liegt locker auf dem Oberschenkel; s = −1 links, +1 rechts; x,y = Schulter */
+  function bentArm(b, o, s, x, y) {
+    const shirt = o.shirt || 0x3f78c8, skin = o.skin || 0xf2c9a0, up = 0.34, fl = 0.25, ex = 1.6, ry = -s * 0.45;
+    b.box(0.07, up, 0.08, shirt, { x, y: y - up, rz: s * 0.04 });
+    b.box(0.066, fl, 0.072, shirt, { x, y: y - up, rx: ex, ry });
+    const dz = Math.sin(ex) * fl, dx = Math.sin(ry) * dz, dy = Math.cos(ex) * fl;
+    b.box(0.062, 0.062, 0.074, skin, { x: x + dx * 1.04, y: y - up + dy - 0.02, z: dz * 0.98 + 0.02 * 0, ry });
+  }
   /* Leute: Förster, Nachbar, Bürgermeisterin, Mitarbeiter */
   function person(o) {
     o = o || {};
     G3.seed(4600 + (o.seed || 0));
     const b = new MB();
-    const shirt = o.shirt || 0x3f78c8, pants = o.pants || 0x3a4a5a, skin = o.skin || 0xf2c9a0, hat = o.hat;
+    const shirt = o.shirt || 0x3f78c8, pants = o.pants || 0x3a4a5a, skin = o.skin || 0xf2c9a0, hat = o.hat, boot = o.boots;
     /* v81: o.sit – sitzend. v95: Oberschenkel waagerecht in Höhe 0,317–0,417 (= Sitzhöhe 0,46 bei Maßstab 1,45), die Unterschenkel
        hängen senkrecht nach unten bis zum Boden, die Füße stehen davor; der Körper bleibt in Standhöhe (dy = 0). Die Beine sind lang genug,
        um vor der Sofakante frei zu hängen. o.noHead – Kopf als eigenes Teil (head()), damit er sich drehen und nicken kann. */
@@ -1930,12 +2025,21 @@ const FWM = (() => {
       [-0.07, 0.07].forEach(x => {
         b.box(0.09, 0.317, 0.1, pants, { x, z: 0.24 });
         b.box(0.09, 0.1, 0.35, pants, { x, y: 0.317, z: 0.115 });
-        b.box(0.095, 0.05, 0.15, 0x2a2a30, { x, z: 0.275 });
+        b.box(0.095, 0.05, 0.15, boot || 0x2a2a30, { x, z: 0.275 });
+        if (boot) b.box(0.098, 0.12, 0.108, boot, { x, z: 0.24 });
       });
-    } else [-0.07, 0.07].forEach(x => b.box(0.09, 0.42, 0.11, pants, { x }));
+    } else [-0.07, 0.07].forEach(x => {
+      b.box(0.09, 0.42, 0.11, pants, { x });
+      if (boot) { b.box(0.098, 0.11, 0.118, boot, { x }); b.box(0.098, 0.05, 0.06, boot, { x, z: 0.06 }); }
+    });
     b.box(0.3, 0.38, 0.18, shirt, { y: 0.42 + dy });
+    if (o.garb) garbParts(b, o);
     /* armR: false – der rechte Arm kommt als eigenes, bewegliches Teil dazu (arm()) */
-    [-1, 1].forEach(s => { if (s === 1 && o.armR === false) return; b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44 + dy, rz: s * 0.08 }); });
+    [-1, 1].forEach(s => {
+      if (s === 1 && o.armR === false) return;
+      if (o.sit) bentArm(b, o, s, s * 0.19, 0.78);                                                  /* v112: sitzend – gebeugt, Hand auf dem Oberschenkel */
+      else b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44 + dy, rz: s * 0.08 });
+    });
     if (!o.noHead) headParts(b, o, 0);
     if (o.tool === "axt" && !o.sit) { b.box(0.03, 0.5, 0.03, C.woodD, { x: 0.22, y: 0.3 + dy, rz: 0.2 }); b.box(0.12, 0.08, 0.02, 0x9aa6af, { x: 0.27, y: 0.55 + dy, rz: 0.2 }); }
     return b;
@@ -1946,6 +2050,12 @@ const FWM = (() => {
     const b = new MB();
     b.box(0.07, 0.34, 0.08, o.shirt || 0x3f78c8, { y: -0.34 });
     b.box(0.062, 0.065, 0.072, o.skin || 0xf2c9a0, { y: -0.4 });
+    return b;
+  }
+  /* v112: derselbe Arm gebeugt (sitzend) – Unterarm nach vorn auf den Oberschenkel */
+  function armSit(o) {
+    const b = new MB();
+    bentArm(b, o || {}, 1, 0, 0);
     return b;
   }
   /* Saison-Deko */
@@ -2467,6 +2577,6 @@ const FWM = (() => {
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
-    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, head, arm, cosDeco
+    deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, head, arm, armSit, cosDeco
   };
 })();

@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v112 – Lager: Outfits/Frisuren, gebeugte Arme, Werkzeugplane, Sessel entfernt (auf v111)
+
+| Teil | Datei |
+|---|---|
+| Plane, Ablagebahnen, Wege mit Stopps, Sessel entfernt | `camp.js` |
+| Frisuren, Kleidung, gebeugter Sitzarm (`armSit`) | `woodmodels.js` |
+| `STAFF_LOOK`, Stopps/Verweilen, Bodenwerkzeug, Hinsetzen/Aufstehen, Mittagsende | `team.js` |
+| Test Werkzeugplane | `tests/camp.test.js` |
+| Version 112 | `index.html`, `sw.js` |
+
 ## Stand v111 – Wild auf der Wildwiese (Karte ↔ Revier), Fernglas: Tiefenpuffer und Baumgeometrie (auf v110)
 
 | Teil | Datei |
