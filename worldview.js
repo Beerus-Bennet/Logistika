@@ -3087,7 +3087,7 @@ function worldStep(dt, time) {
   for (const [id, e] of WV.trees) {
     if (e.pop && !e.falling) {
       const k = Math.max(0, 1 - (now - e.pop) * 2.4);
-      const s = Math.sin((now - e.pop) * 20) * 0.06 * k, t = farmTree(id), b = (t && t.s) || 1;
+      const s = Math.sin((now - e.pop) * 20) * 0.06 * k, t = farmTree(id), b = (t && (t.st === "stump" && t.cut ? t.cut.sc : t.s)) || 1;   /* v116: Sägeschnitt-Stumpf behält seinen Maßstab */
       e.node.sy = b * (1 + s); e.node.sx = e.node.sz = b * (1 - s * 0.5);
       if (!k) { e.pop = 0; e.node.sx = e.node.sy = e.node.sz = b; }
     }

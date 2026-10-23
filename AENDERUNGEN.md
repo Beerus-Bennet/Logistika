@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v116 (aufbauend auf v115) – Baumstumpf wird beim Antippen nicht mehr riesig
+
+- **Ursache:** Beim Antippen wippt ein Baum kurz (`worldview.js`, Wipp-Schleife). Sie setzte danach den Maßstab auf `t.s` zurück. Ein per Säge gekappter Stumpf (`t.cut`) wird aber mit `t.cut.sc` skaliert, sein Mesh ist darauf gerechnet. Nach dem Tippen wuchs er daher auf den Maßstab des ganzen Baums.
+- **Fix:** Die Wippschleife nimmt für Sägeschnitt-Stümpfe `t.cut.sc` als Grundmaßstab. Nur `worldview.js`, `index.html`, `sw.js`.
+
 ## v115 (aufbauend auf v114) – Gefängnis-Feinschliff und saubere Entlassung
 
 - **Sitzpose:** Oberschenkel liegen jetzt flach auf der Matratze (Hüfte `SIT_Y = UM + 0.115`), Figur sitzt an der Bettkante (`SEAT` x −0,3 / z −0,93, leicht gedreht), Unterschenkel hängen an der Kante herunter, Hände ruhen auf den Oberschenkeln.

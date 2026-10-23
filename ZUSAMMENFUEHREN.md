@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v116 – Stumpf-Maßstab beim Antippen (auf v115)
+
+| Teil | Datei |
+|---|---|
+| Wippschleife: Grundmaßstab `t.cut.sc` bei Sägeschnitt-Stumpf | `worldview.js` |
+| Version 116 | `index.html`, `sw.js` |
+
 ## Stand v115 – Gefängnis-Feinschliff (auf v114)
 
 | Teil | Datei |
