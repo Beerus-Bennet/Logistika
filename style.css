@@ -3199,38 +3199,96 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 #huntUI .hu-range b{font-size:13px}
 #huntUI .hu-range small{font-size:11px;font-weight:700;opacity:.9}
 #huntUI.v-harvest .hu-top,#huntUI.v-back .hu-top{display:none}
-/* Medaille blendet groß auf, Lichtstrahlen drehen sich, dann wandert sie nach oben weg */
-#huntUI .hu-reveal{position:absolute;left:50%;top:12%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:4;opacity:0}
-#huntUI .hu-reveal.go{animation:huRev 1.1s cubic-bezier(.2,.9,.25,1.25) forwards}
-#huntUI .hu-reveal.away{animation:huRevOut .7s ease forwards}
-@keyframes huRev{0%{opacity:0;transform:translateX(-50%) scale(.3)}60%{opacity:1;transform:translateX(-50%) scale(1.12)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
-@keyframes huRevOut{from{opacity:1;transform:translateX(-50%) scale(1)}to{opacity:0;transform:translateX(-50%) translateY(-40px) scale(.55)}}
-#huntUI .hu-rays{position:absolute;left:50%;top:58px;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;
-  background:repeating-conic-gradient(from 0deg,rgba(255,241,196,.85) 0deg 7deg,transparent 7deg 22deg);
-  -webkit-mask:radial-gradient(circle,#000 18%,transparent 68%);mask:radial-gradient(circle,#000 18%,transparent 68%);opacity:.75;animation:huSpin 9s linear infinite}
-@keyframes huSpin{to{transform:rotate(360deg)}}
-#huntUI .hu-bigmedal{position:relative;width:112px;height:112px;border-radius:50%;display:grid;place-items:center;font-size:58px;line-height:1;
-  background:radial-gradient(circle at 35% 30%,#fff,var(--mc) 70%);border:4px solid var(--ink);box-shadow:0 0 0 5px rgba(255,255,255,.55),0 0 40px var(--mc),0 0 90px var(--mc)}
-#huntUI .hu-reveal b{position:relative;margin-top:8px;font-family:var(--display);font-size:30px;letter-spacing:1.5px;color:#fff;text-shadow:0 3px 0 var(--ink),0 0 18px rgba(0,0,0,.5)}
-#huntUI .hu-reveal small{position:relative;font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.7)}
-/* schmale Leisten: oben Name und Medaille, unten Werte und Knopf – die Mitte (das Stück) bleibt frei */
-#huntUI .hu-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);display:flex;align-items:center;gap:10px;padding:7px 14px 7px 8px;border-radius:999px;
-  background:rgba(13,27,42,.6);border:2px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:huDown .5s cubic-bezier(.2,.9,.3,1.2)}
-@keyframes huDown{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
-#huntUI .hu-bm{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:21px;background:radial-gradient(circle at 35% 30%,#fff,var(--mc));border:2.5px solid var(--ink);box-shadow:0 0 14px var(--mc)}
-#huntUI .hu-banner div{min-width:0}
-#huntUI .hu-banner small{display:block;font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:#bff0cf}
-#huntUI .hu-banner b{display:block;font-size:15.5px;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#huntUI .hu-banner em{display:block;font-style:normal;font-size:11.5px;font-weight:700;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#huntUI .hu-strip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:min(380px,calc(100% - 20px));padding:9px 10px 10px;border-radius:18px;
-  background:rgba(13,27,42,.58);border:2px solid rgba(255,255,255,.2);color:#fff;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:huUp .5s cubic-bezier(.2,.9,.3,1.2);pointer-events:auto}
-@keyframes huUp{from{opacity:0;transform:translate(-50%,18px)}to{opacity:1;transform:translate(-50%,0)}}
-#huntUI .hu-chips{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px}
-#huntUI .hu-chips span{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
-#huntUI .hu-chips small{font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;opacity:.75}
-#huntUI .hu-chips b{font-size:12.5px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-#huntUI .hu-strip .hu-note{color:#ffe2a6;margin:0 2px 7px;font-size:11.5px}
-#huntUI .hu-strip .hu-keep{width:100%;justify-content:center}
+/* v135: Jagderfolg – Überschrift oben, Karte unten, die Mitte gehört dem erlegten Stück (hunt.js: showWin, showCard, showSaved).
+   Statt großer drehender Medaille mit Strahlen über dem Bild: ruhige Überschrift, leichte Vignette, Karte im Logistika-Stil. */
+#huntUI .hu-vig{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .9s ease;
+  background:radial-gradient(ellipse 78% 64% at 50% 42%,rgba(0,0,0,0) 56%,rgba(8,14,10,.36) 100%)}
+#huntUI .hu-vig.on{opacity:1}
+#huntUI .hu-win{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;flex-direction:column;align-items:center;text-align:center;pointer-events:none;
+  padding:12px 16px 26px;background:linear-gradient(rgba(13,27,42,.52),rgba(13,27,42,.2) 62%,rgba(13,27,42,0))}
+#huntUI .hu-win small{font-size:11.5px;font-weight:900;letter-spacing:2.4px;text-transform:uppercase;color:var(--hu-gold);text-shadow:0 1px 0 var(--ink),0 0 10px rgba(0,0,0,.45)}
+#huntUI .hu-win b{font-family:var(--display);font-size:clamp(26px,7.4vw,36px);line-height:1.06;letter-spacing:1px;color:#fff;margin-top:2px;max-width:100%;
+  text-shadow:0 3px 0 var(--ink),0 0 18px rgba(0,0,0,.45)}
+#huntUI .hu-win em{font-style:normal;font-size:13px;font-weight:800;color:#fff;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.75)}
+#huntUI .hu-win.go small{animation:huWin1 .45s ease both}
+#huntUI .hu-win.go b{animation:huWin2 .6s cubic-bezier(.2,.9,.3,1.15) .08s both}
+#huntUI .hu-win.go em{animation:huWin1 .45s ease .32s both}
+@keyframes huWin1{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes huWin2{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
+#huntUI .hu-card2{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:min(380px,calc(100% - 20px));z-index:3;pointer-events:auto;
+  background:var(--hu-cream);border:var(--line);border-radius:18px;box-shadow:var(--shadow);padding:11px 12px 12px;animation:huUp2 .45s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes huUp2{from{opacity:0;transform:translate(-50%,26px)}to{opacity:1;transform:translate(-50%,0)}}
+#huntUI .hu-ct{display:flex;align-items:center;gap:10px}
+#huntUI .hu-md{position:relative;flex:none;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;border:3px solid var(--ink);overflow:hidden;
+  background:radial-gradient(circle at 34% 28%,#fff 0,var(--mc) 62%);box-shadow:0 0 0 3px #fff,0 0 0 5px var(--mc);animation:huPop .6s cubic-bezier(.2,.9,.3,1.3) .1s both}
+#huntUI .hu-md i{font-style:normal;font-size:27px;line-height:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}
+#huntUI .hu-md::after{content:"";position:absolute;inset:-25%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.85) 50%,transparent 60%);
+  transform:translateX(-120%);animation:huShine 1.1s ease .6s 1 both}
+#huntUI .hu-md.m1::after{display:none}
+#huntUI .hu-md.m4::after{animation-iteration-count:2}
+@keyframes huShine{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
+@keyframes huPop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.1);opacity:1}100%{transform:scale(1);opacity:1}}
+#huntUI .hu-cn{flex:1;min-width:0}
+#huntUI .hu-cn small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--green-d)}
+#huntUI .hu-cn b{display:block;font-size:18px;font-weight:900;line-height:1.12}
+#huntUI .hu-cn em{display:block;font-style:normal;font-size:12px;font-weight:700;color:#4d5966;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#huntUI .hu-val{flex:none;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+#huntUI .hu-val small{font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#6b7682}
+#huntUI .hu-val b{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+#huntUI .hu-feat{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px}
+#huntUI .hu-feat span{font-size:11.5px;font-weight:800;padding:2px 10px;border-radius:999px;background:#fff1c7;border:2px solid var(--ink);color:#5c3f00;box-shadow:0 2px 0 var(--ink);animation:huWin2 .45s cubic-bezier(.2,.9,.3,1.3) .7s both}
+#huntUI .hu-q{display:flex;align-items:center;gap:10px;margin:9px 0 0}
+#huntUI .hu-q>span{flex:none;font-size:11.5px;font-weight:800;color:#4d5966}
+#huntUI .hu-q>span b{font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+#huntUI .hu-q>span em{font-style:normal;font-size:10.5px;color:var(--green-d);margin-left:4px}
+#huntUI .hu-qb{position:relative;flex:1;height:10px;border-radius:6px;background:#efe6d2;overflow:visible;border:2px solid var(--ink);margin-bottom:12px}
+#huntUI .hu-qb>b{position:absolute;left:0;top:0;bottom:0;width:var(--q);border-radius:4px;background:var(--mc);animation:huBar .9s cubic-bezier(.2,.8,.3,1) .35s both}
+@keyframes huBar{from{width:0}}
+#huntUI .hu-qb u{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--ink);opacity:.5}
+#huntUI .hu-qb u s{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-decoration:none;font-size:10px;line-height:1}
+#huntUI .hu-c3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:9px 0 2px;background:#fff;border:2px solid #e3d9c2;border-radius:12px;padding:4px 0}
+#huntUI .hu-c3 span{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;padding:0 4px}
+#huntUI .hu-c3 span+span{border-left:1.5px solid #ece3cf}
+#huntUI .hu-c3 small{font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#6b7682}
+#huntUI .hu-c3 b{font-size:12.5px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+#huntUI .hu-ct{cursor:pointer}
+#huntUI .hu-tg{display:block;width:0;height:0;margin-top:4px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #8a94a0;transition:transform .2s ease}
+#huntUI .hu-card2.hu-min .hu-tg{transform:rotate(180deg)}
+#huntUI .hu-card2.hu-min .hu-more{display:none}
+#huntUI .hu-card2.hu-min .hu-keep{margin-top:10px}
+#huntUI .hu-more+.hu-keep{margin-top:10px}
+#huntUI .hu-card2 .hu-note{margin:-2px 2px 8px;font-size:11.5px}
+#huntUI .hu-card2 .hu-keep,#huntUI .hu-sb .btn{display:block;width:100%;text-align:center;font-size:15px;padding:11px 12px}
+#huntUI .hu-card2 .hu-keep{background:#ffd23f;color:var(--ink)}
+#huntUI .hu-card2 button:disabled{filter:grayscale(.5);opacity:.75;pointer-events:none}
+#huntUI .hu-drag{position:absolute;right:14px;bottom:40%;z-index:4;pointer-events:none;padding:5px 12px;border-radius:999px;
+  background:rgba(13,27,42,.55);color:#fff;font-size:11.5px;font-weight:800;white-space:nowrap;transition:opacity .6s ease;animation:huWin1 .4s ease .8s both}
+#huntUI .hu-drag.off{opacity:0;animation:none}
+/* Trophäe gesichert: das Präparat genau dieses Stücks, kurzer Glanz, dann weiter */
+#huntUI .hu-card2.saved{animation:huSaved .4s cubic-bezier(.2,.9,.3,1.25)}
+@keyframes huSaved{from{transform:translate(-50%,0) scale(.95)}to{transform:translate(-50%,0) scale(1)}}
+#huntUI .hu-sv{display:flex;align-items:center;gap:12px}
+#huntUI .hu-svimg{position:relative;flex:none;width:92px;height:92px;border-radius:16px;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 38%,#fff 0,#efe1bf 75%);border:3px solid var(--ink);box-shadow:0 0 0 3px var(--mc);animation:huPop .55s cubic-bezier(.2,.9,.3,1.3) both}
+#huntUI .hu-svimg .ic{width:100%;height:100%;display:grid;place-items:center;font-size:44px}
+#huntUI .hu-svimg .ic img{width:96%;height:96%;object-fit:contain}
+#huntUI .hu-svimg em{position:absolute;right:3px;bottom:2px;font-style:normal;font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+#huntUI .hu-shine{position:absolute;inset:-30%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.9) 50%,transparent 58%);transform:translateX(-120%);animation:huShine 1s ease .35s both;pointer-events:none}
+#huntUI .hu-svt{flex:1;min-width:0}
+#huntUI .hu-svt small{display:block;font-size:12px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:var(--green-d)}
+#huntUI .hu-card2.sold .hu-svt small{color:#8a5a00}
+#huntUI .hu-svt b{display:block;font-size:17px;font-weight:900;line-height:1.15}
+#huntUI .hu-svt em{display:block;font-style:normal;font-size:12px;font-weight:700;color:#4d5966}
+#huntUI .hu-svt span{display:block;font-size:11.5px;font-weight:800;color:#6a4a00;margin-top:3px}
+#huntUI .hu-sb{display:flex;gap:8px;margin-top:12px}
+#huntUI .hu-sb .hu-wall{flex:1;font-size:13px}
+#huntUI .hu-sb .hu-go{flex:1.35;background:var(--green)}
+@media (max-height:700px){#huntUI .hu-win{padding:7px 14px 14px}#huntUI .hu-win b{font-size:24px}#huntUI .hu-win em{font-size:12px;margin-top:2px}#huntUI .hu-win small{font-size:10.5px}}
+/* breite Bildschirme (Desktop, Tablet quer): Karte rechts als Spalte, Überschrift über der freien linken Fläche – das Stück bleibt groß */
+@media (min-width:700px) and (min-aspect-ratio:5/4){#huntUI .hu-card2{left:auto;right:14px;bottom:14px;transform:none;width:340px;animation-name:huSideIn}
+  #huntUI .hu-card2.saved{animation-name:huSideIn}#huntUI .hu-win{padding-right:368px}#huntUI .hu-drag{right:14px}}
+@keyframes huSideIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#huntUI .hu-win.go *,#huntUI .hu-card2,#huntUI .hu-md,#huntUI .hu-md::after,#huntUI .hu-feat span,#huntUI .hu-qb>b,#huntUI .hu-svimg,#huntUI .hu-shine,#huntUI .hu-drag{animation:none!important}#huntUI .hu-vig{transition:none}}
 /* Bauplatz */
 .hu-needs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px;margin:4px 0 12px}
 .hu-need{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 6px 8px;border-radius:12px;background:#fff;border:2px solid #d6dee7;text-align:center}
@@ -3239,7 +3297,6 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 .hu-need .hu-ni img{width:34px;height:34px}
 .hu-need b{font-size:12px;font-weight:800;line-height:1.2}
 .hu-need small{font-size:10.5px;font-weight:700;opacity:.7}
-@media (prefers-reduced-motion:reduce){#huntUI .hu-rays{animation:none}#huntUI .hu-reveal.go,#huntUI .hu-banner,#huntUI .hu-strip{animation-duration:.01s}}
 
 /* ================= v114: Haftzelle (3D-Wartebild) ================= */
 #report.jl-on{padding:0;background:#07090d;overflow:hidden;display:block}

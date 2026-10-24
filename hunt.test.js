@@ -153,9 +153,44 @@ test("Trophäen (v119): 12 Schilder, ganze Dreiecke, keine NaN, Stufen untersche
     assert.ok(b.v.length % 27 === 0 && b.v.length > 0, k + m + " ganze Dreiecke");
     for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(k + m + " NaN bei " + i);
     sizes[k + m] = b.v.length / 27;
-    assert.ok(sizes[k + m] > 150 && sizes[k + m] < 4000, k + m + " Dreiecke " + sizes[k + m]);
+    assert.ok(sizes[k + m] > 150 && sizes[k + m] < 5600, k + m + " Dreiecke " + sizes[k + m]);          /* v135: Grenze auf den Stand seit v120 (Hirsch ~4 600–5 000) */
   }));
   assert.ok(sizes.hirsch4 > sizes.hirsch1, "mehr Enden bei höherer Stufe");
   assert.ok(sizes.hirsch1 !== sizes.keiler1 && sizes.keiler1 !== sizes.fasan1, "Arten verschieden");
+});
+/* v135: neue Modelle (Keiler, Fasan) und Liegepose aus den Modellpunkten */
+const C4 = { console, Math, Object, Array, JSON, Map, Set, Float32Array, Uint8Array, Uint16Array, Int32Array, Date, performance: { now: () => Date.now() }, navigator: { userAgent: "node" }, localStorage: { getItem: () => null, setItem() {} } };
+C4.window = C4; C4.self = C4; vm.createContext(C4);
+vm.runInContext("function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); } var FITEMS = {};", C4);
+["gl3d.js", "farmmodels.js", "woodmodels.js", "hunt.js"].forEach(f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n;this.__l = 1;", C4, { filename: f }));
+vm.runInContext("this.HUNT = HUNT;", C4);
+const H4 = C4.HUNT, M4 = H4._m;
+const whole = (b, name) => { assert.ok(b.v.length % 27 === 0 && b.v.length > 0, name + " ganze Dreiecke"); for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(name + " NaN bei " + i); return b.v.length / 27; };
+test("Modelle v135: Keiler und Fasan ganz, ohne NaN, im Budget", () => {
+  const T = { boarBody: whole(M4.boarBody(), "boarBody"), boarHead: whole(M4.boarHead(0.6, 18), "boarHead"), boarUpperV: whole(M4.boarUpper(true), "boarUpper"), boarUpperH: whole(M4.boarUpper(false), "boarUpperH"),
+    boarLower: whole(M4.boarLower(), "boarLower"), boarLeg: whole(M4.boarLeg(true), "boarLeg"), phBody: whole(M4.phBody(), "phBody"), phHead: whole(M4.phHead(), "phHead"), phLeg: whole(M4.phLeg(), "phLeg") };
+  const one = T.boarBody + T.boarHead + 2 * (T.boarUpperV + T.boarUpperH) + 4 * T.boarLower;
+  assert.ok(one < 9000, "Keiler gesamt " + one);
+  assert.ok(T.phBody + T.phHead + 2 * T.phLeg < 4500, "Fasan gesamt");
+});
+test("Keiler v135: Waffen wachsen mit den gespeicherten Zentimetern", () => {
+  /* gleiche Eckenzahl – es unterscheiden sich nur die Waffen; deren Ausdehnung muss mit den Zentimetern wachsen */
+  const a = M4.boarHead(0.6, 8).v, b = M4.boarHead(0.6, 24).v, pa = [], pb = [];
+  assert.strictEqual(a.length, b.length, "gleiche Bauweise");
+  for (let i = 0; i < a.length; i += 9) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 1e-7) { pa.push([a[i], a[i + 1], a[i + 2]]); pb.push([b[i], b[i + 1], b[i + 2]]); }
+  const diag = P => { const mn = [9, 9, 9], mx = [-9, -9, -9]; P.forEach(p => { for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], p[k]); mx[k] = Math.max(mx[k], p[k]); } }); return Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]); };
+  assert.ok(pa.length > 20, "Waffen-Ecken " + pa.length);
+  assert.ok(diag(pb) > diag(pa) * 1.15, "24 cm größer als 8 cm: " + diag(pb).toFixed(3) + " / " + diag(pa).toFixed(3));
+});
+test("Liegepose v135: Rumpf auf dem Boden, nichts darunter, Läufe liegen auf, immer gleich", () => {
+  ["keiler", "hirsch", "fasan"].forEach(k => [-1, 1].forEach(side => [0.2, 0.9].forEach(sc => {
+    const A = { k, side, ry: 0.7, s: 1 + sc * 0.2, score: sc, T: H4.traits(k, sc), vr: 2 };
+    const B = Object.assign({}, A), d = H4._dead(A), d2 = H4._dead(B);
+    assert.ok(Math.abs(d.mn[1]) < 0.012, k + " tiefster Punkt " + d.mn[1].toFixed(3));
+    d.pts.forEach(p => assert.ok(p[1] > -0.012, k + " Punkt unter dem Boden " + p[1].toFixed(3)));
+    assert.ok(d.mx[1] < (k === "hirsch" ? 1.9 : k === "keiler" ? 0.7 : 0.45), k + " liegt flach (Höhe " + d.mx[1].toFixed(2) + ")");      /* Hirsch: Geweih ragt auf */
+    assert.strictEqual(JSON.stringify(d.legs), JSON.stringify(d2.legs), k + " gleiche Pose");
+    d.legs.forEach(l => assert.ok(Math.abs(l[2]) <= 1.45 + 1e-9, k + " Lauf gesenkt " + l[2]));
+  })));
 });
 console.log(n + " Tests bestanden");
