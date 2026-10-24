@@ -21,13 +21,13 @@
      Vorhalten), Geschossflugzeit (laufendes Wild vorhalten).
    • Nur Herz, Lunge, Kopf oder Träger erlegen; Körper- und Laufschüsse:
      das Stück flüchtet krank in den Wald – keine Trophäe.
-   • Einsammeln: Überblendung, die Kamera steht in der Totalen und schwenkt um
-     das Stück, goldene Funken, die Medaille blendet groß auf, dann schmale
-     Leisten oben und unten – die Mitte bleibt frei.
+   • Bergen (v135, siehe „Bergen“ unten): kurze Abblende, die Kamera steht nah am liegenden Stück, Überschrift
+     „Waidmannsheil!“ oben, Karte mit Medaille und Werten unten, „Trophäe sichern“ zeigt das Präparat genau dieses Stücks.
 
    v120 – Hirsch, Keiler und Trophäen neu: organische Modelle (skin über Querschnitts-Ringe, Eckfarben, weiche Normalen,
    gleiches Skelett wie vorher), Geweih nach Enden/Güte/Variante, Trophäen als Kopfpräparate je erlegtem Stück
    (S.farm.hunt.coll), Trophäenwand mit großen Bildern und Drehansicht im Lager.
+   v135 – Keiler und Fasan neu modelliert, Liegepose aus den Modellpunkten (calcDead), Bergung neu (Kamera, Liegeplatz, Karte).
 
    Begriffe für Three.js-Kenner: Szene = FV.R.nodes, Mesh = fmesh() + fnode(),
    Gruppe/Bone = Kind-Knoten (R.addChild), InstancedMesh = R.instGroup,
@@ -190,8 +190,6 @@ const HUNT = (() => {
   /* Farben */
   const DC = { coat: 0x9a5f34, coatD: 0x7a4626, belly: 0xc49a6a, rump: 0xead9bd, neck: 0x6b4224, hoof: 0x2a221c, nose: 0x2a2220, ant: 0x8c7454, antT: 0xeee2c6, earIn: 0xd6a98a };
   const BC = { coat: 0x5a4a3d, coatD: 0x473a30, ridge: 0x2b231d, snout: 0x9c7d70, tusk: 0xf3ecd9, hoof: 0x1d1814, belly: 0x3d3229 };
-  const FC_ = { body: 0xb5602c, bodyD: 0x8c4520, neck: 0x1c4c57, head: 0x173b45, red: 0xd2281e, ring: 0xf4f1e8, beak: 0xdcc58b, tail: 0x9b6a3b, tailD: 0x5e3e22, wing: 0xa27648, leg: 0x7d7468 };
-  const FCc = FC_;
 
   /* ======================= v120: organische Tiermodelle ======================
      Warum neu: Der Hirsch bestand aus Kugeln, Quadern und Stäben (Kastenkopf, Stockbeine, Stockgeweih). Jetzt ist jedes
@@ -485,107 +483,234 @@ const HUNT = (() => {
     void front;
     return b;
   }
-  /* Keiler v120: gleiche Bauweise wie der Hirsch – keilförmiger Rumpf mit hoher Schulter und Borstenkamm, Kopf mit langem
-     Gebrech (Rüssel), heller Rüsselscheibe, kleinen Lichtern, spitzen Tellern (Ohren) und gebogenen Waffen (Gewehre unten,
-     Haderer oben). Die Waffenlänge folgt den gespeicherten Zentimetern – dasselbe Stück hat im Revier und an der Wand dieselben. */
-  const BOAR = { hair: 0x3d322a, hairL: 0x6f5e4c, ridge: 0x231c17, belly: 0x2f2620, cheek: 0x55473a, snout: 0x4e4037, disc: 0x7d6559, discD: 0x3e2d26,
-    lip: 0x2a201a, hoof: 0x17120f, tusk: 0xf1e9d4, tuskB: 0xd6c6a0, eye: 0x120c08 };
-  const boarHair = (p, sv, k) => { const g = hsh(p[0] * 1.3, p[1] * 1.7, p[2] * 1.9); return mulc(mixc(BOAR.hair, BOAR.hairL, g * g * (k == null ? 0.6 : k)), 0.94 + 0.12 * hsh(p[2], p[0], p[1])); };
-  const BOAR_T = [[-0.52, 0.55, 0.45, 0.03], [-0.49, 0.63, 0.37, 0.12], [-0.4, 0.69, 0.31, 0.18], [-0.22, 0.73, 0.3, 0.2], [0.0, 0.77, 0.3, 0.212],
-    [0.18, 0.815, 0.31, 0.214], [0.31, 0.835, 0.33, 0.198], [0.41, 0.8, 0.37, 0.172], [0.49, 0.71, 0.43, 0.13], [0.535, 0.63, 0.49, 0.06], [0.55, 0.58, 0.52, 0.02]];
+  /* Keiler v135 – neu modelliert, gleiche Bauweise (Haut über Querschnitts-Ringe, Eckfarben, weiche Normalen), gleiche Trefferzonen.
+     Vorher: fast schwarze Wurst mit waagerechtem Rücken, Säulenbeinen ohne Gelenk, runden Scheibenohren und Waffen, die wie
+     weiße Stacheln aus der Backe nach unten standen. Jetzt:
+     • Rumpf keilförmig: hoher Widerrist mit Buckel, tiefe Brust, aufgezogener Bauch, kleine kompakte Keulen, seitlich schmal
+     • Borstenkamm (einzelne Borstenbüschel) vom Haupt bis über den Rücken – liest sich auch auf 150 m als Wildschwein
+     • Haupt lang und keilförmig, Rüsselscheibe, kleine hoch sitzende Lichter unter einem Brauenwulst, spitze aufrechte Teller,
+       heller Backenbart; Gewehre (unten) wachsen am Gebrech nach außen, oben und hinten, die Haderer (oben) kurz nach außen –
+       ihre sichtbare Länge folgt den gespeicherten Zentimetern
+     • Läufe mit Gelenk (Vorderfußwurzel bzw. Sprunggelenk), schlanke Röhren, gespaltene Schalen mit Afterklauen
+     • Schwarte graubraun mit hellen Grannenspitzen statt fast schwarz: Flanke heller, Rücken und Bauch dunkler */
+  const BOAR = { coat: 0x66543f, coatL: 0xa39078, coatD: 0x352b22, ridge: 0x221a14, belly: 0x44382d, leg: 0x33291f, legD: 0x211a15,
+    beard: 0x9a8c7b, snout: 0x4d4037, disc: 0x93766a, discD: 0x2b201c, lip: 0x261d17, hoof: 0x17120f, hoofL: 0x433830,
+    tusk: 0xf4eedf, tuskB: 0xc8b083, eye: 0x120c08, earIn: 0x2e241d };
+  /* Schwarte: dunkler Grund, graubraune Grannenspitzen unregelmäßig verteilt (kein Muster), Rücken und Bauch dunkler, Flanke heller */
+  function boarCoat(p, sv, k) {
+    const g = hsh(p[0] * 3.1, p[1] * 2.3, p[2] * 2.9), g2 = hsh(p[2] * 1.7 + 3, p[0] * 4.1, p[1] * 3.3);
+    let c = mixc(BOAR.coat, BOAR.coatD, ss((sv - 0.5) / 0.42));
+    c = mixc(c, BOAR.belly, ss((-sv - 0.3) / 0.5));
+    c = mixc(c, BOAR.coatL, g * g * (k == null ? 0.7 : k) * (1 - ss((sv - 0.6) / 0.3)));
+    return mulc(c, (0.93 + 0.14 * g2) * fur(p, 1.4));
+  }
+  const boarHair = (p, sv, k) => boarCoat(p, sv || 0, k);
+  const BOAR_T = [[-0.535, 0.555, 0.475, 0.03], [-0.51, 0.615, 0.4, 0.1], [-0.455, 0.65, 0.33, 0.146], [-0.37, 0.668, 0.305, 0.166], [-0.29, 0.678, 0.345, 0.17], [-0.2, 0.69, 0.39, 0.172],
+    [-0.06, 0.735, 0.37, 0.19], [0.08, 0.805, 0.322, 0.205], [0.18, 0.86, 0.29, 0.213], [0.27, 0.874, 0.288, 0.212], [0.36, 0.83, 0.318, 0.2], [0.44, 0.752, 0.356, 0.18],
+    [0.49, 0.68, 0.392, 0.15], [0.52, 0.61, 0.43, 0.09], [0.535, 0.56, 0.46, 0.03]];
+  const crestH = z => ss((z + 0.34) / 0.42) * (1 - ss((z - 0.38) / 0.12));        /* Borstenkamm: über dem Widerrist am höchsten */
+  /* Borstenbüschel: kurzer Kegel, unten im Fell verankert, Spitze heller */
+  function bristle(b, p, d, l, r, c0, c1) {
+    const n = v3n(d), q1 = [p[0] + n[0] * l * 0.55, p[1] + n[1] * l * 0.55, p[2] + n[2] * l * 0.55], q2 = [p[0] + n[0] * l, p[1] + n[1] * l, p[2] + n[2] * l];
+    tube(b, [p, q1, q2], [r, r * 0.62, r * 0.12], [RGB(c0), mixc(c0, c1, 0.4), RGB(c1)], 4, { tip: true });
+  }
   function boarBody() {
     G3.seed(5201);
-    const b = MB(), P = [], C = [], m = 20, nZ = 24;
+    const b = MB(), P = [], C = [], m = 24, nZ = 34;
     for (let i = 0; i <= nZ; i++) {
       const u = i / nZ, z = lerp(BOAR_T[0][0], BOAR_T[BOAR_T.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45), [top, bot, hw] = prof(BOAR_T, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
-      const crest = ss((z + 0.25) / 0.5) * (1 - ss((z - 0.45) / 0.08));
-      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.2, (j, cu, sv) => [1 - 0.22 * Math.pow(Math.max(0, sv), 2), 1 + (sv > 0.9 ? 0.07 * crest * (0.6 + 0.8 * hsh(i, j, 7)) : 0) + (Math.abs(sv) < 0.95 ? 0.025 * (hsh(i, j, 9) - 0.5) : 0)]);
+      const sh = 1 - ss(Math.abs(z - 0.2) / 0.15), ham = 1 - ss(Math.abs(z + 0.38) / 0.14);
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.25, (j, cu, sv) => [1 - 0.26 * Math.pow(Math.max(0, sv), 2) - 0.06 * Math.pow(Math.max(0, -sv), 3)
+        + 0.07 * sh * Math.max(0, 1 - Math.abs(sv - 0.05) * 1.6) + 0.08 * ham * Math.max(0, 1 - Math.abs(sv + 0.05) * 1.5), 1 + (Math.abs(sv) < 0.95 ? 0.02 * (hsh(i, j, 9) - 0.5) : 0)]);
       P.push(R);
-      C.push(R.map((p, j) => { const sv = Math.sin((j / m) * Math.PI * 2); let c = boarHair(p, sv); c = mixc(c, BOAR.ridge, ss((sv - 0.82) / 0.15) * crest); return mixc(c, BOAR.belly, ss((-sv - 0.5) / 0.4)); }));
+      C.push(R.map((p, j) => {
+        const sv = Math.sin((j / m) * Math.PI * 2);
+        let c = boarCoat(p, sv);
+        c = mixc(c, BOAR.ridge, ss((sv - 0.78) / 0.18) * crestH(z) * 0.85);
+        return mixc(c, BOAR.leg, ss((-sv - 0.62) / 0.3) * Math.max(sh, ham) * 0.55);          /* zu den Läufen hin dunkler */
+      }));
     }
     skin(b, P, C, { cap0: true, cap1: true });
-    /* Pürzel (Schwanz) mit Quaste */
-    tube(b, [[0, 0.55, -0.5], [0, 0.5, -0.545], [0, 0.42, -0.56], [0, 0.36, -0.555]], [0.016, 0.013, 0.01, 0.004], [RGB(BOAR.hair), RGB(BOAR.hair), RGB(BOAR.ridge), RGB(BOAR.ridge)], 5, { tip: true });
-    ell(b, [0, 0.37, -0.556], [0.02, 0.04, 0.015], BOAR.ridge, 6, 4);
+    /* Borstenkamm: Büschel entlang der Rückenlinie, nach hinten gelegt, über dem Widerrist am längsten */
+    const r = mulberry(5203);
+    for (let z = -0.32; z <= 0.5; z += 0.019) {
+      const h = crestH(z); if (h < 0.06) continue;
+      const top = prof(BOAR_T, z)[0];
+      [-1, 1].forEach(sd => {
+        const x = sd * (0.006 + r() * 0.012), l = (0.016 + 0.046 * h) * (0.75 + r() * 0.5);
+        bristle(b, [x, top - 0.016, z + (r() - 0.5) * 0.01], [x * 5, 0.62, -0.8 - r() * 0.3], l, 0.014 + 0.008 * h, BOAR.ridge, mixc(BOAR.ridge, BOAR.coatL, 0.55));
+      });
+    }
+    /* Pürzel (Schwanz), hängend, mit Quaste */
+    tube(b, [[0, 0.585, -0.522], [0, 0.545, -0.558], [0, 0.47, -0.572], [0, 0.4, -0.568]], [0.016, 0.012, 0.009, 0.005], [RGB(BOAR.coat), RGB(BOAR.coatD), RGB(BOAR.ridge), RGB(BOAR.ridge)], 5, { tip: true });
+    ell(b, [0, 0.4, -0.569], [0.018, 0.042, 0.014], BOAR.ridge, 6, 4);
     return b;
   }
-  const BLEG = [[0, 0.064, 0.08, 0], [-0.12, 0.052, 0.064, 0.002], [-0.22, 0.036, 0.042, 0.002], [-0.27, 0.031, 0.036, 0.004], [-0.31, 0.03, 0.036, 0.01], [-0.335, 0.034, 0.044, 0.016], [-0.36, 0.036, 0.048, 0.02]];
-  function boarLeg() {
-    const b = MB();
-    legInto(b, BLEG, (p, y) => y < -0.318 ? RGB(BOAR.hoof) : mulc(mixc(BOAR.hair, BOAR.ridge, ss((-y - 0.12) / 0.15)), 0.95 + 0.1 * hsh(p[0], p[1], p[2])), true);
-    ell(b, [0, -0.3, -0.035], [0.012, 0.014, 0.012], BOAR.hoof, 6, 4);
+  /* Läufe mit Gelenk: oben Unterarm bzw. Keule (kräftig), unten schlanke Röhre, Fessel, gespaltene Schalen, Afterklauen.
+     Nur Optik: die Trefferzonen der Läufe bleiben die gerade Linie wie bisher (SP.keiler.legs, lu 0,36). */
+  const BLU = 0.17, BLL = 0.19;
+  const BLEG_FU = [[0.02, 0.058, 0.07, 0], [-0.06, 0.05, 0.062, 0.004], [-0.13, 0.035, 0.043, 0.004], [-0.178, 0.03, 0.036, 0]];
+  const BLEG_HU = [[0.02, 0.062, 0.084, -0.01], [-0.07, 0.05, 0.066, -0.014], [-0.135, 0.033, 0.046, -0.022], [-0.178, 0.028, 0.04, -0.026]];
+  const BLEG_LO = [[0.012, 0.031, 0.036, 0], [-0.03, 0.027, 0.031, 0], [-0.11, 0.022, 0.026, 0.002], [-0.14, 0.025, 0.03, 0.006], [-0.158, 0.023, 0.028, 0.013], [-0.172, 0.022, 0.028, 0.019]];
+  const boarLegCol = (p, k) => mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5));
+  function boarUpperInto(b, front) {
+    legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.02) / 0.12)), true);
+    if (!front) ell(b, [0, -0.168, -0.056], [0.02, 0.026, 0.02], BOAR.leg, 6, 4);          /* Fersenhöcker */
     return b;
   }
-  const BOAR_H = [[-0.13, 0.1, -0.15, 0.08], [-0.08, 0.165, -0.2, 0.145], [0.0, 0.175, -0.205, 0.158], [0.085, 0.15, -0.185, 0.14], [0.17, 0.11, -0.155, 0.105],
-    [0.255, 0.072, -0.12, 0.078], [0.335, 0.046, -0.092, 0.061], [0.4, 0.031, -0.076, 0.054], [0.445, 0.025, -0.07, 0.055], [0.465, 0.017, -0.062, 0.048], [0.473, 0.0, -0.046, 0.031]];
-  /* Kopf im eigenen Rahmen: z nach vorn; außen um 0,38 nach unten geneigt wie bisher (Haltungen der Animation bleiben gleich) */
+  function boarLowerInto(b) {
+    legInto(b, BLEG_LO, (p, y) => boarLegCol(p, ss((-y - 0.05) / 0.1)), true);
+    [-1, 1].forEach(s => {
+      ell(b, [s * 0.0125, -0.178, 0.027], [0.0135, 0.015, 0.023], (p, y) => mixc(BOAR.hoof, BOAR.hoofL, ss((y - 0.2) / 0.7) * 0.6), 7, 5);   /* Schalen */
+      ell(b, [s * 0.017, -0.148, -0.021], [0.006, 0.009, 0.008], BOAR.hoof, 5, 3);                                                              /* Afterklauen */
+    });
+    return b;
+  }
+  const boarUpper = front => boarUpperInto(MB(), front), boarLower = () => boarLowerInto(MB());
+  function boarLeg(front) { const b = MB(); boarUpperInto(b, front); b.at({ y: -BLU, z: front ? 0 : -0.025 }, q => boarLowerInto(q)); return b; }
+  /* Haupt: z nach vorn, Drehpunkt am Hinterhaupt; außen um 0,38 nach unten geneigt wie bisher (Haltungen der Animation bleiben gleich) */
+  const BOAR_H = [[-0.14, 0.1, -0.12, 0.09], [-0.09, 0.185, -0.215, 0.16], [-0.02, 0.205, -0.235, 0.176], [0.06, 0.19, -0.222, 0.165], [0.14, 0.15, -0.185, 0.133],
+    [0.22, 0.112, -0.148, 0.103], [0.3, 0.08, -0.115, 0.08], [0.37, 0.058, -0.094, 0.067], [0.425, 0.045, -0.083, 0.062], [0.462, 0.04, -0.077, 0.064], [0.48, 0.03, -0.069, 0.06], [0.49, 0.0, -0.048, 0.04]];
+  function headRing(z, m, i) {
+    const [top, bot, hw] = prof(BOAR_H, z), yc = (top + bot) / 2, hy = (top - bot) / 2, back = 1 - ss((z - 0.02) / 0.14), snout = ss((z - 0.24) / 0.1);
+    return ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.3 + 0.5 * snout, (j, cu, sv) => [1 - 0.22 * Math.pow(Math.max(0, sv), 2) + 0.07 * back * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2,
+      1 + (i != null ? 0.022 * (hsh(i, j, 13) - 0.5) * (z < 0.45 ? 1 : 0) : 0)]);
+  }
+  /* Punkt auf der Kopfhaut: Längsstelle z, Winkel w um die Achse (0 = Seite, π/2 = oben, −π/2 = unten) */
+  function headPt(z, w) { const R = headRing(z, 96), j = Math.round((((w / (Math.PI * 2)) % 1) + 1) % 1 * 96) % 96; return R[j]; }
+  const BEYE = [0.13, 0.6];
+  function boarHeadCol(p, sv, z, eye) {
+    let c = boarCoat(p, sv, 0.62);
+    c = mixc(c, BOAR.beard, (1 - ss(Math.abs(z - 0.03) / 0.15)) * ss((-sv - 0.05) / 0.5) * 0.72 * (0.7 + 0.6 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)));    /* Backenbart */
+    c = mixc(c, BOAR.snout, ss((z - 0.22) / 0.12));
+    c = mixc(c, BOAR.lip, (1 - ss(Math.abs(sv + 0.42) / 0.1)) * ss((z - 0.19) / 0.06) * 0.85);                                                   /* Lefze */
+    c = mixc(c, BOAR.disc, ss((z - 0.473) / 0.01));                                                                                               /* Rüsselscheibe */
+    const de = Math.hypot(Math.abs(p[0]) - eye[0], p[1] - eye[1], p[2] - eye[2]);
+    return mixc(c, BOAR.coatD, (1 - ss((de - 0.012) / 0.02)) * 0.8);                                                                             /* dunkel um die Lichter */
+  }
+  /* Teller (Ohren): aufrecht, spitz zulaufend, nach vorn offen (Becher), außen Schwarte, innen dunkel mit hellen Haarrändern, Haarpinsel an der Spitze */
+  function boarEarInto(b, s) {
+    const P = [], C = [], n = 7, m = 10, L = 0.14;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, w = 0.05 * Math.pow(1 - t, 0.7) + 0.003, d = 0.012 * (1 - t) + 0.003, R = [], Cc = [];
+      for (let j = 0; j < m; j++) {
+        const a = (j / m) * Math.PI * 2, cu = Math.cos(a), sv = Math.sin(a), cup = 0.016 * (1 - t) * cu * cu;
+        const p = [cu * w, t * L, 0.014 * t * t + sv * d + cup];
+        R.push(p);
+        const rim = Math.abs(cu) > 0.8 ? 1 : 0;
+        Cc.push(sv > 0.2 && !rim ? mixc(BOAR.earIn, BOAR.beard, hsh(i, j, 31) * 0.35) : boarCoat(p, 0.2, 0.7 + rim * 0.3));
+      }
+      P.push(R); C.push(Cc);
+    }
+    skin(b, P, C, { cap0: true, cap1: true });
+    bristle(b, [0, L * 0.9, 0.012], [0, 1, 0.25], 0.035, 0.008, BOAR.coatD, BOAR.coatL);
+    void s;
+    return b;
+  }
+  /* Waffen: Gewehre aus dem Unterkiefer nach außen, oben und hinten gebogen; Haderer aus dem Oberkiefer kurz nach außen und oben.
+     w: sichtbare Länge nach den gespeicherten Zentimetern (8 cm → 0,7, 24 cm → 1,5) */
+  function boarTusksInto(q, s, cm) {
+    const w = 0.7 + clamp((cm - 8) / 16, 0, 1) * 0.8, X = p => [s * p[0], p[1], p[2]];
+    const g0 = headPt(0.392, -0.6), gb = [g0[0] - 0.006, g0[1] + 0.004, g0[2]];
+    const G = curve([[0, 0, 0], [0.011, 0.019, 0.004], [0.021, 0.038, -0.003], [0.026, 0.056, -0.019], [0.022, 0.069, -0.04]].map(p => X([gb[0] + p[0] * w, gb[1] + p[1] * w, gb[2] + p[2] * w])), 9);
+    tube(q, G, G.map((_, i) => { const u = i / 8; return u > 0.9 ? 0.0016 : (0.0125 - 0.0095 * u) * (0.9 + 0.12 * w); }), G.map((_, i) => { const u = i / 8; return u < 0.25 ? mixc(BOAR.tuskB, BOAR.tusk, u / 0.25) : u > 0.8 ? mixc(BOAR.tusk, 0xffffff, (u - 0.8) / 0.2) : RGB(BOAR.tusk); }), 6, { tip: true, cap0: true });
+    const h0 = headPt(0.362, -0.4), hb = [h0[0] - 0.007, h0[1], h0[2]];
+    const Hd = curve([[0, 0, 0], [0.013, 0.012, -0.003], [0.021, 0.026, -0.014]].map(p => X([hb[0] + p[0] * w * 0.85, hb[1] + p[1] * w * 0.85, hb[2] + p[2] * w * 0.85])), 6);
+    tube(q, Hd, Hd.map((_, i) => i === 5 ? 0.0015 : 0.0115 * (1 - i / 6.5)), Hd.map((_, i) => mixc(BOAR.tuskB, BOAR.tusk, Math.min(1, i / 3))), 6, { tip: true, cap0: true });
+  }
   function boarHeadInto(b, sc, cm) {
     b.at({ rx: 0.38 }, q => {
-      const P = [], C = [], m = 18, nZ = 20;
+      const P = [], C = [], m = 20, nZ = 24, e = headPt(BEYE[0], BEYE[1]), eye = [e[0], e[1], e[2]];
       for (let i = 0; i <= nZ; i++) {
-        const z = lerp(BOAR_H[0][0], BOAR_H[BOAR_H.length - 1][0], i / nZ), [top, bot, hw] = prof(BOAR_H, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
-        const back = 1 - ss((z - 0.02) / 0.14);
-        const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.4, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) + 0.06 * back * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2, 1 + (sv > 0.85 ? 0.12 * back * hsh(i, j, 11) : 0) + 0.03 * (hsh(i, j, 13) - 0.5) * (z < 0.45 ? 1 : 0)]);
-        P.push(R);
-        C.push(R.map((p, j) => {
-          const sv = Math.sin((j / m) * Math.PI * 2);
-          let c = boarHair(p, sv, 0.75);
-          c = mixc(c, BOAR.cheek, (1 - ss(Math.abs(z - 0.08) / 0.1)) * ss((-sv + 0.1) / 0.5) * 0.7);
-          c = mixc(c, BOAR.snout, ss((z - 0.25) / 0.1));
-          c = mixc(c, BOAR.lip, (1 - ss(Math.abs(sv + 0.42) / 0.12)) * ss((z - 0.22) / 0.06) * 0.8);
-          c = mixc(c, BOAR.disc, ss((z - 0.452) / 0.012));
-          return c;
-        }));
+        const z = lerp(BOAR_H[0][0], BOAR_H[BOAR_H.length - 1][0], i / nZ), R = headRing(z, m, i);
+        P.push(R); C.push(R.map((p, j) => boarHeadCol(p, Math.sin((j / m) * Math.PI * 2), z, eye)));
       }
       skin(q, P, C, { cap0: true, cap1: true });
+      const rr = mulberry(5207);
       [-1, 1].forEach(s => {
-        ell(q, [s * 0.017, -0.026, 0.473], [0.01, 0.013, 0.004], BOAR.discD, 6, 4);                                  /* Nasenlöcher */
-        ell(q, [s * 0.084, 0.083, 0.15], [0.011, 0.01, 0.013], BOAR.eye, 7, 5);                                      /* Lichter */
-        ell(q, [s * 0.092, 0.087, 0.155], [0.003, 0.003, 0.003], 0xe9e4da, 4, 3);
-        q.at({ x: s * 0.095, y: 0.165, z: -0.03, rz: -s * 0.55, rx: -0.45 }, e => {                                 /* Teller (Ohren) */
-          ell(e, [0, 0.06, 0], [0.042, 0.07, 0.018], (p, y) => boarHair(p, 0, 0.9), 8, 6);
-          ell(e, [0, 0.055, 0.012], [0.026, 0.05, 0.007], 0x4a3a30, 6, 4);
-        });
-        /* Waffen: Gewehre aus dem Unterkiefer nach außen und oben, Haderer darüber kürzer */
-        const L = (0.045 + 0.0055 * (cm || 8 + sc * 16)) / 0.13, w = L;
-        const G = [[0, 0, 0], [0.03, 0.025, 0.016], [0.05, 0.062, 0.012], [0.055, 0.097, -0.01], [0.044, 0.122, -0.036]].map(p => [s * (0.05 + p[0] * w), -0.07 + p[1] * w, 0.34 + p[2] * w]);
-        tube(q, G, [0.014, 0.012, 0.009, 0.005, 0.0015].map(r => r * (0.8 + 0.25 * L)), [RGB(BOAR.tuskB), mixc(BOAR.tuskB, BOAR.tusk, 0.5), RGB(BOAR.tusk), RGB(BOAR.tusk), RGB(0xfffbf0)], 6, { tip: true, cap0: true });
-        const Hd = [[0, 0, 0], [0.022, 0.018, -0.004], [0.032, 0.036, -0.022]].map(p => [s * (0.056 + p[0] * w), -0.032 + p[1] * w, 0.318 + p[2] * w]);
-        tube(q, Hd, [0.01, 0.007, 0.0015], [RGB(BOAR.tuskB), RGB(BOAR.tusk), RGB(0xfffbf0)], 5, { tip: true, cap0: true });
+        const X = p => [s * p[0], p[1], p[2]];
+        ell(q, [s * 0.019, -0.026, 0.488], [0.011, 0.014, 0.005], BOAR.discD, 6, 4);                                      /* Nasenlöcher */
+        ell(q, X([eye[0] - 0.003, eye[1], eye[2]]), [0.0095, 0.009, 0.011], BOAR.eye, 7, 5);                              /* Lichter */
+        ell(q, X([eye[0] + 0.004, eye[1] + 0.003, eye[2] + 0.004]), [0.0026, 0.0026, 0.0026], 0xe9e4da, 4, 3);
+        const br = headPt(0.122, 0.8);
+        ell(q, X([br[0] - 0.003, br[1] + 0.003, br[2]]), [0.02, 0.009, 0.03], (p) => boarCoat(p, 0.8, 0.3), 7, 4);      /* Brauenwulst */
+        const ep = headPt(0.06, 0.98);
+        q.at({ x: s * ep[0], y: ep[1] - 0.012, z: ep[2], rz: -s * 0.4, rx: -0.32 }, o => boarEarInto(o, s));           /* Teller */
+        /* Backenbart: helle Büschel unten an den Wangen, nach hinten und unten */
+        for (let k = 0; k < 6; k++) {
+          const p = headPt(-0.05 + k * 0.032, -0.62 - (k % 2) * 0.22 - rr() * 0.08);
+          bristle(q, X([p[0] - 0.007, p[1] + 0.004, p[2]]), [s * (0.3 + rr() * 0.15), -0.4, -0.85], 0.022 + rr() * 0.012, 0.013, mixc(BOAR.coat, BOAR.beard, 0.4), BOAR.beard);
+        }
+        boarTusksInto(q, s, cm || 8 + sc * 16);
       });
+      /* Kamm setzt sich auf dem Haupt fort */
+      for (let z = -0.12; z <= 0.04; z += 0.026) { const p = headPt(z, Math.PI / 2); bristle(q, [p[0] + (rr() - 0.5) * 0.02, p[1] - 0.012, p[2]], [0, 0.8, -0.65], 0.03 + 0.02 * ss((0.04 - z) / 0.16), 0.012, BOAR.ridge, mixc(BOAR.ridge, BOAR.coatL, 0.45)); }
     });
     return b;
   }
   function boarHead(sc, cm) { G3.seed(5202); return boarHeadInto(MB(), sc, cm); }
-  /* Fasanenhahn */
+  /* Fasanenhahn v135: organisch wie Hirsch und Keiler statt aus Kugeln und Quadern. Kupferroter Rumpf mit dunklen Schuppenflecken,
+     graugrüner Bürzel, angelegte Schwingen mit Querbinden, langer gebänderter Stoß (dieselben Federn wie an der Trophäe), dunkelgrün
+     bis violett schillernder Hals mit weißem Ring, rote Rosen (Gesichtslappen), Federohren. Ständer (Beine) als eigene Knoten,
+     damit sie im Flug und beim erlegten Stück angezogen sind. Trefferzonen unverändert. */
+  const PHC = { copper: 0xc4672c, copperD: 0x8f3f1b, gold: 0xe0aa52, scale: 0x2c1b10, rump: 0x7f8c74, belly: 0x5a3720, wing: 0xc9a46c, wingD: 0x6f5232,
+    neck: 0x1c5a52, neckB: 0x23407a, head: 0x2c2a5e, ring: 0xf4f1e8, red: 0xd2281e, redD: 0x9c1a14, beak: 0xdcc58b, leg: 0x8d8379, eye: 0xd9b23a };
+  const PH_T = [[-0.215, 0.272, 0.238, 0.02], [-0.19, 0.305, 0.185, 0.06], [-0.12, 0.33, 0.152, 0.09], [-0.03, 0.344, 0.138, 0.1], [0.06, 0.348, 0.14, 0.097],
+    [0.13, 0.342, 0.16, 0.082], [0.18, 0.328, 0.192, 0.058], [0.21, 0.31, 0.23, 0.028]];
+  function phCol(p, sv, z) {
+    let c = mixc(PHC.copper, PHC.gold, ss((sv + 0.1) / 0.6) * 0.35 * (1 - ss((z - 0.1) / 0.08)));
+    c = mixc(c, PHC.copperD, ss((z - 0.08) / 0.1) * 0.35);                                          /* Brust tiefer kupferrot */
+    c = mixc(c, PHC.rump, ss((-z - 0.06) / 0.08) * ss((sv - 0.2) / 0.4));                            /* Bürzel graugrün */
+    c = mixc(c, PHC.belly, ss((-sv - 0.45) / 0.35));
+    const sp = hsh(p[0] * 97.3, p[1] * 61.1, p[2] * 83.7);
+    if (sp > 0.72) c = mixc(c, PHC.scale, 0.18 + 0.3 * (sp - 0.72) / 0.28);                             /* dunkle Federspitzen, verstreut */
+    return mulc(c, 0.94 + 0.12 * hsh(p[2], p[0], p[1]));
+  }
   function phBody() {
     G3.seed(5301);
-    const b = MB();
-    b.noise(0.12, m => {
-      m.sphere(0.13, 8, 6, FCc.body, { y: 0.24, sx: 0.85, sy: 0.85, sz: 1.45, bottom: FCc.bodyD });
-      m.sphere(0.07, 6, 4, FCc.wing, { x: 0.08, y: 0.27, z: -0.03, sx: 0.5, sz: 1.6 });
-      m.sphere(0.07, 6, 4, FCc.wing, { x: -0.08, y: 0.27, z: -0.03, sx: 0.5, sz: 1.6 });
-      m.at({ y: 0.28, z: -0.15, rx: 0.33 }, q => {                                                /* langer Stoß, schräg nach oben */
-        q.box(0.055, 0.02, 0.32, FCc.tail, { z: -0.16, c: true }); q.box(0.022, 0.024, 0.32, FCc.tailD, { z: -0.16, c: true });
-        q.box(0.03, 0.016, 0.22, FCc.tail, { z: -0.42, c: true }); q.box(0.012, 0.02, 0.22, FCc.tailD, { z: -0.42, c: true });
-      });
-      [-1, 1].forEach(s => m.box(0.018, 0.14, 0.02, FCc.leg, { x: s * 0.04, y: 0.02, z: 0.02 }));
-    });
+    const b = MB(), P = [], C = [], m = 20, nZ = 22;
+    for (let i = 0; i <= nZ; i++) {
+      const z = lerp(PH_T[0][0], PH_T[PH_T.length - 1][0], i / nZ), [top, bot, hw] = prof(PH_T, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.05, (j, cu, sv) => [1 - 0.12 * Math.pow(Math.max(0, sv), 2), 1]);
+      P.push(R); C.push(R.map((p, j) => phCol(p, Math.sin((j / m) * Math.PI * 2), z)));
+    }
+    skin(b, P, C, { cap0: true, cap1: true });
+    /* angelegte Schwingen: hell mit dunklen Querbinden, Handschwingen dunkler */
+    [-1, 1].forEach(s => b.at({ x: s * 0.088, y: 0.272, z: -0.035, rx: -0.1, rz: s * 0.38 }, q => ell(q, [0, 0, 0], [0.02, 0.046, 0.13],
+      (p) => { let c = mixc(PHC.wing, PHC.wingD, Math.sin(p[2] * 70) > 0.45 ? 0.55 : 0); c = mixc(c, PHC.wingD, ss((-p[2] - 0.06) / 0.06) * 0.7); return mulc(c, 0.94 + 0.12 * hsh(p[0], p[1], p[2])); }, 12, 8)));
+    /* Stoß: lange gebänderte Schwanzfedern im schmalen Fächer, schräg nach hinten oben */
+    [[-2, 0.3], [-1, 0.36], [0, 0.44], [1, 0.4], [2, 0.32], [0.5, 0.25]].forEach(([f, L], i) =>
+      b.at({ y: 0.292, z: -0.19, rx: -1.25 - Math.abs(f) * 0.03, rz: f * 0.07 }, q => featherInto(q, L, 0.021, f * 0.03, i * 3 + 2)));
+    return b;
+  }
+  /* Ständer: Lauf mit Sporn und drei Zehen nach vorn, eine nach hinten */
+  function phLeg() {
+    const b = MB(), c = RGB(PHC.leg);
+    tube(b, [[0, 0.02, 0], [0, -0.06, 0.004], [0, -0.13, 0.008]], [0.011, 0.008, 0.007], [mixc(PHC.belly, PHC.leg, 0.4), c, c], 5, { cap0: true });
+    [-0.5, 0, 0.5].forEach(a => tube(b, [[0, -0.13, 0.008], [Math.sin(a) * 0.045, -0.136, 0.008 + Math.cos(a) * 0.045]], [0.005, 0.002], [c, c], 4, { tip: true }));
+    tube(b, [[0, -0.13, 0.006], [0, -0.135, -0.03]], [0.004, 0.0015], [c, c], 4, { tip: true });
+    tube(b, [[0, -0.095, -0.002], [0, -0.097, -0.018]], [0.004, 0.001], [c, c], 4, { tip: true });
     return b;
   }
   function phHead() {
     const b = MB();
-    b.box(0.055, 0.13, 0.06, FCc.neck, { y: 0, z: 0 });
-    b.box(0.07, 0.025, 0.07, FCc.ring, { y: 0.01 });
-    b.sphere(0.045, 6, 4, FCc.head, { y: 0.15, z: 0.02 });
-    b.box(0.05, 0.035, 0.04, FCc.red, { y: 0.15, z: 0.04, c: true });
-    b.box(0.018, 0.018, 0.04, FCc.beak, { y: 0.145, z: 0.08, c: true });
+    /* Hals: unten weißer Ring, darüber grün, oben blau-violett schillernd */
+    tube(b, [[0, -0.03, -0.02], [0, 0.03, -0.006], [0, 0.085, 0.006], [0, 0.125, 0.014]], [0.036, 0.03, 0.025, 0.024], [RGB(PHC.neck), RGB(PHC.neck), RGB(PHC.neckB), RGB(PHC.head)], 10, { cap0: true });
+    ell(b, [0, 0.008, -0.01], [0.037, 0.011, 0.037], PHC.ring, 12, 4);
+    ell(b, [0, 0.148, 0.022], [0.029, 0.03, 0.042], (p, y) => mixc(PHC.head, PHC.neck, ss((-y + 0.2) / 0.8) * 0.5), 10, 7);
+    [-1, 1].forEach(s => {
+      ell(b, [s * 0.019, 0.145, 0.036], [0.014, 0.021, 0.025], (p, y) => mixc(PHC.red, PHC.redD, ss((-y + 0.3) / 0.7) * 0.5), 8, 6);    /* Rosen */
+      ell(b, [s * 0.027, 0.156, 0.046], [0.005, 0.005, 0.005], PHC.eye, 5, 3);
+      ell(b, [s * 0.03, 0.157, 0.047], [0.0025, 0.0025, 0.0025], 0x120c08, 4, 3);
+      bristle(b, [s * 0.012, 0.168, 0.004], [s * 0.25, 0.55, -0.8], 0.032, 0.007, PHC.head, PHC.neck);                         /* Federohren */
+    });
+    tube(b, [[0, 0.142, 0.058], [0, 0.138, 0.076], [0, 0.131, 0.09]], [0.0105, 0.007, 0.0015], [RGB(PHC.beak), RGB(PHC.beak), mixc(PHC.beak, 0x8a7a50, 0.5)], 6, { tip: true });
     return b;
   }
   function phWing(s) {
     const b = MB();
-    b.quad([0, 0, 0.08], [s * 0.3, 0.01, 0.03], [s * 0.26, 0.01, -0.1], [0, 0, -0.08], FCc.wing);
-    b.quad([0, 0, -0.08], [s * 0.26, 0.01, -0.1], [s * 0.3, 0.01, 0.03], [0, 0, 0.08], FCc.bodyD);
+    b.quad([0, 0, 0.08], [s * 0.3, 0.01, 0.03], [s * 0.26, 0.01, -0.1], [0, 0, -0.08], PHC.wing);
+    b.quad([0, 0, -0.08], [s * 0.26, 0.01, -0.1], [s * 0.3, 0.01, 0.03], [0, 0, 0.08], PHC.wingD);
     return b;
   }
   /* Blutstropfen (Schweiß) am Boden */
@@ -593,17 +718,20 @@ const HUNT = (() => {
   /* ------------------------------ Arten ----------------------------------- */
   /* Trefferzonen (Tierkoordinaten vor Maßstab). Hals- und Kopfpunkte in Hals- bzw. Kopfkoordinaten. */
   const SP = {
-    hirsch: { n: "Rothirsch", i: "🦌", walk: 0.85, sneak: 0.5, run: 10.5, s0: 0.98, s1: 1.12, lie: 0.24,
+    hirsch: { n: "Rothirsch", i: "🦌", walk: 0.85, sneak: 0.5, run: 10.5, s0: 0.98, s1: 1.12,
       legs: [{ h: [-0.12, 0.84, 0.34], lu: 0.4, ll: 0.44, f: 1 }, { h: [0.12, 0.84, 0.34], lu: 0.4, ll: 0.44, f: 1 }, { h: [-0.12, 0.86, -0.34], lu: 0.42, ll: 0.44, f: 0 }, { h: [0.12, 0.86, -0.34], lu: 0.42, ll: 0.44, f: 0 }],
       neckP: [0, 1.02, 0.4], headP: [0, 0.5, 0.22], body: { c: [0, 0.98, 0], r: [0.2, 0.22, 0.5] }, lung: { c: [0, 0.96, 0.24], r: 0.12 }, heart: { c: [0, 0.88, 0.28], r: 0.07 },
-      head: { c: [0, 0.0, 0.18], r: 0.11 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, sens: 1.3, orbit: 8.6 },
-    keiler: { n: "Keiler", i: "🐗", walk: 1.1, sneak: 0.8, run: 8.0, s0: 0.92, s1: 1.15, lie: 0.21,
+      head: { c: [0, 0.0, 0.18], r: 0.11 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, sens: 1.3,
+      rest: { rz: 1.45, f: [-0.38, 0.95], h: [0.42, -0.3], fT: [-0.62, 1.15], hT: [0.7, -0.5], neckT: 0.5, headT: 0.3, legR: [0.034, 0.024, 0.03] } },
+    keiler: { n: "Keiler", i: "🐗", walk: 1.1, sneak: 0.8, run: 8.0, s0: 0.92, s1: 1.15,
       legs: [{ h: [-0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [-0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }, { h: [0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }],
       neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.11 }, heart: { c: [0, 0.46, 0.24], r: 0.06 },
-      head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.12, sens: 1.2, orbit: 6.4 },
-    fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, lie: 0.1, legs: [],
+      head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.12, sens: 1.2,
+      rest: { rz: 1.5, f: [-0.5, 0.6], h: [0.48, -0.42], fT: [-0.78, 0.85], hT: [0.74, -0.6], neckT: 0.08, headT: 0, legR: [0.03, 0.022, 0.024] } },
+    fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, legs: [],
       neckP: [0, 0.22, 0.15], headP: [0, 0, 0], body: { c: [0, 0.24, -0.02], r: [0.13, 0.13, 0.2] }, lung: null, heart: null,
-      head: { c: [0, 0.14, 0.03], r: 0.06 }, neckZ: [[0, 0.0, 0.0], [0, 0.1, 0.0]], neckR: 0.04, sens: 1.5, orbit: 3.4 }
+      head: { c: [0, 0.14, 0.03], r: 0.06 }, neckZ: [[0, 0.0, 0.0], [0, 0.1, 0.0]], neckR: 0.04, sens: 1.5,
+      rest: { rz: 1.35, neckT: 2.2, headT: 0 } }
   };
   const MEDALS = [null, { n: "Bronze", i: "🥉", c: "#c47a3a" }, { n: "Silber", i: "🥈", c: "#9aa4b1" }, { n: "Gold", i: "🥇", c: "#e0a51e" }, { n: "Diamant", i: "💎", c: "#38b6d8" }];
   const PRICE = { hirsch: [0, 180, 420, 950, 2600], keiler: [0, 120, 300, 700, 1900], fasan: [0, 40, 90, 200, 520] };
@@ -728,7 +856,7 @@ const HUNT = (() => {
   const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
   const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
   const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
-  function trophyKey(r) { const T = traits(r.k, r.s); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_v120"; }
+  function trophyKey(r) { const T = traits(r.k, r.s); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_v135"; }
   function trophyBuild(r) {
     const k = r.k, m = r.m || 1, T = traits(k, r.s), sc = qS(r.s), b = MB();
     G3.seed(5400 + m);
@@ -1217,6 +1345,7 @@ const HUNT = (() => {
   }
   function leaveRevier() {
     const c = FV.R.cam;
+    bedClear();                                        /* v135: Liegeplatz weg, Gras zurück – vor revClear */
     mwFromRevier();
     X.animals.forEach(unbuild); X.animals = [];
     X.drops.forEach(d => rmNode(d.n)); X.drops = [];
@@ -1272,13 +1401,15 @@ const HUNT = (() => {
       A.tail = addNode(fmesh(key + "_t", deerTail), { x: 0, y: 1.07, z: -0.578 }, A.node);
       A.legN = S0.legs.map(L => { const up = addNode(fmesh(key + "_u" + L.f, () => deerUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(fmesh(key + "_l" + L.f, () => deerLower(!!L.f)), { y: -L.lu }, up) }; });
     } else if (k === "keiler") {
-      A.node = addNode(fmesh(key + "_b", boarBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = A.head = addNode(fmesh(key + "_h" + A.T.cm + "_" + Math.round(A.score * 20), () => boarHead(qS(A.score), A.T.cm)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.legN = S0.legs.map(L => ({ up: addNode(fmesh(key + "_l", boarLeg), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node), lo: null }));
+      /* v135: neues Modell, Läufe mit Gelenk (oben/unten als eigene Knoten) */
+      A.node = addNode(fmesh(key + "_b135", boarBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
+      A.neck = A.head = addNode(fmesh(key + "_h135_" + A.T.cm + "_" + Math.round(A.score * 20), () => boarHead(qS(A.score), A.T.cm)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.legN = S0.legs.map(L => { const up = addNode(fmesh(key + "_u135" + L.f, () => boarUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(fmesh(key + "_l135", boarLower), { y: -BLU, z: L.f ? 0 : -0.025 }, up) }; });
     } else {
-      A.node = addNode(fmesh(key + "_b", phBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = A.head = addNode(fmesh(key + "_h", phHead), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.wings = [-1, 1].map(s => addNode(fmesh(key + "_w" + s, () => phWing(s)), { x: s * 0.07, y: 0.29, z: 0.02, visible: false }, A.node));
+      A.node = addNode(fmesh(key + "_b135", phBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
+      A.neck = A.head = addNode(fmesh(key + "_h135", phHead), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.wings = [-1, 1].map(s => addNode(fmesh(key + "_w135" + s, () => phWing(s)), { x: s * 0.07, y: 0.29, z: 0.02, visible: false }, A.node));
+      A.feet = [-1, 1].map(s => addNode(fmesh(key + "_f135", phLeg), { x: s * 0.036, y: 0.15, z: 0.01 }, A.node));
       A.legN = [];
     }
   }
@@ -1400,18 +1531,20 @@ const HUNT = (() => {
         break;
       }
       case "drop": {
-        A.fly.vy -= 14 * dt; A.y = Math.max(S0.lie, A.y + A.fly.vy * dt); A.x += A.fly.vx * dt * 0.3; A.z += A.fly.vz * dt * 0.3;
+        const g = deadPose(A).y;
+        A.fly.vy -= 14 * dt; A.y = Math.max(g, A.y + A.fly.vy * dt); A.x += A.fly.vx * dt * 0.3; A.z += A.fly.vz * dt * 0.3;
         A.rz += dt * 6; A.wings.forEach((w, i) => { w.rz = (i ? 1 : -1) * 0.5; });
-        if (A.y <= S0.lie + 0.001) { A.st = "dead"; A.rz = 1.4; A.rx = 0; A.deadAt = X.t; { const q = lieSpot(A, A.x, A.z); A.x = q[0]; A.z = q[1]; } settle(A); }
+        if (A.y <= g + 0.001) { A.st = "dead"; A.rz = deadPose(A).rz; A.rx = 0; A.deadAt = X.t; A.wings.forEach(w => { w.visible = false; }); { const q = lieSpot(A, A.x, A.z); A.x = q[0]; A.z = q[1]; } settle(A); }
         break;
       }
       case "fall": {
-        const k = ss(1 - A.t / 0.8);
-        A.vT = 0; A.rz = A.side * k * 1.45; A.y = S0.lie * A.s * k; neckT = 0.2 + k * 0.4; headT = 0.3;
+        /* v135: in die berechnete Liegepose sinken (Höhe, Seitenlage, Haupt, Läufe) */
+        const dp = deadPose(A), k = ss(1 - A.t / (A.fT || 0.8));
+        A.vT = 0; A.rz = dp.rz * k; A.y = dp.y * k; neckT = lerp(0.2, dp.neckT, k); nyT = dp.nyT * k; headT = lerp(0.3, dp.headT, k); stiff = 9;
         if (A.t <= 0) { if (A.fs) { A.x = A.fs.to[0]; A.z = A.fs.to[1]; A.fs = null; } A.st = "dead"; A.deadAt = X.t; A.v = 0; settle(A); }
         break;
       }
-      case "dead": A.vT = 0; neckT = 0.55; headT = 0.35; earT = 0.4; break;
+      case "dead": { const dp = deadPose(A); A.vT = 0; neckT = dp.neckT; nyT = dp.nyT; headT = dp.headT; earT = 0.4; stiff = 9; break; }
     }
     /* Tempo weich anpassen, beim Aufspringen schnell */
     const acc = A.vT > A.v ? (A.st === "flee" || A.st === "hit" || A.st === "wounded" ? 2.6 : 2) : 3.2;
@@ -1434,24 +1567,26 @@ const HUNT = (() => {
     const ampW = 0.36 * A.gw * (1 - wR), ampR = 0.82 * wR;
     if (A.k === "hirsch") {
       A.legsA = S0.legs.map((L, i) => {
-        if (A.st === "dead" || A.st === "fall") { const k = A.st === "dead" ? 1 : ss(1 - A.t / 0.8); return [lerp(0, L.f ? -0.35 : 0.45, k), lerp(0, 0.9, k)]; }
+        if (A.st === "dead" || A.st === "fall") return deadLeg(A, i);
         const w = legAng((A.ph + WALK_OFF[i]) % 1, 0.62, ampW, 0.9 * A.gw, !!L.f), r = legAng((A.ph + RUN_OFF[i]) % 1, 0.38, ampR, 1.5, !!L.f);
         return [lerp(w[0], r[0], wR), lerp(w[1], r[1], wR)];
       });
-      A.legN.forEach((N, i) => { N.up.rx = A.legsA[i][0]; N.lo.rx = A.legsA[i][1]; });
     } else if (A.k === "keiler") {
       A.legsA = S0.legs.map((L, i) => {
-        if (A.st === "dead" || A.st === "fall") return [L.f ? -0.4 : 0.4, 0];
-        const c = (A.ph * 1.6 + (wR > 0.5 ? RUN_OFF : WALK_OFF)[i]) % 1;
-        return [Math.sin(c * Math.PI * 2) * (0.45 * A.gw * (1 - wR) + 0.8 * wR), 0];
+        if (A.st === "dead" || A.st === "fall") return deadLeg(A, i);
+        /* v135: Gelenk beugt sich beim Vorschwingen (nur Optik – die Trefferzone des Laufs bleibt die gerade Linie) */
+        const c = (A.ph * 1.6 + (wR > 0.5 ? RUN_OFF : WALK_OFF)[i]) % 1, fl = Math.max(0, -Math.cos(c * Math.PI * 2)) * (0.45 * A.gw * (1 - wR) + 0.7 * wR);
+        return [Math.sin(c * Math.PI * 2) * (0.45 * A.gw * (1 - wR) + 0.8 * wR), L.f ? fl : -fl * 0.6];
       });
-      A.legN.forEach((N, i) => { N.up.rx = A.legsA[i][0]; });
     }
+    if (A.legN.length) A.legN.forEach((N, i) => { const a = A.legsA[i]; N.up.rx = a[0]; if (N.lo) N.lo.rx = a[1]; N.up.rz = a[2] || 0; });
+    if (A.feet) { const tuck = spr(P, "ft", ["fly", "drop", "dead", "fall"].includes(A.st) ? 1.5 : 0, 8, dt); A.feet.forEach(f => { f.rx = tuck; }); }
     /* Kopf, Hals, Lauscher, Wedel über Federn: weich, beim Aufschrecken schnell */
     const nod = A.k === "hirsch" ? Math.sin(A.ph * Math.PI * 4) * 0.05 * A.gw * (1 - wR) : 0;
     const nrx = spr(P, "nrx", neckT + nod, stiff, dt), nry = spr(P, "nry", nyT, stiff * 0.7, dt), hrx = spr(P, "hrx", headT, stiff * 1.2, dt);
+    { const r = neckRot(A.k, nrx, nry); A.neck.rx = r[0]; A.neck.ry = r[1]; A.neck.rz = A.st === "dead" ? deadPose(A).nz : A.st === "fall" ? deadPose(A).nz * ss(1 - A.t / (A.fT || 0.8)) : 0; }
     if (A.k === "hirsch") {
-      A.neck.rx = nrx - 0.35; A.neck.ry = nry; A.head.rx = hrx;
+      A.head.rx = hrx;
       /* Ohrenspiel: jede Lauscher zuckt für sich, beim Sichern beide nach vorn */
       A.ear.forEach((E, i) => {
         E.t -= dt; if (E.t <= 0) { E.t = 0.8 + rnd() * 2.6; E.f = 0.18 + rnd() * 0.2; E.k = (rnd() - 0.5) * 1.1; }
@@ -1461,8 +1596,7 @@ const HUNT = (() => {
         A.ears[i].ry = spr(P, "ery" + i, tw * 0.6 + look, 12, dt);
       });
       A.tail.rx = spr(P, "trx", tailT + (Math.sin(time * 3 + A.seed) > 0.97 ? -0.6 : 0), 12, dt);
-    } else if (A.k === "keiler") { A.neck.rx = nrx - 0.55; A.neck.ry = nry * 0.6; }
-    else { A.neck.rx = nrx * 0.6 - 0.2; }
+    }
     /* Rumpf: Atmen, Wippen im Schritt, Galopp mit Flugphase, Absprung, Schreck-Ruck */
     A.jolt = Math.max(0, A.jolt - dt * 3);
     if (A.leap > 0) A.leap -= dt;
@@ -1527,10 +1661,86 @@ const HUNT = (() => {
     /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
     const sl = (A.v || 0) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
     A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
+    A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
   }
   function settle(A) {
     const S0 = SP[A.k], c = rot(S0.body.c.map(v => v * A.s), A.rx, A.ry, A.rz);
     A.center = [A.x + c[0], (A.y || 0) + c[1], A.z + c[2]];
+    /* v135: Umriss des liegenden Stücks in Weltkoordinaten (für Kamera, Liegeplatz und Gras) */
+    const dp = deadPose(A), o = [A.x, 0, A.z];
+    A.box = { mn: add3(dp.mn, o), mx: add3(dp.mx, o) };
+    A.foot = dp.pts.map(p => add3(p, o));
+  }
+  /* ------------------- v135: Liegepose aus den Modellpunkten -------------------
+     Vorher lag jedes Stück auf fester Höhe (der Keiler etwa 5 cm über dem Boden), die Läufe standen steif ab und die oben
+     liegenden schwebten. Jetzt wird die Pose einmal je Stück aus den echten Eckpunkten der Modelle berechnet:
+     • Rumpf in Seitenlage genau auf dem Boden (tiefster Punkt der Haut)
+     • jeder Lauf leicht angewinkelt (oben liegende weiter gespreizt), dann um die Längsachse gesenkt, bis er aufliegt
+     • Haupt bzw. Träger zum Boden gedreht, bis es aufliegt (beim Hirsch trägt notfalls das Geweih)
+     Fest je Stück (Art, Größe, Lage, Seite) – keine Physik, kein Zufall. */
+  const neckRot = (k, nrx, nry) => k === "keiler" ? [nrx - 0.55, nry * 0.6] : k === "hirsch" ? [nrx - 0.35, nry] : [nrx * 0.6 - 0.2, nry * 0.6];
+  const legDim = (k, L) => k === "keiler" ? [BLU, BLL, L.f ? 0 : -0.025] : [L.lu, L.ll, 0];
+  const PTS = new Map();
+  function ptsOf(key, fn, every) {
+    let P = PTS.get(key);
+    if (!P) { const v = fn().v, n = 9 * (every || 3); P = []; for (let i = 0; i < v.length; i += n) P.push([v[i], v[i + 1], v[i + 2]]); PTS.set(key, P); }
+    return P;
+  }
+  /* Haupt (beim Hirsch mit Träger und Geweih) in Halskoordinaten */
+  function headPts(A) {
+    const S0 = SP[A.k], q = Math.round(A.score * 20) / 20;
+    if (A.k === "keiler") return ptsOf("h:k" + A.T.cm + ":" + q, () => boarHead(q, A.T.cm));
+    if (A.k === "fasan") return ptsOf("h:f", phHead);
+    return ptsOf("h:h" + A.T.P + ":" + q + ":" + A.vr, () => {
+      const b = MB(); deerNeckInto(b);
+      b.at({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: S0.rest.headT }, h => deerHeadInto(h, A.T.P, q, A.vr));
+      return b;
+    }, 2);
+  }
+  function calcDead(A) {
+    const S0 = SP[A.k], D = S0.rest, side = A.side || 1, rz = side * D.rz, s = A.s;
+    const W = (p, y) => { const q = rot([p[0] * s, p[1] * s, p[2] * s], 0, A.ry, rz); return [q[0], y + q[1], q[2]]; };
+    const BP = ptsOf("b:" + A.k, A.k === "hirsch" ? deerBody : A.k === "keiler" ? boarBody : phBody);
+    let lo = 1e9;
+    BP.forEach(p => { lo = Math.min(lo, W(p, 0)[1]); });
+    const y = -lo + 0.004 * s, pts = BP.map(p => W(p, y));
+    const cost = (gap, a) => (gap < 0 ? -gap * 12 : gap) + Math.abs(a) * 0.03;
+    const legs = S0.legs.map(L => {
+      const top = L.h[0] * side > 0, base = L.f ? (top ? D.fT : D.f) : (top ? D.hT : D.h), dm = legDim(A.k, L), r = D.legR;
+      const samp = th => [[[0, -dm[0] * 0.5, 0], r[0] * 1.3, 0], [[0, -dm[0], 0], r[0], 0], [[0, -dm[1] * 0.5, 0], r[1], 1], [[0, -dm[1], 0.02], r[2], 1]].map(([p, rr, low]) => {
+        const q = low ? add3([0, -dm[0], dm[2]], rot(p, base[1], 0, 0)) : p;
+        return [add3(L.h, rot(q, base[0], 0, th)), rr];
+      });
+      let best = 0, bc = 1e9;
+      for (let th = -1.45; th <= 1.451; th += 0.025) {
+        let gap = 1e9;
+        samp(th).forEach(([p, rr]) => { gap = Math.min(gap, W(p, y)[1] - rr * s); });
+        const c = cost(gap, th);
+        if (c < bc) { bc = c; best = th; }
+      }
+      samp(best).forEach(([p]) => pts.push(W(p, y)));
+      return [base[0], base[1], best];
+    });
+    /* Haupt: Keiler dreht den Kopf um die Hochachse zum Boden, Hirsch und Fasan legen den Träger seitlich ab */
+    const HP = headPts(A), nk = S0.neckP, ax = A.k === "keiler" ? "y" : "z", nr = neckRot(A.k, D.neckT, 0);
+    const HW = (p, a) => W(add3(nk, rot(p, nr[0], ax === "y" ? neckRot(A.k, D.neckT, a)[1] : 0, ax === "z" ? a : 0)), y);
+    let hb = 0, hc = 1e9;
+    for (let a = -1.3; a <= 1.301; a += 0.025) {
+      let gap = 1e9;
+      for (let i = 0; i < HP.length; i += 2) gap = Math.min(gap, HW(HP[i], a)[1]);
+      const c = cost(gap - 0.003, a);
+      if (c < hc) { hc = c; hb = a; }
+    }
+    HP.forEach(p => pts.push(HW(p, hb)));
+    const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    pts.forEach(p => { for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], p[k]); mx[k] = Math.max(mx[k], p[k]); } });
+    return { rz, y, legs, neckT: D.neckT, nyT: ax === "y" ? hb : 0, nz: ax === "z" ? hb : 0, headT: D.headT || 0, mn, mx, pts: pts.filter((_, i) => i % 3 === 0) };
+  }
+  function deadPose(A) { return A.dp || (A.dp = calcDead(A)); }
+  /* Lauf beim Zusammenbrechen: von der letzten Haltung in die Liegepose */
+  function deadLeg(A, i) {
+    const d = deadPose(A).legs[i], k = A.st === "dead" ? 1 : ss(1 - A.t / (A.fT || 0.8)), a = (A.legs0 && A.legs0[i]) || [0, 0];
+    return [lerp(a[0], d[0], k), lerp(a[1] || 0, d[1], k), d[2] * k];
   }
   function lostMsg(A) {
     const H = st();
@@ -1552,20 +1762,29 @@ const HUNT = (() => {
       <div class="hu-msg" hidden></div>
       <div class="hu-range" hidden></div>
       <div class="hu-bar"></div>
-      <div class="hu-reveal" hidden></div>
-      <div class="hu-banner" hidden></div>
-      <div class="hu-strip" hidden></div>
+      <div class="hu-vig"></div>
+      <div class="hu-win" hidden></div>
+      <div class="hu-drag" hidden>↔ Wischen dreht die Ansicht</div>
+      <div class="hu-card2" hidden></div>
       <div class="hu-fade"></div>`;
     host.appendChild(el);
     X.ui = el;
-    ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "reveal", "banner", "strip", "fadeEl", "windEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-reveal", ".hu-banner", ".hu-strip", ".hu-fade", ".hu-wind"][i]); });
+    ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind"][i]); });
     renderBar();
     let P = null;
     el.addEventListener("pointerdown", e => {
-      if (e.target.closest("button,.hu-strip")) return;
+      if (e.target.closest("button,.hu-card2")) return;
+      if (X && X.view === "harvest" && X.hrv && X.hrv.ui < 2) X.hrv.skip = true;          /* v135: Antippen überspringt das Warten */
       P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { el.setPointerCapture(e.pointerId); } catch (er) { /* egal */ }
     });
     el.addEventListener("pointermove", e => {
+      /* v135: beim erlegten Stück dreht Wischen die Ansicht um das Stück (seitlich frei, Neigung begrenzt) */
+      if (P && P.id === e.pointerId && X && X.view === "harvest" && X.hrv && X.hrv.cut) {
+        const dx = e.clientX - P.x, dy = e.clientY - P.y, Hv = X.hrv; P.x = e.clientX; P.y = e.clientY;
+        Hv.uy -= dx * 0.009; Hv.up = clamp(Hv.up + dy * 0.005, -0.22, 0.5);
+        if (Math.abs(dx) + Math.abs(dy) > 2) { Hv.dragged = true; if (X.card && !X.card.hidden && !X.card.classList.contains("saved")) X.card.classList.add("hu-min"); }
+        return;
+      }
       if (!P || P.id !== e.pointerId || !X || X.mode !== "hold" || !["eye", "bino", "scope"].includes(X.view)) return;
       const dx = e.clientX - P.x, dy = e.clientY - P.y; P.x = e.clientX; P.y = e.clientY;
       const k = Math.tan(X.fovNow / 2) * 2 / Math.max(200, FV.R.h);
@@ -1589,6 +1808,9 @@ const HUNT = (() => {
       if (a === "fire") return fire();
       if (a === "keep") return keepTrophy();
       if (a === "sell") return keepTrophy(true);
+      if (a === "mini") { if (X.card && !X.card.classList.contains("saved")) { X.card.classList.toggle("hu-min"); snd("tap"); } return; }
+      if (a === "next") return harvestDone(false);
+      if (a === "wall") return harvestDone(true);
     });
     /* v119: Atem halten und gleichzeitig schießen. Vorher löste JEDES pointerup (auch das des zweiten Fingers auf „Schuss“) den
        Atem wieder, und der Schuss kam erst über „click“, den iOS bei gedrücktem ersten Finger oft verschluckt. Jetzt: Atem merkt sich
@@ -1741,8 +1963,8 @@ const HUNT = (() => {
     A.hits.push(zone); A.dm = A.dm || dm;
     const Z = ZONE[zone];
     if (A.k === "fasan") {
-      if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
-      A.zone = zone; X.target = A;
+      if (A.st === "fly") { A.st = "drop"; A.side = 1; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
+      A.zone = zone; X.target = A; buzz(22);
       msg("Waidmannsheil! " + A.T.name + " · " + dm + " m", 3, "good");
       return;
     }
@@ -1757,7 +1979,7 @@ const HUNT = (() => {
     A.zone = zone;
     const running = A.st === "wounded" || A.st === "flee" || A.st === "hit";
     A.dist = 0; A.runL = lerp(Z.run[0], Z.run[1], rnd());
-    X.target = A;
+    X.target = A; buzz(22);
     if (A.hits.some(z => !ZONE[z].kill)) A.capW = true;         /* erst krank, dann erlegt: höchstens Bronze */
     if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.55); }
     else { if (!running) fleeFrom(A, [EYER[0], EYER[2]]); A.st = "hit"; }
@@ -1792,86 +2014,282 @@ const HUNT = (() => {
     o.type = "triangle"; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.09);
     g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.14);
   }
-  /* ------------------------------ Bergen ---------------------------------- */
-  /* Kino: Abblende, Schnitt zur Totalen, Kran zurück und Schwenk, Funken, Medaille, dann schmale Leisten */
+  /* v135: kurzes Jagdhorn-Motiv zum Erfolg (Blechklang: Sägezahn durch Tiefpass, weicher Einsatz) – leise, gut eine Sekunde,
+     je Art ein eigenes Motiv. Nur mit eingeschaltetem Ton (ac() prüft die Einstellung). */
+  function hornSound(k) {
+    const a = ac(); if (!a) return;
+    const N = { keiler: [[392, 0, 0.17], [523, 0.17, 0.17], [659, 0.34, 0.26], [523, 0.62, 0.4]], hirsch: [[523, 0, 0.17], [659, 0.17, 0.17], [784, 0.34, 0.26], [659, 0.62, 0.4]],
+      fasan: [[659, 0, 0.13], [784, 0.13, 0.13], [1047, 0.27, 0.36]] }[k] || [];
+    const t0 = a.currentTime + 0.02, out = a.createGain(), lp = a.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.7; out.gain.value = 0.05; lp.connect(out); out.connect(a.destination);
+    N.forEach(([f, d, l]) => {
+      const o = a.createOscillator(), g = a.createGain(), t = t0 + d;
+      o.type = "sawtooth"; o.frequency.setValueAtTime(f * 0.985, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.04); g.gain.setValueAtTime(1, t + l * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + l + 0.08);
+      o.connect(g); g.connect(lp); o.start(t); o.stop(t + l + 0.12);
+    });
+  }
+  /* ------------------------------ Bergen (v135) ----------------------------------
+     Der Moment nach dem Schuss als eigener kleiner Auftritt statt Ergebnisbildschirm:
+     A  kurze Abblende, Schnitt nah an das liegende Stück (Bauchseite, schräg zum Haupt, leicht von oben), „Waidmannsheil!“ mit Namen des
+        Stücks, leises Jagdhorn, kurzes Rütteln; das Stück leuchtet kurz warm auf
+     B  die Kamera fährt in 2,6 s ruhig auf eine Einstellung, in der das Stück den freien Platz zwischen Überschrift und Karte
+        füllt (aus den echten Modellpunkten berechnet, für jede Bildschirmgröße) – danach steht sie; Wischen dreht um das Stück
+     C  echte Bestmarken unter der Überschrift (erstes Stück überhaupt bzw. der Art, stärkstes bisher, erste Medaille dieser
+        Stufe); Karte von unten (breite Bildschirme: rechts): Medaille, Trophäe, Sammlerwert, aufklappbar Gewicht, Treffer,
+        Flucht und Güte auf der Medaillenskala. Kleine Bildschirme starten zugeklappt, Wischen klappt sie zu.
+     D  „Trophäe sichern“: Knopf sperrt sofort, die Trophäe genau dieses Stücks erscheint (derselbe Datensatz, der gespeichert
+        wird), dann „Weiter jagen“ oder „Zur Trophäenwand“
+     Antippen überspringt das Warten. Medaille, Güte, Preise, EP und Speicherung rechnen wie bisher. */
+  const HV_FOV = 0.62;
+  const TIER = [null, "Ordentliches Stück", "Gutes Stück", "Starkes Stück", "Außergewöhnliches Stück"];
+  const BARC = [null, "#b4682b", "#76828f", "#d99c14", "#2aa3c8"];          /* Medaillenfarben, kräftig genug für den hellen Balken */
+  const SPN = { hirsch: ["Rothirsch", "Dein erster Rothirsch", "Dein stärkster Rothirsch bisher"], keiler: ["Keiler", "Dein erster Keiler", "Dein stärkster Keiler bisher"],
+    fasan: ["Fasan", "Dein erster Fasan", "Dein schönster Fasan bisher"] };
+  const buzz = p => { try { if (navigator.vibrate && !(navigator.userActivation && !navigator.userActivation.hasBeenActive)) navigator.vibrate(p); } catch (e) { /* kein Rütteln */ } };
+  /* breite Bildschirme (wie die CSS-Regel für #huntUI .hu-card2): Karte rechts statt unten */
+  const sideUI = () => innerWidth >= 700 && innerWidth / Math.max(1, innerHeight) >= 1.25;
   function goHarvest(A) {
     if (!X || !A || A.st !== "dead" || X.view === "harvest") return;
     const zone = A.zone || "lunge";
     let medal = medalOf(A.score, A.k === "fasan" ? "vogel" : zone);
     if (A.capW) medal = Math.min(medal, 1);
     A.medal = Math.max(1, medal);
-    /* Kamera-Yaw für die Flanke: lokale +x-Achse des Tiers zeigt in Welt-Richtung −ry */
-    const yaw0 = -A.ry + (rnd() < 0.5 ? 0 : Math.PI) + 0.45;
-    X.view = "harvest"; X.hrv = { A, t: 0, from: camOf(FV.R.cam), yaw0, cut: false, fx: 0, ui: 0 };
-    X.spotEl.hidden = true; X.range.hidden = true; X.marks.innerHTML = "";
+    A.rec = { k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0 };      /* genau dieser Datensatz wird gespeichert */
+    A.feat = feats(A);
+    X.view = "harvest";
+    X.hrv = { A, t: 0, k: 0, from: camOf(FV.R.cam), yaw: heroYaw(A), pitch: A.k === "fasan" ? 0.62 : 0.52, uy: 0, up: 0, cut: false, ui: 0, fr: sideUI() ? { t: 0.17, b: 0.04, r: 0.47 } : { t: 0.17, b: 0.44, r: 0 }, mt: 0 };
+    X.spotEl.hidden = true; X.range.hidden = true; X.marks.innerHTML = ""; X.msgEl.hidden = true; X.msgT = 0;
     breath(false);
     renderBar();
   }
-  function harvestCam(Hv, dt) {
-    const A = Hv.A, c = A.center, S0 = SP[A.k];
-    const k = ss((Hv.t - 0.4) / 5.5), sz = A.s * (A.k === "fasan" ? 0.45 : A.k === "keiler" ? 0.8 : 1);
-    const yaw = Hv.yaw0 + 1.15 * k + Math.max(0, Hv.t - 5.9) * 0.05;
-    return { tx: c[0], ty: c[1] + 0.25 * (1 - k) + 0.15, tz: c[2], dist: lerp(3.0, S0.orbit, k) * sz + (A.k === "hirsch" ? 0 : 0), yaw, pitch: lerp(0.1, 0.36, k), fov: 0.72 };
+  /* Bestmarken – nur, was die Daten hergeben */
+  function feats(A) {
+    const H = st(), N = SPN[A.k], log = (H.log || []).filter(L => L.k === A.k), C = collSync().filter(r => r.k === A.k), out = [];
+    const had = log.length + C.length + ((H.n && H.n[A.k]) || 0);
+    let best = H.top && H.top[A.k] != null ? H.top[A.k] : -1;
+    log.forEach(L => { if (L.s != null) best = Math.max(best, L.s); }); C.forEach(r => { best = Math.max(best, r.s); });
+    if (!H.kills) out.push("Deine erste Trophäe!");
+    else if (!had) out.push(N[1]);
+    else if (best >= 0 && A.rec.s > best) out.push(N[2]);
+    if (H.best && A.medal > H.best) out.push("Erstmals " + MEDALS[A.medal].n);
+    return out;
   }
-  function harvestStep(Hv, dt, time) {
+  /* Blick von der Bauchseite (die Läufe liegen zur Kamera, die obere Flanke zeigt nach oben), schräg zum Haupt, leicht von oben –
+     so liest sich das liegende Stück am klarsten. Frei von Bäumen, Felsen und Totholz. */
+  function heroYaw(A) {
+    const side = A.side || 1, lx = [Math.cos(A.ry), -Math.sin(A.ry)], f = [Math.sin(A.ry), Math.cos(A.ry)];
+    const base = Math.atan2(side * lx[1] * 0.85 + f[1] * 0.5, side * lx[0] * 0.85 + f[0] * 0.5), B = A.box;
+    const c = [(B.mn[0] + B.mx[0]) / 2, 0, (B.mn[2] + B.mx[2]) / 2];
+    for (const o of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9, Math.PI - 0.5, Math.PI + 0.5]) if (camFree(c, base + o, 4.5 * A.s)) return base + o;
+    return base;
+  }
+  function camFree(c, yaw, d) {
+    const L = revLayout();
+    for (let i = 1; i <= 10; i++) {
+      const k = i / 10, x = c[0] + Math.cos(yaw) * d * k, z = c[2] + Math.sin(yaw) * d * k;
+      if (L.trees.some(t => Math.hypot(t.x - x, t.z - z) < 0.7 + 0.45 * t.s)) return false;
+      if (k < 0.65 && L.rocks.some(t => Math.hypot(t.x - x, t.z - z) < 1.05 * t.s + 0.25)) return false;
+      if (k < 0.5 && L.logs.some(t => Math.hypot(t.x - x, t.z - z) < 1.1 * t.s)) return false;
+    }
+    return true;
+  }
+  /* Einstellung: kleinster Abstand, bei dem alle Punkte des liegenden Stücks in den freien Bereich passen (zwischen Überschrift
+     oben und Karte unten, links/rechts mit Rand); das Stück sitzt mittig in diesem Bereich. Anfahrt: etwas weiter und seitlich. */
+  function heroCam(Hv) {
+    const A = Hv.A, R = FV.R, P = A.foot, k = Hv.k, tv = Math.tan(HV_FOV / 2), th = tv * R.w / Math.max(1, R.h);
+    const yaw = Hv.yaw + Hv.uy - 0.42 * (1 - k) + 0.035 * Math.sin(Hv.t * 0.4) * k, pitch = clamp(Hv.pitch + Hv.up + 0.08 * (1 - k), 0.1, 0.95);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch), E = [Math.cos(yaw) * cp, sp, Math.sin(yaw) * cp], rt = [Math.sin(yaw), 0, -Math.cos(yaw)], up = [-Math.cos(yaw) * sp, cp, -Math.sin(yaw) * sp];
+    const B = A.box, c = [(B.mn[0] + B.mx[0]) / 2, (B.mn[1] + B.mx[1]) / 2, (B.mn[2] + B.mx[2]) / 2];
+    const yTop = 1 - 2 * Hv.fr.t, yBot = -1 + 2 * Hv.fr.b, yMid = (yTop + yBot) / 2, xR = 1 - 2 * (Hv.fr.r || 0), xMid = (xR - 1) / 2;
+    const tgt = d => { const o = yMid * tv * d, ox = xMid * th * d; return [c[0] - up[0] * o - rt[0] * ox, c[1] - up[1] * o, c[2] - up[2] * o - rt[2] * ox]; };
+    const fits = d => {
+      const T = tgt(d), e = [T[0] + E[0] * d, T[1] + E[1] * d, T[2] + E[2] * d];
+      for (let i = 0; i < P.length; i++) {
+        const p = P[i], v0 = p[0] - e[0], v1 = p[1] - e[1], v2 = p[2] - e[2], zc = -(v0 * E[0] + v1 * E[1] + v2 * E[2]);
+        if (zc < 0.4) return false;
+        const xs = (v0 * rt[0] + v2 * rt[2]) / (zc * th), ys = (v0 * up[0] + v1 * up[1] + v2 * up[2]) / (zc * tv);
+        if (xs > xR - 0.12 || xs < -0.86 || ys > yTop - 0.05 || ys < yBot + 0.05) return false;
+      }
+      return true;
+    };
+    let lo = 0.9, hi = 16;
+    for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; if (fits(m)) hi = m; else lo = m; }
+    const T = tgt(hi);
+    return { tx: T[0], ty: T[1], tz: T[2], dist: hi * (1 + 0.3 * (1 - k)), yaw, pitch, fov: HV_FOV };
+  }
+  function harvestStep(Hv, dt) {
     Hv.t += dt;
-    const t = Hv.t;
-    /* Abblenden 0 … 0,4 s, Schnitt, Aufblenden bis 0,9 s */
-    X.fade = t < 0.4 ? t / 0.4 : Math.max(0, 1 - (t - 0.4) / 0.5);
-    if (!Hv.cut && t >= 0.4) Hv.cut = true;
-    /* Funken: goldene Lichtpunkte steigen um das Stück auf */
-    if (t > 1.5 && t < 3.3) {
-      Hv.fx -= dt;
-      if (Hv.fx <= 0) {
-        Hv.fx = 0.12;
-        const c = Hv.A.center, a = rnd() * 6.28, r = 0.6 + rnd() * 0.9;
-        FV.R.burst({ x: c[0] + Math.cos(a) * r, y: 0.1, z: c[2] + Math.sin(a) * r, n: 3, col: [[1, 0.86, 0.4, 1], [1, 0.95, 0.7, 1]], speed: 0.25, up: 1.4, g: 0.35, drag: 0.6, life: 2.2, size: 0.06, spread: 0.4 });
+    const t = Hv.t, A = Hv.A;
+    X.fade = t < 0.3 ? t / 0.3 : Math.max(0, 1 - (t - 0.3) / 0.45);
+    if (!Hv.cut && t >= 0.3) { Hv.cut = true; bedShow(A); }
+    Hv.k = 1 - Math.pow(1 - clamp((t - 0.3) / 2.6, 0, 1), 3);
+    if (t > 0.55 && Hv.ui === 0) { Hv.ui = 1; showWin(A); }
+    if ((t > 1.75 || Hv.skip) && Hv.ui === 1 && t > 0.6) { Hv.ui = 2; showCard(A); }
+    /* Hervorheben: warmes Aufleuchten nach dem Schnitt, klingt in gut einer Sekunde ab */
+    if (A.node) A.node.glow = t > 0.3 && !A.kept ? 0.22 * Math.exp(-(t - 0.3) * 1.6) : 0;
+    /* freien Bereich messen (Überschrift oben, Karte unten) – das Stück rückt weich in dessen Mitte */
+    Hv.mt -= dt;
+    if (Hv.mt <= 0 && X.ui) {
+      Hv.mt = 0.25;
+      const r = X.ui.getBoundingClientRect(), h = Math.max(1, r.height);
+      if (!X.win.hidden) Hv.ft = clamp((X.win.getBoundingClientRect().bottom - r.top + 6) / h, 0.05, 0.4);
+      if (!X.card.hidden) {
+        const cr = X.card.getBoundingClientRect(), side = cr.left - r.left > r.width * 0.35;        /* breite Bildschirme: Karte rechts, das Stück links daneben */
+        Hv.fb = side ? 0.04 : clamp((r.bottom - cr.top + 8) / h, 0.1, 0.62); Hv.fR = side ? clamp((r.right - cr.left + 10) / Math.max(1, r.width), 0, 0.6) : 0;
+        X.drag.style.bottom = Math.round(r.bottom - cr.top + 6) + "px";
       }
     }
-    if (t > 1.45 && Hv.ui === 0) { Hv.ui = 1; showReveal(Hv.A); }
-    if (t > 3.6 && Hv.ui === 1) { Hv.ui = 2; showPanels(Hv.A); }
-    return Hv.cut ? harvestCam(Hv, dt) : Hv.from;
+    if (Hv.ft != null) Hv.fr.t += (Hv.ft - Hv.fr.t) * Math.min(1, dt * 3);
+    if (Hv.fb != null) Hv.fr.b += (Hv.fb - Hv.fr.b) * Math.min(1, dt * 3);
+    if (Hv.fR != null) Hv.fr.r += (Hv.fR - (Hv.fr.r || 0)) * Math.min(1, dt * 3);
+    if (X.drag && !X.drag.hidden && (Hv.dragged || t > Hv.dragT)) X.drag.classList.add("off");
+    return Hv.cut ? heroCam(Hv) : Hv.from;
   }
-  function showReveal(A) {
-    const M = MEDALS[A.medal];
-    X.reveal.innerHTML = `<div class="hu-rays" style="--mc:${M.c}"></div><div class="hu-bigmedal" style="--mc:${M.c}">${M.i}</div><b>${M.n}</b><small>${esc(A.T.troph)}</small>`;
-    X.reveal.hidden = false; X.reveal.classList.remove("go"); void X.reveal.offsetWidth; X.reveal.classList.add("go");
-    snd(A.medal >= 3 ? "pearl" : "collect"); if (A.medal >= 3) setTimeout(() => snd("level"), 350);
+  /* ---- Liegeplatz: Kontaktschatten, niedergedrücktes Gras, Farbspiel – randlos in die Wiese übergehend ---- */
+  /* Farbe der Revier-Wiese genau so, wie das grobe Bodengitter sie an dieser Stelle zeigt (gleiche Dreiecke, gleiche Mischung) */
+  function groundColAt(x, z) {
+    const N = 44, M = 84, Rm = 240, dx = x - FC.x, dz = z - FC.z, r = Math.hypot(dx, dz);
+    let a = Math.atan2(dz, dx); if (a < 0) a += Math.PI * 2;
+    const k = clamp(Math.floor(N * Math.pow(r / Rm, 1 / 1.55)), 0, N - 1), j = Math.floor(a / (Math.PI * 2) * M) % M;
+    const r0 = Rm * Math.pow(k / N, 1.55), r1 = Rm * Math.pow((k + 1) / N, 1.55), a0 = j / M * Math.PI * 2, a1 = (j + 1) / M * Math.PI * 2;
+    const u = clamp((a - a0) / (a1 - a0), 0, 1), v = clamp((r - r0) / (r1 - r0), 0, 1);
+    const C = (rr, aa) => revColor(FC.x + Math.cos(aa) * rr, FC.z + Math.sin(aa) * rr);
+    const cA = C(r0, a0), cB = C(r0, a1), cC = C(r1, a1), cD = C(r1, a0);
+    const w = u >= v ? [1 - u, u - v, v, 0] : [1 - v, 0, u, v - u];
+    return [0, 1, 2].map(i => cA[i] * w[0] + cB[i] * w[1] + cC[i] * w[2] + cD[i] * w[3]);
   }
-  function showPanels(A) {
-    const M = MEDALS[A.medal], zone = A.zone || "lunge", id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal], room = typeof farmRoom === "function" ? farmRoom(id) : 1;
-    const hitsTxt = A.hits.map(z => ZONE[z].n).filter((v, i, a) => a.indexOf(v) === i).join(" + ");
-    const note = A.capW ? "Erst krank geschossen – höchstens Bronze." : ZONE[zone] && ZONE[zone].note ? ZONE[zone].note : "";
-    const rec = { k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0 };
-    X.banner.innerHTML = `<span class="hu-tro">${recThumb(rec, true)}<i style="--mc:${M.c}">${M.i}</i></span><div><small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(A.T.troph)} · ${A.k === "fasan" ? String(A.T.kg).replace(".", ",") : A.T.kg} kg</em></div>`;
-    X.strip.innerHTML = `<div class="hu-chips"><span><small>Treffer</small><b>${esc(hitsTxt)}</b></span><span><small>Entfernung</small><b>${A.dm || "?"} m</b></span>
-        <span><small>Bewertung</small><b>${String(Math.round(A.score * 1000) / 10).replace(".", ",")}</b></span><span><small>Wert</small><b>${eur(price)}</b></span></div>
-      ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
-      ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe ins Lager legen</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenwand voll – an Sammler verkaufen · ${eur(price)}</button>`}`;
-    X.reveal.classList.add("away");
-    X.banner.hidden = false; X.strip.hidden = false;
-    if (typeof thumbFill === "function") thumbFill();
+  /* Liegeplatz: innen der weiche Farbverlauf der Wiese (das grobe Bodengitter zeigt aus der Nähe gerade Farbkanten), dazu
+     sanfte helle/dunkle Flecken, um das Stück niedergedrücktes, matteres Gras und der Kontaktschatten; außen läuft alles
+     genau in die Farbe des Bodengitters aus – keine sichtbare Kante. rad: ganzer Fleck, near: Umkreis des Stücks */
+  function bedMesh(A, cx, cz, rad, near) {
+    const b = MB(), NR = 22, NS = 64, P = A.foot.filter(p => p[1] < 0.5);
+    const col = (x, z) => {
+      const d = Math.hypot(x - cx, z - cz), rim = ss((d / rad - 0.7) / 0.3), inner = 1 - ss((d - near * 0.55) / (near * 0.8));
+      let c = mixC(revColor(x, z), groundColAt(x, z), rim);
+      const w = Math.sin(x * 1.3 + z * 0.7) * Math.sin(z * 1.1 - x * 0.5) + 0.5 * Math.sin(x * 3.7 - z * 2.9);
+      c = mulc(c, 1 + 0.045 * w * (1 - rim));
+      let ao = 0;
+      for (const p of P) { const d2 = (p[0] - x) * (p[0] - x) + (p[2] - z) * (p[2] - z); if (d2 < 0.4) ao += Math.exp(-d2 / 0.028) * (p[1] < 0.08 ? 0.055 : 0.02 * (1 - p[1] / 0.5)); }
+      const n = hsh(Math.round(x * 8), Math.round(z * 8), 7), n2 = Math.sin(x * 3.1 + z * 1.7) * Math.sin(z * 2.3 - x * 1.1);
+      c = mixC(c, mixC(0x93a84c, 0x6c8a3a, n), inner * (0.1 + 0.1 * n2 + 0.08 * n));               /* niedergedrückt, matter, fleckig */
+      return mulc(c, 1 - Math.min(0.42, ao) * (1 - rim));
+    };
+    const memo = new Map(), pt = (i, j) => {                       /* jede Gitterecke nur einmal berechnen */
+      const key = i * 1000 + (j % NS); let v = memo.get(key);
+      if (!v) { const r = ringR(i), a = (j % NS) / NS * Math.PI * 2, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; v = [[x - cx, 0, z - cz], col(x, z)]; memo.set(key, v); }
+      return v;
+    };
+    const ringR = i => rad * Math.pow(i / NR, 1.3);
+    for (let i = 0; i < NR; i++) for (let j = 0; j < NS; j++) {
+      const Pa = pt(i, j), Pb = pt(i, j + 1), Pc = pt(i + 1, j + 1), Pd = pt(i + 1, j);
+      if (i > 0) b.triV(Pa[0], Pb[0], Pc[0], Pa[1], Pb[1], Pc[1]);
+      b.triV(Pa[0], Pc[0], Pd[0], Pa[1], Pc[1], Pd[1]);
+    }
+    return b;
+  }
+  function bedShow(A) {
+    if (X.bed || !A.box) return;
+    const B = A.box, cx = (B.mn[0] + B.mx[0]) / 2, cz = (B.mn[2] + B.mx[2]) / 2, near = Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2]) / 2 + 0.9, rad = Math.max(4.5, near + 2.8);
+    const mesh = FV.R.mesh(bedMesh(A, cx, cz, rad, near)), node = addNode(mesh, { x: cx, y: 0.012, z: cz, shadow: false });
+    /* Grasbüschel, die am oder im Stück stünden, solange wegnehmen */
+    const L = revLayout(), hid = [];
+    L.grass.forEach((g, i) => {
+      if (Math.hypot(g.x - cx, g.z - cz) > rad + 0.6 || !A.foot.some(p => Math.hypot(p[0] - g.x, p[2] - g.z) < 0.4 + 0.35 * g.s)) return;
+      const G = RG.get("hu_gt" + g.v); if (G) { G.remove("hg" + i); hid.push([G, i, g]); }
+    });
+    X.bed = { node, mesh, hid };
+  }
+  function bedClear() {
+    if (!X || !X.bed) return;
+    const Bd = X.bed; X.bed = null;
+    rmNode(Bd.node); if (FV.R && FV.R.free) FV.R.free(Bd.mesh);
+    Bd.hid.forEach(([G, i, g]) => { if (FV.R.instGroups.has(G)) G.add("hg" + i, g.x, g.z, g.ry, g.s); });
+  }
+  /* ---- Oberfläche ---- */
+  const fkg = A => (A.k === "fasan" ? fnum(A.T.kg, 1) : A.T.kg) + " kg";
+  function showWin(A) {
+    const Z = ZONE[A.zone] || ZONE.lunge;
+    X.win.innerHTML = `<small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(Z.n)} auf ${A.dm || "?"} m</em>${A.feat.length ? `<div class="hu-feat">${A.feat.map(f => `<span>★ ${esc(f)}</span>`).join("")}</div>` : ""}`;
+    X.win.hidden = false; X.win.classList.remove("go"); void X.win.offsetWidth; X.win.classList.add("go");
+    X.vig.classList.add("on");
+    hornSound(A.k); buzz([16, 70, 28]);
+  }
+  function cardHTML(A) {
+    const M = MEDALS[A.medal], id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal], room = typeof farmRoom === "function" ? farmRoom(id) : 1;
+    const Z = ZONE[A.zone] || ZONE.lunge, bonus = A.capW ? 0 : Z.bonus || 0, eff = clamp(A.score + bonus, 0, 1);
+    const note = A.capW ? "Erst krank geschossen – höchstens Bronze." : Z.note || "";
+    const fled = Math.round((A.dist || 0) * M_PER_U), flucht = A.k === "fasan" ? ["Uhrzeit", typeof clock === "function" ? clock(S.time) : "–"] : ["Flucht", fled < 2 ? "sofort gelegen" : "nach " + fled + " m"];
+    const tick = (v, m) => `<u style="left:${v}%" title="${MEDALS[m].n}"><s>${MEDALS[m].i}</s></u>`;
+    return `<div class="hu-ct" data-hu="mini"><span class="hu-md m${A.medal}" style="--mc:${M.c}"><i>${M.i}</i></span>
+        <div class="hu-cn"><small>${esc(TIER[A.medal])}</small><b>${esc(M.n)}-Trophäe</b><em>${esc(A.T.troph)}</em></div>
+        <span class="hu-val"><small>Sammlerwert</small><b>${eur(price)}</b><i class="hu-tg"></i></span></div>
+      <div class="hu-more">
+        <div class="hu-c3"><span><small>Gewicht</small><b>${fkg(A)}</b></span><span><small>Treffer</small><b>${esc(Z.n)}</b></span><span><small>${flucht[0]}</small><b>${esc(flucht[1])}</b></span></div>
+        <div class="hu-q"><span>Güte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
+          <i class="hu-qb" style="--q:${(eff * 100).toFixed(1)}%;--mc:${BARC[A.medal]}"><b></b>${tick(50, 2)}${tick(72, 3)}${tick(90, 4)}</i></div>
+        ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
+      </div>
+      ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe sichern</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenwand voll – an Sammler · ${eur(price)}</button>`}`;
+  }
+  function showCard(A) {
+    X.card.innerHTML = cardHTML(A);
+    /* kleine Bildschirme: Karte schmal (nur Medaille, Trophäe, Knopf) – Antippen klappt die Werte auf */
+    X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : ""); X.card.hidden = false;
+    X.drag.hidden = false; X.drag.classList.remove("off"); X.hrv.dragT = X.hrv.t + 4.5;
+    snd(A.medal >= 3 ? "pearl" : "collect");
+    if (A.medal >= 3 && A.box) {                       /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück */
+      const B = A.box, cam = FV.R.cam, bx = -Math.cos(cam.yaw) * 0.4, bz = -Math.sin(cam.yaw) * 0.4;
+      FV.R.burst({ x: (B.mn[0] + B.mx[0]) / 2 + bx, y: B.mx[1] * 0.6, z: (B.mn[2] + B.mx[2]) / 2 + bz, n: A.medal === 4 ? 14 : 9, col: [[1, 0.88, 0.5, 1], [1, 0.97, 0.8, 1]], speed: 0.25, up: 0.9, g: 0.25, drag: 0.8, life: 1.8, size: 0.012 + 0.01 * Math.min(2, Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2])), spread: Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2]) * 0.4 });
+    }
   }
   function keepTrophy(sell) {
-    const A = X && X.hrv && X.hrv.A;
-    if (!A || A.kept) return;
-    A.kept = true;
+    const Hv = X && X.hrv, A = Hv && Hv.A;
+    if (!A || A.kept || Hv.ui < 2) return;
+    A.kept = true;                                                    /* doppeltes Tippen: zweiter Aufruf endet hier */
+    X.card.querySelectorAll("button").forEach(b => { b.disabled = true; });
     const H = st(), id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal];
+    let n = 0;
     if (sell) { S.money += price; if (typeof logMoney === "function") logMoney("farm", "Trophäe an Sammler: " + A.T.troph, price); }
-    else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push({ u: uid(), k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0, t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4) }); }
+    else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push(Object.assign({ u: uid() }, A.rec, { t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4) })); n = C.length; }
     H.kills++; H.stock = Math.max(0, H.stock - 1);
     H.best = Math.max(H.best || 0, A.medal);
-    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: Math.round(A.score * 1000) / 1000 });
+    H.n = H.n || {}; H.n[A.k] = (H.n[A.k] || 0) + 1;                   /* v135: je Art zählen und Bestwert merken (für „erster“/„stärkster“) */
+    H.top = H.top || {}; H.top[A.k] = Math.max(H.top[A.k] != null ? H.top[A.k] : -1, A.rec.s);
+    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: A.rec.s });
     if (H.log.length > 40) H.log.length = 40;
     if (typeof farmXP === "function") farmXP(XP[A.k][A.medal]);
-    snd("coin");
     save();
-    X.banner.hidden = true; X.strip.hidden = true; X.reveal.hidden = true;
-    msg((sell ? "Verkauft: " : "Im Lager: ") + A.T.troph + " " + MEDALS[A.medal].i, 3.5, "good");
-    X.view = "back"; X.back = { t: 0, A };
+    showSaved(A, sell, n, price);
+    snd("clunk"); setTimeout(() => snd("coin"), 150); if (A.medal === 4) setTimeout(() => snd("pearl"), 380);
+    buzz(sell ? 20 : [20, 50, 34]);
     X.target = null;
   }
-
+  function showSaved(A, sell, n, price) {
+    const M = MEDALS[A.medal];
+    X.card.className = "hu-card2 saved" + (sell ? " sold" : "");
+    X.card.innerHTML = `<div class="hu-sv"><span class="hu-svimg" style="--mc:${M.c}">${recThumb(A.rec, true)}<i class="hu-shine"></i><em>${M.i}</em></span>
+        <div class="hu-svt"><small>${sell ? "Verkauft" : "✓ Gesichert"}</small><b>${esc(A.T.troph)}</b>
+          <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + " · an deiner Trophäenwand"}</em>
+          <span>${sell ? "" : (n === 1 ? "dein erstes Stück an der Wand" : n + " Stücke an der Wand") + " · "}+${XP[A.k][A.medal]} EP</span></div></div>
+      <div class="hu-sb">${sell ? "" : `<button class="btn ghost hu-wall" data-hu="wall">🏆 Trophäenwand</button>`}<button class="btn hu-go" data-hu="next">Weiter jagen</button></div>`;
+    X.drag.classList.add("off");
+    if (typeof thumbFill === "function") thumbFill();
+  }
+  /* zurück auf den Hochsitz – oder gleich zur Trophäenwand (Hochsitz verlassen, Lager öffnen) */
+  function harvestDone(wall) {
+    const Hv = X && X.hrv;
+    if (!Hv || !Hv.A.kept || X.view !== "harvest") return;
+    X.card.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    X.view = "back"; X.back = { t: 0, A: Hv.A, wall: !!wall };
+    renderBar(); snd("swish");
+  }
+  function harvestUIClear() {
+    if (!X) return;
+    [X.win, X.card].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
+    if (X.drag) X.drag.hidden = true;
+    if (X.vig) X.vig.classList.remove("on");
+  }
 
   /* ---------------------------- Trophäenwand (v120) ----------------------------
      Im Lager-Reiter „Trophäen“: jedes Stück einzeln als großes Bild (das echte 3D-Modell, von vorn), Name, Enden bzw. Länge,
@@ -2006,13 +2424,16 @@ const HUNT = (() => {
       else { if (X.inRv) leaveRevier(); const k = (X.p - 0.22) / 0.78; goal = camLerp(camLook(EYEP, X.thW, -0.12, FOV), X.saved, ss(k)); X.fade = clamp(1 - k * 3, 0, 1); }
       if (X.p >= 1) { finish(); return; }
     } else if (X.view === "harvest" && X.hrv) {
-      goal = harvestStep(X.hrv, dt, time);
+      goal = harvestStep(X.hrv, dt);
     } else if (X.view === "back" && X.back) {
       const Bk = X.back; Bk.t += dt;
       X.fade = Bk.t < 0.35 ? Bk.t / 0.35 : Math.max(0, 1 - (Bk.t - 0.35) / 0.45);
-      if (Bk.t >= 0.35 && !Bk.cut) { Bk.cut = true; unbuild(Bk.A); Bk.A.st = "gone"; X.drops.forEach(d => rmNode(d.n)); X.drops = []; }
+      if (Bk.t >= 0.35 && !Bk.cut) { Bk.cut = true; harvestUIClear(); bedClear(); unbuild(Bk.A); Bk.A.st = "gone"; X.drops.forEach(d => rmNode(d.n)); X.drops = []; }
       goal = Bk.cut ? look : camOrbitHold();
-      if (Bk.t >= 0.8) { X.view = "eye"; X.back = null; X.hrv = null; renderBar(); }
+      if (Bk.t >= 0.8) {
+        X.view = "eye"; X.back = null; X.hrv = null; renderBar();
+        if (Bk.wall) { X.afterFinish = () => { if (typeof openFarmStore === "function") openFarmStore("troph"); }; end(); }
+      }
     }
     if (X.dbgCam) goal = typeof X.dbgCam === "function" ? X.dbgCam() : X.dbgCam;          /* nur für Tests (Kamera frei setzen) */
     CAM_KEYS.forEach(k => { c[k] = goal[k]; });
@@ -2039,6 +2460,8 @@ const HUNT = (() => {
     X.animals.forEach(A => { if (A.st !== "gone") stepAnimal(A, dt, time); });
     X.animals = X.animals.filter(A => A.st !== "gone" || A.kept);
     const T = X.target;
+    /* v135: sobald das Stück liegt – kurze Bestätigung, dann (1,1 s später) die Bergung */
+    if (T && T.st === "dead" && !T.cf) { T.cf = true; if (["eye", "bino", "scope"].includes(X.view)) { msg("Liegt! " + T.T.name, 1.2, "good"); buzz(14); } }
     if (T && T.st === "dead" && ["eye", "bino", "scope"].includes(X.view) && X.t - T.deadAt > 1.1) goHarvest(T);
     /* Oberfläche */
     if (X.msgT > 0) { X.msgT -= dt; if (X.msgT <= 0) X.msgEl.hidden = true; }
@@ -2055,7 +2478,7 @@ const HUNT = (() => {
       const hb = X.bar.querySelector(".hu-breath"); if (hb) hb.classList.toggle("on", B.on);
     }
   }
-  function camOrbitHold() { return X.hrv ? harvestCam(X.hrv, 0) : camOf(FV.R.cam); }
+  function camOrbitHold() { return X.hrv && X.hrv.A.box ? heroCam(X.hrv) : camOf(FV.R.cam); }
   function uiMarks(dt) {
     const R = FV.R, w = R.w, h = R.h, m = Math.min(w, h);
     let html = "", near = null, nd = 1e9;
@@ -2108,7 +2531,7 @@ const HUNT = (() => {
   }
   function finish() {
     if (!X) return;
-    const c = FV.R.cam;
+    const c = FV.R.cam, after = X.afterFinish;
     if (X.inRv) leaveRevier();
     CAM_KEYS.forEach(k => { c[k] = X.saved[k]; });
     delete c.near; delete c.far;
@@ -2120,6 +2543,7 @@ const HUNT = (() => {
     FV.fp = null; X = null;
     if (typeof clampCam === "function") clampCam();
     if (typeof save === "function") save();
+    if (after) setTimeout(after, 80);                  /* v135: „Zur Trophäenwand“ */
   }
 
   /* ------------------------------ Markt ----------------------------------- */
@@ -2143,11 +2567,11 @@ const HUNT = (() => {
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
     wallHTML, wallBind, collSync, trophyBuild, trophyKey,
     _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr) => deerHead(P, sc, vr), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
-      boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: () => boarLeg(), antlerPlan, qS, REP_S },
+      boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: () => phHead(), phLeg: () => phLeg(), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
+    _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
   };

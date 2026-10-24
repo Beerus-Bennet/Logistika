@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v135 – Jagderfolg: Keiler, Liegepose, Bergung (auf v134)
+
+| Teil | Datei |
+|---|---|
+| Keiler- und Fasanmodell, Liegepose (`calcDead`/`deadPose`), Bergung (`goHarvest`, `heroCam`, `bedMesh`, `showWin`, `cardHTML`, `keepTrophy`, `harvestDone`), Jagdhorn | `hunt.js` |
+| Überschrift, Karte, Trophäen-Bestätigung, breite Bildschirme (Abschnitt „v135: Jagderfolg“; alte `.hu-reveal/.hu-banner/.hu-strip` entfernt) | `style.css` |
+| Tests Modelle, Waffenlänge, Liegepose; Dreiecksgrenze Trophäen 5 600 | `hunt.test.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v134 – Offene Kisten (auf v133; ein ZIP mit allem seit v120)
 
 | Teil | Datei |
