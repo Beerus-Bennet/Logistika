@@ -116,9 +116,6 @@ so laufen die Lager nicht ständig über.
   es nur an offenen Seiten. Ziege Tim und Katze Minka spazieren auf den Dekowegen,
   Hofhund Bello auch auf den Hofwegen; das Personal nimmt die Wege gern und ist darauf
   ein Drittel schneller. Fahrzeuge fahren nie darüber.
-* **Heuballen (v70)** – am Scheunentor liegen zwei Rundballen vom eigenen Heu:
-  antippen und verkaufen (je 8 €). Alle 12 Spielstunden wird ein neuer
-  gepresst, höchstens zwei.
 * **Kundschaft** – jede Station hat ihre eigene **Bestelltafel**: am Hoftor
   (Hofwaren), im Sägewerk am Tor (Holz) und an der Fischerei am Uferweg
   (Fisch). Jede zeigt nur die Bestellungen ihrer Station (oben lässt sich

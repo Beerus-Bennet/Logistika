@@ -1,5 +1,59 @@
 # Änderungen – kurz für den Kollegen
 
+## v134 – Offene Kisten (Lieferung und Schatztruhe): Innenleben statt flacher Platten
+
+- **Fehler:** Die offene Kiste zeigte eine flache, einfarbige Deckel-Innenseite und im Korpus nur eine flache Goldplatte mit ein paar Steinen; nachts zusätzlich dunkel und matt. (`woodmodels.js`)
+- **Korpus:** `chestHeap` – Münzhaufen aus 74 schrägen Münzen (vier Goldtöne, hellere Oberseite) mit größeren Edelsteinen auf dem Haufen, roter Boden.
+- **Deckel:** `lidInside` – Holzrahmen, gepolstertes rotes Futter mit vier Kissen, Goldpaspel (Kreuz) und neun Nieten; beide Kisten (`lootCrate/lootLid`, `goldChest/goldLid`).
+- **Licht (`worldview.js`):** offene Kiste bleibt mit Mindestleuchten (`glow` 0,14, Deckel 0,3) auch nachts gut sichtbar.
+- Enthält v133 bis v121 – ein Upload genügt.
+
+## v133 – Nachthimmel neu (Hochsitz und Ich-Sicht beim Fällen)
+
+- **Himmel (`vista.js`):** nachts volle Bildschärfe (vorher halbe CSS-Auflösung → auf dem iPhone sehr unscharf). Milchstraße als einmal berechnete Textur (Band mit Staubstreifen, Körnung, warmer Kern), rund 5 000 Sterne in Spektralfarben (helle mit Lichthof, die hellsten mit Strahlen, Funkeln), Himmel dreht sich 15° je Stunde, Sternschnuppen alle 15–45 s, Lichtglocke der Städte am Horizont und Luftleuchten.
+- **Mond:** Bild mit Maren, Kratern, Randverdunklung und Phase nach Spieltag (29,5 Tage); Helligkeit dämpft schwache Sterne und Milchstraße; steht über dem Feld leicht rechts (`X.skyAz` in `hunt.js`).
+- **Wolken:** vorgerechnete, gelockte Formen (unten Schatten, oben Licht) statt Ellipsen-Ballen, nachts dunkel vor den Sternen mit silbernem Mondrand; gilt auch tagsüber und im Abendrot.
+- **Blick (`hunt.js`):** nach oben bis 0,62 statt 0,3, damit man den Himmel ansehen kann.
+- Enthält v132 bis v121 – ein Upload genügt.
+
+## v132 – Hochsitz-Revier: alle Bäume in der schönen Optik
+
+- **Bäume (`woodmodels.js`, `hunt.js`):** Mit bloßem Auge waren nur Bäume bis 40 m fein, alles dahinter das grobe Standardmodell (kantige Kugelkronen). Neu: Mittelstufe `FWM.treeRv(sp, 3, v, true)` – gleiche Gestalt, Farben und Blattoptik wie das feine Modell, aber etwa ein Viertel der Blätter (dafür größer), weniger Rinden-/Nadelsegmente (1 400–2 800 statt ~6 000 Dreiecke). Bis 40 m und im Fernglas/Zielfernrohr weiterhin fein, dahinter Mittelstufe; das grobe Modell erscheint nur noch kurz beim Betreten, bis die Mittelstufe gebaut ist (wird vor den feinen Modellen gebaut).
+- Enthält v131 bis v121 – ein Upload genügt.
+
+## v131 – Erlegtes Wild liegt nie mehr in Felsen oder Stämmen
+
+- **Liegeplatz (`hunt.js`):** Beim Zusammenbrechen (Herz-/Lungen-/Trägerschuss, Fasan) wird aus der Ausrutschrichtung ein Zielpunkt bestimmt; liegt dort ein Fels, Totholz oder Baumstamm im Weg (Platzbedarf je Art: Hirsch 1,15 m, Keiler 0,75 m, Fasan 0,35 m), sinkt das Stück am nächsten freien Fleck zusammen (Suche in Ringen, bevorzugt in Laufrichtung, innerhalb des Feldes) und gleitet beim Fallen weich dorthin. Auch der abgeschossene Fasan landet frei. Neuer Test `Liegeplatz v131`.
+- Enthält v130 bis v121 – ein Upload genügt.
+
+## v130 – Hochsitz-Revier: Blickbereich und Kanzel-Grafik
+
+- **Blick (`hunt.js`):** Wischen schwenkt nur noch ±65° um die Feldmitte (`X.th0`) – dahinter lag nur leere Wiese ohne Wald; Neigung nach unten höchstens −0,34 (vorher −0,6: man starrte aus nächster Nähe auf Brüstung und Boden, riesige flache Bretterflächen), nach oben 0,3 (Dachunterseite).
+- **Kanzel:** Verwerfung der Balken von 0,16 auf 0,04 (aus der Ego-Sicht wirkten Pfosten und Bretter zackig/verzogen), Dachunterseite etwas heller.
+- Enthält v129 bis v121 – ein Upload genügt.
+
+## v129 – Zutaten-Chips starten keine Produktion mehr
+
+- In allen Produktionsstätten (Mühle, Bäckerei, Sägewerk, Molkerei, Räucherei, Kessel, Fischerei-Fahrten – alles über `openMachine`) startete ein Tipp auf eine Zutat im Rezept sofort die Produktion. Jetzt zeigt der Tipp auf einen Zutaten-Chip (`[data-it]`) nur Namen und Lagerbestand; produziert wird erst beim Tipp auf die übrige Karte. (`farmview.js`)
+- Enthält v128 bis v121 – ein Upload genügt.
+
+## v128 – Bäume in der Ich-Perspektive: kein Moos mehr in der Luft, Eichenborke mit Relief
+
+- **Moos in der Luft:** Die Moospolster am Stamm großer Eichen lagen im Baummodell hinter der Stamm-Marke (`b.tk`) und wurden deshalb von der Ego-Sicht als „Krone“ übernommen. Nach dem Kerb hingen sie frei in der Luft. Jetzt markiert `tree()` sie als `b.skip`, `crownMesh` (`fpsaw.js`) lässt sie weg. Im normalen Hof-Blick ändert sich nichts.
+- **Stamm in der Nahsicht (`fpsaw.js`):** 28 statt 14 Sektoren; Relief je Art über `taperB` (`reliefOf`: Rippen/Furchen je Winkel, Wurzelanlauf unten) – wirkt auf Rinde, Kerbflächen und den Stumpf in der Welt gleich, alles bleibt dicht. Eiche: tief gefurchte Borke, Rippen in Platten mit wechselnder Helligkeit, dunkle Furchen, moosig-dunkler Fuß. Buche bleibt nahezu glatt, die anderen Arten leicht strukturiert.
+- Enthält v127 bis v121 – ein Upload genügt (alle Spieldateien seit v120, ohne Testdateien).
+
+## v127 – Heuballen an der Scheune entfernt
+
+- Komplett raus: Ballen-Modelle am Scheunentor (`farmview.js`, `barnHay` in `farmmodels.js`), Antippen/Verkaufsdialog (`pickHay`, `openHay` in `worldview.js`), Nachwachs-Logik und Verkauf (`FHAY`, `farmHayTick`, `farmHaySell`, `hayWorld` in `erbe.js`), README-Eintrag. Die Deko „Heuballen“ im Laden (`hayBale`) und das Kuhfutter-Icon bleiben.
+- **Alte Spielstände:** einmalige Auszahlung noch nicht verkaufter Ballen (8 € je Stück), `F.hay` wird gelöscht.
+- Hinweis: v126 (See/Seebach wieder bewegt) ist enthalten, ebenso alles bis v121 – ein Upload genügt.
+
+## v126 – See und Seebach wieder bewegt
+
+- `water: 3` (`gl3d.js`) = Wellen wie vor v125 (alle Richtungen, v119-Look) – für den See und den anbindenden Seebach (`LAKE_CREEK`, eigener Knoten in `worldview.js`). `water: 2` = nördlicher Fluss, Ost→West. `water: 1` = still (Teich, Quelltümpel, Netzgehege).
+- Enthält v125 bis v121 – ein Upload genügt (alle Spieldateien seit v120, ohne Testdateien).
+
 ## v125 – Angelsteg, Wasser nur im Fluss in Bewegung (Ost→West), Belohnungs-/Schatzkiste offen sauber
 
 - **Angelsteg (`woodmodels.js` `pier`):** etwas länger; Schild mit Fisch am Stegbeginn, Laterne (nachts warm), zwei Angeln in Haltern mit Schnur und rot-weißer Pose, Fischeimer mit Fischen, Kiste mit Netz, Rettungsring, Ruderboot am Steg.

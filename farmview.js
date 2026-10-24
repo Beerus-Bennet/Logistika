@@ -212,8 +212,6 @@ function buildObjNode(o) {
     parts.sails = R.addChild(root, fnode(fmesh("sails", FM.millSails), { x: h[0], y: h[1], z: h[2] }));
   }
   if (o.t === "field") parts.crop = R.addChild(root, fnode(null, { sway: 0.6 }));
-  /* v70: Heuballen am Scheunentor – eigene Knoten, verschwinden beim Verkaufen */
-  if (o.t === "barn" && typeof HAY_AT !== "undefined") parts.hay = HAY_AT.map(([x, z, r]) => R.addChild(root, fnode(fmesh("barnHay", FM.barnHay), { x, z, ry: r })));
   if (o.t === "tree") {
     parts.fruit = R.addChild(root, fnode(fmesh("fruit:" + o.kind, () => FM.treeFruit(o.kind)), { visible: false }));
     root.sway = 0.25;
@@ -287,7 +285,6 @@ function farmSyncState() {
   for (const o of S.farm.objs) {
     const e = FV.nodes.get(o.id);
     if (!e) continue;
-    if (e.parts.hay) { const n = (S.farm.hay && S.farm.hay.n) || 0; e.parts.hay.forEach((h, i) => { h.visible = i < n; }); }
     if (o.t === "field") {
       const st = fieldStage(o);
       const key = st < 0 ? "" : "crop:" + o.crop + ":" + st;
@@ -2038,7 +2035,9 @@ function openMachine(o) {
     <div class="frecs">${rec}</div>
     ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}`, "mach");
   if (typeof machExtraBind === "function") machExtraBind(o);
-  $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = () => {
+  $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = e => {
+    /* v129: Tipp auf eine Zutat (Chip) zeigt nur ihren Namen und den Lagerbestand – das Produkt wird nicht gleich produziert */
+    if (e && e.target && e.target.closest && e.target.closest("[data-it]")) return;
     const r = farmQueue(o, b.dataset.rec);
     if (r === true) {
       sfx(M.trips ? "horn" : "pop");

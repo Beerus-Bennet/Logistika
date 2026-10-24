@@ -124,7 +124,7 @@ const HUNT = (() => {
     G3.seed(7707);
     const b = MB(), W = 0x8a6440, Wd = 0x6a4a2e, Wl = 0xa98457, roof = 0x4a4d44, roofD = 0x3a3c36;
     const top = 0.82, bot = 1.08;
-    b.noise(0.16, m => {
+    b.noise(0.04, m => {          /* v130: kaum Verwerfung – aus der Kanzel sieht man Bretter und Pfosten aus nächster Nähe, 0,16 machte sie zackig */
       /* vier Stämme, leicht gespreizt */
       [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sz]) => beam(m, [sx * bot, 0, sz * bot], [sx * top, PH, sz * top], 0.09, Wd, true));
       /* Kreuzverstrebungen auf allen vier Seiten, zwei Lagen */
@@ -158,7 +158,7 @@ const HUNT = (() => {
       [-0.5, 0.5].forEach(x => m.box(0.06, 0.44, 0.3, Wd, { x, y: PH + 0.04, z: -0.55 }));
       /* Dach: zwei Flächen (Satteldach quer), dunkle Pappe */
       const rh = H + 2.0;
-      [-1, 1].forEach(s => m.at({ x: s * 0.56, y: rh + 0.16, rz: -s * 0.3 }, q => q.box(1.18, 0.06, 2.3, roof, { c: true, top: roof, bot: roofD })));
+      [-1, 1].forEach(s => m.at({ x: s * 0.56, y: rh + 0.16, rz: -s * 0.3 }, q => q.box(1.18, 0.06, 2.3, roof, { c: true, top: roof, bot: 0x6a5a48 })));
       m.box(0.08, 0.08, 2.32, roofD, { y: rh + 0.31 });
       /* Leiter hinten */
       const L0 = [0, 0, -2.05], L1 = [0, PH + 0.05, -0.98];
@@ -1125,14 +1125,16 @@ const HUNT = (() => {
     X.rv.trees = L.trees.map((t, i) => ({ t, key: "hu" + i, d: Math.hypot(t.x - EYER[0], t.z - EYER[2]), hi: null, g: null }));
     /* feine Modelle nach und nach bauen (je Bild ein paar Millisekunden) – erst die für nahe Bäume, dann der Rest fürs Fernglas */
     const seen = new Set();
-    X.rv.queue = X.rv.trees.slice().sort((a, b) => a.d - b.d).map(e => e.t.sp + ":" + e.t.v).filter(k => !seen.has(k) && seen.add(k));
+    const byD = X.rv.trees.slice().sort((a, b) => a.d - b.d);
+    /* v131: zuerst die Mittelstufe für alle Arten (bloßes Auge, ab TREE_HI), dann die feinen Modelle */
+    X.rv.queue = byD.map(e => "m:" + e.t.sp + ":" + e.t.v).concat(byD.map(e => "f:" + e.t.sp + ":" + e.t.v)).filter(k => !seen.has(k) && seen.add(k));
     revLod(false);
     if (FWM.grassTuft) L.grass.forEach((t, i) => put(rgroup("hu_gt" + t.v, () => FWM.grassTuft(t.v), { sway: 0.3, shadow: false }), "hg" + i, t.x, t.z, t.ry, t.s));
     if (FWM.fern) L.ferns.forEach((t, i) => put(rgroup("hu_fern", () => FWM.fern(), { sway: 0.2, shadow: false }), "hf" + i, t.x, t.z, t.ry, t.s));
     if (FWM.boulder) L.rocks.forEach((t, i) => put(rgroup("hu_rock", () => FWM.boulder(1), {}), "hr" + i, t.x, t.z, t.ry, t.s));
     if (FWM.deadLog) L.logs.forEach((t, i) => put(rgroup("hu_log", () => FWM.deadLog(), {}), "hl" + i, t.x, t.z, t.ry, t.s));
   }
-  const hiKey = t => "wh:" + t.sp + ":" + t.v;
+  const hiKey = t => "wh:" + t.sp + ":" + t.v, midKey = t => "wm:" + t.sp + ":" + t.v;
   /* Bau-Warteschlange abarbeiten: höchstens ~8 ms je Bild (mindestens ein Modell), danach fertige Modelle einsetzen */
   function revBuildStep() {
     const Q = X && X.rv && X.rv.queue;
@@ -1140,24 +1142,30 @@ const HUNT = (() => {
     if (typeof FWM.treeRv !== "function") { Q.length = 0; return; }
     const t0 = performance.now();
     do {
-      const [sp, v] = Q.shift().split(":");
-      try { fmesh("wh:" + sp + ":" + v, () => FWM.treeRv(sp, 3, +v)); } catch (e) { (X.rv.bad = X.rv.bad || new Set()).add(sp + ":" + v); console.warn("treeRv", sp, e); }
+      const qk = Q.shift(), [lv, sp, v] = qk.split(":"), lo = lv === "m";
+      try { fmesh((lo ? "wm:" : "wh:") + sp + ":" + v, () => FWM.treeRv(sp, 3, +v, lo)); } catch (e) { (X.rv.bad = X.rv.bad || new Set()).add(qk); console.warn("treeRv", sp, e); }
     } while (Q.length && performance.now() - t0 < 8);
     revLod(X.rv.far);
   }
   function revLod(far) {
     if (!X || !X.rv || !X.rv.trees) return;
     X.rv.far = far;
+    /* v131: drei Stufen – fein (nah bzw. Fernglas), Mittelstufe (gleiche Optik, weniger Blätter; bloßes Auge ab TREE_HI),
+       grob nur noch übergangsweise, bis die Mittelstufe gebaut ist */
+    const can = typeof FWM.treeRv === "function", Q = X.rv.queue, bad = X.rv.bad;
+    const need = qk => { if (Q && !Q.includes(qk) && !(bad && bad.has(qk))) Q.push(qk); };
     for (const e of X.rv.trees) {
-      const t = e.t, want = typeof FWM.treeRv === "function" && (far || e.d < TREE_HI), ready = !!FV.meshes[hiKey(t)], hi = want && ready;
-      const qk = t.sp + ":" + t.v;
-      if (want && !ready && X.rv.queue && !X.rv.queue.includes(qk) && !(X.rv.bad && X.rv.bad.has(qk))) X.rv.queue.push(qk);
-      if (e.hi === hi) continue;
+      const t = e.t, wantF = can && (far || e.d < TREE_HI), fR = !!FV.meshes[hiKey(t)], mR = !!FV.meshes[midKey(t)];
+      if (can && !mR) need("m:" + t.sp + ":" + t.v);
+      if (wantF && !fR) need("f:" + t.sp + ":" + t.v);
+      const lv = wantF && fR ? 2 : can && mR ? 1 : 0;
+      if (e.hi === lv) continue;
       if (e.g) e.g.remove(e.key);
-      e.g = hi ? rgroup(hiKey(t), () => FWM.treeRv(t.sp, 3, t.v), { sway: 0.22 })
-               : rgroup("wt:" + t.sp + ":" + t.sz + ":" + t.v, () => FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 });
-      e.g.add(e.key, t.x, t.z, t.ry, hi ? t.s * FWM.TH[t.sz] / FWM.TH[3] : t.s);
-      e.hi = hi;
+      e.g = lv === 2 ? rgroup(hiKey(t), () => FWM.treeRv(t.sp, 3, t.v), { sway: 0.22 })
+          : lv === 1 ? rgroup(midKey(t), () => FWM.treeRv(t.sp, 3, t.v, true), { sway: 0.22 })
+          : rgroup("wt:" + t.sp + ":" + t.sz + ":" + t.v, () => FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 });
+      e.g.add(e.key, t.x, t.z, t.ry, lv ? t.s * FWM.TH[t.sz] / FWM.TH[3] : t.s);
+      e.hi = lv;
     }
   }
   function revClear() {
@@ -1186,7 +1194,7 @@ const HUNT = (() => {
     const R = FV.R, c = R.cam, H = st();
     FV.focusId = (FV.focusId || 0) + 1; FV.focusing = false;
     const thW = Math.atan2(CZ - EYEP[2], CX - EYEP[0]), thR = Math.atan2(FC.z - EYER[2], FC.x - EYER[0]);
-    X = { mode: "in", p: 0, saved: camOf(c), view: "eye", th: thR, ph: -0.06, thW, zoom: 8, fovNow: FOV, fogR: [40, 90], inRv: false,
+    X = { mode: "in", p: 0, saved: camOf(c), view: "eye", th: thR, th0: thR, skyAz: thR, ph: -0.06, thW, zoom: 8, fovNow: FOV, fogR: [40, 90], inRv: false,
       animals: [], aid: 0, nodes: [], drops: [], t: 0, kick: 0, reload: 0, breath: { on: false, t: 0, cd: 0, air: 1 },
       msgT: 0, lastTh: thR, lastPh: -0.06, spot: null, target: null, hrv: null, fade: 0,
       wind: { dir: rnd() * Math.PI * 2, v0: 1.5 + rnd() * 4.5, v: 3 }, spawnT: 0, flyT: 70 + rnd() * 50, firstSpawn: true };
@@ -1370,7 +1378,7 @@ const HUNT = (() => {
         A.ry += clamp(angN(want - A.ry), -3 * dt, 3 * dt);
         A.dist += A.v * dt;
         if (A.st !== "flee") trail(A);
-        if (A.st === "hit" && A.dist >= A.runL) { A.st = "fall"; A.t = 0.8; A.side = rnd() < 0.5 ? -1 : 1; }
+        if (A.st === "hit" && A.dist >= A.runL) { A.st = "fall"; A.t = 0.8; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.8); }
         if ((A.st === "flee" || A.st === "wounded") && fieldE(A.x, A.z) > 1.32) {
           if (A.st === "wounded") lostMsg(A);
           A.st = "gone"; unbuild(A);
@@ -1394,13 +1402,13 @@ const HUNT = (() => {
       case "drop": {
         A.fly.vy -= 14 * dt; A.y = Math.max(S0.lie, A.y + A.fly.vy * dt); A.x += A.fly.vx * dt * 0.3; A.z += A.fly.vz * dt * 0.3;
         A.rz += dt * 6; A.wings.forEach((w, i) => { w.rz = (i ? 1 : -1) * 0.5; });
-        if (A.y <= S0.lie + 0.001) { A.st = "dead"; A.rz = 1.4; A.rx = 0; A.deadAt = X.t; settle(A); }
+        if (A.y <= S0.lie + 0.001) { A.st = "dead"; A.rz = 1.4; A.rx = 0; A.deadAt = X.t; { const q = lieSpot(A, A.x, A.z); A.x = q[0]; A.z = q[1]; } settle(A); }
         break;
       }
       case "fall": {
         const k = ss(1 - A.t / 0.8);
         A.vT = 0; A.rz = A.side * k * 1.45; A.y = S0.lie * A.s * k; neckT = 0.2 + k * 0.4; headT = 0.3;
-        if (A.t <= 0) { A.st = "dead"; A.deadAt = X.t; settle(A); }
+        if (A.t <= 0) { if (A.fs) { A.x = A.fs.to[0]; A.z = A.fs.to[1]; A.fs = null; } A.st = "dead"; A.deadAt = X.t; A.v = 0; settle(A); }
         break;
       }
       case "dead": A.vT = 0; neckT = 0.55; headT = 0.35; earT = 0.4; break;
@@ -1414,6 +1422,7 @@ const HUNT = (() => {
       A.vx = Math.sin(A.ry) * A.v; A.vz = Math.cos(A.ry) * A.v;
       A.x += A.vx * dt; A.z += A.vz * dt;
       if (A.st === "fall" || A.st === "dead") { A.vx = A.vz = 0; }
+      if (A.st === "fall" && A.fs) { const k = ss(1 - A.t / A.fs.T); A.x = lerp(A.fs.x0, A.fs.to[0], k); A.z = lerp(A.fs.z0, A.fs.to[1], k); A.v = 0; }
       void step;
     }
     /* Gang: Schritt ↔ Galopp nach Tempo; in der Pause bleibt die Phase stehen (Lauf in der Luft) */
@@ -1495,6 +1504,30 @@ const HUNT = (() => {
     const n = addNode(fmesh("hunt_drop", dropMesh), { x: A.x + (rnd() - 0.5) * 0.3, z: A.z + (rnd() - 0.5) * 0.3, ry: rnd() * 6.28, shadow: false });
     X.drops.push({ n, a: A.id });
   }
+  /* v131: ein erlegtes Stück darf nicht in Felsen, Baumstämmen oder Totholz liegen – es sinkt auf dem nächsten freien Fleck zusammen */
+  function liePad(A) { return (A.k === "hirsch" ? 1.15 : A.k === "keiler" ? 0.75 : 0.35) * (A.s || 1); }
+  function lieBlocked(x, z, pad) {
+    const L = revLayout();
+    if (L.rocks.some(t => Math.hypot(t.x - x, t.z - z) < 1.05 * t.s + pad)) return true;
+    if (L.logs.some(t => { for (const sg of [1, -1]) { const ca = Math.cos(t.ry), sa = Math.sin(t.ry); for (const f of [0.2, 0.8, 1.4]) { if (Math.hypot(t.x + ca * f * t.s - x, t.z - sg * sa * f * t.s - z) < 0.45 * t.s + pad) return true; } } return false; })) return true;
+    if (L.trees.some(t => Math.hypot(t.x - x, t.z - z) < 0.5 * t.s * (1 + t.sz * 0.15) + pad * 0.8)) return true;
+    return false;
+  }
+  function lieSpot(A, x, z) {
+    const pad = liePad(A);
+    if (!lieBlocked(x, z, pad) && fieldE(x, z) < 1.3) return [x, z];
+    const a0 = A.ry || 0;
+    for (let r = 0.5; r <= 9; r += 0.5) for (let i = 0; i < 16; i++) {
+      const a = a0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * (Math.PI / 8), px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r;
+      if (!lieBlocked(px, pz, pad) && fieldE(px, pz) < 1.3) return [px, pz];
+    }
+    return [x, z];
+  }
+  function fallStart(A, T) {
+    /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
+    const sl = (A.v || 0) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
+    A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
+  }
   function settle(A) {
     const S0 = SP[A.k], c = rot(S0.body.c.map(v => v * A.s), A.rx, A.ry, A.rz);
     A.center = [A.x + c[0], (A.y || 0) + c[1], A.z + c[2]];
@@ -1536,7 +1569,10 @@ const HUNT = (() => {
       if (!P || P.id !== e.pointerId || !X || X.mode !== "hold" || !["eye", "bino", "scope"].includes(X.view)) return;
       const dx = e.clientX - P.x, dy = e.clientY - P.y; P.x = e.clientX; P.y = e.clientY;
       const k = Math.tan(X.fovNow / 2) * 2 / Math.max(200, FV.R.h);
-      X.th -= dx * k; X.ph = clamp(X.ph + dy * k, -0.6, 0.38);
+      /* v130: Blick bleibt im Schussfeld (±65° um die Feldmitte) und geht nicht senkrecht auf den eigenen Boden/Brüstung –
+         dahinter liegt nur leere Wiese ohne Wald, darunter nur die Kanzelbretter aus nächster Nähe */
+      const t0 = X.th0 != null ? X.th0 : X.th;
+      X.th = t0 + clamp(angN(X.th - dx * k - t0), -1.15, 1.15); X.ph = clamp(X.ph + dy * k, -0.34, 0.62);
     });
     const up = e => { if (P && P.id === e.pointerId) P = null; };
     el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
@@ -1705,7 +1741,7 @@ const HUNT = (() => {
     A.hits.push(zone); A.dm = A.dm || dm;
     const Z = ZONE[zone];
     if (A.k === "fasan") {
-      if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; }
+      if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
       A.zone = zone; X.target = A;
       msg("Waidmannsheil! " + A.T.name + " · " + dm + " m", 3, "good");
       return;
@@ -1723,7 +1759,7 @@ const HUNT = (() => {
     A.dist = 0; A.runL = lerp(Z.run[0], Z.run[1], rnd());
     X.target = A;
     if (A.hits.some(z => !ZONE[z].kill)) A.capW = true;         /* erst krank, dann erlegt: höchstens Bronze */
-    if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; }
+    if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.55); }
     else { if (!running) fleeFrom(A, [EYER[0], EYER[2]]); A.st = "hit"; }
     msg("Waidmannsheil! " + Z.n + " · " + dm + " m", 3.2, "good");
   }
@@ -2111,7 +2147,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _collSync: () => collSync(), _sellRec: u => sellRec(u),
+    _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
   };

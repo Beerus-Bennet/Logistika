@@ -176,17 +176,8 @@ const FM = (() => {
         b.box(0.07, 0.1, 0.03, C.black, { x: 0.12, y: 0.6 });
       });
     });
-    /* v70: die Heuballen am Tor sind eigene Knoten (worldview.js: worldSyncHay) – man kann sie verkaufen */
     return b;
   }
-  /* Rundballen, liegend, Mitte im Ursprung, mit zwei Garnbändern */
-  function barnHay() {
-    const b = new MB();
-    b.noise(0.05, () => b.cyl(0.32, 0.32, 0.55, 14, C.hay, { rz: Math.PI / 2, x: 0.275, y: 0.32, top: C.hayD, smooth: true }));
-    [0.13, 0.42].forEach(x => b.cyl(0.326, 0.326, 0.03, 14, 0xb98f3c, { rz: Math.PI / 2, x: x - 0.275 + 0.015, y: 0.32, smooth: true }));
-    return b;
-  }
-
   function silo() {
     G3.seed(31);
     const b = new MB();
@@ -1211,7 +1202,7 @@ const FM = (() => {
   }
 
   return {
-    C, house, barn, barnHay, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
+    C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
     board, shed, gate, fieldSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,

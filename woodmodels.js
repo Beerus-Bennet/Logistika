@@ -145,7 +145,10 @@ const FWM = (() => {
         b.at({ x: p[0], y: p[1], z: p[2] }, () => limb(b, 0, a + 0.5, 0.95, 0.35 * k, r * 0.3, T.bark));
         ends.push(p);
       }
+      /* v128: Moospolster am Stamm gehören zum Stamm – die Ego-Sicht ersetzt den Stamm und lässt sie weg (b.skip), sonst hingen sie nach dem Kerb in der Luft */
+      const ms = b.v.length;
       if (big) for (let i = 0; i < 4; i++) b.ico(0.13 * k, 0x3f6b2a, { x: Math.cos(i * 1.6) * r, y: 0.2 + rnd() * h * 0.6, z: Math.sin(i * 1.6) * r, flat: 0.5, jitter: 0.4 });
+      b.skip = [[ms, b.v.length]];
       b.noise(0.16, () => {
         ends.forEach((p, i) => {
           b.ico((0.62 + rnd() * 0.15) * k, i % 2 ? T.leaf2 : T.leaf, { x: p[0] * 1.05, y: p[1] + 0.35 * k, z: p[2] * 1.05, jitter: 0.38, flat: 0.72, bottom: T.leaf3 });
@@ -198,8 +201,10 @@ const FWM = (() => {
     F0.forEach(([a, b, c]) => { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); F.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); });
     return (ICO1 = { V, F });
   }
-  function treeRv(sp, sz, v) {
-    v = v || 0;
+  /* lo (v131): Mittelstufe für die Revier-Sicht mit bloßem Auge – gleiche Gestalt, Farben und Blattoptik wie das feine Modell,
+     aber etwa ein Viertel der Blätter (dafür größer), weniger Rindensegmente; ca. 1 500 statt 6 000 Dreiecke */
+  function treeRv(sp, sz, v, lo) {
+    v = v || 0; lo = !!lo;
     if (!TREE_C[sp] || sp === "kirsche") return tree(sp, sz, v);
     G3.seed(7000 + sz * 97 + v * 13 + sp.length * 7);
     const b = new MB(), T = TREE_C[sp], k = TH[sz] || 1, H = TREE_H[sp] * k, PI = Math.PI;
@@ -229,6 +234,7 @@ const FWM = (() => {
     /* Röhre entlang P mit Radien Rr: weiche Normalen, Farbe je Abschnitt/Ecke, optional Furchen (wob) */
     const tube = (P, Rr, seg, colAt, o) => {
       o = o || {};
+      if (lo) seg = Math.max(3, Math.round(seg * 0.6));
       const n = P.length, rings = [];
       let t0 = nrm(sub(P[1], P[0])), U = Math.abs(t0[1]) < 0.9 ? nrm(crs(t0, [0, 1, 0])) : nrm(crs(t0, [1, 0, 0]));
       for (let i = 0; i < n; i++) {
@@ -298,6 +304,7 @@ const FWM = (() => {
        Heißer Pfad (Tausende Blätter je Baum): reine Zahlen statt kleiner Felder, direkt in den Puffer */
     const cloud = (c, R, n, s, cols, o) => {
       o = o || {};
+      if (lo) { n = Math.max(10, Math.round(n * 0.26)); s *= 1.75; }
       const ph = rnd() * 6.28, ph2 = rnd() * 6.28, lump = o.lump == null ? 0.2 : o.lump;
       const sh = (x, y, z) => 1 + lump * Math.sin(x * 3.3 + ph) * Math.cos(z * 2.9 + ph2) + lump * 0.6 * Math.sin(y * 4.1 + ph2);
       const cx = c[0], cy = c[1], cz = c[2], Rx = R[0], Ry = R[1], Rz = R[2];
@@ -403,7 +410,7 @@ const FWM = (() => {
       const S = stem(r * 1.12, r * 0.38, h, { flare: 0.35, seg: 10, n: 10, lean: 0.09, wig: 0.012,
         col: (i, j) => (i / 10 < jag(j)) ? ((j % 2) ? bri(T.mark, 1.4) : bri(T.base, 1 + (i % 2) * 0.1)) : bri(T.bark, 0.96 + ((i * 3 + j * 5) % 4) * 0.02) });
       /* schwarze Querstriche (Lentizellen): dünne, waagrechte Striche mit spitzen Enden, dicht auf der Rinde; oben mehr */
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < (lo ? 18 : 64); i++) {
         const t = baseT + 0.03 + Math.pow(rnd(), 0.8) * 0.78, a0 = rnd() * 6.28, span = 0.3 + rnd() * 0.8, hh = (0.005 + rnd() * 0.008) * k, c = S.at(t), rr = S.rad(t) * 1.02 + 0.004;
         const m = 4, pt = (a, y) => [c[0] + Math.cos(a) * rr, c[1] + y, c[2] + Math.sin(a) * rr];
         for (let q = 0; q < m; q++) {
@@ -424,10 +431,10 @@ const FWM = (() => {
         const rr = (0.34 - i * 0.012) * k;
         cloud([e[0], e[1] + 0.05 * k, e[2]], [rr, rr * 1.2, rr], 210, 0.056 * k, BC, { lump: 0.36, sun: 0xd8e88a, coreK: 0.55, tilt: 0.8 });
         /* hängende Zweige mit Blättchen */
-        for (let j = 0; j < 5; j++) {
+        for (let j = 0; j < (lo ? 2 : 5); j++) {
           const a = j * 1.26 + i + rnd() * 0.6, d0 = rr * (0.6 + rnd() * 0.4);
           let p = [e[0] + Math.cos(a) * d0, e[1] - rr * 0.1, e[2] + Math.sin(a) * d0];
-          const L = (0.28 + rnd() * 0.22) * k, st = 6;
+          const L = (0.28 + rnd() * 0.22) * k, st = lo ? 3 : 6;
           tube([p, add(p, [Math.cos(a) * L * 0.12, -L * 0.5, Math.sin(a) * L * 0.12]), add(p, [Math.cos(a) * L * 0.24, -L, Math.sin(a) * L * 0.24])], [0.006 * k, 0.004 * k, 0.002], 3, () => 0x5a4a3c, {});
           for (let q = 0; q < st; q++) {
             const p2 = add(p, [Math.cos(a) * L * 0.04, -L / st, Math.sin(a) * L * 0.04]);
@@ -467,15 +474,15 @@ const FWM = (() => {
       const S = stem(r * 1.3, r * 0.12, H * 0.88, { flare: 0.5, seg: 8, n: 6, lean: 0.02, wig: 0.004, col: (i, j) => j % 2 ? bri(T.mark, 0.95) : bri(T.bark, 0.95 + (i % 2) * 0.08) });
       const FC = [T.leaf2, T.leaf, T.leaf3];
       b.cone(0.4 * k, ht * 0.95, 9, bri(T.leaf3, 0.62), { y: hb + 0.05 * k, a0: v, nobot: true });
-      const L = 15 + Math.min(3, sz);
+      const L = (lo ? 9 : 15) + Math.min(3, sz);
       for (let i = 0; i < L; i++) {
-        const f = i / L, y = hb + f * (H * 0.86 - hb), len = (0.86 * Math.pow(1 - f, 0.95) + 0.08) * k, nb = Math.max(5, Math.round(8 * (1 - f * 0.4)));
+        const f = i / L, y = hb + f * (H * 0.86 - hb), len = (0.86 * Math.pow(1 - f, 0.95) + 0.08) * k, nb = Math.max(lo ? 4 : 5, Math.round((lo ? 6 : 8) * (1 - f * 0.4)));
         for (let j = 0; j < nb; j++) {
           const a = j * (2 * PI / nb) + i * 0.83 + v + (rnd() - 0.5) * 0.45, dir = [Math.cos(a), 0, Math.sin(a)];
-          const droop = (0.3 - f * 0.28) * (0.8 + rnd() * 0.4), ll = len * (0.82 + rnd() * 0.32), w = (0.15 + 0.08 * (1 - f)) * k;
-          const p0 = add(S.at(Math.min(1, y / (H * 0.88))), scl(dir, r * 0.5)), m = 4, Sp = [];
+          const droop = (0.3 - f * 0.28) * (0.8 + rnd() * 0.4), ll = len * (0.82 + rnd() * 0.32), w = (0.15 + 0.08 * (1 - f)) * k * (lo ? 1.3 : 1);
+          const p0 = add(S.at(Math.min(1, y / (H * 0.88))), scl(dir, r * 0.5)), m = lo ? 2 : 4, Sp = [];
           for (let q = 0; q <= m; q++) { const t = q / m; Sp.push(add(p0, [dir[0] * ll * t, (-droop * (1.7 * t - 0.9 * t * t) + 0.03 * t) * ll + (rnd() - 0.5) * 0.02 * k, dir[2] * ll * t])); }
-          if (f < 0.6) tube([Sp[0], Sp[2], Sp[4]], [0.014 * k, 0.009 * k, 0.003], 3, () => bri(T.bark, 0.8), {});
+          if (f < 0.6) tube([Sp[0], Sp[m >> 1], Sp[m]], [0.014 * k, 0.009 * k, 0.003], 3, () => bri(T.bark, 0.8), {});
           const sd = nrm(crs(dir, [0, 1, 0]));
           const Nt = nrm([dir[0] * 0.6, 1, dir[2] * 0.6]), Nh = nrm([dir[0], -0.1, dir[2]]);
           const c0 = bri(FC[(i + j) % 3], 0.8 + 0.25 * f + rnd() * 0.12);
@@ -487,8 +494,8 @@ const FWM = (() => {
               const c = bri(c0, 0.9 + 0.05 * q);
               face(Sp[q], Sp[q + 1], E[q + 1], c, Nh, o); face(Sp[q], E[q + 1], E[q], bri(c, 0.95), Nh, o);
               const M = scl(add(E[q], E[q + 1]), 0.5), dz = w * (1 - 0.6 * q / m);
-              face(E[q], M, add(scl(add(E[q], M), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.86), Nh, o);
-              face(M, E[q + 1], add(scl(add(M, E[q + 1]), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.9), Nh, o);
+              if (!lo) face(E[q], M, add(scl(add(E[q], M), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.86), Nh, o);
+              if (!lo) face(M, E[q + 1], add(scl(add(M, E[q + 1]), 0.5), [0, -dz * (0.2 + rnd() * 0.25), 0]), bri(c, 0.9), Nh, o);
               /* Oberseite: aufgestellte, hellere Nadeln */
               const U = add(add(scl(add(Sp[q], Sp[q + 1]), 0.5), scl(sd, s * dz * 0.75)), [0, w * 0.22, 0]);
               face(Sp[q], Sp[q + 1], U, bri(c, 1.14), Nt, nrm(add([0, 1, 0], scl(sd, s * 0.5))));
@@ -1437,6 +1444,28 @@ const FWM = (() => {
   }
   /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
      Teil mit dem Gelenk im Ursprung (hinten), damit er beim Öffnen aufklappen kann. */
+  /* v134: Innenleben der offenen Kiste – statt flacher Platten ein Münzhaufen aus vielen schrägen Münzen mit Edelsteinen,
+     und die Deckel-Innenseite mit Holzrahmen, gepolstertem Futter (vier Kissen), Goldpaspel und Nieten */
+  function chestHeap(b, gems) {
+    const GC = [0xe8b830, 0xf6d24a, 0xd9a22a, 0xffe27a];
+    b.box(0.76, 0.03, 0.48, 0x5a1420, { y: 0.435 });
+    for (let i = 0; i < 74; i++) {
+      const a = rnd() * 6.2832, rr = Math.sqrt(rnd()), x = Math.cos(a) * rr * 0.34, z = Math.sin(a) * rr * 0.2;
+      const hgt = 0.1 * Math.pow(Math.max(0, 1 - (x * x / 0.1156 + z * z / 0.04)), 0.8);
+      const c = GC[(rnd() * 4) | 0];
+      b.cyl(0.062 + rnd() * 0.012, 0.062 + rnd() * 0.012, 0.014, 9, c, { x, z, y: 0.455 + hgt + rnd() * 0.012, rx: (rnd() - 0.5) * 0.9, rz: (rnd() - 0.5) * 0.9, ry: rnd() * 6.28, top: G3.shade(G3.col(c), 1.18) });
+    }
+    gems.forEach(([x, z, c, r]) => b.ico(r, c, { x, y: 0.455 + 0.1 * Math.pow(Math.max(0, 1 - (x * x / 0.1156 + z * z / 0.04)), 0.8) + r * 0.7, z, jitter: 0.12 }));
+  }
+  function lidInside(b, red, redHi, wood, gold) {
+    [0.03, 0.61].forEach(z => b.box(0.92, 0.03, 0.06, wood, { y: -0.03, z, bot: G3.shade(G3.col(wood), 0.9) }));
+    [-0.43, 0.43].forEach(x => b.box(0.06, 0.03, 0.52, wood, { x, y: -0.03, z: 0.32, bot: G3.shade(G3.col(wood), 0.9) }));
+    b.box(0.80, 0.03, 0.54, red, { y: -0.042, z: 0.32, bot: red });
+    [-1, 1].forEach(sx => [-1, 1].forEach(sz => b.box(0.37, 0.024, 0.23, redHi, { x: sx * 0.195, z: 0.32 + sz * 0.13, y: -0.062, bot: redHi, top: red })));
+    b.box(0.80, 0.014, 0.016, gold, { y: -0.07, z: 0.32, bot: gold });
+    b.box(0.016, 0.014, 0.54, gold, { y: -0.07, z: 0.32, bot: gold });
+    [-0.4, 0, 0.4].forEach(x => [-0.26, 0, 0.26].forEach(dz => b.ico(0.02, gold, { x, y: -0.07, z: 0.32 + dz, flat: 0.5 })));
+  }
   function lootCrate() {
     G3.seed(3960);
     const b = new MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
@@ -1449,8 +1478,7 @@ const FWM = (() => {
       b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: 0.42, top: wd });
       b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: -0.42, top: wd });
     });
-    b.box(0.74, 0.035, 0.46, 0xe8b830, { y: 0.44, top: 0xffd75a });
-    [[-0.2, -0.1, 0xd8334a], [0.05, 0.08, 0x3fa0e0], [0.24, -0.06, 0x58d68d], [-0.05, -0.14, 0xffe27a]].forEach(([x, z, c]) => b.ico(0.045, c, { x, y: 0.478, z }));
+    chestHeap(b, [[-0.2, -0.08, 0xd8334a, 0.05], [0.04, 0.06, 0x3fa0e0, 0.055], [0.22, -0.05, 0x58d68d, 0.05], [-0.06, -0.13, 0xffe27a, 0.04]]);
     /* v77: Eckbeschläge 5 mm vor den Seitenflächen (lagen bündig darauf und flimmerten) */
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.08, 0.52, 0.08, g, { x: sx * 0.415, z: sz * 0.275, y: -0.01 }));
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.505, 0.635, g, { x, y: -0.002 }));
@@ -1462,9 +1490,10 @@ const FWM = (() => {
     G3.seed(3961);
     const b = new MB(), w = 0x9a6234, wl = 0xb9783f, g = 0xe2b33a, gl = 0xf6d24a;
     b.noise(0.1, () => {
-      b.box(0.92, 0.12, 0.64, w, { z: 0.32, bot: 0xc9985c });          /* v124: Deckel-Unterseite hell (Futter) statt fast schwarz */
+      b.box(0.92, 0.12, 0.64, w, { z: 0.32, bot: 0x9a6234 });
       b.box(0.84, 0.09, 0.56, wl, { y: 0.12, z: 0.32 });
     });
+    lidInside(b, 0x9a2638, 0xc03a50, 0x7a4a26, g);
     [-0.22, 0.22].forEach(x => b.box(0.07, 0.125, 0.645, g, { x, z: 0.32 }));
     /* Stern auf dem Deckel */
     b.box(0.17, 0.02, 0.17, gl, { y: 0.205, z: 0.32, ry: 0.785 });
@@ -1484,8 +1513,7 @@ const FWM = (() => {
       b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: 0.42, top: wd });
       b.box(0.06, 0.06, 0.5, w, { y: 0.44, x: -0.42, top: wd });
     });
-    b.box(0.74, 0.04, 0.46, 0xe8b830, { y: 0.44, top: 0xffd75a });
-    [[-0.22, -0.1, 0xd8334a], [0.04, 0.1, 0x3fa0e0], [0.26, -0.05, 0x58d68d], [-0.04, -0.15, 0xffe27a], [0.14, -0.14, 0xd8334a]].forEach(([x, z, c]) => b.ico(0.05, c, { x, y: 0.482, z }));
+    chestHeap(b, [[-0.22, -0.08, 0xd8334a, 0.055], [0.04, 0.07, 0x3fa0e0, 0.06], [0.24, -0.04, 0x58d68d, 0.055], [-0.04, -0.14, 0xffe27a, 0.045], [0.14, -0.12, 0xd8334a, 0.05]]);
     b.box(0.94, 0.06, 0.66, g, { y: 0.0 });
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.09, 0.54, 0.09, g, { x: sx * 0.41, z: sz * 0.27, y: -0.02 }));
     [-0.24, 0.24].forEach(x => b.box(0.08, 0.505, 0.635, g, { x, y: -0.002 }));
@@ -1499,13 +1527,14 @@ const FWM = (() => {
     G3.seed(3971);
     const b = new MB(), w = 0x7a4a26, wl = 0x93602f, g = 0xe2b33a, gl = 0xf6d24a;
     b.noise(0.08, () => {
-      b.box(0.94, 0.1, 0.64, w, { z: 0.32, bot: 0x8c2434 });            /* v124: Deckel-Unterseite rotes Futter */
+      b.box(0.94, 0.1, 0.64, w, { z: 0.32, bot: w });
       b.box(0.94, 0.09, 0.52, wl, { y: 0.1, z: 0.32 });
       b.box(0.94, 0.08, 0.34, w, { y: 0.19, z: 0.32 });
     });
     /* v77: die Goldbänder stehen 6 mm über den Stufen (ihre Oberseiten lagen genau in den Stufenflächen) */
     [-0.24, 0.24].forEach(x => { b.box(0.08, 0.106, 0.65, g, { x, z: 0.32 }); b.box(0.08, 0.096, 0.53, g, { x, y: 0.1, z: 0.32 }); b.box(0.08, 0.086, 0.35, g, { x, y: 0.19, z: 0.32 }); });
     b.ico(0.08, 0x3fe09a, { y: 0.3, z: 0.32 });
+    lidInside(b, 0x8c1c30, 0xb02c46, 0x5c3517, g);
     return b;
   }
   /* Lichtsäule (Zylinder, nach oben schmaler) und Bodenring – werden halbdurchsichtig gezeichnet */

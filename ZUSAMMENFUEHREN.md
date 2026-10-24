@@ -1,5 +1,68 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v134 – Offene Kisten (auf v133; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Münzhaufen, Deckel-Innenseite | `woodmodels.js` |
+| Mindestleuchten der offenen Kiste | `worldview.js` |
+
+## Stand v133 – Nachthimmel (auf v132; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Milchstraße, Sterne, Mond, Wolken, Sternschnuppen, Auflösung | `vista.js` |
+| Himmelsrichtung über dem Feld, Blick nach oben | `hunt.js` |
+
+## Stand v132 – Revier-Bäume einheitlich (auf v131; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Mittelstufe der Nahsicht-Bäume (`lo`) | `woodmodels.js` |
+| drei Stufen fein/mittel/grob, Bau-Reihenfolge | `hunt.js` |
+
+## Stand v131 – Liegeplatz des erlegten Wilds (auf v130; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Liegeplatz-Suche, Gleiten beim Fallen | `hunt.js`, `tests/hunt.test.js` (nicht im ZIP) |
+
+## Stand v130 – Hochsitz-Revier (auf v129; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Blickgrenzen, Kanzel-Verwerfung, Dachunterseite | `hunt.js` |
+
+## Stand v129 – Zutaten-Chips starten keine Produktion (auf v128; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| `openMachine`: Klick auf `[data-it]` ignorieren | `farmview.js` |
+
+## Stand v128 – Ego-Sicht-Bäume (auf v127; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| `NSEC`, `RELIEF`/`reliefOf`, `taperB` mit Relief, Eichen-Borke, `crownMesh` mit `skip` | `fpsaw.js` |
+| Eichen-Moos als `b.skip` markiert | `woodmodels.js` |
+
+## Stand v127 – Heuballen an der Scheune entfernt (auf v126; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| `FHAY`/`farmHay*`/`hayWorld` raus, Migration mit Auszahlung | `erbe.js` |
+| Ballen-Knoten raus | `farmview.js` |
+| `barnHay` raus | `farmmodels.js` |
+| `pickHay`/`openHay`/Klick raus | `worldview.js` |
+| README | `README.md` |
+
+## Stand v126 – See und Seebach wieder bewegt (auf v125; ein ZIP mit allem seit v120)
+
+| Teil | Datei |
+|---|---|
+| Wasser-Modus 3 (See) im Shader | `gl3d.js` |
+| See und Seebach `water: 3`, Seebach eigener Knoten | `worldview.js` |
+
 ## Stand v125 – Angelsteg, Fluss-Wasser, offene Kisten (auf v124; ein ZIP mit allem seit v120)
 
 | Teil | Datei |

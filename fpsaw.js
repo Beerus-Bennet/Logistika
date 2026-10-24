@@ -152,6 +152,17 @@ const SAW3D = (() => {
   /* Rindenzeichnung wie bei den Bäumen im Spiel (woodmodels.js tree()): je Art Farbbänder/Flecken am Stamm.
      bf(y in Einheiten, Segment) → Farbe; bp = Höhen (Einheiten), an denen sich die Farbe ändert (Wände werden dort geteilt). */
   const TC_ = () => (typeof FWM !== "undefined" && FWM.TREE_C) || {};
+  /* v128: 28 statt 14 Sektoren und echtes Relief der Borke (Rippen/Furchen, Wurzelanlauf) – vorher wirkte der Nahaufnahme-Stamm
+     wie ein glattes Vieleck mit großen einfarbigen Flächen. Relief: Radiusfaktor je Winkel (und Höhe für den Wurzelanlauf);
+     er wirkt über taperB auf alle Punkte (Rinde, Kerbflächen, Stumpf), daher bleibt alles dicht. */
+  const NSEC = 28;
+  const RELIEF = { eiche: [0.075, 0.16], kiefer: [0.04, 0.06], fichte: [0.03, 0.08], buche: [0.008, 0.12], birke: [0.012, 0.04], kirsche: [0.018, 0.06] };
+  function reliefOf(sp, seed) {
+    const R0 = RELIEF[sp]; if (!R0) return null;
+    const [amp, fl] = R0, s = (seed || 0) * 3.7;
+    const g = th => 0.5 * Math.sin(7 * th + s) + 0.3 * Math.sin(13 * th + 2.1 * s + 1) + 0.2 * Math.sin(19 * th + 0.7 * s + 2);   /* −1…1 */
+    return { g, f: (th, yU) => 1 + amp * g(th) + fl * Math.exp(-Math.max(0, yU) / 0.35) * (0.6 + 0.4 * Math.max(0, Math.sin(5 * th + s))) };
+  }
   function barkStyle(sp, sz, sc, ts, ex) {
     const T = TC_()[sp];
     if (!T) return null;
@@ -189,8 +200,16 @@ const SAW3D = (() => {
       const hb = 1.08 * k; bp.push(hb);
       bf = y => y < hb ? T.base : T.bark;
     } else if (sp === "eiche") {
-      const hs2 = 0.72 * k; bp.push(hs2);
-      bf = (y, g) => y < hs2 && g % 5 === 1 ? T.mark : T.bark;
+      /* v128: tief gefurchte Borke – Rippen hell und in Platten gebrochen, Furchen dunkel, unten moosig-dunkler Fuß */
+      const rh = 0.075 * k, nR = Math.ceil(2.6 * k / rh), RL = reliefOf("eiche", ex && ex.seed), light = 0x76604c, moss = 0x4f5a34;
+      for (let i = 1; i < nR; i++) bp.push(i * rh);
+      bf = (y, g) => {
+        const th = (g + 0.5) * 2 * Math.PI / NSEC, rv = RL ? RL.g(th) : 0, row = Math.floor(y / rh), hh = hs(g * 1.7 + row * 0.37, row + g * 0.11);
+        if (rv < -0.25) return hh < 0.5 ? T.mark : 0x342519;                           /* Furche */
+        const base = mixC(T.bark, light, Math.max(0, rv) * 0.7 * (0.55 + 0.45 * hh));   /* Rippe, Platten mit wechselnder Helligkeit */
+        if (y < 0.18 * k && g % 3 !== 0) return mixC(base, moss, 0.45 * (1 - y / (0.18 * k)));
+        return hh < 0.12 ? T.mark : base;
+      };
     } else if (sp === "kirsche") {
       const n = 4 + (sz || 1), step = 0.8 * k / n;
       for (let i = 0; i < n; i++) bp.push(0.15 + i * step, 0.18 + i * step);
@@ -204,10 +223,11 @@ const SAW3D = (() => {
       const hU = mt[2] * ts / sc, rho = mt[1] / mt[0];
       tp = { hU, f: yU => 1 - (1 - rho) * Math.min(1, Math.max(0, yU) / hU), lx: ex.lx || 0, lz: ex.lz || 0 };
     }
-    const NS = 14;
+    const NS = NSEC;
     const wrap = f => ((f % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     const ysn = v => v * ts / sc;
-    return { tp, cy0: cf ? ysn(cy0) : 1e9, cf: cf ? (yu, f) => cf(yu * sc / ts, wrap(f)) : null, ly: lat ? ysn(lat.ly) : 1, la: lat ? lat.la : 1,
+    const RL = reliefOf(sp, ex && ex.seed), rel = RL ? (th, yu) => RL.f(th, yu * sc / ts) : null;
+    return { tp, rel, cy0: cf ? ysn(cy0) : 1e9, cf: cf ? (yu, f) => cf(yu * sc / ts, wrap(f)) : null, ly: lat ? ysn(lat.ly) : 1, la: lat ? lat.la : 1,
       blobs: blobs ? blobs.map(o => ({ y0: ysn(o.y - o.hy), y1: ysn(o.y + o.hy), f: o.f, df: o.wf })) : null,
       ycuts: blobs ? [...new Set(blobs.flatMap(o => [Math.floor(ysn(o.y - o.hy) / ysn(lat.ly)) * ysn(lat.ly), Math.ceil(ysn(o.y + o.hy) / ysn(lat.ly)) * ysn(lat.ly)]))].sort((x, y) => x - y) : null,
       bf: (yu, f) => bf(yu * sc / ts, Math.floor((((f % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI / NS)) % NS), bp: bp.map(v => v * ts / sc).sort((a, b) => a - b) };
@@ -273,13 +293,17 @@ const SAW3D = (() => {
   }
   /* Verjüngung/Neigung: alle Dreiecke laufen durch diese Abbildung (Normalen entstehen danach im MB) */
   function taperB(b, sty) {
-    const tp = sty && sty.tp;
-    if (!tp) return b;
-    const P = p => { const f = tp.f(p[1]); return [p[0] * f + tp.lx * p[1], p[1], p[2] * f + tp.lz * p[1]]; };
+    const tp = sty && sty.tp, rl = sty && sty.rel;
+    if (!tp && !rl) return b;
+    const P = p => {
+      let f = tp ? tp.f(p[1]) : 1;
+      if (rl && (p[0] * p[0] + p[2] * p[2]) > 1e-10) f *= rl(Math.atan2(p[0], p[2]), p[1]);
+      return [p[0] * f + (tp ? tp.lx * p[1] : 0), p[1], p[2] * f + (tp ? tp.lz * p[1] : 0)];
+    };
     return { tri: (a, p, c, col) => b.tri(P(a), P(p), P(c), col), triV: (a, p, c, ca, cp, cc) => b.triV(P(a), P(p), P(c), ca, cp, cc), raw: b };
   }
   function plainTrunk(bark, hU, sty) {
-    const b0 = new G3.MB(), b = taperB(b0, sty), M = 14, ring = [];
+    const b0 = new G3.MB(), b = taperB(b0, sty), M = NSEC, ring = [];
     for (let i = 0; i <= M; i++) { const f = 2 * Math.PI * i / M; ring.push([Math.sin(f), Math.cos(f)]); }
     const lv = [0];
     if (sty) sty.bp.forEach(v => { if (v > 0.001 && v < hU - 0.001) lv.push(v); });
@@ -297,7 +321,7 @@ const SAW3D = (() => {
     const inLow = part !== "up" && part !== "up0", inUp = part !== "low" && part !== "low0", brk = part === "low" || part === "up";   /* "low0"/"up0": nur geteilt (Neigung), ohne Bruchstufe */
     /* Bruchstufe: hinter der Kerbe (links im Bild) reißt das Haltestück ab – dort bleibt eine unregelmäßig erhöhte Leiste stehen */
     const STEP = 0.2, cl = (v, a, c) => Math.max(a, Math.min(c, v));
-    const d = KMAX * q / KQ, zc = 1 - d, ym = d * KS, R = 6, M = 14, b0 = new G3.MB(), b = taperB(b0, sty);
+    const d = KMAX * q / KQ, zc = 1 - d, ym = d * KS, R = 6, M = NSEC, b0 = new G3.MB(), b = taperB(b0, sty);
     let curSeg = 0;
     const T = (a, p, c, col, out) => {
       if (wood !== 2 && (col === bark) === !!wood) return;
@@ -325,8 +349,8 @@ const SAW3D = (() => {
     };
     /* Alle Ringe teilen sich dieselben Facetten-Grenzen wie der glatte Stamm (14 Sektoren): so liegen Muster und Schattierung
        beim Ansetzen der Säge exakt gleich. Nur der Rand der Kerböffnung (f1) kommt je Ringhöhe dazu. */
-    const SW = 2 * Math.PI / 14;
-    const angs = f1 => { const o = [f1]; for (let k = 1; k < 14; k++) { const bb = k * SW; if (bb > f1 + 1e-6 && bb < 2 * Math.PI - f1 - 1e-6) o.push(bb); } o.push(2 * Math.PI - f1); return o; };
+    const SW = 2 * Math.PI / NSEC;
+    const angs = f1 => { const o = [f1]; for (let k = 1; k < NSEC; k++) { const bb = k * SW; if (bb > f1 + 1e-6 && bb < 2 * Math.PI - f1 - 1e-6) o.push(bb); } o.push(2 * Math.PI - f1); return o; };
     const ring = (y, zs) => { const f1 = Math.acos(Math.max(-1, Math.min(1, zs))), o = angs(f1).map(f => [Math.sin(f), y + nyU, Math.cos(f)]); o.f = angs(f1); return o; };
     /* Band zwischen zwei Ringen mit unterschiedlich vielen Punkten (Reißverschluss nach Winkel) */
     const strip = (pv, cu) => {
@@ -358,7 +382,7 @@ const SAW3D = (() => {
     if (wood !== true && hU > 0) {
       /* Stamm unten (bis zur Sohle) und oben (ab der Dachkante): aus denselben Punkten wie der Kerb – gleiche Farbe, keine Fuge */
       const base = ring(0, zc), loop = base.slice(), f1 = f0;
-      for (let m = -14; m <= 14; m++) { const aa = m * SW; if (aa > -f1 + 1e-6 && aa < f1 - 1e-6) loop.push([Math.sin(aa), nyU, Math.cos(aa)]); }
+      for (let m = -NSEC; m <= NSEC; m++) { const aa = m * SW; if (aa > -f1 + 1e-6 && aa < f1 - 1e-6) loop.push([Math.sin(aa), nyU, Math.cos(aa)]); }
       const nb = base.length, up = (pt, i) => (i % loop.length) < nb ? [pt[0], pt[1] + lh(pt), pt[2]] : pt;
       for (let i = 0; i < loop.length && inLow; i++) {
         const p = up(loop[i], i), n = up(loop[(i + 1) % loop.length], i + 1), o = [p[0] + n[0], 0, p[2] + n[2]];
@@ -427,7 +451,9 @@ const SAW3D = (() => {
   function crownMesh(info, t, fry) {
     const out = new G3.MB(), v = info.m.v, d = (t.ry || 0) - fry, c = Math.cos(d), s = Math.sin(d), ts = t.s || 1;
     const lift = t.sp === "fichte" ? 1.3 / ts : -1e9;               /* Fichte: unterste Äste weg, sonst verdecken sie die Schnittstelle */
+    const skip = info.m.skip || [];
     for (let i = info.m.tk; i + 26 < v.length; i += 27) {
+      if (skip.some(([a, e]) => i >= a && i < e)) continue;                /* v128: Moos am Stamm (gehört zum ersetzten Stamm) */
       if ((v[i + 1] + v[i + 10] + v[i + 19]) / 3 < lift) continue;
       for (let k = 0; k < 3; k++) {
         const o = i + k * 9;

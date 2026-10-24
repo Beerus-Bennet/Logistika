@@ -893,13 +893,13 @@ function worldStatic() {
   const SP = FWORLD.spring;
   if (SP) lines.merge(FWM.springBed(SP[0], SP[1], wGroundAt), {});
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
-  /* v125: nur der nördliche Fluss fließt (water: 2, von Osten nach Westen); Seebach und Quelltümpel stehen still */
+  /* v125: nur der nördliche Fluss fließt von Osten nach Westen (water: 2) */
   const cr = new FM.MB(); cr.merge(FWM.creekWater(FWORLD.creek, CR), {});
   R.nodes.push(fnode(R.mesh(cr), { water: 2, shadow: false }));
-  const cw = new FM.MB();
-  cw.merge(FWM.creekWater(LAKE_CREEK, CL), {});
-  if (SP) cw.merge(FWM.springPool(SP[0], SP[1]), {});
-  R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false }));
+  /* v126: der Seebach (Anbindung des Sees) bewegt sich wie der See (water: 3); nur der Quelltümpel steht still */
+  const sb = new FM.MB(); sb.merge(FWM.creekWater(LAKE_CREEK, CL), {});
+  R.nodes.push(fnode(R.mesh(sb), { water: 3, shadow: false }));
+  if (SP) { const cw = new FM.MB(); cw.merge(FWM.springPool(SP[0], SP[1]), {}); R.nodes.push(fnode(R.mesh(cw), { water: 1, shadow: false })); }
   if (SP) { const q = FWORLD.creek[1]; R.nodes.push(fnode(fmesh("wspring", FWM.springRocks), { x: SP[0], z: SP[1], ry: Math.atan2(-(q[1] - SP[1]), q[0] - SP[0]) })); }
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
@@ -959,7 +959,7 @@ function worldStatic() {
   /* Der Glindower See: Ufer, Wasser, Schilf, Seerosen, Insel, Steine */
   const Lk = FWORLD.lake;
   R.nodes.push(fnode(fmesh("lakeShore", () => FWM.lakeShore(Lk.rx, Lk.rz)), { x: Lk.x, z: Lk.z, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeWater", () => FWM.lakeWater(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.035, z: Lk.z, water: 1, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeWater", () => FWM.lakeWater(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.035, z: Lk.z, water: 3, shadow: false }));
   const lk = new FM.MB();
   [[-15, 52, 26], [-20, 44, 18], [-12, 62, 16], [36, 36, 14], [44, 52, 12], [-17, 34, 10]].forEach(([x, z, n], i) => lk.merge(FWM.reedPatch(n), { x, z, ry: i }));
   [[-9, 40, 14], [-4, 43, 8], [28, 64, 9]].forEach(([x, z, n]) => lk.merge(FWM.lilyPads(n), { x, z, y: 0.03 }));
@@ -2086,14 +2086,14 @@ function stepTreasureReveal(Rv, dt, time) {
   }
   const u = t - Rv.tb;
   const kk = Math.min(1, u / 0.5), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
-  Rv.lid.rx = -2.2 * e; Rv.lid.glow = 0.22;
+  Rv.lid.rx = -2.2 * e; Rv.lid.glow = 0.3;
   /* v98: Truhe setzt auf, bleibt offen und ohne Leuchten kurz stehen, zur Kamera gewandt – dann löst sie sich auf, die offene Truhe in der Grube bleibt */
   const TSd = 2.3 + 4.5, dn = Math.min(1, u / 0.9);
   B.y = 0.77 - dn * 0.65 + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.03 * (1 - dn));
   if (u < TSd) B.ry += angTo(B.ry, parcelFace()) * Math.min(1, dt * 5);
   if (dn >= 1 && !Rv.landed) { Rv.landed = 1; sfx("thud"); R.burst({ x, y: 0.1, z, n: 14, speed: 2.2, flat: true, up: 0.6, life: 0.8, size: 0.25, size2: 0.7, col: [[0.72, 0.58, 0.4, 0.5]], g: -1, drag: 2.2 }); }
   if (u > 2.5) Rv.lit.visible = false;
-  B.glow = Math.max(0, 0.9 * (1 - u / 1.8)); Rv.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.4) + Math.sin(time * 18) * 0.05;
+  B.glow = Math.max(0.14, 0.9 * (1 - u / 1.8));           /* v134: offene Kiste bleibt auch nachts gut sichtbar */ Rv.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.4) + Math.sin(time * 18) * 0.05;
   Rv.b1.alpha = 0.55 * Math.max(0, 1 - u / 2.6); Rv.b2.alpha = 0.8 * Math.max(0, 1 - u / 2.2);
   Rv.b1.sx = Rv.b1.sz = 1.8 + u * 0.7; Rv.b2.sx = Rv.b2.sz = 1.5 + u * 0.4;
   const rw = Math.min(1, u / 0.9); Rv.r1.sx = Rv.r1.sz = 0.8 + rw * 6.5; Rv.r1.alpha = 0.9 * (1 - rw);
@@ -2248,40 +2248,6 @@ function openPile(i) {
     if (!r) return;
     if (r.full) { sfx("bad"); toast("Im Holzlager ist nicht genug Platz – erst etwas verkaufen oder verarbeiten.", "warn"); return; }
     done(r);
-  };
-}
-/* ------------------- v70: Heuballen an der Scheune verkaufen ------------------- */
-function pickHay(x, y) {
-  const n = (S.farm.hay && S.farm.hay.n) || 0;
-  if (!n || typeof hayWorld !== "function") return null;
-  const R = FV.R, r = R.ray(x, y);
-  let best = null;
-  S.farm.objs.filter(o => o.t === "barn").forEach(o => hayWorld(o).slice(0, n).forEach(p => {
-    const d = R.hitBox(r, [p.x - 0.42, 0, p.z - 0.42], [p.x + 0.42, 0.72, p.z + 0.42]);
-    if (d != null && (!best || d < best.d)) best = { o, d };
-  }));
-  return best;
-}
-function hayIc() { return typeof thumbSpan === "function" ? thumbSpan("barnHay", () => FM.barnHay(), "🟨") : `<span class="ic">🟨</span>`; }
-function openHay() {
-  const H = S.farm.hay || { n: 0 };
-  if (!H.n) return closeFarmSheet();
-  FV.sheetFn = openHay;
-  const m = H.n * FHAY.price;
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">🟨</span>Heuballen<small>${H.n} Ballen von der eigenen Wiese · alle 12 Stunden wird ein neuer gepresst</small></div>
-    <div class="fpile">${hayIc()}<div><b>${H.n} × ${eur(FHAY.price)}</b><small>Verkaufen bringt gleich Geld. Danach ist der Platz vor der Scheune frei, bis frisches Heu gepresst ist.</small></div></div>
-    <div class="fs-row"><button class="btn" id="fhaySell">💰 Verkaufen<small>${eur(m)}</small></button></div>`, "pile");
-  $("#fhaySell").onclick = () => {
-    const barn = S.farm.objs.find(o => o.t === "barn"), at = barn ? hayWorld(barn)[0] : null;
-    const r = farmHaySell();
-    if (!r) return closeFarmSheet();
-    const p = at && FV.R ? FV.R.project(at.x, 0.6, at.z) : null;
-    if (p) {
-      floatText(p[0], p[1] - 20, "+" + eur(r.m), "gold");
-      FV.R.burst({ x: at.x, y: 0.4, z: at.z, n: 16, col: [[0.93, 0.8, 0.4, 1], [0.8, 0.66, 0.3, 1]], speed: 1.6, up: 1.4, size: 0.08, shape: 1 });
-    }
-    sfx("coin");
-    closeFarmSheet(); farmSyncState(); renderFarmUI(); save();
   };
 }
 /* Haustiere laufen die Hofwege ab.
@@ -2586,12 +2552,12 @@ function stepParcelOpen(O, P, dt, time) {
   /* Phase 1: Deckel klappt auf (mit Überschwingen), Fontäne, Ringe, Säule schießt hoch – dann löst sich alles auf */
   const u = t - O.tb;
   const kk = Math.min(1, u / 0.45), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
-  P.lid.rx = -2.15 * e; P.lid.glow = 0.22;                  /* v124: offener Deckel (Unterseite) nicht im Schatten */
+  P.lid.rx = -2.15 * e; P.lid.glow = 0.3;                  /* v124: offener Deckel (Unterseite) nicht im Schatten */
   /* v97: Kiste setzt wieder auf (Staub) und bleibt offen stehen – ohne Leuchten, zur Kamera gewandt */
   const dn = Math.min(1, u / 0.7);
   if (u < TS) { P.body.y = (O.y0 || 0) * (1 - dn * dn) + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.02 * (1 - dn)); P.body.ry += angTo(P.body.ry, face) * Math.min(1, dt * 5); }
   if (dn >= 1 && !O.landed) { O.landed = 1; sfx("thud"); R.burst({ x, y: 0.1, z, n: 14, speed: 2.2, flat: true, up: 0.6, life: 0.8, size: 0.25, size2: 0.7, col: [[0.86, 0.8, 0.68, 0.5]], g: -1, drag: 2.2 }); }
-  P.body.glow = Math.max(0, 0.7 * (1 - u / 1.6)); P.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.2) + Math.sin(time * 18) * 0.05; if (u > 2.3) P.lit.visible = false;
+  P.body.glow = Math.max(0.14, 0.7 * (1 - u / 1.6)); P.lit.alpha = 0.85 * Math.max(0, 1 - u / 2.2) + Math.sin(time * 18) * 0.05; if (u > 2.3) P.lit.visible = false;
   P.b1.alpha = 0.46 * Math.max(0, 1 - u / 2.4); P.b2.alpha = 0.7 * Math.max(0, 1 - u / 2.0);
   P.b1.sx = P.b1.sz = 1.8 + u * 0.6; P.b2.sx = P.b2.sz = 1.5 + u * 0.4;
   const rw = Math.min(1, u / 0.9);
@@ -2710,9 +2676,6 @@ function worldTap(x, y) {
   /* v107: Hochsitz */
   const hu = typeof HUNT !== "undefined" ? HUNT.pick(x, y) : null;
   if (hu && (!ho || hu.d < ho.d) && (!ht || hu.d < ht.d + 0.5)) { sfx("tap"); HUNT.sheet(); return true; }
-  /* v70: Heuballen an der Scheune */
-  const hh = pickHay(x, y);
-  if (hh && (!ho || hh.d < ho.d + 0.4)) { sfx("tap"); openHay(); return true; }
   /* Holzstapel im Sägewerk */
   const hp = pickPile(x, y);
   if (hp && (!ho || hp.d < ho.d - 0.2) && (!ht || hp.d < ht.d - 0.2)) {

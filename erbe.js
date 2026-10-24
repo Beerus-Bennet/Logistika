@@ -307,7 +307,8 @@ function erbeInit(F, fresh) {
     if (F.sta > FSTA.max) F.sta = FSTA.max;
   }
   F.stall = F.stall || { slots: [], coins: 0 };
-  F.hay = F.hay || { n: FHAY.max, t: S.time };            /* v70: Heuballen an der Scheune */
+  /* v126: die Heuballen an der Scheune gibt es nicht mehr – noch nicht verkaufte werden einmalig ausgezahlt (8 € je Ballen) */
+  if (F.hay) { const m = (F.hay.n || 0) * 8; if (m > 0) { S.money += m; S.revenue += m; if (F.stats) F.stats.earned += m; } delete F.hay; }
   /* v53: Heuballen vom Weg, Scheune Rand an Rand ans Wohnhaus */
   if (!F.v53) {
     F.v53 = 1;
@@ -667,34 +668,6 @@ function farmPileTake(i, sell) {
   F.piles[i] = S.time;
   farmXP(5);
   return { got: P.n, P };
-}
-
-/* ------------------- v70: Heuballen an der Scheune ------------------------
-   Eigenes Heu von der Hofwiese: zwei Ballen stehen am Scheunentor, antippen und
-   verkaufen. Alle 12 Spielstunden wird ein neuer Ballen gepresst (höchstens zwei). */
-const FHAY = { max: 2, every: 720, price: 8 };
-const HAY_AT = [[1.325, 2.1, 0], [1.125, 2.55, 0.4]];          /* Lage an der Scheune (Mitte, ungedreht) */
-function farmHayTick() {
-  const H = S.farm && S.farm.hay;
-  if (!H) return;
-  if (H.n >= FHAY.max) { H.t = S.time; return; }
-  while (H.n < FHAY.max && S.time - H.t >= FHAY.every) { H.n++; H.t += FHAY.every; }
-}
-function farmHaySell() {
-  const F = S.farm, H = F.hay;
-  if (!H || !H.n || !F.objs.some(o => o.t === "barn")) return null;
-  const n = H.n, m = n * FHAY.price;
-  S.money += m; S.revenue += m; F.stats.earned += m;
-  logMoney("farm", "Heuballen · " + n + " Stück", m);
-  farmEvent("sellhay", n);
-  H.n = 0; H.t = S.time;
-  farmXP(n);
-  return { n, m };
-}
-/* Weltlage der Ballen an einer Scheune */
-function hayWorld(o) {
-  const [cx, cz] = farmCenter(o), ry = o.r ? -Math.PI / 2 : 0, c = Math.cos(ry), s = Math.sin(ry);
-  return HAY_AT.map(([x, z, r]) => ({ x: cx + x * c + z * s, z: cz - x * s + z * c, ry: ry + r }));
 }
 
 /* ------------------------------- Sägewerk -------------------------------- */
@@ -1871,7 +1844,6 @@ function farmErbeTick(dt) {
   const F = S.farm;
   if (!F || F.sold) return;
   farmSta();
-  farmHayTick();
   farmTreesTick();
   farmAreaCheck();
   farmWeather();
