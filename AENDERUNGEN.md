@@ -1,5 +1,9 @@
 # Änderungen – kurz für den Kollegen
 
+## v143 – Kein Köder-Vorrat für den Fischer
+
+- **`team.js`, `erbe.js`:** Der „Vorrat behalten“ aus v142 ist wieder raus. Die Mengengrenze deckelt nur das Herstellen – wer die Ware braucht (auch der Fischer beim Angeln und Beködern), nutzt sie mit. Fischer/in hat deshalb keine Grenze mehr (`STAFF_LIM` ohne „fischer“, `staffBaitKeep` entfernt). Gespeicherte Fischer-Vorräte (`S.farm.limU["f:…"]`) werden beim Laden gelöscht (`limV3`).
+
 ## v142 – Mengengrenze genau und für alle Berufe mit Freigaben
 
 - **Jede Zahl einstellbar (`team.js`):** Grenze jetzt in der Anzeige-Einheit (`S.farm.limU`: Stück, kg, l …) statt in Gebinden – vorher sprang z. B. der Paletten-Schieber nur zwischen 102 und 201 (Stapel à 3). Schieber 0 … Lagerplatz der Ware (mind. 100) in Einzelschritten, dazu Knöpfe −10 / −1 / keine / +1 / +10. Alte Grenzen (v138, `S.farm.lim` in Gebinden) werden beim ersten Zugriff umgerechnet (`limV2`).
