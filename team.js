@@ -621,15 +621,32 @@ function staffWlSet(role, id, on) { const W = staffWl(role); if (on) delete W[id
 /* v138: Mengengrenze je Ware (Landwirt/in, Sägewerker/in): Kachel gedrückt halten → Schieber. Gespeichert in Gebinden
    (S.farm.lim[id], fehlt = keine Grenze). Ist sie erreicht (Lager + was schon wächst bzw. in der Maschine läuft), wird
    nichts mehr gesät, geerntet, gepflückt oder ohne Auftrag produziert. Aufträge für Bestellungen gehen weiter. */
-const STAFF_LIM = ["farmer", "saeger"];
-const LIM_STEPS = [0, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000];       /* in der Anzeige-Einheit (kg, Stück, …) */
-function staffLim(id) { const L = S.farm.lim; return L && L[id] > 0 ? L[id] : 0; }
-function staffLimSet(id, n) { const F = S.farm; F.lim = F.lim || {}; if (n > 0) F.lim[id] = n; else delete F.lim[id]; }
-function staffLimHit(id, extra) { const l = staffLim(id); return l > 0 && farmInv(id) + (extra || 0) >= l; }
+/* v142: alle Berufe mit Freigaben außer Tierpfleger/in (dort ergibt es keinen Sinn); Fahrer/in und Mechaniker/in haben keine.
+   Grenze jetzt in der Anzeige-Einheit (S.farm.limU: Stück, kg, l …) – jede Zahl einstellbar, z. B. 68 Paletten.
+   Fischer/in: die Kacheln sind Köder – dort heißt die Zahl „so viel behalten“ (nimmt den Köder nur, solange mehr da ist). */
+const STAFF_LIM = ["farmer", "saeger", "hofmeister", "holzfaeller", "fischwirt", "fischer"];
+function staffLimU(id) {
+  const F = S.farm;
+  if (F.lim && !F.limV2) {                        /* v138 speicherte in Gebinden – einmal umrechnen */
+    F.limU = F.limU || {};
+    for (const k in F.lim) if (FITEMS[k] && F.lim[k] > 0) F.limU[k] = F.lim[k] * (FITEMS[k].a || 1);
+    delete F.lim; F.limV2 = 1;
+  }
+  const L = F.limU; return L && L[id] > 0 ? L[id] : 0;
+}
+const limIt = key => FITEMS[key.replace(/^f:/, "")];                                      /* Schlüssel „f:mais“ = Vorrat des Fischers */
+function staffLim(id) { const u = staffLimU(id); return u ? u / (limIt(id).a || 1) : 0; }       /* in Gebinden (fürs Vergleichen) */
+function staffLimSet(id, u) { const F = S.farm; staffLimU(id); F.limU = F.limU || {}; F.limV2 = 1; u = Math.round(u); if (u > 0) F.limU[id] = u; else delete F.limU[id]; }
+function staffLimHit(id, extra) { const l = staffLim(id); return l > 0 && farmInv(id) + (extra || 0) >= l - 1e-9; }
+/* Fischer/in: Köder nur nehmen, solange mehr als die eingestellte Menge da ist */
+function staffBaitKeep(b) { const l = staffLim("f:" + b); if (!l) return false; const B = typeof FBAITS !== "undefined" && FBAITS[b]; return farmInv(B ? B.item : b) <= l + 1e-9; }
 /* was auf den Feldern schon wächst (je Feld 2 Gebinde) */
 function staffGrowing(c) { return S.farm.objs.filter(o => o.t === "field" && o.crop === c).length * 2; }
-const limStepOf = (id, n) => { const a = FITEMS[id].a || 1; let k = 0; LIM_STEPS.forEach((v, i) => { if (v && Math.ceil(v / a) <= n) k = i; }); return n > 0 ? Math.max(1, k) : 0; };
-const limOfStep = (id, k) => k > 0 ? Math.max(1, Math.ceil(LIM_STEPS[k] / (FITEMS[id].a || 1))) : 0;
+/* Schieber: 0 … Lagerplatz dieser Ware (mindestens 100), jede Einheit einzeln */
+function staffLimMax(id) { const it = limIt(id), a = it.a || 1; let cap = 0; try { cap = it.st ? farmStoreCap(it.st) * a : 0; } catch (e) { cap = 0; } return Math.max(100, Math.round(cap), staffLimU(id)); }
+/* Schlüssel der Grenze je Beruf und Kachel (Fischer/in: eigener Vorrat-Schlüssel, damit Mais des Landwirts getrennt bleibt) */
+const limKey = (role, id) => role === "fischer" ? "f:" + id : id;
+function staffLimTxt(key, u, fish) { const it = limIt(key); return u ? (fish ? "behält " : "bis ") + famt(key.replace(/^f:/, ""), u / (it.a || 1)) : (fish ? "kein Vorrat" : "keine Grenze"); }
 function staffFahrMode() { return STAFF_FAHR[S.farm.fahrMode] ? S.farm.fahrMode : "all"; }
 /* Darf der Fahrer diese Bestellung bedienen? (B: nur fertige – das prüft der Aufrufer zusätzlich) */
 function staffFahrOk(o) { return staffFahrMode() !== "abo" || !!o.abo; }
@@ -1044,7 +1061,7 @@ function staffStegSpot(steg) {
    Ohne Dosen nimmt er Mais, falls auch Mais freigegeben ist. */
 function staffPotBait() {
   if (!staffWlHas("fischer", "koeder")) return null;
-  return farmInv("koeder") ? "koeder" : staffWlHas("fischer", "mais") && farmInv("mais") ? "mais" : null;
+  return farmInv("koeder") && !staffBaitKeep("koeder") ? "koeder" : staffWlHas("fischer", "mais") && farmInv("mais") && !staffBaitKeep("mais") ? "mais" : null;   /* v142: Vorrat behalten */
 }
 function staffFischerJob(s, target) {
   s.fwhy = "";
@@ -1111,7 +1128,7 @@ function staffAutoJob(s) {
     case "farmer": return staffFarmerJob(s);
     case "pfleger": return staffPflegerJob(s);
     case "hofmeister": case "saeger": case "fischwirt": return staffMachJob(s);
-    case "holzfaeller": return staffFellerJob(s, t => staffWlHas("holzfaeller", FSPECIES[t.sp].log));   /* v61 */
+    case "holzfaeller": return staffFellerJob(s, t => staffWlHas("holzfaeller", FSPECIES[t.sp].log) && !staffLimHit(FSPECIES[t.sp].log));   /* v61, v142: Grenze */
     case "fischer": return staffFischerJob(s);
     case "fahrer": return staffFahrerJob(s);
   }
@@ -1819,21 +1836,25 @@ function staffWlHTML(s, P) {
   /* v138: Schieber für die Mengengrenze der gedrückt gehaltenen Kachel */
   let ed = "";
   if (lim && P && P.lim && FITEMS[P.lim]) {
-    const id = P.lim, L = staffLim(id), k = limStepOf(id, L);
+    /* v142: jede Einheit einzeln (Schieber) plus Feinknöpfe; Fischer/in: Vorrat, der nicht angerührt wird */
+    const id = P.lim, key = limKey(role, id), U = staffLimU(key), mx = staffLimMax(key), fish = role === "fischer";
     ed = `<div class="fst-lim" data-limbox>
-      <div class="fst-lim-h">${staffItemIcNow(id)}<b>Grenze für ${esc(staffItemName(id, 2))}</b><span data-limv>${L ? "bis " + esc(famt(id, L)) : "keine Grenze"}</span></div>
-      <input type="range" min="0" max="${LIM_STEPS.length - 1}" step="1" value="${k}" data-limr aria-label="Grenze">
-      <div class="fst-lim-f"><small>im Lager ${esc(famt(id, farmInv(id)))} · ${name} ${role === "farmer" ? "sät, erntet und pflückt" : "produziert"} nur bis zur Grenze; Bestellungen gehen vor</small><button class="btn tiny" data-limok>Fertig</button></div></div>`;
+      <div class="fst-lim-h">${staffItemIcNow(id)}<b>${fish ? "Vorrat" : "Grenze"} für ${esc(staffItemName(id, 2))}</b><span data-limv>${esc(staffLimTxt(key, U, fish))}</span></div>
+      <input type="range" min="0" max="${mx}" step="1" value="${U}" data-limr aria-label="Grenze">
+      <div class="fst-lim-b">${[-10, -1, 0, 1, 10].map(d => `<button class="btn tiny ghost" data-limd="${d}">${d === 0 ? "keine" : (d > 0 ? "+" : "−") + Math.abs(d)}</button>`).join("")}</div>
+      <div class="fst-lim-f"><small>im Lager ${esc(famt(id, farmInv(id)))} · ${fish ? name + " nimmt diesen Köder nur, solange mehr da ist" : name + " " + (role === "farmer" ? "sät, erntet und pflückt" : role === "holzfaeller" ? "fällt" : "produziert") + " nur bis zur Grenze; Bestellungen gehen vor"}</small><button class="btn tiny" data-limok>Fertig</button></div></div>`;
   }
   const sub = (x) => {
     if (x.lock) return esc(x.lock);
-    if (role === "fischer" && x.id === "koeder") return x.on ? "✓ füllt Reusen" : "aus · Reusen bleiben leer";
+    const key = limKey(role, x.id), L = lim ? staffLimU(key) : 0;
+    if (role === "fischer" && x.id === "koeder" && !L) return x.on ? "✓ füllt Reusen" : "aus · Reusen bleiben leer";
     if (!x.on) return x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus";
-    const L = lim ? staffLim(x.id) : 0;
-    return L ? (staffLimHit(x.id) ? "⛔ " : "✓ ") + "bis " + esc(famt(x.id, L)) : "✓ an";
+    if (!L) return "✓ an";
+    if (role === "fischer") return (staffBaitKeep(x.id) ? "⛔ " : "✓ ") + esc(staffLimTxt(key, L, true));
+    return (staffLimHit(key) ? "⛔ " : "✓ ") + esc(staffLimTxt(key, L));
   };
-  return `<div class="fst-add-h">${role === "fischer" ? "Welche Köder darf " + name + " nehmen?" : "Was darf " + name + " machen?"}<small>${n} von ${free} an · antippen = an/aus${lim ? " · halten = Grenze" : ""}</small></div>${ed}<div class="fp-row fst-opts">`
-    + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}${lim && staffLim(x.id) ? " wl-lim" : ""}${P && P.lim === x.id ? " wl-sel" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffItemName(x.id, 2))}</b>`
+  return `<div class="fst-add-h">${role === "fischer" ? "Welche Köder darf " + name + " nehmen?" : "Was darf " + name + " machen?"}<small>${n} von ${free} an · antippen = an/aus${lim ? " · halten = " + (role === "fischer" ? "Vorrat" : "Grenze") : ""}</small></div>${ed}<div class="fp-row fst-opts">`
+    + items.map(x => `<div class="ftool wl${x.on && !x.lock ? " wl-on" : ""}${x.lock ? " lock" : ""}${lim && staffLimU(limKey(role, x.id)) ? " wl-lim" : ""}${P && P.lim === x.id ? " wl-sel" : ""}" data-wl="${esc(x.id)}">${staffItemIcNow(x.id)}<b>${esc(staffItemName(x.id, 2))}</b>`
       + `<small>${sub(x)}</small></div>`).join("") + `</div>`;
 }
 /* v61: Fahrer/in – genau ein Modus */
@@ -1890,12 +1911,21 @@ function renderStaffPop(el, P, force) {
   });
   const lr = el.querySelector("[data-limr]");
   if (lr) {
-    const id = P.lim, show = () => { const n = limOfStep(id, +lr.value), v = el.querySelector("[data-limv]"); if (v) v.textContent = n ? "bis " + famt(id, n) : "keine Grenze"; };
+    /* v142: Schieber in einzelnen Einheiten, Feinknöpfe −10/−1/keine/+1/+10 */
+    const key = limKey(s.role, P.lim), fish = s.role === "fischer";
+    const show = () => { const v = el.querySelector("[data-limv]"); if (v) v.textContent = staffLimTxt(key, +lr.value, fish); };
+    const commit = () => { staffLimSet(key, +lr.value); P.limDrag = false; save(); renderStaffPop(el, P, true); };
     lr.addEventListener("pointerdown", ev => { ev.stopPropagation(); P.limDrag = true; });
     lr.addEventListener("input", show);
-    lr.addEventListener("change", () => { staffLimSet(id, limOfStep(id, +lr.value)); P.limDrag = false; sfx("tap"); save(); renderStaffPop(el, P, true); });
+    lr.addEventListener("change", () => { sfx("tap"); commit(); });
+    el.querySelectorAll("[data-limd]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation();
+      const d = +b.dataset.limd;
+      lr.value = d === 0 ? 0 : clamp(+lr.value + d, 0, +lr.max);
+      sfx("tap"); commit();
+    });
     el.querySelector("[data-limbox]").addEventListener("click", ev => ev.stopPropagation());
-    el.querySelector("[data-limok]").onclick = ev => { ev.stopPropagation(); staffLimSet(id, limOfStep(id, +lr.value)); P.lim = null; P.limDrag = false; sfx("tap"); save(); renderStaffPop(el, P, true); };
+    el.querySelector("[data-limok]").onclick = ev => { ev.stopPropagation(); staffLimSet(key, +lr.value); P.lim = null; P.limDrag = false; sfx("tap"); save(); renderStaffPop(el, P, true); };
   }
   el.querySelectorAll("[data-fmode]").forEach(b => b.onclick = ev => {
     ev.stopPropagation();

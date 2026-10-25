@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v142 – Mengengrenze genau, alle Berufe (auf v141)
+
+| Teil | Datei |
+|---|---|
+| Grenze in Anzeige-Einheit, Umrechnung, alle Berufe, Holzfäller, Fischer-Vorrat, Schieber/Feinknöpfe | `team.js` |
+| Köder-Vorrat beim Angeln | `erbe.js` |
+| Feinknöpfe | `style.css` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v141 – Herkunft der Maschinenaufträge (auf v140)
 
 | Teil | Datei |

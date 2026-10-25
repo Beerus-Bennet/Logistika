@@ -1126,6 +1126,7 @@ function staffBaitOk(b) {
   const B = FBAITS[b], U = angelS();
   if (!B || !U) return false;
   if (typeof staffWlHas === "function" && !staffWlHas("fischer", b)) return false;   /* v64: Köder-Freigabe */
+  if (typeof staffBaitKeep === "function" && staffBaitKeep(b)) return false;        /* v142: eingestellten Vorrat behalten */
   if (B.tour && !U.tour.done) return false;
   if (B.rod && U.rod < B.rod) return false;
   return b === "mais" ? (U.staffMais || 0) > 0 || farmInv("mais") > 0 : farmInv(B.item) > 0;

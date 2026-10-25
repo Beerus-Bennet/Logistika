@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v142 – Mengengrenze genau und für alle Berufe mit Freigaben
+
+- **Jede Zahl einstellbar (`team.js`):** Grenze jetzt in der Anzeige-Einheit (`S.farm.limU`: Stück, kg, l …) statt in Gebinden – vorher sprang z. B. der Paletten-Schieber nur zwischen 102 und 201 (Stapel à 3). Schieber 0 … Lagerplatz der Ware (mind. 100) in Einzelschritten, dazu Knöpfe −10 / −1 / keine / +1 / +10. Alte Grenzen (v138, `S.farm.lim` in Gebinden) werden beim ersten Zugriff umgerechnet (`limV2`).
+- **Alle Berufe mit Freigaben außer Tierpfleger/in (`STAFF_LIM`):** Landwirt/in, Sägewerker/in, Hofmeister/in, Fischwirt/in (Maschinen ohne Auftrag, `staffPickRecipe`), Holzfäller/in (fällt keine Bäume der Sorte mehr, wenn die Stämme die Grenze erreichen), Fischer/in. Fahrer/in und Mechaniker/in haben keine Freigaben.
+- **Fischer/in:** die Kacheln sind Köder – dort heißt die Zahl „Vorrat behalten“: der Köder wird nur genommen, solange mehr da ist (`staffBaitKeep`, in `staffBaitOk` (`erbe.js`) und beim Beködern der Reusen). Eigener Schlüssel `f:<köder>`, damit z. B. Mais des Landwirts getrennt bleibt.
+- CSS `.fst-lim-b` (`style.css`).
+
 ## v141 – Maschinenaufträge zeigen, wer sie eingestellt hat
 
 - **Hintergrund:** Schaffutter tauchte auf, obwohl laut Freigaben niemand es macht. Im Code gibt es nur drei Wege in eine Maschine (du im Fenster, Arbeiter, Berts Dauerbestellung) – ohne Spielstand nicht eindeutig zu klären, deshalb jetzt sichtbar.
