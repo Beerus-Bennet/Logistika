@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v141 – Herkunft der Maschinenaufträge (auf v140)
+
+| Teil | Datei |
+|---|---|
+| `job.who`, `S.farm.mlog`, `farmQueueBy` | `farm.js` |
+| Grund beim Einstellen durch Arbeiter | `team.js` |
+| Berts Dauerbestellung | `erbe.js` |
+| Plakette und Verlauf im Maschinenfenster | `farmview.js`, `style.css` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v140 – Text Daueraufträge (auf v139)
 
 | Teil | Datei |

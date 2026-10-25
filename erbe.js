@@ -1277,7 +1277,7 @@ function bertKeepTick() {
   machUpdate(o);
   while (o.done.length && o.done[0].r === "wurm" && farmRoom("wurm") >= o.done[0].n) { const d = o.done.shift(); farmAdd("wurm", d.n, d.q); farmEvent("make:wurm", d.n); }
   const queued = () => o.q.concat(o.done).filter(j => j.r === "wurm").reduce((a, j) => a + j.n, 0);
-  for (let i = 0; i < 4 && farmInv("wurm") + queued() < keep; i++) if (farmQueue(o, "wurm") !== true) break;
+  for (let i = 0; i < 4 && farmInv("wurm") + queued() < keep; i++) if (farmQueueBy("bert|Dauerbestellung Tauwürmer", o, "wurm") !== true) break;
 }
 /* im Takt: Kombi aufstellen, Profi-Köder-Anruf, fertige Entwicklungen, Dauerbestellung */
 function angelTick() {

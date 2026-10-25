@@ -1244,12 +1244,16 @@ function staffDo(s, j) {
       const r = j.rid ? recipeOf(o, j.rid) : null;
       /* v65: Zwischenprodukt für ein eigenes freigegebenes Rezept ist erlaubt (siehe staffTaskJob) */
       const own = j.task && staffTaskList().some(T => T.id === j.task && T.from === s.role && T.parent);
-      if (r && (staffWlHas(s.role, r.id) || own) && farmHasAll(r.in) && (FITEMS[r.id].energy || staffRoomFor(r))) { if (farmQueue(o, j.rid) === true) o.lastR = j.rid; }
+      if (r && (staffWlHas(s.role, r.id) || own) && farmHasAll(r.in) && (FITEMS[r.id].energy || staffRoomFor(r))) {
+        const T0 = j.task && staffTaskList().find(T => T.id === j.task);              /* v141: Herkunft merken */
+        const why = own ? "Zwischenprodukt" + (T0 ? " für " + staffItemName((staffTaskList().find(P => P.id === T0.parent) || {}).item || T0.item) : "") : T0 ? "Auftrag" + (T0.from && T0.from !== s.role ? " von " + (FSTAFF_ROLES[T0.from] ? FSTAFF_ROLES[T0.from].n : T0.from) : "") + (T0.note ? " " + T0.note : "") : "Freigabe";
+        if (farmQueueBy(s.role + "|" + why, o, j.rid) === true) o.lastR = j.rid;
+      }
       /* v66: gleich die freien Plätze der Warteschlange füllen – je Platz neu entscheiden, was am dringendsten ist
          (gleiche Regeln: Freigabe, Zutaten, Reserve für Bestellungen, Lagerplatz, 15 % Luft) */
       if (o.t !== "kessel" && !o.broken && FMACHINES[o.t] && !FMACHINES[o.t].trips) for (let k = 0; k < 12 && o.q.length + o.done.length < machSlots(o); k++) {
         const r2 = staffPickRecipe(o, s.role);
-        if (!r2 || farmQueue(o, rkey(r2)) !== true) break;
+        if (!r2 || farmQueueBy(s.role + "|Freigabe", o, rkey(r2)) !== true) break;
         o.lastR = rkey(r2);
       }
       break;

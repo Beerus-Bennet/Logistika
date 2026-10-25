@@ -1963,12 +1963,30 @@ if (typeof document !== "undefined") {
 }
 
 /* Mühle, Ofen, Molkerei */
+/* v141: Herkunft eines Maschinenauftrags – „du“ oder „rolle|Grund“ (farm.js, farmQueueBy) */
+function machWhoTxt(who) {
+  if (!who) return "";
+  if (who === "du") return "von dir eingestellt";
+  const [role, why] = who.split("|"), R = typeof FSTAFF_ROLES !== "undefined" && FSTAFF_ROLES[role];
+  const name = role === "bert" ? "Bert" : R ? R.n : role;
+  return name + (why ? " – " + why : "");
+}
+function machWhoIc(who) {
+  if (who === "du") return "👤";
+  const role = who.split("|")[0], R = typeof FSTAFF_ROLES !== "undefined" && FSTAFF_ROLES[role];
+  return role === "bert" ? "🎣" : R ? R.i : "👷";
+}
+function machLogHTML(o) {
+  const L = (S.farm.mlog || []).filter(e => e.m === o.t).slice(-5).reverse();
+  if (!L.length) return "";
+  return `<div class="fq-log"><b>Zuletzt eingestellt</b>${L.map(e => `<span>${machWhoIc(e.who)} ${esc(FITEMS[e.r] ? FITEMS[e.r].n : e.r)} · ${esc(machWhoTxt(e.who))} <small>vor ${fdur(Math.max(1, S.time - e.t))}</small></span>`).join("")}</div>`;
+}
 function machQueueHTML(o) {
   machUpdate(o);
   const slots = [];
   o.q.forEach((it, i) => {
     const f = i === 0 ? clamp((S.time - it.start) / Math.max(1, it.end - it.start), 0, 1) : 0;
-    slots.push(`<div class="fq-s work">${icOf(it.r)}<i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small>${it.tut ? "" : `<button class="fq-x" data-unq="${i}" aria-label="abbrechen">✕</button>`}</div>`);
+    slots.push(`<div class="fq-s work" title="${esc(machWhoTxt(it.who))}">${icOf(it.r)}<i style="width:${Math.round(f * 100)}%"></i><small>${i === 0 ? fdur(Math.max(1, it.end - S.time)) : "wartet"}</small>${it.who ? `<em class="fq-who">${machWhoIc(it.who)}</em>` : ""}${it.tut ? "" : `<button class="fq-x" data-unq="${i}" aria-label="abbrechen">✕</button>`}</div>`);
   });
   o.done.forEach(d => slots.push(`<div class="fq-s done" data-collect="1">${icOf(d.r)}<small>fertig ✓</small></div>`));
   for (let i = slots.length; i < machSlots(o); i++) slots.push(`<div class="fq-s free"><small>frei</small></div>`);
@@ -2035,7 +2053,8 @@ function openMachine(o) {
     ${typeof machExtraHTML === "function" ? machExtraHTML(o) : ""}
     <div class="fs-sub">${sub}</div>
     <div class="frecs">${rec}</div>
-    ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}`, "mach");
+    ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}
+    ${M.trips ? "" : machLogHTML(o)}`, "mach");
   if (typeof machExtraBind === "function") machExtraBind(o);
   const ob = $("#farmSheetIn [data-moff]");
   if (ob) ob.onclick = () => {

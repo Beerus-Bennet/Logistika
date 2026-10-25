@@ -704,9 +704,15 @@ function farmQueue(o, rid) {
   /* die erste Kutterfahrt im Rundgang läuft im Zeitraffer: sofort fertig,
      der Kutter bleibt am Kai */
   if (quick && M.trips) { job.tut = 1; job.end = start; }
+  /* v141: wer hat das eingestellt? (du, oder Beruf + Grund) – steht im Maschinenfenster, für die Fehlersuche */
+  job.who = FARM_WHO || "du";
+  F.mlog = (F.mlog || []).slice(-29).concat({ t: S.time, r: r.id, m: o.t, who: job.who });
   o.q.push(job);
   return true;
 }
+/* v141: Herkunft des nächsten farmQueue-Aufrufs („rolle|Grund“) – vom Aufrufer gesetzt, sonst „du“ */
+let FARM_WHO = null;
+function farmQueueBy(who, o, rid) { FARM_WHO = who; try { return farmQueue(o, rid); } finally { FARM_WHO = null; } }
 /* v53: Auftrag aus der Warteschlange nehmen – Zutaten kommen zurück (bei Wartenden auch
    Sprit und Strom); die Nachfolger rücken auf */
 function farmUnqueue(o, i) {
