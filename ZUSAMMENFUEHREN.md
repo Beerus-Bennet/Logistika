@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v138 – Mengengrenze (auf v137)
+
+| Teil | Datei |
+|---|---|
+| Grenze speichern/prüfen, Säen/Ernten/Rezeptwahl, Schieber und Halten in der Freigabe-Liste | `team.js` |
+| Schieber-Stil | `style.css` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v137 – Produktionsstätten deaktivieren (auf v136)
 
 | Teil | Datei |

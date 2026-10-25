@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v138 – Mengengrenze für Landwirt/in und Sägewerker/in
+
+- **Bedienung (`team.js`, `staffWlHTML`, `renderStaffPop`):** In der Freigabe-Liste eine Kachel gedrückt halten (0,45 s) → Schieber „Grenze für …“ mit Stufen keine / 20 / 50 / 100 / 200 / 300 / 500 / 750 / 1 000 / 1 500 / 2 000 / 3 000 / 5 000 (in der Anzeige-Einheit: kg, Stück …), „Fertig“ schließt. Antippen schaltet weiter an/aus. Kachel zeigt „✓ bis 200 kg“, ⛔ wenn erreicht.
+- **Wirkung:** gespeichert in `S.farm.lim[id]` (in Gebinden, fehlt = keine Grenze). Landwirt/in sät nicht mehr, wenn Lager + was auf den Feldern wächst die Grenze erreicht (`staffCrop`, `staffGrowing`), und erntet/pflückt/gießt nichts mehr davon, solange das Lager auf der Grenze steht (`staffFarmerJob`). Maschinen ohne Auftrag: kein Rezept mehr, wenn Lager + was in den Maschinen läuft die Grenze erreicht (`staffPickRecipe`, gilt für alle Maschinen-Berufe, einstellbar bei Landwirt/in und Sägewerker/in). Aufträge für Bestellungen gehen weiter.
+- CSS `.fst-lim*`, `.wl-lim`, `.wl-sel` (`style.css`).
+
 ## v137 – Produktionsstätten für Arbeiter deaktivieren
 
 - **Knopf im Maschinenfenster (`farmview.js`, `openMachine`):** „⏸ Deaktivieren“ / „▶ Aktivieren“ oben neben dem Namen, bei allen Produktionsstätten, die Arbeiter bedienen (nicht bei Fangfahrten und Berts Werkstatt). Deaktiviert steht ein Hinweis unter dem Namen; selbst produzieren geht weiter. Gespeichert als `o.off` am Objekt (fehlt = aktiv, keine Migration).
