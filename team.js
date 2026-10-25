@@ -434,10 +434,10 @@ function staffMachThe(t) {
   return (den.includes(t) ? "den " : das.includes(t) ? "das " : "die ") + n;
 }
 function staffMachRole(o) { const M = FMACHINES[o.t]; return M.bert ? "bert" : M.fish ? "fischwirt" : (M.saw || o.t === "saegebock") ? "saeger" : "hofmeister"; }
-function staffMachines(role) {
+function staffMachines(role, all) {   /* v137: all = auch deaktivierte Maschinen (für die Freigabe-Liste) */
   return S.farm.objs.filter(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return false;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area)) || (o.off && !all)) return false;
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return false;
     return staffMachRole(o) === role;
   });
@@ -447,7 +447,7 @@ function staffRecipeFor(id, role) {
   let best = null;
   S.farm.objs.forEach(o => {
     const M = FMACHINES[o.t];
-    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area))) return;
+    if (!M || !o.q || M.trips || M.bert || (o.area && !farmAreaOpen(o.area)) || o.off) return;     /* v137: deaktiviert – Arbeiter lassen sie in Ruhe */
     if ((M.saw || o.t === "saegebock") && !machReady(o)) return;
     const mr = staffMachRole(o);
     if (role && mr !== role) return;
@@ -587,7 +587,7 @@ function staffOptions(role) {
   } else if (role === "pfleger") {
     F.objs.filter(o => FPENS[o.t]).forEach(o => { const k = penKind(o), A = FANIMALS[k]; if (!A || A.fish) return; if (o.animals.length) add(A.out); add("ani:" + k, o.animals.length >= A.max); });
   } else if (role === "hofmeister" || role === "saeger" || role === "fischwirt") {
-    staffMachines(role).forEach(o => FMACHINES[o.t].recipes.forEach(r => { if (!FITEMS[r.id].energy) add(r.id, r.lv > flv()); }));
+    staffMachines(role, true).forEach(o => FMACHINES[o.t].recipes.forEach(r => { if (!FITEMS[r.id].energy) add(r.id, r.lv > flv()); }));
   } else if (role === "holzfaeller") {
     const T0 = F.tools || {};
     ["birke", "kiefer", "fichte", "buche", "kirsche"].forEach(sp => { if (FSPECIES[sp]) add(FSPECIES[sp].log); });
@@ -1356,7 +1356,7 @@ function staffWork() {
 /* v63: Warum steht die Maschinen-Kraft? Der echte Grund statt „Lager reicht oder Zutaten fehlen“ */
 function staffMachWhy(s) {
   const list = staffMachines(s.role).filter(o => o.t !== "kessel");
-  if (!list.length) return "noch keine Maschinen";
+  if (!list.length) return staffMachines(s.role, true).some(o => o.t !== "kessel" && o.off) ? "alle Maschinen deaktiviert" : "noch keine Maschinen";
   let free = false, room = false, ok = false, money = false;
   const full = new Set();   /* v67: welches Lager ist voll? */
   const need = new Set();

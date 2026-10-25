@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v137 – Produktionsstätten für Arbeiter deaktivieren
+
+- **Knopf im Maschinenfenster (`farmview.js`, `openMachine`):** „⏸ Deaktivieren“ / „▶ Aktivieren“ oben neben dem Namen, bei allen Produktionsstätten, die Arbeiter bedienen (nicht bei Fangfahrten und Berts Werkstatt). Deaktiviert steht ein Hinweis unter dem Namen; selbst produzieren geht weiter. Gespeichert als `o.off` am Objekt (fehlt = aktiv, keine Migration).
+- **Arbeiter (`team.js`):** `staffMachines` und `staffRecipeFor` überspringen deaktivierte Maschinen (kein Befüllen, kein Abholen, keine Aufträge dafür). Die Freigabe-Liste (Whitelist) zeigt weiter alle Rezepte (`staffMachines(role, true)`). Statuszeile: „alle Maschinen deaktiviert“.
+- CSS `.fs-h .fm-off` (`style.css`).
+
 ## v136 – Daueraufträge: ohne Grenze, zweimal pro Woche, Menge steigt
 
 - **Keine Grenze mehr (`farm.js`, `farmAboTick`):** Vorher kamen keine Angebote mehr, sobald an einer Station zwei Verträge liefen. Jetzt gibt es beliebig viele Verträge; je Station stehen weiter bis zu zwei Angebote offen.
