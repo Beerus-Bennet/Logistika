@@ -2027,7 +2027,9 @@ function openMachine(o) {
   }).join("");
   const sub = M.trips ? "Wähle eine Fangfahrt – der Kutter fährt eine nach der anderen. Diesel zahlst du beim Ablegen."
     : "Tipp ein Rezept an – es kommt in die Warteschlange.";
-  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)}</div>
+  /* v137: Produktionsstätte für die Arbeiter abschalten (zusätzlich zur Freigabe-Liste) – selbst produzieren geht weiter */
+  const offBtn = !M.trips && !M.bert ? `<button class="fm-off${o.off ? " on" : ""}" data-moff>${o.off ? "▶ Aktivieren" : "⏸ Deaktivieren"}</button>` : "";
+  openFarmSheet(`<div class="fs-h"><span class="fs-ic">${M.i}</span>${esc(M.n)}${offBtn}${o.off ? `<small>Deaktiviert – deine Arbeiter nutzen ${esc(M.n)} nicht. Du selbst kannst weiter produzieren.</small>` : ""}</div>
     ${M.bert && typeof bertTopHTML === "function" ? bertTopHTML(o) : ""}
     <div class="fq">${machQueueHTML(o)}</div>
     ${typeof machExtraHTML === "function" ? machExtraHTML(o) : ""}
@@ -2035,6 +2037,12 @@ function openMachine(o) {
     <div class="frecs">${rec}</div>
     ${M.bert && typeof bertDevBtnHTML === "function" ? bertDevBtnHTML(o) : ""}`, "mach");
   if (typeof machExtraBind === "function") machExtraBind(o);
+  const ob = $("#farmSheetIn [data-moff]");
+  if (ob) ob.onclick = () => {
+    if (o.off) delete o.off; else o.off = true;
+    sfx("tap"); toast(o.off ? "⏸ " + M.n + " deaktiviert – die Arbeiter lassen sie in Ruhe." : "▶ " + M.n + " ist wieder für die Arbeiter frei.", "ok");
+    save(); openMachine(o);
+  };
   $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = e => {
     /* v129: Tipp auf eine Zutat (Chip) zeigt nur ihren Namen und den Lagerbestand – das Produkt wird nicht gleich produziert */
     if (e && e.target && e.target.closest && e.target.closest("[data-it]")) return;

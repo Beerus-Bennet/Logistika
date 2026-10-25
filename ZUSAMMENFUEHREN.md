@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v137 – Produktionsstätten deaktivieren (auf v136)
+
+| Teil | Datei |
+|---|---|
+| Knopf „Deaktivieren“ im Maschinenfenster | `farmview.js` |
+| Arbeiter überspringen deaktivierte Maschinen | `team.js` |
+| Knopf-Stil | `style.css` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v136 – Daueraufträge (auf v135)
 
 | Teil | Datei |
