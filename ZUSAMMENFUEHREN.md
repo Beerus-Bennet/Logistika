@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v136 – Daueraufträge (auf v135)
+
+| Teil | Datei |
+|---|---|
+| Takt, Mengenfaktor, Preis, keine Vertragsgrenze, Migration | `farm.js` |
+| Texte Bestellfenster | `farmview.js` |
+| Text Auftragsliste | `game.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v135 – Jagderfolg: Keiler, Liegepose, Bergung (auf v134)
 
 | Teil | Datei |

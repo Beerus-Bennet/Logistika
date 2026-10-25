@@ -2210,7 +2210,7 @@ function openFarmOrders(sendFor, area) {
     const ready = farmOrderReady(o);
     const q = farmOrderQ(o), pf = 1 + (q - 3) * 0.08;
     const km = o.refDist;
-    const tag = o.abo ? `<span class="fo-tag abo">📅 Woche ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
+    const tag = o.abo ? `<span class="fo-tag abo">📅 Lieferung ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
       : `<span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>`;
     const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small>${tag}</div>`;
     const items = `<div class="fo-it">${Object.keys(o.farm.items).map(id => itemChip(id, o.farm.items[id], farmInv(id))).join("")}</div>`;
@@ -2232,14 +2232,14 @@ function openFarmOrders(sendFor, area) {
   };
   /* Daueraufträge der Station */
   const F = S.farm, abos = farmAbos().filter(x => x.area === area), aoff = (F.aboOff || []).filter(x => x.area === area);
-  const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>jede Woche dieselbe Ladung, fester Bonus</small></div>
-    ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · jede Woche ${esc(farmAboPal(A))}</small>
+  const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>zweimal pro Woche · die Menge steigt mit jeder Lieferung</small></div>
+    ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · nächste Lieferung ${esc(farmAboPal(A))}</small>
       <span class="fo-tag abo">läuft · ${A.n || 0}× geliefert${A.miss ? " · " + A.miss + " verpasst" : ""} · nächste in ${fdur(Math.max(1, A.next - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per)}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-it">${itemChip(A.item, farmAboQty(A))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(farmAboBonus(A))} Bonus${A.mult < FABO_MMAX ? " · danach mehr" : " · Höchstmenge"}</span></div>
       <div class="fo-b"><span class="fo-hint">${farmAboCanQuit(A) ? "" : "kündbar nach " + FABO_MIN + " Lieferungen (" + (A.n || 0) + "/" + FABO_MIN + ")"}</span><button class="btn tiny ghost" data-abox="${A.id}" ${farmAboCanQuit(A) ? "" : "disabled"}>Kündigen</button></div></div>`).join("")}
-    ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will jede Woche ${esc(farmAboPal(A))}</small>
+    ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will zweimal pro Woche ${esc(farmAboPal(A))}, mit jeder Lieferung mehr</small>
       <span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, A.exp - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, A.pal * A.per, farmInv(A.item))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(A.bonus)} Bonus</span></div>
+      <div class="fo-it">${itemChip(A.item, farmAboQty(A), farmInv(A.item))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(farmAboBonus(A))} Bonus</span></div>
       <div class="fo-b"><span class="fo-hint">Läuft, bis du kündigst – frühestens nach ${FABO_MIN} Lieferungen</span><button class="btn tiny acc" data-abo="${A.id}">✓ Vertrag annehmen</button></div></div>`).join("")}` : "";
   const tabs = FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).length > 1 ? `<div class="fo-tabs">${FORD_AREAS.filter(a => farmOrderAreaOn(a.id)).map(a => {
     const n = farmOrders().filter(o => farmOrderArea(o) === a.id), r = n.filter(farmOrderReady).length;
@@ -2286,13 +2286,13 @@ function openFarmOrders(sendFor, area) {
   });
   $$("#farmSheetIn [data-abo]").forEach(b => b.onclick = () => {
     const A = farmAboTake(b.dataset.abo);
-    if (A) { sfx("coin"); toast("📅 Vertrag mit " + A.firm + ": jede Woche " + farmAboPal(A) + ". Die erste Bestellung steht schon an der Tafel.", "ok"); save(); renderFarmUI(); }
+    if (A) { sfx("coin"); toast("📅 Vertrag mit " + A.firm + ": zweimal pro Woche, zuerst " + farmAboPal(A) + ". Die erste Bestellung steht schon an der Tafel.", "ok"); save(); renderFarmUI(); }
     again();
   });
   $$("#farmSheetIn [data-abox]").forEach(b => b.onclick = () => {
     const A = farmAbos().find(x => x.id === b.dataset.abox);
     if (!A) return;
-    askConfirm("Dauerauftrag kündigen?", A.firm + " bekommt dann keine Wochenlieferung mehr. Was schon unterwegs ist, kommt noch an.", "Kündigen", () => { farmAboCancel(A.id); save(); renderFarmUI(); again(); });
+    askConfirm("Dauerauftrag kündigen?", A.firm + " bekommt dann keine Lieferungen mehr. Was schon unterwegs ist, kommt noch an.", "Kündigen", () => { farmAboCancel(A.id); save(); renderFarmUI(); again(); });
   });
 }
 

@@ -2886,7 +2886,7 @@ function renderOrders() {
       <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       <div class="meta small">
         ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
-        <span>${o.acc ? (o.abo ? "📅 Wochenlieferung" : "✓ angenommen · ohne Frist") : o.farm ? "⏳ Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "⏳ " + dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
+        <span>${o.acc ? (o.abo ? "📅 Dauerauftrag" : "✓ angenommen · ohne Frist") : o.farm ? "⏳ Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "⏳ " + dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
       </div>
       ${previewHTML(p)}
     </div>`;
