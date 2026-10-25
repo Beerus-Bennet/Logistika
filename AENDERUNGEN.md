@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v141 – Maschinenaufträge zeigen, wer sie eingestellt hat
+
+- **Hintergrund:** Schaffutter tauchte auf, obwohl laut Freigaben niemand es macht. Im Code gibt es nur drei Wege in eine Maschine (du im Fenster, Arbeiter, Berts Dauerbestellung) – ohne Spielstand nicht eindeutig zu klären, deshalb jetzt sichtbar.
+- **`farm.js`:** jeder Auftrag in `farmQueue` bekommt `who` („du“ oder „rolle|Grund“), dazu Verlauf `S.farm.mlog` (letzte 30). Neu `farmQueueBy(who, o, rid)` für Aufrufer.
+- **`team.js`:** Arbeiter melden den Grund: „Freigabe“, „Auftrag von … für …“ oder „Zwischenprodukt für …“. **`erbe.js`:** Berts Tauwürmer „Dauerbestellung“.
+- **`farmview.js`:** Plakette oben links in jedem Warteschlangen-Platz (👤 du, sonst Berufssymbol; Tooltip mit Grund) und unten im Maschinenfenster „Zuletzt eingestellt“ (letzte 5 dieser Maschine mit Grund und Zeit). CSS `.fq-who`, `.fq-log`.
+
 ## v140 – Daueraufträge: Zusatz „danach mehr“ entfernt
 
 - `farmview.js`: Hinweis „· danach mehr“ / „· Höchstmenge“ hinter dem Preis laufender Verträge entfernt.
