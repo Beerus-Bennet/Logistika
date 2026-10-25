@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v140 – Text Daueraufträge (auf v139)
+
+| Teil | Datei |
+|---|---|
+| Zusatz hinter dem Preis entfernt | `farmview.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v139 – Mengen-Schieber am Stand (auf v138)
 
 | Teil | Datei |
