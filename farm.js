@@ -1024,10 +1024,10 @@ function farmSpawnOrders(n) {
 }
 
 /* ---------------------------- Daueraufträge ---------------------------------
-   Größere Firmen wollen jede Woche dasselbe: z. B. der Baumarkt 6 Paletten
-   Bretter. Fester Bonus je Lieferung, läuft, bis du kündigst. Wird eine Woche
-   nicht geliefert, bleibt die Bestellung stehen – nach drei verpassten Wochen
-   kündigt die Firma. */
+   Größere Firmen wollen regelmäßig dasselbe: z. B. der Baumarkt Paletten
+   Bretter. Seit v136 zweimal pro Woche, die Menge steigt mit jeder Lieferung (siehe
+   FABO_EVERY). Läuft, bis du kündigst. Wird nicht geliefert, bleibt die Bestellung
+   stehen – nach drei verpassten Lieferungen kündigt die Firma. */
 const FABO_WEEK = 10080;
 const FABO = [
   { area: "saege", firm: "Baumarkt Werder",        town: "w-werder",  item: "bretter",  pal: 6, per: 2, bonus: 140 },
@@ -1056,7 +1056,22 @@ const FABO = [
   { area: "see",   firm: "Fischmarkt Potsdam",      town: "potsdam",   item: "fischkiste", pal: 2, per: 2, bonus: 140, lv: 17 },
   { area: "see",   firm: "Schlosshotel Caputh",     town: "w-caputh",  item: "edelbox",  pal: 2, per: 1, bonus: 220, lv: 18 }
 ];
-function farmAboPal(A) { return A.pal + (A.item === "paletten" ? " Stapel " : " Paletten ") + FITEMS[A.item].n; }
+/* v136: Daueraufträge fordern spürbar: zweimal pro Woche (alle 3,5 Tage) eine Lieferung, die Menge startet beim 2,5-Fachen der
+   Grundladung und steigt mit jeder pünktlichen Lieferung um ein Viertel bis zum 4-Fachen – der Preis wächst mit. Begrenzt nur
+   durch das größte eigene Fahrzeug (jede Lieferung muss auf eins passen). Beliebig viele Verträge, es kommen immer neue Angebote. */
+const FABO_EVERY = FABO_WEEK / 2, FABO_M0 = 2.5, FABO_MUP = 0.25, FABO_MMAX = 4;
+function farmAboMigrate(A) {                      /* alte Verträge (vor v136): Faktor setzen, nächste Lieferung im neuen Takt */
+  if (A.mult == null) { A.mult = FABO_M0; delete A.price; if (A.next != null && A.next - S.time > FABO_EVERY) A.next = S.time + FABO_EVERY; }
+  return A;
+}
+/* Paletten der nächsten Lieferung: Grundladung × Faktor, höchstens eine Fahrzeugladung */
+function farmAboPalN(A) {
+  farmAboMigrate(A);
+  const fit = Math.floor(farmMaxKg() / Math.max(0.01, FITEMS[A.item].kg * A.per));
+  return Math.max(1, Math.min(fit, Math.round(A.pal * A.mult)));
+}
+function farmAboQty(A) { return farmAboPalN(A) * A.per; }
+function farmAboPal(A) { return farmAboPalN(A) + (A.item === "paletten" ? " Stapel " : " Paletten ") + FITEMS[A.item].n; }
 function farmAbos() { const F = S.farm; F.abos = F.abos || []; F.aboOff = F.aboOff || []; return F.abos; }
 /* passt die Ladung aufs größte eigene Fahrzeug? Sonst weniger Paletten */
 function farmAboFit(T) {
@@ -1066,32 +1081,32 @@ function farmAboFit(T) {
 function farmAboOk(T) {
   return FITEMS[T.item] && N[T.town] && (typeof isUnlocked !== "function" || isUnlocked(T.town)) && farmOrderAreaOn(T.area) && (farmCanMake(T.item) || farmInv(T.item) > 0) && flv() >= Math.max(6, T.lv || 0) && farmAboFit(T) >= 2;
 }
-/* v59: fester Preis je Lieferung (Warenwert + Liefergebühr + Bonus) – steht schon im Angebot.
+/* v59: Preis je Lieferung (Warenwert + Liefergebühr + Bonus) – steht im Angebot; v136: wächst mit der Menge.
    Kündbar erst nach FABO_MIN Lieferungen. */
 const FABO_MIN = 2;
 function farmAboPrice(A) {
-  if (A.price != null) return A.price;
-  const n = A.pal * A.per, w = Math.max(0.3, FITEMS[A.item].kg * n);
+  const n = farmAboQty(A), w = Math.max(0.3, FITEMS[A.item].kg * n);
   const pr = typeof plan === "function" ? plan(FARM_NODE, A.town, FSITE.cargo || "hof", w, "time") : null;
   const value = FITEMS[A.item].v * n;
-  A.price = Math.round((Math.max(4, value * 1.13 + 2.5 + (pr ? pr.dist : 0) * 0.45) + A.bonus) * 10) / 10;
-  return A.price;
+  /* v136: Preis folgt der aktuellen Menge (wächst mit), Bonus wächst mit dem Mengenfaktor */
+  return Math.round((Math.max(4, value * 1.13 + 2.5 + (pr ? pr.dist : 0) * 0.45) + farmAboBonus(A)) * 10) / 10;
 }
+function farmAboBonus(A) { return Math.round(A.bonus * farmAboMigrate(A).mult / FABO_M0); }
 function farmAboCanQuit(A) { return (A.n || 0) >= FABO_MIN; }
-/* Wochenbestellung erzeugen (angenommen, ohne Frist bis zur nächsten Woche) */
+/* Bestellung erzeugen (angenommen, ohne Frist bis zur nächsten Lieferung) */
 function farmAboOrder(A) {
-  const o = farmOrderObj(A.town, A.firm, { [A.item]: A.pal * A.per }, { area: A.area, abo: A.id });
+  const o = farmOrderObj(A.town, A.firm, { [A.item]: farmAboQty(A) }, { area: A.area, abo: A.id });
   if (!o) return null;
   farmAcceptOrder(o, "abo");
   o.pay = farmAboPrice(A);   /* v59: fester Preis aus dem Angebot */
-  o.desc = "Wochenlieferung: " + farmAboPal(A) + " (" + fqty(A.item, A.pal * A.per) + ")";
+  o.desc = "Dauerauftrag: " + farmAboPal(A) + " (" + fqty(A.item, farmAboQty(A)) + ")";
   o.aboWeek = (A.n || 0) + (A.miss || 0) + 1;
   S.orders.push(o);
   return o;
 }
 function farmAboTick() {
   const F = S.farm, abos = farmAbos();
-  /* Angebot je Station: v59 bis zu zwei offen (1 Tag gültig, Prüfung alle 6 h), höchstens zwei laufende Verträge */
+  /* Angebot je Station: v59 bis zu zwei offen (1 Tag gültig, Prüfung alle 6 h), laufende Verträge ohne Grenze (v136) */
   /* v58: abgelaufene Angebote merken und sofort ersetzen – nicht dieselbe Firma mit neuer Frist */
   F.aboSeen = F.aboSeen || {};
   let gone = false;
@@ -1103,7 +1118,7 @@ function farmAboTick() {
   if (gone || S.time - (F.aboT || -1e9) > 360) {
     F.aboT = S.time;
     FORD_AREAS.forEach(a => {
-      if (F.aboOff.filter(x => x.area === a.id).length >= 2 || abos.filter(x => x.area === a.id).length >= 2) return;
+      if (F.aboOff.filter(x => x.area === a.id).length >= 2) return;            /* v136: keine Grenze für laufende Verträge */
       const all = FABO.filter(T => T.area === a.id && farmAboOk(T) && !abos.some(x => x.firm === T.firm) && !F.aboOff.some(x => x.firm === T.firm));
       /* zuletzt abgelaufene Firma nur, wenn es keine andere gibt; am liebsten die am längsten nicht gezeigte */
       const last = all.reduce((m, T) => (F.aboSeen[T.firm] || -1e9) > (F.aboSeen[m] || -1e9) ? T.firm : m, null);
@@ -1112,31 +1127,33 @@ function farmAboTick() {
       const T = pick(pool);
       /* v59: Menge und Bonus wachsen mit dem Level (±25 %) */
       const k = clamp(1 + (flv() - Math.max(6, T.lv || 0)) * 0.05, 0.75, 1.25);
-      F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: Math.max(2, Math.min(farmAboFit(T), Math.round(T.pal * k))), bonus: Math.round(T.bonus * k), exp: S.time + 1440 }));
+      F.aboOff.push(Object.assign({}, T, { id: "abo" + (S.seq++), pal: Math.max(2, Math.min(farmAboFit(T), Math.round(T.pal * k))), bonus: Math.round(T.bonus * k), mult: FABO_M0, exp: S.time + 1440 }));
     });
   }
-  /* jede Woche: neue Lieferung – oder die alte steht noch (verpasst) */
+  /* zweimal pro Woche: neue Lieferung – oder die alte steht noch (verpasst) */
   abos.slice().forEach(A => {
+    farmAboMigrate(A);
     if (S.time < A.next) return;
-    A.next += FABO_WEEK;
+    A.next += FABO_EVERY;
     const open = S.orders.find(o => o.abo === A.id && !o.farm.taken);
     if (open) {
       A.miss = (A.miss || 0) + 1;
       if (A.miss >= 3) {
         farmAboCancel(A.id, true);
-        toast("📅 " + A.firm + " hat den Dauerauftrag gekündigt – drei Wochen nichts geliefert.", "bad");
-      } else toast("📅 " + A.firm + ": Die Lieferung dieser Woche fehlt noch (" + A.miss + "/3).", "warn");
+        toast("📅 " + A.firm + " hat den Dauerauftrag gekündigt – dreimal nichts geliefert.", "bad");
+      } else toast("📅 " + A.firm + ": Die letzte Lieferung fehlt noch (" + A.miss + "/3).", "warn");
       return;
     }
     farmAboOrder(A);
-    toast("📅 " + A.firm + " bestellt die Wochenlieferung: " + farmAboPal(A) + ".", "ok", true);
+    toast("📅 " + A.firm + " bestellt die nächste Lieferung: " + farmAboPal(A) + ".", "ok", true);
   });
 }
 function farmAboTake(id) {
   const F = S.farm, T = (F.aboOff || []).find(x => x.id === id);
   if (!T) return null;
   F.aboOff = F.aboOff.filter(x => x !== T);
-  const A = Object.assign({}, T, { since: S.time, next: S.time + FABO_WEEK, n: 0, miss: 0 });
+  const A = Object.assign({}, T, { since: S.time, next: S.time + FABO_EVERY, n: 0, miss: 0 });
+  farmAboMigrate(A);
   delete A.exp;
   farmAbos().push(A);
   farmAboOrder(A);
@@ -1152,7 +1169,7 @@ function farmAboCancel(id, byFirm) {
 }
 function farmAboDelivered(o) {
   const A = o.abo && farmAbos().find(x => x.id === o.abo);
-  if (A) { A.n = (A.n || 0) + 1; A.miss = 0; }
+  if (A) { A.n = (A.n || 0) + 1; A.miss = 0; A.mult = Math.min(FABO_MMAX, farmAboMigrate(A).mult + FABO_MUP); }      /* v136: nächste Lieferung größer */
 }
 function farmOrderReady(o) { return o && o.farm && farmHasAll(o.farm.items); }
 function farmOrderQ(o) {

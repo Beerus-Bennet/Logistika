@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v136 – Daueraufträge: ohne Grenze, zweimal pro Woche, Menge steigt
+
+- **Keine Grenze mehr (`farm.js`, `farmAboTick`):** Vorher kamen keine Angebote mehr, sobald an einer Station zwei Verträge liefen. Jetzt gibt es beliebig viele Verträge; je Station stehen weiter bis zu zwei Angebote offen.
+- **Takt und Menge (`FABO_EVERY`, `farmAboPalN`, `farmAboQty`):** Lieferung alle 3,5 Tage statt einmal pro Woche. Die Menge startet beim 2,5-Fachen der Grundladung und steigt mit jeder Lieferung um ein Viertel bis zum 4-Fachen (Beispiel Mosterei: vorher 32 kg Äpfel pro Woche, jetzt 80 kg je Lieferung, bis 128 kg). Jede Lieferung muss aufs größte eigene Fahrzeug passen.
+- **Preis (`farmAboPrice`, `farmAboBonus`):** folgt der aktuellen Menge, der Bonus wächst mit dem Mengenfaktor. Der Preis steht weiter vor der Annahme im Angebot.
+- **Alte Verträge (`farmAboMigrate`):** bekommen beim ersten Zugriff den Startfaktor, die nächste Lieferung rückt in den neuen Takt (höchstens 3,5 Tage). Keine Spielstand-Migration nötig.
+- Nach drei verpassten Lieferungen kündigt die Firma (vorher: drei Wochen). Texte in Bestellfenster und Liste angepasst (`farmview.js`, `game.js`).
+
 ## v135 – Jagderfolg: Keiler neu, Liegepose, Bergung als Erfolgsmoment, Trophäe sichern
 
 - **Keiler neu modelliert (`hunt.js`, `boarBody`/`boarHead`/`boarUpper`/`boarLower`):** keilförmiger Rumpf mit Widerrist-Buckel, tiefer Brust, aufgezogenem Bauch und Keulen; Borstenkamm aus einzelnen Büscheln; langes Keilhaupt mit Rüsselscheibe, kleinen Lichtern unter Brauenwulst, aufrechten spitzen Tellern und hellem Backenbart; Gewehre wachsen am Gebrech nach außen/oben/hinten, Haderer kurz nach außen – Länge weiter nach den gespeicherten cm. Läufe mit Gelenk (eigene Knoten oben/unten, gespaltene Schalen, Afterklauen). Schwarte graubraun mit Grannenspitzen statt fast schwarz. **Trefferzonen unverändert** (das Gelenk ist nur Optik).
