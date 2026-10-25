@@ -1,5 +1,9 @@
 # Änderungen – kurz für den Kollegen
 
+## v144 – Verkaufsstand: Schieber wie bei den Arbeitern
+
+- **`worldview.js`, `openStall`:** Schnellknöpfe 1 / 5 / 10 / alles entfernt. Stattdessen Schieber (kleinstes Gebinde bis alles) und darunter Feinknöpfe −10 / −1 / +1 / +10 Gebinde wie bei der Mengengrenze der Arbeiter (Beschriftung in der Anzeige-Einheit, z. B. „+3“ bei Paletten, „+20 kg“ bei Äpfeln). Verkauft wird weiter in ganzen Gebinden.
+
 ## v143 – Kein Köder-Vorrat für den Fischer
 
 - **`team.js`, `erbe.js`:** Der „Vorrat behalten“ aus v142 ist wieder raus. Die Mengengrenze deckelt nur das Herstellen – wer die Ware braucht (auch der Fischer beim Angeln und Beködern), nutzt sie mit. Fischer/in hat deshalb keine Grenze mehr (`STAFF_LIM` ohne „fischer“, `staffBaitKeep` entfernt). Gespeicherte Fischer-Vorräte (`S.farm.limU["f:…"]`) werden beim Laden gelöscht (`limV3`).

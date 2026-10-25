@@ -3468,8 +3468,8 @@ function openStall(market) {
     const max = farmInv(sel.id), n = clamp(sel.n || 1, 1, Math.max(1, max)), base = stallBase(sel.id, n, market, farmStackV(sel.id, n)), p = Math.round(base * sel.f * 10) / 10;
     const speed = sel.f <= 0.85 ? "schnell weg" : sel.f <= 1.1 ? "normal" : sel.f <= 1.35 ? "dauert länger" : "nur mit Glück";
     pickH = `<div class="fstl-cfg"><b data-stq>${icHTML(sel.id)} ${esc(fqty(sel.id, n))}</b>
-      <div class="fs-row">${[1, 5, 10, max].filter((k, i, a) => k <= max && a.indexOf(k) === i).map(k => `<button class="btn tiny${k === n ? "" : " ghost"}" data-n="${k}">${k === max && k > 1 ? "alles" : famt(sel.id, k)}</button>`).join("")}</div>
-      ${max > 1 ? `<div class="fstl-sl"><input type="range" min="1" max="${max}" step="1" value="${n}" data-nr aria-label="Menge"><small><span>${esc(famt(sel.id, 1))}</span><span>${esc(famt(sel.id, max))}</span></small></div>` : ""}
+      ${max > 1 ? `<div class="fstl-sl"><input type="range" min="1" max="${max}" step="1" value="${n}" data-nr aria-label="Menge"><small><span>${esc(famt(sel.id, 1))}</span><span>${esc(famt(sel.id, max))}</span></small></div>
+      <div class="fst-lim-b">${[-10, -1, 1, 10].map(d => `<button class="btn tiny ghost" data-nd="${d}">${d > 0 ? "+" : "−"}${esc(famt(sel.id, Math.abs(d)))}</button>`).join("")}</div>` : ""}
       <div class="fstl-p"><button class="btn tiny ghost" data-f="-0.1">−</button><span><b data-stp>${eur(p)}</b><small>${Math.round(sel.f * 100)} % vom Wert · ${speed}</small></span><button class="btn tiny ghost" data-f="0.1">＋</button></div>
       <button class="btn fgo" id="fsPut">Einstellen</button></div>`;
   }
@@ -3481,7 +3481,8 @@ function openStall(market) {
     <div class="fs-sub">Kundschaft kommt vorbei – günstig geht schnell, teuer dauert. ${market ? "" : "Mehr Plätze mit dem Hof-Ausbau."}</div>`, "stall");
   $$("#farmSheetIn [data-pick]").forEach(b => b.onclick = () => { FV.stallSel = { m: !!market, id: null }; openStall(market); });
   $$("#farmSheetIn [data-sid]").forEach(b => b.onclick = () => { FV.stallSel = { m: !!market, id: b.dataset.sid, n: Math.min(farmInv(b.dataset.sid), 1), f: 1 }; openStall(market); });
-  $$("#farmSheetIn [data-n]").forEach(b => b.onclick = () => { sel.n = +b.dataset.n; openStall(market); });
+  /* v144: Feinknöpfe wie bei den Arbeitern (±1 und ±10 Gebinde) statt fester Mengen */
+  $$("#farmSheetIn [data-nd]").forEach(b => b.onclick = () => { sel.n = clamp((sel.n || 1) + +b.dataset.nd, 1, Math.max(1, farmInv(sel.id))); sfx("tap"); openStall(market); });
   /* v139: Schieber für jede Menge zwischen 1 und allem – Menge und Preis laufen beim Ziehen mit, Loslassen zeichnet neu */
   const nr = $("#farmSheetIn [data-nr]");
   if (nr) {
@@ -3490,7 +3491,6 @@ function openStall(market) {
       const q = $("#farmSheetIn [data-stq]"), pe = $("#farmSheetIn [data-stp]");
       if (q) q.innerHTML = `${icHTML(sel.id)} ${esc(fqty(sel.id, sel.n))}`;
       if (pe) pe.textContent = eur(Math.round(stallBase(sel.id, sel.n, market, farmStackV(sel.id, sel.n)) * sel.f * 10) / 10);
-      $$("#farmSheetIn [data-n]").forEach(b => b.classList.toggle("ghost", +b.dataset.n !== sel.n));
     });
     nr.addEventListener("change", () => openStall(market));
   }
