@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v144 – Stand-Schieber wie bei Arbeitern (auf v143)
+
+| Teil | Datei |
+|---|---|
+| Schnellknöpfe raus, Feinknöpfe | `worldview.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v143 – kein Köder-Vorrat (auf v142)
 
 | Teil | Datei |
