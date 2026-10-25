@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v139 – Mengen-Schieber am Stand (auf v138)
+
+| Teil | Datei |
+|---|---|
+| Schieber im Stand-Fenster | `worldview.js` |
+| Schieber-Stil | `style.css` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v138 – Mengengrenze (auf v137)
 
 | Teil | Datei |

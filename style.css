@@ -2495,6 +2495,10 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .fstl.sold{background:#c8f7d6;animation:fbob 1.3s ease-in-out infinite}
 .fstl-cfg{margin-top:10px;background:#fff;border:2.5px solid var(--ink);border-radius:13px;padding:9px 10px}
 .fstl-cfg .fs-row{margin-top:6px}
+/* v139: Mengen-Schieber am Verkaufsstand / Fischmarkt */
+.fstl-sl{margin:10px 2px 0}
+.fstl-sl input[type=range]{width:100%;accent-color:#f2b705;touch-action:pan-x}
+.fstl-sl small{display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;opacity:.65}
 .fstl-p{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0}
 .fstl-p span{text-align:center}
 .fstl-p b{display:block;font-family:var(--display);font-size:22px;letter-spacing:.5px;color:var(--green-d);font-weight:400}
