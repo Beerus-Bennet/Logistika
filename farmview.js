@@ -2243,7 +2243,7 @@ function openFarmOrders(sendFor, area) {
   const aboHTML = abos.length || aoff.length ? `<div class="fo-sec">📅 Daueraufträge<small>zweimal pro Woche · die Menge steigt mit jeder Lieferung</small></div>
     ${abos.map(A => `<div class="fo abo on"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · nächste Lieferung ${esc(farmAboPal(A))}</small>
       <span class="fo-tag abo">läuft · ${A.n || 0}× geliefert${A.miss ? " · " + A.miss + " verpasst" : ""} · nächste in ${fdur(Math.max(1, A.next - S.time))}</span></div>
-      <div class="fo-it">${itemChip(A.item, farmAboQty(A))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(farmAboBonus(A))} Bonus${A.mult < FABO_MMAX ? " · danach mehr" : " · Höchstmenge"}</span></div>
+      <div class="fo-it">${itemChip(A.item, farmAboQty(A))}<span class="fo-x">${eur(farmAboPrice(A))} je Lieferung · inkl. ${eur(farmAboBonus(A))} Bonus</span></div>
       <div class="fo-b"><span class="fo-hint">${farmAboCanQuit(A) ? "" : "kündbar nach " + FABO_MIN + " Lieferungen (" + (A.n || 0) + "/" + FABO_MIN + ")"}</span><button class="btn tiny ghost" data-abox="${A.id}" ${farmAboCanQuit(A) ? "" : "disabled"}>Kündigen</button></div></div>`).join("")}
     ${aoff.map(A => `<div class="fo abo"><div class="fo-h"><b>${esc(A.firm)}</b><small>${esc(N[A.town] ? N[A.town].name : A.town)} · will zweimal pro Woche ${esc(farmAboPal(A))}, mit jeder Lieferung mehr</small>
       <span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, A.exp - S.time))}</span></div>

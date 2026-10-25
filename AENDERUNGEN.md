@@ -1,5 +1,9 @@
 # Änderungen – kurz für den Kollegen
 
+## v140 – Daueraufträge: Zusatz „danach mehr“ entfernt
+
+- `farmview.js`: Hinweis „· danach mehr“ / „· Höchstmenge“ hinter dem Preis laufender Verträge entfernt.
+
 ## v139 – Mengen-Schieber am Verkaufsstand und Fischmarkt
 
 - **`worldview.js`, `openStall`:** unter den Knöpfen 1 / 5 / 10 / alles ein Schieber von einer Einheit bis zum ganzen Lagerbestand (Schritt = kleinstes Gebinde, z. B. 10 kg Mais, 1 Räucherforelle). Menge und Preis laufen beim Ziehen mit, Loslassen zeichnet neu; der passende Schnellknopf leuchtet mit. Preislogik unverändert (`stallBase` × Preisfaktor).
