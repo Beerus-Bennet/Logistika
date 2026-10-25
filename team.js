@@ -623,8 +623,8 @@ function staffWlSet(role, id, on) { const W = staffWl(role); if (on) delete W[id
    nichts mehr gesät, geerntet, gepflückt oder ohne Auftrag produziert. Aufträge für Bestellungen gehen weiter. */
 /* v142: alle Berufe mit Freigaben außer Tierpfleger/in (dort ergibt es keinen Sinn); Fahrer/in und Mechaniker/in haben keine.
    Grenze jetzt in der Anzeige-Einheit (S.farm.limU: Stück, kg, l …) – jede Zahl einstellbar, z. B. 68 Paletten.
-   Fischer/in: die Kacheln sind Köder – dort heißt die Zahl „so viel behalten“ (nimmt den Köder nur, solange mehr da ist). */
-const STAFF_LIM = ["farmer", "saeger", "hofmeister", "holzfaeller", "fischwirt", "fischer"];
+   Die Grenze deckelt nur das Herstellen – nutzen dürfen die Ware alle (v143: kein Vorrat für den Fischer). */
+const STAFF_LIM = ["farmer", "saeger", "hofmeister", "holzfaeller", "fischwirt"];   /* v143: Fischer/in nicht – die Grenze deckelt nur das Herstellen, nutzen dürfen alle */
 function staffLimU(id) {
   const F = S.farm;
   if (F.lim && !F.limV2) {                        /* v138 speicherte in Gebinden – einmal umrechnen */
@@ -632,20 +632,20 @@ function staffLimU(id) {
     for (const k in F.lim) if (FITEMS[k] && F.lim[k] > 0) F.limU[k] = F.lim[k] * (FITEMS[k].a || 1);
     delete F.lim; F.limV2 = 1;
   }
+  if (F.limU && !F.limV3) { for (const k in F.limU) if (k.startsWith("f:")) delete F.limU[k]; F.limV3 = 1;    /* v143: Fischer-Vorrat (v142) entfernt */
+  }
   const L = F.limU; return L && L[id] > 0 ? L[id] : 0;
 }
-const limIt = key => FITEMS[key.replace(/^f:/, "")];                                      /* Schlüssel „f:mais“ = Vorrat des Fischers */
+const limIt = key => FITEMS[key];
 function staffLim(id) { const u = staffLimU(id); return u ? u / (limIt(id).a || 1) : 0; }       /* in Gebinden (fürs Vergleichen) */
 function staffLimSet(id, u) { const F = S.farm; staffLimU(id); F.limU = F.limU || {}; F.limV2 = 1; u = Math.round(u); if (u > 0) F.limU[id] = u; else delete F.limU[id]; }
 function staffLimHit(id, extra) { const l = staffLim(id); return l > 0 && farmInv(id) + (extra || 0) >= l - 1e-9; }
-/* Fischer/in: Köder nur nehmen, solange mehr als die eingestellte Menge da ist */
-function staffBaitKeep(b) { const l = staffLim("f:" + b); if (!l) return false; const B = typeof FBAITS !== "undefined" && FBAITS[b]; return farmInv(B ? B.item : b) <= l + 1e-9; }
 /* was auf den Feldern schon wächst (je Feld 2 Gebinde) */
 function staffGrowing(c) { return S.farm.objs.filter(o => o.t === "field" && o.crop === c).length * 2; }
 /* Schieber: 0 … Lagerplatz dieser Ware (mindestens 100), jede Einheit einzeln */
 function staffLimMax(id) { const it = limIt(id), a = it.a || 1; let cap = 0; try { cap = it.st ? farmStoreCap(it.st) * a : 0; } catch (e) { cap = 0; } return Math.max(100, Math.round(cap), staffLimU(id)); }
-/* Schlüssel der Grenze je Beruf und Kachel (Fischer/in: eigener Vorrat-Schlüssel, damit Mais des Landwirts getrennt bleibt) */
-const limKey = (role, id) => role === "fischer" ? "f:" + id : id;
+/* Schlüssel der Grenze je Kachel (= Ware) */
+const limKey = (role, id) => id;
 function staffLimTxt(key, u, fish) { const it = limIt(key); return u ? (fish ? "behält " : "bis ") + famt(key.replace(/^f:/, ""), u / (it.a || 1)) : (fish ? "kein Vorrat" : "keine Grenze"); }
 function staffFahrMode() { return STAFF_FAHR[S.farm.fahrMode] ? S.farm.fahrMode : "all"; }
 /* Darf der Fahrer diese Bestellung bedienen? (B: nur fertige – das prüft der Aufrufer zusätzlich) */
@@ -1061,7 +1061,7 @@ function staffStegSpot(steg) {
    Ohne Dosen nimmt er Mais, falls auch Mais freigegeben ist. */
 function staffPotBait() {
   if (!staffWlHas("fischer", "koeder")) return null;
-  return farmInv("koeder") && !staffBaitKeep("koeder") ? "koeder" : staffWlHas("fischer", "mais") && farmInv("mais") && !staffBaitKeep("mais") ? "mais" : null;   /* v142: Vorrat behalten */
+  return farmInv("koeder") ? "koeder" : staffWlHas("fischer", "mais") && farmInv("mais") ? "mais" : null;
 }
 function staffFischerJob(s, target) {
   s.fwhy = "";
@@ -1850,7 +1850,6 @@ function staffWlHTML(s, P) {
     if (role === "fischer" && x.id === "koeder" && !L) return x.on ? "✓ füllt Reusen" : "aus · Reusen bleiben leer";
     if (!x.on) return x.id === "koeder" && role === "fischwirt" ? "aus · Fischer nimmt Mais" : "aus";
     if (!L) return "✓ an";
-    if (role === "fischer") return (staffBaitKeep(x.id) ? "⛔ " : "✓ ") + esc(staffLimTxt(key, L, true));
     return (staffLimHit(key) ? "⛔ " : "✓ ") + esc(staffLimTxt(key, L));
   };
   return `<div class="fst-add-h">${role === "fischer" ? "Welche Köder darf " + name + " nehmen?" : "Was darf " + name + " machen?"}<small>${n} von ${free} an · antippen = an/aus${lim ? " · halten = " + (role === "fischer" ? "Vorrat" : "Grenze") : ""}</small></div>${ed}<div class="fp-row fst-opts">`

@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v143 – kein Köder-Vorrat (auf v142)
+
+| Teil | Datei |
+|---|---|
+| Fischer-Vorrat entfernt, Aufräumen | `team.js`, `erbe.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v142 – Mengengrenze genau, alle Berufe (auf v141)
 
 | Teil | Datei |
