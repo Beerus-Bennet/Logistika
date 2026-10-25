@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v139 – Mengen-Schieber am Verkaufsstand und Fischmarkt
+
+- **`worldview.js`, `openStall`:** unter den Knöpfen 1 / 5 / 10 / alles ein Schieber von einer Einheit bis zum ganzen Lagerbestand (Schritt = kleinstes Gebinde, z. B. 10 kg Mais, 1 Räucherforelle). Menge und Preis laufen beim Ziehen mit, Loslassen zeichnet neu; der passende Schnellknopf leuchtet mit. Preislogik unverändert (`stallBase` × Preisfaktor).
+- CSS `.fstl-sl` (`style.css`).
+
 ## v138 – Mengengrenze für Landwirt/in und Sägewerker/in
 
 - **Bedienung (`team.js`, `staffWlHTML`, `renderStaffPop`):** In der Freigabe-Liste eine Kachel gedrückt halten (0,45 s) → Schieber „Grenze für …“ mit Stufen keine / 20 / 50 / 100 / 200 / 300 / 500 / 750 / 1 000 / 1 500 / 2 000 / 3 000 / 5 000 (in der Anzeige-Einheit: kg, Stück …), „Fertig“ schließt. Antippen schaltet weiter an/aus. Kachel zeigt „✓ bis 200 kg“, ⛔ wenn erreicht.
