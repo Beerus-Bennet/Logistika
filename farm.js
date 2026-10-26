@@ -130,7 +130,9 @@ function zoneOk(x, z, w, d, t, k) {
    wechseln; Wohnhaus und Fischerei bleiben, wo sie sind. Kacheln: Welt + 16.
    v56: der Sägewerkshof liegt 12 Kacheln weiter im Nordwesten. */
 const FYARD = { x0: -37, x1: -13, z0: -37, z1: -15 };            /* Welt x −53 … −29, z −53 … −31 */
-const FROADSIDE = { x0: -14, x1: 60, z0: 32, z1: 33 };           /* Welt z 16 … 17, nördlich der Straße */
+const FROADSIDE = { x0: -14, x1: 60, z0: 32, z1: 33 };
+/* v162: „rund um den Hof“ (Traktor): Wiese außerhalb des Zauns, Kacheln = Welt + 16. Wo wirklich Platz ist, entscheidet farmWildOk. */
+const FWILD = { x0: -10, x1: 57, z0: -13, z1: 36 };           /* Welt z 16 … 17, nördlich der Straße */
 /* vor den Toren bleibt frei (Kacheln) */
 const FYARD_KEEP = [[-27, -23, -18, -15], [-27, -23, -38, -34], [-38, -34, -28, -24]];
 /* Holzstapel am Rand (FWORLD.piles) – solange sie liegen; verkauft ist der Platz frei */
@@ -148,13 +150,14 @@ function pileTiles([x, z, ry]) {
 const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
 function farmZones(t, k) {
   if (t === "stall") return ["road"];
+  if (t === "tractor") return ["hof", "wild"];
   if (FSAW_MAIN.has(t) || (t === "board" && k === "saege")) return ["yard"];
   if (t === "saegebock" || t === "deco" || (FMACHINES[t] && !FMACHINES[t].fish)) return ["hof", "yard"];
   return ["hof"];
 }
-function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : FIN; }
+function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : z === "wild" ? FWILD : FIN; }
 function farmZoneAt(x, z, w, d) {
-  for (const zn of ["hof", "yard", "road"]) { const R = farmZoneRect(zn); if (x >= R.x0 && z >= R.z0 && x + w <= R.x1 && z + d <= R.z1) return zn; }
+  for (const zn of ["hof", "yard", "road", "wild"]) { const R = farmZoneRect(zn); if (x >= R.x0 && z >= R.z0 && x + w <= R.x1 && z + d <= R.z1) return zn; }
   return null;
 }
 /* Rechteck frei? (außerhalb des Hofrasters: gegen alle Objekte prüfen) */
@@ -176,6 +179,7 @@ function farmFits(x, z, w, d, except, t, k) {
     if (farmYardKeep().some(([a, b, c, e]) => x < b && a < x + w && z < e && c < z + d)) return false;
     return farmFreeRect(x, z, w, d, except);
   }
+  if (zn === "wild") return farmWildOk(x, z, w, d, except);
   if (zn === "road") {
     if (x < 24 && x + w > 18) return false;                       /* Einfahrt zum Hof bleibt frei */
     const x0 = x - FG / 2, x1 = x0 + w;
@@ -187,12 +191,49 @@ function farmFits(x, z, w, d, except, t, k) {
   for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) { const k = fgi(x + i, z + j); if (k < 0 || g[k]) return false; }
   return true;
 }
+/* v162: Traktor rund um den Hof – nur, wo nichts im Weg steht oder liegt: kein Zaun/Hof, kein Wasser, kein Weg oder Straße,
+   keine Bäume, Büsche, Steine, Gebäude, Felder, Laternen. Grundlage ist auch die Hindernis-Karte der Laufwege (NAV). */
+function farmWildKeep() {
+  const out = [];
+  const st = (S.farm && S.farm.stage) || 1;
+  if (st >= 3 && typeof farmHofB === "function" && typeof FGATE !== "undefined") {
+    const B = farmHofB(), F0 = B.z1, GX = FGATE.x;
+    out.push([-8, 17.2], [18, 17.2], [GX - 2.95, F0 + 1.05], [GX + 2.95, F0 + 1.05], [GX - 2.5, F0 + 0.6], [GX + 2.5, F0 + 0.6]);
+    [-10, -6, -2, 10, 12].forEach(x => out.push([x, F0 + 0.9]));
+  }
+  return out;
+}
+function farmWildOk(x, z, w, d, except) {
+  const wx0 = x - FG / 2, wz0 = z - FG / 2, wx1 = wx0 + w, wz1 = wz0 + d;
+  if (typeof farmCamRect === "function") { const cr = farmCamRect(); if (wx0 < cr[0] + 0.5 || wx1 > cr[2] - 0.5 || wz0 < cr[1] + 0.5 || wz1 > cr[3] - 0.5) return false; }
+  /* Hof samt Zaun und künftigem Ausbau: 0,7 m Abstand */
+  const H = typeof FHOF_MAX !== "undefined" ? FHOF_MAX : null;
+  if (H && wx1 > H.x0 - 0.7 && wx0 < H.x1 + 0.7 && wz1 > H.z0 - 0.7 && wz0 < H.z1 + 0.7) return false;
+  const Y = FWORLD.yard; if (wx1 > Y[0] - 2.5 && wx0 < Y[2] + 2.5 && wz1 > Y[1] - 2.5 && wz0 < Y[3] + 2.5) return false;
+  if (FWORLD.fields.some(([fx, fz, fw, fd]) => wx1 > fx - fw / 2 - 1.2 && wx0 < fx + fw / 2 + 1.2 && wz1 > fz - fd / 2 - 1.2 && wz0 < fz + fd / 2 + 1.2)) return false;
+  if (!farmFreeRect(x - 0.4, z - 0.4, w + 0.8, d + 0.8, except)) return false;
+  if (typeof FFISHERY !== "undefined") for (const k in FFISHERY) { const f = FFISHERY[k]; if (Math.abs(f.x - (wx0 + w / 2)) < f.sz[0] / 2 + w / 2 + 1 && Math.abs(f.z - (wz0 + d / 2)) < f.sz[1] / 2 + d / 2 + 1) return false; }
+  const P = FWORLD.pond, keep = farmWildKeep(), me = except ? S.farm.objs.find(o => o.id === except) : null;
+  let mine = null; if (me) { const [mw, md] = farmSize(me); mine = [me.x - FG / 2, me.z - FG / 2, me.x - FG / 2 + mw, me.z - FG / 2 + md]; }
+  const nav = typeof navLive === "function" ? navLive() : null;
+  for (let sx = wx0 - 0.15; sx <= wx1 + 0.16; sx += 0.5) for (let sz = wz0 - 0.15; sz <= wz1 + 0.16; sz += 0.5) {
+    if (Math.hypot(sx - P.x, sz - P.z) < P.r + 1.5) return false;
+    if (inLake(sx, sz, 1.5) || distLine(sx, sz, FWORLD.creek) < 2.2) return false;
+    if (nearPath(sx, sz) < 1.6) return false;
+    if (keep.some(k => Math.hypot(sx - k[0], sz - k[1]) < 1.2)) return false;
+    if (S.farm.trees.some(t => Math.hypot(t.x - sx, t.z - sz) < 1.3)) return false;
+    if (nav) {
+      if (mine && sx > mine[0] - 0.01 && sx < mine[2] + 0.01 && sz > mine[1] - 0.01 && sz < mine[3] + 0.01) continue;   /* die eigene Kachel sperrt sich nicht selbst */
+      if (typeof navIn === "function" && navIn(Math.floor(sx), Math.floor(sz))) { const k = navIdx(Math.floor(sx), Math.floor(sz)); if (nav.blk[k] > 0 || nav.cost[k] <= 0.65) return false; }
+    }
+  }
+  return true;
+}
 /* Straßenrand: was dort schon steht (Welt-x von … bis): Traktor mit Anhänger und der
    fliegende Händler, ab Stufe 3 Laternen und Blumen vor dem Zaun */
 function farmRoadKeep() {
-  const st = (S.farm && S.farm.stage) || 1, big = st >= 4, out = [[8.4, 12.2]];
+  const st = (S.farm && S.farm.stage) || 1, big = st >= 4, out = [];
   /* v56: Laternen und Blumen stehen jetzt am Zaun, zwei Kacheln vor der Straße – frei bleiben Traktor und die Laternen an der Straße */
-  if (st >= 2) out.push(big ? [26.0, 31.4] : [9.0, 14.4]);
   if (st >= 3) [-8, 18].forEach(x => out.push([x - 0.6, x + 0.6]));
   return out;
 }
@@ -1503,7 +1544,7 @@ function farmMigrate() {
 }
 function farmObjKnown(o) {
   if (o.t === "deco") return !!FDECO[o.k];
-  return !!(FMACHINES[o.t] || FPENS[o.t] || FSIZE[o.t] || FSTORE[o.t] || FFISHERY[o.t] || ["field", "tree", "house", "board", "shed", "junk", "stall", "f_plot", "pot"].includes(o.t));
+  return !!(FMACHINES[o.t] || FPENS[o.t] || FSIZE[o.t] || FSTORE[o.t] || FFISHERY[o.t] || ["field", "tree", "house", "board", "shed", "junk", "stall", "tractor", "f_plot", "pot"].includes(o.t));
 }
 /* Ostsee-Spielstand → Hof bei Werder. Fahrzeuge kommen an den Hof, Aufträge
    an der Küste entfallen, für die Fischerei gibt es einen Verkaufserlös. */

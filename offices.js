@@ -375,6 +375,7 @@ function openBase(nodeId, tierIdx, rent) {
   };
   S.bases.push(b);
   refreshPool(b);
+  if (perks().hhAll && typeof luckyHeadFor === "function") luckyHeadFor(b);
   toast("🏢 Standort " + N[nodeId].name + " " + (rent ? "gemietet" : "gekauft") + ".", "ok");
   phoneMsg({
     from: N[nodeId].name, kind: "info", title: "Schlüsselübergabe",
@@ -644,6 +645,50 @@ function baseDispatch(b) {
   return got > 0;
 }
 
+/* v163: Die Disposition sortiert Aufträge aus, die mit der eigenen Flotte des Büros nie Gewinn bringen würden
+   (gleiche Schwelle wie bei der Annahme: Erlös − Kosten > 10 % der Kosten, beste Variante, günstigstes passendes Fahrzeug,
+   auch wenn es gerade unterwegs ist). Kein passendes Fahrzeug / nicht beurteilbar → der Auftrag bleibt liegen. */
+function dispoProfitable(b, o, fleet) {
+  const vars = buildVariants(o);
+  if (!vars.length) return null;
+  const pay = o.pay * (1 + (o.snus ? 0 : baseBonus(b)));
+  let judged = false;
+  for (const v of vars) {
+    const used = [], assign = [];
+    let ok = true;
+    for (const leg of v.legs) {
+      const c = fleet.filter(f => !used.includes(f.uid) && vType(f.type).mode === leg.mode && canCarry(vType(f.type), o.cargo, o.weight, leg.maxHop))
+        .sort((x, y) => costKmOf(vType(x.type)) - costKmOf(vType(y.type)))[0];
+      if (!c) { ok = false; break; }
+      used.push(c.uid); assign.push(c.uid);
+    }
+    if (!ok) continue;
+    let ev; try { ev = evaluate(v, o, assign); } catch (_) { continue; }
+    if (!ev || !ev.ok) continue;
+    judged = true;
+    const full = evalFullCost(ev);
+    if (pay - full > full * 0.10) return true;
+  }
+  return judged ? false : null;
+}
+function dispoPurge(b) {
+  if (S.autoPurge === false || basePaused(b) || b.dispOff || !b.vehicles.length || dispoPower(b) <= 0) return 0;
+  const fleet = b.vehicles.map(u => S.fleet.find(x => x.uid === u)).filter(Boolean);
+  if (!fleet.length) return 0;
+  const here = [N[b.node].lat, N[b.node].lon], reach = reachKm(b);
+  const cand = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !o.mission && !o.farm && !o.fav && o.pay != null
+    && hav(here, [N[o.from].lat, N[o.from].lon]) <= reach).slice(0, 40);
+  let n = 0;
+  for (const o of cand) {
+    if (dispoProfitable(b, o, fleet) === false) { S.orders = S.orders.filter(x => x !== o); n++; }
+  }
+  if (n) {
+    b.purged = (b.purged || 0) + n;
+    if (S.time - (S.purgeToast || -1e9) > 120) { S.purgeToast = S.time; toast("🗑️ Dispo " + N[b.node].short + ": " + n + (n === 1 ? " Auftrag" : " Aufträge") + " aussortiert – wären nie rentabel gewesen.", "info"); }
+  }
+  return n;
+}
+
 /* --------------------------- Stimmung & Vorfälle ------------------------- */
 function moodDrift(b) {
   let d = 3;
@@ -849,6 +894,7 @@ function tickBases(dtMin) {
   for (const b of S.bases) {
     if (b.poolDay !== dayOf(S.time) && Math.random() < 0.4) refreshPool(b);
     if (S.time >= (b.nextAt || 0)) {
+      dispoPurge(b);
       baseDispatch(b);
       b.nextAt = S.time + Math.min(dispatchInterval(b), 60);
     }

@@ -220,16 +220,21 @@ const RIVALS = [
   { id: "rabe", name: "Rabe & Söhne", icon: "🪶", col: "#44546a", st: 1 },
   { id: "nord", name: "Nordstern Cargo", icon: "🧭", col: "#1667c4", st: 3 }
 ];
-function rivalById(id) { return RIVALS.find(r => r.id === id); }
+function rivalById(id) { if (typeof corpSyncRivals === "function") corpSyncRivals(); return RIVALS.find(r => r.id === id); }
 function rivalOnSpawn(o) {
   if (o.vip || o.contract || o.mission || o.jewel) return;
   if (calm()) return;
   const rep = repOf(regionOf(o));
   const p = (0.22 + 0.04 * S.stage) * (1.25 - rep / 100 * 0.5);
+  if (typeof corpSyncRivals === "function") corpSyncRivals();
   const pool = RIVALS.filter(x => x.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[x.id]));
-  if (pool.length && Math.random() < p) {
-    const r = pick(pool);
-    o.rival = { id: r.id, at: Math.round(S.time + rnd(45, 260)) };
+  /* v170: Konzerne (Wellen nach langer Marktführung) greifen öfter und schneller zu */
+  const nBig = pool.filter(x => x.wave).length;
+  if (pool.length && Math.random() < Math.min(0.8, p * (1 + 0.12 * nBig))) {
+    const wt = x => x.wave ? 1.5 + 0.5 * x.wave : 1;
+    let u = Math.random() * pool.reduce((a, x) => a + wt(x), 0), r = pool[0];
+    for (const x of pool) { u -= wt(x); if (u <= 0) { r = x; break; } }
+    o.rival = { id: r.id, at: Math.round(S.time + rnd(45, 260) / (r.wave ? 1.25 + 0.1 * r.wave : 1)) };
   }
   /* Großaufträge: der Kunde lässt mit sich reden */
   const big = o.pay >= 420 * stageK() * (S.stage >= 4 ? 4 : 1);
@@ -238,6 +243,7 @@ function rivalOnSpawn(o) {
 function shareState() { if (!S.share) S.share = { me: 0 }; return S.share; }
 let rivalToast = { n: 0, at: 0, who: null };
 function tickRivals() {
+  if (typeof corpTick === "function") corpTick();          /* v170: Konzerne nachladen, Zeitungs-Show sobald Platz ist */
   const sh = shareState();
   const lost = S.orders.filter(o => o.rival && S.time >= o.rival.at);
   if (!lost.length) return;
@@ -329,17 +335,19 @@ function bindNego(o) {
 function rivalsHTML() {
   const sh = shareState();
   const rows = [{ name: S.player ? S.player.company : "Du", icon: "🏠", col: "#19b8c9", n: sh.me || 0 }]
-    .concat(RIVALS.filter(r => r.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[r.id])).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0 })));
+    .concat(RIVALS.filter(r => r.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[r.id])).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0, wave: r.wave })));
   const tot = rows.reduce((a, r) => a + r.n, 0) || 1;
   return `<div class="card eco">
     <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Wer zögert, verliert Aufträge an andere. Anteil der letzten Tage:</small></div></div>
-    <div class="share">${rows.map(r => `<div class="share-row"><span>${r.icon} ${esc(r.name)}</span>
+    ${typeof corpLeadHTML === "function" ? corpLeadHTML() : ""}
+    <div class="share">${rows.map(r => `<div class="share-row${r.wave ? " wave" : ""}"><span>${r.icon} ${esc(r.name)}${r.wave ? `<em>Konzern</em>` : ""}</span>
       <i style="--w:${Math.round(r.n / tot * 100)}%;--c:${r.col}"></i><b>${Math.round(r.n / tot * 100)} %</b></div>`).join("")}</div>
   </div>`;
 }
 function shareDay() {
   const sh = shareState();
   Object.keys(sh).forEach(k => { sh[k] = Math.round(sh[k] * 0.8 * 10) / 10; });
+  if (typeof corpDay === "function") try { corpDay(); } catch (e) { console.warn("corpDay", e); }   /* v170: Marktführung zählen, Konzern-Wellen */
 }
 
 /* --------------------------- Auftragskarten --------------------------- */

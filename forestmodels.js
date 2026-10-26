@@ -223,5 +223,14 @@
     }
     return b;
   }
-  Object.assign(FWM, { stone, roots, stick, bark, mosslog, mushGroup, flowers, fern2: fern, berry, fruit, nest, lost, paw, butterfly, butterflyWing, lightShaft, FLOWER_COLS: FCOL });
+  /* v153: Lichtfleck am Boden für die Draufsicht. Die Lichtsäule oben (lightShaft) ist von schräg oben ein hartes, durchscheinendes
+     Sechseck mit geraden Kanten (und zwei sich überlagernden Wänden) – das sah wie ein Grafikfehler mitten auf Wiese oder Wasser aus.
+     Hier liegen 8 flache Scheiben mit abnehmendem Radius übereinander; jede ist nur ein paar Prozent deckend, zusammen ergibt das
+     einen weichen Verlauf ohne erkennbare Kante. */
+  function lightPatch() {
+    const b = new MB(), n = 8;
+    for (let k = 0; k < n; k++) b.disc(3.6 - k * 0.38, 16, 0xfff2c0, { y0: 0.03 + k * 0.002 });
+    return b;
+  }
+  Object.assign(FWM, { stone, roots, stick, bark, mosslog, mushGroup, flowers, fern2: fern, berry, fruit, nest, lost, paw, butterfly, butterflyWing, lightShaft, lightPatch, FLOWER_COLS: FCOL });
 })();

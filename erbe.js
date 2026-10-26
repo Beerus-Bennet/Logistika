@@ -199,6 +199,8 @@ function treeOffFence(t, all) {
   return true;
 }
 function inYard(x, z, m) { const y = FWORLD.yard; m = m || 0; return x > y[0] - m && x < y[2] + m && z > y[1] - m && z < y[3] + m; }
+/* v169: Stellplatz des Holzlasters liegt vor dem Sägewerk am Weg zum Südtor (Mitte −43,5 / −24,5); drumherum bleibt es frei */
+function inLkwBay(x, z, m) { m = m || 0; return x > -46.5 - m && x < -40 + m && z > -29.5 - m && z < -19 + m; }
 function inLake(x, z, m) { const L = FWORLD.lake; const a = (x - L.x) / (L.rx + (m || 0)), b = (z - L.z) / (L.rz + (m || 0)); return a * a + b * b < 1; }
 /* Wo im Wald? Für Baumarten und Freischaltung */
 function forestZone(x, z) {
@@ -220,7 +222,7 @@ function treeSpotOk(x, z, pathGap) {
   if (z > 19.5) return false;                                       /* Straße und See */
   if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.8) return false;
   if (x > 25 && x < 45 && z > -17 && z < 17) return false;          /* Teichwiese: dort steht das Feldgehölz extra */
-  if (inYard(x, z, 2)) return false;
+  if (inYard(x, z, 2) || inLkwBay(x, z, 1.5)) return false;
   if (nearPath(x, z) < (pathGap || 2.4)) return false;
   if (distLine(x, z, FWORLD.creek) < 2.6) return false;
   for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < c[2]) return false;
@@ -364,6 +366,15 @@ function erbeInit(F, fresh) {
         q: FMACHINES[d.t] ? [] : undefined, done: FMACHINES[d.t] ? [] : undefined, slots: FMACHINES[d.t] ? 2 : undefined, lvl: 1 });
     });
   }
+  /* v169: Stellplatz des Holzlasters zieht aus dem Hof an den Weg vor dem Südtor; Bäume dort rücken zur Seite */
+  if (!F.v169lkw) {
+    F.v169lkw = 1;
+    const lk = F.objs.find(o => o.t === "sw_lkw");
+    if (lk) { lk.x = -29; lk.z = -11; lk.r = 0; delete lk.fix; }
+    F.trees.forEach(t => { if (inLkwBay(t.x, t.z, 1.5)) { t.z = +(-19 + 2.2 + Math.random() * 0.6).toFixed(2); t.x = +Math.min(t.x, -47.5 - Math.random() * 0.6).toFixed(2); } });
+  }
+  /* v162: Traktor wird zum Objekt – bestehende Spielstände bekommen ihn an der alten Stelle vor dem Zaun (ab Stufe 2), außer er liegt im Lager */
+  farmTractorEnsure();
   /* Verkaufsstand an der Straße (v53: nicht mehr im Hof) */
   if (!F.objs.some(o => o.t === "stall")) {
     const p = farmZoneSpot("road", 2, 1, 16, 32.5, "stall");
@@ -443,6 +454,15 @@ function farmAreaUnlock(id) {
   return true;
 }
 /* Kameragrenzen: Hof plus alles, was offen ist */
+/* v162: ab Stufe 2 steht der Traktor (einmalig) an der alten Stelle vor dem Zaun; danach gehört er dir: verschieben oder ins Lager */
+function farmTractorEnsure() {
+  const F = S.farm;
+  if (!F || F.trkDone || (F.stage || 1) < 2) return;
+  F.trkDone = true;
+  if (F.trkStored || F.objs.some(o => o.t === "tractor")) return;
+  const big = (F.stage || 1) >= 4, tx = big ? 27.4 : 10.4, tz = big ? 16.3 : 16.6;
+  farmAddObj({ t: "tractor", x: Math.round(tx + 1.1 - 2.5 + FG / 2), z: Math.round(tz - 1 + FG / 2), r: 0 });
+}
 function farmCamRect() {
   let r = FCAM_HOF.slice();
   FAREA_ORDER.forEach(id => {
@@ -1669,7 +1689,6 @@ function treasureSpotOk(x, z, area) {
   if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3) return false;
   if (inYard(x, z, 2)) return false;
   if (inFieldN(x, z, 2)) return false;                                /* Nachbars Felder */
-  if (x > 27.5 && x < 34.5 && z > 9 && z < 17) return false;          /* Maschinenhalle und Traktor (Stufe 4) */
   if (F.trees.some(t => Math.hypot(t.x - x, t.z - z) < 2.4)) return false;
   for (const o of F.objs) {
     const [cx, cz] = farmCenter(o), [w, d] = farmSize(o);
@@ -1847,8 +1866,8 @@ function farmErbeTick(dt) {
   farmAreaCheck();
   farmWeather();
   farmEvTick();
-  farmTreasureTick();
-  pvTick();
+  try { farmTreasureTick(); } catch (e) { console.warn("Schatz", e); }   /* v166: ein Fehler in der Ereignis-Anzeige darf Takt und Fenster nicht blockieren */
+  try { pvTick(); } catch (e) { console.warn("PV", e); }
   staffWork();
   if (typeof staffGroupCheck === "function") staffGroupCheck();
   stallTick(false, dt || 1);

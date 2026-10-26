@@ -27,7 +27,7 @@ const PRIZES = [
   { id: "insure", r: "r", icon: "🛡️", name: "Rundum-Schutz", desc: () => "7 Tage Flottenversicherung gratis" },
   { id: "coupon", r: "r", icon: "🏷️", name: "Händlerrabatt", desc: () => "−20 % auf das nächste gekaufte Fahrzeug" },
   { id: "boost", r: "e", icon: "📈", name: "Hochsaison", desc: () => "24 Stunden lang +20 % auf alle Frachterlöse" },
-  { id: "head", r: "e", icon: "🕴️", name: "Headhunter", desc: () => (S.bases || []).length ? "Eine ★★★★★-Fachkraft bewirbt sich – ohne Gebühr" : "Noch kein Büro – dafür " + money(luckyCash() * 3) },
+  { id: "head", r: "e", icon: "🕴️", name: "Headhunter", desc: () => (S.bases || []).length ? "Eine ★★★★★-Fachkraft bewirbt sich – in jedem Büro, ohne Gebühr" : "Noch kein Büro – dafür " + money(luckyCash() * 3) },
   { id: "vip", r: "e", icon: "✉️", name: "Insider-Tipp", desc: () => level() >= 3 ? "Sonderfahrt-Einladung kommt in wenigen Stunden" : "Noch zu früh für Einladungen – dafür " + money(luckyCash() * 3) },
   { id: "bulli", r: "l", icon: "🏆", name: "Hauptpreis: Goldener Bulli", desc: () => ownsBulli()
       ? "Den hast du schon – dafür der Jackpot: " + money(luckyJackpot())
@@ -40,6 +40,14 @@ const luckyJackpot = () => roundK(25000 * stageK(), 100);
 const ownsBulli = () => S.fleet.some(f => f.type === "v-goldbulli");
 
 function luckyState() { if (!S.lucky) S.lucky = { boxes: [], opened: 0, streak: 0, lastSet: -9, log: [] }; return S.lucky; }
+/* v156: Headhunter-Bewerbung für ein Büro (einmalig je Büro); gibt die Kandidatin/den Kandidaten zurück oder null */
+function luckyHeadFor(b) {
+  if (!b || (b.pool || []).some(x => x.hh)) return null;   /* wartet dort schon eine */
+  const c = makeCandidate(false); c.skill = 5; c.fee = 0; c.wage = Math.round(ROLES[c.role].wage * 1.6);
+  c.trait = "kommt über den Headhunter – und weiß das auch"; c.hh = true;
+  (b.pool = b.pool || []).unshift(c);
+  return { name: c.name, role: c.role, b };
+}
 function perks() { if (!S.perk) S.perk = {}; return S.perk; }
 function luckyGive(kind, why) {
   const L = luckyState();
@@ -79,12 +87,13 @@ function applyPrize(p) {
     case "coupon": P.coupon = 0.2; break;
     case "boost": P.boostUntil = S.time + 1440; break;
     case "head": {
-      const b = (S.bases || []).slice().sort((a, c) => c.tier - a.tier)[0];
-      if (b) {
-        const c = makeCandidate(false); c.skill = 5; c.fee = 0; c.wage = Math.round(ROLES[c.role].wage * 1.6);
-        c.trait = "kommt über den Headhunter – und weiß das auch"; c.hh = true;
-        (b.pool = b.pool || []).unshift(c);
-        txt = c.name + " (" + ROLES[c.role].name + ", ★★★★★) wartet in " + N[b.node].short + " – ohne Gebühr.";
+      /* v156: jedes Büro bekommt seine eigene ★★★★★-Fachkraft (eine je Büro und Gewinn) – auch Büros, die später dazukommen */
+      const bs = S.bases || [];
+      if (bs.length) {
+        P.hhAll = true;
+        const got = bs.map(b => luckyHeadFor(b)).filter(Boolean);
+        txt = got.length === 1 ? got[0].name + " (" + ROLES[got[0].role].name + ", ★★★★★) wartet in " + N[got[0].b.node].short + " – ohne Gebühr."
+          : got.length ? got.length + " ★★★★★-Fachkräfte warten – in jedem Büro eine, ohne Gebühr." : "In allen Büros wartet schon eine Headhunter-Fachkraft.";
       } else { const v = luckyCash() * 3; S.money += v; S.revenue += v; logMoney("bonus", "Luckybox", v); }
       break;
     }

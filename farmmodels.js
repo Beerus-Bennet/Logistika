@@ -490,6 +490,20 @@ const FM = (() => {
     G3.seed(300 + kind.length * 11);
     const T = TREE[kind] || TREE.apfel;
     const b = new MB();
+    /* v152: Obstbaum im Stil der Waldbäume – Stamm mit Plattenborke (drei Töne) und Wurzelanlauf, runde Äste statt Latten,
+       Krone als zusammenhängendes Volumen (Farbverlauf oben hell/unten dunkel, Volumenlicht, Blattbüschel; woodmodels.js leafClump) */
+    const LW = typeof FWM !== "undefined" && FWM.leafClump;
+    if (LW) {
+      const P = [T.leaf[1], T.leaf[0], T.leaf[2]], P2 = [T.leaf[0], T.leaf[2], T.leaf[2]], P3 = [T.leaf[1], T.leaf[1], T.leaf[0]], cv = [0, 1.35, 0];
+      b.cyl(0.13, 0.09, 0.95, 8, 0x8b5e3c, { stripe: 0x76502f, top: 0x7a5233 });
+      b.cyl(0.175, 0.13, 0.12, 8, 0x7a5233, { stripe: 0x6a4529, notop: true });
+      [[0.62, 0.55, 0.42], [0.68, -2.3, 0.38], [0.74, 2.0, 0.34]].forEach(([y, a, l]) => b.at({ y, ry: -a }, () => b.cyl(0.045, 0.024, l, 5, 0x845a39, { rz: -(Math.PI / 2 - 0.75), notop: true, nobot: true })));
+      LW(b, [0, 1.35, 0], 0.62, P, { hi: true, flat: T.shape * 0.95, jitter: 0.25, seed: kind.length + 1, vc: cv, tufts: 9 });
+      LW(b, [0.4, 1.15, 0.22], 0.42, P2, { hi: true, jitter: 0.3, seed: kind.length + 3, vc: cv, tufts: 4 });
+      LW(b, [-0.38, 1.2, -0.2], 0.4, P, { hi: true, jitter: 0.3, seed: kind.length + 5, vc: cv, tufts: 4 });
+      LW(b, [-0.1, 1.75 * (T.shape > 1 ? 1.08 : 1), 0.25], 0.36, P3, { hi: true, jitter: 0.3, seed: kind.length + 7, vc: cv, tufts: 4 });
+      return b;
+    }
     b.noise(0.12, () => {
       b.cyl(0.13, 0.09, 0.95, 6, 0x8b5e3c, { top: 0x7a5233 });
       b.box(0.06, 0.4, 0.06, 0x8b5e3c, { y: 0.7, x: 0.1, rz: -0.6 });

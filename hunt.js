@@ -1117,7 +1117,9 @@ const HUNT = (() => {
     const hr = (S.time % 1440) / 60;
     const k = hr >= 21 || hr < 5 ? "keiler" : hr >= 17 ? (rnd() < 0.55 ? "hirsch" : "keiler") : (rnd() < 0.78 ? "hirsch" : "keiler");
     const score = drawScore(), a = A_CT + Math.PI + (rnd() - 0.5) * 2.2, a2 = a + Math.PI + (rnd() - 0.5) * 1.4, d2 = CR * (0.15 + rnd() * 0.45);
-    const x = CX + Math.cos(a) * CR * 1.22, z = CZ + Math.sin(a) * CR * 1.22, tx = CX + Math.cos(a2) * d2, tz = CZ + Math.sin(a2) * d2;
+    let x = CX + Math.cos(a) * CR * 1.22, z = CZ + Math.sin(a) * CR * 1.22;
+    if (typeof navFree === "function") { const f = navFree(x, z, "wild", 5); x = f[0]; z = f[1]; }   /* v146: nie in Hindernissen starten */
+    const tx = CX + Math.cos(a2) * d2, tz = CZ + Math.sin(a2) * d2;
     const s = k === "hirsch" ? 1.05 + score * 0.3 : 1.05 + score * 0.25;
     const mesh = k === "hirsch" ? fmesh("wild:deer", () => FWM.deer(false)) : fmesh("wild:boar", FWM.boar);
     const node = fnode(mesh, { x, z, s, ry: Math.atan2(tx - x, tz - z), visible: false, alpha: 0 });
@@ -1154,10 +1156,16 @@ const HUNT = (() => {
       }
     } else {
       const dx = M.tx - M.x, dz = M.tz - M.z, dist = Math.hypot(dx, dz), sp = (M.k === "hirsch" ? 1.25 : 0.95) * dt;
-      if (dist < sp * 1.2) { if (M.leaving) { mwDrop(); return; } M.st = "graze"; M.t = 5 + rnd() * 9; n.rx = 0; }
+      const nav = typeof wanderPlan === "function";
+      /* v146: das Tier läuft auf dem Wegenetz um Gebäude, Zäune, Bäume, Felsen und Wasser herum */
+      if (nav && (M.ptx !== M.tx || M.ptz !== M.tz)) { M.ptx = M.tx; M.ptz = M.tz; wanderPlan(M, M.tx, M.tz, "wild", 5); }
+      let r = null;
+      if (nav && M.path) r = wanderMove(M, sp);
+      if ((nav && !M.path && !(r && !r.done)) || (!nav && dist < sp * 1.2) || (r && r.done)) { if (M.leaving) { mwDrop(); return; } M.st = "graze"; M.t = 5 + rnd() * 9; n.rx = 0; M.path = null; M.ptx = null; }
       else {
-        M.x += dx / dist * sp; M.z += dz / dist * sp; n.x = M.x; n.z = M.z;
-        const want = Math.atan2(dx, dz); n.ry += angN(want - n.ry) * Math.min(1, dt * 3);
+        if (!nav) { M.x += dx / dist * sp; M.z += dz / dist * sp; }
+        n.x = M.x; n.z = M.z;
+        const want = nav ? (r && r.h != null ? r.h : n.ry) : Math.atan2(dx, dz); n.ry += angN(want - n.ry) * Math.min(1, dt * 3);
         n.y = Math.abs(Math.sin(time * 7.5 + M.ph)) * 0.025; n.rx = 0;
       }
     }
@@ -2437,9 +2445,11 @@ const HUNT = (() => {
     }
     if (X.dbgCam) goal = typeof X.dbgCam === "function" ? X.dbgCam() : X.dbgCam;          /* nur für Tests (Kamera frei setzen) */
     CAM_KEYS.forEach(k => { c[k] = goal[k]; });
-    /* v111: nahe Ebene je nach Ansicht weit nach hinten – im Fernglas/Zielfernrohr ist nichts näher als 6 m im Bild,
+    /* v153: im Auge-Blick 0,3 statt 1,1 – mit 1,1 m wurden Brüstung, Auflage, Eckpfosten und Dach des eigenen Hochsitzes (0,8–1,2 m vom Auge)
+       in scharfen Diagonalen abgeschnitten. 24-Bit-Tiefenpuffer: bei 200 m Entfernung ≈ 1 cm Auflösung, die Ferne flimmert nicht.
+       /* v111: nahe Ebene je nach Ansicht weit nach hinten – im Fernglas/Zielfernrohr ist nichts näher als 6 m im Bild,
        dafür bleibt der Tiefenpuffer fein genug, dass Stämme und Äste in der Ferne nicht mehr flimmern oder zerreißen */
-    if (X.inRv) { c.near = X.view === "bino" || X.view === "scope" ? 3.2 : X.view === "eye" ? 1.1 : 0.6; c.far = FAR; }
+    if (X.inRv) { c.near = X.view === "bino" || X.view === "scope" ? 3.2 : X.view === "eye" ? 0.3 : 0.6; c.far = FAR; }
     if (X.inRv && X.rv && X.rv.trees) { const far = X.view !== "eye"; if (X.rv.far !== far) revLod(far); revBuildStep(); }
     FV.touchAt = performance.now();
     /* Wild: wenig, weit weg – und man muss warten */

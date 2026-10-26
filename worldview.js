@@ -58,7 +58,7 @@ const NPC_LOOK = {
 /* Höhe der Tag-Blasen und Taps für die neuen Objekte */
 Object.assign(OBJ_H, {
   sw_halle: 4.6, sw_lager: 2.6, sw_buero: 2.8, sw_lkw: 2.2, kessel: 3.0, spalter: 1.4, hobel: 1.3, trocken: 2.4, verpack: 1.5,
-  schleif: 1.3, fraese: 2.0, saegebock: 1.1, junk: 0.9, stall: 1.8, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
+  schleif: 1.3, fraese: 2.0, saegebock: 1.1, junk: 0.9, stall: 1.8, tractor: 1.9, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
   f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4, bert_car: 1.1
 });
 /* Rauch über arbeitenden Gebäuden */
@@ -84,22 +84,30 @@ function lakeE(x, z) { const L = FWORLD.lake; return Math.hypot((x - L.x) / L.rx
 function worldGroundCol(x, z) {
   const v = wNoise(x, z), v2 = Math.sin(x * 0.07 + 1.3) * Math.cos(z * 0.06 - 0.4);
   const C = FM.C;
-  let c = v > 0.35 ? C.grassD : v > -0.2 ? C.grass2 : C.grass;
+  /* v153: Grün- und Waldbodentöne gehen stetig ineinander über. Vorher wählte jeder Gitterpunkt (alle 4 m) hart einen von drei
+     Tönen – das gab große, flache, eckige Flächen mit geraden Kanten mitten auf Wiesen und Lichtungen. Jetzt hat jeder Punkt eine
+     Mischfarbe, die Übergänge laufen als weicher Verlauf über die Dreiecke. */
+  const sm = (a, b, t) => { const k = clamp((t - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+  let c = wMix(wMix(C.grass, C.grass2, sm(-0.45, 0.0, v)), C.grassD, sm(0.1, 0.6, v));
   const f = forestK(x, z);
   if (f > 0) {
     const alt = x < -70 && z < -70;
-    let fc = alt ? 0x4f7a2e : v > 0.3 ? 0x5e8a34 : v < -0.3 ? 0x6c8f3c : 0x64903a;
+    let fc = alt ? 0x4f7a2e : wMix(wMix(0x64903a, 0x6c8f3c, sm(-0.1, -0.5, v)), 0x5e8a34, sm(0.1, 0.5, v));
     if (v2 > 0.55) fc = wMix(fc, 0x7d6a42, (v2 - 0.55) * 1.6);
     c = wMix(c, fc, f);
   }
   for (const q of FWORLD.clearings) {
     const d = Math.hypot(x - q[0], z - q[1]);
-    if (d < q[2] + 2) c = wMix(c, v > 0 ? 0x93c957 : 0x8cc650, clamp((q[2] + 2 - d) / 2.5, 0, 1));
+    if (d < q[2] + 2) c = wMix(c, 0x90c853, clamp((q[2] + 2 - d) / 2.5, 0, 1));          /* v153: ein Ton – vorher wechselte er je Gitterpunkt zwischen zwei Grüns (große eckige Flecken in der Lichtung) */
   }
   if (typeof HUNT !== "undefined") c = HUNT.ground(x, z, c, v);                                   /* v107: Wildwiese */
   if (inYard(x, z, 1.5)) {
     const y = FWORLD.yard, d = Math.min(x - y[0], y[2] - x, z - y[1], y[3] - z);
     c = wMix(c, FWM.YARD_COL, clamp((d + 1.5) / 2, 0, 1));     /* v77: dieselbe Farbe wie der Schotter im Hof */
+  }
+  if (inLkwBay(x, z, 1)) {         /* v169: Schotter am Lkw-Stellplatz, weich zum Gras hin */
+    const d = Math.min(x + 46.5, -40 - x, z + 29.5, -19 - z);
+    c = wMix(c, FWM.YARD_COL, clamp((d + 1) / 1.6, 0, 1));
   }
   const e = lakeE(x, z);
   if (e < 1.25) c = wMix(c, 0xd9c48a, clamp((1.25 - e) / 0.2, 0, 1));
@@ -179,7 +187,7 @@ function bgTreeOk(x, z, M) {
   if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
-  if (inYard(x, z, 3.4)) return false;        /* v99: Sägewerkszaun (vorher 1,8) */
+  if (inYard(x, z, 3.4) || inLkwBay(x, z, 1.2)) return false;        /* v99: Sägewerkszaun (vorher 1,8); v169: Lkw-Stellplatz */
   if (inFieldN(x, z, 1)) return false;
   if (M.at(x, z) & 5) return false;
   if (z > 20 && lakeE(x, z) < 1.18) return false;
@@ -307,7 +315,7 @@ function wFreeGround(x, z, r, MK) {
   if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
   if (z > 15.8 - r && z < 22.5 + r) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
-  if (inYard(x, z, 1.8 + r) || inFieldN(x, z, 1 + r)) return false;
+  if (inYard(x, z, 1.8 + r) || inLkwBay(x, z, r * 0.6) || inFieldN(x, z, 1 + r)) return false;
   if (MK.at(x, z) & 4) return false;                                      /* Bachufer */
   if (z > 20 && lakeE(x, z) < 1.18) return false;
   if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.5 + r) return false;
@@ -523,8 +531,9 @@ function worldMakeLife0() {
   }
   L.shafts.forEach((p, i) => {
     const n = fnode(fmesh("lshaft", () => FWM.lightShaft()), { x: p.x, z: p.z, s: 1, alpha: 0, visible: false, shadow: false });
-    R.nodes.push(n);
-    Lf.shafts.push({ i, n, x: p.x, z: p.z });
+    const np = fnode(fmesh("lpatch", () => FWM.lightPatch()), { x: p.x, z: p.z, s: 1, alpha: 0, visible: false, shadow: false });      /* v153: Draufsicht */
+    R.nodes.push(n, np);
+    Lf.shafts.push({ i, n, np, x: p.x, z: p.z });
   });
   WV.life = Lf;
 }
@@ -554,10 +563,22 @@ function stepLife(dt, time) {
     const B = b.body, show = b.f > 0 && nearCam(b.h.x, b.h.z, 46);
     B.visible = show;
     if (!show) continue;
-    const ox = B.x, oz = B.z;
-    b.a += dt * b.sp * (0.8 + 0.4 * Math.sin(time * 0.43 + b.i * 1.9));
-    B.x = b.h.x + Math.cos(b.a) * b.rr + Math.sin(b.a * 2.3 + b.i) * 0.7;
-    B.z = b.h.z + Math.sin(b.a * 0.9) * b.rr * 0.8 + Math.cos(b.a * 1.7 + b.i) * 0.6;
+    const ox = B.x, oz = B.z, oa = b.a;
+    if (!b.dir) b.dir = 1;
+    b.a += dt * b.sp * b.dir * (0.8 + 0.4 * Math.sin(time * 0.43 + b.i * 1.9));
+    const nx = b.h.x + Math.cos(b.a) * b.rr + Math.sin(b.a * 2.3 + b.i) * 0.7;
+    const nz = b.h.z + Math.sin(b.a * 0.9) * b.rr * 0.8 + Math.cos(b.a * 1.7 + b.i) * 0.6;
+    /* v146: Falter fliegen nicht durch Häuser, Bäume, Felsen oder Zäune: an Hindernissen drehen sie um und ziehen die Schleife enger */
+    const nv = typeof navStepBlocked === "function";
+    if (!b.init) {                                  /* Start: nie mitten in einem Hindernis */
+      let sx = nx, sz = nz;
+      if (nv && navBlockedAt(sx, sz)) { const f = navFree(sx, sz, "wild", 4); sx = f[0]; sz = f[1]; }
+      B.x = sx; B.z = sz; b.init = true;
+    } else if (nv && (navBlockedAt(nx, nz) || navHit(ox, oz, nx, nz, NAV.cw)) && !navBlockedAt(ox, oz)) {
+      if (b.rr0 == null) b.rr0 = b.rr; b.a = oa; b.dir = -b.dir; b.rr = Math.max(0.5, b.rr * 0.93);
+    } else if (nv && navBlockedAt(ox, oz) && navBlockedAt(nx, nz)) {
+      b.a = oa; b.dir = -b.dir; b.rr = Math.max(0.5, b.rr * 0.93);   /* steckt fest: zurück, bis sie frei ist */
+    } else { B.x = nx; B.z = nz; if (b.rr0 == null) b.rr0 = b.rr; else if (b.rr < b.rr0) b.rr = Math.min(b.rr0, b.rr + dt * 0.04); }
     B.y = b.hh + Math.sin(time * 1.6 + b.i * 2) * 0.22 + Math.sin(b.a * 3.3) * 0.12;
     if (Math.hypot(B.x - ox, B.z - oz) > 1e-4) B.ry = Math.atan2(B.x - ox, B.z - oz);
     const fl = Math.sin(time * (17 + b.i % 3) + b.i * 1.3) * 0.85 * (Math.sin(time * 0.9 + b.i * 3) > -0.55 ? 1 : 0.15);      /* zwischendurch segeln sie */
@@ -572,9 +593,13 @@ function stepLife(dt, time) {
   }
   /* Lichtschächte: nur bei Sonne, atmen langsam, jeder in eigener Phase */
   const sun = rain ? 0 : Math.max(0, Math.sin((h - 6.5) / 14 * Math.PI)) * (h > 6.5 && h < 20.5 ? 1 : 0);
+  /* v153: Die Lichtsäule gibt es nur bei flachem Blick (Ich-Perspektive); aus der Hofansicht (Blick von schräg oben) liegt dort
+     stattdessen ein weicher Lichtfleck auf dem Boden – die Säule war von oben ein hartes Sechseck mit geraden Kanten. */
+  const lowView = !!FV.fp || cam.pitch < 0.55;
   for (const sh of Lf.shafts) {
-    const a = sun * 0.1 * (0.8 + 0.2 * Math.sin(time * 0.17 + sh.i * 2.4)), n = sh.n;
-    n.visible = a > 0.01 && nearCam(sh.x, sh.z, 60); n.alpha = a;
+    const a = sun * 0.1 * (0.8 + 0.2 * Math.sin(time * 0.17 + sh.i * 2.4)), n = sh.n, np = sh.np, near = nearCam(sh.x, sh.z, 60);
+    n.visible = lowView && a > 0.01 && near; n.alpha = a;
+    if (np) { np.visible = !lowView && a > 0.01 && near; np.alpha = a * 0.16; }       /* 8 Scheiben übereinander: 8 × 1,3 % ≈ 10 % in der Mitte */
   }
   /* fallendes Laub: einzelne Blätter von alten Laubbäumen in Kameranähe */
   Lf.nearT -= dt;
@@ -791,6 +816,7 @@ function worldStatic() {
     rockObs.push([x, z, 0.55 * [0.9, 1.4, 2.0][i % 3] * sc]);
   }
   /* v92: Kulissenbäume entzerren – je Art und Größe, mit fällbaren Bäumen und Felsen als festen Hindernissen */
+  WV.rockObs = rockObs;
   WV.spaceInfo = worldTreeSpace(chunks, chunkOf, MK, rockObs);
   /* v91: versteckte Lichtungen und Senken planen – die Kulissenbäume dort werden entnommen, die Büsche setzen sich an den Rand */
   let fplan = null;
@@ -824,7 +850,7 @@ function worldStatic() {
   }
   worldGround(chunkOf, GC, nx, nz, cell, gcAt, WV.forest);
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
-  R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map();
+  R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map(); WV.bgGH = new Map(); WV.bgHi = new Map(); TLOD.dirty = true;
   for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
     if (c.d.n) R.nodes.push(fnode(R.mesh(c.d.out())));
@@ -965,7 +991,8 @@ function worldStatic() {
   [[-9, 40, 14], [-4, 43, 8], [28, 64, 9]].forEach(([x, z, n]) => lk.merge(FWM.lilyPads(n), { x, z, y: 0.03 }));
   /* Insel mit zwei Bäumen */
   lk.merge((() => { const m = new FM.MB(); m.disc(3.2, 14, 0xd9c48a, { y0: 0.05, wob: 0.12 }); m.disc(2.5, 12, 0x86bf4a, { y0: 0.07, wob: 0.12 }); return m; })(), { x: 2, z: 58 });
-  lk.merge(FWM.bgLeaf(1), { x: 2.6, z: 57.6, s: 1.3 }); lk.merge(FWM.bgPine(2), { x: 1, z: 58.8, s: 1.1 });
+  /* v152: dieselben Baummodelle wie im Wald (vorher eigene, alte Kulissenbäume) */
+  lk.merge(FWM.tree("buche", 1, 1), { x: 2.6, z: 57.6, s: 1.25 }); lk.merge(FWM.tree("fichte", 1, 2), { x: 1, z: 58.8, s: 0.78 });
   for (let i = 0; i < 7; i++) lk.merge(FWM.boulder(0.5 + rnd() * 0.7), { x: 34 + rnd() * 5 - 2.5, z: 39 + rnd() * 3, ry: rnd() * 6 });
   R.nodes.push(fnode(R.mesh(lk), { sway: 0.4 }));
   /* fällbare Bäume, Hof je Ausbaustufe, Schranken an gesperrten Wegen */
@@ -1040,13 +1067,7 @@ function worldSyncHof(force) {
     for (let z = N.z0 + 4; z < N.z1 - 1; z += 4) if (Math.abs(z - WZ) > 1.6) { stake(N.x0, z); stake(N.x1, z); }
   }
   add(fnode(R.mesh(b)));
-  if (stage >= 2) {
-    /* Traktor vor dem Zaun – im großen Wirtschaftshof vor der Maschinenhalle östlich vom Hof */
-    const col = (S.farm.cos && S.farm.cos.on.tractor) || "rot", tz = big ? 16.3 : 16.6, tx = big ? 27.4 : 10.4;
-    add(fnode(fmesh("tractor:" + col, () => FWM.tractor(col)), { x: tx, z: tz, ry: -Math.PI / 2 }));
-    add(fnode(fmesh("trailer", FWM.trailer), { x: tx + 2.2, z: tz, ry: -Math.PI / 2 }));
-  }
-  if (big) add(fnode(fmesh("mhall", FWM.machineHall), { x: 31, z: 11.5, ry: Math.PI }));
+  /* v162: Traktor mit Anhänger ist jetzt ein frei platzierbares Objekt (Hof, rund um den Hof oder im Lager); die Maschinenhalle ist entfernt */
   /* Firmenschild am Tor: Name und Logo stehen auf der Tafel (vorn und hinten) */
   const T = brandTex();
   if (T) {
@@ -1182,6 +1203,7 @@ function objVar(o) {
   if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg && typeof wegMask === "function") return "m" + wegMask(o);   /* v71: Nachbarn → Ränder */
   if (WORN_T.has(o.t)) return (F.stage || 1) <= 1 ? "w" : "";
   if (o.t === "sw_halle") return sawMask() + ":" + (typeof pvN === "function" ? pvN() : 0);
+  if (o.t === "tractor") return (F.cos && F.cos.on && F.cos.on.tractor) || "rot";
   if (o.t === "kessel") return F.saw && F.saw.motor ? "1" : "0";
   if (o.t === "sw_lager") return sawRepaired() ? "1" : "0";
   if (o.t === "sw_buero") return F.saw && F.saw.strom ? "1" : "0";
@@ -1202,6 +1224,7 @@ function worldObjMesh(o) {
     case "saegebock": return fmesh("saegebock", FWM.saegebock);
     case "junk": return fmesh("junk:" + o.k, () => FWM.junk(o.k));
     case "stall": return fmesh("stall", FWM.stall);
+    case "tractor": { const col = (F.cos && F.cos.on && F.cos.on.tractor) || "rot"; return fmesh("trk:" + col, () => { const b = new FM.MB(); b.merge(FWM.tractor(col), { x: -1.1, ry: -Math.PI / 2 }); b.merge(FWM.trailer(), { x: 1.1, ry: -Math.PI / 2 }); return b; }); }
     case "f_plot": { const [w, d] = farmSize(o); return fmesh("fplot:" + w + "x" + d, () => FWM.fPlot(w, d)); }
     case "f_steg": return fmesh("lakeSteg", FWM.lakeSteg);
     case "f_huette": return fmesh("fHuette", FWM.fHuette);
@@ -1238,7 +1261,8 @@ const THUMB = { R: null, cache: {}, failed: false };
    Handys mit 3-facher Pixeldichte (Lagerzelle 40 px = 120 Gerätepixel – vorher wurden 112 px hochgezogen und wirkten weich). */
 const THUMB_N = 144, THUMB_NB = 288;
 function thumbR(big) {
-  const K = big ? "RB" : "R", N = big ? THUMB_NB * 2 : THUMB_N * 2;
+  /* v159: big === 2 → Porträt-Größe (512 px ausgegeben, 1024 gerendert) für Figuren im Gespräch */
+  const K = big === 2 ? "RP" : big ? "RB" : "R", N = big === 2 ? 1024 : big ? THUMB_NB * 2 : THUMB_N * 2;
   if (THUMB[K] || THUMB.failed) return THUMB[K];
   try {
     const cv = document.createElement("canvas");
@@ -1275,7 +1299,7 @@ function thumbOf(key, fn, o) {
       Object.assign(R.cam, { tx: cx, ty: cy, tz: cz, dist: r * (flat ? 3.0 : 3.3) * k, yaw: o.yaw != null ? o.yaw : Math.PI / 4, pitch: o.pitch != null ? o.pitch : flat ? 0.85 : 0.55, fov: 0.55 });
       R.env.sun = thumbSun(R.cam.yaw, R.cam.pitch);
       R.render(1.5);
-      const c = thumbCrop(R.canvas, k < 2.2, o.big ? THUMB_NB : THUMB_N, o);
+      const c = thumbCrop(R.canvas, k < 2.2, o.big === 2 ? 512 : o.big ? THUMB_NB : THUMB_N, o);
       if (c) { url = c; break; }
     }
     R.free(m);
@@ -1456,12 +1480,13 @@ function worldObjParts(o, root, parts) {
 }
 
 /* ------------------------------- Bäume ---------------------------------- */
-function treeMeshOf(t) {
+function treeMeshOf(t, hi) {
   if (t.st === "stump" && t.cut && typeof SAW3D !== "undefined") return fmesh("wsc:" + t.id + ":" + t.cut.q + ":" + Math.round(t.cut.ny * 100), () => SAW3D.stumpMesh(t.cut));   /* v85: Sägeschnitt mit Sohle + Bruchstufe */
   if (t.st === "stump") return fmesh("ws:" + t.sp + ":" + t.sz, () => FWM.stump(t.sp, t.sz));
   if (t.st === "sapling") return fmesh("wsap:" + t.sp, () => FWM.sapling(t.sp));
   if (t.st === "fallen") return fmesh("wf:" + t.sp + ":" + t.sz, () => FWM.fallen(t.sp, t.sz));
   const v = t.v != null ? t.v : t.id % 3;       /* v90: Kulissenbäume bringen ihre Variante mit */
+  if (hi && FV.meshes[tHiKey(t.sp, t.sz, v)]) return FV.meshes[tHiKey(t.sp, t.sz, v)];      /* v152: feine Stufe (nur wenn schon gebaut) */
   return fmesh("wt:" + t.sp + ":" + t.sz + ":" + v, () => FWM.tree(t.sp, t.sz, v));
 }
 function treeKey(t) { return t.st + ":" + t.sz; }
@@ -1480,7 +1505,7 @@ function worldSyncTrees(force) {
     }
     e.key = key;
     const n = e.node;
-    n.mesh = treeMeshOf(t);
+    n.mesh = treeMeshOf(t); n.smesh = null; e.hi = false; TLOD.dirty = true;
     n.x = t.x; n.z = t.z; n.y = 0; n.rx = 0; n.rz = 0;
     const cs = t.st === "stump" && t.cut;
     n.ry = cs ? t.cut.ry : t.st === "fallen" ? (t.fall || 0) : t.ry;
@@ -1543,6 +1568,77 @@ function bgChunkBuild(c) {
       g.add(t.k, t.fx, t.fzz, t.fry, t.fs);
       WV.bgInst.set(t.k, g);
     } else if (!want && g0) { g0.remove(t.k); WV.bgInst.delete(t.k); }
+  }
+}
+/* ---------------- v152: Detailstufen der Waldbäume ----------------
+   Nah an der Kamera die feine Stufe (FWM.tree(…, true): Rinde wie in der Ich-Perspektive, feinere Krone mit Blattbüscheln),
+   sonst die grobe. Beide Stufen haben dieselbe Lage, Größe, Rindenzeichnung und Kronenform – beim Wechsel ändert sich nur die
+   Feinheit, kein anderes Modell. Abstand Auge–Baummitte; größere Bäume wechseln früher, mit Hysterese gegen Flackern.
+   Feine Modelle werden erst gebaut, wenn sie gebraucht werden (je Bild höchstens ~6 ms, mindestens eins), bis dahin bleibt die grobe Stufe. */
+const TLOD = { near: 17, hyst: 2.5, q: [], qs: new Set(), bad: new Set(), t: 0, eye: null, dirty: true, on: true };
+function tHiKey(sp, sz, v) { return "wth:" + sp + ":" + sz + ":" + v; }
+function tHiReady(sp, sz, v) { return !!FV.meshes[tHiKey(sp, sz, v)]; }
+function tHiWant(sp, sz, v) {
+  const k = sp + ":" + sz + ":" + v;
+  if (TLOD.qs.has(k) || TLOD.bad.has(k) || tHiReady(sp, sz, v)) return;
+  TLOD.qs.add(k); TLOD.q.push([sp, sz, v, k]);
+}
+function tHiBuild() {
+  const t0 = performance.now();
+  let built = 0;
+  while (TLOD.q.length && (!built || performance.now() - t0 < 6)) {
+    const [sp, sz, v, k] = TLOD.q.shift();
+    TLOD.qs.delete(k);
+    try { fmesh(tHiKey(sp, sz, v), () => FWM.tree(sp, sz, v, true)); built++; } catch (e) { TLOD.bad.add(k); console.warn("Baum fein", k, e); }
+  }
+  if (built) TLOD.dirty = true;
+}
+/* Grenzabstand je Baum: Größe (Höhe) zählt mit – ein großer Baum ist aus größerer Entfernung noch groß im Bild */
+function tLodLim(sz, s) { return TLOD.near * (0.82 + 0.18 * (FWM.TH[sz] || 1) * (s || 1)); }
+function treeLodStep() {
+  const R = FV.R;
+  if (!R || !R.eye || !S.farm || !TLOD.on) return;
+  if (!FV.fp) tHiBuild();                                       /* in der Ich-Perspektive nichts nachbauen (kein Ruckeln beim Sägen) */
+  const now = performance.now(), E = R.eye;
+  const moved = !TLOD.eye || Math.hypot(E[0] - TLOD.eye[0], E[1] - TLOD.eye[1], E[2] - TLOD.eye[2]) > 0.5;
+  if (!moved && !TLOD.dirty && now - TLOD.t < 500) return;
+  TLOD.t = now; TLOD.eye = E.slice(); TLOD.dirty = false;
+  const HY = TLOD.hyst, dOf = (x, y, z) => Math.hypot(x - E[0], y - E[1], z - E[2]);
+  /* echte (fällbare) Bäume: Knoten bekommen das passende Mesh */
+  const byId = new Map((S.farm.trees || []).map(t => [t.id, t]));
+  for (const [id, e] of WV.trees) {
+    if (e.falling) continue;
+    const t = byId.get(id);
+    if (!t || t.st !== "up") { e.hi = false; continue; }
+    const v = t.v != null ? t.v : t.id % 3, d = dOf(t.x, treeH(t) * 0.45, t.z), want = d < tLodLim(t.sz, t.s) + (e.hi ? HY : 0);
+    if (want && !tHiReady(t.sp, t.sz, v)) { tHiWant(t.sp, t.sz, v); continue; }
+    if (want !== !!e.hi) { e.hi = want; e.node.mesh = treeMeshOf(t, want); e.node.smesh = want ? treeMeshOf(t, false) : null; }
+  }
+  /* Kulissenbäume: Instanz wandert zwischen der groben und der feinen Gruppe derselben Art/Größe/Variante */
+  if (!WV.bgChunks || !WV.bgInst) return;
+  WV.bgGH = WV.bgGH || new Map(); WV.bgHi = WV.bgHi || new Map();
+  const bgY = t => (FWM.TREE_H[t.sp] || 2.8) * (FWM.TH[t.fz] || 1) * t.fs * 0.45;
+  for (const [kk, o] of WV.bgHi) {
+    const t = o.t;
+    if (WV.bgInst.get(kk) !== o.gH) { WV.bgHi.delete(kk); continue; }          /* inzwischen entfernt (angetippt, Ich-Perspektive) */
+    if (dOf(t.fx, bgY(t), t.fzz) > tLodLim(t.fz, t.fs) + HY) {
+      o.gH.remove(kk); o.gF.add(kk, t.fx, t.fzz, t.fry, t.fs); WV.bgInst.set(kk, o.gF); WV.bgHi.delete(kk);
+    }
+  }
+  const CH = WGRID.chunk, reach = tLodLim(4, 1.3);
+  for (const c of WV.bgChunks.values()) {
+    const cx = Math.max(c.x0, Math.min(c.x0 + CH, E[0])), cz = Math.max(c.z0, Math.min(c.z0 + CH, E[2]));
+    if (Math.hypot(cx - E[0], cz - E[2]) > reach) continue;
+    for (const t of c.trees) {
+      if (WV.bgHi.has(t.k)) continue;
+      const gF = WV.bgInst.get(t.k);
+      if (!gF || !t.fz || dOf(t.fx, bgY(t), t.fzz) >= tLodLim(t.fz, t.fs)) continue;
+      if (!tHiReady(t.sp, t.fz, t.fv)) { tHiWant(t.sp, t.fz, t.fv); continue; }
+      const key = t.sp + ":" + t.fz + ":" + t.fv;
+      let gH = WV.bgGH.get(key);
+      if (!gH) { gH = R.instGroup(FV.meshes[tHiKey(t.sp, t.fz, t.fv)], { sway: gF.sway, smesh: gF.mesh }); WV.bgGH.set(key, gH); }
+      gF.remove(t.k); gH.add(t.k, t.fx, t.fzz, t.fry, t.fs); WV.bgInst.set(t.k, gH); WV.bgHi.set(t.k, { t, gF, gH });
+    }
   }
 }
 function bgPick(x, y) {
@@ -1768,9 +1864,18 @@ function worldMakeWild0() {
     return { body, wl, wr, a: i * 0.57, r: 1.6 + (i * 0.37) % 2.8, h: 5 + (i * 0.61) % 2.6, sp: (0.75 + (i % 4) * 0.12) * (i % 5 === 4 ? -1 : 1), f: 0, out: 0, i };
   });
 }
+/* v146: Wild läuft auf dem Wegenetz (team.js): nicht durch Gebäude, Bäume, Felsen, Wasser, Zäune; der Igel schlüpft unter Zäunen durch */
+const wildRole = w => w.k === "hedgehog" ? "igel" : "wild";
 function wildHome(w) {
   const a = Math.random() * 6.28, d = Math.random() * w.r;
-  w.x = w.tx = w.home[0] + Math.cos(a) * d; w.z = w.tz = w.home[1] + Math.sin(a) * d;
+  let x = w.home[0] + Math.cos(a) * d, z = w.home[1] + Math.sin(a) * d;
+  if (w.k !== "heron" && typeof navFree === "function") {
+    const role = wildRole(w);
+    let f = navFree(x, z, role, 4);
+    if (role === "wild" && navSide(f[0], f[1]) !== navSide(w.home[0], w.home[1])) f = navFree(w.home[0], w.home[1], role, 4);   /* nicht hinterm Zaun starten */
+    x = f[0]; z = f[1];
+  }
+  w.x = w.tx = x; w.z = w.tz = z; w.path = null; w.ptx = null;
   w.node.x = w.x; w.node.z = w.z; w.node.ry = Math.random() * 6.28; w.node.rx = 0;
   w.wait = 1 + Math.random() * 3; w.flee = 0; w.leave = 0;
 }
@@ -1800,13 +1905,21 @@ function stepWild(dt, time) {
       }
       continue;
     }
-    const dx = w.tx - w.x, dz = w.tz - w.z, dist = Math.hypot(dx, dz);
     const sp = (w.flee > 0 ? w.D.run : w.D.sp) * dt;
     if (w.flee > 0) w.flee -= dt;
-    if (dist < sp || dist < 0.05) { w.wait = (w.D.still ? 6 : 2) + Math.random() * (w.D.still ? 9 : 5); w.flee = 0; w.node.rx = 0; continue; }
-    w.x += dx / dist * sp; w.z += dz / dist * sp;
+    let hd = null, arrived = false;
+    if (w.k === "heron" || typeof wanderPlan !== "function") {
+      const dx = w.tx - w.x, dz = w.tz - w.z, dist = Math.hypot(dx, dz);
+      if (dist < sp || dist < 0.05) arrived = true; else { w.x += dx / dist * sp; w.z += dz / dist * sp; hd = Math.atan2(dx, dz); }
+    } else {
+      /* neues Ziel: Weg planen (ist es nicht erreichbar, bleibt das Tier einfach stehen) */
+      if (w.ptx !== w.tx || w.ptz !== w.tz) { w.ptx = w.tx; w.ptz = w.tz; wanderPlan(w, w.tx, w.tz, wildRole(w), 4); }
+      if (!w.path) arrived = true;
+      else { const r = wanderMove(w, sp); hd = r.h; if (r.done) arrived = true; }
+    }
+    if (arrived) { w.wait = (w.D.still ? 6 : 2) + Math.random() * (w.D.still ? 9 : 5); w.flee = 0; w.node.rx = 0; w.path = null; w.ptx = null; continue; }
     w.node.x = w.x; w.node.z = w.z; w.node.rx = 0;
-    w.node.ry = Math.atan2(dx, dz);
+    if (hd != null) w.node.ry = hd;
     w.node.y = w.D.hop ? Math.abs(Math.sin(time * (w.flee > 0 ? 14 : 9) + w.i)) * 0.12 : Math.abs(Math.sin(time * 8 + w.i)) * 0.02;
   }
   /* Vögel kreisen über dem Wald, Eulen und Fledermäuse nachts */
@@ -1955,6 +2068,9 @@ function worldTreasureDig() {
 }
 function farmTreasureView(type, c) {
   if (!FV.on) return;
+  try { farmTreasureViewGo(type, c); } catch (e) { console.warn("Schatz-Anzeige", e); }
+}
+function farmTreasureViewGo(type, c) {
   const Z = FTREASURE_ZONES.find(z => z.id === c.zone);
   if (type === "start") toast("🐦 Ein Vogelschwarm kreist " + (Z ? Z.n : "über dem Gelände") + " – darunter liegt eine Schatzkiste! Such das rote Kreuz.", "ok");
   if (type === "start") worldTreasureIntro(c, Z);
@@ -2015,6 +2131,67 @@ function worldTreasureRevealEnd() {
   Rv.nodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
   WV.trReveal = null;
   if (WV.trChest) WV.trChest.visible = true;
+  worldTreasureCamBack();
+}
+/* v167: Kamera für die Truhen-Show – steil von oben und aus der Richtung, in der kein Baum, Busch oder Fels
+   zwischen Kamera und Grube steht; so ist die Truhe samt Animation immer zu sehen (vorher konnte die Krone eines
+   Baums die Kamera schlucken). Nach der Show fliegt die Kamera in ihre alte Ansicht zurück. */
+function worldTreasureCam(c) {
+  const R = FV.R; if (!R || FV.fp) return;
+  const cam = R.cam, D = 13, P = 1.22, H = Math.cos(P) * D;
+  const obs = [];
+  const addT = t => { if (Math.hypot(t.x - c.x, t.z - c.z) < 14) obs.push([t.x, t.z, 1.6 + 1.1 * Math.min(2, (t.s || t.fs || 1))]); };
+  (S.farm.trees || []).forEach(addT);
+  if (WV.bgChunks) for (const ch of WV.bgChunks.values()) (ch.all || ch.trees || []).forEach(addT);
+  /* Gebäude/Zäune des Hofs zählen als Hindernis, Felsen und Büsche aus der Waldplanung, falls vorhanden */
+  if (WV.rockObs) WV.rockObs.forEach(r => { if (Math.hypot(r.x - c.x, r.z - c.z) < 14) obs.push([r.x, r.z, (r.r || 1) + 0.6]); });
+  const dseg = (ox, oz, ex, ez, px, pz) => {          /* Abstand Punkt–Strecke */
+    const dx = ex - ox, dz = ez - oz, l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((px - ox) * dx + (pz - oz) * dz) / l2));
+    return Math.hypot(px - (ox + u * dx), pz - (oz + u * dz));
+  };
+  const cur = cam.yaw; let best = cur, bs = -1e9;
+  for (let i = 0; i < 24; i++) {
+    const yaw = Math.PI / 4 + (i / 24) * Math.PI * 2, ex = c.x + Math.cos(yaw) * H, ez = c.z + Math.sin(yaw) * H;
+    /* je kleiner der Abstand zur Kamera-Linie im Verhältnis zur Baumbreite, desto schlechter */
+    let s = 0, worst = 99;
+    for (const [x, z, r] of obs) { const d = dseg(c.x, c.z, ex, ez, x, z) - r; if (d < worst) worst = d; if (d < 0) s -= 5 - d * 2; }
+    s += Math.min(worst, 3);
+    /* Standard-Blickrichtung bevorzugen, wenn sie frei ist */
+    s -= Math.abs(Math.atan2(Math.sin(yaw - Math.PI / 4), Math.cos(yaw - Math.PI / 4))) * 0.25;
+    if (s > bs) { bs = s; best = yaw; }
+  }
+  const save = WV.trCamSave = WV.trCamSave || { yaw: cam.yaw, pitch: cam.pitch, d: cam.dist, tx: cam.tx, tz: cam.tz };
+  const d0 = Math.atan2(Math.sin(best - cam.yaw), Math.cos(best - cam.yaw));
+  FV.camOv = { pitch: cam.pitch };
+  WV.trCamAnim = { yaw0: cam.yaw, dy: d0, p0: cam.pitch, d0: cam.dist, tx0: cam.tx, tz0: cam.tz, t0: performance.now(), dur: 1500, tx: c.x, tz: c.z + 0.3, d: D, p: P };
+  const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
+  const step = () => {
+    const A = WV.trCamAnim; if (FV.focusId !== id || !A) return;
+    const k = Math.min(1, (performance.now() - A.t0) / A.dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    cam.tx = A.tx0 + (A.tx - A.tx0) * f; cam.tz = A.tz0 + (A.tz - A.tz0) * f; cam.dist = A.d0 + (A.d - A.d0) * f; cam.yaw = A.yaw0 + A.dy * f;
+    FV.camOv.pitch = A.p0 + (A.p - A.p0) * f;
+    clampCam();
+    if (k < 1) requestAnimationFrame(step); else FV.focusing = false;
+  };
+  step();
+}
+function worldTreasureCamBack() {
+  const S0 = WV.trCamSave; WV.trCamSave = null; WV.trCamAnim = null;
+  const R = FV.R;
+  if (!S0 || !R || FV.fp) { FV.camOv = null; return; }
+  const cam = R.cam, from = { yaw: cam.yaw, tx: cam.tx, tz: cam.tz, d: cam.dist, p: FV.camOv ? FV.camOv.pitch : cam.pitch };
+  const dy = Math.atan2(Math.sin(S0.yaw - from.yaw), Math.cos(S0.yaw - from.yaw));
+  const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
+  const t0 = performance.now(), dur = 1300;
+  const step = () => {
+    if (FV.focusId !== id) { FV.camOv = null; return; }       /* Spieler hat die Kamera selbst übernommen */
+    const k = Math.min(1, (performance.now() - t0) / dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    cam.tx = from.tx + (S0.tx - from.tx) * f; cam.tz = from.tz + (S0.tz - from.tz) * f; cam.dist = from.d + (S0.d - from.d) * f; cam.yaw = from.yaw + dy * f;
+    if (FV.camOv) FV.camOv.pitch = from.p + (Math.min(1, Math.max(0.8, S0.pitch)) - from.p) * f;
+    clampCam();
+    if (k < 1) requestAnimationFrame(step); else { FV.focusing = false; FV.camOv = null; clampCam(); }
+  };
+  step();
 }
 /* Nach dem Graben: Truhe bricht aus der Grube, kreist und springt auf – je nach Sternen größer */
 function worldTreasureReveal(c, r) {
@@ -2030,7 +2207,7 @@ function worldTreasureReveal(c, r) {
   Rv.r1 = add(fmesh("lootRing", () => FWM.lootRing(0.85, 1.0, 0xffe27a)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
   Rv.r2 = add(fmesh("lootRingW", () => FWM.lootRing(0.85, 1.0, 0xfff6c8)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
   Rv.r3 = add(fmesh("lootRingB", () => FWM.lootRing(0.85, 1.0, 0x7ad6ff)), { x: c.x, z: c.z, alpha: 0, glow: 1, shadow: false });
-  farmFocusXZ(c.x, c.z + 0.4, 9, 2000);
+  worldTreasureCam(c);
   R.burst({ x: c.x, y: 0.1, z: c.z, n: 22, speed: 2.2, flat: true, up: 0.7, life: 0.9, size: 0.3, size2: 0.8, col: [[0.72, 0.58, 0.4, 0.55]], g: -0.5, drag: 1.5 });
   sfx("thud");
 }
@@ -2637,6 +2814,7 @@ function stepWeather(dt, time) {
   }
   { const sw = 0.22 + WV.gust * 0.9;
     if (WV.bgG) for (const g of WV.bgG.values()) g.sway = sw;
+    if (WV.bgGH) for (const g of WV.bgGH.values()) g.sway = sw;
     if (WV.gust > 0.05) for (const e of WV.trees.values()) if (e.node.sway) e.node.sway = sw; }
 }
 
@@ -3095,6 +3273,7 @@ function worldStep(dt, time) {
   stepParcel(dt, time);
   stepTreasure(dt, time);
   stepWeather(dt, time);
+  treeLodStep();
   const now = wnow();
   /* Baum wippt nach dem Antippen oder wenn er gewachsen ist */
   for (const [id, e] of WV.trees) {
@@ -3438,7 +3617,7 @@ function machExtraBind(o) {
 function openSawOffice() {
   FV.sheetFn = openSawOffice;
   const F = S.farm, rep = sawRepaired();
-  const mach = FSHOP_SAW.map(it => `<span class="fchip${fcount(it.id) ? "" : " miss"}">${it.i}<b>${fcount(it.id) ? "✓" : "Lv " + it.lv}</b></span>`).join("");
+  const mach = FSHOP_SAW.map(it => `<span class="fchip mch${fcount(it.id) ? "" : " miss"}" title="${esc(it.n)}">${typeof thumbSpan === "function" ? thumbSpan("shop:" + it.id, shopModel(it), it.i, false) : it.i}<b>${fcount(it.id) ? "✓" : "Lv " + it.lv}</b></span>`).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏠</span>Büro im Sägewerk<small>${rep ? "alles läuft" : "Reparaturen " + FSAW_REPAIRS.filter(r => F.saw[r.id]).length + "/5"}</small></div>
     ${rep ? energyHTML() : ""}
     <div class="fs-sub">Maschinen im Sägewerk:</div><div class="fr-in">${mach}</div>

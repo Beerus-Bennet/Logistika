@@ -114,7 +114,7 @@ function makeLot(opt) {
     const per = { hyper: [200, 1500], legend: [150, 1200], super: [1000, 5000], sport: [3000, 14000], classic: [500, 4000], young: [5000, 12000] }[c.cls];
     l.km = g ? Math.round(g.km) : Math.round(age * rnd(per[0], per[1]) / 100) * 100;
     l.cond = g ? g.cond : +wpick(l.y >= 2010 ? { 1: 45, 2: 45, 3: 10 } : { 1: 15, 2: 35, 3: 30, 4: 13, 5: 7 });
-    l.paint = g ? g.paint : pick(CAR_PAINTS[c.b]);
+    l.paint = g ? g.paint : (paintOfPhoto(c.id) || pick(CAR_PAINTS[c.b]));
     l.luck = g ? g.luck : rnd(0.93, 1.07);
     l.val = Math.round(carValue(c, l.cond, l.km, l.luck));
     l.est = [nice(l.val * 0.85), nice(l.val * 1.12)];
@@ -547,7 +547,7 @@ let comicBusy = false;
 const comicKey = id => location.origin + "/__carcomic/v2/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
 function wantComic(id, front) {
   if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) return;
-  if (PICS[id] && PICS[id].art && PICS[id].src) { COMIC_URL.set(id, PICS[id].src); showCarPic(id); return; }   /* v79: Zeichnung – kein Filter */
+  if (PICS[id] && PICS[id].art && PICS[id].src) { COMIC_URL.set(id, PICS[id].src); showCarPic(id); detectPaint(id, PICS[id].src); return; }   /* v79: Zeichnung – kein Filter */
   if (!PICS[id] || !PICS[id].src || typeof comicCar !== "function") return;
   const at = COMIC_Q.indexOf(id);
   if (at >= 0) { if (front && at > 0) { COMIC_Q.splice(at, 1); COMIC_Q.unshift(id); } return; }
@@ -643,6 +643,7 @@ async function comicNext() {
     const url = URL.createObjectURL(blob);
     COMIC_URL.set(id, url);
     showCarPic(id);
+    detectPaint(id, blob);
   } catch (_) {
     /* später nochmal (z. B. gedrosselt), nach drei Versuchen bleibt das Originalfoto */
     const n = (COMIC_TRY.get(id) || 0) + 1;
@@ -651,6 +652,71 @@ async function comicNext() {
     else { COMIC_FAIL.add(id); showCarPic(id); }
   }
   setTimeout(comicNext, 120);
+}
+/* v154: Lackfarbe aus dem Foto bestimmen – Notiz („Kyalamigrün“) und Autobild passen so immer zusammen */
+function hex2lab(h) {
+  const n = parseInt(h.replace("#", ""), 16), f = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
+  return rgb2lab(f(n >> 16 & 255), f(n >> 8 & 255), f(n & 255));
+}
+function rgb2lab(r, g, b) {
+  const X = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047, Y = r * 0.2126 + g * 0.7152 + b * 0.0722, Z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+  const q = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const fx = q(X), fy = q(Y), fz = q(Z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function paintFromPixels(d, W, H, list) {
+  const labs = list.map(p => hex2lab(p[1])), votes = list.map(() => 0);
+  let n = 0, dark = 0;
+  const x0 = Math.floor(W * 0.18), x1 = Math.ceil(W * 0.82), y0 = Math.floor(H * 0.32), y1 = Math.ceil(H * 0.66);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = (y * W + x) * 4; if (d[i + 3] < 200) continue;
+    const f = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
+    const L = rgb2lab(f(d[i]), f(d[i + 1]), f(d[i + 2]));
+    n++;
+    if (L[0] < 20) { dark++; continue; }   /* Reifen, Scheiben, Schatten */
+    let b = 0, bd = 1e9;
+    labs.forEach((q, k) => { const dd = 0.45 * (L[0] - q[0]) ** 2 + (L[1] - q[1]) ** 2 + (L[2] - q[2]) ** 2; if (dd < bd) { bd = dd; b = k; } });
+    votes[b] += 1 + Math.hypot(L[1], L[2]) / 40;   /* kräftige Farben zählen mehr als Grau (Straße, Himmel) */
+  }
+  if (n < 20) return -1;
+  let best = 0; votes.forEach((v, k) => { if (v > votes[best]) best = k; });
+  const bl = list.findIndex(p => hex2lab(p[1])[0] < 22);
+  if (bl >= 0 && dark / n > 0.5) return bl;
+  return best;
+}
+async function detectPaint(id, src) {
+  const p = PICS[id], c = CAR[id];
+  if (!p || !c || p.pc || !CAR_PAINTS[c.b]) return;
+  try {
+    const bm = await loadBitmap(typeof src === "string" ? await (await fetch(src)).blob() : src);
+    const W = 96, H = Math.max(24, Math.round(96 * bm.height / bm.width));
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(bm, 0, 0, W, H);
+    if (bm.close) bm.close();
+    const k = paintFromPixels(cx.getImageData(0, 0, W, H).data, W, H, CAR_PAINTS[c.b]);
+    if (k < 0) return;
+    p.pc = CAR_PAINTS[c.b][k][0]; savePics();
+    if (ahFixPaints()) ahRefreshPaintUI();
+  } catch (_) { /* Foto nicht lesbar: Lack bleibt wie gewürfelt */ }
+}
+function paintOfPhoto(carId) {
+  const p = PICS[carId], c = CAR[carId];
+  if (!p || !p.pc || !c || !CAR_PAINTS[c.b]) return null;
+  return CAR_PAINTS[c.b].find(q => q[0] === p.pc) || null;
+}
+/* alle Lose, Garage und Verlauf an das Foto angleichen; true = etwas geändert */
+function ahFixPaints() {
+  if (typeof S === "undefined" || !S || !S.ah) return false;
+  const A = S.ah; let ch = false;
+  const fix = o => { if (!o || o.kind !== "car") return; const q = paintOfPhoto(o.car); if (q && (!o.paint || o.paint[0] !== q[0])) { o.paint = [q[0], q[1]]; ch = true; } };
+  (A.lots || []).forEach(fix); (A.garage || []).forEach(fix); (A.past || []).forEach(fix);
+  return ch;
+}
+function ahRefreshPaintUI() {
+  try {
+    if (typeof lotModal !== "undefined" && lotModal && typeof refreshLotModal === "function") renderLotModal();
+    else if (activeTab === "market" && !document.body.classList.contains("modal-open")) renderAuction();
+  } catch (_) { /* egal */ }
 }
 /* Bild in alle Rahmen dieses Autos setzen (Comic, sonst Original) */
 function showCarPic(id) {
@@ -901,7 +967,7 @@ function pastRowHTML(p) {
     <span class="pr-p"><b>${p.lead ? money(p.price) : "–"}</b>${r[1] ? `<small class="${r[0]}">${r[1]}</small>` : ""}</span></div>`;
 }
 function renderAuction() {
-  const A = ah();
+  const A = ah(); ahFixPaints();
   if (!A.lots.length) ensureLots(true);
   setTools("market", ahToolsHTML(), bindAhTools);
   $("#viewTitle").textContent = "Auktionshaus";
@@ -998,6 +1064,7 @@ function openLot(id) {
   renderLotModal();
 }
 function renderLotModal(msg) {
+  ahFixPaints();
   const l = lotById(lotModal);
   if (!l) { lotModal = null; return; }
   const c = l.kind === "car" ? CAR[l.car] : null, t = l.kind === "veh" ? vType(l.vt) : null;
@@ -1049,6 +1116,7 @@ function refreshLotModal() {
 }
 function openCar(id) {
   const c = CAR[id]; if (!c) return;
+  ahFixPaints();
   const A = ah(), live = liveLots().find(l => l.car === id && !l.mine), own = A.garage.filter(g => g.car === id);
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   const paint = own[0] ? own[0].paint[1] : live ? live.paint[1] : undefined;

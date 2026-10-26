@@ -641,10 +641,10 @@ const G3 = (() => {
     let iscratch = new Float32Array(4096);
     function gUpload(g) {
       if (!g.mesh.buf) return;
-      const mk = () => {
-        const vao = gl.createVertexArray(), buf = gl.createBuffer();
+      const mk = sh => {
+        const vao = gl.createVertexArray(), buf = gl.createBuffer(), ms = sh && g.smesh && g.smesh.buf ? g.smesh : g.mesh;
         gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, g.mesh.buf);
+        gl.bindBuffer(gl.ARRAY_BUFFER, ms.buf);
         gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0);
         gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12);
         gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
@@ -654,7 +654,7 @@ const G3 = (() => {
         gl.bindVertexArray(null);
         return [vao, buf];
       };
-      [g.vaoM, g.bufM] = mk(); [g.vaoS, g.bufS] = mk(); g.capM = g.capS = g.cap;
+      [g.vaoM, g.bufM] = mk(false); [g.vaoS, g.bufS] = mk(true); g.capM = g.capS = g.cap;
     }
     function gFree(g) {
       if (g.vaoM) { gl.deleteVertexArray(g.vaoM); gl.deleteBuffer(g.bufM); gl.deleteVertexArray(g.vaoS); gl.deleteBuffer(g.bufS); }
@@ -835,11 +835,13 @@ const G3 = (() => {
       gl.uniform1f(shad.u.uTime, time);
       for (const [n, st] of slist) {
         if (!st.shadow || st.alpha < 0.99 || n.water || !n.mesh.vao) continue;
+        /* v152: eigenes, gröberes Schattenmodell (feine Bäume werfen den Schatten der groben Stufe – gleicher Umriss, halbe Arbeit) */
+        const sm = n.smesh && n.smesh.vao ? n.smesh : n.mesh;
         gl.uniformMatrix4fv(shad.u.uModel, false, n.W);
         gl.uniform1f(shad.u.uSway, n.sway); gl.uniform1f(shad.u.uSwayT, n.swayT);
-        gl.bindVertexArray(n.mesh.vao);
-        gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
-        ST.sDraws++; ST.sTris += n.mesh.count / 3;
+        gl.bindVertexArray(sm.vao);
+        gl.drawArrays(gl.TRIANGLES, 0, sm.count);
+        ST.sDraws++; ST.sTris += sm.count / 3;
       }
       if (igroups.size) {
         gl.useProgram(shadI.p);
@@ -856,8 +858,9 @@ const G3 = (() => {
           gl.bindBuffer(gl.ARRAY_BUFFER, g.bufS);
           if (g.capS !== g.cap) { gl.bufferData(gl.ARRAY_BUFFER, g.cap * 16, gl.DYNAMIC_DRAW); g.capS = g.cap; }
           gl.bufferSubData(gl.ARRAY_BUFFER, 0, iscratch, 0, nv * 4);
-          gl.drawArraysInstanced(gl.TRIANGLES, 0, g.mesh.count, nv);
-          ST.sDraws++; ST.sTris += nv * g.mesh.count / 3; ST.sInst += nv;
+          const sc = g.smesh && g.smesh.buf ? g.smesh.count : g.mesh.count;
+          gl.drawArraysInstanced(gl.TRIANGLES, 0, sc, nv);
+          ST.sDraws++; ST.sTris += nv * sc / 3; ST.sInst += nv;
         }
         gl.bindVertexArray(null);
       }

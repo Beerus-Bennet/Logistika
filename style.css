@@ -3418,3 +3418,148 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas
 /* v124: angesprungene Telefon-Nachricht kurz hervorheben */
 .pmsg.focus{animation:pmfocus 2.2s ease-out}
 @keyframes pmfocus{0%,35%{box-shadow:0 0 0 3px #f5b83d,0 0 18px #f5b83daa}100%{box-shadow:0 0 0 0 transparent}}
+
+/* v148: Lupe/Cursor beim langen Halten aus – auch Spielfläche und Tipp-Ziele (Eingabefelder ausgenommen) */
+html,body,canvas,#farmAngel,#huntUI{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+*::selection{background:transparent}
+input::selection,textarea::selection{background:rgba(70,120,220,.35)}
+
+/* v155: Maschinen-Chips im Sägewerk-Büro mit 3D-Bildchen wie im Laden */
+.fchip.mch{padding:2px 8px 2px 4px;gap:4px;border-radius:12px}
+.fchip.mch .ic.th,.fchip.mch .ic.th img{width:34px;height:34px}
+.fchip.mch .ic.th b{font-size:22px;line-height:34px}
+.fchip.mch.miss .ic.th img{filter:grayscale(.6) opacity(.75)}
+
+/* v159: Fortbildungs-Meldung (Vertretung) – Porträt groß und scharf, ruhiges Layout */
+.stp{display:flex;gap:12px;align-items:stretch;margin:4px 0 10px}
+.stp-fig{flex:none;width:118px;height:172px;border:var(--line);border-radius:18px;background:linear-gradient(180deg,#fff3c4 0%,#ffe3a0 70%,#e9c97a 100%);box-shadow:var(--shadow-sm);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;position:relative}
+.stp-fig img{position:absolute;width:150%;max-width:none;height:auto;left:-25%;bottom:-8px;display:block;pointer-events:none}
+.stp-emo{font-size:64px;align-self:center}
+.stp-body{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.stp-name{font-family:var(--display);font-size:24px;letter-spacing:1.5px;color:var(--blue);line-height:1}
+.stp-role{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;font-weight:800;opacity:.75;margin:4px 0 8px}
+.stp-role span{font-size:10px;text-transform:uppercase;letter-spacing:.6px;background:var(--ink);color:#fff;border-radius:99px;padding:1px 8px;opacity:1}
+.stp-q{margin:0;font-size:13px;line-height:1.45;background:#fff;border:var(--line);border-radius:4px 16px 16px 16px;padding:9px 12px;font-style:italic}
+.stp-info{display:grid;gap:6px;margin:0 0 12px}
+.stp-info>div{display:flex;flex-direction:column;gap:1px;background:#fff;border:2px solid rgba(13,27,42,.16);border-radius:12px;padding:7px 11px}
+.stp-info b{font-size:13px}
+.stp-info span{font-size:12.5px;line-height:1.35;opacity:.8}
+
+/* v161: Etappen-Knopf schaltet live frei – weich einblenden, einmal aufleuchten, danach ruhiges Pulsieren */
+#unlockBtn{transition:opacity .6s ease,filter .6s ease,background .6s ease,box-shadow .6s ease;position:relative;overflow:hidden}
+#unlockBtn.unlock-ready{animation:unlockPop .7s cubic-bezier(.2,1.6,.4,1) 1,unlockGlow 2.2s ease-in-out .7s infinite}
+#unlockBtn.unlock-ready::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-20deg);animation:unlockShine 1s ease-out .15s 1 both}
+.card.stage.stage-ready{animation:stageReady 1.4s ease-out 1}
+@keyframes unlockPop{0%{transform:scale(.94)}55%{transform:scale(1.09)}100%{transform:scale(1)}}
+@keyframes unlockGlow{0%,100%{box-shadow:0 0 0 0 rgba(32,169,122,0)}50%{box-shadow:0 0 14px 3px rgba(32,169,122,.55)}}
+@keyframes unlockShine{from{left:-60%}to{left:130%}}
+@keyframes stageReady{0%{box-shadow:0 0 0 0 rgba(32,169,122,.7)}100%{box-shadow:0 0 0 22px rgba(32,169,122,0)}}
+@media (prefers-reduced-motion:reduce){#unlockBtn.unlock-ready,#unlockBtn.unlock-ready::after,.card.stage.stage-ready{animation:none}}
+
+/* v164: Favoriten-Stern an Hof-/Sägewerk-/Fischerei-Bestellungen */
+.fo{position:relative}
+.fo-star{position:absolute;top:6px;right:8px;width:38px;height:38px;border-radius:50%;border:2px solid transparent;background:transparent;font-size:26px;line-height:1;color:#9aa6b2;display:grid;place-items:center;padding:0;cursor:pointer;transition:transform .2s cubic-bezier(.2,1.6,.4,1),color .2s,background .2s}
+.fo-star:active{transform:scale(.85)}
+.fo-star.on{color:#f2a900;background:#fff3c4;border-color:#d9981a;text-shadow:0 1px 0 rgba(0,0,0,.18);animation:starPop .45s cubic-bezier(.2,1.6,.4,1)}
+.fo.fav{border-color:#d9981a;background:linear-gradient(180deg,#fffaf0,#fff)}
+.fo.fav.ready{background:linear-gradient(180deg,#fff8e0,#f1fff4)}
+.fo .fo-h{padding-right:44px}
+@keyframes starPop{0%{transform:scale(.6) rotate(-25deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion:reduce){.fo-star.on{animation:none}}
+
+/* ---------------- v170: Konzern-Wellen, Imperium, Übernahme-Show ---------------- */
+.corp-lead{margin:6px 0 8px;padding:6px 9px;border:2px solid var(--ink);border-radius:12px;background:#fff3c4}
+.corp-lead b{display:block;font-size:12.5px}
+.corp-lead small{display:block;font-size:11px;opacity:.8;line-height:1.3}
+.corp-lead i{display:block;height:8px;border-radius:99px;border:1.5px solid var(--ink);margin-top:5px;background:linear-gradient(90deg,#f2a33c var(--w),#fff var(--w))}
+.corp-lead.off{background:#ffe4e8}
+.share-row.wave em,.cr-tag{font-style:normal;font-size:9.5px;font-weight:900;background:#c22c46;color:#fff;border-radius:6px;padding:0 5px;margin-left:5px;vertical-align:1px;letter-spacing:.3px;white-space:nowrap}
+.corp-row.wave{background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 14%,transparent),transparent 70%);border-radius:10px;padding-left:5px}
+.cr-i{position:relative}
+.corp-row.owned .cr-i{filter:grayscale(.85)}
+.cr-x{position:absolute;inset:0;display:grid;place-items:center;color:#c22c46;font-size:28px;font-weight:900;font-style:normal;text-shadow:0 0 3px #fff;filter:none}
+.corp-row.owned .cr-st{color:#8a6d1f}
+.corp-emp{display:flex;flex-direction:column;background:linear-gradient(90deg,#ffe27a,#fff3c4);border:2px solid var(--ink);border-radius:12px;padding:6px 10px;margin:6px 0 4px;box-shadow:2px 2px 0 var(--ink)}
+.corp-emp b{font-family:var(--display);font-size:18px;letter-spacing:.6px;font-weight:400}
+.corp-emp span{font-size:11.5px;font-weight:700}
+
+#corpShow{position:fixed;inset:0;z-index:160;display:flex;align-items:center;justify-content:center;overflow:auto;
+  padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  background:radial-gradient(120% 90% at 50% 35%,rgba(40,30,8,.9),rgba(6,8,14,.96));animation:csFade .3s ease-out both;transition:opacity .3s}
+#corpShow.cs-threat{background:radial-gradient(120% 90% at 50% 35%,rgba(70,8,16,.92),rgba(6,8,14,.97))}
+#corpShow.out{opacity:0}
+.cs-rays{position:fixed;left:50%;top:38%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;pointer-events:none;opacity:.9;
+  background:repeating-conic-gradient(from 0deg,rgba(255,214,90,.16) 0 9deg,transparent 9deg 18deg);animation:csRays 40s linear infinite,csFade 1s .3s both}
+.cs-threat .cs-rays{background:repeating-conic-gradient(from 0deg,rgba(255,70,90,.15) 0 9deg,transparent 9deg 18deg)}
+.cs-fx{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+.cs-fx i{position:absolute;top:-40px;font-style:normal;animation:csFall linear forwards}
+.cs-wrap{position:relative;z-index:1;width:min(440px,100%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.cs-paper{width:100%;background:#f3ead3;color:#16130c;border:3px solid #16130c;box-shadow:7px 9px 0 rgba(0,0,0,.55);padding:10px 14px 12px;transform:rotate(-2deg);
+  background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.025) 0 1px,transparent 1px 3px);animation:csSpin 1s cubic-bezier(.2,.85,.3,1.08) both}
+.cs-mast{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:4px double #16130c;padding-bottom:3px}
+.cs-mast b{font-family:Georgia,"Times New Roman",serif;font-size:21px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.cs-mast small{font-family:Georgia,serif;font-size:10px;font-style:italic;text-align:right}
+.cs-head{font-family:var(--display);font-weight:400;font-size:clamp(27px,8.4vw,38px);line-height:.98;letter-spacing:1px;margin:8px 0 5px;color:#111}
+.cs-head.long{font-size:clamp(23px,6.8vw,31px)}
+.cs-sub{font-family:Georgia,serif;font-size:13px;line-height:1.3;margin:0 0 8px;padding-bottom:7px;border-bottom:1.5px solid rgba(0,0,0,.35)}
+.cs-duel{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:128px;padding:4px 0}
+.cs-side{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;max-width:34%;text-align:center}
+.cs-side b{font-size:11.5px;line-height:1.15}
+.cs-logo{position:relative;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;border:3px solid #16130c;overflow:hidden;
+  background:color-mix(in srgb,var(--rc,#19b8c9) 30%,#fff);font-size:44px;line-height:1;transition:filter .35s,box-shadow .35s}
+.cs-side.big .cs-logo{width:76px;height:76px;font-size:40px}
+.cs-logo svg{width:100%;height:100%;display:block}
+.cs-logo.me{background:#fff;box-shadow:0 0 0 3px #f6d24a,0 0 22px rgba(246,210,74,.9)}
+.cs-logo.mono{background:var(--blue);color:#fff;font-family:var(--display);font-size:34px}
+.cs-arrow{font-size:34px;font-weight:900;color:#b8860b;animation:csPulse .8s ease-in-out infinite alternate}
+.cs-arrow.vs{font-family:var(--display);font-weight:400;color:#c22c46;font-size:30px}
+.cs-crack{position:absolute;inset:0;opacity:0;background:
+  linear-gradient(62deg,transparent 47%,#16130c 48%,#16130c 50%,transparent 51%),
+  linear-gradient(-35deg,transparent 46%,#16130c 47%,#16130c 48.5%,transparent 49.5%),
+  linear-gradient(115deg,transparent 60%,#16130c 61%,#16130c 62%,transparent 63%);transition:opacity .2s .1s}
+.cs-stamp{position:absolute;left:50%;top:38%;z-index:3;font-family:var(--display);font-style:normal;font-size:27px;letter-spacing:2px;color:#c22c46;
+  border:4px solid #c22c46;border-radius:8px;padding:1px 9px;background:rgba(255,245,240,.55);white-space:nowrap;
+  opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(3);pointer-events:none}
+.cs-side .cs-stamp{left:42%;font-size:23px}
+.cs-duel>.cs-stamp{left:64%;top:44%;font-size:24px}
+.hit .cs-stamp{animation:csStamp .3s cubic-bezier(.3,1.5,.5,1) forwards}
+.hit .cs-paper{animation:csSpin 1s cubic-bezier(.2,.85,.3,1.08) both,csShake .45s .02s}
+.cs-win.hit .cs-logo.them{filter:grayscale(1) brightness(.85)}
+.cs-win.hit .cs-crack{opacity:.85}
+.cs-threat.hit .cs-logo.them{box-shadow:0 0 0 4px #c22c46,0 0 26px rgba(255,80,90,.95)}
+#corpShow.hit::after{content:"";position:fixed;inset:0;background:#fff;pointer-events:none;z-index:4;animation:csFlash .45s ease-out forwards}
+.cs-loot{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:100%}
+.cs-chip{background:#fff;border:2.5px solid var(--ink);border-radius:12px;padding:4px 10px;font-weight:800;font-size:13px;box-shadow:2px 2px 0 var(--ink);
+  opacity:0;transform:translateY(10px) scale(.7);animation:csChip .35s cubic-bezier(.3,1.5,.5,1) forwards}
+.cs-chip b{color:var(--green-d);font-size:15px}
+.cs-chip.threat{background:#ffe4e8;font-size:11.5px;width:100%;text-align:center}
+.cs-crown{width:100%;text-align:center;background:linear-gradient(180deg,#ffe27a,#f2a33c);border:3px solid var(--ink);border-radius:16px;padding:6px 12px 8px;box-shadow:3px 4px 0 var(--ink);animation:csUp .5s 2.9s both}
+.cs-crown span{display:block;font-size:36px;line-height:1.1;animation:csCrown 1.6s ease-in-out infinite}
+.cs-crown b{display:block;font-family:var(--display);font-weight:400;font-size:21px;letter-spacing:.8px}
+.cs-crown small{display:block;font-size:11.5px;font-weight:700}
+.cs-crown.threat{background:linear-gradient(180deg,#ffd0d6,#ff8f9f)}
+.cs-quote{text-align:center;color:#fff;animation:csUp .5s 3.2s both}
+.cs-quote b{display:block;font-family:var(--display);font-weight:400;font-size:25px;letter-spacing:1px;line-height:1.1;text-shadow:0 2px 0 #000,0 0 18px rgba(246,210,74,.7)}
+.cs-threat .cs-quote b{font-size:20px;text-shadow:0 2px 0 #000,0 0 18px rgba(255,80,90,.7)}
+.cs-quote small{display:block;font-size:12px;font-style:italic;opacity:.8;margin-top:3px}
+.cs-go{font-size:16px;padding:10px 18px;animation:csUp .4s 3.5s both}
+#corpShow.rm .cs-paper,#corpShow.rm .cs-chip,#corpShow.rm .cs-crown,#corpShow.rm .cs-quote,#corpShow.rm .cs-go,#corpShow.rm .cs-rays{animation-duration:.01s!important;animation-delay:0s!important}
+#corpShow.rm .cs-stamp{opacity:.92;transform:translate(-50%,-50%) rotate(-14deg)}
+@keyframes csFade{from{opacity:0}to{opacity:1}}
+@keyframes csSpin{0%{transform:rotate(900deg) scale(.05);opacity:0}55%{opacity:1}100%{transform:rotate(-2deg) scale(1)}}
+@keyframes csStamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(3)}100%{opacity:.93;transform:translate(-50%,-50%) rotate(-14deg) scale(1)}}
+@keyframes csShake{0%,100%{transform:rotate(-2deg)}20%{transform:rotate(-3deg) translate(-7px,3px)}40%{transform:rotate(-1deg) translate(6px,-3px)}60%{transform:rotate(-2.6deg) translate(-3px,2px)}80%{transform:rotate(-1.5deg) translate(2px,-1px)}}
+@keyframes csChip{to{opacity:1;transform:none}}
+@keyframes csUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes csFall{from{transform:translateY(0) rotate(0)}to{transform:translateY(112vh) rotate(540deg)}}
+@keyframes csRays{to{transform:rotate(360deg)}}
+@keyframes csCrown{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-6px) rotate(6deg)}}
+@keyframes csPulse{from{transform:translateX(0)}to{transform:translateX(-6px)}}
+@keyframes csFlash{from{opacity:.75}to{opacity:0}}
+
+/* ---------------- v171: Speditions-Level (eigene Feier, nicht die Hof-Feier) ---------------- */
+#logiLvl{position:fixed;inset:0;z-index:140;display:grid;place-items:center;background:rgba(13,27,42,.45);animation:csFade .25s ease-out both}
+.flv.logi{background:linear-gradient(180deg,#eef4ff,#fff);border-color:var(--ink)}
+.flv.logi .flv-k{margin-top:16px;opacity:.75}
+.flv.logi .flv-n{margin-top:2px}
+.flv.logi .flv-u span{background:#f3f7ff}

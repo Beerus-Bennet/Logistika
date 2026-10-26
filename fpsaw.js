@@ -149,173 +149,8 @@ const SAW3D = (() => {
      Querschnitt von der Seite: waagerechte Sohle (hell), schräger Dachschnitt 45° (hell, etwas dunkler);
      der Stamm dazwischen ist ein Zylinder, der an der Dachebene z = zc + y beschnitten ist. */
   const WOOD = 0xfbe7bd, WOOD2 = 0xf5dcae, KMAX = 1.3, KQ = 20, KS = 1.9;   /* KS: Steilheit des Dachschnitts (Höhe pro Tiefe) */
-  /* Rindenzeichnung wie bei den Bäumen im Spiel (woodmodels.js tree()): je Art Farbbänder/Flecken am Stamm.
-     bf(y in Einheiten, Segment) → Farbe; bp = Höhen (Einheiten), an denen sich die Farbe ändert (Wände werden dort geteilt). */
-  const TC_ = () => (typeof FWM !== "undefined" && FWM.TREE_C) || {};
-  /* v128: 28 statt 14 Sektoren und echtes Relief der Borke (Rippen/Furchen, Wurzelanlauf) – vorher wirkte der Nahaufnahme-Stamm
-     wie ein glattes Vieleck mit großen einfarbigen Flächen. Relief: Radiusfaktor je Winkel (und Höhe für den Wurzelanlauf);
-     er wirkt über taperB auf alle Punkte (Rinde, Kerbflächen, Stumpf), daher bleibt alles dicht. */
-  const NSEC = 28;
-  const RELIEF = { eiche: [0.075, 0.16], kiefer: [0.04, 0.06], fichte: [0.03, 0.08], buche: [0.008, 0.12], birke: [0.012, 0.04], kirsche: [0.018, 0.06] };
-  function reliefOf(sp, seed) {
-    const R0 = RELIEF[sp]; if (!R0) return null;
-    const [amp, fl] = R0, s = (seed || 0) * 3.7;
-    const g = th => 0.5 * Math.sin(7 * th + s) + 0.3 * Math.sin(13 * th + 2.1 * s + 1) + 0.2 * Math.sin(19 * th + 0.7 * s + 2);   /* −1…1 */
-    return { g, f: (th, yU) => 1 + amp * g(th) + fl * Math.exp(-Math.max(0, yU) / 0.35) * (0.6 + 0.4 * Math.max(0, Math.sin(5 * th + s))) };
-  }
-  function barkStyle(sp, sz, sc, ts, ex) {
-    const T = TC_()[sp];
-    if (!T) return null;
-    ts = ts || 1;
-    const k = TH_[sz || 1] || 1, hs = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
-    const bp = [];
-    let bf = null;
-    let cf = null, cy0 = -1e9, blobs = null, lat = null;
-    if (sp === "birke") {
-      const hb = 0.363 * k; bp.push(hb);
-      bf = y => y < hb ? T.base : T.bark;
-      /* Maserung wie bei echter Birkenrinde: schwarze, querliegende Streifen mit spitzen Enden (teils lang um den Stamm, teils kurze Striche), in Reihen */
-      const hTr = (ex && ex.tp ? ex.tp[2] : 2.27 * k), R0 = (ex && ex.tp ? ex.tp[0] : 0.1), sd = (ex && ex.seed) || 0, rows = 9 + 3 * (sz || 1);
-      blobs = [];
-      for (let i = 0; i < rows; i++) {
-        const yr = hTr * (0.2 + 0.68 * (i + 0.2 + 0.6 * hs(i * 1.37 + sd, 3.1)) / rows), nm = 1 + Math.floor(hs(i + sd, 2.3) * 2.6);
-        for (let j = 0; j < nm; j++) {
-          const f = 2 * Math.PI * hs(i * 2.11 + j * 5.3 + sd, 7.7), hy = 0.008 + 0.011 * hs(i * 3.3 + j + sd, 1.9), wf = hs(i + j * 7.1 + sd, 4.4) < 0.35 ? 0.18 + 0.2 * hs(i + j * 2.7 + sd, 5.3) : 0.55 + 0.8 * hs(i + j * 2.7 + sd, 5.3), y = yr + (hs(i + j, sd + 9.1) - 0.5) * 0.05;
-          if (y > hb + hy) blobs.push({ y, f, hy, wf });
-        }
-      }
-      cy0 = hb;
-      const wr = d => { d = Math.abs(d) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
-      cf = (ym, f) => {
-        let m = 0;
-        for (const o of blobs) {
-          const u = wr(f - o.f) / o.wf; if (u >= 1) continue;
-          const e = o.hy * (1 - u * u), v = e > 0 ? 1 - Math.abs(ym - o.y) / e : 0;
-          if (v > m) m = v;
-        }
-        return m <= 0 ? T.bark : mixC(T.bark, T.mark, Math.min(1, m * 3));
-      };
-      lat = { ly: 0.006, la: 0.008 / R0 };
-    } else if (sp === "kiefer") {
-      const hb = 1.08 * k; bp.push(hb);
-      bf = y => y < hb ? T.base : T.bark;
-    } else if (sp === "eiche") {
-      /* v128: tief gefurchte Borke – Rippen hell und in Platten gebrochen, Furchen dunkel, unten moosig-dunkler Fuß */
-      const rh = 0.075 * k, nR = Math.ceil(2.6 * k / rh), RL = reliefOf("eiche", ex && ex.seed), light = 0x76604c, moss = 0x4f5a34;
-      for (let i = 1; i < nR; i++) bp.push(i * rh);
-      bf = (y, g) => {
-        const th = (g + 0.5) * 2 * Math.PI / NSEC, rv = RL ? RL.g(th) : 0, row = Math.floor(y / rh), hh = hs(g * 1.7 + row * 0.37, row + g * 0.11);
-        if (rv < -0.25) return hh < 0.5 ? T.mark : 0x342519;                           /* Furche */
-        const base = mixC(T.bark, light, Math.max(0, rv) * 0.7 * (0.55 + 0.45 * hh));   /* Rippe, Platten mit wechselnder Helligkeit */
-        if (y < 0.18 * k && g % 3 !== 0) return mixC(base, moss, 0.45 * (1 - y / (0.18 * k)));
-        return hh < 0.12 ? T.mark : base;
-      };
-    } else if (sp === "kirsche") {
-      const n = 4 + (sz || 1), step = 0.8 * k / n;
-      for (let i = 0; i < n; i++) bp.push(0.15 + i * step, 0.18 + i * step);
-      bf = y => { const m = (y - 0.15) / step, kk = Math.floor(m); return m >= 0 && kk < n && (m - kk) * step < 0.03 ? T.mark : T.bark; };
-    }
-    if (!bf) bf = () => T.bark;
-    /* Verjüngung (und Neigung) wie am Spielbaum: Stamm unten r0, oben r1 auf der Höhe h (Modellmaß, vor der Baumgröße ts) */
-    let tp = null;
-    const mt = ex && ex.tp;
-    if (mt) {
-      const hU = mt[2] * ts / sc, rho = mt[1] / mt[0];
-      tp = { hU, f: yU => 1 - (1 - rho) * Math.min(1, Math.max(0, yU) / hU), lx: ex.lx || 0, lz: ex.lz || 0 };
-    }
-    const NS = NSEC;
-    const wrap = f => ((f % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    const ysn = v => v * ts / sc;
-    const RL = reliefOf(sp, ex && ex.seed), rel = RL ? (th, yu) => RL.f(th, yu * sc / ts) : null;
-    return { tp, rel, cy0: cf ? ysn(cy0) : 1e9, cf: cf ? (yu, f) => cf(yu * sc / ts, wrap(f)) : null, ly: lat ? ysn(lat.ly) : 1, la: lat ? lat.la : 1,
-      blobs: blobs ? blobs.map(o => ({ y0: ysn(o.y - o.hy), y1: ysn(o.y + o.hy), f: o.f, df: o.wf })) : null,
-      ycuts: blobs ? [...new Set(blobs.flatMap(o => [Math.floor(ysn(o.y - o.hy) / ysn(lat.ly)) * ysn(lat.ly), Math.ceil(ysn(o.y + o.hy) / ysn(lat.ly)) * ysn(lat.ly)]))].sort((x, y) => x - y) : null,
-      bf: (yu, f) => bf(yu * sc / ts, Math.floor((((f % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI / NS)) % NS), bp: bp.map(v => v * ts / sc).sort((a, b) => a - b) };
-  }
-  /* Stamm ohne Kerb (Nahaufnahme vor dem ersten Treffer): Zylinder mit derselben Rindenzeichnung, Einheitsradius 1, Höhe hU */
-  function mixC(c1, c2, k) { const r = (c1 >> 16) & 255, g = (c1 >> 8) & 255, bl = c1 & 255, r2 = (c2 >> 16) & 255, g2 = (c2 >> 8) & 255, b2 = c2 & 255; return ((Math.round(r + (r2 - r) * k) << 16) | (Math.round(g + (g2 - g) * k) << 8) | Math.round(bl + (b2 - bl) * k)); }
-  /* Vieleck an einer Ebene teilen (f(P) = 0): [Seite f ≤ 0, Seite f ≥ 0] (Sutherland–Hodgman) */
-  function splitF(poly, f) {
-    const lo = [], hi = [], n = poly.length;
-    for (let i = 0; i < n; i++) {
-      const A = poly[i], B = poly[(i + 1) % n], da = f(A), db = f(B);
-      if (da <= 0) lo.push(A); if (da >= 0) hi.push(A);
-      if ((da < 0 && db > 0) || (da > 0 && db < 0)) { const t = da / (da - db), P = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; lo.push(P); hi.push(P); }
-    }
-    return [lo, hi];
-  }
-  const wrapD = d => { d = Math.abs(d) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
-  /* Eine Rindenfläche (Dreieck a,p,c) ausgeben: an den Farbgrenzen der Art sauber geschnitten (gerade Kante statt Zacken).
-     Fleckenbereiche (Birke) werden an einem festen Gitter (Höhe × Winkel) geschnitten und mit Farbe je Ecke ausgegeben – das Gitter hängt nicht
-     von der Form des Kerb-Meshs ab, die Flecken stehen deshalb beim Sägen still. out = grob nach außen zeigender Vektor (Windung). */
-  function emitBark(b, a, p, c, out, sty, bark) {
-    const put = (x, y, z, cx, cy, cz) => {
-      const u = [y[0] - x[0], y[1] - x[1], y[2] - x[2]], v = [z[0] - x[0], z[1] - x[1], z[2] - x[2]];
-      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
-      if (n[0] * n[0] + n[1] * n[1] + n[2] * n[2] < 1e-14) return;
-      const flip = n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0;
-      if (cx === cy && cy === cz) { if (flip) b.tri(x, z, y, cx); else b.tri(x, y, z, cx); }
-      else if (flip) b.triV(x, z, y, cx, cz, cy); else b.triV(x, y, z, cx, cy, cz);
-    };
-    const ang = P => Math.atan2(P[0], P[2]);
-    const cen = pc => { const m = [0, 0, 0]; pc.forEach(q => { m[0] += q[0] / pc.length; m[1] += q[1] / pc.length; m[2] += q[2] / pc.length; }); return m; };
-    const flat = pc => { const m = cen(pc), col = sty ? sty.bf(m[1], ang(m)) : bark; for (let i = 1; i + 1 < pc.length; i++) put(pc[0], pc[i], pc[i + 1], col, col, col); };
-    const grad = pc => { for (let i = 1; i + 1 < pc.length; i++) { const A = pc[0], B = pc[i], C = pc[i + 1]; put(A, B, C, sty.cf(A[1], ang(A)), sty.cf(B[1], ang(B)), sty.cf(C[1], ang(C))); } };
-    const cutBy = (pieces, f0) => { const nx = []; pieces.forEach(pc => { const r = f0(pc); r.forEach(h => { if (h.length >= 3) nx.push(h); }); }); return nx; };
-    const yext = pc => pc.reduce((m, q) => [Math.min(m[0], q[1]), Math.max(m[1], q[1])], [1e9, -1e9]);
-    let pieces = [[a, p, c]];
-    if (sty) sty.bp.forEach(v => { pieces = cutBy(pieces, pc => { const [lo, hi] = yext(pc); return v <= lo + 1e-6 || v >= hi - 1e-6 ? [pc] : splitF(pc, P => P[1] - v); }); });
-    if (!(sty && sty.blobs)) { pieces.forEach(flat); return; }
-    pieces.forEach(pc => {
-      const m0 = cen(pc);
-      if (m0[1] < sty.cy0) { flat(pc); return; }
-      /* in Bänder an den Fleckengrenzen teilen, damit nur wirklich betroffene Bereiche fein werden */
-      let bands = [pc];
-      sty.ycuts.forEach(v => { bands = cutBy(bands, q => { const [lo, hi] = yext(q); return v <= lo + 1e-6 || v >= hi - 1e-6 ? [q] : splitF(q, P => P[1] - v); }); });
-      bands.forEach(bd => {
-        const m = cen(bd), fm = ang(m), ext = bd.reduce((e, q) => Math.max(e, wrapD(ang(q) - fm)), 0), [y0, y1] = yext(bd);
-        if (!sty.blobs.some(o => y1 > o.y0 && y0 < o.y1 && wrapD(fm - o.f) < ext + o.df)) { flat(bd); return; }
-        let strips = [], rest = bd;
-        for (let k = Math.floor(y0 / sty.ly) + 1; k * sty.ly < y1 - 1e-9; k++) { const v = k * sty.ly, [lo, hi] = splitF(rest, P => P[1] - v); if (lo.length >= 3) strips.push(lo); rest = hi; if (rest.length < 3) break; }
-        if (rest.length >= 3) strips.push(rest);
-        strips.forEach(st => {
-          const sm = cen(st), sf = ang(sm), se = st.reduce((e, q) => Math.max(e, wrapD(ang(q) - sf)), 0);
-          let cells = [], r2 = st;
-          for (let k = Math.ceil((sf - se) / sty.la); k * sty.la < sf + se; k++) {
-            const al = k * sty.la, ca = Math.cos(al), sa = Math.sin(al), [lo, hi] = splitF(r2, P => P[0] * ca - P[2] * sa);
-            if (lo.length >= 3) cells.push(lo); r2 = hi; if (r2.length < 3) break;
-          }
-          if (r2.length >= 3) cells.push(r2);
-          cells.forEach(grad);
-        });
-      });
-    });
-  }
-  /* Verjüngung/Neigung: alle Dreiecke laufen durch diese Abbildung (Normalen entstehen danach im MB) */
-  function taperB(b, sty) {
-    const tp = sty && sty.tp, rl = sty && sty.rel;
-    if (!tp && !rl) return b;
-    const P = p => {
-      let f = tp ? tp.f(p[1]) : 1;
-      if (rl && (p[0] * p[0] + p[2] * p[2]) > 1e-10) f *= rl(Math.atan2(p[0], p[2]), p[1]);
-      return [p[0] * f + (tp ? tp.lx * p[1] : 0), p[1], p[2] * f + (tp ? tp.lz * p[1] : 0)];
-    };
-    return { tri: (a, p, c, col) => b.tri(P(a), P(p), P(c), col), triV: (a, p, c, ca, cp, cc) => b.triV(P(a), P(p), P(c), ca, cp, cc), raw: b };
-  }
-  function plainTrunk(bark, hU, sty) {
-    const b0 = new G3.MB(), b = taperB(b0, sty), M = NSEC, ring = [];
-    for (let i = 0; i <= M; i++) { const f = 2 * Math.PI * i / M; ring.push([Math.sin(f), Math.cos(f)]); }
-    const lv = [0];
-    if (sty) sty.bp.forEach(v => { if (v > 0.001 && v < hU - 0.001) lv.push(v); });
-    lv.push(hU);
-    for (let i = 0; i < M; i++) for (let j = 0; j + 1 < lv.length; j++) {
-      const a = ring[i], c = ring[i + 1], y0 = lv[j], y1 = lv[j + 1], col = sty ? sty.bf((y0 + y1) / 2, (i + 0.5) * 2 * Math.PI / M) : bark;
-      const P = [a[0], y0, a[1]], Q = [c[0], y0, c[1]], Q1 = [c[0], y1, c[1]], P1 = [a[0], y1, a[1]], o = [a[0] + c[0], 0, a[1] + c[1]];
-      emitBark(b, P, Q, Q1, o, sty, col); emitBark(b, P, Q1, P1, o, sty, col);
-    }
-    const top = [0, hU, 0]; for (let i = 0; i < M; i++) b.tri(top, [ring[i + 1][0], hU, ring[i + 1][1]], [ring[i][0], hU, ring[i][1]], sty ? sty.bf(hU, (i + 0.5) * 2 * Math.PI / M) : bark);
-    return b0;
-  }
+  /* v152: Rinde, Relief, Verjüngung und der glatte Stamm kommen aus treebark.js (TBARK) – dasselbe System wie die Bäume in der Hof-/Waldansicht */
+  const { NSEC, barkStyle, emitBark, taperB, splitF, mixC, plainTrunk, seedOf } = TBARK;
   function notchMesh(q, bark, wood, nyU, hU, part, sty) {
     nyU = nyU || 0; hU = hU || 0;
     const inLow = part !== "up" && part !== "up0", inUp = part !== "low" && part !== "low0", brk = part === "low" || part === "up";   /* "low0"/"up0": nur geteilt (Neigung), ohne Bruchstufe */
@@ -428,6 +263,8 @@ const SAW3D = (() => {
   }
 
   function can() {
+    /* v149: ein noch auslaufender Lauf (Kamera schwenkt zurück, Baum fällt) darf den nächsten nicht ins 2D-Fenster zwingen oder hängen bleiben – sofort abschließen */
+    if (X && FV && FV.fp === X && (X.mode === "out" || (typeof MG !== "undefined" && !MG.on))) { try { finish(); } catch (e) { FV.fp = null; X = null; } }
     return !!(typeof FV !== "undefined" && FV.R && FV.on && !FV.fp && typeof WV !== "undefined" && document.body.classList.contains("tab-farm"));
   }
   function camOf(c) { const o = {}; CAM_KEYS.forEach(k => { o[k] = c[k] || 0; }); return o; }
@@ -440,9 +277,12 @@ const SAW3D = (() => {
     if (!(k in tpCache)) { try { const m = FWM.tree(sp, sz, 0); tpCache[k] = m && m.tp ? m.tp : null; } catch (e) { tpCache[k] = null; } }
     return tpCache[k];
   }
+  const varOf = t => t.v != null ? t.v : t.id % 3;
   function realInfo(t, fry) {
     let m = null;
-    try { m = FWM.tree(t.sp, t.sz, t.id % 3); } catch (e) { m = null; }
+    /* v152: dieselbe Variante wie in der Hofansicht (Kulissenbäume bringen t.v mit – vorher t.id % 3, die Krone konnte beim Zoom wechseln)
+       und das feine Modell (gleiche Krone wie nah in der Hofansicht) */
+    try { m = FWM.tree(t.sp, t.sz, varOf(t), true); } catch (e) { m = null; }
     if (!m || !m.tk || !m.tp) return null;
     const al = m.tp[3] || 0, th = t.ry || 0, wx = -Math.sin(al) * Math.cos(th), wz = Math.sin(al) * Math.sin(th);
     return { m, tp: m.tp, lx: wx * Math.cos(fry) - wz * Math.sin(fry), lz: wx * Math.sin(fry) + wz * Math.cos(fry) };
@@ -452,6 +292,11 @@ const SAW3D = (() => {
     const out = new G3.MB(), v = info.m.v, d = (t.ry || 0) - fry, c = Math.cos(d), s = Math.sin(d), ts = t.s || 1;
     const lift = t.sp === "fichte" ? 1.3 / ts : -1e9;               /* Fichte: unterste Äste weg, sonst verdecken sie die Schnittstelle */
     const skip = info.m.skip || [];
+    /* v152: Aststummel (b.keep) liegen vor b.tk, gehören aber an den Baum */
+    for (const [a0, a1] of info.m.keep || []) for (let i = a0; i + 26 < a1; i += 27) for (let k = 0; k < 3; k++) {
+      const o = i + k * 9;
+      out.v.push(v[o] * c + v[o + 2] * s, v[o + 1], -v[o] * s + v[o + 2] * c, v[o + 3] * c + v[o + 5] * s, v[o + 4], -v[o + 3] * s + v[o + 5] * c, v[o + 6], v[o + 7], v[o + 8]);
+    }
     for (let i = info.m.tk; i + 26 < v.length; i += 27) {
       if (skip.some(([a, e]) => i >= a && i < e)) continue;                /* v128: Moos am Stamm (gehört zum ersetzten Stamm) */
       if ((v[i + 1] + v[i + 10] + v[i + 19]) / 3 < lift) continue;
@@ -624,7 +469,7 @@ const SAW3D = (() => {
     /* klarer Nahaufnahme-Stamm: verdeckt Äste und Nadeln, damit Zone und Schnitt gut lesbar sind */
     const T = (FWM.TREE_C && FWM.TREE_C[t.sp]) || { bark: 0x8a6a4a, mark: 0x6a4c33 };
     const info = realInfo(t, X.fryN);
-    if (info) info.seed = t.id * 0.731;
+    if (info) { info.seed = seedOf(t.sp, t.sz, varOf(t)); info.scars = info.m.scars; }      /* v152: gleiche Rinde wie in der Hofansicht */
     X.sty = barkStyle(t.sp, t.sz, r * 1.04, t.s || 1, info);
     X.trunk = add(fmesh("fp_tr0_" + t.id + "_" + t.sp, () => plainTrunk(T.bark, 1, X.sty)), { x: t.x, z: t.z, y: 0, ry: X.fryN, s: r * 1.04 });
     const vt = goal.ty + 0.5 * goal.dist, rcr = 0.5 + 1.2 * r;   /* grobe Oberkante des Bildes – die Krone muss darüber bleiben */
@@ -1102,7 +947,7 @@ const SAW3D = (() => {
     };
     X.nt.visible = X.ntw.visible = X.nl.visible = X.nlw.visible = false; X.trunk.visible = false;
     /* der Stumpf bleibt: Form (Sohle + Bruchstufe) wird am Baum vermerkt, die Welt baut daraus den bleibenden Stumpf */
-    t.cut = { sp: t.sp, sz: t.sz, s: t.s || 1, id: t.id, q, ny: Math.round(ny * 1000) / 1000, sc: Math.round(sc * 1000) / 1000, ry: Math.round(X.fryN * 1000) / 1000, bark: X.bark };
+    t.cut = { sp: t.sp, sz: t.sz, s: t.s || 1, id: t.id, v: varOf(t), q, ny: Math.round(ny * 1000) / 1000, sc: Math.round(sc * 1000) / 1000, ry: Math.round(X.fryN * 1000) / 1000, bark: X.bark };
     X.fall = {
       t0: performance.now() / 1000, T: 1.75, cb, ny, zr: sc * 0.8, th0: X.tiltT || 0, done: false, landed: false,
       lowB: mk("_lb", false, "low"), lowW: mk("_lw", true, "low", { glow: 1 }),
@@ -1147,7 +992,7 @@ const SAW3D = (() => {
     document.body.classList.remove("fp3d");
   }
   /* bleibender Stumpf (Rinde + Holz in einem Mesh), wird von worldview.js für gefällte Bäume benutzt */
-  function stumpMesh(c) { return notchMesh(c.q, c.bark, 2, c.ny / c.sc, 1, "low", barkStyle(c.sp, c.sz, c.sc, c.s || 1, { tp: trunkParams(c.sp, c.sz), seed: (c.id || 0) * 0.731 })); }
+  function stumpMesh(c) { return notchMesh(c.q, c.bark, 2, c.ny / c.sc, 1, "low", barkStyle(c.sp, c.sz, c.sc, c.s || 1, { tp: trunkParams(c.sp, c.sz), seed: seedOf(c.sp, c.sz, c.v != null ? c.v : (c.id || 0) % 3) })); }
   /* Testhilfe (v93): feste Axtlage für Standbilder – SAW3D._freeze({ ph: "wind"|"strike"|"hit"|"idle", k, kind, miss }) bzw. null */
   function freeze(f) { if (X) X.freeze = f; return X ? X.dbg || null : null; }
   return { stumpMesh, can, begin, ev, step, end, fall, pick: pickView, _freeze: freeze, _axeMath: { frameQ, mOfQ, eulOf, qSlerp, axeMesh, rotV, AXE_EDGE }, get on() { return !!X; }, get ready() { return !!X && (X.app || 0) > 0.5; } };

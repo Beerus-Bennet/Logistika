@@ -47,6 +47,7 @@ function unwrapLons(coords) {
     while (prev - lon > 180) lon += 360;
     out.push([coords[i][0], lon]);
   }
+  if (coords.gm) out.gm = coords.gm;                 /* v150: Fahrart je Teilstück bleibt erhalten (routegeo.js) */
   return out;
 }
 

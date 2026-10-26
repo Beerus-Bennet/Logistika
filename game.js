@@ -750,11 +750,12 @@ function repoCost(veh, leg, order, i) {
   const O = vehPoint(veh), T = legStartPt(leg, order, i || 0);
   if (veh.at === leg.from) {
     const d = hav(O, T);
-    return { t: (d / t.speed) * 60, d, ok: true, edges: [], pts: [O, T] };
+    const direct = [O, T]; direct.gm = [t.mode === "b" ? "b" : "r"];
+    return { t: (d / t.speed) * 60, d, ok: true, edges: [], pts: direct };
   }
   const e = repoPath(veh.at, leg.from, t.mode);
   if (!e || !e.length) return { t: Infinity, d: 0, ok: false, edges: [], pts: [] };
-  const pts = pathPts([veh.at].concat(e.map(x => x.to)), O, T);
+  const pts = pathPts([veh.at].concat(e.map(x => x.to)), O, T, t.mode);
   const d = pathLen(pts);
   return { t: (d / t.speed) * 60, d, ok: true, edges: e, pts };
 }
@@ -891,6 +892,7 @@ function closeModal() {
   $("#modal").classList.remove("open"); document.body.classList.remove("modal-open");
   planState = null; mapRedraw();
   if (wasPlanner && typeof tutSignal === "function") tutSignal("plannerClosed");
+  if (typeof logiLvlQ !== "undefined" && logiLvlQ.length) setTimeout(logiLevelShow, 400);
 }
 
 function evaluate(variant, order, assign) {
@@ -1348,6 +1350,12 @@ function startJob(o, variant, assign) {
    opt.maxTake    – wie viele es in dieser Runde höchstens annimmt
    opt.onStart(o) – nach jeder Annahme (Zuschlag, Zähler, Fahrerlimit)
    Die Fahrzeuge kommen aus dispatchPool.                                 */
+/* v163: Kosten eines Auftrags inkl. anteiliger Tagesfixkosten der eingesetzten Fahrzeuge (Dauer der Fahrt / 24 h) */
+function evalFullCost(ev) {
+  let fixed = 0;
+  (ev.detail || []).forEach(d => { if (d.t && d.t.daily) fixed += d.t.daily * (isFinite(d.time) ? d.time : 0) / 1440; });
+  return ev.cost + fixed;
+}
 function dispatchRun(opt) {
   const inPool = f => !dispatchPool || dispatchPool.has(f.uid);
   const idleModes = () => {
@@ -1367,7 +1375,7 @@ function dispatchRun(opt) {
     toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
   });
   const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && !(o.farm && !(typeof farmOrderReady === "function" && farmOrderReady(o))) && opt.accept(o))
-    .sort((a, b) => b.pay - a.pay);
+    .sort((a, b) => (!!b.fav - !!a.fav) || b.pay - a.pay);     /* v164: Favoriten (★) zuerst */
   let examined = 0, taken = 0;
   for (const o of cands) {
     if (examined++ > 30 || taken >= (opt.maxTake || 1)) break;
@@ -1381,7 +1389,7 @@ function dispatchRun(opt) {
       /* Verspätung kostet Ruf – die Dispo nimmt nur, was sie pünktlich schafft */
       const over = (S.time + ev.time) - o.deadline;
       if (over > 0) continue;
-      if (o.pay - ev.cost <= ev.cost * 0.10) continue;
+      if (!o.fav) { const full = evalFullCost(ev); if (o.pay - full <= full * 0.10) continue; }   /* Favoriten: egal wie knapp */
       if (opt.onBefore) opt.onBefore(o);
       startJob(o, v, assign);
       taken++;
@@ -1416,18 +1424,18 @@ function co2f(kg) { return kg >= 1000 ? fmt(kg / 1000, kg >= 1e5 ? 0 : 1) + " t"
 
 /* ------------------------------- Simulation ----------------------------- */
 /* v70: Linie auf der Karte – rund um den Hof entlang der Straßen (farm.js roadDisp) */
-function roadLine(pts) { return typeof roadDisp === "function" ? roadDisp(pts) : pts; }
+function roadLine(pts) { return typeof geoLine === "function" ? geoLine(pts) : typeof roadDisp === "function" ? roadDisp(pts) : pts; }
 function legDisp(leg) { return roadLine(legCoords(leg)); }
 function legCoords(leg) {
   /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
-  if (!leg._c) leg._c = unwrapLons(pathPts(leg.nodes, leg.a, leg.b));
+  if (!leg._c || (leg.mode && leg._c.length > 1 && !leg._c.gm)) leg._c = unwrapLons(pathPts(leg.nodes, leg.a, leg.b, leg.mode));
   return leg._c;
 }
 /* Linie über die Netzknoten, beginnend/endend an einer Adresse. Stadtteile
    sind nur Knoten im Netz: von der Tür geht es direkt zum nächsten echten
    Wegpunkt statt erst zur Mitte des Stadtteils (sonst entstehen Zacken).
    Häfen, Flughäfen und Terminals werden immer angefahren. */
-function pathPts(nodes, a, b) {
+function pathPts(nodes, a, b, mode) {
   const ids = nodes.slice();
   const city = id => N[id] && N[id].type === "city";
   if (a && ids.length && city(ids[0]) && (ids.length > 1 || b)) ids.shift();
@@ -1435,11 +1443,16 @@ function pathPts(nodes, a, b) {
   const pts = ids.map(nodePt);
   if (a) pts.unshift(a);
   if (b) pts.push(b);
+  /* v150: Fahrart je Teilstück – die Linie folgt später echten Wegen (routegeo.js); die Länge hier bleibt die Luftlinie */
+  if (mode && pts.length > 1) {
+    const door = mode === "b" ? "b" : "r";
+    pts.gm = pts.slice(1).map((p, i) => (a && i === 0) || (b && i === pts.length - 2) ? door : mode);
+  }
   return pts;
 }
 /* Gefahrene Linie einer Teilstrecke im Planer – dieselbe wie später auf der Karte */
 function legPts(leg, order, i, n) {
-  return pathPts(leg.nodes, order && i === 0 ? addrPt(oPick(order)) : null, order && i === n - 1 ? addrPt(oDrop(order)) : null);
+  return pathPts(leg.nodes, order && i === 0 ? addrPt(oPick(order)) : null, order && i === n - 1 ? addrPt(oDrop(order)) : null, leg.mode);
 }
 
 /* ------------------------------- Adressen --------------------------------
@@ -1472,10 +1485,21 @@ function vehSpot(v) {
   }
   return v.spot;
 }
+/* v150: nach dem Laden eines Spielstands fehlt der Strecke die Fahrart je Teilstück (JSON) – wieder anheften */
+function routeGm(v) {
+  const r = v.route; if (!r || r.gm || r.length < 2) return;
+  let mode, aDoor, bDoor;
+  if (v.phase === "repo") { const t = vType(v.type); mode = t && t.mode; aDoor = bDoor = true; }
+  else { const job = S.jobs.find(j => j.id === v.jobId), leg = job && job.legs[v.legIdx]; if (!leg) return; mode = leg.mode; aDoor = !!leg.a; bDoor = !!leg.b; }
+  if (!mode) return;
+  const door = mode === "b" ? "b" : "r";
+  r.gm = r.slice(1).map((p, i) => (aDoor && i === 0) || (bDoor && i === r.length - 2) ? door : mode);
+}
 function vehPoint(v) {
   if ((v.phase === "repo" || v.phase === "haul") && v.route) {
+    routeGm(v);
     /* v70: rund um den Hof auf den echten Straßen (farm.js roadDispAt) – gleiche Fahrzeit */
-    const q = typeof roadDispAt === "function" ? roadDispAt(v.route, v.pos) : null;
+    const q = typeof geoDispAt === "function" ? geoDispAt(v.route, v.pos) : typeof roadDispAt === "function" ? roadDispAt(v.route, v.pos) : null;
     return q || routePointAt(v.route, v.pos);
   }
   return addrPt(vehSpot(v));
@@ -1522,7 +1546,8 @@ function beginLeg(job, idx) {
 function parkHere(f) {
   const moving = (f.phase === "repo" || f.phase === "haul") && f.route;
   if (!moving) return;
-  const p = (typeof roadDispAt === "function" && roadDispAt(f.route, f.pos)) || routePointAt(f.route, f.pos);
+  routeGm(f);
+  const p = (typeof geoDispAt === "function" && geoDispAt(f.route, f.pos)) || (typeof roadDispAt === "function" && roadDispAt(f.route, f.pos)) || routePointAt(f.route, f.pos);
   const job = S.jobs.find(j => j.id === f.jobId), leg = job && job.legs[f.legIdx];
   const cands = leg ? [f.at, leg.from, leg.to] : [f.at];
   let best = f.at, bd = Infinity;
@@ -1629,19 +1654,68 @@ let lastLevel = 1;
 function checkLevel() {
   const l = level();
   if (l > lastLevel) {
+    const from = lastLevel;
     lastLevel = l;
-    if (typeof farmPhase === "function" && farmPhase() && S.farm) { S.farm.lvSeen = l; if (typeof farmClover === "function") farmClover(3, "Level " + l); }
-    const party = typeof farmLevelUp === "function" && farmLevelUp(l);
-    if (!party) toast("🎉 Level " + l + " erreicht!", "ok");
-    if (typeof farmEvent === "function") farmEvent("level");
-    if (S.fog && typeof farmPhase === "function" && farmPhase()) {
-      /* auf dem Hof lichtet sich der Nebel über den Orten, die jetzt Kundschaft schicken */
-      const neu = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv === l && N[id]).map(id => N[id].short);
-      if (neu.length) toast("☁️ Neue Kundschaft auf der Karte: " + neu.join(", ") + ".", "ok");
-    } else if (S.fog) toast("☁️ Der Nebel lichtet sich: " + kmf(fogRadiusKm(S.stage, l)) + " Sichtweite.", "ok");
-    const nx = STAGES[S.stage];
-    if (nx && l >= nx.reqLevel && (typeof logiOn !== "function" || logiOn())) toast("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden.", "ok");
+    /* v171: Vor der Gründung ist level() das Erbe-Level (Hof-Feier mit Hof-Freischaltungen).
+       Danach ist es das Speditions-Level – das hat mit Hof, Sägewerk und Fischerei nichts zu tun
+       (deren Level feiert farmCheckLevel) und bekommt eine eigene Feier mit Speditions-Inhalten. */
+    if (typeof farmPhase === "function" && farmPhase() && S.farm) {
+      S.farm.lvSeen = l; if (typeof farmClover === "function") farmClover(3, "Level " + l);
+      const party = typeof farmLevelUp === "function" && farmLevelUp(l);
+      if (!party) toast("🎉 Level " + l + " erreicht!", "ok");
+      if (typeof farmEvent === "function") farmEvent("level");
+      if (S.fog) {
+        /* auf dem Hof lichtet sich der Nebel über den Orten, die jetzt Kundschaft schicken */
+        const neu = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv === l && N[id]).map(id => N[id].short);
+        if (neu.length) toast("☁️ Neue Kundschaft auf der Karte: " + neu.join(", ") + ".", "ok");
+      }
+      return;
+    }
+    for (let k = from + 1; k <= l; k++) if (!logiLvlQ.includes(k)) logiLvlQ.push(k);
+    if (!logiLevelShow()) {
+      const u = logiUnlocks(l);
+      toast("🚚 Spedition: Level " + l + " erreicht!" + (u.length ? " Neu: " + u[0] : ""), "ok");
+    }
   }
+}
+/* ---------------- v171: Speditions-Level – eigene Freischaltungen und Feier ---------------- */
+let logiLvlQ = [];
+function logiUnlocks(l) {
+  const out = [];
+  if (l === 2 && !(S.tutSeen && S.tutSeen.extras)) out.push("💬 Lina erklärt Ziele, Konkurrenz und Pannen");
+  if (l === 3) out.push("✉️ Einladungen zu Sonderfahrten", "🎖️ Missionen mit Bonus");
+  if (l === 4) out.push("📜 Rahmenverträge mit festen Kunden");
+  if (l === 5) out.push("🦈 Übernahmen: Konkurrentinnen kaufen");
+  const nx = STAGES[S.stage];                 /* nur die nächste Etappe – spätere gehen erst danach */
+  if (nx && l >= nx.reqLevel) out.push("🌍 Etappe „" + nx.name + "“ kann freigeschaltet werden · " + money(nx.cost));
+  if (S.fog && typeof fogRadiusKm === "function") out.push("☁️ Sichtweite auf der Karte: " + kmf(fogRadiusKm(S.stage, l)));
+  return out;
+}
+/* Feier nur in den Speditions-Reitern (Karte, Aufträge, …) – im Hof-Reiter wartet sie, bis du zurück bist */
+function logiLevelShow() {
+  if (!logiLvlQ.length || !S || !S.player) return false;
+  const b = document.body.classList;
+  if (activeTab === "farm" || b.contains("modal-open") || b.contains("report-open") || b.contains("cs-open") || b.contains("ask-open")
+    || document.getElementById("logiLvl") || (typeof tutorialRunning === "function" && tutorialRunning())) return false;
+  const lv = logiLvlQ.slice().sort((x, y) => x - y), l = lv[lv.length - 1];
+  logiLvlQ = [];
+  let list = [];
+  lv.forEach(k => logiUnlocks(k).forEach(x => { if (!x.startsWith("☁️") && !list.includes(x)) list.push(x); }));
+  const fog = logiUnlocks(l).find(x => x.startsWith("☁️")); if (fog) list.push(fog);
+  const nx = STAGES.find(st => st.n > S.stage && st.reqLevel > l);
+  if (!list.length && nx) list.push("🌍 Nächste Etappe „" + nx.name + "“ ab Level " + nx.reqLevel);
+  const el = document.createElement("div");
+  el.id = "logiLvl";
+  el.innerHTML = `<div class="flv-wrap"><div class="flv-rays"></div><div class="flv logi">
+    <div class="flv-k">🚚 ${esc(S.player.company)}</div>
+    <div class="flv-n">Level ${l}</div><div class="flv-t">Spedition – geschafft!</div>
+    ${list.length ? `<div class="flv-u"><small>Neu für deine Spedition</small>${list.map(x => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
+    <button class="btn" id="logiLvlOk">Weiter</button></div></div>`;
+  document.body.appendChild(el);
+  if (typeof sfx === "function") try { sfx("level"); } catch (e) { /* stumm */ }
+  el.querySelector("#logiLvlOk").onclick = () => { el.remove(); };
+  el.onclick = e => { if (e.target === el) el.remove(); };
+  return true;
 }
 
 function tick(dtMin) {
@@ -3107,21 +3181,24 @@ function fleetToolsHTML(F) {
     k === "unused" && n("use", k) ? "alert" : "")).join("");
   const modes = [...new Set(S.fleet.map(f => vType(f.type).mode))];
   const mchips = modes.length > 1 ? ["all"].concat(["b", "r", "i", "l", "s", "a"].filter(m => modes.includes(m)))
-    .map(m => chipHTML("data-fm", m, m === "all" ? "Alle Arten" : MODE_INFO[m].icon + " " + MODE_INFO[m].name, n("mode", m), F.mode === m)).join("") : "";
+    .map(m => chipHTML("data-fm", m, m === "all" ? "Alle Arten" : MODE_INFO[m].icon + " " + MODE_INFO[m].name, m === "all" ? S.fleet.length : n("mode", m), F.mode === m && (m !== "all" || !fleetFiltered(F)))).join("") : "";
   const own = [["all", "Alle"], ["own", "🏷️ Eigentum"], ["lease", "🔑 Leasing"], ["base", "🏢 im Büro"], ["self", "✋ selbst"]];
   const sel = (id, opts, cur, lbl) => `<label class="fchip sel" title="${lbl}">${lbl}<select id="${id}" aria-label="${lbl}">${opts.map(([k, l]) =>
     `<option value="${k}"${String(k) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
   return `<div class="chiprow first">${use}</div>`
     + `<div class="chiprow">${sel("ffSort", FLEET_SORTS, F.sort, "↕")}${sel("ffDays", FLEET_DAYS.map(d => [d, "ungenutzt ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️")}`
     + own.map(([k, l]) => chipHTML("data-fo", k, l, n("own", k), F.own === k)).join("")
-    + (fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ zurücksetzen</button>` : "") + `</div>`
-    + (mchips ? `<div class="chiprow">${mchips}</div>` : "");
+    + `</div>`
+    + (mchips || fleetFiltered(F) ? `<div class="chiprow">${mchips}${fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ Filter aus</button>` : ""}</div>` : "");
 }
 function bindFleetTools(vt) {
   const F = fleetF();
   const again = () => { save(); renderFleet(); const vb = $("#view .view-body"); if (vb) vb.scrollTop = 0; };
   vt.querySelectorAll("[data-fu]").forEach(b => b.onclick = () => { F.use = b.dataset.fu === F.use ? "all" : b.dataset.fu; again(); });
-  vt.querySelectorAll("[data-fm]").forEach(b => b.onclick = () => { F.mode = b.dataset.fm === F.mode ? "all" : b.dataset.fm; again(); });
+  /* v147: „Alle Arten“ zeigt wirklich alle Fahrzeuge – auch die in einem Büro (setzt Einsatz-/Besitz-Filter zurück) */
+  vt.querySelectorAll("[data-fm]").forEach(b => b.onclick = () => {
+    if (b.dataset.fm === "all") { F.mode = "all"; F.own = "all"; F.use = "all"; } else F.mode = b.dataset.fm === F.mode ? "all" : b.dataset.fm;
+    again(); });
   vt.querySelectorAll("[data-fo]").forEach(b => b.onclick = () => { F.own = b.dataset.fo === F.own ? "all" : b.dataset.fo; again(); });
   const so = vt.querySelector("#ffSort"); if (so) so.onchange = () => { so.blur(); F.sort = so.value; again(); };
   const dd = vt.querySelector("#ffDays"); if (dd) dd.onchange = () => { dd.blur(); F.days = +dd.value; if (F.use !== "unused") F.use = "unused"; again(); };
@@ -3428,7 +3505,6 @@ function infoHTML() {
         ${S.tutSeen && S.tutSeen.pablo ? `<button class="btn tiny ghost" data-talk="pablo">❄️ Don Pablo erklärt</button>` : ""}
         ${S.tutSeen && S.tutSeen.extras ? `<button class="btn tiny ghost" data-talk="extras">🎯 Ziele, Konkurrenz, Pannen</button>` : ""}
       </div></div>
-    <div class="card"><div class="vname">Tipp<small>${esc(pick(TIPS))}</small></div></div>
     <div class="card"><div class="vname">Verkehrsträger<small>Legende</small></div>
       <div class="legend">${Object.values(MODE_INFO).map(m =>
         `<span><i style="background:${m.color}"></i>${m.icon} ${m.name}</span>`).join("")}</div>
@@ -3465,6 +3541,29 @@ function co2HTML() {
     </div>`;
 }
 
+/* v161: Etappen-Knopf live – wird das Geld (oder Level) erreicht, während „Welt“ offen ist, schaltet er sanft frei */
+function stageLiveTick() {
+  if (typeof S === "undefined" || !S || activeTab !== "world") return;
+  const b = document.getElementById("unlockBtn");
+  if (!b) return;
+  const st = STAGES.find(x => x.n === S.stage + 1);
+  if (!st) return;
+  const okLvl = level() >= st.reqLevel, okMoney = S.money >= st.cost, gap = st.reqLevel - level();
+  const ready = okLvl && okMoney;
+  const txt = okLvl ? (okMoney ? "Freischalten für " + money(st.cost) : "Dir fehlen noch " + money(st.cost - S.money)) : "Erst ab Level " + st.reqLevel + " – noch " + gap + " Level";
+  const was = !b.classList.contains("disabled");
+  if (b.textContent.trim() !== txt) b.textContent = txt;
+  b.classList.toggle("disabled", !ready);
+  if (ready && !was) {
+    b.classList.remove("unlock-ready"); void b.offsetWidth; b.classList.add("unlock-ready");
+    try { sfx("coin"); } catch (_) { /* egal */ }
+    const card = b.closest(".card"); if (card) { card.classList.remove("stage-ready"); void card.offsetWidth; card.classList.add("stage-ready"); }
+  } else if (!ready) {
+    b.classList.remove("unlock-ready");
+    const card = b.closest(".card"); if (card) card.classList.remove("stage-ready");
+  }
+}
+setInterval(() => { try { stageLiveTick(); } catch (_) { /* nie die Seite stören */ } }, 400);
 function renderWorld() {
   $("#tab-world").innerHTML =
     `<div class="sechead" style="margin-top:0">Etappen</div>` + stagesHTML() +
@@ -3510,6 +3609,7 @@ function showTab(name) {
   applyPadding();
   render();
   if (typeof tutTabHook === "function") tutTabHook(name);
+  if (logiLvlQ.length) setTimeout(logiLevelShow, 400);       /* v171: aufgeschobene Speditions-Feier */
 }
 function openSheet() { showTab(lastPanel); }
 function closeSheet() { showTab("map"); }
@@ -3689,6 +3789,12 @@ function boot() {
      Pinch auf der Karte. */
   document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
   ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+  /* v148: iOS-Lupe/Textcursor beim langen Halten überall abstellen (Sägen, Jagen, Minispiele, Welt) – nur Eingabefelder bleiben */
+  const loupeOk = t => !!(t && t.closest && t.closest("input,textarea,select,[contenteditable]"));
+  const loupeNo = t => !!(t && t.closest && t.closest("#farmCv,#farmAngel,#huntUI,#mgStage,.mg-stage,.hold,.fa-go,.fp-gauge,.fp-hint") && !t.closest("button:not(.hold):not(.fa-go),a,.fa-box,select,input,textarea"));
+  document.addEventListener("touchstart", e => { if (e.cancelable && !loupeOk(e.target) && loupeNo(e.target)) e.preventDefault(); }, { passive: false, capture: true });
+  document.addEventListener("selectionchange", () => { try { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) || (a && a.isContentEditable)) return; const g = getSelection(); if (g && g.rangeCount && !g.isCollapsed) g.removeAllRanges(); } catch (x) { /* egal */ } });
+  document.addEventListener("touchend", () => { try { const g = getSelection(); if (g && g.rangeCount && !g.isCollapsed && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) g.removeAllRanges(); } catch (x) { /* egal */ } }, true);
   /* iOS zoomt bei schnellem Doppeltipp trotzdem – den zweiten Tipp abfangen
      und selbst als Klick weitergeben (Eingabefelder ausgenommen) */
   let lastTouchEnd = 0;
@@ -3725,8 +3831,9 @@ function boot() {
   function frame(now) {
     const real = Math.min(0.4, (now - last) / 1000);
     last = now;
-    if (clockRunning()) tick(real * S.speed);
-    if (playing()) tickFollow();
+    /* v166: ein Fehler in einem Takt (z. B. bei einem Ereignis) darf die Schleife nicht beenden – sonst bleibt alles stehen */
+    try { if (clockRunning()) tick(real * S.speed); } catch (e) { console.warn("tick", e); }
+    try { if (playing()) tickFollow(); } catch (e) { console.warn("follow", e); }
     /* Haft oder Spielende: eigene Vollbildanzeige, die Uhr steht */
     if (S.jail && typeof jailCheck === "function") jailCheck();
     if (S.over && typeof overCheck === "function") overCheck();

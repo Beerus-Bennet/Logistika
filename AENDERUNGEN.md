@@ -1,5 +1,206 @@
 # Änderungen – kurz für den Kollegen
 
+## v171 – Speditions-Level und Hof-Level sauber getrennt
+
+Gemeldet: Beim Aufstieg im Logistik-Bereich (Karte, Aufträge …) kam die Hof-Feier mit Hof-/Sägewerk-/Fischerei-Freischaltungen (z. B. „Level 12 – Hobelmaschine, Trockenkammer, Blockbandsäge“). Ursache: `checkLevel` (`game.js`) rief nach der Gründung mit dem Speditions-Level die Hof-Feier `farmLevelUp` (Liste `FUNLOCK`) auf, dazu Kleeblätter-Text und Hof-Ereignis „level“.
+
+Jetzt:
+- **Vor der Gründung** (Erbe-Phase) bleibt alles wie gehabt: Hof-Feier mit Hof-Freischaltungen.
+- **Nach der Gründung** feiert der Hof nur noch sein eigenes Erbe-Level (`farmCheckLevel`, unverändert). Das Speditions-Level hat eine **eigene Feier** (`logiLevelShow`, `#logiLvl`): „🚚 Firmenname · Level N · Spedition – geschafft!“ mit Speditions-Inhalten (`logiUnlocks`): Sonderfahrt-Einladungen und Missionen (3), Rahmenverträge (4), Übernahmen (5), nächste Etappe freischaltbar (mit Preis), Sichtweite auf der Karte.
+- Steigst du auf, während du im Hof-Reiter bist, kommt dort nur ein kurzer Hinweis („🚚 Spedition: Level N erreicht! Neu: …“); die Feier erscheint, sobald du zu Karte/Aufträgen/… wechselst oder ein Fenster schließt. Mehrere Aufstiege werden zusammengefasst.
+- Kein Hof-Ereignis „level“ und keine Hof-Kleeblätter mehr durch Speditions-Aufstiege.
+
+## v170 – Konzern-Wellen nach 14 Tagen Marktführung, epische Übernahme-Show
+
+**Marktführung zählt** (`corp.js` `corpDay`, täglich über `shareDay` in `vip.js`): Liegst du vor jeder aktiven Konkurrentin (oder gibt es keine mehr), läuft die Uhr. Anzeige im Konkurrenz-Kasten: „👑 Marktführer seit X Tagen – noch Y Tage, dann werden größere Konzerne aufmerksam“ mit Balken; liegt jemand vorn: „⚔️ X führt den Markt an“.
+
+**Nach 14 Tagen an der Spitze kommt eine Welle** (`corpWave`): zwei Konzerne aus einem Pool von acht (Kraftmann Logistik AG, Ostwind Express, Falkner & Partner Holding, Vulkan Schwerlast, Orbis Transcontinental, Zenit Logistics Group, Eisberg Frischelogistik, Titan Freight Holding; danach „International“, „Global“ …). Höchstens drei Konzerne gleichzeitig offen.
+- **Teurer:** Firmenwert = größter Firmenwert der Etappe × (1,5 + 1,5 × Welle) – in Etappe 2, Welle 1 rund 285.000–300.000 € (Blitzfracht ~76.000 €).
+- **Besser aufgestellt:** Flotte 6 + 2 × Welle (+ Etappe/2), Firmensitz ab Umschlaghalle in einer großen freigeschalteten Stadt, starten mit **mehr Marktanteil als du** – du verlierst die Spitze und musst sie dir zurückholen, bevor du kaufen kannst.
+- **Aggressiver:** schnappen öfter (bis +36 %) und schneller (Zugriff bis ~40 % früher) Aufträge weg; Konzern-Ton in der Verhandlung.
+- Ankunft: Kampfansage aufs Diensthandy und eine Zeitungs-Titelseite „KONZERNE GREIFEN AN“ (Stempel KAMPFANSAGE, Eckdaten, Zitat des Chefs) – erscheint, sobald du nicht im Hof-Reiter bist und kein Fenster offen ist.
+
+**Übernahme-Show** (`corpShow`, `style.css` `#corpShow`): Nach dem Handschlag schließt die Verhandlung, eine Zeitung wirbelt herein („WEITWIND SCHLUCKT BLITZFRACHT“ / „MACHTWECHSEL …“ / „SENSATION …“), der Stempel **ÜBERNOMMEN** knallt aufs Logo der Gegnerin (Bildschirm wackelt, Blitz, Vibration), ihr Logo wird grau und reißt. Beute zählt mit Münzklang hoch (Fahrzeuge, Marktanteil, Büro, Leute, Stammkunden, Ruf), Goldregen, Krone „Dein Imperium: N Firmen geschluckt · investiert · Fahrzeuge“, Machtsatz („Der Markt gehört dir.“ – ohne Gegner: „Du BIST der Markt.“), Knopf „👑 Weiter herrschen“. Bei „reduzierter Bewegung“ ohne Wirbel.
+
+**Mehr Beute:** jede Übernahme bringt Stammkunden (2, bei Konzernen 2 + Welle) als gut bezahlte Aufträge (+25 % / +40 %) sofort ins Auftragsbuch. Konzerne liefern die besseren, kaum gefahrenen Fahrzeuge, ein größeres Büro mit 3–4 erfahrenen Leuten und +5 Ruf.
+
+**Welt-Reiter:** „👑 Dein Imperium“-Leiste, offene Gegner oben (Konzerne mit „NEU · Konzern“), geschluckte Firmen als Trophäen (grau, rotes ✕, „👑 geschluckt“).
+
+Spielstand: `S.corp.rivals` (Konzerne), `S.corp.wave`, `S.corp.leadSince`, `S.corp.showQ`; `corpSyncRivals` trägt sie nach dem Laden in `RIVALS`/`CORP` ein.
+
+## v169 – Lkw-Stellplatz fest vor dem Sägewerk, direkt am Weg
+
+Der Holzlaster fuhr beim Start/Ankommen durch die Sägewerks-Gebäude. Jetzt:
+- **Stellplatz** liegt fest außerhalb des Zauns südwestlich vom Südtor (Mitte −43,5 / −24,5), mit Schotterfläche (`worldview.js` Bodenfarbe) und direkter Anbindung an den Waldweg am Wegknick (−41 / −21). Nicht verschiebbar (`FFIXED`, `erbedata.js`).
+- **Fahrt** (`farmview.js` `lkwRoute`): Stellplatz → Süden → Wegknick → Waldweg → Straße, kein Weg mehr durch Gebäude.
+- **Beladen** weiterhin auf dem Stellplatz (Paletten fliegen aus dem Holzlager).
+- **Bäume/Büsche** halten das Gelände dort frei (`inLkwBay` in `erbe.js`, `worldview.js`).
+- **Alte Spielstände** (`erbe.js`, Marke `v169lkw`): der Stellplatz zieht einmalig um; Bäume im Weg rücken zur Seite.
+
+## v168 – Ablehnen-Knopf (🗑️) bei Bestellungen zuverlässiger
+
+Gemeldet: Der Papierkorb an Angeboten tat nichts. Im Test ließ sich die alte Version nicht zum Fehlschlagen bringen (nur die Zeile, wo das Fenster unter dem Finger neu gezeichnet werden könnte, ist unsicher). Darum (`farmview.js`):
+- Ablehnen läuft per Delegation (Tippen **und** Klick), unabhängig davon, ob der Knopf zwischen Berühren und Loslassen ersetzt wurde. Ein nachgereichter Klick wird unterdrückt, damit er nie die nächste Karte trifft.
+- Rückmeldung: Ton und Hinweis „… abgelehnt“.
+- Sicherheitsprüfung: nur Bestellungen des Hofs (`o.farm`), nie Tutorial-Bestellungen.
+
+## v167 – Schatztruhe immer sichtbar (Kamera der Öffnungs-Show)
+
+Die Show „Truhe bricht aus der Grube“ konnte hinter/in einer Baumkrone verschwinden. Jetzt (`worldview.js`, `worldTreasureCam`):
+- Die Kamera fliegt **steiler von oben** (Neigung 1,22, Abstand 13) – Kronen verdecken dann nur noch ganz nahe Bäume.
+- Aus 24 Blickrichtungen wird die gewählt, bei der **kein Baum** auf der Linie Kamera–Grube steht (Standardrichtung bevorzugt, sonst Drehung um die Grube).
+- Nach der Show fliegt die Kamera sanft in die alte Ansicht zurück; fasst der Spieler die Kamera an, übernimmt er sofort.
+- `farmview.js` `clampCam`: Neigung kann kurzzeitig überschrieben werden (`FV.camOv`).
+
+## v166 – Ereignis bei offenem Fenster blockiert nichts mehr
+
+Gemeldet: Kam ein Ereignis (Schatzkiste/Vogelschwarm) während das Bestellfenster offen war, ließ es sich nicht mehr schließen. Die Ursache konnte ich im Test nicht nachstellen (Fenster schloss sich dort immer); darum drei Absicherungen:
+- `game.js` Spieluhr: Fehler in `tick`/`tickFollow` beenden die Schleife nicht mehr (vorher blieb dann alles stehen).
+- `erbe.js`/`worldview.js`: Schatz-Ereignis und Döring-Solar-Takt sowie die Anzeige des Ereignisses sind abgefangen – ein Fehler dort bricht den Takt nicht ab.
+- `farmview.js`: Schließen-X und Hintergrund-Tipp per Delegation (click + pointerup) – gilt auch, wenn das Fenster unter dem Finger neu aufgebaut wird.
+
+## v165 – Zutat antippen startet keine Produktion mehr
+
+Tippt man in einem Rezept (Sägewerk, Hof, Fischerei …) auf den Zutaten-Button, erscheint nur noch der Name mit „im Lager“; die Karte darunter (Produzieren) bleibt unberührt (`farmview.js`, Tipp-Listener stoppt den Klick bei `.frec`).
+
+## v164 – Bestellungen als Favorit (★) markieren
+
+Jede Bestellung in **Hof, Sägewerk und Fischerei** hat oben rechts einen Stern (`farmview.js`, `.fo-star` in `style.css`); `o.fav` je Bestellung, jede Station einzeln. Favoriten stehen oben in der Liste, goldener Rahmen.
+
+Höchste Dringlichkeit:
+- **Team** (`staffFavPlan` in `team.js`): Fahrer/in nimmt Favoriten sofort an (ohne Drei-Aufträge-Limit); Aufgaben der Bestellung und alle Unteraufträge (Zutaten, Rohstoffe) bekommen **prio 3** und werden vor allem anderen erledigt (bis 9 offene Aufgaben je Kraft, verfallen nicht so schnell). Ohne Fahrer/in bekommt der Hersteller der fehlenden Ware (sonst du) den Auftrag direkt.
+- **Fahrer/in:** fertige Favoriten werden zuerst ausgeliefert; Angebote/Reihenfolge bevorzugen Favoriten.
+- **Büros/Dispo** (`game.js` `dispatchRun`): Favoriten zuerst, die Rentabilitätsschwelle gilt für sie nicht; `dispoPurge` löscht Favoriten nie.
+
+## v163 – Disposition sortiert unrentable Aufträge automatisch aus
+
+- **`dispoPurge(b)` / `dispoProfitable()`** (`offices.js`): Bei jedem Dispo-Takt prüft jedes Büro mit aktiver Disposition die Aufträge in seiner Reichweite. Gerechnet wird mit dem günstigsten passenden Fahrzeug des Büros (auch wenn es gerade unterwegs ist) und der besten Routenvariante: Erlös (inkl. Büro-Bonus) − Kosten. Reicht das nicht für mehr als 10 % Marge, wird der Auftrag **gelöscht** (ohne Rufverlust) und eine Meldung „🗑️ Dispo …: n Aufträge aussortiert“ erscheint (höchstens alle 2 Spielstunden).
+- **Kosten** (`evalFullCost` in `game.js`): Fahrtkosten inkl. Leerfahrt **plus** anteilige Tagesfixkosten der Fahrzeuge (Fahrtdauer/24 h). Dieselbe Rechnung gilt jetzt auch bei der Annahme durch die Dispo.
+- Ausgenommen: Pablo-, VIP-, Tutorial-, Missions- und Hofbestellungen; Aufträge, für die kein passendes Fahrzeug im Büro existiert, bleiben liegen (nicht beurteilbar). Ohne Büro/Disponent wird nichts gelöscht. Abschaltbar über `S.autoPurge = false`.
+
+## v162 – Maschinenhalle entfernt, Traktor frei beweglich
+
+- **Maschinenhalle** (das Gebäude mit Solardach östlich vom Hof) ist entfernt – samt ihrer Sperrzonen (`worldview.js`, `erbe.js`, `farm.js`).
+- **Traktor mit Anhänger ist jetzt ein Objekt** (`t: "tractor"`, 5×2 Kacheln, `FSIZE` in `erbedata.js`): antippen → *Bewegen* oder *Ins Lager*; Ziehen mit Langdruck wie bei anderen Gebäuden; ↻ dreht ihn.
+- **Ins Lager:** `farmTractorStore()` (`farmview.js`) – der Traktor verschwindet, `S.farm.trkStored = true`. Im Lager-Fenster (🌾 Lager) erscheint oben „Traktor im Lager“ → `farmTractorPlace()` → Aufstellen wie beim Bauen (✕ bricht ab, er bleibt im Lager).
+- **Neue Zone „wild“ = rund um den Hof** (`FWILD`, `farmWildOk` in `farm.js`): erlaubt nur, wo nichts im Weg steht – nicht im Zaun/Hof (0,7 m Abstand), nicht im Sägewerkshof, nicht auf Nachbars Feldern, Teich, See, Bach, Wegen oder der Straße, nicht an Laternen/Blumen, nicht an Bäumen, Büschen, Steinen, Totholz, Hochsitz, Lagerplatz oder anderen Objekten (nutzt die Hindernis-Karte `NAV` der Laufwege). Auf dem Hof gelten die normalen Hofregeln. Zonenknopf 🌳/🏡 springt zwischen „rund um den Hof“ und „auf den Hof“.
+- **Spielstände:** `farmTractorEnsure()` stellt ab Stufe 2 einmalig einen Traktor an die alte Stelle (vor dem Zaun); die alten Sperren im Straßenrand (`farmRoadKeep`) für Traktor/Halle sind weg. Farbe aus der Kosmetik (`cos.on.tractor`) bleibt.
+
+## v161 – Etappen-Knopf schaltet live frei
+
+Wartest du im Menü „Welt“ auf das Geld (oder das Level) für die nächste Etappe, musste man das Menü neu öffnen. Jetzt prüft `stageLiveTick()` (`game.js`, alle 0,4 s, nur wenn „Welt“ offen ist) den Knopf:
+- Der Text „Dir fehlen noch …“ zählt live mit.
+- Reicht das Kapital, blendet der Knopf weich auf (Deckkraft-Übergang), poppt kurz, bekommt einen Lichtstreifen, die Etappenkarte ein grünes Aufleuchten, dazu der Münzton; danach pulsiert er ruhig. Fällt das Geld wieder, wird er sanft ausgegraut.
+- `prefers-reduced-motion` schaltet die Animationen ab. CSS: `#unlockBtn`, `.stage-ready` in `style.css`.
+
+## v160 – Übernahme-Verhandlung: Gegenseite wird emotional
+
+Ist dein Angebot zu niedrig, reagiert die Gegenseite jetzt gekränkt und sagt klar, dass sie **aus Prinzip teurer** verkauft (`corp.js`, `corpOffer`):
+- Unter 90 % ihres Wunschpreises: emotionale Antwort (mehrere Varianten, beim zweiten Mal gereizter), Wunschpreis +4 %, Gegenangebot entsprechend höher.
+- Unter 70 %: „Beleidigung/Frechheit“ mit Prinzip-Ansage, Gespräch endet wie bisher (2 Tage Pause), Preis +8 %.
+- Der Aufschlag bleibt für spätere Gespräche mit derselben Firma bestehen (`S.corp.spite`, höchstens +30 %).
+- Angebote ab 90 % bleiben freundlich („Wir sind nah dran“).
+
+## v159 – Fortbildungs-Meldung (Vertretung): neues Layout, scharfes Porträt
+
+Die Meldung nach „Fortbildung“ wirkte unfertig (kleines, weiches Bildchen im Kreis, vom Text überdeckt, Fließtext). Jetzt:
+- **Porträt in hoher Auflösung:** neue Bildgröße `big: 2` in `thumbOf/thumbR` (`worldview.js`): 1024 px gerendert, 512 px ausgegeben (vorher 144 px) – Figur von vorn, vollständig im Rahmen.
+- **Neues Layout** (`staffSubPopup` in `team.js`, `.stp*` in `style.css`): Porträtkarte links, Name/Rolle/„Fortbildung“-Tag und Sprechblase rechts, darunter zwei Infokarten (Fortbildung, Vertretung) und der Button.
+
+## v158 – Verschieben: Sägewerk als Ganzes statt durchsichtig
+
+Beim Verschieben war das Gebäude-„Geisterbild“ durchscheinend (alpha 0.82) – bei der Gattersäge sah man dadurch Förderband, Sägetisch und Bretter im Inneren. Jetzt wird alles, was verschoben wird, und alle Sägewerks-Hauptgebäude **deckend** gezeigt (`startPlace` in `farmview.js`); rot bleibt nur die Färbung bei ungültigem Platz. Das Sägeblatt (Kindteil der Halle) wandert jetzt mit dem Geisterbild mit.
+
+## v157 – „Im Telefonat“ erst mit Büro
+
+Die Sprechblase „Im Telefonat“ (Mitarbeiter am Steg usw.) und die 10 Minuten Anruf-Wartezeit gibt es erst, wenn mindestens ein Büro gekauft/gemietet ist (`staffHasOffice()` in `team.js`, gilt in `staffCalling` und beim Job-Start). Vorher legen die Leute sofort los.
+
+## v156 – Luckybox „Headhunter“: Fachkraft für jedes Büro
+
+Vorher landete die Gratis-★★★★★-Fachkraft nur im höchsten Büro. Jetzt bekommt **jedes** Büro seine eigene (je Gewinn eine pro Büro, solange dort nicht schon eine wartet). Büros, die später gebaut oder per Firmensitz-Wechsel angelegt werden, bekommen ebenfalls eine (`perks().hhAll`).
+
+- `lucky.js` (`luckyHeadFor`, Gewinn `head`, Beschreibung), `offices.js` und `corp.js` (neues Büro), Version v156.
+
+## v155 – Sägewerk-Büro: Maschinen als 3D-Icons
+
+Die Maschinen-Chips („Maschinen im Sägewerk“) zeigten Emojis (Axt, Gleis, Thermometer …). Jetzt dieselben 3D-Bildchen wie im Maschinenladen (`thumbSpan("shop:"+id, shopModel(it), …)`, Emoji nur als Platzhalter/Fallback), etwas größer (34 px); fehlende Maschinen (Lv-Chip) leicht ausgegraut.
+
+- `worldview.js` (`openSawOffice`), `style.css` (`.fchip.mch`), Version v155.
+
+## v154 – Auktionshaus: Lack in der Notiz passt jetzt zum Autofoto
+
+Problem: Das Foto gehört fest zum Modell (z. B. blauer RS 2 Avant), der Lack der Notiz („Kyalamigrün“) wurde aber zufällig gewürfelt.
+
+- `auction.js`: `detectPaint()` bestimmt beim Laden von Foto/Zeichnung die Karosseriefarbe (Mittelbereich, Reifen/Scheiben ausgeblendet, Lab-Abstand zu den Herstellerlacken in `CAR_PAINTS`) und speichert sie als `PICS[id].pc`.
+- `ahFixPaints()` gleicht Lose, Garage und Verlauf an (beim Rendern, Lot-Fenster, `openCar`, sofort nach Erkennung); neue Lose nehmen `paintOfPhoto()`.
+- Gilt für alle Autos. Ohne Foto (offline) bleibt der gewürfelte Lack, bis das Foto geladen ist.
+- Version: v154 (index.html `?v=`, sw.js).
+
+## v153 – Grafikfehler: Hochsitz-Blick, eckige Flächen auf Wiese und Wasser
+
+Drei Screenshots (Hochsitz unten rechts, Flussufer mit Wasser, Lichtung mit Reh) – drei Ursachen, zwei davon dieselbe:
+
+- **Hochsitz (`hunt.js`):** Im Auge-Blick stand die nahe Ebene der Kamera auf 1,1 m (seit v111, damit die Ferne nicht flimmert). Brüstung, Gewehrauflage, Eckpfosten und Dach liegen aber nur 0,8–1,2 m vom Auge – sie wurden in scharfen Diagonalen abgeschnitten (Brett-Enden liefen spitz aus, der rechte Eckpfosten fehlte). Jetzt 0,3 m; bei 200 m Entfernung bleibt der 24-Bit-Tiefenpuffer auf ≈ 1 cm genau, die Ferne flimmert nicht. Fernglas (3,2 m) und Zielfernrohr unverändert.
+- **Lichtsäulen (`worldview.js` stepLife, `forestmodels.js`):** In den Lichtungen steht eine durchscheinende Lichtsäule (6-seitiges Prisma, 6,5 m hoch, bis 10 % deckend). Aus der Hofansicht (Blick schräg von oben, Neigung immer ≥ 0,8) ist das ein hartes, flaches Sechseck mit geraden Kanten und zwei sich überlagernden Wänden: große eckige Flächen mitten auf der Wiese, über Wasser ein helles Rechteck mit Streifen. Jetzt gibt es die Säule nur noch bei flachem Blick (Ich-Perspektive oder Neigung < 0,55); aus der Hofansicht liegt an derselben Stelle ein weicher Lichtfleck (`FWM.lightPatch`, 8 flache Scheiben mit abnehmendem Radius, je ≈ 1,6 % deckend – kein erkennbarer Rand).
+- **Bodenfarbe (`worldview.js` worldGroundCol):** Grün- und Waldbodentöne wählten je Gitterpunkt (4 m) hart einen von drei Tönen, die Lichtung einen von zwei. Jetzt stetige Mischung (smoothstep) und ein einziger Lichtungston – weicher Verlauf statt flacher Flächen.
+- Nicht geändert: Sonnenglanz auf dem Wasser bei Blick gegen die Sonne (bewusst), Schattenform der Bäume auf dem Wasser.
+
+## v152 – Bäume: ein gemeinsames Rinden- und Kronensystem für Hof-/Waldansicht und Ich-Perspektive
+
+**Ursache der Qualitätsunterschiede:** Die Ich-Perspektive (Säge/Axt, `fpsaw.js`) hatte einen eigenen, fein gestalteten Stamm (28 Facetten, Borkenrelief, Birkenstreifen), die Hof-/Waldansicht (`woodmodels.js tree()`) dagegen ein 7-Eck-Rohr mit aufgesetzten Klötzchen bzw. schwarzen Sechseck-Scheiben (die „Punkte“ auf der Birke). Die Krone war in beiden Ansichten dieselbe, aber aus wenigen großen Ikosaeder-Flächen mit zufälligen Farben.
+
+- **Neu `treebark.js` (TBARK):** Rinde, Relief, Verjüngung und Stamm aus `fpsaw.js` herausgelöst – Hof-/Waldansicht, Ich-Perspektive, Stumpf, umgestürzte Bäume nutzen dasselbe System. Samen je Art/Größe/Variante (`seedOf`), damit Relief und Markierungen in allen Ansichten gleich sind. Drei Stufen: 0 = Ich-Perspektive (Markierungen als geschnittene Rindenflächen, nötig für den Kerb), 1 = nah in der Hofansicht (28 Facetten, Markierungen als anliegende Auflage auf den Facetten, 1,5 % über der Rinde), 2 = fern (7 bzw. 14 Facetten – Teiler von 28, gleicher Umriss; gröbere Bänder, nur die großen Markierungen).
+- **Rinde je Art:** Birke cremeweiß in gebrochenen Tönen, dunkler rissiger Fuß mit zackigem Übergang, lange spitze Querbänder, kurze Striche, breite Flecken unten, Lentizellen, Astnarben unter den Ästen. Kiefer unten graubraune Schuppenborke (starkes Relief), zackig übergehend in fuchsrote, glatte Spiegelrinde; Aststummel. Eiche wie v128 (Furchen, Platten, Moosfuß). Buche glatt silbergrau, leicht gefleckt, Hauch Grünalgen, „Buchenaugen“, stärkerer Wurzelanlauf. Fichte kleinschuppig graubraun. Kirsche rotbraun mit unterbrochenen hellen Lentizellenbändern.
+- **Kronen (`woodmodels.js`):** `leafClump` – gleiche Lage/Größe wie bisher, Farbverlauf oben hell → unten dunkel (nie schwarz, nie grell), Licht-Normale halb Fläche/halb von der Kronenmitte (Volumen statt loser Platten), Formzufall aus Hashes (beide Stufen gleiche Grundform). Nah: eine Stufe feiner und Blattbüschel auf der Oberfläche. Fichte: Etagen als Stern mit hängenden Astspitzen (nah mit gewölbtem Mittelring und Unterseite). Birke: graue Äste, nah doppelt so viele hängende Zweige.
+- **Detailstufen (`worldview.js` TLOD):** echte Bäume und Kulissenbäume wechseln je nach Abstand Auge–Baum (17 Einheiten, größere Bäume früher, Hysterese) zwischen fein und grob; feine Modelle werden bei Bedarf gebaut (≤ ~6 ms je Bild). Kulissen-Instanzen wandern zwischen den Gruppen (`WV.bgGH`, `WV.bgHi`).
+- **`gl3d.js`:** Knoten (`n.smesh`) und Instanzgruppen (`smesh`) können ein eigenes Schattenmodell haben – feine Bäume werfen den Schatten der groben Stufe.
+- **`fpsaw.js`:** nutzt TBARK; Krone aus dem feinen Modell (gleich wie nah in der Hofansicht), Variante wie in der Hofansicht (`t.v`, vorher `t.id % 3` – die Krone konnte beim Zoom wechseln), Samen gemeinsam, Aststummel (`b.keep`) werden mitgenommen, Stumpf merkt sich die Variante.
+- **Auch angepasst:** umgestürzte Bäume (Windwurf) und natürliche Stümpfe mit Artrinde, Setzlinge, Obstbäume am Hof (`farmmodels.js treeMesh`: Plattenborke, runde Äste, Volumenkrone), die zwei Bäume auf der Insel im See (jetzt die Waldmodelle statt alter Kulissenbäume).
+- Nicht geändert: die Fernglas-/Revier-Modelle (`treeRv`, für 7-fache Vergrößerung eigens gebaut); `FTREE_DIM` (Abstände) bleibt – die grobe Stufe weicht meist < 0,1 ab.
+
+## v151 – Eiche: Zacken-Dreiecke am Stamm beim Sägen behoben
+
+- **Ursache (`fpsaw.js`, `taperB`):** Das Rinden-Relief der Eiche (Rippen/Furchen) wurde an jedem Eckpunkt über dessen Winkel berechnet. Schnittpunkte in der Mitte einer Stamm-Facette (Höhenteilung der Rindenbänder, Kerb) bekamen dadurch einen anderen Wert als die Fläche an dieser Stelle hat – die Flächen knickten sägezahnartig ein, bei mittelgroßen Eichen (viele Rindenbänder) besonders sichtbar als dunkle Dreiecke.
+- **Fix:** Relief wird nur noch an den Facettenkanten ausgewertet und dazwischen linear gemischt (Kanten bleiben gleich, die Fläche bleibt eben). Zusätzlich werden Eichen-Rindenflächen an den Facettengrenzen geschnitten (`sty.fc`/`sty.la0` in `emitBark`), damit die Farbe pro Facette stimmt.
+
+## v150 – Routen auf echten Wegen (Straße, Seeweg, Flug)
+
+- **Neu `routegeo.js`:** Die Linie einer Strecke und die Fahrzeugposition folgen jetzt echten Wegen statt der Luftlinie.
+  - **Straße, Schiene, Fahrrad und Tür-Strecken:** Weg über befahrbare Straßen (Routing-Dienst `routing.openstreetmap.de`, Ersatz `router.project-osrm.org`). Jede Strecke wird einmal geladen, im Gerät gemerkt (`localStorage` „logistika-geo-v1“, bis 400 Linien) und danach auch offline gezeigt. Solange sie lädt oder ohne Netz bleibt es die gerade Linie. Unsinnige Antworten (viel kürzer/länger als die Luftlinie) werden verworfen. Schiene nutzt mangels Schienen-Routing die Straßenführung.
+  - **Seeweg:** feste Seewege über Wegpunkte (Ärmelkanal, Kieler Kanal, Ostsee-Engen, Gibraltar, Suezkanal, Rotes Meer, Malakka, Panamakanal, Kap Hoorn, Kap der Guten Hoffnung u. a.), Hafen → nächster Wegpunkt, kürzester Weg im Wegpunkt-Netz.
+  - **Binnenwasser:** Flussläufe und Kanäle (Elbe, Rhein, Main-Donau, Donau, Havel, Mittellandkanal, Seine, Rhône, Jangtse).
+  - **Luftfracht:** Großkreis (kürzester Weg über die Erdkugel, z. B. Frankfurt–Shanghai nördlich über Russland).
+- **`game.js`:** `pathPts(nodes, a, b, mode)` hängt jedem Teilstück die Fahrart an (`pts.gm`); `roadLine` → `geoLine` (danach wie bisher die Hofstraßen), `vehPoint`/`parkHere` → `geoDispAt` (gleicher Streckenanteil auf der Weg-Linie). `routeGm` heftet nach dem Laden eines Spielstands die Fahrart wieder an laufende Fahrzeuge. Zeit, Kosten und Entfernung im Spiel bleiben auf der Luftlinie – nur die Anzeige ändert sich.
+- **`map.js`:** `unwrapLons` behält `gm`. **`index.html`/`sw.js`:** `routegeo.js` eingebunden.
+- Nicht geändert: die kleine Schemakarte im Planer (gerade Knotenlinie).
+
+## v149 – Säge/Axt: kein 2D-Fenster mehr nach dem vorigen Baum
+
+- **Fehler:** Direkt nach einem gefällten Baum läuft die 3D-Ansicht noch bis zu 3,5 s aus (Kamera zurück, Baum fällt). Wer in der Zeit den nächsten Baum anging, bekam statt der Ich-Perspektive das alte 2D-Fenster („Kerb setzen“ mit Stamm im Dialog) – und das blieb auch hängen, wenn der Lauf nie sauber endete (`FV.fp` blieb gesetzt).
+- **`fpsaw.js`, `can()`:** Ein auslaufender oder liegengebliebener Lauf (`X.mode === "out"` oder kein Minispiel mehr offen) wird sofort abgeschlossen (`finish()`), dann startet der neue Baum wieder in 3D.
+- Test: zwei Bäume hintereinander – vorher 2. Mal ohne 3D (`st.fp` leer), jetzt mit 3D.
+
+## v148 – iOS-Lupe beim langen Halten überall aus
+
+- **`game.js`:** Auf der Spielfläche (`#farmCv`, `#farmAngel`, `#huntUI`, Minispiel-Bühne, Halten-Knöpfe) wird `touchstart` abgefangen, außer bei Eingabefeldern und normalen Knöpfen; zusätzlich wird jede Textauswahl sofort verworfen (`selectionchange`, `touchend`). Eingabefelder bleiben bedienbar.
+- **`style.css`:** `user-select`/`-webkit-touch-callout` auch für `html`, `body`; Auswahlfarbe transparent (außer Eingabefelder).
+- Hinweis: die Lupe ist ein iOS-Systemverhalten und nur auf einem echten iPhone sicher zu prüfen.
+
+## v147 – Flotte: „Alle Arten“ zeigt wirklich alle Fahrzeuge
+
+- **`game.js`:** Der Chip „Alle Arten“ setzt jetzt auch die Filter „Besitz“ (z. B. „✋ selbst“, das Büro-Fahrzeuge ausblendet) und „Einsatz“ zurück und zeigt die Gesamtzahl der Flotte. Der Zurücksetzen-Knopf („✕ Filter aus“) steht nun in der Arten-Zeile und ist immer sichtbar, solange ein Filter aktiv ist (vorher lag er außerhalb des Bildes in der scrollbaren Zeile).
+
+## v146 – Tiere, Falter und Menschen laufen nicht mehr durch Hindernisse
+
+- **`team.js`:** Das Wegenetz (Raster + A*) kennt jetzt auch Steine, Felsen (`WV.rockObs`), Moosstämme, Stümpfe und Wurzeln als Hindernisse. Neue Helfer: `navWallsFor(role)` (Igel: Zäune zählen nicht; Wild: Hoftore sind zu), `navHit`, `navStepBlocked`, `navSide`, `wanderPlan`, `wanderMove`.
+- **`worldview.js`:** Wildtiere (`stepWild`) planen ihren Weg und laufen außen um Gebäude, Zäune, Bäume, Felsen und Wasser herum – keine Sprunganimation. Der Igel schlüpft unter Zäunen durch, kommt aber ebenfalls nicht durch Bäume, Steine oder Wasser. Start (`wildHome`) nie in einem Hindernis und nie auf der anderen Zaunseite. Falter (`stepLife`) drehen an Hindernissen um und ziehen die Schleife enger (wächst langsam wieder). `WV.rockObs` wird beim Aufbau gesetzt.
+- **`hunt.js`:** Hirsch/Keiler auf der Wildwiese (`mwSpawn`, `mwStep`) laufen ebenfalls auf dem Wegenetz.
+- Menschen (Personal) liefen schon über das Wegenetz; sie sehen jetzt auch Steine und Felsen.
+
+## v145 – Tipp-Karte in „Welt & Kontor“ entfernt
+
+- **`game.js`:** Die Karte „Tipp“ mit dem zufälligen Spieltipp (`TIPS` aus `data.js`) ist aus der Welt-Ansicht raus; die Liste bleibt unbenutzt in `data.js`. Aufgebaut auf dem GitHub-Stand v144.
+
 ## v144 – Verkaufsstand: Schieber wie bei den Arbeitern
 
 - **`worldview.js`, `openStall`:** Schnellknöpfe 1 / 5 / 10 / alles entfernt. Stattdessen Schieber (kleinstes Gebinde bis alles) und darunter Feinknöpfe −10 / −1 / +1 / +10 Gebinde wie bei der Mengengrenze der Arbeiter (Beschriftung in der Anzeige-Einheit, z. B. „+3“ bei Paletten, „+20 kg“ bei Äpfeln). Verkauft wird weiter in ganzen Gebinden.

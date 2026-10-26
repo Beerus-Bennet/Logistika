@@ -145,7 +145,7 @@ Object.assign(FMACHINES, {
 });
 Object.assign(FBUILD_VAL, { saegebock: 600, spalter: 1200, hobel: 1800, trocken: 2400, verpack: 2000, schleif: 2800, fraese: 3200 });
 Object.assign(FSIZE, {
-  saegebock: [2, 2], junk: [2, 2], stall: [2, 1],
+  saegebock: [2, 2], junk: [2, 2], stall: [2, 1], tractor: [5, 2],
   sw_halle: [10, 6], sw_lager: [6, 4], sw_buero: [3, 3], sw_lkw: [3, 5], kessel: [3, 3],
   spalter: [2, 2], hobel: [3, 2], trocken: [4, 3], verpack: [3, 2], schleif: [3, 2], fraese: [3, 2]
 });
@@ -206,11 +206,12 @@ const FSAW = {
     { t: "sw_halle", x: -41, z: -43 },
     { t: "sw_lager", x: -49, z: -34 },
     { t: "sw_buero", x: -32.5, z: -33.5 },
-    { t: "sw_lkw",   x: -32.5, z: -43.5, r: 0 },
+    { t: "sw_lkw",   x: -43.5, z: -24.5, r: 0 },       /* v169: Stellplatz vor dem Sägewerk, direkt am Weg zum Südtor (vorher im Hof, Laster fuhr durch die Gebäude) */
     { t: "kessel",   x: -50.5, z: -45.5 }
   ],
   pads: { spalter: [-36, -33], hobel: [-43.5, -35.5], trocken: [-34, -50], verpack: [-40, -50.5], schleif: [-46, -50.5], fraese: [-50.5, -50] }
 };
+FFIXED.add("sw_lkw");      /* v169: der Stellplatz steht fest am Weg */
 const FSAW_REPAIRS = [
   { id: "dach",  n: "Dach",          i: "🏚️", game: "nails",  need: { bretter: 4, balken: 2 },  cost: 120,
     d: "Dach undicht: Bretter festnageln – zuschlagen, wenn der Ring den Nagel trifft." },

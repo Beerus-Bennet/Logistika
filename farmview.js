@@ -56,7 +56,30 @@ function farmDOM() {
   /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
      falls das Spiel auf der Karte angehalten wurde */
   $("#farmPaused").onclick = () => setSpeed(lastSpeed || 1);
-  $("#farmSheet").addEventListener("click", e => { if (e.target.id === "farmSheet") closeFarmSheet(); });
+  /* v166: Schließen-X per Delegation – gilt auch, wenn das Fenster gerade neu aufgebaut wurde (z. B. durch ein Ereignis) */
+  $("#farmSheet").addEventListener("click", e => { if (e.target.id === "farmSheet" || (e.target.closest && e.target.closest("#fsX"))) closeFarmSheet(); });
+  const dropGo = id => {
+    const o = S.orders.find(x => x.id === id);
+    if (!o || o.tutF || !o.farm) return false;
+    S.orders = S.orders.filter(x => x !== o);
+    S.farm.lastOrd = S.time - 15;
+    sfx("pop"); toast("🗑️ „" + o.shipper + "“ abgelehnt.", "");
+    save(); renderFarmUI();
+    if (FV.sheet === "orders" && FV.dropAgain) FV.dropAgain();
+    return true;
+  };
+  $("#farmSheet").addEventListener("pointerup", e => {
+    const d = e.target.closest && e.target.closest("[data-drop]");
+    if (d && e.pointerType !== "mouse") { FV.dropAt = performance.now(); dropGo(d.dataset.drop); }
+  });
+  $("#farmSheet").addEventListener("click", e => {
+    const d = e.target.closest && e.target.closest("[data-drop]");
+    if (!d) return;
+    e.stopPropagation(); e.preventDefault();
+    if (performance.now() - (FV.dropAt || 0) < 600) return;       /* schon per Tippen erledigt – der nachgereichte Klick darf nicht die nächste Karte treffen */
+    dropGo(d.dataset.drop);
+  }, true);
+  $("#farmSheet").addEventListener("pointerup", e => { if (e.target.closest && e.target.closest("#fsX")) { e.preventDefault(); closeFarmSheet(); } });
   bindFarmInput($("#farmCv"));
   /* iOS: langes Drücken auf dem Hof zeigt sonst die Lupe */
   $("#farmCv").addEventListener("touchstart", e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
@@ -251,6 +274,7 @@ function farmBuildScene() {
 function farmSyncScene(force) {
   const R = FV.R;
   if (!R || !FV.built || !farmOn()) return;
+  farmTractorEnsure();
   if (FV.builtKind !== FSITE.kind) { farmBuildScene(); return; }
   const seen = new Set();
   for (const o of S.farm.objs) {
@@ -470,7 +494,8 @@ function vehMesh(t, f) {
 function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
 function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
-function lkwRoute(p) { return [[p.x, p.z], [p.x, p.z + 5], [-41, p.z + 5.5]].concat(SAW_ROAD); }
+/* v169: vom Stellplatz nach Süden zum Wegknick (−41 / −21) und dann auf dem Waldweg zur Straße – kein Weg mehr durch die Gebäude */
+function lkwRoute(p) { return [[p.x, p.z], [p.x, -21], [-41, -21]].concat(SAW_ROAD.slice(2)); }
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -769,7 +794,7 @@ function clampCam() {
   c.tx = clamp(c.tx, r[0], r[2]);
   c.tz = clamp(c.tz, r[1], r[3]);
   c.dist = clamp(c.dist, 11, 54);
-  c.pitch = 0.8 + (c.dist - 11) / 43 * 0.2;
+  c.pitch = FV.camOv ? FV.camOv.pitch : 0.8 + (c.dist - 11) / 43 * 0.2;      /* v167: Schatz-Show darf steiler von oben schauen */
 }
 function farmFocus(o, dist) {
   if (!FV.R || !o || FV.fp) return;
@@ -1005,6 +1030,7 @@ function objAction(o, x, y) {
     case "house": openFarmHouse(); break;
     case "shed": openFarmShed(); break;
     case "deco": openPop(o, "deco"); break;
+    case "tractor": openPop(o, "tractor"); break;
     case "steg": if (typeof openAngel === "function") openAngel(o); break;
   }
 }
@@ -1515,6 +1541,10 @@ function renderFarmPop() {
         <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>${A.fish ? "Gehege" : "Stall"}</b><small>Platz & Tiere</small></div>
         ${o.animals.length < A.max ? `<div class="ftool" data-act="buyani">${typeof aniIc === "function" && !A.fish ? aniIc(pi.kind) : `<span class="ic">${A.i}</span>`}<b>${esc(A.young || A.n)}</b><small>${eur(animalPrice(pi.kind))}</small></div>` : ""}
       </div>${A.mast ? `<div class="fp-tip">Nach ${A.mast} Mahlzeiten antippen – ab zum Metzger: ${famt(A.out, A.yield)} ${esc(FITEMS[A.out].n)} je ${esc(A.n)}.</div>` : ""}`;
+  } else if (P.kind === "tractor") {
+    h = `<div class="fp-h">🚜 Traktor<small>Auf dem Hof oder rund um den Hof – nur wo nichts im Weg steht</small></div><div class="fp-row">
+      <div class="ftool" data-act="move"><span class="ic">↔️</span><b>Bewegen</b></div>
+      <div class="ftool" data-act="trkstore"><span class="ic">📦</span><b>Ins Lager</b><small>wegstellen</small></div></div>`;
   } else if (P.kind === "deco" && FDECO[o.k].weg) {
     const D = FDECO[o.k];
     h = `<div class="fp-h">🛤️ ${esc(D.n)}<small>Haustiere spazieren hier, das Team läuft hier schneller</small></div><div class="fp-row">
@@ -1537,6 +1567,7 @@ function renderFarmPop() {
     if (a === "pen") { closeFarmPop(); openPen(o); }
     if (a === "buyani") { closeFarmPop(); buyAnimalInto(penKind(o), o); }
     if (a === "move") { closeFarmPop(); startMove(o); }
+    if (a === "trkstore") { closeFarmPop(); FV.sel = null; farmTractorStore(o); }
     if (a === "wegbau") { closeFarmPop(); startWeg(o.k); }
     if (a === "sell") { const [x, y] = objScreen(o); if (farmRemove(o)) { coinFly(x, y, Math.round(FDECO[o.k].price * 0.5)); closeFarmPop(); farmSyncScene(); save(); } }
     if (typeof worldPopAct === "function") worldPopAct(a, o);
@@ -1750,7 +1781,10 @@ function startPlace(spec, x, z) {
   const proto = spec.proto;
   const [w, d] = farmSize(proto);
   const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN.x0, FIN.z0]);
-  const ghost = fnode(objMesh(proto), { alpha: 0.82, shadow: false });
+  /* v158: Gebäude (und alles, was verschoben wird) deckend zeigen – durchscheinend sah man die Maschinen im Inneren des Sägewerks */
+  const solid = !!spec.move || (typeof FSAW_MAIN !== "undefined" && FSAW_MAIN.has(proto.t));
+  const ghost = fnode(objMesh(proto), { alpha: solid ? 1 : 0.82, shadow: false });
+  if (proto.t === "sw_halle" && typeof sawMask === "function" && sawMask() & 4) R.addChild(ghost, fnode(fmesh("sawBlades", FWM.sawBlades), { x: 0.5, y: 0.73, z: 0, shadow: false }));
   const mark = fnode(fmesh("mark:" + w + "x" + d, () => FM.tileMarker(w, d)), { alpha: 0.55, shadow: false, y: 0.01 });
   R.nodes.push(mark, ghost);
   FV.place = { spec, proto, ghost, mark, w, d, x: at[0], z: at[1], r: proto.r || 0, move: spec.move || null };
@@ -1813,6 +1847,12 @@ function confirmPlace() {
     save();
     return;
   }
+  if (P.spec.tractor) {
+    const t = farmAddObj({ t: "tractor", x: P.x, z: P.z, r: P.r });
+    S.farm.trkStored = false;
+    cancelPlace(true); farmSyncScene(); puff(t); sfx("build"); save();
+    return;
+  }
   const o = farmBuild(Object.assign({}, P.spec.build, { price: P.spec.price, label: P.spec.label }), P.x, P.z, P.r);
   if (!o) return;
   cancelPlace(true);
@@ -1843,6 +1883,20 @@ function hideAnimalsOf(o, hide) {
   o.animals.forEach(a => { const s = FV.ani.get(a.id); if (s) { s.node.visible = !hide; if (hide) s.pn.visible = false; } });
 }
 function noRotate(t) { return !!FPENS[t] || ["field", "tree", "pot", "mline", "kutter", "steg", "stall"].includes(t); }
+/* v162: Traktor ins Lager zurückstellen / aus dem Lager aufstellen */
+function farmTractorStore(o) {
+  puff(o);
+  S.farm.objs = S.farm.objs.filter(x => x !== o);
+  S.farm.trkStored = true;
+  sfx("pop"); toast("🚜 Traktor steht im Lager – dort kannst du ihn wieder aufstellen.", "ok");
+  farmSyncScene(); save();
+}
+function farmTractorPlace() {
+  closeFarmSheet();
+  const R = FV.R; if (!R) return;
+  const at = farmZoneSpot("hof", 5, 2, R.cam.tx + FG / 2, R.cam.tz + FG / 2, "tractor") || farmZoneSpot("wild", 5, 2, R.cam.tx + FG / 2, R.cam.tz + FG / 2, "tractor") || null;
+  startPlace({ proto: { t: "tractor", r: 0 }, tractor: true }, at ? at[0] : null, at ? at[1] : null);
+}
 function startMove(o) {
   if (FV.tutLock) return;
   sfx("pop");
@@ -1858,10 +1912,10 @@ function renderPlaceBar() {
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
   const rot = !noRotate(P.proto.t);
   el.className = "on";
-  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
+  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot">↻</button>` : ""}
-    ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : "auf den Hof"}">${zn === "yard" ? "🪚" : "🏡"}</button>`).join("")}
+    ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : zn === "wild" ? "rund um den Hof" : "auf den Hof"}">${zn === "yard" ? "🪚" : zn === "wild" ? "🌳" : "🏡"}</button>`).join("")}
     ${P.move && P.move.t === "tree" && typeof fruitFell === "function" ? `<button class="fpl-b" id="fpFell" title="Fällen">🪓</button>` : ""}
     <button class="fpl-b ok${P.ok ? "" : " disabled"}" id="fpOk">✓</button>`;
   $$("#farmPlace [data-zone]").forEach(b => b.onclick = () => placeJump(b.dataset.zone));
@@ -1879,7 +1933,7 @@ function placeJumps(P) {
 function placeJump(zn) {
   const P = FV.place;
   if (!P) return;
-  const R = farmZoneRect(zn), cx = zn === "yard" ? -25 : FG / 2, cz = zn === "yard" ? -24 : 14;
+  const R = farmZoneRect(zn), cx = zn === "yard" ? -25 : zn === "wild" ? FV.R.cam.tx + FG / 2 : FG / 2, cz = zn === "yard" ? -24 : zn === "wild" ? FV.R.cam.tz + FG / 2 : 14;
   const q = farmZoneSpot(zn, P.w, P.d, cx, cz, P.proto.t, P.proto.k, P.move ? P.move.id : null) || [R.x0, R.z0];
   movePlace(q[0], q[1]);
   renderPlaceBar();
@@ -1954,7 +2008,9 @@ function itemTipHide() {
   if (t && t.className) t.className = "";
 }
 if (typeof document !== "undefined") {
-  document.addEventListener("click", e => { const c = e.target.closest && e.target.closest("[data-it]"); if (c) itemTip(c); }, true);
+  document.addEventListener("click", e => { const c = e.target.closest && e.target.closest("[data-it]"); if (c) { itemTip(c);
+    /* v165: Zutat in einem Rezept antippen zeigt nur den Namen – die Produktion startet nicht mit */
+    if (c.closest(".frec")) { e.stopPropagation(); e.preventDefault(); } } }, true);
   document.addEventListener("wheel", itemTipHide, { capture: true, passive: true });
   document.addEventListener("touchmove", itemTipHide, { capture: true, passive: true });
   document.addEventListener("pointerdown", e => { if (!(e.target.closest && e.target.closest("[data-it]"))) itemTipHide(); }, true);
@@ -2102,7 +2158,8 @@ function openFarmStore(st) {
   /* v120: Trophäen als Wand mit Einzelstücken (jedes zum erlegten Tier) statt Raster gleicher Symbole */
   const wall = st === "troph" && typeof HUNT !== "undefined" && HUNT.wallHTML ? HUNT.wallHTML() : null;
   const sel = wall == null && FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
-  openFarmSheet(`<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
+  const trk = S.farm.trkStored ? `<button class="fup2" id="fsTrk"><span>🚜</span><b>Traktor im Lager</b><small>Antippen und auf dem Hof oder rund um den Hof aufstellen</small></button>` : "";
+  openFarmSheet(`${trk}<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
     ${wall != null ? wall : `<div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>`}
@@ -2124,6 +2181,7 @@ function openFarmStore(st) {
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
       : st === "troph" ? "Jede Trophäe stammt von deinem erlegten Stück – Enden, Waffen und Federn wie im Revier. Herz- und Lungenschüsse bringen die besten Medaillen; Sammler kaufen auch auf dem Markt."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
+  const tb = $("#fsTrk"); if (tb) tb.onclick = farmTractorPlace;
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
   $$("#farmSheetIn [data-sell]").forEach(b => b.onclick = () => {
@@ -2229,8 +2287,9 @@ function openFarmOrders(sendFor, area) {
   FV.sendFor = sendFor || null;
   const A0 = FORD_AREAS.find(a => a.id === area);
   const mine = farmOrders().filter(o => farmOrderArea(o) === area);
-  const acc = mine.filter(o => o.acc).sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
-  const offs = mine.filter(o => !o.acc).sort((a, b) => farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
+  /* v164: Favoriten (★) stehen oben */
+  const acc = mine.filter(o => o.acc).sort((a, b) => (!!b.fav - !!a.fav) || farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
+  const offs = mine.filter(o => !o.acc).sort((a, b) => (!!b.fav - !!a.fav) || farmOrderReady(b) - farmOrderReady(a) || b.pay - a.pay);
   const atFarm = S.fleet.filter(f => f.at === FARM_NODE && f.phase === "idle");
   const vehLine = atFarm.length ? atFarm.map(f => vType(f.type).icon).join(" ") + " " + FT().atHere : FT().vehNone;
   const card = o => {
@@ -2254,7 +2313,8 @@ function openFarmOrders(sendFor, area) {
     const btns = o.acc
       ? `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : miss}${o.tutF ? "" : `<button class="btn tiny ghost" data-ret="${o.id}" title="Zurückgeben">↩︎</button>`}`
       : `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : ""}<button class="btn tiny acc" data-acc="${o.id}">✓ Annehmen</button>${o.tutF ? "" : `<button class="btn tiny ghost" data-drop="${o.id}" title="Ablehnen">🗑️</button>`}`;
-    return `<div class="fo${ready ? " ready" : ""}${o.acc ? " acc" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${head}${items}${reward}
+    const star = `<button class="fo-star${o.fav ? " on" : ""}" data-fav="${o.id}" title="${o.fav ? "Favorit – wird mit höchster Dringlichkeit bearbeitet" : "Als Favorit markieren – Büro und Team ziehen den Auftrag vor"}" aria-pressed="${!!o.fav}">${o.fav ? "★" : "☆"}</button>`;
+    return `<div class="fo${ready ? " ready" : ""}${o.acc ? " acc" : ""}${o.fav ? " fav" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${star}${head}${items}${reward}
       ${!o.acc && !ready ? `<div class="fo-mline">${miss}</div>` : ""}<div class="fo-b">${btns}</div>${send}</div>`;
   };
   /* Daueraufträge der Station */
@@ -2282,6 +2342,15 @@ function openFarmOrders(sendFor, area) {
   const again = () => openFarmOrders(FV.sendFor, FV.ordArea);
   $$("#farmSheetIn [data-oarea]").forEach(b => b.onclick = () => { sfx("tap"); openFarmOrders(null, b.dataset.oarea); });
   $$("#farmSheetIn [data-send]").forEach(b => b.onclick = () => openFarmOrders(FV.sendFor === b.dataset.send ? null : b.dataset.send, area));
+  $$("#farmSheetIn [data-fav]").forEach(b => b.onclick = () => {
+    const o = S.orders.find(x => x.id === b.dataset.fav);
+    if (!o) return;
+    o.fav = !o.fav;
+    sfx(o.fav ? "coin" : "tap");
+    if (o.fav) toast("⭐ Favorit: Team und Büro ziehen „" + o.shipper + "“ vor – höchste Dringlichkeit.", "ok");
+    if (typeof staffPlan === "function") try { staffPlan(); } catch (_) { /* egal */ }
+    save(); again();
+  });
   $$("#farmSheetIn [data-acc]").forEach(b => b.onclick = () => {
     const o = S.orders.find(x => x.id === b.dataset.acc);
     if (farmAcceptOrder(o)) { sfx("pop"); farmEvent("accept"); save(); renderFarmUI(); }
@@ -2299,13 +2368,9 @@ function openFarmOrders(sendFor, area) {
       renderFarmUI();
     }
   });
-  $$("#farmSheetIn [data-drop]").forEach(b => b.onclick = () => {
-    const o = S.orders.find(x => x.id === b.dataset.drop);
-    if (!o || o.tutF) return;
-    S.orders = S.orders.filter(x => x !== o);
-    S.farm.lastOrd = S.time - 15;
-    save(); again();
-  });
+  /* v168: Ablehnen (🗑️) per Delegation: greift auch, wenn das Fenster unter dem Finger neu gezeichnet wurde;
+     danach kurz ein Hinweis, damit man sieht, dass etwas passiert ist */
+  FV.dropAgain = again;
   $$("#farmSheetIn [data-ret]").forEach(b => b.onclick = () => {
     const o = S.orders.find(x => x.id === b.dataset.ret);
     if (!o) return;

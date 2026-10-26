@@ -1,5 +1,230 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Gesamtpaket v144 – v171 (alles von heute in einem ZIP)
+
+Enthält den Endstand aller Dateien, die sich seit v143 geändert haben (26 Dateien, keine gelöschten, keine Tests). Einfach alle Dateien ins Repo-Wurzelverzeichnis hochladen und bestehende überschreiben – die Einzel-ZIPs v144 … v171 sind darin vollständig enthalten.
+
+Neu hinzugekommen: `routegeo.js` (v150), `treebark.js` (v152).
+Geändert: `AENDERUNGEN.md`, `ZUSAMMENFUEHREN.md`, `auction.js`, `corp.js`, `erbe.js`, `erbedata.js`, `farm.js`, `farmmodels.js`, `farmview.js`, `forestmodels.js`, `fpsaw.js`, `game.js`, `gl3d.js`, `hunt.js`, `index.html`, `lucky.js`, `map.js`, `offices.js`, `style.css`, `sw.js`, `team.js`, `vip.js`, `woodmodels.js`, `worldview.js`.
+
+## Stand v171 – Level getrennt (auf v170)
+
+| Teil | Datei |
+|---|---|
+| checkLevel aufgeteilt, logiUnlocks, logiLevelShow, Haken in showTab/closeModal | game.js |
+| #logiLvl, .flv.logi | style.css |
+| Version | index.html, sw.js |
+
+## Stand v170 – Konzern-Wellen und Übernahme-Show (auf v169)
+
+| Teil | Datei |
+|---|---|
+| Wellen, Marktführung, Show, Imperium, Stammkunden | corp.js |
+| rivalById/Sync, Gewichtung, corpDay-Haken, Konzern-Tag | vip.js |
+| #corpShow, Imperium-/Lead-Leisten | style.css |
+| Version | index.html, sw.js |
+
+## Stand v169 – Lkw-Stellplatz (auf v168)
+
+| Teil | Datei |
+|---|---|
+| neue Lage, FFIXED | erbedata.js |
+| inLkwBay, Migration v169lkw | erbe.js |
+| Freihalten, Schotter | worldview.js |
+| lkwRoute | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v168 – Ablehnen-Knopf (auf v167)
+
+| Teil | Datei |
+|---|---|
+| dropGo, Delegation | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v167 – Schatz-Kamera (auf v166)
+
+| Teil | Datei |
+|---|---|
+| worldTreasureCam / CamBack | worldview.js |
+| Neigungs-Override FV.camOv | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v166 – Ereignis-Absicherung (auf v165)
+
+| Teil | Datei |
+|---|---|
+| Spieluhr try/catch | game.js |
+| Schatz-/PV-Takt abgesichert | erbe.js, worldview.js |
+| X per Delegation | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v165 – Zutaten-Tipp ohne Produktion (auf v164)
+
+| Teil | Datei |
+|---|---|
+| Klick auf Chip in .frec stoppen | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v164 – Favoriten-Stern (auf v163)
+
+| Teil | Datei |
+|---|---|
+| Stern, Sortierung | farmview.js, style.css |
+| staffFavPlan, prio 3 | team.js |
+| Dispo-Vorrang | game.js, offices.js |
+| Version | index.html, sw.js |
+
+## Stand v163 – Dispo sortiert Unrentables aus (auf v162)
+
+| Teil | Datei |
+|---|---|
+| dispoPurge / dispoProfitable | offices.js |
+| evalFullCost, Annahmeschwelle | game.js |
+| Version | index.html, sw.js |
+
+## Stand v162 – Traktor frei beweglich, Halle entfernt (auf v161)
+
+| Teil | Datei |
+|---|---|
+| Zone „wild“, Prüfung `farmWildOk`, Straßenrand-Sperren | farm.js |
+| Traktor-Objekt (Größe) | erbedata.js |
+| Migration `farmTractorEnsure` | erbe.js |
+| Popup, Lager, Platzieren | farmview.js |
+| Mesh, alte Halle/Traktor raus | worldview.js |
+| Version | index.html, sw.js |
+
+## Stand v161 – Etappen-Knopf live (auf v160)
+
+| Teil | Datei |
+|---|---|
+| stageLiveTick + Animation | game.js, style.css |
+| Version | index.html, sw.js |
+
+## Stand v160 – Verhandlung emotional (auf v159)
+
+| Teil | Datei |
+|---|---|
+| Emotionale Antworten + Prinzip-Aufschlag | corp.js |
+| Version | index.html, sw.js |
+
+## Stand v159 – Fortbildungs-Meldung neu (auf v158)
+
+| Teil | Datei |
+|---|---|
+| Porträt-Bildgröße (`big: 2`) | worldview.js |
+| Meldung neu gebaut | team.js, style.css |
+| Version | index.html, sw.js |
+
+## Stand v158 – Verschieben deckend (auf v157)
+
+| Teil | Datei |
+|---|---|
+| Geisterbild deckend + Sägeblatt | farmview.js |
+| Version | index.html, sw.js |
+
+## Stand v157 – Telefonat nur mit Büro (auf v156)
+
+| Teil | Datei |
+|---|---|
+| Anruf/Blase nur mit Büro | team.js |
+| Version | index.html, sw.js |
+
+## Stand v156 – Headhunter für jedes Büro (auf v155)
+
+| Teil | Datei |
+|---|---|
+| Gratis-Fachkraft je Büro | lucky.js, offices.js, corp.js |
+| Version | index.html, sw.js |
+
+## Stand v155 – Sägewerk-Büro 3D-Icons (auf v154)
+
+| Teil | Datei |
+|---|---|
+| Maschinen-Chips mit 3D-Bildchen | worldview.js, style.css |
+| Version | index.html, sw.js |
+
+## Stand v154 – Lack passend zum Foto (auf v153)
+
+| Teil | Datei |
+|---|---|
+| Lackerkennung aus Foto, Angleich Lose/Garage/Verlauf | auction.js |
+| Version | index.html, sw.js |
+
+## Stand v153 – Grafikfehler (auf v152)
+
+| Teil | Datei |
+|---|---|
+| Nahe Ebene im Auge-Blick 1,1 → 0,3 | `hunt.js` (Zeile mit `c.near = …`) |
+| Lichtsäule nur bei flachem Blick, sonst Lichtfleck (`stepLife`, Knoten `lpatch`); stetige Bodenfarbe, ein Lichtungston (`worldGroundCol`) | `worldview.js` |
+| `lightPatch()` | `forestmodels.js` |
+| Version | `index.html`, `sw.js` |
+
+## Stand v152 – gemeinsames Baumsystem (auf v151)
+
+| Teil | Datei |
+|---|---|
+| Rinde, Relief, Stamm, Markierungen (aus fpsaw.js herausgelöst) | `treebark.js` (neu, nach woodmodels.js laden) |
+| `tree(sp, sz, v, hi)`, `leafClump`, `spruceLayer`, `stub`, Stumpf, Windwurf, Setzling | `woodmodels.js` |
+| Detailstufen (TLOD, `treeLodStep`, `bgGH`/`bgHi`), Inselbäume | `worldview.js` |
+| Schattenmodell `smesh` für Knoten und Instanzgruppen | `gl3d.js` |
+| TBARK statt eigener Rinde, Variante/Samen, `b.keep` | `fpsaw.js` |
+| Obstbaum | `farmmodels.js` |
+| Version, Skript/Cache-Eintrag | `sw.js`, `index.html` |
+
+## Stand v151 – Eiche: Zacken am Stamm (auf v150)
+
+| Teil | Datei |
+|---|---|
+| `taperB` (Relief kantenlinear), `emitBark` (Facettenschnitt), `barkStyle` (`fc`,`la0`) | `fpsaw.js` |
+| Version | `sw.js`, `index.html` |
+
+## Stand v150 – Routen auf echten Wegen (auf v149)
+
+| Teil | Datei |
+|---|---|
+| Wege/Seewege/Flüsse/Großkreise, Straßen-Routing | `routegeo.js` (neu) |
+| `pathPts` mit Fahrart, `roadLine`, `vehPoint`, `parkHere`, `routeGm` | `game.js` |
+| `unwrapLons` behält `gm` | `map.js` |
+| Skript eingebunden, Version | `index.html`, `sw.js` |
+
+## Stand v149 – Säge/Axt bleibt in 3D (auf v148)
+
+| Teil | Datei |
+|---|---|
+| `can()` schließt auslaufenden Lauf ab | `fpsaw.js` |
+| Version | `sw.js`, `index.html` |
+
+## Stand v148 – iOS-Lupe aus (auf v147)
+
+| Teil | Datei |
+|---|---|
+| touchstart/Auswahl abfangen | `game.js` |
+| Auswahl-CSS | `style.css` |
+| Version | `sw.js`, `index.html` |
+
+## Stand v147 – Flotte: Alle Arten (auf v146)
+
+| Teil | Datei |
+|---|---|
+| Chip „Alle Arten“ setzt Filter zurück | `game.js` |
+| Version | `sw.js`, `index.html` |
+
+## Stand v146 – Hindernisse für Tiere, Falter, Menschen (auf v145)
+
+| Teil | Datei |
+|---|---|
+| Wegenetz um Steine/Felsen, Helfer `wanderPlan` … | `team.js` |
+| Wildtiere, Falter, `WV.rockObs` | `worldview.js` |
+| Wildwiese Hirsch/Keiler | `hunt.js` |
+| Version | `sw.js`, `index.html` |
+
+## Stand v145 – Tipp-Karte entfernt (auf v144)
+
+| Teil | Datei |
+|---|---|
+| Tipp-Karte raus | `game.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v144 – Stand-Schieber wie bei Arbeitern (auf v143)
 
 | Teil | Datei |
