@@ -1383,25 +1383,28 @@ const FWM = (() => {
   /* Querschnitte („Stationen“) je Seite sg: s, Wasserrand h, Randnormale (ns, nl) in Bachkoordinaten (l = Abstand nach außen),
      Verjüngung f, Strandbreite wS (Anteil), Seefarben-Anteil cw. o.mouth = { R, shoreD, shoreW }: Mündung in den See
      (shoreD(x, z) = Abstand von der Seeuferlinie, außen +; shoreW(x, z) = Strandbreite des Sees dort).
-     Je Seite: Q1 = Punkt, an dem die Bachuferlinie (l = h) die Seeuferlinie trifft, u = Richtung der Seeuferlinie dort (nach außen).
-     v178: Die Ecke an Land wird durch eine weiche Kurve (quadratische Bézierkurve T2 → Q1 → T1, Schenkellänge R) ausgerundet –
-     sie berührt Seeufer und Bachufer tangential, die Krümmung nimmt zur Mitte hin zu statt zu springen (wirkt natürlicher als
-     ein Kreisbogen). Am Seeufer (T2) hat der Bachstrand genau die Breite und Farben des Seestrands dort und wird entlang der
-     Kurve allmählich so breit wie am Bach – keine gerade Kante mehr. Zwischen Bachmitte und Seeuferlinie liegt nur Wasser
-     („lake“-Stationen, ohne Ufer). */
+     v179: Die Ecke an Land zwischen Seeufer und Bachufer wird durch eine große, gleichmäßig runde Kurve ersetzt (kubische
+     Bézierkurve, kreisähnlich): Sie beginnt auf dem echten, gebogenen Seeufer im Abstand R von der Bachuferlinie (T2, Richtung
+     = Seeufer dort) und endet auf dem Bachufer R hinter der Ecke (T1, Richtung = Bach) – kein gerades Stück mehr, keine enge
+     Ecke. Am Seeufer hat der Bachstrand genau die Breite und Farben des Seestrands und wird entlang der Kurve allmählich so
+     breit wie am Bach. Zwischen Bachmitte, Seeufer und Kurve liegt nur Wasser („lake“-Stationen, ohne Ufer). */
   function creekMouthSt(Fr, o, sg) {
     const M = o.mouth, end = Fr.L[Fr.L.length - 1];
-    const cross = l => { for (let s = 0; s < end; s += 0.05) { const p = Fr.W(s, sg * l, 0); if (M.shoreD(p[0], p[2]) >= 0) return s; } return 0; };
-    const t = M.R, Q1 = [cross(CR_H), CR_H], Q2 = [cross(CR_H + t), CR_H + t];
-    const u = unit(Q2[0] - Q1[0], Q2[1] - Q1[1]), T1 = [Q1[0] + t, Q1[1]], T2 = [Q1[0] + u[0] * t, Q1[1] + u[1] * t];
+    /* Bogenlänge s, bei der das Seeufer im Abstand l von der Bachmitte liegt */
+    const cross = l => { for (let s = -6; s < end; s += 0.05) { const p = Fr.W(s, sg * l, 0); if (M.shoreD(p[0], p[2]) >= 0) return s; } return 0; };
+    const R = M.R, Q1 = [cross(CR_H), CR_H], l2 = CR_H + R;
+    const T2 = [cross(l2), l2], u = unit(cross(l2 + 0.6) - cross(l2 - 0.6), 1.2), T1 = [Q1[0] + R, CR_H];
+    /* Schenkel der Kurve: 0,55 × Abstand der Endpunkte – ergibt eine fast kreisrunde, weiche Rundung */
+    const k = 0.55 * Math.hypot(T1[0] - T2[0], T1[1] - T2[1]);
+    const P1 = [T2[0] - u[0] * k, T2[1] - u[1] * k], P2 = [T1[0] - k, T1[1]];
     const st = [];
-    /* Wasser zwischen Bachmitte und Seeuferlinie (von l = 0 bis T2), etwas in den See hinein verlängert */
-    const tau0 = -Q1[1] / u[1] - 1.5 / Math.max(0.2, u[1]);
-    for (let k = 0; k <= 6; k++) { const tau = tau0 + (t - tau0) * k / 6, p = [Q1[0] + u[0] * tau - 0.4, Q1[1] + u[1] * tau]; st.push({ s: p[0], h: Math.max(0, p[1]), ns: u[1], nl: -u[0], f: 1, lake: true }); }
-    for (let k = 0; k <= 20; k++) {
-      const a = k / 20, b0 = (1 - a) * (1 - a), b1 = 2 * (1 - a) * a, b2 = a * a;
-      const E = [b0 * T2[0] + b1 * Q1[0] + b2 * T1[0], b0 * T2[1] + b1 * Q1[1] + b2 * T1[1]];
-      const D = unit(2 * (1 - a) * (Q1[0] - T2[0]) + 2 * a * (T1[0] - Q1[0]), 2 * (1 - a) * (Q1[1] - T2[1]) + 2 * a * (T1[1] - Q1[1]));
+    /* Wasser zwischen Bachmitte und Seeufer (dem echten Ufer folgend, von l = 0 bis T2), etwas in den See hinein */
+    for (let j = 0; j <= 8; j++) { const l = l2 * j / 8; st.push({ s: cross(l) - 0.5, h: l, ns: 1, nl: 0, f: 1, lake: true }); }
+    for (let j = 0; j <= 24; j++) {
+      const a = j / 24, b0 = (1 - a) ** 3, b1 = 3 * (1 - a) ** 2 * a, b2 = 3 * (1 - a) * a * a, b3 = a ** 3;
+      const E = [b0 * T2[0] + b1 * P1[0] + b2 * P2[0] + b3 * T1[0], b0 * T2[1] + b1 * P1[1] + b2 * P2[1] + b3 * T1[1]];
+      const d0 = 3 * (1 - a) ** 2, d1 = 6 * (1 - a) * a, d2 = 3 * a * a;
+      const D = unit(d0 * (P1[0] - T2[0]) + d1 * (P2[0] - P1[0]) + d2 * (T1[0] - P2[0]), d0 * (P1[1] - T2[1]) + d1 * (P2[1] - P1[1]) + d2 * (T1[1] - P2[1]));
       st.push({ s: E[0], h: E[1], ns: -D[1], nl: D[0], f: 1 });
     }
     const p2 = Fr.W(T2[0], sg * T2[1], 0);
@@ -1771,7 +1774,7 @@ const FWM = (() => {
     band(() => 0.15, () => -1.4, 0xa89878, 0x75704f, 0.01);                        /* Uferschlamm unter dem Wasserrand */
     for (let i = 0; i < 34; i++) {
       const a = rnd() * 6.28, d = 0.3 + rnd() * Math.max(0.2, W(a) * 0.4), p = lakeR(rx + d, rz + d, a);
-      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.16)) continue;   /* v176: keine Steine in der Bachmündung */
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.26)) continue;   /* v176: keine Steine in der Bachmündung */
       b.noise(0.1, () => b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.04, z: p[1], jitter: 0.5, flat: 0.55 }));
     }
     return b;
@@ -1805,7 +1808,7 @@ const FWM = (() => {
     const b = new MB(), seg = 256, P = (a, d) => { const p = lakeR(rx + d, rz + d, a); return [p[0], 0, p[1]]; };
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, am = (a0 + a1) / 2;
-      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(am - s), Math.cos(am - s))) < 0.15)) continue;   /* v177: breitere Mündung */
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(am - s), Math.cos(am - s))) < 0.26)) continue;   /* v177/v179: breitere Mündung */
       b.triV(P(a0, 0), P(a1, 0.25), P(a1, 0), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
       b.triV(P(a0, 0), P(a0, 0.25), P(a1, 0.25), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
     }

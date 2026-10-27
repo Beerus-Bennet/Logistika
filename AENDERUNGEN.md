@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v179 – Mündung: durchgehend runder Bogen statt Gerade + Knick
+
+- **Problem (Screenshot):** Die Wasserlinie lief vom Seeufer erst ein Stück gerade und knickte dann eng in den Bach ab. Grund: Die Rundung nahm das Seeufer als gerade Linie an (es ist aber gebogen), und die Ecke war zu eng.
+- **Lösung:** Die Rundung beginnt jetzt auf dem echten, gebogenen Seeufer etwa 7 Einheiten neben dem Bach (in Richtung des Seeufers dort) und läuft als große, kreisähnliche Kurve (kubische Bézierkurve) bis 7 Einheiten in den Bach hinein. Das Wasser dazwischen folgt dem echten Seeufer. Schaumsaum und Ufersteine des Sees sind an der breiteren Mündung ausgespart.
+- Nur Optik. Dateien: `woodmodels.js` (creekMouthSt, lakeFoam/lakeShore-Aussparung 0,26 rad), `worldview.js` (`mouth.R = 7`).
+
 ## v178 – Mündung: keine gerade Kante mehr, natürlichere Rundung
 
 - **Gerade Linie entfernt:** Rechts an der Mündung ist der Seestrand wegen des Wegs schmal, der Bachstrand war aber breit – dort endete der Sand mit einer geraden Kante. Jetzt hat der Bachstrand am Seeufer genau die Breite und die Farben des Seestrands an dieser Stelle und wird erst entlang der Rundung allmählich breiter (über ca. 10 Einheiten).
