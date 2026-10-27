@@ -989,23 +989,35 @@ function worldStatic() {
      Flache, helle Stellen unter Schilf, Steinkante und Insel (Seekoordinaten), damit nichts mitten im tiefen Wasser steht. */
   const lkSh = [[-29, 4, 3.6], [-34, -4, 3], [-26, 14, 3], [22, -12, 3], [30, 4, 3], [-31, -14, 3], [-12, 10, 4.6], [20, -7.5, 4.2]];
   const lkSkip = ["f_steg", "f_boot"].filter(k => typeof FFISHERY !== "undefined" && FFISHERY[k]).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx));
-  /* v173: Strand außen genau in der Geländefarbe; vor den Fischerei-Gebäuden (Südufer) nur ein schmaler Saum, damit sie auf Gras stehen */
-  const lkB = typeof FFISHERY !== "undefined" ? Object.keys(FFISHERY).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx)) : [];
-  /* v174: Gebäude an Land (nicht Steg/Bootshaus), die näher als 3 Einheiten am Wasser stehen (Räucherei, Hütte):
-     die Uferlinie weicht dort weich zurück, damit sie nicht auf dem Übergang stehen. Nur Optik – Angeln, Boote, inLake bleiben gleich. */
-  if (FWM.setLakeDents) FWM.setLakeDents(typeof FFISHERY === "undefined" ? [] : Object.keys(FFISHERY).filter(k => k !== "f_steg" && k !== "f_boot").map(k => {
+  /* v174/v175: Abstand zu Gebäuden und Wegen am See. Für jedes Hindernis, das zu nah am Wasser liegt, weicht die Uferlinie dort
+     weich zurück (Einbuchtung), und der Strand bleibt schmal. Gebäude (nicht Steg/Bootshaus): 3,2 Einheiten frei; Wege (Mittellinie,
+     Breite 1,8): 3,0. Nur Optik – Angeln, Boote, inLake/lakeE bleiben unverändert. */
+  const lkWob = a => 1 + 0.05 * Math.sin(3 * a + 0.7) + 0.03 * Math.sin(5 * a + 1.9);
+  const lkAng = (x, z) => Math.atan2((z - Lk.z) / Lk.rz, (x - Lk.x) / Lk.rx);
+  const lkRad = a => Math.hypot(Lk.rx * Math.cos(a), Lk.rz * Math.sin(a)) * lkWob(a);
+  const lkGap = (x, z) => { const a = lkAng(x, z); return (lakeE(x, z) / lkWob(a) - 1) * lkRad(a); };
+  const lkObs = [];
+  if (typeof FFISHERY !== "undefined") Object.keys(FFISHERY).filter(k => k !== "f_steg" && k !== "f_boot").forEach(k => {
     const B = FFISHERY[k], hw = B.sz[0] / 2, hd = B.sz[1] / 2;
-    let mn = 9;
-    for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) mn = Math.min(mn, lakeE(B.x - hw + hw * i / 4, B.z - hd + hd * j / 4));
-    const gap = (mn - 1) * Lk.rz, need = 3.2 - gap;
-    if (need <= 0) return null;
-    return [Math.atan2((B.z - Lk.z) / Lk.rz, (B.x - Lk.x) / Lk.rx), need / Lk.rz, (hw + 3) / Lk.rx * 1.6];
-  }).filter(Boolean));
-  const lkW = a => { let w = 2.2; lkB.forEach(b => { const d = Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))); w = Math.min(w, 0.7 + 1.5 * clamp((d - 0.12) / 0.25, 0, 1)); }); return w; };
-  R.nodes.push(fnode(fmesh("lakeShore174", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW)), { x: Lk.x, z: Lk.z, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeWater174", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeFoam174", () => FWM.lakeFoam(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeReeds174", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
+    let mn = 1e9, at = null;
+    for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) { const x = B.x - hw + hw * i / 4, z = B.z - hd + hd * j / 4, g = lkGap(x, z); if (g < mn) { mn = g; at = [x, z]; } }
+    if (mn < 3.2) { const a = lkAng(at[0], at[1]); lkObs.push({ a, f: (3.2 - mn) / lkRad(a), wd: (hw + 3) / lkRad(a) * 1.6, w: 0.7 }); }
+  });
+  (typeof LAKE_EAST !== "undefined" ? [LAKE_WAY, LAKE_EAST, LAKE_STEM] : []).forEach(line => {
+    for (let k = 1; k < line.length; k++) {
+      const p = line[k - 1], q = line[k], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 0.8));
+      for (let t = 0; t <= n; t++) {
+        const x = p[0] + (q[0] - p[0]) * t / n, z = p[1] + (q[1] - p[1]) * t / n, g = lkGap(x, z);
+        if (g > -1 && g < 3.0) { const a = lkAng(x, z); lkObs.push({ a, f: (3.0 - g) / lkRad(a), wd: 2.6 / lkRad(a), w: 1.2 }); }
+      }
+    }
+  });
+  if (FWM.setLakeDents) FWM.setLakeDents(lkObs.map(o => [o.a, o.f, o.wd]));
+  const lkW = a => { let w = 2.2; lkObs.forEach(o => { const d = Math.abs(Math.atan2(Math.sin(a - o.a), Math.cos(a - o.a))); if (d < o.wd) w = Math.min(w, o.w + (2.2 - o.w) * clamp(d / o.wd, 0, 1) * 0.5); }); return w; };
+  R.nodes.push(fnode(fmesh("lakeShore175", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW)), { x: Lk.x, z: Lk.z, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeWater175", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeFoam175", () => FWM.lakeFoam(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeReeds175", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
   const lk = new FM.MB();
   [[-15, 52, 26], [-20, 44, 18], [-12, 62, 16], [36, 36, 14], [44, 52, 12], [-17, 34, 10]].forEach(([x, z, n], i) => lk.merge(FWM.reedPatch(n), { x, z, ry: i }));
   [[-9, 40, 14], [-4, 43, 8], [28, 64, 9]].forEach(([x, z, n]) => lk.merge(FWM.lilyPads(n), { x, z, y: 0.03 }));

@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v175 – Uferweg nicht mehr direkt am Wasser
+
+- **Problem:** Seit dem neuen Ufer (v173) lief der Weg am Ostufer (und kurz vor der Bachbrücke) direkt an der Wasserlinie entlang.
+- **Lösung:** Gleiches Prinzip wie bei den Gebäuden in v174: Die Uferlinie weicht dort, wo ein Weg (Ostweg, Südweg, Abzweig zum Steg) näher als 3 Einheiten am Wasser liegt, weich zurück, und der Sandstreifen bleibt dort schmal. Jetzt liegt überall ein Grasstreifen zwischen Weg und Strand.
+- Die Gebäude-Abstände rechnen jetzt mit derselben (genaueren) Formel, inkl. der welligen Uferform.
+- Nur Optik: Angeln, Boote, Wege, `inLake`/`lakeE` sind unverändert.
+- Dateien: `worldview.js` (Hindernisliste `lkObs` beim Seebau, Mesh-Keys `lake*175`).
+
 ## v174 – Räucherei und Fischerhütte stehen nicht mehr am Uferübergang
 
 - **Problem:** Räucherei (ca. 1 Einheit) und Fischerhütte (ca. 1,7) standen so nah am Wasser, dass sie genau auf dem Übergang See → Land saßen. Verschieben geht nicht (direkt dahinter liegt der Uferweg).
