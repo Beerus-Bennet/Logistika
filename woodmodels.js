@@ -1650,29 +1650,68 @@ const FWM = (() => {
 
   /* -------------------------------- See ---------------------------------- */
   const lakeR = (rx, rz, a) => { const w = 1 + 0.05 * Math.sin(3 * a + 0.7) + 0.03 * Math.sin(5 * a + 1.9); return [Math.cos(a) * rx * w, Math.sin(a) * rz * w]; };
-  function lakeShore(rx, rz) {
-    G3.seed(3940);
-    const b = new MB(), seg = 96;
+  /* v145: Ufer wie am Teich – Wiese → trockener Sand → nasser Sand → Uferschlamm unter dem Wasserrand, Steine am Ufer */
+  function lakeBand(b, rx, rz, d0, d1, c0, c1, y, seg) {
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      const P = (a, d, y) => { const p = lakeR(rx + d, rz + d, a); return [p[0], y, p[1]]; };
-      b.triV(P(a0, 2.6, 0.006), P(a1, 2.6, 0.006), P(a1, 0.4, 0.008), mix(0x86bf4a, 0xd9c48a, 0.15), mix(0x86bf4a, 0xd9c48a, 0.15), 0xe3cf95);
-      b.triV(P(a0, 2.6, 0.006), P(a1, 0.4, 0.008), P(a0, 0.4, 0.008), mix(0x86bf4a, 0xd9c48a, 0.15), 0xe3cf95, 0xe3cf95);
-      b.triV(P(a0, 0.4, 0.008), P(a1, 0.4, 0.008), P(a1, -1.2, 0.01), 0xe3cf95, 0xe3cf95, 0x9fb58a);
-      b.triV(P(a0, 0.4, 0.008), P(a1, -1.2, 0.01), P(a0, -1.2, 0.01), 0xe3cf95, 0x9fb58a, 0x9fb58a);
+      const P = (a, d) => { const p = lakeR(rx + d, rz + d, a); return [p[0], y, p[1]]; };
+      const p00 = P(a0, d0), p01 = P(a1, d0), p10 = P(a0, d1), p11 = P(a1, d1);
+      b.triV(p00, p11, p01, c0, c1, c0);
+      b.triV(p00, p10, p11, c0, c1, c1);
+    }
+  }
+  function lakeShore(rx, rz) {
+    G3.seed(3940);
+    const b = new MB(), seg = 128;
+    lakeBand(b, rx, rz, 1.9, 0.8, 0x86bf4a, 0xc9b98c, 0.006, seg);        /* Wiese → trockener Sand */
+    lakeBand(b, rx, rz, 0.8, 0.2, 0xc9b98c, 0xa89878, 0.008, seg);        /* Sand → nasser Sand */
+    lakeBand(b, rx, rz, 0.2, -1.4, 0xa89878, 0x75704f, 0.01, seg);        /* Uferschlamm unter dem Wasserrand */
+    for (let i = 0; i < 34; i++) {
+      const a = rnd() * 6.28, p = lakeR(rx + 0.4 + rnd() * 0.9, rz + 0.4 + rnd() * 0.9, a);
+      b.noise(0.1, () => b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.04, z: p[1], jitter: 0.5, flat: 0.55 }));
     }
     return b;
   }
-  function lakeWater(rx, rz) {
-    const b = new MB(), seg = 96;
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      const p0 = lakeR(rx, rz, a0), p1 = lakeR(rx, rz, a1);
-      const q0 = lakeR(rx * 0.55, rz * 0.55, a0), q1 = lakeR(rx * 0.55, rz * 0.55, a1);
-      b.triV([0, 0, 0], [q1[0], 0, q1[1]], [q0[0], 0, q0[1]], 0x1f5f8f, 0x2a6f9e, 0x2a6f9e);
-      b.triV([q0[0], 0, q0[1]], [q1[0], 0, q1[1]], [p1[0], 0, p1[1]], 0x2a6f9e, 0x2a6f9e, 0x5fb2cf);
-      b.triV([q0[0], 0, q0[1]], [p1[0], 0, p1[1]], [p0[0], 0, p0[1]], 0x2a6f9e, 0x5fb2cf, 0x5fb2cf);
+  /* v145: Wasser wie am Teich – tief und dunkel in der Mitte, türkis und hell zum Ufer hin; flache Stellen (sh: [[x, z, r], …] in
+     Seekoordinaten: Schilf, Steinkante, Insel) werden heller, damit Schilf und Steine nicht mitten im tiefen Wasser stehen */
+  const LAKE_F = [0, 0.35, 0.62, 0.82, 0.93, 1.0], LAKE_C = [0x174f7a, 0x1d5f8d, 0x2a7aa6, 0x3f96b4, 0x62adb4, 0x8cbca8];
+  function lakeWater(rx, rz, sh) {
+    const b = new MB(), seg = 128, NR = 18, shoals = sh || [];
+    const grad = f => { let k = 0; while (k < LAKE_F.length - 2 && f > LAKE_F[k + 1]) k++; return mix(LAKE_C[k], LAKE_C[k + 1], Math.min(1, (f - LAKE_F[k]) / (LAKE_F[k + 1] - LAKE_F[k]))); };
+    const fOf = i => i >= NR ? 1 : 1 - Math.pow(1 - i / NR, 1.6);
+    const V = (a, i) => {
+      const f = fOf(i), p = i >= NR ? lakeR(rx + 0.08, rz + 0.08, a) : lakeR(rx * f, rz * f, a);
+      let c = grad(f), s = 0;
+      shoals.forEach(([x, z, r]) => { const d2 = ((p[0] - x) * (p[0] - x) + (p[1] - z) * (p[1] - z)) / (r * r); s = Math.max(s, Math.exp(-d2)); });
+      if (s > 0.01) c = mix(c, 0x6fb8b6, s * 0.75);
+      return [[p[0], 0, p[1]], c];
+    };
+    const memo = new Map(), get = (i, j) => { const k = i * 1000 + (j % seg); let v = memo.get(k); if (!v) { v = V((j % seg) / seg * Math.PI * 2, i); memo.set(k, v); } return v; };
+    for (let i = 0; i < NR; i++) for (let j = 0; j < seg; j++) {
+      const A = get(i, j), B = get(i, j + 1), C2 = get(i + 1, j + 1), D = get(i + 1, j);
+      if (i === 0) { b.triV([0, 0, 0], C2[0], D[0], grad(0), C2[1], D[1]); continue; }
+      b.triV(A[0], B[0], C2[0], A[1], B[1], C2[1]);
+      b.triV(A[0], C2[0], D[0], A[1], C2[1], D[1]);
     }
+    return b;
+  }
+  /* v145: heller Saum, wo das Wasser ans Ufer schwappt (eigener Knoten, halb durchsichtig – wie am Teich) */
+  function lakeFoam(rx, rz) { const b = new MB(); lakeBand(b, rx, rz, 0, 0.25, 0xf2f7f4, 0xf2f7f4, 0, 128); return b; }
+  /* v145: Schilf mit Rohrkolben in Gruppen rund ums Ufer (wiegt im Wind) – an Stellen ohne Steg */
+  function lakeReeds(rx, rz, skip) {
+    G3.seed(3970);
+    const b = new MB();
+    [0.35, 0.9, 1.6, 2.2, 2.75, 3.3, 3.75, 4.35, 5.0, 5.55, 6.0].forEach(a0 => {
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a0 - s), Math.cos(a0 - s))) < 0.22)) return;
+      for (let i = 0; i < 16; i++) {
+        const a = a0 + (rnd() - 0.5) * 0.18, d = (rnd() - 0.6) * 1.4, p = lakeR(rx + d, rz + d, a), h = 0.6 + rnd() * 0.6;
+        b.at({ x: p[0], z: p[1], rx: (rnd() - 0.5) * 0.25, rz: (rnd() - 0.5) * 0.25 }, () => {
+          b.box(0.04, h, 0.04, rnd() < 0.5 ? 0x5c8f34 : 0x6fa23d);
+          if (rnd() < 0.45) b.box(0.08, 0.18, 0.08, 0x6b4426, { y: h - 0.06 });
+          if (rnd() < 0.5) b.box(0.016, 0.42, 0.09, 0x78ad44, { y: 0.02, rz: 0.35, x: 0.04 });
+        });
+      }
+    });
     return b;
   }
   function reedPatch(n) {
@@ -4006,7 +4045,7 @@ const FWM = (() => {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
-    lakeShore, lakeWater, reedPatch, lilyPads,
+    lakeShore, lakeWater, lakeFoam, lakeReeds, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
