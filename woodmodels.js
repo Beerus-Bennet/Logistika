@@ -1363,46 +1363,98 @@ const FWM = (() => {
       return f;
     });
   }
-  /* v176: Querprofil wie das Seeufer. Abstände von der Bachmitte (· f[i] bei Verjüngung); Wasserrand bei 1,15.
-     Ufer: Schlamm (unter dem Wasser) → nasser Sand → trockener Sand → Gelände (o.gnd). Wasser: Mitte → Rand wie der Seerand. */
-  const CB_D = [0.6, 1.3, 1.62, 2.4], CB_C = [0x75704f, 0xa89878, 0xc9b98c];
-  const CW_D = [0, 0.6, 1.2], CW_C = [0x3f96b4, 0x62adb4, 0x8cbca8];
-  /* Band aus Streifen: D = Abstände (aufsteigend), C(i, k) = Farbe am Punkt i im Abstand D[k] (beide Seiten gespiegelt) */
-  function creekProfile(b, P, f, D, C, y) {
-    const n = P.length;
+  /* v176/v177: Querprofil wie das Seeufer – Abstände relativ zum Wasserrand (h = 1,15 · f): Schlamm −0,55 (unter dem Wasser),
+     nasser Sand +0,15, trockener Sand +0,88, Gelände +2,2 (genau wie lakeShore). Wasser: Mitte → Rand wie der Seerand. */
+  const CR_H = 1.15, CB_R = [-0.55, 0.15, 0.88, 2.2], CB_C = [0x75704f, 0xa89878, 0xc9b98c];
+  const CW_F = [0, 0.5, 1], CW_C = [0x3f96b4, 0x62adb4, 0x8cbca8];
+  /* Bachlinie nach Bogenlänge: W(s, l, y) = Weltpunkt im Abstand l (quer, links +) bei Bogenlänge s */
+  function creekFrame(P) {
+    const n = P.length, L = [0];
+    for (let i = 1; i < n; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
     const N = P.map((p, i) => { const a = P[Math.max(0, i - 1)], c = P[Math.min(n - 1, i + 1)]; const u = unit(c[0] - a[0], c[1] - a[1]); return [-u[1], u[0]]; });
-    const at = (i, s) => [P[i][0] + N[i][0] * s, y, P[i][1] + N[i][1] * s];
-    for (let i = 1; i < n; i++) for (let k = 1; k < D.length; k++) [1, -1].forEach(s => {
-      const A = at(i - 1, s * D[k - 1] * f[i - 1]), B = at(i, s * D[k - 1] * f[i]), Cc = at(i, s * D[k] * f[i]), Dd = at(i - 1, s * D[k] * f[i - 1]);
-      const ca = G3.col(C(i - 1, k - 1, A)), cb = G3.col(C(i, k - 1, B)), cc = G3.col(C(i, k, Cc)), cd = G3.col(C(i - 1, k, Dd));
-      quadUp(b, A, B, Cc, Dd, ca, cb, cc, cd);
-    });
+    const W = (s, l, y) => {
+      let j = 0;
+      while (j < n - 2 && L[j + 1] < s) j++;
+      const t = (s - L[j]) / (L[j + 1] - L[j] || 1), nn = unit(N[j][0] + (N[j + 1][0] - N[j][0]) * t, N[j][1] + (N[j + 1][1] - N[j][1]) * t);
+      return [P[j][0] + (P[j + 1][0] - P[j][0]) * t + nn[0] * l, y, P[j][1] + (P[j + 1][1] - P[j][1]) * t + nn[1] * l];
+    };
+    return { L, W };
   }
-  /* Bogenlänge je Punkt; o.mouth = [L0, L1]: bis L0 (im See) ganz in Seerand-Farben, bis L0 + L1 Übergang zum normalen Bach */
-  function creekMouth(P, o) {
-    const M = o && o.mouth, L = [0];
-    for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
-    return L.map(s => !M ? 0 : s <= M[0] ? 1 : s >= M[0] + M[1] ? 0 : 1 - (s - M[0]) / M[1]);
+  /* Querschnitte („Stationen“) je Seite sg: s, Wasserrand h, Randnormale (ns, nl) in Bachkoordinaten (l = Abstand nach außen),
+     Verjüngung f. o.mouth = { R, shoreD }: Mündung in den See (shoreD(x, z) = Abstand von der Seeuferlinie, außen +).
+     Je Seite: Q1 = Punkt, an dem die Bachuferlinie (l = h) die Seeuferlinie trifft, u = Richtung der Seeuferlinie dort (nach außen).
+     Die Ecke an Land zwischen Bachufer und Seeufer wird durch einen Kreisbogen ausgerundet, der beide Linien tangential berührt
+     (Radius R, bei sehr spitzen Ecken kleiner) – die Uferstreifen folgen dem Bogen und liegen am Ende genau parallel zum Seeufer.
+     Zwischen Bachmitte und Seeuferlinie liegt nur Wasser („lake“-Stationen, ohne Ufer). Funktioniert auch, wenn der Bach schräg
+     auf das Seeufer trifft. */
+  function creekMouthSt(Fr, o, sg) {
+    const M = o.mouth, end = Fr.L[Fr.L.length - 1];
+    const cross = l => { for (let s = 0; s < end; s += 0.05) { const p = Fr.W(s, sg * l, 0); if (M.shoreD(p[0], p[2]) >= 0) return s; } return 0; };
+    const Q1 = [cross(CR_H), CR_H], Q2 = [cross(CR_H + M.R + 2), CR_H + M.R + 2];
+    const u = unit(Q2[0] - Q1[0], Q2[1] - Q1[1]), th = Math.acos(Math.max(-1, Math.min(1, u[0])));
+    const R = Math.min(M.R, 5 * Math.tan(th / 2)), t = R / Math.tan(th / 2), bi = unit(1 + u[0], u[1]), dc = R / Math.sin(th / 2);
+    const C = [Q1[0] + bi[0] * dc, Q1[1] + bi[1] * dc], T1 = [Q1[0] + t, Q1[1]], T2 = [Q1[0] + u[0] * t, Q1[1] + u[1] * t];
+    const st = [];
+    /* Wasser zwischen Bachmitte und Seeuferlinie (von l = 0 bis T2), etwas in den See hinein verlängert */
+    const tau0 = -Q1[1] / u[1] - 1.5 / Math.max(0.2, u[1]);
+    for (let k = 0; k <= 6; k++) { const tau = tau0 + (t - tau0) * k / 6, p = [Q1[0] + u[0] * tau - 0.4, Q1[1] + u[1] * tau]; st.push({ s: p[0], h: Math.max(0, p[1]), ns: u[1], nl: -u[0], f: 1, lake: true }); }
+    const a2 = Math.atan2(T2[1] - C[1], T2[0] - C[0]), a1 = Math.atan2(T1[1] - C[1], T1[0] - C[0]), da = Math.atan2(Math.sin(a1 - a2), Math.cos(a1 - a2));
+    for (let k = 0; k <= 14; k++) {
+      const a = a2 + da * k / 14, E = [C[0] + Math.cos(a) * R, C[1] + Math.sin(a) * R];
+      st.push({ s: E[0], h: E[1], ns: -Math.cos(a), nl: -Math.sin(a), f: 1 });
+    }
+    return { st, lim: T1[0] + 0.05, Q: Q1[0] };
   }
+  function creekStations(P, o, Fr, sg) {
+    const f = creekScale(P, o), M = o && o.mouth, mo = M ? creekMouthSt(Fr, o, sg) : { st: [], lim: -1 }, st = mo.st;
+    Fr.L.forEach((s, i) => { if (s > mo.lim) st.push({ s, h: CR_H * f[i], ns: 0, nl: 1, f: f[i] }); });
+    st.lim = mo.lim; st.Q = mo.Q || 0;
+    return st;
+  }
+  const crAt = (Fr, S, sg, r, y) => Fr.W(S.s + S.ns * r * S.f, sg * (S.h + S.nl * r * S.f), y);
   function creekBank(pts, o) {
     G3.seed(3910);
-    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o), gnd = o && o.gnd, m = creekMouth(P, o);
-    b.noise(0.04, () => creekProfile(b, P, f, CB_D, (i, k, p) => k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a, 0.012));
-    for (let i = 0; i < P.length * 0.6; i++) {
-      const k = Math.floor(rnd() * P.length), p = P[k], s = rnd() < 0.5 ? 1 : -1, q = P[Math.min(P.length - 1, k + 1)], o2 = P[Math.max(0, k - 1)], u = unit(q[0] - o2[0], q[1] - o2[1]), r = s * (1.35 + rnd() * 0.4) * f[k], t = (rnd() - 0.5) * 0.8;
-      if (m[k] > 0) continue;   /* v176: keine Steine an der Mündung (dort liegt der Seestrand); Steine quer zur Bachrichtung */
-      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * f[k]), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0] - u[1] * r + u[0] * t, y: 0.05, z: p[1] + u[0] * r + u[1] * t, flat: 0.55, jitter: 0.5 });
+    const b = new MB(), P = smoothLine(pts, 6), Fr = creekFrame(P), gnd = o && o.gnd, M = o && o.mouth;
+    const col = (k, p) => G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
+    const SS = [1, -1].map(sg => creekStations(P, o, Fr, sg));
+    b.noise(0.04, () => [1, -1].forEach((sg, si) => {
+      const st = SS[si];
+      for (let i = 1; i < st.length; i++) {
+        if (st[i - 1].lake) continue;
+        for (let k = 1; k < CB_R.length; k++) {
+          const A = crAt(Fr, st[i - 1], sg, CB_R[k - 1], 0.012), B = crAt(Fr, st[i], sg, CB_R[k - 1], 0.012), Cc = crAt(Fr, st[i], sg, CB_R[k], 0.012), D = crAt(Fr, st[i - 1], sg, CB_R[k], 0.012);
+          quadUp(b, A, B, Cc, D, col(k - 1, A), col(k - 1, B), col(k, Cc), col(k, D));
+        }
+      }
+    }));
+    /* Steine am Ufer, quer zur Bachrichtung – nicht an der Mündung (dort liegt der Seestrand) */
+    const S2 = SS[0].filter(S => S.ns === 0 && S.s > Math.max(SS[0].lim, SS[1].lim) + 1);
+    for (let i = 0; i < S2.length * 0.6; i++) {
+      const S = S2[Math.floor(rnd() * S2.length)], sg = rnd() < 0.5 ? 1 : -1, r = 0.2 + rnd() * 0.4, ds = (rnd() - 0.5) * 0.8;
+      const p = Fr.W(S.s + ds, sg * (S.h + r * S.f), 0.05);
+      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * S.f), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.05, z: p[2], flat: 0.55, jitter: 0.5 });
     }
     return b;
   }
+  /* Wasser: Mitte → Rand; zur Mündung hin (o.mouth) in den hellen Farben des Seerands */
   function creekWater(pts, o) {
-    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o), m = creekMouth(P, o);
-    creekProfile(b, P, f, CW_D, (i, k) => m[i] > 0 ? mix(CW_C[k], CW_C[2], m[i]) : CW_C[k], 0.03);
+    const b = new MB(), P = smoothLine(pts, 6), Fr = creekFrame(P), M = o && o.mouth;
+    const SS = [1, -1].map(sg => creekStations(P, o, Fr, sg)), Lc = (SS[0].Q + SS[1].Q) / 2;
+    const m = S => !M ? 0 : Math.max(0, Math.min(1, 1 - (S.s - Lc) / (M.R + 3)));
+    const col = (S, k) => G3.col(m(S) > 0 ? mix(CW_C[k], CW_C[2], m(S)) : CW_C[k]);
+    [1, -1].forEach((sg, si) => {
+      const st = SS[si];
+      for (let i = 1; i < st.length; i++) for (let k = 1; k < CW_F.length; k++) {
+        const S0 = st[i - 1], S1 = st[i];
+        const A = Fr.W(S0.s, sg * S0.h * CW_F[k - 1], 0.03), B = Fr.W(S1.s, sg * S1.h * CW_F[k - 1], 0.03), Cc = Fr.W(S1.s, sg * S1.h * CW_F[k], 0.03), D = Fr.W(S0.s, sg * S0.h * CW_F[k], 0.03);
+        quadUp(b, A, B, Cc, D, col(S0, k - 1), col(S1, k - 1), col(S1, k), col(S0, k));
+      }
+    });
     return b;
   }
   /* Quelle am Bachanfang: Ufer wie am Bach (Schlamm → nasser Sand → Sand → Gelände), Weltkoordinaten */
   function springBed(x, z, gnd) {
-    const b = new MB(), seg = 24, y = 0.0125, R = [1.0, 1.6, 1.95, 2.8];
+    const b = new MB(), seg = 24, y = 0.0125, R = [0.9, 1.6, 2.33, 3.65];   /* Topfrand 1,45 – Streifen wie am See */
     const wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3), P = (a, r) => [x + Math.cos(a) * r * wob(a), y, z + Math.sin(a) * r * wob(a)];
     const C = (k, p) => G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
     for (let i = 0; i < seg; i++) {
@@ -1701,7 +1753,7 @@ const FWM = (() => {
     band(() => 0.15, () => -1.4, 0xa89878, 0x75704f, 0.01);                        /* Uferschlamm unter dem Wasserrand */
     for (let i = 0; i < 34; i++) {
       const a = rnd() * 6.28, d = 0.3 + rnd() * Math.max(0.2, W(a) * 0.4), p = lakeR(rx + d, rz + d, a);
-      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.08)) continue;   /* v176: keine Steine in der Bachmündung */
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.16)) continue;   /* v176: keine Steine in der Bachmündung */
       b.noise(0.1, () => b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.04, z: p[1], jitter: 0.5, flat: 0.55 }));
     }
     return b;
@@ -1735,7 +1787,7 @@ const FWM = (() => {
     const b = new MB(), seg = 256, P = (a, d) => { const p = lakeR(rx + d, rz + d, a); return [p[0], 0, p[1]]; };
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, am = (a0 + a1) / 2;
-      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(am - s), Math.cos(am - s))) < 0.05)) continue;
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(am - s), Math.cos(am - s))) < 0.15)) continue;   /* v177: breitere Mündung */
       b.triV(P(a0, 0), P(a1, 0.25), P(a1, 0), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
       b.triV(P(a0, 0), P(a0, 0.25), P(a1, 0.25), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
     }

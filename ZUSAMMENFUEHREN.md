@@ -1,5 +1,11 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v177 – Mündung mit Ausrundung und Fließübergang (auf v176)
+
+- `gl3d.js`: Wellen als Funktionen `wavG`/`wavC`, neuer Wassermodus 5 (Fluss → See an `uMouth` = `R.env.mouth` [x, z, Radius]); `setScene` setzt `uMouth`.
+- `woodmodels.js`: Bach komplett über Stationen (`creekFrame`, `creekMouthSt`, `creekStations`); `o.mouth = { R, shoreD }`.
+- `worldview.js`: `lkShoreD`, Mündungspunkt `LK_MP`, `R.env.mouth`, Seebach `water: 5`; Mesh-Keys `lake*177`.
+
 ## Stand v176 – Bachmündung, Wasser und Ufer einheitlich (auf v175)
 
 - `worldview.js`: der Seeufer-Block (`Lk`, `lkObs`, `lkW` …) steht jetzt **vor** dem Bach-Abschnitt (der Seebach braucht `lkShoreCol`); neu `lkDent`, `lkShoreCol`, `LK_MOUTH`, `LCR` (Seebach mit Startpunkt im See). Teich und Seebach `water: 4`. Mesh-Keys `lake*176`.

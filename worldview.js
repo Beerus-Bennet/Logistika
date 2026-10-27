@@ -942,22 +942,32 @@ function worldStatic() {
   /* v176: Uferfarbe des Sees an einem Weltpunkt (genau wie lakeShore: Wiese → Sand → nasser Sand → Schlamm, mit Einbuchtungen) –
      der Seebach läuft an der Mündung damit nahtlos in den Seestrand über */
   const lkDent = a => { let s = 0; lkObs.forEach(o => { const d = Math.abs(Math.atan2(Math.sin(a - o.a), Math.cos(a - o.a))); if (d < o.wd) { const k = 1 - d / o.wd; s = Math.max(s, o.f * k * k * (3 - 2 * k)); } }); return s; };
+  const lkShoreD = (x, z) => {   /* Abstand von der Seeuferlinie im Maß von lakeShore (außen +) */
+    const a = lkAng(x, z), w = lkWob(a) * (1 - lkDent(a)), c = Math.cos(a), s = Math.sin(a);
+    return ((x - Lk.x) / w) * c + ((z - Lk.z) / w) * s - (Lk.rx * c * c + Lk.rz * s * s);
+  };
   const lkShoreCol = (x, z) => {
-    const a = lkAng(x, z), w = lkWob(a) * (1 - lkDent(a)), c = Math.cos(a), s = Math.sin(a), W = lkW(a);
-    const d = ((x - Lk.x) / w) * c + ((z - Lk.z) / w) * s - (Lk.rx * c * c + Lk.rz * s * s);
+    const d = lkShoreD(x, z), W = lkW(lkAng(x, z));
     if (d >= W) return wGroundAt(x, z);
     if (d >= 0.4 * W) return wMix(0xc9b98c, wGroundAt(x, z), (d - 0.4 * W) / (0.6 * W));
     if (d >= 0.15) return wMix(0xa89878, 0xc9b98c, (d - 0.15) / Math.max(0.01, 0.4 * W - 0.15));
     return wMix(0x75704f, 0xa89878, (d + 1.4) / 1.55);
   };
-  const LK_MOUTH = lkAng(LAKE_CREEK[0][0], LAKE_CREEK[0][1]);
+  /* v177: Seebach beginnt 4 Einheiten im See; LK_MP = Punkt, an dem seine Mitte die Seeuferlinie erreicht */
+  const LCR = [[41.4, 56.85]].concat(LAKE_CREEK);
+  let LK_MP = LCR[0];
+  for (let k = 1, done = false; k < LCR.length && !done; k++) {
+    const p = LCR[k - 1], q = LCR[k], l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    for (let t = 0; t <= l; t += 0.05) { const x = p[0] + (q[0] - p[0]) * t / l, z = p[1] + (q[1] - p[1]) * t / l; if (lkShoreD(x, z) >= 0) { LK_MP = [x, z]; done = true; break; } }
+  }
+  const LK_MOUTH = lkAng(LK_MP[0], LK_MP[1]);
+  if (R.env) R.env.mouth = [LK_MP[0], LK_MP[1], 14];   /* Wasser-Shader: Fluss → See überblenden (water: 5) */
   /* v75: Bach – im Osten aus einer Quelle (verjüngt sich auf den letzten 9 Einheiten), im Westen bis an den
      Kartenrand; der Seebach fließt in den See und im Osten bis über den Kartenrand. Ufer laufen weich ins Gras.
-     v176: Ufer wie am See (Wiese → Sand → nasser Sand → Schlamm), Wasser in den Farben des Seeufers. Der Seebach beginnt
-     4 Einheiten im See (unter dem Seewasser), sein Wasser wird zur Mündung hin so hell wie der Seerand, und sein Ufer läuft in
-     den Seestrand aus (lkShoreCol) – kein Absatz mehr an der Mündung. */
-  const LCR = [[41.4, 56.85]].concat(LAKE_CREEK);
-  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: lkShoreCol, mouth: [4, 5] };
+     v176: Ufer wie am See (Wiese → Sand → nasser Sand → Schlamm), Wasser in den Farben des Seeufers.
+     v177: An der Mündung laufen die Uferlinien des Bachs im Bogen (Radius 3,5) in die Seeuferlinie ein, sein Ufer geht in den
+     Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
+  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: lkShoreCol, mouth: { R: 3.5, shoreD: lkShoreD } };
   lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
   lines.merge(FWM.creekBank(LCR, CL), {});
   const SP = FWORLD.spring;
@@ -966,9 +976,9 @@ function worldStatic() {
   /* v125: nur der nördliche Fluss fließt von Osten nach Westen (water: 2) – v176: im ruhigen Muster des großen Sees */
   const cr = new FM.MB(); cr.merge(FWM.creekWater(FWORLD.creek, CR), {});
   R.nodes.push(fnode(R.mesh(cr), { water: 2, shadow: false }));
-  /* v176: Seebach und Quelltopf bewegen sich wie der große See (water: 4) */
+  /* v177: der Seebach fließt (water: 5, Richtung Westen in den See) und geht an der Mündung in die Seebewegung über; Quelltopf wie der See */
   const sb = new FM.MB(); sb.merge(FWM.creekWater(LCR, CL), {});
-  R.nodes.push(fnode(R.mesh(sb), { water: 4, shadow: false }));
+  R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
   if (SP) { const cw = new FM.MB(); cw.merge(FWM.springPool(SP[0], SP[1]), {}); R.nodes.push(fnode(R.mesh(cw), { water: 4, shadow: false })); }
   if (SP) { const q = FWORLD.creek[1]; R.nodes.push(fnode(fmesh("wspring", FWM.springRocks), { x: SP[0], z: SP[1], ry: Math.atan2(-(q[1] - SP[1]), q[0] - SP[0]) })); }
   worldWaterCheck();
@@ -1030,10 +1040,10 @@ function worldStatic() {
      Flache, helle Stellen unter Schilf, Steinkante und Insel (Seekoordinaten), damit nichts mitten im tiefen Wasser steht. */
   const lkSh = [[-29, 4, 3.6], [-34, -4, 3], [-26, 14, 3], [22, -12, 3], [30, 4, 3], [-31, -14, 3], [-12, 10, 4.6], [20, -7.5, 4.2]];
   const lkSkip = ["f_steg", "f_boot"].filter(k => typeof FFISHERY !== "undefined" && FFISHERY[k]).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx)).concat([LK_MOUTH]);
-  R.nodes.push(fnode(fmesh("lakeShore176", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW, [LK_MOUTH])), { x: Lk.x, z: Lk.z, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeWater176", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeFoam176", () => FWM.lakeFoam(Lk.rx, Lk.rz, [LK_MOUTH])), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeReeds176", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
+  R.nodes.push(fnode(fmesh("lakeShore177", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW, [LK_MOUTH])), { x: Lk.x, z: Lk.z, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeWater177", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeFoam177", () => FWM.lakeFoam(Lk.rx, Lk.rz, [LK_MOUTH])), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeReeds177", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
   const lk = new FM.MB();
   [[-15, 52, 26], [-20, 44, 18], [-12, 62, 16], [36, 36, 14], [44, 52, 12], [-17, 34, 10]].forEach(([x, z, n], i) => lk.merge(FWM.reedPatch(n), { x, z, ry: i }));
   [[-9, 40, 14], [-4, 43, 8], [28, 64, 9]].forEach(([x, z, n]) => lk.merge(FWM.lilyPads(n), { x, z, y: 0.03 }));

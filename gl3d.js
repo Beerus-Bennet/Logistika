@@ -349,7 +349,7 @@ const G3 = (() => {
   precision highp float; precision highp sampler2DShadow;
   in vec3 vNor; in vec3 vCol; in vec3 vW; in vec4 vL;
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR;
-  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight;
+  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth;
   uniform sampler2DShadow uShadow;
   /* gesperrte Gebiete: Rechteck (x0, z0, x1, z1) wird grau, außer im
      wachsenden Kreis (cx, cz, Radius, Stärke) – so deckt sich ein Gebiet
@@ -375,19 +375,30 @@ const G3 = (() => {
       s += texture(uShadow, vec3(p.xy + vec2(float(i), float(j)) * uTexel * 1.25, p.z - 0.0018));
     return s / 9.0;
   }
+  /* v177: Wellen für Fluss (L = 0: alle Wellen laufen von Osten nach Westen, −x) und See (L = 1: alle Richtungen) –
+     als Funktionen, damit an der Bachmündung beide Muster weich ineinander überblendet werden können */
+  vec2 wavG(vec2 p, float L, float tt) {
+    vec2 d1 = mix(vec2(0.97, 0.24), vec2(0.8, 0.6), L), d2 = mix(vec2(0.95, -0.31), vec2(-0.5, 0.86), L), d3 = mix(vec2(0.99, 0.12), vec2(0.95, -0.31), L), d4 = mix(vec2(0.9, 0.43), vec2(-0.7, -0.71), L);
+    return d1 * cos(dot(p, d1) * 2.1 + tt * 1.2) * 0.030 + d2 * cos(dot(p, d2) * 3.6 + tt * 1.6) * 0.022
+         + d3 * cos(dot(p, d3) * 6.3 + tt * 2.3) * 0.014 + d4 * cos(dot(p, d4) * 10.1 + tt * 3.0) * 0.009;
+  }
+  vec2 wavC(vec2 q, float L, float tt) {
+    float w1 = L > 0.5 ? sin(q.x * 1.7 + q.y * 1.1 - tt * 0.9) : sin(q.x * 1.7 + q.y * 0.4 + tt * 0.9);
+    float w2 = L > 0.5 ? sin(q.x * 2.9 - q.y * 2.3 + tt * 1.3) : sin(q.x * 2.9 - q.y * 0.9 + tt * 1.3);
+    float w3 = L > 0.5 ? sin(q.x * 0.9 - q.y * 1.9 + tt * 0.6 + w1) : sin(q.x * 0.9 - q.y * 0.7 + tt * 0.6 + w1);
+    float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 - tt * mix(-0.6, 1.3, L) + w2));
+    return vec2(w1 * w2 + 0.6 * w3, gl);
+  }
   void main(){
     vec3 n = normalize(vNor);
-    float isLake = step(2.5, uWater), tt = uWater > 1.5 ? uTime : 0.0, big = step(1.5, uWater);   /* v145: 4 = großer See (wie 3, ruhigeres, größeres Muster); v176: alle bewegten Gewässer im Muster des großen Sees */      /* v126: 2 = Fluss (Ost→West), 3 = See (wie v119, alle Richtungen), 1 = still */
+    /* v126: 2 = Fluss (Ost→West), 3 = See (alle Richtungen), 1 = still; v145: 4 = großer See (ruhigeres, größeres Muster);
+       v176: alle bewegten Gewässer im Muster des großen Sees; v177: 5 = Seebach – fließt wie ein Fluss und geht zur Mündung
+       (uMouth: x, z, Radius) stufenlos in die Seebewegung über */
+    float tt = uWater > 1.5 ? uTime : 0.0, big = step(1.5, uWater);
+    float flow = uWater < 2.5 ? 1.0 : (uWater > 4.5 && uMouth.z > 0.0 ? smoothstep(uMouth.z * 0.36, uMouth.z, distance(vW.xz, uMouth.xy)) : 0.0);
     if (uWater > 0.5) {
-      /* kleine Kräuselwellen aus vier Richtungen */
-      /* v125: nur der nördliche Fluss (uWater = 2) bewegt sich – alle Wellen laufen von Osten nach Westen (−x);
-         alle anderen Gewässer stehen still (Zeit 0) */
-      vec2 p = vW.xz * mix(1.0, 0.55, big), g = vec2(0.0);
-      vec2 d1 = mix(vec2(0.97, 0.24), vec2(0.8, 0.6), isLake), d2 = mix(vec2(0.95, -0.31), vec2(-0.5, 0.86), isLake), d3 = mix(vec2(0.99, 0.12), vec2(0.95, -0.31), isLake), d4 = mix(vec2(0.9, 0.43), vec2(-0.7, -0.71), isLake);
-      g += d1 * cos(dot(p, d1) * 2.1 + tt * 1.2) * 0.030;
-      g += d2 * cos(dot(p, d2) * 3.6 + tt * 1.6) * 0.022;
-      g += d3 * cos(dot(p, d3) * 6.3 + tt * 2.3) * 0.014;
-      g += d4 * cos(dot(p, d4) * 10.1 + tt * 3.0) * 0.009;
+      vec2 p = vW.xz * mix(1.0, 0.55, big);
+      vec2 g = flow >= 1.0 ? wavG(p, 0.0, tt) : flow <= 0.0 ? wavG(p, 1.0, tt) : mix(wavG(p, 1.0, tt), wavG(p, 0.0, tt), flow);
       g *= mix(1.0, 0.6, big);
       n = normalize(vec3(-g.x, 1.0, -g.y));
     }
@@ -405,12 +416,9 @@ const G3 = (() => {
       /* v119: sichtbare, ruhige Wasserbewegung auch von oben: wandernde helle/dunkle Wellenbänder (Farbe, nicht nur Normale)
          und vereinzelte Lichtfunken. Alles langsam und leicht, damit das Wasser lebt, aber nicht unruhig wirkt. */
       vec2 q = vW.xz * mix(1.0, 0.55, big);
-      float w1 = isLake > 0.5 ? sin(q.x * 1.7 + q.y * 1.1 - tt * 0.9) : sin(q.x * 1.7 + q.y * 0.4 + tt * 0.9);
-      float w2 = isLake > 0.5 ? sin(q.x * 2.9 - q.y * 2.3 + tt * 1.3) : sin(q.x * 2.9 - q.y * 0.9 + tt * 1.3);
-      float w3 = isLake > 0.5 ? sin(q.x * 0.9 - q.y * 1.9 + tt * 0.6 + w1) : sin(q.x * 0.9 - q.y * 0.7 + tt * 0.6 + w1);
-      c *= 1.0 + mix(0.085, 0.04, big) * (w1 * w2 + 0.6 * w3);
-      float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 - tt * mix(-0.6, 1.3, isLake) + w2));
-      c += gl * mix(0.13, 0.09, big) * sh * uSunCol;
+      vec2 wc = flow >= 1.0 ? wavC(q, 0.0, tt) : flow <= 0.0 ? wavC(q, 1.0, tt) : mix(wavC(q, 1.0, tt), wavC(q, 0.0, tt), flow);
+      c *= 1.0 + mix(0.085, 0.04, big) * wc.x;
+      c += wc.y * mix(0.13, 0.09, big) * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
     float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
@@ -887,6 +895,7 @@ const G3 = (() => {
         gl.uniform3fv(u.uCam, R.eye);
         gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
         gl.uniform1f(u.uNight, E.night || 0);
+        if (u.uMouth) gl.uniform3fv(u.uMouth, E.mouth || [0, 0, 0]);   /* v177: Bachmündung (Wasser-Shader) */
         if (u.uWind) gl.uniform4fv(u.uWind, E.wind || [0.8, 0.6, 1, 0]);
         if (u.uPlant) gl.uniform1f(u.uPlant, 0);
         /* Sperrgebiete */

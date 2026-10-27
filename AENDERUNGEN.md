@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v177 – Bachmündung: Uferlinien und Fließrichtung gehen sauber in den See über
+
+- **Uferlinien:** An der Mündung des Seebachs wird die Ecke zwischen Bachufer und Seeufer auf beiden Seiten durch einen Kreisbogen ausgerundet (Radius 3,5, bei spitzen Ecken kleiner), der beide Uferlinien tangential berührt. Die Uferstreifen (Sand, nasser Sand, Schlamm) folgen dem Bogen und liegen am Ende genau parallel zum Seeufer. Das funktioniert auch auf der Seite, wo der Bach schräg auf das Ufer trifft.
+- **Fließrichtung:** Der Seebach fließt jetzt sichtbar Richtung See (wie der nördliche Fluss), und die Bewegung geht im Umkreis von etwa 5 bis 14 Einheiten um die Mündung stufenlos in die Seebewegung über. Es gibt keine Kante mehr zwischen den beiden Wassermustern.
+- Bachufer allgemein jetzt mit genau den Streifenbreiten des Seeufers (Sand 2,2 breit).
+- Nur Optik.
+- Dateien: `woodmodels.js` (creekFrame/creekMouthSt/creekStations, creekBank/creekWater), `worldview.js` (Mündungspunkt, `lkShoreD`, `water: 5`), `gl3d.js` (Wasser-Shader: Wellenfunktionen `wavG`/`wavC`, Modus 5, Uniform `uMouth`).
+
 ## v176 – Bachmündung, einheitliches Wasser und Ufer
 
 - **Bachmündung am See (rechts unten):** Der Seebach beginnt jetzt 4 Einheiten im See (unter dem Seewasser), sein Wasser wird zur Mündung hin so hell wie der Seerand, und sein Ufer läuft nahtlos in den Seestrand über. An der Mündung kein Schaumsaum, kein Schilf, keine Steine mehr im Wasser.
