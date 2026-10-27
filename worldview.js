@@ -3771,7 +3771,10 @@ function openNeighbor() {
     <p>„Hast du Holz für mich? Ich zahl gut – plus ${FNEIGHBOR_CLOVER === 1 ? "ein Kleeblatt" : (["", "", "zwei", "drei", "vier"][FNEIGHBOR_CLOVER] || FNEIGHBOR_CLOVER) + " Kleeblätter"} obendrauf!“</p></div></div>
     <div class="fr-in">${Object.keys(c.data.items).map(id => itemChip(id, c.data.items[id], farmInv(id))).join("")}</div>
     <button class="btn fgo" id="fnGo" ${farmHasAll(c.data.items) ? "" : "disabled"}>🤝 Übergeben · ${eur(m)} + 🍀 ${FNEIGHBOR_CLOVER}</button>
+    <button class="btn tiny ghost" id="fnNo">👋 Wegschicken</button>
     <div class="fs-sub">Noch ${fdur(Math.max(1, c.until - S.time))} – dann fragt er woanders.</div>`, "visit");
+  /* v181: Nachbar vorzeitig wegschicken */
+  $("#fnNo").onclick = () => { if (farmNeighborSend()) { closeFarmSheet(); sfx("pop"); save(); farmSyncScene(); renderFarmUI(); } };
   $("#fnGo").onclick = () => { const r = farmNeighborDeliver(); if (r) { closeFarmSheet(); const fr = $("#farmFx").getBoundingClientRect(); coinFly(fr.width / 2, fr.height / 2, r); sfx("coin"); save(); farmSyncScene(); renderFarmUI(); } else sfx("bad"); };
 }
 /* Fischerei: Bauplatz am Ufer */

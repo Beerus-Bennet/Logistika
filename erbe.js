@@ -1615,6 +1615,14 @@ function farmNeighborDeliver() {
   c.until = S.time;
   return m;
 }
+/* v181: Nachbar vorzeitig wegschicken – der Besuch endet sofort (wie abgelaufen, danach die übliche Pause) */
+function farmNeighborSend() {
+  const c = S.farm.ev.cur;
+  if (!c || c.k !== "nachbar") return false;
+  c.until = S.time;
+  farmEvEnd();
+  return true;
+}
 /* v73: Lieferkiste – der Inhalt ist eine Überraschung: Seltenheit wird beim Antippen ausgewürfelt (c.data.rar) */
 const FPARCEL = [
   { id: "gut",       n: "Gut",       w: 58, gifts: 1, mult: 1,   m: [0, 0],     clover: 1, xp: 10 },
