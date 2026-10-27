@@ -1381,49 +1381,67 @@ const FWM = (() => {
     return { L, W };
   }
   /* Querschnitte („Stationen“) je Seite sg: s, Wasserrand h, Randnormale (ns, nl) in Bachkoordinaten (l = Abstand nach außen),
-     Verjüngung f. o.mouth = { R, shoreD }: Mündung in den See (shoreD(x, z) = Abstand von der Seeuferlinie, außen +).
+     Verjüngung f, Strandbreite wS (Anteil), Seefarben-Anteil cw. o.mouth = { R, shoreD, shoreW }: Mündung in den See
+     (shoreD(x, z) = Abstand von der Seeuferlinie, außen +; shoreW(x, z) = Strandbreite des Sees dort).
      Je Seite: Q1 = Punkt, an dem die Bachuferlinie (l = h) die Seeuferlinie trifft, u = Richtung der Seeuferlinie dort (nach außen).
-     Die Ecke an Land zwischen Bachufer und Seeufer wird durch einen Kreisbogen ausgerundet, der beide Linien tangential berührt
-     (Radius R, bei sehr spitzen Ecken kleiner) – die Uferstreifen folgen dem Bogen und liegen am Ende genau parallel zum Seeufer.
-     Zwischen Bachmitte und Seeuferlinie liegt nur Wasser („lake“-Stationen, ohne Ufer). Funktioniert auch, wenn der Bach schräg
-     auf das Seeufer trifft. */
+     v178: Die Ecke an Land wird durch eine weiche Kurve (quadratische Bézierkurve T2 → Q1 → T1, Schenkellänge R) ausgerundet –
+     sie berührt Seeufer und Bachufer tangential, die Krümmung nimmt zur Mitte hin zu statt zu springen (wirkt natürlicher als
+     ein Kreisbogen). Am Seeufer (T2) hat der Bachstrand genau die Breite und Farben des Seestrands dort und wird entlang der
+     Kurve allmählich so breit wie am Bach – keine gerade Kante mehr. Zwischen Bachmitte und Seeuferlinie liegt nur Wasser
+     („lake“-Stationen, ohne Ufer). */
   function creekMouthSt(Fr, o, sg) {
     const M = o.mouth, end = Fr.L[Fr.L.length - 1];
     const cross = l => { for (let s = 0; s < end; s += 0.05) { const p = Fr.W(s, sg * l, 0); if (M.shoreD(p[0], p[2]) >= 0) return s; } return 0; };
-    const Q1 = [cross(CR_H), CR_H], Q2 = [cross(CR_H + M.R + 2), CR_H + M.R + 2];
-    const u = unit(Q2[0] - Q1[0], Q2[1] - Q1[1]), th = Math.acos(Math.max(-1, Math.min(1, u[0])));
-    const R = Math.min(M.R, 5 * Math.tan(th / 2)), t = R / Math.tan(th / 2), bi = unit(1 + u[0], u[1]), dc = R / Math.sin(th / 2);
-    const C = [Q1[0] + bi[0] * dc, Q1[1] + bi[1] * dc], T1 = [Q1[0] + t, Q1[1]], T2 = [Q1[0] + u[0] * t, Q1[1] + u[1] * t];
+    const t = M.R, Q1 = [cross(CR_H), CR_H], Q2 = [cross(CR_H + t), CR_H + t];
+    const u = unit(Q2[0] - Q1[0], Q2[1] - Q1[1]), T1 = [Q1[0] + t, Q1[1]], T2 = [Q1[0] + u[0] * t, Q1[1] + u[1] * t];
     const st = [];
     /* Wasser zwischen Bachmitte und Seeuferlinie (von l = 0 bis T2), etwas in den See hinein verlängert */
     const tau0 = -Q1[1] / u[1] - 1.5 / Math.max(0.2, u[1]);
     for (let k = 0; k <= 6; k++) { const tau = tau0 + (t - tau0) * k / 6, p = [Q1[0] + u[0] * tau - 0.4, Q1[1] + u[1] * tau]; st.push({ s: p[0], h: Math.max(0, p[1]), ns: u[1], nl: -u[0], f: 1, lake: true }); }
-    const a2 = Math.atan2(T2[1] - C[1], T2[0] - C[0]), a1 = Math.atan2(T1[1] - C[1], T1[0] - C[0]), da = Math.atan2(Math.sin(a1 - a2), Math.cos(a1 - a2));
-    for (let k = 0; k <= 14; k++) {
-      const a = a2 + da * k / 14, E = [C[0] + Math.cos(a) * R, C[1] + Math.sin(a) * R];
-      st.push({ s: E[0], h: E[1], ns: -Math.cos(a), nl: -Math.sin(a), f: 1 });
+    for (let k = 0; k <= 20; k++) {
+      const a = k / 20, b0 = (1 - a) * (1 - a), b1 = 2 * (1 - a) * a, b2 = a * a;
+      const E = [b0 * T2[0] + b1 * Q1[0] + b2 * T1[0], b0 * T2[1] + b1 * Q1[1] + b2 * T1[1]];
+      const D = unit(2 * (1 - a) * (Q1[0] - T2[0]) + 2 * a * (T1[0] - Q1[0]), 2 * (1 - a) * (Q1[1] - T2[1]) + 2 * a * (T1[1] - Q1[1]));
+      st.push({ s: E[0], h: E[1], ns: -D[1], nl: D[0], f: 1 });
     }
-    return { st, lim: T1[0] + 0.05, Q: Q1[0] };
+    const p2 = Fr.W(T2[0], sg * T2[1], 0);
+    return { st, lim: T1[0] + 0.05, Q: Q1[0], w0: M.shoreW ? Math.min(1, M.shoreW(p2[0], p2[2]) / 2.2) : 1 };
   }
   function creekStations(P, o, Fr, sg) {
-    const f = creekScale(P, o), M = o && o.mouth, mo = M ? creekMouthSt(Fr, o, sg) : { st: [], lim: -1 }, st = mo.st;
+    const f = creekScale(P, o), M = o && o.mouth, mo = M ? creekMouthSt(Fr, o, sg) : { st: [], lim: -1, w0: 1 }, st = mo.st;
     Fr.L.forEach((s, i) => { if (s > mo.lim) st.push({ s, h: CR_H * f[i], ns: 0, nl: 1, f: f[i] }); });
+    /* Strandbreite und Seefarben entlang der Uferlinie ab dem Seeufer: Breite über 10 Einheiten auf Bachbreite, Farben über 4 */
+    let d = 0, prev = null;
+    st.forEach(S => {
+      if (S.lake) { S.wS = 1; S.cw = 0; return; }
+      if (prev) d += Math.hypot(S.s - prev.s, S.h - prev.h);
+      prev = S;
+      const k = Math.min(1, d / 10), e = k * k * (3 - 2 * k);
+      S.wS = mo.w0 + (1 - mo.w0) * e;
+      S.cw = M ? Math.max(0, 1 - d / 4) : 0;
+    });
     st.lim = mo.lim; st.Q = mo.Q || 0;
     return st;
   }
+  /* Abstand des Uferstreifens k vom Wasserrand: Sand und Wiese skaliert mit der Strandbreite wS */
+  const crR = (S, k) => k >= 2 ? CB_R[k] * S.wS : CB_R[k];
   const crAt = (Fr, S, sg, r, y) => Fr.W(S.s + S.ns * r * S.f, sg * (S.h + S.nl * r * S.f), y);
   function creekBank(pts, o) {
     G3.seed(3910);
     const b = new MB(), P = smoothLine(pts, 6), Fr = creekFrame(P), gnd = o && o.gnd, M = o && o.mouth;
-    const col = (k, p) => G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
+    const col = (k, p, S) => {
+      const c = G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
+      return S.cw > 0 && gnd ? mixA(c, G3.col(gnd(p[0], p[2])), S.cw) : c;
+    };
     const SS = [1, -1].map(sg => creekStations(P, o, Fr, sg));
     b.noise(0.04, () => [1, -1].forEach((sg, si) => {
       const st = SS[si];
       for (let i = 1; i < st.length; i++) {
         if (st[i - 1].lake) continue;
+        const S0 = st[i - 1], S1 = st[i];
         for (let k = 1; k < CB_R.length; k++) {
-          const A = crAt(Fr, st[i - 1], sg, CB_R[k - 1], 0.012), B = crAt(Fr, st[i], sg, CB_R[k - 1], 0.012), Cc = crAt(Fr, st[i], sg, CB_R[k], 0.012), D = crAt(Fr, st[i - 1], sg, CB_R[k], 0.012);
-          quadUp(b, A, B, Cc, D, col(k - 1, A), col(k - 1, B), col(k, Cc), col(k, D));
+          const A = crAt(Fr, S0, sg, crR(S0, k - 1), 0.012), B = crAt(Fr, S1, sg, crR(S1, k - 1), 0.012), Cc = crAt(Fr, S1, sg, crR(S1, k), 0.012), D = crAt(Fr, S0, sg, crR(S0, k), 0.012);
+          quadUp(b, A, B, Cc, D, col(k - 1, A, S0), col(k - 1, B, S1), col(k, Cc, S1), col(k, D, S0));
         }
       }
     }));

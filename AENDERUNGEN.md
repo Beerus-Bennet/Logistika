@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v178 – Mündung: keine gerade Kante mehr, natürlichere Rundung
+
+- **Gerade Linie entfernt:** Rechts an der Mündung ist der Seestrand wegen des Wegs schmal, der Bachstrand war aber breit – dort endete der Sand mit einer geraden Kante. Jetzt hat der Bachstrand am Seeufer genau die Breite und die Farben des Seestrands an dieser Stelle und wird erst entlang der Rundung allmählich breiter (über ca. 10 Einheiten).
+- **Natürlichere Rundung:** Statt eines Kreisbogens (Radius 3,5) läuft das Ufer in einer weichen Kurve (quadratische Bézierkurve, Schenkellänge 5) ins Seeufer – sie berührt beide Uferlinien tangential, ohne Krümmungssprung.
+- Nur Optik. Datei: `woodmodels.js` (creekMouthSt/creekStations/creekBank), `worldview.js` (`mouth: { R: 5, shoreD, shoreW }`).
+
 ## v177 – Bachmündung: Uferlinien und Fließrichtung gehen sauber in den See über
 
 - **Uferlinien:** An der Mündung des Seebachs wird die Ecke zwischen Bachufer und Seeufer auf beiden Seiten durch einen Kreisbogen ausgerundet (Radius 3,5, bei spitzen Ecken kleiner), der beide Uferlinien tangential berührt. Die Uferstreifen (Sand, nasser Sand, Schlamm) folgen dem Bogen und liegen am Ende genau parallel zum Seeufer. Das funktioniert auch auf der Seite, wo der Bach schräg auf das Ufer trifft.

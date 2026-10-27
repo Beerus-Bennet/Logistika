@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v178 – weichere Mündung (auf v177)
+
+- `woodmodels.js`: `creekMouthSt` mit Bézierkurve statt Kreisbogen; Stationen haben `wS` (Strandbreite) und `cw` (Seefarben-Anteil); neu `crR`. `worldview.js`: `CL.mouth` bekommt `shoreW`.
+
 ## Stand v177 – Mündung mit Ausrundung und Fließübergang (auf v176)
 
 - `gl3d.js`: Wellen als Funktionen `wavG`/`wavC`, neuer Wassermodus 5 (Fluss → See an `uMouth` = `R.env.mouth` [x, z, Radius]); `setScene` setzt `uMouth`.
