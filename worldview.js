@@ -185,6 +185,7 @@ function bgTreeOk(x, z, M) {
   if (inHofMax(x, z, 3.2)) return false;      /* v99: Krone soll nicht im Hofzaun stehen (vorher 1,5) */
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
   if (typeof HUNT !== "undefined" && HUNT.clear(x, z, "bg")) return false;      /* v107: Wildwiese am Hochsitz */
+  if (typeof RENT !== "undefined" && RENT.clear(x, z)) return false;              /* v182: Hütte am See, Pfad, Parkfleck */
   if (x > 24.5 && x < 47 && z > -17.5 && z < 17.5) return false;
   if (z > 15.8 && z < 22.5) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -313,6 +314,7 @@ function wFreeGround(x, z, r, MK) {
   if (inHofMax(x, z, 1.5 + r)) return false;
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
   if (typeof HUNT !== "undefined" && r > 0.25 && HUNT.clear(x, z, "bush")) return false;     /* v107: Wildwiese bleibt offen (Gras und Blumen dürfen) */
+  if (typeof RENT !== "undefined" && RENT.clear(x, z)) return false;              /* v182: Hütte am See */
   if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
   if (z > 15.8 - r && z < 22.5 + r) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -993,6 +995,8 @@ function worldStatic() {
   if (typeof CAMP !== "undefined") CAMP.attach(R);
   /* v107: Hochsitz an der Wildwiese (hunt.js) */
   if (typeof HUNT !== "undefined") HUNT.attach(R);
+  /* v182: Hütte am See (rent.js) */
+  if (typeof RENT !== "undefined") RENT.attach(R);
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
@@ -2912,6 +2916,9 @@ function worldTap(x, y) {
   /* v107: Hochsitz */
   const hu = typeof HUNT !== "undefined" ? HUNT.pick(x, y) : null;
   if (hu && (!ho || hu.d < ho.d) && (!ht || hu.d < ht.d + 0.5)) { sfx("tap"); HUNT.sheet(); return true; }
+  /* v182: Hütte am See */
+  const rn = typeof RENT !== "undefined" ? RENT.pick(x, y) : null;
+  if (rn && (!ho || rn.d < ho.d) && (!ht || rn.d < ht.d + 0.5)) { sfx("tap"); RENT.sheet(); return true; }
   /* Holzstapel im Sägewerk */
   const hp = pickPile(x, y);
   if (hp && (!ho || hp.d < ho.d - 0.2) && (!ht || hp.d < ht.d - 0.2)) {
@@ -3190,6 +3197,7 @@ function worldTags() {
   worldEvSpots().forEach((s, i) => { if (!s.area || farmAreaOpen(s.area)) want.push(["e" + i + s.act, s.x, s.y, s.z, s.ic, s.cls || "ready", () => worldEvAct(s)]); });
   if (typeof pvVisit === "function" && pvVisit()) { const at = pvAt(); want.push(["pv", at[0] + 1.3, 2.9, at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]); }
   { const hg = typeof HUNT !== "undefined" ? HUNT.tagInfo() : null; if (hg) want.push(["hunt", hg.x, hg.y, hg.z, hg.html, hg.cls, () => HUNT.sheet()]); }
+  { const rg = typeof RENT !== "undefined" ? RENT.tagInfo() : null; if (rg) want.push(["rent", rg.x, rg.y, rg.z, rg.html, rg.cls, () => RENT.sheet()]); }
   if (WV.npc && worldVisitor()) want.push(["npc", WV.npc.node.x, 2.6, WV.npc.node.z, FAREAS[WV.npc.id].whoI + "❗", "ready", () => openAreaVisit(WV.npc.id)]);
   const F = S.farm;
   F.objs.forEach(o => {
@@ -3365,6 +3373,7 @@ function worldStep(dt, time) {
   if (typeof stepStaff === "function") stepStaff(dt, time);
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
   if (typeof HUNT !== "undefined") HUNT.step(dt, time);
+  if (typeof RENT !== "undefined") RENT.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });

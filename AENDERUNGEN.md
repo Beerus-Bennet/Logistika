@@ -1,5 +1,18 @@
 # Änderungen – kurz für den Kollegen
 
+## v182 – Hütte am See: aufbauen und vermieten
+
+- **Wo:** Auf der Freifläche westlich vom Glindower See (zwischen Straße und See, ca. x −39 / z 31) steht eine **verfallene Blockhütte**, sobald das See-Gebiet offen ist. Ab **Level 18** meldet sich Nachbar Erwin Krüger per Handy.
+- **Aufbauen:** Antippen → Bau-Fenster. Kosten: **9.000 €** + 6 Paar Kanthölzer, 6 Paar Balken, 8 Bund Bretter, 4 Bund Hobeldielen, 4 Stapel Holzplatten, 2 Holztüren (alles aus dem Sägewerk). Danach das Nagel-Minispiel wie bei der Fischerei; die Hütte wächst aus dem Boden (+150 XP).
+- **Die Hütte:** zweistöckig und rustikal – Erdgeschoss aus Rundholz, Obergeschoss aus Brettern mit Deckleisten, steiles Schindeldach, Steinkamin, grüne Fensterläden, offene Veranda mit Geländer, Bank, Tischchen, Blumenkübeln und Laterne, Brennholzstapel und Regentonne.
+- **Mieter:** zieht am Tag nach dem Bau um 10 Uhr ein (Nachricht aufs Handy). **Miete 120 € am Tag**, jede Woche überwiesen (Toast + Kassenbuch).
+- **Probleme:** In jedem 90-Tage-Zyklus meldet der Mieter **1–2 Probleme**, nie gleichzeitig (Heizung, Wasserhahn, Fenster, Dach, Sicherung, Abfluss, Haustür, Mäuse). Reparatur kostet 30–280 €. Bleibt ein Problem länger als 2 Tage liegen, zahlt er nur die halbe Miete.
+- **Instandhaltung:** alle **90 Tage** (900 €, ab 10 Tage vorher möglich). Ist sie länger als 7 Tage überfällig, hält der Mieter die Miete zurück.
+- **Leben an der Hütte:** abends Licht im Erdgeschoss (ab 18 Uhr), vor dem Schlafengehen oben, nachts alles aus; Rauch aus dem Kamin morgens und abends (nicht bei kaputter Heizung). Der Mieter sitzt auf der Veranda oder steht vor der Hütte und schaut zum See; bei Regen bleibt er auf der Veranda. An Werktagen geht er morgens (ca. 6:50–8:30) über den **Trampelpfad** zum Auto und fährt nach Osten weg, nachmittags (ca. 15:30–17:30) kommt er von Westen zurück und parkt auf dem **Erdfleck** an der Straße. Pfad und Parkfleck sind anfangs blass und werden mit der Zeit deutlicher.
+- Markierung über der Hütte nur, wenn etwas zu tun ist (🔨 Bauplatz, ❗ Problem, 🔧 Instandhaltung). Antippen der Hütte öffnet immer das Fenster.
+- **Fix nebenbei:** `team.js` `navHit` – die Zaunliste konnte beim allerersten Aufruf (Schmetterlinge) noch fehlen → „walls is not iterable“ und die Animation blieb stehen.
+- Dateien: **neu `rent.js`**; Anbindung in `worldview.js` (Bäume/Büsche freihalten, Szene, Antippen, Markierung, Animation), `erbe.js` (Takt), `index.html`, `sw.js`, `style.css` (`.rent-iss`), `team.js` (Fix).
+
 ## v181 – Nachbar Erwin Krüger vorzeitig wegschicken
 
 - Im Gesprächsfenster von Erwin Krüger gibt es unter „Übergeben“ jetzt den Knopf **👋 Wegschicken**. Der Besuch endet sofort (wie wenn die Zeit abgelaufen wäre); danach die übliche Pause bis zum nächsten Ereignis (2,5–5 Spielstunden). Keine Belohnung, keine Strafe.
