@@ -965,9 +965,9 @@ function worldStatic() {
   /* v75: Bach – im Osten aus einer Quelle (verjüngt sich auf den letzten 9 Einheiten), im Westen bis an den
      Kartenrand; der Seebach fließt in den See und im Osten bis über den Kartenrand. Ufer laufen weich ins Gras.
      v176: Ufer wie am See (Wiese → Sand → nasser Sand → Schlamm), Wasser in den Farben des Seeufers.
-     v177: An der Mündung laufen die Uferlinien des Bachs im Bogen (Radius 3,5) in die Seeuferlinie ein, sein Ufer geht in den
+     v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
-  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: lkShoreCol, mouth: { R: 3.5, shoreD: lkShoreD } };
+  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: lkShoreCol, mouth: { R: 5, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
   lines.merge(FWM.creekBank(LCR, CL), {});
   const SP = FWORLD.spring;
