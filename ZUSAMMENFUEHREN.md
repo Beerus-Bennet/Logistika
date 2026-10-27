@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v179 – runde Mündung (auf v178)
+
+- `woodmodels.js`: `creekMouthSt` – kubische Bézierkurve vom echten Seeufer (T2) zum Bachufer (T1), Wasser-Stationen folgen dem Seeufer (`cross(l)`); Aussparungen in `lakeFoam`/`lakeShore` 0,26 rad. `worldview.js`: `mouth.R = 7`.
+
 ## Stand v178 – weichere Mündung (auf v177)
 
 - `woodmodels.js`: `creekMouthSt` mit Bézierkurve statt Kreisbogen; Stationen haben `wS` (Strandbreite) und `cw` (Seefarben-Anteil); neu `crR`. `worldview.js`: `CL.mouth` bekommt `shoreW`.
