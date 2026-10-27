@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v180 – Seestrand überall gleich breit
+
+- **Problem:** Vor den Fischerei-Gebäuden und an den Uferwegen war der Strand absichtlich schmaler (0,7 bzw. 1,2 statt 2,2) – das sah ungleichmäßig und ungewollt aus.
+- **Lösung:** Der Strand ist jetzt rundum gleich breit (2,2). Damit er vor Gebäuden und Wegen Platz hat, weicht dort stattdessen die Uferlinie etwas weiter zurück: Wege jetzt 3,5 Einheiten Abstand zur Wasserlinie (vorher 3,0, die Einbuchtung ist auch etwas breiter für einen weicheren Verlauf); Gebäude unverändert 3,2.
+- Nur Optik. Datei: `worldview.js` (`lkObs` ohne `w`, `lkW` konstant 2,2, Mesh-Keys `lake*180`).
+
 ## v179 – Mündung: durchgehend runder Bogen statt Gerade + Knick
 
 - **Problem (Screenshot):** Die Wasserlinie lief vom Seeufer erst ein Stück gerade und knickte dann eng in den Bach ab. Grund: Die Rundung nahm das Seeufer als gerade Linie an (es ist aber gebogen), und die Ecke war zu eng.
