@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v180 – gleich breiter Strand (auf v179)
+
+- `worldview.js`: `lkW = () => 2.2`; Wege-Einbuchtungen mit 3,5 Abstand und Breite 3,2 / Radius; Mesh-Keys `lake*180`.
+
 ## Stand v179 – runde Mündung (auf v178)
 
 - `woodmodels.js`: `creekMouthSt` – kubische Bézierkurve vom echten Seeufer (T2) zum Bachufer (T1), Wasser-Stationen folgen dem Seeufer (`cross(l)`); Aussparungen in `lakeFoam`/`lakeShore` 0,26 rad. `worldview.js`: `mouth.R = 7`.
