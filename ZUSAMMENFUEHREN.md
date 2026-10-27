@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v173 – Seeufer (auf v172)
+
+| Teil | Datei |
+|---|---|
+| Sandring im Gelände raus, Strandbreite und Farbe übergeben | `worldview.js` |
+| `lakeShore` mit Geländefarbe und variabler Breite | `woodmodels.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v172 – Großer See wie der Teich (auf v171)
 
 | Teil | Datei |

@@ -110,8 +110,9 @@ function worldGroundCol(x, z) {
     c = wMix(c, FWM.YARD_COL, clamp((d + 1) / 1.6, 0, 1));
   }
   const e = lakeE(x, z);
-  if (e < 1.25) c = wMix(c, 0xd9c48a, clamp((1.25 - e) / 0.2, 0, 1));
-  if (e < 0.98) c = wMix(0xd9c48a, 0x3d6f86, clamp((0.98 - e) / 0.12, 0, 1));
+  /* v173: kein eigener Sandring im Gelände mehr (4er-Raster: breit, eckig, harte Kante) – den Strand zeichnet FWM.lakeShore weich;
+     unter dem Wasser bleibt der dunkle Seegrund */
+  if (e < 0.92) c = wMix(c, 0x3d6f86, clamp((0.92 - e) / 0.1, 0, 1));
   /* Nachbarfelder */
   FWORLD.fields.forEach(([fx, fz, w, d], i) => { if (Math.abs(x - fx) < w / 2 + 0.4 && Math.abs(z - fz) < d / 2 + 0.4) c = wMix(c, i ? 0xb9d466 : 0xd3b76a, 0.6); });
   return c;
@@ -988,7 +989,10 @@ function worldStatic() {
      Flache, helle Stellen unter Schilf, Steinkante und Insel (Seekoordinaten), damit nichts mitten im tiefen Wasser steht. */
   const lkSh = [[-29, 4, 3.6], [-34, -4, 3], [-26, 14, 3], [22, -12, 3], [30, 4, 3], [-31, -14, 3], [-12, 10, 4.6], [20, -7.5, 4.2]];
   const lkSkip = ["f_steg", "f_boot"].filter(k => typeof FFISHERY !== "undefined" && FFISHERY[k]).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx));
-  R.nodes.push(fnode(fmesh("lakeShore145", () => FWM.lakeShore(Lk.rx, Lk.rz)), { x: Lk.x, z: Lk.z, shadow: false }));
+  /* v173: Strand außen genau in der Geländefarbe; vor den Fischerei-Gebäuden (Südufer) nur ein schmaler Saum, damit sie auf Gras stehen */
+  const lkB = typeof FFISHERY !== "undefined" ? Object.keys(FFISHERY).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx)) : [];
+  const lkW = a => { let w = 2.2; lkB.forEach(b => { const d = Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))); w = Math.min(w, 0.7 + 1.5 * clamp((d - 0.12) / 0.25, 0, 1)); }); return w; };
+  R.nodes.push(fnode(fmesh("lakeShore173", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW)), { x: Lk.x, z: Lk.z, shadow: false }));
   R.nodes.push(fnode(fmesh("lakeWater145", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
   R.nodes.push(fnode(fmesh("lakeFoam145", () => FWM.lakeFoam(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
   R.nodes.push(fnode(fmesh("lakeReeds145", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
