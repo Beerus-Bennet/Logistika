@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v174 – Ufer-Einbuchtungen (auf v173)
+
+| Teil | Datei |
+|---|---|
+| `LAKE_DENTS`, `setLakeDents`, `lakeR` | `woodmodels.js` |
+| Einbuchtungen je Gebäude, Mesh-Schlüssel | `worldview.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Stand v173 – Seeufer (auf v172)
 
 | Teil | Datei |

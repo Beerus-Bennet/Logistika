@@ -1649,7 +1649,12 @@ const FWM = (() => {
   }
 
   /* -------------------------------- See ---------------------------------- */
-  const lakeR = (rx, rz, a) => { const w = 1 + 0.05 * Math.sin(3 * a + 0.7) + 0.03 * Math.sin(5 * a + 1.9); return [Math.cos(a) * rx * w, Math.sin(a) * rz * w]; };
+  /* v174: Ufer-Einbuchtungen (nur Optik): vor Gebäuden, die sehr nah am Wasser stehen, weicht die Uferlinie etwas zurück.
+     LAKE_DENTS = [[Winkel, Anteil des Radius, halbe Breite in rad], …] – gesetzt aus worldview.js (setLakeDents) vor dem Bau der See-Meshes */
+  let LAKE_DENTS = [];
+  const lakeDent = a => { let s = 0; LAKE_DENTS.forEach(([a0, f, wd]) => { const d = Math.abs(Math.atan2(Math.sin(a - a0), Math.cos(a - a0))); if (d < wd) { const k = 1 - d / wd; s = Math.max(s, f * k * k * (3 - 2 * k)); } }); return s; };
+  const lakeR = (rx, rz, a) => { const w = (1 + 0.05 * Math.sin(3 * a + 0.7) + 0.03 * Math.sin(5 * a + 1.9)) * (1 - lakeDent(a)); return [Math.cos(a) * rx * w, Math.sin(a) * rz * w]; };
+  function setLakeDents(list) { LAKE_DENTS = list || []; }
   /* v145: Ufer wie am Teich – Wiese → trockener Sand → nasser Sand → Uferschlamm unter dem Wasserrand, Steine am Ufer */
   function lakeBand(b, rx, rz, d0, d1, c0, c1, y, seg) {
     for (let i = 0; i < seg; i++) {
@@ -4058,7 +4063,7 @@ const FWM = (() => {
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
     terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
-    lakeShore, lakeWater, lakeFoam, lakeReeds, reedPatch, lilyPads,
+    lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,

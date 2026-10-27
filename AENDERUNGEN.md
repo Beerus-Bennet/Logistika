@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v174 – Räucherei und Fischerhütte stehen nicht mehr am Uferübergang
+
+- **Problem:** Räucherei (ca. 1 Einheit) und Fischerhütte (ca. 1,7) standen so nah am Wasser, dass sie genau auf dem Übergang See → Land saßen. Verschieben geht nicht (direkt dahinter liegt der Uferweg).
+- **`woodmodels.js`:** neue Ufer-Einbuchtungen `LAKE_DENTS` / `setLakeDents(list)` – `lakeR` zieht die Uferlinie dort weich zurück (Wasser, Strand, Saum, Schilf).
+- **`worldview.js`:** für jedes Fischerei-Gebäude an Land (nicht Steg/Bootshaus), das näher als 3,2 Einheiten am Wasser steht, wird eine Einbuchtung gesetzt, bis der Abstand reicht. Nur Optik – Angeln, Boote und `inLake`/`lakeE` bleiben unverändert. Mesh-Schlüssel `*174`.
+
 ## v173 – Seeufer: einheitlicher Übergang Land → Wasser
 
 - **Gelände (`worldview.js`, `worldGroundCol`):** kein eigener Sandring um den See mehr – im 4er-Raster war er breit, eckig und hatte eine harte Kante zur Wiese. Unter dem Wasser bleibt der dunkle Seegrund (ab `lakeE < 0.92`).
