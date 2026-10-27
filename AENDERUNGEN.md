@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v181 – Nachbar Erwin Krüger vorzeitig wegschicken
+
+- Im Gesprächsfenster von Erwin Krüger gibt es unter „Übergeben“ jetzt den Knopf **👋 Wegschicken**. Der Besuch endet sofort (wie wenn die Zeit abgelaufen wäre); danach die übliche Pause bis zum nächsten Ereignis (2,5–5 Spielstunden). Keine Belohnung, keine Strafe.
+- Dateien: `erbe.js` (`farmNeighborSend`), `worldview.js` (`openNeighbor`: Knopf `#fnNo`).
+
 ## v180 – Seestrand überall gleich breit
 
 - **Problem:** Vor den Fischerei-Gebäuden und an den Uferwegen war der Strand absichtlich schmaler (0,7 bzw. 1,2 statt 2,2) – das sah ungleichmäßig und ungewollt aus.
