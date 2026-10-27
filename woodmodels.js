@@ -1363,50 +1363,65 @@ const FWM = (() => {
       return f;
     });
   }
-  /* Band mit Breite je Punkt (w · f[i]); fade > 0: außen ein Verlauf zur Bodenfarbe (gnd) */
-  function bandW(b, P, f, w, color, y, gnd, fade, onlyFade) {
-    const n = P.length, cc = G3.col(color);
+  /* v176: Querprofil wie das Seeufer. Abstände von der Bachmitte (· f[i] bei Verjüngung); Wasserrand bei 1,15.
+     Ufer: Schlamm (unter dem Wasser) → nasser Sand → trockener Sand → Gelände (o.gnd). Wasser: Mitte → Rand wie der Seerand. */
+  const CB_D = [0.6, 1.3, 1.62, 2.4], CB_C = [0x75704f, 0xa89878, 0xc9b98c];
+  const CW_D = [0, 0.6, 1.2], CW_C = [0x3f96b4, 0x62adb4, 0x8cbca8];
+  /* Band aus Streifen: D = Abstände (aufsteigend), C(i, k) = Farbe am Punkt i im Abstand D[k] (beide Seiten gespiegelt) */
+  function creekProfile(b, P, f, D, C, y) {
+    const n = P.length;
     const N = P.map((p, i) => { const a = P[Math.max(0, i - 1)], c = P[Math.min(n - 1, i + 1)]; const u = unit(c[0] - a[0], c[1] - a[1]); return [-u[1], u[0]]; });
     const at = (i, s) => [P[i][0] + N[i][0] * s, y, P[i][1] + N[i][1] * s];
-    for (let i = 1; i < n; i++) {
-      const h0 = w / 2 * f[i - 1], h1 = w / 2 * f[i];
-      if (!onlyFade) b.quad(at(i - 1, h0), at(i, h1), at(i, -h1), at(i - 1, -h0), color);
-      if (fade && gnd) [1, -1].forEach(s => {
-        const A = at(i - 1, s * h0), B = at(i, s * h1), Cc = at(i, s * (h1 + fade)), D = at(i - 1, s * (h0 + fade));
-        quadUp(b, A, B, Cc, D, cc, cc, G3.col(gnd(Cc[0], Cc[2])), G3.col(gnd(D[0], D[2])));
-      });
-    }
+    for (let i = 1; i < n; i++) for (let k = 1; k < D.length; k++) [1, -1].forEach(s => {
+      const A = at(i - 1, s * D[k - 1] * f[i - 1]), B = at(i, s * D[k - 1] * f[i]), Cc = at(i, s * D[k] * f[i]), Dd = at(i - 1, s * D[k] * f[i - 1]);
+      const ca = G3.col(C(i - 1, k - 1, A)), cb = G3.col(C(i, k - 1, B)), cc = G3.col(C(i, k, Cc)), cd = G3.col(C(i - 1, k, Dd));
+      quadUp(b, A, B, Cc, Dd, ca, cb, cc, cd);
+    });
+  }
+  /* Bogenlänge je Punkt; o.mouth = [L0, L1]: bis L0 (im See) ganz in Seerand-Farben, bis L0 + L1 Übergang zum normalen Bach */
+  function creekMouth(P, o) {
+    const M = o && o.mouth, L = [0];
+    for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    return L.map(s => !M ? 0 : s <= M[0] ? 1 : s >= M[0] + M[1] ? 0 : 1 - (s - M[0]) / M[1]);
   }
   function creekBank(pts, o) {
     G3.seed(3910);
-    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o);
-    b.noise(0.06, () => bandW(b, P, f, 3.6, 0xb7a78a, 0.012, null, 0));
-    if (o && o.gnd) bandW(b, P, f, 3.6, 0xb7a78a, 0.012, o.gnd, 0.35, true);
+    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o), gnd = o && o.gnd, m = creekMouth(P, o);
+    b.noise(0.04, () => creekProfile(b, P, f, CB_D, (i, k, p) => k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a, 0.012));
     for (let i = 0; i < P.length * 0.6; i++) {
-      const k = Math.floor(rnd() * P.length), p = P[k], s = rnd() < 0.5 ? 1 : -1;
-      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * f[k]), rnd() < 0.5 ? 0x9a948b : 0xaaa498, { x: p[0] + s * (1.3 + rnd() * 0.5) * f[k], y: 0.05, z: p[1] + (rnd() - 0.5) * 0.8, flat: 0.55, jitter: 0.4 });
+      const k = Math.floor(rnd() * P.length), p = P[k], s = rnd() < 0.5 ? 1 : -1, q = P[Math.min(P.length - 1, k + 1)], o2 = P[Math.max(0, k - 1)], u = unit(q[0] - o2[0], q[1] - o2[1]), r = s * (1.35 + rnd() * 0.4) * f[k], t = (rnd() - 0.5) * 0.8;
+      if (m[k] > 0) continue;   /* v176: keine Steine an der Mündung (dort liegt der Seestrand); Steine quer zur Bachrichtung */
+      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * f[k]), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0] - u[1] * r + u[0] * t, y: 0.05, z: p[1] + u[0] * r + u[1] * t, flat: 0.55, jitter: 0.5 });
     }
     return b;
   }
   function creekWater(pts, o) {
-    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o);
-    bandW(b, P, f, 2.3, 0x3f8fc0, 0.03, null, 0);
+    const b = new MB(), P = smoothLine(pts, 6), f = creekScale(P, o), m = creekMouth(P, o);
+    creekProfile(b, P, f, CW_D, (i, k) => m[i] > 0 ? mix(CW_C[k], CW_C[2], m[i]) : CW_C[k], 0.03);
     return b;
   }
-  /* Quelle am Bachanfang: Kiesbett und Quelltopf (Weltkoordinaten, damit der Rand weich ins Gras läuft) */
+  /* Quelle am Bachanfang: Ufer wie am Bach (Schlamm → nasser Sand → Sand → Gelände), Weltkoordinaten */
   function springBed(x, z, gnd) {
-    const b = new MB(), seg = 24, R1 = 2.2, R2 = 2.8, y = 0.0125, sand = G3.col(0xb7a78a);
+    const b = new MB(), seg = 24, y = 0.0125, R = [1.0, 1.6, 1.95, 2.8];
+    const wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3), P = (a, r) => [x + Math.cos(a) * r * wob(a), y, z + Math.sin(a) * r * wob(a)];
+    const C = (k, p) => G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
     for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3);
-      const P = (a, r) => [x + Math.cos(a) * r * wob(a), y, z + Math.sin(a) * r * wob(a)];
-      triUp(b, [x, y, z], P(a0, R1), P(a1, R1), sand, sand, sand);
-      if (gnd) { const q0 = P(a0, R2), q1 = P(a1, R2); quadUp(b, P(a0, R1), P(a1, R1), q1, q0, sand, sand, G3.col(gnd(q1[0], q1[2])), G3.col(gnd(q0[0], q0[2]))); }
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, mud = G3.col(CB_C[0]);
+      triUp(b, [x, y, z], P(a0, R[0]), P(a1, R[0]), mud, mud, mud);
+      for (let k = 1; k < R.length; k++) { const A = P(a0, R[k - 1]), B = P(a1, R[k - 1]), Cc = P(a1, R[k]), D = P(a0, R[k]); quadUp(b, A, B, Cc, D, C(k - 1, A), C(k - 1, B), C(k, Cc), C(k, D)); }
     }
     return b;
   }
+  /* Quelltopf: Mitte → Rand in den Bachfarben */
   function springPool(x, z) {
-    const b = new MB();
-    b.disc(1.45, 18, 0x3f8fc0, { x, z, y0: 0.03, wob: 0.08 });
+    const b = new MB(), seg = 24, R = [0, 0.75, 1.45];
+    const wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3), P = (a, r) => [x + Math.cos(a) * r * wob(a), 0.03, z + Math.sin(a) * r * wob(a)];
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      triUp(b, P(a1, R[1]), P(a0, R[1]), [x, 0.03, z], CW_C[1], CW_C[1], CW_C[0]);
+      triUp(b, P(a0, R[1]), P(a1, R[1]), P(a1, R[2]), CW_C[1], CW_C[1], CW_C[2]);
+      triUp(b, P(a0, R[1]), P(a1, R[2]), P(a0, R[2]), CW_C[1], CW_C[2], CW_C[2]);
+    }
     return b;
   }
   /* Felsen hinter dem Quelltopf (lokal: der Bach läuft nach +x weg, die Felsen liegen bei −x) */
@@ -1667,7 +1682,7 @@ const FWM = (() => {
   }
   /* v173: Strandbreite je Uferstelle (wAt(a) → Breite, Standard 2,2) und Außenfarbe genau wie das Gelände dort (colAt(x, z) in
      Seekoordinaten) – kein sichtbarer Rand mehr zwischen Wiese und Strand. Dünne Stellen (z. B. vor den Fischerei-Gebäuden) bleiben Gras. */
-  function lakeShore(rx, rz, colAt, wAt) {
+  function lakeShore(rx, rz, colAt, wAt, skip) {
     G3.seed(3940);
     const b = new MB(), seg = 160, W = a => wAt ? wAt(a) : 2.2;
     const P = (a, d, y) => { const p = lakeR(rx + d, rz + d, a); return [p[0], y, p[1]]; };
@@ -1686,6 +1701,7 @@ const FWM = (() => {
     band(() => 0.15, () => -1.4, 0xa89878, 0x75704f, 0.01);                        /* Uferschlamm unter dem Wasserrand */
     for (let i = 0; i < 34; i++) {
       const a = rnd() * 6.28, d = 0.3 + rnd() * Math.max(0.2, W(a) * 0.4), p = lakeR(rx + d, rz + d, a);
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.08)) continue;   /* v176: keine Steine in der Bachmündung */
       b.noise(0.1, () => b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.04, z: p[1], jitter: 0.5, flat: 0.55 }));
     }
     return b;
@@ -1714,7 +1730,17 @@ const FWM = (() => {
     return b;
   }
   /* v145: heller Saum, wo das Wasser ans Ufer schwappt (eigener Knoten, halb durchsichtig – wie am Teich) */
-  function lakeFoam(rx, rz) { const b = new MB(); lakeBand(b, rx, rz, 0, 0.25, 0xf2f7f4, 0xf2f7f4, 0, 128); return b; }
+  /* v176: skip = Winkel ohne Saum (Bachmündung) */
+  function lakeFoam(rx, rz, skip) {
+    const b = new MB(), seg = 256, P = (a, d) => { const p = lakeR(rx + d, rz + d, a); return [p[0], 0, p[1]]; };
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, am = (a0 + a1) / 2;
+      if ((skip || []).some(s => Math.abs(Math.atan2(Math.sin(am - s), Math.cos(am - s))) < 0.05)) continue;
+      b.triV(P(a0, 0), P(a1, 0.25), P(a1, 0), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
+      b.triV(P(a0, 0), P(a0, 0.25), P(a1, 0.25), 0xf2f7f4, 0xf2f7f4, 0xf2f7f4);
+    }
+    return b;
+  }
   /* v145: Schilf mit Rohrkolben in Gruppen rund ums Ufer (wiegt im Wind) – an Stellen ohne Steg */
   function lakeReeds(rx, rz, skip) {
     G3.seed(3970);

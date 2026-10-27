@@ -159,7 +159,7 @@ function farmStatic() {
   for (let x = -26; x < 27; x += 4.5) if (Math.abs(x - 5) > 3) b.merge(lt, { x, z: 20.6, s: 0.9 });
   R.nodes.push(fnode(R.mesh(b)));
   /* Wasser, Uferschaum, Schilf, Seerosen, Steg mit Boot, zwei Enten */
-  R.nodes.push(fnode(R.mesh(FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 1, shadow: false }));
+  R.nodes.push(fnode(R.mesh(FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 4, shadow: false }));
   FV.foam = fnode(R.mesh(FM.pondFoam(POND.r)), { x: POND.x, y: 0.042, z: POND.z, alpha: 0.4, shadow: false });
   R.nodes.push(FV.foam);
   R.nodes.push(fnode(R.mesh(FM.pondReeds(POND.r)), { x: POND.x, z: POND.z, sway: 0.9 }));
@@ -247,7 +247,7 @@ function buildObjNode(o) {
   }
   if (o.t === "netz") {
     const [w, d] = farmSize(o);
-    parts.water = R.addChild(root, fnode(fmesh("netw:" + w + "x" + d, () => FFM.netWater(w, d)), { water: 1, shadow: false }));
+    parts.water = R.addChild(root, fnode(fmesh("netw:" + w + "x" + d, () => FFM.netWater(w, d)), { water: 4, shadow: false }));
   }
   if (typeof worldObjParts === "function") worldObjParts(o, root, parts);
   return { node: root, parts, sig: objSig(o) };
