@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v182 – Hütte am See (auf v181)
+
+- **Neue Datei `rent.js`** (Modul `RENT`, Spielstand `S.farm.rent`) – einfach mit übernehmen, `index.html` lädt sie nach `hunt.js`.
+- `worldview.js`: `RENT.clear` in `bgTreeOk` und `wFreeGround`; `RENT.attach(R)` nach `HUNT.attach`; `RENT.pick` nach dem Hochsitz-Pick; Tag `rent` nach dem Hochsitz-Tag; `RENT.step` nach `HUNT.step`.
+- `erbe.js`: `RENT.tick()` in `farmErbeTick` (nach `pvTick`).
+- `team.js`: `navHit` mit `walls || []`.
+- `style.css`: `.rent-iss`. `sw.js`: `rent.js` in der Liste.
+- Falls der Kollege auf der Freifläche westlich vom See (x −52 … −30, z 19 … 40) etwas gebaut hat: Hütte (`H`), Pfad (`PATH`) und Parkfleck (`CAR`) stehen oben in `rent.js`.
+
 ## Stand v181 – Nachbar wegschicken (auf v180)
 
 - `erbe.js`: neue Funktion `farmNeighborSend()` (setzt `until` und ruft `farmEvEnd()`). `worldview.js`: Knopf `#fnNo` in `openNeighbor`.

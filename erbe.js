@@ -1876,6 +1876,7 @@ function farmErbeTick(dt) {
   farmEvTick();
   try { farmTreasureTick(); } catch (e) { console.warn("Schatz", e); }   /* v166: ein Fehler in der Ereignis-Anzeige darf Takt und Fenster nicht blockieren */
   try { pvTick(); } catch (e) { console.warn("PV", e); }
+  try { if (typeof RENT !== "undefined") RENT.tick(); } catch (e) { console.warn("Hütte", e); }   /* v182: Miete, Probleme, Instandhaltung */
   staffWork();
   if (typeof staffGroupCheck === "function") staffGroupCheck();
   stallTick(false, dt || 1);

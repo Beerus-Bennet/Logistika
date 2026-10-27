@@ -260,7 +260,7 @@ function navWallsFor(role) {
 }
 /* liegt zwischen (x0,z0) und (x1,z1) ein Zaun? */
 function navHit(x0, z0, x1, z1, walls) {
-  for (const w of walls) {
+  for (const w of walls || []) {        /* v182: Zaunliste kann beim allerersten Aufruf noch fehlen (Falter) */
     if (w[0] === 1) {
       if ((x0 - w[1]) * (x1 - w[1]) >= 0 || x0 === x1) continue;
       const z = z0 + (w[1] - x0) / (x1 - x0) * (z1 - z0);
