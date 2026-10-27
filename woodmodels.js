@@ -1660,14 +1660,27 @@ const FWM = (() => {
       b.triV(p00, p10, p11, c0, c1, c1);
     }
   }
-  function lakeShore(rx, rz) {
+  /* v173: Strandbreite je Uferstelle (wAt(a) → Breite, Standard 2,2) und Außenfarbe genau wie das Gelände dort (colAt(x, z) in
+     Seekoordinaten) – kein sichtbarer Rand mehr zwischen Wiese und Strand. Dünne Stellen (z. B. vor den Fischerei-Gebäuden) bleiben Gras. */
+  function lakeShore(rx, rz, colAt, wAt) {
     G3.seed(3940);
-    const b = new MB(), seg = 128;
-    lakeBand(b, rx, rz, 1.9, 0.8, 0x86bf4a, 0xc9b98c, 0.006, seg);        /* Wiese → trockener Sand */
-    lakeBand(b, rx, rz, 0.8, 0.2, 0xc9b98c, 0xa89878, 0.008, seg);        /* Sand → nasser Sand */
-    lakeBand(b, rx, rz, 0.2, -1.4, 0xa89878, 0x75704f, 0.01, seg);        /* Uferschlamm unter dem Wasserrand */
+    const b = new MB(), seg = 160, W = a => wAt ? wAt(a) : 2.2;
+    const P = (a, d, y) => { const p = lakeR(rx + d, rz + d, a); return [p[0], y, p[1]]; };
+    const band = (f0, f1, c0, c1, y) => {
+      for (let i = 0; i < seg; i++) {
+        const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, d00 = f0(a0), d01 = f0(a1), d10 = f1(a0), d11 = f1(a1);
+        const p00 = P(a0, d00, y), p01 = P(a1, d01, y), p10 = P(a0, d10, y), p11 = P(a1, d11, y);
+        const C0 = p => typeof c0 === "function" ? c0(p) : c0, C1 = p => typeof c1 === "function" ? c1(p) : c1;
+        b.triV(p00, p11, p01, C0(p00), C1(p11), C0(p01));
+        b.triV(p00, p10, p11, C0(p00), C1(p10), C1(p11));
+      }
+    };
+    const grass = p => colAt ? colAt(p[0], p[2]) : 0x86bf4a;
+    band(a => W(a), a => W(a) * 0.4, grass, 0xc9b98c, 0.006);                      /* Wiese (Geländefarbe) → trockener Sand */
+    band(a => W(a) * 0.4, () => 0.15, 0xc9b98c, 0xa89878, 0.008);                  /* Sand → nasser Sand */
+    band(() => 0.15, () => -1.4, 0xa89878, 0x75704f, 0.01);                        /* Uferschlamm unter dem Wasserrand */
     for (let i = 0; i < 34; i++) {
-      const a = rnd() * 6.28, p = lakeR(rx + 0.4 + rnd() * 0.9, rz + 0.4 + rnd() * 0.9, a);
+      const a = rnd() * 6.28, d = 0.3 + rnd() * Math.max(0.2, W(a) * 0.4), p = lakeR(rx + d, rz + d, a);
       b.noise(0.1, () => b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.04, z: p[1], jitter: 0.5, flat: 0.55 }));
     }
     return b;

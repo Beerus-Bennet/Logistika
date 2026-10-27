@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v173 – Seeufer: einheitlicher Übergang Land → Wasser
+
+- **Gelände (`worldview.js`, `worldGroundCol`):** kein eigener Sandring um den See mehr – im 4er-Raster war er breit, eckig und hatte eine harte Kante zur Wiese. Unter dem Wasser bleibt der dunkle Seegrund (ab `lakeE < 0.92`).
+- **Strand (`woodmodels.js`, `lakeShore(rx, rz, colAt, wAt)`):** Außenkante nimmt genau die Geländefarbe an dieser Stelle (`wGroundAt`) – kein sichtbarer Rand zwischen Wiese und Strand. Breite je Uferstelle: Standard 2,2, vor den Fischerei-Gebäuden (Südufer) nur 0,7, damit sie auf Gras statt auf dem Strand stehen. Steine liegen im Sandstreifen.
+- Mesh-Schlüssel `lakeShore173`.
+
 ## v172 – Großer See wie der Teich gestaltet
 
 - **Ufer (`woodmodels.js`, `lakeShore`):** Bänder wie am Teich – Wiese → trockener Sand → nasser Sand → Uferschlamm unter dem Wasserrand, dazu Steine am Ufer (vorher eine breite, einfarbige Sandfläche).
