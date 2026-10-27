@@ -377,7 +377,7 @@ const G3 = (() => {
   }
   void main(){
     vec3 n = normalize(vNor);
-    float isLake = step(2.5, uWater), tt = uWater > 1.5 ? uTime : 0.0, big = step(3.5, uWater);   /* v145: 4 = großer See (wie 3, ruhigeres, größeres Muster) */      /* v126: 2 = Fluss (Ost→West), 3 = See (wie v119, alle Richtungen), 1 = still */
+    float isLake = step(2.5, uWater), tt = uWater > 1.5 ? uTime : 0.0, big = step(1.5, uWater);   /* v145: 4 = großer See (wie 3, ruhigeres, größeres Muster); v176: alle bewegten Gewässer im Muster des großen Sees */      /* v126: 2 = Fluss (Ost→West), 3 = See (wie v119, alle Richtungen), 1 = still */
     if (uWater > 0.5) {
       /* kleine Kräuselwellen aus vier Richtungen */
       /* v125: nur der nördliche Fluss (uWater = 2) bewegt sich – alle Wellen laufen von Osten nach Westen (−x);

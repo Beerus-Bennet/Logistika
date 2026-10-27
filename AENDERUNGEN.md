@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v176 – Bachmündung, einheitliches Wasser und Ufer
+
+- **Bachmündung am See (rechts unten):** Der Seebach beginnt jetzt 4 Einheiten im See (unter dem Seewasser), sein Wasser wird zur Mündung hin so hell wie der Seerand, und sein Ufer läuft nahtlos in den Seestrand über. An der Mündung kein Schaumsaum, kein Schilf, keine Steine mehr im Wasser.
+- **Einheitliches Wasser:** Alle Gewässer (Seebach, nördlicher Fluss, Quelltopf, Teich, Fischnetz-Becken) nutzen das ruhige Wellenmuster des großen Sees. Der nördliche Fluss fließt weiterhin von Ost nach West. Bach- und Quellwasser haben die Seefarben (türkis in der Mitte, hell am Rand) statt einem flachen Blau.
+- **Einheitliche Ufer:** Fluss- und Quellufer sind wie am See aufgebaut: Wiese → trockener Sand → nasser Sand → Schlamm unter dem Wasserrand, Steine am Ufer. Vorher war es ein graues Kiesband.
+- Fix nebenbei: Ufersteine am Bach wurden nur in x-Richtung versetzt und lagen deshalb bei west-östlich laufenden Bächen teils im Wasser – jetzt quer zur Bachrichtung.
+- Nur Optik, keine Spiellogik geändert (`LAKE_CREEK`, Angeln, `inLake` unverändert).
+- Dateien: `woodmodels.js` (creekProfile/creekBank/creekWater/springBed/springPool, lakeFoam/lakeShore mit `skip`), `worldview.js`, `gl3d.js` (Wassermuster), `farmview.js` (Wassermodus).
+
 ## v175 – Uferweg nicht mehr direkt am Wasser
 
 - **Problem:** Seit dem neuen Ufer (v173) lief der Weg am Ostufer (und kurz vor der Bachbrücke) direkt an der Wasserlinie entlang.

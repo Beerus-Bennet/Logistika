@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v176 – Bachmündung, Wasser und Ufer einheitlich (auf v175)
+
+- `worldview.js`: der Seeufer-Block (`Lk`, `lkObs`, `lkW` …) steht jetzt **vor** dem Bach-Abschnitt (der Seebach braucht `lkShoreCol`); neu `lkDent`, `lkShoreCol`, `LK_MOUTH`, `LCR` (Seebach mit Startpunkt im See). Teich und Seebach `water: 4`. Mesh-Keys `lake*176`.
+- `woodmodels.js`: `bandW` entfernt, neu `creekProfile`/`creekMouth`; `creekBank`, `creekWater`, `springBed`, `springPool` neu; `lakeShore(…, skip)` und `lakeFoam(…, skip)`.
+- `gl3d.js`: `big = step(1.5, uWater)` – alle bewegten Gewässer im Muster des großen Sees.
+- `farmview.js`: Teich und Netzbecken `water: 4`.
+
 ## Stand v175 – Ufer weicht auch vor Wegen zurück (auf v174)
 
 - Nur `worldview.js`: der v174-Block (Gebäude-Dellen + `lkB`/`lkW`) ist ersetzt durch `lkObs` (Gebäude + Punkte von `LAKE_WAY`, `LAKE_EAST`, `LAKE_STEM`), daraus `setLakeDents` und `lkW`. Mesh-Keys `lakeShore/Water/Foam/Reeds175`.
