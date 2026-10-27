@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v172 – Großer See wie der Teich gestaltet
+
+- **Ufer (`woodmodels.js`, `lakeShore`):** Bänder wie am Teich – Wiese → trockener Sand → nasser Sand → Uferschlamm unter dem Wasserrand, dazu Steine am Ufer (vorher eine breite, einfarbige Sandfläche).
+- **Wasser (`lakeWater`):** Verlauf wie am Teich – dunkelblau in der Mitte, türkis und hell zum Ufer (gleiche sechs Farbstufen). Flache, hellere Stellen unter Schilf, Steinkante und Insel (`sh`, Liste in `worldview.js`), damit Schilf und Steine nicht mitten im tiefen Wasser stehen.
+- **Saum und Schilf:** heller, halb durchsichtiger Saum am Wasserrand (`lakeFoam`) und Schilf mit Rohrkolben in Gruppen rund ums Ufer (`lakeReeds`, nicht vor Steg und Bootshaus).
+- **Wellenbild (`gl3d.js`):** neuer Wasser-Modus 4 „großer See“ – bewegt sich wie Modus 3, aber mit größerem, ruhigerem Muster (auf der großen Fläche wirkte Modus 3 fleckig). Seebach bleibt Modus 3.
+- Neue Mesh-Schlüssel `lakeShore145`, `lakeWater145`, `lakeFoam145`, `lakeReeds145` (`worldview.js`).
+
 ## v171 – Speditions-Level und Hof-Level sauber getrennt
 
 Gemeldet: Beim Aufstieg im Logistik-Bereich (Karte, Aufträge …) kam die Hof-Feier mit Hof-/Sägewerk-/Fischerei-Freischaltungen (z. B. „Level 12 – Hobelmaschine, Trockenkammer, Blockbandsäge“). Ursache: `checkLevel` (`game.js`) rief nach der Gründung mit dem Speditions-Level die Hof-Feier `farmLevelUp` (Liste `FUNLOCK`) auf, dazu Kleeblätter-Text und Hof-Ereignis „level“.

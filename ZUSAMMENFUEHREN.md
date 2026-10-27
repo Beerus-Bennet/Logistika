@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v172 – Großer See wie der Teich (auf v171)
+
+| Teil | Datei |
+|---|---|
+| Ufer, Wasserverlauf, Saum, Schilf | `woodmodels.js` |
+| Einbau, flache Stellen, Wasser-Modus 4 | `worldview.js` |
+| Wasser-Modus 4 im Shader | `gl3d.js` |
+| Version | `sw.js`, `index.html` |
+
 ## Gesamtpaket v144 – v171 (alles von heute in einem ZIP)
 
 Enthält den Endstand aller Dateien, die sich seit v143 geändert haben (26 Dateien, keine gelöschten, keine Tests). Einfach alle Dateien ins Repo-Wurzelverzeichnis hochladen und bestehende überschreiben – die Einzel-ZIPs v144 … v171 sind darin vollständig enthalten.

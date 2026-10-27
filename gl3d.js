@@ -377,17 +377,18 @@ const G3 = (() => {
   }
   void main(){
     vec3 n = normalize(vNor);
-    float isLake = step(2.5, uWater), tt = uWater > 1.5 ? uTime : 0.0;      /* v126: 2 = Fluss (Ost→West), 3 = See (wie v119, alle Richtungen), 1 = still */
+    float isLake = step(2.5, uWater), tt = uWater > 1.5 ? uTime : 0.0, big = step(3.5, uWater);   /* v145: 4 = großer See (wie 3, ruhigeres, größeres Muster) */      /* v126: 2 = Fluss (Ost→West), 3 = See (wie v119, alle Richtungen), 1 = still */
     if (uWater > 0.5) {
       /* kleine Kräuselwellen aus vier Richtungen */
       /* v125: nur der nördliche Fluss (uWater = 2) bewegt sich – alle Wellen laufen von Osten nach Westen (−x);
          alle anderen Gewässer stehen still (Zeit 0) */
-      vec2 p = vW.xz, g = vec2(0.0);
+      vec2 p = vW.xz * mix(1.0, 0.55, big), g = vec2(0.0);
       vec2 d1 = mix(vec2(0.97, 0.24), vec2(0.8, 0.6), isLake), d2 = mix(vec2(0.95, -0.31), vec2(-0.5, 0.86), isLake), d3 = mix(vec2(0.99, 0.12), vec2(0.95, -0.31), isLake), d4 = mix(vec2(0.9, 0.43), vec2(-0.7, -0.71), isLake);
       g += d1 * cos(dot(p, d1) * 2.1 + tt * 1.2) * 0.030;
       g += d2 * cos(dot(p, d2) * 3.6 + tt * 1.6) * 0.022;
       g += d3 * cos(dot(p, d3) * 6.3 + tt * 2.3) * 0.014;
       g += d4 * cos(dot(p, d4) * 10.1 + tt * 3.0) * 0.009;
+      g *= mix(1.0, 0.6, big);
       n = normalize(vec3(-g.x, 1.0, -g.y));
     }
     float d = dot(n, uSunDir);
@@ -403,13 +404,13 @@ const G3 = (() => {
       c += pow(max(dot(n, h), 0.0), 180.0) * 1.6 * sh * uSunCol;           /* Glitzern */
       /* v119: sichtbare, ruhige Wasserbewegung auch von oben: wandernde helle/dunkle Wellenbänder (Farbe, nicht nur Normale)
          und vereinzelte Lichtfunken. Alles langsam und leicht, damit das Wasser lebt, aber nicht unruhig wirkt. */
-      vec2 q = vW.xz;
+      vec2 q = vW.xz * mix(1.0, 0.55, big);
       float w1 = isLake > 0.5 ? sin(q.x * 1.7 + q.y * 1.1 - tt * 0.9) : sin(q.x * 1.7 + q.y * 0.4 + tt * 0.9);
       float w2 = isLake > 0.5 ? sin(q.x * 2.9 - q.y * 2.3 + tt * 1.3) : sin(q.x * 2.9 - q.y * 0.9 + tt * 1.3);
       float w3 = isLake > 0.5 ? sin(q.x * 0.9 - q.y * 1.9 + tt * 0.6 + w1) : sin(q.x * 0.9 - q.y * 0.7 + tt * 0.6 + w1);
-      c *= 1.0 + 0.085 * (w1 * w2 + 0.6 * w3);
+      c *= 1.0 + mix(0.085, 0.04, big) * (w1 * w2 + 0.6 * w3);
       float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 - tt * mix(-0.6, 1.3, isLake) + w2));
-      c += gl * 0.13 * sh * uSunCol;
+      c += gl * mix(0.13, 0.09, big) * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
     float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);

@@ -984,8 +984,14 @@ function worldStatic() {
   });
   /* Der Glindower See: Ufer, Wasser, Schilf, Seerosen, Insel, Steine */
   const Lk = FWORLD.lake;
-  R.nodes.push(fnode(fmesh("lakeShore", () => FWM.lakeShore(Lk.rx, Lk.rz)), { x: Lk.x, z: Lk.z, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeWater", () => FWM.lakeWater(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.035, z: Lk.z, water: 3, shadow: false }));
+  /* v145: gestaltet wie der Teich – Sandufer mit Steinen, Wasser von dunkel (Mitte) zu türkis (Rand), heller Saum, Schilf rund ums Ufer.
+     Flache, helle Stellen unter Schilf, Steinkante und Insel (Seekoordinaten), damit nichts mitten im tiefen Wasser steht. */
+  const lkSh = [[-29, 4, 3.6], [-34, -4, 3], [-26, 14, 3], [22, -12, 3], [30, 4, 3], [-31, -14, 3], [-12, 10, 4.6], [20, -7.5, 4.2]];
+  const lkSkip = ["f_steg", "f_boot"].filter(k => typeof FFISHERY !== "undefined" && FFISHERY[k]).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx));
+  R.nodes.push(fnode(fmesh("lakeShore145", () => FWM.lakeShore(Lk.rx, Lk.rz)), { x: Lk.x, z: Lk.z, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeWater145", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeFoam145", () => FWM.lakeFoam(Lk.rx, Lk.rz)), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeReeds145", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
   const lk = new FM.MB();
   [[-15, 52, 26], [-20, 44, 18], [-12, 62, 16], [36, 36, 14], [44, 52, 12], [-17, 34, 10]].forEach(([x, z, n], i) => lk.merge(FWM.reedPatch(n), { x, z, ry: i }));
   [[-9, 40, 14], [-4, 43, 8], [28, 64, 9]].forEach(([x, z, n]) => lk.merge(FWM.lilyPads(n), { x, z, y: 0.03 }));
