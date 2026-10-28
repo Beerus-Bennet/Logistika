@@ -68,7 +68,7 @@ const RENT = (() => {
     return F.rent || (F.rent = { built: 0, earned: 0, fixed: 0 });
   }
   const built = () => { const T = st(); return !!(T && T.built); };
-  const missing = () => typeof farmMissing === "function" ? farmMissing(NEED) : [];
+  const missing = () => typeof siteMissing === "function" ? siteMissing("rent", NEED) : [];      /* v186: am Bauplatz Abgelegtes zählt mit */
   const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   function newTenant() {
     const T = st(), used = T.ten ? T.ten.n : null, names = NAMES.filter(n => n !== used);
@@ -184,7 +184,7 @@ const RENT = (() => {
   function buildNow() {
     const T = st();
     if (T.built || buildCheck() !== true) return false;
-    Object.keys(NEED).forEach(id => farmTake(id, NEED[id]));
+    siteTake("rent", NEED);
     S.money -= COST; S.expense = (S.expense || 0) + COST;
     if (typeof logMoney === "function") logMoney("farm", "Hütte am See aufgebaut", -COST);
     T.built = S.time; T.lt = S.time;
@@ -669,13 +669,14 @@ const RENT = (() => {
     FV.sheetFn = buildSheet;
     const lvOk = flv() >= LV, chk = buildCheck();
     const ic = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
-    const rows = Object.keys(NEED).map(id => { const have = farmInv(id), need = NEED[id], done = have >= need;
-      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${done ? "✓ da" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("")
+    const rows = Object.keys(NEED).map(id => { const have = siteHave("rent", id), dep = siteN("rent", id), need = NEED[id], done = have >= need;
+      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${dep >= need ? "📦 abgelegt" : dep ? "📦 " + esc(famt(id, dep)) + " abgelegt" + (have > dep ? " · " + esc(famt(id, have - dep)) + " im Lager" : "") : done ? "✓ im Lager" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("")
       + `<div class="hu-need${S.money >= COST ? " ok" : ""}"><span class="hu-ni">💶</span><b>${eur(COST)}</b><small>${S.money >= COST ? "✓ da" : "auf dem Konto: " + eur(S.money)}</small></div>`;
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏚️</span>Verfallene Hütte am See<small>${lvOk ? "gehört zu deinem Hof" : "ab Level " + LV}</small></div>
       <div class="fs-sub">Die alte Blockhütte westlich vom See ist eingestürzt. Mit Holz aus dem Sägewerk wird daraus eine zweistöckige Hütte mit Veranda – zum Vermieten: ${eur(RENT_DAY)} Miete am Tag, alle 90 Tage eine Instandhaltung (${eur(MAINT)}), ab und zu eine kleine Reparatur.</div>
-      <div class="hu-needs">${rows}</div>
+      <div class="hu-needs">${rows}</div>${siteDepHTML("rent", NEED)}
       <div class="fs-row"><button class="btn${chk === true ? "" : " disabled"}" id="rnBuild">${chk === true ? "🔨 Hütte aufbauen" : "🔒 " + esc(chk)}</button></div>`, "rent");
+    siteDepBind("rent", NEED, buildSheet);   /* v186: Material am Bauplatz ablegen */
     $("#rnBuild").onclick = () => {
       if (buildCheck() !== true) { sfx("bad"); return; }
       closeFarmSheet();

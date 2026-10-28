@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v186 – Baumaterial am Bauplatz ablegen
+
+- **Problem:** Beim Bauen konnte es fehlschlagen, weil Arbeiter (Verkauf, Rezepte) im selben Moment das gesammelte Material aus dem Lager verbraucht oder verkauft haben.
+- **Lösung:** Jeder Bauplatz hat jetzt ein eigenes kleines Lager. Im Bau-Fenster gibt es den Knopf **📦 Material ablegen**: Er legt alles, was im Lager liegt, an den Bauplatz – je Material höchstens so viel, wie dort noch gebraucht wird (2 Türen gebraucht und 2 im Lager → beide liegen danach am Bauplatz). Abgelegtes ist **nicht mehr im Lager**, Arbeiter, Verkäufe und Rezepte kommen nicht mehr dran.
+- Beim Bauen wird zuerst das Abgelegte verbraucht, der Rest aus dem Lager; danach ist der Bauplatz leer.
+- Anzeige: Die Material-Chips zählen Abgelegtes + Lager, 📦 zeigt, was schon am Bauplatz liegt (grün = komplett abgelegt). Bei Hütte und Hochsitz steht es unter jedem Material („📦 abgelegt“, „📦 10 abgelegt · 4 im Lager“).
+- **Gilt für:** Hütte am See, Hochsitz, alle Fischerei-Bauplätze, Sägewerk-Reparaturen und Unimog, Säge-Ausbau (Halle Stufe 2, Kessel), Hof-Ausbau (nur Stufen mit Material).
+- Nicht dabei: Kauf von Sägewerksmaschinen im Laden und das Motorboot (keine Bauplätze).
+- Dateien: `farm.js` (`siteN`, `siteHave`, `siteMissing`, `sitePutAll`, `siteTake` – Spielstand `S.farm.depot`), `farmview.js` (`siteNeedHTML`, `siteDepHTML`, `siteDepBind`), `erbe.js` (Reparatur, Ausbau, Fischerei, Hof-Ausbau nutzen den Bauplatz), `worldview.js` (Fenster), `hunt.js`, `rent.js`, `style.css`.
+
 ## v185 – Sägewerk: neue Maschinen und sichtbarer Produktionsablauf
 
 - **Neue Datei `sawwerk.js`** (Modul `SWK`): alle Maschinen des Sägewerks neu modelliert, in einem gemeinsamen Stil – Graphitrahmen, satinierter Stahl, Gummi, Betonfundament mit gelber Linie um den Arbeitsbereich, je Maschine eine gedämpfte Akzentfarbe (das Lila der Schleifmaschine war ein Platzhalter und ist jetzt Stahlblau).

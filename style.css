@@ -3552,3 +3552,9 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .rent-iss b{display:block;font-size:14.5px}
 .rent-iss p{margin:4px 0 2px;font-size:13px;font-style:italic;color:#5a4a36}
 .rent-iss small{display:block;font-size:11.5px;color:#7a6a56;margin-bottom:8px}
+/* v186: Bauplatz-Lager */
+.fchip .fdep-n{font-style:normal;font-size:10px;font-weight:800;margin-left:-2px}
+.fchip.dep{background:#e6f6e6}
+.fdep-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
+.fdep-row small{font-size:11px;color:#6b7280;line-height:1.25}
+.fdep-ok{color:#2f7a3a;font-weight:800}

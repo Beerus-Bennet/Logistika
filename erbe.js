@@ -696,7 +696,7 @@ function sawNext() { return FSAW_REPAIRS.find(r => !S.farm.saw[r.id]) || null; }
 function farmRepairCost(rep) { return Math.round(rep.cost * (1 - staffPerk("mechaniker"))); }
 function farmRepairCheck(rep) {
   if (!farmAreaOpen("saege")) return "zu";
-  const miss = farmMissing(rep.need);
+  const miss = siteMissing("saw:" + rep.id, rep.need);      /* v186: Abgelegtes zählt mit */
   if (miss.length) return "missing";
   if (S.money < farmRepairCost(rep)) return "money";
   return true;
@@ -706,7 +706,7 @@ function farmRepairDone(rep, score) {
   const F = S.farm;
   if (F.saw[rep.id]) return false;
   const c = farmRepairCost(rep);
-  for (const id in rep.need) farmTake(id, rep.need[id]);
+  siteTake("saw:" + rep.id, rep.need);
   S.money -= c; S.expense += c;
   logMoney("farm", "Reparatur Sägewerk · " + rep.n, -c);
   F.saw[rep.id] = S.time;
@@ -801,11 +801,11 @@ function farmSawUpgrade(id) {
   const U = FSAW_UPGRADES[id], F = S.farm;
   if (!U || (id === "saege2" && (farmObj1("sw_halle") || {}).lvl >= 2) || (id === "kessel2" && F.enLv >= 1)) return false;
   if (flv() < U.lv) return toast("Erst ab Level " + U.lv + " – dir fehlen noch " + (U.lv - flv()) + " Level.", "warn"), false;
-  const miss = farmMissing(U.need);
+  const miss = siteMissing("up:" + id, U.need);
   if (miss.length) return toast("Es fehlt: " + miss.map(m => fqty(m.id, m.need)).join(", "), "warn"), false;
   if (S.money < U.cost) return toast("Dafür fehlen " + eur(U.cost - S.money) + ".", "warn"), false;
   S.money -= U.cost; S.expense += U.cost;
-  for (const k in U.need) farmTake(k, U.need[k]);
+  siteTake("up:" + id, U.need);
   logMoney("farm", U.n, -U.cost);
   if (id === "saege2") { const h = farmObj1("sw_halle"); h.lvl = 2; h.slots = Math.max(h.slots, 3); }
   if (id === "kessel2") F.enLv = 1;
@@ -839,7 +839,7 @@ function farmFishBuildCheck(t) {
   const B = FFISHERY[t];
   if (!farmAreaOpen("see")) return "zu";
   if (flv() < B.lv) return "lv";
-  if (farmMissing(B.need).length) return "missing";
+  if (siteMissing(t, B.need).length) return "missing";
   if (S.money < B.cost) return "money";
   return true;
 }
@@ -847,7 +847,7 @@ function farmFishBuild(t) {
   const B = FFISHERY[t], F = S.farm;
   const plot = F.objs.find(o => o.t === "f_plot" && o.k === t);
   if (!plot || farmFishBuildCheck(t) !== true) return null;
-  for (const id in B.need) farmTake(id, B.need[id]);
+  siteTake(t, B.need);
   S.money -= B.cost; S.expense += B.cost;
   logMoney("farm", B.n + " gebaut", -B.cost);
   F.objs = F.objs.filter(o => o !== plot);
@@ -1397,7 +1397,7 @@ function farmStageCheck() {
   const N0 = farmStageNext();
   if (!N0) return "max";
   if (flv() < N0.lv) return "lv";
-  if (farmMissing(N0.need).length) return "missing";
+  if (siteMissing("stage:" + (farmHl() + 1), N0.need).length) return "missing";
   if (S.money < N0.cost) return "money";
   return true;
 }
@@ -1405,7 +1405,7 @@ function farmStageUp() {
   if (farmStageCheck() !== true) return false;
   const N0 = farmStageNext(), F = S.farm;
   S.money -= N0.cost; S.expense += N0.cost;
-  for (const id in N0.need) farmTake(id, N0.need[id]);
+  siteTake("stage:" + (farmHl() + 1), N0.need);
   logMoney("farm", "Hof ausgebaut: " + N0.n, -N0.cost);
   const tier0 = F.stage || 1;
   F.hl = farmHl() + 1;

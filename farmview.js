@@ -1972,6 +1972,28 @@ function refreshSheet() { if (FV.sheet && FV.sheetTick) FV.sheetTick(); }
 /* Warenbild: 3D, wo es ein Modell gibt, sonst das Symbol */
 const icOf = (id, lock) => typeof itemIc === "function" ? itemIc(id, lock) : `<span class="ic">${lock ? "🔒" : FITEMS[id].i}</span>`;
 const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}" data-it="${id}">${icOf(id)}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
+/* v186: Baumaterial am Bauplatz: Chips zählen Abgelegtes + Lager, 📦 zeigt, was schon am Bauplatz liegt; darunter der Ablege-Knopf */
+function siteNeedHTML(key, need) {
+  const chips = Object.keys(need).map(id => {
+    const d = siteN(key, id), have = siteHave(key, id);
+    return `<span class="fchip${have < need[id] ? " miss" : ""}${d >= need[id] ? " dep" : ""}" data-it="${id}">${icOf(id)}<b>${fpair(id, have, need[id])}</b>${d ? `<i class="fdep-n">📦${d >= need[id] ? "" : esc(famt(id, d))}</i>` : ""}</span>`;
+  }).join("");
+  return chips;
+}
+function siteDepHTML(key, need) {
+  const can = Object.keys(need).some(id => farmInv(id) > 0 && siteN(key, id) < need[id]);
+  const all = Object.keys(need).every(id => siteN(key, id) >= need[id]);
+  return all ? `<div class="fs-sub fdep-ok">📦 Alles Material liegt am Bauplatz.</div>`
+    : `<div class="fdep-row"><button class="btn tiny${can ? "" : " ghost disabled"}" data-dep="${key}">📦 Material ablegen</button><small>Abgelegtes liegt sicher am Bauplatz – Arbeiter und Verkäufe kommen nicht mehr dran.</small></div>`;
+}
+function siteDepBind(key, need, redraw) {
+  const b = $(`#farmSheetIn [data-dep="${key}"]`);
+  if (b) b.onclick = () => {
+    const n = sitePutAll(key, need);
+    if (!n) { sfx("bad"); toast("Im Lager liegt nichts davon.", "warn"); return; }
+    sfx("pop"); toast("📦 Material am Bauplatz abgelegt.", "good"); save(); redraw();
+  };
+}
 /* v53: Ware antippen → Name darüber (und was im Lager liegt) */
 function itemTip(el) {
   const id = el.dataset.it, it = FITEMS[id];
