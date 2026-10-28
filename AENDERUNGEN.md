@@ -1,5 +1,51 @@
 # Änderungen – kurz für den Kollegen
 
+## v185 – Sägewerk: neue Maschinen und sichtbarer Produktionsablauf
+
+- **Neue Datei `sawwerk.js`** (Modul `SWK`): alle Maschinen des Sägewerks neu modelliert, in einem gemeinsamen Stil – Graphitrahmen, satinierter Stahl, Gummi, Betonfundament mit gelber Linie um den Arbeitsbereich, je Maschine eine gedämpfte Akzentfarbe (das Lila der Schleifmaschine war ein Platzhalter und ist jetzt Stahlblau).
+- **Materialfluss überall gleich:** links Zufuhr, Mitte Bearbeitung, rechts Ausgabe, vorn der Bediener.
+- **Maschinen:**
+  - **Holzspalter:** mobiler Senkrechtspalter – Säule, Hydraulikzylinder, Keil, Motor mit Öltank, Zweihandhebel, Räder und Deichsel, Gitterbox für die Scheite.
+  - **Hobelmaschine:** Dickenhobel mit Rollentischen, Haube über der Hobelwelle, Handrad, Vorschubwalzen, Absaugung mit Filtersack. Paletten für Roh- und Hobelware.
+  - **Schleifmaschine:** Breitbandschleifer – Förderband durch ein Portal, im Fenster die Walzen des Schleifbands, Staubabsaugung mit zwei Säcken, Rollwagen für die fertigen Teile.
+  - **Fräse:** CNC-Portalfräse – Nutentisch, Portal auf Linearführungen, Spindel, Energiekette, Schaltschrank mit Bildschirm, Gestell für Türen und Zaunfelder.
+  - **Verpackungsmaschine:** Palettennagler – Spanntisch, Portal mit Druckluftnagler, Kompressor, Palettenstapel.
+  - **Trockenkammer:** Kammer aus Sandwichpaneelen, Flügeltor, Gleis mit Trockenwagen und Stapel mit Stapellatten, Lüfter und Dampfabzug auf dem Dach, Schaltkasten mit Temperaturanzeige.
+  - **Sägebock:** Holzböcke in X-Form, Hackklotz mit Kettensäge, Kanister.
+  - **Sägehalle:** Die Säge steht jetzt vorn in der offenen Halle, wo man hineinsieht. Zuführwagen auf dem Gleis, Vorschubwalzen, Rollentisch, Querförderband zum Stapelplatz. Stufe 1 ist eine **Gattersäge** mit Schwungrad, Kurbel und Pleuel, die den Sägerahmen genau mitbewegen. **Stufe 2** (Ausbau „Blockbandsäge“) zeigt jetzt wirklich eine Blockbandsäge. Mit Strom gibt es ein warmes Hallenlicht.
+- **Ablauf am echten Spielstand:** Der laufende Auftrag gibt den Fortschritt vor, das Werkstück fährt sichtbar durch die Maschine.
+  - Hobel, Schleifer und Säge wechseln an der Schnittkante vom Rohzustand zum bearbeiteten Stück: sägerau → gehobelt, Stamm → Bretter zwischen den Schwarten.
+  - Der Spalter spaltet die Rolle in drei Hüben und wirft die Scheite in die Gitterbox.
+  - Der Nagler legt die Deckbretter auf und nagelt sie.
+  - Die Fräse fährt ihr Muster ab und gibt die fertige Tür oder das Zaunfeld frei.
+  - Der Trockenwagen fährt in die Kammer, das Tor schließt, nach dem Trocknen kommt hell gestempeltes Bauholz heraus.
+- **Was wo liegt:** An der Zufuhr liegt das Material wartender Aufträge. An der Ausgabe liegt genau die abholbereite Ware; bei Maschinen mit mehreren Stücken je Auftrag kommen die schon fertigen Stücke des laufenden Auftrags dazu.
+- **Nichts an Spielwerten, Zeiten, Rezepten oder Inventar geändert.**
+- **Signalleuchte an jeder Maschine:** grün = läuft, gelb blinkend = abholbereit, rot blinkend = Störung, aus = Leerlauf. Bei einer Störung bleibt alles stehen, wo es ist. Nachts sind laufende Maschinen angestrahlt.
+- **Leistung:**
+  - je Maschine etwa 1.500–2.800 Dreiecke (vorher ~150) und 10–18 Knoten;
+  - alle Meshes werden einmal gebaut und zwischengespeichert;
+  - Maschinen weit außerhalb der Kamera werden nur einmal pro Sekunde nachgeführt;
+  - Partikel nur im Betrieb und sparsam.
+- Dateien: **neu `sawwerk.js`**.
+  - `woodmodels.js`: `machine`/`saegebock` → SWK, `sawHall(m, pv, lvl)` ohne die alte Gattersäge, `WT`/`BARK` exportiert.
+  - `worldview.js`: Mesh-Schlüssel, `SWK.attach` in `worldObjParts`, `SWK.step` in `worldStep` statt der alten Blätter-/Späne-Animation, Tag-Höhen.
+  - `farmview.js`: Vorschau beim Verschieben mit Teilen.
+  - dazu `index.html` und `sw.js`.
+
+## v184 – Gebietsknöpfe links am Hof entfernt
+
+- Die fünf runden Schnellsprung-Knöpfe am linken Rand des Hofs (Hof, Wald, Sägewerk, Alter Wald, See) sind weg – Aufbau, Styles und Neuzeichnen. Ein eventuell noch vorhandenes Element wird beim Start entfernt.
+- Die Gebiete erreicht man weiter über Kamera/Welt, Nachrichten (z. B. „Zum Montagewagen“) und die Freischalt-Fenster. `worldGo` und `AREA_SPOTS` bleiben, weil andere Stellen sie nutzen.
+- Dateien: `worldview.js` (`worldDOM`, `worldUI`), `style.css` (`#farmAreas`, `.farea`; `.farea-req` bleibt), `index.html`, `sw.js`.
+
+## v183 – Letzten Reiter beim Start wieder öffnen
+
+- Das Spiel merkt sich den zuletzt offenen Reiter (Hof, Karte, Aufträge, Live, Fuhrpark, Standorte, Markt, Welt & Kontor) im Spielstand (`S.lastTab`) und öffnet ihn nach dem Schließen/Neuladen wieder – in jedem Browser, auch Safari.
+- Ausnahmen (dort bleibt es beim bisherigen Start): vor der Speditionsgründung (nur Hof möglich), mitten im Tutorial, und bei Spielständen ohne gemerkten Reiter.
+- Gespeichert wird wie bisher beim Verlassen der Seite und alle 6 Sekunden – es ist kein zusätzliches Speichern nötig.
+- Dateien: `game.js` (`showTab` merkt sich den Reiter, `boot` wählt den Start-Reiter), `index.html`, `sw.js`.
+
 ## v182 – Hütte am See: aufbauen und vermieten
 
 - **Wo:** Auf der Freifläche westlich vom Glindower See (zwischen Straße und See, ca. x −39 / z 31) steht eine **verfallene Blockhütte**, sobald das See-Gebiet offen ist. Ab **Level 18** meldet sich Nachbar Erwin Krüger per Handy.

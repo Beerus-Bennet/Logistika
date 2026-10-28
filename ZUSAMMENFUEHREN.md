@@ -1,5 +1,44 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Gesamtpaket v183 – v185 (auf GitHub-Stand v182)
+
+Alle drei Stände von heute in einem Paket, Endstand v185. Einfach alle Dateien ins Hauptverzeichnis laden und überschreiben – die Einzel-ZIPs v183, v184 und v185 braucht es danach nicht mehr.
+
+| Stand | Inhalt | Dateien |
+|---|---|---|
+| v183 | Spiel öffnet beim Start den zuletzt offenen Reiter | `game.js` |
+| v184 | Gebietsknöpfe links am Hof entfernt | `worldview.js`, `style.css` |
+| v185 | Sägewerk: neue Maschinen und sichtbarer Produktionsablauf | **neu `sawwerk.js`**, `woodmodels.js`, `worldview.js`, `farmview.js` |
+| alle | Version, Ladeliste, Doku | `index.html`, `sw.js`, `AENDERUNGEN.md`, `ZUSAMMENFUEHREN.md` |
+
+## Stand v185 – Sägewerk-Maschinen (auf v184)
+
+| Datei | Änderung |
+|---|---|
+| `sawwerk.js` | **neu** – Modul `SWK`: Designsystem (`P`, `ACC`), Bausteine, Werkstücke, Maschinenmodelle (`BODY`/`PARTS`), Sägehalle (`hallInterior`, `hallParts`), Ablauf (`attach`, `step`, `st`) |
+| `woodmodels.js` | `machine(t, bare)` und `saegebock(bare)` rufen nur noch `SWK`; in `sawHall(m, pv, lvl)` ist der alte Block „Gattersäge … Förderband“ durch `SWK.hallInterior` ersetzt (nur wenn die Säge kaputt ist – repariert kommt die Einrichtung als Teil mit Hallenlicht); Späne auf dem Hallenboden nur noch hinten; Export `WT, BARK` |
+| `worldview.js` | `objVar`/`worldObjMesh` für `sw_halle` mit Stufe (`o.lvl`); Maschinen-Meshes heißen `mach2:`/`saegebock2`; `worldObjParts`: `SWK.attach` statt `parts.blades`; `worldStep`: `SWK.step` statt Sägeblatt-Wippen und Sägebock-Spänen; `OBJ_H` der Maschinen angepasst |
+| `farmview.js` | `startPlace`: Vorschau mit `SWK.attach(proto, ghost, {}, true)` statt der Sägeblätter |
+| `index.html`, `sw.js` | `sawwerk.js` nach `woodmodels.js`; Version 185 |
+
+- Falls der Kollege in `machine()`/`saegebock()`/`sawHall()` etwas geändert hat: Die Modelle stehen jetzt in `sawwerk.js` (`BODY.<typ>`), die beweglichen Teile in `PARTS.<typ>`, der Ablauf in `STEP.<typ>`.
+- Lage der Maschinenteile bezieht sich auf die Maschinenmitte (vor dem Drehen), Fluss −x → +x, Bediener +z – gedreht wird über den Wurzelknoten wie bisher.
+
+## Stand v184 – Gebietsknöpfe entfernt (auf v183)
+
+| Datei | Änderung |
+|---|---|
+| `worldview.js` | `worldDOM` legt `#farmAreas` nicht mehr an (räumt ein altes weg); `worldUI` ohne Knopf-Block |
+| `style.css` | `#farmAreas`, `.farea…` und die Desktop-Variante gelöscht (`.farea-req` bleibt) |
+| `index.html`, `sw.js` | Version 184 |
+
+## Stand v183 – Letzten Reiter merken (auf v182)
+
+| Datei | Änderung |
+|---|---|
+| `game.js` | `showTab`: `S.lastTab = name` (nur wenn `S.player`); `boot`: Start-Reiter aus `S.lastTab` (erlaubt: map, farm, orders, jobs, fleet, bases, market, world; nicht im Tutorial, vor der Gründung nur farm) |
+| `index.html`, `sw.js` | Version 183 |
+
 ## Stand v182 – Hütte am See (auf v181)
 
 - **Neue Datei `rent.js`** (Modul `RENT`, Spielstand `S.farm.rent`) – einfach mit übernehmen, `index.html` lädt sie nach `hunt.js`.

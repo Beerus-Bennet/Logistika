@@ -1854,7 +1854,7 @@ const FWM = (() => {
 
   /* ------------------------------ Sägewerk ------------------------------ */
   /* Sägehalle: m = Reparaturen (dach, strom, saege, band) als Bits */
-  function sawHall(m, pv) {
+  function sawHall(m, pv, lvl) {
     G3.seed(4000);
     const b = new MB();
     const dach = m & 1, strom = m & 2, saege = m & 4, band = m & 8;
@@ -1882,29 +1882,8 @@ const FWM = (() => {
     /* Solarmodule der Döring GmbH auf der vorderen Dachfläche: zwei Reihen,
        jede mittig – so sieht es mit jeder Zahl von Modulen symmetrisch aus */
     if (dach && pv) solarRoof(b, pv);
-    /* Gattersäge in der Mitte: Rahmen, Sägeblätter, Wagen auf Schienen */
-    b.at({ y: 0.18, x: 0.5 }, () => {
-      [-0.8, 0.8].forEach(x => b.box(0.22, 2.3, 0.3, saege ? 0x2f6fb0 : 0x7a6a5a, { x }));
-      b.box(1.85, 0.25, 0.32, saege ? 0x2f6fb0 : 0x7a6a5a, { y: 2.2 });
-      if (saege) for (let i = 0; i < 5; i++) b.box(0.03, 1.5, 0.2, 0xd9e1e6, { x: -0.45 + i * 0.22, y: 0.55 });
-      else { b.box(0.03, 1.2, 0.2, 0x9a6a3a, { x: -0.2, y: 0.4, rz: 0.4 }); b.box(0.03, 1.2, 0.2, 0x9a6a3a, { x: 0.6, y: 0.2, rz: 1.3, z: 1.5 }); }
-      /* Schienen und Stammwagen */
-      [-0.35, 0.35].forEach(x => b.box(0.06, 0.06, 5.4, 0x55504a, { x, y: 0.02 }));
-      b.box(1.1, 0.18, 0.9, 0x6e4a2e, { y: 0.1, z: 1.4 });
-      b.cyl(0.32, 0.32, 2.2, 8, 0xa8653c, { rx: Math.PI / 2, y: 0.6, z: 1.4 - 1.1, top: 0xe6c99a });
-    });
-    /* Förderband: Rollen und Gurt (oder Einzelteile am Boden) */
-    b.at({ y: 0.18, x: -3.1, z: 0.4 }, () => {
-      [-1.6, 1.6].forEach(z => [-0.35, 0.35].forEach(x => b.box(0.08, 0.6, 0.08, 0x55504a, { x, z })));
-      if (band) {
-        b.box(0.8, 0.08, 3.6, 0x2a2a2e, { y: 0.62 });
-        for (let i = 0; i < 9; i++) b.cyl(0.07, 0.07, 0.78, 6, 0x9aa6af, { rz: Math.PI / 2, x: 0.39, y: 0.58, z: -1.6 + i * 0.4 });
-        b.cyl(0.25, 0.25, 1.4, 8, 0xa8653c, { rx: Math.PI / 2, y: 0.95, z: -0.9, top: 0xe6c99a });
-      } else {
-        for (let i = 0; i < 4; i++) b.cyl(0.07, 0.07, 0.78, 6, 0x8a7a6a, { rz: Math.PI / 2, x: 0.4 + rnd() * 0.6, y: 0.07, z: -1.5 + i * 0.9, ry: rnd() });
-        b.box(0.8, 0.04, 1.2, 0x2a2a2e, { x: 0.8, y: 0.02, z: 0.6, ry: 0.4 });
-      }
-    });
+    /* v185: Säge, Gleis, Rollentisch und Förderband vorn in der Halle – sawwerk.js (Stufe 2: Blockbandsäge) */
+    if (typeof SWK !== "undefined" && !(m & 4)) SWK.hallInterior(b, m, lvl);      /* repariert: eigenes Teil mit Hallenlicht (SWK.attach) */
     /* Strom: Lampe und Leitung zum Kesselhaus */
     if (strom) {
       [-2.5, 2.5].forEach(x => { b.box(0.04, 0.5, 0.04, 0x2a2a2e, { x, y: 2.4, z: 0.4 }); b.box(0.3, 0.16, 0.3, C.glow, { x, y: 2.25, z: 0.4 }); });
@@ -1912,7 +1891,7 @@ const FWM = (() => {
       b.box(0.04, 0.04, 0.6, 0xd8332b, { x: -4.7, y: 1.5, z: 2.2 });
     }
     /* Sägespäne */
-    for (let i = 0; i < 10; i++) b.ico(0.18 + rnd() * 0.15, dach ? 0xe9cfa0 : 0x9a8a72, { x: (rnd() - 0.5) * 8, y: 0.18, z: 1.2 + rnd() * 1.6, flat: 0.25, jitter: 0.4 });
+    for (let i = 0; i < 6; i++) b.ico(0.16 + rnd() * 0.12, dach ? 0xe9cfa0 : 0x9a8a72, { x: (rnd() - 0.5) * 8, y: 0.18, z: -2.2 + rnd() * 1.4, flat: 0.25, jitter: 0.4 });
     if (!dach) for (let i = 0; i < 8; i++) b.ico(0.22, 0x5f7f3a, { x: (rnd() - 0.5) * 9.5, y: 0.2, z: 2.6 + rnd() * 0.6, flat: 0.5, jitter: 0.5 });
     return b;
   }
@@ -2058,63 +2037,9 @@ const FWM = (() => {
     return b;
   }
   const KESSEL_CHIMNEY = [-0.8, 2.85, -0.7];
-  /* Maschinen zum Dazukaufen */
-  function machine(t, bare) {
-    G3.seed(4100 + t.length);
-    const b = new MB();
-    /* bare: ohne Bodenplatte – für die Bildchen im Laden */
-    const base = (w, d) => { if (!bare) b.box(w, 0.12, d, 0x8a857c); };
-    if (t === "spalter") {
-      base(2, 2);
-      b.box(0.5, 0.6, 1.4, 0xd8a028, { y: 0.12 });
-      b.box(0.2, 1.0, 0.2, 0x3a3a40, { y: 0.7, z: -0.4 });
-      b.box(0.08, 0.4, 0.3, 0xd9e1e6, { y: 1.0, z: -0.4 });
-      b.cyl(0.22, 0.22, 0.5, 8, 0xa8653c, { y: 0.72, z: 0.3, top: 0xe6c99a });
-      for (let i = 0; i < 6; i++) b.box(0.12, 0.12, 0.45, 0xc9955a, { x: 0.65 + (i % 3) * 0.13, y: 0.12 + Math.floor(i / 3) * 0.12, z: 0.4, ry: 0.2 });
-    } else if (t === "hobel") {
-      base(3, 2);
-      b.box(2.2, 0.8, 0.9, 0x2f8a6a, { y: 0.12, top: 0x2a7a5e });
-      b.box(0.6, 0.4, 0.95, 0x3a3a40, { y: 0.92 });
-      b.box(2.6, 0.06, 0.5, 0xe6c99a, { y: 0.95, z: 0.05 });
-      b.box(0.3, 0.5, 0.3, 0x9aa6af, { x: -0.9, y: 0.92 });
-    } else if (t === "trocken") {
-      base(4, 3);
-      b.box(3.6, 2.0, 2.6, 0xd9e1e6, { y: 0.12, top: 0xc0c9cf });
-      b.box(1.4, 1.6, 0.05, 0x6f7a80, { x: -0.6, y: 0.12, z: 1.31 });
-      b.box(0.4, 0.3, 0.06, 0xd8332b, { x: 1.0, y: 1.3, z: 1.31 });
-      [-0.8, 0.8].forEach(x => b.cyl(0.18, 0.18, 0.5, 8, 0x9aa6af, { x, y: 2.12, z: -0.5 }));
-    } else if (t === "verpack") {
-      base(3, 2);
-      b.box(1.8, 0.9, 1.2, 0xf2a531, { y: 0.12, top: 0xe09424 });
-      b.box(0.8, 0.5, 1.25, 0x3a3a40, { x: -0.4, y: 1.02 });
-      for (let i = 0; i < 3; i++) b.box(1.2, 0.14, 0.8, 0xd8b07a, { x: 0.9, y: 0.12 + i * 0.16, z: 0.2 });
-    } else if (t === "schleif") {
-      base(3, 2);
-      b.box(1.6, 0.85, 0.9, 0x8a5ac8, { y: 0.12, top: 0x7a4ab8 });
-      b.cyl(0.32, 0.32, 0.12, 12, 0xe0d0b0, { rz: Math.PI / 2, x: 0.86, y: 0.75 });
-      b.box(1.0, 0.08, 0.5, 0xc9955a, { x: -0.2, y: 0.97 });
-    } else if (t === "fraese") {
-      base(3, 2);
-      b.box(1.8, 0.9, 1.0, 0xc8443a, { y: 0.12, top: 0xb8382e });
-      b.box(0.3, 0.9, 0.3, 0x3a3a40, { y: 1.02 });
-      b.cyl(0.1, 0.06, 0.3, 8, 0xd9e1e6, { y: 0.75, z: 0 });
-      b.box(1.4, 0.1, 0.06, 0x9aa6af, { y: 1.85 });
-    }
-    return b;
-  }
-  /* Sägebock auf dem Hof: Bock mit Stamm, daneben die Kettensäge */
-  function saegebock() {
-    G3.seed(4200);
-    const b = new MB();
-    b.noise(0.1, () => b.plate(1.9, 1.9, 0xc9b48a, { y0: 0.015 }));
-    [-0.55, 0.55].forEach(x => { b.box(0.08, 0.7, 0.08, C.woodD, { x, z: 0.2, rx: 0.35 }); b.box(0.08, 0.7, 0.08, C.woodD, { x, z: -0.2, rx: -0.35 }); });
-    b.cyl(0.16, 0.16, 1.6, 8, 0xa8653c, { rz: Math.PI / 2, x: 0.8, y: 0.7, top: 0xe6c99a });
-    b.box(0.32, 0.18, 0.14, 0xf2731e, { x: 0.55, y: 0.05, z: 0.6 });
-    b.box(0.5, 0.04, 0.08, 0x9aa6af, { x: 0.85, y: 0.08, z: 0.6 });
-    for (let i = 0; i < 6; i++) b.ico(0.08, 0xe9cfa0, { x: (rnd() - 0.5) * 1.2, y: 0.02, z: (rnd() - 0.5) * 1.2, flat: 0.3 });
-    b.merge(logPile(4, "kiefer"), { x: 0.4, z: -1.15, s: 0.6 });
-    return b;
-  }
+  /* v185: Maschinen zum Dazukaufen und Sägebock – neu modelliert in sawwerk.js (SWK) */
+  function machine(t, bare) { return SWK.machine(t, bare); }
+  function saegebock(bare) { return SWK.saegebock(bare); }
   /* Sägewerkshof: Schotter, Späne, Stapel */
   function yard(w, d) {
     G3.seed(4210);
@@ -4158,6 +4083,7 @@ const FWM = (() => {
   }
 
   return {
+    WT, BARK,
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,

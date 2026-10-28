@@ -57,8 +57,8 @@ const NPC_LOOK = {
 };
 /* Höhe der Tag-Blasen und Taps für die neuen Objekte */
 Object.assign(OBJ_H, {
-  sw_halle: 4.6, sw_lager: 2.6, sw_buero: 2.8, sw_lkw: 2.2, kessel: 3.0, spalter: 1.4, hobel: 1.3, trocken: 2.4, verpack: 1.5,
-  schleif: 1.3, fraese: 2.0, saegebock: 1.1, junk: 0.9, stall: 1.8, tractor: 1.9, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
+  sw_halle: 4.6, sw_lager: 2.6, sw_buero: 2.8, sw_lkw: 2.2, kessel: 3.0, spalter: 1.8, hobel: 1.5, trocken: 2.5, verpack: 1.3,
+  schleif: 1.6, fraese: 1.5, saegebock: 1.0, junk: 0.9, stall: 1.8, tractor: 1.9, f_plot: 1.0, f_steg: 0.9, f_huette: 2.8, f_boot: 3.4,
   f_lager: 2.5, f_rauch: 3.6, f_kuehl: 2.9, f_markt: 2.4, bert_car: 1.1
 });
 /* Rauch über arbeitenden Gebäuden */
@@ -1264,7 +1264,7 @@ function objVar(o) {
   const F = S.farm;
   if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg && typeof wegMask === "function") return "m" + wegMask(o);   /* v71: Nachbarn → Ränder */
   if (WORN_T.has(o.t)) return (F.stage || 1) <= 1 ? "w" : "";
-  if (o.t === "sw_halle") return sawMask() + ":" + (typeof pvN === "function" ? pvN() : 0);
+  if (o.t === "sw_halle") return sawMask() + ":" + (typeof pvN === "function" ? pvN() : 0) + ":" + (o.lvl || 1);
   if (o.t === "tractor") return (F.cos && F.cos.on && F.cos.on.tractor) || "rot";
   if (o.t === "kessel") return F.saw && F.saw.motor ? "1" : "0";
   if (o.t === "sw_lager") return sawRepaired() ? "1" : "0";
@@ -1277,13 +1277,13 @@ function sawMask() { const s = S.farm.saw || {}; return (s.dach ? 1 : 0) | (s.st
 function worldObjMesh(o) {
   const F = S.farm;
   switch (o.t) {
-    case "sw_halle": { const m = sawMask(), pv = typeof pvN === "function" ? pvN() : 0; return fmesh("sawHall:" + m + ":" + pv, () => FWM.sawHall(m, pv)); }
+    case "sw_halle": { const m = sawMask(), pv = typeof pvN === "function" ? pvN() : 0, lv = o.lvl || 1; return fmesh("sawHall:" + m + ":" + pv + ":" + lv, () => FWM.sawHall(m, pv, lv)); }
     case "sw_lager": { const k = sawRepaired() ? 1 : 0; return fmesh("sawLager:" + k, () => FWM.sawLager(k)); }
     case "sw_buero": { const k = F.saw && F.saw.strom ? 1 : 0; return fmesh("sawBuero:" + k, () => FWM.sawBuero(k)); }
     case "sw_lkw": { const k = F.saw && F.saw.lkw ? 1 : 0; return fmesh("sawLkw:" + k, () => FWM.sawLkw(k)); }
     case "kessel": { const k = F.saw && F.saw.motor ? 1 : 0; return fmesh("kessel:" + k, () => FWM.kessel(k)); }
-    case "spalter": case "hobel": case "trocken": case "verpack": case "schleif": case "fraese": return fmesh("mach:" + o.t, () => FWM.machine(o.t));
-    case "saegebock": return fmesh("saegebock", FWM.saegebock);
+    case "spalter": case "hobel": case "trocken": case "verpack": case "schleif": case "fraese": return fmesh("mach2:" + o.t, () => FWM.machine(o.t));
+    case "saegebock": return fmesh("saegebock2", () => FWM.saegebock());
     case "junk": return fmesh("junk:" + o.k, () => FWM.junk(o.k));
     case "stall": return fmesh("stall", FWM.stall);
     case "tractor": { const col = (F.cos && F.cos.on && F.cos.on.tractor) || "rot"; return fmesh("trk:" + col, () => { const b = new FM.MB(); b.merge(FWM.tractor(col), { x: -1.1, ry: -Math.PI / 2 }); b.merge(FWM.trailer(), { x: 1.1, ry: -Math.PI / 2 }); return b; }); }
@@ -1532,7 +1532,8 @@ function cosThumb(c) {
 function worldObjParts(o, root, parts) {
   const R = FV.R;
   if (WORN_T.has(o.t) && (S.farm.stage || 1) <= 1) root.tint = [0.42, 0.38, 0.32, 0.22];
-  if (o.t === "sw_halle" && sawMask() & 4) parts.blades = R.addChild(root, fnode(fmesh("sawBlades", FWM.sawBlades), { x: 0.5, y: 0.73, z: 0 }));
+  /* v185: bewegliche Maschinenteile, Werkstücke und Stapel (sawwerk.js) */
+  if (typeof SWK !== "undefined" && SWK.KINDS.has(o.t)) SWK.attach(o, root, parts, false);
   if (o.t === "f_steg") {
     parts.angler = R.addChild(root, fnode(fmesh("angler", FFM.angler), { y: 0.17, z: 2.3 }));
     parts.rod = R.addChild(root, fnode(fmesh("rod", FFM.rod), { y: 0.63, z: 2.55, rx: ROD_REST }));
@@ -3354,21 +3355,8 @@ function worldStep(dt, time) {
     const e = WV.trees.get(WV.hit.id), k = Math.max(0, 1 - (now - WV.hit.t0) * 3.5);
     if (e && !e.falling) { e.node.rz = Math.sin((now - WV.hit.t0) * 38) * 0.05 * k; if (!k) { e.node.rz = 0; WV.hit = null; } } else WV.hit = null;
   }
-  /* Sägeblätter fahren auf und ab, wenn die Halle arbeitet */
-  const hall = farmObj1("sw_halle");
-  if (hall) {
-    const e = FV.nodes.get(hall.id);
-    if (e && e.parts.blades) { const run = hall.q && hall.q.length && !hall.broken; e.parts.blades.y = 0.73 + (run ? Math.sin(time * 14) * 0.18 : 0); }
-    if (hall.q && hall.q.length && !hall.broken && Math.random() < dt * 4) {
-      const [cx, cz] = farmCenter(hall);
-      FV.R.emit({ x: cx + 0.5 + (Math.random() - 0.5) * 0.6, y: 0.9, z: cz + (Math.random() - 0.5), vx: (Math.random() - 0.5), vy: 1.2, vz: 1, g: -3, life: 0.9, size: 0.06, col: [0.95, 0.85, 0.6, 1], shape: 1 });
-    }
-  }
-  const bock = farmObj1("saegebock");
-  if (bock && bock.q && bock.q.length && Math.random() < dt * 3) {
-    const [cx, cz] = farmCenter(bock);
-    FV.R.emit({ x: cx, y: 0.75, z: cz, vx: (Math.random() - 0.5) * 1.4, vy: 1.4, vz: (Math.random() - 0.5) * 1.4, g: -4, life: 0.7, size: 0.05, col: [0.95, 0.85, 0.6, 1], shape: 1 });
-  }
+  /* v185: Maschinen des Sägewerks – Werkstück, Ablauf und Signalleuchte nach dem Spielstand (sawwerk.js) */
+  if (typeof SWK !== "undefined") SWK.step(dt, time);
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
@@ -3418,29 +3406,17 @@ function worldSync(force) {
 /* ------------------------- Oberfläche: Knöpfe ----------------------------- */
 function worldDOM() {
   const f = $("#farm");
-  if (!f || $("#farmAreas")) return;
-  const a = document.createElement("div");
-  a.id = "farmAreas";
-  f.appendChild(a);
+  if (!f || $("#farmChips")) return;
+  const old = $("#farmAreas"); if (old) old.remove();      /* v184: die Gebietsknöpfe links gibt es nicht mehr */
   const c = document.createElement("div");
   c.id = "farmChips";
   f.appendChild(c);
 }
 function worldUI() {
-  const F = S.farm, A = $("#farmAreas"), C = $("#farmChips");
-  if (!A || !C || !F) return;
+  const F = S.farm, C = $("#farmChips");
+  if (!C || !F) return;
   const v = worldVisitor();
   if (FV.R && FV.built && (WV.npc ? WV.npc.id : null) !== v && !WV.reveal) worldSyncNpc();
-  A.style.display = F.tut && !F.tut.done ? "none" : "";
-  const ak = Object.keys(AREA_SPOTS).map(id => id + (id === "hof" || farmAreaOpen(id) ? "1" : v === id ? "!" : "0")).join("");
-  if (A._k !== ak) {
-    A._k = ak;
-    A.innerHTML = Object.keys(AREA_SPOTS).map(id => {
-      const S0 = AREA_SPOTS[id], open = id === "hof" || farmAreaOpen(id), ready = v === id;
-      return `<button class="farea${open ? "" : " lock"}${ready ? " ready" : ""}" data-area="${id}" title="${esc(S0.n)}"><i>${S0.i}</i>${open ? "" : `<em>${ready ? "❗" : "🔒"}</em>`}<span>${esc(S0.n)}</span></button>`;
-    }).join("");
-    A.querySelectorAll("[data-area]").forEach(b => b.onclick = () => worldGo(b.dataset.area));
-  }
   const sta = Math.floor(farmSta()), mx = farmStaMax(), wx0 = FWEATHER[farmWeather()] || FWEATHER.sonne;
   const wx = wx0 === FWEATHER.sonne && farmTod() === "nacht" ? { n: "Klar", i: "🌙" } : wx0;
   const ev = F.ev && F.ev.cur && FEVENTS[F.ev.cur.k] && S.time < F.ev.cur.until && !F.ev.cur.data.done ? F.ev.cur : null;

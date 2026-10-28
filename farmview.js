@@ -1784,7 +1784,7 @@ function startPlace(spec, x, z) {
   /* v158: Gebäude (und alles, was verschoben wird) deckend zeigen – durchscheinend sah man die Maschinen im Inneren des Sägewerks */
   const solid = !!spec.move || (typeof FSAW_MAIN !== "undefined" && FSAW_MAIN.has(proto.t));
   const ghost = fnode(objMesh(proto), { alpha: solid ? 1 : 0.82, shadow: false });
-  if (proto.t === "sw_halle" && typeof sawMask === "function" && sawMask() & 4) R.addChild(ghost, fnode(fmesh("sawBlades", FWM.sawBlades), { x: 0.5, y: 0.73, z: 0, shadow: false }));
+  if (typeof SWK !== "undefined" && SWK.KINDS.has(proto.t)) SWK.attach(proto, ghost, {}, true);     /* v185: bewegliche Teile in Ruhelage */
   const mark = fnode(fmesh("mark:" + w + "x" + d, () => FM.tileMarker(w, d)), { alpha: 0.55, shadow: false, y: 0.01 });
   R.nodes.push(mark, ghost);
   FV.place = { spec, proto, ghost, mark, w, d, x: at[0], z: at[1], r: proto.r || 0, move: spec.move || null };

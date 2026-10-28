@@ -2408,17 +2408,6 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 
 /* ===================== v42: große Welt um den Hof ===================== */
 /* Gebietsknöpfe links */
-#farmAreas{position:absolute;z-index:5;left:calc(10px + var(--safe-l));top:96px;display:flex;flex-direction:column;gap:7px}
-.farea{position:relative;width:48px;height:48px;border-radius:50%;border:var(--line);background:#fff8e6;box-shadow:var(--shadow-sm);cursor:pointer;padding:0;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font)}
-.farea i{font-style:normal;font-size:21px;line-height:1}
-.farea span{font-size:7.5px;font-weight:800;line-height:1;margin-top:1px;max-width:44px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.farea em{position:absolute;right:-5px;top:-5px;font-style:normal;font-size:11px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--ink);display:grid;place-items:center}
-.farea.lock{background:#e4e8ec}
-.farea.lock i{filter:grayscale(1);opacity:.6}
-.farea.ready{background:#fff3c4;animation:fpulse 1.2s ease-in-out infinite}
-.farea.ready em{background:var(--amber)}
-.farea:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 /* Anzeigen oben rechts: Ausdauer, Kleeblätter, Wetter, Ereignis */
 #farmChips{position:absolute;z-index:5;right:calc(10px + var(--safe-r));top:10px;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .fchip2{display:flex;align-items:center;gap:4px;border:2.5px solid var(--ink);border-radius:12px;background:#fffaf0;box-shadow:2px 2px 0 var(--ink);
@@ -2830,11 +2819,6 @@ body.tab-farm #farmSheet.on~#farmAngel{display:none}
 .mg-ten{position:relative;height:26px;border:var(--line);border-radius:12px;background:linear-gradient(90deg,#e6edf4 0 32%,#bfe8a6 32% 78%,#ffd0d6 78%);overflow:visible}
 .mg-ten b{position:absolute;top:-4px;bottom:-4px;width:7px;margin-left:-3px;background:var(--ink);border-radius:3px;box-shadow:0 0 0 2px #fff}
 .mg-ten b.hot{background:#e2465f}
-@media(min-width:900px){
-  .farea{width:54px;height:54px}
-  .farea i{font-size:23px}
-  .farea span{font-size:8.5px}
-}
 
 #farmPop.fresh .fp-box{pointer-events:none}
 .fshop .ic.th{display:block;width:50px;height:50px;margin:-2px 0 -2px -4px}
@@ -3105,7 +3089,7 @@ input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webk
 .fp-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:calc(100% - 100px);padding:6px 14px;border-radius:16px;background:rgba(255,250,240,.92);border:2px solid var(--ink);font-weight:800;font-size:13px;text-align:center;pointer-events:none;transition:opacity .3s}
 .fp-hint.off{opacity:0}
 .fp-hint.hot{background:#ffdde3}
-body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmAreas,body.fp3d #farmChips,body.fp3d #toasts,body.fp3d #linaHint,body.fp3d #tutor,body.fp3d #spot,body.fp3d #farmPop,body.fp3d #farmTags,body.fp3d #farmMsg,body.fp3d #farmTut,body.fp3d #farmLvl{display:none!important}
+body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmChips,body.fp3d #toasts,body.fp3d #linaHint,body.fp3d #tutor,body.fp3d #spot,body.fp3d #farmPop,body.fp3d #farmTags,body.fp3d #farmMsg,body.fp3d #farmTut,body.fp3d #farmLvl{display:none!important}
 
 .fp-gauge{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:34px;padding:6px 5px 8px;border-radius:17px;background:rgba(255,250,240,.94);border:3px solid var(--ink);display:none;flex-direction:column;align-items:center;gap:5px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.35)}
 .fp-gauge.on{display:flex}

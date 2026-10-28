@@ -3599,6 +3599,7 @@ function showTab(name) {
   if (name !== "map" && name !== "farm") lastPanel = name;
   if (name === "farm" && !(typeof farmOn === "function" && farmOn())) name = "map";
   activeTab = name;
+  if (S && S.player) S.lastTab = name;               /* v183: letzter Reiter – beim nächsten Start wieder öffnen */
   $$(".navbtn").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
   $$(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + name));
   $("#view").classList.toggle("on", name !== "map" && name !== "farm");
@@ -3709,7 +3710,11 @@ function boot() {
     if (typeof farmBodyClasses === "function") farmBodyClasses();
     /* Vor der Speditionsgründung startet man auf dem Hof */
     const onFarm = typeof farmPhase === "function" && farmPhase();
-    showTab(onFarm ? "farm" : "map");
+    /* v183: dort weitermachen, wo man aufgehört hat (Hof, Karte oder Menü). Mitten im Tutorial bleibt es beim Standard. */
+    let startTab = onFarm ? "farm" : "map";
+    const lt = S.lastTab, inTut = !!(S.tut && S.tut.done === false);
+    if (!inTut && ["map", "farm", "orders", "jobs", "fleet", "bases", "market", "world"].includes(lt) && (!onFarm || lt === "farm")) startTab = lt;
+    showTab(startTab);
     setTimeout(() => map.setView(onFarm ? FARM_VIEW.center : st.center, onFarm ? FARM_VIEW.zoom : st.zoom), 60);
     if (!S.orders.length) spawnOrders(8);
     renderFollowBar();
