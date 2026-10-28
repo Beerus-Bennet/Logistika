@@ -1984,7 +1984,7 @@ function siteDepHTML(key, need) {
   const can = Object.keys(need).some(id => farmInv(id) > 0 && siteN(key, id) < need[id]);
   const all = Object.keys(need).every(id => siteN(key, id) >= need[id]);
   return all ? `<div class="fs-sub fdep-ok">📦 Alles Material liegt am Bauplatz.</div>`
-    : `<div class="fdep-row"><button class="btn tiny${can ? "" : " ghost disabled"}" data-dep="${key}">📦 Material ablegen</button><small>Abgelegtes liegt sicher am Bauplatz – Arbeiter und Verkäufe kommen nicht mehr dran.</small></div>`;
+    : `<div class="fdep-row"><button class="btn fdep-btn${can ? "" : " ghost disabled"}" data-dep="${key}">📦 Material ablegen</button></div>`;
 }
 function siteDepBind(key, need, redraw) {
   const b = $(`#farmSheetIn [data-dep="${key}"]`);

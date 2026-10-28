@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v187 – Ablegen-Knopf so groß wie „Bauen“
+
+- Der Erklärtext neben **📦 Material ablegen** ist weg; der Knopf ist jetzt so groß wie der Bauen-Knopf (volle Breite, gleiche Schrift).
+- Bei Hütte und Hochsitz ist der Bauen-Knopf dafür ebenfalls auf volle Breite gesetzt, damit beide gleich groß sind.
+- Dateien: `farmview.js` (`siteDepHTML`), `style.css` (`.fdep-btn`, `.hu-needs ~ .fs-row .btn`).
+
 ## v186 – Baumaterial am Bauplatz ablegen
 
 - **Problem:** Beim Bauen konnte es fehlschlagen, weil Arbeiter (Verkauf, Rezepte) im selben Moment das gesammelte Material aus dem Lager verbraucht oder verkauft haben.
