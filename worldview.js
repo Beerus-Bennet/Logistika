@@ -3573,19 +3573,20 @@ function openSawRepair() {
   const F = S.farm, done = FSAW_REPAIRS.filter(r => F.saw[r.id]).length, nx = sawNext();
   const rows = FSAW_REPAIRS.map(r => {
     const ok = !!F.saw[r.id], cur = nx === r, chk = cur ? farmRepairCheck(r) : null;
-    const need = Object.keys(r.need).map(id => itemChip(id, r.need[id], farmInv(id))).join("") + `<span class="fchip${S.money < farmRepairCost(r) ? " miss" : ""}">💶<b>${eur(farmRepairCost(r))}</b></span>`;
+    const need = siteNeedHTML("saw:" + r.id, r.need) + `<span class="fchip${S.money < farmRepairCost(r) ? " miss" : ""}">💶<b>${eur(farmRepairCost(r))}</b></span>`;
     return `<div class="frep${ok ? " ok" : cur ? " cur" : ""}"><span class="ic">${ok ? "✅" : r.i}</span><div><b>${esc(r.n)}</b>
-      ${cur ? `<small>${esc(r.d)}</small><div class="fr-in">${need}</div>` : `<small>${ok ? "repariert" : "danach"}</small>`}</div>
+      ${cur ? `<small>${esc(r.d)}</small><div class="fr-in">${need}</div>${siteDepHTML("saw:" + r.id, r.need)}` : `<small>${ok ? "repariert" : "danach"}</small>`}</div>
       ${cur ? `<button class="btn tiny${chk === true ? "" : " ghost"}" data-rep="${r.id}">🔧 Los</button>` : ""}</div>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏭</span>Sägewerk Krüger<small>Reparaturen ${done}/${FSAW_REPAIRS.length}</small></div>
     <div class="freps">${rows}</div>
     <div class="fs-sub">Material kommt vom Sägebock auf dem Hof – sauber repariert gibt mehr EP.</div>`, "repair");
   $$("#farmSheetIn [data-rep]").forEach(b => b.onclick = () => worldRepair(FSAW_REPAIRS.find(r => r.id === b.dataset.rep)));
+  { const nx = sawNext(); if (nx) siteDepBind("saw:" + nx.id, nx.need, openSawRepair); }   /* v186 */
 }
 function worldRepair(rep, after) {
   const chk = farmRepairCheck(rep);
-  if (chk === "missing") return sfx("bad"), toast("Es fehlt: " + farmMissing(rep.need).map(m => fqty(m.id, m.need)).join(", "), "warn");
+  if (chk === "missing") return sfx("bad"), toast("Es fehlt: " + siteMissing("saw:" + rep.id, rep.need).map(m => fqty(m.id, m.need)).join(", "), "warn");
   if (chk === "money") return sfx("bad"), toast("Dafür fehlen " + eur(farmRepairCost(rep) - S.money) + ".", "warn");
   if (chk !== true) return;
   closeFarmSheet();
@@ -3605,11 +3606,12 @@ function worldRepair(rep, after) {
 function openLkw() {
   FV.sheetFn = openLkw;
   const F = S.farm, R0 = FSAW_LKW, ok = !!(F.saw && F.saw.lkw);
-  const need = Object.keys(R0.need).map(id => itemChip(id, R0.need[id], farmInv(id))).join("") + `<span class="fchip${S.money < farmRepairCost(R0) ? " miss" : ""}">💶<b>${eur(farmRepairCost(R0))}</b></span>`;
+  const need = siteNeedHTML("saw:" + R0.id, R0.need) + `<span class="fchip${S.money < farmRepairCost(R0) ? " miss" : ""}">💶<b>${eur(farmRepairCost(R0))}</b></span>`;
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🚛</span>${esc(R0.n)}<small>${ok ? "fährt in deiner Flotte" : "steht unter der Plane"}</small></div>
     ${ok ? `<div class="fs-sub">Der Unimog steht im Fuhrpark und am Schuppen bereit.</div><div class="fs-row"><button class="btn tiny" id="flFleet">🚚 Zum Fuhrpark</button></div>`
-      : `<div class="fs-sub">${esc(R0.d)}</div><div class="fr-in">${need}</div><button class="btn fgo" id="flGo">🔧 Motor richten</button>`}`, "repair");
+      : `<div class="fs-sub">${esc(R0.d)}</div><div class="fr-in">${need}</div>${siteDepHTML("saw:" + R0.id, R0.need)}<button class="btn fgo" id="flGo">🔧 Motor richten</button>`}`, "repair");
   const g = $("#flGo"); if (g) g.onclick = () => worldRepair(R0);
+  if (!ok) siteDepBind("saw:" + R0.id, R0.need, openLkw);   /* v186 */
   const f = $("#flFleet"); if (f) f.onclick = () => { closeFarmSheet(); showTab("fleet"); };
 }
 /* Strom kommt im Speicher an: Leiste nachführen, über dem Kessel aufblitzen */
@@ -3644,6 +3646,7 @@ function machExtraHTML(o) {
     const id = o.t === "sw_halle" ? "saege2" : "kessel2", U = FSAW_UPGRADES[id];
     const has = id === "saege2" ? (o.lvl || 1) >= 2 : (S.farm.enLv || 0) >= 1;
     if (!has) h += `<button class="fup2" id="fxUp" ${flv() < U.lv ? "disabled" : ""}><span>${U.i}</span><b>${esc(U.n)}</b><small>${flv() < U.lv ? "ab Level " + U.lv : esc(U.d) + " · " + eur(U.cost) + " · " + Object.keys(U.need).map(k => fqty(k, U.need[k])).join(", ")}</small></button>`;
+    if (!has && flv() >= U.lv) h += `<div class="fr-in">${siteNeedHTML("up:" + id, U.need)}</div>${siteDepHTML("up:" + id, U.need)}`;   /* v186: Material ablegen */
   }
   if (M.bert && typeof bertWorkHTML === "function") h += bertWorkHTML(o);   /* v59: Bert – Kopf, Dauerbestellung, Köder-Entwicklung */
   if (o.broken) h += `<button class="fup2 warn" id="fxFix"><span>⚠️</span><b>Die Säge klemmt</b><small>Antippen und richten – solange steht alles</small></button>`;
@@ -3652,6 +3655,7 @@ function machExtraHTML(o) {
 function machExtraBind(o) {
   const u = $("#fxUp");
   if (u) u.onclick = () => { if (farmSawUpgrade(o.t === "sw_halle" ? "saege2" : "kessel2")) { sfx("build"); puff(o); save(); farmSyncScene(); openMachine(o); } else sfx("bad"); };
+  if (o.t === "sw_halle" || o.t === "kessel") { const id = o.t === "sw_halle" ? "saege2" : "kessel2"; siteDepBind("up:" + id, FSAW_UPGRADES[id].need, () => openMachine(o)); }
   const s = $("#fxStall"); if (s) s.onclick = () => openStall(true);
   if (FMACHINES[o.t].bert && typeof bertWorkBind === "function") bertWorkBind(o);
   const f = $("#fxFix"); if (f) f.onclick = () => { closeFarmSheet(); const sp = worldEvSpots().find(x => x.act === "defekt"); if (sp) worldEvAct(sp); else { farmMachFix(o); save(); } };
@@ -3766,11 +3770,12 @@ function openNeighbor() {
 function openPlot(o) {
   const t = o.k, B = FFISHERY[t], chk = farmFishBuildCheck(t);
   FV.sheetFn = () => openPlot(o);
-  const need = Object.keys(B.need).map(id => itemChip(id, B.need[id], farmInv(id))).join("") + `<span class="fchip${S.money < B.cost ? " miss" : ""}">💶<b>${eur(B.cost)}</b></span>`;
+  const need = siteNeedHTML(t, B.need) + `<span class="fchip${S.money < B.cost ? " miss" : ""}">💶<b>${eur(B.cost)}</b></span>`;
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">${B.i}</span>${esc(B.n)}<small>Bauplatz am Ufer${flv() < B.lv ? " · ab Level " + B.lv : ""}</small></div>
-    <div class="fs-sub">${esc(B.d)}</div><div class="fr-in">${need}</div>
+    <div class="fs-sub">${esc(B.d)}</div><div class="fr-in">${need}</div>${siteDepHTML(t, B.need)}
     <button class="btn fgo" id="fpGo" ${chk === true ? "" : "disabled"}>🔨 Bauen</button>
     <div class="fs-sub">Das Holz kommt aus deinem Sägewerk. Beim Bauen nagelst du selbst mit.</div>`, "plot");
+  siteDepBind(t, B.need, () => openPlot(o));   /* v186: Material am Bauplatz ablegen */
   $("#fpGo").onclick = () => {
     if (farmFishBuildCheck(t) !== true) return;
     closeFarmSheet();
@@ -3850,14 +3855,15 @@ function stageHTML() {
   }).join("");
   let next = "";
   if (nx) {
-    const need = Object.keys(nx.need).map(id => itemChip(id, nx.need[id], farmInv(id))).join("") + `<span class="fchip${S.money < nx.cost ? " miss" : ""}">💶<b>${eur(nx.cost)}</b></span>`;
-    next = `<div class="fs-sub">Nächste Stufe: <b>${esc(nx.n)}</b>${flv() < nx.lv ? " · ab Level " + nx.lv : ""}</div><div class="fr-in">${need}</div>
+    const need = siteNeedHTML("stage:" + (cur + 1), nx.need) + `<span class="fchip${S.money < nx.cost ? " miss" : ""}">💶<b>${eur(nx.cost)}</b></span>`;
+    next = `<div class="fs-sub">Nächste Stufe: <b>${esc(nx.n)}</b>${flv() < nx.lv ? " · ab Level " + nx.lv : ""}</div><div class="fr-in">${need}</div>${Object.keys(nx.need).length ? siteDepHTML("stage:" + (cur + 1), nx.need) : ""}
       <button class="btn fgo" id="fsStage" ${chk === true ? "" : "disabled"}>🏡 Hof ausbauen</button>`;
   } else next = `<div class="fs-sub">Größer geht’s nicht – ein echter Wirtschaftshof! 🎉</div>`;
   return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Die großen Stufen (4, 7, 10) brauchen Holz aus Wald und Sägewerk, dazwischen kaufst du nur Land.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
 }
 function stageBind(again) {
-  const b = $("#fsStage");
+  const b = $("#fsStage"), nx = farmStageNext();
+  if (nx && again) siteDepBind("stage:" + (farmHl() + 1), nx.need, again);   /* v186: Material am Bauplatz ablegen */
   if (b) b.onclick = () => {
     if (!farmStageUp()) { sfx("bad"); return; }
     sfx("level"); save();

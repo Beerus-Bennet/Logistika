@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v186 – Bauplatz-Lager (auf v185)
+
+- `farm.js`: neue Funktionen `siteN`, `siteHave`, `siteMissing`, `sitePutAll`, `siteTake` (Spielstand `S.farm.depot[key][id]`, key z. B. `"rent"`, `"hunt"`, `"f_huette"`, `"saw:motor"`, `"saw:lkw"`, `"up:saege2"`, `"stage:4"`).
+- `erbe.js`: `farmRepairCheck/Done`, `farmSawUpgrade`, `farmFishBuildCheck/Build`, `farmStageCheck/Up` rechnen mit `siteMissing`/`siteTake` statt `farmMissing`/`farmTake`.
+- `farmview.js`: `siteNeedHTML`, `siteDepHTML`, `siteDepBind` (nach `itemChip`).
+- `worldview.js`: `openSawRepair`, `worldRepair`, `openLkw`, `openPlot`, `machExtraHTML/Bind`, `stageHTML`, `stageBind` mit Ablage.
+- `hunt.js`/`rent.js`: `missing()` und Bau über den Bauplatz, Ablegen-Zeile im Bau-Fenster. `style.css`: `.fdep-*`, `.fchip.dep`.
+
 ## Gesamtpaket v183 – v185 (auf GitHub-Stand v182)
 
 Alle drei Stände von heute in einem Paket, Endstand v185. Einfach alle Dateien ins Hauptverzeichnis laden und überschreiben – die Einzel-ZIPs v183, v184 und v185 braucht es danach nicht mehr.

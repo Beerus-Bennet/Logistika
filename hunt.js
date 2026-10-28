@@ -1019,7 +1019,7 @@ const HUNT = (() => {
     const d = R.hitBox(r, [TW.x - 1.8, 0, TW.z - 1.8], [TW.x + 1.8, top, TW.z + 1.8]);
     return d != null ? { d } : null;
   }
-  const missing = () => typeof farmMissing === "function" ? farmMissing(NEED) : [];
+  const missing = () => typeof siteMissing === "function" ? siteMissing("hunt", NEED) : [];      /* v186: am Bauplatz Abgelegtes zählt mit */
   function tagInfo() {
     if (!unlocked()) return null;
     const H = st();
@@ -1045,18 +1045,19 @@ const HUNT = (() => {
     FV.sheetFn = buildSheet;
     const miss = missing(), ok = !miss.length;
     const ic = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
-    const rows = Object.keys(NEED).map(id => { const have = farmInv(id), need = NEED[id], done = have >= need;
-      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${done ? "✓ da" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("");
+    const rows = Object.keys(NEED).map(id => { const have = siteHave("hunt", id), dep = siteN("hunt", id), need = NEED[id], done = have >= need;
+      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${dep >= need ? "📦 abgelegt" : dep ? "📦 " + esc(famt(id, dep)) + " abgelegt" + (have > dep ? " · " + esc(famt(id, have - dep)) + " im Lager" : "") : done ? "✓ im Lager" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("");
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🔨</span>Bauplatz für einen Hochsitz<small>vom Förster an der Wildwiese abgesteckt</small></div>
       <div class="fs-sub">Für den Hochsitz brauchst du Holz aus dem Wald und aus dem Sägewerk. Leg das Material hier ab, dann wird gebaut.</div>
-      <div class="hu-needs">${rows}</div>
+      <div class="hu-needs">${rows}</div>${typeof siteDepHTML === "function" ? siteDepHTML("hunt", NEED) : ""}
       <div class="fs-row"><button class="btn${ok ? "" : " disabled"}" id="huBuild">${ok ? "🔨 Hochsitz bauen" : "🔒 Es fehlt noch Material"}</button></div>`, "hunt");
+    if (typeof siteDepBind === "function") siteDepBind("hunt", NEED, buildSheet);   /* v186: Material am Bauplatz ablegen */
     $("#huBuild").onclick = () => { if (!missing().length) { closeFarmSheet(); buildNow(); } else snd("bad"); };
   }
   function buildNow() {
     const H = st();
     if (H.built || missing().length) return false;
-    Object.keys(NEED).forEach(id => farmTake(id, NEED[id]));
+    siteTake("hunt", NEED);
     H.built = S.time; H.stock = 2; H.at = S.time;
     W.site.visible = false;
     W.grow = { t: 0 }; W.root.visible = true; W.root.sy = 0.05;

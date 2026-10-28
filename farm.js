@@ -351,6 +351,31 @@ function farmHasAll(items) { return Object.keys(items).every(id => farmInv(id) >
 function farmMissing(items) {
   return Object.keys(items).filter(id => farmInv(id) < items[id]).map(id => ({ id, need: items[id] - farmInv(id) }));
 }
+/* v186: Bauplatz-Lager – Baumaterial kann man am Bauplatz ablegen (S.farm.depot[Bauplatz][id] = Gebinde). Es liegt dann nicht mehr
+   im Lager, Arbeiter und Verkäufe kommen nicht mehr dran, und beim Bauen wird es zuerst verbraucht. key = Bauplatz (z. B. "rent",
+   "hunt", "f_huette", "saw:motor", "up:saege2", "stage:4"), need = { id: Gebinde } */
+function siteN(key, id) { const D = S.farm.depot && S.farm.depot[key]; return (D && D[id]) || 0; }
+function siteHave(key, id) { return siteN(key, id) + farmInv(id); }
+function siteMissing(key, need) {
+  return Object.keys(need).filter(id => siteHave(key, id) < need[id]).map(id => ({ id, need: need[id] - siteHave(key, id) }));
+}
+/* legt ab, was im Lager liegt – je Material höchstens so viel, wie noch fehlt; Rückgabe: wie viele Gebinde */
+function sitePutAll(key, need) {
+  const F = S.farm;
+  let put = 0;
+  Object.keys(need).forEach(id => {
+    const n = Math.min(farmInv(id), need[id] - siteN(key, id));
+    if (n > 0 && farmTake(id, n)) { F.depot = F.depot || {}; const D = F.depot[key] || (F.depot[key] = {}); D[id] = (D[id] || 0) + n; put += n; }
+  });
+  return put;
+}
+/* beim Bauen: erst das Abgelegte, dann aus dem Lager; der Bauplatz ist danach leer */
+function siteTake(key, need) {
+  if (siteMissing(key, need).length) return false;
+  Object.keys(need).forEach(id => { const d = Math.min(siteN(key, id), need[id]); if (need[id] > d) farmTake(id, need[id] - d); });
+  if (S.farm.depot) delete S.farm.depot[key];
+  return true;
+}
 function qStars(q) { const s = Math.max(1, Math.min(5, Math.round(q || 0))); return "★".repeat(s) + "☆".repeat(5 - s); }
 
 /* ------------------------ Mengen anzeigen -----------------------------
