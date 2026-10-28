@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v187 – Ablegen-Knopf (auf v186)
+
+- `farmview.js`: `siteDepHTML` ohne Erklärtext, Knopf-Klasse `fdep-btn`. `style.css`: `.fdep-row`, `.fdep-btn`, `.hu-needs ~ .fs-row .btn` (volle Breite), `.fdep-row small` entfällt.
+
 ## Stand v186 – Bauplatz-Lager (auf v185)
 
 - `farm.js`: neue Funktionen `siteN`, `siteHave`, `siteMissing`, `sitePutAll`, `siteTake` (Spielstand `S.farm.depot[key][id]`, key z. B. `"rent"`, `"hunt"`, `"f_huette"`, `"saw:motor"`, `"saw:lkw"`, `"up:saege2"`, `"stage:4"`).
