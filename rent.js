@@ -181,9 +181,14 @@ const RENT = (() => {
     const T = st();
     if (!T || !T.iss) return false;
     const c = T.iss.c, k0 = T.iss.k, I = ISSUES[k0];
-    if (S.money < c) { toast("Dafür fehlt das Geld (" + eur(c) + ").", "warn"); return false; }
-    S.money -= c; S.expense = (S.expense || 0) + c;
-    if (typeof logMoney === "function") logMoney("farm", "Reparatur Hütte: " + I.n, -c);
+    if (k0 === "heizung") {                                              /* „Feuerholz alle“: kostet nur Brennholz aus dem Lager, kein Geld */
+      if (farmInv("brennholz") < WOOD_N) { toast("Es fehlt Brennholz: " + fqty("brennholz", WOOD_N) + " gebraucht.", "warn"); return false; }
+      farmTake("brennholz", WOOD_N);
+    } else {
+      if (S.money < c) { toast("Dafür fehlt das Geld (" + eur(c) + ").", "warn"); return false; }
+      S.money -= c; S.expense = (S.expense || 0) + c;
+      if (typeof logMoney === "function") logMoney("farm", "Reparatur Hütte: " + I.n, -c);
+    }
     T.iss = null; T.fixed = (T.fixed || 0) + 1;
     if (typeof farmXP === "function") farmXP(10);
     toast(I.i + (k0 === "heizung" ? " Feuerholz gebracht – " : " Repariert – ") + T.ten.n + " bedankt sich!", "good");
@@ -973,7 +978,7 @@ const RENT = (() => {
     const due = maintDue(T), f = rentF(T, S.time), I = T.iss && ISSUES[T.iss.k];
     const issH = I ? `<div class="rent-iss"><b>${I.i} ${esc(I.n)}</b><p>„${esc(I.t)}“</p>
         <small>gemeldet vor ${fdur(Math.max(1, S.time - T.iss.t0))}${S.time - T.iss.t0 > 2 * DAY ? " · " + esc(t.n) + " mindert die Miete um die Hälfte" : " · nach 2 Tagen mindert " + esc(t.n) + " die Miete"}</small>
-        <button class="btn fgo" id="rnFix">${T.iss.k === "heizung" ? "🪵 Holz besorgen" : "🛠️ Reparieren"} · ${eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
+        <button class="btn fgo${T.iss.k === "heizung" && farmInv("brennholz") < WOOD_N ? " disabled" : ""}" id="rnFix">${T.iss.k === "heizung" ? "🪵 Holz bringen · " + esc(fqty("brennholz", WOOD_N)) : "🛠️ Reparieren · " + eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
     const mLeft = due - S.time;
     const mH = mLeft > 10 * DAY ? `<div class="fs-sub">🔧 Instandhaltung in ${tage(Math.ceil(mLeft / DAY))} fällig (${eur(MAINT)}).</div>`
       : `<div class="rent-iss"><b>🔧 Instandhaltung ${mLeft > 0 ? "in " + tage(Math.ceil(mLeft / DAY)) + " fällig" : "fällig seit " + tage(Math.max(1, Math.floor(-mLeft / DAY)))}</b>
