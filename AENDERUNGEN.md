@@ -1,5 +1,16 @@
 # Änderungen – kurz für den Kollegen
 
+## v211 – Kettensäge: kein Ruckeln mehr beim Kerb und beim Fällschnitt
+
+- **Ursache (gemessen):** Der Kerb-Stamm wird je Kerbtiefe neu gebaut (20 Stufen, je zwei Rinden-Meshes `notchMesh`). Jedes Rinden-Mesh lief über die ganze Stammhöhe durch `emitBark` (Farbgrenzen, Facetten, Birkenflecken) – im Test-Browser 180–300 ms je Mesh. Direkt nach dem ersten Treffer im grünen Bereich wächst der Kerb in schneller Folge um sechs Stufen → sechs solche Neubauten hintereinander; im Fällschnitt weitere acht.
+- **Lösung (`fpsaw.js`):**
+  - Die Rindenwände werden an festen Höhen geteilt (`sty._cuts`: unterhalb jeder möglichen Kerbsohle, Raster 0,4 Radien, oberhalb des höchsten Dachs). Jedes Wandstück wird einmal gebaut und als fertige Vertexdaten wiederverwendet (`wallMemo`, Schlüssel aus den Eckpunkten).
+  - Der Nahaufnahme-Stamm (`trunkFromWalls`, ersetzt `plainTrunk` für die Säge) besteht aus denselben Stücken und füllt den Speicher schon beim Ansetzen; `warmWalls` baut fehlende Stücke notfalls in Portionen (4 ms je Bild).
+  - Der obere Stamm über dem höchsten Dach ist ein eigenes, einmal gebautes Mesh (`staticTop`, Knoten `X.ntS`, neigt sich mit); je Kerbstufe wird nur noch der Bereich um den Kerb neu gebaut (`notchMesh(..., "dyn")`).
+  - Höchstens ein Neubau alle 70 ms; Zwischenstufen werden übersprungen.
+- **Gemessen im Test-Browser (gleicher Baum, Birke Größe 2):** Kerb-Mesh je Stufe vorher 165–295 ms, jetzt 7–26 ms; Oberfläche und Farbe gleich (Flächenabweichung 0,02 %, Stamm 0,004 %). Der Nahaufnahme-Stamm beim Ansetzen kostet etwa so viel wie vorher (rund 13 % mehr).
+- Testhilfen: `SAW3D._notch`, `_warm`, `_static`, `_trunk`, `_x`.
+
 ## v210 – Quell-Wasserfall überarbeitet (Masterprompt): Kante, Wasser, Fels, Gischt, Nacht, Details
 
 **Gefundene Probleme (Code und Test-Browser):** Der Fall schoss in einem weiten Bogen wie aus einem Schlauch (Kante 0,3 hinter dem Topfrand); gerade, gleichmäßige Seitenränder; die Rinne lief als gerader Streifen ohne Ufersteine; nachts war der Fall ein fast schwarzes Band und der Gischtnebel leuchtete weiß (Partikel sind unbeleuchtet); Wellenringe exakt kreisrund; Felsen einfarbig je Block, große Moospolster als grüne Kugeln, zwei davon verdeckten die untere Kaskade; keine Details am Topf.

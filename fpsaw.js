@@ -151,12 +151,94 @@ const SAW3D = (() => {
   const WOOD = 0xfbe7bd, WOOD2 = 0xf5dcae, KMAX = 1.3, KQ = 20, KS = 1.9;   /* KS: Steilheit des Dachschnitts (Höhe pro Tiefe) */
   /* v152: Rinde, Relief, Verjüngung und der glatte Stamm kommen aus treebark.js (TBARK) – dasselbe System wie die Bäume in der Hof-/Waldansicht */
   const { NSEC, barkStyle, emitBark, taperB, splitF, mixC, plainTrunk, seedOf } = TBARK;
-  function notchMesh(q, bark, wood, nyU, hU, part, sty) {
+  /* v211: Rindenwände des Kerb-Stamms zwischenspeichern. Die Wände reichen über die ganze Stammhöhe und liefen bei jeder Kerbtiefe
+     (20 Stufen, je zwei Rinden-Meshes) komplett neu durch emitBark – auf dem Handy ein spürbarer Ruck bei jeder Stufe, am stärksten
+     direkt nach dem ersten Treffer (der Kerb wächst dann in schneller Folge). Jetzt: Wände an festen Höhen geteilt (sty._ylow, sty._yfix),
+     jedes Wandstück wird einmal gebaut und als fertige Vertexdaten wiederverwendet; die festen Stücke baut warmStep vorab in kleinen Portionen. */
+  const wallKey = (p, n, p1, n1, bark) => bark + ":" + [p, n, p1, n1].map(v => Math.round(v[0] * 1e5) + "," + Math.round(v[1] * 1e5) + "," + Math.round(v[2] * 1e5)).join("|");
+  function wallInto(bw, p, n, p1, n1, o, sty, bark) {
+    const y0 = p[1], y1 = p1[1], f = [0];
+    if (sty) sty.bp.forEach(v => { const t = (v - y0) / ((y1 - y0) || 1); if (t > 0.002 && t < 0.998) f.push(t); });
+    f.push(1); f.sort((a, c) => a - c);
+    const L = (u, w, t) => [u[0] + (w[0] - u[0]) * t, u[1] + (w[1] - u[1]) * t, u[2] + (w[2] - u[2]) * t];
+    const T = (a, pp, c) => {
+      if (sty) { emitBark(bw, a, pp, c, o, sty, bark); return; }
+      const u = [pp[0] - a[0], pp[1] - a[1], pp[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      if (nn[0] * o[0] + nn[1] * o[1] + nn[2] * o[2] < 0) bw.tri(a, c, pp, bark); else bw.tri(a, pp, c, bark);
+    };
+    for (let j = 0; j + 1 < f.length; j++) {
+      const a0 = L(p, p1, f[j]), a1 = L(p, p1, f[j + 1]), c0 = L(n, n1, f[j]), c1 = L(n, n1, f[j + 1]);
+      T(a0, c0, c1); T(a0, c1, a1);
+    }
+  }
+  /* Wandstück aus dem Speicher (b0: MB ohne Transformation, bw: Verjüngung darum) – sonst bauen und merken */
+  function wallMemo(b0, bw, p, n, p1, n1, o, sty, bark) {
+    if (!sty) { wallInto(bw, p, n, p1, n1, o, sty, bark); return; }
+    const M = sty._wm || (sty._wm = new Map()), key = wallKey(p, n, p1, n1, bark);
+    let rec = M.get(key);
+    if (!rec) { const s0 = b0.v.length; wallInto(bw, p, n, p1, n1, o, sty, bark); rec = b0.v.slice(s0); M.set(key, rec); return; }
+    const v = b0.v; for (let i = 0; i < rec.length; i++) v.push(rec[i]);
+  }
+  /* feste Wandstücke vorab bauen (in Portionen bis ms Millisekunden je Aufruf); true, wenn fertig */
+  function warmWalls(sty, bark, hU, ms) {
+    if (!sty || sty._warmDone) return true;
+    const SW = 2 * Math.PI / NSEC, t0 = performance.now();
+    if (!sty._warmQ) {
+      sty._warmQ = [];
+      /* alle Abschnitte zwischen den festen Höhen: oben (über dem höchsten Dach) zuerst, dann unten, dann das Raster dazwischen */
+      const H = [0].concat(sty._cuts.filter(y => y > 0 && y < hU), [hU]), segs = [];
+      for (let i = 0; i + 1 < H.length; i++) segs.push([H[i], H[i + 1]]);
+      segs.sort((u, w) => (w[1] >= hU) - (u[1] >= hU) || (u[0] === 0 ? -1 : w[0] === 0 ? 1 : 0));
+      segs.forEach(([y0, y1]) => { for (let k = 0; k < NSEC; k++) {
+        const a = k * SW, c = (k + 1) * SW, sa = Math.sin(a), ca = Math.cos(a), sc = Math.sin(c), cc = Math.cos(c), o = [sa + sc, 0, ca + cc];
+        sty._warmQ.push([[sa, y0, ca], [sc, y0, cc], [sa, y1, ca], [sc, y1, cc], o]);
+      } });
+      sty._warmB = new G3.MB(); sty._warmBw = taperB(sty._warmB, sty);
+    }
+    while (sty._warmQ.length && performance.now() - t0 < ms) {
+      const [p, n, p1, n1, o] = sty._warmQ.shift();
+      wallMemo(sty._warmB, sty._warmBw, p, n, p1, n1, o, sty, bark);
+      sty._warmB.v.length = 0;
+    }
+    if (!sty._warmQ.length) { sty._warmDone = true; sty._warmB = sty._warmBw = null; }
+    return !!sty._warmDone;
+  }
+  /* v211: glatter Stamm (wie plainTrunk bei lod 0: Facettenwände an den Farbgrenzen geteilt, Deckel) aus den zwischengespeicherten Wandstücken */
+  function trunkFromWalls(sty, bark, hU) {
+    const b0 = new G3.MB(), bw = taperB(b0, sty), SW = 2 * Math.PI / NSEC, H = [0].concat((sty._cuts || []).filter(y => y > 0 && y < hU), [hU]);
+    for (let k = 0; k < NSEC; k++) {
+      const a = k * SW, c = (k + 1) * SW, sa = Math.sin(a), ca = Math.cos(a), sc = Math.sin(c), cc = Math.cos(c), o = [sa + sc, 0, ca + cc];
+      for (let i = 0; i + 1 < H.length; i++) wallMemo(b0, bw, [sa, H[i], ca], [sc, H[i], cc], [sa, H[i + 1], ca], [sc, H[i + 1], cc], o, sty, bark);
+      bw.tri([0, hU, 0], [sc, hU, cc], [sa, hU, ca], sty.bf(hU, (k + 0.5) * SW));
+    }
+    sty._warmDone = true;
+    return b0;
+  }
+  /* v211: fester oberer Stamm (oberhalb sty._yfix bis zur Stammspitze) – hängt weder von der Kerbtiefe noch von der Kerbhöhe ab */
+  function staticTop(sty, bark, hU) {
+    const b0 = new G3.MB(), bw = taperB(b0, sty), SW = 2 * Math.PI / NSEC, y0 = sty._yfix;
+    if (!(y0 > 0 && y0 < hU)) return b0;
+    for (let k = 0; k < NSEC; k++) {
+      const a = k * SW, c = (k + 1) * SW, sa = Math.sin(a), ca = Math.cos(a), sc = Math.sin(c), cc = Math.cos(c);
+      wallMemo(b0, bw, [sa, y0, ca], [sc, y0, cc], [sa, hU, ca], [sc, hU, cc], [sa + sc, 0, ca + cc], sty, bark);
+    }
+    return b0;
+  }
+  function notchMesh(q, bark, wood, nyU, hU, part, sty, sel) {
     nyU = nyU || 0; hU = hU || 0;
     const inLow = part !== "up" && part !== "up0", inUp = part !== "low" && part !== "low0", brk = part === "low" || part === "up";   /* "low0"/"up0": nur geteilt (Neigung), ohne Bruchstufe */
     /* Bruchstufe: hinter der Kerbe (links im Bild) reißt das Haltestück ab – dort bleibt eine unregelmäßig erhöhte Leiste stehen */
     const STEP = 0.2, cl = (v, a, c) => Math.max(a, Math.min(c, v));
     const d = KMAX * q / KQ, zc = 1 - d, ym = d * KS, R = 6, M = NSEC, b0 = new G3.MB(), b = taperB(b0, sty);
+    /* v211: Wand mit Zwischenspeicher, an den festen Höhen geteilt (nur wenn fpsaw sie gesetzt hat – Stumpf in der Welt wie bisher) */
+    const WALLc = (p, n, p1, n1, o) => {
+      const cuts = sty && sty._cuts ? sty._cuts.filter(y => y > p[1] + 1e-4 && y < p1[1] - 1e-4) : [];
+      let a = p, c = n;
+      const seg = (u, w, u1, w1) => { if (sel === "dyn" && u[1] >= sty._yfix - 1e-4) return; wallMemo(b0, b, u, w, u1, w1, o, sty, bark); };   /* "dyn": oberer fester Stamm kommt aus staticTop */
+      cuts.forEach(y => { const a2 = [p[0], y, p[2]], c2 = [n[0], y, n[2]]; seg(a, c, a2, c2); a = a2; c = c2; });
+      seg(a, c, p1, n1);
+    };
     let curSeg = 0;
     const T = (a, p, c, col, out) => {
       if (wood !== 2 && (col === bark) === !!wood) return;
@@ -222,12 +304,12 @@ const SAW3D = (() => {
       for (let i = 0; i < loop.length && inLow; i++) {
         const p = up(loop[i], i), n = up(loop[(i + 1) % loop.length], i + 1), o = [p[0] + n[0], 0, p[2] + n[2]];
         const p0 = [p[0], 0, p[2]], n0 = [n[0], 0, n[2]];
-        WALL(p0, n0, p, n, o, 0);
+        WALLc(p0, n0, p, n, o);
       }
       const top = ring(ym, 1);
       for (let i = 0; i < top.length - 1 && inUp; i++) {
         const p = top[i], n = top[i + 1], o = [p[0] + n[0], 0, p[2] + n[2]], p1 = [p[0], hU, p[2]], n1 = [n[0], hU, n[2]];
-        WALL(p, n, p1, n1, o, 1);
+        WALLc(p, n, p1, n1, o);
       }
     }
     if (wood && brk) {
@@ -474,7 +556,15 @@ const SAW3D = (() => {
     X.trunk = add(fmesh("fp_tr0_" + t.id + "_" + t.sp, () => plainTrunk(T.bark, 1, X.sty)), { x: t.x, z: t.z, y: 0, ry: X.fryN, s: r * 1.04 });
     const vt = goal.ty + 0.5 * goal.dist, rcr = 0.5 + 1.2 * r;   /* grobe Oberkante des Bildes – die Krone muss darüber bleiben */
     X.topH = info ? Math.max(info.tp[2] * (t.s || 1), 2.1) : vt + 0.9;       /* Stammhöhe wie am Spielbaum (mindestens bis über die Kerbzone) */
-    X.trunk.mesh = fmesh("fp_tr1_" + t.id + "_" + t.sp, () => plainTrunk(T.bark, X.topH / (r * 1.04), X.sty));
+    /* v211: feste Teilungshöhen der Kerb-Wände (Einheiten des Stammradius): unterhalb jeder möglichen Kerbsohle und oberhalb des höchsten Dachs */
+    if (X.sty) {
+      const sc = r * 1.04, lo = isAxe ? ny0 : GY0 + 0.08 * GH, hi = isAxe ? ny0 : GY0 + 0.5 * GH, yl = Math.max(0.01, lo / sc - 0.03), yf = hi / sc + KMAX * KS + 0.05;
+      /* dazwischen ein Raster (0,4 Einheiten): beim Vertiefen ändert sich dann nur das eine Stück an der Dachkante */
+      const cuts = [yl]; for (let y = yl + 0.4; y < yf - 0.05; y += 0.4) cuts.push(+y.toFixed(4)); cuts.push(yf);
+      X.sty._cuts = cuts; X.sty._ylow = yl; X.sty._yfix = yf;
+    }
+    /* v211: Nahaufnahme-Stamm aus denselben Wandstücken wie der Kerb – füllt dabei den Speicher, jede Kerbstufe danach ist schnell */
+    X.trunk.mesh = fmesh("fp_tr1_" + t.id + "_" + t.sp, () => X.sty ? trunkFromWalls(X.sty, T.bark, X.topH / (r * 1.04)) : plainTrunk(T.bark, X.topH / (r * 1.04), X.sty));
     const TL = (FWM.TREE_C && FWM.TREE_C[t.sp]) || { leaf: 0x4b7c2b };
     const conif = t.sp === "fichte" || t.sp === "kiefer";
     /* Nadelbäume: gestaffelte Etagen aus Kegeln (bis fast zum Boden), Laubbäume: Kugelkrone */
@@ -495,6 +585,7 @@ const SAW3D = (() => {
     X.ntw = add(fmesh("fp_tw_dummy", () => notchMesh(1, T.bark, true)), { visible: false, cull: false, glow: 1 });
     /* v104: unterer Teil (Stumpf) bleibt beim Neigen fest stehen – nur das obere Stück neigt sich um die Kerbsohle */
     X.nl = add(fmesh("fp_tk_dummy", () => notchMesh(1, T.bark)), { visible: false, cull: false });
+    X.ntS = add(fmesh("fp_tk_dummy", () => notchMesh(1, T.bark)), { visible: false, cull: false });      /* v211: fester oberer Stamm (einmal gebaut) */
     X.nlw = add(fmesh("fp_tw_dummy", () => notchMesh(1, T.bark, true)), { visible: false, cull: false, glow: 1 });
     X.bark = T.bark; X.kpv = X.kpT = isAxe ? clampN(opt.kp || 0, 0, 1) : 0;        /* angeschlagener Baum: der Kerb ist schon da */
     if (isAxe) {
@@ -720,6 +811,12 @@ const SAW3D = (() => {
 
   function step(dt, time) {
     if (!X) return;
+    /* v211: feste Rindenwände des Kerbs vorab bauen – höchstens 4 ms je Bild, bis alles im Speicher liegt */
+    if (!X.warmed && X.sty && X.bark != null) X.warmed = warmWalls(X.sty, X.bark, X.topH / (X.r * 1.04), 4);
+    else if (X.warmed && X.sty && !X.statOK) {
+      const kS = "fp_ts_" + X.t.id + "_" + X.t.sp; X.keys.push(kS);
+      X.ntS.mesh = fmesh(kS, () => staticTop(X.sty, X.bark, X.topH / (X.r * 1.04))); X.statOK = true;
+    }
     const R = FV.R, c = R.cam, t = X.t, st = typeof MG !== "undefined" && MG.on && (MG.kind === "saw" || MG.kind === "axe") ? MG.st : null;
     /* Kamera: hin – halten – zurück */
     if (X.mode === "in") { X.p = Math.min(1, X.p + dt / 0.95); CAM_KEYS.forEach(k => { X.cur[k] = lerp(X.saved[k], X.goal[k], ss(X.p)); }); if (X.p >= 1) X.mode = "hold"; }
@@ -892,22 +989,25 @@ const SAW3D = (() => {
     const usePts = ny != null && X.kpv > 0.02 && swap;
     const sc = r * 1.04, q = Math.max(1, Math.min(KQ, Math.round(X.kpv * KQ)));
     [X.nt, X.ntw, X.nl, X.nlw].forEach(n => { n.visible = usePts; });
+    X.ntS.visible = false;
     X.trunk.visible = !usePts && swap;
     if (X.trunk.visible) { X.trunk.x = t.x; X.trunk.z = t.z; }
     if (usePts) {
-      const nyU = ny / sc, hU = X.topH / sc, key = t.id + "_" + q + "_" + Math.round(ny * 50);
-      if (X.key !== key) {
-        X.key = key;
+      const nyU = ny / sc, hU = X.topH / sc, sel = X.statOK ? "dyn" : undefined, key = t.id + "_" + q + "_" + Math.round(ny * 50) + (sel ? "d" : "a");
+      const nowK = performance.now();
+      if (X.key !== key && (X.key == null || nowK - (X.kAt || 0) > 70)) {       /* v211: höchstens ein Neubau alle 70 ms – Zwischenstufen werden übersprungen */
+        X.key = key; X.kAt = nowK;
         const k1 = "fp_tk_" + key, k2 = "fp_tw_" + key;
-        X.nt.mesh = fmesh(k1, () => notchMesh(q, X.bark, false, nyU, hU, "up0", X.sty)); X.ntw.mesh = fmesh(k2, () => notchMesh(q, X.bark, true, nyU, hU, "up0", X.sty));
+        X.nt.mesh = fmesh(k1, () => notchMesh(q, X.bark, false, nyU, hU, "up0", X.sty, sel)); X.ntw.mesh = fmesh(k2, () => notchMesh(q, X.bark, true, nyU, hU, "up0", X.sty));
         X.nl.mesh = fmesh(k1 + "L", () => notchMesh(q, X.bark, false, nyU, hU, "low0", X.sty)); X.nlw.mesh = fmesh(k2 + "L", () => notchMesh(q, X.bark, true, nyU, hU, "low0", X.sty));
         X.keys.push(k1, k2, k1 + "L", k2 + "L");
       }
+      X.ntS.visible = !!X.statOK && !!X.key && X.key.endsWith("d");       /* erst sichtbar, wenn der Kerb-Stamm ohne Oberteil gebaut ist */
       const T0 = X.tiltT || 0, dl2 = (X.tiltR != null ? X.tiltR : 0) - fry;
       const trx = T0 * Math.cos(dl2), trz = -T0 * Math.sin(dl2);
       X.pivY = ny;
       const pv = rotV([0, ny, 0], trx, fry, trz);                  /* Drehung um die Kerbsohle statt um den Fuß */
-      [X.nt, X.ntw].forEach(n => { n.x = t.x - pv[0]; n.z = t.z - pv[2]; n.y = ny - pv[1]; n.ry = fry; n.rx = trx; n.rz = trz; n.sx = n.sy = n.sz = sc; });
+      [X.nt, X.ntw, X.ntS].forEach(n => { n.x = t.x - pv[0]; n.z = t.z - pv[2]; n.y = ny - pv[1]; n.ry = fry; n.rx = trx; n.rz = trz; n.sx = n.sy = n.sz = sc; });
       [X.nl, X.nlw].forEach(n => { n.x = t.x; n.z = t.z; n.y = 0; n.ry = fry; n.rx = 0; n.rz = 0; n.sx = n.sy = n.sz = sc; });
     }  }
   const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -945,7 +1045,7 @@ const SAW3D = (() => {
       const n = fnode(fmesh(key, () => notchMesh(q, X.bark, wood, nyU, hU, part, X.sty)), Object.assign({ shadow: false, cull: false, x: t.x, z: t.z, ry: X.fryN, s: sc }, o || {}));
       R.nodes.push(n); X.nodes.push(n); return n;
     };
-    X.nt.visible = X.ntw.visible = X.nl.visible = X.nlw.visible = false; X.trunk.visible = false;
+    X.nt.visible = X.ntw.visible = X.nl.visible = X.nlw.visible = X.ntS.visible = false; X.trunk.visible = false;
     /* der Stumpf bleibt: Form (Sohle + Bruchstufe) wird am Baum vermerkt, die Welt baut daraus den bleibenden Stumpf */
     t.cut = { sp: t.sp, sz: t.sz, s: t.s || 1, id: t.id, v: varOf(t), q, ny: Math.round(ny * 1000) / 1000, sc: Math.round(sc * 1000) / 1000, ry: Math.round(X.fryN * 1000) / 1000, bark: X.bark };
     X.fall = {
@@ -995,5 +1095,5 @@ const SAW3D = (() => {
   function stumpMesh(c) { return notchMesh(c.q, c.bark, 2, c.ny / c.sc, 1, "low", barkStyle(c.sp, c.sz, c.sc, c.s || 1, { tp: trunkParams(c.sp, c.sz), seed: seedOf(c.sp, c.sz, c.v != null ? c.v : (c.id || 0) % 3) })); }
   /* Testhilfe (v93): feste Axtlage für Standbilder – SAW3D._freeze({ ph: "wind"|"strike"|"hit"|"idle", k, kind, miss }) bzw. null */
   function freeze(f) { if (X) X.freeze = f; return X ? X.dbg || null : null; }
-  return { stumpMesh, can, begin, ev, step, end, fall, pick: pickView, _freeze: freeze, _axeMath: { frameQ, mOfQ, eulOf, qSlerp, axeMesh, rotV, AXE_EDGE }, get on() { return !!X; }, get ready() { return !!X && (X.app || 0) > 0.5; } };
+  return { stumpMesh, can, begin, ev, step, end, fall, pick: pickView, _freeze: freeze, _notch: notchMesh, _warm: warmWalls, _static: staticTop, _trunk: trunkFromWalls, get _x() { return X; }, _axeMath: { frameQ, mOfQ, eulOf, qSlerp, axeMesh, rotV, AXE_EDGE }, get on() { return !!X; }, get ready() { return !!X && (X.app || 0) > 0.5; } };
 })();

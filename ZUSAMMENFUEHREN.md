@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v211 – Kettensäge ohne Ruckeln (auf v210)
+
+| Datei | Änderung |
+|---|---|
+| `fpsaw.js` | neu `wallKey`, `wallInto`, `wallMemo`, `warmWalls`, `trunkFromWalls`, `staticTop`; `notchMesh` mit `WALLc` und Parameter `sel`; `begin`: `sty._cuts/_ylow/_yfix`, Stamm aus Wandstücken, Knoten `X.ntS`; `step`: Vorbau, fester Oberteil, Drossel 70 ms; `fall` blendet `X.ntS` aus; Testhilfen |
+| `sw.js`, `index.html` | Version v211 |
+
 ## Stand v210 – Quell-Wasserfall überarbeitet (auf v209)
 
 | Datei | Änderung |
