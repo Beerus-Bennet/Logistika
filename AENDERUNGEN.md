@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v212 – Hütte am See: Pfad läuft in den Parkfleck aus, Reifenspuren auf der Fahrlinie
+
+- **Pfad am Parkplatz:** Der Trampelpfad endet nicht mehr an der Straße, sondern läuft auf den Parkfleck und blendet dort weich in die Erde über (wie die Wege an den Hoftoren). Der Mieter geht vom Auto direkt auf den Pfad. Der Briefkasten bleibt an der Straße.
+- **Reifenspuren:** Statt zweier gerader Streifen gibt es jetzt zwei Spurpaare genau auf der Fahrlinie des Autos: die Einfahrt von der Straßenkante (wo das Auto auf den Rasen fährt) bis zum Stellplatz und die Ausfahrt vom Stellplatz bis zur Straßenkante. Auf dem Erdfleck dunkel, auf dem Gras nur abgewetzt, Anfang und Ende laufen weich aus.
+- Kleiner Fix: Die Meldung „Die Hütte steht! … zieht morgen ein“ merkt sich den Namen vorher (konnte einen Fehler werfen, wenn der Einzug sehr schnell kam).
+- Datei: `rent.js` (`PATH`, `PAD_DIRT`, `pathMesh`, `padMesh`, Wege zum Auto).
+
 ## v211 – Kettensäge: kein Ruckeln mehr beim Kerb und beim Fällschnitt
 
 - **Ursache (gemessen):** Der Kerb-Stamm wird je Kerbtiefe neu gebaut (20 Stufen, je zwei Rinden-Meshes `notchMesh`). Jedes Rinden-Mesh lief über die ganze Stammhöhe durch `emitBark` (Farbgrenzen, Facetten, Birkenflecken) – im Test-Browser 180–300 ms je Mesh. Direkt nach dem ersten Treffer im grünen Bereich wächst der Kerb in schneller Folge um sechs Stufen → sechs solche Neubauten hintereinander; im Fällschnitt weitere acht.
