@@ -1,5 +1,10 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v218 – Bootssteg, Feuerholz-Regel (auf v217.2)
+
+- `rent.js`: Steg (`DOCK`, `Wd`/`Ld`, `DPATH`, `MOOR`, `BOAT_SPOTS`, `DOCK_NEED`, `DOCK_COST`, `DOCK_BONUS`, `dockCheck`, `dockBuildNow`, `dockSheet`, `tagDock`, `dockMesh`, `dockSiteMesh`, `boatMesh`, `oarMesh`, `dockPathMesh`, `shoreCol`, `ensureBoat`, `boatGo`, `stepBoat`); `rentDay(T)`/`WEEK(T)`; `doing` mit `k: "boat"`; `route` über die Stufen als Knoten; `yDock`; Feuerholz mit `late` und `T.cut`; Spielstand `S.farm.rent.dock`, `.dockAnn`, `.dockQ`, Bauplatz-Lager `"rent_dock"`.
+- `worldview.js`: Pick ruft `RENT.sheet(rn.k)`; zusätzliche Markierung `rentdock` über `RENT.tagDock()`.
+
 ## Stand v217.2 – Miete, Brennholz, Reifenspur, Kamin (auf v217.1)
 
 - Nur `rent.js`: neue Konstanten `WOOD_N`, `WOOD_CUT`; neue Funktionen `woodDay`, `woodTick` (im `tick`), `deliverWood`; Spielstand `S.farm.rent.wood = { wk, done, miss }`; `rentF` multipliziert die Holz-Kürzung; `ISSUES.heizung` = „Feuerholz alle“ (Schlüssel unverändert), `repair` nimmt dafür Brennholz statt Geld; Fenster mit Holz-Kasten; Markierung 🔥; `padMesh` mit einer geglätteten Spur; Kaminkopf mit Öffnung in `hutMesh`.
