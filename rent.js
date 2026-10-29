@@ -891,7 +891,8 @@ const RENT = (() => {
   }
   function dockPathMesh() {
     const b = MB();
-    b.merge(FWM.forestPath(DPATH, 0.9, { y: 0.0235, ey: 0.0165, gnd: shoreCol, caps: [false, false], ends: [false, false], fade: [{ L: 1.6, col: 0x9b8562 }, { L: 1.6, col: 0xc9b98c }], leafOk: () => false }), {});
+    /* v218: wie der Pfad an der Hütte (Breite 1,0, Laub und Steinchen) – nur nicht auf dem Strand */
+    b.merge(FWM.forestPath(DPATH, 1.0, { y: 0.0235, ey: 0.0165, gnd: shoreCol, caps: [false, false], ends: [false, false], fade: [{ L: 1.6, col: 0x9b8562 }, { L: 1.6, col: 0xc9b98c }], leafOk: (x, z) => typeof lakeE !== "function" || lakeE(x, z) > 1.08 }), {});
     return b;
   }
 
@@ -939,7 +940,7 @@ const RENT = (() => {
     W.dsite.visible = dOpen && !dk;
     if (!W.dgrow) W.dock.visible = open && dk;
     W.dpath.visible = open && dk;
-    W.dpath.alpha = dk ? Math.min(1, 0.4 + days(T.dock) / 10) : 1;
+    W.dpath.alpha = W.path.alpha;                                     /* gleiche Deckkraft wie der Pfad an der Hütte */
     if (T && T.ten) ensureActors(T.ten); else dropActors();
     ensureBoat(T, open);
   }
