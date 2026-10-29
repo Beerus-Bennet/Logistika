@@ -57,8 +57,9 @@ const RENT = (() => {
   const CAR = { x: -46, z: 21.4 };
   const CARDOOR = [CAR.x - 0.2, CAR.z + 1.05];
   const PATH = [STEPS, Wp(-2.8, 4.85), Wp(-4.6, 3.5), Wp(-5.0, -0.6),     /* v192: Bogen enger an der Veranda – vorn liegt das Baumaterial */
-                [-44.2, 27.6], [-43.2, 23.6], [-42.6, 21.0], [-42.4, 19.52]];
+                [-44.2, 27.6], [-44.0, 24.6], [-44.6, 22.7]];                       /* v212: endet auf dem Parkfleck (weicher Übergang in die Erde) */
   const CAR_IN = [[-150, 19.1], [CAR.x - 7, 19.1], [CAR.x - 3.6, 19.5], [CAR.x - 1.6, 20.9], [CAR.x, 21.4]];
+  const PAD_DIRT = 0x9a7d56;                                           /* Erde des Parkflecks (auch Ende des Pfads) */
   const CAR_OUT = [[CAR.x, 21.4], [CAR.x + 1.8, 21.2], [CAR.x + 3.6, 20.0], [CAR.x + 5.8, 19.1], [100, 19.1]];
 
   /* Hier wachsen keine Kulissenbäume und Büsche: Hütte, Pfad, Parkfleck */
@@ -207,7 +208,8 @@ const RENT = (() => {
     sfx("build"); setTimeout(() => sfx("build"), 300); setTimeout(() => sfx("level"), 900);
     if (typeof farmXP === "function") farmXP(150);
     if (typeof farmEvent === "function") farmEvent("build:rent");
-    setTimeout(() => toast("🏡 Die Hütte steht! " + T.next.n + " zieht morgen um 10 Uhr ein.", "good"), 1100);
+    const nm = T.next.n;
+    setTimeout(() => toast("🏡 Die Hütte steht! " + nm + " zieht morgen um 10 Uhr ein.", "good"), 1100);
     save();
     return true;
   }
@@ -630,11 +632,11 @@ const RENT = (() => {
     return b;
   }
   function mixC(a, c, t) { const A = G3.col(a), B = G3.col(c); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; }
-  /* Trampelpfad (schmal, mündet in die Straße) und Briefkasten */
+  /* Trampelpfad (schmal) und Briefkasten an der Straße – v212: der Pfad endet auf dem Parkfleck und läuft dort weich in die Erde aus */
   function pathMesh() {
     const b = MB();
     const gnd = typeof wGroundAt === "function" ? wGroundAt : null;
-    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd, roadCol: 0x7c7f86, mouthR: 0.6, caps: [true, false], mouth: [false, true], ends: [false, false], leafOk: (x, z) => z > 20 }), {});
+    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd, caps: [true, false], ends: [false, false], fade: [null, { L: 2.2, col: PAD_DIRT }], leafOk: (x, z) => z > 20 }), {});
     b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -41.4, z: 20.3 });
     b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -41.4, y: 0.92, z: 20.3 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -41.25, y: 1.12, z: 20.42 });
     return b;
@@ -645,7 +647,7 @@ const RENT = (() => {
     const b = MB(), gnd = typeof wGroundAt === "function" ? wGroundAt : () => 0x7fb444, seg = 28, y = 0.02;
     const R = a => [3.4 * (1 + 0.08 * Math.sin(a * 3 + 0.6)), 1.55 * (1 + 0.1 * Math.sin(a * 2 + 1.4))];
     const P = (a, k) => { const r = R(a); return [CAR.x + 0.2 + Math.cos(a) * r[0] * k, y, CAR.z - 0.15 + Math.sin(a) * r[1] * k]; };
-    const dirt = G3.col(0x9a7d56), dirt2 = G3.col(0x8a6e4a);
+    const dirt = G3.col(PAD_DIRT), dirt2 = G3.col(0x8a6e4a);
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, c = [CAR.x + 0.2, y, CAR.z - 0.15];
       b.triV(c, P(a1, 1), P(a0, 1), dirt2, dirt, dirt);
@@ -653,7 +655,36 @@ const RENT = (() => {
       b.triV(A, B, Cc, dirt, dirt, G3.col(gnd(Cc[0], Cc[2])));
       b.triV(A, Cc, D, dirt, G3.col(gnd(Cc[0], Cc[2])), G3.col(gnd(D[0], D[2])));
     }
-    [-0.42, 0.42].forEach(dz => b.box(4.6, 0.004, 0.2, 0x7a6040, { x: CAR.x - 0.6, y: y + 0.002, z: CAR.z + dz, ry: 0.06 }));
+    /* v212: Reifenspuren genau auf der Fahrlinie des Autos – herein von der Straßenkante (wo es auf den Rasen fährt) bis zum
+       Stellplatz, hinaus vom Stellplatz bis zur Straßenkante. Auf dem Fleck dunkel, auf dem Gras nur abgewetzt, an der Straße weich. */
+    const inPad = (x, z) => Math.hypot((x - CAR.x - 0.2) / 3.4, (z - CAR.z + 0.15) / 1.55) < 1;
+    const RUT = G3.col(0x6e5638), off = 0.55, hw = 0.1, yr = y + 0.0015;
+    const rut = line => {
+      const pts = [];                                                   /* dicht abtasten, nur der Teil abseits der Straße */
+      for (let k = 1; k < line.length; k++) {
+        const p = line[k - 1], q = line[k], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 0.25));
+        for (let t = k === 1 ? 0 : 1; t <= n; t++) { const x = p[0] + (q[0] - p[0]) * t / n, z = p[1] + (q[1] - p[1]) * t / n; if (z >= 19.45) pts.push([x, z]); }
+      }
+      const L = [0];
+      for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const tot = L[L.length - 1];
+      const col = (x, z, s) => {
+        const base = inPad(x, z) ? dirt : G3.col(gnd(x, z)), k = inPad(x, z) ? 0.6 : 0.42;
+        const e = Math.min(1, Math.min(s, tot - s) / 0.7);                          /* Anfang und Ende laufen weich aus */
+        return base.map((v, j) => v + (RUT[j] - v) * k * e);
+      };
+      [-1, 1].forEach(sd => {
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1], c = pts[i], dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l;
+          const o = sd * off, A0 = [a[0] + nx * (o - hw), yr, a[1] + nz * (o - hw)], A1 = [a[0] + nx * (o + hw), yr, a[1] + nz * (o + hw)];
+          const C0 = [c[0] + nx * (o - hw), yr, c[1] + nz * (o - hw)], C1 = [c[0] + nx * (o + hw), yr, c[1] + nz * (o + hw)];
+          const ca = col(a[0], a[1], L[i - 1]), cc = col(c[0], c[1], L[i]);
+          b.triV(A0, C1, C0, ca, cc, cc); b.triV(A0, A1, C1, ca, ca, cc);
+          b.triV(A0, C0, C1, ca, cc, cc); b.triV(A0, C1, A1, ca, cc, ca);           /* beide Seiten – die Reihenfolge der Ecken ist egal */
+        }
+      });
+    };
+    rut(CAR_IN.slice(1)); rut(CAR_OUT.slice(0, -1));
     return b;
   }
 
@@ -762,8 +793,8 @@ const RENT = (() => {
   function route(from, to, s) {
     const pts = [], a = regOf(from), b = regOf(to);
     if (a === "v" && b !== "v") pts.push(STEPS);
-    if (a === "c") PATH.slice(0, -1).reverse().forEach(p => pts.push(p));           /* vom Auto direkt auf den Pfad (nicht erst an die Straße) */
-    if (b === "c") { if (a !== "c") PATH.slice(1, -1).forEach(p => pts.push(p)); }
+    if (a === "c") PATH.slice().reverse().forEach(p => pts.push(p));           /* v212: der Pfad endet am Parkfleck */
+    if (b === "c") { if (a !== "c") PATH.slice(1).forEach(p => pts.push(p)); }
     else if (b === "v" && a !== "v") pts.push(STEPS);
     pts.push(posOf(to, s));
     return pts;

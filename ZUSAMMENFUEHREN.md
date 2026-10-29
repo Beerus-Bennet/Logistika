@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v212 – Parkfleck der Hütte (auf v211)
+
+- Nur `rent.js`: `PATH` endet auf dem Parkfleck (`[-44.6, 22.7]`), `forestPath` mit `fade` statt Straßenmündung; neue Konstante `PAD_DIRT`; `padMesh` zeichnet die Reifenspuren entlang `CAR_IN`/`CAR_OUT`; `route` nutzt den ganzen Pfad.
+
 ## Stand v211 – Kettensäge ohne Ruckeln (auf v210)
 
 | Datei | Änderung |
