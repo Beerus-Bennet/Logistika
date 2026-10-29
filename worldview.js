@@ -2974,7 +2974,7 @@ function worldTap(x, y) {
   }
   /* v182: Hütte am See */
   const rn = typeof RENT !== "undefined" ? RENT.pick(x, y) : null;
-  if (rn && (!ho || rn.d < ho.d) && (!ht || rn.d < ht.d + 0.5)) { sfx("tap"); RENT.sheet(); return true; }
+  if (rn && (!ho || rn.d < ho.d) && (!ht || rn.d < ht.d + 0.5)) { sfx("tap"); RENT.sheet(rn.k); return true; }   /* v218: k = "dock" am Steg */
   /* v188: Materialstapel am Bauplatz → Fenster des Bauplatzes */
   const sp3 = typeof SITE3D !== "undefined" ? SITE3D.pick(x, y) : null;
   if (sp3 && (!ho || sp3.d < ho.d) && (!ht || sp3.d < ht.d + 0.5)) { sfx("tap"); SITE3D.open(sp3.key); return true; }
@@ -3257,6 +3257,7 @@ function worldTags() {
   if (typeof pvVisit === "function" && pvVisit()) { const at = pvAt(); want.push(["pv", at[0] + 1.3, 2.9, at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]); }
   { const hg = typeof HUNT !== "undefined" ? HUNT.tagInfo() : null; if (hg) want.push(["hunt", hg.x, hg.y, hg.z, hg.html, hg.cls, () => HUNT.sheet()]); }
   { const rg = typeof RENT !== "undefined" ? RENT.tagInfo() : null; if (rg) want.push(["rent", rg.x, rg.y, rg.z, rg.html, rg.cls, () => RENT.sheet()]); }
+  { const rd = typeof RENT !== "undefined" && RENT.tagDock ? RENT.tagDock() : null; if (rd) want.push(["rentdock", rd.x, rd.y, rd.z, rd.html, rd.cls, () => RENT.dockSheet()]); }   /* v218: Steg-Bauplatz */
   if (WV.npc && worldVisitor()) want.push(["npc", WV.npc.node.x, 2.6, WV.npc.node.z, FAREAS[WV.npc.id].whoI + "❗", "ready", () => openAreaVisit(WV.npc.id)]);
   const F = S.farm;
   F.objs.forEach(o => {
