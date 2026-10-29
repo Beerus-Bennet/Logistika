@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v214 – Briefkasten der Hütte nicht mehr in der Reifenspur
+
+- Der Briefkasten stand bei x −41,4 genau auf der Ausfahrt des Autos (die Reifenspur lief hindurch). Er steht jetzt östlich der Ausfahrt am Straßenrand (x −38,8, z 20,3) auf freiem Gras.
+- Datei: `rent.js` (`pathMesh`).
+
 ## v213 – Parkfleck der Hütte: saubere Übergänge
 
 - **Ursache der Kanten:** Pfad und Reifenspuren rechneten mit einer festen Erdfarbe, der Parkfleck hat aber innen einen Verlauf und einen weichen Rand ins Gras; außerdem endete der Pfad genau auf diesem Rand.
