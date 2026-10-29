@@ -18,6 +18,7 @@ const RENT = (() => {
   const NEED = { bauholz: 6, balken: 6, bretter: 8, dielen: 4, platten: 4, tueren: 2 };   /* Baumaterial (Gebinde) */
   const DAY = 1440, CYCLE = 90 * DAY;                                  /* Spielminuten */
   const RENT_DAY = 360;                                                /* Miete je Tag (v217.2: dreifach, 2.520 € die Woche) */
+  const DOCK_NEED = { pfosten: 6, dielen: 4, balken: 3, bretter: 3 }, DOCK_COST = 3500, DOCK_BONUS = 1.2;   /* v218: Bootssteg – Material, Kosten, +20 % Miete */
   const WOOD_N = 1, WOOD_CUT = 0.5;                                    /* v217.2: Brennholz je Mietwoche (Gebinde = Säcke à 15 kg), Kürzung bei verpasster Lieferung */
   const MAINT = 900;                                                   /* Instandhaltung alle 90 Tage */
   const ISSUES = {
@@ -62,12 +63,25 @@ const RENT = (() => {
   const CAR_IN = [[-150, 19.1], [CAR.x - 7, 19.1], [CAR.x - 3.6, 19.5], [CAR.x - 1.6, 20.9], [CAR.x, 21.4]];
   const PAD_DIRT = 0x9a7d56;                                           /* Erde des Parkflecks (auch Ende des Pfads) */
   const CAR_OUT = [[CAR.x, 21.4], [CAR.x + 1.8, 21.2], [CAR.x + 3.6, 20.0], [CAR.x + 5.8, 19.1], [100, 19.1]];
+  /* v218: Bootssteg am Westufer unterhalb der Hütte. Lokales Steg-System: Ursprung am Ufer, +z zeigt in den See hinaus (Richtung
+     Seemitte), +x nach Norden. Der Steg reicht von lz −1,6 (Strand) bis lz 6,0; das Boot liegt südlich daneben (lx −1,35). */
+  const DOCK = { x: -18.4, z: 38.6, ry: Math.atan2(0.96, 0.28) };
+  const dcs = Math.cos(DOCK.ry), dsn = Math.sin(DOCK.ry);
+  const Wd = (lx, lz) => [DOCK.x + lx * dcs + lz * dsn, DOCK.z - lx * dsn + lz * dcs];
+  const Ld = (x, z) => { const dx = x - DOCK.x, dz = z - DOCK.z; return [dx * dcs - dz * dsn, dx * dsn + dz * dcs]; };
+  const DY = 0.42, PIER_START = Wd(0, -1.2), PIER_END = Wd(0, 4.9), MOOR = Wd(-1.35, 4.0);
+  /* Trampelpfad von den Stufen der Hütte zum Steg */
+  const DPATH = [STEPS, [-31.6, 37.5], [-25.6, 38.2], Wd(0, -3.4), Wd(0, -1.5)];   /* endet am Strand an der Stegkante */
+  /* Plätze auf dem See, an denen der Mieter mit dem Boot treibt (weit genug vom Ufer, nicht an der Insel) */
+  const BOAT_SPOTS = [[-7, 43], [-10, 51], [-3, 47], [-6, 55]];
 
   /* Hier wachsen keine Kulissenbäume und Büsche: Hütte, Pfad, Parkfleck */
   function segD(x, z, a, b) { const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t); }
   function clear(x, z) {
     if (Math.hypot(x - H.x, z - H.z) < 7.5) return true;
     for (let i = 1; i < PATH.length; i++) if (segD(x, z, PATH[i - 1], PATH[i]) < 1.9) return true;
+    for (let i = 1; i < DPATH.length; i++) if (segD(x, z, DPATH[i - 1], DPATH[i]) < 1.9) return true;   /* v218: Pfad zum Steg */
+    if (Math.hypot(x - PIER_START[0], z - PIER_START[1]) < 3) return true;
     return Math.hypot((x - CAR.x) / 4.6, (z - CAR.z) / 2.8) < 1;
   }
 
@@ -96,34 +110,46 @@ const RENT = (() => {
   /* Mietfaktor: überfällige Instandhaltung (> 7 Tage) → keine Miete; Problem länger als 2 Tage offen → halbe Miete */
   function rentF(T, now) {
     if (now > maintDue(T) + 7 * DAY) return 0;
-    return (T.iss && now - T.iss.t0 > 2 * DAY ? 0.5 : 1) * (T.wood && T.wood.miss ? 1 - WOOD_CUT : 1);
+    return T.iss && now - T.iss.t0 > 2 * DAY ? 0.5 : 1;
   }
-  /* v217.2: Feuerholz – Mietwochen zählen ab dem Einzugstag (Tag 1, 8, 15 …). Am ersten Tag jeder Mietwoche muss bis Mitternacht
-     WOOD_N Gebinde Brennholz geliefert werden; sonst gibt es für diese Woche nur (1 − WOOD_CUT) der Miete. */
+  /* v217.2/v217.3: Feuerholz – Mietwochen zählen ab dem Einzugstag (Tag 1, 8, 15 …). Am ersten Tag jeder Mietwoche will der Mieter
+     WOOD_N Gebinde Brennholz. Pünktlich (bis Mitternacht des Holztags) → volle Miete; verspätet (Tag 2–7 der Woche) → halbe Miete
+     für diese Woche; gar nicht → keine Miete für diese Woche. Die Abzüge stehen in T.cut (€) und werden von den nächsten Mietzahlungen
+     abgezogen (der Zahltag liegt nicht genau auf dem Holztag). */
+  /* v218: mit Bootssteg +20 % */
+  const rentDay = T => RENT_DAY * (T && T.dock ? DOCK_BONUS : 1);
+  const WEEK = T => rentDay(T) * 7;
   const woodDay = (T, now) => { const d = Math.floor(now / DAY) - Math.floor(T.ten.since / DAY); return { wk: Math.floor(d / 7), first: d % 7 === 0, left: 7 - d % 7 }; };
   function woodTick(T, now) {
     const w = woodDay(T, now);
-    if (!T.wood) T.wood = { wk: w.wk, done: !w.first, miss: false };                /* bestehende Mieter: laufende Woche gilt als erledigt */
+    if (!T.wood) T.wood = { wk: w.wk, done: !w.first, late: false };              /* bestehende Mieter: laufende Woche gilt als erledigt */
+    if (T.wood.miss != null) { T.wood.late = !!T.wood.miss; delete T.wood.miss; }   /* v217.2 → v217.3 (der halbe Abzug lief dort schon über die Miete) */
     if (T.wood.wk !== w.wk) {
-      T.wood = { wk: w.wk, done: false, miss: false };
+      if (!T.wood.done) {                                                            /* die ganze Woche kein Holz → auch die zweite Hälfte weg */
+        T.cut = (T.cut || 0) + WEEK(T) * WOOD_CUT;
+        phone({ from: T.ten.n, kind: "trouble", title: "🥶 Die ganze Woche kein Feuerholz",
+          body: "Die ganze letzte Woche kam kein Feuerholz – ich habe nur gefroren. Für diese Woche zahle ich gar keine Miete. – " + T.ten.n });
+      }
+      T.wood = { wk: w.wk, done: false, late: false };
       phone({ from: T.ten.n, kind: "info", title: "🔥 Mein Feuerholz ist leer",
-        body: "Guten Morgen! Mein Feuerholz ist leer – bringst du mir bitte bis heute Abend " + fqty("brennholz", WOOD_N) + " für den Kamin vorbei? Sonst sitze ich die Woche im Kalten und muss die Miete kürzen. – " + T.ten.n });
+        body: "Guten Morgen! Mein Feuerholz ist leer – bringst du mir bitte bis heute Abend " + fqty("brennholz", WOOD_N) + " für den Kamin vorbei? Sonst muss ich die Miete kürzen. – " + T.ten.n });
     }
-    if (!T.wood.done && !T.wood.miss && !w.first) {
-      T.wood.miss = true;
-      T.acc = Math.max(0, (T.acc || 0) - RENT_DAY * WOOD_CUT);                      /* auch den Liefertag selbst kürzen – die ganze Woche zählt */
+    if (!T.wood.done && !T.wood.late && !w.first) {                                 /* Holztag verpasst → halbe Miete für diese Woche */
+      T.wood.late = true;
+      T.cut = (T.cut || 0) + WEEK(T) * WOOD_CUT;
       phone({ from: T.ten.n, kind: "trouble", title: "🥶 Kein Feuerholz mehr",
-        body: "Mein Feuerholz ist leer und gestern kam keins mehr – ohne Kamin ist es in der Hütte eiskalt. Für diese Woche zahle ich nur die halbe Miete. – " + T.ten.n });
+        body: "Mein Feuerholz ist leer und gestern kam keins mehr – ohne Kamin ist es in der Hütte eiskalt. Bringst du es noch diese Woche, zahle ich die halbe Miete – sonst gar keine. – " + T.ten.n });
     }
   }
+  /* liefern: am Holztag pünktlich, sonst bis zum Ende der Mietwoche verspätet */
   function deliverWood() {
     const T = st();
-    if (!T || !T.ten || !T.wood || T.wood.done || T.wood.miss || !woodDay(T, S.time).first) return false;
+    if (!T || !T.ten || !T.wood || T.wood.done) return false;
     if (farmInv("brennholz") < WOOD_N) { toast("Es fehlt Brennholz: " + fqty("brennholz", WOOD_N) + " gebraucht.", "warn"); return false; }
     farmTake("brennholz", WOOD_N);
     T.wood.done = true;
-    if (typeof farmXP === "function") farmXP(5);
-    toast("🔥 Brennholz geliefert – " + T.ten.n + " bedankt sich!", "good");
+    if (typeof farmXP === "function") farmXP(T.wood.late ? 2 : 5);
+    toast(T.wood.late ? "🔥 Brennholz verspätet geliefert – diese Woche zahlt " + T.ten.n + " die halbe Miete." : "🔥 Brennholz geliefert – " + T.ten.n + " bedankt sich!", T.wood.late ? "" : "good");
     save();
     return true;
   }
@@ -138,7 +164,13 @@ const RENT = (() => {
     T.lt = now;
     if (!T.ten) { if (now >= T.moveIn) moveIn(T); return; }
     woodTick(T, now);
-    T.acc = (T.acc || 0) + RENT_DAY * d / DAY * rentF(T, now);
+    /* v218: nach dem ersten Tag wünscht sich der Mieter einen Bootssteg für sein Ruderboot */
+    if (!T.dockAnn && !T.dock && now - T.ten.since > DAY) {
+      T.dockAnn = now;
+      phone({ from: T.ten.n, kind: "info", title: "⚓ Ein Steg für mein Ruderboot?", go: "rentdock", goLabel: "Zum Bauplatz",
+        body: "Ich habe mir ein kleines Ruderboot gekauft – es liegt unten am Ufer vor der Hütte. Wenn du mir dort einen Bootssteg baust, zahle ich gern 20 % mehr Miete! – " + T.ten.n });
+    }
+    T.acc = (T.acc || 0) + rentDay(T) * d / DAY * rentF(T, now);
     for (let k = 0; k < 20 && now >= T.pay; k++) { payRent(T); T.pay += 7 * DAY; }
     if (now >= maintDue(T) && !T.mMsg) {
       T.mMsg = 1;
@@ -153,20 +185,20 @@ const RENT = (() => {
     T.next = null;
     T.ten = Object.assign(t, { since: S.time });
     T.cs = S.time; T.plan = planIssues(S.time); T.acc = 0; T.pay = S.time + 7 * DAY; T.mMsg = 0; T.iss = null;
-    T.wood = { wk: 0, done: false, miss: false };                                   /* der Einzugstag ist der erste Holztag */
+    T.wood = { wk: 0, done: false, late: false }; T.cut = 0;                                 /* der Einzugstag ist der erste Holztag */
     phone({ from: t.n, kind: "good", title: "Eingezogen in die Hütte am See",
       body: "Hallo! Ich bin heute in die Hütte am See eingezogen – traumhaft hier, mit Blick aufs Wasser. Die Miete (" + eur(RENT_DAY * 7) + " die Woche) überweise ich jede Woche. Dafür bringst du mir am ersten Tag jeder Mietwoche " + fqty("brennholz", WOOD_N) + " – heute zum ersten Mal, bis heute Abend. Viele Grüße, " + t.n });
     if (typeof save === "function") save();
   }
   function payRent(T) {
-    const m = Math.round(T.acc || 0);
-    T.acc = 0;
-    if (m <= 0) { if (typeof toast === "function") toast("🏡 " + T.ten.n + " hält die Miete zurück – erst die Instandhaltung machen.", "warn"); return; }
+    const gross = Math.max(0, T.acc || 0), cut = Math.min(gross, T.cut || 0), m = Math.round(gross - cut);
+    T.acc = 0; T.cut = Math.max(0, (T.cut || 0) - cut);
+    if (m <= 0) { if (typeof toast === "function") toast("🏡 " + T.ten.n + " hält die Miete zurück – " + (cut > 0 ? "es kam kein Feuerholz." : "erst die Instandhaltung machen."), "warn"); return; }
     S.money += m; S.revenue += m;
     if (S.farm.stats) S.farm.stats.earned = (S.farm.stats.earned || 0) + m;
     T.earned = (T.earned || 0) + m;
     if (typeof logMoney === "function") logMoney("farm", "Miete Hütte am See", m);
-    const full = Math.round(RENT_DAY * 7);
+    const full = Math.round(WEEK(T));
     if (typeof toast === "function") toast("🏡 Miete von " + T.ten.n + ": +" + eur(m) + (m < full - 1 ? " (gemindert)" : ""), "good");
   }
   function spawnIssue(T) {
@@ -249,6 +281,36 @@ const RENT = (() => {
     save();
     return true;
   }
+  /* v218: Bootssteg – Bauplatz erscheint, sobald der Mieter danach gefragt hat */
+  const dockOpen = () => { const T = st(); return !!(T && T.ten && T.dockAnn); };
+  function dockCheck() {
+    const T = st();
+    if (!T || !T.ten || !T.dockAnn) return "Erst wenn ein Mieter wohnt.";
+    if (siteMissing("rent_dock", DOCK_NEED).length) return "Es fehlt noch Material.";
+    if (S.money < DOCK_COST) return "Dafür fehlt das Geld (" + eur(DOCK_COST) + ").";
+    return true;
+  }
+  function dockBuildNow(q) {
+    const T = st();
+    if (!T || T.dock || dockCheck() !== true) return false;
+    siteTake("rent_dock", DOCK_NEED);
+    S.money -= DOCK_COST; S.expense = (S.expense || 0) + DOCK_COST;
+    if (typeof logMoney === "function") logMoney("farm", "Bootssteg an der Hütte", -DOCK_COST);
+    T.dock = S.time; if (q != null) T.dockQ = Math.round(Math.max(0, Math.min(1, q)) * 100);
+    W.dgrow = { t: 0 };
+    syncWorld();
+    if (FV.R) for (let i = 0; i < 4; i++) setTimeout(() => { const p = Wd(0, i * 1.6); FV.R && FV.R.burst({ x: p[0], y: 0.5, z: p[1], n: 14, col: [[0.75, 0.62, 0.45, 1], [0.85, 0.9, 0.95, 0.8]], speed: 2, up: 1.4, size: 0.12, spread: 1.6, life: 1, shape: 1 }); }, i * 160);
+    sfx("build"); setTimeout(() => sfx("level"), 700);
+    if (typeof farmXP === "function") farmXP(80);
+    if (typeof farmEvent === "function") farmEvent("build:rentdock");
+    setTimeout(() => toast("⚓ Der Steg steht! " + T.ten.n + " zahlt jetzt " + eur(WEEK(T)) + " die Woche (+20 %).", "good"), 900);
+    save();
+    return true;
+  }
+  if (typeof MSG_GO !== "undefined") MSG_GO.rentdock = () => {
+    if (typeof showTab === "function") showTab("farm");
+    setTimeout(() => { if (!FV.R) return; if (typeof closeFarmSheet === "function") closeFarmSheet(); if (typeof farmFocusXZ === "function") farmFocusXZ(DOCK.x - 2, DOCK.z + 2, 22, 700); setTimeout(() => { if (FV.on) dockSheet(); }, 760); }, 250);
+  };
 
   /* ------------------------------ Modelle ---------------------------------- */
   const MB = () => new G3.MB();
@@ -756,6 +818,85 @@ const RENT = (() => {
     return b;
   }
 
+  /* ------------------------- v218: Bootssteg und Boot ------------------------- */
+  /* Steg lokal (Ursprung am Ufer, +z in den See): Pfahlpaare, Längsträger, Querdielen, Poller, Leiter am Ende */
+  function dockMesh() {
+    G3.seed(8210);
+    const b = MB(), L0 = -1.6, L1 = 6.0, hw = 0.75, PO = 0x6a4a30, WET = 0x4a3a2a;
+    [-1.0, 0.6, 2.2, 3.8, 5.4].forEach((z, i) => [-1, 1].forEach(s => {
+      b.cyl(0.09, 0.09, 1.25, 8, PO, { x: s * (hw - 0.05), y: -0.75, z, top: 0x8a6a48 });
+      b.cyl(0.095, 0.095, 0.62, 8, WET, { x: s * (hw - 0.05), y: -0.6, z });                     /* nass unten */
+      if (i === 4) b.cyl(0.1, 0.1, 0.42, 8, PO, { x: s * (hw - 0.05), y: DY, z, top: 0x8a6a48 });   /* höhere Pfähle am Ende */
+    }));
+    [-1, 1].forEach(s => b.box(0.12, 0.16, L1 - L0, C.deckD, { x: s * (hw - 0.12), y: DY - 0.22, z: (L0 + L1) / 2 }));
+    b.noise(0.1, () => { for (let z = L0 + 0.11, k = 0; z < L1; z += 0.24, k++) b.box(hw * 2, 0.06, 0.21, k % 3 ? C.deck : 0xb58a5a, { y: DY - 0.06, z, ry: (rnd() - 0.5) * 0.02 }); });
+    [[-1, 3.8], [1, 3.8], [-1, 1.4]].forEach(([s, z]) => { b.box(0.16, 0.08, 0.1, 0x2a2a2e, { x: s * (hw - 0.1), y: DY, z }); b.box(0.06, 0.08, 0.06, 0x2a2a2e, { x: s * (hw - 0.1), y: DY + 0.05, z: z - 0.06 }); });
+    [-0.28, 0.28].forEach(x => b.box(0.05, 1.0, 0.05, 0x8a8f96, { x, y: DY - 0.75, z: L1 + 0.04 }));            /* Leiter */
+    for (let y = -0.25; y < DY; y += 0.22) b.box(0.6, 0.04, 0.05, 0x8a8f96, { y, z: L1 + 0.04 });
+    return b;
+  }
+  /* Bauplatz: alte, schiefe Pfähle im Wasser, Bretter am Strand, Absteckpflöcke mit rotem Band */
+  function dockSiteMesh() {
+    G3.seed(8211);
+    const b = MB(), PO = 0x5a4a3a;
+    [[-0.7, 0.6, 0.1, 0.9], [0.7, 0.6, -0.15, 0.7], [-0.7, 2.2, 0.2, 0.5], [0.7, 3.8, -0.1, 0.35]].forEach(([x, z, r, h]) => b.cyl(0.085, 0.085, 0.8 + h, 7, PO, { x, y: -0.7, z, rx: r, rz: r * 0.6, top: 0x7a6a58 }));
+    for (let i = 0; i < 4; i++) b.box(0.18, 0.04, 1.4, i % 2 ? C.deck : C.board, { x: -1.6 + i * 0.25, y: 0.04 + i * 0.045, z: -2.4, ry: 0.15 * i });
+    [[-1, -1.6], [1, -1.6]].forEach(([s, z]) => { b.box(0.05, 0.55, 0.05, 0xc8a26a, { x: s * 0.8, z }); b.box(0.06, 0.06, 0.03, 0xd8332b, { x: s * 0.8, y: 0.45, z }); });
+    b.box(1.6, 0.012, 0.03, 0xd8332b, { y: 0.47, z: -1.6 });
+    return b;
+  }
+  /* Ruderboot (lokal: Bug +z), Rumpf als Schale aus Spanten, innen Holz, Ruderbänke */
+  function boatMesh(col) {
+    G3.seed(8212);
+    const b = MB(), N = 14, Z0 = -1.15, Z1 = 1.25, OUT = G3.col(col || 0x2f5d7a), IN = G3.col(0xb98a58), RIM = G3.col(0xe6d8bf);
+    const hw = z => { const u = (z - Z0) / (Z1 - Z0); return 0.5 * (u < 0.62 ? 0.82 + 0.18 * Math.sin(u / 0.62 * Math.PI / 2) : Math.cos((u - 0.62) / 0.38 * Math.PI / 2) * 0.98 + 0.02); };
+    const hh = z => 0.4 + Math.max(0, (z - 0.6)) * 0.12;
+    const tri2 = (A, B2, C2, c) => { b.triV(A, B2, C2, c, c, c); b.triV(A, C2, B2, c, c, c); };
+    for (let i = 0; i < N; i++) {
+      const za = Z0 + (Z1 - Z0) * i / N, zb = Z0 + (Z1 - Z0) * (i + 1) / N, wa = hw(za), wb = hw(zb);
+      [-1, 1].forEach(s => {
+        const A = [s * wa * 0.55, 0, za], B2 = [s * wb * 0.55, 0, zb], Cc = [s * wb, hh(zb), zb], D = [s * wa, hh(za), za];
+        tri2(A, B2, Cc, OUT); tri2(A, Cc, D, OUT);                                                    /* Bordwand außen */
+        const Ai = [A[0] * 0.92, 0.05, za], Bi = [B2[0] * 0.92, 0.05, zb], Ci = [Cc[0] * 0.92, hh(zb) - 0.02, zb], Di = [D[0] * 0.92, hh(za) - 0.02, za];
+        tri2(Ai, Bi, Ci, IN); tri2(Ai, Ci, Di, IN);                                                   /* innen Holz */
+        tri2([s * wa, hh(za), za], [s * wb, hh(zb), zb], [s * wb * 0.9, hh(zb) + 0.03, zb], RIM);    /* Dollbord */
+      });
+      tri2([-wa * 0.55, 0, za], [wa * 0.55, 0, za], [wb * 0.55, 0, zb], OUT); tri2([-wa * 0.55, 0, za], [wb * 0.55, 0, zb], [-wb * 0.55, 0, zb], OUT);
+      tri2([-wa * 0.5, 0.05, za], [wa * 0.5, 0.05, za], [wb * 0.5, 0.05, zb], IN); tri2([-wa * 0.5, 0.05, za], [wb * 0.5, 0.05, zb], [-wb * 0.5, 0.05, zb], IN);
+    }
+    const w0 = hw(Z0);                                                                                /* Spiegel am Heck */
+    tri2([-w0 * 0.55, 0, Z0], [w0 * 0.55, 0, Z0], [w0, hh(Z0), Z0], OUT); tri2([-w0 * 0.55, 0, Z0], [w0, hh(Z0), Z0], [-w0, hh(Z0), Z0], OUT);
+    [-0.55, 0.25].forEach(z => b.box(hw(z) * 1.8, 0.05, 0.22, 0xa87a4a, { y: 0.24, z }));             /* Ruderbänke */
+    b.box(0.5, 0.05, 0.18, 0xa87a4a, { y: 0.24, z: -0.98 });
+    return b;
+  }
+  /* Riemen: Drehpunkt an der Dolle, Blatt nach außen (+x) */
+  function oarMesh() {
+    const b = MB();
+    b.box(1.35, 0.035, 0.035, 0xc8a26a, { x: 0.55 });
+    b.box(0.32, 0.02, 0.12, 0xb08a5a, { x: 1.15 });
+    return b;
+  }
+  /* Boot kieloben am Strand (vor dem Stegbau) – dasselbe Boot, umgedreht */
+  function boatBeachMesh(col) { const b = MB(); b.merge(boatMesh(col), { y: 0.42, rz: Math.PI }); b.merge(oarMesh(), { x: -0.2, y: 0.03, z: 0.9, ry: 0.4 }); b.merge(oarMesh(), { x: -0.25, y: 0.03, z: 1.05, ry: 0.35 }); return b; }
+  /* Trampelpfad zum Steg: läuft an den Stufen aus dem anderen Pfad heraus und endet am Strand weich im Sand */
+  /* Bodenfarbe am Seeufer (Näherung des Seestrands: trockener Sand bis 0,9 vom Wasser, dann bis 2,2 ins Gras) */
+  function shoreCol(x, z) {
+    const g = yardCol(x, z);
+    if (typeof lakeE !== "function") return g;
+    const k = (lakeE(x, z) - 1) * 33, sand = G3.col(0xc9b98c);
+    if (k >= 2.2) return g;
+    if (k <= 0.88) return sand;
+    const t = (k - 0.88) / 1.32; return sand.map((v, i) => v + (g[i] - v) * t);
+  }
+  function dockPathMesh() {
+    const b = MB();
+    /* v218: wie der Pfad an der Hütte (Breite 1,0, Laub und Steinchen) – nur nicht auf dem Strand */
+    /* beginnt ein Stück auf dem Hauptpfad (unter ihm verborgen) und läuft ohne Absatz vor den Stufen weiter – ein durchgehender Weg */
+    b.merge(FWM.forestPath([PATH[1]].concat(DPATH), 1.0, { y: 0.0235, ey: 0.0165, gnd: shoreCol, caps: [false, false], ends: [false, false], fade: [null, { L: 1.6, col: 0xc9b98c }], leafOk: (x, z) => typeof lakeE !== "function" || lakeE(x, z) > 1.08 }), {});
+    return b;
+  }
+
   /* ------------------------------- Welt ------------------------------------ */
   const W = { ruin: null, ruins: [], yard: null, stage: -1, hut: null, lit: [], path: null, pad: null, man: null, car: null, grow: null, chk: 0 };
   function attach(R) {
@@ -769,6 +910,12 @@ const RENT = (() => {
     W.path = fnode(fmesh("rent_path_v182", pathMesh), { visible: false, shadow: false });
     W.pad = fnode(fmesh("rent_pad_v182", padMesh), { visible: false, shadow: false });
     R.nodes.push(W.yard, ...W.ruins, W.hut, W.lit[0], W.lit[1], W.path, W.pad);
+    /* v218: Bootssteg, Bauplatz, Pfad dorthin, Boot (am Strand kieloben, später am Steg) */
+    W.dock = fnode(fmesh("rent_dock_v218", dockMesh), { x: DOCK.x, z: DOCK.z, ry: DOCK.ry, visible: false });
+    W.dsite = fnode(fmesh("rent_dsite_v218", dockSiteMesh), { x: DOCK.x, z: DOCK.z, ry: DOCK.ry, visible: false });
+    W.dpath = fnode(fmesh("rent_dpath_v218", dockPathMesh), { visible: false, shadow: false });
+    R.nodes.push(W.dock, W.dsite, W.dpath);
+    W.boat = W.boatBeach = null; W.boatKey = null;
     W.man = null; W.car = null; W.manKey = W.carKey = null;
     syncWorld();
   }
@@ -789,7 +936,14 @@ const RENT = (() => {
     W.path.alpha = b ? Math.min(1, 0.75 + days(T.built) / 12) : [0.38, 0.58, 0.7][ph];
     W.pad.visible = !!(T && T.ten);
     W.pad.alpha = T && T.ten ? Math.min(1, 0.3 + days(T.ten.since) / 14 * 0.7) : 1;
+    /* v218: Steg – Bauplatz (nachdem der Mieter gefragt hat), fertiger Steg, Pfad (wird mit der Zeit deutlicher) */
+    const dk = !!(T && T.dock), dOpen = open && !!(T && T.ten && T.dockAnn);
+    W.dsite.visible = dOpen && !dk;
+    if (!W.dgrow) W.dock.visible = open && dk;
+    W.dpath.visible = open && dk;
+    W.dpath.alpha = W.path.alpha;                                     /* gleiche Deckkraft wie der Pfad an der Hütte */
     if (T && T.ten) ensureActors(T.ten); else dropActors();
+    ensureBoat(T, open);
   }
   function ensureActors(t) {
     const R = FV.R, key = t.n + t.seed + "g199";
@@ -805,22 +959,59 @@ const RENT = (() => {
     W.m = { key: "door", route: [], vis: false, sit: false, idle: 0 };
     W.c = { st: null, pts: null, i: 0 };
   }
+  /* v218: das Ruderboot des Mieters (Farbe aus dem Mieter), mit Ruderer und zwei Riemen; vor dem Stegbau kieloben am Strand */
+  function ensureBoat(T, open) {
+    const R = FV.R, t = T && T.ten, show = open && !!(t && T.dockAnn);
+    const col = t ? [0x2f5d7a, 0x8a3a32, 0x2f6b4a, 0xe6e2d8][t.seed % 4] : 0x2f5d7a, key = t ? t.n + t.seed + ":" + (T.dock ? 1 : 0) : null;
+    if (!show) { dropBoat(); return; }
+    if (W.boatKey === key) return;
+    dropBoat();
+    if (!T.dock) {
+      const p = Wd(-2.4, -2.6);
+      W.boatBeach = fnode(fmesh("rent_boatbeach:" + col, () => boatBeachMesh(col)), { x: p[0], z: p[1], ry: DOCK.ry + 1.2 });
+      R.nodes.push(W.boatBeach);
+    } else {
+      W.boat = fnode(fmesh("rent_boat:" + col, () => boatMesh(col)), { x: MOOR[0], z: MOOR[1], ry: DOCK.ry, y: 0.02 });
+      R.nodes.push(W.boat);
+      W.rower = R.addChild(W.boat, fnode(W.manSit || fmesh("rent_mans:x", () => FWM.person({ sit: true })), { y: 0.08, z: -0.2, s: 1.15, visible: false }));
+      W.oars = [-1, 1].map(s => R.addChild(W.boat, fnode(fmesh("rent_oar", oarMesh), { x: s * 0.42, y: 0.44, z: 0.15, ry: s > 0 ? 0.25 : Math.PI - 0.25 })));
+      W.b = { st: "moored" };
+    }
+    W.boatKey = key;
+  }
+  function dropBoat() {
+    const R = FV.R;
+    [W.boat, W.boatBeach].forEach(n => { if (!n || !R) return; const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+    W.boat = W.boatBeach = W.rower = null; W.oars = []; W.boatKey = null;
+  }
   function dropActors() {
     const R = FV.R;
     [W.man, W.car].forEach(n => { if (!n || !R) return; const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
     W.man = W.car = null; W.manKey = null;
   }
   function pick(x, y) {
+    /* v218: Steg bzw. Bauplatz */
+    if (FV.R && W.dock && (W.dock.visible || W.dsite.visible)) {
+      const a = Wd(-1.8, -2.6), c = Wd(1.8, 6.4), dd = FV.R.hitBox(FV.R.ray(x, y), [Math.min(a[0], c[0]), -0.2, Math.min(a[1], c[1])], [Math.max(a[0], c[0]), 1.4, Math.max(a[1], c[1])]);
+      if (dd != null) return { d: dd, k: "dock" };
+    }
     if (!FV.R || !W.hut || (!W.hut.visible && !W.ruin.visible)) return null;
     const d = FV.R.hitBox(FV.R.ray(x, y), [H.x - 3.6, 0, H.z - 3.4], [H.x + 3.6, W.hut.visible ? 6.6 : 4.2, H.z + 4.2]);
     return d != null ? { d } : null;
+  }
+  /* v218: Markierung am Steg-Bauplatz */
+  function tagDock() {
+    const T = st();
+    if (!T || !W.dsite || !W.dsite.visible) return null;
+    const ok = dockCheck() === true, p = Wd(0, 1.2);
+    return { x: p[0], y: 1.6, z: p[1], html: "⚓" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" };
   }
   function tagInfo() {
     const T = st();
     if (!T || !W.hut) return null;
     if (!T.built) { if (!unlocked()) return null; const ok = buildCheck() === true; return { x: H.x, y: 4.9, z: H.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
     if (T.iss) return { x: H.x, y: 7.2, z: H.z, html: "🏡" + ISSUES[T.iss.k].i + "❗", cls: "ready" };
-    if (T.ten && T.wood && !T.wood.done && !T.wood.miss && woodDay(T, S.time).first) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔥", cls: "ready" };   /* v217.2: Holztag */
+    if (T.ten && T.wood && !T.wood.done) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔥", cls: "ready" };   /* v217.2: Holztag */
     if (T.ten && S.time >= maintDue(T)) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔧", cls: "ready" };
     return null;
   }
@@ -846,6 +1037,12 @@ const RENT = (() => {
       if (m < P.back + WALK) return { k: "fromCar" };
     }
     const slot = Math.floor(m / 45), r = rng(t.seed * 31 + day * 977 + slot * 13)(), rain = S.farm.wx && S.farm.wx.k === "regen";
+    /* v218: mit Steg fährt er tagsüber (9–18 Uhr) ab und zu für einen 90-Minuten-Block mit dem Boot raus – nicht bei Regen */
+    const TT = st();
+    if (TT && TT.dock && !rain && m >= 540 && m < 1080 && now - TT.dock > 30) {
+      const blk = Math.floor((m - 540) / 90), rb = rng(t.seed * 53 + day * 331 + blk * 7)();
+      if (rb < 0.24) return { k: "boat", s: Math.floor(rb * 1000) % BOAT_SPOTS.length, end: day * DAY + 540 + (blk + 1) * 90 };
+    }
     if (m > 1290) return r < 0.35 ? { k: "bench" } : { k: "in" };       /* ab 21:30 höchstens noch auf der Veranda */
     if (r < 0.4) return { k: "in" };
     if (r < 0.72 || rain) return { k: "bench" };
@@ -857,24 +1054,34 @@ const RENT = (() => {
     return [m >= 1080 && m < P.sleep - 30, m >= P.sleep - 75 && m < P.sleep];
   }
   /* Wege: Veranda (Tür, Bank) → Stufen → Wiese; zum Auto über den Trampelpfad */
-  const posOf = (k, s) => k === "door" ? DOOR : k === "bench" ? SIT : k === "steps" ? STEPS : k === "car" ? CARDOOR : SPOTS[s || 0];
-  const regOf = k => k === "door" || k === "bench" ? "v" : k === "car" ? "c" : "y";
+  const posOf = (k, s) => k === "door" ? DOOR : k === "bench" ? SIT : k === "steps" ? STEPS : k === "car" ? CARDOOR : k === "pier" ? PIER_END : SPOTS[s || 0];
+  const regOf = k => k === "door" || k === "bench" ? "v" : k === "car" ? "c" : k === "pier" ? "d" : "y";
+  /* v218: Knotenpunkt sind die Stufen – Veranda, Auto (Pfad zur Straße) und Steg (Pfad zum Ufer) laufen über sie */
   function route(from, to, s) {
-    const pts = [], a = regOf(from), b = regOf(to);
-    if (a === "v" && b !== "v") pts.push(STEPS);
+    const a = regOf(from), b = regOf(to);
+    if (a === b) return [posOf(to, s)];
+    const pts = [];
+    if (a === "v") pts.push(STEPS);
     if (a === "c") PATH.slice().reverse().forEach(p => pts.push(p));           /* v212: der Pfad endet am Parkfleck */
-    if (b === "c") { if (a !== "c") PATH.slice(1).forEach(p => pts.push(p)); }
-    else if (b === "v" && a !== "v") pts.push(STEPS);
+    if (a === "d") [PIER_START].concat(DPATH.slice().reverse()).forEach(p => pts.push(p));
+    if (b === "c") PATH.slice(1).forEach(p => pts.push(p));
+    else if (b === "d") DPATH.slice(1).concat([PIER_START]).forEach(p => pts.push(p));
+    else if (b === "v" && a === "y") pts.push(STEPS);
     pts.push(posOf(to, s));
     return pts;
   }
   /* Höhe: auf der Veranda auf den Dielen, auf den Stufen dazwischen */
-  function yAt(x, z) { const l = Lp(x, z); if (Math.abs(l[0]) > HW + 0.1 || l[1] < HD - 0.2 || l[1] > VZ + 0.7) return 0; return l[1] <= VZ ? DECK : DECK * Math.max(0, 1 - (l[1] - VZ) / 0.7); }
+  /* v218: auf dem Steg auf den Dielen (am Strand eine kurze Rampe) */
+  function yDock(x, z) { const T = st(); if (!T || !T.dock) return null; const l = Ld(x, z); if (Math.abs(l[0]) > 0.85 || l[1] < -2.2 || l[1] > 6.1) return null; return DY * Math.max(0, Math.min(1, (l[1] + 2.2) / 0.6)); }
+  function yAt(x, z) { const yd = yDock(x, z); if (yd != null) return yd; const l = Lp(x, z); if (Math.abs(l[0]) > HW + 0.1 || l[1] < HD - 0.2 || l[1] > VZ + 0.7) return 0; return l[1] <= VZ ? DECK : DECK * Math.max(0, 1 - (l[1] - VZ) / 0.7); }
 
   function stepMan(dt, time, t) {
     const M = W.m, n = W.man, now = S.time, D = doing(t, now), sp = 1.15 * Math.min(3, Math.max(1, S.speed || 1));
-    const want = D.k === "in" ? "door" : D.k === "away" || D.k === "toCar" ? "car" : D.k === "fromCar" ? "door" : D.k === "bench" ? "bench" : "spot";
+    let want = D.k === "in" ? "door" : D.k === "away" || D.k === "toCar" ? "car" : D.k === "fromCar" ? "door" : D.k === "bench" ? "bench" : D.k === "boat" ? "pier" : "spot";
+    if (D.k === "boat" && W.b && W.b.doneEnd === D.end) want = "bench";                /* v218: Fahrt für diesen Block schon gemacht → auf die Veranda */
+    const sailing = W.b && W.b.st && W.b.st !== "moored";
     /* aus dem Haus bzw. vom Auto: Figur erscheint an der Tür bzw. am Auto */
+    if (!M.vis && sailing) { n.visible = false; return; }                         /* v218: er ist mit dem Boot draußen */
     if (!M.vis) {
       if (D.k === "away" || D.k === "in") { n.visible = false; M.key = D.k === "away" ? "car" : "door"; return; }
       if (W.c.st !== "parked") { n.visible = false; return; }          /* solange das Auto fährt, sitzt er drin */
@@ -895,6 +1102,7 @@ const RENT = (() => {
       if (!M.route.length) {
         M.key = M.dest;
         if (M.dest === "door" || M.dest === "car") { n.visible = false; M.vis = false; if (M.dest === "car") W.c.go = true; }
+        if (M.dest === "pier" && W.boat && D.k === "boat") { n.visible = false; M.vis = false; boatGo(D); }   /* v218: einsteigen und losrudern */
         if (M.dest === "bench") { M.sit = true; n.mesh = W.manSit; n.x = SIT[0]; n.z = SIT[1]; n.ry = H.ry; n.y = DECK; n.rz = 0; }
       }
       return;
@@ -936,6 +1144,43 @@ const RENT = (() => {
     }
   }
   function place(n, s) { n.visible = s !== "away"; n.x = CAR.x; n.z = CAR.z; n.ry = Math.PI / 2; n.y = 0; }
+  /* v218: Bootsfahrt – am Steg einsteigen, zu einem Platz auf dem See rudern, dort treiben, rechtzeitig vor Ende des Blocks zurück */
+  function boatGo(D) {
+    const B = W.b;
+    if (!B || !W.boat) return;
+    B.st = "out"; B.tgt = BOAT_SPOTS[D.s || 0]; B.end = D.end; B.t = 0;
+    if (W.rower) { W.rower.mesh = W.manSit; W.rower.visible = true; }
+  }
+  function stepBoat(dt, time, t) {
+    const B = W.b, n = W.boat;
+    if (!B || !n) return;
+    const sp = Math.min(3, Math.max(1, S.speed || 1)), D = doing(t, S.time);
+    n.y = 0.02 + Math.sin(time * 1.6) * 0.02; n.rz = Math.sin(time * 1.1) * 0.03; n.rx = Math.sin(time * 0.9 + 1) * 0.02;
+    const oars = (k, row, stow) => (W.oars || []).forEach((o, i) => { const s = i ? 1 : -1; if (stow) { o.ry = Math.PI / 2; o.rz = 0; o.y = 0.3; return; } o.y = 0.44; o.rz = row ? s * (0.15 + Math.sin(time * 3.2) * 0.12) : s * 0.05; o.ry = (s > 0 ? 0.25 : Math.PI - 0.25) + (row ? Math.cos(time * 3.2) * 0.45 * s : 0); });   /* stow: eingezogen ins Boot (am Steg) */
+    if (B.st === "moored") { n.x = MOOR[0]; n.z = MOOR[1]; n.ry = DOCK.ry + Math.sin(time * 0.5) * 0.03; oars(0, false, true); if (W.rower) W.rower.visible = false; return; }
+    /* Block vorbei (oder Zeit gesprungen): zurück */
+    if (B.st !== "back" && (D.k !== "boat" || D.end !== B.end || S.time >= B.end - 18)) B.st = "back";
+    if (B.st === "idle") {                                              /* treiben: langsam drehen, kleine Kreise */
+      B.t += dt;
+      n.ry += dt * 0.06; n.x = B.tgt[0] + Math.sin(B.t * 0.08) * 0.6; n.z = B.tgt[1] + Math.cos(B.t * 0.07) * 0.5;
+      oars(0, false);
+      return;
+    }
+    const tg = B.st === "back" ? MOOR : B.tgt, dx = tg[0] - n.x, dz = tg[1] - n.z, dist = Math.hypot(dx, dz), v = 1.1 * sp * dt;
+    oars(0, true);
+    if (dist <= v) {
+      n.x = tg[0]; n.z = tg[1];
+      if (B.st === "out") { B.st = "idle"; B.t = 0; }
+      else {                                                            /* angelegt: aussteigen auf den Steg */
+        B.st = "moored"; B.doneEnd = B.end;
+        if (W.rower) W.rower.visible = false;
+        W.m.key = "pier"; W.m.goal = null;
+      }
+      return;
+    }
+    n.x += dx / dist * v; n.z += dz / dist * v;
+    n.ry += angN(Math.atan2(dx, dz) - n.ry) * Math.min(1, dt * 1.5);
+  }
   function lastLeave(t) { const day = Math.floor(S.time / DAY); return day * DAY + plan(t, day).leave + WALK; }
 
   function step(dt, time) {
@@ -948,12 +1193,19 @@ const RENT = (() => {
       W.hut.visible = true; W.hut.sy = Math.max(0.05, e); W.hut.sx = W.hut.sz = 1 + (1 - Math.min(1, k)) * 0.12;
       if (G.t > 2.2) { W.hut.sx = W.hut.sy = W.hut.sz = 1; W.grow = null; }
     }
+    if (W.dgrow && W.dock) {                                          /* v218: der Steg schiebt sich vom Ufer in den See */
+      const G = W.dgrow; G.t += dt;
+      const k = Math.min(1, G.t / 1.2), e = 1 - Math.pow(1 - k, 3);
+      W.dock.visible = true; W.dock.sz = Math.max(0.05, e); W.dock.sy = 0.6 + 0.4 * e;
+      if (G.t > 1.4) { W.dock.sz = W.dock.sy = 1; W.dgrow = null; }
+    }
     const T = st(), t = T && T.ten;
     const L = t && W.man ? lightsOn(t, S.time) : [false, false];
     W.lit[0].visible = L[0] && !W.grow; W.lit[1].visible = L[1] && !W.grow;
     if (!t || !W.man || !W.car) return;
     stepCar(dt, t);
     stepMan(dt, time, t);
+    stepBoat(dt, time, t);
     /* Rauch aus dem Kamin, wenn geheizt wird (morgens und abends, nicht bei kaputtem Kamin) */
     const m = S.time % DAY, d = doing(t, S.time).k, heat = d !== "away" && d !== "toCar" && (m < 600 || m > 1020) && !(T.iss && T.iss.k === "heizung");
     if (heat && Math.random() < dt * 4) {
@@ -964,7 +1216,8 @@ const RENT = (() => {
 
   /* ------------------------------- Fenster --------------------------------- */
   const tage = n => n === 1 ? "1 Tag" : n + " Tagen";
-  function sheet() {
+  function sheet(k) {
+    if (k === "dock") return dockSheet();                                  /* v218: Steg angetippt */
     const T = st();
     if (!T) return;
     FV.sheetFn = sheet;
@@ -986,15 +1239,18 @@ const RENT = (() => {
         <button class="btn${mLeft > 0 ? " ghost" : " fgo"}" id="rnMaint">🔧 Instandhaltung · ${eur(MAINT)}</button></div>`;
     /* v217.2: Brennholz-Lieferung am ersten Tag jeder Mietwoche */
     const w = woodDay(T, S.time), W0 = T.wood || {}, nextIn = w.first ? 7 : w.left, have = farmInv("brennholz");
-    const woodH = w.first && !W0.done && !W0.miss
+    const woodH = !W0.done && w.first
       ? `<div class="rent-iss"><b>🔥 Holztag – heute ${esc(fqty("brennholz", WOOD_N))} liefern</b>
-          <small>Noch ${fdur(Math.max(1, DAY - S.time % DAY))} bis Mitternacht – sonst gibt es für diese Woche nur die halbe Miete. Im Lager: ${esc(famt("brennholz", have) || "0")}</small>
+          <small>Noch ${fdur(Math.max(1, DAY - S.time % DAY))} bis Mitternacht. Verspätet gibt es diese Woche nur die halbe Miete, gar nicht geliefert keine. Im Lager: ${esc(famt("brennholz", have) || "0")}</small>
           <button class="btn fgo${have >= WOOD_N ? "" : " disabled"}" id="rnWood">🔥 Liefern</button></div>`
-      : W0.miss ? `<div class="fs-sub">🔥 Lieferung verpasst – diese Woche nur die halbe Miete. Nächster Holztag in ${tage(nextIn)}.</div>`
+      : !W0.done ? `<div class="rent-iss"><b>🔥 Feuerholz überfällig – ${esc(fqty("brennholz", WOOD_N))}</b>
+          <small>Der Holztag ist verpasst. Lieferst du noch in den nächsten ${tage(w.left)}, gibt es diese Woche die halbe Miete – sonst gar keine. Im Lager: ${esc(famt("brennholz", have) || "0")}</small>
+          <button class="btn fgo${have >= WOOD_N ? "" : " disabled"}" id="rnWood">🔥 Verspätet liefern</button></div>`
+      : W0.late ? `<div class="fs-sub">🔥 Verspätet geliefert – diese Woche nur die halbe Miete. Nächster Holztag in ${tage(nextIn)}.</div>`
       : `<div class="fs-sub">🔥 Brennholz für diese Woche geliefert ✓ – nächster Holztag in ${tage(nextIn)} (${esc(fqty("brennholz", WOOD_N))}).</div>`;
     const payIn = Math.max(1, T.pay - S.time);
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hütte am See<small>Mieter: ${esc(t.n)} · seit Tag ${Math.floor(t.since / DAY) + 1}</small></div>
-      <div class="hu-stats"><span>💶 ${eur(RENT_DAY * 7)} / Woche${f < 1 ? (f ? " · gemindert" : " · zurückgehalten") : ""}</span><span>📅 nächste Miete in ${payIn > DAY ? tage(Math.ceil(payIn / DAY)) : fdur(payIn)} (≈ ${eur(Math.round((T.acc || 0) + RENT_DAY * payIn / DAY * f))})</span><span>Σ ${eur(T.earned || 0)} eingenommen</span></div>
+      <div class="hu-stats"><span>💶 ${eur(WEEK(T))} / Woche${T.dock ? " (mit Steg)" : ""}${f === 0 ? " · zurückgehalten" : f < 1 || (T.cut || 0) > 0 ? " · gemindert" : ""}</span><span>📅 nächste Miete in ${payIn > DAY ? tage(Math.ceil(payIn / DAY)) : fdur(payIn)} (≈ ${eur(Math.max(0, Math.round((T.acc || 0) + rentDay(T) * payIn / DAY * f - (T.cut || 0))))})</span><span>Σ ${eur(T.earned || 0)} eingenommen</span></div>
       ${woodH}${issH}${mH}`, "rent");
     const ui = () => { if (typeof renderFarmUI === "function") renderFarmUI(); };
     const wd = $("#rnWood"); if (wd) wd.onclick = () => { if (deliverWood()) { sfx("pop"); sheet(); ui(); } else sfx("bad"); };
@@ -1027,6 +1283,35 @@ const RENT = (() => {
     };
   }
 
-  return { phase, PHASES, H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, clear, attach, pick, tagInfo, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
+  /* v218: Bootssteg – Bauplatz (Material ablegen, Nagel-Spiel) bzw. fertiger Steg */
+  function dockSheet() {
+    const T = st();
+    if (!T || !T.ten || !T.dockAnn) return;
+    FV.sheetFn = dockSheet;
+    if (T.dock) {
+      openFarmSheet(`<div class="fs-h"><span class="fs-ic">⚓</span>Bootssteg<small>an der Hütte am See</small></div>
+        <div class="fs-sub">Hier liegt das Ruderboot von ${esc(T.ten.n)}. An schönen Tagen rudert ${esc(T.ten.n)} hinaus und treibt eine Weile auf dem See.</div>
+        <div class="hu-stats"><span>💶 Miete jetzt ${eur(WEEK(T))} / Woche (+20 %)</span>${T.dockQ != null ? `<span>🔨 Bauqualität ${T.dockQ} %</span>` : ""}</div>
+        <div class="fs-row"><button class="btn tiny ghost" id="rnHut">🏡 Zur Hütte</button></div>`, "rent");
+      $("#rnHut").onclick = () => sheet();
+      return;
+    }
+    const chk = dockCheck(), ic = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
+    const rows = Object.keys(DOCK_NEED).map(id => siteRowHTML("rent_dock", DOCK_NEED, id, ic)).join("")
+      + `<div class="hu-need${S.money >= DOCK_COST ? " ok" : ""}"><span class="hu-ni">💶</span><b>${eur(DOCK_COST)}</b><small>${S.money >= DOCK_COST ? "✓ da" : "auf dem Konto: " + eur(S.money)}</small></div>`;
+    openFarmSheet(`<div class="fs-h"><span class="fs-ic">⚓</span>Bauplatz für einen Bootssteg<small>Wunsch von ${esc(T.ten.n)}</small></div>
+      <div class="fs-sub">${esc(T.ten.n)} hat sich ein Ruderboot gekauft. Mit einem Steg am Ufer kann es dort anliegen – und die Miete steigt um 20 % auf ${eur(RENT_DAY * DOCK_BONUS * 7)} die Woche.</div>
+      <div class="hu-needs">${rows}</div>${siteDepHTML("rent_dock", DOCK_NEED)}
+      <div class="fs-row"><button class="btn${chk === true ? "" : " disabled"}" id="rnDock">${chk === true ? "⚓ Steg bauen" : "🔒 " + esc(chk)}</button></div>`, "rent");
+    siteDepBind("rent_dock", DOCK_NEED, dockSheet);
+    $("#rnDock").onclick = () => {
+      if (dockCheck() !== true) { sfx("bad"); return; }
+      closeFarmSheet();
+      if (typeof MG !== "undefined" && MG.open) MG.open("nails", { short: true, title: "Bootssteg bauen" }, res => { if (res && res.ok) dockBuildNow(res.score); });
+      else dockBuildNow();
+    };
+  }
+
+  return { phase, PHASES, H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, DOCK, DOCK_NEED, DOCK_COST, clear, attach, pick, tagInfo, tagDock, dockSheet, dockBuildNow, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
     _st: st, _doing: (t, now) => doing(t, now), _plan: (t, d) => plan(t, d), _lights: (t, now) => lightsOn(t, now), _W: W, _spawnIssue: () => spawnIssue(st()) };
 })();

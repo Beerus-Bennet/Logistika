@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v218 – Hütte: Bootssteg mit Ruderboot (+20 % Miete), strengere Feuerholz-Regel
+
+- **Feuerholz:** pünktlich am Holztag → volle Miete; **verspätet** (Tag 2–7 der Mietwoche, Knopf „🔥 Verspätet liefern“) → halbe Miete für diese Woche; **gar nicht** → keine Miete für diese Woche („🥶 Die ganze Woche kein Feuerholz“). Abzüge stehen in `S.farm.rent.cut` und werden von den nächsten Mietzahlungen abgezogen (der Zahltag liegt nicht genau auf dem Holztag). 🔥 über der Hütte, bis geliefert ist.
+- **Bootssteg:** Einen Tag nach dem Einzug fragt der Mieter („⚓ Ein Steg für mein Ruderboot?“). Am Westufer unterhalb der Hütte (zwischen den Schilfgruppen) liegt dann sein Boot kieloben am Strand, im Wasser alte Pfähle, Absteckpflöcke – Markierung ⚓.
+  - Bauen: 6 Bund Pfosten, 4 Bund Hobeldielen, 3 Paar Balken, 3 Bund Bretter + 3.500 € (Material ablegen, Nagel-Spiel). Danach: Holzsteg auf Pfählen mit Pollern und Leiter, das Boot liegt daneben (Riemen eingezogen).
+  - **Miete +20 %** (3.024 € die Woche); auch die Feuerholz-Abzüge rechnen damit.
+  - **Bootsfahrten:** tagsüber (9–18 Uhr), wenn der Mieter zu Hause ist und es nicht regnet, fährt er ab und zu für einen 90-Minuten-Block raus: über den Pfad auf den Steg, einsteigen, zu einer Stelle auf dem See rudern, dort treiben, vor Blockende zurück, anlegen, auf die Veranda.
+  - **Pfad zum Steg:** sieht aus wie der Pfad an der Hütte, läuft ohne Absatz vor den Stufen aus dem Hauptpfad heraus und endet am Strand weich im Sand an der Stegkante.
+- Dateien: `rent.js` (Steg, Boot, Pfad, Tagesablauf, Feuerholz, Miete), `worldview.js` (Antippen `RENT.sheet(rn.k)`, Markierung `RENT.tagDock`).
+
 ## v217.2 – Hütte: Miete ×3 mit wöchentlichem Brennholz, Reifenspur, Kamin
 
 - **Miete dreimal so hoch:** 2.520 € die Woche (360 €/Tag statt 120 €). Im Hütten-Fenster jetzt als Wochenmiete angezeigt.
