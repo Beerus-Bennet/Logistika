@@ -374,55 +374,258 @@ const MG_GAMES = {
     abort(st) { if (st.ph === 2 && st.prog > 0.05) toast("Der Baum bleibt stehen – der Sprit ist leider weg.", "warn"); return { ok: false }; }
   },
 
-  /* ----------------------------- Nageln ----------------------------------- */
+  /* ----------------------------- Nageln (v192) ------------------------------
+     Nahaufnahme einer echten Arbeitssituation: Ein Brett liegt quer über Ständern (Kanthölzern), auf jedem Ständer
+     sitzen oben und unten die Nagelstellen. Der Nagel steht mit Kopf und Schaft im Holz, darüber hängt der Hammer.
+     Unten läuft ein Zeiger über eine Taktleiste; tippen = zuschlagen. Wo der Zeiger steht, entscheidet über den Schlag:
+       Perfekt  (grün)  – der Nagel geht mit einem Schlag ganz rein, der Kopf blitzt kurz golden
+       Gut      (gelb)  – ein gutes Stück tiefer, ein zweiter Schlag macht ihn fest
+       Schief   (orange)– etwas tiefer, aber der Nagel verbiegt sich (sichtbar)
+       Daneben  (rot)   – der Hammer trifft das Brett neben dem Nagel (Delle), der Nagel bleibt stehen
+     Spätestens nach dem dritten Schlag ist jeder Nagel drin. Qualität je Nagel = Mittel seiner Schläge
+     (Perfekt 1 · Gut 0,8 · Schief 0,45 · Daneben 0,1); das Ergebnis (score) ist der Durchschnitt – wie bisher ab 0,4
+     bestanden. Es gibt keinen Zeitdruck: der Zeiger läuft hin und her, bis man schlägt. Von Nagel zu Nagel wird der
+     Zeiger etwas schneller, das grüne Feld etwas schmaler und ab dem dritten Nagel wandert es. */
   nails: {
+    TIER: [{ k: "p", n: "Perfekt!", v: 1, d: 1, c: "#4fbf5a" }, { k: "g", n: "Gut", v: 0.8, d: 0.6, c: "#f2c94c" }, { k: "u", n: "Schief", v: 0.45, d: 0.42, c: "#f08a3c" }, { k: "m", n: "Daneben", v: 0.1, d: 0, c: "#e0503c" }],
     start(st) {
-      st.total = st.short ? 5 : 8; st.i = 0; st.good = 0; st.okc = 0; st.cur = null; st.wait = 0.5;
-      mgH(st.title || "🔨 Dach decken", "Zuschlagen, wenn der Ring genau auf dem Nagelkopf liegt");
-      mgStage(`<div class="mg-board" id="mgBoard"></div>`);
-      mgMsg("Nagel für Nagel. Tipp, wenn der Ring den Kopf trifft.");
-      mgBar(`<div class="mg-count" id="mgCnt">0 / ${st.total}</div>`);
-      $("#mgStage").onpointerdown = e => { e.preventDefault(); MG_GAMES.nails.hit(st); };
+      const N = MG_GAMES.nails;
+      st.total = st.short ? 5 : 8; st.i = 0; st.done = false; st.fin = 0; st.nl = []; st.fx = []; st.pop = []; st.anim = 0; st.flex = 0; st.dent = [];
+      const studs = st.total > 5 ? [0.15, 0.38, 0.62, 0.85] : [0.2, 0.5, 0.8], rows = [0.34, 0.6];
+      const order = st.total > 5 ? [[0, 0], [1, 1], [2, 0], [3, 1], [0, 1], [2, 1], [1, 0], [3, 0]] : [[0, 0], [1, 1], [2, 0], [0, 1], [2, 1]];
+      st.studs = studs;
+      for (let k = 0; k < st.total; k++) { const [c, r] = order[k]; st.nl.push({ x: studs[c], y: rows[r], dep: 0, bend: 0, hits: [], q: null, flash: 0 }); }
+      mgH(st.title || "🔨 Dach decken", "Tippe, wenn der Zeiger im grünen Feld steht – dann sitzt der Nagel mit einem Schlag");
+      mgStage(`<canvas class="mg-ncv" id="mgNc"></canvas>`);
+      mgMsg("Nagel 1: ganz ruhig – der Zeiger läuft langsam.");
+      N.bar(st);
+      N.setup(st);
+      const cv = $("#mgNc");
+      cv.onpointerdown = e => { e.preventDefault(); N.hit(st); };
+      st.pos = 0.04; st.dir = 1;
     },
-    spawn(st) {
-      const b = $("#mgBoard");
-      if (!b) return;
-      st.cur = { x: 10 + Math.random() * 80, y: 18 + Math.random() * 64, t: 0, dur: Math.max(0.75, 1.15 - st.i * 0.04) };
-      b.innerHTML = Array.from({ length: st.i }, (_, k) => `<span class="mg-done" style="left:${(k * 37 % 90) + 5}%;top:${(k * 53 % 70) + 15}%">●</span>`).join("")
-        + `<span class="mg-nail" style="left:${st.cur.x}%;top:${st.cur.y}%"><i id="mgRing"></i><b></b></span>`;
+    /* Fortschritt: ein Punkt je Nagel, gefärbt nach seiner Qualität */
+    bar(st) {
+      const T = MG_GAMES.nails.TIER;
+      const dot = n => n.q == null ? "" : n.q >= 0.95 ? " p" : n.q >= 0.7 ? " g" : n.q >= 0.4 ? " u" : " m";
+      mgBar(`<div class="mg-nprog">${st.nl.map((n, k) => `<i class="${k === st.i && !st.done ? "cur" : ""}${dot(n)}"></i>`).join("")}<b>${Math.min(st.i + 1, st.total)} / ${st.total}</b></div>`);
+      void T;
     },
+    setup(st) {
+      const cv = $("#mgNc"); if (!cv) return;
+      const w = Math.max(240, cv.parentElement.clientWidth || 320), h = Math.round(w * 0.74), dpr = Math.min(2.5, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px";
+      st.cw = w; st.ch = h; st.dpr = dpr;
+      /* Holz einmal vorrechnen: Maserung, Äste */
+      let sd = 92417; const R = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+      st.grain = Array.from({ length: 16 }, () => ({ y: R(), a: 0.004 + R() * 0.01, f: 2 + R() * 5, p: R() * 6, w: 0.6 + R() * 1.2, d: R() < 0.5 }));
+      st.knots = [{ x: 0.33 + R() * 0.08, y: 0.27 + R() * 0.05, r: 0.022 }, { x: 0.71 + R() * 0.06, y: 0.6 + R() * 0.04, r: 0.016 }];
+      st.sgrain = Array.from({ length: 5 }, () => ({ x: R(), f: 1 + R() * 3, p: R() * 6 }));
+    },
+    zone(st) {
+      const i = st.i, C = [0.5, 0.5, 0.62, 0.38, 0.56, 0.42, 0.66, 0.34][i] || 0.5;
+      const p = Math.max(0.045, 0.072 - i * 0.004), g = p + 0.085, u = g + 0.09;
+      return { c: C, p, g, u };
+    },
+    speed(st) { return 0.62 + st.i * (st.total > 5 ? 0.09 : 0.11); },
     frame(st, dt) {
-      if (st.done) return;
-      if (!st.cur) { st.wait -= dt; if (st.wait <= 0) MG_GAMES.nails.spawn(st); return; }
-      st.cur.t += dt;
-      const k = st.cur.t / st.cur.dur, r = $("#mgRing");
-      if (r) { const s = 3.2 - k * 2.9; r.style.transform = `translate(-50%,-50%) scale(${Math.max(0.05, s)})`; }
-      if (k > 1.15) MG_GAMES.nails.res(st, 0);
+      const N = MG_GAMES.nails, cv = $("#mgNc");
+      if (!cv) return;
+      if (Math.abs((cv.parentElement.clientWidth || st.cw) - st.cw) > 4) N.setup(st);
+      if (!st.done && st.anim <= 0 && st.next == null) {
+        st.pos += st.dir * N.speed(st) * dt;
+        if (st.pos > 1) { st.pos = 2 - st.pos; st.dir = -1; } else if (st.pos < 0) { st.pos = -st.pos; st.dir = 1; }
+      }
+      if (st.anim > 0) { st.anim -= dt; if (st.anim <= 0.14 && !st.struck) N.strike(st); }
+      if (st.next != null) { st.next -= dt; if (st.next <= 0) { st.next = null; st.i++; if (st.i >= st.total) N.finish(st); else { st.pos = st.dir > 0 ? 0.04 : 0.96; N.bar(st); } } }
+      st.flex = Math.max(0, st.flex - dt * 9);
+      st.nl.forEach(n => { n.flash = Math.max(0, n.flash - dt * 1.6); });
+      st.fx = st.fx.filter(p => (p.t += dt) < p.life); st.fx.forEach(p => { p.vy += 900 * dt * (p.g || 1); p.x += p.vx * dt; p.y += p.vy * dt; });
+      st.pop = st.pop.filter(p => (p.t += dt) < 0.9);
+      if (st.done) st.fin += dt;
+      N.draw(st);
     },
     hit(st) {
-      if (!st.cur || st.done) return;
-      const s = 3.2 - (st.cur.t / st.cur.dur) * 2.9, d = Math.abs(s - 1);
-      MG_GAMES.nails.res(st, d < 0.22 ? 1 : d < 0.55 ? 0.6 : 0);
+      if (st.done || st.anim > 0 || st.next != null) return;          /* ein Schlag nach dem anderen – kein Doppelschlag */
+      const N = MG_GAMES.nails, Z = N.zone(st), d = Math.abs(st.pos - Z.c);
+      st.tier = d <= Z.p ? 0 : d <= Z.g ? 1 : d <= Z.u ? 2 : 3;
+      st.anim = 0.3; st.struck = false;
     },
-    res(st, q) {
-      const nl = st.cur, bd = $("#mgBoard");
-      if (nl && q && bd) { bd.insertAdjacentHTML("beforeend", `<span class="mg-ham" style="left:${nl.x}%;top:${nl.y}%">🔨</span>`); mgSparks(bd, bd.lastElementChild, "#ffd23f", q === 1 ? 7 : 3); }
-      if (nl && !q && bd) mgFx(bd, "mg-shake");
-      if (q === 1) st.good++; else if (q) st.okc++;
-      sfx(q ? "hammer" : "bad");
-      mgMsg(q === 1 ? "💥 Sitzt!" : q ? "👍 Geht so" : "😬 Krumm – der nächste!", q === 1 ? "ok" : q ? "" : "bad");
-      st.i++; st.cur = null; st.wait = 0.35;
-      const c = $("#mgCnt"); if (c) c.textContent = st.i + " / " + st.total;
-      if (st.i >= st.total) {
-        st.done = true;
-        const score = (st.good + st.okc * 0.6) / st.total;
-        if (score >= 0.4) { mgMsg("✅ Fertig – " + Math.round(score * 100) + " % sauber genagelt!", "ok"); setTimeout(() => MG.close({ ok: true, score }), 600); }
-        else {
-          mgMsg("Zu viele krumme Nägel – das hält nicht. Nochmal!", "bad");
-          mgBar(`<button class="btn fa-go" id="mgAgain">🔨 Nochmal</button>`);
-          $("#mgAgain").onclick = () => MG_GAMES.nails.start(st);
-        }
+    /* Moment des Aufschlags (Hammer unten) */
+    strike(st) {
+      const N = MG_GAMES.nails, T = N.TIER[st.tier], n = st.nl[st.i], W = st.cw, H = st.ch;
+      st.struck = true;
+      n.hits.push(T.v);
+      const bx = n.x * W, by = n.y * H;
+      if (T.k === "m") {
+        st.dent.push({ x: bx + 16 + Math.random() * 6, y: by + 2 + Math.random() * 4 });
+        sfx("bad");
+      } else {
+        n.dep = Math.min(1, n.dep + T.d);
+        if (T.k === "u") n.bend += (n.hits.length % 2 ? 1 : -1) * 0.22;
+        st.flex = 1;
+        sfx("hammer");
+        for (let k = 0; k < (T.k === "p" ? 12 : 7); k++) st.fx.push({ x: bx + (Math.random() - 0.5) * 8, y: by, vx: (Math.random() - 0.5) * 160, vy: -90 - Math.random() * 140, life: 0.45 + Math.random() * 0.25, t: 0, r: 1.5 + Math.random() * 2.2, c: Math.random() < 0.5 ? "#d9b98a" : "#c49a68", g: 0.6 });
+        if (T.k === "p") { n.flash = 1; for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; st.fx.push({ x: bx, y: by - 6, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, life: 0.32, t: 0, r: 2, c: "#ffe07a", g: 0 }); } }
       }
+      st.pop.push({ x: Math.max(W * 0.16, Math.min(W * 0.84, bx)), y: Math.max(H * 0.12, by - 46), n: T.n, c: T.c, t: 0 });
+      const done = n.dep >= 1 || n.hits.length >= 3;
+      if (done) {
+        if (n.dep < 1) n.dep = 1;                                       /* dritter Schlag: wird nachgeschlagen */
+        n.q = n.hits.reduce((a, v) => a + v, 0) / n.hits.length;
+        st.next = 0.5;
+        mgMsg(T.k === "p" && n.hits.length === 1 ? "💥 Perfekt – mit einem Schlag versenkt!" : n.q >= 0.7 ? "👍 Sitzt fest." : n.bend ? "Sitzt – aber krumm." : "Nachgeschlagen – hält.", n.q >= 0.7 ? "ok" : "");
+      } else mgMsg(T.k === "m" ? "Daneben – Delle im Brett. Nochmal auf den Nagel!" : T.k === "u" ? "Schief! Noch ein Schlag richtet es nicht mehr ganz." : "Gut – noch ein Schlag, dann sitzt er.", T.k === "m" ? "bad" : "");
+      MG_GAMES.nails.bar(st);
+    },
+    finish(st) {
+      const N = MG_GAMES.nails;
+      st.done = true; st.fin = 0;
+      st.score = st.nl.reduce((a, n) => a + (n.q || 0), 0) / st.total;
+      N.bar(st);
+      const pc = Math.round(st.score * 100), word = st.score >= 0.9 ? "Meisterhaft" : st.score >= 0.7 ? "Sauber genagelt" : st.score >= 0.5 ? "Ordentlich" : "Hält gerade so";
+      for (let k = 0; k < 20; k++) st.fx.push({ x: st.cw * (0.08 + Math.random() * 0.84), y: st.ch * 0.66, vx: (Math.random() - 0.5) * 90, vy: -40 - Math.random() * 90, life: 0.6 + Math.random() * 0.4, t: 0, r: 2 + Math.random() * 2.5, c: "#d9c4a0", g: 0.25 });
+      if (st.score >= 0.4) {
+        sfx("build");
+        mgMsg(`✅ Fertig – ${pc} % Bauqualität · ${word}!`, "ok");
+        setTimeout(() => MG.close({ ok: true, score: st.score }), 1500);
+      } else {
+        sfx("bad");
+        mgMsg(`Zu viele krumme Nägel (${pc} %) – das hält nicht. Nochmal!`, "bad");
+        mgBar(`<button class="btn fa-go" id="mgAgain">🔨 Nochmal</button>`);
+        $("#mgAgain").onclick = () => MG_GAMES.nails.start(st);
+      }
+    },
+    /* ------------------------------ Zeichnen ------------------------------ */
+    draw(st) {
+      const cv = $("#mgNc"); if (!cv) return;
+      const g = cv.getContext("2d"), W = st.cw, H = st.ch, N = MG_GAMES.nails;
+      g.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+      /* Hintergrund: Wand im Schatten */
+      const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#3c3a33"); bg.addColorStop(1, "#2a2924"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      /* Ständer (Kanthölzer) hinter dem Brett */
+      const sw = W * 0.085;
+      st.studs.forEach((x, k) => {
+        const X = x * W - sw / 2, gr = g.createLinearGradient(X, 0, X + sw, 0);
+        gr.addColorStop(0, "#7a5a3a"); gr.addColorStop(0.15, "#93704a"); gr.addColorStop(0.85, "#86643f"); gr.addColorStop(1, "#5c4128");
+        g.fillStyle = gr; g.fillRect(X, 0, sw, H * 0.72);
+        g.strokeStyle = "rgba(60,40,20,.35)"; g.lineWidth = 1;
+        st.sgrain.forEach(q => { g.beginPath(); for (let y = 0; y <= H * 0.72; y += 6) { const xx = X + sw * (0.2 + q.x * 0.6) + Math.sin(y / H * q.f * 6 + q.p + k) * 1.5; y ? g.lineTo(xx, y) : g.moveTo(xx, y); } g.stroke(); });
+        g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(X, H * 0.68, sw, H * 0.04);
+      });
+      /* Brett: Oberseite mit Maserung und Ästen, Kante (Dicke) darunter, Hirnholz an den Enden */
+      const fy = st.flex * 1.6, X0 = W * 0.04, X1 = W * 0.96, Y0 = H * 0.24 + fy, Y1 = H * 0.66 + fy, th = H * 0.045;
+      g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(X0 + 4, Y1 + th - 2, X1 - X0, 8);
+      const pg = g.createLinearGradient(0, Y0, 0, Y1); pg.addColorStop(0, "#d8ac74"); pg.addColorStop(0.5, "#c99a62"); pg.addColorStop(1, "#b98a55");
+      g.fillStyle = pg; g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+      st.grain.forEach(q => {
+        g.strokeStyle = q.d ? "rgba(120,78,38,.32)" : "rgba(150,100,55,.22)"; g.lineWidth = q.w;
+        g.beginPath();
+        for (let x = X0; x <= X1; x += 8) {
+          let yy = Y0 + (Y1 - Y0) * q.y + Math.sin(x / W * q.f + q.p) * (Y1 - Y0) * q.a * 6;
+          st.knots.forEach(K => { const dx = x - K.x * W, dy = yy - (Y0 + (Y1 - Y0) * K.y * 1.4); const r = K.r * W * 3.2, d2 = dx * dx + dy * dy; if (d2 < r * r) yy += (dy >= 0 ? 1 : -1) * (r - Math.sqrt(d2)) * 0.5; });
+          x === X0 ? g.moveTo(x, yy) : g.lineTo(x, yy);
+        }
+        g.stroke();
+      });
+      st.knots.forEach(K => {
+        const kx = K.x * W, ky = Y0 + (Y1 - Y0) * K.y * 1.4, r = K.r * W;
+        for (let k = 3; k >= 1; k--) { g.fillStyle = k === 1 ? "#6e4422" : k === 2 ? "#8f5c30" : "#a8723f"; g.beginPath(); g.ellipse(kx, ky, r * k * 0.7, r * k * 0.45, 0, 0, 6.283); g.fill(); }
+      });
+      g.fillStyle = "rgba(255,240,210,.35)"; g.fillRect(X0, Y0, X1 - X0, 2);                                       /* Lichtkante */
+      const eg = g.createLinearGradient(0, Y1, 0, Y1 + th); eg.addColorStop(0, "#9a6c3c"); eg.addColorStop(1, "#7a522c");
+      g.fillStyle = eg; g.fillRect(X0, Y1, X1 - X0, th);
+      [X0, X1 - 6].forEach(x => { g.fillStyle = "#e2c08e"; g.fillRect(x, Y0, 6, Y1 - Y0 + th); g.strokeStyle = "rgba(140,95,50,.5)"; for (let k = 1; k < 4; k++) { g.beginPath(); g.arc(x + 3, Y1 + th * 0.5, k * 7, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); } });
+      g.strokeStyle = "#1d1a16"; g.lineWidth = 2; g.strokeRect(X0, Y0, X1 - X0, Y1 - Y0 + th);
+      /* Bleistiftstriche über den Ständern (hier wird genagelt) und Dellen */
+      g.strokeStyle = "rgba(60,60,70,.35)"; g.lineWidth = 1; g.setLineDash([4, 4]);
+      st.studs.forEach(x => { g.beginPath(); g.moveTo(x * W, Y0 + 4); g.lineTo(x * W, Y1 - 4); g.stroke(); });
+      g.setLineDash([]);
+      st.dent.forEach(d => { g.fillStyle = "rgba(90,55,25,.45)"; g.beginPath(); g.ellipse(d.x, d.y + fy, 9, 4, 0, 0, 6.283); g.fill(); g.fillStyle = "rgba(255,235,200,.25)"; g.beginPath(); g.ellipse(d.x - 1, d.y + fy - 1.5, 6, 2, 0, 0, 3.14); g.fill(); });
+      /* Nägel */
+      const cur = !st.done && st.next == null ? st.i : -1;
+      st.nl.forEach((n, k) => {
+        if (k > st.i && !st.done) {                                     /* kommende Stellen: kleine Bleistiftkreuze */
+          const x = n.x * W, y = n.y * H + fy; g.strokeStyle = "rgba(60,60,70,.45)"; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(x - 4, y - 4); g.lineTo(x + 4, y + 4); g.moveTo(x + 4, y - 4); g.lineTo(x - 4, y + 4); g.stroke(); return;
+        }
+        N.nail(g, n, n.x * W, n.y * H + fy, H, k === cur);
+      });
+      /* Zielmarke um die Nagelstelle */
+      if (cur >= 0) {
+        const n = st.nl[cur], x = n.x * W, y = n.y * H + fy, pu = 1 + Math.sin(st.t * 6) * 0.08;
+        g.strokeStyle = "rgba(255,210,63,.9)"; g.lineWidth = 2.5; g.setLineDash([5, 4]); g.beginPath(); g.ellipse(x, y, 17 * pu, 7 * pu, 0, 0, 6.283); g.stroke(); g.setLineDash([]);
+      }
+      /* Hammer */
+      if (cur >= 0 || st.anim > 0) N.hammer(g, st, st.nl[Math.min(st.i, st.total - 1)], W, H, fy);
+      /* Partikel und Rückmeldungen */
+      st.fx.forEach(p => { g.globalAlpha = Math.max(0, 1 - p.t / p.life); g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill(); });
+      g.globalAlpha = 1;
+      st.pop.forEach(p => {
+        const k = p.t / 0.9, sc = k < 0.15 ? 0.6 + k / 0.15 * 0.5 : 1.1 - Math.min(0.1, (k - 0.15));
+        g.save(); g.globalAlpha = Math.max(0, 1 - Math.max(0, k - 0.55) / 0.45); g.translate(p.x, p.y - k * 22); g.scale(sc, sc);
+        g.font = "900 " + Math.round(H * 0.075) + "px system-ui, sans-serif"; g.textAlign = "center"; g.lineWidth = 5; g.strokeStyle = "#1d1a16"; g.strokeText(p.n, 0, 0); g.fillStyle = p.c; g.fillText(p.n, 0, 0); g.restore();
+      });
+      /* Taktleiste */
+      const Z = N.zone(st), bx0 = W * 0.07, bx1 = W * 0.93, byy = H * 0.82, bh = H * 0.075, bw = bx1 - bx0, X = v => bx0 + v * bw;
+      g.fillStyle = "#1d1a16"; g.fillRect(bx0 - 3, byy - 3, bw + 6, bh + 6);
+      g.fillStyle = "#b8483a"; g.fillRect(bx0, byy, bw, bh);
+      [["#e98a3c", Z.u], ["#f2c94c", Z.g], ["#4fbf5a", Z.p]].forEach(([c, r]) => { g.fillStyle = c; const a = Math.max(0, Z.c - r), b = Math.min(1, Z.c + r); g.fillRect(X(a), byy, X(b) - X(a), bh); });
+      g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(bx0, byy, bw, bh * 0.35);
+      if (!st.done) {
+        const px = X(st.pos);
+        g.fillStyle = "#fff"; g.strokeStyle = "#1d1a16"; g.lineWidth = 2.5;
+        g.beginPath(); g.moveTo(px, byy + bh + 2); g.lineTo(px - 9, byy - 12); g.lineTo(px + 9, byy - 12); g.closePath(); g.fill(); g.stroke();
+        g.fillRect(px - 2, byy, 4, bh); g.strokeRect(px - 2, byy, 4, bh);
+      }
+      /* Abschluss: Ergebnis groß über dem Brett */
+      if (st.done && st.score != null) {
+        const k = Math.min(1, st.fin / 0.35), pc = Math.round(st.score * 100), stars = st.score >= 0.85 ? 3 : st.score >= 0.6 ? 2 : st.score >= 0.4 ? 1 : 0;
+        g.save(); g.globalAlpha = k; g.fillStyle = "rgba(20,18,14,.55)"; g.fillRect(0, 0, W, H);
+        g.translate(W / 2, H * 0.42); g.scale(0.8 + 0.2 * k, 0.8 + 0.2 * k); g.textAlign = "center";
+        g.font = "900 " + Math.round(H * 0.16) + "px system-ui, sans-serif"; g.lineWidth = 7; g.strokeStyle = "#1d1a16"; g.strokeText(pc + " %", 0, 0); g.fillStyle = st.score >= 0.4 ? "#ffe07a" : "#ff8a7a"; g.fillText(pc + " %", 0, 0);
+        g.font = "800 " + Math.round(H * 0.065) + "px system-ui, sans-serif"; g.lineWidth = 4; g.strokeText("Bauqualität", 0, H * 0.085); g.fillStyle = "#fff"; g.fillText("Bauqualität", 0, H * 0.085);
+        g.font = Math.round(H * 0.1) + "px system-ui, sans-serif"; for (let s2 = 0; s2 < 3; s2++) { g.globalAlpha = k * (s2 < stars ? 1 : 0.25); g.fillText("⭐", (s2 - 1) * H * 0.12, -H * 0.17); }
+        g.restore();
+      }
+    },
+    /* Nagel: Schaft (eingeschlagen kürzer, verbogen gekippt) und Kopf; eingeschlagen nur der Kopf mit kleinem Krater */
+    nail(g, n, x, y, H, active) {
+      const L = H * 0.12 * (1 - n.dep), hw = 3.2;
+      g.fillStyle = "rgba(0,0,0,.25)"; g.beginPath(); g.ellipse(x + 3, y + 2, 9, 3.5, 0, 0, 6.283); g.fill();
+      g.save(); g.translate(x, y); g.rotate(n.bend);
+      if (L > 1) {
+        const sg = g.createLinearGradient(-hw, 0, hw, 0); sg.addColorStop(0, "#6c727a"); sg.addColorStop(0.45, "#d9dee3"); sg.addColorStop(1, "#80868e");
+        g.fillStyle = sg; g.fillRect(-hw / 2 - 0.5, -L, hw + 1, L); g.strokeStyle = "#1d1a16"; g.lineWidth = 1; g.strokeRect(-hw / 2 - 0.5, -L, hw + 1, L);
+      }
+      const hy = -L, hr = 8.5;
+      g.fillStyle = "#4b5056"; g.beginPath(); g.ellipse(0, hy + 1.6, hr, 3.6, 0, 0, 6.283); g.fill();
+      const hg = g.createRadialGradient(-2.5, hy - 1, 1, 0, hy, hr); hg.addColorStop(0, "#f4f7f9"); hg.addColorStop(1, "#8a9299");
+      g.fillStyle = hg; g.beginPath(); g.ellipse(0, hy, hr, 3.6, 0, 0, 6.283); g.fill(); g.strokeStyle = "#1d1a16"; g.lineWidth = 1.5; g.stroke();
+      if (n.flash > 0) { g.globalAlpha = n.flash; g.fillStyle = "#ffd23f"; g.beginPath(); g.ellipse(0, hy, hr + 4 * n.flash, 3.6 + 2 * n.flash, 0, 0, 6.283); g.fill(); g.globalAlpha = 1; }
+      g.restore();
+      if (active && n.dep < 1) { g.fillStyle = "rgba(255,255,255,.08)"; g.fillRect(x - 12, y - L - 8, 24, L + 10); }
+    },
+    /* Hammer: Stiel nach rechts unten, Kopf über dem Nagel; holt aus und schlägt in 0,16 s zu */
+    hammer(g, st, n, W, H, fy) {
+      const L = H * 0.12 * (1 - n.dep), x = n.x * W, top = n.y * H + fy - L;
+      const T = 0.3, a = st.anim > 0 ? (T - st.anim) / T : -1;          /* 0..1 Schlag */
+      let ang;                                                          /* Drehung um den Griff */
+      const up = 0.5 + Math.sin(st.t * 2.2) * 0.04;                  /* positiv = Kopf angehoben */
+      if (a < 0) ang = up; else if (a < 0.53) { const k = a / 0.53; ang = up + (0 - up) * k * k; } else { const k = (a - 0.53) / 0.47; ang = 0 + (up - 0) * (1 - Math.pow(1 - k, 2)) * (st.tier === 3 ? 1.1 : 1); }
+      const miss = st.tier === 3 && a >= 0 ? 18 : 0;
+      const gx = x + H * 0.36 + miss, gy = top - 9;                     /* Drehpunkt am Griffende */
+      g.save(); g.translate(gx, gy); g.rotate(ang);
+      const hl = H * 0.36;
+      g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(-hl + 4, 8, hl, 6);
+      const wg = g.createLinearGradient(0, -5, 0, 5); wg.addColorStop(0, "#c98c4e"); wg.addColorStop(1, "#8a5a2e");
+      g.fillStyle = wg; g.fillRect(-hl, -5, hl + 10, 10); g.strokeStyle = "#1d1a16"; g.lineWidth = 2; g.strokeRect(-hl, -5, hl + 10, 10);
+      g.fillStyle = "#3a2a1c"; g.fillRect(-6, -5, 16, 10);                                                  /* Griffwicklung */
+      const mg = g.createLinearGradient(-hl - 12, 0, -hl + 12, 0); mg.addColorStop(0, "#9aa2aa"); mg.addColorStop(0.5, "#e6eaee"); mg.addColorStop(1, "#7c848c");
+      g.fillStyle = mg; g.beginPath();
+      g.moveTo(-hl - 11, -22); g.lineTo(-hl + 11, -22); g.lineTo(-hl + 11, 8); g.lineTo(-hl + 7, 12); g.lineTo(-hl - 7, 12); g.lineTo(-hl - 11, 8); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = mg; g.beginPath(); g.moveTo(-hl - 6, -22); g.quadraticCurveTo(-hl - 2, -38, -hl + 10, -42); g.lineTo(-hl + 8, -34); g.quadraticCurveTo(-hl + 2, -30, -hl + 4, -22); g.closePath(); g.fill(); g.stroke();   /* Klaue */
+      g.restore();
     }
   },
 

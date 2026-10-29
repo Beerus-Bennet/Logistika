@@ -159,7 +159,7 @@ function farmStatic() {
   for (let x = -26; x < 27; x += 4.5) if (Math.abs(x - 5) > 3) b.merge(lt, { x, z: 20.6, s: 0.9 });
   R.nodes.push(fnode(R.mesh(b)));
   /* Wasser, Uferschaum, Schilf, Seerosen, Steg mit Boot, zwei Enten */
-  R.nodes.push(fnode(R.mesh(FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(R.mesh(FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 1, shadow: false }));
   FV.foam = fnode(R.mesh(FM.pondFoam(POND.r)), { x: POND.x, y: 0.042, z: POND.z, alpha: 0.4, shadow: false });
   R.nodes.push(FV.foam);
   R.nodes.push(fnode(R.mesh(FM.pondReeds(POND.r)), { x: POND.x, z: POND.z, sway: 0.9 }));
@@ -495,7 +495,7 @@ function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
 function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
 /* v169: vom Stellplatz nach Süden zum Wegknick (−41 / −21) und dann auf dem Waldweg zur Straße – kein Weg mehr durch die Gebäude */
-function lkwRoute(p) { return [[p.x, p.z], [p.x, -21], [-41, -21]].concat(SAW_ROAD.slice(2)); }
+function lkwRoute(p) { return [[p.x, p.z], [p.x, -21.4], [-43.0, -20.0], [-41.6, -19.3], [-39.8, -18.9]].concat(SAW_ROAD.slice(2)); }   /* v197: über die Zufahrt auf den Waldweg */
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -750,10 +750,9 @@ function farmLoop(now) {
     const k = POND.r * 0.08, a = d.a;
     const x = POND.x + 0.6 + Math.cos(a) * d.r * (1 + 0.15 * Math.sin(a * 2)) , z = POND.z + d.off + Math.sin(a) * d.r * 0.8;
     const dx = -Math.sin(a) * Math.sign(d.sp), dz = Math.cos(a) * 0.8 * Math.sign(d.sp);
-    d.n.x = x; d.n.z = z; d.n.ry = Math.atan2(dx, dz); d.n.y = 0.03 + Math.sin(time * 2 + d.off * 9) * 0.012 + k * 0;
-    if (Math.random() < dt * 1.2) R.emit({ x: x - dx * 0.25, y: 0.05, z: z - dz * 0.25, life: 1.4, size: 0.05, size2: 0.22, col: [0.92, 0.96, 1, 0.35], drag: 0 });
+    d.n.x = x; d.n.z = z; d.n.ry = Math.atan2(dx, dz); d.n.y = 0.03 + k * 0;      /* v195: Teich statisch – kein Wippen */
   });
-  if (FV.foam) FV.foam.alpha = 0.32 + Math.sin(time * 0.9) * 0.08;
+  if (FV.foam) FV.foam.alpha = 0.36;      /* v195: kein Pulsieren */
   /* Rauch aus Ofen, Räucherkammer, Räucherei und Schmiede, Funkeln über Reifem */
   if (time - FV.smokeAt > 0.22) {
     FV.smokeAt = time;

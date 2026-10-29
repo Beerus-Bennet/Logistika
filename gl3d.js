@@ -349,7 +349,7 @@ const G3 = (() => {
   precision highp float; precision highp sampler2DShadow;
   in vec3 vNor; in vec3 vCol; in vec3 vW; in vec4 vL;
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR;
-  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth;
+  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth; uniform vec4 uFlow;
   uniform sampler2DShadow uShadow;
   /* gesperrte Gebiete: Rechteck (x0, z0, x1, z1) wird grau, außer im
      wachsenden Kreis (cx, cz, Radius, Stärke) – so deckt sich ein Gebiet
@@ -389,14 +389,53 @@ const G3 = (() => {
     float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 - tt * mix(-0.6, 1.3, L) + w2));
     return vec2(w1 * w2 + 0.6 * w3, gl);
   }
+  /* v193: fallendes Wasser (uWater 6). Die Vertexfarbe trägt hier keine Farbe, sondern Koordinaten:
+     Wasserfall (b = 1): r = Weg entlang der Strömung (0 Rinne oben … 1 Aufprall), g = quer (0…1);
+     Schaumteppich (b = 0): r = Abstand zur Mitte (0…1), g = Winkel (0…1).
+     uFlow = (Länge, Tempo, Querdichte, –). Ergebnis: Farbe und Deckkraft. */
+  float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
+  vec4 fallWater(vec3 amb, float sh){
+    float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11));        /* nur die Helligkeit der Sonne – Wasser bleibt blau-weiß, auch morgens */
+    if (vCol.b > 0.5) {
+      float a = vCol.r, w = vCol.g;
+      float v = a * uFlow.x - t * uFlow.y * (0.7 + 0.6 * a);            /* Muster läuft nach unten und wird schneller */
+      float sx = w * uFlow.z;
+      float s1 = vnoise(vec2(sx * 2.0, v * 0.35)), s2 = vnoise(vec2(sx * 4.5 + 3.1, v * 0.8)), s3 = vnoise(vec2(sx * 9.0 + 7.7, v * 1.9));
+      float strands = smoothstep(0.35, 0.95, s1 * 0.5 + s2 * 0.32 + s3 * 0.18);
+      float edge = smoothstep(0.0, 0.16, w) * smoothstep(1.0, 0.84, w);
+      float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.62, 1.0, a);
+      vec3 deep = vec3(0.16, 0.46, 0.62), mid = vec3(0.44, 0.74, 0.88), wht = vec3(0.93, 0.97, 1.0);
+      vec3 c = mix(deep, mid, 0.25 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
+      c = mix(c, wht, clamp(foam * (0.55 + 0.45 * s2) + (1.0 - edge) * 0.55 * fall + strands * s3 * 0.35 * fall, 0.0, 1.0));
+      c *= amb * 0.45 + vec3(Ls) * (0.7 + 0.2 * sh);
+      c += strands * fall * 0.12 * Ls;                              /* Glanz auf den Strängen */
+      float al = edge * mix(0.9, 0.74 + 0.24 * max(strands, foam), fall);
+      al *= smoothstep(0.0, 0.05, a);                                    /* weich aus der Felsspalte */
+      return vec4(c, al);
+    }
+    /* Schaum und Wellenringe am Fuß: innen dichter, pulsierender Schaum, außen auslaufende Ringe */
+    float r = vCol.r, an = vCol.g * 6.2832;
+    vec2 q = vec2(cos(an), sin(an)) * r;
+    float n1 = vnoise(q * 5.0 + vec2(t * 0.9, -t * 0.7)), n2 = vnoise(q * 11.0 - vec2(t * 1.6, t * 1.1));
+    float puls = 0.85 + 0.15 * sin(t * 4.2 + n1 * 3.0);
+    float foam = smoothstep(0.55, 0.05, r + (n1 - 0.5) * 0.25) * (0.55 + 0.45 * n2) * puls;
+    float ring = 0.0;
+    for (int k = 0; k < 3; k++) { float ph = fract(t * 0.45 + float(k) / 3.0); float rr = 0.25 + ph * 0.8; ring += smoothstep(0.06, 0.0, abs(r - rr)) * (1.0 - ph) * (1.0 - ph); }
+    float al = clamp(foam * 0.95 + ring * 0.5, 0.0, 1.0) * smoothstep(1.0, 0.8, r);
+    vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Ls) * (0.7 + 0.2 * sh));
+    return vec4(c, al);
+  }
   void main(){
     vec3 n = normalize(vNor);
+    bool fallW = uWater > 5.5;
     /* v126: 2 = Fluss (Ost→West), 3 = See (alle Richtungen), 1 = still; v145: 4 = großer See (ruhigeres, größeres Muster);
        v176: alle bewegten Gewässer im Muster des großen Sees; v177: 5 = Seebach – fließt wie ein Fluss und geht zur Mündung
        (uMouth: x, z, Radius) stufenlos in die Seebewegung über */
     float tt = uWater > 1.5 ? uTime : 0.0, big = step(1.5, uWater);
     float flow = uWater < 2.5 ? 1.0 : (uWater > 4.5 && uMouth.z > 0.0 ? smoothstep(uMouth.z * 0.36, uMouth.z, distance(vW.xz, uMouth.xy)) : 0.0);
-    if (uWater > 0.5) {
+    if (uWater > 0.5 && !fallW) {
       vec2 p = vW.xz * mix(1.0, 0.55, big);
       vec2 g = flow >= 1.0 ? wavG(p, 0.0, tt) : flow <= 0.0 ? wavG(p, 1.0, tt) : mix(wavG(p, 1.0, tt), wavG(p, 0.0, tt), flow);
       g *= mix(1.0, 0.6, big);
@@ -407,7 +446,9 @@ const G3 = (() => {
     float sh = uShadowOn > 0.5 ? shadow() : 1.0;
     vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);
     vec3 c = vCol * (amb + uSunCol * wrap * sh);
-    if (uWater > 0.5) {
+    float aOut = uAlpha;
+    if (fallW) { vec4 fw = fallWater(amb, sh); c = fw.rgb; aOut *= fw.a; }
+    else if (uWater > 0.5) {
       vec3 v = normalize(uCam - vW); vec3 h = normalize(uSunDir + v);
       c = vCol * (amb * 0.95 + uSunCol * 0.5 * sh);
       float fr = 0.12 + 0.6 * pow(1.0 - max(dot(n, v), 0.0), 4.0);        /* Himmel spiegelt sich */
@@ -421,7 +462,7 @@ const G3 = (() => {
       c += wc.y * mix(0.13, 0.09, big) * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
-    float warm = step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
+    float warm = fallW ? 0.0 : step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
     c = mix(c, vCol * 1.15, warm * uNight);
     c = mix(c, uTint.rgb, uTint.a);
     if (uLockN > 0) {
@@ -434,7 +475,7 @@ const G3 = (() => {
     c += uGlow * vec3(1.0, 0.92, 0.62) * 0.42;
     float f = smoothstep(uFogR.x, uFogR.y, length(vW - uCam));
     c = mix(c, uFog, f);
-    o = vec4(c, uAlpha);
+    o = vec4(c, aOut);
   }`;
   /* v75: Bodenschicht wirft keinen Schatten. Flache, nach oben zeigende Flächen dicht am Boden (Wege, Pflaster,
      Felder, Ausrundungen, Dekowege, Bauplätze: Weltschicht unter y = 0,07 mit Normale nach oben) werden im
@@ -477,6 +518,10 @@ const G3 = (() => {
       vec2 p = vK * 1.25; p.y = -p.y + 0.25;
       float x = p.x, y = p.y - sqrt(abs(x)) * 0.55;
       a = smoothstep(1.05, 0.9, x * x + y * y * 1.6);
+    } else if (vShape > 3.5 && vShape < 4.5) {                               /* v193: Gischt-Nebel – ganz weich, ohne Rand */
+      float r2 = dot(vK, vK); a = exp(-r2 * 3.2) * (1.0 - min(r2, 1.0));
+    } else if (vShape > 4.5) {                                                /* v193: Wassertropfen – kleiner heller Kern, weicher Saum */
+      a = smoothstep(1.0, 0.15, length(vK));
     } else {                                                                  /* v73: Funkel-Stern (vier Zacken, heller Kern) */
       float d = sqrt(abs(vK.x)) + sqrt(abs(vK.y));
       a = max(smoothstep(1.0, 0.6, d), smoothstep(0.5, 0.0, length(vK)));
@@ -911,6 +956,7 @@ const G3 = (() => {
         if (!n.mesh.vao) return;
         gl.uniformMatrix4fv(u.uModel, false, n.W);
         gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, n.water); gl.uniform1f(u.uPlant, n.plant || 0);
+        if (u.uFlow) gl.uniform4fv(u.uFlow, n.flow || NOTINT);              /* v193: fallendes Wasser */
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
         gl.bindVertexArray(n.mesh.vao);

@@ -1,5 +1,102 @@
 # Änderungen – kurz für den Kollegen
 
+## v198 – Arbeitermenü: Scrollen öffnet nicht mehr die Mengengrenze
+
+- **Ursache:** Das Halten einer Kachel (Mengengrenze) startete nach 0,45 s, auch wenn der Finger dabei die Liste verschob. Dazu kam: Das Menü zeichnet sich alle 0,5 s neu; die Kachel unterm Finger wurde dabei ersetzt, das Scrollen brach ab und der alte Zeitgeber lief weiter.
+- **Behebung (`team.js`, `renderStaffPop`):** Das Halten bricht ab, sobald sich der Finger mehr als 6 px bewegt (`pointermove`, `touchmove`) oder die Liste scrollt; der Zeitgeber löst auf einer entfernten Kachel nichts mehr aus; solange ein Finger auf einer Kachel liegt, wird nicht neu gezeichnet; Haltezeit 0,55 s.
+- **`style.css`:** Kacheln ohne iOS-Textmenü beim Halten (`-webkit-touch-callout`, `user-select`), `touch-action: pan-y`.
+
+## v197 – Lkw-Stellplatz: Zufahrt zum Waldweg
+
+- **Zufahrt:** Neuer kurzer Weg (`FWORLD.paths`, `erbe.js`) vom Südende des Stellplatzes (dort fährt der Laster ein, die Radstopper liegen im Norden) in sanftem Bogen zum Waldweg. Er mündet als Abzweig mit Ausrundung auf dem Hauptweg (neuer Stützpunkt (−39,8 / −18,9) auf der Strecke von (−37 / −14) nach (−41 / −21), geometrisch unverändert).
+- **Fahrweg:** `lkwRoute` (`farmview.js`) führt den Laster jetzt über diese Zufahrt statt quer über die Wiese.
+- **Kein Lichtungsende:** `worldview.js`: das freie Wegende am Stellplatz bekommt keine Lichtung mit Bank (`inLkwBay`).
+
+## v196 – Angelsteg: Fisch passt aufs Schild, Ruderboot entfernt
+
+- **Schild:** Der Fisch war zu groß (Schwanz ragte über den linken Rand). Er ist jetzt auf 1,1 verkleinert und mittig, liegt auf beiden Seiten ganz auf dem Brett (`pierFish` in `woodmodels.js`).
+- **Boot:** Das Ruderboot längsseits rechts am Steg samt Leine zum Poller ist aus `pier()` gelöscht, nicht nur ausgeblendet. Kein anderer Code erzeugt es dort neu. Das Boot am Bootshaus (Fischerei) und das Boot am Teichsteg sind unverändert.
+
+## v195 – Teich im Osten: statisches Wasser, mehr Details
+
+- **Statisch:** Das Teichwasser nutzt die ruhige Wasserart (`water: 1`), es bewegt sich nichts mehr. Das Pulsieren des Uferschaums, das Wippen der Enten und ihre Heckwellen sind entfernt. Die Enten schwimmen weiter ihre Runden, Schilf wiegt sich im Wind.
+- **Wasserfarbe:** feinerer Tiefenverlauf (28 statt 5 Ringe, 96 Segmente), dunkle Tiefstellen, helle sandige Flachstellen und sechs weiche Himmelsreflexe, alles als Vertexfarbe aus einer gemeinsamen Funktion `pondCol`.
+- **Details in `pondProps`:** fünf neue Seerosen mit Blüten, feine Wellenringe um alle Seerosen, Wasserlinsen in einer Bucht, fünf Steine im flachen Wasser mit hellem Rand, 38 Kiesel unter der Oberfläche, Treibholz am Ufer mit Ring.
+- Geändert in `farmmodels.js`, `farmview.js`, `worldview.js`.
+
+## v194 – Quelle und Bach gehen weich ineinander über
+
+- **Form:** Quelltopf und Bachanfang werden mit einer weichen Vereinigung (Radius 3,2) verschmolzen, der Topf läuft trichterförmig in den Bach aus. Vorher stieß der Kreis mit hartem Knick auf den schmalen Bach.
+- **Bachbreite:** Der Bach verjüngt sich am Anfang nicht mehr (`taper: [0, 0]`), er hat von Anfang an volle Breite und passt damit zum Topf.
+- **Wasser:** Der Topf hat dasselbe Wellenmuster wie der Bach (`water: 2` statt 4) und überdeckt auch den Bachanfang im Trichter. Die Farben hängen vom Abstand zur gemeinsamen Wasserkante ab, daher gibt es keine Farbkante mehr an der Verbindung.
+- **Ufer:** Die Sandstreifen folgen derselben weichen Kante (`springGeo.dU`) und laufen im Trichter rund um die Verbindung.
+
+## v193 – Wasserfall fließt: Strömung im Shader, weiche Gischt, Wellenringe
+
+- **Hinweis zur Technik:** Die Welt ist keine 2D-, DOM- oder SVG-Ebene, sondern läuft in der eigenen WebGL-Engine (`gl3d.js`, kein Three.js). Deshalb läuft alles dort, im Shader, und dreht und zoomt mit der Kamera mit. CSS- oder SVG-Überlagerungen würden das nicht.
+- **Fließendes Wasser** (neue Wasserart `water: 6`):
+  - Der Wasserfall ist eine durchgehende Fläche: Rinne oben im Fels, eine abgerundete Kante, dann der Wurfbogen bis in den Topf.
+  - Die Vertexfarben tragen dort Koordinaten (entlang der Strömung, quer). Der Shader zeichnet daraus Wasserstränge, die laufend nach unten fließen und nach unten schneller werden.
+  - Das Wasser ist halbtransparent mit weichen, weiß ausfransenden Rändern, oben dunkler und ruhig, unten heller bis schaumig weiß.
+  - Die Farbe nimmt nur die Helligkeit der Sonne, nicht ihre Tönung, damit das Wasser auch morgens blau-weiß bleibt.
+- **Austritt:** Unter der Kante liegt ein runder Stein, über den sich das Wasser gießt. Die Fläche blendet weich aus der Felsspalte ein, statt als Block herauszukommen.
+- **Schaum und Wellenringe am Fuß:**
+  - Eine Fläche statt der weißen Plättchen und Kreise.
+  - Innen dichter, wandernder, pulsierender Schaum mit unregelmäßigem Rand.
+  - Außen laufen ständig drei weiche Wellenringe nach außen und verblassen.
+  - Nach vorn reicht die Fläche weit in den Topf, zum Fels hin ist sie kurz.
+- **Gischt:**
+  - Zwei neue Partikelformen: `shape 4` für ganz weichen Nebel, `shape 5` für Tropfen mit hellem Kern und weichem Saum.
+  - Am Aufprall: Nebel, der wächst und verweht (9 je Sekunde), und feine Spritzer nach oben und außen (34 je Sekunde).
+  - Am Fall: ein Nebelschleier am unteren Teil (5 je Sekunde) und vereinzelte Tropfen an den Rändern der Kante (7 je Sekunde).
+  - Die Raten sind fest je Sekunde, unabhängig von der Bildrate, und laufen nur, wenn die Kamera in der Nähe ist.
+- Die alte Rinne aus Blöcken, der leuchtende Schaum (`glow`) und die großen Gischt-Kreise sind weg.
+- Dateien:
+  - `gl3d.js`: `fallWater` im Shader, Uniform `uFlow` je Knoten (`n.flow`), Partikelformen 4 und 5
+  - `woodmodels.js`: `springFall` neu, `springFoam` neu, Kantenstein in `springRocks`
+  - `worldview.js`: Knoten und Gischt
+  - `index.html`, `sw.js`
+
+## v192 – Hütte am See: Ruine mit Bauzuständen, neues Nagel-Spiel, Weg und Baustellenboden
+
+- **Ruine nachvollziehbar gebaut** (`rent.js`, `ruinMesh(stage)`):
+  - **Grundaufbau:** Steinsockel mit feuchtem, bemoostem Rand auf der Schattenseite, Bodenbalken mit Dielen. Rechts vorn sind die Dielen weggefault, darunter sieht man den dunklen Unterboden.
+  - **Wände:** Rundholz, an den Ecken verkämmt, in verwitterten Braun- und Grautönen, die unterste Lage dunkler und feucht.
+  - **Öffnungen:** Türzarge mit schief offener Tür. Vorn ein Fenster mit Resten der Scheibe, hinten ein vernageltes Fenster mit alten Nägeln.
+  - **Eingestürzte Ecke:** Die rechte vordere Ecke ist eingestürzt. Dort fehlen die oberen Lagen gestuft, die Stämme haben Bruchenden mit Splittern.
+  - **Dachstuhl:** Firstbalken, Stiel und Sparren, darauf alte Dachbretter. Die linke Seite ist fast geschlossen, mit Lücken, Moos an der Traufe und Nagelreihen. Rechts vorn ist das Dach offen und die Sparren sind abgebrochen.
+  - **Giebel und Veranda:** Giebelbretter mit Lücken. Die Veranda hat noch ihren Rahmen, ein paar Dielen und einen schiefen, abgebrochenen Pfosten.
+  - **Spuren des Fischers:** Netz mit Korkschwimmern neben der Tür, Laterne am Haken, alte Angel, Kiste mit Seil, Holzeimer, Fass.
+- **Bauzustand aus dem echten Spielstand** (`phase()`; das am Bauplatz abgelegte Material, nichts Neues gespeichert):
+  - 0 **Verfallen:** Nichts abgelegt. Die Stämme der eingestürzten Ecke liegen darunter im Gras, Dachbretter daneben, Unkraut und ein junger Strauch in der Hütte.
+  - 1 **Baustelle eingerichtet:** Ab dem ersten abgelegten Material. Der Schutt liegt sortiert auf einem Ausschusshaufen hinten rechts, das Unkraut ist weg, rechts vorn steht ein Arbeitsplatz mit Sägebock, Brett und Werkzeugkiste.
+  - 2 **Gesichert, Dach in Arbeit:** Ab 3 vollständig abgelegten Materialien. Stützen an der eingestürzten Wand, neue Sparren und Latten, die Lücken im Dach mit neuen Brettern geschlossen, eine Leiter an der Traufe.
+  - 3 **Fertig:** Nach dem Bauen die fertige Hütte wie bisher.
+  - Beim Wechsel des Zustands steigt Staub auf, beim Laden nicht.
+  - Im Fenster der Hütte zeigt eine Schrittleiste denselben Zustand, mit Hinweis auf den nächsten Schritt.
+- **Boden der Baustelle** (`yardMesh`):
+  - Festgetretene Erde um die Hütte, mit weichem Übergang ins Gras.
+  - Vor den Stufen und am Arbeitsplatz fester und dunkler, ein feuchter Fleck unter dem Fass.
+  - Kies und Steinchen, Grasbüschel nur am Rand, wo niemand läuft.
+- **Weg:**
+  - Der Trampelpfad von der Straße zum Eingang ist jetzt immer da: an der Ruine zugewachsen und blass, auf der Baustelle ausgetretener, an der fertigen Hütte deutlich.
+  - Der Bogen an der Veranda liegt enger. Die Materialreihe am Bauplatz liegt etwas weiter vorn (z 6,4), so liegen keine Stapel mehr auf dem Pfad.
+- **Nagel-Spiel neu** (`minigames.js`, gilt für alle Bauten, die nageln: Hütte, Dach, Fischerei):
+  - **Ansicht:** eine Nahaufnahme. Ein Brett mit Maserung, Ästen, Hirnholz und Kante liegt über Ständern. Die Nagelstellen sind mit Bleistift markiert, der Nagel hat Kopf und Schaft, darüber holt der Hammer aus.
+  - **Bedienung:** Unten läuft ein Zeiger über eine Taktleiste, Tippen schlägt zu. Ein Schlag folgt auf den anderen, Doppelschläge sind nicht möglich. Es gibt keinen Zeitdruck.
+  - **Treffer:**
+    - Perfekt: ein Schlag, goldener Kopf.
+    - Gut: ein Stück tiefer, ein zweiter Schlag macht ihn fest.
+    - Schief: Der Nagel verbiegt sich sichtbar.
+    - Daneben: eine Delle im Brett, der Nagel bleibt stehen.
+    - Nach spätestens 3 Schlägen ist jeder Nagel drin.
+  - **Rückmeldung:** Holzstaub, das Brett gibt kurz nach, die Bewertung springt auf, die Fortschrittspunkte färben sich nach der Qualität.
+  - **Schwierigkeit:** Von Nagel zu Nagel läuft der Zeiger schneller und das grüne Feld wird schmaler. Ab dem dritten Nagel wandert das Feld.
+  - **Abschluss:** Bauqualität in Prozent mit 1–3 Sternen und Staub über dem Brett.
+  - **Ergebnis:** wie bisher `{ ok, score }`, bestanden ab 0,4. Die Hütte speichert die Qualität als `S.farm.rent.q`, nur zur Anzeige.
+- **Andere Bauplätze** (`bauplatz.js`): Sobald dort etwas abgelegt ist, steht neben der ersten Materialreihe ein Werkzeugplatz mit Kiste, Säge und Nagelschachtel, aber nur wo Platz ist. Am Hochsitz, am Unimog und am Kessel ist dafür kein Platz.
+- Dateien: `rent.js`, `minigames.js`, `bauplatz.js`, `style.css`, `index.html`, `sw.js`
+
 ## v191 – Wasserfall als fließende Wasserfläche, Quelle größer
 
 - **Wasserfall neu:**

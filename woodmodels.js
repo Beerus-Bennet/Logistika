@@ -1498,7 +1498,7 @@ const FWM = (() => {
       }
       return best;
     };
-    return { P, C, RP, d0, hRef: CR_H * wk, dPool, dU: (x, z) => Math.min(dPool(x, z), dCreek(x, z)) };
+    return { P, C, RP, d0, hRef: CR_H * wk, dPool, dU: (x, z) => { const p = dPool(x, z), c = dCreek(x, z), k = 3.2, h = Math.max(k - Math.abs(p - c), 0) / k; return Math.min(p, c) - h * h * k * 0.25; } };   /* v194: weiche Vereinigung – der Topf läuft trichterförmig in den Bach aus */
   }
   /* Polygon (Ecken {x, z, v, …}) auf v < T beschneiden; weitere Felder werden mit interpoliert */
   function clipLT(V, T, keys) {
@@ -1537,8 +1537,8 @@ const FWM = (() => {
   }
   /* Wasser des Quelltopfs: nur im Topf (Bachwasser zeichnet creekWater), Farbe nach dem Abstand zur gemeinsamen Wasserkante */
   function springPool2(pts, o) {
-    const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 0.4, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = 0.044;
-    const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; V.push({ x, z, v: G.dPool(x, z), d: G.dU(x, z) }); }
+    const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 4.2, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = 0.044;
+    const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; { const d = G.dU(x, z); V.push({ x, z, v: d, d }); } }
     const at = (i, j) => V[j * (n + 1) + i];
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const A = at(i, j), B = at(i + 1, j), Cc = at(i + 1, j + 1), D = at(i, j + 1);
@@ -1568,62 +1568,54 @@ const FWM = (() => {
       [[-R0 - 1.6, 1.0, -1.3, 1.9, 0.9], [-R0 - 1.4, 1.05, 1.4, 1.75, 0.95], [-R0 - 2.6, 1.4, 0.1, 2.0, 1.0], [-R0 - 0.9, 0.35, -2.4, 1.15, 0.7], [-R0 - 0.7, 0.3, 2.5, 1.05, 0.7],
        [-R0 - 0.2, 0.15, -1.25, 0.6, 0.6], [-R0 - 0.1, 0.12, 1.3, 0.55, 0.6], [-1.2, 0.05, -R0 - 0.35, 0.65, 0.55], [0.6, 0.05, -R0 - 0.2, 0.5, 0.55], [-1.6, 0.05, R0 + 0.3, 0.7, 0.55], [0.4, 0.04, R0 + 0.15, 0.45, 0.6]
       ].forEach(([x, y, z, r, fl], i) => b.ico(r, i % 3 === 0 ? g1 : i % 3 === 1 ? g2 : g3, { x, y, z, flat: fl, jitter: 0.32 }));
-      /* Moos und Farn auf den Felsen */
+        /* v193: abgerundete Felskante, über die das Wasser fließt (unter der Rinne) */
+      b.ico(0.62, g2, { x: SPRING_FALL.top[0] - 0.45, y: SPRING_FALL.top[1] - 0.62, z: SPRING_FALL.top[2], flat: 0.75, jitter: 0.12 });
+    /* Moos und Farn auf den Felsen */
       [[-R0 - 1.7, 2.55, -1.2, 0.6], [-R0 - 2.5, 2.9, 0.4, 0.55], [-R0 - 1.3, 2.4, 1.5, 0.5], [-R0 - 0.9, 0.95, -2.3, 0.4], [-R0 - 0.6, 0.85, 2.4, 0.38]].forEach(([x, y, z, r], i) => b.ico(r, i % 2 ? moss : moss2, { x, y, z, flat: 0.45, jitter: 0.3 }));
     });
     return b;
   }
-  /* Wasserfall: aus der Spalte zwischen den Felsen in drei Stufen in den Topf, mit Gischtsaum (eigener Knoten mit etwas Leuchten,
-     damit das Wasser vor der beschatteten Felswand hell bleibt) */
+  /* v193: Wasserfall als eine durchgehende Fläche – Rinne oben im Fels, runde Kante, Wurfbogen bis in den Topf.
+     Die Vertexfarben sind Koordinaten für den Wasser-Shader (uWater 6, gl3d.js): r = Weg entlang der Strömung (0…1),
+     g = quer (0…1), b = 1. Farbe, Stränge, Schaum, weiche Ränder und das Fließen macht der Shader. */
   function springFall() {
-    /* v191: statt drei Quaderstufen eine durchgehende, gebogene Wasserfläche: Das Wasser schießt waagerecht über die
-       Felskante und fällt im Wurfbogen in den Topf (y = Kante − g·t²). Senkrechte Wasserstränge in wechselnden Blautönen,
-       nach unten heller bis weiß (Luft im Wasser), an der Kante eine glatte, dunklere Zunge. Oben auf dem Fels läuft
-       das Wasser in einer Rinne zur Kante. Beidseitig, damit der Fall aus jedem Blickwinkel geschlossen wirkt. */
-    G3.seed(3977);
     const b = new MB(), F = SPRING_FALL, lip = F.top, foot = F.foot;
-    const A = G3.col(0x4f9fc0), B = G3.col(0x8fd0ec), Cl = G3.col(0xcdeef9), Wt = G3.col(0xf4fbfe);
-    const NT = 16, NW = 12, vx = foot[0] - lip[0], dy = lip[1] - foot[1];
-    const P = t => [lip[0] + vx * Math.pow(t, 0.75), lip[1] - dy * t * t];
-    const wid = t => 0.95 + 0.55 * t;
-    const strand = j => 0.5 + 0.5 * Math.sin(j * 2.1 + 0.7) * Math.cos(j * 0.9);
+    const NA = 34, NW = 12, A0 = 0.2, vx = foot[0] - lip[0], dy = lip[1] - foot[1];
+    const P = a => {
+      if (a <= A0) { const k = a / A0, x = lip[0] - 1.45 * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k]; }   /* Rinne */
+      const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);                                                                         /* runde Kante */
+      return [lip[0] + vx * Math.pow(t, 0.72), lip[1] - dy * t * t + r * 0.25, 0.95 + 0.62 * t];
+    };
     const V = [];
-    for (let i = 0; i <= NT; i++) {
-      const t = i / NT, p = P(t), q = P(Math.min(1, t + 0.02)), r = P(Math.max(0, t - 0.02));
-      const tx = q[0] - r[0], ty = q[1] - r[1], tl = Math.hypot(tx, ty) || 1, nx = ty / tl, ny = -tx / tl;   /* Normale zur Topfseite */
-      const row = [];
+    for (let i = 0; i <= NA; i++) {
+      const a = i / NA, p = P(a), row = [];
       for (let j = 0; j <= NW; j++) {
-        const u = j / NW - 0.5, k = strand(j), bulge = 0.05 * Math.sin(j * 1.7 + i * 0.6) * t;
-        let c = t < 0.12 ? mixA(A, B, t / 0.12) : mixA(B, Cl, Math.min(1, (t - 0.12) / 0.55) * (0.55 + 0.45 * k));
-        if (t > 0.7) c = mixA(c, Wt, (t - 0.7) / 0.3 * 0.85);
-        const edge = Math.abs(u) > 0.42 ? (Math.abs(u) - 0.42) / 0.08 : 0;
-        if (edge > 0) c = mixA(c, Wt, edge * 0.6);
-        row.push({ p: [p[0] + nx * bulge, p[1] + ny * bulge, foot[2] + u * wid(t) * (1 - 0.15 * Math.abs(u) * (1 - t))], c });
+        const w = j / NW, u = w - 0.5, curl = Math.pow(Math.abs(u) * 2, 3) * 0.06;     /* Ränder biegen leicht nach hinten (in den Fels) */
+        row.push({ p: [p[0] - curl, p[1], foot[2] + u * p[2]], c: [a, w, 1] });
       }
       V.push(row);
     }
-    const tri2 = (a, b2, c) => { b.triV(a.p, b2.p, c.p, a.c, b2.c, c.c); b.triV(a.p, c.p, b2.p, a.c, c.c, b2.c); };
-    for (let i = 0; i < NT; i++) for (let j = 0; j < NW; j++) { const a = V[i][j], b2 = V[i][j + 1], c = V[i + 1][j + 1], d = V[i + 1][j]; tri2(a, b2, c); tri2(a, c, d); }
-    /* Rinne oben auf dem Fels bis zur Kante */
-    const rn = [[lip[0] - 1.5, lip[1] + 0.12], [lip[0] - 0.7, lip[1] + 0.05], [lip[0], lip[1]]];
-    for (let i = 0; i < rn.length - 1; i++) {
-      const w0 = 0.7 + i * 0.12, w1 = 0.7 + (i + 1) * 0.12, a0 = rn[i], a1 = rn[i + 1];
-      triUp(b, [a0[0], a0[1], foot[2] - w0 / 2], [a1[0], a1[1], foot[2] - w1 / 2], [a1[0], a1[1], foot[2] + w1 / 2], A, A, B);
-      triUp(b, [a0[0], a0[1], foot[2] - w0 / 2], [a1[0], a1[1], foot[2] + w1 / 2], [a0[0], a0[1], foot[2] + w0 / 2], A, B, A);
-    }
-    /* Schaumteppich am Fuß: weiche Scheibe, innen weiß, nach außen in das Topfwasser auslaufend (keine einzelnen Plättchen) */
-    const fc = [foot[0] + 0.12, foot[2]], Wo = G3.col(0x4f9fc0), N = 16;   /* nur zur Topfseite (Halbscheibe) */
-    for (let ring = 0; ring < 2; ring++) {
-      const r0 = ring ? 0.55 : 0, r1 = ring ? 1.25 : 0.55, c0 = ring ? mixA(Wt, Cl, 0.35) : Wt, c1 = ring ? Wo : mixA(Wt, Cl, 0.35);
-      for (let k = 0; k < N; k++) {
-        const a0 = (k / N - 0.5) * Math.PI, a1 = ((k + 1) / N - 0.5) * Math.PI, wb = a => 1 + 0.15 * Math.sin(a * 5 + 1) + 0.08 * Math.sin(a * 9);
-        const Pt = (r, a) => [fc[0] + Math.cos(a) * r * wb(a) * 0.8, 0.05, fc[1] + Math.sin(a) * r * wb(a) * 1.05];
-        if (!ring) triUp(b, [fc[0], 0.05, fc[1]], Pt(r1, a0), Pt(r1, a1), c0, c1, c1);
-        else { triUp(b, Pt(r0, a0), Pt(r1, a0), Pt(r1, a1), c0, c1, c1); triUp(b, Pt(r0, a0), Pt(r1, a1), Pt(r0, a1), c0, c1, c0); }
-      }
+    for (let i = 0; i < NA; i++) for (let j = 0; j < NW; j++) {
+      const A = V[i][j], B = V[i][j + 1], C2 = V[i + 1][j + 1], D = V[i + 1][j];
+      [[A, B, C2], [A, C2, D]].forEach(([x, y, z]) => { b.triV(x.p, y.p, z.p, x.c, y.c, z.c); b.triV(x.p, z.p, y.p, x.c, z.c, y.c); });
     }
     return b;
   }
+  /* v193: Schaumteppich mit Wellenringen am Fuß (Shader uWater 6, b = 0: r = Abstand 0…1, g = Winkel 0…1).
+     Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
+  function springFoam() {
+    const b = new MB(), F = SPRING_FALL.foot, cx = F[0] + 0.25, cz = F[2], NR = 8, NA = 36, y = 0.052;
+    const rad = an => { const c = Math.cos(an); return c >= 0 ? 1.9 : 1.9 + c * 1.35; };
+    for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
+      const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
+      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * rad(an) * 0.9];
+      const c = (r, an) => [r, an / (Math.PI * 2), 0];
+      triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
+      if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
+    }
+    return b;
+  }
+
 
 
   /* v72: Brücke als Teil des Weges. Länge 5,8 (vorher 3,1 – kürzer als Bach plus Ufer), leicht gewölbt:
@@ -1658,7 +1650,7 @@ const FWM = (() => {
   /* v189: Angelsteg am Bach, neu und aufgeräumt. Lokal: x vom Ufer (0) übers Wasser bis L, z quer; Belag oben auf top.
      Schmaler Laufsteg (LW), breiter Kopf (Angelplatz). Alles hat seinen Platz: Schild und Laterne am Stegbeginn links/rechts,
      Rettungsring am Pfosten zwischen Laufsteg und Kopf, Kiste und Eimer an der hinteren Kante des Kopfes, Bank an der rechten
-     Kante, zwei Rutenhalter vorn, Ruderboot längsseits rechts festgemacht. Der Angler sitzt beim Angeln vorn in der Mitte. */
+     Kante, zwei Rutenhalter vorn (seit v196 ohne Ruderboot am Steg). Der Angler sitzt beim Angeln vorn in der Mitte. */
   const PIER_DIM = { LW: 1.3, L: 2.25, top: 0.15 };
   function pierFish(b, x, y, z, s, dir) {
     /* Fisch-Silhouette auf einer Fläche x = const (dir ±1 = Blickrichtung): Körper als Ellipsenfächer, Schwanz, Flosse, Auge */
@@ -1710,7 +1702,8 @@ const FWM = (() => {
       m.box(0.05, 0.04, 0.76, BEAM, { y: by - 0.03 }); m.box(0.05, 0.04, 0.76, BEAM, { y: by + 0.43 });
       [-0.36, 0.36].forEach(dz => m.box(0.05, 0.5, 0.04, BEAM, { y: by - 0.03, z: dz }));
       [-1, 1].forEach(s2 => m.box(0.22, 0.025, 0.86, 0x5a4636, { x: s2 * 0.075, y: by + 0.5, rz: s2 * 0.5 }));
-      [-1, 1].forEach(d => { pierFish(m, d * 0.021, by + 0.25, 0, 1.3, d); m.box(0.004, 0.03, 0.5, 0x5fa8d6, { x: d * 0.022, y: by + 0.06 }); m.box(0.004, 0.02, 0.3, 0x5fa8d6, { x: d * 0.022, y: by + 0.11, z: 0.08 }); });
+      [-1, 1].forEach(d => { pierFish(m, d * 0.021, by + 0.21, 0.07, 1.1, d);   /* v196: kleiner und mittig, liegt ganz auf dem Brett (Brett z ±0,35, y 0,44) */
+         m.box(0.004, 0.03, 0.5, 0x5fa8d6, { x: d * 0.022, y: by + 0.06 }); m.box(0.004, 0.02, 0.3, 0x5fa8d6, { x: d * 0.022, y: by + 0.11, z: 0.08 }); });
     });
     /* Laterne am Stegbeginn rechts: Pfosten, Ausleger, hängende Laterne (nachts warm) */
     const lx = 0.12, lz = 0.92;
@@ -1743,18 +1736,7 @@ const FWM = (() => {
       b.box(0.005, ty - 0.02, 0.005, 0xe8e8e8, { x: tx, y: 0.02, z });
       b.ico(0.03, 0xd8334a, { x: tx, y: 0.03, z, bottom: 0xffffff });
     });
-    /* Ruderboot längsseits rechts am Kopf, Bug zum Wasser, Leine zum Poller */
-    const bx = LW + 0.48, bz = 1.42, hull = 0x2d6f94, hullD = 0x245a78, inside = 0xcfa46a;
-    b.at({ x: bx, y: -0.07, z: bz }, m => {
-      m.box(1.2, 0.12, 0.56, hull, { top: inside });
-      [-1, 1].forEach(s => m.box(1.2, 0.17, 0.04, hull, { y: 0.03, z: s * 0.28, top: hullD }));
-      m.box(0.04, 0.17, 0.56, hull, { x: -0.6, y: 0.03, top: hullD });
-      [-1, 1].forEach(s => m.at({ x: 0.6, y: 0.03, z: s * 0.28 }, q => q.box(0.36, 0.17, 0.04, hull, { x: 0.15, ry: s * 0.7, top: hullD })));
-      m.box(0.4, 0.035, 0.5, 0xa87a46, { x: -0.1, y: 0.13 });
-      m.box(0.25, 0.035, 0.46, 0xa87a46, { x: -0.48, y: 0.13 });
-      [-1, 1].forEach(s => m.box(1.0, 0.02, 0.025, 0x8a6a48, { x: 0.05, y: 0.17, z: s * 0.17, ry: s * 0.05 }));
-    });
-    b.box(0.008, 0.008, 0.52, 0xd8c8a0, { x: L - 0.06, y: top + 0.34, z: 1.18, rx: 0.5 });
+    /* v196: kein Ruderboot mehr am Steg (bewusst entfernt – auch die Leine zum Poller) */
     return b;
   }
   /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
@@ -4231,7 +4213,7 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

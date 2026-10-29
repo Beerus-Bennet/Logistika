@@ -34,7 +34,7 @@ const SITE3D = (() => {
   function anchor(key) {
     const obj = t => S.farm.objs.find(o => o.t === t);
     const of = (o, rows) => { if (!o) return null; const [x, z] = farmCenter(o); return { x, z, ry: o.r ? -PI / 2 : 0, rows }; };
-    if (key === "rent" && typeof RENT !== "undefined") return { x: RENT.H.x, z: RENT.H.z, ry: RENT.H.ry, rows: [{ z: 6.15, cx: 0.7, maxW: 6.2 }] };
+    if (key === "rent" && typeof RENT !== "undefined") return { x: RENT.H.x, z: RENT.H.z, ry: RENT.H.ry, rows: [{ z: 6.4, cx: 0.7, maxW: 6.2 }] };     /* v192: etwas weiter vor, frei vom Pfad */
     if (key === "hunt" && typeof HUNT !== "undefined") return { x: HUNT.TW.x, z: HUNT.TW.z, ry: HUNT.TRY, rows: [{ z: -0.86, cx: 0.0, maxW: 2.7 }, { z: 0.76, cx: 0.35, maxW: 2.3 }] };     /* innerhalb des Absperrbands (±1,5) */
     if (key.startsWith("saw:")) {
       if (key === "saw:lkw") return of(obj("sw_lkw"), [{ z: 0.2, cx: -2.25, maxW: 1.2 }]);
@@ -80,8 +80,10 @@ const SITE3D = (() => {
       const R0 = rows[ri]; R0.w += (R0.ids.length ? GAP : 0) + w; R0.ids.push({ id, w });
     });
     const slots = {};
+    /* v192: Werkzeugplatz neben der ersten Reihe, wenn dort Platz ist (die Hütte am See hat ihren eigenen in rent.js) */
+    const R1 = rows[0], tools = key !== "rent" && R1.w + 1.4 <= R1.r.maxW ? { x: R1.r.cx + R1.w / 2 + 0.45, z: R1.r.z } : null;
     rows.forEach(R0 => { let x = R0.r.cx - R0.w / 2; R0.ids.forEach(({ id, w }) => { slots[id] = { x: x + w / 2, z: R0.r.z, w }; x += w + GAP; }); });
-    return { A, need, slots };
+    return { A, need, slots, tools };
   }
   /* ein Gebinde an seiner Stelle bauen (Waren sind entlang x gebaut → um 90° gedreht, damit sie längs z liegen) */
   function unitAt(b, id, p) { b.at({ x: p.x, y: p.y, z: p.z, ry: PI / 2 + (p.ry || 0) }, m => (SWK.UNIT[id] || SWK.UNIT.bretter).fn(m)); }
@@ -134,7 +136,19 @@ const SITE3D = (() => {
         if (s.key !== key2) { s.key = key2; s.mesh = n > 0 ? stackMesh(id, full, n) : null; }
         s.visible = n > 0;
       }
+      /* v192: sobald etwas abgelegt ist, steht dort auch ein Werkzeugplatz (Kiste, Säge, Nagelschachtel) */
+      if (L.tools) {
+        if (!g.tools) g.tools = W.R.addChild(g.root, fnode(fmesh("site:tools192", toolsMesh), {}));
+        g.tools.x = L.tools.x; g.tools.z = L.tools.z; g.tools.visible = true;
+      }
     }
+  }
+  function toolsMesh() {
+    const b = new G3.MB();
+    b.box(0.26, 0.22, 0.5, 0x9a3b2e, { ry: 0.12 }); b.box(0.04, 0.06, 0.36, 0x2a2a2e, { y: 0.24, ry: 0.12 });
+    b.box(0.2, 0.012, 0.42, 0x8a8f96, { x: 0.3, y: 0.012, z: 0.05, ry: -0.2 }); b.box(0.06, 0.05, 0.12, 0x8a6a44, { x: 0.34, y: 0.012, z: 0.32, ry: -0.2 });
+    b.box(0.1, 0.06, 0.08, 0xc8b27a, { x: -0.22, y: 0, z: -0.2 });
+    return b;
   }
   /* --------------------------- Ablegen (Animation) ---------------------------
      put = { Ware: Gebinde } – schon aus dem Lager genommen und im Bauplatz-Lager (farm.js).

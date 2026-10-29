@@ -1089,17 +1089,36 @@ const FM = (() => {
     }
     return b;
   }
-  /* Wasser: tief in der Mitte, türkis und hell am Rand */
+  /* v195: Teichwasser ist statisch (water: 1, keine Bewegung) und dafür reicher an Farbe: Tiefenverlauf mit dunklen Tiefstellen
+     und hellen, sandigen Flachstellen. Alle Aufsätze (Reflexe, Ringe, Schaum um Steine) lesen dieselbe Farbfunktion, so liegen sie ohne Kanten auf dem Wasser. */
+  const PW_K = [0x174f7a, 0x194f7e, 0x1d5f8d, 0x236c99, 0x2a7aa6, 0x3487ae, 0x3f96b4, 0x52a3b4, 0x62adb4, 0x78b5ae, 0x8cbca8], PW_F0 = [0, 0.18, 0.35, 0.5, 0.62, 0.74, 0.82, 0.88, 0.93, 0.97, 1.0];
+  const PW_F = []; for (let k = 0; k < 11; k++) { if (k < 6) for (let q = 0; q < 3; q++) PW_F.push(PW_F0[k] + (PW_F0[k + 1] - PW_F0[k]) * q / 3); else PW_F.push(PW_F0[k]); }
+  const PW_LENS = [[0.3, -0.4, 1.7, 0.42, 0.3], [-1.2, 1.2, 1.3, 0.36, -0.2], [1.8, 0.9, 1.5, 0.38, 0.5], [-0.4, -2.0, 1.1, 0.3, 0.1], [2.5, -1.3, 1.0, 0.28, -0.4], [-2.4, -0.6, 1.2, 0.34, 0.25]];
+  const mixv = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+  function pondCol(r, x, z) {
+    const R = pondR(r, Math.atan2(z, x)), f = Math.min(1, Math.hypot(x, z) / R);
+    let k = 0; while (k < PW_F0.length - 2 && f > PW_F0[k + 1]) k++;
+    let c = lerpC(PW_K[k], PW_K[k + 1], (f - PW_F0[k]) / (PW_F0[k + 1] - PW_F0[k]));
+    const n = Math.sin(x * 1.1 + 0.5) * Math.sin(z * 0.9 + 1.3) + 0.5 * Math.sin(x * 2.3 - z * 1.7 + 2.0);
+    if (n > 0.15) c = mixv(c, [0.06, 0.2, 0.34], Math.min(0.2, (n - 0.15) * 0.22) * (1 - f * f));           /* Tiefstellen */
+    else if (n < -0.3 && f > 0.4) c = mixv(c, [0.56, 0.77, 0.7], Math.min(0.28, (-0.3 - n) * 0.3) * Math.min(1, (f - 0.4) * 3));   /* sandige Flachstellen */
+    PW_LENS.forEach(([cx, cz, l, w, ro]) => {                                                      /* Himmelsreflexe: ruhige, langgezogene Lichtflecken */
+      const dx = x - cx, dz = z - cz, u = (dx * Math.cos(ro) + dz * Math.sin(ro)) / l, v = (-dx * Math.sin(ro) + dz * Math.cos(ro)) / w, g = 1 - (u * u + v * v);
+      if (g > 0) c = mixv(c, [0.8, 0.93, 1.0], 0.3 * g * g);
+    });
+    return c;
+  }
+  const triUpF = (b, A, B, Cc, ca, cb, cc) => { const k = (B[2] - A[2]) * (Cc[0] - A[0]) - (B[0] - A[0]) * (Cc[2] - A[2]); if (k > 0) b.triV(A, B, Cc, ca, cb, cc); else b.triV(A, Cc, B, ca, cc, cb); };
   function pondWater(r) {
-    const b = new MB(), seg = 72, rings = [0, 0.35, 0.62, 0.82, 0.93, 1.0], cols = [0x174f7a, 0x1d5f8d, 0x2a7aa6, 0x3f96b4, 0x62adb4, 0x8cbca8];
+    const b = new MB(), seg = 96;
     const P = (a, f) => { const R = f >= 1 ? pondR(r, a) + 0.06 : pondR(r, a) * f; return [Math.cos(a) * R, 0, Math.sin(a) * R]; };
-    for (let k = 0; k < rings.length - 1; k++)
+    const C = p => pondCol(r, p[0], p[2]);
+    for (let k = 0; k < PW_F.length - 1; k++)
       for (let i = 0; i < seg; i++) {
-        const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-        const f0 = rings[k], f1 = rings[k + 1];
-        if (f0 === 0) { b.triV([0, 0, 0], P(a1, f1), P(a0, f1), cols[0], cols[1], cols[1]); continue; }
-        b.triV(P(a0, f0), P(a1, f0), P(a1, f1), cols[k], cols[k], cols[k + 1]);
-        b.triV(P(a0, f0), P(a1, f1), P(a0, f1), cols[k], cols[k + 1], cols[k + 1]);
+        const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, f0 = PW_F[k], f1 = PW_F[k + 1];
+        if (f0 === 0) { const p1 = P(a1, f1), p2 = P(a0, f1); b.triV([0, 0, 0], p1, p2, C([0, 0, 0]), C(p1), C(p2)); continue; }
+        const A = P(a0, f0), B = P(a1, f0), D = P(a1, f1), E = P(a0, f1);
+        b.triV(A, B, D, C(A), C(B), C(D)); b.triV(A, D, E, C(A), C(D), C(E));
       }
     return b;
   }
@@ -1141,6 +1160,49 @@ const FM = (() => {
         if (i % 3 === 0) { b.ico(0.055, 0xf6a7c8, { y: 0.03, x: s * 0.2, flat: 0.7 }); b.ico(0.025, 0xffe27a, { y: 0.06, x: s * 0.2 }); }
       });
     });
+    /* v195: statische Details auf dem Wasser – alles flach auf 3,6 cm, Ränder laufen in die Wasserfarbe aus */
+    const WC = (x, z) => pondCol(r, x, z), Y = 0.036;
+    const ring = (cx, cz, r0, r1, tint, amt, y) => {                 /* feiner Ring, innen und außen in Wasserfarbe, in der Mitte hell */
+      const n = 28, Q = (k, q) => { const t = k / n * Math.PI * 2; return [cx + Math.cos(t) * q, y, cz + Math.sin(t) * q]; }, m = (r0 + r1) / 2;
+      for (let k = 0; k < n; k++) [[r0, m], [m, r1]].forEach(([q0, q1], h) => {
+        const A = Q(k, q0), B = Q(k + 1, q0), D = Q(k + 1, q1), E = Q(k, q1);
+        const cA = h ? mixv(WC(A[0], A[2]), tint, amt) : WC(A[0], A[2]), cB = h ? mixv(WC(B[0], B[2]), tint, amt) : WC(B[0], B[2]);
+        const cD = h ? WC(D[0], D[2]) : mixv(WC(D[0], D[2]), tint, amt), cE = h ? WC(E[0], E[2]) : mixv(WC(E[0], E[2]), tint, amt);
+        triUpF(b, A, B, D, cA, cB, cD); triUpF(b, A, D, E, cA, cD, cE);
+      });
+    };
+    G3.seed(971);
+    /* Seerosen: Blatt-Ringe wie ein stehengebliebener Wellenkranz */
+    const PADS = [[0.6, 0.55], [0.85, 0.5], [0.72, 0.62], [3.7, 0.55], [3.9, 0.48], [3.55, 0.62], [5.0, 0.6], [1.5, 0.72], [2.25, 0.66], [4.4, 0.7], [5.6, 0.52], [5.75, 0.63]];
+    PADS.forEach(([a, f], i) => {
+      if (i < 7) return;                                           /* die ersten sieben stehen oben, die neuen hier */
+      const R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R, s = 0.13 + rnd() * 0.08, ry = rnd() * 6.28;
+      b.at({ x, z, y: 0.055, ry }, () => {
+        for (let k = 1; k < 12; k++) { const p0 = k / 12 * Math.PI * 2, p1 = (k + 1) / 12 * Math.PI * 2; b.tri([0, 0, 0], [Math.cos(p1) * s, 0, Math.sin(p1) * s], [Math.cos(p0) * s, 0, Math.sin(p0) * s], k % 2 ? 0x4c9a3a : 0x55a542); }
+        if (i % 4 === 0) { b.ico(0.05, 0xffffff, { y: 0.03, x: s * 0.15, flat: 0.7 }); b.ico(0.024, 0xffe27a, { y: 0.058, x: s * 0.15 }); }
+      });
+    });
+    PADS.forEach(([a, f], i) => { const R = pondR(r, a) * f; ring(Math.cos(a) * R, Math.sin(a) * R, 0.2 + (i % 3) * 0.03, 0.34 + (i % 3) * 0.03, [0.82, 0.93, 0.98], 0.3, Y + 0.002); });
+    /* Wasserlinsen: kleine grüne Tupfer in einer Bucht */
+    for (let i = 0; i < 46; i++) {
+      const a = 5.9 + (rnd() - 0.5) * 0.9, f = 0.66 + rnd() * 0.25, R = pondR(r, a) * f, x = Math.cos(a) * R + (rnd() - 0.5) * 0.3, z = Math.sin(a) * R + (rnd() - 0.5) * 0.3, s = 0.028 + rnd() * 0.03, ry = rnd() * 6.28;
+      triUpF(b, [x + Math.cos(ry) * s, 0.04, z + Math.sin(ry) * s], [x + Math.cos(ry + 2.1) * s, 0.04, z + Math.sin(ry + 2.1) * s], [x + Math.cos(ry + 4.2) * s, 0.04, z + Math.sin(ry + 4.2) * s], 0x6cb04a, 0x79bd52, 0x5fa23f);
+    }
+    /* Steine im flachen Wasser mit hellem Rand, und Kiesel unter der Oberfläche */
+    [[0.55, 0.9, 0.2], [0.75, 0.84, 0.14], [2.7, 0.95, 0.16], [4.2, 0.88, 0.22], [1.15, 0.97, 0.12]].forEach(([a, f, s]) => {
+      const R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R;
+      ring(x, z, s * 1.05, s * 1.85, [0.95, 0.98, 1.0], 0.55, Y + 0.003);
+      b.noise(0.08, () => b.ico(s, rnd() < 0.5 ? 0x9a948a : 0x827d75, { x, y: 0.012, z, flat: 0.55, jitter: 0.5 }));
+    });
+    for (let i = 0; i < 38; i++) {
+      const a = rnd() * 6.28, f = 0.72 + rnd() * 0.24, R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R;
+      if (Math.abs(a - Math.PI) < 0.55) continue;                                      /* nicht unter dem Steg */
+      b.ico(0.035 + rnd() * 0.04, [0x6e7f7e, 0x7f8f88, 0x5f6f73][i % 3], { x, y: 0.016, z, flat: 0.35, jitter: 0.4 });
+    }
+    /* Treibholz am Ufer */
+    { const a = 1.95, R = pondR(r, a) - 0.05, x = Math.cos(a) * R, z = Math.sin(a) * R;
+      b.at({ x, z, y: 0.045, ry: 0.9 }, () => { b.cyl(0.05, 0.06, 0.95, 7, 0x6f5638, { rz: Math.PI / 2 }); b.cyl(0.03, 0.035, 0.4, 6, 0x7a6243, { rz: Math.PI / 2, x: 0.3, z: 0.1, ry: 0.7 }); });
+      ring(x, z, 0.45, 0.7, [0.9, 0.96, 0.98], 0.3, Y + 0.002); }
     /* Steg Richtung Hof */
     const a = Math.PI, R0 = pondR(r, a);
     b.at({ x: Math.cos(a) * (R0 - 0.9), z: Math.sin(a) * (R0 - 0.9) + 0.4, ry: 0 }, () => {

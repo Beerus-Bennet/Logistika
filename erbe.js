@@ -41,12 +41,14 @@ const FWORLD = {
      ausgerichtet; die Daten bleiben, damit die fällbaren Bäume eines neuen Spiels dieselben bleiben;
      alle Wege enden genau am Bordstein der Straße (z = 17,48) */
   paths: [
-    [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-41, -21], [-41, -30]],
+    [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-39.8, -18.9], [-41, -21], [-41, -30]],
     [[-41, -54], [-40, -63], [-37.2, -67.8], [-34.2, -70.6], [-33.8, -73.5], [-33.8, -76.4], [-33.8, -79.3], [-33.8, -84], [-34, -92], [-34.6, -98], [-36.6, -103], [-39.2, -106.7], [-43, -110.5], [-49.4, -116.9]],
     [[-54, -42], [-64, -42], [-72, -48], [-79.5, -50.6], [-83.5, -52.4], [-85.5, -54.2], [-86, -55.6]],
     [[-34.2, -70.6], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.8, 11.2], [40.3, 14.6], [40, 16.2], [40, 17.48]],
     [[-33.8, -84], [-46, -82], [-60, -78], [-70, -72]],
-    [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.48]]
+    [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.48]],
+    /* v197: Zufahrt vom Südende des Lkw-Stellplatzes (Radstopper im Norden, der Laster fährt von Süden ein) zum Waldweg; mündet auf dem Hauptweg (Punkt auf der Strecke (−37, −14) → (−41, −21)) */
+    [[-43.5, -22.9], [-43.5, -21.4], [-43.0, -20.0], [-41.6, -19.3], [-39.8, -18.9]]
   ],
   /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg.
      v75: er endet nirgends mehr offen auf der Wiese – im Nordosten entspringt er an einer Quelle mit Felsen

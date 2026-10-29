@@ -885,7 +885,7 @@ function worldStatic() {
   const WAYS = FWORLD.paths.map((p, i) => {
     const gate = q => inYard(q[0], q[1], 0.6), road = q => q[1] > 16;
     /* v72: kein „loses Ende“ mit Lichtung und Bank in der Nähe des Bachs (dort endet der Weg am Steg) */
-    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inHofMax(q[0], q[1], 2) && !road(q) && distLine(q[0], q[1], FWORLD.creek) > 7;
+    const loose = q => !FWORLD.paths.some((o, j) => j !== i && o.some(r => Math.hypot(r[0] - q[0], r[1] - q[1]) < 3)) && !inYard(q[0], q[1], 3) && !inLkwBay(q[0], q[1], 0.5) && !inHofMax(q[0], q[1], 2) && !road(q) && distLine(q[0], q[1], FWORLD.creek) > 7;
     const a = p[0], e = p[p.length - 1], hof = q => inHofMax(q[0], q[1], 1.5);
     const tee = [teeOf(a, i), teeOf(e, i)];
     /* Westweg: das Ende sitzt auf dem Steg-Auflager und läuft in der Achse des Stegs an */
@@ -972,7 +972,7 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [6, 0], min: 0.7, w: 1.5 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
   lines.merge(FWM.creekBank(LCR, CL), {});
   const SP = FWORLD.spring;
@@ -988,12 +988,14 @@ function worldStatic() {
   const sb = new FM.MB(); sb.merge(FWM.creekWater(LCR, CL), {});
   R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
   if (SPI) {
-    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 4, shadow: false }));
+    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 2, shadow: false }));
     const ry = Math.atan2(-SPI.dir[1], SPI.dir[0]);
     /* v191: Felsen und Wasserfall 1,5-mal so groß (Topf jetzt Radius 4,5) */
     const SF = FWM.SPRING_FALL, k = SF.S;
     R.nodes.push(fnode(fmesh("wspring191", FWM.springRocks), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
-    R.nodes.push(fnode(fmesh("wspringfall191", FWM.springFall), { x: SPI.C[0], z: SPI.C[1], ry, s: k, glow: 0.28, shadow: false }));
+    /* v193: Wasserfall und Schaum im Shader (water: 6) – fließend, halbtransparent, weiche Ränder; flow = (Länge, Tempo, Querdichte) */
+    R.nodes.push(fnode(fmesh("wspringfall193", FWM.springFall), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [7.0, 1.7, 5.5, 0], alpha: 0.98, shadow: false }));
+    R.nodes.push(fnode(fmesh("wspringfoam193", FWM.springFoam), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep) */
     const c = Math.cos(ry), s = Math.sin(ry), W = p => [SPI.C[0] + (p[0] * c + p[2] * s) * k, SPI.C[1] + (-p[0] * s + p[2] * c) * k];
     const ft = W(SF.foot), lp = W(SF.top);
@@ -1060,7 +1062,7 @@ function worldStatic() {
   /* Teich im Osten */
   st.merge(FM.pondBank(POND.r), { x: POND.x, z: POND.z });
   R.nodes.push(fnode(R.mesh(st), { shadow: false }));
-  R.nodes.push(fnode(fmesh("pond", () => FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(fmesh("pond", () => FM.pondWater(POND.r)), { x: POND.x, y: 0.03, z: POND.z, water: 1, shadow: false }));
   FV.foam = fnode(fmesh("pondFoam", () => FM.pondFoam(POND.r)), { x: POND.x, y: 0.042, z: POND.z, alpha: 0.4, shadow: false });
   R.nodes.push(FV.foam);
   R.nodes.push(fnode(fmesh("pondReeds", () => FM.pondReeds(POND.r)), { x: POND.x, z: POND.z, sway: 0.9 }));
@@ -3420,10 +3422,20 @@ function worldStep(dt, time) {
   /* v190: Gischt am Fuß des Quell-Wasserfalls (nur wenn die Kamera in der Nähe ist) */
   const sf = WV.springFx;
   if (sf && FV.R.cam && Math.hypot(FV.R.cam.tx - sf.x, FV.R.cam.tz - sf.z) < 50) {
-    if (Math.random() < dt * 18) FV.R.emit({ x: sf.x + (Math.random() - 0.5) * 1.2, y: 0.12, z: sf.z + (Math.random() - 0.5) * 1.2, vx: (Math.random() - 0.5) * 0.6 + sf.dx * 0.4, vy: 0.6 + Math.random() * 0.7, vz: (Math.random() - 0.5) * 0.6 + sf.dz * 0.4, life: 1.1, size: 0.22, size2: 0.6, col: [0.93, 0.97, 1, 0.5], drag: 1.6 });
-    /* v191: Wasserstränge, die über die Kante schießen und im Bogen in den Topf fallen – bewegt den Fall sichtbar */
-    if (Math.random() < dt * 22) { const u = (Math.random() - 0.5) * sf.w * 0.8, v = 1.1 + Math.random() * 0.4;
-      FV.R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly + 0.05, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9, life: 0.75, size: 0.12, size2: 0.2, col: [0.88, 0.96, 1, 0.85], drag: 0.2 }); }
+    /* v193: weiche Gischt statt fester Kreise – je Sekunde feste Raten (unabhängig von der Bildrate):
+       Nebel am Aufprall (shape 4, ganz weich, wächst und verweht), feine Spritzer nach oben/außen (shape 5),
+       Nebelschleier am unteren Teil des Falls, vereinzelte Tropfen an den Rändern */
+    const R = FV.R, rnd = Math.random, fw = sf.w;
+    const acc = sf.acc || (sf.acc = { mist: 0, drop: 0, veil: 0, edge: 0 });
+    const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
+    for (let i = fx("mist", 9); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.9;
+      R.emit({ x: sf.x + sf.dx * 0.5 + Math.cos(a) * r, y: 0.15 + rnd() * 0.3, z: sf.z + sf.dz * 0.5 + Math.sin(a) * r, vx: Math.cos(a) * 0.35 + sf.dx * 0.3, vy: 0.35 + rnd() * 0.45, vz: Math.sin(a) * 0.35 + sf.dz * 0.3, life: 1.8 + rnd() * 0.8, size: 0.35, size2: 1.25, col: [0.94, 0.97, 1, 0.3], drag: 1.2, shape: 4 }); }
+    for (let i = fx("drop", 34); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.6, u = (rnd() - 0.5) * fw;
+      R.emit({ x: sf.x + sf.side[0] * u * 0.6, y: 0.08, z: sf.z + sf.side[1] * u * 0.6, vx: Math.cos(a) * s * 0.7 + sf.dx * s * 0.5, vy: 1.6 + rnd() * 2.0, vz: Math.sin(a) * s * 0.7 + sf.dz * s * 0.5, g: -9.5, life: 0.55 + rnd() * 0.3, size: 0.05 + rnd() * 0.04, size2: 0.03, col: [0.96, 0.99, 1, 0.9], drag: 0.4, shape: 5, fade: false }); }
+    for (let i = fx("veil", 5); i-- > 0;) { const t = 0.55 + rnd() * 0.35, u = (rnd() - 0.5) * fw;
+      R.emit({ x: sf.lx + (sf.x - sf.lx) * t + sf.side[0] * u, y: sf.ly * (1 - t * t) + 0.1, z: sf.lz + (sf.z - sf.lz) * t + sf.side[1] * u, vx: sf.dx * 0.4, vy: -0.6, vz: sf.dz * 0.4, life: 1.0, size: 0.25, size2: 0.7, col: [0.95, 0.98, 1, 0.22], drag: 1.5, shape: 4 }); }
+    for (let i = fx("edge", 7); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.38 + rnd() * 0.12), v = 1.0 + rnd() * 0.5;
+      R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v + sf.side[0] * sd * 0.3, vy: 0.1, vz: sf.dz * v + sf.side[1] * sd * 0.3, g: -9.5, life: 0.75, size: 0.06, size2: 0.04, col: [0.9, 0.97, 1, 0.85], drag: 0.1, shape: 5, fade: false }); }
   }
   stepOutline(time);
   worldTags();

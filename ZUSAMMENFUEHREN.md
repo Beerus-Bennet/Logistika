@@ -1,5 +1,65 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v198 – Arbeitermenü scrollbar (auf v197)
+
+| Datei | Änderung |
+|---|---|
+| `team.js` | `renderStaffPop`: Halten bricht bei Bewegung/Scrollen ab, kein Neuzeichnen unter dem Finger |
+| `style.css` | Kacheln: `touch-action: pan-y`, kein iOS-Callout |
+| `index.html`, `sw.js` | Version 198 |
+
+## Stand v197 – Zufahrt Lkw-Stellplatz (auf v196)
+
+| Datei | Änderung |
+|---|---|
+| `erbe.js` | `FWORLD.paths`: Stützpunkt auf Weg 0, neuer Weg 6 (Zufahrt) |
+| `worldview.js` | `loose()` ohne Lkw-Stellplatz |
+| `farmview.js` | `lkwRoute` über die Zufahrt |
+| `index.html`, `sw.js` | Version 197 |
+
+## Stand v196 – Angelsteg ohne Boot, Fisch auf dem Schild (auf v195)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `pier()`: Ruderboot und Leine entfernt; Fisch auf dem Schild kleiner und mittig |
+| `index.html`, `sw.js` | Version 196 |
+
+## Stand v195 – Teich statisch und detailreicher (auf v194)
+
+| Datei | Änderung |
+|---|---|
+| `farmmodels.js` | `pondCol()`/`PW_F`/`PW_LENS`, `pondWater` neu (feines Gitter, Farbfunktion), `pondProps` mit Seerosen, Ringen, Wasserlinsen, Steinen, Kieseln, Treibholz |
+| `farmview.js` | Teichwasser `water: 1`; Enten ohne Wippen und Heckwelle; Schaum konstant |
+| `worldview.js` | Teichwasser `water: 1` |
+| `index.html`, `sw.js` | Version 195 |
+
+## Stand v194 – Quelle–Bach-Übergang (auf v193)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `springGeo.dU` mit weichem Minimum (k = 3,2); `springPool2` schneidet am vereinigten Feld, Gitter größer (`Hs = RP·1,2 + 4,2`) |
+| `worldview.js` | `CR.taper` `[0, 0]`; Topfwasser `water: 2` |
+| `index.html`, `sw.js` | Version 194 |
+
+## Stand v193 – Wasserfall im Shader (auf v192)
+
+| Datei | Änderung |
+|---|---|
+| `gl3d.js` | FS: `uniform vec4 uFlow`, `hsh`/`vnoise`/`fallWater()`, Zweig `uWater > 5.5` (Farbe und Deckkraft aus `vCol` als Koordinaten), Ausgabe `aOut`; `draw()`: `uFlow` aus `n.flow`; Partikel-FS: `shape` 4 (Nebel) und 5 (Tropfen) |
+| `woodmodels.js` | `springFall()` neu (Rinne + Kante + Wurfbogen, 34 × 12, beidseitig, Vertexfarbe = Koordinaten), neu `springFoam()` (exportiert), Kantenstein in `springRocks` |
+| `worldview.js` | Knoten `wspringfall193` und `wspringfoam193` mit `water: 6`, `flow`, `alpha: 0.98`; Gischt in `worldStep` mit festen Raten (`WV.springFx.acc`) |
+| `index.html`, `sw.js` | Version 193 |
+
+## Stand v192 – Hütte am See, Nagel-Spiel (auf v191)
+
+| Datei | Änderung |
+|---|---|
+| `rent.js` | `ruinMesh(stage)` komplett neu (Hilfen `logSeg`, `pk`, `hh`, `triUp`, Farben `RW`, Maße `RA/EAVE/RIDGE/RL/DZR`); neu `yardMesh`, `phase()` (aus `S.farm.depot.rent`), `PHASES`, `phaseHTML()`; Welt: drei Ruinen-Knoten `rent_ruin{0,1,2}_v192`, Boden `rent_yard_v192`, Pfad immer sichtbar (Deckkraft je Zustand), Staub beim Zustandswechsel; `PATH[1..2]` enger an der Veranda; `buildNow(q)` speichert `T.q`; Antippen/Hinweis höher; Export `phase`, `PHASES` |
+| `minigames.js` | `MG_GAMES.nails` komplett neu (Canvas `#mgNc`, `TIER`, `zone`, `speed`, `strike`, `finish`, `draw`, `nail`, `hammer`); Schnittstelle unverändert (`short`, `title` → `{ ok, score }`) |
+| `bauplatz.js` | Reihe der Hütte am See bei z 6,4 (vorher 6,15); `layout()` liefert `tools`; Werkzeugplatz-Knoten `site:tools192` in `sync()`, `toolsMesh` |
+| `style.css` | `.rn-ph` (Schrittleiste), `.mg-ncv`, `.mg-nprog` |
+| `index.html`, `sw.js` | Version 192 |
+
 ## Stand v191 – Wasserfall, Quelle größer (auf v190)
 
 | Datei | Änderung |

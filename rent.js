@@ -48,7 +48,8 @@ const RENT = (() => {
   /* Parkfleck an der Straße (Auto längs, Front nach +x) und Trampelpfad von den Stufen zur Straße */
   const CAR = { x: -46, z: 21.4 };
   const CARDOOR = [CAR.x - 0.2, CAR.z + 1.05];
-  const PATH = [STEPS, Wp(-2.6, 5.3), Wp(-4.6, 3.6), Wp(-5.0, -0.6), [-44.2, 27.6], [-43.2, 23.6], [-42.6, 21.0], [-42.4, 19.52]];
+  const PATH = [STEPS, Wp(-2.8, 4.85), Wp(-4.6, 3.5), Wp(-5.0, -0.6),     /* v192: Bogen enger an der Veranda – vorn liegt das Baumaterial */
+                [-44.2, 27.6], [-43.2, 23.6], [-42.6, 21.0], [-42.4, 19.52]];
   const CAR_IN = [[-150, 19.1], [CAR.x - 7, 19.1], [CAR.x - 3.6, 19.5], [CAR.x - 1.6, 20.9], [CAR.x, 21.4]];
   const CAR_OUT = [[CAR.x, 21.4], [CAR.x + 1.8, 21.2], [CAR.x + 3.6, 20.0], [CAR.x + 5.8, 19.1], [100, 19.1]];
 
@@ -181,9 +182,10 @@ const RENT = (() => {
     if (S.money < COST) return "Dafür fehlt das Geld (" + eur(COST) + ").";
     return true;
   }
-  function buildNow() {
+  function buildNow(q) {
     const T = st();
     if (T.built || buildCheck() !== true) return false;
+    if (q != null) T.q = Math.round(Math.max(0, Math.min(1, q)) * 100);   /* v192: Bauqualität aus dem Nagel-Spiel (nur Anzeige) */
     siteTake("rent", NEED);
     S.money -= COST; S.expense = (S.expense || 0) + COST;
     if (typeof logMoney === "function") logMoney("farm", "Hütte am See aufgebaut", -COST);
@@ -358,46 +360,252 @@ const RENT = (() => {
     }
     return b;
   }
-  /* Verfallene Hütte: Reste der Rundholzwände, eingestürztes Dach, kaputte Veranda, Unkraut */
-  function ruinMesh() {
+  /* ------------------- v192: Verfallene Hütte, nachvollziehbar gebaut -------------------
+     Eine Blockhütte, die lange leer stand: Steinsockel, Bodenbalken mit Dielen, Rundholzwände mit verkämmten Ecken,
+     Tür- und Fensteröffnungen mit Zargen, Dachstuhl (Firstbalken, Sparren) mit alten Dachbrettern. Die rechte vordere
+     Ecke ist eingestürzt: dort fehlen die oberen Wandlagen, die Sparren sind abgebrochen, das Dach ist offen, die
+     Stämme liegen darunter im Gras. Bauzustand (stage) nach dem echten Spielstand (abgelegtes Material, siehe phase()):
+       0 verfallen – Schutt liegt, wo er hingefallen ist, Unkraut in der Hütte
+       1 Baustelle eingerichtet – Schutt sortiert auf einem Ausschusshaufen, Unkraut weg, Sägebock und Werkzeugkiste
+       2 gesichert, Dach in Arbeit – Stützen an der eingestürzten Wand, neue Sparren und Latten, Dachlücken mit neuen
+         Brettern geschlossen, Leiter am Dach
+     Lokal: Front (Tür, Veranda) +z. */
+  const RW = { log: [0x8a5a36, 0x7b4f2f, 0x86644a, 0x7a6654, 0x6f5a48, 0x80583a], damp: 0x5c4532, end: [0xb8956a, 0xa89478, 0xc2a37a],
+    roof: [0x6b5a4c, 0x5e4e42, 0x75624f, 0x544840, 0x6e5f52], fresh: 0xc49a64, fresh2: 0xd2a970, frame: 0x6a4a30, moss: 0x5f7f3a, moss2: 0x4f6e32,
+    net: 0x4e5a48, float: 0xd8743a, metal: 0x4a4a50, rope: 0xc8b088, tool: 0x9a3b2e };
+  /* Dreieck mit Normale nach oben (Wicklung prüfen, wie triUp in woodmodels.js) */
+  const triUp = (b, A, B, Cc, ca, cb, cc) => { const k = (B[2] - A[2]) * (Cc[0] - A[0]) - (B[0] - A[0]) * (Cc[2] - A[2]); if (k > 0) b.triV(A, B, Cc, ca, cb, cc); else b.triV(A, Cc, B, ca, cc, cb); };
+  const hh = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const pk = (arr, a, b) => arr[Math.floor(hh(a, b) * arr.length) % arr.length];
+  /* Stamm von a0 bis a1 (along "x": Wand längs x bei z = c; "z": längs z bei x = c); brk: Bruchende (Splitter) an a0/a1 */
+  function logSeg(b, along, c, y, a0, a1, col, end, brk) {
+    const L = a1 - a0, r = 0.13;
+    if (L < 0.05) return;
+    if (along === "x") b.cyl(r, r, L, 8, col, { rz: Math.PI / 2, x: a1, y, z: c, top: end });
+    else b.cyl(r, r, L, 8, col, { rx: Math.PI / 2, z: a0, y, x: c, top: end });
+    (brk || []).forEach(k => {      /* Splitter: kurzer, spitz zulaufender Stummel am Bruchende */
+      const at = k ? a1 : a0, d = k ? 1 : -1;
+      if (along === "x") b.cyl(r * 0.85, r * 0.25, 0.16, 6, col, { rz: -d * Math.PI / 2, x: at, y, z: c + 0.02, top: end });
+      else b.cyl(r * 0.85, r * 0.25, 0.16, 6, col, { rx: d * Math.PI / 2, z: at, y, x: c + 0.02, top: end });
+    });
+  }
+  const LY = i => 0.5 + i * 0.25;                                       /* Höhe der Lage i (Wände längs x), längs z +0,125 */
+  const RA = 0.55, EAVE = HW + 0.35, RIDGE = 2.5 + HW * Math.tan(RA), RL = EAVE / Math.cos(RA), DZR = HD * 2 + 0.7;
+  function ruinMesh(stage) {
     G3.seed(8202);
-    const b = MB();
+    const b = MB(), E = HW + 0.2, Dd = HD + 0.2;
     foundation(b);
-    b.noise(0.08, () => {
-      for (let i = 0; i < 8; i++) {
-        const y = 0.5 + i * 0.25, col = i % 2 ? C.log2 : C.log;
-        const bk = 0.5 + 0.5 * Math.sin(i * 1.7);
-        logRow(b, "x", -HD, y, HW * 2 + 0.4 - (i > 4 ? 2.2 * bk : 0), col, 0.13);                                    /* Rückwand: oben eingebrochen */
-        if (i < 6) logRow(b, "z", -HW, y + 0.125, HD * 2 + 0.4 - (i > 2 ? 1.6 * bk : 0), col, 0.13);                   /* linke Wand halb */
-        if (i < 2) logRow(b, "z", HW, y + 0.125, HD * 2 + 0.4 - i * 1.2, col, 0.13);                                   /* rechte Wand fast weg */
-        if (i < 4) { logRow(b, "x", HD, y, 1.6 - (i % 2) * 0.3, col, 0.13); b.cyl(0.13, 0.13, 1.5 - i * 0.25, 8, col, { rz: Math.PI / 2, x: HW + 0.2, y, z: HD, top: C.logEnd }); }
+    /* feuchter, dunklerer Sockelrand mit Moos auf der Schattenseite (hinten) */
+    b.noise(0.1, () => { for (let k = 0; k < 7; k++) b.ico(0.16 + hh(k, 1) * 0.08, k % 2 ? RW.moss : RW.moss2, { x: -2.3 + k * 0.75, y: 0.3, z: -HD - 0.24, flat: 0.35, jitter: 0.3 }); });
+    /* Boden: dunkler Unterboden, Bodenbalken, Dielen (rechts vorn verrottet) */
+    b.box(HW * 2 - 0.05, 0.01, HD * 2 - 0.05, 0x3e3226, { y: 0.362 });
+    for (let z = -HD + 0.3; z < HD; z += 0.6) b.box(HW * 2 - 0.1, 0.1, 0.11, 0x5a4330, { y: 0.37, z });
+    b.noise(0.1, () => {
+      for (let x = -HW + 0.17, i = 0; x < HW - 0.1; x += 0.28, i++) {
+        const col = pk([0x8a6e50, 0x7d644a, 0x94785a], i, 3);
+        if (x > 1.25) b.box(0.25, 0.05, HD + 0.2 - hh(i, 4) * 0.5, col, { x, y: 0.47, z: -HD / 2 - 0.1 - 0.25 + hh(i, 4) * 0.25 });   /* vorn weggefault */
+        else if (i === 6 || i === 11) b.box(0.25, 0.05, HD * 0.9, col, { x, y: 0.47, z: -HD * 0.5 });                           /* einzelne fehlen halb */
+        else b.box(0.25, 0.05, HD * 2 - 0.1, col, { x, y: 0.47 });
       }
     });
-    b.box(0.3, 0.6, 0.06, C.door, { x: 1.4, y: 0.55, z: -HD - 0.16, rz: 0.9 }); b.box(0.3, 0.6, 0.06, C.door, { x: 1.4, y: 0.55, z: -HD - 0.16, rz: -0.9 });   /* vernageltes Fenster */
-    /* eingestürztes Dachstück lehnt an der Rückwand */
-    b.at({ x: -0.6, y: 0.35, z: 0.9, rx: 0.62, ry: 0.15 }, () => {
-      b.box(3.0, 0.12, 2.4, C.roof, { z: -1.2 });
-      for (let k = 1; k < 7; k++) b.box(3.0, 0.05, 0.06, C.roofD, { y: 0.11, z: -k * 0.33 });
+    /* ------------------------- Wände (Rundholz) ------------------------- */
+    b.noise(0.07, () => {
+      for (let i = 0; i < 8; i++) {
+        const y = LY(i), cA = i === 0 ? RW.damp : pk(RW.log, i, 1), cB = i === 0 ? RW.damp : pk(RW.log, i, 2), cC = i === 0 ? RW.damp : pk(RW.log, i, 5), eA = pk(RW.end, i, 1);
+        /* Rückwand: ganz, Fenster (vernagelt) in den Lagen 3–5 */
+        if (i >= 3 && i <= 5) { logSeg(b, "x", -HD, y, -E, 0.75, cA, eA); logSeg(b, "x", -HD, y, 1.65, E, cA, eA); }
+        else logSeg(b, "x", -HD, y, -E, E, cA, eA);
+        /* Front: Tür (−0,05…1,05) bis Lage 6, Fenster (−2,05…−1,05) Lagen 3–5; rechts ab Lage 5 eingestürzt */
+        const door = i <= 6, wnd = i >= 3 && i <= 5;
+        if (i < 7) {
+          logSeg(b, "x", HD, y, -E, wnd ? -2.05 : -0.05, cB, eA);
+          if (wnd) logSeg(b, "x", HD, y, -1.05, -0.05, cB, eA);
+          if (i <= 4) logSeg(b, "x", HD, y, 1.05, E, cB, eA);
+        } else logSeg(b, "x", HD, y, -E, 1.35, cB, eA, [1]);      /* Sturz über der Tür, rechts abgebrochen */
+        if (door && i > 4) { /* nichts rechts der Tür */ }
+        /* linke Wand ganz (Kamin außen), rechte Wand ab Lage 5 vorn weggebrochen (gestuft) */
+        logSeg(b, "z", -HW, y + 0.125, -Dd, Dd, cC, eA);
+        if (i <= 4) logSeg(b, "z", HW, y + 0.125, -Dd, Dd, cC, eA);
+        else logSeg(b, "z", HW, y + 0.125, -Dd, [-0.3, -0.65, -1.05][i - 5], cC, eA, [1]);
+      }
     });
-    /* herabgefallene Stämme, Bretter, Schutt */
-    [[1.2, 0.9, 0.7], [-0.4, -0.6, 2.3], [3.4, 1.4, 1.2], [2.8, -2.8, 0.2]].forEach(([x, z, ry]) => b.cyl(0.12, 0.12, 2.2, 8, C.log2, { rz: Math.PI / 2, x, y: 0.14, z, ry, top: C.logEnd }));
-    for (let i = 0; i < 9; i++) b.box(0.14, 0.04, 1.0 + rnd() * 0.8, rnd() < 0.5 ? C.deck : C.board, { x: -2 + rnd() * 6, y: 0.37 + rnd() * 0.08, z: -1.5 + rnd() * 5.5, ry: rnd() * 3, rx: (rnd() - 0.5) * 0.3 });
-    chimney(b, 3.9);
-    b.box(0.5, 0.3, 0.6, C.stone2, { x: -HW - 0.6, y: 0, z: 0.9 });
-    /* Veranda: Unterbau, ein paar Dielen, schiefe Pfosten */
-    b.box(HW * 2 + 0.4, 0.3, 0.16, C.deckD, { y: 0, z: VZ - 0.1 }); b.box(0.16, 0.3, VZ - HD, C.deckD, { x: -HW, y: 0, z: (HD + VZ) / 2 });
-    [HD + 0.3, HD + 0.8, HD + 1.5].forEach((z, i) => b.box(HW * 2 - 0.4 - i * 0.9, 0.06, 0.22, C.deck, { x: -0.5 + i * 0.4, y: 0.32, z, ry: (i - 1) * 0.05 }));
-    b.box(0.15, 1.9, 0.15, C.post, { x: -HW - 0.05, y: 0.3, z: VZ - 0.1 });
-    b.box(0.15, 1.9, 0.15, C.post, { x: 1.2, y: 0.3, z: VZ - 0.1, rz: -0.55 });
-    b.box(1.4, 0.07, 0.07, C.post, { x: -1.6, y: 1.1, z: VZ - 0.1, rz: 0.3 });
-    /* Unkraut, Brennnesseln, ein junger Strauch in der Hütte */
-    for (let i = 0; i < 26; i++) {
-      const x = -3.6 + rnd() * 7.6, z = -3 + rnd() * 7.6;
-      b.ico(0.18 + rnd() * 0.22, rnd() < 0.5 ? C.green : C.green2, { x, y: 0.12 + (Math.abs(x) < HW && Math.abs(z) < HD ? 0.3 : 0), z, jitter: 0.45, flat: 0.7 });
+    /* Moos an der untersten Lage hinten und links (Schattenseite) */
+    [[-1.6, -HD - 0.12, 0], [0.4, -HD - 0.12, 0], [2.0, -HD - 0.12, 0], [-HW - 0.12, -1.2, 1], [-HW - 0.12, 0.9, 1]].forEach(([x, z], k) => b.ico(0.12, k % 2 ? RW.moss : RW.moss2, { x, y: 0.6, z, flat: 0.45, jitter: 0.3 }));
+    /* Zargen: Tür und Fenster, alte Nägel, Tür hängt schief offen */
+    [-0.1, 1.1].forEach(x => b.box(0.1, 1.76, 0.34, RW.frame, { x, y: 0.37, z: HD }));
+    b.box(1.3, 0.1, 0.34, RW.frame, { x: 0.5, y: 2.12, z: HD });
+    [-2.1, -1.0].forEach(x => b.box(0.08, 0.78, 0.32, RW.frame, { x, y: 1.14, z: HD }));
+    b.box(1.18, 0.08, 0.4, RW.frame, { x: -1.55, y: 1.08, z: HD + 0.03 }); b.box(1.18, 0.07, 0.32, RW.frame, { x: -1.55, y: 1.9, z: HD });
+    b.box(0.95, 0.05, 0.03, 0x5a6a72, { x: -1.55, y: 1.2, z: HD - 0.05, rz: 0.5 });                  /* Rest der Scheibe */
+    b.at({ x: -0.06, y: 0.42, z: HD + 0.17, ry: 1.15 }, m => {                                          /* Tür, an einer Angel offen */
+      m.noise(0.08, () => { for (let k = 0; k < 4; k++) m.box(0.26, 1.62, 0.05, pk([0x6a4a2e, 0x5e4430, 0x735238], k, 9), { x: 0.14 + k * 0.27, rz: k === 3 ? 0.03 : 0 }); });
+      m.box(1.06, 0.08, 0.06, 0x553a24, { x: 0.53, y: 0.3, z: 0.04 }); m.box(1.06, 0.08, 0.06, 0x553a24, { x: 0.53, y: 1.2, z: 0.04 });
+    });
+    /* hinten: Fenster mit zwei Brettern über Kreuz vernagelt */
+    [0.7, 1.7].forEach(x => b.box(0.08, 0.78, 0.32, RW.frame, { x, y: 1.14, z: -HD }));
+    [0.55, -0.55].forEach(r => b.box(1.15, 0.14, 0.04, 0x7a6450, { x: 1.2, y: 1.5, z: -HD - 0.19, rz: r }));
+    [[0.75, 1.75], [1.62, 1.75], [0.75, 1.24], [1.62, 1.24]].forEach(([x, y]) => b.box(0.03, 0.03, 0.03, RW.metal, { x, y, z: -HD - 0.22 }));
+    /* ------------------------- Dachstuhl und Dach ------------------------- */
+    const Ns = 8, zr = k => -DZR / 2 + 0.15 + k * (DZR - 0.3) / (Ns - 1);
+    b.box(0.17, 0.17, DZR, 0x6a4c34, { y: RIDGE - 0.2 });                                              /* Firstbalken */
+    b.box(0.14, RIDGE - 2.4, 0.14, RW.frame, { x: -0.6, y: 2.38, z: HD - 0.05 });                       /* Stiel unter dem First vorn (links der Tür) */
+    b.box(0.12, 0.12, 1.0, RW.frame, { x: -0.3, y: RIDGE - 0.32, z: HD - 0.05, ry: Math.PI / 2 });
+    const slope = (s, fn) => b.at({ y: RIDGE, rz: -s * RA }, fn);
+    for (let k = 0; k < Ns; k++) {
+      const z = zr(k);
+      slope(-1, m => m.box(RL, 0.14, 0.1, 0x6e5038, { x: -RL / 2, y: -0.14, z }));                     /* links: alle Sparren */
+      const broken = z > 0.1;                                                                             /* rechts vorn eingestürzt */
+      if (!broken) slope(1, m => m.box(RL, 0.14, 0.1, 0x6e5038, { x: RL / 2, y: -0.14, z }));
+      else if (stage >= 2) slope(1, m => m.box(RL, 0.14, 0.1, RW.fresh, { x: RL / 2, y: -0.14, z }));     /* neue Sparren */
+      else { const l = RL * (0.25 + 0.2 * hh(k, 8)); slope(1, m => { m.box(l, 0.14, 0.1, 0x6e5038, { x: l / 2, y: -0.14, z }); m.cyl(0.05, 0.015, 0.14, 5, 0x6e5038, { rz: -Math.PI / 2, x: l, y: -0.07, z }); }); }
     }
-    b.ico(0.55, C.green2, { x: 0.6, y: 0.75, z: -0.3, jitter: 0.4 }); b.ico(0.4, C.green, { x: 1.0, y: 1.05, z: 0.1, jitter: 0.4 });
+    /* Giebel: hinten senkrechte Bretter (zwei fehlen), vorn nur links */
+    const gable = (z, xmin, xmax, skip) => {
+      for (let x = -HW + 0.15, i = 0; x < HW - 0.05; x += 0.3, i++) {
+        if (x < xmin || x > xmax || skip.includes(i)) continue;
+        const h = (EAVE - Math.abs(x) - 0.35) * Math.tan(RA) + 0.1;
+        if (h > 0.12) b.box(0.27, h, 0.05, pk(RW.roof, i, z > 0 ? 6 : 7), { x, y: 2.4, z: z + Math.sign(z) * 0.18 });
+      }
+    };
+    gable(-HD, -9, 9, [3, 12]); gable(HD, -9, -0.75, [2]);
+    /* Dachbretter längs z: links fast geschlossen (Lücken), rechts nur hinten, Bruchkante unregelmäßig */
+    b.noise(0.08, () => {
+      for (let u = 0.12, i = 0; u < RL + 0.05; u += 0.27, i++) {
+        const cL = pk(RW.roof, i, 11), cR = pk(RW.roof, i, 12);
+        const gapL = i === 4 || i === 8, halfL = i === 6;
+        if (gapL && stage >= 2) slope(-1, m => m.box(0.25, 0.05, DZR, RW.fresh2, { x: -u }));
+        else if (!gapL && !halfL) slope(-1, m => m.box(0.25, 0.05, DZR, cL, { x: -u }));
+        else if (halfL) slope(-1, m => m.box(0.25, 0.05, DZR * 0.55, cL, { x: -u, z: -DZR * 0.225 }));
+        const zEnd = -0.25 - hh(i, 13) * 0.55, L = zEnd + DZR / 2;
+        if (i !== 5) slope(1, m => m.box(0.25, 0.05, L, cR, { x: u, z: -DZR / 2 + L / 2 }));
+        if (stage >= 2 && i % 2 === 0) slope(1, m => m.box(0.06, 0.04, DZR / 2 - zEnd, RW.fresh2, { x: u, z: zEnd + (DZR / 2 - zEnd) / 2 }));   /* neue Latten */
+      }
+      /* alte Nägel in Reihen über den Sparren (links) */
+      for (let k = 0; k < Ns; k += 2) for (let u = 0.3; u < RL; u += 0.54) slope(-1, m => m.box(0.03, 0.02, 0.03, RW.metal, { x: -u, y: 0.05, z: zr(k) }));
+      /* Moos am unteren Rand der Schattenseite */
+      [[-RL + 0.25, -1.6], [-RL + 0.3, -0.4], [-RL + 0.55, -2.0]].forEach(([u, z], k) => slope(-1, m => m.ico(0.14, k % 2 ? RW.moss : RW.moss2, { x: u, y: 0.04, z, flat: 0.3, jitter: 0.3 })));
+    });
+    chimney(b, 4.5);
+    b.box(0.86, 0.1, 1.0, 0x6f6a62, { x: -HW - 0.35, y: 4.5, z: -0.2 });
+    /* ------------------------- Veranda (Reste) ------------------------- */
+    b.box(HW * 2 + 0.4, 0.3, 0.16, 0x6e5034, { y: 0, z: VZ - 0.1 }); b.box(0.16, 0.3, VZ - HD, 0x6e5034, { x: -HW, y: 0, z: (HD + VZ) / 2 });
+    [-2.3, -1.2, -0.1, 1.0, 2.1].forEach(x => b.box(0.12, 0.26, VZ - HD - 0.1, 0x5e4430, { x, y: 0.04, z: (HD + VZ) / 2 }));
+    b.noise(0.08, () => {
+      [[0, 1, 0], [1, 1, 0], [2, 0.6, -1.1], [4, 0.75, 0.6], [5, 1, 0], [7, 0.45, -1.5]].forEach(([k, f, dx]) => {
+        const Lb = (HW * 2 + 0.3) * f; b.box(Lb, 0.06, 0.22, pk([0x9a7a58, 0x8a6e50, 0xa08060], k, 14), { x: dx, y: 0.32, z: HD + 0.17 + k * 0.24 });
+      });
+    });
+    b.box(0.15, 1.45, 0.15, 0x6e5034, { x: -HW - 0.05, y: 0.3, z: VZ - 0.1 });
+    b.box(0.15, 0.62, 0.15, 0x6e5034, { x: -0.15, y: 0.3, z: VZ - 0.1 }); b.cyl(0.07, 0.02, 0.12, 5, 0x6e5034, { x: -0.15, y: 0.92, z: VZ - 0.1 });
+    b.box(1.3, 0.07, 0.07, 0x6e5034, { x: -HW + 0.6, y: 1.2, z: VZ - 0.1, rz: -0.05 });
+    b.box(1.3, 0.28, 0.34, 0x5e4430, { x: 0.5, y: 0, z: VZ + 0.18 }); b.box(1.3, 0.04, 0.34, 0x9a7a58, { x: 0.5, y: 0.28, z: VZ + 0.18 });
+    /* --------------------- Fischerei: was vom alten Fischer blieb --------------------- */
+    /* Netz an zwei Nägeln neben der Tür, hängt durch, mit Korkschwimmern */
+    const NX0 = -0.95, NX1 = -0.25, NY = 1.92, NZ = HD + 0.17;
+    for (let r = 0; r < 6; r++) { const y = NY - r * 0.16, sag = 0.1 * (1 - r / 6); b.box(NX1 - NX0 - r * 0.05, 0.015, 0.015, RW.net, { x: (NX0 + NX1) / 2, y: y - sag, z: NZ }); }
+    for (let c = 0; c < 6; c++) { const x = NX0 + c * (NX1 - NX0) / 5; b.box(0.015, 0.85 - Math.abs(c - 2.5) * 0.05, 0.015, RW.net, { x: x + (c - 2.5) * 0.012, y: NY - 0.9 + Math.abs(c - 2.5) * 0.05, z: NZ }); }
+    for (let c = 0; c < 4; c++) b.ico(0.04, RW.float, { x: NX0 + 0.08 + c * 0.18, y: NY - 0.02, z: NZ + 0.02 });
+    [NX0, NX1].forEach(x => b.box(0.03, 0.03, 0.06, RW.metal, { x, y: NY, z: NZ - 0.02 }));
+    /* Laterne am Haken links der Tür (aus) */
+    b.box(0.03, 0.03, 0.18, RW.metal, { x: -0.22 + 0.13, y: 1.95, z: HD + 0.22 });
+    b.box(0.13, 0.18, 0.13, RW.metal, { x: -0.09, y: 1.68, z: HD + 0.3 }); b.box(0.1, 0.12, 0.1, 0x9aa8a0, { x: -0.09, y: 1.71, z: HD + 0.3 });
+    /* alte Angel lehnt rechts der Tür, Kiste mit Seil und Eimer auf der Veranda, Fass an der Ecke */
+    b.box(0.035, 2.3, 0.035, 0x5a4030, { x: 1.55, y: 0.36, z: HD + 0.25, rz: -0.18 }); b.cyl(0.06, 0.06, 0.05, 8, RW.metal, { x: 1.62, y: 0.75, z: HD + 0.3, rx: Math.PI / 2 });
+    b.noise(0.1, () => { for (let k = 0; k < 3; k++) b.box(0.62, 0.11, 0.42, pk([0x8a6a44, 0x7d5f3c], k, 15), { x: -2.1, y: 0.35 + k * 0.12, z: 3.3 }); });
+    for (let k = 0; k < 3; k++) b.cyl(0.18 - k * 0.015, 0.18 - k * 0.015, 0.04, 10, k % 2 ? 0xb39a72 : RW.rope, { x: -2.1, y: 0.71 + k * 0.04, z: 3.3 });
+    b.cyl(0.17, 0.14, 0.32, 9, 0x7a5a38, { x: -1.45, y: 0.35, z: 3.45 }); b.cyl(0.175, 0.175, 0.03, 9, RW.metal, { x: -1.45, y: 0.6, z: 3.45 }); b.cyl(0.155, 0.155, 0.03, 9, RW.metal, { x: -1.45, y: 0.41, z: 3.45 });
+    b.cyl(0.3, 0.28, 0.78, 10, 0x6b4a30, { x: -HW - 0.55, z: 1.7 }); [0.12, 0.62].forEach(y => b.cyl(0.31, 0.31, 0.04, 10, RW.metal, { x: -HW - 0.55, y, z: 1.7 }));
+    /* ------------------------- Schutt / Baustelle ------------------------- */
+    if (stage === 0) {
+      /* die Stämme der eingestürzten Ecke liegen darunter im Gras, die Dachbretter daneben und drinnen */
+      [[HW + 0.6, 0.6, 0.12], [HW + 1.0, 1.25, -0.2], [HW + 0.75, 1.0, 0.05, 0.26]].forEach(([x, z, ry, y]) => b.cyl(0.13, 0.13, 2.0, 8, pk(RW.log, x * 10, z * 10), { rx: Math.PI / 2, x, y: y || 0.13, z: z - 1.0, ry, top: RW.end[0] }));
+      [[HW + 1.5, 2.3, 0.4], [HW + 0.4, 2.7, 1.2], [1.8, 1.0, 0.6, 0.53]].forEach(([x, z, ry, y]) => b.box(0.25, 0.05, 1.5, pk(RW.roof, x, z), { x, y: y || 0.05, z, ry, rx: y ? 0.18 : 0 }));
+      /* Unkraut in der Hütte (wo die Dielen fehlen), am Sockel und ein junger Strauch in der Ecke */
+      [[1.7, 0.9, 0.22], [2.2, 1.6, 0.18], [1.5, 1.7, 0.16], [2.1, 0.3, 0.2]].forEach(([x, z, r]) => b.ico(r, C.green, { x, y: 0.4, z, flat: 0.7, jitter: 0.4 }));
+      b.ico(0.5, C.green2, { x: 1.95, y: 0.7, z: 1.2, jitter: 0.4 }); b.ico(0.34, C.green, { x: 2.15, y: 1.05, z: 1.5, jitter: 0.4 });
+    } else {
+      /* Ausschuss: Stämme und kaputte Bretter sortiert hinten rechts, auf zwei Kanthölzern */
+      const SX = HW + 1.6, SZ = -2.5;
+      [-0.6, 0.6].forEach(dz => b.box(1.0, 0.08, 0.1, 0x6a5038, { x: SX, z: SZ + dz }));
+      [-0.14, 0.14].forEach((dx, k) => b.cyl(0.13, 0.13, 1.9, 8, pk(RW.log, k, 20), { rx: Math.PI / 2, x: SX + dx, y: 0.21, z: SZ - 0.95, top: RW.end[1] }));
+      b.cyl(0.13, 0.13, 1.7, 8, pk(RW.log, 3, 20), { rx: Math.PI / 2, x: SX, y: 0.44, z: SZ - 0.8, top: RW.end[1] });
+      [[0.42, 0.06], [0.52, -0.1], [0.62, 0.12]].forEach(([y, r], k) => b.box(0.25, 0.05, 1.2 - k * 0.2, pk(RW.roof, k, 21), { x: SX - 0.05 + k * 0.05, y: y + 0.17, z: SZ + 0.1, ry: r }));
+      /* Arbeitsplatz rechts vor der Hütte: Sägebock mit Brett, Werkzeugkiste */
+      const WX = HW + 1.35, WZ = 2.7;
+      [-0.45, 0.45].forEach(dz => { [-0.32, 0.32].forEach(r => b.box(0.07, 0.75, 0.07, 0x8a6a44, { x: WX, z: WZ + dz, rx: 0, rz: r })); });
+      b.box(0.12, 0.1, 1.1, 0x9a7a52, { x: WX, y: 0.68, z: WZ });
+      b.box(0.25, 0.05, 1.6, RW.fresh, { x: WX, y: 0.79, z: WZ + 0.1, ry: 0.06 });
+      b.box(0.5, 0.24, 0.28, RW.tool, { x: WX + 0.2, y: 0, z: WZ + 1.15, ry: 0.3 }); b.box(0.38, 0.06, 0.04, 0x2a2a2e, { x: WX + 0.2, y: 0.3, z: WZ + 1.15, ry: 0.3 });
+      b.box(0.04, 0.03, 0.26, 0x8a6a44, { x: WX + 0.05, y: 0.25, z: WZ + 1.12, ry: 0.3 }); b.box(0.1, 0.06, 0.05, RW.metal, { x: WX + 0.1, y: 0.25, z: WZ + 1.0, ry: 0.3 });
+      /* die wenigen Unkrautbüschel bleiben nur außen an den Ecken */
+      [[-HW - 0.3, -HD - 0.3], [HW + 0.3, -HD - 0.35]].forEach(([x, z]) => b.ico(0.2, C.green2, { x, y: 0.08, z, flat: 0.7, jitter: 0.4 }));
+    }
+    if (stage >= 2) {
+      /* Stützen an der eingestürzten Wand (frisches Holz, schräg vom Boden an die Wand) */
+      [-1.45, -0.55].forEach(z => { const x0 = HW + 1.25, y1 = 1.85, x1 = HW + 0.16, L = Math.hypot(x0 - x1, y1), a = Math.atan2(y1, x0 - x1);
+        b.box(L, 0.1, 0.1, RW.fresh, { x: (x0 + x1) / 2, y: y1 / 2 - 0.05, z, rz: -a }); b.box(0.3, 0.1, 0.24, 0x8a6a44, { x: x0 + 0.05, y: 0, z }); });
+      /* Leiter an der linken Traufe vorn */
+      b.at({ x: -EAVE - 0.55, y: 0, z: 1.55, rz: -0.24 }, m => { [-0.22, 0.22].forEach(z => m.box(0.06, 2.75, 0.06, RW.fresh, { z })); for (let y = 0.3; y < 2.7; y += 0.32) m.box(0.05, 0.05, 0.44, RW.fresh2, { y }); });
+    }
     return b;
   }
+  /* v192: Boden der Baustelle – festgetretene Erde um die Hütte mit weichem Rand ins Gras, vor Tür und Stufen
+     dunkler und fester, etwas Kies, ein feuchter Fleck unter dem Fass, Grasbüschel am Rand. Lokal wie die Hütte. */
+  function yardMesh() {
+    G3.seed(8205);
+    const b = MB(), gnd = typeof wGroundAt === "function" ? wGroundAt : () => 0x7fb444, y = 0.016, seg = 40;
+    const CX = 0.4, CZ = 1.3, RX = 5.4, RZ = 5.0;
+    const wob = a => 1 + 0.07 * Math.sin(a * 3 + 0.8) + 0.05 * Math.sin(a * 7 + 2.1);
+    const dirt = G3.col(0x9b8562), dirt2 = G3.col(0x8c7653), hard = G3.col(0x857050), damp = G3.col(0x7a6648);
+    const L = (lx, lz) => { const w = Wp(lx, lz); return G3.col(gnd(w[0], w[1])); };
+    const colAt = (x, z) => {
+      let c = mixC(0x9b8562, 0x8c7653, 0.5 + 0.5 * Math.sin(x * 1.3 + z * 0.9));
+      const dDoor = Math.hypot((x - 0.5) / 1.6, (z - 5.0) / 1.3);          /* vor den Stufen festgetreten */
+      if (dDoor < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dDoor));
+      const dW = Math.hypot((x - HW - 1.4) / 1.3, (z - 2.9) / 1.6);        /* Arbeitsplatz */
+      if (dW < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dW) * 0.7);
+      const dB = Math.hypot(x + HW + 0.55, z - 1.7) / 0.9;                  /* feucht unter dem Fass */
+      if (dB < 1) c = c.map((v, i) => v + (damp[i] - v) * (1 - dB));
+      return c;
+    };
+    const P = (a, k) => { const w = wob(a) * k; return [CX + Math.cos(a) * RX * w, CZ + Math.sin(a) * RZ * w]; };
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      /* drei Ringe innen (Farbe nach Lage), dann der Rand ins Gras */
+      const ks = [0, 0.4, 0.75, 1];
+      for (let r = 0; r < 3; r++) {
+        const A = P(a0, ks[r]), B = P(a1, ks[r]), C2 = P(a1, ks[r + 1]), D = P(a0, ks[r + 1]);
+        const cA = colAt(A[0], A[1]), cB = colAt(B[0], B[1]), cC = colAt(C2[0], C2[1]), cD = colAt(D[0], D[1]);
+        if (r === 0) triUp(b, [A[0], y, A[1]], [C2[0], y, C2[1]], [D[0], y, D[1]], cA, cC, cD);
+        else { triUp(b, [A[0], y, A[1]], [B[0], y, B[1]], [C2[0], y, C2[1]], cA, cB, cC); triUp(b, [A[0], y, A[1]], [C2[0], y, C2[1]], [D[0], y, D[1]], cA, cC, cD); }
+      }
+      const A = P(a0, 1), B = P(a1, 1), C2 = P(a1, 1.28), D = P(a0, 1.28);
+      triUp(b, [A[0], y, A[1]], [B[0], y, B[1]], [C2[0], y - 0.001, C2[1]], colAt(A[0], A[1]), colAt(B[0], B[1]), L(C2[0], C2[1]));
+      triUp(b, [A[0], y, A[1]], [C2[0], y - 0.001, C2[1]], [D[0], y - 0.001, D[1]], colAt(A[0], A[1]), L(C2[0], C2[1]), L(D[0], D[1]));
+    }
+    /* Kies und Steinchen, nicht unter der Hütte */
+    for (let i = 0; i < 46; i++) {
+      const a = hh(i, 31) * Math.PI * 2, r = 0.3 + hh(i, 32) * 0.95, p = P(a, r);
+      if (Math.abs(p[0]) < HW + 0.35 && p[1] > -HD - 0.35 && p[1] < VZ + 0.6) continue;
+      b.ico(0.035 + hh(i, 33) * 0.05, hh(i, 34) < 0.5 ? 0x9c958a : 0x8a847a, { x: p[0], y: y, z: p[1], flat: 0.45, jitter: 0.3 });
+    }
+    /* Grasbüschel am Rand (wo kaum jemand läuft) */
+    for (let i = 0; i < 18; i++) {
+      const a = (i + hh(i, 35)) / 18 * Math.PI * 2, p = P(a, 0.93 + hh(i, 36) * 0.12);
+      if (Math.hypot(p[0] - 0.5, p[1] - 5.2) < 2 || (p[0] < -3 && p[1] > 2)) continue;          /* nicht am Weg */
+      for (let k = 0; k < 4; k++) b.box(0.03, 0.18 + hh(i, k) * 0.14, 0.03, k % 2 ? 0x6f9e3c : 0x5d8a34, { x: p[0] + (k - 1.5) * 0.05, y, z: p[1] + hh(k, i) * 0.06, rz: (k - 1.5) * 0.25, rx: (hh(i, k + 4) - 0.5) * 0.4 });
+    }
+    return b;
+  }
+  /* Bauzustand nach dem Spielstand: Material am Bauplatz (S.farm.depot.rent) – siehe Kopf von ruinMesh */
+  function phase() {
+    const T = st();
+    if (T && T.built) return 3;
+    const D = (typeof S !== "undefined" && S.farm && S.farm.depot && S.farm.depot.rent) || {};
+    const full = Object.keys(NEED).filter(id => (D[id] || 0) >= NEED[id]).length, any = Object.keys(D).some(id => D[id] > 0);
+    return full >= 3 ? 2 : any ? 1 : 0;
+  }
+  const PHASES = ["Verfallen", "Baustelle eingerichtet", "Gesichert · Dach in Arbeit", "Fertig · vermietbar"];
   /* Auto des Mieters: kleiner Kombi, Front +z */
   function carMesh(col) {
     G3.seed(8203);
@@ -442,25 +650,36 @@ const RENT = (() => {
   }
 
   /* ------------------------------- Welt ------------------------------------ */
-  const W = { ruin: null, hut: null, lit: [], path: null, pad: null, man: null, car: null, grow: null, chk: 0 };
+  const W = { ruin: null, ruins: [], yard: null, stage: -1, hut: null, lit: [], path: null, pad: null, man: null, car: null, grow: null, chk: 0 };
   function attach(R) {
-    W.ruin = fnode(fmesh("rent_ruin_v182", ruinMesh), { x: H.x, z: H.z, ry: H.ry, visible: false });
+    /* v192: drei Bauzustände der Ruine (eigene Meshes, nur einer sichtbar), Boden der Baustelle */
+    W.ruins = [0, 1, 2].map(k => fnode(fmesh("rent_ruin" + k + "_v192", () => ruinMesh(k)), { x: H.x, z: H.z, ry: H.ry, visible: false }));
+    W.ruin = W.ruins[0];
+    W.yard = fnode(fmesh("rent_yard_v192", yardMesh), { x: H.x, z: H.z, ry: H.ry, visible: false, shadow: false });
+    W.stage = -1;
     W.hut = fnode(fmesh("rent_hut_v182", hutMesh), { x: H.x, z: H.z, ry: H.ry, visible: false });
     W.lit = [0, 1].map(f => fnode(fmesh("rent_lit" + f + "_v182", () => litMesh(f)), { x: H.x, z: H.z, ry: H.ry, visible: false, glow: 0.6, shadow: false }));
     W.path = fnode(fmesh("rent_path_v182", pathMesh), { visible: false, shadow: false });
     W.pad = fnode(fmesh("rent_pad_v182", padMesh), { visible: false, shadow: false });
-    R.nodes.push(W.ruin, W.hut, W.lit[0], W.lit[1], W.path, W.pad);
+    R.nodes.push(W.yard, ...W.ruins, W.hut, W.lit[0], W.lit[1], W.path, W.pad);
     W.man = null; W.car = null; W.manKey = W.carKey = null;
     syncWorld();
   }
   function syncWorld() {
     if (!W.hut) return;
     const T = st(), open = typeof farmAreaOpen === "function" && farmAreaOpen("see"), b = !!(T && T.built);
-    W.ruin.visible = open && !b;
+    const ph = phase();
+    W.ruins.forEach((n, k) => { n.visible = open && !b && ph === k; });
+    W.ruin = W.ruins[Math.min(2, ph)];
+    /* sichtbarer Wechsel des Bauzustands (nicht beim Laden): Staub an der Hütte */
+    if (W.stage >= 0 && ph !== W.stage && ph < 3 && FV.R) FV.R.burst({ x: H.x, y: 0.6, z: H.z, n: 22, col: [[0.75, 0.66, 0.5, 0.8], [0.62, 0.55, 0.42, 0.7]], speed: 1.8, up: 1.2, size: 0.16, spread: 3.4, life: 1.0, g: -1.2 });
+    W.stage = ph;
+    W.yard.visible = open;
     if (!W.grow) W.hut.visible = b;
     const days = t => (S.time - t) / DAY;
-    W.path.visible = b;
-    W.path.alpha = b ? Math.min(1, 0.45 + days(T.built) / 10) : 1;
+    /* v192: der Trampelpfad zur Straße ist immer da – zugewachsen an der Ruine, ausgetretener, sobald gearbeitet wird */
+    W.path.visible = open;
+    W.path.alpha = b ? Math.min(1, 0.75 + days(T.built) / 12) : [0.38, 0.58, 0.7][ph];
     W.pad.visible = !!(T && T.ten);
     W.pad.alpha = T && T.ten ? Math.min(1, 0.3 + days(T.ten.since) / 14 * 0.7) : 1;
     if (T && T.ten) ensureActors(T.ten); else dropActors();
@@ -486,13 +705,13 @@ const RENT = (() => {
   }
   function pick(x, y) {
     if (!FV.R || !W.hut || (!W.hut.visible && !W.ruin.visible)) return null;
-    const d = FV.R.hitBox(FV.R.ray(x, y), [H.x - 3.6, 0, H.z - 3.4], [H.x + 3.6, W.hut.visible ? 6.6 : 3, H.z + 4.2]);
+    const d = FV.R.hitBox(FV.R.ray(x, y), [H.x - 3.6, 0, H.z - 3.4], [H.x + 3.6, W.hut.visible ? 6.6 : 4.2, H.z + 4.2]);
     return d != null ? { d } : null;
   }
   function tagInfo() {
     const T = st();
     if (!T || !W.hut) return null;
-    if (!T.built) { if (!unlocked()) return null; const ok = buildCheck() === true; return { x: H.x, y: 3.4, z: H.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
+    if (!T.built) { if (!unlocked()) return null; const ok = buildCheck() === true; return { x: H.x, y: 4.9, z: H.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
     if (T.iss) return { x: H.x, y: 7.2, z: H.z, html: "🏡" + ISSUES[T.iss.k].i + "❗", cls: "ready" };
     if (T.ten && S.time >= maintDue(T)) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔧", cls: "ready" };
     return null;
@@ -645,7 +864,7 @@ const RENT = (() => {
     const t = T.ten;
     if (!t) {
       openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hütte am See<small>frisch aufgebaut</small></div>
-        <div class="fs-sub">${esc(T.next ? T.next.n : "Ein Mieter")} hat zugesagt und zieht ${S.time < T.moveIn ? "in " + fdur(Math.max(1, T.moveIn - S.time)) : "gleich"} ein. Die Miete beträgt ${eur(RENT_DAY)} am Tag und kommt jede Woche.</div>`, "rent");
+        ${phaseHTML()}<div class="fs-sub">${esc(T.next ? T.next.n : "Ein Mieter")} hat zugesagt und zieht ${S.time < T.moveIn ? "in " + fdur(Math.max(1, T.moveIn - S.time)) : "gleich"} ein. Die Miete beträgt ${eur(RENT_DAY)} am Tag und kommt jede Woche.</div>`, "rent");
       return;
     }
     const due = maintDue(T), f = rentF(T, S.time), I = T.iss && ISSUES[T.iss.k];
@@ -665,6 +884,13 @@ const RENT = (() => {
     const fx = $("#rnFix"); if (fx) fx.onclick = () => { if (repair()) { sfx("coin"); sheet(); ui(); } else sfx("bad"); };
     const mt = $("#rnMaint"); if (mt) mt.onclick = () => { if (maintain()) { sfx("build"); sheet(); ui(); } else sfx("bad"); };
   }
+  /* v192: Bauzustand als Schrittleiste – derselbe Zustand, den die Hütte in der Welt zeigt (phase()) */
+  function phaseHTML() {
+    const ph = phase(), T = st();
+    const hint = ["Lege das erste Material am Bauplatz ab – dann wird die Baustelle eingerichtet.", "Sind 3 Materialien vollständig da, wird die Hütte gesichert und der Dachstuhl ergänzt.",
+      "Alles da? Dann geht es ans Nageln – danach steht die Hütte.", T && T.q != null ? "Bauqualität " + T.q + " % – " + (T.q >= 90 ? "meisterhaft" : T.q >= 70 ? "sauber" : T.q >= 50 ? "ordentlich" : "hält") : "Fertig gebaut"][ph];
+    return `<div class="rn-ph">${PHASES.map((n, k) => `<span class="${k < ph ? "done" : k === ph ? "cur" : ""}"><i></i>${esc(n)}</span>`).join("")}</div><div class="fs-sub rn-phh">${esc(hint)}</div>`;
+  }
   function buildSheet() {
     FV.sheetFn = buildSheet;
     const lvOk = flv() >= LV, chk = buildCheck();
@@ -673,17 +899,17 @@ const RENT = (() => {
       + `<div class="hu-need${S.money >= COST ? " ok" : ""}"><span class="hu-ni">💶</span><b>${eur(COST)}</b><small>${S.money >= COST ? "✓ da" : "auf dem Konto: " + eur(S.money)}</small></div>`;
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏚️</span>Verfallene Hütte am See<small>${lvOk ? "gehört zu deinem Hof" : "ab Level " + LV}</small></div>
       <div class="fs-sub">Die alte Blockhütte westlich vom See ist eingestürzt. Mit Holz aus dem Sägewerk wird daraus eine zweistöckige Hütte mit Veranda – zum Vermieten: ${eur(RENT_DAY)} Miete am Tag, alle 90 Tage eine Instandhaltung (${eur(MAINT)}), ab und zu eine kleine Reparatur.</div>
-      <div class="hu-needs">${rows}</div>${siteDepHTML("rent", NEED)}
+      ${phaseHTML()}<div class="hu-needs">${rows}</div>${siteDepHTML("rent", NEED)}
       <div class="fs-row"><button class="btn${chk === true ? "" : " disabled"}" id="rnBuild">${chk === true ? "🔨 Hütte aufbauen" : "🔒 " + esc(chk)}</button></div>`, "rent");
     siteDepBind("rent", NEED, buildSheet);   /* v186: Material am Bauplatz ablegen */
     $("#rnBuild").onclick = () => {
       if (buildCheck() !== true) { sfx("bad"); return; }
       closeFarmSheet();
-      if (typeof MG !== "undefined" && MG.open) MG.open("nails", { short: true, title: "Hütte aufbauen" }, res => { if (res && res.ok) buildNow(); });
+      if (typeof MG !== "undefined" && MG.open) MG.open("nails", { short: true, title: "Hütte aufbauen" }, res => { if (res && res.ok) buildNow(res.score); });
       else buildNow();
     };
   }
 
-  return { H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, clear, attach, pick, tagInfo, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
+  return { phase, PHASES, H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, clear, attach, pick, tagInfo, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
     _st: st, _doing: (t, now) => doing(t, now), _plan: (t, d) => plan(t, d), _lights: (t, now) => lightsOn(t, now), _W: W, _spawnIssue: () => spawnIssue(st()) };
 })();

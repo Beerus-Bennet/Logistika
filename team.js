@@ -1962,7 +1962,8 @@ function renderStaffPop(el, P, force) {
     positionStaffPop(el, P);
     return;
   }
-  if (force !== true && P.limDrag) { positionStaffPop(el, P); return; }      /* v138: Schieber nicht beim Ziehen neu zeichnen */
+  if (force !== true && P.limDrag) { positionStaffPop(el, P); return; }
+  if (force !== true && el._down && Date.now() - el._down < 4000) { positionStaffPop(el, P); return; }      /* v198: solange ein Finger auf einer Kachel liegt, nicht neu zeichnen (die Kachel verschwand sonst unterm Finger, das Scrollen brach ab) */      /* v138: Schieber nicht beim Ziehen neu zeichnen */
   const h = staffPopHTML(s, P);
   if (force !== true && el._sh === h && el.querySelector(".fstp")) { positionStaffPop(el, P); return; }
   el._sh = h;
@@ -1971,16 +1972,22 @@ function renderStaffPop(el, P, force) {
   el.querySelectorAll("[data-tdel]").forEach(b => b.onclick = ev => { ev.stopPropagation(); if (staffTaskDel(b.dataset.tdel, true)) { sfx("pop"); save(); } renderStaffPop(el, P, true); });
   el.querySelectorAll("[data-tadd]").forEach(b => b.onclick = ev => { ev.stopPropagation(); P.add = true; renderStaffPop(el, P, true); });
   /* v61: Freigabe umschalten / Fahrer-Modus wählen – gilt sofort und bleibt gespeichert */
+  el._lpStops = new Set();
+  if (!el._lpL) { el._lpL = 1; el.addEventListener("scroll", () => el._lpStops.forEach(f => f()), { capture: true, passive: true }); }
   el.querySelectorAll("[data-wl]").forEach(b => {
     /* v138: gedrückt halten (Landwirt/in, Sägewerker/in) öffnet den Schieber für die Mengengrenze */
     if (STAFF_LIM.includes(s.role)) {
       let tm = 0;
-      const stop = () => clearTimeout(tm);
-      b.addEventListener("pointerdown", () => {
-        b._held = false; stop();
-        tm = setTimeout(() => { if (b.classList.contains("lock")) return; b._held = true; P.lim = b.dataset.wl; sfx("pop"); renderStaffPop(el, P, true); }, 450);
+      const stop = () => { clearTimeout(tm); tm = 0; if (!P.limDrag) el._down = 0; };
+      let x0 = 0, y0 = 0;
+      b.addEventListener("pointerdown", ev => {
+        b._held = false; stop(); x0 = ev.clientX; y0 = ev.clientY; el._down = Date.now();
+        tm = setTimeout(() => { el._down = 0; if (!b.isConnected || b.classList.contains("lock")) return; b._held = true; P.lim = b.dataset.wl; sfx("pop"); renderStaffPop(el, P, true); }, 550);
       });
-      ["pointerup", "pointerleave", "pointercancel"].forEach(t => b.addEventListener(t, stop));
+      /* v198: wer die Liste verschiebt (scrollt), hält nicht – schon wenige Pixel Bewegung oder jedes Scrollen brechen das Halten ab */
+      b.addEventListener("pointermove", ev => { if (tm && Math.hypot(ev.clientX - x0, ev.clientY - y0) > 6) stop(); });
+      ["pointerup", "pointerleave", "pointercancel", "touchmove"].forEach(t => b.addEventListener(t, stop, { passive: true }));
+      el._lpStops.add(stop);
       b.addEventListener("contextmenu", e => e.preventDefault());
     }
     b.onclick = ev => {
