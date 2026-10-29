@@ -892,7 +892,8 @@ const RENT = (() => {
   function dockPathMesh() {
     const b = MB();
     /* v218: wie der Pfad an der Hütte (Breite 1,0, Laub und Steinchen) – nur nicht auf dem Strand */
-    b.merge(FWM.forestPath(DPATH, 1.0, { y: 0.0235, ey: 0.0165, gnd: shoreCol, caps: [false, false], ends: [false, false], fade: [{ L: 1.6, col: 0x9b8562 }, { L: 1.6, col: 0xc9b98c }], leafOk: (x, z) => typeof lakeE !== "function" || lakeE(x, z) > 1.08 }), {});
+    /* beginnt ein Stück auf dem Hauptpfad (unter ihm verborgen) und läuft ohne Absatz vor den Stufen weiter – ein durchgehender Weg */
+    b.merge(FWM.forestPath([PATH[1]].concat(DPATH), 1.0, { y: 0.0235, ey: 0.0165, gnd: shoreCol, caps: [false, false], ends: [false, false], fade: [null, { L: 1.6, col: 0xc9b98c }], leafOk: (x, z) => typeof lakeE !== "function" || lakeE(x, z) > 1.08 }), {});
     return b;
   }
 
