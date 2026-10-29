@@ -646,9 +646,9 @@ const RENT = (() => {
   function pathMesh() {
     const b = MB();
     b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd: padCol, caps: [true, false], ends: [false, false], fade: [null, { L: 2.8, col: PAD_DIRT }], leafOk: (x, z) => z > 20 && padK(x, z) > 1.3 }), {});
-    /* v214: Briefkasten östlich der Ausfahrt (vorher x −41,4 mitten in der Reifenspur) */
-    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -38.8, z: 20.3 });
-    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -38.8, y: 0.92, z: 20.3 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -38.65, y: 1.12, z: 20.42 });
+    /* v214/v215: Briefkasten direkt neben der Ausfahrt, gut 1,2 Einheiten neben der Fahrlinie (vorher x −41,4 mitten in der Reifenspur) */
+    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -40.6, z: 20.7 });
+    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -40.6, y: 0.92, z: 20.7 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -40.45, y: 1.12, z: 20.82 });
     return b;
   }
   /* Parkfleck: festgefahrene Erde mit Reifenspuren, weicher Rand ins Gras */

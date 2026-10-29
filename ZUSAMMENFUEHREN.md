@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v215 – Briefkasten (auf v214)
+
+- Nur `rent.js`: Briefkasten in `pathMesh` auf x −40,6, z 20,7.
+
 ## Stand v214 – Briefkasten (auf v213)
 
 - Nur `rent.js`: Briefkasten in `pathMesh` von x −41,4 nach x −38,8.

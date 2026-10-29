@@ -1,5 +1,10 @@
 # Änderungen – kurz für den Kollegen
 
+## v215 – Briefkasten der Hütte näher an die Einfahrt
+
+- v214 stand er zu weit weg. Jetzt steht er direkt am Rand des Parkflecks neben der Ausfahrt (x −40,6, z 20,7) – gut 1,2 Einheiten neben der Fahrlinie, nicht mehr in der Reifenspur.
+- Datei: `rent.js` (`pathMesh`).
+
 ## v214 – Briefkasten der Hütte nicht mehr in der Reifenspur
 
 - Der Briefkasten stand bei x −41,4 genau auf der Ausfahrt des Autos (die Reifenspur lief hindurch). Er steht jetzt östlich der Ausfahrt am Straßenrand (x −38,8, z 20,3) auf freiem Gras.
