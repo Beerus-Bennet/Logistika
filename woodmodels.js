@@ -1412,7 +1412,8 @@ const FWM = (() => {
   }
   function creekStations(P, o, Fr, sg) {
     const f = creekScale(P, o), M = o && o.mouth, mo = M ? creekMouthSt(Fr, o, sg) : { st: [], lim: -1, w0: 1 }, st = mo.st;
-    Fr.L.forEach((s, i) => { if (s > mo.lim) st.push({ s, h: CR_H * f[i], ns: 0, nl: 1, f: f[i] }); });
+    const wk = (o && o.w) || 1;                      /* v190: Breitenfaktor (Bach im Wald 1,5) */
+    Fr.L.forEach((s, i) => { if (s > mo.lim) st.push({ s, h: CR_H * wk * f[i], ns: 0, nl: 1, f: f[i] }); });
     /* Strandbreite und Seefarben entlang der Uferlinie ab dem Seeufer: Breite über 10 Einheiten auf Bachbreite, Farben über 4 */
     let d = 0, prev = null;
     st.forEach(S => {
@@ -1453,6 +1454,7 @@ const FWM = (() => {
     for (let i = 0; i < S2.length * 0.6; i++) {
       const S = S2[Math.floor(rnd() * S2.length)], sg = rnd() < 0.5 ? 1 : -1, r = 0.2 + rnd() * 0.4, ds = (rnd() - 0.5) * 0.8;
       const p = Fr.W(S.s + ds, sg * (S.h + r * S.f), 0.05);
+      if (o && o.spring && Math.hypot(p[0] - o.spring.C[0], p[2] - o.spring.C[1]) < o.spring.RP + 2.4) continue;   /* v190: am Quelltopf liegt das eigene Ufer */
       b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * S.f), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.05, z: p[2], flat: 0.55, jitter: 0.5 });
     }
     return b;
@@ -1473,50 +1475,156 @@ const FWM = (() => {
     });
     return b;
   }
-  /* Quelle am Bachanfang: Ufer wie am Bach (Schlamm → nasser Sand → Sand → Gelände), Weltkoordinaten */
-  function springBed(x, z, gnd) {
-    const b = new MB(), seg = 24, y = 0.0125, R = [0.9, 1.6, 2.33, 3.65];   /* Topfrand 1,45 – Streifen wie am See */
-    const wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3), P = (a, r) => [x + Math.cos(a) * r * wob(a), y, z + Math.sin(a) * r * wob(a)];
-    const C = (k, p) => G3.col(k < CB_C.length ? CB_C[k] : gnd ? gnd(p[0], p[2]) : 0x86bf4a);
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, mud = G3.col(CB_C[0]);
-      triUp(b, [x, y, z], P(a0, R[0]), P(a1, R[0]), mud, mud, mud);
-      for (let k = 1; k < R.length; k++) { const A = P(a0, R[k - 1]), B = P(a1, R[k - 1]), Cc = P(a1, R[k]), D = P(a0, R[k]); quadUp(b, A, B, Cc, D, C(k - 1, A), C(k - 1, B), C(k, Cc), C(k, D)); }
+  /* ---------------------- v190: Quelle groß und aus einem Guss ----------------------
+     Vorher lagen Quelltopf und Bachanfang, ihr Ufer und das Ufer des Bachs jeweils auf derselben Höhe übereinander –
+     das flimmerte (Wasser) und gab kantige Übergänge (Uferstreifen rund gegen gerade). Jetzt: ein großer Quelltopf
+     (Radius 3) etwas oberhalb des Bachanfangs, und rund um Topf und Bachanfang ein gemeinsames Ufer aus einem feinen
+     Gitter, dessen Farben nur vom Abstand zur Wasserkante (Topf ∪ Bach) abhängen – genau wie die Uferstreifen des Bachs,
+     dadurch ohne Naht. Das Gitter wird an den Bandgrenzen exakt beschnitten (keine Treppen). Dahinter eine Felswand
+     mit einem Wasserfall in Stufen in den Topf. */
+  const SPR = { RP: 4.5, wob: a => 1 + 0.07 * Math.sin(a * 3 + 1.3) + 0.04 * Math.sin(a * 5 + 0.4) };
+  function springGeo(pts, o) {
+    const P = smoothLine(pts, 6), f = creekScale(P, o), wk = (o && o.w) || 1, d0 = unit(P[1][0] - P[0][0], P[1][1] - P[0][1]);
+    const RP = SPR.RP, C = [P[0][0] - d0[0] * RP * 0.55, P[0][1] - d0[1] * RP * 0.55], H = P.map((p, i) => CR_H * wk * f[i]);
+    const reach = RP + 9;
+    const segs = []; for (let i = 1; i < P.length; i++) if (Math.hypot(P[i - 1][0] - C[0], P[i - 1][1] - C[1]) < reach + 4) segs.push(i);
+    const dPool = (x, z) => { const dx = x - C[0], dz = z - C[1]; return Math.hypot(dx, dz) - RP * SPR.wob(Math.atan2(dz, dx)); };
+    const dCreek = (x, z) => {
+      let best = 1e9;
+      for (const i of segs) {
+        const a = P[i - 1], b = P[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2));
+        const e = Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) - (H[i - 1] + (H[i] - H[i - 1]) * t);
+        if (e < best) best = e;
+      }
+      return best;
+    };
+    return { P, C, RP, d0, hRef: CR_H * wk, dPool, dU: (x, z) => Math.min(dPool(x, z), dCreek(x, z)) };
+  }
+  /* Polygon (Ecken {x, z, v, …}) auf v < T beschneiden; weitere Felder werden mit interpoliert */
+  function clipLT(V, T, keys) {
+    const out = [];
+    for (let i = 0; i < V.length; i++) {
+      const A = V[i], B = V[(i + 1) % V.length], a = A.v < T, b = B.v < T;
+      if (a) out.push(A);
+      if (a !== b) { const t = (T - A.v) / (B.v - A.v), N = { v: T }; keys.forEach(k => { N[k] = A[k] + (B[k] - A[k]) * t; }); out.push(N); }
+    }
+    return out;
+  }
+  const bankCol = (d, x, z, gnd) => {
+    const C0 = G3.col(CB_C[0]), C1 = G3.col(CB_C[1]), C2 = G3.col(CB_C[2]), g = G3.col(gnd ? gnd(x, z) : 0x86bf4a);
+    if (d <= CB_R[0]) return C0;
+    if (d <= CB_R[1]) return mixA(C0, C1, (d - CB_R[0]) / (CB_R[1] - CB_R[0]));
+    if (d <= CB_R[2]) return mixA(C1, C2, (d - CB_R[1]) / (CB_R[2] - CB_R[1]));
+    return mixA(C2, g, Math.min(1, (d - CB_R[2]) / (CB_R[3] - CB_R[2])));
+  };
+  const waterCol = (u) => { const A = CW_C.map(c => G3.col(c)); return u <= 0.5 ? mixA(A[0], A[1], u / 0.5) : mixA(A[1], A[2], Math.min(1, (u - 0.5) / 0.5)); };
+  /* Ufer rund um Quelltopf und Bachanfang (liegt 4 mm über dem Bachufer und deckt es dort ab – gleiche Farben, keine Naht) */
+  function springBank(pts, o, gnd) {
+    const G = springGeo(pts, o), b = new MB(), Hs = G.RP + CB_R[3] + 4.2, cell = 0.3, n = Math.ceil(2 * Hs / cell), y = 0.02;
+    const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; V.push({ x, z, v: G.dU(x, z) }); }
+    const at = (i, j) => V[j * (n + 1) + i];
+    const emit = poly => { if (poly.length < 3) return; const c = poly.map(p => bankCol(p.v, p.x, p.z, gnd)); for (let k = 1; k < poly.length - 1; k++) triUp(b, [poly[0].x, y, poly[0].z], [poly[k].x, y, poly[k].z], [poly[k + 1].x, y, poly[k + 1].z], c[0], c[k], c[k + 1]); };
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const A = at(i, j), B = at(i + 1, j), Cc = at(i + 1, j + 1), D = at(i, j + 1);
+      if (A.v > CB_R[3] && B.v > CB_R[3] && Cc.v > CB_R[3] && D.v > CB_R[3]) continue;
+      /* Bandgrenzen als Schnittkanten: so liegen die Farbsprünge genau auf den Linien wie beim Bachufer */
+      [[A, B, Cc], [A, Cc, D]].forEach(T => {
+        let polys = [clipLT(T, CB_R[3], ["x", "z", "v"])];
+        emit(polys[0]);
+      });
     }
     return b;
   }
-  /* Quelltopf: Mitte → Rand in den Bachfarben */
-  function springPool(x, z) {
-    const b = new MB(), seg = 24, R = [0, 0.75, 1.45];
-    const wob = a => 1 + 0.08 * Math.sin(a * 3 + 1.3), P = (a, r) => [x + Math.cos(a) * r * wob(a), 0.03, z + Math.sin(a) * r * wob(a)];
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
-      triUp(b, P(a1, R[1]), P(a0, R[1]), [x, 0.03, z], CW_C[1], CW_C[1], CW_C[0]);
-      triUp(b, P(a0, R[1]), P(a1, R[1]), P(a1, R[2]), CW_C[1], CW_C[1], CW_C[2]);
-      triUp(b, P(a0, R[1]), P(a1, R[2]), P(a0, R[2]), CW_C[1], CW_C[2], CW_C[2]);
+  /* Wasser des Quelltopfs: nur im Topf (Bachwasser zeichnet creekWater), Farbe nach dem Abstand zur gemeinsamen Wasserkante */
+  function springPool2(pts, o) {
+    const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 0.4, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = 0.044;
+    const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; V.push({ x, z, v: G.dPool(x, z), d: G.dU(x, z) }); }
+    const at = (i, j) => V[j * (n + 1) + i];
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const A = at(i, j), B = at(i + 1, j), Cc = at(i + 1, j + 1), D = at(i, j + 1);
+      if (A.v >= 0 && B.v >= 0 && Cc.v >= 0 && D.v >= 0) continue;
+      [[A, B, Cc], [A, Cc, D]].forEach(T => {
+        const poly = clipLT(T, 0, ["x", "z", "v", "d"]);
+        if (poly.length < 3) return;
+        /* tiefer in der Mitte: u 0 = Mitte (dunkel), 1 = Rand (hell); im Topf zusätzlich zur Mitte hin dunkler */
+        const c = poly.map(p => { const r = Math.hypot(p.x - G.C[0], p.z - G.C[1]) / G.RP; return waterCol(Math.min(1 - Math.min(1, -p.d / G.hRef), 0.15 + 0.85 * r)); });
+        for (let k = 1; k < poly.length - 1; k++) triUp(b, [poly[0].x, y, poly[0].z], [poly[k].x, y, poly[k].z], [poly[k + 1].x, y, poly[k + 1].z], c[0], c[k], c[k + 1]);
+      });
     }
     return b;
   }
-  /* Felsen hinter dem Quelltopf (lokal: der Bach läuft nach +x weg, die Felsen liegen bei −x) */
+  /* Lage von Topfmitte und Richtung (für Felsen, Wasserfall und Gischt in worldview.js) */
+  function springInfo(pts, o) { const G = springGeo(pts, o); return { C: G.C, RP: G.RP, dir: G.d0 }; }
+  /* alte Fassungen (kleiner Topf) – nur noch für ältere Aufrufer */
+  function springBed(x, z, gnd) { return new MB(); }
+  function springPool(x, z) { return new MB(); }
+  /* Felswand hinter dem Topf mit Wasserfall (lokal: Topfmitte im Ursprung, der Bach läuft nach +x weg, Felsen bei −x) */
+  const SPRING_FALL = { top: [-3.6, 2.15, 0.12], foot: [-2.6, 0.04, 0.12], S: 1.5 };   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
   function springRocks() {
-    G3.seed(3975);
-    const b = new MB(), g1 = 0x8f8a80, g2 = 0xa39e94, moss = 0x5f8a3a;
+    G3.seed(3976);
+    const b = new MB(), g1 = 0x8f8a80, g2 = 0xa39e94, g3 = 0x7d786f, moss = 0x5f8a3a, moss2 = 0x4f7a32, R0 = SPR.RP / SPRING_FALL.S;   /* lokal Radius 3, Knoten ×1,5 */
     b.noise(0.12, () => {
-      b.ico(1.05, g1, { x: -1.7, y: 0.35, z: 0.1, flat: 0.75, jitter: 0.35 });
-      b.ico(0.75, g2, { x: -1.35, y: 0.95, z: -0.55, flat: 0.8, jitter: 0.35 });
-      b.ico(0.6, g1, { x: -1.2, y: 0.2, z: 1.15, flat: 0.7, jitter: 0.4 });
-      b.ico(0.55, g2, { x: -0.9, y: 0.15, z: -1.35, flat: 0.65, jitter: 0.4 });
-      b.ico(0.38, g1, { x: 0.1, y: 0.08, z: 1.5, flat: 0.6, jitter: 0.4 });
-      b.ico(0.32, g2, { x: 0.3, y: 0.06, z: -1.45, flat: 0.6, jitter: 0.4 });
-      /* Moospolster und Farn */
-      b.ico(0.42, moss, { x: -1.9, y: 1.0, z: 0.25, flat: 0.45, jitter: 0.3 });
-      b.ico(0.3, moss, { x: -1.0, y: 0.38, z: 1.25, flat: 0.45, jitter: 0.3 });
+      /* hohe Wand hinten, zwei Flanken, Blöcke am Topfrand */
+      [[-R0 - 1.6, 1.0, -1.3, 1.9, 0.9], [-R0 - 1.4, 1.05, 1.4, 1.75, 0.95], [-R0 - 2.6, 1.4, 0.1, 2.0, 1.0], [-R0 - 0.9, 0.35, -2.4, 1.15, 0.7], [-R0 - 0.7, 0.3, 2.5, 1.05, 0.7],
+       [-R0 - 0.2, 0.15, -1.25, 0.6, 0.6], [-R0 - 0.1, 0.12, 1.3, 0.55, 0.6], [-1.2, 0.05, -R0 - 0.35, 0.65, 0.55], [0.6, 0.05, -R0 - 0.2, 0.5, 0.55], [-1.6, 0.05, R0 + 0.3, 0.7, 0.55], [0.4, 0.04, R0 + 0.15, 0.45, 0.6]
+      ].forEach(([x, y, z, r, fl], i) => b.ico(r, i % 3 === 0 ? g1 : i % 3 === 1 ? g2 : g3, { x, y, z, flat: fl, jitter: 0.32 }));
+      /* Moos und Farn auf den Felsen */
+      [[-R0 - 1.7, 2.55, -1.2, 0.6], [-R0 - 2.5, 2.9, 0.4, 0.55], [-R0 - 1.3, 2.4, 1.5, 0.5], [-R0 - 0.9, 0.95, -2.3, 0.4], [-R0 - 0.6, 0.85, 2.4, 0.38]].forEach(([x, y, z, r], i) => b.ico(r, i % 2 ? moss : moss2, { x, y, z, flat: 0.45, jitter: 0.3 }));
     });
-    /* das Wasser rinnt über den vorderen Stein in den Topf */
-    b.box(0.5, 0.04, 0.24, 0x6fb7e0, { x: -0.9, y: 0.5, z: 0.05, rz: -0.85 });
-    b.box(0.3, 0.04, 0.16, 0xbfe4f6, { x: -0.62, y: 0.26, z: 0.03, rz: -0.6 });
     return b;
   }
+  /* Wasserfall: aus der Spalte zwischen den Felsen in drei Stufen in den Topf, mit Gischtsaum (eigener Knoten mit etwas Leuchten,
+     damit das Wasser vor der beschatteten Felswand hell bleibt) */
+  function springFall() {
+    /* v191: statt drei Quaderstufen eine durchgehende, gebogene Wasserfläche: Das Wasser schießt waagerecht über die
+       Felskante und fällt im Wurfbogen in den Topf (y = Kante − g·t²). Senkrechte Wasserstränge in wechselnden Blautönen,
+       nach unten heller bis weiß (Luft im Wasser), an der Kante eine glatte, dunklere Zunge. Oben auf dem Fels läuft
+       das Wasser in einer Rinne zur Kante. Beidseitig, damit der Fall aus jedem Blickwinkel geschlossen wirkt. */
+    G3.seed(3977);
+    const b = new MB(), F = SPRING_FALL, lip = F.top, foot = F.foot;
+    const A = G3.col(0x4f9fc0), B = G3.col(0x8fd0ec), Cl = G3.col(0xcdeef9), Wt = G3.col(0xf4fbfe);
+    const NT = 16, NW = 12, vx = foot[0] - lip[0], dy = lip[1] - foot[1];
+    const P = t => [lip[0] + vx * Math.pow(t, 0.75), lip[1] - dy * t * t];
+    const wid = t => 0.95 + 0.55 * t;
+    const strand = j => 0.5 + 0.5 * Math.sin(j * 2.1 + 0.7) * Math.cos(j * 0.9);
+    const V = [];
+    for (let i = 0; i <= NT; i++) {
+      const t = i / NT, p = P(t), q = P(Math.min(1, t + 0.02)), r = P(Math.max(0, t - 0.02));
+      const tx = q[0] - r[0], ty = q[1] - r[1], tl = Math.hypot(tx, ty) || 1, nx = ty / tl, ny = -tx / tl;   /* Normale zur Topfseite */
+      const row = [];
+      for (let j = 0; j <= NW; j++) {
+        const u = j / NW - 0.5, k = strand(j), bulge = 0.05 * Math.sin(j * 1.7 + i * 0.6) * t;
+        let c = t < 0.12 ? mixA(A, B, t / 0.12) : mixA(B, Cl, Math.min(1, (t - 0.12) / 0.55) * (0.55 + 0.45 * k));
+        if (t > 0.7) c = mixA(c, Wt, (t - 0.7) / 0.3 * 0.85);
+        const edge = Math.abs(u) > 0.42 ? (Math.abs(u) - 0.42) / 0.08 : 0;
+        if (edge > 0) c = mixA(c, Wt, edge * 0.6);
+        row.push({ p: [p[0] + nx * bulge, p[1] + ny * bulge, foot[2] + u * wid(t) * (1 - 0.15 * Math.abs(u) * (1 - t))], c });
+      }
+      V.push(row);
+    }
+    const tri2 = (a, b2, c) => { b.triV(a.p, b2.p, c.p, a.c, b2.c, c.c); b.triV(a.p, c.p, b2.p, a.c, c.c, b2.c); };
+    for (let i = 0; i < NT; i++) for (let j = 0; j < NW; j++) { const a = V[i][j], b2 = V[i][j + 1], c = V[i + 1][j + 1], d = V[i + 1][j]; tri2(a, b2, c); tri2(a, c, d); }
+    /* Rinne oben auf dem Fels bis zur Kante */
+    const rn = [[lip[0] - 1.5, lip[1] + 0.12], [lip[0] - 0.7, lip[1] + 0.05], [lip[0], lip[1]]];
+    for (let i = 0; i < rn.length - 1; i++) {
+      const w0 = 0.7 + i * 0.12, w1 = 0.7 + (i + 1) * 0.12, a0 = rn[i], a1 = rn[i + 1];
+      triUp(b, [a0[0], a0[1], foot[2] - w0 / 2], [a1[0], a1[1], foot[2] - w1 / 2], [a1[0], a1[1], foot[2] + w1 / 2], A, A, B);
+      triUp(b, [a0[0], a0[1], foot[2] - w0 / 2], [a1[0], a1[1], foot[2] + w1 / 2], [a0[0], a0[1], foot[2] + w0 / 2], A, B, A);
+    }
+    /* Schaumteppich am Fuß: weiche Scheibe, innen weiß, nach außen in das Topfwasser auslaufend (keine einzelnen Plättchen) */
+    const fc = [foot[0] + 0.12, foot[2]], Wo = G3.col(0x4f9fc0), N = 16;   /* nur zur Topfseite (Halbscheibe) */
+    for (let ring = 0; ring < 2; ring++) {
+      const r0 = ring ? 0.55 : 0, r1 = ring ? 1.25 : 0.55, c0 = ring ? mixA(Wt, Cl, 0.35) : Wt, c1 = ring ? Wo : mixA(Wt, Cl, 0.35);
+      for (let k = 0; k < N; k++) {
+        const a0 = (k / N - 0.5) * Math.PI, a1 = ((k + 1) / N - 0.5) * Math.PI, wb = a => 1 + 0.15 * Math.sin(a * 5 + 1) + 0.08 * Math.sin(a * 9);
+        const Pt = (r, a) => [fc[0] + Math.cos(a) * r * wb(a) * 0.8, 0.05, fc[1] + Math.sin(a) * r * wb(a) * 1.05];
+        if (!ring) triUp(b, [fc[0], 0.05, fc[1]], Pt(r1, a0), Pt(r1, a1), c0, c1, c1);
+        else { triUp(b, Pt(r0, a0), Pt(r1, a0), Pt(r1, a1), c0, c1, c1); triUp(b, Pt(r0, a0), Pt(r1, a1), Pt(r0, a1), c0, c1, c0); }
+      }
+    }
+    return b;
+  }
+
 
   /* v72: Brücke als Teil des Weges. Länge 5,8 (vorher 3,1 – kürzer als Bach plus Ufer), leicht gewölbt:
      die Enden liegen auf Wegniveau und gehen mit Rampe in den Belag über; Balken, Pfosten und Geländer folgen
@@ -1547,70 +1655,106 @@ const FWM = (() => {
   /* v75: Angelsteg statt „Brücke ins Nichts“. Lokale x-Achse = vom Ufer (x = 0, Wegende) ins Wasser.
      Schmaler Laufsteg (1,15) und ein breiterer Kopf (0,75 × 2,0) – er endet mitten im Bach, das andere Ufer
      bleibt frei. Kein Geländer am Laufsteg (sonst sieht er aus wie eine Brücke), dafür Poller, Eimer und Angel. */
+  /* v189: Angelsteg am Bach, neu und aufgeräumt. Lokal: x vom Ufer (0) übers Wasser bis L, z quer; Belag oben auf top.
+     Schmaler Laufsteg (LW), breiter Kopf (Angelplatz). Alles hat seinen Platz: Schild und Laterne am Stegbeginn links/rechts,
+     Rettungsring am Pfosten zwischen Laufsteg und Kopf, Kiste und Eimer an der hinteren Kante des Kopfes, Bank an der rechten
+     Kante, zwei Rutenhalter vorn, Ruderboot längsseits rechts festgemacht. Der Angler sitzt beim Angeln vorn in der Mitte. */
+  const PIER_DIM = { LW: 1.3, L: 2.25, top: 0.15 };
+  function pierFish(b, x, y, z, s, dir) {
+    /* Fisch-Silhouette auf einer Fläche x = const (dir ±1 = Blickrichtung): Körper als Ellipsenfächer, Schwanz, Flosse, Auge */
+    const F = 0x2f7fb8, Fd = 0x245f8a, E = 0xffffff, n = 14, P = [];
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; P.push([Math.cos(a) * 0.2 * s, Math.sin(a) * 0.085 * s]); }
+    const q = (zz, yy) => [x + dir * 0.004, y + yy, z + zz];
+    const tri = (A, B, Cc, c) => dir < 0 ? b.tri(q(A[0], A[1]), q(B[0], B[1]), q(Cc[0], Cc[1]), c) : b.tri(q(A[0], A[1]), q(Cc[0], Cc[1]), q(B[0], B[1]), c);
+    for (let i = 0; i < n; i++) tri([0, 0], P[i], P[(i + 1) % n], i < n / 2 ? F : Fd);
+    tri([-0.17 * s, 0], [-0.33 * s, 0.1 * s], [-0.33 * s, -0.1 * s], Fd);                 /* Schwanz */
+    tri([-0.02 * s, 0.07 * s], [0.07 * s, 0.075 * s], [-0.07 * s, 0.14 * s], Fd);         /* Rückenflosse */
+    const eye = (r, c, k) => { const m = 6; for (let i = 0; i < m; i++) { const a = i / m * Math.PI * 2, a2 = (i + 1) / m * Math.PI * 2; const pq = (zz, yy) => [x + dir * (0.006 + k), y + yy, z + zz];
+      const A = pq(0.12 * s, 0.02 * s), B = pq(0.12 * s + Math.cos(a) * r, 0.02 * s + Math.sin(a) * r), Cc = pq(0.12 * s + Math.cos(a2) * r, 0.02 * s + Math.sin(a2) * r);
+      if (dir < 0) b.tri(A, B, Cc, c); else b.tri(A, Cc, B, c); } };
+    eye(0.026 * s, E, 0); eye(0.013 * s, 0x1a1a1a, 0.002);
+  }
   function pier() {
     G3.seed(3951);
-    const b = new MB(), LW = 1.3, LH = 0.95, L = LW + LH, top = 0.15;
-    const deck = (x0, x1, w) => { const n = Math.max(1, Math.round((x1 - x0) / 0.27)), p = (x1 - x0) / n; for (let i = 0; i < n; i++) b.box(p - 0.025, 0.05, w, i % 2 ? C.wood : C.woodL, { x: x0 + (i + 0.5) * p, y: top - 0.05 }); };
-    b.noise(0.1, () => { deck(0.12, LW, 1.1); deck(LW, L, 2.0); });
-    /* Längsbalken und Querbalken unter dem Belag */
-    [-0.42, 0.42].forEach(z => b.box(L - 0.1, 0.08, 0.1, C.woodD, { x: (L + 0.1) / 2, y: top - 0.13, z }));
-    b.box(0.12, 0.08, 2.0, C.woodD, { x: LW + 0.05, y: top - 0.13 });
-    b.box(0.12, 0.08, 2.0, C.woodD, { x: L - 0.06, y: top - 0.13 });
-    /* Auflager am Ufer: ein Stamm quer, halb im Boden – der Weg endet genau hier */
-    b.cyl(0.11, 0.11, 1.3, 8, C.woodD, { x: 0.06, y: 0.03, z: -0.65, rx: Math.PI / 2, top: 0x7a5a38 });
-    /* Pfähle (stehen im Wasser, nur oben sichtbar) */
-    /* v77: die Pfähle enden 5 mm unter dem Belag – vorher lagen ihre Köpfe genau in der Belagfläche und flimmerten
-       (Z-Fighting, geprüft mit zcheck.js) */
-    [[0.7, -0.5], [0.7, 0.5], [LW + 0.05, -0.92], [LW + 0.05, 0.92], [L - 0.06, -0.92], [L - 0.06, 0.92]].forEach(([x, z]) => b.cyl(0.06, 0.06, top + 0.25 - 0.055, 6, C.woodD, { x, y: -0.25, z }));
-    /* Poller an den äußeren Ecken, Tau am einen */
-    [[L - 0.08, -0.95], [L - 0.08, 0.95]].forEach(([x, z]) => { b.cyl(0.075, 0.075, 0.42, 7, 0x6a4a2e, { x, y: top - 0.02, z, top: 0x8a6a48 }); });
-    b.cyl(0.085, 0.085, 0.06, 7, 0xd8c8a0, { x: L - 0.08, y: top + 0.26, z: 0.95 });
-    /* Eimer und eine angelehnte Angel */
-    b.cyl(0.11, 0.13, 0.2, 9, 0x6c8fa8, { x: LW + 0.35, y: top + 0.003, z: -0.6, top: 0x3f8fc0 });
-    b.box(0.025, 0.025, 1.5, 0x5a4030, { x: LW + 0.5, y: top + 0.35, z: 0.25, rx: 0.5, ry: 0.4 });
-    /* v125: klar als Angelsteg erkennbar – Schild mit Fisch, Laterne, Angeln mit Schnur und Pose, Fischeimer, Kiste mit Netz,
-       Rettungsring, Ruderboot am Steg */
-    const SG = 0xe9d6a8, FB = 0x3f8fc0;
-    /* Schild am Stegbeginn (zeigt zum Weg, −x): Pfosten, Brett, Fisch aus Quadern */
-    b.cyl(0.04, 0.04, 1.05, 6, C.woodD, { x: 0.42, y: top - 0.05, z: -0.72 });
-    b.box(0.05, 0.36, 0.66, SG, { x: 0.42, y: top + 0.78, z: -0.72 });
-    b.box(0.055, 0.045, 0.7, C.woodD, { x: 0.42, y: top + 1.12, z: -0.72 });
-    b.box(0.03, 0.1, 0.3, FB, { x: 0.385, y: top + 0.88, z: -0.72 });
-    b.box(0.03, 0.06, 0.1, 0x5ab0e0, { x: 0.385, y: top + 0.9, z: -0.72 });
-    b.box(0.03, 0.14, 0.08, FB, { x: 0.385, y: top + 0.86, z: -0.5 });
-    b.box(0.032, 0.03, 0.03, 0x1a1a1a, { x: 0.37, y: top + 0.93, z: -0.82 });
-    b.box(0.03, 0.05, 0.5, 0xb55a3a, { x: 0.385, y: top + 0.77, z: -0.72 });
-    /* Laterne auf Pfosten (nachts warm leuchtend) */
-    b.cyl(0.035, 0.035, 0.95, 6, C.woodD, { x: 0.42, y: top - 0.05, z: 0.72 });
-    b.box(0.13, 0.17, 0.13, 0xffd67d, { x: 0.42, y: top + 0.9, z: 0.72 });
-    b.box(0.17, 0.035, 0.17, 0x2a2a2a, { x: 0.42, y: top + 1.07, z: 0.72 });
-    b.box(0.17, 0.03, 0.17, 0x2a2a2a, { x: 0.42, y: top + 0.87, z: 0.72 });
-    /* zwei Angeln in Haltern am Kopf, Schnur und rot-weiße Pose im Wasser */
-    [[LW + 0.28, 0.82], [LW + 0.78, 0.86]].forEach(([x, z], i) => {
-      b.box(0.05, 0.28, 0.05, C.woodD, { x, y: top, z: z - 0.04 });
-      b.box(0.022, 0.022, 1.45, 0x6a4a2e, { x, y: top + 0.36, z: z + 0.5, rx: -0.32 });
-      b.box(0.006, 0.55, 0.006, 0xe8e8e8, { x, y: top - 0.2, z: z + 1.15 });
-      b.ico(0.032, 0xd8334a, { x, y: top - 0.16, z: z + 1.15 });
-      b.ico(0.02, 0xffffff, { x, y: top - 0.12, z: z + 1.15 });
+    const b = new MB(), { LW, L, top } = PIER_DIM;
+    const PL = [0xb98a58, 0xae7f4e, 0xc39665], EDGE = 0x8c6440, BEAM = 0x6a4a2e, PILE = 0x5c4332, WET = 0x3c4038;
+    /* Belag: Bohlen quer, gleich breit, mit Fugen; Stirnbretter rundum */
+    const planks = (x0, x1, w) => { const n = Math.round((x1 - x0) / 0.24), p = (x1 - x0) / n; for (let i = 0; i < n; i++) { const c = PL[(i * 7) % 3]; b.box(p - 0.028, 0.045, w, c, { x: x0 + (i + 0.5) * p, y: top - 0.045, top: mix(c, 0xffffff, 0.06), left: EDGE, right: EDGE }); } };
+    planks(0.1, LW, 1.1); planks(LW, L, 2.0);
+    [-1, 1].forEach(s => {
+      b.box(LW - 0.1, 0.09, 0.035, EDGE, { x: (LW + 0.1) / 2, y: top - 0.11, z: s * 0.57 });
+      b.box(L - LW, 0.09, 0.035, EDGE, { x: (L + LW) / 2, y: top - 0.11, z: s * 1.02 });
+      b.box(0.035, 0.09, 0.45, EDGE, { x: LW + 0.017, y: top - 0.11, z: s * 0.795 });
     });
-    /* Fischeimer mit zwei Fischen, Kiste mit Netz */
-    [[0.0, 0.09, 0x7fa8c0], [0.07, -0.1, 0xd9a24a]].forEach(([dz, rz, c]) => b.box(0.045, 0.15, 0.04, c, { x: LW + 0.32, y: top + 0.2, z: -0.6 + dz, rz }));
-    b.box(0.34, 0.2, 0.26, 0xa87a46, { x: LW + 0.3, y: top, z: -0.15, ry: 0.2 });
-    b.box(0.36, 0.03, 0.28, 0x7a5a38, { x: LW + 0.3, y: top + 0.2, z: -0.15, ry: 0.2 });
-    b.box(0.26, 0.035, 0.2, 0x4f9a5a, { x: LW + 0.3, y: top + 0.235, z: -0.15, ry: 0.2 });
-    /* Rettungsring flach am Kopf */
-    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2; b.box(0.09, 0.035, 0.05, k % 2 ? 0xf2f2f2 : 0xd8334a, { x: L - 0.38 + Math.cos(an) * 0.15, y: top, z: -0.62 + Math.sin(an) * 0.15, ry: -an }); }
-    /* Ruderboot am Steg (liegt im Wasser, Bug zeigt flussauf) */
-    const bx = L - 0.55, bz = 1.55;
-    b.box(0.58, 0.13, 1.5, 0x2d6f94, { x: bx, y: -0.07, z: bz });
-    b.box(0.045, 0.16, 1.5, 0x2d6f94, { x: bx - 0.3, y: -0.03, z: bz });
-    b.box(0.045, 0.16, 1.5, 0x2d6f94, { x: bx + 0.3, y: -0.03, z: bz });
-    b.box(0.56, 0.16, 0.05, 0x2d6f94, { x: bx, y: -0.03, z: bz - 0.76 });
-    b.box(0.56, 0.16, 0.05, 0x2d6f94, { x: bx, y: -0.03, z: bz + 0.76 });
-    b.box(0.5, 0.03, 1.4, 0xcfa46a, { x: bx, y: 0.045, z: bz });
-    b.box(0.5, 0.035, 0.16, 0xa87a46, { x: bx, y: 0.09, z: bz + 0.1 });
-    b.box(0.015, 0.015, 0.9, 0x8a6a48, { x: bx + 0.18, y: 0.12, z: bz - 0.25, ry: 0.25 });
-    b.box(0.01, 0.01, 0.8, 0xd8c8a0, { x: L - 0.2, y: top + 0.25, z: 1.1 });
+    b.box(0.035, 0.09, 2.08, EDGE, { x: L + 0.017, y: top - 0.11 });
+    /* Tragwerk: Längsträger, Querriegel, Pfähle mit nassem Ring an der Wasserlinie, Kreuzverband vorn */
+    [-0.4, 0.4].forEach(z => b.box(L - 0.15, 0.08, 0.09, BEAM, { x: (L + 0.15) / 2, y: top - 0.135, z }));
+    [-0.85, 0.85].forEach(z => b.box(L - LW, 0.08, 0.09, BEAM, { x: (L + LW) / 2, y: top - 0.135, z }));
+    [0.7, LW + 0.05, L - 0.06].forEach(x => b.box(0.09, 0.08, x > 1 ? 2.0 : 1.1, BEAM, { x, y: top - 0.215 }));
+    const piles = [[0.7, -0.5], [0.7, 0.5], [LW + 0.05, -0.95], [LW + 0.05, 0.95], [L - 0.06, -0.95], [L - 0.06, 0.95], [L - 0.06, 0]];
+    piles.forEach(([x, z], i) => {
+      const post = i === 4 || i === 5;                     /* vorne an den Ecken ragen die Pfähle als Poller heraus */
+      b.cyl(0.065, 0.065, (post ? top + 0.42 : top - 0.06) + 0.35, 7, PILE, { x, y: -0.35, z, top: 0x8a6a48 });
+      b.cyl(0.07, 0.07, 0.07, 7, WET, { x, y: -0.06, z });
+      if (post) b.cyl(0.08, 0.075, 0.04, 7, 0x4a3626, { x, y: top + 0.42, z });
+    });
+    [[-0.95, 0], [0, 0.95]].forEach(([z0, z1]) => { const A = [L - 0.04, -0.25, z0], B2 = [L - 0.04, top - 0.18, z1]; const dz = B2[2] - A[2], dy = B2[1] - A[1], l = Math.hypot(dz, dy); b.at({ x: A[0], y: A[1], z: A[2], rx: -Math.atan2(dz, dy) }, m => m.box(0.03, l, 0.05, BEAM)); });
+    /* Auflager am Ufer: Stamm quer, zwei Steine */
+    b.cyl(0.11, 0.11, 1.3, 8, BEAM, { x: 0.06, y: 0.03, z: -0.65, rx: Math.PI / 2, top: 0x7a5a38 });
+    [[-0.05, -0.75], [0.0, 0.78]].forEach(([x, z]) => b.ico(0.13, 0x8d8a82, { x, y: 0.05, z, flat: 0.6, jitter: 0.3 }));
+    /* Schild am Stegbeginn links: zwei Pfosten, gerahmtes Brett mit kleinem Dach, Fisch auf beiden Seiten */
+    const by = top + 0.6;
+    b.at({ x: 0.1, z: -0.98, ry: 0.58 }, m => {                         /* schräg zum Weg gedreht, damit man es von vorn sieht */
+      [-0.34, 0.34].forEach(dz => m.box(0.07, by + 0.55, 0.07, BEAM, { z: dz }));
+      m.box(0.04, 0.44, 0.7, 0xf0e0b8, { y: by });
+      m.box(0.05, 0.04, 0.76, BEAM, { y: by - 0.03 }); m.box(0.05, 0.04, 0.76, BEAM, { y: by + 0.43 });
+      [-0.36, 0.36].forEach(dz => m.box(0.05, 0.5, 0.04, BEAM, { y: by - 0.03, z: dz }));
+      [-1, 1].forEach(s2 => m.box(0.22, 0.025, 0.86, 0x5a4636, { x: s2 * 0.075, y: by + 0.5, rz: s2 * 0.5 }));
+      [-1, 1].forEach(d => { pierFish(m, d * 0.021, by + 0.25, 0, 1.3, d); m.box(0.004, 0.03, 0.5, 0x5fa8d6, { x: d * 0.022, y: by + 0.06 }); m.box(0.004, 0.02, 0.3, 0x5fa8d6, { x: d * 0.022, y: by + 0.11, z: 0.08 }); });
+    });
+    /* Laterne am Stegbeginn rechts: Pfosten, Ausleger, hängende Laterne (nachts warm) */
+    const lx = 0.12, lz = 0.92;
+    b.box(0.07, 1.25, 0.07, BEAM, { x: lx, y: 0, z: lz });
+    b.box(0.05, 0.05, 0.32, BEAM, { x: lx, y: 1.2, z: lz - 0.13 });
+    b.box(0.01, 0.08, 0.01, 0x2a2a2a, { x: lx, y: 1.12, z: lz - 0.26 });
+    b.box(0.12, 0.16, 0.12, 0xffd77d, { x: lx, y: 0.95, z: lz - 0.26 });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, c]) => b.box(0.015, 0.17, 0.015, 0x2a2a2a, { x: lx + a * 0.06, y: 0.945, z: lz - 0.26 + c * 0.06 }));
+    b.box(0.15, 0.02, 0.15, 0x2a2a2a, { x: lx, y: 0.94, z: lz - 0.26 });
+    b.cyl(0.11, 0.02, 0.07, 4, 0x2a2a2a, { x: lx, y: 1.11, z: lz - 0.26, a0: Math.PI / 4 });
+    /* Rettungsring senkrecht am Pfosten zwischen Laufsteg und Kopf (links) */
+    const rx0 = LW + 0.05, rz0 = -0.62;
+    b.box(0.06, 0.62, 0.06, BEAM, { x: rx0, y: top, z: rz0 });
+    for (let k = 0; k < 14; k++) { const an = k / 14 * Math.PI * 2; b.box(0.04, 0.075, 0.07, k % 2 ? 0xf2f2f2 : 0xd8334a, { x: rx0 - 0.05, y: top + 0.42 + Math.sin(an) * 0.15, z: rz0 + Math.cos(an) * 0.15, rx: -an }); }
+    /* hintere Kante des Kopfes: Angelkiste und Eimer nebeneinander */
+    b.box(0.34, 0.18, 0.22, 0x3f7a4a, { x: LW + 0.24, y: top, z: -0.25, top: 0x4f8a5a });
+    b.box(0.14, 0.025, 0.03, 0x2a2a2a, { x: LW + 0.24, y: top + 0.2, z: -0.25 });
+    b.box(0.35, 0.012, 0.23, 0x2f6a3a, { x: LW + 0.24, y: top + 0.17, z: -0.25 });
+    b.cyl(0.1, 0.12, 0.22, 10, 0x6c8fa8, { x: LW + 0.24, y: top, z: 0.12, top: 0x3f8fc0 });
+    [[0, 0.09, 0x7fa8c0], [0.05, -0.12, 0xd9a24a]].forEach(([dz, rz, c]) => b.box(0.04, 0.14, 0.035, c, { x: LW + 0.24, y: top + 0.17, z: 0.12 + dz, rz }));
+    /* Bank an der rechten Kante, Blick aufs Wasser */
+    [LW + 0.3, L - 0.3].forEach(x => b.box(0.06, 0.22, 0.22, BEAM, { x, y: top, z: 0.82 }));
+    b.box(L - LW - 0.4, 0.04, 0.26, 0xa47a4a, { x: (LW + L) / 2, y: top + 0.22, z: 0.82, top: 0xb48a58 });
+    /* zwei Rutenhalter vorn (rechts der Mitte), Ruten parallel übers Wasser, Schnur und Pose */
+    [0.38, 0.62].forEach((z, i) => {
+      b.box(0.05, 0.22, 0.05, 0x2a2a2e, { x: L - 0.08, y: top - 0.06, z });
+      const ang = 1.08 + i * 0.06;                          /* etwa 30° über der Waagerechten, wie in einem echten Rutenhalter */
+      b.at({ x: L - 0.08, y: top + 0.14, z, rz: -ang }, m => { m.box(0.02, 1.4, 0.02, 0x3a3a40, {}); m.box(0.03, 0.2, 0.03, 0x2b2b30, { y: -0.06 }); m.cyl(0.03, 0.03, 0.04, 8, 0x9aa6af, { rz: Math.PI / 2, x: 0.02, y: 0.08 }); });
+      const tx = L - 0.08 + Math.sin(ang) * 1.4, ty = top + 0.14 + Math.cos(ang) * 1.4;
+      b.box(0.005, ty - 0.02, 0.005, 0xe8e8e8, { x: tx, y: 0.02, z });
+      b.ico(0.03, 0xd8334a, { x: tx, y: 0.03, z, bottom: 0xffffff });
+    });
+    /* Ruderboot längsseits rechts am Kopf, Bug zum Wasser, Leine zum Poller */
+    const bx = LW + 0.48, bz = 1.42, hull = 0x2d6f94, hullD = 0x245a78, inside = 0xcfa46a;
+    b.at({ x: bx, y: -0.07, z: bz }, m => {
+      m.box(1.2, 0.12, 0.56, hull, { top: inside });
+      [-1, 1].forEach(s => m.box(1.2, 0.17, 0.04, hull, { y: 0.03, z: s * 0.28, top: hullD }));
+      m.box(0.04, 0.17, 0.56, hull, { x: -0.6, y: 0.03, top: hullD });
+      [-1, 1].forEach(s => m.at({ x: 0.6, y: 0.03, z: s * 0.28 }, q => q.box(0.36, 0.17, 0.04, hull, { x: 0.15, ry: s * 0.7, top: hullD })));
+      m.box(0.4, 0.035, 0.5, 0xa87a46, { x: -0.1, y: 0.13 });
+      m.box(0.25, 0.035, 0.46, 0xa87a46, { x: -0.48, y: 0.13 });
+      [-1, 1].forEach(s => m.box(1.0, 0.02, 0.025, 0x8a6a48, { x: 0.05, y: 0.17, z: s * 0.17, ry: s * 0.05 }));
+    });
+    b.box(0.008, 0.008, 0.52, 0xd8c8a0, { x: L - 0.06, y: top + 0.34, z: 1.18, rx: 0.5 });
     return b;
   }
   /* v73: Lieferkiste (Besondere Lieferung): Holzkiste mit Messingbeschlag und Schloss. Der Deckel ist ein eigenes
@@ -4087,9 +4231,9 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
-    sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
+    PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,
     fPlot, lakeSteg, fHuette, fBoot, fLager, fMarkt, rowboat, motorboat,
     deer, hare, boar, fox, squirrel, bird, birdWing, owl, owlWing, bat, batWing, hedgehog, heron, dog, cat, goat, person, head, arm, armSit, cosDeco

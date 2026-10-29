@@ -1,5 +1,51 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v191 – Wasserfall, Quelle größer (auf v190)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `SPR.RP` 3 → 4,5; `SPRING_FALL = { top, foot, S: 1.5 }`; `springRocks` rechnet lokal mit Radius 3 (`SPR.RP / S`); `springFall` komplett neu (Wurfbogen-Fläche 16 × 12, beidseitig, Rinne, Schaum-Halbscheibe) |
+| `worldview.js` | Felsen-/Fall-Knoten mit `s: SF.S`, Schlüssel `wspring191`/`wspringfall191`; `WV.springFx` um `lx/lz/ly/dx/dz/side/w` erweitert; Wasserstränge und Gischt in `worldStep`; `stamp` um die Quelle 10 (Mitte 2,5 vor dem Bachanfang) |
+| `erbe.js` | Baumplätze: Quelle 11 (vorher 8) |
+| `team.js` | Wegnetz: Quelle 7,5 (vorher 5,5) |
+| `index.html`, `sw.js` | Version 191 |
+
+## Stand v190 – Bach breiter, große Quelle (auf v189)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `creekStations`: Breitenfaktor `o.w`; Bachsteine im Umkreis des Quelltopfs entfallen (`o.spring`); neu `springGeo` (Abstandsfeld Topf ∪ Bach), `clipLT`, `springBank` (Ufer, y 0,02), `springPool2` (Topfwasser, y 0,044), `springInfo`, `springFall`, `SPRING_FALL`, `SPR`; `springRocks` neu (Felswand); `springBed`/`springPool` liefern leere Meshes |
+| `worldview.js` | `CR = { taper: [6,0], min: 0.7, w: 1.5 }`, Quellknoten (Ufer, Wasser `water: 4`, Felsen `wspring190`, Fall `wspringfall190` mit `glow`), `WV.springFx` + Gischt in `worldStep`, `stamp` Bach 3,3 und Kreis 7,5 um die Quelle, `worldPierFrame` 2,75 statt 2,3 |
+| `erbe.js` | Baumplätze: Bach 3,2 (vorher 2,6) und 8 um die Quelle; zweite Prüfung 3,6 (vorher 3) |
+| `farm.js` | Bauplatz-Prüfung Bach 2,8 (vorher 2,2) |
+| `team.js` | Wegnetz: Wald-Bach 2,1 (vorher 1,5), Quelle 5,5 gesperrt |
+| `index.html`, `sw.js` | Version 190 |
+
+## Stand v189 – Bachsteg (auf v188)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `pier()` komplett neu (Maße gleich: Laufsteg 1,3, Kopf bis 2,25, Belag 0,15), neu `PIER_DIM` (exportiert) und `pierFish` |
+| `fishdata.js` | `FGROUNDS`: Eintrag `bachsteg` (`pier: true`) direkt nach `steg` – `FGROUNDS[0]` bleibt der Seesteg |
+| `erbe.js` | `farmGroundOk`: `g.pier` → Seesteg gebaut und Wald offen |
+| `fishview.js` | `openFishingAt`/`fishStart` für `G.pier` (Kamera, Wurfstelle `WV.pier.cast`, Pose enger), Bootsliste ohne Bachsteg, Rute `WV.pier.rod`, Text in `stegFishHTML` |
+| `worldview.js` | Steg-Knoten mit Angler/Rute (`WV.pier`, Mesh-Schlüssel `wpier189`), Wurfstelle in `FGROUNDS`, `worldPierTap` + Antippen in `worldTap`, Sichtbarkeit in `worldSync` |
+| `index.html`, `sw.js` | Version 189 |
+
+## Stand v188 – Ablegen je Material, Stapel am Bauplatz (auf v187)
+
+| Datei | Änderung |
+|---|---|
+| `bauplatz.js` | **neu** – Modul `SITE3D`: Orte und Reihen je Bauplatz (`anchor`), feste Plätze nach der Bauliste (`layout`), Stapel (`sync`), Ablegen mit Kamera und fallenden Gebinden (`deliver`), Verbrauch beim Bauen, Antippen (`pick`, `open`); nutzt `SWK.UNIT` aus `sawwerk.js` |
+| `farm.js` | `siteReady`, `sitePutOne` neu; `sitePutAll` legt nur noch vollständige Materialien ab und gibt `{ Ware: Gebinde }` zurück (vorher eine Zahl) |
+| `farmview.js` | `siteNeedHTML` (Chip `rdy` + 📦↓), neu `siteRowHTML` (Karte mit eigenem Knopf `data-dep1="Platz|Ware"`), `siteDepHTML` (Beschriftung je nach Stand), `siteDepBind` (einzeln + alle, dann `SITE3D.deliver`) |
+| `rent.js`, `hunt.js` | Material-Karten über `siteRowHTML`; Hochsitz: `siteMesh` ohne Deko-Stämme/-Bretter (Schlüssel `hunt_site_v188`) |
+| `worldview.js` | `SITE3D.attach` nach `RENT.attach`, `SITE3D.sync` in `worldSync`, `SITE3D.step` nach `RENT.step`, Antippen nach der Hütte, `SITE3D.busy()` in `worldBusy` |
+| `style.css` | `.hu-need.rdy/.dep`, `.fdep-one`, `.fchip.rdy`, `.fdep-st` |
+| `index.html`, `sw.js` | `bauplatz.js` nach `rent.js`; Version 188 |
+
+- Falls der Kollege `sitePutAll` anderswo aufruft: Rückgabe ist jetzt ein Objekt (leer = nichts abgelegt).
+
 ## Stand v187 – Ablegen-Knopf (auf v186)
 
 - `farmview.js`: `siteDepHTML` ohne Erklärtext, Knopf-Klasse `fdep-btn`. `style.css`: `.fdep-row`, `.fdep-btn`, `.hu-needs ~ .fs-row .btn` (volle Breite), `.fdep-row small` entfällt.

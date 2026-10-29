@@ -201,7 +201,7 @@ function navBuild() {
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
-    if (creeks.some(c => distLine(cx, cz, c) < 1.5)) { if (onDeck(cx, cz)) { cost[i] = 0.45; continue; } blk[i] = 1; continue; }
+    if (creeks.some(c => distLine(cx, cz, c) < (c === FWORLD.creek ? 2.1 : 1.5)) || (FWORLD.spring && Math.hypot(cx - FWORLD.spring[0], cz - FWORLD.spring[1]) < 7.5)) { if (onDeck(cx, cz)) { cost[i] = 0.45; continue; } blk[i] = 1; continue; }
     /* v109: Wege lohnen sich – quer durch den Wald ist teuer, über die Wiese etwas teurer, im Hof fast gleich */
     cost[i] = inHofMax(cx, cz, 0) ? 1.1 : fK(cx, cz) > 0.35 ? 2.6 : 1.4;
     /* Nachbars Felder: da läuft keiner durch */

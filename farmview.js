@@ -1972,27 +1972,47 @@ function refreshSheet() { if (FV.sheet && FV.sheetTick) FV.sheetTick(); }
 /* Warenbild: 3D, wo es ein Modell gibt, sonst das Symbol */
 const icOf = (id, lock) => typeof itemIc === "function" ? itemIc(id, lock) : `<span class="ic">${lock ? "🔒" : FITEMS[id].i}</span>`;
 const itemChip = (id, need, have) => `<span class="fchip${have != null && have < need ? " miss" : ""}" data-it="${id}">${icOf(id)}<b>${have != null ? fpair(id, have, need) : famt(id, need)}</b></span>`;
-/* v186: Baumaterial am Bauplatz: Chips zählen Abgelegtes + Lager, 📦 zeigt, was schon am Bauplatz liegt; darunter der Ablege-Knopf */
+/* v186: Baumaterial am Bauplatz: Chips zählen Abgelegtes + Lager, 📦 zeigt, was schon am Bauplatz liegt; darunter der Ablege-Knopf.
+   v188: abgelegt wird je Material, sobald es vollständig da ist – grüner Rand + „📦↓“ = bereit zum Ablegen */
 function siteNeedHTML(key, need) {
+  const rdy = siteReady(key, need);
   const chips = Object.keys(need).map(id => {
-    const d = siteN(key, id), have = siteHave(key, id);
-    return `<span class="fchip${have < need[id] ? " miss" : ""}${d >= need[id] ? " dep" : ""}" data-it="${id}">${icOf(id)}<b>${fpair(id, have, need[id])}</b>${d ? `<i class="fdep-n">📦${d >= need[id] ? "" : esc(famt(id, d))}</i>` : ""}</span>`;
+    const d = siteN(key, id), have = siteHave(key, id), r = rdy.includes(id);
+    return `<span class="fchip${have < need[id] ? " miss" : ""}${d >= need[id] ? " dep" : ""}${r ? " rdy" : ""}" data-it="${id}">${icOf(id)}<b>${fpair(id, have, need[id])}</b>${d >= need[id] ? `<i class="fdep-n">📦</i>` : r ? `<i class="fdep-n">📦↓</i>` : d ? `<i class="fdep-n">📦${esc(famt(id, d))}</i>` : ""}</span>`;
   }).join("");
   return chips;
 }
-function siteDepHTML(key, need) {
-  const can = Object.keys(need).some(id => farmInv(id) > 0 && siteN(key, id) < need[id]);
-  const all = Object.keys(need).every(id => siteN(key, id) >= need[id]);
-  return all ? `<div class="fs-sub fdep-ok">📦 Alles Material liegt am Bauplatz.</div>`
-    : `<div class="fdep-row"><button class="btn fdep-btn${can ? "" : " ghost disabled"}" data-dep="${key}">📦 Material ablegen</button></div>`;
+/* Material-Karte (Hütte, Hochsitz): Menge, Stand und – sobald vollständig – der eigene Ablege-Knopf */
+function siteRowHTML(key, need, id, ic) {
+  const have = siteHave(key, id), dep = siteN(key, id), n = need[id], done = have >= n, put = dep >= n, rdy = !put && done;
+  const sub = put ? "📦 liegt am Bauplatz" : rdy ? "✓ vollständig" : dep ? "📦 " + esc(famt(id, dep)) + " abgelegt · im Lager " + esc(famt(id, have - dep)) : "im Lager: " + esc(fpair(id, have, n));
+  return `<div class="hu-need${done ? " ok" : ""}${put ? " dep" : ""}${rdy ? " rdy" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, n))}</b><small>${sub}</small>${rdy ? `<button class="btn tiny fdep-one" data-dep1="${key}|${id}">📦 Ablegen</button>` : ""}</div>`;
 }
+function siteDepHTML(key, need) {
+  const ids = Object.keys(need), rdy = siteReady(key, need);
+  const all = ids.every(id => siteN(key, id) >= need[id]);
+  if (all) return `<div class="fs-sub fdep-ok">📦 Alles Material liegt am Bauplatz.</div>`;
+  const put = ids.filter(id => siteN(key, id) >= need[id]).length;
+  const lbl = rdy.length ? (rdy.length === 1 ? "📦 " + esc(FITEMS[rdy[0]].n) + " ablegen" : "📦 " + rdy.length + " Materialien ablegen")
+    : "📦 Ablegen, sobald ein Material vollständig ist";
+  return `<div class="fdep-row"><button class="btn fdep-btn${rdy.length ? "" : " ghost disabled"}" data-dep="${key}">${lbl}</button>${put ? `<small class="fdep-st">📦 ${put} von ${ids.length} liegen schon am Bauplatz</small>` : ""}</div>`;
+}
+/* Ablegen: Material verlässt das Lager sofort (Arbeiter kommen nicht mehr dran); dann bringt bauplatz.js es sichtbar an den Platz */
 function siteDepBind(key, need, redraw) {
-  const b = $(`#farmSheetIn [data-dep="${key}"]`);
-  if (b) b.onclick = () => {
-    const n = sitePutAll(key, need);
-    if (!n) { sfx("bad"); toast("Im Lager liegt nichts davon.", "warn"); return; }
-    sfx("pop"); toast("📦 Material am Bauplatz abgelegt.", "good"); save(); redraw();
+  const go = put => {
+    if (!Object.keys(put).length) { sfx("bad"); toast("Ablegen geht erst, wenn ein Material vollständig da ist.", "warn"); return; }
+    save();
+    const names = Object.keys(put).map(id => FITEMS[id].n).join(", ");
+    if (typeof SITE3D !== "undefined" && SITE3D.deliver(key, put, redraw)) { sfx("pop"); toast("📦 " + names + " – wird am Bauplatz abgelegt.", "good"); return; }
+    sfx("pop"); toast("📦 " + names + " am Bauplatz abgelegt.", "good"); redraw();
   };
+  const b = $(`#farmSheetIn [data-dep="${key}"]`);
+  if (b) b.onclick = () => go(sitePutAll(key, need));
+  $$(`#farmSheetIn [data-dep1^="${key}|"]`).forEach(el => el.onclick = e => {
+    e.stopPropagation();
+    const id = el.dataset.dep1.slice(key.length + 1), n = sitePutOne(key, need, id);
+    go(n ? { [id]: n } : {});
+  });
 }
 /* v53: Ware antippen → Name darüber (und was im Lager liegt) */
 function itemTip(el) {

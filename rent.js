@@ -669,8 +669,7 @@ const RENT = (() => {
     FV.sheetFn = buildSheet;
     const lvOk = flv() >= LV, chk = buildCheck();
     const ic = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
-    const rows = Object.keys(NEED).map(id => { const have = siteHave("rent", id), dep = siteN("rent", id), need = NEED[id], done = have >= need;
-      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${dep >= need ? "📦 abgelegt" : dep ? "📦 " + esc(famt(id, dep)) + " abgelegt" + (have > dep ? " · " + esc(famt(id, have - dep)) + " im Lager" : "") : done ? "✓ im Lager" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("")
+    const rows = Object.keys(NEED).map(id => siteRowHTML("rent", NEED, id, ic)).join("")
       + `<div class="hu-need${S.money >= COST ? " ok" : ""}"><span class="hu-ni">💶</span><b>${eur(COST)}</b><small>${S.money >= COST ? "✓ da" : "auf dem Konto: " + eur(S.money)}</small></div>`;
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏚️</span>Verfallene Hütte am See<small>${lvOk ? "gehört zu deinem Hof" : "ab Level " + LV}</small></div>
       <div class="fs-sub">Die alte Blockhütte westlich vom See ist eingestürzt. Mit Holz aus dem Sägewerk wird daraus eine zweistöckige Hütte mit Veranda – zum Vermieten: ${eur(RENT_DAY)} Miete am Tag, alle 90 Tage eine Instandhaltung (${eur(MAINT)}), ab und zu eine kleine Reparatur.</div>

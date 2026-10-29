@@ -224,7 +224,8 @@ function treeSpotOk(x, z, pathGap) {
   if (x > 25 && x < 45 && z > -17 && z < 17) return false;          /* Teichwiese: dort steht das Feldgehölz extra */
   if (inYard(x, z, 2) || inLkwBay(x, z, 1.5)) return false;
   if (nearPath(x, z) < (pathGap || 2.4)) return false;
-  if (distLine(x, z, FWORLD.creek) < 2.6) return false;
+  if (distLine(x, z, FWORLD.creek) < 3.2) return false;                     /* v190: Bach breiter */
+  if (FWORLD.spring && Math.hypot(x - FWORLD.spring[0], z - FWORLD.spring[1]) < 11) return false;   /* v190: großer Quelltopf mit Felswand */
   for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < c[2]) return false;
   if (Math.hypot(x - FWORLD.rocks[0], z - FWORLD.rocks[1]) < FWORLD.rocks[2] * 0.7) return false;
   if (inFieldN(x, z, 1.2)) return false;                            /* Nachbars Felder */
@@ -949,7 +950,8 @@ function farmCatch(gid, q, pre) {
   return r;
 }
 /* Fanggründe, die man gerade erreicht */
-function farmGroundOk(g) { return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
+function farmGroundOk(g) { if (g.pier) return !!farmObj1("f_steg") && farmAreaOpen("wald");      /* v189: Bachsteg – Angel gibt es am Seesteg */
+  return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
 
 /* --------------------------------- Angeln ---------------------------------
    Ab dem Steg: Lehmanns alte Angel, Köder (Mais, Berts Würmer, Profi-Köder)
@@ -1694,7 +1696,7 @@ function treasureSpotOk(x, z, area) {
   if (inHofMax(x, z, 1)) return false;
   if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
   if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;
-  if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3) return false;
+  if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3.6) return false;
   if (inYard(x, z, 2)) return false;
   if (inFieldN(x, z, 2)) return false;                                /* Nachbars Felder */
   if (F.trees.some(t => Math.hypot(t.x - x, t.z - z) < 2.4)) return false;

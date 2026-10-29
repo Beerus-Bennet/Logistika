@@ -177,8 +177,7 @@ const HUNT = (() => {
       [[[-1.5, -1.5], [1.5, -1.5]], [[1.5, -1.5], [1.5, 1.5]], [[1.5, 1.5], [-1.5, 1.5]], [[-1.5, 1.5], [-1.5, -1.5]]].forEach(([A, B]) => {
         for (let i = 0; i < 6; i++) { const u0 = i / 6, u1 = (i + 1) / 6; beam(m, [lerp(A[0], B[0], u0), 0.78, lerp(A[1], B[1], u0)], [lerp(A[0], B[0], u1), 0.76, lerp(A[1], B[1], u1)], 0.018, i % 2 ? 0xffffff : 0xe2465f, false); }
       });
-      for (let i = 0; i < 5; i++) m.cyl(0.13, 0.12, 2.2, 7, Wd, { rz: Math.PI / 2, x: 1.1 - (i % 3) * 0.02, y: 0.13 + Math.floor(i / 3) * 0.22, z: -0.9 + (i % 3) * 0.27 + Math.floor(i / 3) * 0.13, top: 0xcfae80 });
-      for (let i = 0; i < 4; i++) m.box(1.6, 0.05, 0.24, i % 2 ? 0xb08b5c : 0xa98457, { x: 0.2, y: 0.02 + i * 0.055, z: 0.75 });
+      /* v188: kein Deko-Holz mehr – das abgelegte Material liegt als echte Stapel auf dem Platz (bauplatz.js) */
       [-0.25, 0.25].forEach(x => { beam(m, [x - 0.2, 0, -0.1], [x, 0.55, -0.1], 0.03, W, true); beam(m, [x + 0.2, 0, -0.1], [x, 0.55, -0.1], 0.03, W, true); });
       m.box(0.9, 0.06, 0.08, W, { y: 0.52, z: -0.1 });
       m.box(0.07, 1.25, 0.07, Wd, { x: -1.25, z: 1.3 });
@@ -1001,7 +1000,7 @@ const HUNT = (() => {
   const W = { root: null, site: null, grow: null, chk: 0 };
   function attach(R) {
     W.root = fnode(fmesh("hunt_tower_v107", towerMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
-    W.site = fnode(fmesh("hunt_site_v108", siteMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
+    W.site = fnode(fmesh("hunt_site_v188", siteMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
     R.nodes.push(W.root, W.site);
     syncWorld();
     return W.root;
@@ -1045,8 +1044,7 @@ const HUNT = (() => {
     FV.sheetFn = buildSheet;
     const miss = missing(), ok = !miss.length;
     const ic = id => typeof icHTML === "function" ? icHTML(id) : FITEMS[id].i;
-    const rows = Object.keys(NEED).map(id => { const have = siteHave("hunt", id), dep = siteN("hunt", id), need = NEED[id], done = have >= need;
-      return `<div class="hu-need${done ? " ok" : ""}"><span class="hu-ni">${ic(id)}</span><b>${esc(fqty(id, need))}</b><small>${dep >= need ? "📦 abgelegt" : dep ? "📦 " + esc(famt(id, dep)) + " abgelegt" + (have > dep ? " · " + esc(famt(id, have - dep)) + " im Lager" : "") : done ? "✓ im Lager" : "im Lager: " + esc(famt(id, have) || "0")}</small></div>`; }).join("");
+    const rows = Object.keys(NEED).map(id => siteRowHTML("hunt", NEED, id, ic)).join("");
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🔨</span>Bauplatz für einen Hochsitz<small>vom Förster an der Wildwiese abgesteckt</small></div>
       <div class="fs-sub">Für den Hochsitz brauchst du Holz aus dem Wald und aus dem Sägewerk. Leg das Material hier ab, dann wird gebaut.</div>
       <div class="hu-needs">${rows}</div>${typeof siteDepHTML === "function" ? siteDepHTML("hunt", NEED) : ""}

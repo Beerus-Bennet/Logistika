@@ -241,6 +241,8 @@ const FBOAT_DOCK = [18, 31.5];
    fish = Gewicht beim Würfeln (dann noch × Tageszeit × Wetter). */
 const FGROUNDS = [
   { id: "steg",  n: "Am Steg",        i: "🪵", x: 8,   z: 32.5, boat: 0, fish: { rotauge: 25, rotfeder: 20, ukelei: 15, barsch: 50, forelle: 14, karpfen: 22, aal: 4, hecht: 4 } },
+  /* v189: Angelsteg am Bach im Wald – vom Steg aus, Bachfische (x/z = Wurfstelle, worldview.js setzt sie genau) */
+  { id: "bachsteg", n: "Bachsteg im Wald", i: "🏞️", x: -87.3, z: -59.4, boat: 0, pier: true, fish: { ukelei: 26, rotauge: 22, barsch: 24, forelle: 20, aal: 6, hecht: 2 } },
   { id: "rosen", n: "Seerosenbucht",  i: "🪷", x: -9,  z: 40,   boat: 1, fish: { rotfeder: 20, rotauge: 15, ukelei: 10, karpfen: 40, barsch: 28, hecht: 8, schleie: 1.2 } },
   { id: "schilf", n: "Schilfgürtel",  i: "🌾", x: -15, z: 52,   boat: 1, fish: { rotfeder: 15, rotauge: 12, ukelei: 8, hecht: 30, karpfen: 24, barsch: 18, aal: 6, schleie: 1.6 } },
   { id: "stein", n: "Steinkante",     i: "🪨", x: 34,  z: 41,   boat: 1, fish: { rotauge: 12, ukelei: 10, rotfeder: 8, barsch: 40, zander: 18, hecht: 12 } },

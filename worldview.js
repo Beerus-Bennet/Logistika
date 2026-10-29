@@ -147,7 +147,9 @@ function worldMasks(fell) {
   FWORLD.paths.forEach(p => { stamp(p, 2.2, 1); stamp(p, 6, 2); });
   /* v75: auch die Wege am See halten Kulissenbäume fern (der neue Ostuferweg läuft durch lockeren Baumbestand) */
   [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
-  stamp(FWORLD.creek, 2.7, 4); stamp(LAKE_CREEK, 2.3, 4);
+  stamp(FWORLD.creek, 3.3, 4);
+  /* v190: großer Quelltopf mit Felswand – Platz rundherum */
+  if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } stamp(LAKE_CREEK, 2.3, 4);
   const at = (x, z) => { const gx = Math.floor(x) - x0, gz = Math.floor(z) - z0; return gx < 0 || gz < 0 || gx >= W || gz >= H ? 0 : g[gz * W + gx]; };
   const hash = new Map();
   fell.forEach(t => { const k = Math.floor(t.x / 4) + "," + Math.floor(t.z / 4); (hash.get(k) || hash.set(k, []).get(k)).push(t); });
@@ -288,7 +290,7 @@ function worldPierFrame() {
   if (!F || best > 6) return null;
   let n = [-m[1], m[0]];
   if (n[0] * (q[0] - F[0]) + n[1] * (q[1] - F[1]) < 0) n = [-n[0], -n[1]];
-  const x = F[0] + n[0] * 2.3, z = F[1] + n[1] * 2.3, dx = -n[0], dz = -n[1];
+  const x = F[0] + n[0] * 2.75, z = F[1] + n[1] * 2.75, dx = -n[0], dz = -n[1];
   return { x, z, dx, dz, ry: Math.atan2(-dz, dx) };
 }
 /* v75: Edge-Check – kein Bach darf offen auf der Wiese enden: jedes Ende liegt am Kartenrand, im See
@@ -969,27 +971,53 @@ function worldStatic() {
      v176: Ufer wie am See (Wiese → Sand → nasser Sand → Schlamm), Wasser in den Farben des Seeufers.
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
-  const CR = { gnd: wGroundAt, taper: [9, 0], min: 0.45 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
+  const CR = { gnd: wGroundAt, taper: [6, 0], min: 0.7, w: 1.5 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
   lines.merge(FWM.creekBank(LCR, CL), {});
   const SP = FWORLD.spring;
-  if (SP) lines.merge(FWM.springBed(SP[0], SP[1], wGroundAt), {});
+  const SPI = SP ? FWM.springInfo(FWORLD.creek, CR) : null;
+  if (SPI) CR.spring = SPI;
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
+  /* v190: Ufer um Quelltopf und Bachanfang aus einem Guss (deckt das Bachufer dort ab) */
+  if (SPI) { const sb2 = new FM.MB(); sb2.merge(FWM.springBank(FWORLD.creek, CR, wGroundAt), {}); R.nodes.push(fnode(R.mesh(sb2), { shadow: false })); }
   /* v125: nur der nördliche Fluss fließt von Osten nach Westen (water: 2) – v176: im ruhigen Muster des großen Sees */
   const cr = new FM.MB(); cr.merge(FWM.creekWater(FWORLD.creek, CR), {});
   R.nodes.push(fnode(R.mesh(cr), { water: 2, shadow: false }));
   /* v177: der Seebach fließt (water: 5, Richtung Westen in den See) und geht an der Mündung in die Seebewegung über; Quelltopf wie der See */
   const sb = new FM.MB(); sb.merge(FWM.creekWater(LCR, CL), {});
   R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
-  if (SP) { const cw = new FM.MB(); cw.merge(FWM.springPool(SP[0], SP[1]), {}); R.nodes.push(fnode(R.mesh(cw), { water: 4, shadow: false })); }
-  if (SP) { const q = FWORLD.creek[1]; R.nodes.push(fnode(fmesh("wspring", FWM.springRocks), { x: SP[0], z: SP[1], ry: Math.atan2(-(q[1] - SP[1]), q[0] - SP[0]) })); }
+  if (SPI) {
+    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 4, shadow: false }));
+    const ry = Math.atan2(-SPI.dir[1], SPI.dir[0]);
+    /* v191: Felsen und Wasserfall 1,5-mal so groß (Topf jetzt Radius 4,5) */
+    const SF = FWM.SPRING_FALL, k = SF.S;
+    R.nodes.push(fnode(fmesh("wspring191", FWM.springRocks), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
+    R.nodes.push(fnode(fmesh("wspringfall191", FWM.springFall), { x: SPI.C[0], z: SPI.C[1], ry, s: k, glow: 0.28, shadow: false }));
+    /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep) */
+    const c = Math.cos(ry), s = Math.sin(ry), W = p => [SPI.C[0] + (p[0] * c + p[2] * s) * k, SPI.C[1] + (-p[0] * s + p[2] * c) * k];
+    const ft = W(SF.foot), lp = W(SF.top);
+    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: SPI.dir[0], dz: SPI.dir[1], side: [-SPI.dir[1], SPI.dir[0]], w: 1.4 * k, C: SPI.C };
+  }
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
   R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: Math.PI / 2 }));
   /* Brücke am Seebach – v75: der Ostuferweg läuft in ihrer Achse darüber (vorher führte kein Weg hin) */
   R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: 52.6, y: 0, z: 60.3, ry: Math.PI / 2 - Math.atan2(3, 9.5) }));
   /* v75: Angelsteg am Ende des Westwegs – senkrecht zum Bach, beginnt am Wegende und endet mitten im Wasser */
-  if (PIER) R.nodes.push(fnode(fmesh("wpier", FWM.pier), { x: PIER.x, y: 0, z: PIER.z, ry: PIER.ry }));
+  /* v189: Steg neu (aufgeräumt) – und man kann dort angeln: Angler + Rute sitzen vorn am Kopf, sichtbar während des Angelns */
+  WV.pier = null;
+  if (PIER) {
+    const pn = fnode(fmesh("wpier189", FWM.pier), { x: PIER.x, y: 0, z: PIER.z, ry: PIER.ry }), D = FWM.PIER_DIM;
+    const fisher = R.addChild(pn, fnode(null, { x: D.L - 0.14, y: D.top + 0.02, z: -0.15, ry: Math.PI / 2, visible: false }));
+    R.addChild(fisher, fnode(fmesh("angler", FFM.angler), {}));
+    const rod = R.addChild(fisher, fnode(fmesh("rod", FFM.rod), { y: 0.46, z: 0.25, rx: ROD_REST }));
+    R.nodes.push(pn);
+    /* Wurfstelle: vor dem Stegkopf im Bach */
+    const c = Math.cos(PIER.ry), s = Math.sin(PIER.ry), lx = D.L + 1.15, lz = -0.15;
+    WV.pier = { node: pn, fisher, rod, cast: [PIER.x + c * lx + s * lz, PIER.z - s * lx + c * lz] };
+    const G = typeof FGROUNDS !== "undefined" && FGROUNDS.find(g => g.pier); if (G) { G.x = WV.pier.cast[0]; G.z = WV.pier.cast[1]; }
+  }
   R.nodes.push(fnode(fmesh("wbench", FM.bench), { x: -83.2, y: 0, z: -55.4, ry: Math.PI }));
   /* v81: Lagerfeuerplatz am Ende des Hauptwegs (camp.js) */
   if (typeof CAMP !== "undefined") CAMP.attach(R);
@@ -997,6 +1025,8 @@ function worldStatic() {
   if (typeof HUNT !== "undefined") HUNT.attach(R);
   /* v182: Hütte am See (rent.js) */
   if (typeof RENT !== "undefined") RENT.attach(R);
+  /* v188: abgelegtes Baumaterial an den Bauplätzen (bauplatz.js) */
+  if (typeof SITE3D !== "undefined") SITE3D.attach(R);
   const st = new FM.MB();
   st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
@@ -2904,6 +2934,12 @@ function lockedAreaAt(x, z) {
   }
   return null;
 }
+/* v189: am Bachsteg angeln – wie am Seesteg (Angel, Köder, Minispiel), Fische aus dem Bach */
+function worldPierTap() {
+  if (!farmAreaOpen("wald")) return openAreaInfo("wald");
+  if (!farmObj1("f_steg") || !angelS()) { sfx("bad"); return toast("🎣 Hier kann man angeln – die Angel gibt es, sobald der Steg am See gebaut ist.", "warn"); }
+  openFishingAt("bachsteg");
+}
 function worldTap(x, y) {
   const R = FV.R;
   /* Ereignisse und Besucher zuerst (großzügige Fläche um die Figur) */
@@ -2917,9 +2953,18 @@ function worldTap(x, y) {
   /* v107: Hochsitz */
   const hu = typeof HUNT !== "undefined" ? HUNT.pick(x, y) : null;
   if (hu && (!ho || hu.d < ho.d) && (!ht || hu.d < ht.d + 0.5)) { sfx("tap"); HUNT.sheet(); return true; }
+  /* v189: Bachsteg antippen → dort angeln */
+  if (WV.pier && FV.R && !FISH.at) {
+    const P0 = WV.pier.node, c = Math.cos(P0.ry), s = Math.sin(P0.ry), mx = P0.x + c * 1.2, mz = P0.z - s * 1.2;
+    const dp = FV.R.hitBox(FV.R.ray(x, y), [mx - 1.25, 0, mz - 1.25], [mx + 1.25, 1.4, mz + 1.25]);
+    if (dp != null && (!ho || dp < ho.d) && (!ht || dp < ht.d + 0.5)) { sfx("tap"); worldPierTap(); return true; }
+  }
   /* v182: Hütte am See */
   const rn = typeof RENT !== "undefined" ? RENT.pick(x, y) : null;
   if (rn && (!ho || rn.d < ho.d) && (!ht || rn.d < ht.d + 0.5)) { sfx("tap"); RENT.sheet(); return true; }
+  /* v188: Materialstapel am Bauplatz → Fenster des Bauplatzes */
+  const sp3 = typeof SITE3D !== "undefined" ? SITE3D.pick(x, y) : null;
+  if (sp3 && (!ho || sp3.d < ho.d) && (!ht || sp3.d < ht.d + 0.5)) { sfx("tap"); SITE3D.open(sp3.key); return true; }
   /* Holzstapel im Sägewerk */
   const hp = pickPile(x, y);
   if (hp && (!ho || hp.d < ho.d - 0.2) && (!ht || hp.d < ht.d - 0.2)) {
@@ -3328,7 +3373,7 @@ function vegStep(now) {
     if (n.sway < 0.002 && goal === 0) n.sway = 0;
   }
 }
-function worldBusy() { return !!(WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
+function worldBusy() { return !!((typeof SITE3D !== "undefined" && SITE3D.busy()) || WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
   vegStep(time);
@@ -3362,6 +3407,7 @@ function worldStep(dt, time) {
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
   if (typeof HUNT !== "undefined") HUNT.step(dt, time);
   if (typeof RENT !== "undefined") RENT.step(dt, time);
+  if (typeof SITE3D !== "undefined") SITE3D.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });
@@ -3370,6 +3416,14 @@ function worldStep(dt, time) {
   if (ev && ev.k === "schwarm" && S.time < ev.until && Math.random() < dt * 3) {
     const g = FGROUNDS.find(q => q.id === ev.data.g);
     if (g) FV.R.burst({ x: g.x + (Math.random() - 0.5) * 3, y: 0.06, z: g.z + (Math.random() - 0.5) * 3, n: 4, col: [0.9, 0.96, 1, 0.8], speed: 0.6, up: 1.6, size: 0.08, g: -6, life: 0.7 });
+  }
+  /* v190: Gischt am Fuß des Quell-Wasserfalls (nur wenn die Kamera in der Nähe ist) */
+  const sf = WV.springFx;
+  if (sf && FV.R.cam && Math.hypot(FV.R.cam.tx - sf.x, FV.R.cam.tz - sf.z) < 50) {
+    if (Math.random() < dt * 18) FV.R.emit({ x: sf.x + (Math.random() - 0.5) * 1.2, y: 0.12, z: sf.z + (Math.random() - 0.5) * 1.2, vx: (Math.random() - 0.5) * 0.6 + sf.dx * 0.4, vy: 0.6 + Math.random() * 0.7, vz: (Math.random() - 0.5) * 0.6 + sf.dz * 0.4, life: 1.1, size: 0.22, size2: 0.6, col: [0.93, 0.97, 1, 0.5], drag: 1.6 });
+    /* v191: Wasserstränge, die über die Kante schießen und im Bogen in den Topf fallen – bewegt den Fall sichtbar */
+    if (Math.random() < dt * 22) { const u = (Math.random() - 0.5) * sf.w * 0.8, v = 1.1 + Math.random() * 0.4;
+      FV.R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly + 0.05, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9, life: 0.75, size: 0.12, size2: 0.2, col: [0.88, 0.96, 1, 0.85], drag: 0.2 }); }
   }
   stepOutline(time);
   worldTags();
@@ -3388,6 +3442,7 @@ function worldSync(force) {
   worldSyncTreasure();
   worldSyncPV();
   worldSyncPiles();
+  if (typeof SITE3D !== "undefined") SITE3D.sync();            /* v188: Stapel am Bauplatz */
   if (!WV.reveal) worldLocks();
   /* Ware auf dem Verkaufsstand */
   S.farm.objs.forEach(o => {
@@ -3401,6 +3456,7 @@ function worldSync(force) {
   });
   const st = farmObj1("f_steg"), e = st && FV.nodes.get(st.id);
   if (e && e.parts.angler) e.parts.angler.visible = e.parts.rod.visible = !!(typeof FISH !== "undefined" && FISH.at === "steg");
+  if (WV.pier) WV.pier.fisher.visible = !!(typeof FISH !== "undefined" && FISH.at === "bachsteg");     /* v189 */
 }
 
 /* ------------------------- Oberfläche: Knöpfe ----------------------------- */

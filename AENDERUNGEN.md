@@ -1,5 +1,88 @@
 # Änderungen – kurz für den Kollegen
 
+## v191 – Wasserfall als fließende Wasserfläche, Quelle größer
+
+- **Wasserfall neu:**
+  - Statt drei Quaderstufen gibt es jetzt eine durchgehende, gebogene Wasserfläche. Das Wasser schießt über die Felskante und fällt im Wurfbogen in den Topf.
+  - Die Fläche besteht aus senkrechten Strängen in wechselnden Blautönen. An der Kante ist sie glatt und dunkler, nach unten wird sie heller bis weiß. Die Ränder sind weiß ausgefranst, und der Fall wird nach unten breiter.
+  - Oben auf dem Fels läuft das Wasser in einer Rinne zur Kante.
+  - Bewegung: Wasserstränge schießen laufend über die Kante und fallen im Bogen in den Topf. Unten steigt Gischt auf. Beides läuft nur, wenn die Kamera in der Nähe ist.
+  - Am Fuß liegt ein weicher Schaumteppich, der ins Topfwasser ausläuft. Die einzelnen weißen Plättchen sind weg.
+- **Quelle größer, auch aus der Hofansicht von oben:**
+  - Der Topf hat jetzt einen Radius von 4,5 (v190: 3).
+  - Felswand und Wasserfall sind 1,5-mal so groß, die Wand ist bis etwa 4,5 hoch.
+  - Mehr Platz um die Quelle: Kulisse 10 statt 7,5, Bäume 11 statt 8, Wegnetz 7,5 statt 5,5.
+- Dateien:
+  - `woodmodels.js`: `SPR.RP` 4,5; `SPRING_FALL` mit Maßstab `S`; `springFall` neu; `springRocks` lokal unverändert
+  - `worldview.js`: Felsen und Fall mit `s: 1.5` (Mesh-Schlüssel `wspring191`/`wspringfall191`), `WV.springFx` mit Kante, Wasserstränge in `worldStep`, `stamp` um die Quelle
+  - `erbe.js`, `team.js`: Abstände zur Quelle
+  - `index.html`, `sw.js`
+
+## v190 – Bach breiter, große Quelle, saubere Übergänge
+
+- **Grafikfehler behoben:**
+  - Das Flimmern im Wasser kam daher, dass Quelltopf und Bachanfang auf genau derselben Höhe übereinander lagen. Jetzt liegt der Topf höher als das Bachwasser.
+  - Die kantigen Ränder kamen daher, dass das runde Ufer der Quelle auf gleicher Höhe über den geraden Uferstreifen des Bachs lag. Jetzt gibt es dort ein gemeinsames Ufer aus einem Guss:
+    - Die Farbe hängt nur vom Abstand zur Wasserkante von Topf und Bach ab.
+    - Die Farben sind dieselben wie am Bachufer.
+    - Der Rand wird sauber beschnitten.
+- **Bach breiter:**
+  - Der Wald-Bach ist überall 1,5-mal so breit.
+  - Er wird erst auf den letzten 6 Einheiten vor der Quelle schmaler und bleibt dort kräftig (vorher auf 9 Einheiten bis auf fast nichts).
+- **Quelle deutlich größer:**
+  - Der Quelltopf hat jetzt einen Radius von 3 (vorher etwa 1), mit leicht unregelmäßigem Rand und zur Mitte hin dunklerem Wasser.
+  - Dahinter steht eine Felswand mit Moos, bis etwa 3 hoch, mit Blöcken am Topfrand.
+  - Ein Wasserfall fällt in drei Stufen in den Topf. Er leuchtet leicht, damit er vor dem Felsen hell bleibt.
+  - Am Fuß des Wasserfalls steigt Gischt auf, aber nur, wenn die Kamera in der Nähe ist.
+- **Platz gemacht:**
+  - Bäume, Büsche, Bauplätze und Wege halten mehr Abstand zum breiteren Bach und zur Quelle.
+  - Der Bachsteg steht 0,45 weiter am Ufer, damit sein Anfang wieder an Land liegt.
+  - Die Brücke überspannt den Bach weiter.
+- Dateien:
+  - `woodmodels.js`: Breite `w` in `creekStations`; neu `springBank`, `springPool2`, `springInfo`, `springFall`, `SPRING_FALL`, `SPR`; `springRocks` neu; Bachsteine am Topf entfallen; `springBed`/`springPool` sind jetzt leer
+  - `worldview.js`: Bach- und Quell-Aufbau, Gischt in `worldStep`, Abstände in `stamp`, Steg-Lage
+  - `erbe.js`, `farm.js`, `team.js`: Abstände zum Bach und zur Quelle
+  - `index.html`, `sw.js`
+
+## v189 – Bachsteg im Wald: aufgeräumt und zum Angeln
+
+- **Steg neu gebaut** (`FWM.pier`, gleiche Lage und Größe, Wege passen weiter):
+  - Bohlen quer mit Fugen, Stirnbretter, Längsträger und Querriegel; die Pfähle haben einen nassen Ring an der Wasserlinie, vorn sind sie über Kreuz verstrebt.
+  - Die vorderen Eckpfähle ragen als Poller heraus.
+- **Jedes Teil hat seinen Platz:**
+  - Schild links am Stegbeginn: zwei Pfosten, Rahmen und kleines Dach, schräg zum Weg gedreht. Statt Quadern zeigt es einen richtigen Fisch mit Auge, Schwanz- und Rückenflosse über Wellenlinien, auf beiden Seiten.
+  - Hängende Laterne rechts, Rettungsring senkrecht an einem Pfosten.
+  - Angelkiste und Eimer nebeneinander an der hinteren Kante, eine Bank an der rechten Kante.
+  - Zwei Rutenhalter vorn mit parallelen Ruten (etwa 30°), Schnur und Pose.
+  - Das Ruderboot liegt längsseits am Kopf und ist am Poller festgemacht.
+- **Angeln am Bachsteg:** neuer Fangplatz „Bachsteg im Wald“ (`FGROUNDS`, `pier: true`) mit Bachfischen: Ukelei, Rotauge, Barsch, Forelle, seltener Aal und Hecht.
+  - Steg antippen öffnet das Angel-Spiel wie am Seesteg: gleiche Köder, Ruten, Würfe und Fangbuch.
+  - Beim Angeln sitzt der Angler vorn am Stegkopf, die Pose landet im Bach, beim Biss wippt die Rute.
+  - Voraussetzung wie am See: Der Seesteg ist gebaut (dort gibt es die Angel) und der Wald ist offen. Sonst erscheint ein Hinweis.
+  - Der Platz steht auch in der Fangplatz-Liste im Steg-Fenster am See, aber nicht in der Bootsliste.
+- Dateien:
+  - `woodmodels.js`: `pier`, `PIER_DIM`, `pierFish`
+  - `fishdata.js`: Fangplatz
+  - `erbe.js`: `farmGroundOk`
+  - `fishview.js`: Angeln am Bachsteg, Kamera, Wurfstelle, Rute
+  - `worldview.js`: Angler und Rute am Steg, Antippen, Wurfstelle
+  - `index.html`, `sw.js`
+
+## v188 – Material je Stück ablegen, sichtbar am Bauplatz
+
+- **Ablegen je Material, sobald es vollständig ist:** Liegt von einem Material die ganze nötige Menge im Lager, kann man es ablegen – auch wenn anderes noch fehlt. Teilmengen werden nicht mehr abgelegt (aus älteren Spielständen schon abgelegte Teilmengen zählen weiter mit).
+  - Hütte und Hochsitz: jede Material-Karte hat dann einen eigenen Knopf **📦 Ablegen** (Karte gelb = bereit, grün = liegt am Bauplatz).
+  - Überall (auch Fischerei, Sägewerk, Hof-Ausbau): der große Knopf legt alle vollständigen Materialien auf einmal ab („📦 Bretter ablegen“ / „📦 3 Materialien ablegen“, sonst „Ablegen, sobald ein Material vollständig ist“); Chips mit **📦↓** sind bereit.
+- **Sichtbar und animiert:** Das Fenster schließt, die Kamera fährt zum Bauplatz, die Gebinde fallen nacheinander auf ihren Stapel (Staub beim Aufsetzen), danach öffnet sich das Fenster wieder. Jedes Material hat einen festen, nach der Bauliste reservierten Platz auf Kanthölzern – die Reihe bleibt ordentlich, egal in welcher Reihenfolge man ablegt. Stämme liegen als Pyramide, alles andere in gleich hohen Stapeln.
+  - **Hütte am See:** eine Reihe vor der Ruine.
+  - **Hochsitz:** auf dem abgesteckten Platz (das Deko-Holz dort ist weg – was jetzt dort liegt, ist echt).
+  - **Fischerei:** landseitig im jeweiligen Bauplatz.
+  - **Sägewerk:** Reparaturen und Blockbandsäge vor der Halle, großer Kessel neben der Kesseltür, Unimog neben dem Stellplatz.
+  - Hof-Ausbau: kein fester Platz – dort wird nur abgelegt, nicht gezeichnet.
+- **Beim Bauen** werden die Stapel sichtbar verbraucht (sie sinken mit Staub weg), während das Gebäude entsteht. Stapel antippen öffnet das Fenster des Bauplatzes.
+- **Unverändert:** Abgelegtes ist aus dem Lager raus – Arbeiter, Verkäufe und Rezepte kommen nicht dran; beim Bauen wird zuerst das Abgelegte verbraucht.
+- Dateien: **neu `bauplatz.js`** (Modul `SITE3D`), `farm.js` (`siteReady`, `sitePutOne`, `sitePutAll` nur vollständige), `farmview.js` (`siteNeedHTML`, `siteRowHTML`, `siteDepHTML`, `siteDepBind`), `rent.js` und `hunt.js` (Karten über `siteRowHTML`; Hochsitz-Bauplatz ohne Deko-Holz), `worldview.js` (anhängen, abgleichen, Schritt, Antippen, `worldBusy`), `style.css`, `index.html`, `sw.js`.
+
 ## v187 – Ablegen-Knopf so groß wie „Bauen“
 
 - Der Erklärtext neben **📦 Material ablegen** ist weg; der Knopf ist jetzt so groß wie der Bauen-Knopf (volle Breite, gleiche Schrift).

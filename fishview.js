@@ -29,15 +29,15 @@ function fishBobber() {
 }
 /* Angeln an einem Fangplatz – vom Steg oder mit dem Boot */
 function openFishingAt(gid) {
-  if (!farmAreaOpen("see")) return openAreaInfo("see");
   const G = FGROUNDS.find(g => g.id === gid);
   if (!G) return;
+  if (!farmAreaOpen(G.pier ? "wald" : "see")) return openAreaInfo(G.pier ? "wald" : "see");
   if (!farmGroundOk(G)) {
     sfx("bad");
     return toast(G.boat === 0 ? "Erst den Steg bauen." : G.boat === 2 ? "Für " + G.n + " brauchst du das Motorboot." : "Erst das Bootshaus mit Ruderboot bauen.", "warn");
   }
   if (!angelS()) { sfx("bad"); return toast("Erst den Steg bauen – dort liegt Lehmanns alte Angel.", "warn"); }
-  if (gid === "steg") return fishStart(G, false);
+  if (gid === "steg" || G.pier) return fishStart(G, false);
   const B = fishBoatNode();
   if (!B) return;
   if (B.at === gid) return fishStart(G, true);
@@ -46,7 +46,8 @@ function openFishingAt(gid) {
 function fishStart(G, boat) {
   FISH.at = G.id;
   const st = farmObj1("f_steg");
-  if (!boat && st) { const [x, z] = farmCenter(st); farmFocusXZ(x + 1.5, z + 4, 17, 600); FISH.cast = [x, z + 5.6]; }
+  if (G.pier && typeof WV !== "undefined" && WV.pier) { const P = WV.pier.node, c = WV.pier.cast; farmFocusXZ((P.x + c[0]) / 2 + 0.8, (P.z + c[1]) / 2 + 1.6, 15, 600); FISH.cast = c.slice(); }   /* v189: Bachsteg */
+  else if (!boat && st) { const [x, z] = farmCenter(st); farmFocusXZ(x + 1.5, z + 4, 17, 600); FISH.cast = [x, z + 5.6]; }
   else if (FISH.boat) { farmFocusXZ(FISH.boat.x + 1, FISH.boat.z + 2, 18, 500); FISH.cast = [FISH.boat.x + 2.2, FISH.boat.z + 1.8]; }
   if (FISH.boat) FISH.boat.rod.visible = !!boat;
   farmSyncScene();
@@ -55,7 +56,7 @@ function fishStart(G, boat) {
     onCast: () => {
       FISH.rod = 1;
       const b = fishBobber();
-      b.x = FISH.cast[0] + (Math.random() - 0.5); b.z = FISH.cast[1] + (Math.random() - 0.5); b.y = 0.06; b.visible = true;
+      const sc = FISH.at === "bachsteg" ? 0.35 : 1; b.x = FISH.cast[0] + (Math.random() - 0.5) * sc; b.z = FISH.cast[1] + (Math.random() - 0.5) * sc; b.y = 0.06; b.visible = true;
       setTimeout(() => FV.R && FV.R.burst({ x: b.x, y: 0.05, z: b.z, n: 8, col: [0.9, 0.96, 1, 0.9], speed: 0.8, up: 1.4, size: 0.07, g: -6, life: 0.6 }), 250);
     },
     onBite: () => { FISH.bite = performance.now(); },
@@ -96,7 +97,7 @@ function openBoatSheet() {
   if (!farmAreaOpen("see")) return openAreaInfo("see");
   const F = S.farm, B = FBOATS[F.boat] || FBOATS[1], M = FBOATS[2];
   FV.sheetFn = openBoatSheet;
-  const rows = FGROUNDS.filter(g => g.id !== "steg").map(g => {
+  const rows = FGROUNDS.filter(g => g.id !== "steg" && !g.pier).map(g => {
     const ok = farmGroundOk(g), o = angelS() ? angelOdds(g.id) : farmFishOdds(g.id), sum = Object.values(o).reduce((a, b) => a + b, 0);
     const top = Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, 3).map(id => icHTML(id)).join("");
     const sw = farmEvOn("schwarm") && F.ev.cur.data.g === g.id;
@@ -178,6 +179,7 @@ function fishStep(dt, time) {
   const rx = ROD_REST + (FISH.bite ? 0.32 + Math.sin(time * 18) * 0.12 : FISH.rod ? -0.1 : 0);
   if (e && e.parts.rod) e.parts.rod.rx = rx;
   if (B) B.rod.rx = rx;
+  if (typeof WV !== "undefined" && WV.pier) WV.pier.rod.rx = rx;            /* v189: Bachsteg */
 }
 
 /* ------------------------------- Am Steg ----------------------------------
@@ -231,7 +233,7 @@ function stegFishHTML(U) {
     return `<button class="mg-bait${U.bait === b ? " on" : ""}" data-bait="${b}" ${why ? "disabled" : ""}><span>${icHTML(B.item)}</span><b>${esc(B.n)}</b><small>${why ? esc(why) : angelBaitN(b) + " Würfe"}</small></button>`; }).join("");
   const sp = FBAITS[U.bait].spec, odds = sp ? "nur " + esc(FFISH[sp].n) : FCLS.filter(c => w[c]).map(c => `${Math.round(w[c] * 100)} % ${cls[c]}`).join(" · ");
   const gs = FGROUNDS.map(g => { const ok = farmGroundOk(g);
-    return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? fishGroundIc(g) : "🔒"}</span><b>${esc(g.n)}</b><small>${g.boat === 0 ? "direkt vom Steg" : ok ? "mit dem Boot" : g.boat === 2 ? "braucht das Motorboot" : "braucht das Ruderboot"}</small></button>`; }).join("");
+    return `<button class="frec${ok ? "" : " lock"}" data-go="${g.id}" ${ok ? "" : "disabled"}><span class="ic">${ok ? fishGroundIc(g) : "🔒"}</span><b>${esc(g.n)}</b><small>${g.pier ? (ok ? "am Bach im Wald – Steg antippen oder hier" : "Wald noch zu") : g.boat === 0 ? "direkt vom Steg" : ok ? "mit dem Boot" : g.boat === 2 ? "braucht das Motorboot" : "braucht das Ruderboot"}</small></button>`; }).join("");
   return `<div class="fs-sub">Köder – bessere Köder locken größere Arten:</div><div class="mg-baits">${chips}</div>
     <div class="fs-sub">${FRODS[U.rod].i} ${esc(FRODS[U.rod].n)} + ${FBAITS[U.bait].i} ${esc(FBAITS[U.bait].n)}: Es beißen <b>${odds}</b>${sp ? "" : " Fische"}.</div>
     <div class="frecs">${gs}</div>

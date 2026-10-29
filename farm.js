@@ -218,7 +218,7 @@ function farmWildOk(x, z, w, d, except) {
   const nav = typeof navLive === "function" ? navLive() : null;
   for (let sx = wx0 - 0.15; sx <= wx1 + 0.16; sx += 0.5) for (let sz = wz0 - 0.15; sz <= wz1 + 0.16; sz += 0.5) {
     if (Math.hypot(sx - P.x, sz - P.z) < P.r + 1.5) return false;
-    if (inLake(sx, sz, 1.5) || distLine(sx, sz, FWORLD.creek) < 2.2) return false;
+    if (inLake(sx, sz, 1.5) || distLine(sx, sz, FWORLD.creek) < 2.8) return false;
     if (nearPath(sx, sz) < 1.6) return false;
     if (keep.some(k => Math.hypot(sx - k[0], sz - k[1]) < 1.2)) return false;
     if (S.farm.trees.some(t => Math.hypot(t.x - sx, t.z - sz) < 1.3)) return false;
@@ -359,14 +359,19 @@ function siteHave(key, id) { return siteN(key, id) + farmInv(id); }
 function siteMissing(key, need) {
   return Object.keys(need).filter(id => siteHave(key, id) < need[id]).map(id => ({ id, need: need[id] - siteHave(key, id) }));
 }
-/* legt ab, was im Lager liegt – je Material höchstens so viel, wie noch fehlt; Rückgabe: wie viele Gebinde */
+/* v188: abgelegt wird je Material und nur vollständig – sobald Lager + schon Abgelegtes die nötige Menge erreichen.
+   siteReady: Materialien, die jetzt abgelegt werden können; sitePutOne legt eines ab (Rückgabe: Gebinde, 0 = nichts) */
+function siteReady(key, need) { return Object.keys(need).filter(id => siteN(key, id) < need[id] && siteHave(key, id) >= need[id]); }
+function sitePutOne(key, need, id) {
+  const F = S.farm, n = need[id] - siteN(key, id);
+  if (!(n > 0) || farmInv(id) < n || !farmTake(id, n)) return 0;
+  F.depot = F.depot || {}; const D = F.depot[key] || (F.depot[key] = {}); D[id] = (D[id] || 0) + n;
+  return n;
+}
+/* legt alle vollständigen Materialien ab; Rückgabe: { id: Gebinde } der abgelegten */
 function sitePutAll(key, need) {
-  const F = S.farm;
-  let put = 0;
-  Object.keys(need).forEach(id => {
-    const n = Math.min(farmInv(id), need[id] - siteN(key, id));
-    if (n > 0 && farmTake(id, n)) { F.depot = F.depot || {}; const D = F.depot[key] || (F.depot[key] = {}); D[id] = (D[id] || 0) + n; put += n; }
-  });
+  const put = {};
+  siteReady(key, need).forEach(id => { const n = sitePutOne(key, need, id); if (n) put[id] = n; });
   return put;
 }
 /* beim Bauen: erst das Abgelegte, dann aus dem Lager; der Bauplatz ist danach leer */

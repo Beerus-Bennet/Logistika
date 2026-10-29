@@ -3558,3 +3558,9 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .fdep-row{margin:4px 0 10px}
 .fdep-btn,.hu-needs ~ .fs-row .btn{width:100%;text-align:center;font-size:16px}
 .fdep-ok{color:#2f7a3a;font-weight:800}
+/* v188: Ablegen je Material */
+.hu-need.rdy{border-color:#e0a42c;background:#fff7e4}
+.hu-need.dep{border-color:var(--green);background:#e1f5e6}
+.hu-need .fdep-one{margin-top:5px;padding:5px 8px;font-size:12px;width:100%}
+.fchip.rdy{box-shadow:0 0 0 2px #e0a42c inset}
+.fdep-st{display:block;text-align:center;margin-top:5px;font-size:11.5px;font-weight:700;opacity:.7}
