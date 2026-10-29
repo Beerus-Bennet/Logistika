@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v217.2 – Hütte: Miete ×3 mit wöchentlichem Brennholz, Reifenspur, Kamin
+
+- **Miete dreimal so hoch:** 2.520 € die Woche (360 €/Tag statt 120 €). Im Hütten-Fenster jetzt als Wochenmiete angezeigt.
+- **Holztag:** Mietwochen zählen ab dem Einzugstag (Tag 1, 8, 15 …). Am ersten Tag jeder Mietwoche will der Mieter **15 kg Brennholz** (1 Sack). Er meldet sich morgens („🔥 Mein Feuerholz ist leer …“), über der Hütte erscheint 🔥, im Fenster gibt es den Knopf **🔥 Liefern** (mit Restzeit bis Mitternacht und Lagerbestand). Kommt bis Mitternacht nichts, gibt es für diese Woche nur die **halbe Miete** (auch der Liefertag selbst wird gekürzt) und eine Nachricht („🥶 Kein Feuerholz mehr“). Bei bestehenden Mietern gilt die laufende Woche als erledigt – nichts wird rückwirkend gekürzt.
+- **Problem „Feuerholz alle“** statt „Heizung bleibt kalt“ (geheizt wird mit dem Kamin): „Mein Feuerholz ist leer – kannst du mir bitte schnell neues besorgen? …“. Erledigen mit **🪵 Holz bringen** – kostet kein Geld, nur 15 kg Brennholz aus dem Lager. Solange es offen ist, raucht der Kamin nicht. Alte offene Heizungs-Meldungen erscheinen automatisch mit dem neuen Text.
+- **Reifenspur:** eine einzige, geglättete Spur – im Bogen von der Straße auf den Parkfleck, unter den Rädern am Stellplatz entlang und im Bogen zurück zur Straße; keine Kreuzungen, keine Lücke, wo das Auto steht, weich ausblendend an der Straße.
+- **Kamin:** Kaminkopf mit Öffnung (Rahmen aus Deckplatten, rußiges Loch), aus der der Rauch steigt.
+- Datei: `rent.js` (`RENT_DAY`, `WOOD_N`, `WOOD_CUT`, `woodDay`, `woodTick`, `deliverWood`, `rentF`, `ISSUES.heizung`, `repair`, Fenster, Markierung, `padMesh`, Kaminkopf).
+
 ## v217.1 – Hütte: Briefkasten neben dem Pfad, Pfad ohne grünen Rand an der Veranda
 
 - **Briefkasten:** steht jetzt am Parkfleck rechts neben dem Pfad, dort wo der Pfad auf den Fleck kommt (x −43,1, z 23,4) – abseits der Reifenspuren. Parkplatz unverändert wie in v215/v217.
