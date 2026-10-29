@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v213 – Übergänge am Parkfleck (auf v212)
+
+- Nur `rent.js`: neue Helfer `padK`/`padCol`, `pathMesh` mit `gnd: padCol` und längerem `fade`, `padMesh` färbt Fleck und Spuren über `padCol`; Pfadende `[-44.9, 22.35]`.
+
 ## Stand v212 – Parkfleck der Hütte (auf v211)
 
 - Nur `rent.js`: `PATH` endet auf dem Parkfleck (`[-44.6, 22.7]`), `forestPath` mit `fade` statt Straßenmündung; neue Konstante `PAD_DIRT`; `padMesh` zeichnet die Reifenspuren entlang `CAR_IN`/`CAR_OUT`; `route` nutzt den ganzen Pfad.
