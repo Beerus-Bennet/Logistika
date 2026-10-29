@@ -54,10 +54,10 @@ const RENT = (() => {
   /* Plätze, an denen der Mieter steht und sich umschaut (vor und neben der Hütte, Blick zum See) */
   const SPOTS = [Wp(3.6, 6.4), Wp(-3.2, 6.8), Wp(4.4, 2.2), Wp(1.2, 8.6), Wp(6.4, 5.6)];
   /* Parkfleck an der Straße (Auto längs, Front nach +x) und Trampelpfad von den Stufen zur Straße */
-  const CAR = { x: -46, z: 21.4 };
+  const CAR = { x: -49.5, z: 21.4 };                                  /* v216: Parkplatz weiter westlich (vorher x −46) */
   const CARDOOR = [CAR.x - 0.2, CAR.z + 1.05];
   const PATH = [STEPS, Wp(-2.8, 4.85), Wp(-4.6, 3.5), Wp(-5.0, -0.6),     /* v192: Bogen enger an der Veranda – vorn liegt das Baumaterial */
-                [-44.2, 27.6], [-44.1, 24.6], [-44.9, 22.35]];                      /* v212/v213: endet im Parkfleck (weicher Übergang in die Erde) */
+                [-44.2, 27.6], [-44.6, 24.9], [-46.4, 23.2], [-48.2, 22.35]];                      /* v212/v213: endet im Parkfleck (weicher Übergang in die Erde) */
   const CAR_IN = [[-150, 19.1], [CAR.x - 7, 19.1], [CAR.x - 3.6, 19.5], [CAR.x - 1.6, 20.9], [CAR.x, 21.4]];
   const PAD_DIRT = 0x9a7d56;                                           /* Erde des Parkflecks (auch Ende des Pfads) */
   const CAR_OUT = [[CAR.x, 21.4], [CAR.x + 1.8, 21.2], [CAR.x + 3.6, 20.0], [CAR.x + 5.8, 19.1], [100, 19.1]];
@@ -646,9 +646,9 @@ const RENT = (() => {
   function pathMesh() {
     const b = MB();
     b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd: padCol, caps: [true, false], ends: [false, false], fade: [null, { L: 2.8, col: PAD_DIRT }], leafOk: (x, z) => z > 20 && padK(x, z) > 1.3 }), {});
-    /* v214/v215: Briefkasten direkt neben der Ausfahrt, gut 1,2 Einheiten neben der Fahrlinie (vorher x −41,4 mitten in der Reifenspur) */
-    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -40.6, z: 20.7 });
-    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -40.6, y: 0.92, z: 20.7 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -40.45, y: 1.12, z: 20.82 });
+    /* Briefkasten an der Straße (v216 wieder am ursprünglichen Platz – die Ausfahrt liegt jetzt weiter westlich) */
+    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -41.4, z: 20.3 });
+    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -41.4, y: 0.92, z: 20.3 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -41.25, y: 1.12, z: 20.42 });
     return b;
   }
   /* Parkfleck: festgefahrene Erde mit Reifenspuren, weicher Rand ins Gras */
