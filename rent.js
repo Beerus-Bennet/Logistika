@@ -21,7 +21,7 @@ const RENT = (() => {
   const WOOD_N = 1, WOOD_CUT = 0.5;                                    /* v217.2: Brennholz je Mietwoche (Gebinde = Säcke à 15 kg), Kürzung bei verpasster Lieferung */
   const MAINT = 900;                                                   /* Instandhaltung alle 90 Tage */
   const ISSUES = {
-    heizung: { n: "Heizung bleibt kalt",       i: "🔥", c: 180, t: "Die Heizung bleibt seit heute Morgen kalt – drinnen wird es richtig frisch." },
+    heizung: { n: "Feuerholz alle",            i: "🪵", c: 180, t: "Mein Feuerholz ist leer – kannst du mir bitte schnell neues besorgen? Ohne Kamin wird es hier drin richtig kalt." },   /* v217.2: statt Heizung (geheizt wird mit dem Kamin); Schlüssel bleibt für alte Spielstände */
     wasser:  { n: "Wasserhahn tropft",          i: "🚰", c: 60,  t: "In der Küche tropft der Wasserhahn die ganze Nacht. Ich krieg kein Auge zu." },
     fenster: { n: "Fenster klemmt",             i: "🪟", c: 80,  t: "Das Schlafzimmerfenster oben klemmt und lässt sich nicht mehr richtig schließen." },
     dach:    { n: "Dach undicht",               i: "🏚️", c: 240, t: "Beim letzten Regen kam es oben durchs Dach – da steht jetzt ein Eimer." },
@@ -106,14 +106,14 @@ const RENT = (() => {
     if (!T.wood) T.wood = { wk: w.wk, done: !w.first, miss: false };                /* bestehende Mieter: laufende Woche gilt als erledigt */
     if (T.wood.wk !== w.wk) {
       T.wood = { wk: w.wk, done: false, miss: false };
-      phone({ from: T.ten.n, kind: "info", title: "🔥 Heute ist Holztag",
-        body: "Guten Morgen! Heute beginnt eine neue Mietwoche – bringst du mir bitte bis heute Abend " + fqty("brennholz", WOOD_N) + " vorbei? Sonst muss ich die Miete für diese Woche kürzen. – " + T.ten.n });
+      phone({ from: T.ten.n, kind: "info", title: "🔥 Mein Feuerholz ist leer",
+        body: "Guten Morgen! Mein Feuerholz ist leer – bringst du mir bitte bis heute Abend " + fqty("brennholz", WOOD_N) + " für den Kamin vorbei? Sonst sitze ich die Woche im Kalten und muss die Miete kürzen. – " + T.ten.n });
     }
     if (!T.wood.done && !T.wood.miss && !w.first) {
       T.wood.miss = true;
       T.acc = Math.max(0, (T.acc || 0) - RENT_DAY * WOOD_CUT);                      /* auch den Liefertag selbst kürzen – die ganze Woche zählt */
-      phone({ from: T.ten.n, kind: "trouble", title: "🔥 Kein Brennholz bekommen",
-        body: "Gestern kam leider kein Brennholz – ich musste frierend den Kamin aus lassen. Für diese Woche zahle ich nur die halbe Miete. – " + T.ten.n });
+      phone({ from: T.ten.n, kind: "trouble", title: "🥶 Kein Feuerholz mehr",
+        body: "Mein Feuerholz ist leer und gestern kam keins mehr – ohne Kamin ist es in der Hütte eiskalt. Für diese Woche zahle ich nur die halbe Miete. – " + T.ten.n });
     }
   }
   function deliverWood() {
@@ -180,13 +180,13 @@ const RENT = (() => {
   function repair() {
     const T = st();
     if (!T || !T.iss) return false;
-    const c = T.iss.c, I = ISSUES[T.iss.k];
+    const c = T.iss.c, k0 = T.iss.k, I = ISSUES[k0];
     if (S.money < c) { toast("Dafür fehlt das Geld (" + eur(c) + ").", "warn"); return false; }
     S.money -= c; S.expense = (S.expense || 0) + c;
     if (typeof logMoney === "function") logMoney("farm", "Reparatur Hütte: " + I.n, -c);
     T.iss = null; T.fixed = (T.fixed || 0) + 1;
     if (typeof farmXP === "function") farmXP(10);
-    toast(I.i + " Repariert – " + T.ten.n + " bedankt sich!", "good");
+    toast(I.i + (k0 === "heizung" ? " Feuerholz gebracht – " : " Repariert – ") + T.ten.n + " bedankt sich!", "good");
     save();
     return true;
   }
@@ -949,7 +949,7 @@ const RENT = (() => {
     if (!t || !W.man || !W.car) return;
     stepCar(dt, t);
     stepMan(dt, time, t);
-    /* Rauch aus dem Kamin, wenn geheizt wird (morgens und abends, nicht bei kaputter Heizung) */
+    /* Rauch aus dem Kamin, wenn geheizt wird (morgens und abends, nicht bei kaputtem Kamin) */
     const m = S.time % DAY, d = doing(t, S.time).k, heat = d !== "away" && d !== "toCar" && (m < 600 || m > 1020) && !(T.iss && T.iss.k === "heizung");
     if (heat && Math.random() < dt * 4) {
       const p = Wp(-HW - 0.35, -0.2);
@@ -973,7 +973,7 @@ const RENT = (() => {
     const due = maintDue(T), f = rentF(T, S.time), I = T.iss && ISSUES[T.iss.k];
     const issH = I ? `<div class="rent-iss"><b>${I.i} ${esc(I.n)}</b><p>„${esc(I.t)}“</p>
         <small>gemeldet vor ${fdur(Math.max(1, S.time - T.iss.t0))}${S.time - T.iss.t0 > 2 * DAY ? " · " + esc(t.n) + " mindert die Miete um die Hälfte" : " · nach 2 Tagen mindert " + esc(t.n) + " die Miete"}</small>
-        <button class="btn fgo" id="rnFix">🛠️ Reparieren · ${eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
+        <button class="btn fgo" id="rnFix">${T.iss.k === "heizung" ? "🪵 Holz besorgen" : "🛠️ Reparieren"} · ${eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
     const mLeft = due - S.time;
     const mH = mLeft > 10 * DAY ? `<div class="fs-sub">🔧 Instandhaltung in ${tage(Math.ceil(mLeft / DAY))} fällig (${eur(MAINT)}).</div>`
       : `<div class="rent-iss"><b>🔧 Instandhaltung ${mLeft > 0 ? "in " + tage(Math.ceil(mLeft / DAY)) + " fällig" : "fällig seit " + tage(Math.max(1, Math.floor(-mLeft / DAY)))}</b>
