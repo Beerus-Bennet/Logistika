@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v217.1 – Hütte: Briefkasten neben dem Pfad, Pfad ohne grünen Rand an der Veranda
+
+- **Briefkasten:** steht jetzt am Parkfleck rechts neben dem Pfad, dort wo der Pfad auf den Fleck kommt (x −43,1, z 23,4) – abseits der Reifenspuren. Parkplatz unverändert wie in v215/v217.
+- **Pfadrand an der Veranda:** Der Trampelpfad blendete an seinen Rändern in die Grasfarbe, an der Hütte liegt aber der Baustellenboden (Erde) darunter – dadurch ein grüner Streifen um den Pfad. Jetzt nimmt der Rand überall die Farbe des Bodens darunter an (Erde an der Hütte, Gras draußen, Parkfleck am Parkplatz).
+- Datei: `rent.js` (`YD`, `yardWob`, `yardColL`, `yardCol` – `yardMesh` nutzt sie; `pathMesh` mit `gnd: yardCol`; Briefkasten).
+
 ## v217 – Parkplatz der Hütte wieder wie in v215
 
 - v216 (Parkplatz 3,5 Einheiten weiter westlich, Briefkasten zurück auf x −41,4) ist rückgängig gemacht: Parkfleck, Pfad und Briefkasten sind wieder genau wie in v215 (Auto bei x −46, Briefkasten bei x −40,6, z 20,7).

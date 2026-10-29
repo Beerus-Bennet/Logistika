@@ -561,23 +561,36 @@ const RENT = (() => {
   }
   /* v192: Boden der Baustelle – festgetretene Erde um die Hütte mit weichem Rand ins Gras, vor Tür und Stufen
      dunkler und fester, etwas Kies, ein feuchter Fleck unter dem Fass, Grasbüschel am Rand. Lokal wie die Hütte. */
+  /* v218: Form und Farbe des Baustellenbodens als eigene Funktionen (lokal wie die Hütte) – der Trampelpfad nimmt seine Randfarbe
+     daraus (yardCol), damit er dort nicht ins Gras, sondern in die Erde übergeht */
+  const YD = { CX: 0.4, CZ: 1.3, RX: 5.4, RZ: 5.0 };
+  const yardWob = a => 1 + 0.07 * Math.sin(a * 3 + 0.8) + 0.05 * Math.sin(a * 7 + 2.1);
+  function yardColL(x, z) {
+    const hard = G3.col(0x857050), damp = G3.col(0x7a6648);
+    let c = mixC(0x9b8562, 0x8c7653, 0.5 + 0.5 * Math.sin(x * 1.3 + z * 0.9));
+    const dDoor = Math.hypot((x - 0.5) / 1.6, (z - 5.0) / 1.3);          /* vor den Stufen festgetreten */
+    if (dDoor < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dDoor));
+    const dW = Math.hypot((x - HW - 1.4) / 1.3, (z - 2.9) / 1.6);        /* Arbeitsplatz */
+    if (dW < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dW) * 0.7);
+    const dB = Math.hypot(x + HW + 0.55, z - 1.7) / 0.9;                  /* feucht unter dem Fass */
+    if (dB < 1) c = c.map((v, i) => v + (damp[i] - v) * (1 - dB));
+    return c;
+  }
+  /* Bodenfarbe an einem Weltpunkt: Baustellenboden (mit weichem Rand 1 … 1,28), sonst Parkfleck bzw. Gras */
+  function yardCol(x, z) {
+    const l = Lp(x, z), dx = (l[0] - YD.CX) / YD.RX, dz = (l[1] - YD.CZ) / YD.RZ, a = Math.atan2(dz, dx), k = Math.hypot(dx, dz) / yardWob(a);
+    if (k >= 1.28) return padCol(x, z);
+    const e = [YD.CX + Math.cos(a) * YD.RX * yardWob(a) * Math.min(1, k), YD.CZ + Math.sin(a) * YD.RZ * yardWob(a) * Math.min(1, k)], c = yardColL(e[0], e[1]);
+    if (k <= 1) return c;
+    const g = padCol(x, z), t = (k - 1) / 0.28;
+    return c.map((v, i) => v + (g[i] - v) * t);
+  }
   function yardMesh() {
     G3.seed(8205);
     const b = MB(), gnd = typeof wGroundAt === "function" ? wGroundAt : () => 0x7fb444, y = 0.016, seg = 40;
-    const CX = 0.4, CZ = 1.3, RX = 5.4, RZ = 5.0;
-    const wob = a => 1 + 0.07 * Math.sin(a * 3 + 0.8) + 0.05 * Math.sin(a * 7 + 2.1);
-    const dirt = G3.col(0x9b8562), dirt2 = G3.col(0x8c7653), hard = G3.col(0x857050), damp = G3.col(0x7a6648);
+    const { CX, CZ, RX, RZ } = YD, wob = yardWob;
     const L = (lx, lz) => { const w = Wp(lx, lz); return G3.col(gnd(w[0], w[1])); };
-    const colAt = (x, z) => {
-      let c = mixC(0x9b8562, 0x8c7653, 0.5 + 0.5 * Math.sin(x * 1.3 + z * 0.9));
-      const dDoor = Math.hypot((x - 0.5) / 1.6, (z - 5.0) / 1.3);          /* vor den Stufen festgetreten */
-      if (dDoor < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dDoor));
-      const dW = Math.hypot((x - HW - 1.4) / 1.3, (z - 2.9) / 1.6);        /* Arbeitsplatz */
-      if (dW < 1) c = c.map((v, i) => v + (hard[i] - v) * (1 - dW) * 0.7);
-      const dB = Math.hypot(x + HW + 0.55, z - 1.7) / 0.9;                  /* feucht unter dem Fass */
-      if (dB < 1) c = c.map((v, i) => v + (damp[i] - v) * (1 - dB));
-      return c;
-    };
+    const colAt = yardColL;
     const P = (a, k) => { const w = wob(a) * k; return [CX + Math.cos(a) * RX * w, CZ + Math.sin(a) * RZ * w]; };
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
@@ -645,10 +658,10 @@ const RENT = (() => {
      wo der Boden schon gleichmäßig Erde ist, weich aus; seine Ränder gehen in die Farbe darunter über (padCol) */
   function pathMesh() {
     const b = MB();
-    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd: padCol, caps: [true, false], ends: [false, false], fade: [null, { L: 2.8, col: PAD_DIRT }], leafOk: (x, z) => z > 20 && padK(x, z) > 1.3 }), {});
-    /* v214/v215: Briefkasten direkt neben der Ausfahrt, gut 1,2 Einheiten neben der Fahrlinie (vorher x −41,4 mitten in der Reifenspur) */
-    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -40.6, z: 20.7 });
-    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -40.6, y: 0.92, z: 20.7 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -40.45, y: 1.12, z: 20.82 });
+    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd: yardCol, caps: [true, false], ends: [false, false], fade: [null, { L: 2.8, col: PAD_DIRT }], leafOk: (x, z) => z > 20 && padK(x, z) > 1.3 }), {});
+    /* v218: Briefkasten am Parkfleck neben dem Pfad, abseits der Reifenspuren (v182: x −41,4 in der Spur, v215: x −40,6 an der Ausfahrt) */
+    b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -43.1, z: 23.4 });
+    b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -43.1, y: 0.92, z: 23.4 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -42.95, y: 1.12, z: 23.52 });
     return b;
   }
   /* Parkfleck: festgefahrene Erde mit Reifenspuren, weicher Rand ins Gras */

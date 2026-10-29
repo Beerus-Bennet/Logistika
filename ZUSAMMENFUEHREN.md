@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v217.1 – Briefkasten, Pfadrand (auf v217)
+
+- Nur `rent.js`: Form/Farbe des Baustellenbodens als `YD`, `yardWob`, `yardColL`, `yardCol` aus `yardMesh` herausgezogen; `pathMesh` nutzt `gnd: yardCol`; Briefkasten auf x −43,1, z 23,4.
+
 ## Stand v217 – v216 zurückgenommen
 
 - `rent.js` ist wieder auf dem Stand von v215 (v216 per Revert entfernt).
