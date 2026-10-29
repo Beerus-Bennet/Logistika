@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v213 – Parkfleck der Hütte: saubere Übergänge
+
+- **Ursache der Kanten:** Pfad und Reifenspuren rechneten mit einer festen Erdfarbe, der Parkfleck hat aber innen einen Verlauf und einen weichen Rand ins Gras; außerdem endete der Pfad genau auf diesem Rand.
+- **Jetzt:** eine gemeinsame Farbfunktion für den Parkfleck (`padCol`: Mitte → Erde → Gras). Der Fleck selbst, die Ränder des Pfads und die Reifenspuren nehmen ihre Untergrundfarbe daraus – keine Farbsprünge mehr.
+- Der Pfad läuft ein Stück weiter in den Fleck hinein und blendet dort aus (2,8 Einheiten), wo der Boden schon gleichmäßig Erde ist; kein Laub mehr auf dem Fleck.
+- Reifenspuren mit weichen Seitenrändern (dunkle Mitte, Rand in Bodenfarbe), Anfang und Ende laufen über 1,4 Einheiten aus.
+- Datei: `rent.js` (`PAD_C`, `PAD_R`, `padK`, `padCol`, `pathMesh`, `padMesh`, Pfadende).
+
 ## v212 – Hütte am See: Pfad läuft in den Parkfleck aus, Reifenspuren auf der Fahrlinie
 
 - **Pfad am Parkplatz:** Der Trampelpfad endet nicht mehr an der Straße, sondern läuft auf den Parkfleck und blendet dort weich in die Erde über (wie die Wege an den Hoftoren). Der Mieter geht vom Auto direkt auf den Pfad. Der Briefkasten bleibt an der Straße.

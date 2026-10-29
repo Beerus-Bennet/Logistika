@@ -57,7 +57,7 @@ const RENT = (() => {
   const CAR = { x: -46, z: 21.4 };
   const CARDOOR = [CAR.x - 0.2, CAR.z + 1.05];
   const PATH = [STEPS, Wp(-2.8, 4.85), Wp(-4.6, 3.5), Wp(-5.0, -0.6),     /* v192: Bogen enger an der Veranda – vorn liegt das Baumaterial */
-                [-44.2, 27.6], [-44.0, 24.6], [-44.6, 22.7]];                       /* v212: endet auf dem Parkfleck (weicher Übergang in die Erde) */
+                [-44.2, 27.6], [-44.1, 24.6], [-44.9, 22.35]];                      /* v212/v213: endet im Parkfleck (weicher Übergang in die Erde) */
   const CAR_IN = [[-150, 19.1], [CAR.x - 7, 19.1], [CAR.x - 3.6, 19.5], [CAR.x - 1.6, 20.9], [CAR.x, 21.4]];
   const PAD_DIRT = 0x9a7d56;                                           /* Erde des Parkflecks (auch Ende des Pfads) */
   const CAR_OUT = [[CAR.x, 21.4], [CAR.x + 1.8, 21.2], [CAR.x + 3.6, 20.0], [CAR.x + 5.8, 19.1], [100, 19.1]];
@@ -632,11 +632,20 @@ const RENT = (() => {
     return b;
   }
   function mixC(a, c, t) { const A = G3.col(a), B = G3.col(c); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; }
-  /* Trampelpfad (schmal) und Briefkasten an der Straße – v212: der Pfad endet auf dem Parkfleck und läuft dort weich in die Erde aus */
+  /* v213: Farbe des Parkflecks an einem Weltpunkt – genau wie padMesh: Mitte dunkler, zum Rand Erde, dann weicher Rand ins Gras.
+     Pfadkanten und Reifenspuren nehmen ihre Untergrundfarbe hieraus, damit es nirgends eine Kante gibt. */
+  const PAD_C = [CAR.x + 0.2, CAR.z - 0.15], PAD_R = a => [3.4 * (1 + 0.08 * Math.sin(a * 3 + 0.6)), 1.55 * (1 + 0.1 * Math.sin(a * 2 + 1.4))];
+  function padK(x, z) { const dx = x - PAD_C[0], dz = z - PAD_C[1], a = Math.atan2(dz / 1.55, dx / 3.4), r = PAD_R(a); return Math.hypot(dx / r[0], dz / r[1]); }
+  function padCol(x, z) {
+    const g = typeof wGroundAt === "function" ? G3.col(wGroundAt(x, z)) : G3.col(0x7fb444), k = padK(x, z);
+    const D = G3.col(PAD_DIRT), D2 = G3.col(0x8a6e4a), mx = (p, q, t) => p.map((v, j) => v + (q[j] - v) * Math.max(0, Math.min(1, t)));
+    return k <= 1 ? mx(D2, D, k) : k < 1.45 ? mx(D, g, (k - 1) / 0.45) : g;
+  }
+  /* Trampelpfad (schmal) und Briefkasten an der Straße – v212/v213: der Pfad läuft ein Stück in den Parkfleck hinein und blendet dort,
+     wo der Boden schon gleichmäßig Erde ist, weich aus; seine Ränder gehen in die Farbe darunter über (padCol) */
   function pathMesh() {
     const b = MB();
-    const gnd = typeof wGroundAt === "function" ? wGroundAt : null;
-    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd, caps: [true, false], ends: [false, false], fade: [null, { L: 2.2, col: PAD_DIRT }], leafOk: (x, z) => z > 20 }), {});
+    b.merge(FWM.forestPath(PATH, 1.0, { y: 0.024, ey: 0.017, gnd: padCol, caps: [true, false], ends: [false, false], fade: [null, { L: 2.8, col: PAD_DIRT }], leafOk: (x, z) => z > 20 && padK(x, z) > 1.3 }), {});
     b.box(0.08, 0.95, 0.08, 0x6b4a30, { x: -41.4, z: 20.3 });
     b.box(0.26, 0.22, 0.4, 0x3f6b4a, { x: -41.4, y: 0.92, z: 20.3 }); b.box(0.04, 0.12, 0.04, 0xd8332b, { x: -41.25, y: 1.12, z: 20.42 });
     return b;
@@ -644,23 +653,21 @@ const RENT = (() => {
   /* Parkfleck: festgefahrene Erde mit Reifenspuren, weicher Rand ins Gras */
   function padMesh() {
     G3.seed(8204);
-    const b = MB(), gnd = typeof wGroundAt === "function" ? wGroundAt : () => 0x7fb444, seg = 28, y = 0.02;
-    const R = a => [3.4 * (1 + 0.08 * Math.sin(a * 3 + 0.6)), 1.55 * (1 + 0.1 * Math.sin(a * 2 + 1.4))];
-    const P = (a, k) => { const r = R(a); return [CAR.x + 0.2 + Math.cos(a) * r[0] * k, y, CAR.z - 0.15 + Math.sin(a) * r[1] * k]; };
-    const dirt = G3.col(PAD_DIRT), dirt2 = G3.col(0x8a6e4a);
+    const b = MB(), seg = 28, y = 0.02;
+    const P = (a, k) => { const r = PAD_R(a); return [PAD_C[0] + Math.cos(a) * r[0] * k, y, PAD_C[1] + Math.sin(a) * r[1] * k]; };
     for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, c = [CAR.x + 0.2, y, CAR.z - 0.15];
-      b.triV(c, P(a1, 1), P(a0, 1), dirt2, dirt, dirt);
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, c = [PAD_C[0], y, PAD_C[1]];
       const A = P(a0, 1), B = P(a1, 1), Cc = P(a1, 1.45), D = P(a0, 1.45);
-      b.triV(A, B, Cc, dirt, dirt, G3.col(gnd(Cc[0], Cc[2])));
-      b.triV(A, Cc, D, dirt, G3.col(gnd(Cc[0], Cc[2])), G3.col(gnd(D[0], D[2])));
+      b.triV(c, B, A, padCol(c[0], c[2]), padCol(B[0], B[2]), padCol(A[0], A[2]));
+      b.triV(A, B, Cc, padCol(A[0], A[2]), padCol(B[0], B[2]), padCol(Cc[0], Cc[2]));
+      b.triV(A, Cc, D, padCol(A[0], A[2]), padCol(Cc[0], Cc[2]), padCol(D[0], D[2]));
     }
-    /* v212: Reifenspuren genau auf der Fahrlinie des Autos – herein von der Straßenkante (wo es auf den Rasen fährt) bis zum
-       Stellplatz, hinaus vom Stellplatz bis zur Straßenkante. Auf dem Fleck dunkel, auf dem Gras nur abgewetzt, an der Straße weich. */
-    const inPad = (x, z) => Math.hypot((x - CAR.x - 0.2) / 3.4, (z - CAR.z + 0.15) / 1.55) < 1;
-    const RUT = G3.col(0x6e5638), off = 0.55, hw = 0.1, yr = y + 0.0015;
+    /* v212/v213: Reifenspuren auf der Fahrlinie des Autos – herein von der Straßenkante bis zum Stellplatz, hinaus vom Stellplatz bis zur
+       Straßenkante. Jede Spur hat weiche Seitenränder (dunkle Mitte, Rand in der Bodenfarbe) und läuft an beiden Enden über 1,4 aus;
+       auf dem Gras nur abgewetzt, auf der Erde dunkler. */
+    const RUT = G3.col(0x6e5638), off = 0.55, w = 0.17, yr = y + 0.0015;
     const rut = line => {
-      const pts = [];                                                   /* dicht abtasten, nur der Teil abseits der Straße */
+      const pts = [];
       for (let k = 1; k < line.length; k++) {
         const p = line[k - 1], q = line[k], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 0.25));
         for (let t = k === 1 ? 0 : 1; t <= n; t++) { const x = p[0] + (q[0] - p[0]) * t / n, z = p[1] + (q[1] - p[1]) * t / n; if (z >= 19.45) pts.push([x, z]); }
@@ -668,19 +675,21 @@ const RENT = (() => {
       const L = [0];
       for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
       const tot = L[L.length - 1];
-      const col = (x, z, s) => {
-        const base = inPad(x, z) ? dirt : G3.col(gnd(x, z)), k = inPad(x, z) ? 0.6 : 0.42;
-        const e = Math.min(1, Math.min(s, tot - s) / 0.7);                          /* Anfang und Ende laufen weich aus */
-        return base.map((v, j) => v + (RUT[j] - v) * k * e);
+      const N = pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], c = pts[Math.min(pts.length - 1, i + 1)], dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l]; });
+      const at = (i, o) => [pts[i][0] + N[i][0] * o, yr, pts[i][1] + N[i][1] * o];
+      const dark = (p, s) => {
+        const base = padCol(p[0], p[2]), u = Math.max(0, Math.min(1, Math.min(s, tot - s) / 1.4)), e = u * u * (3 - 2 * u);
+        const f = (padK(p[0], p[2]) < 1 ? 0.55 : 0.32) * e;
+        return base.map((v, j) => v + (RUT[j] - v) * f);
       };
+      const tri2 = (A, B, C, ca, cb, cc) => { b.triV(A, B, C, ca, cb, cc); b.triV(A, C, B, ca, cc, cb); };   /* beide Seiten */
       [-1, 1].forEach(sd => {
         for (let i = 1; i < pts.length; i++) {
-          const a = pts[i - 1], c = pts[i], dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l;
-          const o = sd * off, A0 = [a[0] + nx * (o - hw), yr, a[1] + nz * (o - hw)], A1 = [a[0] + nx * (o + hw), yr, a[1] + nz * (o + hw)];
-          const C0 = [c[0] + nx * (o - hw), yr, c[1] + nz * (o - hw)], C1 = [c[0] + nx * (o + hw), yr, c[1] + nz * (o + hw)];
-          const ca = col(a[0], a[1], L[i - 1]), cc = col(c[0], c[1], L[i]);
-          b.triV(A0, C1, C0, ca, cc, cc); b.triV(A0, A1, C1, ca, ca, cc);
-          b.triV(A0, C0, C1, ca, cc, cc); b.triV(A0, C1, A1, ca, cc, ca);           /* beide Seiten – die Reihenfolge der Ecken ist egal */
+          const o = sd * off;
+          const a0 = at(i - 1, o - w), am = at(i - 1, o), a1 = at(i - 1, o + w), c0 = at(i, o - w), cm = at(i, o), c1 = at(i, o + w);
+          const ka0 = padCol(a0[0], a0[2]), ka1 = padCol(a1[0], a1[2]), kc0 = padCol(c0[0], c0[2]), kc1 = padCol(c1[0], c1[2]), kam = dark(am, L[i - 1]), kcm = dark(cm, L[i]);
+          tri2(a0, am, cm, ka0, kam, kcm); tri2(a0, cm, c0, ka0, kcm, kc0);
+          tri2(am, a1, c1, kam, ka1, kc1); tri2(am, c1, cm, kam, kc1, kcm);
         }
       });
     };
