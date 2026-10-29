@@ -2743,13 +2743,20 @@ const FWM = (() => {
       b.box(0.09, 0.42, 0.11, pants, { x });
       if (boot) { b.box(0.098, 0.11, 0.118, boot, { x }); b.box(0.098, 0.05, 0.06, boot, { x, z: 0.06 }); }
     });
-    b.box(0.3, 0.38, 0.18, shirt, { y: 0.42 + dy });
+    /* v199: o.fem – schmalerer Oberkörper, Kleid mit weitem Rock; sonst breitere Schultern */
+    b.box(o.fem ? 0.26 : o.broad ? 0.32 : 0.3, 0.38, 0.18, shirt, { y: 0.42 + dy });
+    if (o.fem) {
+      const dr = o.dress || shirt;
+      b.box(0.272, 0.05, 0.19, mix(dr, 0x000000, 0.22), { y: 0.43 + dy });                         /* Gürtel in der Taille */
+      b.cyl(0.14, 0.215, 0.27, 10, dr, { y: 0.2 + dy, sz: 0.85, top: mix(dr, 0xffffff, 0.08) });    /* Rock */
+      b.box(0.1, 0.03, 0.02, mix(dr, 0xffffff, 0.35), { y: 0.69 + dy, z: 0.092 });                  /* kleiner Ausschnitt-Saum */
+    }
     if (o.garb) garbParts(b, o);
     /* armR: false – der rechte Arm kommt als eigenes, bewegliches Teil dazu (arm()) */
     [-1, 1].forEach(s => {
       if (o.noArms || (s === 1 && o.armR === false)) return;
       if (o.sit) bentArm(b, o, s, s * 0.19, 0.78);                                                  /* v112: sitzend – gebeugt, Hand auf dem Oberschenkel */
-      else b.box(0.07, 0.34, 0.08, shirt, { x: s * 0.19, y: 0.44 + dy, rz: s * 0.08 });
+      else b.box(0.07, 0.34, 0.08, shirt, { x: s * (o.fem ? 0.17 : o.broad ? 0.2 : 0.19), y: 0.44 + dy, rz: s * 0.08 });
     });
     if (!o.noHead) headParts(b, o, 0);
     if (o.tool === "axt" && !o.sit) { b.box(0.03, 0.5, 0.03, C.woodD, { x: 0.22, y: 0.3 + dy, rz: 0.2 }); b.box(0.12, 0.08, 0.02, 0x9aa6af, { x: 0.27, y: 0.55 + dy, rz: 0.2 }); }

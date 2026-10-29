@@ -29,6 +29,14 @@ const RENT = (() => {
     tuer:    { n: "Haustür schließt nicht",     i: "🚪", c: 70,  t: "Die Haustür hat sich verzogen und schließt nicht mehr richtig." },
     maeuse:  { n: "Mäuse in der Speisekammer",  i: "🐭", c: 110, t: "In der Speisekammer sind Mäuse – die haben meine Haferflocken gefunden." }
   };
+  /* v199: Geschlecht nach dem Vornamen – daraus Frisur, Kleidung und Körperbau der Figur an der Hütte */
+  const GEN = { Jonas: "m", Mia: "f", Lukas: "m", Sophie: "f", Tim: "m", Lea: "f", Felix: "m", Emma: "f" };
+  function lookOf(t) {
+    const sd = t.seed || 1, g = GEN[String(t.n).split(" ")[0]] || (sd % 2 ? "f" : "m");
+    if (g === "f") return { fem: true, shirt: t.shirt, dress: t.shirt, pants: 0x2a2a30, hair: t.hair, hs: ["lang", "pferd", "dutt", "locken"][sd % 4], skin: t.skin, seed: sd % 50 };
+    return { broad: true, shirt: t.shirt, pants: t.pants, hair: t.hair, hs: ["kurz", "scheitel", "buzz"][sd % 3], beard: sd % 3 === 0 ? t.hair : undefined,
+      garb: sd % 2 ? "plaid" : undefined, gc: t.shirt, boots: 0x4a3a2a, hat: sd % 5 === 0 ? "cap" : undefined, hatC: 0x3a5a3a, skin: t.skin, seed: sd % 50 };
+  }
   const NAMES = ["Jonas Berger", "Mia Hoffmann", "Lukas Wendland", "Sophie Krause", "Tim Vogel", "Lea Schubert", "Felix Brandt", "Emma Lorenz"];
   const SHIRTS = [0x3f78c8, 0xc8553f, 0x4f8a4a, 0x8a5ab8, 0xd8a03a, 0x3a8a8a];
   const CARS = [0x3f78c8, 0xc23a32, 0xe4e4e0, 0x2f6b4a, 0x34363c, 0xd9a93a];
@@ -685,10 +693,10 @@ const RENT = (() => {
     if (T && T.ten) ensureActors(T.ten); else dropActors();
   }
   function ensureActors(t) {
-    const R = FV.R, key = t.n + t.seed;
+    const R = FV.R, key = t.n + t.seed + "g199";
     if (W.manKey === key) return;
     dropActors();
-    const look = { shirt: t.shirt, pants: t.pants, hair: t.hair, skin: t.skin, seed: t.seed % 50 };
+    const look = lookOf(t);
     W.manStand = fmesh("rent_man:" + key, () => FWM.person(look));
     W.manSit = fmesh("rent_mans:" + key, () => FWM.person(Object.assign({ sit: true }, look)));
     W.man = fnode(W.manStand, { x: DOOR[0], z: DOOR[1], s: 1.35, visible: false });

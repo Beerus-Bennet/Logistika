@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v199 – Mieter männlich/weiblich (auf v198)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `person()`: `fem` (Kleid, schmaler), `broad`, Armabstand |
+| `rent.js` | `GEN`, `lookOf()`, `ensureActors` nutzt sie (Mesh-Schlüssel mit `g199`) |
+| `index.html`, `sw.js` | Version 199 |
+
 ## Stand v198 – Arbeitermenü scrollbar (auf v197)
 
 | Datei | Änderung |

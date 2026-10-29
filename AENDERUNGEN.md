@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v199 – Mieter an der Hütte passt zum Namen (männlich / weiblich)
+
+- **Geschlecht nach Vornamen** (`rent.js`, `GEN`, `lookOf`): Jonas, Lukas, Tim, Felix → männlich; Mia, Sophie, Lea, Emma → weiblich. Gilt auch für Mieter, die schon im Spielstand stehen (kein neuer Spielstandwert nötig). Frisur, Bart und Kleidung ergeben sich fest aus der `seed` des Mieters, ändern sich also nicht von Besuch zu Besuch.
+- **Weiblich:** schmalerer Oberkörper, Kleid mit Gürtel und weitem Rock, dunkle Beine, Frisur lang, Pferdeschwanz, Dutt oder Locken.
+- **Männlich:** breitere Schultern, Frisur kurz, Scheitel oder Stoppeln, oft Bart, oft Flanellhemd (karierte Streifen), Stiefel, manchmal Cap.
+- **`woodmodels.js` `person()`:** neue Optionen `fem`, `dress`, `broad`; Arme sitzen passend zur Schulterbreite. Alle anderen Figuren im Spiel sind unverändert.
+
 ## v198 – Arbeitermenü: Scrollen öffnet nicht mehr die Mengengrenze
 
 - **Ursache:** Das Halten einer Kachel (Mengengrenze) startete nach 0,45 s, auch wenn der Finger dabei die Liste verschob. Dazu kam: Das Menü zeichnet sich alle 0,5 s neu; die Kachel unterm Finger wurde dabei ersetzt, das Scrollen brach ab und der alte Zeitgeber lief weiter.
