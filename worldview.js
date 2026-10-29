@@ -893,7 +893,7 @@ function worldStatic() {
     const snap = [pier(a) ? { at: [PIER.x, PIER.z], dir: [-PIER.dx, -PIER.dz], L: 1.4 } : null, pier(e) ? { at: [PIER.x, PIER.z], dir: [PIER.dx, PIER.dz], L: 1.4 } : null];
     /* v70: alle Ränder liegen unter allen Wegflächen – Abzweige gehen ohne Kante ineinander über.
        v71: am Westtor keine runde Kappe (lag aufs Pflaster), kein Laub auf Hofpflaster und Straße */
-    const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k];
+    const cap = (q, k) => !gate(q) && !road(q) && !hof(q) && tee[k] < 0 && !snap[k] && !inLkwBay(q[0], q[1], 0.3);   /* v208: Zufahrt endet gerade an der Stellplatzkante */
     /* v77: am Tor läuft der Weg 1 Einheit in den Hof hinein und dort in den Schotter aus (fade) */
     const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(a) ? { L: 7, col: CAMP.GRAVEL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(e) ? { L: 7, col: CAMP.GRAVEL } : null];   /* v83: der Weg läuft in den Kies des Lagerfeuerplatzes aus */
     const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0 && !campEnd(a), loose(e) && tee[1] < 0 && !campEnd(e)], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],

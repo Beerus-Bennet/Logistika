@@ -1,5 +1,17 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v208 – Ladebucht quer zum Weg (auf v207)
+
+| Datei | Änderung |
+|---|---|
+| `erbe.js` | `LKW_BAY`; Hauptweg mit Punkt (−41, −24,5), ohne (−40,4, −19,95); Zufahrt gerade; Umstellung `F.v208lkw` (nach v203) |
+| `erbedata.js` | Stellplatz `r: 1` |
+| `farmview.js` | `lkwRoute`, neu `lkwRy`, Drehung des Stellplatz-Knotens, Laster parkt gedreht |
+| `bauplatz.js` | Drehung des Lkw-Bauplatzes |
+| `woodmodels.js` | `sawLkw`: Fläche 2,4 cm höher |
+| `worldview.js` | keine Wegkappe am Stellplatz |
+| `sw.js`, `index.html` | Version v208 |
+
 ## Stand v207 – Herkunft des Quellwassers (auf v206)
 
 | Datei | Änderung |

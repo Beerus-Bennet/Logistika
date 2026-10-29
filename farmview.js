@@ -228,7 +228,7 @@ function buildObjNode(o) {
   const [cx, cz] = farmCenter(o);
   /* Reusen im See: die Modelle rechnen mit dem tieferen Wasser der alten Kaikante */
   /* Verkaufsstand am Straßenrand: ein Stück zur Straße hin (nicht in Mauer oder Zaun) */
-  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? -Math.PI / 2 : 0 });
+  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? (o.t === "sw_lkw" ? Math.PI / 2 : -Math.PI / 2) : 0 });   /* v208: Stellplatz mit offener Seite zum Weg */
   const parts = {};
   if (o.t === "mill") {
     const h = FM.MILL_HUB;
@@ -495,7 +495,9 @@ function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
 function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
 /* v169: vom Stellplatz nach Süden zum Wegknick (−41 / −21) und dann auf dem Waldweg zur Straße – kein Weg mehr durch die Gebäude */
-function lkwRoute(p) { return [[p.x, p.z], [p.x, -21.1], [-45.8, -20.2], [-44.4, -19.8], [-42.4, -19.8], [-40.4, -19.95], [-39.8, -18.9]].concat(SAW_ROAD.slice(2)); }   /* v203: über die kurze Zufahrt auf den Hauptweg */
+function lkwRoute(p) { return [[p.x, p.z], [-43.4, p.z], [-42.0, p.z + 0.25], [-41.25, p.z + 1.0], [-41, p.z + 2.2]].concat(SAW_ROAD.slice(1)); }   /* v208: gerade aus der Bucht, im Bogen auf den Hauptweg nach Süden */
+/* v208: Drehung von Stellplatz und geparktem Laster – Front zur offenen Seite (Zufahrt), Heck an den Radstoppern */
+function lkwRy() { const o = farmObj1("sw_lkw"); return o && o.r ? Math.PI / 2 : 0; }
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -545,7 +547,7 @@ function farmSyncVehicles(force) {
     const p = isTruck ? null : SHED_SLOTS[slot++];
     const x = isTruck ? pad.x : sx + p[0], z = isTruck ? pad.z : sz + p[1];
     if (!v) {
-      const node = fnode(vehMesh(t, f), { x, z, ry: 0 });
+      const node = fnode(vehMesh(t, f), { x, z, ry: isTruck ? lkwRy() : 0 });
       if (typeof brandVehicle === "function") brandVehicle(node, k);
       R.nodes.push(node);
       v = { node };
@@ -553,10 +555,10 @@ function farmSyncVehicles(force) {
       /* angekommen: von der Straße durchs Tor in den Schuppen – mit Fahrer/in, die dann aussteigt */
       if (!force && FV.parked && !FV.parked.has(f.uid)) {
         vehDriver(node, k, null);
-        if (isTruck) { const r = lkwRoute(pad).reverse(); node.x = r[0][0]; node.z = r[0][1]; startDrive(node, r, () => { node.ry = 0; vehNoDriver(node); }); }
+        if (isTruck) { const r = lkwRoute(pad).reverse(); node.x = r[0][0]; node.z = r[0][1]; startDrive(node, r, () => { node.ry = lkwRy(); vehNoDriver(node); }); }
         else { node.x = 30; node.z = 18.5; startDrive(node, [[30, 18.5], [x, 18.5], [x, z]], () => { node.ry = 0; vehNoDriver(node); }); }
       }
-    } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = 0; }
+    } else if (!v.node.driving) { v.node.x = x; v.node.z = z; v.node.ry = isTruck ? lkwRy() : 0; }
     /* frisch lackiert: neue Farben */
     if (v) { const m = vehMesh(t, f); if (v.node.mesh !== m) v.node.mesh = m; }
     /* Beladen beginnt */

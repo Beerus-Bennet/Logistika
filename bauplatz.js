@@ -33,7 +33,7 @@ const SITE3D = (() => {
   /* Ort: Mitte (Welt), Drehung wie die Knoten (ry), Reihen in lokalen Koordinaten: { z, cx, maxW } – Stapel liegen längs z */
   function anchor(key) {
     const obj = t => S.farm.objs.find(o => o.t === t);
-    const of = (o, rows) => { if (!o) return null; const [x, z] = farmCenter(o); return { x, z, ry: o.r ? -PI / 2 : 0, rows }; };
+    const of = (o, rows) => { if (!o) return null; const [x, z] = farmCenter(o); return { x, z, ry: o.r ? (o.t === "sw_lkw" ? PI / 2 : -PI / 2) : 0, rows }; };
     if (key === "rent" && typeof RENT !== "undefined") return { x: RENT.H.x, z: RENT.H.z, ry: RENT.H.ry, rows: [{ z: 6.4, cx: 0.7, maxW: 6.2 }] };     /* v192: etwas weiter vor, frei vom Pfad */
     if (key === "hunt" && typeof HUNT !== "undefined") return { x: HUNT.TW.x, z: HUNT.TW.z, ry: HUNT.TRY, rows: [{ z: -0.86, cx: 0.0, maxW: 2.7 }, { z: 0.76, cx: 0.35, maxW: 2.3 }] };     /* innerhalb des Absperrbands (±1,5) */
     if (key.startsWith("saw:")) {

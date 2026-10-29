@@ -2259,9 +2259,10 @@ const FWM = (() => {
       G3.seed(4031);
       const b = new MB();
       /* Stellplatz klar über dem Hofboden (y 0,014) – sonst flimmert er */
-      b.noise(0.05, () => b.plate(2.6, 4.8, 0x8f8a80, { y0: 0.034 }));
-      [-1.2, 1.2].forEach(x => b.plate(0.08, 4.6, 0xf2efe6, { x, y0: 0.042 }));
-      b.plate(2.4, 0.08, 0xf2efe6, { z: -2.3, y0: 0.042 });
+      /* v208: 2,4 cm höher – die Zufahrt (Weg 6, y 0,044) liegt darunter und endet sauber an der Kante */
+      b.noise(0.05, () => b.plate(2.6, 4.8, 0x8f8a80, { y0: 0.058 }));
+      [-1.2, 1.2].forEach(x => b.plate(0.08, 4.6, 0xf2efe6, { x, y0: 0.066 }));
+      b.plate(2.4, 0.08, 0xf2efe6, { z: -2.3, y0: 0.066 });
       b.box(0.5, 0.12, 0.25, 0x8a6040, { x: 0.8, z: -2.1 }); b.box(0.5, 0.12, 0.25, 0x8a6040, { x: -0.8, z: -2.1 });
       return b;
     }

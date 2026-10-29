@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v208 – Lkw-Stellplatz als Ladebucht quer zum Weg, gerade Zufahrt
+
+- **Analyse:** Der Stellplatz lag parallel zum Hauptweg, der Laster sollte von Süden einfahren. Die Zufahrt musste deshalb vom Weg aus einen Haken um 90° schlagen und lief als Bogen mit Grasinsel auf die Stirnseite zu. Dazu zeichnete sich ihr rundes Ende über dem Stellplatz (Weg 6 lag mit y 0,044 höher als die Fläche mit 0,034).
+- **Neu:** Der Stellplatz ist um 90° gedreht und steht quer zum Hauptweg wie eine Ladebucht – offene Stirnseite zum Weg, Radstopper hinten (Westen). Fläche, Maße und Markierung sind unverändert. Mitte (−46,5, −24,5), Objekt `x −33, z −10, r 1` (Drehung +90°, `farmview.js` und `bauplatz.js`).
+- **Zufahrt:** gerade, 3 m kurz, quer vom Hauptweg (neuer Abzweigpunkt (−41, −24,5) auf dem Hauptweg; der v203-Punkt (−40,4, −19,95) ist wieder weg). Das Wegende an der Bucht hat keine runde Kappe mehr (`cap` in `worldview.js`) und liegt unter der Fläche, die 2,4 cm angehoben ist (`sawLkw`).
+- **Laster:** parkt mit der Front zur Zufahrt (`lkwRy`), fährt gerade heraus und biegt im Bogen nach Süden auf den Hauptweg (`lkwRoute`); Ankunft umgekehrt. Beladen nutzt die Drehung des Lasters (unverändert).
+- `LKW_BAY` auf die neue Lage; einmalige Umstellung `F.v208lkw` (Platz, Drehung, Bäume aus der Bucht).
+
 ## v207 – Quell-Wasserfall: Herkunft des Wassers (Hangquelle, Bergbach, Kaskaden)
 
 - **Idee:** Hinter der Felswand steigt jetzt ein bemooster Felshang in den Wald an. Oben tritt das Wasser am Fuß eines großen Findlings aus (Quelltopf, sprudelt sichtbar), läuft als schmaler Bergbach in einer Rinne den Hang hinab, fällt über zwei kleine Kaskaden mit einem Becken dazwischen in das Becken auf der Felskante und von dort als großer Fall in den Topf. Der Weg des Wassers ist damit von der Quelle bis zum Topf durchgehend sichtbar.

@@ -41,14 +41,14 @@ const FWORLD = {
      ausgerichtet; die Daten bleiben, damit die fällbaren Bäume eines neuen Spiels dieselben bleiben;
      alle Wege enden genau am Bordstein der Straße (z = 17,48) */
   paths: [
-    [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-39.8, -18.9], [-40.4, -19.95], [-41, -21], [-41, -30]],
+    [[-24.6, -9.5], [-31, -9.5], [-37, -14], [-39.8, -18.9], [-41, -21], [-41, -24.5], [-41, -30]],
     [[-41, -54], [-40, -63], [-37.2, -67.8], [-34.2, -70.6], [-33.8, -73.5], [-33.8, -76.4], [-33.8, -79.3], [-33.8, -84], [-34, -92], [-34.6, -98], [-36.6, -103], [-39.2, -106.7], [-43, -110.5], [-49.4, -116.9]],
     [[-54, -42], [-64, -42], [-72, -48], [-79.5, -50.6], [-83.5, -52.4], [-85.5, -54.2], [-86, -55.6]],
     [[-34.2, -70.6], [-24, -70], [-12, -66], [-2, -58], [8, -50], [20, -42], [28, -34], [31, -26], [34.5, -20], [39.5, -15], [43.6, -9.5], [44.4, -2], [43.8, 6], [41.8, 11.2], [40.3, 14.6], [40, 16.2], [40, 17.48]],
     [[-33.8, -84], [-46, -82], [-60, -78], [-70, -72]],
     [[-31, -9.5], [-31, -1], [-31.5, 8], [-31, 17.48]],
-    /* v203: kurze Zufahrt vom Südende des Stellplatzes (Laster fährt von Süden ein, Radstopper im Norden), zweigt im flachen Bogen vom Hauptweg ab (Punkt auf (−39,8, −18,9) → (−41, −21)) */
-    [[-46.5, -22.3], [-46.5, -21.1], [-45.8, -20.2], [-44.4, -19.8], [-42.4, -19.8], [-40.4, -19.95]]
+    /* v208: gerade Zufahrt quer vom Hauptweg (Abzweig (−41, −24,5)) bis an die offene Stirnseite des Stellplatzes – Radstopper an der Westseite */
+    [[-44.1, -24.5], [-41, -24.5]]
   ],
   /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg.
      v75: er endet nirgends mehr offen auf der Wiese – im Nordosten entspringt er an einer Quelle mit Felsen
@@ -204,8 +204,8 @@ function treeOffFence(t, all) {
 }
 function inYard(x, z, m) { const y = FWORLD.yard; m = m || 0; return x > y[0] - m && x < y[2] + m && z > y[1] - m && z < y[3] + m; }
 /* v169: Stellplatz des Holzlasters liegt vor dem Sägewerk am Weg zum Südtor (Mitte −43,5 / −24,5); drumherum bleibt es frei */
-/* v203: Stellplatz 3 m nach Westen neben den Hauptweg (x −47,8 … −45,2, z −26,9 … −22,1); die Bucht schließt nicht mehr den Weg ein */
-const LKW_BAY = [-48.4, -44.6, -27.5, -21.5];
+/* v203: Stellplatz neben dem Hauptweg; v208: quer zum Weg gedreht (Ladebucht, x −48,9 … −44,1, z −25,8 … −23,2), gerade Zufahrt von Osten */
+const LKW_BAY = [-49.5, -43.6, -26.4, -22.6];
 function inLkwBay(x, z, m) { m = m || 0; const b = LKW_BAY; return x > b[0] - m && x < b[1] + m && z > b[2] - m && z < b[3] + m; }
 function inLake(x, z, m) { const L = FWORLD.lake; const a = (x - L.x) / (L.rx + (m || 0)), b = (z - L.z) / (L.rz + (m || 0)); return a * a + b * b < 1; }
 /* Wo im Wald? Für Baumarten und Freischaltung */
@@ -405,6 +405,13 @@ function erbeInit(F, fresh) {
     const lk = F.objs.find(o => o.t === "sw_lkw");
     if (lk) lk.x = -32;
     F.trees.forEach(t => { if (inLkwBay(t.x, t.z, 1.5)) t.x = +(LKW_BAY[0] - 2.2 - Math.random() * 0.8).toFixed(2); });
+  }
+  /* v208: Stellplatz quer zum Weg (Ladebucht), gerade Zufahrt; Bäume in der Bucht rücken nach Westen */
+  if (!F.v208lkw) {
+    F.v208lkw = 1;
+    const lk = F.objs.find(o => o.t === "sw_lkw");
+    if (lk) { lk.x = -33; lk.z = -10; lk.r = 1; }
+    F.trees.forEach(t => { if (inLkwBay(t.x, t.z, 1.5)) t.x = +(LKW_BAY[0] - 2.4 - Math.random() * 0.8).toFixed(2); });
   }
   /* v162: Traktor wird zum Objekt – bestehende Spielstände bekommen ihn an der alten Stelle vor dem Zaun (ab Stufe 2), außer er liegt im Lager */
   farmTractorEnsure();

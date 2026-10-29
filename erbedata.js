@@ -206,7 +206,7 @@ const FSAW = {
     { t: "sw_halle", x: -41, z: -43 },
     { t: "sw_lager", x: -49, z: -34 },
     { t: "sw_buero", x: -32.5, z: -33.5 },
-    { t: "sw_lkw",   x: -46.5, z: -24.5, r: 0 },       /* v169: Stellplatz vor dem Sägewerk, direkt am Weg zum Südtor (vorher im Hof, Laster fuhr durch die Gebäude) */
+    { t: "sw_lkw",   x: -46.5, z: -24.5, r: 1 },       /* v169: Stellplatz vor dem Sägewerk, direkt am Weg zum Südtor (vorher im Hof, Laster fuhr durch die Gebäude) */
     { t: "kessel",   x: -50.5, z: -45.5 }
   ],
   pads: { spalter: [-36, -33], hobel: [-43.5, -35.5], trocken: [-34, -50], verpack: [-40, -50.5], schleif: [-46, -50.5], fraese: [-50.5, -50] }
