@@ -1,8 +1,8 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
-## Stand v216 – Parkplatz verschoben (auf v215)
+## Stand v217 – v216 zurückgenommen
 
-- Nur `rent.js`: `CAR = { x: -49.5, z: 21.4 }`, `PATH` mit zwei Punkten mehr bis `[-48.2, 22.35]`, Briefkasten zurück auf x −41,4, z 20,3.
+- `rent.js` ist wieder auf dem Stand von v215 (v216 per Revert entfernt).
 
 ## Stand v215 – Briefkasten (auf v214)
 
