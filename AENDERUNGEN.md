@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v216 – Parkplatz der Hütte weiter westlich, Briefkasten wieder am alten Platz
+
+- Der Parkfleck samt Stellplatz des Autos liegt jetzt 3,5 Einheiten weiter westlich an der Straße (Auto bei x −49,5 statt −46). Ein- und Ausfahrt, Reifenspuren und der Weg des Mieters zum Auto wandern mit.
+- Der Trampelpfad schwingt bis zum neuen Fleck hinüber und läuft dort weich in die Erde aus.
+- Der Briefkasten steht wieder an seinem ursprünglichen Platz (x −41,4, z 20,3); die Ausfahrt liegt jetzt weiter westlich, die Spur läuft nicht mehr hindurch.
+- Datei: `rent.js` (`CAR`, `PATH`, `pathMesh`).
+
 ## v215 – Briefkasten der Hütte näher an die Einfahrt
 
 - v214 stand er zu weit weg. Jetzt steht er direkt am Rand des Parkflecks neben der Ausfahrt (x −40,6, z 20,7) – gut 1,2 Einheiten neben der Fahrlinie, nicht mehr in der Reifenspur.
