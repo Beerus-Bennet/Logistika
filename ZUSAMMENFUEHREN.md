@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v217.2 – Miete, Brennholz, Reifenspur, Kamin (auf v217.1)
+
+- Nur `rent.js`: neue Konstanten `WOOD_N`, `WOOD_CUT`; neue Funktionen `woodDay`, `woodTick` (im `tick`), `deliverWood`; Spielstand `S.farm.rent.wood = { wk, done, miss }`; `rentF` multipliziert die Holz-Kürzung; `ISSUES.heizung` = „Feuerholz alle“ (Schlüssel unverändert), `repair` nimmt dafür Brennholz statt Geld; Fenster mit Holz-Kasten; Markierung 🔥; `padMesh` mit einer geglätteten Spur; Kaminkopf mit Öffnung in `hutMesh`.
+
 ## Stand v217.1 – Briefkasten, Pfadrand (auf v217)
 
 - Nur `rent.js`: Form/Farbe des Baustellenbodens als `YD`, `yardWob`, `yardColL`, `yardCol` aus `yardMesh` herausgezogen; `pathMesh` nutzt `gnd: yardCol`; Briefkasten auf x −43,1, z 23,4.

@@ -17,10 +17,11 @@ const RENT = (() => {
   const COST = 9000;                                                   /* Baukosten in € */
   const NEED = { bauholz: 6, balken: 6, bretter: 8, dielen: 4, platten: 4, tueren: 2 };   /* Baumaterial (Gebinde) */
   const DAY = 1440, CYCLE = 90 * DAY;                                  /* Spielminuten */
-  const RENT_DAY = 120;                                                /* Miete je Tag */
+  const RENT_DAY = 360;                                                /* Miete je Tag (v217.2: dreifach, 2.520 € die Woche) */
+  const WOOD_N = 1, WOOD_CUT = 0.5;                                    /* v217.2: Brennholz je Mietwoche (Gebinde = Säcke à 15 kg), Kürzung bei verpasster Lieferung */
   const MAINT = 900;                                                   /* Instandhaltung alle 90 Tage */
   const ISSUES = {
-    heizung: { n: "Heizung bleibt kalt",       i: "🔥", c: 180, t: "Die Heizung bleibt seit heute Morgen kalt – drinnen wird es richtig frisch." },
+    heizung: { n: "Feuerholz alle",            i: "🪵", c: 180, t: "Mein Feuerholz ist leer – kannst du mir bitte schnell neues besorgen? Ohne Kamin wird es hier drin richtig kalt." },   /* v217.2: statt Heizung (geheizt wird mit dem Kamin); Schlüssel bleibt für alte Spielstände */
     wasser:  { n: "Wasserhahn tropft",          i: "🚰", c: 60,  t: "In der Küche tropft der Wasserhahn die ganze Nacht. Ich krieg kein Auge zu." },
     fenster: { n: "Fenster klemmt",             i: "🪟", c: 80,  t: "Das Schlafzimmerfenster oben klemmt und lässt sich nicht mehr richtig schließen." },
     dach:    { n: "Dach undicht",               i: "🏚️", c: 240, t: "Beim letzten Regen kam es oben durchs Dach – da steht jetzt ein Eimer." },
@@ -95,8 +96,36 @@ const RENT = (() => {
   /* Mietfaktor: überfällige Instandhaltung (> 7 Tage) → keine Miete; Problem länger als 2 Tage offen → halbe Miete */
   function rentF(T, now) {
     if (now > maintDue(T) + 7 * DAY) return 0;
-    if (T.iss && now - T.iss.t0 > 2 * DAY) return 0.5;
-    return 1;
+    return (T.iss && now - T.iss.t0 > 2 * DAY ? 0.5 : 1) * (T.wood && T.wood.miss ? 1 - WOOD_CUT : 1);
+  }
+  /* v217.2: Feuerholz – Mietwochen zählen ab dem Einzugstag (Tag 1, 8, 15 …). Am ersten Tag jeder Mietwoche muss bis Mitternacht
+     WOOD_N Gebinde Brennholz geliefert werden; sonst gibt es für diese Woche nur (1 − WOOD_CUT) der Miete. */
+  const woodDay = (T, now) => { const d = Math.floor(now / DAY) - Math.floor(T.ten.since / DAY); return { wk: Math.floor(d / 7), first: d % 7 === 0, left: 7 - d % 7 }; };
+  function woodTick(T, now) {
+    const w = woodDay(T, now);
+    if (!T.wood) T.wood = { wk: w.wk, done: !w.first, miss: false };                /* bestehende Mieter: laufende Woche gilt als erledigt */
+    if (T.wood.wk !== w.wk) {
+      T.wood = { wk: w.wk, done: false, miss: false };
+      phone({ from: T.ten.n, kind: "info", title: "🔥 Mein Feuerholz ist leer",
+        body: "Guten Morgen! Mein Feuerholz ist leer – bringst du mir bitte bis heute Abend " + fqty("brennholz", WOOD_N) + " für den Kamin vorbei? Sonst sitze ich die Woche im Kalten und muss die Miete kürzen. – " + T.ten.n });
+    }
+    if (!T.wood.done && !T.wood.miss && !w.first) {
+      T.wood.miss = true;
+      T.acc = Math.max(0, (T.acc || 0) - RENT_DAY * WOOD_CUT);                      /* auch den Liefertag selbst kürzen – die ganze Woche zählt */
+      phone({ from: T.ten.n, kind: "trouble", title: "🥶 Kein Feuerholz mehr",
+        body: "Mein Feuerholz ist leer und gestern kam keins mehr – ohne Kamin ist es in der Hütte eiskalt. Für diese Woche zahle ich nur die halbe Miete. – " + T.ten.n });
+    }
+  }
+  function deliverWood() {
+    const T = st();
+    if (!T || !T.ten || !T.wood || T.wood.done || T.wood.miss || !woodDay(T, S.time).first) return false;
+    if (farmInv("brennholz") < WOOD_N) { toast("Es fehlt Brennholz: " + fqty("brennholz", WOOD_N) + " gebraucht.", "warn"); return false; }
+    farmTake("brennholz", WOOD_N);
+    T.wood.done = true;
+    if (typeof farmXP === "function") farmXP(5);
+    toast("🔥 Brennholz geliefert – " + T.ten.n + " bedankt sich!", "good");
+    save();
+    return true;
   }
 
   /* --------------------------- Takt (erbe.js) ------------------------------ */
@@ -108,6 +137,7 @@ const RENT = (() => {
     const now = S.time, d = Math.max(0, now - (T.lt == null ? now : T.lt));
     T.lt = now;
     if (!T.ten) { if (now >= T.moveIn) moveIn(T); return; }
+    woodTick(T, now);
     T.acc = (T.acc || 0) + RENT_DAY * d / DAY * rentF(T, now);
     for (let k = 0; k < 20 && now >= T.pay; k++) { payRent(T); T.pay += 7 * DAY; }
     if (now >= maintDue(T) && !T.mMsg) {
@@ -123,8 +153,9 @@ const RENT = (() => {
     T.next = null;
     T.ten = Object.assign(t, { since: S.time });
     T.cs = S.time; T.plan = planIssues(S.time); T.acc = 0; T.pay = S.time + 7 * DAY; T.mMsg = 0; T.iss = null;
+    T.wood = { wk: 0, done: false, miss: false };                                   /* der Einzugstag ist der erste Holztag */
     phone({ from: t.n, kind: "good", title: "Eingezogen in die Hütte am See",
-      body: "Hallo! Ich bin heute in die Hütte am See eingezogen – traumhaft hier, mit Blick aufs Wasser. Die Miete (" + eur(RENT_DAY) + " am Tag) überweise ich jede Woche. Wenn etwas ist, melde ich mich. Viele Grüße, " + t.n });
+      body: "Hallo! Ich bin heute in die Hütte am See eingezogen – traumhaft hier, mit Blick aufs Wasser. Die Miete (" + eur(RENT_DAY * 7) + " die Woche) überweise ich jede Woche. Dafür bringst du mir am ersten Tag jeder Mietwoche " + fqty("brennholz", WOOD_N) + " – heute zum ersten Mal, bis heute Abend. Viele Grüße, " + t.n });
     if (typeof save === "function") save();
   }
   function payRent(T) {
@@ -149,13 +180,18 @@ const RENT = (() => {
   function repair() {
     const T = st();
     if (!T || !T.iss) return false;
-    const c = T.iss.c, I = ISSUES[T.iss.k];
-    if (S.money < c) { toast("Dafür fehlt das Geld (" + eur(c) + ").", "warn"); return false; }
-    S.money -= c; S.expense = (S.expense || 0) + c;
-    if (typeof logMoney === "function") logMoney("farm", "Reparatur Hütte: " + I.n, -c);
+    const c = T.iss.c, k0 = T.iss.k, I = ISSUES[k0];
+    if (k0 === "heizung") {                                              /* „Feuerholz alle“: kostet nur Brennholz aus dem Lager, kein Geld */
+      if (farmInv("brennholz") < WOOD_N) { toast("Es fehlt Brennholz: " + fqty("brennholz", WOOD_N) + " gebraucht.", "warn"); return false; }
+      farmTake("brennholz", WOOD_N);
+    } else {
+      if (S.money < c) { toast("Dafür fehlt das Geld (" + eur(c) + ").", "warn"); return false; }
+      S.money -= c; S.expense = (S.expense || 0) + c;
+      if (typeof logMoney === "function") logMoney("farm", "Reparatur Hütte: " + I.n, -c);
+    }
     T.iss = null; T.fixed = (T.fixed || 0) + 1;
     if (typeof farmXP === "function") farmXP(10);
-    toast(I.i + " Repariert – " + T.ten.n + " bedankt sich!", "good");
+    toast(I.i + (k0 === "heizung" ? " Feuerholz gebracht – " : " Repariert – ") + T.ten.n + " bedankt sich!", "good");
     save();
     return true;
   }
@@ -317,7 +353,12 @@ const RENT = (() => {
     b.box(0.06, 0.06, 0.06, 0xd8b050, { x: 0.82, y: 1.3, z: HD + 0.16 });
     /* Kamin an der linken Seite, über den First */
     chimney(b, top + rise + 0.7);
-    b.box(0.86, 0.1, 1.0, 0x6f6a62, { x: -HW - 0.35, y: top + rise + 0.7, z: -0.2 });
+    /* v217.2: Kaminkopf mit Öffnung – Rahmen aus Deckplatten, darin ein rußig-dunkles Loch, aus dem der Rauch steigt */
+    { const cx = -HW - 0.35, cz = -0.2, yt = top + rise + 0.7, ow = 0.42, od = 0.54, W0 = 0.86, D0 = 1.0;
+      b.box(ow, 0.012, od, 0x1c1714, { x: cx, y: yt, z: cz });                                                   /* Ruß im Schacht */
+      b.box(W0, 0.13, (D0 - od) / 2, 0x6f6a62, { x: cx, y: yt, z: cz - (od + D0) / 4 }); b.box(W0, 0.13, (D0 - od) / 2, 0x6f6a62, { x: cx, y: yt, z: cz + (od + D0) / 4 });
+      b.box((W0 - ow) / 2, 0.13, od, 0x6f6a62, { x: cx - (ow + W0) / 4, y: yt, z: cz }); b.box((W0 - ow) / 2, 0.13, od, 0x6f6a62, { x: cx + (ow + W0) / 4, y: yt, z: cz });
+      b.box(ow + 0.04, 0.03, 0.04, 0x2a2420, { x: cx, y: yt + 0.11, z: cz - od / 2 }); b.box(ow + 0.04, 0.03, 0.04, 0x2a2420, { x: cx, y: yt + 0.11, z: cz + od / 2 }); }   /* verrußte Innenkante */
     /* Veranda: Dielen, Unterbau, Pfosten, Geländer, Pultdach, Stufen */
     b.box(HW * 2 + 0.4, 0.36, VZ - HD, C.deckD, { y: 0, z: (HD + VZ) / 2 });
     b.noise(0.08, () => { for (let z = HD + 0.05; z < VZ; z += 0.24) b.box(HW * 2 + 0.4, 0.08, 0.22, C.deck, { y: 0.36, z: z + 0.11 }); });
@@ -677,7 +718,7 @@ const RENT = (() => {
       b.triV(A, Cc, D, padCol(A[0], A[2]), padCol(Cc[0], Cc[2]), padCol(D[0], D[2]));
     }
     /* v212/v213: Reifenspuren auf der Fahrlinie des Autos – herein von der Straßenkante bis zum Stellplatz, hinaus vom Stellplatz bis zur
-       Straßenkante. Jede Spur hat weiche Seitenränder (dunkle Mitte, Rand in der Bodenfarbe) und läuft an beiden Enden über 1,4 aus;
+       Straßenkante. Jede Spur hat weiche Seitenränder (dunkle Mitte, Rand in der Bodenfarbe) und läuft an der Straße über 1,4 aus;
        auf dem Gras nur abgewetzt, auf der Erde dunkler. */
     const RUT = G3.col(0x6e5638), off = 0.55, w = 0.17, yr = y + 0.0015;
     const rut = line => {
@@ -707,7 +748,11 @@ const RENT = (() => {
         }
       });
     };
-    rut(CAR_IN.slice(1)); rut(CAR_OUT.slice(0, -1));
+    /* v217.2: eine durchgehende Spur – das Auto fährt immer von Westen herein und nach Osten hinaus: im Bogen von der Straße auf den
+       Fleck, am Stellplatz entlang (unter den Rädern), im Bogen zurück zur Straße. Geglättet (Chaikin), keine Kreuzungen. */
+    let line = CAR_IN.slice(1).concat(CAR_OUT.slice(1, -1));
+    for (let it = 0; it < 4; it++) { const q = [line[0]]; for (let i = 0; i < line.length - 1; i++) { const a = line[i], c = line[i + 1]; q.push([a[0] * 0.75 + c[0] * 0.25, a[1] * 0.75 + c[1] * 0.25], [a[0] * 0.25 + c[0] * 0.75, a[1] * 0.25 + c[1] * 0.75]); } q.push(line[line.length - 1]); line = q; }
+    rut(line);
     return b;
   }
 
@@ -775,6 +820,7 @@ const RENT = (() => {
     if (!T || !W.hut) return null;
     if (!T.built) { if (!unlocked()) return null; const ok = buildCheck() === true; return { x: H.x, y: 4.9, z: H.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
     if (T.iss) return { x: H.x, y: 7.2, z: H.z, html: "🏡" + ISSUES[T.iss.k].i + "❗", cls: "ready" };
+    if (T.ten && T.wood && !T.wood.done && !T.wood.miss && woodDay(T, S.time).first) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔥", cls: "ready" };   /* v217.2: Holztag */
     if (T.ten && S.time >= maintDue(T)) return { x: H.x, y: 7.2, z: H.z, html: "🏡🔧", cls: "ready" };
     return null;
   }
@@ -908,7 +954,7 @@ const RENT = (() => {
     if (!t || !W.man || !W.car) return;
     stepCar(dt, t);
     stepMan(dt, time, t);
-    /* Rauch aus dem Kamin, wenn geheizt wird (morgens und abends, nicht bei kaputter Heizung) */
+    /* Rauch aus dem Kamin, wenn geheizt wird (morgens und abends, nicht bei kaputtem Kamin) */
     const m = S.time % DAY, d = doing(t, S.time).k, heat = d !== "away" && d !== "toCar" && (m < 600 || m > 1020) && !(T.iss && T.iss.k === "heizung");
     if (heat && Math.random() < dt * 4) {
       const p = Wp(-HW - 0.35, -0.2);
@@ -926,23 +972,32 @@ const RENT = (() => {
     const t = T.ten;
     if (!t) {
       openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hütte am See<small>frisch aufgebaut</small></div>
-        ${phaseHTML()}<div class="fs-sub">${esc(T.next ? T.next.n : "Ein Mieter")} hat zugesagt und zieht ${S.time < T.moveIn ? "in " + fdur(Math.max(1, T.moveIn - S.time)) : "gleich"} ein. Die Miete beträgt ${eur(RENT_DAY)} am Tag und kommt jede Woche.</div>`, "rent");
+        ${phaseHTML()}<div class="fs-sub">${esc(T.next ? T.next.n : "Ein Mieter")} hat zugesagt und zieht ${S.time < T.moveIn ? "in " + fdur(Math.max(1, T.moveIn - S.time)) : "gleich"} ein. Die Miete beträgt ${eur(RENT_DAY * 7)} die Woche; dafür bringst du am ersten Tag jeder Mietwoche ${esc(fqty("brennholz", WOOD_N))} vorbei.</div>`, "rent");
       return;
     }
     const due = maintDue(T), f = rentF(T, S.time), I = T.iss && ISSUES[T.iss.k];
     const issH = I ? `<div class="rent-iss"><b>${I.i} ${esc(I.n)}</b><p>„${esc(I.t)}“</p>
         <small>gemeldet vor ${fdur(Math.max(1, S.time - T.iss.t0))}${S.time - T.iss.t0 > 2 * DAY ? " · " + esc(t.n) + " mindert die Miete um die Hälfte" : " · nach 2 Tagen mindert " + esc(t.n) + " die Miete"}</small>
-        <button class="btn fgo" id="rnFix">🛠️ Reparieren · ${eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
+        <button class="btn fgo${T.iss.k === "heizung" && farmInv("brennholz") < WOOD_N ? " disabled" : ""}" id="rnFix">${T.iss.k === "heizung" ? "🪵 Holz bringen · " + esc(fqty("brennholz", WOOD_N)) : "🛠️ Reparieren · " + eur(T.iss.c)}</button></div>` : `<div class="fs-sub">✅ Alles in Ordnung – ${esc(t.n)} ist zufrieden.</div>`;
     const mLeft = due - S.time;
     const mH = mLeft > 10 * DAY ? `<div class="fs-sub">🔧 Instandhaltung in ${tage(Math.ceil(mLeft / DAY))} fällig (${eur(MAINT)}).</div>`
       : `<div class="rent-iss"><b>🔧 Instandhaltung ${mLeft > 0 ? "in " + tage(Math.ceil(mLeft / DAY)) + " fällig" : "fällig seit " + tage(Math.max(1, Math.floor(-mLeft / DAY)))}</b>
         <small>${mLeft > -7 * DAY ? "Ist sie länger als 7 Tage überfällig, hält " + esc(t.n) + " die Miete zurück." : esc(t.n) + " hält die Miete zurück, bis sie erledigt ist."}</small>
         <button class="btn${mLeft > 0 ? " ghost" : " fgo"}" id="rnMaint">🔧 Instandhaltung · ${eur(MAINT)}</button></div>`;
+    /* v217.2: Brennholz-Lieferung am ersten Tag jeder Mietwoche */
+    const w = woodDay(T, S.time), W0 = T.wood || {}, nextIn = w.first ? 7 : w.left, have = farmInv("brennholz");
+    const woodH = w.first && !W0.done && !W0.miss
+      ? `<div class="rent-iss"><b>🔥 Holztag – heute ${esc(fqty("brennholz", WOOD_N))} liefern</b>
+          <small>Noch ${fdur(Math.max(1, DAY - S.time % DAY))} bis Mitternacht – sonst gibt es für diese Woche nur die halbe Miete. Im Lager: ${esc(famt("brennholz", have) || "0")}</small>
+          <button class="btn fgo${have >= WOOD_N ? "" : " disabled"}" id="rnWood">🔥 Liefern</button></div>`
+      : W0.miss ? `<div class="fs-sub">🔥 Lieferung verpasst – diese Woche nur die halbe Miete. Nächster Holztag in ${tage(nextIn)}.</div>`
+      : `<div class="fs-sub">🔥 Brennholz für diese Woche geliefert ✓ – nächster Holztag in ${tage(nextIn)} (${esc(fqty("brennholz", WOOD_N))}).</div>`;
     const payIn = Math.max(1, T.pay - S.time);
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏡</span>Hütte am See<small>Mieter: ${esc(t.n)} · seit Tag ${Math.floor(t.since / DAY) + 1}</small></div>
-      <div class="hu-stats"><span>💶 ${eur(RENT_DAY)} / Tag${f < 1 ? (f ? " · gemindert" : " · zurückgehalten") : ""}</span><span>📅 nächste Miete in ${payIn > DAY ? tage(Math.ceil(payIn / DAY)) : fdur(payIn)} (≈ ${eur(Math.round((T.acc || 0) + RENT_DAY * payIn / DAY * f))})</span><span>Σ ${eur(T.earned || 0)} eingenommen</span></div>
-      ${issH}${mH}`, "rent");
+      <div class="hu-stats"><span>💶 ${eur(RENT_DAY * 7)} / Woche${f < 1 ? (f ? " · gemindert" : " · zurückgehalten") : ""}</span><span>📅 nächste Miete in ${payIn > DAY ? tage(Math.ceil(payIn / DAY)) : fdur(payIn)} (≈ ${eur(Math.round((T.acc || 0) + RENT_DAY * payIn / DAY * f))})</span><span>Σ ${eur(T.earned || 0)} eingenommen</span></div>
+      ${woodH}${issH}${mH}`, "rent");
     const ui = () => { if (typeof renderFarmUI === "function") renderFarmUI(); };
+    const wd = $("#rnWood"); if (wd) wd.onclick = () => { if (deliverWood()) { sfx("pop"); sheet(); ui(); } else sfx("bad"); };
     const fx = $("#rnFix"); if (fx) fx.onclick = () => { if (repair()) { sfx("coin"); sheet(); ui(); } else sfx("bad"); };
     const mt = $("#rnMaint"); if (mt) mt.onclick = () => { if (maintain()) { sfx("build"); sheet(); ui(); } else sfx("bad"); };
   }
@@ -960,7 +1015,7 @@ const RENT = (() => {
     const rows = Object.keys(NEED).map(id => siteRowHTML("rent", NEED, id, ic)).join("")
       + `<div class="hu-need${S.money >= COST ? " ok" : ""}"><span class="hu-ni">💶</span><b>${eur(COST)}</b><small>${S.money >= COST ? "✓ da" : "auf dem Konto: " + eur(S.money)}</small></div>`;
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🏚️</span>Verfallene Hütte am See<small>${lvOk ? "gehört zu deinem Hof" : "ab Level " + LV}</small></div>
-      <div class="fs-sub">Die alte Blockhütte westlich vom See ist eingestürzt. Mit Holz aus dem Sägewerk wird daraus eine zweistöckige Hütte mit Veranda – zum Vermieten: ${eur(RENT_DAY)} Miete am Tag, alle 90 Tage eine Instandhaltung (${eur(MAINT)}), ab und zu eine kleine Reparatur.</div>
+      <div class="fs-sub">Die alte Blockhütte westlich vom See ist eingestürzt. Mit Holz aus dem Sägewerk wird daraus eine zweistöckige Hütte mit Veranda – zum Vermieten: ${eur(RENT_DAY * 7)} Miete die Woche (dafür jede Woche ${esc(fqty("brennholz", WOOD_N))} für den Mieter), alle 90 Tage eine Instandhaltung (${eur(MAINT)}), ab und zu eine kleine Reparatur.</div>
       ${phaseHTML()}<div class="hu-needs">${rows}</div>${siteDepHTML("rent", NEED)}
       <div class="fs-row"><button class="btn${chk === true ? "" : " disabled"}" id="rnBuild">${chk === true ? "🔨 Hütte aufbauen" : "🔒 " + esc(chk)}</button></div>`, "rent");
     siteDepBind("rent", NEED, buildSheet);   /* v186: Material am Bauplatz ablegen */
