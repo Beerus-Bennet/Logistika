@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v210 – Quell-Wasserfall überarbeitet (Masterprompt): Kante, Wasser, Fels, Gischt, Nacht, Details
+
+**Gefundene Probleme (Code und Test-Browser):** Der Fall schoss in einem weiten Bogen wie aus einem Schlauch (Kante 0,3 hinter dem Topfrand); gerade, gleichmäßige Seitenränder; die Rinne lief als gerader Streifen ohne Ufersteine; nachts war der Fall ein fast schwarzes Band und der Gischtnebel leuchtete weiß (Partikel sind unbeleuchtet); Wellenringe exakt kreisrund; Felsen einfarbig je Block, große Moospolster als grüne Kugeln, zwei davon verdeckten die untere Kaskade; keine Details am Topf.
+
+**`woodmodels.js`**
+- **Kante:** `SPRING_FALL.top` (−2,65 / 1,98) statt (−3,3 / 2,0): überhängender Felsvorsprung 0,35 über dem Topfrand, der Fall stürzt steiler; Fuß (−1,6), Aufprall bleibt mitten im Wasser. Rinne 2,1 lang (`rinne`), lückenlos vom Becken.
+- **Fallendes Wasser (`fallSheet`, `springFall`):** Mitte wölbt sich an der Kante vor, Breite schwankt entlang des Falls, links und rechts verschieden; zwei **Nebenstränge** (`strands`): links über die Kante, rechts schmaler aus einer Spalte darunter, je auf einen Absatz im Wasser und von dort ins Becken.
+- **Felsen mit Material (`stone`):** jede Fläche eigener Ton – oben heller, Seiten mittel, unten/Ritzen dunkler, am Wasser nass und dunkel (`wet`, `wetAll`), Moos nur auf einzelnen oberen Flächen, Flechten selten; große Blöcke feiner unterteilt. Alle Felsen von Topf, Kante, Becken und Hang nutzen es. Neu: Vorsprung unter der Kante, zwei Wächtersteine, dunkle nasse Wand hinter dem Fall, Absätze der Nebenstränge, Steine an den Rinnenrändern und einer mitten im Strom.
+- **Details:** Moospolster klein und flach nur außen; keine Polster mehr auf den Rahmensteinen am Zulauf. Farne und Grasbüschel in Gruppen am Topf und am Bachufer, 16 Kiesel im Sand, Treibholz mit Seitenast in der stillen Ecke. Schaumflecken unter den Nebensträngen (`springFoam`).
+
+**`gl3d.js` (Shader `fallWater`, nur `uWater 6`):** zweite, schnellere Schicht feiner heller Fäden und langsam ziehende dichtere Bahnen (unterschiedliche Geschwindigkeiten, Tiefe); unregelmäßige Ränder, die mit dem Wasser wandern; nachts mindestens 0,36 Helligkeit für Wasser und Schaum (bleibt heller als der Fels). Wellenringe: Radius und Stärke schwanken mit der Richtung, jeder Ring etwas anders schnell, jede Runde neu geformt.
+
+**`worldview.js`:** Gischt, Spritzer, Nebel und Blubbern richten Farbe und Deckkraft nach dem Tageslicht (`lf` aus `R.env.sunCol`), Größen und Lebensdauer variieren; Spritzer an den Absätzen der Nebenstränge. Modellschlüssel …210.
+
+**Leistung:** Szene rund 13 500 Dreiecke (Felsen 1 842, Fall 2 400, Hang 6 828 …), alles einmal gebaut und zwischengespeichert; Partikel nur in Kameranähe, feste Raten (geschätzt unter 80 gleichzeitig, Obergrenze 700 im Renderer).
+
 ## v209 – Rezeptkacheln: Tipp auf eine Zutat startet keine Produktion mehr
 
 - **Problem:** Ein Tipp auf den Zutaten-Chip (z. B. „5/1“ Eichenstämme) stellte auf dem iPhone trotzdem das Produkt in die Warteschlange, und die Kachel drückte sich mit ein. Die Abwehr aus v129/v165 prüfte nur das Ziel des Klicks (`e.target`); iOS meldet den Tipp innerhalb eines Knopfs teils am Knopf selbst.

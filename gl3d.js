@@ -398,33 +398,47 @@ const G3 = (() => {
     return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
   vec4 fallWater(vec3 amb, float sh){
     float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11));        /* nur die Helligkeit der Sonne – Wasser bleibt blau-weiß, auch morgens */
+    float Lw = max(Ls, 0.36);                                          /* v210: nachts bleibt das Wasser heller als der Fels (Mondlicht auf Schaum) */
     if (vCol.b > 0.5) {
       float a = vCol.r, w = vCol.g;
       float v = a * uFlow.x - t * uFlow.y * (0.7 + 0.6 * a);            /* Muster läuft nach unten und wird schneller */
       float sx = w * uFlow.z;
       float s1 = vnoise(vec2(sx * 2.0, v * 0.35)), s2 = vnoise(vec2(sx * 4.5 + 3.1, v * 0.8)), s3 = vnoise(vec2(sx * 9.0 + 7.7, v * 1.9));
+      /* v210: zweite, schnellere Schicht feiner heller Fäden und langsam ziehende dichtere Bereiche (nicht alles läuft gleich schnell) */
+      float v2 = a * uFlow.x * 1.6 - t * uFlow.y * (1.25 + 0.5 * a), v3 = a * uFlow.x * 0.45 - t * uFlow.y * 0.35;
+      float s4 = vnoise(vec2(sx * 13.0 + 1.3, v2 * 2.6)), s5 = vnoise(vec2(sx * 1.3 + 5.0, v3));
       float strands = smoothstep(0.35, 0.95, s1 * 0.5 + s2 * 0.32 + s3 * 0.18);
-      float edge = smoothstep(0.0, 0.16, w) * smoothstep(1.0, 0.84, w);
+      float fine = smoothstep(0.72, 0.93, s4);
+      /* v210: unregelmäßige Ränder, die mit dem Wasser wandern (keine geraden Kanten) */
+      float eL = 0.16 + 0.1 * vnoise(vec2(3.0, v * 0.9)), eR = 0.16 + 0.1 * vnoise(vec2(9.0, v * 0.9 + 4.0));
+      float edge = smoothstep(0.0, eL, w) * smoothstep(1.0, 1.0 - eR, w);
       float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.62, 1.0, a);
-      vec3 deep = vec3(0.16, 0.46, 0.62), mid = vec3(0.44, 0.74, 0.88), wht = vec3(0.93, 0.97, 1.0);
-      vec3 c = mix(deep, mid, 0.25 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
-      c = mix(c, wht, clamp(foam * (0.55 + 0.45 * s2) + (1.0 - edge) * 0.55 * fall + strands * s3 * 0.35 * fall, 0.0, 1.0));
-      c *= amb * 0.45 + vec3(Ls) * (0.7 + 0.2 * sh);
-      c += strands * fall * 0.12 * Ls;                              /* Glanz auf den Strängen */
-      float al = edge * mix(0.9, 0.74 + 0.24 * max(strands, foam), fall);
+      vec3 deep = vec3(0.13, 0.42, 0.58), mid = vec3(0.42, 0.73, 0.86), wht = vec3(0.92, 0.97, 1.0);
+      vec3 c = mix(deep, mid, 0.22 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
+      c = mix(c, deep * 0.85, (1.0 - s5) * 0.3 * fall);                                  /* dunklere, dichtere Bahnen – Tiefe */
+      c = mix(c, wht, clamp(foam * (0.5 + 0.45 * s2) + (1.0 - edge) * 0.5 * fall + strands * s3 * 0.33 * fall + fine * 0.38 * fall, 0.0, 1.0));
+      c *= amb * 0.45 + vec3(Lw) * (0.7 + 0.2 * sh);
+      c += (strands * 0.12 + fine * 0.08) * fall * Lw;                   /* Glanz auf den Strängen */
+      float al = edge * mix(0.9, 0.7 + 0.28 * max(max(strands, fine), foam), fall);
       al *= smoothstep(0.0, 0.05, a);                                    /* weich aus der Felsspalte */
       return vec4(c, al);
     }
-    /* Schaum und Wellenringe am Fuß: innen dichter, pulsierender Schaum, außen auslaufende Ringe */
+    /* Schaum und Wellenringe am Fuß: innen dichter, pulsierender Schaum, außen auslaufende Ringe.
+       v210: Ringe nicht mehr kreisrund – Radius und Stärke schwanken mit der Richtung, jeder Ring etwas anders schnell */
     float r = vCol.r, an = vCol.g * 6.2832;
-    vec2 q = vec2(cos(an), sin(an)) * r;
+    vec2 dir = vec2(cos(an), sin(an)), q = dir * r;
     float n1 = vnoise(q * 5.0 + vec2(t * 0.9, -t * 0.7)), n2 = vnoise(q * 11.0 - vec2(t * 1.6, t * 1.1));
     float puls = 0.85 + 0.15 * sin(t * 4.2 + n1 * 3.0);
-    float foam = smoothstep(0.55, 0.05, r + (n1 - 0.5) * 0.25) * (0.55 + 0.45 * n2) * puls;
+    float foam = smoothstep(0.55, 0.05, r + (n1 - 0.5) * 0.3) * (0.5 + 0.5 * n2) * puls;
     float ring = 0.0;
-    for (int k = 0; k < 3; k++) { float ph = fract(t * 0.45 + float(k) / 3.0); float rr = 0.25 + ph * 0.8; ring += smoothstep(0.06, 0.0, abs(r - rr)) * (1.0 - ph) * (1.0 - ph); }
-    float al = clamp(foam * 0.95 + ring * 0.5, 0.0, 1.0) * smoothstep(1.0, 0.8, r);
-    vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Ls) * (0.7 + 0.2 * sh));
+    for (int k = 0; k < 3; k++) {
+      float fk = float(k), ph = fract(t * (0.4 + 0.06 * fk) + fk / 3.0), rr = 0.25 + ph * 0.8;
+      float wob = (vnoise(dir * 1.7 + vec2(fk * 3.1, fk * 1.7 + floor(t * (0.4 + 0.06 * fk) + fk / 3.0) * 2.3)) - 0.5) * 0.18 * (0.4 + ph);
+      float str = 0.55 + 0.45 * vnoise(dir * 2.3 + vec2(fk * 5.0, 0.0));
+      ring += smoothstep(0.065, 0.0, abs(r - rr - wob)) * (1.0 - ph) * (1.0 - ph) * str;
+    }
+    float al = clamp(foam * 0.92 + ring * 0.45, 0.0, 1.0) * smoothstep(1.0, 0.8, r);
+    vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Lw) * (0.7 + 0.2 * sh));
     return vec4(c, al);
   }
   void main(){
