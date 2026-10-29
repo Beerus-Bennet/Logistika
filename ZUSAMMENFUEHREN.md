@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v214 – Briefkasten (auf v213)
+
+- Nur `rent.js`: Briefkasten in `pathMesh` von x −41,4 nach x −38,8.
+
 ## Stand v213 – Übergänge am Parkfleck (auf v212)
 
 - Nur `rent.js`: neue Helfer `padK`/`padCol`, `pathMesh` mit `gnd: padCol` und längerem `fade`, `padMesh` färbt Fleck und Spuren über `padCol`; Pfadende `[-44.9, 22.35]`.
