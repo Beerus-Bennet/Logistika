@@ -3099,18 +3099,31 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmChips
 .fp-gauge.hot{animation:fpg .35s ease-in-out infinite alternate;border-color:#e2331f}
 @keyframes fpg{to{transform:translateY(-50%) scale(1.08)}}
 
-/* v90: Ladescreen beim ersten Aufbau des Hofs */
-#farmBoot{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(180deg,#6fb0ec,#bfe0f5);transition:opacity .4s}
+/* v201: Ladescreen – Lkw fährt über die Ladeleiste, Setzlinge wachsen hinter ihm */
+#farmBoot{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(180deg,#6fb0ec,#bfe0f5);transition:opacity .45s ease}
 #farmBoot.out{opacity:0;pointer-events:none}
-#farmBoot .fbBox{text-align:center;max-width:290px;padding:18px 18px 14px;background:#fff;border:var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-#farmBoot .fbIcon{font-size:46px;line-height:1.1;animation:fbBob 1.1s ease-in-out infinite}
-#farmBoot b{display:block;font-size:17px;margin-top:4px}
-#farmBoot small{display:block;font-size:12px;opacity:.7;line-height:1.3}
-#farmBoot .fbBar{height:12px;margin:10px 0;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper)}
-#farmBoot .fbBar i{display:block;height:100%;width:40%;background:var(--green);animation:fbSlide 1.3s linear infinite}
-@keyframes fbBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
-@keyframes fbSlide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
-@media (prefers-reduced-motion:reduce){#farmBoot .fbIcon,#farmBoot .fbBar i{animation:none}}
+#farmBoot .fbBox{position:relative;overflow:hidden;width:min(100%,330px);box-sizing:border-box;text-align:center;padding:16px 18px 14px;background:#fff;border:var(--line);border-radius:20px;box-shadow:var(--shadow)}
+#farmBoot .fbBox>*:not(.fbBg){position:relative}
+#farmBoot .fbBg{position:absolute;left:0;right:0;bottom:0;width:100%;height:100%;pointer-events:none}
+#farmBoot .fbTitle{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
+#farmBoot .fbPct{height:30px;overflow:hidden;margin:2px 0 8px;font-size:26px;font-weight:900;line-height:30px;color:var(--ink)}
+#farmBoot .fbReel{will-change:transform}
+#farmBoot .fbReel div{height:30px}
+#farmBoot .fbTrack{position:relative;height:62px;margin:0 0 10px}
+#farmBoot .fbTrees{position:absolute;left:0;right:0;bottom:12px;height:40px}
+#farmBoot .fbTree{position:absolute;bottom:0;transform:scale(0);transform-origin:50% 100%}
+#farmBoot .fbTree.on{transform:scale(1)}
+#farmBoot .fbTree svg{display:block}
+#farmBoot .fbTruck{position:absolute;left:0;bottom:9px;width:54px;height:29px;will-change:transform}
+#farmBoot .fbTruck>div{animation:fbBump .32s ease-in-out infinite alternate}
+#farmBoot .fbRoad{position:absolute;left:0;right:0;bottom:0;height:18px;overflow:hidden;box-sizing:border-box;border:2px solid var(--ink);border-radius:10px;background:#c9a36f}
+#farmBoot .fbRoad::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:0;border-top:2px dashed rgba(13,27,42,.28);transform:translateY(-1px)}
+#farmBoot .fbFill{position:absolute;inset:0;display:block;background:linear-gradient(180deg,#28A745 0 62%,#1E7E34 62%);will-change:transform;transform:translateX(-100%)}
+#farmBoot .fbFill::after{content:"";position:absolute;left:0;right:0;top:3px;height:2px;background:rgba(255,255,255,.35)}
+#farmBoot .fbMsg{position:relative;height:36px}
+#farmBoot .fbMsg span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1.25;opacity:0}
+@keyframes fbBump{to{transform:translateY(-1.2px)}}
+@media (prefers-reduced-motion:reduce){#farmBoot .fbTruck>div{animation:none}}
 
 /* v96: Ergebniskarte nach dem Fällen nimmt keine Berührung an – keine iOS-Lupe */
 .frew,.frew *{pointer-events:none!important;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -3583,3 +3596,130 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 
 /* v198: Freigabe-Kacheln im Arbeitermenü: kein iOS-Textmenü beim Halten, Scrollen mit dem Finger bleibt möglich */
 .fstp [data-wl]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:pan-y}
+
+/* ===================== v200: Jagd – Identität, Seltenheit, Jagdbuch, Aufträge ===================== */
+/* Seltenheitsband in der Überschrift: erscheint nach dem Namen, bei seltenen Stücken mit Glanz */
+#huntUI .hu-rar{margin-top:7px;display:inline-flex;align-items:center;padding:3px 14px;border-radius:999px;background:var(--rc);border:2.5px solid var(--ink);box-shadow:0 2px 0 var(--ink);
+  color:#fff;font-size:12.5px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;position:relative;overflow:hidden;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+#huntUI .hu-win.go .hu-rar{animation:huRar .55s cubic-bezier(.2,.9,.3,1.3) .5s both}
+#huntUI .hu-win.go .hu-rar.r2,#huntUI .hu-win.go .hu-rar.r3,#huntUI .hu-win.go .hu-rar.r4{animation-delay:1s}
+#huntUI .hu-rar.r2::after,#huntUI .hu-rar.r3::after,#huntUI .hu-rar.r4::after{content:"";position:absolute;inset:-30%;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.85) 50%,transparent 60%);
+  transform:translateX(-120%);animation:huShine 1.1s ease 1.45s 1 both}
+#huntUI .hu-rar.r4{font-size:14px;padding:4px 18px;color:#3a2600;text-shadow:none;background:linear-gradient(#ffe48a,#f0b72a);box-shadow:0 2px 0 var(--ink),0 0 22px rgba(255,205,80,.75)}
+#huntUI .hu-rar.r4::after{animation-iteration-count:2}
+@keyframes huRar{from{opacity:0;transform:scale(.4) rotateX(80deg)}to{opacity:1;transform:none}}
+@keyframes huShine{to{transform:translateX(120%)}}
+/* Stimmung je Stufe: seltene Stücke bekommen einen farbigen Rand der Vignette */
+#huntUI.lv3 .hu-vig.on{background:radial-gradient(ellipse 78% 64% at 50% 42%,rgba(0,0,0,0) 54%,rgba(60,24,96,.42) 100%)}
+#huntUI.lv4 .hu-vig.on{background:radial-gradient(ellipse 78% 64% at 50% 42%,rgba(255,214,110,0) 50%,rgba(150,96,6,.46) 100%)}
+/* Merkmals-Hinweis am Stück */
+#huntUI .hu-call{position:absolute;left:0;top:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:4px 11px 5px;border-radius:12px;
+  background:rgba(255,248,230,.95);border:2px solid var(--ink);box-shadow:0 2px 0 var(--ink);transition:opacity .5s ease;max-width:220px;text-align:center}
+#huntUI .hu-call::after{content:"";position:absolute;top:50%;width:11px;height:11px;margin-top:-6px;background:inherit;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink)}
+#huntUI .hu-call.r::after{left:-7px;transform:rotate(135deg)}
+#huntUI .hu-call.l::after{right:-7px;transform:rotate(-45deg)}
+#huntUI .hu-call b{font-size:13px;font-weight:900;line-height:1.15}
+#huntUI .hu-call small{font-size:10.5px;font-weight:800;color:#6b4a00;line-height:1.2}
+#huntUI .hu-call.go{animation:huFade .45s ease both}
+@keyframes huFade{from{opacity:0}to{opacity:1}}
+#huntUI .hu-call.off{opacity:0}
+/* Karte: Seltenheit und Merkmale als Plaketten, Schussnote, Rekord */
+#huntUI .hu-val em{font-style:normal;font-size:10px;font-weight:800;color:#6a3fb0;white-space:nowrap}
+#huntUI .hu-chips{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 0}
+#huntUI .hu-chips span{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#fff;border:1.5px solid #d9ceb5;color:#3d4954;white-space:nowrap}
+#huntUI .hu-chips span.hu-rc{background:var(--rc);border-color:var(--ink);color:#fff}
+#huntUI .hu-chips span.nw{border-color:#2d7fd2;color:#1d5fa3}
+#huntUI .hu-chips span.nw::after{content:" · neu";font-size:9.5px;color:#2d7fd2}
+#huntUI .hu-chips span.ag{background:#f3efe6;border-color:#e6dcc6}
+#huntUI .hu-chips span.pb{background:#fff1c7;border-color:var(--ink);color:#5c3f00}
+#huntUI .hu-shot{display:flex;align-items:baseline;gap:8px;margin:6px 0 0;min-width:0}
+#huntUI .hu-shot>span{flex:none;font-size:11.5px;font-weight:800;color:#4d5966}
+#huntUI .hu-shot>b{flex:none;font-size:15px;letter-spacing:1px;color:#d99a12;text-shadow:0 1px 0 rgba(0,0,0,.15)}
+#huntUI .hu-shot>small{font-size:10.5px;font-weight:700;color:#5c6875;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#huntUI .hu-pbl{margin:5px 0 0;font-size:11.5px;font-weight:700;color:#5c6875}
+#huntUI .hu-pbl.on{color:#7a4f00;font-weight:900}
+#huntUI .hu-card2.lv4{box-shadow:var(--shadow),0 0 0 3px #f2c230}
+#huntUI .hu-card2.lv3{box-shadow:var(--shadow),0 0 0 3px #8b4fd6}
+/* gesichert: neu im Jagdbuch, erfüllte Aufträge */
+#huntUI .hu-nw,#huntUI .hu-jd{margin:8px 0 0;padding:6px 9px;border-radius:10px;font-size:12px;font-weight:700;line-height:1.3;background:#eaf3ff;border:1.5px solid #b8d3f2}
+#huntUI .hu-jd{background:#ecf8ea;border-color:#b5dcae}
+#huntUI .hu-nw small,#huntUI .hu-jd small{font-weight:800;opacity:.75;white-space:nowrap}
+#huntUI .hu-sb{margin-top:10px}
+/* Fernglas: sichtbare Besonderheit */
+#huntUI .hu-spot .hu-sf{color:#6a3fb0;font-weight:800}
+/* offener Auftrag im Revier (oben, unter der Anzeige) */
+#huntUI .hu-job{position:absolute;top:64px;left:max(10px,var(--safe-l));max-width:min(330px,calc(100% - 20px));display:flex;align-items:center;gap:7px;pointer-events:none;z-index:1;
+  padding:4px 10px 5px 7px;border-radius:12px;background:var(--hu-glass);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#huntUI .hu-job i{font-style:normal;font-size:14px}
+#huntUI .hu-job span{font-size:11.5px;font-weight:800;line-height:1.25;min-width:0}
+#huntUI .hu-job span b{color:var(--hu-gold)}
+#huntUI .hu-job em{flex:none;font-style:normal;font-size:10px;font-weight:800;opacity:.75;white-space:nowrap}
+#huntUI.v-scope .hu-job,#huntUI.v-harvest .hu-job,#huntUI.v-back .hu-job{display:none}
+/* Hochsitz-Fenster: Aufträge */
+.hu-jobs{display:flex;flex-direction:column;gap:5px;margin:0 0 12px;padding:8px 10px;border-radius:12px;background:#f6f1e4;border:2px solid #e6dcc6}
+.hu-jobs>b{font-size:12.5px;font-weight:800}
+.hu-jobs span{display:flex;align-items:baseline;gap:7px;font-size:12.5px;font-weight:700;line-height:1.3}
+.hu-jobs span i{flex:none;font-style:normal;font-size:9.5px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:6px;background:#dfe9d6;color:#2f5a25}
+.hu-jobs span.d1 i{background:#fde9c4;color:#7a4f00}
+.hu-jobs span.d2 i{background:#f6d6d2;color:#8a2a1e}
+.hu-jobs span small{font-weight:800;opacity:.7}
+.hu-jobs span em{margin-left:auto;flex:none;font-style:normal;font-weight:800;color:#1e8a4c}
+/* Trophäenwand: Reiter, Filter, Seltenheit, Ehrenplatz, Neu */
+.tw-tabs{display:flex;gap:6px;margin:0 0 9px}
+.tw-tabs button{flex:1;padding:8px 6px;border-radius:12px;border:2.5px solid var(--ink);background:#fff;font-family:var(--font);font-size:13px;font-weight:800;box-shadow:2px 2px 0 var(--ink);color:var(--ink);cursor:pointer}
+.tw-tabs button.on{background:#ffd23f}
+.tw-tabs button b{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--ink);color:#fff;font-size:10.5px;margin-left:3px}
+.tw-fl{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px;align-items:center}
+.tw-f{padding:5px 10px;border-radius:999px;border:2px solid #d9ceb5;background:#fff;font-family:var(--font);font-size:12px;font-weight:800;color:#3d4954;cursor:pointer}
+.tw-f.on{border-color:var(--ink);background:#fff3c4;color:var(--ink)}
+.tw-f small{font-size:10.5px;opacity:.7}
+.tw-sp{flex:1}
+.tw-empty{font-size:12.5px;font-weight:700;opacity:.75;margin:10px 2px}
+.tw-c.rr{border-color:var(--rc)}
+.tw-c.rr .tw-img{border-bottom-color:var(--rc)}
+.tw-pin,.tw-new{position:absolute;top:6px;left:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:900;border:2px solid var(--ink)}
+.tw-pin{background:#ffd23f;color:var(--ink)}
+.tw-new{background:#2d7fd2;color:#fff;font-size:10px;letter-spacing:.4px;text-transform:uppercase}
+.tw-rc{display:inline-block;padding:0 6px;border-radius:999px;background:var(--rc);color:#fff;font-size:10.5px;font-weight:900;margin-right:2px}
+.tw-badge.tw-rb{left:auto;right:8px;border-color:var(--rc);background:var(--rc)}
+.tw-badge.tw-pb{top:40px;border-color:#f2c230}
+.tw-chips{display:flex;flex-wrap:wrap;gap:4px;margin:-2px 0 8px}
+.tw-chips span{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#f3efe6;border:1.5px solid #e2d7bf}
+.tw-more{display:block;margin:10px auto 0}
+/* Jagdbuch */
+.tw-prog{position:relative;padding:9px 11px 10px;border-radius:14px;border:2.5px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink);margin:2px 0 10px}
+.tw-prog b{display:block;font-size:15px;font-weight:900}
+.tw-prog span{display:block;font-size:12px;font-weight:700;opacity:.8}
+.tw-prog i{display:block;height:9px;margin:7px 0 5px;border-radius:6px;background:#efe6d2;border:2px solid var(--ink);position:relative;overflow:hidden}
+.tw-prog i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p);background:#3b9a4c}
+.tw-prog small{font-size:11px;font-weight:700;opacity:.65}
+.tw-pbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px;margin:0 0 10px}
+.tw-pbs span{background:#fff8e6;border:2px solid #ecdcae;border-radius:11px;padding:6px 8px;min-width:0}
+.tw-pbs small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;opacity:.65}
+.tw-pbs b{display:block;font-size:13px;font-weight:900;color:#5c3f00}
+.tw-pbs em{display:block;font-style:normal;font-size:10.5px;font-weight:700;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-best{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}
+.tw-bc{display:flex;flex-direction:column;align-items:center;padding:0 0 5px;border:2.5px solid var(--rc);border-radius:12px;background:#fff;overflow:hidden;font-family:var(--font);cursor:pointer;min-width:0}
+.tw-bc .tw-img{width:100%;margin:0 0 3px;border-bottom:2px solid var(--rc)}
+.tw-bc small{font-size:10.5px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 4px}
+.tw-dg{margin:0 0 9px}
+.tw-dg>b{display:block;font-size:11px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;opacity:.65;margin:0 2px 4px}
+.tw-dx{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.tw-d{padding:6px 9px 7px;border-radius:11px;border:2px dashed #d3c8b0;background:#faf7f0;min-width:0}
+.tw-d b{display:block;font-size:12.5px;font-weight:900;color:#9a8f7c;letter-spacing:.5px}
+.tw-d small{display:block;font-size:10.5px;font-weight:700;opacity:.75;line-height:1.3}
+.tw-d.on{border:2px solid var(--rc,#3b9a4c);background:#fff}
+.tw-d.on b{color:var(--ink);letter-spacing:0}
+/* Aufträge */
+.tw-sub{font-size:12px;font-weight:700;opacity:.78;margin:2px 2px 9px;line-height:1.35}
+.tw-jobs{display:flex;flex-direction:column;gap:7px;margin:0 0 6px}
+.tw-j{position:relative;padding:8px 11px 9px;border-radius:13px;border:2.5px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink)}
+.tw-j b{display:block;font-size:13.5px;font-weight:900;margin:3px 0 1px;padding-right:70px}
+.tw-j em{position:absolute;right:10px;top:9px;font-style:normal;font-size:12px;font-weight:900;color:#1e8a4c;text-align:right}
+.tw-j i{display:block;height:7px;margin:6px 0 3px;border-radius:5px;background:#efe6d2;position:relative;overflow:hidden}
+.tw-j i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p);background:#3b9a4c}
+.tw-j small{font-size:11px;font-weight:700;opacity:.7}
+.tw-jd{display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;padding:1px 7px;border-radius:6px;background:#dfe9d6;color:#2f5a25}
+.tw-j.d1 .tw-jd{background:#fde9c4;color:#7a4f00}
+.tw-j.d2 .tw-jd{background:#f6d6d2;color:#8a2a1e}
+@media (prefers-reduced-motion:reduce){#huntUI .hu-rar,#huntUI .hu-rar::after,#huntUI .hu-call{animation:none!important}}

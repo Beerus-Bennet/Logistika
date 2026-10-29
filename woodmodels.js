@@ -1559,19 +1559,25 @@ const FWM = (() => {
   function springBed(x, z, gnd) { return new MB(); }
   function springPool(x, z) { return new MB(); }
   /* Felswand hinter dem Topf mit Wasserfall (lokal: Topfmitte im Ursprung, der Bach läuft nach +x weg, Felsen bei −x) */
-  const SPRING_FALL = { top: [-3.6, 2.15, 0.12], foot: [-2.6, 0.04, 0.12], S: 1.5 };   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
+  /* v204: Kante weiter vorn und tiefer, Aufprall 1,55 innerhalb des Topfrands (vorher 0,4 – der Fall traf das Ufer);
+     oben ein offenes Becken in einer Felsmulde, aus dem die Rinne sichtbar zur Kante läuft (vorher kam das Wasser aus dem Fels) */
+  const SPRING_FALL = { top: [-3.3, 2.0, 0.12], foot: [-1.45, 0.04, 0.12], S: 1.5, basin: [-5.55, 0.12, 0.72] };   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
   function springRocks() {
     G3.seed(3976);
     const b = new MB(), g1 = 0x8f8a80, g2 = 0xa39e94, g3 = 0x7d786f, moss = 0x5f8a3a, moss2 = 0x4f7a32, R0 = SPR.RP / SPRING_FALL.S;   /* lokal Radius 3, Knoten ×1,5 */
     b.noise(0.12, () => {
       /* hohe Wand hinten, zwei Flanken, Blöcke am Topfrand */
-      [[-R0 - 1.6, 1.0, -1.3, 1.9, 0.9], [-R0 - 1.4, 1.05, 1.4, 1.75, 0.95], [-R0 - 2.6, 1.4, 0.1, 2.0, 1.0], [-R0 - 0.9, 0.35, -2.4, 1.15, 0.7], [-R0 - 0.7, 0.3, 2.5, 1.05, 0.7],
+      /* v204: Flanken weiter außen (die Rinne liegt frei), Rückwand hinter dem Becken, Seitenfelsen der Mulde, Bett unter Becken und Rinne */
+      [[-R0 - 1.5, 0.9, -1.85, 1.75, 0.9], [-R0 - 1.4, 0.95, 1.9, 1.65, 0.95], [-R0 - 0.9, 0.35, -2.4, 1.15, 0.7], [-R0 - 0.7, 0.3, 2.5, 1.05, 0.7],
+       [-5.5, 1.6, -1.35, 0.95, 0.9], [-5.4, 1.6, 1.55, 0.9, 0.9], [-5.5, 1.15, 0.12, 1.05, 0.9], [-4.5, 1.05, 0.12, 0.95, 0.95],
        [-R0 - 0.2, 0.15, -1.25, 0.6, 0.6], [-R0 - 0.1, 0.12, 1.3, 0.55, 0.6], [-1.2, 0.05, -R0 - 0.35, 0.65, 0.55], [0.6, 0.05, -R0 - 0.2, 0.5, 0.55], [-1.6, 0.05, R0 + 0.3, 0.7, 0.55], [0.4, 0.04, R0 + 0.15, 0.45, 0.6]
       ].forEach(([x, y, z, r, fl], i) => b.ico(r, i % 3 === 0 ? g1 : i % 3 === 1 ? g2 : g3, { x, y, z, flat: fl, jitter: 0.32 }));
+      /* v204: Steinkranz um das Becken, zur Rinne hin offen */
+      { const [bx, bz, br] = SPRING_FALL.basin; for (let a = 55; a <= 305; a += 36) { if (a > 150 && a < 210) continue; /* v207: hinten offen für den Zulauf */ const r = a * Math.PI / 180; b.ico(0.3 + (a % 3) * 0.04, a % 72 ? g2 : g3, { x: bx + Math.cos(r) * br * 1.22, y: SPRING_FALL.top[1] + 0.06, z: bz + Math.sin(r) * br * 1.05, flat: 0.6, jitter: 0.3 }); } }
         /* v193: abgerundete Felskante, über die das Wasser fließt (unter der Rinne) */
       b.ico(0.62, g2, { x: SPRING_FALL.top[0] - 0.45, y: SPRING_FALL.top[1] - 0.62, z: SPRING_FALL.top[2], flat: 0.75, jitter: 0.12 });
     /* Moos und Farn auf den Felsen */
-      [[-R0 - 1.7, 2.55, -1.2, 0.6], [-R0 - 2.5, 2.9, 0.4, 0.55], [-R0 - 1.3, 2.4, 1.5, 0.5], [-R0 - 0.9, 0.95, -2.3, 0.4], [-R0 - 0.6, 0.85, 2.4, 0.38]].forEach(([x, y, z, r], i) => b.ico(r, i % 2 ? moss : moss2, { x, y, z, flat: 0.45, jitter: 0.3 }));
+      [[-4.5, 2.35, -1.95, 0.55], [-4.4, 2.4, 2.0, 0.5], [-5.6, 2.4, -1.4, 0.35], [-R0 - 0.9, 0.95, -2.3, 0.4], [-R0 - 0.6, 0.85, 2.4, 0.38]].forEach(([x, y, z, r], i) => b.ico(r, i % 2 ? moss : moss2, { x, y, z, flat: 0.45, jitter: 0.3 }));
     });
     return b;
   }
@@ -1601,6 +1607,160 @@ const FWM = (() => {
     }
     return b;
   }
+  /* v204: stilles Becken oben in der Felsmulde (Farbe wie der Topf, Rand hell) – die Rinne des Falls beginnt darin */
+  function springBasin() {
+    const b = new MB(), F = SPRING_FALL, [bx, bz, br] = F.basin, y = F.top[1] + 0.11, n = 22;
+    const ctr = waterCol(0.1), P = [];
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, r = br * (1 + 0.08 * Math.sin(a * 3 + 0.7)); P.push([bx + Math.cos(a) * r * 1.15, y, bz + Math.sin(a) * r]); }
+    for (let i = 0; i < n; i++) triUp(b, [bx, y, bz], P[i], P[(i + 1) % n], ctr, waterCol(0.8), waterCol(0.8));
+    return b;
+  }
+  /* v207: Woher das Wasser kommt – eine Hangquelle im Wald hinter dem Fall. Hinter der Felswand steigt ein bemooster
+     Felshang an (Höhenfeld springHill). Oben tritt das Wasser am Fuß eines großen Findlings aus (Quelltopf, sprudelt),
+     läuft als schmaler Bergbach in einer Rinne den Hang hinab, fällt über zwei kleine Kaskaden (mit Becken dazwischen)
+     ins Becken auf der Felskante und von dort als großer Fall in den Topf. Alles im lokalen Rahmen von springRocks
+     (Topfmitte im Ursprung, Bach nach +x, Hang nach −x, ×1,5). Wasserflächen: water 2; Kaskaden/Schaum: Shader 6. */
+  const SRUN = {
+    /* Bachlauf: x, z, Wasserspiegel y, halbe Breite – Kaskaden zwischen Kante (lip) und Fuß (foot) */
+    N: [[-13.7, -0.55, 3.56, 0.3], [-13.0, -0.38, 3.53, 0.26], [-12.2, -0.12, 3.48, 0.27], [-11.4, 0.12, 3.43, 0.28], [-10.65, 0.14, 3.39, 0.28],
+        [-10.0, 0.08, 2.8, 0.3], [-9.55, 0.04, 2.79, 0.34], [-9.05, -0.08, 2.77, 0.3], [-8.45, -0.26, 2.73, 0.3], [-7.85, -0.16, 2.69, 0.31], [-7.3, 0.06, 2.65, 0.32],
+        [-6.5, 0.12, 2.115, 0.34]],
+    runs: [[0, 4], [6, 10]],                       /* Knotenbereiche mit ruhig fließendem Wasser */
+    casc: [[4, 5], [10, 11]],                      /* Kante → Fuß */
+    pools: [[-13.75, -0.55, 0.45, 3.56, 1], [-9.55, 0.04, 0.52, 2.79, 1], [-5.55, 0.12, 0.74, 2.11, 1.15]],   /* x, z, r, y, Streckung in x (letzter: Becken auf der Kante) */
+    src: [-14.02, -0.6]                            /* Austritt am Findling */
+  };
+  const sst = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const hn = (x, z) => { const s1 = Math.sin(x * 1.7 + z * 0.6) * Math.sin(z * 1.3 - x * 0.4 + 1.1), s2 = Math.sin(x * 3.1 - z * 2.3 + 0.7); return s1 * 0.7 + s2 * 0.3; };
+  /* Abstand zur Wasserkante (negativ im Wasser) und Wasserspiegel am nächsten Wasser */
+  function srcWater(x, z) {
+    let bd = 1e9, by = 0;
+    const N = SRUN.N;
+    for (let i = 1; i < N.length; i++) {
+      const A = N[i - 1], B = N[i], dx = B[0] - A[0], dz = B[1] - A[1], l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((x - A[0]) * dx + (z - A[1]) * dz) / l2));
+      const d = Math.hypot(x - A[0] - dx * t, z - A[1] - dz * t) - (A[3] + (B[3] - A[3]) * t);
+      if (d < bd) { bd = d; by = A[2] + (B[2] - A[2]) * t; }
+    }
+    SRUN.pools.forEach(([cx, cz, r, y, sx]) => { const d = Math.hypot((x - cx) / sx, z - cz) - r; if (d < bd) { bd = d; by = y; } });
+    return [bd, by];
+  }
+  /* Höhe des Hangs (lokal); Rinne und Becken sind eingetieft */
+  /* Wasserspiegel entlang der Hangachse (stetig, über ±0,5 gemittelt) – Kamm und Hang hängen nur davon ab, sonst
+     entstehen Stufen, wo das nächste Wasser von einem Abschnitt zum anderen wechselt */
+  function yAlong(x) {
+    const N = SRUN.N, f = q => { if (q <= N[0][0]) return N[0][2]; for (let i = 1; i < N.length; i++) if (q <= N[i][0]) { const t = (q - N[i - 1][0]) / (N[i][0] - N[i - 1][0]); return N[i - 1][2] + (N[i][2] - N[i - 1][2]) * t; } return N[N.length - 1][2]; };
+    return (f(x - 0.5) + f(x - 0.25) + f(x) + f(x + 0.25) + f(x + 0.5)) / 5;
+  }
+  function hillH(x, z) {
+    const [d, y] = srcWater(x, z), crest = yAlong(x) + 0.45 + 0.6 * sst(-13.0, -14.9, x), bed = y - 0.14;
+    let h;
+    if (d < 0.06) h = bed;
+    else if (d < 0.72) h = bed + (crest - bed) * sst(0.06, 0.72, d);
+    else if (d < 1.25) h = crest;
+    else h = crest * (1 - sst(1.25, 1.25 + 1.0 * crest + 0.8, d));      /* breiter, flacher Hang statt Damm */
+    h += 0.11 * hn(x, z) * sst(0.25, 1.0, d) * Math.min(1, h);
+    const w = sst(1.0, 3.2, Math.abs(z)), xs = -6.3 - 2.4 * w;                  /* vorn: hinter den Felsen kurz, an den Seiten lang auslaufend (keine Kante) */
+    h *= sst(-18.6, -15.6, x) * (1 - sst(xs, xs + 1.1 + 1.8 * w, x));
+    return h - 0.06 * (1 - sst(0, 0.35, h));
+  }
+  function springHill(gnd) {
+    G3.seed(4207);
+    const b = new MB(), cell = 0.25, X0 = -19.5, X1 = -5, Z0 = -7.4, Z1 = 7.4, nx = Math.round((X1 - X0) / cell), nz = Math.round((Z1 - Z0) / cell);
+    const H = [], D = [];
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + i * cell, z = Z0 + j * cell; H.push(hillH(x, z)); D.push(srcWater(x, z)[0]); }
+    const at = (i, j) => j * (nx + 1) + i;
+    const ROCK = G3.col(0x8f8a80), ROCKD = G3.col(0x77726a), WET = G3.col(0x57544c), MOSS = G3.col(0x5a8636), MOSS2 = G3.col(0x6b9440);
+    const C = [];
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const x = X0 + i * cell, z = Z0 + j * cell, h = H[at(i, j)], d = D[at(i, j)];
+      const gx = (H[at(Math.min(nx, i + 1), j)] - H[at(Math.max(0, i - 1), j)]) / (2 * cell), gz = (H[at(i, Math.min(nz, j + 1))] - H[at(i, Math.max(0, j - 1))]) / (2 * cell);
+      const sl = Math.hypot(gx, gz), g0 = G3.col(gnd ? gnd(x, z) : 0x6f9a40);
+      let c = mixA(g0, hn(x * 0.7, z * 0.9) > 0.1 ? MOSS : MOSS2, 0.55 * sst(0.25, 1.1, h));
+      c = mixA(c, hn(x * 2.1, z * 1.7) > 0 ? ROCK : ROCKD, sst(0.75, 1.5, sl + 0.45 * hn(x * 1.3 + 2, z * 1.1)));   /* Fels in Flecken, nicht als Band */
+      c = mixA(c, WET, 1 - sst(0.02, 0.45, d));
+      C.push(mixA(g0, c, sst(-0.02, 0.3, h)));
+    }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+      if (q.every(k => H[k] <= -0.03)) continue;
+      const P = k => [X0 + (k % (nx + 1)) * cell, H[k], Z0 + Math.floor(k / (nx + 1)) * cell];
+      const [A, B, Cc, Dd] = q.map(P), [ca, cb, cc, cd] = q.map(k => C[k]);
+      if ((i + j) % 2) { triUp(b, A, B, Cc, ca, cb, cc); triUp(b, A, Cc, Dd, ca, cc, cd); }
+      else { triUp(b, A, B, Dd, ca, cb, cd); triUp(b, B, Cc, Dd, cb, cc, cd); }
+    }
+    /* Felsen: Findling an der Quelle, Stufen an den Kaskaden, Blöcke am Hang; teils im Boden versenkt */
+    const g1 = 0x8f8a80, g2 = 0xa39e94, g3 = 0x7d786f, moss = 0x5f8a3a, moss2 = 0x4f7a32;
+    const rock = (x, z, r, c, fl, sink) => b.noise(0.1, () => b.ico(r, c, { x, y: hillH(x, z) - r * (sink == null ? 0.35 : sink), z, flat: fl || 0.8, jitter: 0.3 }));
+    rock(-15.0, -0.65, 1.3, g2, 0.85, 0.3); rock(-15.6, 0.85, 0.8, g3, 0.8); rock(-14.2, 0.55, 0.4, g1, 0.7);    /* Findling mit Nachbarn */
+    rock(-14.3, -1.35, 0.45, g3, 0.75);
+    [[-10.38, 0.14, 2.62, 0.42], [-7.05, 0.08, 1.95, 0.44]].forEach(([x, z, y, r]) => b.ico(r, g3, { x, y, z, flat: 0.95, jitter: 0.25 }));   /* Stufen unter den Kanten */
+    [[-10.6, -0.5, 0.32], [-10.55, 0.75, 0.3], [-7.3, -0.55, 0.34], [-7.2, 0.72, 0.3], [-9.6, -0.65, 0.25], [-9.5, 0.7, 0.22], [-12.4, 0.45, 0.2], [-11.7, -0.4, 0.22]].forEach(([x, z, r], k) => rock(x, z, r, k % 2 ? g1 : g2, 0.7, 0.3));
+    [[-12.6, 1.7, 0.55], [-11.3, -1.6, 0.62], [-9.0, 1.55, 0.5], [-8.2, -1.7, 0.66], [-10.1, -2.1, 0.45], [-16.3, -1.3, 0.62], [-13.6, 2.2, 0.5], [-12.0, -2.6, 0.4], [-8.6, 2.5, 0.42]].forEach(([x, z, r], k) => rock(x, z, r, [g1, g2, g3][k % 3], 0.7, 0.45));
+    /* Rahmen des Zulaufs am Becken (ersetzt die alte Rückwand hinter dem Becken) */
+    b.noise(0.1, () => { b.ico(1.0, g1, { x: -6.95, y: 1.65, z: -1.3, flat: 0.95, jitter: 0.3 }); b.ico(0.95, g2, { x: -6.9, y: 1.6, z: 1.45, flat: 0.95, jitter: 0.3 }); });
+    /* Moos auf den Steinen, Farne an den Ufern */
+    [[-15.0, -0.65, 0.75, 1.0], [-15.6, 0.85, 0.45, 0.72], [-6.95, -1.3, 0.48, 0.9], [-6.9, 1.45, 0.45, 0.85], [-11.3, -1.6, 0.32, 0.5], [-8.2, -1.7, 0.35, 0.5]].forEach(([x, z, r, up], k) =>
+      b.ico(r, k % 2 ? moss : moss2, { x, y: hillH(x, z) + up * (k < 2 ? 1.05 : k < 4 ? 0.75 : 0.45), z, flat: 0.4, jitter: 0.3 }));
+    [[-13.3, 0.35, 0.2], [-12.8, -1.0, 1.4], [-11.0, 0.75, 2.6], [-11.9, -0.85, 0.9], [-9.2, 0.75, 3.3], [-8.7, -0.9, 4.4], [-7.7, 0.85, 5.2], [-14.1, -1.5, 2.0], [-13.6, 1.0, 5.9]].forEach(([x, z, ry]) =>
+      b.merge(fern(), { x, y: hillH(x, z) - 0.03, z, ry, s: 0.95 }));
+    return b;
+  }
+  /* ruhiges Bachwasser und kleine Becken (water 2) – etwas breiter als die Rinne, die Ränder liegen unter dem Ufer */
+  function springRun() {
+    const b = new MB(), N = SRUN.N, wc = waterCol;
+    SRUN.runs.forEach(([i0, i1]) => {
+      for (let i = i0; i < i1; i++) {
+        const A = N[i], B = N[i + 1], dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz), px = -dz / l, pz = dx / l;
+        const E = (P, s) => [P[0] + px * (P[3] + 0.08) * s, P[2] + 0.004, P[1] + pz * (P[3] + 0.08) * s];
+        const Lc = [A[0], A[2] + 0.004, A[1]], Rc = [B[0], B[2] + 0.004, B[1]];
+        triUp(b, E(A, -1), E(B, -1), Rc, wc(0.85), wc(0.85), wc(0.35)); triUp(b, E(A, -1), Rc, Lc, wc(0.85), wc(0.35), wc(0.35));
+        triUp(b, Lc, Rc, E(B, 1), wc(0.35), wc(0.35), wc(0.85)); triUp(b, Lc, E(B, 1), E(A, 1), wc(0.35), wc(0.85), wc(0.85));
+      }
+    });
+    SRUN.pools.slice(0, 2).forEach(([cx, cz, r, y, sx]) => {
+      const n = 20, P = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; P.push([cx + Math.cos(a) * (r + 0.07) * sx, y + 0.003, cz + Math.sin(a) * (r + 0.07)]); }
+      for (let i = 0; i < n; i++) triUp(b, [cx, y + 0.003, cz], P[i], P[(i + 1) % n], wc(0.15), wc(0.8), wc(0.8));
+    });
+    return b;
+  }
+  /* zwei kleine Kaskaden (Shader 6, wie der große Fall): kurzer Anlauf, runde Kante, Wurfbogen in das nächste Becken */
+  function springCascades() {
+    const b = new MB(), N = SRUN.N;
+    SRUN.casc.forEach(([i0, i1]) => {
+      const L = N[i0], F = N[i1], dx = F[0] - L[0], dz = F[1] - L[1], l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, px = -uz, pz = ux, dy = L[2] - F[2];
+      const NA = 18, NW = 6, A0 = 0.2, V = [];
+      for (let i = 0; i <= NA; i++) {
+        const a = i / NA, row = [];
+        let cx, cy, cz, w;
+        if (a <= A0) { const k = a / A0; cx = L[0] - ux * 0.45 * (1 - k); cz = L[1] - uz * 0.45 * (1 - k); cy = L[2] + 0.012; w = L[3] * 0.9; }
+        else { const t = (a - A0) / (1 - A0), f = Math.pow(t, 0.72); cx = L[0] + dx * f; cz = L[1] + dz * f; cy = L[2] + 0.012 - dy * t * t + 0.05 * Math.max(0, 1 - t * 6); w = L[3] * (0.9 + 0.4 * t); }
+        for (let j = 0; j <= NW; j++) { const u = j / NW - 0.5, back = Math.pow(Math.abs(u) * 2, 3) * 0.05; row.push({ p: [cx + px * u * 2 * w - ux * back, cy, cz + pz * u * 2 * w - uz * back], c: [a, j / NW, 1] }); }
+        V.push(row);
+      }
+      for (let i = 0; i < NA; i++) for (let j = 0; j < NW; j++) {
+        const A = V[i][j], B = V[i][j + 1], C2 = V[i + 1][j + 1], D = V[i + 1][j];
+        [[A, B, C2], [A, C2, D]].forEach(([x, y, z]) => { b.triV(x.p, y.p, z.p, x.c, y.c, z.c); b.triV(x.p, z.p, y.p, x.c, z.c, y.c); });
+      }
+    });
+    return b;
+  }
+  /* Schaum (Shader 6, b = 0) an den Füßen der Kaskaden und sprudelnd am Quellaustritt */
+  function springRunFoam() {
+    const b = new MB(), N = SRUN.N;
+    const disc = (cx, cz, y, R, NR, NA) => {
+      for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
+        const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
+        const Q = (r, an) => [cx + Math.cos(an) * r * R, y, cz + Math.sin(an) * r * R], c = (r, an) => [r, an / (Math.PI * 2), 0];
+        triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
+        if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
+      }
+    };
+    SRUN.casc.forEach(([i0, i1]) => { const L = N[i0], F = N[i1], l = Math.hypot(F[0] - L[0], F[1] - L[1]); disc(F[0] + (F[0] - L[0]) / l * 0.12, F[1] + (F[1] - L[1]) / l * 0.12, F[2] + 0.009, 0.6, 6, 24); });
+    disc(SRUN.src[0], SRUN.src[1], SRUN.pools[0][3] + 0.009, 0.34, 5, 20);
+    return b;
+  }
+  /* Lage der Kaskadenfüße und des Quellaustritts (lokal) für Gischt und Blubbern in worldview.js */
+  function springRunInfo() { const N = SRUN.N; return { feet: SRUN.casc.map(([i0, i1]) => [N[i1][0], N[i1][2], N[i1][1], N[i0][0], N[i0][2], N[i0][1]]), src: [SRUN.src[0], SRUN.pools[0][3], SRUN.src[1]] }; }
   /* v193: Schaumteppich mit Wellenringen am Fuß (Shader uWater 6, b = 0: r = Abstand 0…1, g = Winkel 0…1).
      Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
   function springFoam() {
@@ -4220,7 +4380,7 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

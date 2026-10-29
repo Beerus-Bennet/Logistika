@@ -905,6 +905,7 @@ function shopCount(it) {
   if (it.id === "pot") return n("pot");
   if (it.tree) return n("tree");
   if (it.line) return n("mline");
+  if (FPEN_SHARED.has(it.id)) return objs.filter(o => FPEN_SHARED.has(o.t)).length;   /* v206: alle Ställe zählen gemeinsam */
   if (FPENS[it.id] || FMACHINES[it.id]) return n(it.id);
   return 0;
 }
@@ -917,6 +918,7 @@ function shopPrice(it) {
 function shopLimit(it) {
   const lv = flv();
   if (it.max) return it.max(lv);
+  if (FPEN_SHARED.has(it.id)) return FPEN_MAX;
   if (it.tree) return Math.min(16, 2 + lv * 2);
   if (it.line) return Math.min(12, 2 + lv * 2);
   if (it.lim) return it.lim(lv);

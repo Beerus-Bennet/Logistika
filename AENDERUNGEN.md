@@ -1,5 +1,147 @@
 # Änderungen – kurz für den Kollegen
 
+## v207 – Quell-Wasserfall: Herkunft des Wassers (Hangquelle, Bergbach, Kaskaden)
+
+- **Idee:** Hinter der Felswand steigt jetzt ein bemooster Felshang in den Wald an. Oben tritt das Wasser am Fuß eines großen Findlings aus (Quelltopf, sprudelt sichtbar), läuft als schmaler Bergbach in einer Rinne den Hang hinab, fällt über zwei kleine Kaskaden mit einem Becken dazwischen in das Becken auf der Felskante und von dort als großer Fall in den Topf. Der Weg des Wassers ist damit von der Quelle bis zum Topf durchgehend sichtbar.
+- **`woodmodels.js`:** neue Daten `SRUN` (Bachlauf, Kaskaden, Becken, Quellaustritt) und Funktionen `srcWater`, `yAlong`, `hillH` (Höhenfeld; Kamm hängt stetig von der Hangachse ab, Rinne und Becken eingetieft, Hang läuft an den Seiten und vorn weich aus), `springHill` (Gelände mit Farben aus dem Waldboden, Moos, Fels in Flecken, nasser Stein am Wasser; Findling, Stufensteine unter den Kanten, Blöcke, Moos, Farne), `springRun` (Bachwasser und Becken, water 2), `springCascades` (Shader 6 wie der große Fall), `springRunFoam` (Schaum an den Kaskadenfüßen, Sprudeln an der Quelle), `springRunInfo`. In `springRocks`: Rückwand hinter dem Becken entfernt (zwei Rahmensteine im Hang ersetzen sie), Steinkranz zum Zulauf hin offen.
+- **`worldview.js`:** Knoten für Hang, Bach, Kaskaden, Schaum; Becken fließt jetzt (water 2). Spritzer und feiner Nebel an den Kaskadenfüßen, Blubbern am Quellaustritt (nur in Kameranähe). Kulissenbäume, Büsche und Bodendeko halten den Hang frei (Maske).
+- **`erbe.js`:** `FWORLD.springHill` (Achse und Halbbreite des Hangs), `inSpringHill`; fällbare Bäume entstehen dort nicht mehr. Einmalige Umstellung `F.v207hill`: Bäume, die in bestehenden Spielständen auf dem Hang stehen, rücken an seinen Fuß.
+
+## v206 – Ställe: gemeinsames Limit von 7
+
+- **Neu** (`farmdata.js`): `FPEN_SHARED` (Hühnerstall, Kuhstall, Schweinestall, Schafweide, Rinderweide) und `FPEN_MAX = 7`. Zusammen dürfen höchstens 7 Ställe stehen; welche und wie viele von jeder Art, entscheidet der Spieler – wie bei den Obstbäumen.
+- Das Limit gilt ab Beginn und wächst nicht mit dem Level; die einzelnen `lim`-Regeln der Ställe (1 bzw. 2 ab Level 5/8) sind entfernt. Die Freischaltstufen der Stallarten (Kuhstall Lv 3, Schweine Lv 4, Hühner/Schafe Lv 5, Rinder Lv 6) bleiben.
+- **`farm.js`**: `shopCount` zählt bei Ställen alle Ställe zusammen, `shopLimit` liefert 7.
+- **Laden** (`farmview.js`): Anzeige „n/7“ an jedem Stall, bei vollem Limit „Alle 7 Ställe belegt“. Text Hühnerstall ohne „Zweiter“, Level-5-Freischaltung „zweiter Hühnerstall“ entfernt.
+- Der Start-Hühnerstall zählt mit (neuer Spielstand: 1/7). Bestehende Spielstände bleiben unverändert.
+
+## v205 – Hofteich aufgeräumt
+
+- **Ringe entfernt** (`farmmodels.js`, `pondProps`): keine hellen Kreise mehr um Seerosen, Steine im Wasser und Treibholz (aus v195, wirkten wie Auswahlkreise).
+- **Treibholz** liegt ganz im Wasser (80 % des Uferradius), parallel zum Ufer und halb eingetaucht – vorher quer über der Uferkante.
+- **Schilf** (`pondReeds`): Halme stehen im nassen Sand direkt an der Wasserlinie (4–34 cm außerhalb) statt bis 30 cm im Wasser, wo die Oberfläche sie abschnitt; einige mit grünem Horst am Fuß.
+- **Ruderboot** weiter draußen (lokal x 0,75 / z 0,98 statt 0,1 / 0,86): schwimmt frei, mit Abstand zu Steg und Ufer.
+
+## v204 – Quell-Wasserfall: offenes Becken oben, Aufprall mitten im Topf
+
+- **Ursprung:** Oben liegt jetzt ein stilles Becken (`springBasin`, `SPRING_FALL.basin`) in einer Felsmulde mit Steinkranz, zur Rinne hin offen. Die Rinne läuft sichtbar und oberirdisch zur Kante. Vorher steckte sie im hinteren Felsen (die Rückwand reichte über die Rinne, die Flanken ragten in sie hinein).
+- **Felsen (`springRocks`):** Flanken weiter außen, Rückwand hinter das Becken versetzt, zwei Seitenfelsen der Mulde, zwei Bettfelsen unter Becken und Rinne.
+- **Lage:** Kante `top` (−3,3 / 2,0) statt (−3,6 / 2,15), Fuß `foot` x −1,45 statt −2,6 (lokal, ×1,5). Der Aufprall liegt 2,3 m innerhalb des Topfrands statt 0,6 m – nicht mehr am Ufer. Schaum, Wellenringe und Gischt hängen am Fuß und wandern mit.
+- Modellschlüssel `wspring204`, `wspringfall204`, `wspringfoam204`, `wspringbasin204`.
+
+## v203 – Lkw-Stellplatz neben dem Hauptweg, kurze Zufahrt
+
+- **Stellplatz** (Fläche, Markierung, Radstopper unverändert) rückt 3 m nach Westen: Mitte (−46,5, −24,5) statt (−43,5, −24,5). Zwischen ihm und dem Hauptweg bleibt ein Grasstreifen; der Hauptweg läuft unverändert gerade zum Südtor.
+- **Zufahrt:** kurzer Weg vom Südende des Stellplatzes, der im flachen Bogen vom Hauptweg abzweigt (neuer Abzweigpunkt (−40,4, −19,95) auf dem Hauptweg). Die alte v197-Zufahrt mit der Ausbuchtung ist weg.
+- **Schotter:** `LKW_BAY` (erbe.js) umschließt nur noch den Stellplatz; der Schottersaum reichte vorher über den Hauptweg und bildete den unsauberen Erdfleck.
+- **Laster-Route** (`lkwRoute`) über die neue Zufahrt.
+- **Speicherstand:** einmalige Umstellung `F.v203lkw` setzt den Stellplatz um; Bäume in der neuen Bucht rücken nach Westen.
+
+## v202 – Fehleranzeige: nacktes „Script error.“
+
+- `index.html`: Ein „Script error.“ ohne Datei, Zeile und Fehlerobjekt (von iOS so maskiert, nicht auswertbar, nicht reproduzierbar im Test-Browser) zeigt kein Banner mehr, sondern wird nur in `localStorage` `logistika.lastScriptError` gemerkt. Echte Fehler zeigen weiterhin das Banner, jetzt mit Fundstelle aus dem Stack, falls die Zeile fehlt.
+
+## v201 – Neuer Ladescreen: Holz-Lkw fährt über die Ladeleiste
+
+- **Ort:** `farmBoot` in `farmview.js` (Ladescreen beim ersten Aufbau des Hofs), Hilfen `ldMake`, `ldStart`, Grafiken `LD_TRUCK`, `LD_BG`, `ldTreeSVG`. Gestaltung in `style.css` (Abschnitt „v201: Ladescreen“).
+- **Aufbau:** abgerundetes Fenster mit Kontur und Schatten, im Hintergrund Berge und Tannen. Die Leiste ist ein Waldweg, der sich in Grün (`#28A745` mit `#1E7E34`) füllt. Ein Low-Poly-Holz-Lkw fährt mit dem Fortschritt, hinter ihm wachsen Setzlinge auf. Darüber steht die Prozentzahl.
+- **Sprüche:** 0–30 % „Setzlinge werden auf dem Hof gepflanzt …“, 31–70 % „Sägewerk wird eingerichtet & Holztransport bereitgestellt …“, 71–99 % „Sägen werden geschärft – gleich geht's los!“, 100 % „Willkommen auf dem Erbhof!“.
+- **Wichtig:** Der Aufbau blockiert den Hauptthread, daher ist der Fortschritt eine **Schätzung** aus der letzten Ladezeit (gespeichert in `localStorage` `fbMs`, Standard 1,8 s). Alles läuft als Web-Animation (transform/opacity). Ist der Hof fertig, fährt der Rest in unter 1 s auf 100 %, dann kurz „Willkommen“ und Ausblenden. Die Ladezeit selbst wird dadurch nicht länger als etwa 1,2 s Anzeige.
+- **Daten:** keine Änderung am Speicherstand.
+
+## v200 – Jagd: jedes Stück einzigartig, Seltenheit, abgestufte Bergung, Jagdbuch, Aufträge, Ehrenplatz
+
+Alles läuft in der vorhandenen Technik: eigene WebGL-Engine `gl3d.js` für die Tiere, DOM/CSS für die Oberfläche. Es gibt keine neue Bibliothek und keine neue 3D-Engine.
+
+**Identität je Stück (`hunt.js`, Abschnitt „v200: Identität jedes Stücks“)**
+- **Erbgut:** Jedes Stück bekommt beim Erscheinen einen Erbgut-Wert `g`. Aus `g` und der Güte `s` folgen über `genes(k, s, g)` fest, ohne Zufall beim Zeichnen: Decke bzw. Gefieder, Altersklasse, Körperbau (±3 %), Besonderheiten und Seltenheit.
+- **Datensatz:** Die kurze Fassung `gn` wird im Datensatz der Trophäe gespeichert (`S.farm.hunt.coll[].gn`, auch im Jagdbuch-Log). Sie enthält nur Schlüssel, keine Farben.
+- **Gleiches Stück überall:** Revier, Bergung, Trophäenwand, Drehansicht, Bildchen und Schautafel zeichnen aus `gn` dasselbe Stück.
+- **Wiesenwild:** Das Wild auf der Wildwiese der Karte trägt sein Erbgut schon dort. Ein weißes oder geschecktes Stück fällt auch auf der Karte auf (Tönung). Steigt man auf, steht genau dieses Stück im Revier.
+- **Decken mit Häufigkeit:**
+  - Hirsch: rotbraun 55 %, dunkel 17 %, hell 14 %, graubraun 10 %, Schecke 3,2 %, weiß 0,8 %.
+  - Keiler: graubraun 56 %, schwarz 20 %, rötlich 15 %, silbergrau 6 %, Schecke 2,5 %, weiß 0,5 %.
+  - Fasan: mit Halsring 74 %, ohne Halsring 18 %, dunkel 6,8 %, weiß 1,2 %.
+- **Besonderheiten am Hirsch:**
+  - Auslage: weit 10 %, eng 8 %.
+  - Geweihform: ungerade 14 %, doppelte Augsprosse 4 %, abnorme Sprosse 2,5 %.
+  - Alter Recke 5 %, nur bei mittlerer Güte: graues Gesicht, schwere Mähne.
+  - Kampfnarbe 4 %: heller Streifen über Schulter und Flanke.
+- **Besonderheiten an Keiler und Fasan:** Keiler mit Narbe 9 % oder Schlitzohr 8 % (eingerissener Teller); Fasan mit langem Stoß 10 %.
+- **Altersklassen:** jung, mittelalt, reif, alt (Fasan: jung, ausgewachsen). Sichtbar wird das Alter an der Mähne und am grauen Gesicht alter Hirsche bzw. am grauen Bart alter Keiler.
+- **Modelle:** Gleiche Basismodelle, keine Kopien. Die Farben werden nur für die Dauer des Baus ersetzt (`withLook`). Der Schlüssel im Modellspeicher enthält das Aussehen (`lookKey`, `antKey`). Trefferzonen und Skelett bleiben unverändert.
+- **Seltenheit aus Punkten:**
+  - Die Decke bzw. das Gefieder und jedes Merkmal geben 0–5 Punkte, die Güte ab 0,86 einen Punkt und ab 0,95 zwei.
+  - 0 = gewöhnlich, 1 = auffällig, 2 = selten.
+  - Außergewöhnlich braucht ein Merkmal mit 3 Punkten oder 4 Punkte insgesamt mit einem Merkmal ab 2 Punkten.
+  - Legendär sind die weiße Decke oder 6 Punkte mit einem deutlich sichtbaren Merkmal (gescheckte Decke, dunkler Fasan, abnorme oder doppelte Sprosse, alter Recke).
+- **Gemessene Verteilung** (Simulation, 200 000 Stücke je Art; in %: gewöhnlich / auffällig / selten / außergewöhnlich / legendär):
+
+  | Art | gewöhnlich | auffällig | selten | außergewöhnlich | legendär |
+  |---|---|---|---|---|---|
+  | Hirsch | 46,4 | 31,3 | 15,1 | 6,2 | 1,0 |
+  | Keiler | 63,1 | 24,6 | 9,3 | 2,5 | 0,5 |
+  | Fasan | 65,5 | 24,3 | 2,2 | 6,9 | 1,2 |
+- **Namen:** Weißer Rothirsch, Gescheckter Rothirsch, Alter Recke, Silbergrauer Basse, Weißer Keiler, Weißer Fasan, Dunkler Fasanenhahn. Ungerade Geweihe heißen nach Jägerbrauch „Ungerader 14-Ender“ (doppelte Zahl der stärkeren Stange).
+
+**Wert und Bewertung**
+- **Sammlerwert:** Er ist der Preis der Medaille mal dem Seltenheitsaufschlag (×1 / 1,1 / 1,3 / 1,8 / 3). Die Lagerware bleibt `tro_<art>_<medaille>`; der Aufschlag wird beim Verkauf an der Wand oder am Markt dazugezahlt.
+- **Medaillenregeln** bleiben unverändert.
+- **Schussnote** (0,5–5 Sterne, neu): Trefferlage, Entfernung (ab 160 / 190 / 220 m), ziehendes Stück (+1), Wind ab 4 m/s (+0,5), erst krank geschossen (−1,5). Die Gründe stehen auf der Karte.
+- **Bestleistungen** werden dauerhaft in `H.pb` gespeichert: stärkstes Stück je Art, weitester Schuss, beste Schussnote. Die Karte vergleicht mit dem bisherigen Rekord („Neuer Rekord: Güte 81 – bisher 74“).
+
+**Bergung (abgestufte Präsentation, `presOf`)**
+- **Stufen:** 0 Standard · 1 gutes Stück (Gold/Diamant oder auffällig) · 2 neuer Rekord oder neues Merkmal · 3 selten/außergewöhnlich · 4 legendär.
+- **Seltenheitsband:** Es erscheint unter dem Namen; ab „selten“ einen Moment später mit Glanz, eigenem Klang, Rütteln und feinen Lichtpunkten am Stück, bei „legendär“ golden und mit zweitem Klang.
+- **Ab Stufe 3:** farbige Vignette, längere, ruhigere Kamerafahrt, danach wandert die Kamera langsam weiter um das Stück, bis man selbst wischt.
+- **Merkmals-Hinweis:** Er sitzt neben dem Haupt bzw. Geweih des liegenden Stücks, z. B. „Ungerader 18-Ender · Ungerades Geweih“ oder „Waffen 18 cm“, folgt beim Drehen und verblasst nach 6 s.
+- **Karte:**
+  - Seltenheit und Merkmale als Plaketten, neue Einträge mit dem Zusatz „neu“, Altersklasse, „Neuer Rekord“.
+  - Sammlerwert mit Aufschlag.
+  - Aufklappbar: Gewicht, Treffer, Flucht, Güte auf der Medaillenskala, Schussnote mit Gründen, Rekordvergleich.
+- **Nach dem Sichern:** „Neu im Jagdbuch: …“ mit Stand der Art, erfüllte Aufträge mit Belohnung.
+- **Überspringen:** Antippen überspringt das Warten wie bisher.
+- **Medaillentext:** Diamant heißt jetzt „Herausragendes Stück“ (vorher „Außergewöhnliches Stück“, Verwechslung mit der Seltenheit).
+- **Schautafel:** Sie steht links neben dem Hochsitz, die Vorderseite zeigt zur offenen Wiese.
+- **Fernglas:** Es zeigt, was man schon sehen kann (Decke, Geweihform, alter Recke). Die Seltenheit zeigt sich erst beim Bergen.
+
+**Trophäenwand und Jagdbuch (Lager → Trophäen)**
+- **Reiter:** Wand, Jagdbuch, Aufträge.
+- **Wand:**
+  - Filter nach Art und Seltenheit, Sortierung nach Stärke, Neuheit oder Wert.
+  - Rahmen in der Farbe der Seltenheit, Kennzeichen „Neu“ seit dem letzten Besuch, nach je 24 Stücken „Weitere zeigen“.
+  - Nahansicht mit Seltenheit, Merkmalen, Alter, Schussnote, Rekord-Abzeichen.
+- **Jagdbuch je Art:**
+  - Fortschritt (Hirsch 22, Keiler 17, Fasan 12 Einträge) und die Bestleistungen.
+  - Die drei besten Stücke als Bild.
+  - Alle Einträge nach Gruppen (Decke, Geweih, Alter, Körper, Seltenheit). Fehlende zeigen einen Hinweis, ohne zu verraten, wie es aussieht.
+- **Ehrenplatz:** bis zu drei Stücke. Sie hängen an einer neuen Schautafel neben dem Hochsitz (3D, dieselben Präparate) und werden weder an der Wand noch am Markt verkauft. Antippen der Schautafel öffnet die Trophäenwand.
+- **Markt:** Er verkauft je Stufe das schwächste gewöhnliche Stück; Ehrenplätze und seltene Stücke gehen zuletzt.
+
+**Jagdaufträge vom Förster**
+- **Drei Aufträge:** immer einer leicht (150 € / 15 EP), einer mittel (350 € / 30 EP) und einer schwer (800 € / 60 EP), aus 15 Vorlagen.
+- **Arten:** Art erlegen, zwei Trophäen, Fasan im Flug, Silber/Gold, Herzschuss über 170 m, Kammerschuss bei Wind, neues Merkmal, 4-Sterne-Schuss, drei Trophäen ohne krank geschossenes Stück (setzt bei einem Krankschuss zurück), ziehendes Stück, über 210 m, mindestens auffällig, eigenen Rekord übertreffen.
+- **Ohne Glück erfüllbar:** Nur einer verlangt Glück (mindestens auffällig, etwa jedes zweite Stück).
+- **Belohnung:** Jeder Auftrag zahlt genau einmal; danach kommt sofort ein anderer.
+- **Anzeige:** Hochsitz-Fenster, Reiter „Aufträge“, im Revier wechselnd eingeblendet (nicht im Zielfernrohr).
+- **Förster-Nachricht:** einmal, sobald der Hochsitz steht.
+
+**Erfolge (`goals.js`)**
+- Neu: Waidmannsheil, Kapitales Stück, Seltener Anblick, Gut dokumentiert (20 Merkmale), Rechte Hand des Försters (10 Aufträge). Belohnung wie alle Erfolge.
+
+**Speicherstand und Altbestand**
+- **Nur Ergänzungen:**
+  - Trophäen-Datensatz: `gn`, `mv`, `wv`, `cw`, `pin`.
+  - Jagdzustand `S.farm.hunt`: `dex`, `pb`, `jobs`, `jn`, `jd`, `jlast`, `jann`, `wseen`, `v200`.
+- **Alte Trophäen ohne `gn`:** klassisches Aussehen und Seltenheit nur aus der Güte. Beim ersten Laden kommen sie ins Jagdbuch, ihre Bestwerte nach `H.pb`.
+
+**Tests:** `tests/hunt.test.js` hat jetzt 23 Tests. Die 5 neuen prüfen:
+- gleiches Erbgut ergibt dasselbe Stück;
+- die Verteilung je Art, wobei legendäre Stücke immer sichtbar besonders sind;
+- jede Decke und Form baut ohne NaN, und die Farben werden zurückgesetzt;
+- Wert und Schussnote;
+- Altbestand im Jagdbuch, Aufträge zahlen genau einmal, der Ehrenplatz ist geschützt, Seltene gehen zuletzt.
+
 ## v199 – Mieter an der Hütte passt zum Namen (männlich / weiblich)
 
 - **Geschlecht nach Vornamen** (`rent.js`, `GEN`, `lookOf`): Jonas, Lukas, Tim, Felix → männlich; Mia, Sophie, Lea, Emma → weiblich. Gilt auch für Mieter, die schon im Spielstand stehen (kein neuer Spielstandwert nötig). Frisur, Bart und Kleidung ergeben sich fest aus der `seed` des Mieters, ändern sich also nicht von Besuch zu Besuch.

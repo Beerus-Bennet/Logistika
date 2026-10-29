@@ -495,7 +495,7 @@ function shedObj() { return S.farm.objs.find(o => o.t === "shed"); }
 /* Stellplatz des Holzlasters (Sägewerk) und der Weg von dort zur Straße */
 function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x, z] = farmCenter(o); return { x, z }; }
 /* v169: vom Stellplatz nach Süden zum Wegknick (−41 / −21) und dann auf dem Waldweg zur Straße – kein Weg mehr durch die Gebäude */
-function lkwRoute(p) { return [[p.x, p.z], [p.x, -21.4], [-43.0, -20.0], [-41.6, -19.3], [-39.8, -18.9]].concat(SAW_ROAD.slice(2)); }   /* v197: über die Zufahrt auf den Waldweg */
+function lkwRoute(p) { return [[p.x, p.z], [p.x, -21.1], [-45.8, -20.2], [-44.4, -19.8], [-42.4, -19.8], [-40.4, -19.95], [-39.8, -18.9]].concat(SAW_ROAD.slice(2)); }   /* v203: über die kurze Zufahrt auf den Hauptweg */
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -2437,7 +2437,7 @@ function shyName(n) {
 function shopItemHTML(it, lv) {
   const lock = it.lv > lv, n = shopCount(it), lim = shopLimit(it), full = !it.animal && !it.item && n >= lim;
   const price = shopPrice(it);
-  let note = lock ? "ab Level " + it.lv : full ? "Maximum erreicht" + (it.max ? " – mehr ab dem nächsten Level" : "") : eur(price);
+  let note = lock ? "ab Level " + it.lv : full ? (FPEN_SHARED.has(it.id) ? "Alle " + FPEN_MAX + " Ställe belegt" : "Maximum erreicht" + (it.max ? " – mehr ab dem nächsten Level" : "")) : eur(price);
   if (it.animal) {
     const pens = S.farm.objs.filter(o => o.t === FANIMALS[it.animal].house);
     if (!lock && !pens.length) note = "erst " + FPEN_META[FANIMALS[it.animal].house].n + " bauen";
@@ -2847,19 +2847,98 @@ function farmShow() {
 }
 /* v90: erster Aufbau des Hofs mit Ladescreen. Der Aufbau (Wald, Wege, Büsche, alle Bäume in Endform) blockiert den
    Hauptthread; der Schirm wird deshalb erst gemalt, dann gebaut. Die Animation läuft auf dem Compositor weiter. */
+/* v201: neuer Ladescreen. Der Aufbau blockiert den Hauptthread, deshalb laufen Lkw, Balken, Prozentzahl, Bäume und Sprüche
+   ausschließlich als Web-Animationen (transform/opacity, Compositor) nach einer geschätzten Dauer (letzte Ladezeit, gemerkt).
+   Fertig gebaut: der Rest fährt in <1 s auf 100 %, dann Fade-out. Die Prozentzahl ist also Schätzung, nicht echter Fortschritt. */
+const LD_MSG = ["Setzlinge werden auf dem Hof gepflanzt …", "Sägewerk wird eingerichtet & Holztransport bereitgestellt …", "Sägen werden geschärft – gleich geht's los!", "Willkommen auf dem Erbhof!"];
+const LD_LH = 30;
+function ldTreeSVG(h) {
+  return `<svg viewBox="0 0 20 28" width="${Math.round(h * 20 / 28)}" height="${h}" aria-hidden="true"><rect x="8.4" y="22" width="3.2" height="6" fill="#6b4423"/>` +
+    `<path d="M10 13 0 24h10z" fill="#37b058"/><path d="M10 13l10 11H10z" fill="#1f8a3d"/>` +
+    `<path d="M10 7 2 18h8z" fill="#43c466"/><path d="M10 7l8 11h-8z" fill="#26994a"/>` +
+    `<path d="M10 1 4 11h6z" fill="#4fd673"/><path d="M10 1l6 10h-6z" fill="#2da854"/></svg>`;
+}
+const LD_TRUCK = `<svg viewBox="0 0 56 30" width="54" height="29" aria-hidden="true" stroke="#0d1b2a" stroke-width="1.2" stroke-linejoin="round">` +
+  `<rect x="1" y="19" width="37" height="4" rx="1" fill="#3a4658"/>` +
+  `<rect x="3" y="13.5" width="31" height="5.5" rx="2.7" fill="#c98a48"/><rect x="5" y="8" width="28" height="5.5" rx="2.7" fill="#b97a3e"/>` +
+  `<ellipse cx="33.5" cy="16.2" rx="1.4" ry="2.4" fill="#e8c48a" stroke-width=".8"/><ellipse cx="32.5" cy="10.8" rx="1.4" ry="2.4" fill="#e8c48a" stroke-width=".8"/>` +
+  `<rect x="1.5" y="6" width="2" height="13" fill="#3a4658"/><rect x="35" y="7" width="2" height="12" fill="#3a4658"/>` +
+  `<path d="M38 23V9h9l6 7h2v7z" fill="#f2a81d"/><path d="M41 11.2h5l3.6 4.8H41z" fill="#cfeeff"/><rect x="53" y="19" width="2.6" height="2.4" fill="#fff3a0" stroke-width=".8"/>` +
+  `<circle cx="9" cy="24.3" r="4.4" fill="#1a1f2b"/><circle cx="21" cy="24.3" r="4.4" fill="#1a1f2b"/><circle cx="46" cy="24.3" r="4.4" fill="#1a1f2b"/>` +
+  `<circle cx="9" cy="24.3" r="1.5" fill="#aab4c2" stroke="none"/><circle cx="21" cy="24.3" r="1.5" fill="#aab4c2" stroke="none"/><circle cx="46" cy="24.3" r="1.5" fill="#aab4c2" stroke="none"/></svg>`;
+const LD_BG = `<svg class="fbBg" viewBox="0 0 300 130" preserveAspectRatio="xMidYMax slice" aria-hidden="true">` +
+  `<path d="M0 130V78l38-38 28 26 34-46 44 58 30-24 40 40 30-30 56 36v30z" fill="#4a7fb5" opacity=".16"/>` +
+  `<path d="M0 130V100l30-26 24 22 40-34 36 38 34-22 44 30 36-24 56 28v18z" fill="#3b6c9c" opacity=".14"/>` +
+  [8, 30, 52, 232, 258, 284, 150, 176].map((x, i) => { const h = 22 + (i * 7) % 14; return `<path d="M${x} ${130 - h}l-9 ${h}h18z M${x} ${130 - h - 10}l-7 ${h * .6}h14z" fill="#1f8a3d" opacity=".2"/>`; }).join("") + `</svg>`;
+function ldMake(el, T) {
+  el.innerHTML = `<div class="fbBox" role="status" aria-label="Der Hof wird geladen">${LD_BG}<div class="fbTitle">Weitwind Spedition</div>` +
+    `<div class="fbPct"><div class="fbReel">${Array.from({ length: 101 }, (_, i) => `<div>${i} %</div>`).join("")}</div></div>` +
+    `<div class="fbTrack"><div class="fbTrees"></div><div class="fbTruck"><div>${LD_TRUCK}</div></div><div class="fbRoad"><i class="fbFill"></i></div></div>` +
+    `<div class="fbMsg">${LD_MSG.map(t => `<span>${t}</span>`).join("")}</div></div>`;
+  return el;
+}
+function ldStart(el, T) {
+  const q = s => el.querySelector(s), road = q(".fbRoad"), fill = q(".fbFill"), truck = q(".fbTruck"), reel = q(".fbReel"), treesEl = q(".fbTrees");
+  const msgs = [...el.querySelectorAll(".fbMsg span")];
+  const TW = 54, W = Math.max(150, road.clientWidth || 260), run = W - TW;
+  const n = Math.max(8, Math.floor(run / 15)), trees = [];
+  for (let i = 0; i < n; i++) {
+    const t = document.createElement("div"); t.className = "fbTree";
+    const x = 6 + run * (i + ((i * 37) % 7 - 3) * 0.04) / (n - 1), h = 20 + (i * 5) % 9;
+    t.style.left = Math.max(2, x - 7) + "px"; t.innerHTML = ldTreeSVG(h);
+    t._p = Math.min(100, Math.max(0, (x - 6) / run * 100)); treesEl.appendChild(t); trees.push(t);
+  }
+  const sec = p => p <= 30 ? 0 : p <= 70 ? 1 : p < 100 ? 2 : 3;
+  let anims = [], main = null;
+  function ride(from, to, dur) {
+    anims.forEach(a => a.cancel()); anims = [];
+    const A = (e, kf, o) => { const a = e.animate(kf, Object.assign({ duration: dur, fill: "forwards", easing: "linear" }, o)); anims.push(a); return a; };
+    const f = Math.round(from), t = Math.round(to);
+    fill.style.transform = `translateX(${from - 100}%)`; truck.style.transform = `translateX(${from / 100 * run}px)`; reel.style.transform = `translateY(${-f * LD_LH}px)`;
+    A(fill, [{ transform: `translateX(${from - 100}%)` }, { transform: `translateX(${to - 100}%)` }]);
+    const m = A(truck, [{ transform: `translateX(${from / 100 * run}px)` }, { transform: `translateX(${to / 100 * run}px)` }]);
+    if (t > f) A(reel, [{ transform: `translateY(${-f * LD_LH}px)` }, { transform: `translateY(${-t * LD_LH}px)` }], { easing: `steps(${t - f}, end)` });
+    msgs.forEach((sp, j) => {
+      const kf = [];
+      for (let p = f; p <= t; p++) kf.push({ opacity: sec(p) === j ? 1 : 0, offset: t > f ? (p - f) / (t - f) : p > f ? 1 : 0 });
+      if (kf.length < 2) kf.push({ opacity: kf[0].opacity, offset: 1 });
+      sp.style.opacity = sec(f) === j ? 1 : 0; A(sp, kf);
+    });
+    trees.forEach(tr => {
+      if (tr._p < from) { tr.classList.add("on"); return; }
+      if (tr.classList.contains("on")) return;
+      A(tr, [{ transform: "scale(0)" }, { transform: "scale(1.18)", offset: .6 }, { transform: "scale(1)" }], { duration: 380, delay: (tr._p - from) / Math.max(1, to - from) * dur, fill: "both", easing: "ease-out" });
+    });
+    return m;
+  }
+  main = ride(0, 92, T);
+  return {
+    finish() {
+      const p0 = Math.min(92, Math.max(0, (main.currentTime || 0) / T * 92));
+      const a = ride(p0, 100, Math.max(350, (100 - p0) * 9));
+      return a.finished.catch(() => {}).then(() => new Promise(r => setTimeout(r, 650)));
+    }
+  };
+}
 function farmBoot() {
   FV.boot = true;
   const el = document.createElement("div");
   el.id = "farmBoot";
-  el.innerHTML = `<div class="fbBox"><div class="fbIcon">🌲</div><b>Dein Wald wird gepflanzt …</b><div class="fbBar"><i></i></div><small>Alle Bäume wachsen einmal ganz an – danach läuft alles flüssig.</small></div>`;
+  ldMake(el);
   $("#farm").appendChild(el);
+  let T = 1800;
+  try { const v = +localStorage.getItem("fbMs"); if (v > 0) T = Math.min(6000, Math.max(900, v)); } catch (e) {}
+  const ld = ldStart(el, T);
   const t0 = performance.now();
   requestAnimationFrame(() => setTimeout(() => {
     FV.boot = false;
     if (document.body.classList.contains("tab-farm")) farmShowGo();
     FV.bootMs = Math.round(performance.now() - t0);
-    /* zwei Bilder abwarten (Shader, erste Zeichnung), dann ausblenden – mindestens kurz sichtbar, damit nichts flackert */
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 450); }, Math.max(0, 500 - (performance.now() - t0)))));
+    try { localStorage.setItem("fbMs", String(FV.bootMs)); } catch (e) {}
+    /* zwei Bilder abwarten (Shader, erste Zeichnung), dann auf 100 % fahren und ausblenden */
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      ld.finish().then(() => { el.classList.add("out"); setTimeout(() => el.remove(), 450); });
+    }, 0)));
   }, 40));
 }
 function farmShowGo() {

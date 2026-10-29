@@ -1,5 +1,73 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v207 – Herkunft des Quellwassers (auf v206)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `SRUN`, `srcWater`, `yAlong`, `hillH`, `springHill`, `springRun`, `springCascades`, `springRunFoam`, `springRunInfo` (+ Exporte); `springRocks` ohne Rückwand, Steinkranz offen |
+| `worldview.js` | neue Knoten, Becken water 2, Partikel `WV.springRun`, Maske für den Hang |
+| `erbe.js` | `FWORLD.springHill`, `inSpringHill`, `treeSpotOk`, Umstellung `F.v207hill` |
+| `sw.js`, `index.html` | Version v207 |
+
+## Stand v206 – gemeinsames Stall-Limit (auf v205)
+
+| Datei | Änderung |
+|---|---|
+| `farmdata.js` | `FPEN_SHARED`, `FPEN_MAX`; `lim` der Ställe entfernt; Texte |
+| `farm.js` | `shopCount`, `shopLimit` |
+| `farmview.js` | Hinweis „Alle 7 Ställe belegt“ |
+| `sw.js`, `index.html` | Version v206 |
+
+## Stand v205 – Hofteich (auf v204)
+
+| Datei | Änderung |
+|---|---|
+| `farmmodels.js` | `pondProps`: Ringe weg, Treibholz, Bootslage; `pondReeds`: Lage an der Wasserlinie, Horste |
+| `sw.js`, `index.html` | Version v205 |
+
+## Stand v204 – Quell-Wasserfall (auf v203)
+
+| Datei | Änderung |
+|---|---|
+| `woodmodels.js` | `SPRING_FALL` (top, foot, basin), `springRocks` (Flanken, Rückwand, Mulde, Steinkranz), neu `springBasin` + Export |
+| `worldview.js` | Becken-Knoten (water: 1), Modellschlüssel …204 |
+| `sw.js`, `index.html` | Version v204 |
+
+## Stand v203 – Lkw-Stellplatz neben dem Weg (auf v202)
+
+| Datei | Änderung |
+|---|---|
+| `erbe.js` | `LKW_BAY`, `inLkwBay` neu; Hauptweg mit Punkt (−40,4, −19,95); Zufahrt ersetzt; Umstellung `F.v203lkw` |
+| `erbedata.js` | Stellplatz x −46,5 |
+| `worldview.js` | Schottersaum aus `LKW_BAY` |
+| `farmview.js` | `lkwRoute` |
+| `sw.js`, `index.html` | Version v203 |
+
+## Stand v202 – Fehleranzeige (auf v201)
+
+| Datei | Änderung |
+|---|---|
+| `index.html` | Fehler-Handler: nacktes „Script error.“ ohne Banner; Stack als Fundstelle; Version v202 |
+| `sw.js` | Version v202 |
+
+## Stand v201 – Neuer Ladescreen (auf v200)
+
+| Datei | Änderung |
+|---|---|
+| `farmview.js` | `farmBoot` neu; neue Funktionen `ldMake`, `ldStart`, `ldTreeSVG`, Konstanten `LD_MSG`, `LD_TRUCK`, `LD_BG`, `LD_LH` |
+| `style.css` | Abschnitt „v90: Ladescreen“ ersetzt durch „v201: Ladescreen“ (`#farmBoot …`) |
+| `sw.js`, `index.html` | Version v201 |
+
+## Stand v200 – Jagd: Identität, Seltenheit, Bergung, Jagdbuch, Aufträge (auf v199)
+
+| Datei | Änderung |
+|---|---|
+| `hunt.js` | Neuer Abschnitt Identität: `genes`, `COATS`, `FORMS`, `AGES`, `RAR`, `RAR_V`, `withLook`/`LOOK`/`PAL0`, `lookKey`, `antF`; Hilfen `vn3`, `pie`, `scarK`. Modelle: Rumpfbreite, Mähne, Halsstärke, graues Gesicht, Schecke, Narbe (Hirsch, Keiler), Schlitzohr, Fasan ohne Ring/Federfarben (`PHC.fA…`), Stoßlänge, Geweihform `F` (Auslage, ungerade, doppelte Aug-, abnorme Sprosse, fünfte Krone). `traits(k, s, gn)` (Pl, odd, Namen). `build`, `headPts`, `calcDead` (Kopfanker `ha`, `A.headAt`), `trophyBuild`/`trophyKey` im Aussehen des Stücks. Wiesenwild mit Erbgut und Tönung. Neuer Abschnitt Wert/Schussnote/Jagdbuch/Bestleistungen/Aufträge: `valueOf`, `extraOf`, `shotOf`, `stars`, `dexAll`, `hv200` (Altbestand), `dexPut`, `pbPut`, `JOBT`, `jobsEnsure`, `jobsEval`, `jobsLost`, `stats`. `collSync` entfernt mit `weakFirst`; `sellRec` mit Aufschlag, ohne Ehrenplatz; `pinRec`. Bergung: `presOf`, `showWin` (Seltenheitsband, Enthüllung), `callHTML` + Positionierung in `harvestStep`, `cardHTML` (Plaketten, Schussnote, Rekord), `keepTrophy` (Jagdbuch, Rekorde, Aufträge, einmalig), `showSaved`. UI: `.hu-call`, `.hu-job`. Fernglas: `farFeat`. Wand: `WALL` (Reiter, Filter, Sortierung, Seiten), `wandHTML`, `buchHTML`, `jobsHTML`, `wallBind`. Schautafel `showMesh`/`showSync`, `pick`/`sheet` öffnen die Wand. Hochsitz-Fenster mit Aufträgen und Jagdbuch-Stand. Förster-Nachricht `H.jann`. Markt: Ehrenplatz ausgenommen, Aufschlag. Medaillentext Diamant „Herausragendes Stück“. Exporte `stats`, `genes`, `valueOf`, `shotOf`, `RAR`, `COATS`, `FORMS`, `dexAll`, `_v200` |
+| `goals.js` | fünf Jagd-Erfolge, `huntSt()` |
+| `style.css` | v200-Block: Seltenheitsband, Vignette je Stufe, Merkmals-Hinweis, Plaketten, Schussnote, Rekord, Jagdbuch-/Auftragszeilen, Auftragszeile im Revier, Hochsitz-Aufträge, Wand-Reiter/Filter/Ehrenplatz/Neu, Jagdbuch, Aufträge |
+| `hunt.test.js` | 5 neue Tests (Identität, Verteilung, Modelle je Decke/Form, Wert/Schussnote, Jagdbuch/Aufträge/Ehrenplatz) |
+| `index.html`, `sw.js` | Version 200 |
+
 ## Stand v199 – Mieter männlich/weiblich (auf v198)
 
 | Datei | Änderung |

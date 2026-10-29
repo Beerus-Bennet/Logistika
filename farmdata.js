@@ -88,6 +88,8 @@ const FPENS = {
   sheep: [{ w: 5, d: 5, m2: 1200 }, { w: 6, d: 5, m2: 1800 }, { w: 7, d: 6, m2: 2600 },  { w: 8, d: 7, m2: 3600 }, { w: 9, d: 8, m2: 4200 }],
   beef:  [{ w: 6, d: 5, m2: 6000 }, { w: 7, d: 6, m2: 9000 }, { w: 8, d: 7, m2: 12500 }, { w: 9, d: 8, m2: 16000 }, { w: 10, d: 9, m2: 20000 }, { w: 11, d: 10, m2: 24000 }]
 };
+/* v206: höchstens 7 Ställe zusammen (Hühner, Kühe, Schweine, Schafe, Rinder) – welche, entscheidet der Spieler, wie bei den Obstbäumen */
+const FPEN_SHARED = new Set(["coop", "cows", "pigs", "sheep", "beef"]), FPEN_MAX = 7;
 const FPEN_COST = { coop: [0, 60, 150, 320], cows: [0, 200, 450, 900, 1500, 2200], pigs: [0, 120, 280, 550], sheep: [0, 150, 320, 600, 950], beef: [0, 250, 500, 950, 1500, 2300] };
 /* Namen rund um den Stall: Gebäude, Fläche, Symbol, Wert beim Hofverkauf */
 const FPEN_META = {
@@ -176,14 +178,14 @@ const FSHOP_HOF = [
   { id: "a-schwein", cat: "tier", n: "Ferkel",          i: "🐖", lv: 4, animal: "schwein", d: "Frisst Schweinefutter, nach 3 Mahlzeiten zum Metzger: 15 kg Fleisch." },
   { id: "a-schaf", cat: "tier", n: "Schaf",             i: "🐑", lv: 5, animal: "schaf",   d: "Frisst Schaffutter und wird geschoren: ein Vlies Rohwolle je Durchgang." },
   { id: "a-rind",  cat: "tier", n: "Rind",              i: "🐂", lv: 6, animal: "rind",    d: "Frisst Kuhfutter, nach 4 Mahlzeiten zum Metzger: 20 kg Rindfleisch." },
-  { id: "coop",    cat: "bau",  n: "Hühnerstall",       i: "🛖", lv: 5, price: () => 300,  lim: lv => lv >= 5 ? 2 : 1, d: "Zweiter Stall mit Auslauf für bis zu 9 Hühner." },
-  { id: "cows",    cat: "bau",  n: "Kuhstall mit Weide", i: "🏚️", lv: 3, price: () => 500,  lim: lv => lv >= 8 ? 2 : 1, d: "Unterstand und Weide für bis zu 6 Kühe." },
-  { id: "pigs",    cat: "bau",  n: "Schweinestall",     i: "🐷", lv: 4, price: () => 400,  lim: () => 1, d: "Stall mit Suhle und Auslauf für bis zu 8 Schweine." },
+  { id: "coop",    cat: "bau",  n: "Hühnerstall",       i: "🛖", lv: 5, price: () => 300,  d: "Stall mit Auslauf für bis zu 9 Hühner." },
+  { id: "cows",    cat: "bau",  n: "Kuhstall mit Weide", i: "🏚️", lv: 3, price: () => 500,  d: "Unterstand und Weide für bis zu 6 Kühe." },
+  { id: "pigs",    cat: "bau",  n: "Schweinestall",     i: "🐷", lv: 4, price: () => 400,  d: "Stall mit Suhle und Auslauf für bis zu 8 Schweine." },
   { id: "dairy",   cat: "bau",  n: "Molkerei",          i: "🏭", lv: 4, price: () => 800,  lim: () => 1, d: "Butter, Pudding und Käse aus eigener Milch." },
-  { id: "sheep",   cat: "bau",  n: "Schafweide",        i: "🐑", lv: 5, price: () => 450,  lim: () => 1, d: "Weide mit Unterstand für bis zu 8 Schafe." },
+  { id: "sheep",   cat: "bau",  n: "Schafweide",        i: "🐑", lv: 5, price: () => 450,  d: "Weide mit Unterstand für bis zu 8 Schafe." },
   { id: "butcher", cat: "bau",  n: "Metzgerei",         i: "🔪", lv: 5, price: () => 900,  lim: () => 1, d: "Bratwurst, Schinken und Gulasch aus eigenem Fleisch." },
   { id: "spinnery", cat: "bau", n: "Spinnstube",        i: "🧶", lv: 5, price: () => 700,  lim: () => 1, d: "Spinnrad und Stricknadeln: Garn, Socken, Pullover." },
-  { id: "beef",    cat: "bau",  n: "Rinderweide",       i: "🐂", lv: 6, price: () => 600,  lim: () => 1, d: "Große Weide mit Unterstand für bis zu 6 Rinder." }
+  { id: "beef",    cat: "bau",  n: "Rinderweide",       i: "🐂", lv: 6, price: () => 600,  d: "Große Weide mit Unterstand für bis zu 6 Rinder." }
 ];
 const FSHOP_CATS_HOF = [["feld", "🌱 Felder & Bäume"], ["tier", "🐔 Tiere"], ["bau", "🏗️ Gebäude"], ["deko", "🌷 Deko"]];
 /* Deko: kostet wenig, macht den Hof schön (bringt ein paar XP).
@@ -218,7 +220,7 @@ const FUNLOCK_HOF = {
   2: ["🍅 Tomaten", "🌽 Maismehl", "🫓 Maisfladen", "🌷 Deko: Blumen, Bank, Bäume"],
   3: ["🥕 Karotten", "🐄 Kuhstall mit Weide", "🌿 Kuhfutter", "🥧 Apfelkuchen"],
   4: ["🐷 Schweinestall & Ferkel", "🍠 Schweinefutter", "🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
-  5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse", "🛖 zweiter Hühnerstall"],
+  5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse"],
   6: ["🐂 Rinderweide & Rinder", "🍖 Schinken", "🧦 Wollsocken", "🍓 Erdbeeren", "🍕 Pizza", "🍰 Kirschtorte"],
   7: ["🥘 Gulasch", "🧥 Pullover", "🎃 Kürbis", "🍐 Birnbaum"]
 };

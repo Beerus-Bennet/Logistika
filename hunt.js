@@ -202,6 +202,25 @@ const HUNT = (() => {
   const hsh = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
   /* ruhige Fellschattierung: zwei weiche Wellen und feines Korn – kein sichtbares Muster */
   const fur = (p, k) => 1 + (k == null ? 1 : k) * (0.04 * Math.sin(p[0] * 21 + p[1] * 13 + 1.3) * Math.sin(p[2] * 17 - p[1] * 23) + 0.03 * Math.sin(p[2] * 7.1 + p[1] * 4.3) + 0.04 * (hsh(p[0], p[1], p[2]) - 0.5));
+  /* v200: weiches 3D-Rauschen (für die Flecken einer Schecke) und Helfer für Flecken und Narben */
+  function vn3(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), u = ss(x - xi), v = ss(y - yi), w = ss(z - zi), h = hsh;
+    const a = lerp(lerp(h(xi, yi, zi), h(xi + 1, yi, zi), u), lerp(h(xi, yi + 1, zi), h(xi + 1, yi + 1, zi), u), v);
+    const c = lerp(lerp(h(xi, yi, zi + 1), h(xi + 1, yi, zi + 1), u), lerp(h(xi, yi + 1, zi + 1), h(xi + 1, yi + 1, zi + 1), u), v);
+    return lerp(a, c, w);
+  }
+  const PIED = 0xf1ece2;
+  /* Schecke: große, weiche weiße Flecken (fest je Stück über LOOK.ps), extra = Zuschlag (z. B. weiße Fesseln) */
+  const pie = (c, p, extra) => {
+    if (!LOOK.pied) return c;
+    const k = clamp(ss((vn3(p[0] * 5.2 + LOOK.ps * 3.7, p[1] * 5.2, p[2] * 5.2 + LOOK.ps) - 0.55) / 0.08) + (extra || 0), 0, 1) * LOOK.pied;
+    return k > 0 ? mixc(c, mulc(RGB(PIED), 0.96 + 0.06 * hsh(p[0], p[1], p[2])), k) : c;
+  };
+  /* Narbe: Abstand zur Strecke (z0, y0) → (z1, y1) in der Seitenansicht, w = Breite */
+  function scarK(z, y, z0, y0, z1, y1, w) {
+    const dz = z1 - z0, dy = y1 - y0, t = clamp(((z - z0) * dz + (y - y0) * dy) / (dz * dz + dy * dy), 0, 1), d = Math.hypot(z - z0 - dz * t, y - y0 - dy * t);
+    return (1 - ss((d - w * 0.5) / (w * 0.6))) * (0.55 + 0.45 * Math.sin(t * Math.PI));
+  }
   /* Profil-Tabelle [[x, a, b, …], …]: weich (Catmull-Rom) zwischen den Stützstellen */
   function prof(T, x) {
     const n = T.length;
@@ -330,14 +349,16 @@ const HUNT = (() => {
     const rp = Math.hypot(p[0] / 0.125, (p[1] - 0.99) / 0.19, (z + 0.61) / 0.1);
     c = mixc(c, DEER.rumpB, ss((rp - 0.9) / 0.1) * (1 - ss((rp - 1.18) / 0.1)) * 0.55);
     c = mixc(c, DEER.rump, 1 - ss((rp - 0.8) / 0.14));
-    return mulc(c, fur(p));
+    /* v200: Kampfnarbe – heller, kurzhaariger Streifen schräg über Schulter und Flanke (nur auf einer Seite) */
+    if (LOOK.scar && Math.sign(p[0]) === LOOK.sd) c = mixc(c, 0xcbb89c, 0.8 * scarK(z, p[1], 0.32, 1.07, 0.06, 0.86, 0.028));
+    return pie(mulc(c, fur(p)), p, 0);
   }
   function deerBodyInto(b) {
     const P = [], C = [], m = 20, nZ = 26;
     for (let i = 0; i <= nZ; i++) {
       const u = i / nZ, z = lerp(TORSO[0][0], TORSO[TORSO.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45),    /* an den Enden dichter: runde Keulen, runde Brust */ [top, bot, hw] = prof(TORSO, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
       const haunch = 1 - ss(Math.abs(z + 0.36) / 0.16), shoulder = 1 - ss(Math.abs(z - 0.27) / 0.12), elbow = 1 - ss(Math.abs(z - 0.33) / 0.1);
-      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.35, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) + 0.12 * haunch * Math.max(0, -sv) * (1 - Math.abs(sv)) + 0.05 * shoulder * Math.max(0, 1 - Math.abs(sv - 0.2) * 1.5) + 0.1 * elbow * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2, 1]);
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw * LOOK.w, hy, hy, m, 2.35, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) + 0.12 * haunch * Math.max(0, -sv) * (1 - Math.abs(sv)) + 0.05 * shoulder * Math.max(0, 1 - Math.abs(sv - 0.2) * 1.5) + 0.1 * elbow * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2, 1]);
       P.push(R); C.push(R.map((p, j) => torsoCol(p, Math.sin((j / m) * Math.PI * 2), z)));
     }
     return skin(b, P, C, { cap0: true, cap1: true });
@@ -351,7 +372,7 @@ const HUNT = (() => {
     for (let i = 0; i <= n; i++) {
       const t = lerp(t0 || 0, 1, i / n), c = [0, lerp(A[1], B[1], t), lerp(A[2], B[2], t) + Math.sin(t * Math.PI) * 0.03];
       const dz = (B[2] - A[2]) + Math.cos(t * Math.PI) * 0.03 * Math.PI, dy = B[1] - A[1], l = Math.hypot(dy, dz), V = [0, -dz / l, dy / l];
-      const [hw, hF, hB] = prof(NECK, t), mane = 0.34 * Math.sin(Math.PI * Math.min(1, t / 0.78)) * (t < 0.12 ? t / 0.12 : 1);
+      const [hw0, hF0, hB0] = prof(NECK, t), hw = hw0 * LOOK.neck, hF = hF0 * LOOK.neck, hB = hB0 * LOOK.neck, mane = 0.34 * LOOK.mane * Math.sin(Math.PI * Math.min(1, t / 0.78)) * (t < 0.12 ? t / 0.12 : 1);
       const R = ring(c, [1, 0, 0], V, hw, hF, hB, m, 2.0, (j, cu, sv) => [1, sv > 0 ? 1 + Math.pow(sv, 2) * mane * (0.7 + 0.6 * hsh(i, j, 3)) : 1 - 0.04 * Math.pow(-sv, 3)]);
       P.push(R);
       C.push(R.map((p, j) => {
@@ -359,7 +380,7 @@ const HUNT = (() => {
         let c0 = mixc(DEER.nape, DEER.mane, ss((sv + 0.25) / 0.6));
         if (sv > 0.3) c0 = mixc(c0, DEER.maneL, hsh(i, j, 5) * 0.55 * Math.min(1, mane * 3));          /* hellere Haarspitzen in der Mähne */
         c0 = mixc(c0, mixc(DEER.coat, DEER.back, 0.35), ss((0.22 - t) / 0.12) * 0.75);                /* am Ansatz in die Decke übergehen */
-        return mulc(c0, fur(p, 1.3));
+        return pie(mulc(c0, fur(p, 1.3)), [p[0], p[1] + 1, p[2] + 0.4], 0);
       }));
     }
     return skin(b, P, C, { cap0: true, cap1: true });
@@ -380,9 +401,13 @@ const HUNT = (() => {
     c = mixc(c, DEER.ring, (1 - ss((de - 0.018) / 0.02)) * 0.8);                   /* heller Augenring */
     const dg = Math.hypot(Math.abs(p[0]) - 0.066, p[1] - 0.032, p[2] - 0.2);
     c = mixc(c, DEER.gland, 1 - ss((dg - 0.006) / 0.014));                         /* Tränengrube vor dem Auge */
+    /* v200: alte Hirsche werden im Gesicht grau – um Äser und Augen am stärksten */
+    if (LOOK.old) c = mixc(c, 0xa59a8e, LOOK.old * (0.35 + 0.45 * ss((z - 0.16) / 0.16)) * (1 - ss((sv - 0.6) / 0.3) * 0.4) * (1 - ss((z - 0.39) / 0.03)));
+    /* Schecke: helle Blesse über den Nasenrücken */
+    if (LOOK.pied) c = mixc(c, PIED, LOOK.pied * (1 - ss(Math.abs(p[0]) / 0.03 - 0.4)) * ss((sv - 0.2) / 0.3) * ss((z - 0.04) / 0.06) * (1 - ss((z - 0.38) / 0.04)));
     return mulc(c, fur(p, 0.8));
   }
-  function deerHeadInto(b, P_, sc, vr) {
+  function deerHeadInto(b, P_, sc, vr, F) {
     const P = [], C = [], m = 16, nZ = 20;
     for (let i = 0; i <= nZ; i++) {
       const z = lerp(HEAD[0][0], HEAD[HEAD.length - 1][0], i / nZ), [top, bot, hw] = prof(HEAD, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
@@ -398,22 +423,26 @@ const HUNT = (() => {
       ell(b, [s * (DEYE[0] - 0.002), DEYE[1] + 0.013, DEYE[2] - 0.002], [0.018, 0.007, 0.022], DEER.brow, 7, 4);
       ell(b, [s * 0.021, -0.03, 0.455], [0.008, 0.012, 0.006], 0x0b0806, 6, 4);                                       /* Nüstern */
     });
-    antlersInto(b, P_, sc, vr);
+    antlersInto(b, P_, sc, vr, F);
     return b;
   }
-  function deerHead(P, sc, vr) { G3.seed(5102 + P); return deerHeadInto(MB(), P, sc, vr); }
+  function deerHead(P, sc, vr, F) { G3.seed(5102 + P); return deerHeadInto(MB(), P, sc, vr, F); }
 
   /* Geweih v120: Rosenstock, Rose, Stange in Leierform (aus, zurück, oben wieder nach vorn), Augsprosse, ab 10 Enden die Eissprosse,
      Mittelsprosse, oben Gabel oder Krone (12-Ender: 3 Kronenenden, 14: 4, 16: 5). Jede Stange ist etwas anders – fester Seed aus
      Enden, Güte und Variante: dasselbe Stück sieht im Revier und an der Wand immer gleich aus. */
   const ANT = { base: 0x4c3a28, mid: 0x6a5136, tip: 0xeadfc6, burr: 0x45352a, ped: 0x6b4a32 };
   function antlerPlan(P) { const n = Math.max(3, Math.round(P / 2)), t = ["aug"]; if (n >= 5) t.push("eis"); t.push("mittel"); return { n, tines: t, crown: n - t.length - 1 }; }
-  function antlersInto(b, P, sc, vr) {
-    const plan = antlerPlan(P), r = mulberry(P * 131 + (vr || 0) * 977 + Math.round((sc || 0) * 40) * 7 + 11);
+  /* v200: F = Geweihform des Stücks (aus seinen Merkmalen): spread = Auslage, extra = Seite mit einer Krone mehr (ungerade),
+     aug = Seite mit doppelter Augsprosse, abn = Seite mit abnormer, nach unten hinten wachsender Sprosse */
+  function antlersInto(b, P, sc, vr, F) {
+    F = F || {};
+    const plan0 = antlerPlan(P), r = mulberry(P * 131 + (vr || 0) * 977 + Math.round((sc || 0) * 40) * 7 + 11);
     const Ls0 = 0.5 + 0.36 * clamp(sc, 0, 1), r0 = 0.027 + 0.016 * clamp(sc, 0, 1);
     const acol = (t, f) => { const k = hsh(t * 9.1, f || 0, 2.7); let c = t < 0.5 ? mixc(ANT.base, ANT.mid, t / 0.5) : mixc(ANT.mid, ANT.tip, ss((t - 0.62) / 0.34)); return mulc(c, 0.88 + k * 0.24); };
     [-1, 1].forEach(s => {
-      const Ls = Ls0 * (1 + (r() - 0.5) * 0.08), spread = 1 + (r() - 0.5) * 0.14, lean = (r() - 0.5) * 0.08;
+      const plan = F.extra === s ? { n: plan0.n + 1, tines: plan0.tines, crown: plan0.crown + 1 } : plan0;
+      const Ls = Ls0 * (1 + (r() - 0.5) * 0.08), spread = (1 + (r() - 0.5) * 0.14) * (F.spread || 1), lean = (r() - 0.5) * 0.08;
       const p0 = [s * 0.045, 0.094, 0.032], K = [[0, 0, 0], [0.19, 0.2, -0.19], [0.41, 0.47, -0.31], [0.5 + lean, 0.75, -0.24], [0.43 + lean, 0.98, 0.0]]
         .map(q => [p0[0] + s * q[0] * spread * Ls, p0[1] + q[1] * Ls, p0[2] + q[2] * Ls]);
       const pts = curve(K, 11), rad = pts.map((_, i) => { const u = i / 10; return u > 0.92 ? r0 * 0.4 * (1 - (u - 0.92) / 0.08) + 0.0035 : r0 * (1 - 0.52 * u); });
@@ -425,9 +454,12 @@ const HUNT = (() => {
       /* Sprossen */
       const tines = [];
       plan.tines.forEach(k => tines.push(k === "aug" ? { u: 0.07, d: [0.16, 0.32, 0.93], l: 0.36 } : k === "eis" ? { u: 0.15, d: [0.24, 0.44, 0.86], l: 0.27 } : { u: 0.47, d: [0.34, 0.2, 0.92], l: 0.31 }));
-      const CR = [{ u: 0.79, d: [0.4, 0.72, 0.56], l: 0.22 }, { u: 0.84, d: [-0.34, 0.78, 0.52], l: 0.2 }, { u: 0.88, d: [0.6, 0.7, -0.3], l: 0.19 }, { u: 0.92, d: [-0.2, 0.72, -0.62], l: 0.17 }];
+      const CR = [{ u: 0.79, d: [0.4, 0.72, 0.56], l: 0.22 }, { u: 0.84, d: [-0.34, 0.78, 0.52], l: 0.2 }, { u: 0.88, d: [0.6, 0.7, -0.3], l: 0.19 }, { u: 0.92, d: [-0.2, 0.72, -0.62], l: 0.17 },
+        { u: 0.95, d: [0.15, 0.95, 0.25], l: 0.15 }];
       if (plan.crown === 1) tines.push({ u: 0.84, d: [0.1, 0.7, 0.7], l: 0.21 });
-      else for (let k = 0; k < plan.crown; k++) tines.push(CR[k]);
+      else for (let k = 0; k < Math.min(plan.crown, CR.length); k++) tines.push(CR[k]);
+      if (F.aug === s) tines.push({ u: 0.12, d: [0.3, 0.42, 0.86], l: 0.3 });                     /* doppelte Augsprosse */
+      if (F.abn === s) tines.push({ u: 0.36, d: [0.55, -0.45, -0.7], l: 0.26 });                  /* abnorme Sprosse: nach unten hinten */
       tines.forEach((T, ti) => {
         const q = at3(pts, T.u), rb = r0 * (1 - 0.52 * T.u) * 0.84, l = Ls * T.l * (1 + (r() - 0.5) * 0.3);
         const d = v3n([s * T.d[0] + (r() - 0.5) * 0.16, T.d[1] + (r() - 0.5) * 0.12, T.d[2] + (r() - 0.5) * 0.12]);
@@ -468,7 +500,7 @@ const HUNT = (() => {
   }
   function deerUpper(front) {
     const b = MB();
-    legInto(b, front ? LEG_FU : LEG_HU, (p, y) => mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), false);
+    legInto(b, front ? LEG_FU : LEG_HU, (p, y) => pie(mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), false);
     if (!front) ell(b, [0, -0.37, -0.05], [0.022, 0.03, 0.022], DEER.leg, 6, 4);                  /* Fersenhöcker am Sprunggelenk */
     return b;
   }
@@ -476,7 +508,7 @@ const HUNT = (() => {
     const b = MB();
     legInto(b, LEG_LO, (p, y) => {
       if (y < -0.388) return mulc(RGB(DEER.hoof), 1 + 0.6 * ss((-0.388 - y) / 0.05) * 0.3);                              /* Schalen */
-      return mulc(mixc(DEER.leg, DEER.legD, ss((-y - 0.28) / 0.08)), fur(p, 0.6));
+      return pie(mulc(mixc(DEER.leg, DEER.legD, ss((-y - 0.28) / 0.08)), fur(p, 0.6)), [p[0], p[1] + 0.4, p[2]], ss((-y - 0.22) / 0.1) * 0.6);   /* Schecke: weiße Fesseln */
     }, true);
     ell(b, [0, -0.335, -0.03], [0.012, 0.014, 0.012], DEER.hoof, 6, 4);                              /* Afterklauen */
     void front;
@@ -501,7 +533,7 @@ const HUNT = (() => {
     let c = mixc(BOAR.coat, BOAR.coatD, ss((sv - 0.5) / 0.42));
     c = mixc(c, BOAR.belly, ss((-sv - 0.3) / 0.5));
     c = mixc(c, BOAR.coatL, g * g * (k == null ? 0.7 : k) * (1 - ss((sv - 0.6) / 0.3)));
-    return mulc(c, (0.93 + 0.14 * g2) * fur(p, 1.4));
+    return pie(mulc(c, (0.93 + 0.14 * g2) * fur(p, 1.4)), [p[0] * 1.3, p[1] * 1.3 + 0.7, p[2] * 1.3], 0);
   }
   const boarHair = (p, sv, k) => boarCoat(p, sv || 0, k);
   const BOAR_T = [[-0.535, 0.555, 0.475, 0.03], [-0.51, 0.615, 0.4, 0.1], [-0.455, 0.65, 0.33, 0.146], [-0.37, 0.668, 0.305, 0.166], [-0.29, 0.678, 0.345, 0.17], [-0.2, 0.69, 0.39, 0.172],
@@ -526,6 +558,7 @@ const HUNT = (() => {
         const sv = Math.sin((j / m) * Math.PI * 2);
         let c = boarCoat(p, sv);
         c = mixc(c, BOAR.ridge, ss((sv - 0.78) / 0.18) * crestH(z) * 0.85);
+        if (LOOK.scar && Math.sign(p[0]) === LOOK.sd) c = mixc(c, 0x9c8c7a, 0.75 * scarK(z, p[1], 0.3, 0.8, 0.02, 0.58, 0.026));    /* v200: Narbe vom Kampf */
         return mixc(c, BOAR.leg, ss((-sv - 0.62) / 0.3) * Math.max(sh, ham) * 0.55);          /* zu den Läufen hin dunkler */
       }));
     }
@@ -551,7 +584,7 @@ const HUNT = (() => {
   const BLEG_FU = [[0.02, 0.058, 0.07, 0], [-0.06, 0.05, 0.062, 0.004], [-0.13, 0.035, 0.043, 0.004], [-0.178, 0.03, 0.036, 0]];
   const BLEG_HU = [[0.02, 0.062, 0.084, -0.01], [-0.07, 0.05, 0.066, -0.014], [-0.135, 0.033, 0.046, -0.022], [-0.178, 0.028, 0.04, -0.026]];
   const BLEG_LO = [[0.012, 0.031, 0.036, 0], [-0.03, 0.027, 0.031, 0], [-0.11, 0.022, 0.026, 0.002], [-0.14, 0.025, 0.03, 0.006], [-0.158, 0.023, 0.028, 0.013], [-0.172, 0.022, 0.028, 0.019]];
-  const boarLegCol = (p, k) => mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5));
+  const boarLegCol = (p, k) => pie(mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)), [p[0] * 1.3, p[1] * 1.3 + 0.4, p[2] * 1.3], 0.25);
   function boarUpperInto(b, front) {
     legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.02) / 0.12)), true);
     if (!front) ell(b, [0, -0.168, -0.056], [0.02, 0.026, 0.02], BOAR.leg, 6, 4);          /* Fersenhöcker */
@@ -589,12 +622,13 @@ const HUNT = (() => {
   }
   /* Teller (Ohren): aufrecht, spitz zulaufend, nach vorn offen (Becher), außen Schwarte, innen dunkel mit hellen Haarrändern, Haarpinsel an der Spitze */
   function boarEarInto(b, s) {
-    const P = [], C = [], n = 7, m = 10, L = 0.14;
+    /* v200: Schlitzohr – der Teller ist oben eingerissen: kürzer, stumpf, mit Kerbe statt Spitze und Haarpinsel */
+    const torn = LOOK.torn && s === LOOK.sd, P = [], C = [], n = 7, m = 10, L = torn ? 0.105 : 0.14;
     for (let i = 0; i <= n; i++) {
-      const t = i / n, w = 0.05 * Math.pow(1 - t, 0.7) + 0.003, d = 0.012 * (1 - t) + 0.003, R = [], Cc = [];
+      const t = i / n, w = torn ? 0.05 * Math.pow(1 - t * 0.62, 0.7) + 0.003 : 0.05 * Math.pow(1 - t, 0.7) + 0.003, d = 0.012 * (1 - t) + 0.003, R = [], Cc = [];
       for (let j = 0; j < m; j++) {
         const a = (j / m) * Math.PI * 2, cu = Math.cos(a), sv = Math.sin(a), cup = 0.016 * (1 - t) * cu * cu;
-        const p = [cu * w, t * L, 0.014 * t * t + sv * d + cup];
+        const p = [cu * w, t * L - (torn && i === n ? 0.022 * Math.max(0, 1 - Math.abs(cu) * 1.6) : 0), 0.014 * t * t + sv * d + cup];
         R.push(p);
         const rim = Math.abs(cu) > 0.8 ? 1 : 0;
         Cc.push(sv > 0.2 && !rim ? mixc(BOAR.earIn, BOAR.beard, hsh(i, j, 31) * 0.35) : boarCoat(p, 0.2, 0.7 + rim * 0.3));
@@ -602,8 +636,7 @@ const HUNT = (() => {
       P.push(R); C.push(Cc);
     }
     skin(b, P, C, { cap0: true, cap1: true });
-    bristle(b, [0, L * 0.9, 0.012], [0, 1, 0.25], 0.035, 0.008, BOAR.coatD, BOAR.coatL);
-    void s;
+    if (!torn) bristle(b, [0, L * 0.9, 0.012], [0, 1, 0.25], 0.035, 0.008, BOAR.coatD, BOAR.coatL);
     return b;
   }
   /* Waffen: Gewehre aus dem Unterkiefer nach außen, oben und hinten gebogen; Haderer aus dem Oberkiefer kurz nach außen und oben.
@@ -653,7 +686,8 @@ const HUNT = (() => {
      bis violett schillernder Hals mit weißem Ring, rote Rosen (Gesichtslappen), Federohren. Ständer (Beine) als eigene Knoten,
      damit sie im Flug und beim erlegten Stück angezogen sind. Trefferzonen unverändert. */
   const PHC = { copper: 0xc4672c, copperD: 0x8f3f1b, gold: 0xe0aa52, scale: 0x2c1b10, rump: 0x7f8c74, belly: 0x5a3720, wing: 0xc9a46c, wingD: 0x6f5232,
-    neck: 0x1c5a52, neckB: 0x23407a, head: 0x2c2a5e, ring: 0xf4f1e8, red: 0xd2281e, redD: 0x9c1a14, beak: 0xdcc58b, leg: 0x8d8379, eye: 0xd9b23a };
+    neck: 0x1c5a52, neckB: 0x23407a, head: 0x2c2a5e, ring: 0xf4f1e8, red: 0xd2281e, redD: 0x9c1a14, beak: 0xdcc58b, leg: 0x8d8379, eye: 0xd9b23a,
+    fA: 0xc29a5c, fB: 0x9a7a45, fBar: 0x2e2216, fIn: 0x4a3520 };                                   /* v200: Federfarben des Stoßes (vorher fest im Code) */
   const PH_T = [[-0.215, 0.272, 0.238, 0.02], [-0.19, 0.305, 0.185, 0.06], [-0.12, 0.33, 0.152, 0.09], [-0.03, 0.344, 0.138, 0.1], [0.06, 0.348, 0.14, 0.097],
     [0.13, 0.342, 0.16, 0.082], [0.18, 0.328, 0.192, 0.058], [0.21, 0.31, 0.23, 0.028]];
   function phCol(p, sv, z) {
@@ -679,7 +713,7 @@ const HUNT = (() => {
       (p) => { let c = mixc(PHC.wing, PHC.wingD, Math.sin(p[2] * 70) > 0.45 ? 0.55 : 0); c = mixc(c, PHC.wingD, ss((-p[2] - 0.06) / 0.06) * 0.7); return mulc(c, 0.94 + 0.12 * hsh(p[0], p[1], p[2])); }, 12, 8)));
     /* Stoß: lange gebänderte Schwanzfedern im schmalen Fächer, schräg nach hinten oben */
     [[-2, 0.3], [-1, 0.36], [0, 0.44], [1, 0.4], [2, 0.32], [0.5, 0.25]].forEach(([f, L], i) =>
-      b.at({ y: 0.292, z: -0.19, rx: -1.25 - Math.abs(f) * 0.03, rz: f * 0.07 }, q => featherInto(q, L, 0.021, f * 0.03, i * 3 + 2)));
+      b.at({ y: 0.292, z: -0.19, rx: -1.25 - Math.abs(f) * 0.03, rz: f * 0.07 }, q => featherInto(q, L * LOOK.tail, 0.021, f * 0.03, i * 3 + 2)));
     return b;
   }
   /* Ständer: Lauf mit Sporn und drei Zehen nach vorn, eine nach hinten */
@@ -695,7 +729,7 @@ const HUNT = (() => {
     const b = MB();
     /* Hals: unten weißer Ring, darüber grün, oben blau-violett schillernd */
     tube(b, [[0, -0.03, -0.02], [0, 0.03, -0.006], [0, 0.085, 0.006], [0, 0.125, 0.014]], [0.036, 0.03, 0.025, 0.024], [RGB(PHC.neck), RGB(PHC.neck), RGB(PHC.neckB), RGB(PHC.head)], 10, { cap0: true });
-    ell(b, [0, 0.008, -0.01], [0.037, 0.011, 0.037], PHC.ring, 12, 4);
+    if (!LOOK.noRing) ell(b, [0, 0.008, -0.01], [0.037, 0.011, 0.037], PHC.ring, 12, 4);          /* v200: ohne Halsring (Böhmischer und dunkler Fasan) */
     ell(b, [0, 0.148, 0.022], [0.029, 0.03, 0.042], (p, y) => mixc(PHC.head, PHC.neck, ss((-y + 0.2) / 0.8) * 0.5), 10, 7);
     [-1, 1].forEach(s => {
       ell(b, [s * 0.019, 0.145, 0.036], [0.014, 0.021, 0.025], (p, y) => mixc(PHC.red, PHC.redD, ss((-y + 0.3) / 0.7) * 0.5), 8, 6);    /* Rosen */
@@ -752,18 +786,167 @@ const HUNT = (() => {
     const e = score + Z.bonus;
     return Math.min(e >= 0.9 ? 4 : e >= 0.72 ? 3 : e >= 0.5 ? 2 : 1, Z.cap);
   }
-  function traits(k, s) {
+  function traits(k, s, gn) {
     if (k === "hirsch") {
-      const P = 2 * Math.round(3 + s * 5);
-      return { P, kg: Math.round(92 + s * 115), name: s < 0.38 ? "Junger Rothirsch" : s < 0.68 ? "Rothirsch" : s < 0.86 ? "Kapitaler Rothirsch" : "Mächtiger Rothirsch", troph: P + "-Ender Geweih" };
+      const P = 2 * Math.round(3 + s * 5), odd = !!(gn && has(gn, "ungerade")), Pl = odd ? P + 2 : P;
+      const base = s < 0.38 ? "Junger Rothirsch" : s < 0.68 ? "Rothirsch" : s < 0.86 ? "Kapitaler Rothirsch" : "Mächtiger Rothirsch";
+      return { P, Pl, odd, kg: Math.round((92 + s * 115) * bodyK(gn)), name: nameOf(k, gn, base), troph: (odd ? "Ungerader " : "") + Pl + "-Ender" + (odd ? "" : " Geweih") };
     }
     if (k === "keiler") {
-      const cm = Math.round(8 + s * 16);
-      return { cm, kg: Math.round(55 + s * 112), name: s < 0.35 ? "Junger Keiler" : s < 0.7 ? "Keiler" : s < 0.88 ? "Kapitaler Keiler" : "Hauptschwein", troph: "Keilerwaffen · " + cm + " cm" };
+      const cm = Math.round(8 + s * 16), base = s < 0.35 ? "Junger Keiler" : s < 0.7 ? "Keiler" : s < 0.88 ? "Kapitaler Keiler" : "Hauptschwein";
+      return { cm, kg: Math.round((55 + s * 112) * bodyK(gn)), name: nameOf(k, gn, base), troph: "Keilerwaffen · " + cm + " cm" };
     }
-    const cm = Math.round(36 + s * 26);
-    return { cm, kg: Math.round((0.95 + s * 0.65) * 10) / 10, name: s < 0.7 ? "Fasanenhahn" : "Prächtiger Fasanenhahn", troph: (s >= 0.7 ? "Pracht-" : "") + "Fasanenfeder · " + cm + " cm" };
+    const cm = Math.round(36 + s * 26) + (gn && has(gn, "langstoss") ? 6 : 0), base = s < 0.7 ? "Fasanenhahn" : "Prächtiger Fasanenhahn";
+    return { cm, kg: Math.round((0.95 + s * 0.65) * 10) / 10, name: nameOf(k, gn, base), troph: (s >= 0.7 ? "Pracht-" : "") + "Fasanenfeder · " + cm + " cm" };
   }
+  /* ============================ v200: Identität jedes Stücks ============================
+     Jedes Stück bekommt beim Erscheinen einen Erbgut-Wert g (ganze Zahl). Aus g und der Güte s folgen – immer gleich, ohne Zufall
+     beim Zeichnen – Decke, Altersklasse, Körperbau, Besonderheiten am Geweih bzw. an Teller und Stoß, Narben und die Seltenheit.
+     Gespeichert wird im Datensatz der Trophäe die kurze Fassung gn (Schlüssel, keine Farben). Revier, Bergung, Trophäenwand,
+     Jagdbuch und Schautafel zeichnen daraus dasselbe Stück. Alte Datensätze ohne gn: klassisches Aussehen (g = 0).
+
+     Häufigkeiten (je erscheinendem Stück, siehe COATS/FORMS; geprüft in tests/hunt.test.js):
+       Decke Hirsch: rotbraun 55 %, dunkel 17 %, hell 14 %, graubraun 10 %, Schecke 3,2 %, weiß 0,8 %
+       Schwarte Keiler: graubraun 56 %, schwarz 20 %, rötlich 15 %, silbergrau 6 %, Schecke 2,5 %, weiß 0,5 %
+       Fasan: Jagdfasan 74 %, ohne Halsring 18 %, dunkel 6,8 %, weiß 1,2 %
+       Hirsch: weite Auslage 10 %, enge 8 %; ungerade 14 %, doppelte Augsprosse 4 %, abnorme Sprosse 2,5 %; alter Recke 6 % (nur bei
+       mittlerer Güte), Kampfnarbe 10 % (reife und alte); Keiler: Narbe 10 % (ab mittelalt), Schlitzohr 8 %; Fasan: langer Stoß 10 %
+     Seltenheit aus Punkten (Decke/Merkmal je 0–5, Güte ab 0,86 +1, ab 0,95 +2): 0 gewöhnlich, 1 auffällig, 2 selten, ab 3 außergewöhnlich
+     (nur mit einem Merkmal ab 3 Punkten, oder ab 4 Punkten mit einem Merkmal ab 2 – sonst selten), legendär = weiße Decke oder ab 6 Punkten mit deutlich sichtbarem Merkmal
+     (gescheckte Decke, dunkler Fasan, abnorme oder doppelte Sprosse, alter Recke). So ist jedes legendäre Stück wirklich anders anzusehen.
+     Ergebnis der Simulation (200 000 Stücke je Art, tests/hunt.test.js prüft die Grenzen): siehe AENDERUNGEN.md v200. */
+  const RAR = [{ n: "Gewöhnlich", c: "#7d8792" }, { n: "Auffällig", c: "#3b9a4c" }, { n: "Selten", c: "#2d7fd2" }, { n: "Außergewöhnlich", c: "#8b4fd6" }, { n: "Legendär", c: "#d99a12" }];
+  const RAR_V = [1, 1.1, 1.3, 1.8, 3];                    /* Aufschlag auf den Sammlerwert je Seltenheit */
+  /* [Schlüssel, Häufigkeit in %, Punkte, Name, Hinweis solange unentdeckt, Farben] */
+  const COATS = {
+    hirsch: [
+      ["rot", 55, 0, "Rotbraune Decke", "", {}],
+      ["dunkel", 17, 0, "Dunkle Decke", "Manche Hirsche tragen eine fast schokoladenbraune Decke.",
+        { coat: 0x6e4329, back: 0x43281a, mane: 0x33221a, maneL: 0x55392a, nape: 0x452b1d, face: 0x6a4a31, brow: 0x523726, leg: 0x45301f, belly: 0xa88f72 }],
+      ["hell", 14, 1, "Helle, fahle Decke", "Ab und zu zieht ein auffallend heller Hirsch über die Wiese.",
+        { coat: 0xb48557, back: 0x86603e, belly: 0xd6c4a4, mane: 0x6e4f35, maneL: 0x957255, nape: 0x86603f, face: 0xa98260, brow: 0x8a6545, muzzle: 0xb39575, leg: 0x74563c }],
+      ["grau", 10, 1, "Graubraune Decke", "Ein Hirsch mit graubrauner Decke wurde noch nicht dokumentiert.",
+        { coat: 0x8a7766, back: 0x5f5347, belly: 0xc6baa8, mane: 0x4a3f36, maneL: 0x706457, nape: 0x5f5248, face: 0x877768, brow: 0x6b5d51, muzzle: 0x9b8c7e, leg: 0x534638, rump: 0xddd1bd }],
+      ["schecke", 3.2, 3, "Schecke (weiß gefleckt)", "Gelegentlich trägt ein Stück große helle Flecken – selten genug, dass man im Dorf davon erzählt.", {}],
+      ["weiss", 0.8, 5, "Weiße Decke", "Unter alten Förstern geht die Geschichte von einem weißen Hirsch …",
+        { coat: 0xede7db, back: 0xe0d8c8, belly: 0xf6f2ea, mane: 0xd6ccbc, maneL: 0xefe9de, nape: 0xded5c6, rump: 0xf8f4ec, rumpB: 0xd6ccbb, face: 0xeae3d6, brow: 0xdad1c2,
+          muzzle: 0xe6ddd0, chin: 0xf6f1e8, lip: 0x9a8a80, nose: 0x6e5f5a, ring: 0xf3eee6, gland: 0x8c7c72, leg: 0xe2dacc, legD: 0xcfc5b6, hoof: 0x3a302a, earIn: 0xf2e0d6, earRim: 0xcdc2b2 }]
+    ],
+    keiler: [
+      ["graubraun", 56, 0, "Graubraune Schwarte", "", {}],
+      ["schwarz", 20, 0, "Schwarze Schwarte", "Manche Keiler sind fast schwarz.", { coat: 0x3b322a, coatL: 0x6e6255, coatD: 0x221c17, belly: 0x2c251f, ridge: 0x15110d, beard: 0x6e6458, leg: 0x2a221b }],
+      ["rot", 15, 1, "Rötliche Schwarte", "Ein Keiler mit rötlich-brauner Schwarte wurde noch nicht dokumentiert.", { coat: 0x7b5a3c, coatL: 0xbb9672, coatD: 0x4a3524, belly: 0x533f2d, ridge: 0x2e2116, beard: 0xb3977b }],
+      ["silber", 6, 2, "Silbergraue Schwarte", "Sehr alte Keiler werden manchmal silbergrau.", { coat: 0x706b64, coatL: 0xc6c1b8, coatD: 0x3f3b36, belly: 0x4b4741, ridge: 0x2a2622, beard: 0xd8d2c8 }],
+      ["schecke", 2.5, 3, "Schecke (weiß gefleckt)", "Ganz selten hat ein Keiler weiße Flecken in der Schwarte.", {}],
+      ["weiss", 0.5, 5, "Weiße Schwarte", "Ein weißer Keiler? Die Jäger am Stammtisch schwören, dass es ihn gibt.",
+        { coat: 0xe4ded3, coatL: 0xf6f2ec, coatD: 0xcdc4b7, belly: 0xd6cec2, ridge: 0xbcb1a2, leg: 0xd4cabc, legD: 0xbbb0a1, beard: 0xf2ede6, snout: 0xc9aaa2,
+          disc: 0xdba89c, discD: 0x6c4c46, lip: 0x9c7c74, hoof: 0x4a3a32, hoofL: 0x6a5a50, earIn: 0xd9b9af }]
+    ],
+    fasan: [
+      ["ring", 74, 0, "Jagdfasan mit Halsring", "", {}],
+      ["ohne", 18, 1, "Ohne Halsring", "Nicht jeder Hahn trägt den weißen Halsring.", {}],
+      ["dunkel", 6.8, 3, "Dunkler Fasan", "Es gibt Hähne, die fast schwarzgrün schillern.",
+        { copper: 0x3c3428, copperD: 0x272019, gold: 0x5f5a3f, scale: 0x0f0c08, rump: 0x3d4b3f, belly: 0x251d15, wing: 0x605646, wingD: 0x2f2820, neck: 0x15362f, neckB: 0x1d2a52, head: 0x1c1a40,
+          fA: 0x5a4c38, fB: 0x3e3326, fBar: 0x15100b, fIn: 0x2a2018 }],
+      ["weiss", 1.2, 5, "Weißer Fasan", "Ein ganz weißer Hahn – davon hat Bruno bisher nur gehört.",
+        { copper: 0xf1ede4, copperD: 0xe3ddd0, gold: 0xf7f3eb, scale: 0xd9d1c3, rump: 0xede9df, belly: 0xe7e0d3, wing: 0xf4f0e7, wingD: 0xdad3c5, neck: 0xefebe3, neckB: 0xe8e4dc,
+          head: 0xf1ede5, ring: 0xffffff, leg: 0xb9ab9b, fA: 0xf3eee4, fB: 0xe2dbcd, fBar: 0xc9bfae, fIn: 0xd7cfc0 }]
+    ]
+  };
+  /* Besonderheiten: [Schlüssel, Punkte, Name, Hinweis, Gruppe] */
+  const FORMS = {
+    hirsch: [["weit", 1, "Weite Auslage", "Die Stangen mancher Hirsche stehen besonders weit auseinander.", "Geweih"], ["eng", 0, "Enge Auslage", "Es gibt auch Geweihe mit eng stehenden Stangen.", "Geweih"],
+      ["ungerade", 1, "Ungerades Geweih", "Nicht immer tragen beide Stangen gleich viele Enden.", "Geweih"], ["doppelaug", 2, "Doppelte Augsprosse", "Eine Sprosse über dem Auge kann auch doppelt wachsen.", "Geweih"],
+      ["abnorm", 3, "Abnorme Sprosse", "Manchmal wächst eine Sprosse in eine ganz falsche Richtung.", "Geweih"],
+      ["recke", 2, "Alter Recke (zurückgesetzt)", "Eine besonders alte Ausprägung dieser Tierart wurde noch nicht dokumentiert.", "Alter"], ["narbe", 1, "Kampfnarbe", "Reife Hirsche tragen manchmal Spuren der Brunftkämpfe.", "Körper"]],
+    keiler: [["narbe", 1, "Kampfnarbe", "Ältere Keiler tragen Narben von Kämpfen.", "Körper"], ["schlitz", 1, "Schlitzohr", "Ein eingerissener Teller verrät einen alten Kämpfer.", "Körper"]],
+    fasan: [["langstoss", 1, "Langer Stoß", "Manche Hähne haben ungewöhnlich lange Schwanzfedern.", "Gefieder"]]
+  };
+  const AGES = { hirsch: ["jung", "mittelalt", "reif", "alt"], keiler: ["jung", "mittelalt", "reif", "alt"], fasan: ["jung", "ausgewachsen"] };
+  const AGE_HINT = { hirsch: ["", "", "", "Alte Hirsche erkennt man am grauen Gesicht und der schweren Mähne."], keiler: ["", "", "", "Alte Keiler bekommen einen hellen, grauen Bart."], fasan: ["", ""] };
+  const has = (gn, f) => !!(gn && gn.f && gn.f.indexOf(f) >= 0);
+  const coatOf = (k, c) => COATS[k].find(x => x[0] === c) || COATS[k][0];
+  const formOf = (k, f) => (FORMS[k] || []).find(x => x[0] === f);
+  const bodyK = gn => gn ? [0.97, 1, 1.03][(gn.w || 0) + 1] : 1;
+  function ageOf(k, s, ar) {
+    if (k === "fasan") return s < 0.45 ? 0 : 1;
+    let a = s < 0.36 ? 0 : s < 0.62 ? 1 : s < 0.86 ? 2 : 3;
+    if (ar != null) { if (ar < 0.12 && a > 0) a--; else if (ar > 0.9 && a < 3 && s > 0.5) a++; }
+    return a;
+  }
+  function genes(k, s, g) {
+    const gn = { v: 1, g: g || 0, c: COATS[k][0][0], a: ageOf(k, s), w: 0, f: [], sd: 1, ps: 0 };
+    if (g) {
+      const r = mulberry((g | 0) ^ ({ hirsch: 0x51a7, keiler: 0x7a31, fasan: 0x2f19 }[k] || 1));
+      let x = r() * 100;
+      for (const C of COATS[k]) { if (x < C[1]) { gn.c = C[0]; break; } x -= C[1]; }
+      gn.sd = r() < 0.5 ? -1 : 1; gn.ps = Math.floor(r() * 8);
+      const wr = r(); gn.w = wr < 0.22 ? -1 : wr > 0.78 ? 1 : 0;
+      gn.a = ageOf(k, s, r());
+      const r1 = r(), r2 = r() * 100, r3 = r(), r4 = r();
+      if (k === "hirsch") {
+        if (r1 < 0.1) gn.f.push("weit"); else if (r1 < 0.18) gn.f.push("eng");
+        if (r2 < 2.5) gn.f.push("abnorm"); else if (r2 < 6.5) gn.f.push("doppelaug"); else if (r2 < 20.5) gn.f.push("ungerade");
+        if (r3 < 0.06 && s >= 0.4 && s < 0.8) { gn.f.push("recke"); gn.a = 3; }
+        if (gn.a >= 2 && r4 < 0.1) gn.f.push("narbe");
+      } else if (k === "keiler") {
+        if (gn.a >= 1 && r1 < 0.1) gn.f.push("narbe");
+        if (r3 < 0.08) gn.f.push("schlitz");
+      } else if (r1 < 0.1) gn.f.push("langstoss");
+    }
+    const C = coatOf(k, gn.c), fp = gn.f.reduce((t, f) => t + (formOf(k, f) ? formOf(k, f)[1] : 0), 0), qp = s >= 0.95 ? 2 : s >= 0.86 ? 1 : 0;
+    /* außergewöhnlich nur mit einem starken Merkmal: eines mit 3 Punkten, oder eines mit 2 Punkten und insgesamt 4 */
+    const p = C[2] + fp + qp, top = Math.max(C[2], ...gn.f.map(f => formOf(k, f) ? formOf(k, f)[1] : 0)), vis = C[2] >= 3 || has(gn, "abnorm") || has(gn, "doppelaug") || has(gn, "recke");
+    gn.p = p; gn.r = C[2] >= 5 || (p >= 6 && vis) ? 4 : (p >= 3 && top >= 3) || (p >= 4 && top >= 2) ? 3 : Math.min(p, 2);
+    return gn;
+  }
+  /* Genkurzfassung eines Datensatzes – alte Stücke ohne gn bekommen das klassische Aussehen */
+  const gnOf = r => r.gn && r.gn.v ? r.gn : genes(r.k, r.s, 0);
+  function nameOf(k, gn, base) {
+    if (!gn) return base;
+    if (k === "hirsch") return gn.c === "weiss" ? "Weißer Rothirsch" : gn.c === "schecke" ? "Gescheckter Rothirsch" : has(gn, "recke") ? "Alter Recke" : base;
+    if (k === "keiler") return gn.c === "weiss" ? "Weißer Keiler" : gn.c === "schecke" ? "Gescheckter Keiler" : gn.c === "silber" && gn.a >= 2 ? "Silbergrauer Basse" : base;
+    return gn.c === "weiss" ? "Weißer Fasan" : gn.c === "dunkel" ? "Dunkler Fasanenhahn" : base;
+  }
+  /* Merkmale zum Anzeigen: Decke (falls nicht die übliche), Alter, Besonderheiten – je mit Punkten */
+  function featList(k, gn) {
+    const out = [], C = coatOf(k, gn.c);
+    if (C !== COATS[k][0]) out.push({ key: "c:" + C[0], n: C[3], p: C[2], g: k === "fasan" ? "Gefieder" : "Decke" });
+    gn.f.forEach(f => { const F = formOf(k, f); if (F) out.push({ key: "f:" + f, n: F[2], p: F[1], g: F[4] }); });
+    out.push({ key: "a:" + gn.a, n: AGES[k][gn.a], p: 0, g: "Alter", age: true });
+    return out;
+  }
+  /* Was im Fernglas schon zu sehen ist (Decke, Geweihform, sehr alte Stücke) – Narben und Ohren erst aus der Nähe */
+  const farFeat = (k, gn) => featList(k, gn).filter(F => !F.age && F.p > 0 && !/narbe|schlitz/.test(F.key));
+  /* Aussehen beim Zeichnen: Farben der Art werden für die Dauer des Baus ersetzt, LOOK trägt Bau-Parameter */
+  const LOOK = { w: 1, mane: 1, neck: 1, pied: 0, ps: 0, scar: 0, sd: 1, old: 0, torn: 0, tail: 1, noRing: 0 };
+  const LOOK0 = Object.assign({}, LOOK);
+  const PALS = { hirsch: DEER, keiler: BOAR, fasan: PHC };
+  const PAL0 = { hirsch: Object.assign({}, DEER), keiler: Object.assign({}, BOAR), fasan: Object.assign({}, PHC) };
+  function lookOf(k, gn) {
+    const a = gn.a, L = Object.assign({}, LOOK0, { w: [0.965, 1, 1.035][(gn.w || 0) + 1], ps: gn.ps || 0, sd: gn.sd || 1 });
+    if (k === "hirsch") { L.mane = [0.62, 0.9, 1.08, 1.24][a]; L.neck = [0.92, 0.98, 1.02, 1.06][a]; L.old = [0, 0, 0.16, 0.42][a]; }
+    if (k === "keiler") L.old = [0, 0, 0.15, 0.4][a];
+    if (gn.c === "schecke") L.pied = 1;
+    if (has(gn, "narbe")) L.scar = 1;
+    if (has(gn, "schlitz")) L.torn = 1;
+    if (has(gn, "langstoss")) L.tail = 1.18;
+    if (k === "fasan" && (gn.c === "ohne" || gn.c === "dunkel")) L.noRing = 1;
+    return L;
+  }
+  function withLook(k, gn, fn) {
+    if (!gn || !PALS[k]) return fn();
+    const T = PALS[k], keep = Object.assign({}, LOOK), L = lookOf(k, gn);
+    Object.assign(T, PAL0[k], coatOf(k, gn.c)[5]);
+    if (k === "keiler" && L.old) { T.beard = mixc(T.beard, 0xd6d0c6, L.old * 1.4); T.coatL = mixc(T.coatL, 0xbdb7ad, L.old); }
+    Object.assign(LOOK, L);
+    try { return fn(); } finally { Object.assign(T, PAL0[k]); Object.assign(LOOK, keep); }
+  }
+  /* Schlüssel für Modell-Zwischenspeicher und Bildchen: alles, was das Aussehen ändert */
+  const lookKey = (k, gn) => gn ? [gn.c, gn.w, gn.a, gn.c === "schecke" ? gn.ps : "", has(gn, "narbe") ? "n" + gn.sd : "", has(gn, "schlitz") ? "s" + gn.sd : "", has(gn, "langstoss") ? "l" : ""].join(".") : "std";
+  const antF = gn => gn ? { spread: has(gn, "weit") ? 1.14 : has(gn, "eng") ? 0.88 : 1, extra: has(gn, "ungerade") ? gn.sd : 0, aug: has(gn, "doppelaug") ? gn.sd : 0, abn: has(gn, "abnorm") ? -gn.sd : 0 } : {};
+  const antKey = gn => gn ? gn.f.filter(f => /weit|eng|ungerade|doppelaug|abnorm/.test(f)).join("") + gn.sd : "";
+  const newG = () => 1 + Math.floor(rnd() * 2147483000);
   const trophyId = (k, m) => "tro_" + k + "_" + m;
   function registerItems() {
     if (typeof FITEMS === "undefined") return;
@@ -843,9 +1026,9 @@ const HUNT = (() => {
       P.push(R);
       C.push(R.map((p, j) => {
         const bar = Math.sin(t * L * 80 + seed) > 0.72 ? 1 : 0, edge = Math.abs(Math.cos((j / 6) * Math.PI * 2)) > 0.9;
-        let c0 = mixc(0xc29a5c, 0x9a7a45, t * 0.7);
-        if (bar) c0 = mixc(c0, 0x2e2216, 0.75);
-        if (!edge) c0 = mixc(c0, 0x4a3520, 0.2);
+        let c0 = mixc(PHC.fA, PHC.fB, t * 0.7);
+        if (bar) c0 = mixc(c0, PHC.fBar, 0.75);
+        if (!edge) c0 = mixc(c0, PHC.fIn, 0.2);
         return mulc(c0, 0.92 + 0.16 * hsh(i, j, seed));
       }));
     }
@@ -855,9 +1038,11 @@ const HUNT = (() => {
   const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
   const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
   const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
-  function trophyKey(r) { const T = traits(r.k, r.s); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_v135"; }
-  function trophyBuild(r) {
-    const k = r.k, m = r.m || 1, T = traits(k, r.s), sc = qS(r.s), b = MB();
+  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v200"; }
+  /* v200: das Präparat trägt Decke, Alter, Geweih- bzw. Waffenform und Teller genau dieses Stücks */
+  function trophyBuild(r) { const gn = gnOf(r); return withLook(r.k, gn, () => trophyBuild0(r, gn)); }
+  function trophyBuild0(r, gn) {
+    const k = r.k, m = r.m || 1, T = traits(k, r.s, gn), sc = qS(r.s), b = MB();
     G3.seed(5400 + m);
     if (k === "hirsch") {
       shieldInto(b, { w: 0.6, h: 0.78, m });
@@ -867,7 +1052,7 @@ const HUNT = (() => {
       b.at({ y: -0.06, z: 0.0, ry: 0.22 }, q => q.at({ rx: 0.95 }, n => {
         deerNeckInto(n, 0.18);
         n.at({ y: 0.5, z: 0.22, rx: -0.42 }, h => {
-          deerHeadInto(h, T.P, sc, r.vr || 0);
+          deerHeadInto(h, T.P, sc, r.vr || 0, antF(gn));
           [-1, 1].forEach(s => h.at({ x: s * 0.075, y: 0.08, z: 0.02, ry: s * 0.35, rz: -s * 0.15 }, e => deerEarInto(e, s)));
         });
       }));
@@ -913,7 +1098,8 @@ const HUNT = (() => {
     if (typeof farmInv !== "function") return H.coll;
     Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => {
       const id = trophyId(k, m), have = farmInv(id) || 0, mine = H.coll.filter(r => r.k === k && r.m === m);
-      if (mine.length > have) mine.sort((a, b) => a.s - b.s).slice(0, mine.length - have).forEach(r => H.coll.splice(H.coll.indexOf(r), 1));
+      /* v200: fehlt Lagerware (z. B. am Markt verkauft), geht zuerst das schwächste gewöhnliche Stück – Ehrenplatz und Seltene zuletzt */
+      if (mine.length > have) mine.sort(weakFirst).slice(0, mine.length - have).forEach(r => H.coll.splice(H.coll.indexOf(r), 1));
       else if (mine.length < have) {
         /* Altbestand (vor v120): aus dem Jagdbuch nehmen, was dazu passt – sonst ein Musterstück der Medaille */
         const logs = (H.log || []).filter(L => L.k === k && L.m === m && L.s != null && !H.coll.some(r => r.t === L.t && r.s === L.s));
@@ -925,14 +1111,155 @@ const HUNT = (() => {
     }));
     return H.coll;
   }
+  const weakFirst = (a, b) => (a.pin ? 1 : 0) - (b.pin ? 1 : 0) || gnOf(a).r - gnOf(b).r || a.s - b.s;
   const recOf = u => collSync().find(r => r.u === u);
+  /* Verkauf einzeln an der Wand: Lagerware zum Preis der Medaille, dazu der Seltenheitsaufschlag. Ehrenplatz wird nicht verkauft. */
   function sellRec(u) {
     const H = st(), r = recOf(u);
-    if (!r || typeof farmSell !== "function") return 0;
+    if (!r || r.pin || typeof farmSell !== "function") return 0;
     const i = H.coll.indexOf(r); H.coll.splice(i, 1);
     const got = farmSell(trophyId(r.k, r.m), 1);
     if (!got) { H.coll.splice(i, 0, r); return 0; }
-    return got;
+    const ex = extraOf(r);
+    if (ex > 0) { S.money += ex; if (typeof logMoney === "function") logMoney("farm", "Seltenheitsaufschlag: " + RAR[gnOf(r).r].n + " " + SP[r.k].n, ex); }
+    return got + ex;
+  }
+  /* Ehrenplatz: höchstens drei Stücke, sie hängen an der Schautafel am Hochsitz und sind vor dem Verkauf geschützt */
+  const PIN_MAX = 3;
+  function pinRec(u) {
+    const C = collSync(), r = C.find(x => x.u === u);
+    if (!r) return false;
+    if (r.pin) { delete r.pin; return true; }
+    if (C.filter(x => x.pin).length >= PIN_MAX) return false;
+    r.pin = S.time; return true;
+  }
+
+  /* ====================== v200: Wert, Schussnote, Jagdbuch, Bestleistungen, Aufträge ======================
+     Alles wird aus gespeicherten Werten des Datensatzes berechnet (Güte, Medaille, Erbgut, Treffer, Entfernung, ob das Stück zog,
+     Wind) – einmal hier, Oberfläche und Spielstand lesen dieselben Funktionen. */
+  const r10 = v => Math.round(v / 10) * 10;
+  /* Sammlerwert: Preis der Medaille (Lagerware wie bisher) mal Seltenheitsaufschlag */
+  const valueOf = r => r10(PRICE[r.k][r.m] * RAR_V[gnOf(r).r]);
+  const extraOf = r => valueOf(r) - PRICE[r.k][r.m];
+  /* Schussnote 0,5–5 Sterne: Trefferlage, Entfernung, ziehendes Ziel, Seitenwind; erst krank geschossen kostet 1,5 */
+  const SHOT_Z = { herz: 3, lunge: 2.5, hals: 2, kopf: 1.5, vogel: 3 };
+  function shotOf(o) {
+    const why = [];
+    let v = SHOT_Z[o.zone] != null ? SHOT_Z[o.zone] : 1.5;
+    why.push([ZONE[o.zone] ? ZONE[o.zone].n : "Treffer", v]);
+    const dm = o.dm || 0, dv = dm >= 220 ? 1.5 : dm >= 190 ? 1 : dm >= 160 ? 0.5 : 0;
+    if (dv) why.push([dm + " m Entfernung", dv]);
+    if (o.mv && o.k !== "fasan") why.push(["auf ziehendes Stück", 1]);
+    if ((o.wv || 0) >= 4) why.push([String(o.wv).replace(".", ",") + " m/s Wind", 0.5]);
+    if (o.cw) why.push(["erst krank geschossen", -1.5]);
+    v = why.reduce((t, w) => t + (w === why[0] ? 0 : w[1]), v);
+    return { v: clamp(Math.round(v * 2) / 2, 0.5, 5), why };
+  }
+  const stars = v => { let h = ""; for (let i = 1; i <= 5; i++) h += v >= i ? "★" : v >= i - 0.5 ? "⯪" : "☆"; return h; };
+  /* alle Einträge des Jagdbuchs je Art: Decken, Besonderheiten, Altersklassen, Seltenheitsstufen */
+  function dexAll(k) {
+    const out = [];
+    COATS[k].forEach(C => out.push({ key: "c:" + C[0], n: C[3], hint: C[4] || "Die übliche Färbung.", g: k === "fasan" ? "Gefieder" : "Decke", p: C[2] }));
+    (FORMS[k] || []).forEach(F => out.push({ key: "f:" + F[0], n: F[2], hint: F[3], g: F[4], p: F[1] }));
+    AGES[k].forEach((a, i) => out.push({ key: "a:" + i, n: a[0].toUpperCase() + a.slice(1), hint: AGE_HINT[k][i] || "Diese Altersklasse fehlt noch.", g: "Alter", p: 0 }));
+    RAR.forEach((R, i) => out.push({ key: "r:" + i, n: R.n, hint: i >= 3 ? "Dafür braucht es schon ein ganz besonderes Stück." : "Noch kein Stück dieser Seltenheit.", g: "Seltenheit", p: i }));
+    return out;
+  }
+  const dexKeysOf = (k, gn) => ["c:" + gn.c, "a:" + gn.a, "r:" + gn.r].concat(gn.f.map(f => "f:" + f));
+  function hv200(H) {
+    if (H.v200) return H;
+    H.v200 = 1;
+    H.dex = H.dex || {}; H.pb = H.pb || {}; H.jd = H.jd || 0;
+    /* Altbestand: Trophäen und Jagdbuch eintragen (klassisches Aussehen), Bestwerte übernehmen */
+    const seen = new Set(), all = [];
+    (H.coll || []).forEach(r => { all.push(r); seen.add(r.t + ":" + r.s); });
+    (H.log || []).forEach(L => { if (L.s != null && !seen.has(L.t + ":" + L.s)) all.push(L); });
+    all.forEach(r => { if (!SP[r.k] || r.s == null) return; const gn = gnOf(r); dexKeysOf(r.k, gn).forEach(key => dexPut(H, r.k, key, r.t)); pbPut(H, r, gn); });
+    if (H.top) Object.keys(H.top).forEach(k => { if (SP[k] && H.top[k] > ((H.pb[k] && H.pb[k].s) || -1)) H.pb[k] = { s: H.top[k], t: null }; });
+    return H;
+  }
+  function dexPut(H, k, key, t) {
+    const D = H.dex[k] || (H.dex[k] = {});
+    if (D[key]) { D[key].n++; return false; }
+    D[key] = { n: 1, t: t != null ? t : S.time }; return true;
+  }
+  const dexHas = (H, k, key) => !!(H.dex && H.dex[k] && H.dex[k][key]);
+  function dexCount(H, k) { const D = (H.dex && H.dex[k]) || {}, all = dexAll(k); return { got: all.filter(E => D[E.key]).length, of: all.length }; }
+  /* Bestleistungen: stärkstes Stück je Art (Güte), weitester Schuss, beste Schussnote */
+  function pbPut(H, r, gn) {
+    const k = r.k, T = traits(k, r.s, gn), sh = r.zone ? shotOf(Object.assign({ k }, r)).v : 0, out = [];
+    const P = H.pb[k];
+    if (!P || r.s > P.s) { if (P) out.push({ k: "s", was: P.s }); H.pb[k] = { s: r.s, t: r.t, txt: T.troph, u: r.u }; }
+    if (r.dm && (!H.pb.dm || r.dm > H.pb.dm.v)) { if (H.pb.dm) out.push({ k: "dm", was: H.pb.dm.v }); H.pb.dm = { v: r.dm, k, t: r.t }; }
+    if (sh && (!H.pb.sh || sh > H.pb.sh.v)) { if (H.pb.sh) out.push({ k: "sh", was: H.pb.sh.v }); H.pb.sh = { v: sh, k, t: r.t }; }
+    return out;
+  }
+  /* ---- Jagdaufträge vom Förster: je ein leichter, mittlerer und schwerer; jeder zahlt genau einmal ---- */
+  const JOB_PAY = [[150, 15], [350, 30], [800, 60]];
+  const JOBT = [
+    { id: "art_h", d: 0, n: 1, t: () => "Erlege einen Rothirsch", ok: e => e.k === "hirsch" },
+    { id: "art_k", d: 0, n: 1, t: () => "Erlege einen Keiler", ok: e => e.k === "keiler" },
+    { id: "zwei", d: 0, n: 2, t: () => "Sichere zwei Trophäen", ok: () => true },
+    { id: "art_f", d: 1, n: 1, t: () => "Hol einen Fasan im Flug herunter", ok: e => e.k === "fasan" },
+    { id: "silber", d: 1, n: 1, t: () => "Erlege ein Stück mit mindestens Silber", ok: e => e.m >= 2 },
+    { id: "herz", d: 1, n: 1, t: () => "Herzschuss auf über 170 m", ok: e => e.zone === "herz" && e.dm > 170 },
+    { id: "wind", d: 1, n: 1, t: () => "Sauberer Kammerschuss bei mindestens 4 m/s Wind", ok: e => /herz|lunge/.test(e.zone) && e.wv >= 4 },
+    { id: "neu", d: 1, n: 1, t: () => "Trag ein neues Merkmal ins Jagdbuch ein", ok: e => e.newN > 0, can: H => SPK.some(k => dexCount(H, k).got < dexCount(H, k).of - 4) },
+    { id: "note", d: 1, n: 1, t: () => "Schussnote von mindestens 4 Sternen", ok: e => e.sh >= 4 },
+    { id: "drei", d: 2, n: 3, t: () => "Sichere drei Trophäen ohne krank geschossenes Stück", ok: e => !e.cw, reset: "lost" },
+    { id: "gold", d: 2, n: 1, t: () => "Erlege ein Stück mit mindestens Gold", ok: e => e.m >= 3 },
+    { id: "zieh", d: 2, n: 1, t: () => "Erlege ein ziehendes Stück mit Herz- oder Lungenschuss", ok: e => e.mv && e.k !== "fasan" && /herz|lunge/.test(e.zone) },
+    { id: "weit", d: 2, n: 1, t: () => "Erlege ein Stück auf über 210 m", ok: e => e.dm > 210 },
+    { id: "rar", d: 2, n: 1, t: () => "Erlege ein mindestens auffälliges Stück", ok: e => e.r >= 1 },
+    { id: "rek", d: 2, n: 1, t: j => "Übertriff deinen stärksten " + SP[j.k].n, ok: (e, j) => e.k === j.k && e.s > j.v, mk: H => { const k = pickOf(SPK.filter(x => H.pb[x] && H.pb[x].s < 0.93)); return k ? { k, v: H.pb[k].s } : null; } }
+  ];
+  const SPK = ["hirsch", "keiler", "fasan"];
+  const pickOf = a => a.length ? a[Math.floor(rnd() * a.length)] : null;
+  function jobNew(H, d, not) {
+    const pool = JOBT.filter(T => T.d === d && not.indexOf(T.id) < 0 && (!T.can || T.can(H)));
+    for (let i = 0; i < 6; i++) {
+      const T = pickOf(pool); if (!T) return null;
+      const extra = T.mk ? T.mk(H) : {};
+      if (!extra) continue;
+      return Object.assign({ id: "j" + (H.jn = (H.jn || 0) + 1), tpl: T.id, d, n: T.n, got: 0, t0: S.time }, extra);
+    }
+    return null;
+  }
+  function jobsEnsure(H) {
+    H.jobs = (H.jobs || []).filter(j => JOBT.some(T => T.id === j.tpl) && !j.paid);
+    [0, 1, 2].forEach(d => { if (!H.jobs.some(j => j.d === d)) { const j = jobNew(H, d, H.jobs.map(x => x.tpl).concat(H.jlast || [])); if (j) H.jobs.push(j); } });
+    H.jobs.sort((a, b) => a.d - b.d);
+    return H.jobs;
+  }
+  const jobT = j => JOBT.find(T => T.id === j.tpl);
+  const jobTxt = j => jobT(j).t(j);
+  /* e: Ereignis eines gesicherten oder verkauften Stücks. Gibt die erfüllten Aufträge zurück (bezahlt, nur einmal) */
+  function jobsEval(H, e) {
+    const done = [];
+    jobsEnsure(H).forEach(j => {
+      const T = jobT(j);
+      if (j.paid || !T.ok(e, j)) return;
+      j.got = Math.min(j.n, j.got + 1);
+      if (j.got < j.n) return;
+      j.paid = S.time;
+      const [m, xp] = JOB_PAY[j.d];
+      S.money += m; if (typeof logMoney === "function") logMoney("farm", "Jagdauftrag: " + jobTxt(j), m);
+      if (typeof farmXP === "function") farmXP(xp);
+      H.jd = (H.jd || 0) + 1;
+      done.push({ txt: jobTxt(j), m, xp, d: j.d });
+    });
+    if (done.length) { H.jlast = H.jobs.filter(j => j.paid).map(j => j.tpl); jobsEnsure(H); }
+    return done;
+  }
+  /* ein krank geflüchtetes Stück setzt „ohne krank geschossenes Stück“ zurück */
+  function jobsLost(H) { jobsEnsure(H).forEach(j => { if (jobT(j).reset === "lost" && !j.paid) j.got = 0; }); }
+  /* Zahlen für Erfolge und Anzeigen */
+  function stats() {
+    if (typeof S === "undefined" || !S.farm || !S.farm.hunt) return { kills: 0, best: 0, rare: -1, dex: 0, jobs: 0 };
+    const H = st();
+    hv200(H);
+    const dex = SPK.reduce((t, k) => t + dexCount(H, k).got, 0), rare = Math.max(-1, ...SPK.map(k => { const D = H.dex[k] || {}, i = [4, 3, 2, 1, 0].find(x => D["r:" + x]); return i == null ? -1 : i; }));
+    return { kills: H.kills || 0, best: H.best || 0, rare, dex, jobs: H.jd || 0 };
   }
 
   /* --------------------------- Treffertest -------------------------------- */
@@ -992,16 +1319,45 @@ const HUNT = (() => {
     const gain = Math.floor((S.time - H.at) / 120);
     if (gain > 0) { H.stock = Math.min(2, H.stock + gain); H.at += gain * 120; }
     if (H.stock >= 2) H.at = S.time;
-    return H;
+    return hv200(H);
   }
   const built = () => { const H = st(); return !!(H && H.built); };
 
   /* ------------------------------ Welt ------------------------------------ */
-  const W = { root: null, site: null, grow: null, chk: 0 };
+  const W = { root: null, site: null, grow: null, chk: 0, show: null, showKey: null };
+  /* v200: Schautafel neben dem Hochsitz – Brett mit kleinem Dach, daran die bis zu drei Trophäen vom Ehrenplatz */
+  const SHOWL = [-2.9, 0, -0.5];
+  const showAt = () => twL(SHOWL[0], 0, SHOWL[2]);
+  function showMesh(recs) {
+    G3.seed(7790);
+    const b = MB(), Wd = 0x7a5232, Wl = 0x9a6a3e, Rf = 0x5b4636;
+    b.noise(0.08, m => {
+      [-1.25, 1.25].forEach(x => { m.box(0.12, 2.15, 0.12, Wd, { x, z: -0.02 }); m.box(0.2, 0.06, 0.2, 0x6a4a2e, { x, y: 0, z: -0.02 }); });
+      for (let i = 0; i < 6; i++) m.box(2.46, 0.2, 0.06, i % 2 ? Wl : 0x8f6038, { y: 0.78 + i * 0.205, z: -0.06 });
+      m.box(2.6, 0.06, 0.1, Wd, { y: 0.76, z: -0.04 }); m.box(2.6, 0.06, 0.1, Wd, { y: 2.0, z: -0.04 });
+      [-1, 1].forEach(sd => m.box(1.62, 0.04, 0.62, Rf, { x: sd * 0.68, y: 2.24, z: -0.02, rz: sd * -0.42 }));
+      m.box(0.1, 0.1, 0.66, 0x4a3828, { y: 2.55, z: -0.02 });
+    });
+    recs.slice(0, 3).forEach((r, i) => { const n = recs.length, x = n === 1 ? 0 : (i - (n - 1) / 2) * 0.8; b.merge(trophyBuild(r), { x, y: 1.42, z: 0.02, s: 1.05 }); });
+    return b;
+  }
+  function showSync() {
+    if (!W.show || !FV.R) return;
+    const H = st(), pins = H ? (H.coll || []).filter(r => r.pin).sort((a, b) => a.pin - b.pin) : [], key = pins.map(r => r.u + trophyKey(r)).join("|");
+    W.show.visible = built() && !W.grow;
+    if (key === W.showKey) return;
+    W.showKey = key;
+    const old = W.show.mesh;
+    W.show.mesh = FV.R.mesh(showMesh(pins));
+    if (old && old !== W.showMesh0 && FV.R.free) FV.R.free(old);
+  }
   function attach(R) {
     W.root = fnode(fmesh("hunt_tower_v107", towerMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
     W.site = fnode(fmesh("hunt_site_v188", siteMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
-    R.nodes.push(W.root, W.site);
+    const sp = showAt();
+    W.show = fnode(R.mesh(showMesh([])), { x: sp[0], y: 0, z: sp[2], ry: TRY, visible: false });          /* Vorderseite zur offenen Wiese */
+    W.showMesh0 = W.show.mesh; W.showKey = "";
+    R.nodes.push(W.root, W.site, W.show);
     syncWorld();
     return W.root;
   }
@@ -1010,13 +1366,16 @@ const HUNT = (() => {
     const ok = unlocked(), b = built();
     if (!W.grow) W.root.visible = b;
     W.site.visible = ok && !b;
+    showSync();
   }
   function pick(x, y) {
     if (!FV.R || !W.root || (!W.root.visible && !W.site.visible)) return null;
     const R = FV.R, r = R.ray(x, y);
     const top = W.root.visible ? PH + 2.6 : 1.4;
     const d = R.hitBox(r, [TW.x - 1.8, 0, TW.z - 1.8], [TW.x + 1.8, top, TW.z + 1.8]);
-    return d != null ? { d } : null;
+    const sp = showAt(), ds = W.show && W.show.visible ? R.hitBox(r, [sp[0] - 1.4, 0, sp[2] - 1.4], [sp[0] + 1.4, 2.7, sp[2] + 1.4]) : null;
+    W.pickShow = ds != null && (d == null || ds < d);
+    return d != null || ds != null ? { d: W.pickShow ? ds : d } : null;
   }
   const missing = () => typeof siteMissing === "function" ? siteMissing("hunt", NEED) : [];      /* v186: am Bauplatz Abgelegtes zählt mit */
   function tagInfo() {
@@ -1028,6 +1387,7 @@ const HUNT = (() => {
   const dots = n => "●".repeat(n) + "○".repeat(Math.max(0, 2 - n));
   function sheet() {
     if (!unlocked() && !built()) return;
+    if (W.pickShow) { W.pickShow = false; if (typeof openFarmStore === "function") { WALL.tab = "wand"; openFarmStore("troph"); return; } }
     const H = st();
     FV.sheetFn = sheet;
     if (!H.built) return buildSheet();
@@ -1035,10 +1395,13 @@ const HUNT = (() => {
     const wait = H.stock < 2 ? Math.max(1, Math.ceil(120 - (S.time - H.at))) : 0;
     openFarmSheet(`<div class="fs-h"><span class="fs-ic">🔭</span>Hochsitz an der Wildwiese<small>Wild im Revier: <b class="hu-dots">${dots(H.stock)}</b>${wait ? " · nächstes Stück in " + fdur(wait) : ""}</small></div>
       <div class="fs-sub">Oben öffnet sich das Revier: das Wild steht 150 bis 240 Meter entfernt. Such es mit dem Fernglas, halte den Atem an und achte auf den Wind. Nur Herz, Lunge, Kopf oder Träger bringen eine Trophäe.</div>
-      <div class="hu-stats"><span>🎯 ${H.shots} Schüsse</span><span>🏆 ${H.kills} Trophäen</span>${H.lost ? `<span>🩸 ${H.lost} krank geflüchtet</span>` : ""}<span>Beste: ${best}</span></div>
-      <div class="fs-row"><button class="btn" id="huUp">🪜 Hinaufsteigen</button><button class="btn tiny ghost" id="huStore">🏆 Trophäen ansehen</button></div>`, "hunt");
+      <div class="hu-stats"><span>🎯 ${H.shots} Schüsse</span><span>🏆 ${H.kills} Trophäen</span>${H.lost ? `<span>🩸 ${H.lost} krank geflüchtet</span>` : ""}<span>Beste: ${best}</span>
+        <span>📖 Jagdbuch ${SPK.reduce((t, k) => t + dexCount(H, k).got, 0)}/${SPK.reduce((t, k) => t + dexCount(H, k).of, 0)}</span></div>
+      <div class="hu-jobs"><b>📋 Aufträge vom Förster</b>${jobsEnsure(H).map(j => `<span class="d${j.d}"><i>${["leicht", "mittel", "schwer"][j.d]}</i>${esc(jobTxt(j))}${j.n > 1 ? ` <small>${j.got}/${j.n}</small>` : ""}<em>${eur(JOB_PAY[j.d][0])}</em></span>`).join("")}</div>
+      <div class="fs-row"><button class="btn" id="huUp">🪜 Hinaufsteigen</button><button class="btn tiny ghost" id="huStore">🏆 Trophäen</button><button class="btn tiny ghost" id="huBook">📖 Jagdbuch</button></div>`, "hunt");
     $("#huUp").onclick = () => { closeFarmSheet(); begin(); };
-    $("#huStore").onclick = () => { closeFarmSheet(); if (typeof openFarmStore === "function") openFarmStore("troph"); };
+    $("#huStore").onclick = () => { closeFarmSheet(); WALL.tab = "wand"; if (typeof openFarmStore === "function") openFarmStore("troph"); };
+    $("#huBook").onclick = () => { closeFarmSheet(); WALL.tab = "buch"; if (typeof openFarmStore === "function") openFarmStore("troph"); };
   }
   function buildSheet() {
     FV.sheetFn = buildSheet;
@@ -1070,6 +1433,14 @@ const HUNT = (() => {
   /* Freischaltung: einmal Bescheid vom Förster */
   function announce() {
     const H = st();
+    /* v200: einmal Bescheid über Jagdbuch und Aufträge, sobald der Hochsitz steht */
+    if (H && H.built && !H.jann && typeof phoneMsg === "function") {
+      H.jann = S.time; jobsEnsure(H);
+      phoneMsg({ from: "Förster Bruno Wendt", kind: "info", title: "Jagdaufträge und ein Jagdbuch", go: "hunt", goLabel: "Zum Hochsitz",
+        body: "Moin! Kein Stück gleicht dem anderen – Decke, Alter, Geweih, manchmal eine alte Narbe. Ich habe dir ein Jagdbuch angelegt (Lager → Trophäen), da trägst du ein, was du entdeckst. " +
+          "Und ich habe immer drei Aufträge für dich, vom leichten bis zum schweren – jeder wird bezahlt. Die besten Stücke kannst du auf den Ehrenplatz hängen, an der Schautafel neben dem Hochsitz. Waidmannsheil, Bruno" });
+      save();
+    }
     if (!H || H.ann || H.built || !unlocked()) return;
     H.ann = S.time;
     if (typeof phoneMsg === "function") phoneMsg({ from: "Förster Bruno Wendt", kind: "info", title: "Ein Hochsitz für die Wildwiese", go: "hunt", goLabel: "Zum Bauplatz",
@@ -1121,9 +1492,11 @@ const HUNT = (() => {
     const tx = CX + Math.cos(a2) * d2, tz = CZ + Math.sin(a2) * d2;
     const s = k === "hirsch" ? 1.05 + score * 0.3 : 1.05 + score * 0.25;
     const mesh = k === "hirsch" ? fmesh("wild:deer", () => FWM.deer(false)) : fmesh("wild:boar", FWM.boar);
-    const node = fnode(mesh, { x, z, s, ry: Math.atan2(tx - x, tz - z), visible: false, alpha: 0 });
+    /* v200: das Tier hat schon hier sein Erbgut – ein weißes oder geschecktes Stück fällt auch auf der Karte auf */
+    const g = newG(), gn = genes(k, score, g), tint = gn.c === "weiss" ? [0.95, 0.93, 0.88, 0.72] : gn.c === "schecke" ? [0.93, 0.9, 0.84, 0.28] : gn.c === "schwarz" ? [0.12, 0.1, 0.09, 0.35] : null;
+    const node = fnode(mesh, { x, z, s, ry: Math.atan2(tx - x, tz - z), visible: false, alpha: 0, tint });
     FV.R.nodes.push(node);
-    MW.A = { k, score, node, x, z, tx, tz, st: "walk", t: 0, stay: 25 + rnd() * 35, leaving: false, ph: rnd() * 6.28 };
+    MW.A = { k, score, g, node, x, z, tx, tz, st: "walk", t: 0, stay: 25 + rnd() * 35, leaving: false, ph: rnd() * 6.28 };
   }
   function mwDrop() {
     const M = MW.A; if (!M) return;
@@ -1175,7 +1548,7 @@ const HUNT = (() => {
   function mwToRevier() {
     const M = MW.A; if (!M || !X) return false;
     const [x, z] = toRv(M.x, M.z), [tx, tz] = toRv(M.tx, M.tz), grazing = M.st === "graze";
-    const A = spawn(M.k, false, { score: M.score, x, z, tx, tz, st: grazing ? "graze" : "walk", t: grazing ? Math.max(3, M.t) : 0, ry: Math.atan2(tx - x, tz - z) });
+    const A = spawn(M.k, false, { score: M.score, g: M.g, x, z, tx, tz, st: grazing ? "graze" : "walk", t: grazing ? Math.max(3, M.t) : 0, ry: Math.atan2(tx - x, tz - z) });
     M.xfer = A.id; M.node.visible = false;
     X.spawnT = 45 + rnd() * 40; X.firstSpawn = false;
     return true;
@@ -1385,9 +1758,10 @@ const HUNT = (() => {
   function spawn(k, enter, pre) {
     if (!k) { const r = rnd(); k = r < 0.58 ? "hirsch" : r < 0.92 ? "keiler" : "fasan"; }
     /* v120: Güte auf drei Stellen gerundet – genau dieser Wert landet im Trophäen-Datensatz, Modell im Revier und an der Wand sind gleich */
-    const S0 = SP[k], score = Math.round((pre && pre.score != null ? pre.score : drawScore()) * 1000) / 1000, T = traits(k, score), s = lerp(S0.s0, S0.s1, score);
+    const S0 = SP[k], score = Math.round((pre && pre.score != null ? pre.score : drawScore()) * 1000) / 1000, g = pre && pre.g ? pre.g : newG(), gn = genes(k, score, g), T = traits(k, score, gn);
+    const s = lerp(S0.s0, S0.s1, score) * (gn.w ? 1 + gn.w * 0.012 : 1);                                    /* v200: Körperbau ±1,2 % */
     const p = pre ? [pre.x, pre.z] : spawnPoint(null, enter);
-    const A = { id: ++X.aid, k, score, T, s, x: p[0], z: p[1], y: 0, ry: rnd() * 6.28, rx: 0, rz: 0, v: 0, vT: 0, vx: 0, vz: 0, ph: rnd(), gw: 0, gr: 0,
+    const A = { id: ++X.aid, k, score, g, gn, T, s, x: p[0], z: p[1], y: 0, ry: rnd() * 6.28, rx: 0, rz: 0, v: 0, vT: 0, vx: 0, vz: 0, ph: rnd(), gw: 0, gr: 0,
       st: enter ? "walk" : k === "fasan" ? "peck" : k === "keiler" ? "root" : "graze", t: 2 + rnd() * 5, tx: p[0], tz: p[1], alert: 0, seen: false, hits: [], dist: 0,
       sp: {}, ear: [{ f: 0, k: 0, t: 1 }, { f: 0, k: 0, t: 2 }], cautious: enter, pause: 0, jolt: 0, legsA: [[0, 0], [0, 0], [0, 0], [0, 0]], seed: rnd() * 100, fly: null, vr: pre && pre.vr != null ? pre.vr : Math.floor(rnd() * 6) };
     if (enter) { A.tx = p[2]; A.tz = p[3]; A.ry = Math.atan2(A.tx - A.x, A.tz - A.z); }
@@ -1398,25 +1772,27 @@ const HUNT = (() => {
     X.animals.push(A);
     return A;
   }
+  /* v200: jedes Teil im Aussehen dieses Stücks (Schlüssel enthält Decke, Alter, Körperbau, Besonderheiten) */
   function build(A) {
-    const k = A.k, S0 = SP[k], key = "hu9_" + k;
+    const k = A.k, S0 = SP[k], gn = A.gn, lk = "_" + lookKey(k, gn), key = "hu9_" + k;
+    const M = (id, fn) => fmesh(key + id + lk, () => withLook(k, gn, fn));
     if (k === "hirsch") {
-      A.node = addNode(fmesh(key + "_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = addNode(fmesh(key + "_n", deerNeck), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.head = addNode(fmesh(key + "_h" + A.T.P + "_" + Math.round(A.score * 20) + "_" + A.vr, () => deerHead(A.T.P, Math.round(A.score * 20) / 20, A.vr)), { x: S0.headP[0], y: S0.headP[1], z: S0.headP[2] }, A.neck);
-      A.ears = [-1, 1].map(s => addNode(fmesh(key + "_e" + s, () => deerEar(s)), { x: s * 0.075, y: 0.08, z: 0.02 }, A.head));
-      A.tail = addNode(fmesh(key + "_t", deerTail), { x: 0, y: 1.07, z: -0.578 }, A.node);
-      A.legN = S0.legs.map(L => { const up = addNode(fmesh(key + "_u" + L.f, () => deerUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(fmesh(key + "_l" + L.f, () => deerLower(!!L.f)), { y: -L.lu }, up) }; });
+      A.node = addNode(M("_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
+      A.neck = addNode(M("_n", deerNeck), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.head = addNode(M("_h" + A.T.P + "_" + Math.round(A.score * 20) + "_" + A.vr + antKey(gn), () => deerHead(A.T.P, Math.round(A.score * 20) / 20, A.vr, antF(gn))), { x: S0.headP[0], y: S0.headP[1], z: S0.headP[2] }, A.neck);
+      A.ears = [-1, 1].map(s => addNode(M("_e" + s, () => deerEar(s)), { x: s * 0.075, y: 0.08, z: 0.02 }, A.head));
+      A.tail = addNode(M("_t", deerTail), { x: 0, y: 1.07, z: -0.578 }, A.node);
+      A.legN = S0.legs.map(L => { const up = addNode(M("_u" + L.f, () => deerUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(M("_l" + L.f, () => deerLower(!!L.f)), { y: -L.lu }, up) }; });
     } else if (k === "keiler") {
       /* v135: neues Modell, Läufe mit Gelenk (oben/unten als eigene Knoten) */
-      A.node = addNode(fmesh(key + "_b135", boarBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = A.head = addNode(fmesh(key + "_h135_" + A.T.cm + "_" + Math.round(A.score * 20), () => boarHead(qS(A.score), A.T.cm)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.legN = S0.legs.map(L => { const up = addNode(fmesh(key + "_u135" + L.f, () => boarUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(fmesh(key + "_l135", boarLower), { y: -BLU, z: L.f ? 0 : -0.025 }, up) }; });
+      A.node = addNode(M("_b135", boarBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
+      A.neck = A.head = addNode(M("_h135_" + A.T.cm + "_" + Math.round(A.score * 20), () => boarHead(qS(A.score), A.T.cm)), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.legN = S0.legs.map(L => { const up = addNode(M("_u135" + L.f, () => boarUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(M("_l135", boarLower), { y: -BLU, z: L.f ? 0 : -0.025 }, up) }; });
     } else {
-      A.node = addNode(fmesh(key + "_b135", phBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
-      A.neck = A.head = addNode(fmesh(key + "_h135", phHead), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
-      A.wings = [-1, 1].map(s => addNode(fmesh(key + "_w135" + s, () => phWing(s)), { x: s * 0.07, y: 0.29, z: 0.02, visible: false }, A.node));
-      A.feet = [-1, 1].map(s => addNode(fmesh(key + "_f135", phLeg), { x: s * 0.036, y: 0.15, z: 0.01 }, A.node));
+      A.node = addNode(M("_b135", phBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
+      A.neck = A.head = addNode(M("_h135", phHead), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
+      A.wings = [-1, 1].map(s => addNode(M("_w135" + s, () => phWing(s)), { x: s * 0.07, y: 0.29, z: 0.02, visible: false }, A.node));
+      A.feet = [-1, 1].map(s => addNode(M("_f135", phLeg), { x: s * 0.036, y: 0.15, z: 0.01 }, A.node));
       A.legN = [];
     }
   }
@@ -1677,6 +2053,7 @@ const HUNT = (() => {
     const dp = deadPose(A), o = [A.x, 0, A.z];
     A.box = { mn: add3(dp.mn, o), mx: add3(dp.mx, o) };
     A.foot = dp.pts.map(p => add3(p, o));
+    A.headAt = add3(dp.ha, o);
   }
   /* ------------------- v135: Liegepose aus den Modellpunkten -------------------
      Vorher lag jedes Stück auf fester Höhe (der Keiler etwa 5 cm über dem Boden), die Läufe standen steif ab und die oben
@@ -1696,18 +2073,19 @@ const HUNT = (() => {
   /* Haupt (beim Hirsch mit Träger und Geweih) in Halskoordinaten */
   function headPts(A) {
     const S0 = SP[A.k], q = Math.round(A.score * 20) / 20;
-    if (A.k === "keiler") return ptsOf("h:k" + A.T.cm + ":" + q, () => boarHead(q, A.T.cm));
-    if (A.k === "fasan") return ptsOf("h:f", phHead);
-    return ptsOf("h:h" + A.T.P + ":" + q + ":" + A.vr, () => {
+    const gn = A.gn, lk = ":" + lookKey(A.k, gn);
+    if (A.k === "keiler") return ptsOf("h:k" + A.T.cm + ":" + q + lk, () => withLook("keiler", gn, () => boarHead(q, A.T.cm)));
+    if (A.k === "fasan") return ptsOf("h:f" + lk, () => withLook("fasan", gn, phHead));
+    return ptsOf("h:h" + A.T.P + ":" + q + ":" + A.vr + lk + antKey(gn), () => withLook("hirsch", gn, () => {
       const b = MB(); deerNeckInto(b);
-      b.at({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: S0.rest.headT }, h => deerHeadInto(h, A.T.P, q, A.vr));
+      b.at({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: S0.rest.headT }, h => deerHeadInto(h, A.T.P, q, A.vr, antF(gn)));
       return b;
-    }, 2);
+    }), 2);
   }
   function calcDead(A) {
     const S0 = SP[A.k], D = S0.rest, side = A.side || 1, rz = side * D.rz, s = A.s;
     const W = (p, y) => { const q = rot([p[0] * s, p[1] * s, p[2] * s], 0, A.ry, rz); return [q[0], y + q[1], q[2]]; };
-    const BP = ptsOf("b:" + A.k, A.k === "hirsch" ? deerBody : A.k === "keiler" ? boarBody : phBody);
+    const BP = ptsOf("b:" + A.k + ":" + (A.gn ? A.gn.w : 0), () => withLook(A.k, A.gn, A.k === "hirsch" ? deerBody : A.k === "keiler" ? boarBody : phBody));
     let lo = 1e9;
     BP.forEach(p => { lo = Math.min(lo, W(p, 0)[1]); });
     const y = -lo + 0.004 * s, pts = BP.map(p => W(p, y));
@@ -1738,10 +2116,15 @@ const HUNT = (() => {
       const c = cost(gap - 0.003, a);
       if (c < hc) { hc = c; hb = a; }
     }
-    HP.forEach(p => pts.push(HW(p, hb)));
+    const HPW = HP.map(p => HW(p, hb));
+    HPW.forEach(p => pts.push(p));
+    /* v200: Anker für den Merkmals-Hinweis – beim Hirsch die Geweihmitte (oberste Punkte des Hauptes), sonst die Mitte des Hauptes */
+    let ha = [0, 0, 0];
+    { const L = A.k === "hirsch" ? HPW.slice().sort((a, b) => b[1] - a[1]).slice(0, Math.max(1, Math.round(HPW.length * 0.15))) : HPW;
+      L.forEach(p => { ha = add3(ha, p); }); ha = ha.map(v => v / Math.max(1, L.length)); }
     const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
     pts.forEach(p => { for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], p[k]); mx[k] = Math.max(mx[k], p[k]); } });
-    return { rz, y, legs, neckT: D.neckT, nyT: ax === "y" ? hb : 0, nz: ax === "z" ? hb : 0, headT: D.headT || 0, mn, mx, pts: pts.filter((_, i) => i % 3 === 0) };
+    return { rz, y, legs, neckT: D.neckT, nyT: ax === "y" ? hb : 0, nz: ax === "z" ? hb : 0, headT: D.headT || 0, mn, mx, ha, pts: pts.filter((_, i) => i % 3 === 0) };
   }
   function deadPose(A) { return A.dp || (A.dp = calcDead(A)); }
   /* Lauf beim Zusammenbrechen: von der letzten Haltung in die Liegepose */
@@ -1752,6 +2135,7 @@ const HUNT = (() => {
   function lostMsg(A) {
     const H = st();
     H.lost = (H.lost || 0) + 1; H.stock = Math.max(0, H.stock - 1);
+    jobsLost(H);
     msg("Krank geschossen (" + ZONE[A.hits[0]].n + ") – das Stück ist im Wald verschwunden. Keine Trophäe.", 5, "bad");
     X.target = null; save();
   }
@@ -1771,12 +2155,14 @@ const HUNT = (() => {
       <div class="hu-bar"></div>
       <div class="hu-vig"></div>
       <div class="hu-win" hidden></div>
+      <div class="hu-call" hidden></div>
+      <div class="hu-job" hidden></div>
       <div class="hu-drag" hidden>↔ Wischen dreht die Ansicht</div>
       <div class="hu-card2" hidden></div>
       <div class="hu-fade"></div>`;
     host.appendChild(el);
     X.ui = el;
-    ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind"][i]); });
+    ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl", "call", "jobEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind", ".hu-call", ".hu-job"][i]); });
     renderBar();
     let P = null;
     el.addEventListener("pointerdown", e => {
@@ -1968,6 +2354,7 @@ const HUNT = (() => {
   function onHit(A, zone, dm) {
     if (!X || !A.node || A.st === "gone") return;
     A.hits.push(zone); A.dm = A.dm || dm;
+    if (A.mv == null) { A.mv = A.k === "fasan" ? A.st === "fly" : (A.v || 0) > 0.35 || ["walk", "flee", "wounded", "hit"].includes(A.st) && (A.v || 0) > 0.15; A.wv = X.wind ? Math.round(X.wind.v * 10) / 10 : 0; }   /* v200: für die Schussnote */
     const Z = ZONE[zone];
     if (A.k === "fasan") {
       if (A.st === "fly") { A.st = "drop"; A.side = 1; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
@@ -2049,7 +2436,7 @@ const HUNT = (() => {
         wird), dann „Weiter jagen“ oder „Zur Trophäenwand“
      Antippen überspringt das Warten. Medaille, Güte, Preise, EP und Speicherung rechnen wie bisher. */
   const HV_FOV = 0.62;
-  const TIER = [null, "Ordentliches Stück", "Gutes Stück", "Starkes Stück", "Außergewöhnliches Stück"];
+  const TIER = [null, "Ordentliches Stück", "Gutes Stück", "Starkes Stück", "Herausragendes Stück"];          /* v200: nicht „außergewöhnlich“ – so heißt eine Seltenheitsstufe */
   const BARC = [null, "#b4682b", "#76828f", "#d99c14", "#2aa3c8"];          /* Medaillenfarben, kräftig genug für den hellen Balken */
   const SPN = { hirsch: ["Rothirsch", "Dein erster Rothirsch", "Dein stärkster Rothirsch bisher"], keiler: ["Keiler", "Dein erster Keiler", "Dein stärkster Keiler bisher"],
     fasan: ["Fasan", "Dein erster Fasan", "Dein schönster Fasan bisher"] };
@@ -2062,8 +2449,9 @@ const HUNT = (() => {
     let medal = medalOf(A.score, A.k === "fasan" ? "vogel" : zone);
     if (A.capW) medal = Math.min(medal, 1);
     A.medal = Math.max(1, medal);
-    A.rec = { k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0 };      /* genau dieser Datensatz wird gespeichert */
+    A.rec = { k: A.k, m: A.medal, s: Math.round(A.score * 1000) / 1000, vr: A.vr || 0, gn: A.gn };      /* genau dieser Datensatz wird gespeichert */
     A.feat = feats(A);
+    A.pres = presOf(A);
     X.view = "harvest";
     X.hrv = { A, t: 0, k: 0, from: camOf(FV.R.cam), yaw: heroYaw(A), pitch: A.k === "fasan" ? 0.62 : 0.52, uy: 0, up: 0, cut: false, ui: 0, fr: sideUI() ? { t: 0.17, b: 0.04, r: 0.47 } : { t: 0.17, b: 0.44, r: 0 }, mt: 0 };
     X.spotEl.hidden = true; X.range.hidden = true; X.marks.innerHTML = ""; X.msgEl.hidden = true; X.msgT = 0;
@@ -2081,6 +2469,19 @@ const HUNT = (() => {
     else if (best >= 0 && A.rec.s > best) out.push(N[2]);
     if (H.best && A.medal > H.best) out.push("Erstmals " + MEDALS[A.medal].n);
     return out;
+  }
+  /* v200: Auftritt je Stück – Stufe aus den echten Eigenschaften (nicht zufällig):
+     0 Standard · 1 gutes Stück (Gold/Diamant oder auffällig) · 2 neue Bestleistung oder neues Merkmal im Jagdbuch ·
+     3 seltene Enthüllung (selten/außergewöhnlich) · 4 legendär. Höhere Stufen: Seltenheitsband mit Enthüllung, Lichtakzente,
+     ruhigere, längere Kamerafahrt – gewöhnliche Stücke bleiben schlicht. */
+  function presOf(A) {
+    const H = st(), gn = A.gn || genes(A.k, A.score, 0), k = A.k, P = H.pb[k], prev = P ? P.s : null;
+    const fresh = dexKeysOf(k, gn).filter(key => !dexHas(H, k, key)), all = dexAll(k);
+    const names = fresh.filter(key => !/^r:/.test(key)).map(key => (all.find(E => E.key === key) || {}).n).filter(Boolean);
+    const sh = shotOf({ k, zone: A.zone || "vogel", dm: A.dm, mv: A.mv, wv: A.wv, cw: A.capW });
+    const rec = prev != null && A.rec.s > prev, newF = prev != null && fresh.some(x => /^[cf]:/.test(x));
+    const lv = gn.r >= 4 ? 4 : gn.r >= 2 ? 3 : rec || newF ? 2 : A.medal >= 3 || gn.r >= 1 ? 1 : 0;
+    return { lv, gn, prev, rec, fresh, names, sh, list: featList(k, gn) };
   }
   /* Blick von der Bauchseite (die Läufe liegen zur Kamera, die obere Flanke zeigt nach oben), schräg zum Haupt, leicht von oben –
      so liest sich das liegende Stück am klarsten. Frei von Bäumen, Felsen und Totholz. */
@@ -2130,7 +2531,10 @@ const HUNT = (() => {
     const t = Hv.t, A = Hv.A;
     X.fade = t < 0.3 ? t / 0.3 : Math.max(0, 1 - (t - 0.3) / 0.45);
     if (!Hv.cut && t >= 0.3) { Hv.cut = true; bedShow(A); }
-    Hv.k = 1 - Math.pow(1 - clamp((t - 0.3) / 2.6, 0, 1), 3);
+    const lv = A.pres ? A.pres.lv : 0, dur = lv >= 3 ? 3.4 : 2.6;
+    Hv.k = 1 - Math.pow(1 - clamp((t - 0.3) / dur, 0, 1), 3);
+    /* v200: seltene Stücke – die Kamera wandert danach noch langsam ein Stück um das Tier (bis Wischen sie übernimmt) */
+    if (lv >= 3 && !Hv.dragged && t > 0.3 + dur) Hv.uy -= dt * 0.045 * Math.max(0, 1 - (t - 0.3 - dur) / 9);
     if (t > 0.55 && Hv.ui === 0) { Hv.ui = 1; showWin(A); }
     if ((t > 1.75 || Hv.skip) && Hv.ui === 1 && t > 0.6) { Hv.ui = 2; showCard(A); }
     /* Hervorheben: warmes Aufleuchten nach dem Schnitt, klingt in gut einer Sekunde ab */
@@ -2151,6 +2555,19 @@ const HUNT = (() => {
     if (Hv.fb != null) Hv.fr.b += (Hv.fb - Hv.fr.b) * Math.min(1, dt * 3);
     if (Hv.fR != null) Hv.fr.r += (Hv.fR - (Hv.fr.r || 0)) * Math.min(1, dt * 3);
     if (X.drag && !X.drag.hidden && (Hv.dragged || t > Hv.dragT)) X.drag.classList.add("off");
+    /* Merkmals-Hinweis folgt dem Haupt des Stücks, verblasst nach 6 s oder sobald die Werte aufgeklappt sind */
+    if (X.call && !X.call.hidden && A.headAt) {
+      const p = FV.R.project(A.headAt[0], A.headAt[1] + (A.k === "hirsch" ? 0.12 : 0.18) * A.s, A.headAt[2]), r = X.ui.getBoundingClientRect();
+      const off = !p || p[2] > 1 || (Hv.callT != null && t - Hv.callT > 6);
+      X.call.classList.toggle("off", off);
+      if (p) {
+        /* seitlich neben das Haupt (zur Bildmitte hin frei), zwischen Überschrift und Karte */
+        const w = X.call.offsetWidth || 120, h = X.call.offsetHeight || 40, left = p[0] > r.width * 0.5;
+        const top = X.win.hidden ? 70 : X.win.getBoundingClientRect().bottom - r.top + 6, bot = X.card.hidden ? r.height - 8 : X.card.getBoundingClientRect().top - r.top - 8;
+        X.call.classList.toggle("l", left); X.call.classList.toggle("r", !left);
+        X.call.style.transform = `translate(${Math.round(clamp(left ? p[0] - w - 18 : p[0] + 18, 8, r.width - w - 8))}px,${Math.round(clamp(p[1] - h / 2, top, Math.max(top, bot - h)))}px)`;
+      }
+    }
     return Hv.cut ? heroCam(Hv) : Hv.from;
   }
   /* ---- Liegeplatz: Kontaktschatten, niedergedrücktes Gras, Farbspiel – randlos in die Wiese übergehend ---- */
@@ -2216,25 +2633,50 @@ const HUNT = (() => {
   /* ---- Oberfläche ---- */
   const fkg = A => (A.k === "fasan" ? fnum(A.T.kg, 1) : A.T.kg) + " kg";
   function showWin(A) {
-    const Z = ZONE[A.zone] || ZONE.lunge;
-    X.win.innerHTML = `<small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(Z.n)} auf ${A.dm || "?"} m</em>${A.feat.length ? `<div class="hu-feat">${A.feat.map(f => `<span>★ ${esc(f)}</span>`).join("")}</div>` : ""}`;
+    const Z = ZONE[A.zone] || ZONE.lunge, P = A.pres, r = P.gn.r;
+    X.win.innerHTML = `<small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(Z.n)} auf ${A.dm || "?"} m</em>${A.feat.length ? `<div class="hu-feat">${A.feat.map(f => `<span>★ ${esc(f)}</span>`).join("")}</div>` : ""}
+      ${r >= 1 ? `<div class="hu-rar r${r}" style="--rc:${RAR[r].c}"><span>${r >= 4 ? "★ " : "✦ "}${esc(RAR[r].n)}</span></div>` : ""}`;
     X.win.hidden = false; X.win.classList.remove("go"); void X.win.offsetWidth; X.win.classList.add("go");
     X.vig.classList.add("on");
+    X.ui.classList.toggle("lv3", P.lv === 3); X.ui.classList.toggle("lv4", P.lv === 4);
     hornSound(A.k); buzz([16, 70, 28]);
+    /* seltene Stücke: das Band erscheint etwas später mit eigenem Klang und feinen Lichtpunkten am Stück */
+    if (r >= 2) setTimeout(() => {
+      if (!X || !X.hrv || X.hrv.A !== A) return;
+      snd("pearl"); buzz(r >= 4 ? [30, 60, 30, 60, 40] : [24, 50, 30]);
+      if (A.box) { const B = A.box, sz = Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2]);
+        FV.R.burst({ x: (B.mn[0] + B.mx[0]) / 2, y: B.mx[1] * 0.7, z: (B.mn[2] + B.mx[2]) / 2, n: r >= 4 ? 26 : 12, col: r >= 4 ? [[1, 0.86, 0.42, 1], [1, 0.96, 0.78, 1]] : [[0.75, 0.82, 1, 1], [0.95, 0.95, 1, 1]], speed: 0.35, up: 0.8, g: 0.2, drag: 0.9, life: 2.2, size: 0.014 + 0.008 * Math.min(2, sz), spread: sz * 0.45 }); }
+      if (r >= 4) setTimeout(() => snd("level"), 380);
+    }, 1000);
+  }
+  /* Merkmals-Hinweis am Stück: das Wichtigste der Trophäe (Enden, Waffen, Stoß) und sichtbare Besonderheiten */
+  function callHTML(A) {
+    const T = A.T, P = A.pres, main = A.k === "hirsch" ? T.troph.replace(/ Geweih$/, "") : A.k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
+    const sub = P.list.filter(F => !F.age && /^f:/.test(F.key)).map(F => F.n).slice(0, 2);
+    return `<b>${esc(main)}</b>${sub.length ? `<small>${sub.map(esc).join(" · ")}</small>` : ""}`;
   }
   function cardHTML(A) {
-    const M = MEDALS[A.medal], id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal], room = typeof farmRoom === "function" ? farmRoom(id) : 1;
+    const M = MEDALS[A.medal], id = trophyId(A.k, A.medal), P = A.pres, gn = P.gn, price = valueOf(A.rec), room = typeof farmRoom === "function" ? farmRoom(id) : 1;
     const Z = ZONE[A.zone] || ZONE.lunge, bonus = A.capW ? 0 : Z.bonus || 0, eff = clamp(A.score + bonus, 0, 1);
     const note = A.capW ? "Erst krank geschossen – höchstens Bronze." : Z.note || "";
     const fled = Math.round((A.dist || 0) * M_PER_U), flucht = A.k === "fasan" ? ["Uhrzeit", typeof clock === "function" ? clock(S.time) : "–"] : ["Flucht", fled < 2 ? "sofort gelegen" : "nach " + fled + " m"];
     const tick = (v, m) => `<u style="left:${v}%" title="${MEDALS[m].n}"><s>${MEDALS[m].i}</s></u>`;
+    const chips = [gn.r >= 1 ? `<span class="hu-rc" style="--rc:${RAR[gn.r].c}">${gn.r >= 4 ? "★" : "✦"} ${esc(RAR[gn.r].n)}</span>` : ""]
+      .concat(P.list.filter(F => !F.age).map(F => `<span${P.fresh.indexOf(F.key) >= 0 ? ' class="nw"' : ""}>${esc(F.n)}</span>`))
+      .concat(P.list.filter(F => F.age).map(F => `<span class="ag">${esc(F.n[0].toUpperCase() + F.n.slice(1))}</span>`))
+      .concat(P.rec ? [`<span class="pb">🏅 Neuer Rekord</span>`] : []).join("");
+    const sh = P.sh, shTxt = sh.why.map(w => w[0]).join(" · ");
+    const recTxt = P.rec ? `Neuer Rekord: Güte ${Math.round(A.rec.s * 100)} – bisher ${Math.round(P.prev * 100)}` : P.prev != null ? `Dein Rekord (${esc(SP[A.k].n)}): Güte ${Math.round(P.prev * 100)}` : `Dein erstes Stück dieser Art – es setzt den Rekord.`;
     return `<div class="hu-ct" data-hu="mini"><span class="hu-md m${A.medal}" style="--mc:${M.c}"><i>${M.i}</i></span>
         <div class="hu-cn"><small>${esc(TIER[A.medal])}</small><b>${esc(M.n)}-Trophäe</b><em>${esc(A.T.troph)}</em></div>
-        <span class="hu-val"><small>Sammlerwert</small><b>${eur(price)}</b><i class="hu-tg"></i></span></div>
+        <span class="hu-val"><small>Sammlerwert</small><b>${eur(price)}</b>${gn.r >= 1 ? `<em>+${Math.round((RAR_V[gn.r] - 1) * 100)} % ${esc(RAR[gn.r].n.toLowerCase())}</em>` : ""}<i class="hu-tg"></i></span></div>
+      <div class="hu-chips">${chips}</div>
       <div class="hu-more">
         <div class="hu-c3"><span><small>Gewicht</small><b>${fkg(A)}</b></span><span><small>Treffer</small><b>${esc(Z.n)}</b></span><span><small>${flucht[0]}</small><b>${esc(flucht[1])}</b></span></div>
         <div class="hu-q"><span>Güte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
           <i class="hu-qb" style="--q:${(eff * 100).toFixed(1)}%;--mc:${BARC[A.medal]}"><b></b>${tick(50, 2)}${tick(72, 3)}${tick(90, 4)}</i></div>
+        <div class="hu-shot"><span>Schuss</span><b title="${sh.v} von 5">${stars(sh.v)}</b><small>${esc(shTxt)}</small></div>
+        <p class="hu-pbl${P.rec ? " on" : ""}">${recTxt}</p>
         ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
       </div>
       ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe sichern</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenwand voll – an Sammler · ${eur(price)}</button>`}`;
@@ -2242,10 +2684,11 @@ const HUNT = (() => {
   function showCard(A) {
     X.card.innerHTML = cardHTML(A);
     /* kleine Bildschirme: Karte schmal (nur Medaille, Trophäe, Knopf) – Antippen klappt die Werte auf */
-    X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : ""); X.card.hidden = false;
+    X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : "") + " lv" + A.pres.lv; X.card.hidden = false;
     X.drag.hidden = false; X.drag.classList.remove("off"); X.hrv.dragT = X.hrv.t + 4.5;
     snd(A.medal >= 3 ? "pearl" : "collect");
-    if (A.medal >= 3 && A.box) {                       /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück */
+    if (X.call) { X.call.innerHTML = callHTML(A); X.call.hidden = false; X.call.classList.remove("go"); void X.call.offsetWidth; X.call.classList.add("go"); X.hrv.callT = X.hrv.t; }
+    if (A.medal >= 3 && A.box && A.pres.gn.r < 2) {         /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück (Seltene haben ihre eigene Enthüllung) */
       const B = A.box, cam = FV.R.cam, bx = -Math.cos(cam.yaw) * 0.4, bz = -Math.sin(cam.yaw) * 0.4;
       FV.R.burst({ x: (B.mn[0] + B.mx[0]) / 2 + bx, y: B.mx[1] * 0.6, z: (B.mn[2] + B.mx[2]) / 2 + bz, n: A.medal === 4 ? 14 : 9, col: [[1, 0.88, 0.5, 1], [1, 0.97, 0.8, 1]], speed: 0.25, up: 0.9, g: 0.25, drag: 0.8, life: 1.8, size: 0.012 + 0.01 * Math.min(2, Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2])), spread: Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2]) * 0.4 });
     }
@@ -2255,32 +2698,47 @@ const HUNT = (() => {
     if (!A || A.kept || Hv.ui < 2) return;
     A.kept = true;                                                    /* doppeltes Tippen: zweiter Aufruf endet hier */
     X.card.querySelectorAll("button").forEach(b => { b.disabled = true; });
-    const H = st(), id = trophyId(A.k, A.medal), price = PRICE[A.k][A.medal];
-    let n = 0;
+    const H = st(), id = trophyId(A.k, A.medal), base = PRICE[A.k][A.medal], gn = A.gn || genes(A.k, A.score, 0);
+    const R = Object.assign({ u: uid() }, A.rec, { t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4), mv: A.mv ? 1 : 0, wv: A.wv || 0, cw: A.capW ? 1 : 0 });
+    let n = 0, price = valueOf(R);
     if (sell) { S.money += price; if (typeof logMoney === "function") logMoney("farm", "Trophäe an Sammler: " + A.T.troph, price); }
-    else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push(Object.assign({ u: uid() }, A.rec, { t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4) })); n = C.length; }
+    else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push(R); n = C.length; }
     H.kills++; H.stock = Math.max(0, H.stock - 1);
     H.best = Math.max(H.best || 0, A.medal);
     H.n = H.n || {}; H.n[A.k] = (H.n[A.k] || 0) + 1;                   /* v135: je Art zählen und Bestwert merken (für „erster“/„stärkster“) */
     H.top = H.top || {}; H.top[A.k] = Math.max(H.top[A.k] != null ? H.top[A.k] : -1, A.rec.s);
-    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: A.rec.s });
+    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: A.rec.s, gn, mv: R.mv, wv: R.wv, cw: R.cw, u: sell ? null : R.u });
     if (H.log.length > 40) H.log.length = 40;
+    /* v200: Jagdbuch, Bestleistungen, Aufträge – genau einmal je Stück */
+    const fresh = dexKeysOf(A.k, gn).filter(key => dexPut(H, A.k, key, S.time));
+    const pbs = pbPut(H, R, gn);
+    const jobs = jobsEval(H, { k: A.k, m: A.medal, s: A.rec.s, zone: A.zone, dm: A.dm || 0, mv: !!A.mv, wv: A.wv || 0, r: gn.r, newN: fresh.filter(x => !/^r:0$/.test(x)).length, sh: A.pres.sh.v, cw: !!A.capW });
+    A.res = { fresh, pbs, jobs, dex: dexCount(H, A.k) };
     if (typeof farmXP === "function") farmXP(XP[A.k][A.medal]);
     save();
+    if (typeof checkAchievements === "function") setTimeout(checkAchievements, 1200);
     showSaved(A, sell, n, price);
-    snd("clunk"); setTimeout(() => snd("coin"), 150); if (A.medal === 4) setTimeout(() => snd("pearl"), 380);
+    snd("clunk"); setTimeout(() => snd("coin"), 150); if (A.medal === 4 || gn.r >= 3) setTimeout(() => snd("pearl"), 380);
+    if (jobs.length) setTimeout(() => snd("level"), 700);
     buzz(sell ? 20 : [20, 50, 34]);
     X.target = null;
+    void base;
   }
   function showSaved(A, sell, n, price) {
-    const M = MEDALS[A.medal];
+    const M = MEDALS[A.medal], Rs = A.res || { fresh: [], jobs: [], dex: null }, all = dexAll(A.k);
+    const fr = Rs.fresh.filter(x => !/^r:0$/.test(x)).map(key => (all.find(E => E.key === key) || {}).n).filter(Boolean);
+    const lines = [];
+    if (fr.length) lines.push(`<p class="hu-nw">📖 Neu im Jagdbuch: <b>${fr.slice(0, 3).map(esc).join(", ")}${fr.length > 3 ? " +" + (fr.length - 3) : ""}</b>${Rs.dex ? ` <small>· ${Rs.dex.got} von ${Rs.dex.of} bei ${esc(SP[A.k].n)}</small>` : ""}</p>`);
+    Rs.jobs.forEach(j => lines.push(`<p class="hu-jd">📋 Auftrag erfüllt: <b>${esc(j.txt)}</b> <small>+${eur(j.m)} · +${j.xp} EP</small></p>`));
     X.card.className = "hu-card2 saved" + (sell ? " sold" : "");
-    X.card.innerHTML = `<div class="hu-sv"><span class="hu-svimg" style="--mc:${M.c}">${recThumb(A.rec, true)}<i class="hu-shine"></i><em>${M.i}</em></span>
+    X.card.innerHTML = `<div class="hu-sv"><span class="hu-svimg" style="--mc:${M.c}">${recThumb(Object.assign({}, A.rec), true)}<i class="hu-shine"></i><em>${M.i}</em></span>
         <div class="hu-svt"><small>${sell ? "Verkauft" : "✓ Gesichert"}</small><b>${esc(A.T.troph)}</b>
-          <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + " · an deiner Trophäenwand"}</em>
+          <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + (A.pres.gn.r >= 1 ? " · " + RAR[A.pres.gn.r].n : "") + " · an deiner Trophäenwand"}</em>
           <span>${sell ? "" : (n === 1 ? "dein erstes Stück an der Wand" : n + " Stücke an der Wand") + " · "}+${XP[A.k][A.medal]} EP</span></div></div>
+      ${lines.join("")}
       <div class="hu-sb">${sell ? "" : `<button class="btn ghost hu-wall" data-hu="wall">🏆 Trophäenwand</button>`}<button class="btn hu-go" data-hu="next">Weiter jagen</button></div>`;
     X.drag.classList.add("off");
+    if (X.call) X.call.hidden = true;
     if (typeof thumbFill === "function") thumbFill();
   }
   /* zurück auf den Hochsitz – oder gleich zur Trophäenwand (Hochsitz verlassen, Lager öffnen) */
@@ -2293,9 +2751,10 @@ const HUNT = (() => {
   }
   function harvestUIClear() {
     if (!X) return;
-    [X.win, X.card].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
+    [X.win, X.card, X.call].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
     if (X.drag) X.drag.hidden = true;
     if (X.vig) X.vig.classList.remove("on");
+    if (X.ui) X.ui.classList.remove("lv3", "lv4");
   }
 
   /* ---------------------------- Trophäenwand (v120) ----------------------------
@@ -2303,42 +2762,111 @@ const HUNT = (() => {
      Medaille, Wert. Antippen öffnet die Nahansicht: das Präparat dreht sich langsam hin und her (eigener kleiner Zeichner,
      läuft nur, solange die Ansicht offen ist), dazu Bewertung, Gewicht, Treffer, Entfernung und Tag des Erlegens. */
   const TVIEW = { yaw: Math.PI / 2 - 0.42, pitch: 0.1, noShadow: true };            /* hängt an der Wand: kein Bodenschatten */
-  const WALL = { sel: null };
-  const what = (k, T) => k === "hirsch" ? T.P + "-Ender" : k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
+  /* v200: Wand mit Filtern (Art, Seltenheit, Sortierung), Jagdbuch je Art, Aufträge. Ansicht bleibt im Lager-Reiter „Trophäen“. */
+  const WALL = { sel: null, tab: "wand", fk: "all", fr: 0, so: "best", lim: 24, sp: null, seen0: null, at: 0 };
+  const what = (k, T) => k === "hirsch" ? (T.Pl || T.P) + "-Ender" + (T.odd ? " (ung.)" : "") : k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
   const fnum = (v, d) => String(Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).replace(".", ",");
   function recThumb(r, big) {
     if (typeof thumbSpan !== "function") return `<span class="ic">${MEDALS[r.m].i}</span>`;
     return thumbSpan("tro:" + trophyKey(r) + (big ? ":b" : ""), () => trophyBuild(r), SP[r.k].i, false, Object.assign({ big: !!big }, TVIEW));
   }
+  const dayTxt = t => t != null && typeof dayOf === "function" ? "Tag " + dayOf(t) + (typeof clock === "function" ? ", " + clock(t) : "") : null;
+  const rarChip = (r, short) => r >= 1 ? `<span class="tw-rc" style="--rc:${RAR[r].c}">${r >= 4 ? "★" : "✦"}${short ? "" : " " + esc(RAR[r].n)}</span>` : "";
   function wallHTML() {
-    const C = collSync().slice().sort((a, b) => b.m - a.m || b.s - a.s || (b.t || 0) - (a.t || 0));
-    if (!C.length) return null;
-    const sum = C.reduce((t, r) => t + PRICE[r.k][r.m], 0), sel = C.find(r => r.u === WALL.sel);
+    const H = st(), C = collSync();
+    if (!C.length && !H.kills) return null;
+    if (performance.now() - WALL.at > 60000 || WALL.seen0 == null) { WALL.seen0 = H.wseen || 0; H.wseen = S.time; }   /* „neu“ = seit dem letzten Besuch */
+    WALL.at = performance.now();
+    const sum = C.reduce((t, r) => t + valueOf(r), 0), open = jobsEnsure(H).length;
+    const tabs = [["wand", "🏆 Wand"], ["buch", "📖 Jagdbuch"], ["jobs", "📋 Aufträge"]].map(([k, n]) => `<button class="${WALL.tab === k ? "on" : ""}" data-twt="${k}">${n}${k === "jobs" && open ? ` <b>${open}</b>` : ""}</button>`).join("");
+    const body = WALL.tab === "buch" ? buchHTML(H, C) : WALL.tab === "jobs" ? jobsHTML(H) : wandHTML(H, C);
+    return `<div class="tw"><div class="tw-head"><b>🏆 Trophäenwand</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>
+      <div class="tw-tabs">${tabs}</div>${body}</div>`;
+  }
+  function wandHTML(H, C0) {
+    if (!C0.length) return `<p class="tw-empty">Noch keine Trophäe an der Wand. Steig auf den Hochsitz an der Wildwiese.</p>`;
+    const ks = SPK.filter(k => C0.some(r => r.k === k));
+    if (WALL.fk !== "all" && ks.indexOf(WALL.fk) < 0) WALL.fk = "all";
+    let C = C0.filter(r => (WALL.fk === "all" || r.k === WALL.fk) && gnOf(r).r >= WALL.fr);
+    const so = { best: (a, b) => b.m - a.m || gnOf(b).r - gnOf(a).r || b.s - a.s, neu: (a, b) => (b.t || 0) - (a.t || 0), wert: (a, b) => valueOf(b) - valueOf(a) }[WALL.so] || null;
+    C = C.slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || so(a, b));
+    const sel = C0.find(r => r.u === WALL.sel);
     if (!sel) WALL.sel = null;
+    const chip = (attr, v, cur, txt) => `<button class="tw-f${cur === v ? " on" : ""}" ${attr}="${v}">${txt}</button>`;
+    const filt = `<div class="tw-fl">${chip("data-twk", "all", WALL.fk, "Alle")}${ks.map(k => chip("data-twk", k, WALL.fk, SP[k].i + " " + SP[k].n)).join("")}</div>
+      <div class="tw-fl">${chip("data-twr", "0", String(WALL.fr), "Jede Seltenheit")}${chip("data-twr", "1", String(WALL.fr), "✦ ab Auffällig")}${chip("data-twr", "2", String(WALL.fr), "✦✦ ab Selten")}
+        <span class="tw-sp"></span>${chip("data-tws", "best", WALL.so, "Stärkste")}${chip("data-tws", "neu", WALL.so, "Neueste")}${chip("data-tws", "wert", WALL.so, "Wert")}</div>`;
     let det = "";
     if (sel) {
-      const T = traits(sel.k, sel.s), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? ZONE[sel.zone].n : null;
+      const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? ZONE[sel.zone].n : null, pins = C0.filter(r => r.pin).length;
+      const sh = sel.zone ? shotOf(Object.assign({ k: sel.k }, sel)) : null, isPb = H.pb[sel.k] && H.pb[sel.k].u === sel.u;
       const rows = [["Bewertung", fnum(sel.s * 100, 1)], ["Gewicht", (sel.k === "fasan" ? fnum(T.kg, 1) : T.kg) + " kg"], z ? ["Treffer", z] : null, sel.dm ? ["Entfernung", sel.dm + " m"] : null,
-        sel.t != null && typeof dayOf === "function" ? ["Erlegt", "Tag " + dayOf(sel.t) + (typeof clock === "function" ? ", " + clock(sel.t) : "")] : null].filter(Boolean);
+        sh ? ["Schuss", stars(sh.v)] : null, ["Alter", AGES[sel.k][gn.a]], dayTxt(sel.t) ? ["Erlegt", dayTxt(sel.t)] : null].filter(Boolean);
+      const fl = featList(sel.k, gn).filter(F => !F.age);
       det = `<div class="tw-det" style="--mc:${M.c}">
-        <div class="tw-stage" id="twStage"><span class="tw-badge">${M.i} ${esc(M.n)}</span></div>
+        <div class="tw-stage" id="twStage"><span class="tw-badge">${M.i} ${esc(M.n)}</span>${gn.r >= 1 ? `<span class="tw-badge tw-rb" style="--rc:${RAR[gn.r].c}">${gn.r >= 4 ? "★" : "✦"} ${esc(RAR[gn.r].n)}</span>` : ""}${isPb ? `<span class="tw-badge tw-pb">🏅 Rekord</span>` : ""}</div>
         <div class="tw-info"><b>${esc(T.name)}</b><small>${esc(T.troph)}</small>
+          ${fl.length ? `<div class="tw-chips">${fl.map(F => `<span>${esc(F.n)}</span>`).join("")}</div>` : ""}
           <div class="tw-rows">${rows.map(([a, v]) => `<span><small>${a}</small><b>${esc(String(v))}</b></span>`).join("")}</div>
           ${sel.old === 2 ? `<p class="tw-note">Altbestand – Werte geschätzt.</p>` : ""}
-          <div class="tw-btns"><button class="btn tiny ghost" data-twx="1">Schließen</button><button class="btn tiny" data-twsell="${sel.u}">💰 An Sammler · ${eur(PRICE[sel.k][sel.m])}</button></div></div></div>`;
+          <div class="tw-btns"><button class="btn tiny ghost" data-twx="1">Schließen</button>
+            <button class="btn tiny ghost" data-twpin="${sel.u}"${!sel.pin && pins >= PIN_MAX ? " disabled" : ""}>${sel.pin ? "★ Vom Ehrenplatz nehmen" : pins >= PIN_MAX ? "Ehrenplatz voll (3)" : "☆ Auf den Ehrenplatz"}</button>
+            ${sel.pin ? `<button class="btn tiny" disabled>Auf dem Ehrenplatz</button>` : `<button class="btn tiny" data-twsell="${sel.u}">💰 An Sammler · ${eur(valueOf(sel))}</button>`}</div>
+          ${sel.pin ? `<p class="tw-note">Hängt an der Schautafel am Hochsitz und wird nicht verkauft.</p>` : ""}</div></div>`;
     }
-    return `<div class="tw"><div class="tw-head"><b>🏆 Trophäenwand</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>${det}
-      <div class="tw-grid">${C.map(r => { const T = traits(r.k, r.s), M = MEDALS[r.m];
-        return `<button class="tw-c${r.u === WALL.sel ? " on" : ""}" data-tw="${r.u}" style="--mc:${M.c}"><span class="tw-img">${recThumb(r, true)}</span><span class="tw-md">${M.i}</span>
-          <b>${esc(T.name)}</b><small>${esc(what(r.k, T))}</small><em>${eur(PRICE[r.k][r.m])}</em></button>`; }).join("")}</div></div>`;
+    const shown = C.slice(0, WALL.lim);
+    return `${filt}${det}${C.length ? `<div class="tw-grid">${shown.map(r => { const gn = gnOf(r), T = traits(r.k, r.s, gn), M = MEDALS[r.m], nw = (r.t || 0) > WALL.seen0;
+        return `<button class="tw-c${r.u === WALL.sel ? " on" : ""}${gn.r >= 1 ? " rr" : ""}" data-tw="${r.u}" style="--mc:${M.c};--rc:${RAR[gn.r].c}"><span class="tw-img">${recThumb(r, true)}</span><span class="tw-md">${M.i}</span>
+          ${r.pin ? `<span class="tw-pin">★</span>` : nw ? `<span class="tw-new">Neu</span>` : ""}
+          <b>${esc(T.name)}</b><small>${esc(what(r.k, T))}</small><em>${rarChip(gn.r, true)} ${eur(valueOf(r))}</em></button>`; }).join("")}</div>` : `<p class="tw-empty">Keine Trophäe passt zu diesem Filter.</p>`}
+      ${C.length > shown.length ? `<button class="btn tiny ghost tw-more" data-twm="1">Weitere ${C.length - shown.length} zeigen</button>` : ""}`;
+  }
+  function buchHTML(H, C) {
+    const k = WALL.sp && SP[WALL.sp] ? WALL.sp : (WALL.sp = SPK.find(x => (H.n && H.n[x]) || C.some(r => r.k === x)) || "hirsch");
+    const D = H.dex[k] || {}, all = dexAll(k), cnt = dexCount(H, k), pb = H.pb[k];
+    const tabs = SPK.map(x => { const c = dexCount(H, x); return `<button class="tw-f${x === k ? " on" : ""}" data-twb="${x}">${SP[x].i} ${SP[x].n} <small>${c.got}/${c.of}</small></button>`; }).join("");
+    const groups = [];
+    all.forEach(E => { let g = groups.find(x => x.g === E.g); if (!g) groups.push(g = { g: E.g, L: [] }); g.L.push(E); });
+    const best = C.filter(r => r.k === k).sort((a, b) => b.m - a.m || gnOf(b).r - gnOf(a).r || b.s - a.s).slice(0, 3);
+    const tot = SPK.reduce((t, x) => t + dexCount(H, x).got, 0), totOf = SPK.reduce((t, x) => t + dexCount(H, x).of, 0);
+    const gPb = [H.pb.dm ? `<span><small>Weitester Schuss</small><b>${H.pb.dm.v} m</b><em>${esc(SP[H.pb.dm.k].n)}</em></span>` : "", H.pb.sh ? `<span><small>Beste Schussnote</small><b>${stars(H.pb.sh.v)}</b><em>${esc(SP[H.pb.sh.k].n)}</em></span>` : "",
+      pb ? `<span><small>Stärkster ${esc(SP[k].n)}</small><b>Güte ${Math.round(pb.s * 100)}</b><em>${esc(pb.txt || "")}</em></span>` : ""].filter(Boolean).join("");
+    return `<div class="tw-fl">${tabs}</div>
+      <div class="tw-prog"><b>${SP[k].i} ${esc(SP[k].n)}</b><span>${(H.n && H.n[k]) || 0} erlegt · ${cnt.got} von ${cnt.of} Merkmalen dokumentiert</span><i style="--p:${Math.round(cnt.got / cnt.of * 100)}%"></i>
+        <small>Jagdbuch gesamt: ${tot} von ${totOf}</small></div>
+      ${gPb ? `<div class="tw-pbs">${gPb}</div>` : ""}
+      ${best.length ? `<div class="tw-best">${best.map(r => { const gn = gnOf(r), T = traits(r.k, r.s, gn); return `<button class="tw-bc" data-twgo="${r.u}" style="--rc:${RAR[gn.r].c}"><span class="tw-img">${recThumb(r, true)}</span><small>${MEDALS[r.m].i} ${esc(what(r.k, T))}</small></button>`; }).join("")}</div>` : ""}
+      ${groups.map(G => `<div class="tw-dg"><b>${esc(G.g)}</b><div class="tw-dx">${G.L.map(E => { const d = D[E.key], rr = /^r:/.test(E.key) ? +E.key.slice(2) : null;
+        return d ? `<span class="tw-d on"${rr != null ? ` style="--rc:${RAR[rr].c}"` : ""}><b>${rr != null ? (rr >= 4 ? "★ " : rr >= 1 ? "✦ " : "") : ""}${esc(E.n)}</b><small>× ${d.n}${dayTxt(d.t) ? " · seit " + dayTxt(d.t).split(",")[0] : ""}</small></span>`
+          : `<span class="tw-d"><b>???</b><small>${esc(E.hint)}</small></span>`; }).join("")}</div></div>`).join("")}`;
+  }
+  function jobsHTML(H) {
+    const J = jobsEnsure(H), D = ["Leicht", "Mittel", "Schwer"];
+    return `<p class="tw-sub">Bruno Wendt, der Förster, hat immer drei Aufträge für dich – einen leichten, einen mittleren, einen schweren. Erfüllst du einen, kommt gleich ein neuer.</p>
+      <div class="tw-jobs">${J.map(j => `<div class="tw-j d${j.d}"><span class="tw-jd">${D[j.d]}</span><b>${esc(jobTxt(j))}</b>${j.n > 1 ? `<i style="--p:${Math.round(j.got / j.n * 100)}%"></i><small>${j.got} von ${j.n}</small>` : ""}
+        <em>${eur(JOB_PAY[j.d][0])} · ${JOB_PAY[j.d][1]} EP</em></div>`).join("")}</div>
+      <p class="tw-sub">Bisher erfüllt: <b>${H.jd || 0}</b></p>`;
   }
   function wallBind(redraw) {
+    const H = st(), on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(el => el.onclick = () => { snd("tap"); fn(el); redraw(); });
+    on("[data-twt]", el => { WALL.tab = el.dataset.twt; WALL.sel = null; });
+    on("[data-twk]", el => { WALL.fk = el.dataset.twk; WALL.lim = 24; });
+    on("[data-twr]", el => { WALL.fr = +el.dataset.twr; WALL.lim = 24; });
+    on("[data-tws]", el => { WALL.so = el.dataset.tws; });
+    on("[data-twm]", () => { WALL.lim += 24; });
+    on("[data-twb]", el => { WALL.sp = el.dataset.twb; });
+    on("[data-twgo]", el => { WALL.tab = "wand"; WALL.fk = "all"; WALL.fr = 0; WALL.sel = el.dataset.twgo; });
     $$("#farmSheetIn [data-tw]").forEach(el => el.onclick = () => { WALL.sel = WALL.sel === el.dataset.tw ? null : el.dataset.tw; snd("tap"); redraw(); });
     $$("#farmSheetIn [data-twx]").forEach(el => el.onclick = () => { WALL.sel = null; redraw(); });
+    $$("#farmSheetIn [data-twpin]").forEach(el => el.onclick = () => {
+      if (pinRec(el.dataset.twpin)) { snd("pop"); save(); showSync(); } else snd("bad");
+      redraw();
+    });
     $$("#farmSheetIn [data-twsell]").forEach(el => el.onclick = () => {
       const got = sellRec(el.dataset.twsell);
       if (got) { snd("coin"); WALL.sel = null; save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + eur(got), "good"); redraw(); }
     });
+    void H;
     const host = $("#twStage"), r = WALL.sel && recOf(WALL.sel);
     if (host && r) turntable(host, r);
     if (typeof thumbFill === "function") thumbFill();
@@ -2478,6 +3006,13 @@ const HUNT = (() => {
       X.ui.style.setProperty("--fade", X.fade.toFixed(3));
       const k = R.w + "x" + R.h + X.view + X.zoom; if (X.ovKey !== k) drawOverlay();
       X.sub.innerHTML = `Wild <b class="hu-dots">${dots(H.stock)}</b> · 🎯 ${H.shots} · 🏆 ${H.kills}`;
+      /* v200: offene Jagdaufträge, nacheinander eingeblendet (nicht beim Bergen) */
+      if (X.jobEl) {
+        const show = ["eye", "bino"].includes(X.view) && X.mode === "hold", J = show ? jobsEnsure(H) : [];
+        if (J.length) { const i = Math.floor(X.t / 7) % J.length, j = J[i], key = j.id + ":" + j.got;
+          if (X.jobK !== key) { X.jobK = key; X.jobEl.innerHTML = `<i>📋</i><span>${esc(jobTxt(j))}${j.n > 1 ? ` <b>${j.got}/${j.n}</b>` : ""}</span><em>${["leicht", "mittel", "schwer"][j.d]} · ${eur(JOB_PAY[j.d][0])}</em>`; } }
+        X.jobEl.hidden = !J.length;
+      }
       const rel = angN(X.wind.dir - X.th);                          /* Pfeil: wohin der Wind weht, relativ zur Blickrichtung (oben = vorn) */
       X.windEl.querySelector("i").style.transform = `rotate(${(rel * 180 / Math.PI - 90).toFixed(0)}deg)`;
       X.windEl.querySelector("span").textContent = (Math.round(X.wind.v * 10) / 10).toString().replace(".", ",") + " m/s";
@@ -2512,7 +3047,9 @@ const HUNT = (() => {
       X.spot.t += dt;
       if (X.spot.t > 0.6 && !A.seen) { A.seen = true; snd("xp"); }
       const dm = Math.round(Math.hypot(A.x - EYER[0], A.z - EYER[2]) * M_PER_U), ch = chance(A);
-      X.spotEl.innerHTML = A.seen ? `<b>${SP[A.k].i} ${esc(A.T.name)}</b><span>${dm} m · ${doing(A)}</span><span>Medaille: ${ch.txt}</span><span>Sammlerwert ca. ${eur(ch.v)}</span>`
+      /* v200: was schon im Glas zu sehen ist – Decke, Geweihform, alter Recke; die Seltenheit zeigt sich erst beim Bergen */
+      const ff = A.gn ? farFeat(A.k, A.gn) : [];
+      X.spotEl.innerHTML = A.seen ? `<b>${SP[A.k].i} ${esc(A.T.name)}</b><span>${dm} m · ${doing(A)}</span>${ff.length ? `<span class="hu-sf">✦ ${ff.slice(0, 2).map(F => esc(F.n)).join(" · ")}</span>` : ""}<span>Medaille: ${ch.txt}</span><span>Sammlerwert ca. ${eur(ch.v)}</span>`
         : `<b>Erkennen … ${dm} m</b><i style="width:${Math.round(Math.min(1, X.spot.t / 0.6) * 100)}%"></i>`;
       X.spotEl.hidden = false;
       const sw = X.spotEl.offsetWidth || 180, sh = X.spotEl.offsetHeight || 70;
@@ -2561,21 +3098,32 @@ const HUNT = (() => {
     const ids = Object.keys(S.farm.inv).filter(id => /^tro_/.test(id) && FITEMS[id] && farmInv(id) > 0);
     if (!ids.length) return "";
     ids.sort((a, b) => FITEMS[b].v - FITEMS[a].v);
-    const sum = ids.reduce((t, id) => t + farmSellPrice(id, farmInv(id)), 0);
-    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert – verkauft wird jeweils das schwächste Stück der Stufe</small></div><span class="price">${money(sum)}</span></div>
-      <div class="hu-mrows">${ids.map(id => `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}</small></span><button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1))}</button></div>`).join("")}</div></div>`;
+    /* v200: Ehrenplatz-Stücke stehen nicht zum Verkauf; verkauft wird das schwächste gewöhnliche Stück der Stufe, sein Seltenheitsaufschlag kommt dazu */
+    const C = collSync(), next = id => C.filter(r => trophyId(r.k, r.m) === id && !r.pin).sort(weakFirst)[0];
+    const free = id => Math.min(farmInv(id), C.filter(r => trophyId(r.k, r.m) === id && !r.pin).length);
+    const sum = ids.reduce((t, id) => t + C.filter(r => trophyId(r.k, r.m) === id && !r.pin).reduce((a, r) => a + farmSellPrice(id, 1) + extraOf(r), 0), 0);
+    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert und für seltene Stücke einen Aufschlag – verkauft wird jeweils das schwächste Stück der Stufe, Ehrenplätze bleiben</small></div><span class="price">${money(sum)}</span></div>
+      <div class="hu-mrows">${ids.map(id => { const r = next(id), n = free(id);
+        return `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}${n < farmInv(id) ? " · " + (farmInv(id) - n) + " auf Ehrenplatz" : ""}</small></span>${r ? `<button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1) + extraOf(r))}</button>` : `<button class="btn tiny" disabled>Ehrenplatz</button>`}</div>`; }).join("")}</div></div>`;
   }
   function marketBind() {
     $$("#tab-market [data-husell]").forEach(b => b.onclick = () => {
-      const m = farmSell(b.dataset.husell, 1);
-      if (m) { collSync(); snd("coin"); save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + money(m), "good"); renderMarket(); }
+      const id = b.dataset.husell, r = collSync().filter(x => trophyId(x.k, x.m) === id && !x.pin).sort(weakFirst)[0];
+      if (!r) return;
+      const m = farmSell(id, 1);
+      if (m) {
+        const H = st(), i = H.coll.indexOf(r); if (i >= 0) H.coll.splice(i, 1);
+        const ex = extraOf(r); if (ex > 0) { S.money += ex; if (typeof logMoney === "function") logMoney("farm", "Seltenheitsaufschlag: " + RAR[gnOf(r).r].n, ex); }
+        collSync(); snd("coin"); save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + money(m + ex), "good"); renderMarket();
+      }
     });
   }
   return {
     CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
-    wallHTML, wallBind, collSync, trophyBuild, trophyKey,
-    _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr) => deerHead(P, sc, vr), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
+    wallHTML, wallBind, collSync, trophyBuild, trophyKey, stats, genes, valueOf, shotOf, RAR, RAR_V, COATS, FORMS, dexAll,
+    _v200: { hv200, dexPut, dexCount, pbPut, jobsEnsure, jobsEval, jobsLost, jobTxt, pinRec, presOf, featList, lookKey, weakFirst, sellRec: u => sellRec(u), st: () => st(), showMesh, withLook, traits },
+    _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr, F) => deerHead(P, sc, vr, F), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
       boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: () => phHead(), phLeg: () => phLeg(), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },

@@ -309,8 +309,15 @@ const ACHS = [
   { id: "green", icon: "🌱", name: "Klimaretter", desc: "Eine Tonne CO₂ mit dem Rad gespart.", ok: () => typeof co2State === "function" && co2State().bikeKm * CO2_VAN_KM >= 1000 },
   { id: "repair", icon: "🔧", name: "Gut gepflegt", desc: "Zehnmal in der Werkstatt.", ok: () => extraStats().repairs >= 10 },
   { id: "loan", icon: "🏦", name: "Schuldenfrei", desc: "Einen Kredit zurückgezahlt.", ok: () => extraStats().loans >= 1 },
-  { id: "snus", icon: "🎩", name: "Geschäftspartner", desc: "Erste Dose für Mr. Snus verkauft.", ok: () => extraStats().snusSold >= 1 }
+  { id: "snus", icon: "🎩", name: "Geschäftspartner", desc: "Erste Dose für Mr. Snus verkauft.", ok: () => extraStats().snusSold >= 1 },
+  /* v200: Jagd – aus hunt.js (HUNT.stats), nur wenn die Jagd geladen ist */
+  { id: "hunt1", icon: "🦌", name: "Waidmannsheil", desc: "Die erste Trophäe gesichert.", ok: () => huntSt().kills >= 1 },
+  { id: "huntgold", icon: "🥇", name: "Kapitales Stück", desc: "Eine Trophäe in Gold oder Diamant.", ok: () => huntSt().best >= 3 },
+  { id: "huntrare", icon: "✦", name: "Seltener Anblick", desc: "Ein seltenes Stück erlegt.", ok: () => huntSt().rare >= 2 },
+  { id: "huntdex", icon: "📖", name: "Gut dokumentiert", desc: "20 Merkmale im Jagdbuch eingetragen.", ok: () => huntSt().dex >= 20 },
+  { id: "huntjobs", icon: "📋", name: "Rechte Hand des Försters", desc: "Zehn Jagdaufträge erfüllt.", ok: () => huntSt().jobs >= 10 }
 ];
+function huntSt() { return typeof HUNT !== "undefined" && HUNT.stats && typeof S !== "undefined" && S.farm ? HUNT.stats() : { kills: 0, best: 0, rare: -1, dex: 0, jobs: 0 }; }
 function checkAchievements() {
   S.ach = S.ach || {};
   const got = [];

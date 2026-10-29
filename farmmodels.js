@@ -1134,9 +1134,11 @@ const FM = (() => {
     const b = new MB();
     [0.5, 1.25, 2.3, 3.4, 4.3, 5.4].forEach(a0 => {
       for (let i = 0; i < 11; i++) {
-        const a = a0 + (rnd() - 0.5) * 0.35, R = pondR(r, a) + (rnd() - 0.55) * 0.55;
+        /* v205: Halme stehen im nassen Sand an der Wasserlinie (vorher bis 30 cm im Wasser – dort schnitt die Oberfläche sie ab) */
+        const a = a0 + (rnd() - 0.5) * 0.35, R = pondR(r, a) + 0.04 + rnd() * 0.3;
         const x = Math.cos(a) * R, z = Math.sin(a) * R, h = 0.45 + rnd() * 0.5;
-        b.at({ x, z, rx: (rnd() - 0.5) * 0.25, rz: (rnd() - 0.5) * 0.25 }, () => {
+        if (i % 4 === 0) b.ico(0.07 + rnd() * 0.04, 0x557f30, { x, y: 0.02, z, flat: 0.35, jitter: 0.4 });      /* Horst am Fuß */
+        b.at({ x, y: 0.015, z, rx: (rnd() - 0.5) * 0.25, rz: (rnd() - 0.5) * 0.25 }, () => {
           b.box(0.03, h, 0.03, rnd() < 0.5 ? 0x5c8f34 : 0x6fa23d);
           if (rnd() < 0.45) b.box(0.06, 0.15, 0.06, 0x6b4426, { y: h - 0.05 });
           if (rnd() < 0.5) b.box(0.012, 0.32, 0.07, 0x78ad44, { y: 0.02, rz: 0.35, x: 0.03 });
@@ -1182,7 +1184,7 @@ const FM = (() => {
         if (i % 4 === 0) { b.ico(0.05, 0xffffff, { y: 0.03, x: s * 0.15, flat: 0.7 }); b.ico(0.024, 0xffe27a, { y: 0.058, x: s * 0.15 }); }
       });
     });
-    PADS.forEach(([a, f], i) => { const R = pondR(r, a) * f; ring(Math.cos(a) * R, Math.sin(a) * R, 0.2 + (i % 3) * 0.03, 0.34 + (i % 3) * 0.03, [0.82, 0.93, 0.98], 0.3, Y + 0.002); });
+    /* v205: keine hellen Ringe mehr um Seerosen, Steine und Treibholz (wirkten wie Auswahlkreise) */
     /* Wasserlinsen: kleine grüne Tupfer in einer Bucht */
     for (let i = 0; i < 46; i++) {
       const a = 5.9 + (rnd() - 0.5) * 0.9, f = 0.66 + rnd() * 0.25, R = pondR(r, a) * f, x = Math.cos(a) * R + (rnd() - 0.5) * 0.3, z = Math.sin(a) * R + (rnd() - 0.5) * 0.3, s = 0.028 + rnd() * 0.03, ry = rnd() * 6.28;
@@ -1191,7 +1193,6 @@ const FM = (() => {
     /* Steine im flachen Wasser mit hellem Rand, und Kiesel unter der Oberfläche */
     [[0.55, 0.9, 0.2], [0.75, 0.84, 0.14], [2.7, 0.95, 0.16], [4.2, 0.88, 0.22], [1.15, 0.97, 0.12]].forEach(([a, f, s]) => {
       const R = pondR(r, a) * f, x = Math.cos(a) * R, z = Math.sin(a) * R;
-      ring(x, z, s * 1.05, s * 1.85, [0.95, 0.98, 1.0], 0.55, Y + 0.003);
       b.noise(0.08, () => b.ico(s, rnd() < 0.5 ? 0x9a948a : 0x827d75, { x, y: 0.012, z, flat: 0.55, jitter: 0.5 }));
     });
     for (let i = 0; i < 38; i++) {
@@ -1199,10 +1200,9 @@ const FM = (() => {
       if (Math.abs(a - Math.PI) < 0.55) continue;                                      /* nicht unter dem Steg */
       b.ico(0.035 + rnd() * 0.04, [0x6e7f7e, 0x7f8f88, 0x5f6f73][i % 3], { x, y: 0.016, z, flat: 0.35, jitter: 0.4 });
     }
-    /* Treibholz am Ufer */
-    { const a = 1.95, R = pondR(r, a) - 0.05, x = Math.cos(a) * R, z = Math.sin(a) * R;
-      b.at({ x, z, y: 0.045, ry: 0.9 }, () => { b.cyl(0.05, 0.06, 0.95, 7, 0x6f5638, { rz: Math.PI / 2 }); b.cyl(0.03, 0.035, 0.4, 6, 0x7a6243, { rz: Math.PI / 2, x: 0.3, z: 0.1, ry: 0.7 }); });
-      ring(x, z, 0.45, 0.7, [0.9, 0.96, 0.98], 0.3, Y + 0.002); }
+    /* Treibholz – v205: ganz im Wasser, parallel zum Ufer (vorher lag es quer über der Uferkante), halb eingetaucht */
+    { const a = 1.95, R = pondR(r, a) * 0.8, x = Math.cos(a) * R, z = Math.sin(a) * R;
+      b.at({ x, z, y: 0.03, ry: Math.PI / 2 - a }, () => { b.cyl(0.05, 0.06, 0.95, 7, 0x6f5638, { rx: Math.PI / 2 }); b.cyl(0.03, 0.035, 0.38, 6, 0x7a6243, { rx: Math.PI / 2, x: -0.1, z: 0.22, ry: 0.6 }); }); }
     /* Steg Richtung Hof */
     const a = Math.PI, R0 = pondR(r, a);
     b.at({ x: Math.cos(a) * (R0 - 0.9), z: Math.sin(a) * (R0 - 0.9) + 0.4, ry: 0 }, () => {
@@ -1212,7 +1212,7 @@ const FM = (() => {
       /* Pfosten stehen seitlich neben den Planken und ragen als Poller darüber */
       [-1.2, -0.25, 0.7, 1.28].forEach(x => { b.box(0.1, 0.55, 0.1, 0x6b4a2e, { x, y: -0.2, z: 0.37 }); b.box(0.1, 0.55, 0.1, 0x6b4a2e, { x, y: -0.2, z: -0.37 }); });
       /* Ruderboot am Steg: offener Rumpf, Boden unter der Wasserlinie */
-      b.at({ x: 0.1, z: 0.86, y: -0.06, ry: 0.12 }, () => {
+      b.at({ x: 0.75, z: 0.98, y: -0.06, ry: 0.05 }, () => {      /* v205: weiter draußen, Abstand zu Steg und Ufer */
         b.noise(0.08, () => b.cyl(0.38, 0.52, 0.3, 14, 0x3f78c8, { sx: 0.44, sz: 1.0, ry: Math.PI / 2, notop: true }));
         /* Innenwand (gespiegelt, damit man von oben hineinsieht) */
         b.cyl(0.35, 0.49, 0.29, 14, 0x9a6a3c, { sx: -0.41, sz: 0.94, ry: Math.PI / 2, notop: true, nobot: true, y: 0.012 });
