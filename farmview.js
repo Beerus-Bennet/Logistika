@@ -2117,6 +2117,13 @@ function bindMachQueue(o) {
     sfx("pop"); save(); openMachine(o);
   });
 }
+/* v209: Zutat unter dem Finger (Rechteck der Chips, 6 px Rand) – null, wenn daneben */
+function recChipAt(b, e) {
+  if (!e || !(e.clientX || e.clientY)) return null;
+  const M = 6;
+  for (const c of b.querySelectorAll("[data-it]")) { const r = c.getBoundingClientRect(); if (e.clientX >= r.left - M && e.clientX <= r.right + M && e.clientY >= r.top - M && e.clientY <= r.bottom + M) return c; }
+  return null;
+}
 function openMachine(o) {
   FV.sheetFn = () => openMachine(o);
   /* jede Sekunde nur die Warteschlange nachführen */
@@ -2161,9 +2168,16 @@ function openMachine(o) {
     sfx("tap"); toast(o.off ? "⏸ " + M.n + " deaktiviert – die Arbeiter lassen sie in Ruhe." : "▶ " + M.n + " ist wieder für die Arbeiter frei.", "ok");
     save(); openMachine(o);
   };
+  $$("#farmSheetIn [data-rec]").forEach(b => {
+    /* v209: Finger auf einer Zutat – die Rezeptkachel drückt sich nicht mit ein */
+    b.addEventListener("pointerdown", e => { b.classList.toggle("nopress", !!recChipAt(b, e)); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(t => b.addEventListener(t, () => setTimeout(() => b.classList.remove("nopress"), 60)));
+  });
   $$("#farmSheetIn [data-rec]").forEach(b => b.onclick = e => {
-    /* v129: Tipp auf eine Zutat (Chip) zeigt nur ihren Namen und den Lagerbestand – das Produkt wird nicht gleich produziert */
+    /* v129: Tipp auf eine Zutat (Chip) zeigt nur ihren Namen und den Lagerbestand – das Produkt wird nicht gleich produziert.
+       v209: auch per Lage des Fingers (iOS meldet den Tipp innerhalb eines Knopfs teils am Knopf selbst, nicht an der Zutat) */
     if (e && e.target && e.target.closest && e.target.closest("[data-it]")) return;
+    { const c = recChipAt(b, e); if (c) { if (typeof itemTip === "function") itemTip(c); return; } }
     const r = farmQueue(o, b.dataset.rec);
     if (r === true) {
       sfx(M.trips ? "horn" : "pop");

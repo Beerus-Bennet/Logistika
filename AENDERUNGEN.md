@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v209 – Rezeptkacheln: Tipp auf eine Zutat startet keine Produktion mehr
+
+- **Problem:** Ein Tipp auf den Zutaten-Chip (z. B. „5/1“ Eichenstämme) stellte auf dem iPhone trotzdem das Produkt in die Warteschlange, und die Kachel drückte sich mit ein. Die Abwehr aus v129/v165 prüfte nur das Ziel des Klicks (`e.target`); iOS meldet den Tipp innerhalb eines Knopfs teils am Knopf selbst.
+- **Lösung (`farmview.js`):** neue Hilfe `recChipAt(b, e)` prüft die Fingerposition gegen die Rechtecke der Chips (6 px Rand). Liegt der Tipp auf einer Zutat, zeigt sie nur ihren Namen und Bestand, das Rezept startet nicht. Beim Aufsetzen auf einer Zutat bekommt die Kachel `nopress` und drückt sich nicht ein (`style.css`).
+- Im Test-Browser nachgestellt: Klick am Knopf mit Chip-Koordinaten → nichts eingestellt; Tipp auf das Produkt → eingestellt.
+
 ## v208 – Lkw-Stellplatz als Ladebucht quer zum Weg, gerade Zufahrt
 
 - **Analyse:** Der Stellplatz lag parallel zum Hauptweg, der Laster sollte von Süden einfahren. Die Zufahrt musste deshalb vom Weg aus einen Haken um 90° schlagen und lief als Bogen mit Grasinsel auf die Stirnseite zu. Dazu zeichnete sich ihr rundes Ende über dem Stellplatz (Weg 6 lag mit y 0,044 höher als die Fläche mit 0,034).

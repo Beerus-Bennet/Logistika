@@ -2126,6 +2126,7 @@ body.tab-farm #farmPlace.on~#farmSide{opacity:.3}
 .frec.miss{background:#fbfbfb}
 .frec.lock{opacity:.5;cursor:default;background:#eef1f4}
 .frec:active:not(.lock){transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+.frec.nopress:active:not(.lock){transform:none;box-shadow:2px 2px 0 var(--ink)}   /* v209: Tipp auf eine Zutat drückt die Kachel nicht */
 
 /* Lager */
 .fcap{position:relative;height:22px;border:2.5px solid var(--ink);border-radius:12px;background:#fff;overflow:hidden;margin-bottom:10px}

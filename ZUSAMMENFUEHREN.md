@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v209 – Zutaten-Tipp in Rezeptkacheln (auf v208)
+
+| Datei | Änderung |
+|---|---|
+| `farmview.js` | `recChipAt`, Prüfung im Klick der Rezeptkachel, `nopress` beim Aufsetzen |
+| `style.css` | `.frec.nopress:active` |
+| `sw.js`, `index.html` | Version v209 |
+
 ## Stand v208 – Ladebucht quer zum Weg (auf v207)
 
 | Datei | Änderung |
