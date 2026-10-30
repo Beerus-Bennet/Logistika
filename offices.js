@@ -487,6 +487,48 @@ function fire(baseId, staffId) {
   save(); render();
 }
 
+/* v221: Bürowechsel – Personal (auch die Kraft aus der Luckybox) lässt sich in ein anderes Büro versetzen.
+   Kostet nichts, braucht aber einen freien Schreibtisch; ein fester Fahrer verlässt sein Fahrzeug. */
+function transferStaff(fromId, staffId, toId) {
+  const a = baseById(fromId), b = baseById(toId);
+  if (!a || !b || a === b) return false;
+  const s = a.staff.find(x => x.id === staffId); if (!s) return false;
+  if (b.staff.length >= tierOf(b).desks) {
+    toast(N[b.node].short + ": kein freier Schreibtisch (" + tierOf(b).name + ").", "warn");
+    return false;
+  }
+  S.fleet.forEach(f => { if (f.driver === staffId) f.driver = null; });
+  a.staff = a.staff.filter(x => x.id !== staffId);
+  b.staff.push(s);
+  s.moved = S.time;
+  b.nextAt = Math.min(b.nextAt || 0, S.time + 5);
+  toast("🔀 " + s.name + " arbeitet jetzt in " + N[b.node].short + ".", "ok");
+  save(); render();
+  return true;
+}
+function moveZones(fromId) {
+  return basesOf().filter(x => x.id !== fromId).map(x => {
+    const free = tierOf(x).desks - x.staff.length;
+    return `<div class="dropzone base${free > 0 ? "" : " dead"}" data-drop="${free > 0 ? "base:" + x.id : ""}">
+      <i>${tierOf(x).icon}</i><span>${esc(N[x.node].short)}</span>
+      <small>${free > 0 ? (free > 1 ? free + " Plätze" : "1 Platz") + " frei" : "voll"}</small></div>`;
+  }).join("");
+}
+function openMoveBar(payload) {
+  const [baseId, staffId] = payload.split("|");
+  const b = baseById(baseId), s = b && b.staff.find(x => x.id === staffId);
+  const bar = $("#dropbar"); if (!s || !bar) return;
+  bar.innerHTML = `<div class="dropbar-in">
+    <div class="dropbar-t">${esc(s.name)} versetzen nach …</div>
+    <div class="dropbar-row"><div class="dropbar-scroll">${moveZones(baseId) || `<div class="dropzone dead"><i>🏢</i><span>Kein weiteres Büro</span></div>`}</div>
+    <div class="dropzone" data-moveclose="1"><i>✕</i><span>Abbrechen</span></div></div></div>`;
+  bar.classList.add("on");
+  bar.querySelectorAll("[data-drop]").forEach(z => z.onclick = () => {
+    if (z.dataset.drop) { closeDropBar(); handleStaffDrop(payload, z.dataset.drop); }
+  });
+  bar.querySelector("[data-moveclose]").onclick = closeDropBar;
+}
+
 /* --------------------------- Fahrzeugzuordnung --------------------------- */
 function assignVehicle(baseId, uid) {
   const b = baseById(baseId); if (!b) return;
@@ -950,6 +992,7 @@ function staffRow(b, s) {
       <small>${r.icon} ${esc(r.name)} · ${stars(s.skill)} · ${money(s.wage)}/Tag</small>
       <small class="trait">${drives ? "🧑‍✈️ fährt " + esc(vType(drives.type).name) : esc(s.trait)}</small>
     </div>
+    ${S.bases.length > 1 ? `<button class="xmini" data-move="${b.id}|${s.id}" title="in anderes Büro versetzen">⇄</button>` : ""}
     <button class="xmini" data-fire="${b.id}|${s.id}" title="kündigen">✕</button>
   </div>`;
 }
@@ -1122,6 +1165,7 @@ function renderBases() {
   $$("#tab-bases [data-hire]").forEach(b => b.onclick = () => {
     const [bid, cid] = b.dataset.hire.split("|"); hire(bid, cid);
   });
+  $$("#tab-bases [data-move]").forEach(b => b.onclick = () => openMoveBar(b.dataset.move));
   $$("#tab-bases [data-fire]").forEach(b => b.onclick = () => {
     const [bid, sid] = b.dataset.fire.split("|");
     const st = baseById(bid).staff.find(x => x.id === sid);
@@ -1687,6 +1731,7 @@ function openDropBar(payload) {
         }).join("") || `<div class="dropzone dead"><i>🚚</i><span>Kein Fahrzeug am Standort</span></div>`
         : `<div class="dropzone dead"><i>🚚</i><span>Nur Fahrpersonal übernimmt ein Fahrzeug</span></div>`}
         </div>
+        ${basesOf().length > 1 ? `<div class="dropzone-grp">${moveZones(baseId)}</div>` : ""}
         <div class="dropzone fire" data-drop="fire"><i>🗑️</i><span>Kündigen</span>
           <small>${s ? money(s.wage * 14) + " Abfindung" : ""}</small></div>
       </div>
@@ -1710,4 +1755,5 @@ function handleStaffDrop(payload, target) {
   }
   const [kind, uid] = target.split(":");
   if (kind === "veh") setDriver(uid, staffId);
+  else if (kind === "base") transferStaff(baseId, staffId, uid);
 }

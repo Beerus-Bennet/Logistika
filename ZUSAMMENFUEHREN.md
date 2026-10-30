@@ -1,5 +1,84 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v228 – Quellberg in der Nordostecke (auf v227)
+
+- `woodmodels.js`: Der Bereich von „v207: Woher das Wasser kommt“ bis zum Ende von `springHill` ist neu.
+  - Neu: `setSpringFrame(C, ry, k)`, `toW`/`toL`, `SRUN` (W: Welt-Abschnitte A–C, L: lokaler Zulauf und Becken, `srcW`), `srReaches`, `MTN` und `mtnW`, `srPlateau` und `platW`, `srBox`, `baseW` (Tabelle), `unionH`, `springHeightW`, `springFlora`.
+  - `srcWater` arbeitet jetzt mit Raster und gibt „weit“ zurück, wenn kein Wasser näher als 2,5 ist.
+  - `springHill` baut ein adaptives Gitter in Weltachsen. `yAlong` und `SRUN.boulder` entfallen.
+  - `springRunFoam` und `springRunInfo` nehmen `srSrc()`.
+  - Neue Exporte: `setSpringFrame`, `springFlora`, `springHeightW`, `springWater`, `springMtn`, `springSamples`, `springPlateau`, `springBox`, `SRUN`, `MTN`.
+- `worldview.js`:
+  - `FWM.setSpringFrame(SPI.C, ryF, k)` vor dem Bau.
+  - Neuer Knoten `springFlora` (Welt). Mesh-Schlüssel `wspringrun228`, `wspringcasc228`, `wspringrunfoam228`.
+  - `stamp` über `springHill.caps`; die Quell-Bläschen sind aus.
+- `erbe.js`: `FWORLD.springHill = { caps: [...] }`, neu `springHillNear`, `inSpringHill` über die Kapseln. v207hill/v220hill laufen nur noch mit der alten Achse, neue Umstellung `v228hill`, `treasureSpotOk` prüft Berg und Topf.
+- `erbedata.js`: `FAREAS.wald.cam` und `FAREAS.altwald.cam`: x1 von 42 auf 54.
+- `sw.js` und `index.html`: v228.
+
+## Stand v227 – Buchenstämme (auf v226)
+
+- `woodmodels.js`: `TREE_C.buche` (bark/mark/base dunkler). `treebark.js`: Palette `GR` der Buche.
+- `sw.js` und `index.html`: v227.
+
+## Stand v226 – Schautafel (auf v225)
+
+- `hunt.js`: `SHOWL = [3.1, 0, 0.3]`, `SHOWRY = π/4` (Knoten `W.show` mit `ry: SHOWRY`), neu `showClear(x, z)`, am Anfang von `clear()` aufgerufen.
+- `erbe.js`: Migration `F.v225h` (Bäume per `huntTree` filtern).
+- `sw.js` und `index.html`: v226.
+
+## Stand v225 – Merkmals-Blase entfernt (auf v224)
+
+- `hunt.js`: in der Bergungsansicht wird `X.call` nicht mehr befüllt/gezeigt (`callHTML` ungenutzt).
+- `sw.js` und `index.html`: v225.
+
+## Stand v224 – Schussnote-Sterne (auf v223)
+
+- `hunt.js`: `stars()` liefert HTML (`<span class="hu-stars"><i class="f|h|e">★</i>…`); Zeilenwert im Trophäen-Detail als `{ html }`, `rows.map` gibt `v.html` unmaskiert aus.
+- `style.css`: Block `.hu-stars` am Dateiende.
+- `sw.js` und `index.html`: v224.
+
+## Stand v223 – Figuren: Hosenträger (auf v222)
+
+- `woodmodels.js` (`garbParts`): `plaid` neu geschichtet (Streifen 0,2 / Querstreifen 0,216 / Träger-Platten bei z ±0,118, Schulterriemen, Schnalle), `hivis`-Streifen Tiefe 0,226, Latzhosenband und Schürzenband Tiefe 0,2.
+- `sw.js` und `index.html`: v223.
+
+## Stand v222 – Hochsitz-Meldungen (auf v221)
+
+- `hunt.js`: `enterRevier` ohne Wartezeit-Text, `sheet` ohne `wait`/„nächstes Stück in“.
+- `style.css`: `#huntUI .hu-msg` `top:124px`.
+- `sw.js` und `index.html`: v222.
+
+## Stand v221 – Bürowechsel für Personal (auf v220)
+
+- `offices.js`: neu `transferStaff(fromId, staffId, toId)`, `moveZones(fromId)`, `openMoveBar(payload)`; Knopf `data-move` (⇄) in `staffRow` plus Handler im Standorte-Tab; `openDropBar` zeigt die anderen Büros als `data-drop="base:<id>"`, `handleStaffDrop` ruft bei `base` `transferStaff` auf.
+- `style.css`: `.dropzone-grp`, `.dropzone.base`.
+- `sw.js` und `index.html`: v221. Spielstand unverändert.
+
+## Stand v220 – Quell-Wasserfall neu ausgerichtet (auf v219)
+
+- `woodmodels.js`:
+  - `stone()` hat die Optionen `cut`, `top` und `topK` (Bruchflächen).
+  - `springRocks` ist neu aufgebaut, dazu neu `springRim(rim)`.
+  - Neu aufgebaut sind auch `SRUN` (`reach`, `src`, `boulder`), `srSamples`, `srLinks`, `srcWater`, `yAlong`, `hillH`, `springHill` (Normalen je Ecke), `springRun` (Band für `uWater 7`), `srCasc`, `springCascades`, `springRunFoam` und `springRunInfo`.
+  - `fallSheet` übergibt `p[5]` (Kanten-Versatz).
+  - `SPRING_FALL`: `foot` y −0,05, `rinne` 1,35, `basin` neu.
+  - Export `springRim`.
+- `gl3d.js`:
+  - Neu `streamWater()`; `fallW` gilt nur für 6, `strW` für 7.
+  - `uFlow.w` = Einblendlänge.
+  - Fuß-Schaum und Fall-Schaum schwächer.
+- `worldview.js`:
+  - Quell-Block: Knoten im Rahmen `ry + π/2`; Mesh-Schlüssel `…220`.
+  - `springBasin` wird nicht mehr gezeichnet.
+  - `WV.springFx.dx/dz` ist jetzt die Fallrichtung.
+- `erbe.js`: `FWORLD.springHill` neue Achse (r 10,5), Umstellung `F.v220hill`.
+- Fischerei-Dateien unverändert.
+
+## Stand v219 – Ställe abreißen (auf v218)
+
+- `farm.js`: neue Funktionen `penDemolishBack(o)` und `farmPenDemolish(o)` (vor `farmRemove`); `farmview.js`: Knopf `#fpDel` in `openPen` (ausgegraut bei Tieren, `askConfirm`, danach `farmSyncScene`). Sonst nichts verändert; `sw.js`/`index.html` nur Versionsnummer.
+
 ## Stand v218 – Bootssteg, Feuerholz-Regel (auf v217.2)
 
 - `rent.js`: Steg (`DOCK`, `Wd`/`Ld`, `DPATH`, `MOOR`, `BOAT_SPOTS`, `DOCK_NEED`, `DOCK_COST`, `DOCK_BONUS`, `dockCheck`, `dockBuildNow`, `dockSheet`, `tagDock`, `dockMesh`, `dockSiteMesh`, `boatMesh`, `oarMesh`, `dockPathMesh`, `shoreCol`, `ensureBoat`, `boatGo`, `stepBoat`); `rentDay(T)`/`WEEK(T)`; `doing` mit `k: "boat"`; `route` über die Stufen als Knoten; `yDock`; Feuerholz mit `late` und `T.cut`; Spielstand `S.farm.rent.dock`, `.dockAnn`, `.dockQ`, Bauplatz-Lager `"rent_dock"`.

@@ -925,6 +925,8 @@ body.dragging-staff{user-select:none}
 .dropzone.dead{opacity:.45;border-style:solid}
 .dropzone.over{background:var(--blue);border-color:#fff;border-style:solid;color:#fff}
 .dropzone.fire.over{background:var(--red)}
+.dropzone-grp{flex:0 1 auto;min-width:0;display:flex;gap:8px;overflow-x:auto;border-left:2px solid #4b6a94;padding-left:8px}
+.dropzone.base{border-color:#8fc1ff}
 body.dragging-staff .firezone{display:none}
 .mini button.add.sub{background:var(--paper);color:var(--ink);margin-right:4px}
 .mini button.add.sub:active{transform:translate(2px,2px)}
@@ -3183,7 +3185,7 @@ body.fp3d #farmSide,body.fp3d .fq-card,body.fp3d #farmQuest,body.fp3d #farmChips
 #huntUI .hu-range{position:absolute;left:50%;top:calc(50% + min(44vw, 44vh) * .5 + 14px);transform:translateX(-50%);color:#e9f2ec;font-weight:800;font-size:12.5px;letter-spacing:.3px;
   background:rgba(0,0,0,.45);padding:3px 10px;border-radius:10px;pointer-events:none;font-variant-numeric:tabular-nums;white-space:nowrap}
 /* Hinweise */
-#huntUI .hu-msg{position:absolute;left:50%;top:72px;transform:translateX(-50%);max-width:min(340px,calc(100% - 32px));text-align:center;padding:7px 14px;border-radius:14px;
+#huntUI .hu-msg{position:absolute;left:50%;top:124px;transform:translateX(-50%);max-width:min(340px,calc(100% - 32px));text-align:center;padding:7px 14px;border-radius:14px;
   background:var(--hu-glass);color:#fff;font-weight:800;font-size:13px;line-height:1.3;border:2px solid rgba(255,255,255,.18);pointer-events:none;animation:huMsg .25s ease}
 #huntUI .hu-msg.good{background:rgba(23,128,92,.88)}
 #huntUI .hu-msg.bad{background:rgba(158,38,56,.86)}
@@ -3724,3 +3726,10 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .tw-j.d1 .tw-jd{background:#fde9c4;color:#7a4f00}
 .tw-j.d2 .tw-jd{background:#f6d6d2;color:#8a2a1e}
 @media (prefers-reduced-motion:reduce){#huntUI .hu-rar,#huntUI .hu-rar::after,#huntUI .hu-call{animation:none!important}}
+
+/* v224: Schussnote – Sterne gut sichtbar, einheitlich (voll / halb / leer) */
+.hu-stars{display:inline-flex;gap:1px;vertical-align:middle;letter-spacing:0;white-space:nowrap}
+.hu-stars i{font-style:normal;font-size:1.25em;line-height:1;font-family:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","DejaVu Sans",sans-serif;-webkit-text-stroke:.7px #8a6a10}
+.hu-stars i.f{color:#f2b51c}
+.hu-stars i.e{color:#e4e6ea;-webkit-text-stroke:.7px #9aa3ae}
+.hu-stars i.h{color:transparent;background:linear-gradient(90deg,#f2b51c 50%,#e4e6ea 50%);-webkit-background-clip:text;background-clip:text;-webkit-text-stroke:.7px #8a6a10}

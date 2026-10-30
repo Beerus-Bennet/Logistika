@@ -83,7 +83,13 @@ const HUNT = (() => {
   const edgeR = a => CR * (1 + 0.1 * Math.sin(3 * a + 1.1) + 0.06 * Math.sin(5 * a + 2.3));
   const polar = (x, z) => ({ d: Math.hypot(x - CX, z - CZ), a: Math.atan2(z - CZ, x - CX) });
   function inMeadow(x, z, m) { const p = polar(x, z); return p.d < edgeR(p.a) + (m || 0); }
+  /* v225: Schautafel (links vom Turm): freier Platz um sie und eine freie Sichtgasse zur Spielkamera (Südosten), damit keine Bäume die Trophäen verdecken */
+  function showClear(x, z) {
+    const sp = showAt(), dx = x - sp[0], dz = z - sp[2], ux = Math.SQRT1_2, along = dx * ux + dz * ux, perp = Math.abs(dx * ux - dz * ux);
+    return Math.hypot(dx, dz) < 3.3 || (along > -3 && along < 11 && perp < 2.6);
+  }
   function clear(x, z, kind) {
+    if (showClear(x, z)) return true;
     const tw = Math.hypot(x - TW.x, z - TW.z);
     if (kind === "tree") return inMeadow(x, z, 2.5) || tw < 4;
     if (kind === "bush") return inMeadow(x, z, -1.2) || tw < 2.6;
@@ -1155,7 +1161,8 @@ const HUNT = (() => {
     v = why.reduce((t, w) => t + (w === why[0] ? 0 : w[1]), v);
     return { v: clamp(Math.round(v * 2) / 2, 0.5, 5), why };
   }
-  const stars = v => { let h = ""; for (let i = 1; i <= 5; i++) h += v >= i ? "★" : v >= i - 0.5 ? "⯪" : "☆"; return h; };
+  /* v224: Sterne als Text-Sterne ★ mit Klasse (voll = Gold, halb = halb gefüllt per Verlauf, leer = hellgrau mit Kontur) – das Halbstern-Zeichen ⯪ fehlt in vielen Schriften und erschien als Kästchen */
+  const stars = v => { let h = `<span class="hu-stars" role="img" aria-label="${v} von 5 Sternen">`; for (let i = 1; i <= 5; i++) h += `<i class="${v >= i ? "f" : v >= i - 0.5 ? "h" : "e"}">★</i>`; return h + "</span>"; };
   /* alle Einträge des Jagdbuchs je Art: Decken, Besonderheiten, Altersklassen, Seltenheitsstufen */
   function dexAll(k) {
     const out = [];
@@ -1326,7 +1333,8 @@ const HUNT = (() => {
   /* ------------------------------ Welt ------------------------------------ */
   const W = { root: null, site: null, grow: null, chk: 0, show: null, showKey: null };
   /* v200: Schautafel neben dem Hochsitz – Brett mit kleinem Dach, daran die bis zu drei Trophäen vom Ehrenplatz */
-  const SHOWL = [-2.9, 0, -0.5];
+  /* v225: links vom Turm (aus Sicht der Spielkamera) und zur Kamera gedreht – vorher stand sie rechts hinter dem Turm mit der Rückseite zum Spieler und hinter Bäumen */
+  const SHOWL = [3.1, 0, 0.3], SHOWRY = Math.PI / 4;
   const showAt = () => twL(SHOWL[0], 0, SHOWL[2]);
   function showMesh(recs) {
     G3.seed(7790);
@@ -1355,7 +1363,7 @@ const HUNT = (() => {
     W.root = fnode(fmesh("hunt_tower_v107", towerMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
     W.site = fnode(fmesh("hunt_site_v188", siteMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
     const sp = showAt();
-    W.show = fnode(R.mesh(showMesh([])), { x: sp[0], y: 0, z: sp[2], ry: TRY, visible: false });          /* Vorderseite zur offenen Wiese */
+    W.show = fnode(R.mesh(showMesh([])), { x: sp[0], y: 0, z: sp[2], ry: SHOWRY, visible: false });          /* Vorderseite zur Spielkamera (Südosten) */
     W.showMesh0 = W.show.mesh; W.showKey = "";
     R.nodes.push(W.root, W.site, W.show);
     syncWorld();
@@ -1392,8 +1400,7 @@ const HUNT = (() => {
     FV.sheetFn = sheet;
     if (!H.built) return buildSheet();
     const best = H.best ? MEDALS[H.best].i + " " + MEDALS[H.best].n : "–";
-    const wait = H.stock < 2 ? Math.max(1, Math.ceil(120 - (S.time - H.at))) : 0;
-    openFarmSheet(`<div class="fs-h"><span class="fs-ic">🔭</span>Hochsitz an der Wildwiese<small>Wild im Revier: <b class="hu-dots">${dots(H.stock)}</b>${wait ? " · nächstes Stück in " + fdur(wait) : ""}</small></div>
+    openFarmSheet(`<div class="fs-h"><span class="fs-ic">🔭</span>Hochsitz an der Wildwiese<small>Wild im Revier: <b class="hu-dots">${dots(H.stock)}</b></small></div>
       <div class="fs-sub">Oben öffnet sich das Revier: das Wild steht 150 bis 240 Meter entfernt. Such es mit dem Fernglas, halte den Atem an und achte auf den Wind. Nur Herz, Lunge, Kopf oder Träger bringen eine Trophäe.</div>
       <div class="hu-stats"><span>🎯 ${H.shots} Schüsse</span><span>🏆 ${H.kills} Trophäen</span>${H.lost ? `<span>🩸 ${H.lost} krank geflüchtet</span>` : ""}<span>Beste: ${best}</span>
         <span>📖 Jagdbuch ${SPK.reduce((t, k) => t + dexCount(H, k).got, 0)}/${SPK.reduce((t, k) => t + dexCount(H, k).of, 0)}</span></div>
@@ -1720,7 +1727,7 @@ const HUNT = (() => {
     revBuild();
     if (!mwToRevier() && H.stock && rnd() < 0.4) spawn(null, false);
     X.spawnT = X.animals.length ? 35 + rnd() * 45 : 12 + rnd() * 22;
-    if (!H.stock) msg("Das Revier ist ruhig – das Wild kommt in " + fdur(Math.max(1, Math.ceil(120 - (S.time - H.at)))) + " zurück.", 6);
+    if (!H.stock) msg("Das Revier ist ruhig – such den Waldrand mit dem Fernglas ab.", 6);
     else msg(X.animals.length ? "Da draußen steht Wild – such es mit dem Fernglas." : "Warten und beobachten … such den Waldrand mit dem Fernglas ab.", 6);
   }
   function leaveRevier() {
@@ -2687,7 +2694,7 @@ const HUNT = (() => {
     X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : "") + " lv" + A.pres.lv; X.card.hidden = false;
     X.drag.hidden = false; X.drag.classList.remove("off"); X.hrv.dragT = X.hrv.t + 4.5;
     snd(A.medal >= 3 ? "pearl" : "collect");
-    if (X.call) { X.call.innerHTML = callHTML(A); X.call.hidden = false; X.call.classList.remove("go"); void X.call.offsetWidth; X.call.classList.add("go"); X.hrv.callT = X.hrv.t; }
+    /* v225: Merkmals-Blase („Waffen 21 cm“, „8-Ender“, „Stoß …“) am erlegten Stück entfällt für alle Tiere – die Werte stehen in der Trophäenkarte */
     if (A.medal >= 3 && A.box && A.pres.gn.r < 2) {         /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück (Seltene haben ihre eigene Enthüllung) */
       const B = A.box, cam = FV.R.cam, bx = -Math.cos(cam.yaw) * 0.4, bz = -Math.sin(cam.yaw) * 0.4;
       FV.R.burst({ x: (B.mn[0] + B.mx[0]) / 2 + bx, y: B.mx[1] * 0.6, z: (B.mn[2] + B.mx[2]) / 2 + bz, n: A.medal === 4 ? 14 : 9, col: [[1, 0.88, 0.5, 1], [1, 0.97, 0.8, 1]], speed: 0.25, up: 0.9, g: 0.25, drag: 0.8, life: 1.8, size: 0.012 + 0.01 * Math.min(2, Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2])), spread: Math.max(B.mx[0] - B.mn[0], B.mx[2] - B.mn[2]) * 0.4 });
@@ -2801,13 +2808,13 @@ const HUNT = (() => {
       const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? ZONE[sel.zone].n : null, pins = C0.filter(r => r.pin).length;
       const sh = sel.zone ? shotOf(Object.assign({ k: sel.k }, sel)) : null, isPb = H.pb[sel.k] && H.pb[sel.k].u === sel.u;
       const rows = [["Bewertung", fnum(sel.s * 100, 1)], ["Gewicht", (sel.k === "fasan" ? fnum(T.kg, 1) : T.kg) + " kg"], z ? ["Treffer", z] : null, sel.dm ? ["Entfernung", sel.dm + " m"] : null,
-        sh ? ["Schuss", stars(sh.v)] : null, ["Alter", AGES[sel.k][gn.a]], dayTxt(sel.t) ? ["Erlegt", dayTxt(sel.t)] : null].filter(Boolean);
+        sh ? ["Schuss", { html: stars(sh.v) }] : null, ["Alter", AGES[sel.k][gn.a]], dayTxt(sel.t) ? ["Erlegt", dayTxt(sel.t)] : null].filter(Boolean);
       const fl = featList(sel.k, gn).filter(F => !F.age);
       det = `<div class="tw-det" style="--mc:${M.c}">
         <div class="tw-stage" id="twStage"><span class="tw-badge">${M.i} ${esc(M.n)}</span>${gn.r >= 1 ? `<span class="tw-badge tw-rb" style="--rc:${RAR[gn.r].c}">${gn.r >= 4 ? "★" : "✦"} ${esc(RAR[gn.r].n)}</span>` : ""}${isPb ? `<span class="tw-badge tw-pb">🏅 Rekord</span>` : ""}</div>
         <div class="tw-info"><b>${esc(T.name)}</b><small>${esc(T.troph)}</small>
           ${fl.length ? `<div class="tw-chips">${fl.map(F => `<span>${esc(F.n)}</span>`).join("")}</div>` : ""}
-          <div class="tw-rows">${rows.map(([a, v]) => `<span><small>${a}</small><b>${esc(String(v))}</b></span>`).join("")}</div>
+          <div class="tw-rows">${rows.map(([a, v]) => `<span><small>${a}</small><b>${v && v.html ? v.html : esc(String(v))}</b></span>`).join("")}</div>
           ${sel.old === 2 ? `<p class="tw-note">Altbestand – Werte geschätzt.</p>` : ""}
           <div class="tw-btns"><button class="btn tiny ghost" data-twx="1">Schließen</button>
             <button class="btn tiny ghost" data-twpin="${sel.u}"${!sel.pin && pins >= PIN_MAX ? " disabled" : ""}>${sel.pin ? "★ Vom Ehrenplatz nehmen" : pins >= PIN_MAX ? "Ehrenplatz voll (3)" : "☆ Auf den Ehrenplatz"}</button>

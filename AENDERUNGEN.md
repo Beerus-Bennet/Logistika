@@ -1,5 +1,92 @@
 # Änderungen – kurz für den Kollegen
 
+## v228 – Quellberg in der Nordostecke: verdeckter Ursprung, Bergbach über Kaskaden zum bestehenden Fall
+
+- **Lage:** Das Quellgebiet ist ein zusammenhängender Berg in der Nordostecke der Karte. Gipfel bei Welt (49, −134,5), etwa 13 Einheiten hoch; der Ursprung liegt bei (53,75, −138,5). Bisher lag die Quelle auf dem Hang nordwestlich des Topfs bei (18,6, −122,9), in v218 nordöstlich bei etwa (47, −121). Hauptfall, Becken auf der Kante, Topf, Topf-Ufer und Abfluss sind unverändert.
+- **Berg (`MTN`, Welt):** zwölf weich vereinigte Kuppen: Sockel, Gipfel, Kammarm nach Osten, Kamm südlich der Quelle, Sattel, Westwand der Mulde, Rücken hinter der Quelle, Westwand der Klamm, Ostflanke, Westschulter, vordere Stufe, Kuppe im Westen und Vorberg im Osten. Dazu Höhenstufen (breite Absätze, steile Felsstufen, Stufe 2,2), ein verbogener Rand (keine Ellipsen zu sehen) und Rauheit. Felsfarbe an Stufen und steilen Flanken, oben heller. Nadelboden und dunkles Gras am Berg, Moos und Gras unten. Licht und Schatten sind leicht in die Farben eingebacken, damit der Berg auch von oben plastisch wirkt.
+- **Verdeckter Ursprung:** Das Wasser tritt in einer Felsmulde (Radius 3, Boden 6,25) unter einer Felsplatte aus. Ringsum stehen Felswände bis etwa 12. Kamm, Sattel und Kammarm liegen zwischen der Mulde und jeder möglichen Kameraposition, verdeckt wird also durch die echte Geländeform. Geprüft per Strahltest (siehe unten).
+- **Bachlauf (`SRUN`, Welt → Fallrahmen):**
+  - Abschnitt A: Er läuft hinter dem Kamm nach Westen und dann durch eine Klamm zwischen Gipfel und Westschulter.
+  - Abschnitt B: Er tritt bei (43,7, −132,2) zwischen Felsen hervor und fällt über die 1. Kaskade auf die Bergflanke.
+  - 2. Kaskade, dann Abschnitt C: Er schlängelt sich über die Hochfläche nach Westen.
+  - 3. Kaskade, dann der Zulauf von Nordosten. Die bisherige Kaskade führt ins Becken auf der Kante, von dort geht es über den großen Fall in den Topf.
+  - Wasserspiegel 6,55 → 6,32 | 5,5 → 5,4 | 4,72 → 4,53 | 4,08 → 3,98 | Becken 3,17. Er fällt durchgehend; die Kaskaden fallen um 0,82, 0,68, 0,45 und 0,81.
+  - Der Bach bleibt ein durchgehendes Band (Shader `uWater 7`), die Kaskaden zeichnet `uWater 6`.
+- **Hochfläche:** Sie läuft entlang des sichtbaren Bachs, und zwar als Maximum über die Stützpunkte (Ufer = Wasser + 0,9, Kernbreite etwa 3, weicher Abfall). Dadurch gibt es keine Stufen, wo das nächste Wasser wechselt. Am Fall bleibt der alte Felsabsatz (Becken eingebettet), um den Topf bleibt alles frei.
+- **Felsen:** Felsplatte und Blöcke an der Mulde, Felswände in der Klamm, Stufen und Wächter an jeder Kaskade, Ufersteine an Außenkurven und Beckenrändern, und Felsbänder an den Stufen des Bergs (längs der Höhenlinie gestreckt). Kein Fels steht im Wasser (`rockOk`).
+- **Pflanzen:** Farn, Gras und Blumen am Ufer, dazu lockeres Gras, Farn und Moossteine auf Hochfläche und Hängen. Neuer Knoten `springFlora` (Welt): oben dichte Fichten und Kiefern, unten gemischt mit Buchen und Birken, dazu Sträucher. Frei bleiben Ufer, Felsstufen, der Topf und ein Streifen vor dem sichtbaren Bach Richtung Kamera.
+- **Technik:** Das Gitter liegt in Weltachsen, grob 0,6 und am Bach fein 0,3, ohne Risse an der Grenze. Das Gelände ohne Bach steht als Tabelle bereit (0,5er Raster, bilinear). Wasserstrecken und Hochfläche sind in Rastern abgelegt. Im Testbrowser dauert das Bauen etwa 0,2 s für das Gelände und 0,17 s für die Pflanzen. Gelände mit Felsen und Pflanzen: etwa 28.000 Dreiecke, Bäume und Sträucher: etwa 22.000.
+- **Kamera:** Wald und Alter Wald reichen im Osten bis x = 54 (vorher 42), damit man den Berg von vorn ansehen kann.
+- **Spielstand / Welt:** `FWORLD.springHill` ist jetzt ein Grundriss aus Kapseln, der alles abdeckt, wo Gelände über dem Boden liegt. Kulissenbäume halten Abstand, auf dem alten Hang im Nordwesten wachsen wieder welche. Einmalige Umstellung `F.v228hill`: Bäume im neuen Grundriss rücken an den Rand oder fallen weg. In einem neuen Spiel stehen dort keine fällbaren Bäume. Schatztruhen erscheinen nicht mehr im Berg oder im Topf. Die alten Umstellungen v207/v220 laufen nicht mehr.
+- **Geprüft:**
+  - Höhenprofil: kein Stück fließt bergauf, das Bett liegt nie über dem Wasser, die Ufer sind auf beiden Seiten höher als das Wasser. Einzige Ausnahme: 3 Punkte am bisherigen Beckenzulauf mit höchstens 0,045 Abweichung, wie vorher.
+  - Strahltest ohne Bäume und Felsen: Kameraziele im Raster 2 über den ganzen erreichbaren Nordosten, 9 Zoomstufen, Seitenverhältnisse 0,6 bis 2,2. Die Mulde mit dem Ursprung ist aus keiner Stellung sichtbar. Nur ganz herausgezoomt am Ostrand sieht man ein Stück des Bachs hinter dem Kamm, ab etwa 3 Einheiten unterhalb der Quelle.
+- Dateien: `woodmodels.js` (`setSpringFrame`, `SRUN`, `MTN`, `mtnW`, `srPlateau`, `platW`, `baseW`, `srcWater` mit Raster, `hillH`, `springHill`, `springFlora`, `springHeightW`), `worldview.js` (Rahmen setzen, Flora-Knoten, Grundriss für Kulissenbäume, keine Bläschen an der verdeckten Quelle), `erbe.js` (`springHill.caps`, `springHillNear`, `inSpringHill`, `v228hill`, Schatz), `erbedata.js` (Kamera bis x = 54).
+
+## v227 – Buchenstämme dunkler (wirkten wie blasse Sprechblasen)
+
+- **Befund:** Im markierten Bereich gibt es keine Sprechblasen und keine halbtransparenten Bedienelemente (die Blasen sind nur ein Knopf-Layer `#farmTags`; dort lag nichts). Die grauen Kästchen unter den Kronen sind die **Stämme der Buchen**: sehr hell (silbergrau 0xa8a79f), im Schatten der eigenen Krone blass und rechteckig, daher der Eindruck eines durchscheinenden Schildchens.
+- **Jetzt:** Buchenstamm wärmer und dunkler (Rinde 0x867f72, Basis 0x6d675c, Flecken 0x5e594e; Rindenpalette im feinen Baum entsprechend), er liest sich als Stamm. Birken bleiben weiß.
+- Dateien: `woodmodels.js` (`TREE_C.buche`), `treebark.js` (`GR` der Buche). Spielstand unverändert.
+
+## v226 – Schautafel am Hochsitz: gedreht und links vom Turm, freie Sicht
+
+- **Gedreht:** Die Tafel stand mit der Vorderseite zur Wiese (nach Westen), die Spielkamera sah von Südosten auf die Rückseite. Sie ist jetzt zur Kamera gedreht (`SHOWRY = π/4`), die Trophäen schauen den Spieler an.
+- **Platz:** Von der Kamera aus **links vom Turm** (lokal x +3,1, z +0,3) statt rechts dahinter. Um die Tafel liegt ein freier Kreis (3,3), dazu eine **Sichtgasse** zur Kamera (11 lang, 5,2 breit): dort wachsen keine Bäume, Büsche und Kulissenbäume mehr (`HUNT.clear` → `showClear`).
+- **Spielstand:** Einmalige Umstellung `F.v225h` entfernt fällbare Bäume in diesem Bereich.
+- Dateien: `hunt.js` (`SHOWL`, `SHOWRY`, `showClear`, `clear`, Knoten in `attach`), `erbe.js` (`v225h`).
+
+## v225 – Hochsitz: Merkmals-Blase am erlegten Stück entfernt
+
+- Die Textblase neben dem erlegten Tier („Waffen 21 cm“, beim Hirsch „8-Ender“, beim Fasan „Stoß …“, plus Besonderheiten) erscheint bei **keinem** Tier mehr. Die Werte stehen weiter in der Trophäenkarte darunter.
+- Datei: `hunt.js` (Aufruf von `callHTML` in der Bergung entfernt; die Funktion bleibt ungenutzt stehen).
+
+## v224 – Schussnote: Sterne klar sichtbar und einheitlich
+
+- **Fehler:** Die Schussnote nutzte für halbe Sterne das Sonderzeichen ⯪ (fehlt in vielen Handy-Schriften → Kästchen ▯) und gemischt ★/☆ aus unterschiedlichen Schriften.
+- **Jetzt:** Alle Sterne sind dasselbe Zeichen ★, per CSS gefärbt (`.hu-stars`): voll = Gold mit dunkler Kontur, halb = zur Hälfte gefüllt (Farbverlauf), leer = hellgrau mit grauer Kontur. Etwas größer (1,25 em), eigene Symbol-Schriftliste. Gilt im Trophäen-Fenster nach dem Schuss, im Trophäen-Detail und bei „Beste Schussnote“ im Jagdbuch.
+- Dateien: `hunt.js` (`stars`, Zeilenausgabe im Trophäen-Detail), `style.css` (`.hu-stars`).
+
+## v223 – Holzfäller: Hosenträger-Grafikfehler behoben, Figuren geprüft
+
+- **Fehler:** Beim Holzfäller (Flanellhemd, `garb: "plaid"`) lagen senkrechte Streifen, Querstreifen und Hosenträger auf nahezu derselben Fläche (Tiefe 0,19 / 0,19 / 0,192) und flackerten ineinander („Z-Fighting“). Die Träger ragten außerdem über die Schulter hinaus.
+- **Jetzt:** Drei klare Schichten, jede ein Stück weiter vorn (Streifen 0,20 → Querstreifen 0,216 → Träger als dünne Platten vorn und hinten bei ±0,118), dazu ein Riemen über jeder Schulter und eine Schnalle vorn.
+- **Alle Figuren geprüft** (alle 9 Mitarbeiter-Berufe in je 3 Aussehen, stehend und sitzend, von vorn, hinten, seitlich; dazu Förster, Nachbar, Sägewerker, See-NPC, Händler, Bootsfahrer, Baustellen-Mann). Dabei gefunden und behoben: Die **reflektierenden Streifen der Warnweste (Fahrer)** lagen vorn und hinten hinter der Weste und waren nie zu sehen – jetzt sichtbar. Taillenband von Latzhose und Schürze/Kittel und Streifen jetzt mit etwas mehr Abstand zum Hemd, damit nichts flackert.
+- Dateien: `woodmodels.js` (`garbParts`: `plaid`, `hivis`, `bib`, Schürzenband).
+
+## v222 – Hochsitz: Meldungen überlagern sich nicht mehr, keine Wild-Wartezeit mehr
+
+- **Überlagerung:** Die Hinweis-Meldung („Das Revier ist ruhig …“, „Da draußen steht Wild …“) lag auf derselben Höhe wie der Auftrags-Chip („Erlege einen Keiler“). Sie sitzt jetzt darunter (`top:124px` statt 72px), Chip und Meldung berühren sich nicht mehr.
+- **Keine Zeitangabe:** Der Spieler erfährt nicht mehr, wann das nächste Stück kommt. Meldung im Revier jetzt „Das Revier ist ruhig – such den Waldrand mit dem Fernglas ab.“; im Hochsitz-Fenster fehlt „· nächstes Stück in …“ (die Punkte für das Wild im Revier bleiben).
+- Dateien: `hunt.js` (`enterRevier`, `sheet`), `style.css` (`.hu-msg`).
+
+## v221 – Bürowechsel: Personal in ein anderes Büro versetzen
+
+- **Neu:** Jeder Mitarbeiter (auch die ★★★★★-Fachkraft aus der Luckybox-Headhunter) lässt sich in ein anderes Büro versetzen – ab dem 2. Büro. Zwei Wege: Knopf **⇄** neben dem ✕ in der Personalliste (Leiste „… versetzen nach …“ mit den anderen Büros, antippen), oder wie bisher die Karte ziehen: in der Ablageleiste stehen jetzt die anderen Büros neben den Fahrzeugen und „Kündigen“.
+- **Regeln:** kostenlos, braucht aber einen freien Schreibtisch im Zielbüro (volle Büros sind ausgegraut mit „voll“). Ein fester Fahrer verlässt sein Fahrzeug im alten Büro. Das Zielbüro schaut gleich nach Aufträgen.
+- **Headhunter:** Jedes Büro bekam die Headhunter-Bewerbung schon vorher (auch später eröffnete); jetzt kann die eingestellte Kraft zusätzlich frei zwischen den Büros wechseln.
+- Dateien: `offices.js` (`transferStaff`, `moveZones`, `openMoveBar`, Knopf in `staffRow`, `handleStaffDrop`), `style.css`.
+
+## v220 – Quell-Wasserfall neu ausgerichtet: Fall zur Kamera, Bergbach als ein durchgehendes Band
+
+- **Ausrichtung:** Felswand, Fall, Becken, Hang und Bergbach liegen jetzt hinter dem Topf (um 90° gedreht). Die Spielkamera sieht den Fall von vorn statt von der Seite. Der Weg des Wassers läuft auf dem Bildschirm von oben nach unten: Quelle am Findling → Bergbach → zwei Kaskaden → Becken auf der Kante → Fall → Topf → Abfluss. Der Topf, sein Ufer und der Bach bleiben, wie sie sind.
+- **Bergbach (Priorität 1):** Er war aus einzelnen flachen Vierecken je Abschnitt plus runden Scheiben für die Becken zusammengesetzt. Die Ränder schwebten über dem Ufer, an den Knicken entstanden Zacken. Jetzt ist er **ein einziges Band** (Catmull-Rom-Mittellinie, Breite und Wasserspiegel laufen stetig, Becken sind breite Stellen des Bandes). Das Band reicht unter das Ufer, die Uferlinie entsteht dort, wo der Hang den Wasserspiegel schneidet. Er schlängelt sich stärker.
+- **Neuer Wasser-Shader `uWater 7` (Bergbach):** in der Mitte tief und dunkel, zum Ufer flacher und heller. Streifen und feine Lichtlinien ziehen bachabwärts, in Becken langsam, vor einer Kante schneller. Unter den Kaskaden wanderndes weißes Gekräusel. Bleibt nachts lesbar.
+- **Übergänge:** Unter den Kaskaden bleibt das Bett als Stufe hoch (kein sichtbarer Wasserrand mehr unter dem Fall). Der Bach endet im Becken nicht mehr mit einer Kante, sondern läuft im Gefälle der Rinne unter den Fall, der darüber einblendet. Die Kaskaden blenden länger aus dem Bach ein (`uFlow.w`), fallen über die Kante vor und dann steil hinab, mit unregelmäßigen Rändern. Die Rinne zur großen Kante ist kürzer (1,35 statt 2,1), die Kante ist nicht mehr schnurgerade.
+- **Hang:** weiche Normalen (keine Facetten-Streifen mehr) und flachere, breitere Flanken. Keine grauen „Fels in Flecken“-Schlieren mehr, sondern Moos- und Grastöne mit etwas Erde. Nur ein schmaler nasser Saum am Wasser. In der Mitte reicht er als Absatz bis an die Rinne, sodass das Becken eingebettet auf der Kante liegt.
+- **Felsen:** `stone()` hat Bruchflächen (Ebenen-Schnitte, oben eine fast waagerechte Fläche) und ergibt kantige, geschichtete Blöcke statt Kugeln. Die Flanken rahmen den Fall links und rechts, nichts steht mehr zwischen Kamera und Fall. Kein Steinkranz und keine Moospolster-Kugeln mehr. Ufersteine liegen an den Außenkurven und halb im Wasser am Rand der Becken, dazu Steine in der Schlucht zwischen den Kaskaden.
+- **Topf-Ufer (neu `springRim`):** Steine in Gruppen, vorn niedrig, am Abfluss frei. Dazu Farne, Gras, ein paar Blumen, Kiesel und Treibholz in der stillen Ecke.
+- **Weniger Weiß:** Schaum am Fuß des großen Falls und der Kaskaden kleiner und durchsichtiger, der Fall unten weniger vollweiß. Der Fuß des Falls taucht unter die Wasseroberfläche (keine Kante auf dem Wasser).
+- **Gischt/Partikel:** laufen über die neue Fallrichtung (`WV.springFx.dx/dz` ist jetzt die Fallrichtung, nicht mehr die Bachrichtung).
+- **Spielstand:** `FWORLD.springHill` liegt auf der neuen Achse (Radius 10,5). Einmalige Umstellung `F.v220hill`: Bäume auf dem neuen Hang rücken an seinen Fuß, auf einen erlaubten Platz (`treeSpotOk`). Nur wenn keiner frei ist, fällt der Baum weg. Auf dem alten Hang stehen wieder Kulissenbäume.
+- Dateien: `woodmodels.js` (`stone`, `springRocks`, neu `springRim`, `SRUN`, `srSamples`, `srLinks`, `srcWater`, `yAlong`, `hillH`, `springHill`, `springRun`, `srCasc`, `springCascades`, `springRunFoam`, `springRunInfo`, `fallSheet`, `springFall`, `SPRING_FALL`), `gl3d.js` (`streamWater`, `uWater 7`, Fall-Schaum), `worldview.js` (Knoten im gedrehten Rahmen, Topf-Ufer, Partikel), `erbe.js` (`springHill`, `v220hill`).
+
+## v219 – Ställe abreißen
+
+- **Neu:** Im Stall-Fenster (Hühnerstall, Kuhstall, Schweinestall, Schafweide, Rinderweide) gibt es unten den Knopf **🧱 abreißen**. Er ist **ausgegraut („erst alle … abgeben“), solange noch Tiere im Stall sind**; sind alle abgegeben (Knopf „… abgeben“), wird er aktiv und fragt vor dem Abriss nach.
+- **Rückzahlung:** die Hälfte vom Baupreis plus die Hälfte der bezahlten Ausbaustufen (Hühnerstall Stufe 1: 150 €). Der Platz zählt sofort wieder frei (n/7), so lassen sich z. B. Hühnerstall oder Rinderweide durch weitere Kuhställe ersetzen.
+- Dateien: `farm.js` (`penDemolishBack`, `farmPenDemolish`), `farmview.js` (Knopf `#fpDel` in `openPen`). Spielstand unverändert; Mitarbeiter, deren Ziel der Stall war, suchen sich ein neues.
+
 ## v218 – Hütte: Bootssteg mit Ruderboot (+20 % Miete), strengere Feuerholz-Regel
 
 - **Feuerholz:** pünktlich am Holztag → volle Miete; **verspätet** (Tag 2–7 der Mietwoche, Knopf „🔥 Verspätet liefern“) → halbe Miete für diese Woche; **gar nicht** → keine Miete für diese Woche („🥶 Die ganze Woche kein Feuerholz“). Abzüge stehen in `S.farm.rent.cut` und werden von den nächsten Mietzahlungen abgezogen (der Zahltag liegt nicht genau auf dem Holztag). 🔥 über der Hütte, bis geliefert ist.

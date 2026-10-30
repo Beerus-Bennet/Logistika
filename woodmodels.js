@@ -22,7 +22,7 @@ const FWM = (() => {
     birke:   { bark: 0xefece3, mark: 0x26241f, base: 0x4d4943, leaf: 0x92c652, leaf2: 0xaad460, leaf3: 0x78ad46 },
     kiefer:  { bark: 0xc9743f, mark: 0x7a4426, base: 0x6e5646, leaf: 0x3f6d4b, leaf2: 0x4e7e58, leaf3: 0x335d40 },
     fichte:  { bark: 0x5e4232, mark: 0x4a3322, base: 0x4a3426, leaf: 0x24502f, leaf2: 0x2d5d39, leaf3: 0x1c4327 },
-    buche:   { bark: 0xa8a79f, mark: 0x8a8981, base: 0x8f8e86, leaf: 0x5ea63b, leaf2: 0x72b84a, leaf3: 0x4c9231 },
+    buche:   { bark: 0x867f72, mark: 0x5e594e, base: 0x6d675c, leaf: 0x5ea63b, leaf2: 0x72b84a, leaf3: 0x4c9231 },
     eiche:   { bark: 0x5b4535, mark: 0x3d2d21, base: 0x4a382b, leaf: 0x4b7c2b, leaf2: 0x5b8e35, leaf3: 0x3d6923 },
     kirsche: { bark: 0x6c3631, mark: 0xa27560, base: 0x5a2e2a, leaf: 0x5a9c3d, leaf2: 0x6aac46, leaf3: 0x4a8a32, bloom: 0xfbe6ee, fruit: 0xc0242c }
   };
@@ -1562,7 +1562,7 @@ const FWM = (() => {
   /* v204: Kante weiter vorn und tiefer, Aufprall innerhalb des Topfrands; oben ein offenes Becken in einer Felsmulde.
      v210: Kante als überhängender Felsvorsprung 0,35 über dem Topfrand (der Fall stürzt steiler statt im weiten Bogen),
      Rinne länger bis ins Becken; zwei Nebenstränge laufen seitlich über Felsvorsprünge (strands: Kante → Absatz → Wasser) */
-  const SPRING_FALL = { top: [-2.65, 1.98, 0.12], foot: [-1.6, 0.04, 0.12], S: 1.5, basin: [-5.55, 0.12, 0.72], rinne: 2.1,
+  const SPRING_FALL = { top: [-2.65, 1.98, 0.12], foot: [-1.6, -0.05, 0.12], S: 1.5, basin: [-5.3, 0.12, 0.8], rinne: 1.35,
     strands: [[[-2.74, 1.93, -0.5], [-2.36, 0.43, -0.76], [-2.1, 0.04, -0.82], 0.1], [[-2.86, 1.42, 0.8], [-2.42, 0.36, 1.02], [-2.16, 0.04, 1.08], 0.065]] };   /* links über die Kante, rechts schmaler aus einer Spalte darunter */   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
   /* v210: Fels mit Material – jede Fläche eigener Ton: oben heller (Licht), Seiten mittel, unten und in Ritzen dunkler,
      nahe am Wasser nass und dunkel, Moos und Flechten nur auf einzelnen, nach oben zeigenden Flächen. */
@@ -1581,13 +1581,25 @@ const FWM = (() => {
     }
     const j = o.jitter == null ? 0.3 : o.jitter, fl = o.flat || 1, sx = o.sx || 1, sz = o.sz || 1, cy = o.y || 0;
     const P = V.map(v => { const k = 1 + (rnd() - 0.5) * j; return [v[0] * r * k * sx, v[1] * r * k * fl, v[2] * r * k * sz]; });
+    /* v220: Bruchflächen – Ecken jenseits zufälliger Ebenen werden auf die Ebene geschoben: kantige Blöcke mit
+       ebenen Flächen statt runder Kugeln. Die erste Ebene ist (fast) waagerecht: flache, helle Oberseite. */
+    const cuts = o.cut == null ? 2 : o.cut;
+    for (let c = 0; c < cuts; c++) {
+      let nx, ny, nz;
+      if (c === 0 && o.top !== false) { nx = (rnd() - 0.5) * 0.35; ny = 1; nz = (rnd() - 0.5) * 0.35; }
+      else { const a = rnd() * Math.PI * 2, e = (rnd() - 0.3) * 1.1; nx = Math.cos(a) * Math.cos(e); ny = Math.sin(e); nz = Math.sin(a) * Math.cos(e); }
+      const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+      let m = -1e9; P.forEach(p => { const d = p[0] * nx + p[1] * ny + p[2] * nz; if (d > m) m = d; });
+      const d0 = m * (c === 0 ? (o.topK || 0.62 + rnd() * 0.12) : 0.66 + rnd() * 0.16);
+      P.forEach(p => { const d = p[0] * nx + p[1] * ny + p[2] * nz - d0; if (d > 0) { p[0] -= nx * d; p[1] -= ny * d; p[2] -= nz * d; } });
+    }
     const B = G3.col(base);
     b.at({ x: o.x || 0, y: cy, z: o.z || 0, ry: o.ry || 0 }, () => F.forEach(([ia, ib, ic]) => {
       const A = P[ia], Bv = P[ib], C = P[ic];
       const ux = Bv[0] - A[0], uy = Bv[1] - A[1], uz = Bv[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
       const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, nl = Math.hypot(nx, ny, nz) || 1, n1 = ny / nl;
       const yc = cy + (A[1] + Bv[1] + C[1]) / 3;
-      let k = 0.83 + 0.26 * n1 + (rnd() - 0.5) * 0.12;
+      let k = 0.81 + 0.21 * n1 + (rnd() - 0.5) * 0.12;                                /* v220: Bruchflächen oben nicht papierhell */
       if (n1 < -0.25) k *= 0.78;                                                   /* Unterseiten und Ritzen */
       let c = [Math.min(1, B[0] * k), Math.min(1, B[1] * k), Math.min(1, B[2] * k * 0.98)];
       if (o.wet != null) c = mixA(c, ROCK_WET, 0.72 * (1 - sst(o.wet - 0.05, o.wet + 0.4, yc)));
@@ -1598,34 +1610,63 @@ const FWM = (() => {
     }));
     return b;
   }
+  /* v220: Felswand im Fallrahmen (lokal: Topfmitte im Ursprung, Fall nach +x, Hang nach −x; worldview.js dreht diesen
+     Rahmen um 90°, damit der Fall zur Spielkamera zeigt). Kantige, geschichtete Blöcke (Bruchflächen) statt runder
+     Kugeln; die Flanken rahmen den Fall links und rechts, nichts steht zwischen Kamera und Fall. Ufersteine, Farne
+     und Treibholz am Topf liegen jetzt in springRim (Rahmen des Topfs). [x, y, z, r, flach, Farbe, {Extras}] */
   function springRocks() {
     G3.seed(3976);
-    const b = new MB(), g1 = 0x948e83, g2 = 0xa59f93, g3 = 0x847e74, g4 = 0x8c8275, R0 = SPR.RP / SPRING_FALL.S, F = SPRING_FALL;   /* lokal Radius 3, Knoten ×1,5 */
-    /* Hauptform: zwei große Flanken rahmen den Fall, dahinter Mulde und Bett der Rinne, vorn der überhängende Vorsprung.
-       Unterschiedliche Größen, Drehungen und Abflachungen – keine zwei gleichen Blöcke. [x, y, z, r, flach, Farbe, {Extras}] */
-    [[-4.5, 0.9, -1.85, 1.75, 0.9, g1, { moss: 0.3, wet: 0.35, detail: true, ry: 0.4 }], [-4.4, 0.95, 1.9, 1.65, 0.95, g2, { moss: 0.28, wet: 0.35, detail: true, ry: 1.3 }],
-     [-3.9, 0.35, -2.4, 1.15, 0.7, g4, { moss: 0.2, wet: 0.3, ry: 2.1 }], [-3.7, 0.3, 2.5, 1.05, 0.72, g3, { moss: 0.2, wet: 0.3, ry: 0.7 }],
-     [-5.5, 1.6, -1.35, 0.95, 0.9, g3, { moss: 0.35 }], [-5.4, 1.6, 1.55, 0.9, 0.85, g1, { moss: 0.35, ry: 0.9 }], [-5.5, 1.15, 0.12, 1.05, 0.9, g2, { wetAll: 0.35 }], [-4.5, 1.05, 0.12, 0.95, 0.95, g3, { wetAll: 0.4 }],
-     /* v210: Vorsprung der Kante (unter der Rinne, ragt über den Topfrand), zwei kleinere Wächter seitlich davon, nasse dunkle Wand hinter dem Fall */
-     [F.top[0] - 0.4, F.top[1] - 0.66, F.top[2], 0.66, 0.78, g2, { wetAll: 0.45, jitter: 0.18 }], [-3.0, 1.25, -1.28, 0.62, 0.95, g4, { moss: 0.25, wet: 0.5, ry: 0.5 }], [-2.95, 1.18, 1.55, 0.58, 1.0, g1, { moss: 0.25, wet: 0.5, ry: 2.4 }],
-     [-3.32, 0.72, 0.1, 0.8, 1.25, g3, { wetAll: 0.7, jitter: 0.25 }],
-     /* Absätze der Nebenstränge (ragen aus dem Wasser), Blöcke am Topfrand */
+    const b = new MB(), g1 = 0x948e83, g2 = 0xa59f93, g3 = 0x847e74, g4 = 0x8c8275, g5 = 0x9a917f, F = SPRING_FALL;
+    [/* Flanken: breit und hoch, in die Tiefe gestreckt, oben flach – links größer als rechts */
+     [-4.6, 1.05, -2.0, 1.65, 0.88, g1, { moss: 0.32, wet: 0.35, detail: true, ry: 0.4, sx: 1.3, cut: 4 }], [-4.4, 0.95, 2.05, 1.5, 0.95, g5, { moss: 0.28, wet: 0.35, detail: true, ry: 1.3, sx: 1.2, cut: 4 }],
+     [-3.75, 0.3, -2.55, 1.05, 0.7, g4, { moss: 0.2, wet: 0.3, ry: 2.1, cut: 3 }], [-3.6, 0.28, 2.55, 0.95, 0.72, g3, { moss: 0.2, wet: 0.3, ry: 0.7, cut: 3 }],
+     [-5.85, 1.7, -1.6, 0.95, 0.8, g3, { moss: 0.4, cut: 3 }], [-5.7, 1.65, 1.75, 0.85, 0.78, g1, { moss: 0.4, ry: 0.9, cut: 3 }], [-6.6, 1.9, -2.7, 0.8, 0.75, g4, { moss: 0.45, cut: 3 }], [-6.5, 1.85, 2.85, 0.75, 0.8, g2, { moss: 0.45, cut: 3 }],
+     /* Bett unter Becken und Rinne (liegt unter dem Wasser) */
+     [-5.5, 1.1, 0.12, 1.05, 0.9, g2, { wetAll: 0.35, cut: 1 }], [-4.4, 1.02, 0.12, 0.95, 0.95, g3, { wetAll: 0.4, cut: 1 }], [-3.65, 1.28, 0.12, 0.66, 0.95, g2, { wetAll: 0.5, cut: 1, topK: 0.75 }],
+     /* Vorsprung der Kante, zwei Wächter seitlich, nasse dunkle Wand hinter dem Fall, darunter eine Stufe */
+     [F.top[0] - 0.42, F.top[1] - 0.64, F.top[2], 0.66, 0.74, g2, { wetAll: 0.45, jitter: 0.18, topK: 0.7 }], [-3.1, 1.38, -1.3, 0.64, 0.95, g4, { moss: 0.3, wet: 0.5, ry: 0.5, cut: 3 }], [-3.02, 1.3, 1.5, 0.58, 1.0, g1, { moss: 0.3, wet: 0.5, ry: 2.4, cut: 3 }],
+     [-3.34, 0.72, 0.1, 0.8, 1.25, g3, { wetAll: 0.72, jitter: 0.25 }], [-3.0, 0.2, 0.15, 0.5, 0.7, g4, { wetAll: 0.75, cut: 3 }],
+     /* Absätze der Nebenstränge (ragen aus dem Wasser), Blöcke am Fuß der Wand */
      [-2.36, 0.17, -0.76, 0.3, 0.75, g2, { wetAll: 0.55 }], [-2.3, 0.15, 1.0, 0.27, 0.8, g1, { wetAll: 0.55 }],
-     [-3.2, 0.15, -1.25, 0.6, 0.6, g1, { wet: 0.3 }], [-3.1, 0.12, 1.3, 0.55, 0.6, g3, { wet: 0.3 }], [-1.2, 0.05, -R0 - 0.35, 0.65, 0.55, g2, { wet: 0.22, moss: 0.15 }], [0.6, 0.05, -R0 - 0.2, 0.5, 0.55, g4, { wet: 0.2 }],
-     [-1.6, 0.05, R0 + 0.3, 0.7, 0.55, g1, { wet: 0.22, moss: 0.2 }], [0.4, 0.04, R0 + 0.15, 0.45, 0.6, g3, { wet: 0.2 }], [-0.4, 0.02, -R0 - 0.05, 0.22, 0.6, g2, { wet: 0.2 }], [1.4, 0.02, R0 + 0.05, 0.2, 0.65, g4, { wet: 0.2 }]
+     [-3.2, 0.14, -1.3, 0.58, 0.6, g1, { wet: 0.3, cut: 3 }], [-3.05, 0.1, 1.38, 0.5, 0.62, g3, { wet: 0.3 }], [-2.75, 0.04, -1.85, 0.3, 0.6, g5, { wet: 0.25 }], [-2.6, 0.03, 1.95, 0.24, 0.65, g2, { wet: 0.25 }]
     ].forEach(([x, y, z, r, fl, c, e]) => stone(b, r, c, Object.assign({ x, y, z, flat: fl, jitter: 0.32 }, e)));
-    /* v210: Steine an den Rändern der Rinne (das Wasser strömt an ihnen vorbei, die Ränder sind nicht mehr gerade), einer mitten im Strom */
-    [[-4.35, -0.38, 0.22], [-3.95, 0.66, 0.2], [-3.55, -0.36, 0.17], [-3.25, 0.64, 0.24], [-4.62, 0.62, 0.16], [-3.0, -0.33, 0.14]].forEach(([x, z, r], i) => stone(b, r, i % 2 ? g2 : g1, { x, y: F.top[1] + 0.02, z, flat: 0.7, jitter: 0.35, wetAll: 0.45 }));
-    stone(b, 0.085, g3, { x: -3.85, y: F.top[1] + 0.06, z: 0.24, flat: 0.6, jitter: 0.3, wetAll: 0.6 });
-    /* Steinkranz um das Becken, zum Zulauf (hinten) und zur Rinne (vorn) offen */
-    { const [bx, bz, br] = F.basin; for (let a = 55; a <= 305; a += 36) { if (a > 150 && a < 210) continue; const r = a * Math.PI / 180; stone(b, 0.3 + (a % 3) * 0.04, a % 72 ? g2 : g3, { x: bx + Math.cos(r) * br * 1.22, y: F.top[1] + 0.06, z: bz + Math.sin(r) * br * 1.05, flat: 0.6, jitter: 0.3, wet: F.top[1] + 0.1, moss: 0.2 }); } }
-    /* zwei Moospolster an den Außenseiten (nicht am Wasser), Farne und Gras am Fuß der Felsen, Kiesel im Sand, Treibholz in der stillen Ecke */
-    [[-4.95, 2.08, -2.75, 0.3, 0x5a7f3a], [-4.85, 2.12, 2.8, 0.27, 0x668a42]].forEach(([x, y, z, r, c]) => b.noise(0.18, () => b.ico(r, c, { x, y, z, flat: 0.3, jitter: 0.35 })));
-    [[-3.35, -3.3, 0.6], [-2.6, 3.45, 2.2], [-5.1, -3.2, 4.1], [-4.9, 3.4, 1.0]].forEach(([x, z, ry]) => b.merge(fern(), { x, y: -0.02, z, ry, s: 1.1 }));
-    [[-2.3, -3.45, 0], [-0.6, 3.55, 1], [1.3, -3.3, 2], [-3.9, -3.0, 1], [-3.6, 3.15, 2], [0.2, -3.5, 0], [2.0, 3.25, 1]].forEach(([x, z, v], i) => b.merge(grassTuft(v), { x, y: 0, z, ry: i * 1.7, s: 1.25 + (i % 3) * 0.15 }));
-    for (let i = 0; i < 16; i++) { const side = i % 2 ? 1 : -1, an = side * (0.75 + rnd() * 1.55), rr = R0 + 0.22 + rnd() * 0.45, x = Math.cos(an) * rr, z = Math.sin(an) * rr;
-      if (x < -2.4) continue; stone(b, 0.05 + rnd() * 0.07, [g1, g2, g4][i % 3], { x, y: 0.015, z, flat: 0.5, jitter: 0.4, lichen: 0 }); }
-    b.at({ x: 0.75, y: 0.03, z: -2.05, ry: 0.55 }, m => { m.cyl(0.04, 0.05, 0.72, 7, 0x6f5638, { rz: Math.PI / 2, top: 0xa48a62 }); m.at({ x: 0.12, ry: 0.75 }, q => q.cyl(0.022, 0.028, 0.3, 6, 0x7a6243, { rz: Math.PI / 2, x: 0.15, top: 0xa48a62 })); });   /* Treibholz in der stillen Ecke, halb eingetaucht, mit Seitenast */
+    /* Steine an den Rändern der Rinne – verschieden groß, nicht in einer Reihe; einer mitten im Strom */
+    [[-3.7, -0.44, 0.24], [-3.35, 0.7, 0.15], [-2.98, -0.4, 0.12], [-3.08, 0.62, 0.21]].forEach(([x, z, r], i) =>
+      stone(b, r, [g1, g2, g5][i % 3], { x, y: F.top[1] - r * 0.15, z, flat: 0.7, jitter: 0.35, wetAll: 0.45, cut: 2 }));
+    stone(b, 0.075, g3, { x: -3.4, y: F.top[1] + 0.06, z: 0.26, flat: 0.6, jitter: 0.3, wetAll: 0.6 });
+    /* Ränder des Beckens auf der Kante: einzelne Blöcke und Kiesel, teils eingesunken (kein Steinkranz) */
+    [[-6.05, -0.62, 0.3], [-5.3, -0.86, 0.2], [-4.55, -0.5, 0.17], [-5.95, 0.95, 0.24], [-5.05, 0.9, 0.3], [-4.35, 0.9, 0.15], [-6.5, -0.45, 0.16], [-3.95, -0.42, 0.13], [-4.1, 0.62, 0.2]].forEach(([x, z, r], i) =>
+      stone(b, r, [g2, g3, g1][i % 3], { x, y: 2.08 - r * 0.2, z, flat: 0.7, jitter: 0.35, wet: 2.2, moss: 0.25, cut: 2 }));
+    /* Farn und Gras in den Felsspalten (nicht vor dem Fall) */
+    [[-4.2, -2.95, 0.6, 2.05], [-4.6, 2.95, 2.2, 2.1], [-3.4, -3.25, 4.1, 0.55], [-3.3, 3.2, 1.0, 0.5]].forEach(([x, z, ry, y]) => b.merge(fern(), { x, y, z, ry, s: 0.9 }));
+    [[-5.0, -2.6, 2.3], [-5.2, 2.45, 2.2], [-3.95, -2.05, 1.95], [-3.7, 1.95, 1.75]].forEach(([x, z, y], i) => b.merge(grassTuft(i % 3), { x, y, z, ry: i * 1.9, s: 0.9 }));
+    return b;
+  }
+  /* v220: Ufer des Quelltopfs (Rahmen des Topfs: Mitte im Ursprung, der Bach läuft nach +x ab, der Fall kommt von +z,
+     die Kamera schaut von −z). Steine verschieden groß in Gruppen, vorn niedrig, am Abfluss frei; Farne, Gras und ein
+     paar Blumen auf der sonnigen Seite, Kiesel im Sand, Treibholz in der stillen Ecke. rim(an) = Uferradius (lokal). */
+  function springRim(rim) {
+    G3.seed(3990);
+    const b = new MB(), g1 = 0x948e83, g2 = 0xa59f93, g3 = 0x847e74, g4 = 0x8c8275;
+    const P = (an, dr) => { const r = rim(an) + dr; return [Math.cos(an) * r, Math.sin(an) * r]; };
+    const free = (x, z) => !(x > 1.2 && Math.abs(z) < 1.9) && !(z > 1.6 && Math.abs(x) < 1.5);
+    /* Gruppen: [Winkel, Abstand zum Ufer, Radius, Farbe, Moos] */
+    [[1.95, 0.25, 0.62, g1, 0.25], [2.2, 0.75, 0.3, g3, 0.3], [2.45, 0.1, 0.42, g2, 0.2],                /* hinten rechts, neben der Wand */
+     [3.05, 0.35, 0.55, g4, 0.45], [3.3, 0.9, 0.26, g1, 0.3], [3.55, 0.2, 0.3, g2, 0.2],                  /* rechts: bemooster Block */
+     [4.15, 0.25, 0.32, g3, 0.15], [4.35, 0.6, 0.16, g2, 0.1],                                              /* vorn rechts, niedrig */
+     [1.12, 0.3, 0.5, g2, 0.2], [0.92, 0.85, 0.24, g4, 0.25],                                              /* hinten links */
+     [5.3, 0.45, 0.34, g1, 0.2], [5.05, 0.95, 0.18, g3, 0.1]                                                /* vorn links, am Abfluss vorbei */
+    ].forEach(([an, dr, r, c, m]) => { const [x, z] = P(an, dr); if (free(x, z)) stone(b, r, c, { x, y: 0.02 - r * 0.3, z, flat: 0.62, jitter: 0.35, wet: 0.12, moss: m, ry: an * 2.3, cut: 3 }); });
+    /* Kiesel im Sand */
+    for (let i = 0; i < 26; i++) { const an = rnd() * Math.PI * 2, [x, z] = P(an, 0.12 + rnd() * 0.55); if (!free(x, z)) continue;
+      stone(b, 0.04 + rnd() * 0.06, [g1, g2, g4][i % 3], { x, y: 0.012, z, flat: 0.5, jitter: 0.4, lichen: 0, cut: 1 }); }
+    /* Farne und Gras in Gruppen (rechts und hinten), ein paar Blumen auf der sonnigen Seite hinten links */
+    [[2.05, 1.15, 0.4], [2.6, 0.95, 2.0], [3.2, 1.35, 4.2], [3.45, 1.1, 1.1]].forEach(([an, dr, ry]) => { const [x, z] = P(an, dr); b.merge(fern(), { x, y: -0.02, z, ry, s: 1.0 + (ry % 0.3) }); });
+    [[1.7, 1.0], [1.82, 1.3], [2.9, 0.8], [3.75, 0.7], [3.9, 1.0], [4.4, 0.95], [0.8, 1.1], [5.5, 1.05]].forEach(([an, dr], i) => { const [x, z] = P(an, dr); if (free(x, z)) b.merge(grassTuft(i % 3), { x, y: 0, z, ry: i * 1.7, s: 1.0 + (i % 3) * 0.15 }); });
+    [[1.0, 1.25, 0xf2e27a], [1.06, 1.45, 0xffffff], [0.86, 1.4, 0xd99bd4], [1.18, 1.6, 0xf2e27a], [2.35, 1.5, 0xffffff]].forEach(([an, dr, c]) => { const [x, z] = P(an, dr);
+      b.box(0.018, 0.2, 0.018, 0x6b8f2c, { x, z }); b.ico(0.045, c, { x, y: 0.21, z }); b.ico(0.02, 0xf0c040, { x, y: 0.235, z }); });
+    /* Treibholz in der stillen Ecke (rechts im Topf), halb eingetaucht, mit Seitenast */
+    { const [x, z] = P(3.5, -0.45); b.at({ x, y: 0.03, z, ry: 1.1 }, m => { m.cyl(0.04, 0.05, 0.72, 7, 0x6f5638, { rz: Math.PI / 2, top: 0xa48a62 }); m.at({ x: 0.12, ry: 0.75 }, q => q.cyl(0.022, 0.028, 0.3, 6, 0x7a6243, { rz: Math.PI / 2, x: 0.15, top: 0xa48a62 })); }); }
     return b;
   }
   /* v193: Wasserfall als eine durchgehende Fläche – Rinne oben im Fels, runde Kante, Wurfbogen bis in den Topf.
@@ -1639,7 +1680,8 @@ const FWM = (() => {
       const wl = 1 + (wob ? 0.07 * Math.sin(a * 11 + 1.3) + 0.045 * Math.sin(a * 23 + 0.4) : 0), wr = 1 + (wob ? 0.06 * Math.sin(a * 13 + 2.6) + 0.05 * Math.sin(a * 19 + 1.9) : 0);
       for (let j = 0; j <= NW; j++) {
         const w = j / NW, u = w - 0.5, curl = Math.pow(Math.abs(u) * 2, 3) * 0.06, bulge = (p[4] || 0) * (1 - 4 * u * u);
-        row.push({ p: [p[0] - curl + bulge, p[1], p[3] + u * p[2] * (u < 0 ? wl : wr)], c: [a, w, 1] });
+        const lj = (p[5] || 0) * (Math.sin(u * 13 + 0.9) * 0.6 + Math.sin(u * 29 + 2.1) * 0.4);   /* v220: Kante nicht schnurgerade – der Strom tritt ungleichmäßig über */
+        row.push({ p: [p[0] - curl + bulge + lj, p[1] - Math.abs(lj) * 0.4, p[3] + u * p[2] * (u < 0 ? wl : wr)], c: [a, w, 1] });
       }
       V.push(row);
     }
@@ -1654,7 +1696,7 @@ const FWM = (() => {
     fallSheet(b, a => {
       if (a <= A0) { const k = a / A0, x = lip[0] - F.rinne * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k, foot[2], 0]; }   /* Rinne */
       const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);                                                                                   /* runde Kante */
-      return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.95 + 0.5 * t, foot[2], 0.07 * Math.min(1, t * 5)];
+      return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.95 + 0.5 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
     }, 38, 12, true);
     /* Nebenstränge: über die Kante, auf den Absatz, vom Absatz ins Wasser */
     F.strands.forEach(([L, M, W, w]) => {
@@ -1673,130 +1715,438 @@ const FWM = (() => {
     for (let i = 0; i < n; i++) triUp(b, [bx, y, bz], P[i], P[(i + 1) % n], ctr, waterCol(0.8), waterCol(0.8));
     return b;
   }
-  /* v207: Woher das Wasser kommt – eine Hangquelle im Wald hinter dem Fall. Hinter der Felswand steigt ein bemooster
-     Felshang an (Höhenfeld springHill). Oben tritt das Wasser am Fuß eines großen Findlings aus (Quelltopf, sprudelt),
-     läuft als schmaler Bergbach in einer Rinne den Hang hinab, fällt über zwei kleine Kaskaden (mit Becken dazwischen)
-     ins Becken auf der Felskante und von dort als großer Fall in den Topf. Alles im lokalen Rahmen von springRocks
-     (Topfmitte im Ursprung, Bach nach +x, Hang nach −x, ×1,5). Wasserflächen: water 2; Kaskaden/Schaum: Shader 6. */
+  /* v207: Woher das Wasser kommt. v220: Der Bergbach ist ein einziges durchgehendes Band – Mittellinie (Catmull-Rom
+     durch die Kontrollpunkte), Breite und Wasserspiegel laufen stetig, Becken sind breite Stellen des Bandes. Das Band
+     reicht unter das Ufer; die Uferlinie entsteht dort, wo das Gelände den Wasserspiegel schneidet.
+     v228: Quellberg in der Nordostecke der Karte. Der Ursprung liegt in einer Mulde hinter dem Gipfelkamm (von keiner
+     Kameraposition aus zu sehen), der Bach läuft hinter dem Kamm nach Westen, tritt durch eine Klamm zwischen Gipfel und
+     Westschulter hervor, fällt über drei Kaskaden die Bergflanke hinab, schlängelt sich über eine Hochfläche nach
+     Südwesten und kommt von Nordosten an das Becken über dem großen Fall. Fall, Becken, Topf und Abfluss bleiben.
+     Berg, Hochfläche und Bachlauf sind in Weltkoordinaten beschrieben (Kontrollpunkte x, z, Wasserspiegel, halbe Breite);
+     gerechnet wird im Rahmen des Falls (lokal, Maßstab SPRING_FALL.S), den worldview.js mit setSpringFrame setzt. */
+  let SFR = null;
+  function setSpringFrame(C, ry, k) { SFR = { C: [C[0], C[1]], c: Math.cos(ry), s: Math.sin(ry), k: k || SPRING_FALL.S }; SRUN.reach = null; SR_S = SR_G = SR_PL = SR_BOX = SR_BASE = null; }
+  function sfr() {
+    if (!SFR) { const I = springInfo(FWORLD.creek, { w: 1.5 }); setSpringFrame(I.C, Math.atan2(-I.dir[1], I.dir[0]) + Math.PI / 2, SPRING_FALL.S); }
+    return SFR;
+  }
+  const toW = (x, z) => { const F = sfr(); return [F.C[0] + (x * F.c + z * F.s) * F.k, F.C[1] + (-x * F.s + z * F.c) * F.k]; };
+  const toL = (X, Z) => { const F = sfr(), dx = (X - F.C[0]) / F.k, dz = (Z - F.C[1]) / F.k; return [dx * F.c - dz * F.s, dx * F.s + dz * F.c]; };
   const SRUN = {
-    /* Bachlauf: x, z, Wasserspiegel y, halbe Breite – Kaskaden zwischen Kante (lip) und Fuß (foot) */
-    N: [[-13.7, -0.55, 3.56, 0.3], [-13.0, -0.38, 3.53, 0.26], [-12.2, -0.12, 3.48, 0.27], [-11.4, 0.12, 3.43, 0.28], [-10.65, 0.14, 3.39, 0.28],
-        [-10.0, 0.08, 2.8, 0.3], [-9.55, 0.04, 2.79, 0.34], [-9.05, -0.08, 2.77, 0.3], [-8.45, -0.26, 2.73, 0.3], [-7.85, -0.16, 2.69, 0.31], [-7.3, 0.06, 2.65, 0.32],
-        [-6.5, 0.12, 2.115, 0.34]],
-    runs: [[0, 4], [6, 10]],                       /* Knotenbereiche mit ruhig fließendem Wasser */
-    casc: [[4, 5], [10, 11]],                      /* Kante → Fuß */
-    pools: [[-13.75, -0.55, 0.45, 3.56, 1], [-9.55, 0.04, 0.52, 2.79, 1], [-5.55, 0.12, 0.74, 2.11, 1.15]],   /* x, z, r, y, Streckung in x (letzter: Becken auf der Kante) */
-    src: [-14.02, -0.6]                            /* Austritt am Findling */
+    /* Welt: hinter dem Kamm (verdeckt) → Klamm, Bergflanke (zwei Stufen), Hochfläche */
+    W: [
+      [[53.5, -138.7, 6.55, 0.5], [52.1, -139.55, 6.53, 0.74], [50.1, -140.05, 6.49, 0.48], [47.9, -139.7, 6.45, 0.42], [46, -138.4, 6.41, 0.42], [44.7, -136.4, 6.38, 0.4], [44, -134.1, 6.35, 0.42], [43.7, -132.2, 6.32, 0.45]],
+      [[43.35, -131.15, 5.5, 0.55], [42.4, -129.6, 5.48, 0.82], [41.25, -128.6, 5.46, 0.52], [40.6, -127.3, 5.43, 0.44], [40.4, -126, 5.4, 0.44]],
+      [[39.9, -125.05, 4.72, 0.55], [38.75, -123.7, 4.7, 0.88], [37.2, -123.6, 4.68, 0.55], [35.7, -124.2, 4.65, 0.46], [34.3, -124.1, 4.62, 0.46], [33, -123.4, 4.59, 0.47], [31.6, -123.5, 4.56, 0.48], [30, -123.5, 4.53, 0.5]]
+    ],
+    /* lokal (Fallrahmen): Zulauf von Nordosten zur Kaskade ins Becken, Becken auf der Kante (wie bisher) */
+    L: [
+      [[-9.05, -5.45, 2.72, 0.4], [-9.25, -4.55, 2.715, 0.52], [-9.15, -3.4, 2.705, 0.36], [-8.8, -2.25, 2.69, 0.28], [-8.25, -1.2, 2.675, 0.29], [-7.65, -0.45, 2.66, 0.31], [-7.2, 0.0, 2.65, 0.32]],
+      [[-6.45, 0.08, 2.11, 0.44], [-5.95, 0.22, 2.11, 0.66], [-5.32, 0.02, 2.11, 0.8], [-4.62, 0.2, 2.11, 0.62], [-4.05, 0.12, 2.11, 0.42]]
+    ],
+    srcW: [53.75, -138.5],      /* Austritt unter der Felsplatte */
+    reach: null
   };
+  function srReaches() {
+    if (!SRUN.reach) { const k = sfr().k; SRUN.reach = SRUN.W.map(R => R.map(([X, Z, y, hw]) => { const l = toL(X, Z); return [l[0], l[1], y / k, hw / k]; })).concat(SRUN.L); }
+    return SRUN.reach;
+  }
+  const srSrc = () => toL(SRUN.srcW[0], SRUN.srcW[1]);
   const sst = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   const hn = (x, z) => { const s1 = Math.sin(x * 1.7 + z * 0.6) * Math.sin(z * 1.3 - x * 0.4 + 1.1), s2 = Math.sin(x * 3.1 - z * 2.3 + 0.7); return s1 * 0.7 + s2 * 0.3; };
-  /* Abstand zur Wasserkante (negativ im Wasser) und Wasserspiegel am nächsten Wasser */
+  const crv = (a, b, c, d, t) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t);
+  const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const smaxK = (a, b, k) => { if (k < 1e-3) return Math.max(a, b); const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h * h * k * 0.25; };
+  /* weiche Vereinigung zweier Höhen – nah am Boden ohne Aufschlag (sonst stünde der Rand als Stufe) */
+  const unionH = (a, b, k) => smaxK(a, b, k * sst(0, 2.0, Math.min(a, b)));
+  const sminK = (a, b, k) => -smaxK(-a, -b, k);
+  /* dichte Stützpunkte je Abschnitt: x, z, y, hw, s (Weg), Tangente tx/tz (lokal) */
+  let SR_S = null;
+  function srSamples() {
+    if (SR_S) return SR_S;
+    SR_S = srReaches().map(P => {
+      const out = [], n = 8;
+      for (let i = 0; i < P.length - 1; i++) {
+        const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+        for (let k = 0; k < n; k++) { const t = k / n; out.push([0, 1, 2, 3].map(c => c === 2 ? p1[2] + (p2[2] - p1[2]) * t : crv(p0[c], p1[c], p2[c], p3[c], t))); }
+      }
+      out.push(P[P.length - 1].slice());
+      let s = 0;
+      const S = out.map((p, i) => { if (i) s += Math.hypot(p[0] - out[i - 1][0], p[1] - out[i - 1][1]); return { x: p[0], z: p[1], y: p[2], hw: Math.max(0.2, p[3]), s }; });
+      S.forEach((q, i) => { const a = S[Math.max(0, i - 1)], c = S[Math.min(S.length - 1, i + 1)], l = Math.hypot(c.x - a.x, c.z - a.z) || 1; q.tx = (c.x - a.x) / l; q.tz = (c.z - a.z) / l; });
+      return S;
+    });
+    return SR_S;
+  }
+  /* Verbindungen ohne Band: die Kaskaden (Kante → Fuß) und die Rinne vom Becken zur großen Kante */
+  function srLinks() {
+    const S = srSamples(), L = [];
+    for (let i = 0; i + 1 < S.length; i++) { const a = S[i][S[i].length - 1], c = S[i + 1][0]; L.push([a, { x: c.x, z: c.z, y: c.y + 0.05, hw: c.hw * 0.85 }, 3]); }   /* Stufe: Bett bleibt hoch und fällt erst am Fuß */
+    const e = S[S.length - 1][S[S.length - 1].length - 1], T = SPRING_FALL.top;
+    L.push([e, { x: T[0] + 0.15, z: T[2], y: T[1], hw: 0.47 }]);
+    return L;
+  }
+  /* Abstand zur Wasserkante (negativ im Wasser), Wasserspiegel und halbe Breite am nächsten Wasser (lokal).
+     Strecken einmal vorbereitet (mit Umriss), weit entfernte werden übersprungen. */
+  /* v228: Strecken in einem Raster (Zelle 1,5) – gesucht wird nur in der Nähe; weiter als 2,5 vom Wasser zählt nur „weit“.
+     Je Strecke 9 Zahlen: Ax, Az, Bx, Bz, yA, yB, hwA, hwB, Exponent (Kaskade). */
+  let SR_G = null;
+  const SRG_C = 1.5, SRG_M = 2.5, SRG_FAR = [9, 0, 0.3];
   function srcWater(x, z) {
-    let bd = 1e9, by = 0;
-    const N = SRUN.N;
-    for (let i = 1; i < N.length; i++) {
-      const A = N[i - 1], B = N[i], dx = B[0] - A[0], dz = B[1] - A[1], l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((x - A[0]) * dx + (z - A[1]) * dz) / l2));
-      const d = Math.hypot(x - A[0] - dx * t, z - A[1] - dz * t) - (A[3] + (B[3] - A[3]) * t);
-      if (d < bd) { bd = d; by = A[2] + (B[2] - A[2]) * t; }
+    if (!SR_G) {
+      const segs = [], grid = new Map();
+      const add = (A, B, pw) => segs.push([A.x, A.z, B.x, B.z, A.y, B.y, A.hw, B.hw, pw || 0]);
+      for (const S of srSamples()) for (let i = 1; i < S.length; i++) add(S[i - 1], S[i]);
+      srLinks().forEach(([A, B, pw]) => add(A, B, pw));
+      const lists = new Map();
+      segs.forEach((g, n) => { const m = Math.max(g[6], g[7]) + SRG_M;
+        for (let i = Math.floor((Math.min(g[0], g[2]) - m) / SRG_C); i <= Math.floor((Math.max(g[0], g[2]) + m) / SRG_C); i++)
+          for (let j = Math.floor((Math.min(g[1], g[3]) - m) / SRG_C); j <= Math.floor((Math.max(g[1], g[3]) + m) / SRG_C); j++) {
+            const key = i * 8192 + j; (lists.get(key) || lists.set(key, []).get(key)).push(n); } });
+      for (const [key, L] of lists) { const a = new Float64Array(L.length * 9); L.forEach((n, i) => a.set(segs[n], i * 9)); grid.set(key, a); }
+      SR_G = grid;
     }
-    SRUN.pools.forEach(([cx, cz, r, y, sx]) => { const d = Math.hypot((x - cx) / sx, z - cz) - r; if (d < bd) { bd = d; by = y; } });
-    return [bd, by];
-  }
-  /* Höhe des Hangs (lokal); Rinne und Becken sind eingetieft */
-  /* Wasserspiegel entlang der Hangachse (stetig, über ±0,5 gemittelt) – Kamm und Hang hängen nur davon ab, sonst
-     entstehen Stufen, wo das nächste Wasser von einem Abschnitt zum anderen wechselt */
-  function yAlong(x) {
-    const N = SRUN.N, f = q => { if (q <= N[0][0]) return N[0][2]; for (let i = 1; i < N.length; i++) if (q <= N[i][0]) { const t = (q - N[i - 1][0]) / (N[i][0] - N[i - 1][0]); return N[i - 1][2] + (N[i][2] - N[i - 1][2]) * t; } return N[N.length - 1][2]; };
-    return (f(x - 0.5) + f(x - 0.25) + f(x) + f(x + 0.25) + f(x + 0.5)) / 5;
-  }
-  function hillH(x, z) {
-    const [d, y] = srcWater(x, z), crest = yAlong(x) + 0.45 + 0.6 * sst(-13.0, -14.9, x), bed = y - 0.14;
-    let h;
-    if (d < 0.06) h = bed;
-    else if (d < 0.72) h = bed + (crest - bed) * sst(0.06, 0.72, d);
-    else if (d < 1.25) h = crest;
-    else h = crest * (1 - sst(1.25, 1.25 + 1.0 * crest + 0.8, d));      /* breiter, flacher Hang statt Damm */
-    h += 0.11 * hn(x, z) * sst(0.25, 1.0, d) * Math.min(1, h);
-    const w = sst(1.0, 3.2, Math.abs(z)), xs = -6.3 - 2.4 * w;                  /* vorn: hinter den Felsen kurz, an den Seiten lang auslaufend (keine Kante) */
-    h *= sst(-18.6, -15.6, x) * (1 - sst(xs, xs + 1.1 + 1.8 * w, x));
-    return h - 0.06 * (1 - sst(0, 0.35, h));
-  }
-  function springHill(gnd) {
-    G3.seed(4207);
-    const b = new MB(), cell = 0.25, X0 = -19.5, X1 = -5, Z0 = -7.4, Z1 = 7.4, nx = Math.round((X1 - X0) / cell), nz = Math.round((Z1 - Z0) / cell);
-    const H = [], D = [];
-    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + i * cell, z = Z0 + j * cell; H.push(hillH(x, z)); D.push(srcWater(x, z)[0]); }
-    const at = (i, j) => j * (nx + 1) + i;
-    const ROCK = G3.col(0x8f8a80), ROCKD = G3.col(0x77726a), WET = G3.col(0x57544c), MOSS = G3.col(0x5a8636), MOSS2 = G3.col(0x6b9440);
-    const C = [];
-    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
-      const x = X0 + i * cell, z = Z0 + j * cell, h = H[at(i, j)], d = D[at(i, j)];
-      const gx = (H[at(Math.min(nx, i + 1), j)] - H[at(Math.max(0, i - 1), j)]) / (2 * cell), gz = (H[at(i, Math.min(nz, j + 1))] - H[at(i, Math.max(0, j - 1))]) / (2 * cell);
-      const sl = Math.hypot(gx, gz), g0 = G3.col(gnd ? gnd(x, z) : 0x6f9a40);
-      let c = mixA(g0, hn(x * 0.7, z * 0.9) > 0.1 ? MOSS : MOSS2, 0.55 * sst(0.25, 1.1, h));
-      c = mixA(c, hn(x * 2.1, z * 1.7) > 0 ? ROCK : ROCKD, sst(0.75, 1.5, sl + 0.45 * hn(x * 1.3 + 2, z * 1.1)));   /* Fels in Flecken, nicht als Band */
-      c = mixA(c, WET, 1 - sst(0.02, 0.45, d));
-      C.push(mixA(g0, c, sst(-0.02, 0.3, h)));
+    const a = SR_G.get(Math.floor(x / SRG_C) * 8192 + Math.floor(z / SRG_C));
+    if (!a) return SRG_FAR;
+    let bd = 1e9, by = 0, bh = 0.3;
+    for (let o = 0; o < a.length; o += 9) {
+      const ax = a[o], az = a[o + 1], dx = a[o + 2] - ax, dz = a[o + 3] - az, l2 = dx * dx + dz * dz || 1e-6;
+      let t = ((x - ax) * dx + (z - az) * dz) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const qx = x - ax - dx * t, qz = z - az - dz * t, hw = a[o + 6] + (a[o + 7] - a[o + 6]) * t, d = Math.sqrt(qx * qx + qz * qz) - hw;
+      if (d < bd) { bd = d; const pw = a[o + 8]; by = a[o + 4] + (a[o + 5] - a[o + 4]) * (pw ? Math.pow(t, pw) : t); bh = hw; }
     }
-    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-      const q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
-      if (q.every(k => H[k] <= -0.03)) continue;
-      const P = k => [X0 + (k % (nx + 1)) * cell, H[k], Z0 + Math.floor(k / (nx + 1)) * cell];
-      const [A, B, Cc, Dd] = q.map(P), [ca, cb, cc, cd] = q.map(k => C[k]);
-      if ((i + j) % 2) { triUp(b, A, B, Cc, ca, cb, cc); triUp(b, A, Cc, Dd, ca, cc, cd); }
-      else { triUp(b, A, B, Dd, ca, cb, cd); triUp(b, B, Cc, Dd, cb, cc, cd); }
-    }
-    /* Felsen: Findling an der Quelle, Stufen an den Kaskaden, Blöcke am Hang; teils im Boden versenkt */
-    const g1 = 0x8f8a80, g2 = 0xa39e94, g3 = 0x7d786f, moss = 0x5f8a3a, moss2 = 0x4f7a32;
-    const rock = (x, z, r, c, fl, sink) => { const [d, wy] = srcWater(x, z); stone(b, r, c, { x, y: hillH(x, z) - r * (sink == null ? 0.35 : sink), z, flat: fl || 0.8, jitter: 0.3, moss: 0.3, wet: d < 0.8 ? wy + 0.12 : null, detail: r > 0.9, ry: x * 1.7 + z }); };   /* v210: Steine mit Material */
-    rock(-15.0, -0.65, 1.3, g2, 0.85, 0.3); rock(-15.6, 0.85, 0.8, g3, 0.8); rock(-14.2, 0.55, 0.4, g1, 0.7);    /* Findling mit Nachbarn */
-    rock(-14.3, -1.35, 0.45, g3, 0.75);
-    [[-10.38, 0.14, 2.62, 0.42], [-7.05, 0.08, 1.95, 0.44]].forEach(([x, z, y, r]) => stone(b, r, g3, { x, y, z, flat: 0.95, jitter: 0.25, wetAll: 0.6 }));   /* Stufen unter den Kanten (nass) */
-    [[-10.6, -0.5, 0.32], [-10.55, 0.75, 0.3], [-7.3, -0.55, 0.34], [-7.2, 0.72, 0.3], [-9.6, -0.65, 0.25], [-9.5, 0.7, 0.22], [-12.4, 0.45, 0.2], [-11.7, -0.4, 0.22]].forEach(([x, z, r], k) => rock(x, z, r, k % 2 ? g1 : g2, 0.7, 0.3));
-    [[-12.6, 1.7, 0.55], [-11.3, -1.6, 0.62], [-9.0, 1.55, 0.5], [-8.2, -1.7, 0.66], [-10.1, -2.1, 0.45], [-16.3, -1.3, 0.62], [-13.6, 2.2, 0.5], [-12.0, -2.6, 0.4], [-8.6, 2.5, 0.42]].forEach(([x, z, r], k) => rock(x, z, r, [g1, g2, g3][k % 3], 0.7, 0.45));
-    /* Rahmen des Zulaufs am Becken (ersetzt die alte Rückwand hinter dem Becken) */
-    stone(b, 1.0, g1, { x: -6.95, y: 1.65, z: -1.3, flat: 0.95, jitter: 0.3, moss: 0.3, wet: 2.25, detail: true, ry: 0.6 }); stone(b, 0.95, g2, { x: -6.9, y: 1.6, z: 1.45, flat: 0.95, jitter: 0.3, moss: 0.3, wet: 2.25, detail: true, ry: 2.2 });
-    /* Moos auf den Steinen, Farne an den Ufern */
-    /* v210: kein Moospolster mehr auf den Rahmensteinen am Zulauf (verdeckte die untere Kaskade) – Moos sitzt auf den Flächen der Steine */
-    [[-15.0, -0.65, 0.75, 1.0], [-15.6, 0.85, 0.45, 0.72]].forEach(([x, z, r, up], k) =>
-      b.noise(0.18, () => b.ico(r, k % 2 ? moss : moss2, { x, y: hillH(x, z) + up * 1.05, z, flat: 0.4, jitter: 0.3 })));
-    [[-13.3, 0.35, 0.2], [-12.8, -1.0, 1.4], [-11.0, 0.75, 2.6], [-11.9, -0.85, 0.9], [-9.2, 0.75, 3.3], [-8.7, -0.9, 4.4], [-7.7, 0.85, 5.2], [-14.1, -1.5, 2.0], [-13.6, 1.0, 5.9]].forEach(([x, z, ry]) =>
-      b.merge(fern(), { x, y: hillH(x, z) - 0.03, z, ry, s: 0.95 }));
-    /* v210: Grasbüschel in Gruppen am Bachufer (sonnige Seite) und am Hangfuß */
-    [[-12.6, 0.55], [-12.4, 0.75], [-10.9, -0.6], [-9.9, 0.75], [-9.1, 0.6], [-8.0, 0.75], [-7.9, 0.95], [-13.2, -1.1], [-11.6, 1.3], [-8.9, -1.25]].forEach(([x, z], i) =>
-      b.merge(grassTuft(i % 3), { x, y: hillH(x, z) - 0.02, z, ry: i * 2.1, s: 1.1 + (i % 2) * 0.3 }));
-    return b;
+    return bd > SRG_M ? SRG_FAR : [bd, by, bh];
   }
-  /* ruhiges Bachwasser und kleine Becken (water 2) – etwas breiter als die Rinne, die Ränder liegen unter dem Ufer */
-  function springRun() {
-    const b = new MB(), N = SRUN.N, wc = waterCol;
-    SRUN.runs.forEach(([i0, i1]) => {
-      for (let i = i0; i < i1; i++) {
-        const A = N[i], B = N[i + 1], dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz), px = -dz / l, pz = dx / l;
-        const E = (P, s) => [P[0] + px * (P[3] + 0.08) * s, P[2] + 0.004, P[1] + pz * (P[3] + 0.08) * s];
-        const Lc = [A[0], A[2] + 0.004, A[1]], Rc = [B[0], B[2] + 0.004, B[1]];
-        triUp(b, E(A, -1), E(B, -1), Rc, wc(0.85), wc(0.85), wc(0.35)); triUp(b, E(A, -1), Rc, Lc, wc(0.85), wc(0.35), wc(0.35));
-        triUp(b, Lc, Rc, E(B, 1), wc(0.35), wc(0.35), wc(0.85)); triUp(b, Lc, E(B, 1), E(A, 1), wc(0.35), wc(0.85), wc(0.85));
+  /* v228: der Berg (Welt). Ellipsen-Kuppen [x, z, rx, rz, Drehung, Höhe, flacher Kern] weich vereinigt: breiter Sockel, Gipfel mit
+     einem Kammarm nach Osten (deckt die Quelle zur Kamera hin), Rücken hinter der Quelle, Westschulter, vordere Stufe,
+     zwei kleine Vorberge. Darüber Höhenstufen (Terrassen mit steileren Absätzen), ein verbogener Rand (keine Ellipsen
+     zu sehen), Rauheit, und die Mulde, in der das Wasser aus dem Berg tritt. */
+  const MTN = {
+    blobs: [
+      [50.5, -137.7, 14.0, 10.0, 0.25, 8, 0.45],   /* Sockel */
+      [49, -134.5, 6.5, 4.6, 0.3, 13, 0.25],     /* Gipfel */
+      [55.6, -135.3, 5.2, 3.0, -0.15, 12, 0.5],    /* Kammarm nach Osten */
+      [53.3, -135.5, 3.4, 2.3, 0.1, 12.6, 0.55],   /* Kamm südlich der Quelle (deckt sie zur Kamera hin) */
+      [51.0, -137.1, 2.8, 2.0, 0.3, 11.8, 0.5],    /* Sattel zwischen Gipfel und Kamm (deckt den Bach hinter dem Kamm) */
+      [48.8, -140.3, 3.4, 3.0, 0.2, 11.6, 0.5],      /* Westwand der Mulde (die Klamm schneidet hindurch) */
+      [53.5, -143.5, 7.5, 3.4, 0.15, 11.2, 0.45],    /* Rücken hinter der Quelle */
+      [42.2, -138.3, 3.0, 4.4, 0.25, 9.8, 0.45],    /* Westwand der Klamm */
+      [61, -138.2, 6.5, 7.0, 0.6, 8.5, 0.4],       /* Ostflanke */
+      [39, -132.7, 6.6, 6.0, -0.4, 8.6, 0.35],     /* Westschulter */
+      [45.5, -126.7, 9.6, 5.0, 0.4, 5.2, 0.4],       /* vordere Stufe */
+      [33.6, -127.3, 5.2, 4.3, 0.2, 5.6, 0.3],       /* Kuppe im Westen */
+      [56, -123.9, 7.2, 4.8, 0.3, 3, 0.35]       /* Vorberg im Osten */
+    ],
+    hollow: [53.4, -138.7, 3.0, 6.25, 7.0],           /* Mulde der Quelle: x, z, Radius, Boden, Steilheit */
+    step: 2.2
+  };
+  let MTN_B = null;
+  function mtnW(X, Z) {
+    if (!MTN_B) MTN_B = MTN.blobs.map(([cx, cz, rx, rz, a, H, p]) => [cx, cz, Math.cos(a) / rx, Math.sin(a) / rx, Math.cos(a) / rz, Math.sin(a) / rz, H, p, Math.max(rx, rz) + 0.01]);
+    const wx = X + 1.7 * hn(X * 0.09 + 1.3, Z * 0.11), wz = Z + 1.7 * hn(Z * 0.1 - 2.1, X * 0.08 + 0.7);
+    let h = 0;
+    for (const B of MTN_B) {
+      const dx = wx - B[0], dz = wz - B[1];
+      if (Math.abs(dx) > B[8] || Math.abs(dz) > B[8]) continue;
+      const u = dx * B[2] + dz * B[3], v = -dx * B[5] + dz * B[4], r2 = u * u + v * v;
+      if (r2 < 1) h = unionH(h, B[6] * (1 - sst(B[7], 1, Math.sqrt(r2))), 1.6);          /* Kern flach, dann weich abfallend */
+    }
+    if (h <= 0) return 0;
+    const s = MTN.step, q = h / s, fl = Math.floor(q), tr = (fl + sst(0.66, 1.0, q - fl)) * s;
+    h += (tr - h) * 0.82 * sst(1.0, 2.6, h);                                                    /* Höhenstufen: breite Absätze, steile Felsstufen */
+    h += 0.35 * hn(X * 0.37, Z * 0.41) * sst(0.5, 2.5, h) + 0.18 * hn(X * 0.9 + 4, Z * 0.8 - 2) * sst(1, 3, h);
+    const [hx, hz, hr, hb, hk] = MTN.hollow, dq = Math.hypot(X - hx, Z - hz);
+    if (dq < hr * 2.4) h = sminK(h, hb + hk * (dq / hr) * (dq / hr), 1.0);                   /* Mulde der Quelle */
+    return Math.max(0, h);
+  }
+  /* Hochfläche entlang des Bachs (Welt): oben Ufer = Wasser + bank auf der Kernbreite core, dann Abfall über fw –
+     Maximum über die Stützpunkte, dadurch stetig. Zulauf und Becken am Fall: schmal und flach wie bisher. */
+  let SR_PL = null, SR_BOX = null;
+  function srPlateau() {
+    if (SR_PL) return SR_PL;
+    const k = sfr().k, RS = srSamples(), nR = RS.length, P = [], CELL = 5, lists = new Map(), grid = new Map();
+    RS.forEach((S, ri) => S.forEach((q, i) => {
+      if (i % 2 && i !== S.length - 1) return;
+      const [X, Z] = toW(q.x, q.z), y = q.y * k, near = ri >= nR - 2;
+      const core = near ? 1.9 : 3.0 + 1.3 * hn(X * 0.21, Z * 0.19), bank = near ? 0.63 : 0.9 + 0.25 * hn(X * 0.5, Z * 0.45);
+      const top = y + bank, fw = (near ? 1.2 : 1.35) * top + 1.5 + (near ? 0 : 1.2 * hn(Z * 0.23, X * 0.17));
+      P.push({ X, Z, top, core, R: core + fw });
+    }));
+    P.forEach((p, n) => {
+      for (let i = Math.floor((p.X - p.R) / CELL); i <= Math.floor((p.X + p.R) / CELL); i++) for (let j = Math.floor((p.Z - p.R) / CELL); j <= Math.floor((p.Z + p.R) / CELL); j++) {
+        const key = i * 4096 + j; (lists.get(key) || lists.set(key, []).get(key)).push(n);
       }
     });
-    SRUN.pools.slice(0, 2).forEach(([cx, cz, r, y, sx]) => {
-      const n = 20, P = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; P.push([cx + Math.cos(a) * (r + 0.07) * sx, y + 0.003, cz + Math.sin(a) * (r + 0.07)]); }
-      for (let i = 0; i < n; i++) triUp(b, [cx, y + 0.003, cz], P[i], P[(i + 1) % n], wc(0.15), wc(0.8), wc(0.8));
+    for (const [key, L] of lists) { const a = new Float64Array(L.length * 5); L.forEach((n, i) => { const p = P[n]; a.set([p.X, p.Z, p.top, p.core, p.R], i * 5); }); grid.set(key, a); }
+    SR_PL = { P, grid, CELL };
+    return SR_PL;
+  }
+  function platW(X, Z) {
+    const T = srPlateau(), a = T.grid.get(Math.floor(X / T.CELL) * 4096 + Math.floor(Z / T.CELL));
+    if (!a) return 0;
+    let h = 0;
+    for (let o = 0; o < a.length; o += 5) {
+      const dx = X - a[o], dz = Z - a[o + 1], R = a[o + 4], top = a[o + 2];
+      if (top <= h || dx * dx + dz * dz >= R * R) continue;
+      const d = Math.sqrt(dx * dx + dz * dz), core = a[o + 3];
+      const v = d < core ? top : top * (1 - sst(core, R, d)); if (v > h) h = v;
+    }
+    return h;
+  }
+  /* Umriss (Welt) für das Gitter */
+  function srBox() {
+    if (SR_BOX) return SR_BOX;
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
+    const grow = (x, z, r) => { x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r); z0 = Math.min(z0, z - r); z1 = Math.max(z1, z + r); };
+    MTN.blobs.forEach(([cx, cz, rx, rz]) => grow(cx, cz, Math.max(rx, rz) + 2));
+    srPlateau().P.forEach(p => grow(p.X, p.Z, p.R));
+    SR_BOX = [x0, z0, x1, z1];
+    return SR_BOX;
+  }
+  /* Höhe (lokal). Ufer: unter Wasser ein Bett (in Becken tiefer), an der Wasserkante steil aus dem Wasser (die Uferlinie
+     liegt sauber auf der Kante), dann das Gelände (Berg ∪ Hochfläche). In der Klamm stehen die Wände steil am Wasser.
+     Am Fall reicht die Hochfläche in der Mitte als Felsabsatz bis an die Rinne (das Becken liegt eingebettet auf der
+     Kante), seitlich endet sie hinter den Flankenfelsen; um den Topf bleibt alles frei. */
+  /* Gelände ohne Bach (Berg ∪ Hochfläche, Welt) als Tabelle (0,5er Raster, bilinear) – einmal gerechnet, alle Abfragen danach schnell */
+  let SR_BASE = null;
+  const BASE_C = 0.5;
+  function baseW(X, Z) {
+    if (!SR_BASE) {
+      const BB = srBox(), nx = Math.ceil((BB[2] - BB[0]) / BASE_C) + 1, nz = Math.ceil((BB[3] - BB[1]) / BASE_C) + 1, A = new Float32Array((nx + 1) * (nz + 1));
+      for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = BB[0] + i * BASE_C, z = BB[1] + j * BASE_C; A[j * (nx + 1) + i] = unionH(mtnW(x, z), platW(x, z), 1.0); }
+      SR_BASE = { A, nx, nz, x0: BB[0], z0: BB[1] };
+    }
+    const T = SR_BASE, fx = (X - T.x0) / BASE_C, fz = (Z - T.z0) / BASE_C;
+    if (fx < 0 || fz < 0 || fx >= T.nx || fz >= T.nz) return 0;
+    const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, w = T.nx + 1, q = j * w + i, A = T.A;
+    return (A[q] * (1 - u) + A[q + 1] * u) * (1 - v) + (A[q + w] * (1 - u) + A[q + w + 1] * u) * v;
+  }
+  function hillH(x, z, W) {
+    const [d, y, hw] = W || srcWater(x, z), [X, Z] = toW(x, z), k = sfr().k;
+    const G = baseW(X, Z) / k, dep = 0.1 + 0.22 * sst(0.3, 0.7, hw);
+    let h;
+    if (d < 0) h = y - 0.03 - (dep - 0.03) * sst(0, -0.7 * hw, d);
+    else {
+      const T = Math.max(G, y + 0.42);
+      if (d < 0.8) { const t = d / 0.8; h = y - 0.03 + (T - y + 0.03) * (1 - (1 - t) * (1 - t)); }
+      else h = Math.max(G, (y + 0.42) * (1 - sst(0.8, 2.4, d)));
+    }
+    h += 0.11 * hn(x, z) * sst(0.3, 1.0, d) * Math.min(1, h);
+    const w = sst(1.0, 3.2, Math.abs(z)), sh = 1 - sst(1.1, 2.3, Math.abs(z - 0.12));
+    const xs = -6.5 - 2.6 * w + 2.5 * sh, len = 1.4 + 2.2 * w - 0.85 * sh;
+    h *= Math.max(1 - sst(xs, xs + len, x), sst(6.4, 9.0, Math.hypot(x, z)));
+    return h - 0.06 * (1 - sst(0, 0.35, h));
+  }
+  /* Höhe in Weltmaß an einem Weltpunkt (Bäume, Prüfungen) */
+  function springHeightW(X, Z) { const l = toL(X, Z); return hillH(l[0], l[1]) * sfr().k; }
+  /* v228: Gitter in Weltachsen, grob (0,6) und am Bach fein (0,3); an der Grenze grob/fein liegen die Zwischenpunkte
+     genau auf der groben Kante (keine Risse). Ecken lokal (Rahmen des Falls), Normalen aus dem Höhenfeld. */
+  function springHill(gnd) {
+    G3.seed(4207);
+    const b = new MB(), F = sfr(), k = F.k, BB = srBox(), cell = 0.6, nx = Math.ceil((BB[2] - BB[0]) / cell), nz = Math.ceil((BB[3] - BB[1]) / cell), W1 = nx + 1;
+    const T = srPlateau(), near = (X, Z) => T.grid.has(Math.floor(X / T.CELL) * 4096 + Math.floor(Z / T.CELL)) || MTN.blobs.some(([cx, cz, rx, rz]) => Math.hypot(X - cx, Z - cz) < Math.max(rx, rz) + 2);
+    const ROCK = G3.col(0x8a8a83), ROCKD = G3.col(0x6e706a), ROCKL = G3.col(0xa3a39a), WET = G3.col(0x4f5047), BED = G3.col(0x56584a), MOSS = G3.col(0x5f8a38), MOSS2 = G3.col(0x739a44),
+      EARTH = G3.col(0x6b6046), NEEDLE = G3.col(0x56633a), DGRASS = G3.col(0x587d34);
+    const SUN = [0.42, 0.78, 0.46], SL = Math.hypot(SUN[0], SUN[1], SUN[2]);
+    const colAt = (x, z, h, d, sl, on, n) => {
+      const g0 = G3.col(gnd ? gnd(x, z) : 0x6f9a40); if (!on) return g0;
+      const hw = h * k, v1 = 0.5 + 0.5 * hn(x * 0.55, z * 0.7), v2 = 0.5 + 0.5 * hn(x * 1.4 + 3.1, z * 1.2 - 1.7), v3 = 0.5 + 0.5 * hn(x * 0.3 - 2.2, z * 0.27 + 1.4);
+      /* Moos und Gras unten, Nadelboden und dunkles Gras am Berg (in Flecken), Erde auf mäßig steilen Stücken */
+      let c = mixA(g0, mixA(MOSS, MOSS2, v1), 0.5 * sst(0.2, 1.5, hw));
+      c = mixA(c, mixA(NEEDLE, DGRASS, v3), 0.72 * sst(2.5, 5.5, hw) * (0.55 + 0.45 * v2));
+      if (d > 1.0) c = mixA(c, EARTH, 0.14 * sst(0.6, 1.0, sl) * v2 * (1 - sst(1.2, 1.6, sl)));
+      /* Fels an den Stufen und steilen Flanken (am Berg mehr, oben heller); am Bach nur an hohen Wänden */
+      const wall = d < 1.0 ? sst(1.5, 2.2, sl) : sst(0.85, 1.3, sl) * (0.3 + 0.65 * sst(2.5, 7.0, hw));
+      c = mixA(c, mixA(ROCKD, v1 > 0.55 ? ROCKL : ROCK, v2 * 0.6 + 0.4 * sst(6, 11, hw)), Math.min(0.88, wall));
+      if (d >= 0 && d < 1.0) c = mixA(c, mixA(MOSS, DGRASS, v2), 0.35 * (1 - d) * (1 - wall));       /* Moos am Ufer statt Erde */
+      c = mixA(c, WET, 0.6 * (1 - sst(0.0, 0.26, d)));                                          /* nasser Saum am Wasser */
+      if (d < 0) c = mixA(c, BED, sst(0, -0.15, d));                                            /* Bett (sichtbar nur neben den Kaskaden) */
+      /* etwas Licht und Schatten mit eingebacken: Hänge zur Sonne heller, abgewandte dunkler – der Berg liest sich von oben */
+      if (n) { const lk = 0.9 + 0.32 * ((n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2]) / SL - 0.8); c = [c[0] * lk, c[1] * lk, c[2] * lk]; }
+      return mixA(g0, c, sst(-0.02, 0.3, h));
+    };
+    /* Normale (lokal) aus dem Gefälle in Weltachsen (gX, gZ: Weltmaß je Welteinheit) */
+    const nrm = (gX, gZ) => { const nl = Math.hypot(gX, 1, gZ), wx = -gX / nl, wz = -gZ / nl; return [wx * F.c - wz * F.s, 1 / nl, wx * F.s + wz * F.c]; };
+    const evalH = (X, Z) => { const l = toL(X, Z), Wt = srcWater(l[0], l[1]); return [hillH(l[0], l[1], Wt), Wt[0], l[0], l[1]]; };
+    /* grobe Ecken */
+    const N = W1 * (nz + 1), H = new Float32Array(N), D = new Float32Array(N), LX = new Float32Array(N), LZ = new Float32Array(N), on = new Uint8Array(N);
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const q = j * W1 + i, X = BB[0] + i * cell, Z = BB[1] + j * cell;
+      if (!near(X, Z)) { const l = toL(X, Z); LX[q] = l[0]; LZ[q] = l[1]; H[q] = -0.06; D[q] = 9; continue; }
+      const e = evalH(X, Z); H[q] = e[0]; D[q] = e[1]; LX[q] = e[2]; LZ[q] = e[3]; on[q] = 1;
+    }
+    const at = (i, j) => j * W1 + Math.max(0, Math.min(nx, i));
+    const VR = new Array(N);
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const q = j * W1 + i, jm = Math.max(0, j - 1), jp = Math.min(nz, j + 1);
+      const gX = (H[at(i + 1, j)] - H[at(i - 1, j)]) * k / (2 * cell), gZ = (H[jp * W1 + i] - H[jm * W1 + i]) * k / (2 * cell), n = nrm(gX, gZ), nl = Math.hypot(gX, 1, gZ);
+      VR[q] = { x: LX[q], z: LZ[q], h: H[q], n, c: colAt(LX[q], LZ[q], H[q], D[q], Math.hypot(gX, gZ), on[q], [-gX / nl, 1 / nl, -gZ / nl]) };
+    }
+    /* feine Zellen: nahe am Wasser */
+    const fine = new Uint8Array(nx * nz);
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const q = j * W1 + i; if (Math.min(D[q], D[q + 1], D[q + W1], D[q + W1 + 1]) < 1.7 && (on[q] || on[q + 1] || on[q + W1] || on[q + W1 + 1])) fine[j * nx + i] = 1; }
+    const isFine = (i, j) => i >= 0 && j >= 0 && i < nx && j < nz && fine[j * nx + i] === 1;
+    const FV = new Map(), hc = cell / 2, e2 = 0.3;
+    const fineV = (I, J) => {                                                        /* I, J im halben Raster */
+      const key = I * 100003 + J; let r = FV.get(key); if (r) return r;
+      if (!(I % 2) && !(J % 2)) r = VR[(J / 2) * W1 + I / 2];
+      else {
+        /* Kantenmitte an einer groben Nachbarzelle: auf der Kante interpolieren */
+        let lerp = null;
+        if (I % 2 && !(J % 2)) { const i = (I - 1) / 2, j = J / 2; if (!isFine(i, j) || !isFine(i, j - 1)) lerp = [VR[j * W1 + i], VR[j * W1 + i + 1]]; }
+        else if (!(I % 2) && J % 2) { const i = I / 2, j = (J - 1) / 2; if (!isFine(i, j) || !isFine(i - 1, j)) lerp = [VR[j * W1 + i], VR[(j + 1) * W1 + i]]; }
+        if (lerp) { const [A, B] = lerp; r = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2, h: (A.h + B.h) / 2, n: [(A.n[0] + B.n[0]) / 2, (A.n[1] + B.n[1]) / 2, (A.n[2] + B.n[2]) / 2], c: [(A.c[0] + B.c[0]) / 2, (A.c[1] + B.c[1]) / 2, (A.c[2] + B.c[2]) / 2] }; }
+        else {
+          const X = BB[0] + I * hc, Z = BB[1] + J * hc, e = evalH(X, Z);
+          const hx1 = evalH(X + e2, Z)[0], hx0 = evalH(X - e2, Z)[0], hz1 = evalH(X, Z + e2)[0], hz0 = evalH(X, Z - e2)[0];
+          const gX = (hx1 - hx0) * k / (2 * e2), gZ = (hz1 - hz0) * k / (2 * e2);
+          const nl = Math.hypot(gX, 1, gZ); r = { x: e[2], z: e[3], h: e[0], n: nrm(gX, gZ), c: colAt(e[2], e[3], e[0], e[1], Math.hypot(gX, gZ), 1, [-gX / nl, 1 / nl, -gZ / nl]) };
+        }
+      }
+      FV.set(key, r); return r;
+    };
+    const V = b.v;
+    const put = r => V.push(r.x, r.h, r.z, r.n[0], r.n[1], r.n[2], r.c[0], r.c[1], r.c[2]);
+    const tri3 = (A, B, Cc) => { const kk = (B.z - A.z) * (Cc.x - A.x) - (B.x - A.x) * (Cc.z - A.z); put(A); if (kk > 0) { put(B); put(Cc); } else { put(Cc); put(B); } };
+    const quad = (A, B, Cc, Dd, alt) => { if (A.h <= -0.03 && B.h <= -0.03 && Cc.h <= -0.03 && Dd.h <= -0.03) return; if (alt) { tri3(A, B, Cc); tri3(A, Cc, Dd); } else { tri3(A, B, Dd); tri3(B, Cc, Dd); } };
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      if (!isFine(i, j)) { const q = j * W1 + i; quad(VR[q], VR[q + 1], VR[q + W1 + 1], VR[q + W1], (i + j) % 2); continue; }
+      for (let b2 = 0; b2 < 2; b2++) for (let a2 = 0; a2 < 2; a2++) { const I = 2 * i + a2, J = 2 * j + b2; quad(fineV(I, J), fineV(I + 1, J), fineV(I + 1, J + 1), fineV(I, J + 1), (I + J) % 2); }
+    }
+    /* Felsen (lokal). Nie im Wasser: rockOk prüft den Abstand zur Wasserkante. */
+    const g1 = 0x8f8a80, g2 = 0xa39e94, g3 = 0x7d786f, g5 = 0x988f7d, g6 = 0x8a8478;
+    const rock = (x, z, r, c, fl, sink, e) => { const Wt = srcWater(x, z); stone(b, r, c, Object.assign({ x, y: hillH(x, z, Wt) - r * (sink == null ? 0.35 : sink), z, flat: fl || 0.8, jitter: 0.3, moss: 0.3, wet: Wt[0] < 0.8 ? Wt[1] + 0.12 : null, detail: r > 0.9, ry: x * 1.7 + z, cut: 3 }, e || {})); };
+    const rockOk = (x, z, r) => srcWater(x, z)[0] > r * 0.55;
+    const L = (X, Z) => toL(X, Z);
+    /* Quelle: Felsplatte über dem Austritt, Blöcke rund um die Mulde (alles hinter dem Kamm) */
+    { const s = srSrc(), [qx, qz] = s, y0 = srReaches()[0][0][2];
+      stone(b, 0.95, g2, { x: qx + 0.35, y: y0 + 0.55, z: qz - 0.2, flat: 0.42, jitter: 0.25, moss: 0.5, cut: 3, detail: true, ry: 0.8 });
+      [[1.0, -0.6, 0.8], [0.4, 0.9, 0.62], [-0.3, -1.05, 0.5], [1.4, 0.7, 0.55]].forEach(([dx, dz, r], i) => rock(qx + dx, qz + dz, r, [g3, g1, g6][i % 3], 0.85, 0.3, { moss: 0.5 }));
+    }
+    const S = srSamples();
+    /* Kaskaden: Stufe unter der Kante (nass), Wächter links und rechts */
+    for (let i = 0; i + 1 < S.length; i++) { const a = S[i][S[i].length - 1], c = S[i + 1][0];
+      stone(b, 0.44, g3, { x: a.x + (c.x - a.x) * 0.5, y: (a.y + c.y) / 2 - 0.36, z: a.z + (c.z - a.z) * 0.5, flat: 0.95, jitter: 0.25, wetAll: 0.62, cut: 2 });
+      [-1, 1].forEach((sg, k2) => { const px = -a.tz * sg, pz = a.tx * sg, rr = 0.26 + 0.07 * k2 + 0.03 * i, x = a.x + px * (a.hw + rr * 0.7), z = a.z + pz * (a.hw + rr * 0.7); if (rockOk(x, z, rr)) rock(x, z, rr, k2 ? g1 : g2, 0.75, 0.3); });
+    }
+    /* Ufersteine an den Außenkurven (aus der Krümmung), mal groß, mal nur ein Kiesel */
+    S.slice(0, -1).forEach((R, ri) => { for (let i = 6; i < R.length - 6; i += 5) {
+      const p = R[i - 3], q = R[i], n = R[i + 3], cr = (q.x - p.x) * (n.z - q.z) - (q.z - p.z) * (n.x - q.x); if (Math.abs(cr) < 0.004) continue;
+      const sg = cr > 0 ? -1 : 1, px = -q.tz * sg, pz = q.tx * sg, r = [0.2, 0.32, 0.14, 0.26, 0.18][(i + ri) % 5], x = q.x + px * (q.hw + r * 0.55), z = q.z + pz * (q.hw + r * 0.55);
+      if (rockOk(x, z, r)) rock(x, z, r, [g1, g2, g5][i % 3], 0.7, 0.4); } });
+    /* Steine am Rand der Becken, halb im Wasser – sie brechen die runde Uferlinie */
+    S.forEach((R, ri) => { let k2 = 0; for (let i = 3; i < R.length - 3; i++) {
+      const q = R[i]; if (q.hw < 0.5 || R[i - 1].hw >= q.hw || R[i + 1].hw > q.hw) continue;            /* breiteste Stelle eines Beckens */
+      [[1, 0.24], [-1, 0.18]].forEach(([sg, r]) => { const px = -q.tz * sg, pz = q.tx * sg; stone(b, r, [g1, g2, g5][(k2++) % 3], { x: q.x + px * (q.hw - r * 0.25), y: q.y - r * 0.4, z: q.z + pz * (q.hw - r * 0.25), flat: 0.7, jitter: 0.35, wetAll: 0.45, moss: 0.2, cut: 2, ry: ri + k2 }); });
+    } });
+    /* Klamm: Felswände an beiden Seiten des Austritts, ein Block halb im Wasser */
+    { const R = S[0]; for (let i = R.length - 22; i < R.length; i += 4) { const q = R[i];
+      [-1, 1].forEach((sg, k2) => { const r = 0.55 + 0.2 * ((i + k2) % 3), px = -q.tz * sg, pz = q.tx * sg, x = q.x + px * (q.hw + r * 0.75), z = q.z + pz * (q.hw + r * 0.75); if (rockOk(x, z, r)) rock(x, z, r, [g3, g6, g1][(i + k2) % 3], 0.9, 0.45, { moss: 0.35, cut: 4, detail: r > 0.7 }); }); } }
+    /* Felsen am Berg: an Absätzen und steilen Flanken, auf dem Kamm; je höher, desto mehr */
+    { const rr = mulberry(9228), BBx = BB;
+      for (let Z = BBx[1]; Z < BBx[3]; Z += 2.1) for (let X = BBx[0]; X < BBx[2]; X += 2.1) {
+        const Xj = X + (rr() - 0.5) * 1.8, Zj = Z + (rr() - 0.5) * 1.8, hm = mtnW(Xj, Zj), u = rr(), r0 = rr();
+        if (hm < 1.6) continue;
+        const sl = Math.hypot(mtnW(Xj + 0.5, Zj) - hm, mtnW(Xj, Zj + 0.5) - hm) / 0.5;
+        if (u > 0.12 + 0.5 * sst(0.6, 1.5, sl) + 0.15 * sst(8, 11, hm)) continue;
+        const [x, z] = L(Xj, Zj), r = (0.3 + 0.62 * r0 * r0) * (0.8 + 0.4 * sst(4, 10, hm));
+        if (!rockOk(x, z, r * 1.5 + 0.2)) continue;
+        /* längs der Höhenlinie gestreckt (Felsband an der Stufe) */
+        const gx = mtnW(Xj + 0.5, Zj) - hm, gz = mtnW(Xj, Zj + 0.5) - hm, aw = Math.atan2(gz, gx), ryL = -(aw - Math.atan2(-F.s, F.c)) + Math.PI / 2;
+        rock(x, z, r, [g1, g3, g6, g5, g2][Math.floor(r0 * 5) % 5], 0.58 + 0.22 * u, 0.45, { moss: 0.25 + 0.35 * sst(2, 6, hm), cut: 3 + (r > 0.7 ? 1 : 0), detail: r > 0.75, sx: 1.25 + 0.6 * u, ry: ryL });
+      } }
+    /* Rahmen des Zulaufs am Becken */
+    stone(b, 0.95, g1, { x: -6.75, y: 1.62, z: -1.62, flat: 0.92, jitter: 0.3, moss: 0.35, wet: 2.25, detail: true, ry: 0.6, cut: 4 }); stone(b, 0.9, g2, { x: -6.9, y: 1.58, z: 1.55, flat: 0.92, jitter: 0.3, moss: 0.35, wet: 2.25, detail: true, ry: 2.2, cut: 4 });
+    /* Farne und Gras in Gruppen am Ufer (außen an den Kurven), Blumen auf sonnigen Stellen der Hochfläche */
+    const side = (q, sg, off) => { const px = -q.tz * sg, pz = q.tx * sg; return [q.x + px * (q.hw + off), q.z + pz * (q.hw + off)]; };
+    S.forEach((R, ri) => { for (let i = 4; i < R.length - 2; i += 6) {
+      const sg = (i + ri) % 2 ? 1 : -1, [x, z] = side(R[i], sg, 0.55 + 0.1 * (i % 3)); if (!rockOk(x, z, 0.3)) continue;
+      if ((i + ri) % 3) b.merge(fern(), { x, y: hillH(x, z) - 0.03, z, ry: i * 1.3 + ri, s: 0.85 + 0.1 * (i % 3) });
+      else b.merge(grassTuft(i % 3), { x, y: hillH(x, z) - 0.02, z, ry: i * 2.1, s: 1.0 + (i % 2) * 0.3 });
+      const [x2, z2] = side(R[i], -sg, 0.45); if (rockOk(x2, z2, 0.25)) b.merge(grassTuft((i + 1) % 3), { x: x2, y: hillH(x2, z2) - 0.02, z: z2, ry: i * 0.7, s: 0.9 });
+    } });
+    /* Gras, Farn und Moospolster locker über Hochfläche und Hänge (nicht im Wasser, nicht an Felsstufen) */
+    { const rr = mulberry(7228);
+      for (let Z = BB[1]; Z < BB[3]; Z += 1.55) for (let X = BB[0]; X < BB[2]; X += 1.55) {
+        const Xj = X + (rr() - 0.5) * 1.4, Zj = Z + (rr() - 0.5) * 1.4, u = rr(), v = rr();
+        if (u > 0.42) continue;
+        const [x, z] = L(Xj, Zj), Wt = srcWater(x, z); if (Wt[0] < 0.7) continue;
+        const y = hillH(x, z, Wt), yw = y * k; if (yw < 0.4) continue;
+        const y1 = hillH(x + 0.3, z), y2 = hillH(x, z + 0.3), sl = Math.hypot(y1 - y, y2 - y) / 0.3; if (sl > 0.9) continue;
+        if (v < 0.62) b.merge(grassTuft(Math.floor(v * 30) % 3), { x, y: y - 0.02, z, ry: u * 40, s: 0.9 + v * 0.5 });
+        else if (v < 0.86) b.merge(fern(), { x, y: y - 0.03, z, ry: u * 30, s: 0.7 + v * 0.3 });
+        else stone(b, 0.12 + 0.12 * u, [g1, g3, g6][Math.floor(v * 9) % 3], { x, y: y - 0.05, z, flat: 0.55, jitter: 0.35, moss: 0.6, cut: 2 });
+      } }
+    [[36.2, -124.2], [41.6, -127.0], [33.2, -128.6], [44.6, -128.2], [38.4, -129.1]].forEach(([X, Z], g) => { for (let i = 0; i < 4; i++) {
+      const [x, z] = L(X + Math.cos(i * 2.1 + g) * 0.5, Z + Math.sin(i * 2.1 + g) * 0.5); if (!rockOk(x, z, 0.3)) continue;
+      const y = hillH(x, z), c = [0xf2e27a, 0xffffff, 0xd99bd4, 0xffffff][(i + g) % 4]; b.box(0.018, 0.2, 0.018, 0x6b8f2c, { x, y, z }); b.ico(0.045, c, { x, y: y + 0.21, z }); b.ico(0.02, 0xf0c040, { x, y: y + 0.235, z }); } });
+    return b;
+  }
+  /* v228: Bäume und Sträucher auf Berg und Hochfläche (Weltkoordinaten, eigener Knoten): oben dichte Fichten und Kiefern,
+     unten gemischt mit einzelnen Buchen und Birken, Sträucher am Rand. Frei bleiben: Bach und Ufer, steile Absätze, der
+     Topf, und ein Streifen vor dem sichtbaren Bach zur Kamera hin (Südosten), damit man das Wasser sieht. */
+  function springFlora() {
+    const b = new MB(), k = sfr().k, BB = srBox(), rr = mulberry(4228), C0 = toW(0, 0), EYE = [Math.SQRT1_2, Math.SQRT1_2];
+    const S = srSamples(), vis = [];
+    S.forEach((R, ri) => { if (ri) R.forEach((q, i) => { if (!(i % 3)) { const [X, Z] = toW(q.x, q.z); vis.push([X, Z]); } }); });
+    const front = (X, Z) => vis.some(([wx, wz]) => { const dx = X - wx, dz = Z - wz, d = Math.hypot(dx, dz); return d < 7.5 && (dx * EYE[0] + dz * EYE[1]) > 0.2 * d; });
+    const at = (X, Z) => { const l = toL(X, Z), Wt = srcWater(l[0], l[1]); return [hillH(l[0], l[1], Wt) * k, Wt[0] * k]; };
+    const BUSHES = ["evergreen_shrub", "fern_shrub", "round_shrub", "berry_shrub"];
+    for (let Z = BB[1]; Z < BB[3]; Z += 2.35) for (let X = BB[0]; X < BB[2]; X += 2.35) {
+      const x = X + (rr() - 0.5) * 2.0, z = Z + (rr() - 0.5) * 2.0, u = rr(), v = rr(), w = rr();
+      const [h, dw] = at(x, z);
+      if (h < 0.9 || dw < 1.6 || Math.hypot(x - C0[0], z - C0[1]) < 10.5) continue;
+      const [h1] = at(x + 0.6, z), [h2] = at(x, z + 0.6), sl = Math.hypot(h1 - h, h2 - h) / 0.6;
+      if (sl > 1.25) continue;
+      const hi = h > 4.6, fr = front(x, z);
+      if (u < (hi ? 0.6 : 0.34) && !(fr && h < 6.2) && sl < 1.0) {
+        const sp = hi ? (v < 0.62 ? "fichte" : "kiefer") : (v < 0.3 ? "fichte" : v < 0.45 ? "kiefer" : v < 0.72 ? "buche" : "birke");
+        const sz = hi ? (w < 0.55 ? 2 : 3) : (w < 0.5 ? 2 : 1);
+        b.merge(tree(sp, sz, Math.floor(w * 3) % 3), { x, y: h - 0.1, z, ry: v * 6.28, s: 0.85 + 0.3 * w });
+      } else if (u < 0.5 && dw > 2.2) {
+        const id = BUSHES[Math.floor(v * BUSHES.length) % BUSHES.length];
+        b.merge(bush(id, Math.floor(w * 3) % 3), { x, y: h - 0.08, z, ry: w * 6.28, s: 0.8 + 0.4 * v });
+      }
+    }
+    return b;
+  }
+  /* v220: Bergbach (Shader uWater 7). Die Vertexfarbe trägt Koordinaten: r = Weg entlang der Strömung (stetig über
+     alle Abschnitte), g = quer (±1 an der Wasserkante, darüber hinaus unter dem Ufer), b = Strömung (0,25 ruhiges
+     Becken … 1 schneller Lauf, > 1 Verwirbelung am Fuß einer Kaskade). Farbe, Tiefe, Fließen macht der Shader. */
+  function springRun() {
+    const b = new MB(), SS = srSamples(), EXT = 0.24, U = [-1, -0.72, -0.42, -0.16, 0.16, 0.42, 0.72, 1];
+    let s0 = 0;
+    SS.forEach((S, ri) => {
+      const L = S[S.length - 1].s, last = ri === SS.length - 1;
+      const speed = q => 0.25 + 0.65 * sst(0.62, 0.3, q.hw) + (last ? 0.25 * sst(L - 0.5, L + 0.1, q.s) : 0.35 * sst(L - 0.8, L, q.s)) + (ri ? 0.95 * sst(0.95, 0.05, q.s) * sst(-0.25, 0.08, q.s) : 0.4 * sst(0.7, 0, q.s));
+      /* nach hinten verlängert: an der Quelle unter den Findling, am Fuß einer Kaskade nur ein Stück unter den Fall */
+      const f = S[0], e = ri ? 0.16 : f.hw + EXT, all = [{ ...f, x: f.x - f.tx * e, z: f.z - f.tz * e, s: -e }, { ...f, x: f.x - f.tx * e * 0.5, z: f.z - f.tz * e * 0.5, s: -e * 0.5 }].concat(S);
+      /* ein Stück in die Rinne – folgt deren Gefälle knapp unter dem Fall, der darüber einblendet (keine Kante) */
+      if (last) { const q = S[S.length - 1], F = SPRING_FALL, x0 = F.top[0] - F.rinne;
+        [0.15, 0.3, 0.45, 0.6].forEach(e => { const x = q.x + q.tx * e, k = Math.max(0, Math.min(1, (x - x0) / F.rinne)); all.push({ ...q, x, z: q.z + q.tz * e, s: q.s + e, y: F.top[1] + 0.1 * (1 - k) * (1 - k) + 0.013, hw: q.hw - 0.5 * e }); }); }   /* schmaler: bleibt in der Rinne */
+      const sec = all.map(q => { const Wd = q.hw + EXT, sp = speed(q), px = -q.tz, pz = q.tx; return U.map(u => ({ p: [q.x + px * u * Wd, q.y + 0.002, q.z + pz * u * Wd], c: [s0 + q.s, u * Wd / q.hw, sp] })); });
+      for (let i = 1; i < sec.length; i++) for (let j = 1; j < U.length; j++) {
+        const A = sec[i - 1][j - 1], B = sec[i][j - 1], C2 = sec[i][j], D = sec[i - 1][j];
+        triUp(b, A.p, B.p, C2.p, A.c, B.c, C2.c); triUp(b, A.p, C2.p, D.p, A.c, C2.c, D.c);
+      }
+      s0 += L + 1.2;
     });
     return b;
   }
   /* zwei kleine Kaskaden (Shader 6, wie der große Fall): kurzer Anlauf, runde Kante, Wurfbogen in das nächste Becken */
+  function srCasc() { const S = srSamples(), out = []; for (let i = 0; i + 1 < S.length; i++) { const a = S[i][S[i].length - 1], c = S[i + 1][0]; out.push([[a.x, a.z, a.y, a.hw], [c.x, c.z, c.y, c.hw]]); } return out; }
   function springCascades() {
-    const b = new MB(), N = SRUN.N;
-    SRUN.casc.forEach(([i0, i1]) => {
-      const L = N[i0], F = N[i1], dx = F[0] - L[0], dz = F[1] - L[1], l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, px = -uz, pz = ux, dy = L[2] - F[2];
+    const b = new MB();
+    srCasc().forEach(([L, F]) => {
+      const dx = F[0] - L[0], dz = F[1] - L[1], l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, px = -uz, pz = ux, dy = L[2] - F[2];
       const NA = 18, NW = 6, A0 = 0.2, V = [];
       for (let i = 0; i <= NA; i++) {
         const a = i / NA, row = [];
         let cx, cy, cz, w;
-        if (a <= A0) { const k = a / A0; cx = L[0] - ux * 0.45 * (1 - k); cz = L[1] - uz * 0.45 * (1 - k); cy = L[2] + 0.012; w = L[3] * 0.9; }
-        else { const t = (a - A0) / (1 - A0), f = Math.pow(t, 0.72); cx = L[0] + dx * f; cz = L[1] + dz * f; cy = L[2] + 0.012 - dy * t * t + 0.05 * Math.max(0, 1 - t * 6); w = L[3] * (0.9 + 0.4 * t); }
-        for (let j = 0; j <= NW; j++) { const u = j / NW - 0.5, back = Math.pow(Math.abs(u) * 2, 3) * 0.05; row.push({ p: [cx + px * u * 2 * w - ux * back, cy, cz + pz * u * 2 * w - uz * back], c: [a, j / NW, 1] }); }
+        if (a <= A0) { const k = a / A0; cx = L[0] - ux * 0.45 * (1 - k); cz = L[1] - uz * 0.45 * (1 - k); cy = L[2] + 0.012; w = L[3] * 0.95; }
+        else { const t = (a - A0) / (1 - A0), f = 1 - Math.pow(1 - t, 2.6); cx = L[0] + dx * f; cz = L[1] + dz * f; cy = L[2] + 0.012 - (dy + 0.1) * Math.pow(t, 1.5) + 0.05 * Math.max(0, 1 - t * 6); w = L[3] * (0.9 + 0.3 * t); }   /* v220: über die Kante vor, dann steil hinab */
+        const wl = 1 + 0.09 * Math.sin(a * 9 + L[0]) + 0.05 * Math.sin(a * 21 + 1.7), wr = 1 + 0.08 * Math.sin(a * 11 + L[1] * 3) + 0.05 * Math.sin(a * 17 + 0.4);   /* unregelmäßige Ränder */
+        for (let j = 0; j <= NW; j++) { const u = j / NW - 0.5, back = Math.pow(Math.abs(u) * 2, 3) * 0.05; row.push({ p: [cx + px * u * 2 * w * (u < 0 ? wl : wr) - ux * back, cy, cz + pz * u * 2 * w * (u < 0 ? wl : wr) - uz * back], c: [a, j / NW, 1] }); }
         V.push(row);
       }
       for (let i = 0; i < NA; i++) for (let j = 0; j < NW; j++) {
@@ -1808,7 +2158,7 @@ const FWM = (() => {
   }
   /* Schaum (Shader 6, b = 0) an den Füßen der Kaskaden und sprudelnd am Quellaustritt */
   function springRunFoam() {
-    const b = new MB(), N = SRUN.N;
+    const b = new MB();
     const disc = (cx, cz, y, R, NR, NA) => {
       for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
         const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
@@ -1817,12 +2167,12 @@ const FWM = (() => {
         if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
       }
     };
-    SRUN.casc.forEach(([i0, i1]) => { const L = N[i0], F = N[i1], l = Math.hypot(F[0] - L[0], F[1] - L[1]); disc(F[0] + (F[0] - L[0]) / l * 0.12, F[1] + (F[1] - L[1]) / l * 0.12, F[2] + 0.009, 0.6, 6, 24); });
-    disc(SRUN.src[0], SRUN.src[1], SRUN.pools[0][3] + 0.009, 0.34, 5, 20);
+    srCasc().forEach(([L, F]) => { const l = Math.hypot(F[0] - L[0], F[1] - L[1]); disc(F[0] + (F[0] - L[0]) / l * 0.06, F[1] + (F[1] - L[1]) / l * 0.06, F[2] + 0.009, Math.min(0.36, F[3] - 0.06), 6, 24); });
+    { const s = srSrc(); disc(s[0], s[1], srReaches()[0][0][2] + 0.009, 0.32, 5, 20); }
     return b;
   }
   /* Lage der Kaskadenfüße und des Quellaustritts (lokal) für Gischt und Blubbern in worldview.js */
-  function springRunInfo() { const N = SRUN.N; return { feet: SRUN.casc.map(([i0, i1]) => [N[i1][0], N[i1][2], N[i1][1], N[i0][0], N[i0][2], N[i0][1]]), src: [SRUN.src[0], SRUN.pools[0][3], SRUN.src[1]] }; }
+  function springRunInfo() { return { feet: srCasc().map(([L, F]) => [F[0], F[2], F[1], L[0], L[2], L[1]]), src: (() => { const s = srSrc(); return [s[0], srReaches()[0][0][2], s[1]]; })() }; }
   /* v193: Schaumteppich mit Wellenringen am Fuß (Shader uWater 6, b = 0: r = Abstand 0…1, g = Winkel 0…1).
      Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
   function springFoam() {
@@ -2888,7 +3238,7 @@ const FWM = (() => {
     const T = 0.095, gc = o.gc || 0x3f5f8f, dk = mix(gc, 0x000000, 0.25), lt = mix(gc, 0xffffff, 0.18);
     switch (o.garb) {
       case "bib": {
-        b.box(0.31, 0.11, 0.19, gc, { y: 0.4 });
+        b.box(0.31, 0.11, 0.2, gc, { y: 0.4 });
         b.box(0.2, 0.26, 0.02, gc, { y: 0.42, z: T });
         [-1, 1].forEach(q => {
           b.box(0.04, 0.2, 0.02, gc, { x: q * 0.07, y: 0.62, z: T });
@@ -2906,7 +3256,7 @@ const FWM = (() => {
         b.box(0.25, 0.66 - y0, 0.022, gc, { y: y0, z: T + 0.006 });
         [-1, 1].forEach(q => b.box(0.03, 0.17, 0.02, gc, { x: q * 0.065, y: 0.64, z: T }));
         b.box(0.04, 0.016, 0.2, gc, { x: 0, y: 0.8 });
-        b.box(0.31, 0.03, 0.19, dk, { y: 0.46 });
+        b.box(0.31, 0.03, 0.2, dk, { y: 0.46 });
         b.box(0.15, 0.085, 0.014, dk, { y: y0 + 0.07, z: T + 0.02 });
         if (o.garb === "leather") { b.box(0.18, 0.02, 0.015, lt, { y: y0 + 0.17, z: T + 0.02 }); b.box(0.02, 0.07, 0.02, 0xb8bcc4, { x: 0.11, y: 0.4, z: T }); }
         break;
@@ -2919,15 +3269,23 @@ const FWM = (() => {
           b.box(0.06, 0.06, 0.016, dk, { x: q * 0.09, y: 0.58, z: T + 0.012 });
         });
         b.box(0.31, 0.36, 0.02, gc, { y: 0.43, z: -T });
-        if (o.garb === "hivis") { b.box(0.312, 0.03, 0.192, 0xe8ebe0, { y: 0.52 }); b.box(0.312, 0.03, 0.192, 0xe8ebe0, { y: 0.66 }); }
+        if (o.garb === "hivis") { b.box(0.316, 0.03, 0.226, 0xe8ebe0, { y: 0.52 }); b.box(0.316, 0.03, 0.226, 0xe8ebe0, { y: 0.66 }); }
         else b.box(0.03, 0.06, 0.01, 0xe8d8a0, { x: -0.09, y: 0.7, z: T + 0.014 });
         break;
       }
       case "plaid": {
-        const st = dk;
-        for (let i = -2; i <= 2; i++) b.box(0.022, 0.38, 0.19, st, { x: i * 0.06, y: 0.42 });
-        [0.5, 0.64].forEach(y => b.box(0.31, 0.024, 0.19, st, { y }));
-        [-1, 1].forEach(q => { b.box(0.032, 0.4, 0.192, 0x2a2a30, { x: q * 0.075, y: 0.42 }); b.box(0.034, 0.03, 0.01, 0xb8bcc4, { x: q * 0.075, y: 0.45, z: T + 0.014 }); });
+        /* v223: drei Schichten, jede ein Stück weiter vor der anderen (vorher lagen Streifen, Querbalken und Träger auf derselben Fläche und flackerten):
+           Hemd (Torso) → senkrechte Streifen → Querstreifen → Hosenträger (dünne Platten vorn/hinten + Riemen über der Schulter) */
+        const st = dk, ts = 0x2a2a30;
+        for (let i = -2; i <= 2; i++) b.box(0.022, 0.38, 0.2, st, { x: i * 0.06, y: 0.42 });
+        [0.5, 0.64].forEach(y => b.box(0.31, 0.024, 0.216, st, { y }));
+        [-1, 1].forEach(q => {
+          const x = q * 0.075;
+          b.box(0.032, 0.38, 0.016, ts, { x, y: 0.42, z: 0.118 });                                 /* Träger vorn */
+          b.box(0.032, 0.38, 0.016, ts, { x, y: 0.42, z: -0.118 });                                /* Träger hinten */
+          b.box(0.032, 0.014, 0.236, ts, { x, y: 0.8 });                                           /* Riemen über die Schulter (Oberseite des Hemds) */
+          b.box(0.034, 0.03, 0.01, 0xb8bcc4, { x, y: 0.5, z: 0.13 });                              /* Schnalle */
+        });
         break;
       }
       case "overall": {
@@ -4450,7 +4808,7 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springRim, setSpringFrame, springFlora, springHeightW, springWater: (X, Z) => { const l = toL(X, Z), w = srcWater(l[0], l[1]), k = sfr().k; return [w[0] * k, w[1] * k, w[2] * k]; }, springMtn: mtnW, springSamples: () => srSamples().map(R => R.map(q => { const w = toW(q.x, q.z); return { X: w[0], Z: w[1], y: q.y * sfr().k, hw: q.hw * sfr().k, s: q.s }; })), springPlateau: () => srPlateau().P, springBox: () => srBox(), SRUN, MTN, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

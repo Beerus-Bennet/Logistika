@@ -412,7 +412,7 @@ const G3 = (() => {
       /* v210: unregelmäßige Ränder, die mit dem Wasser wandern (keine geraden Kanten) */
       float eL = 0.16 + 0.1 * vnoise(vec2(3.0, v * 0.9)), eR = 0.16 + 0.1 * vnoise(vec2(9.0, v * 0.9 + 4.0));
       float edge = smoothstep(0.0, eL, w) * smoothstep(1.0, 1.0 - eR, w);
-      float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.62, 1.0, a);
+      float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.72, 1.0, a) * 0.8;          /* v220: unten weniger Vollweiß */
       vec3 deep = vec3(0.13, 0.42, 0.58), mid = vec3(0.42, 0.73, 0.86), wht = vec3(0.92, 0.97, 1.0);
       vec3 c = mix(deep, mid, 0.22 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
       c = mix(c, deep * 0.85, (1.0 - s5) * 0.3 * fall);                                  /* dunklere, dichtere Bahnen – Tiefe */
@@ -420,7 +420,7 @@ const G3 = (() => {
       c *= amb * 0.45 + vec3(Lw) * (0.7 + 0.2 * sh);
       c += (strands * 0.12 + fine * 0.08) * fall * Lw;                   /* Glanz auf den Strängen */
       float al = edge * mix(0.9, 0.7 + 0.28 * max(max(strands, fine), foam), fall);
-      al *= smoothstep(0.0, 0.05, a);                                    /* weich aus der Felsspalte */
+      al *= smoothstep(0.0, max(0.05, uFlow.w), a);                      /* weich aus der Felsspalte; v220: Kaskaden blenden länger aus dem Bach ein (uFlow.w) */
       return vec4(c, al);
     }
     /* Schaum und Wellenringe am Fuß: innen dichter, pulsierender Schaum, außen auslaufende Ringe.
@@ -429,7 +429,7 @@ const G3 = (() => {
     vec2 dir = vec2(cos(an), sin(an)), q = dir * r;
     float n1 = vnoise(q * 5.0 + vec2(t * 0.9, -t * 0.7)), n2 = vnoise(q * 11.0 - vec2(t * 1.6, t * 1.1));
     float puls = 0.85 + 0.15 * sin(t * 4.2 + n1 * 3.0);
-    float foam = smoothstep(0.55, 0.05, r + (n1 - 0.5) * 0.3) * (0.5 + 0.5 * n2) * puls;
+    float foam = smoothstep(0.46, 0.04, r + (n1 - 0.5) * 0.3) * (0.45 + 0.5 * n2) * puls;
     float ring = 0.0;
     for (int k = 0; k < 3; k++) {
       float fk = float(k), ph = fract(t * (0.4 + 0.06 * fk) + fk / 3.0), rr = 0.25 + ph * 0.8;
@@ -437,19 +437,49 @@ const G3 = (() => {
       float str = 0.55 + 0.45 * vnoise(dir * 2.3 + vec2(fk * 5.0, 0.0));
       ring += smoothstep(0.065, 0.0, abs(r - rr - wob)) * (1.0 - ph) * (1.0 - ph) * str;
     }
-    float al = clamp(foam * 0.92 + ring * 0.45, 0.0, 1.0) * smoothstep(1.0, 0.8, r);
+    float al = clamp(foam * 0.78 + ring * 0.4, 0.0, 1.0) * smoothstep(1.0, 0.8, r);
     vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Lw) * (0.7 + 0.2 * sh));
     return vec4(c, al);
   }
+  /* v220: Bergbach (uWater 7). Vertexfarbe = Koordinaten: r = Weg entlang der Strömung, g = quer (±1 an der
+     Wasserkante), b = Strömung (0,25 ruhiges Becken … 1 schneller Lauf, > 1 Verwirbelung unter einer Kaskade).
+     Mitte tief und dunkel, zum Ufer flacher und heller; Streifen und feine Lichtlinien ziehen mit der Strömung
+     bachabwärts (in Becken langsam, vor der Kante schneller), unter den Kaskaden weißes, wanderndes Gekräusel. */
+  vec4 streamWater(vec3 amb, float sh){
+    float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11)), Lw = max(Ls, 0.3);
+    float s = vCol.r, w = vCol.g, sp = vCol.b, aw = abs(w), spc = min(sp, 1.2);
+    float v = s * 1.5 - t * (0.35 + 1.35 * spc);
+    float n1 = vnoise(vec2(w * 2.1, v * 0.5)), n2 = vnoise(vec2(w * 4.6 + 3.7, v * 1.25 - t * 0.15)), n3 = vnoise(vec2(w * 8.5 + 1.1, s * 2.9 - t * (0.8 + 2.0 * spc)));
+    float depth = 1.0 - smoothstep(0.1, 1.05, aw + (n1 - 0.5) * 0.3);
+    vec3 deep = vec3(0.11, 0.36, 0.45), mid = vec3(0.26, 0.56, 0.64), shal = vec3(0.45, 0.64, 0.58);
+    vec3 c = mix(shal, mix(mid, deep, smoothstep(0.4, 1.0, depth)), smoothstep(0.0, 0.5, depth));
+    c = mix(c, deep * 0.9, (1.0 - n1) * 0.18 * depth);                                  /* langsam ziehende, dunklere Bahnen */
+    float streak = smoothstep(0.6, 0.9, n2 * 0.65 + n1 * 0.35) * (0.3 + 0.7 * smoothstep(0.3, 0.9, sp)) * (1.0 - 0.6 * smoothstep(0.75, 1.0, aw));
+    float fine = smoothstep(0.8, 0.95, n3) * smoothstep(0.35, 1.0, sp);
+    float foam = smoothstep(1.0, 1.55, sp) * smoothstep(0.42, 0.85, n2 * 0.4 + n3 * 0.35 + n1 * 0.25 + (sp - 1.0) * 0.3);
+    /* Wellennormale (alle Richtungen, klein) für Himmel und Glitzern */
+    vec2 p = vW.xz;
+    vec2 g = wavG(p * 1.6, 1.0, t * 1.3) * (0.5 + 0.6 * spc);
+    vec3 nn = normalize(vec3(-g.x, 1.0, -g.y));
+    vec3 vv = normalize(uCam - vW), hh = normalize(uSunDir + vv);
+    vec3 col = c * (amb * 0.95 + uSunCol * 0.5 * sh);
+    float fr = 0.1 + 0.5 * pow(1.0 - max(dot(nn, vv), 0.0), 4.0);
+    col = mix(col, uSky * 1.2 + vec3(0.05, 0.07, 0.09), fr);
+    vec3 lit = amb * 0.45 + vec3(Lw) * (0.62 + 0.2 * sh);
+    col = mix(col, vec3(0.66, 0.84, 0.88) * lit, streak * 0.38 + fine * 0.3);
+    col = mix(col, vec3(0.92, 0.96, 1.0) * lit, clamp(foam * 0.8, 0.0, 0.7));
+    col += pow(max(dot(nn, hh), 0.0), 140.0) * 1.3 * sh * uSunCol * (0.4 + 0.6 * spc);
+    return vec4(col, 1.0);
+  }
   void main(){
     vec3 n = normalize(vNor);
-    bool fallW = uWater > 5.5;
+    bool fallW = uWater > 5.5 && uWater < 6.5, strW = uWater > 6.5;   /* v220: 7 = Bergbach */
     /* v126: 2 = Fluss (Ost→West), 3 = See (alle Richtungen), 1 = still; v145: 4 = großer See (ruhigeres, größeres Muster);
        v176: alle bewegten Gewässer im Muster des großen Sees; v177: 5 = Seebach – fließt wie ein Fluss und geht zur Mündung
        (uMouth: x, z, Radius) stufenlos in die Seebewegung über */
     float tt = uWater > 1.5 ? uTime : 0.0, big = step(1.5, uWater);
     float flow = uWater < 2.5 ? 1.0 : (uWater > 4.5 && uMouth.z > 0.0 ? smoothstep(uMouth.z * 0.36, uMouth.z, distance(vW.xz, uMouth.xy)) : 0.0);
-    if (uWater > 0.5 && !fallW) {
+    if (uWater > 0.5 && !fallW && !strW) {
       vec2 p = vW.xz * mix(1.0, 0.55, big);
       vec2 g = flow >= 1.0 ? wavG(p, 0.0, tt) : flow <= 0.0 ? wavG(p, 1.0, tt) : mix(wavG(p, 1.0, tt), wavG(p, 0.0, tt), flow);
       g *= mix(1.0, 0.6, big);
@@ -462,6 +492,7 @@ const G3 = (() => {
     vec3 c = vCol * (amb + uSunCol * wrap * sh);
     float aOut = uAlpha;
     if (fallW) { vec4 fw = fallWater(amb, sh); c = fw.rgb; aOut *= fw.a; }
+    else if (strW) { c = streamWater(amb, sh).rgb; }
     else if (uWater > 0.5) {
       vec3 v = normalize(uCam - vW); vec3 h = normalize(uSunDir + v);
       c = vCol * (amb * 0.95 + uSunCol * 0.5 * sh);
@@ -476,7 +507,7 @@ const G3 = (() => {
       c += wc.y * mix(0.13, 0.09, big) * sh * uSunCol;
     }
     /* Fenster und Glut leuchten nachts: sehr helle, warme Vertexfarben */
-    float warm = fallW ? 0.0 : step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
+    float warm = fallW || strW ? 0.0 : step(0.995, vCol.r) * step(0.80, vCol.g) * step(vCol.g, 0.87) * step(0.46, vCol.b) * step(vCol.b, 0.52);
     c = mix(c, vCol * 1.15, warm * uNight);
     c = mix(c, uTint.rgb, uTint.a);
     if (uLockN > 0) {

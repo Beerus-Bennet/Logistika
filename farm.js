@@ -949,6 +949,21 @@ function farmBuild(spec, x, z, r) {
   if (t !== "deco" && !small && !plant) farmEvent("build:" + t);
   return o;
 }
+/* v219: Stall abreißen – erst wenn kein Tier mehr drin ist; zurück gibt es die Hälfte von Bau und Ausbauten */
+function penDemolishBack(o) {
+  const sh = FSHOP.find(s => s.id === o.t), base = sh && sh.price ? sh.price(0) : 0;
+  const up = (FPEN_COST[o.t] || []).slice(1, o.lvl).reduce((a, c) => a + (c || 0), 0);
+  return Math.round((base + up) * 0.5);
+}
+function farmPenDemolish(o) {
+  if (!o || !FPENS[o.t] || !S.farm.objs.includes(o)) return false;
+  if (o.animals.length) return toast("Erst alle Tiere abgeben.", "warn"), false;
+  const back = penDemolishBack(o);
+  S.money += back; S.revenue += back;
+  logMoney("farm", FPEN_META[o.t].n + " abgerissen", back);
+  S.farm.objs = S.farm.objs.filter(x => x !== o);
+  return back;
+}
 /* Deko wieder abgeben */
 function farmRemove(o) {
   if (!o) return false;

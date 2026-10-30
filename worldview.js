@@ -149,7 +149,7 @@ function worldMasks(fell) {
   [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
   stamp(FWORLD.creek, 3.3, 4);
   /* v190: großer Quelltopf mit Felswand – Platz rundherum */
-  if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } if (FWORLD.springHill) stamp([FWORLD.springHill.a, FWORLD.springHill.b], FWORLD.springHill.r, 4);   /* v207: Quellhang */ stamp(LAKE_CREEK, 2.3, 4);
+  if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } if (FWORLD.springHill) FWORLD.springHill.caps.forEach(([ax, az, bx, bz, r]) => stamp([[ax, az], [bx, bz]], r, 4));   /* v207: Quellhang; v228: Quellberg mit Hochfläche */ stamp(LAKE_CREEK, 2.3, 4);
   const at = (x, z) => { const gx = Math.floor(x) - x0, gz = Math.floor(z) - z0; return gx < 0 || gz < 0 || gx >= W || gz >= H ? 0 : g[gz * W + gx]; };
   const hash = new Map();
   fell.forEach(t => { const k = Math.floor(t.x / 4) + "," + Math.floor(t.z / 4); (hash.get(k) || hash.set(k, []).get(k)).push(t); });
@@ -992,25 +992,33 @@ function worldStatic() {
     const ry = Math.atan2(-SPI.dir[1], SPI.dir[0]);
     /* v191: Felsen und Wasserfall 1,5-mal so groß (Topf jetzt Radius 4,5) */
     const SF = FWM.SPRING_FALL, k = SF.S;
-    R.nodes.push(fnode(fmesh("wspring210", FWM.springRocks), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
+    /* v220: Felswand, Fall, Becken, Hang und Bergbach stehen im um 90° gedrehten Fallrahmen hinter dem Topf – der Fall
+       stürzt zur Spielkamera hin (vorher sah man ihn von der Seite, halb verdeckt vom vorderen Felsblock). Der Topf, sein
+       Ufer und der Abfluss bleiben, wie sie sind. */
+    const ryF = ry + Math.PI / 2, cF = Math.cos(ryF), sF = Math.sin(ryF), nF = { x: SPI.C[0], z: SPI.C[1], ry: ryF, s: k };
+    const WF = (x, z) => [SPI.C[0] + (x * cF + z * sF) * k, SPI.C[1] + (-x * sF + z * cF) * k];
+    FWM.setSpringFrame(SPI.C, ryF, k);       /* v228: Berg, Hochfläche und Bergbach rechnen in diesem Rahmen */
+    R.nodes.push(fnode(fmesh("wspring220", FWM.springRocks), nF));
+    /* Ufer des Topfs im eigenen Rahmen; Uferradius aus der Form des Topfs (SPR.wob läuft über den Weltwinkel) */
+    const c0 = Math.cos(ry), s0 = Math.sin(ry), rim = an => FWM.SPR.RP / k * FWM.SPR.wob(Math.atan2(-Math.cos(an) * s0 + Math.sin(an) * c0, Math.cos(an) * c0 + Math.sin(an) * s0));
+    R.nodes.push(fnode(fmesh("wspringrim220", () => FWM.springRim(rim)), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
+    /* v207: Herkunft des Wassers; v220: Bach als ein Band (water 7). v228: Quellberg in der Nordostecke – Berg, Hochfläche
+       und Bergbach mit vier Kaskaden vom verdeckten Ursprung hinter dem Gipfelkamm bis ans Becken über dem Fall;
+       Bäume und Sträucher darauf in einem eigenen Knoten (Weltkoordinaten). */
+    R.nodes.push(fnode(R.mesh(FWM.springHill((x, z) => { const w = WF(x, z); return wGroundAt(w[0], w[1]); })), nF));
+    R.nodes.push(fnode(R.mesh(FWM.springFlora()), {}));
+    R.nodes.push(fnode(fmesh("wspringrun228", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringcasc228", FWM.springCascades), Object.assign({ water: 6, flow: [3.2, 1.5, 4.0, 0.17], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrunfoam228", FWM.springRunFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.7, shadow: false }, nF)));
+    const I = FWM.springRunInfo();
+    WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
     /* v193: Wasserfall und Schaum im Shader (water: 6) – fließend, halbtransparent, weiche Ränder; flow = (Länge, Tempo, Querdichte) */
-    R.nodes.push(fnode(fmesh("wspringbasin204", FWM.springBasin), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 2, shadow: false }));   /* v204: Becken oben; v207: wird gespeist, fließt (water 2) */
-    /* v207: Herkunft des Wassers – Hang mit Quelle, Bergbach und zwei Kaskaden hinter dem Fall */
-    { const cr = Math.cos(ry), sr = Math.sin(ry), WL = (x, z) => [SPI.C[0] + (x * cr + z * sr) * k, SPI.C[1] + (-x * sr + z * cr) * k];
-      R.nodes.push(fnode(R.mesh(FWM.springHill((x, z) => { const w = WL(x, z); return wGroundAt(w[0], w[1]); })), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
-      R.nodes.push(fnode(fmesh("wspringrun207", FWM.springRun), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 2, shadow: false }));
-      R.nodes.push(fnode(fmesh("wspringcasc207", FWM.springCascades), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [3.2, 1.5, 4.0, 0], alpha: 0.98, shadow: false }));
-      R.nodes.push(fnode(fmesh("wspringrunfoam207", FWM.springRunFoam), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [1, 1, 1, 0], alpha: 0.95, shadow: false }));
-      const I = FWM.springRunInfo();
-      WV.springRun = { feet: I.feet.map(f => { const a = WL(f[0], f[2]), l = WL(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WL(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
-    }
-    R.nodes.push(fnode(fmesh("wspringfall210", FWM.springFall), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [7.0, 1.7, 5.5, 0], alpha: 0.98, shadow: false }));
-    R.nodes.push(fnode(fmesh("wspringfoam210", FWM.springFoam), { x: SPI.C[0], z: SPI.C[1], ry, s: k, water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }));
-    /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep) */
-    const c = Math.cos(ry), s = Math.sin(ry), W = p => [SPI.C[0] + (p[0] * c + p[2] * s) * k, SPI.C[1] + (-p[0] * s + p[2] * c) * k];
-    const ft = W(SF.foot), lp = W(SF.top);
-    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: SPI.dir[0], dz: SPI.dir[1], side: [-SPI.dir[1], SPI.dir[0]], w: 1.4 * k, C: SPI.C,
-      strands: (SF.strands || []).map(([L, M]) => { const q = W(M); return { x: q[0], z: q[1], y: M[1] * k }; }) };   /* v210: Absätze der Nebenstränge */
+    R.nodes.push(fnode(fmesh("wspringfall220", FWM.springFall), Object.assign({ water: 6, flow: [7.0, 1.7, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam220", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
+    /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
+    const ft = WF(SF.foot[0], SF.foot[2]), lp = WF(SF.top[0], SF.top[2]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
+    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: 1.4 * k, C: SPI.C,
+      strands: (SF.strands || []).map(([L, M]) => { const q = WF(M[0], M[2]); return { x: q[0], z: q[1], y: M[1] * k }; }) };   /* v210: Absätze der Nebenstränge */
   }
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
@@ -3464,7 +3472,8 @@ function worldStep(dt, time) {
       R.emit({ x: f.x + (rnd() - 0.5) * 0.5, y: f.y + 0.04, z: f.z + (rnd() - 0.5) * 0.5, vx: Math.cos(a) * v * 0.5 + f.dx / l * v * 0.4, vy: 0.9 + rnd() * 1.1, vz: Math.sin(a) * v * 0.5 + f.dz / l * v * 0.4, g: -9.5, life: 0.4 + rnd() * 0.2, size: 0.03 + rnd() * 0.035, size2: 0.02, col: LC(0.96, 0.99, 1, 0.85), drag: 0.4, shape: 5, fade: false }); }
     for (let i = fx("m", 3); i-- > 0;) { const f = sr.feet[i % sr.feet.length];
       R.emit({ x: f.x, y: f.y + 0.1, z: f.z, vx: (rnd() - 0.5) * 0.3, vy: 0.25 + rnd() * 0.2, vz: (rnd() - 0.5) * 0.3, life: 1.0 + rnd() * 0.6, size: 0.18, size2: 0.55, col: LC(0.94, 0.97, 1, 0.18, true), drag: 1.2, shape: 4 }); }
-    for (let i = fx("b", 6); i-- > 0;) { const q = sr.src, a = rnd() * 6.283, r = rnd() * 0.3;
+    /* v228: der Ursprung liegt verdeckt hinter dem Gipfelkamm – dort keine Bläschen mehr */
+    if (false) for (let i = fx("b", 6); i-- > 0;) { const q = sr.src, a = rnd() * 6.283, r = rnd() * 0.3;
       R.emit({ x: q.x + Math.cos(a) * r, y: q.y + 0.03, z: q.z + Math.sin(a) * r, vx: 0, vy: 0.25 + rnd() * 0.25, vz: 0, g: -2, life: 0.35 + rnd() * 0.2, size: 0.035 + rnd() * 0.025, size2: 0.05, col: LC(0.92, 0.97, 1, 0.8), drag: 0.5, shape: 5 }); }
   }
   stepOutline(time);

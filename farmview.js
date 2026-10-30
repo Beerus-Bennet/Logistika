@@ -2307,6 +2307,7 @@ function openPen(o) {
     <div class="fpen-b">
       ${o.animals.length < A.max ? `<button class="btn" id="fpBuy">${A.i} ${esc(A.young || A.n)} kaufen · ${eur(animalPrice(kind))}<small>danach ${qStars(add1)}</small></button>` : ""}
       ${o.animals.length ? `<button class="btn ghost" id="fpSell">${esc(A.n)} abgeben · +${eur(Math.round(A.price * 0.5))}</button>` : ""}
+      <button class="btn ghost${o.animals.length ? " disabled" : ""}" id="fpDel"${o.animals.length ? " disabled" : ""}>🧱 ${esc(M.n)} abreißen${o.animals.length ? `<small>erst alle ${esc(A.pl)} abgeben</small>` : ` · +${eur(penDemolishBack(o))}`}</button>
       ${uc != null ? `<button class="btn ghost" id="fpUp">📐 ${esc(M.area)} vergrößern auf ${fmt(nx.m2, 0)} ${A.unit} · ${eur(uc)}<small>dann ${qStars(nxSt)}</small></button>` : ""}
     </div>`, "pen");
   bindPenAnis(o);
@@ -2315,6 +2316,11 @@ function openPen(o) {
     const a = farmSellAnimal(o);
     if (a) { dropAnimal(a.id); sfx("coin"); save(); openPen(o); }
   });
+  const dl = $("#fpDel"); if (dl && !o.animals.length) dl.onclick = () => askConfirm(M.n + " abreißen?", "Der Stall wird entfernt, du bekommst " + eur(penDemolishBack(o)) + " zurück. Danach ist wieder ein Platz von " + FPEN_MAX + " frei.", "Abreißen", () => {
+    const [x, y] = objScreen(o), back = farmPenDemolish(o);
+    if (back === false) return;
+    FV.sel = null; closeFarmPop(); closeFarmSheet(); coinFly(x, y, back); sfx("coin"); farmSyncScene(); save();
+  }, true);
   const u = $("#fpUp"); if (u) u.onclick = () => { if (farmPenUpgrade(o)) { sfx("build"); farmSyncScene(); puff(o); save(); openPen(o); } };
 }
 function buyAnimalInto(kind, pen, stay) {

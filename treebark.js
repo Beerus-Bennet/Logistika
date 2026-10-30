@@ -126,7 +126,7 @@ const TBARK = (() => {
          dunkle „Buchenaugen“ (Narben abgeworfener Äste) */
       const rr = (far ? 0.45 : 0.2) * k;
       for (let y = rr; y < hTr - 0.02; y += rr) bp.push(y);
-      const GR = [T.bark, 0xb1b0a8, 0x9e9d95, 0xa9aba0], ALG = 0x8f9a7c, ws = hs(sd, 6.1) * 2 * Math.PI;
+      const GR = [T.bark, 0x938c7f, 0x7a7468, 0x8a8b7c], ALG = 0x8f9a7c, ws = hs(sd, 6.1) * 2 * Math.PI;
       bf = (y, g) => {
         const row = Math.floor(y / rr), q = hs(g * 1.3 + row * 2.1 + sd, row * 0.7 + 4.4), th = (g + 0.5) * 2 * Math.PI / NSEC;
         let c = GR[Math.floor(q * 3.999)];

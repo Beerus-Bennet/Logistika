@@ -55,8 +55,10 @@ const FWORLD = {
      (spring, der Bach verjüngt sich dorthin), im Westen läuft er bis über den Kartenrand (x = −160) */
   creek: [[31.2, -105.6], [26, -100.5], [18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60], [-124, -63], [-140, -61.5], [-164, -64]],
   spring: [31.2, -105.6],
-  /* v207: Felshang mit Hangquelle hinter dem Quell-Wasserfall (Achse von der Felswand nach Nordosten, Halbbreite) – dort keine Bäume */
-  springHill: { a: [38.6, -113.0], b: [53.3, -128.0], r: 8.4 },
+  /* v207: Felshang mit Hangquelle hinter dem Quell-Wasserfall – dort keine Bäume. v220: hinter dem Topf (Nordwesten).
+     v228: Quellberg in der Nordostecke mit Hochfläche bis an den Fall (Gelände in woodmodels.js, MTN/SRUN). Grundriss als
+     Kapseln [ax, az, bx, bz, r] (Strecke + Radius; Kreis, wenn a = b) – überdeckt alles, wo das Gelände über dem Boden liegt. */
+  springHill: { caps: [[53.5, -138.7, 52.5, -139.3, 15.8], [52.5, -139.3, 51.2, -139.9, 15.6], [51.2, -139.9, 49.6, -140, 15.2], [49.6, -140, 47.9, -139.7, 15.1], [47.9, -139.7, 46.4, -138.8, 14.6], [46.4, -138.8, 45.3, -137.5, 14.3], [45.3, -137.5, 44.5, -135.8, 14.5], [44.5, -135.8, 44, -134.1, 14.9], [44, -134.1, 43.7, -132.5, 14.9], [43.7, -132.5, 43.2, -130.9, 14.7], [43.2, -130.9, 42.4, -129.6, 13.2], [42.4, -129.6, 41.5, -128.9, 13.4], [41.5, -128.9, 40.9, -128, 13.9], [40.9, -128, 40.5, -126.9, 13.9], [40.5, -126.9, 40.4, -126, 13.8], [40.4, -126, 39.4, -124.4, 13.4], [39.4, -124.4, 38.4, -123.6, 11.8], [38.4, -123.6, 37.2, -123.6, 11.9], [37.2, -123.6, 36.1, -124.1, 12.2], [36.1, -124.1, 35, -124.2, 12.4], [35, -124.2, 34, -123.9, 12.5], [34, -123.9, 33, -123.4, 12.4], [33, -123.4, 32, -123.5, 12.3], [32, -123.5, 30.7, -123.5, 12.3], [30.7, -123.5, 29, -122.7, 12.1], [29, -122.7, 28.2, -122.2, 9.4], [28.2, -122.2, 27.3, -121.4, 9.3], [27.3, -121.4, 26.5, -120.3, 9.3], [26.5, -120.3, 25.9, -119, 9.3], [25.9, -119, 25.5, -117.8, 9.3], [25.5, -117.8, 25.3, -116.6, 9.3], [25.3, -116.6, 25.3, -115.6, 9.3], [25.3, -115.6, 25.3, -115, 9.2], [25.3, -115, 26.1, -113.8, 9.2], [26.1, -113.8, 26.6, -113.3, 8.3], [26.6, -113.3, 27.2, -113, 8.3], [27.2, -113, 27.7, -112.2, 8.3], [27.7, -112.2, 28.2, -111.7, 8.3], [50.5, -137.7, 50.5, -137.7, 16], [49, -134.5, 49, -134.5, 8.5], [55.6, -135.3, 55.6, -135.3, 7.2], [53.3, -135.5, 53.3, -135.5, 5.4], [48.8, -140.3, 48.8, -140.3, 5.4], [53.5, -143.5, 53.5, -143.5, 9.5], [42.2, -138.3, 42.2, -138.3, 6.4], [61, -138.2, 61, -138.2, 9], [39, -132.7, 39, -132.7, 8.6], [45.5, -126.7, 45.5, -126.7, 11.6], [33.6, -127.3, 33.6, -127.3, 7.2], [56, -123.9, 56, -123.9, 9.2]] },
   bridge: [-33.8, -76.4],   /* Mitte der Brücke – Gehrichtung Nord–Süd */
   clearings: [[-24, -48, 6], [-60, -54, 6.5], [-6, -76, 5.5], [-78, -84, 6], [-52, -96, 5]],
   rocks: [-68, -98, 9],
@@ -223,10 +225,19 @@ function areaOfPoint(x, z) {
   return null;
 }
 /* Freier Platz für einen Baum? (Wege, Bach, Hof, Teich, Lichtungen, Felsen) */
+/* v228: Abstand zum Grundriss des Quellbergs (negativ = drin) und der nächste Punkt auf der Achse der nächsten Kapsel */
+function springHillNear(x, z) {
+  let best = { d: 1e9, px: x, pz: z };
+  for (const [ax, az, bx, bz, r] of FWORLD.springHill.caps) {
+    const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz, t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)) : 0;
+    const px = ax + dx * t, pz = az + dz * t, d = Math.hypot(x - px, z - pz) - r;
+    if (d < best.d) best = { d, px, pz, r };
+  }
+  return best;
+}
 function inSpringHill(x, z, m) {
   const H = FWORLD.springHill; if (!H) return false;
-  const dx = H.b[0] - H.a[0], dz = H.b[1] - H.a[1], t = Math.max(0, Math.min(1, ((x - H.a[0]) * dx + (z - H.a[1]) * dz) / (dx * dx + dz * dz)));
-  return Math.hypot(x - H.a[0] - dx * t, z - H.a[1] - dz * t) < H.r + (m || 0);
+  return springHillNear(x, z).d < (m || 0);
 }
 function treeSpotOk(x, z, pathGap) {
   if (inHofMax(x, z, 1)) return false;
@@ -357,6 +368,7 @@ function erbeInit(F, fresh) {
   /* v81: Lagerfeuerplatz – Bäume im Platz weg (ältere Stände) */
   if (!F.v81u) { F.v81u = 1; F.trees = F.trees.filter(t => !campTree(t)); }
   if (!F.v107h) { F.v107h = 1; F.trees = F.trees.filter(t => !huntTree(t)); }
+  if (!F.v225h) { F.v225h = 1; F.trees = F.trees.filter(t => !huntTree(t)); }      /* v225: Platz und Sichtgasse für die Schautafel am Hochsitz */
   /* v82: Weg zum Lagerfeuer läuft gerade auf den Platz zu – Bäume auf der neuen Linie weg oder beiseite */
   if (!F.v83p) { F.v83p = 1; const all = F.trees.slice(); F.trees = F.trees.filter(t => treeOffPath(t, all)); }
   /* v92: fällbare Bäume, die ineinanderstehen (große Eichen im Altwald), rücken auseinander */
@@ -387,7 +399,7 @@ function erbeInit(F, fresh) {
     F.trees.forEach(t => { if (inLkwBay(t.x, t.z, 1.5)) { t.z = +(-19 + 2.2 + Math.random() * 0.6).toFixed(2); t.x = +Math.min(t.x, -47.5 - Math.random() * 0.6).toFixed(2); } });
   }
   /* v207: Bäume auf dem neuen Quellhang rücken seitlich an seinen Fuß */
-  if (!F.v207hill && FWORLD.springHill) {
+  if (!F.v207hill && FWORLD.springHill && FWORLD.springHill.a) {
     F.v207hill = 1;
     const H = FWORLD.springHill, dx = H.b[0] - H.a[0], dz = H.b[1] - H.a[1], L = Math.hypot(dx, dz);
     F.trees.forEach(t => {
@@ -398,6 +410,41 @@ function erbeInit(F, fresh) {
       const R = H.r + 0.9 + Math.random() * 0.8;
       t.x = +(px + nx / d * R).toFixed(2); t.z = +(pz + nz / d * R).toFixed(2);
     });
+  }
+  /* v220: Hang und Felswand liegen jetzt hinter dem Topf – Bäume auf dem neuen Hang rücken ebenso an seinen Fuß */
+  if (!F.v220hill && FWORLD.springHill && FWORLD.springHill.a) {
+    F.v220hill = 1;
+    const H = FWORLD.springHill, dx = H.b[0] - H.a[0], dz = H.b[1] - H.a[1], L = Math.hypot(dx, dz);
+    F.trees.forEach(t => {
+      if (!inSpringHill(t.x, t.z, 0.4)) return;
+      const k = Math.max(0, Math.min(1, ((t.x - H.a[0]) * dx + (t.z - H.a[1]) * dz) / (L * L))), px = H.a[0] + dx * k, pz = H.a[1] + dz * k;
+      let nx = t.x - px, nz = t.z - pz, d = Math.hypot(nx, nz);
+      if (d < 0.01) { nx = -dz / L; nz = dx / L; d = 1; }
+      /* an den Hangfuß – zuerst auf derselben Seite, sonst gegenüber oder etwas weiter weg; nie in Bach, Weg oder Topf */
+      for (const R of [H.r + 0.9 + Math.random() * 0.8, H.r + 2.2, H.r + 3.6]) for (const sg of [1, -1]) {
+        const x = +(px + sg * nx / d * R).toFixed(2), z = +(pz + sg * nz / d * R).toFixed(2);
+        if (treeSpotOk(x, z)) { t.x = x; t.z = z; return; }
+      }
+      t._v220 = 1;                                   /* kein freier Platz in der Nähe: der Baum fällt weg */
+    });
+    F.trees = F.trees.filter(t => !t._v220);
+  }
+  F.v207hill = F.v220hill = 1;                      /* v228: die alten Hangachsen gibt es nicht mehr */
+  /* v228: Quellberg in der Nordostecke – Bäume auf Berg und Hochfläche rücken an den Rand, auf einen erlaubten Platz;
+     nur wenn in der Nähe keiner frei ist, fällt der Baum weg. Auf dem alten Hang (Nordwesten) stehen wieder Kulissenbäume. */
+  if (!F.v228hill && FWORLD.springHill && FWORLD.springHill.caps) {
+    F.v228hill = 1;
+    F.trees.forEach(t => {
+      const N = springHillNear(t.x, t.z); if (N.d >= 0.4) return;
+      let nx = t.x - N.px, nz = t.z - N.pz, d = Math.hypot(nx, nz);
+      if (d < 0.01) { nx = 1; nz = 0; d = 1; }
+      for (const R of [N.r + 0.9 + Math.random() * 0.8, N.r + 2.2, N.r + 3.6]) {
+        const x = +(N.px + nx / d * R).toFixed(2), z = +(N.pz + nz / d * R).toFixed(2);
+        if (treeSpotOk(x, z)) { t.x = x; t.z = z; return; }
+      }
+      t._v228 = 1;
+    });
+    F.trees = F.trees.filter(t => !t._v228);
   }
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */
   if (!F.v203lkw) {
@@ -1736,6 +1783,7 @@ function treasureSpotOk(x, z, area) {
   if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
   if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;
   if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3.6) return false;
+  if (inSpringHill(x, z, 1) || (FWORLD.spring && Math.hypot(x - FWORLD.spring[0], z - FWORLD.spring[1]) < 11)) return false;   /* v228: nicht im Quellberg, nicht im Topf */
   if (inYard(x, z, 2)) return false;
   if (inFieldN(x, z, 2)) return false;                                /* Nachbars Felder */
   if (F.trees.some(t => Math.hypot(t.x - x, t.z - z) < 2.4)) return false;

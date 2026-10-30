@@ -158,7 +158,7 @@ Object.assign(FSIZE, {
 const FAREAS = {
   wald: {
     n: "Plötziner Forst", i: "🌲", lv: 5,
-    locks: [[-400, -400, -27, 21], [-400, -400, 400, -30], [27, -30, 400, -19]], reveal: [-27, -9.5], cam: [-94, -96, 42, 20],
+    locks: [[-400, -400, -27, 21], [-400, -400, 400, -30], [27, -30, 400, -19]], reveal: [-27, -9.5], cam: [-94, -96, 54, 20],
     reqs: [{ t: "Bäume gefällt", n: 3, v: () => S.farm.stats.felled || 0 }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster hat einen Weg durch den Wald freigegeben.",
@@ -174,7 +174,7 @@ const FAREAS = {
   },
   altwald: {
     n: "Alter Wald", i: "🌳", lv: 13,
-    locks: [[-400, -400, -70, -70]], reveal: [-62, -74], cam: [-130, -130, 42, 20],
+    locks: [[-400, -400, -70, -70]], reveal: [-62, -74], cam: [-130, -130, 54, 20],
     reqs: [{ t: "Sägewerk repariert", n: 5, v: () => FSAW_REPAIRS.filter(r => S.farm.saw && S.farm.saw[r.id]).length }],
     who: "Förster Bruno Wendt", whoI: "🧔", whoRole: "Förster",
     msg: "Der Förster öffnet den alten Wald hinter dem Bach.",
@@ -189,6 +189,7 @@ const FAREAS = {
     talk: "Guten Tag! Die Gemeinde verpachtet Ihnen das Ufer – fangen Sie mit einem Steg an."
   }
 };
+/* v228: Wald und Alter Wald reichen im Osten bis x = 54 (vorher 42) – so lässt sich der Quellberg in der Nordostecke von vorn ansehen */
 const FAREA_ORDER = ["wald", "saege", "altwald", "see"];
 /* Bedingungen: alle erfüllt? Und als Text („3 Bäume gefällt“) */
 Object.values(FAREAS).forEach(A => {
