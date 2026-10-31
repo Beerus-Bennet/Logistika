@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v229 – Keine Lackierung für Leasingfahrzeuge, Hofaufträge nur noch für Hofarbeiter
+
+- **Lackierung (`livery.js`):** Neu ist `canPaint(f)`: `paintable(vType(f.type)) && !f.lease`. Das gilt überall, wo Fahrzeuge lackiert oder gezählt werden: Einzel-Button, „Flotte lackieren“, Lackierung ab Werk (`onAcquire`), Zähler im Fenster. `painted(f)` ist für Leasingfahrzeuge immer false, auch bei alten Spielständen mit gesetztem `f.liv`. Sie fahren also im Originallack und zählen nicht für den +2 %-Bonus. Der Hinweis im Fenster lautet „Sondereditionen und Leasingfahrzeuge bleiben im Original.“
+- **Büro-Dispo (`game.js`, `dispatchRun`):** Kandidaten mit `o.farm` sind komplett ausgeschlossen. Bisher wurden sie genommen, sobald `farmOrderReady(o)` erfüllt war. Hofaufträge liefern jetzt nur noch die Hofarbeiter aus (`team.js`, dort unverändert).
+- **Favoriten-Stern (`farmview.js`):** Im Tooltip und im Toast heißt es jetzt „das Team“ statt „Büro und Team“.
+
 ## v228 – Quellberg in der Nordostecke: verdeckter Ursprung, Bergbach über Kaskaden zum bestehenden Fall
 
 - **Lage:** Das Quellgebiet ist ein zusammenhängender Berg in der Nordostecke der Karte. Gipfel bei Welt (49, −134,5), etwa 13 Einheiten hoch; der Ursprung liegt bei (53,75, −138,5). Bisher lag die Quelle auf dem Hang nordwestlich des Topfs bei (18,6, −122,9), in v218 nordöstlich bei etwa (47, −121). Hauptfall, Becken auf der Kante, Topf, Topf-Ufer und Abfluss sind unverändert.

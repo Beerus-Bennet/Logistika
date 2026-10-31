@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v229 – Leasing-Lackierung, Hofaufträge (auf v228)
+
+- `livery.js`: neue Funktion `canPaint` direkt unter `paintable`. `painted` prüft zusätzlich `!f.lease`. `paintable(vType(f.type))` ist überall durch `canPaint(f)` ersetzt, in `paintVeh`, `onAcquire` und `liveryVehHTML` gilt `canPaint(f/v)` statt `paintable(t)`.
+- `game.js`, `dispatchRun`: In der `cands`-Bedingung steht `!o.farm` statt `!(o.farm && !farmOrderReady(o))`, dazu ein Kommentar darüber.
+- `farmview.js`: Zwei Texte am Favoriten-Stern.
+- `sw.js` / `index.html`: v229.
+
 ## Stand v228 – Quellberg in der Nordostecke (auf v227)
 
 - `woodmodels.js`: Der Bereich von „v207: Woher das Wasser kommt“ bis zum Ende von `springHill` ist neu.
