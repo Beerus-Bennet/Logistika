@@ -1374,7 +1374,8 @@ function dispatchRun(opt) {
     o.snus.flagged = true;
     toast("🕵️ Dispo lässt „" + o.shipper + "“ liegen: " + snusWhy(o) + " – bitte selbst prüfen.", "warn");
   });
-  const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && !(o.farm && !(typeof farmOrderReady === "function" && farmOrderReady(o))) && opt.accept(o))
+  /* Hofaufträge (o.farm) liefern allein die Hofarbeiter aus (team.js) – die Büros fassen sie nicht an */
+  const cands = S.orders.filter(o => !o.pablo && !o.vip && !o.tut && !o.tutNext && !(o.snus && o.snus.flagged) && !o.farm && opt.accept(o))
     .sort((a, b) => (!!b.fav - !!a.fav) || b.pay - a.pay);     /* v164: Favoriten (★) zuerst */
   let examined = 0, taken = 0;
   for (const o of cands) {
