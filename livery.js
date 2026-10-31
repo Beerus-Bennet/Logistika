@@ -30,8 +30,10 @@ function livery() {
   return S.livery;
 }
 const liveryOn = () => !!(S.livery && S.livery.ver > 0);
-const painted = f => liveryOn() && f.liv === S.livery.ver;
+const painted = f => liveryOn() && !f.lease && f.liv === S.livery.ver;
 const paintable = t => !t.special;
+/* Leasingfahrzeuge gehören dem Leasinggeber – lackiert wird erst nach dem Kauf */
+const canPaint = f => paintable(vType(f.type)) && !f.lease;
 function paintCost(t) { return Math.round(clamp(t.price * 0.03, 60, 60000)); }
 
 /* ------------------------------- Zeichnen ------------------------------ */
@@ -191,12 +193,12 @@ function bindWheel(box, cur, set, onLive) {
   draw(); place();
 }
 function fleetPaintInfo() {
-  const todo = S.fleet.filter(f => paintable(vType(f.type)) && f.liv !== (livery().ver || 1) && (f.phase === "idle"));
+  const todo = S.fleet.filter(f => canPaint(f) && f.liv !== (livery().ver || 1) && (f.phase === "idle"));
   return { todo, cost: todo.reduce((a, f) => a + paintCost(vType(f.type)), 0) };
 }
 function renderLivery() {
   const d = livDraft, L = d.logo, changed = JSON.stringify(Object.assign({}, d, { ver: 0, auto: 0 })) !== JSON.stringify(Object.assign({}, livery(), { ver: 0, auto: 0 }));
-  const all = S.fleet.filter(f => paintable(vType(f.type)));
+  const all = S.fleet.filter(f => canPaint(f));
   const done = all.filter(f => f.liv === livery().ver && livery().ver > 0).length;
   const fp = fleetPaintInfo();
   $("#modalBody").innerHTML = `<div class="livm">
@@ -222,7 +224,7 @@ function renderLivery() {
     <div class="liv-sec">Logo-Hintergrund</div>${sw("lbg", L.bg)}
     <div class="liv-sec">Logo-Schrift</div>${sw("lfg", L.fg)}
     <label class="liv-auto"><input type="checkbox" id="livAuto" ${d.auto ? "checked" : ""}> Neue Fahrzeuge direkt lackiert kaufen (kostet extra)</label>
-    <div class="lim">Lackiert = <b>+2 % Erlös</b>. Sondereditionen bleiben im Original.</div>
+    <div class="lim">Lackiert = <b>+2 % Erlös</b>. Sondereditionen und Leasingfahrzeuge bleiben im Original.</div>
     <div class="mbtns">
       <button class="btn ghost" id="livSave">${changed || !livery().ver ? "Design speichern" : "Gespeichert ✓"}</button>
       <button class="btn${fp.todo.length || changed ? "" : " disabled"}" id="livAll">🎨 Flotte lackieren${(() => {
@@ -279,7 +281,7 @@ function saveLivery() {
 }
 function paintVeh(f, quiet) {
   const t = vType(f.type);
-  if (!paintable(t) || !liveryOn() || f.liv === S.livery.ver) return 0;
+  if (!canPaint(f) || !liveryOn() || f.liv === S.livery.ver) return 0;
   if (f.phase !== "idle") { if (!quiet) toast("Nur freie Fahrzeuge können in die Lackiererei.", "warn"); return 0; }
   const c = paintCost(t);
   if (c > S.money) { if (!quiet) toast("Für die Lackierung fehlen " + money(c - S.money) + ".", "warn"); return -1; }
@@ -291,7 +293,7 @@ function paintVeh(f, quiet) {
 function paintFleet() {
   let n = 0, sum = 0, broke = false, busy = 0;
   S.fleet.forEach(f => {
-    if (!paintable(vType(f.type)) || f.liv === S.livery.ver) return;
+    if (!canPaint(f) || f.liv === S.livery.ver) return;
     if (f.phase !== "idle") { busy++; return; }
     if (broke) return;
     const c = paintVeh(f, true);
@@ -305,7 +307,7 @@ function paintFleet() {
 function onAcquire(v) {
   if (!liveryOn() || !S.livery.auto) return;
   const t = vType(v.type);
-  if (!paintable(t)) return;
+  if (!canPaint(v)) return;
   const c = paintCost(t);
   if (c > S.money) return;
   S.money -= c; S.expense += c;
@@ -333,7 +335,7 @@ function vehLiveryCol(f) {
 /* ------------------------------ Anzeigen ------------------------------- */
 function liveryVehHTML(v) {
   const t = vType(v.type);
-  if (!paintable(t)) return "";
+  if (!canPaint(v)) return "";
   if (painted(v)) return `<span class="livtag"><i style="--c:${S.livery.c1};--c2:${S.livery.c2}"></i>Firmenfarben</span>`;
   const r = v.foreign && typeof rivalById === "function" ? rivalById(v.foreign.id) : null;
   if (!liveryOn()) return r ? `<span class="livtag old"><i style="--c:${r.col};--c2:#fff"></i>noch in ${esc(r.name)}-Farben</span>` : "";
