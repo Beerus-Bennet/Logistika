@@ -2376,7 +2376,7 @@ function openFarmOrders(sendFor, area) {
     const btns = o.acc
       ? `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : miss}${o.tutF ? "" : `<button class="btn tiny ghost" data-ret="${o.id}" title="Zurückgeben">↩︎</button>`}`
       : `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : ""}<button class="btn tiny acc" data-acc="${o.id}">✓ Annehmen</button>${o.tutF ? "" : `<button class="btn tiny ghost" data-drop="${o.id}" title="Ablehnen">🗑️</button>`}`;
-    const star = `<button class="fo-star${o.fav ? " on" : ""}" data-fav="${o.id}" title="${o.fav ? "Favorit – wird mit höchster Dringlichkeit bearbeitet" : "Als Favorit markieren – Büro und Team ziehen den Auftrag vor"}" aria-pressed="${!!o.fav}">${o.fav ? "★" : "☆"}</button>`;
+    const star = `<button class="fo-star${o.fav ? " on" : ""}" data-fav="${o.id}" title="${o.fav ? "Favorit – wird mit höchster Dringlichkeit bearbeitet" : "Als Favorit markieren – das Team zieht den Auftrag vor"}" aria-pressed="${!!o.fav}">${o.fav ? "★" : "☆"}</button>`;
     return `<div class="fo${ready ? " ready" : ""}${o.acc ? " acc" : ""}${o.fav ? " fav" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${star}${head}${items}${reward}
       ${!o.acc && !ready ? `<div class="fo-mline">${miss}</div>` : ""}<div class="fo-b">${btns}</div>${send}</div>`;
   };
@@ -2410,7 +2410,7 @@ function openFarmOrders(sendFor, area) {
     if (!o) return;
     o.fav = !o.fav;
     sfx(o.fav ? "coin" : "tap");
-    if (o.fav) toast("⭐ Favorit: Team und Büro ziehen „" + o.shipper + "“ vor – höchste Dringlichkeit.", "ok");
+    if (o.fav) toast("⭐ Favorit: Das Team zieht „" + o.shipper + "“ vor – höchste Dringlichkeit.", "ok");
     if (typeof staffPlan === "function") try { staffPlan(); } catch (_) { /* egal */ }
     save(); again();
   });
