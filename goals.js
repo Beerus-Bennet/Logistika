@@ -18,8 +18,8 @@ function fleetCanDo(o) {
     return t.mode === l.mode && canCarry(t, o.cargo, o.weight, l.maxHop);
   })));
 }
-function contractOffer() {
-  let tpl = null;
+function contractOffer(tpl0) {
+  let tpl = tpl0 || null;   /* v244: Stammkunden bieten einen Vertrag über genau ihre Strecke an */
   for (let i = 0; i < 30 && !tpl; i++) {
     const o = makeOrder();
     if (o && !o.air && CARGO[o.cargo].minStage <= S.stage && o.pay > 0 && fleetCanDo(o)) tpl = o;
@@ -31,9 +31,9 @@ function contractOffer() {
     weight: tpl.weight, pick: tpl.pick, drop: tpl.drop, per, days, pay, penalty: Math.round(pay * 0.6),
     day: 0, done: 0, missed: 0, pending: [], over: false, refTime: tpl.refTime, refDist: tpl.refDist };
 }
-function offerContract() {
+function offerContract(tpl) {
   if (typeof logiOn === "function" && !logiOn()) return;
-  const c = contractOffer(); if (!c) return;
+  const c = contractOffer(tpl); if (!c) return;
   const total = c.per * c.days * c.pay;
   decisionMsg({ from: c.client, kind: "contract", icon: "📑", type: "contract", title: "Angebot: Rahmenvertrag über " + c.days + " Tage",
     body: `Täglich ${c.per}× ${CARGO[c.cargo].name} (${kgf(c.weight)}) ${N[c.from].short} → ${N[c.to].short}, je ${money(c.pay)} `
@@ -51,7 +51,7 @@ DECISIONS.contract = {
   }
 };
 function contractOrder(c) {
-  const o = { id: "A" + (S.seq++), from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay,
+  const o = { id: "A" + (S.seq++), from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay, pk: PAY_K,
     deadline: Math.round(S.time + 20 * 60), shipper: c.client, desc: c.desc + " · Rahmenvertrag", created: S.time,
     refDist: c.refDist, refTime: c.refTime, expire: Math.round(S.time + 20 * 60), contract: c.id,
     pick: Object.assign({}, c.pick), drop: Object.assign({}, c.drop) };
@@ -147,7 +147,7 @@ DECISIONS.mission = {
         const w = Math.round(rnd(mi.spawn.kg[0], mi.spawn.kg[1]) / 10) * 10;
         const pr = priceOrder(f.id, mi.spawn.to, mi.spawn.cargo, w);
         if (!pr) continue;
-        const o = { id: "A" + (S.seq++), from: f.id, to: mi.spawn.to, cargo: mi.spawn.cargo, weight: w, pay: Math.round(pr.pay * 1.2),
+        const o = { id: "A" + (S.seq++), from: f.id, to: mi.spawn.to, cargo: mi.spawn.cargo, weight: w, pay: Math.round(pr.pay * 1.2), pk: PAY_K,
           deadline: a.until, shipper: "Mission: " + mi.title, desc: mi.spawn.desc, created: S.time,
           refDist: Math.round(pr.ref.dist), refTime: Math.round(pr.fastest.time), expire: a.until, mission: mi.id,
           pick: makeAddr(f.id), drop: makeAddr(mi.spawn.to) };

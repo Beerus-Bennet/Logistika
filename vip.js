@@ -67,7 +67,7 @@ const VIP_JOBS = [
     from: "fra", to: "pvg", item: "ein Satellitenbauteil", cargo: "express", kg: [400, 700],
     story: "Das Startfenster schließt bald – das Bauteil ist das letzte fehlende Stück." }
 ];
-const VIP_MIN = [1400, 4800, 16000, 65000, 190000, 420000];
+const VIP_MIN = [3500, 12000, 40000, 160000, 475000, 1050000];   /* v244: mit Spielaufschlag (×2,5) */
 
 function vipState() { if (!S.vip) S.vip = { next: 0, open: null, done: 0 }; return S.vip; }
 function vipCandidates() {
@@ -82,7 +82,7 @@ function makeVipOrder(tpl) {
   const pay = Math.round(Math.max(pr.pay * rnd(5.5, 8.5), VIP_MIN[Math.min(6, S.stage) - 1] * rnd(0.9, 1.35)) / 10) * 10;
   const o = {
     id: "A" + (S.seq++), from: tpl.from, to: tpl.to, cargo: tpl.cargo, weight, vip: { org: tpl.org, mono: tpl.mono },
-    pay, deadline: Math.round(S.time + fast.time * 1.35 + fast.legs.length * 60 + 40),
+    pay, pk: PAY_K, deadline: Math.round(S.time + fast.time * 1.35 + fast.legs.length * 60 + 40),
     shipper: tpl.org, desc: tpl.item, created: S.time,
     refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
     expire: 0, pick: makeAddr(tpl.from), drop: makeAddr(tpl.to)

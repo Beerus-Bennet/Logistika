@@ -1,5 +1,85 @@
 # Änderungen – kurz für den Kollegen
 
+## v244 – Masterprompt V2: Wirtschaft, Fahrzeuge, Leasing raus, Etappen nach Fortschritt, Schiff in Etappe 2, persönlichere Aufträge
+
+### 1. Analyse vorher (gemessen mit den echten Spielfunktionen, je 400 Aufträge)
+Der Simulator (`makeOrder`, `buildVariants`, `assignFor`, `evaluate`, `evalFullCost`) misst, wie viel jeder Auftrag mit der eigenen Flotte netto bringt (Erlös − Fahrt, Leerfahrt, anteilige Fixkosten) und wie viele Aufträge überhaupt fahrbar sind. „Gute Aufträge“ = bestes Drittel.
+
+| Spielstand (vorher v243) | fahrbar | gutes Drittel netto | Aufträge bis … |
+|---|---|---|---|
+| Etappe 1, Rad + Roller | 62 % | 161 € | Caddy 180, Sprinter 335 |
+| Etappe 1, + Caddy | 97 % | 154 € | Sprinter 351 |
+| Etappe 2, Transporter | 66 % | 224 € | Daily 348, Scania 571, Binnenschiff 6.027 |
+| Etappe 3, Problemfall Lv 24 | 52 % | 648 € | Actros 225, Schwerlast 378, Schiff 2.083, Güterzug 3.704 |
+| Etappe 3, angeschlagen (nur E-Sattelzug) | 19 % | 613 € | Sprinter 88 |
+
+Befund: Fahrzeuge kosteten echte Neupreise, Aufträge zahlten echte Frachtraten. Ein Upgrade brauchte 150–600 gute Aufträge, ein Schiff über 1.000. Etappen kosteten zusätzlich 18.000 € bis 20 Mio. €. Leasing war der einzige Weg zu Fahrzeugen. Fast die Hälfte der Aufträge passte nicht zur Flotte (zu schwer, falscher Verkehrsträger, fehlende Spezialklasse).
+
+### 2. Neue Preis- und Vergütungsstruktur (`data.js`)
+- **Spielpreise** (`VEH_PRICE_V244`, `v.old` = alter Listenpreis): Caddy 8.900 € · Sprinter 15.000 € · eSprinter 19.500 € · **neu** Crafter Kühlkastenwagen 19.000 € · Daily 7 t 24.000 € · **neu** MAN TGM 10,5 t 28.000 € · Atego Kühl 30.000 € · Scania 39.000 € · Actros 45.000 € · **neu** Eurocargo ADR 36.000 € · **neu** Container-Chassis-Zug 47.000 € · DAF Kühlsattel 54.000 € · MAN Tankzug ADR 58.000 € · **neu** Semi-Tieflader 62.000 € · Volvo FH Electric 72.000 € · Volvo Schwerlast 76.000 € · Goldhofer 320.000 €. Räder und Roller unverändert. Schiene, See und Luft auf 15–20 % des Listenpreises.
+- **Aufträge** zahlen einen Spielaufschlag `PAY_K = 2,5` (`priceOrder`, `makeAirOrder`, Schmuck). VIP, Verträge, Missionen und Serien bauen darauf auf, `VIP_MIN` wurde mitgezogen. **EP** werden weiter vom Erlös ohne Aufschlag berechnet (`o.pk`). Das Level-Tempo bleibt gleich.
+- **Container** gibt es ab 9 t statt 180 t, damit auch ein Lkw (Container-Chassis) sie fahren kann.
+- **Kredit** (`LOAN_BASE`) an die neuen Preise angepasst: Etappe 1–3 bietet 1,5–6 k / 5–20 k / 20–80 k €. Er bleibt das Sicherheitsnetz gegen Sackgassen.
+
+### 3. Leasing vollständig entfernt (`game.js`, `livery.js`, `extras.js`, `data.js`)
+Entfernt sind Leasing-Knopf im Markt, Leasingrate im Planer, Leasing-Filter in der Flotte, „Leasing beenden“, Leasing in der Sammelaktion, `dailyCost`-Aufschlag und Tipp-Text. `acquire` kauft nur noch. Fehlt Geld, steht da, wie viel fehlt, mit dem Hinweis auf Aufträge oder Kredit.
+**Migration (`econMigrate`, einmal je Spielstand, `S.econ = 244`):** Alte Leasingfahrzeuge werden Eigentum. Die Ablöse beträgt 40 % des neuen Kaufpreises minus der schon gezahlten Leasingaufschläge (Dauer aus dem Kassenbuch „Geleast: …“, sonst 30 Tage), mindestens 10 %. Was das Konto nicht deckt, wird ein Ablösekredit über 60 Tage (+5 %), ein laufender Kredit wird aufgestockt. Eine Nachricht der Hausbank erklärt das. Im Test: Scania geleast, 1.000 € auf dem Konto → 1.000 € bezahlt, Rest als Kredit, zweiter Aufruf tut nichts.
+
+### 4. Etappen nach Level und Fortschritt (`data.js` STAGES, `game.js`)
+Kein Kaufpreis mehr. Frei werden die Etappen mit Speditions-Level und erfolgreichen Speditionslieferungen (`logiDone`, ohne Hofbestellungen):
+Etappe 2: Level 3 + 25 Lieferungen · Etappe 3: Level 9 + 120 · Etappe 4: Level 26 + 600 · Etappe 5: Level 34 + 1.200 · Etappe 6: Level 42 + 2.000.
+Die Level-Grenzen ab Etappe 4 sind höher als vorher (13/18/24), weil das Geld nicht mehr bremst. Bereits freigeschaltete Etappen bleiben. Der Welt-Reiter zeigt Level und Lieferungen samt Fortschritt, der Knopf heißt „Etappe N freischalten – kostenlos“ oder „Noch x Level und y Lieferungen“.
+
+### 5. Erstes Schiff in Etappe 2
+- **Schiffsstufen:** Spits-Frachtschiff 350 t für 27.000 € (Etappe 2), Kempenaar 650 t für 85.000 € (Etappe 2), Europaschiff GMS 1.350 t für 170.000 € (jetzt Etappe 3), danach Tank-, Groß- und Koppelschiff.
+- **Einführung (`shipIntroCheck`):** Sobald Etappe 2 offen ist und noch kein Binnenschiff da ist (auch rückwirkend in Etappe 3), kommt „Dein erster Auftrag auf dem Wasser“. Havelkies Brandenburg braucht 250 t Splitt vom Westhafen nach Brandenburg, zahlt +25 % (im Test 4.376 €) und wartet 3 Tage. Dazu erklärt die Hafenmeisterin am Telefon das Schiff. Geschenkt wird nichts.
+- **Nach dem Kauf (`shipFirstOrders`):** Sofort liegen zwei passende Wasseraufträge im Buch, danach schneidet die normale Auftragsvergabe die Aufträge auch auf das Schiff zu.
+
+### 6. Auftragssystem (`game.js`, neues Modul `kunden.js`)
+- **Zur Flotte passend:** Ladungsarten, die deine Fahrzeuge fahren können, kommen dreimal so oft (`pickCargo`). 72 % statt 60 % der Aufträge sind auf ein eigenes Fahrzeug zugeschnitten. Der freie Rest bleibt meist bei deinen Verkehrsträgern und höchstens der 1,5-fachen Nutzlast. Aufträge, die keins deiner Fahrzeuge je tragen könnte, bleiben nur noch zu etwa 30 % stehen, als Ausblick.
+- **Was fehlt (`missingReason`):** Vier Fälle werden unterschieden:
+  - „⏳ dein … passt – ist gerade unterwegs“
+  - „braucht mindestens 2 t Nutzlast – dein größtes passendes Fahrzeug schafft 1,4 t · im Markt: … ab …“
+  - „braucht Kühlung/Gefahrgut/… · im Markt: günstigstes passendes Fahrzeug“
+  - „🔒 passendes Fahrzeug erst ab Etappe N“
+
+  Der Planer hat wie bisher den Knopf direkt zum passenden Fahrzeug im Markt.
+- **Geschichten:** Jeder Speditionsauftrag bekommt einen Titel (z. B. „Wettlauf gegen die Uhr“, „Die Kühlkette darf nicht reißen“, „Paletten für Dr. Oetker Werk“) und ein kurzes Zitat des Auftraggebers mit dem Grund (je Ladungsart 4–5 Titel und 4 Zitate, fest je Auftrag).
+- **Stammkunden:** Ab 3, 5 und 10 pünktlichen Lieferungen an denselben Kunden gibt es +4, +8 bzw. +12 % auf dessen Aufträge (bei über 30 % Verspätungen nicht). Stammkunden melden sich dreimal so oft. Ab 5 Lieferungen bietet der Kunde einmal einen Liefervertrag über seine Strecke an (bestehende Rahmenverträge).
+- **Auftragsserien:** Ab 15 Lieferungen kommt gelegentlich ein Angebot (höchstens alle 4 Tage, 35 % Chance je Tag). Es gibt drei Vorlagen: „Die große Erntelieferung“ (Sonnenfeld), „Werkstatt Hoffmann zieht um“ und „Bäckerei Morgenstern eröffnet eine Filiale“. Jede Serie hat drei Fahrten, jede beginnt am Ziel der vorigen. Das Gewicht passt immer auf dein größtes Straßenfahrzeug. Jede Fahrt zahlt 10 % mehr, am Ende gibt es +35 % der Serie als Bonus (+15 % mit Verspätung). Verfällt eine Fahrt, ist die Serie vorbei. Der Bonus wird einmal ausgezahlt (`S.series` wird gelöscht).
+- **Meilensteine** (bestehende Erfolge, je einmal 100 € × Etappenfaktor): Schwergewicht (erster Schwerlasttransporter), Spezialist (erste Kühl-, Gefahrgut- oder Containerklasse), Hausspediteur (10 Lieferungen an denselben Kunden), Am Stück (erste Serie), Über die Grenze (erste internationale Lieferung). „Leinen los“ (erstes Schiff) gab es schon.
+
+### 7. Auftragskarten (Handy)
+Die Karte zeigt jetzt:
+- oben die Ladungsart, den Erlös und darunter „≈ +x € Gewinn“ (aus der Vorschau: Fahrt, Leerfahrt, Umschlag)
+- den Titel, den Auftraggeber und das Zitat (höchstens zwei Zeilen)
+- Marken für Besonderheiten: Einführung, Serie k/3, Stammkunde +x %, Liefervertrag, Express, knappe Frist
+- eine Zeile „Start → Ziel“ und Gewicht, Strecke und Frist
+
+Unter „▸ Details“ klappen Ware und genaue Adressen auf, ohne dass sich der Planer öffnet. Einführungs- und Serienkarten haben einen farbigen Rand.
+
+### 8. Simulationen nachher (gleiche Spielstände, 400 Aufträge)
+| Spielstand | fahrbar | gutes Drittel netto | Aufträge bis … (gut/Median) |
+|---|---|---|---|
+| Etappe 1, Rad + Roller | 84 % | 404 € | Caddy 22/46, Sprinter 37/77 |
+| Etappe 1, + Caddy | 100 % | 385 € | Sprinter 39/74 |
+| Etappe 2, Transporter | 94 % | 622 € | Kühlwagen 31, Daily 39, Spits-Schiff 43, Atego 48, Scania 63 |
+| Etappe 2, + Daily | 98 % | 928 € | **Spits 29**, Scania 42, Kempenaar 92 |
+| Etappe 2, mit erstem Schiff | 100 % | 3.593 € | Scania 11, **Kempenaar 24** |
+| Etappe 3, Problemfall Lv 24 | 89 % | 2.164 € | Spits 12, Eurocargo 17, Actros 21, Container-Zug 22, Tankzug 27, Tieflader 29, Schwerlast 35, GMS 79, Güterzug 139 |
+| Etappe 3, fortgeschritten | 68 % | 6.427 € | Schwerlast 12, Güterzug 47, Tankschiff 51 |
+| Etappe 3, angeschlagen (nur E-Sattelzug) | 55 % | 2.311 € | Sprinter 6, Daily 10 |
+
+Damit ist ein bedeutendes Upgrade als Zyklus nach etwa 20–40 guten Aufträgen erreichbar: Kleintransporter und Kühlwagen früher, große Spezial-Lkw, GMS, Bahn und Tankschiff später als Langzeitziel. Ein Spieler mit Fehlkauf erholt sich durch Verkauf (62 % Restwert) und kleine Fahrzeuge nach wenigen Aufträgen. Die Fixkosten bleiben spürbar: Ein schlecht ausgelasteter Fuhrpark frisst sie täglich weg.
+
+### 9. Tests und offene Punkte
+- **Ausgeführt:** Simulator vorher und nachher, Leasing-Migration, Schiffseinführung und Schiffskauf, Etappen-Anforderungen, Serien (drei Fahrten, Bonus, Ende), Stammkunden-Zähler, neue Erfolge, Kartenansicht (Screenshot), voller Spielstart mit Hof und Spedition, alle Reiter ohne Fehler, Markt ohne Leasing, Welt mit neuen Etappen. Die Unit-Tests `camp`, `forest`, `hunt` und `jail` sind bestanden. `axe` und `trees` scheitern wie auf GitHub schon vorher.
+- **Nicht geprüft:** echtes Handy und ein langer Spielverlauf über Stunden.
+- **Offene Punkte:**
+  - Wer Fahrzeuge zu alten Preisen gekauft hat, bekommt beim Verkauf nur 62 % des neuen, niedrigeren Preises.
+  - Die Level-Grenzen für Etappe 4–6 sind Schätzungen aus dem bisherigen EP-Tempo.
+  - Der Güterverkehr per Bahn bleibt in Etappe 3 ein großes Ziel (Güterzug 300.000 €).
+
 ## v243 – Firmenwerte springen nicht mehr mit der Etappe
 
 - **Ursache:** Der Firmenwert war `Grundwert × Etappenfaktor × (0,7 + 1,6 × Marktanteil)`. Der Etappenfaktor kam aus **deiner aktuellen Etappe** (1 / 2,5 / 6 / 18 / 45 / 90). Mit dem Freischalten von Etappe 3 (Deutschland), das zeitlich mit der Übernahme von Ostwind zusammenfiel, stieg jeder Preis auf das 2,4-Fache (+140 %), obwohl Flotte, Personal und Kunden gleich blieben. Der Kauf selbst verschiebt die Anteile kaum: Der Anteil der gekauften Firma geht an dich, die Summe bleibt gleich.

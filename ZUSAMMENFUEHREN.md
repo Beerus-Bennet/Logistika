@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v244 – Masterprompt V2 Wirtschaft (auf v243)
+
+- **Neue Datei `kunden.js`** (in `index.html` nach `goals.js` eingebunden, im Service Worker ergänzt): Geschichten, Stammkunden, Auftragsserien, neue Erfolge, `orderSpecialHTML`.
+- `data.js`: neue Fahrzeuge (`v-crafterkuehl`, `v-tgm`, `v-eurocargo`, `v-chassis`, `v-tieflader`, `v-spits`, `v-kempenaar`), GMS auf Etappe 3, Block `VEH_PRICE_V244` + `PAY_K` vor den Etappen, STAGES mit `reqDone` und `cost:0`, `cont.minKg` 9000, `LEASE_RATE` → `LEASE_RATE_OLD`, Tipp-Texte.
+- `game.js`: kein Leasing mehr (`dailyCost`, `makeVehicle`, `acquire`, `release`, Planer-Knopf, Flottenfilter, Sammelaktion, Marktkarte), `econMigrate` + Aufruf in `boot`, `shipOrderAt`/`shipIntroCheck`/`shipFirstOrders`, `pickCargo`/`fleetCanCargo` + neue Zuschnitt-Regeln in `makeOrder`, `PAY_K` in `priceOrder`/Luftfracht/Schmuck, `o.pk` und EP-Formel, `stageReq`/`logiDone` + Etappen-UI, `missingReason` neu (+ `cheapestFor`, `laterStageFor`), Auftragskarte, Stammkunden-Gewichtung in `pickShipper`.
+- `extras.js`: `LOAN_BASE`, Hooks `kundenOnSpawn`/`kundenDelivered`/`kundenTick`/`kundenDay`, Versicherungswert ohne Leasing. `goals.js`: `contractOffer(tpl)`, `offerContract(tpl)`, `pk` an Vertrags- und Missionsaufträgen. `vip.js`: `VIP_MIN`, `pk`. `livery.js`: Texte. `style.css`: Block v244 am Ende.
+- `sw.js` / `index.html`: v244.
+
 ## Stand v243 – Firmenwert nach Sitz-Etappe (auf v242)
 
 - `corp.js`: `corpStageK` neu, `corpValue` nutzt sie; `openCorp` rechnet laufende Gespräche um. `sw.js` / `index.html`: v243.

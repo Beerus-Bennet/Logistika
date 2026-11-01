@@ -32,7 +32,7 @@ function livery() {
 const liveryOn = () => !!(S.livery && S.livery.ver > 0);
 const painted = f => liveryOn() && !f.lease && f.liv === S.livery.ver;
 const paintable = t => !t.special;
-/* Leasingfahrzeuge gehören dem Leasinggeber – lackiert wird erst nach dem Kauf */
+/* v244: Leasing gibt es nicht mehr – f.lease ist nur noch in uralten Ständen gesetzt, bis econMigrate läuft */
 const canPaint = f => paintable(vType(f.type)) && !f.lease;
 function paintCost(t) { return Math.round(clamp(t.price * 0.03, 60, 60000)); }
 
@@ -224,7 +224,7 @@ function renderLivery() {
     <div class="liv-sec">Logo-Hintergrund</div>${sw("lbg", L.bg)}
     <div class="liv-sec">Logo-Schrift</div>${sw("lfg", L.fg)}
     <label class="liv-auto"><input type="checkbox" id="livAuto" ${d.auto ? "checked" : ""}> Neue Fahrzeuge direkt lackiert kaufen (kostet extra)</label>
-    <div class="lim">Lackiert = <b>+2 % Erlös</b>. Sondereditionen und Leasingfahrzeuge bleiben im Original.</div>
+    <div class="lim">Lackiert = <b>+2 % Erlös</b>. Sondereditionen bleiben im Original.</div>
     <div class="mbtns">
       <button class="btn ghost" id="livSave">${changed || !livery().ver ? "Design speichern" : "Gespeichert ✓"}</button>
       <button class="btn${fp.todo.length || changed ? "" : " disabled"}" id="livAll">🎨 Flotte lackieren${(() => {

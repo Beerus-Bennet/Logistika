@@ -314,7 +314,7 @@ function onDriven(veh, t, km, job, leg) {
 
 /* ========================== Versicherung ============================== */
 function fleetValue() {
-  return S.fleet.reduce((a, f) => a + (vType(f.type).car ? 0 : vType(f.type).price * (f.lease ? 0.5 : 1) * wearValueFactor(f)), 0);
+  return S.fleet.reduce((a, f) => a + (vType(f.type).car ? 0 : vType(f.type).price * wearValueFactor(f)), 0);
 }
 function insurePremium() { return Math.round(fleetValue() * 0.0006); }
 function toggleInsure() {
@@ -325,7 +325,7 @@ function toggleInsure() {
 }
 
 /* ============================== Kredit ================================= */
-const LOAN_BASE = [8000, 30000, 120000, 600000, 2500000, 10000000];
+const LOAN_BASE = [3000, 10000, 40000, 200000, 800000, 3000000];   /* v244: an die Spielpreise der Fahrzeuge angepasst (vorher 8.000 … 10 Mio.) */
 const LOAN_RATE = 0.089;                        /* effektiv p. a. */
 const LOAN_DAYS = 60;
 function loanOffers() {
@@ -433,6 +433,7 @@ function onOrderSpawn(o) {
   if (!o || o.tut || o.tutNext || o.snus || o.pablo || calm()) return;
   o.pay = Math.round(o.pay * repPayFactor(o));
   if (typeof rivalOnSpawn === "function") rivalOnSpawn(o);
+  if (typeof kundenOnSpawn === "function") kundenOnSpawn(o);   /* v244: Titel, Zitat, Stammkunden-Bonus */
 }
 function onJobStart(job) {
   const o = job.order, f = S.fleet.find(x => x.uid === job.legs[0].veh);
@@ -455,6 +456,7 @@ function onDelivered(job, pay, late) {
   if (!o.snus && !o.pablo && typeof shareState === "function") shareState().me++;
   if (typeof goalsDelivered === "function") goalsDelivered(job, pay, late);
   if (typeof vipDelivered === "function") vipDelivered(job, pay, late);
+  if (typeof kundenDelivered === "function") kundenDelivered(job, pay, late);   /* v244: Stammkunden, Serien */
 }
 function onFailed(job, reason) {
   const o = job.order;
@@ -500,6 +502,7 @@ function tickExtras(dtMin) {
   if (uiBusy()) { busyFreeze(dtMin || 0); return; }   /* v236: nicht stören */
   tickDecisions();
   tickCalls();
+  if (typeof kundenTick === "function") kundenTick();   /* v244 */
   if (typeof tickEvents === "function") tickEvents(dtMin);
   if (typeof tickRivals === "function") tickRivals(dtMin);
   if (typeof tickVip === "function" && !(typeof logiOn === "function" && !logiOn())) tickVip(dtMin);
@@ -515,6 +518,7 @@ function dayExtras(days) {
   if (S.insure && S.fleet.length && !(typeof perkInsured === "function" && perkInsured())) payOut(insurePremium() * days, "insure", "Flottenversicherung");
   taxDay();
   if (typeof goalsDay === "function") goalsDay(days);
+  if (typeof kundenDay === "function") kundenDay();   /* v244: Auftragsserien */
 }
 
 /* ================ Welt-Reiter: Ruf, Treibstoff, Bank, Steuern ================ */

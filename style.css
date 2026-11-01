@@ -3749,3 +3749,28 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 
 /* v242: Hinweis – Ware ist für einen Favoriten reserviert */
 .fo-miss.fav{color:#a46a00;font-size:12px}
+
+/* v244: Auftragskarte – Titel, Auftraggeber, Zitat, Besonderheiten, Gewinn, aufklappbare Details */
+.card.order .pay{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+.card.order .netpay{font-family:inherit;font-size:11px;font-weight:800;letter-spacing:0;color:var(--green-d);opacity:.85;margin-top:2px}
+.card.order .netpay.neg{color:#c23a4f}
+.o-title{font-weight:900;font-size:15.5px;line-height:1.2;margin-top:6px}
+.card.order .o-title + .ship{margin-top:2px;font-size:12.5px;font-weight:700;opacity:.8}
+.o-quote{font-size:12.5px;font-style:italic;line-height:1.35;margin-top:3px;opacity:.82;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.o-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.o-tag{font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;background:#eef1f6;border:1.5px solid #d5dbe6}
+.o-tag.express,.o-tag.tight{background:#ffe9ec;border-color:#ffb3bf}
+.o-tag.reg{background:#fff4cc;border-color:#f0cf5a}
+.o-tag.series{background:#e6f0ff;border-color:#9fbfff}
+.o-tag.intro{background:#e2f7ff;border-color:#8fd3ef}
+.o-tag.contract{background:#efe6ff;border-color:#c3a8ff}
+.meta.route{margin-top:6px;font-weight:700;font-size:12.5px}
+.o-more{margin-top:4px;font-size:12px}
+.o-more summary{cursor:pointer;font-weight:800;opacity:.6;list-style:none;display:inline-block;padding:2px 0}
+.o-more summary::-webkit-details-marker{display:none}
+.o-more summary::before{content:"▸ "}
+.o-more[open] summary::before{content:"▾ "}
+.o-more .desc{margin-top:2px}
+.card.order.intro{border-color:#1fa6c4;box-shadow:4px 4px 0 #1fa6c4}
+.card.order.series{border-color:#5b8cff}
+.card.order .netpay{-webkit-text-stroke:0}

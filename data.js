@@ -321,7 +321,10 @@ const VEHICLES = [
   {id:"v-sprinter", name:"Mercedes-Benz Sprinter 317 CDI",     brand:"Transporter",      mode:"r", cap:1400,      speed:84,  costKm:0.42, daily:38,    price:54000,     stage:1, range:1100,  icon:"🚐", flags:[]},
   {id:"v-esprinter",name:"Mercedes-Benz eSprinter",            brand:"E-Transporter",    mode:"r", cap:1000,      speed:80,  costKm:0.22, daily:34,    price:69000,     stage:2, range:400,   icon:"🚐", flags:[]},
   {id:"v-daily",    name:"Iveco Daily 7t Koffer",              brand:"Leicht-Lkw",       mode:"r", cap:4200,      speed:80,  costKm:0.62, daily:56,    price:78000,     stage:2, range:1200,  icon:"🚚", flags:[]},
+  {id:"v-crafterkuehl",name:"VW Crafter Kühlkastenwagen",      brand:"Kühltransporter",  mode:"r", cap:1100,      speed:80,  costKm:0.46, daily:40,    price:62000,     stage:2, range:900,   icon:"🚐", flags:["kuehl"]},
   {id:"v-atego",    name:"Mercedes-Benz Atego 1223 Kühlkoffer",brand:"Verteiler-Lkw",    mode:"r", cap:6800,      speed:78,  costKm:0.74, daily:78,    price:112000,    stage:2, range:1000,  icon:"🚚", flags:["kuehl"]},
+
+  {id:"v-tgm",      name:"MAN TGM 18.290 Wechselbrücke",       brand:"Mittel-Lkw",       mode:"r", cap:10500,     speed:78,  costKm:0.80, daily:92,    price:98000,     stage:2, range:1600,  icon:"🚚", flags:[]},
 
   /* ---- Straße: schwer ---- */
   {id:"v-scania",   name:"Scania R 450 Sattelzug",             brand:"Sattelzug",        mode:"r", cap:24000,     speed:74,  costKm:0.95, daily:135,   price:128000,    stage:2, range:2200,  icon:"🚛", flags:[]},
@@ -329,11 +332,16 @@ const VEHICLES = [
   {id:"v-volvofhe", name:"Volvo FH Electric Sattelzug",        brand:"E-Sattelzug",      mode:"r", cap:22000,     speed:72,  costKm:0.71, daily:150,   price:265000,    stage:3, range:330,   icon:"🚛", flags:[]},
   {id:"v-dafreefer",name:"DAF XG+ mit Schmitz Kühlauflieger",  brand:"Kühlsattelzug",    mode:"r", cap:22000,     speed:74,  costKm:1.28, daily:180,   price:172000,    stage:3, range:2200,  icon:"🚛", flags:["kuehl"]},
   {id:"v-manadr",   name:"MAN TGS 26.470 Tankzug (ADR)",       brand:"Gefahrgutzug",     mode:"r", cap:28000,     speed:72,  costKm:1.35, daily:195,   price:185000,    stage:3, range:2000,  icon:"🚛", flags:["adr"]},
+  {id:"v-eurocargo",name:"Iveco Eurocargo ADR-Verteiler",      brand:"Gefahrgut-Lkw",    mode:"r", cap:7000,      speed:76,  costKm:0.86, daily:110,   price:118000,    stage:3, range:1400,  icon:"🚚", flags:["adr"]},
+  {id:"v-chassis",  name:"Scania R 410 mit Container-Chassis", brand:"Containerzug",     mode:"r", cap:26000,     speed:72,  costKm:1.00, daily:140,   price:150000,    stage:3, range:2000,  icon:"🚛", flags:["container"]},
+  {id:"v-tieflader",name:"MAN TGX 26.510 Semi-Tieflader",      brand:"Tieflader",        mode:"r", cap:40000,     speed:60,  costKm:1.70, daily:210,   price:205000,    stage:3, range:1800,  icon:"🚛", flags:["sperrig"]},
   {id:"v-volvoheavy",name:"Volvo FH16 750 Schwerlastzug",      brand:"Schwertransport",  mode:"r", cap:64000,     speed:52,  costKm:2.35, daily:290,   price:245000,    stage:3, range:1800,  icon:"🚛", flags:["sperrig"]},
   {id:"v-goldhofer",name:"Goldhofer Modul-Tieflader 250 t",    brand:"Großraumtransport",mode:"r", cap:250000,    speed:28,  costKm:6.80, daily:820,   price:1150000,   stage:4, range:900,   icon:"🚛", flags:["sperrig"]},
 
-  /* ---- Binnenschiff ---- */
-  {id:"v-gms",      name:"Europaschiff GMS (85 m)",            brand:"Binnenschiff",     mode:"i", cap:1350000,   speed:13,  costKm:2.40, daily:430,   price:1350000,   stage:2, range:5000,  icon:"🛥️", flags:["container","schuett"]},
+  /* ---- Binnenschiff ---- v244: drei Einstiegsstufen – Spits (Etappe 2), Kempenaar (Etappe 2), GMS (Etappe 3) */
+  {id:"v-spits",    name:"Spits-Frachtschiff (39 m, 350 t)",   brand:"Binnenschiff",     mode:"i", cap:350000,    speed:11,  costKm:0.95, daily:140,   price:300000,    stage:2, range:5000,  icon:"🛥️", flags:["schuett","container"]},
+  {id:"v-kempenaar",name:"Kempenaar (55 m, 650 t)",            brand:"Binnenschiff",     mode:"i", cap:650000,    speed:12,  costKm:1.35, daily:230,   price:620000,    stage:2, range:5000,  icon:"🛥️", flags:["schuett","container"]},
+  {id:"v-gms",      name:"Europaschiff GMS (85 m)",            brand:"Binnenschiff",     mode:"i", cap:1350000,   speed:13,  costKm:2.40, daily:430,   price:1350000,   stage:3, range:5000,  icon:"🛥️", flags:["container","schuett"]},
   {id:"v-tms",      name:"Tankmotorschiff (110 m)",            brand:"Tankschiff",       mode:"i", cap:2400000,   speed:12,  costKm:3.10, daily:590,   price:2200000,   stage:3, range:5000,  icon:"🛥️", flags:["adr","schuett"]},
   {id:"v-gross",    name:"Großmotorgüterschiff (135 m)",       brand:"Binnenschiff",     mode:"i", cap:3000000,   speed:12,  costKm:3.60, daily:650,   price:2600000,   stage:3, range:5000,  icon:"🛥️", flags:["container","schuett","sperrig"]},
   {id:"v-koppel",   name:"Koppelverband (185 m)",              brand:"Schubverband",     mode:"i", cap:5400000,   speed:11,  costKm:4.90, daily:840,   price:3900000,   stage:4, range:5000,  icon:"🛥️", flags:["container","schuett","sperrig"]},
@@ -363,24 +371,45 @@ const VEHICLES = [
   {id:"v-an124",    name:"Antonow An-124-100 Ruslan",          brand:"Schwerlastfrachter",mode:"a",cap:120000,    speed:780, costKm:54,   daily:24500, price:148000000, stage:6, range:5200,  icon:"✈️", flags:["sperrig"]}
 ];
 
-/* ------------------------------- Etappen -------------------------------- */
+/* ------------------------ v244: Spielpreise ---------------------------------
+   Die Listenpreise oben sind echte Neupreise. Mit ihnen brauchte ein Upgrade 150–600 gute Aufträge, ein Schiff
+   über 1.000. Im Spiel gelten deshalb diese Preise (gebraucht/Händlerpreis, Werte in €). Ziel: ein bedeutendes
+   Upgrade nach etwa 20–35 gut gewählten Aufträgen – ein Kleintransporter früher, ein Spezial-Lkw später.
+   v.old = alter Listenpreis (nur für die Umwandlung alter Leasingverträge). */
+const VEH_PRICE_V244 = {
+  "v-caddy": 8900, "v-sprinter": 15000, "v-esprinter": 19500, "v-crafterkuehl": 19000, "v-daily": 24000, "v-atego": 30000,
+  "v-tgm": 28000, "v-scania": 39000, "v-actros": 45000, "v-volvofhe": 72000, "v-dafreefer": 54000, "v-eurocargo": 36000,
+  "v-manadr": 58000, "v-chassis": 47000, "v-tieflader": 62000, "v-volvoheavy": 76000, "v-goldhofer": 320000,
+  "v-spits": 27000, "v-kempenaar": 85000, "v-gms": 170000, "v-tms": 330000, "v-gross": 390000, "v-koppel": 560000,
+  "v-br185": 300000, "v-ludmilla": 190000, "v-vectron": 720000, "v-silkroad": 880000,
+  "v-feeder": 2200000, "v-supramax": 4500000, "v-panamax": 6800000, "v-roro": 8500000, "v-triplee": 22000000, "v-capesize": 10500000, "v-hmm": 29000000,
+  "v-caravan": 520000, "v-atr": 4400000, "v-737": 6000000, "v-a330f": 16000000, "v-777f": 27000000, "v-7478f": 29000000, "v-an124": 22000000
+};
+VEHICLES.forEach(v => { if (VEH_PRICE_V244[v.id] != null) { v.old = v.price; v.price = VEH_PRICE_V244[v.id]; } });
+/* Auftragserlöse: Spielaufschlag auf alle Speditionsausschreibungen (priceOrder, makeAirOrder).
+   EP werden weiter vom Erlös ohne Aufschlag berechnet, damit das Level-Tempo gleich bleibt. */
+const PAY_K = 2.5;
+
+/* ------------------------------- Etappen --------------------------------
+   v244: Etappen kosten kein Geld mehr. Frei werden sie mit Speditions-Level (reqLevel) und erfolgreichen Lieferungen
+   der Spedition (reqDone, ohne Hofbestellungen). Das Geld gehört in die Flotte. */
 const STAGES = [
   {n:1, name:"Berlin", modes:"br", reqLevel:1, cost:0,
    center:[52.5100,13.4050], zoom:11,
    info:"Kurierfahrten in der Hauptstadt: Lastenrad, Kastenwagen und enge Zeitfenster zwischen Mitte, Kreuzberg und Spandau."},
-  {n:2, name:"Brandenburg & Mitteldeutschland", modes:"bri", reqLevel:3, cost:18000,
+  {n:2, name:"Brandenburg & Mitteldeutschland", modes:"bri", reqLevel:3, reqDone:25, cost:0,
    center:[52.20,13.10], zoom:7,
    info:"Der Nahverkehrsraum öffnet sich: schwere Lkw, das GVZ Großbeeren, der Frachthub Leipzig/Halle und die ersten Binnenschiffe auf Havel und Elbe."},
-  {n:3, name:"Deutschland", modes:"bril", reqLevel:8, cost:120000,
+  {n:3, name:"Deutschland", modes:"bril", reqLevel:9, reqDone:120, cost:0,
    center:[51.20,10.20], zoom:6,
    info:"Bundesweites Netz mit Hamburger Hafen, duisport, Rheinschiene und Ganzzügen der DB Cargo."},
-  {n:4, name:"Europa", modes:"brilsa", reqLevel:13, cost:700000,
+  {n:4, name:"Europa", modes:"brilsa", reqLevel:26, reqDone:600, cost:0,
    center:[49.00,10.00], zoom:4,
    info:"Rotterdam, Antwerpen, Le Havre, Piräus: europäischer Seeverkehr, Kombiverkehr und die erste Luftfracht."},
-  {n:5, name:"Eurasien & Transatlantik", modes:"brilsa", reqLevel:18, cost:3500000,
+  {n:5, name:"Eurasien & Transatlantik", modes:"brilsa", reqLevel:34, reqDone:1200, cost:0,
    center:[38.00,55.00], zoom:3,
    info:"Neue Seidenstraße per Blockzug, Suezkanal, Transpazifik und die großen Container-Carrier."},
-  {n:6, name:"Die ganze Welt", modes:"brilsa", reqLevel:24, cost:20000000,
+  {n:6, name:"Die ganze Welt", modes:"brilsa", reqLevel:42, reqDone:2000, cost:0,
    center:[10.00,10.00], zoom:2,
    info:"Afrika, Südamerika und Ozeanien. Capesize-Bulker, 24.000-TEU-Riesen und Schwerlast per An-124 – das komplette Weltnetz ist frei."}
 ];
@@ -397,7 +426,7 @@ const CARGO = {
   schuett: {name:"Schüttgut",          icon:"⛏️",  req:["schuett"],  rate:0.85, minStage:2, minKg:200000, maxKg:180000000},
   adr:     {name:"Gefahrgut (ADR)",    icon:"☣️",  req:["adr"],      rate:1.60, minStage:3, minKg:900,    maxKg:200000000},
   sperrig: {name:"Schwer- & Sperrgut", icon:"🏗️",  req:["sperrig"],  rate:1.75, minStage:3, minKg:8000,   maxKg:180000000},
-  cont:    {name:"Container (FCL)",    icon:"📮",  req:["container"],rate:1.10, minStage:3, minKg:180000, maxKg:220000000},
+  cont:    {name:"Container (FCL)",    icon:"📮",  req:["container"],rate:1.10, minStage:3, minKg:9000,   maxKg:220000000},
   /* Wertsachen innerhalb Berlins: nur mit persönlicher Übergabe durch einen
      Kurier (Rad oder Moped). Eigene Ausschreibungen, siehe JEWEL_JOBS. */
   schmuck: {name:"Schmuck & Uhren",    icon:"💎",  req:["kurier"],   rate:1.00, minStage:99,minKg:0.05,   maxKg:6},
@@ -490,7 +519,8 @@ const TIPS = [
   "Ein zu großes Fahrzeug kostet pro Kilometer mehr, egal wie leicht die Ladung ist.",
   "Luftfracht ist unschlagbar schnell, aber nur bei Expressaufträgen wirklich lohnend.",
   "Binnenschiffe sind langsam, dafür pro Tonne kaum zu schlagen.",
-  "Geleaste Fahrzeuge kosten kein Kapital, aber jeden Tag Geld – auch im Stillstand.",
+  "Jedes Fahrzeug kostet jeden Tag Fixkosten – auch im Stillstand. Kauf das, was du auch auslasten kannst.",
+  "Leg eine kleine Rücklage an: Reparaturen und Steuern kommen nicht immer dann, wenn es passt.",
   "Kühlware ohne Kühlaufbau lehnt der Verlader ab. Achte auf die Symbole am Fahrzeug.",
   "Die Umschlagzeit beim Moduswechsel ist real: Hafen und Terminal brauchen Stunden.",
   "Mit der Auto-Disposition übernimmst du die Strategie, das Spiel den Klickaufwand."
@@ -512,10 +542,11 @@ const MODE_INFO = {
 
 /* Grundgebühr je Auftrag (Disposition, Papiere, Avisierung) */
 const BASE_FEE = 9;
-/* Leasingfaktor: Tagesrate = Fixkosten + Kaufpreis × Faktor.
+/* v244: Leasing gibt es nicht mehr. Der alte Faktor bleibt nur für die einmalige Umwandlung alter Leasingverträge
+   (econMigrate in game.js). Früher: Tagesrate = Fixkosten + Kaufpreis × Faktor.
    0,00055 entspricht etwa fünf Jahren bis zum Kaufpreis und liegt damit
    nahe an realen Charter- und Leasingraten. */
-const LEASE_RATE = 0.00055;
+const LEASE_RATE_OLD = 0.00055;
 /* CO₂ in kg je Tonnenkilometer */
 const CO2 = { b: 0, r: 0.075, l: 0.018, i: 0.031, s: 0.008, a: 0.50 };
 /* CO₂ je gefahrenem Kilometer: [leer, voll beladen] in kg. Aus Verbrauch
