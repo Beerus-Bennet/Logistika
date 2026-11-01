@@ -250,9 +250,16 @@ function shares() {
   rows.forEach(r => { out[r.id] = r.n / tot; });
   return out;
 }
+/* v243: Firmenwert hängt an der Region des Firmensitzes, nicht an deiner aktuellen Etappe. Vorher sprang jeder Preis beim
+   Freischalten einer neuen Etappe um den Etappenfaktor (Etappe 2 → 3: × 2,4), obwohl Flotte, Personal und Kunden gleich blieben.
+   Jetzt: Faktor der Etappe, in der der Sitz liegt (höchstens deine aktuelle). Dazu wie bisher der Marktanteil. */
+function corpStageK(id) {
+  const c = CORP[id], n = c && N[c.hq], st = Math.max(1, Math.min(S.stage, n ? n.stage : S.stage));
+  return STAGE_K[Math.min(STAGE_K.length, st) - 1];
+}
 function corpValue(id) {
   const c = CORP[id], sh = shares();
-  return roundK(c.base * stageK() * (0.7 + 1.6 * (sh[id] || 0)), 1000);
+  return roundK(c.base * corpStageK(id) * (0.7 + 1.6 * (sh[id] || 0)), 1000);
 }
 /* Voraussetzungen: Level 5 und mindestens so viel Marktanteil wie die andere */
 function corpReady(id) {
@@ -302,6 +309,8 @@ function openCorp(id) {
   const rd = corpReady(id); if (!rd.ok) return toast(r.name + ": " + rd.why + ".", "warn");
   const C = corp(), val = corpValue(id), sh = shares();
   let t = C.talks[id];
+  /* v243: laufendes Gespräch auf den neuen Firmenwert umrechnen (Forderung und Gegenangebot im gleichen Verhältnis) */
+  if (t && !t.done && t.val && Math.abs(t.val - val) / val > 0.05) { const k = val / t.val; t.res = Math.round(t.res * k); if (t.ask) t.ask = roundK(t.ask * k, 1000); if (t.offer) t.offer = Math.round(t.offer * k); t.val = val; }
   if (!t || t.done || t.cool <= S.time && t.round >= 3) {
     /* Was sie insgeheim verlangt: je stärker du, desto weicher wird sie */
     const dom = (sh.me || 0) > 2 * (sh[id] || 0) ? 0.94 : 1;

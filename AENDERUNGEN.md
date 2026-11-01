@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+## v243 – Firmenwerte springen nicht mehr mit der Etappe
+
+- **Ursache:** Der Firmenwert war `Grundwert × Etappenfaktor × (0,7 + 1,6 × Marktanteil)`. Der Etappenfaktor kam aus **deiner aktuellen Etappe** (1 / 2,5 / 6 / 18 / 45 / 90). Mit dem Freischalten von Etappe 3 (Deutschland), das zeitlich mit der Übernahme von Ostwind zusammenfiel, stieg jeder Preis auf das 2,4-Fache (+140 %), obwohl Flotte, Personal und Kunden gleich blieben. Der Kauf selbst verschiebt die Anteile kaum: Der Anteil der gekauften Firma geht an dich, die Summe bleibt gleich.
+- **Neu (`corp.js`, `corpStageK`):** Der Faktor richtet sich nach der Etappe, in der der **Firmensitz** liegt, höchstens nach deiner aktuellen. Kraftmann (Sitz Frankfurt/O., Etappe 2) kostet so in Etappe 2 und 3 gleich viel. Im Test bei gleichem Anteil: 162.000 € → 161.000 €, statt ×2,4. Nordstern (Sitz Hamburg, Etappe 3) erscheint erst in Etappe 3 und hat dort seinen vollen Wert. Teurer wird eine Firma nur noch mit wachsendem Marktanteil und durch Ärger in den Verhandlungen.
+- **Laufende Verhandlungen:** Eine laufende Verhandlung wird auf den neuen Wert umgerechnet (Forderung, Gegenangebot und dein Regler im gleichen Verhältnis).
+
 ## v242 – Favoriten reservieren ihre Ware
 
 - **Fehler:** Ein Favorit (★) wurde zwar zuerst bearbeitet, solange er aber noch nicht komplett war, galt jede andere Bestellung mit derselben Ware als „fertig“ (`farmOrderReady` prüft nur den Lagerbestand). Die Fahrerin schickte sie los und nahm dem Favoriten die schon gesammelte Ware wieder weg. So sank z. B. bei „Feinkost am Holländerviertel“ der Stand von 56/68 auf 14/68.

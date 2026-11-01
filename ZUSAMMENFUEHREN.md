@@ -1,5 +1,9 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v243 – Firmenwert nach Sitz-Etappe (auf v242)
+
+- `corp.js`: `corpStageK` neu, `corpValue` nutzt sie; `openCorp` rechnet laufende Gespräche um. `sw.js` / `index.html`: v243.
+
 ## Stand v242 – Favoriten-Reservierung (auf v241)
 
 - `farm.js`: `farmFavReserve`, `farmOrderReadyFree`, `farmFavClash` (unter `farmOrderReady`). `team.js`: `staffFahrerJob` und `staffDo` „send“ nutzen `farmOrderReadyFree`. `farmview.js`: Hinweis in der Bestellkarte. `style.css`: `.fo-miss.fav`. `sw.js` / `index.html`: v242.
