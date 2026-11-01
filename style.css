@@ -3733,3 +3733,19 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .hu-stars i.f{color:#f2b51c}
 .hu-stars i.e{color:#e4e6ea;-webkit-text-stroke:.7px #9aa3ae}
 .hu-stars i.h{color:transparent;background:linear-gradient(90deg,#f2b51c 50%,#e4e6ea 50%);-webkit-background-clip:text;background-clip:text;-webkit-text-stroke:.7px #8a6a10}
+
+/* v231: Auf der Bestelltafel schwebt das ✕ nicht mehr über den Karten – es verdeckte beim Scrollen den Papierkorb */
+#farmSheet.orders .fs-x{position:relative}
+.fo-b .btn[data-drop],.fo-b .btn[data-ret]{min-width:46px;min-height:40px;touch-action:manipulation;font-size:18px;line-height:1}
+
+/* v240: Easter Egg – Chat mit einer telefonierenden Kraft */
+#farmSheet .pchat{display:flex;flex-direction:column;gap:7px;margin:8px 0 12px}
+#farmSheet .pchat .bub{font-size:14px}
+#farmSheet .pchat .bub.in{background:#eef1f6;color:var(--ink);border:1.5px solid #d5dbe6}
+#farmSheet .pchat .bub.typing{opacity:.6;letter-spacing:2px}
+#farmSheet .pchat-opt{display:block;width:100%;text-align:left;font:inherit;font-size:14px;font-weight:700;line-height:1.35;padding:11px 13px;border-radius:14px;border:var(--line);background:#2f6fed;color:#fff;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+#farmSheet .pchat-opt:disabled{opacity:.5}
+#farmSheet .pchat-egg{font-size:12.5px;font-weight:700;background:#fff6d6;border:1.5px dashed #d9b440;border-radius:12px;padding:8px 10px;margin-bottom:10px}
+
+/* v242: Hinweis – Ware ist für einen Favoriten reserviert */
+.fo-miss.fav{color:#a46a00;font-size:12px}

@@ -1797,6 +1797,7 @@ function tick(dtMin) {
   if (S.time - (S.lastJewel || -999) > (S.stage <= 2 ? 150 : 75)) { S.lastJewel = S.time; if (typeof logiOn !== "function" || logiOn()) spawnJewels(); }
   if (typeof prunePhone === "function") prunePhone();
   tickBases(dtMin);
+  if (S.corp && typeof corpHqTry === "function" && (S.corp.hq && Object.keys(S.corp.hq).length)) corpHqTry();   /* v230 */
   if (typeof tickSnus === "function" && (typeof logiOn !== "function" || logiOn())) tickSnus(dtMin);
   if (typeof tickPablo === "function" && (typeof logiOn !== "function" || logiOn())) tickPablo(dtMin);
   if (typeof farmTick === "function") farmTick(dtMin);
@@ -1813,6 +1814,7 @@ function unlockStage() {
   S.money -= next.cost; S.expense += next.cost; S.stage++;
   logMoney("stage", "Etappe " + next.name + " freigeschaltet", -next.cost);
   clearRouteCache(); buildNetBuffers();
+  if (typeof corpHqTry === "function") corpHqTry();   /* v230: vorgemerkte Firmensitze öffnen */
   toast("🌍 Etappe " + S.stage + " freigeschaltet: " + next.name, "ok");
   spawnOrders(6);
   map.flyTo(next.center, next.zoom, 1600);
@@ -2589,10 +2591,10 @@ const LEDGER_KIND = {
   paint: { icon: "🎨", name: "Lackierung" },
   farm:  { icon: "🏡", name: "Hof" }
 };
-function logMoney(kind, label, amount) {
+function logMoney(kind, label, amount, nt) {
   if (!S.ledger) S.ledger = [];
   if (!amount) return;
-  S.ledger.unshift({ t: S.time, k: kind, l: label, a: Math.round(amount) });
+  S.ledger.unshift(Object.assign({ t: S.time, k: kind, l: label, a: Math.round(amount) }, nt ? { nt: 1 } : {}));   /* v237: nt = steuerlich erst später wirksam */
   if (S.ledger.length > 260) S.ledger.length = 260;
 }
 const SHADOW_KINDS = new Set(["snus", "pablo"]);
@@ -3691,6 +3693,7 @@ function boot() {
   if (S.farm && typeof farmMigrate === "function") { try { farmMigrate(); } catch (e) { console.warn("Erbe-Migration", e); } }
   lastLevel = level();
   ensureOffices();
+  if (typeof corpHqTry === "function") { try { corpHqTry(); } catch (e) { console.warn("corpHqTry", e); } }   /* v230 */
   /* Eigene Porträts suchen; gefundene tauchen in der Charaktererstellung auf. */
   probePlayerArt(any => {
     if (!any) return;

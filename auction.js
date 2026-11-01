@@ -249,10 +249,15 @@ function finishLot(l) {
       const net = Math.round(l.price * (1 - AH_COMMISSION));
       S.money += net;
       logMoney("auction", "Versteigert: " + name, net);
-      if (l.garage) A.garage = A.garage.filter(g => g.uid !== l.garage);
+      let gain = "";
+      if (l.garage) {
+        const g0 = garageById(l.garage);
+        if (g0 && g0.ware) { taxWare(g0.paid, "Wareneinsatz " + name); gain = ` Gewinn ${net - g0.paid >= 0 ? "+" : "−"}${money(Math.abs(net - g0.paid))} – nur der zählt für die Steuer.`; }
+        A.garage = A.garage.filter(g => g.uid !== l.garage);
+      }
       res = "sold";
       phoneMsg({ from: AH_NAME, kind: "good", title: "Zuschlag für Ihr Los",
-        body: `${name} ging für ${money(l.price)} an ${l.lead}. Nach ${Math.round(AH_COMMISSION * 100)} % Provision: +${money(net)}.` });
+        body: `${name} ging für ${money(l.price)} an ${l.lead}. Nach ${Math.round(AH_COMMISSION * 100)} % Provision: +${money(net)}.${gain}` });
     } else {
       if (l.garage) { const g = garageById(l.garage); if (g) delete g.consigned; }
       if (l.fleetVeh) {
@@ -273,9 +278,10 @@ function finishLot(l) {
   } else if (l.lead === "me") {
     const cost = Math.round(l.price * (1 + AH_PREMIUM));
     S.money -= cost; S.expense += cost;
-    logMoney("auction", "Ersteigert: " + name, -cost);
+    /* v237: ein Auto für die Garage ist Handelsware – steuerlich erst beim Verkauf (Wareneinsatz) */
+    logMoney("auction", "Ersteigert: " + name, -cost, l.kind === "car");
     if (l.kind === "car") {
-      A.garage.push({ uid: "G" + (A.seq++), kind: "car", car: l.car, y: l.y, km: l.km, cond: l.cond, paint: l.paint, luck: l.luck, paid: cost, at: S.time });
+      A.garage.push({ uid: "G" + (A.seq++), kind: "car", car: l.car, y: l.y, km: l.km, cond: l.cond, paint: l.paint, luck: l.luck, paid: cost, at: S.time, ware: 1 });
     } else {
       const v = makeVehicle(l.vt, false); v.wear = l.wear; v.kmTotal = l.km;
       S.fleet.push(v);
@@ -304,6 +310,7 @@ function carToFleet(uid) {
   const v = makeVehicle("car-" + c.id, false);
   v.garage = g.uid; v.wear = [0, 2, 8, 25, 45, 70][g.cond];
   S.fleet.push(v); g.fleet = v.uid;
+  if (g.ware) { taxWare(g.paid, "Betriebsfahrzeug " + carName(c)); delete g.ware; }   /* v237: jetzt Betriebsfahrzeug – sofort absetzbar */
   toast("🏎️ " + carName(c) + " fährt jetzt als Wertkurier – jeder Kilometer kostet Sammlerwert.", "ok");
   save(); render();
 }
@@ -987,7 +994,7 @@ function renderAuction() {
   } else if (A.view === "garage") {
     const tot = A.garage.reduce((a, g) => a + gValue(g), 0), paid = A.garage.reduce((a, g) => a + g.paid, 0);
     html = A.garage.length
-      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen fallen – Kurier-Kilometer drücken den Wert.</small></div>
+      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen fallen – Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
           <div class="meta small"><span>Marktwert ${money(tot)}</span><span>bezahlt ${money(paid)}</span><span class="${tot >= paid ? "up" : "down"}">${tot >= paid ? "+" : "−"}${money(Math.abs(tot - paid))}</span></div></div>`
         + A.garage.map(garageCardHTML).join("")
       : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;

@@ -26,7 +26,7 @@ Object.assign(FITEMS, {
   bretter:   { n: "Bretter",       sg: "Brett",        i: "🪵", k: "wood",  a: 10, u: "",       pk: "Bund",    v: 42,  kg: 45,  xp: 6,  st: "holz" },
   balken:    { n: "Balken",        sg: "Balken",       i: "🏗️", k: "wood",  a: 2,  u: "",       pk: "Paar",    v: 48,  kg: 50,  xp: 7,  st: "holz" },
   platten:   { n: "Holzplatten",   sg: "Holzplatte",   i: "🟫", k: "wood",  a: 5,  u: "",       pk: "Stapel",  v: 36,  kg: 40,  xp: 7,  st: "holz" },
-  kisten:    { n: "Holzkisten",    sg: "Holzkiste",    i: "📦", k: "wood",  a: 5,  u: "",       pk: "Stapel",  v: 20,  kg: 8,   xp: 4,  st: "holz" },
+  kisten:    { n: "Holzkisten",    sg: "Holzkiste",    i: "📦", k: "wood",  a: 5,  u: "",       pk: "Stapel",  v: 27,  kg: 8,   xp: 4,  st: "holz" },
   paletten:  { n: "Europaletten",  sg: "Europalette",  i: "🗃️", k: "wood",  a: 3,  u: "",       pk: "Stapel",  v: 39,  kg: 75,  xp: 8,  st: "holz" },
   dielen:    { n: "Hobeldielen",   sg: "Hobeldiele",   i: "🛤️", k: "wood",  a: 8,  u: "",       pk: "Bund",    v: 68,  kg: 38,  xp: 10, st: "holz" },
   bauholz:   { n: "Kanthölzer (Bauholz)", sg: "Kantholz", i: "🏠", k: "wood", a: 2, u: "",      pk: "Paar",    v: 80,  kg: 44,  xp: 12, st: "holz" },

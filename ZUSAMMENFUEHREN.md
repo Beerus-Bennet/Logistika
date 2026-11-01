@@ -1,5 +1,69 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v242 – Favoriten-Reservierung (auf v241)
+
+- `farm.js`: `farmFavReserve`, `farmOrderReadyFree`, `farmFavClash` (unter `farmOrderReady`). `team.js`: `staffFahrerJob` und `staffDo` „send“ nutzen `farmOrderReadyFree`. `farmview.js`: Hinweis in der Bestellkarte. `style.css`: `.fo-miss.fav`. `sw.js` / `index.html`: v242.
+
+## Stand v241 – Kaufangebote unter 30 % (auf v240)
+
+- `corp.js`: neuer Block vor `corpWaveHQ` (`CORP_BID_*`, `corpMyValue`, `corpBidCheck`, `DECISIONS.buyout`, `corpSellAll`, `corpStakePrice`, `corpStakeBack`, `corpStakeHTML`); Aufruf in `corpDay`; `corpClose` löscht eine Beteiligung der gekauften Firma.
+- `extras.js`: `taxDay` zahlt den Gewinnanteil. `vip.js`: Konkurrenz-Kasten mit Erklärung und Beteiligung. `sw.js` / `index.html`: v241.
+
+## Stand v240 – Easter Egg Telefonat (auf v239)
+
+- `team.js`: in `staffTap` Zähler für dreifaches Antippen; neue Funktionen `staffHangUp`, `staffHash`, `staffPhoneChat`, Texte `STAFF_PHONE_EXCUSE`/`STAFF_PHONE_SORRY`. `style.css`: Block v240 (`.pchat`). `sw.js` / `index.html`: v240.
+
+## Stand v239 – Schatz-Kamera (auf v238)
+
+- `worldview.js`: `stepTreasureReveal` startet `worldTreasureCamBack` bei u > 2,6; Rückflug 700 ms; `worldTreasureRevealEnd` nur noch wenn `WV.trCamSave`. `sw.js` / `index.html`: v239.
+
+## Stand v238 – Bestellpreise und Verarbeitungswerte (auf v237)
+
+- `farm.js`: `farmOrderBase`, `farmOrderPay`; `farmOrderObj`, `farmAboPrice` und die Migration in `farmMigrate` (`F.econ238`) nutzen sie.
+- `fishdata.js`: Werte `v` von barschfilet, forellenfilet, karpfenblau, zanderfilet, konserve, fischbroetchen, hechtkloesse, fischkiste, edelbox. `erbedata.js`: kisten.
+- `sw.js` / `index.html`: v238.
+
+## Stand v237 – Autohandel: Wareneinsatz und Verlustvortrag (auf v236)
+
+- `game.js`: `logMoney` mit 4. Parameter `nt` (steuerlich später wirksam).
+- `extras.js`: `taxWare`, `taxSums`, `taxBase`, `taxDay` mit Verlustvortrag (`S.taxLoss`) und Wareneinsatz (`S.taxAdj`). Anzeige im Monatsabschluss-Kasten.
+- `auction.js`: Kauf eines Garagen-Autos mit `nt` und `ware: 1`; Verkauf und Übernahme in die Flotte rufen `taxWare`; Garagen-Text.
+- `sw.js` / `index.html`: v237.
+
+## Stand v236 – Nicht stören (auf v235)
+
+- `extras.js`: `uiBusy`, `busyFreeze`; `tickCalls`/`tickExtras` warten. `vip.js`: Einladungsfenster erst wenn frei. `sw.js` / `index.html`: v236.
+
+## Stand v235 – Männerfrisuren (auf v234)
+
+- `avatar.js`: `AV_HAIR_M_SAFE`, `avFixMale`, `avRandom` für Männer angepasst. `offices.js`: `ensureOffices` ruft `avFixMale`. `sw.js` / `index.html`: v235.
+
+## Stand v234 – Schattentiefe der Sonnenkamera (auf v233)
+
+- `gl3d.js`: in `updateCamera` Tiefenbereich der Schattenkamera relativ zum Ziel. `sw.js` / `index.html`: v234.
+
+## Stand v233 – Streife seltener (auf v232)
+
+- `events.js`: `maybeStreife` mit 8 % Chance und 3 Tagen Sperre. `sw.js` / `index.html`: v233.
+
+## Stand v232 – Wege nach der Mittagspause, Abstand (auf v231)
+
+- `team.js`: neue Funktionen `staffRouteDist`, `routeProject`, `staffFollow`; in `stepStaff`: Uhr-Verzögerung beim Aufstehen, Aufholen auf der Route, Abstandsregel (`STAFF_GAP`) vor dem Blasen-Block.
+- `sw.js` / `index.html`: v232.
+
+## Stand v231 – Papierkorb-Knopf (auf v230)
+
+- `farmview.js`: `dropGo` mit try/catch um `save`/`renderFarmUI`/`dropAgain`; `data-ret`-Knopf mit 🗑️.
+- `style.css`: Block am Ende (v231): `.fs-x` auf der Bestelltafel nicht sticky, größere Papierkorb-Knöpfe.
+- `sw.js` / `index.html`: v231.
+
+## Stand v230 – Firmensitz vorgemerkt (auf v229, zusammen mit v219–v228)
+
+- Merge von `origin/main` (v229) in v219–v228: Konflikte nur in `sw.js`, `index.html` (Versionsstellen, jetzt v230) und den beiden Doku-Dateien (beide Abschnitte behalten). Code-Dateien liefen ohne Konflikt zusammen.
+- `corp.js`: neue Funktionen `corpHqStaff`, `corpHqOpen`, `corpHqRepair`, `corpHqTry`; `corpClose` merkt den Sitz vor statt ihn zu verkaufen; Dialogtext angepasst.
+- `game.js`: `corpHqTry()` im Tick (nach `tickBases`), in `unlockStage` und in `boot`.
+- `offices.js`: Hinweisbox in `newBaseCard`.
+
 ## Stand v229 – Leasing-Lackierung, Hofaufträge (auf v228)
 
 - `livery.js`: neue Funktion `canPaint` direkt unter `paintable`. `painted` prüft zusätzlich `!f.lease`. `paintable(vType(f.type))` ist überall durch `canPaint(f)` ersetzt, in `paintVeh`, `onAcquire` und `liveryVehHTML` gilt `canPaint(f/v)` statt `paintable(t)`.

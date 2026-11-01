@@ -1,5 +1,110 @@
 # Änderungen – kurz für den Kollegen
 
+## v242 – Favoriten reservieren ihre Ware
+
+- **Fehler:** Ein Favorit (★) wurde zwar zuerst bearbeitet, solange er aber noch nicht komplett war, galt jede andere Bestellung mit derselben Ware als „fertig“ (`farmOrderReady` prüft nur den Lagerbestand). Die Fahrerin schickte sie los und nahm dem Favoriten die schon gesammelte Ware wieder weg. So sank z. B. bei „Feinkost am Holländerviertel“ der Stand von 56/68 auf 14/68.
+- **Behoben (`farm.js`, `team.js`):** Neu sind `farmFavReserve` (was alle offenen Favoriten zusammen brauchen) und `farmOrderReadyFree` (fertig, ohne einem Favoriten etwas wegzunehmen). Die Fahrerin nimmt nur noch solche Bestellungen (`staffFahrerJob`) und prüft beim Losschicken noch einmal (`staffDo` „send“). Übrige Ware über die Reservierung hinaus darf sie weiter ausliefern. Die Verarbeitung achtete schon vorher auf offene Bestellungen (`staffReserve`).
+- **Anzeige (`farmview.js`):** Eine fertige Bestellung, die einem Favoriten Ware wegnehmen würde, zeigt „⭐ für Favorit reserviert: … – dein Team liefert das nicht aus“. Selbst losschicken kannst du sie weiterhin.
+- **Geprüft** im Testbrowser: Favorit braucht 68 Krabben + 12 Zanderfilets, auf Lager sind 60 + 20. Eine Bestellung über 20 Krabben wird gesperrt (Hinweis „Krabbe“), eine über 5 Zanderfilets darf raus. Nicht geprüft: echte Fahrerin auf dem Handy.
+
+## v241 – Kaufangebote der Konkurrenz unter 30 % Marktanteil
+
+- **So funktioniert der Marktanteil (unverändert):** Jede gelieferte Tour zählt +1 für dich. Jeder Auftrag, den eine Konkurrentin wegschnappt (rote Zeile „greift in … zu“), zählt +1 für sie. Täglich werden alle Werte mit 0,8 multipliziert, alte Erfolge verblassen also nach etwa einer Woche. Der Anteil ist dein Wert geteilt durch die Summe aller aktiven Firmen. Bist du 14 Tage Marktführer, kommen zwei Konzerne mit eigenen Kunden. Kaufen kannst du eine Firma nur mit mindestens so viel Anteil wie sie.
+- **Neu (`corp.js`):** Fällt dein Anteil unter **30 %** (bei mindestens 6 Punkten Geschäft insgesamt), schickt die stärkste Konkurrentin ein Kaufangebot aufs Diensthandy. Es kommt höchstens alle 6 Tage und gilt 3 Tage. Ohne Antwort gilt es als abgelehnt. Firmenwert (`corpMyValue`): Fahrzeugwerte (ohne Leasing, Sonderstücke und Garagenautos) + gekaufte Büros (60 %) + Personal + Firmenwert-Aufschlag (25 % + dein Anteil, mindestens 30.000 € × Etappenfaktor).
+  - **Ablehnen.**
+  - **25 % Beteiligung verkaufen:** 105–120 % eines Viertels des Firmenwerts sofort aufs Konto. Danach gehen bei jedem Monatsabschluss 25 % des Gewinns nach Steuern an die Käuferin. Der Rückkauf ist jederzeit möglich (Knopf im Konkurrenz-Kasten): zum heutigen Viertelwert, mindestens Verkaufspreis + 10 %. Kaufst du die Beteiligte selbst auf, fällt die Beteiligung weg. Es gibt höchstens eine Beteiligung gleichzeitig.
+  - **Ganze Spedition verkaufen:** 95–112 % des Firmenwerts, nach einer Sicherheitsabfrage. Weg sind: Speditionsfahrzeuge, alle Büros mit Personal, laufende Speditionsaufträge und der Marktanteil. Neustart in **Etappe 1**. Es bleiben Hof und Erbe (auch Hoffahrzeuge und Hofaufträge), Garage, Level, Geld, Kredite und übernommene Firmen. Danach kommen 14 Tage lang keine Angebote.
+- **Anzeige (`vip.js`):** Der Konkurrenz-Kasten erklärt die Zählung in einem Satz und zeigt eine bestehende Beteiligung mit Rückkauf-Knopf. Der Monatsabschluss nennt den Gewinnanteil.
+- **Geprüft** im Testbrowser: 17 % Anteil löst ein Angebot aus (Firmenwert 360.000 €). Beteiligung +101.000 €, beim Monatsabschluss gehen 17.500 € Gewinnanteil ab. Ein zweites Angebot bietet keine Beteiligung mehr an. Komplettverkauf: Flotte und Büros leer, Etappe 1, neue Aufträge. Nicht geprüft: Handy.
+
+## v240 – Easter Egg: „Handy weg, wenn der Chef redet“
+
+- **Auslöser (`team.js`, `staffTap`):** Eine Hof-Kraft telefoniert gerade („Im Telefonat“). Wer sie in diesem Telefonat **dreimal** antippt (innerhalb von 30 s, gezählt je Kraft und je Telefonat in `WV.callTaps`), öffnet beim dritten Mal ein Chatfenster statt der kleinen Blase. Nirgends steht ein Hinweis darauf, man findet es nur durch Zufall.
+- **Chat (`staffPhoneChat`):** Die Kraft wimmelt ab („Pssst, Chef – wichtiges Gespräch …“, vier Varianten je nach Person). Zur Auswahl steht eine Antwort des Spielers: „‹Vorname›, wenn dein Chef mit dir redet, ist das Handy weg. Telefonieren kannst du danach – jetzt höre ich von dir, nicht vom Büro.“ Nach kurzem Tippen kommt die Entschuldigung (drei Varianten), dazu der Hinweis „🤫 Easter Egg entdeckt“ und der Knopf „Zurück an die Arbeit“.
+- **Folge, je Kraft einzeln (`s.noPhone`, gespeichert):** Diese Kraft legt ab jetzt beim Antippen sofort auf (`staffHangUp`: die restliche Telefonzeit fällt weg, die Arbeit beginnt gleich). Statt „Im Telefonat“ öffnet sich das normale Aufgabenmenü. Die anderen Kräfte telefonieren weiter wie bisher, bis man auch sie belehrt.
+- **Geprüft** im Testbrowser: Chat öffnen, Antwort antippen, Entschuldigung, Merkmal gesetzt, Telefonat beendet und Arbeitszeit vorgezogen. Das dreifache Antippen der 3D-Figur selbst habe ich nicht im Browser getestet.
+
+## v239 – Schatzkiste: Kamera schwenkt gleich nach der Show zurück
+
+- **Vorher (`worldview.js`):** Die Kamera flog erst zurück, nachdem die geöffnete Truhe sich aufgelöst hatte. Das war etwa 7,6 s nach dem Aufspringen des Deckels, dazu kamen 1,3 s Rückflug. Man schaute lange steil von oben auf die Grube.
+- **Jetzt:** Sobald Münzfontäne, Lichtsäulen und Ringe vorbei sind (2,6 s nach dem Aufspringen), geht die Kamera in 0,7 s in ihre alte Ausrichtung, Entfernung und Position zurück. Die offene Truhe ist danach weiter zu sehen und löst sich wie gewohnt auf. `worldTreasureRevealEnd` ruft den Rückflug nur noch auf, wenn er nicht schon lief.
+- **Geprüft** im Testbrowser: Die Show wurde Schritt für Schritt abgespielt. Bei 2,7 s startet der Rückflug, nach 1,5 s steht die Kamera wieder auf Entfernung 30 und Blickrichtung 45°, wie vorher. Nicht geprüft: Handy.
+
+## v238 – Hof-, Sägewerk- und Fischerei-Bestellungen lohnen sich wieder, Verarbeitung neu bepreist
+
+- **Befund:** Bestellungen zahlten den Warenwert × 1,05–1,22 plus kleine Liefergebühr (2,50 € + 0,45 €/km). Der Fischmarkt zahlt auf Fischwaren aber +15 %, und Fisch/Reusentiere werden dort nach Gewicht bewertet. Beispiel „Feinkost am Holländerviertel“ (68 Krabben, 23 Krebse, 12 Zanderfilets): Fischmarktwert 1.032 €, Bestellung bisher ≈ 1.018 €. Liefern lohnte sich also nicht.
+- **Neue Preisformel (`farm.js`, `farmOrderBase`, `farmOrderPay`):** Grundwert ist, was die Ware im besten Laden bringt. Das heißt Fisch und Reusentiere nach Durchschnittsgewicht und Fischwaren mit Fischmarkt-Aufschlag. Darauf kommen **30–50 % Aufschlag** sowie eine Liefergebühr von 5 € + 0,80 €/km. Das Feinkost-Beispiel bringt jetzt 1.355–1.561 € statt ≈ 1.018 €. Gilt für Hof, Sägewerk und Fischerei. Daueraufträge: Grundwert wie oben, +35 % (vorher +13 %), Bonus wie gehabt.
+- **Bestehende Bestellungen:** Offene und angenommene Bestellungen werden einmal auf mindestens den neuen Preis angehoben (`F.econ238`). Daueraufträge behalten ihren vereinbarten Preis bis zur nächsten Lieferung.
+- **Verarbeitung (`fishdata.js`, `erbedata.js`):** Rezepte, bei denen das Fertigprodukt kaum mehr (oder weniger) wert war als die Zutaten, bringen jetzt etwa +30 %:
+  - Barschfilet 7 → 9 €, Forellenfilet 9 → 11 €, Karpfen blau 18 → 22 €, **Zanderfilet 40 → 46 €**
+  - Fischkonserve 4,50 → 5,50 €, Fischbrötchen 4 → 4,50 €, Hechtklößchen 13 → 20 €, Frischfischkiste 26 → 58 €, Edelfisch-Box 120 → 150 €
+  - Holzkisten (Sägewerk) 20 → 27 €
+  - Futter und Bert-Köder bleiben bewusst bei ihrem Preis (Hilfsstoffe).
+- **Geprüft** im Testbrowser: Rechnung für Fisch-, Holz- und Hof-Beispiel sowie eine Rezeptliste mit allen Margen. Nicht geprüft: dein Spielstand.
+
+## v237 – Autohandel steuerlich absetzbar: nur der Gewinn wird versteuert, Verluste werden vorgetragen
+
+- **Vorher:** Ein ersteigertes Auto zählte im Kaufmonat sofort als Ausgabe. Was davon über den Monatsgewinn hinausging, verfiel, weil es keinen Verlustvortrag gab. Der Verkaufserlös war im Folgemonat dann voll steuerpflichtig. Wer im einen Monat kaufte und im nächsten verkaufte, zahlte 30 % auf den **Umsatz** statt auf den Gewinn. Autohandel lohnte sich deshalb kaum.
+- **Neu – Wareneinsatz (`extras.js`, `auction.js`, `game.js`):**
+  - Ein ersteigertes Garagen-Auto ist Handelsware. Der Kauf (Hammerpreis + 12 % Aufgeld) wird gebucht, ist aber steuerlich noch nicht wirksam (`logMoney(..., nt)`, Merkmal `g.ware`).
+  - Beim Verkauf werden Kaufpreis und Aufgeld als **Wareneinsatz** abgesetzt (`taxWare`, `S.taxAdj`). Die 8 % Provision mindern ohnehin den Erlös. Versteuert wird also nur der Handelsgewinn.
+  - Wird ein Garagen-Auto als Wertkurier in die Flotte genommen, ist es ab dann Betriebsfahrzeug und wird sofort abgesetzt.
+  - Autos, die vor v237 gekauft wurden, sind schon abgesetzt und zählen nicht doppelt.
+- **Neu – Verlustvortrag:** Ein Monat mit Verlust (z. B. ein Auto unter Einkaufspreis verkauft) zahlt keine Steuern. Der Verlust wird vorgetragen (`S.taxLoss`) und mindert die Steuern der nächsten Monate, für das ganze Geschäft.
+- **Anzeige:** Der Monatsabschluss nennt Autohandel-Erlös, Wareneinsatz, den verrechneten Verlustvortrag und den neuen Stand. Unter „Welt → Geschäft“ stehen Verlustvortrag und Autohandel-Gewinn des laufenden Monats. Die Garage erklärt die Regel. Die Verkaufsnachricht nennt den Gewinn gegenüber dem Einkauf.
+- **Beispiel (getestet):** Kauf 53.760 € im Monat 1, Verkauf netto 64.400 € im Monat 2, dazu 20.000 € und 5.000 € Auftragsgewinn. Bisher: 6.000 € + 20.820 € Steuern. Jetzt: 6.000 € + 2.892 € Steuern. Ein Verlustmonat (−12.892 €) wird im nächsten Monat vollständig verrechnet.
+- **Bleibt bewusst:** 12 % Aufgeld, 8 % Provision und die Wertentwicklung (Klassiker steigen, Sportwagen fallen, Kilometer drücken). Gewinn bringt der Handel also nur mit gutem Einkauf. Er ist eine zusätzliche Einnahmequelle, kein Selbstläufer.
+
+## v236 – Nicht stören: keine Sonderaufträge und Anrufe beim Schießen, Angeln, Sägen
+
+- **Problem:** Einladungen zur Sonderfahrt (VIP/Express), Anrufe mit Wischen-zum-Annehmen und Zufallsereignisse öffneten ihr Fenster auch mitten im Schießen auf dem Hochsitz.
+- **Neu (`extras.js`):** `uiBusy()` erkennt, ob man gerade beschäftigt ist: Ich-Perspektive (`fphunt`, `fp3d`), Angeln/Sägen/Minispiele (`#farmAngel` belegt), Hammer, Zoll, Pakete, Luckybox. Dann gilt:
+  - `tickCalls` zeigt keinen Anruf, die Anrufe warten in der Schlange.
+  - `tickExtras` würfelt keine neuen Ereignisse, Einladungen oder Konzern-Meldungen (`busyFreeze`).
+  - Offene Entscheidungen und die Frist einer Einladung laufen nicht ab: ihre Fristen werden um die gleiche Zeit verschoben (`dec.until`, `v.open.rsvp`). Nichts wird währenddessen automatisch abgelehnt.
+- **`vip.js`:** Das Einladungsfenster öffnet nicht mehr nach festen 400 ms, sondern erst, wenn man nicht beschäftigt ist (prüft alle 1,5 s).
+- Danach geht alles wie gewohnt: Anruf klingelt, Einladung öffnet sich, Streife/Ereignisse kommen wieder.
+- **Geprüft** im Testbrowser: mit `fphunt` bleibt ein Anruf in der Schlange, die Frist verschiebt sich um 50 Minuten, nach dem Verlassen klingelt er. Nicht geprüft: echtes Schießen auf dem Handy.
+
+## v235 – Männer sehen nicht mehr wie Frauen aus (Bewerber, Personal)
+
+- **Befund:** Name und Geschlecht des Avatars waren in der Erzeugung immer passend (`makeCandidate`: erst Geschlecht, dann Vorname aus `STAFF_FIRST_W/M`). Der Eindruck „männlicher Name, weibliches Gesicht“ kam von drei Männerfrisuren in `AV.hairM`, die im kleinen Porträt wie Frauenhaar aussehen: Seitenscheitel, Lange Wellen, Pferdeschwanz. Ich habe alle Frisuren einzeln gerendert, um das zu prüfen.
+- **Neu (`avatar.js`):** `avRandom` zieht für Männer nur noch aus `AV_HAIR_M_SAFE` = kurz, Undercut, Tolle, Locken. Die Frisuren der Frauen bleiben, die Wahl beim eigenen Charakter ebenso.
+- **Rückwirkend:** `avFixMale` stellt vorhandene Männer-Avatare mit Seitenscheitel, Wellen oder Pferdeschwanz einmalig auf eine kurze Frisur um (je Person fest aus der ID abgeleitet). Läuft in `ensureOffices` für Personal und Bewerber (`offices.js`).
+- Wirkt auch auf die Snus-Kunden (`snus.js` nutzt `avRandom`).
+- **Geprüft** im Testbrowser: 24 neue Bewerber ohne langhaarige Männer, alter Avatar mit Hair 5 wird auf eine kurze Frisur gesetzt. Nicht geprüft: dein Spielstand.
+
+## v234 – Schatten fehlten im Westwald (Hochsitz) bei flacher Sonne
+
+- **Ursache (`gl3d.js`, Sonnenkamera in `updateCamera`):** Die Schattenkamera hatte einen festen Tiefenbereich 1…90, gemessen ab einem Punkt 40 Einheiten vom **Weltursprung** Richtung Sonne. Je weiter das Kamera-Ziel vom Ursprung weg liegt und je flacher die Sonne steht (Morgen, Abend), desto eher lag der Boden hinter der fernen Ebene. Der Shader wertet das als „kein Schatten“. Am Hochsitz im Westwald fehlten bei Morgensonne deshalb alle Schatten (der Turm warf keinen), bis auf Bäume, die näher an der Sonne lagen. Das ergab die scharfe Hell-Dunkel-Grenze quer durchs Bild.
+- **Behoben:** Der Tiefenbereich folgt jetzt dem Ziel: `d0 = −lc[2]`, `ortho(…, max(0.5, d0 − 39), d0 + 50)`. Am Ursprung ergibt das genau den alten Bereich 1…90, in der Nähe des Hofs ändert sich also nichts. Texel-Einrasten und Schattengröße sind unverändert.
+- **Geprüft** im Testbrowser: gleiche Kamera im Westwald (x −75, z −30, Draufsicht, 7:30 Uhr), vorher gar keine Schatten, nachher Turm- und Baumschatten. Nicht geprüft: dein Handy und andere Tageszeiten einzeln.
+
+## v233 – „Streife bei …“ deutlich seltener
+
+- `events.js`, `maybeStreife`: Die Wahrscheinlichkeit pro Snus-Lieferung sinkt von 30 % auf 8 %. Dazu gilt eine Sperre von 3 Spieltagen nach der letzten Streife (`snusState().lastStreife`). Erwartung: statt fast jeder dritten Fahrt etwa jede zwölfte, und nie zweimal in kurzer Folge. Der Ausgang der Entscheidung (35 % Risiko beim Weiterfahren) ist unverändert.
+
+## v232 – Nach der Mittagspause auf dem Weg bleiben, Figuren laufen nicht ineinander
+
+- **Ursache (Querlauf nach der Pause):** Das Aufstehen vom Lagerfeuer dauert gut eine Sekunde (`staffRise`). Die Uhr der nächsten Arbeit lief dabei schon, und die Figur hing danach hinter ihrer Route zurück. In `stepStaff` holte sie dann in gerader Linie auf – quer durch Bäume, Zäune und Felsen. Das betraf alle Berufe, am auffälligsten bei der Fischerin mit ihrem langen Weg.
+- **Behoben (`team.js`):** (1) Beim Aufstehen läuft die Uhr der Folgearbeit nicht weiter (`gdt`, `j.t0/t1` werden verschoben). (2) Wer hinter der Route zurückhängt, holt jetzt **entlang der Route** auf (`staffFollow`, `routeProject`, `staffRouteDist`; 12 Einheiten/s), nicht mehr in Luftlinie. Nur wenn die Figur weiter als 3 Einheiten vom Weg entfernt ist, gilt wie bisher die direkte Bewegung.
+- **Abstand (`team.js`, `STAFF_GAP` = 0,8):** Zwei Figuren, die sich näher kommen, weichen seitlich aus (sanft, höchstens 0,7 Einheiten; wer läuft, weicht stärker aus als wer steht). Ausgenommen: Sitzende, aufstehende Figuren, das Ablegen/Aufnehmen an der Werkzeugplane und alles auf dem Lagerplatz. Gerade nach Mittagsende laufen viele gleichzeitig los, dort greift die Regel am meisten.
+- **Geprüft** nur im Testbrowser mit nachgestellten Figuren: Aufholen folgt der Routenecke, zwei Figuren am selben Punkt stehen danach 0,84 auseinander. Nicht geprüft: das echte Mittagsende mit allen Berufen auf dem Handy.
+
+## v231 – Papierkorb auf der Bestelltafel zuverlässig und einheitlich
+
+- **Fehler:** Das ✕ der Bestelltafel (`.fs-x`, `position:sticky`) schwebte beim Scrollen über den Karten. Wo ein Papierkorb darunter lag, traf der Finger das ✕ und schloss das Fenster. Auf der Tafel ist das ✕ jetzt nicht mehr sticky (`#farmSheet.orders .fs-x{position:relative}`).
+- **Robuster:** `dropGo` zeichnet die Liste immer neu, auch wenn `save()` oder `renderFarmUI()` einen Fehler werfen. Vorher blieb die Karte dann stehen, obwohl der Auftrag schon weg war. Die Knöpfe sind größer (46×40) und haben `touch-action: manipulation`.
+- **Einheitlich:** Der Zurückgeben-Knopf angenommener Aufträge (`data-ret`) zeigt jetzt auch 🗑️ statt ↩︎. Das Rückfrage-Fenster bleibt.
+- **Geprüft** nur im Testbrowser mit Touch-Eingabe. Auf dem Handy konnte ich den Fehler nicht nachstellen, die Ursache ist deshalb eine begründete Annahme.
+
+## v230 – Firmensitz nach Übernahme geht nicht mehr verloren
+
+- **Fehler:** In `corpClose` (corp.js) wurde der Firmensitz einer übernommenen Firma sofort für 18 % des Preises verkauft, wenn sein Ort noch gesperrt war (z. B. Hamburg in Etappe 2) oder kein Standortplatz frei war (`maxBases() = S.stage`). Wer danach die Etappe freischaltete, hatte den Platz, aber das Büro war schon weg.
+- **Neu:** Der Sitz wird samt Mitarbeitern in `S.corp.hq[id]` vorgemerkt. `corpHqOpen(id)` macht daraus ein Büro, sobald der Ort freigeschaltet und ein Platz frei ist (Fahrzeuge der Firma werden zugeordnet). `corpHqTry()` läuft im Tick, nach `unlockStage` und beim Laden. Steht am Ort schon ein eigenes Büro, wird der Sitz wie früher verkauft.
+- **Rückwirkend:** `corpHqRepair()` legt für jede alte Übernahme ohne Büro am Firmensitz (`C.owned[id].hq` fehlt) einen vorgemerkten Sitz an. Er öffnet sich von selbst, sobald ein Platz frei ist. Der damalige Verkaufserlös bleibt als Entschädigung. Neue Übernahmen tragen `hq: 1`.
+- **Anzeige:** Im Übernahme-Dialog steht jetzt „vorgemerkt“ statt „Erlös aus Verkauf“. Im Büros-Tab zeigt ein Hinweis vorgemerkte Sitze. `game.js`: Hooks in `tick`, `unlockStage`, `boot`.
+
 ## v229 – Keine Lackierung für Leasingfahrzeuge, Hofaufträge nur noch für Hofarbeiter
 
 - **Lackierung (`livery.js`):** Neu ist `canPaint(f)`: `paintable(vType(f.type)) && !f.lease`. Das gilt überall, wo Fahrzeuge lackiert oder gezählt werden: Einzel-Button, „Flotte lackieren“, Lackierung ab Werk (`onAcquire`), Zähler im Fenster. `painted(f)` ist für Leasingfahrzeuge immer false, auch bei alten Spielständen mit gesetztem `f.liv`. Sie fahren also im Originallack und zählen nicht für den +2 %-Bonus. Der Hinweis im Fenster lautet „Sondereditionen und Leasingfahrzeuge bleiben im Original.“

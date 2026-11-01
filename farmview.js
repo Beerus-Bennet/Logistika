@@ -64,8 +64,9 @@ function farmDOM() {
     S.orders = S.orders.filter(x => x !== o);
     S.farm.lastOrd = S.time - 15;
     sfx("pop"); toast("🗑️ „" + o.shipper + "“ abgelehnt.", "");
-    save(); renderFarmUI();
-    if (FV.sheet === "orders" && FV.dropAgain) FV.dropAgain();
+    /* v231: Die Liste wird immer neu gezeichnet – auch wenn beim Speichern oder in der Anzeige etwas hakt */
+    try { save(); renderFarmUI(); } catch (err) { console.warn("Ablehnen", err); }
+    try { if (FV.sheet === "orders" && FV.dropAgain) FV.dropAgain(); } catch (err) { console.warn("Ablehnen", err); }
     return true;
   };
   $("#farmSheet").addEventListener("pointerup", e => {
@@ -2372,10 +2373,12 @@ function openFarmOrders(sendFor, area) {
         : `<div class="fs-empty">Kein freies Fahrzeug schafft das gerade (Gewicht ${kgf(o.weight)}, ${km} km${N[o.to].modes.includes("b") ? "" : ", nur auf der Straße"}). Im Markt gibt es mehr.</div>`}</div>`;
       FV.sendOpts = opts;
     }
-    const miss = ready ? "" : `<span class="fo-miss">fehlt: ${farmMissing(o.farm.items).map(m => famt(m.id, m.need) + " " + icHTML(m.id)).join(" ")}</span>`;
+    const clash = ready && typeof farmFavClash === "function" ? farmFavClash(o) : [];
+    const miss = ready ? (clash.length ? `<span class="fo-miss fav">⭐ für Favorit reserviert: ${clash.map(id => icHTML(id)).join(" ")} – dein Team liefert das nicht aus</span>` : "")
+      : `<span class="fo-miss">fehlt: ${farmMissing(o.farm.items).map(m => famt(m.id, m.need) + " " + icHTML(m.id)).join(" ")}</span>`;
     const btns = o.acc
-      ? `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : miss}${o.tutF ? "" : `<button class="btn tiny ghost" data-ret="${o.id}" title="Zurückgeben">↩︎</button>`}`
-      : `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` : ""}<button class="btn tiny acc" data-acc="${o.id}">✓ Annehmen</button>${o.tutF ? "" : `<button class="btn tiny ghost" data-drop="${o.id}" title="Ablehnen">🗑️</button>`}`;
+      ? `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` + miss : miss}${o.tutF ? "" : `<button class="btn tiny ghost" data-ret="${o.id}" title="Auftrag zurückgeben" aria-label="Auftrag zurückgeben">🗑️</button>`}`
+      : `${ready ? `<button class="btn tiny" data-send="${o.id}">🚚 Liefern</button>` + miss : ""}<button class="btn tiny acc" data-acc="${o.id}">✓ Annehmen</button>${o.tutF ? "" : `<button class="btn tiny ghost" data-drop="${o.id}" title="Ablehnen">🗑️</button>`}`;
     const star = `<button class="fo-star${o.fav ? " on" : ""}" data-fav="${o.id}" title="${o.fav ? "Favorit – wird mit höchster Dringlichkeit bearbeitet" : "Als Favorit markieren – das Team zieht den Auftrag vor"}" aria-pressed="${!!o.fav}">${o.fav ? "★" : "☆"}</button>`;
     return `<div class="fo${ready ? " ready" : ""}${o.acc ? " acc" : ""}${o.fav ? " fav" : ""}${sendFor === o.id ? " open" : ""}" data-o="${o.id}">${star}${head}${items}${reward}
       ${!o.acc && !ready ? `<div class="fo-mline">${miss}</div>` : ""}<div class="fo-b">${btns}</div>${send}</div>`;

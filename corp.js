@@ -84,10 +84,108 @@ function corpDay() {
   corpSyncRivals();
   if (typeof logiOn === "function" && !logiOn()) return;
   const C = corp();
+  try { corpBidCheck(); } catch (e) { console.warn("corpBid", e); }   /* v241: unter 30 % kommen Kaufangebote */
   if (!corpLead()) { C.leadSince = 0; return; }
   if (!C.leadSince) C.leadSince = S.time;
   const big = activeRivals().filter(r => r.wave).length;
   if (S.time - C.leadSince >= CORP_LEAD_DAYS * 1440 && big < 3 && level() >= 5) corpWave();
+}
+/* ================= v241: Übernahmeangebote, wenn du schwächelst =================
+   Fällt dein Marktanteil unter 30 %, meldet sich die stärkste Konkurrentin mit einem Angebot (höchstens alle 6 Tage,
+   es gilt 3 Tage). Zur Wahl: ablehnen, 25 % Beteiligung verkaufen (Geld sofort, dafür ein Viertel jedes Monatsgewinns
+   an sie, bis du zurückkaufst) oder die ganze Spedition verkaufen (große Einmalzahlung, Neustart in Etappe 1;
+   Hof, Erbe, Garage und Geld bleiben). */
+const CORP_BID_SHARE = 0.30, CORP_BID_GAP = 6, CORP_STAKE = 0.25;
+function corpMyValue() {
+  const veh = S.fleet.filter(f => !f.lease && !vType(f.type).special && !f.garage).reduce((a, f) => a + vehValue(f), 0);
+  const bases = (S.bases || []).reduce((a, b) => a + (b.rent ? 0 : buyPrice(b.node, OFFICE_TIERS[b.tier]) * 0.6) + b.staff.length * 900 * stageK(), 0);
+  const sh = shares().me || 0, good = (veh + bases) * (0.25 + sh) + 30000 * stageK();
+  return roundK(veh + bases + good, 1000);
+}
+function corpBidOpen() { return (S.phone && S.phone.msgs || []).some(m => m.dec && m.dec.type === "buyout" && !m.dec.done); }
+function corpBidCheck() {
+  if (level() < 5 || !S.player || (typeof tutorialRunning === "function" && tutorialRunning())) return;
+  const C = corp(), raw = shareState();
+  const tot = Object.keys(raw).reduce((a, k) => a + (raw[k] || 0), 0);
+  if (tot < 6) return;                                         /* zu wenig Geschäft, um etwas zu messen */
+  const sh = shares();
+  if ((sh.me || 0) >= CORP_BID_SHARE || corpBidOpen() || S.time < (C.bidNext || 0)) return;
+  const top = activeRivals().map(r => ({ r, n: sh[r.id] || 0 })).sort((a, b) => b.n - a.n)[0];
+  if (!top || top.n <= (sh.me || 0)) return;
+  const r = top.r, c = CORP[r.id]; if (!c) return;
+  const val = corpMyValue();
+  const full = roundK(val * rnd(0.95, 1.12), 1000), part = roundK(val * CORP_STAKE * rnd(1.05, 1.2), 1000);
+  C.bidNext = S.time + CORP_BID_GAP * 1440; C.bids = (C.bids || 0) + 1;
+  const ch = [{ k: "no", label: "Ablehnen", sub: "Wir bleiben unabhängig" }];
+  if (!S.stake) ch.push({ k: "stake", label: Math.round(CORP_STAKE * 100) + " % Beteiligung verkaufen", sub: "+" + money(part) + " sofort · " + Math.round(CORP_STAKE * 100) + " % jedes Monatsgewinns an " + r.name + ", Rückkauf jederzeit" });
+  ch.push({ k: "all", label: "Ganze Spedition verkaufen", sub: "+" + money(full) + " · Flotte, Büros, Aufträge gehen weg – Neustart in Etappe 1" });
+  decisionMsg({ from: c.boss + " · " + r.name, kind: "call", icon: "🤝", type: "buyout", brake: false,
+    title: r.name + " will " + S.player.company + " kaufen",
+    toast: "🤝 Kaufangebot von " + r.name,
+    body: `„Ihr Marktanteil liegt nur noch bei ${Math.round((sh.me || 0) * 100)} %. Wir machen Ihnen ein faires Angebot, solange Ihre Firma noch etwas wert ist.“ Firmenwert laut ${r.name}: ${money(val)}.`,
+    choices: ch, def: 0, wait: 3 * 1440, ctx: { id: r.id, full, part } });
+}
+DECISIONS.buyout = {
+  choose(m, idx) {
+    const c = m.dec.choices[idx], x = m.dec.ctx, r = rivalById(x.id);
+    if (!c || !r) return "Hat sich erledigt.";
+    if (c.k === "no") return "Abgelehnt – " + S.player.company + " bleibt unabhängig.";
+    if (c.k === "stake") {
+      if (S.stake) return "Es gibt schon eine Beteiligung.";
+      S.stake = { id: x.id, name: r.name, pct: CORP_STAKE, paid: x.part, at: S.time };
+      S.money += x.part; S.revenue += x.part; logMoney("corp", Math.round(CORP_STAKE * 100) + " % Beteiligung an " + r.name, x.part);
+      toast("🤝 " + r.name + " hält jetzt " + Math.round(CORP_STAKE * 100) + " % – +" + money(x.part), "ok");
+      save(); render();
+      return "Beteiligung verkauft: +" + money(x.part) + ". " + r.name + " bekommt " + Math.round(CORP_STAKE * 100) + " % jedes Monatsgewinns.";
+    }
+    setTimeout(() => askConfirm("Ganze Spedition an " + r.name + " verkaufen?",
+      "Du bekommst " + money(x.full) + ". Alle Speditionsfahrzeuge, Büros, Mitarbeiter und laufenden Aufträge gehen an " + r.name + ", du beginnst wieder in Etappe 1. Hof, Erbe, Garage, Level und Geld bleiben. Das lässt sich nicht rückgängig machen.",
+      "Verkaufen", () => corpSellAll(x.id, x.full), true), 250);
+    return "Komplettverkauf – wartet auf deine Bestätigung.";
+  }
+};
+function corpSellAll(id, price) {
+  const r = rivalById(id); if (!r) return;
+  const farmJob = f => f.jobId && S.jobs.some(j => j.id === f.jobId && j.order && j.order.farm);
+  const keep = f => vType(f.type).special || farmJob(f) || (!f.jobId && typeof FARM_NODE !== "undefined" && f.at === FARM_NODE && !f.lease);
+  /* Garagenautos, die als Wertkurier fuhren, kommen zurück in die Garage */
+  S.fleet.filter(f => f.garage && !farmJob(f)).forEach(f => { const g = typeof garageById === "function" && garageById(f.garage); if (g) delete g.fleet; });
+  const gone = S.fleet.filter(f => !keep(f) || (f.garage && !farmJob(f)));
+  if (S.follow && gone.some(f => f.uid === S.follow)) setFollow(null);
+  S.fleet = S.fleet.filter(f => !gone.includes(f));
+  S.jobs = S.jobs.filter(j => j.order && j.order.farm);
+  S.orders = S.orders.filter(o => o.farm);
+  S.bases = [];
+  S.share = { me: 0 };
+  S.stake = null;
+  const C = corp(); C.leadSince = 0; C.bidNext = S.time + 14 * 1440;
+  S.money += price; S.revenue += price;
+  logMoney("corp", "Verkauf der Spedition an " + r.name, price);
+  S.stage = 1;
+  clearRouteCache(); buildNetBuffers();
+  spawnOrders(6);
+  phoneMsg({ from: r.name, kind: "info", title: "Übernahme abgeschlossen",
+    body: `${r.name} hat die Spedition übernommen: ${gone.length} Fahrzeuge, alle Büros und Aufträge. Auf deinem Konto: +${money(price)}. Du startest wieder in Etappe 1 – mit Kapital im Rücken.` });
+  toast("🤝 Spedition verkauft: +" + money(price) + " · Neustart in Etappe 1", "ok");
+  save(); render();
+}
+/* Rückkauf der Beteiligung: Wert heute (Anteil am Firmenwert), mindestens der Verkaufspreis + 10 % */
+function corpStakePrice() { return S.stake ? Math.max(roundK(S.stake.paid * 1.1, 1000), roundK(corpMyValue() * S.stake.pct, 1000)) : 0; }
+function corpStakeBack() {
+  if (!S.stake) return;
+  const p = corpStakePrice();
+  if (S.money < p) return toast("Für den Rückkauf fehlen " + money(p - S.money) + ".", "warn");
+  askConfirm("Beteiligung zurückkaufen?", S.stake.name + " gibt die " + Math.round(S.stake.pct * 100) + " % für " + money(p) + " zurück. Danach gehört dein Gewinn wieder ganz dir.", "Zurückkaufen", () => {
+    S.money -= p; S.expense += p; logMoney("corp", "Rückkauf Beteiligung von " + S.stake.name, -p);
+    toast("🤝 Beteiligung zurückgekauft – " + S.player.company + " gehört wieder dir allein.", "ok");
+    S.stake = null; save(); render();
+  });
+}
+function corpStakeHTML() {
+  if (!S.stake) return "";
+  return `<div class="corp-lead off"><b>🤝 ${esc(S.stake.name)} hält ${Math.round(S.stake.pct * 100)} % deiner Spedition</b>
+    <small>Jeden Monat gehen ${Math.round(S.stake.pct * 100)} % des Gewinns nach Steuern an sie.</small>
+    <button class="btn tiny" style="margin-top:6px" onclick="corpStakeBack()">Zurückkaufen · ${money(corpStakePrice())}</button></div>`;
 }
 /* Firmensitz der Konzerne: große, freigeschaltete Orte (neueste Region zuerst) */
 function corpWaveHQ(taken) {
@@ -238,7 +336,7 @@ function renderCorp(note) {
       <div><small>Firmensitz</small><b>${esc(N[c.hq].short)} · ${OFFICE_TIERS[c.tier].name}</b></div>
     </div>
     <div class="lim">${t.done ? "✔ Übernommen – Flotte, Firmensitz und Marktanteil gehören jetzt " + esc(S.player.company) + "."
-      : "Du bekommst: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro + " + (c.wave ? 2 + Math.min(2, c.wave) : 2) + " Leute," : "Erlös aus Verkauf des Firmensitzes,") + " " + (c.wave ? 2 + c.wave : 2) + " Stammkunden, Marktanteil, +" + (c.wave ? 5 : 3) + " Ruf."}</div>
+      : "Du bekommst: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro + " + (c.wave ? 2 + Math.min(2, c.wave) : 2) + " Leute," : "Firmensitz samt Leuten (vorgemerkt – wird dein Büro, sobald Etappe und Standortplatz da sind),") + " " + (c.wave ? 2 + c.wave : 2) + " Stammkunden, Marktanteil, +" + (c.wave ? 5 : 3) + " Ruf."}</div>
     <div class="nego-chat corp-chat">${t.chat.map(m => `<div class="bub ${m.me ? "out" : "in"}">${esc(m.t)}</div>`).join("")}</div>
     ${note ? `<div class="lotm-msg">${esc(note)}</div>` : ""}
     ${t.done ? "" : `<div class="lotm-box">
@@ -307,6 +405,76 @@ function corpOffer(id, amount, takeAsk) {
         `Ehrlich, das kränkt mich. So wenig soll ${r.name} wert sein? Dann verlange ich jetzt aus Prinzip mehr: ${money(t.ask)}. Nehmen Sie es oder lassen Sie es.`]) });
   save(); renderCorp();
 }
+/* ===== v230: Firmensitz einer übernommenen Firma – vorgemerkt statt verkauft ===== */
+function corpHqStaff(r, W) {
+  const roles = ["disp", "fahr", "disp", "fahr"].slice(0, W ? 2 + Math.min(2, W) : 2), out = [];
+  roles.forEach(role => {
+    const p = makeCandidate(false); p.role = role; p.skill = clamp(Math.round(W ? rnd(3, 5) : rnd(2, 4.4)), 2, 5);
+    p.wage = Math.round(ROLES[role].wage * (0.62 + p.skill * 0.19));
+    out.push({ id: p.id, name: p.name, role, skill: p.skill, wage: p.wage, trait: "war vorher bei " + r.name, av: p.av, since: S.time, jobs: 0 });
+  });
+  return out;
+}
+/* Macht aus einem vorgemerkten Firmensitz ein Büro – wenn Etappe und Platz es erlauben. Gibt das Büro zurück oder null. */
+function corpHqOpen(id, silent) {
+  const C = corp(), p = C.hq && C.hq[id], c = CORP[id], r = rivalById(id);
+  if (!p || !c || !r) return null;
+  if (!isUnlocked(c.hq)) return null;
+  ensureOffices();
+  if (baseAtNode(c.hq)) {                    /* dort steht schon ein eigenes Büro → Sitz wie früher verkaufen */
+    const cash = roundK((C.owned[id] ? C.owned[id].price : 30000) * 0.18, 1000);
+    S.money += cash; S.revenue += cash; logMoney("corp", "Verkauf Firmensitz " + r.name, cash);
+    delete C.hq[id];
+    phoneMsg({ from: c.boss, kind: "info", title: "Firmensitz " + r.name + " verkauft", body: `An diesem Ort hast du schon ein Büro – der Firmensitz ging für ${money(cash)} weg.` });
+    return null;
+  }
+  if (S.bases.length >= maxBases()) return null;
+  const W = c.wave || 0;
+  const b = { id: "S" + (S.seq++), node: c.hq, tier: c.tier, rent: false, staff: p.staff || [], vehicles: [], mood: W ? 80 : 70, opened: S.time, done: 0,
+    nextAt: S.time + 30, pausedUntil: 0, pool: null, poolDay: -1, rentDue: S.time + 30 * 1440,
+    deco: { floor: "beton", tint: "natur", wall: "weiss", kitchen: "keine", plants: [] } };
+  if (!b.staff.length) b.staff = corpHqStaff(r, W);
+  const slots = OFFICE_TIERS[b.tier].slots;
+  S.fleet.forEach(v => {
+    if (b.vehicles.length >= slots || !v.foreign || v.foreign.id !== id || baseOfVehicle(v.uid)) return;
+    if (!N[c.hq].modes.includes(vType(v.type).mode)) return;
+    v.at = c.hq; b.vehicles.push(v.uid);
+  });
+  S.bases.push(b);
+  delete C.hq[id];
+  refreshPool(b);
+  if (perks().hhAll && typeof luckyHeadFor === "function") luckyHeadFor(b);
+  if (!silent) {
+    phoneMsg({ from: c.boss, kind: "good", title: "Firmensitz " + r.name + " ist jetzt dein Büro",
+      toastText: "🏢 Firmensitz " + N[c.hq].short + " ist jetzt dein Büro!",
+      body: `Der Firmensitz von ${r.name} in ${N[c.hq].name} gehört jetzt zu ${S.player.company}: ${OFFICE_TIERS[b.tier].name}, ${b.staff.length} Leute und ${b.vehicles.length} Fahrzeuge.` });
+    save(); render();
+  }
+  return b;
+}
+/* Alte Spielstände: Firmen, deren Sitz damals verkauft wurde, bekommen ihn nachträglich zurück (einmalig, Verkaufserlös bleibt als Entschädigung). */
+function corpHqRepair() {
+  const C = S.corp; if (!C || !C.owned) return;
+  C.hq = C.hq || {};
+  let n = 0;
+  Object.keys(C.owned).forEach(id => {
+    const o = C.owned[id], c = CORP[id], r = rivalById(id);
+    if (!o || o.hq || !c || !r) return;
+    o.hq = 1;
+    if (baseAtNode(c.hq) || C.hq[id]) return;
+    C.hq[id] = { staff: corpHqStaff(r, c.wave || 0), legacy: true }; n++;
+  });
+  if (n) save();
+}
+/* Läuft regelmäßig und nach jeder Etappe: vorgemerkte Firmensitze öffnen, sobald es geht. */
+function corpHqTry() {
+  if (!S.corp) return;
+  if (S.corp.owned && Object.values(S.corp.owned).some(o => !o.hq)) corpHqRepair();
+  const ids = Object.keys(S.corp.hq || {});
+  if (!ids.length) return;
+  const had = S.bases.length;
+  for (const id of ids) { if (S.bases.length >= maxBases()) break; const legacy = (S.corp.hq[id] || {}).legacy; const b = corpHqOpen(id, false); if (b && legacy) toast("↩️ Rückwirkend: der damals verkaufte Firmensitz ist wieder da.", "ok"); }
+}
 function corpClose(id, price) {
   const C = corp(), r = rivalById(id), c = CORP[id], W = c.wave || 0;
   const pct = Math.round((shares()[id] || 0) * 100);            /* v170: für die Show – wie viel Markt du gerade geschluckt hast */
@@ -328,32 +496,20 @@ function corpClose(id, price) {
     v.foreign = { id, col: r.col };
     S.fleet.push(v); got.push(v);
   }
-  /* Firmensitz: als Büro übernehmen – oder verkaufen */
+  /* v230: Der Firmensitz wird NIE mehr sofort verkauft. Ist die Etappe noch gesperrt oder kein Standortplatz frei,
+     bleibt er vorgemerkt (samt Leuten) und geht von selbst als Büro auf, sobald beides passt. */
   let baseTxt, hqChip, staffN = 0;
-  if (at && (S.bases || []).length < maxBases() && !baseAtNode(at)) {
-    ensureOffices();
-    const b = { id: "S" + (S.seq++), node: at, tier: c.tier, rent: false, staff: [], vehicles: [], mood: W ? 80 : 70, opened: S.time, done: 0,
-      nextAt: S.time + 30, pausedUntil: 0, pool: null, poolDay: -1, rentDue: S.time + 30 * 1440,
-      deco: { floor: "beton", tint: "natur", wall: "weiss", kitchen: "keine", plants: [] } };
-    const roles = ["disp", "fahr", "disp", "fahr"].slice(0, W ? 2 + Math.min(2, W) : 2);
-    roles.forEach(role => {
-      const p = makeCandidate(false); p.role = role; p.skill = clamp(Math.round(W ? rnd(3, 5) : rnd(2, 4.4)), 2, 5);
-      p.wage = Math.round(ROLES[role].wage * (0.62 + p.skill * 0.19));
-      b.staff.push({ id: p.id, name: p.name, role, skill: p.skill, wage: p.wage, trait: "war vorher bei " + r.name, av: p.av, since: S.time, jobs: 0 });
-    });
-    staffN = b.staff.length;
-    got.forEach(v => { if (b.vehicles.length < OFFICE_TIERS[b.tier].slots && v.at === at) b.vehicles.push(v.uid); });
-    S.bases.push(b);
-    refreshPool(b);
-    if (perks().hhAll && typeof luckyHeadFor === "function") luckyHeadFor(b);
-    baseTxt = `Firmensitz ${N[at].name} ist jetzt dein ${OFFICE_TIERS[b.tier].name} – ${staffN} Leute bleiben.`;
-    hqChip = `🏢 ${OFFICE_TIERS[b.tier].name} in ${N[at].short}`;
+  const hqSt = corpHqStaff(r, W);
+  staffN = hqSt.length;
+  corp().hq = corp().hq || {};
+  corp().hq[id] = { staff: hqSt };
+  const nb = corpHqOpen(id, true);
+  if (nb) {
+    baseTxt = `Firmensitz ${N[c.hq].name} ist jetzt dein ${OFFICE_TIERS[nb.tier].name} – ${staffN} Leute bleiben.`;
+    hqChip = `🏢 ${OFFICE_TIERS[nb.tier].name} in ${N[c.hq].short}`;
   } else {
-    const cash = roundK(price * 0.18, 1000);
-    S.money += cash; S.revenue += cash;
-    logMoney("corp", "Verkauf Firmensitz " + r.name, cash);
-    baseTxt = `Den Firmensitz haben wir verkauft: ${money(cash)}.`;
-    hqChip = `🏢 Firmensitz verkauft · +${money(cash)}`;
+    baseTxt = `Der Firmensitz in ${N[c.hq].name} ist für dich vorgemerkt – ${staffN} Leute warten dort. Er wird automatisch dein Büro, sobald ${isUnlocked(c.hq) ? "ein Standortplatz frei ist (nächste Etappe)" : "die Etappe freigeschaltet ist"}.`;
+    hqChip = `🏢 Firmensitz vorgemerkt · ${N[c.hq].short}`;
   }
   /* v170: Stammkunden der Konkurrentin wechseln zu dir – gut bezahlte Aufträge sofort im Auftragsbuch */
   let cust = 0;
@@ -365,7 +521,8 @@ function corpClose(id, price) {
   }
   if (cust) renderDirty = true;
   if (typeof repAdd === "function") repAdd(S.stage, W ? 5 : 3);
-  C.owned[id] = { at: S.time, price, veh: got.length, cust, wave: W };
+  C.owned[id] = { at: S.time, price, veh: got.length, cust, wave: W, hq: 1 };
+  if (S.stake && S.stake.id === id) S.stake = null;   /* v241: die Beteiligung gehört jetzt wieder dir */
   phoneMsg({ from: c.boss, kind: "good", title: r.name + " gehört jetzt zu " + S.player.company,
     toastText: "🦈 Übernahme: " + r.name + " gehört dir!",
     body: `${W ? "„Sie haben uns geschlagen. Respekt.“ " : ""}Unterschrieben! ${got.length} Fahrzeuge fahren jetzt für Sie – umlackieren unter „Flotte“. ${baseTxt}${cust ? " " + cust + " Stammkunden wechseln zu Ihnen." : ""}` });

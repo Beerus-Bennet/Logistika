@@ -854,7 +854,11 @@ const G3 = (() => {
       lookAt(L, [sd[0] * 40, sd[1] * 40, sd[2] * 40], [0, 0, 0], [0, 1, 0]);
       const lc = xf(L, [c.tx, 0, c.tz]);
       const px = Math.round(lc[0] / tex) * tex, py = Math.round(lc[1] / tex) * tex;
-      ortho(Pr, px - s, px + s, py - s, py + s, 1, 90);
+      /* v234: Tiefenbereich der Sonnenkamera folgt dem Ziel. Vorher fest 1…90 ab einem Punkt 40 Einheiten vor dem Weltursprung –
+         weit weg vom Ursprung (z. B. am Hochsitz im Westwald, vor allem bei flacher Morgensonne) lag der Boden jenseits der fernen Ebene,
+         und dort gab es plötzlich gar keine Schatten (scharfe Grenze quer durchs Bild). */
+      const d0 = -lc[2];
+      ortho(Pr, px - s, px + s, py - s, py + s, Math.max(0.5, d0 - 39), d0 + 50);
       mul(R.LVP, Pr, L);
     }
     R.updateCamera = updateCamera;

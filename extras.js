@@ -108,11 +108,24 @@ function bindDecisionMsgs(root) {
 }
 
 /* ------------------------- Eingehender Anruf -------------------------- */
+/* v236: Nicht stören – solange man schießt, angelt, sägt, ein Minispiel spielt oder sonst voll beschäftigt ist, kommen keine Anrufe,
+   Einladungen, Zufallsereignisse oder Konzern-Meldungen dazwischen. Offene Entscheidungen warten (ihre Frist läuft nicht ab),
+   neue Ereignisse werden erst danach gewürfelt. */
+function uiBusy() {
+  const b = document.body.classList;
+  if (b.contains("fphunt") || b.contains("fp3d") || b.contains("hammer-open") || b.contains("customs-open") || b.contains("pack-open") || b.contains("lucky-open")) return true;
+  const a = document.getElementById("farmAngel");
+  return !!(a && a.firstElementChild && a.offsetParent !== null);   /* Angeln, Sägen, Minispiele */
+}
+function busyFreeze(dtMin) {
+  pendingDecisions().forEach(m => { m.dec.until += dtMin; });
+  if (typeof vipState === "function") { const v = vipState(); if (v.open) v.open.rsvp += dtMin; }
+}
 let callState = null;
 const callQueue = [];
 function queueCall(id) { if (!callQueue.includes(id)) callQueue.push(id); }
 function tickCalls() {
-  if (callState || !callQueue.length) return;
+  if (callState || !callQueue.length || uiBusy()) return;
   if (typeof walletOpen === "function" && walletOpen()) return;
   if (["invite-open", "pack-open", "lucky-open", "hammer-open", "customs-open"].some(c => document.body.classList.contains(c))) return;
   const id = callQueue.shift();
@@ -353,19 +366,53 @@ function loanDay() {
 
 /* ========================= Monatsabschluss ============================ */
 const TAX_RATE = 0.30;
+/* v237: Autohandel steuerlich wie ein Händler – ein ersteigertes Auto (Kaufpreis + Aufgeld) ist Handelsware und wird erst
+   beim Verkauf als Wareneinsatz abgesetzt (S.taxAdj). Versteuert wird so nur der Gewinn aus dem Handel, nicht der Umsatz.
+   Verluste eines Monats werden vorgetragen (S.taxLoss) und mindern die Steuern der Folgemonate. */
+function taxWare(paid, label) {
+  if (!(paid > 0)) return;
+  (S.taxAdj = S.taxAdj || []).push({ t: S.time, a: Math.round(paid), l: label || "Wareneinsatz Autohandel" });
+}
+function taxSums(from) {
+  let inc = 0, exp = 0, carInc = 0, carExp = 0;
+  (S.ledger || []).forEach(e => {
+    if (from != null && e.t < from) return;
+    if (SHADOW_KINDS.has(e.k) || e.nt) return;
+    if (e.a >= 0) inc += e.a; else exp -= e.a;
+    if (e.k === "auction" && e.a > 0) carInc += e.a;
+  });
+  (S.taxAdj || []).forEach(x => { if (from == null || x.t >= from) { exp += x.a; carExp += x.a; } });
+  return { inc, exp, net: inc - exp, carInc, carExp };
+}
+/* Was davon zu versteuern ist (nach Verlustvortrag) */
+function taxBase(net) {
+  const loss = S.taxLoss || 0;
+  if (net <= 0) return { base: 0, used: 0, loss: loss - net };
+  const used = Math.min(loss, net);
+  return { base: net - used, used, loss: loss - used };
+}
 function taxDay() {
   if (!S.taxFrom && S.taxFrom !== 0) S.taxFrom = S.time;
   if (S.time - S.taxFrom < 30 * 1440) return;
-  const sums = ledgerSums(S.taxFrom);            /* nur die offiziellen Bücher */
-  const tax = Math.round(Math.max(0, sums.net) * TAX_RATE);
+  const sums = taxSums(S.taxFrom);               /* nur die offiziellen Bücher, Autohandel als Wareneinsatz */
+  const tb = taxBase(sums.net);
+  const tax = Math.round(tb.base * TAX_RATE);
+  S.taxLoss = Math.round(tb.loss);
   const month = (S.taxHist = S.taxHist || []).length + 1;
-  S.taxHist.unshift({ month, inc: sums.inc, exp: sums.exp, net: sums.net, tax, t: S.time });
+  S.taxHist.unshift({ month, inc: sums.inc, exp: sums.exp, net: sums.net, tax, t: S.time, vv: tb.used, car: sums.carInc - sums.carExp });
   if (S.taxHist.length > 12) S.taxHist.length = 12;
+  S.taxAdj = (S.taxAdj || []).filter(x => x.t >= S.time);
   S.taxFrom = S.time;
   if (tax > 0) payOut(tax, "tax", "Steuern Monat " + month);
+  /* v241: Beteiligung – ihr Anteil am Gewinn nach Steuern */
+  let stakeTxt = "";
+  if (S.stake && sums.net - tax > 0) { const g = Math.round((sums.net - tax) * S.stake.pct); payOut(g, "corp", "Gewinnanteil " + S.stake.name); stakeTxt = ` ${S.stake.name} erhält ${Math.round(S.stake.pct * 100)} % Gewinnanteil: ${money(g)}.`; }
+  const car = sums.carInc || sums.carExp ? ` Autohandel: ${money(sums.carInc)} Erlös, ${money(sums.carExp)} Wareneinsatz.` : "";
   if (lively()) phoneMsg({ from: "Steuerbüro Kranz & Partner", kind: "info", title: "Monatsabschluss " + month,
-    body: `Ergebnis ${money(sums.net)} (Einnahmen ${money(sums.inc)}, Ausgaben ${money(sums.exp)}). `
-      + (tax > 0 ? `${Math.round(TAX_RATE * 100)} % Steuern: ${money(tax)} – abgebucht.` : "Kein Gewinn, keine Steuern.") });
+    body: `Ergebnis ${money(sums.net)} (Einnahmen ${money(sums.inc)}, Ausgaben ${money(sums.exp)}).${car} `
+      + (tb.used ? `Verlustvortrag verrechnet: ${money(tb.used)}. ` : "")
+      + (tax > 0 ? `${Math.round(TAX_RATE * 100)} % Steuern: ${money(tax)} – abgebucht.` : sums.net < 0 ? `Kein Gewinn, keine Steuern – ${money(-sums.net)} Verlust werden vorgetragen.` : "Keine Steuern fällig.")
+      + (S.taxLoss > 0 ? ` Verlustvortrag jetzt ${money(S.taxLoss)}.` : "") + stakeTxt });
 }
 
 /* =============================== Ruf ================================== */
@@ -450,6 +497,7 @@ function tickExtras(dtMin) {
   if (!linaAsked && lively() && level() >= 2 && !(S.tutSeen && S.tutSeen.extras) && typeof linaTalk === "function" && !(typeof logiOn === "function" && !logiOn())) {
     linaAsked = true; setTimeout(() => linaTalk("extras"), 1200);
   }
+  if (uiBusy()) { busyFreeze(dtMin || 0); return; }   /* v236: nicht stören */
   tickDecisions();
   tickCalls();
   if (typeof tickEvents === "function") tickEvents(dtMin);
@@ -487,7 +535,7 @@ function economyHTML() {
          <b>${money(o.amount)}</b><small>${money(o.daily)} täglich</small><small>Zinsen ${money(o.total - o.amount)}</small></button>`).join("")}</div>`;
   const th = (S.taxHist || [])[0];
   const nextTax = (S.taxFrom || 0) + 30 * 1440;
-  const cur = ledgerSums(S.taxFrom || 0);
+  const cur = taxSums(S.taxFrom || 0), curB = taxBase(cur.net);
   return `
   <div class="card eco">
     <div class="card-top"><div class="vname">⭐ Ruf<small>Pünktlich hebt ihn, Verspätung senkt ihn – guter Ruf = bessere Preise & mehr Einladungen.</small></div></div>
@@ -506,7 +554,8 @@ function economyHTML() {
   </div>
   <div class="card eco">
     <div class="card-top"><div class="vname">🧾 Monatsabschluss<small>Alle 30 Tage: ${Math.round(TAX_RATE * 100)} % Steuern auf den Gewinn der offiziellen Bücher</small></div></div>
-    <div class="meta small"><span>Laufender Monat: ${money(cur.net)} Ergebnis</span><span>≈ ${money(Math.max(0, cur.net) * TAX_RATE)} Steuern</span><span>Abschluss ${stamp(nextTax)}</span></div>
+    <div class="meta small"><span>Laufender Monat: ${money(cur.net)} Ergebnis</span><span>≈ ${money(curB.base * TAX_RATE)} Steuern</span><span>Abschluss ${stamp(nextTax)}</span></div>
+    ${S.taxLoss > 0 || cur.carInc || cur.carExp ? `<div class="meta small">${S.taxLoss > 0 ? `<span>Verlustvortrag ${money(S.taxLoss)}</span>` : ""}${cur.carInc || cur.carExp ? `<span>Autohandel ${money(cur.carInc - cur.carExp)} Gewinn (nach Wareneinsatz)</span>` : ""}</div>` : ""}
     ${th ? `<div class="meta small"><span>Monat ${th.month}: ${money(th.net)} Ergebnis · ${money(th.tax)} Steuern</span></div>` : ""}
   </div>`;
 }

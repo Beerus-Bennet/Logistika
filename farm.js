@@ -1072,15 +1072,25 @@ function makeFarmOrder(area) {
   }
   return null;
 }
+/* v238: Grundwert einer Ware für Bestellungen – was sie im besten Laden bringen würde: Fisch und Reusentiere nach Durchschnittsgewicht,
+   Fischwaren mit dem Fischmarkt-Aufschlag. Bestellungen zahlen darauf 30–50 % plus Liefergebühr – liefern lohnt sich mehr als der Stand. */
+function farmOrderBase(id) {
+  const it = FITEMS[id]; if (!it) return 0;
+  const v = farmQsOn(id) && typeof fishPrice === "function" ? fishPrice(id, null, 3) : it.v;
+  return v * (it.st === "fisch" && typeof FSTALL !== "undefined" ? 1 + FSTALL.premium : 1);
+}
+function farmOrderPay(items, dist, k) {
+  const value = Object.keys(items).reduce((s, id) => s + farmOrderBase(id) * items[id], 0);
+  return Math.max(6, Math.round((value * k + 5 + (dist || 3) * 0.8) * 10) / 10);
+}
 function farmOrderObj(town, cust, items, extra) {
   const w = Math.max(0.3, Math.round(Object.keys(items).reduce((s, id) => s + FITEMS[id].kg * items[id], 0) * 10) / 10);
   const cargo = FSITE.cargo || "hof";
   const pr = plan(FARM_NODE, town, cargo, w, "time");
   if (!pr) return null;
-  const value = Object.keys(items).reduce((s, id) => s + FITEMS[id].v * items[id], 0);
   const dist = pr.dist;
-  /* Warenwert zum Hofladenpreis, dazu Liefergebühr – wie im echten Lieferdienst */
-  const pay = Math.max(4, Math.round((value * rnd(1.05, 1.22) + 2.5 + dist * 0.45) * 10) / 10);
+  /* Warenwert zum besten Ladenpreis plus 30–50 % Aufschlag, dazu Liefergebühr (v238; vorher 5–22 % auf den Hofladenpreis) */
+  const pay = farmOrderPay(items, dist, rnd(1.3, 1.5));
   const xp = Math.round(Object.keys(items).reduce((s, id) => s + FITEMS[id].xp * items[id], 0) * 1.3 + 4 + dist * 0.3);
   const streets = FTOWN_STREETS[town];
   let drop;
@@ -1181,9 +1191,8 @@ const FABO_MIN = 2;
 function farmAboPrice(A) {
   const n = farmAboQty(A), w = Math.max(0.3, FITEMS[A.item].kg * n);
   const pr = typeof plan === "function" ? plan(FARM_NODE, A.town, FSITE.cargo || "hof", w, "time") : null;
-  const value = FITEMS[A.item].v * n;
-  /* v136: Preis folgt der aktuellen Menge (wächst mit), Bonus wächst mit dem Mengenfaktor */
-  return Math.round((Math.max(4, value * 1.13 + 2.5 + (pr ? pr.dist : 0) * 0.45) + farmAboBonus(A)) * 10) / 10;
+  /* v136: Preis folgt der aktuellen Menge (wächst mit), Bonus wächst mit dem Mengenfaktor. v238: Grundwert wie bei Bestellungen, +35 % */
+  return Math.round((farmOrderPay({ [A.item]: n }, pr ? pr.dist : 0, 1.35) + farmAboBonus(A)) * 10) / 10;
 }
 function farmAboBonus(A) { return Math.round(A.bonus * farmAboMigrate(A).mult / FABO_M0); }
 function farmAboCanQuit(A) { return (A.n || 0) >= FABO_MIN; }
@@ -1266,6 +1275,25 @@ function farmAboDelivered(o) {
   if (A) { A.n = (A.n || 0) + 1; A.miss = 0; A.mult = Math.min(FABO_MMAX, farmAboMigrate(A).mult + FABO_MUP); }      /* v136: nächste Lieferung größer */
 }
 function farmOrderReady(o) { return o && o.farm && farmHasAll(o.farm.items); }
+/* v242: Favoriten (★) reservieren ihre Ware – was ein Favorit braucht, darf keine andere Bestellung wegnehmen */
+function farmFavReserve(except) {
+  const r = {};
+  farmOrders().forEach(o => { if (!o.fav || o === except || o.farm.taken) return; for (const id in o.farm.items) r[id] = (r[id] || 0) + o.farm.items[id]; });
+  return r;
+}
+/* fertig UND ohne einem Favoriten etwas wegzunehmen (Favoriten selbst: wie farmOrderReady) */
+function farmOrderReadyFree(o) {
+  if (!farmOrderReady(o)) return false;
+  if (o.fav) return true;
+  const r = farmFavReserve(o);
+  return Object.keys(o.farm.items).every(id => farmInv(id) - (r[id] || 0) >= o.farm.items[id]);
+}
+/* Ware dieser Bestellung, die ein Favorit braucht und die dann fehlen würde */
+function farmFavClash(o) {
+  if (!o || o.fav || !farmOrderReady(o)) return [];
+  const r = farmFavReserve(o);
+  return Object.keys(o.farm.items).filter(id => r[id] && farmInv(id) - r[id] < o.farm.items[id]);
+}
 function farmOrderQ(o) {
   let s = 0, n = 0;
   for (const id in o.farm.items) { s += (farmQ(id) || 3) * o.farm.items[id]; n += o.farm.items[id]; }
@@ -1579,12 +1607,16 @@ function farmMigrate() {
   farmStores().forEach(s => { F.cap[s] = F.cap[s] || 1; });
   /* v46: Backen braucht jetzt Mehl aus der Mühle – Opa hatte noch welches in der Kammer */
   if (!F.flour) { F.flour = 1; if (S.farm.objs.some(o => o.t === "bakery")) farmAdd("mehl", Math.min(6, Math.max(0, farmRoom("mehl"))), 3); }
+  /* v238: Bestellungen neu bepreist – offene Bestellungen (auch angenommene) bekommen mindestens den neuen Preis */
+  if ((F.econ || 0) >= 2 && !F.econ238) {
+    F.econ238 = 1;
+    S.orders.forEach(o => { if (o.farm && o.farm.items && !o.abo) o.pay = Math.max(o.pay, farmOrderPay(o.farm.items, o.refDist, 1.4)); });
+  }
   if (F.econ >= 2) return;
-  F.econ = 2;
+  F.econ = 2; F.econ238 = 1;
   S.orders.forEach(o => {
     if (!o.farm) return;
-    const value = Object.keys(o.farm.items).reduce((s, id) => s + FITEMS[id].v * o.farm.items[id], 0);
-    o.pay = Math.max(4, Math.round((value * 1.12 + 2.5 + (o.refDist || 3) * 0.45) * 10) / 10);
+    o.pay = farmOrderPay(o.farm.items, o.refDist, 1.4);
     o.desc = "Bestellung: " + Object.keys(o.farm.items).map(id => fqty(id, o.farm.items[id])).join(", ");
     o.weight = Math.max(0.3, Math.round(Object.keys(o.farm.items).reduce((s, id) => s + FITEMS[id].kg * o.farm.items[id], 0) * 10) / 10);
   });

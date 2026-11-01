@@ -2245,7 +2245,7 @@ function worldTreasureRevealEnd() {
   Rv.nodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
   WV.trReveal = null;
   if (WV.trChest) WV.trChest.visible = true;
-  worldTreasureCamBack();
+  if (WV.trCamSave) worldTreasureCamBack();   /* v239: meist schon früher zurückgeschwenkt (gleich nach der Show) */
 }
 /* v167: Kamera für die Truhen-Show – steil von oben und aus der Richtung, in der kein Baum, Busch oder Fels
    zwischen Kamera und Grube steht; so ist die Truhe samt Animation immer zu sehen (vorher konnte die Krone eines
@@ -2296,7 +2296,7 @@ function worldTreasureCamBack() {
   const cam = R.cam, from = { yaw: cam.yaw, tx: cam.tx, tz: cam.tz, d: cam.dist, p: FV.camOv ? FV.camOv.pitch : cam.pitch };
   const dy = Math.atan2(Math.sin(S0.yaw - from.yaw), Math.cos(S0.yaw - from.yaw));
   const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
-  const t0 = performance.now(), dur = 1300;
+  const t0 = performance.now(), dur = 700;   /* v239: zügig zurück (vorher 1,3 s) */
   const step = () => {
     if (FV.focusId !== id) { FV.camOv = null; return; }       /* Spieler hat die Kamera selbst übernommen */
     const k = Math.min(1, (performance.now() - t0) / dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -2408,6 +2408,9 @@ function stepTreasureReveal(Rv, dt, time) {
     R.burst({ x, y: 1.0, z, n: 50, speed: 4.8, up: 5.5, life: 1.7, size: 0.22, size2: 0.03, col: TR_GEM, shape: 3, g: -5, drag: 0.5 });
     R.burst({ x, y: 1.0, z, n: 40, speed: 3.4, up: 7.5, life: 1.8, size: 0.14, size2: 0.02, col: [TR_GOLD, [1, 1, 1, 1]], shape: 3, g: -6, drag: 0.4 });
   }
+  /* v239: Sobald Fontäne, Lichtsäulen und Ringe vorbei sind, geht die Kamera sofort in die alte Ansicht zurück –
+     vorher erst nach dem Auflösen der Truhe (≈ 7,6 s nach dem Aufspringen + 1,3 s Flug). Die offene Truhe bleibt sichtbar. */
+  if (u > 2.6 && !Rv.camBack) { Rv.camBack = 1; if (WV.trCamSave) worldTreasureCamBack(); }
   if (u > TSd) {
     /* Truhe löst sich in Funken auf – die offene Truhe in der Grube bleibt */
     const k = Math.min(1, (u - TSd) / 0.5);

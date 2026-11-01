@@ -266,7 +266,10 @@ function maybeStreife(veh, job, leg) {
   if (!o.snus || job.streife || veh.phase !== "haul" || !veh.routeDist) return false;
   if (veh.pos < veh.routeDist * 0.3) return false;
   job.streife = true;
-  if (Math.random() > 0.3) return false;
+  /* v233: viel seltener – nur noch etwa jede zwölfte Fahrt, und frühestens drei Tage nach der letzten Streife */
+  const sn0 = snusState();
+  if (S.time - (sn0.lastStreife || -1e9) < 3 * 1440 || Math.random() > 0.08) return false;
+  sn0.lastStreife = S.time;
   const where = nearName(vehPoint(veh));
   veh.halt = { icon: "🚓", label: "wartet – Streife bei " + where, until: WAIT_DECISION };
   decisionMsg({ from: "Fahrer · " + vType(veh.type).name, icon: "🚓", type: "streife", ring: true,

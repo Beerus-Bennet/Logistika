@@ -294,6 +294,7 @@ function ensureOffices() {
     b.staff = b.staff || [];
     b.vehicles = (b.vehicles || []).filter(u => S.fleet.some(f => f.uid === u));
     if (typeof b.mood !== "number") b.mood = 80;
+    if (typeof avFixMale === "function") { b.staff.forEach(p => avFixMale(p.av, parseInt(String(p.id).replace(/\D/g, ""), 10) || 0)); (b.pool || []).forEach(p => avFixMale(p.av, parseInt(String(p.id).replace(/\D/g, ""), 10) || 0)); }   /* v235 */
     if (typeof b.done !== "number") b.done = 0;
     if (typeof b.rentDue !== "number") b.rentDue = S.time + 30 * 1440;
     decoOf(b);
@@ -1126,6 +1127,7 @@ function newBaseCard() {
   return `<div class="card">
     <div class="card-top"><span class="vicon">➕</span>
       <div class="vname">Neuer Standort<small>${(S.bases || []).length} von ${maxBases()} belegt · jede Etappe gibt einen weiteren frei</small></div></div>
+    ${(() => { const ids = Object.keys((S.corp && S.corp.hq) || {}).filter(id => CORP[id]); return ids.length ? `<div class="hintbox">🏢 Vorgemerkt aus Übernahme: ${ids.map(id => esc(N[CORP[id].hq].name) + " (" + esc(rivalById(id) ? rivalById(id).name : id) + ")").join(", ")} – wird automatisch dein Büro, sobald Etappe und Standortplatz es erlauben.</div>` : ""; })()}
     ${!room ? `<div class="hintbox">Alle Standorte dieser Etappe vergeben – die nächste schaltet einen weiteren frei.</div>` : `
       <div class="assignrow">
         <select id="newBaseNode">${free.map(n =>

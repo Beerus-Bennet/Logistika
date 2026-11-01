@@ -118,7 +118,9 @@ function tickVip() {
     choices: [{ label: "Zusagen" }, { label: "Höflich absagen" }], def: 1, wait: rsvp - S.time + 1,
     ctx: { tpl: VIP_JOBS.indexOf(tpl) } });
   v.open = { o, msg: m.id, rsvp, tpl: VIP_JOBS.indexOf(tpl) };
-  setTimeout(() => openInvite(), 400);
+  /* v236: das Einladungsfenster öffnet erst, wenn man nicht gerade schießt/angelt/sägt */
+  const showInv = () => { if (!vipState().open || vipState().open.msg !== m.id) return; if (typeof uiBusy === "function" && uiBusy()) return setTimeout(showInv, 1500); openInvite(); };
+  setTimeout(showInv, 400);
 }
 DECISIONS.invite = {
   choose(m, idx) {
@@ -338,8 +340,9 @@ function rivalsHTML() {
     .concat(RIVALS.filter(r => r.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[r.id])).map(r => ({ name: r.name, icon: r.icon, col: r.col, n: sh[r.id] || 0, wave: r.wave })));
   const tot = rows.reduce((a, r) => a + r.n, 0) || 1;
   return `<div class="card eco">
-    <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Wer zögert, verliert Aufträge an andere. Anteil der letzten Tage:</small></div></div>
+    <div class="card-top"><div class="vname">⚔️ Konkurrenz<small>Jede gelieferte Tour zählt für dich, jeder weggeschnappte Auftrag für die Konkurrenz; alte Werte verblassen täglich um 20 %. Unter 30 % kommen Kaufangebote. Anteil der letzten Tage:</small></div></div>
     ${typeof corpLeadHTML === "function" ? corpLeadHTML() : ""}
+    ${typeof corpStakeHTML === "function" ? corpStakeHTML() : ""}
     <div class="share">${rows.map(r => `<div class="share-row${r.wave ? " wave" : ""}"><span>${r.icon} ${esc(r.name)}${r.wave ? `<em>Konzern</em>` : ""}</span>
       <i style="--w:${Math.round(r.n / tot * 100)}%;--c:${r.col}"></i><b>${Math.round(r.n / tot * 100)} %</b></div>`).join("")}</div>
   </div>`;

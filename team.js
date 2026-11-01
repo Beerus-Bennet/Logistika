@@ -1184,7 +1184,7 @@ function staffSendJob(o, opt) {
 function staffFahrerJob(s) {
   /* v61: angenommen wird erst beim Losschicken (staffDo „send“) – Moduswechsel unterwegs nimmt nichts an */
   /* fertige Bestellungen: angenommene zuerst, dann die lukrativste */
-  const ready = farmOrders().filter(x => !x.farm.taken && staffFahrOk(x) && farmOrderReady(x)).sort((a, b) => (!!b.fav - !!a.fav) || (!!b.acc - !!a.acc) || b.pay - a.pay);
+  const ready = farmOrders().filter(x => !x.farm.taken && staffFahrOk(x) && farmOrderReadyFree(x))   /* v242: nichts, was ein Favorit braucht */.sort((a, b) => (!!b.fav - !!a.fav) || (!!b.acc - !!a.acc) || b.pay - a.pay);
   let o = null, opt = null;
   for (const x of ready) { opt = staffSendOpt(x); if (opt && !opt.late) { o = x; break; } }
   if (!o) return null;
@@ -1302,6 +1302,35 @@ function staffRoutePos(j) {
   if (!j.route) { const f = Math.min(1, Math.max(0, el / j.walk)); return [j.sx + (j.x - j.sx) * f, j.sz + (j.z - j.sz) * f, Math.atan2(j.x - j.sx, j.z - j.sz)]; }
   return routeAt(j.route, Math.min(1, Math.max(0, el / j.walk)) * (j.len || routeLen(j.route)));
 }
+/* v232: Strecke entlang der Route, auf der die Figur nach Uhr gerade sein soll */
+function staffRouteDist(j) {
+  if (!j.route) return null;
+  if (j.stops && j.stops.length) return staffTimeline(j).geo;
+  return Math.min(1, Math.max(0, (S.time - j.t0) / j.walk)) * (j.len || routeLen(j.route));
+}
+/* nächster Punkt auf der Route: Strecke von Anfang und Abstand */
+function routeProject(r, x, z) {
+  let best = { s: 0, dist: 1e9 }, acc = 0;
+  for (let i = 1; i < r.length; i++) {
+    const ax = r[i - 1][0], az = r[i - 1][1], bx = r[i][0], bz = r[i][1], l = Math.hypot(bx - ax, bz - az);
+    const f = l ? Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (l * l))) : 0;
+    const d = Math.hypot(ax + (bx - ax) * f - x, az + (bz - az) * f - z);
+    if (d < best.dist) best = { s: acc + l * f, dist: d };
+    acc += l;
+  }
+  return best;
+}
+/* v232: Wer hinter seiner Route zurückhängt (z. B. nach dem Aufstehen vom Lagerfeuer), holt auf dem Weg auf – nie quer durch Bäume und Zäune.
+   Gibt die Blickrichtung zurück oder null, wenn die Figur dem Weg nicht folgen kann. */
+function staffFollow(e, j, D, dt) {
+  const r = j.route;
+  if (!r || r.length < 2) return null;
+  if (e.rj !== j) { const pr = routeProject(r, e.x, e.z); if (pr.dist > 3) return null; e.rj = j; e.rs = pr.s; }
+  if (e.rs >= D - 1e-3) return null;
+  e.rs = Math.min(D, e.rs + 12 * dt);
+  const q = routeAt(r, e.rs); e.x = q[0]; e.z = q[1];
+  return q[2];
+}
 function staffAtHome(s, i) { if (s.px == null) return true; const h = staffHome(s.role, i); return Math.hypot(s.px - h[0], s.pz - h[1]) < 0.9; }
 /* Erledigen – erst jetzt passiert es wirklich (alles noch einmal prüfen) */
 function staffDo(s, j) {
@@ -1390,7 +1419,7 @@ function staffDo(s, j) {
     }
     case "send": {
       const ord = S.orders.find(x => x.id === j.order);
-      if (!ord || !farmOrderReady(ord) || !staffFahrOk(ord)) break;   /* v61: Modus kann sich unterwegs geändert haben */
+      if (!ord || !farmOrderReadyFree(ord) || !staffFahrOk(ord)) break;   /* v242: Favoriten-Ware bleibt liegen */   /* v61: Modus kann sich unterwegs geändert haben */
       const opt = staffSendOpt(ord, j.veh);
       if (opt && !ord.acc) farmAcceptOrder(ord, "fahrer");
       if (opt && farmSend(ord, opt)) {
@@ -1704,6 +1733,7 @@ function staffGroundTool(s, e, tg) {
   g.visible = true; g.x = tg.x; g.z = tg.z; g.ry = tg.ry + (lay ? 0 : 0); g.rx = lay ? -1.5 : 0; g.y = 0.07 + tg.lift * 0.3;
 }
 /* Jedes Bild: hinlaufen, arbeiten (Arm schwingt das Werkzeug), winken, zurück an den Platz */
+const STAFF_GAP = 0.8;     /* v232: Mindestabstand zwischen zwei Figuren */
 function stepStaff(dt, time) {
   const F = S.farm;
   if (!F || !F.staff) return;
@@ -1721,13 +1751,18 @@ function stepStaff(dt, time) {
     const e = WV.staff.get(s.id);
     if (!e) return;
     const j = s.job, n = e.node, A = e.arm, calling = staffCalling(s);
+    const gdt = e.lt != null ? Math.max(0, S.time - e.lt) : 0; e.lt = S.time;   /* v232: Spielzeit seit dem letzten Bild */
     /* v106: Telefonat mit dem Büro – Anzeigetext folgt dem Zustand */
     if (calling) s.doing = STAFF_CALL_TXT; else if (j && s.doing === STAFF_CALL_TXT) s.doing = j.what;
     /* v81: Mittagspause – angekommen: hinsetzen (Sitzfigur), danach wieder aufstehen.
        v112: weich – erst zum Feuer umdrehen, rückwärts an den Sitz, in die Knie; beim Aufstehen vorbeugen, Hände aufs Knie, hoch */
     const sl = j && j.k === "lunch" && S.time - j.t0 >= j.walk && typeof CAMP !== "undefined" ? CAMP.slotOf(s.id) : null;
     if (sl && !e.isSit) { if (staffSitDown(s, e, sl, dt)) return; }
-    else if (!sl && (e.isSit || e.riseT != null)) { if (staffRise(s, e, dt)) return; }
+    else if (!sl && (e.isSit || e.riseT != null)) {
+      /* v232: Beim Aufstehen läuft die Uhr der nächsten Arbeit nicht weiter – sonst ist der Weg schon halb vorbei, bevor die Figur steht */
+      if (j && j.k !== "lunch" && gdt > 0 && S.time < j.t1) { j.t0 += gdt; j.t1 += gdt; if (s.jobEnd) s.jobEnd += gdt; }
+      if (staffRise(s, e, dt)) return;
+    }
     else if (e.sitT) e.sitT = 0;
     /* angetippt: stehen bleiben, zu dir drehen, einmal winken */
     const wv = e.wave != null && !calling ? now - e.wave : 99;
@@ -1759,10 +1794,11 @@ function stepStaff(dt, time) {
       if (A) { if (A.mesh !== e.armSitM) A.mesh = e.armSitM; A.rx += (-G.ges * 0.9 + Math.sin(time * 0.8 + e.ph) * 0.03 - A.rx) * k; A.rz += (P.az * 0.15 + G.ges * 0.12 - A.rz) * k; }
       return;
     }
-    let tx, tz, work = false, face = null, onRoute = false, rh = null, dwell = null;
+    let tx, tz, work = false, face = null, onRoute = false, rh = null, dwell = null, lagD = null;
     if (j) {
       const el = S.time - j.t0;
-      if (el < j.walk) { const p = staffRoutePos(j); tx = p[0]; tz = p[1]; rh = p[2]; onRoute = true; dwell = p[3] || null; }
+      if (el < j.walk) { const p = staffRoutePos(j); tx = p[0]; tz = p[1]; rh = p[2]; onRoute = true; dwell = p[3] || null; lagD = staffRouteDist(j); }
+      else if (j.route && j.route.length > 1 && e.rj === j && e.rs != null && e.rs < routeLen(j.route) - 0.2 && !j.spots) { tx = j.x; tz = j.z; lagD = routeLen(j.route); face = Math.atan2(j.fx - j.x, j.fz - j.z); }   /* v232: noch nicht am Ziel der Route */
       else if (j.spots) {
         /* von Feld zu Feld */
         const per = (j.t1 - j.t0 - j.walk) / j.spots.length, q = j.spots[Math.min(j.spots.length - 1, Math.floor((el - j.walk) / per))];
@@ -1772,17 +1808,22 @@ function stepStaff(dt, time) {
     } else { tx = s.px != null ? s.px : e.x; tz = s.pz != null ? s.pz : e.z; }
     const dx = tx - e.x, dz = tz - e.z, d = Math.hypot(dx, dz), sp = 6 * dt;
     let moving = d > 0.05;
-    if (d > 40) { e.x = tx; e.z = tz; }
+    let fh = null;
+    if (lagD != null && d >= 2.5 && d <= 60 && (fh = staffFollow(e, j, lagD, dt)) != null) {
+      /* v232: hängt hinter der Route zurück → auf dem Weg aufholen, nicht quer durchs Gelände */
+      moving = true; n.ry += angTo(n.ry, fh) * Math.min(1, dt * 12);
+    }
+    else if (d > 40) { e.x = tx; e.z = tz; if (j && j.route && lagD != null) { e.rj = j; e.rs = lagD; } }
     else if (onRoute && d < 2.5) {
       /* auf dem Weg: genau der Wegspur folgen (auch bei schneller Uhr) */
       moving = !dwell;
-      e.x = tx; e.z = tz;
+      e.x = tx; e.z = tz; if (lagD != null) { e.rj = j; e.rs = lagD; }
       if (rh != null) n.ry += angTo(n.ry, rh) * Math.min(1, dt * 12);
     }
     else if (moving) { const k = Math.min(1, Math.max(sp, d * dt * 3) / d); e.x += dx * k; e.z += dz * k; n.ry += angTo(n.ry, Math.atan2(dx, dz)) * Math.min(1, dt * 12); }
     else if (face != null) n.ry += angTo(n.ry, face) * Math.min(1, dt * 6);
     if (work && moving && d > 0.3) work = false;
-    n.x = e.x; n.z = e.z;
+    n.x = e.x; n.z = e.z; e.dw = !!dwell; e.mv = moving;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     /* v112: Halt an der Werkzeugplane – hinstellen, bücken, ablegen (oder aufnehmen), aufrichten */
     let bend = 0;
@@ -1820,6 +1861,31 @@ function stepStaff(dt, time) {
       if (t) { WV.hit = { id: t.id, t0: wnow() }; FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: 4, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.2, up: 1.4, size: 0.06, shape: 1 }); }
     }
   });
+  /* v232: Abstand halten – niemand läuft in einen anderen hinein. Wer näher als STAFF_GAP kommt, weicht seitlich aus (sanft, höchstens 0,7);
+     Sitzende am Feuer und das Ablegen an der Werkzeugplane bleiben unberührt. */
+  {
+    const L = [];
+    F.staff.forEach(s => { const e = WV.staff.get(s.id); if (e && e.node.visible && !e.isSit && !e.dw && e.riseT == null) L.push(e); });
+    L.forEach(e => { e.tx = 0; e.tz = 0; });
+    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) {
+      const A = L[a], B = L[b];
+      if (typeof CAMP !== "undefined" && CAMP.blockedW && (CAMP.blockedW(A.x, A.z) || CAMP.blockedW(B.x, B.z))) continue;
+      let dx = A.x - B.x, dz = A.z - B.z, d = Math.hypot(dx, dz);
+      if (d >= STAFF_GAP) continue;
+      if (d < 1e-3) { const q = (A.ph || 0) - (B.ph || 0) + 1; dx = Math.cos(q); dz = Math.sin(q); d = 1; }
+      const push = (STAFF_GAP - Math.hypot(A.x - B.x, A.z - B.z)) / 2 + 0.02, ux = dx / d, uz = dz / d;
+      /* wer läuft, weicht stärker aus als wer steht */
+      const wa = A.mv && !B.mv ? 1.5 : !A.mv && B.mv ? 0.5 : 1;
+      A.tx += ux * push * wa; A.tz += uz * push * wa; B.tx -= ux * push * (2 - wa); B.tz -= uz * push * (2 - wa);
+    }
+    F.staff.forEach(s => {
+      const e = WV.staff.get(s.id); if (!e) return;
+      if (e.isSit || e.dw || e.riseT != null) { e.ox = 0; e.oz = 0; return; }
+      const k = Math.min(1, dt * 6), m = Math.hypot(e.tx || 0, e.tz || 0), c = m > 0.7 ? 0.7 / m : 1;
+      e.ox = (e.ox || 0) + ((e.tx || 0) * c - (e.ox || 0)) * k; e.oz = (e.oz || 0) + ((e.tz || 0) * c - (e.oz || 0)) * k;
+      if (Math.abs(e.ox) > 0.002 || Math.abs(e.oz) > 0.002) { e.node.x = e.x + e.ox; e.node.z = e.z + e.oz; }
+    });
+  }
   /* offene Blase über einer Kraft: Text aktuell halten */
   if (FV.pop && FV.pop.kind === "staff") {
     const P = FV.pop, el = $("#farmPop");
@@ -1860,6 +1926,16 @@ function staffTap(x, y) {
   }
   if (best == null) return false;
   const e = WV.staff.get(best), sB = (S.farm.staff || []).find(x => x.id === best);
+  /* v240: Easter Egg – wer belehrt wurde, legt beim Antippen sofort auf; sonst öffnet das dritte Antippen im selben Telefonat einen Chat */
+  if (sB && staffCalling(sB)) {
+    if (sB.noPhone) staffHangUp(sB);
+    else {
+      const T = WV.callTaps || (WV.callTaps = {}), key = sB.job.cT1, now = wnow();
+      const tp = T[sB.id] && T[sB.id].key === key && now - T[sB.id].t < 30 ? T[sB.id] : (T[sB.id] = { n: 0, key });
+      tp.n++; tp.t = now;
+      if (tp.n >= 3) { delete T[sB.id]; closeFarmPop(); FV.sel = null; sfx("pop"); staffPhoneChat(sB); return true; }
+    }
+  }
   if (!staffCalling(sB) && !(sB && sB.job && sB.job.k === "lunch")) { e.wave = wnow(); e.wr0 = e.node.ry; }
   closeFarmPop();
   FV.sel = null;
@@ -1868,6 +1944,49 @@ function staffTap(x, y) {
   popFresh();
   sfx("tap");
   return true;
+}
+/* v240: Telefonat beenden – die restliche Telefonzeit fällt weg, die Arbeit beginnt sofort */
+function staffHangUp(s) {
+  const j = s && s.job; if (!j || j.cT1 == null) return;
+  const left = j.cT1 - S.time;
+  if (left > 0) { j.t0 -= left; j.t1 -= left; s.jobEnd = j.t1; }
+  j.cT1 = null; s.doing = j.what;
+}
+/* v240: Easter Egg – dreimal antippen, während jemand telefoniert: der Chef redet ein ernstes Wort mit ihm.
+   Danach legt genau diese Kraft beim Antippen immer sofort auf (s.noPhone), die anderen nicht. */
+const STAFF_PHONE_EXCUSE = ["Äh … ja, Moment, Chef – ich bin gerade noch kurz am Telefon …", "Sekunde, Chef, ich hab hier grad das Büro dran …",
+  "Gleich, gleich! Ich telefonier nur noch schnell zu Ende …", "Pssst, Chef – wichtiges Gespräch …"];
+const STAFF_PHONE_SORRY = ["Oh. Ja. Verstanden, Chef. Handy ist weg – kommt nicht wieder vor.", "Sie haben recht, Chef. Wenn Sie mit mir reden, hab ich ab jetzt Zeit. Versprochen.",
+  "Tut mir leid, Chef. Ich lege sofort auf – und das nächste Mal gar nicht erst ran."];
+const staffHash = s => [...String(s.id || s.name || "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9973, 7);
+function staffPhoneChat(s) {
+  const first = String(s.name || "").split(" ")[0] || "du";
+  const ex = STAFF_PHONE_EXCUSE[staffHash(s) % STAFF_PHONE_EXCUSE.length];
+  const draw = done => {
+    openFarmSheet(`<div class="fs-h"><span class="fs-ic">💬</span>${esc(s.name)}<small>${esc((FSTAFF_ROLES[s.role] || {}).n || "")} · ${done ? "aufgelegt" : "📞 im Telefonat"}</small></div>
+      <div class="pchat">
+        <div class="bub in">${esc(ex)}</div>
+        ${done ? `<div class="bub out">${esc(done.me)}</div><div class="bub in">${esc(done.re)}</div>` : ""}
+      </div>
+      ${done ? `<div class="pchat-egg">🤫 Easter Egg entdeckt – ${esc(first)} legt ab jetzt sofort auf, wenn du ${esc(first)} antippst.</div>
+        <button class="btn" id="pcBack">Zurück an die Arbeit</button>`
+      : `<button class="pchat-opt" id="pcSay">„${esc(first)}, wenn dein Chef mit dir redet, ist das Handy weg. Telefonieren kannst du danach – jetzt höre ich von dir, nicht vom Büro.“</button>`}`, "staffchat");
+    const b = $("#pcSay");
+    if (b) b.onclick = () => {
+      b.disabled = true; sfx("tap");
+      const me = b.textContent.replace(/^„|“$/g, "");
+      $("#farmSheetIn .pchat").insertAdjacentHTML("beforeend", `<div class="bub out">${esc(me)}</div><div class="bub in typing">…</div>`);
+      setTimeout(() => {
+        const re = STAFF_PHONE_SORRY[staffHash(s) % STAFF_PHONE_SORRY.length];
+        s.noPhone = 1; staffHangUp(s); save();
+        sfx("coin");
+        draw({ me, re });
+        if (typeof toast === "function") toast("🤫 Easter Egg: " + first + " lässt das Handy jetzt stecken, wenn du kommst.", "ok");
+      }, 900);
+    };
+    const k = $("#pcBack"); if (k) k.onclick = () => closeFarmSheet();
+  };
+  draw(null);
 }
 function staffWho(T) {
   if (T.from === "chef") return "dir";

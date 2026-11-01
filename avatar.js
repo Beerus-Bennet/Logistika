@@ -100,11 +100,23 @@ function avWrap(cfg, key) {
 function avDefault() {
   return { sex: 0, skin: 1, hair: 0, hairColor: 0, eyes: 0, outfit: 0, acc: 0, beard: 0 };
 }
+const AV_HAIR_M_SAFE = [0, 2, 3, 4];      /* hairM: kurz, undercut, quiff, locken – wirken männlich. Seitenscheitel, Wellen, Pferdeschwanz sind lang und sehen im Porträt wie Frauenhaar aus */
+/* v235: alte Männer-Avatare mit langem Haar (wellen/zopf) auf eine kurze Frisur umstellen – einmal je Avatar */
+function avFixMale(av, seed) {
+  if (!av || av.fx235) return av;
+  av.fx235 = 1;
+  if (AV.sexes[((av.sex % 2) + 2) % 2] === "m" && (av.hair === 1 || av.hair === 5 || av.hair === 6)) {
+    av.hair = AV_HAIR_M_SAFE[Math.abs(Math.round(seed || 0) * 7 + 3) % AV_HAIR_M_SAFE.length];
+  }
+  return av;
+}
 function avRandom(sex) {
   const cfg = avDefault();
   cfg.sex = sex == null ? Math.floor(Math.random() * 2) : sex;
   cfg.skin = Math.floor(Math.random() * AV.skins.length);
-  cfg.hair = Math.floor(Math.random() * (avHairList(cfg).length - 1));   // ohne Glatze
+  /* v235: Männer ohne lange Wellen und Pferdeschwanz – sie wirkten klein im Porträt wie Frauen und passten nicht zum Vornamen */
+  cfg.hair = AV.sexes[cfg.sex % 2] === "m" ? AV_HAIR_M_SAFE[Math.floor(Math.random() * AV_HAIR_M_SAFE.length)]
+    : Math.floor(Math.random() * (avHairList(cfg).length - 1));   // ohne Glatze
   cfg.hairColor = Math.floor(Math.random() * AV.hairColors.length);
   cfg.eyes = Math.floor(Math.random() * AV.eyeColors.length);
   cfg.outfit = Math.floor(Math.random() * AV.outfits.length);
