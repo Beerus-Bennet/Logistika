@@ -13,6 +13,7 @@
 - Neues Modul `officefp.js` (`OFFICE3D.enter`, `OFFICE3D.leave`): baut genau das, was der Grundriss zeigt – Bodenbelag mit Muster und Farbton, Wandfarbe, Fenster links, Tür rechts, Schreibtische mit Bildschirm und Stuhl, das Personal am Platz (Figuren wie auf dem Hof, `FWM.person`, Hemdfarbe nach Rolle), Küche je Ausbaustufe, Pflanzen, bei Hallen Stahlträger und Rolltor zum Hof, bei Bürogebäuden Treppe, Empfang und Etagenwahl. Whiteboard mit den echten Zahlen des Standorts, Firmenschild an der Wand.
 - Steuerung: Joystick links (gehen), wischen (umsehen), Personal antippen (Name, Rolle, ein Satz); Desktop: WASD/Pfeile, Q/E drehen, Maus ziehen, Esc verlässt. Kollision mit Wänden und Möbeln.
 - Solange man im Büro ist: keine Anrufe/Ereignisse (`uiBusy` erkennt `body.office3d`), Einblendungen ausgeblendet. Die Spielzeit läuft weiter.
+- Icon-Links aus Bennets Upload übernommen (192, 512, Apple 180), alle auf v254 (das Apple-Icon stand auf v252).
 - Geprüft im Testbrowser (Chromium mit Software-WebGL): Ladescreen, Umschlaghalle, Bürogebäude EG und 1. OG, Verlassen räumt auf. **Nicht auf dem Handy geprüft** (Bildrate und Touch-Steuerung auf echten Geräten offen).
 ## v253 – Versionen nach Icon-Upload vereinheitlicht, Übergabe abgelegt
 - Ursache: Der Upload der neuen App-Icons brachte ältere Fassungen von `index.html` (Skripte auf `?v=250`) und `sw.js` (`v251`) mit. Handys hätten dadurch v251/v252 (Tipp-Schutz, Zeitung) eventuell nicht geladen.
