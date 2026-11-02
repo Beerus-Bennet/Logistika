@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v257 – Büro: Figuren, Küche, Mitarbeiter des Monats (auf v256)
+
+- `officefp.js`: weitgehend neu (Raum wie bisher, neu `buildKitchen`, Büro-Figur `lookOf`/`headMesh`/`torsoMesh`/`legsMesh`/`upperMesh`/`foreMesh`, `buildFigure`, `animFigure`, `solveArm`, `screenCanvas`, `posterCanvas`/`drawPoster`, `tapAt` mit `blocked`, `say`/`factLines`, `openCard`). `FWM.person` (woodmodels.js) bleibt unverändert.
+- `offices.js`: neu `KITCHEN_MOD`, `KITCHEN_Y`, `kitchenModules`, `kitchenX`; `kitchenPos` rastet an der Wand ein; `officeSVG` zeichnet die Küchenmodule; Plan-Ziehen der Küche nur waagerecht. Neu `MOTM_UNIT`, `GAME_MONTHS`, `gameMonth`, `gameMonthName`, `staffMonthN`, `motmCredit`, `staffPick`, `officeCreditDrive`, `officeCreditUms`, `motmCheck`; Aufrufe in `baseDispatch` (onStart) und `tickBases`. Neue Spielstandfelder: `s.mo` (Personal), `b.motm`, `b.motmWins` (Standort).
+- `game.js`: `finishLeg` ruft `officeCreditDrive(veh)`, die drei Umschlag-Stellen rufen `officeCreditUms(...)`.
+- `gl3d.js`: neu `R.texFree`.
+- `style.css`: Block „v257“ am Ende (`.ofp-card`, Hinweis mit Umbruch).
+- `index.html`: `?v=257` nur für `style.css`, `offices.js`, `game.js`, `gl3d.js`, `officefp.js`; `sw.js`: `VERSION = "v257"`.
+
 ## Stand v256 – Tutorial-System mit Lina (auf v255)
 
 - `intro.js`: neu `linaFaceSVG`, `linaFace`, `linaFaceFail`, `linaCardHTML`, `linaExitHTML`, `linaAnnounce`, `tutReplay`, `TALK_CTX`, `TALK_TITLES`, `tutTitle`, `tutCardHTML`, `tutBind`, `tutRedraw`, `tutUsable`, `hintInterrupt`, `farmTourShown`, `talkPend`; geändert `probeGuideArt`, `TUT_STEPS` (title/act/note), `linaHint`/`hintBusy`/`hintNext`, `startTutorial` (Wiederholung ohne Auftrag), `tutGo(i, from)`, `tutSignal`, `endTutorial`, `showTutStep`, `tutFollow`, `tutGeom`, `tutWatch` (Ausweg), `renderTutStep`, `tutCount` (gibt `{k, n}` zurück), `tutRefresh`, `linaRole`, `linaTalk`; Esc-Handler.

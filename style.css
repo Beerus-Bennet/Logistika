@@ -4062,3 +4062,20 @@ body.ftut-on #farmSide,body.ftut-on #farmFound{display:none}
   .ft-mark i,.ft-mark span,#spot i::after{animation:none!important}
   #spot i,.ltc-prog u,.ltc-part u{transition:none!important}
 }
+
+/* ---------- v257: Büro in der Ich-Perspektive – Karte „Mitarbeiter des Monats“, Hinweise mit Umbruch ---------- */
+.ofp-hint{white-space:normal;text-align:center;max-width:calc(100vw - 40px);width:max-content}
+.ofp-card{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 74px);transform:translate(-50%,-8px);width:min(320px,calc(100vw - 32px));box-sizing:border-box;
+  display:flex;gap:12px;align-items:flex-start;background:#fffdf6;border:var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px 38px 12px 12px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:5}
+.ofp-card.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.ofp-card-face{flex:none;width:64px;height:64px;border-radius:50%;overflow:hidden;border:2.5px solid var(--ink);background:#cfe3fb}
+.ofp-card-face svg{display:block;width:100%;height:100%}
+.ofp-card-txt{min-width:0;line-height:1.25}
+.ofp-card-txt small{display:block;font-size:10.5px;font-weight:800;opacity:.6;text-transform:uppercase;letter-spacing:.04em}
+.ofp-card-txt b{display:block;font-size:16px;font-weight:900;margin-top:2px}
+.ofp-card-txt i{display:block;font-style:normal;font-size:12px;font-weight:800;margin-top:1px}
+.ofp-card-txt p{margin:6px 0 0;font-size:12.5px}
+.ofp-card-txt p.dim{opacity:.62;font-size:11.5px}
+.ofp-card-x{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;border:2px solid var(--ink);background:#fff;font-size:12px;font-weight:900;line-height:1;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.ofp-card,.ofp-say{transition:none}}
