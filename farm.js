@@ -271,7 +271,13 @@ function farmStoreCap(st) {
   let c = s.base + s.step * ((S.farm.cap[st] || 1) - 1) + (typeof farmStageStoreBonus === "function" ? farmStageStoreBonus(st) : 0);
   if (st === "holz" && S.farm.saw && S.farm.areas && S.farm.areas.saege) c += 60;
   if (st === "fisch") S.farm.objs.forEach(o => { c += FFISH_STORE_BONUS[o.t] || 0; });
+  c += farmHallBonus(st);
   return c;
+}
+/* v258: Plätze durch die Große Lagerhalle (eine je Hof) */
+function farmHallBonus(st) {
+  if (typeof FHALL === "undefined" || !FHALL.stores.includes(st) || !FSTORE[st]) return 0;
+  return S.farm.objs.some(o => o.t === FHALL.t) ? FHALL.steps * FSTORE[st].step : 0;
 }
 function farmStoreUsed(st) {
   let n = 0;
@@ -907,6 +913,7 @@ function shopCount(it) {
   if (it.line) return n("mline");
   if (FPEN_SHARED.has(it.id)) return objs.filter(o => FPEN_SHARED.has(o.t)).length;   /* v206: alle Ställe zählen gemeinsam */
   if (FPENS[it.id] || FMACHINES[it.id]) return n(it.id);
+  if (it.id === "lagerhalle") return n(it.id);                                   /* v258 */
   return 0;
 }
 function shopPrice(it) {
@@ -935,6 +942,7 @@ function farmBuild(spec, x, z, r) {
   else if (FPENS[t]) o = { t, lvl: 1, animals: [] };
   else if (FMACHINES[t]) o = { t, q: [], done: [], slots: 2 };
   else if (t === "deco") o = { t, k: spec.k, arg: FDECO[spec.k].arg };
+  else if (t === "lagerhalle") o = { t };                                        /* v258: Große Lagerhalle */
   else return null;
   o.x = x; o.z = z; o.r = r || 0;
   if (!farmFits(x, z, ...farmSize(o), null, t, spec.k)) return null;

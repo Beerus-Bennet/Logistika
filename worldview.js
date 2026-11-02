@@ -1479,6 +1479,7 @@ function shopModel(it) {
   }
   if (FSHOP_SAW.some(x => x.id === it.id)) return () => FWM.machine(it.id, true);
   if (typeof FM[it.id] === "function" && FMACHINES[it.id]) return () => FM[it.id]();
+  if (it.id === "lagerhalle") return () => FM.lagerhalle();                       /* v258 */
   return null;
 }
 function decoModel(k) {

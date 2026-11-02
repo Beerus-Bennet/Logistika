@@ -9,6 +9,19 @@
 
 
 
+## v258 – Große Lagerhalle für den Hof
+**Wunsch:** eine große Lagerhalle kaufen und auf dem Hof platzieren, die Lagerplatz für Hof, Sägewerk und Fischerei bringt.
+
+**Umsetzung:**
+- Neues Gebäude „Große Lagerhalle“ (`lagerhalle`, 6 × 4 Kacheln) im Hof-Laden unter „Gebäude“, ab Erbe-Level 5, 5.000 €, einmal je Hof (`FSHOP_HOF`, `FSIZE`, `FUNLOCK_HOF` in `farmdata.js`). Wird wie die anderen Gebäude platziert, gedreht und per langem Druck verschoben; nur auf dem Hof.
+- Platz: je Lager so viel wie drei Ausbaustufen – Silo +120, Scheune +90, Holzplatz +75, Kühlkiste +48, Köderkiste +120 (`FHALL`, `farmHallBonus` in `farm.js`, eingerechnet in `farmStoreCap`). Gilt auch für Lager, die erst später dazukommen (Kühl- und Köderkiste mit der Fischerei). Die Ausbaustufen der einzelnen Lager bleiben unverändert; Trophäen (Jagd) sind nicht dabei.
+- Antippen öffnet das Lager mit allen Reitern. Im Lagerfenster steht, wie viele Plätze die Halle beiträgt – vor dem Kauf ein Hinweis auf die Halle im Laden.
+- 3D-Modell im Hof-Stil (`FM.lagerhalle` in `farmmodels.js`): Stahlhalle mit Trapezblech, flaches Satteldach mit Lichtband und Lüftern, Rolltor mit Warnstreifen und Vordach, Laderampe mit Paletten, Seitentür mit Lampe, Fenster; das Schild zeigt die fünf Lager (Ähre, Ei, Stamm, Fisch, Wurm). Bildchen im Laden aus demselben Modell (`shopModel` in `worldview.js`).
+- Hofwert +4.000 € (`FBUILD_VAL`); in der Ich-Perspektive im Sägewerk zählt die Halle als hohes Gebäude (`fpsaw.js`).
+- Spielstände: nichts zu migrieren – ohne Halle bleibt alles wie bisher.
+
+**Geprüft:** Playwright/Chromium (SwiftShader, 420 × 800): Laden zeigt die Halle ab Level 5, Kauf zieht 5.000 € ab, Platzieren und Bestätigen auf freier Fläche, alle fünf Lager wachsen um die genannten Plätze, danach „Maximum erreicht 1/1“, Antippen öffnet das Lager mit Hinweiszeile, Speichern und Neuladen behalten Halle und Plätze; Hofwert steigt. Bilder der Halle im Hof. Unit-Tests wie bisher. **Nicht geprüft:** echtes iPhone/Safari.
+
 ## v257 – Büro in der Ich-Perspektive: lebendiges Personal, Küche an der Wand, Mitarbeiter des Monats
 **Bestätigte Ursachen (Code gelesen, im Testbrowser gemessen bzw. gesehen):**
 - Hüpfen: `step()` setzte jede Figur 7-mal pro Sekunde um bis zu 4 mm hoch (`n.y = |sin(7t)|·0,004`) und drehte sie um ±4,6° um die Hochachse. Gemessen am alten Stand: 3,7–3,9 mm Hub am Figurenursprung; neu 0 mm, 0°. Kopfwippen beim Gehen 2,5 cm → 1 cm (bei „Bewegung reduzieren“ 0).

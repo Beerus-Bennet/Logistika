@@ -186,6 +186,7 @@ function objMesh(o) {
     case "dairy": return fmesh("dairy", FM.dairy);
     case "butcher": return fmesh("butcher", FM.butcher);
     case "spinnery": return fmesh("spinnery", FM.spinnery);
+    case "lagerhalle": return fmesh("lagerhalle", FM.lagerhalle);                     /* v258 */
     case "board": return fmesh("board", FM.board);
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil", () => FM.fieldSoil(false));
@@ -210,7 +211,7 @@ function objMesh(o) {
   return typeof worldObjMesh === "function" ? worldObjMesh(o) : null;
 }
 const OBJ_H = {
-  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0,
+  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0, lagerhalle: 3.4,
   coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
   kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
 };
@@ -1028,6 +1029,7 @@ function objAction(o, x, y) {
     return;
   }
   if (FSTORE[o.t]) { openFarmStore(o.t); return; }
+  if (o.t === "lagerhalle") { openFarmStore(); return; }                           /* v258: Große Lagerhalle → alle Lager */
   switch (o.t) {
     case "board": openFarmOrders(null, o.k || "hof"); break;
     case "house": openFarmHouse(); break;
@@ -2220,6 +2222,8 @@ function openFarmStore(st) {
   const trk = S.farm.trkStored ? `<button class="fup2" id="fsTrk"><span>🚜</span><b>Traktor im Lager</b><small>Antippen und auf dem Hof oder rund um den Hof aufstellen</small></button>` : "";
   openFarmSheet(`${trk}<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
+    ${typeof farmHallBonus === "function" && FHALL.stores.includes(st) ? (farmHallBonus(st) ? `<div class="fs-sub fhall">🏬 Davon +${farmHallBonus(st)} Plätze durch die Große Lagerhalle.</div>`
+      : `<div class="fs-sub fhall">🏬 Mehr Platz für alle Lager: Große Lagerhalle im Laden unter „Gebäude“${flv() < 5 ? " (ab Level 5)" : ""}.</div>`) : ""}
     ${wall != null ? wall : `<div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>`}
     ${sel ? (() => {

@@ -149,7 +149,7 @@ const FMACHINES = {
 };
 const FSLOT_COST = [0, 0, 60, 180, 450, 1000];   /* Preis für Platz 3, 4, 5 … in der Warteschlange */
 /* Wert eines Gebäudes beim Verkauf des Hofs */
-const FBUILD_VAL = { dairy: 6000, butcher: 7000, spinnery: 4500 };
+const FBUILD_VAL = { dairy: 6000, butcher: 7000, spinnery: 4500, lagerhalle: 4000 };
 
 /* Lager: Grundgröße, Zuwachs und Preise je Ausbaustufe – v70: zehn Stufen (neun Ausbauten) für jedes Lager */
 const FSTORE = {
@@ -158,10 +158,14 @@ const FSTORE = {
   barn: { n: "Scheune", i: "🏚️", the: "Die Scheune", base: 40, step: 30, cost: [90, 220, 450, 850, 1350, 2200, 3300, 4800, 6800],
           empty: "Leer. Eier, Milch, Futter und Küchenware landen hier." }
 };
+/* v258: Große Lagerhalle – ein Gebäude auf dem Hof, das jedem Lager von Hof, Sägewerk und Fischerei
+   so viel Platz gibt wie drei Ausbaustufen (Silo +120, Scheune +90, Holzplatz +75, Kühlkiste +48, Köderkiste +120).
+   Trophäen gehören zur Jagd und bleiben außen vor. Gilt auch für Lager, die erst später dazukommen. */
+const FHALL = { t: "lagerhalle", steps: 3, stores: ["silo", "barn", "holz", "fisch", "koeder"] };
 
 /* Kachelgröße der Objekte (Breite × Tiefe) */
 const FSIZE = {
-  house: [5, 4], barn: [4, 4], silo: [2, 2], bakery: [3, 3], mill: [2, 2], dairy: [3, 3], butcher: [3, 3], spinnery: [3, 3],
+  house: [5, 4], barn: [4, 4], silo: [2, 2], lagerhalle: [6, 4], bakery: [3, 3], mill: [2, 2], dairy: [3, 3], butcher: [3, 3], spinnery: [3, 3],
   shed: [3, 2], board: [1, 1], gate: [4, 1], field: [2, 2], tree: [2, 2]
 };
 /* lassen sich nicht verschieben */
@@ -185,7 +189,8 @@ const FSHOP_HOF = [
   { id: "sheep",   cat: "bau",  n: "Schafweide",        i: "🐑", lv: 5, price: () => 450,  d: "Weide mit Unterstand für bis zu 8 Schafe." },
   { id: "butcher", cat: "bau",  n: "Metzgerei",         i: "🔪", lv: 5, price: () => 900,  lim: () => 1, d: "Bratwurst, Schinken und Gulasch aus eigenem Fleisch." },
   { id: "spinnery", cat: "bau", n: "Spinnstube",        i: "🧶", lv: 5, price: () => 700,  lim: () => 1, d: "Spinnrad und Stricknadeln: Garn, Socken, Pullover." },
-  { id: "beef",    cat: "bau",  n: "Rinderweide",       i: "🐂", lv: 6, price: () => 600,  d: "Große Weide mit Unterstand für bis zu 6 Rinder." }
+  { id: "beef",    cat: "bau",  n: "Rinderweide",       i: "🐂", lv: 6, price: () => 600,  d: "Große Weide mit Unterstand für bis zu 6 Rinder." },
+  { id: "lagerhalle", cat: "bau", n: "Große Lagerhalle",  i: "🏬", lv: 5, price: () => 5000, lim: () => 1, d: "Mehr Platz für alle Lager: Silo, Scheune, Holzplatz, Kühl- und Köderkiste – je so viel wie drei Ausbaustufen." }
 ];
 const FSHOP_CATS_HOF = [["feld", "🌱 Felder & Bäume"], ["tier", "🐔 Tiere"], ["bau", "🏗️ Gebäude"], ["deko", "🌷 Deko"]];
 /* Deko: kostet wenig, macht den Hof schön (bringt ein paar XP).
@@ -220,7 +225,7 @@ const FUNLOCK_HOF = {
   2: ["🍅 Tomaten", "🌽 Maismehl", "🫓 Maisfladen", "🌷 Deko: Blumen, Bank, Bäume"],
   3: ["🥕 Karotten", "🐄 Kuhstall mit Weide", "🌿 Kuhfutter", "🥧 Apfelkuchen"],
   4: ["🐷 Schweinestall & Ferkel", "🍠 Schweinefutter", "🏭 Molkerei: Butter & Pudding", "🍒 Kirschbaum", "🧁 Möhren-Muffins"],
-  5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse"],
+  5: ["🐑 Schafweide & Schafe", "🔪 Metzgerei: Bratwurst", "🧶 Spinnstube: Garn", "🥔 Kartoffeln", "🧀 Käse", "🏬 Große Lagerhalle"],
   6: ["🐂 Rinderweide & Rinder", "🍖 Schinken", "🧦 Wollsocken", "🍓 Erdbeeren", "🍕 Pizza", "🍰 Kirschtorte"],
   7: ["🥘 Gulasch", "🧥 Pullover", "🎃 Kürbis", "🍐 Birnbaum"]
 };

@@ -178,6 +178,70 @@ const FM = (() => {
     });
     return b;
   }
+  /* v258: Große Lagerhalle (6 × 4 Kacheln) – Stahlhalle mit Trapezblech, flaches Satteldach mit Lichtband,
+     Rolltor mit Warnstreifen und Laderampe vorn, Seitentür, Fenster an den Giebeln. Das Schild zeigt die fünf
+     Lager, für die sie Platz schafft: Ähre (Silo), Ei (Scheune), Stamm (Holzplatz), Fisch (Kühlkiste), Wurm (Köder). */
+  function lagerhalle() {
+    G3.seed(61);
+    const b = new MB(), wall = 0xcdd6de, rib = 0xaeb9c4, frame = 0x55606c, roofC = 0x7d8894, gate = 0xb8c3d0;
+    const W = 5.6, D = 3.4, H = 2.2, fz = D / 2;
+    b.box(5.92, 0.16, 3.72, C.stoneD);
+    b.at({ y: 0.16 }, () => {
+      b.box(W, H, D, wall);
+      /* Trapezblech: senkrechte Sicken vorn/hinten und an den Seiten (je etwas vor der Wand) */
+      for (let x = -W / 2 + 0.22; x < W / 2 - 0.1; x += 0.28) { b.box(0.07, H - 0.02, 0.03, rib, { x, z: fz + 0.012 }); b.box(0.07, H - 0.02, 0.03, rib, { x, z: -fz - 0.012 }); }
+      for (let z = -D / 2 + 0.22; z < D / 2 - 0.1; z += 0.28) [-1, 1].forEach(s => b.box(0.03, H - 0.02, 0.07, rib, { x: s * (W / 2 + 0.012), z }));
+      /* Stützen an den Ecken, Sockelblech */
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => b.box(0.16, H + 0.04, 0.16, frame, { x: sx * W / 2, z: sz * D / 2 }));
+      b.box(W + 0.04, 0.18, D + 0.04, 0x8d98a4);
+      /* Rolltor mit Lamellen, Zarge mit Warnstreifen */
+      b.at({ z: fz + 0.035 }, () => {
+        b.box(2.2, 1.8, 0.04, gate, { y: 0.02 });
+        for (let y = 0.17; y < 1.8; y += 0.15) b.box(2.2, 0.025, 0.02, 0x8e9aa8, { y, z: 0.025 });
+        [-1, 1].forEach(s => { for (let k = 0; k < 7; k++) b.box(0.13, 0.27, 0.06, k % 2 ? C.black : 0xf2c230, { x: s * 1.17, y: k * 0.27, z: 0.01 }); });
+        b.box(2.47, 0.14, 0.07, frame, { y: 1.86, z: 0.01 });
+        b.box(2.6, 0.08, 0.36, 0x6f7b88, { y: 2.0, z: 0.16 });                                 /* Vordach über dem Tor */
+      });
+      /* Seitentür rechts vorn, Lampe */
+      b.box(0.56, 1.1, 0.05, 0x3f78c8, { x: 2.15, y: 0.02, z: fz + 0.03 });
+      b.box(0.08, 0.04, 0.06, C.metal, { x: 1.95, y: 0.55, z: fz + 0.07 });
+      b.box(0.68, 0.06, 0.06, frame, { x: 2.15, y: 1.13, z: fz + 0.035 });
+      b.box(0.16, 0.1, 0.12, C.black, { x: 2.15, y: 1.32, z: fz + 0.08 });
+      b.box(0.12, 0.04, 0.1, C.glow, { x: 2.15, y: 1.29, z: fz + 0.09 });
+      /* Fenster vorn links und an beiden Giebeln */
+      windowAt(b, -2.05, 1.25, fz + 0.03, 0.6, 0.42, { lit: false, frame: frame });
+      [-1, 1].forEach(s => [-0.8, 0.8].forEach(z => windowAt(b, s * (W / 2 + 0.03), 1.3, z, 0.55, 0.4, { ry: s * Math.PI / 2, lit: false, frame: frame })));
+      /* Schild rechts über der Seitentür: weiße Tafel mit den fünf Lagern */
+      b.at({ x: 2.02, y: 1.52, z: fz + 0.03 }, () => {
+        b.box(1.34, 0.54, 0.04, 0x2a2a2e);
+        b.box(1.26, 0.46, 0.05, C.white, { y: 0.04 });
+        b.at({ y: 0.27, z: 0.035 }, () => {
+          b.box(0.05, 0.26, 0.03, C.wheat, { x: -0.5 }); [-0.07, 0.0, 0.07].forEach(y => [-1, 1].forEach(s => b.box(0.05, 0.035, 0.03, C.wheat, { x: -0.5 + s * 0.035, y: y + 0.02, rz: s * 0.5 })));
+          b.sphere(0.075, 8, 6, 0xf6f1e6, { x: -0.25, sy: 1.25 });
+          b.cyl(0.07, 0.07, 0.22, 8, C.woodD, { x: 0.11, y: 0, rz: Math.PI / 2, top: C.woodL });
+          b.sphere(0.07, 8, 6, C.water, { x: 0.27, sx: 1.6, sy: 0.75 }); b.box(0.06, 0.1, 0.02, C.water, { x: 0.39, rz: 0.4 });
+          [[0.47, 0], [0.52, 0.04], [0.57, 0]].forEach(([x, y]) => b.sphere(0.03, 6, 4, 0xe48a9a, { x, y }));
+        });
+      });
+    });
+    /* Dach: flaches Satteldach mit First entlang x, Traufe, Lichtband, Lüfter */
+    b.at({ y: 0.16 + H }, () => {
+      b.noise(0.03, () => b.roof(W + 0.36, D + 0.4, 0.62, roofC, { gable: wall, inset: 0.18 }));
+      [-1, 1].forEach(s => b.box(W + 0.4, 0.07, 0.09, 0x5d6772, { z: s * (D / 2 + 0.2), y: -0.08 }));
+      b.box(W - 0.6, 0.03, 0.42, 0xcfe8f4, { y: 0.47, z: 0.33, rx: Math.atan2(0.62, (D + 0.4) / 2) });
+      [-1.6, 0, 1.6].forEach(x => { b.box(0.3, 0.24, 0.3, 0x9aa6af, { x, y: 0.56 }); b.box(0.38, 0.05, 0.38, 0x7d8894, { x, y: 0.8 }); });
+    });
+    /* Laderampe vor dem Tor, Paletten mit Ware */
+    b.box(2.6, 0.18, 0.3, 0xa9a39a, { z: fz + 0.15 });
+    b.box(2.64, 0.04, 0.34, 0x8d877e, { y: 0.18, z: fz + 0.15 });
+    const pal = (x, z, items) => {
+      b.box(0.5, 0.07, 0.38, C.woodL, { x, z });
+      items.forEach(([dx, dz, h, c]) => b.box(0.22, h, 0.17, c, { x: x + dx, y: 0.07, z: z + dz }));
+    };
+    pal(-2.4, fz + 0.06, [[-0.12, -0.08, 0.2, C.plank], [0.12, -0.08, 0.2, C.plank], [-0.12, 0.09, 0.2, C.plank], [0.12, 0.09, 0.38, 0xd9c08a]]);
+    pal(-1.65, fz + 0.06, [[0, 0, 0.3, C.wheat]]);
+    return b;
+  }
   function silo() {
     G3.seed(31);
     const b = new MB();
@@ -1284,6 +1348,6 @@ const FM = (() => {
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,
     pondR, pondBank, pondWater, pondFoam, pondReeds, pondProps, duck,
     pig, sheep, beef, woolBall, pigRun, pigHut, sheepPasture, sheepShelter, beefPasture, beefShelter,
-    butcher, BUTCHER_CHIMNEY, spinnery, windowAt, plankWall, wheel, bush, ringBand
+    butcher, BUTCHER_CHIMNEY, spinnery, windowAt, plankWall, wheel, bush, ringBand, lagerhalle
   };
 })();
