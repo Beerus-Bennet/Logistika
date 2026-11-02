@@ -3929,9 +3929,17 @@ function boot() {
   document.addEventListener("touchend", () => { try { const g = getSelection(); if (g && g.rangeCount && !g.isCollapsed && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) g.removeAllRanges(); } catch (x) { /* egal */ } }, true);
   /* iOS zoomt bei schnellem Doppeltipp trotzdem – den zweiten Tipp abfangen
      und selbst als Klick weitergeben (Eingabefelder ausgenommen) */
-  let lastTouchEnd = 0;
+  let lastTouchEnd = 0, tStart = null;
+  document.addEventListener("touchstart", e => {
+    const p = e.touches[0];
+    tStart = e.touches.length === 1 && p ? { x: p.clientX, y: p.clientY } : null;
+  }, { passive: true, capture: true });
   document.addEventListener("touchend", e => {
-    const now = performance.now(), t = e.target;
+    const now = performance.now(), t = e.target, p = e.changedTouches[0];
+    /* Nur ein echter Tipp zählt – wer wischt/scrollt, löst nie einen Klick aus (z. B. auf Auftragskarten) */
+    const moved = !tStart || !p || Math.abs(p.clientX - tStart.x) > 8 || Math.abs(p.clientY - tStart.y) > 8;
+    tStart = null;
+    if (moved) { lastTouchEnd = 0; return; }
     if (now - lastTouchEnd < 330 && e.changedTouches.length === 1 && !(t.closest && t.closest("input,textarea,select,#map,#farmCv"))) {
       e.preventDefault();
       if (t.click) t.click();
