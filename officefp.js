@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v260)
+   LOGISTIKA – officefp.js (v263)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -19,6 +19,12 @@
    Küche an der hinteren Wand im 60-cm-Raster (kitchenModules in offices.js), Monitorinhalte je Rolle
    aus echten Standortdaten, Poster „Mitarbeiter des Monats“ (b.motm, offices.js), Ansprechen nur mit
    freier Sicht und in Reichweite. Bilder und Netze werden bei Etagenwechsel und Verlassen freigegeben.
+   v263: Kaffee auf jeder freien Fläche abstellen (Tische, Arbeitsplatte, Küchentisch, Fensterbank, Empfang, Boden),
+   Personal anbieten (nachvollziehbare Zu- oder Absage, Übergabe am Henkel), Tasse werfen (Flugbahn mit Schwerkraft,
+   zerspringt, Kaffee und Scherben 5 Spielminuten an der logischen Stelle), Treffer an Kopf oder Rumpf tödlich mit
+   sichtbarer Verletzung und Folgen im Spielstand. Tätigkeiten neu nach echtem Ablauf: ergonomischer Schreibtisch,
+   Hände mit Fingern und Griffen, Handgelenk-IK; Tippen, Maus, Lesen, Schreiben (Block heranziehen, Stift nehmen),
+   Telefonieren (Handy an der Wange), Trinken (Henkel, Becher kippt, Kopf leicht zurück, vor der Brust halten).
    ========================================================================= */
 "use strict";
 
@@ -29,7 +35,7 @@ const OFFICE3D = (() => {
   const EYE = 1.62, PR = 0.32, SPEED = 2.3;
   const FS = 1.45;                                          /* Maßstab der Figuren (wie auf dem Hof): 1 Figureinheit = 1,45 m */
   const CHAIR_D = 0.72, SEAT_Y = 0.46;                       /* Stuhlmitte hinter der Tischmitte · Sitzfläche = Oberschenkel-Unterseite (0,317 × 1,45) */
-  const TALK_RANGE = 6, ARM_A = 0.22, ARM_B = 0.28;       /* Reichweite zum Ansprechen (m) · Oberarm, Unterarm bis Handmitte (Figureinheiten) */
+  const TALK_RANGE = 6, ARM_A = 0.22, ARM_B = 0.211;      /* Reichweite zum Ansprechen (m) · Oberarm, Unterarm bis Handgelenk (Figureinheiten, v263) */
   const hx = c => typeof c === "number" ? c : parseInt(String(c).replace("#", ""), 16);
   const hs6 = c => "#" + (typeof c === "number" ? c.toString(16).padStart(6, "0") : String(c).replace("#", ""));
   const mixH = (a, b, k) => hx(avMix(hs6(a), hs6(b), k));
@@ -49,13 +55,15 @@ const OFFICE3D = (() => {
   /* st: Boden, Wände, Möbel (wirft Schatten) · shell: Decke (kein Schatten) · glow: Lampen, Fensterlicht.
      ob: Rechtecke für die Begehbarkeit (x0, z0, x1, z1) · occ: Kästen [lo, hi] für die Sichtprüfung beim Antippen. */
   function buildRoom(b, fl0) {
-    const MB = G3.MB, st = new MB(), shell = new MB(), trim = new MB(), glow = new MB(), ob = [], occ = [];
+    const MB = G3.MB, st = new MB(), shell = new MB(), trim = new MB(), glow = new MB(), ob = [], occ = [], surf = [], phys = [];
     const d = decoOf(b), t = tierOf(b), H = ceilH(b), multi = tierFloors(t) > 1;
     const fl = findBy(FLOORS, d.floor), tint = findBy(FLOOR_TINTS, d.tint), wall = findBy(WALLS, d.wall), kit = findBy(KITCHENS, d.kitchen);
     const fc = tint.mix ? avMix(fl.base, tint.mix, 0.5) : fl.base, fdk = hx(avMix(fc, "#000000", 0.16)), fcol = hx(fc);
     const wc = hx(wall.color), wdk = hx(avMix(wall.color, "#000000", 0.22));
     const rect = (x0, z0, x1, z1) => ob.push([Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1)]);
     const blk = (x0, y0, z0, x1, y1, z1) => occ.push([[Math.min(x0, x1), y0, Math.min(z0, z1)], [Math.max(x0, x1), y1, Math.max(z0, z1)]]);
+    /* v263: Ablageflächen (Rechteck in x/z, Höhe y, Sperrzonen ex für das, was schon darauf steht) */
+    const top = (x0, z0, x1, z1, y, ex, kind) => surf.push({ x0, z0, x1, z1, y, ex: ex || [], kind });
 
     /* Boden mit Muster wie im Plan */
     st.box(2 * RW + 0.4, 0.06, 2 * RD + 0.4, fcol, { y: -0.06 });
@@ -93,6 +101,7 @@ const OFFICE3D = (() => {
     wallBox(T, SILL, wz1 - wz0, { x: -RW - T / 2, z: (wz0 + wz1) / 2 });
     wallBox(T, H - WTOP, wz1 - wz0, { x: -RW - T / 2, y: WTOP, z: (wz0 + wz1) / 2 });
     st.box(0.26, 0.05, wz1 - wz0 + 0.1, 0xf4f6f8, { x: -RW + 0.05, y: SILL, z: (wz0 + wz1) / 2 });      /* Fensterbank */
+    top(-RW, wz0 - 0.04, -RW + 0.18, wz1 + 0.04, SILL + 0.05, [], "sill");
     [wz0, (wz0 + wz1) / 2, wz1].forEach(z => st.box(0.08, WTOP - SILL, 0.06, 0xf4f6f8, { x: -RW - 0.02, y: SILL, z }));
     st.box(0.08, 0.06, wz1 - wz0, 0xf4f6f8, { x: -RW - 0.02, y: WTOP - 0.06, z: (wz0 + wz1) / 2 });
     glow.box(0.02, WTOP - SILL, wz1 - wz0, 0xcfe8ff, { x: -RW - T + 0.02, y: SILL, z: (wz0 + wz1) / 2 });
@@ -119,6 +128,8 @@ const OFFICE3D = (() => {
     /* Küche (nur im Erdgeschoss) */
     let kitchen = null;
     if (fl0 === 0 && kit.id !== "keine") kitchen = buildKitchen(st, kit.id, PX(kitchenPos(b)[0]), H, rect, blk);
+    if (kitchen && kitchen.top) top(kitchen.top.x0, kitchen.top.z0, kitchen.top.x1, kitchen.top.z1, kitchen.top.y, kitchen.ex, "work");
+    if (kitchen && kitchen.table) top(kitchen.table[0] - 1.5, kitchen.table[1] - 0.5, kitchen.table[0] + 1.5, kitchen.table[1] + 0.5, 0.78, [], "table");
 
     /* Schreibtische, Stühle, Bildschirme, Arbeitsmittel */
     const seats = [], screens = [];
@@ -129,33 +140,46 @@ const OFFICE3D = (() => {
       st.box(2.08, 0.04, 1.04, 0xe4d3b6, { x, y: 0.72, z, top: 0xead9bd });
       [-1, 1].forEach(s => st.box(0.05, 0.72, 0.96, 0x55606c, { x: x + s * 0.98, z }));
       st.box(1.9, 0.4, 0.03, 0x55606c, { x, y: 0.3, z: z - 0.44 });
-      /* Bildschirm vor dem Platz: Fuß, Gehäuse; der Inhalt kommt als Bild (screenCanvas) bzw. dunkel im Ruhezustand */
-      st.box(0.2, 0.012, 0.16, 0x2a2a30, { x: mx, y: 0.76, z: z - 0.3 });
-      st.box(0.05, 0.2, 0.04, 0x2a2a30, { x: mx, y: 0.77, z: z - 0.32 });
-      st.box(0.66, 0.42, 0.04, 0x22303f, { x: mx, y: 0.94, z: z - 0.3 });
-      if (p) screens.push({ i, p, x: mx, y: 1.15, z: z - 0.3 + 0.0205 });
-      else glow.box(0.6, 0.36, 0.008, 0x1d2a38, { x: mx, y: 0.97, z: z - 0.276 });
-      /* Tastatur mit Tastenreihen, Mauspad, Block mit Stift, Papierstapel, Telefon */
-      st.box(0.44, 0.018, 0.15, 0x2a2a30, { x: mx - 0.04, y: 0.76, z: z + 0.12 });
-      for (let r = 0; r < 4; r++) st.box(0.4, 0.006, 0.022, 0x4a4f58, { x: mx - 0.04, y: 0.778, z: z + 0.068 + r * 0.033 });
-      st.box(0.22, 0.004, 0.19, 0x2f4a6a, { x: mx + 0.34, y: 0.76, z: z + 0.12 });
-      st.box(0.15, 0.008, 0.21, 0xf6f1d8, { x: mx + 0.18, y: 0.76, z: z + 0.36, ry: -0.12 });
-      for (let r = 0; r < 5; r++) st.box(0.12, 0.002, 0.004, 0x9ab0c8, { x: mx + 0.18 + r * 0.004, y: 0.768, z: z + 0.29 + r * 0.03, ry: -0.12 });
-      st.box(0.21, 0.012, 0.3, 0xfaf6ee, { x: mx - 0.5, y: 0.76, z: z + 0.18, ry: 0.22 });
-      st.box(0.21, 0.008, 0.3, 0xf0ece2, { x: mx - 0.53, y: 0.772, z: z + 0.17, ry: 0.12 });
-      for (let r = 0; r < 6; r++) st.box(0.15, 0.002, 0.006, 0x8a94a2, { x: mx - 0.53 + r * 0.004, y: 0.781, z: z + 0.07 + r * 0.035, ry: 0.12 });
+      /* Bildschirm vor dem Platz: Fuß, Gehäuse; der Inhalt kommt als Bild (screenCanvas) bzw. dunkel im Ruhezustand.
+         v263: ergonomisch – Bildschirm etwa eine Armlänge vor den Augen, Tastatur und Maus 15–20 cm von der Tischkante,
+         Block rechts neben der Maus, Becher dahinter, Telefon links: Ellbogen bleiben gebeugt und am Körper. */
+      st.box(0.2, 0.012, 0.16, 0x2a2a30, { x: mx, y: 0.76, z: z - 0.06 });
+      st.box(0.05, 0.2, 0.04, 0x2a2a30, { x: mx, y: 0.77, z: z - 0.08 });
+      st.box(0.66, 0.42, 0.04, 0x22303f, { x: mx, y: 0.94, z: z - 0.06 });
+      if (p) screens.push({ i, p, x: mx, y: 1.15, z: z - 0.06 + 0.0205 });
+      else glow.box(0.6, 0.36, 0.008, 0x1d2a38, { x: mx, y: 0.97, z: z - 0.036 });
+      /* Tastatur mit Tastenreihen, Mauspad, Block mit Linien, Papierstapel, Telefon */
+      st.box(0.44, 0.018, 0.15, 0x2a2a30, { x: mx - 0.04, y: 0.76, z: z + 0.25 });
+      for (let r = 0; r < 4; r++) st.box(0.4, 0.006, 0.022, 0x4a4f58, { x: mx - 0.04, y: 0.778, z: z + 0.198 + r * 0.033 });
+      st.box(0.22, 0.004, 0.19, 0x2f4a6a, { x: mx + 0.31, y: 0.76, z: z + 0.25 });
       if (!p) {
-        st.box(0.06, 0.03, 0.1, 0x2a2a30, { x: mx + 0.34, y: 0.764, z: z + 0.12 });
-        st.box(0.075, 0.01, 0.15, 0x1d1d20, { x: mx - 0.3, y: 0.76, z: z + 0.36 });
-        st.box(0.13, 0.008, 0.008, 0x2a4a8a, { x: mx + 0.2, y: 0.768, z: z + 0.42, ry: 0.4 });
+        st.box(0.15, 0.008, 0.21, 0xf6f1d8, { x: mx + 0.55, y: 0.76, z: z + 0.33, ry: -0.2 });
+        for (let r = 0; r < 5; r++) { const v = -0.06 + r * 0.03; st.box(0.11, 0.002, 0.003, 0x9ab0c8, { x: mx + 0.55 - 0.199 * v, y: 0.768, z: z + 0.33 + 0.98 * v, ry: -0.2 }); }
+      }
+      st.box(0.21, 0.012, 0.3, 0xfaf6ee, { x: mx - 0.62, y: 0.76, z: z + 0.22, ry: 0.22 });
+      st.box(0.21, 0.008, 0.3, 0xf0ece2, { x: mx - 0.65, y: 0.772, z: z + 0.21, ry: 0.12 });
+      for (let r = 0; r < 6; r++) st.box(0.15, 0.002, 0.006, 0x8a94a2, { x: mx - 0.65 + r * 0.004, y: 0.781, z: z + 0.11 + r * 0.035, ry: 0.12 });
+      if (!p) {
+        st.box(0.06, 0.03, 0.1, 0x2a2a30, { x: mx + 0.31, y: 0.764, z: z + 0.25 });
+        st.box(0.075, 0.01, 0.15, 0x1d1d20, { x: mx - 0.43, y: 0.76, z: z + 0.3 });
+        st.box(0.13, 0.008, 0.008, 0x2a4a8a, { x: mx + 0.57, y: 0.768, z: z + 0.36, ry: 0.7 });
       }
       chair(st, mx, cz, p ? 0 : 0.35, 0x2f3d55);
+      /* v263: Tischplatte als Ablage – frei bleiben Monitorfuß, Tastatur, Mauspad, Block, Papiere, Telefon,
+         bei besetzten Plätzen auch die eigene Tasse und der Bereich, in dem Unterarme und Hände arbeiten */
+      const ex = [[mx - 0.12, z - 0.16, mx + 0.12, z + 0.03], [mx - 0.27, z + 0.165, mx + 0.19, z + 0.335], [mx + 0.19, z + 0.145, mx + 0.43, z + 0.355],
+        [mx + 0.44, z + 0.21, mx + 0.66, z + 0.455], [mx - 0.79, z + 0.04, mx - 0.48, z + 0.4], [mx - 0.48, z + 0.215, mx - 0.38, z + 0.385]];
+      if (p) ex.push([mx + 0.27, z + 0.045, mx + 0.45, z + 0.155], [mx - 0.32, z + 0.335, mx + 0.46, z + 0.52]);
+      top(x - 1.04, z - 0.52, x + 1.04, z + 0.52, 0.76, ex, "desk");
+      /* Rückenlehne und Sitz besetzter Stühle halten eine geworfene Tasse auf */
+      if (p) phys.push([[mx - 0.22, SEAT_Y + 0.1, cz + 0.2], [mx + 0.22, SEAT_Y + 0.6, cz + 0.29]], [[mx - 0.23, SEAT_Y - 0.07, cz - 0.23], [mx + 0.23, SEAT_Y, cz + 0.23]]);
       rect(x - 1.04, z - 0.52, x + 1.04, z + 0.52);
       rect(mx - 0.32, cz - 0.3, mx + 0.32, cz + 0.36);
+      const own = ob.slice(-2);
       blk(x - 1.04, 0.72, z - 0.52, x + 1.04, 0.76, z + 0.52);
       blk(x - 0.95, 0.3, z - 0.455, x + 0.95, 0.7, z - 0.425);
-      blk(mx - 0.33, 0.94, z - 0.32, mx + 0.33, 1.36, z - 0.28);
-      if (p) seats.push({ p, i, x: mx, z: cz, dz: z });
+      blk(mx - 0.33, 0.94, z - 0.08, mx + 0.33, 1.36, z - 0.04);
+      if (p) seats.push({ p, i, x: mx, z: cz, dz: z, own });
     }
 
     /* Pflanzen */
@@ -180,6 +204,7 @@ const OFFICE3D = (() => {
         st.box(rx1 - rx0 + 0.1, 0.05, rz1 - rz0 + 0.1, 0x5d4a32, { x: (rx0 + rx1) / 2, y: 1.08, z: (rz0 + rz1) / 2 });
         rect(rx0, rz0, rx1, rz1);
         blk(rx0, 0, rz0, rx1, 1.13, rz1);
+        top(rx0 - 0.05, rz0 - 0.05, rx1 + 0.05, rz1 + 0.05, 1.13, [], "counter");
       }
     }
 
@@ -188,7 +213,8 @@ const OFFICE3D = (() => {
     st.box(POSTER.w + 0.08, POSTER.h + 0.08, 0.03, 0x2a2a30, { x: POSTER.x, y: POSTER.y - POSTER.h / 2 - 0.04, z: RD - 0.015 });
     st.box(POSTER.w + 0.01, POSTER.h + 0.01, 0.006, 0xfbfcfd, { x: POSTER.x, y: POSTER.y - POSTER.h / 2 - 0.005, z: RD - 0.033 });
 
-    return { st, shell, trim, glow, ob, occ, seats, screens, H, kitchen, poster: POSTER, door: [RW - 0.7, (dz0 + dz1) / 2], stairs: multi ? [PX(300), PZ(64)] : null };
+    top(-RW, -RD, RW, RD, 0, null, "floor");                    /* Boden: Sperrzonen sind alle Möbel (ob), siehe dropSpot */
+    return { st, shell, trim, glow, ob, occ, surf, phys, carpet: fl.pattern === "carpet", seats, screens, H, kitchen, poster: POSTER, door: [RW - 0.7, (dz0 + dz1) / 2], stairs: multi ? [PX(300), PZ(64)] : null };
   }
 
   /* v259: Küche mit getrennten Korpussen, Türen und Zuständen in officekitchen.js. */
@@ -444,43 +470,134 @@ const OFFICE3D = (() => {
   function foreMesh(L, side) {
     const b = new G3.MB();
     b.sphere(0.033, 10, 7, L.sleeve, { smooth: true });
-    b.cyl(0.027, 0.033, 0.2, 10, L.sleeve, { y: -0.2, smooth: true });
-    b.box(0.057, 0.022, 0.06, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.212 });
-    /* v260: nur Handgelenk am Unterarm, Handfläche wird unabhängig ausgerichtet. */
-    b.sphere(0.021, 10, 7, L.skin, { y: -0.247, sy: 1.65, smooth: true });
+    b.cyl(0.025, 0.033, 0.178, 10, L.sleeve, { y: -0.178, smooth: true });
+    b.box(0.056, 0.02, 0.058, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.19 });
+    /* v263: Unterarm endet am Handgelenk (ARM_B); die Hand setzt dort mit dem Handballen an, ohne Lücke bei abgeknickter Hand */
+    b.cyl(0.018, 0.022, 0.03, 10, L.skin, { y: -ARM_B, smooth: true });
+    b.sphere(0.019, 9, 6, L.skin, { y: -ARM_B, smooth: true });
     return b;
   }
-  function handMesh(L, side) {
-    const b = new G3.MB();
-    b.sphere(0.028, 12, 8, L.skin, { sx: 0.95, sy: 0.42, sz: 1.3, smooth: true });
-    b.sphere(0.011, 10, 7, L.skin, { x: -side * 0.025, z: 0.005, sy: 0.65, sz: 1.4, smooth: true });
+  /* v263: Hand mit Daumen und vier zweigliedrigen Fingern. Handkoordinaten: Ursprung Handmitte, +z zu den Fingern,
+     −y Handfläche, Daumen auf der Körperseite (x = −side · …). Je Griff sind die Finger unterschiedlich gebeugt. */
+  const PALM = 0.034;
+  const FING = [[0.0195, 0.025, 0.022, 0.0062], [0.0065, 0.027, 0.024, 0.0063], [-0.0065, 0.026, 0.022, 0.0058], [-0.0195, 0.02, 0.018, 0.0052]];
+  const FAN = [0.12, 0.04, -0.04, -0.1];
+  const GRIPS = {
+    rest:   { f: [[0.5, 0.7], [0.55, 0.75], [0.6, 0.8], [0.65, 0.85]], th: [0.55, -0.35, 0.75] },
+    type:   { f: [[0.38, 0.62], [0.32, 0.6], [0.36, 0.62], [0.45, 0.66]], th: [0.55, -0.45, 0.7], fan: 0.4 },
+    mouse:  { f: [[0.3, 0.42], [0.28, 0.42], [0.42, 0.55], [0.55, 0.7]], th: [0.75, -0.35, 0.5] },
+    pen:    { f: [[0.6, 0.55], [0.95, 0.85], [1.35, 1.45], [1.45, 1.5]], pinch: true },
+    cup:    { f: [[1.05, 1.25], [1.1, 1.3], [1.15, 1.3], [1.2, 1.3]], th: [0.3, -0.15, 0.95] },
+    phone:  { f: [[0.8, 0.75], [0.85, 0.8], [0.9, 0.85], [0.95, 0.9]], th: [0.35, -0.5, 0.8] },
+    spread: { f: [[0.15, 0.2], [0.12, 0.18], [0.15, 0.2], [0.2, 0.25]], th: [0.9, -0.2, 0.45], fan: 1 },
+    open:   { f: [[0.08, 0.12], [0.06, 0.1], [0.08, 0.12], [0.12, 0.14]], th: [0.7, 0.05, 0.7], fan: 0.8 }
+  };
+  const PINCH = side => [-side * 0.0225, -0.034, 0.055];
+  function fingerPts(side, grip, i) {
+    const G = GRIPS[grip], [m, l1, l2] = FING[i], [a1, a2] = G.f[i], fx = -side * FAN[i] * (G.fan || 0);
+    const d1 = nrm([fx, -Math.sin(a1), Math.cos(a1)]), d2 = nrm([fx, -Math.sin(a1 + a2), Math.cos(a1 + a2)]);
+    const p0 = [-side * m, 0, 0.031], p1 = p0.map((v, k) => v + d1[k] * l1);
+    return { p0, p1, p2: p1.map((v, k) => v + d2[k] * l2), d1, d2 };
+  }
+  function thumbPts(side, grip) {
+    const G = GRIPS[grip], t0 = [-side * 0.026, -0.004, 0];
+    let d1, d2;
+    if (G.pinch) { d1 = nrm(PINCH(side).map((v, k) => v - t0[k])); d2 = d1; }
+    else { d1 = nrm([-side * G.th[0], G.th[1], G.th[2]]); d2 = nrm([-side * G.th[0] * 0.5, G.th[1] - 0.35, G.th[2]]); }
+    const t1 = t0.map((v, k) => v + d1[k] * 0.03);
+    return { t0, t1, t2: t1.map((v, k) => v + d2[k] * 0.027), d1, d2 };
+  }
+  /* Stift zwischen Daumen und Zeigefinger, Spitze vorn unten, Ende auf der Daumenfalte */
+  function penPose(side) {
+    const pin = PINCH(side), top = [-side * 0.024, 0.006, 0.004], d = nrm(top.map((v, k) => v - pin[k]));
+    const tip = pin.map((v, k) => v - d[k] * 0.02), c = tip.map((v, k) => v + d[k] * 0.045);
+    return { tip, c, rx: Math.acos(clamp1(d[1], -1, 1)), ry: Math.atan2(d[0], d[2]) };
+  }
+  function limb(b, p, d, len, r0, r1, col) {
+    b.cyl(r0, r1, len, 7, col, { x: p[0], y: p[1], z: p[2], rx: Math.acos(clamp1(d[1], -1, 1)), ry: Math.atan2(d[0], d[2]), smooth: true });
+  }
+  function handMesh(L, side, grip) {
+    const b = new G3.MB(), c = L.skin, cs = mixH(L.skin, L.skinS, 0.35);
+    grip = GRIPS[grip] ? grip : "rest";
+    b.sphere(0.03, 12, 8, c, { sx: 0.98, sy: 0.4, sz: 1.13, smooth: true });
+    for (let i = 0; i < 4; i++) {
+      const f = fingerPts(side, grip, i), r = FING[i][3];
+      b.sphere(r * 1.08, 7, 5, c, { x: f.p0[0], y: f.p0[1], z: f.p0[2], smooth: true });
+      limb(b, f.p0, f.d1, FING[i][1], r, r, c);
+      b.sphere(r * 0.98, 7, 5, c, { x: f.p1[0], y: f.p1[1], z: f.p1[2], smooth: true });
+      limb(b, f.p1, f.d2, FING[i][2], r * 0.95, r * 0.9, c);
+      b.sphere(r * 0.9, 7, 5, cs, { x: f.p2[0], y: f.p2[1], z: f.p2[2], smooth: true });
+    }
+    const t = thumbPts(side, grip), r = 0.0075;
+    b.sphere(r * 1.25, 7, 5, c, { x: t.t0[0], y: t.t0[1], z: t.t0[2], smooth: true });
+    limb(b, t.t0, t.d1, 0.03, r * 1.15, r, c);
+    b.sphere(r, 7, 5, c, { x: t.t1[0], y: t.t1[1], z: t.t1[2], smooth: true });
+    limb(b, t.t1, t.d2, 0.027, r * 0.95, r * 0.85, c);
+    b.sphere(r * 0.88, 7, 5, cs, { x: t.t2[0], y: t.t2[1], z: t.t2[2], smooth: true });
     return b;
   }
-  /* Kleine Dinge in Figureinheiten (Welt / 1,45): Tasse, Telefon, Maus, Stift */
+  /* Kontaktpunkt je Griff in Handkoordinaten: Fingerkuppe, Handfläche, Stiftspitze, Henkel, Telefonmitte */
+  function gripOff(side, grip) {
+    const tip = (g, dy) => { const p = fingerPts(side, g, 1).p2; return [p[0], p[1] - dy, p[2]]; };
+    switch (grip) {
+      case "type": return tip("type", 0.006);
+      case "spread": return tip("spread", 0.005);
+      case "mouse": return [0, -0.014, 0.012];
+      case "pen": return penPose(side).tip;
+      case "cup": return [-side * 0.002, -0.022, 0.03];
+      case "phone": return [0, -0.024, 0.012];
+      case "open": return [0, -0.013, 0.02];
+      default: return [0, -0.013, 0.004];
+    }
+  }
+  /* Handdrehung je Griff (Figur-Koordinaten, Reihenfolge der Engine) */
+  const HROT = {
+    type: s => [0.14, -s * 0.18, -s * 0.12], mouse: s => [0.1, -s * 0.06, -s * 0.08], rest: s => [0.02, -s * 0.32, -s * 0.3],
+    spread: s => [0.04, -s * 0.22, 0], pen: s => [0.32, -s * 0.38, -s * 0.9], cup: s => [0.05, -s * 0.12, -s * 1.45],
+    phone: s => [0.12, -s * 0.1, -s * 0.15], ear: s => [-2.69, 0, -s * PI / 2], open: s => [-PI / 2, s * 0.2, PI]
+  };
+  /* Kleine Dinge in Figureinheiten (Welt / 1,45): Telefon, Maus, Stift; Becher wie in der Küche (Meter, Knoten mit 1/FS) */
   const U = v => v / FS;
-  function cupMesh(c) { const b = new G3.MB(); b.cyl(U(0.04), U(0.036), U(0.1), 12, c, { top: 0x5a3a24 }); b.box(U(0.012), U(0.05), U(0.03), c, { x: -U(0.045), y: U(0.025) }); return b; }
+  const MUG_HANDLE = [0.066, 0.057, 0], MUG_RIM = 0.04, MUG_H = 0.108;
+  function mugMesh(c) { const b = OFFICE_KITCHEN.cupMesh(c); b.cyl(0.0358, 0.0358, 0.0015, 16, 0x59321b, { y: 0.086, top: 0x82512c }); return b; }
   function phoneMesh() { const b = new G3.MB(); b.box(U(0.075), U(0.01), U(0.15), 0x1d1d20, { y: 0 }); b.box(U(0.064), U(0.002), U(0.13), 0x2c4a6a, { y: U(0.01) }); return b; }
   function mouseMesh() { const b = new G3.MB(); b.sphere(U(0.035), 10, 6, 0x2a2a30, { sx: 0.85, sy: 0.45, sz: 1.35, y: U(0.004), smooth: true }); return b; }
   function penMesh() { const b = new G3.MB(); b.cyl(0.0035, 0.0035, 0.09, 8, 0x2a4a8a, { y: -0.045 }); return b; }
+  /* v263: Schreibblock mit Linien (Meter, Knoten mit 1/FS) – die Person zieht ihn zum Schreiben heran und schiebt ihn danach zurück */
+  function noteMesh() {
+    const b = new G3.MB();
+    b.box(0.15, 0.008, 0.21, 0xf6f1d8);
+    b.box(0.15, 0.004, 0.018, 0x3f78c8, { y: 0.008, z: -0.096 });
+    for (let r = 0; r < 5; r++) b.box(0.11, 0.0015, 0.003, 0x9ab0c8, { y: 0.008, z: -0.06 + r * 0.03 });
+    return b;
+  }
+  function penMeshM() { const b = new G3.MB(); b.cyl(0.005, 0.005, 0.13, 8, 0x2a4a8a, { y: -0.065 }); b.cyl(0.0052, 0.0052, 0.012, 8, 0xd8dde2, { y: 0.053 }); return b; }
+  const NOTE_REST = { x: 0.55, z: 0.33, ry: -0.2 }, NOTE_WRITE = { x: 0.36, z: 0.42, ry: -0.34 };
+  function notePose(F) {
+    const e = ease(F.noteK || 0), dx = NOTE_REST.x + (NOTE_WRITE.x - NOTE_REST.x) * e, dz = NOTE_REST.z + (NOTE_WRITE.z - NOTE_REST.z) * e;
+    const ry = NOTE_REST.ry + (NOTE_WRITE.ry - NOTE_REST.ry) * e;
+    return { c: [-dx / FS, 0.768 / FS, -(dz - CHAIR_D) / FS], ry, u: [-Math.cos(ry), 0, Math.sin(ry)], v: [-Math.sin(ry), 0, -Math.cos(ry)] };
+  }
+  const notePt = (N, u, v, h) => [N.c[0] + (N.u[0] * u + N.v[0] * v) / FS, N.c[1] + (h || 0) / FS, N.c[2] + (N.u[2] * u + N.v[2] * v) / FS];
 
   /* Tätigkeiten: Gewicht je Rolle, Dauer, Haltung (Vorbeugen) */
   const ACTS = {
     type:  { w: { disp: 3, fahr: 1, ums: 1.5, zoll: 2.5 }, d: [10, 18], lean: 0.06 },
     mouse: { w: { disp: 3, fahr: 1.5, ums: 2, zoll: 1.5 }, d: [7, 13], lean: 0.05 },
     read:  { w: { disp: 1, fahr: 2, ums: 2, zoll: 3 }, d: [9, 15], lean: 0.075 },
-    note:  { w: { disp: 1.5, fahr: 1, ums: 1.5, zoll: 2 }, d: [8, 13], lean: 0.08 },
-    phone: { w: { disp: 2.5, fahr: 2, ums: 1.5, zoll: 1 }, d: [10, 14], lean: 0.025 },
-    cup:   { w: { disp: 1, fahr: 1.5, ums: 1, zoll: 1 }, d: [8.2, 8.2], lean: 0.04 },
-    look:  { w: { disp: 0.6, fahr: 1, ums: 0.8, zoll: 0.6 }, d: [3, 5], lean: 0.01 }
+    note:  { w: { disp: 1.5, fahr: 1, ums: 1.5, zoll: 2 }, d: [9.5, 14], lean: 0.15 },
+    phone: { w: { disp: 2.5, fahr: 2, ums: 1.5, zoll: 1 }, d: [11, 16], lean: 0.0 },
+    cup:   { w: { disp: 1, fahr: 1.5, ums: 1, zoll: 1 }, d: [9.5, 13], lean: 0.04 },
+    look:  { w: { disp: 0.6, fahr: 1, ums: 0.8, zoll: 0.6 }, d: [3, 5], lean: -0.02 }
   };
   function pickAct(F) {
-    const keys = Object.keys(ACTS).filter(k => k !== F.act || k === "type");
+    const keys = Object.keys(ACTS).filter(k => (k !== F.act || k === "type") && !(k === "cup" && F.act === "gift"));   /* v263: nach geschenktem Kaffee nicht gleich zum eigenen Becher */
     const tot = keys.reduce((a, k) => a + (ACTS[k].w[F.L.role] || 1), 0);
     let r = F.rnd() * tot, k = keys[0];
     for (const x of keys) { r -= ACTS[x].w[F.L.role] || 1; if (r <= 0) { k = x; break; } }
     const D = ACTS[k].d;
     F.act = k; F.actT = 0; F.actDur = D[0] + F.rnd() * (D[1] - D[0]);
-    F.held = null;
+    F.held = null; F.cupKeys = null;
   }
 
   /* Figur zusammensetzen: Wurzel am Stuhl (Blick zum Bildschirm), alle Teile als Kinder */
@@ -496,22 +613,24 @@ const OFFICE3D = (() => {
     const arm = [1, -1].map(side => {
       const ua = part("ua:" + L.sleeve, () => upperMesh(L));
       const fa = R.addChild(ua, R.node(M("fa:" + side + ":" + L.sleeve + ":" + L.skin + ":" + L.outfit, () => foreMesh(L, side)), { y: -ARM_A }));
-      const hand = part("hand:" + side + ":" + L.skin, () => handMesh(L, side), { shadow: true });
-      return { side, ua, fa, hand, S: [side * L.sh, 0.75, 0], T: null, H: [0, 0, 0], pole: [side * 0.25, -1, -0.45] };
+      const hand = part("hand:" + side + ":" + L.skin + ":rest", () => handMesh(L, side, "rest"), { shadow: true });
+      return { side, ua, fa, hand, S: [side * L.sh, 0.75, 0], T: null, H: [0, 0, 0], pole: [side * 0.25, -1, -0.45], g: "rest", r: null, C: null };
     });
-    const pen = R.addChild(arm[1].hand, R.node(M("pen", penMesh), { y: 0.004, z: 0.025, rx: 0.45, rz: -0.12, visible: false, shadow: false }));
-    /* Desk-Gegenstände in Figur-Koordinaten (Welt → Figur: x und z gespiegelt, / 1,45) */
+    const pp = penPose(-1);
+    const pen = R.addChild(arm[1].hand, R.node(M("pen", penMesh), { x: pp.c[0], y: pp.c[1], z: pp.c[2], rx: pp.rx, ry: pp.ry, visible: false, shadow: false }));
+    /* Desk-Gegenstände in Figur-Koordinaten (Welt → Figur: x und z gespiegelt, / 1,45); Lage wie in buildRoom (v263) */
     const loc = (dx, y, dz) => [-dx / FS, y / FS, -(dz - CHAIR_D) / FS];
     const P = {
-      kb: loc(-0.04, 0.778, 0.12), mouse: loc(0.34, 0.762, 0.12), note: loc(0.18, 0.768, 0.36), papers: loc(-0.52, 0.782, 0.17),
-      phone: loc(-0.3, 0.76, 0.36), cup: loc(0.52, 0.76, 0.22), mon: loc(0, 1.15, -0.3)
+      kb: loc(-0.04, 0.778, 0.25), mouse: loc(0.31, 0.762, 0.25), papers: loc(-0.64, 0.782, 0.22), paperHold: loc(-0.55, 0.784, 0.33), phone: loc(-0.43, 0.76, 0.3), cup: loc(0.33, 0.76, 0.1), mon: loc(0, 1.15, -0.06)
     };
-    const cup = part("cup:" + L.cup, () => cupMesh(L.cup), { x: P.cup[0], y: P.cup[1], z: P.cup[2], ry: 0.6, shadow: false });
+    const cup = part("mug:" + L.cup, () => mugMesh(L.cup), { x: P.cup[0], y: P.cup[1], z: P.cup[2], ry: PI, s: 1 / FS, shadow: false });
     const phone = part("phone", phoneMesh, { x: P.phone[0], y: P.phone[1], z: P.phone[2], ry: -0.1, shadow: false });
     const mouse = part("mouse", mouseMesh, { x: P.mouse[0], y: P.mouse[1], z: P.mouse[2], shadow: false });
+    const note = part("note", noteMesh, { y: 0.76 / FS, s: 1 / FS, shadow: false });
+    const penRest = R.addChild(note, R.node(M("penM", penMeshM), { x: 0.035, y: 0.0135, z: 0.01, rz: PI / 2, ry: 0.6, shadow: false }));
     const r0 = rng(nameHash(s.p.id || s.p.name) * 7 + 13);
     const F = Object.assign(s, {
-      L, root, torso, head, lids, mouth, arm, pen, cup, phone, mouse, P, rnd: r0,
+      L, root, torso, head, lids, mouth, arm, pen, penRest, note, noteK: 0, cup, phone, mouse, P, rnd: r0, M,
       lean: 0.1, tw: 0, br: 1, yaw: 0, pitch: 0.2, gaze: [0, 0], gazeT: 0,
       bF: 1.35 + r0() * 0.5, bP: r0() * 6.3, tP: [r0() * 6.3, r0() * 6.3], tF: 8 + r0() * 4,
       blinkAt: 1 + r0() * 4, blinkEnd: 0, talkUntil: 0, attendUntil: 0, lookUntil: 0, nextPeek: 2 + r0() * 6,
@@ -568,7 +687,7 @@ const OFFICE3D = (() => {
     /* v260: jedes Handziel bleibt auf seiner Körperseite. */
     T = T.slice(); T[0] = a.side * Math.max(0.045, a.side * T[0]);
     const delta = T.map((v, i) => v - S[i]), d0 = Math.hypot(...delta) || 1e-4;
-    const d = clamp1(d0, 0.18, A + B - 0.008), u = delta.map(v => v / d0);
+    const d = clamp1(d0, 0.1, A + B - 0.006), u = delta.map(v => v / d0);
     const p = a.pole, pd = p.reduce((s, v, i) => s + v * u[i], 0), w = nrm(p.map((v, i) => v - pd * u[i]));
     const v = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
     const ca = clamp1((A * A + d * d - B * B) / (2 * A * d), -1, 1), radius = A * Math.sqrt(1 - ca * ca);
@@ -587,7 +706,8 @@ const OFFICE3D = (() => {
     }
     /* Erst nahe Fortsetzungen der letzten Pose prüfen: kein Umspringen der Ellbogenebene. */
     for (const q of limited.concat(candidates)) {
-      let cost = (q[0] - a.side * 0.25) ** 2 * 4 + (q[1] - (S[1] - 0.15)) ** 2 * 2 + (q[2] - 0.12) ** 2;
+      const ep = a.el || [a.side * 0.23, S[1] - 0.17, 0.1];                   /* v263: bevorzugte Ellbogenlage je Tätigkeit */
+      let cost = (q[0] - ep[0]) ** 2 * 4 + (q[1] - ep[1]) ** 2 * 2 + (q[2] - ep[2]) ** 2;
       if (a.E) cost += q.reduce((sum, v, i) => sum + (v - a.E[i]) ** 2, 0) * 0.8;
       if (a.side * q[0] < 0.15) cost += 100 + (0.15 - a.side * q[0]) * 100;
       if (q[1] > S[1] + 0.015) cost += 100 + (q[1] - S[1]) * 100;
@@ -602,53 +722,142 @@ const OFFICE3D = (() => {
     a.fa.rx = fr[0]; a.fa.rz = fr[1]; a.H = Hh; a.E = E;
   }
 
-  /* v260: ruhige Arbeitsphasen, getrennte Handgelenke und durchgehende Greifwege. */
+  /* v263: Tätigkeiten nach echtem Ablauf. Jede Hand bekommt ein Ziel: Kontaktpunkt c (Figur-Koordinaten), Griff g, Drehung r,
+     Kontaktgriff o. Daraus folgt das Handgelenk; Arm-IK wie v260, die Hand setzt am Handgelenk an. Gegenstände (Becher, Telefon,
+     Maus) folgen der tatsächlichen Hand, solange sie gegriffen sind – nichts schwebt, nichts springt. */
+  const R3 = (r, v) => nodePoint({ x: 0, y: 0, z: 0, rx: r[0], ry: r[1], rz: r[2], sx: 1, sy: 1, sz: 1 }, v);
+  const OFFS = new Map();
+  const offOf = (side, g) => { const k = side + ":" + g; if (!OFFS.has(k)) OFFS.set(k, gripOff(side, g)); return OFFS.get(k); };
+  const want = (c, g, side, r, o) => ({ c, g, r: r || HROT[g](side), o: o || g });
+  const kbAt = (F, side, tap) => { const P = F.P.kb; return want([P[0] + side * 0.072, P[1] + 0.004 + (tap || 0), P[2] - 0.008], "type", side); };
+  const restOn = (F, side) => want([side * 0.135, DESK_HI[1] + 0.001, DESK_LO[2] + 0.065], "rest", side);
+  function mouseAt(F, mv) {
+    const P = F.P.mouse, t = O.t, s = O.reduced ? 0 : mv;
+    return want([P[0] + Math.sin(t * 0.6 + F.tP[0]) * 0.012 * s, P[1] + 0.014, P[2] + Math.cos(t * 0.45 + F.tP[1]) * 0.009 * s], "mouse", -1);
+  }
+  /* Becher: Henkel, Rand am Mund, Halten vor der Brust; psi = Drehung um die Hochachse (PI: Henkel rechts, 0: links) */
+  const mugRot = (psi, tilt) => [psi ? tilt : -tilt, psi, 0];
+  const mugAnchor = (base, psi, tilt) => { const h = R3(mugRot(psi, tilt), MUG_HANDLE); return base.map((v, i) => v + h[i] / FS); };
+  const mugFromAnchor = (a, psi, tilt) => { const h = R3(mugRot(psi, tilt), MUG_HANDLE); return a.map((v, i) => v - h[i] / FS); };
+  function mugAtMouth(F, psi, tilt) {
+    const m = nodePoint(F.head, [0, 0.088, 0.128]), rim = R3(mugRot(psi, tilt), [0, MUG_H, psi ? MUG_RIM : -MUG_RIM]);
+    return m.map((v, i) => v - rim[i] / FS);
+  }
+  const mugChest = (F, side) => torsoPt(F, side * 0.07, 0.12, F.L.td / 2 + 0.16);
+  /* Schlüsselbilder [Zeit, Ort, Kippung]; Ort: "home" | "chest" | "mouth" | Punkt in Figur-Koordinaten */
+  function mugPlan(F, side, psi, keys, k, home) {
+    const place = (p, tilt) => p === "home" ? home : p === "chest" ? mugChest(F, side) : p === "mouth" ? mugAtMouth(F, psi, tilt) : p;
+    let i = 0; while (i < keys.length - 2 && k >= keys[i + 1][0]) i++;
+    const [t0, p0, a0] = keys[i], [t1, p1, a1] = keys[i + 1], e = ease((k - t0) / Math.max(1e-3, t1 - t0)), tilt = a0 + (a1 - a0) * e;
+    const base = lerp3(place(p0, tilt), place(p1, tilt), e);
+    if (p0 !== p1 && (p0 === "home" || p1 === "home" || p0 === "chest" && Array.isArray(p1))) base[1] += Math.sin(e * PI) * 0.02;
+    return { base, tilt };
+  }
+  /* Eigener Becher: greifen, anheben, ansetzen, trinken (Becher kippt, Kopf leicht zurück), vor der Brust halten,
+     bei längerer Pause ein zweiter Schluck, abstellen, loslassen */
+  function cupKeys(D) {
+    const K = [[0, "home", 0], [0.85, "home", 0], [1.8, "chest", 0], [2.3, "mouth", 0.25], [3.0, "mouth", 0.8], [3.7, "mouth", 0.25], [4.3, "chest", 0]];
+    const h0 = 4.3, h1 = D - 2.3;
+    if (h1 - h0 > 3.4) { const s = (h0 + h1) / 2 - 1.05; K.push([s, "chest", 0], [s + 0.5, "mouth", 0.25], [s + 1.05, "mouth", 0.7], [s + 1.6, "mouth", 0.25], [s + 2.1, "chest", 0]); }
+    K.push([h1, "chest", 0], [D - 1.1, "home", 0], [D + 99, "home", 0]);
+    return K;
+  }
+  /* Schreiben: Stiftspitze läuft Zeile für Zeile über den Block, kleine Buchstabenschleifen, Wortabstände mit angehobenem Stift */
+  function writePt(F, w) {
+    const P = F.P, LINE = 3.3, RET = 0.45, per = LINE + RET, n = Math.floor(w / per), lt = w - n * per;
+    let u, lift = 0, v = -0.06 + (n % 5) * 0.03;
+    if (lt < LINE) {
+      u = -0.045 + 0.09 * lt / LINE + 0.0025 * Math.sin(lt * 31);
+      v += 0.0022 * Math.sin(lt * 23 + 0.7) + 0.0012 * Math.sin(lt * 51);
+      const wd = (lt % 0.95) / 0.95; if (wd > 0.84) lift = 0.006 * Math.sin((wd - 0.84) / 0.16 * PI);
+    } else { const e = ease((lt - LINE) / RET); u = 0.045 - 0.09 * e; v += 0.03 * e; lift = 0.012 * Math.sin(e * PI) + 0.004; }
+    if (O.reduced) { lift = 0; }
+    return notePt(notePose(F), u, v, lift + 0.0015);
+  }
+  const setNode = (n, p, r) => { n.x = p[0]; n.y = p[1]; n.z = p[2]; n.rx = r[0]; n.ry = r[1]; n.rz = r[2]; };
+
   function animFigure(F, dt, now, pl) {
     F.actT += dt;
-    if (F.actT >= F.actDur) pickAct(F);
-    const A = F.act, P = F.P, k = F.actT, t = O.t, [L, Rr] = F.arm, reduce = O.reduced;
+    if (F.actT >= F.actDur) { if (F.act === "gift") giftDone(F); pickAct(F); }
+    const A = F.act, P = F.P, k = F.actT, D = F.actDur, t = O.t, [L, Rr] = F.arm, reduce = O.reduced;
     const attend = now < F.attendUntil, headset = F.L.acc === "headset";
-    let tL = rest(F, 1), tR = rest(F, -1), look = P.mon, lean = ACTS[A].lean, talk = now < F.talkUntil;
-    let pen = false, holdCup = false, holdPhone = false;
-    const kbL = [P.kb[0] + 0.085, P.kb[1] + 0.027, P.kb[2] - 0.012];
-    const kbR = [P.kb[0] - 0.075, P.kb[1] + 0.027, P.kb[2] - 0.012];
-    const tap = ph => reduce ? 0 : -0.0025 * Math.pow(Math.max(0, Math.sin(t * F.tF + ph)), 6);
-    let tapL = 0, tapR = 0;
-    let cupPose = null, phonePose = null;
+    const tap = ph => reduce ? 0 : -0.003 * Math.pow(Math.max(0, Math.sin(t * F.tF + ph)), 6);
+    const grab = (a, b, c, d) => k < a ? 0 : k < b ? ease((k - a) / (b - a)) : k < c ? 1 : k < d ? 1 - ease((k - c) / (d - c)) : 0;
+    let IL = kbAt(F, 1), IR = mouseAt(F, 0), look = P.mon, lean = ACTS[A] ? ACTS[A].lean : 0.04, talk = now < F.talkUntil;
+    let cupP = null, phoneP = null, writing = false, carrying = false, sip = 0, headRz = 0, yawWide = 0.65, twBias = 0, mouseOn = A === "mouse";
     if (A === "type") {
-      const sway = reduce ? 0 : 0.005;
-      tL = [kbL[0] + Math.sin(t * 0.5 + F.tP[0]) * sway, kbL[1], kbL[2]];
-      tR = [kbR[0] + Math.sin(t * 0.47 + F.tP[1]) * sway, kbR[1], kbR[2]];
-      tapL = tap(F.tP[0]); tapR = tap(F.tP[1] + 1.7);
+      const sw = reduce ? 0 : 0.008;
+      IL = kbAt(F, 1, tap(F.tP[0])); IL.c[0] += Math.sin(t * 0.5 + F.tP[0]) * sw;
+      IR = kbAt(F, -1, tap(F.tP[1] + 1.7)); IR.c[0] += Math.sin(t * 0.47 + F.tP[1]) * sw;
+      if (!reduce && (t + F.bP * 3) % 7.3 < 0.7) look = P.kb;                          /* kurzer Blick auf die Tastatur */
     } else if (A === "mouse" || (A === "phone" && headset)) {
-      const scale = reduce ? 0 : 1;
-      const m = [P.mouse[0] + Math.sin(t * 0.6 + F.tP[0]) * 0.012 * scale, P.mouse[1], P.mouse[2] + Math.cos(t * 0.45 + F.tP[1]) * 0.009 * scale];
-      F.mPos = m; tR = [m[0], m[1] + 0.028, m[2] - 0.004]; tL = kbL;
+      IR = mouseAt(F, 1); mouseOn = true;
       if (A === "phone") talk = true;
     } else if (A === "read") {
-      /* Linkes Blatt mit linker Hand; rechte Hand bleibt an ihrer Tastaturhälfte. */
-      tL = [P.papers[0] - 0.025, P.papers[1] + 0.032, P.papers[2] - 0.025];
-      tR = kbR; look = [P.papers[0], P.papers[1], P.papers[2]];
+      IL = want([P.paperHold[0], P.paperHold[1], P.paperHold[2] - Math.min(1, k / D) * 0.02], "spread", 1);
+      look = [P.papers[0] + Math.sin(k * 2.4) * 0.025, P.papers[1], P.papers[2] + (k / D - 0.5) * 0.07];
+      yawWide = 0.85; mouseOn = true;
     } else if (A === "note") {
-      pen = true;
-      const stroke = reduce ? 0 : Math.sin(k * 2.4) * 0.014, line = reduce ? 0 : Math.sin(k * 0.45) * 0.025;
-      tR = [P.note[0] + stroke, P.note[1] + 0.038, P.note[2] + line];
-      tL = kbL; look = [P.note[0], P.note[1], P.note[2]];
+      /* Block mit den Fingerspitzen heranziehen, Stift nehmen, schreiben, Stift ablegen, Block zurückschieben;
+         linke Hand ruht auf dem Tisch, Blick auf die Stiftspitze */
+      const pull = k < 0.6 ? 0 : k < 1.3 ? ease((k - 0.6) / 0.7) : k < D - 1.3 ? 1 : k < D - 0.7 ? 1 - ease((k - (D - 1.3)) / 0.6) : 0;
+      if (k >= 0.6 && k < D - 0.7) F.noteK = pull;
+      const N = notePose(F), corner = notePt(N, 0.06, 0.095, 0.002), penAt = notePt(N, 0.035, 0.01, 0.0045);
+      writing = k >= 1.75 && k < D - 1.7;
+      let c = null, g = "pen";
+      if (k < 1.3 || (k >= D - 1.6 && k < D - 0.7)) { c = corner; g = "spread"; }
+      else if (k < 1.9 || k >= D - 2.0) c = penAt;
+      else c = writePt(F, k - 1.9);
+      if (c) IR = want(c, g, -1);
+      IL = restOn(F, 1);
+      if (c) look = c;
+      yawWide = 0.85; twBias = -0.07;
     } else if (A === "phone") {
-      talk = k > 2.2 && k < F.actDur - 2.2;
-      tR = kbR;
+      /* Telefon mit links vom Tisch ans Ohr: Display an der Wange, Ellbogen unten, Kopf leicht zum Telefon geneigt */
+      const ear = nodePoint(F.head, [0.127, 0.084, 0.05]);
+      const up = k < 0.8 ? 0 : k < 2.0 ? ease((k - 0.8) / 1.2) : k < D - 2.0 ? 1 : k < D - 0.8 ? 1 - ease((k - (D - 2.0)) / 1.2) : 0;
+      const pos = lerp3(P.phone, ear, up); pos[1] += Math.sin(up * PI) * 0.03;
+      phoneP = { pos, rot: lerp3([0, -0.1, 0], [0.42, F.yaw * 0.8, PI / 2], up), g: grab(0.55, 0.8, D - 0.8, D - 0.55) };
+      if (k < D - 0.5) { IL = want(pos, k < 0.55 ? "rest" : "phone", 1, lerp3(HROT.phone(1), HROT.ear(1), up), "phone"); if (up > 0.3) IL.el = [0.1, 0.58, 0.2]; }
+      talk = k > 2.2 && k < D - 2.2;
+      if (up > 0.9) { look = [Math.sin(t * 0.31 + F.bP) * 0.45, 0.92 + Math.sin(t * 0.47) * 0.08, 1.25]; headRz = -0.18; }
+      carrying = k > 0.8 && k < D - 0.8;
     } else if (A === "cup") {
-      tL = kbL; look = [0, 1, 1.4];
+      const pl2 = mugPlan(F, -1, PI, F.cupKeys || (F.cupKeys = cupKeys(D)), k, P.cup);
+      cupP = { base: pl2.base, tilt: pl2.tilt, g: grab(0.55, 0.85, D - 1.1, D - 0.85) };
+      if (k < D - 0.9) { const r = HROT.cup(-1); IR = want(mugAnchor(pl2.base, PI, pl2.tilt), k < 0.55 ? "open" : "cup", -1, [r[0] - pl2.tilt, r[1], r[2]], "cup"); if (pl2.base[1] > 0.62) IR.el = [-0.17, 0.56, 0.17]; }
+      sip = pl2.tilt; look = [0, 1, 1.4];
+      carrying = k > 0.85 && k < D - 1.1;
     } else if (A === "look") {
-      look = [Math.sin(F.bP) * 0.3, 0.98, 1.3]; lean = 0.01;
+      IL = restOn(F, 1); IR = restOn(F, -1);
+      look = [Math.sin(F.bP) * 0.3, 0.98, 1.3];
+    } else if (A === "gift" && F.gift) {
+      /* v263: angebotene Tasse am Henkel übernehmen, trinken, auf dem eigenen Tisch abstellen */
+      const g = F.gift, s = g.side, psi = s < 0 ? PI : 0, meet = toLoc(F, g.meet), spot = toLoc(F, g.spot);
+      const keys = [[0, meet, 0], [1.2, meet, 0], [2.2, "mouth", 0.25], [2.85, "mouth", 0.75], [3.5, "mouth", 0.25], [4.1, "chest", 0], [5.3, spot, 0], [99, spot, 0]];
+      const pl2 = mugPlan(F, s, psi, keys, k, spot);
+      g.plan = { base: pl2.base, tilt: pl2.tilt, g: grab(0.9, 1.15, 5.3, 5.55), psi };
+      const r = HROT.cup(s), I = want(mugAnchor(pl2.base, psi, pl2.tilt), k < 0.9 ? "open" : "cup", s, [r[0] - pl2.tilt, r[1], r[2]], "cup");
+      if (pl2.base[1] > 0.62) I.el = [s * 0.17, 0.56, 0.17];
+      if (k < 5.6) { if (s > 0) IL = I; else IR = I; }
+      look = k < 1.3 ? meet : k < 4.1 ? [0, 1, 1.4] : spot;
+      sip = pl2.tilt; lean = k > 4.1 && k < 5.6 ? 0.12 : 0.05; carrying = true;
     }
-    const carrying = (A === "phone" && !headset && k > 1 && k < F.actDur - 0.8) || (A === "cup" && k > 1 && k < F.actDur - 0.8);
+    /* v263: Schock (tote Kollegin, toter Kollege) und Schreck (klirrende Tasse): Blick dorthin, bei Schock Hände vor den Mund */
+    const shock = F.shock && O.t >= F.shock.at ? F.shock : null;
+    const fright = !shock && F.startle && now < F.startle.until ? F.startle : null;
+    const seeW = shock ? (shock.F.dead ? deadHead(shock.F) : shock.pt) : fright ? fright.pt : null;
+    if (shock) {
+      if (O.t - shock.at < 3.4) { IL = want(nodePoint(F.head, [0.03, 0.08, 0.17]), "open", 1); IR = want(nodePoint(F.head, [-0.03, 0.08, 0.17]), "open", -1); }
+      lean = 0.0; writing = false; talk = false;
+    }
+    if (seeW) look = toLoc(F, seeW);
     let toPl = false;
-    if (pl.d < 3.4 && pl.front && !carrying) {
+    if (pl.d < 3.4 && pl.front && !carrying && !seeW) {
       if (t > F.nextPeek) { F.nextPeek = t + 10 + F.rnd() * 12; if (F.rnd() < 0.35) F.lookUntil = now + 1200 + F.rnd() * 900; }
       toPl = now < F.lookUntil || attend;
-    } else if (attend && pl.front && !carrying) toPl = true;
-    if (attend && !carrying) { tL = kbL; tR = kbR; lean = 0.025; pen = false; }
+    } else if (attend && pl.front && !carrying && !seeW) toPl = true;
+    if (attend && !carrying && !shock) { IL = kbAt(F, 1); IR = kbAt(F, -1); lean = 0.025; writing = false; mouseOn = false; }
     const kk = 1 - Math.exp(-dt * 2.8);
     F.br = 1 + (reduce ? 0 : Math.sin(t * F.bF * 0.7 + F.bP) * 0.003);
     F.lean += (lean - F.lean) * kk;
@@ -661,76 +870,56 @@ const OFFICE3D = (() => {
       const dx = look[0] - hp[0], dz = look[2] - hp[2];
       wantYaw = Math.atan2(dx, dz) + F.gaze[0]; wantPitch = Math.atan2(hp[1] - look[1], Math.hypot(dx, dz)) + F.gaze[1];
     }
-    if (A === "phone" && !headset) { wantYaw = 0.04; wantPitch = 0.04; }
-    if (A === "cup") { wantYaw = 0; wantPitch = 0.035; }
-    wantYaw = clamp1(wantYaw, -0.65, 0.65); wantPitch = clamp1(wantPitch, -0.14, 0.3);
-    const kh = 1 - Math.exp(-dt * 2.8);
+    if (sip > 0.3 && !seeW) { wantYaw = 0; wantPitch = -0.06 - (sip - 0.3) * 0.3; }       /* beim Trinken Kopf leicht zurück */
+    const wide = seeW ? 1.2 : yawWide;
+    wantYaw = clamp1(wantYaw, -wide, wide); wantPitch = clamp1(wantPitch, -0.25, seeW ? 0.6 : 0.7);
+    const kh = 1 - Math.exp(-dt * (fright ? 7 : 2.8));
     F.yaw = angTo(F.yaw, wantYaw, kh); F.pitch += (wantPitch - F.pitch) * kh;
-    F.tw += (clamp1(F.yaw * 0.10, -0.065, 0.065) - F.tw) * kk;
+    F.tw += (clamp1(F.yaw * (seeW ? 0.3 : 0.12) + twBias, seeW ? -0.22 : -0.1, seeW ? 0.22 : 0.1) - F.tw) * kk;
+    F.hrz = (F.hrz || 0) + (headRz - (F.hrz || 0)) * kh;
     const T = F.torso; T.rx = F.lean; T.ry = F.tw; T.sy = F.br; T.sz = 1 + (F.br - 1) * 0.5;
     const np = torsoPt(F, 0, 0.4, 0);
     F.head.x = np[0]; F.head.y = np[1]; F.head.z = np[2];
-    F.head.ry = F.yaw; F.head.rx = F.pitch; F.head.rz = 0;
+    F.head.ry = F.yaw; F.head.rx = F.pitch; F.head.rz = F.hrz;
+    if (now < (F.shakeUntil || 0) && !reduce) F.head.ry += Math.sin((F.shakeUntil - now) / 900 * PI * 4) * 0.2;   /* Kopfschütteln beim Ablehnen */
 
-    /* v260: erst greifen, dann heben, halten, senken, loslassen – Gegenstand bleibt an derselben Hand. */
-    function propPhase(home, raised, homeGrip, raisedGrip) {
-      const end = F.actDur;
-      let lift = 0, grip = 0;
-      if (k >= 1 && k < 2.3) { lift = ease((k - 1) / 1.3); grip = ease((k - 1) / 0.18); }
-      else if (k >= 2.3 && k < end - 2.3) { lift = 1; grip = 1; }
-      else if (k >= end - 2.3 && k < end - 1) { lift = 1 - ease((k - (end - 2.3)) / 1.3); grip = 1; }
-      else if (k >= end - 1) grip = 1 - ease((k - (end - 1)) / 0.25);
-      const pos = lerp3(home, raised, lift), offset = lerp3(homeGrip, raisedGrip, lift);
-      pos[1] += Math.sin(lift * PI) * 0.025;
-      return { pos, lift, grip, hand: pos.map((v, i) => v + offset[i]) };
-    }
-    if (A === "phone" && !headset) {
-      const ear = nodePoint(F.head, [0.132, 0.101, 0.002]);
-      phonePose = propPhase(P.phone, ear, [0, 0.032, -0.015], [0.024, -0.025, 0.008]);
-      tL = k < 1 ? lerp3(kbL, phonePose.hand, ease(k)) : k > F.actDur - 0.65 ? lerp3(phonePose.hand, kbL, ease((k - (F.actDur - 0.65)) / 0.65)) : phonePose.hand;
-      holdPhone = phonePose.grip > 0;
-    }
-    if (A === "cup") {
-      const sip = nodePoint(F.head, [-0.048, 0.018, 0.14]);
-      cupPose = propPhase(P.cup, sip, [-0.037, 0.044, -0.018], [-0.047, 0.045, -0.006]);
-      tR = k < 1 ? lerp3(kbR, cupPose.hand, ease(k)) : k > F.actDur - 0.65 ? lerp3(cupPose.hand, kbR, ease((k - (F.actDur - 0.65)) / 0.65)) : cupPose.hand;
-      holdCup = cupPose.grip > 0;
-    }
-    [[L, tL, tapL], [Rr, tR, tapR]].forEach(([a, target, tap]) => {
+    /* Arme: Handdrehung glätten, Griff (Fingerstellung) wechseln, Handgelenk-Ziel mit begrenzter Geschwindigkeit anfahren */
+    [[L, IL], [Rr, IR]].forEach(([a, I]) => {
       a.S = torsoPt(F, a.side * F.L.sh, 0.33, 0);
-      a.pole = [a.side * 0.28, -1, 0.12];
-      /* Kontaktflächen nicht unter der Tischplatte; kein Wechsel auf die andere Körperseite. */
-      const goal = target.slice(); goal[0] = a.side * Math.max(0.045, a.side * goal[0]);
-      if (goal[2] > DESK_LO[2] - 0.03) goal[1] = Math.max(DESK_HI[1] + 0.033, goal[1]);
-      /* v260: begrenzte Geschwindigkeit und Beschleunigung statt ruckartigem Zielwechsel. */
-      const desired = goal.map((v, i) => (v - a.T[i]) * 6), speed = Math.hypot(...desired), maxSpeed = 0.48;
+      a.pole = [a.side * 0.28, -1, 0.12]; a.el = I.el || null;
+      const kr = 1 - Math.exp(-dt * 7);
+      a.r = a.r ? a.r.map((v, i) => angTo(v, I.r[i], kr)) : I.r.slice();
+      if (a.g !== I.g) { a.g = I.g; a.hand.mesh = F.M("hand:" + a.side + ":" + F.L.skin + ":" + I.g, () => handMesh(F.L, a.side, I.g)); }
+      const off = R3(a.r, offOf(a.side, I.o)), back = R3(a.r, [0, 0, -PALM]);
+      const goal = I.c.map((v, i) => v - off[i] + back[i]);
+      goal[0] = a.side * Math.max(0.045, a.side * goal[0]);
+      if (goal[2] > DESK_LO[2] - 0.03) goal[1] = Math.max(DESK_HI[1] + 0.02, goal[1]);
+      const desired = goal.map((v, i) => (v - a.T[i]) * 6), speed = Math.hypot(...desired), maxSpeed = 0.55;
       if (speed > maxSpeed) desired.forEach((v, i) => { desired[i] = v * maxSpeed / speed; });
       a.V = lerp3(a.V || [0, 0, 0], desired, 1 - Math.exp(-dt * 12));
       a.T = a.T.map((v, i) => v + a.V[i] * dt);
-      solveArm(a, [a.T[0], a.T[1] + tap, a.T[2]], F, dt);
-      a.hand.x = a.H[0]; a.hand.y = a.H[1]; a.hand.z = a.H[2];
-      const raised = a === L && phonePose ? phonePose.lift : a === Rr && cupPose ? cupPose.lift : 0;
-      a.hand.rx = -0.04 - raised * (a === L && phonePose ? 1.28 : 0.55);
-      a.hand.ry = a.side * 0.08 - a.side * raised * (a === L && phonePose ? 0.35 : 0.85);
-      a.hand.rz = a.side * raised * 0.08;
-      if (pen && a === Rr) { a.hand.rx = -0.18; a.hand.rz = -0.16; }
+      solveArm(a, a.T, F, dt);
+      const fw = R3(a.r, [0, 0, PALM]), o2 = R3(a.r, offOf(a.side, I.o));
+      a.hand.x = a.H[0] + fw[0]; a.hand.y = a.H[1] + fw[1]; a.hand.z = a.H[2] + fw[2];
+      a.hand.rx = a.r[0]; a.hand.ry = a.r[1]; a.hand.rz = a.r[2];
+      a.C = [a.hand.x + o2[0], a.hand.y + o2[1], a.hand.z + o2[2]];
     });
-    function prop(node, home, pose, hand, target, angles) {
-      const p = pose ? pose.pos.map((v, i) => v + (hand.H[i] - target[i]) * pose.grip) : home;
-      node.x = p[0]; node.y = p[1]; node.z = p[2];
-      node.rx = pose ? angles[0] * pose.lift : 0;
-      node.ry = pose ? angles[1] * pose.lift : 0;
-      node.rz = pose ? angles[2] * pose.lift : 0;
-    }
-    prop(F.phone, P.phone, phonePose, L, tL, [-PI / 2, PI / 2, 0]);
-    prop(F.cup, P.cup, cupPose, Rr, tR, [-0.16, 0, 0]);
-    F.held = holdPhone ? "phone" : holdCup ? "cup" : null;
-    if (A === "mouse" || (A === "phone" && headset)) { F.mouse.x = Rr.H[0]; F.mouse.z = Rr.H[2] + 0.004; }
-    else { F.mouse.x = P.mouse[0]; F.mouse.z = P.mouse[2]; }
-    F.pen.visible = pen;
+    /* Gegenstände folgen der greifenden Hand */
+    if (cupP) {
+      const anc = lerp3(mugAnchor(cupP.base, PI, cupP.tilt), Rr.C, cupP.g);
+      setNode(F.cup, mugFromAnchor(anc, PI, cupP.tilt), mugRot(PI, cupP.tilt));
+    } else setNode(F.cup, P.cup, [0, PI, 0]);
+    if (phoneP) setNode(F.phone, lerp3(phoneP.pos, L.C, phoneP.g), phoneP.rot);
+    else setNode(F.phone, P.phone, [0, -0.1, 0]);
+    if (mouseOn && Rr.g === "mouse") { F.mouse.x = Rr.C[0]; F.mouse.z = Rr.C[2]; }
+    F.pen.visible = writing; F.penRest.visible = !writing;
+    const N = notePose(F); F.note.x = N.c[0]; F.note.z = N.c[2]; F.note.ry = N.ry + PI;
+    F.held = phoneP && phoneP.g > 0.5 ? "phone" : cupP && cupP.g > 0.5 ? "cup" : null;
+    if (A === "gift" && F.gift) giftCup(F, k);
     if (t > F.blinkAt) { F.blinkEnd = t + 0.12; F.blinkAt = t + 3 + F.rnd() * 4.5; }
+    if (sip > 0.6 && F.sipBlink !== F.actT - (F.actT % 100)) { F.sipBlink = F.actT - (F.actT % 100); F.blinkEnd = t + 0.5; }   /* beim Schluck kurz die Augen zu */
     F.lids.visible = t < F.blinkEnd;
-    F.mouth.sy = talk && !reduce ? 1 + 0.8 * Math.abs(Math.sin(t * 8 + F.bP)) : 1;
+    F.mouth.sy = talk && !reduce ? 1 + 0.8 * Math.abs(Math.sin(t * 8 + F.bP)) : shock ? 1.5 : 1;
   }
 
   /* --------------------------- Wandbilder ------------------------------ */
@@ -923,7 +1112,7 @@ const OFFICE3D = (() => {
         <button class="ofp-x" id="ofpX">🚪 Verlassen</button></div>
       <div class="ofp-floors"></div>
       <div class="ofp-aim" aria-hidden="true"></div>
-      <div class="ofp-actions"><small id="ofpCarry" role="status"></small><button id="ofpAction" hidden></button></div>
+      <div class="ofp-actions"><small id="ofpCarry" role="status"></small><button id="ofpAction" hidden></button><button id="ofpThrow" hidden>Tasse werfen</button></div>
       <div class="ofp-joy" id="ofpJoy"><i></i></div>
       <div class="ofp-say" id="ofpSay"></div>
       <div class="ofp-hint" id="ofpHint">Links gehen · wischen zum Umsehen · Personal antippen · Küchenobjekte ansehen</div>
@@ -932,7 +1121,7 @@ const OFFICE3D = (() => {
     document.body.appendChild(el);
     document.body.classList.add("office3d");
     const tok = ++SEQ;
-    O = { el, b, tok, floor: Math.max(0, Math.min(tierFloors(tierOf(b)) - 1, floor || 0)), alive: true, meshes: [], texs: [], mcache: new Map(), kitchenStates: new Map() };
+    O = { el, b, tok, floor: Math.max(0, Math.min(tierFloors(tierOf(b)) - 1, floor || 0)), alive: true, meshes: [], texs: [], mcache: new Map(), kitchenStates: new Map(), spills: new Map(), fx: [], later: [] };
     el.querySelector("#ofpX").onclick = leave;
     /* Statusleiste dunkel wie die Szene (iPhone: Farbe der Leiste kommt aus theme-color) */
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -996,6 +1185,15 @@ const OFFICE3D = (() => {
   /* Etage aufbauen (beim Betreten, Etagenwechsel und wenn sich das Team ändert) – vorher alles Alte freigeben */
   function freeFloor() {
     const R = O.R;
+    /* v263: laufende Übergaben abschließen, fliegende Tasse zerbricht, Kaffee und Scherben bleiben für diese Etage gemerkt */
+    (O.staff || []).forEach(F => { if (F.gift) giftDone(F); });
+    if (O.fly && O.kitRuntime) { O.kitRuntime.shatter(O.fly.it); O.fly = null; }
+    if (O.kitFloor != null) O.spills.set(O.kitFloor, (O.fx || []).filter(f => f.d.persist && f.fade == null && S.time < f.d.until).map(f => {
+      const d = Object.assign({}, f.d, { grow: false, v: null });
+      if (d.type === "shard") { d.pos = d.pos.slice(); d.pos[1] = surfBelow(d.pos[0], d.pos[2], d.pos[1]).y + 0.002; d.rot = [0, d.rot[1], 0]; }
+      return d;
+    }));
+    O.fx = []; O.later = [];
     if (O.kitRuntime) {
       const state = O.kitRuntime.snapshot();
       /* v259: Etagenwechsel stellt Getragenes zurück; Team-Neuaufbau erhält die Hand. */
@@ -1034,8 +1232,13 @@ const OFFICE3D = (() => {
     O.poster = Object.assign({}, P, { c: pc, t: pt, k: posterKey(b) });
     posterPortrait(b, pt, pc);
     O.ob = room.ob; O.occ = room.occ; O.H = room.H; O.kitchen = room.kitchen;
+    O.surf = room.surf; O.phys = room.phys; O.carpet = room.carpet;               /* v263 */
     O.kitFloor = O.floor;
     O.kitRuntime = room.kitchen ? OFFICE_KITCHEN.mount(room.kitchen, R, M1, O.kitchenStates.get(O.floor), hint, O.reduced) : null;
+    /* v263: Markierung zum Abstellen, Kaffee und Scherben dieser Etage (noch keine 5 Spielminuten alt) */
+    O.ghost = R.node(M1(ringMesh()), { visible: false, shadow: false, glow: 0.9 }); R.nodes.push(O.ghost);
+    const back = O.spills.get(O.floor) || []; O.spills.delete(O.floor);
+    back.forEach(d => { if (S.time < d.until) fxAdd(d); });
     O.sig = staffSig(b, O.floor); O.pollAt = performance.now() + 3000;          /* echte Zeit, unabhängig von der Bildrate */
     if (!keepPos) {
       /* Startpunkt: in der Tür (EG) bzw. oben an der Treppe */
@@ -1090,11 +1293,12 @@ const OFFICE3D = (() => {
     /* v259: Kamera und Küchenzustand teilen dieselbe Uhr, keine nachlaufenden Timer. */
     O.eye = [ex, ey, ez];
     if (O.kitRuntime) { O.kitRuntime.tick(dt, { eye: O.eye, yaw: O.yaw }); collide(O.pos); }
+    stepCoffee(dt);                                                              /* v263: Wurf, Spuren, verzögerte Reaktionen */
     /* Personal: Gliederpuppe statt Hüpfen (vorher hob sich die ganze Figur 7-mal pro Sekunde und pendelte um die Hochachse) */
     (O.staff || []).forEach(st => {
       const dx = O.pos[0] - st.x, dz = O.pos[1] - st.z;
       const pl = { d: Math.hypot(dx, dz), front: -dz / FS > -0.3, l: [-dx / FS, EYE / FS, -dz / FS] };
-      animFigure(st, dt, now, pl);
+      if (st.dead) animDead(st, dt); else animFigure(st, dt, now, pl);
     });
     /* Sprechblase folgt dem Kopf */
     if (O.sayAt) {
@@ -1164,6 +1368,9 @@ const OFFICE3D = (() => {
     const action = el.querySelector("#ofpAction");
     action.addEventListener("pointerdown", e => e.stopPropagation());
     action.onclick = e => { e.stopPropagation(); const hit = actionTarget(); if (hit && !hit.disabled) performAction(hit); };
+    const thr = el.querySelector("#ofpThrow");                                     /* v263 */
+    thr.addEventListener("pointerdown", e => e.stopPropagation());
+    thr.onclick = e => { e.stopPropagation(); throwCup(); };
     /* Tastatur */
     const MAP = { KeyW: "w", ArrowUp: "w", KeyS: "s", ArrowDown: "s", KeyA: "a", KeyD: "d", ArrowLeft: "l", ArrowRight: "r", KeyQ: "l", KeyE: "r" };
     O.key = e => {
@@ -1200,10 +1407,17 @@ const OFFICE3D = (() => {
       const p = ray.o.map((v, i) => v + ray.d[i] * t);
       if (Math.hypot(...p.map((v, i) => v - eye[i])) < 2.4 && !blocked(eye, p)) best = { id: "leave", label: "Zurückkehren", t };
     }
+    /* v263: Wer im Blick sitzt oder liegt, verdeckt, was dahinter ist; mit Kaffee in der Hand: anbieten. Sonst: abstellen. */
+    const who = staffHit(ray);
+    if (who && (!best || who.t < best.t)) return offerTarget(who, eye);
+    const drop = dropSpot(ray, eye);
+    if (drop && (!best || drop.t < best.t)) best = drop;
     return best;
   }
   function performAction(hit) {
     if (hit.id === "leave") return leave();
+    if (hit.id === "drop") { if (O.kitRuntime) O.kitRuntime.dropAt(hit.pos, hit.ry); return; }
+    if (hit.id === "offer") return offerTo(hit.F);
     if (O.kitRuntime) O.kitRuntime.perform(hit.id);
   }
   function updateAction() {
@@ -1215,17 +1429,27 @@ const OFFICE3D = (() => {
     if (O.kitRuntime) O.kitRuntime.focus(hit && hit.id);
     const carry = O.el.querySelector("#ofpCarry"), K = O.kitRuntime;
     carry.textContent = K && K.held ? "In der Hand: " + (K.held.kind === "cup" ? K.held.fill > 0 ? "Kaffee" : "Leere Tasse" : K.held.name) : "";
+    /* v263: Werfen nur mit einer Tasse in der Hand; Ring zeigt, wo abgestellt wird */
+    O.el.querySelector("#ofpThrow").hidden = !(K && K.held && K.held.kind === "cup" && !K.busy() && !O.fly && !O.cardOpen);
+    if (O.ghost) {
+      const g = !!(hit && hit.id === "drop"); O.ghost.visible = g;
+      if (g) { O.ghost.x = hit.pos[0]; O.ghost.y = hit.pos[1] + 0.003; O.ghost.z = hit.pos[2]; }
+    }
   }
   function tapAt(x, y) {
     if (O.cardOpen) { closeCard(); return; }
     const rc = O.el.querySelector("#ofpCv").getBoundingClientRect(), px = x - rc.left, py = y - rc.top;
     const ray = O.R.ray(px, py), eye = eyePt();
     const action = actionTarget(ray);
-    if (action) { if (!action.disabled) performAction(action); return; }
+    if (action) {
+      if (!action.disabled) performAction(action);
+      else if (action.id === "offer") hint("Geh näher an " + action.F.p.name.split(" ")[0] + " heran, um den Kaffee zu übergeben.");
+      return;
+    }
     let best = null;
-    /* 1. Strahl trifft eine Figur (Kasten um Oberkörper und Kopf) */
+    /* 1. Strahl trifft eine Figur (Kasten um Oberkörper und Kopf; v263: liegend um den Körper) */
     (O.staff || []).forEach(st => {
-      const t = O.R.hitBox(ray, [st.x - 0.3, 0.45, st.z - 0.42], [st.x + 0.3, 1.62, st.z + 0.22]);
+      const [lo, hi] = figBox(st), t = O.R.hitBox(ray, lo, hi);
       if (t != null && (!best || t < best.t)) best = { st, t };
     });
     /* 2. knapp daneben: nächster Kopf auf dem Bildschirm (36 px) */
@@ -1243,6 +1467,7 @@ const OFFICE3D = (() => {
     }
     if (!best) return;
     const s = best.st;
+    if (s.dead) return hint(s.p.name + " ist tot.");
     const vis = [1.42, 1.05].some(h => !blocked(eye, [s.x, h, s.z - 0.05]));
     if (!vis) return hint("Da steht etwas im Weg – geh um den Tisch herum.");
     if (best.t > TALK_RANGE) return hint("Zu weit weg – geh näher an " + s.p.name.split(" ")[0] + " heran.");
@@ -1278,17 +1503,14 @@ const OFFICE3D = (() => {
     if (p.since != null) out.push("Ich bin seit Tag " + dayOf(p.since) + " dabei.");
     return out;
   }
+  const SHOCK_SAY = ["Ich … ich kann jetzt nicht reden.", "Der Notarzt ist unterwegs.", "Warum hast du das getan?", "Ich zittere immer noch."];
   function say(s) {
-    const p = s.p, role = ROLES[p.role], A = ACT_SAY[s.act] || ACT_SAY.look, al = A[p.role] || A.disp;
+    if (O.deaths) return speak(s, SHOCK_SAY[s.talkN++ % SHOCK_SAY.length]);           /* v263: nach einem Todesfall */
+    const p = s.p, A = ACT_SAY[s.act] || ACT_SAY.look, al = A[p.role] || A.disp;
     const list = [al[s.talkN % al.length]].concat(factLines(s));
     let i = s.talkN % list.length; if (list[i] === s.lastSay) i = (i + 1) % list.length;
     const line = list[i]; s.lastSay = line; s.talkN++;
-    const el = O.el.querySelector("#ofpSay");
-    el.innerHTML = `<b>${esc(p.name)}</b><small>${esc(role ? role.name : "Team")}</small><span>„${esc(line)}“</span>`;
-    el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
-    const now = performance.now();
-    s.attendUntil = now + 4800; s.talkUntil = now + Math.min(3200, 900 + line.length * 38);
-    O.sayAt = { x: s.x, z: s.z }; O.sayUntil = now + 4200;
+    speak(s, line);
   }
 
   /* Kleine Karte zum Poster */
@@ -1312,12 +1534,625 @@ const OFFICE3D = (() => {
   }
   function closeCard() { if (!O) return; const el = O.el.querySelector("#ofpCard"); if (el) el.classList.remove("on"); O.cardOpen = false; }
 
+  /* ------------------ v263: Kaffee abstellen, anbieten, werfen ------------------ */
+  /* Abstellen auf jeder freien Fläche (Tische, Arbeitsplatte, Küchentisch, Fensterbank, Empfang, Boden).
+     Anbieten: Die Person entscheidet nachvollziehbar (telefoniert, hat gerade den eigenen Kaffee in der Hand,
+     hat eben erst einen bekommen, trinkt keinen Kaffee, spät am Abend, kein Platz auf dem Tisch); sonst nimmt sie
+     die Tasse, trinkt und stellt sie auf ihren Tisch. Keine Wirkung auf Stimmung oder Geld.
+     Werfen: Flugbahn mit Schwerkraft gegen Wände, Decke, Boden, Möbel, offene Küchentüren, Stuhllehnen und Personen;
+     die Tasse zerspringt beim ersten Aufprall. Kaffee und Scherben bleiben 5 Spielminuten (S.time) dort, wo sie
+     landen: waagerechte Fläche → an der Stelle; Wand, Möbelfront, Decke, Person → Fleck dort, Lache auf der höchsten
+     Fläche darunter. Kopf- oder Rumpftreffer: Die Person stirbt sofort (Wunsch v263) – sichtbare Verletzung,
+     Sturz vom Stuhl bzw. Zusammensacken, Blutlache, Schock im Team, Folgen im Spielstand wie beim Ausscheiden. */
+  const GRAV = 9.81, CUP_R = 0.045, CUP_C = 0.054, THROW_V = 8.5, OFFER_RANGE = 1.35, SPILL_MIN = 5;
+  const COFFEE = 0x4a2812, COFFEE_HI = 0x6b3d1d, COFFEE_CARPET = 0x3a2412, BLOOD = 0x5e0b0d, BLOOD_HI = 0x7d1214;
+  const GIFTS = new Map();                                   /* Personal-ID → Spielzeit der letzten angenommenen Tasse (nur Sitzung) */
+  const toLoc = (F, w) => [-(w[0] - F.x) / FS, w[1] / FS, -(w[2] - F.z) / FS];
+  const toWorld = (F, l) => [F.x - l[0] * FS, l[1] * FS, F.z - l[2] * FS];     /* Wurzel noch ungedreht (lebende Figur) */
+  function rootWorld(F, l) {
+    const r = F.root, M = G3.trs(new Float32Array(16), r.x, r.y, r.z, r.rx, r.ry, r.rz, r.sx, r.sy, r.sz);
+    return [0, 1, 2].map(i => M[i] * l[0] + M[i + 4] * l[1] + M[i + 8] * l[2] + M[i + 12]);
+  }
+  const deadHead = F => rootWorld(F, nodePoint(F.head, HC));
+  /* Punkt aus Eltern- in Knotenkoordinaten (Umkehrung von T · Ry · Rx · Rz · S) */
+  function invNode(n, p) {
+    let v = [p[0] - n.x, p[1] - n.y, p[2] - n.z];
+    const cy = Math.cos(n.ry), sy = Math.sin(n.ry); v = [cy * v[0] - sy * v[2], v[1], sy * v[0] + cy * v[2]];
+    const cx = Math.cos(n.rx), sx = Math.sin(n.rx); v = [v[0], cx * v[1] + sx * v[2], -sx * v[1] + cx * v[2]];
+    const cz = Math.cos(n.rz), sz = Math.sin(n.rz); v = [cz * v[0] + sz * v[1], -sz * v[0] + cz * v[1], v[2]];
+    return [v[0] / n.sx, v[1] / n.sy, v[2] / n.sz];
+  }
+  function later(ms, fn) { (O.later || (O.later = [])).push({ at: performance.now() + ms, fn }); }
+
+  /* Strecke a → a + d gegen Kasten (mit Flächennormale) und Kugel; t in [0, 1], Start im Inneren zählt nicht */
+  function segBox(a, d, lo, hi) {
+    let t0 = 0, t1 = 1, ax = -1, sg = 0;
+    for (let k = 0; k < 3; k++) {
+      if (Math.abs(d[k]) < 1e-9) { if (a[k] < lo[k] || a[k] > hi[k]) return null; continue; }
+      let u = (lo[k] - a[k]) / d[k], w = (hi[k] - a[k]) / d[k], s = -1;
+      if (u > w) { const q = u; u = w; w = q; s = 1; }
+      if (u > t0) { t0 = u; ax = k; sg = s; }
+      if (w < t1) t1 = w;
+      if (t0 > t1) return null;
+    }
+    if (ax < 0) return null;
+    const n = [0, 0, 0]; n[ax] = sg; return { t: t0, n };
+  }
+  function segSphere(a, d, c, r) {
+    const m = [a[0] - c[0], a[1] - c[1], a[2] - c[2]], A = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    const B = 2 * (m[0] * d[0] + m[1] * d[1] + m[2] * d[2]), C = m[0] * m[0] + m[1] * m[1] + m[2] * m[2] - r * r;
+    if (C < 0 || A < 1e-12) return null;
+    const D = B * B - 4 * A * C; if (D < 0) return null;
+    const t = (-B - Math.sqrt(D)) / (2 * A); if (t < 0 || t > 1) return null;
+    return { t, n: [0, 1, 2].map(i => (m[i] + d[i] * t) / r) };
+  }
+  /* Kasten um den Oberkörper (mit Oberarmen) in Weltkoordinaten */
+  function torsoBox(F) {
+    const L = F.L, lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    [-1, 1].forEach(sx => [0.02, 0.36].forEach(y => [-1, 1].forEach(sz => {
+      const w = toWorld(F, torsoPt(F, sx * (L.tw / 2 + 0.04), y, sz > 0 ? L.td / 2 + 0.03 : -L.td / 2));
+      for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], w[i]); hi[i] = Math.max(hi[i], w[i]); }
+    })));
+    return [lo, hi];
+  }
+  /* Kasten zum Antippen und als Hindernis: sitzend bzw. liegend */
+  function figBox(F) {
+    const D = F.dead;
+    if (D && D.kind === "fall") {
+      const a = F.x + D.dn * 0.15, b = F.x + D.dn * 1.5;
+      return [[Math.min(a, b), 0, F.z - 0.55], [Math.max(a, b), 0.45, F.z + 0.2]];
+    }
+    return [[F.x - 0.3, 0.45, F.z - 0.42], [F.x + 0.3, 1.62, F.z + 0.22]];
+  }
+  const deadRects = () => (O.staff || []).filter(F => F.dead && F.dead.kind === "fall").map(F => { const [lo, hi] = figBox(F); return [lo[0], lo[2], hi[0], hi[2]]; });
+  function staffHit(ray) {
+    let best = null;
+    (O.staff || []).forEach(F => { const [lo, hi] = figBox(F), t = O.R.hitBox(ray, lo, hi); if (t != null && (!best || t < best.t)) best = { F, t }; });
+    return best;
+  }
+
+  /* Erster Aufprall einer Kugel (Radius r) auf der Strecke a → a + d */
+  function sweep(a, d, r) {
+    let best = null;
+    const take = (h, kind, extra) => { if (h && h.t >= 0 && h.t <= 1 && (!best || h.t < best.t)) best = Object.assign({ t: h.t, n: h.n, kind }, extra || {}); };
+    [[0, -RW + r, 1], [0, RW - r, -1], [2, -RD + r, 1], [2, RD - r, -1], [1, r, 1], [1, O.H - r, -1]].forEach(([ax, v, sg]) => {
+      if (d[ax] * sg >= 0) return;
+      const t = (v - a[ax]) / d[ax]; if (t < 0 || t > 1) return;
+      const n = [0, 0, 0]; n[ax] = sg;
+      take({ t, n }, ax === 1 ? (sg > 0 ? "floor" : "ceiling") : "wall");
+    });
+    for (const box of (O.occ || []).concat(O.phys || [])) take(segBox(a, d, box[0].map(v => v - r), box[1].map(v => v + r)), "furn", { box });
+    const K = O.kitRuntime, len = Math.hypot(d[0], d[1], d[2]);
+    if (K && K.doorT && len > 1e-6) {
+      const dn = d.map(v => v / len), t = K.doorT({ o: a, d: dn });
+      if (t != null && t - r <= len) { const hz = Math.hypot(dn[0], dn[2]) || 1; take({ t: Math.max(0, t - r) / len, n: [-dn[0] / hz, 0, -dn[2] / hz] }, "furn"); }
+    }
+    (O.staff || []).forEach(F => {
+      if (F.dead) { const [lo, hi] = figBox(F); take(segBox(a, d, lo.map(v => v - r), hi.map(v => v + r)), "body", { F }); return; }
+      take(segSphere(a, d, toWorld(F, nodePoint(F.head, HC)), 0.165 + r), "staff", { F, part: "head" });
+      const tb = torsoBox(F);
+      take(segBox(a, d, tb[0].map(v => v - r), tb[1].map(v => v + r)), "staff", { F, part: "torso" });
+      take(segBox(a, d, [F.x - 0.2 - r, 0, F.z - 0.55 - r], [F.x + 0.2 + r, SEAT_Y + 0.12 + r, F.z + 0.12 + r]), "staff", { F, part: "legs" });
+    });
+    if (best) { best.c = a.map((v, i) => v + d[i] * best.t); best.p = best.c.map((v, i) => v - best.n[i] * r); }
+    return best;
+  }
+
+  /* Höchste Ablagefläche unter (x, z) bis zur Höhe y – dorthin fällt oder läuft, was von oben kommt */
+  function surfBelow(x, z, y) {
+    let best = null;
+    for (const s of O.surf || []) {
+      if (s.y > y + 0.01 || x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) continue;
+      if (!best || s.y > best.y) best = s;
+    }
+    return best || { y: 0, x0: -RW, x1: RW, z0: -RD, z1: RD, kind: "floor" };
+  }
+  /* Abstellen: erste Fläche unter dem Blick, frei, in Reichweite, nicht verdeckt, Henkel zeigt nach rechts */
+  function dropSpot(ray, eye) {
+    const K = O.kitRuntime;
+    if (!K || !K.held || K.busy() || ray.d[1] > -0.08) return null;
+    let h = null;
+    for (const s of O.surf || []) {
+      if (eye[1] < s.y + 0.1) continue;
+      const t = (s.y - ray.o[1]) / ray.d[1];
+      if (!(t > 0) || (h && t >= h.t)) continue;
+      const p = [ray.o[0] + ray.d[0] * t, s.y, ray.o[2] + ray.d[2] * t];
+      if (p[0] < s.x0 || p[0] > s.x1 || p[2] < s.z0 || p[2] > s.z1) continue;
+      h = { t, p, s };
+    }
+    if (!h) return null;
+    const { p, s } = h, m = CUP_R + 0.012;
+    if (Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]) > 2.4) return null;
+    if (p[0] < s.x0 + m || p[0] > s.x1 - m || p[2] < s.z0 + m || p[2] > s.z1 - m) return null;
+    const ex = s.kind === "floor" ? O.ob.concat(K.colliders(), deadRects(), [[O.pos[0] - PR, O.pos[1] - PR, O.pos[0] + PR, O.pos[1] + PR]]) : s.ex;
+    if (ex.some(r => p[0] > r[0] - m && p[0] < r[2] + m && p[2] > r[1] - m && p[2] < r[3] + m)) return null;
+    if (K.items.some(i => i !== K.held && i.location === "free" && i.pos && Math.abs(i.pos[1] - p[1]) < 0.03 && Math.hypot(i.pos[0] - p[0], i.pos[2] - p[2]) < 2 * CUP_R + 0.02)) return null;
+    if (blocked(eye, p) || K.occludes(ray, h.t)) return null;
+    return { id: "drop", label: "Hier abstellen", t: h.t, pos: p, ry: PI / 2 - O.yaw };
+  }
+
+  /* ------------------------------ Anbieten ------------------------------ */
+  function offerTarget(who, eye) {
+    const K = O.kitRuntime, F = who.F;
+    if (!K || !K.held || K.busy() || K.held.kind !== "cup" || K.held.fill < 0.05 || F.dead || F.gift) return null;
+    if ([1.42, 1.05].every(h => blocked(eye, [F.x, h, F.z - 0.05]))) return null;
+    const d = Math.hypot(F.x - eye[0], F.z - eye[2]);
+    if (d > 3.2) return null;
+    return d <= OFFER_RANGE ? { id: "offer", label: "Kaffee anbieten", t: who.t, F } : { id: "offer", label: "Näher ran zum Übergeben", t: who.t, F, disabled: true };
+  }
+  /* Freier Platz auf dem eigenen Tisch, mit der übernehmenden Hand erreichbar (außerhalb von Tastatur, Maus, Block …) */
+  function giftSpot(F, side) {
+    const K = O.kitRuntime, mx = F.x, z = F.dz;
+    const C = side < 0 ? [[0.5, 0.12], [0.17, 0.06], [0.62, 0.12]] : [[-0.6, 0.46], [-0.75, 0.46], [-0.36, 0.12]];
+    for (const [dx, dz] of C) {
+      const x = mx + dx, zz = z + dz;
+      if (!K.items.some(i => i.location === "free" && i.pos && Math.abs(i.pos[1] - 0.76) < 0.03 && Math.hypot(i.pos[0] - x, i.pos[2] - zz) < 2 * CUP_R + 0.02)) return [x, 0.76, zz];
+    }
+    return null;
+  }
+  const THANKS = ["Oh, danke! Genau das brauche ich jetzt.", "Für mich? Das ist aber nett – danke!", "Danke! Den kann ich gut gebrauchen.", "Kaffee? Du bist ein Schatz, danke!"];
+  function offerTo(F) {
+    const K = O.kitRuntime;
+    if (!K || !K.held || K.held.kind !== "cup" || K.held.fill < 0.05 || F.dead || F.gift) return;
+    const p = F.p, hr = Math.floor((S.time % 1440) / 60), hs = nameHash(p.id || p.name), last = GIFTS.get(p.id);
+    const side = K.hand[0] < F.x ? 1 : -1;                     /* Spieler links von der Person (Welt −x) → linke Hand */
+    let no = null;
+    if (O.deaths) no = "Ich … ich bekomme jetzt nichts runter.";
+    else if (F.act === "phone") no = "Gerade nicht – ich telefoniere.";
+    else if (F.held === "cup") no = "Danke, ich hab gerade noch meinen.";
+    else if (last != null && S.time - last < 90) no = "Danke, einer reicht mir fürs Erste.";
+    else if (hs % 7 === 0) no = "Lieb gemeint – aber ich trinke keinen Kaffee.";
+    else if ((hr >= 20 || hr < 5) && hs % 3 !== 0) no = "So spät noch? Dann kann ich nachher nicht schlafen.";
+    const spot = no ? null : giftSpot(F, side);
+    if (!no && !spot) no = "Danke, aber auf meinem Tisch ist gerade kein Platz.";
+    if (no) { speak(F, no, { shake: true }); return; }
+    const from = K.hand.slice(), it = K.release(); if (!it) return;
+    GIFTS.set(p.id, S.time);
+    /* Übergabepunkt: von der Schulter Richtung Spielerhand, höchstens 45 cm, auf der Körperseite der Hand, über der Tischkante */
+    const sh = toWorld(F, torsoPt(F, side * F.L.sh, 0.33, 0)), dv = from.map((v, i) => v - sh[i]), dl = Math.hypot(...dv) || 1;
+    let meet = sh.map((v, i) => v + dv[i] * Math.min(1, 0.45 / dl));
+    const ml = toLoc(F, meet); ml[0] = side * Math.max(0.12, side * ml[0]); ml[2] = Math.max(0.05, ml[2]); ml[1] = clamp1(ml[1], 0.98 / FS, 1.25 / FS);
+    meet = toWorld(F, ml);
+    F.gift = { it, side, from, meet, spot, ry: side < 0 ? 0 : PI, sipped: false, plan: null };
+    F.act = "gift"; F.actT = 0; F.actDur = 6.6; F.held = null;
+    speak(F, THANKS[(hs + (F.giftN = (F.giftN || 0) + 1)) % THANKS.length]);
+  }
+  /* Lage der übergebenen Tasse (Weltknoten): erst von der Spielerhand zum Übergabepunkt, dann in der Hand der Person */
+  function giftCup(F, k) {
+    const g = F.gift, pl = g.plan; if (!pl) return;
+    const a = g.side > 0 ? F.arm[0] : F.arm[1];
+    let base = pl.base;
+    if (k < 0.9) base = lerp3(toLoc(F, g.from), pl.base, ease(k / 0.9));
+    else if (pl.g > 0 && a.C) base = mugFromAnchor(lerp3(mugAnchor(pl.base, pl.psi, pl.tilt), a.C, pl.g), pl.psi, pl.tilt);
+    const w = toWorld(F, base), r = mugRot(pl.psi, pl.tilt), n = g.it.node;
+    n.x = w[0]; n.y = w[1]; n.z = w[2]; n.rx = r[0]; n.ry = r[1] + PI; n.rz = 0;
+    if (k >= 2.9 && !g.sipped) { g.sipped = true; g.it.fill = Math.max(0, g.it.fill - 0.12); }
+  }
+  function giftDone(F) {
+    const g = F.gift; if (!g) return;
+    F.gift = null;
+    if (O.kitRuntime && g.it.location === "ext") O.kitRuntime.settle(g.it, g.spot, g.ry);
+  }
+  function giftAbort(F) {                                        /* Tasse bleibt dort, wo sie gerade ist – auf der Fläche darunter */
+    const g = F.gift; if (!g) return;
+    F.gift = null;
+    const n = g.it.node, s = surfBelow(n.x, n.z, n.y + 0.02);
+    if (O.kitRuntime && g.it.location === "ext") O.kitRuntime.settle(g.it, [n.x, s.y, n.z], g.ry);
+  }
+  /* Sprechblase über der Person */
+  function speak(s, line, o) {
+    const p = s.p, role = ROLES[p.role], el = O.el.querySelector("#ofpSay");
+    el.innerHTML = `<b>${esc(p.name)}</b><small>${esc(role ? role.name : "Team")}</small><span>„${esc(line)}“</span>`;
+    el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+    const now = performance.now();
+    s.attendUntil = now + 4800; s.talkUntil = now + Math.min(3200, 900 + line.length * 38);
+    if (o && o.shake) s.shakeUntil = now + 900;
+    O.sayAt = { x: s.x, z: s.z }; O.sayUntil = now + 4200;
+  }
+
+  /* ------------------------------- Werfen ------------------------------- */
+  /* Gezielt wird über das Fadenkreuz: Die Flugbahn von der Hand führt durch den ersten Punkt unter dem Blick. */
+  function throwCup() {
+    const K = O && O.kitRuntime;
+    if (!K || !K.held || K.held.kind !== "cup" || K.busy() || O.fly) return;
+    const R = O.R, ray = R.ray(R.w / 2, R.h / 2);
+    const c0 = [clamp1(K.hand[0], -RW + 0.06, RW - 0.06), K.hand[1] + CUP_C, clamp1(K.hand[2], -RD + 0.06, RD - 0.06)];
+    const aim = sweep(ray.o, ray.d.map(v => v * 25), 0);
+    const P = aim ? aim.p : ray.o.map((v, i) => v + ray.d[i] * 8);
+    const T = clamp1(Math.hypot(P[0] - c0[0], P[1] - c0[1], P[2] - c0[2]) / THROW_V, 0.06, 0.9);
+    const v = P.map((q, i) => (q - c0[i]) / T + (i === 1 ? 0.5 * GRAV * T : 0));
+    const it = K.release(); if (!it) return;
+    O.fly = { it, c: c0, v, rx: 0, rz: 0, wx: 6 + Math.random() * 5, wz: (Math.random() - 0.5) * 6, fill: it.fill, t: 0 };
+    O.throwN = (O.throwN || 0) + 1;
+  }
+  function stepFly(dt) {
+    const f = O.fly; if (!f) return;
+    let left = dt;
+    while (left > 1e-6) {
+      const h = Math.min(left, 1 / 120); left -= h;
+      const v0 = f.v.slice(); f.v[1] -= GRAV * h;
+      const d = [(v0[0] + f.v[0]) / 2 * h, (v0[1] + f.v[1]) / 2 * h, (v0[2] + f.v[2]) / 2 * h];
+      const hit = sweep(f.c, d, CUP_R);
+      if (hit) { f.c = hit.c; return impact(f, hit); }
+      f.c = f.c.map((x, i) => x + d[i]); f.t += h;
+      if (f.t > 4) return impact(f, { kind: "floor", n: [0, 1, 0], c: f.c, p: [f.c[0], 0, f.c[2]] });
+    }
+    if (!O.reduced) { f.rx += f.wx * dt; f.rz += f.wz * dt; }
+    const n = f.it.node, cx = Math.cos(f.rx), sx = Math.sin(f.rx), cz = Math.cos(f.rz), sz = Math.sin(f.rz);
+    n.rx = f.rx; n.ry = 0; n.rz = f.rz;
+    n.x = f.c[0] + sz * CUP_C; n.y = f.c[1] - cx * cz * CUP_C; n.z = f.c[2] - sx * cz * CUP_C;   /* Drehpunkt ist der Tassenboden */
+    if (f.it.liquid) f.it.liquid.visible = false;
+    /* offene Tasse: unterwegs schwappt Kaffee heraus */
+    if (f.fill > 0.04 && !O.reduced && Math.random() < dt * 45) {
+      O.R.emit({ x: f.c[0], y: f.c[1], z: f.c[2], vx: f.v[0] * 0.85 + (Math.random() - 0.5) * 0.6, vy: f.v[1] * 0.85 + Math.random() * 0.4, vz: f.v[2] * 0.85 + (Math.random() - 0.5) * 0.6,
+        g: -GRAV, drag: 0.4, life: 0.5, size: 0.016, col: [0.3, 0.17, 0.08, 1], fade: false });
+      f.fill = Math.max(0, f.fill - 0.006);
+    }
+  }
+  function impact(f, hit) {
+    const K = O.kitRuntime, R = O.R, it = f.it, n = hit.n, p = hit.p;
+    O.fly = null;
+    const sp = Math.hypot(f.v[0], f.v[1], f.v[2]) || 1, dir = f.v.map(v => v / sp);
+    if (K) K.shatter(it);
+    crashSound(Math.min(1, sp / 8));
+    const col = G3.col(it.color || 0xf6f1e6);
+    R.burst({ x: p[0], y: p[1], z: p[2], n: 12, spread: 0.06, speed: 1.3, up: 1.1, g: -9, life: 0.45, size: 0.012, col: [[col[0], col[1], col[2], 1], [0.96, 0.94, 0.9, 1]] });
+    if (f.fill > 0.03) R.burst({ x: p[0], y: p[1], z: p[2], n: Math.round(12 + f.fill * 18), spread: 0.08, speed: 1.7, up: 1.3, g: -9.8, life: 0.55, size: 0.018, col: [[0.33, 0.19, 0.09, 1], [0.42, 0.25, 0.12, 1]] });
+    shards(p, f.v, n, it.color || 0xf6f1e6);
+    if (f.fill > 0.03) spillAt(hit, dir, f.fill);
+    if (hit.kind === "staff" && (hit.part === "head" || hit.part === "torso")) killStaff(hit.F, p, dir, hit.part, f.fill);
+    else if (hit.kind === "staff") { ouch(hit.F); startle(p, hit.F); }
+    else startle(p, null);
+  }
+  /* Scherben: Splitter in Tassenfarbe mit glasierter Innenseite und der Henkel als Ganzes */
+  function shards(p, v, n, color) {
+    const dot = v[0] * n[0] + v[1] * n[1] + v[2] * n[2], rv = v.map((x, i) => (x - 2 * dot * n[i]) * 0.22);
+    for (let k = 0; k < 8; k++) {
+      const a = Math.random() * 2 * PI, s = 0.4 + Math.random() * 1.3;
+      fxAdd({ type: "shard", persist: true, until: S.time + SPILL_MIN, col: color, k, handle: k === 0,
+        pos: p.map((x, i) => x + n[i] * 0.03), rot: [Math.random() * 6, Math.random() * 6, Math.random() * 6],
+        v: [rv[0] + Math.cos(a) * s, rv[1] + 0.6 + Math.random() * 1.4, rv[2] + Math.sin(a) * s], w: [(Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30] });
+    }
+  }
+  /* Wohin der Kaffee kommt (logische Stelle) */
+  function spillAt(hit, dir, fill) {
+    const n = hit.n, p = hit.p;
+    let on = null, at = null, flat = false;
+    if (n[1] > 0.7 && hit.kind !== "staff" && hit.kind !== "body") {
+      if (hit.kind === "floor") on = surfBelow(p[0], p[2], 0);
+      else if (hit.box && Math.min(hit.box[1][0] - hit.box[0][0], hit.box[1][2] - hit.box[0][2]) >= 0.2)
+        on = { y: hit.box[1][1], x0: hit.box[0][0], x1: hit.box[1][0], z0: hit.box[0][2], z1: hit.box[1][2], kind: "box" };
+      if (on) { at = [p[0] + dir[0] * 0.06, on.y, p[2] + dir[2] * 0.06]; flat = true; }
+    }
+    if (!at) {
+      /* senkrecht oder von unten: Fleck an der Trefferstelle, der Rest läuft bzw. tropft nach unten */
+      if (hit.kind !== "staff" && hit.kind !== "body") fxAdd({ type: "blob", persist: true, until: S.time + SPILL_MIN, pos: p.map((x, i) => x + n[i] * 0.004), n, r: 0.05 + fill * 0.07, col: COFFEE, hi: null, seed: (O.throwN || 1) * 31 + 7, drip: Math.abs(n[1]) < 0.7 ? [0, 1] : null });
+      const off = hit.kind === "staff" || hit.kind === "body" ? 0.25 : Math.abs(n[1]) > 0.7 ? 0 : 0.1;
+      const x = clamp1(p[0] + n[0] * off, -RW + 0.1, RW - 0.1), z = clamp1(p[2] + n[2] * off, -RD + 0.1, RD - 0.1);
+      on = surfBelow(x, z, p[1]); at = [x, on.y, z];
+    }
+    const carpet = on.kind === "floor" && O.carpet;
+    const r = Math.sqrt(0.04 * fill) * (carpet ? 0.65 : 1) * (flat ? 1 : 0.8);
+    at[0] = clamp1(at[0], on.x0 + r * 0.45, on.x1 - r * 0.45); at[2] = clamp1(at[2], on.z0 + r * 0.45, on.z1 - r * 0.45);
+    at[1] = on.y + 0.003;
+    fxAdd({ type: "blob", persist: true, until: S.time + SPILL_MIN, pos: at, n: [0, 1, 0], ry: Math.atan2(dir[0], dir[2]), r, col: carpet ? COFFEE_CARPET : COFFEE, hi: carpet ? null : COFFEE_HI, seed: (O.throwN || 1) * 17 + 3, grow: true, growT: 0.6 });
+  }
+
+  /* ----------------------------- Spuren-Netze ---------------------------- */
+  /* Unregelmäßige Lache in der xz-Ebene (Normale +y), mit Tropfen daneben; drip [x, z]: Laufspuren in diese Richtung */
+  function blobInto(b, r, col, hi, seed, drip) {
+    const g = rng(seed), n = 20, rr = [];
+    for (let i = 0; i < n; i++) rr.push(r * (0.74 + g() * 0.36));
+    const sm = rr.map((v, i) => (v * 2 + rr[(i + 1) % n] + rr[(i + n - 1) % n]) / 4);
+    const P = (i, s, y) => { const a = i / n * 2 * PI; return [Math.cos(a) * sm[i % n] * s, y || 0, Math.sin(a) * sm[i % n] * s]; };
+    for (let i = 0; i < n; i++) b.tri([0, 0, 0], P(i + 1, 1), P(i, 1), col);
+    if (hi != null) for (let i = 0; i < n; i++) b.tri([r * 0.1, 0.0012, -r * 0.08], P(i + 1, 0.5, 0.0012), P(i, 0.5, 0.0012), hi);
+    const k = 3 + Math.floor(g() * 4);
+    for (let j = 0; j < k; j++) { const a = g() * 2 * PI, d = r * (1.0 + g() * 0.55); b.disc(r * (0.06 + g() * 0.09), 8, col, { x: Math.cos(a) * d, z: Math.sin(a) * d }); }
+    if (drip) for (let j = 0; j < 3; j++) {
+      const o = (g() - 0.5) * r * 1.1, len = r * (0.8 + g() * 1.8), w = 0.006 + g() * 0.006, q = [drip[1], -drip[0]];
+      const c = [q[0] * o + drip[0] * (r * 0.4 + len / 2), q[1] * o + drip[1] * (r * 0.4 + len / 2)];
+      b.plate(drip[0] ? len : w, drip[0] ? w : len, col, { x: c[0], z: c[1] });
+      b.disc(w * 0.9, 8, col, { x: q[0] * o + drip[0] * (r * 0.4 + len), z: q[1] * o + drip[1] * (r * 0.4 + len) });
+    }
+    return b;
+  }
+  function shardMesh(color, k) {
+    const b = new G3.MB(), g = rng(k * 977 + 13), n = 3 + (k % 3), h = 0.006, pts = [];
+    for (let i = 0; i < n; i++) { const a = i / n * 2 * PI + g() * 0.6, r = 0.012 + g() * 0.02; pts.push([Math.cos(a) * r, Math.sin(a) * r]); }
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], c = pts[(i + 1) % n];
+      b.tri([0, h, 0], [c[0], h, c[1]], [a[0], h, a[1]], color);
+      b.tri([0, 0, 0], [a[0], 0, a[1]], [c[0], 0, c[1]], 0xeee8de);
+      b.quad([a[0], 0, a[1]], [a[0], h, a[1]], [c[0], h, c[1]], [c[0], 0, c[1]], 0xd8d2c6);
+    }
+    return b;
+  }
+  function handleMesh(color) {                                   /* Henkel, flach liegend */
+    const b = new G3.MB();
+    b.box(0.033, 0.014, 0.012, color, { x: -0.006, z: -0.0275 }); b.box(0.033, 0.014, 0.012, color, { x: -0.006, z: 0.0275 });
+    b.box(0.012, 0.014, 0.067, color, { x: 0.011 });
+    return b;
+  }
+  function ringMesh() {
+    const b = new G3.MB(), n = 24, P = (r, a) => [Math.cos(a) * r, 0, Math.sin(a) * r];
+    for (let i = 0; i < n; i++) { const a = i / n * 2 * PI, c = (i + 1) / n * 2 * PI; b.quad(P(0.05, a), P(0.05, c), P(0.06, c), P(0.06, a), 0xffffff); }
+    return b;
+  }
+  /* Spuren: Lachen, Flecken, Scherben. Sie bleiben über Etagenwechsel erhalten (persist) und verblassen nach until (S.time). */
+  function fxAdd(d) {
+    const R = O.R, fx = { d, nodes: [], meshes: [], born: O.t, fade: null, ph: null };
+    const M1 = mb => { const m = R.mesh(mb); O.meshes.push(m); fx.meshes.push(m); return m; };
+    if (d.type === "shard") {
+      fx.nodes.push(R.node(M1(d.handle ? handleMesh(d.col) : shardMesh(d.col, d.k)), { x: d.pos[0], y: d.pos[1], z: d.pos[2], rx: d.rot[0], ry: d.rot[1], rz: d.rot[2], shadow: false }));
+      if (d.v) fx.ph = { v: d.v.slice(), w: d.w.slice() };
+    } else {
+      const o = { x: d.pos[0], y: d.pos[1], z: d.pos[2], shadow: false }, nn = d.n || [0, 1, 0];
+      if (nn[1] > 0.9) o.ry = d.ry || 0;
+      else if (nn[1] < -0.9) o.rx = PI;
+      else { o.rx = PI / 2; o.ry = Math.atan2(nn[0], nn[2]); }
+      if (d.grow) o.sx = o.sz = 0.25;
+      fx.nodes.push(R.node(M1(blobInto(new G3.MB(), d.r, d.col, d.hi, d.seed, d.drip)), o));
+    }
+    fx.nodes.forEach(n => R.nodes.push(n));
+    (O.fx || (O.fx = [])).push(fx);
+    return fx;
+  }
+  function fxRemove(fx) {
+    const R = O.R;
+    fx.nodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
+    fx.meshes.forEach(m => { R.free(m); const i = O.meshes.indexOf(m); if (i >= 0) O.meshes.splice(i, 1); });
+    O.fx = O.fx.filter(x => x !== fx);
+  }
+  function stepFx(dt) {
+    for (const fx of (O.fx || []).slice()) {
+      const d = fx.d, nd = fx.nodes[0];
+      if (fx.ph) {
+        const ph = fx.ph; ph.v[1] -= GRAV * dt;
+        const p = [nd.x + ph.v[0] * dt, nd.y + ph.v[1] * dt, nd.z + ph.v[2] * dt];
+        if (Math.abs(p[0]) > RW - 0.02) { p[0] = Math.sign(p[0]) * (RW - 0.02); ph.v[0] *= -0.3; }
+        if (Math.abs(p[2]) > RD - 0.02) { p[2] = Math.sign(p[2]) * (RD - 0.02); ph.v[2] *= -0.3; }
+        if (p[1] > O.H - 0.02) { p[1] = O.H - 0.02; ph.v[1] = -Math.abs(ph.v[1]) * 0.3; }
+        const gy = surfBelow(p[0], p[2], nd.y + 0.004).y + 0.002;
+        if (p[1] <= gy) {
+          p[1] = gy;
+          if (Math.abs(ph.v[1]) < 0.7) { fx.ph = null; d.v = null; nd.rx = 0; nd.rz = 0; }
+          else { ph.v[1] *= -0.28; ph.v[0] *= 0.5; ph.v[2] *= 0.5; ph.w = ph.w.map(x => x * 0.5); }
+        }
+        nd.x = p[0]; nd.y = p[1]; nd.z = p[2];
+        if (fx.ph && !O.reduced) { nd.rx += ph.w[0] * dt; nd.ry += ph.w[1] * dt; nd.rz += ph.w[2] * dt; }
+        d.pos = p; d.rot = [nd.rx, nd.ry, nd.rz];
+      }
+      if (d.grow) {
+        const k = clamp1((O.t - fx.born) / (d.growT || 0.6), 0, 1), s = 0.25 + 0.75 * (1 - Math.pow(1 - k, 3));
+        nd.sx = nd.sz = s; if (k >= 1) d.grow = false;
+      }
+      if (fx.fade == null && S.time >= d.until) fx.fade = 0;
+      if (fx.fade != null) {
+        fx.fade += dt;
+        const a = Math.max(0, 1 - fx.fade / 1.2);
+        fx.nodes.forEach(n => { n.alpha = a; });
+        if (a <= 0) fxRemove(fx);
+      }
+    }
+  }
+  function crashSound(loud) {
+    if (typeof S === "undefined" || !S.farm || !S.farm.snd) return;
+    try {
+      const ac = O.ac || (O.ac = new (window.AudioContext || window.webkitAudioContext)()), t0 = ac.currentTime;
+      const len = 0.35, buf = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate), dd = buf.getChannelData(0);
+      for (let i = 0; i < dd.length; i++) { const x = i / dd.length; dd[i] = (Math.random() * 2 - 1) * Math.pow(1 - x, 3) * Math.min(1, x * 100); }
+      const src = ac.createBufferSource(), hp = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = buf; hp.type = "highpass"; hp.frequency.value = 1800; g.gain.value = 0.22 * loud;
+      src.connect(hp); hp.connect(g); g.connect(ac.destination); src.start(t0);
+      for (let k = 0; k < 4; k++) {
+        const o = ac.createOscillator(), gg = ac.createGain(), ts = t0 + 0.01 + Math.random() * 0.12;
+        o.type = "triangle"; o.frequency.value = 2600 + Math.random() * 2800;
+        gg.gain.setValueAtTime(0.0001, ts); gg.gain.exponentialRampToValueAtTime(0.05 * loud + 0.001, ts + 0.005); gg.gain.exponentialRampToValueAtTime(0.0001, ts + 0.12);
+        o.connect(gg); gg.connect(ac.destination); o.start(ts); o.stop(ts + 0.14);
+      }
+      if (ac.resume) ac.resume().catch(() => {});
+    } catch (e) { /* Ton ist optional */ }
+  }
+
+  /* ---------------------------- Reaktionen ----------------------------- */
+  const CRASH_SAY = ["Hey, pass doch auf!", "Schon wieder eine Tasse?!", "Alles in Ordnung bei dir?"];
+  function startle(pt, except) {
+    const now = performance.now(); let near = null, nd = 3.2;
+    (O.staff || []).forEach(G => {
+      if (G.dead || G === except || G.gift) return;
+      G.startle = { pt: pt.slice(), until: now + 1300 + G.rnd() * 500 };
+      const d = Math.hypot(G.x - pt[0], G.z - pt[2]);
+      if (d < nd) { nd = d; near = G; }
+    });
+    if (near && !except && !O.deaths && now > (O.sayUntil || 0)) {
+      const n = O.crashN = (O.crashN || 0) + 1;
+      later(450, () => { if (O.staff.includes(near) && !near.dead) speak(near, n === 1 ? "Huch! Was war das denn?" : CRASH_SAY[(n - 2) % CRASH_SAY.length]); });
+    }
+  }
+  function ouch(F) {
+    const n = O.ouchN = (O.ouchN || 0) + 1;
+    speak(F, ["Au! Spinnst du?!", "Aua! Was soll das?!", "Hey! Bist du verrückt geworden?"][(n - 1) % 3]);
+    F.startle = { pt: eyePt().slice(), until: performance.now() + 2600 };
+  }
+
+  /* ------------------------------ Todesfall ------------------------------ */
+  /* Sturzseite: dorthin, wohin der Wurf drückt, sonst zur anderen Seite; ist beides verstellt, sackt die Person im Stuhl zusammen */
+  function fallSide(F, dirX) {
+    const pref = dirX >= 0 ? 1 : -1, own = F.own || [];
+    const rects = O.ob.concat(O.kitRuntime ? O.kitRuntime.colliders() : [], deadRects(), [[O.pos[0] - PR, O.pos[1] - PR, O.pos[0] + PR, O.pos[1] + PR]]);
+    for (const fx of [pref, -pref]) {
+      const xa = F.x + fx * 0.3, xb = F.x + fx * 1.55, r = [Math.min(xa, xb), F.z - 0.3, Math.max(xa, xb), F.z + 0.22];
+      if (r[0] < -RW + 0.05 || r[2] > RW - 0.05) continue;
+      if (rects.some(o => !own.includes(o) && o[0] < r[2] && o[2] > r[0] && o[1] < r[3] && o[3] > r[1])) continue;
+      return fx;
+    }
+    return 0;
+  }
+  /* Gegenstand aus der Figur lösen (bleibt in der Welt liegen, wenn die Figur stürzt) */
+  function detach(F, n) {
+    const r = F.root, i = r.children.indexOf(n); if (i < 0) return;
+    r.children.splice(i, 1); n.parent = null;
+    const w = toWorld(F, [n.x, n.y, n.z]);
+    n.x = w[0]; n.y = w[1]; n.z = w[2]; n.ry = PI + n.ry; n.sx *= FS; n.sy *= FS; n.sz *= FS;
+    O.R.nodes.push(n);
+  }
+  /* Kugelkappe um die Richtung dir (unregelmäßiger Rand) für shell() */
+  function capKeep(dir, ang, g) {
+    return (th, az) => {
+      const v = [Math.sin(th) * Math.sin(az), Math.cos(th), Math.sin(th) * Math.cos(az)];
+      const a = Math.acos(clamp1(v[0] * dir[0] + v[1] * dir[1] + v[2] * dir[2], -1, 1));
+      return a < ang * (1 + 0.22 * Math.sin(v[0] * 37 + v[1] * 23 + v[2] * 29 + g));
+    };
+  }
+  /* Sichtbare Verletzung an der Trefferstelle: Kopf (Platzwunde mit Rinnsal) oder Oberkörper (durchgeblutete Kleidung) */
+  function wound(F, hit, part, fill) {
+    const R = O.R, lp = toLoc(F, hit), g = nameHash(F.p.id) % 97;
+    const M1 = mb => { const m = R.mesh(mb); O.meshes.push(m); return m; };
+    if (part === "head") {
+      const Hn = F.head, q = invNode(Hn, lp), L = F.L;
+      const d = nrm([(q[0] - HC[0]) / HR, (q[1] - HC[1]) / (HR * HSY), (q[2] - HC[2]) / HR]);
+      const hairy = L.style !== "glatze" && d[2] < 0.55 && d[1] > -0.25;
+      const rr = L.acc === "muetze" ? 1.16 : L.acc === "cap" ? 1.12 : hairy ? 1.11 : 1.025;
+      const b = new G3.MB(), cap = (dir, ang, rm, col) => shell(b, HR * rr * rm, col, capKeep(dir, ang, g), { c: HC, sy: HSY, seg: 96, rings: 56 });
+      cap(d, 0.36, 1.0, 0x6a0e10);                                  /* verschmiertes Blut */
+      cap(d, 0.19, 1.004, 0xa5191d);                                /* Platzwunde */
+      cap(d, 0.07, 1.008, 0x2b0506);                                /* Riss */
+      const down = nrm([d[0] * 0.55, -0.85, d[2] * 0.55]);
+      [0.25, 0.42, 0.6, 0.78, 0.92].forEach((s, i) => cap(nrm(lerp3(d, down, s)), 0.075 - i * 0.008, 1.002, 0x7a1214));   /* Rinnsal */
+      R.addChild(Hn, R.node(M1(b), { shadow: false }));
+      return;
+    }
+    const T = F.torso, q = invNode(T, lp), L = F.L, hw = L.tw / 2, hd = L.td / 2, y = clamp1(q[1], 0.05, 0.31);
+    let o, drip;
+    if (Math.abs(q[2]) / hd >= Math.abs(q[0]) / hw) {
+      const sz = q[2] >= 0 ? 1 : -1;
+      o = { x: clamp1(q[0], -hw + 0.04, hw - 0.04), y, z: sz * (hd + 0.024), rx: sz * PI / 2 }; drip = [0, sz];
+    } else {
+      const sx = q[0] >= 0 ? 1 : -1;
+      o = { x: sx * (hw + 0.014), y, z: clamp1(q[2], -hd + 0.03, hd - 0.03), rz: -sx * PI / 2 }; drip = [sx, 0];
+    }
+    const b = new G3.MB();
+    if (fill > 0.03) b.at({ y: -0.0008 }, () => blobInto(b, 0.08, COFFEE, null, g + 5, null));       /* Kaffee auf der Kleidung */
+    blobInto(b, 0.05, 0x6a0e10, null, g, drip);
+    b.at({ y: 0.0006 }, () => blobInto(b, 0.022, 0xa5191d, null, g + 1, null));
+    b.at({ y: 0.0012 }, () => b.disc(0.008, 8, 0x2b0506));
+    R.addChild(T, R.node(M1(b), Object.assign({ s: 1 / FS, shadow: false }, o)));
+  }
+  function killStaff(F, hit, dir, part, fill) {
+    if (F.dead) return;
+    if (F.gift) giftAbort(F);
+    const Hn = F.head, dl = [-dir[0], dir[1], -dir[2]];             /* Wurfrichtung in Figur-Koordinaten */
+    const armDir = F.arm.map(a => {
+      const S0 = a.S, E = a.E || S0.map((v, i) => v + (i === 1 ? -ARM_A : 0)), Hh = a.H || E;
+      return [nrm(E.map((v, i) => v - S0[i])), nrm(Hh.map((v, i) => v - E[i]))];
+    });
+    wound(F, hit, part, fill);
+    const dn = fallSide(F, dir[0]), kind = dn ? "fall" : "slump", s = dl[0] >= 0 ? 1 : -1;
+    let pose;
+    if (kind === "fall") {
+      const bot = -dn;                                              /* dn = +1: Kopf zur Welt-+x-Seite, Figur-−x liegt unten */
+      pose = { lean: 0.12, hrx: 0.25, hry: 0, hrz: dn * 0.85,
+        up: F.arm.map(a => a.side === bot ? nrm([-dn * 0.05, -0.25, 1]) : nrm([-dn * 0.7, -0.3, 0.65])),
+        fo: F.arm.map(a => a.side === bot ? nrm([-dn * 0.1, 0.35, 1]) : nrm([-dn * 0.6, 0.1, 0.8])) };
+    } else {
+      pose = { lean: -0.18, hrx: 0.62, hry: s * 0.18, hrz: s * 0.55,
+        up: F.arm.map(a => nrm([a.side * 0.22, -1, 0.04])), fo: F.arm.map(a => nrm([a.side * 0.12, -1, 0.14])) };
+    }
+    const fwd = clamp1(dl[2], -1, 1), sideK = clamp1(dl[0], -1, 1), hk = part === "head" ? 0.45 : 0.15;
+    F.dead = { t: 0, kind, dn, part, pose, pool: null,
+      from: { lean: F.lean, tw: F.tw, hrx: Hn.rx, hry: Hn.ry, hrz: Hn.rz, up: armDir.map(x => x[0]), fo: armDir.map(x => x[1]) },
+      jl: fwd * 0.18, jp: fwd * hk, jr: -sideK * hk };
+    F.act = "dead"; F.held = null; F.pen.visible = false; F.talkUntil = 0; F.attendUntil = 0;
+    /* Tasse, Telefon, Maus bleiben auf dem Tisch liegen */
+    [[F.cup, F.P.cup, PI], [F.phone, F.P.phone, -0.1], [F.mouse, [F.mouse.x, F.P.mouse[1], F.mouse.z], 0]].forEach(([n, p, ry]) => {
+      n.x = p[0]; n.y = p[1]; n.z = p[2]; n.rx = 0; n.ry = ry; n.rz = 0;
+      if (kind === "fall") detach(F, n);
+    });
+    F.penRest.visible = true; if (kind === "fall") detach(F, F.note);
+    if (O.sayAt && Math.abs(O.sayAt.x - F.x) < 0.01 && Math.abs(O.sayAt.z - F.z) < 0.01) { O.sayUntil = 0; }
+    /* Folgen im Spielstand – wie beim Ausscheiden (offices.js fire), ohne Abfindung */
+    const b = (typeof baseById === "function" && baseById(O.b.id)) || O.b, p = F.p, role = ROLES[p.role];
+    try {
+      if (S.fleet) S.fleet.forEach(f => { if (f.driver === p.id) f.driver = null; });
+      b.staff = b.staff.filter(x => x.id !== p.id);
+      b.mood = Math.max(0, (b.mood || 0) - 40);
+      O.b = b; O.sig = staffSig(b, O.floor);
+      if (typeof phoneMsg === "function") phoneMsg({
+        from: N[b.node].name, kind: "trouble", title: "Todesfall im Büro", baseId: b.id,
+        body: p.name + " (" + (role ? role.name : "Team") + ") ist im Büro " + N[b.node].short + " von einer geworfenen Kaffeetasse am "
+          + (part === "head" ? "Kopf" : "Oberkörper") + " getroffen worden und noch am Arbeitsplatz gestorben. Notarzt und Polizei waren vor Ort. Das Team ist schwer erschüttert.",
+        toastText: "⚠️ " + p.name + " ist im Büro " + N[b.node].short + " gestorben."
+      });
+      if (typeof save === "function") save();
+      if (typeof render === "function") render();
+    } catch (e) { console.warn("Büro: Todesfall", e); }
+    O.deaths = (O.deaths || 0) + 1;
+    /* Team: Schreck, Blick zur Person, Hände vor den Mund; wer am nächsten sitzt, ruft um Hilfe */
+    let near = null, nd = 1e9;
+    (O.staff || []).forEach(G => {
+      if (G === F || G.dead) return;
+      if (G.gift) giftAbort(G);
+      const d = Math.hypot(G.x - F.x, G.z - F.z);
+      G.shock = { at: O.t + 0.25 + d * 0.06, F, pt: hit.slice() };
+      G.act = "look"; G.actT = 0; G.actDur = 1e9; G.held = null; G.startle = null;
+      if (d < nd) { nd = d; near = G; }
+    });
+    const first = p.name.split(" ")[0];
+    if (near) later(1300, () => { if (O.staff.includes(near) && !near.dead) speak(near, first + "?! … Oh nein! Ruft sofort einen Notarzt!"); });
+    later(near ? 4200 : 1200, () => hint(p.name + " ist tot. Notarzt und Polizei sind verständigt."));
+  }
+  /* Zusammenbruch: kurzer Ruck vom Aufprall, dann erschlafft; Sturz seitlich vom Stuhl oder Zusammensacken im Stuhl */
+  function animDead(F, dt) {
+    const D = F.dead, k = (D.t += dt), P0 = D.from, Q = D.pose, rt = F.root;
+    const jerk = k < 0.28 ? Math.sin(k / 0.28 * PI) : 0;
+    const u = ease((k - 0.1) / (D.kind === "fall" ? 0.75 : 0.9)), mixA = (a, b) => a + (b - a) * u;
+    F.br = 1; F.lean = mixA(P0.lean, Q.lean) + jerk * D.jl; F.tw = mixA(P0.tw, 0);
+    const T = F.torso; T.rx = F.lean; T.ry = F.tw; T.sy = 1; T.sz = 1;
+    const np = torsoPt(F, 0, 0.4, 0), Hn = F.head;
+    Hn.x = np[0]; Hn.y = np[1]; Hn.z = np[2];
+    Hn.rx = mixA(P0.hrx, Q.hrx) + jerk * D.jp; Hn.ry = mixA(P0.hry, Q.hry); Hn.rz = mixA(P0.hrz, Q.hrz) + jerk * D.jr;
+    if (D.kind === "fall") {
+      const f = clamp1((k - 0.15) / 0.6, 0, 1), th = f * f;
+      const bounce = !O.reduced && k > 0.75 ? Math.exp(-(k - 0.75) * 8) * Math.sin((k - 0.75) * 20) * 0.05 : 0;
+      rt.rz = D.dn * (1.47 * th - bounce);
+      rt.y = 0.17 * Math.sin(Math.abs(rt.rz)) / Math.sin(1.47);
+    }
+    F.arm.forEach((a, i) => {
+      const S0 = torsoPt(F, a.side * F.L.sh, 0.33, 0), up = nrm(lerp3(P0.up[i], Q.up[i], u)), fo = nrm(lerp3(P0.fo[i], Q.fo[i], u));
+      const ur = dirRot(up), fr = dirRot(nrm(invRxRz(ur[0], ur[1], fo)));
+      a.ua.x = S0[0]; a.ua.y = S0[1]; a.ua.z = S0[2]; a.ua.rx = ur[0]; a.ua.rz = ur[1]; a.fa.rx = fr[0]; a.fa.rz = fr[1];
+      const W = S0.map((v, j) => v + up[j] * ARM_A + fo[j] * ARM_B);           /* Handgelenk; Hand schlaff in Verlängerung des Unterarms */
+      a.hand.x = W[0] + fo[0] * PALM; a.hand.y = W[1] + fo[1] * PALM; a.hand.z = W[2] + fo[2] * PALM;
+      a.hand.rx = Math.asin(clamp1(-fo[1], -1, 1)); a.hand.ry = Math.atan2(fo[0], fo[2]); a.hand.rz = 0;
+      if (a.g !== "rest") { a.g = "rest"; a.hand.mesh = F.M("hand:" + a.side + ":" + F.L.skin + ":rest", () => handMesh(F.L, a.side, "rest")); }
+    });
+    F.lids.visible = k > 0.1; F.mouth.sy = 1.45;
+    if (!D.pool && k > (D.kind === "fall" ? 0.95 : 0.7)) {
+      const src = D.part === "head" ? deadHead(F) : rootWorld(F, torsoPt(F, 0, 0.18, 0));
+      let x = src[0], z = src[2];
+      if (D.kind === "slump") { const w = toWorld(F, [0, 0, 0.2]); z = w[2]; }          /* tropft vor dem Sitz auf den Boden */
+      const carpet = O.carpet, r = (D.part === "head" ? 0.26 : 0.2) * (D.kind === "slump" ? 0.55 : 1) * (carpet ? 0.75 : 1);
+      D.pool = fxAdd({ type: "blob", persist: false, until: Infinity, pos: [x, 0.004, z], n: [0, 1, 0], ry: nameHash(F.p.id) % 6, r,
+        col: carpet ? 0x3f0909 : BLOOD, hi: carpet ? null : BLOOD_HI, seed: nameHash(F.p.id) % 991, grow: true, growT: 8 });
+    }
+  }
+  function stepCoffee(dt) {
+    stepFly(dt);
+    stepFx(dt);
+    if (O.later && O.later.length) {
+      const now = performance.now(), due = O.later.filter(l => now >= l.at);
+      if (due.length) { O.later = O.later.filter(l => now < l.at); due.forEach(l => { try { l.fn(); } catch (e) { console.warn("Büro", e); } }); }
+    }
+  }
+
   /* ------------------------------ Verlassen ---------------------------- */
   function leave() {
     if (!O) return;
     const o = O; O = null; o.alive = false;
     cancelAnimationFrame(o.raf);
     if (o.kitRuntime) o.kitRuntime.dispose();
+    if (o.ac) { try { o.ac.close(); } catch (e) { /* egal */ } }
     clearTimeout(o.hintT);
     if (o.key) { window.removeEventListener("keydown", o.key); window.removeEventListener("keyup", o.key); }
     if (o.blur) window.removeEventListener("blur", o.blur);
@@ -1336,5 +2171,6 @@ const OFFICE3D = (() => {
   }
 
   /* _dbg nur für Browser-Tests (Kamera setzen, Zustand lesen) */
-  return { enter, leave, isOpen: () => !!O, buildRoom, _dbg: () => O, _tap: (x, y) => tapAt(x, y) };
+  return { enter, leave, isOpen: () => !!O, buildRoom, _dbg: () => O, _tap: (x, y) => tapAt(x, y),
+    _t: { throwCup, offerTo, killStaff, actionTarget, performAction, sweep, surfBelow } };       /* _t nur für Browser-Tests (v263) */
 })();

@@ -1,8 +1,10 @@
 /* =========================================================================
-   LOGISTIKA – officekitchen.js (v259)
+   LOGISTIKA – officekitchen.js (v263)
    Bewegliche Büroküche für die eigene G3-Engine: getrennte Korpusse/Türen,
    hohle Tassen, Kaffeezustand und Kühlschrankprodukte aus FITEMS.
    Nur Sitzungszustand – keine Waren, Geld oder Spielstände werden verändert.
+   v263: Gegenstände lassen sich überall abstellen (Lage „free“), aus der Hand geben (Wurf, Übergabe an Personal: „ext“)
+   und zerspringen („broken“). Welche Flächen es gibt und was mit dem Wurf passiert, bestimmt officefp.js.
    ========================================================================= */
 "use strict";
 
@@ -66,7 +68,7 @@ const OFFICE_KITCHEN = (() => {
     const back = W + 0.03, front = back + 0.58, UB = 1.42, UT = 2.1;
     const C = kid === "nische" ? 0xf4f6f8 : kid === "einbau" ? 0xe9edf1 : 0xf3efe8;
     const work = kid === "nische" ? 0x8d9097 : kid === "einbau" ? 0xb08a5a : 0x5c6068;
-    const D = { x0, x1: x0 + L, cx, L, zf: front + 0.048, mods: [], doors: [], items: [], machine: null };
+    const D = { x0, x1: x0 + L, cx, L, zf: front + 0.048, mods: [], doors: [], items: [], machine: null, top: null, ex: [] };
     const solid = (w, h, d, color, x, y, z) => {
       st.box(w, h, d, color, { x, y, z });
       blk(x - w / 2, y, z - d / 2, x + w / 2, y + h, z + d / 2);
@@ -85,6 +87,8 @@ const OFFICE_KITCHEN = (() => {
       [-0.15, 0.03, 0.17].forEach((dx, i) => D.items.push({ id: d.id + "-cup" + i, kind: "cup", color: [0xf6f1e6, 0x3f78c8, 0xb94938][i], home: [x + dx, y, z], doorId: d.id, fill: 0 }));
     }
     const run = mods.filter(m => m !== "kuehl").length * M;
+    /* v263: Arbeitsplatte als Ablagefläche; Geräte darauf sind Sperrzonen (x0, z0, x1, z1) */
+    D.top = { x0, x1: x0 + run, z0: W, z1: front + 0.048, y: 0.9 };
     st.box(L, 0.1, 0.52, 0x3a3f48, { x: cx, z: back + 0.26 });
     solid(run, 0.04, front + 0.048 - (W + 0.002), work, x0 + run / 2, 0.86, (front + 0.048 + W + 0.002) / 2);
     st.box(run, 0.5, 0.01, mixH(C, 0x9aa6b4, 0.25), { x: x0 + run / 2, y: 0.9, z: W + 0.005 });
@@ -122,16 +126,19 @@ const OFFICE_KITCHEN = (() => {
         st.cyl(0.018, 0.018, 0.26, 8, 0xd8dde2, { x, y: 0.9, z: W + 0.08 });
         st.box(0.026, 0.026, 0.2, 0xd8dde2, { x, y: 1.14, z: W + 0.17 });
         st.box(0.016, 0.06, 0.016, 0xd8dde2, { x, y: 1.09, z: W + 0.27 });
+        D.ex.push([x - 0.04, W, x + 0.04, W + 0.3]);
       }
       if (m === "mikro") {
         solid(0.48, 0.28, 0.36, 0xe1e5ea, x, 0.9, back + 0.26);
         st.box(0.3, 0.2, 0.006, 0x1d2228, { x: x - 0.05, y: 0.94, z: back + 0.443 });
         st.box(0.08, 0.2, 0.006, 0x55606c, { x: x + 0.17, y: 0.94, z: back + 0.443 });
+        D.ex.push([x - 0.25, W, x + 0.25, back + 0.45]);
       }
       if (m === "kocher") {
         st.cyl(0.075, 0.075, 0.012, 12, 0x2a2a30, { x, y: 0.9, z: back + 0.3 });
         st.cyl(0.07, 0.06, 0.22, 12, 0xd9413a, { x, y: 0.912, z: back + 0.3 });
         st.box(0.03, 0.12, 0.05, 0x2a2a30, { x: x + 0.08, y: 0.96, z: back + 0.3 });
+        D.ex.push([x - 0.09, back + 0.2, x + 0.12, back + 0.4]);
       }
       if (m === "kaffee") {
         const z = back + 0.25, face = z + 0.19, cup = [x - 0.08, 0.932, z + 0.24];
@@ -146,6 +153,7 @@ const OFFICE_KITCHEN = (() => {
         st.box(0.115, 0.035, 0.12, 0x24272d, { x: cup[0], y: 1.175, z: z + 0.205 });
         st.cyl(0.014, 0.014, 0.04, 12, 0x363a42, { x: cup[0], y: 1.135, z: cup[2] });
         D.machine = { x, z, face, cup, nozzle: [cup[0], 1.135, cup[2]], button: [x + 0.125, 1.215, face + 0.025] };
+        D.ex.push([x - 0.25, W, x + 0.25, face + 0.04]);
         return;
       }
       carcass(x, UB, UT, 0.32, [1.72], false);
@@ -184,7 +192,9 @@ const OFFICE_KITCHEN = (() => {
     D.items.forEach(it => {
       const old = saved && saved.items.find(p => p.id === it.id);
       const n = make(it.kind === "cup" ? cupMesh(it.color) : productMesh(it.productId));
-      const item = Object.assign({}, it, { node: n, location: old ? old.location : "home", fill: old ? old.fill : 0 });
+      /* v263: zusätzlich „free“ (frei abgestellt, mit Lage), „ext“ (Szene führt: geworfen, in der Hand einer Person), „broken“ (zersprungen) */
+      const loc = old ? (old.location === "ext" ? (old.pos ? "free" : "home") : old.location) : "home";
+      const item = Object.assign({}, it, { node: n, location: loc, fill: old ? old.fill : 0, pos: old && old.pos ? old.pos.slice() : null, ry: old && old.ry || 0 });
       if (it.kind === "cup") {
         const mb = new G3.MB(); mb.cyl(1, 1, 0.0015, 24, 0x59321b, { top: 0x82512c });
         item.liquid = R.addChild(n, R.node(upload(mb), { shadow: false, visible: false }));
@@ -208,6 +218,7 @@ const OFFICE_KITCHEN = (() => {
     const accessible = item => { const d = doorOf(item); return d && d.open > 0.95 && !d.busy; };
     const brewing = () => K.machine && K.machine.status === "brewing";
     const busy = () => !!K.transfer;
+    const gone = item => item.location === "held" || item.location === "ext" || item.location === "broken";
     function soundStop() {
       if (K.sound) { K.sound.close().catch(() => {}); K.sound = null; }
     }
@@ -235,7 +246,7 @@ const OFFICE_KITCHEN = (() => {
       if (busy()) return;
       if (id.startsWith("take:")) {
         const item = K.items.find(i => i.id === id.slice(5));
-        if (!item || item.location === "held" || (item.location === "home" && !accessible(item))) return;
+        if (!item || gone(item) || (item.location === "home" && !accessible(item))) return;
         if (K.held) return notify("Du trägst bereits einen Gegenstand. Stelle ihn zuerst zurück.");
         if (item.location === "machine") {
           if (brewing()) return notify("Der Kaffee läuft noch.");
@@ -266,6 +277,8 @@ const OFFICE_KITCHEN = (() => {
       const tr = v => [c * v[0] - s * v[2], v[1], s * v[0] + c * v[2]];
       return R.hitBox({ o: tr(p), d: tr(ray.d) }, [Math.min(0, d.sign * d.w) - pad, -pad, -0.055], [Math.max(0, d.sign * d.w) + pad, d.h + pad, 0.055]);
     }
+    /* v263: Abstand zur nächsten Küchentür auf dem Strahl (für die Wurfbahn) */
+    function doorT(ray) { let m = null; K.doors.forEach(d => { const t = doorHit(d, ray, 0); if (t != null && (m == null || t < m)) m = t; }); return m; }
     /* Dynamische Türen sperren Sicht und Bewegung auch während der Animation. */
     function occludes(ray, distance, except) {
       return K.doors.some(d => d.id !== except && (() => { const t = doorHit(d, ray, 0); return t != null && t < distance - 0.012; })());
@@ -280,7 +293,7 @@ const OFFICE_KITCHEN = (() => {
         if (t != null) hits.push({ id: "door:" + d.id, label: d.busy ? "Tür bewegt sich …" : (d.kind === "fridge" ? "Kühlschrank " : "Schrank ") + (d.open > 0.5 ? "schließen" : "öffnen"), t, doorId: d.id, disabled: d.busy });
       });
       if (!busy()) K.items.forEach(item => {
-        if (item.location === "held") return;
+        if (gone(item)) return;
         if (item.location === "home" && !accessible(item)) return;
         const n = item.node, p = [n.x, n.y, n.z];
         const label = item.kind === "cup" ? item.fill > 0 ? "Kaffee nehmen" : "Tasse nehmen" : item.name + " nehmen";
@@ -304,6 +317,20 @@ const OFFICE_KITCHEN = (() => {
         return Math.hypot(...p.map((v, i) => v - eye[i])) <= RANGE && !blocked(eye, p) && !occludes(ray, h.t, h.doorId);
       }) || null;
     }
+    function liquid(it) {
+      if (!it.liquid) return;
+      it.liquid.visible = it.fill > 0;
+      it.liquid.y = 0.014 + it.fill * 0.081;
+      it.liquid.sx = it.liquid.sz = 0.029 + (it.liquid.y - 0.012) / 0.096 * 0.009 - 0.0008;
+    }
+    /* v263: frei abstellen (Fläche und Lage bestimmt die Szene), aus der Hand geben (Wurf, Übergabe), ablegen, zerspringen */
+    function dropAt(pos, ry) {
+      if (!K.held || busy()) return false;
+      const it = K.held; it.pos = pos.slice(); it.ry = ry || 0; move(it, "free"); return true;
+    }
+    function release() { const it = K.held; if (!it || busy()) return null; K.held = null; it.location = "ext"; return it; }
+    function settle(it, pos, ry) { it.pos = pos.slice(); it.ry = ry || 0; it.location = "free"; }
+    function shatter(it) { it.location = "broken"; it.fill = 0; it.node.visible = false; }
     function tick(dt, view) {
       K.doors.forEach(d => {
         if (d.busy) {
@@ -326,8 +353,11 @@ const OFFICE_KITCHEN = (() => {
         const f = [-Math.cos(view.yaw), -Math.sin(view.yaw)], rt = [Math.sin(view.yaw), -Math.cos(view.yaw)];
         return [view.eye[0] + f[0] * 0.38 + rt[0] * 0.18, view.eye[1] - 0.33, view.eye[2] + f[1] * 0.38 + rt[1] * 0.18];
       };
+      K.hand = hold();
       K.items.forEach(it => {
-        let p = it.location === "held" ? hold() : it.location === "machine" && M ? M.cup : it.home;
+        if (it.location === "broken") { it.node.visible = false; return; }
+        if (it.location === "ext") { liquid(it); return; }                             /* v263: Lage setzt officefp.js (Wurf, Person) */
+        let p = it.location === "held" ? K.hand : it.location === "machine" && M ? M.cup : it.location === "free" && it.pos ? it.pos : it.home;
         const tr = K.transfer;
         if (tr && tr.item === it) {
           tr.t = Math.min(1, tr.t + dt / (reduced ? 0.12 : 0.5));
@@ -335,12 +365,9 @@ const OFFICE_KITCHEN = (() => {
           if (tr.t >= 1) K.transfer = null;
         }
         [it.node.x, it.node.y, it.node.z] = p;
-        if (it.kind === "product") it.node.glow = accessible(it) ? 0.12 : 0;
-        if (it.liquid) {
-          it.liquid.visible = it.fill > 0;
-          it.liquid.y = 0.014 + it.fill * 0.081;
-          it.liquid.sx = it.liquid.sz = 0.029 + (it.liquid.y - 0.012) / 0.096 * 0.009 - 0.0008;
-        }
+        it.node.rx = it.node.rz = 0; it.node.ry = it.location === "free" ? it.ry || 0 : 0;
+        if (it.kind === "product") it.node.glow = it.location === "home" && accessible(it) ? 0.12 : 0;
+        liquid(it);
       });
       if (M) {
         const cup = K.items.find(i => i.id === M.cupId), active = brewing();
@@ -355,7 +382,7 @@ const OFFICE_KITCHEN = (() => {
       return K.doors.filter(d => d.open > 0.02).map(d => {
         const n = d.node, c = Math.cos(n.ry), s = Math.sin(n.ry), x = n.x + c * d.sign * d.w, z = n.z - s * d.sign * d.w;
         return [Math.min(n.x, x) - 0.02, Math.min(n.z, z) - 0.02, Math.max(n.x, x) + 0.02, Math.max(n.z, z) + 0.02];
-      });
+      }).concat(K.items.filter(i => i.location === "free" && i.pos && i.pos[1] < 0.05).map(i => [i.pos[0] - 0.06, i.pos[2] - 0.06, i.pos[0] + 0.06, i.pos[2] + 0.06]));   /* v263: Tasse auf dem Boden – man läuft drum herum */
     }
     let focused = null;
     function focus(id) {
@@ -364,9 +391,9 @@ const OFFICE_KITCHEN = (() => {
       focused = door ? door.node : item ? item.node : id === "start" && K.machine ? K.machine.knob : null;
       if (focused) focused.tint = [1, 0.86, 0.52, 0.16];
     }
-    const snapshot = () => ({ doors: K.doors.map(d => ({ id: d.id, open: d.goal })), items: K.items.map(i => ({ id: i.id, location: i.location, fill: i.fill })), machine: MState() });
+    const snapshot = () => ({ doors: K.doors.map(d => ({ id: d.id, open: d.goal })), items: K.items.map(i => ({ id: i.id, location: i.location === "ext" ? (i.pos ? "free" : "home") : i.location, fill: i.fill, pos: i.pos ? i.pos.slice() : null, ry: i.ry || 0 })), machine: MState() });
     const MState = () => K.machine ? { status: K.machine.status, elapsed: K.machine.elapsed, cupId: K.machine.cupId } : null;
-    return Object.assign(K, { target, perform, tick, colliders, snapshot, occludes, focus, dispose: soundStop });
+    return Object.assign(K, { target, perform, tick, colliders, snapshot, occludes, focus, dispose: soundStop, dropAt, release, settle, shatter, busy, doorT });
   }
   return { layout, mount, cupMesh, foods };
 })();
