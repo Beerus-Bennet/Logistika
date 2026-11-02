@@ -1,5 +1,11 @@
 # Änderungen – kurz für den Kollegen
 
+
+## v248 – Fahrzeuge als 3D-Bildchen im Hof-Stil
+- Neu `vehmodels.js`: Modelle für alle 48 Marktfahrzeuge plus Unimog-Holzlaster und goldenen T1, gebaut mit FM.MB wie die Hofmodelle.
+- Gerendert über dasselbe Bildchen-System wie Silo- und Ladenwaren (`thumbSpan`/`thumbOf`): Sonne, weiche Schatten, Kontur, Kontaktschatten.
+- Zu sehen in Markt, Flotte (lackierte Fahrzeuge in Firmenfarbe), Fahrzeugwahl im Planer, Auktionshaus, Hof-Fahrzeugliste und Tutorial.
+- v246/v247: Markt innerhalb jeder Art nach Preis sortiert; Tiersymbol im Hochsitz entfernt.
 ## v245 – Aufträge auf Speditionsniveau: Kundenprofile, geprüfte Texte, Verhandlung, Ausschreibungen
 
 ### 1. Ursache der widersprüchlichen Texte

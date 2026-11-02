@@ -1030,7 +1030,7 @@ function vehOptHTML(r, i, on) {
   const uTxt = u >= 0.995 ? "voll" : u >= 0.1 ? Math.round(u * 100) + " %" : u >= 0.001 ? fmt(u * 100, 1) + " %" : "< 0,1 %";
   const util = r.sc ? `<i class="vo-u${u < 0.02 && t.cap >= 500 ? " big" : ""}">⚖️ ${uTxt} ausgelastet${u < 0.02 && t.cap >= 500 ? " · überdimensioniert" : ""}</i>` : "";
   return `<button class="vopt${on ? " on" : ""}${r.best ? " best" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on}">
-    <span class="vo-ic">${t.icon}</span>
+    <span class="vo-ic">${typeof vehIc === "function" ? vehIc(t) : t.icon}</span>
     <span class="vo-tx"><b>${r.best ? `<em class="vo-best">💡 passt am besten</em>` : ""}${esc(t.name)}</b><small>📍 ${esc(vehSpot(f).t)} · ${esc(N[f.at].short)}</small>${util}</span>
     ${badge}
   </button>`;
@@ -3239,7 +3239,7 @@ function renderFleet() {
     const t = vType(v.type);
     const prog = v.routeDist ? clamp((v.pos / v.routeDist) * 100, 0, 100) : 0;
     return `<div class="card veh-card">
-      <div class="card-top"><span class="vicon vtile" style="--vc:${(MODE_INFO[t.mode] || {}).color || "#f0812b"}">${t.icon}</span>
+      <div class="card-top"><span class="vicon">${typeof vehIc === "function" ? vehIc(t, typeof painted === "function" && painted(v) ? S.livery.c1 : null) : t.icon}</span>
         <div class="vname">${esc(t.name)}<small>${esc(t.brand)} · ${kgf(t.cap)} · ${t.speed} km/h</small></div>
 
       </div>
@@ -3522,7 +3522,7 @@ function renderMarket() {
     const m = t.mode, avail = unlockedModes().includes(m);
     const locked = t.stage > S.stage || !avail;
     return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
-        <div class="card-top"><span class="vicon vtile" style="--vc:${(MODE_INFO[t.mode] || {}).color || "#f0812b"}">${t.icon}</span>
+        <div class="card-top"><span class="vicon">${typeof vehIc === "function" ? vehIc(t) : t.icon}</span>
           <div class="vname">${esc(t.name)}<small>${esc(t.brand)}</small></div>
           <span class="price">${(() => { const cp = typeof couponPrice === "function" ? couponPrice(t.price) : t.price;
             return cp < t.price ? `<s>${money(t.price)}</s> ${money(cp)}` : money(t.price); })()}</span></div>

@@ -3816,7 +3816,13 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .nego-mg .good{color:var(--green-d)}
 .nego-mg .bad{color:#c23a4f}
 
-/* v248: Fahrzeug-Emoji im Logistika-Look – Feld in der Farbe der Verkehrsart, dicke Kontur, harter Schatten */
-.vicon.vtile{width:44px;height:44px;display:grid;place-items:center;font-size:24px;line-height:1;border:2px solid var(--ink);border-radius:12px;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--vc) 28%,#fff),color-mix(in srgb,var(--vc) 55%,#fff));box-shadow:2px 2px 0 var(--ink)}
-.card.locked .vicon.vtile,.card.shop.locked .vicon.vtile{filter:grayscale(.6);opacity:.8}
+/* v248: Fahrzeuge als 3D-Bildchen (vehmodels.js, gleiches Bildchen-System wie die Hofwaren) */
+.vicon .ic{display:grid;place-items:center;width:56px;height:56px;margin:-6px 0}
+.vicon .ic img{width:56px;height:56px;object-fit:contain;display:block}
+.vicon .ic.th b{font-size:24px;line-height:56px;font-weight:400}
+.vopt .vo-ic:has(.ic.th){width:44px;height:44px;background:none;border:0;box-shadow:none}
+.vo-ic .ic img,.mini .ic .ic img{width:44px;height:44px;object-fit:contain;display:block}
+.vo-ic .ic.th b,.mini .ic .ic.th b{font-size:20px;font-weight:400}
+.fveh>span .ic img,.fo-v>span .ic img{width:36px;height:36px;object-fit:contain;display:block}
+.fveh>span .ic.th b,.fo-v>span .ic.th b{font-size:22px;font-weight:400}
+.carpic.veh .vbig .ic img{width:120px;height:120px;object-fit:contain;display:block}

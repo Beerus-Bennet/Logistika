@@ -56,6 +56,7 @@ const SHELL = [
   "./vista.js?v=109",
   "./farmview.js?v=109",
   "./worldview.js?v=109",
+  "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
   "./hunt.js?v=109",
