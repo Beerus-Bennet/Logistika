@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v257)
+   LOGISTIKA – officefp.js (v259)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -191,118 +191,9 @@ const OFFICE3D = (() => {
     return { st, shell, trim, glow, ob, occ, seats, screens, H, kitchen, poster: POSTER, door: [RW - 0.7, (dz0 + dz1) / 2], stairs: multi ? [PX(300), PZ(64)] : null };
   }
 
-  /* v257: Küchenzeile an der hinteren Wand (Innenseite z = −RD), Raster 60 cm.
-     Korpus 58 cm tief, hinten 3 cm Luft für die Sockelleiste · Sockel 10 cm hoch und 6 cm zurückgesetzt · Fronten 18 mm vor dem
-     Korpus mit 6-mm-Fugen · Arbeitsplatte 4 cm, hinten bis an die Wand, vorn 3 cm Überstand · Hängeschränke 35 cm tief auf gemeinsamer
-     Höhe 1,42–2,10 m im selben Raster, nicht über Kühlschrank (Hochschrank bis 2,10 m) und Kaffeemodul · Dunstabzug über dem Herd.
-     Vorher: Zeile stand 40 cm vor der Wand, Sockel und Fronten lagen in derselben Ebene (Flimmern/Zickzack an der Front),
-     Hängeschränke ragten in den Kühlschrank. */
+  /* v259: Küche mit getrennten Korpussen, Türen und Zuständen in officekitchen.js. */
   function buildKitchen(st, kid, cx0, H, rect, blk) {
-    const M = 0.6, mods = kitchenModules(kid), L = mods.length * M;
-    const cx = clamp1(cx0, -RW + 0.05 + L / 2, RW - 0.05 - L / 2), x0 = cx - L / 2;
-    const WALL = -RD, zb = WALL + 0.03, CD = 0.58, zf = zb + CD, FT = 0.018, zF = zf + FT, TOP0 = 0.86, TOP1 = 0.9, J = 0.003;
-    const UB = 1.42, UT = 2.1, UD = 0.35, uzf = WALL + UD;
-    const FRONT = kid === "nische" ? 0xf4f6f8 : kid === "einbau" ? 0xe9edf1 : 0xf3efe8;
-    const CARC = 0xdfe3e8, PLINTH = 0x3a3f48, HANDLE = 0x9aa3ad;
-    const WORK = kid === "nische" ? 0x8d9097 : kid === "einbau" ? 0xb08a5a : 0x5c6068;
-    const run = mods.filter(m => m !== "kuehl").length * M;                  /* Unterschränke + Arbeitsplatte */
-    /* Sockel (zurückgesetzt), durchgehender Korpus, Arbeitsplatte, Rückwand-Spritzschutz */
-    st.box(L, 0.1, CD - 0.06, PLINTH, { x: cx, z: zb + (CD - 0.06) / 2 });
-    st.box(run, TOP0 - 0.1, CD, CARC, { x: x0 + run / 2, y: 0.1, z: zb + CD / 2 });
-    st.box(run, TOP1 - TOP0, zF + 0.03 - (WALL + 0.002), WORK, { x: x0 + run / 2, y: TOP0, z: (zF + 0.03 + WALL + 0.002) / 2, top: mixH(WORK, 0xffffff, 0.08) });
-    st.box(run, 0.5, 0.01, mixH(FRONT, 0x9aa6b4, 0.25), { x: x0 + run / 2, y: TOP1, z: WALL + 0.005 });
-    const door = (x, y0, y1, w, o) => {                                       /* Front mit Fuge, Griff waagerecht oben bzw. unten */
-      st.box(w - 2 * J, y1 - y0 - 2 * J, FT, (o && o.c) || FRONT, { x, y: y0 + J, z: (o && o.zf != null ? o.zf : zf) + FT / 2 + 0.0005 });
-      if (!(o && o.noHandle)) st.box(Math.min(0.2, w * 0.4), 0.012, 0.016, HANDLE, { x, y: o && o.hy != null ? o.hy : y1 - 0.06, z: (o && o.zf != null ? o.zf : zf) + FT + 0.012 });
-    };
-    const R = { x0, x1: x0 + L, zf: zF + 0.03, cx, L, mods: [] };
-    mods.forEach((m, k) => {
-      const x = x0 + (k + 0.5) * M;
-      R.mods.push({ m, x });
-      if (m === "kuehl") {
-        /* Hochschrank mit Kühlschrank, bündig mit den Fronten, Griffe zur Zeile hin (Anschlag außen) */
-        st.box(M, UT - 0.1, CD, CARC, { x, y: 0.1, z: zb + CD / 2 });
-        door(x, 0.1, 1.3, M, { noHandle: true, c: 0xf6f7f8 });
-        door(x, 1.3, UT, M, { noHandle: true, c: 0xf6f7f8 });
-        [[0.7, 1.24], [1.36, 1.7]].forEach(([a, c]) => st.box(0.016, c - a, 0.022, HANDLE, { x: x - M / 2 + 0.06, y: a, z: zF + 0.014 }));
-        st.box(0.12, 0.05, 0.004, 0x2a3a4a, { x, y: 1.18, z: zF + 0.002 });
-        rect(x - M / 2, WALL, x + M / 2, zF);
-        blk(x - M / 2, 0, WALL, x + M / 2, UT, zF);
-        return;
-      }
-      if (m === "herd") {
-        /* Backofen mit Glasfront und Bedienleiste, Kochfeld auf der Platte, Dunstabzug */
-        st.box(M - 2 * J, 0.6, FT, 0x2a2f36, { x, y: 0.18, z: zf + FT / 2 + 0.0005 });
-        st.box(M - 0.12, 0.34, 0.004, 0x10161c, { x, y: 0.3, z: zF + 0.002 });
-        st.box(0.4, 0.014, 0.02, HANDLE, { x, y: 0.72, z: zF + 0.012 });
-        door(x, 0.1, 0.18, M, { noHandle: true });
-        st.box(M - 2 * J, 0.06, FT, 0x3a4048, { x, y: 0.79, z: zf + FT / 2 + 0.0005 });
-        [-0.18, -0.06, 0.06, 0.18].forEach(dx => st.cyl(0.016, 0.016, 0.014, 8, 0xd8dde2, { x: x + dx, y: 0.82, z: zF, rx: PI / 2 }));
-        st.box(0.56, 0.006, 0.5, 0x15171a, { x, y: TOP1, z: zb + 0.29 });
-        [[-0.13, -0.11, 0.09], [0.13, -0.11, 0.07], [-0.13, 0.12, 0.07], [0.13, 0.12, 0.09]].forEach(([dx, dz, r]) => st.cyl(r, r, 0.002, 16, 0x3a3d44, { x: x + dx, y: TOP1 + 0.006, z: zb + 0.29 + dz }));
-        /* Flachschirmhaube unter dem Hängeschrank (kein Kamin vor dem Firmenschild) */
-        st.box(M - 0.01, 0.06, UD + 0.1, 0xc9ced6, { x, y: UB - 0.06, z: WALL + (UD + 0.1) / 2 });
-        st.box(M - 0.06, 0.004, 0.08, 0x2a2f36, { x, y: UB - 0.064, z: WALL + UD + 0.04 });
-      }
-      if (m === "herd") { /* Front oben fertig */ }
-      else if (m === "spuelm") { door(x, 0.1, TOP0, M, { noHandle: true }); st.box(0.3, 0.012, 0.02, HANDLE, { x, y: TOP0 - 0.05, z: zF + 0.012 }); st.box(0.05, 0.012, 0.004, 0x6fd38a, { x: x + 0.2, y: TOP0 - 0.045, z: zF + 0.002 }); }
-      else if (m === "unter" || m === "mikro" || m === "kocher") {
-        door(x, TOP0 - 0.16, TOP0, M);                                        /* Schublade */
-        door(x, 0.1, TOP0 - 0.16, M, { hy: TOP0 - 0.22 });                    /* Tür */
-      } else door(x, 0.1, TOP0, M, { hy: TOP0 - 0.08 });                      /* Spüle, Kaffee: hohe Tür */
-      if (m === "spuele") {
-        st.box(0.5, 0.004, 0.42, 0xc8ced6, { x, y: TOP1, z: zb + 0.3 });
-        st.box(0.42, 0.003, 0.34, 0x8f98a3, { x, y: TOP1 + 0.004, z: zb + 0.31 });
-        st.cyl(0.018, 0.018, 0.26, 8, 0xd8dde2, { x, y: TOP1, z: WALL + 0.08 });
-        st.box(0.026, 0.026, 0.2, 0xd8dde2, { x, y: TOP1 + 0.24, z: WALL + 0.17 });
-        st.box(0.016, 0.06, 0.016, 0xd8dde2, { x, y: TOP1 + 0.19, z: WALL + 0.27 });
-        st.box(0.02, 0.012, 0.08, 0x9aa3ad, { x: x + 0.05, y: TOP1 + 0.2, z: WALL + 0.08, ry: 0.4 });
-      }
-      if (m === "mikro") {
-        st.box(0.48, 0.28, 0.36, 0xe1e5ea, { x, y: TOP1, z: zb + 0.26 });
-        st.box(0.3, 0.2, 0.004, 0x1d2228, { x: x - 0.05, y: TOP1 + 0.04, z: zb + 0.442 });
-        st.box(0.08, 0.2, 0.004, 0x55606c, { x: x + 0.17, y: TOP1 + 0.04, z: zb + 0.442 });
-      }
-      if (m === "kocher") {
-        st.cyl(0.075, 0.075, 0.012, 12, 0x2a2a30, { x, y: TOP1, z: zb + 0.3 });
-        st.cyl(0.07, 0.06, 0.22, 12, 0xd9413a, { x, y: TOP1 + 0.012, z: zb + 0.3 });
-        st.box(0.03, 0.12, 0.05, 0x2a2a30, { x: x + 0.08, y: TOP1 + 0.06, z: zb + 0.3 });
-      }
-      if (m === "kaffee") {
-        /* Siebträger: ganz auf der Platte, Auslauf und Tasten nach vorn, darüber frei (offenes Brett mit Tassen) */
-        const mz = zb + 0.26;
-        st.box(0.46, 0.42, 0.38, 0xa83526, { x, y: TOP1, z: mz });
-        st.box(0.48, 0.05, 0.4, 0xd8dde2, { x, y: TOP1 + 0.42, z: mz });
-        st.box(0.36, 0.06, 0.012, 0xd8dde2, { x, y: TOP1 + 0.31, z: mz + 0.196 });
-        st.cyl(0.035, 0.035, 0.06, 10, 0x2a2a30, { x: x - 0.08, y: TOP1 + 0.19, z: mz + 0.2 });
-        st.box(0.12, 0.02, 0.02, 0x2a2a30, { x: x - 0.08, y: TOP1 + 0.2, z: mz + 0.25 });
-        st.box(0.026, 0.026, 0.11, 0x1d1d20, { x: x - 0.08, y: TOP1 + 0.19, z: mz + 0.3, ry: 0.35 });
-        st.box(0.2, 0.012, 0.12, 0x6a6f78, { x: x - 0.08, y: TOP1 + 0.002, z: mz + 0.2 });
-        st.cyl(0.032, 0.026, 0.07, 10, 0xf6f1e6, { x: x - 0.08, y: TOP1 + 0.014, z: mz + 0.21 });
-        [[0.1, 0x6fd38a], [0.16, 0xf2c230]].forEach(([dx, c]) => st.cyl(0.016, 0.016, 0.012, 10, c, { x: x + dx, y: TOP1 + 0.33, z: mz + 0.19, rx: PI / 2 }));
-        st.cyl(0.03, 0.03, 0.02, 12, 0xffffff, { x: x + 0.13, y: TOP1 + 0.21, z: mz + 0.19, rx: PI / 2 });
-        st.box(M - 0.04, 0.025, 0.25, FRONT, { x, y: 1.75, z: WALL + 0.125 });
-        [-0.18, -0.06, 0.06, 0.18].forEach((dx, n) => st.cyl(0.035, 0.03, 0.08, 10, [0xf6f1e6, 0x3f78c8, 0xf6f1e6, 0xd9413a][n], { x: x + dx, y: 1.775, z: WALL + 0.12 }));
-        return;
-      }
-      /* Hängeschrank im selben Raster */
-      st.box(M - 0.002, UT - UB, UD - FT, CARC, { x, y: UB, z: WALL + (UD - FT) / 2 });
-      door(x, UB, UT, M, { zf: WALL + UD - FT, hy: UB + 0.05 });
-    });
-    rect(x0, WALL, x0 + run, zF + 0.03);
-    blk(x0, 0, WALL, x0 + run, TOP1, zF + 0.03);
-    blk(x0, UB, WALL, x0 + L, UT, uzf);
-    /* Esstisch: 1,2 m freie Fläche vor den Fronten (Türen und Schubladen gehen auf), dann Stuhl, dann Tisch */
-    if (kid !== "nische") {
-      const tw = 3.0, td = 1.0, tx = clamp1(cx - 0.2, -RW + 0.9 + tw / 2, RW - 0.9 - tw / 2), tz = zF + 0.03 + 1.2 + 0.28 + 0.72;
-      st.box(tw, 0.04, td, 0xe4d3b6, { x: tx, y: 0.74, z: tz });
-      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => st.box(0.05, 0.74, 0.05, 0x55606c, { x: tx + sx * (tw / 2 - 0.1), z: tz + sz * (td / 2 - 0.1) }));
-      [-0.9, 0, 0.9].forEach(dx => [-1, 1].forEach(s => chair(st, tx + dx, tz + s * 0.72, s > 0 ? 0 : PI, 0xcbd6e2)));
-      rect(tx - tw / 2 - 0.1, tz - td / 2 - 0.5, tx + tw / 2 + 0.1, tz + td / 2 + 0.5);
-      blk(tx - tw / 2, 0.74, tz - td / 2, tx + tw / 2, 0.78, tz + td / 2);
-      R.table = [tx, tz];
-    }
-    return R;
+    return OFFICE_KITCHEN.layout({ st, kid, cx0, H, rect, blk, RW, RD, mods: kitchenModules(kid), chair, mixH });
   }
 
   function chair(m, x, z, ry, col) {
@@ -340,7 +231,9 @@ const OFFICE3D = (() => {
   function lookOf(p) {
     const av = Object.assign(avDefault(), p.av || {}), k = nameHash(p.id || p.name);
     const fem = AV.sexes[avWrap(av, "sex")] === "w";
-    const sk = AV.skins[avWrap(av, "skin")], hc = AV.hairColors[avWrap(av, "hairColor")], ec = AV.eyeColors[avWrap(av, "eyes")], fit = AV.outfits[avWrap(av, "outfit")];
+    /* v259: natürliche Haarpalette im 3D-Büro; gespeicherte Avatare bleiben unverändert. */
+    const hc0 = AV.hairColors[avWrap(av, "hairColor")], hc = hc0.id === "blau" ? AV.hairColors[3 + k % 2] : hc0;
+    const sk = AV.skins[avWrap(av, "skin")], ec = AV.eyeColors[avWrap(av, "eyes")], fit = AV.outfits[avWrap(av, "outfit")];
     const PANTS = [0x2f3a4a, 0x3d5a80, 0x4a4038, 0x26303c, 0x5a6470, 0x34495e], SHOES = [0x2a2a30, 0x5a3a24, 0x3a3f48, 0xe4e4e0];
     const SHIRT = [0xf2f2ee, 0x8fb0d8, 0xd9e2c8];
     const L = {
@@ -352,7 +245,7 @@ const OFFICE3D = (() => {
       cup: [0xd9413a, 0x3f78c8, 0xf6f1e6, 0x3f9a5a, 0xf2c230][(k >>> 11) % 5], role: p.role
     };
     L.sleeve = L.outfit === "warnweste" ? 0x3a4a5a : L.outfit === "latzhose" ? L.under : L.oc;
-    L.tw = fem ? 0.27 : 0.31; L.td = fem ? 0.17 : 0.18; L.sh = fem ? 0.165 : 0.19;
+    L.tw = fem ? 0.27 : 0.31; L.td = fem ? 0.17 : 0.18; L.sh = fem ? 0.145 : 0.165;
     L.key = [L.fem, L.skin, L.hair, L.eye, L.outfit, L.style, L.acc, L.beard, L.pants, L.shoe, L.under, L.hatC, L.role].join(":");
     return L;
   }
@@ -384,13 +277,13 @@ const OFFICE3D = (() => {
     /* Augen: Weiß, Iris in Augenfarbe, Pupille, Glanzpunkt · Brauen · Nase */
     [-1, 1].forEach(s => {
       const ex = s * 0.042;
-      b.sphere(0.021, 10, 7, 0xfbfbf8, { x: ex, y: 0.142, z: 0.104, sz: 0.5, smooth: true });
-      b.sphere(0.0125, 10, 6, L.eye, { x: ex, y: 0.141, z: 0.1128, sz: 0.4, smooth: true });
-      b.sphere(0.0062, 8, 5, 0x15171a, { x: ex, y: 0.141, z: 0.1162, sz: 0.4, smooth: true });
-      b.box(0.004, 0.004, 0.002, 0xffffff, { x: ex + 0.004, y: 0.145, z: 0.1185 });
-      b.box(0.042, 0.009, 0.012, brow, { x: ex, y: 0.168, z: 0.1045, rz: -s * 0.1 });
+      b.sphere(0.017, 12, 8, 0xfbfbf8, { x: ex, y: 0.142, z: 0.109, sy: 0.8, sz: 0.25, smooth: true });
+      b.sphere(0.008, 12, 8, L.eye, { x: ex, y: 0.141, z: 0.1132, sz: 0.18, smooth: true });
+      b.sphere(0.0042, 10, 7, 0x15171a, { x: ex, y: 0.141, z: 0.1145, sz: 0.15, smooth: true });
+      b.box(0.004, 0.004, 0.002, 0xffffff, { x: ex + 0.004, y: 0.144, z: 0.1155 });
+      b.box(0.032, 0.006, 0.006, brow, { x: ex, y: 0.165, z: 0.107, rz: -s * 0.07 });
     });
-    b.sphere(0.017, 10, 7, mixH(skin, L.skinS, 0.45), { y: 0.118, z: 0.113, sy: 1.25, sz: 0.85, smooth: true });
+    b.sphere(0.012, 10, 7, mixH(skin, L.skinS, 0.25), { y: 0.117, z: 0.115, sy: 1.15, sz: 0.65, smooth: true });
     /* Haare */
     const st = L.style, hc = { c: HC, sy: HSY };
     const S2 = (rm, keep, col, o) => shell(b, HR * rm, col == null ? hair : col, keep, Object.assign({}, hc, o || {}));
@@ -402,12 +295,15 @@ const OFFICE3D = (() => {
     else if (st === "quiff") { S2(1.05, hairLim(0.95, 1.85)); b.sphere(0.058, 9, 7, hair, { y: 0.245, z: 0.07, sy: 0.75, sz: 1.2, rx: -0.4, smooth: true }); b.sphere(0.046, 8, 6, hairS, { x: 0.02, y: 0.262, z: 0.03, sy: 0.7, smooth: true }); }
     else if (st === "locken") {
       S2(1.04, hairLim(0.9, 1.95));
-      const r2 = rng(nameHash(L.key) + 3);
-      for (let i = 0; i < 18; i++) {
-        const th = 0.25 + r2() * 1.35, az = (r2() * 2 - 1) * PI;
-        if (Math.abs(az) < 0.8 && th > 0.75) continue;
-        const n = [Math.sin(th) * Math.sin(az), Math.cos(th), Math.sin(th) * Math.cos(az)], rr = HR * 1.04;
-        b.sphere(0.034, 7, 5, i % 3 ? hair : hairS, { x: n[0] * rr, y: HC[1] + n[1] * rr * HSY, z: n[2] * rr, smooth: true });
+      /* v259: kleine, geordnete Locken, größtenteils in die Haarkappe eingelassen. */
+      for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 7; i++) {
+        const th = ring ? 0.93 : 0.48, az = (i + ring * 0.5) / 7 * 2 * PI;
+        if (ring && Math.cos(az) > 0.6) continue;
+        const rr = HR * 1.015;
+        b.sphere(0.018, 8, 6, i % 3 ? hair : mixH(hair, hairS, 0.3), {
+          x: Math.sin(th) * Math.sin(az) * rr, y: HC[1] + Math.cos(th) * rr * HSY,
+          z: Math.sin(th) * Math.cos(az) * rr, sy: 0.8, smooth: true
+        });
       }
     } else if (st === "wellen") {
       S2(1.07, hairLim(0.86, 2.1));
@@ -427,7 +323,11 @@ const OFFICE3D = (() => {
     /* Bart */
     if (L.beard === "stoppeln") S2(1.008, (th, az) => th > 1.72 && Math.abs(az) < 1.75, mixH(skin, hair, 0.4));
     else if (L.beard === "schnauzer") b.sphere(0.03, 10, 6, hairS, { y: 0.1, z: 0.111, sy: 0.32, sz: 0.5, smooth: true });
-    else if (L.beard === "vollbart") { S2(1.05, (th, az) => th > (Math.abs(az) < 0.5 ? 1.75 : 1.55) && Math.abs(az) < 1.9, hair); b.sphere(0.05, 10, 7, hair, { y: 0.045, z: 0.07, sy: 0.9, smooth: true }); }
+    else if (L.beard === "vollbart") {
+      /* v259: Bart am Kiefer, Wangen und Mund bleiben frei. */
+      S2(1.022, (th, az) => th > (Math.abs(az) < 0.55 ? 2.12 : 1.95) && Math.abs(az) < 1.8, hairS);
+      b.sphere(0.034, 12, 8, hair, { y: 0.035, z: 0.059, sy: 0.6, sz: 0.9, smooth: true });
+    }
     /* Brille, Cap, Mütze, Headset */
     if (L.acc === "brille") {
       const fc = 0x2a2a30;
@@ -456,18 +356,24 @@ const OFFICE3D = (() => {
   /* Lider (Blinzeln) und Mund (beim Sprechen) als eigene kleine Teile */
   function lidsMesh(L) {
     const b = new G3.MB();
-    [-1, 1].forEach(s => b.sphere(0.0225, 10, 7, L.skin, { x: s * 0.042, y: 0.142, z: 0.105, sz: 0.62, smooth: true }));
+    [-1, 1].forEach(s => b.sphere(0.018, 12, 8, L.skin, { x: s * 0.042, y: 0.142, z: 0.110, sy: 0.8, sz: 0.32, smooth: true }));
     return b;
   }
   function mouthMesh(L) { const b = new G3.MB(); b.box(0.042, 0.009, 0.01, mixH(L.lips, 0x000000, 0.35), { c: true }); return b; }
-  const mouthZ = L => L.beard === "vollbart" ? 0.124 : L.beard === "stoppeln" ? 0.115 : 0.109;
+  const mouthZ = L => L.beard === "vollbart" ? 0.109 : L.beard === "stoppeln" ? 0.115 : 0.109;
 
   /* Oberkörper: Drehpunkt an der Taille (Figur y 0,42), Kleidung nach Avatar-Outfit, Namensschild in Rollenfarbe */
   function torsoMesh(L) {
     const b = new G3.MB(), tw = L.tw, td = L.td, f = td / 2, base = L.outfit === "warnweste" ? 0x3a4a5a : L.outfit === "latzhose" ? L.under : L.oc;
-    b.box(tw - 0.03, 0.16, td - 0.01, base, { y: 0 });
-    b.box(tw, 0.22, td, base, { y: 0.14 });
-    b.box(tw - 0.07, 0.03, td - 0.04, base, { y: 0.36 });
+    /* v259: ein durchgehender, abgeschrägter Rumpf statt drei gestapelter Quader. */
+    const ring = (w, d, y) => {
+      const q = 0.024, x = w / 2, z = d / 2;
+      return [[-x + q, y, -z], [x - q, y, -z], [x, y, -z + q], [x, y, z - q], [x - q, y, z], [-x + q, y, z], [-x, y, z - q], [-x, y, -z + q]];
+    };
+    const rings = [ring(tw * 0.88, td * 0.92, 0), ring(tw, td, 0.14), ring(tw, td, 0.30), ring(tw * 0.65, td * 0.75, 0.36)];
+    for (let k = 0; k < rings.length - 1; k++) for (let j = 0; j < 8; j++)
+      b.quad(rings[k][j], rings[k + 1][j], rings[k + 1][(j + 1) % 8], rings[k][(j + 1) % 8], base);
+    for (let j = 0; j < 8; j++) b.tri([0, 0.36, 0], rings[3][(j + 1) % 8], rings[3][j], base);
     b.cyl(0.042, 0.04, 0.1, 10, mixH(L.skin, L.skinS, 0.25), { y: 0.355, smooth: true });
     let fz = 0.003;
     switch (L.outfit) {
@@ -479,7 +385,7 @@ const OFFICE3D = (() => {
         break;
       case "blaujacke":
         b.box(0.01, 0.34, 0.004, L.ocT, { y: 0.02, z: f + 0.002 });
-        b.box(tw - 0.1, 0.045, td + 0.012, L.ocS, { y: 0.33 });
+        b.box(0.09, 0.018, 0.07, L.ocS, { y: 0.35, z: -0.012 });
         [-1, 1].forEach(s => b.box(0.07, 0.05, 0.004, L.ocS, { x: s * 0.075, y: 0.05, z: f + 0.002 }));
         fz = 0.004; break;
       case "warnweste":
@@ -491,7 +397,7 @@ const OFFICE3D = (() => {
         });
         fz = 0.02; break;
       case "kapuzenpulli":
-        b.box(tw - 0.07, 0.09, 0.07, L.ocS, { y: 0.29, z: -f - 0.025 });
+        b.sphere(0.07, 12, 8, L.ocS, { y: 0.32, z: -f + 0.015, sx: 1.2, sy: 0.45, sz: 0.65, smooth: true });
         b.box(0.16, 0.08, 0.006, L.ocS, { y: 0.03, z: f + 0.003 });
         [-1, 1].forEach(s => b.box(0.006, 0.07, 0.004, L.ocT, { x: s * 0.025, y: 0.26, z: f + 0.004 }));
         b.box(tw - 0.024, 0.03, td - 0.004, L.ocS, { y: 0 });
@@ -531,17 +437,17 @@ const OFFICE3D = (() => {
   /* Arme: Oberarm (Drehpunkt Schulter, hängt nach −y) und Unterarm mit Hand (Drehpunkt Ellbogen) */
   function upperMesh(L) {
     const b = new G3.MB();
-    b.sphere(0.046, 10, 7, L.sleeve, { smooth: true });
-    b.box(0.074, ARM_A, 0.08, L.sleeve, { y: -ARM_A });
+    b.sphere(0.038, 12, 8, L.sleeve, { sy: 0.8, smooth: true });
+    b.cyl(0.033, 0.037, ARM_A, 10, L.sleeve, { y: -ARM_A, smooth: true });
     return b;
   }
   function foreMesh(L, side) {
     const b = new G3.MB();
-    b.sphere(0.038, 9, 6, L.sleeve, { smooth: true });
-    b.box(0.066, 0.2, 0.07, L.sleeve, { y: -0.2 });
-    b.box(0.07, 0.022, 0.074, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.212 });
-    b.box(0.062, 0.078, 0.03, L.skin, { y: -0.288 });
-    b.box(0.018, 0.046, 0.02, L.skin, { x: -side * 0.034, y: -0.262, z: 0.012, rz: -side * 0.4 });
+    b.sphere(0.033, 10, 7, L.sleeve, { smooth: true });
+    b.cyl(0.027, 0.033, 0.2, 10, L.sleeve, { y: -0.2, smooth: true });
+    b.box(0.057, 0.022, 0.06, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.212 });
+    b.sphere(0.032, 10, 7, L.skin, { y: -0.248, sx: 0.85, sy: 1.12, sz: 0.48, smooth: true });
+    b.sphere(0.012, 8, 6, L.skin, { x: -side * 0.025, y: -0.237, z: 0.006, sy: 1.4, rz: -side * 0.4, smooth: true });
     return b;
   }
   /* Kleine Dinge in Figureinheiten (Welt / 1,45): Tasse, Telefon, Maus, Stift */
@@ -578,7 +484,7 @@ const OFFICE3D = (() => {
     const part = (k, fn, o) => R.addChild(root, R.node(M(k, fn), o || {}));
     part("legs:" + key, () => legsMesh(L));
     const torso = part("torso:" + key, () => torsoMesh(L), { y: 0.42 });
-    const head = part("head:" + key, () => headMesh(L), { y: 0.82 });
+    const head = part("head:" + key, () => headMesh(L), { y: 0.82, s: 0.94 });
     const lids = R.addChild(head, R.node(M("lids:" + L.skin, () => lidsMesh(L)), { visible: false, shadow: false }));
     const mouth = R.addChild(head, R.node(M("mouth:" + L.lips + ":" + L.beard, () => mouthMesh(L)), { y: 0.086, z: mouthZ(L), shadow: false }));
     const arm = [1, -1].map(side => {
@@ -932,15 +838,17 @@ const OFFICE3D = (() => {
       <div class="ofp-top"><div class="ofp-plate"><b>${esc(N[b.node].short)}</b><small>${esc(tierOf(b).name)}<span class="ofp-fl"></span></small></div>
         <button class="ofp-x" id="ofpX">🚪 Verlassen</button></div>
       <div class="ofp-floors"></div>
+      <div class="ofp-aim" aria-hidden="true"></div>
+      <div class="ofp-actions"><small id="ofpCarry" role="status"></small><button id="ofpAction" hidden></button></div>
       <div class="ofp-joy" id="ofpJoy"><i></i></div>
       <div class="ofp-say" id="ofpSay"></div>
-      <div class="ofp-hint" id="ofpHint">Links gehen · wischen zum Umsehen · Personal antippen</div>
+      <div class="ofp-hint" id="ofpHint">Links gehen · wischen zum Umsehen · Personal antippen · Küchenobjekte ansehen</div>
       <div class="ofp-card" id="ofpCard" role="dialog" aria-modal="false" aria-label="Mitarbeiter des Monats"></div>
       <div id="officeBoot"></div>`;
     document.body.appendChild(el);
     document.body.classList.add("office3d");
     const tok = ++SEQ;
-    O = { el, b, tok, floor: Math.max(0, Math.min(tierFloors(tierOf(b)) - 1, floor || 0)), alive: true, meshes: [], texs: [], mcache: new Map() };
+    O = { el, b, tok, floor: Math.max(0, Math.min(tierFloors(tierOf(b)) - 1, floor || 0)), alive: true, meshes: [], texs: [], mcache: new Map(), kitchenStates: new Map() };
     el.querySelector("#ofpX").onclick = leave;
     /* Statusleiste dunkel wie die Szene (iPhone: Farbe der Leiste kommt aus theme-color) */
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -988,7 +896,10 @@ const OFFICE3D = (() => {
       if (!O || !O.alive || O.R !== R) return;
       const dt = Math.max(0, Math.min(0.05, (now - O.last) / 1000)); O.last = now; O.t += dt;
       step(dt, now);
+      if (!O || !O.alive || O.R !== R) return;
+      R.stepParticles(dt);
       try { R.render(O.t); } catch (e) { /* Kontextverlust */ }
+      updateAction();
       O.raf = requestAnimationFrame(frame);
     };
     O.raf = requestAnimationFrame(frame);
@@ -1001,6 +912,12 @@ const OFFICE3D = (() => {
   /* Etage aufbauen (beim Betreten, Etagenwechsel und wenn sich das Team ändert) – vorher alles Alte freigeben */
   function freeFloor() {
     const R = O.R;
+    if (O.kitRuntime) {
+      const state = O.kitRuntime.snapshot();
+      /* v259: Etagenwechsel stellt Getragenes zurück; Team-Neuaufbau erhält die Hand. */
+      if (O.kitFloor !== O.floor) state.items.forEach(i => { if (i.location === "held") i.location = "home"; });
+      O.kitchenStates.set(O.kitFloor, state); O.kitRuntime.dispose(); O.kitRuntime = null;
+    }
     O.meshes.forEach(m => R.free(m)); O.meshes = []; O.mcache.clear();
     O.texs.forEach(t => R.texFree(t)); O.texs = [];
     R.nodes.length = 0;
@@ -1033,6 +950,8 @@ const OFFICE3D = (() => {
     O.poster = Object.assign({}, P, { c: pc, t: pt, k: posterKey(b) });
     posterPortrait(b, pt, pc);
     O.ob = room.ob; O.occ = room.occ; O.H = room.H; O.kitchen = room.kitchen;
+    O.kitFloor = O.floor;
+    O.kitRuntime = room.kitchen ? OFFICE_KITCHEN.mount(room.kitchen, R, M1, O.kitchenStates.get(O.floor), hint, O.reduced) : null;
     O.sig = staffSig(b, O.floor); O.pollAt = performance.now() + 3000;          /* echte Zeit, unabhängig von der Bildrate */
     if (!keepPos) {
       /* Startpunkt: in der Tür (EG) bzw. oben an der Treppe */
@@ -1055,7 +974,7 @@ const OFFICE3D = (() => {
     const r = PR;
     p[0] = Math.max(-RW + r, Math.min(RW - r, p[0]));
     p[1] = Math.max(-RD + r, Math.min(RD - r, p[1]));
-    for (const [x0, z0, x1, z1] of O.ob) {
+    for (const [x0, z0, x1, z1] of O.ob.concat(O.kitRuntime ? O.kitRuntime.colliders() : [])) {
       const a = x0 - r, c = z0 - r, bx = x1 + r, d = z1 + r;
       if (p[0] > a && p[0] < bx && p[1] > c && p[1] < d) {
         const pen = [p[0] - a, bx - p[0], p[1] - c, d - p[1]], m = Math.min(...pen);
@@ -1084,6 +1003,9 @@ const OFFICE3D = (() => {
     c.yaw = O.yaw; c.pitch = O.pitch;
     const ex = O.pos[0], ey = (O.dbgEye || EYE) + bob, ez = O.pos[1];          /* dbgEye nur für Browser-Tests (Draufsicht) */
     c.tx = ex - Math.cos(O.yaw) * cp * c.dist; c.ty = ey - spp * c.dist; c.tz = ez - Math.sin(O.yaw) * cp * c.dist;
+    /* v259: Kamera und Küchenzustand teilen dieselbe Uhr, keine nachlaufenden Timer. */
+    O.eye = [ex, ey, ez];
+    if (O.kitRuntime) { O.kitRuntime.tick(dt, { eye: O.eye, yaw: O.yaw }); collide(O.pos); }
     /* Personal: Gliederpuppe statt Hüpfen (vorher hob sich die ganze Figur 7-mal pro Sekunde und pendelte um die Hochachse) */
     (O.staff || []).forEach(st => {
       const dx = O.pos[0] - st.x, dz = O.pos[1] - st.z;
@@ -1154,6 +1076,10 @@ const OFFICE3D = (() => {
     joy.addEventListener("pointermove", e => { if (I.joyId === e.pointerId) joyMove(e); });
     const joyEnd = e => { if (I.joyId !== e.pointerId) return; I.joyId = null; I.jx = I.jy = 0; knob.style.transform = ""; };
     joy.addEventListener("pointerup", joyEnd); joy.addEventListener("pointercancel", joyEnd); joy.addEventListener("lostpointercapture", joyEnd);
+    /* v259: UI-Tipps erreichen nie Canvas/Joystick. Aktion beim Auslösen erneut prüfen. */
+    const action = el.querySelector("#ofpAction");
+    action.addEventListener("pointerdown", e => e.stopPropagation());
+    action.onclick = e => { e.stopPropagation(); const hit = actionTarget(); if (hit && !hit.disabled) performAction(hit); };
     /* Tastatur */
     const MAP = { KeyW: "w", ArrowUp: "w", KeyS: "s", ArrowDown: "s", KeyA: "a", KeyD: "d", ArrowLeft: "l", ArrowRight: "r", KeyQ: "l", KeyE: "r" };
     O.key = e => {
@@ -1167,7 +1093,7 @@ const OFFICE3D = (() => {
   }
 
   /* Sichtprüfung: verdeckt ein Möbelstück die Strecke Auge → Ziel? */
-  function eyePt() { return [O.pos[0], O.R.cam.ty, O.pos[1]]; }
+  function eyePt() { return O.eye || [O.pos[0], EYE, O.pos[1]]; }
   function blocked(from, to, ignore) {
     const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]], len = Math.hypot(d[0], d[1], d[2]) || 1e-4;
     const r = { o: from, d: [d[0] / len, d[1] / len, d[2] / len] };
@@ -1178,10 +1104,40 @@ const OFFICE3D = (() => {
     }
     return false;
   }
+  /* v259: kontextabhängige Interaktion über Blickrichtung, mit Reichweite und Sichtprüfung. */
+  function actionTarget(ray) {
+    if (!O || !O.R || O.cardOpen) return null;
+    const R = O.R, eye = eyePt();
+    ray = ray || R.ray(R.w / 2, R.h / 2);
+    let best = O.kitRuntime ? O.kitRuntime.target(ray, eye, blocked) : null;
+    const z = PZ(96) + 0.18;
+    const t = R.hitBox(ray, [RW - 0.11, 0.9, z - 0.14], [RW + 0.035, 1.16, z + 0.14]);
+    if (t != null && (!best || t < best.t)) {
+      const p = ray.o.map((v, i) => v + ray.d[i] * t);
+      if (Math.hypot(...p.map((v, i) => v - eye[i])) < 2.4 && !blocked(eye, p)) best = { id: "leave", label: "Zurückkehren", t };
+    }
+    return best;
+  }
+  function performAction(hit) {
+    if (hit.id === "leave") return leave();
+    if (O.kitRuntime) O.kitRuntime.perform(hit.id);
+  }
+  function updateAction() {
+    if (!O) return;
+    const hit = actionTarget(), button = O.el.querySelector("#ofpAction"), aim = O.el.querySelector(".ofp-aim");
+    button.hidden = !hit; button.disabled = !!(hit && hit.disabled);
+    if (hit && button.textContent !== hit.label) button.textContent = hit.label;
+    aim.classList.toggle("active", !!hit);
+    if (O.kitRuntime) O.kitRuntime.focus(hit && hit.id);
+    const carry = O.el.querySelector("#ofpCarry"), K = O.kitRuntime;
+    carry.textContent = K && K.held ? "In der Hand: " + (K.held.kind === "cup" ? K.held.fill > 0 ? "Kaffee" : "Leere Tasse" : K.held.name) : "";
+  }
   function tapAt(x, y) {
     if (O.cardOpen) { closeCard(); return; }
     const rc = O.el.querySelector("#ofpCv").getBoundingClientRect(), px = x - rc.left, py = y - rc.top;
     const ray = O.R.ray(px, py), eye = eyePt();
+    const action = actionTarget(ray);
+    if (action) { if (!action.disabled) performAction(action); return; }
     let best = null;
     /* 1. Strahl trifft eine Figur (Kasten um Oberkörper und Kopf) */
     (O.staff || []).forEach(st => {
@@ -1277,6 +1233,7 @@ const OFFICE3D = (() => {
     if (!O) return;
     const o = O; O = null; o.alive = false;
     cancelAnimationFrame(o.raf);
+    if (o.kitRuntime) o.kitRuntime.dispose();
     clearTimeout(o.hintT);
     if (o.key) { window.removeEventListener("keydown", o.key); window.removeEventListener("keyup", o.key); }
     if (o.blur) window.removeEventListener("blur", o.blur);
