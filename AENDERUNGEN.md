@@ -1,5 +1,45 @@
 # Änderungen – kurz für den Kollegen
 
+## v245 – Aufträge auf Speditionsniveau: Kundenprofile, geprüfte Texte, Verhandlung, Ausschreibungen
+
+### 1. Ursache der widersprüchlichen Texte
+In v244 hingen Titel und Zitat nur an der Ladungsart (z. B. „Schüttgut → Geschichte Nr. 3“). Weder Verkehrsträger noch Menge noch Kunde flossen ein. Deshalb stand bei einem Bahnauftrag über 1,0 kt „Eine Schiffsladung voll“ und „Per Lkw wären es zehn Fahrten“. Außerdem kam die Einheit „kt“ aus `kgf`.
+
+### 2. Neue Textkette (`kunden.js`)
+Reihenfolge jetzt: **Auftragsdaten → passender Kunde → Text → Prüfung → Anzeige.**
+1. `makeOrder` erzeugt Ladung, Gewicht und Route wie bisher. `pickShipper` ruft `custPick` auf: Gewählt wird nur ein Kunde, dessen Profil genau diese Ware in genau dieser Menge, Richtung und an diesem Ort plausibel verschickt (`custEligible`, `dirOk`).
+2. `orderStory(o)` liest die tatsächlichen Routenvarianten (`buildVariants` → `orderModes`: Hauptlauf je Variante und alle Träger) und erzeugt mit `orderTexts` Titel, Anfrage, Menge, Einordnung, Mehrwert, Kapazität und Bedeutung.
+3. `orderTextCheck` prüft vor jeder Anzeige: Verkehrsträger im Text ⊆ Verkehrsträger der Route (auch „Schiff“, „Güterwagen“ …), Kühlung nur bei Kühlware, Gefahrgut nur bei ADR, jede Mengenangabe = Auftragsgewicht, keine Platzhalter, keine Formfehler („..“, „von von“), Export-/Importtitel nur mit Seehafen, Kunde/Menge/Richtung passen zum Profil. Bei einem Fehler zeigt die Karte einen neutralen Sachtext (`orderTextSafe`) und zählt `TEXT_ERRORS`.
+4. Mengen: Tonnen mit Tausenderpunkt (nie „kt“), Paletten/Pakete/Container/Stück je nach Ware, sehr große Palettenmengen in Tonnen. Bahn nennt Wagen (Schüttgut-, Kessel-, Flach-, Containertrag- oder Güterwagen), ab 40 Wagen „verteilt auf mehrere Züge“.
+5. Orte mit richtiger Präposition (`placeOf`): „vom Hamburger Hafen“, „zum Flughafen BER“, „nach Dresden“, Berliner Bezirke ohne Abkürzung.
+6. Mehrere mögliche Verkehrsträger werden als Wahl formuliert („Möglich ist der Transport per Bahn oder Binnenschiff – die Wahl überlassen wir Ihnen“), kombinierte Routen als „Die Route kombiniert … mit Umschlag unterwegs“.
+
+### 3. Kundenprofile
+64 Profile (57 Kunden und 7 neutrale Auffangprofile) mit Name, Branche, Kommunikationsstil (Konzern, Mittelstand, Familienbetrieb, Hafen, Klinik, Handel), Folgegeschäft (Liefervertrag, Folgeaufträge, Saison, Projekt), optionalem Heimatort, Hafenpflicht und Waren mit Einheit, Mengenbereich, Titelstamm, Zweck, Temperatur bzw. Gefahrgutklasse. Neu: Richtung für Container (Export zum Seehafen, Import aus dem Seehafen ins Hinterland, Seehafen zu Seehafen), Kerosin nur zum Flughafen, Massen-/Schwer-/Gefahrgut und Container am Flughafen nur über neutrale Profile (z. B. Baustoffe für eine Großbaustelle). Reale Firmennamen nur von Unternehmen, die schon vorher als Auftraggeber im Spiel vorkamen; die Texte behaupten keine bestehenden Verträge mit ihnen.
+
+### 4. Kundenbeziehung
+Neukunde → Bekannter Geschäftspartner (1–2 Lieferungen) → Stammkunde (ab 3: +3 %, mehr Verhandlungsspielraum, 25 % längere Angebotsfrist) → Bevorzugter Logistikpartner (ab 10: +6 %, noch mehr Spielraum, halb so viele Ausschreibungen, 50 % längere Frist). Mehr als 30 % verspätet: höchstens Stufe 1. Der Zuschlag wird einmal beim Erscheinen gezahlt (`kundenOnSpawn`), Texte ändern keine Vergütung. Kartendetail „Bedeutung“ zeigt, wie viele pünktliche Lieferungen bis zur nächsten Stufe fehlen. `kundenOnSpawn` läuft jetzt vor `rivalOnSpawn`, damit die Stufe Ausschreibung und Verhandlung beeinflusst.
+
+### 5. Verhandlung (`vip.js`)
+`negoModel(o)` statt Zufall (`rnd(1.05, 1.38)`): marktüblicher Spielraum +6 %, Express +6 % bzw. enges Zeitfenster +4 %, Volumen +2/+4 %, lange Strecke +2 %, Spezialladung +3 %, Stammkunde +3 %/+6 %, frühere Verspätungen −4 %, Konkurrenzangebot −5 %, dazu ein unbekannter Rest von ±2 % (internes Budget). Begrenzt auf +2 … +32 %. Der Planer zeigt alle Faktoren, eine Einschätzung (Spanne wird mit der Beziehungsstufe enger), ein Risiko-Label beim Schieberegler und den Deckungsbeitrag beim gewählten Preis. Verhandelbar: große Aufträge wie bisher (deterministisch 60 %) und Stammkunden ab halber Größe. Alte Aufträge mit Verhandlung bekommen den Spielraum nach dem neuen Modell.
+
+### 6. Ausschreibungen
+Begriffe getrennt: **Angebotsfrist** (wie lange das Angebot im Auftragsbuch steht), **Konkurrenzangebot** (es gibt tatsächlich einen Mitbewerber – die Simulation ist echt), **Vergabe** (Zeitpunkt, an dem der Kunde ohne Zusage an den Mitbewerber vergibt), **Liefervertrag** (Rahmenvertrag ab 5 Lieferungen). Karte: „Ausschreibung · Vergabe in 1 h 35 min · Mitbewerber: Blitzfracht“. Meldung bei Verlust: „Angebotsfrist abgelaufen: „Kunde“ hat an Blitzfracht vergeben.“
+
+### 7. Geschäftsereignisse (Projekte)
+Die Serien heißen jetzt Projekte: Neue Produktionshalle, Erntezeit, Großbaustelle, Hafenengpass (alle Fahrten ab demselben Hafen), Filialeröffnung, Betriebsumzug. Titel „Neue Produktionshalle (1/3): Betriebsausstattung zur neuen Halle“, Anfrage aus der Vorlage plus Menge und Route aus den Daten, ebenfalls geprüft. Laufende Serien aus v244 werden über Schlüssel bzw. Firmenname weitergeführt.
+
+### 8. Auftragskarte (`game.js` `renderOrders`, `style.css`)
+Feste Reihenfolge: **Kopf** (Ladungsart, Titel, Vergütung + ≈ Gewinn) · **Kunde** (Name, Status-Chip, Branche, Anfrage zweizeilig) · **Transport** (Route, Verkehrsträger-Symbole aus den echten Varianten, Menge, km, Lieferfrist, Fahrzeit, Angebotsfrist) · **Mehrwert** (Marken ohne Emojis) · **Details** zum Aufklappen (volle Anfrage, Auftragswert/Kosten/Gewinn, Ware, Kapazität inkl. Wagenzahl, Zeitfenster, Kunde, Bedeutung, Adressen). Weniger Emojis, auf 390 px geprüft.
+
+### 9. Wirtschaft
+Keine neuen Geldquellen: Stammkunden-Zuschläge unverändert (+3/+6 %), Verhandlungsspielraum im Mittel kleiner als vorher (vorher Zufall bis +38 %, jetzt typisch +6 … +20 %), Projektbonus unverändert.
+
+### 10. Tests
+- **Neu `auftraege.test.js`** (13 Tests, läuft wie die anderen aus einem `tests/`-Ordner): Profile vollständig; 15.000 Kombinationen aus allen Profilen × Waren × 5 Mengen × 8 Verkehrsträger-Situationen × 5 Beziehungsständen ohne einen Widerspruch; der ursprüngliche Fehlerfall (Bahn, 1.000 t: kein Schiff, kein Lkw-Vergleich, „rund 17 Schüttgutwagen“); Straßentext ohne Bahn/Schiff; eingeschmuggelte Widersprüche werden erkannt; 5.000 Zufallsaufträge wählen nur passende Kunden; Einheiten; Präpositionen; Beziehungsstufen; Zuschlag nur einmal; alte Aufträge; Projekttexte; Verhandlungsmodell.
+- Browser (echte Spielfunktionen): 2.000 Aufträge über Etappe 1–6 mit typischen Flotten → 0 ersetzte Texte, 62 der 64 Profile kamen vor, rund 500 verschiedene Titel; Stichprobe von über 50 Aufträgen gelesen; 72 Spielstunden mit Annahmen, Ausschreibungen, Verhandlungen und einem Projekt ohne Fehler; Auftragskarten und Planer auf 390 px Breite angesehen.
+- Bestehende Tests: camp, forest, hunt, jail grün; axe und trees schlagen wie schon auf `origin/main` fehl.
+
 ## v244 – Masterprompt V2: Wirtschaft, Fahrzeuge, Leasing raus, Etappen nach Fortschritt, Schiff in Etappe 2, persönlichere Aufträge
 
 ### 1. Analyse vorher (gemessen mit den echten Spielfunktionen, je 400 Aufträge)

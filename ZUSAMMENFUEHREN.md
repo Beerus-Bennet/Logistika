@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v245 – Aufträge auf Speditionsniveau (auf v244)
+
+- `kunden.js`: Kundenprofile erweitert (`dir`, `at`, umbenannte Waren), Textblock ab `wFmt` neu (`railWagons`, `SEA`, `AIR`, `placeOf`, `dirOk`, `REQ_MAIN` mit `{von}/{nach}/{in}/{Zweck}`, `CUST_PERKS`, `relNext`, `orderCapacity`, `orderTexts`, `orderTextCheck`, `orderTextSafe`, `seriesTexts`, `orderStory` gibt das Textobjekt inkl. `modes` zurück), `SERIES` als Geschäftsprojekte (+ `seriesCap`, Hafen-Projekt), `orderSpecialHTML(o, tx)`.
+- `game.js`: `renderOrders` – neue Kartenstruktur mit `const tx = orderStory(o)`; Planer übergibt `ev.cost` an `negoHTML`. `pickShipper`/`makeOrder`/`makeAirOrder`/`tutOrderObj`/`shipIntroCheck` mit `cid`/`gi`; `kgf` ohne „kt“.
+- `vip.js`: `custTierOf`, `negoBig`, `rivalOnSpawn` (Stufe → Ausschreibungs-Häufigkeit und Frist, deterministische Verhandelbarkeit), `tickRivals`-Meldung, `rivalBadgeHTML`, `negoModel`, `negoRisk`, `negoMarginHTML`, `negoHTML(o, cost)`, `bindNego`.
+- `extras.js`: `onOrderSpawn` ruft `kundenOnSpawn` vor `rivalOnSpawn`. `goals.js`: `cid`/`gi` an Vertragsaufträgen. `data.js`: Zugnamen. `style.css`: Block v245 am Ende.
+- Neu: `auftraege.test.js`. `sw.js` / `index.html`: v245.
+
 ## Stand v244 – Masterprompt V2 Wirtschaft (auf v243)
 
 - **Neue Datei `kunden.js`** (in `index.html` nach `goals.js` eingebunden, im Service Worker ergänzt): Geschichten, Stammkunden, Auftragsserien, neue Erfolge, `orderSpecialHTML`.

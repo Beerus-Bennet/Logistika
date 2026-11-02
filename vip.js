@@ -223,11 +223,15 @@ const RIVALS = [
   { id: "nord", name: "Nordstern Cargo", icon: "🧭", col: "#1667c4", st: 3 }
 ];
 function rivalById(id) { if (typeof corpSyncRivals === "function") corpSyncRivals(); return RIVALS.find(r => r.id === id); }
+/* v245: Beziehungsstufe des Kunden (kunden.js) – 0 Neukunde … 3 Bevorzugter Logistikpartner */
+function custTierOf(o) { return typeof custTier === "function" && typeof custOf === "function" && !o.series ? custTier(custOf(o.shipper)) : 0; }
+const negoBig = o => o.pay / (420 * stageK() * (S.stage >= 4 ? 4 : 1));
 function rivalOnSpawn(o) {
   if (o.vip || o.contract || o.mission || o.jewel) return;
   if (calm()) return;
-  const rep = repOf(regionOf(o));
-  const p = (0.22 + 0.04 * S.stage) * (1.25 - rep / 100 * 0.5);
+  const rep = repOf(regionOf(o)), tier = custTierOf(o);
+  /* v245: Bevorzugte Logistikpartner schreiben seltener aus */
+  const p = (0.22 + 0.04 * S.stage) * (1.25 - rep / 100 * 0.5) * (tier >= 3 ? 0.5 : 1);
   if (typeof corpSyncRivals === "function") corpSyncRivals();
   const pool = RIVALS.filter(x => x.st <= S.stage && !(S.corp && S.corp.owned && S.corp.owned[x.id]));
   /* v170: Konzerne (Wellen nach langer Marktführung) greifen öfter und schneller zu */
@@ -236,11 +240,12 @@ function rivalOnSpawn(o) {
     const wt = x => x.wave ? 1.5 + 0.5 * x.wave : 1;
     let u = Math.random() * pool.reduce((a, x) => a + wt(x), 0), r = pool[0];
     for (const x of pool) { u -= wt(x); if (u <= 0) { r = x; break; } }
-    o.rival = { id: r.id, at: Math.round(S.time + rnd(45, 260) / (r.wave ? 1.25 + 0.1 * r.wave : 1)) };
+    /* Angebotsfrist: bis dahin entscheidet der Kunde – Stammkunden warten länger auf die Zusage */
+    o.rival = { id: r.id, at: Math.round(S.time + rnd(45, 260) / (r.wave ? 1.25 + 0.1 * r.wave : 1) * (1 + 0.25 * Math.max(0, tier - 1))) };
   }
-  /* Großaufträge: der Kunde lässt mit sich reden */
-  const big = o.pay >= 420 * stageK() * (S.stage >= 4 ? 4 : 1);
-  if (big && Math.random() < 0.6) o.nego = { ceil: rnd(1.05, 1.38) * (o.rival ? 0.95 : 1), done: false };
+  /* Großaufträge: der Kunde lässt mit sich reden – Stammkunden auch bei kleineren Aufträgen */
+  const big = negoBig(o), h = typeof storyHash === "function" ? storyHash(o.id) % 10 : Math.floor(Math.random() * 10);
+  if ((big >= 1 && h < 6) || (tier >= 2 && big >= 0.5 && h < 8)) o.nego = { ceil: negoModel(o).ceil, m: 1, done: false };
 }
 function shareState() { if (!S.share) S.share = { me: 0 }; return S.share; }
 let rivalToast = { n: 0, at: 0, who: null };
@@ -253,28 +258,68 @@ function tickRivals() {
   lost.forEach(o => { sh[o.rival.id] = (sh[o.rival.id] || 0) + 1; });
   if (lively()) {
     const r = rivalById(lost[0].rival.id);
-    toast(r.icon + " " + r.name + " hat „" + lost[0].shipper + "“" + (lost.length > 1 ? " und " + (lost.length - 1) + " weitere" : "") + " geschnappt.", "warn", true);
+    toast(r.icon + " Angebotsfrist abgelaufen: „" + lost[0].shipper + "“ hat an " + r.name + " vergeben" + (lost.length > 1 ? " (und " + (lost.length - 1) + " weitere Ausschreibung" + (lost.length > 2 ? "en" : "") + ")" : "") + ".", "warn", true);
   }
   renderDirty = true;
 }
+/* Ausschreibung: es gibt tatsächlich ein Konkurrenzangebot – ohne Zusage bis zur Vergabe geht der Auftrag an den Mitbewerber */
 function rivalBadgeHTML(o) {
   if (!o.rival) return "";
   const r = rivalById(o.rival.id), left = o.rival.at - S.time;
-  return `<div class="rivalrow${left < 30 ? " hot" : ""}" style="--rc:${r.col}">${r.icon} <b>${esc(r.name)}</b> greift in ${dur(Math.max(1, left))} zu</div>`;
+  return `<div class="rivalrow${left < 30 ? " hot" : ""}" style="--rc:${r.col}"><b>Ausschreibung</b> · Vergabe in ${dur(Math.max(1, left))} · Mitbewerber: ${r.icon} ${esc(r.name)}</div>`;
 }
 
 /* ------------------------------ Verhandeln ------------------------------ */
-function negoHTML(o) {
+/* v245: Spielraum aus nachvollziehbaren Faktoren statt Zufall. Nur ein kleiner, unbekannter Rest (±2 %) bleibt – das interne
+   Budget des Kunden. Die angezeigte Einschätzung wird mit der Beziehungsstufe genauer. */
+function negoModel(o) {
+  const tier = custTierOf(o), c = typeof custOf === "function" ? custOf(o.shipper) : null, cg = CARGO[o.cargo] || {};
+  const f = [["Marktüblicher Spielraum", 0.06]];
+  if (o.cargo === "express") f.push(["Dringlichkeit (Express)", 0.06]);
+  else if (o.refTime && o.deadline - (o.created || S.time) < o.refTime * 1.4) f.push(["Enges Zeitfenster", 0.04]);
+  const big = negoBig(o);
+  if (big >= 3) f.push(["Großes Auftragsvolumen", 0.04]); else if (big >= 1.5) f.push(["Größeres Auftragsvolumen", 0.02]);
+  if ((o.refDist || 0) > 800) f.push(["Lange Strecke", 0.02]);
+  if (["kuehl", "adr", "sperrig"].includes(o.cargo)) f.push(["Spezialladung (" + (cg.name || o.cargo) + ")", 0.03]);
+  if (tier >= 2) f.push([typeof CUST_NAME !== "undefined" ? CUST_NAME[tier] : "Stammkunde", 0.03 * (tier - 1)]);
+  if (c && c.n >= 2 && c.late > c.n * 0.3) f.push(["Verspätungen in der Vergangenheit", -0.04]);
+  if (o.rival) { const r = rivalById(o.rival.id); f.push(["Konkurrenzangebot" + (r ? " von " + r.name : ""), -0.05]); }
+  const sum = f.reduce((a, x) => a + x[1], 0);
+  const noise = typeof storyHash === "function" ? ((storyHash(o.id + "n") % 41) - 20) / 1000 : 0;
+  const ceil = clamp(1 + sum + noise, 1.02, 1.32), band = [0.05, 0.04, 0.025, 0.02][tier];
+  return { f, ceil, lo: clamp(1 + sum - band, 1, 1.4), hi: clamp(1 + sum + band, 1.01, 1.4), tier };
+}
+let negoCost = null;
+function negoRisk(o, ask, M) {
+  if (ask <= M.lo + 0.001) return ["ok", "Sicher – liegt im üblichen Rahmen"];
+  if (ask <= (M.lo + M.hi) / 2 + 0.001) return ["mid", "Gute Chancen"];
+  if (ask <= M.hi + 0.001) return ["warn", "Riskant – Gegenangebot oder Ablehnung möglich"];
+  return ["bad", o.rival ? "Sehr riskant – der Kunde kann an " + rivalById(o.rival.id).name + " vergeben" : "Sehr riskant – der Kunde lehnt wahrscheinlich ab"];
+}
+function negoMarginHTML(o, ask) {
+  if (negoCost == null) return "";
+  const pr = Math.round(o.pay * ask) - negoCost;
+  return `Deckungsbeitrag bei diesem Preis: <b class="${pr >= 0 ? "good" : "bad"}">${money(pr)}</b> · Kosten ${money(negoCost)}`;
+}
+function negoHTML(o, cost) {
   if (!o.nego) return "";
   const n = o.nego;
   if (n.done) return `<div class="nego done">🤝 ${esc(n.result || "Verhandelt")}</div>`;
-  const pct = n.ask || 115;
+  const M = negoModel(o);
+  if (!n.m) { n.ceil = M.ceil; n.m = 1; }      /* Aufträge aus älteren Ständen: Spielraum nach dem neuen Modell */
+  negoCost = cost == null ? null : cost;
+  const pct = n.ask || Math.round(M.lo * 100), rk = negoRisk(o, pct / 100, M);
+  const pc = x => (x >= 0 ? "+" : "−") + Math.abs(Math.round(x * 100)) + " %";
   return `<div class="nego">
-    <div class="nego-h">🤝 Preis verhandeln<small>Großauftrag – der Kunde hat Spielraum${o.rival ? ", aber " + esc(rivalById(o.rival.id).name) + " bietet mit" : ""}</small></div>
+    <div class="nego-h">Preis verhandeln<small>${o.rival ? "Ausschreibung mit Konkurrenzangebot – zu viel Aufschlag kann den Auftrag kosten" : "Der Kunde hat Spielraum beim Preis"}</small></div>
+    <div class="nego-f">${M.f.map(([t, v]) => `<span class="${v < 0 ? "neg" : ""}">${esc(t)} <b>${pc(v)}</b></span>`).join("")}</div>
+    <div class="nego-est">Einschätzung: Aufschlag von etwa <b>${pc(M.lo - 1)}</b> bis <b>${pc(M.hi - 1)}</b> realistisch${M.tier >= 2 ? " (gute Kenntnis des Kunden)" : M.tier === 0 ? " (neuer Kunde – unsichere Einschätzung)" : ""}</div>
     <div class="nego-row">
-      <input type="range" min="100" max="150" step="1" value="${pct}" id="negoR" aria-label="Aufschlag in Prozent">
+      <input type="range" min="100" max="140" step="1" value="${pct}" id="negoR" aria-label="Aufschlag in Prozent">
       <div class="nego-v"><b id="negoPay">${money(o.pay * pct / 100)}</b><small id="negoPct">+${pct - 100} %</small></div>
     </div>
+    <div class="nego-risk ${rk[0]}" id="negoRisk">${esc(rk[1])}</div>
+    <div class="nego-mg" id="negoMg">${negoMarginHTML(o, pct / 100)}</div>
     <div class="nego-chat" id="negoChat">${(n.chat || []).map(c => `<div class="bub ${c.me ? "out" : "in"}">${esc(c.t)}</div>`).join("")}</div>
     <div class="nego-btns" id="negoBtns">${n.counter
       ? `<button class="btn tiny" id="negoTake">${money(n.counter)} annehmen</button><button class="btn tiny ghost" id="negoDrop">Ablehnen</button>`
@@ -283,38 +328,42 @@ function negoHTML(o) {
 }
 function bindNego(o) {
   const r = $("#negoR"); if (!r || !o.nego) return;
-  const n = o.nego;
-  r.oninput = () => { n.ask = +r.value; $("#negoPay").textContent = money(o.pay * n.ask / 100); $("#negoPct").textContent = "+" + (n.ask - 100) + " %"; };
+  const n = o.nego, M = negoModel(o);
+  r.oninput = () => {
+    n.ask = +r.value; $("#negoPay").textContent = money(o.pay * n.ask / 100); $("#negoPct").textContent = "+" + (n.ask - 100) + " %";
+    const rk = negoRisk(o, n.ask / 100, M), el = $("#negoRisk"); if (el) { el.className = "nego-risk " + rk[0]; el.textContent = rk[1]; }
+    const mg = $("#negoMg"); if (mg) mg.innerHTML = negoMarginHTML(o, n.ask / 100);
+  };
   const go = $("#negoGo");
   if (go) go.onclick = () => {
-    const ask = (n.ask || 115) / 100;
-    n.chat = (n.chat || []).concat({ me: true, t: "Wir fahren das für " + money(o.pay * ask) + "." });
+    const ask = (n.ask || Math.round(M.lo * 100)) / 100;
+    n.chat = (n.chat || []).concat({ me: true, t: "Wir übernehmen den Transport für " + money(o.pay * ask) + "." });
     go.disabled = true;
     $("#negoChat").innerHTML += `<div class="bub in typing"><i></i><i></i><i></i></div>`;
     setTimeout(() => {
       if (!planState || planState.order !== o) return;
       if (ask <= n.ceil) {
         o.pay = Math.round(o.pay * ask); n.done = true; n.result = "Einigung bei " + money(o.pay);
-        n.chat.push({ me: false, t: "Einverstanden. Auf gute Zusammenarbeit!" });
+        n.chat.push({ me: false, t: "Einverstanden. Wir freuen uns auf die Zusammenarbeit." });
         extraStats().nego++;
         toast("🤝 Einigung: " + money(o.pay), "ok");
-      } else if (ask <= n.ceil * 1.12) {
+      } else if (ask <= n.ceil + 0.06) {
         n.counter = Math.round(o.pay * n.ceil / 10) * 10;
-        n.chat.push({ me: false, t: "Zu viel. " + money(n.counter) + " – letztes Wort." });
+        n.chat.push({ me: false, t: "Das liegt über unserem Budget. Wir können " + money(n.counter) + " anbieten – das ist unser letztes Angebot." });
       } else if (o.rival) {
-        n.chat.push({ me: false, t: "Das ist uns zu viel. Dann nehmen wir " + rivalById(o.rival.id).name + "." });
-        n.done = true; n.result = "Kunde ging zur Konkurrenz";
+        n.chat.push({ me: false, t: "Das liegt deutlich über dem Angebot von " + rivalById(o.rival.id).name + ". Wir vergeben den Auftrag dorthin." });
+        n.done = true; n.result = "Kunde hat an die Konkurrenz vergeben";
         const rv = o.rival.id;
         setTimeout(() => {
           closeModal();
           S.orders = S.orders.filter(x => x !== o);
           const sh = shareState(); sh[rv] = (sh[rv] || 0) + 1;
-          toast("🤝 Zu hoch gepokert – " + rivalById(rv).name + " fährt „" + o.shipper + "“.", "bad");
+          toast("🤝 Preis zu hoch angesetzt – „" + o.shipper + "“ hat an " + rivalById(rv).name + " vergeben.", "bad");
           render();
         }, 1400);
       } else {
-        n.chat.push({ me: false, t: "Weit über Budget – es bleibt beim ausgeschriebenen Preis." });
-        n.done = true; n.result = "Kein Aufschlag – es bleibt beim Preis";
+        n.chat.push({ me: false, t: "Das liegt deutlich über unserem Budget – es bleibt beim ausgeschriebenen Preis." });
+        n.done = true; n.result = "Kein Aufschlag – es bleibt beim ausgeschriebenen Preis";
       }
       renderPlanner(false);
     }, 900);
@@ -322,7 +371,7 @@ function bindNego(o) {
   const take = $("#negoTake");
   if (take) take.onclick = () => {
     o.pay = n.counter; n.done = true; n.result = "Einigung bei " + money(o.pay); n.counter = 0;
-    n.chat.push({ me: true, t: "Abgemacht." }); extraStats().nego++;
+    n.chat.push({ me: true, t: "Einverstanden." }); extraStats().nego++;
     renderPlanner(false);
   };
   const drop = $("#negoDrop");
@@ -361,7 +410,7 @@ function orderExtraHTML(o) {
     h += `<div class="xrow contract">📑 Rahmenvertrag${c ? " · Tag " + c.day + " von " + c.days + " · Ausfall kostet " + money(c.penalty) : ""}</div>`;
   }
   if (o.mission) h += `<div class="xrow mission">🧭 Teil einer Mission – Frist ${stamp(o.deadline)}</div>`;
-  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Großauftrag – Preis im Planer verhandelbar</div>`;
+  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Preis verhandelbar – im Planer</div>`;
   if (o.nego && o.nego.done && o.nego.result) h += `<div class="xrow nego done">🤝 ${esc(o.nego.result)}</div>`;
   return h + rivalBadgeHTML(o);
 }

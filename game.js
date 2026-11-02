@@ -27,8 +27,8 @@ function money(n) {
 }
 function fmt(n, d) { return n.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d }); }
 function kgf(n) {
-  if (n >= 1e6) return fmt(n / 1e6, n >= 1e7 ? 0 : 1) + " kt";
-  if (n >= 1000) return fmt(n / 1000, n >= 1e4 ? 0 : 1) + " t";
+  /* v245: große Mengen in Tonnen mit Tausenderpunkt („1.000 t“) statt „1,0 kt“ – gleich wie wFmt in kunden.js */
+  if (n >= 1000) { const t = n / 1000; return (t >= 10 ? Math.round(t).toLocaleString("de-DE") : fmt(t, 1)) + " t"; }
   if (n < 10 && Math.round(n) !== n) return fmt(n, n < 1 ? 2 : 1).replace(/0$/, "") + " kg";
   return Math.round(n) + " kg";
 }
@@ -420,11 +420,11 @@ function makeOrder() {
        („Apotheke am Rosenthaler Platz“), wird genau dort abgeholt. Wartet die
        Ladung dort, wo ein Fahrzeug frei steht, liegt sie gleich nebenan. */
     const sp = anchorVeh && a.id === anchorVeh.at ? vehSpot(anchorVeh) : null;
-    const sh = pickShipper(ck, a.id, !sp);
+    const sh = pickShipper(ck, a.id, !sp, weight, b.id);
     const home = sh.home;
     const o = {
       id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight,
-      pay: pr.pay, deadline: pr.deadline, pk: PAY_K,
+      pay: pr.pay, deadline: pr.deadline, pk: PAY_K, cid: sh.cid, gi: sh.gi,
       shipper: sh[0], desc: sh[1], created: S.time,
       refDist: Math.round(pr.ref.dist), refTime: Math.round(pr.fastest.time),
       expire: Math.round(S.time + rnd(400, 1500)),
@@ -437,7 +437,14 @@ function makeOrder() {
 }
 
 /* Auftraggeber passend zum Abholort: ortsgebundene nur in ihrem Stadtteil */
-function pickShipper(ck, fromId, allowHome) {
+/* v245: Auftraggeber aus den Kundenprofilen (kunden.js) – passend zu Ladung, Menge und Route; die Beschreibung ist die Menge
+   samt Ware („1.000 t Zement“). Ohne Gewicht (alte Aufrufe) bleibt die alte Liste. */
+function pickShipper(ck, fromId, allowHome, weight, toId) {
+  if (typeof custPick === "function" && weight != null) {
+    const x = custPick(ck, weight, fromId, toId, allowHome), g = x.p.g[ck] ? x.p.g[ck][x.gi] : null;
+    const home = allowHome && x.p.home === fromId && typeof shipperHome === "function" ? shipperHome(x.p.n) : null;
+    return { 0: x.p.n, 1: g ? goodsQty(g, weight) : kgf(weight), home: home && home.node === fromId ? home : null, cid: x.p.id, gi: x.gi };
+  }
   const list = SHIPPERS[ck] || SHIPPERS.pak;
   const fits = list.filter(sh => {
     const h = typeof SHIPPER_HOME !== "undefined" && SHIPPER_HOME[sh[0]];
@@ -504,9 +511,9 @@ function tutDests(from, t, avoid) {
     .map(x => x.n);
 }
 function tutOrderObj(from, to, ck, weight, pr, extra) {
-  const sh = pickShipper(ck, from, false);
+  const sh = pickShipper(ck, from, false, weight, to);
   return Object.assign({
-    id: "A" + (S.seq++), from, to, cargo: ck, weight,
+    id: "A" + (S.seq++), from, to, cargo: ck, weight, cid: sh.cid, gi: sh.gi,
     pay: pr.pay, deadline: Math.round(S.time + pr.fastest.time * 3 + 300),
     shipper: sh[0], desc: sh[1], created: S.time,
     refDist: Math.round(pr.ref.dist), refTime: Math.round(pr.fastest.time),
@@ -595,11 +602,11 @@ function makeAirOrder() {
     fast.legs.forEach(l => { const mi = MODE_INFO[l.mode]; handling += mi.handleFix + tons * mi.handleTon; tkm += l.dist * tons * mi.tariff; });
     const core = Math.max(fast.cost, tkm);
     const pay = Math.round((core + handling + BASE_FEE) * cg.rate * rnd(1.35, 1.7) * rnd(1.35, 1.65) * PAY_K);   /* v244 */
-    const sh = pickShipper(ck, a.id, false);
+    const sh = pickShipper(ck, a.id, false, weight, b.id);
     return {
-      id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight, pay, air: true, pk: PAY_K,
+      id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight, pay, air: true, pk: PAY_K, cid: sh.cid, gi: sh.gi,
       deadline: Math.round(S.time + fast.time * rnd(1.25, 1.55) + 240),
-      shipper: sh[0], desc: sh[1] + " · per Luftfracht", created: S.time,
+      shipper: sh[0], desc: sh[1], created: S.time,
       refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
       expire: Math.round(S.time + rnd(300, 900)),
       pick: makeAddr(a.id), drop: makeAddr(b.id)
@@ -693,9 +700,7 @@ function shipOrderAt(from, to, ck, w, extra) {
 function shipIntroCheck() {
   if (S.shipIntro || S.stage < 2 || !playing() || (typeof logiOn === "function" && !logiOn()) || (typeof tutorialRunning === "function" && tutorialRunning())) return;
   if (S.fleet.some(f => vType(f.type) && vType(f.type).mode === "i")) { S.shipIntro = 2; return; }
-  const o = shipOrderAt("b-westh", "bbg", "schuett", 250000, { shipper: "Havelkies Brandenburg", intro: "ship", title: "Dein erster Auftrag auf dem Wasser",
-    quote: "Zehn Lkw-Fahrten oder eine Schiffsladung – wir wissen, was günstiger ist. Sie auch?",
-    desc: "Unser Betonwerk braucht 250 t Splitt aus dem Westhafen – ein Schiff schafft das in einer Fahrt, mit dem Lkw wären es zehn." });
+  const o = shipOrderAt("b-westh", "bbg", "schuett", 250000, { shipper: "Havelkies Brandenburg", intro: "ship", cid: "havelkies", gi: 0, desc: "250 t Splitt" });
   if (!o) return;
   o.pay = Math.round(o.pay * 1.25); o.expire = S.time + 3 * 1440; o.deadline = Math.max(o.deadline, S.time + 4 * 1440);
   S.orders.unshift(o); S.shipIntro = 1;
@@ -715,8 +720,8 @@ function shipFirstOrders(v) {
     const a = pick(hubs), b = pick(hubs); if (a === b) continue;
     const ck = pick(["schuett", "schuett", "pal"].filter(c => CARGO[c].minStage <= S.stage && meetsReq(t, c)));
     const w = Math.round(t.cap * rnd(0.6, 0.95));
-    const o = shipOrderAt(a, b, ck, w, { shipper: pick(["Agrarhandel Havelland", "Baustoffe Elbe-Havel", "Getreidekontor Magdeburg", "Recyclinghof Spree"]),
-      desc: pick(["Schüttgut für die Baustelle – per Schiff deutlich günstiger als per Lkw.", "Erntegetreide für die Mühle, die Ladung liegt am Kai bereit.", "Recyclingglas für die Schmelze, ganze Schiffsladung."]) });
+    const sh = pickShipper(ck, a, false, w, b);   /* v245: Kunde passend zu Ware, Menge und Route */
+    const o = shipOrderAt(a, b, ck, w, { shipper: sh[0], desc: sh[1], cid: sh.cid, gi: sh.gi });
     if (o) { S.orders.unshift(o); added++; }
   }
   if (added) toast("🛥️ " + added + " Wasseraufträge passen zu deinem neuen Schiff – siehe „Aufträge“.", "ok");
@@ -1326,7 +1331,7 @@ function renderPlanner(fit) {
     ${ps.variants.length > 1 ? `<div class="vswitch">${ps.variants.map((x, i) =>
       `<button class="${i === ps.vi ? "on" : ""}" data-variant="${i}">${x.label}</button>`).join("")}</div>` : ""}
     <div class="legs">${legHtml}</div>
-    ${typeof negoHTML === "function" ? negoHTML(o) : ""}
+    ${typeof negoHTML === "function" ? negoHTML(o, ev.ok ? ev.cost : null) : ""}
     <div class="sum">
       <div><span>Transportkosten</span><b>${ev.ok ? money(ev.cost) : "—"}</b>
         ${ev.ok ? `<small class="${repoEur > 0.005 ? "bad" : "good"}">${repoEur > 0.005 ? "davon Leerfahrt " + money(repoEur) : "ohne Leerfahrt"}</small>` : ""}</div>
@@ -3056,11 +3061,17 @@ function renderOrders() {
     const cg = CARGO[o.cargo];
     const rest = o.deadline - S.time;
     const tight = !o.acc && rest < o.refTime * 1.25;
-    /* v244: Karte mit Titel, Auftraggeber, kurzem Zitat und Besonderheiten; Ware und genaue Adressen klappen auf */
-    const story = !o.farm && !o.jewel && typeof orderStory === "function";
-    if (story) orderStory(o);
+    /* v245: Karte in fester Reihenfolge – Kopf (Art, Titel, Vergütung) · Kunde (Name, Status, Anfrage) · Transport (Route, Menge,
+       Verkehrsträger, Zeitfenster) · Mehrwert (Marken) · Details zum Aufklappen (Anfrage, Kosten/Gewinn, Kapazität, Adressen, Bedeutung).
+       Alle Texte kommen aus orderStory (kunden.js) und sind gegen die Auftragsdaten geprüft. */
+    const tx = !o.farm && !o.jewel && typeof orderStory === "function" ? orderStory(o) : null;
     const net = p.ok && isFinite(p.profit) ? `<span class="netpay${p.profit < 0 ? " neg" : ""}">≈ ${p.profit < 0 ? "−" : "+"}${money(Math.abs(p.profit))} Gewinn</span>` : "";
-    return `<div class="card order${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${o.intro ? " intro" : ""}${o.series ? " series" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
+    const modesIc = tx && tx.modes ? tx.modes.all.filter(m => MODE_INFO[m]).map(m => `<i title="${esc(MODE_INFO[m].name)}">${MODE_INFO[m].icon}</i>`).join("") : "";
+    const window_ = o.acc ? (o.abo ? "Dauerauftrag" : "angenommen · ohne Frist") : o.farm ? "Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "Lieferung bis " + stamp(o.deadline);
+    const offer = !o.acc && !o.farm && !o.rival && o.expire && o.expire - S.time < 1440 * 2 ? `<span>Angebot gültig noch ${dur(Math.max(1, o.expire - S.time))}</span>` : "";
+    const kindCls = tx ? (o.rival ? "tender" : o.contract ? "contract" : o.series ? "project" : tx.tier >= 2 ? "reg" : tx.tier === 1 ? "known" : "new") : "";
+    const cost = p.ok && isFinite(p.profit) ? o.pay - p.profit : null;
+    return `<div class="card order${tx ? " v245" : ""}${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${o.intro ? " intro" : ""}${o.series ? " series" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
       ${o.tut ? `<div class="tutribbon">⭐ Linas Übungsauftrag</div>` : ""}
       ${o.tutNext ? `<div class="tutribbon">⭐ Anschlussauftrag ab ${esc(N[o.from].short)}</div>` : ""}
       <div class="card-top">
@@ -3069,20 +3080,31 @@ function renderOrders() {
         <span class="pay">${money(o.pay)}${net}</span>
         ${o.tut || o.tutNext ? "" : rejectBtnHTML(o.id)}
       </div>
-      ${story && o.title ? `<div class="o-title">${esc(o.title)}</div>` : ""}
-      <div class="ship">${story ? "👤 " : ""}${esc(o.shipper)}</div>
-      ${story && o.quote ? `<div class="o-quote">„${esc(o.quote)}“</div>` : `<div class="desc">${esc(o.desc)}</div>`}
-      ${story && typeof orderSpecialHTML === "function" ? orderSpecialHTML(o) : ""}
+      ${tx ? `<div class="o-title">${esc(tx.title)}</div>
+      <div class="o-cust"><b>${esc(o.shipper)}</b><span class="o-kind ${kindCls}">${esc(tx.kind)}</span>${tx.p && tx.p.br ? `<small>${esc(tx.p.br)}</small>` : ""}</div>
+      <div class="o-quote">${esc(tx.req)}</div>`
+      : `<div class="ship">${esc(o.shipper)}</div><div class="desc">${esc(o.desc)}</div>`}
       ${o.farm && typeof farmOrderHTML === "function" ? farmOrderHTML(o) : ""}
       ${typeof orderExtraHTML === "function" ? orderExtraHTML(o) : ""}
-      <div class="meta route"><span>📍 ${esc(N[o.from].short)} → 🏁 ${esc(oDrop(o).a || N[o.to].short)}</span></div>
-      <div class="meta small">
-        ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>⚖️ ${kgf(o.weight)}</span><span>📏 ${kmf(o.refDist)}</span>
-        <span>${o.acc ? (o.abo ? "📅 Dauerauftrag" : "✓ angenommen · ohne Frist") : o.farm ? "⏳ Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "⏳ " + dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span>
+      <div class="o-trans">
+        <div class="meta route"><span>${esc(N[o.from].short)} → ${esc(oDrop(o).a || N[o.to].short)}</span>${modesIc ? `<span class="o-modes">${modesIc}</span>` : ""}</div>
+        <div class="meta small">
+          ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>${esc(tx ? tx.menge : kgf(o.weight))}</span><span>${kmf(o.refDist)}</span>
+          <span class="${tight ? "o-tight" : ""}">${window_}</span><span>Fahrzeit ab ${dur(o.refTime)}</span>${offer}
+        </div>
       </div>
+      ${tx && typeof orderSpecialHTML === "function" ? orderSpecialHTML(o, tx) : ""}
       <details class="o-more"><summary>Details</summary>
-        ${story ? `<div class="desc">📦 ${esc(o.desc)}</div>` : ""}
-        <div class="meta addr"><span>📍 ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
+        ${tx ? `<div class="o-full">${esc(tx.req)}</div>
+        <dl class="o-dl">
+          <dt>Auftragswert</dt><dd>${money(o.pay)}${cost != null ? ` · Kosten ≈ ${money(cost)} · Gewinn ≈ <b class="${p.profit < 0 ? "bad" : "good"}">${money(p.profit)}</b>` : " · Kosten erst mit passendem Fahrzeug berechenbar"}</dd>
+          <dt>Ware</dt><dd>${esc(tx.menge)}</dd>
+          ${tx.cap ? `<dt>Kapazität</dt><dd>${esc(tx.cap)}</dd>` : ""}
+          <dt>Zeitfenster</dt><dd>${o.acc ? esc(window_) : "Lieferung bis " + stamp(o.deadline) + " · noch " + dur(Math.max(1, rest))}${o.rival ? " · Vergabe in " + dur(Math.max(1, o.rival.at - S.time)) : o.expire && !o.farm && !o.acc ? " · Angebot bis " + stamp(o.expire) : ""}</dd>
+          <dt>Kunde</dt><dd>${esc(o.shipper)}${tx.p && tx.p.br ? " · " + esc(tx.p.br) : ""}${tx.rel ? " · " + esc(tx.rel) : ""}</dd>
+          ${tx.next ? `<dt>Bedeutung</dt><dd>${esc(tx.next)}</dd>` : ""}
+        </dl>` : ""}
+        <div class="meta addr"><span>Abholung: ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>Zustellung: ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       </details>
       ${previewHTML(p)}
     </div>`;

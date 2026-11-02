@@ -27,7 +27,7 @@ function contractOffer(tpl0) {
   if (!tpl) return null;
   const days = Math.round(rnd(5, 9) + S.stage * 1.5), per = Math.random() < 0.5 ? 1 : Math.random() < 0.7 ? 2 : 3;
   const pay = Math.round(tpl.pay * rnd(1.2, 1.35) / 5) * 5;
-  return { id: "V" + (S.seq++), client: tpl.shipper, desc: tpl.desc, cargo: tpl.cargo, from: tpl.from, to: tpl.to,
+  return { id: "V" + (S.seq++), client: tpl.shipper, desc: tpl.desc, cargo: tpl.cargo, from: tpl.from, to: tpl.to, cid: tpl.cid, gi: tpl.gi,
     weight: tpl.weight, pick: tpl.pick, drop: tpl.drop, per, days, pay, penalty: Math.round(pay * 0.6),
     day: 0, done: 0, missed: 0, pending: [], over: false, refTime: tpl.refTime, refDist: tpl.refDist };
 }
@@ -51,7 +51,7 @@ DECISIONS.contract = {
   }
 };
 function contractOrder(c) {
-  const o = { id: "A" + (S.seq++), from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay, pk: PAY_K,
+  const o = { id: "A" + (S.seq++), from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay, pk: PAY_K, cid: c.cid, gi: c.gi,
     deadline: Math.round(S.time + 20 * 60), shipper: c.client, desc: c.desc + " · Rahmenvertrag", created: S.time,
     refDist: c.refDist, refTime: c.refTime, expire: Math.round(S.time + 20 * 60), contract: c.id,
     pick: Object.assign({}, c.pick), drop: Object.assign({}, c.drop) };

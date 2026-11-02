@@ -347,8 +347,8 @@ const VEHICLES = [
   {id:"v-koppel",   name:"Koppelverband (185 m)",              brand:"Schubverband",     mode:"i", cap:5400000,   speed:11,  costKm:4.90, daily:840,   price:3900000,   stage:4, range:5000,  icon:"🛥️", flags:["container","schuett","sperrig"]},
 
   /* ---- Schiene ---- */
-  {id:"v-br185",    name:"DB Cargo BR 185 Güterzug",           brand:"Güterzug",         mode:"l", cap:1400000,   speed:58,  costKm:8.20, daily:940,   price:2400000,   stage:3, range:6000,  icon:"🚂", flags:["container","schuett"]},
-  {id:"v-ludmilla", name:"DB Cargo BR 232 „Ludmilla“",         brand:"Diesel-Güterzug",  mode:"l", cap:1100000,   speed:48,  costKm:9.40, daily:880,   price:1450000,   stage:3, range:4000,  icon:"🚂", flags:["schuett","sperrig"]},
+  {id:"v-br185",    name:"DB Cargo BR 185 mit 20 Güterwagen",  brand:"Güterzug",         mode:"l", cap:1400000,   speed:58,  costKm:8.20, daily:940,   price:2400000,   stage:3, range:6000,  icon:"🚂", flags:["container","schuett"]},
+  {id:"v-ludmilla", name:"BR 232 „Ludmilla“ mit Schüttgutwagen",brand:"Diesel-Güterzug",  mode:"l", cap:1100000,   speed:48,  costKm:9.40, daily:880,   price:1450000,   stage:3, range:4000,  icon:"🚂", flags:["schuett","sperrig"]},
   {id:"v-vectron",  name:"Siemens Vectron MS + 30 Taschenwagen",brand:"Kombiverkehr",    mode:"l", cap:1650000,   speed:72,  costKm:11.50,daily:1300,  price:4300000,   stage:4, range:9000,  icon:"🚆", flags:["container","kuehl","adr","sperrig"]},
   {id:"v-silkroad", name:"China-Europa-Blockzug (41 × 40 ft)", brand:"Neue Seidenstraße",mode:"l", cap:950000,    speed:55,  costKm:7.80, daily:1500,  price:5200000,   stage:5, range:14000, icon:"🚆", flags:["container","kuehl"]},
 

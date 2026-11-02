@@ -432,8 +432,8 @@ function repStars(v) {
 function onOrderSpawn(o) {
   if (!o || o.tut || o.tutNext || o.snus || o.pablo || calm()) return;
   o.pay = Math.round(o.pay * repPayFactor(o));
+  if (typeof kundenOnSpawn === "function") kundenOnSpawn(o);   /* v244: Kunde, Stammkunden-Bonus – v245: vor der Konkurrenz, weil die Beziehungsstufe Ausschreibung und Verhandlung beeinflusst */
   if (typeof rivalOnSpawn === "function") rivalOnSpawn(o);
-  if (typeof kundenOnSpawn === "function") kundenOnSpawn(o);   /* v244: Titel, Zitat, Stammkunden-Bonus */
 }
 function onJobStart(job) {
   const o = job.order, f = S.fleet.find(x => x.uid === job.legs[0].veh);
