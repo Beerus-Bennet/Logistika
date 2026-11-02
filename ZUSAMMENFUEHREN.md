@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v258 – Große Lagerhalle (auf v257)
+
+- `farmdata.js`: `FBUILD_VAL.lagerhalle`, neu `FHALL`, `FSIZE.lagerhalle`, Ladeneintrag `lagerhalle` in `FSHOP_HOF` (Reiter „bau“), `FUNLOCK_HOF[5]`.
+- `farm.js`: neu `farmHallBonus`, Aufruf in `farmStoreCap`; `shopCount` und `farmBuild` kennen `lagerhalle`.
+- `farmmodels.js`: neu `FM.lagerhalle`. `farmview.js`: `objMesh`, `OBJ_H`, Antippen → `openFarmStore()`, Hinweiszeile im Lagerfenster. `worldview.js`: `shopModel`. `fpsaw.js`: `HIGH`.
+- Neues Objekt im Spielstand: `{ t: "lagerhalle", x, z, r }` in `S.farm.objs`.
+- `index.html`: `?v=258` nur für `farmdata.js`, `farm.js`, `farmmodels.js`, `farmview.js`, `worldview.js`, `fpsaw.js`; `sw.js`: `VERSION = "v258"`.
+
 ## Stand v257 – Büro: Figuren, Küche, Mitarbeiter des Monats (auf v256)
 
 - `officefp.js`: weitgehend neu (Raum wie bisher, neu `buildKitchen`, Büro-Figur `lookOf`/`headMesh`/`torsoMesh`/`legsMesh`/`upperMesh`/`foreMesh`, `buildFigure`, `animFigure`, `solveArm`, `screenCanvas`, `posterCanvas`/`drawPoster`, `tapAt` mit `blocked`, `say`/`factLines`, `openCard`). `FWM.person` (woodmodels.js) bleibt unverändert.

@@ -426,7 +426,7 @@ const SAW3D = (() => {
   /* ---- feste Hindernisse der Welt: Zäune, Mauern, Gebäude (Weltkoordinaten) ----
      Zäune/Mauern sind niedrige Strecken (Höhe h), Gebäude Rechtecke. Daran wird die Sichtlinie Kamera → Stammfuß geprüft:
      liegt ein Zaun davor, würde man durch ihn hindurchsägen. */
-  const HIGH = new Set(["house", "barn", "silo", "bakery", "mill", "dairy", "butcher", "spinnery", "shed", "sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel",
+  const HIGH = new Set(["house", "barn", "silo", "bakery", "mill", "dairy", "butcher", "spinnery", "lagerhalle", "shed", "sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel",
     "spalter", "hobel", "trocken", "verpack", "schleif", "fraese", "f_huette", "f_lager", "f_rauch", "f_kuehl", "f_markt", "stall"]);
   function obstacles() {
     const segs = [], boxes = [], F = S.farm;
