@@ -4,6 +4,11 @@
 
 
 
+
+## v252 – Zeitung im Diensthandy statt Einblendung
+- Vergibt ein Kunde eine Ausschreibung an einen Mitbewerber, gibt es keine Einblendung mehr.
+- Stattdessen erscheint eine sachliche Meldung im neuen Tab „📰 Zeitung“ des Diensthandys (Logistik-Kurier): Kunde, Mitbewerber, Strecke, Ladung, Auftragswert.
+- Ungelesene Meldungen zeigt ein kleiner Zähler am Tab; das Handy klingelt dafür nicht. Meldungen bleiben 7 Tage, höchstens 40.
 ## v251 – Auftragskarten: Tipp-Schutz
 - Eine Karte öffnet den Planer nur noch bei einem echten Tipp: Finger höchstens 6 px bewegt, kürzer als 0,6 s, Liste lief nicht mehr nach (350 ms) und hat sich währenddessen nicht bewegt.
 - Schwung abbremsen, kurze Wischer und langes Halten öffnen keinen Auftrag mehr.

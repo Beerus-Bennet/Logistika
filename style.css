@@ -3874,3 +3874,17 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .o-sign .sig-svg{display:block;width:170px;height:56px;margin-bottom:-6px;overflow:visible}
 .o-sign .sig-name{border-top:1.5px solid #c8d1dd;padding-top:3px;font-size:11px;font-weight:800;line-height:1.25}
 .o-sign .sig-role{font-size:10px;font-weight:600;opacity:.6;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* v252: Zeitung im Diensthandy – schlichtes Wirtschaftsblatt statt Einblendung */
+.ptab-n{display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:99px;background:#c23a4f;color:#fff;font-size:10px;line-height:16px;text-align:center}
+.phone-list.news{background:#faf8f3}
+.np-mast{text-align:center;padding:8px 6px 7px;margin:0 0 6px;border-bottom:3px double #2b2b2b}
+.np-name{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:26px;line-height:1;letter-spacing:.5px;color:#1b1b1b}
+.np-sub{display:flex;justify-content:center;gap:10px;margin-top:4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5a5a5a}
+.np-art{padding:10px 4px 11px;border-bottom:1px solid #d9d4c8}
+.np-art:last-child{border-bottom:0}
+.np-meta{display:flex;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#77706a}
+.np-res{color:var(--rc)}
+.np-head{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:19px;line-height:1.15;margin:4px 0 2px;color:#161616}
+.np-lead{font-size:11px;font-weight:700;color:#5a5a5a;margin-bottom:3px}
+.np-body{margin:0;font-family:Georgia,"Cormorant Garamond",serif;font-size:13px;line-height:1.5;color:#2b2b2b}

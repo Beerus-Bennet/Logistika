@@ -256,10 +256,8 @@ function tickRivals() {
   if (!lost.length) return;
   S.orders = S.orders.filter(o => !lost.includes(o));
   lost.forEach(o => { sh[o.rival.id] = (sh[o.rival.id] || 0) + 1; });
-  if (lively()) {
-    const r = rivalById(lost[0].rival.id);
-    toast(r.icon + " Angebotsfrist abgelaufen: „" + lost[0].shipper + "“ hat an " + r.name + " vergeben" + (lost.length > 1 ? " (und " + (lost.length - 1) + " weitere Ausschreibung" + (lost.length > 2 ? "en" : "") + ")" : "") + ".", "warn", true);
-  }
+  /* v252: keine Einblendung mehr – die Vergabe erscheint als Meldung in der Zeitung im Diensthandy */
+  lost.forEach(o => { try { pressRivalWin(o, rivalById(o.rival.id)); } catch (e) { console.warn("Zeitung", e); } });
   renderDirty = true;
 }
 /* Ausschreibung: es gibt tatsächlich ein Konkurrenzangebot – ohne Zusage bis zur Vergabe geht der Auftrag an den Mitbewerber */
@@ -430,4 +428,42 @@ function vipCardHTML(o, pv) {
     <div class="xrow vip">Nur du disponierst – die Dispo fasst sie nicht an.</div>
     ${pv}
   </div>`;
+}
+
+/* ------------------- v252: Wirtschaftsmeldungen (Zeitung im Diensthandy) ------------------- */
+const PRESS_MAX = 40;
+function pressState() { if (!S.press) S.press = { items: [], unread: 0 }; return S.press; }
+function pressAdd(a) {
+  const P = pressState();
+  P.items.unshift(Object.assign({ id: "pr" + S.time + "_" + Math.floor(Math.random() * 1e6), time: S.time }, a));
+  if (P.items.length > PRESS_MAX) P.items.length = PRESS_MAX;
+  P.unread = Math.min(99, (P.unread || 0) + 1);
+  if (typeof renderPhoneBadge === "function") renderPhoneBadge(false);
+  if (typeof phoneOpen === "function" && phoneOpen() && typeof renderPhone === "function") renderPhone();
+}
+/* Vergabe an einen Mitbewerber: sachlich, nur mit Daten aus der Ausschreibung */
+function pressRivalWin(o, r) {
+  const cg = CARGO[o.cargo], me = S.player && S.player.company ? S.player.company : "Ihre Spedition";
+  const from = N[o.from] ? N[o.from].short : "", to = (oDrop(o).a || (N[o.to] ? N[o.to].short : ""));
+  const what = (cg ? cg.name : "Fracht") + ", " + kgf(o.weight);
+  pressAdd({
+    kind: "tender", col: r.col,
+    head: o.shipper + " vergibt Transportauftrag an " + r.name,
+    lead: from + " – " + to,
+    body: o.shipper + " hat den ausgeschriebenen Transport von " + from + " nach " + to + " (" + what + ") an " + r.name +
+      " vergeben. Der Auftragswert lag laut Ausschreibung bei " + money(o.pay) + ". " +
+      me + " hatte bis zum Ablauf der Angebotsfrist keine Zusage abgegeben."
+  });
+}
+function pressHTML() {
+  const P = pressState();
+  const items = P.items.filter(a => S.time - a.time < 1440 * 7);
+  const head = `<div class="np-mast"><div class="np-name">Logistik-Kurier</div><div class="np-sub">Wirtschaft · Transport · Handel <span>Tag ${Math.floor(S.time / 1440) + 1}</span></div></div>`;
+  if (!items.length) return head + `<div class="empty">Keine aktuellen Meldungen.</div>`;
+  return head + items.map(a => `<article class="np-art" style="--rc:${a.col || "#59616d"}">
+      <div class="np-meta"><span class="np-res">${a.kind === "tender" ? "Ausschreibungen" : "Wirtschaft"}</span><span>${esc(stamp(a.time))}</span></div>
+      <h3 class="np-head">${esc(a.head)}</h3>
+      ${a.lead ? `<div class="np-lead">${esc(a.lead)}</div>` : ""}
+      <p class="np-body">${esc(a.body)}</p>
+    </article>`).join("");
 }

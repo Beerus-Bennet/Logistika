@@ -894,19 +894,22 @@ function renderPhone(focusId) {
   })(m))).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
      dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
-  const calc = phoneTab === "calc";
+  const calc = phoneTab === "calc", news = phoneTab === "news";
+  if (news && S.press && S.press.unread) { S.press.unread = 0; renderPhoneBadge(); }
+  const pressN = S.press && S.press.unread ? S.press.unread : 0;
 
   $("#modalBody").innerHTML = `
     <div class="mhead phone">
       <div><div class="mtitle">📞 Diensttelefon</div>
-      <div class="msub">${calc ? "Rechner" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
+      <div class="msub">${calc ? "Rechner" : news ? "Wirtschaftsmeldungen der letzten 7 Tage" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
     <div class="ptabs">
-      <button class="ptab${calc ? "" : " on"}" data-ptab="msgs">💬 Nachrichten</button>
+      <button class="ptab${calc || news ? "" : " on"}" data-ptab="msgs">💬 Nachrichten</button>
+      <button class="ptab${news ? " on" : ""}" data-ptab="news">📰 Zeitung${pressN ? ` <b class="ptab-n">${pressN > 9 ? "9+" : pressN}</b>` : ""}</button>
       <button class="ptab calc${calc ? " on" : ""}" data-ptab="calc" title="Rechner" aria-label="Rechner">🧮</button>
     </div>
-    <div class="phone-list">${calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : body}</div>
+    <div class="phone-list${news ? " news" : ""}">${calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : news && typeof pressHTML === "function" ? pressHTML() : body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
   $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
   if (focusId) {                                /* v124: Tipp auf die Meldung → genau diese Nachricht zeigen */
