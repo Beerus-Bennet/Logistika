@@ -2957,6 +2957,23 @@ function orderMono(name) {
   return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || "?").slice(0, 2)).toUpperCase();
 }
 function orderMonoColor(name) { const h = [...String(name || "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); return MONO_COLS[h % MONO_COLS.length]; }
+/* v251: Tipp-Schutz für Listenkarten. iOS löst nach kurzen Wischern, beim Abbremsen einer schwungvoll laufenden
+   Liste oder nach leichtem Verrutschen trotzdem „click“ aus. Ein Tipp zählt nur, wenn
+   – der Finger sich höchstens 6 px bewegt hat, – er nicht länger als 0,6 s lag,
+   – die Liste in den 350 ms davor nicht gescrollt hat (Schwung stoppen ist kein Tipp) und sich währenddessen nicht bewegt hat. */
+const TAP = { x: 0, y: 0, t: 0, moved: false, scrollAt: 0, scrollDuring: false, down: false };
+document.addEventListener("pointerdown", e => {
+  Object.assign(TAP, { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, down: true,
+    scrollDuring: performance.now() - TAP.scrollAt < 350 });
+}, true);
+document.addEventListener("pointermove", e => { if (TAP.down && Math.hypot(e.clientX - TAP.x, e.clientY - TAP.y) > 6) TAP.moved = true; }, true);
+document.addEventListener("pointerup", e => { if (Math.hypot(e.clientX - TAP.x, e.clientY - TAP.y) > 6) TAP.moved = true; TAP.down = false; }, true);
+document.addEventListener("pointercancel", () => { TAP.moved = true; TAP.down = false; }, true);
+document.addEventListener("scroll", () => { TAP.scrollAt = performance.now(); if (TAP.down) TAP.scrollDuring = true; }, { capture: true, passive: true });
+function realTap() {
+  if (!TAP.t) return true;                                   /* Tastatur/ohne Zeiger: wie bisher */
+  return !TAP.moved && !TAP.scrollDuring && performance.now() - TAP.t < 600;
+}
 function previewHTML(p) {
   if (!p.ok) return `<div class="vhintrow"><span class="vhint none">🚫 ${esc(p.why)}</span></div>`;
   const t = vType(p.veh.type);
@@ -3126,7 +3143,7 @@ function renderOrders() {
       ${(() => { const sg = tx && typeof orderSignHTML === "function" ? orderSignHTML(o) : ""; return sg ? `<div class="o-foot">${previewHTML(p)}${sg}</div>` : previewHTML(p); })()}
     </div>`;
   }).join("");
-  $$("#tab-orders .order").forEach(c => c.onclick = e => { if (e.target.closest && e.target.closest(".o-more")) return; openPlanner(c.dataset.order); });   /* v244: Details aufklappen öffnet nicht den Planer */
+  $$("#tab-orders .order").forEach(c => c.onclick = e => { if (e.target.closest && e.target.closest(".o-more")) return; if (!realTap()) return; openPlanner(c.dataset.order); });   /* v251: nur echte Tipps */   /* v244: Details aufklappen öffnet nicht den Planer */
   $$("#tab-orders [data-reject]").forEach(b => b.onclick = (e) => { e.stopPropagation(); rejectOrder(b.dataset.reject); });
   const rs = $("#ofReset");
   if (rs) rs.onclick = () => { S.orderFilter = "all"; save(); renderOrders(); };
