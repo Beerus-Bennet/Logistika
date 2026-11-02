@@ -3815,3 +3815,11 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .nego-mg{font-size:11.5px;margin-top:2px;opacity:.85}
 .nego-mg .good{color:var(--green-d)}
 .nego-mg .bad{color:#c23a4f}
+
+/* v248: 3D-Fahrzeugsymbole (vehicon.js) */
+img.v3d{display:block;width:62px;height:41px;object-fit:contain;-webkit-user-drag:none;user-select:none;pointer-events:none}
+.vicon img.v3d{margin:-4px 0}
+.vo-ic img.v3d,.mini .ic img.v3d{width:46px;height:31px}
+.fveh img.v3d,.fo-v img.v3d{width:40px;height:27px}
+.carpic.veh img.v3d.vbig3d{width:86%;height:86%;margin:auto;position:absolute;inset:0}
+.vopt .vo-ic:has(img.v3d){width:48px;background:none}
