@@ -3045,7 +3045,8 @@ const HUNT = (() => {
         if (d < m * 0.17 && d < nd) { nd = d; near = { A, p }; }
       }
       if (p[0] < -20 || p[0] > w + 20 || p[1] < -20 || p[1] > h + 20) return;
-      if (A.seen && (view === "eye" || view === "bino") && A.st !== "dead") html += `<i class="hu-mk${["flee", "wounded", "hit"].includes(A.st) ? " fl" : ""}" style="transform:translate(${Math.round(p[0])}px,${Math.round(p[1] - 6)}px)">${SP[A.k].i}</i>`;
+      /* v247: Tiersymbol über dem Wild entfernt */
+      if (false && A.seen && (view === "eye" || view === "bino") && A.st !== "dead") html += `<i class="hu-mk${["flee", "wounded", "hit"].includes(A.st) ? " fl" : ""}" style="transform:translate(${Math.round(p[0])}px,${Math.round(p[1] - 6)}px)">${SP[A.k].i}</i>`;
     });
     X.marks.innerHTML = html;
     if (near) {

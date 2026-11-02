@@ -3553,7 +3553,7 @@ function renderMarket() {
     if (list.length) html += `<div class="sortnote">${list.length} Fahrzeug${list.length === 1 ? "" : "e"} · sortiert nach ${esc(lbl)}</div>`;
     html += list.map(shopCard).join("");
   } else groups.forEach(m => {
-    const list = VEHICLES.filter(v => v.mode === m && pass(v));
+    const list = VEHICLES.filter(v => v.mode === m && pass(v)).sort((x, y) => x.price - y.price);   /* v246: innerhalb jeder Art immer nach Preis, günstigste zuerst */
     if (!list.length) return;
     const mi = MODE_INFO[m];
     const avail = unlockedModes().includes(m);
