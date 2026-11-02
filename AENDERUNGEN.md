@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+
+
+
+## v250 – Unterschrift bei Großaufträgen
+- Aufträge über 100.000 € tragen unten rechts eine Unterschrift „i. A.“ mit Name, Funktion und Firma.
+- Jede Firma hat eine feste, erfundene Person (Name und Funktion aus dem Firmennamen abgeleitet).
+- Handschrift je Person individuell: eine von vier Schreibschriften, Neigung, Größe, Tintenfarbe, Namensform und Schwung.
+## v249 – Auftragskarten: seriöser, persönlicher, klarer gegliedert
+- Absenderzeile mit Firmen-Monogramm (Initialen, feste Farbe je Firma), Branche und Beziehungsstatus.
+- Anfrage als ruhiges Zitat (drei Zeilen, ganzer Text in den Details).
+- Route groß, darunter Eckdaten im Raster: Ladung, Strecke, Liefertermin, Fahrzeit, ggf. Angebot gültig / Vergabe.
+- Hinweiszeilen (Verhandlung, Vertrag, Mission) zurückhaltender mit Akzentkante.
+- Texte: einige Kundenanfragen freundlicher und verbindlicher formuliert; Hinweis bei fehlendem Fahrzeug und Verhandlungshinweis klarer.
+- Keine Änderung an Logik, Preisen oder Abläufen.
+## v248 – Fahrzeuge als 3D-Bildchen im Hof-Stil
+- Neu `vehmodels.js`: Modelle für alle 48 Marktfahrzeuge plus Unimog-Holzlaster und goldenen T1, gebaut mit FM.MB wie die Hofmodelle.
+- Gerendert über dasselbe Bildchen-System wie Silo- und Ladenwaren (`thumbSpan`/`thumbOf`): Sonne, weiche Schatten, Kontur, Kontaktschatten.
+- Zu sehen in Markt, Flotte (lackierte Fahrzeuge in Firmenfarbe), Fahrzeugwahl im Planer, Auktionshaus, Hof-Fahrzeugliste und Tutorial.
+- v246/v247: Markt innerhalb jeder Art nach Preis sortiert; Tiersymbol im Hochsitz entfernt.
 ## v245 – Aufträge auf Speditionsniveau: Kundenprofile, geprüfte Texte, Verhandlung, Ausschreibungen
 
 ### 1. Ursache der widersprüchlichen Texte

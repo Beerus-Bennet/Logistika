@@ -853,7 +853,7 @@ function carPicHTML(c, paint, big) {
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];
-  return `<div class="carpic veh" style="--pc:${mi.color}"><span class="vbig">${t.icon}</span></div>`;
+  return `<div class="carpic veh" style="--pc:${mi.color}"><span class="vbig">${typeof vehIc === "function" ? vehIc(t) : t.icon}</span></div>`;
 }
 function lotPicHTML(l, big) { return l.kind === "veh" ? vehPicHTML(vType(l.vt)) : carPicHTML(CAR[l.car], l.paint && l.paint[1], big); }
 

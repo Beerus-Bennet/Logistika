@@ -410,7 +410,7 @@ function orderExtraHTML(o) {
     h += `<div class="xrow contract">📑 Rahmenvertrag${c ? " · Tag " + c.day + " von " + c.days + " · Ausfall kostet " + money(c.penalty) : ""}</div>`;
   }
   if (o.mission) h += `<div class="xrow mission">🧭 Teil einer Mission – Frist ${stamp(o.deadline)}</div>`;
-  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Preis verhandelbar – im Planer</div>`;
+  if (o.nego && !o.nego.done) h += `<div class="xrow nego">🤝 Preis verhandelbar · dein Angebot gibst du im Planer ab</div>`;
   if (o.nego && o.nego.done && o.nego.result) h += `<div class="xrow nego done">🤝 ${esc(o.nego.result)}</div>`;
   return h + rivalBadgeHTML(o);
 }
