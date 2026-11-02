@@ -1033,7 +1033,8 @@ function baseCard(b) {
 
     <div class="planpeek" data-office="${b.id}" role="button" tabindex="0"
          title="Büro einrichten">${officeSVG(b, 240, false)}${tierFloors(t) > 1 ? `<span class="floorbadge">${tierFloors(t)} Etagen</span>` : ""}
-      <span class="planhint">🪴 einrichten</span></div>
+      <span class="planhint">🪴 einrichten</span>
+      ${typeof OFFICE3D !== "undefined" ? `<button class="planenter" data-enter="${b.id}" aria-label="Büro betreten">🚪 Betreten</button>` : ""}</div>
 
     ${paused ? `<div class="halt">⛔ Der Betrieb steht still · noch ${rest} · <b>siehe Telefon</b></div>` : ""}
 
@@ -1199,6 +1200,11 @@ function renderBases() {
   });
   $$("#tab-bases [data-nodriver]").forEach(b => b.onclick = () => clearDriver(b.dataset.nodriver));
   $$("#tab-bases [data-staffdrag]").forEach(el => makeDraggable(el, el.dataset.staffdrag));
+  /* v254: Büro in der Ich-Perspektive betreten */
+  $$("#tab-bases [data-enter]").forEach(b => {
+    b.onclick = (e) => { e.stopPropagation(); OFFICE3D.enter(b.dataset.enter); };
+    b.onkeydown = (e) => e.stopPropagation();
+  });
   $$("#tab-bases [data-office]").forEach(b => {
     b.onclick = () => openOffice(b.dataset.office);
     b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOffice(b.dataset.office); } };

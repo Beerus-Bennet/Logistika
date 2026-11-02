@@ -1,5 +1,13 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v254 – Büro betreten (auf v253; dazwischen v246–v253 ohne eigenen Abschnitt, siehe AENDERUNGEN.md)
+
+- Neu: `officefp.js` (`OFFICE3D`), geladen nach `jail.js`; in `sw.js` (`SHELL`) eingetragen.
+- `offices.js`: `baseCard` – Knopf `.planenter` mit `data-enter` im Grundriss; Bindung in der Standortliste vor `[data-office]` (mit `stopPropagation`).
+- `extras.js`: `uiBusy` berücksichtigt `body.office3d`.
+- `style.css`: Block „v254: Büro betreten“ am Ende (Overlay `#ofp`, HUD, Joystick, Sprechblase, `#officeBoot` = Kopie der `#farmBoot`-Regeln).
+- `sw.js` / `index.html` / `manifest.webmanifest`: v254.
+
 ## Stand v245 – Aufträge auf Speditionsniveau (auf v244)
 
 - `kunden.js`: Kundenprofile erweitert (`dir`, `at`, umbenannte Waren), Textblock ab `wFmt` neu (`railWagons`, `SEA`, `AIR`, `placeOf`, `dirOk`, `REQ_MAIN` mit `{von}/{nach}/{in}/{Zweck}`, `CUST_PERKS`, `relNext`, `orderCapacity`, `orderTexts`, `orderTextCheck`, `orderTextSafe`, `seriesTexts`, `orderStory` gibt das Textobjekt inkl. `modes` zurück), `SERIES` als Geschäftsprojekte (+ `seriesCap`, Hafen-Projekt), `orderSpecialHTML(o, tx)`.

@@ -27,7 +27,7 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - Keine Geschäftslogik ändern, wenn nur Gestaltung oder Texte gewünscht sind.
 
 ## Wichtige Dateien
-`data.js` (Welt, Fahrzeuge, Ladungsarten, Etappen) · `game.js` (Kern: Aufträge, Routing, Planer, Listen, Tick, Speichern) · `kunden.js` (Kundenprofile, Auftragstexte mit Prüfung, Beziehungsstufen, Projekte, Unterschriften) · `vip.js` (Sonderfahrten, Konkurrenz/Ausschreibungen, Verhandlung, Zeitung) · `extras.js` (Telefon, Entscheidungen, Steuern, Kredit) · `offices.js` (Büros, Personal, Diensthandy) · `goals.js` · `corp.js` · `vehmodels.js` (3D-Fahrzeugbildchen) · Hof/Welt: `farm*.js`, `worldview.js`, `team.js` u. a. Vollständige Tabelle in `docs/UEBERGABE.md`.
+`data.js` (Welt, Fahrzeuge, Ladungsarten, Etappen) · `game.js` (Kern: Aufträge, Routing, Planer, Listen, Tick, Speichern) · `kunden.js` (Kundenprofile, Auftragstexte mit Prüfung, Beziehungsstufen, Projekte, Unterschriften) · `vip.js` (Sonderfahrten, Konkurrenz/Ausschreibungen, Verhandlung, Zeitung) · `extras.js` (Telefon, Entscheidungen, Steuern, Kredit) · `offices.js` (Büros, Personal, Diensthandy) · `goals.js` · `corp.js` · `vehmodels.js` (3D-Fahrzeugbildchen) · `officefp.js` (Büro in der Ich-Perspektive) · Hof/Welt: `farm*.js`, `worldview.js`, `team.js` u. a. Vollständige Tabelle in `docs/UEBERGABE.md`.
 
 ## Stand nach v245 (Kurzfassung der Änderungen seit der Übergabe)
 - v245 (Nachtrag, gleiche Nummer wie die Übergabe): Scrollen löst keinen Klick über den Doppeltipp-Schutz mehr aus.
@@ -36,3 +36,4 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v249: Auftragskarten neu gegliedert (Absender-Monogramm, Anfrage als Zitat, Eckdaten-Raster). v250: Unterschrift „i. A.“ bei Aufträgen über 100.000 €.
 - v251: Tipp-Schutz für Auftragskarten (`realTap` in `game.js`). v252: Vergaben an Mitbewerber als Meldung im Tab „Zeitung“ des Diensthandys statt Einblendung.
 - v253: Versionsnummern nach Bennets Icon-Upload wieder vereinheitlicht; Übergabe und diese Datei angelegt.
+- v254: Büro betreten – Ich-Perspektive mit Ladescreen (`officefp.js`, Knopf auf dem Grundriss).
