@@ -5,6 +5,12 @@
 
 
 
+
+## v253 – Versionen nach Icon-Upload vereinheitlicht, Übergabe abgelegt
+- Ursache: Der Upload der neuen App-Icons brachte ältere Fassungen von `index.html` (Skripte auf `?v=250`) und `sw.js` (`v251`) mit. Handys hätten dadurch v251/v252 (Tipp-Schutz, Zeitung) eventuell nicht geladen.
+- Lösung: Alle `?v=` in `index.html` und `manifest.webmanifest` sowie `VERSION` in `sw.js` auf v253. Die neuen Icons bleiben unverändert.
+- Neu: `CLAUDE.md` (wird von Claude Code automatisch geladen: Regeln, Technik, aktueller Stand) und `docs/UEBERGABE.md` (Übergabe aus dem früheren Chat, Stand v245).
+- Geprüft: `index.html` ist bis auf die Versionsnummern identisch mit dem Stand vor dem Upload. Nicht auf dem Handy geprüft.
 ## v252 – Zeitung im Diensthandy statt Einblendung
 - Vergibt ein Kunde eine Ausschreibung an einen Mitbewerber, gibt es keine Einblendung mehr.
 - Stattdessen erscheint eine sachliche Meldung im neuen Tab „📰 Zeitung“ des Diensthandys (Logistik-Kurier): Kunde, Mitbewerber, Strecke, Ladung, Auftragswert.
