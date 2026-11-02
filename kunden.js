@@ -488,8 +488,10 @@ function kundenOnSpawn(o) {
   const c = custOf(o.shipper), t = custTier(c);
   if (t >= 2) { o.reg = t; o.pay = Math.round(o.pay * CUST_BONUS[t]); }
   /* Stammkunden ab 5 Lieferungen: einmal ein Liefervertrag (bestehender Rahmenvertrag, mit genau dieser Strecke) */
-  if (c && c.n >= 5 && !c.offer && t >= 2 && typeof offerContract === "function" && typeof fleetCanDo === "function" && fleetCanDo(o) && !o.air) {
+  if (c && c.n >= 5 && !c.offer && t >= 2 && typeof offerContract === "function" && typeof contractMayOffer === "function" && contractMayOffer()
+      && typeof fleetCanDo === "function" && fleetCanDo(o) && !o.air) {
     c.offer = S.time;
+    S.contractNext = S.time + rnd(4, 7) * 1440;                      /* v261: zählt für die gemeinsame Pause */
     try { offerContract(o); } catch (e) { console.warn("Liefervertrag", e); }
   }
 }

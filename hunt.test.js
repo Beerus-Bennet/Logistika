@@ -182,15 +182,57 @@ test("Keiler v135: Waffen wachsen mit den gespeicherten Zentimetern", () => {
   assert.ok(pa.length > 20, "Waffen-Ecken " + pa.length);
   assert.ok(diag(pb) > diag(pa) * 1.15, "24 cm größer als 8 cm: " + diag(pb).toFixed(3) + " / " + diag(pa).toFixed(3));
 });
-test("Liegepose v135: Rumpf auf dem Boden, nichts darunter, Läufe liegen auf, immer gleich", () => {
-  ["keiler", "hirsch", "fasan"].forEach(k => [-1, 1].forEach(side => [0.2, 0.9].forEach(sc => {
-    const A = { k, side, ry: 0.7, s: 1 + sc * 0.2, score: sc, T: H4.traits(k, sc), vr: 2 };
-    const B = Object.assign({}, A), d = H4._dead(A), d2 = H4._dead(B);
-    assert.ok(Math.abs(d.mn[1]) < 0.012, k + " tiefster Punkt " + d.mn[1].toFixed(3));
-    d.pts.forEach(p => assert.ok(p[1] > -0.012, k + " Punkt unter dem Boden " + p[1].toFixed(3)));
-    assert.ok(d.mx[1] < (k === "hirsch" ? 1.9 : k === "keiler" ? 0.7 : 0.45), k + " liegt flach (Höhe " + d.mx[1].toFixed(2) + ")");      /* Hirsch: Geweih ragt auf */
-    assert.strictEqual(JSON.stringify(d.legs), JSON.stringify(d2.legs), k + " gleiche Pose");
-    d.legs.forEach(l => assert.ok(Math.abs(l[2]) <= 1.45 + 1e-9, k + " Lauf gesenkt " + l[2]));
-  })));
+test("Liegepose v262: Boden, Gelenkgrenzen, keine Durchdringung, Haupt liegt auf, immer gleich – alle Arten, beide Seiten, klein und groß", () => {
+  ["keiler", "hirsch", "fasan"].forEach(k => [-1, 1].forEach(side => [0.1, 0.5, 0.95].forEach(sc => [0, 77, 4242, 90001].forEach(g => {
+    const gn = H4.genes(k, sc, g), S0 = H4.SP[k];
+    const A = { k, side, ry: 0.7, s: S0.s0 + (S0.s1 - S0.s0) * sc, score: sc, g, gn, T: H4.traits(k, sc, gn), vr: g % 6 };
+    const B = Object.assign({}, A), d = H4._dead(A), d2 = H4._dead(B), c = H4._poseCheck(A), tag = k + " " + side + " " + sc + " g" + g;
+    assert.ok(Math.abs(d.mn[1]) < 0.012, tag + " tiefster Punkt " + d.mn[1].toFixed(3));
+    d.pts.forEach(p => assert.ok(p[1] > -0.008 * A.s, tag + " Punkt unter dem Boden " + p[1].toFixed(3)));
+    assert.ok(d.mx[1] < (k === "hirsch" ? 1.9 : k === "keiler" ? 0.7 : 0.45), tag + " liegt flach (Höhe " + d.mx[1].toFixed(2) + ")");
+    assert.strictEqual(JSON.stringify(d.legs), JSON.stringify(d2.legs), tag + " gleiche Pose");
+    assert.strictEqual(JSON.stringify([d.neckT, d.nz, d.hz, d.headT]), JSON.stringify([d2.neckT, d2.nz, d2.hz, d2.headT]), tag + " gleiches Haupt");
+    /* Läufe: Gelenke in ihren Grenzen (Vorderfußwurzel nur nach hinten, Sprunggelenk nur nach vorn), Spreizung begrenzt, nicht alle gleich */
+    d.legs.forEach((l, i) => {
+      const L = S0.legs[i], lim = c.lim[L.f ? "f" : "h"];
+      assert.ok(l[0] >= lim[0][0] - 1e-9 && l[0] <= lim[0][1] + 1e-9 && l[1] >= lim[1][0] - 1e-9 && l[1] <= lim[1][1] + 1e-9, tag + " Gelenk " + i + " " + l);
+      assert.ok(Math.abs(l[2]) <= 1.0 + 1e-9, tag + " Spreizung " + l[2]);
+    });
+    if (d.legs.length) assert.ok(new Set(d.legs.map(l => l[0].toFixed(2) + "/" + l[1].toFixed(2))).size === 4, tag + " vier verschiedene Winkel");
+    /* keine Durchdringung: Lauf ↔ Boden, Lauf ↔ Lauf, Lauf ↔ Rumpf (mit denselben Abtastpunkten nachgemessen) */
+    if (d.legs.length) {
+      assert.ok(c.ground > -0.012 * A.s, tag + " Lauf im Boden " + c.ground.toFixed(3));
+      assert.ok(c.legLeg < 0.012, tag + " Lauf in Lauf " + c.legLeg.toFixed(3));
+      assert.ok(c.legBody < 0.012, tag + " Lauf im Rumpf " + c.legBody.toFixed(3));
+    }
+    /* Haupt: keine Durchdringung; liegt auf – beim Hirsch darf das Geweih tragen, dann höchstens eine Handbreit angehoben */
+    assert.ok(d.head.pen < 0.004, tag + " Haupt/Geweih durchdringt " + d.head.pen.toFixed(4));
+    assert.ok(d.head.gap < (d.head.carried ? 0.13 : 0.03) * A.s, tag + " Haupt schwebt " + d.head.gap.toFixed(3) + (d.head.carried ? " (Geweih trägt)" : ""));
+    if (k === "fasan") d.feet.forEach(f => assert.ok(f[0] >= 0.85 && f[0] <= 1.75 && Math.abs(f[1]) <= 0.45, tag + " Ständer " + f));
+  }))));
+});
+test("Geweih v262: Name und Modell zählen dieselben Enden (auch ungerade, doppelte Augsprosse, abnorme Sprosse)", () => {
+  const Fs = [{}, { extra: -1 }, { extra: 1 }, { aug: -1 }, { aug: 1 }, { abn: -1 }, { abn: 1 }];
+  for (let P = 6; P <= 16; P += 2) Fs.forEach(F => {
+    const sides = H4._antSides(P, F), built = H4._antEnds(P, 0.6, 2, F);
+    assert.deepStrictEqual(Array.from(sides), Array.from(built), "P " + P + " " + JSON.stringify(F) + " Modell " + built + " gezählt " + sides);
+  });
+  /* Name aus den Merkmalen: gleiche Stangen → „N-Ender Geweih“, sonst „Ungerader N-Ender“ mit der stärkeren Stange doppelt */
+  for (let g = 0; g < 4000; g += 7) [0.3, 0.6, 0.9].forEach(sc => {
+    const gn = H4.genes("hirsch", sc, g), T = H4.traits("hirsch", sc, gn), sd = H4._antSides(T.P, H4._antF(gn));
+    assert.strictEqual(T.Pl, 2 * Math.max(sd[0], sd[1]), "Enden " + T.troph);
+    assert.strictEqual(T.odd, sd[0] !== sd[1], "ungerade " + T.troph);
+    assert.ok(T.odd ? /^Ungerader \d+-Ender$/.test(T.troph) : /^\d+-Ender Geweih$/.test(T.troph), T.troph);
+  });
+});
+test("Artenwahl v262: 45 % Hirsch, 30 % Keiler, 25 % Fasan (12 000 feste Ziehungen); Flugtimer und Grenzen", () => {
+  let s = 99; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const n = { hirsch: 0, keiler: 0, fasan: 0 }, N = 12000;
+  for (let i = 0; i < N; i++) n[H4.pickSpecies(r)]++;
+  const W = H4.SPECIES_W, tot = W.hirsch + W.keiler + W.fasan;
+  Object.keys(n).forEach(k => assert.ok(Math.abs(n[k] / N - W[k] / tot) < 0.012, k + " " + (n[k] / N * 100).toFixed(1) + " %"));
+  assert.deepStrictEqual([W.hirsch, W.keiler, W.fasan], [45, 30, 25]);
+  assert.deepStrictEqual(Array.from(H4.FLY_FIRST), [25, 45]); assert.deepStrictEqual(Array.from(H4.FLY_NEXT), [45, 75]);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(H4.LIMIT)), { ground: 2, fly: 1, total: 3 });
 });
 console.log(n + " Tests bestanden");

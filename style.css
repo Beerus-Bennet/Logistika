@@ -4099,3 +4099,9 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 [contenteditable="true"] *,[contenteditable=""] *,[contenteditable="plaintext-only"] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 [contenteditable="false"],[contenteditable="false"] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #ofpCv,#ofpJoy{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
+
+/* ---------- v262: Jagd – Bergungsansicht: lange Namen sauber umbrechen, Karte schmal halten ---------- */
+#huntUI .hu-win b{overflow-wrap:anywhere;hyphens:auto;padding:0 12px;box-sizing:border-box}
+#huntUI .hu-svt b,#huntUI .hu-cn b,#huntUI .hu-cn em{overflow-wrap:anywhere;hyphens:auto}
+#huntUI .hu-svimg{width:min(92px,24vw);height:min(92px,24vw)}
+@media (max-width:360px){#huntUI .hu-sb{flex-direction:column}#huntUI .hu-svt b{font-size:15.5px}}

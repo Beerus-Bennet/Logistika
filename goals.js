@@ -266,12 +266,19 @@ function goalsFailed(job) {
     if (c) { c.pending = c.pending.filter(id => id !== job.order.id); c.missed++; payOut(c.penalty, "fail", "Vertragsstrafe · " + c.client); }
   }
 }
+/* v261: gemeinsame Bremse für alle Vertragsangebote (täglicher Zufallsvertrag und Stammkunden-Vertrag):
+   ab Level 4, höchstens 2 (ab Etappe 4: 3) laufende Verträge, kein unbeantwortetes Angebot, und nach jedem Angebot
+   mindestens 4–7 Spieltage Pause. Vorher hatten Stammkunden keine Grenze – bei mehreren Stammkunden kamen Angebote
+   gleichzeitig und im Dauerfeuer. */
+function contractMayOffer() {
+  return level() >= 4 && activeContracts().length < (S.stage >= 4 ? 3 : 2) && S.time >= (S.contractNext || 0)
+    && !pendingDecisions().some(m => m.dec.type === "contract");
+}
 function goalsDay() {
   newDaily();
   if (typeof shareDay === "function") shareDay();
   if (!lively()) return;
-  if (level() >= 4 && activeContracts().length < (S.stage >= 4 ? 3 : 2) && S.time >= (S.contractNext || 0)
-      && !pendingDecisions().some(m => m.dec.type === "contract")) {
+  if (contractMayOffer()) {
     S.contractNext = S.time + rnd(4, 7) * 1440;
     if (S.time > 3 * 1440) offerContract();
   }

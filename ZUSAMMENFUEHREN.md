@@ -1,5 +1,23 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v262 – Jagd: Liegeposen, Bergung, Fasane (auf v261)
+
+- `hunt.js`:
+  - Liegepose neu ab `POSE` (ersetzt `SP.*.rest`): `inTorso`, `ptsOf` (ohne Doppelte), `legSamp`, `legPt`, `poseRnd`, `headParts` (ersetzt `headPts`), `mat3`/`mmul`/`mapp`/`flat`, `calcDead`, `poseCheck`, `fallK`, `deadLeg`.
+  - `antSides` (Endenzahl), `deerHeadInto(…, noAnt)`, `traits` (Hirsch: `Pl`/`odd` aus `antSides`).
+  - Fasan: `phBody` (Schwingen), `phWing` (neu), `phLegCurl` (neu), `takeOff(A, a, o)`, Zustände `fly` (Start, Abflugkurs, Einflug), `land` (neu), `drop`.
+  - Erzeugung: `SPECIES_W`, `FLY_FIRST`, `FLY_NEXT`, `LIMIT`, `pickSpecies`, `flyEvent`.
+  - Bergung: `bedMesh`/`settle` (Kontaktschatten, Gras), `heroCam`/`heroYaw`, `cardHTML`/`showSaved`.
+  - Modell-Schlüssel des Fasans neu: `_b262`, `_w262`, `_fc262`.
+- `hunt.test.js`: Test „Liegepose v135“ ersetzt durch v262, neue Tests für Geweih-Enden und Artenwahl.
+- `style.css`: Block „v262“ am Ende.
+- `index.html`: `?v=262` nur für `hunt.js` und `style.css`; `sw.js`: `VERSION = "v262"`.
+
+## Stand v261 – Vertragsangebote seltener (auf v260)
+
+- `goals.js`: neu `contractMayOffer`, von `goalsDay` genutzt. `kunden.js`: `kundenOnSpawn` fragt `contractMayOffer()` und setzt `S.contractNext`.
+- `index.html`: `?v=261` nur für `goals.js`, `kunden.js`; `sw.js`: `VERSION = "v261"`.
+
 ## Stand v258 – Große Lagerhalle (auf v257)
 
 - `farmdata.js`: `FBUILD_VAL.lagerhalle`, neu `FHALL`, `FSIZE.lagerhalle`, Ladeneintrag `lagerhalle` in `FSHOP_HOF` (Reiter „bau“), `FUNLOCK_HOF[5]`.
