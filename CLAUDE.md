@@ -38,3 +38,4 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v253: Versionsnummern nach Bennets Icon-Upload wieder vereinheitlicht; Übergabe und diese Datei angelegt.
 - v254: Büro betreten – Ich-Perspektive mit Ladescreen (`officefp.js`, Knopf auf dem Grundriss).
 - v255: Schatzkiste – Show-Kamera gibt bei jedem Eingriff des Spielers sofort frei, kein Rückflug, kein ungefragter Schwenk beim Vogelschwarm.
+- v256: Tutorial-System überarbeitet – eine gemeinsame Lina-Karte (`linaCardHTML` in `intro.js`) für Hof-Rundgang (`FTUT_HOF`, `farmview.js`), Spedition (`TUT_STEPS`) und Gespräche; Schrittzähler, Teilfortschritt, Ausweg bei fehlenden Zielen, Beenden mit Rückfrage. Bei Cache-Versionen nur geänderte Dateien hochzählen (Bennets Wunsch in v256).

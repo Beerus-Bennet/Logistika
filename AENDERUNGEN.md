@@ -8,6 +8,38 @@
 
 
 
+
+## v256 – Tutorial-System mit Lina überarbeitet
+**Gestaltung (alle Erklärungen sehen jetzt gleich aus):**
+- Neue gemeinsame Karte `linaCardHTML` (`intro.js`) für Hof-Rundgang, Speditions-Einführung, Büro-/Snus-/Pablo-Gespräche und Rollen-Erklärungen: Lina als **Kopf-/Schulterporträt in der Karte** (statt einer abgeschnittenen Ganzkörperfigur daneben bzw. Figur + Wolke), Rolle und Kontext („Nachbarin · Hof-Rundgang“, „Disponentin · Einführung“ …), **„Schritt X von Y“** mit Balken, Titel, kurze Einordnung, Kasten **„Deine Aufgabe“** bzw. „So geht’s“, getrennter **Teilfortschritt** („1 von 3 Feldern geerntet“), Rückmeldung („✓ Geerntet! …“), Haupt- und Nebenaktion, ✕ zum Beenden.
+- Fehlt `lina.png`, zeichnet `avatarSVG` ein Porträt (`linaFace`, `linaFaceFail` – auch für eine schon sichtbare Hof-Karte und offene Tipps).
+- Hof: Karte unten über die Breite; **„Laden“, „Lager“ und der Gründen-Knopf sind während des Rundgangs ausgeblendet** (`body.ftut-on`). Liegt das Ziel unter der Karte, weicht sie aus (hoch: nach oben, quer: nach rechts; `farmTutPoint`). Ruhiger Ring + Finger statt springender Hand. Deckt die Karte das Ziel in beiden Lagen (kleine Schirme), schiebt die Kamera das Ziel einmal sanft in den freien Bereich (`farmTutNudge`) – nur solange der Spieler die Kamera seit dem Schrittwechsel nicht selbst bewegt hat. Niedrige Schirme: kompaktere Karte; im Querformat entfällt bei Mitmach-Aufgaben die Einleitungszeile.
+- Spedition: dieselbe Karte im `#tutor`; hohe Ziele (ganze Auftragskarte) → Karte unten, damit Kopf und ⭐ sichtbar bleiben. Leuchtfenster etwas weniger dunkel, langsamer Puls.
+- Kurz-Tipps mit demselben Porträt. CSS-Block „v256“ am Ende von `style.css` (44-px-Ziele, Safe Areas, Querformat, Desktop, kleine Schirme, `prefers-reduced-motion`).
+
+**Texte:** Jeder Schritt nach dem Muster Einordnung → Handlung → Rückmeldung, Titel für alle Schritte und Gespräche (`TUT_STEPS`, `FTUT_HOF`, `TALK_TITLES`, `TALK_CTX`).
+
+**Bestätigte Fehler und Korrekturen:**
+- `farmTutShow`: Wiederholung trug zugleich `wait` und `free` (Finger sichtbar, obwohl nur „Weiter“) → ein Zustand (`farmTutMode`: info/task/finish/done).
+- `farmTutSignal`: Schrittwechsel nach 650 ms ohne Prüfung → `farmTutAdvance` mit Rundgang-/Schritt-Kennung (`ftT`, `ftGen`); `farmTutNext(from)` ignoriert veraltete Aufrufe und Doppeltipps.
+- `T.adv` blieb nach Speichern + Neuladen im Wechselmoment hängen → jedes weitere Signal wurde ignoriert, der Rundgang hing. Wird beim Laden zurückgesetzt; erreichte Aufgaben gehen direkt weiter.
+- `hintBusy`: Tipps kamen über die Erklärseiten/den Abschluss des Hof-Rundgangs → warten jetzt, solange der Rundgang sichtbar ist (auch im Büro-Vollbild, in der Jagd).
+- `probeGuideArt`: Hof-Figur und Tipps bekamen keinen Fallback → umgestellt.
+- Kamera sprang bei jedem Teilfortschritt (z. B. nach dem 1. Feld) zum nächsten Ziel → nur noch beim Schrittwechsel.
+- Wiederholung der Spedition-Einführung („Welt“) legte einen neuen bezahlten Übungsauftrag an → Wiederholung ohne Auftrag (`S.tut.replay`).
+- Hof-Wiederholung hielt die Hofproduktion an (`farmTick`) → nur noch der erste Rundgang.
+- Nach einer Hof-Wiederholung blieb `replay` gesetzt → Gieß-/Futter-Tipps kamen nie → wird beim Ende entfernt.
+- `linaTalk`: auf dem Hof endlose Startversuche, mehrere Aufrufe stapelten Ketten → je Gespräch ein geplanter Versuch, begrenzt, alte Versuche nach Spielstandwechsel wirkungslos.
+- Tipp-Warteschlange: ein vom Tutorial unterbrochener Tipp ging verloren (galt schon als gesehen) → kommt danach wieder; zu lange wartende Tipps verfallen, ohne als gesehen zu gelten.
+- Bauernhaus-/„Welt“-Knopf überschrieb einen laufenden ersten Rundgang → geht dort weiter.
+
+**Abläufe abgesichert:** Ziele gelten nur als erreichbar, wenn sie sichtbar, eingeblendet, nicht gesperrt und auf dem Bildschirm sind (`tutUsable`); fehlt ein Mitmach-Ziel länger als 1,5 s, gibt es „Weiter“ (Lina übernimmt). Hof-Aufgaben ohne Möglichkeit (kein reifes Feld, keine reifen Äpfel) oder nach 45 s ohne Fortschritt: „Schritt auslassen“. Beenden jederzeit über ✕ oder Esc mit kurzer Rückfrage (Folgen + Wiederholung unter „Welt“/im Bauernhaus); danach sind Sperrflächen, Klassen und Timer weg.
+
+**Zugänglichkeit:** echte Buttons mit Beschriftung, `role="dialog"` (blockierend) bzw. `region` (Hof), Fokus auf die Karte/den Hauptknopf, sichtbarer Tastaturfokus, Schrittwechsel per `aria-live` (nur beim Wechsel), Tipps als `status`.
+
+**Unverändert:** Pausenlogik der Spedition (Uhr steht in Einführung und Gesprächen), erster Hof-Rundgang hält den Hof an, Belohnungen, Aufträge, Spielstand-Migration (`T.v76`).
+
+**Geprüft** im Testbrowser (Chromium, Software-WebGL): Hof-Rundgang mit Teilfortschritt, Doppeltipp, Rückfrage; Spedition vom Fahrzeug bis zur Annahme und zum Ende; Wiederholungen ohne Zusatzauftrag; fehlendes Ziel + Ausweg; Planer schließen; Doppelsignal; Esc; Büro-Gespräch, Rollen-Erklärung, Kurz-Tipp mit Unterbrechung; Neuladen im Wechselmoment; fehlende Lina-Grafik; 390 × 844, 375 × 667, 844 × 390, 1280 × 800. **Nicht auf einem echten iPhone/Safari geprüft.**
 ## v255 – Schatzkiste: Kamera gehört dem Spieler
 - Ursache: Wischte man während der Truhen-Show weg, brach nur die Hinfahrt ab. Die Show merkte sich die alte Ansicht und flog ~2,6 s nach dem Aufspringen trotzdem dorthin zurück; die steile Show-Neigung blieb bis dahin aktiv. Beim Erscheinen eines Vogelschwarms schwenkte die Kamera ungefragt zur Fundstelle (nach 4 s ohne Berührung). Das Mausrad zählte nicht als Eingriff.
 - Lösung (`worldview.js`): `trCamTaken` erkennt, dass der Spieler seit Beginn der Show die Kamera angefasst hat; `worldTreasureCamRelease` gibt sie dann sofort frei (kein Rückflug, Neigung gleitet in 0,4 s auf normal). Geprüft in der Hinfahrt (`worldTreasureCam`), während der Show (`stepTreasureReveal`) und vor dem Rückflug (`worldTreasureCamBack`). `worldTreasureIntro` bewegt die Kamera nicht mehr – hin geht es über den 🐦-Knopf. `farmview.js`: Mausrad setzt `FV.touchAt`/`FV.focusId` wie ein Wisch.

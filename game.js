@@ -3752,9 +3752,9 @@ function renderWorld() {
   const b = $("#unlockBtn");
   if (b) b.onclick = unlockStage;
   const ta = $("#tutAgainBtn");
-  if (ta) ta.onclick = () => { S.tut = { done: false }; startTutorial(); };
+  if (ta) ta.onclick = () => { S.tut = { done: false, replay: true }; startTutorial(); };   /* v256: Wiederholung ohne neuen Übungsauftrag */
   const fta = $("#farmTutAgain");
-  if (fta) fta.onclick = () => { S.farm.tut = { step: 0, done: false, replay: true }; showTab("farm"); };
+  if (fta) fta.onclick = () => { if (!S.farm.tut || S.farm.tut.done) S.farm.tut = { step: 0, done: false, replay: true }; showTab("farm"); };   /* v256: laufenden Rundgang nicht überschreiben */
   $$("#tab-world [data-talk]").forEach(b => b.onclick = () => replayTalk(b.dataset.talk));
   const r = $("#resetBtn");
   if (r) r.onclick = () => {

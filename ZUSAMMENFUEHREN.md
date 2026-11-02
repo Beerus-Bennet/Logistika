@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v256 – Tutorial-System mit Lina (auf v255)
+
+- `intro.js`: neu `linaFaceSVG`, `linaFace`, `linaFaceFail`, `linaCardHTML`, `linaExitHTML`, `linaAnnounce`, `tutReplay`, `TALK_CTX`, `TALK_TITLES`, `tutTitle`, `tutCardHTML`, `tutBind`, `tutRedraw`, `tutUsable`, `hintInterrupt`, `farmTourShown`, `talkPend`; geändert `probeGuideArt`, `TUT_STEPS` (title/act/note), `linaHint`/`hintBusy`/`hintNext`, `startTutorial` (Wiederholung ohne Auftrag), `tutGo(i, from)`, `tutSignal`, `endTutorial`, `showTutStep`, `tutFollow`, `tutGeom`, `tutWatch` (Ausweg), `renderTutStep`, `tutCount` (gibt `{k, n}` zurück), `tutRefresh`, `linaRole`, `linaTalk`; Esc-Handler.
+- `farmview.js`: `FTUT_HOF` (title/act/ready/part/ok), `farmTutShow` neu, neu `farmTutState`, `farmTutMode`, `farmTutClear`, `farmTutAdvance`, `farmTutEsc`, `farmTutNudge`; `farmTutNext(from)`, `farmTutEnd`, `farmTutSignal`, `farmTutPoint`; Bauernhaus-Knopf `#fhTut`.
+- `farm.js`: `farmTick` – Wiederholung hält den Hof nicht an.
+- `game.js`: „Welt“-Knöpfe `#tutAgainBtn` (Wiederholung mit `replay`), `#farmTutAgain` (laufenden Rundgang nicht überschreiben).
+- `style.css`: Block „v256: Linas Tutorial-Karte“ am Ende.
+- `index.html`: `?v=256` nur für `style.css`, `game.js`, `intro.js`, `farm.js`, `farmview.js`; `sw.js`: `VERSION = "v256"`.
+
 ## Stand v255 – Schatzkiste: Kamera gehört dem Spieler (auf v254)
 
 - `worldview.js`: `worldTreasureIntro` ohne Kamerafahrt; neu `trCamTaken`, `worldTreasureCamRelease`; `worldTreasureCam` (Merker `at`, Freigabe bei Eingriff), `worldTreasureCamBack` (kein Rückflug nach Eingriff, weiche Freigabe), `stepTreasureReveal` (Freigabe bei Eingriff).
