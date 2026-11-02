@@ -4091,3 +4091,11 @@ body.ftut-on #farmSide,body.ftut-on #farmFound{display:none}
 #ofpAction:active{transform:translate(2px,2px);box-shadow:none}
 #ofpAction:disabled{cursor:default;background:#eeeae2;color:#58616c}
 #ofpAction:focus-visible{outline:3px solid #e5a43a;outline-offset:4px}
+
+/* v260 – iOS-Auswahllupe und Haltemenüs auf allen Spielflächen unterbinden */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas,img{-webkit-user-drag:none}
+input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"],
+[contenteditable="true"] *,[contenteditable=""] *,[contenteditable="plaintext-only"] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+[contenteditable="false"],[contenteditable="false"] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#ofpCv,#ofpJoy{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}

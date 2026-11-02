@@ -19,12 +19,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Baloo+2:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Great+Vibes&family=Allura&family=Mrs+Saint+Delafield&family=Herr+Von+Muellerhoff&display=swap">
 <link rel="preload" as="image" href="lina.png">
-<link rel="stylesheet" href="style.css?v=259">
+<link rel="stylesheet" href="style.css?v=260">
 <script>
 /* v55: Fehler beim Start sichtbar machen (statt still auf der leeren Karte zu landen).
    Die Dateien tragen eine Versionsnummer (?v=…), damit nach einem Update nie
    alte und neue Dateien gemischt aus dem Zwischenspeicher kommen. */
-window.LOGI_V = "85";
+window.LOGI_V = "260";
 window.LOGI_ERRS = [];
 window.logiErr = function (msg, where) {
   try {
@@ -48,6 +48,31 @@ window.addEventListener("error", function (e) {
   var st = e && e.error && e.error.stack ? String(e.error.stack).split("\n").slice(1, 2).join("").trim().split("/").pop() : "";
   if (e && e.message && (!f || /\.js$/.test(f))) window.logiErr(e.message, (f + (e.lineno ? ":" + e.lineno : "")) || st);
 });
+/* v260: iOS-Lupe zusätzlich zur CSS-Sperre an selbst gesteuerten Spielflächen abfangen.
+   WebKit #231161: user-select/touch-callout allein reichen bei Canvas-Gesten nicht immer.
+   Eingaben, Schaltflächen und native Scrollbereiche behalten ihre normalen Ereignisse. */
+(() => {
+  const elementOf = e => {
+    const n = e.target;
+    return n && n.nodeType === 1 ? n : n && n.parentElement;
+  };
+  const editable = el => !!(el && (el.closest("input,textarea,select") || el.isContentEditable));
+  const noSelection = e => { if (!editable(elementOf(e)) && e.cancelable) e.preventDefault(); };
+  document.addEventListener("selectstart", noSelection, true);
+  document.addEventListener("contextmenu", noSelection, true);
+  const ownedSurface = el => {
+    if (!el || editable(el) || el.closest("button,a,label,summary,[role=button]")) return false;
+    const canvas = el.closest("canvas");
+    if (canvas && (getComputedStyle(canvas).touchAction === "none" || canvas.closest("#ofp,#farmAngel,#huntUI"))) return true;
+    return !!el.closest("#ofpJoy,#huntUI");
+  };
+  const nativeTouch = e => {
+    if (ownedSurface(elementOf(e)) && e.cancelable) e.preventDefault();
+  };
+  document.addEventListener("touchstart", nativeTouch, { capture: true, passive: false });
+  document.addEventListener("touchmove", nativeTouch, { capture: true, passive: false });
+})();
+
 </script>
 </head>
 <body class="locked">
@@ -185,6 +210,6 @@ window.addEventListener("error", function (e) {
 <script src="team.js?v=255"></script>
 <script src="jail.js?v=255"></script>
 <script src="officekitchen.js?v=259"></script>
-<script src="officefp.js?v=259"></script>
+<script src="officefp.js?v=260"></script>
 </body>
 </html>

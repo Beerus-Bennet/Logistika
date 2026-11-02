@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v259)
+   LOGISTIKA – officefp.js (v260)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -28,8 +28,8 @@ const OFFICE3D = (() => {
   const RW = 6.8, RD = 4.8;                                 /* halbe Innenmaße (340 × 240 Planeinheiten) */
   const EYE = 1.62, PR = 0.32, SPEED = 2.3;
   const FS = 1.45;                                          /* Maßstab der Figuren (wie auf dem Hof): 1 Figureinheit = 1,45 m */
-  const CHAIR_D = 0.8, SEAT_Y = 0.46;                       /* Stuhlmitte hinter der Tischmitte · Sitzfläche = Oberschenkel-Unterseite (0,317 × 1,45) */
-  const TALK_RANGE = 6, ARM_A = 0.29, ARM_B = 0.247;       /* Reichweite zum Ansprechen (m) · Oberarm, Unterarm bis Handmitte (Figureinheiten) */
+  const CHAIR_D = 0.72, SEAT_Y = 0.46;                       /* Stuhlmitte hinter der Tischmitte · Sitzfläche = Oberschenkel-Unterseite (0,317 × 1,45) */
+  const TALK_RANGE = 6, ARM_A = 0.22, ARM_B = 0.28;       /* Reichweite zum Ansprechen (m) · Oberarm, Unterarm bis Handmitte (Figureinheiten) */
   const hx = c => typeof c === "number" ? c : parseInt(String(c).replace("#", ""), 16);
   const hs6 = c => "#" + (typeof c === "number" ? c.toString(16).padStart(6, "0") : String(c).replace("#", ""));
   const mixH = (a, b, k) => hx(avMix(hs6(a), hs6(b), k));
@@ -446,26 +446,32 @@ const OFFICE3D = (() => {
     b.sphere(0.033, 10, 7, L.sleeve, { smooth: true });
     b.cyl(0.027, 0.033, 0.2, 10, L.sleeve, { y: -0.2, smooth: true });
     b.box(0.057, 0.022, 0.06, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.212 });
-    b.sphere(0.032, 10, 7, L.skin, { y: -0.248, sx: 0.85, sy: 1.12, sz: 0.48, smooth: true });
-    b.sphere(0.012, 8, 6, L.skin, { x: -side * 0.025, y: -0.237, z: 0.006, sy: 1.4, rz: -side * 0.4, smooth: true });
+    /* v260: nur Handgelenk am Unterarm, Handfläche wird unabhängig ausgerichtet. */
+    b.sphere(0.021, 10, 7, L.skin, { y: -0.247, sy: 1.65, smooth: true });
+    return b;
+  }
+  function handMesh(L, side) {
+    const b = new G3.MB();
+    b.sphere(0.028, 12, 8, L.skin, { sx: 0.95, sy: 0.42, sz: 1.3, smooth: true });
+    b.sphere(0.011, 10, 7, L.skin, { x: -side * 0.025, z: 0.005, sy: 0.65, sz: 1.4, smooth: true });
     return b;
   }
   /* Kleine Dinge in Figureinheiten (Welt / 1,45): Tasse, Telefon, Maus, Stift */
   const U = v => v / FS;
-  function cupMesh(c) { const b = new G3.MB(); b.cyl(U(0.04), U(0.036), U(0.1), 12, c, { top: 0x5a3a24 }); b.box(U(0.012), U(0.05), U(0.03), c, { x: U(0.045), y: U(0.025) }); return b; }
+  function cupMesh(c) { const b = new G3.MB(); b.cyl(U(0.04), U(0.036), U(0.1), 12, c, { top: 0x5a3a24 }); b.box(U(0.012), U(0.05), U(0.03), c, { x: -U(0.045), y: U(0.025) }); return b; }
   function phoneMesh() { const b = new G3.MB(); b.box(U(0.075), U(0.01), U(0.15), 0x1d1d20, { y: 0 }); b.box(U(0.064), U(0.002), U(0.13), 0x2c4a6a, { y: U(0.01) }); return b; }
   function mouseMesh() { const b = new G3.MB(); b.sphere(U(0.035), 10, 6, 0x2a2a30, { sx: 0.85, sy: 0.45, sz: 1.35, y: U(0.004), smooth: true }); return b; }
-  function penMesh() { const b = new G3.MB(); b.cyl(0.006, 0.006, 0.1, 6, 0x2a4a8a, { y: -0.05 }); return b; }
+  function penMesh() { const b = new G3.MB(); b.cyl(0.0035, 0.0035, 0.09, 8, 0x2a4a8a, { y: -0.045 }); return b; }
 
   /* Tätigkeiten: Gewicht je Rolle, Dauer, Haltung (Vorbeugen) */
   const ACTS = {
-    type:  { w: { disp: 3, fahr: 1, ums: 1.5, zoll: 2.5 }, d: [4, 10], lean: 0.13 },
-    mouse: { w: { disp: 3, fahr: 1.5, ums: 2, zoll: 1.5 }, d: [3, 8], lean: 0.1 },
-    read:  { w: { disp: 1, fahr: 2, ums: 2, zoll: 3 }, d: [5, 10], lean: 0.17 },
-    note:  { w: { disp: 1.5, fahr: 1, ums: 1.5, zoll: 2 }, d: [3, 7], lean: 0.2 },
-    phone: { w: { disp: 2.5, fahr: 2, ums: 1.5, zoll: 1 }, d: [5, 8], lean: -0.03 },
-    cup:   { w: { disp: 1, fahr: 1.5, ums: 1, zoll: 1 }, d: [4.6, 4.6], lean: 0.04 },
-    look:  { w: { disp: 0.6, fahr: 1, ums: 0.8, zoll: 0.6 }, d: [2, 4], lean: -0.02 }
+    type:  { w: { disp: 3, fahr: 1, ums: 1.5, zoll: 2.5 }, d: [10, 18], lean: 0.06 },
+    mouse: { w: { disp: 3, fahr: 1.5, ums: 2, zoll: 1.5 }, d: [7, 13], lean: 0.05 },
+    read:  { w: { disp: 1, fahr: 2, ums: 2, zoll: 3 }, d: [9, 15], lean: 0.075 },
+    note:  { w: { disp: 1.5, fahr: 1, ums: 1.5, zoll: 2 }, d: [8, 13], lean: 0.08 },
+    phone: { w: { disp: 2.5, fahr: 2, ums: 1.5, zoll: 1 }, d: [10, 14], lean: 0.025 },
+    cup:   { w: { disp: 1, fahr: 1.5, ums: 1, zoll: 1 }, d: [8.2, 8.2], lean: 0.04 },
+    look:  { w: { disp: 0.6, fahr: 1, ums: 0.8, zoll: 0.6 }, d: [3, 5], lean: 0.01 }
   };
   function pickAct(F) {
     const keys = Object.keys(ACTS).filter(k => k !== F.act || k === "type");
@@ -490,9 +496,10 @@ const OFFICE3D = (() => {
     const arm = [1, -1].map(side => {
       const ua = part("ua:" + L.sleeve, () => upperMesh(L));
       const fa = R.addChild(ua, R.node(M("fa:" + side + ":" + L.sleeve + ":" + L.skin + ":" + L.outfit, () => foreMesh(L, side)), { y: -ARM_A }));
-      return { side, ua, fa, S: [side * L.sh, 0.75, 0], T: null, H: [0, 0, 0], pole: [side * 0.25, -1, -0.45] };
+      const hand = part("hand:" + side + ":" + L.skin, () => handMesh(L, side), { shadow: true });
+      return { side, ua, fa, hand, S: [side * L.sh, 0.75, 0], T: null, H: [0, 0, 0], pole: [side * 0.25, -1, -0.45] };
     });
-    const pen = R.addChild(arm[1].fa, R.node(M("pen", penMesh), { y: -0.27, z: 0.02, rx: 0.5, visible: false, shadow: false }));
+    const pen = R.addChild(arm[1].hand, R.node(M("pen", penMesh), { y: 0.004, z: 0.025, rx: 0.45, rz: -0.12, visible: false, shadow: false }));
     /* Desk-Gegenstände in Figur-Koordinaten (Welt → Figur: x und z gespiegelt, / 1,45) */
     const loc = (dx, y, dz) => [-dx / FS, y / FS, -(dz - CHAIR_D) / FS];
     const P = {
@@ -510,11 +517,11 @@ const OFFICE3D = (() => {
       blinkAt: 1 + r0() * 4, blinkEnd: 0, talkUntil: 0, attendUntil: 0, lookUntil: 0, nextPeek: 2 + r0() * 6,
       act: null, actT: 0, actDur: 1, held: null, talkN: Math.floor(r0() * 5), lastSay: "", mPos: P.mouse.slice()
     });
-    pickAct(F); F.actT = r0() * F.actDur * 0.8;
+    pickAct(F); F.actT = 0;
     arm.forEach(a => { a.T = rest(F, a.side); a.H = a.T.slice(); });
     return root;
   }
-  const rest = (F, side) => [side * 0.15, 0.538, 0.3];
+  const rest = (F, side) => [side * 0.15, 0.561, 0.32];
 
   /* Rumpf-Punkt (relativ zur Taille) → Figur-Koordinaten mit Vorbeugen, Drehen, Atmen */
   function torsoPt(F, x, y, z) {
@@ -531,122 +538,199 @@ const OFFICE3D = (() => {
     return [cz * v[0] + sz * y1, -sz * v[0] + cz * y1, z1];
   }
   const nrm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
-  /* Zwei-Gelenk-Rechnung: Schulter S, Ziel T, Ellbogen zeigt Richtung pole */
-  function solveArm(a, T) {
+  /* v260: Ellbogen bleiben außen/unten; die Tischplatte und der Kopf sind Sperrbereiche. */
+  const elbowCircle = Array.from({ length: 24 }, (_, i) => [Math.cos(i * PI / 12), Math.sin(i * PI / 12)]);
+  const DESK_LO = [-0.74 / FS, 0.72 / FS, (CHAIR_D - 0.52) / FS], DESK_HI = [1.34 / FS, 0.76 / FS, (CHAIR_D + 0.52) / FS];
+  function segmentBox(A, B, lo, hi, pad) {
+    let t0 = 0, t1 = 1;
+    for (let i = 0; i < 3; i++) {
+      const d = B[i] - A[i];
+      if (Math.abs(d) < 1e-8) { if (A[i] < lo[i] - pad || A[i] > hi[i] + pad) return false; }
+      else {
+        let a = (lo[i] - pad - A[i]) / d, b = (hi[i] + pad - A[i]) / d;
+        if (a > b) [a, b] = [b, a];
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) return false;
+      }
+    }
+    return true;
+  }
+  function pointSegment(P, A, B) {
+    const d = B.map((v, i) => v - A[i]), q = P.map((v, i) => v - A[i]);
+    const k = clamp1(q.reduce((s, v, i) => s + v * d[i], 0) / (d.reduce((s, v) => s + v * v, 0) || 1), 0, 1);
+    return Math.hypot(...P.map((v, i) => v - A[i] - d[i] * k));
+  }
+  function nodePoint(n, p) {
+    const M = G3.trs(G3.ID(), n.x, n.y, n.z, n.rx, n.ry, n.rz, n.sx, n.sy, n.sz);
+    return [0, 1, 2].map(i => M[i] * p[0] + M[i + 4] * p[1] + M[i + 8] * p[2] + M[i + 12]);
+  }
+  function solveArm(a, T, F, dt) {
     const S = a.S, A = ARM_A, B = ARM_B;
-    const dx = T[0] - S[0], dy = T[1] - S[1], dz = T[2] - S[2], d0 = Math.hypot(dx, dy, dz) || 1e-4;
-    const d = clamp1(d0, Math.abs(A - B) + 0.03, A + B - 0.003), u = [dx / d0, dy / d0, dz / d0];
-    const p = a.pole, pd = p[0] * u[0] + p[1] * u[1] + p[2] * u[2], w = nrm([p[0] - pd * u[0], p[1] - pd * u[1], p[2] - pd * u[2]]);
-    const ca = clamp1((A * A + d * d - B * B) / (2 * A * d), -1, 1), sa = Math.sqrt(1 - ca * ca);
-    const E = [S[0] + A * (ca * u[0] + sa * w[0]), S[1] + A * (ca * u[1] + sa * w[1]), S[2] + A * (ca * u[2] + sa * w[2])];
-    const Hh = [S[0] + u[0] * d, S[1] + u[1] * d, S[2] + u[2] * d];
-    const ur = dirRot(nrm([E[0] - S[0], E[1] - S[1], E[2] - S[2]]));
+    /* v260: jedes Handziel bleibt auf seiner Körperseite. */
+    T = T.slice(); T[0] = a.side * Math.max(0.045, a.side * T[0]);
+    const delta = T.map((v, i) => v - S[i]), d0 = Math.hypot(...delta) || 1e-4;
+    const d = clamp1(d0, 0.18, A + B - 0.008), u = delta.map(v => v / d0);
+    const p = a.pole, pd = p.reduce((s, v, i) => s + v * u[i], 0), w = nrm(p.map((v, i) => v - pd * u[i]));
+    const v = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    const ca = clamp1((A * A + d * d - B * B) / (2 * A * d), -1, 1), radius = A * Math.sqrt(1 - ca * ca);
+    const C = S.map((v, i) => v + A * ca * u[i]), Hh = S.map((v, i) => v + d * u[i]);
+    const head = F ? nodePoint(F.head, HC) : null;
+    let E = null, score = Infinity;
+    const candidates = elbowCircle.map(([c, s]) => C.map((q, i) => q + radius * (w[i] * c + v[i] * s)));
+    const limited = [];
+    if (a.E) {
+      const prev = a.E.map((q, i) => q - C[i]), k = prev.reduce((s, q, i) => s + q * u[i], 0), dir = nrm(prev.map((q, i) => q - k * u[i]));
+      const tangent = [u[1] * dir[2] - u[2] * dir[1], u[2] * dir[0] - u[0] * dir[2], u[0] * dir[1] - u[1] * dir[0]];
+      for (const f of [-1, -0.5, 0, 0.5, 1]) {
+        const angle = f * Math.min(0.12, (dt || 1 / 60) * 3.2);
+        limited.push(C.map((q, i) => q + radius * (dir[i] * Math.cos(angle) + tangent[i] * Math.sin(angle))));
+      }
+    }
+    /* Erst nahe Fortsetzungen der letzten Pose prüfen: kein Umspringen der Ellbogenebene. */
+    for (const q of limited.concat(candidates)) {
+      let cost = (q[0] - a.side * 0.25) ** 2 * 4 + (q[1] - (S[1] - 0.15)) ** 2 * 2 + (q[2] - 0.12) ** 2;
+      if (a.E) cost += q.reduce((sum, v, i) => sum + (v - a.E[i]) ** 2, 0) * 0.8;
+      if (a.side * q[0] < 0.15) cost += 100 + (0.15 - a.side * q[0]) * 100;
+      if (q[1] > S[1] + 0.015) cost += 100 + (q[1] - S[1]) * 100;
+      if (segmentBox(S, q, DESK_LO, DESK_HI, 0.03) || segmentBox(q, Hh, DESK_LO, DESK_HI, 0.03)) cost += 1000;
+      if (head && pointSegment(head, q, Hh) < HR * 0.94 + 0.024) cost += 1000;
+      if (limited.length && !limited.includes(q) && score < 100) break;
+      if (cost < score) { score = cost; E = q; }
+    }
+    const ur = dirRot(nrm(E.map((v, i) => v - S[i])));
     a.ua.x = S[0]; a.ua.y = S[1]; a.ua.z = S[2]; a.ua.rx = ur[0]; a.ua.rz = ur[1];
-    const fr = dirRot(nrm(invRxRz(ur[0], ur[1], [Hh[0] - E[0], Hh[1] - E[1], Hh[2] - E[2]])));
-    a.fa.rx = fr[0]; a.fa.rz = fr[1];
-    a.H = Hh;
+    const fr = dirRot(nrm(invRxRz(ur[0], ur[1], Hh.map((v, i) => v - E[i]))));
+    a.fa.rx = fr[0]; a.fa.rz = fr[1]; a.H = Hh; a.E = E;
   }
 
-  /* Ein Bild der Figur: Ziele je Tätigkeit, weich nachgeführt, dazu Atmen, Blinzeln, Blick, Sprechen */
+  /* v260: ruhige Arbeitsphasen, getrennte Handgelenke und durchgehende Greifwege. */
   function animFigure(F, dt, now, pl) {
     F.actT += dt;
     if (F.actT >= F.actDur) pickAct(F);
-    const A = F.act, P = F.P, k = F.actT, t = O.t, [L, Rr] = F.arm;
-    const attend = now < F.attendUntil;
-    const headset = F.L.acc === "headset";
-    let tL = rest(F, 1), tR = rest(F, -1), look = P.mon, lean = ACTS[A].lean, talk = now < F.talkUntil, pen = false;
-    let holdCup = false, holdPhone = false, poleL = [0.25, -1, -0.45], poleR = [-0.25, -1, -0.45];
-    const kbL = [P.kb[0] + 0.085, P.kb[1] + 0.024, P.kb[2] - 0.012], kbR = [P.kb[0] - 0.075, P.kb[1] + 0.024, P.kb[2] - 0.012];
-    const tap = (ph) => -0.007 * Math.pow(Math.max(0, Math.sin(t * F.tF + ph)), 6);
+    const A = F.act, P = F.P, k = F.actT, t = O.t, [L, Rr] = F.arm, reduce = O.reduced;
+    const attend = now < F.attendUntil, headset = F.L.acc === "headset";
+    let tL = rest(F, 1), tR = rest(F, -1), look = P.mon, lean = ACTS[A].lean, talk = now < F.talkUntil;
+    let pen = false, holdCup = false, holdPhone = false;
+    const kbL = [P.kb[0] + 0.085, P.kb[1] + 0.027, P.kb[2] - 0.012];
+    const kbR = [P.kb[0] - 0.075, P.kb[1] + 0.027, P.kb[2] - 0.012];
+    const tap = ph => reduce ? 0 : -0.0025 * Math.pow(Math.max(0, Math.sin(t * F.tF + ph)), 6);
     let tapL = 0, tapR = 0;
+    let cupPose = null, phonePose = null;
     if (A === "type") {
-      tL = [kbL[0] + Math.sin(t * 0.8 + F.tP[0]) * 0.02, kbL[1], kbL[2]];
-      tR = [kbR[0] + Math.sin(t * 0.7 + F.tP[1]) * 0.02, kbR[1], kbR[2]];
+      const sway = reduce ? 0 : 0.005;
+      tL = [kbL[0] + Math.sin(t * 0.5 + F.tP[0]) * sway, kbL[1], kbL[2]];
+      tR = [kbR[0] + Math.sin(t * 0.47 + F.tP[1]) * sway, kbR[1], kbR[2]];
       tapL = tap(F.tP[0]); tapR = tap(F.tP[1] + 1.7);
-      if (Math.sin(t * 0.37 + F.bP) > 0.85) look = P.kb;
-    } else if (A === "mouse" || ((A === "phone") && headset)) {
-      const m = [P.mouse[0] + Math.sin(t * 1.3 + F.tP[0]) * 0.022 + Math.sin(t * 3.1) * 0.006, P.mouse[1], P.mouse[2] + Math.cos(t * 0.9 + F.tP[1]) * 0.018];
-      F.mPos = m;
-      tR = [m[0], m[1] + 0.032, m[2] - 0.005];
-      tL = A === "phone" ? rest(F, 1) : [kbL[0] + 0.03, kbL[1] + 0.004, kbL[2] + 0.02];
-      if (A === "phone") { talk = true; look = [0.6, 0.85, 1.2]; }
+    } else if (A === "mouse" || (A === "phone" && headset)) {
+      const scale = reduce ? 0 : 1;
+      const m = [P.mouse[0] + Math.sin(t * 0.6 + F.tP[0]) * 0.012 * scale, P.mouse[1], P.mouse[2] + Math.cos(t * 0.45 + F.tP[1]) * 0.009 * scale];
+      F.mPos = m; tR = [m[0], m[1] + 0.028, m[2] - 0.004]; tL = kbL;
+      if (A === "phone") talk = true;
     } else if (A === "read") {
-      tL = [P.papers[0] - 0.02, P.papers[1] + 0.02, P.papers[2] + 0.04];
-      tR = [P.papers[0] - 0.13, P.papers[1] + 0.02, P.papers[2] - 0.06 + Math.sin(k * 0.6) * 0.02];
-      look = [P.papers[0] - 0.05, P.papers[1], P.papers[2] - 0.02 + Math.sin(k * 0.5) * 0.05];
+      /* Linkes Blatt mit linker Hand; rechte Hand bleibt an ihrer Tastaturhälfte. */
+      tL = [P.papers[0] - 0.025, P.papers[1] + 0.032, P.papers[2] - 0.025];
+      tR = kbR; look = [P.papers[0], P.papers[1], P.papers[2]];
     } else if (A === "note") {
       pen = true;
-      const line = Math.floor(k * 0.45) % 5;
-      tR = [P.note[0] + 0.03 - ((k * 0.45) % 1) * 0.06 + Math.sin(t * 9) * 0.004, P.note[1] + 0.028 + Math.max(0, Math.sin(t * 15)) * 0.003, P.note[2] + 0.05 - line * 0.02];
-      tL = [P.note[0] + 0.13, P.note[1] + 0.02, P.note[2] + 0.02];
-      look = [P.note[0], P.note[1], P.note[2]];
+      const stroke = reduce ? 0 : Math.sin(k * 2.4) * 0.014, line = reduce ? 0 : Math.sin(k * 0.45) * 0.025;
+      tR = [P.note[0] + stroke, P.note[1] + 0.038, P.note[2] + line];
+      tL = kbL; look = [P.note[0], P.note[1], P.note[2]];
     } else if (A === "phone") {
-      const home = [P.phone[0] + 0.005, P.phone[1] + 0.03, P.phone[2]], hp = torsoPt(F, 0, 0.53, 0.02), ear = [hp[0] + 0.105, hp[1] - 0.02, hp[2] + 0.04];
-      const e = F.actDur;
-      poleL = [0.9, -0.55, 0.15];
-      if (k < 0.8) tL = home;
-      else if (k < 1.6) { tL = lerp3(home, ear, ease((k - 0.8) / 0.8)); holdPhone = true; }
-      else if (k < e - 1.6) { tL = ear; holdPhone = true; talk = true; look = [0.7, 0.9, 1.3]; }
-      else if (k < e - 0.8) { tL = lerp3(ear, home, ease((k - (e - 1.6)) / 0.8)); holdPhone = true; }
-      else tL = rest(F, 1);
-      tR = [P.mouse[0], P.mouse[1] + 0.032, P.mouse[2] - 0.005];
+      talk = k > 2.2 && k < F.actDur - 2.2;
+      tR = kbR;
     } else if (A === "cup") {
-      const grab = [P.cup[0] + 0.03, P.cup[1] + 0.045, P.cup[2] - 0.035], hp = torsoPt(F, 0, 0.53, 0.02), mouthP = [hp[0] - 0.03, hp[1] - 0.075, hp[2] + 0.14];
-      if (k < 0.9) tR = lerp3(rest(F, -1), grab, ease(k / 0.9));
-      else if (k < 1.7) { tR = lerp3(grab, mouthP, ease((k - 0.9) / 0.8)); holdCup = true; }
-      else if (k < 3.0) { tR = mouthP; holdCup = true; look = [0, 1.0, 1.2]; }
-      else if (k < 3.8) { tR = lerp3(mouthP, grab, ease((k - 3.0) / 0.8)); holdCup = true; }
-      else tR = lerp3(grab, rest(F, -1), ease((k - 3.8) / 0.8));
+      tL = kbL; look = [0, 1, 1.4];
     } else if (A === "look") {
-      look = [Math.sin(F.bP * 3) * 0.6, 0.95 + Math.sin(F.bP) * 0.1, 1.1];
-      lean = -0.03;
+      look = [Math.sin(F.bP) * 0.3, 0.98, 1.3]; lean = 0.01;
     }
-    /* Spieler in der Nähe: gelegentlich aufschauen; angesprochen: zuwenden */
+    const carrying = (A === "phone" && !headset && k > 1 && k < F.actDur - 0.8) || (A === "cup" && k > 1 && k < F.actDur - 0.8);
     let toPl = false;
-    if (pl.d < 3.4 && pl.front) {
-      if (t > F.nextPeek) { F.nextPeek = t + 6 + F.rnd() * 10; if (F.rnd() < 0.45 && !holdCup) F.lookUntil = now + 1500 + F.rnd() * 1300; }
-      if (now < F.lookUntil || attend) toPl = true;
-    } else if (attend && pl.front) toPl = true;
-    if (attend && !holdCup && !holdPhone && A !== "phone") { tL = rest(F, 1); tR = rest(F, -1); lean = 0; pen = false; }
-    /* Atmen, Rumpf */
-    const kk = 1 - Math.exp(-dt * 3);
-    F.br = 1 + Math.sin(t * F.bF + F.bP) * 0.009;
+    if (pl.d < 3.4 && pl.front && !carrying) {
+      if (t > F.nextPeek) { F.nextPeek = t + 10 + F.rnd() * 12; if (F.rnd() < 0.35) F.lookUntil = now + 1200 + F.rnd() * 900; }
+      toPl = now < F.lookUntil || attend;
+    } else if (attend && pl.front && !carrying) toPl = true;
+    if (attend && !carrying) { tL = kbL; tR = kbR; lean = 0.025; pen = false; }
+    const kk = 1 - Math.exp(-dt * 2.8);
+    F.br = 1 + (reduce ? 0 : Math.sin(t * F.bF * 0.7 + F.bP) * 0.003);
     F.lean += (lean - F.lean) * kk;
-    let wantYaw, wantPitch;
     const hp = torsoPt(F, 0, 0.53, 0.02);
-    if (toPl) { const dx = pl.l[0] - hp[0], dz = pl.l[2] - hp[2]; wantYaw = Math.atan2(dx, dz); wantPitch = Math.atan2(hp[1] - pl.l[1], Math.hypot(dx, dz)); }
-    else {
-      if (t > F.gazeT) { F.gazeT = t + 0.7 + F.rnd() * 1.6; F.gaze = [(F.rnd() - 0.5) * 0.12, (F.rnd() - 0.5) * 0.06]; }
+    let wantYaw, wantPitch;
+    if (toPl) {
+      const dx = pl.l[0] - hp[0], dz = pl.l[2] - hp[2]; wantYaw = Math.atan2(dx, dz); wantPitch = Math.atan2(hp[1] - pl.l[1], Math.hypot(dx, dz));
+    } else {
+      if (t > F.gazeT) { F.gazeT = t + 2 + F.rnd() * 3; F.gaze = reduce ? [0, 0] : [(F.rnd() - 0.5) * 0.045, (F.rnd() - 0.5) * 0.025]; }
       const dx = look[0] - hp[0], dz = look[2] - hp[2];
       wantYaw = Math.atan2(dx, dz) + F.gaze[0]; wantPitch = Math.atan2(hp[1] - look[1], Math.hypot(dx, dz)) + F.gaze[1];
     }
-    wantYaw = clamp1(wantYaw, -1.2, 1.2); wantPitch = clamp1(wantPitch, -0.35, 0.7);
-    const kh = 1 - Math.exp(-dt * (toPl ? 5 : 3.5));
+    if (A === "phone" && !headset) { wantYaw = 0.04; wantPitch = 0.04; }
+    if (A === "cup") { wantYaw = 0; wantPitch = 0.035; }
+    wantYaw = clamp1(wantYaw, -0.65, 0.65); wantPitch = clamp1(wantPitch, -0.14, 0.3);
+    const kh = 1 - Math.exp(-dt * 2.8);
     F.yaw = angTo(F.yaw, wantYaw, kh); F.pitch += (wantPitch - F.pitch) * kh;
-    F.tw += (clamp1(F.yaw * 0.22, -0.25, 0.25) - F.tw) * kk;
-    const T = F.torso; T.rx = F.lean; T.ry = F.tw; T.sy = F.br; T.sz = 1 + (F.br - 1) * 1.4;
+    F.tw += (clamp1(F.yaw * 0.10, -0.065, 0.065) - F.tw) * kk;
+    const T = F.torso; T.rx = F.lean; T.ry = F.tw; T.sy = F.br; T.sz = 1 + (F.br - 1) * 0.5;
     const np = torsoPt(F, 0, 0.4, 0);
     F.head.x = np[0]; F.head.y = np[1]; F.head.z = np[2];
-    F.head.ry = F.yaw; F.head.rx = F.pitch; F.head.rz = Math.sin(t * 0.31 + F.bP) * 0.025;
-    /* Hände weich ans Ziel, dann Arm-Rechnung */
-    const kf = 1 - Math.exp(-dt * 7);
-    [[L, tL, poleL, tapL], [Rr, tR, poleR, tapR]].forEach(([a, tg, pole, tp]) => {
+    F.head.ry = F.yaw; F.head.rx = F.pitch; F.head.rz = 0;
+
+    /* v260: erst greifen, dann heben, halten, senken, loslassen – Gegenstand bleibt an derselben Hand. */
+    function propPhase(home, raised, homeGrip, raisedGrip) {
+      const end = F.actDur;
+      let lift = 0, grip = 0;
+      if (k >= 1 && k < 2.3) { lift = ease((k - 1) / 1.3); grip = ease((k - 1) / 0.18); }
+      else if (k >= 2.3 && k < end - 2.3) { lift = 1; grip = 1; }
+      else if (k >= end - 2.3 && k < end - 1) { lift = 1 - ease((k - (end - 2.3)) / 1.3); grip = 1; }
+      else if (k >= end - 1) grip = 1 - ease((k - (end - 1)) / 0.25);
+      const pos = lerp3(home, raised, lift), offset = lerp3(homeGrip, raisedGrip, lift);
+      pos[1] += Math.sin(lift * PI) * 0.025;
+      return { pos, lift, grip, hand: pos.map((v, i) => v + offset[i]) };
+    }
+    if (A === "phone" && !headset) {
+      const ear = nodePoint(F.head, [0.132, 0.101, 0.002]);
+      phonePose = propPhase(P.phone, ear, [0, 0.032, -0.015], [0.024, -0.025, 0.008]);
+      tL = k < 1 ? lerp3(kbL, phonePose.hand, ease(k)) : k > F.actDur - 0.65 ? lerp3(phonePose.hand, kbL, ease((k - (F.actDur - 0.65)) / 0.65)) : phonePose.hand;
+      holdPhone = phonePose.grip > 0;
+    }
+    if (A === "cup") {
+      const sip = nodePoint(F.head, [-0.048, 0.018, 0.14]);
+      cupPose = propPhase(P.cup, sip, [-0.037, 0.044, -0.018], [-0.047, 0.045, -0.006]);
+      tR = k < 1 ? lerp3(kbR, cupPose.hand, ease(k)) : k > F.actDur - 0.65 ? lerp3(cupPose.hand, kbR, ease((k - (F.actDur - 0.65)) / 0.65)) : cupPose.hand;
+      holdCup = cupPose.grip > 0;
+    }
+    [[L, tL, tapL], [Rr, tR, tapR]].forEach(([a, target, tap]) => {
       a.S = torsoPt(F, a.side * F.L.sh, 0.33, 0);
-      a.pole = pole;
-      a.T = lerp3(a.T, tg, kf);
-      solveArm(a, tp ? [a.T[0], a.T[1] + tp, a.T[2]] : a.T);       /* Tastenanschlag direkt, ohne Nachziehen */
+      a.pole = [a.side * 0.28, -1, 0.12];
+      /* Kontaktflächen nicht unter der Tischplatte; kein Wechsel auf die andere Körperseite. */
+      const goal = target.slice(); goal[0] = a.side * Math.max(0.045, a.side * goal[0]);
+      if (goal[2] > DESK_LO[2] - 0.03) goal[1] = Math.max(DESK_HI[1] + 0.033, goal[1]);
+      /* v260: begrenzte Geschwindigkeit und Beschleunigung statt ruckartigem Zielwechsel. */
+      const desired = goal.map((v, i) => (v - a.T[i]) * 6), speed = Math.hypot(...desired), maxSpeed = 0.48;
+      if (speed > maxSpeed) desired.forEach((v, i) => { desired[i] = v * maxSpeed / speed; });
+      a.V = lerp3(a.V || [0, 0, 0], desired, 1 - Math.exp(-dt * 12));
+      a.T = a.T.map((v, i) => v + a.V[i] * dt);
+      solveArm(a, [a.T[0], a.T[1] + tap, a.T[2]], F, dt);
+      a.hand.x = a.H[0]; a.hand.y = a.H[1]; a.hand.z = a.H[2];
+      const raised = a === L && phonePose ? phonePose.lift : a === Rr && cupPose ? cupPose.lift : 0;
+      a.hand.rx = -0.04 - raised * (a === L && phonePose ? 1.28 : 0.55);
+      a.hand.ry = a.side * 0.08 - a.side * raised * (a === L && phonePose ? 0.35 : 0.85);
+      a.hand.rz = a.side * raised * 0.08;
+      if (pen && a === Rr) { a.hand.rx = -0.18; a.hand.rz = -0.16; }
     });
-    /* Gegenstände in der Hand */
-    if (holdCup) { const h = Rr.H; F.cup.x = h[0] - 0.02; F.cup.y = h[1] - 0.045; F.cup.z = h[2] + 0.03; F.cup.rx = k > 1.7 && k < 3.0 ? -0.5 : -0.1; }
-    else { F.cup.x = P.cup[0]; F.cup.y = P.cup[1]; F.cup.z = P.cup[2]; F.cup.rx = 0; }
-    if (holdPhone) { const h = L.H; F.phone.x = h[0] - 0.01; F.phone.y = h[1] - 0.04; F.phone.z = h[2]; F.phone.rx = -1.2; F.phone.rz = 0.3; }
-    else { F.phone.x = P.phone[0]; F.phone.y = P.phone[1]; F.phone.z = P.phone[2]; F.phone.rx = 0; F.phone.rz = 0; }
-    if (A === "mouse" || (A === "phone" && !holdPhone)) { F.mouse.x = Rr.H[0]; F.mouse.z = Rr.H[2] + 0.005; }
+    function prop(node, home, pose, hand, target, angles) {
+      const p = pose ? pose.pos.map((v, i) => v + (hand.H[i] - target[i]) * pose.grip) : home;
+      node.x = p[0]; node.y = p[1]; node.z = p[2];
+      node.rx = pose ? angles[0] * pose.lift : 0;
+      node.ry = pose ? angles[1] * pose.lift : 0;
+      node.rz = pose ? angles[2] * pose.lift : 0;
+    }
+    prop(F.phone, P.phone, phonePose, L, tL, [-PI / 2, PI / 2, 0]);
+    prop(F.cup, P.cup, cupPose, Rr, tR, [-0.16, 0, 0]);
+    F.held = holdPhone ? "phone" : holdCup ? "cup" : null;
+    if (A === "mouse" || (A === "phone" && headset)) { F.mouse.x = Rr.H[0]; F.mouse.z = Rr.H[2] + 0.004; }
+    else { F.mouse.x = P.mouse[0]; F.mouse.z = P.mouse[2]; }
     F.pen.visible = pen;
-    /* Blinzeln, Sprechen */
-    if (t > F.blinkAt) { F.blinkEnd = t + 0.12; F.blinkAt = t + 2.2 + F.rnd() * 4.5; }
+    if (t > F.blinkAt) { F.blinkEnd = t + 0.12; F.blinkAt = t + 3 + F.rnd() * 4.5; }
     F.lids.visible = t < F.blinkEnd;
-    F.mouth.sy = talk ? 1 + 1.8 * Math.abs(Math.sin(t * 11 + F.bP)) * (0.5 + 0.5 * Math.abs(Math.sin(t * 3.3))) : 1;
+    F.mouth.sy = talk && !reduce ? 1 + 0.8 * Math.abs(Math.sin(t * 8 + F.bP)) : 1;
   }
 
   /* --------------------------- Wandbilder ------------------------------ */
