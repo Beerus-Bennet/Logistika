@@ -2923,7 +2923,7 @@ function laterStageFor(mode, ck, w) {
   const t = VEHICLES.filter(t => !t.special && !t.car && t.mode === mode && canCarry(t, ck, w, null)).sort((a, b) => a.stage - b.stage)[0];
   return t ? Math.max(t.stage, firstStageWith(mode)) : null;
 }
-const buyHint = t => t ? " · im Markt: " + t.name + " ab " + money(t.price) : "";
+const buyHint = t => t ? " – im Markt ab " + money(t.price) + ": " + t.name : "";
 function missingReason(o, variants) {
   if (!variants.length) return "keine Route mit deinen Verkehrsträgern";
   if (!S.fleet.length) return "noch kein Fahrzeug";
@@ -2944,12 +2944,19 @@ function missingReason(o, variants) {
   const buy = cheapestFor(l.mode, o.cargo, o.weight);
   if (!buy) { const st = laterStageFor(l.mode, o.cargo, o.weight); return "🔒 passendes Fahrzeug" + (st ? " erst ab Etappe " + st : " gibt es noch nicht"); }
   const sameMode = fleetT.filter(x => x.t.mode === l.mode);
-  if (!sameMode.length) return mi.icon + " " + mi.name + " nötig – dafür fehlt dir ein Fahrzeug" + buyHint(buy);
+  if (!sameMode.length) return mi.icon + " Für " + mi.name + " fehlt dir noch ein passendes Fahrzeug" + buyHint(buy);
   if (cg.req.length && !sameMode.some(x => meetsReq(x.t, o.cargo))) return "braucht " + cg.req.map(flagName).join(" + ") + buyHint(buy);
   const maxCap = Math.max(...sameMode.filter(x => meetsReq(x.t, o.cargo)).map(x => x.t.cap));
   if (maxCap < o.weight) return "braucht mindestens " + kgf(o.weight) + " Nutzlast – dein größtes passendes Fahrzeug schafft " + kgf(maxCap) + buyHint(buy);
   return "Reichweite reicht nicht (" + kmf(l.maxHop) + " am Stück)" + buyHint(buy);
 }
+/* v249: Absender-Monogramm – Initialen der Firma (keine erfundenen Personen), Farbe fest aus dem Namen */
+const MONO_COLS = ["#2f6fed", "#1fa6c4", "#2e9a63", "#c98a00", "#d2556a", "#7c5cff", "#3d6b8f", "#b0603a"];
+function orderMono(name) {
+  const w = String(name || "").replace(/[„“"'()]/g, " ").split(/[\s&+\-–·.,/]+/).filter(x => /^[A-Za-zÄÖÜäöü0-9]/.test(x) && !/^(GmbH|AG|KG|SE|eG|e\.V|mbH|Co|und|der|die|das|am|an|im|für|von)$/i.test(x));
+  return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || "?").slice(0, 2)).toUpperCase();
+}
+function orderMonoColor(name) { const h = [...String(name || "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); return MONO_COLS[h % MONO_COLS.length]; }
 function previewHTML(p) {
   if (!p.ok) return `<div class="vhintrow"><span class="vhint none">🚫 ${esc(p.why)}</span></div>`;
   const t = vType(p.veh.type);
@@ -3071,7 +3078,16 @@ function renderOrders() {
     const offer = !o.acc && !o.farm && !o.rival && o.expire && o.expire - S.time < 1440 * 2 ? `<span>Angebot gültig noch ${dur(Math.max(1, o.expire - S.time))}</span>` : "";
     const kindCls = tx ? (o.rival ? "tender" : o.contract ? "contract" : o.series ? "project" : tx.tier >= 2 ? "reg" : tx.tier === 1 ? "known" : "new") : "";
     const cost = p.ok && isFinite(p.profit) ? o.pay - p.profit : null;
-    return `<div class="card order${tx ? " v245" : ""}${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${o.intro ? " intro" : ""}${o.series ? " series" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
+    /* v249: ruhigere, sachliche Karte – Kopf · Absender · Anfrage · Route mit Eckdaten · Mehrwert · Details. Inhalte unverändert aus orderStory. */
+    const facts = [
+      ["Ladung", tx ? tx.menge : kgf(o.weight)],
+      ["Strecke", kmf(o.refDist)],
+      [o.acc ? "Status" : o.farm ? "Angebot" : "Liefertermin", o.acc ? window_ : o.farm ? "noch " + dur(Math.max(1, o.expire - S.time)) : stamp(o.deadline), tight ? "o-tight" : ""],
+      ["Fahrzeit", "ab " + dur(o.refTime)]
+    ];
+    if (offer) facts.push(["Angebot gültig", "noch " + dur(Math.max(1, o.expire - S.time))]);
+    if (o.rival) facts.push(["Vergabe", "in " + dur(Math.max(1, o.rival.at - S.time))]);
+    return `<div class="card order v249${tx ? " v245" : ""}${o.tut ? " tut" : ""}${o.tutNext ? " tutnext" : ""}${o.intro ? " intro" : ""}${o.series ? " series" : ""}${flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
       ${o.tut ? `<div class="tutribbon">⭐ Linas Übungsauftrag</div>` : ""}
       ${o.tutNext ? `<div class="tutribbon">⭐ Anschlussauftrag ab ${esc(N[o.from].short)}</div>` : ""}
       <div class="card-top">
@@ -3080,18 +3096,19 @@ function renderOrders() {
         <span class="pay">${money(o.pay)}${net}</span>
         ${o.tut || o.tutNext ? "" : rejectBtnHTML(o.id)}
       </div>
-      ${tx ? `<div class="o-title">${esc(tx.title)}</div>
-      <div class="o-cust"><b>${esc(o.shipper)}</b><span class="o-kind ${kindCls}">${esc(tx.kind)}</span>${tx.p && tx.p.br ? `<small>${esc(tx.p.br)}</small>` : ""}</div>
-      <div class="o-quote">${esc(tx.req)}</div>`
-      : `<div class="ship">${esc(o.shipper)}</div><div class="desc">${esc(o.desc)}</div>`}
+      ${tx ? `<div class="o-title">${esc(tx.title)}</div>` : ""}
+      <div class="o-sender">
+        <span class="o-mono" style="--mc:${orderMonoColor(o.shipper)}" aria-hidden="true">${esc(orderMono(o.shipper))}</span>
+        <span class="o-who"><b>${esc(o.shipper)}</b>${tx && tx.p && tx.p.br ? `<small>${esc(tx.p.br)}</small>` : ""}</span>
+        ${tx ? `<span class="o-kind ${kindCls}">${esc(tx.kind)}</span>` : ""}
+      </div>
+      <p class="o-quote">${esc(tx ? tx.req : o.desc)}</p>
       ${o.farm && typeof farmOrderHTML === "function" ? farmOrderHTML(o) : ""}
       ${typeof orderExtraHTML === "function" ? orderExtraHTML(o) : ""}
       <div class="o-trans">
-        <div class="meta route"><span>${esc(N[o.from].short)} → ${esc(oDrop(o).a || N[o.to].short)}</span>${modesIc ? `<span class="o-modes">${modesIc}</span>` : ""}</div>
-        <div class="meta small">
-          ${o.jewel ? `<span class="jewelonly">💎 nur Wertkurier</span>` : ""}<span>${esc(tx ? tx.menge : kgf(o.weight))}</span><span>${kmf(o.refDist)}</span>
-          <span class="${tight ? "o-tight" : ""}">${window_}</span><span>Fahrzeit ab ${dur(o.refTime)}</span>${offer}
-        </div>
+        <div class="o-route"><span>${esc(N[o.from].short)}</span><i aria-hidden="true">→</i><span>${esc(oDrop(o).a || N[o.to].short)}</span>${modesIc ? `<span class="o-modes">${modesIc}</span>` : ""}</div>
+        <dl class="o-facts">${facts.map(([k, v, c]) => `<div><dt>${k}</dt><dd${c ? ` class="${c}"` : ""}>${esc(v)}</dd></div>`).join("")}</dl>
+        ${o.jewel ? `<div class="o-note"><span class="jewelonly">💎 nur Wertkurier</span></div>` : ""}
       </div>
       ${tx && typeof orderSpecialHTML === "function" ? orderSpecialHTML(o, tx) : ""}
       <details class="o-more"><summary>Details</summary>
@@ -3102,7 +3119,7 @@ function renderOrders() {
           ${tx.cap ? `<dt>Kapazität</dt><dd>${esc(tx.cap)}</dd>` : ""}
           <dt>Zeitfenster</dt><dd>${o.acc ? esc(window_) : "Lieferung bis " + stamp(o.deadline) + " · noch " + dur(Math.max(1, rest))}${o.rival ? " · Vergabe in " + dur(Math.max(1, o.rival.at - S.time)) : o.expire && !o.farm && !o.acc ? " · Angebot bis " + stamp(o.expire) : ""}</dd>
           <dt>Kunde</dt><dd>${esc(o.shipper)}${tx.p && tx.p.br ? " · " + esc(tx.p.br) : ""}${tx.rel ? " · " + esc(tx.rel) : ""}</dd>
-          ${tx.next ? `<dt>Bedeutung</dt><dd>${esc(tx.next)}</dd>` : ""}
+          ${tx.next ? `<dt>Beziehung</dt><dd>${esc(tx.next)}</dd>` : ""}
         </dl>` : ""}
         <div class="meta addr"><span>Abholung: ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>Zustellung: ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       </details>

@@ -1,6 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
 
+
+## v249 – Auftragskarten: seriöser, persönlicher, klarer gegliedert
+- Absenderzeile mit Firmen-Monogramm (Initialen, feste Farbe je Firma), Branche und Beziehungsstatus.
+- Anfrage als ruhiges Zitat (drei Zeilen, ganzer Text in den Details).
+- Route groß, darunter Eckdaten im Raster: Ladung, Strecke, Liefertermin, Fahrzeit, ggf. Angebot gültig / Vergabe.
+- Hinweiszeilen (Verhandlung, Vertrag, Mission) zurückhaltender mit Akzentkante.
+- Texte: einige Kundenanfragen freundlicher und verbindlicher formuliert; Hinweis bei fehlendem Fahrzeug und Verhandlungshinweis klarer.
+- Keine Änderung an Logik, Preisen oder Abläufen.
 ## v248 – Fahrzeuge als 3D-Bildchen im Hof-Stil
 - Neu `vehmodels.js`: Modelle für alle 48 Marktfahrzeuge plus Unimog-Holzlaster und goldenen T1, gebaut mit FM.MB wie die Hofmodelle.
 - Gerendert über dasselbe Bildchen-System wie Silo- und Ladenwaren (`thumbSpan`/`thumbOf`): Sonne, weiche Schatten, Kontur, Kontaktschatten.

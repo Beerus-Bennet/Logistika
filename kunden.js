@@ -295,22 +295,22 @@ const REQ_MAIN = {
   konzern: [
     "{Zweck} suchen wir einen zuverlässigen Logistikpartner, der {menge} {von} {nach} transportiert und die Lieferung im vereinbarten Zeitfenster abwickelt.",
     "Zu vergeben ist ein Transport {von} {nach}: {menge}, {zweck}. Für uns zählen Termintreue und eine saubere Abwicklung.",
-    "Wir suchen einen Partner, der {menge} {zweck} {von} {nach} übernimmt. Bitte prüfen Sie Ihre Kapazitäten."
+    "Wir suchen einen Partner, der {menge} {zweck} {von} {nach} übernimmt. Bitte prüfen Sie, ob Sie die Kapazität haben."
   ],
   mittel: [
-    "Können Sie für uns {menge} {von} {nach} fahren? Die Ware ist {zweck} bestimmt.",
+    "Können Sie für uns {menge} {von} {nach} transportieren? Die Ware ist {zweck} bestimmt.",
     "Wir suchen eine verlässliche Spedition, die {menge} {von} {nach} bringt. Die Ware ist {zweck} bestimmt.",
     "{Zweck} brauchen wir einen Transport: {menge} {von} {nach}. Können Sie das übernehmen?"
   ],
   familie: [
-    "Wir sind ein kleiner Betrieb und auf pünktliche Lieferungen angewiesen. Bitte bringen Sie {menge} {zweck} {von} {nach}. Vielen Dank schon jetzt.",
+    "Als kleiner Betrieb sind wir auf pünktliche Lieferungen angewiesen. Bitte bringen Sie {menge} {zweck} {von} {nach} – vielen Dank im Voraus.",
     "Könnten Sie uns unterstützen? Wir brauchen jemanden, der {menge} {zweck} {von} {nach} bringt.",
     "{Zweck} suchen wir einen sorgfältigen Partner, der {menge} {von} {nach} bringt."
   ],
   hafen: [
-    "Zu übernehmen {in}: {menge}, Ziel {ziel}, {zweck}. Wer kann die Kapazität stellen?",
-    "Kurz und klar: {menge} {von} {nach}, {zweck}. Wir brauchen eine verlässliche Zusage.",
-    "{Zweck} suchen wir Transportkapazität: {menge} {von} {nach}."
+    "{in} stehen {menge} zur Übernahme bereit, Ziel {ziel}, {zweck}. Können Sie die Kapazität stellen?",
+    "Wir benötigen Transportkapazität für {menge} {von} {nach}, {zweck}. Über eine verbindliche Zusage würden wir uns freuen.",
+    "{Zweck} suchen wir Transportkapazität für {menge} {von} {nach}."
   ],
   klinik: [
     "Wir benötigen einen zuverlässigen Kurier, der {menge} {zweck} {von} {nach} bringt. Die Übergabe erfolgt nur an berechtigtes Personal.",
