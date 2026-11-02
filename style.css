@@ -3888,3 +3888,58 @@ input::selection,textarea::selection{background:rgba(70,120,220,.35)}
 .np-head{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:19px;line-height:1.15;margin:4px 0 2px;color:#161616}
 .np-lead{font-size:11px;font-weight:700;color:#5a5a5a;margin-bottom:3px}
 .np-body{margin:0;font-family:Georgia,"Cormorant Garamond",serif;font-size:13px;line-height:1.5;color:#2b2b2b}
+
+/* ---- v254: Büro betreten – Ich-Perspektive (officefp.js) ---- */
+.planpeek .planenter{position:absolute;left:7px;bottom:7px;background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:99px;
+  padding:2px 10px;font-size:11px;font-weight:800;line-height:1.5;box-shadow:1px 1px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+.planpeek .planenter:active{transform:translate(1px,1px);box-shadow:none}
+body.office3d #toasts,body.office3d #linaHint,body.office3d #tutor,body.office3d #spot{display:none!important}
+#ofp{position:fixed;inset:0;z-index:9000;background:#0d1b2a;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;transition:opacity .3s}
+#ofp.out{opacity:0;pointer-events:none}
+#ofp canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.ofp-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 0;pointer-events:none}
+.ofp-plate{background:rgba(255,255,255,.94);border:var(--line);border-radius:14px;padding:6px 12px;box-shadow:var(--shadow);line-height:1.15;min-width:0}
+.ofp-plate b{display:block;font-size:15px;font-weight:900}
+.ofp-plate small{display:block;font-size:11.5px;font-weight:700;opacity:.65}
+.ofp-x{pointer-events:auto;flex:none;background:#fff;border:var(--line);border-radius:14px;padding:8px 12px;font-size:13px;font-weight:900;box-shadow:var(--shadow);cursor:pointer}
+.ofp-x:active{transform:translate(2px,2px);box-shadow:none}
+.ofp-floors{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;flex-direction:column;gap:6px}
+.ofp-floors:empty{display:none}
+.ofp-floors button{background:#fff;border:2.5px solid var(--ink);border-radius:10px;padding:5px 9px;font-size:12px;font-weight:900;box-shadow:2px 2px 0 var(--ink)}
+.ofp-floors button.on{background:var(--blue);color:#fff}
+.ofp-joy{position:absolute;left:calc(env(safe-area-inset-left,0px) + 22px);bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:124px;height:124px;border-radius:50%;
+  background:rgba(255,255,255,.22);border:3px solid rgba(13,27,42,.55);touch-action:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.ofp-joy i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:#fff;border:var(--line);box-shadow:2px 2px 0 var(--ink);pointer-events:none}
+.ofp-say{position:absolute;left:0;top:0;transform:translate(-50%,-100%) scale(.9);opacity:0;pointer-events:none;max-width:220px;background:#fff;border:var(--line);
+  border-radius:14px;padding:7px 11px;box-shadow:var(--shadow);transition:opacity .2s,transform .2s;line-height:1.25}
+.ofp-say.on{opacity:1;transform:translate(-50%,-110%) scale(1)}
+.ofp-say b{display:block;font-size:13px;font-weight:900}
+.ofp-say small{display:block;font-size:10.5px;font-weight:800;opacity:.55;text-transform:uppercase;letter-spacing:.05em}
+.ofp-say span{display:block;font-size:12.5px;margin-top:3px}
+.ofp-hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 168px);transform:translateX(-50%);background:rgba(13,27,42,.82);color:#fff;
+  font-size:12px;font-weight:800;padding:6px 12px;border-radius:99px;white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none}
+.ofp-hint.on{opacity:1}
+#officeBoot{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(180deg,#6fb0ec,#bfe0f5);transition:opacity .45s ease}
+#officeBoot.out{opacity:0;pointer-events:none}
+#officeBoot .fbBox{position:relative;overflow:hidden;width:min(100%,330px);box-sizing:border-box;text-align:center;padding:16px 18px 14px;background:#fff;border:var(--line);border-radius:20px;box-shadow:var(--shadow)}
+#officeBoot .fbBox>*:not(.fbBg){position:relative}
+#officeBoot .fbBg{position:absolute;left:0;right:0;bottom:0;width:100%;height:100%;pointer-events:none}
+#officeBoot .fbTitle{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
+#officeBoot .fbPct{height:30px;overflow:hidden;margin:2px 0 8px;font-size:26px;font-weight:900;line-height:30px;color:var(--ink)}
+#officeBoot .fbReel{will-change:transform}
+#officeBoot .fbReel div{height:30px}
+#officeBoot .fbTrack{position:relative;height:62px;margin:0 0 10px}
+#officeBoot .fbTrees{position:absolute;left:0;right:0;bottom:12px;height:40px}
+#officeBoot .fbTree{position:absolute;bottom:0;transform:scale(0);transform-origin:50% 100%}
+#officeBoot .fbTree.on{transform:scale(1)}
+#officeBoot .fbTree svg{display:block}
+#officeBoot .fbTruck{position:absolute;left:0;bottom:9px;width:54px;height:29px;will-change:transform}
+#officeBoot .fbTruck>div{animation:fbBump .32s ease-in-out infinite alternate}
+#officeBoot .fbRoad{position:absolute;left:0;right:0;bottom:0;height:18px;overflow:hidden;box-sizing:border-box;border:2px solid var(--ink);border-radius:10px;background:#c9a36f}
+#officeBoot .fbRoad::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:0;border-top:2px dashed rgba(13,27,42,.28);transform:translateY(-1px)}
+#officeBoot .fbFill{position:absolute;inset:0;display:block;background:linear-gradient(180deg,#28A745 0 62%,#1E7E34 62%);will-change:transform;transform:translateX(-100%)}
+#officeBoot .fbFill::after{content:"";position:absolute;left:0;right:0;top:3px;height:2px;background:rgba(255,255,255,.35)}
+#officeBoot .fbMsg{position:relative;height:36px}
+#officeBoot .fbMsg span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1.25;opacity:0}
+@media (prefers-reduced-motion:reduce){#officeBoot .fbTruck>div{animation:none}}

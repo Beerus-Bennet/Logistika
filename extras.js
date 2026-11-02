@@ -113,7 +113,7 @@ function bindDecisionMsgs(root) {
    neue Ereignisse werden erst danach gewürfelt. */
 function uiBusy() {
   const b = document.body.classList;
-  if (b.contains("fphunt") || b.contains("fp3d") || b.contains("hammer-open") || b.contains("customs-open") || b.contains("pack-open") || b.contains("lucky-open")) return true;
+  if (b.contains("fphunt") || b.contains("fp3d") || b.contains("hammer-open") || b.contains("customs-open") || b.contains("pack-open") || b.contains("lucky-open") || b.contains("office3d")) return true;
   const a = document.getElementById("farmAngel");
   return !!(a && a.firstElementChild && a.offsetParent !== null);   /* Angeln, Sägen, Minispiele */
 }
