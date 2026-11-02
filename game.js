@@ -3123,7 +3123,7 @@ function renderOrders() {
         </dl>` : ""}
         <div class="meta addr"><span>Abholung: ${esc(oPick(o).t)} <small>${esc(N[o.from].short)}</small></span><span>Zustellung: ${esc(oDrop(o).t)} <small>${esc(oDrop(o).a || N[o.to].short)}</small></span></div>
       </details>
-      ${previewHTML(p)}
+      ${(() => { const sg = tx && typeof orderSignHTML === "function" ? orderSignHTML(o) : ""; return sg ? `<div class="o-foot">${previewHTML(p)}${sg}</div>` : previewHTML(p); })()}
     </div>`;
   }).join("");
   $$("#tab-orders .order").forEach(c => c.onclick = e => { if (e.target.closest && e.target.closest(".o-more")) return; openPlanner(c.dataset.order); });   /* v244: Details aufklappen öffnet nicht den Planer */

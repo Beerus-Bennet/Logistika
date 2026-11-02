@@ -651,3 +651,45 @@ function orderSpecialHTML(o, tx) {
   if (tx && tx.chance && !o.reg && !o.series && !o.contract) t.push(["chance", tx.chance]);
   return t.length ? `<div class="o-tags">${t.map(([c, x]) => `<span class="o-tag ${c}">${esc(x)}</span>`).join("")}</div>` : "";
 }
+
+/* ------------------- v250: Unterschrift bei Großaufträgen ------------------- */
+/* Ab 100.000 € zeichnet eine feste, erfundene Person „i. A.“ für das Unternehmen. Name, Funktion und Handschrift
+   hängen nur am Firmennamen – dieselbe Firma unterschreibt immer mit derselben Person und demselben Schriftzug. */
+const SIGN_MIN = 100000;
+const SIGN_FIRST = ["Martina", "Thomas", "Sabine", "Jörg", "Katrin", "Michael", "Anja", "Stefan", "Claudia", "Frank", "Nadine", "Matthias",
+  "Birgit", "Andreas", "Julia", "Ralf", "Melanie", "Christian", "Petra", "Dirk", "Lena", "Sebastian", "Ines", "Oliver", "Heike", "Tobias", "Carolin", "Marco"];
+const SIGN_LAST = ["Kessler", "Brandt", "Hoffmann", "Lindner", "Vogt", "Krämer", "Sommer", "Albrecht", "Wendt", "Böhm", "Hartmann", "Engel",
+  "Seidel", "Franke", "Lorenz", "Busch", "Winkler", "Arnold", "Pohl", "Graf", "Ludwig", "Riedel", "Schuster", "Kühn", "Haas", "Bauer", "Ebert", "Roth"];
+const SIGN_ROLE = ["Leitung Logistik", "Leitung Einkauf", "Supply Chain Management", "Transportdisposition", "Leitung Versand", "Geschäftsführung",
+  "Leitung Beschaffung", "Logistikkoordination"];
+const SIGN_FONT = [["Great Vibes", 1], ["Allura", 1.05], ["Mrs Saint Delafield", 1.25], ["Herr Von Muellerhoff", 1.3]];
+const SIGN_INK = ["#1d3f8f", "#16336e", "#22314d", "#2a2a5e", "#1b4a7a"];
+function signHash(s, salt) { return [...(salt + "|" + s)].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) >>> 0, 2166136261); }
+function signerOf(company) {
+  const h = signHash(company, "p"), f = SIGN_FIRST[h % SIGN_FIRST.length], l = SIGN_LAST[(h >>> 7) % SIGN_LAST.length];
+  return { first: f, last: l, role: SIGN_ROLE[(h >>> 13) % SIGN_ROLE.length], h: signHash(company, "s") };
+}
+/* Unterschrift als SVG: Schrift, Neigung, Größe und Tinte je Person; darunter ein eigener Schwung */
+function signatureSVG(p) {
+  let s = p.h || 1;
+  const r = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const [font, k] = SIGN_FONT[Math.floor(r() * SIGN_FONT.length)], ink = SIGN_INK[Math.floor(r() * SIGN_INK.length)];
+  const style = r();
+  const txt = style < 0.34 ? p.first + " " + p.last : style < 0.67 ? p.first[0] + ". " + p.last : p.last;
+  const fs = (27 + r() * 6) * k, rot = -(2 + r() * 6), skew = -(r() * 10);
+  const W = 190, y0 = 40;
+  /* Schwung: ein Bogen unter dem Namen, je Person anders gelegt (mal flach, mal mit Schleife) */
+  const x1 = 18 + r() * 20, x2 = 150 + r() * 30, yb = 46 + r() * 6, c1 = 30 + r() * 40, c2 = 100 + r() * 40, d1 = r() * 14 - 4, d2 = r() * 12 - 9;
+  const loop = r() < 0.45;
+  const path = loop
+    ? `M${x1.toFixed(1)} ${(yb - 2).toFixed(1)} C${c1.toFixed(1)} ${(yb + 10 + d1).toFixed(1)} ${c2.toFixed(1)} ${(yb + 8).toFixed(1)} ${(x2 - 12).toFixed(1)} ${(yb - 6).toFixed(1)} S${(x2 + 6).toFixed(1)} ${(yb - 14).toFixed(1)} ${(x2 - 4).toFixed(1)} ${(yb - 2).toFixed(1)}`
+    : `M${x1.toFixed(1)} ${(yb + d2 * 0.3).toFixed(1)} Q${((x1 + x2) / 2).toFixed(1)} ${(yb + 7 + d1).toFixed(1)} ${x2.toFixed(1)} ${(yb - 4 + d2 * 0.4).toFixed(1)}`;
+  return `<svg class="sig-svg" viewBox="0 0 ${W} 62" aria-hidden="true"><g transform="rotate(${rot.toFixed(1)} ${W / 2} ${y0}) skewX(${skew.toFixed(1)})">
+    <text x="${W / 2}" y="${y0}" text-anchor="middle" font-family="'${font}',cursive" font-size="${fs.toFixed(1)}" fill="${ink}">${esc(txt)}</text>
+    <path d="${path}" fill="none" stroke="${ink}" stroke-width="${(1 + r() * 0.6).toFixed(2)}" stroke-linecap="round" opacity=".85"/></g></svg>`;
+}
+function orderSignHTML(o) {
+  if (!o || !(o.pay > SIGN_MIN) || !o.shipper) return "";
+  const p = signerOf(o.shipper);
+  return `<div class="o-sign">${signatureSVG(p)}<div class="sig-name">i. A. ${esc(p.first + " " + p.last)}</div><div class="sig-role">${esc(p.role)} · ${esc(o.shipper)}</div></div>`;
+}

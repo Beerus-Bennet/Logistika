@@ -2,6 +2,11 @@
 
 
 
+
+## v250 – Unterschrift bei Großaufträgen
+- Aufträge über 100.000 € tragen unten rechts eine Unterschrift „i. A.“ mit Name, Funktion und Firma.
+- Jede Firma hat eine feste, erfundene Person (Name und Funktion aus dem Firmennamen abgeleitet).
+- Handschrift je Person individuell: eine von vier Schreibschriften, Neigung, Größe, Tintenfarbe, Namensform und Schwung.
 ## v249 – Auftragskarten: seriöser, persönlicher, klarer gegliedert
 - Absenderzeile mit Firmen-Monogramm (Initialen, feste Farbe je Firma), Branche und Beziehungsstatus.
 - Anfrage als ruhiges Zitat (drei Zeilen, ganzer Text in den Details).
