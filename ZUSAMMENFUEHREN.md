@@ -1,5 +1,11 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v255 – Schatzkiste: Kamera gehört dem Spieler (auf v254)
+
+- `worldview.js`: `worldTreasureIntro` ohne Kamerafahrt; neu `trCamTaken`, `worldTreasureCamRelease`; `worldTreasureCam` (Merker `at`, Freigabe bei Eingriff), `worldTreasureCamBack` (kein Rückflug nach Eingriff, weiche Freigabe), `stepTreasureReveal` (Freigabe bei Eingriff).
+- `farmview.js`: Mausrad-Handler in `bindFarmInput` setzt `FV.touchAt` und `FV.focusId`.
+- `sw.js` / `index.html` / `manifest.webmanifest`: v255.
+
 ## Stand v254 – Büro betreten (auf v253; dazwischen v246–v253 ohne eigenen Abschnitt, siehe AENDERUNGEN.md)
 
 - Neu: `officefp.js` (`OFFICE3D`), geladen nach `jail.js`; in `sw.js` (`SHELL`) eingetragen.

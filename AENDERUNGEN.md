@@ -7,6 +7,12 @@
 
 
 
+
+## v255 – Schatzkiste: Kamera gehört dem Spieler
+- Ursache: Wischte man während der Truhen-Show weg, brach nur die Hinfahrt ab. Die Show merkte sich die alte Ansicht und flog ~2,6 s nach dem Aufspringen trotzdem dorthin zurück; die steile Show-Neigung blieb bis dahin aktiv. Beim Erscheinen eines Vogelschwarms schwenkte die Kamera ungefragt zur Fundstelle (nach 4 s ohne Berührung). Das Mausrad zählte nicht als Eingriff.
+- Lösung (`worldview.js`): `trCamTaken` erkennt, dass der Spieler seit Beginn der Show die Kamera angefasst hat; `worldTreasureCamRelease` gibt sie dann sofort frei (kein Rückflug, Neigung gleitet in 0,4 s auf normal). Geprüft in der Hinfahrt (`worldTreasureCam`), während der Show (`stepTreasureReveal`) und vor dem Rückflug (`worldTreasureCamBack`). `worldTreasureIntro` bewegt die Kamera nicht mehr – hin geht es über den 🐦-Knopf. `farmview.js`: Mausrad setzt `FV.touchAt`/`FV.focusId` wie ein Wisch.
+- Ohne Eingriff bleibt alles wie bisher: Kamera fährt zur Grube und nach der Show zurück.
+- Geprüft im Testbrowser (echte Hof-Ansicht, Show direkt ausgelöst): ohne Eingriff Rückflug auf die alte Ansicht; mit Wisch während der Show bleibt die Kamera an der Stelle des Spielers, keine Sonderneigung mehr. Nicht auf dem Handy geprüft.
 ## v254 – Büro betreten (Ich-Perspektive)
 - Neu: Knopf „🚪 Betreten“ links unten auf dem Grundriss jeder Standortkarte (`offices.js` `baseCard`, Bindung `[data-enter]`; „einrichten“ bleibt wie bisher).
 - Nach einem Ladescreen (derselbe wie beim Hof: `ldMake`/`ldStart` aus `farmview.js`, eigene Texte, mindestens ~1,7 s) steht man in der Bürotür und läuft in der Ich-Perspektive durch den Raum.

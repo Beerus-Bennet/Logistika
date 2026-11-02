@@ -953,6 +953,7 @@ function bindFarmInput(cv) {
   cv.addEventListener("wheel", e => {
     e.preventDefault();
     if (!FV.R || farmCamLocked()) return;
+    FV.touchAt = performance.now(); FV.focusId = (FV.focusId || 0) + 1; FV.focusing = false;   /* v255: Zoomen = Spieler übernimmt die Kamera */
     FV.R.cam.dist *= Math.exp(e.deltaY * 0.0012);
     clampCam();
   }, { passive: false });
