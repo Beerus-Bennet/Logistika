@@ -1,5 +1,10 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v259 – Schatzkisten-Kamera, Wegräumen (auf v258)
+
+- `worldview.js`: `worldTreasureCam` (Standpunkt nur neu merken, wenn keine Show-Neigung aktiv; Freigabe bei jeder Unterbrechung), `worldTreasureRevealEnd` (Sicherung), `worldPopHTML` und `worldPopAct` (Energie-Anzeige, Brotzeit statt Staubwolke).
+- `index.html`: `?v=259` nur für `worldview.js`; `sw.js`: `VERSION = "v259"`.
+
 ## Stand v258 – Große Lagerhalle (auf v257)
 
 - `farmdata.js`: `FBUILD_VAL.lagerhalle`, neu `FHALL`, `FSIZE.lagerhalle`, Ladeneintrag `lagerhalle` in `FSHOP_HOF` (Reiter „bau“), `FUNLOCK_HOF[5]`.

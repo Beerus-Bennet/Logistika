@@ -2246,6 +2246,7 @@ function worldTreasureRevealEnd() {
   WV.trReveal = null;
   if (WV.trChest) WV.trChest.visible = true;
   if (WV.trCamSave) worldTreasureCamBack();   /* v239: meist schon früher zurückgeschwenkt (gleich nach der Show) */
+  else if (FV.camOv && !WV.trCamAnim && !FV.focusing) worldTreasureCamRelease();   /* v259: Sicherung – keine Show-Neigung stehen lassen */
 }
 /* v167: Kamera für die Truhen-Show – steil von oben und aus der Richtung, in der kein Baum, Busch oder Fels
    zwischen Kamera und Grube steht; so ist die Truhe samt Animation immer zu sehen (vorher konnte die Krone eines
@@ -2274,6 +2275,9 @@ function worldTreasureCam(c) {
     s -= Math.abs(Math.atan2(Math.sin(yaw - Math.PI / 4), Math.cos(yaw - Math.PI / 4))) * 0.25;
     if (s > bs) { bs = s; best = yaw; }
   }
+  /* v259: nur wenn die Show-Neigung noch aktiv ist (gleiche Show), bleibt der gemerkte Standpunkt; sonst neu merken –
+     vorher blieb ein veralteter Standpunkt stehen und die Kamera flog nach der nächsten Kiste dorthin zurück */
+  if (!FV.camOv) WV.trCamSave = null;
   const save = WV.trCamSave = WV.trCamSave || { yaw: cam.yaw, pitch: cam.pitch, d: cam.dist, tx: cam.tx, tz: cam.tz, at: performance.now() };
   const d0 = Math.atan2(Math.sin(best - cam.yaw), Math.cos(best - cam.yaw));
   FV.camOv = { pitch: cam.pitch };
@@ -2281,7 +2285,7 @@ function worldTreasureCam(c) {
   const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
   const step = () => {
     const A = WV.trCamAnim; if (!A || WV.trCamAnim !== A) return;
-    if (FV.focusId !== id) { if (trCamTaken()) worldTreasureCamRelease(); return; }   /* v255: Spieler übernimmt */
+    if (FV.focusId !== id) { worldTreasureCamRelease(); return; }   /* v255/v259: Spieler oder andere Kamerafahrt übernimmt – Show-Neigung immer freigeben, Standpunkt vergessen */
     const k = Math.min(1, (performance.now() - A.t0) / A.dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     cam.tx = A.tx0 + (A.tx - A.tx0) * f; cam.tz = A.tz0 + (A.tz - A.tz0) * f; cam.dist = A.d0 + (A.d - A.d0) * f; cam.yaw = A.yaw0 + A.dy * f;
     FV.camOv.pitch = A.p0 + (A.p - A.p0) * f;
@@ -3138,7 +3142,7 @@ function worldPopHTML(o, P) {
   if (P.kind === "junk") {
     const J = FJUNK[o.k] || FJUNK.unkraut;
     return `<div class="fp-h">${J.i} ${esc(J.n)}<small>Aufräumen bringt ${Object.keys(J.gain).map(id => fqty(id, J.gain[id])).join(", ")}${J.m ? " und " + eur(J.m) + " vom Schrotthändler" : ""} · +5 EP</small></div>
-      <div class="fp-row"><div class="ftool big" data-act="clear"><span class="ic">🧹</span><b>Wegräumen</b><small>💪 ${J.sta}</small></div></div>`;
+      <div class="fp-row"><div class="ftool big${farmSta() < J.sta ? " tired" : ""}" data-act="clear"><span class="ic">🧹</span><b>Wegräumen</b><small>${farmSta() < J.sta ? "💪 " + J.sta + " · zu erschöpft – erst Brotzeit" : "💪 " + J.sta}</small></div></div>`;   /* v259: Energie sichtbar */
   }
   return "";
 }
@@ -3178,6 +3182,9 @@ function worldPopAct(a, o) {
   if (a === "fell") { fruitFell(o); return; }
   if (a === "clear") {
     const [x, y] = objScreen(o);
+    const J = FJUNK[o.k] || FJUNK.unkraut;
+    /* v259: ohne Energie keine Staubwolke, stattdessen gleich die Brotzeit anbieten (wie bei Baum und Säge) */
+    if (farmSta() < J.sta) { sfx("bad"); closeFarmPop(); openFood(); toast("💪 Zu erschöpft – erst eine Brotzeit.", "warn"); return; }
     puff(o);
     const r = farmClearJunk(o);
     if (!r) { sfx("bad"); toast("💪 Zu erschöpft – erst eine Brotzeit.", "warn"); return; }

@@ -9,6 +9,15 @@
 
 
 
+## v259 – Kamera nach der Schatzkiste, Wegräumen ohne Energie
+**Ursachen (Code gelesen, im Testbrowser nachgestellt):**
+- Kamera: Startet während der 1,5-s-Anfahrt der Truhen-Show eine andere Kamerafahrt (z. B. ein Tipp auf ein Objekt), brach die Anfahrt ab, ohne die steile Show-Neigung (`FV.camOv`) und den gemerkten alten Standpunkt (`WV.trCamSave`) freizugeben. Bei der nächsten Kiste wurde der **veraltete** Standpunkt wiederverwendet (`trCamSave || …`), die Kamera flog an eine falsche Stelle zurück und blieb steil.
+- Gerümpel: Das Popup zeigte „Wegräumen 💪 8“ immer wie anklickbar; ohne Energie kam erst die Staubwolke, dann nur eine Meldung.
+
+**Lösung (`worldview.js`):** Show-Anfahrt gibt bei jeder Unterbrechung Neigung und Standpunkt frei; ein neuer Standpunkt wird gemerkt, sobald keine Show-Neigung mehr aktiv ist; Sicherung beim Ende der Show. Wegräumen: Knopf rot mit „zu erschöpft – erst Brotzeit“, Tippen öffnet die Brotzeit (wie bei Baum und Säge), keine Staubwolke ohne Energie.
+
+**Geprüft:** Testbrowser: Show durch andere Kamerafahrt unterbrochen → Neigung und Standpunkt frei; zweite Kiste merkt den aktuellen Standpunkt und kehrt dorthin zurück; Popup mit 2 und mit 50 Energie, Klick ohne Energie räumt nichts weg und öffnet die Brotzeit. **Nicht geprüft:** iPhone/Safari.
+
 ## v258 – Große Lagerhalle für den Hof
 **Wunsch:** eine große Lagerhalle kaufen und auf dem Hof platzieren, die Lagerplatz für Hof, Sägewerk und Fischerei bringt.
 
