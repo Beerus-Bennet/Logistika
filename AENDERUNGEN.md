@@ -9,6 +9,15 @@
 
 
 
+## v261 – Vertragsangebote im Diensttelefon seltener
+**Frage:** Kommen die Rahmenvertrags-Angebote zu oft – wurde das heute geändert? **Nein**, an den Angeboten wurde heute nichts geändert (v255–v260 betreffen sie nicht).
+
+**Ursache:** Es gibt zwei Wege zu einem Vertragsangebot. Der tägliche Zufallsvertrag war begrenzt (ab Level 4, höchstens 2 bzw. 3 laufende Verträge, 4–7 Tage Pause, kein offenes Angebot). Der Weg über Stammkunden (`kundenOnSpawn`, ab 5 Lieferungen) hatte **keine** dieser Grenzen: je Kunde einmal, aber bei mehreren Stammkunden kamen Angebote gleichzeitig und hintereinander (wie um 13:52 im Screenshot).
+
+**Lösung:** gemeinsame Bremse `contractMayOffer()` (`goals.js`) für beide Wege; ein Stammkunden-Angebot setzt dieselbe Pause (4–7 Spieltage, `S.contractNext`). Sonst unverändert (Vertragsinhalt, Preise, 24-h-Frist).
+
+**Geprüft:** Testbrowser: 400 Aufträge von lauter Stammkunden ab 5 Lieferungen → vorher 40 Angebote gleichzeitig, jetzt 1 und danach rund 7 Tage Pause. Der tägliche Zufallsvertrag nutzt dieselbe Bremse, aber nicht gesondert über Tage getestet. **Nicht geprüft:** iPhone/Safari.
+
 ## v258 – Große Lagerhalle für den Hof
 **Wunsch:** eine große Lagerhalle kaufen und auf dem Hof platzieren, die Lagerplatz für Hof, Sägewerk und Fischerei bringt.
 
