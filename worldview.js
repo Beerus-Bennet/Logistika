@@ -2203,8 +2203,7 @@ function worldTreasureIntro(c, Z) {
   if (!R || FV.fp || (typeof MG !== "undefined" && MG.on)) return;
   WV.trIntro = { t: 0, t0: c.t0, shot: false };
   WV.swarm.forEach(b => { b.out = 6 + (b.i % 3) * 0.6; b.f = 0; });
-  /* Kamera nur mitnehmen, wenn der Spieler sie gerade nicht anfasst */
-  if (!FV.touchAt || performance.now() - FV.touchAt > 4000) farmFocusXZ(c.x + 1, c.z + 1.5, 24, 1300);
+  /* v255: Kamera bleibt, wo der Spieler sie hat – hin geht es über den 🐦-Knopf oder das Banner, nicht ungefragt */
   worldLootShow(R.w / 2, R.h / 2, { sub: Z ? Z.n : "Neue Fundstelle", title: "🐦 Schatz gesichtet!", chips: ["Such das rote Kreuz", "3 Stunden Zeit"], r: 1, css: "#ffd25a", ms: 3600 });
   sfx("horn"); setTimeout(() => sfx("pearl"), 260);
 }
@@ -2274,13 +2273,14 @@ function worldTreasureCam(c) {
     s -= Math.abs(Math.atan2(Math.sin(yaw - Math.PI / 4), Math.cos(yaw - Math.PI / 4))) * 0.25;
     if (s > bs) { bs = s; best = yaw; }
   }
-  const save = WV.trCamSave = WV.trCamSave || { yaw: cam.yaw, pitch: cam.pitch, d: cam.dist, tx: cam.tx, tz: cam.tz };
+  const save = WV.trCamSave = WV.trCamSave || { yaw: cam.yaw, pitch: cam.pitch, d: cam.dist, tx: cam.tx, tz: cam.tz, at: performance.now() };
   const d0 = Math.atan2(Math.sin(best - cam.yaw), Math.cos(best - cam.yaw));
   FV.camOv = { pitch: cam.pitch };
   WV.trCamAnim = { yaw0: cam.yaw, dy: d0, p0: cam.pitch, d0: cam.dist, tx0: cam.tx, tz0: cam.tz, t0: performance.now(), dur: 1500, tx: c.x, tz: c.z + 0.3, d: D, p: P };
   const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
   const step = () => {
-    const A = WV.trCamAnim; if (FV.focusId !== id || !A) return;
+    const A = WV.trCamAnim; if (!A || WV.trCamAnim !== A) return;
+    if (FV.focusId !== id) { if (trCamTaken()) worldTreasureCamRelease(); return; }   /* v255: Spieler übernimmt */
     const k = Math.min(1, (performance.now() - A.t0) / A.dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     cam.tx = A.tx0 + (A.tx - A.tx0) * f; cam.tz = A.tz0 + (A.tz - A.tz0) * f; cam.dist = A.d0 + (A.d - A.d0) * f; cam.yaw = A.yaw0 + A.dy * f;
     FV.camOv.pitch = A.p0 + (A.p - A.p0) * f;
@@ -2289,7 +2289,26 @@ function worldTreasureCam(c) {
   };
   step();
 }
+/* v255: Die Kamera gehört dem Spieler. Sobald er während der Truhen-Show wischt, zoomt oder tippt, endet die
+   Show-Kamera sofort: kein Zurückfliegen in die alte Ansicht, und die steile Show-Neigung gleitet in 0,4 s auf
+   den Normalwert zurück (ohne Sprung, ohne die Verschiebung des Spielers anzufassen). */
+const trCamTaken = () => !!(WV.trCamSave && FV.touchAt && FV.touchAt > WV.trCamSave.at);
+function worldTreasureCamRelease() {
+  WV.trCamSave = null; WV.trCamAnim = null;
+  const ov = FV.camOv; if (!ov) return;
+  const p0 = ov.pitch, t0 = performance.now();
+  const step = () => {
+    if (FV.camOv !== ov) return;
+    const R = FV.R; if (!R) { FV.camOv = null; return; }
+    const target = 0.8 + (R.cam.dist - 11) / 43 * 0.2;               /* wie die Normalneigung in farmview.js */
+    const k = Math.min(1, (performance.now() - t0) / 400), f = 1 - Math.pow(1 - k, 3);
+    ov.pitch = p0 + (target - p0) * f;
+    if (k < 1) requestAnimationFrame(step); else FV.camOv = null;
+  };
+  step();
+}
 function worldTreasureCamBack() {
+  if (trCamTaken()) { worldTreasureCamRelease(); return; }      /* v255: Spieler schaut woanders hin – nicht zurückholen */
   const S0 = WV.trCamSave; WV.trCamSave = null; WV.trCamAnim = null;
   const R = FV.R;
   if (!S0 || !R || FV.fp) { FV.camOv = null; return; }
@@ -2298,7 +2317,7 @@ function worldTreasureCamBack() {
   const id = (FV.focusId || 0) + 1; FV.focusId = id; FV.focusing = true;
   const t0 = performance.now(), dur = 700;   /* v239: zügig zurück (vorher 1,3 s) */
   const step = () => {
-    if (FV.focusId !== id) { FV.camOv = null; return; }       /* Spieler hat die Kamera selbst übernommen */
+    if (FV.focusId !== id) { if (FV.camOv) worldTreasureCamRelease(); return; }       /* Spieler hat die Kamera selbst übernommen – v255: weich */
     const k = Math.min(1, (performance.now() - t0) / dur), f = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     cam.tx = from.tx + (S0.tx - from.tx) * f; cam.tz = from.tz + (S0.tz - from.tz) * f; cam.dist = from.d + (S0.d - from.d) * f; cam.yaw = from.yaw + dy * f;
     if (FV.camOv) FV.camOv.pitch = from.p + (Math.min(1, Math.max(0.8, S0.pitch)) - from.p) * f;
@@ -2327,6 +2346,7 @@ function worldTreasureReveal(c, r) {
 }
 function stepTreasureReveal(Rv, dt, time) {
   Rv.t += dt;
+  if (trCamTaken()) worldTreasureCamRelease();                     /* v255: Show läuft weiter, die Kamera gehört dem Spieler */
   const t = Rv.t, R = FV.R, x = Rv.x, z = Rv.z, st = Rv.st, col = TR_COL[st - 1], B = Rv.body, cx = Rv.cx, cz = Rv.cz;
   const TA = 1.4, TB = 0.9, TC = TA + TB;
   if (!farmTreasureCur() && t < TC) { worldTreasureRevealEnd(); return; }

@@ -953,6 +953,7 @@ function bindFarmInput(cv) {
   cv.addEventListener("wheel", e => {
     e.preventDefault();
     if (!FV.R || farmCamLocked()) return;
+    FV.touchAt = performance.now(); FV.focusId = (FV.focusId || 0) + 1; FV.focusing = false;   /* v255: Zoomen = Spieler übernimmt die Kamera */
     FV.R.cam.dist *= Math.exp(e.deltaY * 0.0012);
     clampCam();
   }, { passive: false });
@@ -2597,7 +2598,8 @@ function openFarmHouse(tab) {
     if (p) { closeFarmSheet(); sfx("coin"); toast(T.sold + eur(p) + ". Viel Erfolg mit der Spedition!", "ok"); showTab("map"); render(); }
   }, true);
   const sn = $("#fhSnd"); if (sn) sn.onclick = () => { F.snd = !F.snd; openFarmHouse("buch"); renderFarmUI(); };
-  const tu = $("#fhTut"); if (tu) tu.onclick = () => { closeFarmSheet(); S.farm.tut = { step: 0, done: false, replay: true }; farmTutShow(); };
+  /* v256: Läuft der erste Rundgang noch, geht es dort weiter – eine Wiederholung würde ihn sonst überschreiben */
+  const tu = $("#fhTut"); if (tu) tu.onclick = () => { closeFarmSheet(); if (!S.farm.tut || S.farm.tut.done) S.farm.tut = { step: 0, done: false, replay: true }; farmTutShow(); };
   if (tab === "ausbau" && typeof stageBind === "function") stageBind(() => openFarmHouse("ausbau"));
   if (tab === "team" && typeof staffBind === "function") staffBind(() => openFarmHouse("team"));
   if (tab === "extras" && typeof cosShopBind === "function") cosShopBind(() => openFarmHouse("extras"));
@@ -2766,17 +2768,41 @@ function farmLevelUp(l) {
 /* -------------------------- Linas Rundgang ----------------------------
    v76: kürzer – Gießen, Füttern und Bäumefällen sind raus aus dem Rundgang. Gießen und Füttern erklärt Lina
    später mit einem kurzen Tipp, wenn es zum ersten Mal passt (farmHintFor); das Fällen mit Opas Axt
-   entdeckt man selbst. */
+   entdeckt man selbst.
+   v256: dieselbe Karte wie in der Spedition (linaCardHTML, intro.js). Jeder Schritt: Titel, Einordnung (tx),
+   konkrete Handlung (act), Teilfortschritt (part, n), Rückmeldung (ok). ready: Ist die Aufgabe gerade überhaupt
+   machbar? Wenn nicht – oder wenn lange nichts passiert –, gibt es „Schritt auslassen“ statt endlosen Wartens. */
 const FTUT_HOF = [
-  { tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina – der Hof gehört jetzt dir. Komm, ich zeig dir das Wichtigste.` },
-  { tx: "Der Weizen ist reif! <b>Tipp ein goldenes Feld an und zieh die Sichel über alle.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), wait: "harvestField", n: 3 },
-  { tx: "Super, das gibt ⭐ <b>EP</b>! Jetzt säen: <b>Tipp ein leeres Feld an und zieh den Weizen drüber.</b>", target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), wait: "plant", n: 2 },
-  { tx: "Die Hühner haben gelegt! <b>Tipp den Hühnerstall an.</b>", target: () => firstObj(o => o.t === "coop"), wait: "collect:ei", n: 1 },
-  { tx: "Zeit zum Backen! <b>Tipp den Backofen an und leg Brot hinein.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "queue:brot", n: 1 },
-  { tx: "Die Äpfel sind reif: <b>Tipp einen Apfelbaum an.</b>", target: () => firstObj(o => o.t === "tree" && treeRipe(o)) || firstObj(o => o.t === "tree"), wait: "harvest:apfel", n: 1 },
-  { tx: "Das Brot ist fertig – <b>tipp den Ofen an und hol es raus.</b>", target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1 },
-  { tx: "Café Inselblick will Brot und Äpfel: <b>Tipp die Bestelltafel an und schick die Lieferung los.</b>", target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder },
-  { tx: "Klasse – der Hof läuft! Den Rest entdeckst du selbst. Deine nächsten Aufgaben stehen oben links in <b>Opas Notizbuch</b>." }
+  { title: "Willkommen auf dem Hof",
+    tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina, deine Nachbarin. Opas Hof gehört jetzt dir – in ein paar kurzen Schritten zeige ich dir, wie er läuft.`,
+    next: "Los geht’s" },
+  { title: "Weizen ernten", tx: "Goldene Felder sind reif.",
+    act: "Tippe ein goldenes Feld an und ziehe die Sichel über die reifen Felder.",
+    target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), ready: () => !!firstObj(o => o.t === "field" && fieldState(o) === "ripe"),
+    wait: "harvestField", n: 3, part: "Feldern geerntet", ok: "Geerntet! Das gibt ⭐ Erfahrung und Weizen fürs Lager." },
+  { title: "Neu säen", tx: "Leere Felder bringen nichts – also gleich wieder einsäen.",
+    act: "Tippe ein leeres Feld an und ziehe den Weizen darüber.",
+    target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), ready: () => !!firstObj(o => o.t === "field" && fieldState(o) === "empty"),
+    wait: "plant", n: 2, part: "Feldern gesät", ok: "Gesät! In ein paar Minuten ist der Weizen wieder reif." },
+  { title: "Eier einsammeln", tx: "Die Hühner haben gelegt.",
+    act: "Tippe den Hühnerstall an.",
+    target: () => firstObj(o => o.t === "coop"), wait: "collect:ei", n: 1, ok: "Die Eier liegen im Lager." },
+  { title: "Brot backen", tx: "Im Backofen wird aus Mehl Brot – das dauert ein paar Minuten.",
+    act: "Tippe den Backofen an und lege ein Brot hinein.",
+    target: () => firstObj(o => o.t === "bakery"), wait: "queue:brot", n: 1, ok: "Das Brot ist im Ofen." },
+  { title: "Äpfel pflücken", tx: "Während das Brot backt, sind die Äpfel reif.",
+    act: "Tippe einen Apfelbaum mit roten Äpfeln an.",
+    target: () => firstObj(o => o.t === "tree" && treeRipe(o)) || firstObj(o => o.t === "tree"), ready: () => !!firstObj(o => o.t === "tree" && treeRipe(o)),
+    wait: "harvest:apfel", n: 1, ok: "Äpfel gepflückt!" },
+  { title: "Brot herausholen", tx: "Ist das Brot fertig, wartet es im Ofen auf dich.",
+    act: "Tippe den Backofen an und hole das Brot heraus.",
+    target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1, ok: "Frisches Brot liegt im Lager." },
+  { title: "Erste Lieferung", tx: "Café Inselblick bestellt 2 Brote und 3 Äpfel.",
+    act: "Tippe die Bestelltafel an und schicke die Lieferung los.",
+    target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder, ok: "Die Lieferung ist unterwegs!" },
+  { title: "Der Hof läuft", tx: "Klasse – das war das Wichtigste. Den Rest entdeckst du selbst.",
+    note: "Deine nächsten Aufgaben stehen oben links in Opas Notizbuch. Den Rundgang kannst du im Bauernhaus oder unter „Welt“ wiederholen.",
+    next: "Los geht’s!" }
 ];
 function farmTutList() { return FTUT_HOF; }
 function firstObj(fn) { return S.farm.objs.find(fn) || null; }
@@ -2785,47 +2811,130 @@ function farmTutOrder() {
   const o = farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
   if (o) { o.acc = "tut"; o.expire = S.time + 99999; o.deadline = S.time + 99999; S.orders.push(o); }
 }
+/* v256: Zustand des Rundgangs. ftT – der Rundgang, zu dem Timer und Fokus gehören (ein neuer – Wiederholung,
+   anderer Spielstand – macht alte Timer wirkungslos); ftGen zählt Schrittwechsel; ftAdvT – geplanter Wechsel nach
+   der Rückmeldung; ftSlow – Schritt, bei dem „Schritt auslassen“ angeboten wird; ftExit – Rückfrage offen. */
+let ftT = null, ftGen = 0, ftAdvT = 0, ftSlowT = 0, ftSlow = -1, ftFocus = -1, ftExit = false, ftAnim = "", ftNudge = -1, ftFocusAt = 0;
+const FT_SLOW_MS = 45000, FT_OK_MS = 1100;
+function farmTutState() { const T = S && S.farm && S.farm.tut; return T && !T.done ? T : null; }
+function farmTutMode(T, st, i) { return st.wait && !T.replay ? "task" : i === FTUT_HOF.length - 1 ? "finish" : "info"; }
+function farmTutClear() {
+  clearTimeout(ftAdvT); clearTimeout(ftSlowT); ftAdvT = ftSlowT = 0; ftSlow = -1; ftFocus = -1; ftExit = false; ftAnim = ""; ftNudge = -1;
+  const el = $("#farmTut"); if (el) { el.innerHTML = ""; el.className = ""; el.onclick = null; }
+  document.body.classList.remove("ftut-on");
+  FV.tutLock = false;
+}
 function farmTutShow() {
   const el = $("#farmTut");
-  if (!el || !S.farm || !S.farm.tut || S.farm.tut.done) { if (el) { el.innerHTML = ""; el.className = ""; } FV.tutLock = false; return; }
-  const T = S.farm.tut;
+  const T = farmTutState();
+  if (!el || !T) { farmTutClear(); ftT = null; return; }
+  if (T !== ftT) {                           /* neuer Rundgang (Start, Wiederholung, geladener Stand) */
+    clearTimeout(ftAdvT); clearTimeout(ftSlowT); ftAdvT = ftSlowT = 0;
+    ftT = T; ftGen++; ftSlow = -1; ftFocus = -1; ftExit = false;
+    /* v256: Ein beim Speichern hängengebliebenes „adv“ (Wechsel war geplant, dann neu geladen) blockierte
+       jedes weitere Signal – der Rundgang hing. Ohne geplanten Wechsel gibt es kein adv. */
+    T.adv = false;
+  }
   /* v76: alte Spielstände mitten im (längeren) Rundgang auf die neue Schrittfolge umrechnen */
   if (!T.v76) { T.v76 = 1; const m = [0, 1, 2, 3, 3, 4, 4, 5, 6, 7, 8, 8]; if (T.step > 0 && m[T.step] != null) T.step = m[T.step]; }
-  const st = farmTutList()[T.step];
+  const list = farmTutList(), st = list[T.step];
   if (!st) return farmTutEnd();
   if (st.before && !T.replay) st.before();
   T.cnt = T.cnt || 0;
-  /* Wiederholung: jeder Schritt hat „Weiter“, nichts muss erst wachsen */
-  const wait = st.wait && !T.replay;
-  const tx = typeof st.tx === "function" ? st.tx() : st.tx;
-  const img = typeof guideArt !== "undefined" && guideArt ? `<img src="${guideArt}" alt="Lina">` : `<span class="ft-fb">👩‍🌾</span>`;
-  el.className = "on" + (st.wait ? " wait" : "");
-  if (!wait) el.classList.add("free");
-  el.innerHTML = `<div class="ft-box"><div class="ft-fig">${img}</div><div class="ft-tx"><b>Lina</b><p>${tx}</p>
-    ${wait ? `<small class="ft-step">${T.step}/${farmTutList().length - 2}${st.n > 1 ? " · " + Math.min(T.cnt, st.n) + "/" + st.n : ""}</small>` : `<button class="btn tiny" id="ftNext">${T.step === farmTutList().length - 1 ? "Los geht’s!" : "Weiter"}</button>`}
-    ${T.step === 0 ? `<button class="ft-skip" id="ftSkip">Rundgang überspringen</button>` : ""}</div></div><div class="ft-hand" id="ftHand">👆</div>`;
-  const nx = $("#ftNext"); if (nx) nx.onclick = () => farmTutNext();
-  const sk = $("#ftSkip"); if (sk) sk.onclick = () => farmTutEnd(true);
-  const tg = st.target && st.target();
-  if (tg) farmFocus(tg, innerHeight > innerWidth ? 27 : 22);
+  const mode = farmTutMode(T, st, T.step), need = st.n || 1;
+  /* Schon erledigt (z. B. nach dem Neuladen genau beim Wechsel): gleich weiter */
+  if (mode === "task" && T.cnt >= need && !T.adv) return farmTutAdvance(T);
+  const done = mode === "task" && !!T.adv;
+  const ready = mode !== "task" || !st.ready || st.ready();
+  if (mode === "task" && ready && !done && ftSlow !== T.step && !ftSlowT) {
+    const gen = ftGen, step = T.step;
+    ftSlowT = setTimeout(() => { ftSlowT = 0; if (gen === ftGen && farmTutState() === T && T.step === step) { ftSlow = step; farmTutShow(); } }, FT_SLOW_MS);
+  }
+  const offer = mode === "task" && !done && (!ready || ftSlow === T.step);
+  const card = ftExit
+    ? linaExitHTML({ uid: "fx", ctx: "Nachbarin · Hof-Rundgang", title: "Rundgang beenden?",
+        tx: T.replay ? "Du kannst ihn jederzeit im Bauernhaus oder unter „Welt“ wiederholen."
+          : "Der Hof läuft dann frei weiter, und die ersten Bestellungen kommen. Wiederholen kannst du den Rundgang im Bauernhaus oder unter „Welt“.",
+        quit: "Rundgang beenden" })
+    : linaCardHTML({ uid: "f" + T.step, kind: done ? "done" : mode, ctx: T.replay ? "Nachbarin · Rundgang (Wiederholung)" : "Nachbarin · Hof-Rundgang",
+        step: T.step + 1, total: list.length, title: st.title, tx: typeof st.tx === "function" ? st.tx() : st.tx,
+        act: mode === "task" && !done ? st.act : (T.replay && st.act ? st.act : null),
+        part: mode === "task" && need > 1 ? `${Math.min(T.cnt, need)} von ${need} ${st.part || "erledigt"}` : null,
+        partK: Math.min(T.cnt, need) / need,
+        ok: done ? st.ok : null,
+        note: offer ? (ready ? "Klappt es gerade nicht? Dann lass den Schritt einfach aus." : "Gerade gibt es dafür nichts zu tun – lass den Schritt einfach aus.")
+          : mode === "finish" ? st.note : null,
+        primary: mode === "task" ? null : { id: "next", label: st.next || "Weiter" },
+        secondary: offer ? [{ id: "skipstep", label: "Schritt auslassen" }] : [],
+        close: "Rundgang beenden" });
+  /* Einblenden nur beim Schrittwechsel – Teilfortschritt, Rückmeldung und Rückfrage tauschen nur den Inhalt */
+  const still = ftAnim === T.step + (T.replay ? "r" : "");
+  ftAnim = T.step + (T.replay ? "r" : "");
+  el.className = "on " + (ftExit ? "exit" : done ? "done" : mode) + (el.classList.contains("alt") ? " alt" : "") + (still ? " still" : "");
+  document.body.classList.add("ftut-on");
+  el.innerHTML = card + `<div class="ft-mark" id="ftHand" aria-hidden="true"><i></i><span>👆</span></div>`;
+  const step = T.step;
+  let used = false;
+  el.onclick = e => {
+    const b = e.target.closest && e.target.closest("[data-lt]");
+    if (!b || used) return;
+    const k = b.dataset.lt;
+    if (k === "close") { ftExit = true; return farmTutShow(); }
+    if (k === "stay") { ftExit = false; return farmTutShow(); }
+    if (k === "quit") { used = true; return farmTutEnd(true); }
+    if (k === "next" || k === "skipstep") { used = true; return farmTutNext(step); }
+  };
+  if (!ftExit) linaAnnounce("hof:" + T.step + (done ? "ok" : ""), done ? st.ok : `Schritt ${T.step + 1} von ${list.length}: ${st.title}`);
+  /* Kamera nur beim Schrittwechsel ausrichten – nicht bei jedem Teilfortschritt (sonst springt sie mitten in der Ernte) */
+  if (ftFocus !== T.step && !done) {
+    ftFocus = T.step; ftFocusAt = performance.now(); ftNudge = -1;
+    const tg = mode === "task" && st.target && st.target();
+    if (tg) farmFocus(tg, innerHeight > innerWidth ? 27 : 22);
+  }
 }
-function farmTutNext() {
-  const T = S.farm.tut;
-  T.step++; T.cnt = 0;
+/* Aufgabe erledigt: Rückmeldung zeigen, dann weiter. Der Wechsel gehört genau zu diesem Rundgang und Schritt. */
+function farmTutAdvance(T) {
+  if (ftAdvT) return;
+  const gen = ftGen, step = T.step;
+  T.adv = true;
+  ftAdvT = setTimeout(() => {
+    ftAdvT = 0;
+    if (gen !== ftGen || farmTutState() !== T || T.step !== step) return;
+    T.adv = false;
+    farmTutNext(step);
+  }, FT_OK_MS);
+  clearTimeout(ftSlowT); ftSlowT = 0;
+  farmTutShow();
+  if (typeof sfx === "function") sfx("pop");
+}
+/* from – der Schritt, für den „Weiter“ gedrückt wurde; ein später Doppeltipp oder Timer springt nicht weiter */
+function farmTutNext(from) {
+  const T = farmTutState();
+  if (!T) return;
+  if (from != null && from !== T.step) return;
+  clearTimeout(ftAdvT); clearTimeout(ftSlowT); ftAdvT = ftSlowT = 0;
+  T.step++; T.cnt = 0; T.adv = false; ftGen++; ftSlow = -1; ftExit = false;
   sfx("pop");
   if (T.step >= farmTutList().length) return farmTutEnd();
   save();
   farmTutShow();
 }
 function farmTutEnd(skip) {
-  const T = S.farm.tut;
-  T.done = true;
-  if (skip) S.orders = S.orders.filter(o => !o.tutF || !o.farm);
-  const el = $("#farmTut"); if (el) { el.innerHTML = ""; el.className = ""; }
-  if (!T.replay) { S.farm.lastOrd = S.time - 999; farmSpawnOrders(2); }
+  const T = S.farm && S.farm.tut;
+  if (!T) return farmTutClear();
+  const replay = !!T.replay;
+  T.done = true; T.adv = false;
+  delete T.replay;                           /* v256: sonst kamen nach einer Wiederholung die Gieß-/Futter-Tipps nie mehr */
+  ftGen++; ftT = null;
+  if (skip && !replay) S.orders = S.orders.filter(o => !o.tutF || !o.farm);
+  farmTutClear();
+  if (!replay) { S.farm.lastOrd = S.time - 999; farmSpawnOrders(2); }
   renderFarmUI();
   save();
+  if (typeof hintNext === "function") setTimeout(hintNext, 1500);
 }
+/* Esc: Rückfrage öffnen bzw. wieder schließen */
+function farmTutEsc() { if (!farmTutState()) return; ftExit = !ftExit; farmTutShow(); }
 /* Signale aus der Spiellogik */
 /* v76: Lina-Tipps auf dem Hof, wenn es zum ersten Mal passt (statt im Rundgang) */
 function farmHintFor(key) {
@@ -2835,29 +2944,72 @@ function farmHintFor(key) {
 }
 function farmTutSignal(key, n) {
   if (S.farm && S.farm.tut && S.farm.tut.done && !S.farm.tut.replay) farmHintFor(key);
-  if (!S.farm || !S.farm.tut || S.farm.tut.done) return;
-  const T = S.farm.tut, st = farmTutList()[T.step];
-  if (!st || !st.wait || T.replay) return;
+  const T = farmTutState();
+  if (!T) return;
+  const st = farmTutList()[T.step];
+  if (!st || !st.wait || T.replay || T.adv) return;
   const k = key.split(":")[0];
   const match = st.wait === key || (st.wait === "plant" && k === "plant") || (st.wait === "feed" && k === "feed") || (st.wait === "bait" && k === "bait")
     || (st.wait === "harvestField" && key === "harvest:weizen");
-  if (!match || T.adv) return;
+  if (!match) return;
   T.cnt = (T.cnt || 0) + (st.wait === "harvestField" || st.calls ? 1 : n || 1);
-  if (T.cnt >= (st.n || 1)) { T.adv = true; setTimeout(() => { T.adv = false; farmTutNext(); }, 650); }
+  /* Fortschritt: das Angebot „auslassen“ verschwindet, die Wartezeit beginnt neu */
+  clearTimeout(ftSlowT); ftSlowT = 0; if (ftSlow === T.step) ftSlow = -1;
+  if (T.cnt >= (st.n || 1)) farmTutAdvance(T);
   else farmTutShow();
 }
-/* Zeigefinger über dem Ziel */
+/* Kamera so verschieben, dass sich das Ziel auf dem Schirm um (dx, dy) Pixel bewegt – über die Ableitung der
+   Projektion nach tx/tz (unabhängig von Blickrichtung und Zoom). Spieler fasst an → Fahrt bricht ab (focusId). */
+function farmTutNudge(o, dx, dy) {
+  const R = FV.R; if (!R || (Math.abs(dx) < 8 && Math.abs(dy) < 8)) return;
+  const c = R.cam, [cx, cz] = farmCenter(o), hy = objH(o) * 0.55;
+  const at = () => { R.updateCamera(); return R.project(cx, hy, cz); };
+  const t0 = { tx: c.tx, tz: c.tz }, p0 = at();
+  c.tx = t0.tx + 1; const px = at(); c.tx = t0.tx;
+  c.tz = t0.tz + 1; const pz = at(); c.tz = t0.tz; R.updateCamera();
+  if (!p0 || !px || !pz) return;
+  const a = px[0] - p0[0], b = pz[0] - p0[0], cc = px[1] - p0[1], d = pz[1] - p0[1], det = a * d - b * cc;
+  if (Math.abs(det) < 1e-6) return;
+  const ux = (dx * d - b * dy) / det, uz = (a * dy - cc * dx) / det;
+  const id = (FV.focusId || 0) + 1, s = performance.now(); FV.focusId = id; FV.focusing = true;
+  const step = () => {
+    if (FV.focusId !== id) return;
+    const k = Math.min(1, (performance.now() - s) / 450), f = 1 - Math.pow(1 - k, 3);
+    c.tx = t0.tx + ux * f; c.tz = t0.tz + uz * f; clampCam();
+    if (k < 1) requestAnimationFrame(step); else FV.focusing = false;
+  };
+  step();
+}
+/* Markierung über dem Ziel (ruhiger Ring + Finger). Liegt das Ziel unter der Karte, weicht die Karte aus
+   (Hochformat nach oben, Querformat nach rechts) – mit Abstand, damit sie nicht hin- und herspringt. */
 function farmTutPoint() {
-  const h = $("#ftHand");
-  if (!h || !S.farm || !S.farm.tut || S.farm.tut.done) return;
-  const st = farmTutList()[S.farm.tut.step];
-  const o = st && st.target && st.target();
-  if (!o || FV.sheet || !FV.R) { h.style.display = "none"; return; }
-  const [cx, cz] = farmCenter(o);
-  const p = FV.R.project(cx, objH(o) * 0.55, cz);
-  if (!p) { h.style.display = "none"; return; }
-  h.style.display = "";
-  h.style.left = p[0] + "px"; h.style.top = p[1] + "px";
+  const el = $("#farmTut"), h = $("#ftHand");
+  if (!el || !h || !el.classList.contains("on")) return;
+  const T = farmTutState(), st = T && farmTutList()[T.step];
+  const o = el.classList.contains("task") && st && st.target && st.target();
+  let p = null;
+  if (o && !FV.sheet && FV.R && !FV.fp) { const [cx, cz] = farmCenter(o); p = FV.R.project(cx, objH(o) * 0.55, cz); }
+  const W = FV.R ? FV.R.w : innerWidth, H = FV.R ? FV.R.h : innerHeight;
+  const vis = !!(p && p[2] < 1 && p[0] > 8 && p[0] < W - 8 && p[1] > 8 && p[1] < H - 8);
+  h.style.display = vis ? "" : "none";
+  if (!vis) return;
+  h.style.transform = `translate(${p[0].toFixed(1)}px,${p[1].toFixed(1)}px)`;
+  const card = el.querySelector(".ltc");
+  if (!card) return;
+  /* beide Lagen ausrechnen (Koordinaten relativ zum Hof); nur wechseln, wenn die andere das Ziel frei lässt */
+  const ch = card.offsetHeight, cw = card.offsetWidth, land = W > H && H < 560, x = p[0], y = p[1], m = 46;
+  const coverBase = land ? x < cw + 12 + m : y > H - ch - 12 - m;
+  const coverAlt = land ? x > W - cw - 12 - m : y < ch + 12 + m;
+  const alt = el.classList.contains("alt"), want = coverBase && !coverAlt ? true : !coverBase ? false : alt;
+  if (want !== alt && performance.now() - (el._flip || 0) > 700) { el._flip = performance.now(); el.classList.toggle("alt", want); }
+  /* Kleiner Schirm: Die Karte deckt das Ziel oben wie unten zu → die Kamera schiebt das Ziel einmal sanft in den
+     freien Bereich – nur, solange der Spieler die Kamera seit dem Schrittwechsel nicht selbst bewegt hat. */
+  if (coverBase && coverAlt && ftNudge !== T.step && !FV.focusing && !(FV.touchAt > ftFocusAt)) {
+    ftNudge = T.step;
+    const fx = land ? (alt ? (W - cw - 12) / 2 : cw + 12 + (W - cw - 12) / 2) : x;
+    const fy = land ? y : (alt ? ch + 12 + (H - ch - 12) / 2 : Math.max(40, (H - ch - 12) / 2));
+    farmTutNudge(o, fx - x, fy - y);
+  }
 }
 
 /* -------------------------- Ein- und Ausblenden ------------------------ */

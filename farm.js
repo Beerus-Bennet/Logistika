@@ -1514,7 +1514,8 @@ function farmSellAll() {
 
 /* -------------------------------- Takt -------------------------------- */
 function farmTick(dt) {
-  if (!farmOn() || (S.farm.tut && !S.farm.tut.done)) return;
+  /* v256: nur der erste Rundgang hält den Hof an – eine Wiederholung (nur „Weiter“) nicht, sonst fehlt danach Produktionszeit */
+  if (!farmOn() || (S.farm.tut && !S.farm.tut.done && !S.farm.tut.replay)) return;
   farmErbeTick(dt || 1);
   /* der Kessel heizt auch, wenn gerade niemand hinschaut */
   const ks = S.farm.objs.find(o => o.t === "kessel");

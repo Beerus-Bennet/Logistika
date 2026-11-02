@@ -1637,6 +1637,7 @@ function beginLeg(job, idx) {
   } else {
     veh.phase = "load";
     veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from) * (job.fastLoad ? 0.6 : 1);
+    if (typeof officeCreditUms === "function") officeCreditUms(leg.from);
     veh.route = null; veh.routeDist = 0;
   }
 }
@@ -1694,6 +1695,7 @@ function finishLeg(job, veh) {
   const leg = job.legs[veh.legIdx];
   leg.done = true;
   veh.phase = "idle"; veh.jobId = null; veh.legIdx = -1; veh.route = null; veh.jobs++;
+  if (typeof officeCreditDrive === "function") officeCreditDrive(veh);      /* v257: Monatsauswertung Fahrpersonal */
   job.curLeg++;
   if (job.curLeg < job.legs.length) { beginLeg(job, job.curLeg); return; }
 
@@ -1878,10 +1880,12 @@ function tick(dtMin) {
           veh.at = leg.from;
           setSpot(veh, end, li === 0 ? oPick(job.order) : nodeAddr(leg.from));
           veh.phase = "load"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from) * (job.fastLoad ? 0.6 : 1);
+          if (typeof officeCreditUms === "function") officeCreditUms(leg.from);
         } else {
           veh.at = leg.to;
           setSpot(veh, end, lastLeg && leg.b ? oDrop(job.order) : nodeAddr(leg.to));
           veh.phase = "unload"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.55, 0.95) * umschlagFactor(leg.to);
+          if (typeof officeCreditUms === "function") officeCreditUms(leg.to);
         }
       }
     }
@@ -3752,9 +3756,9 @@ function renderWorld() {
   const b = $("#unlockBtn");
   if (b) b.onclick = unlockStage;
   const ta = $("#tutAgainBtn");
-  if (ta) ta.onclick = () => { S.tut = { done: false }; startTutorial(); };
+  if (ta) ta.onclick = () => { S.tut = { done: false, replay: true }; startTutorial(); };   /* v256: Wiederholung ohne neuen Übungsauftrag */
   const fta = $("#farmTutAgain");
-  if (fta) fta.onclick = () => { S.farm.tut = { step: 0, done: false, replay: true }; showTab("farm"); };
+  if (fta) fta.onclick = () => { if (!S.farm.tut || S.farm.tut.done) S.farm.tut = { step: 0, done: false, replay: true }; showTab("farm"); };   /* v256: laufenden Rundgang nicht überschreiben */
   $$("#tab-world [data-talk]").forEach(b => b.onclick = () => replayTalk(b.dataset.talk));
   const r = $("#resetBtn");
   if (r) r.onclick = () => {

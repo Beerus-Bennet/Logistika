@@ -820,6 +820,8 @@ const G3 = (() => {
     }
     R.texture = function (cv) { const t = { canvas: cv, tex: null }; texs.add(t); texUp(t); return t; };
     R.texUpdate = function (t) { if (t) texUp(t); };
+    /* v257: Aufkleber-Bild wieder freigeben (Büro: Etagenwechsel, Monitore) */
+    R.texFree = function (t) { if (!t) return; texs.delete(t); if (t.tex && !lost) gl.deleteTexture(t.tex); t.tex = null; };
 
     canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); lost = true; });
     canvas.addEventListener("webglcontextrestored", () => {

@@ -7,6 +7,68 @@
 
 
 
+
+
+## v257 – Büro in der Ich-Perspektive: lebendiges Personal, Küche an der Wand, Mitarbeiter des Monats
+**Bestätigte Ursachen (Code gelesen, im Testbrowser gemessen bzw. gesehen):**
+- Hüpfen: `step()` setzte jede Figur 7-mal pro Sekunde um bis zu 4 mm hoch (`n.y = |sin(7t)|·0,004`) und drehte sie um ±4,6° um die Hochachse. Gemessen am alten Stand: 3,7–3,9 mm Hub am Figurenursprung; neu 0 mm, 0°. Kopfwippen beim Gehen 2,5 cm → 1 cm (bei „Bewegung reduzieren“ 0).
+- Steife Figuren: `FWM.person` ist ein einziges starres Netz (Hände auf den Oberschenkeln), nichts konnte sich bewegen. Stuhlsitz lag 3 cm über der Oberschenkel-Unterseite.
+- Küche: Zeile stand 40 cm vor der Wand (`back = PZ(ky − 17)`), Sockel und Fronten lagen in derselben Ebene (Flimmern/Zickzack an der Front – keine Schattenfrage, die globalen Schatten bleiben unverändert), Hängeschränke ragten in den Kühlschrank, Kühlschrank mitten in der Zeile.
+- Ressourcen: Wandbilder wurden bei Etagenwechsel neu angelegt, aber nie freigegeben. Alte Lade-Rückrufe prüften nur `O.alive` – nach schnellem Verlassen/Betreten liefen sie in die neue Sitzung.
+- Antippen: kein Sichttest (durch Möbel hindurch ansprechbar), Reichweite 9 m.
+
+**Lösung (`officefp.js`, eigene Engine, `FWM.person` für Hof/Wald unverändert):**
+- Büro-Figur als Gliederpuppe: Becken/Beine (Becken auf dem Sitz, Füße am Boden), Oberkörper (Taille als Drehpunkt, Atmen, Vorbeugen), Kopf (Drehpunkt Hals) mit Lidern und Mund, je Arm Ober- und Unterarm mit Hand. Hände per Zwei-Gelenk-Rechnung an Tastatur, Maus, Block, Papiere, Telefon, Tasse.
+- Aussehen aus `p.av` (Geschlecht, Haut, Haarfarbe und alle Frisuren, Augenfarbe, Bart, Brille/Cap/Mütze/Headset, Outfit), Hose/Schuhe/Tasse aus der festen Personal-ID – gleich auf jeder Etage und bei jedem Betreten. Namensschild in Rollenfarbe.
+- Tätigkeiten je Person zeitversetzt und nach Rolle gewichtet: tippen, Maus, Unterlagen lesen, notieren (mit Stift), kurz telefonieren (mit Headset freihändig), Tasse nehmen und trinken, aufschauen. Spieler in der Nähe → gelegentlicher Blick; angesprochen → Kopf zum Spieler, Mund spricht. Kein Herumlaufen.
+- Schreibtisch: Maus mit Pad rechts, Block mit Stift, Papierstapel, Telefon, Tasse; Bildschirm je Rolle mit echten Standortdaten (Fahrzeuge frei/unterwegs, Touren, Fahrerpool, Umschlag, Aufschlag, eigener Monatswert). Die kleine Kartenskizze ist reine Deko ohne Zahlen. Bildschirmbilder 256 × 160, Neuzeichnen nur bei geänderten Daten, höchstens alle 12 s.
+- Küche im 60-cm-Raster an der hinteren Wand (`kitchenModules`, `kitchenX` in `offices.js`, auch der Grundriss zeigt die Module): Korpus 58 cm, 3 cm Luft für die Sockelleiste, Sockel 10 cm hoch und 6 cm zurückgesetzt, Fronten 18 mm mit 6-mm-Fugen, Arbeitsplatte bis an die Wand mit 3 cm Überstand, Spritzschutz, Hängeschränke 35 cm tief auf 1,42–2,10 m im selben Raster (nicht über Kühlschrank und Kaffeemodul), Flachschirmhaube über dem Herd, Hochschrank/Kühlschrank bündig am Ende mit Griff zur Zeile, Siebträger ganz auf der Platte mit Auslauf und Tasten nach vorn, darüber ein offenes Brett. Esstisch mit 1,2 m freier Fläche vor den Fronten. Kollision und Sichtprüfung passen dazu. Im Grundriss gleitet die Küche nur noch an der Wand entlang (gespeicherte Lage bleibt, nur die Höhe rastet ein).
+- Poster „Mitarbeiter des Monats“ neben dem Whiteboard: Standort, Monat (Spielzeit, 30 Tage), Name, Rolle, Porträt (Avatar), Begründung; Antippen öffnet eine kleine Karte. Hinweis, wenn die Person versetzt wurde oder gegangen ist. Keine Prämie.
+- Antippen: Strahl gegen Figur bzw. Poster, Sicht über Möbel-Kästen geprüft, Reichweite 6 m, sonst Hinweis („Zu weit weg …“, „Da steht etwas im Weg …“). Gesprächszeilen aus aktueller Tätigkeit und prüfbaren Fakten (eigener Monatswert, Fahrzeuge, Fahrerpool, Umschlag, Aufschlag, Stimmung, Auszeichnung, seit Tag N), der Reihe nach ohne direkte Wiederholung.
+- Robustheit: `R.texFree` (neu in `gl3d.js`) gibt Bilder bei Etagenwechsel und Verlassen frei; Netze werden je Etage zwischengespeichert und freigegeben; Sitzungsmarke gegen alte Rückrufe; ändert sich das Team während die Ansicht offen ist, wird die Etage neu aufgebaut (Position bleibt); Statusleiste dunkel, beim Verlassen zurück; Joystick und Umsehen mit zwei Fingern unabhängig, verlorene Finger werden zurückgesetzt.
+
+**Monatsauswertung (`offices.js`, `game.js`):** je Person `s.mo = { k, n, pk, pn }` (laufender und voriger Spielmonat). Gezählt: Disposition 1 je gestarteter Tour, Zoll 1 je betreuter Tour (wenn Zollkräfte da), Fahrpersonal 1 je abgeschlossener Fahrt (fester Fahrer, sonst Pool des Standorts), Umschlag 1 je Lade-/Entladevorgang am Standort. Verteilung innerhalb einer Rolle wie echte Arbeit (wer im Verhältnis zum Können am wenigsten hatte). Nach Monatsende Auswertung je Standort (`motmCheck`, aus `tickBases` und beim Betreten): jede Person im Verhältnis zum Schnitt ihrer Rolle im ganzen Unternehmen im selben Monat (sonst hätte Umschlag mit wenigen, großen Einzelschritten gegen die Disposition nie eine Chance – im Spieltest 4 Tage: 132 Touren disponiert, 131 Fahrten, 31 Umschlagvorgänge), Gleichstand → mehr Können → seltener schon ausgezeichnet (`b.motmWins`) → mehr Einsätze → länger dabei → Kennung. Niemand mit Einsätzen → „Diesmal niemand“. Ergebnis als Momentaufnahme in `b.motm` gespeichert. Ältere Spielstände/neue Standorte: Startmarke, erste Auszeichnung nach Ende des laufenden Monats. Funktionsname `motmCredit` (ein erster Entwurf hieß wie `staffCredit` aus `team.js` – im Test aufgefallen und umbenannt).
+
+**Nicht vorhanden:** Einen Ablauf „Tasse nehmen / Kaffee kochen“ für den Spieler gab es in keinem Stand des Spiels – er wurde nicht erfunden. Küchentüren haben (wie bisher) keine Öffnungs-Animation; der Platz zum Aufschwingen ist frei gehalten.
+
+**Geprüft:** Playwright/Chromium (SwiftShader, Desktop 960 × 600): Vorher/Nachher-Bilder (Küche vorn, links, rechts, oben, Sockel; Figuren seitlich und von vorn als Bildfolgen), Hub-Messung, Kontor (Nische, 2 bzw. 1 Person), Halle (Siebträger), Bürogebäude (Einbauküche, EG/1. OG), Konzernzentrale (36 Plätze), leeres Büro ohne Küche; Antippen nah/zu weit/verdeckt (künstliches Hindernis), Poster-Karte, Teamwechsel bei offener Ansicht, Etagenwechsel hin und zurück (gleiche Zahl an Netzen und Bildern), schnelles Verlassen/Betreten, Statusleistenfarbe; bestehende Unit-Tests (camp, forest, hunt, jail grün; axe und trees wie bisher rot). **Nicht geprüft:** echtes iPhone/Safari, echte Mehrfinger-Bedienung, Bildrate auf dem Handy.
+
+## v256 – Tutorial-System mit Lina überarbeitet
+**Gestaltung (alle Erklärungen sehen jetzt gleich aus):**
+- Neue gemeinsame Karte `linaCardHTML` (`intro.js`) für Hof-Rundgang, Speditions-Einführung, Büro-/Snus-/Pablo-Gespräche und Rollen-Erklärungen: Lina als **Kopf-/Schulterporträt in der Karte** (statt einer abgeschnittenen Ganzkörperfigur daneben bzw. Figur + Wolke), Rolle und Kontext („Nachbarin · Hof-Rundgang“, „Disponentin · Einführung“ …), **„Schritt X von Y“** mit Balken, Titel, kurze Einordnung, Kasten **„Deine Aufgabe“** bzw. „So geht’s“, getrennter **Teilfortschritt** („1 von 3 Feldern geerntet“), Rückmeldung („✓ Geerntet! …“), Haupt- und Nebenaktion, ✕ zum Beenden.
+- Fehlt `lina.png`, zeichnet `avatarSVG` ein Porträt (`linaFace`, `linaFaceFail` – auch für eine schon sichtbare Hof-Karte und offene Tipps).
+- Hof: Karte unten über die Breite; **„Laden“, „Lager“ und der Gründen-Knopf sind während des Rundgangs ausgeblendet** (`body.ftut-on`). Liegt das Ziel unter der Karte, weicht sie aus (hoch: nach oben, quer: nach rechts; `farmTutPoint`). Ruhiger Ring + Finger statt springender Hand. Deckt die Karte das Ziel in beiden Lagen (kleine Schirme), schiebt die Kamera das Ziel einmal sanft in den freien Bereich (`farmTutNudge`) – nur solange der Spieler die Kamera seit dem Schrittwechsel nicht selbst bewegt hat. Niedrige Schirme: kompaktere Karte; im Querformat entfällt bei Mitmach-Aufgaben die Einleitungszeile.
+- Spedition: dieselbe Karte im `#tutor`; hohe Ziele (ganze Auftragskarte) → Karte unten, damit Kopf und ⭐ sichtbar bleiben. Leuchtfenster etwas weniger dunkel, langsamer Puls.
+- Kurz-Tipps mit demselben Porträt. CSS-Block „v256“ am Ende von `style.css` (44-px-Ziele, Safe Areas, Querformat, Desktop, kleine Schirme, `prefers-reduced-motion`).
+
+**Texte:** Jeder Schritt nach dem Muster Einordnung → Handlung → Rückmeldung, Titel für alle Schritte und Gespräche (`TUT_STEPS`, `FTUT_HOF`, `TALK_TITLES`, `TALK_CTX`).
+
+**Bestätigte Fehler und Korrekturen:**
+- `farmTutShow`: Wiederholung trug zugleich `wait` und `free` (Finger sichtbar, obwohl nur „Weiter“) → ein Zustand (`farmTutMode`: info/task/finish/done).
+- `farmTutSignal`: Schrittwechsel nach 650 ms ohne Prüfung → `farmTutAdvance` mit Rundgang-/Schritt-Kennung (`ftT`, `ftGen`); `farmTutNext(from)` ignoriert veraltete Aufrufe und Doppeltipps.
+- `T.adv` blieb nach Speichern + Neuladen im Wechselmoment hängen → jedes weitere Signal wurde ignoriert, der Rundgang hing. Wird beim Laden zurückgesetzt; erreichte Aufgaben gehen direkt weiter.
+- `hintBusy`: Tipps kamen über die Erklärseiten/den Abschluss des Hof-Rundgangs → warten jetzt, solange der Rundgang sichtbar ist (auch im Büro-Vollbild, in der Jagd).
+- `probeGuideArt`: Hof-Figur und Tipps bekamen keinen Fallback → umgestellt.
+- Kamera sprang bei jedem Teilfortschritt (z. B. nach dem 1. Feld) zum nächsten Ziel → nur noch beim Schrittwechsel.
+- Wiederholung der Spedition-Einführung („Welt“) legte einen neuen bezahlten Übungsauftrag an → Wiederholung ohne Auftrag (`S.tut.replay`).
+- Hof-Wiederholung hielt die Hofproduktion an (`farmTick`) → nur noch der erste Rundgang.
+- Nach einer Hof-Wiederholung blieb `replay` gesetzt → Gieß-/Futter-Tipps kamen nie → wird beim Ende entfernt.
+- `linaTalk`: auf dem Hof endlose Startversuche, mehrere Aufrufe stapelten Ketten → je Gespräch ein geplanter Versuch, begrenzt, alte Versuche nach Spielstandwechsel wirkungslos.
+- Tipp-Warteschlange: ein vom Tutorial unterbrochener Tipp ging verloren (galt schon als gesehen) → kommt danach wieder; zu lange wartende Tipps verfallen, ohne als gesehen zu gelten.
+- Bauernhaus-/„Welt“-Knopf überschrieb einen laufenden ersten Rundgang → geht dort weiter.
+
+**Abläufe abgesichert:** Ziele gelten nur als erreichbar, wenn sie sichtbar, eingeblendet, nicht gesperrt und auf dem Bildschirm sind (`tutUsable`); fehlt ein Mitmach-Ziel länger als 1,5 s, gibt es „Weiter“ (Lina übernimmt). Hof-Aufgaben ohne Möglichkeit (kein reifes Feld, keine reifen Äpfel) oder nach 45 s ohne Fortschritt: „Schritt auslassen“. Beenden jederzeit über ✕ oder Esc mit kurzer Rückfrage (Folgen + Wiederholung unter „Welt“/im Bauernhaus); danach sind Sperrflächen, Klassen und Timer weg.
+
+**Zugänglichkeit:** echte Buttons mit Beschriftung, `role="dialog"` (blockierend) bzw. `region` (Hof), Fokus auf die Karte/den Hauptknopf, sichtbarer Tastaturfokus, Schrittwechsel per `aria-live` (nur beim Wechsel), Tipps als `status`.
+
+**Unverändert:** Pausenlogik der Spedition (Uhr steht in Einführung und Gesprächen), erster Hof-Rundgang hält den Hof an, Belohnungen, Aufträge, Spielstand-Migration (`T.v76`).
+
+**Geprüft** im Testbrowser (Chromium, Software-WebGL): Hof-Rundgang mit Teilfortschritt, Doppeltipp, Rückfrage; Spedition vom Fahrzeug bis zur Annahme und zum Ende; Wiederholungen ohne Zusatzauftrag; fehlendes Ziel + Ausweg; Planer schließen; Doppelsignal; Esc; Büro-Gespräch, Rollen-Erklärung, Kurz-Tipp mit Unterbrechung; Neuladen im Wechselmoment; fehlende Lina-Grafik; 390 × 844, 375 × 667, 844 × 390, 1280 × 800. **Nicht auf einem echten iPhone/Safari geprüft.**
+## v255 – Schatzkiste: Kamera gehört dem Spieler
+- Ursache: Wischte man während der Truhen-Show weg, brach nur die Hinfahrt ab. Die Show merkte sich die alte Ansicht und flog ~2,6 s nach dem Aufspringen trotzdem dorthin zurück; die steile Show-Neigung blieb bis dahin aktiv. Beim Erscheinen eines Vogelschwarms schwenkte die Kamera ungefragt zur Fundstelle (nach 4 s ohne Berührung). Das Mausrad zählte nicht als Eingriff.
+- Lösung (`worldview.js`): `trCamTaken` erkennt, dass der Spieler seit Beginn der Show die Kamera angefasst hat; `worldTreasureCamRelease` gibt sie dann sofort frei (kein Rückflug, Neigung gleitet in 0,4 s auf normal). Geprüft in der Hinfahrt (`worldTreasureCam`), während der Show (`stepTreasureReveal`) und vor dem Rückflug (`worldTreasureCamBack`). `worldTreasureIntro` bewegt die Kamera nicht mehr – hin geht es über den 🐦-Knopf. `farmview.js`: Mausrad setzt `FV.touchAt`/`FV.focusId` wie ein Wisch.
+- Ohne Eingriff bleibt alles wie bisher: Kamera fährt zur Grube und nach der Show zurück.
+- Geprüft im Testbrowser (echte Hof-Ansicht, Show direkt ausgelöst): ohne Eingriff Rückflug auf die alte Ansicht; mit Wisch während der Show bleibt die Kamera an der Stelle des Spielers, keine Sonderneigung mehr. Nicht auf dem Handy geprüft.
 ## v254 – Büro betreten (Ich-Perspektive)
 - Neu: Knopf „🚪 Betreten“ links unten auf dem Grundriss jeder Standortkarte (`offices.js` `baseCard`, Bindung `[data-enter]`; „einrichten“ bleibt wie bisher).
 - Nach einem Ladescreen (derselbe wie beim Hof: `ldMake`/`ldStart` aus `farmview.js`, eigene Texte, mindestens ~1,7 s) steht man in der Bürotür und läuft in der Ich-Perspektive durch den Raum.

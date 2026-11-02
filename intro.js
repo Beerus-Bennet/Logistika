@@ -58,6 +58,8 @@ function probeGuideArt() {
     const t = $("#tutor");
     if (t && t.classList.contains("on")) showTutStep();
     if ($("#intro").classList.contains("on") && INTRO.step === 0) renderIntro();
+    /* v256: auch die schon sichtbare Hof-Karte und einen offenen Tipp auf die gezeichnete Lina umstellen */
+    $$("#farmTut .lf-img, #linaHint .lf-img").forEach(linaFaceFail);
   };
   img.src = GUIDE_ART;
 }
@@ -65,6 +67,63 @@ function guideFigure(size, uid) {
   return guideArt
     ? `<img class="guide-art" src="${guideArt}" alt="${GUIDE.name}" width="289" height="821">`
     : avatarFigureSVG(GUIDE.avatar, size, { uid: uid, label: GUIDE.name });
+}
+
+/* ==================== v256: Linas Tutorial-Karte (einheitlich) ====================
+   Eine Karte für alles, was Lina erklärt: Einführung in die Spedition, Hof-Rundgang, spätere Gespräche.
+   Lina als Kopf-/Schulterporträt in der Karte (statt einer abgeschnittenen Ganzkörperfigur daneben),
+   Rolle, Schritt X von Y, Titel, kurze Einordnung, die konkrete Handlung, Teilfortschritt, Rückmeldung,
+   Haupt- und Nebenaktion. Fehlt lina.png, zeichnet avatarSVG ein Porträt.                                  */
+function linaFaceSVG(uid) { return avatarSVG(GUIDE.avatar, 96, { uid: "lf" + (uid || ""), bg: false }); }
+function linaFace(uid) {
+  return guideArt
+    ? `<img class="lf-img" src="${guideArt}" alt="" draggable="false" onerror="linaFaceFail(this)">`
+    : linaFaceSVG(uid);
+}
+/* Bild lädt nicht: sofort die gezeichnete Lina einsetzen (auch bevor probeGuideArt fertig ist) */
+function linaFaceFail(img) {
+  guideArt = "";
+  document.body.classList.remove("guide-art");
+  const w = img && img.parentNode;
+  if (w) w.innerHTML = linaFaceSVG("f" + Math.random().toString(36).slice(2, 6));
+}
+/* c: { uid, cls, kind ("info"|"task"|"finish"|"done"|"exit"), ctx, step, total, title, tx, act, part, partK,
+        ok, note, primary {id,label}, secondary [{id,label}], close (Beschriftung des ✕), modal }            */
+function linaCardHTML(c) {
+  const id = "ltc" + String(c.uid || "x").replace(/\W/g, "");
+  const btn = (b, cls) => `<button type="button" class="${cls}" data-lt="${b.id}">${b.label}</button>`;
+  const pct = c.total ? Math.round(Math.min(1, c.step / c.total) * 100) : 0;
+  const acts = (c.secondary || []).map(b => btn(b, "ltc-sec")).join("") + (c.primary ? btn(c.primary, "btn ltc-pri") : "");
+  return `<div class="ltc ltc-${c.kind}${c.cls ? " " + c.cls : ""}" role="${c.modal ? "dialog" : "region"}" aria-labelledby="${id}-t" tabindex="-1">
+    <div class="ltc-head">
+      <span class="ltc-face" aria-hidden="true">${linaFace(c.uid)}</span>
+      <span class="ltc-who"><b>${GUIDE.name}</b><small>${c.ctx || GUIDE.role}</small></span>
+      ${c.close ? `<button type="button" class="ltc-x" data-lt="close" aria-label="${c.close}" title="${c.close}">✕</button>` : ""}
+    </div>
+    ${c.total > 1 ? `<div class="ltc-prog"><span>Schritt ${c.step} von ${c.total}</span><i aria-hidden="true"><u style="width:${pct}%"></u></i></div>` : ""}
+    <h2 class="ltc-title" id="${id}-t">${c.title || ""}</h2>
+    ${c.tx ? `<p class="ltc-tx">${c.tx}</p>` : ""}
+    ${c.act ? `<div class="ltc-do"><b>${c.kind === "task" ? "Deine Aufgabe" : "So geht’s"}</b><span>${c.act}</span></div>` : ""}
+    ${c.part ? `<div class="ltc-part"><span>${c.part}</span><i aria-hidden="true"><u style="width:${Math.round(Math.max(0, Math.min(1, c.partK || 0)) * 100)}%"></u></i></div>` : ""}
+    ${c.ok ? `<div class="ltc-ok">✓ ${c.ok}</div>` : ""}
+    ${c.note ? `<p class="ltc-note">${c.note}</p>` : ""}
+    ${acts ? `<div class="ltc-act">${acts}</div>` : ""}
+  </div>`;
+}
+/* Rückfrage vor dem Beenden: Folgen kurz erklärt, Weitermachen ist die Hauptaktion */
+function linaExitHTML(o) {
+  return linaCardHTML({ uid: o.uid, cls: o.cls, kind: "exit", modal: o.modal, ctx: o.ctx, title: o.title, tx: o.tx,
+    primary: { id: "stay", label: "Weitermachen" }, secondary: [{ id: "quit", label: o.quit }] });
+}
+/* Screenreader: nur bei einem echten Schrittwechsel ansagen, nicht bei jedem Neuzeichnen */
+let linaLiveKey = "";
+function linaAnnounce(key, text) {
+  if (key === linaLiveKey) return;
+  linaLiveKey = key;
+  let el = document.getElementById("ltLive");
+  if (!el) { el = document.createElement("div"); el.id = "ltLive"; el.className = "sr-only"; el.setAttribute("aria-live", "polite"); el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.textContent = "";
+  setTimeout(() => { el.textContent = String(text || "").replace(/<[^>]+>/g, ""); }, 60);
 }
 
 /* ------------------------------ Ablauf --------------------------------- */
@@ -454,14 +513,18 @@ function tutPinRect() {
    Fahrzeugwahl, Deckungsbeitrag, Profi-Trick, Flotte, Büros, Diensthandy …) – jetzt nur das, ohne das man
    nicht losspielen kann: wo steht mein Fahrzeug, Auftrag antippen, annehmen, zuschauen, Uhr. Alles andere
    entdeckt man selbst; ein paar Dinge erklärt Lina später genau dann, wenn sie passieren (linaHint). */
+/* v256: Jeder Schritt nach dem Muster Einordnung (tx) → Handlung (act) → Rückmeldung (nächster Schritt bzw. ok).
+   title: kurzer Schritttitel · act: konkrete Handlung · note: Zusatz klein darunter. */
+const tutReplay = () => !!(S.tut && S.tut.replay);
 const TUT_STEPS = [
-  { id: "hello", skip: true,
+  { id: "hello", skip: true, title: "Dein erstes Fahrzeug",
     tx: () => {
       const f = tutVeh();
-      return (S.farm ? "Jetzt wird’s eine Spedition, Chef! " : "Moin, ich bin Lina – deine Disponentin! ")
-        + (f ? `Das ist dein ${tvIcon()} ${esc(tvName())}. ` : "")
-        + "<b>Steht es nah am Abholort, bleibt am meisten hängen.</b> Wir fahren den ersten Auftrag zusammen – die Uhr steht so lange still.";
+      return (S.farm ? "Jetzt wird aus dem Hof eine Spedition. " : "Moin, ich bin Lina, deine Disponentin. ")
+        + (f ? `Das hier ist dein ${tvIcon()} <b>${esc(tvName())}</b>. ` : "")
+        + "Steht ein Fahrzeug nah am Abholort, bleibt vom Erlös am meisten übrig.";
     },
+    note: () => tutReplay() ? "Das ist eine Wiederholung – es entsteht kein zusätzlicher Auftrag." : "Wir fahren den ersten Auftrag zusammen. So lange steht die Uhr still.",
     target: tutVehRect,
     before: () => {
       showTab("map");
@@ -470,20 +533,22 @@ const TUT_STEPS = [
     } },
 
   /* ---------- mit Übungsauftrag ---------- */
-  { id: "pick", need: "order",
-    tx: () => `Unter „Aufträge“ liegt meine ⭐ Übung. ✅ heißt: dein ${esc(tvName())} steht schon dort, also keine Leerfahrt. <b>Tipp drauf.</b>`,
+  { id: "pick", need: "order", title: "Übungsauftrag öffnen",
+    tx: () => `Unter „Aufträge“ liegt meine Übung, markiert mit ⭐. Das grüne ✅ heißt: Dein ${esc(tvName())} steht schon dort – keine Leerfahrt.`,
+    act: "Tippe auf die Karte mit dem ⭐ Übungsauftrag.",
     target: tutOrderCard, waitFor: "openPlanner",
     before: () => { if (activeTab !== "orders") showTab("orders"); $("#view .view-body").scrollTop = 0; },
     already: () => planState && planState.order.id === tutOrderId },
-  { id: "accept", need: "order", inPlanner: true, top: true,
+  { id: "accept", need: "order", inPlanner: true, top: true, title: "Fahrt planen und annehmen",
     tx: () => {
       const r = tutRepoSel();
-      return "Hier planst du die Fahrt. Unten steht die Rechnung: Erlös minus Kosten = <b>Deckungsbeitrag</b>"
-        + (r.eur > 0.005 ? `, die Leerfahrt kostet ${money(r.eur)}.` : ".") + " Grün? Dann <b>„Auftrag annehmen“</b>.";
+      return "Das ist der Planer. Unten steht die Rechnung: Erlös minus Kosten ergibt den <b>Deckungsbeitrag</b>"
+        + (r.eur > 0.005 ? ` – die Leerfahrt kostet ${money(r.eur)}.` : ".");
     },
+    act: "Ist der Deckungsbeitrag grün, tippe auf „Auftrag annehmen“.",
     target: "#modalBody #mAccept", waitFor: "orderAccepted" },
-  { id: "accepted", need: "job",
-    tx: () => `Läuft! Unter „Live“ siehst du, wie dein ${tvIcon()} ${esc(tvName())} fährt.`,
+  { id: "accepted", need: "job", title: "Die Fahrt läuft",
+    tx: () => `Angenommen! Dein ${tvIcon()} ${esc(tvName())} ist unterwegs. Unter „Live“ siehst du jede laufende Fahrt mit ihrem Fortschritt.`,
     target: () => { const j = tutJob(); return j && document.querySelector(`#tab-jobs .card.job[data-job="${j.id}"]`); },
     before: () => {
       /* der Anschlussauftrag am Ziel liegt schon bereit – erklärt wird er erst, wenn das Fahrzeug ankommt */
@@ -492,39 +557,60 @@ const TUT_STEPS = [
       showTab("jobs");
     } },
 
-  /* ---------- ohne Übungsauftrag (alle Fahrzeuge unterwegs) ---------- */
-  { need: "none",
-    tx: "Gerade ist kein Fahrzeug frei – dann ohne Übung: Unter „Aufträge“ tippst du eine Ausschreibung mit ✅ an und nimmst sie an.",
+  /* ---------- ohne Übungsauftrag (alle Fahrzeuge unterwegs – oder Wiederholung) ---------- */
+  { need: "none", title: "Aufträge finden",
+    tx: () => tutReplay() ? "Unter „Aufträge“ stehen alle Ausschreibungen. Ein ✅ heißt: Ein freies Fahrzeug steht schon in der Nähe."
+      : "Gerade ist kein Fahrzeug frei, deshalb geht es ohne Übung weiter.",
+    act: "Tippe später unter „Aufträge“ eine Ausschreibung mit ✅ an und nimm sie im Planer an.",
     target: '[data-tab="orders"]', before: () => showTab("orders") },
 
-  { tx: () => {
+  { id: "end", title: "Die Uhr läuft",
+    tx: () => {
       const c = document.querySelector('#controls [data-speed="0"]'), vis = !!(c && c.offsetParent);
-      return "Ab jetzt läuft die Uhr" + (vis ? ": ⏸ hält an, 1× bis 30× macht schneller" : "")
-        + ". Den Rest entdeckst du selbst – wenn’s was Neues gibt, melde ich mich. Viel Erfolg!";
+      return "Ab jetzt läuft die Zeit" + (vis ? ": ⏸ hält an, 1× bis 30× macht schneller." : ".");
     },
+    note: "Den Rest entdeckst du selbst – gibt es etwas Neues, melde ich mich. Wiederholen kannst du die Einführung unter „Welt“.",
     target: '#controls [data-speed="0"]', before: () => showTab("map") }
 ];
+/* Kopfzeile der Karte je Gespräch */
+const TALK_CTX = { main: "Disponentin · Einführung", snus: "Disponentin · Mr. Snus", extras: "Disponentin · Diensthandy",
+  pablo: "Disponentin · Don Pablo", bases: "Disponentin · Büros", base1: "Disponentin · Dein Büro" };
+const TALK_TITLES = {
+  snus: ["Mr. Snus meldet sich", "Vorsicht: Zivilfahnder"],
+  extras: ["Dein Diensthandy", "Tagesziele"],
+  pablo: ["Don Pablo", "Echte Kunden erkennen"],
+  bases: ["Was ist ein Büro?", "Kaufen oder mieten"],
+  base1: ["Dein erstes Büro", "Die vier Stellen", "Bewerbungen"]
+};
 
 /* ============================== Lina-Tipps ================================
    v76: Kurze Hinweise genau in dem Moment, in dem sie gebraucht werden – statt alles vorab im Tutorial.
    Sie blockieren nichts, die Uhr läuft weiter, ein Tipp auf die Blase schließt sie, nach ein paar
    Sekunden geht sie von allein. Jeder Tipp kommt nur einmal (S.tutSeen["h_" + key]).            */
-let hintQ = [], hintT = 0, hintOn = null;
+let hintQ = [], hintT = 0, hintOn = null, hintCloseT = 0;
+/* v256: Ein Tipp, der zu lange in der Schlange wartet, passt meist nicht mehr zur Lage – er verfällt dann,
+   ohne als gesehen zu gelten (kommt also beim nächsten passenden Anlass wieder). o.keep: verfällt nie. */
+const HINT_MAX_WAIT = 90000;
 function linaHint(key, tx, o) {
   if (typeof S === "undefined" || !S) return;
   const seen = (S.tutSeen = S.tutSeen || {});
   if (seen["h_" + key] || hintQ.some(h => h.key === key) || (hintOn && hintOn.key === key)) return;
-  hintQ.push({ key, tx, o: o || {} });
+  hintQ.push({ key, tx, o: o || {}, at: performance.now(), s: S });
   if (!hintOn && !hintT) hintNext();
 }
+/* v256: Tipps warten, solange Lina erklärt – auch während der Erklärseiten und des Abschlusses im Hof-Rundgang
+   (vorher nur bei Mitmach-Schritten: #farmTut.on:not(.free)) – und solange ein Vollbild läuft (Büro, Jagd …). */
+const farmTourShown = () => document.body.classList.contains("tab-farm") && !!document.querySelector("#farmTut.on");
 function hintBusy() {
   const b = document.body.classList;
-  return tutorialRunning() || b.contains("report-open") || b.contains("locked") || !!(typeof S !== "undefined" && (S.jail || S.over))
-    || !!document.querySelector("#farmTut.on:not(.free)");
+  return tutorialRunning() || b.contains("report-open") || b.contains("locked") || b.contains("office3d")
+    || b.contains("fphunt") || b.contains("fp3d") || !!(typeof S !== "undefined" && (S.jail || S.over)) || farmTourShown();
 }
 function hintNext() {
-  hintT = 0;
-  if (!hintQ.length) return;
+  clearTimeout(hintT); hintT = 0;
+  /* Spielstand gewechselt: alte Tipps gehören nicht in den neuen */
+  hintQ = hintQ.filter(h => h.s === S && (h.o.keep || performance.now() - h.at < HINT_MAX_WAIT));
+  if (!hintQ.length || hintOn) return;
   if (hintBusy()) { hintT = setTimeout(hintNext, 2500); return; }
   const h = hintQ.shift();
   const tx = typeof h.tx === "function" ? h.tx() : h.tx;
@@ -533,14 +619,32 @@ function hintNext() {
   if (typeof save === "function") save();
   let el = $("#linaHint");
   if (!el) { el = document.createElement("div"); el.id = "linaHint"; document.body.appendChild(el); }
-  const face = guideArt ? `<img src="${guideArt}" alt="">` : avatarFigureSVG(GUIDE.avatar, 60, { uid: "hint", label: GUIDE.name });
-  el.innerHTML = `<button class="lh-box" type="button"><span class="lh-face">${face}</span><span class="lh-tx"><b>Lina-Tipp</b>${tx}</span><span class="lh-x" aria-label="Schließen">✕</span></button>`;
+  el.innerHTML = `<button class="lh-box" type="button" aria-label="Lina-Tipp schließen"><span class="lh-face ltc-face" aria-hidden="true">${linaFace("h")}</span>`
+    + `<span class="lh-tx" role="status"><b>Lina-Tipp</b>${tx}</span><span class="lh-x" aria-hidden="true">✕</span></button>`;
   el.className = "on" + (h.o.top ? " top" : "");
   document.body.classList.toggle("hint-bot", !h.o.top);
   hintOn = h;
-  const close = () => { if (hintOn !== h) return; hintOn = null; el.className = "off" + (h.o.top ? " top" : ""); document.body.classList.remove("hint-bot"); setTimeout(hintNext, 500); };
+  const close = () => {
+    if (hintOn !== h) return;
+    hintOn = null; clearTimeout(hintCloseT);
+    el.className = "off" + (h.o.top ? " top" : ""); document.body.classList.remove("hint-bot");
+    clearTimeout(hintT); hintT = setTimeout(hintNext, 500);
+  };
   el.querySelector(".lh-box").onclick = () => { close(); if (typeof sfx === "function") sfx("tap"); };
-  setTimeout(close, h.o.ms || Math.min(14000, 6000 + tx.replace(/<[^>]+>/g, "").length * 45));
+  clearTimeout(hintCloseT);
+  hintCloseT = setTimeout(close, h.o.ms || Math.min(14000, 6000 + tx.replace(/<[^>]+>/g, "").length * 45));
+}
+/* v256: Ein Tutorial unterbricht einen offenen Tipp – er kommt danach wieder (vorher ging er verloren,
+   weil er beim Einblenden schon als gesehen galt). */
+function hintInterrupt() {
+  if (!hintOn) return;
+  const h = hintOn; hintOn = null; clearTimeout(hintCloseT);
+  const lh = $("#linaHint"); if (lh) lh.className = "";
+  document.body.classList.remove("hint-bot");
+  if (S && S.tutSeen) delete S.tutSeen["h_" + h.key];
+  h.at = performance.now();
+  hintQ.unshift(h);
+  clearTimeout(hintT); hintT = setTimeout(hintNext, 2500);
 }
 
 /* Wolkenkontur: einmal im Uhrzeigersinn um das Textfeld, jede Kante aus
@@ -579,18 +683,20 @@ function drawCloud() {
 }
 addEventListener("resize", () => { if (document.body.classList.contains("tut-on")) { drawCloud(); tutRefresh(); } });
 
-let tutStep = 0, tutTimer = 0;
+let tutStep = 0, tutTimer = 0, tutExit = false;   /* v256: tutExit – Rückfrage „Beenden?“ ist offen */
 /* Welche Schrittliste gerade läuft: das große Einführungstutorial ("main")
    oder eines von Linas späteren Gesprächen (siehe LINA_TALKS). */
 let tutList = TUT_STEPS, tutKey = "main";
 function startTutorial() {
   if (S.tut && S.tut.done) return;
+  if (tutorialRunning() && tutKey === "main") return;              /* v256: nicht doppelt starten */
   if (planState) closeModal();
-  tutList = TUT_STEPS; tutKey = "main";
+  tutList = TUT_STEPS; tutKey = "main"; tutExit = false;
   /* Übungsauftrag anlegen – oder einen alten wiederfinden, falls das
-     Tutorial nochmal läuft. */
+     Tutorial nochmal läuft. v256: Bei einer Wiederholung (unter „Welt“) entsteht kein neuer Auftrag –
+     sonst gäbe es mit jeder Wiederholung einen zusätzlichen bezahlten Übungsauftrag. */
   const old = S.orders.find(o => o.tut);
-  tutOrderId = old ? old.id : ((typeof makeTutorialOrder === "function" && makeTutorialOrder()) || {}).id || null;
+  tutOrderId = old ? old.id : tutReplay() ? null : ((typeof makeTutorialOrder === "function" && makeTutorialOrder()) || {}).id || null;
   tutStep = 0;
   showTutStep();
 }
@@ -601,7 +707,14 @@ function tutNeedOk(need) {
   if (need === "none") return !tutOrder() && !tutJob();
   return true;
 }
-function tutGo(i) { tutStep = i; showTutStep(); }
+/* v256: from – Schritt, von dem aus gewechselt wird. Kommt ein Signal oder Doppeltipp für einen Schritt,
+   der schon vorbei ist, passiert nichts (kein doppelter Sprung). */
+function tutGo(i, from) {
+  if (from != null && from !== tutStep) return;
+  if (i < 0) return;
+  tutExit = false;
+  tutStep = i; showTutStep();
+}
 
 /* Echte Aktionen aus game.js: Planer geöffnet, Auftrag angenommen, Planer zu. */
 function tutSignal(tag, o) {
@@ -616,19 +729,20 @@ function tutSignal(tag, o) {
       toast("Tipp erst auf Linas ⭐ Übungsauftrag – danach bist du frei.", "warn");
       return;
     }
-    tutGo(tutStep + 1);
+    tutGo(tutStep + 1, tutStep);
   } else if (tag === "orderAccepted") {
     if (!o || o.id !== tutOrderId) return;
     const i = tutList.findIndex(s => s.id === "accepted");
-    if (i > tutStep) tutGo(i);
+    if (i > tutStep) tutGo(i, tutStep);
   } else if (tag === "plannerClosed") {
     /* Abgebrochen, während Lina die Planung erklärt: zurück zur Liste. */
-    if (st.inPlanner && tutOrder()) tutGo(tutList.findIndex(s => s.id === "pick"));
+    if (st.inPlanner && tutOrder()) tutGo(tutList.findIndex(s => s.id === "pick"), tutStep);
   }
 }
 
 function endTutorial() {
-  clearTimeout(tutTimer);
+  clearTimeout(tutTimer); tutTimer = 0;
+  tutExit = false;
   if (tutKey === "main") {
     S.tut = { done: true };
     S.orders.forEach(o => { delete o.tut; });
@@ -639,9 +753,13 @@ function endTutorial() {
   tutKey = "main"; tutList = TUT_STEPS;
   document.body.classList.remove("tut-on", "tut-talk");
   if (typeof renderPause === "function") renderPause();
-  $("#tutor").classList.remove("on", "top", "compact");
+  $("#tutor").classList.remove("on", "top", "compact", "measure");
   $("#tutor").innerHTML = "";          /* keine unsichtbaren Knöpfe zurücklassen */
   tutUnblock();
+  linaLiveKey = "";
+  /* v256: Fokus nicht im entfernten Knopf hängen lassen */
+  if (document.activeElement && document.activeElement !== document.body && !document.activeElement.isConnected) document.body.focus && document.body.focus();
+  clearTimeout(hintT); hintT = setTimeout(hintNext, 1500);
   save();
   render();
 }
@@ -661,8 +779,8 @@ function showTutStep() {
   if (st.waitFor && st.already && st.already()) { tutStep++; return showTutStep(); }
 
   clearTimeout(tutTimer);
-  /* ein offener Lina-Tipp macht dem Gespräch Platz */
-  if (hintOn) { hintOn = null; const lh = $("#linaHint"); if (lh) lh.className = ""; document.body.classList.remove("hint-bot"); }
+  /* ein offener Lina-Tipp macht dem Gespräch Platz – v256: und kommt danach wieder */
+  hintInterrupt();
   document.body.classList.add("tut-on");
   /* Bei Linas späteren Gesprächen stören Meldungen oben nur (sie liegen
      sonst genau über dem, was sie gerade zeigt). */
@@ -694,7 +812,7 @@ function showTutStep() {
    Mitmach-Schritten („Tipp auf …“) bleibt das Fenster selbst frei, sonst
    ist auch das abgedeckt. Scrollen ist währenddessen aus, damit das
    Fenster nicht vom Inhalt wegrutschen kann.                             */
-let tutAskedAt = 0, tutWatchT = 0, tutPlaced = null;
+let tutAskedAt = 0, tutWatchT = 0, tutPlaced = null, tutStuckAt = 0;
 /* v76: Durch die Sperrscheiben hindurch scrollen (Wischen, Mausrad) – die Liste bzw. der Planer bewegt
    sich, das Leuchtfenster läuft mit. Tippen bleibt gesperrt. */
 function tutScrollBox() {
@@ -707,7 +825,7 @@ function tutFollow() {
   if (!st || !$("#tutor").classList.contains("on")) return;
   const g = tutGeom(st);
   tutPlaced = g.r ? { top: g.r.top, left: g.r.left, width: g.r.width, height: g.r.height } : null;
-  tutBlock(g.hole, tutOpen(st) && g.ok, g.ring);
+  tutBlock(g.hole, tutOpen(st) && g.ok && !tutExit && $("#tutor").dataset.stuck !== "1", tutExit ? null : g.ring);
 }
 function tutScrollBind(spot) {
   if (spot._scroll) return;
@@ -751,10 +869,20 @@ function tutUnblock() {
   clearInterval(tutWatchT); tutWatchT = 0;
 }
 /* Wo liegt das Ziel gerade, wie groß ist das Leuchtfenster? */
+/* v256: Größe allein heißt nicht „bedienbar“: versteckt, durchsichtig, abgeschaltet oder außerhalb
+   des Bildschirms zählt wie ein fehlendes Ziel (dann greift der Ausweg, statt dass man festsitzt). */
+function tutUsable(el) {
+  if (!el || el.nodeType !== 1) return !!el;                 /* Rechteck aus der Karte (Fahrzeug, Stecknadel) */
+  if (!el.isConnected || el.closest("[hidden]")) return false;
+  if (el.disabled || el.classList.contains("disabled") || el.getAttribute("aria-disabled") === "true") return false;
+  const cs = getComputedStyle(el);
+  return cs.display !== "none" && cs.visibility !== "hidden" && +cs.opacity > 0.05;
+}
 function tutGeom(st) {
   const el = tutResolve(st);
   const r = el ? (el.nodeType === 1 ? el.getBoundingClientRect() : el) : null;
-  const ok = !!(r && r.width >= 12 && r.height >= 12);
+  const onScreen = !!(r && r.right > 4 && r.bottom > 4 && r.left < innerWidth - 4 && r.top < innerHeight - 4);
+  const ok = !!(r && r.width >= 12 && r.height >= 12 && onScreen && tutUsable(el));
   const p = st.pad == null ? 6 : st.pad;
   let ring = null;
   if (ok && (r.width + p * 2) * (r.height + p * 2) <= innerWidth * innerHeight * 0.42) {
@@ -781,13 +909,21 @@ function tutWatch() {
       return;
     }
     const g = tutGeom(st);
+    /* v256: Mitmach-Ziel verschwunden (Liste neu, Fenster zu, Knopf gesperrt)? Nach 1,5 s bekommt die Karte einen
+       Ausweg („Weiter“); taucht das Ziel wieder auf, wird es wieder zur Aufgabe. Kurze Aussetzer flackern nicht. */
+    if (st.waitFor && !tutExit) {
+      const was = tutor.dataset.stuck === "1";
+      if (!g.ok && !was) { if (!tutStuckAt) tutStuckAt = performance.now(); else if (performance.now() - tutStuckAt > 1500) { tutStuckAt = 0; return renderTutStep(st, true, true); } }
+      else if (g.ok && was) { tutStuckAt = 0; return renderTutStep(st, true, true); }
+      else tutStuckAt = 0;
+    }
     /* Hat sich das Ziel spürbar verschoben (Schrift nachgeladen, Liste neu
        gezeichnet), wird auch Linas Platz neu bestimmt – sonst nur das Fenster. */
     const pl = tutPlaced, r = g.r;
     const moved = !pl !== !r || (r && pl && Math.abs(r.top - pl.top) + Math.abs(r.left - pl.left)
       + Math.abs(r.width - pl.width) + Math.abs(r.height - pl.height) > 4);
     if (moved) renderTutStep(st, false);
-    else tutBlock(g.hole, tutOpen(st) && g.ok, g.ring);
+    else tutBlock(g.hole, tutOpen(st) && g.ok && !tutExit && tutor.dataset.stuck !== "1", tutExit ? null : g.ring);
   }, 200);
 }
 /* Mitmach-Schritt, dessen Ziel nicht da ist: Lina erledigt es selbst,
@@ -806,59 +942,76 @@ function tutFallback(st) {
   tutGo(tutStep + 1);
 }
 
-function renderTutStep(st, fresh) {
+function tutTitle(st) {
+  if (st.title) return typeof st.title === "function" ? st.title() : st.title;
+  const t = TALK_TITLES[tutKey];
+  return (t && t[tutStep]) || (st.roleTitle || "Lina erklärt");
+}
+const tutVal = v => typeof v === "function" ? v() : v;
+/* v256: Karte (neu) aufbauen – Schritt, Rückfrage „Beenden?“ oder Ausweg, wenn das Ziel fehlt */
+function tutCardHTML(st, stuck) {
+  const last = tutStep === tutList.length - 1, main = tutKey === "main", cnt = tutCount();
+  const ctx = TALK_CTX[tutKey] || (st.ctx || "Disponentin");
+  if (tutExit) return linaExitHTML({ uid: "x" + tutStep, cls: "tut-box", modal: true, ctx,
+    title: main ? "Einführung beenden?" : "Gespräch beenden?",
+    tx: main ? "Die Uhr läuft dann sofort, und ein offener Übungsauftrag bleibt als normaler Auftrag stehen. Wiederholen kannst du die Einführung jederzeit unter „Welt“."
+      : "Du kannst dir das Gespräch später unter „Welt“ noch einmal anhören.",
+    quit: main ? "Einführung beenden" : "Gespräch beenden" });
+  const kind = st.waitFor && !stuck ? "task" : last ? "finish" : "info";
+  return linaCardHTML({ uid: "t" + tutKey + tutStep, cls: "tut-box", kind, modal: true, ctx,
+    step: cnt.k, total: cnt.n, title: tutTitle(st), tx: tutText(st),
+    act: stuck ? "Das Ziel ist gerade nicht erreichbar. Tippe auf „Weiter“, dann übernehme ich diesen Schritt." : tutVal(st.act),
+    note: tutVal(st.note),
+    primary: kind === "task" ? null : { id: "next", label: stuck ? "Weiter" : last ? (main ? "Los geht’s" : "Alles klar") : "Weiter" },
+    secondary: st.skip && main && !tutReplay() ? [{ id: "skip", label: "Kenn ich schon" }] : [],
+    close: main ? "Einführung beenden" : "Gespräch schließen" });
+}
+function tutBind(tutor, st, stuck) {
+  const idx = tutStep;
+  let used = false;                     /* ein Tipp = ein Schritt, auch bei Doppeltipp */
+  tutor.onclick = e => {
+    const b = e.target.closest && e.target.closest("[data-lt]");
+    if (!b || used || idx !== tutStep) return;
+    const k = b.dataset.lt;
+    if (k === "close" || k === "skip") {
+      if (tutKey !== "main") { used = true; return endTutorial(); }
+      tutExit = true; return tutRedraw();
+    }
+    if (k === "stay") { tutExit = false; return tutRedraw(); }
+    if (k === "quit") { used = true; return endTutorial(); }
+    if (k === "next") { used = true; if (stuck) tutFallback(st); else tutGo(tutStep + 1, idx); }
+  };
+}
+/* Karte neu aufbauen, ohne den Schritt zu wechseln (Rückfrage auf/zu) */
+function tutRedraw() {
+  const st = tutList[tutStep];
+  if (st && $("#tutor").classList.contains("on")) renderTutStep(st, true, true);
+}
+function renderTutStep(st, fresh, quiet) {
   const tutor = $("#tutor");
-  const last = tutStep === tutList.length - 1;
-  const el = tutResolve(st);
+  let el = tutResolve(st);
   const inModal = !!(el && el.nodeType === 1 && el.closest("#modal"));
   const inView = !!(el && el.nodeType === 1 && el.closest("#view .view-body"));
-  /* Mitmach-Schritt ohne erreichbares Ziel (oder „annehmen“ gesperrt)? */
-  const stuck = st.waitFor && (!el || (el.nodeType === 1 && el.classList.contains("disabled")));
-  if (fresh) {
-    tutor.innerHTML = `
-      <div class="tut-box">
-        <div class="tut-fig">${guideFigure(300, "t" + tutStep)}</div>
-        <div class="tut-bubble">
-          <svg class="tut-cloud" aria-hidden="true" preserveAspectRatio="none"></svg>
-          <div class="tut-in">
-            <div class="tut-who">${GUIDE.name} · ${GUIDE.role}${tutCount() ? `<span class="tut-n">${tutCount()}</span>` : ""}</div>
-            <div class="tut-tx">${tutText(st)}</div>
-            <div class="tut-row">
-              ${st.waitFor && !stuck
-                ? `<span class="tut-wait">👉 Tipp auf das leuchtende Feld</span>`
-                : `<button class="btn" id="tutNext">${last ? "Alles klar" : "Weiter"}</button>`}
-              ${st.skip && tutKey === "main" ? `<button class="tut-skipl" id="tutSkip">Kenn ich schon – überspringen</button>` : ""}
-            </div>
-          </div>
-        </div>
-      </div>`;
-    /* Größe steht fest, bevor das Bild geladen ist; trotzdem nach dem Laden
-       einmal nachmessen, damit Lina sicher nicht aufs Ziel rutscht. */
-    const fig = tutor.querySelector("img.guide-art");
-    if (fig && !fig.complete) fig.onload = () => tutRefresh();
-    const skipBtn = $("#tutSkip");
-    if (skipBtn) skipBtn.onclick = () => endTutorial();
-    const nextBtn = $("#tutNext");
-    if (nextBtn) {
-      let used = false;                 /* ein Tipp = ein Schritt, auch bei Doppeltipp */
-      nextBtn.onclick = () => {
-        if (used) return; used = true;
-        if (stuck) tutFallback(st); else tutGo(tutStep + 1);
-      };
-    }
-  }
-  /* Lina rückt zusammen, wo es eng wird: im Planer immer, in den Listen bei
-     den späteren Gesprächen (Büros, Mr. Snus, Don Pablo). */
-  tutor.classList.toggle("compact", inModal || (inView && tutKey !== "main"));
-
   /* Ziel im Planer bzw. in der Liste erst einmal grob in die Mitte holen (v76: auch im großen Tutorial –
      vorher lag z. B. der Auftrag unter „Live“ halb hinter der Leiste); fein ausgerichtet wird unten,
      sobald feststeht, wo Lina steht. */
   const sbox = fresh && (inModal || inView) ? el.closest(".modal-inner, .view-body") : null;
-  if (sbox) {
+  if (sbox && !quiet) {
     const br = sbox.getBoundingClientRect(), er = el.getBoundingClientRect();
     sbox.scrollTop += (er.top + er.height / 2) - (br.top + br.height / 2);
   }
+  /* Mitmach-Schritt ohne erreichbares (sichtbares, bedienbares) Ziel? Dann gibt es einen Ausweg. */
+  const stuck = !!(st.waitFor && !tutGeom(st).ok);
+  if (fresh) {
+    tutor.classList.toggle("still", !!quiet);       /* Rückfrage auf/zu: Inhalt tauschen, nicht neu einblenden */
+    tutor.innerHTML = tutCardHTML(st, stuck);
+    tutor.dataset.stuck = stuck ? "1" : "";
+    tutBind(tutor, st, stuck);
+    if (!quiet) linaAnnounce(tutKey + ":" + tutStep, (tutCount().n > 1 ? "Schritt " + tutCount().k + " von " + tutCount().n + ": " : "") + tutTitle(st));
+  }
+  /* Lina rückt zusammen, wo es eng wird: im Planer immer, in den Listen bei
+     den späteren Gesprächen (Büros, Mr. Snus, Don Pablo). */
+  tutor.classList.toggle("compact", inModal || (inView && tutKey !== "main"));
   let g = tutGeom(st);
   const r = g.r, ok = g.ok;
   tutPlaced = r ? { top: r.top, left: r.left, width: r.width, height: r.height } : null;
@@ -869,7 +1022,6 @@ function renderTutStep(st, fresh) {
   tutor.classList.add("on");
   const bx = tutor.querySelector(".tut-box");
   const cover = a => ok ? Math.max(0, Math.min(a.bottom, r.bottom + 10) - Math.max(a.top, r.top - 10)) : 0;
-  /* Lage ohne Aufploppen-Animation messen (die skaliert die Blase gerade noch) */
   const place = () => { const t = tutor.getBoundingClientRect(); return { top: t.top + bx.offsetTop, bottom: t.top + bx.offsetTop + bx.offsetHeight }; };
   const measure = () => {
     tutor.classList.add("top"); const rt = place();
@@ -877,7 +1029,7 @@ function renderTutStep(st, fresh) {
     return [cover(rt), cover(rb)];
   };
   let [ct, cb] = measure();
-  /* Kleiner Bildschirm: Deckt Lina das Ziel oben wie unten zu, rückt sie zusammen */
+  /* Kleiner Bildschirm: Deckt die Karte das Ziel oben wie unten zu, rückt sie zusammen */
   if (ct > 0 && cb > 0 && !tutor.classList.contains("compact")) {
     tutor.classList.add("compact");
     [ct, cb] = measure();
@@ -886,10 +1038,13 @@ function renderTutStep(st, fresh) {
   if (st.top === true) top = !(ct > 0 && cb < ct);
   else if (st.top === false) top = cb > 0 && ct < cb;
   else top = ok ? (ct < cb || (ct === cb && r.top + r.height / 2 > innerHeight * 0.55)) : false;
+  /* v256: Hohes Ziel (z. B. eine ganze Auftragskarte ganz oben in der Liste): Karte nach unten, damit Kopf und
+     Markierung des Ziels sichtbar bleiben – nach oben lässt sich so ein Ziel nicht unter der Karte hervorschieben. */
+  if (ok && st.top == null && r.height > innerHeight * 0.4) top = false;
   tutor.classList.toggle("top", top);
   tutor.classList.remove("measure");
-  /* v76: Ziel mittig in den freien Teil neben Lina rücken (über oder unter ihr) */
-  if (sbox && ok) {
+  /* v76: Ziel mittig in den freien Teil neben der Karte rücken (über oder unter ihr) */
+  if (sbox && ok && !quiet) {
     const br = sbox.getBoundingClientRect(), lr = bx.getBoundingClientRect(), er = el.getBoundingClientRect();
     const f0 = top ? Math.max(br.top, lr.bottom + 10) : br.top + 6, f1 = top ? br.bottom - 6 : Math.min(br.bottom, lr.top - 10);
     if (f1 - f0 > 40) {
@@ -898,30 +1053,39 @@ function renderTutStep(st, fresh) {
       tutPlaced = g.r ? { top: g.r.top, left: g.r.left, width: g.r.width, height: g.r.height } : null;
     }
   }
-  drawCloud();
-  requestAnimationFrame(drawCloud);
-
-  tutBlock(g.hole, tutOpen(st) && g.ok && !stuck, g.ring);
+  /* Tastatur: Fokus auf die Karte (blockierendes Tutorial), damit Tab sofort die Knöpfe erreicht */
+  if (fresh) { const f = tutor.querySelector(".ltc-pri") || bx; try { f.focus({ preventScroll: true }); } catch (e) { /* egal */ } }
+  tutBlock(g.hole, tutOpen(st) && g.ok && !stuck && !tutExit, tutExit ? null : g.ring);
 }
-/* v76: Schritt-Zähler („2/5“) – zeigt, dass es kurz ist */
+/* v256: Schritt-Zähler als Zahlen (k von n) – berücksichtigt die tatsächlich erreichbare Schrittfolge
+   (mit oder ohne Übungsauftrag, Wiederholung). */
 function tutCount() {
   const has = !!(tutOrder() || tutJob());
   const vis = [];
   tutList.forEach((s, i) => { if (tutKey !== "main" || !s.need || (has ? s.need !== "none" : s.need === "none")) vis.push(i); });
   const k = vis.indexOf(tutStep) + 1;
-  return vis.length > 1 && k > 0 ? k + "/" + vis.length : "";
+  return { k: Math.max(1, k), n: vis.length };
 }
 
 /* Planer neu gezeichnet (anderes Fahrzeug gewählt) oder Fenster gedreht:
-   Text und Scheinwerfer nachziehen, ohne die Blase neu aufploppen zu lassen. */
+   Text und Scheinwerfer nachziehen, ohne die Karte neu aufploppen zu lassen. */
 function tutRefresh() {
   if (!document.body.classList.contains("tut-on")) return;
   const st = tutList[tutStep];
   if (!st || !$("#tutor").classList.contains("on")) return;
-  const tx = $("#tutor .tut-tx");
-  if (tx) { const t = tutText(st); if (tx.innerHTML !== t) tx.innerHTML = t; }
+  const tx = $("#tutor .ltc-tx");
+  if (tx && !tutExit) { const t = tutText(st); if (tx.innerHTML !== t) tx.innerHTML = t; }
   renderTutStep(st, false);
 }
+/* v256: Esc öffnet die Rückfrage (Einführung) bzw. schließt ein Gespräch; im Hof-Rundgang dasselbe */
+addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (tutorialRunning() && $("#tutor").classList.contains("on")) {
+    e.preventDefault();
+    if (tutKey !== "main") return endTutorial();
+    tutExit = !tutExit; tutRedraw();
+  } else if (typeof farmTutEsc === "function" && farmTourShown()) { e.preventDefault(); farmTutEsc(); }
+});
 
 /* ============================ Linas Gespräche ============================
    Kurze Einschübe, sobald etwas Neues auftaucht: Mr. Snus, Don Pablo und
@@ -997,25 +1161,37 @@ function roleHere(r, b) {
 function linaRole(r, baseId) {
   const b = baseById(baseId);
   const target = `#tab-bases .card.base .cov[data-role="${r}"][data-rolebase="${baseId}"]`;
-  LINA_TALKS["role_" + r] = [{ tx: () => ROLE_TEXT[r], target }, { tx: () => roleHere(r, b), target }];
+  LINA_TALKS["role_" + r] = [{ title: ROLES[r].name, ctx: "Disponentin · Büro-Stellen", tx: () => ROLE_TEXT[r], target },
+    { title: "Bei dir im Büro", ctx: "Disponentin · Büro-Stellen", tx: () => roleHere(r, b), target }];
   if (S.tutSeen) delete S.tutSeen["role_" + r];
   linaTalk("role_" + r);
 }
 
 /* Startet ein Gespräch, sobald Platz dafür ist (kein anderes Tutorial,
-   keine Haft, kein Bericht auf dem Schirm). */
+   keine Haft, kein Bericht auf dem Schirm).
+   v256: je Gespräch höchstens ein geplanter Startversuch (vorher stapelten sich bei jedem Aufruf eigene
+   Wiederholungsketten), auf dem Hof begrenzt (statt endlos alle 4 s), und nach einem Spielstandswechsel
+   (Neustart) laufen alte Versuche ins Leere. */
+const talkPend = {};
 function linaTalk(key, tries) {
+  if (typeof S === "undefined" || !S) return;
   const seen = (S.tutSeen = S.tutSeen || {});
   if (seen[key] || !LINA_TALKS[key]) return;
+  if (tutorialRunning() && tutKey === key) return;
+  const s0 = S, n = tries || 0;
+  const later = () => {
+    if (talkPend[key]) return;
+    talkPend[key] = setTimeout(() => { talkPend[key] = 0; if (S === s0) linaTalk(key, n + 1); }, 4000);
+  };
+  if (n >= 90) return;                                   /* gut sechs Minuten ohne Gelegenheit: beim nächsten Anlass wieder */
   /* Auf dem Hof stört Lina nicht – sie wartet, bis man zur Spedition wechselt */
-  if (playing() && activeTab === "farm") { setTimeout(() => linaTalk(key, tries), 4000); return; }
+  if (playing() && activeTab === "farm") return later();
   const busy = !playing() || !(S.tut && S.tut.done) || tutorialRunning() || S.jail || S.over
-    || document.body.classList.contains("report-open") || document.body.classList.contains("dragging-staff");
-  if (busy) {
-    if ((tries || 0) < 30) setTimeout(() => linaTalk(key, (tries || 0) + 1), 4000);
-    return;
-  }
-  tutList = LINA_TALKS[key]; tutKey = key; tutStep = 0;
+    || document.body.classList.contains("report-open") || document.body.classList.contains("dragging-staff")
+    || document.body.classList.contains("office3d") || farmTourShown();
+  if (busy) return later();
+  clearTimeout(talkPend[key]); talkPend[key] = 0;
+  tutList = LINA_TALKS[key]; tutKey = key; tutStep = 0; tutExit = false;
   if (key === "bases" || key === "base1") { if (planState) closeModal(); if (activeTab !== "bases") showTab("bases"); $("#view .view-body").scrollTop = 0; }
   showTutStep();
 }

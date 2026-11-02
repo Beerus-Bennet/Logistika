@@ -1,5 +1,29 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v257 – Büro: Figuren, Küche, Mitarbeiter des Monats (auf v256)
+
+- `officefp.js`: weitgehend neu (Raum wie bisher, neu `buildKitchen`, Büro-Figur `lookOf`/`headMesh`/`torsoMesh`/`legsMesh`/`upperMesh`/`foreMesh`, `buildFigure`, `animFigure`, `solveArm`, `screenCanvas`, `posterCanvas`/`drawPoster`, `tapAt` mit `blocked`, `say`/`factLines`, `openCard`). `FWM.person` (woodmodels.js) bleibt unverändert.
+- `offices.js`: neu `KITCHEN_MOD`, `KITCHEN_Y`, `kitchenModules`, `kitchenX`; `kitchenPos` rastet an der Wand ein; `officeSVG` zeichnet die Küchenmodule; Plan-Ziehen der Küche nur waagerecht. Neu `MOTM_UNIT`, `GAME_MONTHS`, `gameMonth`, `gameMonthName`, `staffMonthN`, `motmCredit`, `staffPick`, `officeCreditDrive`, `officeCreditUms`, `motmCheck`; Aufrufe in `baseDispatch` (onStart) und `tickBases`. Neue Spielstandfelder: `s.mo` (Personal), `b.motm`, `b.motmWins` (Standort).
+- `game.js`: `finishLeg` ruft `officeCreditDrive(veh)`, die drei Umschlag-Stellen rufen `officeCreditUms(...)`.
+- `gl3d.js`: neu `R.texFree`.
+- `style.css`: Block „v257“ am Ende (`.ofp-card`, Hinweis mit Umbruch).
+- `index.html`: `?v=257` nur für `style.css`, `offices.js`, `game.js`, `gl3d.js`, `officefp.js`; `sw.js`: `VERSION = "v257"`.
+
+## Stand v256 – Tutorial-System mit Lina (auf v255)
+
+- `intro.js`: neu `linaFaceSVG`, `linaFace`, `linaFaceFail`, `linaCardHTML`, `linaExitHTML`, `linaAnnounce`, `tutReplay`, `TALK_CTX`, `TALK_TITLES`, `tutTitle`, `tutCardHTML`, `tutBind`, `tutRedraw`, `tutUsable`, `hintInterrupt`, `farmTourShown`, `talkPend`; geändert `probeGuideArt`, `TUT_STEPS` (title/act/note), `linaHint`/`hintBusy`/`hintNext`, `startTutorial` (Wiederholung ohne Auftrag), `tutGo(i, from)`, `tutSignal`, `endTutorial`, `showTutStep`, `tutFollow`, `tutGeom`, `tutWatch` (Ausweg), `renderTutStep`, `tutCount` (gibt `{k, n}` zurück), `tutRefresh`, `linaRole`, `linaTalk`; Esc-Handler.
+- `farmview.js`: `FTUT_HOF` (title/act/ready/part/ok), `farmTutShow` neu, neu `farmTutState`, `farmTutMode`, `farmTutClear`, `farmTutAdvance`, `farmTutEsc`, `farmTutNudge`; `farmTutNext(from)`, `farmTutEnd`, `farmTutSignal`, `farmTutPoint`; Bauernhaus-Knopf `#fhTut`.
+- `farm.js`: `farmTick` – Wiederholung hält den Hof nicht an.
+- `game.js`: „Welt“-Knöpfe `#tutAgainBtn` (Wiederholung mit `replay`), `#farmTutAgain` (laufenden Rundgang nicht überschreiben).
+- `style.css`: Block „v256: Linas Tutorial-Karte“ am Ende.
+- `index.html`: `?v=256` nur für `style.css`, `game.js`, `intro.js`, `farm.js`, `farmview.js`; `sw.js`: `VERSION = "v256"`.
+
+## Stand v255 – Schatzkiste: Kamera gehört dem Spieler (auf v254)
+
+- `worldview.js`: `worldTreasureIntro` ohne Kamerafahrt; neu `trCamTaken`, `worldTreasureCamRelease`; `worldTreasureCam` (Merker `at`, Freigabe bei Eingriff), `worldTreasureCamBack` (kein Rückflug nach Eingriff, weiche Freigabe), `stepTreasureReveal` (Freigabe bei Eingriff).
+- `farmview.js`: Mausrad-Handler in `bindFarmInput` setzt `FV.touchAt` und `FV.focusId`.
+- `sw.js` / `index.html` / `manifest.webmanifest`: v255.
+
 ## Stand v254 – Büro betreten (auf v253; dazwischen v246–v253 ohne eigenen Abschnitt, siehe AENDERUNGEN.md)
 
 - Neu: `officefp.js` (`OFFICE3D`), geladen nach `jail.js`; in `sw.js` (`SHELL`) eingetragen.

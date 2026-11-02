@@ -648,6 +648,70 @@ function dispatchInterval(b) {
 }
 function baseBonus(b) { return Math.min(0.12, rolePower(b, "zoll") * 0.022 * moodFactor(b)) + (tierOf(b).prestige || 0); }
 
+/* ---------------- v257: Mitarbeiter des Monats ----------------
+   Spielmonat = 30 Spieltage (wie die Miete). Je Person zählt eine kleine Monatsauswertung s.mo = { k, n, pk, pn }
+   (aktueller und vorheriger Monat) – nur echte Einzelbeiträge:
+     disp  eine Büro-Disposition (je Auftrag genau eine Person: wer im Verhältnis zum Können am wenigsten hatte)
+     fahr  eine abgeschlossene Teilstrecke als fester Fahrer – sonst eine Person aus dem Fahrerpool des Büros
+     ums   ein Lade- oder Entladevorgang am Standort
+     zoll  ein Büro-Auftrag mit Servicezuschlag
+   Gewertet wird nach Monatsende am Standort, an dem die Person dann arbeitet. Damit Rollen mit wenigen, großen Einzelschritten
+   (Umschlag) nicht gegen Rollen mit vielen kleinen (Disposition) verlieren, zählt der Wert im Verhältnis zum Rollenschnitt im
+   ganzen Unternehmen im selben Monat. Gleichstand: mehr Können, seltener schon ausgezeichnet, mehr Einsätze, länger dabei, Kennung.
+   Niemand mit Einsätzen → keine Auszeichnung. Die Auszeichnung bleibt als Momentaufnahme gespeichert (b.motm), auch wenn
+   die Person später geht oder versetzt wird. Ältere Spielstände: keine Daten → erste Auszeichnung nach dem ersten vollen Monat. */
+const MOTM_UNIT = { disp: ["Tour disponiert", "Touren disponiert"], fahr: ["Fahrt abgeschlossen", "Fahrten abgeschlossen"],
+  ums: ["Lade- oder Entladevorgang", "Lade- und Entladevorgänge"], zoll: ["Auftrag mit Papieren betreut", "Aufträge mit Papieren betreut"] };
+const GAME_MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+function gameMonth(t) { return Math.floor((dayOf(t == null ? S.time : t) - 1) / 30); }
+function gameMonthName(k) { return GAME_MONTHS[((k % 12) + 12) % 12] + " · Jahr " + (Math.floor(k / 12) + 1); }
+function staffMonthN(s, k) { const m = s && s.mo; return !m ? 0 : m.k === k ? m.n : m.pk === k ? m.pn : 0; }
+function motmCredit(s, n) {
+  if (!s) return;
+  const k = gameMonth(), m = s.mo;
+  if (!m || m.k !== k) s.mo = { k, n: 0, pk: m ? m.k : null, pn: m ? m.n : 0 };
+  s.mo.n = Math.round((s.mo.n + (n || 1)) * 10) / 10;
+}
+/* eine Person der Rolle am Standort: wer im Verhältnis zum Können bisher am wenigsten hatte (verteilt wie echte Arbeit) */
+function staffPick(b, role) {
+  const k = gameMonth();
+  const L = (b && b.staff || []).filter(s => s.role === role);
+  if (!L.length) return null;
+  return L.reduce((a, s) => (staffMonthN(s, k) + 1) / (s.skill || 1) < (staffMonthN(a, k) + 1) / (a.skill || 1) ? s : a);
+}
+function officeCreditDrive(veh) {
+  if (!veh || !S.bases) return;
+  if (veh.driver) { for (const b of S.bases) { const s = b.staff.find(x => x.id === veh.driver); if (s) return motmCredit(s, 1); } }
+  const b = typeof baseOfVehicle === "function" ? baseOfVehicle(veh.uid) : null;
+  if (b) motmCredit(staffPick(b, "fahr"), 1);
+}
+function officeCreditUms(nodeId) {
+  const b = S.bases && S.bases.find(x => x.node === nodeId);
+  if (b) motmCredit(staffPick(b, "ums"), 1);
+}
+function motmCheck(b) {
+  if (!b) return null;
+  const k = gameMonth();
+  /* erstes Mal (älterer Spielstand oder neuer Standort): der laufende Monat ist der erste mit Daten */
+  if (!b.motm) { b.motm = { k: k - 1, none: true, start: true, why: "Die erste Auszeichnung gibt es nach Ende des Monats " + GAME_MONTHS[k % 12] + "." }; return b.motm; }
+  if (b.motm.k >= k - 1) return b.motm;
+  const M = k - 1;
+  /* Rollenschnitt im Unternehmen (nur wer im Monat etwas hatte) · bisherige Auszeichnungen je Person (b.motmWins) */
+  const avg = {}, wins = b.motmWins || {};
+  (S.bases || []).forEach(x => x.staff.forEach(s => { const n = staffMonthN(s, M); if (n > 0) { const a = avg[s.role] = avg[s.role] || [0, 0]; a[0] += n; a[1]++; } }));
+  const cand = b.staff.map(s => ({ s, n: staffMonthN(s, M) })).filter(x => x.n > 0)
+    .map(x => Object.assign(x, { sc: Math.round(x.n / (avg[x.s.role][0] / avg[x.s.role][1]) * 100) }))
+    .sort((a, c) => c.sc - a.sc || (c.s.skill || 0) - (a.s.skill || 0) || (wins[a.s.id] || 0) - (wins[c.s.id] || 0) || c.n - a.n || (a.s.since || 0) - (c.s.since || 0) || String(a.s.id).localeCompare(String(c.s.id)));
+  if (!cand.length) { b.motm = { k: M, none: true, why: b.staff.length ? "Im " + GAME_MONTHS[((M % 12) + 12) % 12] + " gab es keine erfassten Einsätze." : "Noch kein Personal." }; return b.motm; }
+  const w = cand[0];
+  b.motmWins = Object.assign({}, wins, { [w.s.id]: (wins[w.s.id] || 0) + 1 });
+  const u = MOTM_UNIT[w.s.role] || ["Einsatz", "Einsätze"], n = Math.round(w.n);
+  b.motm = { k: M, id: w.s.id, name: w.s.name, role: w.s.role, av: w.s.av ? JSON.parse(JSON.stringify(w.s.av)) : null, n,
+    why: n + " " + (n === 1 ? u[0] : u[1]) + " im " + GAME_MONTHS[((M % 12) + 12) % 12]
+      + (w.sc !== 100 ? " – " + w.sc + " % des Rollenschnitts im Unternehmen." : ".") };
+  return b.motm;
+}
+
 function baseDispatch(b) {
   if (basePaused(b) || b.dispOff || !b.vehicles.length || dispoPower(b) <= 0) return false;
   const fleet = b.vehicles.map(u => S.fleet.find(x => x.uid === u)).filter(Boolean);
@@ -675,6 +739,8 @@ function baseDispatch(b) {
       onStart: (o, assign) => {
         b.done++;
         b.staff.forEach(s => { if (s.role === "disp") s.jobs++; });
+        motmCredit(staffPick(b, "disp"), 1);                                    /* v257: Monatsauswertung (eine Person) */
+        if (rolePower(b, "zoll") > 0 && !o.snus) motmCredit(staffPick(b, "zoll"), 1);
         /* Wer ohne festen Fahrer losfuhr, belegt einen Platz im Fahrerpool */
         assign.forEach(u => {
           const f = S.fleet.find(x => x.uid === u);
@@ -938,6 +1004,7 @@ function prunePhoneSilent() {
 function tickBases(dtMin) {
   ensureOffices();
   for (const b of S.bases) {
+    if (!b.motm || b.motm.k < gameMonth() - 1) motmCheck(b);              /* v257: Monatsauszeichnung nach Monatsende (erstes Mal: Startmarke) */
     if (b.poolDay !== dayOf(S.time) && Math.random() < 0.4) refreshPool(b);
     if (S.time >= (b.nextAt || 0)) {
       dispoPurge(b);
@@ -1314,7 +1381,24 @@ function plantHome(b, i) {
   return slots[k % slots.length];
 }
 function plantPos(b, i) { return decoOf(b).pos.plants[i] || plantHome(b, i); }
-function kitchenPos(b) { return decoOf(b).pos.kitchen || [200, 57]; }
+/* v257: Küchenzeile im 60-cm-Raster (1 Modul = 15 Planeinheiten), immer mit dem Rücken an der oberen Wand (Plan-y 30).
+   Gemeinsame Grundlage für Grundriss und 3D-Büro (officefp.js). Kühlschrank bündig am rechten Ende, Kaffeemodul davor.
+   Gespeicherte Positionen bleiben unverändert – nur die waagerechte Lage zählt, die Höhe im Plan rastet an der Wand ein. */
+const KITCHEN_MOD = 15, KITCHEN_Y = 47;
+function kitchenModules(id) {
+  if (id === "nische") return ["spuele", "unter", "mikro", "kocher"];
+  if (id !== "einbau" && id !== "barista") return [];
+  const m = ["unter", "herd", "unter", "spuele", "spuelm", "unter"];
+  if (id === "barista") m.push("kaffee");
+  m.push("kuehl");
+  return m;
+}
+function kitchenX(b, x) {
+  const half = kitchenModules(decoOf(b).kitchen).length * KITCHEN_MOD / 2 || 80;
+  const right = tierFloors(tierOf(b)) > 1 ? 316 : 368;          /* nicht in die Treppe (Plan-x 318) */
+  return Math.round(clamp(x, 32 + half, right - half));
+}
+function kitchenPos(b) { const p = decoOf(b).pos.kitchen; return [kitchenX(b, p ? p[0] : 200), KITCHEN_Y]; }
 function setPos(b, kind, i, xy) {
   const p = decoOf(b).pos;
   if (kind === "kitchen") p.kitchen = xy;
@@ -1439,17 +1523,32 @@ function officeSVG(b, w, detail, floor) {
   const kitchen = fl0 > 0 ? "" : kit.id === "keine"
     ? `<text x="200" y="66" text-anchor="middle" font-size="11" fill="#7c8794"
              font-family="system-ui">keine Küche</text>`
-    : `<g class="fur" data-drag="kitchen|0" transform="translate(${kx} ${ky})">
-        <rect x="-80" y="-17" width="160" height="34" rx="5" fill="#dfe6ee" stroke="#0d1b2a" stroke-width="2.4"/>
-        <rect x="-72" y="-11" width="34" height="22" rx="3" fill="#b9c4d0" stroke="#4a5867" stroke-width="1.6"/>
-        <circle cx="-20" cy="0" r="7" fill="#9fb0c2" stroke="#4a5867" stroke-width="1.6"/>
-        ${kit.id !== "nische" ? `<rect x="-2" y="-12" width="26" height="24" rx="3" fill="#f4f7fa" stroke="#4a5867" stroke-width="1.6"/>` : ""}
-        ${kit.id === "barista" ? `<rect x="34" y="-13" width="34" height="26" rx="4" fill="#8d5a3b" stroke="#3c2617" stroke-width="2"/>
-          <circle cx="51" cy="0" r="5" fill="#f0e2d2" stroke="#3c2617" stroke-width="1.4"/>` : ""}
+    : (() => {
+        /* v257: Module im Raster, Kühlschrank am Ende (wie im 3D-Büro) */
+        const mods = kitchenModules(kit.id), Wk = mods.length * KITCHEN_MOD, x0 = -Wk / 2;
+        const sym = mods.map((m, i) => {
+          const x = x0 + i * KITCHEN_MOD, c = x + KITCHEN_MOD / 2;
+          if (m === "herd") return `<rect x="${x + 1.5}" y="-12" width="12" height="15" rx="2" fill="#39404a"/>
+            <circle cx="${c - 3}" cy="-8" r="2.2" fill="#8d96a2"/><circle cx="${c + 3}" cy="-8" r="2.2" fill="#8d96a2"/>
+            <circle cx="${c - 3}" cy="-1" r="2.2" fill="#8d96a2"/><circle cx="${c + 3}" cy="-1" r="2.2" fill="#8d96a2"/>`;
+          if (m === "spuele") return `<rect x="${x + 2}" y="-12" width="11" height="14" rx="3" fill="#9fb0c2" stroke="#4a5867" stroke-width="1.2"/>`;
+          if (m === "kuehl") return `<rect x="${x + 0.5}" y="-17" width="14" height="34" rx="2" fill="#f4f7fa" stroke="#4a5867" stroke-width="1.6"/>
+            <path d="M${x + 3} 13 H${x + 12}" stroke="#4a5867" stroke-width="1.6"/>`;
+          if (m === "kaffee") return `<rect x="${x + 1.5}" y="-13" width="12" height="13" rx="2" fill="#8d5a3b" stroke="#3c2617" stroke-width="1.4"/>
+            <circle cx="${c}" cy="-4" r="2.6" fill="#f0e2d2"/>`;
+          if (m === "mikro") return `<rect x="${x + 1.5}" y="-12" width="12" height="9" rx="1.5" fill="#55606c"/>`;
+          if (m === "kocher") return `<circle cx="${c}" cy="-6" r="4" fill="#d9413a" stroke="#7a1f1a" stroke-width="1.2"/>`;
+          return "";
+        }).join("");
+        const joints = mods.slice(1).map((m, i) => `<path d="M${x0 + (i + 1) * KITCHEN_MOD} -17 V17" stroke="#a9b5c2" stroke-width="1"/>`).join("");
+        return `<g class="fur" data-drag="kitchen|0" transform="translate(${kx} ${ky})">
+        <rect x="${x0}" y="-17" width="${Wk}" height="34" rx="4" fill="#dfe6ee" stroke="#0d1b2a" stroke-width="2.4"/>
+        ${joints}${sym}
         ${kit.id !== "nische" ? `<g><rect x="-50" y="29" width="90" height="28" rx="5" fill="#e4d3b6" stroke="#5d4a32" stroke-width="2"/>
           <circle cx="-60" cy="43" r="8" fill="#cbd6e2" stroke="#4a5867" stroke-width="1.8"/>
           <circle cx="50" cy="43" r="8" fill="#cbd6e2" stroke="#4a5867" stroke-width="1.8"/></g>` : ""}
        </g>`;
+      })();
 
   /* Pflanzen */
   const plants = d.plants.map((pid, i) => {
@@ -1626,7 +1725,8 @@ function bindPlanDrag(baseId) {
     if (!cur) return;
     const [px, py] = toPlan(e);
     /* Innerhalb der Wände bleiben */
-    const x = clamp(px + cur.dx, 48, 352), y = clamp(py + cur.dy, 48, 252);
+    /* v257: die Küche gleitet nur an der Wand entlang */
+    const x = cur.kind === "kitchen" ? kitchenX(b, px + cur.dx) : clamp(px + cur.dx, 48, 352), y = cur.kind === "kitchen" ? KITCHEN_Y : clamp(py + cur.dy, 48, 252);
     cur.g.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
     cur.last = [Math.round(x), Math.round(y)];
   });
