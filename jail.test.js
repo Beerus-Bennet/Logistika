@@ -38,6 +38,11 @@ test("Figur sitzt: Hüfte auf der Matratze des oberen Betts, Knie knapp über de
   assert.ok(kneeZ > J.BUNK.z1 - 0.08 && kneeZ < J.BUNK.z1 + 0.12, "Knie an der Kante " + kneeZ.toFixed(2));
   assert.ok(hipY - 0.417 + 0.04 > J.LM, "Füße über dem unteren Bett");
 });
+test("v264 U-Haft: eigene Tipps und Sprüche, nichts Verharmlosendes", () => {
+  assert.ok(J.TIPS_U.length >= 6 && J.TIPS_U.every(t => t.length > 10));
+  ["man", "rat", "tap", "win"].forEach(k => assert.ok(J.SAY_U[k].length >= 2 && J.SAY_U[k].every(t => t.length > 1)));
+  assert.ok(!J.SAY_U.man.some(t => /wert|Lieferungen/.test(t)) && !J.TIPS_U.some(t => /Kunden|Käufer/.test(t)));
+});
 test("Texte: Tipps und Sprüche vorhanden, keine leeren Einträge", () => {
   assert.ok(J.TIPS.length >= 8 && J.TIPS.every(t => t.length > 10));
   ["man", "rat", "tap", "win"].forEach(k => assert.ok(J.SAY[k].length >= 2 && J.SAY[k].every(t => t.length > 1)));

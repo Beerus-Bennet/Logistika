@@ -1294,6 +1294,7 @@ const OFFICE3D = (() => {
     O.eye = [ex, ey, ez];
     if (O.kitRuntime) { O.kitRuntime.tick(dt, { eye: O.eye, yaw: O.yaw }); collide(O.pos); }
     stepCoffee(dt);                                                              /* v263: Wurf, Spuren, verzögerte Reaktionen */
+    if (!O) return;                                                              /* v264: Festnahme hat das Büro geschlossen */
     /* Personal: Gliederpuppe statt Hüpfen (vorher hob sich die ganze Figur 7-mal pro Sekunde und pendelte um die Hochachse) */
     (O.staff || []).forEach(st => {
       const dx = O.pos[0] - st.x, dz = O.pos[1] - st.z;
@@ -2084,6 +2085,8 @@ const OFFICE3D = (() => {
           + (part === "head" ? "Kopf" : "Oberkörper") + " getroffen worden und noch am Arbeitsplatz gestorben. Notarzt und Polizei waren vor Ort. Das Team ist schwer erschüttert.",
         toastText: "⚠️ " + p.name + " ist im Büro " + N[b.node].short + " gestorben."
       });
+      /* v264: Festnahme vormerken (S.jail „pending“, snus.js) – auch beim Neuladen oder vorzeitigen Verlassen kommt die U-Haft */
+      if (typeof jailUhaft === "function") jailUhaft({ who: p.name, place: b.node, baseId: b.id });
       if (typeof save === "function") save();
       if (typeof render === "function") render();
     } catch (e) { console.warn("Büro: Todesfall", e); }
@@ -2101,6 +2104,15 @@ const OFFICE3D = (() => {
     const first = p.name.split(" ")[0];
     if (near) later(1300, () => { if (O.staff.includes(near) && !near.dead) speak(near, first + "?! … Oh nein! Ruft sofort einen Notarzt!"); });
     later(near ? 4200 : 1200, () => hint(p.name + " ist tot. Notarzt und Polizei sind verständigt."));
+    /* v264: Die Polizei kommt und führt dich hinaus; danach zeigt snus.js die Festnahme und die U-Haft */
+    if (!O.police) {
+      O.police = true;
+      later(near ? 8200 : 5200, () => {
+        hint("Die Polizei ist da. Du wirst festgenommen.");
+        const st = O.el.querySelector("#ofpHint"); if (st) { clearTimeout(O.hintT); O.hintT = setTimeout(() => { if (O) st.classList.remove("on"); }, 6000); }
+        later(3000, () => { if (O) leave(); });
+      });
+    }
   }
   /* Zusammenbruch: kurzer Ruck vom Aufprall, dann erschlafft; Sturz seitlich vom Stuhl oder Zusammensacken im Stuhl */
   function animDead(F, dt) {
@@ -2142,7 +2154,7 @@ const OFFICE3D = (() => {
     stepFx(dt);
     if (O.later && O.later.length) {
       const now = performance.now(), due = O.later.filter(l => now >= l.at);
-      if (due.length) { O.later = O.later.filter(l => now < l.at); due.forEach(l => { try { l.fn(); } catch (e) { console.warn("Büro", e); } }); }
+      if (due.length) { O.later = O.later.filter(l => now < l.at); due.forEach(l => { if (!O) return; try { l.fn(); } catch (e) { console.warn("Büro", e); } }); }
     }
   }
 

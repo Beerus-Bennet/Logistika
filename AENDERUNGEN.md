@@ -9,6 +9,32 @@
 
 
 
+## v264 – U-Haft nach dem Todesfall im Büro
+**Wunsch Bennet:** Die Festnahme und Untersuchungshaft nach dem tödlichen Tassenwurf (v263) über die vorhandene Haft-Mechanik umsetzen.
+
+**Ausgangslage:** `S.jail` (`snus.js`, Zelle in `jail.js`) kannte nur den Snus-Fall. Dauer (`SNUS_JAIL_DAYS` = 14), Texte („Zivilfahnder“, „Mr. Snus meldet sich wieder“) und die Zelle („Du verbüßt eine Haftstrafe“, „Das war's wert. Fast.“) waren fest darauf zugeschnitten.
+
+**Lösung:**
+- **`snus.js`:** `S.jail` kennt jetzt die Art `kind: "uhaft"` mit eigener Dauer `days`. Alte Spielstände ohne `kind` bleiben der Snus-Fall.
+  - `jailUhaft()` merkt die Festnahme beim Todesfall vor (`state: "pending"`, gespeichert). Mehrere Opfer in derselben Szene kommen in denselben Vorgang.
+  - `jailCheck()` wartet, bis die Ich-Perspektive zu ist, und zeigt dann die Festnahme. Neuladen oder vorzeitiges „Verlassen“ umgeht sie also nicht.
+  - **Festnahme:** Tatvorwurf Körperverletzung mit Todesfolge (§ 227 StGB), Haftbefehl wegen Fluchtgefahr, Vorführung beim Ermittlungsrichter am nächsten Tag, Haftprüfung vom Anwalt beantragt.
+  - **U-Haft:** 16 Tage (`UHAFT_DAYS`). Vorführung am nächsten Tag plus mündliche Haftprüfung binnen zwei Wochen nach Antrag (§ 118 Abs. 5 StPO). Sie läuft im Schnelldurchlauf wie bisher: Kosten laufen weiter, Büros mit Personal arbeiten.
+  - **Haftprüfung:** Haftverschonung gegen Auflagen (§ 116 StPO: Meldepflicht zweimal pro Woche, Reisepass abgegeben). Das Strafverfahren läuft weiter, wird aber nicht nachgespielt. Gezeigt werden Kontostand, Aufträge ohne dich und das betroffene Team.
+- **`jail.js`:** `JAIL3D.open(host, { days, kind, where })` mit eigenen Texten für die U-Haft (`TIPS_U`, `SAY_U`, ohne Verharmlosung). Dazu Schild „U-HAFT“ und Ort „Untersuchungshaft · Standort“.
+- **`officefp.js`:**
+  - Nach dem Todesfall ruft die nächste Person nach dem Notarzt. Etwa 8 Sekunden später kommt „Die Polizei ist da. Du wirst festgenommen.“, nach weiteren 3 Sekunden wird das Büro geschlossen.
+  - Fehler behoben: Schloss die Festnahme das Büro mitten im Bild, lief die Figurenschleife noch weiter.
+- **`jail.test.js`:** neuer Test für die U-Haft-Texte.
+
+**Geprüft (Testbrowser Chromium/SwiftShader):**
+- Todesfall → Hinweis → Büro schließt → Festnahme → Zelle mit 16 Tagen → Haftprüfung → „Zurück an die Arbeit“ (`S.jail` leer).
+- Vorzeitiges Verlassen und Neuladen mit vorgemerkter Festnahme führen ebenfalls zur Festnahme.
+- Die Snus-Haft ist unverändert (14 Tage, „Gefängnis“, „Entlassen“).
+- Unit-Tests `camp`, `forest`, `hunt`, `jail` (7) bestanden; `axe`, `trees` wie bisher rot.
+
+**Nicht geprüft:** am Handy.
+
 ## v263 – Büro: Kaffee abstellen, anbieten, werfen · Tätigkeiten der Figuren realistisch
 **Wunsch Bennet:**
 1. Kaffee überall abstellen, dem Personal anbieten und bei Interesse übergeben.

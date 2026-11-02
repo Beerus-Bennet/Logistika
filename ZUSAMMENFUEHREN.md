@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v264 – U-Haft nach Todesfall im Büro (auf v263)
+
+- `snus.js`: `UHAFT_DAYS`, `jailDays`, `jailUhaft`, `uhaftWho`, `uhaftArrestScreen`, `jailWhere`, `uhaftOut`. `jailCheck` kennt `state: "pending"`; `jailServe`/`jailScene`/`jailOut` arbeiten mit `S.jail.kind`/`days`. `S.jail` ohne `kind` = Snus wie bisher.
+- `jail.js`: `open(host, { days, kind, where })`, `TIPS_U`, `SAY_U`.
+- `officefp.js`: `killStaff` ruft `jailUhaft`; Polizei-Hinweis und `leave()` über `later`. `step` endet, wenn das Büro dabei geschlossen wurde.
+- `jail.test.js`: Test „v264 U-Haft“.
+
 ## Stand v263 – Büro: Kaffee abstellen, anbieten, werfen; Tätigkeiten realistisch (auf v262)
 
 - `officekitchen.js`:
