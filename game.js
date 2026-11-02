@@ -3239,7 +3239,7 @@ function renderFleet() {
     const t = vType(v.type);
     const prog = v.routeDist ? clamp((v.pos / v.routeDist) * 100, 0, 100) : 0;
     return `<div class="card veh-card">
-      <div class="card-top"><span class="vicon">${t.icon}</span>
+      <div class="card-top"><span class="vicon vtile" style="--vc:${(MODE_INFO[t.mode] || {}).color || "#f0812b"}">${t.icon}</span>
         <div class="vname">${esc(t.name)}<small>${esc(t.brand)} · ${kgf(t.cap)} · ${t.speed} km/h</small></div>
 
       </div>
@@ -3522,7 +3522,7 @@ function renderMarket() {
     const m = t.mode, avail = unlockedModes().includes(m);
     const locked = t.stage > S.stage || !avail;
     return `<div class="card shop${locked ? " locked" : ""}${mf ? " match" : ""}">
-        <div class="card-top"><span class="vicon">${t.icon}</span>
+        <div class="card-top"><span class="vicon vtile" style="--vc:${(MODE_INFO[t.mode] || {}).color || "#f0812b"}">${t.icon}</span>
           <div class="vname">${esc(t.name)}<small>${esc(t.brand)}</small></div>
           <span class="price">${(() => { const cp = typeof couponPrice === "function" ? couponPrice(t.price) : t.price;
             return cp < t.price ? `<s>${money(t.price)}</s> ${money(cp)}` : money(t.price); })()}</span></div>
