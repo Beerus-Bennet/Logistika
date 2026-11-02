@@ -1,10 +1,5 @@
 # Änderungen – kurz für den Kollegen
 
-
-## v248 – 3D-Fahrzeugsymbole
-- Neu `vehicon.js`: Für alle 48 Marktfahrzeuge plus Unimog-Holzlaster und goldenen T1 ein Low-Poly-3D-Modell (Räder, Mopeds, Transporter, Lkw, Sattelzüge, Binnen- und Seeschiffe, Züge, Flugzeuge). Einmal per Canvas gerendert (ohne WebGL) und zwischengespeichert.
-- Als Icon in Markt, Flotte (lackierte Fahrzeuge in Firmenfarbe), Fahrzeugwahl im Planer, Auktionshaus, Hof-Fahrzeugliste und Tutorial. Sportwagen behalten ihre Bilder.
-- v246/v247: Markt innerhalb jeder Art nach Preis sortiert; Tiersymbol im Hochsitz entfernt.
 ## v245 – Aufträge auf Speditionsniveau: Kundenprofile, geprüfte Texte, Verhandlung, Ausschreibungen
 
 ### 1. Ursache der widersprüchlichen Texte

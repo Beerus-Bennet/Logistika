@@ -2369,7 +2369,7 @@ function openFarmOrders(sendFor, area) {
     if (sendFor === o.id) {
       const opts = farmDispatchOptions(o);
       send = `<div class="fo-send">${opts.length ? opts.slice(0, 4).map((p, i) => `<button class="fo-v${p.late ? " late" : ""}" data-go="${i}">
-          <span>${(typeof vehIconHTML === "function" ? vehIconHTML(p.t) : p.t.icon)}</span><b>${esc(p.t.brand)}</b><small>${p.here ? FT().atHere : "kommt von " + esc(N[p.f.at].short)} · ${fdur(Math.round(p.ev.time))} · ${eur(p.ev.cost)}${p.late ? " · zu spät" : ""}</small></button>`).join("")
+          <span>${p.t.icon}</span><b>${esc(p.t.brand)}</b><small>${p.here ? FT().atHere : "kommt von " + esc(N[p.f.at].short)} · ${fdur(Math.round(p.ev.time))} · ${eur(p.ev.cost)}${p.late ? " · zu spät" : ""}</small></button>`).join("")
         : `<div class="fs-empty">Kein freies Fahrzeug schafft das gerade (Gewicht ${kgf(o.weight)}, ${km} km${N[o.to].modes.includes("b") ? "" : ", nur auf der Straße"}). Im Markt gibt es mehr.</div>`}</div>`;
       FV.sendOpts = opts;
     }
@@ -2608,7 +2608,7 @@ function openFarmShed() {
   FV.sheetFn = openFarmShed;
   const here = S.fleet.filter(f => f.at === FARM_NODE);
   const away = S.fleet.filter(f => f.at !== FARM_NODE);
-  const row = f => { const t = vType(f.type); return `<div class="fveh"><span>${(typeof vehIconHTML === "function" ? vehIconHTML(t) : t.icon)}</span><b>${esc(t.name)}</b><small>${kgf(t.cap)} · ${t.speed} km/h · ${phaseLabel(f)}</small></div>`; };
+  const row = f => { const t = vType(f.type); return `<div class="fveh"><span>${t.icon}</span><b>${esc(t.name)}</b><small>${kgf(t.cap)} · ${t.speed} km/h · ${phaseLabel(f)}</small></div>`; };
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🛠️</span>Schuppen</div>
     ${here.length ? here.map(row).join("") : `<div class="fs-empty">Gerade steht kein Fahrzeug ${esc(FT().atHere)}.</div>`}
     ${away.length ? `<div class="fs-sub">Unterwegs oder woanders geparkt:</div>` + away.map(row).join("") : ""}

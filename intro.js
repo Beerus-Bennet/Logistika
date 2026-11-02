@@ -217,7 +217,7 @@ function renderIntro() {
           const afford = S.money >= t.price;
           const n = count(t.id);
           return `<div class="mini">
-            <span class="ic">${(typeof vehIconHTML === "function" ? vehIconHTML(t) : t.icon)}</span>
+            <span class="ic">${t.icon}</span>
             <div class="tx"><b>${esc(t.name)}</b>
               <small>${kgf(t.cap)} · ${t.speed} km/h · ${fmt(t.costKm, 2)} €/km · ${money(t.price)}</small></div>
             ${n ? `<span class="ct">${n}×</span>` : ""}
