@@ -9,6 +9,68 @@
 
 
 
+## v262 – Jagd: Liegeposen, Bergungsansicht, mehr Fasane
+**Bestätigte Ursachen (Code gelesen, im Testbrowser nachgestellt, Vorher/Nachher-Bilder):**
+- **Liegepose (`calcDead`, v135):** Jeder Lauf wurde nach festen Winkeln bis zu ±1,45 rad zur Seite gedreht, bis irgendein Punkt den Boden berührte. Daraus wurden steif parallel gestreckte Hinterläufe, Vorderläufe übereinander und beim Keiler oben liegende Läufe, die 69° über der Schulter abstanden. Es gab keine Prüfung von Lauf gegen Lauf oder Lauf gegen Rumpf. Für den Boden zählte nur jede dritte Modellecke.
+- **Hals:** Der Träger blieb in der Ruhepose fast senkrecht zum Rücken. Liegt das Stück auf der Seite, ragt er quer ab, und das Haupt wurde über eine Drehung um die Halsachse zum Boden gezwungen. Das ergab den eingeschnürten, abgeknickten Übergang.
+- **Fasan:** Die angezogenen Ständer stachen mit gespreizten Zehen aus dem Bauch. Der angelegte Flügel war ein einzelnes helles Oval und wirkte am liegenden Vogel wie ein Deckel. Beim Abschuss im Flug drehte sich der Vogel frei und sprang am Boden in die Liegepose.
+- **Liegendes Stück:** Ohren zuckten und der Wedel schlug weiter.
+- **Geweih:** Doppelte Augsprosse (4 %) und abnorme Sprosse (2,5 %) werden gezeichnet, aber im Namen nicht mitgezählt. Ein „12-Ender“ trug so sichtbar 7 Enden an einer Stange.
+- **Erzeugung:** Der Fasan-Flugtimer prüfte keine Tiergrenze, und fliegende Fasane kreisten mit ihrem Kurvenanteil im Feld, ohne es zu verlassen. Im Test waren bis zu 5 Flieger und 5 Tiere gleichzeitig unterwegs. Während der Bergung lief der Timer weiter (−30 s) und löste danach sofort aus. Die Artenwahl stand als Zahlen im Code (58/34/8 %).
+- **Bergungskamera:** Die Freisicht-Prüfung rechnete mit festem Abstand. Beim Fasan verwarf ein ferner Baum die Bauchseite, und die Kamera schaute von hinten, mit dem Kopf hinter dem Körper. Nach dem Wischen lief die Anfahrt weiter, und die Kamera pendelte leicht.
+
+**Lösung (`hunt.js`, eigene WebGL2-Engine, Low-Poly-Stil unverändert):**
+- **Neue Liegepose:** `POSE`, `calcDead`, `inTorso`, `legSamp`, `legPt`, `poseRnd`, `headParts`, `mat3`.
+  - Gelenkwinkel je Lage (unten oder oben, vorn oder hinten) aus einer Tabelle, je Stück leicht verschieden (fest aus Erbgut und Güte) und an anatomische Grenzen geklemmt: Vorderfußwurzel beugt nur nach hinten, Sprunggelenk nur nach vorn.
+  - Der Lauf wird nur so weit abgespreizt, bis er Boden, Rumpf oder einen schon liegenden Lauf berührt: unten liegende zuerst, oben liegende ruhen darauf.
+  - Der Rumpf wird exakt über die Querschnittsprofile (`TORSO`, `BOAR_T`, `PH_T`) geprüft, der Boden über alle Ecken.
+- **Hals und Haupt:** Der Träger ist nach vorn gestreckt (Verlängerung der Rückenlinie). Das Haupt wird über eine begrenzte Suche abgelegt (Biegung, Drehung und Neigung, grob und fein).
+  - Haupt, Geweih, Lauscher und Waffen dürfen weder Boden noch Rumpf noch Läufe durchdringen.
+  - Trägt das Geweih, darf das Haupt eine Handbreit angehoben liegen, sonst liegt es auf.
+  - Der Hirsch hat eine eigene Kopfdrehung (`head.rz`).
+  - Der Keiler legt Haupt und Waffen über Seitenschwenk und Drehung ab, der Fasan den Hals über eine leichte seitliche Biegung.
+- **Übergänge:**
+  - Das Zusammenbrechen läuft für Rumpf, Läufe, Träger und Haupt von der aktuellen Lage aus mit derselben Kurve.
+  - Der Fasan dreht sich im Fallen zur Seitenlage und legt die Flügel an. Am Boden folgt der Rest über „fall“, ohne Sprung.
+  - Am liegenden Stück zucken weder Ohren noch Wedel, und es atmet nicht.
+- **Fasan:**
+  - Neue Bauteile: angelegte Schwingen (Decken und spitze Handschwingen, zum Rumpf hin kupferfarben), Flugflügel mit Arm und Hand, ein eingekrallter Ständer für Flug und Liegen.
+  - Die Flügel öffnen und schließen am Ansatz.
+  - Start aus dem Stand mit weichem Steigen, dann fester Abflugkurs mit leichtem Pendeln.
+  - Neu ist der Einflug vom gegenüberliegenden Waldrand mit Gleitflug, Abfangen und Landung: Die Ständer strecken sich, die Flügel klappen ein. Die Landung erfolgt nur, wenn am Boden Platz ist, sonst startet der Fasan durch.
+  - Stehend reichen die Zehen jetzt bis zum Boden.
+- **Geweih:** Die gemeinsame Zählung `antSides` gilt für Modell und Name. Gespeicherte Texte älterer Trophäen bleiben unverändert, Werte und Preise auch.
+- **Erzeugung:**
+  - Zentrale Gewichte `SPECIES_W = { hirsch: 45, keiler: 30, fasan: 25 }`.
+  - Flugtimer `FLY_FIRST` 25–45 s, `FLY_NEXT` 45–75 s.
+  - Gemeinsame Grenzen `LIMIT` (2 am Boden, 1 in der Luft, 3 insgesamt) für normales Wild und Flugereignisse.
+  - Beide Uhren laufen nur beim Ansitzen. Ist kein Flug möglich, folgt ein neuer Versuch nach 6–12 s.
+  - Kein Tier wird entfernt. Der Wildbestand hat Vorrang. Güte, Erbgut und Seltenheit würfeln unverändert.
+- **Bergung:**
+  - Der Liegeplatz ist innen matter und weniger grell, mit Übergang in die Wiese: Die Tageszeit bleibt erhalten.
+  - Ein enger, dunkler Kontaktschatten liegt unter den Auflagestellen.
+  - Flach gedrücktes Gras liegt nur außerhalb des Umrisses.
+  - Die Kamera schaut etwas steiler (Schalenwild 0,64, Fasan 0,72), damit sich die Läufe trennen. Der Fasan darf näher heran.
+  - Die Freisicht wird mit dem echten Kameraabstand geprüft.
+  - Nach dem Wischen bleibt die Ansicht stehen.
+- **Ergebniskarte:** Die Seltenheit steht nur noch oben im Band, in der Karte nur als Wertzuschlag. Lange Namen brechen um (CSS-Block v262).
+
+**Geprüft:**
+- **Unit-Tests** (`hunt.test.js`, neu bzw. erweitert):
+  - Liegepose für alle drei Arten, beide Seiten, 3 Größen und 4 Erbgut-Varianten: Boden, Gelenkgrenzen, Lauf ↔ Lauf, Lauf ↔ Rumpf, Haupt und Geweih ohne Durchdringung, Haupt liegt auf oder wird vom Geweih getragen, gleiche Pose bei gleichem Stück.
+  - Geweih: Modell und Name zählen dieselben Enden (alle Endenzahlen, alle Formen).
+  - Artenwahl mit 12 000 festen Ziehungen (Abweichung unter 1,2 Punkten).
+  - Alle Jagd-Tests grün; camp, forest, jail grün; axe und trees wie bisher rot.
+- **Testbrowser** (Chromium mit SwiftShader, 390 × 844, echtes Spiel):
+  - Vorher/Nachher-Bergungsbilder für Hirsch, Keiler und Fasan in beiden Liegerichtungen, klein und groß, dazu besondere Varianten.
+  - 20 Minuten simulierter Ansitz, bei dem ein „Jäger“ Bodenwild nach 90 s entnimmt:
+    - vorher 11 Fasane (10 Flüge), bis zu 5 Flieger gleichzeitig, 6 508 Messpunkte mit Grenzverletzung;
+    - nachher 24 Fasane (20 Flüge, 4 am Boden), Flugabstände 45–72 s, nie mehr als 2/1/3 Tiere;
+    - 120 s Bergung ohne neue Tiere, danach erscheint nichts auf einmal;
+    - dreimaliges Wiederbetreten mit Timer im ersten Fenster und genau einer Oberfläche.
+  - Einflug mit Landung und Abschuss im Flug als Ablauf (Lage und Höhe ohne Sprung).
+- **Nicht geprüft:** echtes iPhone/Safari, Bildrate auf dem Handy.
+
 ## v261 – Vertragsangebote im Diensttelefon seltener
 **Frage:** Kommen die Rahmenvertrags-Angebote zu oft – wurde das heute geändert? **Nein**, an den Angeboten wurde heute nichts geändert (v255–v260 betreffen sie nicht).
 
