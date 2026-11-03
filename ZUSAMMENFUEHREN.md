@@ -1,5 +1,12 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v267 – Große Lagerhalle: doppelter Bonus, 8 × 5 (auf v266)
+
+- `farmdata.js`: `FHALL.steps` 6, `FSIZE.lagerhalle` [8, 5], Ladentext.
+- `farm.js`: `farmSize` beachtet `o.sz` bei der Halle; `farmHallGrow` (neu, aus `farmMigrate`, Merkmal `S.farm.hall267`).
+- `farmmodels.js`: `lagerhalle(w, d)` vergrößert das bisherige Modell (`lagerhalle64`).
+- `farmview.js`: Modell nach Größe (`lagerhalle:8x5`), Schildhöhe 4,3.
+
 ## Stand v266 – Luckybox-Bühne neu (auf v265)
 
 - `lucky.js`: Abschnitt „Öffnen“ ersetzt: `openLucky`, `tileHTML`, `spinLucky`, `revealLucky` neu gestaltet, dazu `lbRoll`, `lbFlash`, `lbCount`, `lbSparks`, `lbCoins`, `lbStreakHTML`, Töne `lbTone`/`lbNoise`/`lbFanfare`. `closeLucky` beendet Effekte und schreibt einen laufenden Gewinn gut. `confetti` (Auktionshaus) und `luckyShelfHTML` unverändert.

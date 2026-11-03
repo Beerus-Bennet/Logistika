@@ -85,7 +85,7 @@ function farmSize(o) {
   if (FPENS[o.t]) { const P = FPENS[o.t], p = P[Math.min(P.length, o.lvl || 1) - 1]; w = p.w; d = p.d; }
   else if (o.t === "deco") { const s = (FDECO[o.k] || { sz: [1, 1] }).sz; w = s[0]; d = s[1]; }
   else if (o.t === "f_plot" && typeof FFISHERY !== "undefined" && FFISHERY[o.k]) { w = FFISHERY[o.k].sz[0]; d = FFISHERY[o.k].sz[1]; }
-  else { const s = FSIZE[o.t] || [1, 1]; w = s[0]; d = s[1]; }
+  else { const s = (o.t === "lagerhalle" && o.sz) || FSIZE[o.t] || [1, 1]; w = s[0]; d = s[1]; }      /* v267: alte Halle ohne Platz zum Wachsen behält o.sz */
   return o.r ? [d, w] : [w, d];
 }
 /* Weltmitte eines Objekts */
@@ -273,6 +273,20 @@ function farmStoreCap(st) {
   if (st === "fisch") S.farm.objs.forEach(o => { c += FFISH_STORE_BONUS[o.t] || 0; });
   c += farmHallBonus(st);
   return c;
+}
+/* v267: Die Große Lagerhalle ist größer geworden (8 × 5 statt 6 × 4). Eine schon gebaute Halle wächst einmalig um ihre
+   alte Fläche herum (möglichst mittig), wenn dort Platz ist; sonst behält sie ihre Größe (o.sz) – der Lagerbonus gilt so oder so. */
+function farmHallGrow(F) {
+  if (F.hall267) return;
+  F.hall267 = 1;
+  (F.objs || []).filter(o => o.t === "lagerhalle" && !o.sz).forEach(o => {
+    const old = o.r ? [4, 6] : [6, 4], nw = o.r ? FSIZE.lagerhalle[1] : FSIZE.lagerhalle[0], nd = o.r ? FSIZE.lagerhalle[0] : FSIZE.lagerhalle[1];
+    const cx = (nw - old[0]) / 2, cz = (nd - old[1]) / 2, C = [];
+    for (let dx = 0; dx <= nw - old[0]; dx++) for (let dz = 0; dz <= nd - old[1]; dz++) C.push([dx, dz, Math.hypot(dx - cx, dz - cz)]);
+    C.sort((a, b) => a[2] - b[2]);
+    const hit = C.find(([dx, dz]) => { try { return farmFits(o.x - dx, o.z - dz, nw, nd, o.id, "lagerhalle"); } catch (e) { return false; } });
+    if (hit) { o.x -= hit[0]; o.z -= hit[1]; } else o.sz = [6, 4];
+  });
 }
 /* v258: Plätze durch die Große Lagerhalle (eine je Hof) */
 function farmHallBonus(st) {
@@ -1545,6 +1559,7 @@ if (typeof N !== "undefined" && N.potsdam) N.potsdam.farmX = "hof";
 function farmMigrate() {
   let F = S.farm;
   if (!F || F.sold) return;
+  farmHallGrow(F);
   /* v40: Die Ostsee-Fischerei gibt es nicht mehr – aus ihr wird Opas Hof */
   if (F.kind === "fisch") { farmConvertFisch(F); F = S.farm; }
   if ((F.qv || 1) < 2) {

@@ -9,6 +9,26 @@
 
 
 
+## v267 – Große Lagerhalle: doppelter Nutzen und größer auf dem Hof
+**Wunsch Bennet:** Die Lagerhalle soll mehr Nutzen bringen – 100 % mehr Lagerplatz – und auf dem Hof ggf. größer sein.
+
+**Lösung:**
+- **100 % mehr Platz durch die Halle** (`FHALL.steps` 3 → 6, `farmdata.js`). Sie gibt jedem Lager so viel wie sechs statt drei Ausbaustufen:
+  - Silo +240 statt +120, Scheune +180 statt +90.
+  - Holzplatz +150 statt +75, Kühlkiste +96 statt +48, Köderkiste +240 statt +120.
+  - Gilt sofort auch für schon gebaute Hallen. Ladentext angepasst.
+- **Größer auf dem Hof:**
+  - Die Halle belegt 8 × 5 statt 6 × 4 Kacheln. Das Modell wird gleichmäßig vergrößert (Faktor 1,29, `FM.lagerhalle(w, d)`), das Namensschild sitzt höher.
+  - Eine schon gebaute Halle wächst beim Laden einmalig (`farmHallGrow`, Merkmal `S.farm.hall267`) um ihre alte Fläche herum, möglichst mittig, wenn dort Platz ist. Ist ringsum alles bebaut, behält sie 6 × 4 (`o.sz`) – nichts wird überdeckt oder verschoben, der Lagerbonus gilt trotzdem voll.
+
+**Geprüft (Testbrowser):**
+- Neue Halle: 8 × 5, Silo 60 → 300 Plätze, Scheune 40 → 220.
+- Alte Halle mit Platz: wächst um eine Kachel nach links.
+- Alte Halle mit Nachbarn ringsum: bleibt 6 × 4 und überlappt nichts.
+- Hof-Bild vorher/nachher.
+
+**Nicht geprüft:** am Handy.
+
 ## v266 – Luckybox: seriöser und mehr Belohnungsgefühl
 **Wunsch Bennet:** Das Öffnen der Luckyboxen leicht seriöser gestalten und mit mehr „Dopamin-Ausschuss“ für den Spieler.
 
