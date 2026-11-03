@@ -194,14 +194,22 @@ const LUCKY3D = (() => {
     segs.forEach(s => b.at({ rz: -s.a0 }, () => b.box(0.035, L, 0.03, 0x0d1420, { y: 0.3, z: 0.065 })));
     return b;
   }
-  /* Gewinnerfeld: eigene helle Fläche knapp vor dem Feld und ein Rahmen, der es umschließt */
+  /* Gewinnerfeld (v273): kein gefüllter Streifen mehr – der wirkte bei schmalen Feldern wie ein Lichtstrahl. Stattdessen ein dünner
+     Rahmen um das Feld und eine runde Plakette in der Seltenheitsfarbe, auf der das Symbol größer erscheint (Lage und Größe
+     richten sich nach dem Gewinnfeld). */
+  const BADGE_R = 0.8, BADGE_S = 0.34;
   function winMesh(s, col) {
-    const b = new G3.MB(), R = R_WHEEL - 0.02, z = 0.064, n = Math.max(2, Math.ceil(s.w / (TAU / 90))), w = 0.045;
+    const b = new G3.MB(), R = R_WHEEL - 0.02, z = 0.064, n = Math.max(2, Math.ceil(s.w / (TAU / 90))), w = 0.03;
     const pt = (a, r, zz) => [Math.sin(a) * r, Math.cos(a) * r, zz];
-    const cIn = mixc(col, 0x0d1420, 0.1), cOut = mixc(col, 0xffffff, 0.12);        /* v272: Farbe der Seltenheit bleibt erkennbar, kein weißer Schleier */
-    for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.triV(pt(0, 0.3, z), pt(a1, R, z), pt(a0, R, z), cIn, cOut, cOut); }
-    for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.quad(pt(a0, R - w, z + 0.004), pt(a1, R - w, z + 0.004), pt(a1, R, z + 0.004), pt(a0, R, z + 0.004), mixc(col, 0xffffff, 0.55)); }
-    [s.a0, s.a0 + s.w].forEach(a => b.at({ rz: -a }, () => b.box(0.035, R - 0.3, 0.012, mixc(col, 0xffffff, 0.55), { y: 0.3, z: z + 0.002 })));
+    const lite = mixc(col, 0xffffff, 0.5), mid = mixc(col, 0x0d1420, 0.3), dark = mixc(col, 0x0d1420, 0.62);
+    for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.quad(pt(a0, R - w, z + 0.004), pt(a1, R - w, z + 0.004), pt(a1, R, z + 0.004), pt(a0, R, z + 0.004), lite); }
+    [s.a0, s.a0 + s.w].forEach(a => b.at({ rz: -a }, () => b.box(0.028, R - 0.3, 0.012, lite, { y: 0.3, z: z + 0.002 })));
+    /* Plakette: Scheibe mit hellem Ring */
+    const cx = Math.sin(s.mid) * BADGE_R, cy = Math.cos(s.mid) * BADGE_R, zp = 0.088, N = 40;
+    const ring = (r0, r1, c, zz) => { for (let i = 0; i < N; i++) { const a0 = TAU * i / N, a1 = TAU * (i + 1) / N; b.quad([cx + Math.sin(a0) * r0, cy + Math.cos(a0) * r0, zz], [cx + Math.sin(a1) * r0, cy + Math.cos(a1) * r0, zz], [cx + Math.sin(a1) * r1, cy + Math.cos(a1) * r1, zz], [cx + Math.sin(a0) * r1, cy + Math.cos(a0) * r1, zz], c); } };
+    for (let i = 0; i < N; i++) { const a0 = TAU * i / N, a1 = TAU * (i + 1) / N; b.triV([cx, cy, zp], [cx + Math.sin(a1) * BADGE_S, cy + Math.cos(a1) * BADGE_S, zp], [cx + Math.sin(a0) * BADGE_S, cy + Math.cos(a0) * BADGE_S, zp], mid, dark, dark); }
+    ring(BADGE_S - 0.035, BADGE_S, lite, zp + 0.004);
+    ring(BADGE_S, BADGE_S + 0.022, 0x0d1420, zp + 0.002);
     return b;
   }
   function standMesh(P) {
@@ -382,8 +390,15 @@ const LUCKY3D = (() => {
         n.tint = [c[0] * (0.3 + 0.7 * k), c[1] * (0.3 + 0.7 * k), c[2] * (0.3 + 0.7 * k), 1]; n.glow = k * 0.9;
         if (rv < 1) n.tint = n.tint.map((v, j) => j < 3 ? v * rv + P.dark[j] * (1 - rv) : 1);
       }
-      if (winNode) winNode.glow = S3.lit >= 0 ? 0.04 + (red ? 0 : 0.06 * Math.max(0, Math.cos((t - S3.lit) * TAU * 1.2)) * Math.exp(-(t - S3.lit) * 1.2)) : 0;
-      iconN.forEach(n => { n.alpha = (S3.winSeg && n.seg !== S3.winSeg && S3.lit >= 0 ? 0.42 : 1) * rv; });
+      if (winNode) winNode.glow = S3.lit >= 0 ? 0.03 : 0;
+      iconN.forEach(n => {
+        const win = S3.winSeg && n.seg === S3.winSeg && S3.lit >= 0;
+        n.alpha = (S3.winSeg && !win && S3.lit >= 0 ? 0.42 : 1) * rv;
+        /* Gewinnsymbol wächst auf die Plakette (kurze Einblendung, bei „Bewegung reduzieren“ sofort) */
+        const k = win ? (red ? 1 : smooth((t - S3.lit) / 0.35)) : 0, sz = n.seg.iconSize + (0.5 - n.seg.iconSize) * k, rr = n.seg.iconR + (BADGE_R - n.seg.iconR) * k;
+        n.decal.w = n.decal.h = sz; n.x = Math.sin(n.seg.mid) * rr; n.y = Math.cos(n.seg.mid) * rr; n.z = 0.075 + 0.04 * k;
+      });
+      if (winNode) winNode.alpha = S3.lit >= 0 ? (red ? 1 : smooth((t - S3.lit) / 0.3)) : 0;
       /* Kamera */
       if (S3.camT >= 0) S3.camK = red ? 1 : clamp01((t - S3.camT) / S3.camD);
       setCam(S3.camK);
