@@ -9,6 +9,20 @@
 
 
 
+## v274 – Lückenloser Gebietsnebel, Gebäudedrehung und runde Navigation
+
+### Gebietsnebel
+
+Die weichen Kanten der Sperrrechtecke wurden auch nach innen ausgeblendet. Dadurch entstanden helle Nähte an aneinanderliegenden Flächen. Die Kante läuft jetzt nur nach außen weich aus; innerhalb des gesperrten Gebiets bleibt die Nebelstärke vollständig erhalten. Die Freischaltanimation bleibt bestehen. Geprüft: Vorher-/Nachher-Aufnahmen in Chromium aus zwei Blickwinkeln, sechs aktive Sperrflächen, keine JavaScript-Fehler; Kantenberechnung für volle Deckung und weichen Außenrand geprüft. Nicht auf einem echten Handy geprüft.
+
+### Gebäude in alle vier Richtungen drehen
+
+Der Drehen-Button wechselte bisher nur zwischen 0° und 90°. Jetzt folgen 90°, 180°, 270° und nach dem vierten Klick wieder 0°. Vorschau und fertiges Gebäude nutzen dieselbe Drehung; rechteckige Stellflächen tauschen Breite und Tiefe nur bei ungeraden Vierteldrehungen. Bauplatz-Stapel, Lkw-Ausrichtung, Hallenwachstum und Personal-Wegecache berücksichtigen die vier Richtungen. Vorhandene Ausrichtungen 0/1 bleiben erhalten. Geprüft in Chromium: vier Drehungen eines bestehenden Auftragsbretts samt Bestätigen, rechteckige Hallenmaße und Speichern/Neuladen bei 270°. Syntaxprüfung der geänderten Skripte erfolgreich. Nicht auf einem echten Handy geprüft.
+
+### Runde Ecken am Auswahlbereich
+
+Die dunkle Navigationsleiste unten rechts hatte eckige Außenkanten. Der gesamte Auswahlbereich erhält 18 px abgerundete Ecken; Inhalte werden an der Rundung abgeschnitten. CSS-Cache und Service-Worker-Version aktualisiert. Geprüft: Chromium auf Desktop- und Mobilbreite, Navigation weiterhin bedienbar. Nicht auf einem echten Handy geprüft.
+
 ## v273 – Luckybox: Gewinn auf Plakette statt Lichtstreifen
 **Wunsch Bennet:** Der „Lichtstrahl“ am Gewinnerfeld sitzt noch nicht sauber – je Gewinn einzeln anpassen (Screenshot beim Goldenen Bulli).
 
@@ -29,6 +43,7 @@
 **Lösung** (`lucky3d.js`): Feld in der kräftigen Farbe der Seltenheit mit nur leichtem Verlauf, Rahmen und Trennstege in einer hellen Tönung derselben Farbe statt Weiß, Leuchten stark gedämpft (0,04–0,10 statt 0,25–0,45), weniger Funken (2 + 2 je Seltenheitsstufe statt 6 + 3). Sonst unverändert.
 
 **Geprüft (Testbrowser):** Rad nach dem Stopp bei epischem Gewinn, goldene Box, keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
 
 ## v271 – Luckybox-Testbühne (`index.html?test&lucky`)
 **Wunsch Bennet:** Eine Testansicht, auf der man das ganze Luckybox-System kurz durchprobieren kann.

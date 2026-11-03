@@ -4451,3 +4451,6 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 .lbt-tab th,.lbt-tab td{padding:3px 5px;border-bottom:1px solid rgba(13,27,42,.15);text-align:right}
 .lbt-tab th:first-child{text-align:left}
 .lbt-tab .lbt-bad{color:#c62828;font-weight:900}
+
+/* ---------- v274: Abgerundeter Auswahlbereich der Navigation ---------- */
+#nav{border-radius:18px;overflow:hidden}

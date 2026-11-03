@@ -79,6 +79,9 @@ function farmAddObj(o) {
   return o;
 }
 function farmObj(id) { return S.farm.objs.find(o => o.id === id) || null; }
+/* v274: Vier Vierteldrehungen; alte Spielstände mit r=0/1 behalten ihre Richtung. */
+function farmRotation(o) { return (o.r || 0) & 3; }
+function farmYaw(o) { return farmRotation(o) * (o.t === "sw_lkw" ? Math.PI / 2 : -Math.PI / 2); }
 /* Kachelgröße eines Objekts (Ausläufe wachsen mit der Ausbaustufe) */
 function farmSize(o) {
   let w, d;
@@ -86,7 +89,7 @@ function farmSize(o) {
   else if (o.t === "deco") { const s = (FDECO[o.k] || { sz: [1, 1] }).sz; w = s[0]; d = s[1]; }
   else if (o.t === "f_plot" && typeof FFISHERY !== "undefined" && FFISHERY[o.k]) { w = FFISHERY[o.k].sz[0]; d = FFISHERY[o.k].sz[1]; }
   else { const s = (o.t === "lagerhalle" && o.sz) || FSIZE[o.t] || [1, 1]; w = s[0]; d = s[1]; }      /* v267: alte Halle ohne Platz zum Wachsen behält o.sz */
-  return o.r ? [d, w] : [w, d];
+  return farmRotation(o) % 2 ? [d, w] : [w, d];
 }
 /* Weltmitte eines Objekts */
 function farmCenter(o) {
@@ -288,7 +291,7 @@ function farmHallGrow(F) {
   const was = F.hall267 ? [8, 5] : [6, 4];                    /* v267: 8 × 5 ohne o.sz */
   (F.objs || []).filter(o => o.t === "lagerhalle").forEach(o => {
     if (!o.sz) o.sz = was.slice();
-    const rot = s => o.r ? [s[1], s[0]] : s, old = rot(o.sz);
+    const rot = s => farmRotation(o) % 2 ? [s[1], s[0]] : s, old = rot(o.sz);
     for (const ns of HALL_SIZES) {
       if (ns[0] * ns[1] <= o.sz[0] * o.sz[1]) break;
       const [nw, nd] = rot(ns), cx = (nw - old[0]) / 2, cz = (nd - old[1]) / 2, C = [];
@@ -729,7 +732,8 @@ function farmPenUpgrade(o) {
   const cost = penUpgradeCost(o);
   if (cost == null) return toast("Größer geht es nicht.", "warn"), false;
   const nx = FPENS[o.t][o.lvl];
-  const w = o.r ? nx.d : nx.w, d = o.r ? nx.w : nx.d;
+  const odd = farmRotation(o) % 2;
+  const w = odd ? nx.d : nx.w, d = odd ? nx.w : nx.d;
   if (!farmFits(o.x, o.z, w, d, o.id, o.t)) return toast("Kein Platz – rechts oder unten steht was im Weg (lange drücken zum Verschieben).", "warn"), false;
   if (S.money < cost) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn"), false;
   S.money -= cost; S.expense += cost;

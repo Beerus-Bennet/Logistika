@@ -176,7 +176,7 @@ const NAV = { x0: -120, z0: -125, x1: 60, z1: 36, key: "", blk: null, cost: null
 function navKey() {
   const F = S.farm;
   let h = farmHl() * 7 + Object.keys(F.areas || {}).length;   /* v70: Hofgröße aus der Ausbaustufe 1 … 10 */
-  F.objs.forEach(o => { h = (h * 31 + o.x * 7 + o.z * 13 + (o.r ? 5 : 0) + o.t.length) % 1e9; });
+  F.objs.forEach(o => { h = (h * 31 + o.x * 7 + o.z * 13 + farmRotation(o) * 5 + o.t.length) % 1e9; });
   (F.trees || []).forEach(t => { if (t.st === "up" || t.st === "sapling") h = (h * 17 + t.id) % 1e9; });
   /* v109: Kulissenbäume, Büsche und der Hochsitz zählen mit – sie entstehen erst mit der Welt */
   const w = typeof WV !== "undefined" ? (WV.bgChunks ? WV.bgChunks.size : 0) + "/" + (WV.bushes ? WV.bushes.length : 0) + "/" + (WV.forest && WV.forest.items ? WV.forest.items.length : 0) : "";
