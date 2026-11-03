@@ -9,6 +9,43 @@
 
 
 
+## v271 – Luckybox-Testbühne (`index.html?test&lucky`)
+**Wunsch Bennet:** Eine Testansicht, auf der man das ganze Luckybox-System kurz durchprobieren kann.
+
+**Lösung** (neue Datei `luckytest.js`, CSS-Block v271):
+- **Aufruf:** Nur mit `?test&lucky` in der Adresse. Testmodus mit eigenem Spielstand (`logistika.test.v3`), der echte Spielstand bleibt unberührt. Ohne `lucky` tut die Datei nichts.
+- **Testfirma:** Fehlt im Test-Spielstand noch eine Firma, legt „Testfirma anlegen“ sie an. Der Hof-Rundgang wird dabei übersprungen.
+- **Status:** Wartende Boxen (normal/golden), unterbrochener Gewinn, Zahl der Öffnungen, Serie, letzte Gewinne mit Seltenheit, aktive Wirkungen, ob der Goldene Bulli schon in der Flotte ist (dann gibt es den Jackpot).
+- **Boxen:** +1 normal, +1 golden, +1 Bonus (Sonderfahrt), +10 gemischt, alle entfernen.
+- **Nächster Gewinn festlegen:** Zufall, eine Seltenheit oder ein bestimmter Preis.
+  - Gilt nur für die eine Ziehung beim Antippen, die Füllkacheln im Band bleiben zufällig.
+  - Chancen und Preise im Spiel bleiben unverändert.
+- **Darstellung:** „Bewegung reduzieren“ simulieren, ohne WebGL 2 (Band statt 3D), Ton an/aus, Serie ±1 Tag oder auf 0. Dafür fragt `lucky.js` die Testbühne ab (`lbTest`).
+- **Fertige Abläufe:**
+  - Goldene Box bei kurzer Serie (Herkunft ≠ Fortschritt).
+  - 15 Boxen am Stück (mit „Animation überspringen“).
+  - Schließen, während das Rad dreht.
+  - Seite neu laden, während das Rad dreht (danach zeigt die Testbühne den gespeicherten Gewinn).
+- **Chancen prüfen:** 20 000 Ziehungen je Boxart mit der echten Ziehung, Soll/Ist-Tabelle.
+- **Hinweise:** Was am Handy zusätzlich zu prüfen ist – Querformat, Safari-Leisten, schnelles Mehrfachtippen, echte iOS-Einstellung „Bewegung reduzieren“.
+- **Bedienung:** Einklappbar, dann bleibt unten links der Knopf „🧪 Luckybox-Test“. Einstellungen gelten für die Sitzung (sessionStorage).
+
+**Geprüft (Testbrowser):**
+- Keine Testbühne bei `?test` ohne `lucky` und im echten Spiel; echter Spielstand unverändert.
+- Testfirma anlegen.
+- Boxen geben.
+- Festgelegte Seltenheit (Legendär) und festgelegter Preis kommen, die Füllkacheln bleiben gemischt.
+- Ohne WebGL 2: Band.
+- Simuliertes „Bewegung reduzieren“: Karte nach < 1 s, keine Kamerafahrt.
+- Goldene Box bei kurzer Serie: „Herkunft … 7 Tage“ / „2 Tage in Folge“.
+- Chancen-Tabelle nahe Soll.
+- Schließen beim Drehen: einmal gutgeschrieben.
+- Neuladen beim Drehen: Gewinn gespeichert und danach gezeigt, ohne neue Box.
+- Einklappen.
+- Keine Konsolenfehler.
+
+**Nicht geprüft:** am Handy.
+
 ## v270 – Luckybox: räumliche Kiste mit Innenraum, zusammenhängender Ablauf, eigene Symbole, mobiles Layout
 **Wunsch Bennet** (vier Handy-Screenshots):
 - Kiste räumlicher und sauberer.

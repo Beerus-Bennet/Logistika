@@ -157,7 +157,9 @@ function perkChips() {
    Kamerafahrt, kein Drehen, keine Blitze – kurze Überblendung zur Karte. Töne nur mit eingeschaltetem Spielton (S.farm.snd).
    Einheitliche Symbole (lbIcon) auf Rad, Band, Anzeige und Karte. */
 let lucky = null, lbSeq = 0;
-const lbReduced = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+/* v271: die Testbühne (luckytest.js, nur index.html?test&lucky) kann „Bewegung reduzieren“ und „ohne WebGL 2“ vorgeben */
+const lbTest = k => typeof LB_TEST !== "undefined" && LB_TEST.on ? LB_TEST[k] : null;
+const lbReduced = () => { const t = lbTest("reduced"); if (t != null) return !!t; try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
 const LB_RANK = { c: 0, r: 1, e: 2, l: 3 };
 /* Farbe der Box beim Aufladen (Qualität der Box, nicht des Gewinns) */
 const LB_BOXCOL = { std: "#a9d8ff", gold: "#ffd36a" };
@@ -429,7 +431,7 @@ function lbOpen(box, resume) {
     return;
   }
   /* v268: Kiste und Glücksrad in 3D (lucky3d.js, gl3d.js); ohne WebGL 2 bleibt die Bühne aus v266 */
-  if (typeof LUCKY3D !== "undefined") {
+  if (typeof LUCKY3D !== "undefined" && !lbTest("no3d")) {
     try { lucky.g3 = LUCKY3D.open($("#lbScene"), { gold, odds, prizes: PRIZES, rarity: RARITY, reduced: lbReduced(), icon: lbIcon }); } catch (e) { console.warn("Luckybox 3D", e); lucky.g3 = null; }
     if (lucky.g3) el.classList.add("is3d");
   }

@@ -1,5 +1,14 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v271 – Luckybox-Testbühne (auf v270)
+
+- `luckytest.js` (neu, in `index.html` nach `lucky3d.js`, in `sw.js`):
+  - `LB_TEST` (`on`, `reduced`, `no3d`, `force`).
+  - Nur aktiv mit `?test&lucky`.
+  - Umhüllt `rollPrize` nur für die Ziehung beim Antippen.
+- `lucky.js`: `lbTest(k)` – `lbReduced` und `lbOpen` fragen die Testbühne ab (sonst wie v270).
+- `style.css`: Block „v271: Luckybox-Testbühne“ am Ende.
+
 ## Stand v270 – Luckybox: Kiste mit Innenraum, Ablauf, Symbole, Layout (auf v269)
 
 - `lucky3d.js` neu aufgebaut:
