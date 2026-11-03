@@ -9,6 +9,10 @@
 
 
 
+## v272 – Runde Ecken am Auswahlbereich
+
+Die dunkle Navigationsleiste unten rechts hatte eckige Außenkanten. Der gesamte Auswahlbereich erhält 18 px abgerundete Ecken; Inhalte werden an der Rundung abgeschnitten. CSS-Cache und Service-Worker-Version aktualisiert. Geprüft: Chromium auf Desktop- und Mobilbreite, Navigation weiterhin bedienbar. Nicht auf einem echten Handy geprüft.
+
 ## v271 – Luckybox-Testbühne (`index.html?test&lucky`)
 **Wunsch Bennet:** Eine Testansicht, auf der man das ganze Luckybox-System kurz durchprobieren kann.
 
