@@ -9,6 +9,13 @@
 
 
 
+## v275 – Arbeitsprinzipien in `CLAUDE.md`
+**Wunsch Bennet:** Die Hinweise aus dem Repo `andrej-karpathy-skills` (nach Prüfung auf Schadcode: nur Text, keine Skripte) für Claude einbinden.
+
+**Lösung:** Neuer Abschnitt „Arbeitsprinzipien“ am Ende von `CLAUDE.md`: vier Regeln (erst denken, Einfachheit, chirurgische Änderungen, Ziele überprüfbar machen), sinngemäß übernommen und auf Logistika zugeschnitten. Ausdrücklich: Bei Widerspruch haben Bennets feste Regeln Vorrang. Kein Spielcode geändert; `sw.js` zählt nur die Version hoch.
+
+**Geprüft:** Nur Textdatei geändert, keine Spielfunktion betroffen; nichts im Testbrowser nötig. **Nicht geprüft:** Wirkung auf das Verhalten von Claude – das zeigt sich erst in späteren Sitzungen.
+
 ## v274 – Lückenloser Gebietsnebel, Gebäudedrehung und runde Navigation
 
 ### Gebietsnebel
