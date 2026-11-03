@@ -9,6 +9,15 @@
 
 
 
+## v272 – Luckybox: Lichtschein am Gewinnerfeld ruhiger
+**Wunsch Bennet:** Den Lichtschein anpassen (Screenshot vom Rad nach dem Stopp).
+
+**Ursache:** Das Gewinnerfeld wurde mit einem hellen Weißanteil und zusätzlichem Leuchten (`glow`) gezeichnet und wirkte wie ein weißlicher Schleier; die Farbe der Seltenheit war kaum noch zu sehen. Dazu kamen viele Funken direkt am Zeiger.
+
+**Lösung** (`lucky3d.js`): Feld in der kräftigen Farbe der Seltenheit mit nur leichtem Verlauf, Rahmen und Trennstege in einer hellen Tönung derselben Farbe statt Weiß, Leuchten stark gedämpft (0,04–0,10 statt 0,25–0,45), weniger Funken (2 + 2 je Seltenheitsstufe statt 6 + 3). Sonst unverändert.
+
+**Geprüft (Testbrowser):** Rad nach dem Stopp bei epischem Gewinn, goldene Box, keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
 ## v271 – Luckybox-Testbühne (`index.html?test&lucky`)
 **Wunsch Bennet:** Eine Testansicht, auf der man das ganze Luckybox-System kurz durchprobieren kann.
 
