@@ -507,8 +507,8 @@ const HUNT = (() => {
   function deerTail() { const b = MB(); ell(b, [0, -0.07, -0.02], [0.036, 0.085, 0.03], (p, y) => mulc(mixc(DEER.back, DEER.rumpB, ss((-y + 0.2) / 0.8)), fur(p)), 8, 6); return b; }
   /* Läufe: oben kräftig (Unterarm/Keule), Vorderfußwurzel- bzw. Sprunggelenk als Verdickung, schlanker Röhrenknochen,
      Fesselgelenk, schräge Fessel, gespaltene Schalen, Afterklauen. Länge und Gelenkpunkte wie bisher. */
-  const LEG_FU = [[0, 0.044, 0.074, 0], [-0.1, 0.047, 0.068, 0.006], [-0.2, 0.042, 0.05, 0.005], [-0.3, 0.029, 0.035, 0], [-0.362, 0.031, 0.039, 0.002], [-0.41, 0.026, 0.031, 0]];
-  const LEG_HU = [[0, 0.08, 0.115, -0.01], [-0.1, 0.07, 0.1, -0.012], [-0.2, 0.048, 0.07, -0.01], [-0.3, 0.031, 0.048, -0.008], [-0.37, 0.027, 0.046, -0.016], [-0.405, 0.026, 0.034, -0.008], [-0.43, 0.025, 0.03, 0]];
+  const LEG_FU = [[0.065, 0.044, 0.066, 0], [0, 0.052, 0.078, 0], [-0.1, 0.047, 0.068, 0.006], [-0.2, 0.042, 0.05, 0.005], [-0.3, 0.029, 0.035, 0], [-0.362, 0.031, 0.039, 0.002], [-0.41, 0.026, 0.031, 0]];
+  const LEG_HU = [[0.07, 0.067, 0.092, 0], [0, 0.083, 0.115, -0.01], [-0.1, 0.07, 0.1, -0.012], [-0.2, 0.048, 0.07, -0.01], [-0.3, 0.031, 0.048, -0.008], [-0.37, 0.027, 0.046, -0.016], [-0.405, 0.026, 0.034, -0.008], [-0.43, 0.025, 0.03, 0]];
   const LEG_LO = [[0.01, 0.031, 0.037, 0], [-0.06, 0.022, 0.026, 0], [-0.24, 0.021, 0.025, 0], [-0.305, 0.027, 0.032, -0.002], [-0.345, 0.023, 0.027, 0.01], [-0.383, 0.026, 0.032, 0.018], [-0.41, 0.03, 0.038, 0.024], [-0.44, 0.033, 0.043, 0.028]];
   function legInto(b, T, colAt, cap1) {
     const P = [], C = [], m = 8, n = 11, y0 = T[0][0], y1 = T[T.length - 1][0], TA = T.slice().reverse();   /* prof braucht aufsteigende Stützstellen */
@@ -520,6 +520,10 @@ const HUNT = (() => {
   }
   function deerUpper(front) {
     const b = MB();
+    /* v283: Rundes Schulter-/Hüftgelenk überlappt den Rumpf auch bei gespreizten Läufen.
+       Gelenk und Trefferachsen bleiben an ihren bisherigen Positionen. */
+    ell(b, [0, 0.018, 0], front ? [0.063, 0.085, 0.086] : [0.083, 0.095, 0.108],
+      p => pie(mulc(RGB(DEER.coat), fur(p, 0.35)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), 12, 9);
     legInto(b, front ? LEG_FU : LEG_HU, (p, y) => pie(mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), false);
     if (!front) ell(b, [0, -0.37, -0.05], [0.022, 0.03, 0.022], DEER.leg, 6, 4);                  /* Fersenhöcker am Sprunggelenk */
     return b;
@@ -606,6 +610,8 @@ const HUNT = (() => {
   const BLEG_LO = [[0.012, 0.031, 0.036, 0], [-0.03, 0.027, 0.031, 0], [-0.11, 0.022, 0.026, 0.002], [-0.14, 0.025, 0.03, 0.006], [-0.158, 0.023, 0.028, 0.013], [-0.172, 0.022, 0.028, 0.019]];
   const boarLegCol = (p, k) => pie(mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)), [p[0] * 1.3, p[1] * 1.3 + 0.4, p[2] * 1.3], 0.25);
   function boarUpperInto(b, front) {
+    /* v283: Kräftige, runde Ansätze statt eines sichtbaren flachen Schnitts. */
+    ell(b, [0, 0.012, -0.005], front ? [0.068, 0.075, 0.082] : [0.072, 0.08, 0.09], p => boarCoat(p, 0.1, 0.3), 12, 8);
     legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.02) / 0.12)), true);
     if (!front) ell(b, [0, -0.168, -0.056], [0.02, 0.026, 0.02], BOAR.leg, 6, 4);          /* Fersenhöcker */
     return b;
@@ -996,16 +1002,31 @@ const HUNT = (() => {
     if (k === "fasan" && (gn.c === "ohne" || gn.c === "dunkel")) L.noRing = 1;
     return L;
   }
+  /* v283: Acht stabile Fell-/Gefiedernuancen je Decke, ohne zusätzliche Seltenheits- oder Geldboni.
+     Alte Stücke mit g=0 behalten ihre bisherigen Farben. Augen, Hufe und Geweih bleiben unverändert. */
+  const shadeVariant = gn => gn && gn.g ? (Math.abs(gn.g) % 8) : -1;
+  const temperOf = gn => {
+    const i = gn && gn.g ? Math.abs(Math.imul(gn.g, 31) >>> 0) % 3 : 1;
+    return [{ name: "Gelassen", sense: 0.82, watch: 0.38 }, { name: "Aufmerksam", sense: 1, watch: 0.55 }, { name: "Wachsam", sense: 1.22, watch: 0.76 }][i];
+  };
   function withLook(k, gn, fn) {
     if (!gn || !PALS[k]) return fn();
     const T = PALS[k], keep = Object.assign({}, LOOK), L = lookOf(k, gn);
     Object.assign(T, PAL0[k], coatOf(k, gn.c)[5]);
+    const variant = shadeVariant(gn);
+    if (variant >= 0) {
+      const colors = k === "hirsch" ? ["coat", "back", "belly", "face", "mane", "maneL", "leg", "nape"]
+        : k === "keiler" ? ["coat", "coatL", "coatD", "belly", "beard", "leg"]
+        : ["copper", "copperD", "gold", "rump", "belly", "wing", "wingD", "neck", "neckB", "head", "fA", "fB"];
+      const warm = variant % 2 === 0, light = (Math.floor(variant / 2) - 1.5) * 0.065;
+      colors.forEach(key => { if (T[key] != null) T[key] = mulc(mixc(T[key], warm ? 0xc48748 : 0x687b8b, gn.c === "weiss" ? 0.025 : 0.12), 1 + light); });
+    }
     if (k === "keiler" && L.old) { T.beard = mixc(T.beard, 0xd6d0c6, L.old * 1.4); T.coatL = mixc(T.coatL, 0xbdb7ad, L.old); }
     Object.assign(LOOK, L);
     try { return fn(); } finally { Object.assign(T, PAL0[k]); Object.assign(LOOK, keep); }
   }
   /* Schlüssel für Modell-Zwischenspeicher und Bildchen: alles, was das Aussehen ändert */
-  const lookKey = (k, gn) => gn ? [gn.c, gn.w, gn.a, gn.c === "schecke" ? gn.ps : "", has(gn, "narbe") ? "n" + gn.sd : "", has(gn, "schlitz") ? "s" + gn.sd : "", has(gn, "langstoss") ? "l" : ""].join(".") : "std";
+  const lookKey = (k, gn) => gn ? [gn.c, shadeVariant(gn), gn.w, gn.a, gn.c === "schecke" ? gn.ps : "", has(gn, "narbe") ? "n" + gn.sd : "", has(gn, "schlitz") ? "s" + gn.sd : "", has(gn, "langstoss") ? "l" : ""].join(".") : "std";
   const antF = gn => gn ? { spread: has(gn, "weit") ? 1.14 : has(gn, "eng") ? 0.88 : 1, extra: has(gn, "ungerade") ? gn.sd : 0, aug: has(gn, "doppelaug") ? gn.sd : 0, abn: has(gn, "abnorm") ? -gn.sd : 0 } : {};
   const antKey = gn => gn ? gn.f.filter(f => /weit|eng|ungerade|doppelaug|abnorm/.test(f)).join("") + gn.sd : "";
   const newG = () => 1 + Math.floor(rnd() * 2147483000);
@@ -1882,7 +1903,7 @@ const HUNT = (() => {
     const s = lerp(S0.s0, S0.s1, score) * (gn.w ? 1 + gn.w * 0.012 : 1);                                    /* v200: Körperbau ±1,2 % */
     const p = pre ? [pre.x, pre.z] : spawnPoint(null, enter);
     const A = { id: ++X.aid, k, score, g, gn, T, s, x: p[0], z: p[1], y: 0, ry: rnd() * 6.28, rx: 0, rz: 0, v: 0, vT: 0, vx: 0, vz: 0, ph: rnd(), gw: 0, gr: 0,
-      st: enter ? "walk" : k === "fasan" ? "peck" : k === "keiler" ? "root" : "graze", t: 2 + rnd() * 5, tx: p[0], tz: p[1], alert: 0, seen: false, hits: [], dist: 0,
+      st: enter ? "walk" : k === "fasan" ? "peck" : k === "keiler" ? "root" : "graze", t: 2 + rnd() * 5, tx: p[0], tz: p[1], temper: temperOf(gn), alert: 0, seen: false, hits: [], dist: 0,
       sp: {}, ear: [{ f: 0, k: 0, t: 1 }, { f: 0, k: 0, t: 2 }], cautious: enter, pause: 0, jolt: 0, legsA: [[0, 0], [0, 0], [0, 0], [0, 0]], seed: rnd() * 100, fly: null, vr: pre && pre.vr != null ? pre.vr : Math.floor(rnd() * 6) };
     if (enter) { A.tx = p[2]; A.tz = p[3]; A.ry = Math.atan2(A.tx - A.x, A.tz - A.z); }
     if (pre) {                                         /* v111: das Tier von der Wiese – gleiche Art, gleiche Güte, gleiche Lage und Blickrichtung */
@@ -1934,7 +1955,7 @@ const HUNT = (() => {
       if (A === except || !alive(A)) return;
       const d = Math.hypot(A.x - from[0], A.z - from[2]);
       if (d > rad) return;
-      A.alert += amount * SP[A.k].sens * clamp(1.4 - d / rad, 0.4, 1.2);
+      A.alert += amount * (A.temper || temperOf(A.gn)).sense * SP[A.k].sens * clamp(1.4 - d / rad, 0.4, 1.2);
       A.src = [from[0], from[2]];
     });
   }
@@ -1963,16 +1984,30 @@ const HUNT = (() => {
     else { const u = (c - duty) / (1 - duty), e = 0.5 - 0.5 * Math.cos(Math.PI * u); a1 = lerp(amp, -amp, e); a2 = Math.sin(Math.PI * u) * lift * (front ? 1 : 0.8); }
     return [a1 + (front ? 0 : 0.1), a2 + (front ? 0 : -0.12)];
   }
+  /* v283: Gegenwind schützt; nahe Tiere bekommen bei Wind zum Stück tatsächlich Witterung.
+     Der bisherige Zugewinn blieb bei mäßigem Wind unter dem ständigen Alarmabbau. */
+  function scentGain(A, wind) {
+    if (!wind || wind.v <= 2) return 0;
+    const dx = A.x - EYER[0], dz = A.z - EYER[2];
+    if (Math.cos(angN(Math.atan2(dz, dx) - wind.dir)) <= 0.94) return 0;
+    return 0.07 * wind.v / 3 * (A.temper || temperOf(A.gn)).sense * clamp(1.5 - Math.hypot(dx, dz) / 120, 0.15, 1);
+  }
   function stepAnimal(A, dt, time) {
     const S0 = SP[A.k], n = A.node, P = A.sp;
     A.t -= dt;
     A.alert = Math.max(0, A.alert - dt * 0.04);
     /* Witterung: weht der Wind vom Hochsitz zum Tier, riecht es dich langsam */
-    if (alive(A) && X.wind.v > 2) { const a = Math.atan2(A.z - EYER[2], A.x - EYER[0]); if (Math.cos(angN(a - X.wind.dir)) > 0.94) A.alert += dt * 0.02 * X.wind.v / 3; }
+    if (alive(A)) A.alert += dt * scentGain(A, X.wind);
     let neckT = 0.2, nyT = 0, headT = 0.1, earT = 0.15, tailT = 0, stiff = 5;
     if (alive(A) && !["flee", "hit", "wounded", "fly"].includes(A.st)) {
       if (A.alert > 1) fleeFrom(A, A.src || [EYER[0], EYER[2]]);
-      else if (A.alert > 0.5 && A.st !== "alert") { A.st = "alert"; A.t = 1.4 + rnd() * 2.2; A.jolt = 1; A.vT = 0; A.pause = 0; }
+      else if (A.alert > 0.5 && A.st !== "alert") {
+        /* v283: Unruhe steckt nahe Stücke einmalig an; keine Ketteneskalation pro Frame. */
+        if (!A.alarmAt || time - A.alarmAt > 12) {
+          A.alarmAt = time;
+          X.animals.forEach(B => { if (B !== A && alive(B) && Math.hypot(A.x - B.x, A.z - B.z) < 10) B.alert = Math.min(0.7, B.alert + 0.16); });
+        }
+        A.st = "alert"; A.t = 1.4 + rnd() * 2.2; A.jolt = 1; A.vT = 0; A.pause = 0; }
     }
     const towardA = Math.atan2(EYER[0] - A.x, EYER[2] - A.z);
     switch (A.st) {
@@ -1980,7 +2015,7 @@ const HUNT = (() => {
         A.vT = 0; neckT = 2.55; headT = -0.45 + Math.max(0, Math.sin(time * 6.5 + A.seed)) * 0.06 * (Math.sin(time * 0.7 + A.seed) > 0 ? 1 : 0.2);
         nyT = Math.sin(time * 0.23 + A.seed) * 0.35;
         if (A.stepT > 0) { A.stepT -= dt; A.vT = 0.32; } else if (rnd() < dt * 0.12) A.stepT = 1.2 + rnd();
-        if (A.t <= 0) { if (rnd() < 0.55) { A.st = "look"; A.t = 2 + rnd() * 3; } else pickWalk(A); }
+        if (A.t <= 0) { if (rnd() < (A.temper || temperOf(A.gn)).watch) { A.st = "look"; A.t = 2 + rnd() * 3; } else pickWalk(A); }
         break;
       }
       case "peck": A.vT = 0; neckT = 0.9 + Math.max(0, Math.sin(time * 9 + A.seed)) * 0.6; if (A.t <= 0) { if (rnd() < 0.5) { A.st = "look"; A.t = 1 + rnd() * 1.5; } else pickWalk(A); } break;
@@ -3276,7 +3311,7 @@ const HUNT = (() => {
     const m = medalOf(A.score, "lunge"), lo = Math.max(1, m - (A.score % 0.18 < 0.09 ? 1 : 0));
     return { lo, hi: m, txt: lo === m ? MEDALS[m].i + " " + MEDALS[m].n : MEDALS[lo].i + "–" + MEDALS[m].i + " " + MEDALS[lo].n + " bis " + MEDALS[m].n, v: PRICE[A.k][m] };
   }
-  const doing = A => ({ graze: "äst", peck: "pickt", root: "bricht im Boden", look: "sichert", alert: "hat etwas bemerkt", walk: A.cautious ? "zieht vorsichtig" : "zieht", flee: "flüchtet", wounded: "flüchtet krank", hit: "flüchtet", fly: "fliegt", fall: "bricht zusammen", dead: "liegt", drop: "fällt" })[A.st] || "";
+  const doing = A => ((A.seen && alive(A)) ? (A.temper || temperOf(A.gn)).name + " · " : "") + ({ graze: "äst", peck: "pickt", root: "bricht im Boden", look: "sichert", alert: "hat etwas bemerkt", walk: A.cautious ? "zieht vorsichtig" : "zieht", flee: "flüchtet", wounded: "flüchtet krank", hit: "flüchtet", fly: "fliegt", fall: "bricht zusammen", dead: "liegt", drop: "fällt" })[A.st] || "";
   /* woher der Wind kommt, aus Sicht des Schützen (acht Richtungen) */
   const windFrom = (dir, th) => {
     const rel = angN(dir + Math.PI - th), i = Math.round(rel / (Math.PI / 4));
@@ -3490,7 +3525,7 @@ const HUNT = (() => {
       boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: () => phHead(), phLeg: () => phLeg(), phLegCurl: () => phLegCurl(), phWing: s => phWing(s), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
-    _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
+    _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
     _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);

@@ -1558,3 +1558,7 @@ Nachtrag v281: corp.js und Cache-Verweise ebenfalls geändert. Einmalige Reparat
 
 ## v282 – Screenshot-Korrekturen
 Basis main dcbfc26. Änderungen: avatar.js, corp.js, officefp.js, style.css, index.html, sw.js (v282), AENDERUNGEN.md, diese Datei; neu review-v282.test.js. v281 aus main bleibt erhalten. ZIP enthält nur geänderte Dateien. Tests und Einschränkungen siehe AENDERUNGEN.md. Keine Spielstandmigration nötig.
+
+
+## v283 – Jagd
+Basis main 7321acd. Geändert: hunt.js; Cache-Verweise in index.html und sw.js (v283); AENDERUNGEN.md, diese Datei; neu hunt-v283.test.js. Nur diese sechs Dateien als ZIP. Keine Migration; v282 bleibt erhalten. Bestehende Jagdtests via Kopie nach tests/ ausführen: node tests/hunt.test.js. Zusätzliche Tests: node hunt-v283.test.js. Keine zusätzlichen Abhängigkeiten. Optik der Schulter-/Hüftansätze, acht erbgutbasierte Nuancen, Temperamente, Wind und soziale Unruhe. Details und Prüfgrenzen in AENDERUNGEN.md.

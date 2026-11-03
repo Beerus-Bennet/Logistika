@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v283 – Jagd: runde Laufansätze, individuelle Decken und lebendigeres Revier
+**Basis:** GitHub main 7321acd, v282 bleibt vollständig erhalten.
+- Hirsch: Obere Laufprofile reichen jetzt in den Gelenkbereich hinein; runde Schulter-/Hüftansätze überlappen den Rumpf statt sichtbarer flacher Schnittflächen. Keiler erhalten ebenfalls runde, kräftigere Ansätze. Gelenkachsen, Größe und Lage der kritischen Trefferzonen unverändert.
+- Acht subtile Farbnuancen pro vorhandener Decke/Gefiedervariante (warm/kühl, heller/dunkler), aus gespeichertem Erbgut abgeleitet. Revier, Bergung und Trophäen verwenden denselben Aussehensschlüssel; Cache bleibt auf acht Nuancen begrenzt. Alte Stücke mit g=0 behalten die bisherigen Farben. Seltene Decken, Seltenheitswahrscheinlichkeiten und Wert bleiben unverändert.
+- Gelassene, aufmerksame und wachsame Stücke: unterschiedliches Sichern sowie unterschiedliche Reaktion auf Geräusche und Witterung. Verhalten wird aus der Identität bestimmt und im Beobachtungstext angezeigt, sobald das Tier gesehen wurde.
+- Witterung berücksichtigt Windrichtung, Stärke, Entfernung und Wachsamkeit. Der Zugewinn war zuvor bei mäßigem Wind kleiner als der ständige Alarmabbau. Gegenwind schützt weiterhin.
+- Nahe Tiere bemerken Unruhe bei anderen Stücken (10 Reviereinheiten, gedrosselter Impuls statt Eskalation in jedem Frame). Kein neues kostenpflichtiges System und keine Spielstandmigration.
+**Geprüft:** 21 bestehende Jagdtests bestanden, darunter Trefferzonen, Statistik, Medaillen, Liegeposen beider Seiten, Boden-/Körperkollision und Geweihzählung. `node hunt-v283.test.js`: 72 deterministische Körpermodelle, Farbnuancen, Palettenrücksetzung, Temperamente, Wind und alte/neue Gelenkmodelle mit endlichen Koordinaten. Syntax geprüft. Zusätzliche Vorher-nachher-Ansicht der echten 3D-Modelldaten im Stand/seitlichen Liegen visuell kontrolliert (Softwareprojektion, kein Spielbrowser). Kein Live-/iPhone-Test.
+
+
 ## v282 – Firmenliste, Porträtstart, Verhandlungen und Bürodetails
 - Firmenliste: lange Firmennamen und Konzern-Badges umbrechen; mobil steht der Status unter den Firmendaten. Chatblasen werden im Scrollbereich nicht mehr zusammengedrückt.
 - Profilbild: gespeicherte Standardporträts werden sofort mit ihrem Dateipfad angefordert; während der asynchronen Prüfung erscheint keine andere SVG-Figur. Eigene Fotos behalten Vorrang.
