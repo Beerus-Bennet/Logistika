@@ -4454,3 +4454,10 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 
 /* ---------- v274: Abgerundeter Auswahlbereich der Navigation ---------- */
 #nav{border-radius:18px;overflow:hidden}
+
+/* ---------- v278: Produktionsfenster mittig und gesperrte Rezepte mit eigener Statuszeile ---------- */
+#farmSheet.mach.on{display:flex;align-items:center;justify-content:center;padding:16px 16px calc(var(--nav-h) + 12px + var(--safe-b))}
+body.tab-farm #farm #farmSheet.mach .fs-in{position:relative;left:auto;right:auto;bottom:auto;transform:none;width:min(640px,100%);max-height:100%;border:var(--line);border-radius:20px;animation:none}
+.frec.lock{opacity:1;color:#667384;border-color:#8895a3;box-shadow:none}
+.frec.lock>.ic{opacity:.65}
+.frec .fr-lock{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#526173;line-height:1.4}

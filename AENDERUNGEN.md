@@ -9,6 +9,20 @@
 
 
 
+## v278 – Startaufstellung und Produktionsfenster
+
+Neue Höfe starten mit der Liefertafel in Richtung der Startkamera (r=3), wie im gewünschten Screenshot. Die beiden anfänglichen Apfelbäume stehen rechts neben dem Hauptweg; ihre Stellflächen belegen keine Wegkacheln mehr. Bestehende selbst eingerichtete Höfe werden nicht umgestellt.
+
+Im Produktionsfenster behalten gesperrte Rezepte ihr Warenbild. Schloss und Freischaltbedingung stehen zusammen in einer eigenen Zeile; beim Schaffutter hängt das Schloss dadurch nicht mehr unter dem Bild in der Zutatenzeile. Produktionsfenster sitzen mittig mit begrenzter Höhe und Abstand zur Navigation; lange Inhalte scrollen im Fenster.
+
+Geprüft in Chromium: frischer Hof mit Tafelausrichtung r=3 und Bäumen ohne Überschneidung mit Wegkacheln; Mühlenfenster vollständig innerhalb der Ansicht bei 1280 und 390 Pixeln Breite; Schaffutter mit Warenbild, eigenem Schlossstatus und deaktivierter Rezeptwahl; Weizenmehl über den Rezeptnamen starten und in der Warteschlange bestätigen. Keine JavaScript-Fehler. Syntaxprüfungen und git diff --check erfolgreich. Nicht auf einem echten Handy geprüft.
+
+## v277 – Schatten an linken und rechten Bildrändern vollständig
+
+Der Schattenausschnitt war unabhängig von Fensterbreite, Zoom und Kamerablick auf eine feste Größe begrenzt. Deshalb wurden insbesondere Zaun- und Baumschatten mitten im sichtbaren Bild abgeschnitten. Die Schattenkamera umfasst jetzt die sichtbare Bodenfläche und hohe Schattenwerfer; ihre Mitte rastet weiterhin auf Schattentexel. Der bisherige lokale Ausschnitt bleibt als Mindestgröße erhalten, Blickrichtungen über den Horizont werden nicht unbegrenzt erweitert.
+
+Geprüft: 144 Abdeckungsprüfungen über Hochformat, Quadrat und Breitbild, zwei Blickrichtungen und drei Kamerapositionen; der Regressionstest scheitert mit der alten Kameraberechnung. Syntaxprüfung und git diff --check erfolgreich. Vorher-/Nachher-Aufnahmen in Chromium nach abgeschlossenem Laden bestätigen die zusätzliche Schattenabdeckung links und rechts; keine JavaScript-Fehler. Nicht auf einem echten Handy geprüft.
+
 ## v276 – Arbeitsprinzipien in `CLAUDE.md`
 **Wunsch Bennet:** Die Hinweise aus dem Repo `andrej-karpathy-skills` (nach Prüfung auf Schadcode: nur Text, keine Skripte) für Claude einbinden.
 

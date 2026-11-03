@@ -855,15 +855,35 @@ const G3 = (() => {
       /* Sonnenkamera: feste Ausrichtung, der Ausschnitt folgt der Kamera und
          rastet auf ganze Schattentexel ein – so flimmern Schattenkanten beim
          Schwenken nicht. */
-      const L = ID(), Pr = ID(), s = R.shadowBox, sd = R.env.sun, tex = (2 * s) / SH;
+      const L = ID(), Pr = ID(), sd = R.env.sun;
       lookAt(L, [sd[0] * 40, sd[1] * 40, sd[2] * 40], [0, 0, 0], [0, 1, 0]);
       const lc = xf(L, [c.tx, 0, c.tz]);
-      const px = Math.round(lc[0] / tex) * tex, py = Math.round(lc[1] / tex) * tex;
-      /* v234: Tiefenbereich der Sonnenkamera folgt dem Ziel. Vorher fest 1…90 ab einem Punkt 40 Einheiten vor dem Weltursprung –
-         weit weg vom Ursprung (z. B. am Hochsitz im Westwald, vor allem bei flacher Morgensonne) lag der Boden jenseits der fernen Ebene,
-         und dort gab es plötzlich gar keine Schatten (scharfe Grenze quer durchs Bild). */
-      const d0 = -lc[2];
-      ortho(Pr, px - s, px + s, py - s, py + s, Math.max(0.5, d0 - 39), d0 + 50);
+      let x0 = lc[0] - R.shadowBox, x1 = lc[0] + R.shadowBox;
+      let y0 = lc[1] - R.shadowBox, y1 = lc[1] + R.shadowBox;
+      let z0 = lc[2] - 50, z1 = lc[2] + 39;
+      /* v277: Schattenkarte über die sichtbare Bodenfläche aufspannen.
+         Der feste Ausschnitt schnitt Schatten an breiten Bildrändern ab.
+         Hohe Objekte ebenfalls einschließen; bei Horizontblick bleibt der lokale Ausschnitt. */
+      for (const x of [-1, 1]) for (const y of [-1, 1]) {
+        const q = xf4(R.IVP, [x, y, 1, 1]);
+        const p = [q[0] / q[3], q[1] / q[3], q[2] / q[3]];
+        const dy = p[1] - R.eye[1], t = -R.eye[1] / dy;
+        if (dy >= -0.001 || t <= 0 || t > 1) continue;
+        const gx = R.eye[0] + (p[0] - R.eye[0]) * t;
+        const gz = R.eye[2] + (p[2] - R.eye[2]) * t;
+        for (const h of [0, 20]) {
+          const v = xf(L, [gx, h, gz]);
+          x0 = Math.min(x0, v[0] - 2); x1 = Math.max(x1, v[0] + 2);
+          y0 = Math.min(y0, v[1] - 2); y1 = Math.max(y1, v[1] + 2);
+          z0 = Math.min(z0, v[2] - 2); z1 = Math.max(z1, v[2] + 2);
+        }
+      }
+      /* Mitte auf Schattentexel rasten; Reserve verhindert Abschneiden beim Rasten. */
+      const hx = (x1 - x0) / 2, hy = (y1 - y0) / 2;
+      const tx = 2 * hx / SH, ty = 2 * hy / SH;
+      const px = Math.round((x0 + x1) / 2 / tx) * tx;
+      const py = Math.round((y0 + y1) / 2 / ty) * ty;
+      ortho(Pr, px - hx - tx, px + hx + tx, py - hy - ty, py + hy + ty, -z1, -z0);
       mul(R.LVP, Pr, L);
     }
     R.updateCamera = updateCamera;

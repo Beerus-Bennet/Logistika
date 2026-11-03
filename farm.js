@@ -57,9 +57,11 @@ function farmStartHof(add, F) {
   /* Felder: drei reif mit Weizen, drei leer */
   [[11, 9], [13, 9], [15, 9], [11, 11], [13, 11], [15, 11]].forEach(([x, z], i) =>
     add("field", x, z, i < 3 ? { crop: "weizen", end: S.time - 1, w: false, rot: 0, last: null } : { crop: null, last: "mais" }));
-  add("tree", 21, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
+  /* v278: Apfelbäume neben dem Hauptweg statt auf dessen rechter Kachel. */
   add("tree", 23, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
-  add("board", 19, 23);
+  add("tree", 25, 7, { kind: "apfel", end: S.time - 1, w: false, h: 2 });
+  /* v278: Beschriftete Vorderseite zur Startkamera und zum Hofweg. */
+  add("board", 19, 23, { r: 3 });
   add("shed", 30, 31);                              /* v105: Fuhrpark-Schuppen vor dem Hof an der Straße (Welt x 14…17, z 15…17) */
   add("deco", 17, 10, { k: "scarecrow" });
   add("deco", 4, 7, { k: "flowers" });
