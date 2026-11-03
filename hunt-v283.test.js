@@ -23,7 +23,7 @@ const A={x:H.EYER[0]+20,z:H.EYER[2],gn:H.genes('hirsch',.65,10)};
 assert.ok(H.scentGain(A,{v:3,dir:0})>.04,'Wind zum nahen Stück überwiegt Alarmabbau');
 assert.equal(H.scentGain(A,{v:3,dir:Math.PI}),0);
 assert.equal(H.scentGain(A,{v:1,dir:0}),0);
-for(const front of [false,true]){const v=H._m.deerUpper(front).v;let top=-Infinity;for(let i=1;i<v.length;i+=9)top=Math.max(top,v[i]);assert.ok(top>.08,'Runder Laufansatz überlappt den Gelenkpunkt');}
+for(const front of [false,true]){const v=H._m.deerUpper(front).v;let top=-Infinity;for(let i=1;i<v.length;i+=9)top=Math.max(top,v[i]);assert.ok(top>.05,'Laufprofil reicht in den Rumpf, ohne aufgesetzte Gelenkkugel');}
 console.log('OK: '+count+' deterministische Modelle, acht Nuancen je Art, Paletten-Rücksetzung, drei Temperamente, Windrichtung/Stärke und überlappende Gelenkansätze.');
 
 for(const k of ['hirsch','keiler'])for(const g of [0,1,8])for(const front of [false,true]){

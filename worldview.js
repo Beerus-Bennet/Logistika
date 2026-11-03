@@ -1013,11 +1013,11 @@ function worldStatic() {
     const I = FWM.springRunInfo();
     WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
     /* v193: Wasserfall und Schaum im Shader (water: 6) – fließend, halbtransparent, weiche Ränder; flow = (Länge, Tempo, Querdichte) */
-    R.nodes.push(fnode(fmesh("wspringfall220", FWM.springFall), Object.assign({ water: 6, flow: [7.0, 1.7, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringfoam220", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfall289", FWM.springFall), Object.assign({ water: 6, flow: [7.0, 1.7, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam289", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
     const ft = WF(SF.foot[0], SF.foot[2]), lp = WF(SF.top[0], SF.top[2]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
-    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: 1.4 * k, C: SPI.C,
+    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: 1.16 * k, C: SPI.C,
       strands: (SF.strands || []).map(([L, M]) => { const q = WF(M[0], M[2]); return { x: q[0], z: q[1], y: M[1] * k }; }) };   /* v210: Absätze der Nebenstränge */
   }
   worldWaterCheck();
@@ -3124,7 +3124,7 @@ function worldPopHTML(o, P) {
   if (P.kind === "junk") {
     const J = FJUNK[o.k] || FJUNK.unkraut;
     return `<div class="fp-h">${J.i} ${esc(J.n)}<small>Aufräumen bringt ${Object.keys(J.gain).map(id => fqty(id, J.gain[id])).join(", ")}${J.m ? " und " + eur(J.m) + " vom Schrotthändler" : ""} · +5 EP</small></div>
-      <div class="fp-row"><div class="ftool big" data-act="clear"><span class="ic">🧹</span><b>Wegräumen</b><small>💪 ${J.sta}</small></div></div>`;
+      <div class="fp-row"><div class="ftool big" data-act="clear"><span class="ic">🧹</span><b>Wegräumen</b></div></div>`;
   }
   return "";
 }
@@ -3164,9 +3164,9 @@ function worldPopAct(a, o) {
   if (a === "fell") { fruitFell(o); return; }
   if (a === "clear") {
     const [x, y] = objScreen(o);
-    puff(o);
     const r = farmClearJunk(o);
-    if (!r) { sfx("bad"); toast("💪 Zu erschöpft – erst eine Brotzeit.", "warn"); return; }
+    if (!r) { closeFarmPop(); return; }
+    puff(o);
     r.got.forEach((g, i) => flyItem(g.id, x, y, storeBtn(), i * 100, g.n));
     if (r.m) coinFly(x, y, r.m);
     xpFly(x, y - 10, r.xp, 120);
@@ -3461,12 +3461,12 @@ function worldStep(dt, time) {
     const E = R.env, Ls = E ? E.sunCol[0] * 0.3 + E.sunCol[1] * 0.59 + E.sunCol[2] * 0.11 : 1, lf = Math.max(0.32, Math.min(1, Ls)), LC = (r, g, b, a, fa) => [r * (0.3 + 0.7 * lf), g * (0.32 + 0.68 * lf), b * (0.38 + 0.62 * lf), a * (fa ? 0.35 + 0.65 * lf : 1)];
     sf.lc = LC;
     const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
-    for (let i = fx("mist", 9); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.9;
-      R.emit({ x: sf.x + sf.dx * 0.5 + Math.cos(a) * r, y: 0.15 + rnd() * 0.3, z: sf.z + sf.dz * 0.5 + Math.sin(a) * r, vx: Math.cos(a) * 0.35 + sf.dx * 0.3, vy: 0.35 + rnd() * 0.45, vz: Math.sin(a) * 0.35 + sf.dz * 0.3, life: 1.5 + rnd() * 1.1, size: 0.25 + rnd() * 0.2, size2: 0.9 + rnd() * 0.6, col: LC(0.94, 0.97, 1, 0.22 + rnd() * 0.1, true), drag: 1.2, shape: 4 }); }
-    for (let i = fx("drop", 34); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.6, u = (rnd() - 0.5) * fw;
+    for (let i = fx("mist", 5); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.65;
+      R.emit({ x: sf.x + sf.dx * 0.5 + Math.cos(a) * r, y: 0.15 + rnd() * 0.3, z: sf.z + sf.dz * 0.5 + Math.sin(a) * r, vx: Math.cos(a) * 0.35 + sf.dx * 0.3, vy: 0.35 + rnd() * 0.45, vz: Math.sin(a) * 0.35 + sf.dz * 0.3, life: 1.1 + rnd() * 0.7, size: 0.16 + rnd() * 0.12, size2: 0.55 + rnd() * 0.3, col: LC(0.94, 0.97, 1, 0.13 + rnd() * 0.06, true), drag: 1.2, shape: 4 }); }
+    for (let i = fx("drop", 26); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.6, u = (rnd() - 0.5) * fw;
       R.emit({ x: sf.x + sf.side[0] * u * 0.6, y: 0.08, z: sf.z + sf.side[1] * u * 0.6, vx: Math.cos(a) * s * 0.7 + sf.dx * s * 0.5, vy: 1.6 + rnd() * 2.0, vz: Math.sin(a) * s * 0.7 + sf.dz * s * 0.5, g: -9.5, life: 0.55 + rnd() * 0.3, size: 0.035 + rnd() * 0.05, size2: 0.02, col: LC(0.96, 0.99, 1, 0.85), drag: 0.4, shape: 5, fade: false }); }
-    for (let i = fx("veil", 5); i-- > 0;) { const t = 0.55 + rnd() * 0.35, u = (rnd() - 0.5) * fw;
-      R.emit({ x: sf.lx + (sf.x - sf.lx) * t + sf.side[0] * u, y: sf.ly * (1 - t * t) + 0.1, z: sf.lz + (sf.z - sf.lz) * t + sf.side[1] * u, vx: sf.dx * 0.4, vy: -0.6, vz: sf.dz * 0.4, life: 0.8 + rnd() * 0.5, size: 0.2 + rnd() * 0.1, size2: 0.6, col: LC(0.95, 0.98, 1, 0.16, true), drag: 1.5, shape: 4 }); }
+    for (let i = fx("veil", 3); i-- > 0;) { const t = 0.55 + rnd() * 0.35, u = (rnd() - 0.5) * fw;
+      R.emit({ x: sf.lx + (sf.x - sf.lx) * t + sf.side[0] * u, y: sf.ly * (1 - t * t) + 0.1, z: sf.lz + (sf.z - sf.lz) * t + sf.side[1] * u, vx: sf.dx * 0.4, vy: -0.6, vz: sf.dz * 0.4, life: 0.8 + rnd() * 0.5, size: 0.2 + rnd() * 0.1, size2: 0.45, col: LC(0.95, 0.98, 1, 0.1, true), drag: 1.5, shape: 4 }); }
     for (let i = fx("edge", 7); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.38 + rnd() * 0.12), v = 1.0 + rnd() * 0.5;
       R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v + sf.side[0] * sd * 0.3, vy: 0.1, vz: sf.dz * v + sf.side[1] * sd * 0.3, g: -9.5, life: 0.75, size: 0.045 + rnd() * 0.03, size2: 0.03, col: LC(0.9, 0.97, 1, 0.85), drag: 0.1, shape: 5, fade: false }); }
     /* v210: kleine Spritzer, wo die Nebenstränge auf ihre Absätze treffen */

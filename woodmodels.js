@@ -1635,6 +1635,10 @@ const FWM = (() => {
     [[-3.7, -0.44, 0.24], [-3.35, 0.7, 0.15], [-2.98, -0.4, 0.12], [-3.08, 0.62, 0.21]].forEach(([x, z, r], i) =>
       stone(b, r, [g1, g2, g5][i % 3], { x, y: F.top[1] - r * 0.15, z, flat: 0.7, jitter: 0.35, wetAll: 0.45, cut: 2 }));
     stone(b, 0.075, g3, { x: -3.4, y: F.top[1] + 0.06, z: 0.26, flat: 0.6, jitter: 0.3, wetAll: 0.6 });
+    /* v289: Kleine, nasse Absätze gliedern die große Felswand am Aufprall,
+       ohne den Hauptstrom zwischen z=-0,46 und 0,70 zu versperren. */
+    [[-2.52, 0.12, -1.05, 0.22], [-2.66, 0.36, 1.22, 0.25], [-2.2, 0.02, -1.35, 0.18], [-2.22, 0.04, 1.45, 0.2]].forEach(([x, y, z, r], i) =>
+      stone(b, r, [g2, g4][i % 2], { x, y, z, flat: 0.6, sx: 1.35, jitter: 0.22, wetAll: 0.65, moss: 0.14, detail: true }));
     /* Ränder des Beckens auf der Kante: einzelne Blöcke und Kiesel, teils eingesunken (kein Steinkranz) */
     [[-6.05, -0.62, 0.3], [-5.3, -0.86, 0.2], [-4.55, -0.5, 0.17], [-5.95, 0.95, 0.24], [-5.05, 0.9, 0.3], [-4.35, 0.9, 0.15], [-6.5, -0.45, 0.16], [-3.95, -0.42, 0.13], [-4.1, 0.62, 0.2]].forEach(([x, z, r], i) =>
       stone(b, r, [g2, g3, g1][i % 3], { x, y: 2.08 - r * 0.2, z, flat: 0.7, jitter: 0.35, wet: 2.2, moss: 0.25, cut: 2 }));
@@ -1697,7 +1701,7 @@ const FWM = (() => {
     fallSheet(b, a => {
       if (a <= A0) { const k = a / A0, x = lip[0] - F.rinne * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k, foot[2], 0]; }   /* Rinne */
       const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);                                                                                   /* runde Kante */
-      return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.95 + 0.5 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
+      return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.92 + 0.24 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
     }, 38, 12, true);
     /* Nebenstränge: über die Kante, auf den Absatz, vom Absatz ins Wasser */
     F.strands.forEach(([L, M, W, w]) => {
@@ -2178,10 +2182,11 @@ const FWM = (() => {
      Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
   function springFoam() {
     const b = new MB(), F = SPRING_FALL.foot, cx = F[0] + 0.25, cz = F[2], NR = 8, NA = 36, y = 0.052;
-    const rad = an => { const c = Math.cos(an); return c >= 0 ? 1.9 : 1.9 + c * 1.35; };
+    /* v289: Schaum läuft in Fließrichtung aus, statt einen gleichmäßigen Leuchtkreis zu bilden. */
+    const rad = an => { const c = Math.cos(an); return (c >= 0 ? 1.75 : 1.75 + c * 1.2) * (1 + 0.09 * Math.sin(an * 3 + 0.8) + 0.05 * Math.sin(an * 7)); };
     for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
       const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
-      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * rad(an) * 0.9];
+      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * rad(an) * 0.68];
       const c = (r, an) => [r, an / (Math.PI * 2), 0];
       triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
       if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));

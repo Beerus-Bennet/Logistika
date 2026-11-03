@@ -1566,3 +1566,31 @@ Basis main 7321acd. Geändert: hunt.js; Cache-Verweise in index.html und sw.js (
 
 ## v284 – Büro-Korrekturen
 Basis main 5b36609 (v283), vor Lieferung frisch abgeglichen. Geändert: officefp.js, style.css, index.html, sw.js (v284), AENDERUNGEN.md und diese Datei; neu office-workers-v284.test.js. Sieben Dateien als ZIP, bestehende Jagdänderungen aus main unverändert. Keine Spielstandmigration. Details und Testgrenzen siehe AENDERUNGEN.md.
+
+
+## v285 – Firmenliste
+Basis main 1458f40. Nur style.css (feste Zeilen für Name/Badge/Status), index.html und sw.js (CSS-Cache v285, SW v285) sowie Doku geändert. ZIP mit fünf Dateien; alle bisherigen Änderungen aus main erhalten. Keine Spielstandmigration.
+
+
+## v286 – Mobiles Produktionsfenster
+Basis main 1458f40, v285-Firmenlisten-CSS mit übernommen. Änderungen nur style.css, index.html, sw.js (CSS/SW v286) und Doku. ZIP mit fünf Dateien. Kompaktes Maschinenfenster mobil; keine Änderung der Produktionslogik und keine Migration.
+
+
+## v287 – Untere Navigation
+Mobil #nav radius 0, ab 860 px radius 18 px. Nur CSS, Cache-Versionen und Doku geändert. Lieferung enthält v285/v286, die noch nicht in main 1458f40 waren. ZIP mit fünf Dateien. Keine Spielstandmigration.
+
+
+## v288 – Handgelenk und Empfang
+Basis main 1458f40 plus gelieferte v285–v287. Geändert: officefp.js (Unterarmabschluss und Empfang), offices.js (gemeinsame Tresenposition für Plan/3D), index.html/sw.js (Büroskripte v288, SW v288), Doku. Neue Tests office-joints-v288.test.js. CSS aus v287 enthalten, sofern noch nicht in main. Keine Spielstandmigration. Tests/Prüfgrenzen siehe AENDERUNGEN.md.
+
+
+## v289 – Wasserfall
+Basis main 1458f40, v285–v288 mit enthalten. Neue Änderungen: gl3d.js (fallWater), woodmodels.js (Fallbreite/Schaum/Felsdetails), worldview.js (Mesh-Kennungen, Gischtbreite und Raten), index.html/sw.js (drei Skripte v289, SW v289), Doku; neu waterfall-v289.test.js. Keine Migration. GLSL unter Mesa/EGL kompiliert/verlinkt und isoliert gerendert, Modell- und Effekttests bestanden. Einzelheiten in AENDERUNGEN.md.
+
+
+## v290 – Schenkel
+Basis main 1458f40 plus v285–v289. Neue Änderungen: hunt.js (Muskelprofile statt Gelenkkugeln), hunt-v283.test.js (Ansatzprüfung aktualisiert), index.html/sw.js (hunt v290, SW v290), Doku; neu hunt-thighs-v290.test.js. Keine Migration oder Änderung der Trefferzonen. Tests und visuelle Prüfgrenzen siehe AENDERUNGEN.md.
+
+
+## v291 – Gerümpel wegräumen
+Basis main 1458f40 plus v285–v290. Neu geändert: erbe.js (Aufräumen ohne Ausdauer und Schutz gegen doppelte Vergütung), worldview.js (Knopf/Meldung), index.html/sw.js (beide Skripte v291, SW v291), Doku; neu clearing-v291.test.js. Keine Migration. Vorige Lieferungen enthalten.

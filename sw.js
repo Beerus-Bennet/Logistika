@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v284";
+const VERSION = "v291";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -13,7 +13,7 @@ const MAX_PICS = 260;
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=284",
+  "./style.css?v=287",
   "./data.js?v=109",
   "./farmdata.js?v=269",
   "./fishdata.js?v=109",
@@ -23,7 +23,7 @@ const SHELL = [
   "./photo.js?v=109",
   "./map.js?v=109",
   "./routegeo.js?v=109",
-  "./offices.js?v=281",
+  "./offices.js?v=288",
   "./wallet.js?v=109",
   "./snus.js?v=264",
   "./pablo.js?v=109",
@@ -36,18 +36,18 @@ const SHELL = [
   "./loading.js?v=109",
   "./game.js?v=109",
   "./farm.js?v=278",
-  "./erbe.js?v=109",
+  "./erbe.js?v=291",
   "./intro.js?v=109",
   "./cars.js?v=109",
   "./auction.js?v=109",
   "./customs.js?v=109",
   "./corp.js?v=282",
   "./livery.js?v=109",
-  "./gl3d.js?v=277",
+  "./gl3d.js?v=289",
   "./farmmodels.js?v=275",
   "./fishmodels.js?v=109",
   "./bushes.js?v=109",
-  "./woodmodels.js?v=275",
+  "./woodmodels.js?v=289",
   "./sawwerk.js?v=109",
   "./treebark.js?v=109",
   "./forestmodels.js?v=109",
@@ -55,11 +55,11 @@ const SHELL = [
   "./camp.js?v=109",
   "./vista.js?v=109",
   "./farmview.js?v=280",
-  "./worldview.js?v=279",
+  "./worldview.js?v=291",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
-  "./hunt.js?v=283",
+  "./hunt.js?v=290",
   "./rent.js?v=109",
   "./bauplatz.js?v=274",
   "./fishview.js?v=109",
@@ -68,7 +68,7 @@ const SHELL = [
   "./lucky3d.js?v=273",
   "./luckytest.js?v=271",
   "./officekitchen.js?v=263",
-  "./officefp.js?v=284",
+  "./officefp.js?v=288",
   "./manifest.webmanifest",
   "./favicon-64.png?v=251",
   "./icon-180.png?v=251",

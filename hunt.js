@@ -507,11 +507,11 @@ const HUNT = (() => {
   function deerTail() { const b = MB(); ell(b, [0, -0.07, -0.02], [0.036, 0.085, 0.03], (p, y) => mulc(mixc(DEER.back, DEER.rumpB, ss((-y + 0.2) / 0.8)), fur(p)), 8, 6); return b; }
   /* Läufe: oben kräftig (Unterarm/Keule), Vorderfußwurzel- bzw. Sprunggelenk als Verdickung, schlanker Röhrenknochen,
      Fesselgelenk, schräge Fessel, gespaltene Schalen, Afterklauen. Länge und Gelenkpunkte wie bisher. */
-  const LEG_FU = [[0.065, 0.044, 0.066, 0], [0, 0.052, 0.078, 0], [-0.1, 0.047, 0.068, 0.006], [-0.2, 0.042, 0.05, 0.005], [-0.3, 0.029, 0.035, 0], [-0.362, 0.031, 0.039, 0.002], [-0.41, 0.026, 0.031, 0]];
-  const LEG_HU = [[0.07, 0.067, 0.092, 0], [0, 0.083, 0.115, -0.01], [-0.1, 0.07, 0.1, -0.012], [-0.2, 0.048, 0.07, -0.01], [-0.3, 0.031, 0.048, -0.008], [-0.37, 0.027, 0.046, -0.016], [-0.405, 0.026, 0.034, -0.008], [-0.43, 0.025, 0.03, 0]];
+  const LEG_FU = [[0.07, 0.002, 0.003, 0], [0.02, 0.043, 0.064, 0], [-0.055, 0.05, 0.07, 0.004], [-0.14, 0.045, 0.061, 0.006], [-0.23, 0.035, 0.046, 0.004], [-0.31, 0.028, 0.035, 0], [-0.362, 0.03, 0.038, 0.002], [-0.41, 0.026, 0.031, 0]];
+  const LEG_HU = [[0.07, 0.002, 0.003, 0], [0.025, 0.061, 0.087, -0.006], [-0.055, 0.073, 0.103, -0.016], [-0.13, 0.062, 0.091, -0.02], [-0.22, 0.043, 0.065, -0.018], [-0.3, 0.03, 0.047, -0.012], [-0.37, 0.027, 0.044, -0.016], [-0.405, 0.026, 0.034, -0.008], [-0.43, 0.025, 0.03, 0]];
   const LEG_LO = [[0.01, 0.031, 0.037, 0], [-0.06, 0.022, 0.026, 0], [-0.24, 0.021, 0.025, 0], [-0.305, 0.027, 0.032, -0.002], [-0.345, 0.023, 0.027, 0.01], [-0.383, 0.026, 0.032, 0.018], [-0.41, 0.03, 0.038, 0.024], [-0.44, 0.033, 0.043, 0.028]];
   function legInto(b, T, colAt, cap1) {
-    const P = [], C = [], m = 8, n = 11, y0 = T[0][0], y1 = T[T.length - 1][0], TA = T.slice().reverse();   /* prof braucht aufsteigende Stützstellen */
+    const P = [], C = [], m = 10, n = 13, y0 = T[0][0], y1 = T[T.length - 1][0], TA = T.slice().reverse();   /* prof braucht aufsteigende Stützstellen */
     for (let i = 0; i <= n; i++) {
       const y = lerp(y0, y1, i / n), [hx, hz, dz] = prof(TA, y), R = ring([0, y, dz], [1, 0, 0], [0, 0, 1], hx, hz, hz, m, 2.1);
       P.push(R); C.push(R.map(p => colAt(p, y)));
@@ -520,10 +520,8 @@ const HUNT = (() => {
   }
   function deerUpper(front) {
     const b = MB();
-    /* v283: Rundes Schulter-/Hüftgelenk überlappt den Rumpf auch bei gespreizten Läufen.
-       Gelenk und Trefferachsen bleiben an ihren bisherigen Positionen. */
-    ell(b, [0, 0.018, 0], front ? [0.063, 0.085, 0.086] : [0.083, 0.095, 0.108],
-      p => pie(mulc(RGB(DEER.coat), fur(p, 0.35)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), 12, 9);
+    /* v290: Durchgehendes Muskelprofil statt aufgesetzter Gelenkkugel.
+       Das schmale obere Ende steckt im Rumpf, der Muskelbauch liegt längs am Lauf. */
     legInto(b, front ? LEG_FU : LEG_HU, (p, y) => pie(mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), false);
     if (!front) ell(b, [0, -0.37, -0.05], [0.022, 0.03, 0.022], DEER.leg, 6, 4);                  /* Fersenhöcker am Sprunggelenk */
     return b;
@@ -605,13 +603,12 @@ const HUNT = (() => {
   /* Läufe mit Gelenk: oben Unterarm bzw. Keule (kräftig), unten schlanke Röhre, Fessel, gespaltene Schalen, Afterklauen.
      Nur Optik: die Trefferzonen der Läufe bleiben die gerade Linie wie bisher (SP.keiler.legs, lu 0,36). */
   const BLU = 0.17, BLL = 0.19;
-  const BLEG_FU = [[0.02, 0.058, 0.07, 0], [-0.06, 0.05, 0.062, 0.004], [-0.13, 0.035, 0.043, 0.004], [-0.178, 0.03, 0.036, 0]];
-  const BLEG_HU = [[0.02, 0.062, 0.084, -0.01], [-0.07, 0.05, 0.066, -0.014], [-0.135, 0.033, 0.046, -0.022], [-0.178, 0.028, 0.04, -0.026]];
+  const BLEG_FU = [[0.055, 0.002, 0.003, 0], [0.015, 0.045, 0.059, 0], [-0.035, 0.057, 0.07, 0.004], [-0.085, 0.046, 0.06, 0.006], [-0.135, 0.034, 0.044, 0.004], [-0.178, 0.03, 0.036, 0]];
+  const BLEG_HU = [[0.06, 0.002, 0.003, -0.004], [0.02, 0.046, 0.066, -0.008], [-0.025, 0.061, 0.086, -0.014], [-0.075, 0.056, 0.077, -0.024], [-0.125, 0.037, 0.053, -0.028], [-0.178, 0.028, 0.04, -0.026]];
   const BLEG_LO = [[0.012, 0.031, 0.036, 0], [-0.03, 0.027, 0.031, 0], [-0.11, 0.022, 0.026, 0.002], [-0.14, 0.025, 0.03, 0.006], [-0.158, 0.023, 0.028, 0.013], [-0.172, 0.022, 0.028, 0.019]];
   const boarLegCol = (p, k) => pie(mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)), [p[0] * 1.3, p[1] * 1.3 + 0.4, p[2] * 1.3], 0.25);
   function boarUpperInto(b, front) {
-    /* v283: Kräftige, runde Ansätze statt eines sichtbaren flachen Schnitts. */
-    ell(b, [0, 0.012, -0.005], front ? [0.068, 0.075, 0.082] : [0.072, 0.08, 0.09], p => boarCoat(p, 0.1, 0.3), 12, 8);
+    /* v290: Schulter und Keule länglich modelliert, ohne kugelige Aufsätze. */
     legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.02) / 0.12)), true);
     if (!front) ell(b, [0, -0.168, -0.056], [0.02, 0.026, 0.02], BOAR.leg, 6, 4);          /* Fersenhöcker */
     return b;

@@ -201,8 +201,9 @@ const OFFICE3D = (() => {
       st.box(x1 - x0, 0.05, 0.05, 0x55606c, { x: (x0 + x1) / 2, y: H / 2 + 0.95, z: z1 + 0.02, rz: -Math.atan2(H, x1 - x0) });
       rect(x0, z0, x1, z1 + 0.05);
       blk(x0 + 1.2, 0, z0, x1, H, z1);
-      if (fl0 === 0) {
-        const rx0 = PX(150), rx1 = PX(250), rz0 = PZ(236), rz1 = PZ(258);
+      const reception = fl0 === 0 ? receptionPlan(b) : null;
+      if (reception) {
+        const rx0 = PX(reception.x0), rx1 = PX(reception.x1), rz0 = PZ(reception.y0), rz1 = PZ(reception.y1);
         st.box(rx1 - rx0, 1.08, rz1 - rz0, 0xe9dcc0, { x: (rx0 + rx1) / 2, z: (rz0 + rz1) / 2 });
         st.box(rx1 - rx0 + 0.1, 0.05, rz1 - rz0 + 0.1, 0x5d4a32, { x: (rx0 + rx1) / 2, y: 1.08, z: (rz0 + rz1) / 2 });
         rect(rx0, rz0, rx1, rz1);
@@ -477,11 +478,10 @@ const OFFICE3D = (() => {
   function foreMesh(L, side) {
     const b = new G3.MB();
     b.sphere(0.033, 10, 7, L.sleeve, { smooth: true });
-    b.cyl(0.025, 0.033, 0.178, 10, L.sleeve, { y: -0.178, smooth: true });
-    b.box(0.056, 0.02, 0.058, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -0.19 });
-    /* v263: Unterarm endet am Handgelenk (ARM_B); die Hand setzt dort mit dem Handballen an, ohne Lücke bei abgeknickter Hand */
-    b.cyl(0.018, 0.022, 0.03, 10, L.skin, { y: -ARM_B, smooth: true });
-    b.sphere(0.019, 9, 6, L.skin, { y: -ARM_B, smooth: true });
+    b.cyl(0.025, 0.033, ARM_B, 10, L.sleeve, { y: -ARM_B, smooth: true });
+    b.box(0.056, 0.02, 0.058, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -ARM_B });
+    /* v288: Der Ärmel endet am einzigen Handgelenk. Der hautfarbene Übergang
+       gehört vollständig zur Hand; kein zweiter Knubbel am Unterarm. */
     return b;
   }
   /* v263: Hand mit Daumen und vier zweigliedrigen Fingern. Handkoordinaten: Ursprung Handmitte, +z zu den Fingern,

@@ -1,5 +1,60 @@
 # Änderungen – kurz für den Kollegen
 
+## v291 – Aufräumen ohne alte Kraftkosten
+**Wunsch:** Beim Wegräumen von Gerümpel keine veraltete Ausdaueranzeige mehr.
+**Lösung:** Muskel-Symbol und Zahl vom Wegräumen-Knopf entfernt; farmClearJunk prüft und verbraucht keine Ausdauer mehr. Die veraltete Erschöpfungsmeldung im zugehörigen Klickpfad entfällt ebenfalls. Aufräumen funktioniert damit auch bei alten Spielständen mit sta=0. Materialien, Geld, Statistik und EP bleiben unverändert. Ein bereits entferntes Objekt kann nicht mehrfach vergütet werden.
+**Geprüft:** `node clearing-v291.test.js` für alle fünf Gerümpelarten: Aufräumen bei sta=0 ohne Aufruf der Ausdauerfunktion, korrekte Belohnungen, Doppelaufruf, volles Lager, Anzeige ohne Kraftkosten. JavaScript-Syntax von erbe.js, worldview.js und sw.js geprüft. Kein visueller iPhone-Test.
+**Basis:** main 1458f40 plus bereits gelieferte v285–v290, alle enthalten.
+
+
+## v290 – Schenkel von Keiler und Hirsch
+**Ursache:** Die in v283 hinzugefügten Ellipsoide an Schulter/Hüfte erschienen bei seitlich liegenden Tieren als separate runde Knubbel.
+**Lösung:** Zusatz-Ellipsoide entfernt. Vorder- und Hinterschenkel als durchgehende, längliche Muskelprofile mit artgerechter Abstufung: kräftige kompakte Keilerkeule, schlankere Hirschläufe. Oben läuft das Profil sehr schmal im Rumpf aus; der Muskelbauch liegt unterhalb des Gelenkansatzes. Keine sichtbaren breiten runden Deckflächen mehr. Umfangsauflösung von 8 auf 10 Segmente, Längsauflösung von 11 auf 13 verbessert, innerhalb des bisherigen Modellbudgets.
+**Erhalten:** Gelenkachsen, Längen, Trefferzonen, Medaillen, Farbvarianten und Speicherdaten. Liegeposen werden weiterhin aus den tatsächlichen Profilen berechnet.
+**Geprüft:** 21 ursprüngliche Jagdtests bestanden, inklusive Modellbudget (<9000 Dreiecke je Keiler), Liegeposen beider Seiten, Gelenkgrenzen und Kollisionen. `node hunt-thighs-v290.test.js`: beide Arten, Vorder-/Hinterschenkel, alte/neue Datensätze, schmale Verankerung und Muskelbauch unterhalb des Ansatzes. `node hunt-v283.test.js` bestanden; dessen Ansatzprüfung an das neue Profil angepasst. Vorher-/Nachher-Ansichten im Stand und seitlich liegend aus echten Modellkoordinaten gerendert und visuell geprüft (Softwareprojektion). Kein Live-/iPhone-Test.
+**Basis:** main 1458f40 plus bereits gelieferte v285–v289, alle enthalten.
+
+
+## v289 – Wasserfall mit durchlässigen Strähnen und natürlicherem Aufprall
+- Hauptfall am Fuß von 1,45 auf 1,16 lokale Einheiten verjüngt. Shader zeichnet ungleichmäßig dichte Wassersträhnen mit durchscheinenden Zwischenräumen statt eines durchgehend deckenden Bandes. Bestehender Fließverlauf und Anschluss an Becken bleiben erhalten.
+- Schaumfläche schmaler, unregelmäßiger und in Fließrichtung gestreckt; zwei schwächere, langsamere Wellenfronten statt dreier heller Ringe. Weniger dichter Schaumkern; nachts geringere Mindesthelligkeit.
+- Mehrere umgekehrte smoothstep-Kanten innerhalb fallWater durch definierte, aufsteigende Kanten mit invertiertem Ergebnis ersetzt. Damit hängen diese Übergänge nicht mehr vom treiberspezifischen Verhalten bei umgekehrten Kanten ab.
+- Hauptfall-Gischt von 63 auf 49 Emissionen/Sekunde reduziert. Nebel kleiner, kürzer und transparenter; weniger Spritzer und Schleier. Die Begrenzung auf Kameranähe bleibt erhalten. Kein zusätzlicher Shader-Rauschaufruf und kein zusätzlicher Wasser-Drawcall.
+- Vier kleine, nasse Felsabsätze am Fuß gliedern die große Wand, ohne den Hauptstrom zu verdecken. Gelände, Quelllauf, Teichhöhe und Spiellogik unverändert.
+**Basis:** main 1458f40 plus bereits gelieferte v285–v288. Alle früheren Korrekturen enthalten.
+**Geprüft:** Acht originale GLSL-Shader erfolgreich unter Mesa/EGL kompiliert, Hauptprogramm verlinkt. Vorher-/Nachher-Renderings der Wasser- und Schaumshader für Tag/Nacht mit OpenGL gerendert und visuell kontrolliert (isolierte Shaderansichten, kein kompletter Spielbrowser). `node waterfall-v289.test.js`: vier deterministische Modelle, endliche Koordinaten, gültige Strömungskoordinaten, Partikelbudget bei 30/60/120 fps und keine Emission bei ferner Kamera. Büro-Modell-/Kollisions-/Animationstests bestanden. JS-Syntax geprüft. Kein iPhone-/Safari-Livetest.
+
+
+## v288 – Ein Handgelenk, Empfang hinter der Sitzreihe
+- Unterarm: Ärmel und Bündchen reichen jetzt bis zum Handgelenk. Zusätzlicher hautfarbener Zylinder und Kugel am Unterarm entfernt. Der Übergang zur Hand gehört nur noch zum Handmodell; Handfläche und Finger bleiben unverändert.
+- Das vermeintliche Schrankmöbel war der Empfangstresen (Plan 150–250 / 236–258), der die hintere Sitzreihe durchdrang. Er steht jetzt schmaler an der Rückwand (150–250 / 258–268), hinter den Stühlen. Grundriss und 3D benutzen dieselbe Funktion `receptionPlan(b)`.
+- Bei manuell in diesen Bereich verschobenen Tischen wird der dekorative Tresen ausgelassen, statt Tisch/Person zu durchdringen. Gespeicherte Möbelpositionen werden nicht verändert.
+**Basis:** main 1458f40; vorher gelieferte CSS-Korrekturen v285–v287 enthalten.
+**Geprüft:** `node office-joints-v288.test.js` mit echten Raum- und Modellbauern: alle EG-Sitzplätze in Bürogebäude/Konzernzentrale ohne Empfangsüberschneidung; Obergeschoss ohne Tresen; manuelle Kollision abgefangen; kein zweiter hautfarbener Gelenkabschluss am Unterarm. `node office-workers-v284.test.js`, `node office-limits.test.js` und `node review-v282.test.js` bestanden. JavaScript-Syntax geprüft. Kein visueller Live-/iPhone-Test.
+
+
+## v287 – Navigation mobil wieder vollflächig
+**Wunsch:** Die untere Leiste auf dem Handy bis in alle Ecken ausfüllen; nur Desktop abrunden.
+**Lösung:** #nav hat standardmäßig Eckenradius 0. Nur ab dem vorhandenen Desktop-Breakpoint von 860 px wird Radius 18 px gesetzt. Hintergrund, Safe-Area-Padding und aktive Tab-Schaltflächen bleiben erhalten. CSS-Cache/SW auf v287.
+**Basis:** aktuelles main 1458f40 plus bereits gelieferte v285/v286; beide enthalten.
+**Geprüft:** CSS-Kaskade, Breakpoint und Cache-Verweise kontrolliert; Service-Worker-Syntax und ZIP geprüft. Kein visueller Live-/iPhone-Test.
+
+
+## v286 – Kompaktes Produktionsfenster fürs Handy
+- Mobil bis 699 px: Fenster über der Navigation, maximal 56 % der sichtbaren Höhe und 380 px breit. Inhalt vertikal scrollbar, damit alle Rezepte erreichbar bleiben. Mehr Hof bleibt darüber sichtbar; Hintergrund weniger abgedunkelt.
+- Warteschlange: 48-px-Plätze in einer horizontal wischbaren Reihe statt mehrerer großer Reihen. Einzelabbruch, fertige Produkte und Slotkauf bleiben bedienbar.
+- Sonnenstrom-Hinweis: kompakter Text mit eigener Zeilenhöhe statt übergroßer Abstände; alle Informationen bleiben lesbar. Rezeptkarten, Zutaten und Schaltknöpfe enger gesetzt.
+- Basis main 1458f40, zusätzlich die bereits gelieferte v285-Firmenliste enthalten, sofern noch nicht in main. Keine Produktionslogik geändert.
+**Geprüft:** CSS-Änderungen manuell kontrolliert, Klammerstruktur und Cache-Verweise geprüft, Service-Worker-Syntax geprüft; kein visueller Live-Browser-/iPhone-Test.
+
+
+## v285 – Konzern-Badge und Status in der Firmenliste
+**Ursache:** Der vorherige Umbruch hing von der Viewport-Breite ab; das 430-px-Seitenpanel konnte auch auf breiten Ansichten in drei Spalten zusammengedrückt werden. Das Badge stand weiterhin neben dem Firmennamen.
+**Lösung:** Zwei feste Spalten (Symbol, Inhalt) bei jeder Bildschirmbreite. Firmenname und Konzern-Badge untereinander, Status bzw. Angebotsknopf in eigener Zeile unter den Firmendaten. Lange Namen und Statusmeldungen umbrechen innerhalb ihrer Zelle.
+**Basis:** aktuelles main 1458f40 (v284). Keine Geschäftslogik geändert.
+**Geprüft:** CSS-Regeln und Cache-Verweise geprüft; JavaScript-Syntax des Service Workers geprüft. Kein Live-Browser-/iPhone-Test.
+
+
 ## v284 – Büro: Hände, Notfallverhalten, Monitor und Sprechblasen
 **Basis:** GitHub main 5b36609 (v283), abschließend erneut abgeglichen; Jagdänderungen bleiben unverändert.
 - Handgelenk: zusätzlicher abgerundeter Übergang zwischen Ärmel und Handfläche. Bei Tischkontakten orientiert sich die Hand am Unterarm statt starr in Figurenrichtung; übermäßiges Abknicken und Rollen begrenzt. Gezielte Stift-, Tassen- und Telefongriffe bleiben erhalten.

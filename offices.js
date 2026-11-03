@@ -1370,6 +1370,19 @@ const plantFloor = (b, i) => i % tierFloors(tierOf(b));
 const floorName = f => f === 0 ? "Erdgeschoss" : f + ". Obergeschoss";
 let officeFloor = 0;
 function deskPos(b, i) { return decoOf(b).pos.desks[i] || deskHome(b, i); }
+/* v288: Empfang an der Rückwand, hinter der letzten Sitzreihe. Gleiche Lage in Plan und 3D.
+   Bei manuell hineingeschobenen Arbeitsplätzen entfällt der dekorative Tresen. */
+function receptionPlan(b) {
+  if (tierFloors(tierOf(b)) < 2) return null;
+  const r = { x0: 150, x1: 250, y0: 258, y1: 268 };
+  for (let i = 0; i < perFloor(tierOf(b)); i++) {
+    const [x, y] = deskPos(b, i);
+    const overlap = (x0, y0, x1, y1) => x0 < r.x1 + 2 && x1 > r.x0 - 2 && y0 < r.y1 + 2 && y1 > r.y0 - 2;
+    if (overlap(x - 26, y - 13, x + 26, y + 13) || overlap(x - 1, y + 10, x + 16, y + 27)) return null;
+  }
+  return r;
+}
+
 /* Neue Pflanzen kommen paarweise in die unteren Ecken (links, rechts,
    links, rechts …), dann nach oben – nie auf Treppe, Tür oder Küche. */
 const PLANT_CORNERS = [[48, 252], [352, 252], [48, 222], [352, 222], [78, 258], [322, 258], [48, 194], [352, 194]];
@@ -1576,8 +1589,8 @@ function officeSVG(b, w, detail, floor) {
           const w = Math.max(44, Math.round(lbl.length * 6.4 + 18));
           return `<g transform="translate(42 44)"><rect width="${w}" height="18" rx="9" fill="#0d1b2a"/>
         <text x="${w / 2}" y="12.5" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" font-family="system-ui">${lbl}</text></g>`; })()}
-       ${fl0 === 0 ? `<g transform="translate(150 236)"><rect width="100" height="22" rx="6" fill="#e9dcc0" stroke="#5d4a32" stroke-width="2"/>
-        <text x="50" y="15" text-anchor="middle" font-size="9.5" font-weight="700" fill="#5d4a32" font-family="system-ui">EMPFANG</text></g>` : ""}` : "";
+       ${(() => { const r = fl0 === 0 ? receptionPlan(b) : null; return r ? `<g transform="translate(${r.x0} ${r.y0})"><rect width="${r.x1 - r.x0}" height="${r.y1 - r.y0}" rx="3" fill="#e9dcc0" stroke="#5d4a32" stroke-width="2"/>
+        <text x="50" y="8" text-anchor="middle" font-size="7" font-weight="700" fill="#5d4a32" font-family="system-ui">EMPFANG</text></g>` : ""; })()}` : "";
   const dock = b.tier > 0 && fl0 === 0
     ? `<rect x="300" y="268" width="76" height="14" rx="3" fill="#b8c3d0" stroke="#0d1b2a" stroke-width="2.4"/>
        <text x="338" y="279" text-anchor="middle" font-size="9" font-weight="700"

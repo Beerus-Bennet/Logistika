@@ -1555,8 +1555,9 @@ function machSlots(o) {
 
 /* -------------------------------- Gerümpel ------------------------------- */
 function farmClearJunk(o) {
+  /* v291: Aufräumen ohne Ausdauerverbrauch; veraltete Klicks nicht doppelt vergüten. */
+  if (!o || !S.farm.objs.includes(o)) return null;
   const J = FJUNK[o.k] || FJUNK.unkraut;
-  if (!farmStaUse(J.sta)) return null;
   const got = [];
   for (const id in J.gain) { const n = Math.min(J.gain[id], farmRoom(id)); if (n > 0) { farmAdd(id, n, 3); got.push({ id, n, xp: 0 }); } }
   if (J.m) { S.money += J.m; S.revenue += J.m; }
