@@ -55,7 +55,7 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v272: Luckybox – Gewinnerfeld am Rad in Seltenheitsfarbe statt weißem Schleier, weniger Funken am Zeiger (`winMesh`, `highlight` in `lucky3d.js`).
 - v273: Luckybox – Gewinnerfeld mit dünnem Rahmen und Plakette (`BADGE_R`, `BADGE_S`) statt gefülltem Keil; Gewinnsymbol wächst darauf.
 
-## Arbeitsprinzipien (v275, nach Karpathy-Hinweisen, MIT-Lizenz, `forrestchang/andrej-karpathy-skills`)
+## Arbeitsprinzipien (v276, nach Karpathy-Hinweisen, MIT-Lizenz, `forrestchang/andrej-karpathy-skills`)
 Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projektregeln (Bennet) Vorrang** – zum Beispiel Version, Doku und Pull Request je Lieferung, und: Bennets klare Aufträge werden umgesetzt, nicht zerredet.
 1. **Erst denken:** Annahmen nennen. Bei echter Unklarheit (mehrere sinnvolle Deutungen mit unterschiedlichem Ergebnis) kurz nachfragen oder die gewählte Deutung klar benennen. Einfachere Wege vorschlagen, wenn es sie gibt.
 2. **Einfachheit zuerst:** So wenig Code wie nötig, keine ungefragten Zusatzfunktionen, keine Abstraktion für Einmaliges, keine Fehlerbehandlung für Unmögliches.

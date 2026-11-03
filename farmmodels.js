@@ -56,13 +56,15 @@ const FM = (() => {
     o = o || {};
     const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / (o.step || 1))), ang = Math.atan2(z1 - z0, x1 - x0);
     const post = o.post || C.woodD, rail = o.rail || C.wood, h = o.h || 0.55;
+    /* v275: Hofzaun kann kräftigere Profile für stabile Darstellung beim Schwenken nutzen. */
+    const pw = o.postWidth || 0.09, rh = o.railHeight || 0.06, rd = o.railDepth || 0.04;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      b.box(0.09, h, 0.09, post, { x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, top: post });
+      b.box(pw, h, pw, post, { x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, top: post });
     }
     b.at({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, ry: -ang }, () => {
-      b.box(len, 0.06, 0.04, rail, { y: h * 0.45 });
-      b.box(len, 0.06, 0.04, rail, { y: h * 0.82 });
+      b.box(len, rh, rd, rail, { y: h * 0.45 });
+      b.box(len, rh, rd, rail, { y: h * 0.82 });
     });
   }
   function rectFence(b, w, d, o) {
