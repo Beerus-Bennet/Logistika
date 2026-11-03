@@ -160,13 +160,13 @@ const FSTORE = {
 };
 /* v258: Große Lagerhalle – ein Gebäude auf dem Hof, das jedem Lager von Hof, Sägewerk und Fischerei
    zusätzlichen Platz gibt. Trophäen gehören zur Jagd und bleiben außen vor. Gilt auch für Lager, die erst später dazukommen.
-   v267: 100 % mehr als bisher – sechs statt drei Ausbaustufen (Silo +240, Scheune +180, Holzplatz +150, Kühlkiste +96,
-   Köderkiste +240); die Halle ist auf dem Hof größer (8 × 5 statt 6 × 4 Kacheln, siehe farmMigrate). */
-const FHALL = { t: "lagerhalle", steps: 6, stores: ["silo", "barn", "holz", "fisch", "koeder"] };
+   v269: Die Halle verdoppelt jedes dieser Lager einzeln (mult 1 = +100 % des Platzes ohne Halle, samt jedem späteren Ausbau)
+   und ist auf dem Hof entsprechend groß (10 × 6 statt 6 × 4 Kacheln, siehe farmHallGrow). */
+const FHALL = { t: "lagerhalle", mult: 1, stores: ["silo", "barn", "holz", "fisch", "koeder"] };
 
 /* Kachelgröße der Objekte (Breite × Tiefe) */
 const FSIZE = {
-  house: [5, 4], barn: [4, 4], silo: [2, 2], lagerhalle: [8, 5], bakery: [3, 3], mill: [2, 2], dairy: [3, 3], butcher: [3, 3], spinnery: [3, 3],
+  house: [5, 4], barn: [4, 4], silo: [2, 2], lagerhalle: [10, 6], bakery: [3, 3], mill: [2, 2], dairy: [3, 3], butcher: [3, 3], spinnery: [3, 3],
   shed: [3, 2], board: [1, 1], gate: [4, 1], field: [2, 2], tree: [2, 2]
 };
 /* lassen sich nicht verschieben */
@@ -191,7 +191,7 @@ const FSHOP_HOF = [
   { id: "butcher", cat: "bau",  n: "Metzgerei",         i: "🔪", lv: 5, price: () => 900,  lim: () => 1, d: "Bratwurst, Schinken und Gulasch aus eigenem Fleisch." },
   { id: "spinnery", cat: "bau", n: "Spinnstube",        i: "🧶", lv: 5, price: () => 700,  lim: () => 1, d: "Spinnrad und Stricknadeln: Garn, Socken, Pullover." },
   { id: "beef",    cat: "bau",  n: "Rinderweide",       i: "🐂", lv: 6, price: () => 600,  d: "Große Weide mit Unterstand für bis zu 6 Rinder." },
-  { id: "lagerhalle", cat: "bau", n: "Große Lagerhalle",  i: "🏬", lv: 5, price: () => 5000, lim: () => 1, d: "Mehr Platz für alle Lager: Silo, Scheune, Holzplatz, Kühl- und Köderkiste – je so viel wie sechs Ausbaustufen." }
+  { id: "lagerhalle", cat: "bau", n: "Große Lagerhalle",  i: "🏬", lv: 5, price: () => 5000, lim: () => 1, d: "Verdoppelt jedes Lager: Silo, Scheune, Holzplatz, Kühl- und Köderkiste – auch jeden späteren Ausbau." }
 ];
 const FSHOP_CATS_HOF = [["feld", "🌱 Felder & Bäume"], ["tier", "🐔 Tiere"], ["bau", "🏗️ Gebäude"], ["deko", "🌷 Deko"]];
 /* Deko: kostet wenig, macht den Hof schön (bringt ein paar XP).

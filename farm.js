@@ -267,32 +267,46 @@ function farmFreeSpot(w, d, px, pz, t, k) {
 function farmInv(id) { return (S.farm.inv[id] && S.farm.inv[id].n) || 0; }
 function farmQ(id) { const e = S.farm.inv[id]; return e && e.n ? e.q : 0; }
 function farmStoreCap(st) {
+  const c = farmStoreCapBase(st);
+  return c + farmHallBonus(st, c);
+}
+/* v269: Platz ohne Große Lagerhalle (Grundstock, Ausbau, Etappe, Sägewerk, Fischerei-Gebäude) */
+function farmStoreCapBase(st) {
   const s = FSTORE[st];
   let c = s.base + s.step * ((S.farm.cap[st] || 1) - 1) + (typeof farmStageStoreBonus === "function" ? farmStageStoreBonus(st) : 0);
   if (st === "holz" && S.farm.saw && S.farm.areas && S.farm.areas.saege) c += 60;
   if (st === "fisch") S.farm.objs.forEach(o => { c += FFISH_STORE_BONUS[o.t] || 0; });
-  c += farmHallBonus(st);
   return c;
 }
-/* v267: Die Große Lagerhalle ist größer geworden (8 × 5 statt 6 × 4). Eine schon gebaute Halle wächst einmalig um ihre
-   alte Fläche herum (möglichst mittig), wenn dort Platz ist; sonst behält sie ihre Größe (o.sz) – der Lagerbonus gilt so oder so. */
+/* v269: Die Große Lagerhalle ist so groß wie ihr Inhalt (10 × 6 Kacheln, vorher 6 × 4). Jede Halle trägt ihre Größe in o.sz.
+   Eine schon gebaute Halle wächst einmalig um ihre alte Fläche herum (möglichst mittig) auf 10 × 6, sonst auf 8 × 5, wenn dort
+   Platz ist; ist ringsum alles bebaut, behält sie ihre Größe. Nichts wird überdeckt oder verschoben, der Lagerbonus gilt immer. */
+const HALL_SIZES = [[10, 6], [8, 5]];
 function farmHallGrow(F) {
-  if (F.hall267) return;
-  F.hall267 = 1;
-  (F.objs || []).filter(o => o.t === "lagerhalle" && !o.sz).forEach(o => {
-    const old = o.r ? [4, 6] : [6, 4], nw = o.r ? FSIZE.lagerhalle[1] : FSIZE.lagerhalle[0], nd = o.r ? FSIZE.lagerhalle[0] : FSIZE.lagerhalle[1];
-    const cx = (nw - old[0]) / 2, cz = (nd - old[1]) / 2, C = [];
-    for (let dx = 0; dx <= nw - old[0]; dx++) for (let dz = 0; dz <= nd - old[1]; dz++) C.push([dx, dz, Math.hypot(dx - cx, dz - cz)]);
-    C.sort((a, b) => a[2] - b[2]);
-    const hit = C.find(([dx, dz]) => { try { return farmFits(o.x - dx, o.z - dz, nw, nd, o.id, "lagerhalle"); } catch (e) { return false; } });
-    if (hit) { o.x -= hit[0]; o.z -= hit[1]; } else o.sz = [6, 4];
+  if (F.hall269) return;
+  F.hall269 = 1;
+  const was = F.hall267 ? [8, 5] : [6, 4];                    /* v267: 8 × 5 ohne o.sz */
+  (F.objs || []).filter(o => o.t === "lagerhalle").forEach(o => {
+    if (!o.sz) o.sz = was.slice();
+    const rot = s => o.r ? [s[1], s[0]] : s, old = rot(o.sz);
+    for (const ns of HALL_SIZES) {
+      if (ns[0] * ns[1] <= o.sz[0] * o.sz[1]) break;
+      const [nw, nd] = rot(ns), cx = (nw - old[0]) / 2, cz = (nd - old[1]) / 2, C = [];
+      for (let dx = 0; dx <= nw - old[0]; dx++) for (let dz = 0; dz <= nd - old[1]; dz++) C.push([dx, dz, Math.hypot(dx - cx, dz - cz)]);
+      C.sort((a, b) => a[2] - b[2]);
+      const hit = C.find(([dx, dz]) => { try { return farmFits(o.x - dx, o.z - dz, nw, nd, o.id, "lagerhalle"); } catch (e) { return false; } });
+      if (hit) { o.x -= hit[0]; o.z -= hit[1]; o.sz = ns.slice(); break; }
+    }
   });
 }
-/* v258: Plätze durch die Große Lagerhalle (eine je Hof) */
-function farmHallBonus(st) {
+/* v258, v269: Plätze durch die Große Lagerhalle (eine je Hof) – sie verdoppelt jedes Lager einzeln, samt Ausbau */
+function farmHallBonus(st, base) {
   if (typeof FHALL === "undefined" || !FHALL.stores.includes(st) || !FSTORE[st]) return 0;
-  return S.farm.objs.some(o => o.t === FHALL.t) ? FHALL.steps * FSTORE[st].step : 0;
+  if (!S.farm.objs.some(o => o.t === FHALL.t)) return 0;
+  return Math.round((base != null ? base : farmStoreCapBase(st)) * FHALL.mult);
 }
+/* Faktor für einen Ausbauschritt (mit Halle zählt jeder neue Platz doppelt) */
+const farmHallK = st => farmHallBonus(st) ? 1 + FHALL.mult : 1;
 function farmStoreUsed(st) {
   let n = 0;
   for (const id in S.farm.inv) if (FITEMS[id] && FITEMS[id].st === st) n += S.farm.inv[id].n;
@@ -956,7 +970,7 @@ function farmBuild(spec, x, z, r) {
   else if (FPENS[t]) o = { t, lvl: 1, animals: [] };
   else if (FMACHINES[t]) o = { t, q: [], done: [], slots: 2 };
   else if (t === "deco") o = { t, k: spec.k, arg: FDECO[spec.k].arg };
-  else if (t === "lagerhalle") o = { t };                                        /* v258: Große Lagerhalle */
+  else if (t === "lagerhalle") o = { t, sz: FSIZE.lagerhalle.slice() };          /* v258: Große Lagerhalle, v269: Größe im Objekt */
   else return null;
   o.x = x; o.z = z; o.r = r || 0;
   if (!farmFits(x, z, ...farmSize(o), null, t, spec.k)) return null;

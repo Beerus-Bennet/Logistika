@@ -9,6 +9,46 @@
 
 
 
+## v269 – Große Lagerhalle verdoppelt jedes Lager, Halle 10 × 6 nach Maß
+**Wunsch Bennet:** „Alle Lager einzeln verdoppeln. Demnach bitte die Größe der Lagerhalle ingame anpassen.“ (Klarstellung zu „100 % mehr“ aus v267.)
+
+**Ursache:** In v258/v267 gab die Halle jedem Lager einen festen Zuschlag (drei bzw. sechs Ausbaustufen). Das ist keine Verdopplung, und spätere Ausbauten zählten nicht mit.
+
+**Lösung:**
+- **Verdopplung je Lager** (`farm.js`, `farmdata.js`):
+  - `FHALL.mult` 1 ersetzt `FHALL.steps`. Neu `farmStoreCapBase(st)`: Platz ohne Halle (Grundstock, Ausbau, Etappe, Sägewerk, Fischerei-Gebäude). `farmStoreCap` = Grundplatz + `farmHallBonus(st)`, und der Bonus ist der Grundplatz selbst.
+  - Gilt für Silo, Scheune, Holzplatz, Kühl- und Köderkiste, sofort auch für schon gebaute Hallen.
+  - Beispiele auf Stufe 1: Silo 60 → 120, Scheune 40 → 80, Holzplatz 30 → 60, Kühlkiste 24 → 48, Köderkiste 60 → 120.
+  - Jeder Ausbau zählt doppelt: Silo +80 statt +40. Der Ausbauknopf im Lagerfenster zeigt das (`farmHallK`).
+  - Ladentext: „Verdoppelt jedes Lager … – auch jeden späteren Ausbau.“
+  - **Achtung:** Bei wenig ausgebauten Lagern gibt die Halle jetzt weniger als der feste Zuschlag aus v267 (Silo Stufe 1: 300 → 120), ab höheren Stufen mehr (Silo Stufe 10: 660 → 840).
+  - Was schon über der neuen Grenze liegt, bleibt im Lager; es kommt nur nichts mehr dazu, bis wieder Platz ist.
+- **Größe passend dazu:**
+  - Die Halle belegt 10 × 6 Kacheln, so groß wie alle fünf Lager zusammen.
+  - Neue Hallen tragen ihre Größe in `o.sz`.
+- **Modell nach Maß statt vergrößert** (`FM.lagerhalle(w, d)`, `farmmodels.js`):
+  - Wände, Dach (gleiche Neigung), Lichtband und Lüfter richten sich nach der Kachelgröße. Die 10 × 6-Halle ist höher (3,0 statt 2,2).
+  - Tür, Fenster, Schild und Paletten behalten ihre echte Größe.
+  - Ab 10 Kacheln Breite: zwei Rolltore mit je einer Rampe, Mittelstütze, drei Fenster je Giebel.
+  - 6 × 4 sieht aus wie bisher. Die Schildhöhe in der Hofansicht ist 5,0.
+- **Bestehende Hallen** (`farmHallGrow`, einmalig mit Merkmal `S.farm.hall269`):
+  - Ohne `o.sz` gilt die alte Größe: 6 × 4, bzw. 8 × 5, wenn v267 schon geladen war (`S.farm.hall267`).
+  - Die Halle wächst um ihre alte Fläche herum, möglichst mittig, auf 10 × 6. Ist dafür kein Platz, wächst sie auf 8 × 5, sonst behält sie ihre Größe.
+  - Nichts wird überdeckt oder verschoben, die Verdopplung gilt in jeder Größe.
+
+**Geprüft (Testbrowser):**
+- Neue Halle: 10 × 6 auf einem frischen Hof platzierbar. Alle fünf Lager verdoppelt; Silo-Ausbau 120 → 200.
+- Lagerfenster: „Davon +100 Plätze durch die Große Lagerhalle“, Knopf „Silo ausbauen: +80 Plätze“.
+- Migration:
+  - alte 6 × 4 mit Platz → 10 × 6;
+  - v267-Halle 8 × 5 → 10 × 6;
+  - nur seitlich zwei Spalten frei → 8 × 5;
+  - rundum bebaut → bleibt 6 × 4.
+  - Jeweils ohne Überlappung.
+- Bilder der Hofansicht in allen drei Größen. Keine Fehler in der Konsole.
+
+**Nicht geprüft:** am Handy.
+
 ## v268 – Luckybox in 3D: Kiste und Glücksrad, im Stil des Spiels
 **Wunsch Bennet:**
 - Die Luckybox-Bühne soll natürlich auch zum Spiel passen.

@@ -1,5 +1,17 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v269 – Lagerhalle verdoppelt jedes Lager, 10 × 6 (auf v268)
+
+- `farmdata.js`: `FHALL.mult` 1 (statt `steps`), `FSIZE.lagerhalle` [10, 6], Ladentext.
+- `farm.js`:
+  - `farmStoreCapBase` (neu) = alter Rumpf von `farmStoreCap` ohne Halle;
+  - `farmHallBonus(st, base)` = Grundplatz × `mult`;
+  - `farmHallK`;
+  - Neubau mit `o.sz`;
+  - `farmHallGrow` mit Merkmal `S.farm.hall269` (wächst auf 10 × 6 oder 8 × 5).
+- `farmmodels.js`: `lagerhalle(w, d)` parametrisch (ersetzt `lagerhalle64`), ab 10 Kacheln zwei Tore.
+- `farmview.js`: Ausbauknopf zeigt den doppelten Zuwachs, Schildhöhe 5,0.
+
 ## Stand v268 – Luckybox in 3D (auf v267)
 
 - `lucky3d.js` (neu, in `index.html` nach `jail.js`, in `sw.js`): `LUCKY3D.open(host, { gold, odds, prizes, rarity, reduced })` → `charge`, `burst`, `spin`, `celebrate`, `close`; Modelle `caseBody`, `caseLid`, `wheelMesh`, `spokes`, `standMesh`, `pointerMesh`; Feldreihenfolge `ORDER`.
