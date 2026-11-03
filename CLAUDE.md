@@ -54,3 +54,10 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v271: Luckybox-Testbühne `index.html?test&lucky` (`luckytest.js`, nur Testmodus): Boxen geben, Gewinn festlegen, reduzierte Bewegung/ohne WebGL simulieren, Ton, Serie, fertige Abläufe (Neuladen/Schließen beim Drehen, goldene Box bei kurzer Serie, 15 Boxen), Chancen prüfen.
 - v272: Luckybox – Gewinnerfeld am Rad in Seltenheitsfarbe statt weißem Schleier, weniger Funken am Zeiger (`winMesh`, `highlight` in `lucky3d.js`).
 - v273: Luckybox – Gewinnerfeld mit dünnem Rahmen und Plakette (`BADGE_R`, `BADGE_S`) statt gefülltem Keil; Gewinnsymbol wächst darauf.
+
+## Arbeitsprinzipien (v276, nach Karpathy-Hinweisen, MIT-Lizenz, `forrestchang/andrej-karpathy-skills`)
+Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projektregeln (Bennet) Vorrang** – zum Beispiel Version, Doku und Pull Request je Lieferung, und: Bennets klare Aufträge werden umgesetzt, nicht zerredet.
+1. **Erst denken:** Annahmen nennen. Bei echter Unklarheit (mehrere sinnvolle Deutungen mit unterschiedlichem Ergebnis) kurz nachfragen oder die gewählte Deutung klar benennen. Einfachere Wege vorschlagen, wenn es sie gibt.
+2. **Einfachheit zuerst:** So wenig Code wie nötig, keine ungefragten Zusatzfunktionen, keine Abstraktion für Einmaliges, keine Fehlerbehandlung für Unmögliches.
+3. **Chirurgische Änderungen:** Nur anfassen, was der Auftrag braucht. Fremden Code, Kommentare und Formatierung nicht „verbessern“. Eigene Reste (ungenutzte Variablen, Funktionen) entfernen, fremden toten Code nur melden.
+4. **Zielgetriebenes Arbeiten:** Erfolg vorher überprüfbar festlegen (Fehler zuerst reproduzieren, danach beheben; vorher/nachher prüfen) und erst melden, wenn es geprüft ist – ehrlich, was nicht geprüft wurde.
