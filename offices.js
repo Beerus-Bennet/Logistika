@@ -305,7 +305,8 @@ function baseById(id) { return (S.bases || []).find(b => b.id === id); }
 function baseAtNode(nodeId) { return (S.bases || []).find(b => b.node === nodeId); }
 function baseOfVehicle(uid) { return (S.bases || []).find(b => b.vehicles.includes(uid)); }
 function tierOf(b) { return OFFICE_TIERS[b.tier]; }
-function maxBases() { return S.stage; }
+/* v281: Etappenlimits; die Welt-Etappe hat keine numerische Bürogrenze. */
+function maxBases() { return S.stage >= 6 ? Infinity : [1, 3, 10, 15, 20][S.stage - 1] || 1; }
 
 function roleCount(b, role) { return b.staff.filter(s => s.role === role).length; }
 function rolePower(b, role) { return b.staff.filter(s => s.role === role).reduce((a, s) => a + s.skill, 0); }
@@ -362,7 +363,7 @@ function openBase(nodeId, tierIdx, rent) {
   if (baseAtNode(nodeId)) return toast("Hier steht bereits ein Standort.", "warn");
   if (S.bases.length >= maxBases())
     return toast("Etappe " + S.stage + ": höchstens " + maxBases() + " Standort"
-      + (maxBases() > 1 ? "e" : "") + ". Die nächste Etappe gibt einen weiteren frei.", "warn");
+      + (maxBases() > 1 ? "e" : "") + ". Mit der nächsten Etappe steigt die Bürogrenze.", "warn");
   const price = rent ? rentPrice(nodeId, t) * 30 : buyPrice(nodeId, t);
   if (S.money < price) return toast("Dafür fehlen " + money(price - S.money) + ".", "warn");
   S.money -= price; S.expense += price;
@@ -1197,9 +1198,9 @@ function newBaseCard() {
   newBaseCard.sel = sel;
   return `<div class="card">
     <div class="card-top"><span class="vicon">➕</span>
-      <div class="vname">Neuer Standort<small>${(S.bases || []).length} von ${maxBases()} belegt · jede Etappe gibt einen weiteren frei</small></div></div>
+      <div class="vname">Neuer Standort<small>${Number.isFinite(maxBases()) ? `${(S.bases || []).length} von ${maxBases()} belegt · die nächste Etappe erhöht die Bürogrenze` : `${(S.bases || []).length} Büros · unbegrenzt viele Standorte möglich`}</small></div></div>
     ${(() => { const ids = Object.keys((S.corp && S.corp.hq) || {}).filter(id => CORP[id]); return ids.length ? `<div class="hintbox">🏢 Vorgemerkt aus Übernahme: ${ids.map(id => esc(N[CORP[id].hq].name) + " (" + esc(rivalById(id) ? rivalById(id).name : id) + ")").join(", ")} – wird automatisch dein Büro, sobald Etappe und Standortplatz es erlauben.</div>` : ""; })()}
-    ${!room ? `<div class="hintbox">Alle Standorte dieser Etappe vergeben – die nächste schaltet einen weiteren frei.</div>` : `
+    ${!room ? `<div class="hintbox">Bürogrenze dieser Etappe erreicht – die nächste Etappe erhöht sie. Übernommene Firmensitze bleiben samt Personal vorgemerkt.</div>` : `
       <div class="assignrow">
         <select id="newBaseNode">${free.map(n =>
           `<option value="${n.id}"${n.id === sel ? " selected" : ""}>${TYPE_GLYPH[n.type] || "🏙"} ${esc(n.name)}</option>`).join("")}</select>

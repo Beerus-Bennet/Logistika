@@ -1548,3 +1548,9 @@ Stände zusammen, testet und liefert ein fertiges Paket.
 - In gemeinsamen Dateien nur die Fischerei-Abschnitte ändern und nichts
   umformatieren (keine Einrückungen, keine verschobenen Blöcke) – sonst
   sieht Git Änderungen, wo keine sind.
+
+
+## v281 – Bürogrenzen (ZIP-Lieferung)
+Basis main: 3f64b5d31acb253f2676fd60090731e1e4c95891. Geändert: offices.js, index.html (offices.js?v=281), sw.js (v281 und offices.js?v=281), AENDERUNGEN.md; neu office-limits.test.js. Limits: 1/3/10/15/20/unbegrenzt. Bestehende Übernahme-Vormerkung samt Personal bleibt erhalten und wird mit den neuen Limits genutzt. Tests: node office-limits.test.js, node --check offices.js, node --check sw.js, git diff --check. Kein visueller Browser-/Handytest.
+
+Nachtrag v281: corp.js und Cache-Verweise ebenfalls geändert. Einmalige Reparatur fehlender übernommener Firmensitze über S.corp.hqRestore281; vorhandene Sitze/Vormerkungen werden nicht dupliziert. Regressionstests für Reparatur an voller Grenze, spätere Aktivierung und nur einmaliges Wiederherstellen ergänzt.

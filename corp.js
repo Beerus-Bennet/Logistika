@@ -465,20 +465,23 @@ function corpHqOpen(id, silent) {
 function corpHqRepair() {
   const C = S.corp; if (!C || !C.owned) return;
   C.hq = C.hq || {};
+  /* v281: Auch als erledigt markierte Übernahmen einmalig auf verlorene Sitze prüfen. */
+  const restore = !C.hqRestore281;
   let n = 0;
   Object.keys(C.owned).forEach(id => {
     const o = C.owned[id], c = CORP[id], r = rivalById(id);
-    if (!o || o.hq || !c || !r) return;
+    if (!o || (o.hq && !restore) || !c || !r) return;
     o.hq = 1;
     if (baseAtNode(c.hq) || C.hq[id]) return;
     C.hq[id] = { staff: corpHqStaff(r, c.wave || 0), legacy: true }; n++;
   });
-  if (n) save();
+  C.hqRestore281 = true;
+  if (n || restore) save();
 }
 /* Läuft regelmäßig und nach jeder Etappe: vorgemerkte Firmensitze öffnen, sobald es geht. */
 function corpHqTry() {
   if (!S.corp) return;
-  if (S.corp.owned && Object.values(S.corp.owned).some(o => !o.hq)) corpHqRepair();
+  if (S.corp.owned && (!S.corp.hqRestore281 || Object.values(S.corp.owned).some(o => !o.hq))) corpHqRepair();
   const ids = Object.keys(S.corp.hq || {});
   if (!ids.length) return;
   const had = S.bases.length;

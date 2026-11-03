@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v281 – Bürogrenzen je Etappe und unbegrenzte Welt
+**Ursache:** `maxBases()` gab die Etappennummer zurück, somit waren selbst weltweit nur sechs Büros möglich.
+**Lösung:** Berlin 1, Brandenburg & Mitteldeutschland 3, Deutschland 10, Europa 15, Eurasien & Transatlantik 20, Welt ohne numerische Grenze. Kauf, Miete und Übernahme nutzen dieselbe Grenze. Anzeige und Sperrtexte angepasst; bei Welt kein Verweis auf eine nächste Etappe. Ein Büro je Kartenort gilt weiterhin.
+**Wiederherstellung v281:** Einmalig werden alle gespeicherten Firmenübernahmen auf fehlende Firmensitze geprüft, auch wenn die alte Übernahme bereits als erledigt markiert war. Fehlende Sitze werden samt neu rekonstruiertem Personal wieder vorgemerkt oder bei freiem Platz aktiviert. Bereits vorgemerktes Originalpersonal bleibt erhalten. Auch früher bewusst verkaufte Übernahme-Sitze können bei dieser einmaligen Reparatur zurückkehren, da alte Spielstände Verlust und Verkauf nicht unterscheiden. Danach verhindert `hqRestore281` erneutes Wiederherstellen bewusst verkaufter Büros. Manuell erworbene, gelöschte Büros ohne Historie sind nicht rekonstruierbar.
+**Spielstände/Übernahmen:** Die bestehende Vormerkung `S.corp.hq` erhält Firmensitze samt Personal beim Erreichen der Grenze. Sie wird unverändert mit dem Spielstand gespeichert und bei freier Kapazität bzw. Etappenaufstieg automatisch aktiviert. Bestehende Büros oberhalb einer Grenze werden nicht entfernt.
+**Geprüft:** `node office-limits.test.js` testet alle sechs Grenzen, reale Kauf-Funktion (inkl. Welt mit 30 Büros), Oberflächentexte, Übernahmesitz an der Grenze, JSON-Speicherzyklus, Aktivierung nach Etappenaufstieg, Schutz gegen doppelte Aktivierung und Bestandsschutz. JavaScript-Syntax und `git diff --check` geprüft. Kein visueller Browser-/Handytest: Browser in dieser Umgebung nicht installiert.
+**Basis:** GitHub `main`, Commit `3f64b5d31acb253f2676fd60090731e1e4c95891`. Lieferung als ZIP auf ausdrücklichen Wunsch, kein Push.
+
+
 
 
 
