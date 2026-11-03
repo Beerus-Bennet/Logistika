@@ -186,7 +186,7 @@ function objMesh(o) {
     case "dairy": return fmesh("dairy", FM.dairy);
     case "butcher": return fmesh("butcher", FM.butcher);
     case "spinnery": return fmesh("spinnery", FM.spinnery);
-    case "lagerhalle": return fmesh("lagerhalle", FM.lagerhalle);                     /* v258 */
+    case "lagerhalle": { const s = o.sz || FSIZE.lagerhalle; return fmesh("lagerhalle:" + s[0] + "x" + s[1], () => FM.lagerhalle(s[0], s[1])); }   /* v258, v267: nach Größe */
     case "board": return fmesh("board", FM.board);
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil", () => FM.fieldSoil(false));
@@ -211,7 +211,7 @@ function objMesh(o) {
   return typeof worldObjMesh === "function" ? worldObjMesh(o) : null;
 }
 const OBJ_H = {
-  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0, lagerhalle: 3.4,
+  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0, lagerhalle: 4.3,
   coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
   kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
 };

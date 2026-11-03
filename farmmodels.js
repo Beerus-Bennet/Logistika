@@ -181,7 +181,13 @@ const FM = (() => {
   /* v258: Große Lagerhalle (6 × 4 Kacheln) – Stahlhalle mit Trapezblech, flaches Satteldach mit Lichtband,
      Rolltor mit Warnstreifen und Laderampe vorn, Seitentür, Fenster an den Giebeln. Das Schild zeigt die fünf
      Lager, für die sie Platz schafft: Ähre (Silo), Ei (Scheune), Stamm (Holzplatz), Fisch (Kühlkiste), Wurm (Köder). */
-  function lagerhalle() {
+  /* v267: Halle nach Kachelgröße – das Modell für 6 × 4 wird gleichmäßig vergrößert (8 × 5: Faktor 1,29) */
+  function lagerhalle(w, d) {
+    const base = lagerhalle64();
+    if (!w || (w === 6 && d === 4)) return base;
+    const b = new MB(); b.merge(base, { s: Math.min((w - 0.4) / 5.6, (d - 0.6) / 3.4) }); return b;
+  }
+  function lagerhalle64() {
     G3.seed(61);
     const b = new MB(), wall = 0xcdd6de, rib = 0xaeb9c4, frame = 0x55606c, roofC = 0x7d8894, gate = 0xb8c3d0;
     const W = 5.6, D = 3.4, H = 2.2, fz = D / 2;

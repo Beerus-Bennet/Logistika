@@ -9,6 +9,95 @@
 
 
 
+## v268 – Luckybox in 3D: Kiste und Glücksrad, im Stil des Spiels
+**Wunsch Bennet:**
+- Die Luckybox-Bühne soll natürlich auch zum Spiel passen.
+- Kiste und „Glücksrad“ (das laufende Gewinnband) sollen 3D-Modelle sein, im Farb- und Zeichenstil von v266.
+
+**Lösung:**
+- **Neue Datei `lucky3d.js`:** 3D-Bühne mit der eigenen Engine `gl3d.js`, wie Hof und Büro, ohne fremde Bibliothek.
+  - **Transportkiste** in den Farben von v266: dunkler Navy-Korpus, helle Metallecken, Stahlband, Nieten, Emblem „L“. Die goldene Box ist schwarz-gold mit Stern.
+  - **Ablauf der Kiste:** Sie schwebt und dreht sich leicht. Beim Aufladen ruckelt der Deckel, aus der Fuge leuchtet das Licht Stufe für Stufe bis zur Seltenheitsfarbe, mit Funken. Dann springt der Deckel auf, eine Lichtsäule steigt hoch, die Kiste sinkt ab.
+  - **Glücksrad** fährt hoch: Jedes Feld ist ein Preis mit seinem Symbol.
+    - Die **Feldgröße entspricht genau der Gewinnchance** (Chance der Seltenheit ÷ Anzahl der Preise dieser Seltenheit). Bei der normalen Box sind gewöhnliche Felder 49,5° groß, seltene 25,2°, epische 15,6° und der Goldene Bulli 14,4°; die goldene Box hat ihre eigenen Größen.
+    - Das Rad zeigt also ehrlich, was `rollPrize` zieht, und bleibt auf dem gezogenen Preis stehen.
+    - Rand mit Stiften, ein Zeiger, der bei jedem Feld federnd ausschlägt und klickt, Lauflichter, Ständer, Emblem auf der Nabe.
+    - Unter dem Rad steht der Name des Felds am Zeiger. Am Ende blinken die Lampen in der Seltenheitsfarbe, danach kommt die Gewinnkarte (v266) vor dem abgeblendeten Rad.
+  - **Ohne WebGL 2** bleibt automatisch die Bühne aus v266 (Kiste und Band in HTML).
+- **Mehr im Stil des Spiels (`style.css` Block v268):**
+  - Titel mit Tuschekontur wie die übrigen Fenster.
+  - Kräftige dunkle Umrisse an Gewinnkarte, Symbolkreis, Seltenheitsschild, Knöpfen, Serienleiste und Chancenbalken.
+- **Unverändert:** Chancen, Preise und Wirkungen. Schließen während des Drehens schreibt den Gewinn gut (v266).
+
+**Geprüft (Testbrowser Chromium mit SwiftShader):**
+- Normale Box (episch, legendär) und goldene Box (selten): Bildfolgen zu, Aufladen, Rad dreht, Rad steht, Karte.
+- Feldgrößen nachgerechnet; das Rad blieb jedes Mal auf dem gezogenen Preis stehen.
+- Ohne WebGL 2 (abgeschaltet): Bühne aus v266, das Band endet auf dem Gewinn.
+- Keine Konsolenfehler.
+
+**Nicht geprüft:**
+- Am Handy (Bildrate, Akku).
+- Die Töne (im Testbrowser ohne Ton).
+
+## v267 – Große Lagerhalle: doppelter Nutzen und größer auf dem Hof
+**Wunsch Bennet:** Die Lagerhalle soll mehr Nutzen bringen – 100 % mehr Lagerplatz – und auf dem Hof ggf. größer sein.
+
+**Lösung:**
+- **100 % mehr Platz durch die Halle** (`FHALL.steps` 3 → 6, `farmdata.js`). Sie gibt jedem Lager so viel wie sechs statt drei Ausbaustufen:
+  - Silo +240 statt +120, Scheune +180 statt +90.
+  - Holzplatz +150 statt +75, Kühlkiste +96 statt +48, Köderkiste +240 statt +120.
+  - Gilt sofort auch für schon gebaute Hallen. Ladentext angepasst.
+- **Größer auf dem Hof:**
+  - Die Halle belegt 8 × 5 statt 6 × 4 Kacheln. Das Modell wird gleichmäßig vergrößert (Faktor 1,29, `FM.lagerhalle(w, d)`), das Namensschild sitzt höher.
+  - Eine schon gebaute Halle wächst beim Laden einmalig (`farmHallGrow`, Merkmal `S.farm.hall267`) um ihre alte Fläche herum, möglichst mittig, wenn dort Platz ist. Ist ringsum alles bebaut, behält sie 6 × 4 (`o.sz`) – nichts wird überdeckt oder verschoben, der Lagerbonus gilt trotzdem voll.
+
+**Geprüft (Testbrowser):**
+- Neue Halle: 8 × 5, Silo 60 → 300 Plätze, Scheune 40 → 220.
+- Alte Halle mit Platz: wächst um eine Kachel nach links.
+- Alte Halle mit Nachbarn ringsum: bleibt 6 × 4 und überlappt nichts.
+- Hof-Bild vorher/nachher.
+
+**Nicht geprüft:** am Handy.
+
+## v266 – Luckybox: seriöser und mehr Belohnungsgefühl
+**Wunsch Bennet:** Das Öffnen der Luckyboxen leicht seriöser gestalten und mit mehr „Dopamin-Ausschuss“ für den Spieler.
+
+**Vorher (Screenshot und Testbrowser):**
+- Comic-Geschenk mit dicken Umrissen, große bunte Chancen-Kacheln und eine weiße Gewinnkarte.
+- Zwischen Antippen und Gewinn passierte wenig: kurzes Wackeln, dann lief das Band per CSS-Übergang ohne Klang und Rückmeldung.
+- Wer während des Bandlaufs schloss (Escape, Zurück), verlor den Gewinn: Die Box war schon verbraucht.
+
+**Lösung (`lucky.js` Abschnitt „Öffnen“, `style.css` Block v266):**
+- **Ruhiger, hochwertiger:**
+  - Dunkle Bühne, kleine Kopfzeile („Tagesbelohnung“, „Serienbelohnung“, „Bonus“), Titel mit Metall- bzw. Goldverlauf.
+  - Gewinnchancen dezent als schmaler Balken mit vier Spalten, aber immer sichtbar.
+  - Statt des Geschenks eine Transportkiste mit Metallrahmen, Stahlband, Nieten und Emblem; die goldene Box ist schwarz-gold mit Stern.
+- **Aufladen:** Nach dem Antippen ruckelt die Kiste immer stärker. Aus der Fuge dringt Licht, das Stufe für Stufe bis zur Farbe des Gewinns steigt (hell → grün → violett → gold), mit steigenden Tönen und kurzen Vibrationen. Dann springt der Deckel auf, mit Blitz.
+- **Band:**
+  - Eigene Bewegung statt CSS-Übergang.
+  - Leises Klicken je Feld, das Feld unter der Markierung leuchtet; epische und legendäre Felder schimmern.
+  - Am Ende rastet das Band mittig ein. Bei Episch und Legendär läuft es etwas länger.
+- **Enthüllung:**
+  - Fanfare je Seltenheit, Blitz in der Seltenheitsfarbe, Strahlenkranz (ab Selten).
+  - Die Karte dreht sich herein, das Symbol springt auf; Geldbeträge zählen hoch.
+  - Funken (Gewöhnlich, Selten) bzw. Konfetti (Episch, Legendär); bei Legendär Goldregen und ein kurzes Beben.
+  - Der Knopf erscheint nach einer kurzen Pause, damit man den Moment sieht.
+- **Fortschritt:** Unten die Serie mit sieben Feldern bis zur goldenen Box. Das ist nur eine Anzeige, die Regeln sind unverändert.
+- **Fehler behoben:** Schließen während des Öffnens schreibt den Gewinn jetzt gut (mit Hinweis), statt ihn zu verlieren.
+- **Unverändert:** Chancen, Preise und Wirkungen (`rollPrize`, `applyPrize`, `LUCKY_ODDS`), das Regal im Ziele-Fenster und das Konfetti im Auktionshaus.
+- **Töne** nur bei eingeschaltetem Spielton (`S.farm.snd`). „Bewegung reduzieren“ kürzt alles; Karte und Knopf erscheinen sofort.
+
+**Geprüft (Testbrowser Chromium, 390 × 844):**
+- Bildfolgen (zu, Aufladen, Band, Gewinn, Karte) für Gewöhnlich, Selten, Episch und Legendär sowie für die goldene Box.
+- Escape mitten im Band: Gewinn gutgeschrieben, nächste Box bleibt.
+- Kopfzeile „Bonus“ bei der Sonderfahrt-Box.
+- „Bewegung reduzieren“: Ablauf in rund 3 Sekunden fertig.
+- Keine Fehler in der Konsole.
+
+**Nicht geprüft:**
+- Am Handy (Vibration gibt es unter iOS im Browser ohnehin nicht).
+- Töne (im Testbrowser ohne Ton).
+
 ## v265 – Jagd: größere Toleranz für tödliche Schüsse am Träger
 **Wunsch Bennet:** Schüsse gingen teils direkt durch den Hals, und das Tier wirkte nur leicht verletzt.
 

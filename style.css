@@ -4111,3 +4111,197 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 #ofpThrow[hidden]{display:none}
 #ofpThrow:active{transform:translate(2px,2px);box-shadow:none}
 #ofpThrow:focus-visible{outline:3px solid #e5a43a;outline-offset:4px}
+
+/* ---------- v266: Luckybox – Öffnen-Bühne neu (ruhiger, hochwertiger; Aufladen, Band, Enthüllung) ---------- */
+#lucky.lb{--tc:#9fd8ff;--rc:#8fa3b8;
+  background:radial-gradient(90% 60% at 50% 46%,rgba(46,72,120,.55),transparent 70%),radial-gradient(140% 100% at 50% 0%,#14223c,#070c16 75%)}
+#lucky.lb.gold{background:radial-gradient(90% 60% at 50% 46%,rgba(150,108,24,.45),transparent 70%),radial-gradient(140% 100% at 50% 0%,#2a1e08,#0b0803 75%)}
+#lucky.lb[data-tease]::before,#lucky.lb[data-r]::before{content:"";position:fixed;inset:0;pointer-events:none;transition:background .35s;
+  background:radial-gradient(60% 42% at 50% 50%,color-mix(in srgb,var(--tc) 30%,transparent),transparent 72%)}
+#lucky.lb[data-r]::before{background:radial-gradient(70% 50% at 50% 48%,color-mix(in srgb,var(--rc) 34%,transparent),transparent 74%)}
+#lucky.lb .lb-stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:420px;margin:auto;color:#fff;text-align:center}
+.lb-head{display:flex;flex-direction:column;align-items:center;gap:2px}
+.lb-kick{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:2.6px;text-transform:uppercase;color:rgba(255,255,255,.62)}
+.lb-kick::before,.lb-kick::after{content:"";width:22px;height:1px;background:rgba(255,255,255,.35)}
+.lb-title{margin:0;font-family:var(--display);font-size:36px;font-weight:400;letter-spacing:2px;line-height:1.05;
+  background:linear-gradient(180deg,#ffffff,#c4d4ec);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+#lucky.gold .lb-title{background-image:linear-gradient(180deg,#fff4c8,#f2c443 55%,#b8841b)}
+.lb-sub{margin:2px 0 0;font-size:13px;color:rgba(255,255,255,.78)}
+.lb-sub b{color:#fff}
+/* Gewinnchancen: dezent, aber immer sichtbar */
+.lb-odds{width:100%;max-width:340px}
+.lb-oddbar{display:flex;gap:2px;height:6px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.06)}
+.lb-oddbar i{min-width:4px;background:var(--rc)}
+.lb-oddrow{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:7px;font-size:10.5px;color:rgba(255,255,255,.68)}
+.lb-oddrow span{display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap}
+.lb-oddrow i{width:7px;height:7px;border-radius:50%;background:var(--rc);box-shadow:0 0 6px var(--rc)}
+.lb-oddrow b{font-size:12.5px;color:#fff;font-weight:800}
+/* Bühne */
+.lb-scene{position:relative;width:100%;height:300px;display:grid;place-items:center}
+.lb-rays{position:absolute;left:50%;top:50%;width:560px;height:560px;margin:-280px 0 0 -280px;pointer-events:none;opacity:0;transform:scale(.55);
+  transition:opacity .5s,transform .7s cubic-bezier(.2,1.3,.4,1);
+  -webkit-mask-image:radial-gradient(circle,#000 0%,rgba(0,0,0,.55) 32%,transparent 66%);mask-image:radial-gradient(circle,#000 0%,rgba(0,0,0,.55) 32%,transparent 66%)}
+.lb-rays::before{content:"";position:absolute;inset:0;border-radius:50%;animation:lbSpin 16s linear infinite;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 60%,transparent) 0deg 6deg,transparent 6deg 20deg)}
+.lb-rays.on{opacity:1;transform:scale(1)}
+@keyframes lbSpin{to{transform:rotate(360deg)}}
+/* Kiste: dunkler Korpus mit Metallrahmen, Stahlband, Emblem; Licht dringt aus der Fuge */
+.lb-case{position:relative;width:204px;height:176px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  animation:lbBob 2.8s ease-in-out infinite;--amp:1}
+.lb-case:focus-visible{outline:3px solid #ffe08a;outline-offset:8px;border-radius:14px}
+.lb-case>span,.lb-case i{position:absolute;display:block}
+.lb-shadow{left:14%;right:14%;bottom:-4px;height:18px;border-radius:50%;background:rgba(0,0,0,.55);filter:blur(6px)}
+.lb-body{left:10px;right:10px;bottom:10px;height:104px;border-radius:12px;overflow:hidden;
+  background:linear-gradient(180deg,#3b4b66 0%,#1d283b 55%,#131b29 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -8px 14px rgba(0,0,0,.45),0 0 0 2px #0a0f18,0 0 0 4px #5f7090,0 0 0 5px #0a0f18}
+.lb-lid{left:2px;right:2px;top:20px;height:48px;border-radius:13px 13px 7px 7px;z-index:2;
+  background:linear-gradient(180deg,#4a5d7d 0%,#26334b 70%,#1d283a 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -5px 8px rgba(0,0,0,.35),0 0 0 2px #0a0f18,0 0 0 4px #6b7d9d,0 0 0 5px #0a0f18;
+  transition:transform .6s cubic-bezier(.3,1.4,.5,1),opacity .45s .2s}
+.lb-strap{left:50%;top:0;bottom:0;width:30px;margin-left:-15px;background:linear-gradient(90deg,#8e9cb2,#e8eef6 45%,#9aa8bd 60%,#7d8ba1);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.lb-handle{left:50%;top:-11px;width:62px;height:12px;margin-left:-31px;border-radius:8px 8px 0 0;border:3px solid #9aa8bd;border-bottom:0}
+.lb-emb{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;display:grid;place-items:center;z-index:1;
+  background:radial-gradient(circle at 50% 35%,#2b3a57,#0f1726);box-shadow:0 0 0 3px #c9d4e3,0 0 0 5px #0a0f18,0 6px 12px rgba(0,0,0,.5)}
+.lb-emb span{font-family:var(--display);font-size:30px;line-height:1;color:#f2c443;text-shadow:0 0 10px rgba(242,196,67,.6)}
+.lb-rivet{width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#eef3f9,#7d8ba1);top:10px}
+.lb-rivet.a{left:12px}.lb-rivet.b{right:12px}
+#lucky.gold .lb-body{background:linear-gradient(180deg,#2a2418 0%,#16120a 60%,#0e0b06 100%);box-shadow:inset 0 1px 0 rgba(255,236,170,.2),inset 0 -8px 14px rgba(0,0,0,.5),0 0 0 2px #0b0803,0 0 0 4px #c99a2e,0 0 0 5px #0b0803}
+#lucky.gold .lb-lid{background:linear-gradient(180deg,#3a3020 0%,#1d170c 75%);box-shadow:inset 0 1px 0 rgba(255,236,170,.25),inset 0 -5px 8px rgba(0,0,0,.4),0 0 0 2px #0b0803,0 0 0 4px #e0b44a,0 0 0 5px #0b0803}
+#lucky.gold .lb-strap{background:linear-gradient(90deg,#a87a18,#ffe7a0 45%,#d6a537 60%,#94690f)}
+#lucky.gold .lb-handle{border-color:#d6a537}
+#lucky.gold .lb-emb{box-shadow:0 0 0 3px #f2c443,0 0 0 5px #0b0803,0 0 18px rgba(242,196,67,.5)}
+.lb-seam{left:8px;right:8px;top:66px;height:3px;border-radius:3px;z-index:3;opacity:.25;background:var(--tc);box-shadow:0 0 10px var(--tc),0 0 26px var(--tc);transition:opacity .3s,box-shadow .3s}
+.lb-beam{left:-20%;right:-20%;top:-40px;height:150px;z-index:0;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none;
+  background:radial-gradient(50% 60% at 50% 72%,color-mix(in srgb,var(--tc) 80%,transparent),transparent 70%);filter:blur(6px)}
+@keyframes lbBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.lb-case.charge{animation:lbRattle .11s linear infinite}
+@keyframes lbRattle{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(calc(var(--amp) * -1.6px),calc(var(--amp) * .6px)) rotate(calc(var(--amp) * -.9deg))}
+  50%{transform:translate(calc(var(--amp) * 1.4px),0) rotate(calc(var(--amp) * .8deg))}75%{transform:translate(calc(var(--amp) * -.8px),calc(var(--amp) * -.6px)) rotate(calc(var(--amp) * -.4deg))}100%{transform:translate(0,0) rotate(0)}}
+.lb-case.charge .lb-seam{opacity:.75}
+.lb-case.charge .lb-beam{opacity:.45}
+#lucky[data-tease="r"] .lb-case.charge .lb-beam{opacity:.6}
+#lucky[data-tease="e"] .lb-case.charge .lb-beam{opacity:.78;transform:scale(1.08)}
+#lucky[data-tease="l"] .lb-case.charge .lb-beam{opacity:.95;transform:scale(1.18)}
+#lucky[data-tease="e"] .lb-case.charge .lb-seam,#lucky[data-tease="l"] .lb-case.charge .lb-seam{opacity:1;box-shadow:0 0 14px var(--tc),0 0 40px var(--tc)}
+.lb-case.burst{animation:none;pointer-events:none}
+.lb-case.burst .lb-lid{transform:translateY(-150px) rotate(-16deg);opacity:0}
+.lb-case.burst .lb-body,.lb-case.burst .lb-shadow{transition:transform .45s .1s,opacity .4s .15s;transform:translateY(24px) scale(.9);opacity:0}
+.lb-case.burst .lb-beam{opacity:1;transform:scale(1.6)}
+.lb-case.burst .lb-seam{opacity:0}
+.lb-case[disabled]{cursor:default}
+/* Band */
+.lb-reel{position:absolute;left:0;right:0;top:50%;height:134px;margin-top:-67px;display:none;overflow:hidden;border-radius:18px;z-index:2;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12);
+  box-shadow:inset 0 0 36px rgba(0,0,0,.65),0 14px 34px rgba(0,0,0,.4);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 13%,#000 87%,transparent);mask-image:linear-gradient(90deg,transparent,#000 13%,#000 87%,transparent);
+  transition:opacity .35s,transform .45s cubic-bezier(.4,0,.2,1)}
+.lb-reel.on{display:block;animation:lbIn .35s ease-out}
+.lb-reel.away{opacity:0;transform:translateY(-40px) scale(.92)}
+@keyframes lbIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.lb-strip{display:flex;gap:10px;padding:16px 10px;will-change:transform}
+.lb-tile{position:relative;flex:none;width:92px;height:100px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;overflow:hidden;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 18%,#17233a),#0e1626);border:1px solid color-mix(in srgb,var(--rc) 55%,transparent);
+  box-shadow:inset 0 -3px 0 var(--rc),inset 0 1px 0 rgba(255,255,255,.08);filter:brightness(.8) saturate(.9);transition:transform .1s,box-shadow .1s,filter .1s}
+.lb-tile span{font-size:36px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.lb-tile small{padding:0 5px;font-size:10px;font-weight:800;line-height:1.15;color:rgba(255,255,255,.9)}
+.lb-tile.r-e::after,.lb-tile.r-l::after{content:"";position:absolute;inset:-40% -60%;background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.22) 50%,transparent 58%);animation:lbSheen 2.6s ease-in-out infinite}
+@keyframes lbSheen{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
+.lb-tile.hot{filter:brightness(1.18) saturate(1.1);transform:translateY(-2px) scale(1.06);
+  box-shadow:inset 0 -3px 0 var(--rc),0 0 0 2px var(--rc),0 0 22px color-mix(in srgb,var(--rc) 75%,transparent)}
+.lb-mark{position:absolute;left:50%;top:6px;bottom:6px;width:3px;margin-left:-1.5px;z-index:3;border-radius:2px;background:linear-gradient(#fff2c2,#e8b24a);box-shadow:0 0 12px rgba(255,214,120,.95)}
+.lb-mark::before,.lb-mark::after{content:"";position:absolute;left:50%;margin-left:-8px;border:8px solid transparent}
+.lb-mark::before{top:-6px;border-top-color:#ffe08a}
+.lb-mark::after{bottom:-6px;border-bottom-color:#ffe08a}
+/* Blitz */
+.lb-flash{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 46%,var(--fc,#fff) 0%,transparent 62%)}
+.lb-flash.go{animation:lbFlash .55s ease-out}
+@keyframes lbFlash{0%{opacity:var(--fa,.6)}100%{opacity:0}}
+/* Gewinnkarte */
+.lb-prize{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:4}
+.lb-prize.on{display:flex}
+.lb-card{position:relative;width:min(300px,88%);padding:18px 18px 20px;border-radius:20px;overflow:hidden;text-align:center;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 30%,#1a2740) 0%,#121b2c 58%);border:1px solid color-mix(in srgb,var(--rc) 75%,transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 22px 50px rgba(0,0,0,.55),0 0 60px color-mix(in srgb,var(--rc) 45%,transparent);
+  animation:lbCardIn .7s cubic-bezier(.2,1.35,.4,1) both}
+@keyframes lbCardIn{0%{transform:perspective(800px) rotateY(-95deg) scale(.72);opacity:0}45%{opacity:1}100%{transform:perspective(800px) rotateY(0) scale(1);opacity:1}}
+.lb-card-rar{display:inline-block;padding:3px 12px;border-radius:99px;font-size:11px;font-weight:900;letter-spacing:2.2px;text-transform:uppercase;color:#0d1420;
+  background:var(--rc);box-shadow:0 0 16px color-mix(in srgb,var(--rc) 65%,transparent)}
+.lb-card-ico{width:112px;height:112px;margin:12px auto 8px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--rc) 45%,#22314d),#10192a 72%);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--rc) 60%,transparent),0 0 34px color-mix(in srgb,var(--rc) 50%,transparent)}
+.lb-card-ico span{font-size:62px;line-height:1;animation:lbIco .65s .2s cubic-bezier(.2,1.7,.4,1) both,lbFloat 2.6s 1s ease-in-out infinite}
+@keyframes lbIco{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes lbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.lb-card-name{display:block;font-family:var(--display);font-size:27px;font-weight:400;letter-spacing:1.2px;line-height:1.1;color:#fff}
+.lb-card-txt{margin:7px 0 0;font-size:14.5px;font-weight:700;line-height:1.35;color:rgba(255,255,255,.9)}
+.lb-card.r-l::after{content:"";position:absolute;inset:-30% -70%;pointer-events:none;background:linear-gradient(105deg,transparent 44%,rgba(255,246,200,.45) 50%,transparent 56%);animation:lbSheen 2.2s .6s ease-in-out infinite}
+.lb-card.r-l .lb-card-name{background:linear-gradient(180deg,#fff4c8,#f2c443);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* Funken, Konfetti, Goldregen, Beben */
+.lb-p{position:absolute;left:50%;top:46%;width:7px;height:7px;border-radius:50%;z-index:5;pointer-events:none;animation:lbBurst 1.5s cubic-bezier(.15,.8,.35,1) both}
+.lb-p.spark{width:5px;height:5px;box-shadow:0 0 8px currentColor,0 0 2px #fff}
+.lb-p.conf{width:7px;height:12px;border-radius:2px;animation-duration:2s}
+@keyframes lbBurst{0%{transform:translate(-50%,-50%) scale(.4);opacity:1}55%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--rot));opacity:1}
+  100%{transform:translate(calc(-50% + var(--dx) * 1.15),calc(-50% + var(--dy) + 150px)) rotate(calc(var(--rot) * 2));opacity:0}}
+.lb-coin{position:absolute;top:-34px;width:22px;height:22px;border-radius:50%;z-index:6;pointer-events:none;
+  background:radial-gradient(circle at 35% 32%,#fff6c8,#f2c230 45%,#b88a12);box-shadow:inset 0 0 0 2px rgba(120,80,0,.35),0 2px 6px rgba(0,0,0,.35);
+  animation:lbCoin 1.8s cubic-bezier(.4,0,.8,1) both}
+@keyframes lbCoin{0%{transform:translateY(0) rotateY(0)}100%{transform:translateY(112vh) rotateY(900deg)}}
+#lucky.quake .lb-stage{animation:lbQuake .6s ease-out}
+@keyframes lbQuake{0%,100%{transform:translate(0,0)}15%{transform:translate(-7px,3px)}30%{transform:translate(6px,-4px)}45%{transform:translate(-5px,2px)}60%{transform:translate(4px,-2px)}80%{transform:translate(-2px,1px)}}
+/* Hinweis, Serie, Knöpfe */
+.lb-hint{margin:-4px 0 0;min-height:18px;font-size:13px;font-weight:700;color:rgba(255,255,255,.75);animation:lbHint 2s ease-in-out infinite}
+@keyframes lbHint{0%,100%{opacity:.55}50%{opacity:1}}
+.lb-foot{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px}
+.lb-streak{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);text-align:left}
+.lb-streak-t{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:rgba(255,255,255,.72)}
+.lb-streak-t b{color:#fff}
+.lb-streak-bar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.lb-streak-bar i{height:6px;border-radius:3px;background:rgba(255,255,255,.12)}
+.lb-streak-bar i.on{background:linear-gradient(90deg,#ff9b3d,#ffd25a);box-shadow:0 0 8px rgba(255,170,60,.6)}
+.lb-streak-bar i.gem{box-shadow:0 0 0 1px rgba(214,186,255,.7)}
+.lb-btns{display:flex;flex-direction:column;gap:8px;transition:opacity .35s}
+.lb-btns.hide{opacity:0;visibility:hidden;pointer-events:none}
+.lb-go{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;padding:8px 16px;border:0;border-radius:16px;cursor:pointer;
+  font:inherit;font-size:17px;font-weight:900;letter-spacing:.3px;color:#1a1204;background:linear-gradient(180deg,#ffe597,#f0b730);
+  box-shadow:0 5px 0 #a8741a,0 12px 26px rgba(240,183,48,.35);animation:lbGo 1.8s ease-in-out infinite;touch-action:manipulation}
+.lb-go small{font-size:11px;font-weight:800;opacity:.7}
+.lb-go:active{transform:translateY(4px);box-shadow:0 1px 0 #a8741a}
+.lb-go:focus-visible,.lb-later:focus-visible{outline:3px solid #9fd8ff;outline-offset:3px}
+@keyframes lbGo{0%,100%{box-shadow:0 5px 0 #a8741a,0 12px 26px rgba(240,183,48,.3)}50%{box-shadow:0 5px 0 #a8741a,0 12px 34px rgba(240,183,48,.6)}}
+.lb-later{min-height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:transparent;color:rgba(255,255,255,.85);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+@media (max-height:700px){.lb-scene{height:250px}.lb-title{font-size:30px}}
+@media (prefers-reduced-motion:reduce){
+  .lb-case,.lb-hint,.lb-go,.lb-tile::after,.lb-card::after,.lb-rays::before,.lb-card-ico span{animation:none!important}
+  .lb-card{animation-duration:.01s}
+}
+
+/* ---------- v268: Luckybox in 3D (lucky3d.js) und mehr im Stil des Spiels (Comic-Umrisse, Schrift mit Kontur) ---------- */
+#lucky.is3d .lb-scene{height:370px}
+.lb-3d{position:absolute;inset:0;width:100%;height:100%;z-index:1;transition:opacity .45s,filter .45s}
+#lucky.is3d .lb-case{position:absolute;inset:0;width:100%;height:100%;z-index:3;opacity:0;animation:none}
+#lucky.is3d .lb-case.burst *{transition:none}
+#lucky.is3d .lb-reel{display:none!important}
+#lucky.is3d[data-r] .lb-3d{opacity:.38;filter:blur(1.5px)}
+.lb-rays{z-index:2}
+.lb-now{min-height:30px;margin:-6px 0 -8px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .25s}
+.lb-now.on{opacity:1}
+.lb-now:not(:empty){padding:3px 14px;border-radius:99px;border:2.5px solid var(--ink);background:color-mix(in srgb,var(--rc,#8fa3b8) 30%,#121b2c);
+  font-size:14px;font-weight:900;color:#fff;box-shadow:0 3px 0 var(--ink)}
+#lucky[data-r] .lb-now{opacity:0}
+/* Stil des Spiels: Titel mit Tuschekontur wie die übrigen Fenster, kräftige Umrisse an Karte, Knöpfen und Leisten */
+.lb-title{background:none;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;filter:drop-shadow(0 3px 0 var(--ink))}
+#lucky.gold .lb-title{background:none;color:#ffe27a}
+.lb-kick{color:rgba(255,255,255,.75)}
+.lb-oddbar{height:9px;border:2px solid var(--ink);box-sizing:content-box}
+.lb-card{border:3px solid var(--ink);box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--rc) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.12),0 6px 0 var(--ink),0 0 60px color-mix(in srgb,var(--rc) 45%,transparent)}
+.lb-card-rar{border:2px solid var(--ink)}
+.lb-card-ico{box-shadow:0 0 0 3px var(--ink),0 0 0 6px color-mix(in srgb,var(--rc) 70%,transparent),0 0 34px color-mix(in srgb,var(--rc) 50%,transparent)}
+.lb-card-name{-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill}
+.lb-go{border:var(--line);box-shadow:0 5px 0 var(--ink),0 12px 26px rgba(240,183,48,.35);animation:lbGo268 1.8s ease-in-out infinite}
+.lb-go:active{box-shadow:0 1px 0 var(--ink)}
+@keyframes lbGo268{0%,100%{box-shadow:0 5px 0 var(--ink),0 12px 26px rgba(240,183,48,.3)}50%{box-shadow:0 5px 0 var(--ink),0 12px 34px rgba(240,183,48,.62)}}
+.lb-later{border:2.5px solid rgba(255,255,255,.45)}
+.lb-streak{border:2.5px solid var(--ink);background:rgba(255,255,255,.07);box-shadow:0 3px 0 var(--ink)}
+.lb-streak-bar i{border:1.5px solid var(--ink);height:7px}
+.lb-tile{border-width:2px;border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--rc),inset 0 0 0 2px color-mix(in srgb,var(--rc) 55%,transparent)}
+@media (max-height:720px){#lucky.is3d .lb-scene{height:300px}}

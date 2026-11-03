@@ -1,5 +1,23 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v268 – Luckybox in 3D (auf v267)
+
+- `lucky3d.js` (neu, in `index.html` nach `jail.js`, in `sw.js`): `LUCKY3D.open(host, { gold, odds, prizes, rarity, reduced })` → `charge`, `burst`, `spin`, `celebrate`, `close`; Modelle `caseBody`, `caseLid`, `wheelMesh`, `spokes`, `standMesh`, `pointerMesh`; Feldreihenfolge `ORDER`.
+- `lucky.js`: `openLucky` startet die 3D-Bühne (Klasse `is3d`), `spinLucky` ruft `charge`/`burst`, neu `lb3dSpin`; `closeLucky` gibt die 3D-Bühne frei. Ohne WebGL 2 alles wie v266.
+- `style.css`: Block „v268: Luckybox in 3D“ am Ende.
+
+## Stand v267 – Große Lagerhalle: doppelter Bonus, 8 × 5 (auf v266)
+
+- `farmdata.js`: `FHALL.steps` 6, `FSIZE.lagerhalle` [8, 5], Ladentext.
+- `farm.js`: `farmSize` beachtet `o.sz` bei der Halle; `farmHallGrow` (neu, aus `farmMigrate`, Merkmal `S.farm.hall267`).
+- `farmmodels.js`: `lagerhalle(w, d)` vergrößert das bisherige Modell (`lagerhalle64`).
+- `farmview.js`: Modell nach Größe (`lagerhalle:8x5`), Schildhöhe 4,3.
+
+## Stand v266 – Luckybox-Bühne neu (auf v265)
+
+- `lucky.js`: Abschnitt „Öffnen“ ersetzt: `openLucky`, `tileHTML`, `spinLucky`, `revealLucky` neu gestaltet, dazu `lbRoll`, `lbFlash`, `lbCount`, `lbSparks`, `lbCoins`, `lbStreakHTML`, Töne `lbTone`/`lbNoise`/`lbFanfare`. `closeLucky` beendet Effekte und schreibt einen laufenden Gewinn gut. `confetti` (Auktionshaus) und `luckyShelfHTML` unverändert.
+- `style.css`: Block „v266: Luckybox“ am Ende (Klassen `lb-*`); die alten `lk-*`-Regeln bleiben für Regal und Konfetti.
+
 ## Stand v265 – Jagd: Träger-Zone nach Modell (auf v264)
 
 - `hunt.js`: `deerNeckZones()` (neu, vor `SP`), `SP.hirsch.neckS`, `SP.keiler.stich`, Radien Herz/Lunge/Haupt angepasst; `rayTube` (neu); `zoneHit` prüft `neckS`/`stich` und wertet Rumpf → Träger als `hals`.
