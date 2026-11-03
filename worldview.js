@@ -2143,27 +2143,11 @@ function worldSyncTreasure() {
       });
       return b;
     }), { x: c.x, z: c.z, shadow: false });
-    /* Kiste steckt halb im Loch, Deckel offen, voller Münzen */
-    WV.trChest = add(fmesh("trChest2", () => {
-      const b = new FM.MB(), w = 0x9a6234, wd = 0x7a4a26, g = 0xe2b33a, gl = 0xf6d24a;
-      b.box(0.66, 0.42, 0.46, w, { y: -0.16, top: 0x8c2434 });
-      [-0.18, -0.04].forEach(y => b.box(0.67, 0.025, 0.47, wd, { y }));
-      [-0.3, 0.3].forEach(x => b.box(0.06, 0.44, 0.48, g, { x, y: -0.17 }));
-      b.box(0.12, 0.12, 0.03, g, { y: 0.0, z: 0.235 });
-      /* Münzberg */
-      b.noise(0.15, m => {
-        m.sphere(0.27, 9, 5, gl, { y: 0.24, sy: 0.32, sx: 1.05 });
-        for (let i = 0; i < 9; i++) m.cyl(0.06, 0.06, 0.02, 8, gl, { x: (Math.random() - 0.5) * 0.44, y: 0.27 + Math.random() * 0.04, z: (Math.random() - 0.5) * 0.28, rx: (Math.random() - 0.5) * 0.9, rz: (Math.random() - 0.5) * 0.9, top: 0xffe27a });
-      });
-      b.ico(0.06, 0xd8334a, { x: 0.12, y: 0.33, z: 0.05 });
-      b.ico(0.05, 0x3fa0e0, { x: -0.14, y: 0.32, z: -0.02 });
-      /* Deckel: gewölbt, nach hinten aufgeklappt */
-      b.at({ y: 0.26, z: -0.23, rx: -1.95 }, m => {
-        m.cyl(0.23, 0.23, 0.66, 9, w, { rz: Math.PI / 2, x: 0.33, z: 0.23, sz: 1, top: wd });
-        [-0.3, 0.3].forEach(x => m.cyl(0.24, 0.24, 0.06, 9, g, { rz: Math.PI / 2, x: x + 0.03, z: 0.23 }));
-      });
-      return b;
-    }), { x: c.x + 0.05, z: c.z - 0.05, ry: 0.55 });
+    /* v279: Dasselbe Modell und dieselbe Endpose wie in der Öffnungsanimation. */
+    WV.trChest = add(fmesh("goldBody", FWM.goldChest), {
+      x: c.x + 0.05, z: c.z - 0.05, y: 0.12, ry: parcelFace(), s: 1.15, glow: 0.14
+    });
+    R.addChild(WV.trChest, fnode(fmesh("goldLid", FWM.goldLid), { y: 0.5, z: -0.31, rx: -2.2, glow: 0.3 }));
     if (WV.trReveal) WV.trChest.visible = false;
   }
 }
@@ -2244,7 +2228,15 @@ function worldTreasureRevealEnd() {
   if (!Rv) return;
   Rv.nodes.forEach(n => { const i = R.nodes.indexOf(n); if (i >= 0) R.nodes.splice(i, 1); });
   WV.trReveal = null;
-  if (WV.trChest) WV.trChest.visible = true;
+  if (WV.trChest) {
+    /* v279: Exakte Endpose übernehmen, ohne Größen-, Richtungs- oder Modellwechsel. */
+    if (Rv.ph === 1) {
+      for (const k of ["x", "y", "z", "rx", "ry", "rz", "sx", "sy", "sz", "glow"]) WV.trChest[k] = Rv.body[k];
+      const lid = WV.trChest.children[0];
+      if (lid) { lid.rx = Rv.lid.rx; lid.glow = Rv.lid.glow; }
+    }
+    WV.trChest.visible = true;
+  }
   if (WV.trCamSave) worldTreasureCamBack();   /* v239: meist schon früher zurückgeschwenkt (gleich nach der Show) */
 }
 /* v167: Kamera für die Truhen-Show – steil von oben und aus der Richtung, in der kein Baum, Busch oder Fels
@@ -2380,7 +2372,7 @@ function stepTreasureReveal(Rv, dt, time) {
   if (Rv.ph === 0) {
     /* C: Deckel springt auf – Lichtstoß, Fontäne, Schockwellen */
     Rv.ph = 1; Rv.tb = t;
-    B.ry = parcelFace(); B.rz = B.rx = 0; B.glow = 1; Rv.lit.visible = true;
+    B.ry = parcelFace(); B.rz = B.rx = 0; B.sx = B.sy = B.sz = 1.15; B.glow = 1; Rv.lit.visible = true;
     sfx("thud"); sfx("level"); setTimeout(() => sfx("pearl"), 260); [0, 160, 320].forEach(d => setTimeout(() => sfx("coin"), 420 + d));
     if (st === 3) { setTimeout(() => sfx("level"), 700); setTimeout(() => sfx("pearl"), 950); }
     try { if (navigator.vibrate) navigator.vibrate(st > 1 ? [40, 30, 90, 30, 60] : 30); } catch (e) { /* kein Rütteln */ }
@@ -2399,7 +2391,7 @@ function stepTreasureReveal(Rv, dt, time) {
   const u = t - Rv.tb;
   const kk = Math.min(1, u / 0.5), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
   Rv.lid.rx = -2.2 * e; Rv.lid.glow = 0.3;
-  /* v98: Truhe setzt auf, bleibt offen und ohne Leuchten kurz stehen, zur Kamera gewandt – dann löst sie sich auf, die offene Truhe in der Grube bleibt */
+  /* v279: Die Truhe setzt auf und behält anschließend ihre offene Form und Größe. */
   const TSd = 2.3 + 4.5, dn = Math.min(1, u / 0.9);
   B.y = 0.77 - dn * 0.65 + (dn >= 1 ? 0 : Math.sin(u * 5) * 0.03 * (1 - dn));
   if (u < TSd) B.ry += angTo(B.ry, parcelFace()) * Math.min(1, dt * 5);
@@ -2430,14 +2422,8 @@ function stepTreasureReveal(Rv, dt, time) {
     R.burst({ x, y: 1.0, z, n: 40, speed: 3.4, up: 7.5, life: 1.8, size: 0.14, size2: 0.02, col: [TR_GOLD, [1, 1, 1, 1]], shape: 3, g: -6, drag: 0.4 });
   }
   /* v239: Sobald Fontäne, Lichtsäulen und Ringe vorbei sind, geht die Kamera sofort in die alte Ansicht zurück –
-     vorher erst nach dem Auflösen der Truhe (≈ 7,6 s nach dem Aufspringen + 1,3 s Flug). Die offene Truhe bleibt sichtbar. */
+     Die offene Truhe bleibt auch nach Ende der Show unverändert sichtbar. */
   if (u > 2.6 && !Rv.camBack) { Rv.camBack = 1; if (WV.trCamSave) worldTreasureCamBack(); }
-  if (u > TSd) {
-    /* Truhe löst sich in Funken auf – die offene Truhe in der Grube bleibt */
-    const k = Math.min(1, (u - TSd) / 0.5);
-    B.sx = B.sz = 1.15 * (1 - k); B.sy = 1.15 * (1 - k * 0.6); B.y = 0.12 + k * 0.6;
-    if (!Rv.gone) { Rv.gone = 1; sfx("pop"); R.burst({ x, y: 0.5, z, n: 26, speed: 2.2, up: 3, life: 1, size: 0.13, size2: 0.01, col: [col, [1, 1, 1, 1]], shape: 3, g: -3, drag: 1 }); if (WV.trChest) WV.trChest.visible = true; }
-  }
   if (u > TSd + 0.8) { worldTreasureRevealEnd(); renderFarmUI(); }
 }
 /* Döring GmbH: Montagewagen und Herr Döring vor dem Sägewerk */
