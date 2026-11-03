@@ -11,7 +11,7 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - Vanilla JS (`"use strict"`, globale Skripte, keine Module), kein Framework, kein Build, keine externen Bibliotheken.
 - 3D: eigene WebGL2-Engine `gl3d.js` (kein Three.js – so gewollt). Modelle mit `FM.MB` (`farmmodels.js`), Bildchen über `thumbSpan`/`thumbOf` (`worldview.js`).
 - Karte: eigene Slippy-Map `map.js`. Spielstand: globales `S` in `localStorage` (`logistika.save.v3`), Hof in `S.farm`.
-- Testmodus: `index.html?test` bzw. `?test=100`.
+- Testmodus: `index.html?test` bzw. `?test=100`. Luckybox-Testbühne: `index.html?test&lucky` (v271, `luckytest.js`).
 - Unit-Tests: `*.test.js` im Wurzelordner, erwarten `ROOT = path.join(__dirname, "..")` → zum Ausführen in `tests/` kopieren. `axe.test.js` und `trees.test.js` schlagen schon länger fehl.
 - Browser-Tests: Playwright (vorinstalliertes Chromium) gegen `python3 -m http.server`. Das Intro überdeckt das Spiel; Inhalte zum Ansehen in eine leere Seite kopieren. Für 3D-Bildchen Chromium mit `--use-angle=swiftshader` starten.
 
@@ -49,3 +49,5 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v267: Große Lagerhalle – doppelter Bonus (`FHALL.steps` 6), 8 × 5 Kacheln (`FSIZE`), alte Hallen wachsen beim Laden nur bei freiem Platz (`farmHallGrow`, `S.farm.hall267`), sonst `o.sz` = [6, 4].
 - v268: Luckybox in 3D (`lucky3d.js`, `LUCKY3D.open`): Kiste wie v266 und Glücksrad mit einem Feld je Preis, Feldgröße = Gewinnchance, bleibt auf dem gezogenen Preis stehen (`lb3dSpin`); ohne WebGL 2 die v266-Bühne. Titel/Karte/Knöpfe mit Tuschekontur im Spielstil.
 - v269: Große Lagerhalle verdoppelt jedes Lager einzeln samt Ausbau (`FHALL.mult`, `farmStoreCapBase`, `farmHallBonus(st, base)`, `farmHallK`), 10 × 6 Kacheln mit Modell nach Maß (`FM.lagerhalle(w, d)`, zwei Tore); alte Hallen wachsen beim Laden auf 10 × 6 bzw. 8 × 5, wenn Platz ist (`farmHallGrow`, `S.farm.hall269`, Größe in `o.sz`).
+- v270: Luckybox überarbeitet – `lucky3d.js` neu (Kiste mit Innenraum und Deckel-Schale, Licht aus Fuge/Innenraum, Kamerafahrt Kiste → Rad, Rad mit Beschleunigen/Abbremsen, `finish` fürs Überspringen); `lucky.js`: Gewinn einmal ziehen und als `S.lucky.pending` sichern, einmal anwenden (`lbSettle`), Kennung je Öffnung, eigene Symbole `lbIcon`, Layout an `visualViewport` (`--lb-h`); `gl3d.js`: Aufkleber `unlit`/`mul`/`add`.
+- v271: Luckybox-Testbühne `index.html?test&lucky` (`luckytest.js`, nur Testmodus): Boxen geben, Gewinn festlegen, reduzierte Bewegung/ohne WebGL simulieren, Ton, Serie, fertige Abläufe (Neuladen/Schließen beim Drehen, goldene Box bei kurzer Serie, 15 Boxen), Chancen prüfen.

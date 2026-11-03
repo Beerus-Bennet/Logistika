@@ -595,6 +595,7 @@ const G3 = (() => {
   in vec2 vUV; in vec3 vW; in vec3 vNor; in vec4 vL;
   uniform sampler2D uTex; uniform sampler2DShadow uShadow;
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR; uniform float uAlpha, uTexel, uShadowOn;
+  uniform vec3 uMul; uniform float uUnlit;   /* v270: Farbfaktor und unbeleuchtet (Lichtschein, Symbole) */
   out vec4 o;
   float shadow(){
     vec3 p = vL.xyz / vL.w * 0.5 + 0.5;
@@ -607,11 +608,12 @@ const G3 = (() => {
   void main(){
     vec4 t = texture(uTex, vUV);
     if (t.a < 0.03) discard;
+    if (uUnlit > 0.5) { o = vec4(t.rgb * uMul, t.a * uAlpha); return; }
     vec3 n = normalize(vNor);
     float wrap = clamp((dot(n, uSunDir) + 0.2) / 1.2, 0.0, 1.0);
     float sh = uShadowOn > 0.5 ? shadow() : 1.0;
     vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);
-    vec3 c = t.rgb * (amb + uSunCol * wrap * sh);
+    vec3 c = t.rgb * uMul * (amb + uSunCol * wrap * sh);
     c = mix(c, uFog, smoothstep(uFogR.x, uFogR.y, length(vW - uCam)));
     o = vec4(c, t.a * uAlpha);
   }`;
@@ -883,7 +885,7 @@ const G3 = (() => {
       }
     }
 
-    const NOTINT = [0, 0, 0, 0];
+    const NOTINT = [0, 0, 0, 0], ONE3 = [1, 1, 1];
     /* Sichtkegel: sechs Ebenen aus der Matrix, Kugeltest gegen die Hülle */
     function planes(M) {
       const p = [];
@@ -1087,15 +1089,22 @@ const G3 = (() => {
         gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
         gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -4);
         gl.bindVertexArray(decVAO);
+        /* v270: Aufkleber können unbeleuchtet sein (D.unlit), einen Farbfaktor tragen (D.mul) und additiv leuchten (D.add) */
+        let addOn = false;
         for (const [n, st] of decals) {
           const D = n.decal;
           if (!D.t || !D.t.tex) continue;
+          if (D.add && D.mul && D.mul[0] + D.mul[1] + D.mul[2] < 0.004) continue;          /* ausgeschalteter Lichtschein */
+          /* additiv: nur Farbe dazu, Deckkraft der Zeichenfläche bleibt (sonst färbt Licht auf durchsichtigem Grund schwarz) */
+          if (!!D.add !== addOn) { addOn = !!D.add; if (addOn) gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ZERO, gl.ONE); else gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA); }
           gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, D.t.tex);
           gl.uniformMatrix4fv(d.uModel, false, n.W);
           gl.uniform2f(d.uSize, D.w, D.h);
           gl.uniform1f(d.uAlpha, st.alpha);
+          gl.uniform3fv(d.uMul, D.mul || ONE3); gl.uniform1f(d.uUnlit, D.unlit ? 1 : 0);
           gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
+        if (addOn) gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.POLYGON_OFFSET_FILL);
         gl.activeTexture(gl.TEXTURE0);
         gl.depthMask(true); gl.depthFunc(gl.LESS);

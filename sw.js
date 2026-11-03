@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v269";
+const VERSION = "v271";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -13,7 +13,7 @@ const MAX_PICS = 260;
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=268",
+  "./style.css?v=271",
   "./data.js?v=109",
   "./farmdata.js?v=269",
   "./fishdata.js?v=109",
@@ -30,9 +30,9 @@ const SHELL = [
   "./extras.js?v=109",
   "./events.js?v=109",
   "./vip.js?v=109",
-  "./goals.js?v=109",
+  "./goals.js?v=270",
   "./kunden.js?v=109",
-  "./lucky.js?v=268",
+  "./lucky.js?v=271",
   "./loading.js?v=109",
   "./game.js?v=109",
   "./farm.js?v=269",
@@ -43,7 +43,7 @@ const SHELL = [
   "./customs.js?v=109",
   "./corp.js?v=109",
   "./livery.js?v=109",
-  "./gl3d.js?v=109",
+  "./gl3d.js?v=270",
   "./farmmodels.js?v=269",
   "./fishmodels.js?v=109",
   "./bushes.js?v=109",
@@ -65,7 +65,8 @@ const SHELL = [
   "./fishview.js?v=109",
   "./team.js?v=109",
   "./jail.js?v=264",
-  "./lucky3d.js?v=268",
+  "./lucky3d.js?v=270",
+  "./luckytest.js?v=271",
   "./officekitchen.js?v=263",
   "./officefp.js?v=264",
   "./manifest.webmanifest",

@@ -1,5 +1,30 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v271 – Luckybox-Testbühne (auf v270)
+
+- `luckytest.js` (neu, in `index.html` nach `lucky3d.js`, in `sw.js`):
+  - `LB_TEST` (`on`, `reduced`, `no3d`, `force`).
+  - Nur aktiv mit `?test&lucky`.
+  - Umhüllt `rollPrize` nur für die Ziehung beim Antippen.
+- `lucky.js`: `lbTest(k)` – `lbReduced` und `lbOpen` fragen die Testbühne ab (sonst wie v270).
+- `style.css`: Block „v271: Luckybox-Testbühne“ am Ende.
+
+## Stand v270 – Luckybox: Kiste mit Innenraum, Ablauf, Symbole, Layout (auf v269)
+
+- `lucky3d.js` neu aufgebaut:
+  - Modelle `caseBody` (Wände mit Stärke), `caseLid` (Schale, Scharnier hinten), `seamRing`, `lightPlate`, `winMesh`.
+  - Verlaufsbilder `gradTex`.
+  - API `tap`, `charge(k, n)`, `openLid`, `toWheel(ms)`, `spin(id, { ta, tb, tc, turns, onTick, onDone })`, `highlight(col, rank)`, `finish(id)`, `close`.
+  - Symbole über `opt.icon`.
+- `lucky.js`, Abschnitt „Öffnen“ ersetzt:
+  - `lbOpen` (auch Fortsetzung nach Neuladen), `spinLucky` mit `S.lucky.pending`, `lbSettle`, `lbSkip`, `lbStopped`, `lbNow`.
+  - Symbole `lbIcon`/`lbIconPaint`/`lbImg`, Zeitplan `LB_TIME`/`LB_HOLD`.
+  - Höhe `lbViewport`/`lbFitVh`, Kennung `lucky.id`, `lbLater`/`lbMine`.
+  - `confetti` (Auktionshaus) unverändert.
+- `goals.js`: Ziele-Chip zählt `S.lucky.pending` mit.
+- `gl3d.js`: Aufkleber mit `unlit`, `mul`, `add` (abwärtskompatibel).
+- `style.css`: Block „v270: Luckybox …“ am Ende.
+
 ## Stand v269 – Lagerhalle verdoppelt jedes Lager, 10 × 6 (auf v268)
 
 - `farmdata.js`: `FHALL.mult` 1 (statt `steps`), `FSIZE.lagerhalle` [10, 6], Ladentext.
