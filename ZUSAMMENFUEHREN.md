@@ -1,5 +1,10 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v266 – Luckybox-Bühne neu (auf v265)
+
+- `lucky.js`: Abschnitt „Öffnen“ ersetzt: `openLucky`, `tileHTML`, `spinLucky`, `revealLucky` neu gestaltet, dazu `lbRoll`, `lbFlash`, `lbCount`, `lbSparks`, `lbCoins`, `lbStreakHTML`, Töne `lbTone`/`lbNoise`/`lbFanfare`. `closeLucky` beendet Effekte und schreibt einen laufenden Gewinn gut. `confetti` (Auktionshaus) und `luckyShelfHTML` unverändert.
+- `style.css`: Block „v266: Luckybox“ am Ende (Klassen `lb-*`); die alten `lk-*`-Regeln bleiben für Regal und Konfetti.
+
 ## Stand v265 – Jagd: Träger-Zone nach Modell (auf v264)
 
 - `hunt.js`: `deerNeckZones()` (neu, vor `SP`), `SP.hirsch.neckS`, `SP.keiler.stich`, Radien Herz/Lunge/Haupt angepasst; `rayTube` (neu); `zoneHit` prüft `neckS`/`stich` und wertet Rumpf → Träger als `hals`.

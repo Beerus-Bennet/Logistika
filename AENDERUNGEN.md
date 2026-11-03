@@ -9,6 +9,45 @@
 
 
 
+## v266 – Luckybox: seriöser und mehr Belohnungsgefühl
+**Wunsch Bennet:** Das Öffnen der Luckyboxen leicht seriöser gestalten und mit mehr „Dopamin-Ausschuss“ für den Spieler.
+
+**Vorher (Screenshot und Testbrowser):**
+- Comic-Geschenk mit dicken Umrissen, große bunte Chancen-Kacheln und eine weiße Gewinnkarte.
+- Zwischen Antippen und Gewinn passierte wenig: kurzes Wackeln, dann lief das Band per CSS-Übergang ohne Klang und Rückmeldung.
+- Wer während des Bandlaufs schloss (Escape, Zurück), verlor den Gewinn: Die Box war schon verbraucht.
+
+**Lösung (`lucky.js` Abschnitt „Öffnen“, `style.css` Block v266):**
+- **Ruhiger, hochwertiger:**
+  - Dunkle Bühne, kleine Kopfzeile („Tagesbelohnung“, „Serienbelohnung“, „Bonus“), Titel mit Metall- bzw. Goldverlauf.
+  - Gewinnchancen dezent als schmaler Balken mit vier Spalten, aber immer sichtbar.
+  - Statt des Geschenks eine Transportkiste mit Metallrahmen, Stahlband, Nieten und Emblem; die goldene Box ist schwarz-gold mit Stern.
+- **Aufladen:** Nach dem Antippen ruckelt die Kiste immer stärker. Aus der Fuge dringt Licht, das Stufe für Stufe bis zur Farbe des Gewinns steigt (hell → grün → violett → gold), mit steigenden Tönen und kurzen Vibrationen. Dann springt der Deckel auf, mit Blitz.
+- **Band:**
+  - Eigene Bewegung statt CSS-Übergang.
+  - Leises Klicken je Feld, das Feld unter der Markierung leuchtet; epische und legendäre Felder schimmern.
+  - Am Ende rastet das Band mittig ein. Bei Episch und Legendär läuft es etwas länger.
+- **Enthüllung:**
+  - Fanfare je Seltenheit, Blitz in der Seltenheitsfarbe, Strahlenkranz (ab Selten).
+  - Die Karte dreht sich herein, das Symbol springt auf; Geldbeträge zählen hoch.
+  - Funken (Gewöhnlich, Selten) bzw. Konfetti (Episch, Legendär); bei Legendär Goldregen und ein kurzes Beben.
+  - Der Knopf erscheint nach einer kurzen Pause, damit man den Moment sieht.
+- **Fortschritt:** Unten die Serie mit sieben Feldern bis zur goldenen Box. Das ist nur eine Anzeige, die Regeln sind unverändert.
+- **Fehler behoben:** Schließen während des Öffnens schreibt den Gewinn jetzt gut (mit Hinweis), statt ihn zu verlieren.
+- **Unverändert:** Chancen, Preise und Wirkungen (`rollPrize`, `applyPrize`, `LUCKY_ODDS`), das Regal im Ziele-Fenster und das Konfetti im Auktionshaus.
+- **Töne** nur bei eingeschaltetem Spielton (`S.farm.snd`). „Bewegung reduzieren“ kürzt alles; Karte und Knopf erscheinen sofort.
+
+**Geprüft (Testbrowser Chromium, 390 × 844):**
+- Bildfolgen (zu, Aufladen, Band, Gewinn, Karte) für Gewöhnlich, Selten, Episch und Legendär sowie für die goldene Box.
+- Escape mitten im Band: Gewinn gutgeschrieben, nächste Box bleibt.
+- Kopfzeile „Bonus“ bei der Sonderfahrt-Box.
+- „Bewegung reduzieren“: Ablauf in rund 3 Sekunden fertig.
+- Keine Fehler in der Konsole.
+
+**Nicht geprüft:**
+- Am Handy (Vibration gibt es unter iOS im Browser ohnehin nicht).
+- Töne (im Testbrowser ohne Ton).
+
 ## v265 – Jagd: größere Toleranz für tödliche Schüsse am Träger
 **Wunsch Bennet:** Schüsse gingen teils direkt durch den Hals, und das Tier wirkte nur leicht verletzt.
 

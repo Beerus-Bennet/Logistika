@@ -4,6 +4,7 @@
    Sieben volle Tage in Folge geben eine goldene, eine pünktliche
    Sonderfahrt eine als Dankeschön. Beim Öffnen läuft ein Band mit Preisen
    durch und bleibt auf dem Gewinn stehen. Hauptpreis: der Goldene Bulli.
+   v266: Öffnen-Bühne neu gestaltet (siehe Abschnitt „Öffnen“), Logik unverändert.
    ========================================================================= */
 "use strict";
 
@@ -141,11 +142,56 @@ function perkChips() {
 }
 
 /* ------------------------------ Öffnen ------------------------------ */
+/* v266: Bühne neu gestaltet – ruhiger und hochwertiger (dunkle Transportkiste mit Metallkanten statt Comic-Geschenk,
+   klare Schrift, Gewinnchancen dezent, aber immer sichtbar) und mit mehr Belohnungsgefühl:
+   1. Aufladen: Die Kiste ruckelt stärker, aus der Fuge dringt Licht, das Stufe für Stufe bis zur Farbe des Gewinns steigt
+      (Gewöhnlich bleibt hell, Selten wird grün, Episch violett, Legendär gold) – mit steigenden Tönen.
+   2. Band: läuft mit leisem Klicken je Feld, wird langsamer, das Feld unter der Markierung leuchtet, am Ende rastet es mittig ein.
+   3. Enthüllung: Blitz in der Seltenheitsfarbe, Strahlenkranz, Karte dreht sich herein, Beträge zählen hoch, Funken bzw. Konfetti,
+      bei Legendär zusätzlich Goldregen und ein kurzes Beben. Danach Fortschritt zur goldenen Box.
+   Chancen, Preise und Wirkungen sind unverändert (rollPrize, applyPrize). Töne nur mit eingeschaltetem Spielton (S.farm.snd),
+   „Bewegung reduzieren“ kürzt alles auf das Nötige. */
 let lucky = null;
+const lbReduced = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+const LB_RANK = { c: 0, r: 1, e: 2, l: 3 };
 function luckyEl() {
   let el = document.getElementById("lucky");
   if (!el) { el = document.createElement("div"); el.id = "lucky"; document.body.appendChild(el); }
   return el;
+}
+const lbLater = (fn, ms) => { if (!lucky) return; const id = setTimeout(() => { if (lucky) fn(); }, ms); lucky.timers.push(id); };
+/* Töne (Web Audio, gleicher Kontext wie Hof und Jagd) */
+function lbAudio() {
+  if (typeof S === "undefined" || !S.farm || !S.farm.snd || typeof farmAC === "undefined") return null;
+  try { if (!farmAC) farmAC = new (window.AudioContext || window.webkitAudioContext)(); if (farmAC.state === "suspended") farmAC.resume(); return farmAC; } catch (e) { return null; }
+}
+function lbTone(f, d, o) {
+  const ac = lbAudio(); if (!ac) return;
+  o = o || {};
+  const t = ac.currentTime + (o.at || 0), osc = ac.createOscillator(), g = ac.createGain();
+  osc.type = o.type || "sine"; osc.frequency.setValueAtTime(f, t);
+  if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || 0.05, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  osc.connect(g); g.connect(ac.destination); osc.start(t); osc.stop(t + d + 0.03);
+}
+function lbNoise(d, vol, f0, f1) {
+  const ac = lbAudio(); if (!ac) return;
+  const b = ac.createBuffer(1, Math.floor(ac.sampleRate * d), ac.sampleRate), ch = b.getChannelData(0);
+  for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / ch.length);
+  const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter(), t = ac.currentTime;
+  f.type = "bandpass"; f.Q.value = 0.8; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d);
+  s.buffer = b; g.gain.value = vol; s.connect(f); f.connect(g); g.connect(ac.destination); s.start();
+}
+const lbTick = () => lbTone(2100 + Math.random() * 250, 0.022, { type: "square", vol: 0.016 });
+const LB_FANFARE = { c: [[880, 0]], r: [[784, 0], [1175, 0.09]], e: [[659, 0], [988, 0.08], [1319, 0.16]], l: [[523, 0], [659, 0.1], [784, 0.2], [1047, 0.3], [1319, 0.44]] };
+function lbFanfare(r) { const F = LB_FANFARE[r]; F.forEach(([f, at], i) => lbTone(f, i === F.length - 1 ? 0.7 : 0.24, { type: "triangle", vol: r === "l" ? 0.07 : 0.055, at })); }
+const lbBuzz = p => { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (_) { /* egal */ } } };
+
+function lbStreakHTML() {
+  const L = luckyState(), s = L.lastSet >= dayOf(S.time) - 1 ? L.streak || 0 : 0, k = s % 7, left = 7 - k;
+  return `<div class="lb-streak" aria-label="Serie ${s} Tage, goldene Box in ${left} Tagen">
+    <div class="lb-streak-t"><span>🔥 Serie <b>${s} ${s === 1 ? "Tag" : "Tage"}</b></span><span>💎 Goldene Box in <b>${left} ${left === 1 ? "Tag" : "Tagen"}</b></span></div>
+    <div class="lb-streak-bar">${Array.from({ length: 7 }, (_, i) => `<i class="${i < k ? "on" : ""}${i === 6 ? " gem" : ""}"></i>`).join("")}</div></div>`;
 }
 function openLucky() {
   const L = luckyState();
@@ -153,73 +199,182 @@ function openLucky() {
   if (lucky) return;
   /* goldene zuerst */
   L.boxes.sort((a, b) => (b.kind === "gold") - (a.kind === "gold"));
-  const box = L.boxes[0];
-  lucky = { box, stage: "closed" };
+  const box = L.boxes[0], gold = box.kind === "gold", odds = LUCKY_ODDS[box.kind] || LUCKY_ODDS.std, more = L.boxes.length - 1;
+  lucky = { box, stage: "closed", timers: [], raf: 0 };
   if (typeof closeModal === "function") closeModal();
   const el = luckyEl();
-  el.className = "on" + (box.kind === "gold" ? " gold" : "");
+  el.className = "on lb" + (gold ? " gold" : "");
+  el.removeAttribute("data-r"); el.removeAttribute("data-tease"); el.style.removeProperty("--rc"); el.style.removeProperty("--tc");
   document.body.classList.add("lucky-open");
-  el.innerHTML = `<div class="lk-stage">
-    <div class="lk-top"><b>${box.kind === "gold" ? "💎 Goldene Luckybox" : "🎁 Luckybox"}</b><small>${esc(box.why)}${L.boxes.length > 1 ? " · noch " + (L.boxes.length - 1) + " weitere" : ""}</small></div>
-    <div class="lk-odds" aria-label="Gewinnchancen">
-      <div class="lk-oddbar">${["c", "r", "e", "l"].map(k => `<i style="flex:${LUCKY_ODDS[box.kind][k]};--rc:${RARITY[k].col}"></i>`).join("")}</div>
-      <div class="lk-oddlist">${["c", "r", "e", "l"].map(k => `<span style="--rc:${RARITY[k].col}"><b>${LUCKY_ODDS[box.kind][k]} %</b><small>${RARITY[k].name}</small></span>`).join("")}</div>
+  const kick = gold ? "Serienbelohnung" : /Sonderfahrt/.test(box.why) ? "Bonus" : "Tagesbelohnung";
+  el.innerHTML = `<div class="lb-stage" role="dialog" aria-modal="true" aria-label="${gold ? "Goldene Luckybox" : "Luckybox"}">
+    <div class="lb-head">
+      <small class="lb-kick">${kick}</small>
+      <h2 class="lb-title">${gold ? "Goldene Luckybox" : "Luckybox"}</h2>
+      <p class="lb-sub">${esc(box.why)}${more ? ` · <b>noch ${more} ${more === 1 ? "weitere" : "weitere"}</b>` : ""}</p>
     </div>
-    <div class="lk-box" id="lkBox"><div class="lk-lid"></div><div class="lk-body"></div><div class="lk-rib"></div><div class="lk-bow"><i></i><i></i></div></div>
-    <div class="lk-hint" id="lkHint">Antippen zum Öffnen</div>
-    <div class="lk-reel" id="lkReel"><div class="lk-strip" id="lkStrip"></div><div class="lk-mark"></div></div>
-    <div class="lk-prize" id="lkPrize"></div>
-    <button class="wl-cancel" id="lkLater">Später öffnen</button>
+    <div class="lb-odds" aria-label="Gewinnchancen">
+      <div class="lb-oddbar">${["c", "r", "e", "l"].map(k => `<i style="flex:${odds[k]};--rc:${RARITY[k].col}"></i>`).join("")}</div>
+      <div class="lb-oddrow">${["c", "r", "e", "l"].map(k => `<span style="--rc:${RARITY[k].col}"><i></i>${RARITY[k].name}<b>${odds[k]} %</b></span>`).join("")}</div>
+    </div>
+    <div class="lb-scene" id="lbScene">
+      <div class="lb-rays" id="lbRays"></div>
+      <button class="lb-case" id="lbCase" aria-label="Luckybox öffnen">
+        <span class="lb-shadow"></span>
+        <span class="lb-beam"></span>
+        <span class="lb-body"><i class="lb-strap"></i><span class="lb-emb"><span>${gold ? "★" : "L"}</span></span><i class="lb-rivet a"></i><i class="lb-rivet b"></i></span>
+        <span class="lb-seam"></span>
+        <span class="lb-lid"><i class="lb-strap"></i><i class="lb-handle"></i></span>
+      </button>
+      <div class="lb-reel" id="lbReel"><div class="lb-strip" id="lbStrip"></div><div class="lb-mark"></div></div>
+      <div class="lb-prize" id="lbPrize" aria-live="polite"></div>
+      <div class="lb-flash" id="lbFlash"></div>
+    </div>
+    <p class="lb-hint" id="lbHint">Tippe auf die Kiste, um sie zu öffnen</p>
+    <div class="lb-foot" id="lbFoot">${lbStreakHTML()}
+      <div class="lb-btns" id="lbBtns"><button class="lb-later" id="lbLater">Später öffnen</button></div></div>
   </div>`;
-  $("#lkBox").onclick = () => spinLucky();
-  $("#lkLater").onclick = () => closeLucky();
+  $("#lbCase").onclick = () => spinLucky();
+  $("#lbLater").onclick = () => closeLucky();
 }
 function tileHTML(p) {
-  return `<div class="lk-tile" style="--rc:${RARITY[p.r].col}"><span>${p.icon}</span><small>${esc(p.name.replace("Hauptpreis: ", ""))}</small></div>`;
+  return `<div class="lb-tile r-${p.r}" style="--rc:${RARITY[p.r].col}"><span>${p.icon}</span><small>${esc(p.name.replace("Hauptpreis: ", ""))}</small></div>`;
 }
+function lbFlash(col, a) {
+  const f = $("#lbFlash"); if (!f || lbReduced()) return;
+  f.style.setProperty("--fc", col); f.style.setProperty("--fa", a);
+  f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+}
+/* 1. Aufladen: Licht steigt Stufe für Stufe bis zur Seltenheit des Gewinns */
 function spinLucky() {
   if (!lucky || lucky.stage !== "closed") return;
-  lucky.stage = "spin";
+  lucky.stage = "charge";
   const L = luckyState();
   L.boxes.shift();                       /* ab hier gehört der Preis dir */
   L.opened++;
   const win = rollPrize(lucky.box.kind);
   lucky.win = win;
   save();
-  const WIN = 34, tiles = [];
-  for (let i = 0; i < 42; i++) tiles.push(i === WIN ? win : rollPrize("std"));
-  const box = $("#lkBox"); box.classList.add("shake");
-  $("#lkHint").textContent = "…";
-  $("#lkLater").style.visibility = "hidden";
-  setTimeout(() => {
-    box.classList.add("open");
-    const reel = $("#lkReel"), strip = $("#lkStrip");
-    strip.innerHTML = tiles.map(tileHTML).join("");
-    reel.classList.add("on");
-    const tw = strip.firstElementChild.getBoundingClientRect().width + 8;
-    const center = reel.clientWidth / 2;
-    const jitter = (Math.random() - 0.5) * (tw * 0.5);
-    const x = -(WIN * tw + tw / 2 - center + jitter);
-    requestAnimationFrame(() => {
-      strip.style.transition = "transform 4.6s cubic-bezier(.08,.72,.12,1)";
-      strip.style.transform = `translateX(${x}px)`;
-    });
-    setTimeout(() => revealLucky(), 4800);
-  }, 700);
+  const el = luckyEl(), cs = $("#lbCase"), red = lbReduced(), top = LB_RANK[win.r], order = ["c", "r", "e", "l"];
+  $("#lbHint").textContent = ""; $("#lbBtns").classList.add("hide");
+  cs.classList.add("charge"); cs.disabled = true;
+  const step = red ? 0 : 380;
+  for (let i = 0; i <= top; i++) lbLater(() => {
+    el.dataset.tease = order[i]; el.style.setProperty("--tc", RARITY[order[i]].col);
+    cs.style.setProperty("--amp", (1 + i * 0.6).toFixed(2));
+    lbTone(330 * Math.pow(1.335, i), 0.32, { type: "triangle", vol: 0.045 }); lbBuzz(12 + i * 10);
+    if (i) lbFlash(RARITY[order[i]].col, 0.18 + i * 0.06);
+  }, 180 + i * step);
+  lbLater(() => {
+    cs.classList.add("burst"); lbFlash(RARITY[win.r].col, 0.5); lbNoise(0.45, 0.06, 500, 3200); lbBuzz(30);
+    lbLater(() => lbRoll(win), red ? 0 : 320);
+  }, red ? 250 : 180 + top * step + 650);
 }
+/* 2. Band: eigene Bewegung statt CSS-Übergang, damit es klickt, das Feld unter der Markierung leuchtet und am Ende einrastet */
+function lbRoll(win) {
+  lucky.stage = "spin";
+  const reel = $("#lbReel"), strip = $("#lbStrip"), WIN = 38, tiles = [];
+  for (let i = 0; i < 46; i++) tiles.push(i === WIN ? win : rollPrize("std"));
+  strip.innerHTML = tiles.map(tileHTML).join("");
+  reel.classList.add("on");
+  const els = [...strip.children], gap = 10, tw = els[0].getBoundingClientRect().width + gap, pad = 10, center = reel.clientWidth / 2;
+  const target = -(pad + WIN * tw + (tw - gap) / 2 - center), jit = (Math.random() - 0.5) * tw * 0.56;
+  const red = lbReduced(), D = red ? 900 : win.r === "l" ? 5600 : win.r === "e" ? 5000 : 4500, SNAP = red ? 0 : 340;
+  let t0 = null, idx = -1;
+  const ease = u => 1 - Math.pow(1 - u, 5);
+  const frame = now => {
+    if (!lucky) return;
+    if (t0 == null) t0 = now;
+    const t = now - t0;
+    let x;
+    if (t < D) x = (target + jit) * ease(t / D);
+    else { const u = Math.min(1, (t - D) / Math.max(1, SNAP)), e = u * u * (3 - 2 * u); x = target + jit * (1 - e); }
+    strip.style.transform = `translate3d(${x.toFixed(1)}px,0,0)`;
+    const i = Math.floor((center - pad - x) / tw);
+    if (i !== idx && i >= 0 && i < els.length) {
+      if (els[idx]) els[idx].classList.remove("hot");
+      els[i].classList.add("hot"); idx = i;
+      if (t < D) { lbTick(); if (t > D * 0.6) lbBuzz(4); }
+    }
+    if (t < D + SNAP) lucky.raf = requestAnimationFrame(frame);
+    else { els[WIN].classList.add("hot"); lbBuzz(18); revealLucky(); }
+  };
+  lucky.raf = requestAnimationFrame(frame);
+}
+/* Beträge in der Gewinnzeile hochzählen (erste Geldangabe im Text) */
+function lbCount(el, txt) {
+  const m = /(\d{1,3}(?:\.\d{3})*(?:,\d+)?)\s(Mio\. |Mrd\. )?€/.exec(txt);
+  if (!m || m[2] || lbReduced()) return;
+  const v = parseFloat(m[1].replace(/\./g, "").replace(",", ".")), D = 900, t0 = performance.now(), pre = txt.slice(0, m.index), post = txt.slice(m.index + m[0].length);
+  const run = now => {
+    if (!lucky || !el.isConnected) return;
+    const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = pre + (k < 1 ? money(Math.round(v * e)) : m[0]) + post;
+    if (k < 1) requestAnimationFrame(run);
+  };
+  requestAnimationFrame(run);
+}
+function lbSparks(host, n, cols, kind) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("i");
+    c.className = "lb-p " + kind;
+    const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 170;
+    c.style.background = cols[i % cols.length];
+    c.style.setProperty("--dx", (Math.cos(a) * d).toFixed(0) + "px");
+    c.style.setProperty("--dy", (Math.sin(a) * d * 0.8 - 40).toFixed(0) + "px");
+    c.style.setProperty("--rot", (Math.random() * 720 - 360).toFixed(0) + "deg");
+    c.style.animationDelay = (Math.random() * 0.18).toFixed(2) + "s";
+    host.appendChild(c);
+    setTimeout(() => c.remove(), 2200);
+  }
+}
+function lbCoins(host, n) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("i");
+    c.className = "lb-coin";
+    c.style.left = (Math.random() * 100).toFixed(1) + "%";
+    c.style.animationDelay = (Math.random() * 0.9).toFixed(2) + "s";
+    c.style.animationDuration = (1.4 + Math.random() * 0.8).toFixed(2) + "s";
+    host.appendChild(c);
+    setTimeout(() => c.remove(), 3600);
+  }
+}
+/* 3. Enthüllung */
 function revealLucky() {
-  if (!lucky || !lucky.win) return;
-  const p = lucky.win, txt = applyPrize(p);
+  if (!lucky || !lucky.win || lucky.stage === "done") return;
+  const p = lucky.win, txt = applyPrize(p), rc = RARITY[p.r], el = luckyEl(), red = lbReduced();
   lucky.stage = "done";
-  const el = $("#lkPrize"), rc = RARITY[p.r];
-  el.innerHTML = `<div class="lk-card r-${p.r}" style="--rc:${rc.col}">
-    <small>${rc.name}</small><span>${p.icon}</span><b>${esc(p.name)}</b><p>${esc(txt)}</p>
-    <button class="btn" id="lkOk">${luckyState().boxes.length ? "Nächste Box öffnen" : "Einsammeln"}</button></div>`;
-  el.classList.add("on");
-  $("#lkHint").textContent = "";
-  if (p.r === "l" || p.r === "e") confetti(el, p.r === "l" ? 60 : 30, rc.col);
-  if (navigator.vibrate) { try { navigator.vibrate(p.r === "l" ? [80, 60, 80, 60, 160] : 30); } catch (_) { /* egal */ } }
-  $("#lkOk").onclick = () => { const more = luckyState().boxes.length; closeLucky(); if (more) setTimeout(openLucky, 120); };
+  el.dataset.r = p.r; el.style.setProperty("--rc", rc.col);
+  lbFanfare(p.r);
+  lbBuzz(p.r === "l" ? [80, 60, 80, 60, 160] : p.r === "e" ? [40, 40, 60] : 30);
+  lbLater(() => {
+    lbFlash(rc.col, p.r === "l" ? 0.85 : p.r === "e" ? 0.7 : 0.5);
+    $("#lbReel").classList.add("away");
+    if (p.r !== "c") $("#lbRays").classList.add("on");
+    const pr = $("#lbPrize");
+    pr.innerHTML = `<div class="lb-card r-${p.r}" style="--rc:${rc.col}">
+      <span class="lb-card-rar">${rc.name}</span>
+      <div class="lb-card-ico"><span>${p.icon}</span></div>
+      <b class="lb-card-name">${esc(p.name)}</b>
+      <p class="lb-card-txt" id="lbTxt">${esc(txt)}</p></div>`;
+    pr.classList.add("on");
+    lbCount($("#lbTxt"), txt);
+    const scene = $("#lbScene");
+    if (!red) {
+      const cols = [rc.col, "#ffffff", p.r === "l" ? "#fff2b0" : "#9fd8ff"];
+      lbSparks(scene, p.r === "l" ? 70 : p.r === "e" ? 44 : p.r === "r" ? 22 : 10, cols, p.r === "c" || p.r === "r" ? "spark" : "conf");
+      if (p.r === "l") { lbCoins(el, 46); el.classList.add("quake"); lbLater(() => el.classList.remove("quake"), 650); }
+    }
+    const more = luckyState().boxes.length;
+    lbLater(() => {
+      const bt = $("#lbBtns");
+      bt.innerHTML = `<button class="lb-go" id="lkOk">${more ? "Nächste Box öffnen" : "Einsammeln"}${more ? `<small>noch ${more}</small>` : ""}</button>${more ? `<button class="lb-later" id="lbLater">Später</button>` : ""}`;
+      bt.classList.remove("hide");
+      $("#lkOk").onclick = () => { const m = luckyState().boxes.length; closeLucky(); if (m) setTimeout(openLucky, 120); };
+      const lt = $("#lbLater"); if (lt) lt.onclick = () => closeLucky();
+      const ok = $("#lkOk"); if (ok) try { ok.focus({ preventScroll: true }); } catch (e) { /* egal */ }
+    }, red ? 0 : 700);
+  }, red ? 0 : 380);
 }
 function confetti(host, n, col) {
   const cols = [col, "#ffffff", "#19b8c9", "#ff8a3d", "#2fa85c"];
@@ -237,9 +392,15 @@ function confetti(host, n, col) {
   }
 }
 function closeLucky() {
+  if (lucky) {
+    lucky.timers.forEach(clearTimeout); cancelAnimationFrame(lucky.raf);                       /* v266: laufende Effekte beenden */
+    /* v266: Wer während des Öffnens schließt (Escape, Zurück), verliert den Gewinn nicht – vorher war er weg */
+    if (lucky.win && lucky.stage !== "done") { const p = lucky.win; lucky.stage = "done"; const txt = applyPrize(p); toast(p.icon + " " + p.name + ": " + txt, "ok"); }
+  }
   lucky = null;
   const el = document.getElementById("lucky"); if (!el) return;
   el.className = ""; el.innerHTML = "";
+  el.removeAttribute("data-r"); el.removeAttribute("data-tease"); el.style.removeProperty("--rc"); el.style.removeProperty("--tc");
   document.body.classList.remove("lucky-open");
   if (typeof renderGoalsChip === "function") renderGoalsChip();
 }
