@@ -166,6 +166,34 @@ vm.runInContext("function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 vm.runInContext("this.HUNT = HUNT;", C4);
 const H4 = C4.HUNT, M4 = H4._m;
 const whole = (b, name) => { assert.ok(b.v.length % 27 === 0 && b.v.length > 0, name + " ganze Dreiecke"); for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(name + " NaN bei " + i); return b.v.length / 27; };
+/* v265: Schüsse von der Seite durch den sichtbaren Träger des Hirschs (Rasterpunkte der Silhouette) sind tödlich */
+test("Träger v265: Schuss durch den sichtbaren Hals ist tödlich, nie Weichschuss", () => {
+  const nk = (p, nrx) => { const r = H4.rot(p, nrx, 0, 0), S0 = H4.SP.hirsch; return [S0.neckP[0] + r[0], S0.neckP[1] + r[1], S0.neckP[2] + r[2]]; };
+  const mb = M4.deerNeck(), V = []; for (let i = 0; i < mb.v.length; i += 9) V.push([mb.v[i], mb.v[i + 1], mb.v[i + 2]]);
+  const B = H4.SP.hirsch.body, outside = p => (p[0] / B.r[0]) ** 2 + ((p[1] - B.c[1]) / B.r[1]) ** 2 + ((p[2] - B.c[2]) / B.r[2]) ** 2 > 1;   /* Halsansatz im Rumpf ist unsichtbar */
+  [-0.35, 0, 0.6].forEach(nrx => {
+    const pose = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx, nry: 0, hrx: 0.2, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
+    const P = V.map(p => nk(p, nrx)).filter(outside); let y0 = 9, y1 = -9, z0 = 9, z1 = -9;
+    P.forEach(p => { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); z0 = Math.min(z0, p[2]); z1 = Math.max(z1, p[2]); });
+    let n = 0, kill = 0, soft = 0;
+    for (let y = y0; y <= y1; y += 0.02) for (let z = z0; z <= z1; z += 0.02) {
+      if (!P.some(p => Math.abs(p[1] - y) < 0.018 && Math.abs(p[2] - z) < 0.018)) continue;
+      const r = H4.zoneHit("hirsch", pose, [6, y, z], [-1, 0, 0]); n++;
+      if (r && H4.ZONE[r.zone].kill) kill++; if (r && r.zone === "koerper") soft++;
+    }
+    assert.ok(kill / n >= 0.88, "tödlich " + Math.round(kill / n * 100) + " % bei nrx " + nrx);
+    assert.strictEqual(soft, 0, "Weichschuss am Hals bei nrx " + nrx);
+  });
+  /* Kehle (vorn am Hals) und Stich (Brustansatz vor dem Blatt) */
+  const P0 = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: -0.35, nry: 0, hrx: 0.2, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
+  const throat = nk([0, 0.25, 0.2], -0.35), stich = nk([0, -0.12, 0.08], -0.35);
+  assert.strictEqual(H4.zoneHit("hirsch", P0, [6, throat[1], throat[2]], [-1, 0, 0]).zone, "hals");
+  assert.ok(H4.ZONE[H4.zoneHit("hirsch", P0, [6, stich[1], stich[2]], [-1, 0, 0]).zone].kill, "Stich");
+  /* Keiler: Stich unter dem Träger tödlich, Keule bleibt Weichschuss */
+  const PK = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: -0.55, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
+  assert.strictEqual(H4.zoneHit("keiler", PK, [6, 0.42, 0.45], [-1, 0, 0]).zone, "hals");
+  assert.strictEqual(H4.zoneHit("keiler", PK, [6, 0.55, -0.3], [-1, 0, 0]).zone, "koerper");
+});
 test("Modelle v135: Keiler und Fasan ganz, ohne NaN, im Budget", () => {
   const T = { boarBody: whole(M4.boarBody(), "boarBody"), boarHead: whole(M4.boarHead(0.6, 18), "boarHead"), boarUpperV: whole(M4.boarUpper(true), "boarUpper"), boarUpperH: whole(M4.boarUpper(false), "boarUpperH"),
     boarLower: whole(M4.boarLower(), "boarLower"), boarLeg: whole(M4.boarLeg(true), "boarLeg"), phBody: whole(M4.phBody(), "phBody"), phHead: whole(M4.phHead(), "phHead"), phLeg: whole(M4.phLeg(), "phLeg") };
