@@ -1562,3 +1562,7 @@ Basis main dcbfc26. Änderungen: avatar.js, corp.js, officefp.js, style.css, ind
 
 ## v283 – Jagd
 Basis main 7321acd. Geändert: hunt.js; Cache-Verweise in index.html und sw.js (v283); AENDERUNGEN.md, diese Datei; neu hunt-v283.test.js. Nur diese sechs Dateien als ZIP. Keine Migration; v282 bleibt erhalten. Bestehende Jagdtests via Kopie nach tests/ ausführen: node tests/hunt.test.js. Zusätzliche Tests: node hunt-v283.test.js. Keine zusätzlichen Abhängigkeiten. Optik der Schulter-/Hüftansätze, acht erbgutbasierte Nuancen, Temperamente, Wind und soziale Unruhe. Details und Prüfgrenzen in AENDERUNGEN.md.
+
+
+## v284 – Büro-Korrekturen
+Basis main 5b36609 (v283), vor Lieferung frisch abgeglichen. Geändert: officefp.js, style.css, index.html, sw.js (v284), AENDERUNGEN.md und diese Datei; neu office-workers-v284.test.js. Sieben Dateien als ZIP, bestehende Jagdänderungen aus main unverändert. Keine Spielstandmigration. Details und Testgrenzen siehe AENDERUNGEN.md.

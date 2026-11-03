@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v284 – Büro: Hände, Notfallverhalten, Monitor und Sprechblasen
+**Basis:** GitHub main 5b36609 (v283), abschließend erneut abgeglichen; Jagdänderungen bleiben unverändert.
+- Handgelenk: zusätzlicher abgerundeter Übergang zwischen Ärmel und Handfläche. Bei Tischkontakten orientiert sich die Hand am Unterarm statt starr in Figurenrichtung; übermäßiges Abknicken und Rollen begrenzt. Gezielte Stift-, Tassen- und Telefongriffe bleiben erhalten.
+- Trinken: freie Hand ruht auf dem Tisch, statt gleichzeitig weiterzutippen.
+- Notfall: Nach der ersten Schreckphase bleiben beide Hände in Ruhe. Arbeitsziele, Stift, Mausbewegung, Telefon-/Tassenanimationen und Tätigkeitswechsel sind während des Schocks unterbrochen. Hilferufe können weiterhin gesprochen werden. Bisher fielen die Hände nach 3,4 Sekunden auf Tastatur und Maus zurück.
+- Monitor: Überschrift auf die Rollenbezeichnung verkürzt, rechts bleibt Platz für den Tag. Pixelbasierter Textumbruch/Abkürzung; lange Monatsstatistiken werden vollständig über mehrere Zeilen angezeigt. Zusammenfassungen beginnen direkt unter der Liste statt erst am unteren Bildschirmrand.
+- Sprechblasen: Position anhand der tatsächlichen Blasengröße auf die sichtbare Fläche begrenzt; hinter der Kamera ausgeblendet; lange Namen umbrechen. Kein Abschneiden am rechten Bildschirmrand mehr.
+**Geprüft:** `node office-workers-v284.test.js` durchläuft die echte Figurenanimation aller sieben Tätigkeiten, prüft endliche Gelenkpositionen, Armreichweite, Schreibkontakthöhe (max. etwa 7 mm im Test), Notfall nach der Schreckphase, Monitor-Umbruch und Sprechblasengrenzen. `node review-v282.test.js`, `node office-limits.test.js`, `node hunt-v283.test.js` bestanden; 21 ursprüngliche Jagdtests ebenfalls bestanden. Monitorcanvas zusätzlich als Bild gerendert und kontrolliert. JavaScript-Syntax geprüft. Kein visueller Live-Browser-/iPhone-Test; keine Aussage über vollständige Kollisionsfreiheit aller denkbaren Posen.
+
+
 ## v283 – Jagd: runde Laufansätze, individuelle Decken und lebendigeres Revier
 **Basis:** GitHub main 7321acd, v282 bleibt vollständig erhalten.
 - Hirsch: Obere Laufprofile reichen jetzt in den Gelenkbereich hinein; runde Schulter-/Hüftansätze überlappen den Rumpf statt sichtbarer flacher Schnittflächen. Keiler erhalten ebenfalls runde, kräftigere Ansätze. Gelenkachsen, Größe und Lage der kritischen Trefferzonen unverändert.

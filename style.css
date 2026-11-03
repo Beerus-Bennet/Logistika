@@ -4514,3 +4514,7 @@ body.tab-farm #farm #farmSheet.mach .fs-in{position:relative;left:auto;right:aut
  .cs-win .cs-wrap{gap:5px}
  .cs-win .cs-head,.cs-win .cs-head.long{font-size:21px}
 }
+
+/* v284: Sprechblasen bleiben auch auf schmalen Ansichten vollständig sichtbar. */
+.ofp-say{max-width:min(220px,calc(100% - 16px));overflow-wrap:anywhere}
+.ofp-say.on{transform:translate(-50%,-100%)}

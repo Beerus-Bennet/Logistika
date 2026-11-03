@@ -526,6 +526,8 @@ const OFFICE3D = (() => {
   function handMesh(L, side, grip) {
     const b = new G3.MB(), c = L.skin, cs = mixH(L.skin, L.skinS, 0.35);
     grip = GRIPS[grip] ? grip : "rest";
+    /* v284: Verbindendes Handgelenk bis zum Ärmel statt einer losen Handfläche. */
+    b.sphere(0.021, 12, 8, c, { z: -0.022, sx: 0.8, sy: 0.62, sz: 1.1, smooth: true });
     b.sphere(0.03, 12, 8, c, { sx: 0.92, sy: 0.36, sz: 1.13, smooth: true });
     for (let i = 0; i < 4; i++) {
       const f = fingerPts(side, grip, i), r = FING[i][3] * 0.82;
@@ -791,9 +793,22 @@ const OFFICE3D = (() => {
   }
   const setNode = (n, p, r) => { n.x = p[0]; n.y = p[1]; n.z = p[2]; n.rx = r[0]; n.ry = r[1]; n.rz = r[2]; };
 
+  /* v284: Bei Tischkontakt folgt die Hand der Unterarmrichtung, bleibt aber mit der Handfläche unten.
+     Telefon- und Henkelgriffe behalten ihre gezielt vorgegebene Ausrichtung. */
+  function deskWrist(a, I) {
+    if (!["type", "mouse", "rest", "spread"].includes(I.g)) return I.r;
+    const d = a.E && a.H ? a.H.map((v, i) => v - a.E[i]) : I.c.map((v, i) => v - a.S[i]);
+    if (Math.hypot(d[0], d[2]) < 0.01) return I.r;
+    return [clamp1(I.r[0], -0.3, 0.45), clamp1(Math.atan2(d[0], d[2]), -1.25, 1.25), clamp1(I.r[2], -0.22, 0.22)];
+  }
+  function bubblePosition(x, y, w, h, boxW, boxH) {
+    const pad = 8, half = Math.min(boxW, w - pad * 2) / 2;
+    return [clamp1(x, pad + half, Math.max(pad + half, w - pad - half)),
+      clamp1(y, boxH + pad + 12, Math.max(boxH + pad + 12, h - pad))];
+  }
   function animFigure(F, dt, now, pl) {
-    F.actT += dt;
-    if (F.actT >= F.actDur) { if (F.act === "gift") giftDone(F); pickAct(F); }
+    if (!F.shock && !O.deaths) F.actT += dt;
+    if (!F.shock && !O.deaths && F.actT >= F.actDur) { if (F.act === "gift") giftDone(F); pickAct(F); }
     const A = F.act, P = F.P, k = F.actT, D = F.actDur, t = O.t, [L, Rr] = F.arm, reduce = O.reduced;
     const attend = now < F.attendUntil, headset = F.L.acc === "headset";
     const tap = ph => reduce ? 0 : -0.003 * Math.pow(Math.max(0, Math.sin(t * F.tF + ph)), 6);
@@ -838,6 +853,7 @@ const OFFICE3D = (() => {
       if (up > 0.9) { look = [Math.sin(t * 0.31 + F.bP) * 0.45, 0.92 + Math.sin(t * 0.47) * 0.08, 1.25]; headRz = -0.18; }
       carrying = k > 0.8 && k < D - 0.8;
     } else if (A === "cup") {
+      IL = restOn(F, 1); /* v284: Beim Trinken ruht die freie Hand statt weiterzutippen. */
       const pl2 = mugPlan(F, -1, PI, F.cupKeys || (F.cupKeys = cupKeys(D)), k, P.cup);
       cupP = { base: pl2.base, tilt: pl2.tilt, g: grab(0.55, 0.85, D - 1.1, D - 0.85) };
       if (k < D - 0.9) { const r = HROT.cup(-1); IR = want(mugAnchor(pl2.base, PI, pl2.tilt), k < 0.55 ? "open" : "cup", -1, [r[0] - pl2.tilt, r[1], r[2]], "cup"); if (pl2.base[1] > 0.62) IR.el = [-0.17, 0.56, 0.17]; }
@@ -864,7 +880,10 @@ const OFFICE3D = (() => {
     const seeW = shock ? (shock.F.dead ? deadHead(shock.F) : shock.pt) : fright ? fright.pt : null;
     if (shock) {
       if (O.t - shock.at < 3.4) { IL = want(nodePoint(F.head, [0.03, 0.08, 0.17]), "open", 1); IR = want(nodePoint(F.head, [-0.03, 0.08, 0.17]), "open", -1); }
-      lean = 0.0; writing = false; talk = false;
+      else { IL = restOn(F, 1); IR = restOn(F, -1); }
+      /* v284: Der Notfall unterbricht auch Gegenstände und Blickautomatiken. */
+      lean = 0; writing = false; talk = now < F.talkUntil;
+      mouseOn = false; cupP = null; phoneP = null; carrying = false; sip = 0;
     }
     if (seeW) look = toLoc(F, seeW);
     let toPl = false;
@@ -903,7 +922,8 @@ const OFFICE3D = (() => {
       a.S = torsoPt(F, a.side * F.L.sh, 0.33, 0);
       a.pole = [a.side * 0.28, -1, 0.12]; a.el = I.el || null;
       const kr = 1 - Math.exp(-dt * 7);
-      a.r = a.r ? a.r.map((v, i) => angTo(v, I.r[i], kr)) : I.r.slice();
+      const wrist = deskWrist(a, I);
+      a.r = a.r ? a.r.map((v, i) => angTo(v, wrist[i], kr)) : wrist.slice();
       if (a.g !== I.g) { a.g = I.g; a.hand.mesh = F.M("hand:" + a.side + ":" + F.L.skin + ":" + I.g, () => handMesh(F.L, a.side, I.g)); }
       const off = R3(a.r, offOf(a.side, I.o)), back = R3(a.r, [0, 0, -PALM]);
       const goal = I.c.map((v, i) => v - off[i] + back[i]);
@@ -994,18 +1014,34 @@ const OFFICE3D = (() => {
     } else {
       title = "Zoll & Papiere";
       lines.push("Aufschlag auf Aufträge: +" + Math.round(baseBonus(b) * 1000) / 10 + " %");
-      lines.push("Zollteam: " + b.staff.filter(s => s.role === "zoll").length + " Person(en)");
+      lines.push("Zollteam: " + b.staff.filter(s => s.role === "zoll").length + " Beschäftigte");
     }
     const n = monthN(p);
     lines.push("Mein Monat: " + n + " " + monthUnit(p.role, n));
     return { title, R, lines, day: dayOf(S.time) };
+  }
+  /* v284: Pixelbreite statt Zeichenanzahl; lange Statuszeilen umbrechen. */
+  function fitScreenText(g, text, width) {
+    let out = String(text);
+    if (g.measureText(out).width <= width) return out;
+    while (out.length && g.measureText(out + "…").width > width) out = out.slice(0, -1);
+    return out + "…";
+  }
+  function screenLines(g, text, width) {
+    const out = []; let line = "";
+    String(text).split(/\s+/).forEach(word => {
+      const next = line ? line + " " + word : word;
+      if (line && g.measureText(next).width > width) { out.push(line); line = word; } else line = next;
+    });
+    if (line) out.push(line);
+    return out.map(l => fitScreenText(g, l, width));
   }
   function screenCanvas(c, b, p) {
     const g = c.getContext("2d"), D = screenData(b, p), W = c.width, Hh = c.height;
     g.fillStyle = "#eef3f9"; g.fillRect(0, 0, W, Hh);
     g.fillStyle = "#2f6fed"; g.fillRect(0, 0, W, 26);
     g.fillStyle = "#fff"; g.font = "800 14px 'Baloo 2', system-ui, sans-serif"; g.textBaseline = "middle";
-    g.fillText("LOGISTIKA · " + D.title, 8, 14);
+    g.fillText(fitScreenText(g, D.title, W - 72), 8, 14);
     g.textAlign = "right"; g.font = "700 12px system-ui, sans-serif"; g.fillText("Tag " + D.day, W - 8, 14); g.textAlign = "left";
     let y = 40;
     if (p.role === "disp" || p.role === "ums") {
@@ -1016,13 +1052,15 @@ const OFFICE3D = (() => {
     g.font = "700 12px system-ui, sans-serif";
     D.R.forEach(([n, s, on]) => {
       g.fillStyle = "#ffffff"; g.fillRect(8, y - 9, p.role === "fahr" || p.role === "zoll" ? W - 16 : W - 108, 18);
-      g.fillStyle = "#22303f"; g.fillText(n.length > 18 ? n.slice(0, 17) + "…" : n, 12, y);
+      g.fillStyle = "#22303f"; g.fillText(fitScreenText(g, n, (p.role === "fahr" || p.role === "zoll" ? W - 24 : W - 116) - g.measureText(s).width - 8), 12, y);
       g.fillStyle = on ? "#2f6fed" : "#3f9a5a"; g.textAlign = "right"; g.fillText(s, (p.role === "fahr" || p.role === "zoll" ? W - 12 : W - 112), y); g.textAlign = "left";
       y += 21;
     });
-    y = Math.max(y + 2, Hh - 12 - (D.lines.length - 1) * 16);
-    g.fillStyle = "#22303f"; g.font = "700 11.5px system-ui, sans-serif";
-    D.lines.forEach((l, i) => g.fillText(l, 8, y + i * 16 - (D.lines.length - 1) * 0));
+    y += 4;
+    g.fillStyle = "#22303f"; g.font = "700 11px system-ui, sans-serif";
+    const lines = D.lines.flatMap(l => screenLines(g, l, W - 16));
+    const step = Math.min(14, (Hh - 10 - y) / Math.max(1, lines.length));
+    lines.forEach((line, i) => g.fillText(line, 8, y + i * step));
     return JSON.stringify(D);
   }
 
@@ -1319,7 +1357,10 @@ const OFFICE3D = (() => {
     /* Sprechblase folgt dem Kopf */
     if (O.sayAt) {
       const p = O.R.project(O.sayAt.x, 1.62, O.sayAt.z), el = O.el.querySelector("#ofpSay");
-      if (el && p && p[2] < 1) { el.style.left = p[0] + "px"; el.style.top = p[1] + "px"; }
+      if (el && p && p[2] < 1) {
+        const pos = bubblePosition(p[0], p[1], O.el.clientWidth, O.el.clientHeight, el.offsetWidth, el.offsetHeight);
+        el.style.left = pos[0] + "px"; el.style.top = pos[1] + "px"; el.style.visibility = "visible";
+      } else if (el) el.style.visibility = "hidden";
       if (now > O.sayUntil) { O.sayAt = null; if (el) el.classList.remove("on"); }
     }
     /* Bildschirme: höchstens ein Bild je Durchgang, nur wenn sich die Daten geändert haben */
