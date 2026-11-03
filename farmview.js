@@ -230,7 +230,7 @@ function buildObjNode(o) {
   const [cx, cz] = farmCenter(o);
   /* Reusen im See: die Modelle rechnen mit dem tieferen Wasser der alten Kaikante */
   /* Verkaufsstand am Straßenrand: ein Stück zur Straße hin (nicht in Mauer oder Zaun) */
-  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: o.r ? (o.t === "sw_lkw" ? Math.PI / 2 : -Math.PI / 2) : 0 });   /* v208: Stellplatz mit offener Seite zum Weg */
+  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: farmYaw(o) });   /* v208: Stellplatz mit offener Seite zum Weg */
   const parts = {};
   if (o.t === "mill") {
     const h = FM.MILL_HUB;
@@ -499,7 +499,7 @@ function lkwPad() { const o = farmObj1("sw_lkw"); if (!o) return null; const [x,
 /* v169: vom Stellplatz nach Süden zum Wegknick (−41 / −21) und dann auf dem Waldweg zur Straße – kein Weg mehr durch die Gebäude */
 function lkwRoute(p) { return [[p.x, p.z], [-43.4, p.z], [-42.0, p.z + 0.25], [-41.25, p.z + 1.0], [-41, p.z + 2.2]].concat(SAW_ROAD.slice(1)); }   /* v208: gerade aus der Bucht, im Bogen auf den Hauptweg nach Süden */
 /* v208: Drehung von Stellplatz und geparktem Laster – Front zur offenen Seite (Zufahrt), Heck an den Radstoppern */
-function lkwRy() { const o = farmObj1("sw_lkw"); return o && o.r ? Math.PI / 2 : 0; }
+function lkwRy() { const o = farmObj1("sw_lkw"); return o ? farmYaw(o) : 0; }
 /* Fahrer/in im Fahrzeug: Platz hinterm Steuer je Modell */
 const DRIVER_AT = { van: { x: 0.28, y: 0.42, z: 0.55, s: 0.82 }, moped: { x: 0, y: 0.3, z: -0.12, s: 0.8 }, bike: { x: 0, y: 0.28, z: -0.25, s: 0.8 }, truck: { x: 0.38, y: 0.86, z: 1.35, s: 0.82 } };
 const DRIVER_LOOK = { shirt: 0x2f6fb0, pants: 0x2a3a4a, skin: 0xf2c9a0, hair: 0x7a3a22, seed: 7 };
@@ -1818,7 +1818,7 @@ function movePlace(x, z) {
   P.x = clamp(x, R.x0, R.x1 - P.w); P.z = clamp(z, R.z0, R.z1 - P.d);
   const cx = P.x + P.w / 2 - FG / 2, cz = P.z + P.d / 2 - FG / 2;
   P.ghost.x = P.mark.x = cx; P.ghost.z = P.mark.z = cz;
-  P.ghost.ry = P.r ? -Math.PI / 2 : 0;
+  P.ghost.ry = farmYaw(P.proto);
   P.ok = farmFits(P.x, P.z, P.w, P.d, P.move ? P.move.id : null, P.proto.t, P.proto.k);
   P.mark.tint = P.ok ? [0.3, 0.85, 0.4, 0.75] : [0.95, 0.25, 0.25, 0.75];
   P.ghost.tint = P.ok ? null : [0.95, 0.3, 0.3, 0.35];
@@ -1827,7 +1827,8 @@ function movePlace(x, z) {
 function rotatePlace() {
   const P = FV.place;
   if (!P || noRotate(P.proto.t)) return;
-  P.r = P.r ? 0 : 1;
+  /* v273: Nach vier Klicks wieder in der Ausgangsrichtung. */
+  P.r = (P.r + 1) % 4;
   P.proto.r = P.r;
   const [w, d] = farmSize(P.proto);
   P.w = w; P.d = d;
@@ -1919,7 +1920,7 @@ function renderPlaceBar() {
   el.className = "on";
   el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
-    ${rot ? `<button class="fpl-b" id="fpRot">↻</button>` : ""}
+    ${rot ? `<button class="fpl-b" id="fpRot" aria-label="Um 90 Grad drehen" title="Um 90 Grad drehen">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : zn === "wild" ? "rund um den Hof" : "auf den Hof"}">${zn === "yard" ? "🪚" : zn === "wild" ? "🌳" : "🏡"}</button>`).join("")}
     ${P.move && P.move.t === "tree" && typeof fruitFell === "function" ? `<button class="fpl-b" id="fpFell" title="Fällen">🪓</button>` : ""}
     <button class="fpl-b ok${P.ok ? "" : " disabled"}" id="fpOk">✓</button>`;

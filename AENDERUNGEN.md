@@ -9,6 +9,10 @@
 
 
 
+## v273 – Gebäude in alle vier Richtungen drehen
+
+Der Drehen-Button wechselte bisher nur zwischen 0° und 90°. Jetzt folgen 90°, 180°, 270° und nach dem vierten Klick wieder 0°. Vorschau und fertiges Gebäude nutzen dieselbe Drehung; rechteckige Stellflächen tauschen Breite und Tiefe nur bei ungeraden Vierteldrehungen. Bauplatz-Stapel, Lkw-Ausrichtung, Hallenwachstum und Personal-Wegecache berücksichtigen die vier Richtungen. Vorhandene Ausrichtungen 0/1 bleiben erhalten. Geprüft in Chromium: vier Drehungen eines bestehenden Auftragsbretts samt Bestätigen, rechteckige Hallenmaße und Speichern/Neuladen bei 270°. Syntaxprüfung der geänderten Skripte erfolgreich. Nicht auf einem echten Handy geprüft.
+
 ## v272 – Runde Ecken am Auswahlbereich
 
 Die dunkle Navigationsleiste unten rechts hatte eckige Außenkanten. Der gesamte Auswahlbereich erhält 18 px abgerundete Ecken; Inhalte werden an der Rundung abgeschnitten. CSS-Cache und Service-Worker-Version aktualisiert. Geprüft: Chromium auf Desktop- und Mobilbreite, Navigation weiterhin bedienbar. Nicht auf einem echten Handy geprüft.
