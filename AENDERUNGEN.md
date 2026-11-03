@@ -9,6 +9,12 @@
 
 
 
+## v277 – Schatten an linken und rechten Bildrändern vollständig
+
+Der Schattenausschnitt war unabhängig von Fensterbreite, Zoom und Kamerablick auf eine feste Größe begrenzt. Deshalb wurden insbesondere Zaun- und Baumschatten mitten im sichtbaren Bild abgeschnitten. Die Schattenkamera umfasst jetzt die sichtbare Bodenfläche und hohe Schattenwerfer; ihre Mitte rastet weiterhin auf Schattentexel. Der bisherige lokale Ausschnitt bleibt als Mindestgröße erhalten, Blickrichtungen über den Horizont werden nicht unbegrenzt erweitert.
+
+Geprüft: 144 Abdeckungsprüfungen über Hochformat, Quadrat und Breitbild, zwei Blickrichtungen und drei Kamerapositionen; der Regressionstest scheitert mit der alten Kameraberechnung. Syntaxprüfung und git diff --check erfolgreich. Browserprüfung und Vorher-/Nachher-Aufnahmen ergänzen die Prüfung. Nicht auf einem echten Handy geprüft.
+
 ## v276 – Arbeitsprinzipien in `CLAUDE.md`
 **Wunsch Bennet:** Die Hinweise aus dem Repo `andrej-karpathy-skills` (nach Prüfung auf Schadcode: nur Text, keine Skripte) für Claude einbinden.
 
