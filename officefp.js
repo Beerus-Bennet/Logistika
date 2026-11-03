@@ -150,7 +150,10 @@ const OFFICE3D = (() => {
       else glow.box(0.6, 0.36, 0.008, 0x1d2a38, { x: mx, y: 0.97, z: z - 0.036 });
       /* Tastatur mit Tastenreihen, Mauspad, Block mit Linien, Papierstapel, Telefon */
       st.box(0.44, 0.018, 0.15, 0x2a2a30, { x: mx - 0.04, y: 0.76, z: z + 0.25 });
-      for (let r = 0; r < 4; r++) st.box(0.4, 0.006, 0.022, 0x4a4f58, { x: mx - 0.04, y: 0.778, z: z + 0.198 + r * 0.033 });
+      /* v282: Einzelne Tasten mit Zwischenräumen statt vier durchgehender Balken. */
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 12; k++)
+        st.box(0.027, 0.006, 0.022, k === 11 ? 0x7b8da1 : 0x657080, { x: mx - 0.222 + k * 0.033, y: 0.778, z: z + 0.198 + r * 0.026 });
+      st.box(0.18, 0.006, 0.022, 0x8b96a4, { x: mx - 0.04, y: 0.778, z: z + 0.302 });
       st.box(0.22, 0.004, 0.19, 0x2f4a6a, { x: mx + 0.31, y: 0.76, z: z + 0.25 });
       if (!p) {
         st.box(0.15, 0.008, 0.21, 0xf6f1d8, { x: mx + 0.55, y: 0.76, z: z + 0.33, ry: -0.2 });
@@ -442,8 +445,12 @@ const OFFICE3D = (() => {
         });
         fz = 0.012; break;
     }
-    b.box(0.056, 0.03, 0.005, 0xffffff, { x: 0.075, y: 0.25, z: f + fz + 0.0025 });
-    b.box(0.056, 0.01, 0.006, ROLE_COL[L.role] || 0x3f78c8, { x: 0.075, y: 0.27, z: f + fz + 0.003 });
+    /* v282: Gefasstes Namensschild, getrennte Tiefen verhindern Flimmern. */
+    const badgeZ = f + fz + 0.006;
+    b.box(0.072, 0.042, 0.004, 0x263747, { x: 0.075, y: 0.244, z: badgeZ });
+    b.box(0.066, 0.036, 0.002, 0xf5f5ef, { x: 0.075, y: 0.247, z: badgeZ + 0.003 });
+    b.box(0.066, 0.008, 0.001, ROLE_COL[L.role] || 0x3f78c8, { x: 0.075, y: 0.275, z: badgeZ + 0.0045 });
+    [0.258, 0.251].forEach((y, i) => b.box(i ? 0.029 : 0.045, 0.002, 0.001, 0x596574, { x: 0.07, y, z: badgeZ + 0.0045 }));
     return b;
   }
   /* Becken auf dem Sitz, Oberschenkel waagerecht, Unterschenkel senkrecht, Füße flach auf dem Boden */
@@ -496,7 +503,7 @@ const OFFICE3D = (() => {
   function fingerPts(side, grip, i) {
     const G = GRIPS[grip], [m, l1, l2] = FING[i], [a1, a2] = G.f[i], fx = -side * FAN[i] * (G.fan || 0);
     const d1 = nrm([fx, -Math.sin(a1), Math.cos(a1)]), d2 = nrm([fx, -Math.sin(a1 + a2), Math.cos(a1 + a2)]);
-    const p0 = [-side * m, 0, 0.031], p1 = p0.map((v, k) => v + d1[k] * l1);
+    const p0 = [-side * m, 0, 0.023], p1 = p0.map((v, k) => v + d1[k] * l1);
     return { p0, p1, p2: p1.map((v, k) => v + d2[k] * l2), d1, d2 };
   }
   function thumbPts(side, grip) {
@@ -519,9 +526,9 @@ const OFFICE3D = (() => {
   function handMesh(L, side, grip) {
     const b = new G3.MB(), c = L.skin, cs = mixH(L.skin, L.skinS, 0.35);
     grip = GRIPS[grip] ? grip : "rest";
-    b.sphere(0.03, 12, 8, c, { sx: 0.98, sy: 0.4, sz: 1.13, smooth: true });
+    b.sphere(0.03, 12, 8, c, { sx: 0.92, sy: 0.36, sz: 1.13, smooth: true });
     for (let i = 0; i < 4; i++) {
-      const f = fingerPts(side, grip, i), r = FING[i][3];
+      const f = fingerPts(side, grip, i), r = FING[i][3] * 0.82;
       b.sphere(r * 1.08, 7, 5, c, { x: f.p0[0], y: f.p0[1], z: f.p0[2], smooth: true });
       limb(b, f.p0, f.d1, FING[i][1], r, r, c);
       b.sphere(r * 0.98, 7, 5, c, { x: f.p1[0], y: f.p1[1], z: f.p1[2], smooth: true });
@@ -561,7 +568,15 @@ const OFFICE3D = (() => {
   const MUG_HANDLE = [0.066, 0.057, 0], MUG_RIM = 0.04, MUG_H = 0.108;
   function mugMesh(c) { const b = OFFICE_KITCHEN.cupMesh(c); b.cyl(0.0358, 0.0358, 0.0015, 16, 0x59321b, { y: 0.086, top: 0x82512c }); return b; }
   function phoneMesh() { const b = new G3.MB(); b.box(U(0.075), U(0.01), U(0.15), 0x1d1d20, { y: 0 }); b.box(U(0.064), U(0.002), U(0.13), 0x2c4a6a, { y: U(0.01) }); return b; }
-  function mouseMesh() { const b = new G3.MB(); b.sphere(U(0.035), 10, 6, 0x2a2a30, { sx: 0.85, sy: 0.45, sz: 1.35, y: U(0.004), smooth: true }); return b; }
+  /* v282: Abgerundete Maus mit zwei Tasten, Trennfuge und Scrollrad. */
+  function mouseMesh() {
+    const b = new G3.MB();
+    b.sphere(U(0.035), 16, 10, 0x303942, { sx: 0.85, sy: 0.45, sz: 1.35, y: U(0.004), smooth: true });
+    [-1, 1].forEach(side => b.sphere(U(0.014), 12, 7, 0x586777, { x: U(side * 0.014), y: U(0.014), z: U(-0.019), sx: 0.84, sy: 0.32, sz: 1.5, smooth: true }));
+    b.box(U(0.002), U(0.002), U(0.032), 0x111b24, { y: U(0.019), z: U(-0.014) });
+    b.sphere(U(0.005), 10, 6, 0x98a6b4, { y: U(0.021), z: U(-0.012), sy: 0.65, sz: 1.6, smooth: true });
+    return b;
+  }
   function penMesh() { const b = new G3.MB(); b.cyl(0.0035, 0.0035, 0.09, 8, 0x2a4a8a, { y: -0.045 }); return b; }
   /* v263: Schreibblock mit Linien (Meter, Knoten mit 1/FS) – die Person zieht ihn zum Schreiben heran und schiebt ihn danach zurück */
   function noteMesh() {

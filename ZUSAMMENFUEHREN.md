@@ -1554,3 +1554,7 @@ Stände zusammen, testet und liefert ein fertiges Paket.
 Basis main: 3f64b5d31acb253f2676fd60090731e1e4c95891. Geändert: offices.js, index.html (offices.js?v=281), sw.js (v281 und offices.js?v=281), AENDERUNGEN.md; neu office-limits.test.js. Limits: 1/3/10/15/20/unbegrenzt. Bestehende Übernahme-Vormerkung samt Personal bleibt erhalten und wird mit den neuen Limits genutzt. Tests: node office-limits.test.js, node --check offices.js, node --check sw.js, git diff --check. Kein visueller Browser-/Handytest.
 
 Nachtrag v281: corp.js und Cache-Verweise ebenfalls geändert. Einmalige Reparatur fehlender übernommener Firmensitze über S.corp.hqRestore281; vorhandene Sitze/Vormerkungen werden nicht dupliziert. Regressionstests für Reparatur an voller Grenze, spätere Aktivierung und nur einmaliges Wiederherstellen ergänzt.
+
+
+## v282 – Screenshot-Korrekturen
+Basis main dcbfc26. Änderungen: avatar.js, corp.js, officefp.js, style.css, index.html, sw.js (v282), AENDERUNGEN.md, diese Datei; neu review-v282.test.js. v281 aus main bleibt erhalten. ZIP enthält nur geänderte Dateien. Tests und Einschränkungen siehe AENDERUNGEN.md. Keine Spielstandmigration nötig.

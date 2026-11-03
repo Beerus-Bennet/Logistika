@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v282 – Firmenliste, Porträtstart, Verhandlungen und Bürodetails
+- Firmenliste: lange Firmennamen und Konzern-Badges umbrechen; mobil steht der Status unter den Firmendaten. Chatblasen werden im Scrollbereich nicht mehr zusammengedrückt.
+- Profilbild: gespeicherte Standardporträts werden sofort mit ihrem Dateipfad angefordert; während der asynchronen Prüfung erscheint keine andere SVG-Figur. Eigene Fotos behalten Vorrang.
+- Verhandlungen: neue Reserven bei 88–104 % des Firmenwerts (vor Marktdominanz/Altaufschlägen); seriöse abgelehnte Angebote erhalten ein entgegenkommendes, nicht steigendes Gegenangebot. Die Gegenforderung reduziert zugleich die Annahmeschwelle. Nur unter 60 % des Firmenwerts greift die bestehende Beleidigungsreaktion. Auch laufende alte Gespräche kommen bei seriösen Angeboten entgegen. Drei Runden bleiben bestehen.
+- Übernahme: sachliche Schlagzeile und Abschlussmeldung, ruhiger Comic-Zeitungslook; kein Goldregen, keine Krone/Überlegenheitsparolen, weniger Effekte. Kompaktes Layout mit eigener Scrollfläche und dauerhaft erreichbarem Abschlussknopf. Bei extrem kleinen Ansichten wird weiterhin gescrollt, statt Informationen zu verbergen.
+- Büro: eingefasstes Namensschild mit getrennten Tiefen gegen Flimmern und angedeuteten Schriftzeilen; Finger schmaler und Ansatz mit Handfläche verbunden; einzelne Tastaturtasten samt Leertaste; abgerundete Maus mit zwei Tasten und Scrollrad.
+**Basis:** aktuelles GitHub-main dcbfc26 (enthält v281 samt Bürogrenzen/Wiederherstellung).
+**Geprüft:** node review-v282.test.js (Verhandlungen inkl. Screenshot-Beträgen und alten Forderungen, Annahme, sofortige Porträts, Fotovorrang, echte 3D-Modellbauer mit endlichen Koordinaten); node office-limits.test.js; Syntaxprüfung aller geänderten JS-Dateien. Kein visueller Browser-/iPhone-Test möglich: Browser nicht installiert.
+
+
 ## v281 – Bürogrenzen je Etappe und unbegrenzte Welt
 **Ursache:** `maxBases()` gab die Etappennummer zurück, somit waren selbst weltweit nur sechs Büros möglich.
 **Lösung:** Berlin 1, Brandenburg & Mitteldeutschland 3, Deutschland 10, Europa 15, Eurasien & Transatlantik 20, Welt ohne numerische Grenze. Kauf, Miete und Übernahme nutzen dieselbe Grenze. Anzeige und Sperrtexte angepasst; bei Welt kein Verweis auf eine nächste Etappe. Ein Büro je Kartenort gilt weiterhin.

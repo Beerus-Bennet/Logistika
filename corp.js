@@ -291,10 +291,10 @@ function corpHTML() {
     const o = C.owned[r.id];
     return `<div class="corp-row owned" style="--rc:${r.col}"><span class="cr-i">${r.icon}<i class="cr-x">✕</i></span>
       <span class="cr-t"><b>${esc(r.name)}</b><small>gehört seit ${stamp(o.at)} zu ${esc(S.player.company)} · ${money(o.price)}</small></span>
-      <span class="cr-st">👑 geschluckt</span></div>`;
+      <span class="cr-st">✓ übernommen</span></div>`;
   }).join("");
   const Ow = Object.values(C.owned || {}), veh = Ow.reduce((x, o) => x + (o.veh || 0), 0), paid = Ow.reduce((x, o) => x + (o.price || 0), 0);
-  const emp = Ow.length ? `<div class="corp-emp"><b>👑 Dein Imperium</b><span>${Ow.length} ${Ow.length === 1 ? "Firma" : "Firmen"} geschluckt${veh ? " · " + veh + " Fahrzeuge übernommen" : ""} · ${money(paid)} investiert</span></div>` : "";
+  const emp = Ow.length ? `<div class="corp-emp"><b>Deine Unternehmensgruppe</b><span>${Ow.length} ${Ow.length === 1 ? "Firma" : "Firmen"} übernommen${veh ? " · " + veh + " Fahrzeuge übernommen" : ""} · ${money(paid)} investiert</span></div>` : "";
   return `<div class="card eco corp">
     <div class="card-top"><div class="vname">🦈 Übernahmen<small>Kauf eine Konkurrentin: Flotte, Firmensitz, Kunden und Marktanteil gehören dann dir.</small></div></div>
     ${emp}${rows}
@@ -314,7 +314,7 @@ function openCorp(id) {
   if (!t || t.done || t.cool <= S.time && t.round >= 3) {
     /* Was sie insgeheim verlangt: je stärker du, desto weicher wird sie */
     const dom = (sh.me || 0) > 2 * (sh[id] || 0) ? 0.94 : 1;
-    t = C.talks[id] = { round: 0, val, res: Math.round(val * rnd(0.95, 1.2) * dom * ((C.spite || {})[id] || 1)), chat: [], ask: null, cool: 0 };
+    t = C.talks[id] = { round: 0, val, res: Math.round(val * rnd(0.88, 1.04) * dom * ((C.spite || {})[id] || 1)), chat: [], ask: null, cool: 0 };
     t.chat.push({ me: false, t: c.wave ? `${c.boss}, ${r.name}. Sie wollen einen Konzern kaufen? Mutig. Der Aufsichtsrat hört zu – machen Sie ein Angebot.`
       : `${c.boss}, ${r.name}. Sie wollen uns kaufen? Machen Sie ein Angebot.` });
   }
@@ -382,7 +382,7 @@ function corpOffer(id, amount, takeAsk) {
     corpClose(id, amount);
     return renderCorp();
   }
-  if (amount < t.res * 0.7) {
+  if (amount < t.val * 0.6) {
     /* v160: tief beleidigt – aus Prinzip wird es jetzt teurer (bleibt für die nächste Runde bestehen) */
     corpSpite(id, 1.08);
     t.chat.push({ me: false, t: c.wave ? pick([
@@ -399,19 +399,14 @@ function corpOffer(id, amount, takeAsk) {
     t.cool = S.time + 2 * 1440; t.ask = null;
     save(); return renderCorp();
   }
-  const low = amount < t.res * 0.9;
-  if (low) { corpSpite(id, 1.04); t.res = Math.round(t.res * 1.04); t.spiteN = (t.spiteN || 0) + 1; }   /* v160: zu gering → sie wollen aus Prinzip mehr */
-  t.ask = roundK((amount + t.res * 1.05) / 2, 1000);
-  t.chat.push({ me: false, t: !low
-    ? `Wir sind nah dran. Für ${money(t.ask)} gehört ${r.name} Ihnen.`
-    : c.wave ? `Zu wenig. Unsere Aktionäre erwarten mehr – ${money(t.ask)}, oder wir reden nicht weiter.`
-    : t.spiteN > 1
-      ? pick([
-        `Schon wieder so ein Spottpreis?! Mir reicht es. Jetzt verkaufe ich aus Prinzip nicht mehr unter ${money(t.ask)} – und mit jedem Angebot dieser Sorte wird es teurer.`,
-        `Sie nehmen mich nicht ernst! Ich habe ${r.name} aufgebaut, und Sie wollen es verramschen. Aus Prinzip: ${money(t.ask)}, keinen Cent weniger – und es wird nicht billiger.`])
-      : pick([
-        `Das ist beleidigend! Das Lebenswerk meiner Familie ist kein Schnäppchen. Jetzt will ich es Ihnen aus Prinzip teurer verkaufen: unter ${money(t.ask)} läuft nichts mehr.`,
-        `Ehrlich, das kränkt mich. So wenig soll ${r.name} wert sein? Dann verlange ich jetzt aus Prinzip mehr: ${money(t.ask)}. Nehmen Sie es oder lassen Sie es.`]) });
+  /* v282: Seriöse Angebote führen zur Annäherung, nie zu einem Strafaufschlag.
+     Alte Gespräche können noch überhöhte Reserven enthalten. */
+  const previous = t.ask || t.res;
+  const target = Math.min(t.res, t.val);
+  const counter = roundK(amount + (Math.max(amount, target) - amount) * 0.55, 1000);
+  t.ask = Math.max(amount, Math.min(previous, counter));
+  t.res = Math.min(t.res, t.ask);
+  t.chat.push({ me: false, t: `Danke für Ihr Angebot. Wir können Ihnen entgegenkommen: Für ${money(t.ask)} können wir die Übernahme vereinbaren.` });
   save(); renderCorp();
 }
 /* ===== v230: Firmensitz einer übernommenen Firma – vorgemerkt statt verkauft ===== */
@@ -565,8 +560,8 @@ function corpShow(ev) {
   if (ev.kind === "win") {
     const r = rivalById(ev.id), c = CORP[ev.id]; if (!r || !c) return;
     const A = me.toUpperCase(), B = r.name.toUpperCase();
-    head = c.wave ? pick([`SENSATION: ${A} KAUFT ${B}`, `${A} SCHLUCKT KONZERN ${B}`]) : pick([`${A} SCHLUCKT ${B}`, `MACHTWECHSEL: ${B} GEHÖRT JETZT ${A}`, `${B} GEKAUFT – ${A} RÄUMT AB`]);
-    sub = `Für ${money(ev.price)} übernimmt ${me} ${c.wave ? "den Konzern" : "die Konkurrentin"} – ${c.boss} räumt ${c.wave ? "die Vorstandsetage" : "ihr Büro"}.`;
+    head = `${A} ÜBERNIMMT ${B}`;
+    sub = `${me} und ${r.name} haben die Übernahme für ${money(ev.price)} vereinbart. Der Geschäftsbetrieb wird unter dem Dach von ${me} fortgeführt.`;
     stampT = "ÜBERNOMMEN";
     duel = `<div class="cs-side">${corpMyLogo(84)}<b>${esc(me)}</b></div>
       <div class="cs-arrow">⟸</div>
@@ -575,11 +570,9 @@ function corpShow(ev) {
       ev.cust ? ["📋", ev.cust, " Stammkunden", "+"] : null, ["⭐", ev.rep, " Ruf", "+"]].filter(Boolean);
     chips = ch.map((x, i) => `<span class="cs-chip" style="animation-delay:${(RM ? 0.2 : 1.9) + i * 0.17}s">${x[0] ? `${x[0]} ${x[3]}<b data-n="${x[1]}">0</b>${x[2]}` : esc(x[1])}</span>`).join("");
     const Ow = Object.values(C.owned || {}), paid = Ow.reduce((a, o) => a + (o.price || 0), 0);
-    crown = `<div class="cs-crown"><span>👑</span><b>Dein Imperium: ${Ow.length} ${Ow.length === 1 ? "Firma" : "Firmen"} geschluckt</b><small>${money(paid)} investiert · ${Ow.reduce((a, o) => a + (o.veh || 0), 0)} Fahrzeuge übernommen</small></div>`;
-    quote = ev.left ? pick(["Der Markt gehört dir.", "Aus Konkurrenz wird Besitz.", "Ein Name weniger auf der Liste deiner Gegner.", "Wer jetzt noch gegen dich fährt, fährt hinterher."])
-      : "Kein Gegner mehr im Markt. Du BIST der Markt.";
-    quote = `<b>${esc(quote)}</b><small>${c.wave ? "„Sie haben uns geschlagen. Respekt.“" : "„Kümmern Sie sich gut um meine Leute.“"} – ${esc(c.boss)}</small>`;
-    btn = "👑 Weiter herrschen";
+    crown = `<div class="cs-crown"><b>Unternehmensgruppe: ${Ow.length} ${Ow.length === 1 ? "Übernahme" : "Übernahmen"}</b><small>${money(paid)} investiert · ${Ow.reduce((a, o) => a + (o.veh || 0), 0)} Fahrzeuge übernommen</small></div>`;
+    quote = `<b>Übernahme abgeschlossen</b><small>Die Integration von Flotte, Standorten und Personal beginnt.</small>`;
+    btn = "Zur Unternehmensübersicht";
   } else {
     const Rs = (ev.ids || []).map(id => ({ r: rivalById(id), c: CORP[id] })).filter(x => x.r && x.c); if (!Rs.length) return;
     head = pick(["KONZERNE GREIFEN AN", "ANGRIFF AUF DEN MARKTFÜHRER", "DIE GROSSEN KOMMEN"]);
@@ -611,9 +604,9 @@ function corpShow(ev) {
   document.body.classList.add("cs-open");
   const later = (ms, f) => setTimeout(() => { if (el.isConnected) f(); }, RM ? Math.min(ms, 300) : ms);
   const snd = k => { if (typeof sfx === "function") try { sfx(k); } catch (e) { /* stumm */ } };
-  snd("horn");
+  if (ev.kind !== "win") snd("horn");
   later(1150, () => {
-    snd("thud"); snd(ev.kind === "win" ? "level" : "bad");
+    if (ev.kind !== "win") { snd("thud"); snd("bad"); }
     el.classList.add("hit");
     try { if (navigator.vibrate) navigator.vibrate(ev.kind === "win" ? [60, 40, 120] : [90, 50, 90]); } catch (e) { /* kein Rütteln */ }
   });
@@ -627,7 +620,7 @@ function corpShow(ev) {
   }));
   /* Goldregen (Sieg) bzw. Funken (Kampfansage) */
   if (!RM) later(1200, () => {
-    const fx = el.querySelector(".cs-fx"), n = ev.kind === "win" ? 46 : 22;
+    const fx = el.querySelector(".cs-fx"), n = ev.kind === "win" ? 0 : 22;
     for (let i = 0; i < n; i++) {
       const p = document.createElement("i");
       p.textContent = ev.kind === "win" ? pick(["🪙", "✨", "💶", "⭐"]) : pick(["⚡", "💥"]);
@@ -636,7 +629,7 @@ function corpShow(ev) {
       fx.appendChild(p);
     }
   });
-  if (ev.kind === "win") later(2900, () => snd("pearl"));
+  /* v282: Keine zusätzliche Siegesfanfare bei einer Übernahme. */
   el.querySelector(".cs-go").onclick = () => {
     snd("tap");
     el.classList.add("out");

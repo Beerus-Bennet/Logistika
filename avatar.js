@@ -418,8 +418,10 @@ function portraitHTML(cfg, size, opts) {
             alt="${(opts && opts.label) || "Porträt"}" draggable="false">`;
   }
   const id = cfg && cfg.art;
-  if (id && playerArt[id]) {
-    return `<img class="pt-art" src="${playerArt[id]}" width="${size}" height="${size}"
+  /* v282: Gespeichertes Porträt sofort laden, ohne kurz die SVG-Ersatzfigur zu zeigen. */
+  const src = id && (playerArt[id] || (PLAYER_ART_SLOTS.some(sl => sl.id === id) ? "player-" + id + ".png" : ""));
+  if (src) {
+    return `<img class="pt-art" src="${src}" width="${size}" height="${size}"
             alt="${(opts && opts.label) || "Porträt"}">`;
   }
   return avatarSVG(cfg, size, opts);

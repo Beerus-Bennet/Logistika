@@ -4461,3 +4461,56 @@ body.tab-farm #farm #farmSheet.mach .fs-in{position:relative;left:auto;right:aut
 .frec.lock{opacity:1;color:#667384;border-color:#8895a3;box-shadow:none}
 .frec.lock>.ic{opacity:.65}
 .frec .fr-lock{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#526173;line-height:1.4}
+
+/* v282: Lange Firmennamen und Status ohne überlagernde Spalten. */
+.corp-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:start}
+.cr-t,.cr-t b,.cr-st{overflow-wrap:anywhere}
+.cr-t b{line-height:1.3}
+.cr-tag{display:inline-block;max-width:100%;white-space:normal;margin:3px 0 0;vertical-align:middle}
+.cr-st{max-width:160px;align-self:center}
+@media(max-width:600px){
+  .corp-row{grid-template-columns:34px minmax(0,1fr);row-gap:5px;padding:10px 6px}
+  .cr-i{grid-row:1 / 3}
+  .cr-st{grid-column:2;max-width:none;text-align:left;font-size:11px}
+  .corp-row .cr-st .btn{margin-top:2px}
+  .corpm .specs{gap:6px}
+  .corpm .specs>div{padding:7px 9px}
+  .corpm .lotm-note{font-size:12px;margin:8px 0}
+  .corpm .lim{font-size:12px;line-height:1.4}
+  .corpm .bidrow{display:flex;flex-wrap:wrap;gap:6px}
+  .corpm .bidrow .btn{flex:1 1 140px;min-width:0;font-size:13px;padding:8px}
+}
+/* Chatblasen schrumpfen nicht, wenn der Verlauf seinen Scrollbereich füllt. */
+.corp-chat{display:flex;flex-direction:column;gap:6px;max-height:180px;overscroll-behavior:contain}
+.corp-chat .bub{flex-shrink:0;margin:0;overflow-wrap:anywhere}
+/* v282: Ruhige Übernahmebestätigung; Abschluss bleibt auch auf kleinen Displays erreichbar. */
+#corpShow.cs-win{background:rgba(9,24,39,.94);align-items:flex-start;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom))}
+.cs-win .cs-wrap{width:min(500px,100%);margin:auto;gap:8px;max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;padding:0 5px 5px;overscroll-behavior:contain}
+.cs-win .cs-wrap>*{flex-shrink:0}
+.cs-win .cs-rays,.cs-win .cs-crack,.cs-win .cs-arrow{display:none}
+.cs-win .cs-paper,.cs-win.hit .cs-paper{transform:none;animation:none;padding:9px 12px;border-radius:12px}
+.cs-win .cs-head,.cs-win .cs-head.long{font-size:clamp(22px,5.5vw,28px);line-height:1.05;margin:7px 0}
+.cs-win .cs-sub{font-size:12px;margin-bottom:4px}
+.cs-win .cs-duel{min-height:88px;gap:40px}
+.cs-win .cs-logo{width:54px;height:54px;font-size:28px}
+.cs-win .cs-logo.me{box-shadow:0 0 0 2px #d8bc67}
+.cs-win.hit .cs-logo.them{filter:none}
+.cs-win .cs-side{max-width:42%}
+.cs-win .cs-side b{font-size:10px}
+.cs-win .cs-stamp{font-size:14px;letter-spacing:1px;left:50%;top:50%}
+.cs-win .cs-loot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.cs-win .cs-chip{font-size:11px;padding:4px 6px;text-align:center;overflow-wrap:anywhere;animation:none}
+.cs-win .cs-chip b{font-size:12px}
+.cs-win .cs-crown{background:#eaf2fb;padding:5px 8px;animation:none}
+.cs-win .cs-crown b{font-size:17px}
+.cs-win .cs-crown small{font-size:10px}
+.cs-win .cs-quote{animation:none}
+.cs-win .cs-quote b{font-size:19px;text-shadow:none}
+.cs-win .cs-quote small{font-size:11px}
+.cs-win .cs-go{position:sticky;bottom:0;z-index:5;width:100%;font-size:14px;padding:9px;animation:none;box-shadow:0 -4px 12px rgba(9,24,39,.6)}
+@media(max-height:650px){
+ .cs-win .cs-duel{min-height:65px}
+ .cs-win .cs-logo{width:42px;height:42px}
+ .cs-win .cs-wrap{gap:5px}
+ .cs-win .cs-head,.cs-win .cs-head.long{font-size:21px}
+}
