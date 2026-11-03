@@ -79,7 +79,7 @@ function farmAddObj(o) {
   return o;
 }
 function farmObj(id) { return S.farm.objs.find(o => o.id === id) || null; }
-/* v273: Vier Vierteldrehungen; alte Spielstände mit r=0/1 behalten ihre Richtung. */
+/* v274: Vier Vierteldrehungen; alte Spielstände mit r=0/1 behalten ihre Richtung. */
 function farmRotation(o) { return (o.r || 0) & 3; }
 function farmYaw(o) { return farmRotation(o) * (o.t === "sw_lkw" ? Math.PI / 2 : -Math.PI / 2); }
 /* Kachelgröße eines Objekts (Ausläufe wachsen mit der Ausbaustufe) */

@@ -1827,7 +1827,7 @@ function movePlace(x, z) {
 function rotatePlace() {
   const P = FV.place;
   if (!P || noRotate(P.proto.t)) return;
-  /* v273: Nach vier Klicks wieder in der Ausgangsrichtung. */
+  /* v274: Nach vier Klicks wieder in der Ausgangsrichtung. */
   P.r = (P.r + 1) % 4;
   P.proto.r = P.r;
   const [w, d] = farmSize(P.proto);

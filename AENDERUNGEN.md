@@ -9,13 +9,41 @@
 
 
 
-## v273 – Gebäude in alle vier Richtungen drehen
+## v274 – Lückenloser Gebietsnebel, Gebäudedrehung und runde Navigation
+
+### Gebietsnebel
+
+Die weichen Kanten der Sperrrechtecke wurden auch nach innen ausgeblendet. Dadurch entstanden helle Nähte an aneinanderliegenden Flächen. Die Kante läuft jetzt nur nach außen weich aus; innerhalb des gesperrten Gebiets bleibt die Nebelstärke vollständig erhalten. Die Freischaltanimation bleibt bestehen. Geprüft: Vorher-/Nachher-Aufnahmen in Chromium aus zwei Blickwinkeln, sechs aktive Sperrflächen, keine JavaScript-Fehler; Kantenberechnung für volle Deckung und weichen Außenrand geprüft. Nicht auf einem echten Handy geprüft.
+
+### Gebäude in alle vier Richtungen drehen
 
 Der Drehen-Button wechselte bisher nur zwischen 0° und 90°. Jetzt folgen 90°, 180°, 270° und nach dem vierten Klick wieder 0°. Vorschau und fertiges Gebäude nutzen dieselbe Drehung; rechteckige Stellflächen tauschen Breite und Tiefe nur bei ungeraden Vierteldrehungen. Bauplatz-Stapel, Lkw-Ausrichtung, Hallenwachstum und Personal-Wegecache berücksichtigen die vier Richtungen. Vorhandene Ausrichtungen 0/1 bleiben erhalten. Geprüft in Chromium: vier Drehungen eines bestehenden Auftragsbretts samt Bestätigen, rechteckige Hallenmaße und Speichern/Neuladen bei 270°. Syntaxprüfung der geänderten Skripte erfolgreich. Nicht auf einem echten Handy geprüft.
 
-## v272 – Runde Ecken am Auswahlbereich
+### Runde Ecken am Auswahlbereich
 
 Die dunkle Navigationsleiste unten rechts hatte eckige Außenkanten. Der gesamte Auswahlbereich erhält 18 px abgerundete Ecken; Inhalte werden an der Rundung abgeschnitten. CSS-Cache und Service-Worker-Version aktualisiert. Geprüft: Chromium auf Desktop- und Mobilbreite, Navigation weiterhin bedienbar. Nicht auf einem echten Handy geprüft.
+
+## v273 – Luckybox: Gewinn auf Plakette statt Lichtstreifen
+**Wunsch Bennet:** Der „Lichtstrahl“ am Gewinnerfeld sitzt noch nicht sauber – je Gewinn einzeln anpassen (Screenshot beim Goldenen Bulli).
+
+**Ursache:** Das Gewinnerfeld wurde als gefüllter Keil vom Zentrum bis zum Rand hervorgehoben. Bei schmalen Feldern (Goldener Bulli 14°) wurde daraus ein dünner heller Streifen, und das Symbol blieb winzig.
+
+**Lösung** (`lucky3d.js`, `winMesh`, `highlight`):
+- Kein gefüllter Keil mehr, nur ein dünner Rahmen um das Feld in heller Tönung der Seltenheitsfarbe.
+- Das Gewinnsymbol wächst in 0,35 s auf eine runde Plakette (Scheibe in der Seltenheitsfarbe mit hellem Ring) und wird größer (0,5 statt 0,2–0,42). Lage und Größe ergeben sich aus dem jeweiligen Feld – ein schmales Feld bekommt dieselbe Plakette wie ein breites. Bei „Bewegung reduzieren“ sofort, ohne Animation.
+- Die anderen Felder bleiben abgedunkelt.
+
+**Geprüft (Testbrowser):** Goldener Bulli (schmal), Insider-Tipp (episch), Trinkgeldkasse (gewöhnlich), Empfehlungsschreiben (selten), keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
+## v272 – Luckybox: Lichtschein am Gewinnerfeld ruhiger
+**Wunsch Bennet:** Den Lichtschein anpassen (Screenshot vom Rad nach dem Stopp).
+
+**Ursache:** Das Gewinnerfeld wurde mit einem hellen Weißanteil und zusätzlichem Leuchten (`glow`) gezeichnet und wirkte wie ein weißlicher Schleier; die Farbe der Seltenheit war kaum noch zu sehen. Dazu kamen viele Funken direkt am Zeiger.
+
+**Lösung** (`lucky3d.js`): Feld in der kräftigen Farbe der Seltenheit mit nur leichtem Verlauf, Rahmen und Trennstege in einer hellen Tönung derselben Farbe statt Weiß, Leuchten stark gedämpft (0,04–0,10 statt 0,25–0,45), weniger Funken (2 + 2 je Seltenheitsstufe statt 6 + 3). Sonst unverändert.
+
+**Geprüft (Testbrowser):** Rad nach dem Stopp bei epischem Gewinn, goldene Box, keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
 
 ## v271 – Luckybox-Testbühne (`index.html?test&lucky`)
 **Wunsch Bennet:** Eine Testansicht, auf der man das ganze Luckybox-System kurz durchprobieren kann.

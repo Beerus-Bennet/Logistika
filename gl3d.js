@@ -361,7 +361,8 @@ const G3 = (() => {
     for (int i = 0; i < 6; i++) {
       if (i >= uLockN) break;
       vec4 r = uLockR[i], c = uLockC[i];
-      float inside = smoothstep(-1.2, 1.2, min(min(p.x - r.x, r.z - p.x), min(p.y - r.y, r.w - p.y)));
+      /* v274: Nur außen weich ausblenden, damit angrenzende Sperrflächen keine hellen Nähte bilden. */
+      float inside = smoothstep(-1.2, 0.0, min(min(p.x - r.x, r.z - p.x), min(p.y - r.y, r.w - p.y)));
       float out1 = smoothstep(c.z - 4.0, c.z, distance(p, c.xy));
       g = max(g, inside * out1 * c.w);
     }

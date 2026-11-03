@@ -20,6 +20,7 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - **Jede Lieferung bekommt eine neue Version:** `sw.js` → `const VERSION = "vNNN"`, alle `?v=NNN` in `index.html` (und `manifest.webmanifest`) anpassen, oben in `AENDERUNGEN.md` einen Abschnitt `## vNNN – …` (Ursache, Lösung, geprüft/nicht geprüft); bei größeren Änderungen auch `ZUSAMMENFUEHREN.md`.
 - Commit-Nachrichten beginnen mit `vNNN: …`.
 - **Vor jeder Arbeit `git fetch` und den Stand von `main` prüfen.** Bennet lädt teils selbst Dateien über die GitHub-Weboberfläche hoch – dabei können ältere Fassungen von `index.html`/`sw.js` mitkommen und Versionsnummern zurücksetzen (zuletzt passiert nach v252, behoben in v253).
+- Vor jedem Push zusätzlich den aktuellen Pull Request und seine Mergefähigkeit prüfen. Aktuelles `main` integrieren, Konflikte lösen und nach dem Push den Merge-Status auf GitHub erneut kontrollieren.
 - Arbeit auf eigenem Branch `claude/…`, dann Pull Request auf `main` (Push funktioniert inzwischen; die frühere ZIP-Lieferung ist nicht mehr nötig).
 - Ehrlich berichten, was wie geprüft wurde (Testbrowser, Unit-Test). **Nie behaupten, etwas sei auf dem Handy geprüft.**
 - Spielstände nie brechen: Migrationen einmalig mit Merkmal (z. B. `S.econ = 244`), alte Felder tolerieren.
@@ -51,3 +52,5 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - v269: Große Lagerhalle verdoppelt jedes Lager einzeln samt Ausbau (`FHALL.mult`, `farmStoreCapBase`, `farmHallBonus(st, base)`, `farmHallK`), 10 × 6 Kacheln mit Modell nach Maß (`FM.lagerhalle(w, d)`, zwei Tore); alte Hallen wachsen beim Laden auf 10 × 6 bzw. 8 × 5, wenn Platz ist (`farmHallGrow`, `S.farm.hall269`, Größe in `o.sz`).
 - v270: Luckybox überarbeitet – `lucky3d.js` neu (Kiste mit Innenraum und Deckel-Schale, Licht aus Fuge/Innenraum, Kamerafahrt Kiste → Rad, Rad mit Beschleunigen/Abbremsen, `finish` fürs Überspringen); `lucky.js`: Gewinn einmal ziehen und als `S.lucky.pending` sichern, einmal anwenden (`lbSettle`), Kennung je Öffnung, eigene Symbole `lbIcon`, Layout an `visualViewport` (`--lb-h`); `gl3d.js`: Aufkleber `unlit`/`mul`/`add`.
 - v271: Luckybox-Testbühne `index.html?test&lucky` (`luckytest.js`, nur Testmodus): Boxen geben, Gewinn festlegen, reduzierte Bewegung/ohne WebGL simulieren, Ton, Serie, fertige Abläufe (Neuladen/Schließen beim Drehen, goldene Box bei kurzer Serie, 15 Boxen), Chancen prüfen.
+- v272: Luckybox – Gewinnerfeld am Rad in Seltenheitsfarbe statt weißem Schleier, weniger Funken am Zeiger (`winMesh`, `highlight` in `lucky3d.js`).
+- v273: Luckybox – Gewinnerfeld mit dünnem Rahmen und Plakette (`BADGE_R`, `BADGE_S`) statt gefülltem Keil; Gewinnsymbol wächst darauf.
