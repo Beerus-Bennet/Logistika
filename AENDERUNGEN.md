@@ -1,5 +1,25 @@
 # Änderungen – kurz für den Kollegen
 
+## v292 – Produktionsfenster wieder am unteren Rand, Arbeitermenü passt in den sichtbaren Bereich
+**Wunsch Bennet** (drei Handy-Screenshots): Das Fenster der Produktionsstätten (Fischerhütte) soll wieder wie der Kuhstall am unteren Rand sitzen. Beim Arbeiter mit vielen Aufträgen war sein Menü nicht vollständig einsehbar.
+
+**Ursache:**
+- Seit v278/v286 hatte das Produktionsfenster (`.mach`) eine Sonderplatzierung: eine schwebende Karte, mobil schmal über der Navigation, abgedunkelter Hintergrund.
+- Das Arbeitermenü ist ein Pop-over über der Figur (`#farmPop`, `positionStaffPop`) ohne Höhengrenze. Es wuchs mit jedem Auftrag und ragte oben und unten aus dem Bild (unten unter die Navigation).
+
+**Lösung:**
+- **`style.css`:** Die Sonderplatzierung der Produktionsfenster ist entfernt, sie nutzen wieder das normale Bodenblatt. Die kompakten Innenmaße aus v286 bleiben.
+- **`team.js`:**
+  - Das Arbeitermenü ist höchstens so hoch wie der sichtbare Bereich zwischen Kopfleiste und Navigation (`maxHeight` in `positionStaffPop`) und scrollt innen (Regel `.fp-box.fstp` mit `overflow-y:auto`).
+  - Der Scrollstand bleibt beim Neuzeichnen erhalten.
+
+**Geprüft (Testbrowser, 390 × 700):**
+- Mühle: Fenster über die volle Breite am unteren Rand.
+- Arbeitermenü mit 14 künstlichen Aufträgen: bleibt zwischen Kopfleiste und Navigation, scrollt, und das Ende der Liste ist erreichbar. Die Prüfung nutzte ein künstlich gebautes Menü, weil im Test noch keine Arbeiter freigeschaltet waren.
+- Keine Konsolenfehler.
+
+**Nicht geprüft:** das echte Arbeitermenü mit echten Aufträgen und die Fischerhütte, am Handy.
+
 ## v291 – Aufräumen ohne alte Kraftkosten
 **Wunsch:** Beim Wegräumen von Gerümpel keine veraltete Ausdaueranzeige mehr.
 **Lösung:** Muskel-Symbol und Zahl vom Wegräumen-Knopf entfernt; farmClearJunk prüft und verbraucht keine Ausdauer mehr. Die veraltete Erschöpfungsmeldung im zugehörigen Klickpfad entfällt ebenfalls. Aufräumen funktioniert damit auch bei alten Spielständen mit sta=0. Materialien, Geld, Statistik und EP bleiben unverändert. Ein bereits entferntes Objekt kann nicht mehrfach vergütet werden.

@@ -61,3 +61,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 2. **Einfachheit zuerst:** So wenig Code wie nötig, keine ungefragten Zusatzfunktionen, keine Abstraktion für Einmaliges, keine Fehlerbehandlung für Unmögliches.
 3. **Chirurgische Änderungen:** Nur anfassen, was der Auftrag braucht. Fremden Code, Kommentare und Formatierung nicht „verbessern“. Eigene Reste (ungenutzte Variablen, Funktionen) entfernen, fremden toten Code nur melden.
 4. **Zielgetriebenes Arbeiten:** Erfolg vorher überprüfbar festlegen (Fehler zuerst reproduzieren, danach beheben; vorher/nachher prüfen) und erst melden, wenn es geprüft ist – ehrlich, was nicht geprüft wurde.
+- v292: Produktionsfenster (`.mach`) wieder als normales Bodenblatt (Sonderplatzierung aus v278/v286 entfernt); Arbeitermenü (`positionStaffPop`) mit `maxHeight` bis zur Navigation, scrollt innen, Scrollstand bleibt.
