@@ -9,6 +9,18 @@
 
 
 
+## v273 – Luckybox: Gewinn auf Plakette statt Lichtstreifen
+**Wunsch Bennet:** Der „Lichtstrahl“ am Gewinnerfeld sitzt noch nicht sauber – je Gewinn einzeln anpassen (Screenshot beim Goldenen Bulli).
+
+**Ursache:** Das Gewinnerfeld wurde als gefüllter Keil vom Zentrum bis zum Rand hervorgehoben. Bei schmalen Feldern (Goldener Bulli 14°) wurde daraus ein dünner heller Streifen, und das Symbol blieb winzig.
+
+**Lösung** (`lucky3d.js`, `winMesh`, `highlight`):
+- Kein gefüllter Keil mehr, nur ein dünner Rahmen um das Feld in heller Tönung der Seltenheitsfarbe.
+- Das Gewinnsymbol wächst in 0,35 s auf eine runde Plakette (Scheibe in der Seltenheitsfarbe mit hellem Ring) und wird größer (0,5 statt 0,2–0,42). Lage und Größe ergeben sich aus dem jeweiligen Feld – ein schmales Feld bekommt dieselbe Plakette wie ein breites. Bei „Bewegung reduzieren“ sofort, ohne Animation.
+- Die anderen Felder bleiben abgedunkelt.
+
+**Geprüft (Testbrowser):** Goldener Bulli (schmal), Insider-Tipp (episch), Trinkgeldkasse (gewöhnlich), Empfehlungsschreiben (selten), keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
 ## v272 – Luckybox: Lichtschein am Gewinnerfeld ruhiger
 **Wunsch Bennet:** Den Lichtschein anpassen (Screenshot vom Rad nach dem Stopp).
 
