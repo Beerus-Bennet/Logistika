@@ -9,6 +9,116 @@
 
 
 
+## v270 – Luckybox: räumliche Kiste mit Innenraum, zusammenhängender Ablauf, eigene Symbole, mobiles Layout
+**Wunsch Bennet** (vier Handy-Screenshots):
+- Kiste räumlicher und sauberer.
+- Echter Innenraum.
+- Weiches Licht statt hartem Kegel.
+- Kiste → Rad → Karte als ein Ablauf, kürzer, mit „Animation überspringen“.
+- Lesbares Rad.
+- Einheitliche Symbole.
+- „Nächste Box öffnen“ nicht mehr abgeschnitten, Serientexte korrekt.
+- Logik und Zustände absichern.
+
+**Ursache (im laufenden Spiel nachgeprüft, Testbrowser):**
+- **Kiste:**
+  - Frontal, mit zu starkem Licht (Sonne 1,3-fach): Metall lief weiß aus.
+  - Der Korpus war ein voller Quader, das Stahlband ein durchgehender Block – geöffnet sah man eine Fläche statt eines Innenraums.
+  - Der Lichtkegel war ein Kegelstumpf mit harten Kanten.
+- **Ablauf:**
+  - Die Kiste sank ab und schrumpfte, das Rad fuhr aus 5,5 Einheiten Tiefe hoch.
+  - Bis zur Karte vergingen ≈ 7,6 s (legendär ≈ 10 s).
+  - Die Aufladefarbe verriet die Seltenheit vorab.
+- **Layout:**
+  - Feste Höhen (Bühne 370 px) und Zentrieren mit `margin:auto` – auf dem Handy rutschte der Knopf unter die Browserleiste.
+- **Zustände:**
+  - Beim Neuladen mitten im Öffnen war die Box verbraucht, der Gewinn aber weg.
+  - Ohne WebGL maß das Band die Kachelbreite während seiner Einblend-Animation (skaliert) und hielt bis zu 1,5 Kacheln neben dem Gewinn (Fehler seit v266).
+
+**Lösung:**
+- **Kiste** (`lucky3d.js`, neu aufgebaut):
+  - Ruhige Dreiviertelansicht, gedämpftes Licht (Deckflächen hell, Front mittel, Seite dunkel), abgestufte Farben: dunkler Korpus, Rahmen, dunklere Beschläge, Messing-Emblem. Nur schmale Glanzkanten sind hell.
+  - Keine deckungsgleichen Flächen mehr (Bänder, Beschläge und Stahlband liegen versetzt) – kein Flimmern.
+  - Weicher Bodenschatten als Verlaufsbild.
+  - Goldene Box mit gleichem Aufbau in warmem Messing.
+- **Innenraum:**
+  - Boden und vier Wände mit Wandstärke, dunkler Innenboden, eigene Innenfarbe. Das Stahlband liegt außen auf.
+  - Deckel als Schale mit sichtbarer Unterseite, Drehpunkt genau an der hinteren Scharnierkante (Scharniere sichtbar), keine Durchdringung.
+  - Öffnung als gedämpfte Feder (≈ 0,6 s, ein kleines Nachschwingen).
+- **Licht und Funken:**
+  - Beim Aufladen leuchtet nur die Deckelfuge, in der Farbe der **Box** (normal kühl, golden warm) – der Gewinn wird nicht verraten.
+  - Geöffnet leuchtet der Innenboden, darüber ein weicher, nach oben und zur Seite auslaufender Lichtschein (Verlaufsbild, additiv, durch die Wände verdeckt).
+  - Kleine, verschieden große Funken mit kurzer Lebenszeit, die meisten an der Öffnung.
+- **Ablauf:**
+  - Antippen (kurzes Nachgeben) → Aufladen → Deckel öffnet → Kamerafahrt nach oben zum Rad. Das Rad steht auf derselben Mittelachse hinter der Kiste und taucht im Licht aus dem Dunkel auf.
+  - Danach: Drehen → kurzer Halt mit hervorgehobenem Gewinnerfeld → Karte.
+  - Normale Box ≈ 4,8–5,3 s bis zur lesbaren Karte, goldene ≈ 5,4–5,9 s. Die Drehdauer ist je Boxart gleich, nur der Halt danach ist bei Episch/Legendär etwas länger.
+  - Alle Abläufe laufen nach echter Zeit (auch bei niedriger Bildrate im Takt).
+  - „Animation überspringen“ (wenn weitere Boxen warten) steht im Aktionsbereich und zeigt sofort das schon gezogene Ergebnis.
+- **Rad:**
+  - Feldgrößen weiter genau nach Gewinnchance.
+  - Kurz beschleunigen, gleichmäßig, stetig abbremsen, endet genau im Feld (±28 % um die Mitte), kein Nachrücken.
+  - Der Zeiger liegt vor dem Rad und schlägt bei jedem Stift (= Feldgrenze) dezent aus. Klick dazu, höchstens alle 55 ms.
+  - Ruhige Lampen.
+  - Symbole so bemessen, dass sie in schmale Felder passen.
+  - Der Name unter dem Rad zeigt das Feld unter dem Zeiger, nach dem Stopp eindeutig den Gewinn.
+- **Symbole** (`lbIcon` in `lucky.js`):
+  - Zwölf eigene Canvas-Zeichnungen (z. B. Empfehlungsschreiben = Brief mit rotem Siegel, Goldener Bulli = goldener Kleinbus) mit gleicher Strichstärke.
+  - Identisch auf Rad, Band, Anzeige und Karte, keine Emojis mehr.
+- **Layout** (`style.css` Block v270):
+  - Overlay so hoch wie die sichtbare Fläche (`visualViewport` → `--lb-h`, folgt Browserleisten und Drehen), Safe Areas.
+  - Spalte aus Kopf, Chancen, flexibler Bühne und Aktionsbereich mit fester Höhe – die Knöpfe verschieben sich bei der Enthüllung nicht und sind kurz gesperrt.
+  - Reicht die Höhe nicht, scrollt nur das Overlay.
+  - Querformat: Bühne links, Rest rechts.
+- **Gewinnkarte:**
+  - Passt sich der Bühne an, lange Namen trennen an der Wortfuge.
+  - Strahlen nur bei Episch/Legendär, kleiner, sie klingen aus. Ruhiger Hintergrund.
+- **Serie:**
+  - „Herkunft dieser Box“ (Grund und Tag) und „Aktueller Serienfortschritt“ sind getrennt benannt.
+- **Zustände** (`lucky.js`):
+  - Der Gewinn wird beim Antippen genau einmal gezogen und mit der entnommenen Box gespeichert (`S.lucky.pending`).
+  - Angewendet wird er genau einmal (`lbSettle`) – beim Enthüllen, Überspringen oder Schließen.
+  - Nach Neuladen zeigt das nächste Öffnen diesen Gewinn ohne neue Box. Der Ziele-Chip und das Regal zählen ihn mit (`goals.js`).
+  - Jede Öffnung hat eine Kennung, alte Zeitgeber und Rückrufe laufen ins Leere.
+  - Beim Schließen enden Zeitgeber, Schleife, Klänge und der WebGL-Kontext.
+  - Ein schneller Doppeltipp öffnet keine weitere Box.
+- **Bewegung reduzieren:**
+  - Keine Kamerafahrt, kein Drehen, keine Blitze, Funken oder Vibration – kurze Überblendung zur Karte (≈ 0,35 s).
+- **Ohne WebGL 2:**
+  - Band mit gleichem Bewegungsprofil und den neuen Symbolen. Die Messung ist jetzt korrekt.
+- **Engine** (`gl3d.js`):
+  - Aufkleber können unbeleuchtet sein, einen Farbfaktor tragen und additiv leuchten, ohne die Deckkraft zu verändern.
+  - Abwärtskompatibel (Hof mit alter und neuer Engine: 8 von 126 000 Pixeln verschieden, nur animierte Stellen).
+- **Unverändert:** Chancen (55/28/13/4 bzw. 25/40/27/8), Preise und Wirkungen (`rollPrize`, `applyPrize`).
+
+**Geprüft (Testbrowser Chromium/SwiftShader, Playwright, mit virtueller Uhr):**
+- **Abläufe:**
+  - Normale und goldene Box, je Seltenheit: Gewinn genau einmal gezogen, Mehrfachtipp verbraucht genau eine Box, Belohnung genau einmal angewendet.
+  - Rad steht auf dem Gewinn, Anzeige = Karte.
+  - Karte bei 4,8–5,3 s (normal) bzw. 5,3–5,8 s (golden) plus 0,3 s Auftritt.
+- **Unterbrechungen:**
+  - Überspringen während des Drehens: gleiches Ergebnis, Knopf „Nächste Box“ kurz gesperrt.
+  - Schließen in jeder Phase (Aufladen, Öffnen, Drehen, Halt, Karte): Gewinn einmal, nichts bleibt offen, die nächste Box öffnet normal.
+  - Alte Rückrufe ändern die nächste Box nicht.
+  - Neuladen beim Drehen.
+- **Varianten:**
+  - Reduzierte Bewegung.
+  - Ohne WebGL 2: Band hält mittig auf dem Gewinn.
+  - Ton aus = keine Klänge, Ton an = gedrosselte Klicks.
+- **Leistung:**
+  - Zwölf Boxen nacheinander: je Öffnung eine Schleife und eine Zeichenfläche, danach wie vorher, JS-Heap stabil (12–18 MB).
+- **Layout:**
+  - Geprüfte Größen: 430 × 759, 390 × 664, 375 × 553, 320 × 480, 844 × 390, 667 × 320 und 768 × 1024.
+  - Kiste und Zeiger ganz im Bild, Karte passt, Knopf „Nächste Box öffnen“ ganz sichtbar. Bei 320 × 480 und 667 × 320 ist er per Scrollen erreichbar, bei 667 × 320 trotzdem ganz sichtbar.
+  - Aktionsbereich ohne Sprung.
+  - Höhenwechsel 664 → 740 → 600 → 664 (Leisten): Overlay folgt.
+- Keine Konsolenfehler. Unit-Tests wie bisher (nur `axe` und `trees` schlagen fehl).
+
+**Nicht geprüft:**
+- Auf einem echten iPhone oder Safari, also auch nicht die echten dynamischen Safari-Leisten.
+- Echte Bildrate auf dem Handy.
+- Vibration.
+
 ## v269 – Große Lagerhalle verdoppelt jedes Lager, Halle 10 × 6 nach Maß
 **Wunsch Bennet:** „Alle Lager einzeln verdoppeln. Demnach bitte die Größe der Lagerhalle ingame anpassen.“ (Klarstellung zu „100 % mehr“ aus v267.)
 

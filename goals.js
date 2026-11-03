@@ -400,7 +400,7 @@ function renderGoalsChip() {
   const el = document.getElementById("goalsCount"); if (!el) return;
   const d = dailyState();
   const open = d.tasks.filter(t => !t.done).length;
-  const boxes = S.lucky ? S.lucky.boxes.length : 0;
+  const boxes = S.lucky ? S.lucky.boxes.length + (S.lucky.pending ? 1 : 0) : 0;      /* v270: unterbrochene Öffnung zählt mit */
   el.textContent = boxes ? "🎁" + boxes : d.tasks.length ? (d.tasks.length - open) + "/" + d.tasks.length : "–";
   el.classList.toggle("all", d.tasks.length > 0 && !open && !boxes);
   el.classList.toggle("gift", boxes > 0);

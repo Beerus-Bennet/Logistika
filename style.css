@@ -4305,3 +4305,112 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 .lb-streak-bar i{border:1.5px solid var(--ink);height:7px}
 .lb-tile{border-width:2px;border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--rc),inset 0 0 0 2px color-mix(in srgb,var(--rc) 55%,transparent)}
 @media (max-height:720px){#lucky.is3d .lb-scene{height:300px}}
+
+/* ---------- v270: Luckybox – Layout an der sichtbaren Höhe, flexible Bühne, fester Aktionsbereich, ruhigere Enthüllung, eigene Symbole ---------- */
+/* Overlay so hoch wie die tatsächlich sichtbare Fläche (--lb-h aus visualViewport, sonst dvh); Inhalt scrollt nur, wenn es nicht passt */
+#lucky.lb{top:var(--lb-top,0);bottom:auto;height:100vh;height:100dvh;height:var(--lb-h,100dvh);overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+  padding:calc(10px + var(--safe-t)) calc(14px + var(--safe-r)) calc(14px + var(--safe-b)) calc(14px + var(--safe-l))}
+#lucky.lb.on{display:block}
+/* Stufe genau so hoch wie die sichtbare Fläche: die Bühne schrumpft zuerst; reicht es trotzdem nicht, scrollt das Overlay.
+   Zentriert wird über automatische Ränder (bei Überlauf werden sie 0 – nichts rutscht oben aus dem erreichbaren Bereich). */
+#lucky.lb .lb-stage{height:100%;min-height:0;margin:0 auto;gap:10px;max-width:460px;justify-content:flex-start}
+#lucky.lb .lb-stage>.lb-head{margin-top:auto}
+#lucky.lb .lb-stage>.lb-foot{margin-bottom:auto}
+#lucky.lb[data-tease]::before{background:radial-gradient(46% 30% at 50% 52%,color-mix(in srgb,var(--tc) 16%,transparent),transparent 74%)}
+#lucky.lb[data-r]::before{background:radial-gradient(50% 34% at 50% 52%,color-mix(in srgb,var(--rc) 16%,transparent),transparent 76%)}
+/* Kopf: Herkunft der Box klar benannt, wartende Boxen getrennt */
+#lucky.lb .lb-head{flex:none;gap:1px}
+#lucky.lb .lb-title{font-size:clamp(28px,8vw,36px)}
+.lb-sub{max-width:34em;line-height:1.35}
+.lb-src{display:inline-block;margin-right:5px;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.12);font-size:9.5px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.75);vertical-align:1px}
+.lb-more{margin:1px 0 0;font-size:12px;font-weight:800;color:#fff}
+#lucky.lb .lb-odds{flex:none}
+/* Bühne: nimmt den Platz zwischen Chancen und Aktionen, Rad und Kiste passen sich an (Kamera rechnet mit dem Seitenverhältnis) */
+#lucky.lb .lb-scene,#lucky.lb.is3d .lb-scene{flex:1 1 0;height:auto;min-height:200px;max-height:560px}
+/* Anzeige des Felds unter dem Zeiger: unten in der Bühne, verschiebt nichts */
+#lucky.lb .lb-now{position:absolute;left:50%;bottom:6px;z-index:3;margin:0;max-width:92%;transform:translateX(-50%);gap:6px;white-space:nowrap;transition:opacity .2s,box-shadow .2s}
+#lucky.lb .lb-now span{overflow:hidden;text-overflow:ellipsis}
+.lb-now-ico{width:22px;height:22px;flex:none}
+#lucky.lb .lb-now.final{box-shadow:0 3px 0 var(--ink),0 0 0 2px var(--rc),0 0 16px color-mix(in srgb,var(--rc) 55%,transparent)}
+#lucky.lb .lb-now.away{opacity:0}
+/* Überspringen: im Aktionsbereich an der Stelle von „Später“ – fern der Kiste; danach erscheinen die Knöpfe kurz gesperrt */
+#lucky.lb .lb-skip{font-size:13.5px;color:#fff;background:rgba(255,255,255,.06)}
+/* 3D-Bühne nach der Enthüllung ruhig abgeblendet (ohne teure Unschärfe) */
+#lucky.is3d[data-r] .lb-3d{opacity:.3;filter:none}
+/* Band ohne WebGL: eigene Symbole */
+.lb-tile .lb-ico{display:block;width:44px;height:44px}
+.lb-tile.win{filter:none}
+/* Gewinnkarte: passt sich der Bühne an, lange Namen brechen an der Wortfuge um, kein dauerhaftes Leuchten */
+#lucky.lb .lb-prize{padding:6px}
+#lucky.lb .lb-card{display:flex;flex-direction:column;align-items:center;width:min(320px,94%);max-height:100%;overflow:hidden;
+  padding:clamp(10px,2.6vh,18px) 16px clamp(12px,2.8vh,20px);
+  box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--rc) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.12),0 6px 0 var(--ink),0 0 28px color-mix(in srgb,var(--rc) 30%,transparent);
+  animation:lbCard270 .34s cubic-bezier(.2,.9,.3,1.12) both}
+@keyframes lbCard270{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:none}}
+#lucky.quiet .lb-card{animation:lbFade270 .28s ease both}
+@keyframes lbFade270{from{opacity:0}to{opacity:1}}
+#lucky.lb .lb-card-ico{flex:none;width:clamp(64px,14vh,104px);height:clamp(64px,14vh,104px);margin:clamp(6px,1.4vh,12px) auto clamp(4px,1vh,8px)}
+.lb-card-img{width:76%;height:auto;animation:lbIco270 .4s .08s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes lbIco270{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+#lucky.quiet .lb-card-img{animation:none}
+#lucky.lb .lb-card-name{max-width:100%;font-size:clamp(23px,6.6vw,28px);line-height:1.06;overflow-wrap:break-word;-webkit-hyphens:manual;hyphens:manual}
+#lucky.lb .lb-card-txt{font-size:15px;line-height:1.35;color:#fff}
+.lb-card.r-l::after{animation-iteration-count:2!important}
+/* Strahlen nur bei Episch/Legendär, kleiner, und sie klingen aus */
+#lucky.lb .lb-rays{width:420px;height:420px;margin:-210px 0 0 -210px}
+#lucky.lb .lb-rays.on{opacity:.5;animation:lbRaysOut 2.2s 1.2s ease-out forwards}
+@keyframes lbRaysOut{to{opacity:0}}
+/* Aktionsbereich: fester Platz von Anfang an (keine Verschiebung bei der Enthüllung), Knöpfe kurz gesperrt, nachdem sie erscheinen */
+#lucky.lb .lb-foot{flex:none;gap:10px;max-width:380px;margin:0 auto}
+#lucky.lb .lb-btns{min-height:114px;justify-content:flex-end}
+#lucky.lb .lb-go{min-height:62px;height:62px;padding:6px 16px;line-height:1.2}
+#lucky.lb .lb-later{min-height:44px;height:44px}
+#lucky.lb .lb-hint{margin:0 0 4px;text-align:center}
+#lucky.lb .lb-btns.arming button{pointer-events:none}
+#lucky.lb .lb-go:disabled,#lucky.lb .lb-later:disabled{opacity:1;cursor:default}
+#lucky.lb .lb-go{animation-iteration-count:2}
+.lb-streak-h{margin-bottom:3px;font-size:9.5px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.6)}
+#lucky.lb .lb-streak{padding:8px 12px}
+#lucky.lb .lb-streak-t{flex-wrap:wrap;row-gap:2px}
+/* wenig Höhe: Kopf und Leisten kompakter, die Bühne behält ihr Minimum, sonst scrollt der Inhalt */
+@media (max-height:700px){
+  #lucky.lb .lb-stage{gap:8px}
+  #lucky.lb .lb-title{font-size:28px}
+  #lucky.lb .lb-kick{display:none}
+  #lucky.lb .lb-oddrow{margin-top:4px}
+  #lucky.lb .lb-streak-bar{margin-top:5px}
+  #lucky.lb .lb-btns{min-height:108px}
+  #lucky.lb .lb-go{min-height:56px;height:56px}
+}
+@media (max-height:600px){
+  #lucky.lb .lb-sub{font-size:12px}
+  #lucky.lb .lb-oddrow{font-size:9.5px}
+  #lucky.lb .lb-streak-bar{display:none}
+}
+/* Querformat mit wenig Höhe: Bühne links, Kopf, Chancen und Aktionen rechts */
+@media (orientation:landscape) and (max-height:560px){
+  #lucky.lb .lb-stage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:18px;row-gap:8px;max-width:920px;align-items:start}
+  #lucky.lb .lb-scene,#lucky.lb.is3d .lb-scene{grid-column:1;grid-row:1/span 4;align-self:stretch;height:auto;min-height:240px;max-height:none}
+  #lucky.lb .lb-head{grid-column:2;grid-row:1}
+  #lucky.lb .lb-odds{grid-column:2;grid-row:2;max-width:none}
+  #lucky.lb .lb-foot{grid-column:2;grid-row:4;max-width:none;width:100%}
+  #lucky.lb .lb-kick{display:none}
+  #lucky.lb .lb-streak-bar{display:none}
+  #lucky.lb .lb-stage>.lb-head,#lucky.lb .lb-stage>.lb-foot{margin:0}
+}
+@media (orientation:landscape) and (max-height:420px){
+  #lucky.lb .lb-title{font-size:24px}
+  #lucky.lb .lb-sub{font-size:11.5px}
+  #lucky.lb .lb-streak{padding:5px 10px}
+  #lucky.lb .lb-streak-h{display:none}
+  #lucky.lb .lb-btns{min-height:102px}
+  #lucky.lb .lb-go{min-height:52px;height:52px}
+  #lucky.lb .lb-later{min-height:42px;height:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  #lucky.lb .lb-card{animation:lbFade270 .25s ease both}
+  #lucky.lb .lb-rays{display:none}
+  #lucky.lb .lb-go,.lb-card-img{animation:none}
+  #lucky.lb[data-tease]::before,#lucky.lb[data-r]::before{transition:none}
+}
