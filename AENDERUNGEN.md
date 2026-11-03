@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v293 – Produktionsfenster: Überschrift wie im Kuhstall
+**Wunsch Bennet:** Der Name der Mühle sah anders aus als beim Kuhstall.
+
+**Ursache:** Bei v292 blieben die kompakten Innenmaße von v286 stehen, darunter kleinere Überschrift (20 px, engere Buchstaben), kleineres Symbol, kleinerer Knopf „Deaktivieren“ und ein kleineres ✕. Sie galten nur für die Produktionsfenster.
+
+**Lösung (`style.css`):** Die vier Regeln für `.fs-h`, `.fs-ic`, `.fm-off` und `.fs-x` bei `.mach` sind entfernt. Titel, Symbol und Knöpfe haben jetzt die gleiche Größe wie in jedem anderen Hofblatt. Die kompakten Maße für Rezepte und Warteschlange bleiben.
+
+**Geprüft:** Nur Stil geändert; Mühle im Testbrowser angesehen, Titel in Standardgröße. **Nicht geprüft:** am Handy.
+
 ## v292 – Produktionsfenster wieder am unteren Rand, Arbeitermenü passt in den sichtbaren Bereich
 **Wunsch Bennet** (drei Handy-Screenshots): Das Fenster der Produktionsstätten (Fischerhütte) soll wieder wie der Kuhstall am unteren Rand sitzen. Beim Arbeiter mit vielen Aufträgen war sein Menü nicht vollständig einsehbar.
 

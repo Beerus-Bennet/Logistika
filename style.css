@@ -4537,10 +4537,6 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 
 /* v286: Produktionsfenster auf dem Handy kompakt über der Navigation. */
 @media(max-width:699px){
-  #farmSheet.mach .fs-x{width:34px;height:34px;min-width:34px;top:0;z-index:4}
-  #farmSheet.mach .fs-h{font-size:20px;line-height:1.15;letter-spacing:.5px;gap:5px;padding-right:36px;margin:0 0 8px;min-height:34px}
-  #farmSheet.mach .fs-ic{font-size:22px}
-  #farmSheet.mach .fm-off{font-size:11px;line-height:1.2;padding:6px 8px;margin:0;min-height:34px;box-shadow:2px 2px 0 var(--ink)}
   #farmSheet.mach .fq{flex-wrap:nowrap;gap:5px;overflow-x:auto;padding:2px 0 6px;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
   #farmSheet.mach .fq-s{flex:0 0 48px;width:48px;height:48px;border-width:2px;border-radius:10px;scroll-snap-align:start}
   #farmSheet.mach .fq-s>.ic.th,#farmSheet.mach .fq-s>.ic.th img{width:28px;height:28px}
