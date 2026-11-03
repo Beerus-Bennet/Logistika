@@ -9,6 +9,16 @@
 
 
 
+## v280 – Tierprodukt-Restzeiten folgen der Spielzeit
+
+Die Statuszeile im geöffneten Tier-Popup wurde nur beim Öffnen berechnet. Sie wird jetzt mit der Hofoberfläche aus der aktuellen Spielzeit aktualisiert, ohne das Popup oder seine Schaltflächen neu aufzubauen. Bei fertigen Tierprodukten entfällt die abgelaufene Wartezeit.
+
+Geprüft in Chromium für Hühner, Kühe und Schafe: 1 h 47 min wird nach 20 Spielminuten zu 1 h 27 min, auch über Mitternacht; ohne Zeitfortschritt bleibt die Anzeige gleich; bei Fertigstellung verschwindet die Restzeit. Die Stall-Schaltfläche bleibt derselbe DOM-Knoten. Die Truhenkorrektur v279 wurde ebenfalls mit geprüft: Modell und Endpose bleiben nach der Öffnungsanimation gleich. Keine JavaScript-Fehler. Syntaxprüfungen und git diff --check erfolgreich. Nicht auf einem echten Handy geprüft.
+
+## v279 – Geöffnete Schatztruhe behält ihr Aussehen
+
+Die Animation ließ die Truhe zuletzt schrumpfen und ersetzte sie durch ein kleineres, anders aufgebautes Modell in der Grube. Die dauerhafte Truhe nutzt jetzt denselben Korpus und Deckel wie die Öffnungsanimation. Schrumpfen und Auflösungsfunken entfallen; beim Übergang wird die Endpose übernommen. Auch beim Neuaufbau der Szene und nach dem Laden wird dieselbe geöffnete Truhe mit identischer Größe, Deckelstellung und Höhe dargestellt. Belohnungen und Kamerarückkehr bleiben erhalten.
+
 ## v278 – Startaufstellung und Produktionsfenster
 
 Neue Höfe starten mit der Liefertafel in Richtung der Startkamera (r=3), wie im gewünschten Screenshot. Die beiden anfänglichen Apfelbäume stehen rechts neben dem Hauptweg; ihre Stellflächen belegen keine Wegkacheln mehr. Bestehende selbst eingerichtete Höfe werden nicht umgestellt.

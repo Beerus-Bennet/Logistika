@@ -1484,6 +1484,22 @@ function closeFarmPop() {
   const el = $("#farmPop");
   if (el) { el.innerHTML = ""; el.className = ""; }
 }
+/* v280: Tierprodukt-Restzeiten immer aus der aktuellen Spielzeit ableiten. */
+function penPopStatus(o, pi) {
+  const A = pi.A, busy = o.animals.filter(a => aniState(a) === "busy");
+  const next = busy.length ? Math.min(...busy.map(a => a.fed)) - S.time : 0;
+  const mast = A.mast ? " · Mast " + o.animals.map(a => "●".repeat(Math.min(A.mast, a.g || 0)) + "○".repeat(Math.max(0, A.mast - (a.g || 0)))).join(" ") : "";
+  return `${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je ${A.fish ? "Schwarm" : "Tier"}${busy.length ? " · " + (A.mast ? "satt" : "nächstes " + tagIc(A.out)) + " in " + fdur(Math.max(1, next)) : ""}${mast}`;
+}
+function refreshPenPop() {
+  const P = FV.pop;
+  if (!P || P.kind !== "pen") return;
+  const o = farmObj(P.id), el = $("#farmPop [data-pen-status]");
+  if (!o) { closeFarmPop(); return; }
+  if (!el) return;
+  const html = penPopStatus(o, penInfo(o));
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
 function renderFarmPop() {
   const el = $("#farmPop");
   const P = FV.pop;
@@ -1535,12 +1551,8 @@ function renderFarmPop() {
   } else if (P.kind === "pen") {
     const pi = penInfo(o), A = pi.A, M = FPEN_META[o.t];
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
-    const busy = o.animals.filter(a => aniState(a) === "busy");
-    const next = busy.length ? Math.min(...busy.map(a => a.fed)) - S.time : 0;
-    const per = A.fish ? "Schwarm" : "Tier";
-    const mast = A.mast ? " · Mast " + o.animals.map(a => "●".repeat(Math.min(A.mast, a.g || 0)) + "○".repeat(Math.max(0, A.mast - (a.g || 0)))).join(" ") : "";
     h = `<div class="fp-h">${typeof aniHTML === "function" && !A.fish ? aniHTML(pi.kind) : A.i} ${o.animals.length} ${o.animals.length === 1 ? A.n : A.pl} · ${qStars(pi.stars)}
-        <small>${esc(pi.keep)} · ${fmt(pi.per, 0)} ${A.unit} je ${per}${busy.length ? " · " + (A.mast ? "satt" : "nächstes " + tagIc(A.out)) + " in " + fdur(Math.max(1, next)) : ""}${mast}</small></div>
+        <small data-pen-status>${penPopStatus(o, pi)}</small></div>
       <div class="fp-row">
         ${hungry ? `<div class="ftool big" data-tool="feed">${icOf(A.feed)}<b>Füttern</b><small>${famt(A.feed, farmInv(A.feed))} da · ${hungry} hungrig</small></div>` : ""}
         <div class="ftool" data-act="pen"><span class="ic">🔍</span><b>${A.fish ? "Gehege" : "Stall"}</b><small>Platz & Tiere</small></div>
@@ -2663,6 +2675,8 @@ function renderFarmUI() {
       if (can) $("#ffGo").onclick = askFound;
     }
   }
+  /* v280: Nur die Statuszeile aktualisieren; Bedienelemente unter dem Finger bleiben erhalten. */
+  refreshPenPop();
   /* offenes Fenster nachführen – aber nie unter dem Finger */
   if (FV.sheet) {
     const now = performance.now();
