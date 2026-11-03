@@ -2087,7 +2087,9 @@ function renderStaffPop(el, P, force) {
   if (force !== true && el._sh === h && el.querySelector(".fstp")) { positionStaffPop(el, P); return; }
   el._sh = h;
   el.classList.add("on");
+  const oldBox = el.querySelector(".fp-box.fstp"), keepTop = oldBox ? oldBox.scrollTop : 0;      /* v277: Scrollstand bleibt beim Neuzeichnen */
   el.innerHTML = `<div class="fp-box fstp">${h}</div>`;
+
   el.querySelectorAll("[data-tdel]").forEach(b => b.onclick = ev => { ev.stopPropagation(); if (staffTaskDel(b.dataset.tdel, true)) { sfx("pop"); save(); } renderStaffPop(el, P, true); });
   el.querySelectorAll("[data-tadd]").forEach(b => b.onclick = ev => { ev.stopPropagation(); P.add = true; renderStaffPop(el, P, true); });
   /* v61: Freigabe umschalten / Fahrer-Modus wählen – gilt sofort und bleibt gespeichert */
@@ -2148,13 +2150,22 @@ function renderStaffPop(el, P, force) {
   });
   if (typeof thumbFill === "function") thumbFill();
   positionStaffPop(el, P);
+  if (keepTop && el.firstChild) el.firstChild.scrollTop = keepTop;      /* erst nach der Höhengrenze, sonst wird der Wert auf 0 gekürzt */
 }
 function positionStaffPop(el, P) {
   const e = WV.staff.get(P.id), box = el && el.firstChild;
   if (!e || !box || !FV.R) return;
   const say = box.classList.contains("saym"), y0 = e.node.y || 0, p = FV.R.project(e.x, y0 + (say ? 1.62 : 2.35), e.z), f = FV.R.project(e.x, y0, e.z);
   if (!p) return;
-  const w = box.offsetWidth, hgt = box.offsetHeight, W = FV.R.w, H = FV.R.h;
+  /* v277: Das Menü darf nie höher sein als der sichtbare Bereich (zwischen Kopfleiste und Navigation) – sonst fehlten bei vielen
+     Aufträgen die unteren Teile (Freigaben, Grenzen). Es scrollt dann innen. */
+  let H = FV.R.h;
+  if (!say) {
+    const nav = document.getElementById("nav"), top = el.getBoundingClientRect().top, nt = nav && nav.offsetParent !== null ? nav.getBoundingClientRect().top : Infinity;
+    if (isFinite(nt)) H = Math.min(H, nt - top);
+    box.style.maxHeight = Math.max(160, Math.floor(H - 16)) + "px";
+  }
+  const w = box.offsetWidth, hgt = box.offsetHeight, W = FV.R.w;
   let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - (say ? 9 : 10);
   /* oben kein Platz: unter die Füße, damit die Kraft sichtbar bleibt */
   if (y < 56) y = Math.min(H - hgt - 8, (f ? f[1] : p[1] + 70) + 14);
