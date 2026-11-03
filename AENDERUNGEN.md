@@ -9,6 +9,116 @@
 
 
 
+## v264 – U-Haft nach dem Todesfall im Büro
+**Wunsch Bennet:** Die Festnahme und Untersuchungshaft nach dem tödlichen Tassenwurf (v263) über die vorhandene Haft-Mechanik umsetzen.
+
+**Ausgangslage:** `S.jail` (`snus.js`, Zelle in `jail.js`) kannte nur den Snus-Fall. Dauer (`SNUS_JAIL_DAYS` = 14), Texte („Zivilfahnder“, „Mr. Snus meldet sich wieder“) und die Zelle („Du verbüßt eine Haftstrafe“, „Das war's wert. Fast.“) waren fest darauf zugeschnitten.
+
+**Lösung:**
+- **`snus.js`:** `S.jail` kennt jetzt die Art `kind: "uhaft"` mit eigener Dauer `days`. Alte Spielstände ohne `kind` bleiben der Snus-Fall.
+  - `jailUhaft()` merkt die Festnahme beim Todesfall vor (`state: "pending"`, gespeichert). Mehrere Opfer in derselben Szene kommen in denselben Vorgang.
+  - `jailCheck()` wartet, bis die Ich-Perspektive zu ist, und zeigt dann die Festnahme. Neuladen oder vorzeitiges „Verlassen“ umgeht sie also nicht.
+  - **Festnahme:** Tatvorwurf Körperverletzung mit Todesfolge (§ 227 StGB), Haftbefehl wegen Fluchtgefahr, Vorführung beim Ermittlungsrichter am nächsten Tag, Haftprüfung vom Anwalt beantragt.
+  - **U-Haft:** 16 Tage (`UHAFT_DAYS`). Vorführung am nächsten Tag plus mündliche Haftprüfung binnen zwei Wochen nach Antrag (§ 118 Abs. 5 StPO). Sie läuft im Schnelldurchlauf wie bisher: Kosten laufen weiter, Büros mit Personal arbeiten.
+  - **Haftprüfung:** Haftverschonung gegen Auflagen (§ 116 StPO: Meldepflicht zweimal pro Woche, Reisepass abgegeben). Das Strafverfahren läuft weiter, wird aber nicht nachgespielt. Gezeigt werden Kontostand, Aufträge ohne dich und das betroffene Team.
+- **`jail.js`:** `JAIL3D.open(host, { days, kind, where })` mit eigenen Texten für die U-Haft (`TIPS_U`, `SAY_U`, ohne Verharmlosung). Dazu Schild „U-HAFT“ und Ort „Untersuchungshaft · Standort“.
+- **`officefp.js`:**
+  - Nach dem Todesfall ruft die nächste Person nach dem Notarzt. Etwa 8 Sekunden später kommt „Die Polizei ist da. Du wirst festgenommen.“, nach weiteren 3 Sekunden wird das Büro geschlossen.
+  - Fehler behoben: Schloss die Festnahme das Büro mitten im Bild, lief die Figurenschleife noch weiter.
+- **`jail.test.js`:** neuer Test für die U-Haft-Texte.
+
+**Geprüft (Testbrowser Chromium/SwiftShader):**
+- Todesfall → Hinweis → Büro schließt → Festnahme → Zelle mit 16 Tagen → Haftprüfung → „Zurück an die Arbeit“ (`S.jail` leer).
+- Vorzeitiges Verlassen und Neuladen mit vorgemerkter Festnahme führen ebenfalls zur Festnahme.
+- Die Snus-Haft ist unverändert (14 Tage, „Gefängnis“, „Entlassen“).
+- Unit-Tests `camp`, `forest`, `hunt`, `jail` (7) bestanden; `axe`, `trees` wie bisher rot.
+
+**Nicht geprüft:** am Handy.
+
+## v263 – Büro: Kaffee abstellen, anbieten, werfen · Tätigkeiten der Figuren realistisch
+**Wunsch Bennet:**
+1. Kaffee überall abstellen, dem Personal anbieten und bei Interesse übergeben.
+2. Tasse werfen: Sie zerspringt, der Kaffee liegt 5 Spielminuten an der logischen Stelle. Wird eine Person getroffen, stirbt sie sofort mit sichtbarer Verletzung.
+3. Nachgereicht per Screenshot: Schreiben, Telefonieren und Kaffeetrinken der Figuren wirkten unrealistisch.
+
+**Ursachen (Code gelesen, im Testbrowser nachgestellt, Vorher-Bilder):**
+- **Abstellen:** Eine Tasse in der Hand ließ sich nur an ihren Schrankplatz zurückstellen oder in die Kaffeemaschine; andere Ablagen gab es nicht.
+- **Arme gestreckt:** Tastatur und Maus lagen 40 cm, der Block 16 cm und der Bildschirm 82 cm von der Tischkante. Die Figur sitzt 20 cm hinter der Kante, deshalb mussten die Arme fast ganz durchgestreckt werden.
+- **Hände:** Jede Hand war nur ein flaches Oval mit Daumenkugel, ohne Finger, ohne Griff und ohne Handgelenk-Ausrichtung.
+- **Stift:** Er hing schräg am Handoval, die Spitze traf das Papier nicht.
+- **Telefon:** Der Ellbogen stand seitlich ab.
+- **Tasse:** Ein Zylinder mit Klötzchen, an einem festen Punkt neben der Hand. Sie kippte kaum, und der Kopf blieb starr.
+
+**Lösung – Kaffee (`officefp.js`, `officekitchen.js`):**
+- **Ablageflächen** (`room.surf`):
+  - Flächen: Schreibtische, Arbeitsplatte (Kaffeemaschine, Mikrowelle, Wasserkocher und Hahn bleiben frei), Küchentisch, Fensterbank, Empfangstheke (Bürogebäude) und Boden.
+  - Ein Ring zeigt die Stelle, „Hier abstellen“ stellt die Tasse ab, der Henkel zeigt nach rechts.
+  - Nicht möglich auf Tastatur, Maus, Block, Papieren, Telefon, dem eigenen Becher und dort, wo die Unterarme arbeiten.
+  - Auf dem Boden nicht in Möbeln und nicht unter den eigenen Füßen; man läuft um Tassen auf dem Boden herum.
+  - Abstand zu anderen Tassen, Reichweite 2,4 m, freie Sicht.
+  - Neue Lage `free` bleibt beim Etagenwechsel erhalten.
+- **Anbieten:** Mit Kaffee in der Hand und höchstens 1,35 m Abstand erscheint „Kaffee anbieten“; über den Tisch hinweg heißt es „Näher ran zum Übergeben“. Die Person entscheidet nachvollziehbar:
+  - Absage, wenn sie telefoniert oder gerade ihren eigenen Becher in der Hand hat.
+  - Absage, wenn sie vor weniger als 90 Spielminuten schon einen bekommen hat.
+  - Absage, wenn sie keinen Kaffee trinkt (fest je Person, etwa jede Siebte).
+  - Abends ab 20 Uhr sagen die meisten nein; bei vollem Tisch ebenfalls.
+  - Nach einem Todesfall sagen alle nein.
+  - Sonst bedankt sie sich, nimmt die Tasse mit der Hand auf deiner Seite am Henkel, trinkt einen Schluck und stellt sie auf ihren Tisch.
+  - Keine Wirkung auf Stimmung oder Geld.
+- **Werfen** („Tasse werfen“, zweiter Knopf):
+  - Flugbahn mit Schwerkraft, gezielt über das Fadenkreuz.
+  - Prüft Wände, Decke, Boden, Möbel, offene Küchentüren, Stuhllehnen, Kopf, Oberkörper und Beine.
+  - Die Tasse zerspringt beim ersten Aufprall: Scherben in Tassenfarbe (Henkel als Ganzes), Spritzer und Klirren (nur mit Ton an).
+  - Aus der offenen Tasse schwappt im Flug Kaffee.
+- **Logische Stelle des Kaffees:**
+  - Waagerechte Fläche: Lache dort.
+  - Wand, Möbelfront, Decke oder Person: Fleck mit Laufspuren an der Trefferstelle, Lache auf der höchsten Fläche darunter (z. B. Hängeschrank → Arbeitsplatte, Wand → Boden).
+  - Größe nach Füllmenge; auf Teppich zieht er ein (kleiner, dunkler).
+  - Kaffee und Scherben verblassen nach 5 Spielminuten (`S.time`) und bleiben bis dahin auch über einen Etagenwechsel liegen.
+- **Treffer an Beinen:** „Au! Spinnst du?!“, sonst schauen alle zur Stelle und jemand fragt, was los ist.
+- **Treffer an Kopf oder Oberkörper:** Die Person stirbt sofort (wie gewünscht).
+  - Ablauf: kurzer Ruck vom Aufprall, dann seitlicher Sturz vom Stuhl auf den Boden (in Wurfrichtung, sonst zur freien Seite). Ist beides verstellt, sackt sie im Stuhl zusammen.
+  - Sichtbare Verletzung: Platzwunde mit Rinnsal am Kopf bzw. durchgeblutete Kleidung. Dazu Blutlache, geschlossene Augen, keine Atmung.
+  - Becher, Telefon, Maus und Block bleiben auf dem Tisch.
+  - Das Team erschrickt: Hände vor den Mund, Blick zur Person; die nächste Person ruft nach dem Notarzt.
+  - Antippen der Person: „… ist tot.“
+- **Folgen im Spielstand** (wie Ausscheiden in `offices.js`, ohne Abfindung):
+  - Die Person wird aus `b.staff` entfernt, ein fest zugeteiltes Fahrzeug verliert den Fahrer.
+  - Stimmung −40.
+  - Meldung „Todesfall im Büro“ im Diensthandy.
+  - Gespeichert wird sofort.
+- **Keine Migration nötig:** Die Küchenzustände sind wie bisher nur Sitzungszustand.
+
+**Lösung – Tätigkeiten (`officefp.js`):**
+- **Ergonomischer Schreibtisch:** Bildschirm etwa eine Armlänge vor den Augen, Tastatur und Maus 15–20 cm von der Kante, Becher hinter der Maus, Telefon links, Block rechts. Die Ellbogen bleiben gebeugt und am Körper.
+- **Hände** (`handMesh`, `GRIPS`):
+  - Daumen und vier zweigliedrige Finger; Griffe: Tippen, Maus, Stift, Henkel, Telefon, flach, offen, Ruhe.
+  - Jede Hand hat einen Kontaktpunkt (Fingerkuppe, Stiftspitze, Henkel, Telefonmitte) und eine eigene Drehung.
+  - Der Arm rechnet bis zum Handgelenk (`ARM_B` neu 0,211), die Hand setzt dort ohne Lücke an.
+- **Schreiben:** Block mit den Fingerspitzen heranziehen, Stift vom Block nehmen (Dreipunktgriff, Spitze auf dem Papier), Zeile für Zeile mit kleinen Buchstabenschleifen und angehobenem Stift zwischen den Wörtern. Danach Stift ablegen und Block zurückschieben; der Blick folgt der Stiftspitze.
+- **Telefonieren:** Handy mit links vom Tisch nehmen, Display an der Wange, Ellbogen nach vorn unten. Der Kopf neigt sich zum Telefon, der Blick wandert, die rechte Hand bleibt an der Maus.
+- **Trinken:** Becher wie in der Küche (Henkel, Rand, Kaffee). Henkel greifen, anheben, Rand an die Lippe, Becher kippt, Kopf geht leicht zurück, kurz die Augen zu. Danach vor der Brust halten, bei längerer Pause ein zweiter Schluck, abstellen.
+- **Tippen und Maus:** Fingerkuppen auf den Tasten, ab und zu ein Blick auf die Tastatur. Die Maus bleibt dort liegen, wo die Hand sie loslässt.
+- **Lesen:** Linke Hand hält das Blatt, der Blick wandert die Zeilen hinunter.
+- **Logik:** Nach dem geschenkten Kaffee greift die Person nicht sofort zum eigenen Becher.
+
+**Geprüft (Testbrowser Chromium/SwiftShader, Unit-Tests):**
+- **Abstellen:** auf Schreibtisch und Boden.
+- **Anbieten:** über das Fadenkreuz angenommen, Tasse landet auf dem Tisch der Person (Füllung 0,88); ein zweites Angebot wird abgelehnt.
+- **Wurf gegen den Hängeschrank:** Fleck dort, Lache auf der Arbeitsplatte darunter.
+- **Wurf auf den Tisch:** Lache auf der Tischplatte.
+- **Nach +5 Spielminuten:** alle Spuren weg.
+- **Kopftreffer:** Sturz, Personal 6 → 5, Meldung, Stimmung 100 → 60, Ruf nach dem Notarzt.
+- **Rumpftreffer bei verstellten Seiten:** Zusammensacken.
+- **Bürogebäude mit Etagen** (Empfangstheke als Ablage, Etagenwechsel mit Kaffeelache) **und kleines Büro mit Nischenküche:** ohne Fehler.
+- **Tätigkeiten:** Vorher-/Nachher-Bilder aus drei Blickwinkeln.
+- **Unit-Tests:** `camp`, `forest`, `hunt`, `jail` bestanden; `axe` und `trees` schlagen wie bisher fehl.
+
+**Nicht geprüft:**
+- Am Handy.
+- Mit echtem Spielfluss über längere Zeit.
+- Der Klirr-Ton (im Testbrowser ohne Ton).
+
 ## v262 – Jagd: Liegeposen, Bergungsansicht, mehr Fasane
 **Bestätigte Ursachen (Code gelesen, im Testbrowser nachgestellt, Vorher/Nachher-Bilder):**
 - **Liegepose (`calcDead`, v135):** Jeder Lauf wurde nach festen Winkeln bis zu ±1,45 rad zur Seite gedreht, bis irgendein Punkt den Boden berührte. Daraus wurden steif parallel gestreckte Hinterläufe, Vorderläufe übereinander und beim Keiler oben liegende Läufe, die 69° über der Schulter abstanden. Es gab keine Prüfung von Lauf gegen Lauf oder Lauf gegen Rumpf. Für den Boden zählte nur jede dritte Modellecke.

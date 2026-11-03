@@ -37,6 +37,18 @@ const JAIL3D = (() => {
     "Hofgang um drei. Danach wieder Warten."
   ];
   const SAY = { man: ["Alles gut.", "Nur noch ein paar Tage …", "Ich vermisse die Lieferungen.", "Hallo?", "Das war's wert. Fast."], rat: ["Hubert!", "Quiek!", "Krümel!"], tap: ["Tropf.", "Tropf, tropf …", "Der Hahn tropft."], win: ["Freiheit …", "Schöner Tag draußen.", "Ein Vogel!"] };
+  /* v264: Untersuchungshaft nach dem Todesfall im Büro – eigene, ernste Texte (kein „Das war's wert“) */
+  const TIPS_U = [
+    "Dein Anwalt hat die Haftprüfung beantragt.",
+    "Fixkosten und Löhne laufen auch in der U-Haft weiter.",
+    "Büros mit Personal arbeiten ohne dich weiter.",
+    "In der U-Haft giltst du als unschuldig, bis ein Urteil fällt.",
+    "Besuch nur mit Erlaubnis des Gerichts – Briefe werden gelesen.",
+    "Jeder Strich an der Wand ist ein Tag weniger.",
+    "Hofgang um drei. Danach wieder Warten.",
+    "Die Ratte heißt Hubert. Sie ist die Einzige, die dich besucht. Tipp sie an."
+  ];
+  const SAY_U = { man: ["Ich wollte das nicht …", "Wann ist die Haftprüfung?", "Hallo?", "Ich kann nicht schlafen."], rat: SAY.rat, tap: SAY.tap, win: ["Draußen geht alles weiter …", "Ein Vogel!", "Wie es dem Team wohl geht?"] };
 
   const hex = c => typeof c === "number" ? c : parseInt(String(c).replace("#", ""), 16);
   const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
@@ -291,18 +303,19 @@ const JAIL3D = (() => {
   /* -------------------------------- Szene --------------------------------- */
   function open(host, opt) {
     opt = opt || {};
-    const DAYS = opt.days || 14;
+    const DAYS = opt.days || 14, U = opt.kind === "uhaft", tips = U ? TIPS_U : TIPS, says = U ? SAY_U : SAY;
+    const esc2 = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     host.innerHTML = `<div class="jl3" id="jl3">
       <canvas id="jlCv"></canvas><div class="jl-vig"></div>
-      <div class="jl-top"><div class="jl-plate"><i class="jl-bars"><u></u><u></u><u></u><u></u></i><b>GEFÄNGNIS</b></div>
-        <p>Du verbüßt eine Haftstrafe von<br><b>${DAYS} Tagen</b></p><small>JVA Moabit · Zelle 214</small></div>
+      <div class="jl-top"><div class="jl-plate"><i class="jl-bars"><u></u><u></u><u></u><u></u></i><b>${U ? "U-HAFT" : "GEFÄNGNIS"}</b></div>
+        <p>${U ? "Untersuchungshaft bis zur<br><b>Haftprüfung in " + DAYS + " Tagen</b>" : "Du verbüßt eine Haftstrafe von<br><b>" + DAYS + " Tagen</b>"}</p><small>${esc2(opt.where || "JVA Moabit · Zelle 214")}</small></div>
       <div class="jl-say" id="jlSay"></div>
       <div class="jl-bot">
         <div class="jl-bar"><i id="jlFill"></i></div>
         <div class="jl-days" id="jlDays">Tag <b>1</b> / ${DAYS} (0 %)</div>
         <div class="jl-cells" id="jlCells">${Array.from({ length: DAYS }, (_, i) => `<span${i ? "" : " class=\"cur\""}>${i + 1}</span>`).join("")}</div>
         <div class="jl-stats"><span>Kontostand <b id="jlMoney">–</b></span><span>Ohne dich zugestellt <b id="jlJobs">0</b></span></div>
-        <div class="jl-tip"><i>💡</i><div><b>Tipp:</b><span id="jlTip">${TIPS[0]}</span></div></div>
+        <div class="jl-tip"><i>💡</i><div><b>Tipp:</b><span id="jlTip">${tips[0]}</span></div></div>
       </div><div class="jl-flash" id="jlFlash"></div></div>`;
     const cv = host.querySelector("#jlCv");
     let R = null;
@@ -441,7 +454,7 @@ const JAIL3D = (() => {
       beam.tint = [...mixc(0xfff0c0, 0xffb070, k), 0.6]; rays.tint = [...mixc(0xffe9a0, 0xffa860, k), 0.7]; rays.alpha = 0.055 + Math.sin(t * 0.8) * 0.02;
       /* Tipps */
       st.tipT -= dt;
-      if (st.tipT <= 0) { st.tipT = 3.6; const el = host.querySelector("#jlTip"); if (el) { el.parentNode.classList.add("sw"); setTimeout(() => { if (el.isConnected) { el.textContent = TIPS[++st.tip % TIPS.length]; el.parentNode.classList.remove("sw"); } }, 260); } }
+      if (st.tipT <= 0) { st.tipT = 3.6; const el = host.querySelector("#jlTip"); if (el) { el.parentNode.classList.add("sw"); setTimeout(() => { if (el.isConnected) { el.textContent = tips[++st.tip % tips.length]; el.parentNode.classList.remove("sw"); } }, 260); } }
     }
 
     /* -------------------------------- Eingabe -------------------------------- */
@@ -454,7 +467,7 @@ const JAIL3D = (() => {
         ["win", proj(X0, 1.25, (WIN.z0 + WIN.z1) / 2), 70]
       ].filter(q => q[1]).map(([k, p, r]) => [k, p, r, Math.hypot(p[0] - x, p[1] - y)]).filter(q => q[3] < q[2]).sort((a, b) => a[3] - b[3]);
       if (!T.length) return;
-      const [k, p] = T[0], L = SAY[k];
+      const [k, p] = T[0], L = says[k];
       say(L[Math.floor(Math.random() * L.length)], p[0], p[1] - 40);
       if (k === "man") { st.wave = 2.2; }
       else if (k === "rat") { if (st.rat.s !== "hide") st.rat.s = "flee"; else { st.rat.t = 0; } }
@@ -512,5 +525,5 @@ const JAIL3D = (() => {
     return ctl;
   }
 
-  return { open, look, cellStatic, prisoner, ratMesh, beamMesh, raysMesh, cupMesh, bookMesh, SIT_Y, guardMesh, birdMesh, TIPS, SAY, UM, LM, BUNK, WIN, SEAT, LIGHT };
+  return { open, look, cellStatic, prisoner, ratMesh, beamMesh, raysMesh, cupMesh, bookMesh, SIT_Y, guardMesh, birdMesh, TIPS, SAY, TIPS_U, SAY_U, UM, LM, BUNK, WIN, SEAT, LIGHT };
 })();

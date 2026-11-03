@@ -1,5 +1,33 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v264 – U-Haft nach Todesfall im Büro (auf v263)
+
+- `snus.js`: `UHAFT_DAYS`, `jailDays`, `jailUhaft`, `uhaftWho`, `uhaftArrestScreen`, `jailWhere`, `uhaftOut`. `jailCheck` kennt `state: "pending"`; `jailServe`/`jailScene`/`jailOut` arbeiten mit `S.jail.kind`/`days`. `S.jail` ohne `kind` = Snus wie bisher.
+- `jail.js`: `open(host, { days, kind, where })`, `TIPS_U`, `SAY_U`.
+- `officefp.js`: `killStaff` ruft `jailUhaft`; Polizei-Hinweis und `leave()` über `later`. `step` endet, wenn das Büro dabei geschlossen wurde.
+- `jail.test.js`: Test „v264 U-Haft“.
+
+## Stand v263 – Büro: Kaffee abstellen, anbieten, werfen; Tätigkeiten realistisch (auf v262)
+
+- `officekitchen.js`:
+  - Lagen `free` (mit `pos`, `ry`), `ext` und `broken`.
+  - Neue Funktionen: `dropAt`, `release`, `settle`, `shatter`, `busy`, `doorT`.
+  - `layout` liefert `top` (Arbeitsplatte) und `ex` (Sperrzonen).
+  - `colliders` enthält auch Tassen auf dem Boden.
+- `officefp.js`:
+  - `buildRoom` liefert `surf` (Ablageflächen), `phys` (Stuhllehnen und Sitze für den Wurf) und `carpet`. Der Schreibtisch ist neu angeordnet; `seats[].own` hält die eigenen Rechtecke.
+  - Abschnitt „v263: Kaffee …“: `sweep`, `segBox`, `segSphere`, `surfBelow`, `dropSpot`, `offerTarget`/`offerTo`, `giftCup`/`giftDone`/`giftAbort`, `throwCup`/`stepFly`/`impact`/`shards`/`spillAt`, `fxAdd`/`stepFx` (Spuren mit `until` in Spielminuten), `startle`/`ouch`, `killStaff`/`wound`/`animDead`/`fallSide`/`detach`.
+  - `O.spills`: Spuren je Etage.
+  - Figuren:
+    - `ARM_B` = 0,211 (bis Handgelenk), `foreMesh` angepasst.
+    - `handMesh(L, side, grip)` mit `GRIPS`, `gripOff`, `HROT`, `penPose`.
+    - Becher `mugMesh` (aus `OFFICE_KITCHEN.cupMesh`), Block `noteMesh`/`notePose` (`F.noteK`).
+    - `animFigure` neu mit Zielen je Hand (`want`, `kbAt`, `restOn`, `mouseAt`, `mugPlan`, `cupKeys`, `writePt`).
+    - `solveArm`: engere Beugung, Ellbogenvorgabe `a.el`.
+  - Prüfstand `OFFICE3D._t` nur für Tests.
+- `style.css`: Block „v263: Büro – Tasse werfen“ am Ende.
+- Spielstand: Beim Todesfall wird die Person aus `b.staff` entfernt (wie `fire()`, ohne Abfindung), Stimmung −40, `phoneMsg`, `save()`. Keine Migration.
+
 ## Stand v262 – Jagd: Liegeposen, Bergung, Fasane (auf v261)
 
 - `hunt.js`:

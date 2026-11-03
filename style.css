@@ -4105,3 +4105,9 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 #huntUI .hu-svt b,#huntUI .hu-cn b,#huntUI .hu-cn em{overflow-wrap:anywhere;hyphens:auto}
 #huntUI .hu-svimg{width:min(92px,24vw);height:min(92px,24vw)}
 @media (max-width:360px){#huntUI .hu-sb{flex-direction:column}#huntUI .hu-svt b{font-size:15.5px}}
+
+/* ---------- v263: Büro – Tasse werfen (zweiter Knopf unter der Aktion) ---------- */
+#ofpThrow{pointer-events:auto;min-height:44px;padding:8px 12px;background:#fff1e8;border:var(--line);border-color:#b8502c;color:#7d2a10;border-radius:14px;box-shadow:var(--shadow);font-size:13.5px;font-weight:900;line-height:1.2;touch-action:manipulation;cursor:pointer}
+#ofpThrow[hidden]{display:none}
+#ofpThrow:active{transform:translate(2px,2px);box-shadow:none}
+#ofpThrow:focus-visible{outline:3px solid #e5a43a;outline-offset:4px}

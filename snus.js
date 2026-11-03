@@ -49,6 +49,11 @@ const SNUS_RICH_LINES = [
   "Für die Jungs vom Verein: {n}× {s}. Passt schon mit dem Preis."
 ];
 const SNUS_JAIL_DAYS = 14;
+/* v264: Untersuchungshaft nach einem Todesfall im Büro (officefp.js). Festnahme, Vorführung beim Ermittlungsrichter am
+   nächsten Tag, Haftprüfung auf Antrag des Anwalts – mündliche Verhandlung binnen zwei Wochen (§ 118 Abs. 5 StPO).
+   Danach Haftverschonung gegen Auflagen (§ 116 StPO); das Strafverfahren läuft weiter, wird aber nicht nachgespielt. */
+const UHAFT_DAYS = 16;
+const jailDays = j => (j && j.days) || SNUS_JAIL_DAYS;
 const SNUS_COP_JOBS = ["Angestellter", "Berater", "Sachbearbeiter", "Vertriebler", "Projektleiter"];
 const SNUS_COP_LINES = [
   "Hab deine Nummer von 'nem Kumpel. Brauch {n}× {s}, zahl auch mehr.",
@@ -386,6 +391,11 @@ function snusBust(job) {
 }
 function jailCheck() {
   if (!S.jail || jailUI) return;
+  /* v264: Festnahme im Büro – erst wenn die Ich-Perspektive zu ist (Polizei führt dich hinaus) */
+  if (S.jail.state === "pending") {
+    if (typeof OFFICE3D !== "undefined" && OFFICE3D.isOpen()) return;
+    S.jail.state = "arrest";
+  }
   jailUI = true;
   if (typeof closeModal === "function" && $("#modal").classList.contains("open")) closeModal();
   if (S.jail.state === "arrest") return jailArrestScreen();
@@ -402,7 +412,39 @@ function reportHide() {
   $("#report").innerHTML = "";
   document.body.classList.remove("report-open", "jl-open");
 }
+/* v264: Festnahme nach dem Todesfall im Büro. Mehrere Opfer in derselben Szene kommen in denselben Vorgang. */
+function jailUhaft(o) {
+  if (S.jail && S.jail.kind === "uhaft" && S.jail.state === "pending") {
+    if (!S.jail.victims.includes(o.who)) S.jail.victims.push(o.who);
+    save(); return;
+  }
+  if (S.jail) return;
+  S.jail = {
+    kind: "uhaft", state: "pending", days: UHAFT_DAYS, from: S.time, until: S.time + UHAFT_DAYS * 1440,
+    victims: [o.who], place: o.place, baseId: o.baseId, money0: S.money, done0: S.done
+  };
+  save();
+}
+const uhaftWho = j => { const v = j.victims || []; return v.length > 1 ? v.slice(0, -1).join(", ") + " und " + v[v.length - 1] : v[0] || "–"; };
+function uhaftArrestScreen() {
+  const j = S.jail, many = (j.victims || []).length > 1;
+  reportShow(`<div class="rp jail">
+    <div class="rp-head"><b>🚔 Festnahme</b><span>Büro ${esc(N[j.place].short)} · Tag ${dayOf(S.time)}, ${clock(S.time)}</span></div>
+    <p><b>${esc(uhaftWho(j))}</b> ${many ? "sind" : "ist"} an den Verletzungen durch die geworfene Kaffeetasse gestorben. Die Polizei nimmt dich noch im Büro fest.</p>
+    <dl>
+      <dt>Tatvorwurf</dt><dd>Körperverletzung mit Todesfolge (§ 227 StGB)</dd>
+      <dt>Haftbefehl</dt><dd>Fluchtgefahr wegen der hohen Straferwartung</dd>
+      <dt>Ermittlungsrichter</dt><dd>Vorführung am nächsten Tag</dd>
+      <dt>Haftprüfung</dt><dd>vom Anwalt beantragt – Termin in ${jailDays(j)} Tagen</dd>
+    </dl>
+    <div class="rp-stamp">U-HAFT</div>
+    <p class="rp-note">Kosten laufen weiter, Büros mit Personal arbeiten ohne dich.</p>
+    <button class="btn" id="rpGo">Abführen lassen</button>
+  </div>`);
+  $("#rpGo").onclick = () => { S.jail.state = "serving"; save(); jailServe(); };
+}
 function jailArrestScreen() {
+  if (S.jail.kind === "uhaft") return uhaftArrestScreen();
   const j = S.jail, s = snusSort(j.sort);
   reportShow(`<div class="rp jail">
     <div class="rp-head"><b>🚔 Festnahme</b><span>Polizeidirektion ${esc(N[j.place].short)} · Tag ${dayOf(S.time)}, ${clock(S.time)}</span></div>
@@ -423,11 +465,11 @@ function jailArrestScreen() {
    JAIL_MS = Mindestdauer der Anzeige in Millisekunden (die Spielzeit läuft im Schnelldurchlauf mit). */
 const JAIL_MS = (typeof window !== "undefined" && window.JAIL_MS_TEST) || 9000;
 function jailServe() {
-  const j = S.jail;
+  const j = S.jail, DAYS = jailDays(j), U = j.kind === "uhaft";
   const ctl = typeof JAIL3D !== "undefined" && typeof G3 !== "undefined" ? jailScene(j) : null;
   if (!ctl) reportShow(`<div class="rp jail">
-    <div class="rp-head"><b>🔒 Haft</b><span>JVA Moabit · Zelle 214</span></div>
-    <div class="rp-days" id="rpDays">Tag 1 von ${SNUS_JAIL_DAYS}</div>
+    <div class="rp-head"><b>🔒 ${U ? "Untersuchungshaft" : "Haft"}</b><span>${esc(U ? jailWhere(j) : "JVA Moabit · Zelle 214")}</span></div>
+    <div class="rp-days" id="rpDays">Tag 1 von ${DAYS}</div>
     <div class="rp-bar"><i id="rpBar"></i></div>
     <p class="rp-note">Hofgang, Kantine, Warten.</p>
   </div>`);
@@ -446,7 +488,7 @@ function jailServe() {
     if (ctl) ctl.update({ k, money: S.money, moneyTxt: money(S.money), jobs: Math.max(0, S.done - j.done0) });
     const bar = $("#rpBar"), days = $("#rpDays");
     if (bar) bar.style.width = Math.round(Math.min(1, k) * 100) + "%";
-    if (days) days.textContent = "Tag " + Math.min(SNUS_JAIL_DAYS, 1 + Math.floor(k * SNUS_JAIL_DAYS)) + " von " + SNUS_JAIL_DAYS;
+    if (days) days.textContent = "Tag " + Math.min(DAYS, 1 + Math.floor(k * DAYS)) + " von " + DAYS;
     if (S.time < j.until - 0.01) return requestAnimationFrame(step);
     muteToasts = false;
     if (ctl) ctl.finish(() => { ctl.close(); $("#report").classList.remove("jl-on"); document.body.classList.remove("jl-open"); jailRefresh(); jailOut(); });
@@ -458,7 +500,7 @@ function jailScene(j) {
   const el = $("#report");
   el.classList.add("on", "jl-on");
   document.body.classList.add("report-open", "jl-open");
-  const ctl = JAIL3D.open(el, { days: SNUS_JAIL_DAYS });
+  const ctl = JAIL3D.open(el, j.kind === "uhaft" ? { days: jailDays(j), kind: "uhaft", where: jailWhere(j) } : { days: SNUS_JAIL_DAYS });
   if (!ctl) { el.classList.remove("jl-on"); document.body.classList.remove("jl-open"); return null; }
   return ctl;
 }
@@ -467,7 +509,31 @@ function jailRefresh() {
   const run = (fn, ...a) => { try { if (typeof fn === "function") fn(...a); } catch (e) { console.warn("jailRefresh", e); } };
   run(renderHud); run(farmSyncScene, true); run(renderFarmUI); run(mapRedraw); run(save);
 }
+const jailWhere = j => "Untersuchungshaft · " + (N[j.place] ? N[j.place].name : "JVA");
+/* v264: Haftprüfung – der Haftbefehl wird gegen Auflagen außer Vollzug gesetzt */
+function uhaftOut() {
+  const j = S.jail, diff = S.money - j.money0, jobs = S.done - j.done0;
+  const b = typeof baseById === "function" ? baseById(j.baseId) : null;
+  reportShow(`<div class="rp jail">
+    <div class="rp-head"><b>⚖️ Haftprüfung</b><span>Tag ${dayOf(S.time)}, ${clock(S.time)}</span></div>
+    <p>Nach ${jailDays(j)} Tagen Untersuchungshaft setzt das Gericht den Haftbefehl gegen Auflagen außer Vollzug: Meldepflicht zweimal pro Woche, Reisepass abgegeben. Das Strafverfahren wegen des Todes von ${esc(uhaftWho(j))} läuft weiter.</p>
+    <dl>
+      <dt>Kontostand</dt><dd class="${diff >= 0 ? "good" : "bad"}">${money(S.money)} (${diff >= 0 ? "+" : "−"}${money(Math.abs(diff))})</dd>
+      <dt>Ohne dich zugestellt</dt><dd>${jobs} Auftr${jobs === 1 ? "ag" : "äge"}</dd>
+      ${b ? `<dt>Team ${esc(N[b.node].short)}</dt><dd>${b.staff.length} Person${b.staff.length === 1 ? "" : "en"} · Stimmung ${Math.round(b.mood)} %</dd>` : ""}
+    </dl>
+    <p class="rp-note">Das Team trauert. Gewalt am Arbeitsplatz hat Folgen – auch für die, die zusehen mussten.</p>
+    <button class="btn" id="rpGo">Zurück an die Arbeit</button>
+  </div>`);
+  $("#rpGo").onclick = () => {
+    S.jail = null; jailUI = false;
+    reportHide(); jailRefresh();
+    if (typeof renderPause === "function") renderPause();
+    render();
+  };
+}
 function jailOut() {
+  if (S.jail && S.jail.kind === "uhaft") return uhaftOut();
   const j = S.jail;
   const diff = S.money - j.money0, jobs = S.done - j.done0;
   reportShow(`<div class="rp jail">
