@@ -2148,9 +2148,9 @@ function openMachine(o) {
     const by = r.by ? " · dazu " + Object.keys(r.by).map(id => fqty(id, r.by[id])).join(", ") : "";
     const what = r.trip ? `<em class="fr-trip">${esc(r.trip)}</em>` : r.note ? `<em class="fr-trip">${esc(r.note)}</em>` : "";
     return `<button class="frec${lock ? " lock" : ok ? "" : " miss"}" data-rec="${rkey(r)}" ${lock ? "disabled" : ""}>
-      ${icOf(r.id, lock)}
+      ${icOf(r.id)}
       <b>${esc((r.luck ? "ca. " : "") + fqty(r.id, r.out))}</b>${what}
-      <span class="fr-in">${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : nok && r.lv <= lv ? esc(r.why || "gesperrt") : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
+      <span class="fr-in${lock ? " fr-lock" : ""}">${lock ? `<span aria-hidden="true">🔒</span> ` : ""}${sunOff(r) && r.lv <= lv ? "🌙 erst nachts – jetzt liefert die Sonne" : nok && r.lv <= lv ? esc(r.why || "gesperrt") : lock ? "ab Level " + r.lv : ins || `<span class="fchip free">ohne Zutaten</span>`}</span>
       <small>⏱ ${fdur(r.t)} · ${it.energy ? "+" + it.energy * r.out + " kWh in den Speicher" : "Wert " + eur(it.v * r.out)}${by}</small>
     </button>`;
   }).join("");
