@@ -2188,8 +2188,8 @@ function worldTreasureIntro(c, Z) {
   if (!R || FV.fp || (typeof MG !== "undefined" && MG.on)) return;
   WV.trIntro = { t: 0, t0: c.t0, shot: false };
   WV.swarm.forEach(b => { b.out = 6 + (b.i % 3) * 0.6; b.f = 0; });
-  /* v255: Kamera bleibt, wo der Spieler sie hat – hin geht es über den 🐦-Knopf oder das Banner, nicht ungefragt */
-  worldLootShow(R.w / 2, R.h / 2, { sub: Z ? Z.n : "Neue Fundstelle", title: "🐦 Schatz gesichtet!", chips: ["Such das rote Kreuz", "3 Stunden Zeit"], r: 1, css: "#ffd25a", ms: 3600 });
+  /* v255: Kamera bleibt, wo der Spieler sie hat – hin geht es über den 🐦-Knopf, nicht ungefragt.
+     v294: Die große Einblendung „Schatz gesichtet!“ entfällt; den Hinweis liefern die Meldung und der Vogelschwarm-Knopf. */
   sfx("horn"); setTimeout(() => sfx("pearl"), 260);
 }
 function stepTreasure(dt, time) {
