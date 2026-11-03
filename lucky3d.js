@@ -198,10 +198,10 @@ const LUCKY3D = (() => {
   function winMesh(s, col) {
     const b = new G3.MB(), R = R_WHEEL - 0.02, z = 0.064, n = Math.max(2, Math.ceil(s.w / (TAU / 90))), w = 0.045;
     const pt = (a, r, zz) => [Math.sin(a) * r, Math.cos(a) * r, zz];
-    const cIn = mixc(col, 0xffffff, 0.15), cOut = mixc(col, 0xffffff, 0.45);
+    const cIn = mixc(col, 0x0d1420, 0.1), cOut = mixc(col, 0xffffff, 0.12);        /* v272: Farbe der Seltenheit bleibt erkennbar, kein weißer Schleier */
     for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.triV(pt(0, 0.3, z), pt(a1, R, z), pt(a0, R, z), cIn, cOut, cOut); }
-    for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.quad(pt(a0, R - w, z + 0.004), pt(a1, R - w, z + 0.004), pt(a1, R, z + 0.004), pt(a0, R, z + 0.004), 0xffffff); }
-    [s.a0, s.a0 + s.w].forEach(a => b.at({ rz: -a }, () => b.box(0.04, R - 0.3, 0.012, 0xffffff, { y: 0.3, z: z + 0.002 })));
+    for (let i = 0; i < n; i++) { const a0 = s.a0 + s.w * i / n, a1 = s.a0 + s.w * (i + 1) / n; b.quad(pt(a0, R - w, z + 0.004), pt(a1, R - w, z + 0.004), pt(a1, R, z + 0.004), pt(a0, R, z + 0.004), mixc(col, 0xffffff, 0.55)); }
+    [s.a0, s.a0 + s.w].forEach(a => b.at({ rz: -a }, () => b.box(0.035, R - 0.3, 0.012, mixc(col, 0xffffff, 0.55), { y: 0.3, z: z + 0.002 })));
     return b;
   }
   function standMesh(P) {
@@ -382,7 +382,7 @@ const LUCKY3D = (() => {
         n.tint = [c[0] * (0.3 + 0.7 * k), c[1] * (0.3 + 0.7 * k), c[2] * (0.3 + 0.7 * k), 1]; n.glow = k * 0.9;
         if (rv < 1) n.tint = n.tint.map((v, j) => j < 3 ? v * rv + P.dark[j] * (1 - rv) : 1);
       }
-      if (winNode) winNode.glow = S3.lit >= 0 ? 0.25 + (red ? 0 : 0.2 * Math.max(0, Math.cos((t - S3.lit) * TAU * 1.2)) * Math.exp(-(t - S3.lit) * 1.2)) : 0;
+      if (winNode) winNode.glow = S3.lit >= 0 ? 0.04 + (red ? 0 : 0.06 * Math.max(0, Math.cos((t - S3.lit) * TAU * 1.2)) * Math.exp(-(t - S3.lit) * 1.2)) : 0;
       iconN.forEach(n => { n.alpha = (S3.winSeg && n.seg !== S3.winSeg && S3.lit >= 0 ? 0.42 : 1) * rv; });
       /* Kamera */
       if (S3.camT >= 0) S3.camK = red ? 1 : clamp01((t - S3.camT) / S3.camD);
@@ -439,7 +439,7 @@ const LUCKY3D = (() => {
         wheel.tint = [0.04, 0.06, 0.1, 0.32];
         if (!red && rank >= 2) {
           const cr = rgb(col);
-          for (let i = 0; i < 6 + rank * 3; i++) {
+          for (let i = 0; i < 2 + rank * 2; i++) {
             const sx = Math.random() < 0.5 ? -1 : 1;
             R.emit({ x: sx * (0.35 + Math.random() * 0.55), y: HUB_Y + R_WHEEL * 0.75 + Math.random() * 0.25, z: WZ + 0.25, vx: sx * (0.3 + Math.random() * 0.5), vy: 0.4 + Math.random() * 0.6, vz: 0.1,
               g: -1.2, drag: 1.4, life: 0.5 + Math.random() * 0.4, size: 0.03 + Math.random() * 0.03, size2: 0.006, col: i % 2 ? [...cr, 1] : [1, 1, 1, 0.9], shape: 3 });
