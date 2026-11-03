@@ -1,5 +1,11 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v268 – Luckybox in 3D (auf v267)
+
+- `lucky3d.js` (neu, in `index.html` nach `jail.js`, in `sw.js`): `LUCKY3D.open(host, { gold, odds, prizes, rarity, reduced })` → `charge`, `burst`, `spin`, `celebrate`, `close`; Modelle `caseBody`, `caseLid`, `wheelMesh`, `spokes`, `standMesh`, `pointerMesh`; Feldreihenfolge `ORDER`.
+- `lucky.js`: `openLucky` startet die 3D-Bühne (Klasse `is3d`), `spinLucky` ruft `charge`/`burst`, neu `lb3dSpin`; `closeLucky` gibt die 3D-Bühne frei. Ohne WebGL 2 alles wie v266.
+- `style.css`: Block „v268: Luckybox in 3D“ am Ende.
+
 ## Stand v267 – Große Lagerhalle: doppelter Bonus, 8 × 5 (auf v266)
 
 - `farmdata.js`: `FHALL.steps` 6, `FSIZE.lagerhalle` [8, 5], Ladentext.

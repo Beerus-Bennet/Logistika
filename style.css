@@ -4274,3 +4274,34 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
   .lb-case,.lb-hint,.lb-go,.lb-tile::after,.lb-card::after,.lb-rays::before,.lb-card-ico span{animation:none!important}
   .lb-card{animation-duration:.01s}
 }
+
+/* ---------- v268: Luckybox in 3D (lucky3d.js) und mehr im Stil des Spiels (Comic-Umrisse, Schrift mit Kontur) ---------- */
+#lucky.is3d .lb-scene{height:370px}
+.lb-3d{position:absolute;inset:0;width:100%;height:100%;z-index:1;transition:opacity .45s,filter .45s}
+#lucky.is3d .lb-case{position:absolute;inset:0;width:100%;height:100%;z-index:3;opacity:0;animation:none}
+#lucky.is3d .lb-case.burst *{transition:none}
+#lucky.is3d .lb-reel{display:none!important}
+#lucky.is3d[data-r] .lb-3d{opacity:.38;filter:blur(1.5px)}
+.lb-rays{z-index:2}
+.lb-now{min-height:30px;margin:-6px 0 -8px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .25s}
+.lb-now.on{opacity:1}
+.lb-now:not(:empty){padding:3px 14px;border-radius:99px;border:2.5px solid var(--ink);background:color-mix(in srgb,var(--rc,#8fa3b8) 30%,#121b2c);
+  font-size:14px;font-weight:900;color:#fff;box-shadow:0 3px 0 var(--ink)}
+#lucky[data-r] .lb-now{opacity:0}
+/* Stil des Spiels: Titel mit Tuschekontur wie die übrigen Fenster, kräftige Umrisse an Karte, Knöpfen und Leisten */
+.lb-title{background:none;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;filter:drop-shadow(0 3px 0 var(--ink))}
+#lucky.gold .lb-title{background:none;color:#ffe27a}
+.lb-kick{color:rgba(255,255,255,.75)}
+.lb-oddbar{height:9px;border:2px solid var(--ink);box-sizing:content-box}
+.lb-card{border:3px solid var(--ink);box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--rc) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.12),0 6px 0 var(--ink),0 0 60px color-mix(in srgb,var(--rc) 45%,transparent)}
+.lb-card-rar{border:2px solid var(--ink)}
+.lb-card-ico{box-shadow:0 0 0 3px var(--ink),0 0 0 6px color-mix(in srgb,var(--rc) 70%,transparent),0 0 34px color-mix(in srgb,var(--rc) 50%,transparent)}
+.lb-card-name{-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill}
+.lb-go{border:var(--line);box-shadow:0 5px 0 var(--ink),0 12px 26px rgba(240,183,48,.35);animation:lbGo268 1.8s ease-in-out infinite}
+.lb-go:active{box-shadow:0 1px 0 var(--ink)}
+@keyframes lbGo268{0%,100%{box-shadow:0 5px 0 var(--ink),0 12px 26px rgba(240,183,48,.3)}50%{box-shadow:0 5px 0 var(--ink),0 12px 34px rgba(240,183,48,.62)}}
+.lb-later{border:2.5px solid rgba(255,255,255,.45)}
+.lb-streak{border:2.5px solid var(--ink);background:rgba(255,255,255,.07);box-shadow:0 3px 0 var(--ink)}
+.lb-streak-bar i{border:1.5px solid var(--ink);height:7px}
+.lb-tile{border-width:2px;border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--rc),inset 0 0 0 2px color-mix(in srgb,var(--rc) 55%,transparent)}
+@media (max-height:720px){#lucky.is3d .lb-scene{height:300px}}

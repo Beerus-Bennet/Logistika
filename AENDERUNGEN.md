@@ -9,6 +9,36 @@
 
 
 
+## v268 – Luckybox in 3D: Kiste und Glücksrad, im Stil des Spiels
+**Wunsch Bennet:**
+- Die Luckybox-Bühne soll natürlich auch zum Spiel passen.
+- Kiste und „Glücksrad“ (das laufende Gewinnband) sollen 3D-Modelle sein, im Farb- und Zeichenstil von v266.
+
+**Lösung:**
+- **Neue Datei `lucky3d.js`:** 3D-Bühne mit der eigenen Engine `gl3d.js`, wie Hof und Büro, ohne fremde Bibliothek.
+  - **Transportkiste** in den Farben von v266: dunkler Navy-Korpus, helle Metallecken, Stahlband, Nieten, Emblem „L“. Die goldene Box ist schwarz-gold mit Stern.
+  - **Ablauf der Kiste:** Sie schwebt und dreht sich leicht. Beim Aufladen ruckelt der Deckel, aus der Fuge leuchtet das Licht Stufe für Stufe bis zur Seltenheitsfarbe, mit Funken. Dann springt der Deckel auf, eine Lichtsäule steigt hoch, die Kiste sinkt ab.
+  - **Glücksrad** fährt hoch: Jedes Feld ist ein Preis mit seinem Symbol.
+    - Die **Feldgröße entspricht genau der Gewinnchance** (Chance der Seltenheit ÷ Anzahl der Preise dieser Seltenheit). Bei der normalen Box sind gewöhnliche Felder 49,5° groß, seltene 25,2°, epische 15,6° und der Goldene Bulli 14,4°; die goldene Box hat ihre eigenen Größen.
+    - Das Rad zeigt also ehrlich, was `rollPrize` zieht, und bleibt auf dem gezogenen Preis stehen.
+    - Rand mit Stiften, ein Zeiger, der bei jedem Feld federnd ausschlägt und klickt, Lauflichter, Ständer, Emblem auf der Nabe.
+    - Unter dem Rad steht der Name des Felds am Zeiger. Am Ende blinken die Lampen in der Seltenheitsfarbe, danach kommt die Gewinnkarte (v266) vor dem abgeblendeten Rad.
+  - **Ohne WebGL 2** bleibt automatisch die Bühne aus v266 (Kiste und Band in HTML).
+- **Mehr im Stil des Spiels (`style.css` Block v268):**
+  - Titel mit Tuschekontur wie die übrigen Fenster.
+  - Kräftige dunkle Umrisse an Gewinnkarte, Symbolkreis, Seltenheitsschild, Knöpfen, Serienleiste und Chancenbalken.
+- **Unverändert:** Chancen, Preise und Wirkungen. Schließen während des Drehens schreibt den Gewinn gut (v266).
+
+**Geprüft (Testbrowser Chromium mit SwiftShader):**
+- Normale Box (episch, legendär) und goldene Box (selten): Bildfolgen zu, Aufladen, Rad dreht, Rad steht, Karte.
+- Feldgrößen nachgerechnet; das Rad blieb jedes Mal auf dem gezogenen Preis stehen.
+- Ohne WebGL 2 (abgeschaltet): Bühne aus v266, das Band endet auf dem Gewinn.
+- Keine Konsolenfehler.
+
+**Nicht geprüft:**
+- Am Handy (Bildrate, Akku).
+- Die Töne (im Testbrowser ohne Ton).
+
 ## v267 – Große Lagerhalle: doppelter Nutzen und größer auf dem Hof
 **Wunsch Bennet:** Die Lagerhalle soll mehr Nutzen bringen – 100 % mehr Lagerplatz – und auf dem Hof ggf. größer sein.
 

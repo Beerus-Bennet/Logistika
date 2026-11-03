@@ -5,6 +5,7 @@
    Sonderfahrt eine als Dankeschön. Beim Öffnen läuft ein Band mit Preisen
    durch und bleibt auf dem Gewinn stehen. Hauptpreis: der Goldene Bulli.
    v266: Öffnen-Bühne neu gestaltet (siehe Abschnitt „Öffnen“), Logik unverändert.
+   v268: Kiste und Glücksrad in 3D (lucky3d.js); ohne WebGL 2 die Bühne aus v266.
    ========================================================================= */
 "use strict";
 
@@ -200,7 +201,7 @@ function openLucky() {
   /* goldene zuerst */
   L.boxes.sort((a, b) => (b.kind === "gold") - (a.kind === "gold"));
   const box = L.boxes[0], gold = box.kind === "gold", odds = LUCKY_ODDS[box.kind] || LUCKY_ODDS.std, more = L.boxes.length - 1;
-  lucky = { box, stage: "closed", timers: [], raf: 0 };
+  lucky = { box, stage: "closed", timers: [], raf: 0, g3: null };
   if (typeof closeModal === "function") closeModal();
   const el = luckyEl();
   el.className = "on lb" + (gold ? " gold" : "");
@@ -230,12 +231,18 @@ function openLucky() {
       <div class="lb-prize" id="lbPrize" aria-live="polite"></div>
       <div class="lb-flash" id="lbFlash"></div>
     </div>
+    <div class="lb-now" id="lbNow" aria-hidden="true"></div>
     <p class="lb-hint" id="lbHint">Tippe auf die Kiste, um sie zu öffnen</p>
     <div class="lb-foot" id="lbFoot">${lbStreakHTML()}
       <div class="lb-btns" id="lbBtns"><button class="lb-later" id="lbLater">Später öffnen</button></div></div>
   </div>`;
   $("#lbCase").onclick = () => spinLucky();
   $("#lbLater").onclick = () => closeLucky();
+  /* v268: Kiste und Glücksrad in 3D (lucky3d.js, gl3d.js); ohne WebGL 2 bleibt die Bühne aus v266 */
+  if (typeof LUCKY3D !== "undefined") {
+    try { lucky.g3 = LUCKY3D.open($("#lbScene"), { gold, odds, prizes: PRIZES, rarity: RARITY, reduced: lbReduced() }); } catch (e) { console.warn("Luckybox 3D", e); lucky.g3 = null; }
+    if (lucky.g3) el.classList.add("is3d");
+  }
 }
 function tileHTML(p) {
   return `<div class="lb-tile r-${p.r}" style="--rc:${RARITY[p.r].col}"><span>${p.icon}</span><small>${esc(p.name.replace("Hauptpreis: ", ""))}</small></div>`;
@@ -264,11 +271,24 @@ function spinLucky() {
     cs.style.setProperty("--amp", (1 + i * 0.6).toFixed(2));
     lbTone(330 * Math.pow(1.335, i), 0.32, { type: "triangle", vol: 0.045 }); lbBuzz(12 + i * 10);
     if (i) lbFlash(RARITY[order[i]].col, 0.18 + i * 0.06);
+    if (lucky.g3) lucky.g3.charge(i, RARITY[order[i]].col);
   }, 180 + i * step);
   lbLater(() => {
     cs.classList.add("burst"); lbFlash(RARITY[win.r].col, 0.5); lbNoise(0.45, 0.06, 500, 3200); lbBuzz(30);
-    lbLater(() => lbRoll(win), red ? 0 : 320);
+    if (lucky.g3) lucky.g3.burst(RARITY[win.r].col, () => { if (lucky) lb3dSpin(win); });
+    else lbLater(() => lbRoll(win), red ? 0 : 320);
   }, red ? 250 : 180 + top * step + 650);
+}
+/* v268: Glücksrad in 3D – jedes Feld ein Preis, Feldgröße = Gewinnchance; Klick je Feldgrenze, Name des Felds unter dem Zeiger */
+function lb3dSpin(win) {
+  lucky.stage = "spin";
+  const now = $("#lbNow"), red = lbReduced();
+  if (now) now.classList.add("on");
+  lucky.g3.spin(win.id, {
+    D: red ? 900 : win.r === "l" ? 6400 : win.r === "e" ? 5800 : 5200,
+    onTick: p => { lbTick(); if (now) { now.textContent = p.icon + " " + p.name.replace("Hauptpreis: ", ""); now.style.setProperty("--rc", RARITY[p.r].col); } },
+    onDone: () => { if (!lucky) return; lbBuzz(18); lucky.g3.celebrate(RARITY[win.r].col); revealLucky(); }
+  });
 }
 /* 2. Band: eigene Bewegung statt CSS-Übergang, damit es klickt, das Feld unter der Markierung leuchtet und am Ende einrastet */
 function lbRoll(win) {
@@ -394,6 +414,7 @@ function confetti(host, n, col) {
 function closeLucky() {
   if (lucky) {
     lucky.timers.forEach(clearTimeout); cancelAnimationFrame(lucky.raf);                       /* v266: laufende Effekte beenden */
+    if (lucky.g3) { try { lucky.g3.close(); } catch (e) { /* egal */ } lucky.g3 = null; }     /* v268: 3D-Bühne freigeben */
     /* v266: Wer während des Öffnens schließt (Escape, Zurück), verliert den Gewinn nicht – vorher war er weg */
     if (lucky.win && lucky.stage !== "done") { const p = lucky.win; lucky.stage = "done"; const txt = applyPrize(p); toast(p.icon + " " + p.name + ": " + txt, "ok"); }
   }
