@@ -9,6 +9,10 @@
 
 
 
+## v275 – Hofzaun beim Schwenken besser sichtbar
+
+Die nur 0,04 Einheiten tiefen Querlatten werden in schräger Ansicht sehr schmal und sind beim Schwenken teilweise kaum noch sichtbar. Der Hofzaun erhält 0,09 × 0,09 starke Querlatten und 0,12 breite Pfosten, auch nach der Reparatur und beim weißen Zaun. Die absichtlichen Schäden des morschen Startzauns bleiben gleich. Andere Zäune behalten ihre Standardprofile. Geprüft: Chromium-Aufnahmen vor/nach der Änderung beim Schwenken nach links und rechts; keine JavaScript-Fehler. Die 21 vorhandenen Jagd-/Modelltests und Syntaxprüfungen bestehen. Nicht auf einem echten Handy geprüft.
+
 ## v274 – Lückenloser Gebietsnebel, Gebäudedrehung und runde Navigation
 
 ### Gebietsnebel

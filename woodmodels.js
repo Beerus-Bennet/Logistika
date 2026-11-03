@@ -999,18 +999,19 @@ const FWM = (() => {
         const r = rnd();
         if (r < 0.14) continue;                                   /* Lücke */
         const post = r < 0.3 ? 0x6a5a48 : 0x7a6550;
-        b.box(0.09, 0.55, 0.09, post, { x: ax, z: az, rz: (rnd() - 0.5) * 0.25, rx: (rnd() - 0.5) * 0.25 });
+        b.box(0.12, 0.55, 0.12, post, { x: ax, z: az, rz: (rnd() - 0.5) * 0.25, rx: (rnd() - 0.5) * 0.25 });
         if (r < 0.24) continue;                                   /* nur der Pfosten steht noch */
         const ang = Math.atan2(bz - az, bx - ax), l = Math.hypot(bx - ax, bz - az);
         b.at({ x: (ax + bx) / 2, z: (az + bz) / 2, ry: -ang }, () => {
-          b.box(l, 0.06, 0.04, 0x9a8466, { y: 0.26, rz: r > 0.8 ? 0.25 : 0 });
-          if (r < 0.7) b.box(l, 0.06, 0.04, 0x9a8466, { y: 0.45 });
+          b.box(l, 0.09, 0.09, 0x9a8466, { y: 0.26, rz: r > 0.8 ? 0.25 : 0 });
+          if (r < 0.7) b.box(l, 0.09, 0.09, 0x9a8466, { y: 0.45 });
         });
       }
       return;
     }
     const o = stage === 2 ? { step: 1.0, h: 0.62, post: 0x8a5a34, rail: 0xcf9a62 } : { step: 1.0, h: 0.7, post: 0xf6f1e6, rail: 0xfaf7f0 };
-    FM.fenceLine(b, x0, z0, x1, z1, o);
+    /* v275: Querlatten auch schräg zur Kamera mit ausreichend breitem Profil zeichnen. */
+    FM.fenceLine(b, x0, z0, x1, z1, Object.assign(o, { postWidth: 0.12, railHeight: 0.09, railDepth: 0.09 }));
   }
 
   /* ------------------------------ Gelände ------------------------------- */
