@@ -21,6 +21,9 @@
      Vorhalten), Geschossflugzeit (laufendes Wild vorhalten).
    • Nur Herz, Lunge, Kopf oder Träger erlegen; Körper- und Laufschüsse:
      das Stück flüchtet krank in den Wald – keine Trophäe.
+     v265: Träger des Hirschs als Röhre nach dem gezeichneten Hals (Kehle, Mähne, Nacken, Stich), beim Keiler
+     zusätzlich der Stich; ein Durchschuss durch die Decke in Träger oder Stich gilt als Trägerschuss.
+     Herz, Lunge und Haupt etwas größer.
    • Bergen (v135, siehe „Bergen“ unten): kurze Abblende, die Kamera steht nah am liegenden Stück, Überschrift
      „Waidmannsheil!“ oben, Karte mit Medaille und Werten unten, „Trophäe sichern“ zeigt das Präparat genau dieses Stücks.
 
@@ -788,16 +791,36 @@ const HUNT = (() => {
   /* Blutstropfen (Schweiß) am Boden */
   function dropMesh() { const b = MB(); b.disc(0.07, 7, 0x7d1912, { y0: 0.025, wob: 0.3 }); b.disc(0.035, 6, 0x9c2216, { x: 0.09, z: 0.04, y0: 0.026 }); return b; }
   /* ------------------------------ Arten ----------------------------------- */
+  /* v265: Träger des Hirschs wie gezeichnet. Vorher fünf Kugeln (r 0,095) auf einer Linie am Nacken – sie deckten nur gut ein
+     Drittel des sichtbaren Halses ab; Kehle, Mähne und Stich (Brustansatz vor dem Blatt) waren „vorbei“, am Halsansatz griff
+     zuerst die Rumpf-Ellipse (Weichschuss). Jetzt: elliptische Röhrenabschnitte aus derselben Profiltabelle wie das Modell
+     (NECK, deerNeckInto), mit halber Mähne und 6 % Zugabe. Halskoordinaten; je Abschnitt Mitte c, Achse u, Vorderseite v,
+     Halbachsen r = [quer, halbe Länge, vorn/hinten]. */
+  function deerNeckZones() {
+    const A = [0, -0.2, -0.12], B = [0, 0.535, 0.205], n = 12, TOL = 1.06, Q = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, c = [0, lerp(A[1], B[1], t), lerp(A[2], B[2], t) + Math.sin(t * Math.PI) * 0.03];
+      const dz = (B[2] - A[2]) + Math.cos(t * Math.PI) * 0.03 * Math.PI, dy = B[1] - A[1], l = Math.hypot(dy, dz);
+      const [hw, hF, hB] = prof(NECK, t), mane = 0.34 * Math.sin(Math.PI * Math.min(1, t / 0.78)) * (t < 0.12 ? t / 0.12 : 1);
+      Q.push({ c, u: [0, dy / l, dz / l], v: [0, -dz / l, dy / l], hw, hf: hF * (1 + 0.5 * mane), hb: hB });
+    }
+    return Q.slice(0, n).map((a, i) => {
+      const b = Q[i + 1], hw = Math.max(a.hw, b.hw), hf = Math.max(a.hf, b.hf), hb = Math.max(a.hb, b.hb), off = (hf - hb) / 2;
+      const u = [0, (a.u[1] + b.u[1]) / 2, (a.u[2] + b.u[2]) / 2], lu = Math.hypot(u[1], u[2]), U = [0, u[1] / lu, u[2] / lu], V = [0, -U[2], U[1]];
+      const m = [0, (a.c[1] + b.c[1]) / 2 + V[1] * off, (a.c[2] + b.c[2]) / 2 + V[2] * off];
+      return { c: m, u: U, v: V, r: [hw * TOL, Math.hypot(b.c[1] - a.c[1], b.c[2] - a.c[2]) / 2 + 0.006, (hf + hb) / 2 * TOL] };
+    });
+  }
   /* Trefferzonen (Tierkoordinaten vor Maßstab). Hals- und Kopfpunkte in Hals- bzw. Kopfkoordinaten. */
   const SP = {
     hirsch: { n: "Rothirsch", i: "🦌", walk: 0.85, sneak: 0.5, run: 10.5, s0: 0.98, s1: 1.12,
       legs: [{ h: [-0.12, 0.84, 0.34], lu: 0.4, ll: 0.44, f: 1 }, { h: [0.12, 0.84, 0.34], lu: 0.4, ll: 0.44, f: 1 }, { h: [-0.12, 0.86, -0.34], lu: 0.42, ll: 0.44, f: 0 }, { h: [0.12, 0.86, -0.34], lu: 0.42, ll: 0.44, f: 0 }],
-      neckP: [0, 1.02, 0.4], headP: [0, 0.5, 0.22], body: { c: [0, 0.98, 0], r: [0.2, 0.22, 0.5] }, lung: { c: [0, 0.96, 0.24], r: 0.12 }, heart: { c: [0, 0.88, 0.28], r: 0.07 },
-      head: { c: [0, 0.0, 0.18], r: 0.11 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, sens: 1.3 },
+      neckP: [0, 1.02, 0.4], headP: [0, 0.5, 0.22], body: { c: [0, 0.98, 0], r: [0.2, 0.22, 0.5] }, lung: { c: [0, 0.96, 0.24], r: 0.135 }, heart: { c: [0, 0.88, 0.28], r: 0.08 },
+      head: { c: [0, 0.0, 0.18], r: 0.12 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, neckS: deerNeckZones(), sens: 1.3 },
     keiler: { n: "Keiler", i: "🐗", walk: 1.1, sneak: 0.8, run: 8.0, s0: 0.92, s1: 1.15,
       legs: [{ h: [-0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [-0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }, { h: [0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }],
-      neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.11 }, heart: { c: [0, 0.46, 0.24], r: 0.06 },
-      head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.12, sens: 1.2 },
+      neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.125 }, heart: { c: [0, 0.46, 0.24], r: 0.07 },
+      head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.13, stich: { c: [0, 0.455, 0.44], r: [0.17, 0.13, 0.135] }, sens: 1.2 },
     fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, legs: [],
       neckP: [0, 0.22, 0.15], headP: [0, 0, 0], body: { c: [0, 0.24, -0.02], r: [0.13, 0.13, 0.2] }, lung: null, heart: null,
       head: { c: [0, 0.14, 0.03], r: 0.06 }, neckZ: [[0, 0.0, 0.0], [0, 0.1, 0.0]], neckR: 0.04, sens: 1.5 }
@@ -1312,6 +1335,18 @@ const HUNT = (() => {
     return t1 < 0 ? null : Math.max(0, t0);
   }
   function rayEll(o, d, c, r) { return raySphere([(o[0] - c[0]) / r[0], (o[1] - c[1]) / r[1], (o[2] - c[2]) / r[2]], [d[0] / r[0], d[1] / r[1], d[2] / r[2]], [0, 0, 0], 1); }
+  /* v265: Strahl gegen einen Röhrenabschnitt mit elliptischem Querschnitt (Abschnittskoordinaten x, u = Achse, v) */
+  function rayTube(o, d, G) {
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], q = [o[0] - G.c[0], o[1] - G.c[1], o[2] - G.c[2]];
+    const ox = q[0] / G.r[0], ov = dot(q, G.v) / G.r[2], ou = dot(q, G.u), dx = d[0] / G.r[0], dv = dot(d, G.v) / G.r[2], du = dot(d, G.u);
+    let t0 = -Infinity, t1 = Infinity;
+    if (Math.abs(du) < 1e-9) { if (Math.abs(ou) > G.r[1]) return null; }
+    else { let a = (-G.r[1] - ou) / du, b = (G.r[1] - ou) / du; if (a > b) { const x = a; a = b; b = x; } t0 = a; t1 = b; }
+    const A = dx * dx + dv * dv, B = 2 * (ox * dx + ov * dv), C = ox * ox + ov * ov - 1;
+    if (A < 1e-12) { if (C > 0) return null; }
+    else { const D = B * B - 4 * A * C; if (D < 0) return null; const s = Math.sqrt(D); t0 = Math.max(t0, (-B - s) / (2 * A)); t1 = Math.min(t1, (-B + s) / (2 * A)); }
+    return t0 > t1 || t1 < 0 ? null : Math.max(0, t0);
+  }
   /* Pose: Lage (x, y, z, rx, ry, rz, s), Hals (nrx, nry), Kopf (hrx), Läufe [[oben, unten], …] */
   function zoneHit(k, pose, o, d) {
     const S0 = SP[k], s = pose.s || 1;
@@ -1322,8 +1357,18 @@ const HUNT = (() => {
     const nk = p => add3(S0.neckP, rot(p, pose.nrx || 0, pose.nry || 0, 0));                 /* Halskoordinaten → Tier */
     const hd = p => nk(add3(S0.headP, rot(p, pose.hrx || 0, 0, 0)));                         /* Kopfkoordinaten → Tier */
     const th = raySphere(lo, ld, hd(S0.head.c), S0.head.r); if (th != null) hits.push(["kopf", th]);
-    const [n0, n1] = S0.neckZ;
-    for (let i = 0; i <= 4; i++) { const u = i / 4, t = raySphere(lo, ld, nk([lerp(n0[0], n1[0], u), lerp(n0[1], n1[1], u), lerp(n0[2], n1[2], u)]), S0.neckR); if (t != null) hits.push(["hals", t]); }
+    /* Träger: v265 beim Hirsch als Röhre nach dem Modell, sonst Kugelkette; beim Keiler zusätzlich der Stich */
+    let neckT = null;
+    const nHit = t => { if (t != null && (neckT == null || t < neckT)) neckT = t; };
+    if (S0.neckS) {
+      const nlo = unrot([lo[0] - S0.neckP[0], lo[1] - S0.neckP[1], lo[2] - S0.neckP[2]], pose.nrx || 0, pose.nry || 0, 0), nld = unrot(ld, pose.nrx || 0, pose.nry || 0, 0);
+      S0.neckS.forEach(G => nHit(rayTube(nlo, nld, G)));
+    } else {
+      const [n0, n1] = S0.neckZ;
+      for (let i = 0; i <= 4; i++) { const u = i / 4; nHit(raySphere(lo, ld, nk([lerp(n0[0], n1[0], u), lerp(n0[1], n1[1], u), lerp(n0[2], n1[2], u)]), S0.neckR)); }
+    }
+    if (S0.stich) nHit(rayEll(lo, ld, S0.stich.c, S0.stich.r));
+    if (neckT != null) hits.push(["hals", neckT]);
     S0.legs.forEach((L, i) => {
       const a = (pose.legs && pose.legs[i]) || [0, 0];
       for (let j = 1; j <= 4; j++) {
@@ -1335,10 +1380,11 @@ const HUNT = (() => {
     hits.sort((a, b) => a[1] - b[1]);
     const [part, t] = hits[0];
     let zone = part;
-    if (part === "body") {
+    if (part === "body" || (part === "hals" && k !== "fasan")) {      /* v265: auch durch den Träger ins Herz bleibt Herzschuss */
       if (k === "fasan") zone = "vogel";
       else if (S0.heart && raySphere(lo, ld, S0.heart.c, S0.heart.r) != null) zone = "herz";
       else if (S0.lung && raySphere(lo, ld, S0.lung.c, S0.lung.r) != null) zone = "lunge";
+      else if (neckT != null) zone = "hals";                       /* v265: durch die Decke in Träger oder Stich – kein Weichschuss */
       else zone = "koerper";
     } else if (k === "fasan") zone = part === "kopf" ? "kopf" : "vogel";
     return { zone, t };

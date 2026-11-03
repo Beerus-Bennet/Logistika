@@ -9,6 +9,43 @@
 
 
 
+## v265 – Jagd: größere Toleranz für tödliche Schüsse am Träger
+**Wunsch Bennet:** Schüsse gingen teils direkt durch den Hals, und das Tier wirkte nur leicht verletzt.
+
+**Ursache (Code gelesen, nachgemessen):**
+- Die Trägerzone des Hirschs war eine Kette aus fünf Kugeln (Radius 0,095) auf einer Linie am Nacken.
+- Der gezeichnete Hals ist bis zu doppelt so tief: Kehle, Brunftmähne und Stich (Brustansatz vor dem Blatt).
+- Gemessen mit Strahlen von der Seite durch die Silhouette des Halses:
+  - nur 35 % Trägerschuss,
+  - etwa 40 % „vorbei“ (die Kugel ging durch den sichtbaren Hals, ohne zu zählen),
+  - etwa 10 % Weichschuss („Getroffen – aber kein guter Schuss“). Am Halsansatz traf der Strahl zuerst die Rumpf-Ellipse.
+- Beim Keiler fehlte die Zone für Kehle und Stich unter dem Träger.
+
+**Lösung (`hunt.js`, Treffertest `zoneHit`):**
+- **Hirsch:** Der Träger ist jetzt eine Röhre aus 12 Abschnitten mit elliptischem Querschnitt (`deerNeckZones`, `rayTube`).
+  - Gebaut aus derselben Profiltabelle wie das Modell (`NECK`, `deerNeckInto`), mit halber Mähne und 6 % Zugabe.
+  - Sie dreht mit dem Hals mit (Äsen, Sichern).
+- **Keiler:** Kugeln am Träger etwas größer (0,12 → 0,13) und neu der Stich (Ellipsoid unter dem Träger).
+- **Durchschuss:** Trifft der Strahl zuerst die Decke und dahinter Träger oder Stich, zählt das als Trägerschuss statt als Weichschuss.
+- **Vorrang:** Herz und Lunge haben auf dem ganzen Strahl Vorrang. Ein Schuss durch den Trägeransatz ins Herz bleibt Herzschuss (Medaille bis Diamant).
+- **Etwas mehr Toleranz:**
+  - Hirsch: Lunge 0,12 → 0,135, Herz 0,07 → 0,08, Haupt 0,11 → 0,12.
+  - Keiler: Lunge 0,11 → 0,125, Herz 0,06 → 0,07.
+- **Bewusst unverändert:**
+  - Äser, Rüssel, Geweih und Borstenkamm bleiben ohne tödliche Zone (real kein sauberer Schuss bzw. nur Haar).
+  - Keulen, Bauch und Rücken bleiben Weichschuss, die Läufe Laufschuss.
+  - Medaillen-Deckel unverändert (Trägerschuss höchstens Gold).
+
+**Geprüft:**
+- **Messung von der Seite, sichtbarer Hirschhals:**
+  - Vorher: 35 % Träger, 7 % Lunge, 4 % Herz, 42 % vorbei, 11 % Weichschuss.
+  - Nachher: 75–78 % Träger, 7–11 % Lunge, 4–6 % Herz, 0–1 % Haupt, 7 % vorbei (äußerer Mähnensaum), 0 % Weichschuss. Gleiches Ergebnis bei vier Halshaltungen; insgesamt über 90 % tödlich.
+- **Bilder der Seitenansicht vorher/nachher** für Hirsch und Keiler.
+- **Im Revier (Testbrowser) mit gezeichneten Tieren auf 204 m:** Strahlen vom Hochsitz durch Punkte der Halsoberfläche (echte Weltmatrix) sind beim äsenden Hirsch zu 84 %, beim Keiler zu 81 % tödlich. Der Rest liegt am äußersten Rand oder hinter Lauf bzw. Rumpf.
+- **Unit-Tests:** `hunt` (21, neuer Test „Träger v265“), `camp`, `forest`, `jail` bestanden; `axe`, `trees` wie bisher rot.
+
+**Nicht geprüft:** am Handy; ein echter Schuss über das Zielfernrohr mit Schwanken und Wind.
+
 ## v264 – U-Haft nach dem Todesfall im Büro
 **Wunsch Bennet:** Die Festnahme und Untersuchungshaft nach dem tödlichen Tassenwurf (v263) über die vorhandene Haft-Mechanik umsetzen.
 

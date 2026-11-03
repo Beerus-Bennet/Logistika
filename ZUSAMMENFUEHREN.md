@@ -1,5 +1,10 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## Stand v265 – Jagd: Träger-Zone nach Modell (auf v264)
+
+- `hunt.js`: `deerNeckZones()` (neu, vor `SP`), `SP.hirsch.neckS`, `SP.keiler.stich`, Radien Herz/Lunge/Haupt angepasst; `rayTube` (neu); `zoneHit` prüft `neckS`/`stich` und wertet Rumpf → Träger als `hals`.
+- `hunt.test.js`: Test „Träger v265“.
+
 ## Stand v264 – U-Haft nach Todesfall im Büro (auf v263)
 
 - `snus.js`: `UHAFT_DAYS`, `jailDays`, `jailUhaft`, `uhaftWho`, `uhaftArrestScreen`, `jailWhere`, `uhaftOut`. `jailCheck` kennt `state: "pending"`; `jailServe`/`jailScene`/`jailOut` arbeiten mit `S.jail.kind`/`days`. `S.jail` ohne `kind` = Snus wie bisher.
