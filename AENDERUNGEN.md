@@ -1,5 +1,23 @@
 # Änderungen – kurz für den Kollegen
 
+## v298 – Mitarbeiterhaare, Ärmelanschlüsse, Maus und tatsächliche Bildschirmarbeit
+**Basis:** GitHub main `c295039` (v297), während der Umsetzung wiederholt abgeglichen. Die Wasserfallkorrekturen v297 und Claudes vorherige Änderungen bleiben enthalten.
+
+**Ursachen:** Frisuren bestanden aus nach Dreiecksmittelpunkten ausgeschnittenen Kugelkacheln und aufgesetzten Blöcken; dadurch entstanden Treppenkanten und freie Kopfhautstreifen. Am Handgelenk trafen ein geschlossenes, rechteckiges Bündchen und zwei Hautwölbungen aufeinander. Die Maus hatte aufgesetzte ovale Tasten auf der falschen Seite, ihre Handauflage passte nicht zum Griffkontakt. Monitore zeigten überwiegend allgemeine Monatszahlen statt eines aktuellen Vorgangs.
+
+**Lösung (`officefp.js`):**
+- Geschlossene, zusammenhängende Haarkappen mit exakter Haarlinie, weichen Normalen und anliegenden Rändern. Undercut ohne Kopfhautspalt; Seitenscheitel, Tolle, Locken, Wellen, Bob, Pferdeschwanz und Dutt behalten eigene Formen. Locken/Wellen als integrierte Oberfläche statt einzelner aufgeklebter Kugeln. Dichtere Kopfoberfläche, anliegende Caps/Mützen; gespeicherte Avatarmerkmale bleiben erhalten.
+- Rundes, offenes Ärmelbündchen; eine durchgehende, schmal zulaufende Handwurzel bis zur Handfläche. Keine zusätzliche Hautkugel am Handgelenk. Finger, Griffpunkte und Armlängen bleiben erhalten.
+- Neu geformte Maus mit höherer hinterer Handauflage, flacheren vorderen Tasten, sauberer Tastennaht und eingelassenem Scrollrad. Tasten zeigen zum Monitor bzw. in Fingerrichtung. Gehäuse und Hand sind beim Benutzen über einen gemeinsamen Kontaktpunkt verbunden; Mausdrehung folgt der Hand.
+- Monitore zeigen tatsächliche Standortvorgänge: Auftragskennung, Start/Ziel, Fracht/Gewicht, Fahrzeug und aktuellen Transportstatus einschließlich Halten. Rollenbezogene Ansicht für Disposition, Fahrpersonal, Umschlag und Zoll; feste Fahrerbindung hat Vorrang. Die Tätigkeit folgt der Figur (Tippen, Maus, Unterlagen, Notieren, Telefonat, Kaffeepause, Notfall). Keine erfundene persönliche Auftragszuweisung: gezeigt wird ein echter Standortvorgang. Ohne laufende Vorgänge erscheint die reale Fahrzeugübersicht. Größere Textur (384 × 240), kurze Zeilen und begrenzte Breiten; maximal ein geänderter Monitor pro Bild, Abfrage ungefähr alle 900 ms.
+- `index.html` / `sw.js`: v298 nur für das geänderte Spielskript; alle übrigen Cache-Verweise bleiben erhalten. Keine neue Spielstandmigration und keine Änderung an Geschäftslogik oder Personalzuweisungen.
+
+**Geprüft:** `node office-appearance-v298.test.js`: 48 Kopf-/Haar-/Zubehörkombinationen mit Strahlprüfung gegen Kopfhautstreifen, 96 Hand-/Outfit-/Griffkombinationen, Modellbudgets, Mausausrichtung und animierter Mauskontakt in sechs Outfits, reale Aufträge für vier Rollen, Fahrerbindung, Ladepriorität, Unterbrechungen, leere Auftragsliste, begrenzte Texturaktualisierung und unveränderte Geschäftsdaten. Bestehende Prüfungen `office-workers-v284.test.js`, `office-joints-v288.test.js` und `review-v282.test.js` bestehen weiterhin (alle sieben Tätigkeiten, Armreichweite, Schreibkontakt, Notfall, Sitzplatzkollisionen und bestehende Modelle). JavaScript-Syntax und Diff geprüft.
+
+**Grafikprüfung:** Vorher-/Nachher-Nahansichten der zehn Frisurentypen, Ärmel-/Handanschlüsse beim Schreiben und Mausbedienen sowie der Maus mit den tatsächlichen Spielmodellen und Originalshadern unter Mesa/EGL gerendert und geprüft. Die neuen Monitortexturen mit tatsächlicher Canvas-Zeichenroutine für alle vier Rollen gerendert. Keine neuen Bilddateien oder Fremdbibliotheken für das Spiel.
+
+**Prüfgrenze:** Kein Live-3D-/iPhone-/Safari-Test. Die Sichtprüfung erfolgte mit Originalmodellen und Shadern in einer Grafik-Prüfkulisse sowie separat gerenderten Monitortexturen.
+
 ## v297 – Stetige Wasserübergänge, natürlicherer See-Aufprall, keine Seitenfälle
 **Basis:** GitHub main `49c5f99` (v296), während der Umsetzung wiederholt abgeglichen. Alle bisherigen Änderungen einschließlich Claudes Schatz- und Wegfindungskorrekturen bleiben enthalten.
 

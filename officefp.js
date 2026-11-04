@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v263)
+   LOGISTIKA – officefp.js (v298)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -295,14 +295,68 @@ const OFFICE3D = (() => {
     }
   }
   const smooth = (e0, e1, x) => ease((x - e0) / (e1 - e0));
-  const hairLim = (F, Bk) => (th, az) => th < F + (Bk - F) * smooth(0.55, 2.3, Math.abs(az));
+
+  /* v298: Jede Längsreihe endet exakt an ihrer Haarlinie. Die Kappe liegt vollständig
+     außerhalb der Kopfoberfläche, auch zwischen deren gröberen Dreiecken. */
+  function hairCap(b, col, front, back, o) {
+    o = o || {};
+    const N=o.curl?48:28, M=o.curl?24:12, cap=[];
+    const shape=(u,az,inner) => {
+      const edge=front+(back-front)*smooth(0.55,2.3,Math.abs(az))+(o.part ? Math.sin(az)*0.07 : 0);
+      const th=u*edge, curl=o.curl ? Number(o.curl)*Math.sin(th)*(0.5+0.5*Math.sin(az*7+th*2)*Math.sin(th*8))*0.075 : 0;
+      const lift=(o.lift||0)*Math.exp(-Math.pow((th-0.42)/0.55,2))*Math.sin(th)*1.7*Math.max(0,Math.cos(az));
+      const r=HR*(inner ? 1.006 : (o.rad||1.065)+curl+lift+(o.part ? Math.sin(az-0.6)*Math.sin(th)*0.025 : 0));
+      const wave=(o.long||0)*smooth(0.9,1.7,Math.abs(az))*smooth(1.1,2.4,th);
+      const n=[Math.sin(th)*Math.sin(az),Math.cos(th),Math.sin(th)*Math.cos(az)];
+      return {p:[n[0]*r,HC[1]+n[1]*r*HSY-wave,n[2]*r],n:nrm([n[0],n[1]/HSY,n[2]])};
+    };
+    const point=(u,az,inner)=>{
+      const v=shape(u,az,inner),e=0.001;
+      if(u>0&&!inner){
+        const A=shape(u-e,az).p,B=shape(u+e,az).p,C=shape(u,az-e).p,D=shape(u,az+e).p;
+        const x=B.map((v,i)=>v-A[i]),y=D.map((v,i)=>v-C[i]);
+        v.n=nrm([x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]]);
+      }
+      return v;
+    };
+    for(let j=0;j<=M;j++) cap.push(Array.from({length:N+1},(_,i)=>point(j/M,i/N*2*PI>PI?i/N*2*PI-2*PI:i/N*2*PI)));
+    for(let j=0;j<M;j++)for(let i=0;i<N;i++){
+      const A=cap[j][i],B=cap[j][i+1],C=cap[j+1][i+1],D=cap[j+1][i];
+      if(j) b.tri(A.p,C.p,B.p,col,A.n,C.n,B.n);
+      b.tri(A.p,D.p,C.p,col,A.n,D.n,C.n);
+    }
+    for(let i=0;i<N;i++){
+      const a=i/N*2*PI,bb=(i+1)/N*2*PI, A=cap[M][i],B=cap[M][i+1];
+      const C=point(1,bb>PI?bb-2*PI:bb,true),D=point(1,a>PI?a-2*PI:a,true);
+      b.quad(A.p,B.p,C.p,D.p,mixH(col,0x000000,0.12));
+    }
+  }
+  function hairMesh(L) {
+    const b=new G3.MB(),st=L.style,hat=L.acc==='cap'||L.acc==='muetze',cap=(f,bk,o,c)=>hairCap(b,c==null?L.hair:c,f,bk,o);
+    if(st==='glatze')return b;
+    if(st==='undercut'){
+      cap(1.0,1.92,{rad:1.04},mixH(L.hair,L.skin,0.23));
+      cap(0.88,1.25,{rad:1.075,lift:hat?0:0.07});
+    }else if(st==='quiff')cap(0.96,1.92,{lift:hat?0:0.28});
+    else if(st==='seitenscheitel')cap(0.98,1.98,{part:true,lift:hat?0:0.08});
+    else if(st==='locken')cap(0.98,2.0,{curl:hat?0.35:1,lift:hat?0:0.035});
+    else if(st==='bob'||st==='wellen')cap(0.94,st==='bob'?2.42:2.5,{long:st==='bob'?0.015:0.06,curl:st==='wellen'?(hat?0.25:0.45):0});
+    else {
+      cap(0.96,1.95);
+      if(st==='zopf'){
+        b.sphere(0.028,12,10,L.hair,{y:0.075,z:-0.145,sy:3.2,sz:0.8,rx:0.12,smooth:true});
+        b.sphere(0.026,10,7,L.hairS,{y:0.17,z:-0.124,sy:0.45,smooth:true});
+      }else if(st==='dutt')b.sphere(hat?0.038:0.043,14,10,L.hair,{y:hat?0.14:0.25,z:hat?-0.133:-0.062,sy:0.85,smooth:true});
+    }
+    return b;
+  }
 
   /* Kopf: Drehpunkt am Hals (Figur y 0,82), Kopfmitte 0,13 darüber, nach +z blickend */
   const HC = [0, 0.13, 0], HR = 0.118, HSY = 1.06;
   function headMesh(L) {
     const b = new G3.MB(), skin = L.skin, hair = L.hair, hairS = L.hairS, brow = L.style === "glatze" ? mixH(L.skinS, 0x000000, 0.2) : mixH(hair, 0x000000, 0.3);
     G3.seed(5100 + (nameHash(L.key) % 997));
-    b.sphere(HR, 16, 11, skin, { y: HC[1], sy: HSY, smooth: true });
+    b.sphere(HR, 24, 16, skin, { y: HC[1], sy: HSY, smooth: true });
     [-1, 1].forEach(s => b.sphere(0.026, 8, 6, mixH(skin, L.skinS, 0.4), { x: s * 0.116, y: 0.123, z: -0.004, sx: 0.5, smooth: true }));
     /* Augen: Weiß, Iris in Augenfarbe, Pupille, Glanzpunkt · Brauen · Nase */
     [-1, 1].forEach(s => {
@@ -314,42 +368,11 @@ const OFFICE3D = (() => {
       b.box(0.032, 0.006, 0.006, brow, { x: ex, y: 0.165, z: 0.107, rz: -s * 0.07 });
     });
     b.sphere(0.012, 10, 7, mixH(skin, L.skinS, 0.25), { y: 0.117, z: 0.115, sy: 1.15, sz: 0.65, smooth: true });
-    /* Haare */
-    const st = L.style, hc = { c: HC, sy: HSY };
+    /* v298: Geschlossene Haarkappe mit einer durchgehenden Haarlinie statt
+       ausgeschnittener Kugelkacheln und aufgesetzter eckiger Haarblöcke. */
+    const hc = { c: HC, sy: HSY };
     const S2 = (rm, keep, col, o) => shell(b, HR * rm, col == null ? hair : col, keep, Object.assign({}, hc, o || {}));
-    if (st === "kurz") S2(1.05, hairLim(0.92, 1.9));
-    else if (st === "seitenscheitel") { S2(1.06, (th, az) => th < (az > 0 ? 0.82 : 0.98) + (1.9 - 0.9) * smooth(0.55, 2.3, Math.abs(az))); b.box(0.13, 0.03, 0.05, hair, { x: 0.02, y: 0.238, z: 0.08, rz: -0.3, rx: 0.45 }); }
-    else if (st === "undercut") { S2(1.1, hairLim(0.86, 1.2)); S2(1.02, (th, az) => th > 0.75 && hairLim(1.0, 1.9)(th, az), mixH(hair, skin, 0.45)); }
-    const hat = L.acc === "cap" || L.acc === "muetze";
-    if (st === "quiff" && hat) S2(1.05, hairLim(0.95, 1.85));
-    else if (st === "quiff") { S2(1.05, hairLim(0.95, 1.85)); b.sphere(0.058, 9, 7, hair, { y: 0.245, z: 0.07, sy: 0.75, sz: 1.2, rx: -0.4, smooth: true }); b.sphere(0.046, 8, 6, hairS, { x: 0.02, y: 0.262, z: 0.03, sy: 0.7, smooth: true }); }
-    else if (st === "locken") {
-      S2(1.04, hairLim(0.9, 1.95));
-      /* v259: kleine, geordnete Locken, größtenteils in die Haarkappe eingelassen. */
-      for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 7; i++) {
-        const th = ring ? 0.93 : 0.48, az = (i + ring * 0.5) / 7 * 2 * PI;
-        if (ring && Math.cos(az) > 0.6) continue;
-        const rr = HR * 1.015;
-        b.sphere(0.018, 8, 6, i % 3 ? hair : mixH(hair, hairS, 0.3), {
-          x: Math.sin(th) * Math.sin(az) * rr, y: HC[1] + Math.cos(th) * rr * HSY,
-          z: Math.sin(th) * Math.cos(az) * rr, sy: 0.8, smooth: true
-        });
-      }
-    } else if (st === "wellen") {
-      S2(1.07, hairLim(0.86, 2.1));
-      b.box(0.25, 0.24, 0.07, hair, { y: -0.09, z: -0.078 });
-      [-0.08, 0, 0.08].forEach((dx, n) => b.sphere(0.045, 8, 6, n % 2 ? hairS : hair, { x: dx, y: -0.09, z: -0.075, sz: 0.8, smooth: true }));
-      [-1, 1].forEach(s => b.box(0.05, 0.2, 0.07, hair, { x: s * 0.105, y: -0.04, z: -0.025 }));
-    } else if (st === "zopf") {
-      S2(1.04, hairLim(0.86, 1.9));
-      b.sphere(0.028, 8, 6, mixH(hairS, 0xd9413a, 0.5), { y: 0.17, z: -0.128, smooth: true });
-      b.box(0.055, 0.2, 0.05, hair, { y: -0.03, z: -0.15, rx: 0.22 });
-      b.sphere(0.03, 8, 6, hairS, { y: -0.03, z: -0.137, smooth: true });
-    } else if (st === "dutt") {
-      S2(1.035, hairLim(0.88, 1.9));
-      if (hat) b.sphere(0.05, 10, 7, hair, { y: 0.15, z: -0.14, smooth: true });          /* unter Cap/Mütze: Knoten im Nacken */
-      else { b.sphere(0.055, 10, 7, hair, { y: 0.262, z: -0.06, smooth: true }); b.cyl(0.04, 0.04, 0.012, 12, hairS, { y: 0.225, z: -0.05, rx: -0.5 }); }
-    } else if (st === "bob") S2(1.1, (th, az) => th < (Math.abs(az) < 0.75 ? 0.92 : 2.05));
+    b.merge(hairMesh(L), {});
     /* Bart */
     if (L.beard === "stoppeln") S2(1.008, (th, az) => th > 1.72 && Math.abs(az) < 1.75, mixH(skin, hair, 0.4));
     else if (L.beard === "schnauzer") b.sphere(0.03, 10, 6, hairS, { y: 0.1, z: 0.111, sy: 0.32, sz: 0.5, smooth: true });
@@ -369,11 +392,11 @@ const OFFICE3D = (() => {
       });
       b.box(0.02, 0.005, 0.005, fc, { y: 0.148, z: 0.123 });
     } else if (L.acc === "cap") {
-      S2(1.09, hairLim(1.0, 1.25), L.hatC);
+      hairCap(b,L.hatC,1.0,1.25,{rad:1.125});
       b.box(0.15, 0.012, 0.1, mixH(L.hatC, 0x000000, 0.2), { y: 0.205, z: 0.14, rx: 0.15 });
     } else if (L.acc === "muetze") {
-      S2(1.11, hairLim(0.95, 1.3), L.hatC);
-      S2(1.13, (th, az) => { const lim = 0.95 + 0.35 * smooth(0.55, 2.3, Math.abs(az)); return th < lim && th > lim - 0.22; }, mixH(L.hatC, 0xffffff, 0.2));
+      hairCap(b,L.hatC,0.95,1.3,{rad:1.14,lift:0.015});
+      S2(1.16, (th, az) => { const lim = 0.95 + 0.35 * smooth(0.55, 2.3, Math.abs(az)); return th < lim && th > lim - 0.22; }, mixH(L.hatC, 0xffffff, 0.2));
       b.sphere(0.03, 8, 6, 0xf0f0ea, { y: 0.277, smooth: true });
     } else if (L.acc === "headset") {
       for (let k = -3; k <= 3; k++) { const a = k / 3 * 1.45; b.box(0.022, 0.012, 0.026, 0x2a2a30, { x: Math.sin(a) * 0.137, y: HC[1] + Math.cos(a) * 0.137 * HSY, rz: -a }); }
@@ -476,12 +499,18 @@ const OFFICE3D = (() => {
     return b;
   }
   function foreMesh(L, side) {
-    const b = new G3.MB();
-    b.sphere(0.033, 10, 7, L.sleeve, { smooth: true });
-    b.cyl(0.025, 0.033, ARM_B, 10, L.sleeve, { y: -ARM_B, smooth: true });
-    b.box(0.056, 0.02, 0.058, L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve, { y: -ARM_B });
-    /* v288: Der Ärmel endet am einzigen Handgelenk. Der hautfarbene Übergang
-       gehört vollständig zur Hand; kein zweiter Knubbel am Unterarm. */
+    const b = new G3.MB(), col=L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve;
+    b.sphere(0.033,10,7,L.sleeve,{smooth:true});
+    b.cyl(0.024,0.033,ARM_B,12,L.sleeve,{y:-ARM_B,smooth:true,nobot:true});
+    /* v298: Rundes Bündchen mit echter Öffnung. Keine geschlossene Würfelkappe am Handgelenk. */
+    const N=16, y0=-ARM_B-0.002,y1=-ARM_B+0.018;
+    for(let i=0;i<N;i++){
+      const a=i/N*2*PI,c=(i+1)/N*2*PI;
+      const P=(r,y,t)=>[Math.cos(t)*r,y,Math.sin(t)*r];
+      b.quad(P(0.026,y0,a),P(0.026,y1,a),P(0.026,y1,c),P(0.026,y0,c),col);
+      b.quad(P(0.018,y0,c),P(0.018,y1,c),P(0.018,y1,a),P(0.018,y0,a),mixH(col,0x000000,0.12));
+      b.quad(P(0.026,y0,c),P(0.018,y0,c),P(0.018,y0,a),P(0.026,y0,a),col);
+    }
     return b;
   }
   /* v263: Hand mit Daumen und vier zweigliedrigen Fingern. Handkoordinaten: Ursprung Handmitte, +z zu den Fingern,
@@ -526,9 +555,21 @@ const OFFICE3D = (() => {
   function handMesh(L, side, grip) {
     const b = new G3.MB(), c = L.skin, cs = mixH(L.skin, L.skinS, 0.35);
     grip = GRIPS[grip] ? grip : "rest";
-    /* v284: Verbindendes Handgelenk bis zum Ärmel statt einer losen Handfläche. */
-    b.sphere(0.021, 12, 8, c, { z: -0.022, sx: 0.8, sy: 0.62, sz: 1.1, smooth: true });
-    b.sphere(0.03, 12, 8, c, { sx: 0.92, sy: 0.36, sz: 1.13, smooth: true });
+    /* v298: Ein durchgehendes Profil von der schmalen Handwurzel bis zu den Knöcheln.
+       Der hintere Ring reicht in das offene Bündchen; keine zwei Hautkugeln mehr. */
+    const rings=[[-0.046,0.012,0.008],[-0.034,0.014,0.009],[-0.018,0.023,0.0105],[0.004,0.028,0.011],[0.026,0.026,0.010]];
+    const V=rings.map(([z,w,h],i)=>{
+      const A=rings[Math.max(0,i-1)],B=rings[Math.min(rings.length-1,i+1)],dz=B[0]-A[0],dw=(B[1]-A[1])/dz,dh=(B[2]-A[2])/dz;
+      return Array.from({length:17},(_,j)=>{const a=j/16*2*PI,x=Math.cos(a),y=Math.sin(a);return {p:[x*w,y*h,z],n:nrm([x/w,y/h,-dw*x*x/w-dh*y*y/h])};});
+    });
+    for(let i=1;i<V.length;i++)for(let j=0;j<16;j++){
+      const A=V[i-1][j],B=V[i][j],C=V[i][j+1],D=V[i-1][j+1];
+      b.tri(A.p,C.p,B.p,c,A.n,C.n,B.n);b.tri(A.p,D.p,C.p,c,A.n,D.n,C.n);
+    }
+    for(let j=0;j<16;j++){
+      b.tri([0,0,rings[0][0]],V[0][j+1].p,V[0][j].p,c);
+      b.tri([0,0,rings[4][0]],V[4][j].p,V[4][j+1].p,c);
+    }
     for (let i = 0; i < 4; i++) {
       const f = fingerPts(side, grip, i), r = FING[i][3] * 0.82;
       b.sphere(r * 1.08, 7, 5, c, { x: f.p0[0], y: f.p0[1], z: f.p0[2], smooth: true });
@@ -570,13 +611,39 @@ const OFFICE3D = (() => {
   const MUG_HANDLE = [0.066, 0.057, 0], MUG_RIM = 0.04, MUG_H = 0.108;
   function mugMesh(c) { const b = OFFICE_KITCHEN.cupMesh(c); b.cyl(0.0358, 0.0358, 0.0015, 16, 0x59321b, { y: 0.086, top: 0x82512c }); return b; }
   function phoneMesh() { const b = new G3.MB(); b.box(U(0.075), U(0.01), U(0.15), 0x1d1d20, { y: 0 }); b.box(U(0.064), U(0.002), U(0.13), 0x2c4a6a, { y: U(0.01) }); return b; }
-  /* v282: Abgerundete Maus mit zwei Tasten, Trennfuge und Scrollrad. */
+  /* v298: Die Maus blickt wie die Figur nach +z: flache Tasten vorn, hohe Handauflage
+     hinten. Integrierte Tastenschalen statt aufgeklebter ovaler Knöpfe. */
+  const MOUSE_ANCHOR=[0,U(0.032),U(-0.010)];
   function mouseMesh() {
-    const b = new G3.MB();
-    b.sphere(U(0.035), 16, 10, 0x303942, { sx: 0.85, sy: 0.45, sz: 1.35, y: U(0.004), smooth: true });
-    [-1, 1].forEach(side => b.sphere(U(0.014), 12, 7, 0x586777, { x: U(side * 0.014), y: U(0.014), z: U(-0.019), sx: 0.84, sy: 0.32, sz: 1.5, smooth: true }));
-    b.box(U(0.002), U(0.002), U(0.032), 0x111b24, { y: U(0.019), z: U(-0.014) });
-    b.sphere(U(0.005), 10, 6, 0x98a6b4, { y: U(0.021), z: U(-0.012), sy: 0.65, sz: 1.6, smooth: true });
+    const b=new G3.MB(),N=16;
+    const height=(x,z)=>0.004+0.030*Math.sqrt(Math.max(0,1-(x/0.033)**2-((z+0.004)/0.055)**2))*(1-0.22*smooth(-0.02,0.05,z));
+    const P=(x,z)=>{
+      const y=height(x,z),e=0.0001;
+      return {p:[U(x),U(y),U(z)],n:nrm([-(height(x+e,z)-height(x-e,z))/(2*e),1,-(height(x,z+e)-height(x,z-e))/(2*e)])};
+    };
+    /* Gerade gemeinsame Tastennaht statt einer Farbkante quer durch radiale Dreiecke. */
+    const zs=[-0.059,-0.057,-0.053,-0.048,-0.042,-0.035,-0.028,-0.021,-0.014,-0.007,0,0.006,0.012,0.018,0.024,0.030,0.036,0.041,0.045,0.048,0.050,0.051];
+    const rows=zs.map(z=>{
+      const w=0.033*Math.sqrt(Math.max(0,1-((z+0.004)/0.055)**2));
+      return Array.from({length:N+1},(_,i)=>P(w*Math.sin((i/N-0.5)*PI),z));
+    });
+    for(let j=0;j<rows.length-1;j++){
+      const col=zs[j]>=0.006?0x45515d:0x303942;
+      for(let i=0;i<N;i++){
+        const A=rows[j][i],B=rows[j][i+1],C=rows[j+1][i+1],D=rows[j+1][i];
+        b.tri(A.p,D.p,C.p,col,A.n,D.n,C.n);b.tri(A.p,C.p,B.p,col,A.n,C.n,B.n);
+      }
+      const A=rows[j][0].p,B=rows[j+1][0].p,C=rows[j][N].p,D=rows[j+1][N].p;
+      const down=p=>[p[0],0,p[2]];
+      b.quad(A,down(A),down(B),B,0x1b242d);b.quad(C,D,down(D),down(C),0x1b242d);
+      b.quad(down(A),down(C),down(D),down(B),0x1b242d);
+    }
+    for(let i=0;i<8;i++){
+      const z=0.008+i*0.005,z1=z+0.005,x=0.00055;
+      const p=(xx,zz)=>[U(xx),U(height(xx,zz)+0.00025),U(zz)];
+      b.quad(p(-x,z),p(-x,z1),p(x,z1),p(x,z),0x17212a);
+    }
+    b.cyl(U(0.0038),U(0.0038),U(0.005),14,0x8b99a4,{x:U(-0.0025),y:U(height(0,0.022)-0.0018),z:U(0.022),rz:-PI/2,smooth:true});
     return b;
   }
   function penMesh() { const b = new G3.MB(); b.cyl(0.0035, 0.0035, 0.09, 8, 0x2a4a8a, { y: -0.045 }); return b; }
@@ -750,7 +817,7 @@ const OFFICE3D = (() => {
   const restOn = (F, side) => want([side * 0.135, DESK_HI[1] + 0.001, DESK_LO[2] + 0.065], "rest", side);
   function mouseAt(F, mv) {
     const P = F.P.mouse, t = O.t, s = O.reduced ? 0 : mv;
-    return want([P[0] + Math.sin(t * 0.6 + F.tP[0]) * 0.012 * s, P[1] + 0.014, P[2] + Math.cos(t * 0.45 + F.tP[1]) * 0.009 * s], "mouse", -1);
+    return want([P[0] + Math.sin(t * 0.6 + F.tP[0]) * 0.012 * s, P[1] + MOUSE_ANCHOR[1], P[2] + MOUSE_ANCHOR[2] + Math.cos(t * 0.45 + F.tP[1]) * 0.009 * s], "mouse", -1);
   }
   /* Becher: Henkel, Rand am Mund, Halten vor der Brust; psi = Drehung um die Hochachse (PI: Henkel rechts, 0: links) */
   const mugRot = (psi, tilt) => [psi ? tilt : -tilt, psi, 0];
@@ -946,7 +1013,11 @@ const OFFICE3D = (() => {
     } else setNode(F.cup, P.cup, [0, PI, 0]);
     if (phoneP) setNode(F.phone, lerp3(phoneP.pos, L.C, phoneP.g), phoneP.rot);
     else setNode(F.phone, P.phone, [0, -0.1, 0]);
-    if (mouseOn && Rr.g === "mouse") { F.mouse.x = Rr.C[0]; F.mouse.z = Rr.C[2]; }
+    if (mouseOn && Rr.g === "mouse") {
+      F.mouse.ry=Rr.hand.ry;
+      const a=R3([0,F.mouse.ry,0],MOUSE_ANCHOR);
+      F.mouse.x=Rr.C[0]-a[0];F.mouse.z=Rr.C[2]-a[2];
+    }
     F.pen.visible = writing; F.penRest.visible = !writing;
     const N = notePose(F); F.note.x = N.c[0]; F.note.z = N.c[2]; F.note.ry = N.ry + PI;
     F.held = phoneP && phoneP.g > 0.5 ? "phone" : cupP && cupP.g > 0.5 ? "cup" : null;
@@ -992,33 +1063,42 @@ const OFFICE3D = (() => {
   const busy = f => f.phase && f.phase !== "idle";
   const monthUnit = (role, n) => { const u = (typeof MOTM_UNIT !== "undefined" && MOTM_UNIT[role]) || ["Einsatz", "Einsätze"]; return n === 1 ? u[0] : u[1]; };
   const monthN = p => typeof staffMonthN === "function" ? Math.round(staffMonthN(p, gameMonth())) : 0;
+  /* v298: Bildschirmfokus nur aus echten Aufträgen und Fahrzeugen dieses Standorts.
+     Disposition/Zoll/Umschlag zeigen einen Standortvorgang, keine erfundene persönliche
+     Auftragszuweisung. Beim Fahrpersonal hat die feste Fahrzeugbindung Vorrang. */
   function screenData(b, p) {
-    const fl = fleetOf(b), R = [];
-    const vrow = f => { const v = vType(f.type); return [v ? v.name : "Fahrzeug", busy(f) ? "unterwegs" : "frei", busy(f)]; };
-    let title, lines = [];
-    if (p.role === "disp") {
-      title = "Disposition";
-      fl.slice(0, 4).forEach(f => R.push(vrow(f)));
-      lines.push(fl.length ? fl.filter(busy).length + " von " + fl.length + " Fahrzeugen unterwegs" : "Noch keine Fahrzeuge am Standort");
-      lines.push("Selbst disponiert: " + (b.done || 0) + " Touren");
-    } else if (p.role === "fahr") {
-      title = "Fahrplan";
-      const mine = fl.find(f => f.driver === p.id);
-      if (mine) { R.push(vrow(mine)); lines.push("Fest eingeteilt"); }
-      else { fl.filter(f => !f.driver).slice(0, 3).forEach(f => R.push(vrow(f))); lines.push("Fahrerpool: Platz für " + driverCap(b) + " Fahrzeuge"); }
-    } else if (p.role === "ums") {
-      title = "Umschlag";
-      fl.filter(f => !busy(f)).slice(0, 3).forEach(f => R.push(vrow(f)));
-      lines.push("Umschlagzeit hier: −" + Math.round((1 - umschlagFactor(b.node)) * 100) + " %");
-      lines.push("Stellplätze: " + b.vehicles.length + " / " + tierOf(b).slots);
-    } else {
-      title = "Zoll & Papiere";
-      lines.push("Aufschlag auf Aufträge: +" + Math.round(baseBonus(b) * 1000) / 10 + " %");
-      lines.push("Zollteam: " + b.staff.filter(s => s.role === "zoll").length + " Beschäftigte");
+    const fl=fleetOf(b), ids=new Set((b.vehicles||[]));
+    const phase=f=>(f&&typeof haltLabel==='function'&&haltLabel(f))||({idle:"Bereit",reserved:"Eingeplant",repo:"Anfahrt",load:"Beladen",haul:"Unterwegs",unload:"Entladen",service:"Werkstatt"}[f&&f.phase]||"Bereit");
+    const name=id=>typeof N!=="undefined"&&N[id]?(N[id].short||N[id].name):String(id||"–");
+    const actor=O&&(O.staff||[]).find(f=>f.p&&f.p.id===p.id);
+    const interrupted=actor&&(actor.shock||actor.dead||O.deaths), pause=actor&&["cup","gift"].includes(actor.act);
+    const activity=interrupted?"Arbeit unterbrochen":pause?"Kaffeepause":({type:"Erfasst Daten",mouse:"Prüft Vorgang",read:"Liest Unterlagen",note:"Schreibt Notizen",phone:"Telefoniert",look:"Prüft Übersicht"}[actor&&actor.act]||"Arbeitsübersicht");
+    const local=(S.jobs||[]).filter(j=>j.order&&((j.order.viaBase===b.id)||(j.legs||[]).some(l=>ids.has(l.veh))));
+    const rank=Math.max(0,(b.staff||[]).filter(x=>x.role===p.role).findIndex(x=>x.id===p.id));
+    const mine=fl.find(f=>f.driver===p.id);
+    let jobs=local, job=null;
+    if(p.role==='fahr') jobs=mine?local.filter(j=>(j.legs||[]).some(l=>l.veh===mine.uid&&!l.done)):local;
+    if(p.role==='ums'){
+      jobs=local.filter(j=>(j.legs||[]).some(l=>!l.done&&((l.from===b.node)||(l.to===b.node))));
+      const loading=jobs.filter(j=>(j.legs||[]).some((l,i)=>!l.done&&i===(j.curLeg||0)&&fl.some(f=>f.uid===l.veh&&f.jobId===j.id&&((f.phase==='load'&&l.from===b.node)||(f.phase==='unload'&&l.to===b.node)))));
+      if(loading.length)jobs=loading;
     }
-    const n = monthN(p);
-    lines.push("Mein Monat: " + n + " " + monthUnit(p.role, n));
-    return { title, R, lines, day: dayOf(S.time) };
+    if(jobs.length)job=(p.role==='fahr'&&mine&&jobs.find(j=>j.id===mine.jobId))||jobs[rank%jobs.length];
+    const title=({disp:"Disposition",fahr:"Fahrplan",ums:"Umschlag",zoll:"Zoll & Papiere"}[p.role]||"Arbeitsplatz");
+    const view=p.role==='fahr'&&!mine?'Fahrerpool':({disp:"Tourenkoordination",fahr:"Tourenplan",ums:"Ladeübersicht",zoll:"Frachtpapiere"}[p.role]||"Vorgangsübersicht");
+    let work=null;
+    if(job){
+      const legs=job.legs||[], leg=(mine&&legs.find(l=>l.veh===mine.uid&&!l.done))||legs[job.curLeg||0]||legs.find(l=>!l.done)||legs[0];
+      const f=leg&&S.fleet.find(f=>f.uid===leg.veh),o=job.order,cargo=typeof CARGO!=="undefined"&&CARGO[o.cargo],kg=Number(o.weight);
+      const weight=Number.isFinite(kg)&&kg>0?(kg>=1000?(kg/1000).toLocaleString('de-DE',{maximumFractionDigits:1})+' t':kg.toLocaleString('de-DE',{maximumFractionDigits:1})+' kg'):'';
+      const v=f&&vType(f.type);
+      work={id:o.id||job.id,jobId:job.id,from:name(o.from),to:name(o.to),cargo:cargo?cargo.name:String(o.cargo||"Fracht"),weight,
+        vehicle:v?v.name:"Transportkette",status:f&&f.jobId===job.id&&legs.indexOf(leg)===(job.curLeg||0)?phase(f):"Eingeplant",leg:leg?legs.indexOf(leg)+1:0,total:legs.length};
+    }
+    return {title,view,person:p.name||"Team",activity,paused:!!(pause||interrupted),work,
+      R:(mine?[mine]:fl).slice(0,3).map(f=>{const v=vType(f.type);return [v?v.name:"Fahrzeug",phase(f),busy(f)];}),
+      lines:[fl.filter(busy).length+" aktive Fahrzeuge · "+fl.length+" am Standort","Mein Monat: "+monthN(p)+" "+monthUnit(p.role,monthN(p))],
+      site:name(b.node),day:dayOf(S.time)};
   }
   /* v284: Pixelbreite statt Zeichenanzahl; lange Statuszeilen umbrechen. */
   function fitScreenText(g, text, width) {
@@ -1036,32 +1116,52 @@ const OFFICE3D = (() => {
     if (line) out.push(line);
     return out.map(l => fitScreenText(g, l, width));
   }
-  function screenCanvas(c, b, p) {
-    const g = c.getContext("2d"), D = screenData(b, p), W = c.width, Hh = c.height;
-    g.fillStyle = "#eef3f9"; g.fillRect(0, 0, W, Hh);
-    g.fillStyle = "#2f6fed"; g.fillRect(0, 0, W, 26);
-    g.fillStyle = "#fff"; g.font = "800 14px 'Baloo 2', system-ui, sans-serif"; g.textBaseline = "middle";
-    g.fillText(fitScreenText(g, D.title, W - 72), 8, 14);
-    g.textAlign = "right"; g.font = "700 12px system-ui, sans-serif"; g.fillText("Tag " + D.day, W - 8, 14); g.textAlign = "left";
-    let y = 40;
-    if (p.role === "disp" || p.role === "ums") {
-      /* dekorative Kartenskizze ohne Zahlen */
-      g.strokeStyle = "#b9c8da"; g.lineWidth = 2; g.beginPath(); g.moveTo(W - 92, 112); g.bezierCurveTo(W - 70, 60, W - 40, 100, W - 14, 46); g.stroke();
-      [[W - 92, 112], [W - 14, 46]].forEach(([x, yy]) => { g.fillStyle = "#d9413a"; g.beginPath(); g.arc(x, yy, 4, 0, 7); g.fill(); });
+  function screenCanvas(c, b, p, data) {
+    const g=c.getContext("2d"),D=data||screenData(b,p),W=384,H=240;
+    g.save();g.scale(c.width/W,c.height/H);g.textBaseline="middle";g.textAlign="left";
+    g.fillStyle="#e8eef5";g.fillRect(0,0,W,H);
+    g.fillStyle="#2f6fed";g.fillRect(0,0,W,30);
+    g.fillStyle="#ffffff";g.font="700 17px system-ui, sans-serif";g.fillText(fitScreenText(g,D.title,W-90),10,15);
+    g.font="600 12px system-ui, sans-serif";g.textAlign="right";g.fillText("Tag "+D.day,W-10,15);g.textAlign="left";
+    g.fillStyle="#25384c";g.font="700 12px system-ui, sans-serif";g.fillText(fitScreenText(g,D.person,212),10,45);
+    g.fillStyle=D.paused?"#657485":"#286e57";g.font="600 11px system-ui, sans-serif";g.textAlign="right";g.fillText(D.activity,W-10,45);g.textAlign="left";
+    g.fillStyle="#ffffff";g.fillRect(8,59,W-16,139);
+    g.fillStyle="#34495e";g.font="700 14px system-ui, sans-serif";g.fillText(D.view,18,76);
+    if(D.work){
+      const d=D.work;
+      g.fillStyle="#526b82";g.font="600 11px system-ui, sans-serif";g.textAlign="right";g.fillText(fitScreenText(g,String(d.id),130),W-18,76);g.textAlign="left";
+      g.fillStyle="#1f3449";g.font="600 13px system-ui, sans-serif";
+      ["Von: "+d.from,"Nach: "+d.to,d.cargo+(d.weight?" · "+d.weight:"")].forEach((t,i)=>g.fillText(fitScreenText(g,t,W-36),18,101+i*21));
+      g.fillStyle="#607184";g.font="600 11px system-ui, sans-serif";g.fillText(fitScreenText(g,d.vehicle,W-36),18,163);
+      g.fillStyle="#e4edf8";g.fillRect(16,177,W-32,16);
+      g.fillStyle="#244b77";g.font="700 11px system-ui, sans-serif";g.fillText(fitScreenText(g,d.status,W-164),21,185);
+      g.textAlign="right";g.fillText("Abschnitt "+d.leg+" / "+d.total,W-22,185);g.textAlign="left";
+    }else{
+      g.fillStyle="#526779";g.font="600 12px system-ui, sans-serif";
+      g.fillText("Keine laufenden Standortvorgänge",18,101);
+      if(!D.R.length)g.fillText("Noch keine Fahrzeuge zugeordnet",18,130);
+      D.R.slice(0,3).forEach(([n,status,on],i)=>{
+        const y=126+i*24;g.fillStyle="#f1f5f9";g.fillRect(16,y-9,W-32,20);
+        const label=fitScreenText(g,status,142),space=g.measureText(label).width;
+        g.fillStyle="#263e55";g.fillText(fitScreenText(g,n,W-52-space),21,y);
+        g.textAlign="right";g.fillStyle=on?"#2f6fed":"#286e57";g.fillText(label,W-22,y);g.textAlign="left";
+      });
     }
-    g.font = "700 12px system-ui, sans-serif";
-    D.R.forEach(([n, s, on]) => {
-      g.fillStyle = "#ffffff"; g.fillRect(8, y - 9, p.role === "fahr" || p.role === "zoll" ? W - 16 : W - 108, 18);
-      g.fillStyle = "#22303f"; g.fillText(fitScreenText(g, n, (p.role === "fahr" || p.role === "zoll" ? W - 24 : W - 116) - g.measureText(s).width - 8), 12, y);
-      g.fillStyle = on ? "#2f6fed" : "#3f9a5a"; g.textAlign = "right"; g.fillText(s, (p.role === "fahr" || p.role === "zoll" ? W - 12 : W - 112), y); g.textAlign = "left";
-      y += 21;
+    g.fillStyle="#526779";g.font="600 10px system-ui, sans-serif";
+    g.fillText(fitScreenText(g,D.lines[0],W-20),10,211);
+    g.fillText(fitScreenText(g,D.site+" · "+D.lines[1],W-20),10,228);
+    g.restore();return JSON.stringify(D);
+  }
+  /* v298: Aktuelle Tätigkeit und Auftragsstatus zeitnah zeigen. Höchstens eine
+     Textur pro Bild aktualisieren, nur bei inhaltlicher Änderung. */
+  function updateScreens(now) {
+    let budget=1;
+    (O.screens||[]).forEach(s=>{
+      if(now<s.next||!budget)return;
+      s.next=now+900;
+      const data=screenData(O.b,s.p),sig=JSON.stringify(data);
+      if(sig!==s.sig){s.sig=screenCanvas(s.c,O.b,s.p,data);O.R.texUpdate(s.t);budget--;}
     });
-    y += 4;
-    g.fillStyle = "#22303f"; g.font = "700 11px system-ui, sans-serif";
-    const lines = D.lines.flatMap(l => screenLines(g, l, W - 16));
-    const step = Math.min(14, (Hh - 10 - y) / Math.max(1, lines.length));
-    lines.forEach((line, i) => g.fillText(line, 8, y + i * step));
-    return JSON.stringify(D);
   }
 
   /* Poster „Mitarbeiter des Monats“ – aus b.motm (Momentaufnahme mit Name, Rolle, Avatar, Grund) */
@@ -1270,12 +1370,12 @@ const OFFICE3D = (() => {
     R.nodes.push(R.node(M1(room.glow), { shadow: false, glow: 0.85 }));
     /* Personal */
     O.staff = room.seats.map(s => { R.nodes.push(buildFigure(R, s, M)); return s; });
-    /* Bildschirme (256 × 160, nur bei geänderten Daten und höchstens alle paar Sekunden neu) */
+    /* Bildschirme (384 × 240, nur bei geänderten Daten neu) */
     O.screens = room.screens.map((s, n) => {
-      const c = document.createElement("canvas"); c.width = 256; c.height = 160;
+      const c = document.createElement("canvas"); c.width = 384; c.height = 240;
       const sig = screenCanvas(c, b, s.p), t = TX(c);
       R.nodes.push(R.node(null, { x: s.x, y: s.y, z: s.z, decal: { t, w: 0.6, h: 0.36 } }));
-      return Object.assign(s, { c, t, sig, next: performance.now() + 10000 + n * 700 });
+      return Object.assign(s, { c, t, sig, next: performance.now() + 600 + n * 23 });
     });
     /* Wandtafeln, Firmenschild über der Küche, Poster */
     R.nodes.push(R.node(null, { x: -2.6, y: 1.55, z: RD - 0.012, ry: PI, decal: { t: TX(boardCanvas(b)), w: 2.4, h: 1.5 } }));
@@ -1363,14 +1463,7 @@ const OFFICE3D = (() => {
       } else if (el) el.style.visibility = "hidden";
       if (now > O.sayUntil) { O.sayAt = null; if (el) el.classList.remove("on"); }
     }
-    /* Bildschirme: höchstens ein Bild je Durchgang, nur wenn sich die Daten geändert haben */
-    let up = 1;
-    (O.screens || []).forEach(s => {
-      if (now < s.next || up <= 0) return;
-      s.next = now + 12000;
-      const sig = JSON.stringify(screenData(O.b, s.p));
-      if (sig !== s.sig) { s.sig = screenCanvas(s.c, O.b, s.p); O.R.texUpdate(s.t); up--; }
-    });
+    updateScreens(now);
     /* Team oder Auszeichnung geändert? */
     if (now > O.pollAt) {
       O.pollAt = now + 3000;

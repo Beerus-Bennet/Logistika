@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v298 – Bürografik und Monitorarbeit auf main c295039 / v297
+
+Die ZIP enthält ausschließlich die sechs gegenüber aktuellem main geänderten bzw. neuen Dateien. Diese sechs Dateien im Projekt ersetzen/ergänzen. Wasserfall, Hof, Wege und alle übrigen Skripte bleiben auf GitHub-Stand v297.
+
+- `officefp.js`: zusammenhängende Haaroberflächen, runde offene Ärmelbündchen und einteilige Handwurzel; neues Mausgehäuse mit korrekter Ausrichtung und gemeinsamem Handkontakt. `screenData` liest tatsächliche Standortaufträge und die Figurentätigkeit; `screenCanvas` zeichnet kompakte Arbeitsansichten, `updateScreens` begrenzt Aktualisierungen. Bestehende öffentliche API und gespeicherte Avatare bleiben kompatibel.
+- `index.html` / `sw.js`: `officefp.js?v=298`, Service-Worker-Version v298. Alle anderen Cache-Verweise aus main erhalten.
+- `office-appearance-v298.test.js` neu, direkt im Projektordner mit Node ausführen. Keine zusätzlichen Pakete erforderlich. Bestehende Büroprüfungen bleiben unverändert ausführbar.
+- `AENDERUNGEN.md` und diese Datei: Ursachen, Umsetzung und Prüfgrenzen.
+
+Keine Geschäftslogik, Personal- oder Fahrzeugzuweisungen und keine Spielstandstruktur geändert. Keine zusätzliche Modelldatei/Engineänderung nötig. Kein Live-iPhone-/Safari-Test; Grafikprüfung mit den originalen Modellen/Shadern und der echten Canvas-Zeichenroutine. Vor dem Einspielen späterer Änderungen nach `c295039` nochmals zusammenführen.
+
 ## v297 – Wasseranschlüsse und Aufprall auf main 49c5f99 / v296
 
 Diese Lieferung ersetzt v296 für den Wasserfall und enthält ausschließlich die gegenüber aktuellem main geänderten Dateien. Die jüngsten Menü-, Schatz- und Wegfindungskorrekturen bleiben erhalten.
