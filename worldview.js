@@ -998,7 +998,7 @@ function worldStatic() {
     const ryF = ry + Math.PI / 2, cF = Math.cos(ryF), sF = Math.sin(ryF), nF = { x: SPI.C[0], z: SPI.C[1], ry: ryF, s: k };
     const WF = (x, z) => [SPI.C[0] + (x * cF + z * sF) * k, SPI.C[1] + (-x * sF + z * cF) * k];
     FWM.setSpringFrame(SPI.C, ryF, k);       /* v228: Berg, Hochfläche und Bergbach rechnen in diesem Rahmen */
-    R.nodes.push(fnode(fmesh("wspring220", FWM.springRocks), nF));
+    R.nodes.push(fnode(fmesh("wspring310", FWM.springRocks), nF));
     /* Ufer des Topfs im eigenen Rahmen; Uferradius aus der Form des Topfs (SPR.wob läuft über den Weltwinkel) */
     const c0 = Math.cos(ry), s0 = Math.sin(ry), rim = an => FWM.SPR.RP / k * FWM.SPR.wob(Math.atan2(-Math.cos(an) * s0 + Math.sin(an) * c0, Math.cos(an) * c0 + Math.sin(an) * s0));
     R.nodes.push(fnode(fmesh("wspringrim220", () => FWM.springRim(rim)), { x: SPI.C[0], z: SPI.C[1], ry, s: k }));
@@ -1007,15 +1007,15 @@ function worldStatic() {
        Bäume und Sträucher darauf in einem eigenen Knoten (Weltkoordinaten). */
     R.nodes.push(fnode(R.mesh(FWM.springHill((x, z) => { const w = WF(x, z); return wGroundAt(w[0], w[1]); })), nF));
     R.nodes.push(fnode(R.mesh(FWM.springFlora()), {}));
-    R.nodes.push(fnode(fmesh("wspringrun297", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringcasc297", FWM.springCascades), Object.assign({ water: 7, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringrunfoam297", FWM.springRunFoam), Object.assign({ water: 6, alpha: 0.38, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrun310", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringcasc310", FWM.springCascades), Object.assign({ water: 7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrunfoam310", FWM.springRunFoam), Object.assign({ water: 6, alpha: 0.68, shadow: false }, nF)));
     const I = FWM.springRunInfo();
     WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
-    /* v297: Hauptfall blendet am gemeinsamen Rand aus dem Bachmaterial über. Schaum ist
-       flach über die Einschlagsbreite verteilt; die abstehenden Nebenfälle sind entfernt. */
-    R.nodes.push(fnode(fmesh("wspringfall297", FWM.springFall), Object.assign({ water: 6, flow: FWM.springFallJoin(), alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringfoam297", FWM.springFoam), Object.assign({ water: 6, alpha: 0.92, shadow: false }, nF)));
+    /* v310: Belüftete Stränge gehen in eine sichtbare, flache Aufprallzone über.
+       Gemeinsame Anschlusskanten und der Verzicht auf abstehende Nebenfälle bleiben erhalten. */
+    R.nodes.push(fnode(fmesh("wspringfall310", FWM.springFall), Object.assign({ water: 6, flow: FWM.springFallJoin(), alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam310", FWM.springFoam), Object.assign({ water: 6, alpha: 0.96, shadow: false }, nF)));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
     const impact = FWM.springImpact(), lip = FWM.springFallPath(0.24), ft = WF(impact.x, impact.z), lp = WF(lip[0], lip[3]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
     /* v296: Aufprall auf der echten Seehöhe; Schleier folgt derselben Kurve wie das Modell. */
@@ -1130,6 +1130,9 @@ function worldSyncHof(force) {
   WV.hof = [];
   /* der Zaun wächst mit jeder Ausbaustufe nach Westen, Norden und Osten (v56: FHOF_B); der Südzaun bleibt */
   const stage = S.farm.stage || 1, big = stage >= 4, B = farmHofB(), F0 = B.z1, GX = FGATE.x, WZ = FGATE.wz;
+  /* v309: Schon die erste Flächenerweiterung bekommt einen intakten Zaun und ein gerades Tor.
+     Die übrige Hofgestaltung bleibt an die großen Ausbaustufen 4, 7 und 10 gebunden. */
+  const fenceStage = farmHl() >= 2 ? Math.max(2, stage) : stage;
   const add = n => { R.nodes.push(n); WV.hof.push(n); return n; };
   add(fnode(fmesh("hofGround:" + Math.min(stage, 2) + ":" + stage + ":" + farmHl(), () => FWM.hofGround(HOFG, B, Math.min(stage, 2), wGroundAt)), { shadow: false }));
   const b = new FM.MB(), ps = Math.min(3, stage);
@@ -1157,14 +1160,14 @@ function worldSyncHof(force) {
     wall(x0, z0, x0, wg[0]); wall(x0, wg[1], x0, z1);
     b.merge(FWM.stoneGate(), { x: GX, z: z1 });
   } else {
-    const k = stage;
+    const k = fenceStage;
     FWM.hofFence(b, B.x0, B.z0, B.x1, B.z0, k, 1);
     FWM.hofFence(b, B.x1, B.z0, B.x1, B.z1, k, 2);
     FWM.hofFence(b, B.x0, B.z1, GX - 2, B.z1, k, 3);
     FWM.hofFence(b, GX + 2, B.z1, B.x1, B.z1, k, 4);
     FWM.hofFence(b, B.x0, B.z0, B.x0, wg[0], k, 5);
     FWM.hofFence(b, B.x0, wg[1], B.x0, B.z1, k, 6);
-    b.merge(FM.gate(), { x: GX, z: F0, ry: stage <= 1 ? 0.06 : 0 });
+    b.merge(FM.gate(), { x: GX, z: F0, ry: fenceStage <= 1 ? 0.06 : 0 });
   }
   /* Westtor zum Wald */
   [wg[0] - 0.1, wg[1] + 0.1].forEach(z => b.box(0.18, 1.2, 0.18, stage >= 4 ? 0xa8a094 : FM.C.woodD, { x: B.x0 - (big ? 0.3 : 0), z }));
@@ -1187,7 +1190,7 @@ function worldSyncHof(force) {
   /* Firmenschild am Tor: Name und Logo stehen auf der Tafel (vorn und hinten) */
   const T = brandTex();
   if (T) {
-    const g = big ? { y: 2.7, z: F0 + 0.3 + 0.362, w: 2.52, h: 0.46, ry: 0 } : { y: 1.67, z: F0 + 0.045, w: 2.36, h: 0.47, ry: stage <= 1 ? 0.06 : 0 };
+    const g = big ? { y: 2.7, z: F0 + 0.3 + 0.362, w: 2.52, h: 0.46, ry: 0 } : { y: 1.67, z: F0 + 0.045, w: 2.36, h: 0.47, ry: fenceStage <= 1 ? 0.06 : 0 };
     const sg = add(R.node(null, { x: GX, y: 0, z: F0 + (big ? 0.3 : 0), ry: g.ry }));
     R.addChild(sg, R.node(null, { y: g.y, z: g.z - F0 - (big ? 0.3 : 0), decal: { t: big ? T.stone : T.sign, w: g.w, h: g.h } }));
     if (!big) R.addChild(sg, R.node(null, { y: g.y, z: -0.045, ry: Math.PI, decal: { t: T.sign, w: g.w, h: g.h } }));
@@ -3478,13 +3481,13 @@ function worldStep(dt, time) {
       R.emit({ x:sf.x+sf.side[0]*u+sf.dx*0.12, y:sf.y+0.04, z:sf.z+sf.side[1]*u+sf.dz*0.12,
         vx:sf.dx*0.2, vy:0.04+rnd()*0.06, vz:sf.dz*0.2, life:0.45+rnd()*0.15,
         size:0.06+rnd()*0.04, size2:0.18, col:LC(0.84,0.91,0.95,0.05,true), drag:1.2, shape:4 }); }
-    /* v296: Flache Spritzfächer vom Wasserkontakt nach außen; Tropfen fallen zur Oberfläche zurück. */
+    /* v310: Feine Spritzfächer statt großer heller Kugeln; Flugbahn weiterhin zur Wasseroberfläche zurück. */
     for (let i = fx("drop", 32); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.2, u = (rnd() - 0.5) * fw, vy = 0.7 + rnd() * 1.1;
-      R.emit({ x: sf.x + sf.side[0] * u * 0.8, y: sf.y + 0.025, z: sf.z + sf.side[1] * u * 0.8, vx: Math.cos(a) * s * 0.65 + sf.dx * s * 0.7, vy, vz: Math.sin(a) * s * 0.65 + sf.dz * s * 0.7, g: -9.5, life: 2 * vy / 9.5 + 0.04, size: 0.025 + rnd() * 0.02, size2: 0.012, col: LC(0.9, 0.96, 1, 0.75), drag: 0.25, shape: 5, fade: false }); }
+      R.emit({ x: sf.x + sf.side[0] * u * 0.8, y: sf.y + 0.025, z: sf.z + sf.side[1] * u * 0.8, vx: Math.cos(a) * s * 0.65 + sf.dx * s * 0.7, vy, vz: Math.sin(a) * s * 0.65 + sf.dz * s * 0.7, g: -9.5, life: 2 * vy / 9.5 + 0.04, size: 0.012 + rnd() * 0.012, size2: 0.008, col: LC(0.9, 0.96, 1, 0.62), drag: 0.25, shape: 5, fade: false }); }
     for (let i = fx("veil", 3); i-- > 0;) { const p = sf.path(0.65 + rnd() * 0.3), u = (rnd() - 0.5) * p.w * 0.7;
-      R.emit({ x: p.x + sf.side[0] * u, y: p.y, z: p.z + sf.side[1] * u, vx: sf.dx * 0.5, vy: -1.4, vz: sf.dz * 0.5, g: -3, life: 0.35, size: 0.03, size2: 0.018, col: LC(0.95, 0.98, 1, 0.65), shape: 5 }); }
+      R.emit({ x: p.x + sf.side[0] * u, y: p.y, z: p.z + sf.side[1] * u, vx: sf.dx * 0.5, vy: -1.4, vz: sf.dz * 0.5, g: -3, life: 0.35, size: 0.016, size2: 0.009, col: LC(0.95, 0.98, 1, 0.6), shape: 5 }); }
     for (let i = fx("edge", 5); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.35 + rnd() * 0.08), flight = Math.sqrt(2 * (sf.ly - sf.y) / 9.5), v = Math.hypot(sf.x - sf.lx, sf.z - sf.lz) / flight;
-      R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9.5, life: flight, size: 0.035 + rnd() * 0.025, size2: 0.02, col: LC(0.9, 0.97, 1, 0.8), shape: 5, fade: false }); }
+      R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9.5, life: flight, size: 0.015 + rnd() * 0.01, size2: 0.009, col: LC(0.9, 0.97, 1, 0.6), shape: 5, fade: false }); }
 
   }
   /* v207: Spritzer an den Füßen der Kaskaden, Blubbern am Quellaustritt */
@@ -3494,9 +3497,9 @@ function worldStep(dt, time) {
     const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
     /* v296: Zähler über Bildgrenzen hinweg: auch bei 60/120 fps erhält jede Kaskade Spritzer. */
     for (let i = fx("d", 14); i-- > 0;) { const f = sr.feet[acc.dNext++ % sr.feet.length], l = Math.hypot(f.dx, f.dz) || 1, a = rnd() * 6.283, v = 0.5 + rnd() * 0.8;
-      R.emit({ x: f.x + (rnd() - 0.5) * 0.5, y: f.y + 0.04, z: f.z + (rnd() - 0.5) * 0.5, vx: Math.cos(a) * v * 0.5 + f.dx / l * v * 0.4, vy: 0.9 + rnd() * 1.1, vz: Math.sin(a) * v * 0.5 + f.dz / l * v * 0.4, g: -9.5, life: 0.4 + rnd() * 0.2, size: 0.03 + rnd() * 0.035, size2: 0.02, col: LC(0.96, 0.99, 1, 0.85), drag: 0.4, shape: 5, fade: false }); }
+      R.emit({ x: f.x + (rnd() - 0.5) * 0.5, y: f.y + 0.04, z: f.z + (rnd() - 0.5) * 0.5, vx: Math.cos(a) * v * 0.5 + f.dx / l * v * 0.4, vy: 0.9 + rnd() * 1.1, vz: Math.sin(a) * v * 0.5 + f.dz / l * v * 0.4, g: -9.5, life: 0.4 + rnd() * 0.2, size: 0.012 + rnd() * 0.016, size2: 0.009, col: LC(0.96, 0.99, 1, 0.7), drag: 0.4, shape: 5, fade: false }); }
     for (let i = fx("m", 3); i-- > 0;) { const f = sr.feet[acc.mNext++ % sr.feet.length];
-      R.emit({ x: f.x, y: f.y + 0.1, z: f.z, vx: (rnd() - 0.5) * 0.3, vy: 0.25 + rnd() * 0.2, vz: (rnd() - 0.5) * 0.3, life: 1.0 + rnd() * 0.6, size: 0.18, size2: 0.55, col: LC(0.94, 0.97, 1, 0.18, true), drag: 1.2, shape: 4 }); }
+      R.emit({ x: f.x, y: f.y + 0.1, z: f.z, vx: (rnd() - 0.5) * 0.3, vy: 0.25 + rnd() * 0.2, vz: (rnd() - 0.5) * 0.3, life: 1.0 + rnd() * 0.6, size: 0.09, size2: 0.26, col: LC(0.94, 0.97, 1, 0.10, true), drag: 1.2, shape: 4 }); }
     /* v228: der Ursprung liegt verdeckt hinter dem Gipfelkamm – dort keine Bläschen mehr */
     if (false) for (let i = fx("b", 6); i-- > 0;) { const q = sr.src, a = rnd() * 6.283, r = rnd() * 0.3;
       R.emit({ x: q.x + Math.cos(a) * r, y: q.y + 0.03, z: q.z + Math.sin(a) * r, vx: 0, vy: 0.25 + rnd() * 0.25, vz: 0, g: -2, life: 0.35 + rnd() * 0.2, size: 0.035 + rnd() * 0.025, size2: 0.05, col: LC(0.92, 0.97, 1, 0.8), drag: 0.5, shape: 5 }); }
@@ -3991,7 +3994,7 @@ function stageHTML() {
     next = `<div class="fs-sub">Nächste Stufe: <b>${esc(nx.n)}</b>${flv() < nx.lv ? " · ab Level " + nx.lv : ""}</div><div class="fr-in">${need}</div>${Object.keys(nx.need).length ? siteDepHTML("stage:" + (cur + 1), nx.need) : ""}
       <button class="btn fgo" id="fsStage" ${chk === true ? "" : "disabled"}>🏡 Hof ausbauen</button>`;
   } else next = `<div class="fs-sub">Größer geht’s nicht – ein echter Wirtschaftshof! 🎉</div>`;
-  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Die großen Stufen (4, 7, 10) brauchen Holz aus Wald und Sägewerk, dazwischen kaufst du nur Land.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
+  return `<div class="fstages">${list}</div>${next}<div class="fs-sub">Die großen Stufen (4, 7, 10) brauchen Holz aus Wald und Sägewerk; für die übrigen reicht der Kaufpreis.${nx ? " Die Pflöcke mit roter Spitze rund um den Hof zeigen, bis wohin er dann reicht." : ""}</div>`;
 }
 function stageBind(again) {
   const b = $("#fsStage"), nx = farmStageNext();

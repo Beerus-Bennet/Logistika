@@ -39,6 +39,10 @@ for(const [p,v] of main)if(run.has(p)){
   assert.equal(v[6],0);close([join[0],v[7]*2-1,join[1]],r.slice(6),'Wasserkoordinaten am Materialwechsel');mainJoins++;
 }
 assert.equal(mainJoins,9,'Hauptfall über volle Breite angeschlossen');
+/* v310: Verdeckte Uferzugabe darf nicht als breite Flügel über die Stufen hinausragen. */
+assert.ok(vertices(meshes.springCascades).every(v=>Math.abs(v[7])<=1.22),'Schmaler Ufersaum an sämtlichen Kaskaden');
+const lip=vertices(meshes.springFall).filter(v=>Math.abs(v[6]-.24)<1e-8);
+assert.ok(lip.length>0&&lip.every(v=>Math.abs(v[7]*2-1)<=1.001),'Hauptfall-Lippe ohne seitliche Uferzugabe');
 let bedChecks=0;
 for(const v of vertices(meshes.springCascades))if(Math.abs(v[7])<1e-8){
   const w=world(v[0],v[2]),ground=FWM.springHeightW(w[0],w[1]);

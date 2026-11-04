@@ -1626,7 +1626,8 @@ const FWM = (() => {
      [-5.5, 1.1, 0.12, 1.05, 0.9, g2, { wetAll: 0.35, cut: 1 }], [-4.4, 1.02, 0.12, 0.95, 0.95, g3, { wetAll: 0.4, cut: 1 }], [-3.65, 1.28, 0.12, 0.66, 0.95, g2, { wetAll: 0.5, cut: 1, topK: 0.75 }],
      /* Vorsprung der Kante, zwei Wächter seitlich, nasse dunkle Wand hinter dem Fall, darunter eine Stufe */
      [F.top[0] - 0.42, F.top[1] - 0.64, F.top[2], 0.66, 0.74, g2, { wetAll: 0.45, jitter: 0.18, topK: 0.7 }], [-3.1, 1.38, -1.3, 0.64, 0.95, g4, { moss: 0.3, wet: 0.5, ry: 0.5, cut: 3 }], [-3.02, 1.3, 1.5, 0.58, 1.0, g1, { moss: 0.3, wet: 0.5, ry: 2.4, cut: 3 }],
-     [-3.34, 0.72, 0.1, 0.8, 1.25, g3, { wetAll: 0.72, jitter: 0.25 }], [-3.0, 0.2, 0.15, 0.5, 0.7, g4, { wetAll: 0.75, cut: 3 }],
+     /* v310: zurückliegende, geschichtete Wand statt eines vorgewölbten Blocks im freien Wasserstrahl. */
+     [-3.55, 0.72, 0.1, 0.92, 0.98, g3, { wetAll: 0.82, jitter: 0.14, sx: 1.15, detail: true, cut: 4 }], [-3.18, 0.18, 0.15, 0.55, 0.7, g4, { wetAll: 0.82, cut: 3 }],
      /* Absätze der Nebenstränge (ragen aus dem Wasser), Blöcke am Fuß der Wand */
      [-2.36, 0.17, -0.76, 0.3, 0.75, g2, { wetAll: 0.55 }], [-2.3, 0.15, 1.0, 0.27, 0.8, g1, { wetAll: 0.55 }],
      [-3.2, 0.14, -1.3, 0.58, 0.6, g1, { wet: 0.3, cut: 3 }], [-3.05, 0.1, 1.38, 0.5, 0.62, g3, { wet: 0.3 }], [-2.75, 0.04, -1.85, 0.3, 0.6, g5, { wet: 0.25 }], [-2.6, 0.03, 1.95, 0.24, 0.65, g2, { wet: 0.25 }]
@@ -2119,7 +2120,10 @@ const FWM = (() => {
       const speed = q => 0.25 + 0.65 * sst(0.62, 0.3, q.hw)
         + (last ? 0.25 * sst(L - 0.5, L + 0.1, q.s) : 0.35 * sst(L - 0.8, L, q.s))
         + (ri ? 0.95 * sst(0.95, 0.05, q.s) * sst(-0.25, 0.08, q.s) : 0.4 * sst(0.7, 0, q.s));
-      const samples = S.map(q => ({ ...q, y: q.y + 0.002, sp: speed(q) })), f = samples[0];
+      /* v310: Uferüberdeckung schon vor der Stufenkante verengen, im Unterlauf weich zurückführen.
+         Ein schmaler Saum bleibt im Gelände; die alte breite Zugabe hing frei neben dem Fall. */
+      const samples = S.map(q => ({ ...q, y: q.y + 0.002, sp: speed(q),
+        bank: 0.04 + 0.20 * Math.min(ri ? sst(0,0.55,q.s) : 1, last ? 1 : sst(0,0.55,L-q.s)) })), f = samples[0];
       if (!ri) {
         const e = f.hw + 0.24;
         put({ ...f, x: f.x - f.tx * e, z: f.z - f.tz * e }, "run");
@@ -2132,7 +2136,7 @@ const FWM = (() => {
           const t = i / 24, h = t*t*(3-2*t), waist = Math.sin(Math.PI*t);
           put({ x: H(A.x,B.x,A.tx*length*0.7,B.tx*length*0.7,t), z: H(A.z,B.z,A.tz*length*0.7,B.tz*length*0.7,t),
             y: A.y + (B.y-A.y)*h, hw: A.hw + (B.hw-A.hw)*h - Math.min(A.hw,B.hw)*0.08*waist*waist,
-            sp: A.sp + (B.sp-A.sp)*h + 0.75*waist }, "cascade");
+            sp: A.sp + (B.sp-A.sp)*h + 0.75*waist, bank:0.04 }, "cascade");
         }
         const q = rows[rows.length - 1];
         /* Die erste Bachzeile gehört zugleich zum Kaskadenfuß. */
@@ -2160,8 +2164,11 @@ const FWM = (() => {
   function springWaterMesh(kind) {
     const b=new MB(), rows=springWaterProfile().rows;
     const section=q => {
-      /* Unter dem Ufer 24 cm Zugabe; beim freien Fall geht sie weich auf null zurück. */
-      const free=q.a == null ? 0 : sst(0.24,0.48,q.a), ext=0.24*(1-free), width=q.hw+ext;
+      /* v310: Die verdeckte Uferzugabe endet schon an der Lippe, bevor sich das Wasser vom Fels löst.
+         An steilen Stufen weniger Zugabe, damit keine seitlichen Wasserflügel aus dem Hang stehen.
+         Alle Teilflächen lesen weiterhin dieselben Zeilen, einschließlich Breite und Normale. */
+      const free=q.a == null ? 0 : sst(0.24,0.48,q.a), supported=q.a == null ? 1 : 1-sst(0,0.24,q.a),
+        ext=(q.bank == null ? 0.24 : q.bank)*supported, width=q.hw+ext;
       return WATER_U.map(u => {
         const w=u*width/q.hw, edge=1+free*0.025*Math.sin((q.a||0)*19+u*3);
         return { p:[q.x-q.tz*u*width*edge,q.y,q.z+q.tx*u*width*edge], n:q.n,

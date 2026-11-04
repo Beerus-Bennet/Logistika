@@ -1,5 +1,31 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v310 – Trophäentafel und Wasser auf main 0e6ee68 / v308 einschließlich v309
+
+Diese ZIP enthält elf gegenüber main `0e6ee68` geänderte/neue Dateien. Die Zaunkorrektur v309 ist vollständig enthalten; v302–v308 liegen bereits auf main. Ältere ZIPs nicht zusätzlich darüberkopieren. Kein Push erfolgt; vor Übernahme neuerer GitHub-Commits erneut abgleichen.
+
+- `hunt.js`: Schädel-/Waffenpräparate, dezente Plaketten und gezimmerte Tafel; echte Modellgrenzen für ein bis drei Ehrenplätze. Gespeicherte Enden, Maße, Merkmale und Werte bleiben erhalten; Modellschlüssel v310.
+- `woodmodels.js`: verengte Uferüberdeckung an Kaskaden, keine Überdeckung mehr an der freien Hauptfall-Lippe, zurückgesetzter zentraler Wandfels. Gemeinsame Wasser-Anschlusszeilen und physische Fallbahn erhalten.
+- `gl3d.js`: ruhigere Bachfarben, Schaumflecken auf Stufen, belüftete Hauptfallfäden und deutlichere flache Schaumzone im See. Bisherige talwärts gerichtete Laufzeitphasen erhalten.
+- `worldview.js`: neue Modellschlüssel, Schaum sichtbarer, Spritztropfen kleiner; vorhandene v309-Zaunreparatur erhalten. Emissionsraten, Schwerkraft, Licht-/Distanzlogik unverändert.
+- `erbedata.js`: unverändert aus v309; Reparaturhinweis beim ersten Hofausbau.
+- `index.html` / `sw.js`: Service Worker v310, vier oben genannte Produktdateien auf v310; `erbedata.js` bleibt v309, übrige Verweise bleiben bestehen.
+- `trophy-layout-v310.test.js`: echte Modellgrenzen, gespeicherte Merkmale, Altbestand und Belegung prüfen. `water-seams-v297.test.js`: vorhandene Anschlussprüfung um Schutz gegen breite Überdeckung an den Kanten ergänzt. Beide direkt im Projektordner mit Node ausführen.
+- `AENDERUNGEN.md` / diese Datei: Ursachen, Lösungen, Prüfungen und Grenzen.
+
+Modell-/Daten-/Jagd-/Strömungstests bestanden; Originalshader kompiliert und Vorher-/Nachher- sowie Nacht-/Zeitansichten über Mesa/EGL gerendert und geprüft. Kein Live-Handy-/Safari-Test. Keine neuen Bild-/Texturdateien, keine Spielstandmigration und kein neuer Paketbedarf.
+
+## v309 – Hofzaun auf aktuellem main 0e6ee68 / v308
+
+Diese ZIP enthält nur sechs gegenüber main `0e6ee68` geänderte Dateien. Alle bisherigen Änderungen v302–v308 sind inzwischen vollständig auf GitHub; der Upload wurde während dieser Arbeit übernommen. Die früheren ZIPs sind hierfür nicht zusätzlich erforderlich und dürfen nicht anschließend darüberkopiert werden.
+
+- `worldview.js`: ab Ausbauhöhe 2 intakte Zaungestaltung, auch solange die allgemeine Hofgestaltung noch Stufe 1 ist; Tor und Schild gerade. Spätere weiße Zäune/Steinmauer, Tore, Grenzen und übrige Hofgestaltung unverändert. Ausbauhinweis ohne widersprüchliche Nur-Land-Aussage.
+- `erbedata.js`: Reparaturhinweis von „Ausgebauter Hof“ zu „Weideland dazu“ verschoben. Kosten, Level, Materialbedarf und sonstige Vorteile unverändert.
+- `index.html` / `sw.js`: `erbedata.js?v=309`, `worldview.js?v=309`, Service Worker v309. Alle anderen Dateiverweise bleiben erhalten.
+- `AENDERUNGEN.md` / diese Datei: Ursache, bestehende Spielstände, Prüfungen und Grenzen.
+
+Originale Kauf-/Weltsynchronisierung sowie alle zehn Ausbauhöhen, vier alte Gestaltungsstände und Laden eines erweiterten Hofs geprüft; dazu Riegelgeometrie/Toröffnungen und Vorher-/Nachher-Modellansichten. Kein Live-Handy-/Safari-Test. Vor Übernahme neuerer Commits nach `0e6ee68` erneut abgleichen. Kein Push erfolgt.
+
 ## v308 – Kunden-Monogramme auf main 8232bbe / v301 einschließlich v302–v307
 
 Diese ZIP enthält 23 gegenüber aktuellem main geänderte/neue Dateien. Alle noch ausstehenden Lieferungen v302–v307 (Händlerkontakte, Feldmenü, Gießzustand, Schatz, Firmenbewertung und Jagd) sind enthalten. Ältere ZIPs nicht zusätzlich darüberkopieren.

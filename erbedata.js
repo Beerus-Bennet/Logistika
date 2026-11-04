@@ -256,14 +256,15 @@ const FPV = { lv: 15, price: 180, max: 16, kwh: 2, stay: 2880, again: 7, at: [-3
 /* --------------------------- Hof-Ausbaustufen ---------------------------- */
 /* v70: zehn Ausbaustufen – jede gibt eine Kachel mehr nach Westen, Norden und Osten
    (Größe zeigt das Fenster selbst an, aus FHOF_B). Die großen Stufen 4, 7 und 10
-   (big) bringen wie bisher neues Aussehen und mehr Lager; die kleinen nur Land. */
+   (big) bringen wie bisher neues Aussehen und mehr Lager; die kleinen mehr Land.
+   v309: Bereits die erste Erweiterung setzt den umgebenden Zaun und das Tor instand. */
 const FHOF_STAGES = [
   null,
   { n: "Kleiner Bauernhof", d: "Ein bisschen heruntergekommen – aber deiner." },
-  { n: "Weideland dazu", lv: 3, cost: 300, need: {}, perks: ["Ein Streifen Wiese rundherum"] },
+  { n: "Weideland dazu", lv: 3, cost: 300, need: {}, perks: ["Ein Streifen Wiese rundherum", "Zaun und Tor instand gesetzt"] },
   { n: "Neue Koppel", lv: 5, cost: 600, need: {}, perks: ["Noch ein Streifen – Platz für den nächsten Stall"] },
   { n: "Ausgebauter Hof", big: true, lv: 6, cost: 900, need: { kiefer: 6, birke: 6 },
-    perks: ["Frischer Anstrich, Zaun repariert, Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
+    perks: ["Frischer Anstrich und Kieswege", "+20 Plätze in Silo und Scheune", "+1 Warteplatz in allen Hofgebäuden", "Ein Traktor für den Hof"] },
   { n: "Obstwiese dazu", lv: 8, cost: 1500, need: {}, perks: ["Mehr Platz für Bäume und Felder"] },
   { n: "Feldrand gepachtet", lv: 10, cost: 2400, need: {}, perks: ["Mehr Platz für Felder und Ställe"] },
   { n: "Professioneller Betrieb", big: true, lv: 11, cost: 3500, need: { bretter: 12, balken: 8, pfosten: 8 },

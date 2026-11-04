@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v308";
+const VERSION = "v310";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -17,7 +17,7 @@ const SHELL = [
   "./data.js?v=109",
   "./farmdata.js?v=269",
   "./fishdata.js?v=109",
-  "./erbedata.js?v=109",
+  "./erbedata.js?v=309",
   "./places.js?v=109",
   "./avatar.js?v=282",
   "./photo.js?v=109",
@@ -43,11 +43,11 @@ const SHELL = [
   "./customs.js?v=109",
   "./corp.js?v=306",
   "./livery.js?v=109",
-  "./gl3d.js?v=297",
+  "./gl3d.js?v=310",
   "./farmmodels.js?v=304",
   "./fishmodels.js?v=109",
   "./bushes.js?v=109",
-  "./woodmodels.js?v=297",
+  "./woodmodels.js?v=310",
   "./sawwerk.js?v=109",
   "./treebark.js?v=109",
   "./forestmodels.js?v=109",
@@ -55,11 +55,11 @@ const SHELL = [
   "./camp.js?v=109",
   "./vista.js?v=109",
   "./farmview.js?v=304",
-  "./worldview.js?v=305",
+  "./worldview.js?v=310",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
-  "./hunt.js?v=307",
+  "./hunt.js?v=310",
   "./rent.js?v=109",
   "./bauplatz.js?v=274",
   "./fishview.js?v=109",
