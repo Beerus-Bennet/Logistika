@@ -1008,17 +1008,19 @@ function worldStatic() {
     R.nodes.push(fnode(R.mesh(FWM.springHill((x, z) => { const w = WF(x, z); return wGroundAt(w[0], w[1]); })), nF));
     R.nodes.push(fnode(R.mesh(FWM.springFlora()), {}));
     R.nodes.push(fnode(fmesh("wspringrun228", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringcasc228", FWM.springCascades), Object.assign({ water: 6, flow: [3.2, 1.5, 4.0, 0.17], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringcasc296", FWM.springCascades), Object.assign({ water: 6, flow: [3.2, 2.5, 4.0, 0.17], alpha: 0.98, shadow: false }, nF)));
     R.nodes.push(fnode(fmesh("wspringrunfoam228", FWM.springRunFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.7, shadow: false }, nF)));
     const I = FWM.springRunInfo();
     WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
     /* v193: Wasserfall und Schaum im Shader (water: 6) – fließend, halbtransparent, weiche Ränder; flow = (Länge, Tempo, Querdichte) */
-    R.nodes.push(fnode(fmesh("wspringfall289", FWM.springFall), Object.assign({ water: 6, flow: [7.0, 1.7, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringfoam289", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfall296", FWM.springFall), Object.assign({ water: 6, flow: [6.0, 4.2, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam296", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
-    const ft = WF(SF.foot[0], SF.foot[2]), lp = WF(SF.top[0], SF.top[2]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
-    WV.springFx = { x: ft[0], z: ft[1], lx: lp[0], lz: lp[1], ly: SF.top[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: 1.16 * k, C: SPI.C,
-      strands: (SF.strands || []).map(([L, M]) => { const q = WF(M[0], M[2]); return { x: q[0], z: q[1], y: M[1] * k }; }) };   /* v210: Absätze der Nebenstränge */
+    const impact = FWM.springImpact(), lip = FWM.springFallPath(0.24), ft = WF(impact.x, impact.z), lp = WF(lip[0], lip[3]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
+    /* v296: Aufprall auf der echten Seehöhe; Schleier folgt derselben Kurve wie das Modell. */
+    WV.springFx = { x: ft[0], y: impact.y * k, z: ft[1], lx: lp[0], lz: lp[1], ly: lip[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: impact.w * k, C: SPI.C,
+      path: a => { const p = FWM.springFallPath(a), q = WF(p[0] + p[4], p[3]); return { x: q[0], y: p[1] * k, z: q[1], w: p[2] * k }; },
+      strands: (SF.strands || []).flatMap(([, M, W]) => [M, W].map(p => { const q = WF(p[0], p[2]); return { x: q[0], z: q[1], y: p[1] * k }; })) };
   }
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
@@ -3451,36 +3453,38 @@ function worldStep(dt, time) {
   }
   /* v190: Gischt am Fuß des Quell-Wasserfalls (nur wenn die Kamera in der Nähe ist) */
   const sf = WV.springFx;
+  /* v296: Ein Lichtwert für Hauptfall und Bergkaskaden, auch außerhalb des Hauptfall-Emissionsradius. */
+  const waterSun = FV.R.env && FV.R.env.sunCol, waterLight = waterSun ? waterSun[0] * 0.3 + waterSun[1] * 0.59 + waterSun[2] * 0.11 : 1;
+  const lf = Math.max(0.32, Math.min(1, waterLight)), LC = (r, g, b, a, fa) => [r * (0.3 + 0.7 * lf), g * (0.32 + 0.68 * lf), b * (0.38 + 0.62 * lf), a * (fa ? 0.35 + 0.65 * lf : 1)];
   if (sf && FV.R.cam && Math.hypot(FV.R.cam.tx - sf.x, FV.R.cam.tz - sf.z) < 50) {
     /* v193: weiche Gischt statt fester Kreise – je Sekunde feste Raten (unabhängig von der Bildrate):
        Nebel am Aufprall (shape 4, ganz weich, wächst und verweht), feine Spritzer nach oben/außen (shape 5),
        Nebelschleier am unteren Teil des Falls, vereinzelte Tropfen an den Rändern */
     const R = FV.R, rnd = Math.random, fw = sf.w;
-    const acc = sf.acc || (sf.acc = { mist: 0, drop: 0, veil: 0, edge: 0, st: 0 });
-    /* v210: Partikel sind unbeleuchtet – Farbe und Deckkraft folgen dem Tageslicht (nachts kein leuchtend weißer Nebel) */
-    const E = R.env, Ls = E ? E.sunCol[0] * 0.3 + E.sunCol[1] * 0.59 + E.sunCol[2] * 0.11 : 1, lf = Math.max(0.32, Math.min(1, Ls)), LC = (r, g, b, a, fa) => [r * (0.3 + 0.7 * lf), g * (0.32 + 0.68 * lf), b * (0.38 + 0.62 * lf), a * (fa ? 0.35 + 0.65 * lf : 1)];
-    sf.lc = LC;
+    const acc = sf.acc || (sf.acc = { mist: 0, drop: 0, veil: 0, edge: 0, st: 0, stNext: 0 });
     const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
-    for (let i = fx("mist", 5); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.65;
-      R.emit({ x: sf.x + sf.dx * 0.5 + Math.cos(a) * r, y: 0.15 + rnd() * 0.3, z: sf.z + sf.dz * 0.5 + Math.sin(a) * r, vx: Math.cos(a) * 0.35 + sf.dx * 0.3, vy: 0.35 + rnd() * 0.45, vz: Math.sin(a) * 0.35 + sf.dz * 0.3, life: 1.1 + rnd() * 0.7, size: 0.16 + rnd() * 0.12, size2: 0.55 + rnd() * 0.3, col: LC(0.94, 0.97, 1, 0.13 + rnd() * 0.06, true), drag: 1.2, shape: 4 }); }
-    for (let i = fx("drop", 26); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.6, u = (rnd() - 0.5) * fw;
-      R.emit({ x: sf.x + sf.side[0] * u * 0.6, y: 0.08, z: sf.z + sf.side[1] * u * 0.6, vx: Math.cos(a) * s * 0.7 + sf.dx * s * 0.5, vy: 1.6 + rnd() * 2.0, vz: Math.sin(a) * s * 0.7 + sf.dz * s * 0.5, g: -9.5, life: 0.55 + rnd() * 0.3, size: 0.035 + rnd() * 0.05, size2: 0.02, col: LC(0.96, 0.99, 1, 0.85), drag: 0.4, shape: 5, fade: false }); }
-    for (let i = fx("veil", 3); i-- > 0;) { const t = 0.55 + rnd() * 0.35, u = (rnd() - 0.5) * fw;
-      R.emit({ x: sf.lx + (sf.x - sf.lx) * t + sf.side[0] * u, y: sf.ly * (1 - t * t) + 0.1, z: sf.lz + (sf.z - sf.lz) * t + sf.side[1] * u, vx: sf.dx * 0.4, vy: -0.6, vz: sf.dz * 0.4, life: 0.8 + rnd() * 0.5, size: 0.2 + rnd() * 0.1, size2: 0.45, col: LC(0.95, 0.98, 1, 0.1, true), drag: 1.5, shape: 4 }); }
-    for (let i = fx("edge", 7); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.38 + rnd() * 0.12), v = 1.0 + rnd() * 0.5;
-      R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v + sf.side[0] * sd * 0.3, vy: 0.1, vz: sf.dz * v + sf.side[1] * sd * 0.3, g: -9.5, life: 0.75, size: 0.045 + rnd() * 0.03, size2: 0.03, col: LC(0.9, 0.97, 1, 0.85), drag: 0.1, shape: 5, fade: false }); }
+    for (let i = fx("mist", 5); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.35;
+      R.emit({ x: sf.x + sf.dx * 0.2 + Math.cos(a) * r, y: sf.y + 0.08 + rnd() * 0.12, z: sf.z + sf.dz * 0.2 + Math.sin(a) * r, vx: Math.cos(a) * 0.2 + sf.dx * 0.3, vy: 0.12 + rnd() * 0.22, vz: Math.sin(a) * 0.2 + sf.dz * 0.3, life: 0.7 + rnd() * 0.4, size: 0.14 + rnd() * 0.1, size2: 0.4 + rnd() * 0.2, col: LC(0.94, 0.97, 1, 0.14 + rnd() * 0.06, true), drag: 1.2, shape: 4 }); }
+    /* v296: Flache Spritzfächer vom Wasserkontakt nach außen; Tropfen fallen zur Oberfläche zurück. */
+    for (let i = fx("drop", 26); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.2, u = (rnd() - 0.5) * fw, vy = 1.1 + rnd() * 1.5;
+      R.emit({ x: sf.x + sf.side[0] * u * 0.8, y: sf.y + 0.025, z: sf.z + sf.side[1] * u * 0.8, vx: Math.cos(a) * s * 0.65 + sf.dx * s * 0.7, vy, vz: Math.sin(a) * s * 0.65 + sf.dz * s * 0.7, g: -9.5, life: 2 * vy / 9.5 + 0.04, size: 0.045 + rnd() * 0.035, size2: 0.018, col: LC(0.96, 0.99, 1, 0.9), drag: 0.25, shape: 5, fade: false }); }
+    for (let i = fx("veil", 3); i-- > 0;) { const p = sf.path(0.65 + rnd() * 0.3), u = (rnd() - 0.5) * p.w * 0.7;
+      R.emit({ x: p.x + sf.side[0] * u, y: p.y, z: p.z + sf.side[1] * u, vx: sf.dx * 0.5, vy: -1.4, vz: sf.dz * 0.5, g: -3, life: 0.35, size: 0.045, size2: 0.025, col: LC(0.95, 0.98, 1, 0.65), shape: 5 }); }
+    for (let i = fx("edge", 7); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.35 + rnd() * 0.08), flight = Math.sqrt(2 * (sf.ly - sf.y) / 9.5), v = Math.hypot(sf.x - sf.lx, sf.z - sf.lz) / flight;
+      R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9.5, life: flight, size: 0.035 + rnd() * 0.025, size2: 0.02, col: LC(0.9, 0.97, 1, 0.8), shape: 5, fade: false }); }
     /* v210: kleine Spritzer, wo die Nebenstränge auf ihre Absätze treffen */
-    for (let i = fx("st", 8); i-- > 0;) { const q = sf.strands[i % (sf.strands.length || 1)]; if (!q) break; const a = rnd() * 6.283, v = 0.4 + rnd() * 0.6;
+    for (let i = fx("st", 8); i-- > 0;) { const q = sf.strands[acc.stNext++ % sf.strands.length]; if (!q) break; const a = rnd() * 6.283, v = 0.4 + rnd() * 0.6;
       R.emit({ x: q.x, y: q.y + 0.03, z: q.z, vx: Math.cos(a) * v * 0.6 + sf.dx * 0.3, vy: 0.6 + rnd() * 0.7, vz: Math.sin(a) * v * 0.6 + sf.dz * 0.3, g: -9.5, life: 0.35 + rnd() * 0.15, size: 0.03 + rnd() * 0.025, size2: 0.02, col: LC(0.95, 0.98, 1, 0.8), drag: 0.4, shape: 5, fade: false }); }
   }
   /* v207: Spritzer an den Füßen der Kaskaden, Blubbern am Quellaustritt */
   const sr = WV.springRun;
   if (sr && sf && FV.R.cam && Math.hypot(FV.R.cam.tx - sf.x, FV.R.cam.tz - sf.z) < 60) {
-    const R = FV.R, rnd = Math.random, acc = sr.acc || (sr.acc = { d: 0, m: 0, b: 0 }), LC = sf.lc || ((r, g, b, a) => [r, g, b, a]);
+    const R = FV.R, rnd = Math.random, acc = sr.acc || (sr.acc = { d: 0, m: 0, b: 0, dNext: 0, mNext: 0 });
     const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
-    for (let i = fx("d", 14); i-- > 0;) { const f = sr.feet[i % sr.feet.length], l = Math.hypot(f.dx, f.dz) || 1, a = rnd() * 6.283, v = 0.5 + rnd() * 0.8;
+    /* v296: Zähler über Bildgrenzen hinweg: auch bei 60/120 fps erhält jede Kaskade Spritzer. */
+    for (let i = fx("d", 14); i-- > 0;) { const f = sr.feet[acc.dNext++ % sr.feet.length], l = Math.hypot(f.dx, f.dz) || 1, a = rnd() * 6.283, v = 0.5 + rnd() * 0.8;
       R.emit({ x: f.x + (rnd() - 0.5) * 0.5, y: f.y + 0.04, z: f.z + (rnd() - 0.5) * 0.5, vx: Math.cos(a) * v * 0.5 + f.dx / l * v * 0.4, vy: 0.9 + rnd() * 1.1, vz: Math.sin(a) * v * 0.5 + f.dz / l * v * 0.4, g: -9.5, life: 0.4 + rnd() * 0.2, size: 0.03 + rnd() * 0.035, size2: 0.02, col: LC(0.96, 0.99, 1, 0.85), drag: 0.4, shape: 5, fade: false }); }
-    for (let i = fx("m", 3); i-- > 0;) { const f = sr.feet[i % sr.feet.length];
+    for (let i = fx("m", 3); i-- > 0;) { const f = sr.feet[acc.mNext++ % sr.feet.length];
       R.emit({ x: f.x, y: f.y + 0.1, z: f.z, vx: (rnd() - 0.5) * 0.3, vy: 0.25 + rnd() * 0.2, vz: (rnd() - 0.5) * 0.3, life: 1.0 + rnd() * 0.6, size: 0.18, size2: 0.55, col: LC(0.94, 0.97, 1, 0.18, true), drag: 1.2, shape: 4 }); }
     /* v228: der Ursprung liegt verdeckt hinter dem Gipfelkamm – dort keine Bläschen mehr */
     if (false) for (let i = fx("b", 6); i-- > 0;) { const q = sr.src, a = rnd() * 6.283, r = rnd() * 0.3;

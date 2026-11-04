@@ -1483,7 +1483,7 @@ const FWM = (() => {
      Gitter, dessen Farben nur vom Abstand zur Wasserkante (Topf ∪ Bach) abhängen – genau wie die Uferstreifen des Bachs,
      dadurch ohne Naht. Das Gitter wird an den Bandgrenzen exakt beschnitten (keine Treppen). Dahinter eine Felswand
      mit einem Wasserfall in Stufen in den Topf. */
-  const SPR = { RP: 4.5, wob: a => 1 + 0.07 * Math.sin(a * 3 + 1.3) + 0.04 * Math.sin(a * 5 + 0.4) };
+  const SPR = { RP: 4.5, waterY: 0.044, wob: a => 1 + 0.07 * Math.sin(a * 3 + 1.3) + 0.04 * Math.sin(a * 5 + 0.4) };
   function springGeo(pts, o) {
     const P = smoothLine(pts, 6), f = creekScale(P, o), wk = (o && o.w) || 1, d0 = unit(P[1][0] - P[0][0], P[1][1] - P[0][1]);
     const RP = SPR.RP, C = [P[0][0] - d0[0] * RP * 0.55, P[0][1] - d0[1] * RP * 0.55], H = P.map((p, i) => CR_H * wk * f[i]);
@@ -1538,7 +1538,7 @@ const FWM = (() => {
   }
   /* Wasser des Quelltopfs: nur im Topf (Bachwasser zeichnet creekWater), Farbe nach dem Abstand zur gemeinsamen Wasserkante */
   function springPool2(pts, o) {
-    const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 4.2, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = 0.044;
+    const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 4.2, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = SPR.waterY;
     const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; { const d = G.dU(x, z); V.push({ x, z, v: d, d }); } }
     const at = (i, j) => V[j * (n + 1) + i];
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
@@ -1695,14 +1695,24 @@ const FWM = (() => {
       [[A, B, C2], [A, C2, D]].forEach(([x, y, z]) => { b.triV(x.p, y.p, z.p, x.c, y.c, z.c); b.triV(x.p, z.p, y.p, x.c, z.c, y.c); });
     }
   }
-  function springFall() {
-    const b = new MB(), F = SPRING_FALL, lip = F.top, foot = F.foot;
+  /* v296: Modell, Schaum und Spritzer teilen sich denselben Fallbogen und Wasserstand. */
+  function springFallPath(a) {
+    const F = SPRING_FALL, lip = F.top, foot = F.foot;
     const A0 = 0.24, vx = foot[0] - lip[0], dy = lip[1] - foot[1];
-    fallSheet(b, a => {
-      if (a <= A0) { const k = a / A0, x = lip[0] - F.rinne * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k, foot[2], 0]; }   /* Rinne */
-      const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);                                                                                   /* runde Kante */
-      return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.92 + 0.24 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
-    }, 38, 12, true);
+    if (a <= A0) { const k = a / A0, x = lip[0] - F.rinne * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k, foot[2], 0]; }
+    const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);
+    return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.92 + 0.24 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
+  }
+  function springImpact() {
+    const y = SPR.waterY / SPRING_FALL.S;
+    let lo = 0.24, hi = 1;
+    for (let i = 0; i < 24; i++) { const a = (lo + hi) / 2; if (springFallPath(a)[1] > y) lo = a; else hi = a; }
+    const a = (lo + hi) / 2, p = springFallPath(a);
+    return { x: p[0] + p[4], y, z: p[3], w: p[2], a, foamY: y + 0.012 };
+  }
+  function springFall() {
+    const b = new MB(), F = SPRING_FALL;
+    fallSheet(b, springFallPath, 48, 12, true);
     /* Nebenstränge: über die Kante, auf den Absatz, vom Absatz ins Wasser */
     F.strands.forEach(([L, M, W, w]) => {
       [[L, M, 0.1], [M, W, 0.2]].forEach(([P0, P1, a0]) => {
@@ -2181,12 +2191,12 @@ const FWM = (() => {
   /* v193: Schaumteppich mit Wellenringen am Fuß (Shader uWater 6, b = 0: r = Abstand 0…1, g = Winkel 0…1).
      Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
   function springFoam() {
-    const b = new MB(), F = SPRING_FALL.foot, cx = F[0] + 0.25, cz = F[2], NR = 8, NA = 36, y = 0.052;
-    /* v289: Schaum läuft in Fließrichtung aus, statt einen gleichmäßigen Leuchtkreis zu bilden. */
-    const rad = an => { const c = Math.cos(an); return (c >= 0 ? 1.75 : 1.75 + c * 1.2) * (1 + 0.09 * Math.sin(an * 3 + 0.8) + 0.05 * Math.sin(an * 7)); };
+    const b = new MB(), I = springImpact(), cx = I.x + 0.04, cz = I.z, NR = 10, NA = 36, y = I.foamY;
+    /* v296: Kern direkt unter der Wasserbahn; längerer Auslauf zum See, kurz zur Felswand. */
+    const rad = an => { const c = Math.cos(an); return (c >= 0 ? 1.45 : 1.45 + c * 0.8) * (1 + 0.07 * Math.sin(an * 3 + 0.8) + 0.04 * Math.sin(an * 7)); };
     for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
       const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
-      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * rad(an) * 0.68];
+      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * 0.9];
       const c = (r, an) => [r, an / (Math.PI * 2), 0];
       triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
       if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
@@ -4814,7 +4824,7 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springRim, setSpringFrame, springFlora, springHeightW, springWater: (X, Z) => { const l = toL(X, Z), w = srcWater(l[0], l[1]), k = sfr().k; return [w[0] * k, w[1] * k, w[2] * k]; }, springMtn: mtnW, springSamples: () => srSamples().map(R => R.map(q => { const w = toW(q.x, q.z); return { X: w[0], Z: w[1], y: q.y * sfr().k, hw: q.hw * sfr().k, s: q.s }; })), springPlateau: () => srPlateau().P, springBox: () => srBox(), SRUN, MTN, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFallPath, springImpact, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springRim, setSpringFrame, springFlora, springHeightW, springWater: (X, Z) => { const l = toL(X, Z), w = srcWater(l[0], l[1]), k = sfr().k; return [w[0] * k, w[1] * k, w[2] * k]; }, springMtn: mtnW, springSamples: () => srSamples().map(R => R.map(q => { const w = toW(q.x, q.z); return { X: w[0], Z: w[1], y: q.y * sfr().k, hw: q.hw * sfr().k, s: q.s }; })), springPlateau: () => srPlateau().P, springBox: () => srBox(), SRUN, MTN, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

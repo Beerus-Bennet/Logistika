@@ -1,5 +1,19 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v296 – Wasserfallkorrektur auf main 75af8fa / v295
+
+Diese ZIP ersetzt die bisherige Wasserfall-ZIP v294. Sie enthält ausschließlich neun gegenüber aktuellem main geänderte Dateien. `index.html` und `sw.js` erhalten Claudes aktuelle Verweise `style.css?v=293` und `team.js?v=295`.
+
+- `gl3d.js`, `woodmodels.js`, `worldview.js`: Wasserfallkorrektur wie zuvor geliefert, mit Versionsmarken v296. Die entfernte Schatz-Einblendung aus Claudes v294 bleibt in `worldTreasureIntro` erhalten.
+- `team.js` mit Claudes Wegfindung v295 und `CLAUDE.md` wurden vollständig aus GitHub übernommen, sind bytegleich mit main und liegen deshalb nicht in der ZIP.
+- `index.html` / `sw.js`: Version v296, nur die drei Wasserfall-Spielskripte erhalten Cache-Verweise v296.
+- `waterflow-v296.test.js` (vormals Wasserfalltest v294) und `waterfall-v289.test.js`: direkt im Wurzelordner mit Node ausführen.
+- `AENDERUNGEN.md` und diese Datei: Ursache, Abgleich und Prüfgrenzen.
+
+**Abgleich:** Nach Abzug der Wasserfallkorrektur stimmen alle drei betroffenen Spielskripte byteweise mit main überein. Zusätzlich aktuelle Versionen von `team.js`, `CLAUDE.md` und Cache-Verweisen geprüft. Die neun ZIP-Dateien ersetzen die entsprechenden Projektdateien vollständig; die ursprüngliche ZIP v294 dafür nicht mehr verwenden.
+
+Keine Spielstandmigration nötig. Falls nach `75af8fa` weitere Commits eintreffen, diese erneut zusammenführen. Vollständiger Live-/iPhone-Test bleibt offen (WebGL 2 im Testbrowser nicht verfügbar).
+
 ## Stand v271 – Luckybox-Testbühne (auf v270)
 
 - `luckytest.js` (neu, in `index.html` nach `lucky3d.js`, in `sw.js`):

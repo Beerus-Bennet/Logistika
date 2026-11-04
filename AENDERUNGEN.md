@@ -1,5 +1,25 @@
 # Änderungen – kurz für den Kollegen
 
+## v296 – Wasserfallkorrektur mit aktuellem GitHub-Stand zusammengeführt
+**Basis:** GitHub main `75af8fa` (v295), einschließlich Claudes Schatzbanner-Änderung v294 und Wegfindungsänderung v295. Diese Fassung ersetzt die frühere Wasserfall-ZIP v294. Aktuelles main vollständig integriert.
+
+**Ursache:** Die Zeitphase im Wasserfall-Shader wurde mit der Position entlang des Falls multipliziert. Dadurch wechselte das räumliche Gefälle nach wenigen Sekunden das Vorzeichen: die Textur lief tatsächlich bergauf. Dieselbe Ursache betraf die Bergkaskaden und die vom Tempo abhängige Animation im Bergbach. Der Aufprallschaum war gegenüber dem Fall versetzt und schwach; die Partikelauswahl begann jedes Bild wieder bei der ersten Kaskade.
+
+**Lösung:**
+- `gl3d.js`: feste, streng aufsteigende Laufzeitkoordinate statt ortsabhängiger Zeitphase. Alle drei Texturschichten laufen dauerhaft talwärts; das Muster beschleunigt nach unten. Auch die mitgeführten Strukturen im Bergbach laufen in Fließrichtung. Zusammenhängenderer, halbtransparenter Wasserkern bis zum Fuß.
+- Heller, kompakter Schaumkern unmittelbar am Kontakt, auslaufender Schaum und schwache, nach außen wandernde Wellen. Schaum ist auf die Wasseroberfläche begrenzt; Dunst bleibt flach und kurzlebig. Die Tropfenform verwendet definierte `smoothstep`-Kanten statt einer treiberabhängigen umgekehrten Kante.
+- `woodmodels.js`: `SPR.waterY`, `springFallPath` und `springImpact` liefern für Modell, Schaum und Emission dieselbe Wasserhöhe und denselben Schnittpunkt des Falls mit dem See. Fallfläche und Schaum etwas feiner unterteilt (+624 Dreiecke zusammen), ohne zusätzliche Wasser-Drawcalls.
+- `worldview.js`: mehr sichtbarer Abwärtsfluss; fallende Randtropfen folgen einer Flugbahn bis zur Seehöhe, Aufprallspritzer fliegen flach nach außen und sinken zurück. Dünne fallende Tropfen statt eines schwebenden Schleiers. Die beiden Nebenstränge erzeugen Spritzer auf den Absätzen und am Wasser. Fortlaufende Zähler versorgen alle vier Bergkaskaden gleichmäßig. Nachtfarben gelten auch außerhalb des Hauptfall-Emissionsradius.
+- Partikelraten unverändert begrenzt: Hauptfall/Nebenstränge zusammen 49 pro Sekunde, alle Bergkaskaden zusammen 17; weiterhin nur bei Kameranähe. Spielregeln, Gelände, Wasserstand, Büro-, Jagd- und Produktionsänderungen bleiben erhalten. Cache-Verweise nur für die drei geänderten Spielskripte auf v296.
+
+**Abgleich:** Die drei Spielskripte wurden nach rechnerischem Entfernen der Wasserfallkorrektur byteweise mit aktuellem GitHub verglichen: identisch. `team.js` und `CLAUDE.md` sind vollständig bytegleich mit main. Cache-Verweise auf `style.css?v=293` und `team.js?v=295` bleiben erhalten. Beide jüngsten GitHub-Änderungen bleiben enthalten.
+
+**Erneut geprüft nach Zusammenführung:** `node waterflow-v296.test.js`: echte Shader-Koordinaten bis 7200 Sekunden, See-Kontakt, fünf Modellbudgets, alle vier Bergkaskaden und vier Nebenstrang-Kontakte, Partikelraten und Nachtfarben bei 30/60/120 fps, keine Emission bei ferner Kamera. `node waterfall-v289.test.js` mit aktualisierter Modell-Fixture bestanden. JavaScript-Syntax und Diff geprüft.
+
+**Grafikprüfung der unveränderten Wasserfallkorrektur aus der vorherigen Lieferung:** Alle acht originalen GLSL-Shader unter Mesa/EGL kompiliert, Haupt- und Partikelprogramme verlinkt. Komplette Wasserfallszene mit originalen Modellen, Wasser-Shadern und emittierten Partikeln für Vorher/Nachher gerendert; Hauptfall und Bergkaskaden als animierte Sequenzen kontrolliert. GPU-Bildvergleich an 7 Zeitpunkten von 0 bis 7200 Sekunden für Hauptfall, Kaskaden und Bergbach: 21/21 Proben laufen talwärts; in der alten Fassung laufen alle drei nach 15 Sekunden bergauf.
+
+**Nicht geprüft:** Die Live-Seite wurde im Testbrowser geöffnet, ihr 3D-Hof meldet jedoch „WebGL 2 fehlt“. Daher kein vollständiger Live-Spieltest und kein Test auf iPhone/Safari. Die Grafikprüfung lief mit den Spielmodellen und Originalshadern außerhalb des Browser-Spiels.
+
 ## v295 – Mitarbeiter laufen nicht mehr in der Geraden durch alles, wenn sie eingeschlossen stehen
 **Wunsch Bennet:** Der Fischer läuft in normaler Spielzeit zum Lagerfeuer und geht dabei durch alles hindurch.
 

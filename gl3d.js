@@ -397,16 +397,20 @@ const G3 = (() => {
   float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
+  /* v296: Feste Laufzeitkoordinate, unten enger = schneller. Zeit darf nicht mit a multipliziert
+     werden: sonst kippt das Ortsgefälle nach einigen Sekunden und das Wasser läuft rückwärts. */
+  float fallTravel(float a){ return (a - 0.3 * a * a) / 0.7; }
   vec4 fallWater(vec3 amb, float sh){
     float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11));        /* nur die Helligkeit der Sonne – Wasser bleibt blau-weiß, auch morgens */
     float Lw = max(Ls, 0.27);                                          /* v210: nachts bleibt das Wasser heller als der Fels (Mondlicht auf Schaum) */
     if (vCol.b > 0.5) {
       float a = vCol.r, w = vCol.g;
-      float v = a * uFlow.x - t * uFlow.y * (0.7 + 0.6 * a);            /* Muster läuft nach unten und wird schneller */
+      float travel = fallTravel(a) * uFlow.x, phase = t * uFlow.y;
+      float v = travel - phase;
       float sx = w * uFlow.z;
       float s1 = vnoise(vec2(sx * 2.0, v * 0.35)), s2 = vnoise(vec2(sx * 4.5 + 3.1, v * 0.8)), s3 = vnoise(vec2(sx * 9.0 + 7.7, v * 1.9));
-      /* v210: zweite, schnellere Schicht feiner heller Fäden und langsam ziehende dichtere Bereiche (nicht alles läuft gleich schnell) */
-      float v2 = a * uFlow.x * 1.6 - t * uFlow.y * (1.25 + 0.5 * a), v3 = a * uFlow.x * 0.45 - t * uFlow.y * 0.35;
+      /* v296: Zweite Schicht feiner heller Fäden und langsam ziehende dichtere Bereiche. */
+      float v2 = travel * 1.6 - phase * 1.4, v3 = travel * 0.45 - phase * 0.35;
       float s4 = vnoise(vec2(sx * 13.0 + 1.3, v2 * 2.6)), s5 = vnoise(vec2(sx * 1.3 + 5.0, v3));
       float strands = smoothstep(0.35, 0.95, s1 * 0.5 + s2 * 0.32 + s3 * 0.18);
       float fine = smoothstep(0.72, 0.93, s4);
@@ -415,15 +419,16 @@ const G3 = (() => {
       float edge = smoothstep(0.0, eL, w) * (1.0 - smoothstep(1.0 - eR, 1.0, w));
       /* v289: Einzelne Strähnen mit durchscheinenden Zwischenräumen, ohne weitere Flächen/Drawcalls. */
       float ribbons = smoothstep(0.12, 0.88, 0.5 + 0.5 * sin(sx * 5.0 + sin(v * 0.38 + sx) * 1.1));
-      float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.8, 1.0, a) * 0.6;          /* v220: unten weniger Vollweiß */
+      float fall = smoothstep(0.18, 0.32, a), foam = smoothstep(0.78, 1.0, a) * 0.72;
       vec3 deep = vec3(0.13, 0.42, 0.58), mid = vec3(0.42, 0.73, 0.86), wht = vec3(0.92, 0.97, 1.0);
       vec3 c = mix(deep, mid, 0.22 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
       c = mix(c, deep * 0.85, (1.0 - s5) * 0.3 * fall);                                  /* dunklere, dichtere Bahnen – Tiefe */
       c = mix(c, wht, clamp(foam * (0.5 + 0.45 * s2) + (1.0 - edge) * 0.5 * fall + strands * s3 * 0.33 * fall + fine * 0.38 * fall, 0.0, 1.0));
       c *= amb * 0.45 + vec3(Lw) * (0.7 + 0.2 * sh);
       c += (strands * 0.12 + fine * 0.08) * fall * Lw;                   /* Glanz auf den Strängen */
-      float al = edge * mix(0.86, 0.34 + 0.52 * max(max(strands, fine), foam), fall);
-      al *= mix(1.0, 0.48 + 0.52 * ribbons, fall);
+      /* v296: Zusammenhängender Wasserkern bis zum Aufprall, feine Zwischenräume bleiben sichtbar. */
+      float al = edge * mix(0.86, 0.46 + 0.46 * max(max(strands, fine), foam), fall);
+      al *= mix(1.0, 0.65 + 0.35 * ribbons, fall);
       al *= smoothstep(0.0, max(0.05, uFlow.w), a);                      /* weich aus der Felsspalte; v220: Kaskaden blenden länger aus dem Bach ein (uFlow.w) */
       return vec4(c, al);
     }
@@ -431,9 +436,11 @@ const G3 = (() => {
        v210: Ringe nicht mehr kreisrund – Radius und Stärke schwanken mit der Richtung, jeder Ring etwas anders schnell */
     float r = vCol.r, an = vCol.g * 6.2832;
     vec2 dir = vec2(cos(an), sin(an)), q = dir * r;
-    float n1 = vnoise(q * 5.0 + vec2(t * 0.9, -t * 0.7)), n2 = vnoise(q * 11.0 - vec2(t * 1.6, t * 1.1));
-    float puls = 0.85 + 0.15 * sin(t * 4.2 + n1 * 3.0);
-    float foam = (1.0 - smoothstep(0.04, 0.46, r + (n1 - 0.5) * 0.3)) * (0.45 + 0.5 * n2) * puls;
+    /* v296: Heller, kompakter Aufprallkern; Schaum zieht von dort in Fließrichtung (+x) weg. */
+    float n1 = vnoise(vec2(q.x * 5.0 - t * 0.9, q.y * 5.0)), n2 = vnoise(vec2(q.x * 11.0 - t * 1.6, q.y * 11.0));
+    float core = 1.0 - smoothstep(0.12, 0.4, r + (n1 - 0.5) * 0.08);
+    float foam = core * (0.7 + 0.3 * n2);
+    float wake = (1.0 - smoothstep(0.28, 0.85, r)) * smoothstep(-0.12, 0.35, q.x) * smoothstep(0.4, 0.75, n1 * 0.4 + n2 * 0.6);
     float ring = 0.0;
     for (int k = 0; k < 2; k++) {
       float fk = float(k), ph = fract(t * (0.26 + 0.04 * fk) + fk / 2.0), rr = 0.25 + ph * 0.8;
@@ -441,19 +448,21 @@ const G3 = (() => {
       float str = 0.55 + 0.45 * vnoise(dir * 2.3 + vec2(fk * 5.0, 0.0));
       ring += (1.0 - smoothstep(0.0, 0.045, abs(r - rr - wob))) * (1.0 - ph) * (1.0 - ph) * str;
     }
-    float al = clamp(foam * 0.56 + ring * 0.18, 0.0, 1.0) * (1.0 - smoothstep(0.8, 1.0, r));
+    float al = clamp(foam * 0.88 + wake * 0.32 + ring * 0.28, 0.0, 0.94) * (1.0 - smoothstep(0.8, 1.0, r));
     vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Lw) * (0.7 + 0.2 * sh));
     return vec4(c, al);
   }
   /* v220: Bergbach (uWater 7). Vertexfarbe = Koordinaten: r = Weg entlang der Strömung, g = quer (±1 an der
      Wasserkante), b = Strömung (0,25 ruhiges Becken … 1 schneller Lauf, > 1 Verwirbelung unter einer Kaskade).
      Mitte tief und dunkel, zum Ufer flacher und heller; Streifen und feine Lichtlinien ziehen mit der Strömung
-     bachabwärts (in Becken langsam, vor der Kante schneller), unter den Kaskaden weißes, wanderndes Gekräusel. */
+     bachabwärts; in Becken zurückhaltend, vor der Kante stärker, unter den Kaskaden weißes, wanderndes Gekräusel. */
   vec4 streamWater(vec3 amb, float sh){
     float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11)), Lw = max(Ls, 0.3);
     float s = vCol.r, w = vCol.g, sp = vCol.b, aw = abs(w), spc = min(sp, 1.2);
-    float v = s * 1.5 - t * (0.35 + 1.35 * spc);
-    float n1 = vnoise(vec2(w * 2.1, v * 0.5)), n2 = vnoise(vec2(w * 4.6 + 3.7, v * 1.25 - t * 0.15)), n3 = vnoise(vec2(w * 8.5 + 1.1, s * 2.9 - t * (0.8 + 2.0 * spc)));
+    /* v296: Auch im Bergbach keine ortsabhängige Zeitphase. sp steuert die Turbulenz,
+       während alle mitgeführten Muster dauerhaft zum nächsten Fall wandern. */
+    float v = s * 1.5 - t * 0.95;
+    float n1 = vnoise(vec2(w * 2.1, v * 0.5)), n2 = vnoise(vec2(w * 4.6 + 3.7, v * 1.25 - t * 0.15)), n3 = vnoise(vec2(w * 8.5 + 1.1, s * 2.9 - t * 1.8));
     float depth = 1.0 - smoothstep(0.1, 1.05, aw + (n1 - 0.5) * 0.3);
     vec3 deep = vec3(0.11, 0.36, 0.45), mid = vec3(0.26, 0.56, 0.64), shal = vec3(0.45, 0.64, 0.58);
     vec3 c = mix(shal, mix(mid, deep, smoothstep(0.4, 1.0, depth)), smoothstep(0.0, 0.5, depth));
@@ -570,7 +579,7 @@ const G3 = (() => {
     } else if (vShape > 3.5 && vShape < 4.5) {                               /* v193: Gischt-Nebel – ganz weich, ohne Rand */
       float r2 = dot(vK, vK); a = exp(-r2 * 3.2) * (1.0 - min(r2, 1.0));
     } else if (vShape > 4.5) {                                                /* v193: Wassertropfen – kleiner heller Kern, weicher Saum */
-      a = smoothstep(1.0, 0.15, length(vK));
+      a = 1.0 - smoothstep(0.15, 1.0, length(vK));                           /* v296: definierte Kanten auch auf mobilen Treibern */
     } else {                                                                  /* v73: Funkel-Stern (vier Zacken, heller Kern) */
       float d = sqrt(abs(vK.x)) + sqrt(abs(vK.y));
       a = max(smoothstep(1.0, 0.6, d), smoothstep(0.5, 0.0, length(vK)));
