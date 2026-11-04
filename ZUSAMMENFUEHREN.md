@@ -1,5 +1,27 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v300 – Arbeiterkorrekturen einschließlich v299 auf main 4b687f9 / v298
+
+Diese ZIP enthält sieben gegenüber aktuellem main geänderte/neue Dateien. Sie ersetzt die separate Pflanzenlieferung v299 und enthält deren Änderungen vollständig; v299 muss nicht vorher eingespielt werden. Die Mitarbeiter-, Hand-, Maus- und Monitorkorrekturen aus main/v298 bleiben erhalten.
+
+- `officefp.js`: Pflanzenfunktion aus v299 unverändert. Neu: geschlossene Mütze, gebogener Cap-Schirm, durchgehender Undercut, Gesichts-Bartflächen, Brillen-/Headsetbügel, gemeinsames Schnittmuster für Rumpf/Träger/Westen, gefaltete Kapuze und durchgehende Ärmel. Nur Darstellung; keine öffentliche API, Personalzuweisung, Animationstätigkeit oder Spielstandstruktur geändert.
+- `index.html` / `sw.js`: `officefp.js?v=300`, Service-Worker v300. Übrige Cache-Verweise aus main unverändert.
+- `office-plants-v299.test.js` aus der vorigen Lieferung und `office-clothes-v300.test.js` neu gegenüber main. Beide mit Node direkt im Projektordner ausführen, ohne Zusatzpakete. Die übrigen Bürotests bleiben unverändert ausführbar.
+- `AENDERUNGEN.md` und diese Datei: Ursachen, Grafikprüfung und Grenzen. Keine zusätzlichen Modelldateien oder Bilder erforderlich.
+
+Vor dem Einspielen späterer Commits nach `4b687f9` erneut zusammenführen. Kein Live-iPhone-/Safari-Test; 42 Vorher-/Nachher-Ansichten mit Originalmodellen und Shadern von vorn, hinten und seitlich geprüft.
+
+## v299 – Büropflanzen auf main 4b687f9 / v298
+
+Die ZIP enthält ausschließlich sechs gegenüber aktuellem main geänderte/neue Dateien. Die Mitarbeiterkorrekturen v298 sind bereits in diesem GitHub-Stand enthalten und bleiben vollständig erhalten.
+
+- `officefp.js`: nur die Pflanzenfunktion `plant` und der Versionskopf gegenüber v298 geändert. Alle sechs vorhandenen Pflanzenarten mit echten Blättern, verbundenen Stämmen und neuen Topfprofilen. Weiterhin Teil desselben statischen Raum-Meshs, keine Engine-/Katalog-/Spielstandänderung.
+- `index.html` / `sw.js`: `officefp.js?v=299`, Service-Worker v299. Übrige Cache-Verweise unverändert.
+- `office-plants-v299.test.js` neu, mit Node direkt im Projektordner ausführen. Prüft insbesondere Stammanschlüsse, Topfgeometrie, Determinismus und das Budget von höchstens 4.500 Dreiecken pro Pflanze. Keine zusätzlichen Pakete nötig.
+- `AENDERUNGEN.md` und diese Datei: Übergabe und Prüfgrenzen. Keine separaten Bild-/Modellassets erforderlich.
+
+Vor dem Einspielen späterer Commits nach `4b687f9` erneut abgleichen. Kein Live-iPhone-/Safari-Test; Sichtprüfung mit Originalmodellen und Shadern unter Mesa/EGL.
+
 ## v298 – Bürografik und Monitorarbeit auf main c295039 / v297
 
 Die ZIP enthält ausschließlich die sechs gegenüber aktuellem main geänderten bzw. neuen Dateien. Diese sechs Dateien im Projekt ersetzen/ergänzen. Wasserfall, Hof, Wege und alle übrigen Skripte bleiben auf GitHub-Stand v297.

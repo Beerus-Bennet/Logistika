@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v298)
+   LOGISTIKA – officefp.js (v300)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -236,22 +236,110 @@ const OFFICE3D = (() => {
     });
   }
   function plant(m, x, z, h, pr, it) {
-    G3.seed(900 + Math.round(x * 13 + z * 7));
-    m.cyl(pr, pr * 0.78, 0.34, 12, it.id === "olive" ? 0x8a8f94 : 0xc0673f, { x, z, top: 0x5a3a24 });
-    const top = 0.34, c = hx(it.col), cd = mixH(c, 0x000000, 0.2), cl = mixH(c, 0xffffff, 0.15);
-    m.noise(0.14, () => {
-      if (it.id === "kaktus") {
-        m.cyl(0.09, 0.08, h * 0.9, 8, c, { x, z, y: top });
-        m.cyl(0.05, 0.05, h * 0.3, 6, cd, { x: x + 0.1, z, y: top + h * 0.35 });
-        m.cyl(0.045, 0.045, h * 0.25, 6, cd, { x: x - 0.09, z, y: top + h * 0.5 });
-      } else if (it.id === "palme" || it.id === "olive") {
-        m.cyl(0.03, 0.025, h * 0.75, 6, 0x7a5233, { x, z, y: top });
-        if (it.id === "olive") { m.ico(h * 0.28, c, { x, z, y: top + h * 0.8, jitter: 0.3 }); m.ico(h * 0.2, cl, { x: x + 0.1, z, y: top + h * 0.7, jitter: 0.3 }); }
-        else for (let k = 0; k < 7; k++) m.box(0.12, 0.02, h * 0.45, k % 2 ? c : cd, { x, z, y: top + h * 0.75, ry: k * 2 * PI / 7, rx: 0.5 });
-      } else {
-        m.ico(h * 0.34, c, { x, z, y: top + h * 0.38, jitter: 0.3 });
-        m.ico(h * 0.24, cl, { x: x + h * 0.15, z: z + 0.05, y: top + h * 0.3, jitter: 0.3 });
-        m.ico(h * 0.22, cd, { x: x - h * 0.14, z: z - 0.04, y: top + h * 0.5, jitter: 0.3 });
+    /* v299: Verwurzelte Pflanzen mit zusammenhängenden Ästen und beidseitigen,
+       gekrümmten Blättern. Lokaler Zufall verändert keine anderen Raummodelle. */
+    const rnd=rng(nameHash(it.id+':'+x.toFixed(3)+':'+z.toFixed(3))),c=hx(it.col),soil=0.305;
+    const polar=(a,r,y)=>[Math.cos(a)*r,y,Math.sin(a)*r],add=(a,b)=>a.map((v,i)=>v+b[i]);
+    const curve=(a,b,d,t)=>a.map((v,i)=>v*(1-t)*(1-t)+2*b[i]*t*(1-t)+d[i]*t*t);
+    const stem=(a,b,r0,r1,col)=>{
+      const d=b.map((v,i)=>v-a[i]),len=Math.hypot(...d);if(len<0.00001)return;
+      const A=a.map((v,i)=>v-d[i]/len*r0*.35);
+      m.cyl(r0,r1,len+(r0+r1)*.35,6,col,{x:A[0],y:A[1],z:A[2],rx:Math.acos(d[1]/len),ry:Math.atan2(d[0],d[2]),smooth:true,nobot:true,notop:true});
+    };
+    const leaf=(a,b,d,w,col,o)=>{
+      o=o||{};const n=o.n||6,side=nrm([d[2]-a[2],0,a[0]-d[0]]),cuts=o.split?[-1,-0.60,-0.28,0,0.28,0.60,1]:o.stripe?[-1,-0.2,0.2,1]:[-1,0,1];
+      const rows=Array.from({length:n+1},(_,i)=>{
+        const u=i/n,P=curve(a,b,d,u),lobes=o.split?1-.40*Math.exp(-Math.pow((u-.4375)/.032,2))-.46*Math.exp(-Math.pow((u-.625)/.032,2))-.43*Math.exp(-Math.pow((u-.8125)/.032,2)):1;
+        const ww=w*Math.pow(Math.sin(PI*u),o.strap?0.55:0.8)*lobes;
+        return cuts.map(s=>[P[0]+side[0]*ww*s,P[1]+(1-Math.abs(s))*ww*0.12,P[2]+side[2]*ww*s]);
+      });
+      for(let j=0;j<n;j++)for(let k=0;k<cuts.length-1;k++){
+        const A=rows[j][k],B=rows[j][k+1],C=rows[j+1][k+1],D=rows[j+1][k];
+        const top=o.stripe&&k===1?0xd6e4b0:col;
+        /* Monstera: achteckig gerundete Blattfenster, keine rechteckig ausgesparten Kacheln. */
+        if(o.split&&j===8&&(k===1||k===4)){
+          const point=(u,v)=>lerp3(lerp3(A,B,u),lerp3(D,C,u),v);
+          for(let q=0;q<8;q++){
+            const at=(i,inner)=>{const a=i/8*2*PI,x=Math.cos(a),y=Math.sin(a),r=inner?.40:.5/Math.max(Math.abs(x),Math.abs(y));return point(.5+x*r,.5+y*r);};
+            const E=at(q,false),F=at(q,true),G=at(q+1,true),H=at(q+1,false);
+            m.quad(E,F,G,H,top);m.quad(H,G,F,E,o.under||mixH(col,0x9dba8a,.30));
+          }
+          continue;
+        }
+        m.quad(A,D,C,B,top);m.quad(B,C,D,A,o.under||mixH(col,0x9dba8a,0.30));
+      }
+    };
+    m.at({x,z},()=>{
+      /* Nach oben weiter Topf, geschlossene Standfläche, sichtbarer Rand und vertiefte Erde. */
+      const pc=it.id==='olive'?0x909995:it.id==='monstera'?0xe6dfd0:0xb97250,N=20;
+      m.cyl(pr*0.80,pr*1.06,0.025,N,mixH(pc,0x4b3329,0.15),{smooth:true});
+      const rings=[[0.025,pr*0.74],[0.30,pr],[0.315,pr*1.025],[0.34,pr*1.025],[0.34,pr*0.88],[0.30,pr*0.88]];
+      for(let j=1;j<rings.length;j++)for(let i=0;i<N;i++){
+        const a=i/N*2*PI,b=(i+1)/N*2*PI,[y0,r0]=rings[j-1],[y1,r1]=rings[j];
+        m.quad(polar(a,r0,y0),polar(a,r1,y1),polar(b,r1,y1),polar(b,r0,y0),j===3?mixH(pc,0xffffff,0.10):pc);
+      }
+      m.cyl(pr*0.88,pr*0.88,0.005,N,0x493a29,{y:0.30});
+      for(let i=0;i<9;i++){
+        const a=i*2.4,r=pr*(0.25+rnd()*0.48),p=polar(a,r,soil+0.001),rr=0.006+rnd()*0.006;
+        m.tri(add(p,[-rr,0,-rr]),add(p,[0,0,rr]),add(p,[rr,0,-rr]),it.id==='kaktus'?0xc2af8c:0x66533a);
+      }
+      if(it.id==='gruenlilie'){
+        for(let i=0;i<22;i++){
+          const a=i*2.399,rise=h*(0.40+rnd()*0.28),reach=h*(0.38+rnd()*0.22),tip=soil+(i<14?-.10+rnd()*h*.15:.07+rnd()*h*.22);
+          leaf(polar(a,0.008,soil-0.008),polar(a,reach*0.6,soil+rise),polar(a,reach,tip),0.016+rnd()*0.009,mixH(c,0x245b35,rnd()*0.25),{strap:true,stripe:true,n:8});
+        }
+      }else if(it.id==='monstera'){
+        for(let i=0;i<9;i++){
+          const a=i*2.399+rnd()*0.22,level=0.32+i/8*0.45,r=h*(0.045+rnd()*0.10),A=polar(a,r,soil+h*level),len=h*(0.26+rnd()*0.09);
+          const root=polar(a,0.018,soil-0.01),mid=polar(a,r*0.35,soil+h*level*0.63);
+          stem(root,mid,0.009,0.007,0x487442);stem(mid,A,0.007,0.004,0x487442);
+          const B=add(A,polar(a,len*0.52,0.03)),D=add(A,polar(a,len,-len*0.28));
+          leaf(A,B,D,len*0.43,mixH(c,0x174c32,rnd()*0.22),{split:i>1,n:16});
+        }
+      }else if(it.id==='ficus'||it.id==='olive'){
+        const olive=it.id==='olive',wood=olive?0x81745b:0x75533a;
+        const trunk=t=>[h*0.025*Math.sin(t*5),soil-0.01+h*t,h*0.018*Math.sin(t*3)];
+        for(let i=0;i<5;i++)stem(trunk(i*.18),trunk((i+1)*.18),0.023*(1-i*.13),0.023*(1-(i+1)*.13),wood);
+        for(let i=0;i<10;i++){
+          const a=i*2.399+0.2,t=0.40+i*.044,A=trunk(t),len=h*(0.25+rnd()*0.11)*(1-(t-.4)*.9);
+          const B=add(A,polar(a,len*0.45,h*0.08)),D=add(A,polar(a,len,h*0.10));
+          const mid=curve(A,B,D,.5);stem(A,mid,0.010,0.006,wood);stem(mid,D,0.006,0.0028,wood);
+          for(let j=0;j<(olive?8:6);j++){
+            const u=.18+Math.floor(j/2)*(olive?.23:.33),root=curve(A,B,D,u),az=a+(j%2?1:-1)*(olive?0.85:0.70),l=h*(olive?0.095:0.14)*(0.85+rnd()*.25);
+            const C=add(root,polar(az,l*.55,l*.28)),E=add(root,polar(az,l,-l*.15));
+            leaf(root,C,E,l*(olive?0.105:0.29),mixH(c,olive?0xa8b79a:0x245e3a,rnd()*.35),{n:4,under:olive?0xb0b8a0:0x8dac70});
+          }
+        }
+      }else if(it.id==='palme'){
+        const tips=[];
+        for(let i=0;i<3;i++){
+          const a=i*2.1,H=h*(0.68+i*.07),A=polar(a,.028,soil-.008),B=polar(a,.035,soil+H*.52),D=polar(a,.09,soil+H);
+          stem(A,B,.015,.012,0x6c8050);stem(B,D,.012,.008,0x7c8e56);tips.push(D);
+        }
+        for(let i=0;i<8;i++){
+          const a=i*2.399,A=tips[i%3],len=h*(.36+rnd()*.08),B=add(A,polar(a,len*.6,h*.14)),D=add(A,polar(a,len,-h*.18));
+          for(let j=0;j<8;j++)stem(curve(A,B,D,j/8),curve(A,B,D,(j+1)/8),.004*(1-j*.09),.004*(1-(j+1)*.09),0x789653);
+          for(let j=1;j<=7;j++)for(const s of [-1,1]){
+            const u=j/8,P=curve(A,B,D,u),l=h*(.13+.05*Math.sin(PI*u))*(1-u*.35),az=a+s*1.05;
+            leaf(P,add(P,polar(az,l*.6,.012)),add(P,polar(az,l,-l*.36)),h*.011,mixH(c,0x29613e,rnd()*.25),{n:3,strap:true});
+          }
+        }
+      }else if(it.id==='kaktus'){
+        for(let k=0;k<3;k++){
+          const cx=k===0?0:k===1?-.108:.103,cz=k===2?.04:0,r=k===0?.068:.044,H=h*(k===0?.83:k===1?.48:.59),N=32;
+          const rings=[[0,.94],[H-r,1],[H-r*.58,.90],[H-r*.18,.57],[H,0]];
+          for(let j=1;j<rings.length;j++)for(let i=0;i<N;i++){
+            const a=i/N*2*PI,b=(i+1)/N*2*PI,P=(t,q)=>[cx+Math.cos(t)*r*q*(.88+.12*Math.cos(t*8)),soil-0.005,cz+Math.sin(t)*r*q*(.88+.12*Math.cos(t*8))];
+            const A=P(a,rings[j-1][1]),B=P(a,rings[j][1]),C=P(b,rings[j][1]),D=P(b,rings[j-1][1]);
+            A[1]+=rings[j-1][0];D[1]+=rings[j-1][0];B[1]+=rings[j][0];C[1]+=rings[j][0];
+            m.quad(A,B,C,D,i%4===1||i%4===2?c:mixH(c,0x31573c,.23));
+          }
+          for(let j=1;j<=5;j++)for(let i=0;i<8;i++){
+            const a=i/8*2*PI,y=soil+H*(.12+j*.13),P=[cx+Math.cos(a)*(r+.001),y,cz+Math.sin(a)*(r+.001)],S=[-Math.sin(a)*.004,0,Math.cos(a)*.004];
+            const T=[P[0]+Math.cos(a)*.012,y+.004,P[2]+Math.sin(a)*.012];
+            m.tri(add(P,S),add(P,[0,.005,0]),T,0xd8c79f);m.tri(T,add(P,[0,-.005,0]),add(P,S.map(v=>-v)),0xa59571);
+          }
+        }
       }
     });
   }
@@ -280,7 +368,7 @@ const OFFICE3D = (() => {
     return L;
   }
 
-  /* Kugelfläche nur dort, wo keep(Winkel von oben, Winkel von vorn) zutrifft – für Haaransatz, Bart, Mützen */
+  /* Kugelfläche nur dort, wo keep(Winkel von oben, Winkel von vorn) zutrifft – für Trefferflecken. */
   function shell(b, r, col, keep, o) {
     o = o || {};
     const seg = o.seg || 18, rings = o.rings || 12, sx = o.sx || 1, sy = o.sy || 1, sz = o.sz || 1, c = o.c || [0, 0, 0];
@@ -305,10 +393,10 @@ const OFFICE3D = (() => {
       const edge=front+(back-front)*smooth(0.55,2.3,Math.abs(az))+(o.part ? Math.sin(az)*0.07 : 0);
       const th=u*edge, curl=o.curl ? Number(o.curl)*Math.sin(th)*(0.5+0.5*Math.sin(az*7+th*2)*Math.sin(th*8))*0.075 : 0;
       const lift=(o.lift||0)*Math.exp(-Math.pow((th-0.42)/0.55,2))*Math.sin(th)*1.7*Math.max(0,Math.cos(az));
-      const r=HR*(inner ? 1.006 : (o.rad||1.065)+curl+lift+(o.part ? Math.sin(az-0.6)*Math.sin(th)*0.025 : 0));
+      const r=HR*(inner ? 1.006 : (o.rad||1.065)+(o.shave?0.045*(1-smooth(.85,1.45,th)):0)+curl+lift+(o.part ? Math.sin(az-0.6)*Math.sin(th)*0.025 : 0));
       const wave=(o.long||0)*smooth(0.9,1.7,Math.abs(az))*smooth(1.1,2.4,th);
       const n=[Math.sin(th)*Math.sin(az),Math.cos(th),Math.sin(th)*Math.cos(az)];
-      return {p:[n[0]*r,HC[1]+n[1]*r*HSY-wave,n[2]*r],n:nrm([n[0],n[1]/HSY,n[2]])};
+      return {p:[n[0]*r,HC[1]+n[1]*r*HSY-wave,n[2]*r],n:nrm([n[0],n[1]/HSY,n[2]]),th};
     };
     const point=(u,az,inner)=>{
       const v=shape(u,az,inner),e=0.001;
@@ -322,8 +410,9 @@ const OFFICE3D = (() => {
     for(let j=0;j<=M;j++) cap.push(Array.from({length:N+1},(_,i)=>point(j/M,i/N*2*PI>PI?i/N*2*PI-2*PI:i/N*2*PI)));
     for(let j=0;j<M;j++)for(let i=0;i<N;i++){
       const A=cap[j][i],B=cap[j][i+1],C=cap[j+1][i+1],D=cap[j+1][i];
-      if(j) b.tri(A.p,C.p,B.p,col,A.n,C.n,B.n);
-      b.tri(A.p,D.p,C.p,col,A.n,D.n,C.n);
+      const cc=o.shave?mixH(col,o.shave,smooth(.85,1.45,(A.th+B.th+C.th+D.th)/4)):col;
+      if(j) b.tri(A.p,C.p,B.p,cc,A.n,C.n,B.n);
+      b.tri(A.p,D.p,C.p,cc,A.n,D.n,C.n);
     }
     for(let i=0;i<N;i++){
       const a=i/N*2*PI,bb=(i+1)/N*2*PI, A=cap[M][i],B=cap[M][i+1];
@@ -335,8 +424,8 @@ const OFFICE3D = (() => {
     const b=new G3.MB(),st=L.style,hat=L.acc==='cap'||L.acc==='muetze',cap=(f,bk,o,c)=>hairCap(b,c==null?L.hair:c,f,bk,o);
     if(st==='glatze')return b;
     if(st==='undercut'){
-      cap(1.0,1.92,{rad:1.04},mixH(L.hair,L.skin,0.23));
-      cap(0.88,1.25,{rad:1.075,lift:hat?0:0.07});
+      /* v300: Deckhaar und kurze Seiten bilden eine Fläche, keinen überhängenden Helmrand. */
+      cap(1.0,1.92,{rad:1.04,shave:mixH(L.hair,L.skin,.23),lift:hat?0:.07});
     }else if(st==='quiff')cap(0.96,1.92,{lift:hat?0:0.28});
     else if(st==='seitenscheitel')cap(0.98,1.98,{part:true,lift:hat?0:0.08});
     else if(st==='locken')cap(0.98,2.0,{curl:hat?0.35:1,lift:hat?0:0.035});
@@ -353,8 +442,103 @@ const OFFICE3D = (() => {
 
   /* Kopf: Drehpunkt am Hals (Figur y 0,82), Kopfmitte 0,13 darüber, nach +z blickend */
   const HC = [0, 0.13, 0], HR = 0.118, HSY = 1.06;
+  /* v300: Bart ausschließlich vor den Ohren, mit durchgehender Wangen-/Kieferlinie.
+     Die seitliche Grenze liegt vor der Kopfmitte; hinten am Nacken bleibt Haut. */
+  function beardMesh(L) {
+    const b=new G3.MB(),full=L.beard==='vollbart',stubble=L.beard==='stoppeln';
+    if(full||stubble){
+      const N=28,M=12,azMax=1.34,col=full?L.hairS:mixH(L.skin,L.hair,.40);
+      const at=(i,j,inside)=>{
+        const az=(i/N*2-1)*azMax,u=j/M,side=smooth(.25,1.25,Math.abs(az));
+        const top=full?2.02-.44*side:1.72-.14*side,bottom=2.86-.34*side,th=top+(bottom-top)*u;
+        const fade=smooth(0,.16,u)*(1-smooth(.84,1,u))*(1-smooth(.82,1,Math.abs(i/N*2-1)));
+        const r=HR*(inside?1.008:1.014+(full?.028:.010)*fade);
+        const n=[Math.sin(th)*Math.sin(az),Math.cos(th),Math.sin(th)*Math.cos(az)];
+        return {p:[n[0]*r,HC[1]+n[1]*r*HSY,n[2]*r],n:nrm([n[0],n[1]/HSY,n[2]])};
+      };
+      for(let j=0;j<M;j++)for(let i=0;i<N;i++){
+        const A=at(i,j),B=at(i+1,j),C=at(i+1,j+1),D=at(i,j+1);
+        b.tri(A.p,D.p,C.p,col,A.n,D.n,C.n);b.tri(A.p,C.p,B.p,col,A.n,C.n,B.n);
+      }
+      const edge=(i,j,k,l)=>{const A=at(i,j).p,B=at(k,l).p,C=at(k,l,true).p,D=at(i,j,true).p;b.quad(A,B,C,D,col);};
+      for(let i=0;i<N;i++){edge(i,0,i+1,0);edge(i+1,M,i,M);}
+      for(let j=0;j<M;j++){edge(0,j+1,0,j);edge(N,j,N,j+1);}
+    }
+    if(full||L.beard==='schnauzer')b.sphere(.026,14,8,L.hairS,{y:.100,z:.1124,sy:.21,sz:.24,smooth:true});
+    return b;
+  }
+  /* v300: Mütze mit geschlossenem, analytischem Umschlag statt ausgeschnittenen
+     Kugelkacheln. Genügend Abstand zwischen Kappe und Band verhindert Flimmern. */
+  function hatMesh(L) {
+    const b=new G3.MB();
+    if(L.acc==='muetze'){
+      hairCap(b,L.hatC,.95,1.3,{rad:1.14,lift:.015});
+      const N=28,edge=a=>.95+.35*smooth(.55,2.3,Math.abs(a)),at=(i,u,inside)=>{
+        const a=i/N*2*PI,az=a>PI?a-2*PI:a,th=edge(az)-.19+u*.205,r=HR*(inside?1.135:1.175);
+        const n=[Math.sin(th)*Math.sin(a),Math.cos(th),Math.sin(th)*Math.cos(a)];
+        return {p:[n[0]*r,HC[1]+n[1]*r*HSY,n[2]*r],n:nrm([n[0],n[1]/HSY,n[2]])};
+      };
+      for(let i=0;i<N;i++){
+        const A=at(i,0),B=at(i+1,0),C=at(i+1,1),D=at(i,1),col=mixH(L.hatC,0xffffff,i%2?.11:.08);
+        b.tri(A.p,D.p,C.p,col,A.n,D.n,C.n);b.tri(A.p,C.p,B.p,col,A.n,C.n,B.n);
+        b.quad(B.p,A.p,at(i,0,true).p,at(i+1,0,true).p,col);
+        b.quad(D.p,C.p,at(i+1,1,true).p,at(i,1,true).p,col);
+      }
+      b.sphere(.026,12,8,0xf0f0ea,{y:.285,smooth:true});
+    }else if(L.acc==='cap'){
+      hairCap(b,L.hatC,1.0,1.25,{rad:1.125});
+      const N=16,M=3,at=(i,j,under)=>{
+        const a=(i/N*2-1)*.85,u=j/M,th=1+.25*smooth(.55,2.3,Math.abs(a)),r=HR*1.125;
+        return [Math.sin(th)*Math.sin(a)*r+Math.sin(a)*.008*u,HC[1]+Math.cos(th)*r*HSY-.006*u-.008*u*u-(under?.0025:0),Math.sin(th)*Math.cos(a)*r+.06*Math.pow(Math.cos(a),1.4)*u];
+      };
+      const col=mixH(L.hatC,0x000000,.18);
+      for(let i=0;i<N;i++)for(let j=0;j<M;j++){
+        b.quad(at(i,j),at(i,j+1),at(i+1,j+1),at(i+1,j),L.hatC);
+        b.quad(at(i+1,j,true),at(i+1,j+1,true),at(i,j+1,true),at(i,j,true),col);
+      }
+      for(let i=0;i<N;i++)b.quad(at(i,M),at(i,M,true),at(i+1,M,true),at(i+1,M),col);
+      for(let j=0;j<M;j++){b.quad(at(0,j),at(0,j,true),at(0,j+1,true),at(0,j+1),col);b.quad(at(N,j+1),at(N,j+1,true),at(N,j,true),at(N,j),col);}
+    }
+    return b;
+  }
+  /* v300: Durchgehende Brillenbügel und ein zusammenhängender Kopfhörerbogen. */
+  function headTube(b,points,r,col){
+    for(let i=1;i<points.length;i++){
+      const a=points[i-1],d=points[i].map((v,k)=>v-a[k]),len=Math.hypot(...d);
+      limb(b,a,d.map(v=>v/len),len,r,r,col);
+      if(i<points.length-1)b.sphere(r,6,4,col,{x:points[i][0],y:points[i][1],z:points[i][2],smooth:true});
+    }
+  }
+  function glassesMesh(){
+    const b=new G3.MB(),fc=0x2a2a30;
+    [-1,1].forEach(s=>{
+      const ex=s*.043,z=.121;
+      b.box(.05,.006,.006,fc,{x:ex,y:.156,z});b.box(.05,.006,.006,fc,{x:ex,y:.124,z});
+      b.box(.006,.036,.006,fc,{x:ex-.025,y:.124,z});b.box(.006,.036,.006,fc,{x:ex+.025,y:.124,z});
+      headTube(b,[[s*.071,.147,.121],[s*.096,.147,.102],[s*.123,.147,.053],[s*.124,.143,-.004],[s*.127,.130,-.014]],.0024,fc);
+    });
+    b.box(.034,.005,.005,fc,{y:.148,z:.123});return b;
+  }
+  function headsetMesh(){
+    const b=new G3.MB(),N=24,at=(i,r,z)=>{
+      const a=(i/N*2-1)*PI/2;return [Math.sin(a)*r,HC[1]+Math.cos(a)*r*HSY,z];
+    };
+    for(let i=0;i<N;i++){
+      const r=HR*1.18,inside=HR*1.12,z=.010;
+      b.quad(at(i,r,-z),at(i,r,z),at(i+1,r,z),at(i+1,r,-z),0x2a2a30);
+      b.quad(at(i,inside,z),at(i,inside,-z),at(i+1,inside,-z),at(i+1,inside,z),0x59616a);
+      b.quad(at(i,r,z),at(i,inside,z),at(i+1,inside,z),at(i+1,r,z),0x333d48);
+      b.quad(at(i,inside,-z),at(i,r,-z),at(i+1,r,-z),at(i+1,inside,-z),0x333d48);
+    }
+    [-1,1].forEach(s=>{
+      b.cyl(.034,.034,.030,16,0x2a2a30,{x:s*.118,y:.123,rz:-s*PI/2,smooth:true});
+      b.cyl(.030,.030,.010,16,0x59616a,{x:s*.113,y:.123,rz:-s*PI/2,smooth:true});
+    });
+    headTube(b,[[-.148,.109,0],[-.134,.090,.075],[-.068,.086,.122],[-.028,.090,.128]],.003,0x333d48);
+    b.sphere(.010,10,6,0x55606c,{x:-.028,y:.090,z:.128,sy:.65,sz:.7,smooth:true});return b;
+  }
   function headMesh(L) {
-    const b = new G3.MB(), skin = L.skin, hair = L.hair, hairS = L.hairS, brow = L.style === "glatze" ? mixH(L.skinS, 0x000000, 0.2) : mixH(hair, 0x000000, 0.3);
+    const b = new G3.MB(), skin = L.skin, hair = L.hair, brow = L.style === "glatze" ? mixH(L.skinS, 0x000000, 0.2) : mixH(hair, 0x000000, 0.3);
     G3.seed(5100 + (nameHash(L.key) % 997));
     b.sphere(HR, 24, 16, skin, { y: HC[1], sy: HSY, smooth: true });
     [-1, 1].forEach(s => b.sphere(0.026, 8, 6, mixH(skin, L.skinS, 0.4), { x: s * 0.116, y: 0.123, z: -0.004, sx: 0.5, smooth: true }));
@@ -370,39 +554,15 @@ const OFFICE3D = (() => {
     b.sphere(0.012, 10, 7, mixH(skin, L.skinS, 0.25), { y: 0.117, z: 0.115, sy: 1.15, sz: 0.65, smooth: true });
     /* v298: Geschlossene Haarkappe mit einer durchgehenden Haarlinie statt
        ausgeschnittener Kugelkacheln und aufgesetzter eckiger Haarblöcke. */
-    const hc = { c: HC, sy: HSY };
-    const S2 = (rm, keep, col, o) => shell(b, HR * rm, col == null ? hair : col, keep, Object.assign({}, hc, o || {}));
     b.merge(hairMesh(L), {});
-    /* Bart */
-    if (L.beard === "stoppeln") S2(1.008, (th, az) => th > 1.72 && Math.abs(az) < 1.75, mixH(skin, hair, 0.4));
-    else if (L.beard === "schnauzer") b.sphere(0.03, 10, 6, hairS, { y: 0.1, z: 0.111, sy: 0.32, sz: 0.5, smooth: true });
-    else if (L.beard === "vollbart") {
-      /* v259: Bart am Kiefer, Wangen und Mund bleiben frei. */
-      S2(1.022, (th, az) => th > (Math.abs(az) < 0.55 ? 2.12 : 1.95) && Math.abs(az) < 1.8, hairS);
-      b.sphere(0.034, 12, 8, hair, { y: 0.035, z: 0.059, sy: 0.6, sz: 0.9, smooth: true });
-    }
+    b.merge(beardMesh(L),{});
     /* Brille, Cap, Mütze, Headset */
     if (L.acc === "brille") {
-      const fc = 0x2a2a30;
-      [-1, 1].forEach(s => {
-        const ex = s * 0.043, z = 0.121;
-        b.box(0.05, 0.006, 0.006, fc, { x: ex, y: 0.156, z }); b.box(0.05, 0.006, 0.006, fc, { x: ex, y: 0.124, z });
-        b.box(0.006, 0.036, 0.006, fc, { x: ex - 0.025, y: 0.124, z }); b.box(0.006, 0.036, 0.006, fc, { x: ex + 0.025, y: 0.124, z });
-        b.box(0.005, 0.005, 0.12, fc, { x: s * 0.118, y: 0.15, z: 0.062 });
-      });
-      b.box(0.02, 0.005, 0.005, fc, { y: 0.148, z: 0.123 });
-    } else if (L.acc === "cap") {
-      hairCap(b,L.hatC,1.0,1.25,{rad:1.125});
-      b.box(0.15, 0.012, 0.1, mixH(L.hatC, 0x000000, 0.2), { y: 0.205, z: 0.14, rx: 0.15 });
-    } else if (L.acc === "muetze") {
-      hairCap(b,L.hatC,0.95,1.3,{rad:1.14,lift:0.015});
-      S2(1.16, (th, az) => { const lim = 0.95 + 0.35 * smooth(0.55, 2.3, Math.abs(az)); return th < lim && th > lim - 0.22; }, mixH(L.hatC, 0xffffff, 0.2));
-      b.sphere(0.03, 8, 6, 0xf0f0ea, { y: 0.277, smooth: true });
+      b.merge(glassesMesh(),{});
+    } else if (L.acc === "cap"||L.acc==='muetze') {
+      b.merge(hatMesh(L),{});
     } else if (L.acc === "headset") {
-      for (let k = -3; k <= 3; k++) { const a = k / 3 * 1.45; b.box(0.022, 0.012, 0.026, 0x2a2a30, { x: Math.sin(a) * 0.137, y: HC[1] + Math.cos(a) * 0.137 * HSY, rz: -a }); }
-      [-1, 1].forEach(s => b.cyl(0.034, 0.034, 0.03, 12, 0x2a2a30, { x: s * 0.118, y: 0.122, rz: -s * PI / 2 }));
-      b.box(0.008, 0.008, 0.16, 0x2a2a30, { x: -0.072, y: 0.105, z: 0.055, ry: 0.87, rx: 0.2 });
-      b.sphere(0.012, 8, 6, 0x55606c, { x: -0.03, y: 0.092, z: 0.11, smooth: true });
+      b.merge(headsetMesh(),{});
     }
     return b;
   }
@@ -415,6 +575,80 @@ const OFFICE3D = (() => {
   function mouthMesh(L) { const b = new G3.MB(); b.box(0.042, 0.009, 0.01, mixH(L.lips, 0x000000, 0.35), { c: true }); return b; }
   const mouthZ = L => L.beard === "vollbart" ? 0.109 : L.beard === "stoppeln" ? 0.115 : 0.109;
 
+  /* v300: Gemeinsames Schnittmuster für Rumpf und aufliegende Kleidung. Die Schulter
+     reicht bis zum Ärmelansatz; Träger folgen Vorderseite, Schulter und Rücken. */
+  const TORSO_PROFILE=[[0,.88,.92],[.14,1,1],[.30,1,1],[.335,.98,.96],[.36,.70,.75]];
+  function torsoSize(L,y){
+    const p=TORSO_PROFILE;let i=0;while(i<p.length-2&&y>p[i+1][0])i++;
+    const a=p[i],b=p[i+1],t=clamp1((y-a[0])/(b[0]-a[0]),0,1);
+    return [L.tw*(a[1]+(b[1]-a[1])*t)/2,L.td*(a[2]+(b[2]-a[2])*t)/2];
+  }
+  function torsoSurface(L,x,y,side,offset){
+    const [w,d]=torsoSize(L,y);x=clamp1(x,-w+.001,w-.001);
+    return [x,y,side*(d-Math.max(0,Math.abs(x)-(w-.024))+(offset||0))];
+  }
+  function clothPanel(b,L,x0,x1,ys,side,col,offset){
+    /* Auch dort unterteilen, wo ein schmaler Träger über die Schulterfase läuft.
+       Sonst schneidet die Dreiecksmitte trotz anliegender Ecken durch den Stoff. */
+    const knots=ys.slice(),lo=ys[0],hi=ys[ys.length-1];
+    for(let i=1;i<TORSO_PROFILE.length;i++){
+      const a=TORSO_PROFILE[i-1],c=TORSO_PROFILE[i],w0=L.tw*a[1]/2,w1=L.tw*c[1]/2;
+      if(c[0]>lo&&c[0]<hi)knots.push(c[0]);
+      if(w0===w1)continue;
+      for(const x of [x0,x1])for(const edge of [.024,.001]){
+        const t=(Math.abs(x)+edge-w0)/(w1-w0),y=a[0]+t*(c[0]-a[0]);
+        if(t>0&&t<1&&y>lo&&y<hi)knots.push(y);
+      }
+    }
+    ys=[...new Set(knots)].sort((a,b)=>a-b);
+    const row=y=>{
+      const [w]=torsoSize(L,y),a=clamp1(x0,-w+.001,w-.001),c=clamp1(x1,-w+.001,w-.001);
+      return [a,clamp1(-w+.024,a,c),clamp1(w-.024,a,c),c].map(x=>torsoSurface(L,x,y,side,offset));
+    };
+    for(let i=1;i<ys.length;i++){
+      const lo=row(ys[i-1]),hi=row(ys[i]);
+      for(let j=0;j<3;j++){
+        const A=lo[j],B=lo[j+1],C=hi[j+1],D=hi[j];
+        if(side>0)b.quad(A,B,C,D,col);else b.quad(A,D,C,B,col);
+      }
+    }
+  }
+  function overallStraps(L,vest){
+    const b=new G3.MB(),ys=vest?[.34,.36,.3615]:[.205,.26,.30,.335,.36,.3615],half=vest?.024:.016,offset=vest?.004:.002;
+    [-1,1].forEach(s=>{
+      const x=s*(vest?.073:.065),x0=x-half,x1=x+half;
+      clothPanel(b,L,x0,x1,ys,1,L.oc,offset);clothPanel(b,L,x0,x1,ys,-1,L.oc,offset);
+      b.quad(torsoSurface(L,x0,.3615,1,offset),torsoSurface(L,x1,.3615,1,offset),torsoSurface(L,x1,.3615,-1,offset),torsoSurface(L,x0,.3615,-1,offset),L.oc);
+    });
+    return b;
+  }
+  function hoodMesh(L){
+    const b=new G3.MB(),ys=[.359,.337,.303,.267,.245],ws=[.053,.074,.076,.058,.018];
+    const rows=ys.map((y,j)=>Array.from({length:5},(_,i)=>{
+      const s=i/2-1,fold=.003+.020*Math.sin(j/4*PI)*(1-s*s);
+      return torsoSurface(L,s*ws[j],y,-1,fold);
+    }));
+    const normal=(j,i)=>{
+      const A=rows[j][Math.max(0,i-1)],B=rows[j][Math.min(4,i+1)],C=rows[Math.max(0,j-1)][i],D=rows[Math.min(4,j+1)][i];
+      const x=B.map((v,k)=>v-A[k]),y=D.map((v,k)=>v-C[k]);
+      return nrm([x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]]);
+    };
+    for(let j=0;j<4;j++)for(let i=0;i<4;i++){
+      const A=rows[j][i],B=rows[j][i+1],C=rows[j+1][i+1],D=rows[j+1][i];
+      b.tri(A,B,C,L.ocS,normal(j,i),normal(j,i+1),normal(j+1,i+1));b.tri(A,C,D,L.ocS,normal(j,i),normal(j+1,i+1),normal(j+1,i));
+    }
+    for(let j=0;j<4;j++)for(const i of [0,4]){
+      const A=rows[j][i],B=rows[j+1][i],C=torsoSurface(L,B[0],B[1],-1,.001),D=torsoSurface(L,A[0],A[1],-1,.001);
+      if(i)b.quad(B,A,D,C,L.ocS);else b.quad(A,B,C,D,L.ocS);
+    }
+    /* Angelegter Kragen, keine Kugel auf dem Rücken. */
+    b.cyl(.049,.047,.012,16,L.ocS,{y:.351,nobot:true,notop:true,smooth:true});
+    for(let i=0;i<16;i++){
+      const a=i/16*2*PI,c=(i+1)/16*2*PI,P=(r,t)=>[Math.cos(t)*r,.363,Math.sin(t)*r];
+      b.quad(P(.047,a),P(.042,a),P(.042,c),P(.047,c),L.ocS);
+    }
+    return b;
+  }
   /* Oberkörper: Drehpunkt an der Taille (Figur y 0,42), Kleidung nach Avatar-Outfit, Namensschild in Rollenfarbe */
   function torsoMesh(L) {
     const b = new G3.MB(), tw = L.tw, td = L.td, f = td / 2, base = L.outfit === "warnweste" ? 0x3a4a5a : L.outfit === "latzhose" ? L.under : L.oc;
@@ -423,10 +657,10 @@ const OFFICE3D = (() => {
       const q = 0.024, x = w / 2, z = d / 2;
       return [[-x + q, y, -z], [x - q, y, -z], [x, y, -z + q], [x, y, z - q], [x - q, y, z], [-x + q, y, z], [-x, y, z - q], [-x, y, -z + q]];
     };
-    const rings = [ring(tw * 0.88, td * 0.92, 0), ring(tw, td, 0.14), ring(tw, td, 0.30), ring(tw * 0.65, td * 0.75, 0.36)];
+    const rings = TORSO_PROFILE.map(([y,w,d])=>ring(tw*w,td*d,y));
     for (let k = 0; k < rings.length - 1; k++) for (let j = 0; j < 8; j++)
       b.quad(rings[k][j], rings[k + 1][j], rings[k + 1][(j + 1) % 8], rings[k][(j + 1) % 8], base);
-    for (let j = 0; j < 8; j++) b.tri([0, 0.36, 0], rings[3][(j + 1) % 8], rings[3][j], base);
+    for (let j = 0; j < 8; j++) b.tri([0, 0.36, 0], rings[4][(j + 1) % 8], rings[4][j], base);
     b.cyl(0.042, 0.04, 0.1, 10, mixH(L.skin, L.skinS, 0.25), { y: 0.355, smooth: true });
     let fz = 0.003;
     switch (L.outfit) {
@@ -440,37 +674,38 @@ const OFFICE3D = (() => {
         b.box(0.01, 0.34, 0.004, L.ocT, { y: 0.02, z: f + 0.002 });
         b.box(0.09, 0.018, 0.07, L.ocS, { y: 0.35, z: -0.012 });
         [-1, 1].forEach(s => b.box(0.07, 0.05, 0.004, L.ocS, { x: s * 0.075, y: 0.05, z: f + 0.002 }));
-        fz = 0.004; break;
+        fz = 0.003; break;
       case "warnweste":
-        [-1, 1].forEach(s => b.box(tw / 2 - 0.025, 0.33, 0.012, L.oc, { x: s * (tw / 4 + 0.008), y: 0.01, z: f + 0.004 }));
-        b.box(tw - 0.02, 0.33, 0.012, L.oc, { y: 0.01, z: -f - 0.004 });
-        [0.09, 0.19].forEach(y => {                                           /* Reflexstreifen nur auf den Westenteilen, nichts steht ab */
-          [-1, 1].forEach(q => b.box(tw / 2 - 0.03, 0.024, 0.004, 0xe8ebe0, { x: q * (tw / 4 + 0.008), y, z: f + 0.012 }));
-          b.box(tw - 0.03, 0.024, 0.004, 0xe8ebe0, { y, z: -f - 0.012 });
+        [-1,1].forEach(s=>clothPanel(b,L,s>0?.016:-tw/2+.012,s>0?tw/2-.012:-.016,[.01,.14,.30,.34],1,L.oc,.004));
+        clothPanel(b,L,-tw/2+.012,tw/2-.012,[.01,.14,.30,.34],-1,L.oc,.004);
+        b.merge(overallStraps(L,true),{});
+        [.09,.19].forEach(y=>{
+          [-1,1].forEach(s=>clothPanel(b,L,s>0?.016:-tw/2+.012,s>0?tw/2-.012:-.016,[y,y+.024],1,0xe8ebe0,.0055));
+          clothPanel(b,L,-tw/2+.012,tw/2-.012,[y,y+.024],-1,0xe8ebe0,.0055);
         });
-        fz = 0.02; break;
+        fz = 0.004; break;
       case "kapuzenpulli":
-        b.sphere(0.07, 12, 8, L.ocS, { y: 0.32, z: -f + 0.015, sx: 1.2, sy: 0.45, sz: 0.65, smooth: true });
+        b.merge(hoodMesh(L),{});
         b.box(0.16, 0.08, 0.006, L.ocS, { y: 0.03, z: f + 0.003 });
         [-1, 1].forEach(s => b.box(0.006, 0.07, 0.004, L.ocT, { x: s * 0.025, y: 0.26, z: f + 0.004 }));
         b.box(tw - 0.024, 0.03, td - 0.004, L.ocS, { y: 0 });
-        fz = 0.007; break;
+        fz = 0.003; break;
       case "lederjacke":
         b.box(0.07, 0.3, 0.004, 0xe8e8e4, { y: 0.05, z: f + 0.002 });
         [-1, 1].forEach(s => b.box(0.05, 0.13, 0.008, L.ocT, { x: s * 0.05, y: 0.22, z: f + 0.004, rz: s * 0.25 }));
-        fz = 0.01; break;
+        fz = 0.007; break;
       case "latzhose":
-        b.box(0.17, 0.22, 0.01, L.oc, { y: 0.0, z: f + 0.004 });
-        b.box(tw - 0.02, 0.22, 0.01, L.oc, { y: 0.0, z: -f - 0.004 });
+        clothPanel(b,L,-.085,.085,[0,.14,.22],1,L.oc,.002);
+        clothPanel(b,L,-tw/2+.012,tw/2-.012,[0,.14,.22],-1,L.oc,.002);
+        b.merge(overallStraps(L),{});
         [-1, 1].forEach(s => {
-          b.box(0.035, 0.16, 0.008, L.oc, { x: s * 0.065, y: 0.2, z: f + 0.004 });
-          b.box(0.035, 0.012, td + 0.016, L.oc, { x: s * 0.065, y: 0.36 });
-          b.box(0.022, 0.022, 0.006, 0xe8c04a, { x: s * 0.065, y: 0.205, z: f + 0.011 });
+          const p=torsoSurface(L,s*.065,.215,1,.004);
+          b.box(.022,.022,.003,0xe8c04a,{x:p[0],y:.205,z:p[2]});
         });
-        fz = 0.012; break;
+        fz = 0.003; break;
     }
     /* v282: Gefasstes Namensschild, getrennte Tiefen verhindern Flimmern. */
-    const badgeZ = f + fz + 0.006;
+    const badgeZ = torsoSurface(L,.075,.265,1,fz+.003)[2];
     b.box(0.072, 0.042, 0.004, 0x263747, { x: 0.075, y: 0.244, z: badgeZ });
     b.box(0.066, 0.036, 0.002, 0xf5f5ef, { x: 0.075, y: 0.247, z: badgeZ + 0.003 });
     b.box(0.066, 0.008, 0.001, ROLE_COL[L.role] || 0x3f78c8, { x: 0.075, y: 0.275, z: badgeZ + 0.0045 });
@@ -492,16 +727,25 @@ const OFFICE3D = (() => {
     return b;
   }
   /* Arme: Oberarm (Drehpunkt Schulter, hängt nach −y) und Unterarm mit Hand (Drehpunkt Ellbogen) */
-  function upperMesh(L) {
-    const b = new G3.MB();
-    b.sphere(0.038, 12, 8, L.sleeve, { sy: 0.8, smooth: true });
-    b.cyl(0.033, 0.037, ARM_A, 10, L.sleeve, { y: -ARM_A, smooth: true });
+  /* v300: Ein Ärmelprofil statt überlappender Kugel und Zylinder am Gelenk. */
+  function sleeveMesh(col,rings){
+    const b=new G3.MB(),N=14;
+    const rows=rings.map(([y,r],i)=>{
+      const A=rings[Math.max(0,i-1)],B=rings[Math.min(rings.length-1,i+1)],slope=(B[1]-A[1])/(B[0]-A[0]);
+      return Array.from({length:N+1},(_,j)=>{const a=j/N*2*PI,c=Math.cos(a),s=Math.sin(a);return {p:[c*r,y,s*r],n:r?nrm([c,-slope,s]):[0,1,0]};});
+    });
+    for(let i=1;i<rows.length;i++)for(let j=0;j<N;j++){
+      const A=rows[i-1][j],B=rows[i-1][j+1],C=rows[i][j+1],D=rows[i][j];
+      if(rings[i-1][1])b.tri(A.p,B.p,C.p,col,A.n,B.n,C.n);
+      b.tri(A.p,C.p,D.p,col,A.n,C.n,D.n);
+    }
     return b;
   }
+  function upperMesh(L) {
+    return sleeveMesh(L.sleeve,[[.025,0],[.022,.017],[.012,.029],[0,.035],[-.055,.035],[-ARM_A+.012,.031],[-ARM_A,.033]]);
+  }
   function foreMesh(L, side) {
-    const b = new G3.MB(), col=L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve;
-    b.sphere(0.033,10,7,L.sleeve,{smooth:true});
-    b.cyl(0.024,0.033,ARM_B,12,L.sleeve,{y:-ARM_B,smooth:true,nobot:true});
+    const b=sleeveMesh(L.sleeve,[[.030,0],[.025,.018],[.012,.030],[0,.033],[-.035,.032],[-ARM_B,.024]]),col=L.outfit === "kapuzenpulli" || L.outfit === "blaujacke" ? L.ocS : L.sleeve;
     /* v298: Rundes Bündchen mit echter Öffnung. Keine geschlossene Würfelkappe am Handgelenk. */
     const N=16, y0=-ARM_B-0.002,y1=-ARM_B+0.018;
     for(let i=0;i<N;i++){

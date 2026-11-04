@@ -1,5 +1,39 @@
 # Änderungen – kurz für den Kollegen
 
+## v300 – Arbeiter aus Seiten- und Rückenansichten korrigiert
+**Basis:** GitHub main `4b687f9` (v298), während der Arbeit wiederholt abgeglichen. Die bisher noch nicht auf main enthaltene Pflanzenlieferung v299 ist vollständig integriert. Diese ZIP kann direkt auf main angewendet werden, ohne v299 vorher einzuspielen.
+
+**Ursachen:** Der alte Mützenumschlag bestand aus grob abgeschnittenen Kugelkacheln, die mit der neuen Kappe überlappten. Das erzeugte Lücken und flimmernde Muster. Bartflächen reichten hinter die seitliche Kopfmitte und hatten kantige Abschlüsse. Latzhosenträger waren starre Balken über den Schultern; Warnwesten standen als Platten ab. Kapuzen waren flache Kugeln auf dem Rücken. Oberarm-/Ellbogenkugeln überschnitten sich mit den Ärmeln, während der Rumpf zu früh schmal wurde. Kopfhörerbügel bestanden aus getrennten Blöcken; Brillenbügel waren nicht durchgehend an Fassung und Ohr angepasst. Diese Fehler wurden in den bisherigen Frontal-/Hand-Nahansichten nicht ausreichend erfasst.
+
+**Lösung (`officefp.js`):**
+- Geschlossener Mützenumschlag mit durchgehenden Randflächen und Abstand zur Kappe. Cap-Schirm gebogen statt quaderförmig. Undercut als eine durchgehende Oberfläche mit weich auslaufenden kurzen Seiten, ohne zweite überhängende Haarkappe. Gespeicherte Avatarmerkmale bleiben unverändert.
+- Zusammenhängende Bartflächen mit auslaufender Dicke und einer Grenze vor den Ohren. Keine Bartgeometrie am Hinterkopf/Nacken. Schnurrbart mit Abstand zum Mund.
+- Gemeinsames Rumpfprofil für Körper und aufliegende Stoffflächen. Latzhosenträger laufen von der Brust über die Schulter auf den Rücken; Latz und Warnweste einschließlich Reflexstreifen folgen den abgeschrägten Körperflächen. Zusätzliche Teilungen an den Schulterfasen verhindern, dass schmale Träger oder breite Stoffflächen im Hemd verschwinden. Gilt für beide Körperformen.
+- Angelegte, weich gefaltete Kapuze mit Kragen statt eines aufgesetzten Ovals. Schulterprofil bis zum Ärmelansatz verbreitert; Ärmel als durchgehende, abgerundete Profile statt Kugel-/Zylinder-Überlappungen. Bestehende Handgelenke, Hände, Griffpunkte und Armlängen bleiben erhalten. Namensschild näher an der Kleidung.
+- Durchgehender Kopfhörerbogen mit Polstern und verbundenem Mikrofonarm; gebogene, verbundene Brillenbügel bis zum Ohr. Alles weiter Teil der vorhandenen Figuren-Meshes, keine zusätzlichen Drawcalls, Bildassets oder Pakete.
+- `index.html` / `sw.js`: v300 nur für `officefp.js`. Pflanzen aus v299, Maus-/Monitoransichten aus v298, Raumaufteilung, Animationstätigkeiten und Geschäftslogik bleiben erhalten. Keine Spielstandmigration.
+
+**Geprüft:** `node office-clothes-v300.test.js`: 320 Kopfkombinationen, 1.216 Mützen-/Haar-Strahlproben, Bart nur auf der Gesichtsseite und über der Haut, durchgehender Kopfhörerbogen, zwölf Kombinationen aus Outfit/Körperform, anliegende Stoffflächen einschließlich Dreiecksmitten, freie Halsöffnung, angelegte Kapuze, zusammenhängende Ärmel, endliche Geometrie und Modellbudgets (Kopf höchstens 6.500 Dreiecke). Zusätzlich `office-appearance-v298.test.js`, `office-workers-v284.test.js`, `office-joints-v288.test.js`, `office-plants-v299.test.js` und `review-v282.test.js` bestanden: Maus-/Handkontakt, sieben Tätigkeiten, Notfall, Schreibkontakt, Büro-Kollisionen, Pflanzen und bestehende Modelle. Syntax und Diff geprüft.
+
+**Grafikprüfung:** 42 Vorher-/Nachher-Ansichten mit acht animierten Figuren und sechs Kopfkombinationen jeweils von vorn, hinten und seitlich mit Originalmodellen und Originalshadern unter Mesa/EGL gerendert. Details der drei Screenshot-Motive sowie der zusätzlich aufgefallenen Brillen-/Headset-/Westenfehler einzeln und alle Kombinationen als Übersichten kontrolliert.
+
+**Prüfgrenze:** Kein Live-3D-/iPhone-/Safari-Test. Die Sichtprüfung erfolgte in einer Grafik-Prüfkulisse mit den originalen Spielmodellen und Shadern.
+
+## v299 – Natürliche Büropflanzen mit Stämmen, Blättern und richtigen Töpfen
+**Basis:** GitHub main `4b687f9` (v298), während der Arbeit neu eingetroffen und vollständig übernommen. Die dort hochgeladene v298 entspricht der vorigen Lieferung; sämtliche Mitarbeiter-, Hand-, Maus- und Monitorverbesserungen bleiben erhalten.
+
+**Ursache:** Grünlilie, Monstera und Ficus bestanden aus frei schwebenden groben Laubkörpern ohne Stämme/Blattstiele. Palmenblätter waren starre Quader. Der Topf wurde nach oben schmaler und hatte weder einen sichtbaren Innenrand noch einen Untersetzer.
+
+**Lösung (`officefp.js`, `plant`):**
+- Alle sechs vorhandenen Arten neu modelliert: gestreifte, überhängende Grünlilienblätter; Monstera mit verzweigten Blattstielen, breiten gelappten Blättern und gerundeten Blattfenstern; Ficus mit sichtbarem Stamm, Ästen und dichterer ovalblättriger Krone; Zimmerpalme mit mehreren Halmen und acht gebogenen, gefiederten Wedeln; Olive mit feinen Zweigen und schmalen Blättern mit silbrigen Unterseiten; gerippter Säulenkaktus mit gerundeten Kuppen und feinen Dornen.
+- Nach oben weitere Pflanzgefäße mit Untersetzer, Innenwand, Rand und vertieft liegender Erde. Stämme stecken in der Erde, Astabschnitte überlappen an den Anschlüssen. Blätter sind von oben und unten sichtbar. Leichte, reproduzierbare Unterschiede in Wuchs und Grüntönen je Art/Position, ohne den Zufall anderer Raummodelle zu verändern.
+- Modelle weiterhin im vorhandenen statischen Raum-Mesh: keine zusätzlichen Drawcalls, Texturen, externen Pakete oder Animationen. Je Pflanze 1.377 bis 3.921 Dreiecke (Prüfgrenze 4.500), deutlich mehr Detail als bisher. Preise, Komfort, Pflanzenkatalog, Standorte, Etagen, Kollisionsflächen und Spielstände unverändert.
+- `index.html` / `sw.js`: v299 nur für das geänderte Spielskript; übrige Cache-Verweise bleiben erhalten.
+
+**Geprüft:** `node office-plants-v299.test.js`: alle sechs Arten an drei Standorten, endliche Koordinaten/Normalen, Größen- und Modellbudgets, richtig verjüngte offene Töpfe, Erde unter dem Rand, mit der Erde verbundene Stamm-/Ast-/Blattstielketten, beidseitige Blätter, reproduzierbare Geometrie und kein Einfluss auf den Zufall anderer Modelle. Die drei bestehenden Büroprüfungen `office-appearance-v298.test.js`, `office-workers-v284.test.js`, `office-joints-v288.test.js` bestehen weiterhin. Syntax und Diff geprüft.
+
+**Grafikprüfung:** Sechs Vorher-/Nachher-Ansichten mit den originalen Spielmodellen und Shadern unter Mesa/EGL gerendert und einzeln bzw. als Übersicht geprüft. Keine Smartphone-/Safari-/Live-3D-Prüfung und keine FPS-Messung auf echter Handyhardware.
+
 ## v298 – Mitarbeiterhaare, Ärmelanschlüsse, Maus und tatsächliche Bildschirmarbeit
 **Basis:** GitHub main `c295039` (v297), während der Umsetzung wiederholt abgeglichen. Die Wasserfallkorrekturen v297 und Claudes vorherige Änderungen bleiben enthalten.
 
