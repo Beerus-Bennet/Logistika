@@ -1562,9 +1562,9 @@ const FWM = (() => {
   /* Felswand hinter dem Topf mit Wasserfall (lokal: Topfmitte im Ursprung, der Bach läuft nach +x weg, Felsen bei −x) */
   /* v204: Kante weiter vorn und tiefer, Aufprall innerhalb des Topfrands; oben ein offenes Becken in einer Felsmulde.
      v210: Kante als überhängender Felsvorsprung 0,35 über dem Topfrand (der Fall stürzt steiler statt im weiten Bogen),
-     Rinne länger bis ins Becken; zwei Nebenstränge laufen seitlich über Felsvorsprünge (strands: Kante → Absatz → Wasser) */
+     Rinne länger bis ins Becken. v297: Die beiden künstlich abstehenden Nebenstränge sind entfernt. */
   const SPRING_FALL = { top: [-2.65, 1.98, 0.12], foot: [-1.6, -0.05, 0.12], S: 1.5, basin: [-5.3, 0.12, 0.8], rinne: 1.35,
-    strands: [[[-2.74, 1.93, -0.5], [-2.36, 0.43, -0.76], [-2.1, 0.04, -0.82], 0.1], [[-2.86, 1.42, 0.8], [-2.42, 0.36, 1.02], [-2.16, 0.04, 1.08], 0.065]] };   /* links über die Kante, rechts schmaler aus einer Spalte darunter */   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
+    strands: [] };   /* v297: Nur der durchgehende Hauptfall. */   /* v191: Felsen und Fall werden mit S skaliert (Topf Radius 4,5) */
   /* v210: Fels mit Material – jede Fläche eigener Ton: oben heller (Licht), Seiten mittel, unten und in Ritzen dunkler,
      nahe am Wasser nass und dunkel, Moos und Flechten nur auf einzelnen, nach oben zeigenden Flächen. */
   const ICO_T = (1 + Math.sqrt(5)) / 2;
@@ -1674,53 +1674,30 @@ const FWM = (() => {
     { const [x, z] = P(3.5, -0.45); b.at({ x, y: 0.03, z, ry: 1.1 }, m => { m.cyl(0.04, 0.05, 0.72, 7, 0x6f5638, { rz: Math.PI / 2, top: 0xa48a62 }); m.at({ x: 0.12, ry: 0.75 }, q => q.cyl(0.022, 0.028, 0.3, 6, 0x7a6243, { rz: Math.PI / 2, x: 0.15, top: 0xa48a62 })); }); }
     return b;
   }
-  /* v193: Wasserfall als eine durchgehende Fläche – Rinne oben im Fels, runde Kante, Wurfbogen bis in den Topf.
-     Die Vertexfarben sind Koordinaten für den Wasser-Shader (uWater 6, gl3d.js): r = Weg entlang der Strömung (0…1),
-     g = quer (0…1), b = 1. Farbe, Stränge, Schaum, weiche Ränder und das Fließen macht der Shader.
-     v210: steilerer Fall, Mitte wölbt sich an der Kante vor, Ränder unregelmäßig (links und rechts verschieden), dazu zwei Nebenstränge. */
-  function fallSheet(b, P, NA, NW, wob) {
-    const V = [];
-    for (let i = 0; i <= NA; i++) {
-      const a = i / NA, p = P(a), row = [];
-      const wl = 1 + (wob ? 0.07 * Math.sin(a * 11 + 1.3) + 0.045 * Math.sin(a * 23 + 0.4) : 0), wr = 1 + (wob ? 0.06 * Math.sin(a * 13 + 2.6) + 0.05 * Math.sin(a * 19 + 1.9) : 0);
-      for (let j = 0; j <= NW; j++) {
-        const w = j / NW, u = w - 0.5, curl = Math.pow(Math.abs(u) * 2, 3) * 0.06, bulge = (p[4] || 0) * (1 - 4 * u * u);
-        const lj = (p[5] || 0) * (Math.sin(u * 13 + 0.9) * 0.6 + Math.sin(u * 29 + 2.1) * 0.4);   /* v220: Kante nicht schnurgerade – der Strom tritt ungleichmäßig über */
-        row.push({ p: [p[0] - curl + bulge + lj, p[1] - Math.abs(lj) * 0.4, p[3] + u * p[2] * (u < 0 ? wl : wr)], c: [a, w, 1] });
-      }
-      V.push(row);
-    }
-    for (let i = 0; i < NA; i++) for (let j = 0; j < NW; j++) {
-      const A = V[i][j], B = V[i][j + 1], C2 = V[i + 1][j + 1], D = V[i + 1][j];
-      [[A, B, C2], [A, C2, D]].forEach(([x, y, z]) => { b.triV(x.p, y.p, z.p, x.c, y.c, z.c); b.triV(x.p, z.p, y.p, x.c, z.c, y.c); });
-    }
-  }
-  /* v296: Modell, Schaum und Spritzer teilen sich denselben Fallbogen und Wasserstand. */
+  /* v297: Eine stetige Rinne bis über die Kante. Die Fallfläche benutzt dieselben Randpunkte
+     und Normalen wie der Bergbach; die früheren zwei seitlichen Stränge sind entfernt. */
   function springFallPath(a) {
-    const F = SPRING_FALL, lip = F.top, foot = F.foot;
-    const A0 = 0.24, vx = foot[0] - lip[0], dy = lip[1] - foot[1];
-    if (a <= A0) { const k = a / A0, x = lip[0] - F.rinne * (1 - k); return [x, lip[1] + 0.1 * (1 - k) * (1 - k) + 0.025, 0.82 + 0.13 * k, foot[2], 0]; }
-    const t = (a - A0) / (1 - A0), r = 0.11 * Math.max(0, 1 - t * 8);
-    return [lip[0] + vx * Math.pow(t, 0.85), lip[1] - dy * t * t + r * 0.25, 0.92 + 0.24 * t, foot[2], 0.07 * Math.min(1, t * 5), 0.07 * Math.max(0, 1 - t * 2.2)];
+    const F = SPRING_FALL, lip = F.top, foot = F.foot, A0 = 0.24;
+    if (a <= A0) {
+      const k = a / A0, h = k * k * (3 - 2 * k);
+      return [lip[0] - F.rinne * (1 - k), lip[1] + 0.125 - 0.1 * h, 0.82 + 0.13 * h, foot[2], 0];
+    }
+    const t = (a - A0) / (1 - A0), y0 = lip[1] + 0.025;
+    return [lip[0] + (foot[0] - lip[0]) * t, y0 - (y0 - foot[1]) * t * t, 0.95 + 0.21 * t, foot[2], 0];
   }
   function springImpact() {
     const y = SPR.waterY / SPRING_FALL.S;
     let lo = 0.24, hi = 1;
     for (let i = 0; i < 24; i++) { const a = (lo + hi) / 2; if (springFallPath(a)[1] > y) lo = a; else hi = a; }
     const a = (lo + hi) / 2, p = springFallPath(a);
-    return { x: p[0] + p[4], y, z: p[3], w: p[2], a, foamY: y + 0.012 };
+    return { x: p[0], y, z: p[3], w: p[2], a, foamY: y + 0.006 };
   }
-  function springFall() {
-    const b = new MB(), F = SPRING_FALL;
-    fallSheet(b, springFallPath, 48, 12, true);
-    /* Nebenstränge: über die Kante, auf den Absatz, vom Absatz ins Wasser */
-    F.strands.forEach(([L, M, W, w]) => {
-      [[L, M, 0.1], [M, W, 0.2]].forEach(([P0, P1, a0]) => {
-        const dxs = P1[0] - P0[0], dys = P0[1] - P1[1], dzs = P1[2] - P0[2];
-        fallSheet(b, a => { const t = (a - a0) / (1 - a0), tt = Math.max(0, t); return [P0[0] + dxs * Math.pow(tt, 0.8), P0[1] - dys * tt * tt, w * (1 + 0.6 * tt), P0[2] + dzs * tt, 0]; }, 12, 3, false);
-      });
-    });
-    return b;
+  function springFall() { return springWaterMesh("fall"); }
+  /* v297: Strömungsanschluss am Anfang der Rinne für die Materialüberblendung im Shader.
+     (Laufzeitkoordinate, Turbulenz, Rinnenmaßstab, Seehöhe in Weltkoordinaten.) */
+  function springFallJoin() {
+    const q = springWaterProfile().rows.find(q => q.a === 0);
+    return [q.flow, q.sp, SPRING_FALL.rinne / 0.24 / (0.6 + q.sp), SPR.waterY];
   }
   /* v204: stilles Becken oben in der Felsmulde (Farbe wie der Topf, Rand hell) – die Rinne des Falls beginnt darin */
   function springBasin() {
@@ -1740,7 +1717,7 @@ const FWM = (() => {
      Berg, Hochfläche und Bachlauf sind in Weltkoordinaten beschrieben (Kontrollpunkte x, z, Wasserspiegel, halbe Breite);
      gerechnet wird im Rahmen des Falls (lokal, Maßstab SPRING_FALL.S), den worldview.js mit setSpringFrame setzt. */
   let SFR = null;
-  function setSpringFrame(C, ry, k) { SFR = { C: [C[0], C[1]], c: Math.cos(ry), s: Math.sin(ry), k: k || SPRING_FALL.S }; SRUN.reach = null; SR_S = SR_G = SR_PL = SR_BOX = SR_BASE = null; }
+  function setSpringFrame(C, ry, k) { SFR = { C: [C[0], C[1]], c: Math.cos(ry), s: Math.sin(ry), k: k || SPRING_FALL.S }; SRUN.reach = null; SR_S = SR_G = SR_PL = SR_BOX = SR_BASE = SR_SURFACE = null; }
   function sfr() {
     if (!SFR) { const I = springInfo(FWORLD.creek, { w: 1.5 }); setSpringFrame(I.C, Math.atan2(-I.dir[1], I.dir[0]) + Math.PI / 2, SPRING_FALL.S); }
     return SFR;
@@ -1793,13 +1770,16 @@ const FWM = (() => {
     });
     return SR_S;
   }
-  /* Verbindungen ohne Band: die Kaskaden (Kante → Fuß) und die Rinne vom Becken zur großen Kante */
+  /* v297: Das Bachbett folgt derselben gebogenen Verbindung wie die sichtbare Oberfläche.
+     Die alte t³-Absenkung konnte sonst mitten im neuen Übergang über dem Wasser liegen. */
   function srLinks() {
-    const S = srSamples(), L = [];
-    for (let i = 0; i + 1 < S.length; i++) { const a = S[i][S[i].length - 1], c = S[i + 1][0]; L.push([a, { x: c.x, z: c.z, y: c.y + 0.05, hw: c.hw * 0.85 }, 3]); }   /* Stufe: Bett bleibt hoch und fällt erst am Fuß */
-    const e = S[S.length - 1][S[S.length - 1].length - 1], T = SPRING_FALL.top;
-    L.push([e, { x: T[0] + 0.15, z: T[2], y: T[1], hw: 0.47 }]);
-    return L;
+    const P = springWaterProfile(), out = [];
+    for (let i = 1; i < P.rows.length; i++) {
+      const a = P.rows[i - 1], b = P.rows[i];
+      if (b.kind === "cascade" || (b.kind === "fall" && b.a <= 0.24))
+        out.push([{ ...a, y: a.y - 0.002 }, { ...b, y: b.y - 0.002 }]);
+    }
+    return out;
   }
   /* Abstand zur Wasserkante (negativ im Wasser), Wasserspiegel und halbe Breite am nächsten Wasser (lokal).
      Strecken einmal vorbereitet (mit Umriss), weit entfernte werden übersprungen. */
@@ -2125,89 +2105,117 @@ const FWM = (() => {
     }
     return b;
   }
-  /* v220: Bergbach (Shader uWater 7). Die Vertexfarbe trägt Koordinaten: r = Weg entlang der Strömung (stetig über
-     alle Abschnitte), g = quer (±1 an der Wasserkante, darüber hinaus unter dem Ufer), b = Strömung (0,25 ruhiges
-     Becken … 1 schneller Lauf, > 1 Verwirbelung am Fuß einer Kaskade). Farbe, Tiefe, Fließen macht der Shader. */
-  function springRun() {
-    const b = new MB(), SS = srSamples(), EXT = 0.24, U = [-1, -0.72, -0.42, -0.16, 0.16, 0.42, 0.72, 1];
-    let s0 = 0;
+  /* v297: Eine gemeinsame Stützpunktfolge für Bach, Kaskaden und Hauptfall. Getrennte
+     Zeichenknoten teilen ihre Anschlusszeilen (Position, Normale und Strömungsphase) exakt.
+     So gibt es keine überlappenden Glasflächen und keine verschieden breiten Schnittkanten. */
+  let SR_SURFACE = null;
+  const WATER_U = [-1, -0.72, -0.42, -0.16, 0, 0.16, 0.42, 0.72, 1];
+  function springWaterProfile() {
+    if (SR_SURFACE) return SR_SURFACE;
+    const SS = srSamples(), rows = [], feet = [];
+    const put = (q, kind) => rows.push({ ...q, kind });
     SS.forEach((S, ri) => {
       const L = S[S.length - 1].s, last = ri === SS.length - 1;
-      const speed = q => 0.25 + 0.65 * sst(0.62, 0.3, q.hw) + (last ? 0.25 * sst(L - 0.5, L + 0.1, q.s) : 0.35 * sst(L - 0.8, L, q.s)) + (ri ? 0.95 * sst(0.95, 0.05, q.s) * sst(-0.25, 0.08, q.s) : 0.4 * sst(0.7, 0, q.s));
-      /* nach hinten verlängert: an der Quelle unter den Findling, am Fuß einer Kaskade nur ein Stück unter den Fall */
-      const f = S[0], e = ri ? 0.16 : f.hw + EXT, all = [{ ...f, x: f.x - f.tx * e, z: f.z - f.tz * e, s: -e }, { ...f, x: f.x - f.tx * e * 0.5, z: f.z - f.tz * e * 0.5, s: -e * 0.5 }].concat(S);
-      /* ein Stück in die Rinne – folgt deren Gefälle knapp unter dem Fall, der darüber einblendet (keine Kante) */
-      if (last) { const q = S[S.length - 1], F = SPRING_FALL, x0 = F.top[0] - F.rinne;
-        [0.15, 0.3, 0.45, 0.6].forEach(e => { const x = q.x + q.tx * e, k = Math.max(0, Math.min(1, (x - x0) / F.rinne)); all.push({ ...q, x, z: q.z + q.tz * e, s: q.s + e, y: F.top[1] + 0.1 * (1 - k) * (1 - k) + 0.013, hw: q.hw - 0.5 * e }); }); }   /* schmaler: bleibt in der Rinne */
-      const sec = all.map(q => { const Wd = q.hw + EXT, sp = speed(q), px = -q.tz, pz = q.tx; return U.map(u => ({ p: [q.x + px * u * Wd, q.y + 0.002, q.z + pz * u * Wd], c: [s0 + q.s, u * Wd / q.hw, sp] })); });
-      for (let i = 1; i < sec.length; i++) for (let j = 1; j < U.length; j++) {
-        const A = sec[i - 1][j - 1], B = sec[i][j - 1], C2 = sec[i][j], D = sec[i - 1][j];
-        triUp(b, A.p, B.p, C2.p, A.c, B.c, C2.c); triUp(b, A.p, C2.p, D.p, A.c, C2.c, D.c);
+      const speed = q => 0.25 + 0.65 * sst(0.62, 0.3, q.hw)
+        + (last ? 0.25 * sst(L - 0.5, L + 0.1, q.s) : 0.35 * sst(L - 0.8, L, q.s))
+        + (ri ? 0.95 * sst(0.95, 0.05, q.s) * sst(-0.25, 0.08, q.s) : 0.4 * sst(0.7, 0, q.s));
+      const samples = S.map(q => ({ ...q, y: q.y + 0.002, sp: speed(q) })), f = samples[0];
+      if (!ri) {
+        const e = f.hw + 0.24;
+        put({ ...f, x: f.x - f.tx * e, z: f.z - f.tz * e }, "run");
+        put({ ...f, x: f.x - f.tx * e * 0.5, z: f.z - f.tz * e * 0.5 }, "run");
+        put(f, "run");
+      } else {
+        const A = rows[rows.length - 1], B = f, length = Math.hypot(B.x - A.x, B.z - A.z);
+        const H = (a, b, m, n, t) => (2*t*t*t-3*t*t+1)*a + (t*t*t-2*t*t+t)*m + (-2*t*t*t+3*t*t)*b + (t*t*t-t*t)*n;
+        for (let i = 1; i <= 24; i++) {
+          const t = i / 24, h = t*t*(3-2*t), waist = Math.sin(Math.PI*t);
+          put({ x: H(A.x,B.x,A.tx*length*0.7,B.tx*length*0.7,t), z: H(A.z,B.z,A.tz*length*0.7,B.tz*length*0.7,t),
+            y: A.y + (B.y-A.y)*h, hw: A.hw + (B.hw-A.hw)*h - Math.min(A.hw,B.hw)*0.08*waist*waist,
+            sp: A.sp + (B.sp-A.sp)*h + 0.75*waist }, "cascade");
+        }
+        const q = rows[rows.length - 1];
+        /* Die erste Bachzeile gehört zugleich zum Kaskadenfuß. */
+        Object.assign(q, B, { kind: "cascade" });
+        feet.push([B.x, B.y - 0.002, B.z, A.x, A.y - 0.002, A.z]);
       }
-      s0 += L + 1.2;
+      samples.slice(1).forEach(q => put(q, "run"));
     });
-    return b;
-  }
-  /* zwei kleine Kaskaden (Shader 6, wie der große Fall): kurzer Anlauf, runde Kante, Wurfbogen in das nächste Becken */
-  function srCasc() { const S = srSamples(), out = []; for (let i = 0; i + 1 < S.length; i++) { const a = S[i][S[i].length - 1], c = S[i + 1][0]; out.push([[a.x, a.z, a.y, a.hw], [c.x, c.z, c.y, c.hw]]); } return out; }
-  function springCascades() {
-    const b = new MB();
-    srCasc().forEach(([L, F]) => {
-      const dx = F[0] - L[0], dz = F[1] - L[1], l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, px = -uz, pz = ux, dy = L[2] - F[2];
-      const NA = 18, NW = 6, A0 = 0.2, V = [];
-      for (let i = 0; i <= NA; i++) {
-        const a = i / NA, row = [];
-        let cx, cy, cz, w;
-        if (a <= A0) { const k = a / A0; cx = L[0] - ux * 0.45 * (1 - k); cz = L[1] - uz * 0.45 * (1 - k); cy = L[2] + 0.012; w = L[3] * 0.95; }
-        else { const t = (a - A0) / (1 - A0), f = 1 - Math.pow(1 - t, 2.6); cx = L[0] + dx * f; cz = L[1] + dz * f; cy = L[2] + 0.012 - (dy + 0.1) * Math.pow(t, 1.5) + 0.05 * Math.max(0, 1 - t * 6); w = L[3] * (0.9 + 0.3 * t); }   /* v220: über die Kante vor, dann steil hinab */
-        const wl = 1 + 0.09 * Math.sin(a * 9 + L[0]) + 0.05 * Math.sin(a * 21 + 1.7), wr = 1 + 0.08 * Math.sin(a * 11 + L[1] * 3) + 0.05 * Math.sin(a * 17 + 0.4);   /* unregelmäßige Ränder */
-        for (let j = 0; j <= NW; j++) { const u = j / NW - 0.5, back = Math.pow(Math.abs(u) * 2, 3) * 0.05; row.push({ p: [cx + px * u * 2 * w * (u < 0 ? wl : wr) - ux * back, cy, cz + pz * u * 2 * w * (u < 0 ? wl : wr) - uz * back], c: [a, j / NW, 1] }); }
-        V.push(row);
-      }
-      for (let i = 0; i < NA; i++) for (let j = 0; j < NW; j++) {
-        const A = V[i][j], B = V[i][j + 1], C2 = V[i + 1][j + 1], D = V[i + 1][j];
-        [[A, B, C2], [A, C2, D]].forEach(([x, y, z]) => { b.triV(x.p, y.p, z.p, x.c, y.c, z.c); b.triV(x.p, z.p, y.p, x.c, z.c, y.c); });
-      }
-    });
-    return b;
-  }
-  /* Schaum (Shader 6, b = 0) an den Füßen der Kaskaden und sprudelnd am Quellaustritt */
-  function springRunFoam() {
-    const b = new MB();
-    const disc = (cx, cz, y, R, NR, NA) => {
-      for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
-        const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
-        const Q = (r, an) => [cx + Math.cos(an) * r * R, y, cz + Math.sin(an) * r * R], c = (r, an) => [r, an / (Math.PI * 2), 0];
-        triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
-        if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
-      }
-    };
-    srCasc().forEach(([L, F]) => { const l = Math.hypot(F[0] - L[0], F[1] - L[1]); disc(F[0] + (F[0] - L[0]) / l * 0.06, F[1] + (F[1] - L[1]) / l * 0.06, F[2] + 0.009, Math.min(0.36, F[3] - 0.06), 6, 24); });
-    { const s = srSrc(); disc(s[0], s[1], srReaches()[0][0][2] + 0.009, 0.32, 5, 20); }
-    return b;
-  }
-  /* Lage der Kaskadenfüße und des Quellaustritts (lokal) für Gischt und Blubbern in worldview.js */
-  function springRunInfo() { return { feet: srCasc().map(([L, F]) => [F[0], F[2], F[1], L[0], L[2], L[1]]), src: (() => { const s = srSrc(); return [s[0], srReaches()[0][0][2], s[1]]; })() }; }
-  /* v193: Schaumteppich mit Wellenringen am Fuß (Shader uWater 6, b = 0: r = Abstand 0…1, g = Winkel 0…1).
-     Nach vorn (in den Topf) weit, nach hinten zum Fels kurz. */
-  function springFoam() {
-    const b = new MB(), I = springImpact(), cx = I.x + 0.04, cz = I.z, NR = 10, NA = 36, y = I.foamY;
-    /* v296: Kern direkt unter der Wasserbahn; längerer Auslauf zum See, kurz zur Felswand. */
-    const rad = an => { const c = Math.cos(an); return (c >= 0 ? 1.45 : 1.45 + c * 0.8) * (1 + 0.07 * Math.sin(an * 3 + 0.8) + 0.04 * Math.sin(an * 7)); };
-    for (let i = 0; i < NR; i++) for (let k = 0; k < NA; k++) {
-      const r0 = i / NR, r1 = (i + 1) / NR, a0 = k / NA * Math.PI * 2, a1 = (k + 1) / NA * Math.PI * 2;
-      const Q = (r, an) => [cx + Math.cos(an) * r * rad(an), y, cz + Math.sin(an) * r * 0.9];
-      const c = (r, an) => [r, an / (Math.PI * 2), 0];
-      triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
-      if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
+    const last = rows[rows.length - 1], sp = last.sp;
+    for (let i = 0; i <= 50; i++) {
+      const a = i/50, p = springFallPath(a);
+      put({ x:p[0], y:p[1], z:p[3], hw:p[2]/2, sp, a }, i ? "fall" : "run");
     }
-    /* v210: kleine Schaumflecken, wo die Nebenstränge ins Wasser fallen */
-    SPRING_FALL.strands.forEach(([, , W]) => { for (let i = 0; i < 4; i++) for (let k = 0; k < 20; k++) {
-      const r0 = i / 4, r1 = (i + 1) / 4, a0 = k / 20 * Math.PI * 2, a1 = (k + 1) / 20 * Math.PI * 2, R = 0.3;
-      const Q = (r, an) => [W[0] + 0.08 + Math.cos(an) * r * R, y + 0.001, W[2] + Math.sin(an) * r * R], c = (r, an) => [r, an / (Math.PI * 2), 0];
-      triUp(b, Q(r0, a0), Q(r1, a0), Q(r1, a1), c(r0, a0), c(r1, a0), c(r1, a1));
-      if (i) triUp(b, Q(r0, a0), Q(r1, a1), Q(r0, a1), c(r0, a0), c(r1, a1), c(r0, a1));
-    } });
+    let flow = 0;
+    rows.forEach((q, i) => {
+      const prev = rows[Math.max(0,i-1)], next = rows[Math.min(rows.length-1,i+1)];
+      if (i) flow += Math.hypot(q.x-prev.x,q.y-prev.y,q.z-prev.z)/(0.6+(q.sp+prev.sp)*0.5);
+      q.flow = flow;
+      const dx=next.x-prev.x, dz=next.z-prev.z, len=Math.hypot(dx,dz)||1, dy=(next.y-prev.y)/len, nl=Math.hypot(dy,1);
+      q.tx=dx/len; q.tz=dz/len; q.n=[-dy*q.tx/nl,1/nl,-dy*q.tz/nl];
+    });
+    SR_SURFACE = { rows, feet };
+    return SR_SURFACE;
+  }
+  function springWaterMesh(kind) {
+    const b=new MB(), rows=springWaterProfile().rows;
+    const section=q => {
+      /* Unter dem Ufer 24 cm Zugabe; beim freien Fall geht sie weich auf null zurück. */
+      const free=q.a == null ? 0 : sst(0.24,0.48,q.a), ext=0.24*(1-free), width=q.hw+ext;
+      return WATER_U.map(u => {
+        const w=u*width/q.hw, edge=1+free*0.025*Math.sin((q.a||0)*19+u*3);
+        return { p:[q.x-q.tz*u*width*edge,q.y,q.z+q.tx*u*width*edge], n:q.n,
+          c:kind === "fall" ? [q.a,(w+1)/2,1] : [q.flow,w,q.sp] };
+      });
+    };
+    const tri=(a,c,d,reverse) => {
+      const winding=(c.p[2]-a.p[2])*(d.p[0]-a.p[0])-(c.p[0]-a.p[0])*(d.p[2]-a.p[2]);
+      if((winding<0)!==!!reverse) [c,d]=[d,c];
+      const offset=b.v.length;
+      b.triV(a.p,c.p,d.p,a.c,c.c,d.c);
+      [a,c,d].forEach((v,j) => { for(let k=0;k<3;k++) b.v[offset+j*9+3+k]=v.n[k]*(reverse?-1:1); });
+    };
+    for(let i=1;i<rows.length;i++) {
+      if(rows[i].kind !== kind) continue;
+      const A=section(rows[i-1]), B=section(rows[i]);
+      for(let j=1;j<WATER_U.length;j++) {
+        tri(A[j-1],B[j],B[j-1]); tri(A[j-1],A[j],B[j]);
+        if(kind === "fall") { tri(A[j-1],B[j-1],B[j],true); tri(A[j-1],B[j],A[j],true); }
+      }
+    }
+    return b;
+  }
+  function springRun() { return springWaterMesh("run"); }
+  function springCascades() { return springWaterMesh("cascade"); }
+
+  /* v297: Flacher, quer zur Fallbreite verteilter Schaum statt eines hellen Mittelpunktes.
+     Vertexfarbe: r = Strecke stromabwärts, g = quer zur Strömung, b = -1. */
+  function impactPatch(b, x, y, z, width, length, dx, dz) {
+    const N=14,M=12;
+    const Q=(i,j) => {
+      const u=-0.35+2.15*i/N, w=-1.35+2.7*j/M;
+      return { p:[x+dx*u*length-dz*w*width,y,z+dz*u*length+dx*w*width], c:[u,w,-1] };
+    };
+    for(let i=0;i<N;i++) for(let j=0;j<M;j++) {
+      const A=Q(i,j),B=Q(i+1,j),C=Q(i+1,j+1),D=Q(i,j+1);
+      triUp(b,A.p,B.p,C.p,A.c,B.c,C.c);triUp(b,A.p,C.p,D.p,A.c,C.c,D.c);
+    }
+  }
+  function springRunFoam() {
+    const b=new MB();
+    springWaterProfile().feet.forEach(([x,y,z,lx,,lz]) => {
+      const d=Math.hypot(x-lx,z-lz)||1;
+      impactPatch(b,x,y+0.009,z,0.32,0.36,(x-lx)/d,(z-lz)/d);
+    });
+    return b;
+  }
+  function springRunInfo() {
+    const s=srSrc();
+    return { feet:springWaterProfile().feet, src:[s[0],srReaches()[0][0][2],s[1]] };
+  }
+  function springFoam() {
+    const b=new MB(), I=springImpact();
+    impactPatch(b,I.x,I.foamY,I.z,I.w*0.55,1.05,1,0);
     return b;
   }
 
@@ -4824,7 +4832,7 @@ const FWM = (() => {
     _wk: { lumber: o => lumber(new MB(), o), logPiece: o => logPiece(new MB(), o), splitPiece: o => splitPiece(new MB(), o), WOOD_IDS: ["birke", "kiefer", "buche", "eiche", "edelholz", "aeste", "reste", "brennholz", "kaminholz", "pfosten", "bretter", "balken", "platten", "kisten", "paletten", "dielen", "bauholz", "bohlen", "moebel", "tueren", "zaun", "schatulle"] },
     traderCart, solarVan, item, tool, cargo,
     TREE_C, TH, TREE_H, tree, treeRv, leafClump, bgTree, stump, sapling, fallen, logPile, fern, mushrooms, deadLog, boulder, bush, BUSH_ORDER, grassTuft, bgPine, bgLeaf, bgBirch, hofGround, hofPath, hofFence,
-    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFallPath, springImpact, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springRim, setSpringFrame, springFlora, springHeightW, springWater: (X, Z) => { const l = toL(X, Z), w = srcWater(l[0], l[1]), k = sfr().k; return [w[0] * k, w[1] * k, w[2] * k]; }, springMtn: mtnW, springSamples: () => srSamples().map(R => R.map(q => { const w = toW(q.x, q.z); return { X: w[0], Z: w[1], y: q.y * sfr().k, hw: q.hw * sfr().k, s: q.s }; })), springPlateau: () => srPlateau().P, springBox: () => srBox(), SRUN, MTN, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
+    terrain, ribbon, smoothLine, forestPath, YARD_COL, wayRaw, wayStraightAt, fillet, creekBank, creekWater, springBed, springPool, springRocks, springFall, springFallPath, springFallJoin, springImpact, springFoam, springBasin, springHill, springRun, springCascades, springRunFoam, springRunInfo, springRim, setSpringFrame, springFlora, springHeightW, springWater: (X, Z) => { const l = toL(X, Z), w = srcWater(l[0], l[1]), k = sfr().k; return [w[0] * k, w[1] * k, w[2] * k]; }, springMtn: mtnW, springSamples: () => srSamples().map(R => R.map(q => { const w = toW(q.x, q.z); return { X: w[0], Z: w[1], y: q.y * sfr().k, hw: q.hw * sfr().k, s: q.s }; })), springPlateau: () => srPlateau().P, springBox: () => srBox(), SRUN, MTN, springBank, springPool2, springInfo, SPRING_FALL, SPR, bridge, pier, lootCrate, lootLid, goldChest, goldLid, lootBeam, lootRing, barrier,
     lakeShore, lakeWater, lakeFoam, lakeReeds, setLakeDents, reedPatch, lilyPads,
     PIER_DIM, sawHall, SAW_BLADE, sawBlades, sawLager, sawBuero, sawLkw, holzTruck, palletLoad, decoWeg, kessel, KESSEL_CHIMNEY, machine, saegebock, yard,
     junk, stall, stallGoods, tractor, trailer, machineHall, stoneWall, stoneGate,

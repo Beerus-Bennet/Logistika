@@ -1,5 +1,19 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v297 – Wasseranschlüsse und Aufprall auf main 49c5f99 / v296
+
+Diese Lieferung ersetzt v296 für den Wasserfall und enthält ausschließlich die gegenüber aktuellem main geänderten Dateien. Die jüngsten Menü-, Schatz- und Wegfindungskorrekturen bleiben erhalten.
+
+- `woodmodels.js`: `springWaterProfile`/`springWaterMesh` verbinden Bach, Kaskaden und Rinne; `srLinks` führt das Bachbett entsprechend. `springFallJoin` neu im FWM-Export. `springFallPath` mit stetiger Rinne und Fallkurve. `impactPatch` statt radialer Schaumkreise; `SPRING_FALL.strands` ist leer. Alle Modelle und das Gelände zusammen übernehmen.
+- `gl3d.js`: gemeinsames `streamWaterAt` für Bach und kleine Fälle sowie den Übergang zum Hauptfall. Für den Hauptfall trägt `uFlow` nun `[Bachphase, Turbulenz am Anschluss, Rinnenmaßstab, Seehöhe]`, geliefert von `FWM.springFallJoin()`. Die Phase im freien Fall bleibt unabhängig davon fest talwärts. Der Shader für Aufprallschaum erwartet kartesische Koordinaten mit `b=-1`.
+- `worldview.js`: kleine Kaskaden mit `water:7` und alpha 1; Hauptfall weiter `water:6`, dessen `flow` aus `springFallJoin` kommt. Keine seitlichen Stränge oder Spritzer. Neue Modelle, Shader und Szenenmontage deshalb gemeinsam austauschen.
+- `index.html` / `sw.js`: v297 nur für die drei geänderten Spielskripte; `style.css?v=293` und `team.js?v=295` erhalten.
+- `water-seams-v297.test.js` neu; bestehende `waterflow-v296.test.js` und `waterfall-v289.test.js` an die entfernten Seitenfälle und das gemeinsame Modell angepasst. Alle direkt im Projektordner mit Node ausführen.
+- Dokumentation in `AENDERUNGEN.md` und dieser Datei. Kein neuer Spielstand und keine Migration nötig.
+
+Prüfungen: 72 gemeinsame Kaskadenpunkte, neun Hauptfall-Anschlüsse, 576 Bachbettprüfungen; acht GLSL-Shader kompiliert, 3D-Nahansichten/Sequenzen und GPU-Fließrichtung bis zwei Stunden kontrolliert. Kein Live-iPhone-/Safari-Test.
+
+
 ## v296 – Wasserfallkorrektur auf main 75af8fa / v295
 
 Diese ZIP ersetzt die bisherige Wasserfall-ZIP v294. Sie enthält ausschließlich neun gegenüber aktuellem main geänderte Dateien. `index.html` und `sw.js` erhalten Claudes aktuelle Verweise `style.css?v=293` und `team.js?v=295`.

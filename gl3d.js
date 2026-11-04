@@ -392,22 +392,23 @@ const G3 = (() => {
   }
   /* v193: fallendes Wasser (uWater 6). Die Vertexfarbe trägt hier keine Farbe, sondern Koordinaten:
      Wasserfall (b = 1): r = Weg entlang der Strömung (0 Rinne oben … 1 Aufprall), g = quer (0…1);
-     Schaumteppich (b = 0): r = Abstand zur Mitte (0…1), g = Winkel (0…1).
-     uFlow = (Länge, Tempo, Querdichte, –). Ergebnis: Farbe und Deckkraft. */
+     v297: Aufprallschaum (b = -1): r = stromabwärts, g = quer zur Fallbreite.
+     uFlow = (Bachphase am Anschluss, Turbulenz, Rinnenmaßstab, Seehöhe). */
   float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
   /* v296: Feste Laufzeitkoordinate, unten enger = schneller. Zeit darf nicht mit a multipliziert
      werden: sonst kippt das Ortsgefälle nach einigen Sekunden und das Wasser läuft rückwärts. */
   float fallTravel(float a){ return (a - 0.3 * a * a) / 0.7; }
+  vec4 streamWaterAt(vec3 coords, vec3 amb, float sh);
   vec4 fallWater(vec3 amb, float sh){
     float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11));        /* nur die Helligkeit der Sonne – Wasser bleibt blau-weiß, auch morgens */
     float Lw = max(Ls, 0.27);                                          /* v210: nachts bleibt das Wasser heller als der Fels (Mondlicht auf Schaum) */
     if (vCol.b > 0.5) {
       float a = vCol.r, w = vCol.g;
-      float travel = fallTravel(a) * uFlow.x, phase = t * uFlow.y;
+      float travel = fallTravel(a) * 6.0, phase = t * 4.2;
       float v = travel - phase;
-      float sx = w * uFlow.z;
+      float sx = w * 5.5;
       float s1 = vnoise(vec2(sx * 2.0, v * 0.35)), s2 = vnoise(vec2(sx * 4.5 + 3.1, v * 0.8)), s3 = vnoise(vec2(sx * 9.0 + 7.7, v * 1.9));
       /* v296: Zweite Schicht feiner heller Fäden und langsam ziehende dichtere Bereiche. */
       float v2 = travel * 1.6 - phase * 1.4, v3 = travel * 0.45 - phase * 0.35;
@@ -423,42 +424,47 @@ const G3 = (() => {
       vec3 deep = vec3(0.13, 0.42, 0.58), mid = vec3(0.42, 0.73, 0.86), wht = vec3(0.92, 0.97, 1.0);
       vec3 c = mix(deep, mid, 0.22 + 0.6 * strands * fall + 0.15 * (1.0 - fall));
       c = mix(c, deep * 0.85, (1.0 - s5) * 0.3 * fall);                                  /* dunklere, dichtere Bahnen – Tiefe */
-      c = mix(c, wht, clamp(foam * (0.5 + 0.45 * s2) + (1.0 - edge) * 0.5 * fall + strands * s3 * 0.33 * fall + fine * 0.38 * fall, 0.0, 1.0));
+      c = mix(c, wht, clamp(foam * (0.5 + 0.45 * s2) + (1.0 - edge) * 0.5 * fall + strands * s3 * 0.33 * fall + fine * 0.25 * fall, 0.0, 1.0));
       c *= amb * 0.45 + vec3(Lw) * (0.7 + 0.2 * sh);
       c += (strands * 0.12 + fine * 0.08) * fall * Lw;                   /* Glanz auf den Strängen */
       /* v296: Zusammenhängender Wasserkern bis zum Aufprall, feine Zwischenräume bleiben sichtbar. */
-      float al = edge * mix(0.86, 0.46 + 0.46 * max(max(strands, fine), foam), fall);
-      al *= mix(1.0, 0.65 + 0.35 * ribbons, fall);
-      al *= smoothstep(0.0, max(0.05, uFlow.w), a);                      /* weich aus der Felsspalte; v220: Kaskaden blenden länger aus dem Bach ein (uFlow.w) */
-      return vec4(c, al);
+      float al = edge * mix(0.92, 0.60 + 0.32 * max(max(strands, fine), foam), fall);
+      al *= mix(1.0, 0.78 + 0.22 * ribbons, fall);
+      /* v297: Kein gerader Vorhangsaum auf dem See. Die untersten Zentimeter zerfallen
+         unregelmäßig in Schaum und Tropfen; die Fläche reicht unter den Wasserspiegel. */
+      float contact = 1.0 - smoothstep(0.015, 0.32, vW.y - uFlow.w);
+      al *= 1.0 - contact * (0.58 + 0.32 * s3);
+      if (a >= 0.40) return vec4(c, al);
+      vec4 river = streamWaterAt(vec3(uFlow.x + a * uFlow.z, w * 2.0 - 1.0, uFlow.y), amb, sh);
+      return mix(river, vec4(c, al), smoothstep(0.10, 0.40, a));
     }
-    /* Schaum und Wellenringe am Fuß: innen dichter, pulsierender Schaum, außen auslaufende Ringe.
-       v210: Ringe nicht mehr kreisrund – Radius und Stärke schwanken mit der Richtung, jeder Ring etwas anders schnell */
-    float r = vCol.r, an = vCol.g * 6.2832;
-    vec2 dir = vec2(cos(an), sin(an)), q = dir * r;
-    /* v296: Heller, kompakter Aufprallkern; Schaum zieht von dort in Fließrichtung (+x) weg. */
-    float n1 = vnoise(vec2(q.x * 5.0 - t * 0.9, q.y * 5.0)), n2 = vnoise(vec2(q.x * 11.0 - t * 1.6, q.y * 11.0));
-    float core = 1.0 - smoothstep(0.12, 0.4, r + (n1 - 0.5) * 0.08);
-    float foam = core * (0.7 + 0.3 * n2);
-    float wake = (1.0 - smoothstep(0.28, 0.85, r)) * smoothstep(-0.12, 0.35, q.x) * smoothstep(0.4, 0.75, n1 * 0.4 + n2 * 0.6);
-    float ring = 0.0;
-    for (int k = 0; k < 2; k++) {
-      float fk = float(k), ph = fract(t * (0.26 + 0.04 * fk) + fk / 2.0), rr = 0.25 + ph * 0.8;
-      float wob = (vnoise(dir * 1.7 + vec2(fk * 3.1, fk * 1.7 + floor(t * (0.26 + 0.04 * fk) + fk / 2.0) * 2.3)) - 0.5) * 0.18 * (0.4 + ph);
-      float str = 0.55 + 0.45 * vnoise(dir * 2.3 + vec2(fk * 5.0, 0.0));
-      ring += (1.0 - smoothstep(0.0, 0.045, abs(r - rr - wob))) * (1.0 - ph) * (1.0 - ph) * str;
-    }
-    float al = clamp(foam * 0.88 + wake * 0.32 + ring * 0.28, 0.0, 0.94) * (1.0 - smoothstep(0.8, 1.0, r));
-    vec3 c = mix(vec3(0.62, 0.82, 0.9), vec3(0.95, 0.98, 1.0), clamp(foam * 1.3, 0.0, 1.0)) * (amb * 0.4 + vec3(Lw) * (0.7 + 0.2 * sh));
+    /* v297: Flacher Schaum quer über die Auftreffbreite. Viele unregelmäßige Flocken,
+       ein auslaufender Strömungsschweif und schwache Druckwellen statt Lichtfleck/Kreis. */
+    float x = vCol.r, w = vCol.g;
+    vec2 warp = vec2(sin(w * 3.2 + x * 1.1), sin(x * 4.0 - w * 1.7)) * 0.55;
+    float n1 = vnoise(vec2(x * 6.0 - t * 1.05, w * 5.0) + warp);
+    float n2 = vnoise(vec2(x * 15.0 - t * 2.2, w * 11.0 + 3.7) + warp * 1.4);
+    float across = 1.0 - smoothstep(0.65, 1.15, abs(w) + (n1 - 0.5) * 0.14);
+    float core = (1.0 - smoothstep(0.04, 0.30, abs(x) + (n1 - 0.5) * 0.06)) * across;
+    float wake = smoothstep(-0.1, 0.15, x) * (1.0 - smoothstep(0.45, 1.55, x))
+               * (1.0 - smoothstep(0.5 + max(x,0.0) * 0.12, 1.1 + max(x,0.0) * 0.12, abs(w)));
+    float lace = smoothstep(0.43, 0.76, n1 * 0.4 + n2 * 0.6);
+    float pressure = (1.0 - smoothstep(0.035, 0.1, abs(sin(x * 14.0 - t * 3.5 + w * 0.8 + n1)))) * wake;
+    float edge = smoothstep(-0.35, -0.2, x) * (1.0 - smoothstep(1.45, 1.8, x))
+               * (1.0 - smoothstep(1.05, 1.35, abs(w)));
+    float al = clamp(core * (0.48 + n2 * 0.3) + wake * lace * 0.42 + pressure * 0.07, 0.0, 0.85) * edge;
+    vec3 c = mix(vec3(0.56,0.78,0.84), vec3(0.9,0.96,0.98), core * 0.65 + n2 * 0.3)
+           * (amb * 0.45 + vec3(Lw) * (0.58 + 0.18 * sh));
     return vec4(c, al);
   }
+
   /* v220: Bergbach (uWater 7). Vertexfarbe = Koordinaten: r = Weg entlang der Strömung, g = quer (±1 an der
      Wasserkante), b = Strömung (0,25 ruhiges Becken … 1 schneller Lauf, > 1 Verwirbelung unter einer Kaskade).
      Mitte tief und dunkel, zum Ufer flacher und heller; Streifen und feine Lichtlinien ziehen mit der Strömung
      bachabwärts; in Becken zurückhaltend, vor der Kante stärker, unter den Kaskaden weißes, wanderndes Gekräusel. */
-  vec4 streamWater(vec3 amb, float sh){
+  vec4 streamWaterAt(vec3 coords, vec3 amb, float sh){
     float t = uTime, Ls = dot(uSunCol, vec3(0.3, 0.59, 0.11)), Lw = max(Ls, 0.3);
-    float s = vCol.r, w = vCol.g, sp = vCol.b, aw = abs(w), spc = min(sp, 1.2);
+    float s = coords.r, w = coords.g, sp = coords.b, aw = abs(w), spc = min(sp, 1.2);
     /* v296: Auch im Bergbach keine ortsabhängige Zeitphase. sp steuert die Turbulenz,
        während alle mitgeführten Muster dauerhaft zum nächsten Fall wandern. */
     float v = s * 1.5 - t * 0.95;
@@ -473,17 +479,22 @@ const G3 = (() => {
     /* Wellennormale (alle Richtungen, klein) für Himmel und Glitzern */
     vec2 p = vW.xz;
     vec2 g = wavG(p * 1.6, 1.0, t * 1.3) * (0.5 + 0.6 * spc);
-    vec3 nn = normalize(vec3(-g.x, 1.0, -g.y));
+    /* v297: Bach und kleine Fälle benutzen dasselbe Material. Die Spiegelung neigt
+       sich mit der geglätteten Oberfläche; keine waagerechte See-Spiegelung auf der Fallwand. */
+    vec3 surface = normalize(vNor);
+    float steep = smoothstep(0.06, 0.65, 1.0 - abs(surface.y));
+    vec3 nn = normalize(mix(vec3(-g.x, 1.0, -g.y), surface + vec3(g.x * 0.3, 0.0, g.y * 0.3), steep));
     vec3 vv = normalize(uCam - vW), hh = normalize(uSunDir + vv);
     vec3 col = c * (amb * 0.95 + uSunCol * 0.5 * sh);
     float fr = 0.1 + 0.5 * pow(1.0 - max(dot(nn, vv), 0.0), 4.0);
     col = mix(col, uSky * 1.2 + vec3(0.05, 0.07, 0.09), fr);
     vec3 lit = amb * 0.45 + vec3(Lw) * (0.62 + 0.2 * sh);
     col = mix(col, vec3(0.66, 0.84, 0.88) * lit, streak * 0.38 + fine * 0.3);
-    col = mix(col, vec3(0.92, 0.96, 1.0) * lit, clamp(foam * 0.8, 0.0, 0.7));
+    col = mix(col, vec3(0.92, 0.96, 1.0) * lit, clamp(foam * 0.6 + steep * (0.12 + fine * 0.3), 0.0, 0.6));
     col += pow(max(dot(nn, hh), 0.0), 140.0) * 1.3 * sh * uSunCol * (0.4 + 0.6 * spc);
     return vec4(col, 1.0);
   }
+  vec4 streamWater(vec3 amb, float sh){ return streamWaterAt(vCol, amb, sh); }
   void main(){
     vec3 n = normalize(vNor);
     bool fallW = uWater > 5.5 && uWater < 6.5, strW = uWater > 6.5;   /* v220: 7 = Bergbach */

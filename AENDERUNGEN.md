@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v297 – Stetige Wasserübergänge, natürlicherer See-Aufprall, keine Seitenfälle
+**Basis:** GitHub main `49c5f99` (v296), während der Umsetzung wiederholt abgeglichen. Alle bisherigen Änderungen einschließlich Claudes Schatz- und Wegfindungskorrekturen bleiben enthalten.
+
+**Ursache:** Bach und kleine Wasserfälle waren unabhängig konstruierte, überlappende Streifen mit unterschiedlichen Breiten, Kantenhöhen, Normalen und Materialien (Bach undurchsichtig, Fälle als durchsichtige Glasschicht). Das erzeugte die harten Schnittlinien in Screenshot 1/2. Das Bachbett folgte außerdem einer abweichenden Fallkurve. Am Hauptfall betonten ein punktförmiger Schaumkern, große Spritzer und Nebel den Eindruck eines Lichtflecks statt eines Wasseraufpralls.
+
+**Lösung:**
+- `woodmodels.js`: gemeinsame Stützpunktfolge für Bach, vier Bergkaskaden, Rinne und Hauptfall. Alle kleinen Fälle teilen oben und unten exakt dieselben Randpunkte, Normalen und Fließkoordinaten mit dem Bach. Gekrümmte Verbindungen mit auslaufendem Gefälle statt ineinandergesteckter Flächen. Das eingeschnittene Bachbett folgt denselben Verbindungen.
+- `gl3d.js` / `worldview.js`: kleine Fälle benutzen jetzt dasselbe undurchsichtige Wassermaterial wie der Bach. Spiegelung und Turbulenz neigen sich mit der Oberfläche. Am Hauptfall blendet das Bachmaterial über die gemeinsame Rinne in das Fallmaterial über; die Shaderfarben sind direkt am Anschluss identisch. Die Fließphase bleibt zeitlich stabil talwärts, auch bei örtlich wechselndem Tempo.
+- Hauptfall mit dichterem Wasserkern und einem unregelmäßig zerfallenden Saum über der Seeoberfläche. Kompakter, flacher Aufprallschaum über die Fallbreite mit unregelmäßigen Flocken, schwachen Druckwellen und stromabwärts auslaufendem Schaum. Kein zentraler Nebelball und kein runder Leuchtring. Der Quelltopf verwendet die ruhigere Seerichtung statt der Flussrichtung.
+- Beide abstehenden Seitenfälle vollständig entfernt: Geometrie, deren Schaumflecken und die zugehörigen Spritzer. Die bisherigen Felsen bleiben als natürliche Ufersteine erhalten. Hauptfallspritzer kleiner und kürzer, Nebel stark reduziert und auf Wassernähe begrenzt.
+- Wassergeometrie insgesamt von 10.140 auf 8.448 Dreiecke reduziert (rund 17 % weniger), keine zusätzlichen Wasser-Drawcalls. Hauptfall-Emissionen von 49 auf 42 pro Sekunde reduziert; alle Bergkaskaden zusammen weiterhin 17, nur in Kameranähe. Spielstände und Geschäftslogik unverändert.
+- `index.html` / `sw.js`: v297 für die drei geänderten Spielskripte. Aktuelle CSS-/Mitarbeiter-Verweise bleiben erhalten.
+
+**Geprüft:** `node water-seams-v297.test.js`: alle 72 gemeinsamen Kaskaden-Anschlusspunkte einschließlich Normalen und Fließphase, neun Hauptfall-Anschlüsse, 576 Bachbettprüfungen, sichtbare Dreiecksausrichtung, Modellbudgets, keine Seitenfälle, Aufprallschaum auf Seehöhe und über voller Fallbreite. Die an die neue Geometrie angepassten bestehenden Tests `node waterflow-v296.test.js` und `node waterfall-v289.test.js` bestehen weiterhin (Fließrichtung bis 7200 Sekunden, endliche/deterministische Modelle, Emissionen bei 30/60/120 fps, Nachtfarben, Kameradistanz). JavaScript-Syntax und Diff geprüft.
+
+**Grafikprüfung:** Acht originale GLSL-Shader unter Mesa/EGL kompiliert, Haupt- und Partikelprogramme verlinkt. Vorher-/Nachher-Nahansichten von allen vier Bergfällen, der Rinne/Fallkante, dem Hauptfall und dem Auftreffbereich in einer 3D-Prüfkulisse aus Originalmodellen und der tatsächlichen Szenenmontage gerendert (ohne verdeckende Kulissenbäume und Spiel-UI). Zusätzlich Ansichten der kleinen Fälle von oben und animierte Sequenzen geprüft. GPU-Bildvergleich: 21/21 Zeitproben für Hauptfall, Kaskaden und Bach von 0 bis 7200 Sekunden laufen talwärts. Die Shaderfarben beider Materialien am Hauptfall-Anschluss sind bei 0/15/3600/7200 Sekunden in sämtlichen Farbkanälen identisch.
+
+**Prüfgrenze:** Kein Live-3D-/iPhone-/Safari-Test. Die zuvor geöffnete Live-Seite meldete im Testbrowser fehlendes WebGL 2; die aktuelle Sichtprüfung erfolgte deshalb mit den Spielmodellen und Originalshadern in der Grafik-Prüfkulisse.
+
 ## v296 – Wasserfallkorrektur mit aktuellem GitHub-Stand zusammengeführt
 **Basis:** GitHub main `75af8fa` (v295), einschließlich Claudes Schatzbanner-Änderung v294 und Wegfindungsänderung v295. Diese Fassung ersetzt die frühere Wasserfall-ZIP v294. Aktuelles main vollständig integriert.
 

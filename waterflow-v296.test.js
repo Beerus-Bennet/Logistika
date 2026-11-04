@@ -7,15 +7,15 @@ const match = (re, s = gl) => { const m = s.match(re); assert.ok(m, 'Erwarteter 
 
 /* Tatsächliche GLSL-Koordinaten ausführen, statt die Formel im Test nachzubauen. */
 const travel = new Function('a', match(/float fallTravel\(float a\)\{([\s\S]*?)\}/));
-const phases = new Function('a', 't', 'uFlow', 'fallTravel', (
+const phases = new Function('a', 't', 'fallTravel', (
   match(/(float travel =[^;]*;\s*float v =[^;]*;)/) + '\n' + match(/(float v2 =[^;]*;)/)
 ).replace(/float /g, 'let ').replace(/uFlow\.x/g, 'uFlow[0]').replace(/uFlow\.y/g, 'uFlow[1]') + '\nreturn [v, v2, v3];');
 const stream = new Function('s', 't', 'spc', 'return ' + match(/float v = (s \*[^;]*);/));
 const streamFine = new Function('s', 't', 'spc', 'return ' + match(/n3 = vnoise\(vec2\(w \* 8\.5 \+ 1\.1, ([^;]*?)\)\);/));
-const flows = [...world.matchAll(/FWM\.(springFall|springCascades)\), Object\.assign\(\{ water: 6, flow: \[([^\]]+)\]/g)].map(m => m[2].split(',').map(Number));
-assert.equal(flows.length, 2);
-for (const f of flows) for (const t of [0, 4, 15, 60, 600, 3600, 7200]) for (const a of [0.05, 0.3, 0.6, 0.9, 0.99]) {
-  const p = phases(a, t, f, travel), dx = phases(a + 0.0001, t, f, travel), dt = phases(a, t + 0.001, f, travel);
+/* v297: Nur der Hauptfall verwendet noch das Fallmaterial. Die Kaskaden benutzen
+   mit dem Bach dasselbe Material und dieselbe durchgehende Strömungskoordinate. */
+for (const t of [0, 4, 15, 60, 600, 3600, 7200]) for (const a of [0.05, 0.3, 0.6, 0.9, 0.99]) {
+  const p = phases(a, t, travel), dx = phases(a + 0.0001, t, travel), dt = phases(a, t + 0.001, travel);
   for (let i = 0; i < p.length; i++) {
     assert.ok(dx[i] > p[i], 'Ortskoordinate bleibt aufsteigend, auch nach zwei Stunden');
     assert.ok(dt[i] < p[i], 'Muster wandert talwärts');
@@ -42,7 +42,8 @@ assert.ok(Math.abs(impact.y * FWM.SPRING_FALL.S - FWM.SPR.waterY) < 1e-12);
 assert.equal(impact.x, curve[0] + curve[4]);
 assert.ok(impact.foamY > impact.y && impact.foamY - impact.y < 0.02, 'Schaum direkt auf dem Wasser');
 const foam = FWM.springFoam().v;
-assert.ok(Math.abs(foam[0] - impact.x - 0.04) < 1e-10);
+assert.ok(foam[0] < impact.x, 'Schaumfläche beginnt hinter dem Einschlag');
+for(let i=0;i<foam.length;i+=9){assert.equal(foam[i+1],impact.foamY);assert.equal(foam[i+8],-1);}
 assert.equal(foam[1], impact.foamY);
 for (const name of ['springFall', 'springFoam', 'springRun', 'springCascades', 'springRunFoam']) {
   const a = FWM[name]().v, b = FWM[name]().v;
@@ -52,7 +53,7 @@ for (const name of ['springFall', 'springFoam', 'springRun', 'springCascades', '
 }
 
 const Istart = world.indexOf('    const I = FWM.springRunInfo();');
-const setupI = world.slice(Istart, world.indexOf('\n    /* v193:', Istart));
+const setupI = world.slice(Istart, world.indexOf('\n', world.indexOf('    WV.springRun = ', Istart)));
 const fxStart = world.indexOf('    const impact = FWM.springImpact()');
 const setupFx = world.slice(fxStart, world.indexOf('\n  }\n  worldWaterCheck', fxStart));
 const effectStart = world.indexOf('  /* v190: Gischt');
@@ -65,10 +66,10 @@ for (const fps of [30, 60, 120]) {
   for (let n = 0; n < fps * 10; n++) script.runInContext(ctx);
   const { WV, FV, emitted } = vm.runInContext('({WV,FV,emitted})', ctx), sf = WV.springFx;
   assert.equal(WV.springRun.feet.length, 4);
-  assert.equal(sf.strands.length, 4, 'Spritzer an Absätzen und Wasserfüßen beider Nebenstränge');
+  assert.equal(sf.strands.length, 0, 'Keine seitlichen Nebenfälle oder deren Spritzer');
   assert.ok(Math.abs(sf.y - FWM.SPR.waterY) < 1e-12);
   assert.ok(Math.hypot(sf.path(impact.a).x - sf.x, sf.path(impact.a).z - sf.z) < 1e-10);
-  assert.ok(emitted.length >= 655 && emitted.length <= 660, 'Gesamtrate für Hauptfall und vier Kaskaden');
+  assert.ok(emitted.length >= 585 && emitted.length <= 590, 'Gesamtrate für Hauptfall und vier Kaskaden');
   for (const p of emitted) {
     for (const f of ['x', 'y', 'z', 'vx', 'vy', 'vz', 'life', 'size', 'size2']) assert.ok(Number.isFinite(p[f]), f);
     assert.ok(p.life > 0 && p.size > 0 && p.col.every(Number.isFinite));
@@ -80,16 +81,16 @@ for (const fps of [30, 60, 120]) {
   };
   coverage(WV.springRun.feet, 0.04, 5, 35);
   coverage(WV.springRun.feet, 0.1, 4, 7.5);
-  coverage(sf.strands, 0.03, 5, 20);
+
   const lipDrops = emitted.filter(p => p.y === sf.ly);
-  assert.ok(lipDrops.length >= 69);
+  assert.ok(lipDrops.length >= 49);
   for (const p of lipDrops) {
     assert.equal(p.vy, 0, 'Tropfen starten waagerecht und fallen mit Schwerkraft');
     assert.ok(Math.abs(p.y + p.g * p.life * p.life / 2 - sf.y) < 1e-8, 'Falltropfen enden auf Seehöhe');
     assert.ok(p.vx * sf.dx + p.vz * sf.dz > 0);
   }
   const splash = emitted.filter(p => Math.abs(p.y - sf.y - 0.025) < 1e-10);
-  assert.ok(splash.length >= 259);
+  assert.ok(splash.length >= 319);
   for (const p of splash) assert.ok(p.vx * sf.dx + p.vz * sf.dz > 0, 'Aufprallspritzer laufen zum See aus');
   totals.push(emitted.length);FV.R.cam.tx = 1000;const count = emitted.length;script.runInContext(ctx);
   assert.equal(emitted.length, count, 'Keine Emission bei ferner Kamera');
@@ -99,4 +100,4 @@ for (const fps of [30, 60, 120]) {
   assert.ok(emitted.every(p => p.col[0] < 0.65), 'Nachtlicht auch ohne aktiven Hauptfall-Emitter');
 }
 assert.ok(Math.max(...totals) - Math.min(...totals) <= 5);
-console.log('OK: Shader-Fließrichtung bis 7200 s, exakter See-Aufprall, fünf Modellbudgets, vier Kaskaden und vier Nebenstrang-Kontakte bei 30/60/120 fps, Nachtfarben und Kameradistanz.');
+console.log('OK: Shader-Fließrichtung bis 7200 s, exakter See-Aufprall, fünf Modellbudgets, vier Kaskaden ohne Nebenstränge bei 30/60/120 fps, Nachtfarben und Kameradistanz.');

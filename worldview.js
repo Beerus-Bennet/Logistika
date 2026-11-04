@@ -988,7 +988,7 @@ function worldStatic() {
   const sb = new FM.MB(); sb.merge(FWM.creekWater(LCR, CL), {});
   R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
   if (SPI) {
-    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 2, shadow: false }));
+    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 3, shadow: false }));
     const ry = Math.atan2(-SPI.dir[1], SPI.dir[0]);
     /* v191: Felsen und Wasserfall 1,5-mal so groß (Topf jetzt Radius 4,5) */
     const SF = FWM.SPRING_FALL, k = SF.S;
@@ -1007,20 +1007,21 @@ function worldStatic() {
        Bäume und Sträucher darauf in einem eigenen Knoten (Weltkoordinaten). */
     R.nodes.push(fnode(R.mesh(FWM.springHill((x, z) => { const w = WF(x, z); return wGroundAt(w[0], w[1]); })), nF));
     R.nodes.push(fnode(R.mesh(FWM.springFlora()), {}));
-    R.nodes.push(fnode(fmesh("wspringrun228", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringcasc296", FWM.springCascades), Object.assign({ water: 6, flow: [3.2, 2.5, 4.0, 0.17], alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringrunfoam228", FWM.springRunFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrun297", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringcasc297", FWM.springCascades), Object.assign({ water: 7, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrunfoam297", FWM.springRunFoam), Object.assign({ water: 6, alpha: 0.38, shadow: false }, nF)));
     const I = FWM.springRunInfo();
     WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
-    /* v193: Wasserfall und Schaum im Shader (water: 6) – fließend, halbtransparent, weiche Ränder; flow = (Länge, Tempo, Querdichte) */
-    R.nodes.push(fnode(fmesh("wspringfall296", FWM.springFall), Object.assign({ water: 6, flow: [6.0, 4.2, 5.5, 0.1], alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringfoam296", FWM.springFoam), Object.assign({ water: 6, flow: [1, 1, 1, 0], alpha: 0.98, shadow: false }, nF)));
+    /* v297: Hauptfall blendet am gemeinsamen Rand aus dem Bachmaterial über. Schaum ist
+       flach über die Einschlagsbreite verteilt; die abstehenden Nebenfälle sind entfernt. */
+    R.nodes.push(fnode(fmesh("wspringfall297", FWM.springFall), Object.assign({ water: 6, flow: FWM.springFallJoin(), alpha: 0.98, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam297", FWM.springFoam), Object.assign({ water: 6, alpha: 0.92, shadow: false }, nF)));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
     const impact = FWM.springImpact(), lip = FWM.springFallPath(0.24), ft = WF(impact.x, impact.z), lp = WF(lip[0], lip[3]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
     /* v296: Aufprall auf der echten Seehöhe; Schleier folgt derselben Kurve wie das Modell. */
     WV.springFx = { x: ft[0], y: impact.y * k, z: ft[1], lx: lp[0], lz: lp[1], ly: lip[1] * k, dx: fd[0], dz: fd[1], side: [-fd[1], fd[0]], w: impact.w * k, C: SPI.C,
       path: a => { const p = FWM.springFallPath(a), q = WF(p[0] + p[4], p[3]); return { x: q[0], y: p[1] * k, z: q[1], w: p[2] * k }; },
-      strands: (SF.strands || []).flatMap(([, M, W]) => [M, W].map(p => { const q = WF(p[0], p[2]); return { x: q[0], z: q[1], y: p[1] * k }; })) };
+      strands: [] };
   }
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
@@ -3459,22 +3460,23 @@ function worldStep(dt, time) {
   if (sf && FV.R.cam && Math.hypot(FV.R.cam.tx - sf.x, FV.R.cam.tz - sf.z) < 50) {
     /* v193: weiche Gischt statt fester Kreise – je Sekunde feste Raten (unabhängig von der Bildrate):
        Nebel am Aufprall (shape 4, ganz weich, wächst und verweht), feine Spritzer nach oben/außen (shape 5),
-       Nebelschleier am unteren Teil des Falls, vereinzelte Tropfen an den Rändern */
+       v297: nur noch wenig flache Feuchtigkeit; kleine Tropfen im Fall und an den Rändern */
     const R = FV.R, rnd = Math.random, fw = sf.w;
-    const acc = sf.acc || (sf.acc = { mist: 0, drop: 0, veil: 0, edge: 0, st: 0, stNext: 0 });
+    const acc = sf.acc || (sf.acc = { mist: 0, drop: 0, veil: 0, edge: 0 });
     const fx = (k, rate) => { acc[k] += dt * rate; const n = Math.floor(acc[k]); acc[k] -= n; return n; };
-    for (let i = fx("mist", 5); i-- > 0;) { const a = rnd() * 6.283, r = rnd() * 0.35;
-      R.emit({ x: sf.x + sf.dx * 0.2 + Math.cos(a) * r, y: sf.y + 0.08 + rnd() * 0.12, z: sf.z + sf.dz * 0.2 + Math.sin(a) * r, vx: Math.cos(a) * 0.2 + sf.dx * 0.3, vy: 0.12 + rnd() * 0.22, vz: Math.sin(a) * 0.2 + sf.dz * 0.3, life: 0.7 + rnd() * 0.4, size: 0.14 + rnd() * 0.1, size2: 0.4 + rnd() * 0.2, col: LC(0.94, 0.97, 1, 0.14 + rnd() * 0.06, true), drag: 1.2, shape: 4 }); }
+    /* v297: Kein heller Nebelball am Mittelpunkt; nur wenig bodennahe Feuchtigkeit. */
+    for (let i = fx("mist", 2); i-- > 0;) { const u=(rnd()-0.5)*fw;
+      R.emit({ x:sf.x+sf.side[0]*u+sf.dx*0.12, y:sf.y+0.04, z:sf.z+sf.side[1]*u+sf.dz*0.12,
+        vx:sf.dx*0.2, vy:0.04+rnd()*0.06, vz:sf.dz*0.2, life:0.45+rnd()*0.15,
+        size:0.06+rnd()*0.04, size2:0.18, col:LC(0.84,0.91,0.95,0.05,true), drag:1.2, shape:4 }); }
     /* v296: Flache Spritzfächer vom Wasserkontakt nach außen; Tropfen fallen zur Oberfläche zurück. */
-    for (let i = fx("drop", 26); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.2, u = (rnd() - 0.5) * fw, vy = 1.1 + rnd() * 1.5;
-      R.emit({ x: sf.x + sf.side[0] * u * 0.8, y: sf.y + 0.025, z: sf.z + sf.side[1] * u * 0.8, vx: Math.cos(a) * s * 0.65 + sf.dx * s * 0.7, vy, vz: Math.sin(a) * s * 0.65 + sf.dz * s * 0.7, g: -9.5, life: 2 * vy / 9.5 + 0.04, size: 0.045 + rnd() * 0.035, size2: 0.018, col: LC(0.96, 0.99, 1, 0.9), drag: 0.25, shape: 5, fade: false }); }
+    for (let i = fx("drop", 32); i-- > 0;) { const a = rnd() * 6.283, s = 0.8 + rnd() * 1.2, u = (rnd() - 0.5) * fw, vy = 0.7 + rnd() * 1.1;
+      R.emit({ x: sf.x + sf.side[0] * u * 0.8, y: sf.y + 0.025, z: sf.z + sf.side[1] * u * 0.8, vx: Math.cos(a) * s * 0.65 + sf.dx * s * 0.7, vy, vz: Math.sin(a) * s * 0.65 + sf.dz * s * 0.7, g: -9.5, life: 2 * vy / 9.5 + 0.04, size: 0.025 + rnd() * 0.02, size2: 0.012, col: LC(0.9, 0.96, 1, 0.75), drag: 0.25, shape: 5, fade: false }); }
     for (let i = fx("veil", 3); i-- > 0;) { const p = sf.path(0.65 + rnd() * 0.3), u = (rnd() - 0.5) * p.w * 0.7;
-      R.emit({ x: p.x + sf.side[0] * u, y: p.y, z: p.z + sf.side[1] * u, vx: sf.dx * 0.5, vy: -1.4, vz: sf.dz * 0.5, g: -3, life: 0.35, size: 0.045, size2: 0.025, col: LC(0.95, 0.98, 1, 0.65), shape: 5 }); }
-    for (let i = fx("edge", 7); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.35 + rnd() * 0.08), flight = Math.sqrt(2 * (sf.ly - sf.y) / 9.5), v = Math.hypot(sf.x - sf.lx, sf.z - sf.lz) / flight;
+      R.emit({ x: p.x + sf.side[0] * u, y: p.y, z: p.z + sf.side[1] * u, vx: sf.dx * 0.5, vy: -1.4, vz: sf.dz * 0.5, g: -3, life: 0.35, size: 0.03, size2: 0.018, col: LC(0.95, 0.98, 1, 0.65), shape: 5 }); }
+    for (let i = fx("edge", 5); i-- > 0;) { const sd = rnd() < 0.5 ? -1 : 1, u = sd * fw * (0.35 + rnd() * 0.08), flight = Math.sqrt(2 * (sf.ly - sf.y) / 9.5), v = Math.hypot(sf.x - sf.lx, sf.z - sf.lz) / flight;
       R.emit({ x: sf.lx + sf.side[0] * u, y: sf.ly, z: sf.lz + sf.side[1] * u, vx: sf.dx * v, vy: 0, vz: sf.dz * v, g: -9.5, life: flight, size: 0.035 + rnd() * 0.025, size2: 0.02, col: LC(0.9, 0.97, 1, 0.8), shape: 5, fade: false }); }
-    /* v210: kleine Spritzer, wo die Nebenstränge auf ihre Absätze treffen */
-    for (let i = fx("st", 8); i-- > 0;) { const q = sf.strands[acc.stNext++ % sf.strands.length]; if (!q) break; const a = rnd() * 6.283, v = 0.4 + rnd() * 0.6;
-      R.emit({ x: q.x, y: q.y + 0.03, z: q.z, vx: Math.cos(a) * v * 0.6 + sf.dx * 0.3, vy: 0.6 + rnd() * 0.7, vz: Math.sin(a) * v * 0.6 + sf.dz * 0.3, g: -9.5, life: 0.35 + rnd() * 0.15, size: 0.03 + rnd() * 0.025, size2: 0.02, col: LC(0.95, 0.98, 1, 0.8), drag: 0.4, shape: 5, fade: false }); }
+
   }
   /* v207: Spritzer an den Füßen der Kaskaden, Blubbern am Quellaustritt */
   const sr = WV.springRun;
