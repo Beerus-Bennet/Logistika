@@ -1,5 +1,12 @@
 # Änderungen – kurz für den Kollegen
 
+## v294 – Schatzsuche: große Einblendung „Schatz gesichtet!“ entfällt
+**Wunsch Bennet:** Die riesige Einblendung „Schatz gesichtet!“ mit „Such das rote Kreuz“ und „3 Stunden Zeit“ bei diesem Ereignis entfernen.
+
+**Lösung (`worldview.js`, `worldTreasureIntro`):** Der Aufruf der großen Einblendung (`worldLootShow`) ist für dieses eine Ereignis entfernt. Ton, Vogelschwarm, die Meldung unten („Ein Vogelschwarm kreist über dem Seeufer …“) und der Vogelschwarm-Knopf mit der Restzeit bleiben. Die Einblendungen beim Fund der Kiste und bei Paketlieferungen (`worldLootShow`) sind unverändert.
+
+**Geprüft (Testbrowser):** Ereignis ausgelöst – es entsteht keine Einblendung mehr, keine Konsolenfehler. **Nicht geprüft:** am Handy, der echte Ablauf mit Vogelschwarm im Spiel.
+
 ## v293 – Produktionsfenster: Überschrift wie im Kuhstall
 **Wunsch Bennet:** Der Name der Mühle sah anders aus als beim Kuhstall.
 
