@@ -1,5 +1,19 @@
 # Änderungen – kurz für den Kollegen
 
+## v295 – Mitarbeiter laufen nicht mehr in der Geraden durch alles, wenn sie eingeschlossen stehen
+**Wunsch Bennet:** Der Fischer läuft in normaler Spielzeit zum Lagerfeuer und geht dabei durch alles hindurch.
+
+**Ursache (im Testbrowser nachgestellt):** Die Wegesuche (`navPath`) findet keinen Weg, wenn das Startfeld ringsum von gesperrten Feldern umgeben ist, zum Beispiel der Fischer am Steg zwischen Reusen, Boot und Hütte. `staffGo` zog dann als Notlösung eine Gerade vom Start zum Ziel. In meinem Test lief diese Gerade vom Steg zum Lagerplatz an 53 von 642 Messpunkten durch gesperrte Felder.
+
+**Lösung (`team.js`):** Neue Wegsuche `navPathSafe` mit Notlösung: Findet `navPath` keinen Weg, dürfen im Umkreis von zwei Feldern um Start und Ziel gesperrte Felder überstiegen werden (`NAV.loose` in `navOk`). Der Rest des Weges bleibt auf freien Feldern. `staffGo` nutzt sie an den drei Stellen für Wege zum Ziel und zum Lagerplatz. Die normale Wegesuche ändert sich nicht.
+
+**Geprüft (Testbrowser):**
+- Fischer mit eingeschlossenem Startfeld: Route vorher eine Gerade mit zwei Punkten, jetzt 70 Wegpunkte entlang des Wegenetzes. Nur der Schritt aus der Einschließung gilt als gesperrt (4 von 935 Messpunkten).
+- Normale Wege: über 230 Startpunkte für Fischer, Landwirt und Pfleger ohne Fehler und ohne gesperrte Felder.
+- Mittagspause von der Fahrt zum Lagerfeuer bis zum Hinsetzen: wie vorher, Abstand zur Feuerstelle ≥ 1,49. Keine Konsolenfehler.
+
+**Nicht geprüft:** dein Spielstand mit seiner echten Umgebung am Steg; ob genau das bei deinem Fischer die Ursache ist, ließ sich nur im Nachbau zeigen. Am Handy nicht geprüft.
+
 ## v294 – Schatzsuche: große Einblendung „Schatz gesichtet!“ entfällt
 **Wunsch Bennet:** Die riesige Einblendung „Schatz gesichtet!“ mit „Such das rote Kreuz“ und „3 Stunden Zeit“ bei diesem Ereignis entfernen.
 

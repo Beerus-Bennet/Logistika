@@ -307,7 +307,25 @@ function wanderMove(m, step) {
   if (m.pi >= P.length) { m.path = null; return { done: true, h }; }
   return { done: false, h };
 }
-function navOk(i, role, si, ti) { const b = NAV.blk[i]; return !b || i === si || i === ti || (b === 2 && role === "farmer"); }
+function navOk(i, role, si, ti) {
+  const b = NAV.blk[i];
+  if (!b || i === si || i === ti || (b === 2 && role === "farmer")) return true;
+  /* v295: Notlösung (navPathSafe): in der Nähe von Start und Ziel dürfen einzelne gesperrte Felder überstiegen werden */
+  const L = NAV.loose;
+  if (L) { const x = i % NAV.W, z = (i / NAV.W) | 0; if ((Math.abs(x - L[0]) <= 2 && Math.abs(z - L[1]) <= 2) || (Math.abs(x - L[2]) <= 2 && Math.abs(z - L[3]) <= 2)) return true; }
+  return false;
+}
+/* v295: Wegsuche, die nie aufgibt: Steht jemand eingeschlossen (z. B. der Fischer am Steg zwischen Reusen, Boot und Hütte) oder soll er an
+   eine umbaute Stelle, fand navPath keinen Weg, und staffGo zog daraufhin eine Gerade quer durch alles. Jetzt dürfen im Umkreis von zwei
+   Feldern um Start und Ziel gesperrte Felder überstiegen werden – der Rest des Wegs bleibt auf freien Feldern. */
+function navPathSafe(sx, sz, tx, tz, role) {
+  const r = navPath(sx, sz, tx, tz, role);
+  if (r) return r;
+  navBuild();
+  const ax = Math.floor(sx) - NAV.x0, az = Math.floor(sz) - NAV.z0, bx = Math.floor(tx) - NAV.x0, bz = Math.floor(tz) - NAV.z0;
+  NAV.loose = [ax, az, bx, bz];
+  try { return navPath(sx, sz, tx, tz, role); } finally { NAV.loose = null; }
+}
 /* A* vom Start zum Ziel – gibt die Wegpunkte zurück (oder null) */
 function navPath(sx, sz, tx, tz, role) {
   navBuild();
@@ -1249,11 +1267,11 @@ function staffGo(s, i, j) {
     if (inC || toC) {
       /* v95: im Lagerplatz nur über das Tor und den Ring ums Feuer (nie durchs Feuer, Sofas oder Wände) */
       const g = C.gate();
-      let head = inC ? C.routeOut(h[0], h[1]) : (navPath(h[0], h[1], g[0], g[1], s.role) || [[h[0], h[1]], g]);
+      let head = inC ? C.routeOut(h[0], h[1]) : (navPathSafe(h[0], h[1], g[0], g[1], s.role) || [[h[0], h[1]], g]);
       if (inC && head.stops) head.stops.forEach(st => stops.push(Object.assign({}, st)));
       if (toC) { const ri = C.routeIn(toC); r = head.concat(ri.slice(1)); (ri.stops || []).forEach(st => stops.push(Object.assign({}, st, { i: head.length + st.i - 1 }))); }
-      else r = head.concat((navPath(g[0], g[1], p.x, p.z, s.role) || [g, [p.x, p.z]]).slice(1));
-    } else r = navPath(h[0], h[1], p.x, p.z, s.role);
+      else r = head.concat((navPathSafe(g[0], g[1], p.x, p.z, s.role) || [g, [p.x, p.z]]).slice(1));
+    } else r = navPathSafe(h[0], h[1], p.x, p.z, s.role);
   } catch (e) { console.warn("Weg:", e); }
   const route = (r || [[h[0], h[1]], [p.x, p.z]]).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
   const len = routeLen(route), home = j.k === "home";
