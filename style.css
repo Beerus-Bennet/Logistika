@@ -4567,3 +4567,10 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
    die kompakten Innenmaße von v286 bleiben, damit die Rezepte gut hineinpassen. */
 /* Das Arbeitermenü (Pop-over über der Figur) endet immer im sichtbaren Bereich und scrollt innen, wenn die Aufträge mehr Platz brauchen. */
 #farmPop .fp-box.fstp{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;box-sizing:border-box}
+
+/* v301: Kleine Treppenhaus-Auswahl nur zwischen zwei benachbarten Etagen. */
+.ofp-card.ofp-card-stairs{display:block;max-height:calc(100% - 100px);overflow:auto}
+.ofp-card-stairs .ofp-card-txt{width:100%}
+.ofp-stair-options{display:grid;gap:8px;margin-top:12px}
+.ofp-stair-options button{min-height:44px;padding:8px 10px;border:var(--line);border-radius:10px;background:#e8f0ff;color:var(--ink);font-size:14px;font-weight:900;text-align:left;cursor:pointer;touch-action:manipulation}
+.ofp-stair-options button:focus-visible{outline:3px solid #e5a43a;outline-offset:2px}

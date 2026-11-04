@@ -1,5 +1,23 @@
 # Änderungen – kurz für den Kollegen
 
+## v301 – Firmenschriftzug im Büro entfernt, Treppen nutzbar
+**Basis:** GitHub main `3b2b285` (v300), während der Arbeit neu eingetroffen und vollständig übernommen. Dieser GitHub-Stand enthält bereits die vorherigen Mitarbeiter- und Pflanzenkorrekturen; sie bleiben erhalten.
+
+**Ursachen:** Der Firmenname wurde als eigene Textur an der Küchenwand montiert. Die Treppe war nur Geometrie mit einer Sperrfläche, ohne Verbindung zur Interaktions- oder Etagenlogik. Etagen ließen sich ausschließlich über die Knöpfe oben rechts wechseln. Der Handlauf war zu kurz und entgegengesetzt zur Treppensteigung gedreht.
+
+**Lösung:**
+- `officefp.js`: Firmenschild-Knoten und `signCanvas` entfernt. Standorttafel und Personalposter bleiben erhalten; die Firmenfarbe für das Poster wird weiterhin gelesen.
+- Treppen in Bürogebäuden und Konzernzentralen verwenden dieselben Maße für Modell, Kollisionsbereich, Zugang und Blickziel. Beim Hineingehen in den vorderen Treppenzugang oder beim Antippen/Benutzen des Blickziels öffnet sich die benachbarte Etage. Auf dem mittleren Stockwerk gibt es eine kleine Auswahl für hinauf/hinunter. Erdgeschoss und oberste Etage bieten jeweils nur die gültige Richtung. Auf dem Desktop löst F die Blickziel-Aktion aus; gehaltenes F wiederholt sie nicht, Strg-/Cmd-Kombinationen bleiben frei.
+- Gemeinsamer Etagenwechsel mit den vorhandenen Etagenknöpfen. Ankunft vor dem Treppenbereich an einem freien Platz, auch bei Pflanzen oder Möbeln am vorgesehenen Ausgang. Bewegungs-/Blickeingaben werden zurückgesetzt und die Kamera sofort aktualisiert; kein automatisches Zurückwechseln. Während der Treppenauswahl steht die Figur. Abbrechen per Schließen, Escape oder Tipp außerhalb. Der Übergang verwendet weiterhin den vorhandenen Auf-/Abbau der getrennten Etagenräume einschließlich Ressourcenfreigabe und Küchenzuständen.
+- Handlauf folgt jetzt der vollständigen Treppenlänge und steigt mit den Stufen.
+- `style.css`: kompakte Treppenauswahl im vorhandenen Büro-Kartenstil mit 44 px hohen Schaltflächen. `index.html` / `sw.js`: v301 für die beiden geänderten Produktdateien; übrige Cache-Verweise unverändert. Keine neue Spielstandstruktur oder Geschäftslogik.
+
+**Geprüft:** `node office-stairs-v301.test.js`: 24 vollständige Auf-/Abgänge in beiden Gebäudetypen mit allen vier Küchentypen und Pflanzen im Ankunftsbereich; echte Raum-/Etagen-/Kollisions-/Eingabelogik mit leichtem DOM-/Grafiktreiber-Ersatz. Direkter Laufzugang per WASD/Joystick, kurzer Touch über den Canvas-Eingabepfad, F ohne Wiederholung, freie Strg+F-Kombination, mittlere Etagenwahl, Abbrechen, gültige Etagengrenzen, Reichweite/Sichtschutz, vorhandene Etagenknöpfe, freie Ankunft, kein Rücksprung, sofort passende Kamera, Freigabe alter Netze/Texturen und Kaffeezustand nach Rückkehr. Der Firmenname erscheint nicht mehr in den gezeichneten Texten; ohne besetzte Schreibtische verbleiben nur Standort- und Postertextur. Geometrieprüfung des vollständigen, richtig steigenden Handlaufs. Gespeicherte Firma, Geld, Personal und Dekoration im Vergleich unverändert.
+
+**Regressionen:** `office-joints-v288.test.js`, `office-workers-v284.test.js`, `office-appearance-v298.test.js`, `office-clothes-v300.test.js` und `office-plants-v299.test.js` bestanden. JavaScript-Syntax und Diff geprüft; neue CSS-Regeln auf ausgeglichene Blöcke kontrolliert.
+
+**Prüfgrenze:** Kein Live-Browser-/3D-/iPhone-/Safari-Test und keine Browsermessung des Kartenlayouts. Die Funktionsprüfung erfolgte mit der echten Spiellogik und einem DOM-/Grafiktreiber-Ersatz, die Handlaufprüfung an den tatsächlichen Modellkoordinaten.
+
 ## v300 – Arbeiter aus Seiten- und Rückenansichten korrigiert
 **Basis:** GitHub main `4b687f9` (v298), während der Arbeit wiederholt abgeglichen. Die bisher noch nicht auf main enthaltene Pflanzenlieferung v299 ist vollständig integriert. Diese ZIP kann direkt auf main angewendet werden, ohne v299 vorher einzuspielen.
 

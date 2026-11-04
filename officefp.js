@@ -1,5 +1,5 @@
 /* =========================================================================
-   LOGISTIKA – officefp.js (v300)
+   LOGISTIKA – officefp.js (v301)
    Büro betreten: Nach einem Ladescreen steht man in der Tür des Büros und
    läuft in der Ich-Perspektive durch den Raum. Gebaut wird genau das, was der
    Grundriss (offices.js, officeSVG) zeigt: Boden, Wandfarbe, Fenster, Tür,
@@ -52,6 +52,14 @@ const OFFICE3D = (() => {
   const angTo = (a, b, k) => { let d = b - a; while (d > PI) d -= 2 * PI; while (d < -PI) d += 2 * PI; return a + d * k; };
 
   /* ------------------------------- Raum -------------------------------- */
+  /* v301: Dieselben Treppenmaße für Modell, Kollision und Etagenzugang. */
+  function stairwell(b,floor){
+    const count=tierFloors(tierOf(b));if(count<2)return null;
+    const x0=PX(318),x1=PX(364),z0=PZ(44),z1=PZ(84),dest=[];
+    if(floor+1<count)dest.push({floor:floor+1,label:'↑ Zum '+floorName(floor+1)});
+    if(floor>0)dest.push({floor:floor-1,label:'↓ Zum '+floorName(floor-1)});
+    return {lo:[x0,0,z0],hi:[x1,ceilH(b),z1],entry:[PX(300),(z0+z1)/2],gate:x0-PR-.10,dest};
+  }
   /* st: Boden, Wände, Möbel (wirft Schatten) · shell: Decke (kein Schatten) · glow: Lampen, Fensterlicht.
      ob: Rechtecke für die Begehbarkeit (x0, z0, x1, z1) · occ: Kästen [lo, hi] für die Sichtprüfung beim Antippen. */
   function buildRoom(b, fl0) {
@@ -198,7 +206,8 @@ const OFFICE3D = (() => {
     if (multi) {
       const x0 = PX(318), x1 = PX(364), z0 = PZ(44), z1 = PZ(84), n = 10, sw = (x1 - x0) / n;
       for (let k = 0; k < n; k++) st.box(sw, (k + 1) * (H / n), z1 - z0, k % 2 ? 0xcfd6df : 0xc3cbd5, { x: x0 + sw * (k + 0.5), z: (z0 + z1) / 2 });
-      st.box(x1 - x0, 0.05, 0.05, 0x55606c, { x: (x0 + x1) / 2, y: H / 2 + 0.95, z: z1 + 0.02, rz: -Math.atan2(H, x1 - x0) });
+      /* v301: Handlauf folgt der Steigung und reicht über die ganze Treppe. */
+      st.box(Math.hypot(x1-x0,H),0.05,0.05,0x55606c,{x:(x0+x1)/2,y:H/2+.90,z:z1+.02,rz:Math.atan2(H,x1-x0),c:true});
       rect(x0, z0, x1, z1 + 0.05);
       blk(x0 + 1.2, 0, z0, x1, H, z1);
       const reception = fl0 === 0 ? receptionPlan(b) : null;
@@ -218,7 +227,7 @@ const OFFICE3D = (() => {
     st.box(POSTER.w + 0.01, POSTER.h + 0.01, 0.006, 0xfbfcfd, { x: POSTER.x, y: POSTER.y - POSTER.h / 2 - 0.005, z: RD - 0.033 });
 
     top(-RW, -RD, RW, RD, 0, null, "floor");                    /* Boden: Sperrzonen sind alle Möbel (ob), siehe dropSpot */
-    return { st, shell, trim, glow, ob, occ, surf, phys, carpet: fl.pattern === "carpet", seats, screens, H, kitchen, poster: POSTER, door: [RW - 0.7, (dz0 + dz1) / 2], stairs: multi ? [PX(300), PZ(64)] : null };
+    return { st, shell, trim, glow, ob, occ, surf, phys, carpet: fl.pattern === "carpet", seats, screens, H, kitchen, poster: POSTER, door: [RW - 0.7, (dz0 + dz1) / 2], stairs: multi ? [PX(300), PZ(64)] : null, stairwell:stairwell(b,fl0) };
   }
 
   /* v259: Küche mit getrennten Korpussen, Türen und Zuständen in officekitchen.js. */
@@ -1293,14 +1302,6 @@ const OFFICE3D = (() => {
     return c;
   }
   const companyCol = () => (S.livery && S.livery.c1) || (S.player && typeof COMPANY_COLORS !== "undefined" && COMPANY_COLORS[S.player.color]) || "#2f6fed";   /* nur lesen – livery() würde eine Lackierung anlegen */
-  function signCanvas() {
-    const c = document.createElement("canvas"); c.width = 1024; c.height = 200;
-    const g = c.getContext("2d"), name = (S.player && S.player.company) || "Spedition";
-    g.font = "64px Bangers, 'Baloo 2', system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.lineWidth = 12; g.strokeStyle = "#0d1b2a"; g.strokeText(name.toUpperCase(), 512, 104);
-    g.fillStyle = companyCol(); g.fillText(name.toUpperCase(), 512, 104);
-    return c;
-  }
 
   /* Bildschirm je Rolle: einfache Logistika-Oberfläche mit echten Standortdaten (keine erfundenen Kennzahlen) */
   const fleetOf = b => b.vehicles.map(u => S.fleet.find(f => f.uid === u)).filter(Boolean);
@@ -1512,7 +1513,7 @@ const OFFICE3D = (() => {
       <div class="ofp-actions"><small id="ofpCarry" role="status"></small><button id="ofpAction" hidden></button><button id="ofpThrow" hidden>Tasse werfen</button></div>
       <div class="ofp-joy" id="ofpJoy"><i></i></div>
       <div class="ofp-say" id="ofpSay"></div>
-      <div class="ofp-hint" id="ofpHint">Links gehen · wischen zum Umsehen · Personal antippen · Küchenobjekte ansehen</div>
+      <div class="ofp-hint" id="ofpHint">Links gehen · wischen zum Umsehen · Personal antippen · Treppe betreten oder antippen</div>
       <div class="ofp-card" id="ofpCard" role="dialog" aria-modal="false" aria-label="Mitarbeiter des Monats"></div>
       <div id="officeBoot"></div>`;
     document.body.appendChild(el);
@@ -1621,14 +1622,13 @@ const OFFICE3D = (() => {
       R.nodes.push(R.node(null, { x: s.x, y: s.y, z: s.z, decal: { t, w: 0.6, h: 0.36 } }));
       return Object.assign(s, { c, t, sig, next: performance.now() + 600 + n * 23 });
     });
-    /* Wandtafeln, Firmenschild über der Küche, Poster */
+    /* v301: Standorttafel und Personalposter; kein Firmenschriftzug an der Küchenwand. */
     R.nodes.push(R.node(null, { x: -2.6, y: 1.55, z: RD - 0.012, ry: PI, decal: { t: TX(boardCanvas(b)), w: 2.4, h: 1.5 } }));
-    R.nodes.push(R.node(null, { x: -2.4, y: room.H - 0.42, z: -RD + 0.012, decal: { t: TX(signCanvas()), w: 3.6, h: 0.703 } }));
     const pc = posterCanvas(b, null), pt = TX(pc), P = room.poster;
     R.nodes.push(R.node(null, { x: P.x, y: P.y, z: RD - 0.037, ry: PI, decal: { t: pt, w: P.w, h: P.h } }));
     O.poster = Object.assign({}, P, { c: pc, t: pt, k: posterKey(b) });
     posterPortrait(b, pt, pc);
-    O.ob = room.ob; O.occ = room.occ; O.H = room.H; O.kitchen = room.kitchen;
+    O.ob = room.ob; O.occ = room.occ; O.H = room.H; O.kitchen = room.kitchen;O.stairwell=room.stairwell;
     O.surf = room.surf; O.phys = room.phys; O.carpet = room.carpet;               /* v263 */
     O.kitFloor = O.floor;
     O.kitRuntime = room.kitchen ? OFFICE_KITCHEN.mount(room.kitchen, R, M1, O.kitchenStates.get(O.floor), hint, O.reduced) : null;
@@ -1640,7 +1640,7 @@ const OFFICE3D = (() => {
     if (!keepPos) {
       /* Startpunkt: in der Tür (EG) bzw. oben an der Treppe */
       const sp = O.floor > 0 && room.stairs ? room.stairs : room.door;
-      O.pos = [sp[0], sp[1]]; O.pitch = 0.06;
+      O.pos = safeLanding(sp,sp===room.stairs?room.stairwell.gate:null); O.pitch = 0.06;
       O.yaw = Math.atan2(-(0.6 - sp[1]), -(-0.6 - sp[0]));          /* Blick zur Raummitte: Blickrichtung = (−cos yaw, −sin yaw) */
     } else collide(O.pos);
     const fl = O.el.querySelector(".ofp-fl"), multi = tierFloors(tierOf(b)) > 1;
@@ -1648,9 +1648,54 @@ const OFFICE3D = (() => {
     const fb = O.el.querySelector(".ofp-floors");
     if (fb) {
       fb.innerHTML = multi ? Array.from({ length: tierFloors(tierOf(b)) }, (_, f) => `<button class="${f === O.floor ? "on" : ""}" data-ofl="${f}">${f === 0 ? "EG" : f + ". OG"}</button>`).join("") : "";
-      fb.querySelectorAll("[data-ofl]").forEach(x => x.onclick = () => { const f = +x.dataset.ofl; if (O && f !== O.floor) { O.floor = f; buildFloor(false); } });
+      fb.querySelectorAll("[data-ofl]").forEach(x => x.onclick = () => changeFloor(+x.dataset.ofl,false));
     }
     if (!first) { const s = O.el.querySelector("#ofpSay"); if (s) s.classList.remove("on"); O.sayAt = null; closeCard(); }
+  }
+
+  /* v301: Gemeinsamer Etagenwechsel für Treppen und die vorhandenen Etagenknöpfe.
+     Kein gespeicherter Zustand; die bestehenden Aufräum-/Aufbauwege bleiben zuständig. */
+  function stopOfficeInput(){
+    if(!O)return;
+    if(O.in){O.in.jx=O.in.jy=0;O.in.k={};O.in.look=null;O.in.joyId=null;}
+    const knob=O.el.querySelector('.ofp-joy i');if(knob)knob.style.transform='';
+  }
+  function safeLanding(anchor,gate){
+    const ob=O.ob.concat(O.kitRuntime?O.kitRuntime.colliders():[]),r=PR+.025;
+    const free=p=>(gate==null||p[0]<=gate-.10)&&Math.abs(p[0])<=RW-r&&Math.abs(p[1])<=RD-r&&!ob.some(([x0,z0,x1,z1])=>p[0]>x0-r&&p[0]<x1+r&&p[1]>z0-r&&p[1]<z1+r);
+    if(free(anchor))return anchor.slice();
+    let best=null,dist=Infinity;
+    for(let x=-RW+r;x<=RW-r;x+=.25)for(let z=-RD+r;z<=RD-r;z+=.25){
+      const p=[x,z],d=Math.hypot(x-anchor[0],z-anchor[1]);if(d<dist&&free(p)){best=p;dist=d;}
+    }
+    return best||anchor.slice();
+  }
+  function nearStairs(){return !!(O&&O.stairwell&&Math.hypot(O.pos[0]-O.stairwell.entry[0],O.pos[1]-O.stairwell.entry[1])<=2.4);}
+  function changeFloor(f,viaStairs){
+    if(!O||!Number.isInteger(f)||f<0||f>=tierFloors(tierOf(O.b))||f===O.floor)return false;
+    if(viaStairs&&(!nearStairs()||Math.abs(f-O.floor)!==1))return false;
+    stopOfficeInput();closeCard();O.floor=f;buildFloor(false);
+    if(viaStairs&&O.stairwell){
+      O.pos=safeLanding(O.stairwell.entry,O.stairwell.gate);O.pitch=.06;
+      O.yaw=Math.atan2(-(.6-O.pos[1]),-(-.6-O.pos[0]));
+    }
+    syncOfficeCamera(0);return true;
+  }
+  function useStairs(){
+    if(!nearStairs()||O.cardOpen)return false;
+    const dest=O.stairwell.dest,from=O.floor;
+    if(dest.length===1)return changeFloor(dest[0].floor,true);
+    if(!dest.length)return false;
+    stopOfficeInput();O.cardOpen=true;O.stairChoice=true;
+    const el=O.el.querySelector('#ofpCard');el.setAttribute('aria-label','Treppenhaus');el.classList.add('ofp-card-stairs','on');
+    el.innerHTML=`<div class="ofp-card-txt"><small>Treppenhaus · ${esc(floorName(from))}</small><b>Wohin möchtest du gehen?</b><div class="ofp-stair-options">${dest.map(d=>`<button data-stair-floor="${d.floor}">${esc(d.label)}</button>`).join('')}</div></div><button class="ofp-card-x" aria-label="Schließen">✕</button>`;
+    el.querySelector('.ofp-card-x').onclick=closeCard;
+    el.querySelectorAll('[data-stair-floor]').forEach(button=>button.onclick=()=>{if(O&&O.floor===from)changeFloor(+button.dataset.stairFloor,true);});
+    const first=el.querySelector('[data-stair-floor]');if(first)first.focus({preventScroll:true});return true;
+  }
+  function walkedIntoStairs(before){
+    const t=O.stairwell;if(!t||O.cardOpen)return false;
+    return before[0]<t.gate&&O.pos[0]>=t.gate&&O.pos[1]>t.lo[2]+PR&&O.pos[1]<t.hi[2]-PR&&useStairs();
   }
 
   /* ------------------------------ Bewegung ----------------------------- */
@@ -1670,25 +1715,21 @@ const OFFICE3D = (() => {
     const I = O.in;
     let f = I.jy, s = I.jx;
     if (I.k.w) f += 1; if (I.k.s) f -= 1; if (I.k.d) s += 1; if (I.k.a) s -= 1;
+    if(O.stairChoice)f=s=0;
     if (I.k.l) O.yaw -= 1.8 * dt; if (I.k.r) O.yaw += 1.8 * dt;
     const l = Math.hypot(f, s);
     if (l > 1) { f /= l; s /= l; }
     const cy = Math.cos(O.yaw), sy = Math.sin(O.yaw);
     const F = [-cy, -sy], Rt = [sy, -cy];
     if (l > 0.05) {
+      const before=O.pos.slice();
       O.pos[0] += (F[0] * f + Rt[0] * s) * SPEED * dt;
       O.pos[1] += (F[1] * f + Rt[1] * s) * SPEED * dt;
       collide(O.pos);
+      if(walkedIntoStairs(before))return;
       O.bob = (O.bob || 0) + dt * 9 * Math.min(1, l);
     }
-    /* v257: Kopfwippen beim Gehen nur noch 1 cm (vorher 2,5 cm), bei „Bewegung reduzieren“ gar nicht */
-    const bob = O.reduced ? 0 : Math.sin(O.bob || 0) * 0.01 * Math.min(1, l);
-    const c = O.R.cam, cp = Math.cos(O.pitch), spp = Math.sin(O.pitch);
-    c.yaw = O.yaw; c.pitch = O.pitch;
-    const ex = O.pos[0], ey = (O.dbgEye || EYE) + bob, ez = O.pos[1];          /* dbgEye nur für Browser-Tests (Draufsicht) */
-    c.tx = ex - Math.cos(O.yaw) * cp * c.dist; c.ty = ey - spp * c.dist; c.tz = ez - Math.sin(O.yaw) * cp * c.dist;
-    /* v259: Kamera und Küchenzustand teilen dieselbe Uhr, keine nachlaufenden Timer. */
-    O.eye = [ex, ey, ez];
+    syncOfficeCamera(l);
     if (O.kitRuntime) { O.kitRuntime.tick(dt, { eye: O.eye, yaw: O.yaw }); collide(O.pos); }
     stepCoffee(dt);                                                              /* v263: Wurf, Spuren, verzögerte Reaktionen */
     if (!O) return;                                                              /* v264: Festnahme hat das Büro geschlossen */
@@ -1718,6 +1759,12 @@ const OFFICE3D = (() => {
       const mk = posterKey(b);
       if (O.poster && mk !== O.poster.k) { O.poster.k = mk; drawPoster(O.poster.c, b, null); O.R.texUpdate(O.poster.t); posterPortrait(b, O.poster.t, O.poster.c); }
     }
+  }
+  function syncOfficeCamera(l){
+    /* v301: Auch unmittelbar nach dem Etagenwechsel stimmen Blickziel und Auge. */
+    const bob=O.reduced?0:Math.sin(O.bob||0)*.01*Math.min(1,l),c=O.R.cam,cp=Math.cos(O.pitch),sp=Math.sin(O.pitch);
+    c.yaw=O.yaw;c.pitch=O.pitch;const ex=O.pos[0],ey=(O.dbgEye||EYE)+bob,ez=O.pos[1];
+    c.tx=ex-Math.cos(O.yaw)*cp*c.dist;c.ty=ey-sp*c.dist;c.tz=ez-Math.sin(O.yaw)*cp*c.dist;O.eye=[ex,ey,ez];
   }
 
   /* ------------------------------- Eingabe ----------------------------- */
@@ -1769,6 +1816,7 @@ const OFFICE3D = (() => {
     const MAP = { KeyW: "w", ArrowUp: "w", KeyS: "s", ArrowDown: "s", KeyA: "a", KeyD: "d", ArrowLeft: "l", ArrowRight: "r", KeyQ: "l", KeyE: "r" };
     O.key = e => {
       if (e.code === "Escape" && e.type === "keydown") { if (O.cardOpen) closeCard(); else leave(); return; }
+      if(e.code==='KeyF'&&e.type==='keydown'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(!e.repeat){const hit=actionTarget();if(hit&&!hit.disabled)performAction(hit);}e.preventDefault();return;}
       const k = MAP[e.code]; if (!k) return;
       I.k[k] = e.type === "keydown"; e.preventDefault();
     };
@@ -1801,6 +1849,7 @@ const OFFICE3D = (() => {
       const p = ray.o.map((v, i) => v + ray.d[i] * t);
       if (Math.hypot(...p.map((v, i) => v - eye[i])) < 2.4 && !blocked(eye, p)) best = { id: "leave", label: "Zurückkehren", t };
     }
+    const stair=stairTarget(ray,eye);if(stair&&(!best||stair.t<best.t))best=stair;
     /* v263: Wer im Blick sitzt oder liegt, verdeckt, was dahinter ist; mit Kaffee in der Hand: anbieten. Sonst: abstellen. */
     const who = staffHit(ray);
     if (who && (!best || who.t < best.t)) return offerTarget(who, eye);
@@ -1808,7 +1857,14 @@ const OFFICE3D = (() => {
     if (drop && (!best || drop.t < best.t)) best = drop;
     return best;
   }
+  function stairTarget(ray,eye){
+    if(!nearStairs())return null;const s=O.stairwell,t=O.R.hitBox(ray,s.lo,s.hi);if(t==null)return null;
+    const p=ray.o.map((v,i)=>v+ray.d[i]*t);
+    if(Math.hypot(...p.map((v,i)=>v-eye[i]))>2.6||blocked(eye,p,(lo,hi)=>lo[0]===s.lo[0]+1.2&&hi[0]===s.hi[0]&&lo[2]===s.lo[2]))return null;
+    return {id:'stairs',label:s.dest.length===1?s.dest[0].label:'Treppe benutzen',t};
+  }
   function performAction(hit) {
+    if(hit.id==='stairs')return useStairs();
     if (hit.id === "leave") return leave();
     if (hit.id === "drop") { if (O.kitRuntime) O.kitRuntime.dropAt(hit.pos, hit.ry); return; }
     if (hit.id === "offer") return offerTo(hit.F);
@@ -1926,7 +1982,7 @@ const OFFICE3D = (() => {
     el.querySelector(".ofp-card-x").onclick = closeCard;
     el.classList.add("on"); O.cardOpen = true;
   }
-  function closeCard() { if (!O) return; const el = O.el.querySelector("#ofpCard"); if (el) el.classList.remove("on"); O.cardOpen = false; }
+  function closeCard() { if (!O) return; const el = O.el.querySelector("#ofpCard"); if (el) {el.classList.remove("on","ofp-card-stairs");el.setAttribute('aria-label','Mitarbeiter des Monats');} O.cardOpen = false;O.stairChoice=false; }
 
   /* ------------------ v263: Kaffee abstellen, anbieten, werfen ------------------ */
   /* Abstellen auf jeder freien Fläche (Tische, Arbeitsplatte, Küchentisch, Fensterbank, Empfang, Boden).

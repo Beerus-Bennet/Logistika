@@ -1,5 +1,17 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v301 – Firmenschild entfernen und Treppen anbinden auf main 3b2b285 / v300
+
+Diese ZIP enthält ausschließlich sieben gegenüber aktuellem main geänderte/neue Dateien. Alle bisherigen Pflanzen-, Mitarbeiter-, Wasserfall- und übrigen Änderungen aus main bleiben erhalten.
+
+- `officefp.js`: Wand-Firmenschriftzug vollständig entfernt. Neue Treppenmetadaten und `changeFloor` verbinden Laufzugang, Blickziel-/Touch-Aktion und vorhandene Etagenknöpfe mit dem bisherigen Etagenaufbau. Mittlere Etage bietet zwei benachbarte Ziele, Endetagen nur eines; Ankunft und Eingaben werden abgesichert. `syncOfficeCamera` hält Kamera/Auge unmittelbar nach dem Wechsel konsistent. Handlaufgeometrie korrigiert. Keine neue Spielstandstruktur.
+- `style.css`: nur der neue Block v301 für die kleine Treppenhaus-Auswahl am Dateiende.
+- `index.html` / `sw.js`: `style.css?v=301`, `officefp.js?v=301`, Service-Worker v301. Übrige Verweise unverändert.
+- `office-stairs-v301.test.js` neu, direkt im Projektordner mit Node ausführen. Keine Zusatzpakete. Prüft 24 Auf-/Abgänge sowie Lauf-/Touch-/Tastaturbedienung, Etagenwahl, Kollisionen, Aufräumen, Küchenzustände und fehlendes Firmenschild. Die fünf bisherigen Büro-/Pflanzenprüfungen bleiben unverändert ausführbar.
+- `AENDERUNGEN.md` und diese Datei: Ursachen, Umsetzung und Prüfgrenzen.
+
+Vor dem Einspielen späterer Commits nach `3b2b285` erneut zusammenführen. Kein Live-Browser-/iPhone-/Safari-Test; DOM-/Grafiktreiber-Ersatz für die Funktionsprüfungen.
+
 ## v300 – Arbeiterkorrekturen einschließlich v299 auf main 4b687f9 / v298
 
 Diese ZIP enthält sieben gegenüber aktuellem main geänderte/neue Dateien. Sie ersetzt die separate Pflanzenlieferung v299 und enthält deren Änderungen vollständig; v299 muss nicht vorher eingespielt werden. Die Mitarbeiter-, Hand-, Maus- und Monitorkorrekturen aus main/v298 bleiben erhalten.
