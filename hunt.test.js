@@ -40,7 +40,7 @@ test("verschoben, gedreht, größer: Strahl durch die Lunge bleibt kritisch, hin
   assert.strictEqual(ray(W([0, 0.98, -0.34])).zone, "koerper");
   assert.ok(ray(W([0, 0.98, -0.34])).t > 4 && ray(W([0, 0.98, -0.34])).t < 6.1, "Abstand stimmt");
 });
-test("Keiler und Fasan: kritische Zonen, Vogel stets Treffer im Flug", () => {
+test("Keiler und Fasan: kritische Zonen, Vogel-Körperzone ohne Aussage über den Flug", () => {
   const pose = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: 0, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] };
   assert.ok(["lunge", "herz"].includes(shoot(pose, 0.5, 0.2, "keiler").zone));
   assert.strictEqual(shoot(pose, 0.53, -0.3, "keiler").zone, "koerper");
@@ -253,13 +253,13 @@ test("Geweih v262: Name und Modell zählen dieselben Enden (auch ungerade, doppe
     assert.ok(T.odd ? /^Ungerader \d+-Ender$/.test(T.troph) : /^\d+-Ender Geweih$/.test(T.troph), T.troph);
   });
 });
-test("Artenwahl v262: 45 % Hirsch, 30 % Keiler, 25 % Fasan (12 000 feste Ziehungen); Flugtimer und Grenzen", () => {
+test("Artenwahl v307: 40 % Hirsch, 28 % Keiler, 32 % Fasan (12 000 feste Ziehungen); Flugtimer und Grenzen", () => {
   let s = 99; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
   const n = { hirsch: 0, keiler: 0, fasan: 0 }, N = 12000;
   for (let i = 0; i < N; i++) n[H4.pickSpecies(r)]++;
   const W = H4.SPECIES_W, tot = W.hirsch + W.keiler + W.fasan;
   Object.keys(n).forEach(k => assert.ok(Math.abs(n[k] / N - W[k] / tot) < 0.012, k + " " + (n[k] / N * 100).toFixed(1) + " %"));
-  assert.deepStrictEqual([W.hirsch, W.keiler, W.fasan], [45, 30, 25]);
+  assert.deepStrictEqual([W.hirsch, W.keiler, W.fasan], [40, 28, 32]);
   assert.deepStrictEqual(Array.from(H4.FLY_FIRST), [25, 45]); assert.deepStrictEqual(Array.from(H4.FLY_NEXT), [45, 75]);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(H4.LIMIT)), { ground: 2, fly: 1, total: 3 });
 });

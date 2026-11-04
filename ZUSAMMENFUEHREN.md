@@ -1,5 +1,97 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v308 – Kunden-Monogramme auf main 8232bbe / v301 einschließlich v302–v307
+
+Diese ZIP enthält 23 gegenüber aktuellem main geänderte/neue Dateien. Alle noch ausstehenden Lieferungen v302–v307 (Händlerkontakte, Feldmenü, Gießzustand, Schatz, Firmenbewertung und Jagd) sind enthalten. Ältere ZIPs nicht zusätzlich darüberkopieren.
+
+- `game.js`: `orderMonoName`, Unicode-Initialen und `orderMonoHTML` erzeugen feste Firmenzeichen aus dem Kundennamen. Die bisherige einzelne Farbfläche durch ein gemeinsames Inline-SVG-System ersetzt; alle Auftragskarten verwenden denselben Aufruf. Keine neuen Bilder/Fonts, keine Spielstandänderung.
+- `style.css`: neuer v308-Block am Ende; bisherige Umrandung/Schatten gezielt für `.o-mono` ersetzen, 32-Pixel-Fläche behalten, Kontrastmodus berücksichtigen. Die Händlergestaltung v302 ist unverändert enthalten.
+- `index.html` / `sw.js`: `game.js?v=308`, `style.css?v=308`, Service Worker v308. Alle anderen Verweise bleiben auf ihrer jeweiligen Dateiversion.
+- `AENDERUNGEN.md` / diese Datei: Ursache, Gestaltung, Prüfungen und Grenzen. Keine neue Test-/Bilddatei erforderlich.
+- Die übrigen Dateien entsprechen der letzten Lieferung v307; keine vorherigen Produktänderungen entfernt.
+
+103 vorhandene Kundennamen ohne identische Monogramme und zwölf gerenderte SVG-Beispiele geprüft; kein Live-Handy-/Safari-Test. Vor dem Übernehmen neuerer Commits nach `8232bbe` erneut abgleichen. Kein Push erfolgt.
+
+## v307 – Jagd auf main 8232bbe / v301 einschließlich v302–v306
+
+Diese ZIP enthält 22 gegenüber aktuellem main geänderte/neue Dateien. Alle noch ausstehenden Händler-, Feldmenü-, Gießzustands-, Schatz- und Firmenbewertungsänderungen aus v302–v306 sind vollständig enthalten. Ältere ZIPs nicht zusätzlich darüberkopieren.
+
+- `hunt.js`: Keilerrumpf/-kopf/-läufe und Farbpaletten überarbeitet; neue Familien `braun`/`aschgrau` ergänzen bestehende gespeicherte Farbkennungen. Seltene Fellwahrscheinlichkeiten, vorhandene Trophäendaten und Preise bleiben erhalten. Neue optionale `air`-Angabe für neue Fasan-Treffer; alte Datensätze funktionieren ohne Migration.
+- `stepAnimal` / `fallStart` / `deadLeg` / `fallFloor`: versetzte Sturzphasen, Ausgangslage aus den tatsächlichen Knoten, individuelle Größe erhalten und Bodenauflage während der Bewegung. Keiler-Laufansätze, Segmentlängen und Lauf-Trefferzonen gemeinsam geändert; deshalb `hunt.js` immer vollständig übernehmen.
+- `shotContext` / `shotName` / `onHit` / Sammlung/Jagdauftrag: Flugzustand beim Abdrücken statt pauschaler Vogel-Zonenbeschriftung; Flugauftrag nur bei bestätigtem Flugtreffer. `SPECIES_W` jetzt 40/28/32, Flugtimer und Tiergrenzen unverändert.
+- `hunt-v307.test.js` neu: direkt `node hunt-v307.test.js`, nur Node-Standardmodule. Nutzt Originalmodell-, Treffer-, Animations- und Schussfunktionen; Renderer/DOM-Peripherie als Fixture. `hunt.test.js` weiterhin nach Projektkonvention aus `tests/` ausführen, darin Artenverhältnis und irreführenden alten Testtitel angepasst.
+- `index.html` / `sw.js`: `hunt.js?v=307`, Service Worker v307. Alle anderen Cache-Verweise behalten ihre bisherigen Dateiversionen.
+- Die übrigen Produkt-/Testdateien entsprechen der letzten Lieferung v306. Änderungen/Prüfgrenzen ausführlich oben in `AENDERUNGEN.md`.
+
+Vor dem Einspielen neuerer Commits nach `8232bbe` erneut abgleichen. Kein Push erfolgt. Keine Live-Browser-/iPhone-/Safari-Prüfung; 18 Ansichten mit Originalshadern über Mesa/EGL sowie automatische Modell-/Animations-/Treffertests geprüft.
+
+## v306 – Firmenbewertung auf main 8232bbe / v301 einschließlich v302–v305
+
+Diese ZIP enthält neunzehn gegenüber aktuellem main geänderte/neue Dateien. Händlerkontakte, dynamisches Feldmenü, sichtbarer Gießzustand und angepasste Schatzbelohnungen aus v302–v305 sind vollständig enthalten; ältere ZIPs nicht zusätzlich erforderlich.
+
+- `corp.js`: `corpFleetPlan` speichert das deterministische Angebot in `S.corp.fleets306`; bei Etappen-/Anzahl-/Modusänderung neu geplant. `corpAppraisal` bewertet die angebotene Flotte, den Sitz und den Kunden-/Organisationsanteil. `corpValue` verwendet diese Summe statt `base × corpStageK`. Alte Basisfelder bleiben erhalten, `corpStageK` als unbenutzter bisheriger Bewertungshelfer entfernt.
+- `openCorp`: alte laufende Gesprächswerte proportional anpassen, Fortschritt behalten und Neubewertung erklären. Konkrete Flotte und Bewertungsanteile als optionale `t.fleet306`/`t.appraisal306` speichern. `renderCorp` zeigt deren Zusammensetzung, `corpClose` übergibt genau diese Fahrzeuge. Historische `C.owned`-Kaufpreise, vorhandene Spielerfahrzeuge und Büros bleiben erhalten. Kein globaler rückwirkender Vermögenseingriff.
+- `corpHqOpen`: doppelten Firmensitz zum tatsächlichen Immobilien-Zeitwert verkaufen statt zu 18 % des gesamten Konzernpreises.
+- `company-values-v306.test.js` neu: direkt mit Node ausführen, keine Zusatzpakete/Git-/Netzwerkzugriffe. Zwölf Szenarien mit den echten Tabellen und Kernfunktionen; DOM/Peripherie als Fixture.
+- `index.html` / `sw.js`: `corp.js?v=306`, Service Worker v306. Erbe/Welt bleiben auf v305, Modelle/Feldansicht auf v304, Händlerdateien auf v302; übrige Verweise unverändert.
+- `AENDERUNGEN.md` und diese Datei: Ursachen, Vorher-/Nachher-Werte, Übergabe-/Verhandlungsverhalten und Prüfgrenzen.
+- Übrige dreizehn ZIP-Dateien unverändert aus v302–v305: `offices.js`, `snus.js`, `pablo.js`, `intro.js`, `style.css`, `farmmodels.js`, `farmview.js`, `erbe.js`, `worldview.js`, `dealer-contacts-v302.test.js`, `field-menu-v303.test.js`, `watering-look-v304.test.js`, `treasure-loot-v305.test.js`.
+
+Vor dem Einspielen späterer Commits nach `8232bbe` erneut zusammenführen. Keine Live-Browser-/iPhone-/Safari-Prüfung. Keine zusätzlichen Bilder oder Texturen. Ältere ZIPs nicht anschließend darüberkopieren.
+
+## v305 – Kapital-/bedarfsgerechter Schatz auf main 8232bbe / v301 einschließlich v302–v304
+
+Diese ZIP enthält siebzehn gegenüber aktuellem main geänderte/neue Dateien. Händlerkontakte, dynamisches Feldmenü und sichtbarer Gießzustand aus v302/v303/v304 sind vollständig integriert. Direkt auf main einspielbar, ältere ZIPs nicht erforderlich.
+
+- `erbe.js`: neue `farmTreasureLoot`-Planung für verfügbare, benötigte Waren mit gemeinsamer Lagerplatzreservierung. `farmTreasureDig` skaliert Geld nach Kapital/Level/Etappe und Grabqualität, EP/Kleeblätter nach Fortschritt. Einmalige Vergabe mit gespeichertem Ergebnis `c.reward`, Geldersatz für fehlende Warenplätze. Keine neue globale Spielstandmigration, alte `done`-Schätze bleiben erledigt.
+- `worldview.js`: `worldTreasureReward` zeigt/animiert tatsächliches Geld und Waren sowie EP/Kleeblätter. Aufruf aus der bisherigen Öffnungsphase; alte Ergebnisse ohne `items` kompatibel. Grab-/Kamera-/Wasserfallcode unverändert.
+- `treasure-loot-v305.test.js` neu: direkt mit Node ausführbar, 13 Szenarien inklusive echter Waren-/Rezepttabellen und rekursiver Freigaben. Keine Zusatzpakete.
+- `index.html` / `sw.js`: `erbe.js?v=305`, `worldview.js?v=305`, Service Worker v305. Modelle/Ansicht bleiben auf v304, Händlerdateien auf v302, übrige Verweise unverändert.
+- `AENDERUNGEN.md` und diese Datei: Umsetzung, Geld-/Fortschrittsfaktoren, Tests und Grenzen.
+- Die übrigen zehn ZIP-Dateien stammen unverändert aus v302–v304: `offices.js`, `snus.js`, `pablo.js`, `intro.js`, `style.css`, `farmmodels.js`, `farmview.js`, `dealer-contacts-v302.test.js`, `field-menu-v303.test.js`, `watering-look-v304.test.js`.
+
+Vor dem Einspielen späterer Commits nach `8232bbe` erneut zusammenführen. Keine Live-Browser-/iPhone-/Safari-Prüfung. Keine neuen Bilder/Texturen erforderlich. Ältere ZIPs nicht anschließend darüberkopieren.
+
+## v304 – Sichtbarer Gießzustand auf main 8232bbe / v301 einschließlich v302/v303
+
+Diese ZIP enthält vierzehn gegenüber aktuellem main geänderte/neue Dateien. Händlerkontakte v302 und Feldmenü v303 sind vollständig enthalten; ältere ZIPs müssen nicht vorher angewendet werden.
+
+- `farmmodels.js`: optionale Gießparameter an `fieldSoil`, `cropMesh` und `treeMesh`. Neue `treeSoil`-Baumscheibe, feine Bodenrisse und ausschließlich auf grünes Pflanzengewebe begrenzte Entsättigung. Aufrufe ohne Parameter bleiben kompatibel; Fruchtmodelle unverändert. `FM.treeSoil` exportiert.
+- `farmview.js`: Mesh-Schlüssel für feuchten/trockenen Feldboden, Pflanzengrün und Obstbäume. Baumscheibe als flaches Kindobjekt; Netze beim vorhandenen Zustandsabgleich wechseln, keine neuen Szenenknoten pro Frame. Feldmenü aus v303 bleibt erhalten. Keine Änderung an `farm.js` oder `team.js`.
+- `watering-look-v304.test.js` neu: direkt mit Node ausführbar, ohne Zusatzpakete. 66 Netze plus Zustands-/Cache-/Speicherprüfungen mit tatsächlichen Modell-/Spielfunktionen. Erwartet für den Vergleich kompatible Originalmodelle auf `origin/main`.
+- `index.html` / `sw.js`: `farmmodels.js?v=304`, `farmview.js?v=304`, Service Worker v304. Händlerdateien bleiben auf v302, übrige Cache-Verweise unverändert.
+- `AENDERUNGEN.md` und diese Datei: Ursache, Umsetzung und Prüfgrenzen.
+- Übrige Dateien unverändert aus v302/v303: `offices.js`, `snus.js`, `pablo.js`, `intro.js`, `style.css`, `dealer-contacts-v302.test.js`, `field-menu-v303.test.js`. Frühere Büro-, Pflanzen-, Treppen- und Wasserfallkorrekturen aus main bleiben erhalten.
+
+Vor dem Einspielen späterer Commits nach `8232bbe` erneut zusammenführen. 22 Trocken-/Nass-Ansichten mit Originalmodellen/Shadern über Mesa/EGL geprüft; kein Live-Browser-/iPhone-/Safari-Test. Keine neuen Bilddateien oder Texturen erforderlich. Ältere ZIPs nicht anschließend darüberkopieren.
+
+## v303 – Dynamisches Feldmenü auf main 8232bbe / v301 einschließlich v302
+
+Diese ZIP enthält zwölf gegenüber aktuellem main geänderte/neue Dateien. Die noch nicht auf main enthaltene Händlerlieferung v302 ist vollständig integriert; diese ZIP kann direkt auf main eingespielt werden, ohne v302 vorher anzuwenden.
+
+- `farmview.js` neu gegenüber v302 geändert: `fieldPopState` und `refreshFieldPop` verbinden den Zustand des ausgewählten Feldes mit dem offenen Menü. Abgleich im bestehenden Positionspfad, Zustand auch beim direkten Neuaufbau normalisiert. Nur echte Zustandswechsel ersetzen den Inhalt; laufende Werkzeuggesten werden erst nach dem Loslassen nachgeführt. Veraltete Werkzeugereignisse werden abgefangen. Keine Änderung an `farm.js` oder `team.js`.
+- `field-menu-v303.test.js` neu: direkt mit Node ausführbar. Zehn Szenarien mit echten Feld-, Farmer- und Menüfunktionen und DOM-/Grafik-Ersatz. Optional `--before` lädt `farmview.js` von `origin/main` und reproduziert den alten Fehler, solange main ihn noch enthält.
+- `index.html` / `sw.js`: `farmview.js?v=303`, Service Worker v303. Cache-Verweise der Händlerdateien bleiben auf v302. Nur diese neue Produktdatei wurde weiter hochgezählt.
+- `AENDERUNGEN.md` und diese Datei: Ursache, Lösung und Prüfgrenzen.
+- Übrige ZIP-Dateien stammen unverändert aus der vorherigen Lieferung v302: `offices.js`, `snus.js`, `pablo.js`, `intro.js`, `style.css`, `dealer-contacts-v302.test.js`. Dauerhafte Kontakte, Crack und Don Pablos Erstkontakt ab Deutschland bleiben erhalten. Beschreibung und Migrationen siehe v302 unten.
+
+Vor dem Einspielen späterer Commits nach `8232bbe` erneut zusammenführen. Keine Live-Browser-/iPhone-/Safari-Prüfung. Ältere ZIPs nicht anschließend darüberkopieren.
+
+## v302 – Händlerkontakte und Crack auf main 8232bbe / v301
+
+Diese ZIP enthält ausschließlich zehn gegenüber aktuellem main geänderte/neue Dateien. Vorherige Büro-, Treppen-, Pflanzen- und Wasserfalländerungen bleiben erhalten; die ZIP setzt direkt auf den bereits hochgeladenen Stand v301 auf.
+
+- `offices.js`: dauerhafte `S.phone.contacts`, einmalige Kontaktmigration `contacts302` vor der 24-h-Löschung, Kontaktkarten, vier Telefonreiter, stille eigene Anfragen und gemeinsame Angebots-/Nachschubprüfungen. Bestehende Teamnachrichten und Zeitung bleiben funktional.
+- `snus.js`: genau eine Erstnachricht, Bestandsanfrage über Kontakte, gespeichertes Sortiment `supply302` / `lastSupply302`, Kauf-/Ablaufprüfung und aktualisierter Haftentlassungstext. Bestehende Snus-Kunden und Haftlogik erhalten.
+- `pablo.js`: Erstkontakt ab Etappe Deutschland (3). Vor Europa Abholung an einer Straßen-Lagerhalle, danach wieder Flughafen-Hangars möglich. Kokain und Crack separat in `stock`, einmalige Migration `stock302`; `kg` bleibt die Summe. Alte Aufträge ohne `sort` und Angebote mit `tons`/numerischem `pick` bleiben Kokain. Kunden, Rückgaben, Abschlussbericht und Lageranzeigen berücksichtigen die Ware. Sortiment bleibt während einer Einkaufsrunde gespeichert; kleine Restmengen sind absetzbar.
+- `intro.js`: Lina erklärt Kontakte, eigene Nachbestellung und beide Waren ab Deutschland.
+- `style.css`: nur neuer Block v302 am Dateiende, kompakte Reiter/Kontaktkarten und auf schmalen Bildschirmen umgebrochene Mengenauswahl.
+- `index.html` / `sw.js`: v302 für `style.css`, `offices.js`, `snus.js`, `pablo.js`, `intro.js`; Service Worker v302. Übrige Cache-Verweise unverändert.
+- `dealer-contacts-v302.test.js` neu: direkt im Projektordner mit Node ausführen, ohne Zusatzpakete. 13 Szenarien einschließlich echter Weltdaten/Routing ab Deutschland. DOM und Fahrzeugzuteilungsansicht teilweise als Fixture.
+- `AENDERUNGEN.md` und diese Datei: Umsetzung, Migrationen und Prüfgrenzen.
+
+Vor dem Einspielen späterer Commits nach `8232bbe` erneut zusammenführen. Keine Live-Browser-/iPhone-/Safari-Prüfung. Nicht zusätzlich ältere ZIPs einspielen; deren Änderungen sind bereits in main enthalten.
+
 ## v301 – Firmenschild entfernen und Treppen anbinden auf main 3b2b285 / v300
 
 Diese ZIP enthält ausschließlich sieben gegenüber aktuellem main geänderte/neue Dateien. Alle bisherigen Pflanzen-, Mitarbeiter-, Wasserfall- und übrigen Änderungen aus main bleiben erhalten.

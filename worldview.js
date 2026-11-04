@@ -2384,12 +2384,7 @@ function stepTreasureReveal(Rv, dt, time) {
     R.burst({ x, y: 0.9, z, n: 22 + st * 6, speed: 3.2, up: 5, life: 1.8, size: 0.2, size2: 0.05, col: TR_GEM, shape: 3, g: -6, drag: 0.5 });
     R.burst({ x, y: 0.15, z, n: 18, speed: 2.6, flat: true, up: 0.5, life: 1.0, size: 0.3, size2: 0.9, col: [[1, 0.95, 0.75, 0.55]], g: -0.5, drag: 1.4 });
     const px = FV.R.project(cx, 0.9, cz) || [R.w / 2, R.h / 2];
-    const r = Rv.r, chips = ["💶 " + eur(r.m), "🍀 " + r.clover, "⭐ " + r.xp + " EP"];
-    worldLootShow(px[0], px[1], { sub: "Schatzkiste · " + "★".repeat(st) + "☆".repeat(3 - st), title: (st > 1 ? "✨ " : "") + TR_TXT[st - 1] + (st > 1 ? " ✨" : ""), chips, r: st === 3 ? 3 : st, css: TR_CSS[st - 1] });
-    let d = 500;
-    setTimeout(() => { if (FV.on) { coinFly(px[0], px[1], r.m); sfx("coin"); } }, d); d += 420;
-    setTimeout(() => { if (FV.on) farmCloverFlyAt(px[0], px[1], r.clover); }, d); d += 300;
-    setTimeout(() => { if (FV.on) xpFly(px[0], px[1] - 10, r.xp, 0); }, d);
+    worldTreasureReward(px[0], px[1], Rv.r, st);
   }
   const u = t - Rv.tb;
   const kk = Math.min(1, u / 0.5), e = 1 + 2.70158 * Math.pow(kk - 1, 3) + 1.70158 * Math.pow(kk - 1, 2);
@@ -2881,6 +2876,20 @@ function stepParcelOpen(O, P, dt, time) {
   if (u > TS + 0.7) { WV.parcelOpen = null; WV.evKey = null; farmSyncScene(); renderFarmUI(); }
 }
 /* Gemeinsame Show: Lichtblitz an (px|py) und Banner mit Titel und Beute-Chips */
+/* v305: Tatsächlich erhaltene Waren und skalierte Belohnungen gemeinsam
+   zeigen; alte Funde ohne Warenliste bleiben darstellbar. */
+function worldTreasureReward(px, py, r, st) {
+  const items = r.items || [], chips = ["💶 " + eur(r.m), "🍀 " + r.clover, "⭐ " + r.xp + " EP"];
+  items.forEach(([id, n]) => chips.push({ html: icHTML(id) + " " + esc(n + "× " + FITEMS[id].n) }));
+  worldLootShow(px, py, { sub: "Schatzkiste · " + "★".repeat(st) + "☆".repeat(3 - st), title: (st > 1 ? "✨ " : "") + TR_TXT[st - 1] + (st > 1 ? " ✨" : ""), chips, r: st === 3 ? 3 : st, css: TR_CSS[st - 1], ms: items.length ? 4800 : 3200 });
+  let d = 500;
+  setTimeout(() => { if (FV.on) { coinFly(px, py, r.m); sfx("coin"); } }, d); d += 420;
+  items.forEach(([id, n], i) => {
+    setTimeout(() => { if (FV.on) { flyItem(id, px + i * 20, py, storeBtn(), 0, n); sfx("collect"); } }, d); d += 220;
+  });
+  setTimeout(() => { if (FV.on) farmCloverFlyAt(px, py, r.clover); }, d); d += 300;
+  setTimeout(() => { if (FV.on) xpFly(px, py - 10, r.xp, 0); }, d);
+}
 function worldLootShow(px, py, o) {
   const fx = $("#farmFx");
   if (!fx) return;

@@ -486,17 +486,59 @@ const FM = (() => {
   }
 
   /* ------------------------------- Felder ------------------------------- */
-  function fieldSoil(rotation) {
+  function fieldSoil(rotation, watered) {
     G3.seed(101);
     const b = new MB();
-    b.noise(0.06, () => b.box(1.9, 0.08, 1.9, C.soilD, { top: C.soil }));
-    for (let i = 0; i < 4; i++) b.noise(0.08, () => b.box(1.75, 0.07, 0.2, rotation ? 0x9a6c40 : C.soilL, { y: 0.06, z: -0.66 + i * 0.44 }));
+    /* v304: Hell/matt ohne Wasser, dunkel nach dem Gießen. Ohne Angabe
+       bleiben leere Beete und bisherige Modellvorschauen unverändert. */
+    const top = watered === true ? 0x60402b : watered === false ? 0xad8455 : C.soil;
+    const side = watered === true ? 0x483020 : watered === false ? 0x87603c : C.soilD;
+    const ridge = watered === true ? 0x735036 : watered === false ? 0xbd9563 : rotation ? 0x9a6c40 : C.soilL;
+    b.noise(0.06, () => b.box(1.9, 0.08, 1.9, side, { top }));
+    for (let i = 0; i < 4; i++) b.noise(0.08, () => b.box(1.75, 0.07, 0.2, ridge, { y: 0.06, z: -0.66 + i * 0.44 }));
+    if (watered === false) soilCracks(b, 0.083, 1);
+    return b;
+  }
+  /* v304: Wenige feine Risse in den Furchen, ohne zusätzliche Texturen. */
+  function soilCracks(b, y, spread) {
+    for (const [x, z, a] of [[-0.4, -0.44, 0.15], [0.32, 0, -0.25], [-0.15, 0.44, 0.3]]) {
+      b.at({ x: x * spread, z: z * spread, y, ry: a }, () => {
+        b.box(0.26 * spread, 0.002, 0.018, 0x725134, { rz: 0 });
+        b.box(0.15 * spread, 0.002, 0.013, 0x725134, { x: 0.11 * spread, z: 0.03, ry: -0.45 });
+        b.box(0.1 * spread, 0.002, 0.012, 0x725134, { x: -0.03, z: -0.025, ry: 0.65 });
+      });
+    }
+  }
+  function treeSoil(watered) {
+    G3.seed(304);
+    const b = new MB(), points = [];
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2, r = 0.83 + rnd() * 0.08;
+      points.push([Math.cos(a) * r, 0.035, Math.sin(a) * r]);
+    }
+    b.noise(0.07, () => {
+      for (let i = 0; i < points.length; i++) b.tri([0, 0.035, 0], points[(i + 1) % points.length], points[i], watered ? 0x60402b : 0xb18c5d);
+    });
+    if (!watered) soilCracks(b, 0.038, 0.9);
+    return b;
+  }
+  /* v304: Nur grünes Pflanzengewebe entsättigen. Stamm, Stützen und reife
+     Früchte/Ähren behalten ihre Farben; kein Absterben wird simuliert. */
+  function dryFoliage(b) {
+    for (let i = 0; i < b.v.length; i += 9) {
+      const r = b.v[i + 6], g = b.v[i + 7], blue = b.v[i + 8];
+      if (g > r * 1.05 && g > blue * 1.2) {
+        b.v[i + 6] = r * 0.62 + 0.62 * 0.38;
+        b.v[i + 7] = g * 0.62 + 0.52 * 0.38;
+        b.v[i + 8] = blue * 0.62 + 0.24 * 0.38;
+      }
+    }
     return b;
   }
   /* Pflanzen je Sorte und Stufe (0 Saat, 1 klein, 2 halb, 3 reif) */
   const PLANT_SPOTS = [];
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) PLANT_SPOTS.push([-0.58 + i * 0.58, -0.6 + j * 0.6]);
-  function cropMesh(kind, stage) {
+  function cropMesh(kind, stage, watered) {
     G3.seed(200 + stage * 13 + kind.length * 7);
     const b = new MB();
     const g = [0.25, 0.5, 0.78, 1][stage];
@@ -507,7 +549,7 @@ const FM = (() => {
         PLANT[kind](b, g, stage === 3, k);
       });
     });
-    return b;
+    return watered === false ? dryFoliage(b) : b;
   }
   const PLANT = {
     weizen(b, g, ripe) {
@@ -566,7 +608,7 @@ const FM = (() => {
     kirsche: { leaf: [0x4f9e35, 0x5fae3a, 0x3f8a2a], fruit: 0xa8102c, shape: 1.0, pair: true },
     birne: { leaf: [0x67b043, 0x79c24a, 0x58a038], fruit: 0xc8d24a, shape: 1.25, pear: true }
   };
-  function treeMesh(kind) {
+  function treeMesh(kind, watered) {
     G3.seed(300 + kind.length * 11);
     const T = TREE[kind] || TREE.apfel;
     const b = new MB();
@@ -582,7 +624,7 @@ const FM = (() => {
       LW(b, [0.4, 1.15, 0.22], 0.42, P2, { hi: true, jitter: 0.3, seed: kind.length + 3, vc: cv, tufts: 4 });
       LW(b, [-0.38, 1.2, -0.2], 0.4, P, { hi: true, jitter: 0.3, seed: kind.length + 5, vc: cv, tufts: 4 });
       LW(b, [-0.1, 1.75 * (T.shape > 1 ? 1.08 : 1), 0.25], 0.36, P3, { hi: true, jitter: 0.3, seed: kind.length + 7, vc: cv, tufts: 4 });
-      return b;
+      return watered === false ? dryFoliage(b) : b;
     }
     b.noise(0.12, () => {
       b.cyl(0.13, 0.09, 0.95, 6, 0x8b5e3c, { top: 0x7a5233 });
@@ -595,7 +637,7 @@ const FM = (() => {
       b.ico(0.4, T.leaf[2], { x: -0.38, y: 1.2, z: -0.2, jitter: 0.3 });
       b.ico(0.36, T.leaf[1], { x: -0.1, y: 1.75 * (T.shape > 1 ? 1.08 : 1), z: 0.25, jitter: 0.3 });
     });
-    return b;
+    return watered === false ? dryFoliage(b) : b;
   }
   /* Früchte am Baum (eigener Knoten – nur sichtbar, wenn reif) */
   function treeFruit(kind) {
@@ -1359,7 +1401,7 @@ const FM = (() => {
 
   return {
     C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
-    board, shed, gate, fieldSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
+    board, shed, gate, fieldSoil, treeSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,
     pondR, pondBank, pondWater, pondFoam, pondReeds, pondProps, duck,

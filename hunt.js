@@ -554,13 +554,15 @@ const HUNT = (() => {
     const g = hsh(p[0] * 3.1, p[1] * 2.3, p[2] * 2.9), g2 = hsh(p[2] * 1.7 + 3, p[0] * 4.1, p[1] * 3.3);
     let c = mixc(BOAR.coat, BOAR.coatD, ss((sv - 0.5) / 0.42));
     c = mixc(c, BOAR.belly, ss((-sv - 0.3) / 0.5));
-    c = mixc(c, BOAR.coatL, g * g * (k == null ? 0.7 : k) * (1 - ss((sv - 0.6) / 0.3)));
-    return pie(mulc(c, (0.93 + 0.14 * g2) * fur(p, 1.4)), [p[0] * 1.3, p[1] * 1.3 + 0.7, p[2] * 1.3], 0);
+    /* v307: feine Grannenspitzen statt großflächiger heller Beulen. Die Form kommt aus der Anatomie, nicht aus Zufallsfalten. */
+    c = mixc(c, BOAR.coatL, g * g * (k == null ? 0.32 : k * 0.55) * (1 - ss((sv - 0.6) / 0.3)));
+    return pie(mulc(c, (0.98 + 0.04 * g2) * fur(p, 0.45)), [p[0] * 1.3, p[1] * 1.3 + 0.7, p[2] * 1.3], 0);
   }
   const boarHair = (p, sv, k) => boarCoat(p, sv || 0, k);
-  const BOAR_T = [[-0.535, 0.555, 0.475, 0.03], [-0.51, 0.615, 0.4, 0.1], [-0.455, 0.65, 0.33, 0.146], [-0.37, 0.668, 0.305, 0.166], [-0.29, 0.678, 0.345, 0.17], [-0.2, 0.69, 0.39, 0.172],
-    [-0.06, 0.735, 0.37, 0.19], [0.08, 0.805, 0.322, 0.205], [0.18, 0.86, 0.29, 0.213], [0.27, 0.874, 0.288, 0.212], [0.36, 0.83, 0.318, 0.2], [0.44, 0.752, 0.356, 0.18],
-    [0.49, 0.68, 0.392, 0.15], [0.52, 0.61, 0.43, 0.09], [0.535, 0.56, 0.46, 0.03]];
+  /* v307: geschlossene, vorn kräftige Silhouette; Bauchlinie steigt zur schmaleren Hinterhand an. */
+  const BOAR_T = [[-0.535, 0.555, 0.475, 0.03], [-0.51, 0.625, 0.41, 0.092], [-0.455, 0.686, 0.355, 0.142], [-0.37, 0.714, 0.334, 0.161], [-0.29, 0.726, 0.35, 0.169], [-0.2, 0.738, 0.37, 0.176],
+    [-0.06, 0.766, 0.356, 0.19], [0.08, 0.811, 0.316, 0.207], [0.18, 0.846, 0.29, 0.215], [0.27, 0.85, 0.29, 0.212], [0.36, 0.815, 0.318, 0.197], [0.44, 0.752, 0.356, 0.174],
+    [0.49, 0.68, 0.392, 0.143], [0.52, 0.61, 0.43, 0.084], [0.535, 0.56, 0.46, 0.03]];
   const crestH = z => ss((z + 0.34) / 0.42) * (1 - ss((z - 0.38) / 0.12));        /* Borstenkamm: über dem Widerrist am höchsten */
   /* Borstenbüschel: kurzer Kegel, unten im Fell verankert, Spitze heller */
   function bristle(b, p, d, l, r, c0, c1) {
@@ -573,8 +575,8 @@ const HUNT = (() => {
     for (let i = 0; i <= nZ; i++) {
       const u = i / nZ, z = lerp(BOAR_T[0][0], BOAR_T[BOAR_T.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45), [top, bot, hw] = prof(BOAR_T, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
       const sh = 1 - ss(Math.abs(z - 0.2) / 0.15), ham = 1 - ss(Math.abs(z + 0.38) / 0.14);
-      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.25, (j, cu, sv) => [1 - 0.26 * Math.pow(Math.max(0, sv), 2) - 0.06 * Math.pow(Math.max(0, -sv), 3)
-        + 0.07 * sh * Math.max(0, 1 - Math.abs(sv - 0.05) * 1.6) + 0.08 * ham * Math.max(0, 1 - Math.abs(sv + 0.05) * 1.5), 1 + (Math.abs(sv) < 0.95 ? 0.02 * (hsh(i, j, 9) - 0.5) : 0)]);
+      const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.1, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) - 0.04 * Math.pow(Math.max(0, -sv), 3)
+        + 0.035 * sh * Math.max(0, 1 - Math.abs(sv) * 1.6), 1]);
       P.push(R);
       C.push(R.map((p, j) => {
         const sv = Math.sin((j / m) * Math.PI * 2);
@@ -600,17 +602,17 @@ const HUNT = (() => {
     ell(b, [0, 0.4, -0.569], [0.018, 0.042, 0.014], BOAR.ridge, 6, 4);
     return b;
   }
-  /* Läufe mit Gelenk: oben Unterarm bzw. Keule (kräftig), unten schlanke Röhre, Fessel, gespaltene Schalen, Afterklauen.
-     Nur Optik: die Trefferzonen der Läufe bleiben die gerade Linie wie bisher (SP.keiler.legs, lu 0,36). */
-  const BLU = 0.17, BLL = 0.19;
-  const BLEG_FU = [[0.055, 0.002, 0.003, 0], [0.015, 0.045, 0.059, 0], [-0.035, 0.057, 0.07, 0.004], [-0.085, 0.046, 0.06, 0.006], [-0.135, 0.034, 0.044, 0.004], [-0.178, 0.03, 0.036, 0]];
-  const BLEG_HU = [[0.06, 0.002, 0.003, -0.004], [0.02, 0.046, 0.066, -0.008], [-0.025, 0.061, 0.086, -0.014], [-0.075, 0.056, 0.077, -0.024], [-0.125, 0.037, 0.053, -0.028], [-0.178, 0.028, 0.04, -0.026]];
+  /* v307: Schulter-/Hüftdrehpunkt im Rumpf statt unter dem Bauch. Der obere Muskel steckt im Körper,
+     verjüngt sich zum Gelenk und beugt zusammen mit dem Unterlauf; auch die Trefferzonen folgen beiden Segmenten. */
+  const BLU = 0.32, BLL = 0.19;
+  const BLEG_FU = [[0.07, 0.002, 0.003, 0], [0.035, 0.041, 0.065, 0], [-0.035, 0.062, 0.088, 0.005], [-0.105, 0.054, 0.077, 0.012], [-0.19, 0.038, 0.052, 0.01], [-0.27, 0.029, 0.036, 0.004], [-0.328, 0.03, 0.036, 0]];
+  const BLEG_HU = [[0.07, 0.002, 0.003, -0.004], [0.03, 0.047, 0.071, -0.006], [-0.035, 0.07, 0.097, -0.012], [-0.105, 0.065, 0.089, -0.022], [-0.19, 0.044, 0.063, -0.033], [-0.27, 0.03, 0.044, -0.032], [-0.328, 0.028, 0.04, -0.026]];
   const BLEG_LO = [[0.012, 0.031, 0.036, 0], [-0.03, 0.027, 0.031, 0], [-0.11, 0.022, 0.026, 0.002], [-0.14, 0.025, 0.03, 0.006], [-0.158, 0.023, 0.028, 0.013], [-0.172, 0.022, 0.028, 0.019]];
   const boarLegCol = (p, k) => pie(mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)), [p[0] * 1.3, p[1] * 1.3 + 0.4, p[2] * 1.3], 0.25);
   function boarUpperInto(b, front) {
     /* v290: Schulter und Keule länglich modelliert, ohne kugelige Aufsätze. */
     legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.02) / 0.12)), true);
-    if (!front) ell(b, [0, -0.168, -0.056], [0.02, 0.026, 0.02], BOAR.leg, 6, 4);          /* Fersenhöcker */
+    if (!front) ell(b, [0, -0.318, -0.056], [0.018, 0.024, 0.018], BOAR.leg, 6, 4);          /* Fersenhöcker */
     return b;
   }
   function boarLowerInto(b) {
@@ -624,12 +626,13 @@ const HUNT = (() => {
   const boarUpper = front => boarUpperInto(MB(), front), boarLower = () => boarLowerInto(MB());
   function boarLeg(front) { const b = MB(); boarUpperInto(b, front); b.at({ y: -BLU, z: front ? 0 : -0.025 }, q => boarLowerInto(q)); return b; }
   /* Haupt: z nach vorn, Drehpunkt am Hinterhaupt; außen um 0,38 nach unten geneigt wie bisher (Haltungen der Animation bleiben gleich) */
-  const BOAR_H = [[-0.14, 0.1, -0.12, 0.09], [-0.09, 0.185, -0.215, 0.16], [-0.02, 0.205, -0.235, 0.176], [0.06, 0.19, -0.222, 0.165], [0.14, 0.15, -0.185, 0.133],
-    [0.22, 0.112, -0.148, 0.103], [0.3, 0.08, -0.115, 0.08], [0.37, 0.058, -0.094, 0.067], [0.425, 0.045, -0.083, 0.062], [0.462, 0.04, -0.077, 0.064], [0.48, 0.03, -0.069, 0.06], [0.49, 0.0, -0.048, 0.04]];
+  /* v307: Stirn und Jochbein gehen in einen kräftigen Rüssel mit stumpfer, ovaler Scheibe über. */
+  const BOAR_H = [[-0.14, 0.1, -0.12, 0.09], [-0.09, 0.176, -0.188, 0.148], [-0.02, 0.198, -0.207, 0.158], [0.06, 0.184, -0.2, 0.15], [0.14, 0.146, -0.174, 0.13],
+    [0.22, 0.106, -0.143, 0.108], [0.3, 0.077, -0.115, 0.089], [0.37, 0.057, -0.098, 0.077], [0.425, 0.048, -0.09, 0.073], [0.462, 0.046, -0.088, 0.075], [0.48, 0.044, -0.087, 0.076], [0.49, 0.04, -0.083, 0.071]];
   function headRing(z, m, i) {
     const [top, bot, hw] = prof(BOAR_H, z), yc = (top + bot) / 2, hy = (top - bot) / 2, back = 1 - ss((z - 0.02) / 0.14), snout = ss((z - 0.24) / 0.1);
     return ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.3 + 0.5 * snout, (j, cu, sv) => [1 - 0.22 * Math.pow(Math.max(0, sv), 2) + 0.07 * back * Math.max(0, -sv) * (1 - Math.abs(sv)) * 2,
-      1 + (i != null ? 0.022 * (hsh(i, j, 13) - 0.5) * (z < 0.45 ? 1 : 0) : 0)]);
+      1]);
   }
   /* Punkt auf der Kopfhaut: Längsstelle z, Winkel w um die Achse (0 = Seite, π/2 = oben, −π/2 = unten) */
   function headPt(z, w) { const R = headRing(z, 96), j = Math.round((((w / (Math.PI * 2)) % 1) + 1) % 1 * 96) % 96; return R[j]; }
@@ -684,7 +687,7 @@ const HUNT = (() => {
       const rr = mulberry(5207);
       [-1, 1].forEach(s => {
         const X = p => [s * p[0], p[1], p[2]];
-        ell(q, [s * 0.019, -0.026, 0.488], [0.011, 0.014, 0.005], BOAR.discD, 6, 4);                                      /* Nasenlöcher */
+        ell(q, [s * 0.026, -0.022, 0.494], [0.013, 0.016, 0.005], BOAR.discD, 7, 5);                                      /* Nasenlöcher */
         ell(q, X([eye[0] - 0.003, eye[1], eye[2]]), [0.0095, 0.009, 0.011], BOAR.eye, 7, 5);                              /* Lichter */
         ell(q, X([eye[0] + 0.004, eye[1] + 0.003, eye[2] + 0.004]), [0.0026, 0.0026, 0.0026], 0xe9e4da, 4, 3);
         const br = headPt(0.122, 0.8);
@@ -821,7 +824,7 @@ const HUNT = (() => {
       neckP: [0, 1.02, 0.4], headP: [0, 0.5, 0.22], body: { c: [0, 0.98, 0], r: [0.2, 0.22, 0.5] }, lung: { c: [0, 0.96, 0.24], r: 0.135 }, heart: { c: [0, 0.88, 0.28], r: 0.08 },
       head: { c: [0, 0.0, 0.18], r: 0.12 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, neckS: deerNeckZones(), sens: 1.3 },
     keiler: { n: "Keiler", i: "🐗", walk: 1.1, sneak: 0.8, run: 8.0, s0: 0.92, s1: 1.15,
-      legs: [{ h: [-0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [0.11, 0.36, 0.24], lu: 0.36, ll: 0, f: 1 }, { h: [-0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }, { h: [0.11, 0.36, -0.26], lu: 0.36, ll: 0, f: 0 }],
+      legs: [{ h: [-0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [-0.12, 0.51, -0.26], lu: BLU, ll: BLL, f: 0 }, { h: [0.12, 0.51, -0.26], lu: BLU, ll: BLL, f: 0 }],
       neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.125 }, heart: { c: [0, 0.46, 0.24], r: 0.07 },
       head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.13, stich: { c: [0, 0.455, 0.44], r: [0.17, 0.13, 0.135] }, sens: 1.2 },
     fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, legs: [],
@@ -839,7 +842,7 @@ const HUNT = (() => {
     kopf:    { n: "Kopfschuss", kill: true, run: [0, 0], cap: 2, bonus: 0, note: "Kopfschuss – das Haupt ist beschädigt, höchstens Silber." },
     koerper: { n: "Weichschuss", kill: false },
     lauf:    { n: "Laufschuss", kill: false },
-    vogel:   { n: "Treffer im Flug", kill: true, run: [0, 0], cap: 4, bonus: 0 }
+    vogel:   { n: "Körpertreffer", kill: true, run: [0, 0], cap: 4, bonus: 0 }
   };
   function drawScore(r) { r = r || rnd; return clamp(0.16 + 0.8 * (r() + r() + r()) / 3 + (r() < 0.06 ? 0.12 : 0), 0, 1); }
   function medalOf(score, zone) {
@@ -898,9 +901,12 @@ const HUNT = (() => {
           muzzle: 0xe6ddd0, chin: 0xf6f1e8, lip: 0x9a8a80, nose: 0x6e5f5a, ring: 0xf3eee6, gland: 0x8c7c72, leg: 0xe2dacc, legD: 0xcfc5b6, hoof: 0x3a302a, earIn: 0xf2e0d6, earRim: 0xcdc2b2 }]
     ],
     keiler: [
-      ["graubraun", 56, 0, "Graubraune Schwarte", "", {}],
+      ["graubraun", 36, 0, "Graubraune Schwarte", "", {}],
       ["schwarz", 20, 0, "Schwarze Schwarte", "Manche Keiler sind fast schwarz.", { coat: 0x3b322a, coatL: 0x6e6255, coatD: 0x221c17, belly: 0x2c251f, ridge: 0x15110d, beard: 0x6e6458, leg: 0x2a221b }],
-      ["rot", 15, 1, "Rötliche Schwarte", "Ein Keiler mit rötlich-brauner Schwarte wurde noch nicht dokumentiert.", { coat: 0x7b5a3c, coatL: 0xbb9672, coatD: 0x4a3524, belly: 0x533f2d, ridge: 0x2e2116, beard: 0xb3977b }],
+      ["rot", 16, 1, "Rötliche Schwarte", "Ein Keiler mit rötlich-brauner Schwarte wurde noch nicht dokumentiert.", { coat: 0x865331, coatL: 0xbb8962, coatD: 0x4a3022, belly: 0x53392a, ridge: 0x2e2116, beard: 0xb3977b }],
+      /* v307: zusätzliche natürliche Grundfarben; die seltenen weißen und gescheckten Stücke bleiben gleich selten. */
+      ["braun", 12, 0, "Kastanienbraune Schwarte", "Auch sattbraune Keiler ziehen durch das Revier.", { coat: 0x664331, coatL: 0x967157, coatD: 0x35261e, belly: 0x423026, ridge: 0x251a15, beard: 0x9d8067, leg: 0x39271f, snout: 0x51392d }],
+      ["aschgrau", 7, 1, "Aschgraue Schwarte", "Manche Keiler tragen kühle, aschgraue Grannen.", { coat: 0x686a65, coatL: 0xa4aaa4, coatD: 0x383c3a, belly: 0x424642, ridge: 0x252b28, beard: 0xb0b1a6, leg: 0x343834, snout: 0x55544e }],
       ["silber", 6, 2, "Silbergraue Schwarte", "Sehr alte Keiler werden manchmal silbergrau.", { coat: 0x706b64, coatL: 0xc6c1b8, coatD: 0x3f3b36, belly: 0x4b4741, ridge: 0x2a2622, beard: 0xd8d2c8 }],
       ["schecke", 2.5, 3, "Schecke (weiß gefleckt)", "Ganz selten hat ein Keiler weiße Flecken in der Schwarte.", {}],
       ["weiss", 0.5, 5, "Weiße Schwarte", "Ein weißer Keiler? Die Jäger am Stammtisch schwören, dass es ihn gibt.",
@@ -1015,8 +1021,8 @@ const HUNT = (() => {
       const colors = k === "hirsch" ? ["coat", "back", "belly", "face", "mane", "maneL", "leg", "nape"]
         : k === "keiler" ? ["coat", "coatL", "coatD", "belly", "beard", "leg"]
         : ["copper", "copperD", "gold", "rump", "belly", "wing", "wingD", "neck", "neckB", "head", "fA", "fB"];
-      const warm = variant % 2 === 0, light = (Math.floor(variant / 2) - 1.5) * 0.065;
-      colors.forEach(key => { if (T[key] != null) T[key] = mulc(mixc(T[key], warm ? 0xc48748 : 0x687b8b, gn.c === "weiss" ? 0.025 : 0.12), 1 + light); });
+      const warm = variant % 2 === 0, light = (Math.floor(variant / 2) - 1.5) * (k === "keiler" ? 0.095 : 0.065);
+      colors.forEach(key => { if (T[key] != null) T[key] = mulc(mixc(T[key], warm ? 0xc48748 : 0x687b8b, gn.c === "weiss" ? 0.025 : k === "keiler" ? 0.08 : 0.12), 1 + light); });
     }
     if (k === "keiler" && L.old) { T.beard = mixc(T.beard, 0xd6d0c6, L.old * 1.4); T.coatL = mixc(T.coatL, 0xbdb7ad, L.old); }
     Object.assign(LOOK, L);
@@ -1223,10 +1229,21 @@ const HUNT = (() => {
   const extraOf = r => valueOf(r) - PRICE[r.k][r.m];
   /* Schussnote 0,5–5 Sterne: Trefferlage, Entfernung, ziehendes Ziel, Seitenwind; erst krank geschossen kostet 1,5 */
   const SHOT_Z = { herz: 3, lunge: 2.5, hals: 2, kopf: 1.5, vogel: 3 };
+  /* v307: Flug ist ein Zustand beim Schuss, keine Trefferzone. Alte Datensätze ohne Zustand bleiben neutral beschriftet. */
+  function shotName(o) {
+    if (o.k !== "fasan") return ZONE[o.zone] ? ZONE[o.zone].n : "Treffer";
+    const air = o.air != null ? !!o.air : o.mv != null ? !!o.mv : null, head = o.zone === "kopf";
+    return (head ? "Kopfschuss" : "Treffer") + (air == null ? "" : air ? " im Flug" : " am Boden");
+  }
+  function shotContext(A) {
+    const air = A.k === "fasan" && ["fly", "land"].includes(A.st) && (A.y || 0) > 0.06;
+    return { air, mv: A.k === "fasan" ? air : (A.v || 0) > 0.35 || ["walk", "flee", "wounded", "hit"].includes(A.st) && (A.v || 0) > 0.15,
+      wv: X && X.wind ? Math.round(X.wind.v * 10) / 10 : 0 };
+  }
   function shotOf(o) {
     const why = [];
     let v = SHOT_Z[o.zone] != null ? SHOT_Z[o.zone] : 1.5;
-    why.push([ZONE[o.zone] ? ZONE[o.zone].n : "Treffer", v]);
+    why.push([shotName(o), v]);
     const dm = o.dm || 0, dv = dm >= 220 ? 1.5 : dm >= 190 ? 1 : dm >= 160 ? 0.5 : 0;
     if (dv) why.push([dm + " m Entfernung", dv]);
     if (o.mv && o.k !== "fasan") why.push(["auf ziehendes Stück", 1]);
@@ -1281,7 +1298,7 @@ const HUNT = (() => {
     { id: "art_h", d: 0, n: 1, t: () => "Erlege einen Rothirsch", ok: e => e.k === "hirsch" },
     { id: "art_k", d: 0, n: 1, t: () => "Erlege einen Keiler", ok: e => e.k === "keiler" },
     { id: "zwei", d: 0, n: 2, t: () => "Sichere zwei Trophäen", ok: () => true },
-    { id: "art_f", d: 1, n: 1, t: () => "Hol einen Fasan im Flug herunter", ok: e => e.k === "fasan" },
+    { id: "art_f", d: 1, n: 1, t: () => "Hol einen Fasan im Flug herunter", ok: e => e.k === "fasan" && e.air === true },
     { id: "silber", d: 1, n: 1, t: () => "Erlege ein Stück mit mindestens Silber", ok: e => e.m >= 2 },
     { id: "herz", d: 1, n: 1, t: () => "Herzschuss auf über 170 m", ok: e => e.zone === "herz" && e.dm > 170 },
     { id: "wind", d: 1, n: 1, t: () => "Sauberer Kammerschuss bei mindestens 4 m/s Wind", ok: e => /herz|lunge/.test(e.zone) && e.wv >= 4 },
@@ -1390,8 +1407,8 @@ const HUNT = (() => {
     S0.legs.forEach((L, i) => {
       const a = (pose.legs && pose.legs[i]) || [0, 0];
       for (let j = 1; j <= 4; j++) {
-        const up = rot([0, -L.lu * j / 4, 0], a[0], 0, 0), t = raySphere(lo, ld, add3(L.h, up), 0.06); if (t != null) hits.push(["lauf", t]);
-        if (L.ll) { const lp = add3(L.h, rot(add3([0, -L.lu, 0], rot([0, -L.ll * j / 4.2, 0], a[1], 0, 0)), a[0], 0, 0)), t2 = raySphere(lo, ld, lp, 0.045); if (t2 != null) hits.push(["lauf", t2]); }
+        const dm = legDim(k, L), up = legPt(L, dm, a[0], a[1] || 0, a[2] || 0, [0, -L.lu * j / 4, 0], false), t = raySphere(lo, ld, up, 0.06); if (t != null) hits.push(["lauf", t]);
+        if (L.ll) { const lp = legPt(L, dm, a[0], a[1] || 0, a[2] || 0, [0, -L.ll * j / 4.2, 0], true), t2 = raySphere(lo, ld, lp, 0.045); if (t2 != null) hits.push(["lauf", t2]); }
       }
     });
     if (!hits.length) return null;
@@ -1861,7 +1878,7 @@ const HUNT = (() => {
   }
   /* v262: Artenwahl für normales Wild – Anteile in Prozent (vorher fest im Code: 58 % Hirsch, 34 % Keiler, 8 % Fasan).
      Nur die Begegnungen werden häufiger – Güte, Erbgut, Gefieder und Seltenheit eines Fasans würfeln danach unverändert. */
-  const SPECIES_W = { hirsch: 45, keiler: 30, fasan: 25 };
+  const SPECIES_W = { hirsch: 40, keiler: 28, fasan: 32 };     /* v307: etwas mehr Fasane, gleiche Bestands- und Tiergrenzen */
   /* Fasan-Flugtimer: erster möglicher Flug nach 25–45 s Ansitz, danach alle 45–75 s – nur Zeitfenster für einen Versuch,
      keine Garantie: Wildbestand und Tiergrenzen haben Vorrang. Die Zeit läuft nur beim Ansitzen (nicht in Bergung oder Rückweg). */
   const FLY_FIRST = [25, 45], FLY_NEXT = [45, 75];
@@ -1912,7 +1929,7 @@ const HUNT = (() => {
   }
   /* v200: jedes Teil im Aussehen dieses Stücks (Schlüssel enthält Decke, Alter, Körperbau, Besonderheiten) */
   function build(A) {
-    const k = A.k, S0 = SP[k], gn = A.gn, lk = "_" + lookKey(k, gn), key = "hu9_" + k;
+    const k = A.k, S0 = SP[k], gn = A.gn, lk = "_" + lookKey(k, gn), key = (k === "keiler" ? "hu307_" : "hu9_") + k;
     const M = (id, fn) => fmesh(key + id + lk, () => withLook(k, gn, fn));
     if (k === "hirsch") {
       A.node = addNode(M("_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
@@ -2114,9 +2131,13 @@ const HUNT = (() => {
         break;
       }
       case "fall": {
-        /* v135: in die berechnete Liegepose sinken (Höhe, Seitenlage, Haupt, Läufe) */
-        const dp = deadPose(A), k = ss(1 - A.t / (A.fT || 0.8));
-        A.vT = 0; A.rz = lerp(A.rz0 || 0, dp.rz, k); A.y = lerp(A.y0 || 0, dp.y, k); A.rx = lerp(A.rx0 || 0, 0, k);
+        /* v307: erst einknicken, dann über die Schulter auf die Flanke rollen, zuletzt ausruhen.
+           Die Höhe wird nach dem Stellen der Gelenke zusätzlich an der tatsächlichen Haut begrenzt. */
+        const dp = deadPose(A), u = fallU(A), k = A.k === "fasan" ? ss(u) : ss((u - 0.13) / 0.65);
+        const impact = A.k === "fasan" ? 0 : ss((u - 0.74) / 0.12) * (1 - ss((u - 0.86) / 0.14));
+        A.vT = 0; A.rz = lerp(A.rz0 || 0, dp.rz, k) + (A.side || 1) * 0.025 * impact;
+        A.y = lerp(A.y0 || 0, dp.y, k) - (A.k === "fasan" ? 0 : Math.sin(Math.PI * ss(u / 0.85)) * 0.2 * A.s);
+        A.rx = lerp(A.rx0 || 0, 0, ss(u / 0.85)) + (A.k === "fasan" ? 0 : 0.1 * Math.sin(Math.PI * ss(u / 0.7)) * (1 - k));
         neckT = lerp(0.2, dp.neckT, k); nyT = dp.nyT * k; headT = lerp(0.3, dp.headT, k); stiff = 9;
         if (A.t <= 0) { if (A.fs) { A.x = A.fs.to[0]; A.z = A.fs.to[1]; A.fs = null; } A.st = "dead"; A.deadAt = X.t; A.v = 0; settle(A); }
         break;
@@ -2132,7 +2153,7 @@ const HUNT = (() => {
       A.vx = Math.sin(A.ry) * A.v; A.vz = Math.cos(A.ry) * A.v;
       A.x += A.vx * dt; A.z += A.vz * dt;
       if (A.st === "fall" || A.st === "dead") { A.vx = A.vz = 0; }
-      if (A.st === "fall" && A.fs) { const k = ss(1 - A.t / A.fs.T); A.x = lerp(A.fs.x0, A.fs.to[0], k); A.z = lerp(A.fs.z0, A.fs.to[1], k); A.v = 0; }
+      if (A.st === "fall" && A.fs) { const u = fallU(A), k = A.k === "fasan" ? ss(u) : (1 - Math.exp(-4 * u)) / (1 - Math.exp(-4)); A.x = lerp(A.fs.x0, A.fs.to[0], k); A.z = lerp(A.fs.z0, A.fs.to[1], k); A.v = 0; }
       void step;
     }
     /* Gang: Schritt ↔ Galopp nach Tempo; in der Pause bleibt die Phase stehen (Lauf in der Luft) */
@@ -2151,7 +2172,7 @@ const HUNT = (() => {
     } else if (A.k === "keiler") {
       A.legsA = S0.legs.map((L, i) => {
         if (A.st === "dead" || A.st === "fall") return deadLeg(A, i);
-        /* v135: Gelenk beugt sich beim Vorschwingen (nur Optik – die Trefferzone des Laufs bleibt die gerade Linie) */
+        /* v307: obere und untere Laufsegmente bewegen sich wie ihre Trefferzonen. */
         const c = (A.ph * 1.6 + (wR > 0.5 ? RUN_OFF : WALK_OFF)[i]) % 1, fl = Math.max(0, -Math.cos(c * Math.PI * 2)) * (0.45 * A.gw * (1 - wR) + 0.7 * wR);
         return [Math.sin(c * Math.PI * 2) * (0.45 * A.gw * (1 - wR) + 0.8 * wR), L.f ? fl : -fl * 0.6];
       });
@@ -2170,19 +2191,27 @@ const HUNT = (() => {
     }
     /* Kopf, Hals, Lauscher, Wedel über Federn: weich, beim Aufschrecken schnell */
     const nod = A.k === "hirsch" ? Math.sin(A.ph * Math.PI * 4) * 0.05 * A.gw * (1 - wR) : 0;
-    const nrx = spr(P, "nrx", neckT + nod, stiff, dt), nry = spr(P, "nry", nyT, stiff * 0.7, dt), hrx = spr(P, "hrx", headT, stiff * 1.2, dt);
     const lying = A.st === "dead" || A.st === "fall";
-    { const r = neckRot(A.k, nrx, nry); A.neck.rx = r[0]; A.neck.ry = r[1]; A.neck.rz = lying ? deadPose(A).nz * fallK(A) : 0; }
+    let nrx, nry, hrx, headK = fallK(A);
+    if (lying) {
+      const dp = deadPose(A), p = A.pose0, u = fallU(A), nk = ss((u - 0.1) / 0.8);
+      headK = ss((u - 0.2) / 0.76);
+      const from = p ? neckRotInv(A.k, p.neck[0], p.neck[1]) : [0.2, 0];
+      nrx = lerp(from[0], dp.neckT, nk); nry = lerp(from[1], dp.nyT, nk); hrx = lerp(p ? p.head[0] : 0.3, dp.headT, headK);
+      /* Kein Federnachlauf durch den Boden und kein letzter Winkelsprung beim Wechsel in „dead“. */
+      Object.assign(P, { nrx, nry, hrx, nrxv: 0, nryv: 0, hrxv: 0 });
+    } else { nrx = spr(P, "nrx", neckT + nod, stiff, dt); nry = spr(P, "nry", nyT, stiff * 0.7, dt); hrx = spr(P, "hrx", headT, stiff * 1.2, dt); }
+    { const r = neckRot(A.k, nrx, nry); A.neck.rx = r[0]; A.neck.ry = r[1]; A.neck.rz = lying ? lerp(A.pose0 ? A.pose0.neck[2] : 0, deadPose(A).nz, headK) : 0; }
     if (A.k === "hirsch") {
       A.head.rx = hrx;
-      A.head.rz = lying ? deadPose(A).hz * fallK(A) : 0;                                   /* v262: Haupt seitlich abgelegt (Drehung um die Äserachse) */
+      A.head.rz = lying ? lerp(A.pose0 ? A.pose0.head[1] : 0, deadPose(A).hz, headK) : 0;
       /* Ohrenspiel: jede Lauscher zuckt für sich, beim Sichern beide nach vorn */
       A.ear.forEach((E, i) => {
         E.t -= dt; if (E.t <= 0) { E.t = 0.8 + rnd() * 2.6; E.f = 0.18 + rnd() * 0.2; E.k = (rnd() - 0.5) * 1.1; }
         E.f -= dt; if (lying) E.f = 0;                                                       /* v262: am liegenden Stück zuckt nichts mehr */
         const s = i ? 1 : -1, tw = E.f > 0 ? E.k : 0, look = A.st === "alert" ? clamp(nyT * 0.4, -0.4, 0.4) : 0;
-        A.ears[i].rz = spr(P, "erz" + i, s * (earT + (E.f > 0 ? Math.abs(tw) * 0.3 : 0)), 14, dt);
-        A.ears[i].ry = spr(P, "ery" + i, tw * 0.6 + look, 12, dt);
+        A.ears[i].rz = lying ? lerp(A.pose0 && A.pose0.ears[i] ? A.pose0.ears[i][0] : s * 0.15, s * 0.4, headK) : spr(P, "erz" + i, s * (earT + (E.f > 0 ? Math.abs(tw) * 0.3 : 0)), 14, dt);
+        A.ears[i].ry = lying ? lerp(A.pose0 && A.pose0.ears[i] ? A.pose0.ears[i][1] : 0, 0, headK) : spr(P, "ery" + i, tw * 0.6 + look, 12, dt);
       });
       A.tail.rx = spr(P, "trx", tailT + (!lying && Math.sin(time * 3 + A.seed) > 0.97 ? -0.6 : 0), 12, dt);
     }
@@ -2192,13 +2221,14 @@ const HUNT = (() => {
     const lp = A.leap > 0 ? Math.sin((1 - A.leap / 0.42) * Math.PI) : 0;
     const gal = wR * Math.pow(Math.max(0, Math.sin(A.ph * Math.PI * 2)), 1.5);
     const bobW = -0.018 * (1 - Math.cos(A.ph * Math.PI * 4)) * A.gw * (1 - wR);
+    if (A.st === "fall" && A.k !== "fasan") A.y = Math.max(A.y, fallFloor(A));
     n.x = A.x; n.z = A.z; n.ry = A.ry; n.rz = A.rz;
     if (A.st === "fly" || A.st === "drop" || A.st === "land") { n.y = A.y; n.rx = A.rx; }
-    else if (A.st === "dead" || A.st === "fall") { n.y = A.y; n.rx = A.rx || 0; n.sy = 1; }
+    else if (A.st === "dead" || A.st === "fall") { n.y = A.y; n.rx = A.rx || 0; n.sy = A.s; }  /* v307: Größenmaßstab auch in der Seitenlage erhalten. */
     else {
       n.y = (bobW + gal * 0.2 + lp * 0.42 + A.jolt * 0.05) * A.s;
       n.rx = wR * Math.sin(A.ph * Math.PI * 2 + 1.2) * 0.1 - lp * 0.22 + (A.st === "graze" && A.k === "hirsch" ? 0.08 : 0) - A.jolt * 0.04;
-      n.sy = 1 + Math.sin(time * 2.4 + A.seed) * 0.006;
+      n.sy = A.s * (1 + Math.sin(time * 2.4 + A.seed) * 0.006);
       /* v120: im Stehen leichtes Verlagern des Gewichts (kaum sichtbar, aber das Tier wirkt nicht eingefroren) */
       const idle = clamp(1 - A.gw * 3, 0, 1);
       if (idle > 0 && A.k !== "fasan") { n.rz = A.rz + Math.sin(time * 0.37 + A.seed) * 0.011 * idle; n.y += (Math.sin(time * 0.74 + A.seed * 2) * 0.004 - 0.002) * idle * A.s; }
@@ -2247,11 +2277,14 @@ const HUNT = (() => {
     return [x, z];
   }
   function fallStart(A, T) {
+    /* v307: Aus der gerade sichtbaren Bewegung beginnen; Dauer je Art und Stück statt starrem Wegkippen in 0,55 s. */
+    if (A.k !== "fasan") T = (A.k === "keiler" ? 1.18 : 1.34) + poseRnd(A, 34) * 0.08;
     /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
     const sl = (A.v || 0) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
     A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
-    A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
-    A.rz0 = A.rz || 0; A.y0 = 0; A.rx0 = 0;                                            /* v262: Zusammenbrechen ab der aktuellen Lage */
+    A.t = A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
+    A.rz0 = A.node.rz || 0; A.y0 = A.node.y || 0; A.rx0 = A.node.rx || 0;
+    A.pose0 = { neck: [A.neck.rx || 0, A.neck.ry || 0, A.neck.rz || 0], head: [A.head.rx || 0, A.head.rz || 0], ears: (A.ears || []).map(e => [e.rz || 0, e.ry || 0]) };
   }
   function settle(A) {
     const S0 = SP[A.k], c = rot(S0.body.c.map(v => v * A.s), A.rx, A.ry, A.rz);
@@ -2499,12 +2532,47 @@ const HUNT = (() => {
     }));
     return { ground, legLeg, legBody, head: dp.head, legs: dp.legs, lim: POSE[k].lim };
   }
-  /* Anteil des Zusammenbrechens (0 … 1) – gleiche Kurve für Rumpf, Läufe, Träger und Haupt */
-  const fallK = A => A.st === "dead" ? 1 : A.st === "fall" ? ss(1 - A.t / (A.fT || 0.8)) : 0;
-  /* Lauf beim Zusammenbrechen: von der letzten Haltung in die Liegepose */
+  /* v307: gemeinsame Zeit, aber versetzte Bewegung für Läufe, Rumpf und Haupt. */
+  const fallU = A => A.st === "dead" ? 1 : A.st === "fall" ? clamp(1 - A.t / (A.fT || 0.8), 0, 1) : 0;
+  const fallK = A => ss(fallU(A));
+  /* v307: Die Vorderläufe geben zuerst nach; Hinterläufe und obere Seite folgen etwas später. */
   function deadLeg(A, i) {
-    const d = deadPose(A).legs[i], k = fallK(A), a = (A.legs0 && A.legs0[i]) || [0, 0];
-    return [lerp(a[0], d[0], k), lerp(a[1] || 0, d[1], k), lerp(a[2] || 0, d[2], k)];
+    const d = deadPose(A).legs[i], a = (A.legs0 && A.legs0[i]) || [0, 0];
+    if (A.st === "dead") return d.slice();
+    const L = SP[A.k].legs[i], u = fallU(A), delay = (L.f ? 0 : 0.08) + (L.h[0] * (A.side || 1) > 0 ? 0.04 : 0);
+    const fold = ss((u - delay) / 0.34), rest = ss((u - 0.29 - delay) / (0.71 - delay));
+    const mid = L.f ? [-0.4, 1.24] : [0.46, -1.12];
+    return [lerp(lerp(a[0], mid[0], fold), d[0], rest), lerp(lerp(a[1] || 0, mid[1], fold), d[1], rest), lerp(a[2] || 0, d[2], ss((u - 0.22) / 0.74))];
+  }
+  /* v307: Bodenauflage während der Bewegung anhand derselben Modellpunkte wie in der Liegepose.
+     Geometrie einmal je Stück beziehen; pro Bild nur Matrizen und Höhen, keine neuen Modelle/GPU-Objekte. */
+  function fallFloor(A) {
+    const k = A.k, S0 = SP[k], lk = lookKey(k, A.gn), make = fn => () => withLook(k, A.gn, fn);
+    const G = A.fallGeom || (A.fallGeom = {
+      body: ptsOf("b:" + k + ":" + lk, make(k === "keiler" ? boarBody : deerBody)), head: headParts(A),
+      up: [false, true].map(f => ptsOf("fall:u:" + k + f + lk, make(() => k === "keiler" ? boarUpper(f) : deerUpper(f)))),
+      lo: [false, true].map(f => ptsOf("fall:l:" + k + f + lk, make(() => k === "keiler" ? boarLower() : deerLower(f))))
+    });
+    const R = mat3(A.rx || 0, 0, A.rz || 0), I = mat3(0, 0, 0); let low = Infinity;
+    const scan = (P, M, o) => {
+      const W = mmul(R, M), y = R[3] * o[0] + R[4] * o[1] + R[5] * o[2];
+      for (const p of P) low = Math.min(low, y + W[3] * p[0] + W[4] * p[1] + W[5] * p[2]);
+    };
+    scan(G.body, I, [0, 0, 0]);
+    S0.legs.forEach((L, i) => {
+      const a = A.legsA[i], U = mat3(a[0], 0, a[2] || 0), dm = legDim(k, L), f = L.f ? 1 : 0;
+      scan(G.up[f], U, L.h);
+      scan(G.lo[f], mmul(U, mat3(a[1], 0, 0)), add3(L.h, mapp(U, [0, -dm[0], dm[2]])));
+    });
+    const Mn = mat3(A.neck.rx, A.neck.ry, A.neck.rz), H = G.head;
+    if (k === "keiler") scan(H.head, Mn, S0.neckP);
+    else {
+      scan(H.neck, Mn, S0.neckP);
+      const Mh = mmul(Mn, mat3(A.head.rx, 0, A.head.rz)), oh = add3(S0.neckP, mapp(Mn, S0.headP));
+      scan(H.head, Mh, oh); scan(H.ant, Mh, oh);
+      H.ear.forEach((E, j) => { const sg = j ? 1 : -1, e = A.ears[j]; scan(E, mmul(Mh, mat3(e.rx || 0, e.ry || 0, e.rz)), add3(oh, mapp(Mh, [sg * 0.075, 0.08, 0.02]))); });
+    }
+    return -low * A.s + 0.002 * A.s;
   }
   function lostMsg(A) {
     const H = st();
@@ -2714,7 +2782,8 @@ const HUNT = (() => {
     if (best && tb == null) {
       const A = best.A, at = [r0.o[0] + d[0] * best.h.t, r0.o[1] + d[1] * best.h.t, r0.o[2] + d[2] * best.h.t];
       const dm = Math.round(Math.hypot(at[0] - E[0], at[1] - E[1], at[2] - E[2]) * M_PER_U);
-      setTimeout(() => { if (!X) return; hitSound(); FV.R.burst({ x: at[0], y: at[1], z: at[2], n: 6, col: [[0.45, 0.1, 0.08, 1], [0.35, 0.25, 0.18, 1]], speed: 0.9, up: 0.6, size: 0.05, life: 0.6, shape: 1 }); onHit(A, best.h.zone, dm); scare(1.6, at, 140, A); }, Math.round(best.tf * 1000) + 60);
+      const context = shotContext(A), session = X;        /* v307: Zustand des sichtbaren Ziels festhalten, bevor Flugzeit/Schreck es ändern. */
+      setTimeout(() => { if (X !== session) return; hitSound(); FV.R.burst({ x: at[0], y: at[1], z: at[2], n: 6, col: [[0.45, 0.1, 0.08, 1], [0.35, 0.25, 0.18, 1]], speed: 0.9, up: 0.6, size: 0.05, life: 0.6, shape: 1 }); onHit(A, best.h.zone, dm, context); scare(1.6, at, 140, A); }, Math.round(best.tf * 1000) + 60);
     } else {
       let t = tb;
       if (t == null && d[1] < -1e-4) t = -r0.o[1] / d[1];
@@ -2726,10 +2795,10 @@ const HUNT = (() => {
     }
     save();
   }
-  function onHit(A, zone, dm) {
-    if (!X || !A.node || A.st === "gone") return;
+  function onHit(A, zone, dm, context) {
+    if (!X || !A.node || !alive(A)) return;
     A.hits.push(zone); A.dm = A.dm || dm;
-    if (A.mv == null) { A.mv = A.k === "fasan" ? A.st === "fly" : (A.v || 0) > 0.35 || ["walk", "flee", "wounded", "hit"].includes(A.st) && (A.v || 0) > 0.15; A.wv = X.wind ? Math.round(X.wind.v * 10) / 10 : 0; }   /* v200: für die Schussnote */
+    if (A.mv == null) { const c = context || shotContext(A); A.mv = c.mv; A.air = c.air; A.wv = c.wv; }   /* v307: für Beschriftung, Jagdbuch und Flugauftrag */
     const Z = ZONE[zone];
     if (A.k === "fasan") {
       if (A.st === "fly") { A.st = "drop"; A.side = 1; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
@@ -2854,7 +2923,7 @@ const HUNT = (() => {
     const H = st(), gn = A.gn || genes(A.k, A.score, 0), k = A.k, P = H.pb[k], prev = P ? P.s : null;
     const fresh = dexKeysOf(k, gn).filter(key => !dexHas(H, k, key)), all = dexAll(k);
     const names = fresh.filter(key => !/^r:/.test(key)).map(key => (all.find(E => E.key === key) || {}).n).filter(Boolean);
-    const sh = shotOf({ k, zone: A.zone || "vogel", dm: A.dm, mv: A.mv, wv: A.wv, cw: A.capW });
+    const sh = shotOf({ k, zone: A.zone || "vogel", dm: A.dm, mv: A.mv, air: A.air, wv: A.wv, cw: A.capW });
     const rec = prev != null && A.rec.s > prev, newF = prev != null && fresh.some(x => /^[cf]:/.test(x));
     const lv = gn.r >= 4 ? 4 : gn.r >= 2 ? 3 : rec || newF ? 2 : A.medal >= 3 || gn.r >= 1 ? 1 : 0;
     return { lv, gn, prev, rec, fresh, names, sh, list: featList(k, gn) };
@@ -3029,8 +3098,8 @@ const HUNT = (() => {
   /* ---- Oberfläche ---- */
   const fkg = A => (A.k === "fasan" ? fnum(A.T.kg, 1) : A.T.kg) + " kg";
   function showWin(A) {
-    const Z = ZONE[A.zone] || ZONE.lunge, P = A.pres, r = P.gn.r;
-    X.win.innerHTML = `<small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(Z.n)} auf ${A.dm || "?"} m</em>${A.feat.length ? `<div class="hu-feat">${A.feat.map(f => `<span>★ ${esc(f)}</span>`).join("")}</div>` : ""}
+    const P = A.pres, r = P.gn.r;
+    X.win.innerHTML = `<small>Waidmannsheil!</small><b>${esc(A.T.name)}</b><em>${esc(shotName(A))} auf ${A.dm || "?"} m</em>${A.feat.length ? `<div class="hu-feat">${A.feat.map(f => `<span>★ ${esc(f)}</span>`).join("")}</div>` : ""}
       ${r >= 1 ? `<div class="hu-rar r${r}" style="--rc:${RAR[r].c}"><span>${r >= 4 ? "★ " : "✦ "}${esc(RAR[r].n)}</span></div>` : ""}`;
     X.win.hidden = false; X.win.classList.remove("go"); void X.win.offsetWidth; X.win.classList.add("go");
     X.vig.classList.add("on");
@@ -3096,7 +3165,7 @@ const HUNT = (() => {
     A.kept = true;                                                    /* doppeltes Tippen: zweiter Aufruf endet hier */
     X.card.querySelectorAll("button").forEach(b => { b.disabled = true; });
     const H = st(), id = trophyId(A.k, A.medal), base = PRICE[A.k][A.medal], gn = A.gn || genes(A.k, A.score, 0);
-    const R = Object.assign({ u: uid() }, A.rec, { t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4), mv: A.mv ? 1 : 0, wv: A.wv || 0, cw: A.capW ? 1 : 0 });
+    const R = Object.assign({ u: uid() }, A.rec, { t: S.time, zone: A.zone, dm: A.dm, hits: A.hits.slice(0, 4), mv: A.mv ? 1 : 0, air: A.k === "fasan" ? !!A.air : undefined, wv: A.wv || 0, cw: A.capW ? 1 : 0 });
     let n = 0, price = valueOf(R);
     if (sell) { S.money += price; if (typeof logMoney === "function") logMoney("farm", "Trophäe an Sammler: " + A.T.troph, price); }
     else { collSync(); farmAdd(id, 1, 3); const C = st().coll; C.push(R); n = C.length; }
@@ -3104,12 +3173,12 @@ const HUNT = (() => {
     H.best = Math.max(H.best || 0, A.medal);
     H.n = H.n || {}; H.n[A.k] = (H.n[A.k] || 0) + 1;                   /* v135: je Art zählen und Bestwert merken (für „erster“/„stärkster“) */
     H.top = H.top || {}; H.top[A.k] = Math.max(H.top[A.k] != null ? H.top[A.k] : -1, A.rec.s);
-    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: A.rec.s, gn, mv: R.mv, wv: R.wv, cw: R.cw, u: sell ? null : R.u });
+    H.log.unshift({ k: A.k, m: A.medal, t: S.time, name: A.T.name, troph: A.T.troph, zone: A.zone, dm: A.dm, s: A.rec.s, gn, mv: R.mv, air: R.air, wv: R.wv, cw: R.cw, u: sell ? null : R.u });
     if (H.log.length > 40) H.log.length = 40;
     /* v200: Jagdbuch, Bestleistungen, Aufträge – genau einmal je Stück */
     const fresh = dexKeysOf(A.k, gn).filter(key => dexPut(H, A.k, key, S.time));
     const pbs = pbPut(H, R, gn);
-    const jobs = jobsEval(H, { k: A.k, m: A.medal, s: A.rec.s, zone: A.zone, dm: A.dm || 0, mv: !!A.mv, wv: A.wv || 0, r: gn.r, newN: fresh.filter(x => !/^r:0$/.test(x)).length, sh: A.pres.sh.v, cw: !!A.capW });
+    const jobs = jobsEval(H, { k: A.k, m: A.medal, s: A.rec.s, zone: A.zone, dm: A.dm || 0, mv: !!A.mv, air: !!A.air, wv: A.wv || 0, r: gn.r, newN: fresh.filter(x => !/^r:0$/.test(x)).length, sh: A.pres.sh.v, cw: !!A.capW });
     A.res = { fresh, pbs, jobs, dex: dexCount(H, A.k) };
     if (typeof farmXP === "function") farmXP(XP[A.k][A.medal]);
     save();
@@ -3195,7 +3264,7 @@ const HUNT = (() => {
         <span class="tw-sp"></span>${chip("data-tws", "best", WALL.so, "Stärkste")}${chip("data-tws", "neu", WALL.so, "Neueste")}${chip("data-tws", "wert", WALL.so, "Wert")}</div>`;
     let det = "";
     if (sel) {
-      const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? ZONE[sel.zone].n : null, pins = C0.filter(r => r.pin).length;
+      const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? shotName(sel) : null, pins = C0.filter(r => r.pin).length;
       const sh = sel.zone ? shotOf(Object.assign({ k: sel.k }, sel)) : null, isPb = H.pb[sel.k] && H.pb[sel.k].u === sel.u;
       const rows = [["Bewertung", fnum(sel.s * 100, 1)], ["Gewicht", (sel.k === "fasan" ? fnum(T.kg, 1) : T.kg) + " kg"], z ? ["Treffer", z] : null, sel.dm ? ["Entfernung", sel.dm + " m"] : null,
         sh ? ["Schuss", { html: stars(sh.v) }] : null, ["Alter", AGES[sel.k][gn.a]], dayTxt(sel.t) ? ["Erlegt", dayTxt(sel.t)] : null].filter(Boolean);

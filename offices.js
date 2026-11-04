@@ -876,21 +876,99 @@ function fireGoodNews(b) {
 }
 
 /* -------------------------------- Telefon -------------------------------- */
-function phoneMsg(m) {
+function phoneMsg(m, silent) {
   ensureOffices();
   m.id = "M" + (S.seq++);
   m.time = S.time;
   S.phone.msgs.unshift(m);
   if (S.phone.msgs.length > 40) S.phone.msgs.length = 40;
+  /* v302: Eine selbst gestartete Händleranfrage klingelt nicht zurück. */
+  if (silent) return m;
   S.phone.unread++;
   renderPhoneBadge(true);
   toast(m.toastText || "📞 Anruf aus " + m.from + ": " + m.title, m.kind === "trouble" ? "warn" : "ok", false, m.go || "msg:" + m.id);
   /* v76: beim ersten Anruf erklärt Lina das Diensthandy (früher ein Tutorial-Schritt) */
   if (typeof linaHint === "function") linaHint("phone", "Dein <b>Diensthandy</b> 📞 klingelt – hier meldet sich dein Team. Tipp oben drauf; Nachrichten löschen sich nach 24 Stunden.", { top: true });
+  return m;
+}
+/* v302: Kontakte überleben die kurzlebigen Chats. Vor dem Löschen alter
+   Nachrichten einmalig auch Bekanntschaften aus bisherigen Spielständen übernehmen. */
+function phoneContactsState() {
+  if (!S.phone) S.phone = { msgs: [], unread: 0 };
+  const contacts = S.phone.contacts || (S.phone.contacts = {});
+  if (!S.phone.contacts302) {
+    for (const kind of ["snus", "pablo"]) {
+      const st = S[kind] || {};
+      if (contacts[kind] || S.phone.msgs.some(m => m.kind === kind) || (S.tutSeen && S.tutSeen[kind])
+          || st.bought > 0 || st.sold > 0 || st.bustFree || st.kg > 0
+          || Object.values(st.stock || {}).some(n => n > 0)) contacts[kind] = true;
+    }
+    S.phone.contacts302 = true;
+  }
+  return contacts;
+}
+function phoneDealerOpen(kind) {
+  return (S.phone && S.phone.msgs || []).find(m => m.kind === kind
+    && (m.state === "ask" || m.state === "offer") && m.expires > S.time);
+}
+function phoneExpireDealerOffers(kind) {
+  let changed = false;
+  for (const m of S.phone && S.phone.msgs || []) {
+    if (m.kind !== kind || (m.state !== "ask" && m.state !== "offer") || m.expires > S.time) continue;
+    m.state = "gone";
+    m.thread.push({ me: false, t: "Das Angebot ist abgelaufen. Melde dich bei Bedarf über Kontakte." });
+    changed = true;
+  }
+  return changed;
+}
+/* v302: Alte parallele Werbeangebote gelten nach einem Einkauf nicht weiter. */
+function phoneCloseDealerOffers(kind) {
+  for (const m of S.phone.msgs) if (m.kind === kind && (m.state === "ask" || m.state === "offer")) {
+    m.state = "gone";
+    m.thread.push({ me: false, t: "Der Einkauf ist erledigt. Für Nachschub findest du mich unter Kontakte." });
+  }
+}
+/* v302: Unterwegs befindliche Ware verhindert einen neuen Abholort, solange
+   eine abgebrochene Lieferung noch ins bisherige Lager zurückkommen könnte. */
+function phoneDealerBlock(kind) {
+  if (S.jail || S.over) return "Zurzeit nicht erreichbar.";
+  if (typeof logiOn === "function" && !logiOn()) return "In der Spedition erreichbar.";
+  if (kind === "snus" && level() < SNUS_LEVEL) return "Ab Level " + SNUS_LEVEL + " erreichbar.";
+  if (kind === "pablo" && S.stage < PABLO_STAGE) return "Ab Etappe Deutschland erreichbar.";
+  const n = kind === "snus" ? snusTotal() : pabloState().kg;
+  if (n > 0) return "Noch " + (kind === "snus" ? n + " Dosen" : kgf(n)) + " im Lager.";
+  if (S.jobs.some(j => j.order && j.order[kind])) return "Deine letzte Lieferung ist noch unterwegs.";
+  return "";
+}
+function phoneContactDealer(kind) {
+  if (!phoneContactsState()[kind]) return;
+  const open = phoneDealerOpen(kind);
+  const m = open || (kind === "snus" ? snusOffer(true) : kind === "pablo" ? pabloOffer(true) : null);
+  if (!m) return;
+  phoneTab = "msgs";
+  renderPhone(m.id);
+  save();
+}
+function phoneContactsHTML() {
+  const known = phoneContactsState();
+  const rows = [
+    { id: "snus", name: "Mr. Snus", face: () => snusFace(38), info: "Snus · wechselnde Sorten" },
+    { id: "pablo", name: "Don Pablo", face: () => pabloFace(38), info: "Kokain & Crack · wechselnder Bestand" }
+  ].filter(c => known[c.id]).map(c => {
+    const open = phoneDealerOpen(c.id), block = phoneDealerBlock(c.id);
+    return `<article class="pcontact ${c.id}">
+      <div class="pcontact-head">${c.face()}<div><b>${c.name}</b><small>${c.info}</small></div></div>
+      <p>${esc(block || (open ? "Ein Angebot wartet im Chat." : "Dein Lager ist leer. Frag nach dem aktuellen Bestand."))}</p>
+      <button class="btn tiny${open || !block ? "" : " ghost"}" data-contact="${c.id}"${open || !block ? "" : " disabled"}>${open ? "Chat öffnen" : block ? "Derzeit nicht verfügbar" : "Bestand anfragen"}</button>
+    </article>`;
+  }).join("");
+  return `<div class="pcontacts"><p class="pcontacts-info">Dauerhaft gespeichert. Die Händler schreiben dir nur zur Begrüßung. Ist dein Lager leer und alles ausgeliefert, meldest du dich hier.</p>
+    ${rows || `<div class="empty">Noch keine Händlerkontakte. Nach ihrer ersten Nachricht findest du sie hier.</div>`}</div>`;
 }
 /* Sicherheitsmaßnahme: Nachrichten löschen sich nach 24 Spielstunden */
 const PHONE_TTL = 24 * 60;
 function prunePhone() {
+  phoneContactsState();
   if (!S.phone || !S.phone.msgs.length) return;
   const before = S.phone.msgs.length;
   S.phone.msgs = S.phone.msgs.filter(m => S.time - m.time < PHONE_TTL);
@@ -934,6 +1012,7 @@ function openPhone(focusId) {
 function renderPhone(focusId) {
   if (!$("#modal").classList.contains("open")) return;
   prunePhoneSilent();
+  phoneExpireDealerOffers("snus"); phoneExpireDealerOffers("pablo");
   const msgs = S.phone.msgs;
   const body = msgs.length ? msgs.map(m => (html => html.replace(/^(\s*<div)/, `$1 data-mid="${m.id}"`))((m => {
     if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
@@ -961,22 +1040,23 @@ function renderPhone(focusId) {
   })(m))).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
      dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
-  const calc = phoneTab === "calc", news = phoneTab === "news";
+  const calc = phoneTab === "calc", news = phoneTab === "news", contacts = phoneTab === "contacts";
   if (news && S.press && S.press.unread) { S.press.unread = 0; renderPhoneBadge(); }
   const pressN = S.press && S.press.unread ? S.press.unread : 0;
 
   $("#modalBody").innerHTML = `
     <div class="mhead phone">
       <div><div class="mtitle">📞 Diensttelefon</div>
-      <div class="msub">${calc ? "Rechner" : news ? "Wirtschaftsmeldungen der letzten 7 Tage" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
+      <div class="msub">${calc ? "Rechner" : news ? "Wirtschaftsmeldungen der letzten 7 Tage" : contacts ? "Deine gespeicherten Händlerkontakte" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
-    <div class="ptabs">
-      <button class="ptab${calc || news ? "" : " on"}" data-ptab="msgs">💬 Nachrichten</button>
-      <button class="ptab${news ? " on" : ""}" data-ptab="news">📰 Zeitung${pressN ? ` <b class="ptab-n">${pressN > 9 ? "9+" : pressN}</b>` : ""}</button>
+    <div class="ptabs phone-tabs">
+      <button class="ptab${calc || news || contacts ? "" : " on"}" data-ptab="msgs" aria-label="Nachrichten"><span aria-hidden="true">💬</span><span>Chats</span></button>
+      <button class="ptab${contacts ? " on" : ""}" data-ptab="contacts"><span aria-hidden="true">👥</span><span>Kontakte</span></button>
+      <button class="ptab${news ? " on" : ""}" data-ptab="news"><span aria-hidden="true">📰</span><span>Zeitung${pressN ? ` <b class="ptab-n">${pressN > 9 ? "9+" : pressN}</b>` : ""}</span></button>
       <button class="ptab calc${calc ? " on" : ""}" data-ptab="calc" title="Rechner" aria-label="Rechner">🧮</button>
     </div>
-    <div class="phone-list${news ? " news" : ""}">${calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : news && typeof pressHTML === "function" ? pressHTML() : body}</div>
+    <div class="phone-list${news ? " news" : ""}">${contacts ? phoneContactsHTML() : calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : news && typeof pressHTML === "function" ? pressHTML() : body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
   $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
   if (focusId) {                                /* v124: Tipp auf die Meldung → genau diese Nachricht zeigen */
@@ -986,6 +1066,7 @@ function renderPhone(focusId) {
   $("#mClose").onclick = closeModal;
   $("#mCancel").onclick = closeModal;
   $$("#modalBody [data-ptab]").forEach(b => b.onclick = () => { phoneTab = b.dataset.ptab; $(".phone-list").scrollTop = 0; renderPhone(); });
+  $$("#modalBody [data-contact]").forEach(b => b.onclick = () => phoneContactDealer(b.dataset.contact));
   $$("#modalBody [data-fix]").forEach(btn =>
     btn.onclick = () => applyFix(btn.dataset.fix, +btn.dataset.idx));
   if (typeof bindSnusMsgs === "function") bindSnusMsgs();
@@ -996,6 +1077,7 @@ function renderPhone(focusId) {
 }
 
 function prunePhoneSilent() {
+  phoneContactsState();
   if (!S.phone) return;
   S.phone.msgs = S.phone.msgs.filter(m => S.time - m.time < PHONE_TTL);
   S.phone.unread = Math.min(S.phone.unread, S.phone.msgs.length);

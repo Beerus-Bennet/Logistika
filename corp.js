@@ -31,7 +31,8 @@ function corp() { if (!S.corp) S.corp = { owned: {}, talks: {} }; return S.corp;
 
 /* ============================ v170: Konzern-Wellen ============================
    Je Welle zwei Konzerne aus diesem Pool (danach mit „International“ usw. von vorn).
-   Firmenwert: größter Firmenwert der Etappe × (1,5 + 1,5 × Welle); Flotte 6 + 2 × Welle;
+   v306: Firmenwert aus Flotte/Sitz/Kundenwert, ohne Standort-/Wellenmultiplikation.
+   Flotte 6 + 2 × Welle;
    Firmensitz ab Umschlaghalle; sie starten mit mehr Marktanteil als du. */
 const CORP_LEAD_DAYS = 14;
 const CORP_WAVE_POOL = [
@@ -250,16 +251,47 @@ function shares() {
   rows.forEach(r => { out[r.id] = r.n / tot; });
   return out;
 }
-/* v243: Firmenwert hängt an der Region des Firmensitzes, nicht an deiner aktuellen Etappe. Vorher sprang jeder Preis beim
-   Freischalten einer neuen Etappe um den Etappenfaktor (Etappe 2 → 3: × 2,4), obwohl Flotte, Personal und Kunden gleich blieben.
-   Jetzt: Faktor der Etappe, in der der Sitz liegt (höchstens deine aktuelle). Dazu wie bisher der Marktanteil. */
-function corpStageK(id) {
-  const c = CORP[id], n = c && N[c.hq], st = Math.max(1, Math.min(S.stage, n ? n.stage : S.stage));
-  return STAGE_K[Math.min(STAGE_K.length, st) - 1];
+/* v306: Ein gemeinsam benutztes Flottenangebot pro Firma/Etappe. Die frühere
+   Übergabe würfelte Fahrzeuge erst nach dem Kauf; jetzt werden genau die
+   bewerteten Fahrzeuge samt Verschleiß übergeben. Gleichmäßig über den
+   Preisbereich verteilt statt zufällig nur Flugzeuge oder nur Kleinwagen. */
+function corpFleetPlan(id) {
+  const c = CORP[id], C = corp(), n = c.fleet + Math.floor(S.stage / 2);
+  const key = [S.stage, n, c.modes, !!c.wave].join("|");
+  const all = C.fleets306 || (C.fleets306 = {}), old = all[id];
+  if (old && old.key === key && old.fleet.length === n && old.fleet.every(f => vType(f.type))) return old;
+  let pool = rivalFleet(id).slice().sort((a, b) => b.price - a.price || a.id.localeCompare(b.id));
+  if (c.wave) pool = pool.slice(0, Math.max(2, Math.ceil(pool.length / 2)));
+  pool.reverse();
+  let seed = 2166136261;
+  for (const ch of id + "|" + key) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const fleet = [];
+  for (let i = 0; i < n && pool.length; i++) {
+    const k = Math.min(pool.length - 1, Math.floor((i + 0.35 + random() * 0.3) * pool.length / n));
+    fleet.push({ type: pool[k].id, wear: Math.round(c.wave ? 4 + random() * 18 : 20 + random() * 35),
+      kmTotal: Math.round(c.wave ? 8000 + random() * 82000 : 40000 + random() * 260000) });
+  }
+  return (all[id] = { key, fleet });
 }
-function corpValue(id) {
-  const c = CORP[id], sh = shares();
-  return roundK(c.base * corpStageK(id) * (0.7 + 1.6 * (sh[id] || 0)), 1000);
+/* v306: Derselbe Bewertungsmaßstab für alle Konkurrenten. Der Sitz trägt
+   nur seinen tatsächlichen Immobilien-Zeitwert bei; die frühere rohe
+   Konzern-Basis und STAGE_K werden nicht noch einmal multipliziert. */
+function corpAppraisal(id) {
+  const c = CORP[id], plan = corpFleetPlan(id);
+  const fleetValue = plan.fleet.reduce((sum, f) => sum + vehValue(f), 0);
+  const hqValue = Math.round(buyPrice(c.hq, OFFICE_TIERS[c.tier]) * 0.6);
+  const assets = fleetValue + hqValue, share = shares()[id] || 0;
+  const goodwill = Math.round(assets * (0.15 + share * 1.8));
+  return { fleet: plan.fleet, fleetValue, hqValue, goodwill, total: roundK(assets + goodwill, 1000) };
+}
+function corpValue(id) { return corpAppraisal(id).total; }
+/* v306: Im Angebot ist erkennbar, ob die Flotte etwa Schiffe/Flugzeuge
+   enthält – gleiche Fahrzeuganzahl allein sagt wenig über den Wert aus. */
+function corpFleetText(fleet) {
+  const counts = {};
+  fleet.forEach(f => { const mode = vType(f.type).mode; counts[mode] = (counts[mode] || 0) + 1; });
+  return Object.keys(MODE_INFO).filter(mode => counts[mode]).map(mode => MODE_INFO[mode].icon + " " + counts[mode]).join(" · ");
 }
 /* Voraussetzungen: Level 5 und mindestens so viel Marktanteil wie die andere */
 function corpReady(id) {
@@ -307,10 +339,18 @@ let corpOpen = null;
 function openCorp(id) {
   const r = rivalById(id), c = CORP[id]; if (!r || !c || ownedRival(id)) return;
   const rd = corpReady(id); if (!rd.ok) return toast(r.name + ": " + rd.why + ".", "warn");
-  const C = corp(), val = corpValue(id), sh = shares();
+  const C = corp(), appraisal = corpAppraisal(id), val = appraisal.total, sh = shares();
   let t = C.talks[id];
-  /* v243: laufendes Gespräch auf den neuen Firmenwert umrechnen (Forderung und Gegenangebot im gleichen Verhältnis) */
-  if (t && !t.done && t.val && Math.abs(t.val - val) / val > 0.05) { const k = val / t.val; t.res = Math.round(t.res * k); if (t.ask) t.ask = roundK(t.ask * k, 1000); if (t.offer) t.offer = Math.round(t.offer * k); t.val = val; }
+  /* v306: Auch gespeicherte Gespräche auf die einheitliche Bewertung umrechnen;
+     Runde, Verhandlungsfortschritt und bestehende Sperrzeiten bleiben erhalten. */
+  if (t && !t.done && t.val && t.val !== val) {
+    const k = val / t.val; t.res = Math.round(t.res * k);
+    if (t.ask) t.ask = roundK(t.ask * k, 1000);
+    if (t.offer) t.offer = Math.round(t.offer * k);
+    t.val = val;
+    t.chat.push({ me: false, t: "Unsere Bewertung nach Flotte, Firmensitz und Kundenbestand beträgt aktuell " + money(val) + "."
+      + (t.ask ? " Unser angepasstes Gegenangebot: " + money(t.ask) + "." : "") });
+  }
   if (!t || t.done || t.cool <= S.time && t.round >= 3) {
     /* Was sie insgeheim verlangt: je stärker du, desto weicher wird sie */
     const dom = (sh.me || 0) > 2 * (sh[id] || 0) ? 0.94 : 1;
@@ -318,6 +358,10 @@ function openCorp(id) {
     t.chat.push({ me: false, t: c.wave ? `${c.boss}, ${r.name}. Sie wollen einen Konzern kaufen? Mutig. Der Aufsichtsrat hört zu – machen Sie ein Angebot.`
       : `${c.boss}, ${r.name}. Sie wollen uns kaufen? Machen Sie ein Angebot.` });
   }
+  /* v306: Die Zusage gilt für diese konkrete Flotte, auch wenn vor dem
+     Unterschreiben eine weitere Etappe freigeschaltet wird. */
+  t.fleet306 = appraisal.fleet.map(f => ({ ...f }));
+  t.appraisal306 = { fleetValue: appraisal.fleetValue, hqValue: appraisal.hqValue, goodwill: appraisal.goodwill };
   corpOpen = id;
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderCorp();
@@ -341,9 +385,10 @@ function renderCorp(note) {
     <div class="specs">
       <div><small>Firmenwert</small><b>${money(val)}</b></div>
       <div><small>Marktanteil</small><b>${Math.round((sh[id] || 0) * 100)} % · deiner ${Math.round((sh.me || 0) * 100)} %</b></div>
-      <div><small>Flotte</small><b>${c.fleet + Math.floor(S.stage / 2)} Fahrzeuge</b></div>
+      <div><small>Flotte</small><b>${t.fleet306 ? t.fleet306.length : c.fleet + Math.floor(S.stage / 2)} Fahrzeuge</b>${t.fleet306 ? `<small title="Fahrzeuge je Verkehrsträger">${corpFleetText(t.fleet306)}</small>` : ""}</div>
       <div><small>Firmensitz</small><b>${esc(N[c.hq].short)} · ${OFFICE_TIERS[c.tier].name}</b></div>
     </div>
+    ${t.appraisal306 ? `<div class="lot-est">Bewertung: Flotte ${money(t.appraisal306.fleetValue)} · Sitz ${money(t.appraisal306.hqValue)} · Kunden & Organisation ${money(t.appraisal306.goodwill)}</div>` : ""}
     <div class="lim">${t.done ? "✔ Übernommen – Flotte, Firmensitz und Marktanteil gehören jetzt " + esc(S.player.company) + "."
       : "Du bekommst: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro + " + (c.wave ? 2 + Math.min(2, c.wave) : 2) + " Leute," : "Firmensitz samt Leuten (vorgemerkt – wird dein Büro, sobald Etappe und Standortplatz da sind),") + " " + (c.wave ? 2 + c.wave : 2) + " Stammkunden, Marktanteil, +" + (c.wave ? 5 : 3) + " Ruf."}</div>
     <div class="nego-chat corp-chat">${t.chat.map(m => `<div class="bub ${m.me ? "out" : "in"}">${esc(m.t)}</div>`).join("")}</div>
@@ -426,7 +471,9 @@ function corpHqOpen(id, silent) {
   if (!isUnlocked(c.hq)) return null;
   ensureOffices();
   if (baseAtNode(c.hq)) {                    /* dort steht schon ein eigenes Büro → Sitz wie früher verkaufen */
-    const cash = roundK((C.owned[id] ? C.owned[id].price : 30000) * 0.18, 1000);
+    /* v306: Ein doppelter Sitz wird zum Immobilien-Zeitwert verkauft, nicht
+       als pauschaler Anteil am gesamten Konzern samt Schiffen/Flugzeugen. */
+    const cash = Math.round(buyPrice(c.hq, OFFICE_TIERS[c.tier]) * 0.6);
     S.money += cash; S.revenue += cash; logMoney("corp", "Verkauf Firmensitz " + r.name, cash);
     delete C.hq[id];
     phoneMsg({ from: c.boss, kind: "info", title: "Firmensitz " + r.name + " verkauft", body: `An diesem Ort hast du schon ein Büro – der Firmensitz ging für ${money(cash)} weg.` });
@@ -490,16 +537,14 @@ function corpClose(id, price) {
   /* Marktanteil wandert zu dir, offene Kaperversuche enden */
   const sh = shareState(); sh.me = (sh.me || 0) + (sh[id] || 0); sh[id] = 0;
   S.orders.forEach(o => { if (o.rival && o.rival.id === id) delete o.rival; });
-  /* Flotte – Konzerne bringen die besseren Fahrzeuge mit, kaum gefahren */
-  let pool = rivalFleet(id);
-  if (W) pool = pool.slice().sort((x, y) => y.price - x.price).slice(0, Math.max(2, Math.ceil(pool.length / 2)));
-  const n = c.fleet + Math.floor(S.stage / 2), got = [];
+  /* v306: Exakt die angebotene Flotte statt einer neuen Zufallsziehung. */
+  const fleet = C.talks[id] && C.talks[id].fleet306 || corpFleetPlan(id).fleet, got = [];
   const at = isUnlocked(c.hq) ? c.hq : null;
-  for (let i = 0; i < n; i++) {
-    const t = pick(pool);
+  for (const f of fleet) {
+    const t = vType(f.type);
     const v = makeVehicle(t.id, false);
     if (at && N[at].modes.includes(t.mode)) v.at = at;
-    v.wear = Math.round(W ? rnd(4, 22) : rnd(20, 55)); v.kmTotal = Math.round(W ? rnd(8000, 90000) : rnd(40000, 300000));
+    v.wear = f.wear; v.kmTotal = f.kmTotal;
     v.foreign = { id, col: r.col };
     S.fleet.push(v); got.push(v);
   }

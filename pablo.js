@@ -1,30 +1,44 @@
 /* =========================================================================
    LOGISTIKA – Don Pablo
-   Ab Etappe 4 (Luftfracht) ruft gelegentlich Don Pablo an und bietet
-   tonnenweise Kokain an. Die Ware wartet in einem Hangar; Kunden heißen nach
+   Ab Etappe 3 (Deutschland) stellt sich Don Pablo einmal vor; Nachschub an
+   Kokain und Crack fragt der Spieler danach selbst im Diensthandy an.
+   Die Ware wartet in einem Hangar; Kunden heißen nach
    ihren Städten („Mr. Hamburg“) und nehmen ein paar hundert Kilo bis ein paar
    Tonnen. Wer nicht nach einer Stadt heißt („Mr. Banane“), ermittelt verdeckt
    für Interpol – eine Lieferung an ihn beendet das Spiel.
    ========================================================================= */
 "use strict";
 
-const PABLO_STAGE = 4;          /* ab der Etappe mit Luftfracht */
+const PABLO_STAGE = 3;          /* v302: Erstkontakt schon in Deutschland */
 const PABLO_BUY = 35;           /* Einkauf €/kg */
 const PABLO_SELL = 80;          /* Verkauf €/kg */
 const PABLO_COP_SHARE = 0.25;
 const PABLO_COP_NAMES = ["Banane", "Schnitzel", "Kartoffel", "Gurke", "Toaster", "Pudding", "Brezel",
   "Bratwurst", "Kohlrabi", "Zitrone", "Staubsauger", "Kaktus", "Radieschen", "Spätzle", "Pfannkuchen",
   "Wackeldackel", "Gartenzwerg", "Rasenmäher", "Sauerkraut", "Blumenkohl"];
-const PABLO_BYE = ["Como quieras. Ich ruf wieder an.", "Schade, amigo. Hasta luego.", "Bueno. Du weißt, wo du mich findest."];
+const PABLO_BYE = ["Como quieras. Schreib mir, wenn du etwas brauchst.", "Schade, amigo. Du hast meine Nummer.", "Bueno. Du findest mich unter Kontakte."];
 const PABLO_OPS = ["Schneesturm", "Weißer Hai", "Nachtfalke", "Puderzucker", "Eisberg", "Lawine", "Polarlicht"];
+/* v302: Beide Waren verwenden die bisherigen fiktiven Spielpreise. */
+const PABLO_SORTS = [
+  { id: "kokain", name: "Kokain", icon: "❄️" },
+  { id: "crack", name: "Crack", icon: "💎" }
+];
+const pabloSort = id => PABLO_SORTS.find(s => s.id === id) || PABLO_SORTS[0];
 
 function pabloState() {
   if (!S.pablo) S.pablo = { kg: 0, at: null, nextOffer: 0, nextCust: 0, bought: 0, sold: 0 };
+  /* v302: Frühere Hangarbestände und Aufträge waren ausschließlich Kokain.
+     kg bleibt als Gesamtbestand für bestehende Anzeigen/Buchhaltung erhalten. */
+  if (!S.pablo.stock302) {
+    S.pablo.stock = { kokain: Math.max(0, S.pablo.kg || 0), crack: 0 };
+    S.pablo.stock302 = true;
+  }
   return S.pablo;
 }
-function pabloFree() {
-  const promised = S.orders.filter(o => o.pablo).reduce((a, o) => a + o.pablo.kg, 0);
-  return Math.max(0, pabloState().kg - promised);
+function pabloFree(sort) {
+  const pb = pabloState();
+  const promised = S.orders.filter(o => o.pablo && (!sort || (o.pablo.sort || "kokain") === sort)).reduce((a, o) => a + o.pablo.kg, 0);
+  return Math.max(0, (sort ? pb.stock[sort] || 0 : pb.kg) - promised);
 }
 /* Kunden sitzen in echten Städten – Berliner Stadtteile zählen nicht */
 function pabloCities() {
@@ -70,107 +84,164 @@ function pabloGuy(size) {
 }
 
 /* ------------------------------- Ablauf --------------------------------- */
-function pabloOpenMsg() { return (S.phone && S.phone.msgs || []).find(m => m.kind === "pablo" && (m.state === "ask" || m.state === "offer")); }
+function pabloOpenMsg() { return phoneDealerOpen("pablo"); }
 
 function tickPablo() {
   if (S.stage < PABLO_STAGE || S.jail || S.over) return;
   const pb = pabloState();
-  if (!pb.nextOffer) pb.nextOffer = S.time + rnd(120, 480);
-  const open = pabloOpenMsg();
-  if (open && S.time > open.expires) {
-    open.state = "gone";
-    open.thread.push({ me: false, t: "Zu langsam, amigo. Die Ware ist weg." });
-    pb.nextOffer = S.time + rnd(1.5, 3) * 1440;
-    if (typeof renderPhone === "function") renderPhone();
+  /* v302: Nach der Begrüßung keinerlei automatische Nachschub-Anrufe. */
+  if (!phoneContactsState().pablo) {
+    if (!pb.nextOffer) pb.nextOffer = S.time + rnd(120, 480);
+    if (S.time >= pb.nextOffer) pabloOffer();
   }
-  if (!open && S.time >= pb.nextOffer) pabloOffer();
+  if (phoneExpireDealerOffers("pablo") && phoneOpen()) renderPhone();
   if (pb.at && pb.kg > 0 && S.time >= (pb.nextCust || 0)) {
     if (S.orders.filter(o => o.pablo).length < 3) pabloCustomer();
     pb.nextCust = S.time + rnd(180, 420);
   }
 }
 
-function pabloOffer() {
+function pabloOffer(requested) {
   const pb = pabloState();
-  pb.nextOffer = S.time + rnd(2, 4) * 1440;
-  const tons = 8 + Math.floor(Math.random() * 33);
-  phoneMsg({
-    kind: "pablo", from: "Don Pablo", title: "Hola amigo", body: "",
-    state: "ask", expires: S.time + rnd(8, 12) * 60, tons,
-    thread: [
-      { me: false, t: "Hola amigo, Don Pablo hier." },
-      { me: false, t: tons + " Tonnen Kokain, reinste Ware. Interesse?" }
-    ],
+  const contacts = phoneContactsState();
+  if (!requested && contacts.pablo) return null;
+  if (requested && !contacts.pablo) return null;
+  const block = phoneDealerBlock("pablo");
+  if (block) { if (requested) toast(block, "warn"); return null; }
+  const open = pabloOpenMsg();
+  if (open) return open;
+  contacts.pablo = true;
+  const m = phoneMsg({
+    kind: "pablo", from: "Don Pablo", title: requested ? "Aktueller Bestand" : "Hola amigo", body: "",
+    state: requested ? "offer" : "ask", expires: S.time + rnd(8, 12) * 60,
+    offer: pabloSupply().map(r => ({ ...r })), pick: {},
+    thread: requested ? [{ me: true, t: "Mein Lager ist leer. Was hast du gerade da?" },
+      { me: false, t: "Das kann ich dir heute anbieten, amigo." }, { me: false, list: true }]
+      : [{ me: false, t: "Hola amigo, Don Pablo hier. Ich habe Kokain und Crack im Sortiment. Interesse?" },
+        { me: false, t: "Meine Nummer findest du unter Kontakte. Melde dich dort, wenn dein Lager leer ist. Keine weiteren Werbeanrufe, versprochen." }],
     toastText: "📞 Don Pablo: „Hola amigo …“"
-  });
-  if (typeof linaTalk === "function") setTimeout(() => linaTalk("pablo"), 600);
+  }, requested);
+  save();
+  if (!requested && typeof linaTalk === "function") setTimeout(() => linaTalk("pablo"), 600);
+  return m;
+}
+/* v302: Gespeicherte Lieferung statt Neu-Würfeln beim Öffnen. Insgesamt
+   weiterhin 8–40 Spieltonnen; Mengen und verfügbare Waren wechseln. */
+function pabloSupply() {
+  const pb = pabloState();
+  if (!pb.supply302) {
+    const legacy = pabloOpenMsg();
+    if (legacy) {
+      pb.supply302 = pabloRows(legacy).map(r => ({ ...r }));
+    } else {
+      const tons = 8 + Math.floor(Math.random() * 33);
+      if (!pb.lastSupply302 || Math.random() < 0.65) {
+        const k = Math.max(1, Math.floor(tons * rnd(0.3, 0.7)));
+        pb.supply302 = [{ id: "kokain", have: k }, { id: "crack", have: tons - k }];
+      } else pb.supply302 = [{ id: pick(PABLO_SORTS).id, have: tons }];
+      if (JSON.stringify(pb.supply302) === pb.lastSupply302) {
+        if (pb.supply302.length === 1) pb.supply302[0].id = pb.supply302[0].id === "kokain" ? "crack" : "kokain";
+        else { pb.supply302[0].have += 1; pb.supply302[1].have -= 1; }
+      }
+    }
+  }
+  return pb.supply302;
+}
+/* v302: Bereits offene Angebote aus alten Spielständen bleiben kaufbar. */
+function pabloRows(m) { return m.offer || [{ id: "kokain", have: m.tons }]; }
+function pabloPicked(m, id) { return typeof m.pick === "number" ? (id === "kokain" ? m.pick : 0) : (m.pick && m.pick[id]) || 0; }
+function pabloPickTotal(m) { return pabloRows(m).reduce((n, r) => n + pabloPicked(m, r.id), 0); }
+function pabloPickMap(m) {
+  if (typeof m.pick === "number") m.pick = { kokain: m.pick };
+  return m.pick || (m.pick = {});
 }
 
 function pabloReply(msgId, yes) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "ask") return;
+  if (!m || m.kind !== "pablo" || m.state !== "ask" || m.expires <= S.time) return;
   if (!yes) {
     m.thread.push({ me: true, t: "Kein Interesse." }, { me: false, t: pick(PABLO_BYE) });
     m.state = "no";
   } else {
     m.thread.push({ me: true, t: "Zeig her." });
-    m.pick = 0;
+    m.pick = {};
     m.thread.push({ me: false, list: true });
     m.state = "offer";
     m.expires = Math.max(m.expires, S.time + 8 * 60);
   }
   save(); renderPhone();
 }
-function pabloStep(msgId, d) {
+function pabloStep(msgId, sort, d) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
-  m.pick = clamp((m.pick || 0) + d, 0, m.tons);
-  renderPhone();
+  if (!m || m.kind !== "pablo" || m.state !== "offer" || m.expires <= S.time) return;
+  const row = pabloRows(m).find(r => r.id === sort);
+  if (!row) return;
+  const picks = pabloPickMap(m);
+  picks[sort] = clamp((picks[sort] || 0) + d, 0, row.have);
+  save(); renderPhone();
 }
 function pabloAll(msgId, on) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
-  m.pick = on ? m.tons : 0;
-  renderPhone();
+  if (!m || m.kind !== "pablo" || m.state !== "offer" || m.expires <= S.time) return;
+  const picks = pabloPickMap(m);
+  pabloRows(m).forEach(r => { picks[r.id] = on ? r.have : 0; });
+  save(); renderPhone();
 }
 function pabloPay(msgId) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer" || !m.pick) return;
-  const cost = m.pick * 1000 * PABLO_BUY;
+  if (!m || m.kind !== "pablo" || m.state !== "offer" || m.expires <= S.time) return;
+  const block = phoneDealerBlock("pablo");
+  if (block) return toast(block, "warn");
+  const tons = pabloPickTotal(m);
+  if (!tons) return toast("Erst Ware auswählen.", "warn");
+  const cost = tons * 1000 * PABLO_BUY;
   if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
   if (typeof walletPay !== "function") return pabloBuy(msgId);
-  walletPay({ to: "Don Pablo", icon: pabloFace(34), eur: cost, memo: m.pick + " t", onPaid: tx => pabloBuy(msgId, tx) });
+  walletPay({ to: "Don Pablo", icon: pabloFace(34), eur: cost, memo: tons + " t", onPaid: tx => pabloBuy(msgId, tx) });
 }
 function pabloBuy(msgId, tx) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer" || !m.pick) return;
-  const kg = m.pick * 1000, cost = kg * PABLO_BUY;
+  if (!m || m.kind !== "pablo" || m.state !== "offer" || m.expires <= S.time) return;
+  const block = phoneDealerBlock("pablo");
+  if (block) return toast(block, "warn");
+  const tons = pabloPickTotal(m);
+  if (!tons) return toast("Erst Ware auswählen.", "warn");
+  const kg = tons * 1000, cost = kg * PABLO_BUY;
+  if (tx && tx.eur !== cost) return toast("Deine Auswahl hat sich geändert. Bitte erneut bestätigen.", "warn");
   if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
   if (!tx && typeof walletQuote === "function") tx = walletQuote(cost);
   const pb = pabloState();
   if (!pb.at || pb.kg <= 0) {
-    const hubs = unlockedNodes().filter(n => n.modes.includes("a"));
+    /* v302: In Deutschland genügt eine per Lkw erreichbare Lagerhalle;
+       erst ab Europa kommen Flughafen-Hangars als Übergabeort hinzu. */
+    const hubs = unlockedNodes().filter(n => S.stage < 4
+      ? n.type === "city" && !n.id.startsWith("b-") && n.modes.includes("r") : n.modes.includes("a"));
     pb.at = pick(hubs.length ? hubs : unlockedNodes()).id;
   }
   S.money -= cost; S.expense += cost;
-  logMoney("pablo", "Don Pablo · " + m.pick + " t" + (tx ? " · " + solf(tx.sol, 2) + " SOL" : ""), -cost);
+  logMoney("pablo", "Don Pablo · " + tons + " t" + (tx ? " · " + solf(tx.sol, 2) + " SOL" : ""), -cost);
   pb.spent = (pb.spent || 0) + cost;
+  for (const row of pabloRows(m)) pb.stock[row.id] = (pb.stock[row.id] || 0) + pabloPicked(m, row.id) * 1000;
   pb.kg += kg; pb.bought += kg;
-  m.thread.push({ me: true, t: "Ich nehm " + m.pick + " Tonnen." });
+  pb.lastSupply302 = JSON.stringify(pabloRows(m));
+  delete pb.supply302;
+  m.thread.push({ me: true, t: "Ich nehme " + pabloRows(m).filter(r => pabloPicked(m, r.id)).map(r => pabloPicked(m, r.id) + " t " + pabloSort(r.id).name).join(" und ") + "." });
   if (tx) { m.thread.push({ me: true, tx }); pb.sol = (pb.sol || 0) + tx.sol; }
   const hg = pabloHangar();
-  m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : "Hangar 7") + ", " + N[pb.at].name + ". Meine Leute melden sich." });
-  m.state = "done"; m.bought = m.pick;
+  m.thread.push({ me: false, t: "Perfecto. " + (hg ? hg.t : pabloDepotLabel() + " 7") + ", " + N[pb.at].name + ". Meine Leute melden sich." });
+  m.state = "done"; m.bought = tons;
+  phoneCloseDealerOffers("pablo");
   const first = !pb.bustFree;
   pb.bustFree = true;
   pabloCustomer(first);
   pb.nextCust = S.time + rnd(120, 300);
-  toast("❄️ " + m.pick + " t im Hangar " + N[pb.at].short + " – Kunden unter „Aufträge“.", "ok");
+  toast("📦 " + tons + " t · " + pabloDepotLabel() + " " + N[pb.at].short + " – Kunden unter „Aufträge“.", "ok");
   save(); renderPhone(); render();
 }
 function pabloCancel(msgId) {
   const m = S.phone.msgs.find(x => x.id === msgId);
   if (!m || m.state !== "offer") return;
+  pabloSupply();
   m.thread.push({ me: true, t: "Doch nicht." }, { me: false, t: pick(PABLO_BYE) });
   m.state = "no";
   save(); renderPhone();
@@ -180,13 +251,14 @@ function pabloCancel(msgId) {
    werden. Ermittler tragen irgendeinen anderen Namen. */
 function pabloCustomer(safe) {
   const pb = pabloState();
-  const free = pabloFree();
-  if (!pb.at || free < 300) return null;
+  /* v302: Keine Mischaufträge; auch ein kleiner Rest kann vollständig weg. */
+  const sorts = PABLO_SORTS.filter(s => pabloFree(s.id) > 0);
+  if (!pb.at || !sorts.length) return null;
+  const sort = pick(sorts), free = pabloFree(sort.id);
   const cities = pabloCities().filter(n => n.id !== pb.at).sort(() => Math.random() - 0.5);
   if (!cities.length) return null;
   const cop = !safe && Math.random() < PABLO_COP_SHARE;
-  const kg = Math.min(Math.floor(free / 50) * 50, 300 + Math.floor(Math.random() * 55) * 50);
-  if (kg < 300) return null;
+  const kg = Math.min(free, 300 + Math.floor(Math.random() * 55) * 50);
   const name = cop ? "Mr. " + pick(PABLO_COP_NAMES) : null;
   /* Am liebsten ein Ziel, das die eigene Flotte gerade auch bedienen kann */
   let fallback = null;
@@ -196,10 +268,10 @@ function pabloCustomer(safe) {
     const o = {
       id: "A" + (S.seq++), from: pb.at, to: dest.id, cargo: "ware", weight: kg,
       pay: kg * PABLO_SELL, deadline: Math.round(S.time + fast.time * 2.5 + rnd(360, 720)),
-      shipper: name || "Mr. " + dest.short, desc: "nimmt " + kgf(kg) + " · Übergabe in " + dest.name, created: S.time,
+      shipper: name || "Mr. " + dest.short, desc: "nimmt " + kgf(kg) + " " + sort.name + " · Übergabe in " + dest.name, created: S.time,
       refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
       expire: Math.round(S.time + rnd(8, 16) * 60),
-      pablo: { kg, cop, city: dest.id },
+      pablo: { kg, sort: sort.id, cop, city: dest.id },
       /* Abgeholt im Hangar, übergeben in einer Siedlung am Stadtrand */
       pick: pabloHangar(), drop: typeof makeAddr === "function" ? makeAddr(dest.id, "home") : undefined
     };
@@ -221,15 +293,24 @@ function pabloHangar() {
   }
   return pb.hangar ? Object.assign({}, pb.hangar) : undefined;
 }
-function pabloTake(o) { const pb = pabloState(); pb.kg = Math.max(0, pb.kg - o.pablo.kg); }
-function pabloGiveBack(o) { pabloState().kg += o.pablo.kg; }
+function pabloDepotLabel() { return N[pabloState().at] && N[pabloState().at].type === "air" ? "Hangar" : "Lagerhalle"; }
+function pabloTake(o) {
+  const pb = pabloState(), sort = o.pablo.sort || "kokain";
+  pb.stock[sort] = Math.max(0, (pb.stock[sort] || 0) - o.pablo.kg);
+  pb.kg = Object.values(pb.stock).reduce((n, kg) => n + kg, 0);
+}
+function pabloGiveBack(o) {
+  const pb = pabloState(), sort = o.pablo.sort || "kokain";
+  pb.stock[sort] = (pb.stock[sort] || 0) + o.pablo.kg;
+  pb.kg = Object.values(pb.stock).reduce((n, kg) => n + kg, 0);
+}
 function pabloDelivered(o, pay) { const pb = pabloState(); pb.sold += o.pablo.kg; pb.earned = (pb.earned || 0) + (pay || 0); }
 
 /* ------------------------------ Spielende -------------------------------- */
 function pabloBust(job) {
   const o = job.order;
   S.over = {
-    kind: "interpol", who: o.shipper, kg: o.pablo.kg, place: o.to, time: S.time,
+    kind: "interpol", who: o.shipper, kg: o.pablo.kg, sort: o.pablo.sort || "kokain", place: o.to, time: S.time,
     name: S.player ? S.player.name : "", company: S.player ? S.player.company : "",
     money: S.money, fleet: S.fleet.length, bases: (S.bases || []).length,
     op: pick(PABLO_OPS), file: "IP/" + (100000 + Math.floor(Math.random() * 899999))
@@ -251,7 +332,7 @@ function overCheck() {
       <dt>Beschuldigt</dt><dd>${esc(o.name || "unbekannt")}, Inhaber von ${esc(o.company || "–")}</dd>
       <dt>Festnahme</dt><dd>bei der Übergabe in ${esc(N[o.place] ? N[o.place].name : "–")}</dd>
       <dt>Verdeckter Ermittler</dt><dd>„${esc(o.who)}“</dd>
-      <dt>Sichergestellt</dt><dd>${kgf(o.kg)} Kokain</dd>
+      <dt>Sichergestellt</dt><dd>${kgf(o.kg)} ${pabloSort(o.sort).name}</dd>
       <dt>Eingezogen</dt><dd>Firmenvermögen ${money(Math.max(0, o.money))}, ${o.fleet} Fahrzeug${o.fleet === 1 ? "" : "e"}${o.bases ? ", " + o.bases + " Standort" + (o.bases === 1 ? "" : "e") : ""}</dd>
       <dt>Urteil</dt><dd>${years} Jahre Haft</dd>
     </dl>
@@ -266,18 +347,17 @@ function overCheck() {
 function pabloMsgHTML(m) {
   const bub = e => {
     if (e.list) {
-      const live = m.state === "offer", k = m.pick || 0;
+      const live = m.state === "offer" && m.expires > S.time;
       return `<div class="bub in list">
         <div class="sn-lh">Was ich dir geben kann:</div>
-        <div class="sn-row">
-          <span class="pb-ic">❄️</span>
-          <div class="sn-tx"><b>Kokain</b><small>${m.tons} t · ${money(PABLO_BUY * 1000)}/t</small></div>
-          ${live ? `<div class="sn-step">
-              <button data-pbstep="${m.id}|-1" aria-label="weniger">−</button>
-              <b>${k} t</b>
-              <button data-pbstep="${m.id}|1" aria-label="mehr">+</button>
-            </div>` : (m.bought ? `<span class="sn-got">${m.bought} t</span>` : "")}
-        </div>
+        ${pabloRows(m).map(r => {
+          const sort = pabloSort(r.id), k = pabloPicked(m, r.id);
+          return `<div class="sn-row"><span class="pb-ic">${sort.icon}</span>
+            <div class="sn-tx"><b>${sort.name}</b><small>${r.have} t · ${money(PABLO_BUY * 1000)}/t</small></div>
+            ${live ? `<div class="sn-step"><button data-pbstep="${m.id}|${r.id}|-1" aria-label="Weniger ${sort.name}">−</button>
+              <b>${k} t</b><button data-pbstep="${m.id}|${r.id}|1" aria-label="Mehr ${sort.name}">+</button></div>`
+              : m.bought && k ? `<span class="sn-got">${k} t</span>` : ""}</div>`;
+        }).join("")}
       </div>`;
     }
     if (e.tx && typeof walletTxBubble === "function") return walletTxBubble(e.tx);
@@ -289,7 +369,7 @@ function pabloMsgHTML(m) {
       <button class="btn tiny" data-pbyes="${m.id}">Zeig her</button>
       <button class="btn tiny ghost" data-pbno="${m.id}">Kein Interesse</button></div>`;
   } else if (m.state === "offer") {
-    const k = m.pick || 0, cost = k * 1000 * PABLO_BUY;
+    const k = pabloPickTotal(m), cost = k * 1000 * PABLO_BUY;
     acts = `<div class="sn-sum">${k} t · <b>${money(cost)}</b>${k && typeof solf === "function" ? ` <span class="sn-sol">≈ ${solf(solAmt(cost), 0)} SOL</span>` : ""} <small>Kunden zahlen ${money(PABLO_SELL * 1000)}/t · Zahlung in Solana</small></div>
       <div class="sn-acts">
         <button class="btn tiny${k && cost <= S.money ? "" : " disabled"}" data-pbbuy="${m.id}">◎ Bezahlen${k ? " · " + money(cost) : ""}</button>
@@ -299,7 +379,7 @@ function pabloMsgHTML(m) {
     acts = `<div class="pmsg-note">Don Pablo hat aufgelegt.</div>`;
   }
   return `<div class="pmsg snus pablo">
-    <div class="sn-head">${pabloFace(38)}<div><b>Don Pablo</b><small>${stamp(m.time)} · unterdrückte Nummer</small></div>${typeof phoneTTL === "function" ? phoneTTL(m) : ""}</div>
+    <div class="sn-head">${pabloFace(38)}<div><b>Don Pablo</b><small>${stamp(m.time)} · Kontakt gespeichert</small></div>${typeof phoneTTL === "function" ? phoneTTL(m) : ""}</div>
     <div class="sn-chat">${m.thread.map(bub).join("")}</div>
     ${acts}
   </div>`;
@@ -307,21 +387,22 @@ function pabloMsgHTML(m) {
 function bindPabloMsgs() {
   $$("#modalBody [data-pbyes]").forEach(b => b.onclick = () => pabloReply(b.dataset.pbyes, true));
   $$("#modalBody [data-pbno]").forEach(b => b.onclick = () => pabloReply(b.dataset.pbno, false));
-  $$("#modalBody [data-pbstep]").forEach(b => b.onclick = () => { const [id, d] = b.dataset.pbstep.split("|"); pabloStep(id, +d); });
+  $$("#modalBody [data-pbstep]").forEach(b => b.onclick = () => { const [id, sort, d] = b.dataset.pbstep.split("|"); pabloStep(id, sort, +d); });
   $$("#modalBody [data-pball]").forEach(b => b.onclick = () => { const [id, on] = b.dataset.pball.split("|"); pabloAll(id, on === "1"); });
   $$("#modalBody [data-pbbuy]").forEach(b => b.onclick = () => pabloPay(b.dataset.pbbuy));
   $$("#modalBody [data-pbcancel]").forEach(b => b.onclick = () => pabloCancel(b.dataset.pbcancel));
 }
 function pabloStockHTML() {
-  const pb = S.pablo;
+  const pb = pabloState();
   if (!pb || !pb.at || pb.kg <= 0) return "";
-  return `<div class="snusbar pablo"><span class="sn-lbl">❄️ Hangar ${esc(N[pb.at].short)} · ${kgf(pb.kg)} Ware</span></div>`;
+  const parts = PABLO_SORTS.filter(s => pb.stock[s.id] > 0).map(s => `<span class="sn-chip">${s.icon} ${s.name} <b>${kgf(pb.stock[s.id])}</b></span>`).join("");
+  return `<div class="snusbar pablo"><span class="sn-lbl">📦 ${pabloDepotLabel()} ${esc(N[pb.at].short)} · ${kgf(pb.kg)}</span>${parts}</div>`;
 }
 function pabloOrderCard(o, previewRow) {
-  const rest = o.deadline - S.time;
+  const rest = o.deadline - S.time, sort = pabloSort(o.pablo.sort);
   return `<div class="card order gray dark${typeof flashOn === "function" && flashOn(o.id) ? " flash" : ""}" data-order="${o.id}">
     <div class="card-top">
-      <span class="badge gray">❄️ Ware · Don Pablo</span>
+      <span class="badge gray">${sort.icon} ${sort.name} · Don Pablo</span>
       <span class="pay">${money(o.pay)}</span>
       ${typeof rejectBtnHTML === "function" ? rejectBtnHTML(o.id) : ""}
     </div>
@@ -331,7 +412,7 @@ function pabloOrderCard(o, previewRow) {
       <span class="sn-want"><b>${kgf(o.pablo.kg)}</b></span>
     </div>
     <div class="desc">${esc(o.desc)} · ${money(PABLO_SELL * 1000)}/t</div>
-    <div class="meta addr"><span>🛫 ${esc(addrText(oPick(o)))} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(addrText(oDrop(o)))} <small>${esc(N[o.to].short)}</small></span></div>
+    <div class="meta addr"><span>📦 ${esc(addrText(oPick(o)))} <small>${esc(N[o.from].short)}</small></span><span>🏁 ${esc(addrText(oDrop(o)))} <small>${esc(N[o.to].short)}</small></span></div>
     <div class="meta small"><span>📏 ${kmf(o.refDist)}</span><span>⏳ ${dur(rest)}</span><span>⚡ ab ${dur(o.refTime)}</span></div>
     ${previewRow}
   </div>`;

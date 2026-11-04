@@ -1,5 +1,138 @@
 # Änderungen – kurz für den Kollegen
 
+## v308 – Individuelle, seriösere Kunden-Monogramme in Auftragskarten
+**Basis:** GitHub main `8232bbe` (v301), vor und während der Arbeit erneut abgeglichen. Die noch nicht auf main vorhandenen Lieferungen v302–v307 sind vollständig integriert.
+
+**Ursache:** Alle Kunden hatten denselben stark umrandeten Initialenkreis, nur mit einer von acht kräftigen Farben. Das wirkte wie ein generischer Platzhalter. Die Initialenermittlung berücksichtigte außerdem nur eingeschränkt internationale Anfangsbuchstaben und erkannte getrennt geschriebenes „e. V.“ nicht zuverlässig.
+
+**Lösung (`game.js`, `style.css`):** Gemeinsames `orderMonoHTML` für sämtliche Hof-/Speditions-Auftragskarten. Zehn gedeckte Geschäftspaletten mit vier Varianten (dunkel/hell, einfacher/doppelter feiner Rahmen, klare Systemschrift bzw. klassische Serifenschrift). Gestaltung fest aus dem vollständigen, normalisierten Firmennamen, ohne Zufall oder Auftragskennung: derselbe Kunde behält sein Zeichen bei erneutem Auftrag/Rendern/Neuladen. NFC-Normalisierung und vereinheitlichte Leerzeichen, Unicode-Initialen; Rechtsform-/Füllwörter zählen nicht als Initialen. Inline-SVG ohne Bilddateien, externe Schriftzugriffe oder SVG-IDs; Initialen als Text korrekt escaped. Dekorativ ausgeblendet für Screenreader, da daneben bereits der Firmenname steht. Windows-Kontrastmodus berücksichtigt.
+
+**Handy:** Unverändert 32 × 32 CSS-Pixel, gleicher Platz im Absenderbereich. Die bisherige dicke Kontur und der versetzte Schatten entfallen zugunsten feiner Linien. Keine Änderung am Kartenablauf, an Aufträgen, Kundenbeziehungen oder Spielstand.
+
+**Geprüft:** Alle 103 unterschiedlichen Kundennamen aus `CUSTOMERS`, `FTOWNS_HOF` und den Holz-/Fisch-Ergänzungen erzeugen unterschiedliche Zeichen; wiederholter Aufruf und normalisierte Leerzeichen/NFC liefern dieselbe Gestaltung. Gleiche Initialen können durch Farbe/Rahmen unterscheidbar bleiben. Initialenfälle einschließlich Fischerhütte Caputh, Hofladen Glindow, Schlosscafé Petzow, Umlauten, Akzentzeichen, einbuchstabigem Namen, leerem Namen und „e. V.“ geprüft; SVG-Escaping und keine externen Bilder/IDs geprüft. Kleinstes Textkontrastverhältnis der zehn Paletten 6,66:1. Zwölf Beispiele der tatsächlich ausgegebenen SVGs in zweifacher Handygröße gerendert und visuell kontrolliert. Syntax, Diff und unveränderte 32-Pixel-Fläche geprüft. Kein zusätzlicher Testdatei-/Paketbedarf für diese Gestaltungsänderung.
+
+**Cache:** Service Worker v308; nur `game.js` und `style.css` auf v308 gesetzt, in HTML und Service Worker konsistent. Alle anderen Dateiverweise behalten ihren Stand.
+
+**Grenzen:** Keine Live-Browser-/iPhone-/Safari-Prüfung; SVG-Ansichten und Quelltext-/Funktionsprüfung. Betriebssysteme können die jeweilige System-/Serifenschrift geringfügig anders darstellen.
+
+## v307 – Keiler-Anatomie, versetztes Zusammenbrechen und korrekte Fasan-Treffer
+**Basis:** GitHub main `8232bbe` (v301), während der Arbeit wiederholt abgeglichen. Die noch nicht auf main vorhandenen Lieferungen v302–v306 sind vollständig integriert.
+
+**Ursache:** Die Keilerläufe drehten unterhalb des Rumpfs; ihre sichtbaren Muskelbäuche wirkten dadurch wie angesetzte Kugeln. Zufällige Querschnittsverformung und starke Farbunruhe machten die Schwarte wellig. Beim Zusammenbrechen wurden Rumpf und alle Gelenke fast gleichzeitig zwischen zwei Posen interpoliert. Außerdem setzte `stepAnimal` den Höhenmaßstab auf 1 zurück, obwohl Bodenauflage und Trefferzonen mit der individuellen Größe rechneten. Die Vogel-Körperzone hieß pauschal „Treffer im Flug“, auch bei einem laufenden Fasan; der Flugauftrag prüfte bisher nur die Art.
+
+**Lösung (`hunt.js`):**
+- Keiler mit gleichmäßigeren Körperquerschnitten, kräftigem Widerrist und schlankerer Hinterhand, ruhigerer Schwarte sowie stumpfer ovaler Rüsselscheibe mit sichtbaren Nasenlöchern. Schulter-/Hüftdrehpunkte jetzt innerhalb des Rumpfs; längliche obere Muskeln verjüngen sich zu den unteren Laufsegmenten. Keiler-Trefferzonen der Läufe folgen denselben beiden Gelenksegmenten einschließlich Sprunggelenkversatz. Organ-/Rumpfzonen, Preise und Medaillenregeln bleiben erhalten.
+- Acht natürliche Schwarte-Familien statt sechs: neu Kastanienbraun und Aschgrau; Rötlich, Schwarz und Graubraun deutlicher unterscheidbar, weiterhin acht feste Nuancen je Familie. Weiß (0,5 %) und Schecke (2,5 %) bleiben gleich selten. Gespeicherte Merkmale/Farbschlüssel werden weiter gelesen; kein Neuwürfeln gesicherter Trophäen.
+- Zusammenbrechen bei Keiler und Hirsch aus der gerade sichtbaren Lauf-/Kopf-/Rumpfhaltung: Vorderläufe zuerst, Hinterläufe etwas später; Gewichtsabsenkung, Schulterrolle, verzögertes Ablegen des Haupts und ruhiges Auslaufen. Dauer je Art/Stück etwa 1,1–1,4 s. Bewegungsweg wird früh abgebremst. Während der Bewegung begrenzen Modellpunkte von Rumpf, Läufen und Kopf/Geweih die Bodenauflage; Geometrie einmal beziehen, keine Modell-/GPU-Neuerzeugung je Bild. Berechnete Endpose und bestehende Gelenk-/Kollisionsprüfung bleiben maßgeblich. Individueller Höhenmaßstab bleibt in Bewegung und Seitenlage erhalten.
+- Fasananteil normaler Begegnungen von 25 auf 32 % (Hirsch 40 %, Keiler 28 %). Flugtimer, Bestandsregeneration, Güte/Gefieder und Grenzen von zwei Bodentieren/einem Flugvogel/drei Tieren insgesamt unverändert.
+- Boden-/Flugzustand beim Abdrücken erfassen und über die Geschossflugzeit erhalten. Bergungsüberschrift, Schussbewertung und Trophäenwand lesen dieselbe Beschriftung. Optionale `air`-Angabe in Sammlung und Jagdprotokoll; alte Einträge mit `mv` bleiben lesbar, ohne bekannte Zustandsdaten neutrale Trefferbezeichnung. Ein gerade startender Vogel ohne Bodenabstand zählt noch als Bodentreffer. Der Flugauftrag verlangt einen bestätigten Flugtreffer. Folgeeinschläge auf bereits zusammenbrechende/erlegte Tiere werden verworfen.
+- Cache v307, nur die geänderte Produktdatei `hunt.js` hochgezählt.
+
+**Geprüft:** `node hunt-v307.test.js`: zehn Prüfgruppen, darunter 16 echte `stepAnimal`-Sturzabläufe und 884 vermessene Animationsbilder (beide Arten/Seiten, kleine/große Tiere, Stand/Galopp, 30/60 Zeitschritte pro Sekunde), Haut/Hufe/Kopf/Geweih über Boden, kein anschließender Posensprung; tatsächliche Lauf-Treffersegmente; stabile acht Fellfamilien und alte Merkmale; echter verzögerter `fire`-Ablauf mit Start bzw. Landung zwischen Abdrücken und Einschlag; korrekte Beschriftung nach Datenspeicherung und stabile Fasan-Endpose nach Boden-/Flugtreffer; Flugauftrag und Begegnungsanteile. `hunt.test.js` mit 21 bestehenden Prüfungen einschließlich 144 Endposen bestanden, Arten-Erwartung angepasst. `hunt-v283.test.js` (72 deterministische Modelle/Nuancen) und `hunt-thighs-v290.test.js` bestanden. 18 Ansichten mit Originalmodellen, echten Animationsknoten und originalen GLSL-Shadern über Mesa/EGL gerendert und angesehen: vorher/nachher stehend/liegend, acht Fellfamilien, sechs Sturzphasen. Keiler weiter unter dem bestehenden Budget von 9.000 Dreiecken. Syntax, Diff und Cache-Verweise geprüft.
+
+**Grenzen:** Keine Live-Browser-, iPhone-/Safari- oder Mobilgerät-Leistungsmessung. Die Modellansichten ersetzen keinen Test der kompletten Jagdszene auf dem Handy. Keine neuen Bild-/Texturdateien nötig.
+
+## v306 – Vergleichbare Firmenwerte aus tatsächlichem Übernahmebestand
+**Basis:** GitHub main `8232bbe` (v301), während der Arbeit wiederholt abgeglichen. Die bisher noch nicht auf main vorhandenen Lieferungen v302–v305 sind vollständig integriert.
+
+**Ursache:** Konzernwellen erhielten bei ihrem Auftauchen bereits einen nach damaligem Fortschritt/Welle erhöhten Basiswert. `corpValue` multiplizierte diesen zusätzlich mit dem Etappenfaktor des Firmensitzes (z. B. Mannheim ×6, Callao/Casablanca ×90). Ähnlich große Konzerne wurden deshalb trotz 10–12 % Marktanteil um über das Hundertfache unterschiedlich bewertet. Die später übernommene Flotte wurde außerdem erst beim Kauf neu gewürfelt und war nicht die Grundlage der Bewertung.
+
+**Lösung (`corp.js`):**
+- Gemeinsamer Maßstab für alle Konkurrenten: Zeitwert der tatsächlich angebotenen Flotte plus Immobilien-Zeitwert des Firmensitzes, dazu Kunden-/Organisationswert von `Vermögenswert × (15 % + 1,8 × Marktanteil)`. Marktanteil stetig und moderat, keine pauschale Multiplikation des gesamten Unternehmens mit Standort- oder Wellenfaktoren. Die alten `base`-Felder im Spielstand bleiben kompatible Metadaten, treiben aber den Kaufpreis nicht mehr.
+- Standort beeinflusst nur noch den Büro-/Immobilienanteil anhand der vorhandenen `buyPrice`-Logik. Fahrzeug-Zeitwerte verwenden dieselbe Funktion `vehValue` wie die Spielerflotte, einschließlich Verschleiß. Die Bewertung der eigenen Spedition bleibt unverändert.
+- Pro Konkurrent/Etappe ein gespeichertes Flottenangebot mit Typ, Zustand und Laufleistung. Deterministischer Aufbau ohne Neuwürfeln beim Öffnen oder Neuladen; repräsentative Mischung über den bisherigen erlaubten Preispool. Konzerne verwenden weiterhin die bessere Hälfte der verfügbaren Fahrzeuge. Dadurch entstehen vergleichbare Mischflotten statt zufälliger reiner Billig- oder Luxusflotten. Fahrzeuganzahl, verfügbare Verkehrsträger und bisherige Zustandsbereiche bleiben erhalten.
+- Das bisher schon etappenabhängige Übernahme-Sortiment wird bei einer neuen Etappe neu zusammengestellt; ein höherer Wert geht damit mit tatsächlich anderen/besseren angebotenen Fahrzeugen einher. Im laufenden Gespräch ist die zugesagte Flotte als Kopie fixiert und wird beim Abschluss exakt übergeben, auch wenn inzwischen eine neue Etappe geöffnet wurde.
+- Verhandlungsfenster zeigt Zeitwertanteile und Fahrzeugzahlen je Verkehrsträger. Bestehende aktive Gespräche beim Wiederöffnen proportional auf die neue Bewertung umgerechnet; Gegenangebot, Angebot und Reserve im gleichen Verhältnis, Runde/Verhandlungsfortschritt und bestehende Sperrzeiten bleiben erhalten. Eine Chatzeile erklärt die aktualisierte Bewertung. Historische Kaufpreise und bereits übernommene Fahrzeuge/Büros bleiben unangetastet.
+- Falls am Firmensitz schon ein eigenes Büro steht, wird nur der Immobilien-Zeitwert ausgezahlt. Der bisherige Rückfluss von 18 % des gesamten Konzernpreises konnte bei Schiffen/Flugzeugen den Immobilienwert massiv überschreiten.
+- Nur `corp.js` als Produktdatei geändert, Cache v306. Keine Änderungen an Marktanteilsermittlung, Wellenhäufigkeit, eigenen Firmenverkaufsangeboten oder Kapital des Spielers durch die Neubewertung allein.
+
+**Vorher/nachher im nachgebildeten Screenshot:** Die originalen Werte 5,70 / 636,35 / 548,41 Mio. € wurden mit dem vorherigen Code reproduziert. Mit derselben Marktanteils-/Standort-/Flottengrößenkonstellation ergeben sich nun etwa 91,263 / 105,081 / 105,100 Mio. €. Der gemeinsame Wertmaßstab berücksichtigt die tatsächlich übernommenen See-/Luftfrachtflotten. Kleine Abweichungen zwischen den beiden 17-Fahrzeug-Firmen ergeben sich aus Typen und Zustand.
+
+**Geprüft:** `node company-values-v306.test.js`: zwölf Szenarien mit echten Fahrzeug-, Verschleiß- und Büropreisen sowie originaler Bewertungs-/Verhandlungs-/Übergabelogik. Screenshotkonstellation, Standort-/Wellenbasis ohne Gesamt-Multiplikator, gleiche Ausstattung/Anteile = gleicher Wert, stetiger Marktanteilseinfluss, alle sechs Etappen, 80 vergleichbare Flottenmischungen, gespeicherte/deterministisch wiederhergestellte Angebote, alte Verhandlungen/Sperren/Historie, exakte Übergabe und einmalige Zahlung, Etappenwechsel während des Gesprächs, Verkauf eines doppelten Sitzes ohne Mehrfacherstattung. Neuer Test ohne Git-/Netzwerkabhängigkeit nach dem Einspielen weiter ausführbar.
+
+**Regressionen:** `office-limits.test.js`, `review-v282.test.js` und alle 13 Schatzprüfungen v305 bestanden. Syntax, Diff und Cache-Verweise geprüft.
+
+**Prüfgrenze:** Kein Live-Browser-/iPhone-/Safari-Test und keine Messung der neuen Textzeilen im Angebotsfenster. DOM, Kandidatennamen, Auftragsgenerator und Effekte im Test ersetzt. Keine Langzeitsimulation der gesamten Firmenwirtschaft.
+
+## v305 – Schatzbelohnungen nach Kapital, Fortschritt und Bedarf
+**Basis:** GitHub main `8232bbe` (v301), während der Arbeit wiederholt abgeglichen. Die noch nicht auf main vorhandenen Lieferungen v302 (Händler), v303 (Feldmenü) und v304 (sichtbarer Gießzustand) sind vollständig enthalten.
+
+**Ursache / Auftrag:** Die Schatzkiste vergab nur Geld nach der Formel `80 + Erbe-Level × 15`, mit kleiner Zufalls-/Grababweichung, sowie feste EP und ein bis zwei Kleeblätter. Bei Millionen auf dem Konto blieb sie damit wirtschaftlich bedeutungslos; passende Waren gab es nicht.
+
+**Lösung (`erbe.js`):**
+- Alle drei Grabqualitäten skalieren mit dem positiven Kontostand unmittelbar vor der Vergabe: Grundwert 0,5 % / 1,2 % / 2 %, mit ±10 % Zufallsabweichung. Eine Untergrenze nach Erbe-Level und Etappe hält Funde auch nach größeren Investitionen sinnvoll. Kein pauschaler Euro-Höchstbetrag, der später erneut bedeutungslos wird. Beispiel: 50 Mio. € Kapital und zwei Sterne ergeben 540.000–660.000 € vor einem eventuellen Lagerersatz.
+- EP wachsen mit dem Abstand zum nächsten Erbe-Level (mindestens die bisherigen EP), Kleeblätter mit Erbe-Level/Etappe bis maximal zwölf je Fund. Drei Sterne bleiben wertvoller als zwei und einer.
+- Je nach Grabqualität bis zu ein/zwei/drei verschiedene Warenpakete, Qualität drei/vier/fünf Sterne. Nur herstellbare/kaufbare, freigegebene Waren aus erreichbaren Bereichen und vorhandenen Lagern. Kein Strom/Energie, keine rohen Fische, Wildkörper oder erarbeiteten Trophäen als Zufalls-Lagerfüller.
+- Fehlende Ware aktiver, noch nicht ausgelieferter Aufträge zuerst; danach schwach gefüllte passende Bestände. Umfang begrenzt durch Bedarf, Warenwert, Level/Etappe und 15 % der jeweiligen Lagerkapazität pro Paket. Bereits ausreichend gefüllte Waren ohne Bedarf entfallen. Verschiedene Pakete reservieren gemeinsam genutzten Lagerplatz schon während der Planung; kein Überfüllen.
+- Fehlende Warenplätze (volle Lager/kein sinnvolles Sortiment) werden anteilig durch bis zu 10 % zusätzlichen Geldwert ersetzt. Es wird nur tatsächlich passender Inhalt gutgeschrieben.
+- Einmalige Vergabe weiterhin vor der Öffnungsanimation; Ergebnis zusätzlich an `c.reward` gespeichert. Zweiter Abschluss oder Neuladen zahlt nicht erneut aus. Bestehende verbuchte Schätze werden nicht rückwirkend verändert. Schatzhäufigkeit, Grab-Minispiel und Sternegrenzen bleiben gleich.
+
+**Anzeige (`worldview.js`):** Geld, EP, Kleeblätter und tatsächlich erhaltene Waren erscheinen gemeinsam und fliegen ins Lager. Mit Waren bleibt die vorhandene Anzeige 4,8 Sekunden sichtbar. Keine zweite Gutschrift in Animationen. Alte Ergebnisse ohne Warenliste bleiben darstellbar; kein neues Fenster oder Kameraverhalten.
+
+**Geprüft:** `node treasure-loot-v305.test.js`: 13 Szenarien für Einsteiger/Millionen/Milliarden, Fortschritts-Untergrenze, Sternequalität, Auftragsdefizite, Freigaben/Gebiete/Lagertypen, volle/nahezu volle gemeinsame Lager, Geldersatz, bereits vorhandene Bestände, abgelaufene/ausgelieferte/angenommene Aufträge, ungültige Ergebnisse, doppelte Minispielabschlüsse, Speicherung/Neuladen und Anzeige/Effektinhalt ohne weitere Gutschrift. Zusätzlich echte Waren-/Rezepttabellen mit rekursivem `farmCanMake`: Einsteiger-Getreide sowie nach Ausbau tatsächlich verfügbare Backwaren. Kontostand, Einnahmenbuchung und Warenqualität geprüft.
+
+**Regressionen:** Zehn Feldmenü-Szenarien v303, 66 Modellvarianten/Zustandsabgleiche v304 und alle 13 Händler-Szenarien v302 bestanden. JavaScript-Syntax, Diff und Cache-Verweise geprüft. Cache v305 ausschließlich für `erbe.js` und `worldview.js`.
+
+**Prüfgrenze:** Kein Live-Browser-/iPhone-/Safari-Test. Der Haupttest verwendet Freigabe-/Effekt-Fixtures; die zusätzliche Produktionsprüfung verwendet echte Waren-/Rezepttabellen und die originale rekursive Freigabelogik. Keine vollständige Balance-Langzeitsimulation der Gesamtwirtschaft.
+
+## v304 – Gegossene und trockene Beete/Obstbäume sichtbar unterscheiden
+**Basis:** GitHub main `8232bbe` (v301), während der Arbeit wiederholt abgeglichen. Die noch nicht auf main vorhandenen Lieferungen v302 (Händlerkontakte) und v303 (dynamisches Feldmenü) sind vollständig integriert; diese ZIP kann direkt auf main angewendet werden.
+
+**Ursache / Auftrag:** `o.w` beeinflusste bisher Wachstumszeit und Qualität, wurde aber bei Feldboden, Pflanzenfarben und Obstbaumdarstellung nicht berücksichtigt. Gegossene und ungewässerte Pflanzen sahen deshalb gleich aus.
+
+**Lösung:**
+- `farmmodels.js`: Beete mit heller, matter Erde und wenigen feinen Rissen in den Furchen, wenn bepflanzt und nicht gegossen. Nach dem Gießen dunklere, feuchte Erde. Leere Beete und alte Modellaufrufe ohne Gießparameter behalten ihre bisherige Darstellung.
+- Ungegossenes grünes Pflanzengewebe erhält einen dezenten olivfarbenen Ton; gegossenes Grün verwendet die gesunden Originalfarben. Geometrie und Wachstumsstufen bleiben gleich. Reife rote/orange Früchte, goldene Weizenähren, Baumstämme und Pflanzstützen werden nicht umgefärbt.
+- Obstbäume mit passender Laubfarbe und einer flachen, leicht unregelmäßigen Baumscheibe: hell mit kleinen Rissen bzw. dunkel nach dem Gießen. Kein dauerhaft schwebendes Symbol, keine neue HUD-Fläche oder Partikeldauerschleife. Die Baumscheiben bleiben innerhalb des vorhandenen Baumplatzes.
+- `farmview.js`: Gießzustand in den Mesh-Schlüsseln berücksichtigen; Boden, Pflanzen und Baum passen sich beim bestehenden Zustandsabgleich an. Vorhandene Szenenknoten und Fruchtknoten bleiben erhalten. Getrennte Netze werden pro Sorte/Stufe/Gießzustand gemeinsam verwendet; kein neuer GPU-Upload pro Frame. Ernte/Neuaussaat setzt das Aussehen passend zum vorhandenen `o.w` zurück. Muschelleinen und übrige Objekte unverändert.
+- Keine Änderung an Gießregeln, Regen, Wachstumszeiten, Qualität, Kosten oder Erträgen. Keine neue Spielstandstruktur. Cache v304 nur für `farmmodels.js` und `farmview.js`.
+
+**Geprüft:** `node watering-look-v304.test.js`: 66 trockene/nasse Originalnetze für sieben Feldfrüchte in allen vier Wachstumsstufen, drei Obstbäume und beide Bodenarten; endliche Koordinaten, unveränderte Pflanzengeometrie/Früchte und gesunde Originalmodelle, deutlich unterschiedlicher Bodenhelligkeitswert, Kachelgrenzen und kleines Dreiecksbudget. Zustandsabgleich mit Originalfunktionen für Gießen, Ernte, Neuaussaat, Baumernte und Neuladen; identische Darstellung lädt keine neuen Netze hoch. Auch der Baum-Fallback ohne Blattbüschel funktioniert.
+
+**Grafikprüfung:** 22 Ansichten für alle sieben Kulturen in Stufe 2, reifen Weizen und alle drei Obstbaumarten, jeweils trocken/gegossen. Tatsächliche Modellnetze und Originalshader mit Mesa/EGL gerendert und die Vergleichsansichten geprüft. Alle acht Original-GLSL-Shader kompiliert. Die Ansichten verwenden eine feste Tagesbeleuchtung und keine vollständige Hofszene/Schattenkarte.
+
+**Regressionen:** Alle zehn Feldmenü-Szenarien v303 und alle 13 Händler-Szenarien v302 bestanden. Syntax, Diff und Cache-Verweise geprüft.
+
+**Prüfgrenze:** Kein Live-Browser-/iPhone-/Safari-Test. Die Zustandsprüfung verwendet einen kleinen Grafik-/Upload-Ersatz; die separate Grafikprüfung rendert echte Netze/Shader ohne die vollständige Spieloberfläche. Keine Aussage über gemessene Handy-Bildrate.
+
+## v303 – Offenes Feldmenü folgt Farmer-Aktionen
+**Basis:** GitHub main `8232bbe` (v301), während der Arbeit erneut abgeglichen, einschließlich der noch nicht auf main vorhandenen Händlerlieferung v302. Die ZIP enthält diese vorherige Änderung vollständig; v302 muss nicht gesondert eingespielt werden.
+
+**Ursache:** Das Saatmenü speicherte seine Art beim Antippen. Der Farmer änderte anschließend das Feld, aber das geöffnete Menü wurde nicht an den neuen Zustand angepasst. Die bestehende Kernfunktion `farmPlant` verhinderte zwar bereits eine doppelte Aussaat, das Menü bot sie optisch weiterhin an.
+
+**Lösung (`farmview.js`):**
+- Feldmenü beim bestehenden Nachführen seiner Position mit dem aktuellen Feld abgleichen: leer → Saat, bepflanzt → Gießen, gewässert → gegossen, reif → Sichel. Auch Ernte/Neuaussaat des Farmers und ein anderer angebauter Pflanzentyp werden berücksichtigt. Feld und Auswahl bleiben erhalten; kein erneutes Antippen nötig.
+- Neuaufbau nur bei verändertem Zustand/Pflanzentyp/Bewässerung/Fruchtwechsel. Restzeit und Position werden weiterhin ohne Ersetzen der Bedienelemente nachgeführt. Nach einem automatischen Wechsel greift der vorhandene kurze Klickschutz.
+- Bereits gestartete Werkzeuggesten werden nicht unter dem Finger umgebaut. Übernimmt der Farmer während einer erfolglosen Saatgeste, erscheint beim Loslassen das neue Feldmenü, statt die Auswahl zu verwerfen. Saat kann weiterhin über andere leere Felder gezogen werden.
+- Ereignisse von inzwischen veralteten Saat-, Wasser- oder Sichelknöpfen starten keine unpassende Aktion. Die vorhandenen Feld-/Geld-/Erntefunktionen bleiben unverändert; keine neue Spielstandstruktur und keine Änderung der Kosten, Wachstumszeiten oder Farmerfreigaben.
+- Cache v303 ausschließlich für `farmview.js`, übrige Verweise der Händlerlieferung v302 erhalten.
+
+**Geprüft:** Fehler am bisherigen GitHub-Code mit `node field-menu-v303.test.js --before` reproduziert: nach Farmer-Aussaat bleibt die Menüart `seed` statt `grow`. Mit der Korrektur bestehen zehn Szenarien mit Originalfunktionen aus `farm.js`, `team.js` und `farmview.js`: automatischer Wechsel, Auswahl bleibt erhalten, kein ständiger DOM-Neuaufbau, Farmer-Bewässerung/Restzeit/Qualität, Reife und Farmer-Ernte/Neuaussaat, direkter Neuaufbau, alter Saatknopf ohne zweite Abbuchung, Übernahme während einer laufenden Geste, weiterhin mehrere Felder per Saatziehen und Gießen über die tatsächlich gebundenen Pointerfunktionen. Andere Menüs bleiben unverändert; entfernte Felder schließen ihr eigenes Menü.
+
+**Regressionen:** Alle 13 Szenarien aus `dealer-contacts-v302.test.js` sowie `clearing-v291.test.js` bestanden. JavaScript-Syntax, Diff und Cache-Verweise geprüft.
+
+**Prüfgrenze:** Kein Live-Browser-/iPhone-/Safari-Test. DOM, Grafik-/Effektausgabe und vorbereitende Farmer-Auswahl sind im Test ersetzt; ausgeführt werden die originalen Feldaktionen, der Farmer-Abschluss und die Menü-/Werkzeugeingabelogik.
+
+## v302 – Dauerhafte Händlerkontakte, Nachschub auf Anfrage und Crack
+**Basis:** GitHub main `8232bbe` (v301), wiederholt während der Arbeit abgeglichen. Die bisherigen Mitarbeiter-, Pflanzen-, Treppen- und Wasserfallkorrekturen sind vollständig enthalten. Keine Änderungen an diesen Bereichen.
+
+**Ursache / Auftrag:** Mr. Snus und Don Pablo starteten nach jeder Absage oder abgelaufenen Offerte weitere Werbechats. Die Chats verschwinden nach 24 Spielstunden; eine bleibende Kontaktliste fehlte. Don Pablo führte ausschließlich einen ungeteilten Kokainbestand und meldete sich erst ab Europa/Luftfracht.
+
+**Lösung:**
+- Diensthandy mit vier kompakten Reitern: Chats, Kontakte, Zeitung und Rechner. Nach der ersten Händlernachricht bleibt der Kontakt dauerhaft gespeichert. Keine weiteren automatischen Werbechats, auch nicht nach Ablauf, Absage oder Neuladen. Eigene Bestandsanfragen erzeugen weder Klingeln noch ungelesene Nachrichten. Bereits offene Angebote lassen sich aus der Kontaktkarte wieder aufrufen.
+- Nachschub wird über „Bestand anfragen“ bestellt, sobald Lager und laufende Kundenlieferungen leer sind. Der Hinweis nennt vorhandenen Bestand bzw. noch laufende Lieferung. Damit kann eine stornierte Lieferung weiter an ihren bisherigen Lagerort zurückgebucht werden.
+- Mr. Snus bietet drei bis fünf wechselnde Sorten mit unterschiedlichen Mengen an. Don Pablo bietet Kokain und neu Crack mit getrennten Auswahl-/Lagerbeständen an; später können einzelne Waren vorübergehend fehlen. Insgesamt bleibt sein Angebot bei den bisherigen 8–40 Tonnen. Beide Waren verwenden die bestehenden fiktiven Spielpreise, Kundentypen und Folgen.
+- Ein Sortiment wird pro Einkaufsrunde gespeichert. Absage, abgelaufenes Angebot oder erneutes Öffnen würfeln es nicht neu; nach dem Einkauf unterscheidet sich die nächste Lieferung. Doppelte und abgelaufene Kaufbestätigungen werden abgewiesen. Alte parallele Werbeangebote schließen sich nach einem Einkauf.
+- Don Pablos Erstkontakt bereits ab **Etappe 3 „Deutschland“**, auf nachträglichen Wunsch. In dieser Etappe wird in einer per Straße erreichbaren Lagerhalle abgeholt; ab Europa kommen wie bisher Flughafen-Hangars hinzu. Anzeigen, Chat und Lina erklären den jeweiligen Ablauf.
+- Don-Pablo-Kunden bestellen jeweils eine konkrete Ware. Reservierung, Entnahme, Stornorückgabe und Lageranzeige unterscheiden Kokain und Crack. Kleine Restmengen unter 300 kg sind vollständig verkaufbar. Gesamtbestand `kg` und bisherige Buchhaltung bleiben kompatibel; alte Bestände und untypisierte Aufträge gelten als Kokain. Bereits offene alte Angebote mit numerischer Auswahl bleiben nutzbar. Kontaktübernahme aus vorhandenen Chats erfolgt vor deren Löschung; frühere Einkäufe und gesehene Händlererklärungen werden ebenfalls übernommen.
+- Cache v302 nur für die fünf geänderten Produktdateien; keine Änderung an Welt-, Fahrzeug- oder 3D-Daten.
+
+**Geprüft:** `node dealer-contacts-v302.test.js`: 13 Szenarien mit echten Telefon-/Händlerfunktionen; Freischaltungen, genau eine Begrüßung über 90 Spieltage und Speicherzyklen, Altdatenmigration, echte Reiter-/Kontakt-/Mengenklickbindungen am DOM-Ersatz, stille Anfragen, keine Angebotsduplikate, stabiles Sortiment nach Absage/Ablauf/Neuladen, neue Sortimente auch bei identischer Zufallsfolge, Guthaben-/Ablauf-/Doppelbuchungsschutz, gemischter Einkauf, getrennte Reservierungen/Entnahmen/Rückgaben, Restmengen beider Waren und alte Angebote. Zusätzlich Don-Pablo-Einkauf und Crack-Kundenauftrag mit echten Weltdaten und echtem Routing aus `game.js` in Deutschland ohne Luftfracht; die Fahrzeugzuteilungsansicht ist dabei eine Fixture.
+
+**Regressionen:** `office-limits.test.js` und `office-stairs-v301.test.js` bestanden; alle sechs Etappen/Bürogrenzen und 24 Auf-/Abgänge weiterhin korrekt. Syntax aller geänderten JavaScript-Dateien, Diff, CSS-Blockstruktur und Cache-Verweise geprüft.
+
+**Prüfgrenze:** Kein Live-Browser-/iPhone-/Safari-Test und keine Browsermessung des neuen Telefonlayouts. Telefonbedienung mit kleinem DOM-Ersatz, Standard-Transportzuteilung als Fixture; tatsächliche Weltdaten/Routing gesondert geprüft. Keine echten Wallet-Transaktionen oder Live-Kursabfragen.
+
 ## v301 – Firmenschriftzug im Büro entfernt, Treppen nutzbar
 **Basis:** GitHub main `3b2b285` (v300), während der Arbeit neu eingetroffen und vollständig übernommen. Dieser GitHub-Stand enthält bereits die vorherigen Mitarbeiter- und Pflanzenkorrekturen; sie bleiben erhalten.
 

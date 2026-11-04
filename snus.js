@@ -1,6 +1,7 @@
 /* =========================================================================
    LOGISTIKA – Mr. Snus
-   Nebengeschäft ab Level 2: Ab und zu schreibt Mr. Snus aufs Diensttelefon.
+   Nebengeschäft ab Level 2: Mr. Snus schreibt einmal aufs Diensttelefon,
+   danach fragt der Spieler über den gespeicherten Kontakt nach Nachschub.
    Wer zusagt, bekommt seine Liste, kauft Dosen für 5 € ins Lager und
    beliefert danach private Kunden (graue Aufträge) für 10 € pro Dose.
    ========================================================================= */
@@ -27,8 +28,8 @@ const snusLabel = s => s.brand + " " + s.name;
 const SNUS_JOBS = ["Bauarbeiter", "Kurierfahrer", "Barbier", "Türsteher", "Lagerist", "Taxifahrer",
   "Gerüstbauer", "Koch", "Fitnesstrainer", "Security", "Elektriker", "Spätibesitzer", "Dachdecker",
   "Maler", "Busfahrer", "Student", "Gastronom", "Mechaniker"];
-const SNUS_BYE = ["Kein Ding. Ich meld mich.", "Alles klar, Bruder. Bis dann.", "Safe. Du weißt, wo du mich findest.",
-  "Easy, nächstes Mal."];
+const SNUS_BYE = ["Kein Ding. Meld dich, wenn du was brauchst.", "Alles klar, Bruder. Du hast meine Nummer.", "Safe. Du findest mich unter Kontakte.",
+  "Easy, schreib mir bei Bedarf."];
 const SNUS_DEAL = ["Deal 🤝", "Geht klar 🤝", "Läuft 🤝"];
 
 /* Zivilfahnder: verraten sich durch ihr Verhalten, nicht durch Herkunft –
@@ -135,22 +136,18 @@ function snusCan(s, size) {
 }
 
 /* ------------------------------- Ablauf --------------------------------- */
-function snusOpenMsg() { return (S.phone && S.phone.msgs || []).find(m => m.kind === "snus" && (m.state === "ask" || m.state === "offer")); }
+function snusOpenMsg() { return phoneDealerOpen("snus"); }
 
 function tickSnus() {
   if (typeof level !== "function" || level() < SNUS_LEVEL) return;
   if (S.jail || S.over) return;              /* im Knast ruft keiner an */
   const sn = snusState();
-  /* Erstes Mal kurz nach Level 2, danach alle paar Spieltage */
-  if (!sn.nextOffer) sn.nextOffer = S.time + rnd(60, 240);
-  const open = snusOpenMsg();
-  if (open && S.time > open.expires) {
-    open.state = "gone";
-    open.thread.push({ me: false, t: "Hat sich erledigt. Ich meld mich wieder." });
-    sn.nextOffer = S.time + rnd(1.0, 2.2) * 1440;
-    if (typeof renderPhone === "function") renderPhone();
+  /* v302: Der bisherige Wiederholungstimer gilt nur bis zur ersten Nachricht. */
+  if (!phoneContactsState().snus) {
+    if (!sn.nextOffer) sn.nextOffer = S.time + rnd(60, 240);
+    if (S.time >= sn.nextOffer) snusOffer();
   }
-  if (!open && S.time >= sn.nextOffer) snusOffer();
+  if (phoneExpireDealerOffers("snus") && phoneOpen()) renderPhone();
   /* Kundschaft meldet sich, solange Dosen im Lager liegen */
   if (sn.at && snusTotal() > 0 && S.time >= (sn.nextCust || 0)) {
     const openCust = S.orders.filter(o => o.snus).length;
@@ -159,36 +156,63 @@ function tickSnus() {
   }
 }
 
-function snusOffer() {
+function snusOffer(requested) {
   const sn = snusState();
-  sn.nextOffer = S.time + rnd(1.2, 2.8) * 1440;
-  phoneMsg({
-    kind: "snus", from: "Mr. Snus", title: "Jo brauchst du Snus?", body: "",
-    state: "ask", expires: S.time + rnd(6, 10) * 60,
-    thread: [{ me: false, t: "Jo brauchst du Snus?" }],
+  const contacts = phoneContactsState();
+  if (!requested && contacts.snus) return null;
+  if (requested && !contacts.snus) return null;
+  const block = phoneDealerBlock("snus");
+  if (block) { if (requested) toast(block, "warn"); return null; }
+  const open = snusOpenMsg();
+  if (open) return open;
+  contacts.snus = true;
+  const m = phoneMsg({
+    kind: "snus", from: "Mr. Snus", title: requested ? "Aktueller Bestand" : "Jo brauchst du Snus?", body: "",
+    state: requested ? "offer" : "ask", expires: S.time + rnd(6, 10) * 60,
+    offer: snusSupply().map(r => ({ ...r })), pick: {},
+    thread: requested ? [{ me: true, t: "Mein Lager ist leer. Was hast du gerade da?" },
+      { me: false, t: "Hier ist mein aktueller Bestand." }, { me: false, list: true }]
+      : [{ me: false, t: "Jo brauchst du Snus?" }, { me: false, t: "Meine Nummer ist unter Kontakte gespeichert. Wenn dein Lager leer ist, schreib mir dort – ich schicke dir keine weiteren Werbenachrichten." }],
     toastText: "💬 Mr. Snus: „Jo brauchst du Snus?“"
-  });
+  }, requested);
+  save();
   /* Beim ersten Mal erklärt Lina, worauf man sich einlässt */
-  if (typeof linaTalk === "function") setTimeout(() => linaTalk("snus"), 600);
+  if (!requested && typeof linaTalk === "function") setTimeout(() => linaTalk("snus"), 600);
+  return m;
 }
 
 /* Seine Liste: ein paar Sorten, jeweils eine hohe zweistellige Zahl bis
    Anfang der Hunderter. */
 function snusList() {
   const n = 3 + Math.floor(Math.random() * 3);
-  const sorts = [...SNUS_SORTS].sort(() => Math.random() - 0.5).slice(0, n);
-  return sorts.map(s => ({ id: s.id, have: 68 + Math.floor(Math.random() * 61) }));
+  const sorts = [...SNUS_SORTS];
+  for (let i = sorts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [sorts[i], sorts[j]] = [sorts[j], sorts[i]];
+  }
+  return sorts.slice(0, n).map(s => ({ id: s.id, have: 68 + Math.floor(Math.random() * 61) }));
+}
+/* v302: Ein Sortiment pro Einkaufsrunde; Absage, Ablauf und Neuladen
+   würfeln es nicht neu. Erst nach dem Einkauf gibt es eine neue Lieferung. */
+function snusSupply() {
+  const sn = snusState();
+  if (!sn.supply302) {
+    const legacy = snusOpenMsg();
+    sn.supply302 = legacy && legacy.offer ? legacy.offer.map(r => ({ ...r })) : snusList();
+    if (JSON.stringify(sn.supply302) === sn.lastSupply302) sn.supply302[0].have = sn.supply302[0].have === 128 ? 68 : sn.supply302[0].have + 1;
+  }
+  return sn.supply302;
 }
 
 function snusReply(msgId, yes) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "ask") return;
+  if (!m || m.kind !== "snus" || m.state !== "ask" || m.expires <= S.time) return;
   if (!yes) {
     m.thread.push({ me: true, t: "Nein, danke mein Akh" }, { me: false, t: pick(SNUS_BYE) });
     m.state = "no";
   } else {
     m.thread.push({ me: true, t: "Ja was hast du da?" });
-    m.offer = snusList();
+    m.offer = m.offer || snusSupply().map(r => ({ ...r }));
     m.pick = {};
     m.offer.forEach(r => { m.pick[r.id] = 0; });
     m.thread.push({ me: false, list: true });
@@ -200,16 +224,16 @@ function snusReply(msgId, yes) {
 
 function snusStep(msgId, id, d) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
+  if (!m || m.kind !== "snus" || m.state !== "offer" || m.expires <= S.time) return;
   const row = m.offer.find(r => r.id === id); if (!row) return;
   m.pick[id] = clamp((m.pick[id] || 0) + d, 0, row.have);
-  renderPhone();
+  save(); renderPhone();
 }
 function snusAll(msgId, on) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
+  if (!m || m.kind !== "snus" || m.state !== "offer" || m.expires <= S.time) return;
   m.offer.forEach(r => { m.pick[r.id] = on ? r.have : 0; });
-  renderPhone();
+  save(); renderPhone();
 }
 function snusPicked(m) { return m.offer.reduce((a, r) => a + (m.pick[r.id] || 0), 0); }
 
@@ -227,7 +251,9 @@ function snusDropNode() {
 /* Kaufen: erst die Wallet, bezahlt wird in Solana – danach geht die Ware raus */
 function snusPay(msgId) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
+  if (!m || m.kind !== "snus" || m.state !== "offer" || m.expires <= S.time) return;
+  const block = phoneDealerBlock("snus");
+  if (block) return toast(block, "warn");
   const n = snusPicked(m);
   if (!n) return toast("Erst Dosen auswählen.", "warn");
   const cost = n * SNUS_BUY;
@@ -237,10 +263,13 @@ function snusPay(msgId) {
 }
 function snusBuy(msgId, tx) {
   const m = S.phone.msgs.find(x => x.id === msgId);
-  if (!m || m.state !== "offer") return;
+  if (!m || m.kind !== "snus" || m.state !== "offer" || m.expires <= S.time) return;
+  const block = phoneDealerBlock("snus");
+  if (block) return toast(block, "warn");
   const n = snusPicked(m);
   if (!n) return toast("Erst Dosen auswählen.", "warn");
   const cost = n * SNUS_BUY;
+  if (tx && tx.eur !== cost) return toast("Deine Auswahl hat sich geändert. Bitte erneut bestätigen.", "warn");
   if (cost > S.money) return toast("Dafür fehlen " + money(cost - S.money) + ".", "warn");
   if (!tx && typeof walletQuote === "function") tx = walletQuote(cost);
   const sn = snusState();
@@ -257,11 +286,14 @@ function snusBuy(msgId, tx) {
     parts.push(k + "× " + snusLabel(snusSort(r.id)));
   });
   sn.bought += n;
+  sn.lastSupply302 = JSON.stringify(m.offer);
+  delete sn.supply302;
   m.thread.push({ me: true, t: "Nehm ich: " + parts.join(", ") + "." });
   if (tx) m.thread.push({ me: true, tx });
   const shop = snusShop();
   m.thread.push({ me: false, t: pick(SNUS_DEAL) + " Liegt beim " + (shop ? shop.t + ", " + N[sn.at].short : "Späti in " + N[sn.at].short) + ". Die Jungs melden sich." });
   m.state = "done";
+  phoneCloseDealerOffers("snus");
   m.bought = n;
   /* Die ersten Kunden sind schnell da – und beim allerersten Einkauf echt */
   const first = !sn.bustFree;
@@ -274,6 +306,7 @@ function snusBuy(msgId, tx) {
 function snusCancel(msgId) {
   const m = S.phone.msgs.find(x => x.id === msgId);
   if (!m || m.state !== "offer") return;
+  snusSupply();
   m.thread.push({ me: true, t: "Doch nicht, sorry." }, { me: false, t: pick(SNUS_BYE) });
   m.state = "no";
   save(); renderPhone();
@@ -544,7 +577,7 @@ function jailOut() {
       <dt>Ohne dich zugestellt</dt><dd>${jobs} Auftr${jobs === 1 ? "ag" : "äge"}</dd>
       <dt>Snus im Lager</dt><dd>${snusTotal()} Dosen</dd>
     </dl>
-    <p class="rp-note">Mr. Snus meldet sich wieder. Schau dir die Kunden vorher genau an.</p>
+    <p class="rp-note">Mr. Snus bleibt unter Kontakte erreichbar. Schau dir die Kunden vorher genau an.</p>
     <button class="btn" id="rpGo">Zurück an die Arbeit</button>
   </div>`);
   $("#rpGo").onclick = () => {
@@ -696,7 +729,7 @@ function shadowBookHTML() {
       <div class="sb-row"><span>Eingekauft</span><span>${kgf(t.pb.bought)}</span><b class="bad">−${money(t.pb.spent)}</b></div>
       ${S.pablo && S.pablo.sol ? `<div class="sb-row muted"><span>davon per Wallet</span><span></span><span>${solf(S.pablo.sol, 0)} SOL</span></div>` : ""}
       <div class="sb-row"><span>Verkauft</span><span>${kgf(t.pb.sold)}</span><b class="good">+${money(t.pb.earned)}</b></div>
-      <div class="sb-row muted"><span>Im Hangar${t.pb.way ? " + unterwegs" : ""}</span><span>${kgf(t.pb.stock)}</span><b>+${money(pbStock)}</b></div>
+      <div class="sb-row muted"><span>Im Lager${t.pb.way ? " + unterwegs" : ""}</span><span>${kgf(t.pb.stock)}</span><b>+${money(pbStock)}</b></div>
     </div>` : ""}
     ${rows ? `<div class="sb-list"><div class="sb-lh">Letzte Buchungen</div>${rows}</div>` : ""}
     <div class="sb-note">Offiziell gibt’s dieses Buch nicht.</div>

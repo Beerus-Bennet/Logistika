@@ -189,8 +189,8 @@ function objMesh(o) {
     case "lagerhalle": { const s = o.sz || FSIZE.lagerhalle; return fmesh("lagerhalle:" + s[0] + "x" + s[1], () => FM.lagerhalle(s[0], s[1])); }   /* v258, v269: nach Größe */
     case "board": return fmesh("board", FM.board);
     case "shed": return fmesh("shed", FM.shed);
-    case "field": return fmesh("soil", () => FM.fieldSoil(false));
-    case "tree": return fmesh("tree:" + o.kind, () => FM.treeMesh(o.kind));
+    case "field": return fmesh("soil:" + (o.crop ? o.w ? "wet" : "dry" : "empty"), () => FM.fieldSoil(false, o.crop ? !!o.w : undefined));
+    case "tree": return fmesh("tree:" + o.kind + ":" + (o.w ? "wet" : "dry"), () => FM.treeMesh(o.kind, !!o.w));
     case "coop": { const [w, d] = sz(); return fmesh("run:" + w + "x" + d, () => FM.coopRun(w, d)); }
     case "cows": { const [w, d] = sz(); return fmesh("pasture:" + w + "x" + d, () => FM.pasture(w, d)); }
     case "pigs": { const [w, d] = sz(); return fmesh("pigrun:" + w + "x" + d, () => FM.pigRun(w, d)); }
@@ -238,6 +238,8 @@ function buildObjNode(o) {
   }
   if (o.t === "field") parts.crop = R.addChild(root, fnode(null, { sway: 0.6 }));
   if (o.t === "tree") {
+    /* v304: Unregelmäßige Baumscheibe macht den Gießzustand auch am Boden sichtbar. */
+    parts.soil = R.addChild(root, fnode(fmesh("treeSoil:" + (o.w ? "wet" : "dry"), () => FM.treeSoil(!!o.w)), { shadow: false }));
     parts.fruit = R.addChild(root, fnode(fmesh("fruit:" + o.kind, () => FM.treeFruit(o.kind)), { visible: false }));
     root.sway = 0.25;
   }
@@ -313,10 +315,14 @@ function farmSyncState() {
     if (!e) continue;
     if (o.t === "field") {
       const st = fieldStage(o);
-      const key = st < 0 ? "" : "crop:" + o.crop + ":" + st;
+      /* v304: Getrennte, gemeinsam genutzte Netze für trockene/nasse Beete;
+         Gießen oder Ernten tauscht nur Netze, keine Knoten oder Spielobjekte. */
+      const water = o.w ? "wet" : "dry", soil = o.crop ? water : "empty";
+      if (e.soilKey !== soil) { e.soilKey = soil; e.node.mesh = objMesh(o); }
+      const key = st < 0 ? "" : "crop:" + o.crop + ":" + st + ":" + water;
       if (e.cropKey !== key) {
         e.cropKey = key;
-        e.parts.crop.mesh = key ? fmesh(key, () => FM.cropMesh(o.crop, st)) : null;
+        e.parts.crop.mesh = key ? fmesh(key, () => FM.cropMesh(o.crop, st, !!o.w)) : null;
         e.parts.crop.visible = !!key;
       }
       e.node.glow = 0;
@@ -330,6 +336,13 @@ function farmSyncState() {
       }
     }
     if (o.t === "tree" || o.t === "mline") {
+      if (o.t === "tree") {
+        const water = o.w ? "wet" : "dry";
+        if (e.waterKey !== water) {
+          e.waterKey = water; e.node.mesh = objMesh(o);
+          e.parts.soil.mesh = fmesh("treeSoil:" + water, () => FM.treeSoil(!!o.w));
+        }
+      }
       const ripe = treeRipe(o);
       e.parts.fruit.visible = ripe;
       const f = Math.min(1, 1 - (o.end - S.time) / treeDef(o).t);
@@ -1500,6 +1513,24 @@ function refreshPenPop() {
   const html = penPopStatus(o, penInfo(o));
   if (el.innerHTML !== html) el.innerHTML = html;
 }
+/* v303: Das Feldmenü folgt auch der Arbeit des Farmers. Nur bei einem
+   Zustandswechsel neu aufbauen; laufende Werkzeuggesten bleiben erhalten. */
+function fieldPopState(o) {
+  const st = fieldState(o), kind = st === "empty" ? "seed" : st === "ripe" ? "sickle" : "grow";
+  return { kind, sig: [kind, o.crop || "", !!o.w, o.rot || 0].join("|") };
+}
+function refreshFieldPop() {
+  const P = FV.pop;
+  if (!P || FV.tool || !["seed", "grow", "sickle"].includes(P.kind)) return false;
+  const o = farmObj(P.id);
+  if (!o) { closeFarmPop(); return true; }
+  if (o.t !== "field") return false;
+  const st = fieldPopState(o);
+  if (P.kind === st.kind && P.fieldSig === st.sig) return false;
+  renderFarmPop();
+  popFresh();
+  return true;
+}
 function renderFarmPop() {
   const el = $("#farmPop");
   const P = FV.pop;
@@ -1508,6 +1539,11 @@ function renderFarmPop() {
   if (P.kind === "staff") return typeof renderStaffPop === "function" ? renderStaffPop(el, P) : closeFarmPop();
   const o = farmObj(P.id);
   if (!o) return closeFarmPop();
+  /* v303: Auch direkte Neuaufbauten dürfen kein veraltetes Saatmenü zeigen. */
+  if (o.t === "field" && ["seed", "grow", "sickle"].includes(P.kind)) {
+    const st = fieldPopState(o);
+    P.kind = st.kind; P.fieldSig = st.sig;
+  }
   let h = typeof worldPopHTML === "function" ? worldPopHTML(o, P) : "";
   const lv = flv();   /* Erbe-Level – level() ist nach der Gründung das der Spedition */
   if (h) { /* Gerümpel & Co. aus worldview.js */ }
@@ -1592,6 +1628,7 @@ function renderFarmPop() {
   positionFarmPop();
 }
 function positionFarmPop() {
+  if (refreshFieldPop()) return;
   const P = FV.pop, el = $("#farmPop");
   if (!P || !el || !el.firstChild || !FV.R) return;
   if (P.kind === "wtree") return positionTreePop(el, P);
@@ -1619,6 +1656,16 @@ function positionFarmPop() {
 /* --------------------- Werkzeug ziehen (Hay-Day-Geste) ----------------- */
 function startToolDrag(e, kind, crop, origin) {
   e.preventDefault(); e.stopPropagation();
+  /* v303: Ein alter Saat-/Gießknopf kann zwischen zwei Bildern noch ein
+     Ereignis liefern. Nur zum aktuellen Feldzustand passende Gesten starten. */
+  if (origin && origin.t === "field") {
+    const st = fieldState(origin);
+    if (farmObj(origin.id) !== origin || (kind === "seed" && st !== "empty")
+        || (kind === "sickle" && st !== "ripe") || (kind === "water" && (st !== "grow" || origin.w))) {
+      refreshFieldPop();
+      return;
+    }
+  }
   const ghost = document.createElement("div");
   ghost.className = "fdrag";
   ghost.textContent = { seed: FITEMS[crop] ? FITEMS[crop].i : "🌱", sickle: "🌙", water: origin && origin.t === "mline" ? "🧽" : "🚿", bait: "🪱", hook: "🪝",
@@ -1650,6 +1697,9 @@ function startToolDrag(e, kind, crop, origin) {
     FV.tool = null;
     $("#farmPop").classList.remove("dragging");
     if (T.done) save();
+    /* v303: Hat der Farmer während der Geste übernommen, das ausgewählte
+       Feld mit seiner neuen Aktion offen lassen statt die Auswahl zu verlieren. */
+    if (!T.done && refreshFieldPop()) return;
     if (T.done || !T.moved) {
       closeFarmPop();
       FV.sel = null;

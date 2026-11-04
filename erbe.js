@@ -1845,24 +1845,64 @@ function farmTreasureTick() {
   T.zone = sp.zone; T.plan = 0; T.next = d + FTREASURE.every;
   if (typeof farmTreasureView === "function") farmTreasureView("start", T.cur);
 }
-/* Ausgegraben: Münzen (je nach Level, gut gegraben gibt mehr) und ein Kleeblatt */
+/* v305: Passende Waren statt beliebigem Lagerfüller. Auftragslücken zuerst,
+   danach unterbesetzte Bestände des tatsächlich verfügbaren Sortiments. */
+function farmTreasureLoot(stars, lv, stage) {
+  const target = Math.min(60, 4 + Math.floor(lv / 4) + stars * 2), need = {}, reserved = {}, stores = new Set(farmStores());
+  for (const o of farmOrders()) {
+    if (o.farm.taken || (!o.acc && o.expire != null && o.expire <= S.time)) continue;
+    for (const [id, n] of Object.entries(o.farm.items || {})) need[id] = (need[id] || 0) + n;
+  }
+  const pool = Object.keys(FITEMS).filter(id => {
+    const it = FITEMS[id];
+    return it.st && stores.has(it.st) && it.v > 0 && !it.energy && !["fisch", "wild", "troph"].includes(it.k)
+      && farmOrderAreaOn(farmItemArea(id)) && farmCanMake(id)
+      && farmRoom(id) > 0 && Math.max(target, need[id] || 0) > farmInv(id);
+  }).map(id => {
+    const have = farmInv(id), missing = Math.max(0, (need[id] || 0) - have);
+    return { id, have, missing, rank: (missing ? 100 : 0) + Math.log2(1 + FITEMS[id].v) + Math.random() * 8 - Math.min(1, have / target) * 4 };
+  }).sort((a, b) => b.rank - a.rank);
+  const items = [];
+  for (const row of pool) {
+    if (items.length >= stars) break;
+    const it = FITEMS[row.id], room = Math.max(0, Math.floor(farmRoom(row.id) - (reserved[it.st] || 0)));
+    const portion = Math.max(1, Math.floor(farmStoreCap(it.st) * 0.15));
+    const budget = Math.max(1, Math.floor((20 + lv * 5) * (1 + stage * 0.25) * stars / it.v));
+    const n = Math.min(room, portion, budget, Math.ceil(row.missing || target - row.have));
+    if (n <= 0) continue;
+    items.push([row.id, n]); reserved[it.st] = (reserved[it.st] || 0) + n;
+  }
+  return items;
+}
+/* v305: Kapital zum Fundzeitpunkt, Fortschritts-Untergrenze und Grabqualität.
+   Der Fund wird einmal verbucht und sein Ergebnis am Schatz gespeichert. */
 function farmTreasureDig(score) {
   const F = S.farm, c = farmTreasureCur();
   if (!c || c.done) return null;
+  const sc = clamp(Number.isFinite(score) ? score : 0.6, 0, 1), stars = sc >= 0.95 ? 3 : sc >= 0.75 ? 2 : 1;
+  const lv = flv(), stage = clamp(S.stage || 1, 1, 6), capital = Math.max(0, S.money);
+  const floor = (80 + lv * 15) * [1, 2, 5, 12, 24, 40][stage - 1] * [1, 1.4, 2][stars - 1];
+  const base = Math.max(floor, capital * [0.005, 0.012, 0.02][stars - 1]);
+  let m = Math.max(50, Math.round(base * (0.9 + Math.random() * 0.2) / 5) * 5);
+  const items = farmTreasureLoot(stars, lv, stage);
+  /* Nicht passende/volle Lager kosten keinen Fund: fehlende Warenplätze
+     werden als kleiner zusätzlicher Geldanteil ausgezahlt. */
+  const cashBonus = Math.round(m * 0.1 * (stars - items.length) / stars / 5) * 5;
+  m += cashBonus;
+  const clover = Math.min(12, (stars === 3 ? 2 : 1) + Math.floor((lv - 1) / 25) + Math.floor((stage - 1) / 2));
+  const xp = Math.max([0, 20, 26, 35][stars], Math.round(50 * (2 * lv - 1) * [0.025, 0.04, 0.06][stars - 1]));
   c.done = true;
   c.until = Math.min(c.until, S.time + 30);                                           /* das offene Loch bleibt noch kurz */
-  const sc = clamp(score == null ? 0.6 : score, 0, 1), stars = sc >= 0.95 ? 3 : sc >= 0.75 ? 2 : 1;      /* wie die Sterne im Minispiel */
-  const k = 0.8 + Math.random() * 0.25 + sc * 0.3;
-  const m = Math.max(50, Math.round((80 + flv() * 15) * k / 5) * 5);
+  items.forEach(([id, n]) => farmAdd(id, n, 2 + stars));
   S.money += m; S.revenue += m; F.stats.earned = (F.stats.earned || 0) + m;
   logMoney("farm", "Schatzkiste", m);
-  /* v74: Meisterhaft gegraben (3 ★) bringt ein zweites Kleeblatt und mehr EP; das Kleeblatt fliegt erst in der Öffnungs-Show */
-  const clover = stars === 3 ? 2 : 1, xp = [0, 20, 26, 35][stars];
   F.clover = (F.clover || 0) + clover;
   farmXP(xp);
   F.tr.found = (F.tr.found || 0) + 1;
   F.stats.events++;
-  return { m, clover, xp, stars };
+  const r = { m, clover, xp, stars, items, cashBonus };
+  c.reward = r;
+  return r;
 }
 
 /* ------------------------- Kleeblätter & Kosmetik ------------------------- */

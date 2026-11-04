@@ -2954,13 +2954,34 @@ function missingReason(o, variants) {
   if (maxCap < o.weight) return "braucht mindestens " + kgf(o.weight) + " Nutzlast – dein größtes passendes Fahrzeug schafft " + kgf(maxCap) + buyHint(buy);
   return "Reichweite reicht nicht (" + kmf(l.maxHop) + " am Stück)" + buyHint(buy);
 }
-/* v249: Absender-Monogramm – Initialen der Firma (keine erfundenen Personen), Farbe fest aus dem Namen */
-const MONO_COLS = ["#2f6fed", "#1fa6c4", "#2e9a63", "#c98a00", "#d2556a", "#7c5cff", "#3d6b8f", "#b0603a"];
+/* v308: feste Firmenzeichen aus dem Namen – zurückhaltende Geschäftspaletten und vier Monogrammvarianten.
+   Keine Auftrags-ID und kein Zufall: derselbe Kunde bleibt bei jedem Auftrag wiedererkennbar. */
+const MONO_COLS = [
+  ["#25374c", "#edf1f6", "#a4b7cf"], ["#24534c", "#edf3ee", "#a0bdae"],
+  ["#315b65", "#edf3f5", "#a3c1ca"], ["#574138", "#f5efe8", "#c6ac92"],
+  ["#5d3d4d", "#f5edf1", "#c7a5b6"], ["#5a5437", "#f4f1e4", "#c0b68a"],
+  ["#3c4458", "#f0f0f6", "#aeb4cd"], ["#36535b", "#edf2f2", "#9fb9bc"],
+  ["#594a33", "#f6f0e5", "#c8b38a"], ["#434c49", "#f0f3ee", "#b0bcb4"]
+];
+const orderMonoName = name => String(name || "").normalize("NFC").trim().replace(/\s+/g, " ");
 function orderMono(name) {
-  const w = String(name || "").replace(/[„“"'()]/g, " ").split(/[\s&+\-–·.,/]+/).filter(x => /^[A-Za-zÄÖÜäöü0-9]/.test(x) && !/^(GmbH|AG|KG|SE|eG|e\.V|mbH|Co|und|der|die|das|am|an|im|für|von)$/i.test(x));
-  return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || "?").slice(0, 2)).toUpperCase();
+  const w = (orderMonoName(name).replace(/[„“"'()]/g, " ").replace(/(^|\s)e\.\s*v\.?(?=\s|$)/gi, " ").match(/[\p{L}\p{N}]+/gu) || [])
+    .filter(x => !/^(GmbH|AG|KG|SE|eG|mbH|Co|UG|haftungsbeschränkt|Ltd|Limited|Inc|LLC|und|der|die|das|am|an|im|für|von)$/i.test(x));
+  const text = w.length > 1 ? Array.from(w[0])[0] + Array.from(w[1])[0] : Array.from(w[0] || "?").slice(0, 2).join("");
+  return Array.from(text.toUpperCase()).slice(0, 2).join("");
 }
-function orderMonoColor(name) { const h = [...String(name || "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); return MONO_COLS[h % MONO_COLS.length]; }
+function orderMonoHTML(name) {
+  const key = orderMonoName(name).toLowerCase(), h = Array.from(key).reduce((a, c) => Math.imul(a ^ c.codePointAt(0), 16777619) >>> 0, 2166136261);
+  const [ink, paper, accent] = MONO_COLS[h % MONO_COLS.length], type = (h >>> 8) % 4, dark = type === 0 || type === 2;
+  const text = orderMono(name), single = Array.from(text).length === 1;
+  const frame = type === 2 ? `<circle class="om-detail" cx="20" cy="20" r="16.6" fill="none" stroke="${accent}" stroke-width=".8"/>`
+    : type === 3 ? `<circle class="om-detail" cx="20" cy="20" r="16.3" fill="none" stroke="${ink}" stroke-opacity=".24" stroke-width=".7"/>` : "";
+  const font = type === 3 ? "Georgia,'Times New Roman',serif" : "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  return `<span class="o-mono" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" focusable="false">
+    <circle class="om-plate" cx="20" cy="20" r="19" fill="${dark ? ink : paper}" stroke="${type === 1 ? accent : ink}" stroke-width="1.2"/>${frame}
+    <text class="om-letters" x="20" y="${single ? 26.6 : 25.5}" text-anchor="middle" fill="${dark ? paper : ink}" font-family="${font}" font-size="${single ? 18.5 : 15.5}" font-weight="700" letter-spacing="${single ? 0 : .25}">${esc(text)}</text>
+  </svg></span>`;
+}
 /* v251: Tipp-Schutz für Listenkarten. iOS löst nach kurzen Wischern, beim Abbremsen einer schwungvoll laufenden
    Liste oder nach leichtem Verrutschen trotzdem „click“ aus. Ein Tipp zählt nur, wenn
    – der Finger sich höchstens 6 px bewegt hat, – er nicht länger als 0,6 s lag,
@@ -3119,7 +3140,7 @@ function renderOrders() {
       </div>
       ${tx ? `<div class="o-title">${esc(tx.title)}</div>` : ""}
       <div class="o-sender">
-        <span class="o-mono" style="--mc:${orderMonoColor(o.shipper)}" aria-hidden="true">${esc(orderMono(o.shipper))}</span>
+        ${orderMonoHTML(o.shipper)}
         <span class="o-who"><b>${esc(o.shipper)}</b>${tx && tx.p && tx.p.br ? `<small>${esc(tx.p.br)}</small>` : ""}</span>
         ${tx ? `<span class="o-kind ${kindCls}">${esc(tx.kind)}</span>` : ""}
       </div>

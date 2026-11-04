@@ -1098,7 +1098,8 @@ const baseHead = i => () => $$("#tab-bases .card.base .sechead.sm")[i] || null;
 const LINA_TALKS = {
   snus: [
     { tx: () => `Psst, Chef! <b>Mr. Snus</b> hat sich gemeldet – Snus unter der Hand. Einkauf per <b>Nachtwallet in Solana</b> ◎, `
-        + `<b>graue Aufträge</b> zahlen ${money(SNUS_SELL)} die Dose.`,
+        + `<b>graue Aufträge</b> zahlen ${money(SNUS_SELL)} die Dose. Seine Nummer bleibt unter <b>Diensthandy → Kontakte</b>. `
+        + `Ist alles verkauft und ausgeliefert, fragst du dort selbst nach dem nächsten Sortiment.`,
       target: "#phoneBtn", top: true },
     { tx: () => `Vorsicht, <b>Zivilfahnder</b>: zahlen auffällig viel und wollen 20, 30 Dosen. Sicheres Zeichen: `
         + `<b>weißes Hemd UND glatt rasiert</b>. Lieferst du an einen: Ware und Geld weg, <b>${SNUS_JAIL_DAYS} Tage Haft</b>. ✕ blockiert Kunden gratis.` }
@@ -1110,8 +1111,9 @@ const LINA_TALKS = {
       target: "#goalsBtn", top: true }
   ],
   pablo: [
-    { tx: () => `Chef … <b>Don Pablo</b> ist am Telefon. Kokain, tonnenweise: Einkauf per Nachtwallet ◎, Ware im Flughafen-Hangar, `
-        + `Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne.`,
+    { tx: () => `Chef … <b>Don Pablo</b> stellt sich ab <b>Deutschland</b> vor. Kokain und Crack: Einkauf per Nachtwallet ◎, Abholung in der Lagerhalle, später auch im Flughafen-Hangar. `
+        + `Kunden zahlen ${money(PABLO_SELL * 1000)} pro Tonne. Unter <b>Diensthandy → Kontakte</b> fragst du selbst nach Nachschub, `
+        + `sobald der Bestand ausgeliefert ist. Sortiment und Mengen wechseln.`,
       target: "#phoneBtn", top: true },
     { tx: "Echte Kunden heißen wie ihre Stadt (<b>Mr. Hamburg</b>) und wollen genau dorthin. <b>Mr. Banane</b>, <b>Mr. Schnitzel</b>? "
         + "Interpol – lieferst du da hin, ist das Spiel endgültig vorbei. Ich hab dich gewarnt." }
