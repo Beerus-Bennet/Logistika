@@ -1,5 +1,17 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v322 – Büroausstattung und lokaler Fahrzeugkauf auf main 7e0df0d / v313
+
+Branch `claude/office-value`. Eigenständige Lieferung; frühere offene PRs werden nicht erneut eingespielt. Vor Upload und nach Erstellung des PR die aktuelle Basis und Mergefähigkeit prüfen.
+
+- `offices.js`: `officeFitout`, `officeFitoutText`, einmalige Standardausstattung in `decoOf` (`deco.fitout322`), Kaufknopf und `openShopAtBase`. Individuelle Einrichtung und Möbelpositionen erhalten. Fenster im SVG-Grundriss angepasst.
+- `game.js`: erreichbare Vorauswahl, unerreichbare Fahrzeugknöpfe gesperrt, Kaufhilfe je Teilstrecke, Markt-Fokus für Büro neben bisherigem Auftrag. Lokale Bestellung wird bei ausreichenden Stellplätzen zugeordnet; bereits vorhandene Fahrzeuge werden nicht bewegt.
+- `officefp.js`: Fenster, Arbeitsflächen, Doppelmonitore, Standortanzeige. Der Zweitmonitor nutzt die Textur des ersten, keine zusätzliche Canvas-Aktualisierung. Keine Änderung an Sprechblasen, Qualitätssenkung, Gliedmaßen oder Figurenabläufen.
+- `style.css`: neuer v322-Block für Ausstattung, Kaufhilfe und mobile Fahrzeugauswahl. `index.html` / `sw.js`: vier Dateien und Service Worker v322.
+- `office-value-v322.test.js`: neue Prüfung; bestehende Büro- und Tür-zu-Tür-Prüfungen ebenfalls bestanden, dazu Browserabläufe und Vorher-/Nachheransichten.
+
+Parallele PRs #33–#41 vor der Lieferung abgeglichen. Insbesondere #35 betrifft Sprechblase/Qualität in `officefp.js`, #38 den Anzeigenpreis in `offices.js`, #41 das Warten auf Streckenlinien in anderen Teilen von `game.js`; diese Änderungen beim späteren Zusammenführen erhalten. `sw.js`, Cache-Verweise, beide Changelog-Abschnitte und angehängte CSS-Blöcke zusammenführen; jeweils die neueste Version der tatsächlich geänderten Datei verwenden. Keine neuen Bilder, Pakete oder Zugangsdaten.
+
 ## v313 – Tür-zu-Tür-Logistik auf main 462093c / v312
 
 Branch `claude/tuer-zu-tuer`, Pull Request auf main; v312 (PR #31) ist eingemischt. Bei Konflikten in `index.html`/`sw.js` jeweils die höhere Dateiversion behalten.

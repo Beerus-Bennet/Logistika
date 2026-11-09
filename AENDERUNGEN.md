@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v322 – Bezugsfertige Büros und Fahrzeugkauf am Standort
+
+**Wunsch:** Ein Büro für rund eine Million Euro soll in Ausstattung und Logistik mehr bieten. Der markierte Auftragsplaner zeigte ausschließlich Lkw mit „kommt nicht hin“.
+
+**Ursache:** Alle Büroklassen starteten mit Sichtbeton, weißen Wänden und ohne Küche. Die Zuordnung zum Büro änderte den tatsächlichen Standort eines Fahrzeugs nicht. Der normale Fahrzeugmarkt stellte neue Lkw weiterhin am Heimatort ab. Im Planer wurde der örtliche Fahrzeugkauf ausgeblendet, sobald überhaupt ein freies Fahrzeug vorhanden war – auch wenn keines den Ladeort erreichen konnte. Die automatische Auswahl markierte dann sogar ein Fahrzeug mit unendlichen Anfahrtskosten als vorausgewählt.
+
+**Lösung:**
+- `offices.js`: Grundausstattung nach Büroklasse, ab Umschlaghalle inklusive Bodenbelag, Küche und Pflanzen, ab Logistikzentrum zusätzlich breite Fensterfront und Doppelmonitore. Größere Büros mit Parkett und Siebträgerküche. In Kaufansicht und Bürokarte steht die Ausstattung dabei. Kostenlose einmalige Ausstattung bisher unveränderter Standardbüros; individuell gewählte Beläge, Küchen, Pflanzen und Möbelpositionen bleiben erhalten. Merkmal `deco.fitout322`; eine unberührte Standardausstattung wächst beim Ausbau mit.
+- `officefp.js`: Fensterfront, Holzarbeitsflächen, zweite Bildschirme und passende Standortanzeige in großen Büros. Beide Monitore teilen eine Textur; die Zahl der pro Arbeitsplatz aktualisierten Texturen bleibt gleich. Grundriss und 3D-Fenster stimmen überein. Vorhandene Arbeitsplatzpositionen, Figuren und Abläufe bleiben erhalten.
+- Über **„Vor Ort kaufen“** im Büro lassen sich dort nutzbare Fahrzeuge zum normalen Kaufpreis beschaffen. Sie werden am Standort bereitgestellt und automatisch dem Büro zugeordnet. Schiffe, Züge und Flugzeuge bleiben an ihrem passenden Terminal; die Büroadresse gilt für Straßenfahrzeuge. Keine kostenlose Versetzung bereits vorhandener Fahrzeuge.
+- `game.js`: Unerreichbare Fahrzeuge werden weder empfohlen noch auswählbar dargestellt. Die Auswahl erklärt den fehlenden Anfahrtsweg und bietet den Kauf am Ladeort auch bei vorhandener ferner Flotte an. Danach geht es zum bisherigen Auftrag zurück. Die mobile Fahrzeugzeile gibt Name und Status mehr Platz.
+- Kaufkontrollen für Geld und Stellplätze bleiben wirksam. Büro-/Fahrzeugpreise, Personalbedarf, Nutzlast, Transportnetz und Auftragsbelohnungen unverändert. Service Worker und vier geänderte Produktdateien v322; die parallelen PRs verwenden v314–v321.
+
+**Geprüft:**
+- `office-value-v322.test.js`: fünf Büroklassen, wiederholtes Laden, Erhalt individueller Einrichtung, Ausbau, reale nicht erreichbare Europa–Lanzhou-Anfahrt und lokaler Kauf mit normaler Abbuchung; Raumgeometrie und Monitorquellen auf sechs Etagen.
+- Vorhandene Tests `d2d-v313.test.js`, `office-limits.test.js`, `office-stairs-v301.test.js`, `office-appearance-v298.test.js`, `office-workers-v284.test.js` bestanden.
+- Chromium/Playwright bei 390 × 844 und 1280 × 800 Pixeln: Vorher-/Nachheransicht des Logistikzentrums, Kauf über Büro mit Bereitstellung/Zuordnung, gesperrter Europa-Lkw im Lanzhou-Planer, Kauf am Ladeort und Rückkehr zum jetzt fahrbaren Auftrag. Käufe bei Geld-/Stellplatzmangel ohne Abbuchung oder neues Fahrzeug. Zusätzlich Bahn, Flugzeug, Binnen- und Seeschiff mit korrekten Terminalkoordinaten und normaler Abbuchung gekauft. Keine JavaScript-Fehler oder horizontaler Überlauf.
+- Syntax und `git diff --check`. Kein Test auf einem echten iPhone oder in Safari; keine Aussage zur Bildrate auf diesen Geräten.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 
