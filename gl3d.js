@@ -864,7 +864,8 @@ const G3 = (() => {
     });
 
     R.resize = function () {
-      const dpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr || 2);
+      /* v315: R.scale (0,5–1) senkt die Auflösung, wenn ein Bildschirm nicht mitkommt (siehe officefp.js) */
+      const dpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr || 2) * (R.scale || 1);
       const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
       R.w = w; R.h = h; R.dpr = dpr;
       const W = Math.round(w * dpr), H = Math.round(h * dpr);

@@ -1,5 +1,20 @@
 # Änderungen – kurz für den Kollegen
 
+## v315 – Büro: Sprechblase bleibt über dem Kopf, Ruckelbremse
+**Meldung Bennet (Handy, Konzernzentrale):** Starkes Ruckeln in den Büros. Der Text der Sprechblase stand als schmale Spalte am rechten Rand. Die Blase soll über dem Arbeiter bleiben und nicht mit skalieren.
+
+**Ursache Sprechblase (`officefp.js`, `style.css`):** Die Blase wurde auf den Bildschirmrand geklemmt, auch wenn der Sprecher gar nicht im Bild war. Am rechten Rand blieb dem Element nur noch wenig Breite, und der Text brach nach jedem Buchstaben um.
+
+**Lösung:**
+- Die Blase hat feste Breite (`width:max-content`, mindestens 120 px, höchstens 220 px) und ändert ihre Größe nicht.
+- Sie sitzt über dem Kopf der Person. Nur waagerecht wird sie so weit verschoben, dass sie ganz sichtbar ist. Liegt der Kopf nicht im Bild, verschwindet sie.
+
+**Ursache Ruckeln (gemessen im Testbrowser, 24 Mitarbeiter, 390 × 844):** Der JS-Anteil ist klein (Profiler: unter 10 ms je Bild, Figuren-Animation 2 ms). Es sind rund 290 Zeichenaufrufe je Bild bei 1,75-facher Auflösung (683 × 1477 Pixel) mit Schatten und Nebel. Das Ruckeln liegt also an der Grafik.
+
+**Lösung (`officefp.js` `governQuality`, `gl3d.js` `R.scale`):** Kommt das Gerät nicht auf etwa 30 Bilder pro Sekunde, sinkt die Auflösung stufenweise auf 80 %, 65 % und 50 %. Nur abwärts, damit nichts hin und her springt. Die ersten 2,5 s, Pausen und Hänger über 1,5 s zählen nicht mit. Schatten, Figuren und alle Abläufe bleiben unverändert.
+
+**Geprüft (Testbrowser mit Software-Grafik, Büro mit 24 Mitarbeitern):** Die Auflösung sinkt stufenweise (390 → 254 → 195 px Breite), sobald die Bilder zu langsam kommen. Eine Sprechblase am rechten Rand behält ihre Breite (198 × 89 px statt einer schmalen Spalte). Positionsrechnung: Kopf im Bild bleibt über dem Kopf, am Rand wird nur waagerecht verschoben, Kopf außerhalb blendet die Blase aus. **Nicht geprüft:** auf dem Handy; ob das Ruckeln dort wirklich an der Auflösung liegt. Die Software-Grafik im Testbrowser sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones aus. Wenn es weiter ruckelt, bitte melden, dann messe ich Schatten und Figuren einzeln.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 

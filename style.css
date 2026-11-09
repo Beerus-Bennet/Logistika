@@ -4632,3 +4632,6 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 .tw-img{background:radial-gradient(ellipse at 50% 35%,#70827a 0%,#405a51 65%,#293e36 100%)}
 .tw-img img{filter:drop-shadow(0 5px 5px rgba(10,22,17,.28))}
 .tw-stage{height:min(78vw,340px);background:radial-gradient(ellipse at 50% 38%,#71847b 0%,#425e53 65%,#293e36 100%)}
+
+/* ===== v315: Büro-Sprechblase – feste Breite statt Schrumpfen am Bildrand ===== */
+.ofp-say{width:max-content;min-width:120px;white-space:normal;overflow-wrap:break-word}
