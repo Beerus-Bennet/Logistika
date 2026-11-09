@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v320 – Gegossene und trockene Beete: sanfterer Farbunterschied
+**Wunsch Bennet:** Die Farben von bewässerten und nicht bewässerten Feldern sind zu hart. Der Unterschied soll sanfter sein.
+
+**Ursache (`farmmodels.js`, v304):** Trockene Erde war ein helles Sandbraun (`0xad8455`), nasse ein sehr dunkles Braun (`0x60402b`). Die Helligkeit lag bei etwa 2 : 1.
+
+**Lösung:** Beide Töne rücken zur normalen Beeterde: nasse Erde um 35 %, trockene um 30 %. Das gilt für Beetfläche, Furchen, Seiten und die Erde unter Obstbäumen. Trockene Beete bleiben heller und mit Rissen, nasse dunkler. Der Helligkeitsabstand sinkt von etwa 0,27 auf etwa 0,17 (Verhältnis von 1,98 auf 1,54). Leere Beete, Pflanzen und Geometrie sind unverändert.
+
+**Geprüft:** Der vorhandene Test `watering-look-v304.test.js` besteht weiter (verlangt weiterhin ein deutlich sichtbares Helligkeitsverhältnis von mehr als 1,4). Rechnung der Farbwerte siehe oben. Im Testbrowser Hofansicht mit gegossenen und trockenen Beeten vor und nach der Änderung gerendert, keine Fehler. Der Unterschied ist auf einem so kleinen Bildausschnitt subtil. **Nicht geprüft:** am Handy. Falls dir der Unterschied jetzt zu schwach ist, lässt er sich mit einem Zahlenwert nachjustieren.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 
