@@ -314,15 +314,20 @@ function createMap(canvas, opts) {
     if (cam.zoom < zm) cam.zoom = zm;
     const s = scale(), hx = midX() / s, hy = midY() / s;
     const k = Math.round((cam.x - (bounds.x0 + bounds.x1) / 2) / WORLD) * WORLD, x0 = bounds.x0 + k, x1 = bounds.x1 + k;
-    cam.x = x1 - x0 > 2 * hx ? Math.max(x0 + hx, Math.min(x1 - hx, cam.x)) : (x0 + x1) / 2;
+    /* v296: Ist (fast) die ganze Welt erschlossen, gibt es in Ost-West-Richtung keine Grenze: die Karte läuft rundherum
+       (clampCam bringt cam.x in 0 … WORLD), man sieht nach Osten oder Westen immer weiter dieselbe Welt – wie auf der Snapchat-Karte. */
+    const endless = bounds.x1 - bounds.x0 >= WORLD * 0.5;
+    if (!endless) cam.x = x1 - x0 > 2 * hx ? Math.max(x0 + hx, Math.min(x1 - hx, cam.x)) : (x0 + x1) / 2;
     cam.y = bounds.y1 - bounds.y0 > 2 * hy ? Math.max(bounds.y0 + hy, Math.min(bounds.y1 - hy, cam.y)) : (bounds.y0 + bounds.y1) / 2;
   }
   /* pts: Eckpunkte [lat, lon]; marg: Rand als Anteil der größeren Ausdehnung (null = keine Grenzen) */
   function setBounds(pts, marg) {
     if (!pts || !pts.length) { bounds = null; return; }
-    const un = unwrapLons(pts);
+    /* v296: Die Eckpunkte sind kleinster und größter Längengrad des erschlossenen Gebiets – sie dürfen NICHT wie eine Linie über die
+       Datumsgrenze „aufgerollt“ werden: Bei mehr als 180° Breite (Etappe 6: Amerika bis Asien) wurde daraus ein schmales Band an der falschen
+       Stelle, und die Karte ließ sich nicht mehr verschieben. */
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    un.forEach(p => { const x = projX(p[1]), y = projY(p[0]); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+    pts.forEach(p => { const x = projX(p[1]), y = projY(p[0]); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
     const m = Math.max(x1 - x0, y1 - y0) * (marg == null ? 0.15 : marg) + 1e-4;
     bounds = { x0: x0 - m, x1: x1 + m, y0: y0 - m, y1: y1 + m };
     if (!anim) { clampCam(); requestDraw(); }
@@ -518,12 +523,18 @@ function createMap(canvas, opts) {
     return best || [screenX(wx), screenY(wy)];
   }
 
+  /* v296: alle Bildschirmorte eines Punktes (jede sichtbare Weltkopie) – der Nebel braucht sie, sonst bleibt die zweite Kopie dunkel */
+  function screenPosAll(lat, lon) {
+    const wx = projX(lon), wy = projY(lat);
+    return copies().map(off => [screenX(wx + off), screenY(wy)]);
+  }
+
   const api = {
     get zoom() { return cam.zoom; },
     get width() { return W; },
     get dpr() { return dpr; },
     get height() { return H; },
-    ctx, line, pin, segments, screenPos, toScreen, fromScreen, screenRuns, clipRuns, tracePath,
+    ctx, line, pin, segments, screenPos, screenPosAll, toScreen, fromScreen, screenRuns, clipRuns, tracePath,
     projectPoint: (lat, lon) => [projX(lon), projY(lat)],
     setView, flyTo, panTo, fitBounds, resize, redraw: requestDraw,
     animating: () => !!anim,

@@ -2087,9 +2087,12 @@ function drawFog(m, ctx) {
      Standorts – dann gibt es keinen Nebel zu zeichnen. */
   const cover = unlockedNodes().some(n => {
     const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
-    const r = Math.max(30, fogNodeKm(n, km) * pxPerKm) * 0.62, p = m.screenPos(n.lat, n.lon);
-    const dx = Math.max(Math.abs(p[0]), Math.abs(p[0] - W)), dy = Math.max(Math.abs(p[1]), Math.abs(p[1] - H));
-    return dx * dx + dy * dy < r * r;
+    const r = Math.max(30, fogNodeKm(n, km) * pxPerKm) * 0.62;
+    /* v296: jede sichtbare Weltkopie prüfen (Karte läuft rundherum) */
+    return m.screenPosAll(n.lat, n.lon).some(p => {
+      const dx = Math.max(Math.abs(p[0]), Math.abs(p[0] - W)), dy = Math.max(Math.abs(p[1]), Math.abs(p[1] - H));
+      return dx * dx + dy * dy < r * r;
+    });
   });
   if (cover) { if (km !== lastFogKm) { lastFogKm = km; renderFogNote(km); } return; }
 
@@ -2097,14 +2100,15 @@ function drawFog(m, ctx) {
   unlockedNodes().forEach(n => {
     const pxPerKm = (world / 360) / (111.32 * Math.max(0.15, Math.cos(n.lat * Math.PI / 180)));
     const r = Math.max(30, fogNodeKm(n, km) * pxPerKm);
-    const p = m.screenPos(n.lat, n.lon);
-    if (p[0] < -r || p[0] > W + r || p[1] < -r || p[1] > H + r) return;
-    anyVisible = true;
-    const g = f.createRadialGradient(p[0], p[1], r * 0.62, p[0], p[1], r);
-    g.addColorStop(0, "rgba(0,0,0,1)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    f.fillStyle = g;
-    f.beginPath(); f.arc(p[0], p[1], r, 0, 7); f.fill();
+    m.screenPosAll(n.lat, n.lon).forEach(p => {                  /* v296: in jeder sichtbaren Weltkopie */
+      if (p[0] < -r || p[0] > W + r || p[1] < -r || p[1] > H + r) return;
+      anyVisible = true;
+      const g = f.createRadialGradient(p[0], p[1], r * 0.62, p[0], p[1], r);
+      g.addColorStop(0, "rgba(0,0,0,1)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      f.fillStyle = g;
+      f.beginPath(); f.arc(p[0], p[1], r, 0, 7); f.fill();
+    });
   });
 
   // Die eigenen Routen leuchten frei
@@ -2122,13 +2126,14 @@ function drawFog(m, ctx) {
   S.fleet.forEach(v => {
     const pos = vehPos(v);
     if (!pos) return;
-    const p = m.screenPos(pos[0], pos[1]);
     const r = 46;
-    const g = f.createRadialGradient(p[0], p[1], 8, p[0], p[1], r);
-    g.addColorStop(0, "rgba(0,0,0,1)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    f.fillStyle = g;
-    f.beginPath(); f.arc(p[0], p[1], r, 0, 7); f.fill();
+    m.screenPosAll(pos[0], pos[1]).forEach(p => {                /* v296: in jeder sichtbaren Weltkopie */
+      const g = f.createRadialGradient(p[0], p[1], 8, p[0], p[1], r);
+      g.addColorStop(0, "rgba(0,0,0,1)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      f.fillStyle = g;
+      f.beginPath(); f.arc(p[0], p[1], r, 0, 7); f.fill();
+    });
   });
 
   f.globalCompositeOperation = "source-over";
