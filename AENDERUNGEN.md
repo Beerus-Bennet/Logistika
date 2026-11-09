@@ -86,6 +86,16 @@
 - Hauptläufe (Schiff, Zug, Flugzeug) fahren weiterhin in einer Fahrt, mehrere Fahrten gibt es nur auf der Straße.
 - Die Zustellprognose ist eine Schätzung aus dem aktuellen Stand.
 
+## v312 – Trophäen als ruhigere Sammlerstücke präsentieren
+
+Keilerwaffen mit aufrechteren, schlankeren Bögen, etwas unterschiedlichen Seiten, sichtbaren Wurzeln und kleinen Messingfassungen statt fast identischer Hornringe. Elfenbein verläuft von warmen Wurzeln zu hellen Spitzen. Hirschgeweihe erhalten am Präparat eine weichere Auslage und gedämpfte Spitzenfarben, der Schädel einen abgerundeten Nasensteg. Das lebende Wild bleibt unverändert. Walnussschilder mit ruhigerer Maserung hängen vor einer entsättigten grünen Rückwand. Die Sammlung nutzt einen passenden Hintergrund, weniger harte Schlagschatten, eine größere Nahansicht und Licht von vorn. Cache-Schlüssel v312 verhindert alte Vorschaubilder.
+
+Gespeicherte Maße, Geweihenden, Sonderformen, Medaillen, Werte, Inventar und Ehrenplatzbelegung bleiben erhalten. Keine zusätzlichen Zeichenknoten oder externen Bilder.
+
+Geprüft: 36 deterministische Präparate, Altbestände, zehn Geweih-Sonderformen, acht Ehrenplatzbelegungen ohne Überschneidung/Durchragen (trophy-layout-v310.test.js); zehn v307-Prüfgruppen einschließlich 884 Animationsbildern sowie 72 v283-Modellvarianten bestanden. Originalmodelle im Chromium vor/nach der Änderung und auf Mobilbreite gerendert, keine WebGL-Fehler. Im vollständigen Spiel bei 390 Pixeln Breite Hirsch, Keiler und Fasan öffnen/schließen, 3D-Nahansichten ohne horizontales Abschneiden, keine JavaScript-Fehler. Syntax und git diff --check erfolgreich. Nicht auf einem echten Handy geprüft.
+
+PR #30 (Karte v311) ist inzwischen in main enthalten und in diesen Branch integriert. Beide Änderungen bleiben erhalten; gemeinsame Cache-/Versionsdateien auf v312 abgestimmt.
+
 ## v311 – Karte läuft in Ost-West-Richtung rundherum (wie die Snapchat-Karte)
 **Wunsch Bennet:** Man soll auf der Karte sowohl nach Westen als auch nach Osten schieben können; danach sieht man die Welt wieder wie zu Beginn.
 

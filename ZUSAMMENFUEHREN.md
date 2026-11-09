@@ -1,8 +1,8 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
-## v313 – Tür-zu-Tür-Logistik auf main c921341 / v311
+## v313 – Tür-zu-Tür-Logistik auf main 462093c / v312
 
-Branch `claude/tuer-zu-tuer`, Pull Request auf main. Die Nummer v312 ist für den offenen PR #31 reserviert. Bei Konflikten in `index.html`/`sw.js` jeweils die höhere Dateiversion behalten.
+Branch `claude/tuer-zu-tuer`, Pull Request auf main; v312 (PR #31) ist eingemischt. Bei Konflikten in `index.html`/`sw.js` jeweils die höhere Dateiversion behalten.
 
 - `game.js`:
   - Neuer Block „v313: Tür zu Tür“ (Kette, Mengenfluss, Status, Prognose).

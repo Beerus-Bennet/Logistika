@@ -4627,3 +4627,8 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 .d2d-st b{display:block}
 .d2d-st small{display:block;opacity:.75;font-weight:700}
 .d2d-st small.bad{color:var(--red);opacity:1}
+
+/* ---------- v312: Ruhige Sammlervitrine und mehr Platz für Trophäendetails ---------- */
+.tw-img{background:radial-gradient(ellipse at 50% 35%,#70827a 0%,#405a51 65%,#293e36 100%)}
+.tw-img img{filter:drop-shadow(0 5px 5px rgba(10,22,17,.28))}
+.tw-stage{height:min(78vw,340px);background:radial-gradient(ellipse at 50% 38%,#71847b 0%,#425e53 65%,#293e36 100%)}
