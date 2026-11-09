@@ -463,6 +463,7 @@ function d2dTick(veh, job, leg, t, dtMin) {
     return;
   }
   if (veh.phase !== "repo" && veh.phase !== "haul") return;
+  if (routeHold(veh)) return;                                          /* v321: Route wird noch berechnet */
   const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
   const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
   veh.pos += step; veh.kmTotal += step;
@@ -1907,6 +1908,7 @@ function startJob(o, variant, assign, extra) {
   S.orders = S.orders.filter(x => x.id !== o.id);
   if (typeof onJobStart === "function") onJobStart(job);
   job.legs.forEach((l, i) => l.vehs.slice().forEach(u => d2dGo(job, i, u)));
+  job.legs.forEach(l => { if (typeof geoPrefetch === "function") geoPrefetch(legCoords(l)); });   /* v321: Linien schon beim Annehmen berechnen */
 }
 
 /* ------------------------------ Disposition -------------------------------
@@ -2001,6 +2003,16 @@ function co2f(kg) { return kg >= 1000 ? fmt(kg / 1000, kg >= 1e5 ? 0 : 1) + " t"
 /* v70: Linie auf der Karte – rund um den Hof entlang der Straßen (farm.js roadDisp) */
 function roadLine(pts) { return typeof geoLine === "function" ? geoLine(pts) : typeof roadDisp === "function" ? roadDisp(pts) : pts; }
 function legDisp(leg) { return roadLine(legCoords(leg)); }
+/* v321: Route erst berechnen, dann zeichnen und losfahren. Solange der Routing-Dienst die Linie einer Strecke noch liefert (Straße, Rad, Schiene),
+   wird sie weder als gerade Linie gezeichnet, noch fährt das Fahrzeug darauf; ist sie da, bleibt sie für die Fahrt unverändert (kein Springen). */
+function routePending(pts) { return typeof geoPending === "function" && !!pts && geoPending(pts); }
+function routeHold(veh) {
+  const r = veh.route; if (!r) return false;
+  routeGm(veh);
+  if (routePending(r)) return true;
+  if (!r.fz && typeof geoLine === "function") { geoLine(r); r.fz = 1; }
+  return false;
+}
 function legCoords(leg) {
   /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
   if (!leg._c || (leg.mode && leg._c.length > 1 && !leg._c.gm)) leg._c = unwrapLons(legLine(leg, leg.a, leg.b));
@@ -2381,6 +2393,7 @@ function tick(dtMin) {
       continue;
     }
     if (veh.phase === "repo" || veh.phase === "haul") {
+      if (routeHold(veh)) continue;                                    /* v321: Route wird noch berechnet */
       const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
       const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
       veh.pos += step; veh.kmTotal += step;
@@ -2705,6 +2718,7 @@ function drawWorld(m, ctx) {
       const mi = MODE_INFO[l.mode];
       /* v313: in einer Kette können mehrere Teilstrecken gleichzeitig laufen (Teilmengen) */
       const active = !l.done && (job.v === D2D_V ? l.ld > 0 || (i > 0 && d2dStock(job, i) > 1e-6) : i === job.curLeg);
+      if (routePending(legCoords(l))) return;                          /* v321: erst wenn die Route berechnet ist */
       m.line(legDisp(l), {
         color: mi.color, width: l.done ? 3 : (active ? 5.5 : 4),
         alpha: l.done ? 0.3 : (active ? 1 : 0.6),
@@ -2719,7 +2733,9 @@ function drawWorld(m, ctx) {
     const v = planState.variants[planState.vi], o = planState.order, n = v.legs.length;
     v.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
-      m.line(roadLine(unwrapLons(legPts(l, o, i, n))), {
+      const pv = unwrapLons(legPts(l, o, i, n));
+      if (routePending(pv)) return;                                    /* v321: erst wenn die Route berechnet ist */
+      m.line(roadLine(pv), {
         color: mi.color, width: 5, dash: [10, 8],
         dashOffset: -(performance.now() / 45) % 18,
         outline: "rgba(16,34,47,0.6)", outlineWidth: 3
