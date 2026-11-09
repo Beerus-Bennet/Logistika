@@ -80,6 +80,9 @@ const ADJ = {};
 NODES.forEach(a => {
   N[a[0]] = { id: a[0], name: a[1], lat: a[2], lon: a[3], land: a[4], stage: a[5], modes: a[6], type: a[7], short: a[8], home: a[9] || null };
 });
+/* v313: Der Suezkanal ist nur Durchfahrt für Schiffe – kein Ort für Kunden, Abholungen oder Zustellungen
+   (vorher konnten Ausschreibungen „von Suezkanal / Port Said“ ohne Straßenanbindung entstehen). */
+if (N.suez) N.suez.via = true;
 const noLand = new Set();
 NO_LAND_LINK.forEach(p => { noLand.add(p[0] + ">" + p[1]); noLand.add(p[1] + ">" + p[0]); });
 
@@ -222,11 +225,13 @@ function toLegs(edges) {
   return legs;
 }
 
-function plan(from, to, cargoKey, weight, metric) {
+function plan(from, to, cargoKey, weight, metric, modes) {
   /* in der Hofphase hängt das Netz am Level (neue Orte) – das gehört in den Schlüssel */
-  const key = from + ">" + to + "|" + cargoKey + "|" + weight + "|" + metric + "|" + S.stage + (typeof farmPhase === "function" && farmPhase() ? "|L" + level() : "");
+  /* v313: modes – nur diese Verkehrsträger (Varianten ohne Luftfracht, nur Straße …) */
+  const um = modes ? [...modes].filter(m => unlockedModes().includes(m)).join("") : unlockedModes();
+  const key = from + ">" + to + "|" + cargoKey + "|" + weight + "|" + metric + "|" + S.stage + (modes ? "|m" + um : "") + (typeof farmPhase === "function" && farmPhase() ? "|L" + level() : "");
   if (routeMemo.has(key)) return routeMemo.get(key);
-  const edges = dijkstra(from, to, unlockedModes(), metric, cargoKey, weight);
+  const edges = um ? dijkstra(from, to, um, metric, cargoKey, weight) : null;
   let res = null;
   if (edges && edges.length) {
     const legs = toLegs(edges);
@@ -246,6 +251,341 @@ function plan(from, to, cargoKey, weight, metric) {
   return res;
 }
 function clearRouteCache() { routeMemo.clear(); refMemo.clear(); repoMemo.clear(); }
+
+/* ============================ v313: Tür zu Tür ===============================
+   Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers.
+   Häfen, Flughäfen und Bahnterminals sind Zwischenstationen: Schiff, Zug und Flugzeug
+   fahren nur zwischen Terminals, Vor- und Nachlauf übernimmt die Straße. Ausnahme:
+   Großmengen über D2D_HEAVY – diese Kunden haben einen eigenen Kai bzw. Gleisanschluss und
+   übergeben bzw. übernehmen ausdrücklich am Terminal (o.pickT / o.dropT, Adresse mit term).
+   Teilstrecken (kind): direkt · vor · haupt · strasse · umfuhr · nach.
+   Mengenfluss je Teilstrecke: qty (zu bewegen), ld (geladen), dn (abgeladen). Ware für
+   Teilstrecke i liegt erst bereit, wenn Teilstrecke i−1 sie abgeladen hat – vorher wartet das
+   Fahrzeug am Terminal. Straßenfahrzeuge dürfen mehrmals fahren, mehrere Fahrzeuge teilen sich
+   eine Teilstrecke. Alte Aufträge (ohne job.v) laufen nach der alten Logik zu Ende.        */
+const D2D_V = 313;
+const D2D_HEAVY = 60000;      /* ab 60 t: eigener Kai bzw. Gleisanschluss beim Kunden */
+const D2D_TRIPS = 8;          /* höchstens so viele Fahrten je Fahrzeug und Teilstrecke */
+const D2D_MAXVEH = 4;         /* höchstens so viele Fahrzeuge je Teilstrecke */
+const AIR_OFF_KM = 16;        /* so weit liegt der Flughafen vom Hafen bzw. von der Stadtmitte */
+const isDoorMode = m => m === "r" || m === "b";
+const LEG_KIND = { direkt: "Direktfahrt", vor: "Vorlauf", haupt: "Hauptlauf", strasse: "Straßenetappe", umfuhr: "Umfuhr", nach: "Nachlauf" };
+const MODE_VEH = { r: "Lkw", b: "Rad", l: "Zug", i: "Binnenschiff", s: "Seeschiff", a: "Flugzeug" };
+
+/* Wo der Verkehrsträger an einem Knoten lädt. Flughäfen liegen weder im Hafen noch in der
+   Innenstadt: An Knoten, die kein reiner Flughafen sind, hat der Flughafen einen eigenen Punkt. */
+function termPt(id, mode) {
+  const n = N[id];
+  if (mode === "a" && n.type !== "air") {
+    let h = 0;
+    for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 3600;
+    const a = (h / 3600) * Math.PI * 2;
+    return [+(n.lat + AIR_OFF_KM * Math.cos(a) / 111.32).toFixed(5),
+            +(n.lon + AIR_OFF_KM * Math.sin(a) / (111.32 * Math.max(0.2, Math.cos(n.lat * Math.PI / 180)))).toFixed(5)];
+  }
+  return [n.lat, n.lon];
+}
+function termName(id, mode) {
+  const n = N[id];
+  if (mode === "a") return n.type === "air" ? n.name : "Flughafen " + n.short;
+  if (mode === "s" || mode === "i") return n.type === "port" ? n.name : "Hafen " + n.short;
+  if (mode === "l") return n.type === "rail" ? n.name : "Bahnterminal " + n.short;
+  return n.name;
+}
+function termAddr(id, mode) { return { t: termName(id, mode), a: N[id].short }; }
+
+/* Einmal je Auftrag (Merkmal o.d2d): Großmengen übergeben am eigenen Kai bzw. Gleisanschluss.
+   Sonderaufträge (Hof, Mr. Snus, Don Pablo, Wertsachen, Tutorial) fahren ohnehin Tür zu Tür auf der Straße. */
+function d2dInit(o) {
+  if (!o || o.d2d) return o;
+  o.d2d = D2D_V;
+  if (o.farm || o.snus || o.pablo || o.jewel || o.tut || o.tutNext || !(o.weight > D2D_HEAVY)) return o;
+  ["pick", "drop"].forEach(k => {
+    const id = k === "pick" ? o.from : o.to, n = N[id];
+    const m = ["s", "i", "l"].find(x => n.modes.includes(x));
+    if (!m) return;
+    const p = termPt(id, m), ang = Math.random() * Math.PI * 2, km = 0.12 + Math.random() * 0.15;
+    o[k + "T"] = m;
+    o[k] = { lat: +(p[0] + km * Math.cos(ang) / 111.32).toFixed(5), lon: +(p[1] + km * Math.sin(ang) / (111.32 * Math.max(0.2, Math.cos(p[0] * Math.PI / 180)))).toFixed(5),
+      t: (m === "l" ? "Gleisanschluss am " : "Werkskai am ") + termName(id, m), a: n.short, term: m };
+  });
+  return o;
+}
+
+/* Aus der Netzroute (plan) wird die Kette von Tür zu Tür: Vorlauf zur Abgangsstation, Umfuhr
+   zwischen Hafen bzw. Bahnhof und Flughafen, Nachlauf von der Zielstation zum Empfänger.
+   pts = feste Linie (Straße zwischen zwei Punkten), ta/tb = Lade-/Zielpunkt am Terminal. */
+function chainLegs(o, net) {
+  const out = [], n = net.length;
+  const pick = addrPt(oPick(o)), drop = addrPt(oDrop(o));
+  const road = (kind, at, a, b) => {
+    const d = Math.max(0.05, hav(a, b) * 1.25);
+    return { mode: "r", nodes: [at, at], from: at, to: at, dist: d, maxHop: d, kind, pts: [a.slice(), b.slice()], ref: null };
+  };
+  net.forEach((l, i) => {
+    const prev = i ? net[i - 1] : null, next = net[i + 1];
+    const L = Object.assign({}, l, { nodes: l.nodes.slice() });
+    if (!isDoorMode(l.mode)) {
+      L.kind = "haupt";
+      const ta = termPt(l.from, l.mode), tb = termPt(l.to, l.mode);
+      if (hav(ta, nodePt(l.from)) > 0.05) L.ta = ta;
+      if (hav(tb, nodePt(l.to)) > 0.05) L.tb = tb;
+      if (i === 0 && !(o.pickT && hav(pick, ta) < 1.5)) out.push(road("vor", l.from, pick, ta));
+      if (prev && !isDoorMode(prev.mode) && hav(termPt(l.from, prev.mode), ta) > 0.5)
+        out.push(road("umfuhr", l.from, termPt(l.from, prev.mode), ta));
+    } else {
+      L.kind = n === 1 ? "direkt" : i === 0 && next && !isDoorMode(next.mode) ? "vor" : i === n - 1 && prev && !isDoorMode(prev.mode) ? "nach" : "strasse";
+      /* Straße zum bzw. vom Flughafen draußen: Endpunkt ist der Flughafen, nicht die Stadtmitte */
+      if (prev && !isDoorMode(prev.mode)) { const t = termPt(l.from, prev.mode); if (hav(t, nodePt(l.from)) > 0.05) L.ta = t; }
+      if (next && !isDoorMode(next.mode)) { const t = termPt(l.to, next.mode); if (hav(t, nodePt(l.to)) > 0.05) L.tb = t; }
+    }
+    out.push(L);
+    if (i === n - 1 && !isDoorMode(l.mode) && !(o.dropT && hav(drop, termPt(l.to, l.mode)) < 1.5))
+      out.push(road("nach", l.to, termPt(l.to, l.mode), drop));
+  });
+  out.forEach((L, i) => {
+    const prev = out[i - 1], next = out[i + 1];
+    L.fa = i === 0 ? addrText(oPick(o), true) : termName(L.from, isDoorMode(L.mode) && prev ? prev.mode : L.mode);
+    L.fb = i === out.length - 1 ? addrText(oDrop(o), true) : termName(L.to, isDoorMode(L.mode) && next ? next.mode : L.mode);
+  });
+  return out;
+}
+
+/* Fahrten, die eine Kapazität für eine Menge braucht */
+function legTrips(cap, qty) { return Math.max(1, Math.ceil(qty / Math.max(1e-6, cap) - 1e-9)); }
+/* Bestes Straßenfahrzeug für Vor-/Nachlauf: wenigste Fahrten, dann am billigsten */
+function doorRefType(o, leg) {
+  let best = null, bt = 0;
+  for (const v of VEHICLES) {
+    if (v.mode !== leg.mode || v.special || v.stage > S.stage || !meetsReq(v, o.cargo)) continue;
+    if (v.range && leg.maxHop > v.range) continue;
+    const k = legTrips(v.cap, o.weight);
+    if (!best || k < bt || (k === bt && v.costKm < best.costKm)) { best = v; bt = k; }
+  }
+  return best;
+}
+/* Richtwert einer ganzen Kette mit Referenzfahrzeugen (für die Auswahl der Varianten) */
+function chainRef(o, legs) {
+  let t = 0, c = 0, ok = true;
+  legs.forEach(l => {
+    const ref = isDoorMode(l.mode) ? doorRefType(o, l) : (l.ref ? vType(l.ref) : refVeh(l.mode, o.cargo, o.weight, l.maxHop));
+    if (!ref) { ok = false; return; }
+    const k = isDoorMode(l.mode) ? legTrips(ref.cap, o.weight) : 1, mi = MODE_INFO[l.mode];
+    t += (2 * k - 1) * (l.dist / ref.speed) * 60 + k * mi.umschlag * 1.8;
+    c += (2 * k - 1) * l.dist * ref.costKm + mi.handleFix + (o.weight / 1000) * mi.handleTon;
+  });
+  return { ok, time: t, cost: c };
+}
+/* Zeit und Kosten von Vor-, Nach- und Umfuhr für Frist und Preis neuer Ausschreibungen */
+function d2dDoorExtra(o) {
+  const p = plan(o.from, o.to, o.cargo, o.weight, "time");
+  const out = { min: 0, eur: 0 };
+  if (!p) return out;
+  chainLegs(o, p.legs).forEach(l => {
+    if (!l.pts) return;
+    const ref = doorRefType(o, l);
+    if (!ref) return;
+    const k = legTrips(ref.cap, o.weight), mi = MODE_INFO.r;
+    out.min += ((2 * k - 1) * (l.dist / ref.speed) * 60 + k * mi.umschlag * 1.8) / Math.min(k, 2) + 45;
+    out.eur += (2 * k - 1) * l.dist * ref.costKm + mi.handleFix + (o.weight / 1000) * mi.handleTon;
+  });
+  return out;
+}
+
+/* Ware bereit am Anfang von Teilstrecke i (noch nicht geladen) */
+function d2dStock(job, i) {
+  const l = job.legs[i];
+  return (i === 0 ? l.qty : job.legs[i - 1].dn) - l.ld;
+}
+function d2dCur(job) { const i = job.legs.findIndex(l => !l.done); return i < 0 ? job.legs.length - 1 : i; }
+/* Fahrzeug einer Teilstrecke zuschicken – alle Fahrzeuge der Kette fahren gleich los
+   und warten am Ladepunkt, bis ihre Ware da ist. */
+function d2dGo(job, i, uid) {
+  if (!S.jobs.includes(job)) return;
+  const leg = job.legs[i], veh = S.fleet.find(f => f.uid === uid);
+  if (!veh) {
+    if (uid === leg.veh) failJob(job, "Fahrzeug nicht mehr verfügbar");
+    else leg.vehs = leg.vehs.filter(u => u !== uid);
+    return;
+  }
+  veh.jobId = job.id; veh.legIdx = i; veh.pos = 0; veh.load = 0;
+  const r = repoCost(veh, leg, job.order, i);
+  if (!r.ok) { failJob(job, "Leerfahrt zum Ladeort nicht möglich"); return; }
+  if (r.d > 0.03) { veh.phase = "repo"; veh.route = unwrapLons(r.pts); veh.routeDist = pathLen(veh.route); }
+  else { veh.phase = "wait"; veh.route = null; veh.routeDist = 0; }
+}
+function d2dRelease(veh) {
+  veh.phase = "idle"; veh.jobId = null; veh.legIdx = -1; veh.route = null; veh.load = 0;
+  if (typeof officeCreditDrive === "function") officeCreditDrive(veh);      /* v257: Monatsauswertung Fahrpersonal */
+}
+/* Adresse am Anfang bzw. Ende einer Teilstrecke (für den Stellplatz des Fahrzeugs) */
+function d2dLegAddr(job, i, end) {
+  const L = job.legs, l = L[i];
+  if (!end && i === 0) return oPick(job.order);
+  if (end && i === L.length - 1) return oDrop(job.order);
+  const nb = end ? L[i + 1] : L[i - 1];
+  return termAddr(end ? l.to : l.from, isDoorMode(l.mode) && nb ? nb.mode : l.mode);
+}
+function d2dUnloaded(job, veh, leg) {
+  const i = job.legs.indexOf(leg), last = i === job.legs.length - 1;
+  leg.dn = Math.min(leg.qty, leg.dn + (veh.load || 0)); veh.load = 0; veh.jobs++;
+  if (leg.dn >= leg.qty - 1e-6) leg.done = true;
+  job.curLeg = d2dCur(job);
+  if (last && leg.done) { d2dRelease(veh); finishJob(job); return; }
+  if (last && !job.partToast) { job.partToast = 1; toast("📦 Teilweise zugestellt: " + job.order.shipper + " – " + kgf(leg.dn) + " von " + kgf(leg.qty) + ".", "ok"); }
+  if (leg.qty - leg.ld > 1e-6) {
+    /* Es liegt noch Ware am Start: leer zurück und die nächste Teilmenge holen */
+    const c = legCoords(leg), r = c.map(p => p.slice()).reverse();
+    if (c.gm) r.gm = c.gm.slice().reverse();
+    veh.phase = "repo"; veh.route = r; veh.routeDist = pathLen(r); veh.pos = 0;
+  } else d2dRelease(veh);
+}
+/* Ein Fahrzeug einer v313-Kette einen Takt weiter */
+function d2dTick(veh, job, leg, t, dtMin) {
+  const li = job.legs.indexOf(leg);
+  if (veh.phase === "wait") {
+    const take = Math.min(t.cap, leg.qty - leg.ld);
+    if (take <= 1e-6) { d2dRelease(veh); return; }                 /* nichts mehr zu holen */
+    if (d2dStock(job, li) + 1e-6 < take) return;                   /* Ware noch nicht (ganz) da */
+    leg.ld += take; veh.load = take;
+    veh.phase = "load";
+    veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.8, 1.25) * umschlagFactor(leg.from) * (job.fastLoad ? 0.6 : 1);
+    if (typeof officeCreditUms === "function") officeCreditUms(leg.from);
+    return;
+  }
+  if (veh.phase === "load" || veh.phase === "unload") {
+    if (typeof hubHold === "function" && hubHold(veh, leg)) return;
+    if (typeof customsHold === "function" && customsHold(veh, job, leg)) return;
+    veh.timer -= dtMin;
+    if (veh.timer > 0) return;
+    if (veh.phase === "load") { veh.phase = "haul"; veh.route = legCoords(leg); veh.routeDist = pathLen(veh.route); veh.pos = 0; }
+    else d2dUnloaded(job, veh, leg);
+    return;
+  }
+  if (veh.phase !== "repo" && veh.phase !== "haul") return;
+  const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
+  const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
+  veh.pos += step; veh.kmTotal += step;
+  if (step > 0 && typeof onDriven === "function") onDriven(veh, t, step, job, leg);
+  if (veh.phase === "haul") S.kmTotal += step;
+  addCO2(veh, t, step, veh.phase === "haul" ? (veh.load || 0) : 0);
+  if (veh.pos < veh.routeDist) return;
+  const cost = veh.routeDist * costKmOf(t);
+  S.money -= cost; S.expense += cost; job.cost += cost;
+  const end = veh.route[veh.route.length - 1];
+  veh.pos = 0; veh.route = null;
+  if (veh.phase === "repo") {
+    veh.at = leg.from; setSpot(veh, end, d2dLegAddr(job, li, false));
+    veh.phase = "wait";
+  } else {
+    veh.at = leg.to; setSpot(veh, end, d2dLegAddr(job, li, true));
+    veh.phase = "unload"; veh.timer = MODE_INFO[leg.mode].umschlag * rnd(0.55, 0.95) * umschlagFactor(leg.to);
+    if (typeof officeCreditUms === "function") officeCreditUms(leg.to);
+  }
+}
+/* Weitere Fahrzeuge für Straßenabschnitte, deren Menge ein Fahrzeug nicht auf einmal schafft */
+function extraFor(variant, order, assign) {
+  const used = assign.filter(Boolean);
+  return variant.legs.map((leg, i) => {
+    const f0 = S.fleet.find(f => f.uid === assign[i]);
+    if (!f0 || !isDoorMode(leg.mode) || !order) return [];
+    let cap = vType(f0.type).cap;
+    const out = [];
+    if (cap >= order.weight) return out;
+    const cands = eligible(leg, order, used).map(f => ({ f, rc: repoCost(f, leg, order, i) }))
+      .filter(x => x.rc.ok && x.rc.d < Math.max(40, leg.dist * 3)).sort((a, b) => a.rc.t - b.rc.t);
+    for (const x of cands) {
+      if (cap >= order.weight || out.length >= D2D_MAXVEH - 1) break;
+      out.push(x.f.uid); used.push(x.f.uid); cap += vType(x.f.type).cap;
+    }
+    return out;
+  });
+}
+/* Lesbarer Sendungsstatus einer v313-Kette */
+const MAIN_ON = { s: "Auf See", i: "Auf dem Binnenschiff", l: "Auf der Schiene", a: "In der Luft" };
+const AT_TERM = { s: "Im Hafen", i: "Im Binnenhafen", l: "Am Bahnterminal", a: "Am Flughafen" };
+function d2dStatus(j) {
+  const L = j.legs, last = L[L.length - 1], q = last.qty;
+  if (last.dn >= q - 1e-6) return "Vollständig zugestellt";
+  const vs = S.fleet.filter(f => f.jobId === j.id);
+  const on = (i, ph) => vs.some(f => f.legIdx === i && f.phase === ph);
+  let s = null;
+  for (let i = L.length - 1; i >= 0 && !s; i--) {
+    const l = L[i], prev = L[i - 1], stock = d2dStock(j, i);
+    if (on(i, "haul")) s = l.kind === "vor" ? "Im Vorlauf" : l.kind === "nach" || (i === L.length - 1 && i > 0) ? "In Zustellung"
+      : l.kind === "umfuhr" ? "In der Umfuhr" : l.kind === "haupt" ? MAIN_ON[l.mode] || "Im Hauptlauf" : l.kind === "direkt" ? "Unterwegs zum Empfänger" : "Unterwegs";
+    else if (on(i, "unload")) s = i === L.length - 1 ? "Wird beim Empfänger entladen" : "Wird umgeschlagen";
+    else if (on(i, "load")) s = i === 0 ? "Wird beim Absender geladen" : "Wird umgeschlagen";
+    else if (i > 0 && stock > 1e-6) {
+      const where = !isDoorMode(prev.mode) ? AT_TERM[prev.mode] + " " + N[l.from].short + " · " : "";
+      /* Ursache und was kommt: welches Fahrzeug ist unterwegs, wie lange noch */
+      const come = vs.filter(f => f.legIdx === i && f.phase === "repo" && f.routeDist)
+        .map(f => (f.routeDist - f.pos) / vType(f.type).speed * 60).sort((a, b) => a - b)[0];
+      s = where + (on(i, "wait") ? "Wartet auf Umschlag" : "Wartet auf " + MODE_VEH[l.mode] + (come != null ? " (kommt in " + dur(come) + ")" : ""));
+    }
+  }
+  if (!s) s = L[0].ld > 0 ? "Unterwegs" : on(0, "wait") ? "Wird abgeholt" : "Abholung geplant";
+  if (last.dn > 1e-6) s = "Teilweise zugestellt (" + kgf(last.dn) + " von " + kgf(q) + ") · " + s;
+  return s;
+}
+/* Wo die Ware gerade liegt: beim Absender, in Fahrzeugen, an Terminals, beim Empfänger */
+function d2dWhere(j) {
+  const L = j.legs, out = [];
+  const atS = L[0].qty - L[0].ld;
+  if (atS > 1e-6) out.push("📦 Absender " + kgf(atS));
+  const mov = L.reduce((a, l) => a + (l.ld - l.dn), 0);
+  if (mov > 1e-6) out.push("🚚 geladen " + kgf(mov));
+  L.forEach((l, i) => { if (i > 0) { const s = d2dStock(j, i); if (s > 1e-6) out.push("🏗️ " + N[l.from].short + " " + kgf(s)); } });
+  const dn = L[L.length - 1].dn;
+  if (dn > 1e-6) out.push("🏁 Empfänger " + kgf(dn));
+  return out.join(" · ");
+}
+/* Das Fahrzeug, das man live verfolgen möchte: das am weitesten fortgeschrittene, das fährt */
+function d2dFocusVeh(j) {
+  const vs = S.fleet.filter(f => f.jobId === j.id);
+  /* zuerst wer Ware fährt, dann wer umschlägt – jeweils die am weitesten hinten in der Kette */
+  const rank = f => (f.phase === "haul" ? 400 : f.phase === "unload" || f.phase === "load" ? 300 : f.phase === "repo" ? 200 : 100) + f.legIdx;
+  return vs.sort((a, b) => rank(b) - rank(a))[0] || null;
+}
+/* Zustellprognose aus dem tatsächlichen Stand: wo die Fahrzeuge sind, was noch zu laden ist,
+   Störungen (Halt, Sturm, Zoll) verlängern die Restzeit – die Prognose wandert also mit. */
+function d2dEta(j) {
+  let t = S.time;
+  const holdLeft = f => f.halt ? Math.min(240, Math.max(0, (f.halt.until || 0) - S.time)) : 0;
+  j.legs.forEach((l, i) => {
+    if (l.done) return;
+    const vs = S.fleet.filter(f => f.jobId === j.id && f.legIdx === i);
+    const ts = vs.map(f => vType(f.type));
+    const cap = ts.reduce((a, x) => a + x.cap, 0) || l.qty, speed = ts.length ? Math.min(...ts.map(x => x.speed)) : 50;
+    const drive = (l.dist / speed) * 60, um = MODE_INFO[l.mode].umschlag;
+    let ready = S.time, busy = S.time;
+    vs.forEach(f => {
+      const sp = vType(f.type).speed, h = holdLeft(f);
+      if (f.phase === "repo" && f.routeDist) ready = Math.max(ready, S.time + h + (f.routeDist - f.pos) / sp * 60);
+      if (f.phase === "haul" && f.routeDist) busy = Math.max(busy, S.time + h + (f.routeDist - f.pos) / sp * 60 + um * 0.75);
+      if (f.phase === "load") busy = Math.max(busy, S.time + h + Math.max(0, f.timer) + drive + um * 0.75);
+      if (f.phase === "unload") busy = Math.max(busy, S.time + h + Math.max(0, f.timer));
+    });
+    const toLoad = l.qty - l.ld;
+    let end = Math.max(t, busy);
+    if (toLoad > 1e-6) {
+      const k = legTrips(cap, toLoad), start = Math.max(t, ready, l.ld > 0 ? busy - drive : 0);
+      end = Math.max(end, start + k * (um + drive + um * 0.75) + (k - 1) * drive);
+    }
+    t = end;
+  });
+  return t;
+}
+/* Fortschritt in Prozent: abgeladene Menge je Teilstrecke, gewichtet mit der Strecke */
+function d2dProgress(j) {
+  const tot = j.legs.reduce((a, l) => a + l.dist, 0) || 1;
+  let p = 0;
+  j.legs.forEach((l, i) => {
+    p += l.dist * l.dn / l.qty;
+    S.fleet.forEach(f => { if (f.jobId === j.id && f.legIdx === i && f.phase === "haul" && f.routeDist) p += l.dist * (f.load || 0) / l.qty * clamp(f.pos / f.routeDist, 0, 1); });
+  });
+  return clamp(p / tot * 100, 0, 100);
+}
 
 /* ------------------------------ Spielstand ------------------------------ */
 /* v102: Testmodus – index.html?test=100 startet einen eigenen Spielstand (Level 100, 1 Mio. €), der echte Stand bleibt unberührt */
@@ -400,7 +740,7 @@ function makeOrder() {
     weight = clamp(weight, cg.minKg, Math.min(cg.maxKg, rv.cap));
     if (weight < 1) continue;
 
-    const pool = unlockedNodes().filter(n => hasUsableMode(n, ck, weight));
+    const pool = unlockedNodes().filter(n => !n.via && hasUsableMode(n, ck, weight));   /* v313: Kanal-Durchfahrt ist kein Kundenort */
     if (pool.length < 2) continue;
     let a = pick(pool);
     if (anchor && pool.some(n => n.id === anchor)) a = N[anchor];
@@ -461,9 +801,16 @@ function pickShipper(ck, fromId, allowHome, weight, toId) {
 /* Die letzten Meter zur Tür: Frist und angezeigte Strecke wachsen mit.
    Gerechnet mit Radtempo in der Stadt, sonst Lieferwagen. */
 function withLastMile(o) {
+  d2dInit(o);                                   /* v313: Großmengen am eigenen Kai – vor der Rechnung */
   const km = lastMileKm(o);
   o.refDist = Math.round(o.refDist + km);
   o.deadline = Math.round(o.deadline + (km / (S.stage === 1 ? 15 : 40)) * 60 * 1.3);
+  /* v313: Vor-, Nach- und Umfuhr per Lkw kosten Zeit und Geld – beides steckt in Frist und Preis */
+  const x = d2dDoorExtra(o);
+  if (x.min > 0) {
+    o.deadline = Math.round(o.deadline + x.min);
+    if (o.pay != null) o.pay = Math.round(o.pay + x.eur * rnd(1.4, 1.8) * PAY_K);
+  }
   return o;
 }
 
@@ -603,14 +950,15 @@ function makeAirOrder() {
     const core = Math.max(fast.cost, tkm);
     const pay = Math.round((core + handling + BASE_FEE) * cg.rate * rnd(1.35, 1.7) * rnd(1.35, 1.65) * PAY_K);   /* v244 */
     const sh = pickShipper(ck, a.id, false, weight, b.id);
-    return {
+    /* v313: auch Luftfracht holt beim Absender ab und stellt beim Empfänger zu – Lkw-Anbindung in Frist und Preis */
+    return withLastMile({
       id: "A" + (S.seq++), from: a.id, to: b.id, cargo: ck, weight, pay, air: true, pk: PAY_K, cid: sh.cid, gi: sh.gi,
       deadline: Math.round(S.time + fast.time * rnd(1.25, 1.55) + 240),
       shipper: sh[0], desc: sh[1], created: S.time,
       refDist: Math.round(fast.dist), refTime: Math.round(fast.time),
       expire: Math.round(S.time + rnd(300, 900)),
       pick: makeAddr(a.id), drop: makeAddr(b.id)
-    };
+    });
   }
   return null;
 }
@@ -828,6 +1176,8 @@ function eligible(leg, order, excludeUids) {
     if (excludeUids && excludeUids.includes(v.uid)) return false;
     const t = vType(v.type);
     if (t.mode !== leg.mode) return false;
+    /* v313: Straße und Rad dürfen mehrmals fahren – höchstens D2D_TRIPS Fahrten allein */
+    if (isDoorMode(leg.mode)) return canCarry(t, order.cargo, 0, leg.maxHop) && t.cap * D2D_TRIPS >= order.weight;
     return canCarry(t, order.cargo, order.weight, leg.maxHop);
   });
 }
@@ -855,6 +1205,13 @@ function repoCost(veh, leg, order, i) {
   const e = repoPath(veh.at, leg.from, t.mode);
   if (!e || !e.length) return { t: Infinity, d: 0, ok: false, edges: [], pts: [] };
   const pts = pathPts([veh.at].concat(e.map(x => x.to)), O, T, t.mode);
+  /* v313: Flughafen außerhalb von Hafen/Stadt – nicht erst über den Knotenpunkt fliegen */
+  if (t.mode === "a" && pts.length > 2) {
+    const near = (p, id) => hav(p, nodePt(id)) < 0.01;
+    if (N[leg.from].type !== "air" && near(pts[pts.length - 2], leg.from)) pts.splice(pts.length - 2, 1);
+    if (N[veh.at].type !== "air" && pts.length > 2 && near(pts[1], veh.at)) pts.splice(1, 1);
+    pts.gm = pts.slice(1).map(() => "a");
+  }
   const d = pathLen(pts);
   return { t: (d / t.speed) * 60, d, ok: true, edges: e, pts };
 }
@@ -862,16 +1219,44 @@ function repoCost(veh, leg, order, i) {
 /* --------------------------- Dispositionsdialog ------------------------- */
 let planState = null;
 
+/* v313: Varianten als ganze Kette von Tür zu Tür (Vor-/Nachlauf, Umfuhr, Mehrfachfahrten),
+   bewertet mit Referenzfahrzeugen. Kandidaten: schnellste und günstigste Netzroute, dieselben
+   ohne Luftfracht und die reine Straße. Was teurer UND langsamer als eine andere ist, fällt weg –
+   so bleibt etwa Schiff + Flugzeug nur, wenn es wirklich Zeit gegenüber dem Schiff und Geld
+   gegenüber dem Flugzeug spart. Übrig bleiben höchstens Schnellste, Ausgewogen, Günstigste. */
 function buildVariants(o) {
-  const fast = plan(o.from, o.to, o.cargo, o.weight, "time");
-  const cheap = plan(o.from, o.to, o.cargo, o.weight, "cost");
-  const list = [];
-  if (fast) list.push({ label: "Schnellste Route", ...fast });
-  if (cheap) {
-    const sig = (p) => p.legs.map(l => l.mode + ">" + l.to).join("|");
-    if (!fast || sig(cheap) !== sig(fast)) list.push({ label: "Günstigste Route", ...cheap });
+  d2dInit(o);
+  const um = unlockedModes(), cands = [];
+  const add = p => {
+    if (!p) return;
+    const legs = chainLegs(o, p.legs), sig = legs.map(l => l.mode + ">" + l.to + ">" + (l.kind || "")).join("|");
+    if (cands.some(x => x.sig === sig)) return;
+    cands.push({ legs, time: p.time, cost: p.cost, dist: p.dist, sig, ref: chainRef(o, legs) });
+  };
+  add(plan(o.from, o.to, o.cargo, o.weight, "time"));
+  add(plan(o.from, o.to, o.cargo, o.weight, "cost"));
+  if (um.includes("a")) {
+    const na = um.replace("a", "");
+    add(plan(o.from, o.to, o.cargo, o.weight, "time", na));
+    add(plan(o.from, o.to, o.cargo, o.weight, "cost", na));
   }
-  return list;
+  const road = um.replace(/[^rb]/g, "");
+  if (road && road !== um) add(plan(o.from, o.to, o.cargo, o.weight, "cost", road));
+  let list = cands.filter(v => v.ref.ok);
+  if (!list.length) list = cands;
+  list = list.filter(v => !list.some(w => w !== v && w.ref.cost <= v.ref.cost && w.ref.time <= v.ref.time
+    && (w.ref.cost < v.ref.cost - 0.01 || w.ref.time < v.ref.time - 0.01)));
+  if (!list.length) return [];
+  const fast = list.reduce((a, b) => b.ref.time < a.ref.time ? b : a);
+  const cheap = list.reduce((a, b) => b.ref.cost < a.ref.cost ? b : a);
+  const out = [Object.assign({ label: "⚡ Schnellste", key: "fast" }, fast)];
+  const rest = list.filter(v => v !== fast && v !== cheap);
+  if (rest.length) {
+    const sc = v => v.ref.cost / Math.max(1, cheap.ref.cost) + v.ref.time / Math.max(1, fast.ref.time);
+    out.push(Object.assign({ label: "⚖️ Ausgewogen", key: "bal" }, rest.reduce((a, b) => sc(b) < sc(a) ? b : a)));
+  }
+  if (cheap !== fast) out.push(Object.assign({ label: "💶 Günstigste", key: "cheap" }, cheap));
+  return out;
 }
 
 /* ------------------------- Das passende Fahrzeug -------------------------
@@ -896,9 +1281,10 @@ function vehScore(f, leg, order, i, n, tBefore, tAfter) {
   const t = vType(f.type), rc = repoCost(f, leg, order, i);
   if (!rc.ok) return { s: Infinity, rc, t, util: 0 };
   const dist = order ? pathLen(legPts(leg, order, i, n)) : leg.dist;
-  const legT = (dist / t.speed) * 60 + rc.t;
+  const k = order && isDoorMode(leg.mode) ? legTrips(t.cap, order.weight) : 1;   /* v313: Mehrfachfahrten */
+  const legT = (2 * k - 1) * (dist / t.speed) * 60 + rc.t;
   const util = order ? Math.min(1, order.weight / t.cap) : 1;
-  const drive = (dist + rc.d) * costKmOf(t);
+  const drive = (dist * (2 * k - 1) + rc.d) * costKmOf(t);
   const block = (t.daily / 1440) * legT * (1 + 3 * (1 - util));
   const wait = rc.t * 0.03;
   let late = 0;
@@ -906,7 +1292,7 @@ function vehScore(f, leg, order, i, n, tBefore, tAfter) {
     const eta = S.time + (tBefore || 0) + legT + MODE_INFO[leg.mode].umschlag * 1.8 + (tAfter || 0);
     if (eta > order.deadline) late = 1000 + (eta - order.deadline) * 5;
   }
-  return { s: drive + block + wait + late, rc, t, util, legT };
+  return { s: drive + block + wait + late, rc, t, util, legT, trips: k };
 }
 function assignFor(variant, order) {
   const used = [], n = variant.legs.length;
@@ -931,11 +1317,12 @@ function assignFor(variant, order) {
 function planOptions(o, variants) {
   return variants.map((v, vi) => {
     const assign = assignFor(v, o);
-    if (!assign.every(Boolean)) return { vi, v, assign, ok: false };
-    const ev = evaluate(v, o, assign);
+    if (!assign.every(Boolean)) return { vi, v, assign, extra: v.legs.map(() => []), ok: false };
+    const extra = extraFor(v, o, assign);
+    const ev = evaluate(v, o, assign, extra);
     let repoKm = 0, repoEur = 0;
     ev.detail.forEach(d => { if (d.repo && d.repo.ok) { repoKm += d.repo.d; repoEur += d.repo.d * costKmOf(d.t); } });
-    return { vi, v, assign, ok: ev.ok, ev, repoKm, repoEur, profit: o.pay - ev.cost, late: S.time + ev.time > o.deadline };
+    return { vi, v, assign, extra, ok: ev.ok, ev, repoKm, repoEur, profit: o.pay - ev.cost, late: S.time + ev.time > o.deadline };
   });
 }
 /* Beste Variante: pünktlich vor verspätet, dann der höchste Deckungsbeitrag.
@@ -962,7 +1349,8 @@ function openPlanner(orderId, preferVi) {
   const opts = planOptions(o, variants);
   const best = preferVi != null && opts[preferVi] ? opts[preferVi] : bestOption(opts);
   const vi = best ? best.vi : 0;
-  planState = { order: o, variants, vi, assign: best ? best.assign.map(u => u || null) : assignFor(variants[0], o), showAll: {} };
+  const assign = best ? best.assign.map(u => u || null) : assignFor(variants[0], o);
+  planState = { order: o, variants, vi, assign, extra: best ? best.extra : extraFor(variants[vi], o, assign), showAll: {} };
   renderPlanner(true);
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   if (typeof tutSignal === "function") tutSignal("openPlanner", o);
@@ -994,22 +1382,43 @@ function closeModal() {
   if (typeof logiLvlQ !== "undefined" && logiLvlQ.length) setTimeout(logiLevelShow, 400);
 }
 
-function evaluate(variant, order, assign) {
+/* v313: Alle Fahrzeuge der Kette fahren gleich los (Anfahrt parallel), jede Teilstrecke beginnt,
+   sobald ihre Fahrzeuge da sind und die vorige fertig ist. Mehrere Fahrzeuge bzw. Fahrten je
+   Straßenabschnitt: Runden = Menge / Summe der Nutzlasten, dazwischen leer zurück.
+   d.start/d.end = Minuten ab jetzt; d.time = Dauer der Teilstrecke inkl. Anfahrt (wie bisher). */
+function evaluate(variant, order, assign, extra) {
+  if (!extra) extra = extraFor(variant, order, assign);
   let cost = 0, time = 0, ok = true;
-  const last = variant.legs.length - 1;
+  const n = variant.legs.length, qty = order ? order.weight : 0;
   const detail = variant.legs.map((leg, i) => {
     const mi = MODE_INFO[leg.mode];
     /* Von der Tür des Auftraggebers bis zur Tür des Empfängers */
-    const dist = order ? pathLen(legPts(leg, order, i, last + 1)) : leg.dist;
+    const dist = order ? pathLen(legPts(leg, order, i, n)) : leg.dist;
     const veh = S.fleet.find(f => f.uid === assign[i]);
-    if (!veh) { ok = false; return { leg, veh: null, repo: null, time: (dist / 50) * 60, cost: 0, dist }; }
+    if (!veh) {
+      ok = false;
+      const lt = (dist / 50) * 60;
+      const d = { leg, veh: null, vehs: [], repo: null, time: lt, cost: 0, dist, start: time, end: time + lt, rounds: 1, capSum: 0 };
+      time += lt; return d;
+    }
+    const vehs = [veh].concat((extra[i] || []).map(u => S.fleet.find(f => f.uid === u)).filter(Boolean));
     const t = vType(veh.type);
-    const repo = repoCost(veh, leg, order, i);
-    if (!repo.ok) { ok = false; }
-    const lt = (dist / t.speed) * 60 + (repo.ok ? repo.t : 0) + mi.umschlag * 1.8;
-    const lc = (dist + (repo.ok ? repo.d : 0)) * costKmOf(t);
-    cost += lc; time += lt;
-    return { leg, veh, repo, time: lt, cost: lc, t, dist };
+    const repos = vehs.map(f => repoCost(f, leg, order, i)), repo = repos[0];
+    if (repos.some(r => !r.ok)) ok = false;
+    const capSum = vehs.reduce((a, f) => a + vType(f.type).cap, 0);
+    const rounds = order && isDoorMode(leg.mode) ? legTrips(capSum, qty) : 1;
+    const slow = Math.min(...vehs.map(f => vType(f.type).speed));
+    const drive = (dist / slow) * 60;
+    const ready = Math.max(...repos.map(r => r.ok ? r.t : 0));
+    const start = Math.max(time, ready);
+    const lt = rounds * (drive + mi.umschlag * 1.8) + (rounds - 1) * drive;
+    let lc = 0;
+    vehs.forEach((f, k) => {
+      const tt = vType(f.type), my = rounds > 1 ? Math.min(rounds, legTrips(tt.cap, qty * tt.cap / capSum)) : 1;
+      lc += ((repos[k].ok ? repos[k].d : 0) + dist * (2 * my - 1)) * costKmOf(tt);
+    });
+    cost += lc; time = start + lt;
+    return { leg, veh, vehs, repo, repos, time: lt + (repo.ok ? repo.t : 0), cost: lc, t, dist, start, end: start + lt, rounds, capSum };
   });
   return { detail, cost, time, ok };
 }
@@ -1041,7 +1450,9 @@ function vehOptHTML(r, i, on) {
    nur gerade unterwegs ist? Der Knopf springt in den Markt, zeigt nur die
    passenden, und nach dem Kauf geht es zurück zum Auftrag.               */
 function fitTypes(leg, o) {
-  return VEHICLES.filter(t => !t.special && t.mode === leg.mode && canCarry(t, o.cargo, o.weight, leg.maxHop))
+  return VEHICLES.filter(t => !t.special && t.mode === leg.mode && (isDoorMode(leg.mode)
+      ? canCarry(t, o.cargo, 0, leg.maxHop) && t.cap * D2D_TRIPS >= o.weight     /* v313: Straße darf mehrmals fahren */
+      : canCarry(t, o.cargo, o.weight, leg.maxHop)))
     .sort((a, b) => a.price - b.price);
 }
 function missingHelpHTML(leg, o, i) {
@@ -1071,7 +1482,7 @@ function openShopFor(legIdx) {
     orderId: o.id, vi: ps.vi, ids, at: leg.from, addr: legIdx === 0 ? oPick(o) : null,
     label: `${mi.icon} ${mi.name} · ab ${kgf(o.weight)}${cg.req.length ? " · " + cg.req.map(flagName).join(" + ") : ""}`
       + `${leg.maxHop > 400 ? " · Reichweite " + kmf(leg.maxHop) : ""}`,
-    title: o.shipper, from: legIdx === 0 ? addrText(oPick(o), true) : N[leg.from].name
+    title: o.shipper, from: leg.fa || (legIdx === 0 ? addrText(oPick(o), true) : N[leg.from].name)
   };
   closeModal();
   showTab("market");
@@ -1089,6 +1500,7 @@ function backToOrder() {
    nicht auf. Damit das nicht wie ein Fehler aussieht, steht hier warum –
    etwa: Lastenräder kommen nicht bis zum Flughafen. */
 function modeNote(leg, o, ps) {
+  if (leg.pts) return "";            /* v313: Vor-/Nachlauf und Umfuhr sind immer Straße – kein Hinweis nötig */
   const other = S.fleet.filter(f => f.phase === "idle" && vType(f.type).mode !== leg.mode
     && canCarry(vType(f.type), o.cargo, o.weight, null));
   if (!other.length) return "";
@@ -1111,9 +1523,10 @@ function modeNote(leg, o, ps) {
 const PM_W = 360, PM_H = 180;
 function planMapHTML(ps, ev) {
   const v = ps.variants[ps.vi], o = ps.order;
-  const selUids = new Set(ps.assign.filter(Boolean));
+  const selUids = new Set(ps.assign.filter(Boolean).concat(...(ps.extra || [])));
   const vehs = [];
-  ev.detail.forEach((d, i) => { if (d.veh) vehs.push({ f: d.veh, sel: true, repo: d.repo }); });
+  /* v313: auch die weiteren Fahrzeuge eines Straßenabschnitts */
+  ev.detail.forEach(d => (d.vehs || []).forEach((f, k) => vehs.push({ f, sel: true, repo: d.repos ? d.repos[k] : d.repo })));
   /* Weitere freie Fahrzeuge, die eine Teilstrecke fahren könnten – nur die
      in der Nähe, sonst schrumpft der Ausschnitt auf Briefmarkengröße. */
   const pickA = oPick(o), dropA = oDrop(o), start = addrPt(pickA);
@@ -1130,7 +1543,10 @@ function planMapHTML(ps, ev) {
      Leerfahrten – und in Web-Mercator projizieren */
   const keys = [], raw = [];
   const add = (k, p) => { keys.push(k); raw.push(p); };
-  v.legs.forEach(l => l.nodes.forEach(id => add(id, nodePt(id))));
+  /* v313: die gezeichnete Linie je Teilstrecke (Vor-/Nachlauf, Umfuhr, Flughafen außerhalb) */
+  const nl = v.legs.length;
+  const LP = v.legs.map((l, i) => legPts(l, o, i, nl));
+  LP.forEach((pts, i) => pts.forEach((p, k) => add("@L" + i + "_" + k, p)));
   add("@pick", start); add("@drop", addrPt(dropA));
   vehs.forEach(x => {
     add("@v" + x.f.uid, vehPoint(x.f));
@@ -1164,14 +1580,8 @@ function planMapHTML(ps, ev) {
   const pl = pts => pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   let svg = "";
   /* Route – von Tür zu Tür */
-  const nl = v.legs.length;
   v.legs.forEach((l, i) => {
-    const city = id => N[id].type === "city";
-    const ids = l.nodes.slice(), a = i === 0, b = i === nl - 1;
-    if (a && city(ids[0]) && (ids.length > 1 || b)) ids.shift();
-    if (b && ids.length && city(ids[ids.length - 1]) && (ids.length > 1 || a)) ids.pop();
-    const ks = (a ? ["@pick"] : []).concat(ids, b ? ["@drop"] : []);
-    const pts = ks.map(P), c = MODE_INFO[l.mode].color;
+    const pts = LP[i].map((p, k) => P("@L" + i + "_" + k)), c = MODE_INFO[l.mode].color;
     svg += `<polyline points="${pl(pts)}" class="pm-out"/><polyline points="${pl(pts)}" class="pm-route" style="stroke:${c}"/>`;
   });
   /* Leerfahrten der gewählten Fahrzeuge */
@@ -1181,7 +1591,7 @@ function planMapHTML(ps, ev) {
     svg += `<polyline points="${pl(pts)}" class="pm-repo-out"/><polyline points="${pl(pts)}" class="pm-repo"/>`;
   });
   /* Umschlagpunkte zwischen zwei Teilstrecken */
-  v.legs.slice(1).forEach(l => { const p = P(l.from); svg += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="5" class="pm-hub"/>`; });
+  v.legs.forEach((l, i) => { if (!i) return; const p = P("@L" + i + "_0"); svg += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="5" class="pm-hub"/>`; });
 
   /* Abholung und Ziel */
   const f1 = n => n.toFixed(1);
@@ -1189,7 +1599,7 @@ function planMapHTML(ps, ev) {
   const pickP = P("@pick"), dropP = P("@drop");
   const marker = (p, glyph, fill) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="11" class="pm-node" style="fill:${fill}"/>
     <text x="${f1(p[0])}" y="${f1(p[1] + 4.5)}" class="pm-gl">${glyph}</text>`;
-  const anchors = [pickP, dropP].concat(v.legs.slice(1).map(l => P(l.from)));
+  const anchors = [pickP, dropP].concat(v.legs.slice(1).map((l, i) => P("@L" + (i + 1) + "_0")));
 
   /* Fahrzeuge – mehrere am selben Ort werden aufgefächert, eins am
      Abholort rückt neben die Kiste statt sie zu verdecken. Steht eins nur
@@ -1266,11 +1676,33 @@ function planMapHTML(ps, ev) {
     </div>`;
 }
 
+/* v313: Die ganze Kette auf einen Blick – Abholung → Vorlauf → Terminal → Hauptlauf → Terminal →
+   Nachlauf → Zustellung – und was vor der Annahme noch fehlt */
+const TERM_GLYPH = { s: "⚓", i: "⚓", l: "🚉", a: "🛫" };
+function chainHTML(v, o, ev) {
+  const L = v.legs, parts = [`<span class="ch-end">📦 Abholung</span>`];
+  L.forEach((l, i) => {
+    const mi = MODE_INFO[l.mode];
+    parts.push(`<span class="ch-leg" style="--c:${mi.color}">${mi.icon} ${esc(LEG_KIND[l.kind] || mi.name)}</span>`);
+    if (i < L.length - 1) {
+      const nx = L[i + 1], m = !isDoorMode(l.mode) ? l.mode : nx.mode;
+      parts.push(`<span class="ch-term">${TERM_GLYPH[m] || "📍"} ${esc(N[l.to].short)}</span>`);
+    }
+  });
+  parts.push(`<span class="ch-end">🏁 Zustellung</span>`);
+  const miss = ev.detail.map((d, i) => d.veh ? null : `${MODE_INFO[d.leg.mode].icon} ${MODE_VEH[d.leg.mode]} für ${LEG_KIND[d.leg.kind] || "Teilstrecke " + (i + 1)} (${N[d.leg.from].short})`).filter(Boolean);
+  const term = [o.pickT ? "Abholung am eigenen Kai bzw. Gleisanschluss des Absenders" : "", o.dropT ? "Übergabe am Kai bzw. Gleisanschluss des Empfängers" : ""].filter(Boolean);
+  return `<div class="chainline">${parts.join('<i class="ch-ar">›</i>')}</div>`
+    + (term.length ? `<div class="ch-note">🏗️ ${esc(term.join(" · "))} – so mit dem Kunden vereinbart.</div>` : "")
+    + (miss.length ? `<div class="warnbox ch-miss">🚫 Für die ganze Kette fehlt noch: ${miss.map(esc).join(" · ")}</div>` : "");
+}
+
 function renderPlanner(fit) {
   const ps = planState; if (!ps) return;
   const o = ps.order, cg = CARGO[o.cargo];
   const v = ps.variants[ps.vi];
-  const ev = evaluate(v, o, ps.assign);
+  if (!ps.extra) ps.extra = extraFor(v, o, ps.assign);
+  const ev = evaluate(v, o, ps.assign, ps.extra);
   const profit = o.pay - ev.cost;
   const eta = S.time + ev.time;
   const late = eta > o.deadline;
@@ -1278,9 +1710,11 @@ function renderPlanner(fit) {
   /* Unter 500 m ist das nur die Anfahrt um die Ecke, keine Leerfahrt */
   ev.detail.forEach(d => { if (d.veh && d.repo && d.repo.ok && d.repo.d >= 0.5) repoEur += d.repo.d * costKmOf(d.t); });
 
+  /* v313: Fahrzeuge anderer Teilstrecken (Haupt- und Zusatzfahrzeuge) sind belegt */
+  const usedBy = i => ps.assign.filter((u, k) => k !== i && u).concat(...ps.extra.filter((x, k) => k !== i));
   const legHtml = ev.detail.map((d, i) => {
     const mi = MODE_INFO[d.leg.mode];
-    const list = eligible(d.leg, o, ps.assign.filter((u, k) => k !== i && u));
+    const list = eligible(d.leg, o, usedBy(i).concat(ps.extra[i] || []));
     const all = d.veh && !list.some(x => x.uid === d.veh.uid) ? [d.veh, ...list] : list;
     /* Beste Wahl zuerst – dieselbe Rechnung wie bei der automatischen Zuteilung */
     let tB = 0;
@@ -1296,18 +1730,28 @@ function renderPlanner(fit) {
     const more = rows.length - shown.length;
     const via = d.leg.nodes.length > 2
       ? `<div class="via">über ${d.leg.nodes.slice(1, -1).map(n => esc(N[n].short)).join(" · ")}</div>` : "";
+    /* v313: Menge, Kapazität, Fahrten, weitere Fahrzeuge, Zeiten und Kosten je Teilstrecke */
+    const door = isDoorMode(d.leg.mode);
+    const xs = (ps.extra[i] || []).map(u => S.fleet.find(f => f.uid === u)).filter(Boolean);
+    const addable = door && d.veh && xs.length < D2D_MAXVEH - 1 && d.capSum < o.weight
+      ? list.filter(f => f.uid !== ps.assign[i]).map(f => ({ f, rc: repoCost(f, d.leg, o, i) })).filter(x => x.rc.ok).sort((a, b) => a.rc.t - b.rc.t).map(x => x.f) : [];
+    const qtyLine = d.veh ? `<div class="leg-qty">⚖️ ${kgf(o.weight)} · ${d.vehs.length > 1 ? d.vehs.length + " Fahrzeuge, zusammen " : "Nutzlast "}${kgf(d.capSum)}`
+      + ` · <b class="${d.rounds > 1 ? "warn" : ""}">${d.rounds > 1 ? d.rounds + " Runden (" + (d.vehs.length > 1 ? "je Fahrzeug, " : "") + "leer zurück)" : "1 Fahrt"}</b></div>` : "";
+    const xsLine = door && d.veh && (xs.length || addable.length) ? `<div class="leg-xs">${xs.map(f => `<button class="xs-chip" data-xsdel="${i}" data-uid="${f.uid}" title="Wieder herausnehmen">${vType(f.type).icon} ${esc(vType(f.type).brand)} · ${esc(N[f.at].short)} ✕</button>`).join("")}`
+      + `${addable.length ? `<button class="xs-add" data-xsadd="${i}">＋ weiteres Fahrzeug (${esc(vType(addable[0].type).brand)}, ${esc(N[addable[0].at].short)})</button>` : ""}</div>` : "";
+    const when = d.veh && ev.ok ? `<div class="leg-when">🕒 ${stamp(S.time + d.start)} – ${stamp(S.time + d.end)} · 💶 ${money(d.cost)}</div>` : "";
     return `<div class="leg">
-      <div class="leg-head"><span class="mode-chip" style="--c:${mi.color}">${mi.icon} ${mi.name}</span>
+      <div class="leg-head"><span class="leg-kind">${esc(LEG_KIND[d.leg.kind] || "")}</span><span class="mode-chip" style="--c:${mi.color}">${mi.icon} ${mi.name}</span>
         <span class="leg-dist">${kmf(d.dist || d.leg.dist)}</span></div>
-      <div class="leg-route">${esc(i === 0 ? addrText(oPick(o), true) : N[d.leg.from].name)} <b>→</b> ${esc(i === ev.detail.length - 1 ? addrText(oDrop(o), true) : N[d.leg.to].name)}</div>
-      ${via}
+      <div class="leg-route">${esc(d.leg.fa || (i === 0 ? addrText(oPick(o), true) : N[d.leg.from].name))} <b>→</b> ${esc(d.leg.fb || (i === ev.detail.length - 1 ? addrText(oDrop(o), true) : N[d.leg.to].name))}</div>
+      ${via}${qtyLine}${xsLine}${when}
       ${rows.length
         ? `<div class="vpick" data-leg="${i}">
              <div class="vp-h">Fahrzeug wählen <small>· passendstes zuerst</small></div>
              ${shown.map(r => vehOptHTML(r, i, r.f.uid === ps.assign[i])).join("")}
              ${more > 0 ? `<button class="vmore" data-more="${i}">+ ${more} weitere${more === 1 ? "s" : ""} Fahrzeug${more === 1 ? "" : "e"} zeigen</button>` : ""}
            </div>`
-        : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, mind. ${kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
+        : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, ${door ? "ab " + kgf(o.weight / D2D_TRIPS) + " Nutzlast (mehrere Fahrten)" : "mind. " + kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
       ${modeNote(d.leg, o, ps)}
       ${typeof legEventNote === "function" ? legEventNote(d.leg) : ""}
       ${rows.length ? "" : missingHelpHTML(d.leg, o, i)}
@@ -1330,6 +1774,7 @@ function renderPlanner(fit) {
     ${planMapHTML(ps, ev)}
     ${ps.variants.length > 1 ? `<div class="vswitch">${ps.variants.map((x, i) =>
       `<button class="${i === ps.vi ? "on" : ""}" data-variant="${i}">${x.label}</button>`).join("")}</div>` : ""}
+    ${chainHTML(v, o, ev)}
     <div class="legs">${legHtml}</div>
     ${typeof negoHTML === "function" ? negoHTML(o, ev.ok ? ev.cost : null) : ""}
     <div class="sum">
@@ -1352,11 +1797,25 @@ function renderPlanner(fit) {
   $$("#modalBody [data-variant]").forEach(b => b.onclick = () => {
     ps.vi = +b.dataset.variant;
     ps.assign = assignFor(ps.variants[ps.vi], o);
+    ps.extra = extraFor(ps.variants[ps.vi], o, ps.assign);
     ps.showAll = {};
     renderPlanner(true);
   });
   $$("#modalBody .vopt").forEach(b => b.onclick = () => {
-    ps.assign[+b.dataset.leg] = b.dataset.uid; renderPlanner(false);
+    ps.assign[+b.dataset.leg] = b.dataset.uid;
+    ps.extra = extraFor(v, o, ps.assign);            /* v313: Zusatzfahrzeuge passend zur neuen Wahl */
+    renderPlanner(false);
+  });
+  /* v313: weitere Fahrzeuge für einen Straßenabschnitt dazu oder wieder heraus */
+  $$("#modalBody [data-xsadd]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.xsadd, leg = v.legs[i];
+    const used = ps.assign.filter(Boolean).concat(...ps.extra);
+    const c = eligible(leg, o, used).map(f => ({ f, rc: repoCost(f, leg, o, i) })).filter(x => x.rc.ok).sort((a, b) => a.rc.t - b.rc.t)[0];
+    if (c) { ps.extra[i] = (ps.extra[i] || []).concat(c.f.uid); renderPlanner(false); }
+  });
+  $$("#modalBody [data-xsdel]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.xsdel;
+    ps.extra[i] = (ps.extra[i] || []).filter(u => u !== b.dataset.uid); renderPlanner(false);
   });
   $$("#modalBody [data-shop]").forEach(b => b.onclick = () => openShopFor(+b.dataset.shop));
   $$("#modalBody [data-more]").forEach(b => b.onclick = () => {
@@ -1382,7 +1841,7 @@ function acceptOrder(vi) {
   const o = ps.order, v = ps.variants[vi];
   if (o.farm && typeof farmOrderReady === "function" && !farmOrderReady(o))
     return toast("🧺 Es fehlt noch Ware: " + farmMissing(o.farm.items).map(m => fqty(m.id, m.need)).join(", "), "warn");
-  startJob(o, v, ps.assign);
+  startJob(o, v, ps.assign, ps.vi === vi ? ps.extra : undefined);
   /* Erst Lina Bescheid geben, dann schließen – sonst hielte sie das
      Schließen für ein Abbrechen und schickte einen zurück zur Liste. */
   const tut = tutorialRunning();
@@ -1419,23 +1878,35 @@ function cancelJob(id) {
   save(); render();
 }
 
-function startJob(o, variant, assign) {
+/* v313: Kette von Tür zu Tür (job.v = D2D_V) – alle Fahrzeuge starten sofort Richtung Ladepunkt,
+   die Ware fließt Teilstrecke für Teilstrecke (d2dTick). extra = weitere Fahrzeuge je Teilstrecke. */
+function startJob(o, variant, assign, extra) {
+  if (!extra) extra = extraFor(variant, o, assign);
   const job = {
-    id: "J" + (S.seq++), order: o, curLeg: 0, started: S.time, cost: 0,
-    legs: variant.legs.map((leg, i, all) => ({
-      mode: leg.mode, nodes: leg.nodes.slice(), dist: leg.dist, maxHop: leg.maxHop,
-      from: leg.from, to: leg.to, veh: assign[i], done: false,
-      a: i === 0 ? addrPt(oPick(o)) : null, b: i === all.length - 1 ? addrPt(oDrop(o)) : null
-    }))
+    id: "J" + (S.seq++), order: o, curLeg: 0, started: S.time, cost: 0, v: D2D_V,
+    legs: variant.legs.map((leg, i, all) => {
+      const L = {
+        mode: leg.mode, nodes: leg.nodes.slice(), dist: leg.dist, maxHop: leg.maxHop,
+        from: leg.from, to: leg.to, veh: assign[i], vehs: [assign[i]].concat(extra[i] || []), done: false,
+        kind: leg.kind || (all.length === 1 ? "direkt" : "strasse"), qty: o.weight, ld: 0, dn: 0,
+        fa: leg.fa || (i === 0 ? addrText(oPick(o), true) : N[leg.from].name),
+        fb: leg.fb || (i === all.length - 1 ? addrText(oDrop(o), true) : N[leg.to].name),
+        a: i === 0 ? addrPt(oPick(o)) : null, b: i === all.length - 1 ? addrPt(oDrop(o)) : null
+      };
+      if (leg.pts) L.pts = leg.pts.map(p => p.slice());
+      if (leg.ta) L.ta = leg.ta.slice();
+      if (leg.tb) L.tb = leg.tb.slice();
+      return L;
+    })
   };
-  job.legs.forEach(l => { const f = S.fleet.find(x => x.uid === l.veh); if (f) f.phase = "reserved"; });
+  job.legs.forEach(l => l.vehs.forEach(u => { const f = S.fleet.find(x => x.uid === u); if (f) f.phase = "reserved"; }));
   if (o.snus && typeof snusTake === "function") snusTake(o);
   if (o.pablo && typeof pabloTake === "function") pabloTake(o);
   if (o.farm && typeof farmTakeOrder === "function") farmTakeOrder(o);
   S.jobs.push(job);
   S.orders = S.orders.filter(x => x.id !== o.id);
   if (typeof onJobStart === "function") onJobStart(job);
-  beginLeg(job, 0);
+  job.legs.forEach((l, i) => l.vehs.slice().forEach(u => d2dGo(job, i, u)));
 }
 
 /* ------------------------------ Disposition -------------------------------
@@ -1451,7 +1922,12 @@ function startJob(o, variant, assign) {
 /* v163: Kosten eines Auftrags inkl. anteiliger Tagesfixkosten der eingesetzten Fahrzeuge (Dauer der Fahrt / 24 h) */
 function evalFullCost(ev) {
   let fixed = 0;
-  (ev.detail || []).forEach(d => { if (d.t && d.t.daily) fixed += d.t.daily * (isFinite(d.time) ? d.time : 0) / 1440; });
+  /* v313: alle Fahrzeuge einer Teilstrecke, gebunden von der Annahme bis zum Ende ihrer Teilstrecke */
+  (ev.detail || []).forEach(d => {
+    const ts = d.vehs && d.vehs.length ? d.vehs.map(f => vType(f.type)) : d.t ? [d.t] : [];
+    const m = d.end != null ? d.end : d.time;
+    ts.forEach(t => { if (t.daily) fixed += t.daily * (isFinite(m) ? m : 0) / 1440; });
+  });
   return ev.cost + fixed;
 }
 function dispatchRun(opt) {
@@ -1527,8 +2003,21 @@ function roadLine(pts) { return typeof geoLine === "function" ? geoLine(pts) : t
 function legDisp(leg) { return roadLine(legCoords(leg)); }
 function legCoords(leg) {
   /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
-  if (!leg._c || (leg.mode && leg._c.length > 1 && !leg._c.gm)) leg._c = unwrapLons(pathPts(leg.nodes, leg.a, leg.b, leg.mode));
+  if (!leg._c || (leg.mode && leg._c.length > 1 && !leg._c.gm)) leg._c = unwrapLons(legLine(leg, leg.a, leg.b));
   return leg._c;
+}
+/* v313: Linie einer Teilstrecke – feste Straßenlinie (pts, Vor-/Nachlauf, Umfuhr) oder Netzlinie,
+   deren Anfang/Ende am Terminal (ta/tb, etwa Flughafen außerhalb) liegt */
+function legLine(leg, a, b) {
+  if (leg.pts) {
+    const p = leg.pts.map(x => x.slice());
+    p.gm = p.slice(1).map(() => leg.mode === "b" ? "b" : "r");
+    return p;
+  }
+  const p = pathPts(leg.nodes, a, b, leg.mode);
+  if (leg.ta && p.length) p[0] = leg.ta.slice();
+  if (leg.tb && p.length) p[p.length - 1] = leg.tb.slice();
+  return p;
 }
 /* Linie über die Netzknoten, beginnend/endend an einer Adresse. Stadtteile
    sind nur Knoten im Netz: von der Tür geht es direkt zum nächsten echten
@@ -1551,7 +2040,7 @@ function pathPts(nodes, a, b, mode) {
 }
 /* Gefahrene Linie einer Teilstrecke im Planer – dieselbe wie später auf der Karte */
 function legPts(leg, order, i, n) {
-  return pathPts(leg.nodes, order && i === 0 ? addrPt(oPick(order)) : null, order && i === n - 1 ? addrPt(oDrop(order)) : null, leg.mode);
+  return legLine(leg, order && i === 0 ? addrPt(oPick(order)) : null, order && i === n - 1 ? addrPt(oDrop(order)) : null);
 }
 
 /* ------------------------------- Adressen --------------------------------
@@ -1567,7 +2056,11 @@ function ensureAddr(o) {
 }
 function oPick(o) { return ensureAddr(o).pick; }
 function oDrop(o) { return ensureAddr(o).drop; }
-function legStartPt(leg, order, i) { return i === 0 && order ? addrPt(oPick(order)) : nodePt(leg.from); }
+function legStartPt(leg, order, i) {
+  if (leg.pts) return leg.pts[0];                     /* v313: Vor-/Nachlauf, Umfuhr */
+  if (leg.ta) return leg.ta;                          /* v313: Flughafen außerhalb */
+  return i === 0 && order ? addrPt(oPick(order)) : nodePt(leg.from);
+}
 function lastMileKm(o) { return hav(addrPt(oPick(o)), nodePt(o.from)) + hav(nodePt(o.to), addrPt(oDrop(o))); }
 const normLon = lon => ((lon + 540) % 360) - 180;
 function setSpot(v, p, addr) {
@@ -1578,6 +2071,13 @@ function setSpot(v, p, addr) {
    Stadtteils – gibt es dort schon einen, stellen sie sich dazu. */
 function vehSpot(v) {
   if (!v.spot || v.spotAt !== v.at) {
+    /* v313: Flugzeuge stehen am Flughafen – auch an Knoten, deren Flughafen außerhalb liegt */
+    const t = vType(v.type);
+    if (t && t.mode === "a" && N[v.at] && N[v.at].type !== "air") {
+      const p = termPt(v.at, "a");
+      v.spot = { lat: p[0], lon: p[1], t: "Vorfeld, " + termName(v.at, "a"), a: N[v.at].short }; v.spotAt = v.at;
+      return v.spot;
+    }
     const mate = S.fleet.find(f => f !== v && f.spot && f.spotAt === v.at && /^Stellplatz/.test(f.spot.t));
     const a = mate ? Object.assign({}, mate.spot) : ((typeof makeAddr === "function" && makeAddr(v.at, "yard")) || nodeAddr(v.at));
     v.spot = { lat: a.lat, lon: a.lon, t: a.t, a: a.a }; v.spotAt = v.at;
@@ -1589,7 +2089,12 @@ function routeGm(v) {
   const r = v.route; if (!r || r.gm || r.length < 2) return;
   let mode, aDoor, bDoor;
   if (v.phase === "repo") { const t = vType(v.type); mode = t && t.mode; aDoor = bDoor = true; }
-  else { const job = S.jobs.find(j => j.id === v.jobId), leg = job && job.legs[v.legIdx]; if (!leg) return; mode = leg.mode; aDoor = !!leg.a; bDoor = !!leg.b; }
+  else {
+    const job = S.jobs.find(j => j.id === v.jobId), leg = job && job.legs[v.legIdx]; if (!leg) return;
+    const c = legCoords(leg);                         /* v313: dieselbe Fahrart wie die Linie der Teilstrecke */
+    if (c.gm && c.gm.length === r.length - 1) { r.gm = c.gm.slice(); return; }
+    mode = leg.mode; aDoor = !!leg.a; bDoor = !!leg.b;
+  }
   if (!mode) return;
   const door = mode === "b" ? "b" : "r";
   r.gm = r.slice(1).map((p, i) => (aDoor && i === 0) || (bDoor && i === r.length - 2) ? door : mode);
@@ -1657,13 +2162,13 @@ function parkHere(f) {
 }
 function failJob(job, reason) {
   if (typeof onFailed === "function") onFailed(job, reason);
-  job.legs.forEach(l => {
-    const f = S.fleet.find(x => x.uid === l.veh);
+  job.legs.forEach(l => (l.vehs || [l.veh]).forEach(u => {      /* v313: alle Fahrzeuge der Teilstrecke */
+    const f = S.fleet.find(x => x.uid === u);
     if (f && f.jobId === job.id || (f && f.phase === "reserved")) {
       parkHere(f);
-      f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; delete f.halt;
+      f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; f.load = 0; delete f.halt;
     }
-  });
+  }));
   /* Hofbestellung: Ware zurück in Silo und Scheune, keine Strafe */
   if (job.order.farm) {
     if (typeof farmGiveBack === "function") farmGiveBack(job.order);
@@ -1698,7 +2203,18 @@ function finishLeg(job, veh) {
   if (typeof officeCreditDrive === "function") officeCreditDrive(veh);      /* v257: Monatsauswertung Fahrpersonal */
   job.curLeg++;
   if (job.curLeg < job.legs.length) { beginLeg(job, job.curLeg); return; }
-
+  finishJob(job);
+}
+/* v313: Abschluss erst nach Zustellung und Entladen der ganzen Menge – Geld, EP und
+   Kundenwirkung genau einmal (job.fin). Noch gebundene Fahrzeuge bleiben stehen, wo sie sind. */
+function finishJob(job) {
+  if (job.fin) return;
+  job.fin = 1;
+  S.fleet.forEach(f => {
+    if (f.jobId !== job.id) return;
+    parkHere(f);
+    f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; f.load = 0;
+  });
   const o = job.order;
   /* Übergabe an verdeckte Ermittler: statt Geld gibt es Handschellen */
   if (o.snus && o.snus.cop && typeof snusBust === "function") {
@@ -1846,6 +2362,7 @@ function tick(dtMin) {
     const leg = job.legs[veh.legIdx];
     if (!leg) continue;
     const t = vType(veh.type);
+    if (job.v === D2D_V) { d2dTick(veh, job, leg, t, dtMin); continue; }   /* v313: Kette von Tür zu Tür */
 
     if (veh.phase === "load" || veh.phase === "unload") {
       if (typeof hubHold === "function" && hubHold(veh, leg)) continue;   /* Sturm, Streik am Umschlagplatz */
@@ -1931,6 +2448,9 @@ function mapRedraw() { if (map) map.redraw(); }
 function vehPos(v) { return vehPoint(v); }
 function setFollow(uid) {
   S.follow = uid || null;
+  /* v313: Ortskarte eines Knotens schließen, wenn die Karte einem Fahrzeug folgt – sonst bliebe
+     z. B. „Suezkanal / Port Said“ stehen, während die Karte längst bei Casablanca ist */
+  if (uid && selected && selected.kind === "node") { selected = null; renderInspector(); }
   if (uid) {
     const v = S.fleet.find(f => f.uid === uid);
     if (v) {
@@ -2183,7 +2703,8 @@ function drawWorld(m, ctx) {
   S.jobs.forEach(job => {
     job.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
-      const active = !l.done && i === job.curLeg;
+      /* v313: in einer Kette können mehrere Teilstrecken gleichzeitig laufen (Teilmengen) */
+      const active = !l.done && (job.v === D2D_V ? l.ld > 0 || (i > 0 && d2dStock(job, i) > 1e-6) : i === job.curLeg);
       m.line(legDisp(l), {
         color: mi.color, width: l.done ? 3 : (active ? 5.5 : 4),
         alpha: l.done ? 0.3 : (active ? 1 : 0.6),
@@ -2253,6 +2774,14 @@ function drawWorld(m, ctx) {
       }
     });
   });
+
+  /* v313: Ortskarte veraltet nicht – liegt der gewählte Knoten nicht mehr im Bild, schließt sie */
+  if (selected && selected.kind === "node" && N[selected.id]) {
+    const sn = N[selected.id], sp = m.screenPos(sn.lat, sn.lon);
+    if (sp[0] < -40 || sp[1] < -40 || sp[0] > m.width + 40 || sp[1] > m.height + 40) setTimeout(() => {
+      if (selected && selected.kind === "node" && selected.id === sn.id) { selected = null; renderInspector(); }
+    }, 0);
+  }
 
   // 5. Büros und Stecknadeln der Aufträge
   if (typeof drawEvents === "function") drawEvents(m);
@@ -2327,6 +2856,10 @@ function snusPinImg() {
 const PIN_COL = { yellow: "#ffc12e", orange: "#ff8a3d", gray: "#a3aebb", white: "#ffffff" };
 let pinHits = [];
 function jobPicked(j) {
+  if (j.v === D2D_V) {                     /* v313: abgeholt, sobald die erste Teilmenge unterwegs ist */
+    const l = j.legs[0];
+    return l.dn > 0 || S.fleet.some(f => f.jobId === j.id && f.legIdx === 0 && (f.phase === "haul" || f.phase === "unload"));
+  }
   if (j.curLeg > 0 || j.legs[0].done) return true;
   const v = S.fleet.find(f => f.uid === j.legs[0].veh);
   return !!(v && v.jobId === j.id && v.legIdx === 0 && (v.phase === "haul" || v.phase === "unload"));
@@ -2587,11 +3120,12 @@ function renderInspector() {
     const j = S.jobs.find(x => x.id === selected.id);
     if (!j) { selected = null; return renderInspector(); }
     const o = j.order, cur = j.legs[j.curLeg];
-    const veh = cur ? S.fleet.find(f => f.uid === cur.veh) : null;
+    const veh = j.v === D2D_V ? d2dFocusVeh(j) : cur ? S.fleet.find(f => f.uid === cur.veh) : null;   /* v313 */
     const picked = jobPicked(j);
     el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
       <div class="ins-title">${o.snus && typeof snusLogo === "function" ? snusLogo(18) : CARGO[o.cargo].icon} ${esc(o.shipper)} <span class="ins-pin orange">in Arbeit</span></div>
       <div class="ins-addr"><span class="${picked ? "done" : ""}">📍 ${esc(addrText(oPick(o), true))}</span><span>🏁 ${esc(addrText(oDrop(o), true))}</span></div>
+      ${j.v === D2D_V ? `<div class="ins-row"><b>${esc(d2dStatus(j))}</b></div><div class="ins-row small">${esc(d2dWhere(j))}</div>` : ""}
       <div class="ins-row">${veh ? vType(veh.type).icon + " " + esc(phaseLabel(veh)) : "wartet auf Vorlauf"}</div>
       <div class="ins-row small">⚖️ ${kgf(o.weight)} · 💶 ${money(o.pay)} · ⏳ ${S.time > o.deadline ? "überfällig" : dur(o.deadline - S.time)}</div>
       <div class="ins-btns">
@@ -2840,9 +3374,20 @@ function phaseLabel(v) {
   switch (v.phase) {
     case "idle": return "bereit · " + vehSpot(v).t + ", " + N[v.at].short;
     case "reserved": return "disponiert, wartet auf Vorlauf";
-    case "repo": return leg && leg.from === v.at ? "fährt zur Abholung" : "Leerfahrt nach " + (leg ? N[leg.from].short : "?");
-    case "load": return "wird beladen";
-    case "haul": return "unterwegs nach " + (leg ? N[leg.to].short : "?");
+    /* v313: Kette von Tür zu Tür – Teilstrecke und Ziel beim Namen */
+    case "wait": {
+      if (!job || !leg) return "wartet";
+      const i = job.legs.indexOf(leg), take = Math.min(vType(v.type).cap, leg.qty - leg.ld);
+      return d2dStock(job, i) + 1e-6 < take ? "wartet " + (i === 0 ? "beim Absender" : "in " + N[leg.from].short) + " auf Ware (" + LEG_KIND[leg.kind] + ")"
+        : "wartet auf Beladung (" + LEG_KIND[leg.kind] + ")";
+    }
+    case "repo":
+      if (job && job.v === D2D_V && leg && leg.ld > 0 && v.at === leg.to) return "fährt leer zurück für die nächste Teilmenge";
+      return leg && leg.from === v.at ? "fährt zur Abholung" : "Leerfahrt nach " + (leg ? (leg.fa && job.v === D2D_V ? leg.fa : N[leg.from].short) : "?");
+    case "load": return "wird beladen" + (v.load ? " · " + kgf(v.load) : "");
+    case "haul":
+      if (job && job.v === D2D_V && leg) return (LEG_KIND[leg.kind] || "unterwegs") + " nach " + leg.fb + (v.load ? " · " + kgf(v.load) : "");
+      return "unterwegs nach " + (leg ? N[leg.to].short : "?");
     case "unload": return "wird entladen";
     default: return v.phase;
   }
@@ -3215,13 +3760,19 @@ function renderJobs() {
   }
   el.innerHTML = shown.map(j => {
     const o = j.order, cg = CARGO[o.cargo];
+    const d2d = j.v === D2D_V;                       /* v313: Kette mit Mengenfluss */
     const doneDist = j.legs.filter(l => l.done).reduce((a, l) => a + l.dist, 0);
     const cur = j.legs[j.curLeg];
-    const veh = cur ? S.fleet.find(f => f.uid === cur.veh) : null;
+    const veh = d2d ? d2dFocusVeh(j) : cur ? S.fleet.find(f => f.uid === cur.veh) : null;
     const curProg = veh && veh.phase === "haul" && veh.routeDist ? veh.pos : 0;
     const total = j.legs.reduce((a, l) => a + l.dist, 0);
-    const prog = clamp(((doneDist + curProg) / total) * 100, 0, 100);
+    const prog = d2d ? d2dProgress(j) : clamp(((doneDist + curProg) / total) * 100, 0, 100);
     const late = S.time > o.deadline;
+    const legState = (l, i) => {
+      if (l.done) return "done";
+      if (!d2d) return i === j.curLeg ? "now" : "wait";
+      return l.ld > 0 || S.fleet.some(f => f.jobId === j.id && f.legIdx === i && f.phase !== "repo" && f.phase !== "wait") ? "now" : "wait";
+    };
     return `<div class="card job${flashOn(j.id) ? " flash" : ""}${o.vip ? " vipjob" : ""}${o.snus || o.pablo ? " greyjob" : ""}" data-job="${j.id}">
       ${o.vip ? `<div class="vip-ribbon">✉️ Sonderfahrt · ${esc(o.shipper)}</div>` : ""}
       <div class="card-top">
@@ -3233,10 +3784,12 @@ function renderJobs() {
         <span>⚖️ ${kgf(o.weight)}</span><span>⏳ ${late ? "überfällig" : dur(o.deadline - S.time)}</span></div>
       <div class="chain">${j.legs.map((l, i) => {
         const mi = MODE_INFO[l.mode];
-        const st = l.done ? "done" : (i === j.curLeg ? "now" : "wait");
-        return `<span class="chip-leg ${st}" style="--c:${mi.color}">${mi.icon}</span>`;
+        const st = legState(l, i);
+        return `<span class="chip-leg ${st}" style="--c:${mi.color}" title="${esc((LEG_KIND[l.kind] || mi.name) + (l.fa ? ": " + l.fa + " → " + l.fb : ""))}">${mi.icon}${d2d ? `<small>${esc(LEG_KIND[l.kind] || "")}</small>` : ""}</span>`;
       }).join('<i class="arrow">›</i>')}</div>
       <div class="bar"><i style="width:${prog}%"></i></div>
+      ${d2d ? (() => { const eta = d2dEta(j); return `<div class="d2d-st"><b>${esc(d2dStatus(j))}</b><small>${esc(d2dWhere(j))}</small>`
+        + `<small class="${eta > o.deadline ? "bad" : ""}">🔮 Prognose Zustellung ${stamp(eta)}${eta > o.deadline ? " · nach der Frist" : ""}</small></div>`; })() : ""}
       <div class="meta small"><span>${veh ? esc(phaseLabel(veh)) : "wartet"}</span><span>${Math.round(prog)} %</span></div>
       ${typeof customsJobHTML === "function" ? customsJobHTML(j) : ""}
       <div class="buyrow">

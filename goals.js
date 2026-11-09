@@ -15,6 +15,8 @@ function activeContracts() { return contracts().filter(c => !c.over); }
 function fleetCanDo(o) {
   return buildVariants(o).some(v => v.legs.every(l => S.fleet.some(f => {
     const t = vType(f.type);
+    /* v313: Straße und Rad dürfen mehrmals fahren (wie eligible in game.js) */
+    if (t.mode === l.mode && typeof isDoorMode === "function" && isDoorMode(l.mode)) return canCarry(t, o.cargo, 0, l.maxHop) && t.cap * D2D_TRIPS >= o.weight;
     return t.mode === l.mode && canCarry(t, o.cargo, o.weight, l.maxHop);
   })));
 }
