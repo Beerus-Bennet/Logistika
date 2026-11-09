@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v319 – Übernahme-Zeitung: Kaufpreis groß, sichtbare Beute, klare Zahlen
+**Meldung Bennet:** Die Übernahme-Zeitung sieht unübersichtlich und unspektakulär aus; die 24,86 Mio. € „investiert“ erschließen sich nicht.
+
+**Ursachen (`corp.js`, `style.css`):**
+- **Die 24,86 Mio. €** waren die Summe der Kaufpreise aller bisherigen Übernahmen (hier 7) plus der neuen. Im Text stand nur „investiert“, direkt unter einer Schlagzeile mit 14,41 Mio. €. Es stand nirgends, dass es die Summe ist.
+- **Leere Lücke unter dem Papier:** Die Beute-Chips (Fahrzeuge, Marktanteil, Leute, Stammkunden, Ruf) starten unsichtbar und werden nur durch ihre Animation eingeblendet. Die ruhige Fassung v282 setzte `animation:none`, deshalb blieben sie dauerhaft unsichtbar.
+- Goldregen und Strahlen waren für den Sieg abgeschaltet.
+
+**Lösung:**
+- Der **Kaufpreis dieser Übernahme** steht als große goldene Plakette unter dem Papier.
+- Die **Beute-Chips** sind sichtbar und poppen nacheinander auf, in zwei Spalten.
+- Die Gruppenkarte zeigt drei Zahlen (Übernahmen, Fahrzeuge, Kaufpreise gesamt) und rechnet vor, woraus die Summe besteht: „9,00 Mio. € für die früheren Übernahmen + 14,41 Mio. € für Blitzfracht“. Bei der ersten Übernahme steht dort ein kurzer Satz statt der Rechnung.
+- Strahlen im Hintergrund und Goldregen sind wieder an, ohne Ton (die Entscheidung von v282 bleibt). Mit „weniger Bewegung“ gibt es keine Animationen. Der Knopf ist schon nach 0,6 s da.
+
+**Geprüft (Testbrowser, 390 × 844 und 360 × 640):** Alle sechs Beute-Chips sichtbar, Kaufpreis und Gruppenzahlen stimmen mit den gespeicherten Preisen überein (Test mit 5 Übernahmen: 23,41 Mio. € = 9,00 + 14,41), kein seitliches Überlaufen, keine Fehler in der Konsole. Bildschirmfoto gesichtet. **Nicht geprüft:** am Handy; Aussehen mit echtem Vereins-Logo. Die Zahlen selbst (Kaufpreis, Rechenweg) habe ich nicht verändert, nur die Anzeige.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 

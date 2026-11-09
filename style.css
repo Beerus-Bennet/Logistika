@@ -4632,3 +4632,20 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 .tw-img{background:radial-gradient(ellipse at 50% 35%,#70827a 0%,#405a51 65%,#293e36 100%)}
 .tw-img img{filter:drop-shadow(0 5px 5px rgba(10,22,17,.28))}
 .tw-stage{height:min(78vw,340px);background:radial-gradient(ellipse at 50% 38%,#71847b 0%,#425e53 65%,#293e36 100%)}
+
+/* ===== v319: Übernahme-Zeitung – Kaufpreis groß, sichtbare Beute, Gruppenkarte mit Zahlen, Goldregen ===== */
+.cs-win .cs-rays{display:block;opacity:.55}
+.cs-win .cs-chip{animation:csChip .35s cubic-bezier(.3,1.5,.5,1) forwards}        /* v282 setzte animation:none – die Chips blieben auf opacity:0 unsichtbar */
+.cs-win .cs-price{width:100%;text-align:center;background:linear-gradient(180deg,#ffe27a,#f2a33c);border:3px solid var(--ink);border-radius:14px;padding:5px 10px 7px;box-shadow:3px 4px 0 var(--ink);animation:csUp .5s .9s both}
+.cs-price small{display:block;font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#5b3a00}
+.cs-price b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(30px,10vw,42px);line-height:1;letter-spacing:1px;color:#16130c;text-shadow:0 2px 0 rgba(255,255,255,.55)}
+.cs-win .cs-crown{background:linear-gradient(180deg,#ffe9a0,#f6c75a);padding:6px 8px 8px;animation:csUp .5s 2.9s both}
+.cs-win .cs-crown span{font-size:26px}
+.cs-win .cs-crown>b{font-size:19px}
+.cs-gstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:5px 0 4px}
+.cs-gstats i{font-style:normal;background:rgba(255,255,255,.55);border:2px solid var(--ink);border-radius:10px;padding:3px 2px;font-size:10px;font-weight:800;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cs-gstats i b{font-family:var(--display);font-weight:400;font-size:17px;letter-spacing:.4px;overflow-wrap:anywhere}
+.cs-win .cs-crown small{font-size:11px}
+.cs-win .cs-quote{animation:csUp .5s 3.1s both}
+.cs-win .cs-go{animation:csUp .4s .6s both}        /* Schließen ist früh möglich */
+#corpShow.rm .cs-price{animation-duration:.01s!important;animation-delay:0s!important}
