@@ -134,7 +134,8 @@ function staffRideGone(s) {
   if (!s.ride) return false;
   if (s.ride.gone) return true;
   const f = staffRideVeh(s);
-  return !f || f.at !== FARM_NODE || !(f.phase === "reserved" || f.phase === "load" || f.phase === "idle");
+  /* v313: „wait“ = Fahrzeug steht zum Beladen bereit (Tür-zu-Tür-Kette) – noch am Hof */
+  return !f || f.at !== FARM_NODE || !(f.phase === "reserved" || f.phase === "wait" || f.phase === "load" || f.phase === "idle");
 }
 function staffRideTick(s, i) {
   const f = staffRideVeh(s), el = S.time - s.ride.t0, gone = staffRideGone(s);

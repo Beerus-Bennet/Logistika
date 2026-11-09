@@ -65,4 +65,10 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v293: Produktionsfenster – Überschrift, Symbol und Knöpfe wieder in Standardgröße (v286-Sonderregeln für `.fs-h`, `.fs-ic`, `.fm-off`, `.fs-x` entfernt).
 - v294: Schatzsuche – keine große Einblendung „Schatz gesichtet!“ mehr (`worldTreasureIntro`); Meldung und Vogelschwarm-Knopf bleiben.
 - v295: Wegesuche mit Notlösung `navPathSafe` (`NAV.loose` in `navOk`): Eingeschlossene Leute laufen nicht mehr in der Geraden durch alles, sondern auf dem Wegenetz; genutzt in `staffGo`.
+- v313: Tür-zu-Tür-Logistik (`game.js`, Block „v313: Tür zu Tür“):
+  - Kette aus `chainLegs`: Vorlauf, Hauptlauf nur zwischen Terminals, Umfuhr Hafen↔Flughafen über `termPt` (16 km), Nachlauf.
+  - Großmengen über 60 t am eigenen Kai (`o.pickT`/`o.dropT`, `d2dInit`).
+  - Mengenfluss `qty`/`ld`/`dn` je Teilstrecke, Fahrzeugphase `wait`, mehrere Fahrzeuge/Fahrten auf der Straße (`leg.vehs`, `extraFor`, `D2D_TRIPS`), `d2dTick`.
+  - Abschluss genau einmal (`finishJob`, `job.fin`); Status/Prognose `d2dStatus`/`d2dWhere`/`d2dEta`; Varianten Schnellste/Ausgewogen/Günstigste ohne dominierte.
+  - Altaufträge ohne `job.v` laufen nach alter Logik. Suezkanal ist reine Durchfahrt (`N.suez.via`). Test: `d2d-v313.test.js`.
 - v311: Karte läuft in Ost-West-Richtung rundherum, wenn das erschlossene Gebiet ≥ halbe Welt ist (`endless` in `clampBounds`); `setBounds` rollt die Eckpunkte nicht mehr über die Datumsgrenze auf; `screenPosAll` für den Nebel auf jeder Weltkopie.

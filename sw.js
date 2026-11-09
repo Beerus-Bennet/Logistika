@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v312";
+const VERSION = "v313";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -13,7 +13,7 @@ const MAX_PICS = 260;
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=312",
+  "./style.css?v=313",
   "./data.js?v=109",
   "./farmdata.js?v=269",
   "./fishdata.js?v=109",
@@ -30,11 +30,11 @@ const SHELL = [
   "./extras.js?v=109",
   "./events.js?v=109",
   "./vip.js?v=109",
-  "./goals.js?v=270",
+  "./goals.js?v=313",
   "./kunden.js?v=109",
   "./lucky.js?v=271",
   "./loading.js?v=109",
-  "./game.js?v=311",
+  "./game.js?v=313",
   "./farm.js?v=278",
   "./erbe.js?v=305",
   "./intro.js?v=302",
@@ -63,12 +63,12 @@ const SHELL = [
   "./rent.js?v=109",
   "./bauplatz.js?v=274",
   "./fishview.js?v=109",
-  "./team.js?v=295",
+  "./team.js?v=313",
   "./jail.js?v=264",
   "./lucky3d.js?v=273",
   "./luckytest.js?v=271",
   "./officekitchen.js?v=263",
-  "./officefp.js?v=301",
+  "./officefp.js?v=313",
   "./manifest.webmanifest",
   "./favicon-64.png?v=251",
   "./icon-180.png?v=251",

@@ -1313,7 +1313,8 @@ const OFFICE3D = (() => {
      Auftragszuweisung. Beim Fahrpersonal hat die feste Fahrzeugbindung Vorrang. */
   function screenData(b, p) {
     const fl=fleetOf(b), ids=new Set((b.vehicles||[]));
-    const phase=f=>(f&&typeof haltLabel==='function'&&haltLabel(f))||({idle:"Bereit",reserved:"Eingeplant",repo:"Anfahrt",load:"Beladen",haul:"Unterwegs",unload:"Entladen",service:"Werkstatt"}[f&&f.phase]||"Bereit");
+    /* v313: „wait“ = Fahrzeug wartet in der Tür-zu-Tür-Kette auf Ware */
+    const phase=f=>(f&&typeof haltLabel==='function'&&haltLabel(f))||({idle:"Bereit",reserved:"Eingeplant",wait:"Wartet auf Ware",repo:"Anfahrt",load:"Beladen",haul:"Unterwegs",unload:"Entladen",service:"Werkstatt"}[f&&f.phase]||"Bereit");
     const name=id=>typeof N!=="undefined"&&N[id]?(N[id].short||N[id].name):String(id||"–");
     const actor=O&&(O.staff||[]).find(f=>f.p&&f.p.id===p.id);
     const interrupted=actor&&(actor.shock||actor.dead||O.deaths), pause=actor&&["cup","gift"].includes(actor.act);

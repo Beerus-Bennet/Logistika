@@ -1,5 +1,91 @@
 # Änderungen – kurz für den Kollegen
 
+## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
+**Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
+
+**Ursache (Stand v311 nachgelesen und im Testbrowser nachgestellt):**
+- Die erste und die letzte Teilstrecke fuhren mit ihrem eigenen Verkehrsträger bis an die Tür (`legPts`/`legStartPt`). Ein Binnenschiff von Westhafen nach Hannover legte also an der „Siemensstraße 108“ an. Mit dem Entladen des Schiffs war der Auftrag fertig und bezahlt.
+- Jede Teilstrecke brauchte genau ein Fahrzeug, das die ganze Menge auf einmal trägt. Teilmengen und mehrere Fahrten gab es nicht.
+- Die Folgeteilstrecke startete erst nach dem Ende der vorigen. Es gab keinen Warenbestand am Terminal und kein Warten.
+- Flughafen und Hafen derselben Stadt waren derselbe Punkt (Jebel Ali, New York, Hongkong …). Es gab keinen Transport dazwischen.
+- Der Suezkanal (Knoten nur für Schiffe, ohne Straße) konnte als Absender oder Empfänger einer Ausschreibung auftauchen: „Suezkanal / Port Said“. Die Ortskarte eines angetippten Knotens blieb außerdem offen, wenn die Karte einem Fahrzeug folgte oder weit weggeschoben wurde. So stand „Suezkanal / Port Said“ noch da, während die Karte längst Casablanca zeigte.
+
+**Lösung (`game.js`, Block „v313: Tür zu Tür“):**
+- **Kette:** `chainLegs` macht aus der Netzroute die Kette.
+  - Vorlauf per Lkw von der Tür zur Abgangsstation.
+  - Hauptlauf nur zwischen Terminals.
+  - Umfuhr per Lkw, wenn zwischen Wasser/Schiene und Luft gewechselt wird. Der Flughafen liegt an solchen Knoten 16 km entfernt (`termPt`).
+  - Nachlauf von der Zielstation zum Empfänger.
+  - Teilstrecken tragen `kind` (direkt · vor · haupt · strasse · umfuhr · nach) und lesbare Start-/Zielnamen (`fa`/`fb`, z. B. „Hafen Jebel Ali (Dubai) → Flughafen Jebel Ali“).
+- **Ausnahme Großmengen:** Ab 60 t (`D2D_HEAVY`) übergibt der Kunde am eigenen Kai bzw. Gleisanschluss. Die Adresse heißt dann z. B. „Werkskai am Hamburger Hafen“, Merkmal `o.pickT`/`o.dropT`. Der Planer nennt das ausdrücklich („so mit dem Kunden vereinbart“). Schüttgut fährt so weiterhin von Kai zu Kai, denn kein Lkw darf Schüttgut laden.
+- **Lokale Aufträge:** Reine Straßen- oder Radstrecken bleiben eine Direktfahrt mit einem Fahrzeug.
+- **Mengenfluss (`d2dTick`):** Jede Teilstrecke führt `qty`, `ld` (geladen) und `dn` (abgeladen).
+  - Ein Fahrzeug lädt erst, wenn seine Ware am Ladepunkt liegt. Der Bestand ist das, was die vorige Teilstrecke abgeladen hat.
+  - Ein Fahrzeug nimmt höchstens seine Nutzlast (`take = min(cap, Rest)`).
+  - Alle Fahrzeuge der Kette fahren bei Annahme los und warten am Terminal (Phase `wait`).
+  - Straßenfahrzeuge fahren mehrmals: abladen, leer zurück, nächste Teilmenge.
+  - Mehrere Fahrzeuge können sich eine Straßenteilstrecke teilen (`leg.vehs`, `extraFor`).
+- **Abschluss (`finishJob`):** Erst wenn die ganze Menge beim Empfänger abgeladen ist. Geld, EP und Kundenwirkung gibt es genau einmal (`job.fin`). Teilzustellungen melden sich einmal („Teilweise zugestellt“).
+- **Varianten (`buildVariants`):** Es wird die ganze Kette mit Referenzfahrzeugen bewertet, inklusive Vor-/Nachlauf und Mehrfachfahrten.
+  - Kandidaten sind die schnellste und die günstigste Netzroute, beide ohne Luftfracht, und die reine Straße.
+  - Was teurer UND langsamer als eine andere Variante ist, fällt weg. Schiff + Flugzeug bleibt also nur, wenn es echt Zeit oder Geld spart.
+  - Zur Auswahl stehen „⚡ Schnellste“, „⚖️ Ausgewogen“ und „💶 Günstigste“.
+- **Preis und Frist:** `withLastMile` rechnet Vor-, Nach- und Umfuhr (Fahrten, Umschlag) in Frist und Preis neuer Ausschreibungen ein. Das gilt jetzt auch für Luftfracht-Ausschreibungen.
+- **Planer:**
+  - Die Kette steht als Abfolge da: Abholung › Vorlauf › ⚓ Terminal › Hauptlauf › ⚓ Terminal › Nachlauf › Zustellung.
+  - Je Teilstrecke: Art, Verkehrsträger, Start → Ziel, Menge, Nutzlast, Fahrten bzw. Runden, Zeitfenster und Kosten.
+  - Weitere Fahrzeuge lassen sich hinzufügen oder entfernen.
+  - Oben steht, was für die ganze Kette noch fehlt („Lkw für Nachlauf (FRA)“), mit dem Markt-Knopf je Teilstrecke.
+  - Die ganze Kette übernimmt man mit einem Klick („Auftrag annehmen“).
+  - Die Minikarte zeichnet die echte Linie je Teilstrecke.
+- **Live und Ortskarte:**
+  - Lesbarer Status: Abholung geplant, Wird abgeholt, Im Vorlauf, Wartet auf Umschlag, Auf See, Im Hafen X · Wartet auf Lkw (kommt in …), In der Umfuhr, In der Luft, In Zustellung, Teilweise zugestellt (x von y), Vollständig zugestellt.
+  - Dazu, wo die Ware liegt (Absender, geladen, Terminal, Empfänger) und eine Zustellprognose aus dem tatsächlichen Stand. Halte, Stürme und Zoll schieben sie mit (`d2dEta`).
+  - Mehrere Teilstrecken leuchten auf der Karte gleichzeitig, wenn Teilmengen unterwegs sind.
+  - „Live verfolgen“ folgt dem Fahrzeug, das gerade Ware fährt.
+- **Fahrzeuge:** Flugzeuge stehen am Flughafen, nicht im Hafen. Leerflüge gehen nicht mehr über den Hafen-/Stadtpunkt.
+- **Suezkanal:** Als reine Durchfahrt markiert (`N.suez.via`). Er ist kein Kundenort mehr.
+- **Ortskarte:** Sie schließt, sobald „Live verfolgen“ startet oder der Ort aus dem Bild geschoben wird.
+- **Weitere Dateien:**
+  - `goals.js`: Vertragsprüfung erlaubt Mehrfachfahrten auf der Straße.
+  - `team.js`: Fahrerin gilt in Phase `wait` noch als am Hof.
+  - `officefp.js`: Bildschirm zeigt „Wartet auf Ware“.
+  - `style.css`: Kette, Mengen, Status.
+
+**Alte Spielstände:**
+- Laufende Aufträge ohne `job.v` laufen unverändert nach der alten Logik zu Ende. Sie werden nicht umgeschrieben, damit weder Ware noch Geld doppelt entsteht.
+- Neue Aufträge bekommen `job.v = 313`.
+- Offene Ausschreibungen werden beim ersten Planen einmalig eingeordnet (Merkmal `o.d2d`). Bei Großmengen wird die Adresse auf den Kai gesetzt. Preis und Frist alter offener Ausschreibungen bleiben, der Planer zeigt die echten Kettenkosten.
+- Alles steckt im Spielstand (`ld`/`dn`/`vehs`, Fahrzeugphase und Ladung). Neuladen geht in jedem Zwischenzustand.
+
+**Geprüft:**
+- Unit-Test `d2d-v313.test.js` (lädt die echten Spieldateien in eine VM), 7 Prüfungen bestanden:
+  - Direktlieferung.
+  - Binnenschiff Westhafen → Hannover: Lkw wartet, Schiff endet im Hafen ohne Auszahlung, 2 Nachlauffahrten, Teilzustellung, Menge in jedem Takt erhalten, nie überladen, genau eine Auszahlung.
+  - JSON-Speichern/Laden an drei Stellen.
+  - See → Umfuhr → Luft → Nachlauf, Flugzeug lädt erst nach der Umfuhr.
+  - Ungeeignete Fahrzeuge abgelehnt, Schüttgut am Kai.
+  - Stichprobe neuer Aufträge in Etappe 2–6: kein Schiff/Zug/Flugzeug an einer Kundentür, kein Suezkanal.
+  - Alter Auftrag läuft weiter.
+  - Die anderen Unit-Tests: gleiche Ergebnisse wie auf main (dieselben schlagen dort schon fehl).
+- Testbrowser (Chromium, Playwright, `?test`):
+  - Dieselben Abläufe mit echtem `tick`.
+  - Neuladen der Seite in drei Zwischenzuständen (Lkw wartet, Umschlag, Leerrückfahrt nach Teilzustellung) bis zum Abschluss, eine Auszahlung.
+  - Alter laufender Auftrag nach Neuladen fertig.
+  - Prognose verschiebt sich bei 3 h Halt um 180 min.
+  - Planer zeigt den fehlenden Lkw. Kauf über den Markt-Knopf, zurück, Annahme mit einem Klick, dann Live-Ansicht.
+  - Desktop 1280 × 860 und Mobil 390 × 844 ohne seitliches Überlaufen der Seite.
+  - Antippen von Casablanca, Suezkanal und Algeciras bei Zoom 3,2/5,5/7 wählt jeweils genau diesen Ort.
+  - 300 neue Aufträge in Etappe 6, keiner am Suezkanal.
+
+**Nicht geprüft:** am Handy (nur schmale Ansicht im Testbrowser); lange Spielzeit mit Büro-Disposition und vielen gleichzeitigen Ketten; das Aussehen der Linien auf echten Kartenkacheln (im Testbrowser laden die Kacheln nicht). Die ursprüngliche Bildschirmsituation „Suezkanal / Port Said bei Casablanca“ habe ich nicht eins zu eins nachgestellt; behoben sind die beiden gefundenen Ursachen (Kanal als Kundenort, offen bleibende Ortskarte).
+
+**Vereinfachungen:**
+- Umschlag- und Wartezeiten am Terminal sind die bisherigen Pauschalen je Verkehrsträger.
+- Der Flughafenpunkt an Mischknoten ist ein fester Spielpunkt 16 km neben dem Knoten, keine echte Flughafenlage.
+- Hauptläufe (Schiff, Zug, Flugzeug) fahren weiterhin in einer Fahrt, mehrere Fahrten gibt es nur auf der Straße.
+- Die Zustellprognose ist eine Schätzung aus dem aktuellen Stand.
+
 ## v312 – Trophäen als ruhigere Sammlerstücke präsentieren
 
 Keilerwaffen mit aufrechteren, schlankeren Bögen, etwas unterschiedlichen Seiten, sichtbaren Wurzeln und kleinen Messingfassungen statt fast identischer Hornringe. Elfenbein verläuft von warmen Wurzeln zu hellen Spitzen. Hirschgeweihe erhalten am Präparat eine weichere Auslage und gedämpfte Spitzenfarben, der Schädel einen abgerundeten Nasensteg. Das lebende Wild bleibt unverändert. Walnussschilder mit ruhigerer Maserung hängen vor einer entsättigten grünen Rückwand. Die Sammlung nutzt einen passenden Hintergrund, weniger harte Schlagschatten, eine größere Nahansicht und Licht von vorn. Cache-Schlüssel v312 verhindert alte Vorschaubilder.

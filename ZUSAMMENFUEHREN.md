@@ -1,5 +1,20 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v313 – Tür-zu-Tür-Logistik auf main 462093c / v312
+
+Branch `claude/tuer-zu-tuer`, Pull Request auf main; v312 (PR #31) ist eingemischt. Bei Konflikten in `index.html`/`sw.js` jeweils die höhere Dateiversion behalten.
+
+- `game.js`:
+  - Neuer Block „v313: Tür zu Tür“ (Kette, Mengenfluss, Status, Prognose).
+  - Umgebaut: `startJob`, `evaluate`, `buildVariants`, `eligible`, `fitTypes`, Planer (`renderPlanner`, `chainHTML`, `planMapHTML`), Live-Karte/-Liste, `phaseLabel`, `finishJob` (aus `finishLeg` herausgelöst), `failJob` (alle Fahrzeuge einer Teilstrecke), `legLine`, `vehSpot` (Flugzeuge am Flughafen), `repoCost`.
+  - Der alte Ablauf (`beginLeg`/`finishLeg`) bleibt für laufende Altaufträge ohne `job.v`.
+  - Wer am Fischerei-Branch eigene Auftragsarten mit `startJob(o, variant, assign)` startet: Das läuft weiter. Zusatzfahrzeuge werden automatisch gewählt, Teilstrecken ohne `kind` gelten als Direktfahrt bzw. Straßenetappe.
+- `goals.js`, `team.js`, `officefp.js`: je eine Zeile für Mehrfachfahrten bzw. die neue Fahrzeugphase `wait`.
+- `style.css`: neuer v313-Block am Ende.
+- `d2d-v313.test.js`: neuer Unit-Test, direkt im Projektordner mit `node d2d-v313.test.js` ausführen.
+- `index.html` / `sw.js`: Service Worker v313; `game.js`, `goals.js`, `team.js`, `officefp.js`, `style.css` auf v313.
+- Spielstände: keine Pflichtmigration. Neue Felder: `job.v`, `leg.kind/fa/fb/qty/ld/dn/vehs/pts/ta/tb`, `veh.load`, `o.d2d`, `o.pickT`/`o.dropT`.
+
 ## v310 – Trophäentafel und Wasser auf main 0e6ee68 / v308 einschließlich v309
 
 Diese ZIP enthält elf gegenüber main `0e6ee68` geänderte/neue Dateien. Die Zaunkorrektur v309 ist vollständig enthalten; v302–v308 liegen bereits auf main. Ältere ZIPs nicht zusätzlich darüberkopieren. Kein Push erfolgt; vor Übernahme neuerer GitHub-Commits erneut abgleichen.
