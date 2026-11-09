@@ -439,7 +439,9 @@ function refreshPool(b, bonus) {
   b.poolDay = dayOf(S.time);
 }
 /* Stellenanzeige: sofort drei Bewerbungen für genau die gesuchte Stelle */
-const adFee = () => roundK(250 * stageK(), 10);
+/* v318: fester, niedriger Preis – unabhängig von Etappe und Kontostand (vorher 250 € × Etappenfaktor, bis in die Tausende) */
+const AD_FEE = 750;
+const adFee = () => AD_FEE;
 function makeCandidateFor(role) {
   const c = makeCandidate(false), r = ROLES[role];
   c.role = role;

@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v318 – Stellenanzeige kostet immer 750 €
+**Wunsch Bennet:** Anzeigen sollen immer einen festen, geringen Preis haben, auch als Millionär nur 750 €.
+
+**Ursache (`offices.js`):** Der Preis war 250 € mal Etappenfaktor (`stageK`) und stieg in späteren Etappen auf mehrere tausend Euro.
+
+**Lösung:** Fester Preis `AD_FEE = 750` in `adFee()`. Er gilt für den Knopf im Büro und die Abbuchung (`postAd`), unabhängig von Etappe und Kontostand. Sonst ändert sich nichts: drei Bewerbungen für die gesuchte Stelle, Eintrag im Kassenbuch.
+
+**Geprüft (Testbrowser):** Etappe 1, 3 und 6 mit 5 Mrd. € auf dem Konto: Preis 750 €, abgebucht 750 €, 3 neue Bewerbungen, Kassenbuch −750 €. **Nicht geprüft:** auf dem Handy.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 
