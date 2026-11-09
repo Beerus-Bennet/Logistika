@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v311 – Karte läuft in Ost-West-Richtung rundherum (wie die Snapchat-Karte)
+**Wunsch Bennet:** Man soll auf der Karte sowohl nach Westen als auch nach Osten schieben können; danach sieht man die Welt wieder wie zu Beginn.
+
+**Ursache (im Testbrowser nachgestellt):** Die Karte ist technisch schon mehrfach nebeneinander gezeichnet, scheiterte aber an der Begrenzung auf das erschlossene Gebiet (v77). `setBounds` bekommt als Eckpunkte den kleinsten und größten Längengrad, hat sie aber wie eine Linie über die Datumsgrenze „aufgerollt“. Reicht das Gebiet über mehr als 180° (Etappe 6: Amerika bis Asien), wurde daraus ein schmales Band an der falschen Stelle, und die Kamera ließ sich nicht mehr hinausschieben. Mit dem alten Code blieb die Karte beim Schieben nach Osten bei −125° hängen. Außerdem zeichnete der Nebel seine Lichtkreise nur auf der nächsten Weltkopie.
+
+**Lösung:**
+- **`map.js`:**
+  - `setBounds` benutzt die Eckpunkte unverändert (kein Aufrollen mehr).
+  - Ist das erschlossene Gebiet mindestens halb so breit wie die Welt, gibt es in Ost-West-Richtung keine Grenze: Die Karte läuft rundherum. Die Begrenzung nach Norden und Süden und das Herauszoomen bleiben.
+  - Neu `screenPosAll(lat, lon)` liefert den Bildschirmort in jeder sichtbaren Weltkopie.
+- **`game.js` (`drawFog`):** Lichtkreise der Orte, der Fahrzeuge und die „Bildschirm ist frei“-Prüfung berücksichtigen jede sichtbare Weltkopie. Pins, Linien und Kacheln wiederholten sich schon vorher.
+
+**Geprüft (Testbrowser, Schieben per Pointer-Ereignissen, Gebiet −122° … 139°):**
+- Alter Code: die Länge der Kartenmitte bleibt beim Schieben nach Osten bei −125° stehen.
+- Neuer Code: 141° → −178° → … → 148° → −171° …, die Karte läuft mehrfach um die Welt.
+- Nebel: weit herausgezoomt vier Weltkopien, das Zeichnen läuft ohne Fehler. Keine Konsolenfehler.
+
+**Nicht geprüft:** am Handy mit echtem Wischen; das Aussehen des Nebels über der Datumsgrenze im Spiel (im Testbrowser laden die Kartenkacheln nicht); Etappen unterhalb von Etappe 6 mit schmalerem Gebiet (dort bleibt die Begrenzung wie bisher).
+
 ## v310 – Glaubwürdigere Trophäentafel und sichtbarer Wasseraufprall
 **Basis:** GitHub main `0e6ee68` (v308), vor und während der Arbeit wiederholt abgeglichen. Die noch nicht auf main vorhandene Zaunkorrektur v309 ist vollständig enthalten. Die ZIP enthält nur die elf gegenüber diesem main geänderten/neuen Dateien; ältere ZIPs nicht anschließend darüberkopieren.
 

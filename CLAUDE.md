@@ -65,3 +65,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v293: Produktionsfenster – Überschrift, Symbol und Knöpfe wieder in Standardgröße (v286-Sonderregeln für `.fs-h`, `.fs-ic`, `.fm-off`, `.fs-x` entfernt).
 - v294: Schatzsuche – keine große Einblendung „Schatz gesichtet!“ mehr (`worldTreasureIntro`); Meldung und Vogelschwarm-Knopf bleiben.
 - v295: Wegesuche mit Notlösung `navPathSafe` (`NAV.loose` in `navOk`): Eingeschlossene Leute laufen nicht mehr in der Geraden durch alles, sondern auf dem Wegenetz; genutzt in `staffGo`.
+- v311: Karte läuft in Ost-West-Richtung rundherum, wenn das erschlossene Gebiet ≥ halbe Welt ist (`endless` in `clampBounds`); `setBounds` rollt die Eckpunkte nicht mehr über die Datumsgrenze auf; `screenPosAll` für den Nebel auf jeder Weltkopie.
