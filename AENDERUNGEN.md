@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v317 – U-Haft: Beine hängen frei über der Bettkante
+**Meldung Bennet:** Die Beine des Gefangenen hängen im Bett.
+
+**Ursache (`jail.js`, am Modell nachgemessen):** Der Gefangene saß so nah an der Bettkante, dass die Knie genau an der vorderen Schiene lagen. Die Unterschenkel hingen im Rahmen. Außerdem schwangen sie bis zu 0,2 m nach hinten unter die Matratze und damit in den Bettrahmen.
+
+**Lösung:**
+- Der Sitzpunkt (`SEAT.z`) liegt 12 cm weiter hinten auf der Matratze. Die Knie sind jetzt 14 cm hinter der Bettkante, die Unterschenkel hängen davor in der Luft.
+- Das Baumeln (`KNEE`) geht nur noch von senkrecht bis leicht nach vorn, nie nach hinten unter das Bett.
+- Die Beine sind für Prüfungen über `ctl.legs` erreichbar.
+
+**Geprüft (Testbrowser, 300 Messungen der Beinecken über 150 Bilder):** Die hinterste Ecke der Beine liegt mit z = −0,646 vor der Bettkante (−0,68, Schienenkante −0,66). Vorher (Messung in Zwischenständen bis −0,73) lagen Ecken im Rahmen, nachher 0 Punkte im Rahmen. Bildschirmfoto der Zelle gesichtet: Beine hängen vor dem Bett, Füße in der Luft über der unteren Matratze. **Nicht geprüft:** auf dem Handy.
+
 ## v316 – U-Haft-Zelle ruckelt nicht mehr (gemeinsame Ruckelbremse)
 **Meldung Bennet (Handy, U-Haft):** Die Zelle ruckelt stark, besonders beim Antippen.
 
