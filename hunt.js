@@ -458,12 +458,12 @@ const HUNT = (() => {
     F = F || {};
     const plan0 = antlerPlan(P), r = mulberry(P * 131 + (vr || 0) * 977 + Math.round((sc || 0) * 40) * 7 + 11);
     const Ls0 = 0.5 + 0.36 * clamp(sc, 0, 1), r0 = 0.027 + 0.016 * clamp(sc, 0, 1);
-    const acol = (t, f) => { const k = hsh(t * 9.1, f || 0, 2.7); let c = t < 0.5 ? mixc(ANT.base, ANT.mid, t / 0.5) : mixc(ANT.mid, ANT.tip, ss((t - 0.62) / 0.34)); return mulc(c, 0.88 + k * 0.24); };
+    const acol = (t, f) => { const k = hsh(t * 9.1, f || 0, 2.7); let c = t < 0.5 ? mixc(ANT.base, ANT.mid, t / 0.5) : mixc(ANT.mid, ANT.tip, ss((t - 0.62) / 0.34)); if (F.skull) c = mixc(c, RGB(0x96764e), 0.32); return mulc(c, 0.88 + k * 0.24); };
     [-1, 1].forEach(s => {
       const plan = F.extra === s ? { n: plan0.n + 1, tines: plan0.tines, crown: plan0.crown + 1 } : plan0;
       const Ls = Ls0 * (1 + (r() - 0.5) * 0.08), spread = (1 + (r() - 0.5) * 0.14) * (F.spread || 1), lean = (r() - 0.5) * 0.08;
       const p0 = [s * 0.045, 0.094, 0.032], K = [[0, 0, 0], [0.19, 0.2, -0.19], [0.41, 0.47, -0.31], [0.5 + lean, 0.75, -0.24], [0.43 + lean, 0.98, 0.0]]
-        .map(q => [p0[0] + s * q[0] * spread * Ls, p0[1] + q[1] * Ls, p0[2] + q[2] * Ls]);
+        .map(q => [p0[0] + s * (q[0] + (F.skull ? 0.16 * Math.sin(q[1] * Math.PI) : 0)) * spread * Ls, p0[1] + q[1] * Ls, p0[2] + q[2] * Ls]);
       const pts = curve(K, 11), rad = pts.map((_, i) => { const u = i / 10; return u > 0.92 ? r0 * 0.4 * (1 - (u - 0.92) / 0.08) + 0.0035 : r0 * (1 - 0.52 * u); });
       /* Rosenstock (kurz, behaart) und Rose (rauer Kranz) */
       const ped = F.skull ? 0xd9d0ba : DEER.brow;          /* v310: knöcherner Rosenstock am Schädelpräparat, im Revier weiterhin behaart. */
@@ -1050,9 +1050,10 @@ const HUNT = (() => {
      (Form der Stangen) sowie Zeit, Treffer und Entfernung. Daraus wird das Modell immer gleich gebaut (fester Seed).
      Die Lagerware bleibt wie bisher (tro_<art>_<medaille>, Preis nach Medaille) – Markt, Lagerplätze und alte Spielstände
      funktionieren unverändert; collSync() hält Datensätze und Lagerbestand deckungsgleich. */
-  const WOOD = { a: 0xa36e3c, b: 0x7a4e29, rim: 0x5a391e, back: 0x452c17 };
+  /* v312: Ruhiges Walnussholz statt heller, kontrastreicher Maserungsringe. */
+  const WOOD = { a: 0x805a3e, b: 0x67472f, rim: 0x493527, back: 0x392b23 };
   const BRASS = { c: 0xcaa552, d: 0x7c6227 };
-  const woodCol = (p, k) => { const g = Math.sin(p[0] * 52 + Math.sin(p[1] * 6.3) * 2.2 + Math.sin(p[1] * 17 + p[0] * 3) * 0.5); return mulc(mixc(WOOD.a, WOOD.b, 0.5 + 0.5 * g), (k || 1) * (0.94 + 0.12 * hsh(p[0], p[1], 3))); };
+  const woodCol = (p, k) => { const g = Math.sin(p[0] * 52 + Math.sin(p[1] * 6.3) * 2.2 + Math.sin(p[1] * 17 + p[0] * 3) * 0.5); return mulc(mixc(WOOD.a, WOOD.b, 0.5 + 0.18 * g), (k || 1) * (0.94 + 0.12 * hsh(p[0], p[1], 3))); };
   /* Umriss: oben gewölbt, unten zur weichen Spitze (Wappenschild) – oder oval */
   function shieldOutline(w, h, n, kind) {
     const pts = [];
@@ -1094,9 +1095,9 @@ const HUNT = (() => {
   /* v310: klassischer Oberkiefer-Schädel auf dem Brett, mit dunklen Öffnungen und knöchernem Nasenrücken.
      Das Geweih kommt weiterhin aus genau den gespeicherten Enden, Auslagen und Besonderheiten des Stücks. */
   function deerSkullInto(b, P, sc, vr, F) {
-    const bone = 0xe4decd, shadow = 0xb7ad96, T = [[-0.285,0.024,0.012,0.17],[-0.26,0.031,0.019,0.184],[-0.18,0.028,0.026,0.18],[-0.08,0.04,0.034,0.162],[0,0.066,0.042,0.135],[0.07,0.079,0.045,0.112],[0.135,0.043,0.028,0.09]], Q = [], C = [];
+    const bone = 0xe9dfc7, shadow = 0xb5a78e, T = [[-0.285,0.024,0.012,0.17],[-0.26,0.031,0.019,0.184],[-0.18,0.028,0.026,0.18],[-0.08,0.04,0.034,0.162],[0,0.066,0.042,0.135],[0.07,0.079,0.045,0.112],[0.135,0.043,0.028,0.09]], Q = [], C = [];
     for(let i=0;i<=24;i++) {
-      const y=lerp(0.135,-0.285,i/24), [hx,hz,z]=prof(T,y), R=ring([0,y,z+0.04],[1,0,0],[0,0,1],hx,hz,hz,14,2.1);
+      const y=lerp(0.135,-0.285,i/24), [hx,hz,z]=prof(T,y), R=ring([0,y,z+0.04],[1,0,0],[0,0,1],hx,hz,hz,18,2.6);
       Q.push(R); C.push(R.map(p=>mulc(mixc(shadow,bone,ss((p[2]-z+0.01)/0.065)),0.97+0.04*hsh(p[0],p[1],2))));
     }
     skin(b,Q,C,{cap0:true,cap1:true});
@@ -1104,20 +1105,26 @@ const HUNT = (() => {
       ell(b,[s*0.057,0.005,0.206],[0.021,0.028,0.0065],0x625b4e,9,6);
       ell(b,[s*0.016,-0.218,0.244],[0.009,0.038,0.005],0x6c6252,8,6);
     });
-    b.box(0.008,0.09,0.013,bone,{y:-0.267,z:0.247});
+    /* v312: Abgerundeter Nasensteg statt rechteckigem Fortsatz. */
+    ell(b,[0,-0.245,0.247],[0.012,0.045,0.012],bone,10,6);
     b.box(0.045,0.045,0.04,0x62594b,{y:0.06,z:0.086,c:true});        /* verdeckte Aufhängung */
     b.at({y:0.04,z:0.145,rx:0.55},q=>antlersInto(q,P,sc,vr,Object.assign({},F,{skull:true})));
   }
   /* v310: Keilerwaffen auf einem Waffenbrett: zwei lange, gebogene Gewehre und zwei kürzere Haderer.
      Größe aus den gespeicherten Zentimetern; keine neuen Würfe und kein Einfluss auf den Sammlerwert. */
+  /* v312: Schlankere, aufrecht montierte Waffen mit sichtbaren Wurzeln,
+     leicht verschiedenen Bögen und sanftem Elfenbeinverlauf statt identischer Hornringe. */
   function tuskMountInto(b, cm) {
     const scale=0.7+clamp((cm-8)/16,0,1)*0.36;
     [-1,1].forEach(s=>{
-      const P=curve([[0.042,-0.135,0.107],[0.148,-0.10,0.117],[0.205,0.01,0.127],[0.19,0.13,0.124],[0.105,0.205,0.114]].map(p=>[s*p[0]*scale,p[1]*scale,p[2]]),16);
-      tube(b,P,P.map((_,i)=>0.026*scale*Math.pow(1-i/15,0.65)+0.001),P.map((_,i)=>mixc(BOAR.tuskB,BOAR.tusk,ss(i/7))),8,{cap0:true,tip:true});
-      const H=curve([[0.035,-0.035,0.117],[0.095,0.018,0.125],[0.09,0.085,0.13],[0.045,0.118,0.12]].map(p=>[s*p[0]*scale,p[1]*scale,p[2]]),10);
-      tube(b,H,H.map((_,i)=>0.019*scale*(1-i/9)+0.001),H.map((_,i)=>mixc(BOAR.tuskB,BOAR.tusk,ss(i/4))),7,{cap0:true,tip:true});
-      b.box(0.035,0.022,0.012,BRASS.d,{x:s*0.073*scale,y:-0.12*scale,z:0.12,c:true,rz:s*0.3});
+      const S=scale*(s<0?0.97:1);
+      const P=curve([[0.038,-0.16,0.112],[0.142,-0.125,0.125],[0.215,-0.025,0.145],[0.226,0.105,0.15],[0.175,0.225,0.14],[0.125,0.27,0.13]].map(p=>[s*p[0]*S,p[1]*S,p[2]]),20);
+      const ivory=(i,n)=>mixc(RGB(0x9b7c4d),RGB(0xeee1bb),ss(i/(n*0.6)));
+      tube(b,P,P.map((_,i)=>0.036*S*Math.pow(1-i/19,0.8)+0.0008),P.map((_,i)=>ivory(i,20)),10,{cap0:true,tip:true});
+      const H=curve([[0.032,0.025,0.12],[0.075,0.068,0.138],[0.085,0.128,0.145],[0.064,0.18,0.14]].map(p=>[s*p[0]*S,p[1]*S,p[2]]),12);
+      tube(b,H,H.map((_,i)=>0.022*S*Math.pow(1-i/11,0.85)+0.0008),H.map((_,i)=>ivory(i,12)),8,{cap0:true,tip:true});
+      /* Kleine Messingfassungen direkt an den Zahnwurzeln. */
+      b.box(0.055,0.025,0.025,BRASS.c,{x:s*0.055*S,y:-0.15*S,z:0.14,c:true,rz:-s*0.35});
     });
   }
   /* Fasanenfeder: lanzettlich, braun-oliv mit dunklen Querbinden, dunkler Kiel, leicht gebogen */
@@ -1141,7 +1148,7 @@ const HUNT = (() => {
   const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
   const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
   const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
-  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v310"; }
+  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v312"; }
   /* v310: Knochen-/Waffenpräparate mit den gespeicherten Geweih-, Waffen- und Federmaßen.
      Decke, Alter und sonstige Merkmale bleiben im Datensatz erhalten; keine neue Trophäenberechnung. */
   function trophyBuild(r) { const gn = gnOf(r); return withLook(r.k, gn, () => trophyBuild0(r, gn)); }
@@ -1453,7 +1460,8 @@ const HUNT = (() => {
   const showAt = () => twL(SHOWL[0], 0, SHOWL[2]);
   function showMesh(recs) {
     G3.seed(7790);
-    const b = MB(), Wd = 0x725238, Wl = 0x916b47, Rf = 0x4f493d;
+    /* v312: Dunkler, entsättigter Hintergrund trennt Knochen, Geweih und Holzschilder. */
+    const b = MB(), Wd = 0x70543b, Wl = 0x52605b, Rf = 0x414943;
     /* v310: gezimmerte Tafel mit geschlossener Rückwand, Dachüberstand und Pfostenschuhen.
        Der First läuft quer über die Tafel; die Dachflächen fallen nach vorn/hinten ab. */
     [-1.3,1.3].forEach(x=>{
@@ -1462,8 +1470,8 @@ const HUNT = (() => {
       b.box(0.115,2.4,0.115,Wd,{x,y:0.1,z:-0.06});
       beam(b,[x,1.99,-0.13],[x-Math.sign(x)*0.27,2.31,-0.13],0.034,Wd);
     });
-    b.box(2.48,1.36,0.065,0x63482f,{y:0.8,z:-0.06});
-    for(let i=0;i<8;i++) b.box(2.48,0.165,0.028,i%2?Wl:0x88613f,{y:0.8+i*0.17,z:-0.015});
+    b.box(2.48,1.36,0.065,0x3e4b46,{y:0.8,z:-0.06});
+    for(let i=0;i<8;i++) b.box(2.48,0.165,0.028,i%2?Wl:0x4d5a55,{y:0.8+i*0.17,z:-0.015});
     [0.75,2.17].forEach(y=>b.box(2.72,0.08,0.13,Wd,{y,z:-0.065}));
     [-1,1].forEach(sd=>{
       for(let i=0;i<11;i++) b.box(0.268,0.045,0.49,i%3?Rf:0x595144,{x:-1.35+i*0.27,y:2.43,z:-0.03+sd*0.22,rx:sd*0.34,c:true});
@@ -3364,7 +3372,7 @@ const HUNT = (() => {
     if (!TT.cv) { TT.cv = document.createElement("canvas"); TT.cv.className = "tw-cv"; }
     host.insertBefore(TT.cv, host.firstChild);
     try {
-      if (!TT.R) { TT.R = G3.create(TT.cv, { shadowSize: 1024, shadowBox: 3, maxDpr: 2 }); if (TT.R) TT.R.env.fogR = [400, 800]; }
+      if (!TT.R) { TT.R = G3.create(TT.cv, { shadowSize: 1024, shadowBox: 3, maxDpr: 2 }); if (TT.R) { TT.R.env.fogR = [400, 800]; TT.R.env.sun = G3.norm([-0.4, 0.75, 1]); TT.R.env.sky = [0.8, 0.86, 0.92]; } }
     } catch (e) { TT.R = null; }
     const R = TT.R;
     if (!R) { host.classList.add("nogl"); host.insertAdjacentHTML("beforeend", recThumb(r, true)); return; }
