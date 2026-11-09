@@ -93,22 +93,46 @@ function createMap(canvas, opts) {
     } catch (_) { return img; }
   }
 
-  function requestTile(z, x, y) {
-    const key = tileKey(z, x, y);
-    if (tiles.has(key)) return tiles.get(key);
-    const rec = { img: null, ok: false, t: performance.now() };
-    tiles.set(key, rec);
+  /* v314: Fehlgeschlagene oder hängende Kacheln werden nach und nach erneut geladen (vorher blieb der
+     Eintrag für immer „failed“, und eine nie antwortende Anfrage blockierte einen von 10 Ladeplätzen). */
+  const RETRY_MS = [2500, 6000, 15000, 40000], TILE_TIMEOUT = 15000;
+  function startTile(z, x, y, rec) {
     const job = () => {
       pending++;
+      let over = false;
       const img = new Image();
+      const end = ok => {
+        if (over) return; over = true; clearTimeout(timer);
+        img.onload = img.onerror = null;
+        pending--;
+        if (ok) { rec.img = stylize(img); rec.ok = true; rec.failed = false; drain(); requestDraw(); }
+        else { rec.ok = false; rec.failed = true; rec.tries = (rec.tries || 0) + 1; rec.failAt = performance.now(); drain();
+          if (rec.tries <= RETRY_MS.length) setTimeout(requestDraw, RETRY_MS[rec.tries - 1] + 50); }
+      };
+      const timer = setTimeout(() => { img.src = ""; end(false); }, TILE_TIMEOUT);
       img.crossOrigin = "anonymous";
       img.decoding = "async";
-      img.onload = () => { rec.img = stylize(img); rec.ok = true; pending--; drain(); requestDraw(); };
-      img.onerror = () => { rec.ok = false; rec.failed = true; pending--; drain(); };
-      img.src = source.url.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+      img.onload = () => end(true);
+      img.onerror = () => end(false);
+      /* Wiederholung: andere URL (Zähler), sonst liefert der Browser die gemerkte Fehlerantwort erneut aus */
+      img.src = source.url.replace("{z}", z).replace("{x}", x).replace("{y}", y) + (rec.tries ? "?r=" + rec.tries : "");
     };
     queue.push(job);
     drain();
+  }
+  function requestTile(z, x, y) {
+    const key = tileKey(z, x, y);
+    if (tiles.has(key)) {
+      const r = tiles.get(key);
+      if (r.failed && !r.ok && !r.again && r.tries <= RETRY_MS.length && performance.now() - r.failAt > RETRY_MS[r.tries - 1]) {
+        r.again = true; r.failed = false; startTile(z, x, y, r);
+        const done = setInterval(() => { if (r.ok || r.failed) { r.again = false; clearInterval(done); } }, 500);
+      }
+      return r;
+    }
+    const rec = { img: null, ok: false, t: performance.now() };
+    tiles.set(key, rec);
+    startTile(z, x, y, rec);
     return rec;
   }
   function drain() {

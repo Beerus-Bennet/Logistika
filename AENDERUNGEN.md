@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v314 – Karte bleibt nicht mehr leer, wenn Kacheln einmal nicht laden
+**Meldung Bennet (Handy, Etappe 6):** Die Karte war leer. Routen, Pins und Fahrzeuge waren da, nur Land und Meer (die Kartenkacheln) fehlten.
+
+**Ursache (`map.js`, im Code nachgelesen und mit simulierten Netzfehlern bestätigt):**
+- Lädt eine Kachel einmal nicht (kurzer Netzaussetzer, Server antwortet nicht), bleibt ihr Eintrag für immer als „fehlgeschlagen“ im Zwischenspeicher. Sie wurde nie neu angefragt, die helle Ersatzfläche blieb stehen, bis man die Seite neu lud. Weil die Karte jede Kachel bei jedem Zeichnen „auffrischt“, wurde der Eintrag auch nicht aus dem Speicher verdrängt.
+- Antwortet eine Anfrage überhaupt nicht (weder Erfolg noch Fehler), blieb ihr Ladeplatz belegt. Nach 10 solchen Anfragen lud die Karte gar nichts mehr.
+- Im Testbrowser reproduziert: Netz weg, dann wieder da. Alter Code lud nicht nach.
+
+**Lösung (`map.js`):** Eine Anfrage bricht nach 15 s ab und gilt als Fehler. Fehlgeschlagene Kacheln werden nach 2,5 s, 6 s, 15 s und 40 s automatisch erneut angefragt, die Karte zeichnet sich danach neu. Wiederholungen hängen `?r=n` an die Kachel-URL, weil der Browser für dieselbe URL sonst die gemerkte Fehlerantwort erneut ausliefert. Erfolgreich geladene Kacheln sind unberührt.
+
+**Geprüft (Testbrowser, Playwright, Service Worker blockiert, Kachel-Anfragen simuliert):** (1) Netz fällt aus, Kacheln scheitern, Netz kommt zurück: Wiederholungen nach 3/6/12 s scheitern, die nächste nach der Rückkehr (27 s) lädt alle Kacheln. (2) Anfragen, die nie antworten: nach dem Zeitlimit wird neu geladen, die Karte füllt sich. Ohne die Änderung bleibt die Karte in beiden Fällen leer. **Nicht geprüft:** am Handy; ob bei dir wirklich ein Netzfehler die Ursache war. Falls die Karte auch nach dem Update leer bleibt, hilft die Seitenaufruf-Fehlermeldung oder ein Bild der Entwicklerkonsole.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 
