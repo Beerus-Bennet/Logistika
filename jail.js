@@ -477,9 +477,11 @@ const JAIL3D = (() => {
 
     /* -------------------------------- Schleife -------------------------------- */
     let raf = 0, last = performance.now(), alive = true;
+    const gov = G3.governor(R);                   /* v316: Ruckelbremse (gl3d.js) */
     const frame = now => {
       if (!alive) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const raw = now - last, dt = Math.min(0.05, raw / 1000); last = now;
+      gov(raw, now);
       fit();
       step(dt);
       R.stepParticles(dt);

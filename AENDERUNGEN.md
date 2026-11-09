@@ -1,5 +1,18 @@
 # Änderungen – kurz für den Kollegen
 
+## v316 – U-Haft-Zelle ruckelt nicht mehr (gemeinsame Ruckelbremse)
+**Meldung Bennet (Handy, U-Haft):** Die Zelle ruckelt stark, besonders beim Antippen.
+
+**Ursache (`jail.js`, im Testbrowser gemessen):**
+- Der Tipp selbst ist billig (Handler 0,4–1,4 ms, 30 Zeichenaufrufe je Bild). Die Zelle ist wie das Büro grafiklastig: vollflächig mit 1,75-facher Auflösung, Schatten, Nebel, Lichtstrahlen, Staub. Ohne Reserve fällt jeder zusätzliche Aufwand (Sprechblase, Tippreaktion) sofort als Ruckler auf.
+- Die Sprechblase animierte `margin-top`. Das erzwingt in jedem Bild der Animation (1,9 s) eine neue Layoutberechnung.
+
+**Lösung:**
+- Die Ruckelbremse aus v315 liegt jetzt in `gl3d.js` (`G3.governor`) und gilt für die Zelle und das Büro: Kommt das Gerät nicht auf etwa 30 Bilder/s, sinkt die Auflösung stufenweise auf 80 %, 65 %, 50 %. Nur abwärts.
+- Die Blasenanimation läuft über `transform` statt `margin-top` (`style.css`, v316).
+
+**Geprüft (Testbrowser, Software-Grafik):** Die Zelle drosselt die Auflösung (390 × 844 → 195 × 422), das Büro weiterhin (390 → 254 → 195). Tippen auf den Häftling zeigt die Blase („Ich kann nicht schlafen.“) mit `transform`-Animation. **Nicht geprüft:** auf dem Handy. Die Software-Grafik sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones. Ruckelt es weiter, bitte melden, dann messe ich Schatten und Lichtstrahlen einzeln.
+
 ## v315 – Büro: Sprechblase bleibt über dem Kopf, Ruckelbremse
 **Meldung Bennet (Handy, Konzernzentrale):** Starkes Ruckeln in den Büros. Der Text der Sprechblase stand als schmale Spalte am rechten Rand. Die Blase soll über dem Arbeiter bleiben und nicht mit skalieren.
 

@@ -1554,17 +1554,6 @@ const OFFICE3D = (() => {
     }, 60));
   }
 
-  /* v315: Ruckelbremse. Kommt das Gerät nicht auf ~30 Bilder/s (viele Mitarbeiter, kleines Handy, Stromsparmodus),
-     sinkt die Auflösung stufenweise (Schatten und Figuren bleiben gleich). Nur abwärts, damit nichts hin und her springt;
-     Messung ohne die ersten Sekunden (Shader, Texturen) und ohne Pausen im Hintergrund. */
-  const QUALITY = [1, 0.8, 0.65, 0.5];
-  function governQuality(R, raw, now) {
-    const g = O.gov || (O.gov = { ema: 16, level: 0, since: now, last: now });
-    if (raw > 1500 || document.hidden) { g.since = now; return; }          /* Pause, Tabwechsel, Ladehänger */
-    g.ema += (raw - g.ema) * 0.08;
-    if (now - g.since < 2500 || now - g.last < 1500 || g.level >= QUALITY.length - 1) return;
-    if (g.ema > 30) { g.level++; g.last = now; g.ema = 16; R.scale = QUALITY[g.level]; }
-  }
   function start() {
     const el = O.el, cv = el.querySelector("#ofpCv");
     const R = G3.create(cv, { shadowSize: 2048, shadowBox: 8.5, maxDpr: 1.75 });
@@ -1578,11 +1567,12 @@ const OFFICE3D = (() => {
     buildFloor(true);
     bindInput();
     O.last = performance.now(); O.t = 0;
+    const gov = G3.governor(R);                    /* v316: Ruckelbremse (gl3d.js) */
     const frame = now => {
       if (!O || !O.alive || O.R !== R) return;
       const raw = now - O.last;
       const dt = Math.max(0, Math.min(0.05, raw / 1000)); O.last = now; O.t += dt;
-      governQuality(R, raw, now);
+      gov(raw, now);
       step(dt, now);
       if (!O || !O.alive || O.R !== R) return;
       R.stepParticles(dt);
