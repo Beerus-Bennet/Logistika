@@ -1,5 +1,20 @@
 # Änderungen – kurz für den Kollegen
 
+## v315 – Natürliche Liegebewegung und ausgestopfte Kopfpräparate
+
+**Ursache:** In der Bergungsansicht wirkten die oberen Läufe stark angewinkelt, die Konturen und Scheckenflecken hart. Auf der Trophäentafel waren nur Schädel bzw. Keilerwaffen zu sehen; die getrennte Skalierung ließ Kopfgrößen unpassend wirken.
+
+**Lösung (`hunt.js`):**
+- Hirschrumpf und -läufe mit feineren Konturen, weichere Farbübergänge bei Schecken. Obere Läufe von Hirsch und Keiler liegen entspannter; Rumpf, Hals und Gelenke laufen mit stetiger Beschleunigung in die Endpose aus. Geschlossene Lider ersetzen beim erlegten Tier die offenen Augen; das Kopfmodell wird einmal erzeugt und wiederverwendet.
+- Hirsch und Keiler als ausgestopfte Köpfe mit Hals-/Schulteransatz, Ohren, Fell und Augen. Geweih, Waffen und Fell stammen aus dem gespeicherten Stück. Kopf und Geweih werden gleichmäßig skaliert; alle Präparate auf der Tafel nutzen denselben Maßstab, der Platz richtet sich nach der tatsächlichen Breite.
+- Bestehende Trophäendaten, Werte, Seltenheiten, Trefferzonen und Belohnungen unverändert. Keine Spielstandmigration. Service Worker v315 und `hunt.js?v=315`; v314 ist für die parallele Kartenkorrektur in PR #33 reserviert.
+
+**Geprüft:**
+- `hunt-presentation-v315.test.js`: 24 Kopfpräparate, unverzerrte Kopftransformationen, gleiche Tafelskalierung, gespeicherte Merkmale/Werte und acht Liegeposen mit geschlossenen Lidern, weichem Auslaufen und Modellcache.
+- Bestehende Tests `trophy-layout-v310.test.js`, `hunt-v307.test.js`, `hunt-thighs-v290.test.js`, `hunt-v283.test.js` und `hunt.test.js` bestanden: Modellgrenzen, Geweihformen, Bodenauflage, Fallbewegung (884 Bilder), Treffer und Leistungsbudgets.
+- Chromium mit WebGL: 14 Vorher-/Nachheransichten der Originalmodelle geprüft, einschließlich beider Liegerichtungen und Tafel. Im Testbrowser bei 390 × 844 Pixeln Hirsch-, Keiler- und Fasanansicht geöffnet/geschlossen sowie die Bergung eines gescheckten Hirschs geprüft; keine JavaScript-/WebGL-Fehler oder horizontal abgeschnittene Detailansicht.
+- Aktuelles main und PR #33 vor dem Upload auf Überschneidungen geprüft. Kein Test auf einem echten iPhone oder in Safari.
+
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.
 
