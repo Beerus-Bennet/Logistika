@@ -728,7 +728,7 @@ function farmLoop(now) {
   if (!R || R.lost() || document.hidden || document.body.classList.contains("jl-open")) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
   /* Akku schonen: ohne Berührung reichen ~30 Bilder pro Sekunde */
   const busy = FV.ptr.size || FV.focusing || FV.tool || FV.place || FV.drives.length || now - (FV.touchAt || 0) < 1500
-    || Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01 || (typeof worldBusy === "function" && worldBusy());
+    || FV.distSoft != null || Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01 || (typeof worldBusy === "function" && worldBusy());
   FV.busy = !!busy;
   if (!busy && now - (FV.last || 0) < 30) return;
   const dt = Math.min(0.05, (now - (FV.last || now)) / 1000);
@@ -738,6 +738,12 @@ function farmLoop(now) {
   if (!FV.ptr.size && (Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01)) {
     R.cam.tx += FV.vel[0] * dt; R.cam.tz += FV.vel[1] * dt;
     FV.vel[0] *= Math.pow(0.04, dt); FV.vel[1] *= Math.pow(0.04, dt);
+    clampCam();
+  }
+  /* v341: weiches Zurückfahren der Zoomgrenze – das Verhältnis (Entfernung / Grenze) nimmt gleichmäßig ab, das wirkt wie ein ruhiges Herauszoomen rückwärts */
+  if (FV.distSoft != null) {
+    const lim = FV.distLim || 54, r = Math.log(FV.distSoft / lim) * Math.exp(-dt * 2);
+    FV.distSoft = r < 0.01 ? null : lim * Math.exp(r);
     clampCam();
   }
   if (now - FV.syncAt > 400) { FV.syncAt = now; farmSyncScene(false); renderFarmUI(); }
@@ -814,7 +820,11 @@ function clampCam() {
   c.tz = clamp(c.tz, r[1], r[3]);
   /* v340: Die neue Ortsübersicht muss auch im Hochformat vollständig ins Bild passen. */
   const town = typeof VILLAGE !== "undefined" && VILLAGE.clear(c.tx,c.tz);
-  c.dist = clamp(c.dist, 11, town ? 450 : 54);
+  /* v341: Verlässt die Kamera den Ortsbereich, schrumpft die Zoomgrenze weich (farmLoop) statt sofort von bis zu 450 auf 54 zu springen. */
+  const lim = town ? 450 : 54;
+  if (FV.distLim != null && lim < FV.distLim && c.dist > lim) FV.distSoft = c.dist;
+  FV.distLim = lim;
+  c.dist = clamp(c.dist, 11, FV.distSoft != null ? Math.max(lim, FV.distSoft) : lim);
   c.pitch = FV.camOv ? FV.camOv.pitch : 0.8 + Math.min(43,c.dist - 11) / 43 * 0.2;      /* v167: Schatz-Show darf steiler von oben schauen */
 }
 function farmFocus(o, dist) {

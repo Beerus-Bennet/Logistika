@@ -78,3 +78,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v337: Auktionshaus – `ahPurgeVeh` entfernt alte fremde Nutzfahrzeug-Lose auch mit Spielergebot, beim Nachlegen und beim Öffnen.
 - v338: Auktionshaus – Limit-Feld zeigt Tausenderpunkte (`ahGroup`, `ahGroupInput`, `ahDigits` in `auction.js`).
 - v339: Auktionshaus – fehlende Autofotos per Wikipedia-Suche („Marke Modell“, Treffer muss die Marke im Titel haben) als vierter Schritt in `resolvePics`.
+- v341: Seeblick – Zoomgrenze beim Verlassen des Ortsbereichs weich statt hart (`FV.distSoft`, `distLim` in `clampCam`/`farmLoop`); keine Namensschilder über bewohnten Häusern (`tags` in `villageview.js`).
