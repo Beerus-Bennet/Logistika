@@ -422,21 +422,26 @@ const VISTA = (() => {
     /* v133: Wolken aus vorgerechneten, gelockten Formen – unten Schatten, oben Licht; nachts dunkel vor den Sternen, mit silbernem Mondrand */
     const CS = cloudShapes(), lit = mix(P.cl, P.sun, 0.25 * evening), dkc = P.cd, cAl = night > 0.5 ? 0.9 : 0.95 * (1 - wg * 0.25);
     const moonA = el < -0.02 && sunX != null ? sol.az + 0.5 : null;
-    let ci = 0;
-    const cloud = (a, e, w, hgt, band) => {
-      const x = sx(a); if (x == null) return;
-      const d = angN(a - fwd), cd = Math.max(0.25, Math.cos(d));
+    /* v342: Wolken sitzen fest auf der Himmelskugel. Mitte und Breite kommen aus der echten Kameraprojektion (R.project) – vorher stand die Höhe über dem
+       Horizont als hy − f·tan(e), unabhängig von der Neigung; beim Hoch- und Runterschauen wuchsen und wanderten die Wolken dadurch. Die Form hängt an der
+       Nummer der Wolke (id), nicht mehr an einem Zähler, der beim Drehen wechselte. */
+    const cloud = (id, a, e, w, hgt, band) => {
+      const d = angN(a - fwd);
       if (Math.abs(d) > halfH + 0.5) return;
-      const S0 = CS[(ci++) % CS.length], y = hy - fs * Math.tan(e) / cd, wd = fs * w / cd * (band ? 2.2 : 1.7), ht = wd * S0.H / S0.W * (band ? 0.35 : 0.55 + hgt * 0.45);
-      X.drawImage(tintCloud(S0, lit, dkc, cAl), x - wd / 2, y - ht * 0.8, wd, ht);
+      const ce = Math.cos(e), se = Math.sin(e), half = w * (band ? 1.1 : 0.85);
+      const at = aa => R.project(eye[0] + Math.cos(aa) * ce * S0, eye[1] + se * S0, eye[2] + Math.sin(aa) * ce * S0);
+      const q = at(a), q1 = at(a - half), q2 = at(a + half);
+      if (!q || !q1 || !q2) return;
+      const SH = CS[id % CS.length], x = q[0] * sc, y = q[1] * sc, wd = Math.hypot(q2[0] - q1[0], q2[1] - q1[1]) * sc, ht = wd * SH.H / SH.W * (band ? 0.35 : 0.55 + hgt * 0.45);
+      X.drawImage(tintCloud(SH, lit, dkc, cAl), x - wd / 2, y - ht * 0.8, wd, ht);
       if (moonA != null && sunV > 0.05) {
         const md = Math.abs(angN(a - moonA)), rk = Math.exp(-Math.pow(md / 0.6, 2)) * sunV * (0.2 + 0.5 * moonI) * night;
-        if (rk > 0.03) { X.globalAlpha = Math.min(1, rk * 1.3); X.globalCompositeOperation = "lighter"; X.drawImage(rimCloud(S0), x - wd / 2, y - ht * 0.8, wd, ht); X.globalCompositeOperation = "source-over"; X.globalAlpha = 1; }
+        if (rk > 0.03) { X.globalAlpha = Math.min(1, rk * 1.3); X.globalCompositeOperation = "lighter"; X.drawImage(rimCloud(SH), x - wd / 2, y - ht * 0.8, wd, ht); X.globalCompositeOperation = "source-over"; X.globalAlpha = 1; }
       }
     };
     const drift = time * 0.004;
-    CLOUDS.forEach((k, i) => { if (i < 8 + Math.round(wg * 6)) cloud(k.a + drift * k.sp, k.e * (1 + wg * 0.1), k.w * (1 + wg * 0.5), k.hgt, false); });
-    if ((evening > 0.05 || h > 17.2 && h < 21.8)) for (let i = 0; i < 6; i++) cloud(i * 1.05 + 0.4 + drift * 0.6, 0.025 + (i % 3) * 0.05 + (i % 2) * 0.02, 0.45 + (i % 3) * 0.12, 0.7, true);
+    CLOUDS.forEach((k, i) => { if (i < 8 + Math.round(wg * 6)) cloud(i, k.a + drift * k.sp, k.e * (1 + wg * 0.1), k.w * (1 + wg * 0.5), k.hgt, false); });
+    if ((evening > 0.05 || h > 17.2 && h < 21.8)) for (let i = 0; i < 6; i++) cloud(20 + i, i * 1.05 + 0.4 + drift * 0.6, 0.025 + (i % 3) * 0.05 + (i % 2) * 0.02, 0.45 + (i % 3) * 0.12, 0.7, true);
     /* Gelände: Berge, See, Hügel – jede Kette ein Polygon, oben die Farbe der Kette, unten im Dunst */
     const a0 = fwd - halfH, a1 = fwd + halfH, N = 110, pts = [];
     for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N, x = sx(a); if (x != null) pts.push({ a, x, d: Math.abs(((a - fwd + Math.PI * 3) % (Math.PI * 2)) - Math.PI) }); }
