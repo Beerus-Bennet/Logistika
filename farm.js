@@ -88,6 +88,7 @@ function farmYaw(o) { return farmRotation(o) * (o.t === "sw_lkw" ? Math.PI / 2 :
 function farmSize(o) {
   let w, d;
   if (FPENS[o.t]) { const P = FPENS[o.t], p = P[Math.min(P.length, o.lvl || 1) - 1]; w = p.w; d = p.d; }
+  else if (o.t === "trophy") { [w, d] = o.sz; }       /* v328: eigener Sockel je Präparat */
   else if (o.t === "deco") { const s = (FDECO[o.k] || { sz: [1, 1] }).sz; w = s[0]; d = s[1]; }
   else if (o.t === "f_plot" && typeof FFISHERY !== "undefined" && FFISHERY[o.k]) { w = FFISHERY[o.k].sz[0]; d = FFISHERY[o.k].sz[1]; }
   else { const s = (o.t === "lagerhalle" && o.sz) || FSIZE[o.t] || [1, 1]; w = s[0]; d = s[1]; }      /* v267: alte Halle ohne Platz zum Wachsen behält o.sz */
@@ -154,13 +155,17 @@ function pileTiles([x, z, ry]) {
 }
 const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
 function farmZones(t, k) {
+  if (t === "trophy") return ["display"];
   if (t === "stall") return ["road"];
   if (t === "tractor") return ["hof", "wild"];
   if (FSAW_MAIN.has(t) || (t === "board" && k === "saege")) return ["yard"];
   if (t === "saegebock" || t === "deco" || (FMACHINES[t] && !FMACHINES[t].fish)) return ["hof", "yard"];
   return ["hof"];
 }
-function farmZoneRect(z) { return z === "yard" ? FYARD : z === "road" ? FROADSIDE : z === "wild" ? FWILD : FIN; }
+function farmZoneRect(z) {
+  if (z === "display") { const r = farmCamRect(); return {x0:Math.ceil(r[0]+FG/2),z0:Math.ceil(r[1]+FG/2),x1:Math.floor(r[2]+FG/2),z1:Math.floor(r[3]+FG/2)}; }
+  return z === "yard" ? FYARD : z === "road" ? FROADSIDE : z === "wild" ? FWILD : FIN;
+}
 function farmZoneAt(x, z, w, d) {
   for (const zn of ["hof", "yard", "road", "wild"]) { const R = farmZoneRect(zn); if (x >= R.x0 && z >= R.z0 && x + w <= R.x1 && z + d <= R.z1) return zn; }
   return null;
@@ -175,6 +180,7 @@ function farmFreeRect(x, z, w, d, except) {
   return true;
 }
 function farmFits(x, z, w, d, except, t, k) {
+  if (t === "trophy") return TROPHIES.canPlace(x,z,w,d,except);
   const zn = farmZoneAt(x, z, w, d);
   if (!zn) return false;
   if (t && !farmZones(t, k).includes(zn)) return false;
@@ -1533,6 +1539,7 @@ function farmValue() {
       v += FPEN_META[o.t].val + FPEN_COST[o.t].slice(0, o.lvl).reduce((a, b) => a + b, 0) + o.animals.length * A.price * (A.mast ? 1.6 : o.t === "cows" ? 1.5 : 1);
     }
     else if (o.t === "deco") v += FDECO[o.k].price;
+    else if (o.t === "trophy") { const r = TROPHIES.record(o); v += farmStackV(HUNT.trophyId(r.k,r.m),1)*.8; }
     else if (FBUILD_VAL[o.t]) v += FBUILD_VAL[o.t];
     else if (o.t === "sw_halle" && sawRepaired()) v += 18000;
     if (o.slots) v += FSLOT_COST.slice(0, o.slots).reduce((a, b) => a + b, 0);
@@ -1666,6 +1673,7 @@ function farmMigrate() {
   });
 }
 function farmObjKnown(o) {
+  if (o.t === "trophy") return ["hirsch","keiler","fasan"].includes(o.k) && !!o.u && Array.isArray(o.sz) && o.sz.length === 2 && o.sz.every(n => Number.isInteger(n) && n > 0) && !!o.specimen;
   if (o.t === "deco") return !!FDECO[o.k];
   return !!(FMACHINES[o.t] || FPENS[o.t] || FSIZE[o.t] || FSTORE[o.t] || FFISHERY[o.t] || ["field", "tree", "house", "board", "shed", "junk", "stall", "tractor", "f_plot", "pot"].includes(o.t));
 }

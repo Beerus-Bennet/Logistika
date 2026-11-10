@@ -1,3 +1,14 @@
+## v328 – Fasan und individuelle Ganzkörperpräparate
+
+Branch `claude/fullbody-trophies`. Aktuelles `main` und alle beim Upload offenen PRs abgleichen; Versionsdateien und Changelogs zusammenführen, keine Veröffentlichung/Merge ohne Auftrag.
+
+- Zusammengehörig: `hunt.js` (Modelle/Sammlung/Bestand), neues `exhibits.js` (Objektidentität, Aufstellen/Einlagern), `farm.js` (Größe, Bauzone, Objektmigration, Hofwert), `farmview.js` (Modell, Vorschau, Objektmenü), `erbe.js` (Sammlung bleibt auch bei ausschließlich ausgestellten Stücken erreichbar).
+- `exhibits.js` nach `hunt.js` laden und im Service Worker vormerken. Alle fünf geänderten Produktdateien und Service Worker v328; neuere fremde Cache-Verweise erhalten.
+- Neue Hofobjekte `t: "trophy"`: `u`, `k`, `sz`, `h`, `x`, `z`, `r`, `specimen`. Nicht als unbekannte Objekte herausfiltern. `collSync` muss ausgestellte Stücke mitzählen. `farmInv` bleibt ausschließlich Lagerbestand. Niemals beim Zeichnen neue Gene ziehen oder ein ausgestelltes Stück als gelagerte Verkaufsware behandeln.
+- Bisherige `pin`-Werte bleiben als Favoriten/Verkaufsschutz; die bisherige Tafel und ihre Dreiergrenze entfallen. Alte Stücke liegen weiter in der Sammlung und werden vom Spieler einzeln platziert.
+- Präparate teilen den gleichmäßigen Körpermaßstab mit dem Reviertier. Füße stehen auf Sockelhöhe 0,14; Radius und vollständige Modellhöhe bestimmen die gespeicherte Stellfläche. Keine Änderung an Beute-/Medaillenwerten oder Jagdaufträgen.
+- Neue Integrationsprüfung `trophy-exhibits-v328.test.js`; zwei bisherige Kopf-/Tafelprüfungen auf die ausdrücklich gewünschten Ganzkörpermodelle angepasst. Bestehende Flug-/Pose-/Treffer- und Merkmalsprüfungen weiter ausführen. Der Fasan hält das alte 4500-Dreiecke-Budget ein.
+
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
 ## v325 – Wasserfall, Wasserfarben und Fluss auf main 261173a / v324
