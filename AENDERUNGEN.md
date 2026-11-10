@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v348 – Haifisch-Moment bei einer Konzernübernahme
+
+Eine erfolgreiche Übernahme erhält vor der bestehenden Zeitung eine eigene Meeresinszenierung: Lichtstrahlen, aufsteigende Luftblasen, ein eigens gezeichneter Hai mit Schwanz-/Flossenbewegung, Vorbeizug, Wasserring und goldener Markenenthüllung. Der Machtzuwachs gehört sichtbar dem Spieler: Sein Firmenname steht groß im Zentrum, begleitet von „Du gibst den Kurs vor“ und den tatsächlichen Zugewinnen an Fahrzeugen, Personal und Marktanteil beziehungsweise Stammkunden. Keine erfundenen Belohnungen.
+
+Die Inszenierung führt nach rund acht aktiven Animationssekunden zur bisherigen vollständigen Übersicht. Überspringen, Escape und „Übernahme ansehen“ führen genau einmal dorthin. Reduzierte Bewegung zeigt sofort das ruhige Ergebnisbild; der Nutzer öffnet die Details selbst. Fokus bleibt während der Inszenierung im Dialog; Animation, Ereignislistener und eigene Audioquellen werden anschließend entfernt. Bei verstecktem Tab läuft die Szene nicht unbemerkt durch. Der eigene Audiobogen respektiert den vorhandenen Tonschalter; Audio wird beim bestätigenden Kaufklick freigegeben und bei Stummschaltung/Verbergen beendet.
+
+Der Konzernkauf bleibt vor der Animation gespeichert. Preis, Flotte, Firmensitz, Personal, Marktanteile und bestehende Erfolgsboni werden nicht durch die Darstellung verändert. Kampfansagen behalten die bisherige Zeitungsansicht.
+
+Geprüft: zwölf bestehende Firmenwert-/Übergabe-Szenarien; Syntax und Diff. Lokales Chromium: echter Konzernkauf, unveränderte Vermögenswerte nach frühem Überspringen und Escape, einmaliger Übergang, Zahlenanzeige, automatisches Ende, reduzierte Bewegung und Fokusführung bei 320/390/844/1280 Pixeln. Audiofreigabe nach Nutzergeste, Start und vollständiger Quellenabbau bei Stummschaltung geprüft; gemeinsamer Audiokontext bleibt nutzbar. Sichtprüfung des Hais auf Handy- und Desktopbreite. Nicht auf echtem iPhone/Safari geprüft.
+
 ## v347 – Geordnete Platzvorschläge und einheitlicher Sammelabbruch
 
 Felder und Obstbäume erhalten beim Kauf einen Vorschlag am vorhandenen Bestand statt nur in Kameranähe. Feldlücken haben Vorrang, neue Beete bilden kompakte Blöcke. Obstbaumreihen übernehmen die vorhandenen Abstände; Einzelbäume beginnen mit zusätzlichem Abstand. Wege, Gebäude und Baugrenzen werden weiterhin durch die reguläre Bauprüfung geschützt. Die Vorschau kostet nichts, bezahlt wird erst beim Bestätigen. Manuelles Verschieben bleibt möglich; bei fortlaufendem Feldbau nutzt auch das nächste Feld die neue Platzsuche. Der Hinweis lautet „Bestätigen oder verschieben“.
