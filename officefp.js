@@ -64,7 +64,7 @@ const OFFICE3D = (() => {
      ob: Rechtecke für die Begehbarkeit (x0, z0, x1, z1) · occ: Kästen [lo, hi] für die Sichtprüfung beim Antippen. */
   function buildRoom(b, fl0) {
     const MB = G3.MB, st = new MB(), shell = new MB(), trim = new MB(), glow = new MB(), ob = [], occ = [], surf = [], phys = [];
-    const d = decoOf(b), t = tierOf(b), H = ceilH(b), multi = tierFloors(t) > 1;
+    const d = decoOf(b), t = tierOf(b), H = ceilH(b), multi = tierFloors(t) > 1, premium = b.tier >= 2;
     const fl = findBy(FLOORS, d.floor), tint = findBy(FLOOR_TINTS, d.tint), wall = findBy(WALLS, d.wall), kit = findBy(KITCHENS, d.kitchen);
     const fc = tint.mix ? avMix(fl.base, tint.mix, 0.5) : fl.base, fdk = hx(avMix(fc, "#000000", 0.16)), fcol = hx(fc);
     const wc = hx(wall.color), wdk = hx(avMix(wall.color, "#000000", 0.22));
@@ -90,7 +90,8 @@ const OFFICE3D = (() => {
     }
 
     /* Wände: Fenster links (Plan x 30, y 140–186), Tür rechts (y 96–130), Tor unten rechts bei Hallen */
-    const T = 0.16, wz0 = PZ(140), wz1 = PZ(186), dz0 = PZ(96), dz1 = PZ(130), DOOR_H = 2.15, SILL = 0.85, WTOP = 2.3;
+    /* v322: Tageslicht über eine breite Fensterfront statt einer einzelnen kleinen Scheibe. */
+    const T = 0.16, wz0 = PZ(premium ? 82 : 140), wz1 = PZ(premium ? 246 : 186), dz0 = PZ(96), dz1 = PZ(130), DOOR_H = 2.15, SILL = premium ? 0.7 : 0.85, WTOP = premium ? 2.65 : 2.3;
     const dock = b.tier > 0 && fl0 === 0, gx0 = PX(300), GATE_H = Math.min(H - 0.3, 3.0);
     const wallBox = (w, h, d2, o) => st.box(w, h, d2, wc, o);
     wallBox(2 * RW + 2 * T, H, T, { z: -RD - T / 2 });                                      /* hinten */
@@ -110,9 +111,15 @@ const OFFICE3D = (() => {
     wallBox(T, H - WTOP, wz1 - wz0, { x: -RW - T / 2, y: WTOP, z: (wz0 + wz1) / 2 });
     st.box(0.26, 0.05, wz1 - wz0 + 0.1, 0xf4f6f8, { x: -RW + 0.05, y: SILL, z: (wz0 + wz1) / 2 });      /* Fensterbank */
     top(-RW, wz0 - 0.04, -RW + 0.18, wz1 + 0.04, SILL + 0.05, [], "sill");
-    [wz0, (wz0 + wz1) / 2, wz1].forEach(z => st.box(0.08, WTOP - SILL, 0.06, 0xf4f6f8, { x: -RW - 0.02, y: SILL, z }));
+    Array.from({length: premium ? 7 : 3}, (_, i) => wz0 + (wz1 - wz0) * i / (premium ? 6 : 2)).forEach(z => st.box(0.08, WTOP - SILL, 0.06, 0xf4f6f8, { x: -RW - 0.02, y: SILL, z }));
     st.box(0.08, 0.06, wz1 - wz0, 0xf4f6f8, { x: -RW - 0.02, y: WTOP - 0.06, z: (wz0 + wz1) / 2 });
     glow.box(0.02, WTOP - SILL, wz1 - wz0, 0xcfe8ff, { x: -RW - T + 0.02, y: SILL, z: (wz0 + wz1) / 2 });
+    if (premium) {
+      /* Festes Glas-/Brüstungsdetail, ohne weitere Zeichenaufrufe oder bewegliche Teile. */
+      st.box(0.08, 0.035, wz1-wz0, 0xa4bcc4, {x:-RW-.04,y:1.55,z:(wz0+wz1)/2});
+      trim.box(0.12, 0.08, wz1-wz0+.12, 0x364b55, {x:-RW+.015,y:WTOP+.025,z:(wz0+wz1)/2});
+      glow.box(0.025,0.025,wz1-wz0,0xffeed0,{x:-RW+.08,y:WTOP+.02,z:(wz0+wz1)/2});
+    }
     /* rechts mit Tür */
     wallBox(T, H, dz0 + RD, { x: RW + T / 2, z: (-RD + dz0) / 2 });
     wallBox(T, H, RD - dz1, { x: RW + T / 2, z: (dz1 + RD) / 2 });
@@ -145,7 +152,7 @@ const OFFICE3D = (() => {
       if (deskFloor(b, i) !== fl0) continue;
       const [sx, sy] = deskPos(b, i), x = PX(sx), z = PZ(sy), p = b.staff[i];
       const mx = x + 0.3, cz = z + CHAIR_D;
-      st.box(2.08, 0.04, 1.04, 0xe4d3b6, { x, y: 0.72, z, top: 0xead9bd });
+      st.box(2.08, 0.04, 1.04, premium ? 0xb4875a : 0xe4d3b6, { x, y: 0.72, z, top: premium ? 0xcba67b : 0xead9bd });
       [-1, 1].forEach(s => st.box(0.05, 0.72, 0.96, 0x55606c, { x: x + s * 0.98, z }));
       st.box(1.9, 0.4, 0.03, 0x55606c, { x, y: 0.3, z: z - 0.44 });
       /* Bildschirm vor dem Platz: Fuß, Gehäuse; der Inhalt kommt als Bild (screenCanvas) bzw. dunkel im Ruhezustand.
@@ -156,6 +163,15 @@ const OFFICE3D = (() => {
       st.box(0.66, 0.42, 0.04, 0x22303f, { x: mx, y: 0.94, z: z - 0.06 });
       if (p) screens.push({ i, p, x: mx, y: 1.15, z: z - 0.06 + 0.0205 });
       else glow.box(0.6, 0.36, 0.008, 0x1d2a38, { x: mx, y: 0.97, z: z - 0.036 });
+      /* v322: Zweiter Monitor auf derselben ergonomischen Höhe, ohne den Arbeitsplatz zu verschieben. */
+      if (premium) {
+        st.box(0.18,0.012,0.15,0x2a2a30,{x:mx-.69,y:.76,z:z-.06});
+        st.box(.045,.2,.04,0x2a2a30,{x:mx-.69,y:.77,z:z-.08});
+        st.box(.62,.42,.04,0x22303f,{x:mx-.69,y:.94,z:z-.06});
+        if (p) screens.push({i,p,x:mx-.69,y:1.15,z:z-.0395,mirror:true});
+        else glow.box(.56,.36,.008,0x1d2a38,{x:mx-.69,y:.97,z:z-.036});
+        blk(mx-1, .94, z-.08, mx-.38, 1.36, z-.04);
+      }
       /* Tastatur mit Tastenreihen, Mauspad, Block mit Linien, Papierstapel, Telefon */
       st.box(0.44, 0.018, 0.15, 0x2a2a30, { x: mx - 0.04, y: 0.76, z: z + 0.25 });
       /* v282: Einzelne Tasten mit Zwischenräumen statt vier durchgehender Balken. */
@@ -175,11 +191,12 @@ const OFFICE3D = (() => {
         st.box(0.075, 0.01, 0.15, 0x1d1d20, { x: mx - 0.43, y: 0.76, z: z + 0.3 });
         st.box(0.13, 0.008, 0.008, 0x2a4a8a, { x: mx + 0.57, y: 0.768, z: z + 0.36, ry: 0.7 });
       }
-      chair(st, mx, cz, p ? 0 : 0.35, 0x2f3d55);
+      chair(st, mx, cz, p ? 0 : 0.35, premium ? 0x344b50 : 0x2f3d55);
       /* v263: Tischplatte als Ablage – frei bleiben Monitorfuß, Tastatur, Mauspad, Block, Papiere, Telefon,
          bei besetzten Plätzen auch die eigene Tasse und der Bereich, in dem Unterarme und Hände arbeiten */
       const ex = [[mx - 0.12, z - 0.16, mx + 0.12, z + 0.03], [mx - 0.27, z + 0.165, mx + 0.19, z + 0.335], [mx + 0.19, z + 0.145, mx + 0.43, z + 0.355],
         [mx + 0.44, z + 0.21, mx + 0.66, z + 0.455], [mx - 0.79, z + 0.04, mx - 0.48, z + 0.4], [mx - 0.48, z + 0.215, mx - 0.38, z + 0.385]];
+      if (premium) ex.push([mx-.81,z-.15,mx-.57,z+.025]);
       if (p) ex.push([mx + 0.27, z + 0.045, mx + 0.45, z + 0.155], [mx - 0.32, z + 0.335, mx + 0.46, z + 0.52]);
       top(x - 1.04, z - 0.52, x + 1.04, z + 0.52, 0.76, ex, "desk");
       /* Rückenlehne und Sitz besetzter Stühle halten eine geworfene Tasse auf */
@@ -1289,11 +1306,13 @@ const OFFICE3D = (() => {
   function boardCanvas(b) {
     const c = document.createElement("canvas"); c.width = 512; c.height = 320;
     const g = c.getContext("2d"), t = tierOf(b);
-    g.fillStyle = "#fbfcfd"; g.fillRect(0, 0, 512, 320);
-    g.strokeStyle = "#8e98a6"; g.lineWidth = 14; g.strokeRect(7, 7, 498, 306);
-    g.fillStyle = "#1d3f8f"; g.font = "800 34px 'Baloo 2', system-ui, sans-serif";
+    /* v322: In großen Büros eine gerahmte Dispositionsanzeige mit echten Standortzahlen. */
+    const premium = b.tier >= 2;
+    g.fillStyle = premium ? "#142d38" : "#fbfcfd"; g.fillRect(0, 0, 512, 320);
+    g.strokeStyle = premium ? "#90b4b1" : "#8e98a6"; g.lineWidth = 14; g.strokeRect(7, 7, 498, 306);
+    g.fillStyle = premium ? "#f4d49a" : "#1d3f8f"; g.font = "800 34px 'Baloo 2', system-ui, sans-serif";
     g.fillText("Standort " + N[b.node].short, 30, 62);
-    g.fillStyle = "#2a2a30"; g.font = "700 25px 'Baloo 2', system-ui, sans-serif";
+    g.fillStyle = premium ? "#e4f0ef" : "#2a2a30"; g.font = "700 25px 'Baloo 2', system-ui, sans-serif";
     const rows = [
       "Selbst disponiert: " + (b.done || 0) + " Touren",
       "Team: " + b.staff.length + " / " + t.desks + " Plätze",
@@ -1623,11 +1642,16 @@ const OFFICE3D = (() => {
     /* Personal */
     O.staff = room.seats.map(s => { R.nodes.push(buildFigure(R, s, M)); return s; });
     /* Bildschirme (384 × 240, nur bei geänderten Daten neu) */
-    O.screens = room.screens.map((s, n) => {
+    O.screens = room.screens.filter(s => !s.mirror).map((s, n) => {
       const c = document.createElement("canvas"); c.width = 384; c.height = 240;
       const sig = screenCanvas(c, b, s.p), t = TX(c);
       R.nodes.push(R.node(null, { x: s.x, y: s.y, z: s.z, decal: { t, w: 0.6, h: 0.36 } }));
       return Object.assign(s, { c, t, sig, next: performance.now() + 600 + n * 23 });
+    });
+    /* v322: Doppelmonitore teilen dieselbe Textur; weiterhin nur eine Aktualisierung pro Arbeitsplatz. */
+    room.screens.filter(s => s.mirror).forEach(s => {
+      const source = O.screens.find(x => x.i === s.i);
+      R.nodes.push(R.node(null, {x:s.x,y:s.y,z:s.z,decal:{t:source.t,w:.56,h:.36}}));
     });
     /* v301: Standorttafel und Personalposter; kein Firmenschriftzug an der Küchenwand. */
     R.nodes.push(R.node(null, { x: -2.6, y: 1.55, z: RD - 0.012, ry: PI, decal: { t: TX(boardCanvas(b)), w: 2.4, h: 1.5 } }));
