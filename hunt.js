@@ -733,9 +733,28 @@ const HUNT = (() => {
     c = mixc(c, PHC.copperD, ss((z - 0.08) / 0.1) * 0.35);                                          /* Brust tiefer kupferrot */
     c = mixc(c, PHC.rump, ss((-z - 0.06) / 0.08) * ss((sv - 0.2) / 0.4));                            /* Bürzel graugrün */
     c = mixc(c, PHC.belly, ss((-sv - 0.45) / 0.35));
-    const sp = hsh(p[0] * 97.3, p[1] * 61.1, p[2] * 83.7);
-    if (sp > 0.72) c = mixc(c, PHC.scale, 0.18 + 0.3 * (sp - 0.72) / 0.28);                             /* dunkle Federspitzen, verstreut */
-    return mulc(c, 0.94 + 0.12 * hsh(p[2], p[0], p[1]));
+    /* v328: Ruhiger Kupferverlauf; die Federzeichnung liegt als überlappende Kontur darüber. */
+    return mulc(c, 0.97 + 0.045 * Math.sin(z*41+p[1]*23));
+  }
+  /* v328: Federn folgen der wirklichen Rumpfoberfläche. Die Decken liegen
+     übereinander; ihre Säume bilden Flügel statt schwebender Einzelteile. */
+  function phFeather(b, side, angle, z0, length, width, col) {
+    const rows=[],n=4;
+    for(let i=0;i<=n;i++) {
+      const t=i/n,z=z0-length*t,[top,bot,hw]=prof(PH_T,z),hy=(top-bot)/2;
+      const w=width*Math.pow(Math.sin(Math.PI*t),.55);
+      rows.push([-1,0,1].map(j=>{
+        const a=angle+j*w,cs=Math.cos(a),sn=Math.sin(a),lift=.004+(z0+.08)*.018+Math.sin(Math.PI*t)*.0015;
+        return {p:[side*Math.sign(cs)*Math.pow(Math.abs(cs),2/2.05)*(hw*(1-.12*Math.max(0,sn)**2)+lift),
+          (top+bot)/2+Math.sign(sn)*Math.pow(Math.abs(sn),2/2.05)*(hy+lift),z],
+          c:mixc(col,j?PHC.wingD:PHC.gold,j?.45:.10)};
+      }));
+    }
+    for(let i=1;i<rows.length;i++)for(let j=1;j<3;j++){
+      const a=rows[i-1][j-1],c=rows[i][j-1],d=rows[i][j],e=rows[i-1][j];
+      if(side>0){b.triV(a.p,c.p,d.p,a.c,c.c,d.c);b.triV(a.p,d.p,e.p,a.c,d.c,e.c);}
+      else{b.triV(d.p,c.p,a.p,d.c,c.c,a.c);b.triV(e.p,d.p,a.p,e.c,d.c,a.c);}
+    }
   }
   function phBody() {
     G3.seed(5301);
@@ -746,20 +765,15 @@ const HUNT = (() => {
       P.push(R); C.push(R.map((p, j) => phCol(p, Math.sin((j / m) * Math.PI * 2), z)));
     }
     skin(b, P, C, { cap0: true, cap1: true });
-    /* angelegte Schwingen (v262): vorn die hellen Decken, darüber nach hinten spitz zulaufend die dunklen Handschwingen mit Querbinden –
-       liest sich von oben und von der Seite als Flügel (vorher ein einzelnes flaches Oval, das am liegenden Stück wie ein Deckel wirkte) */
-    const wcol = (p, dark) => {
-      let c = mixc(mixc(PHC.wing, PHC.copperD, 0.38), PHC.wingD, (Math.sin(p[2] * 70 + p[1] * 20) > 0.35 ? 0.6 : 0) + dark * 0.4);
-      c = mixc(c, PHC.copperD, ss((p[1] + 0.02) / 0.05) * 0.35 * (1 - dark));                    /* zum Rumpf hin in das Kupfer übergehend */
-      c = mixc(c, PHC.wingD, ss((-p[2] - 0.06) / 0.07) * 0.6); return mulc(c, 0.92 + 0.14 * hsh(p[0] * 3, p[1] * 3, p[2] * 3));
-    };
-    [-1, 1].forEach(s => {
-      b.at({ x: s * 0.088, y: 0.274, z: 0.005, rx: -0.12, rz: s * 0.44 }, q => ell(q, [0, 0, 0], [0.018, 0.048, 0.086], p => wcol(p, 0), 12, 8));
-      b.at({ x: s * 0.083, y: 0.29, z: -0.105, rx: -0.2, rz: s * 0.36 }, q => ell(q, [0, 0, 0], [0.016, 0.033, 0.105], p => wcol([p[0], p[1], p[2] - 0.11], 1), 10, 7));
+    /* Überlappende Flügeldecken, längere Handschwingen am unteren Rand. */
+    [-1,1].forEach(side=>{
+      for(let row=0;row<7;row++)for(let j=0;j<6;j++)
+        phFeather(b,side,-.7+row*.30,.14-j*.047,.10,.23,mixc(PHC.wing,PHC.copper,row<2?.65:.18));
+      for(let j=0;j<4;j++)phFeather(b,side,-.05+j*.17,.065-j*.017,.23-j*.008,.16,PHC.wingD);
     });
     /* Stoß: lange gebänderte Schwanzfedern im schmalen Fächer, schräg nach hinten oben */
-    [[-2, 0.3], [-1, 0.36], [0, 0.44], [1, 0.4], [2, 0.32], [0.5, 0.25]].forEach(([f, L], i) =>
-      b.at({ y: 0.292, z: -0.19, rx: -1.25 - Math.abs(f) * 0.03, rz: f * 0.07 }, q => featherInto(q, L * LOOK.tail, 0.021, f * 0.03, i * 3 + 2)));
+    [[-2,.40],[-1,.48],[0,.56],[1,.51],[2,.42],[.5,.35]].forEach(([f,L],i)=>
+      b.at({x:f*.006,y:.295-i*.0006,z:-.185,rx:-1.72-Math.abs(f)*.025,rz:f*.045},q=>featherInto(q,L*LOOK.tail,.025,f*.014,i*3+2)));
     return b;
   }
   /* Ständer: Lauf mit Sporn und drei Zehen nach vorn, eine nach hinten */
@@ -771,19 +785,28 @@ const HUNT = (() => {
     tube(b, [[0, -0.095, -0.002], [0, -0.097, -0.018]], [0.004, 0.001], [c, c], 4, { tip: true });
     return b;
   }
-  function phHead() {
-    const b = MB();
-    /* Hals: unten weißer Ring, darüber grün, oben blau-violett schillernd */
-    tube(b, [[0, -0.03, -0.02], [0, 0.03, -0.006], [0, 0.085, 0.006], [0, 0.125, 0.014]], [0.036, 0.03, 0.025, 0.024], [RGB(PHC.neck), RGB(PHC.neck), RGB(PHC.neckB), RGB(PHC.head)], 10, { cap0: true });
-    if (!LOOK.noRing) ell(b, [0, 0.008, -0.01], [0.037, 0.011, 0.037], PHC.ring, 12, 4);          /* v200: ohne Halsring (Böhmischer und dunkler Fasan) */
-    ell(b, [0, 0.148, 0.022], [0.029, 0.03, 0.042], (p, y) => mixc(PHC.head, PHC.neck, ss((-y + 0.2) / 0.8) * 0.5), 10, 7);
-    [-1, 1].forEach(s => {
-      ell(b, [s * 0.019, 0.145, 0.036], [0.014, 0.021, 0.025], (p, y) => mixc(PHC.red, PHC.redD, ss((-y + 0.3) / 0.7) * 0.5), 8, 6);    /* Rosen */
-      ell(b, [s * 0.027, 0.156, 0.046], [0.005, 0.005, 0.005], PHC.eye, 5, 3);
-      ell(b, [s * 0.03, 0.157, 0.047], [0.0025, 0.0025, 0.0025], 0x120c08, 4, 3);
-      bristle(b, [s * 0.012, 0.168, 0.004], [s * 0.25, 0.55, -0.8], 0.032, 0.007, PHC.head, PHC.neck);                         /* Federohren */
+  function phHead(resting) {
+    const b=MB(),P=[],C=[],m=14;
+    /* S-förmiger, am Kropf breiter Hals statt geradem Rohr. */
+    const T=[[-.055,.052,-.027],[0,.045,-.01],[.05,.032,.012],[.10,.026,.025],[.145,.028,.032]];
+    for(let i=0;i<=12;i++) {
+      const y=lerp(-.055,.145,i/12),[w,z]=prof(T,y),R=ring([0,y,z],[1,0,0],[0,0,1],w,w*.87,w*.87,m,2);
+      P.push(R);C.push(R.map((p,j)=>{
+        let c=mixc(PHC.neck,PHC.neckB,ss((y-.015)/.13)*(.4+.25*Math.cos(j/m*6.28)));
+        c=mixc(PHC.copperD,c,ss((y+.025)/.06));
+        if(!LOOK.noRing && y>.04 && y<.055)c=RGB(PHC.ring);
+        return c;
+      }));
+    }
+    skin(b,P,C,{cap0:true,cap1:true});
+    ell(b,[0,.153,.043],[.035,.033,.045],p=>mixc(PHC.head,PHC.neck,.55+.15*Math.sin(p[0]*50)),14,8);
+    [-1,1].forEach(side=>{
+      ell(b,[side*.029,.154,.054],[.008,.017,.022],PHC.red,8,5);
+      if(resting)ell(b,[side*.036,.164,.059],[.002,.0014,.007],PHC.redD,7,4);
+      else {ell(b,[side*.036,.164,.059],[.0045,.0045,.005],PHC.eye,8,5);ell(b,[side*.039,.164,.061],[.0024,.0028,.0026],0x120c08,7,4);}
+      bristle(b,[side*.018,.177,.017],[side*.25,.35,-.8],.022,.005,PHC.head,PHC.neck);
     });
-    tube(b, [[0, 0.142, 0.058], [0, 0.138, 0.076], [0, 0.131, 0.09]], [0.0105, 0.007, 0.0015], [RGB(PHC.beak), RGB(PHC.beak), mixc(PHC.beak, 0x8a7a50, 0.5)], 6, { tip: true });
+    tube(b,[[0,.149,.078],[0,.145,.097],[0,.138,.111]],[.010,.006,.001],[RGB(PHC.beak),RGB(PHC.beak),mixc(PHC.beak,0x8a7a50,.4)],8,{tip:true});
     return b;
   }
   /* v262: Flugflügel mit Arm (Decken hell) und Hand (Schwingen dunkel, gefingert), Drehpunkt am Ansatz – vorher ein einzelnes Viereck */
@@ -840,8 +863,8 @@ const HUNT = (() => {
       neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.125 }, heart: { c: [0, 0.46, 0.24], r: 0.07 },
       head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.13, stich: { c: [0, 0.455, 0.44], r: [0.17, 0.13, 0.135] }, sens: 1.2 },
     fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, legs: [],
-      neckP: [0, 0.22, 0.15], headP: [0, 0, 0], body: { c: [0, 0.24, -0.02], r: [0.13, 0.13, 0.2] }, lung: null, heart: null,
-      head: { c: [0, 0.14, 0.03], r: 0.06 }, neckZ: [[0, 0.0, 0.0], [0, 0.1, 0.0]], neckR: 0.04, sens: 1.5 }
+      neckP: [0, 0.28, 0.15], headP: [0, 0, 0], body: { c: [0, 0.24, -0.02], r: [0.13, 0.13, 0.2] }, lung: null, heart: null,
+      head: { c: [0, 0.153, 0.043], r: 0.06 }, neckZ: [[0,0.01,0],[0,0.13,0.032]], neckR: 0.04, sens: 1.5 }
   };
   const MEDALS = [null, { n: "Bronze", i: "🥉", c: "#c47a3a" }, { n: "Silber", i: "🥈", c: "#9aa4b1" }, { n: "Gold", i: "🥇", c: "#e0a51e" }, { n: "Diamant", i: "💎", c: "#38b6d8" }];
   const PRICE = { hirsch: [0, 180, 420, 950, 2600], keiler: [0, 120, 300, 700, 1900], fasan: [0, 40, 90, 200, 520] };
@@ -877,7 +900,7 @@ const HUNT = (() => {
       return { cm, kg: Math.round((55 + s * 112) * bodyK(gn)), name: nameOf(k, gn, base), troph: "Keilerwaffen · " + cm + " cm" };
     }
     const cm = Math.round(36 + s * 26) + (gn && has(gn, "langstoss") ? 6 : 0), base = s < 0.7 ? "Fasanenhahn" : "Prächtiger Fasanenhahn";
-    return { cm, kg: Math.round((0.95 + s * 0.65) * 10) / 10, name: nameOf(k, gn, base), troph: (s >= 0.7 ? "Pracht-" : "") + "Fasanenfeder · " + cm + " cm" };
+    return { cm, kg: Math.round((0.95 + s * 0.65) * 10) / 10, name: nameOf(k, gn, base), troph: "Stoßlänge · " + cm + " cm" };
   }
   /* ============================ v200: Identität jedes Stücks ============================
      Jedes Stück bekommt beim Erscheinen einen Erbgut-Wert g (ganze Zahl). Aus g und der Güte s folgen – immer gleich, ohne Zufall
@@ -1048,11 +1071,11 @@ const HUNT = (() => {
   const trophyId = (k, m) => "tro_" + k + "_" + m;
   function registerItems() {
     if (typeof FITEMS === "undefined") return;
-    const nm = { hirsch: "Hirschgeweih", keiler: "Keilerwaffen", fasan: "Fasanenfeder" };
+    const nm = { hirsch: "Hirschpräparat", keiler: "Keilerpräparat", fasan: "Fasanpräparat" };
     Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => {
       FITEMS[trophyId(k, m)] = { n: nm[k] + " (" + MEDALS[m].n + ")", sg: nm[k] + " (" + MEDALS[m].n + ")", i: MEDALS[m].i, k: "troph", a: 1, u: "", pk: "Trophäe", v: PRICE[k][m], kg: k === "fasan" ? 0.1 : 2, xp: 0, st: "troph", hunt: k, medal: m };
     }));
-    if (typeof FSTORE !== "undefined") FSTORE.troph = { n: "Trophäen", i: "🏆", the: "Die Trophäenwand", base: 24, step: 12, cost: [400, 900, 1600, 2600, 4000],
+    if (typeof FSTORE !== "undefined") FSTORE.troph = { n: "Trophäen", i: "🏆", the: "Die Präparatesammlung", base: 24, step: 12, cost: [400, 900, 1600, 2600, 4000],
       empty: "Noch keine Trophäen. Steig auf den Hochsitz an der Wildwiese." };
   }
   registerItems();
@@ -1066,35 +1089,6 @@ const HUNT = (() => {
   const WOOD = { a: 0x805a3e, b: 0x67472f, rim: 0x493527, back: 0x392b23 };
   const BRASS = { c: 0xcaa552, d: 0x7c6227 };
   const woodCol = (p, k) => { const g = Math.sin(p[0] * 52 + Math.sin(p[1] * 6.3) * 2.2 + Math.sin(p[1] * 17 + p[0] * 3) * 0.5); return mulc(mixc(WOOD.a, WOOD.b, 0.5 + 0.18 * g), (k || 1) * (0.94 + 0.12 * hsh(p[0], p[1], 3))); };
-  /* Umriss: oben gewölbt, unten zur weichen Spitze (Wappenschild) – oder oval */
-  function shieldOutline(w, h, n, kind) {
-    const pts = [];
-    for (let j = 0; j < n; j++) {
-      const t = (j / n) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
-      if (kind === "oval") { pts.push([c * w / 2, s * h / 2]); continue; }
-      if (s >= 0) { const e = 2 / 2.8; pts.push([Math.sign(c) * Math.pow(Math.abs(c), e) * w / 2, h * 0.12 + Math.pow(s, e) * h * 0.38]); }
-      else { const q = -s; pts.push([Math.sign(c) * Math.pow(Math.abs(c), 0.85) * w / 2 * (1 - 0.2 * q * q), h * 0.12 - Math.pow(q, 0.95) * h * 0.62]); }
-    }
-    return pts;
-  }
-  /* v310: Brett mit gefaster Kante, gemaserter Fläche, erhabenem Spiegel und schmalem Holzrand. */
-  function shieldInto(b, o) {
-    const n = 44, OL = shieldOutline(o.w, o.h, n, o.kind), T = o.t || 0.06;
-    const lay = (rings, col, ref) => {
-      const P = rings.map(([k, z]) => OL.map(([x, y]) => [x * k, y * k, z]));
-      skin(b, P, P.map((R, i) => R.map(p => col(p, i))), { cap0: rings[0][0] === 1, cap1: true, tip0: [0, 0, rings[0][1]], tip1: [0, 0, rings[rings.length - 1][1]], ref, n0: [0, 0, -1], n1: [0, 0, 1] });
-    };
-    lay([[1, 0], [1, T * 0.72], [0.975, T * 0.95], [0.945, T], [0.8, T], [0.6, T], [0.4, T], [0.2, T]],
-      (p, i) => i < 3 ? mulc(RGB(WOOD.rim), 0.92 + 0.14 * hsh(p[0], p[1], 1)) : woodCol(p, 0.92), (i, j, p) => i <= 1 ? [p[0], p[1], 0] : i === 2 ? [p[0], p[1], 0.7] : [0, 0, 1]);
-    const T2 = T + 0.014;
-    const P2 = [[0.82, T - 0.002], [0.8, T2 - 0.004], [0.78, T2], [0.6, T2], [0.4, T2], [0.2, T2]].map(([k, z]) => OL.map(([x, y]) => [x * k, y * k, z]));
-    skin(b, P2, P2.map(R => R.map(p => woodCol(p, 1.05))), { cap1: true, tip1: [0, 0, T2], n1: [0, 0, 1], ref: (i, j, p) => i === 0 ? [p[0], p[1], 0.3] : i === 1 ? [p[0], p[1], 1] : [0, 0, 1] });
-    /* Zierleiste */
-    const lp = OL.map(([x, y]) => [x * 0.885, y * 0.885, T + 0.004]);
-    lp.push(lp[0]);
-    tube(b, lp, lp.map(() => 0.0075), lp.map(() => RGB(WOOD.rim)), 5, { cap1: false });
-    return b;
-  }
   /* Messingschild mit zwei Gravurzeilen und Schrauben */
   function plateInto(b, x, y, z, w, m) {
     /* v310: dezente Metallplakette statt Schmucksteinen und einer frei schwebenden Medaille. */
@@ -1104,26 +1098,9 @@ const HUNT = (() => {
     b.box(w * 0.46, 0.008, 0.014, BRASS.d, { x, y: y - 0.014, z: z + 0.007, c: true });
     [-1, 1].forEach(s => ell(b, [x + s * (w / 2 - 0.016), y, z + 0.013], [0.006, 0.006, 0.004], BRASS.d, 5, 3));
   }
-  /* v315: Schulterpräparat mit glattem Halsansatz; Köpfe, Ohren, Fell und Geweih
-     stammen unverzerrt aus demselben Tiermodell und dem gespeicherten Erbgut. */
-  function mountShoulderInto(b, k) {
-    const deer = k === "hirsch", P = [], C = [], m = 18, n = 14;
-    const T = deer
-      ? [[0.075,0.19,0.255,-0.075],[0.13,0.18,0.23,-0.055],[0.22,0.13,0.17,0.015],[0.3,0.08,0.115,0.075]]
-      : [[0.075,0.235,0.23,-0.035],[0.14,0.22,0.215,-0.015],[0.23,0.18,0.18,0.025],[0.32,0.14,0.14,0.045]];
-    for (let i = 0; i <= n; i++) {
-      const z = lerp(T[0][0], T[T.length - 1][0], i / n), [w,h,y] = prof(T,z);
-      const R = ring([0,y,z],[1,0,0],[0,1,0],w,h,h,m,2.1);
-      P.push(R);C.push(R.map((p,j)=> {
-        const sv = Math.sin(j / m * Math.PI * 2);
-        return deer ? pie(mulc(mixc(DEER.mane,DEER.nape,ss((sv+0.4)/1.2)),fur(p,.5)),[p[0],p[1]+1,p[2]+.4],0) : boarCoat(p,sv,.5);
-      }));
-    }
-    skin(b,P,C,{cap0:true,cap1:true});
-  }
   /* Fasanenfeder: lanzettlich, braun-oliv mit dunklen Querbinden, dunkler Kiel, leicht gebogen */
   function featherInto(b, L, W, bend, seed) {
-    const n = 14, P = [], C = [];
+    const n = 12, P = [], C = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n, w = W * Math.pow(Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95)), 0.7) * (t > 0.85 ? 1 - (t - 0.85) / 0.15 * 0.85 : 1) + 0.002;
       const c = [bend * t * t * L, t * L, 0.004 * Math.sin(t * 3)], R = ring(c, [1, 0, 0], [0, 0, 1], w, 0.0035, 0.0035, 6, 2);
@@ -1142,41 +1119,53 @@ const HUNT = (() => {
   const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
   const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
   const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
-  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(qS(r.s) * 20) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v315"; }
-  /* v315: Kopfpräparate mit den gespeicherten Fell-, Geweih-, Waffen- und Federmerkmalen.
+  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(r.s * 1000) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v328"; }
+  /* v328: Ganzkörperpräparate mit den gespeicherten Fell-, Geweih-, Waffen- und Federmerkmalen.
      Decke, Alter und sonstige Merkmale bleiben im Datensatz erhalten; keine neue Trophäenberechnung. */
   function trophyBuild(r) { const gn = gnOf(r); return withLook(r.k, gn, () => trophyBuild0(r, gn)); }
+  /* v328: Ganzkörperpräparate auf einem eigenen runden, gefasten Museumssockel.
+     Alle Körperteile bleiben gleichmäßig skaliert und stammen vom gespeicherten Stück. */
   function trophyBuild0(r, gn) {
-    const k = r.k, m = r.m || 1, T = traits(k, r.s, gn), sc = qS(r.s), b = MB();
-    G3.seed(5400 + m);
-    if (k === "hirsch") {
-      shieldInto(b, { w: 0.66, h: 0.88 });
-      plateInto(b, 0, -0.35, 0.074, 0.23, m);
-      mountShoulderInto(b, k);
-      b.at({ y: 0.105, z: 0.285, rx: 0.18, ry: 0.08 }, q => {
-        deerHeadInto(q, T.P, sc, r.vr || 0, antF(gn));
-        [-1,1].forEach(side => q.at({x:side*.075,y:.08,z:.02,ry:side*.28,rz:-side*.18},e=>deerEarInto(e,side)));
-      });
-    } else if (k === "keiler") {
-      shieldInto(b, { w: 0.68, h: 0.8 });
-      plateInto(b, 0, -0.31, 0.074, 0.24, m);
-      mountShoulderInto(b, k);
-      b.at({ y: 0.055, z: 0.3, rx: -0.25, ry: -0.08 }, q => boarHeadInto(q, sc, T.cm));
+    const k=r.k,T=traits(k,r.s,gn),sc=qS(r.s),S0=SP[k],a=MB();
+    if(k==="hirsch") {
+      a.merge(deerBody(),{});a.merge(deerTail(),{y:1.07,z:-.578,rx:.05});
+      const head=MB().merge(deerHead(T.P,sc,r.vr||0,antF(gn)),{});
+      [-1,1].forEach(side=>head.merge(deerEar(side),{x:side*.075,y:.08,z:.02,rz:side*.16,ry:side*.10}));
+      const neck=MB().merge(deerNeck(),{}).merge(head,{x:S0.headP[0],y:S0.headP[1],z:S0.headP[2],rx:.06});
+      a.merge(neck,{x:S0.neckP[0],y:S0.neckP[1],z:S0.neckP[2],rx:-.04,ry:-.16});
+    } else if(k==="keiler") {
+      a.merge(boarBody(),{});a.merge(boarHead(sc,T.cm),{x:S0.neckP[0],y:S0.neckP[1],z:S0.neckP[2],rx:.15,ry:.10});
     } else {
-      shieldInto(b, { w: 0.4, h: 0.56, kind: "oval" });
-      plateInto(b, 0, -0.19, 0.074, 0.2, m);
-      /* Stoß: lange Schwanzfedern im Fächer, die längste so lang wie das Stück (cm), dazu kurze grün schimmernde Halsfedern */
-      const rr = mulberry(Math.round(T.cm) * 31 + (r.vr || 0) * 7 + 5), nF = 3 + m, Lmax = T.cm * 0.0105;
-      for (let i = 0; i < nF; i++) {
-        const f = i - (nF - 1) / 2, ang = f * 0.21 + (rr() - 0.5) * 0.05, L = Lmax * (1 - Math.abs(f) * 0.09 - rr() * 0.06);
-        b.at({ y: -0.09, z: 0.09 + i * 0.004, rz: -ang }, q => featherInto(q, L, 0.026, Math.sign(f) * 0.08 + (rr() - 0.5) * 0.08, i * 3 + 1));
-      }
-      [-1, 1].forEach(s => b.at({ x: s * 0.03, y: -0.08, z: 0.12, rz: s * 0.9 }, q => featherInto(q, 0.12, 0.018, 0, 9)));
-      [-1, 1].forEach(s => ell(b, [s * 0.035, -0.04, 0.115], [0.03, 0.05, 0.01], 0x1d5a4f, 6, 4));
-      b.at({ y: -0.1, z: 0.11 }, q => { q.cyl(0.04, 0.034, 0.06, 12, BRASS.c, { rx: Math.PI / 2, top: BRASS.c }); });
+      a.merge(phBody(),{});a.merge(phHead(),{x:S0.neckP[0],y:S0.neckP[1],z:S0.neckP[2],rx:.06,ry:.27});
+      [-1,1].forEach(side=>a.merge(phLeg(),{x:side*.036,y:.137,z:.01}));
     }
+    if(k!=="fasan")S0.legs.forEach(L=>{
+      a.merge(k==="hirsch"?deerUpper(!!L.f):boarUpper(!!L.f),{x:L.h[0],y:L.h[1],z:L.h[2]});
+      a.merge(k==="hirsch"?deerLower(!!L.f):boarLower(),{x:L.h[0],y:L.h[1]-L.lu,z:L.h[2]+(k==="keiler"&&!L.f?-.025:0)});
+    });
+    const scale=lerp(S0.s0,S0.s1,r.s)*(1+(gn.w||0)*.012);
+    const animal=MB().merge(a,{s:scale}),mn=[Infinity,Infinity,Infinity],mx=[-Infinity,-Infinity,-Infinity];
+    for(let i=0;i<animal.v.length;i+=9)for(let j=0;j<3;j++){mn[j]=Math.min(mn[j],animal.v[i+j]);mx[j]=Math.max(mx[j],animal.v[i+j]);}
+    const cx=(mn[0]+mx[0])/2,cz=(mn[2]+mx[2])/2;let radius=0;
+    for(let i=0;i<animal.v.length;i+=9)radius=Math.max(radius,Math.hypot(animal.v[i]-cx,animal.v[i+2]-cz));
+    radius=Math.max(.36,radius+.065);const b=MB(),top=.14;
+    b.cyl(radius*.96,radius,.035,48,WOOD.rim,{smooth:true});
+    b.cyl(radius,radius,.075,48,p=>woodCol(p,.72),{y:.035,smooth:true});
+    b.cyl(radius,radius*.96,.03,48,WOOD.rim,{y:.11,smooth:true,top:0x666346});
+    b.cyl(radius*.94,radius*.94,.004,48,0x666346,{y:.138,smooth:true});
+    b.merge(animal,{x:-cx,y:top-mn[1],z:-cz});
+    const plaque=Math.min(.30,radius*.7);
+    plateInto(b,0,.071,radius-.004,plaque,r.m||1);
+    /* Kleine Naturdetails sitzen auf dem Sockel, ohne die Tierkontur zu verdecken. */
+    for(let i=0;i<3;i++){
+      const ang=2.4+i*.53,x=Math.cos(ang)*radius*.78,z=Math.sin(ang)*radius*.78;
+      ell(b,[x,top+.016,z],[.035,.022,.028],i===1?0x8b8d7d:0x77796a,7,4);
+      [-1,0,1].forEach(j=>bristle(b,[x+.045,top,z],[j*.3,1,.25],.05+Math.abs(j)*.015,.005,0x738253,0xa6ad7a));
+    }
+    b._stand={radius,height:mx[1]-mn[1]+top,size:Math.ceil((radius+.035)*2)};
     return b;
   }
+  function trophyInfo(r){return trophyBuild(r)._stand;}
   function trophyMesh(id) { const it = typeof FITEMS !== "undefined" && FITEMS[id]; return trophyBuild(repRec(it ? it.hunt : "hirsch", it ? it.medal : 1)); }
   if (typeof FWM !== "undefined" && FWM.item && !FWM.__huntItem) {
     const base = FWM.item; FWM.item = id => /^tro_/.test(id) ? trophyMesh(id) : base(id); FWM.__huntItem = true;
@@ -1189,10 +1178,14 @@ const HUNT = (() => {
     if (!H) return [];
     if (!Array.isArray(H.coll)) H.coll = [];
     if (typeof farmInv !== "function") return H.coll;
+    const exhibits = (S.farm.objs || []).filter(o => o.t === "trophy");
+    /* v328: Aufgestellte Stücke sind weiterhin Eigentum. Die Sicherung am
+       Sockel ergänzt einen fehlenden alten Datensatz, ohne Gene neu zu ziehen. */
+    exhibits.forEach(o => { if (!H.coll.some(r => r.u === o.u) && o.specimen) H.coll.push(JSON.parse(JSON.stringify(o.specimen))); });
     Object.keys(PRICE).forEach(k => [1, 2, 3, 4].forEach(m => {
-      const id = trophyId(k, m), have = farmInv(id) || 0, mine = H.coll.filter(r => r.k === k && r.m === m);
+      const id = trophyId(k, m), deployed = exhibits.filter(o => o.k === k && o.specimen.m === m), have = (farmInv(id) || 0) + deployed.length, mine = H.coll.filter(r => r.k === k && r.m === m);
       /* v200: fehlt Lagerware (z. B. am Markt verkauft), geht zuerst das schwächste gewöhnliche Stück – Ehrenplatz und Seltene zuletzt */
-      if (mine.length > have) mine.sort(weakFirst).slice(0, mine.length - have).forEach(r => H.coll.splice(H.coll.indexOf(r), 1));
+      if (mine.length > have) mine.filter(r => !deployed.some(o => o.u === r.u)).sort(weakFirst).slice(0, mine.length - have).forEach(r => H.coll.splice(H.coll.indexOf(r), 1));
       else if (mine.length < have) {
         /* Altbestand (vor v120): aus dem Jagdbuch nehmen, was dazu passt – sonst ein Musterstück der Medaille */
         const logs = (H.log || []).filter(L => L.k === k && L.m === m && L.s != null && !H.coll.some(r => r.t === L.t && r.s === L.s));
@@ -1206,10 +1199,11 @@ const HUNT = (() => {
   }
   const weakFirst = (a, b) => (a.pin ? 1 : 0) - (b.pin ? 1 : 0) || gnOf(a).r - gnOf(b).r || a.s - b.s;
   const recOf = u => collSync().find(r => r.u === u);
+  const onDisplay = r => (S.farm.objs || []).some(o => o.t === "trophy" && o.u === r.u);
   /* Verkauf einzeln an der Wand: Lagerware zum Preis der Medaille, dazu der Seltenheitsaufschlag. Ehrenplatz wird nicht verkauft. */
   function sellRec(u) {
     const H = st(), r = recOf(u);
-    if (!r || r.pin || typeof farmSell !== "function") return 0;
+    if (!r || r.pin || onDisplay(r) || typeof farmSell !== "function") return 0;
     const i = H.coll.indexOf(r); H.coll.splice(i, 1);
     const got = farmSell(trophyId(r.k, r.m), 1);
     if (!got) { H.coll.splice(i, 0, r); return 0; }
@@ -1217,14 +1211,13 @@ const HUNT = (() => {
     if (ex > 0) { S.money += ex; if (typeof logMoney === "function") logMoney("farm", "Seltenheitsaufschlag: " + RAR[gnOf(r).r].n + " " + SP[r.k].n, ex); }
     return got + ex;
   }
-  /* Ehrenplatz: höchstens drei Stücke, sie hängen an der Schautafel am Hochsitz und sind vor dem Verkauf geschützt */
-  const PIN_MAX = 3;
+  /* v328: Alte Ehrenplätze bleiben als verkaufsgeschützte Favoriten erhalten.
+     Ausstellen erfolgt je Stück; die ehemalige Dreiergrenze entfällt. */
   function pinRec(u) {
     const C = collSync(), r = C.find(x => x.u === u);
     if (!r) return false;
     if (r.pin) { delete r.pin; return true; }
-    if (C.filter(x => x.pin).length >= PIN_MAX) return false;
-    r.pin = S.time; return true;
+    r.pin = S.time || 1; return true;
   }
 
   /* ====================== v200: Wert, Schussnote, Jagdbuch, Bestleistungen, Aufträge ======================
@@ -1452,67 +1445,15 @@ const HUNT = (() => {
   const built = () => { const H = st(); return !!(H && H.built); };
 
   /* ------------------------------ Welt ------------------------------------ */
-  const W = { root: null, site: null, grow: null, chk: 0, show: null, showKey: null };
-  /* v200: Schautafel neben dem Hochsitz – Brett mit kleinem Dach, daran die bis zu drei Trophäen vom Ehrenplatz */
-  /* v225: links vom Turm (aus Sicht der Spielkamera) und zur Kamera gedreht – vorher stand sie rechts hinter dem Turm mit der Rückseite zum Spieler und hinter Bäumen */
-  const SHOWL = [3.1, 0, 0.3], SHOWRY = Math.PI / 4;
+  const W = { root: null, site: null, grow: null, chk: 0 };
+  /* v328: Die vorhandene kleine Lichtung neben dem Hochsitz bleibt frei. */
+  const SHOWL = [3.1, 0, 0.3];
   const showAt = () => twL(SHOWL[0], 0, SHOWL[2]);
-  function showMesh(recs) {
-    G3.seed(7790);
-    /* v312: Dunkler, entsättigter Hintergrund trennt Knochen, Geweih und Holzschilder. */
-    const b = MB(), Wd = 0x70543b, Wl = 0x52605b, Rf = 0x414943;
-    /* v310: gezimmerte Tafel mit geschlossener Rückwand, Dachüberstand und Pfostenschuhen.
-       Der First läuft quer über die Tafel; die Dachflächen fallen nach vorn/hinten ab. */
-    [-1.3,1.3].forEach(x=>{
-      b.box(0.23,0.055,0.25,0x8b8c81,{x,z:-0.06});
-      b.box(0.15,0.16,0.15,0x515954,{x,y:0.055,z:-0.06});
-      b.box(0.115,2.4,0.115,Wd,{x,y:0.1,z:-0.06});
-      beam(b,[x,1.99,-0.13],[x-Math.sign(x)*0.27,2.31,-0.13],0.034,Wd);
-    });
-    b.box(2.48,1.36,0.065,0x3e4b46,{y:0.8,z:-0.06});
-    for(let i=0;i<8;i++) b.box(2.48,0.165,0.028,i%2?Wl:0x4d5a55,{y:0.8+i*0.17,z:-0.015});
-    [0.75,2.17].forEach(y=>b.box(2.72,0.08,0.13,Wd,{y,z:-0.065}));
-    [-1,1].forEach(sd=>{
-      for(let i=0;i<11;i++) b.box(0.268,0.045,0.49,i%3?Rf:0x595144,{x:-1.35+i*0.27,y:2.43,z:-0.03+sd*0.22,rx:sd*0.34,c:true});
-      b.box(2.98,0.1,0.045,Wd,{y:2.30,z:-0.03+sd*0.46});
-    });
-    b.box(3,0.055,0.065,0x494237,{y:2.49,z:-0.03});
-    [-1.3,1.3].forEach(x=>[0.79,2.21].forEach(y=>ell(b,[x,y,0.012],[0.012,0.012,0.007],0x555b55,6,4)));
-    const pieces=recs.slice(0,3).map(r=>{
-      const t=trophyBuild(r), mn=[Infinity,Infinity,Infinity], mx=[-Infinity,-Infinity,-Infinity];
-      for(let j=0;j<t.v.length;j+=9) for(let k=0;k<3;k++){mn[k]=Math.min(mn[k],t.v[j+k]);mx[k]=Math.max(mx[k],t.v[j+k]);}
-      return {t,mn,mx,w:mx[0]-mn[0],h:mx[1]-mn[1]};
-    });
-    /* v315: Gemeinsamer Maßstab statt großem Keilerkopf neben winzigem Hirschkopf.
-       Breite Geweihe bekommen mehr Platz; sämtliche Teile werden nur gleichmäßig skaliert. */
-    const gap=0.14, total=pieces.reduce((v,p)=>v+p.w,0);
-    const scale=pieces.length?Math.min(1.1,(2.36-gap*(pieces.length-1))/total,1.2/Math.max(...pieces.map(p=>p.h))):1;
-    let left=-(total*scale+gap*Math.max(0,pieces.length-1))/2;
-    pieces.forEach(({t,mn,mx,w})=>{
-      const x=left-mn[0]*scale, y=1.49-(mn[1]+mx[1])*scale/2;
-      b.box(0.04,0.06,0.08,0x454b43,{x:x+(mn[0]+mx[0])*scale/2,y:y+0.1*scale,z:0.025,c:true});
-      b.merge(t,{x,y,z:0.065,s:scale});
-      left+=w*scale+gap;
-    });
-    return b;
-  }
-  function showSync() {
-    if (!W.show || !FV.R) return;
-    const H = st(), pins = H ? (H.coll || []).filter(r => r.pin).sort((a, b) => a.pin - b.pin) : [], key = pins.map(r => r.u + trophyKey(r)).join("|");
-    W.show.visible = built() && !W.grow;
-    if (key === W.showKey) return;
-    W.showKey = key;
-    const old = W.show.mesh;
-    W.show.mesh = FV.R.mesh(showMesh(pins));
-    if (old && old !== W.showMesh0 && FV.R.free) FV.R.free(old);
-  }
   function attach(R) {
     W.root = fnode(fmesh("hunt_tower_v107", towerMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
     W.site = fnode(fmesh("hunt_site_v188", siteMesh), { x: TW.x, y: 0, z: TW.z, ry: TRY, visible: false });
-    const sp = showAt();
-    W.show = fnode(R.mesh(showMesh([])), { x: sp[0], y: 0, z: sp[2], ry: SHOWRY, visible: false });          /* Vorderseite zur Spielkamera (Südosten) */
-    W.showMesh0 = W.show.mesh; W.showKey = "";
-    R.nodes.push(W.root, W.site, W.show);
+    /* v328: Präparate werden einzeln als Hofobjekte aufgestellt. */
+    R.nodes.push(W.root, W.site);
     syncWorld();
     return W.root;
   }
@@ -1521,16 +1462,13 @@ const HUNT = (() => {
     const ok = unlocked(), b = built();
     if (!W.grow) W.root.visible = b;
     W.site.visible = ok && !b;
-    showSync();
   }
   function pick(x, y) {
     if (!FV.R || !W.root || (!W.root.visible && !W.site.visible)) return null;
     const R = FV.R, r = R.ray(x, y);
     const top = W.root.visible ? PH + 2.6 : 1.4;
     const d = R.hitBox(r, [TW.x - 1.8, 0, TW.z - 1.8], [TW.x + 1.8, top, TW.z + 1.8]);
-    const sp = showAt(), ds = W.show && W.show.visible ? R.hitBox(r, [sp[0] - 1.4, 0, sp[2] - 1.4], [sp[0] + 1.4, 2.7, sp[2] + 1.4]) : null;
-    W.pickShow = ds != null && (d == null || ds < d);
-    return d != null || ds != null ? { d: W.pickShow ? ds : d } : null;
+    return d != null ? { d } : null;
   }
   const missing = () => typeof siteMissing === "function" ? siteMissing("hunt", NEED) : [];      /* v186: am Bauplatz Abgelegtes zählt mit */
   function tagInfo() {
@@ -1542,7 +1480,6 @@ const HUNT = (() => {
   const dots = n => "●".repeat(n) + "○".repeat(Math.max(0, 2 - n));
   function sheet() {
     if (!unlocked() && !built()) return;
-    if (W.pickShow) { W.pickShow = false; if (typeof openFarmStore === "function") { WALL.tab = "wand"; openFarmStore("troph"); return; } }
     const H = st();
     FV.sheetFn = sheet;
     if (!H.built) return buildSheet();
@@ -1592,7 +1529,7 @@ const HUNT = (() => {
       H.jann = S.time; jobsEnsure(H);
       phoneMsg({ from: "Förster Bruno Wendt", kind: "info", title: "Jagdaufträge und ein Jagdbuch", go: "hunt", goLabel: "Zum Hochsitz",
         body: "Moin! Kein Stück gleicht dem anderen – Decke, Alter, Geweih, manchmal eine alte Narbe. Ich habe dir ein Jagdbuch angelegt (Lager → Trophäen), da trägst du ein, was du entdeckst. " +
-          "Und ich habe immer drei Aufträge für dich, vom leichten bis zum schweren – jeder wird bezahlt. Die besten Stücke kannst du auf den Ehrenplatz hängen, an der Schautafel neben dem Hochsitz. Waidmannsheil, Bruno" });
+          "Und ich habe immer drei Aufträge für dich, vom leichten bis zum schweren – jeder wird bezahlt. Jedes Stück kannst du als ganzes Tier auf seinem eigenen runden Sockel ausstellen – und jederzeit wieder einlagern. Waidmannsheil, Bruno" });
       save();
     }
     if (!H || H.ann || H.built || !unlocked()) return;
@@ -1962,7 +1899,7 @@ const HUNT = (() => {
   }
   /* v200: jedes Teil im Aussehen dieses Stücks (Schlüssel enthält Decke, Alter, Körperbau, Besonderheiten) */
   function build(A) {
-    const k = A.k, S0 = SP[k], gn = A.gn, lk = "_" + lookKey(k, gn), key = "hu315_" + k;
+    const k = A.k, S0 = SP[k], gn = A.gn, lk = "_" + lookKey(k, gn), key = "hu328_" + k;
     const M = (id, fn) => fmesh(key + id + lk, () => withLook(k, gn, fn));
     if (k === "hirsch") {
       A.node = addNode(M("_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
@@ -2312,11 +2249,11 @@ const HUNT = (() => {
   }
   /* v315: Ruhiger Gesichtsausdruck am liegenden Stück, bei gleichem Fell und Geweih. */
   function restHead(A) {
-    if (A.restingHead || A.k === "fasan") return;
-    const key = "hu315_rest:" + A.k + ":" + lookKey(A.k,A.gn) + ":" + A.T.P + ":" + A.T.cm + ":" + qS(A.score) + ":" + A.vr + antKey(A.gn);
+    if (A.restingHead) return;
+    const key = "hu328_rest:" + A.k + ":" + lookKey(A.k,A.gn) + ":" + A.T.P + ":" + A.T.cm + ":" + qS(A.score) + ":" + A.vr + antKey(A.gn);
     A.head.mesh = fmesh(key, () => withLook(A.k, A.gn, () => {
       G3.seed(A.k === "hirsch" ? 5102 + A.T.P : 5202);
-      return A.k === "hirsch" ? deerHeadInto(MB(), A.T.P, qS(A.score), A.vr, antF(A.gn), false, true) : boarHeadInto(MB(), qS(A.score), A.T.cm, true);
+      return A.k === "hirsch" ? deerHeadInto(MB(), A.T.P, qS(A.score), A.vr, antF(A.gn), false, true) : A.k === "keiler" ? boarHeadInto(MB(), qS(A.score), A.T.cm, true) : phHead(true);
     }));
     A.restingHead = true;
   }
@@ -3192,7 +3129,7 @@ const HUNT = (() => {
         <p class="hu-pbl${P.rec ? " on" : ""}">${recTxt}</p>
         ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
       </div>
-      ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe sichern</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenwand voll – an Sammler · ${eur(price)}</button>`}`;
+      ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe sichern</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenlager voll – an Sammler · ${eur(price)}</button>`}`;
   }
   function showCard(A) {
     X.card.innerHTML = cardHTML(A);
@@ -3246,10 +3183,10 @@ const HUNT = (() => {
     X.card.className = "hu-card2 saved" + (sell ? " sold" : "");
     X.card.innerHTML = `<div class="hu-sv"><span class="hu-svimg" style="--mc:${M.c}">${recThumb(Object.assign({}, A.rec), true)}<i class="hu-shine"></i><em>${M.i}</em></span>
         <div class="hu-svt"><small>${sell ? "Verkauft" : "✓ Gesichert"}</small><b>${esc(A.T.troph)}</b>
-          <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + " · an deiner Trophäenwand"}</em>
+          <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + " · in deiner Sammlung"}</em>
           <span>${sell ? "" : (n === 1 ? "dein erstes Stück an der Wand" : n + " Stücke an der Wand") + " · "}+${XP[A.k][A.medal]} EP</span></div></div>
       ${lines.join("")}
-      <div class="hu-sb">${sell ? "" : `<button class="btn ghost hu-wall" data-hu="wall">🏆 Trophäenwand</button>`}<button class="btn hu-go" data-hu="next">Weiter jagen</button></div>`;
+      <div class="hu-sb">${sell ? "" : `<button class="btn ghost hu-wall" data-hu="wall">🏆 Sammlung</button>`}<button class="btn hu-go" data-hu="next">Weiter jagen</button></div>`;
     X.drag.classList.add("off");
     if (X.call) X.call.hidden = true;
     if (typeof thumbFill === "function") thumbFill();
@@ -3274,7 +3211,7 @@ const HUNT = (() => {
      Im Lager-Reiter „Trophäen“: jedes Stück einzeln als großes Bild (das echte 3D-Modell, von vorn), Name, Enden bzw. Länge,
      Medaille, Wert. Antippen öffnet die Nahansicht: das Präparat dreht sich langsam hin und her (eigener kleiner Zeichner,
      läuft nur, solange die Ansicht offen ist), dazu Bewertung, Gewicht, Treffer, Entfernung und Tag des Erlegens. */
-  const TVIEW = { yaw: Math.PI / 2 - 0.42, pitch: 0.1, noShadow: true };            /* hängt an der Wand: kein Bodenschatten */
+  const TVIEW = { yaw: Math.PI / 2 - 0.55, pitch: 0.22, noShadow: false };       /* v328: Sockel und vollständige Silhouette */
   /* v200: Wand mit Filtern (Art, Seltenheit, Sortierung), Jagdbuch je Art, Aufträge. Ansicht bleibt im Lager-Reiter „Trophäen“. */
   const WALL = { sel: null, tab: "wand", fk: "all", fr: 0, so: "best", lim: 24, sp: null, seen0: null, at: 0 };
   const what = (k, T) => k === "hirsch" ? (T.Pl || T.P) + "-Ender" + (T.odd ? " (ung.)" : "") : k === "keiler" ? "Waffen " + T.cm + " cm" : "Stoß " + T.cm + " cm";
@@ -3291,13 +3228,13 @@ const HUNT = (() => {
     if (performance.now() - WALL.at > 60000 || WALL.seen0 == null) { WALL.seen0 = H.wseen || 0; H.wseen = S.time; }   /* „neu“ = seit dem letzten Besuch */
     WALL.at = performance.now();
     const sum = C.reduce((t, r) => t + valueOf(r), 0), open = jobsEnsure(H).length;
-    const tabs = [["wand", "🏆 Wand"], ["buch", "📖 Jagdbuch"], ["jobs", "📋 Aufträge"]].map(([k, n]) => `<button class="${WALL.tab === k ? "on" : ""}" data-twt="${k}">${n}${k === "jobs" && open ? ` <b>${open}</b>` : ""}</button>`).join("");
+    const tabs = [["wand", "🏆 Sammlung"], ["buch", "📖 Jagdbuch"], ["jobs", "📋 Aufträge"]].map(([k, n]) => `<button class="${WALL.tab === k ? "on" : ""}" data-twt="${k}">${n}${k === "jobs" && open ? ` <b>${open}</b>` : ""}</button>`).join("");
     const body = WALL.tab === "buch" ? buchHTML(H, C) : WALL.tab === "jobs" ? jobsHTML(H) : wandHTML(H, C);
-    return `<div class="tw"><div class="tw-head"><b>🏆 Trophäenwand</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>
+    return `<div class="tw"><div class="tw-head"><b>🏆 Präparatesammlung</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>
       <div class="tw-tabs">${tabs}</div>${body}</div>`;
   }
   function wandHTML(H, C0) {
-    if (!C0.length) return `<p class="tw-empty">Noch keine Trophäe an der Wand. Steig auf den Hochsitz an der Wildwiese.</p>`;
+    if (!C0.length) return `<p class="tw-empty">Noch keine Trophäe in der Sammlung. Steig auf den Hochsitz an der Wildwiese.</p>`;
     const ks = SPK.filter(k => C0.some(r => r.k === k));
     if (WALL.fk !== "all" && ks.indexOf(WALL.fk) < 0) WALL.fk = "all";
     let C = C0.filter(r => (WALL.fk === "all" || r.k === WALL.fk) && gnOf(r).r >= WALL.fr);
@@ -3311,27 +3248,29 @@ const HUNT = (() => {
         <span class="tw-sp"></span>${chip("data-tws", "best", WALL.so, "Stärkste")}${chip("data-tws", "neu", WALL.so, "Neueste")}${chip("data-tws", "wert", WALL.so, "Wert")}</div>`;
     let det = "";
     if (sel) {
-      const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? shotName(sel) : null, pins = C0.filter(r => r.pin).length;
+      const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? shotName(sel) : null, deployed = onDisplay(sel);
       const sh = sel.zone ? shotOf(Object.assign({ k: sel.k }, sel)) : null, isPb = H.pb[sel.k] && H.pb[sel.k].u === sel.u;
       const rows = [["Bewertung", fnum(sel.s * 100, 1)], ["Gewicht", (sel.k === "fasan" ? fnum(T.kg, 1) : T.kg) + " kg"], z ? ["Treffer", z] : null, sel.dm ? ["Entfernung", sel.dm + " m"] : null,
         sh ? ["Schuss", { html: stars(sh.v) }] : null, ["Alter", AGES[sel.k][gn.a]], dayTxt(sel.t) ? ["Erlegt", dayTxt(sel.t)] : null].filter(Boolean);
       const fl = featList(sel.k, gn).filter(F => !F.age);
       det = `<div class="tw-det" style="--mc:${M.c}">
         <div class="tw-stage" id="twStage"><span class="tw-badge">${M.i} ${esc(M.n)}</span>${gn.r >= 1 ? `<span class="tw-badge tw-rb" style="--rc:${RAR[gn.r].c}">${gn.r >= 4 ? "★" : "✦"} ${esc(RAR[gn.r].n)}</span>` : ""}${isPb ? `<span class="tw-badge tw-pb">🏅 Rekord</span>` : ""}</div>
-        <div class="tw-info"><b>${esc(T.name)}</b><small>${esc(T.troph)}</small>
+        <div class="tw-info"><b>${esc(T.name)}</b><small>Ganzkörperpräparat · ${deployed ? "Ausgestellt" : "Im Lager"}</small><small>${esc(T.troph)}</small>
           ${fl.length ? `<div class="tw-chips">${fl.map(F => `<span>${esc(F.n)}</span>`).join("")}</div>` : ""}
           <div class="tw-rows">${rows.map(([a, v]) => `<span><small>${a}</small><b>${v && v.html ? v.html : esc(String(v))}</b></span>`).join("")}</div>
           ${sel.old === 2 ? `<p class="tw-note">Altbestand – Werte geschätzt.</p>` : ""}
-          <div class="tw-btns"><button class="btn tiny ghost" data-twx="1">Schließen</button>
-            <button class="btn tiny ghost" data-twpin="${sel.u}"${!sel.pin && pins >= PIN_MAX ? " disabled" : ""}>${sel.pin ? "★ Vom Ehrenplatz nehmen" : pins >= PIN_MAX ? "Ehrenplatz voll (3)" : "☆ Auf den Ehrenplatz"}</button>
-            ${sel.pin ? `<button class="btn tiny" disabled>Auf dem Ehrenplatz</button>` : `<button class="btn tiny" data-twsell="${sel.u}">💰 An Sammler · ${eur(valueOf(sel))}</button>`}</div>
-          ${sel.pin ? `<p class="tw-note">Hängt an der Schautafel am Hochsitz und wird nicht verkauft.</p>` : ""}</div></div>`;
+          <div class="tw-btns"><button class="btn tiny" data-twplace="${sel.u}">${deployed ? "↔ Verschieben / Drehen" : "Aufstellen"}</button>
+            ${deployed ? `<button class="btn tiny ghost" data-twstore="${sel.u}">Ins Lager</button>` : ""}
+            <button class="btn tiny ghost" data-twpin="${sel.u}">${sel.pin ? "★ Favorit" : "☆ Favorit"}</button>
+            ${!sel.pin && !deployed ? `<button class="btn tiny ghost" data-twsell="${sel.u}">An Sammler · ${eur(valueOf(sel))}</button>` : ""}
+            <button class="btn tiny ghost" data-twx="1">Schließen</button></div>
+          <p class="tw-note">${deployed ? "Dieses Stück steht auf seinem eigenen Sockel. Verschieben und Einlagern sind kostenlos." : "Stelle dieses Stück auf freies Land. Seine Pose und alle Merkmale bleiben erhalten."}${sel.pin ? " Als Favorit vor Verkauf geschützt." : ""}</p></div></div>`;
     }
     const shown = C.slice(0, WALL.lim);
     return `${filt}${det}${C.length ? `<div class="tw-grid">${shown.map(r => { const gn = gnOf(r), T = traits(r.k, r.s, gn), M = MEDALS[r.m], nw = (r.t || 0) > WALL.seen0;
         return `<button class="tw-c${r.u === WALL.sel ? " on" : ""}${gn.r >= 1 ? " rr" : ""}" data-tw="${r.u}" style="--mc:${M.c};--rc:${RAR[gn.r].c}"><span class="tw-img">${recThumb(r, true)}</span><span class="tw-md">${M.i}</span>
           ${r.pin ? `<span class="tw-pin">★</span>` : nw ? `<span class="tw-new">Neu</span>` : ""}
-          <b>${esc(T.name)}</b><small>${esc(what(r.k, T))}</small><em>${rarChip(gn.r, true)} ${eur(valueOf(r))}</em></button>`; }).join("")}</div>` : `<p class="tw-empty">Keine Trophäe passt zu diesem Filter.</p>`}
+          <b>${esc(T.name)}</b><small>${onDisplay(r) ? "Ausgestellt" : "Im Lager"} · ${esc(what(r.k, T))}</small><em>${rarChip(gn.r, true)} ${eur(valueOf(r))}</em></button>`; }).join("")}</div>` : `<p class="tw-empty">Keine Trophäe passt zu diesem Filter.</p>`}
       ${C.length > shown.length ? `<button class="btn tiny ghost tw-more" data-twm="1">Weitere ${C.length - shown.length} zeigen</button>` : ""}`;
   }
   function buchHTML(H, C) {
@@ -3372,13 +3311,15 @@ const HUNT = (() => {
     $$("#farmSheetIn [data-tw]").forEach(el => el.onclick = () => { WALL.sel = WALL.sel === el.dataset.tw ? null : el.dataset.tw; snd("tap"); redraw(); });
     $$("#farmSheetIn [data-twx]").forEach(el => el.onclick = () => { WALL.sel = null; redraw(); });
     $$("#farmSheetIn [data-twpin]").forEach(el => el.onclick = () => {
-      if (pinRec(el.dataset.twpin)) { snd("pop"); save(); showSync(); } else snd("bad");
+      if (pinRec(el.dataset.twpin)) { snd("pop"); save(); } else snd("bad");
       redraw();
     });
     $$("#farmSheetIn [data-twsell]").forEach(el => el.onclick = () => {
       const got = sellRec(el.dataset.twsell);
       if (got) { snd("coin"); WALL.sel = null; save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + eur(got), "good"); redraw(); }
     });
+    $$("#farmSheetIn [data-twplace]").forEach(el => el.onclick = () => TROPHIES.start(el.dataset.twplace));
+    $$("#farmSheetIn [data-twstore]").forEach(el => el.onclick = () => { if (TROPHIES.store(el.dataset.twstore)) redraw(); });
     void H;
     const host = $("#twStage"), r = WALL.sel && recOf(WALL.sel);
     if (host && r) turntable(host, r);
@@ -3407,7 +3348,7 @@ const HUNT = (() => {
     const loop = now => {
       if (!TT.cv.isConnected) { TT.raf = 0; return; }
       const t = (now - t0) / 1000;
-      Object.assign(R.cam, { tx: B.c[0], ty: B.c[1], tz: B.c[2], dist: B.r * 3.05, yaw: Math.PI / 2 - 0.2 + Math.sin(t * 0.5) * 0.42, pitch: 0.1 + Math.sin(t * 0.33) * 0.03, fov: 0.55 });
+      Object.assign(R.cam, { tx: B.c[0], ty: B.c[1], tz: B.c[2], dist: B.r * 3.05, yaw: Math.PI / 2 - 0.2 + Math.sin(t * 0.5) * 0.42, pitch: 0.22 + Math.sin(t * 0.33) * 0.03, fov: 0.55 });
       R.render(t);
       TT.raf = requestAnimationFrame(loop);
     };
@@ -3610,16 +3551,16 @@ const HUNT = (() => {
     if (!ids.length) return "";
     ids.sort((a, b) => FITEMS[b].v - FITEMS[a].v);
     /* v200: Ehrenplatz-Stücke stehen nicht zum Verkauf; verkauft wird das schwächste gewöhnliche Stück der Stufe, sein Seltenheitsaufschlag kommt dazu */
-    const C = collSync(), next = id => C.filter(r => trophyId(r.k, r.m) === id && !r.pin).sort(weakFirst)[0];
-    const free = id => Math.min(farmInv(id), C.filter(r => trophyId(r.k, r.m) === id && !r.pin).length);
-    const sum = ids.reduce((t, id) => t + C.filter(r => trophyId(r.k, r.m) === id && !r.pin).reduce((a, r) => a + farmSellPrice(id, 1) + extraOf(r), 0), 0);
-    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert und für seltene Stücke einen Aufschlag – verkauft wird jeweils das schwächste Stück der Stufe, Ehrenplätze bleiben</small></div><span class="price">${money(sum)}</span></div>
+    const C = collSync(), next = id => C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).sort(weakFirst)[0];
+    const free = id => Math.min(farmInv(id), C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).length);
+    const sum = ids.reduce((t, id) => t + C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).reduce((a, r) => a + farmSellPrice(id, 1) + extraOf(r), 0), 0);
+    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert und für seltene Stücke einen Aufschlag – verkauft wird jeweils das schwächste Stück der Stufe, Favoriten bleiben</small></div><span class="price">${money(sum)}</span></div>
       <div class="hu-mrows">${ids.map(id => { const r = next(id), n = free(id);
-        return `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}${n < farmInv(id) ? " · " + (farmInv(id) - n) + " auf Ehrenplatz" : ""}</small></span>${r ? `<button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1) + extraOf(r))}</button>` : `<button class="btn tiny" disabled>Ehrenplatz</button>`}</div>`; }).join("")}</div></div>`;
+        return `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}${n < farmInv(id) ? " · " + (farmInv(id) - n) + " geschützt" : ""}</small></span>${r ? `<button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1) + extraOf(r))}</button>` : `<button class="btn tiny" disabled>Favorit</button>`}</div>`; }).join("")}</div></div>`;
   }
   function marketBind() {
     $$("#tab-market [data-husell]").forEach(b => b.onclick = () => {
-      const id = b.dataset.husell, r = collSync().filter(x => trophyId(x.k, x.m) === id && !x.pin).sort(weakFirst)[0];
+      const id = b.dataset.husell, r = collSync().filter(x => trophyId(x.k, x.m) === id && !x.pin && !onDisplay(x)).sort(weakFirst)[0];
       if (!r) return;
       const m = farmSell(id, 1);
       if (m) {
@@ -3632,8 +3573,8 @@ const HUNT = (() => {
   return {
     CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
-    wallHTML, wallBind, collSync, trophyBuild, trophyKey, stats, genes, valueOf, shotOf, RAR, RAR_V, COATS, FORMS, dexAll,
-    _v200: { hv200, dexPut, dexCount, pbPut, jobsEnsure, jobsEval, jobsLost, jobTxt, pinRec, presOf, featList, lookKey, weakFirst, sellRec: u => sellRec(u), st: () => st(), showMesh, withLook, traits },
+    wallHTML, wallBind, collSync, trophyBuild, trophyKey, trophyInfo, stats, genes, valueOf, shotOf, RAR, RAR_V, COATS, FORMS, dexAll,
+    _v200: { hv200, dexPut, dexCount, pbPut, jobsEnsure, jobsEval, jobsLost, jobTxt, pinRec, presOf, featList, lookKey, weakFirst, sellRec: u => sellRec(u), st: () => st(), withLook, traits },
     _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr, F) => deerHead(P, sc, vr, F), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
       boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: () => phHead(), phLeg: () => phLeg(), phLegCurl: () => phLegCurl(), phWing: s => phWing(s), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,

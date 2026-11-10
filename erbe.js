@@ -503,7 +503,7 @@ function farmStores() {
   /* v59: Köderkiste, sobald der Steg steht (oder schon Köder im Lager liegen) */
   if (S.farm && (S.farm.objs.some(o => o.t === "f_steg") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "koeder"))) s.push("koeder");
   /* v108: Trophäen erst, wenn der Hochsitz gebaut ist (oder schon Trophäen im Lager liegen) */
-  if (S.farm && FSTORE.troph && ((typeof HUNT !== "undefined" && HUNT.built()) || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "troph"))) s.push("troph");
+  if (S.farm && FSTORE.troph && ((typeof HUNT !== "undefined" && HUNT.built()) || S.farm.objs.some(o => o.t === "trophy") || Object.keys(S.farm.inv).some(id => FITEMS[id] && FITEMS[id].st === "troph"))) s.push("troph");
   return s;
 }
 

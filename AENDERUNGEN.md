@@ -1,5 +1,25 @@
 # Änderungen – kurz für den Kollegen
 
+## v328 – Fasan und einzeln aufstellbare Ganzkörperpräparate
+
+**Wunsch:** Der Fasan soll im Revier und nach dem Erlegen als Vogel mit stimmigem Gefieder erkennbar sein. Alle Trophäen sollen vollständige, ausgestopfte Tiere in fester Pose auf eigenen runden Ausstellern werden, frei platzierbar und wieder einlagerbar.
+
+**Lösung:**
+- `hunt.js`: geschichtete Flügeldecken entlang der wirklichen Körperoberfläche, längerer gebänderter Stoß, geformter Kropf/Hals, deutlicher Kopf mit Halsring, Rosen und Schnabel. Nach dem Erlegen geschlossene Lider mit eigenem Modellcache. Das sichtbare Hals-/Kopfprofil und die Trefferzonen passen zusammen; Preise, Medaillen und Seltenheiten bleiben erhalten. Der komplette Fasan bleibt mit **4488 Dreiecken** innerhalb des bisherigen Budgets von 4500 (ohne die nur im Flug sichtbaren 64 Flügeldreiecke).
+- Hirsch, Keiler und Fasan stehen als vollständige Präparate in artspezifischer, fester Pose auf jeweils einem runden, gefasten Holzsockel mit Metallplakette und kleinen Naturdetails. Körpermaßstab wie beim erlegten Stück; Fell/Federn, Alter, Körperbau, Geweihform, Waffen- und Stoßlänge werden aus dem gespeicherten Datensatz übernommen. Keine fremden Modelle, Texturen oder Pakete.
+- `exhibits.js`, `farm.js`, `farmview.js`, `erbe.js`: Sammlung → Aufstellen → Vorschau mit vier Vierteldrehungen → Bestätigen. Das Objekt lässt sich danach verschieben oder über Objektmenü/Sammlung wieder einlagern. Freies, freigeschaltetes Land außerhalb der bisherigen Bauzonen ist nutzbar; Wasser, Straßen/Wege, Bäume, belegte Flächen und Berghänge bleiben frei. Kein Geld-/EP-Verbrauch beim Aufstellen oder Einlagern.
+- `S.farm.objs` enthält je aufgestelltem Stück ein Objekt `t: "trophy"` mit Kennung `u`, Größe/Höhe, Standort, Drehung und Sicherung `specimen`. Im Lager zählt nur die gelagerte Ware; `collSync` zählt ausgestellte Stücke mit und erhält sie auch bei Bestandsverkäufen derselben Medaille. Kein doppeltes Aufstellen; volles Lager blockiert das Einlagern ohne Verlust. Der Hofwert zählt das Stück weiterhin genau einmal zum bisherigen Lagerwert.
+- Die gemeinsame Schautafel entfällt. Frühere Ehrenplatz-Stücke bleiben als verkaufsgeschützte Favoriten in der Sammlung erhalten und können einzeln aufgestellt werden. Keine Dreiergrenze mehr; kein automatisches Umplatzieren bestehender Gebäude oder Vernichten alter Trophäen.
+- Cache-Verweise für `farm.js`, `erbe.js`, `farmview.js`, `hunt.js` und das neue `exhibits.js` sowie Service Worker v328. Die Dateien gemeinsam übernehmen.
+
+**Gestaltungsreferenzen:** [Ring Necked Pheasant](https://sketchfab.com/3d-models/f6d8887011314469b55f03a5807705db), [Stuffed Pheasant](https://sketchfab.com/3d-models/612c2ae00c8547eebd7e13a3cdcbe7ab) und [Statue Deer](https://sketchfab.com/3d-models/c01822c507874fb7bab7196a7e4f0d6f) visuell gesichtet: natürliche Silhouette, gestaffelte Federn und ruhige Ausstellungspose als Vorbild; ausschließlich eigene prozedurale Geometrie.
+
+**Geprüft:**
+- `trophy-exhibits-v328.test.js`: echte Lager-/Bauzonen-/Sammlungslogik, mehr als drei Favoriten, Aufstellen ohne Kosten, Duplikatsperre, Hindernisse/gesperrte Gebiete, JSON-Laden mit Datensatzwiederherstellung, Bestandsentnahme und volles Lager.
+- `trophy-layout-v310.test.js` auf Ganzkörperpräparate angepasst: 36 deterministische Modelle, Altbestand, zehn Geweih-Sonderformen, vier getrennte Hufe, Bodenkontakt auf der Sockeloberfläche und vollständige Stellfläche.
+- `hunt-presentation-v315.test.js`, `hunt-v307.test.js`, `hunt-v283.test.js`, `hunt-thighs-v290.test.js` sowie die 21 Gruppen aus `hunt.test.js`: Körperproportionen, stabile Liegepose, Boden, geschlossene Lider, Flug-/Bodentreffer, Jagdregeln, Paletten und Modellbudget.
+- Chromium/Playwright mit tatsächlichem Spiel bei 390 × 844 und 1280 × 800 Pixeln: drei Präparate in der Sammlung, Abbrechen ohne Warenverbrauch, vier Drehungen je Tier, Aufstellen, Verschieben abbrechen, Neuladen, Einlagern über Sammlung und Objektmenü, Fasanbergung. Modelle zusätzlich vor/nach der Änderung aus mehreren Richtungen mit echtem WebGL gerendert und gesichtet. Keine JavaScript-Fehler. Kein Test auf einem echten Handy oder in Safari.
+
 ## v327 – Sammlerautos in der Garage gewinnen an Wert (Haltebonus)
 **Wunsch Bennet:** Fahrzeuge sollen nach einigen Wochen an Wert gewinnen, gerade Autos über 1 Mio. €. Solange man das Auto in der Garage lässt, soll eine Marktpreis-Anpassung zu seinem Vorteil sichtbar werden.
 

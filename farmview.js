@@ -188,6 +188,7 @@ function objMesh(o) {
     case "spinnery": return fmesh("spinnery", FM.spinnery);
     case "lagerhalle": { const s = o.sz || FSIZE.lagerhalle; return fmesh("lagerhalle:" + s[0] + "x" + s[1], () => FM.lagerhalle(s[0], s[1])); }   /* v258, v269: nach Größe */
     case "board": return fmesh("board", FM.board);
+    case "trophy": { const r = TROPHIES.record(o); return fmesh("exhibit:"+HUNT.trophyKey(r), () => HUNT.trophyBuild(r)); }
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil:" + (o.crop ? o.w ? "wet" : "dry" : "empty"), () => FM.fieldSoil(false, o.crop ? !!o.w : undefined));
     case "tree": return fmesh("tree:" + o.kind + ":" + (o.w ? "wet" : "dry"), () => FM.treeMesh(o.kind, !!o.w));
@@ -215,7 +216,7 @@ const OBJ_H = {
   coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
   kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
 };
-function objH(o) { return o.t === "house" && FSITE.kind === "fisch" ? 4.4 : o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg ? 0.12 : OBJ_H[o.t] || 1; }
+function objH(o) { return o.t === "trophy" ? o.h : o.t === "house" && FSITE.kind === "fisch" ? 4.4 : o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg ? 0.12 : OBJ_H[o.t] || 1; }
 /* Hütte in der Ecke eines Auslaufs: Modell, Lage und die Ecke, die Tiere meiden */
 const PEN_HUT = {
   coop:  { key: "coopHut",      fn: () => FM.coopHut(),      x: 1.05, z: 0.85, hx: 2.15, hz: 1.75 },
@@ -1048,6 +1049,7 @@ function objAction(o, x, y) {
     case "house": openFarmHouse(); break;
     case "shed": openFarmShed(); break;
     case "deco": openPop(o, "deco"); break;
+    case "trophy": openPop(o, "trophy"); break;
     case "tractor": openPop(o, "tractor"); break;
     case "steg": if (typeof openAngel === "function") openAngel(o); break;
   }
@@ -1598,6 +1600,11 @@ function renderFarmPop() {
     h = `<div class="fp-h">🚜 Traktor<small>Auf dem Hof oder rund um den Hof – nur wo nichts im Weg steht</small></div><div class="fp-row">
       <div class="ftool" data-act="move"><span class="ic">↔️</span><b>Bewegen</b></div>
       <div class="ftool" data-act="trkstore"><span class="ic">📦</span><b>Ins Lager</b><small>wegstellen</small></div></div>`;
+  } else if (P.kind === "trophy") {
+    const r = TROPHIES.record(o), T = HUNT.traits(r.k,r.s,r.gn);
+    h = `<div class="fp-h">${esc(T.name)}<small>Ganzkörperpräparat · ${esc(HUNT.MEDALS[r.m].n)}</small></div><div class="fp-row">
+      <div class="ftool" data-act="move"><span class="ic">↔️</span><b>Verschieben</b><small>und drehen</small></div>
+      <div class="ftool" data-act="trostore"><span class="ic">📦</span><b>Ins Lager</b><small>Präparat behalten</small></div></div>`;
   } else if (P.kind === "deco" && FDECO[o.k].weg) {
     const D = FDECO[o.k];
     h = `<div class="fp-h">🛤️ ${esc(D.n)}<small>Haustiere spazieren hier, das Team läuft hier schneller</small></div><div class="fp-row">
@@ -1621,6 +1628,7 @@ function renderFarmPop() {
     if (a === "buyani") { closeFarmPop(); buyAnimalInto(penKind(o), o); }
     if (a === "move") { closeFarmPop(); startMove(o); }
     if (a === "trkstore") { closeFarmPop(); FV.sel = null; farmTractorStore(o); }
+    if (a === "trostore" && TROPHIES.store(o.u)) { closeFarmPop(); FV.sel = null; }
     if (a === "wegbau") { closeFarmPop(); startWeg(o.k); }
     if (a === "sell") { const [x, y] = objScreen(o); if (farmRemove(o)) { coinFly(x, y, Math.round(FDECO[o.k].price * 0.5)); closeFarmPop(); farmSyncScene(); save(); } }
     if (typeof worldPopAct === "function") worldPopAct(a, o);
@@ -1903,6 +1911,7 @@ function confirmPlace() {
   const P = FV.place;
   if (!P || !P.ok) { sfx("bad"); return; }
   if (P.move) {
+    if (P.proto.t === "trophy" && !farmFits(P.x,P.z,P.w,P.d,P.move.id,"trophy",P.proto.k)) return;
     const o = P.move;
     o.x = P.x; o.z = P.z; o.r = P.r;
     /* in den Sägewerkshof gezogen: gehört jetzt zum Sägewerk – und umgekehrt */
@@ -1913,6 +1922,12 @@ function confirmPlace() {
     farmSyncScene();
     puff(o);
     save();
+    return;
+  }
+  if (P.spec.trophy) {
+    const o = TROPHIES.place(P.spec.trophy,P.x,P.z,P.r);
+    if (!o) { sfx("bad"); return; }
+    cancelPlace(true); farmSyncScene(); puff(o); sfx("build"); save();
     return;
   }
   if (P.spec.tractor) {
@@ -1980,7 +1995,7 @@ function renderPlaceBar() {
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
   const rot = !noRotate(P.proto.t);
   el.className = "on";
-  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
+  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : P.spec.trophy ? "Präparat aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot" aria-label="Um 90 Grad drehen" title="Um 90 Grad drehen">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : zn === "wild" ? "rund um den Hof" : "auf den Hof"}">${zn === "yard" ? "🪚" : zn === "wild" ? "🌳" : "🏡"}</button>`).join("")}
@@ -2305,7 +2320,7 @@ function openFarmStore(st) {
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
       : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
-      : st === "troph" ? "Jede Trophäe stammt von deinem erlegten Stück – Enden, Waffen und Federn wie im Revier. Herz- und Lungenschüsse bringen die besten Medaillen; Sammler kaufen auch auf dem Markt."
+      : st === "troph" ? "Jedes Stück bleibt als Ganzkörperpräparat mit seinen eigenen Merkmalen erhalten. In der Sammlung kannst du es aufstellen, drehen, verschieben oder einlagern. Favoriten sind vor Verkauf geschützt."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
   const tb = $("#fsTrk"); if (tb) tb.onclick = farmTractorPlace;
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));

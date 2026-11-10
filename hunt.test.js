@@ -66,7 +66,7 @@ test("Güte und Merkmale: 0 … 1, Hirsch mit geraden Enden 6 … 16", () => {
   for (let i = 0; i < 2000; i++) { const s = H.drawScore(); assert.ok(s >= 0 && s <= 1); sum += s; const T = H.traits("hirsch", s); assert.ok(T.P % 2 === 0 && T.P >= 6 && T.P <= 16); }
   const avg = sum / 2000; assert.ok(avg > 0.5 && avg < 0.65, "Mittel " + avg.toFixed(3));
   assert.ok(/Ender Geweih/.test(H.traits("hirsch", 0.9).troph));
-  assert.ok(/cm/.test(H.traits("keiler", 0.5).troph) && /Fasanenfeder/.test(H.traits("fasan", 0.8).troph));
+  assert.ok(/cm/.test(H.traits("keiler", 0.5).troph) && /Stoßlänge/.test(H.traits("fasan", 0.8).troph));
 });
 test("Lichtung frei, Hochsitz am Rand, weit weg kein Einfluss", () => {
   assert.ok(H.clear(H.CX, H.CZ, "bg") && H.clear(H.CX, H.CZ, "tree") && H.clear(H.CX + 5, H.CZ - 3, "bush"));
@@ -141,7 +141,7 @@ test("Nahsicht-Bäume (v117): fünf Arten, Höhe wie das Standardmodell, keine N
   }));
   assert.ok(W.treeRv("kirsche", 2, 0).v.length === W.tree("kirsche", 2, 0).v.length, "Kirsche bleibt das Standardmodell");
 });
-test("Trophäen (v119): 12 Schilder, ganze Dreiecke, keine NaN, Stufen unterscheiden sich, Hirschgeweih wächst mit der Stufe", () => {
+test("Trophäen (v119): 12 Ganzkörperpräparate, ganze Dreiecke, keine NaN, Stufen unterscheiden sich, Hirschgeweih wächst mit der Stufe", () => {
   const C3 = { console, Math, Object, Array, JSON, Map, Set, Float32Array, Uint8Array, Uint16Array, Int32Array, Date, performance: { now: () => Date.now() }, navigator: { userAgent: "node" }, localStorage: { getItem: () => null, setItem() {} } };
   C3.window = C3; C3.self = C3; vm.createContext(C3);
   vm.runInContext("function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); } var FITEMS = {};", C3);
@@ -153,7 +153,7 @@ test("Trophäen (v119): 12 Schilder, ganze Dreiecke, keine NaN, Stufen untersche
     assert.ok(b.v.length % 27 === 0 && b.v.length > 0, k + m + " ganze Dreiecke");
     for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(k + m + " NaN bei " + i);
     sizes[k + m] = b.v.length / 27;
-    assert.ok(sizes[k + m] > 150 && sizes[k + m] < 5600, k + m + " Dreiecke " + sizes[k + m]);          /* v135: Grenze auf den Stand seit v120 (Hirsch ~4 600–5 000) */
+    assert.ok(sizes[k + m] > 150 && sizes[k + m] < 11000, k + m + " Dreiecke " + sizes[k + m]);          /* v328: Vollständige Tiere samt Sockel, höchstens 11 000 Dreiecke. */
   }));
   assert.ok(sizes.hirsch4 > sizes.hirsch1, "mehr Enden bei höherer Stufe");
   assert.ok(sizes.hirsch1 !== sizes.keiler1 && sizes.keiler1 !== sizes.fasan1, "Arten verschieden");
