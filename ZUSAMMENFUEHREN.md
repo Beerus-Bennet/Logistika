@@ -2,6 +2,8 @@
 
 Branch `claude/fullbody-trophies`. Aktuelles `main` und alle beim Upload offenen PRs abgleichen; Versionsdateien und Changelogs zusammenführen, keine Veröffentlichung/Merge ohne Auftrag.
 
+- GitHub-Abgleich: `main` bis PR #46 (v326) sowie der lokal mit diesem Stand abgeglichene PR #47 (v327, Haltebonus) sind als gemeinsame Historie enthalten. Die Synchronisierung von #47 korrigiert nur Changelog/Versionsdateien; seine Fachänderung bleibt erhalten. Beide PRs können anschließend ohne erneute Änderungen an denselben Versionsblöcken zusammengeführt werden.
+
 - Zusammengehörig: `hunt.js` (Modelle/Sammlung/Bestand), neues `exhibits.js` (Objektidentität, Aufstellen/Einlagern), `farm.js` (Größe, Bauzone, Objektmigration, Hofwert), `farmview.js` (Modell, Vorschau, Objektmenü), `erbe.js` (Sammlung bleibt auch bei ausschließlich ausgestellten Stücken erreichbar).
 - `exhibits.js` nach `hunt.js` laden und im Service Worker vormerken. Alle fünf geänderten Produktdateien und Service Worker v328; neuere fremde Cache-Verweise erhalten.
 - Neue Hofobjekte `t: "trophy"`: `u`, `k`, `sz`, `h`, `x`, `z`, `r`, `specimen`. Nicht als unbekannte Objekte herausfiltern. `collSync` muss ausgestellte Stücke mitzählen. `farmInv` bleibt ausschließlich Lagerbestand. Niemals beim Zeichnen neue Gene ziehen oder ein ausgestelltes Stück als gelagerte Verkaufsware behandeln.
