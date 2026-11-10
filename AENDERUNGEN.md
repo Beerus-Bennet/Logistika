@@ -1,5 +1,20 @@
 # Änderungen – kurz für den Kollegen
 
+## v327 – Sammlerautos in der Garage gewinnen an Wert (Haltebonus)
+**Wunsch Bennet:** Fahrzeuge sollen nach einigen Wochen an Wert gewinnen, gerade Autos über 1 Mio. €. Solange man das Auto in der Garage lässt, soll eine Marktpreis-Anpassung zu seinem Vorteil sichtbar werden.
+
+**Ursache (`auction.js`):** Der Marktwert eines Garagenautos hing nur am Modelltrend (kleines Jahresprozent je Modell) und einer Schwankung von ±15 %. Sportwagen wie der Lamborghini Gallardo (−21,9 % im Screenshot) konnten dauerhaft unter dem Kaufpreis liegen, auch wenn man sie nur stehen ließ.
+
+**Lösung (Haltebonus):**
+- Alle **21 Tage** gibt es für jedes Auto, das ruhig in der Garage steht, eine Marktpreis-Anpassung nach oben: Marktwert ab **1 Mio. € +6 %**, ab 250.000 € **+3,5 %**, darunter **+2 %**. Sie summiert sich (`g.hold`, höchstens das 2,5-Fache).
+- Der Bonus steckt im Marktwert (`gValue`) und im Auktionswert beim Einliefern (`makeLot`). Wer verkauft, bekommt ihn also bezahlt.
+- Gilt nur für ruhende Autos: Als Wertkurier unterwegs oder in der Auktion zählt keine Zeit. Die 21-Tage-Frist startet dann neu.
+- Eine Meldung zeigt jede Anpassung („📈 Marktpreis-Anpassung: … Marktwert jetzt …“). Die Garagenkarte zeigt den Haltebonus seit Kauf und die Zeit bis zur nächsten Anpassung. Neue Autos zeigen den Hinweis, wie der Bonus funktioniert.
+- **Alte Spielstände:** Bestehende Garagenautos starten ihre erste Frist am Tag des Updates (keine Nachzahlung für vergangene Wochen). Felder `g.hold` und `g.adjAt` sind neu und optional.
+- Die Prozentwerte stehen in `holdRate`, die Frist in `AH_HOLD_DAYS`, die Obergrenze in `AH_HOLD_MAX` und lassen sich dort anpassen.
+
+**Geprüft (Testbrowser, simulierte Tage):** Auto ab 1 Mio. €: nach 21 Tagen noch nichts, nach 23 Tagen +6 %, nach 12 Wochen +26,3 % (vier Anpassungen). Auto im mittleren Preisbereich +6 % ab 1 Mio. € (Carrera-GT-Klasse zählt mit seinem Marktwert), kleines Auto +2 % je Anpassung. Ein als Wertkurier eingesetztes und ein eingeliefertes Auto bekommen nichts. Der Auktionswert eines 4,2-Mio.-€-Autos steigt von 4.567.500 € auf 6.013.925 €. Garagenkarten zeigen den Haltebonus. Keine Konsolenfehler. **Nicht geprüft:** am Handy; ob die Stärke (etwa +6 % je drei Wochen bei Millionenautos, also rund das Doppelte in einem Jahr) für dich passt – bei Bedarf stelle ich sie nach. Normale Lkw, Schiffe und Flugzeuge im Fuhrpark sind nicht betroffen (sie verlieren weiter durch Verschleiß an Wert).
+
 ## v325 – Wasserfall-Aufprall, Wasserfarben und Strömung entlang des Flusses
 
 **Ursache:** Die Aufprallfläche erzeugte im Nachtbild einen groben, hellen Schaumfleck. Bergbach/Fall und Quellbecken verwendeten unterschiedliche Farbpaletten und Materialien. Der untere Fluss animierte sein Wasser pauschal nach Westen; die Muster folgten seinen Biegungen und dem seitlichen Abfluss des Beckens nicht.
