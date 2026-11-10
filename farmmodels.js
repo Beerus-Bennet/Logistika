@@ -489,11 +489,12 @@ const FM = (() => {
   function fieldSoil(rotation, watered) {
     G3.seed(101);
     const b = new MB();
-    /* v304: Hell/matt ohne Wasser, dunkel nach dem Gießen. Ohne Angabe
+    /* v320: Der Unterschied ist sanfter (Helligkeit trocken : nass etwa 1,5 : 1 statt 2 : 1).
+       v304: Hell/matt ohne Wasser, dunkel nach dem Gießen. Ohne Angabe
        bleiben leere Beete und bisherige Modellvorschauen unverändert. */
-    const top = watered === true ? 0x60402b : watered === false ? 0xad8455 : C.soil;
-    const side = watered === true ? 0x483020 : watered === false ? 0x87603c : C.soilD;
-    const ridge = watered === true ? 0x735036 : watered === false ? 0xbd9563 : rotation ? 0x9a6c40 : C.soilL;
+    const top = watered === true ? 0x6f492e : watered === false ? 0xa2774b : C.soil;
+    const side = watered === true ? 0x553723 : watered === false ? 0x805836 : C.soilD;
+    const ridge = watered === true ? 0x815a3a : watered === false ? 0xb38858 : rotation ? 0x9a6c40 : C.soilL;
     b.noise(0.06, () => b.box(1.9, 0.08, 1.9, side, { top }));
     for (let i = 0; i < 4; i++) b.noise(0.08, () => b.box(1.75, 0.07, 0.2, ridge, { y: 0.06, z: -0.66 + i * 0.44 }));
     if (watered === false) soilCracks(b, 0.083, 1);
@@ -517,7 +518,7 @@ const FM = (() => {
       points.push([Math.cos(a) * r, 0.035, Math.sin(a) * r]);
     }
     b.noise(0.07, () => {
-      for (let i = 0; i < points.length; i++) b.tri([0, 0.035, 0], points[(i + 1) % points.length], points[i], watered ? 0x60402b : 0xb18c5d);
+      for (let i = 0; i < points.length; i++) b.tri([0, 0.035, 0], points[(i + 1) % points.length], points[i], watered ? 0x6f492e : 0xa57d50);
     });
     if (!watered) soilCracks(b, 0.038, 0.9);
     return b;

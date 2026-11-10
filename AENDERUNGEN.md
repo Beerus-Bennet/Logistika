@@ -1,5 +1,128 @@
 # Änderungen – kurz für den Kollegen
 
+## v323 – Sammellieferung: alle offenen Pull Requests in einem Stand
+Dieser Stand fasst die neun offenen Pull Requests #34 bis #42 zusammen (Branch `claude/sammel-v323`, Basis `main` nach PR #33 / v314). Es gibt eine Versionsnummer für alle geänderten Dateien. Die Einzelabschnitte v315 bis v322 stehen unten unverändert.
+
+**Enthalten:**
+- v315 Natürliche Liegebewegung und Kopfpräparate (#34), v315 Büro-Sprechblase und Ruckelbremse (#35), v316 Zelle ruckelt nicht mehr (#36), v317 U-Haft-Beine (#37)
+- v318 Stellenanzeige 750 € (#38), v319 Übernahme-Zeitung (#39), v320 Beet-Farben (#40), v321 Züge auf Schienen und Route erst berechnen (#41), v322 Büros aufwerten und Fahrzeugkauf am Standort (#42)
+
+**Zusammenführung:**
+- Konflikte gab es nur in `sw.js`, `index.html` (Versionszeilen), `AENDERUNGEN.md`, `ZUSAMMENFUEHREN.md` und `style.css` (angehängte Blöcke). Dort sind alle Abschnitte und alle CSS-Blöcke behalten (Zeile für Zeile gegen die Einzel-PRs geprüft). Die Code-Dateien ließen sich ohne Konflikt verbinden.
+- `sw.js` steht auf v323. Alle in diesem Stand geänderten Dateien haben `?v=323` in `index.html` und `sw.js`, alle anderen behalten ihre Nummer.
+
+**Behoben beim Zusammenführen:** Mein Beinfix v317 (#37) brach den vorhandenen Test `jail.test.js` („Knie knapp an der Bettkante“). Der Test erwartet jetzt die gewollte Lage: Knie 5 bis 18 cm hinter der Schiene, Unterschenkel hängen frei davor. Das hatte ich im PR #37 übersehen, weil ich dort nur die Beinmessung, nicht die Unit-Tests wiederholt hatte.
+
+**Geprüft:** Syntax aller Skripte. Unit-Tests: dieselben Fehlschläge wie auf `main` (die lange bekannte Liste, siehe CLAUDE.md), dazu bestehen die neuen Tests der PRs (`d2d-v313`, `hunt-presentation-v315`, `office-value-v322`, `jail`). Browser-Rauchtest mit den Prüfskripten der einzelnen Änderungen auf dem zusammengeführten Stand (Ergebnis im Pull Request). **Nicht geprüft:** am Handy; das Zusammenspiel der Änderungen über lange Spielzeit.
+
+## v322 – Bezugsfertige Büros und Fahrzeugkauf am Standort
+
+**Wunsch:** Ein Büro für rund eine Million Euro soll in Ausstattung und Logistik mehr bieten. Der markierte Auftragsplaner zeigte ausschließlich Lkw mit „kommt nicht hin“.
+
+**Ursache:** Alle Büroklassen starteten mit Sichtbeton, weißen Wänden und ohne Küche. Die Zuordnung zum Büro änderte den tatsächlichen Standort eines Fahrzeugs nicht. Der normale Fahrzeugmarkt stellte neue Lkw weiterhin am Heimatort ab. Im Planer wurde der örtliche Fahrzeugkauf ausgeblendet, sobald überhaupt ein freies Fahrzeug vorhanden war – auch wenn keines den Ladeort erreichen konnte. Die automatische Auswahl markierte dann sogar ein Fahrzeug mit unendlichen Anfahrtskosten als vorausgewählt.
+
+**Lösung:**
+- `offices.js`: Grundausstattung nach Büroklasse, ab Umschlaghalle inklusive Bodenbelag, Küche und Pflanzen, ab Logistikzentrum zusätzlich breite Fensterfront und Doppelmonitore. Größere Büros mit Parkett und Siebträgerküche. In Kaufansicht und Bürokarte steht die Ausstattung dabei. Kostenlose einmalige Ausstattung bisher unveränderter Standardbüros; individuell gewählte Beläge, Küchen, Pflanzen und Möbelpositionen bleiben erhalten. Merkmal `deco.fitout322`; eine unberührte Standardausstattung wächst beim Ausbau mit.
+- `officefp.js`: Fensterfront, Holzarbeitsflächen, zweite Bildschirme und passende Standortanzeige in großen Büros. Beide Monitore teilen eine Textur; die Zahl der pro Arbeitsplatz aktualisierten Texturen bleibt gleich. Grundriss und 3D-Fenster stimmen überein. Vorhandene Arbeitsplatzpositionen, Figuren und Abläufe bleiben erhalten.
+- Über **„Vor Ort kaufen“** im Büro lassen sich dort nutzbare Fahrzeuge zum normalen Kaufpreis beschaffen. Sie werden am Standort bereitgestellt und automatisch dem Büro zugeordnet. Schiffe, Züge und Flugzeuge bleiben an ihrem passenden Terminal; die Büroadresse gilt für Straßenfahrzeuge. Keine kostenlose Versetzung bereits vorhandener Fahrzeuge.
+- `game.js`: Unerreichbare Fahrzeuge werden weder empfohlen noch auswählbar dargestellt. Die Auswahl erklärt den fehlenden Anfahrtsweg und bietet den Kauf am Ladeort auch bei vorhandener ferner Flotte an. Danach geht es zum bisherigen Auftrag zurück. Die mobile Fahrzeugzeile gibt Name und Status mehr Platz.
+- Kaufkontrollen für Geld und Stellplätze bleiben wirksam. Büro-/Fahrzeugpreise, Personalbedarf, Nutzlast, Transportnetz und Auftragsbelohnungen unverändert. Service Worker und vier geänderte Produktdateien v322; die parallelen PRs verwenden v314–v321.
+
+**Geprüft:**
+- `office-value-v322.test.js`: fünf Büroklassen, wiederholtes Laden, Erhalt individueller Einrichtung, Ausbau, reale nicht erreichbare Europa–Lanzhou-Anfahrt und lokaler Kauf mit normaler Abbuchung; Raumgeometrie und Monitorquellen auf sechs Etagen.
+- Vorhandene Tests `d2d-v313.test.js`, `office-limits.test.js`, `office-stairs-v301.test.js`, `office-appearance-v298.test.js`, `office-workers-v284.test.js` bestanden.
+- Chromium/Playwright bei 390 × 844 und 1280 × 800 Pixeln: Vorher-/Nachheransicht des Logistikzentrums, Kauf über Büro mit Bereitstellung/Zuordnung, gesperrter Europa-Lkw im Lanzhou-Planer, Kauf am Ladeort und Rückkehr zum jetzt fahrbaren Auftrag. Käufe bei Geld-/Stellplatzmangel ohne Abbuchung oder neues Fahrzeug. Zusätzlich Bahn, Flugzeug, Binnen- und Seeschiff mit korrekten Terminalkoordinaten und normaler Abbuchung gekauft. Keine JavaScript-Fehler oder horizontaler Überlauf.
+- Syntax und `git diff --check`. Kein Test auf einem echten iPhone oder in Safari; keine Aussage zur Bildrate auf diesen Geräten.
+## v321 – Züge fahren auf Schienen, Routen erst berechnen und dann zeichnen
+**Meldung Bennet (Handy):** Züge fahren auf Autobahnen und Straßen. Außerdem erscheinen Routen nach der Annahme kurz als gerade Linie und werden erst danach berechnet.
+
+**Ursachen (`routegeo.js`, `game.js`):**
+- **Züge auf Straßen:** Für die Fahrart „Schiene“ wurde derselbe Auto-Routing-Dienst abgefragt wie für Lkw. Die Linie folgte deshalb Straßen. Gleise kennt dieser Dienst nicht. Diese Straßenlinien lagen außerdem im Gerätespeicher.
+- **Gerade Linie zuerst:** Die Linie wird nachgeladen. Bis sie da war, zeichnete die Karte die Luftlinie, und das Fahrzeug fuhr schon darauf. Danach sprang beides auf den echten Weg.
+
+**Lösung:**
+- **Schiene:** Eigene Abfrage an den Schienen-Routingdienst OpenRailRouting (`routing.openrailrouting.org`, Profil `all_tracks`). Es gibt keinen Rückgriff auf den Auto-Dienst. Scheitert der Schienen-Dienst, bleibt die gerade Linie, aber keine Straße. Der Speicher heißt jetzt `logistika-geo-v2`. Aus dem alten Speicher werden Straßen- und Radlinien übernommen, die alten „Schienen“-Linien (waren Straßen) verworfen.
+- **Erst berechnen, dann zeichnen:** `geoPending` meldet, ob die Linie einer Strecke noch aussteht.
+  - Solange das so ist, zeichnet die Karte sie nicht (laufende Aufträge und Vorschau im Planer), und das Fahrzeug wartet am Start.
+  - Beim Annehmen werden alle Linien sofort mit Vorrang angefragt.
+  - Dauert eine Anfrage länger als 25 s oder scheitert sie oder ist das Gerät offline, gilt die gerade Linie als endgültig. Das Fahrzeug fährt dann los.
+- **Kein Springen:** Sobald ein Fahrzeug auf einer Linie fährt, wird sie eingefroren (`route.fz`). Eine später eintreffende Antwort ändert sie nicht mehr.
+
+**Geprüft (Testbrowser, Dienste simuliert):** Die Abfrage von Schiene und Straße geht an den jeweils richtigen Dienst (Schiene: nur Schienen-Dienst, Straße: Auto-Dienst). Nach der Annahme steht die Linie aus, gezeichnet wird nichts, die Fahrzeuge bleiben bei Position 0. Nach der Antwort ist die Linie da und fahrbar. Eine später steigende Versionsnummer ändert eine fahrende Linie nicht. Alter Speicher: Schienenlinie verworfen, Straßenlinie behalten. Der Unit-Test `d2d-v313.test.js` besteht weiter.
+
+**Nicht geprüft:**
+- **Der echte Schienen-Dienst.** Aus dieser Umgebung ist kein Zugriff auf `routing.openrailrouting.org` möglich. Aufbau der Anfrage und Antwort (GraphHopper-Format) habe ich nach meinem Kenntnisstand umgesetzt und nur gegen eine nachgebaute Antwort getestet. Ob dieser öffentliche Dienst erreichbar ist, Anfragen von der Seite erlaubt (CORS) und lange Strecken liefert, zeigt erst ein Test auf dem Handy. Fällt er aus, sieht man Schienenstrecken als gerade Linie. Das ist hässlicher als zuvor, aber nicht mehr falsch auf Straßen.
+- Das Handy selbst.
+## v320 – Gegossene und trockene Beete: sanfterer Farbunterschied
+**Wunsch Bennet:** Die Farben von bewässerten und nicht bewässerten Feldern sind zu hart. Der Unterschied soll sanfter sein.
+
+**Ursache (`farmmodels.js`, v304):** Trockene Erde war ein helles Sandbraun (`0xad8455`), nasse ein sehr dunkles Braun (`0x60402b`). Die Helligkeit lag bei etwa 2 : 1.
+
+**Lösung:** Beide Töne rücken zur normalen Beeterde: nasse Erde um 35 %, trockene um 30 %. Das gilt für Beetfläche, Furchen, Seiten und die Erde unter Obstbäumen. Trockene Beete bleiben heller und mit Rissen, nasse dunkler. Der Helligkeitsabstand sinkt von etwa 0,27 auf etwa 0,17 (Verhältnis von 1,98 auf 1,54). Leere Beete, Pflanzen und Geometrie sind unverändert.
+
+**Geprüft:** Der vorhandene Test `watering-look-v304.test.js` besteht weiter (verlangt weiterhin ein deutlich sichtbares Helligkeitsverhältnis von mehr als 1,4). Rechnung der Farbwerte siehe oben. Im Testbrowser Hofansicht mit gegossenen und trockenen Beeten vor und nach der Änderung gerendert, keine Fehler. Der Unterschied ist auf einem so kleinen Bildausschnitt subtil. **Nicht geprüft:** am Handy. Falls dir der Unterschied jetzt zu schwach ist, lässt er sich mit einem Zahlenwert nachjustieren.
+## v319 – Übernahme-Zeitung: Kaufpreis groß, sichtbare Beute, klare Zahlen
+**Meldung Bennet:** Die Übernahme-Zeitung sieht unübersichtlich und unspektakulär aus; die 24,86 Mio. € „investiert“ erschließen sich nicht.
+
+**Ursachen (`corp.js`, `style.css`):**
+- **Die 24,86 Mio. €** waren die Summe der Kaufpreise aller bisherigen Übernahmen (hier 7) plus der neuen. Im Text stand nur „investiert“, direkt unter einer Schlagzeile mit 14,41 Mio. €. Es stand nirgends, dass es die Summe ist.
+- **Leere Lücke unter dem Papier:** Die Beute-Chips (Fahrzeuge, Marktanteil, Leute, Stammkunden, Ruf) starten unsichtbar und werden nur durch ihre Animation eingeblendet. Die ruhige Fassung v282 setzte `animation:none`, deshalb blieben sie dauerhaft unsichtbar.
+- Goldregen und Strahlen waren für den Sieg abgeschaltet.
+
+**Lösung:**
+- Der **Kaufpreis dieser Übernahme** steht als große goldene Plakette unter dem Papier.
+- Die **Beute-Chips** sind sichtbar und poppen nacheinander auf, in zwei Spalten.
+- Die Gruppenkarte zeigt drei Zahlen (Übernahmen, Fahrzeuge, Kaufpreise gesamt) und rechnet vor, woraus die Summe besteht: „9,00 Mio. € für die früheren Übernahmen + 14,41 Mio. € für Blitzfracht“. Bei der ersten Übernahme steht dort ein kurzer Satz statt der Rechnung.
+- Strahlen im Hintergrund und Goldregen sind wieder an, ohne Ton (die Entscheidung von v282 bleibt). Mit „weniger Bewegung“ gibt es keine Animationen. Der Knopf ist schon nach 0,6 s da.
+
+**Geprüft (Testbrowser, 390 × 844 und 360 × 640):** Alle sechs Beute-Chips sichtbar, Kaufpreis und Gruppenzahlen stimmen mit den gespeicherten Preisen überein (Test mit 5 Übernahmen: 23,41 Mio. € = 9,00 + 14,41), kein seitliches Überlaufen, keine Fehler in der Konsole. Bildschirmfoto gesichtet. **Nicht geprüft:** am Handy; Aussehen mit echtem Vereins-Logo. Die Zahlen selbst (Kaufpreis, Rechenweg) habe ich nicht verändert, nur die Anzeige.
+## v318 – Stellenanzeige kostet immer 750 €
+**Wunsch Bennet:** Anzeigen sollen immer einen festen, geringen Preis haben, auch als Millionär nur 750 €.
+
+**Ursache (`offices.js`):** Der Preis war 250 € mal Etappenfaktor (`stageK`) und stieg in späteren Etappen auf mehrere tausend Euro.
+
+**Lösung:** Fester Preis `AD_FEE = 750` in `adFee()`. Er gilt für den Knopf im Büro und die Abbuchung (`postAd`), unabhängig von Etappe und Kontostand. Sonst ändert sich nichts: drei Bewerbungen für die gesuchte Stelle, Eintrag im Kassenbuch.
+
+**Geprüft (Testbrowser):** Etappe 1, 3 und 6 mit 5 Mrd. € auf dem Konto: Preis 750 €, abgebucht 750 €, 3 neue Bewerbungen, Kassenbuch −750 €. **Nicht geprüft:** auf dem Handy.
+## v317 – U-Haft: Beine hängen frei über der Bettkante
+**Meldung Bennet:** Die Beine des Gefangenen hängen im Bett.
+
+**Ursache (`jail.js`, am Modell nachgemessen):** Der Gefangene saß so nah an der Bettkante, dass die Knie genau an der vorderen Schiene lagen. Die Unterschenkel hingen im Rahmen. Außerdem schwangen sie bis zu 0,2 m nach hinten unter die Matratze und damit in den Bettrahmen.
+
+**Lösung:**
+- Der Sitzpunkt (`SEAT.z`) liegt 12 cm weiter hinten auf der Matratze. Die Knie sind jetzt 14 cm hinter der Bettkante, die Unterschenkel hängen davor in der Luft.
+- Das Baumeln (`KNEE`) geht nur noch von senkrecht bis leicht nach vorn, nie nach hinten unter das Bett.
+- Die Beine sind für Prüfungen über `ctl.legs` erreichbar.
+
+**Geprüft (Testbrowser, 300 Messungen der Beinecken über 150 Bilder):** Die hinterste Ecke der Beine liegt mit z = −0,646 vor der Bettkante (−0,68, Schienenkante −0,66). Vorher (Messung in Zwischenständen bis −0,73) lagen Ecken im Rahmen, nachher 0 Punkte im Rahmen. Bildschirmfoto der Zelle gesichtet: Beine hängen vor dem Bett, Füße in der Luft über der unteren Matratze. **Nicht geprüft:** auf dem Handy.
+
+## v316 – U-Haft-Zelle ruckelt nicht mehr (gemeinsame Ruckelbremse)
+**Meldung Bennet (Handy, U-Haft):** Die Zelle ruckelt stark, besonders beim Antippen.
+
+**Ursache (`jail.js`, im Testbrowser gemessen):**
+- Der Tipp selbst ist billig (Handler 0,4–1,4 ms, 30 Zeichenaufrufe je Bild). Die Zelle ist wie das Büro grafiklastig: vollflächig mit 1,75-facher Auflösung, Schatten, Nebel, Lichtstrahlen, Staub. Ohne Reserve fällt jeder zusätzliche Aufwand (Sprechblase, Tippreaktion) sofort als Ruckler auf.
+- Die Sprechblase animierte `margin-top`. Das erzwingt in jedem Bild der Animation (1,9 s) eine neue Layoutberechnung.
+
+**Lösung:**
+- Die Ruckelbremse aus v315 liegt jetzt in `gl3d.js` (`G3.governor`) und gilt für die Zelle und das Büro: Kommt das Gerät nicht auf etwa 30 Bilder/s, sinkt die Auflösung stufenweise auf 80 %, 65 %, 50 %. Nur abwärts.
+- Die Blasenanimation läuft über `transform` statt `margin-top` (`style.css`, v316).
+
+**Geprüft (Testbrowser, Software-Grafik):** Die Zelle drosselt die Auflösung (390 × 844 → 195 × 422), das Büro weiterhin (390 → 254 → 195). Tippen auf den Häftling zeigt die Blase („Ich kann nicht schlafen.“) mit `transform`-Animation. **Nicht geprüft:** auf dem Handy. Die Software-Grafik sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones. Ruckelt es weiter, bitte melden, dann messe ich Schatten und Lichtstrahlen einzeln.
+
+## v315 – Büro: Sprechblase bleibt über dem Kopf, Ruckelbremse
+**Meldung Bennet (Handy, Konzernzentrale):** Starkes Ruckeln in den Büros. Der Text der Sprechblase stand als schmale Spalte am rechten Rand. Die Blase soll über dem Arbeiter bleiben und nicht mit skalieren.
+
+**Ursache Sprechblase (`officefp.js`, `style.css`):** Die Blase wurde auf den Bildschirmrand geklemmt, auch wenn der Sprecher gar nicht im Bild war. Am rechten Rand blieb dem Element nur noch wenig Breite, und der Text brach nach jedem Buchstaben um.
+
+**Lösung:**
+- Die Blase hat feste Breite (`width:max-content`, mindestens 120 px, höchstens 220 px) und ändert ihre Größe nicht.
+- Sie sitzt über dem Kopf der Person. Nur waagerecht wird sie so weit verschoben, dass sie ganz sichtbar ist. Liegt der Kopf nicht im Bild, verschwindet sie.
+
+**Ursache Ruckeln (gemessen im Testbrowser, 24 Mitarbeiter, 390 × 844):** Der JS-Anteil ist klein (Profiler: unter 10 ms je Bild, Figuren-Animation 2 ms). Es sind rund 290 Zeichenaufrufe je Bild bei 1,75-facher Auflösung (683 × 1477 Pixel) mit Schatten und Nebel. Das Ruckeln liegt also an der Grafik.
+
+**Lösung (`officefp.js` `governQuality`, `gl3d.js` `R.scale`):** Kommt das Gerät nicht auf etwa 30 Bilder pro Sekunde, sinkt die Auflösung stufenweise auf 80 %, 65 % und 50 %. Nur abwärts, damit nichts hin und her springt. Die ersten 2,5 s, Pausen und Hänger über 1,5 s zählen nicht mit. Schatten, Figuren und alle Abläufe bleiben unverändert.
+
+**Geprüft (Testbrowser mit Software-Grafik, Büro mit 24 Mitarbeitern):** Die Auflösung sinkt stufenweise (390 → 254 → 195 px Breite), sobald die Bilder zu langsam kommen. Eine Sprechblase am rechten Rand behält ihre Breite (198 × 89 px statt einer schmalen Spalte). Positionsrechnung: Kopf im Bild bleibt über dem Kopf, am Rand wird nur waagerecht verschoben, Kopf außerhalb blendet die Blase aus. **Nicht geprüft:** auf dem Handy; ob das Ruckeln dort wirklich an der Auflösung liegt. Die Software-Grafik im Testbrowser sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones aus. Wenn es weiter ruckelt, bitte melden, dann messe ich Schatten und Figuren einzeln.
 ## v314 – Karte bleibt nicht mehr leer, wenn Kacheln einmal nicht laden
 **Meldung Bennet (Handy, Etappe 6):** Die Karte war leer. Routen, Pins und Fahrzeuge waren da, nur Land und Meer (die Kartenkacheln) fehlten.
 
@@ -11,6 +134,20 @@
 **Lösung (`map.js`):** Eine Anfrage bricht nach 15 s ab und gilt als Fehler. Fehlgeschlagene Kacheln werden nach 2,5 s, 6 s, 15 s und 40 s automatisch erneut angefragt, die Karte zeichnet sich danach neu. Wiederholungen hängen `?r=n` an die Kachel-URL, weil der Browser für dieselbe URL sonst die gemerkte Fehlerantwort erneut ausliefert. Erfolgreich geladene Kacheln sind unberührt.
 
 **Geprüft (Testbrowser, Playwright, Service Worker blockiert, Kachel-Anfragen simuliert):** (1) Netz fällt aus, Kacheln scheitern, Netz kommt zurück: Wiederholungen nach 3/6/12 s scheitern, die nächste nach der Rückkehr (27 s) lädt alle Kacheln. (2) Anfragen, die nie antworten: nach dem Zeitlimit wird neu geladen, die Karte füllt sich. Ohne die Änderung bleibt die Karte in beiden Fällen leer. **Nicht geprüft:** am Handy; ob bei dir wirklich ein Netzfehler die Ursache war. Falls die Karte auch nach dem Update leer bleibt, hilft die Seitenaufruf-Fehlermeldung oder ein Bild der Entwicklerkonsole.
+## v315 – Natürliche Liegebewegung und ausgestopfte Kopfpräparate
+
+**Ursache:** In der Bergungsansicht wirkten die oberen Läufe stark angewinkelt, die Konturen und Scheckenflecken hart. Auf der Trophäentafel waren nur Schädel bzw. Keilerwaffen zu sehen; die getrennte Skalierung ließ Kopfgrößen unpassend wirken.
+
+**Lösung (`hunt.js`):**
+- Hirschrumpf und -läufe mit feineren Konturen, weichere Farbübergänge bei Schecken. Obere Läufe von Hirsch und Keiler liegen entspannter; Rumpf, Hals und Gelenke laufen mit stetiger Beschleunigung in die Endpose aus. Geschlossene Lider ersetzen beim erlegten Tier die offenen Augen; das Kopfmodell wird einmal erzeugt und wiederverwendet.
+- Hirsch und Keiler als ausgestopfte Köpfe mit Hals-/Schulteransatz, Ohren, Fell und Augen. Geweih, Waffen und Fell stammen aus dem gespeicherten Stück. Kopf und Geweih werden gleichmäßig skaliert; alle Präparate auf der Tafel nutzen denselben Maßstab, der Platz richtet sich nach der tatsächlichen Breite.
+- Bestehende Trophäendaten, Werte, Seltenheiten, Trefferzonen und Belohnungen unverändert. Keine Spielstandmigration. Service Worker v315 und `hunt.js?v=315`; v314 ist für die parallele Kartenkorrektur in PR #33 reserviert.
+
+**Geprüft:**
+- `hunt-presentation-v315.test.js`: 24 Kopfpräparate, unverzerrte Kopftransformationen, gleiche Tafelskalierung, gespeicherte Merkmale/Werte und acht Liegeposen mit geschlossenen Lidern, weichem Auslaufen und Modellcache.
+- Bestehende Tests `trophy-layout-v310.test.js`, `hunt-v307.test.js`, `hunt-thighs-v290.test.js`, `hunt-v283.test.js` und `hunt.test.js` bestanden: Modellgrenzen, Geweihformen, Bodenauflage, Fallbewegung (884 Bilder), Treffer und Leistungsbudgets.
+- Chromium mit WebGL: 14 Vorher-/Nachheransichten der Originalmodelle geprüft, einschließlich beider Liegerichtungen und Tafel. Im Testbrowser bei 390 × 844 Pixeln Hirsch-, Keiler- und Fasanansicht geöffnet/geschlossen sowie die Bergung eines gescheckten Hirschs geprüft; keine JavaScript-/WebGL-Fehler oder horizontal abgeschnittene Detailansicht.
+- Aktuelles main und PR #33 vor dem Upload auf Überschneidungen geprüft. Kein Test auf einem echten iPhone oder in Safari.
 
 ## v313 – Echte Tür-zu-Tür-Logistik: Vorlauf, Hauptlauf, Umfuhr, Nachlauf
 **Wunsch Bennet:** Jeder Auftrag läuft von der Adresse des Absenders bis zur Adresse des Empfängers. Häfen, Flughäfen und Bahnterminals sind Zwischenstationen, Vor- und Nachlauf fährt die Straße. Ware nach Schiff, Bahn oder Flugzeug darf nicht automatisch beim Kunden landen.

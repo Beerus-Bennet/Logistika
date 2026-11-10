@@ -439,7 +439,9 @@ function refreshPool(b, bonus) {
   b.poolDay = dayOf(S.time);
 }
 /* Stellenanzeige: sofort drei Bewerbungen für genau die gesuchte Stelle */
-const adFee = () => roundK(250 * stageK(), 10);
+/* v318: fester, niedriger Preis – unabhängig von Etappe und Kontostand (vorher 250 € × Etappenfaktor, bis in die Tausende) */
+const AD_FEE = 750;
+const adFee = () => AD_FEE;
 function makeCandidateFor(role) {
   const c = makeCandidate(false), r = ROLES[role];
   c.role = role;
@@ -555,6 +557,22 @@ function unassignVehicle(uid) {
   if (f) f.driver = null;                    /* ohne Standort kein fester Fahrer */
   b.vehicles = b.vehicles.filter(u => u !== uid);
   save(); render();
+}
+/* v322: Am eigenen Standort kaufen statt jeden neuen Lkw in Berlin abzustellen.
+   Der Händler stellt nur dort nutzbare Verkehrsträger bereit; bestehende Fahrzeuge bleiben an ihrem Ort. */
+function openShopAtBase(baseId) {
+  const b = baseById(baseId); if (!b || !N[b.node] || !isUnlocked(b.node)) return;
+  if (b.vehicles.length >= tierOf(b).slots) return toast("Alle Stellplätze dieses Standorts sind belegt.", "warn");
+  if (!b.addr) b.addr = makeAddr(b.node, "office");
+  marketFocus = {
+    baseId: b.id, at: b.node, addr: b.addr,
+    ids: VEHICLES.filter(t => !t.special && t.stage <= S.stage && unlockedModes().includes(t.mode) && N[b.node].modes.includes(t.mode)).map(t => t.id),
+    title: tierOf(b).name + " · " + N[b.node].short, from: N[b.node].name,
+    label: "Lokaler Fahrzeugkauf · normale Kaufpreise"
+  };
+  if (S.ah) S.ah.on = false;
+  showTab("market");
+  const body = $("#view .view-body"); if (body) body.scrollTop = 0;
 }
 function assignedUids() {
   const s = new Set();
@@ -1185,6 +1203,7 @@ function baseCard(b) {
          title="Büro einrichten">${officeSVG(b, 240, false)}${tierFloors(t) > 1 ? `<span class="floorbadge">${tierFloors(t)} Etagen</span>` : ""}
       <span class="planhint">🪴 einrichten</span>
       ${typeof OFFICE3D !== "undefined" ? `<button class="planenter" data-enter="${b.id}" aria-label="Büro betreten">🚪 Betreten</button>` : ""}</div>
+    <div class="office-fitout">${esc(findBy(FLOORS, decoOf(b).floor).name)} · ${esc(findBy(KITCHENS, decoOf(b).kitchen).name)}${b.tier >= 2 ? " · Doppelmonitore · Panoramafenster" : ""}</div>
 
     ${paused ? `<div class="halt">⛔ Der Betrieb steht still · noch ${rest} · <b>siehe Telefon</b></div>` : ""}
 
@@ -1235,6 +1254,8 @@ function baseCard(b) {
     </div>
 
     <div class="sechead sm">Fahrzeuge am Standort</div>
+    <div class="office-procure"><div><b>Flotte vor Ort aufbauen</b><small>Neue Fahrzeuge werden in ${esc(n.short)} bereitgestellt und diesem Büro zugeordnet. Die Zuordnung vorhandener Fahrzeuge ändert deren Standort nicht.</small></div>
+      <button class="btn tiny${b.vehicles.length >= t.slots ? " disabled" : ""}" data-base-shop="${b.id}">🛒 Vor Ort kaufen</button></div>
     ${autoBoxHTML(b)}
     ${mine.length ? mine.map(f => {
       const vt = vType(f.type);
@@ -1291,6 +1312,7 @@ function newBaseCard() {
         <div class="tier${tierOpen(t) ? "" : " locked"}${tierFloors(t) > 1 ? " big" : ""}">
           <div class="tier-head"><span>${t.icon}</span><b>${t.name}</b>${tierFloors(t) > 1 ? `<em>${tierFloors(t)} Etagen</em>` : ""}</div>
           <small>${esc(t.info)}</small>
+          ${i > 0 ? `<small class="office-included">Inklusive: ${esc(officeFitoutText(i))}</small>` : ""}
           <div class="meta small">
             <span>👥 ${t.desks}</span><span>🚚 ${t.slots}</span><span>📡 ${kmf(Math.round(t.reach * (1 + (S.stage - 1) * 0.35)))}</span>
           </div>
@@ -1360,6 +1382,7 @@ function renderBases() {
     b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOffice(b.dataset.office); } };
   });
   $$("#tab-bases [data-up]").forEach(b => b.onclick = () => upgradeBase(b.dataset.up));
+  $$("#tab-bases [data-base-shop]").forEach(b => b.onclick = () => openShopAtBase(b.dataset.baseShop));
   $$("#tab-bases [data-close]").forEach(b => b.onclick = () => {
     const base = baseById(b.dataset.close);
     askConfirm(base.rent ? "Mietvertrag kündigen?" : "Standort verkaufen?",
@@ -1429,6 +1452,20 @@ const PLANTS = [
   { id: "kaktus",     name: "Säulenkaktus",  price: 150,  comfort: 1, h: 18, col: "#6ea36b" }
 ];
 
+/* v322: Eine bezugsfertige Ausstattung gehört zur Büroklasse, auch bei Miete.
+   Individuell eingerichtete Bestandsbüros werden nicht überschrieben. */
+function officeFitout(tier) {
+  const floors = ["beton", "vinyl", "teppich", "parkett", "parkett"];
+  const kitchens = ["keine", "nische", "einbau", "barista", "barista"];
+  const plants = [[], ["gruenlilie", "gruenlilie"], ["ficus", "monstera"],
+    ["ficus", "ficus", "monstera", "monstera"], ["olive", "olive", "olive", "monstera", "monstera", "monstera"]];
+  return { floor: floors[tier], tint: "natur", wall: tier >= 2 ? "petrol" : "weiss", kitchen: kitchens[tier], plants: plants[tier].slice() };
+}
+function officeFitoutText(tier) {
+  const d = officeFitout(tier);
+  return [findBy(FLOORS, d.floor).name, findBy(KITCHENS, d.kitchen).name,
+    tier >= 2 ? "Panoramafenster und Doppelmonitore" : "", d.plants.length ? "Bepflanzung" : ""].filter(Boolean).join(" · ");
+}
 function decoOf(b) {
   if (!b.deco) b.deco = { floor: "beton", tint: "natur", wall: "weiss", kitchen: "keine", plants: [] };
   if (!Array.isArray(b.deco.plants)) b.deco.plants = [];
@@ -1436,6 +1473,15 @@ function decoOf(b) {
   const p = b.deco.pos;
   if (!p.desks) p.desks = {};
   if (!p.plants) p.plants = {};
+  const d = b.deco;
+  if (d.fitout322 !== b.tier) {
+    const old = officeFitout(d.fitout322 == null ? 0 : d.fitout322);
+    const untouched = ["floor", "tint", "wall", "kitchen"].every(k => d[k] === old[k])
+      && JSON.stringify(d.plants) === JSON.stringify(old.plants)
+      && !Object.keys(p.desks).length && !Object.keys(p.plants).length && !p.kitchen;
+    if (untouched) Object.assign(d, officeFitout(b.tier));
+    d.fitout322 = b.tier;
+  }
   return b.deco;
 }
 
@@ -1689,7 +1735,7 @@ function officeSVG(b, w, detail, floor) {
     <rect x="30" y="30" width="340" height="240" rx="5" fill="none"
           stroke="#ffffff" stroke-width="10" opacity="0.14"/>
     ${stairs}${kitchen}${desks}${plants}${dock}
-    <rect x="30" y="140" width="9" height="46" fill="#8fb6ff" stroke="#0d1b2a" stroke-width="2"/>
+    <rect x="30" y="${b.tier >= 2 ? 82 : 140}" width="9" height="${b.tier >= 2 ? 164 : 46}" fill="#a9dcea" stroke="#0d1b2a" stroke-width="2"/>
     <path d="M361 96 a30 30 0 0 0 -30 30" fill="none" stroke="#0d1b2a" stroke-width="2" opacity="0.5"/>
     <rect x="361" y="96" width="9" height="34" fill="#c8b48f" stroke="#0d1b2a" stroke-width="2"/>
   </svg>`;

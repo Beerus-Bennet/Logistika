@@ -29,13 +29,14 @@ test("Lichtstrahl: beginnt im Fenster der linken Wand und endet im Raum (Boden o
   assert.ok(zmin >= -1.31, "z " + zmin);
   assert.ok(ymin >= 0.03, "y " + ymin);
 });
-test("Figur sitzt: Hüfte auf der Matratze des oberen Betts, Knie knapp über der Bettkante", () => {
+test("Figur sitzt: Hüfte auf der Matratze des oberen Betts, Knie 5–18 cm hinter der Bettkante (Unterschenkel hängen frei davor, v317)", () => {
   const hipY = J.SIT_Y, kneeZ = J.SEAT.z + 0.29 * Math.cos(J.SEAT.ry);
   assert.ok(Math.abs(hipY - 0.115 - J.UM) < 0.02, "Oberschenkel liegen flach auf der Matratze");
   assert.ok(J.UM > J.LM + 0.4, "oberes Bett über dem unteren");
   assert.ok(J.SEAT.x > J.BUNK.x0 + 0.2 && J.SEAT.x < J.BUNK.x1 - 0.2, "Figur mittig auf dem Bett");
   assert.ok(J.SEAT.z > J.BUNK.z0 && J.SEAT.z < J.BUNK.z1, "Rumpf über der Matratze");
-  assert.ok(kneeZ > J.BUNK.z1 - 0.08 && kneeZ < J.BUNK.z1 + 0.12, "Knie an der Kante " + kneeZ.toFixed(2));
+  /* v317: Knie vor der Schiene, sonst hängen die Unterschenkel im Rahmen */
+  assert.ok(kneeZ > J.BUNK.z1 + 0.05 && kneeZ < J.BUNK.z1 + 0.18, "Knie hinter der Kante " + kneeZ.toFixed(2));
   assert.ok(hipY - 0.417 + 0.04 > J.LM, "Füße über dem unteren Bett");
 });
 test("v264 U-Haft: eigene Tipps und Sprüche, nichts Verharmlosendes", () => {

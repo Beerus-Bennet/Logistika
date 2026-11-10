@@ -864,7 +864,8 @@ const G3 = (() => {
     });
 
     R.resize = function () {
-      const dpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr || 2);
+      /* v315: R.scale (0,5–1) senkt die Auflösung, wenn ein Bildschirm nicht mitkommt (siehe officefp.js) */
+      const dpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr || 2) * (R.scale || 1);
       const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
       R.w = w; R.h = h; R.dpr = dpr;
       const W = Math.round(w * dpr), H = Math.round(h * dpr);
@@ -1266,5 +1267,20 @@ const G3 = (() => {
     return R;
   }
 
-  return { MB, create, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
+  /* v316: Ruckelbremse für alle 3D-Ansichten. Kommt das Gerät nicht auf ~30 Bilder/s (kleines Handy, Stromsparmodus),
+     sinkt die Auflösung stufenweise (R.scale). Nur abwärts, damit nichts hin und her springt; die ersten 2,5 s,
+     Pausen und Hänger über 1,5 s zählen nicht. Aufruf je Bild: gov(Millisekunden seit dem letzten Bild, jetzt). */
+  const QUALITY = [1, 0.8, 0.65, 0.5];
+  function governor(R) {
+    const g = { ema: 16, level: 0, since: null, last: 0 };
+    return (raw, now) => {
+      if (g.since === null) g.since = g.last = now;
+      if (raw > 1500 || document.hidden) { g.since = now; return; }
+      g.ema += (raw - g.ema) * 0.08;
+      if (now - g.since < 2500 || now - g.last < 1500 || g.level >= QUALITY.length - 1) return;
+      if (g.ema > 30) { g.level++; g.last = now; g.ema = 16; R.scale = QUALITY[g.level]; }
+    };
+  }
+
+  return { MB, create, governor, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
 })();

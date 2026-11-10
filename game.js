@@ -463,6 +463,7 @@ function d2dTick(veh, job, leg, t, dtMin) {
     return;
   }
   if (veh.phase !== "repo" && veh.phase !== "haul") return;
+  if (routeHold(veh)) return;                                          /* v321: Route wird noch berechnet */
   const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
   const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
   veh.pos += step; veh.kmTotal += step;
@@ -1304,8 +1305,11 @@ function assignFor(variant, order) {
     let best = null, bestSc = null;
     for (const f of list) {
       const sc = vehScore(f, leg, order, li, n, tAcc, rest);
+      /* v322: Ein nicht erreichbarer Ladeort ist keine Fahrzeugempfehlung. */
+      if (!Number.isFinite(sc.s)) continue;
       if (!best || sc.s < bestSc.s - 0.001 || (Math.abs(sc.s - bestSc.s) <= 0.001 && sc.rc.t < bestSc.rc.t)) { best = f; bestSc = sc; }
     }
+    if (!best) return null;
     used.push(best.uid);
     tAcc += (isFinite(bestSc.legT) ? bestSc.legT : 0) + MODE_INFO[leg.mode].umschlag * 1.8;
     return best.uid;
@@ -1430,7 +1434,7 @@ function vehOptHTML(r, i, on) {
   const { f, t, rc } = r;
   const here = rc.ok && rc.d < 0.5;
   const badge = !rc.ok
-    ? `<span class="vo-b bad">kommt nicht hin</span>`
+    ? `<span class="vo-b bad">kein Anfahrtsweg</span>`
     : here
       ? `<span class="vo-b ok">✅ vor Ort</span>`
       : `<span class="vo-b ${rc.d > 15 ? "bad" : "warn"}">↩️ ${kmf(rc.d)} leer<small>${dur(rc.t)} · −${money(rc.d * costKmOf(t))}</small></span>`;
@@ -1438,7 +1442,7 @@ function vehOptHTML(r, i, on) {
   const u = r.sc ? r.sc.util : 1;
   const uTxt = u >= 0.995 ? "voll" : u >= 0.1 ? Math.round(u * 100) + " %" : u >= 0.001 ? fmt(u * 100, 1) + " %" : "< 0,1 %";
   const util = r.sc ? `<i class="vo-u${u < 0.02 && t.cap >= 500 ? " big" : ""}">⚖️ ${uTxt} ausgelastet${u < 0.02 && t.cap >= 500 ? " · überdimensioniert" : ""}</i>` : "";
-  return `<button class="vopt${on ? " on" : ""}${r.best ? " best" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on}">
+  return `<button class="vopt${on && rc.ok ? " on" : ""}${r.best ? " best" : ""}" data-leg="${i}" data-uid="${f.uid}" aria-pressed="${on && rc.ok}"${rc.ok ? "" : ' disabled title="Vom aktuellen Standort gibt es keinen verbundenen Anfahrtsweg für dieses Fahrzeug. Ein Fahrzeug am Ladeort kaufen."'}>
     <span class="vo-ic">${typeof vehIc === "function" ? vehIc(t) : t.icon}</span>
     <span class="vo-tx"><b>${r.best ? `<em class="vo-best">💡 passt am besten</em>` : ""}${esc(t.name)}</b><small>📍 ${esc(vehSpot(f).t)} · ${esc(N[f.at].short)}</small>${util}</span>
     ${badge}
@@ -1470,7 +1474,7 @@ function missingHelpHTML(leg, o, i) {
   const from = now[0].price;
   /* v244: kein Leasing mehr – reicht das Geld nicht, steht dabei, wie viel noch fehlt */
   const price = S.money >= from ? "ab " + money(from) : "ab " + money(from) + " · dir fehlen " + money(from - S.money);
-  return busyNote + `<button class="btn tiny shopjump" data-shop="${i}">🛒 ${now.length === 1 ? esc(now[0].name) : now.length + " passende Fahrzeuge"} im Markt · ${price}</button>`;
+  return busyNote + `<button class="btn tiny shopjump" data-shop="${i}">🛒 Fahrzeug in ${esc(N[leg.from].short)} kaufen · ${price}</button>`;
 }
 let marketFocus = null;          /* { orderId, leg, ids, label, at } solange der Markt gefiltert ist */
 function openShopFor(legIdx) {
@@ -1484,13 +1488,16 @@ function openShopFor(legIdx) {
       + `${leg.maxHop > 400 ? " · Reichweite " + kmf(leg.maxHop) : ""}`,
     title: o.shipper, from: leg.fa || (legIdx === 0 ? addrText(oPick(o), true) : N[leg.from].name)
   };
+  if (S.ah) S.ah.on = false;
   closeModal();
   showTab("market");
   $("#view .view-body").scrollTop = 0;
 }
 function backToOrder() {
   const f = marketFocus; marketFocus = null;
-  if (f && S.orders.some(o => o.id === f.orderId)) {
+  if (f && f.baseId) {
+    showTab("bases");
+  } else if (f && S.orders.some(o => o.id === f.orderId)) {
     showTab("orders");
     openPlanner(f.orderId, f.vi);
   } else { toast("Der Auftrag ist inzwischen weg.", "warn"); render(); }
@@ -1754,8 +1761,8 @@ function renderPlanner(fit) {
         : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, ${door ? "ab " + kgf(o.weight / D2D_TRIPS) + " Nutzlast (mehrere Fahrten)" : "mind. " + kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
       ${modeNote(d.leg, o, ps)}
       ${typeof legEventNote === "function" ? legEventNote(d.leg) : ""}
-      ${rows.length ? "" : missingHelpHTML(d.leg, o, i)}
-      ${d.repo && !d.repo.ok ? `<div class="warnbox">Dieses Fahrzeug erreicht den Ladeort nicht.</div>` : ""}
+      ${rows.length && !rows.some(r => r.rc.ok) ? `<div class="warnbox">Keines der freien Fahrzeuge erreicht ${esc(N[d.leg.from].short)} über das ${esc(mi.name)}netz. Stelle ein passendes Fahrzeug direkt am Ladeort bereit.</div>` : ""}
+      ${missingHelpHTML(d.leg, o, i)}
     </div>`;
   }).join("");
 
@@ -1907,6 +1914,7 @@ function startJob(o, variant, assign, extra) {
   S.orders = S.orders.filter(x => x.id !== o.id);
   if (typeof onJobStart === "function") onJobStart(job);
   job.legs.forEach((l, i) => l.vehs.slice().forEach(u => d2dGo(job, i, u)));
+  job.legs.forEach(l => { if (typeof geoPrefetch === "function") geoPrefetch(legCoords(l)); });   /* v321: Linien schon beim Annehmen berechnen */
 }
 
 /* ------------------------------ Disposition -------------------------------
@@ -2001,6 +2009,16 @@ function co2f(kg) { return kg >= 1000 ? fmt(kg / 1000, kg >= 1e5 ? 0 : 1) + " t"
 /* v70: Linie auf der Karte – rund um den Hof entlang der Straßen (farm.js roadDisp) */
 function roadLine(pts) { return typeof geoLine === "function" ? geoLine(pts) : typeof roadDisp === "function" ? roadDisp(pts) : pts; }
 function legDisp(leg) { return roadLine(legCoords(leg)); }
+/* v321: Route erst berechnen, dann zeichnen und losfahren. Solange der Routing-Dienst die Linie einer Strecke noch liefert (Straße, Rad, Schiene),
+   wird sie weder als gerade Linie gezeichnet, noch fährt das Fahrzeug darauf; ist sie da, bleibt sie für die Fahrt unverändert (kein Springen). */
+function routePending(pts) { return typeof geoPending === "function" && !!pts && geoPending(pts); }
+function routeHold(veh) {
+  const r = veh.route; if (!r) return false;
+  routeGm(veh);
+  if (routePending(r)) return true;
+  if (!r.fz && typeof geoLine === "function") { geoLine(r); r.fz = 1; }
+  return false;
+}
 function legCoords(leg) {
   /* a = Tür des Auftraggebers, b = Tür des Empfängers (nur bei Aufträgen) */
   if (!leg._c || (leg.mode && leg._c.length > 1 && !leg._c.gm)) leg._c = unwrapLons(legLine(leg, leg.a, leg.b));
@@ -2381,6 +2399,7 @@ function tick(dtMin) {
       continue;
     }
     if (veh.phase === "repo" || veh.phase === "haul") {
+      if (routeHold(veh)) continue;                                    /* v321: Route wird noch berechnet */
       const mf = typeof moveFactor === "function" ? moveFactor(veh, leg, job) : 1;
       const step = (t.speed * (typeof vehSpeedFactor === "function" ? vehSpeedFactor(veh) : 1) * mf * dtMin) / 60;
       veh.pos += step; veh.kmTotal += step;
@@ -2705,6 +2724,7 @@ function drawWorld(m, ctx) {
       const mi = MODE_INFO[l.mode];
       /* v313: in einer Kette können mehrere Teilstrecken gleichzeitig laufen (Teilmengen) */
       const active = !l.done && (job.v === D2D_V ? l.ld > 0 || (i > 0 && d2dStock(job, i) > 1e-6) : i === job.curLeg);
+      if (routePending(legCoords(l))) return;                          /* v321: erst wenn die Route berechnet ist */
       m.line(legDisp(l), {
         color: mi.color, width: l.done ? 3 : (active ? 5.5 : 4),
         alpha: l.done ? 0.3 : (active ? 1 : 0.6),
@@ -2719,7 +2739,9 @@ function drawWorld(m, ctx) {
     const v = planState.variants[planState.vi], o = planState.order, n = v.legs.length;
     v.legs.forEach((l, i) => {
       const mi = MODE_INFO[l.mode];
-      m.line(roadLine(unwrapLons(legPts(l, o, i, n))), {
+      const pv = unwrapLons(legPts(l, o, i, n));
+      if (routePending(pv)) return;                                    /* v321: erst wenn die Route berechnet ist */
+      m.line(roadLine(pv), {
         color: mi.color, width: 5, dash: [10, 8],
         dashOffset: -(performance.now() / 45) % 18,
         outline: "rgba(16,34,47,0.6)", outlineWidth: 3
@@ -4127,9 +4149,12 @@ const MKT_SORT_FN = {
 };
 
 function renderMarket() {
-  if (typeof ahMode === "function" && ahMode()) return renderAuction();
+  if (!marketFocus && typeof ahMode === "function" && ahMode()) return renderAuction();
   const groups = ["b", "r", "i", "l", "s", "a"];
-  const mf = marketFocus && S.orders.some(o => o.id === marketFocus.orderId) ? marketFocus : null;
+  /* v322: Neben dem Auftrag kann auch ein eigener Standort den Kauf-/Lieferort festlegen. */
+  const mf = marketFocus && (marketFocus.baseId
+    ? typeof baseById === "function" && baseById(marketFocus.baseId)
+    : S.orders.some(o => o.id === marketFocus.orderId)) ? marketFocus : null;
   if (!mf) marketFocus = null;
   let html = "";
   const f = mktState();
@@ -4156,9 +4181,9 @@ function renderMarket() {
       </div>`;
   };
   if (mf) html += `<div class="card shopfocus">
-      <div class="vname">🎯 Passend für „${esc(mf.title)}“<small>${esc(mf.label)} · Überführung zu ${esc(mf.from)} inklusive</small></div>
+      <div class="vname">${mf.baseId ? "🏢 Fahrzeuge für " : "🎯 Passend für "}„${esc(mf.title)}“<small>${esc(mf.label)} · Bereitstellung in ${esc(mf.from)} inklusive${mf.baseId ? " · wird diesem Büro zugeordnet" : ""}</small></div>
       <div class="buyrow">
-        <button class="btn tiny" id="mfBack">↩ zurück zum Auftrag</button>
+        <button class="btn tiny" id="mfBack">↩ ${mf.baseId ? "zurück zum Büro" : "zurück zum Auftrag"}</button>
         <button class="btn tiny ghost" id="mfAll">alle Fahrzeuge zeigen</button>
       </div></div>`;
   /* Im Fokus zählt nur, was die Strecke schafft; sonst greifen die Filter */
@@ -4186,7 +4211,15 @@ function renderMarket() {
   if (mr) mr.onclick = () => { Object.assign(f, { cat: "all", avail: false, afford: false, flags: [] }); save(); renderMarket(); };
   /* Im Fokus: Kauf wird an den Ladeort überführt, danach zurück zum Auftrag */
   const buy = (id, lease) => {
-    const v = acquire(id, lease, mf ? mf.at : null, mf ? mf.addr : null);
+    const base = mf && mf.baseId && baseById(mf.baseId);
+    if (base && base.vehicles.length >= tierOf(base).slots) return toast("Alle Stellplätze dieses Standorts sind belegt.", "warn");
+    const addr = mf && (!mf.baseId || isDoorMode(vType(id).mode)) ? mf.addr : null;
+    const v = acquire(id, lease, mf ? mf.at : null, addr);
+    if (v && base && !isDoorMode(vType(v.type).mode)) {
+      const mode = vType(v.type).mode;
+      setSpot(v, termPt(base.node, mode), {t:termName(base.node, mode), a:N[base.node].short});
+    }
+    if (v && base) assignVehicle(base.id, v.uid);
     if (v && mf) backToOrder();
   };
   $$("#tab-market [data-buy]").forEach(b => b.onclick = () => buy(b.dataset.buy, false));

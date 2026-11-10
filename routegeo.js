@@ -11,10 +11,12 @@
    roadLine / vehPoint.
    ========================================================================= */
 const GEO = { ver: 0, mem: new Map(), pend: new Set(), q: [], busy: false, failAt: new Map(), ids: null, sea: null, ok: true };
-const GEO_STORE = "logistika-geo-v1";
+const GEO_STORE = "logistika-geo-v2", GEO_STORE_OLD = "logistika-geo-v1";   /* v321: v1 enthält Güterzug-Linien über Straßen – nur Straße/Rad werden übernommen */
 const GEO_HOSTS = {
   car: ["https://routing.openstreetmap.de/routed-car/route/v1/driving/", "https://router.project-osrm.org/route/v1/driving/"],
-  bike: ["https://routing.openstreetmap.de/routed-bike/route/v1/driving/", "https://router.project-osrm.org/route/v1/driving/"]
+  bike: ["https://routing.openstreetmap.de/routed-bike/route/v1/driving/", "https://router.project-osrm.org/route/v1/driving/"],
+  /* v321: Schiene – OpenRailRouting (GraphHopper auf OpenStreetMap-Gleisen). Kein Auto-Dienst als Ersatz: Fällt er aus, bleibt die gerade Linie. */
+  rail: ["https://routing.openrailrouting.org/route"]
 };
 
 /* ------------------------------ kleine Helfer ------------------------------ */
@@ -68,11 +70,15 @@ function geoUnwrap(c) {
 
 /* ------------------------------- Speicher --------------------------------- */
 function geoLoad() {
-  try {
-    const raw = localStorage.getItem(GEO_STORE); if (!raw) return;
-    const o = JSON.parse(raw);
-    Object.keys(o).forEach(k => { try { GEO.mem.set(k, geoDec(o[k])); } catch (e) { /* kaputt: ignorieren */ } });
-  } catch (e) { /* kein Speicher */ }
+  const take = (key, skipRail) => {
+    try {
+      const raw = localStorage.getItem(key); if (!raw) return;
+      const o = JSON.parse(raw);
+      Object.keys(o).forEach(k => { if (skipRail && k.startsWith("l|")) return; try { GEO.mem.set(k, geoDec(o[k])); } catch (e) { /* kaputt: ignorieren */ } });
+    } catch (e) { /* kein Speicher */ }
+  };
+  take(GEO_STORE_OLD, true);       /* alte Straßen-/Radlinien behalten, alte „Schienen“-Linien (waren Straßen) verwerfen */
+  take(GEO_STORE, false);
 }
 let geoSaveT = 0;
 function geoSave() {
@@ -279,20 +285,52 @@ function geoIdOf(p) {
 }
 
 /* ------------------------- Straße / Schiene / Rad -------------------------- */
-function geoWant(a, b, mode) {
+/* v321: Braucht diese Teilstrecke eine Linie vom Routing-Dienst? (Straße, Rad, Schiene; Tür-Strecken zählen als Straße) */
+function geoNeeds(a, b, mode) {
+  if (mode === "d") mode = "r";
+  if (mode !== "r" && mode !== "l" && mode !== "b") return false;
+  return geoHav(a, b) >= (mode === "r" ? 0.8 : 0.8);
+}
+/* Wie lange eine Anfrage höchstens erwartet wird, bevor die gerade Linie als endgültig gilt (ms) */
+const GEO_WAIT = 25000;
+function geoWant(a, b, mode, urgent) {
   const key = geoKey(a, b, mode);
-  if (GEO.pend.has(key)) return;
+  if (GEO.pend.has(key)) { if (urgent) { const i = GEO.q.findIndex(j => j.key === key); if (i > 0) GEO.q.unshift(GEO.q.splice(i, 1)[0]); } return; }
   const f = GEO.failAt.get(key); if (f && Date.now() - f < 5 * 60e3) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   if (!GEO.ok) return;
   GEO.pend.add(key);
-  GEO.q.push({ key, a: geoFwd(a, b) ? a : b, b: geoFwd(a, b) ? b : a, mode });
+  GEO.since = GEO.since || new Map(); GEO.since.set(key, Date.now());
+  const job = { key, a: geoFwd(a, b) ? a : b, b: geoFwd(a, b) ? b : a, mode };
+  if (urgent) GEO.q.unshift(job); else GEO.q.push(job);
   geoPump();
 }
+/* Steht die Linie dieser Strecke noch aus? (Anfrage läuft und ist jünger als GEO_WAIT) – dann weder zeichnen noch fahren */
+function geoPending(pts) {
+  if (!pts || !pts.gm || pts.length < 2 || !GEO.ok) return false;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+  const now = Date.now();
+  for (let i = 1; i < pts.length; i++) {
+    const m = pts.gm[i - 1];
+    if (!geoNeeds(pts[i - 1], pts[i], m)) continue;
+    const key = geoKey(pts[i - 1], pts[i], m === "d" ? "r" : m);
+    if (GEO.mem.has(key)) continue;
+    const f = GEO.failAt.get(key);
+    if (f && now - f < 5 * 60e3) continue;                         /* gescheitert: gerade Linie, endgültig */
+    const t = GEO.since && GEO.since.get(key);
+    if (t == null) { geoWant(pts[i - 1], pts[i], m, true); return true; }
+    if (GEO.pend.has(key) && now - t < GEO_WAIT) return true;
+    if (!GEO.pend.has(key)) { geoWant(pts[i - 1], pts[i], m, true); return true; }
+  }
+  return false;
+}
+/* Alle Teilstrecken vormerken (vor dem Zeichnen/Losfahren) – dringend, vor dem Rest der Warteschlange */
+function geoPrefetch(pts) { if (pts && pts.gm) geoPending(pts); }
 function geoPump() {
   if (GEO.busy || !GEO.q.length) return;
   GEO.busy = true;
   const job = GEO.q.shift();
+  if (GEO.since) GEO.since.set(job.key, Date.now());                /* v321: die Wartezeit zählt ab Beginn der Anfrage, nicht ab der Warteschlange */
   geoFetch(job).then(pts => {
     if (pts) { GEO.mem.set(job.key, pts); GEO.ver++; geoSave(); } else GEO.failAt.set(job.key, Date.now());
   }).catch(() => { GEO.failAt.set(job.key, Date.now()); }).then(() => {
@@ -302,23 +340,30 @@ function geoPump() {
 }
 async function geoFetch(job) {
   if (typeof fetch === "undefined") return null;
-  const hosts = job.mode === "b" ? GEO_HOSTS.bike : GEO_HOSTS.car;
+  const rail = job.mode === "l";
+  const hosts = rail ? GEO_HOSTS.rail : job.mode === "b" ? GEO_HOSTS.bike : GEO_HOSTS.car;
   const co = job.a[1].toFixed(5) + "," + job.a[0].toFixed(5) + ";" + job.b[1].toFixed(5) + "," + job.b[0].toFixed(5);
   for (const h of hosts) {
     try {
       const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
       const to = ctl ? setTimeout(() => ctl.abort(), 20000) : 0;
-      const r = await fetch(h + co + "?overview=full&geometries=geojson&alternatives=false&steps=false", ctl ? { signal: ctl.signal } : {});
+      const url = rail
+        ? h + "?point=" + job.a[0].toFixed(5) + "," + job.a[1].toFixed(5) + "&point=" + job.b[0].toFixed(5) + "," + job.b[1].toFixed(5) + "&profile=all_tracks&points_encoded=false&instructions=false"
+        : h + co + "?overview=full&geometries=geojson&alternatives=false&steps=false";
+      const r = await fetch(url, ctl ? { signal: ctl.signal } : {});
       clearTimeout(to);
       if (!r.ok) continue;
       const j = await r.json();
-      const rt = j && j.routes && j.routes[0];
-      if (!rt || !rt.geometry || !rt.geometry.coordinates || rt.geometry.coordinates.length < 2) continue;
-      let pts = rt.geometry.coordinates.map(c => [c[1], c[0]]);
+      /* OSRM: routes[0].geometry.coordinates · GraphHopper: paths[0].points.coordinates (jeweils [Länge, Breite]) */
+      const co2 = rail ? j && j.paths && j.paths[0] && j.paths[0].points && j.paths[0].points.coordinates
+        : j && j.routes && j.routes[0] && j.routes[0].geometry && j.routes[0].geometry.coordinates;
+      if (!co2 || co2.length < 2) continue;
+      let pts = co2.map(c => [c[1], c[0]]);
       const straight = geoHav(job.a, job.b), len = geoLen(pts);
-      /* nur sinnvolle Wege: nicht viel kürzer, nicht endlos Umweg, Start/Ziel nah am Wunschpunkt */
+      /* nur sinnvolle Wege: nicht viel kürzer, nicht endlos Umweg, Start/Ziel nah am Wunschpunkt (Gleise liegen oft weiter weg von der Stadtmitte) */
       if (len < straight * 0.92 || len > straight * 2.6 + 4) continue;
-      if (geoHav(pts[0], job.a) > 6 || geoHav(pts[pts.length - 1], job.b) > 6) continue;
+      const snap = rail ? 25 : 6;
+      if (geoHav(pts[0], job.a) > snap || geoHav(pts[pts.length - 1], job.b) > snap) continue;
       pts = geoSimplify(pts, straight > 200 ? 0.0012 : 0.0005);
       pts = [job.a.slice()].concat(pts, [job.b.slice()]);
       return pts;
@@ -356,7 +401,7 @@ const GEOC = new WeakMap();
 function geoDisp(pts) {
   if (!pts || !pts.gm || pts.length < 2) return pts;
   const c = GEOC.get(pts);
-  if (c && c.ver === GEO.ver) return c.out;
+  if (c && (c.ver === GEO.ver || pts.fz)) return c.out;          /* v321: pts.fz = Fahrzeug ist darauf unterwegs – die Linie springt nicht mehr */
   let out = [pts[0]], changed = false;
   for (let i = 1; i < pts.length; i++) {
     const seg = geoSeg(pts[i - 1], pts[i], pts.gm[i - 1]);

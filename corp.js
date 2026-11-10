@@ -601,7 +601,7 @@ function corpShow(ev) {
   if (!ev || document.getElementById("corpShow")) return;
   corpSyncRivals();
   const me = S.player.company, C = corp(), RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  let head, sub, duel, chips, crown = "", quote, btn, stampT;
+  let head, sub, duel, chips, crown = "", price = "", quote, btn, stampT;
   if (ev.kind === "win") {
     const r = rivalById(ev.id), c = CORP[ev.id]; if (!r || !c) return;
     const A = me.toUpperCase(), B = r.name.toUpperCase();
@@ -614,8 +614,13 @@ function corpShow(ev) {
     const ch = [["🚚", ev.veh, " Fahrzeuge", "+"], ["📈", ev.pct, " % Marktanteil", "+"], [null, ev.hq], ev.staff ? ["👥", ev.staff, " Leute übernommen", "+"] : null,
       ev.cust ? ["📋", ev.cust, " Stammkunden", "+"] : null, ["⭐", ev.rep, " Ruf", "+"]].filter(Boolean);
     chips = ch.map((x, i) => `<span class="cs-chip" style="animation-delay:${(RM ? 0.2 : 1.9) + i * 0.17}s">${x[0] ? `${x[0]} ${x[3]}<b data-n="${x[1]}">0</b>${x[2]}` : esc(x[1])}</span>`).join("");
-    const Ow = Object.values(C.owned || {}), paid = Ow.reduce((a, o) => a + (o.price || 0), 0);
-    crown = `<div class="cs-crown"><b>Unternehmensgruppe: ${Ow.length} ${Ow.length === 1 ? "Übernahme" : "Übernahmen"}</b><small>${money(paid)} investiert · ${Ow.reduce((a, o) => a + (o.veh || 0), 0)} Fahrzeuge übernommen</small></div>`;
+    /* v319: Kaufpreis dieser Übernahme groß, darunter die Gruppe: Anzahl, Fahrzeuge und was alle Übernahmen zusammen gekostet haben
+       (vorher stand nur „24,86 Mio. € investiert“ – ohne zu sagen, dass es die Summe aller bisherigen Käufe plus diesem ist) */
+    const Ow = Object.values(C.owned || {}), paid = Ow.reduce((a, o) => a + (o.price || 0), 0), before = paid - (ev.price || 0), vehAll = Ow.reduce((a, o) => a + (o.veh || 0), 0);
+    price = `<div class="cs-price"><small>Kaufpreis</small><b>${money(ev.price)}</b></div>`;
+    crown = `<div class="cs-crown"><span>👑</span><b>Deine Unternehmensgruppe</b>
+      <div class="cs-gstats"><i><b>${Ow.length}</b>${Ow.length === 1 ? "Übernahme" : "Übernahmen"}</i><i><b>${vehAll}</b>Fahrzeuge</i><i><b>${money(paid)}</b>Kaufpreise gesamt</i></div>
+      ${before > 0 ? `<small>${money(before)} für die früheren Übernahmen + ${money(ev.price)} für ${esc(r.name)}</small>` : `<small>Erste Übernahme – der Anfang deines Imperiums.</small>`}</div>`;
     quote = `<b>Übernahme abgeschlossen</b><small>Die Integration von Flotte, Standorten und Personal beginnt.</small>`;
     btn = "Zur Unternehmensübersicht";
   } else {
@@ -640,6 +645,7 @@ function corpShow(ev) {
         <p class="cs-sub">${esc(sub)}</p>
         <div class="cs-duel">${duel}</div>
       </div>
+      ${price}
       <div class="cs-loot">${chips}</div>
       ${crown}
       <div class="cs-quote">${quote}</div>
@@ -665,7 +671,7 @@ function corpShow(ev) {
   }));
   /* Goldregen (Sieg) bzw. Funken (Kampfansage) */
   if (!RM) later(1200, () => {
-    const fx = el.querySelector(".cs-fx"), n = ev.kind === "win" ? 0 : 22;
+    const fx = el.querySelector(".cs-fx"), n = ev.kind === "win" ? 26 : 22;   /* v319: auch beim Sieg Goldregen */
     for (let i = 0; i < n; i++) {
       const p = document.createElement("i");
       p.textContent = ev.kind === "win" ? pick(["🪙", "✨", "💶", "⭐"]) : pick(["⚡", "💥"]);
