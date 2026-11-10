@@ -1121,10 +1121,13 @@ const OFFICE3D = (() => {
     if (Math.hypot(d[0], d[2]) < 0.01) return I.r;
     return [clamp1(I.r[0], -0.3, 0.45), clamp1(Math.atan2(d[0], d[2]), -1.25, 1.25), clamp1(I.r[2], -0.22, 0.22)];
   }
+  /* v315: Die Blase bleibt über dem Kopf der Person und wird nicht mit dem Bild skaliert. Nur waagerecht
+     wird sie so weit zurechtgerückt, dass sie ganz zu sehen ist; liegt der Kopf nicht im Bild, verschwindet sie
+     (vorher klebte sie am Bildrand fest und schrumpfte dort zu einer schmalen Textspalte). */
   function bubblePosition(x, y, w, h, boxW, boxH) {
     const pad = 8, half = Math.min(boxW, w - pad * 2) / 2;
-    return [clamp1(x, pad + half, Math.max(pad + half, w - pad - half)),
-      clamp1(y, boxH + pad + 12, Math.max(boxH + pad + 12, h - pad))];
+    if (x < 0 || x > w || y < 0 || y > h + 40) return null;
+    return [clamp1(x, pad + half, Math.max(pad + half, w - pad - half)), Math.max(y, boxH + 4)];
   }
   function animFigure(F, dt, now, pl) {
     if (!F.shock && !O.deaths) F.actT += dt;
@@ -1564,9 +1567,12 @@ const OFFICE3D = (() => {
     buildFloor(true);
     bindInput();
     O.last = performance.now(); O.t = 0;
+    const gov = G3.governor(R);                    /* v316: Ruckelbremse (gl3d.js) */
     const frame = now => {
       if (!O || !O.alive || O.R !== R) return;
-      const dt = Math.max(0, Math.min(0.05, (now - O.last) / 1000)); O.last = now; O.t += dt;
+      const raw = now - O.last;
+      const dt = Math.max(0, Math.min(0.05, raw / 1000)); O.last = now; O.t += dt;
+      gov(raw, now);
       step(dt, now);
       if (!O || !O.alive || O.R !== R) return;
       R.stepParticles(dt);
@@ -1745,7 +1751,8 @@ const OFFICE3D = (() => {
       const p = O.R.project(O.sayAt.x, 1.62, O.sayAt.z), el = O.el.querySelector("#ofpSay");
       if (el && p && p[2] < 1) {
         const pos = bubblePosition(p[0], p[1], O.el.clientWidth, O.el.clientHeight, el.offsetWidth, el.offsetHeight);
-        el.style.left = pos[0] + "px"; el.style.top = pos[1] + "px"; el.style.visibility = "visible";
+        if (pos) { el.style.left = pos[0] + "px"; el.style.top = pos[1] + "px"; el.style.visibility = "visible"; }
+        else el.style.visibility = "hidden";
       } else if (el) el.style.visibility = "hidden";
       if (now > O.sayUntil) { O.sayAt = null; if (el) el.classList.remove("on"); }
     }

@@ -1,5 +1,44 @@
 # Änderungen – kurz für den Kollegen
 
+## v317 – U-Haft: Beine hängen frei über der Bettkante
+**Meldung Bennet:** Die Beine des Gefangenen hängen im Bett.
+
+**Ursache (`jail.js`, am Modell nachgemessen):** Der Gefangene saß so nah an der Bettkante, dass die Knie genau an der vorderen Schiene lagen. Die Unterschenkel hingen im Rahmen. Außerdem schwangen sie bis zu 0,2 m nach hinten unter die Matratze und damit in den Bettrahmen.
+
+**Lösung:**
+- Der Sitzpunkt (`SEAT.z`) liegt 12 cm weiter hinten auf der Matratze. Die Knie sind jetzt 14 cm hinter der Bettkante, die Unterschenkel hängen davor in der Luft.
+- Das Baumeln (`KNEE`) geht nur noch von senkrecht bis leicht nach vorn, nie nach hinten unter das Bett.
+- Die Beine sind für Prüfungen über `ctl.legs` erreichbar.
+
+**Geprüft (Testbrowser, 300 Messungen der Beinecken über 150 Bilder):** Die hinterste Ecke der Beine liegt mit z = −0,646 vor der Bettkante (−0,68, Schienenkante −0,66). Vorher (Messung in Zwischenständen bis −0,73) lagen Ecken im Rahmen, nachher 0 Punkte im Rahmen. Bildschirmfoto der Zelle gesichtet: Beine hängen vor dem Bett, Füße in der Luft über der unteren Matratze. **Nicht geprüft:** auf dem Handy.
+
+## v316 – U-Haft-Zelle ruckelt nicht mehr (gemeinsame Ruckelbremse)
+**Meldung Bennet (Handy, U-Haft):** Die Zelle ruckelt stark, besonders beim Antippen.
+
+**Ursache (`jail.js`, im Testbrowser gemessen):**
+- Der Tipp selbst ist billig (Handler 0,4–1,4 ms, 30 Zeichenaufrufe je Bild). Die Zelle ist wie das Büro grafiklastig: vollflächig mit 1,75-facher Auflösung, Schatten, Nebel, Lichtstrahlen, Staub. Ohne Reserve fällt jeder zusätzliche Aufwand (Sprechblase, Tippreaktion) sofort als Ruckler auf.
+- Die Sprechblase animierte `margin-top`. Das erzwingt in jedem Bild der Animation (1,9 s) eine neue Layoutberechnung.
+
+**Lösung:**
+- Die Ruckelbremse aus v315 liegt jetzt in `gl3d.js` (`G3.governor`) und gilt für die Zelle und das Büro: Kommt das Gerät nicht auf etwa 30 Bilder/s, sinkt die Auflösung stufenweise auf 80 %, 65 %, 50 %. Nur abwärts.
+- Die Blasenanimation läuft über `transform` statt `margin-top` (`style.css`, v316).
+
+**Geprüft (Testbrowser, Software-Grafik):** Die Zelle drosselt die Auflösung (390 × 844 → 195 × 422), das Büro weiterhin (390 → 254 → 195). Tippen auf den Häftling zeigt die Blase („Ich kann nicht schlafen.“) mit `transform`-Animation. **Nicht geprüft:** auf dem Handy. Die Software-Grafik sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones. Ruckelt es weiter, bitte melden, dann messe ich Schatten und Lichtstrahlen einzeln.
+
+## v315 – Büro: Sprechblase bleibt über dem Kopf, Ruckelbremse
+**Meldung Bennet (Handy, Konzernzentrale):** Starkes Ruckeln in den Büros. Der Text der Sprechblase stand als schmale Spalte am rechten Rand. Die Blase soll über dem Arbeiter bleiben und nicht mit skalieren.
+
+**Ursache Sprechblase (`officefp.js`, `style.css`):** Die Blase wurde auf den Bildschirmrand geklemmt, auch wenn der Sprecher gar nicht im Bild war. Am rechten Rand blieb dem Element nur noch wenig Breite, und der Text brach nach jedem Buchstaben um.
+
+**Lösung:**
+- Die Blase hat feste Breite (`width:max-content`, mindestens 120 px, höchstens 220 px) und ändert ihre Größe nicht.
+- Sie sitzt über dem Kopf der Person. Nur waagerecht wird sie so weit verschoben, dass sie ganz sichtbar ist. Liegt der Kopf nicht im Bild, verschwindet sie.
+
+**Ursache Ruckeln (gemessen im Testbrowser, 24 Mitarbeiter, 390 × 844):** Der JS-Anteil ist klein (Profiler: unter 10 ms je Bild, Figuren-Animation 2 ms). Es sind rund 290 Zeichenaufrufe je Bild bei 1,75-facher Auflösung (683 × 1477 Pixel) mit Schatten und Nebel. Das Ruckeln liegt also an der Grafik.
+
+**Lösung (`officefp.js` `governQuality`, `gl3d.js` `R.scale`):** Kommt das Gerät nicht auf etwa 30 Bilder pro Sekunde, sinkt die Auflösung stufenweise auf 80 %, 65 % und 50 %. Nur abwärts, damit nichts hin und her springt. Die ersten 2,5 s, Pausen und Hänger über 1,5 s zählen nicht mit. Schatten, Figuren und alle Abläufe bleiben unverändert.
+
+**Geprüft (Testbrowser mit Software-Grafik, Büro mit 24 Mitarbeitern):** Die Auflösung sinkt stufenweise (390 → 254 → 195 px Breite), sobald die Bilder zu langsam kommen. Eine Sprechblase am rechten Rand behält ihre Breite (198 × 89 px statt einer schmalen Spalte). Positionsrechnung: Kopf im Bild bleibt über dem Kopf, am Rand wird nur waagerecht verschoben, Kopf außerhalb blendet die Blase aus. **Nicht geprüft:** auf dem Handy; ob das Ruckeln dort wirklich an der Auflösung liegt. Die Software-Grafik im Testbrowser sagt nichts über die tatsächlichen Bilder pro Sekunde eines iPhones aus. Wenn es weiter ruckelt, bitte melden, dann messe ich Schatten und Figuren einzeln.
 ## v314 – Karte bleibt nicht mehr leer, wenn Kacheln einmal nicht laden
 **Meldung Bennet (Handy, Etappe 6):** Die Karte war leer. Routen, Pins und Fahrzeuge waren da, nur Land und Meer (die Kartenkacheln) fehlten.
 

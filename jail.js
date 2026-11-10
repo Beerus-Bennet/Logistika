@@ -17,7 +17,7 @@ const JAIL3D = (() => {
   const UM = 0.92, LM = 0.38;                                           /* Matratzenoberkante oben / unten */
   const BUNK = { x0: -1.25, x1: 0.05, z0: -1.25, z1: -0.68 };
   const WIN = { z0: -0.25, z1: 0.4, y0: 1.0, y1: 1.5 };               /* Fenster in der linken Wand (x = X0) */
-  const SEAT = { x: -0.3, z: -0.93, ry: 0.35 };                          /* Hüfte auf der Matratze, Knie an der Bettkante, Blick leicht zur Kamera */
+  const SEAT = { x: -0.3, z: -0.81, ry: 0.35 };                          /* Hüfte auf der Matratze, Knie 14 cm hinter der Bettkante (v317: vorher an der Schiene, die Unterschenkel hingen im Rahmen), Blick leicht zur Kamera */
   const SIT_Y = UM + 0.115;                                              /* Oberkante Hüfte: Oberschenkel liegen flach auf Decke (Matratze + Decke 0,012) */
   const LIGHT = [0.7, -0.45, -0.55];                                   /* Richtung des Lichts durchs Fenster: schräg über das Bett */
   /* Weg eines Strahls vom Fenster bis Boden oder Rückwand (Parameter t) */
@@ -394,6 +394,8 @@ const JAIL3D = (() => {
     const cur = Object.assign({}, POSE.idle);
     const NEXT = ["idle", "lookL", "idle", "sigh", "lookR", "think", "idle", "stretch", "window"];
     let nextI = 0;
+    /* v317: Beine baumeln frei über der Bettkante und schwingen nur von senkrecht bis nach vorn, nie unter das Bett – nie unter das Bett in den Rahmen */
+    const KNEE = v => -0.12 + v * 0.12;
     const damp = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-k * dt));
     const say = (txt, x, y) => { const el = host.querySelector("#jlSay"); if (!el) return; el.textContent = txt; el.style.left = x + "px"; el.style.top = y + "px"; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); };
     const proj = (x, y, z) => R.project(x, y, z);
@@ -413,7 +415,7 @@ const JAIL3D = (() => {
       const wv = st.pose === "wave" ? Math.sin(t * 11) * 0.35 : 0;
       armL.rx = -cur.aL; armR.rx = -cur.aR + fid; armL.rz = -cur.zL; armR.rz = cur.zR + wv;
       hipL.rx = Math.sin(t * 1.1) * 0.05; hipR.rx = Math.sin(t * 1.1 + 1.5) * 0.05;
-      knL.rx = Math.sin(t * 1.5 + 0.4) * 0.32 + 0.1; knR.rx = Math.sin(t * 1.5 + 2.2) * 0.32 + 0.1;
+      knL.rx = KNEE(Math.sin(t * 1.5 + 0.4)); knR.rx = KNEE(Math.sin(t * 1.5 + 2.2));
       /* Tropfen */
       const d = st.drop; d.t -= dt;
       if (d.t <= 0 && !d.on) { d.on = true; d.y = 0.68; drop.visible = true; }
@@ -477,9 +479,11 @@ const JAIL3D = (() => {
 
     /* -------------------------------- Schleife -------------------------------- */
     let raf = 0, last = performance.now(), alive = true;
+    const gov = G3.governor(R);                   /* v316: Ruckelbremse (gl3d.js) */
     const frame = now => {
       if (!alive) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const raw = now - last, dt = Math.min(0.05, raw / 1000); last = now;
+      gov(raw, now);
       fit();
       step(dt);
       R.stepParticles(dt);
@@ -489,7 +493,7 @@ const JAIL3D = (() => {
     raf = requestAnimationFrame(frame);
 
     const ctl = {
-      R, st,
+      R, st, legs: { knL, knR, hipL, hipR },   /* legs nur für Prüfungen */
       update(o) {
         if (!alive) return;
         const k = Math.max(0, Math.min(1, o.k || 0));
