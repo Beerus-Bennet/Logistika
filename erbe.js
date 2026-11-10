@@ -1377,14 +1377,42 @@ function specGive(id) {
   farmXP(10);
   return true;
 }
-/* Dauerbestellung: Bert hält Tauwürmer vorrätig – holt Fertiges ab, reiht neu ein */
+/* Dauerbestellung: Bert hält jede Sorte vorrätig – Tauwürmer, Profi-Köder (sobald freigeschaltet) und jeden entwickelten Spezialköder,
+   je „keep“ Stück (20/50/100). Fertiges holt er ab, neue Aufträge reiht er ein. Die Tauwürmer kommen zuerst, denn aus je 2 baut er
+   5 Spezialköder: Fehlt Nachschub, macht er automatisch neue Würmer (v333; vorher hielt er nur die Würmer vorrätig). */
+function bertKeepIds() {
+  const ids = ["wurm"];
+  if (bertLureOk()) ids.push("profikoeder");
+  Object.keys(FSPEC_BAIT).forEach(id => { if (specDone(id)) ids.push("sk_" + id); });
+  return ids;
+}
+const batchMin = ids => 5;
 function bertKeepTick() {
   const U = angelS(), o = bertCar(), keep = U && U.bert.keep || 0;
   if (!o || !keep || !U.tour.done) return;
   machUpdate(o);
-  while (o.done.length && o.done[0].r === "wurm" && farmRoom("wurm") >= o.done[0].n) { const d = o.done.shift(); farmAdd("wurm", d.n, d.q); farmEvent("make:wurm", d.n); }
-  const queued = () => o.q.concat(o.done).filter(j => j.r === "wurm").reduce((a, j) => a + j.n, 0);
-  for (let i = 0; i < 4 && farmInv("wurm") + queued() < keep; i++) if (farmQueueBy("bert|Dauerbestellung Tauwürmer", o, "wurm") !== true) break;
+  const keepIds = bertKeepIds();
+  /* Fertiges abholen, wenn im Lager Platz ist – egal welche Sorte (der Auftrag kam von der Dauerbestellung oder von dir) */
+  while (o.done.length && keepIds.includes(o.done[0].r) && farmRoom(o.done[0].r) >= o.done[0].n) {
+    const d = o.done.shift(); farmAdd(d.r, d.n, d.q); farmEvent("make:" + d.r, d.n);
+  }
+  const queued = id => o.q.concat(o.done).filter(j => j.r === id).reduce((a, j) => a + j.n, 0);
+  const have = id => farmInv(id) + queued(id);
+  const batch = id => recipeOf(o, id).out;
+  /* Wurmbedarf: Soll + 2 je noch fehlendem 5er-Satz Spezialköder, damit die Zutat nicht ausgeht */
+  const spec = keepIds.filter(id => id.startsWith("sk_"));
+  const wormNeed = keep + spec.reduce((a, id) => a + Math.max(0, Math.ceil((keep - have(id)) / batch(id))) * 2, 0);
+  /* reihum je Sorte ein Satz, solange Platz im Lager ist (die Köderkiste fasst nur so viel – sonst blockiert ein nicht abholbarer Satz die Werkstatt) */
+  const share = Math.max(batchMin(keepIds), Math.floor(farmStoreCap(FITEMS.wurm.st) / keepIds.length));   /* faire Teilung der Köderkiste, falls sie kleiner ist als Sorten × keep */
+  let slots = 6, again = true;
+  while (slots > 0 && again) {
+    again = false;
+    for (const id of keepIds) {
+      const goal = Math.min(id === "wurm" ? wormNeed : keep, share);
+      if (slots <= 0 || have(id) >= goal || farmRoom(id) < queued(id) + batch(id)) continue;
+      if (farmQueueBy("bert|Dauerbestellung " + (FITEMS[id].n || id), o, id) === true) { slots--; again = true; }
+    }
+  }
 }
 /* im Takt: Kombi aufstellen, Profi-Köder-Anruf, fertige Entwicklungen, Dauerbestellung */
 function angelTick() {
