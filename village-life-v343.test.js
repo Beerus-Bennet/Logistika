@@ -92,4 +92,11 @@ test('Pedalumdrehung bleibt erreichbar: Kniegelenke und Füße folgen den Pedale
 test('Nach einem versetzten Markt kein Verkauf am früheren Standort',()=>{
  run('prepared();farmAdd("apfel",1,3);stallState(false).slots=[];stallPut(false,"apfel",1,stallBase("apfel",1,false));VILLAGE_PEOPLE.start("000","shop",false);stallObj(false).x+=5;advance("buy",1);');assert.ok(run('!stallState(false).slots[0].sold'));
 });
+test('Gebäude, Veranda und Zäune sperren; Haustürpunkt und Umwege bleiben frei',()=>{
+ run('prepared();var p=VILLAGE.plot("000"),d=VILLAGE.door(p),a=VILLAGE.local(p,0,0),b=VILLAGE.local(p,.5,4);');
+ assert.ok(run('VILLAGE_SITE.blocked(...a)&&VILLAGE_SITE.blocked(...b)'));assert.ok(run('!VILLAGE_SITE.blocked(...d)'));
+ run('var r=VILLAGE_SITE.safePath([d,[d[0]+1,d[1]+1]]);');assert.ok(run('r&&r.slice(1).every((p,i)=>VILLAGE_SITE.clearLine(r[i],p))'));
+ assert.notEqual(run('VILLAGE_SITE.homeMesh("holz",0).v.length'),run('VILLAGE_SITE.homeMesh("familie",0).v.length'));
+ assert.notEqual(run('VILLAGE_SITE.construction("holz").v.length'),run('VILLAGE_SITE.construction("familie").v.length'));
+});
 console.log('Straßen und Bewohner: '+count+' Gruppen bestanden.');

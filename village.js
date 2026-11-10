@@ -14,7 +14,7 @@ const VILLAGE = (() => {
   const home=id=>{const T=state();return T&&T.homes[id];};
   function geo(x,z){return [FARM_PT[0]-z*2/111320,FARM_PT[1]+x*2/(111320*Math.cos(FARM_PT[0]*Math.PI/180))];}
   function local(p,x,z){return [p.x+x*Math.cos(p.ry)+z*Math.sin(p.ry),p.z-x*Math.sin(p.ry)+z*Math.cos(p.ry)];}
-  function door(p){const h=home(p.id),k=D.houses[h&&h.type]||D.houses.holz;return local(p,.5*k.scale,4.8*k.scale);}
+  function door(p){const h=home(p.id),k=D.houses[h&&h.type]||D.houses.holz;return local(p,.5*k.scale,5.5*k.scale);} /* v344: einschließlich Körperradius vor den Stufen. */
   function address(p){const q=geo(...door(p));return {lat:q[0],lon:q[1],t:p.street+" "+p.number,a:state().name};}
   function clear(x,z){const r=D.rect;return x>r[0]&&x<r[2]&&z>r[1]&&z<r[3];}
   function overlaps(x,z,w,d){const r=D.rect;return x<r[2]&&x+w>r[0]&&z<r[3]&&z+d>r[1];}

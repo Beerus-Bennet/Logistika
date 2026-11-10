@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v344 – Bewohnerkollisionen, Haustypen, Wendeplatz und Ortstafel
+
+Gebäude, Veranden, Treppen und Grundstückszäune berücksichtigen nun den Körperradius der Bewohner. Haustürpunkte liegen vor den Stufen; blockierte Laufabschnitte werden umgangen oder der Ablauf bleibt gesperrt. Die Darstellung prüft auch geglättete Bewegungen. Alte gespeicherte Bewegungsabläufe werden beendet, ohne Verkäufe erneut auszuführen.
+
+Das Familienhaus besitzt einen eigenen seitlichen Wohnflügel mit Fenstern und Dach; Fundament und Rohbau zeigen bereits die größere Bauform. Kleine Häuser bleiben kompakter. Am vorläufigen Straßenende liegt ein runder Wendeplatz mit Gehweg, der beim Ausbau entfällt. Die schwebende Seeblick-Blase wird durch eine beschriftete, anklickbare Holztafel ersetzt.
+
+Geprüft: bestehende Stadtprüfungen sowie erweiterte Bewohnerprüfung für gesperrte Gebäudeflächen, freie Haustürpunkte, sichere Wege und unterschiedliche Haus-/Baumodelle; Syntax. Browser-Sichtprüfung zusätzlich im lokalen Chromium. Nicht auf echtem iPhone/Safari geprüft.
+
+
 ## v343 – Seeblick: Straßen, Grundstücke und Bewohneralltag
 
 **Wunsch/Ursache:** Die Nebenstraße war breiter als die Hauptstraße und überdeckte diese mit einer Asphaltplatte. Hecken endeten vor dem Gehweg. Kleine Bewohner liefen ohne konkrete Tätigkeit im Kreis. Gewünscht sind stimmige Grundstücke sowie Postrunden und Fahrradeinkäufe mit Animationen im Arbeitermaßstab.
