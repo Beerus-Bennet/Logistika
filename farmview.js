@@ -1877,7 +1877,7 @@ function startPlace(spec, x, z) {
   cancelPlace();
   const proto = spec.proto;
   const [w, d] = farmSize(proto);
-  const at = x != null ? [x, z] : (farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN.x0, FIN.z0]);
+  const at = x != null ? [x, z] : ((!spec.move && farmSuggestedSpot(proto, R.cam.tx + FG / 2, R.cam.tz + FG / 2)) || farmFreeSpot(w, d, R.cam.tx + FG / 2, R.cam.tz + FG / 2, proto.t, proto.k) || [FIN.x0, FIN.z0]);
   /* v158: Gebäude (und alles, was verschoben wird) deckend zeigen – durchscheinend sah man die Maschinen im Inneren des Sägewerks */
   const solid = !!spec.move || (typeof FSAW_MAIN !== "undefined" && FSAW_MAIN.has(proto.t));
   const ghost = fnode(objMesh(proto), { alpha: solid ? 1 : 0.82, shadow: false });
@@ -1970,7 +1970,7 @@ function confirmPlace() {
   /* Felder und Reusen am Stück: gleich das nächste anbieten */
   const again = P.spec.again && FSHOP.find(x => x.id === o.t);
   if (again && shopCount(again) < shopLimit(again)) {
-    const spot = farmFreeSpot(2, 2, P.x + 3, P.z + 1, o.t);
+    const spot = farmSuggestedSpot(P.proto, P.x + P.w / 2, P.z + P.d / 2) || farmFreeSpot(2, 2, P.x + 3, P.z + 1, o.t);
     if (spot && S.money >= shopPrice(again)) setTimeout(() => buyShopItem(again, spot), 250);
   }
 }
@@ -2017,7 +2017,7 @@ function renderPlaceBar() {
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
   const rot = !noRotate(P.proto.t);
   el.className = "on";
-  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : P.spec.trophy ? "Präparat aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>Zieh es an seinen Platz</small></div>
+  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : P.spec.trophy ? "Präparat aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>${!P.move && ["field", "tree"].includes(P.proto.t) ? "Bestätigen oder verschieben" : "Zieh es an seinen Platz"}</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot" aria-label="Um 90 Grad drehen" title="Um 90 Grad drehen">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : zn === "wild" ? "rund um den Hof" : "auf den Hof"}">${zn === "yard" ? "🪚" : zn === "wild" ? "🌳" : "🏡"}</button>`).join("")}
@@ -2195,7 +2195,7 @@ function machQueueHTML(o) {
   for (let i = slots.length; i < machSlots(o); i++) slots.push(`<div class="fq-s free"><small>frei</small></div>`);
   const sc = slotCost(o);
   return slots.join("") + (sc != null ? `<button class="fq-s buy" id="fqBuy">＋<small>${eur(sc)}</small></button>` : "")
-    + (o.q.length > 1 ? `<button class="fq-all" id="fqAll">✕ alle abbrechen</button>` : "");
+    + (o.q.length > 1 ? `<button class="fq-s fq-all" id="fqAll" aria-label="Alle Aufträge abbrechen"><span aria-hidden="true">✕</span><small>alle<br>abbrechen</small></button>` : "");
 }
 function bindMachQueue(o) {
   $$("#farmSheetIn [data-collect]").forEach(b => b.onclick = () => {

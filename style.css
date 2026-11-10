@@ -4824,3 +4824,12 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 #farmSheet.town .town-negotiate button{grid-column:1/-1;min-height:44px}
 #farmSheet.town button:disabled{opacity:.45;cursor:default;pointer-events:none}
 #farmSheet.town .town-agreement{padding:10px;background:#f3f7e8;border-radius:9px}
+
+/* v347: Sammelabbruch überall als gleich große Warteschlangenkachel. */
+.fq-s.fq-all{flex:0 0 62px;width:62px;height:62px;min-height:0;max-width:none;margin:0;padding:3px 2px;border:2.5px solid var(--ink);border-radius:13px;background:#fff6f0;color:#a0302a;line-height:1.1;gap:1px;box-sizing:border-box}
+.fq-s.fq-all>span{font-size:22px;line-height:1}
+.fq-s.fq-all>small{font-size:9.5px;line-height:1.1;text-align:center}
+@media(max-width:699px){
+  #farmSheet.mach .fq-s.fq-all{flex:0 0 64px;width:64px;height:64px;min-height:0;max-width:none;margin:0;border-radius:12px}
+  #farmSheet.mach .fq-s.fq-all>small{font-size:12px}
+}
