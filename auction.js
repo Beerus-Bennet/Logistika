@@ -197,6 +197,18 @@ function rivalAct(l, r) {
   return true;
 }
 function bidBudget() { return Math.max(0, Math.floor(S.money / (1 + AH_PREMIUM))); }
+/* v338: Geldbeträge im Limit-Feld mit Tausenderpunkten (4.550.000). Gelesen wird nur die Ziffernfolge. */
+const ahDigits = s => +String(s).replace(/\D/g, "") || 0;
+const ahGroup = n => n ? n.toLocaleString("de-DE", { maximumFractionDigits: 0 }) : "";
+function ahGroupInput(el) {
+  const raw = el.value, pos = el.selectionStart == null ? raw.length : el.selectionStart;
+  const before = raw.slice(0, pos).replace(/\D/g, "").length;
+  const txt = ahGroup(ahDigits(raw));
+  el.value = txt;
+  let p = 0, seen = 0;                              /* Cursor hinter dieselbe Ziffer setzen */
+  while (p < txt.length && seen < before) { if (/\d/.test(txt[p])) seen++; p++; }
+  try { el.setSelectionRange(p, p); } catch (e) { /* manche Geräte melden das nicht */ }
+}
 /* Spielergebot: max ist das Limit. Gesteigert wird nur so weit wie nötig. */
 function playerBid(l, max) {
   if (!l || l.done) return { ok: false, msg: "Die Auktion ist vorbei." };
@@ -1130,7 +1142,7 @@ function renderLotModal(msg) {
             <button class="btn" id="lmBid1">${l.lead === "me" ? "Limit +" + money(inc) : "Bieten · " + money(need)}</button>
             <button class="btn ghost" id="lmBid5">+${money(inc * 5)}</button>
           </div>
-          <div class="limrow"><label>Limit (Maximalgebot)<input id="lmMax" type="number" inputmode="numeric" min="${need}" step="${inc}" value="${Math.max(need, l.me.max + inc)}"></label>
+          <div class="limrow"><label>Limit (Maximalgebot)<input id="lmMax" type="text" inputmode="numeric" autocomplete="off" value="${ahGroup(Math.max(need, l.me.max + inc))}"></label>
             <button class="btn ghost" id="lmSet">Limit setzen</button></div>
           <div class="lot-est">Budget ${money(bidBudget())} · Käufer zahlen ${Math.round(AH_PREMIUM * 100)} % Aufgeld</div>`}
     </div>
@@ -1142,7 +1154,9 @@ function renderLotModal(msg) {
   const bid = max => { const r = playerBid(l, max); renderLotModal(r.msg); if (r.ok) toast((r.lead ? "👑 " : "🔨 ") + r.msg, r.lead ? "ok" : "warn", true); };
   const b1 = $("#lmBid1"); if (b1) b1.onclick = () => bid(l.lead === "me" ? l.me.max + inc : need);
   const b5 = $("#lmBid5"); if (b5) b5.onclick = () => bid((l.lead === "me" ? l.me.max : need) + inc * 5);
-  const bs = $("#lmSet"); if (bs) bs.onclick = () => bid(+$("#lmMax").value || 0);
+  const lmIn = $("#lmMax");
+  if (lmIn) lmIn.oninput = () => ahGroupInput(lmIn);
+  const bs = $("#lmSet"); if (bs) bs.onclick = () => bid(ahDigits($("#lmMax").value));
   resolvePics();
 }
 function refreshLotModal() {
