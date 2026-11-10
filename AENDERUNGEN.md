@@ -14,6 +14,14 @@
 - Der Text im Fenster sagt jetzt, dass es für jede Sorte gilt (Knöpfe „je 20/50/100 Stück“). Alter Spielstand: `U.bert.keep` bleibt gültig, ein alter Wert „100“ gilt nun für alle Sorten.
 
 **Geprüft (Testbrowser, Zeit vorgespult, Berts Kombi mit Tauwürmern, Profi-Köder, Barsch- und Hecht-Spezialköder):** Bei 60 Plätzen in der Kiste 22/15/15/5 (Würmer/Profi/Barsch/Hecht, gefüllt bis zum Rand). Bei großem Lager (2.000 Plätze) 100/100/100/100, dabei sank der Wurmbestand durch die Spezialköder auf 102 und wurde wieder auf 100 aufgefüllt. **Nicht geprüft:** am Handy; mit deinem echten Lagerstand (ich kenne die Größe deiner Köderkiste nicht – bei 60 Plätzen bekommst du nicht 100 je Sorte).
+## v332 – Hof: Blasen schauen nicht mehr halb unter der Kopfleiste hervor
+**Meldung Bennet:** Am oberen Rand der Hofansicht, direkt unter dem grünen Menü, schauen periodisch Sprechblasen oder Ähnliches hervor.
+
+**Ursache (`farmview.js` `farmTags`, `worldview.js`):** Die Blasen über Gebäuden, Brettern und Werkstätten (`.ftag`) hängen über ihrem Anker. Rückt der Anker beim Schwenken oder bei der Tagesbewegung nahe an den oberen Rand der Hofansicht, ragt die Blase nach oben aus der Ansicht. Die Ansicht schneidet sie dort ab. Zu sehen ist dann nur die untere Hälfte mit dem Pfeil direkt unter der Leiste, die „hinter dem Menü hervorschaut“. Bei den Weltmarken (`wtag`) war nur ein Anker deutlich außerhalb ausgeblendet, nicht ein halbabgeschnittener.
+
+**Lösung:** `tagCut(el, p)`: Passt die ganze Blase (Höhe + Pfeil) nicht mehr über den Anker in die Ansicht, wird sie ganz ausgeblendet und erscheint wieder, sobald sie vollständig sichtbar ist. Gilt für die Hof- und die Weltmarken. Sprechblasen der Mitarbeiter sind davon nicht betroffen (die waren schon so eingefasst, dass sie ganz sichtbar bleiben).
+
+**Geprüft (Testbrowser, 390 × 844):** `tagCut` blendet eine Blase mit Anker 30 px unter dem Rand aus, mit Anker 45 px (Höhe 29 + Pfeil) noch nicht, mittig nie. Hofansicht läuft ohne Konsolenfehler, die Tafelblase „📋1“ erscheint wie bisher vollständig. **Nicht geprüft:** am Handy; ich konnte die Situation aus deinem Bildschirmfoto nicht eins zu eins nachstellen (dunkle Nachtansicht ohne Blasen im Bild). Bleibt dort etwas sichtbar, schick bitte noch ein Foto oder sag, wo genau es auftaucht.
 
 ## v331 – Ladeprozente und Außenlager auf der Karte für alle Lagerarten
 
