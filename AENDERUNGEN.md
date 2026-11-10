@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v339 – Auktionshaus: fehlende Autofotos werden per Wikipedia-Suche nachgeholt
+**Meldung Bennet:** Beim Ford GT (2017) erscheint nur die gezeichnete Ersatzgrafik, während andere Autos (BMW 3.0 CSi) das Wikipedia-Foto zeigen – das sieht besser aus.
+
+**Ursache (`auction.js`, `resolvePics`):** Die Fotos kommen über den Artikelnamen (`wp` in `cars.js`). Bei den 50 neuen Autos aus v336 habe ich die Titel nach bestem Wissen gesetzt, aber nicht gegen Wikipedia prüfen können (Testumgebung ohne Netz). Stimmt ein Titel nicht, bleibt das Auto bei der Zeichnung.
+
+**Lösung:** Neuer vierter Schritt in `resolvePics`: Hat ein Auto nach den bisherigen drei Wegen kein Foto, sucht das Spiel bei Wikipedia nach „Marke Modell“, nimmt den ersten Treffer, in dessen Titel die Marke vorkommt (kein fremdes Auto), und holt dessen Titelbild über die Kurzfassung. Höchstens 12 Suchen je Durchlauf, nach 3 Fehlern Abbruch. Greift auch für alte Autos mit umbenanntem Artikel. Bilder bleiben wie bisher im Zwischenspeicher; Autos ohne Foto werden alle 10 Minuten erneut versucht, die neuen Fotos erscheinen also von selbst.
+
+**Geprüft (Testbrowser, Wikipedia-Antworten nachgestellt):** Titel liefert 404, Suche liefert „Lamborghini Foo“ und „Ford GT (2017)“ → ausgewählt wird der Ford-Treffer, Foto landet im Zwischenspeicher (`sum` 1), keine Konsolenfehler. **Nicht geprüft:** die echte Wikipedia-Antwort (die Schnittstelle war von hier aus nur gedrosselt erreichbar), welche Autos auf deinem Handy tatsächlich noch ohne Foto bleiben (Ford GT (2017) bitte nach ein paar Minuten ansehen), am Handy.
+
 ## v338 – Auktionshaus: Limit-Feld mit Tausenderpunkten
 **Meldung Bennet:** Die Zahl im Feld „Limit (Maximalgebot)“ (z. B. 4550000) ist auf dem Handy schwer zu lesen.
 

@@ -544,6 +544,25 @@ async function resolvePics(force) {
         if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
       } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
     }
+    /* v339: Titel ohne Foto (falscher oder umbenannter Artikelname) → Wikipedia-Suche nach „Marke Modell“. Nur Treffer, in deren Titel die
+       Marke steht, damit kein fremdes Auto auftaucht; höchstens 12 Versuche je Durchlauf, bei Fehlern früh Schluss. */
+    const still = todo.filter(c => c.wp && !c.file && (!PICS[c.id] || !PICS[c.id].src));
+    let sfails = 0;
+    for (const c of still.slice(0, 12)) {
+      if (sfails >= 3) break;
+      try {
+        const brand = carBrand(c).split(/[ -]/)[0].toLowerCase();
+        const q = await wikiApi("list=search&srlimit=4&srnamespace=0&srsearch=" + encodeURIComponent(carBrand(c) + " " + c.m.replace(/\s*\(.*\)/, "")));
+        const hit = ((q.query || {}).search || []).find(h => h.title.toLowerCase().includes(brand));
+        if (!hit) continue;
+        const j = await wikiSummary(hit.title);
+        const o = j && j.originalimage, th = j && j.thumbnail;
+        let src = null;
+        if (o && okSrc(o.source) && (o.width || 9999) <= 800) src = o.source;
+        else if (th && okSrc(th.source)) src = thumbAt(th.source, PIC_W);
+        if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
+      } catch (e) { sfails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
+    }
     /* v77: nur merken, dass es für ein Auto kein Foto gibt, wenn die Abfrage selbst geklappt hat – vorher sperrte ein
        Fehlschlag (z. B. kurz offline) alle 77 Autos für zehn Minuten („0 von 77 Fotos geladen“, ohne Fehlermeldung) */
     const gotAny = todo.some(c => PICS[c.id] && PICS[c.id].src);
