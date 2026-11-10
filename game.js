@@ -3602,6 +3602,8 @@ function setTools(tab, html, bind) {
   vt.querySelectorAll(".chiprow").forEach((r, i) => { if (keep[i]) r.scrollLeft = keep[i]; });
   bind(vt);
 }
+/* v324: Jede Zeile der Werkzeugleiste trägt links eine kleine Beschriftung (Sortieren, Zeigen, Art …) – so ist klar, was die Chips tun */
+const toolRow = (label, inner) => `<div class="chiprow" data-l="${label}">${inner}</div>`;
 const chipHTML = (attr, key, label, n, on, extra) =>
   `<button class="fchip${on ? " on" : ""}${n === 0 && !on ? " zero" : ""}${extra ? " " + extra : ""}" ${attr}="${key}">${label}${n != null ? ` <b>${n}</b>` : ""}</button>`;
 
@@ -3623,8 +3625,8 @@ function orderMatches(o, p, f) {
   return o.cargo === f;
 }
 function orderToolsHTML(rows, mode, filt) {
-  const seg = `<div class="seg" aria-label="Sortieren">${ORDER_SORTS.map(([k, i, l]) =>
-    `<button data-sort="${k}" class="${k === mode ? "on" : ""}"><i>${i}</i>${l}</button>`).join("")}</div>`;
+  const seg = toolRow("Sortieren", `<div class="seg" aria-label="Sortieren">${ORDER_SORTS.map(([k, i, l]) =>
+    `<button data-sort="${k}" class="${k === mode ? "on" : ""}"><i>${i}</i>${l}</button>`).join("")}</div>`);
   const n = {};
   rows.forEach(({ o }) => { n[o.cargo] = (n[o.cargo] || 0) + 1; if (o.air) n.air = (n.air || 0) + 1; });
   /* Hof, Sägewerk, Fischerei: je Station ein Filter (statt einem für alle Hofwaren) */
@@ -3636,7 +3638,7 @@ function orderToolsHTML(rows, mode, filt) {
   areas.forEach(a => chips.push(chipHTML("data-of", "f:" + a.id, a.i + " " + a.n, rows.filter(({ o }) => o.farm && farmOrderArea(o) === a.id).length, filt === "f:" + a.id)));
   if (n.air || filt === "air") chips.push(chipHTML("data-of", "air", "✈️ Luftfracht", n.air || 0, filt === "air"));
   kinds.forEach(k => chips.push(chipHTML("data-of", k, icon(k) + " " + (ORDER_CHIP[k] || CARGO[k].name), n[k] || 0, filt === k)));
-  return seg + `<div class="chiprow">${chips.join("")}</div>`;
+  return seg + toolRow("Zeigen", chips.join(""));
 }
 function renderOrders() {
   const el = $("#tab-orders");
@@ -3757,11 +3759,11 @@ function jobMatches(j, k) {
   return k === "all" || (k === "legal" && !grey) || (k === "grey" && grey) || (k === "vip" && !!o.vip) || (k === "trouble" && jobTrouble(j));
 }
 function jobToolsHTML(k) {
-  return `<div class="chiprow first">${JOB_FILTERS.map(([id, l]) => {
+  return toolRow("Zeigen", JOB_FILTERS.map(([id, l]) => {
     const n = S.jobs.filter(j => jobMatches(j, id)).length;
     if ((id === "vip" || id === "grey") && !n && k !== id) return "";
     return chipHTML("data-jf", id, l, n, k === id, id === "trouble" && n ? "alert" : "");
-  }).join("")}</div>`;
+  }).join(""));
 }
 function renderJobs() {
   const el = $("#tab-jobs");
@@ -3964,14 +3966,16 @@ function fleetToolsHTML(F) {
   const mchips = modes.length > 1 ? ["all"].concat(["b", "r", "i", "l", "s", "a"].filter(m => modes.includes(m)))
     .map(m => chipHTML("data-fm", m, m === "all" ? "Alle Arten" : MODE_INFO[m].icon + " " + MODE_INFO[m].name, m === "all" ? S.fleet.length : n("mode", m), F.mode === m && (m !== "all" || !fleetFiltered(F)))).join("") : "";
   if (F.own === "lease" || F.own === "own") F.own = "all";   /* v244: kein Leasing mehr – alle Fahrzeuge gehören dir */
-  const own = [["all", "Alle"], ["base", "🏢 im Büro"], ["self", "✋ selbst"]];
+  /* v324: drei beschriftete Zeilen – Zeigen (Einsatz und Zuständigkeit), Art, Sortieren. Der Chip „Alle“ bei der Zuständigkeit entfällt
+     (erneutes Antippen hebt die Wahl auf), die Tage-Auswahl erscheint nur beim Filter „ungenutzt“. */
+  const own = [["base", "🏢 im Büro"], ["self", "✋ selbst"]];
   const sel = (id, opts, cur, lbl) => `<label class="fchip sel" title="${lbl}">${lbl}<select id="${id}" aria-label="${lbl}">${opts.map(([k, l]) =>
     `<option value="${k}"${String(k) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-  return `<div class="chiprow first">${use}</div>`
-    + `<div class="chiprow">${sel("ffSort", FLEET_SORTS, F.sort, "↕")}${sel("ffDays", FLEET_DAYS.map(d => [d, "ungenutzt ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️")}`
-    + own.map(([k, l]) => chipHTML("data-fo", k, l, n("own", k), F.own === k)).join("")
-    + `</div>`
-    + (mchips || fleetFiltered(F) ? `<div class="chiprow">${mchips}${fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ Filter aus</button>` : ""}</div>` : "");
+  return toolRow("Zeigen", use + `<span class="chipdiv"></span>` + own.map(([k, l]) => chipHTML("data-fo", k, l, n("own", k), F.own === k)).join(""))
+    + (mchips ? toolRow("Art", mchips) : "")
+    + toolRow("Sortieren", sel("ffSort", FLEET_SORTS, F.sort, "↕")
+      + (F.use === "unused" ? sel("ffDays", FLEET_DAYS.map(d => [d, "ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️") : "")
+      + (fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ Filter aus</button>` : ""));
 }
 function bindFleetTools(vt) {
   const F = fleetF();
@@ -4122,7 +4126,7 @@ function marketToolsHTML(f) {
     `<span class="chipdiv"></span>`, ...MKT_FLAGS.map(([k, l]) => tg("flag:" + k, l, f.flags.includes(k)))];
   if (mktActive(f)) opts.push(`<button class="fchip reset" data-mreset="1">✕ zurücksetzen</button>`);
   return (typeof ahSwitchHTML === "function" ? ahSwitchHTML(false) : "")
-    + `<div class="chiprow${typeof ahSwitchHTML === "function" ? "" : " first"}">${cats}</div><div class="chiprow">${opts.join("")}</div>`;
+    + toolRow("Art", cats) + toolRow("Auswahl", opts.join(""));
 }
 function bindMarketTools(vt) {
   if (typeof bindAhSwitch === "function") bindAhSwitch(vt);

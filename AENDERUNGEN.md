@@ -1,5 +1,23 @@
 # Änderungen – kurz für den Kollegen
 
+## v324 – Filterleisten aufgeräumt (Aufträge, Live, Flotte, Markt)
+**Meldung Bennet:** Der Filterbereich über den Listen wirkt unprofessionell und unübersichtlich.
+
+**Ursachen (`style.css`, `game.js`):**
+- Die Filter-Chips heißen `.fchip` wie die Hof-Warenchips. Deren spätere CSS-Regel (16 px Schrift, eckige Form, Außenabstände) galt dadurch auch für die Filter. Deshalb waren die Chips übergroß und uneinheitlich.
+- Die Zeilen hatten keine Beschriftung. In der Flotte standen drei Reihen mit zwei „Alle“-Chips, zwei Auswahlfeldern und gemischten Bedeutungen untereinander.
+- Bei den Aufträgen war die Sortierung ein großer Kasten in anderem Stil als der Rest.
+
+**Lösung:**
+- Eigener Stil nur für die Leiste (`#viewTools`): alle Chips 30 px hoch, 12,5 px Schrift, rund, ohne Schlagschatten. Aktiv ist blau. Zähler sitzen als kleine Plakette im Chip.
+- Jede Zeile trägt links eine kleine feste Beschriftung (`toolRow`): **Sortieren**, **Zeigen**, **Art**, **Auswahl**. Die Chips scrollen rechts daneben.
+- Aufträge: Sortieren als flache Dreier-Auswahl in Chip-Höhe, darunter „Zeigen“.
+- Flotte: „Zeigen“ (Einsatz und Zuständigkeit), „Art“, „Sortieren“. Der doppelte „Alle“-Chip der Zuständigkeit entfällt (erneutes Antippen hebt die Wahl auf). Die Tage-Auswahl erscheint nur beim Filter „ungenutzt“. „Filter aus“ steht am Ende der Sortierzeile.
+- Markt: „Art“ und „Auswahl“. Live: „Zeigen“.
+- Die Filterlogik ist unverändert: dieselben Filter, Sortierungen und gespeicherten Einstellungen.
+
+**Geprüft (Testbrowser, 390 × 844):** Höhe der Leiste: Aufträge 86 px, Flotte 124 px, Markt 130 px (inklusive Umschalter). Alle Chips 30 px hoch mit 12,5 px Schrift. Echte Tipps: Aufträge sortieren und filtern, Flotte nach Einsatz, Art und Zuständigkeit filtern (3 Treffer) und zurücksetzen. Keine Konsolenfehler, Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy; Live-Reiter und Auktionshaus nur über den gemeinsamen Stil, nicht einzeln gesichtet.
+
 ## v323 – Sammellieferung: alle offenen Pull Requests in einem Stand
 Dieser Stand fasst die neun offenen Pull Requests #34 bis #42 zusammen (Branch `claude/sammel-v323`, Basis `main` nach PR #33 / v314). Es gibt eine Versionsnummer für alle geänderten Dateien. Die Einzelabschnitte v315 bis v322 stehen unten unverändert.
 
