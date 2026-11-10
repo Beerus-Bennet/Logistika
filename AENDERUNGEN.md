@@ -1,5 +1,20 @@
 # Änderungen – kurz für den Kollegen
 
+## v323 – Sammellieferung: alle offenen Pull Requests in einem Stand
+Dieser Stand fasst die neun offenen Pull Requests #34 bis #42 zusammen (Branch `claude/sammel-v323`, Basis `main` nach PR #33 / v314). Es gibt eine Versionsnummer für alle geänderten Dateien. Die Einzelabschnitte v315 bis v322 stehen unten unverändert.
+
+**Enthalten:**
+- v315 Natürliche Liegebewegung und Kopfpräparate (#34), v315 Büro-Sprechblase und Ruckelbremse (#35), v316 Zelle ruckelt nicht mehr (#36), v317 U-Haft-Beine (#37)
+- v318 Stellenanzeige 750 € (#38), v319 Übernahme-Zeitung (#39), v320 Beet-Farben (#40), v321 Züge auf Schienen und Route erst berechnen (#41), v322 Büros aufwerten und Fahrzeugkauf am Standort (#42)
+
+**Zusammenführung:**
+- Konflikte gab es nur in `sw.js`, `index.html` (Versionszeilen), `AENDERUNGEN.md`, `ZUSAMMENFUEHREN.md` und `style.css` (angehängte Blöcke). Dort sind alle Abschnitte und alle CSS-Blöcke behalten (Zeile für Zeile gegen die Einzel-PRs geprüft). Die Code-Dateien ließen sich ohne Konflikt verbinden.
+- `sw.js` steht auf v323. Alle in diesem Stand geänderten Dateien haben `?v=323` in `index.html` und `sw.js`, alle anderen behalten ihre Nummer.
+
+**Behoben beim Zusammenführen:** Mein Beinfix v317 (#37) brach den vorhandenen Test `jail.test.js` („Knie knapp an der Bettkante“). Der Test erwartet jetzt die gewollte Lage: Knie 5 bis 18 cm hinter der Schiene, Unterschenkel hängen frei davor. Das hatte ich im PR #37 übersehen, weil ich dort nur die Beinmessung, nicht die Unit-Tests wiederholt hatte.
+
+**Geprüft:** Syntax aller Skripte. Unit-Tests: dieselben Fehlschläge wie auf `main` (die lange bekannte Liste, siehe CLAUDE.md), dazu bestehen die neuen Tests der PRs (`d2d-v313`, `hunt-presentation-v315`, `office-value-v322`, `jail`). Browser-Rauchtest mit den Prüfskripten der einzelnen Änderungen auf dem zusammengeführten Stand (Ergebnis im Pull Request). **Nicht geprüft:** am Handy; das Zusammenspiel der Änderungen über lange Spielzeit.
+
 ## v322 – Bezugsfertige Büros und Fahrzeugkauf am Standort
 
 **Wunsch:** Ein Büro für rund eine Million Euro soll in Ausstattung und Logistik mehr bieten. Der markierte Auftragsplaner zeigte ausschließlich Lkw mit „kommt nicht hin“.
