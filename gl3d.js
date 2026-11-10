@@ -7,6 +7,8 @@
    ========================================================================= */
 const G3 = (() => {
   "use strict";
+  /* v325: Dieselbe Tiefen-/Uferpalette für Bach, Becken und See; nur Luftblasen werden weiß. */
+  const WATER = Object.freeze({ deep: 0x285965, mid: 0x4a8790, shallow: 0x81aca2, foam: 0xe3eeeb });
 
   /* ------------------------------- Mathe -------------------------------- */
   const ID = () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
@@ -390,6 +392,10 @@ const G3 = (() => {
     float gl = smoothstep(0.86, 1.0, sin(q.x * 5.3 + tt * 1.7) * sin(q.y * 4.7 - tt * mix(-0.6, 1.3, L) + w2));
     return vec2(w1 * w2 + 0.6 * w3, gl);
   }
+  const vec3 waterDeep = vec3(${col(WATER.deep).map(v=>v.toFixed(6)).join(',')});
+  const vec3 waterMid = vec3(${col(WATER.mid).map(v=>v.toFixed(6)).join(',')});
+  const vec3 waterShallow = vec3(${col(WATER.shallow).map(v=>v.toFixed(6)).join(',')});
+  const vec3 waterFoam = vec3(${col(WATER.foam).map(v=>v.toFixed(6)).join(',')});
   /* v193: fallendes Wasser (uWater 6). Die Vertexfarbe trägt hier keine Farbe, sondern Koordinaten:
      Wasserfall (b = 1): r = Weg entlang der Strömung (0 Rinne oben … 1 Aufprall), g = quer (0…1);
      v297: Aufprallschaum (b = -1): r = stromabwärts, g = quer zur Fallbreite.
@@ -423,7 +429,7 @@ const G3 = (() => {
          Die Rinne bleibt bis zur Kante Bachwasser; erst danach brechen helle Stränge und Zwischenräume auf. */
       float ribbons = smoothstep(0.24, 0.76, 0.5 + 0.5 * sin(sx * 8.0 + sin(v * 0.38 + sx) * 0.7));
       float fall = smoothstep(0.24, 0.48, a), foam = smoothstep(0.55, 0.96, a);
-      vec3 deep = vec3(0.20, 0.39, 0.45), mid = vec3(0.56, 0.73, 0.77), wht = vec3(0.91, 0.96, 0.97);
+      vec3 deep = waterDeep, mid = waterMid, wht = waterFoam;
       vec3 c = mix(deep, mid, 0.32 + 0.48 * strands);
       c = mix(c, wht, clamp(0.12 + strands * 0.34 + fine * 0.30 + foam * (0.23 + 0.25 * s2), 0.0, 0.92));
       c *= amb * 0.5 + vec3(Lw) * (0.64 + 0.2 * sh);
@@ -432,31 +438,38 @@ const G3 = (() => {
       al = mix(al, edge * (0.72 + 0.22 * strands), foam * 0.75);
       /* Sichtbarer Kontakt bis in den See: der Strahl wird dort zu Schaum, nicht vorher unsichtbar. */
       float contact = 1.0 - smoothstep(0.01, 0.18, vW.y - uFlow.w);
-      c = mix(c, wht * (amb * 0.5 + vec3(Lw) * 0.76), contact * 0.65);
-      al *= 1.0 - contact * (0.12 + 0.15 * s3);
+      c = mix(c, wht * (amb * 0.5 + vec3(Lw) * 0.76), contact * (0.24 + 0.34 * strands));
+      al *= 1.0 - contact * (0.16 + 0.24 * (1.0-strands));
       if (a >= 0.48) return vec4(c, al);
       vec4 river = streamWaterAt(vec3(uFlow.x + a * uFlow.z, w * 2.0 - 1.0, uFlow.y), amb, sh);
       return mix(river, vec4(c, al), fall);
     }
-    /* v297: Flacher Schaum quer über die Auftreffbreite. Viele unregelmäßige Flocken,
-       ein auslaufender Strömungsschweif und schwache Druckwellen statt Lichtfleck/Kreis. */
+    /* v325: Schmaler Auftreffsaum, mitgeführte Schaumadern und auslaufende Wellen.
+       Alle Flockengrößen teilen dieselbe Laufzeit; kein ortsabhängiger Zeitfaktor.
+       uFlow.xy enthält die wirklichen Längs-/Quermaße der Aufprallfläche. */
     float x = vCol.r, w = vCol.g;
-    vec2 warp = vec2(sin(w * 3.2 + x * 1.1), sin(x * 4.0 - w * 1.7)) * 0.55;
-    float n1 = vnoise(vec2(x * 6.0 - t * 1.05, w * 5.0) + warp);
-    float n2 = vnoise(vec2(x * 15.0 - t * 2.2, w * 11.0 + 3.7) + warp * 1.4);
-    float across = 1.0 - smoothstep(0.65, 1.15, abs(w) + (n1 - 0.5) * 0.14);
-    float core = (1.0 - smoothstep(0.09, 0.37, abs(x) + (n1 - 0.5) * 0.10)) * across;
-    float wake = smoothstep(-0.1, 0.15, x) * (1.0 - smoothstep(0.45, 1.55, x))
-               * (1.0 - smoothstep(0.5 + max(x,0.0) * 0.12, 1.1 + max(x,0.0) * 0.12, abs(w)));
-    float lace = smoothstep(0.32, 0.68, n1 * 0.4 + n2 * 0.6);
-    /* v310: flache, stromabwärts auseinanderlaufende Druckwellen; kein leuchtender Nebelball. */
-    float radius = length(vec2(max(x,0.0) * 0.85, w * 0.56));
-    float pressure = (1.0 - smoothstep(0.04, 0.14, abs(sin(radius * 16.0 - t * 2.4 + n1 * 0.65)))) * wake * smoothstep(0.12,0.35,x);
+    float travel = x + 0.28 * max(x,0.0) * max(x,0.0);
+    vec2 drift = vec2(travel * 4.8 - t * 1.5, w * 4.0);
+    vec2 warp = vec2(vnoise(drift * 0.7 + 2.3), vnoise(drift * 0.7 + 9.1)) - 0.5;
+    /* Gegeneinander gedrehte Skalen vermeiden ein sichtbares quadratisches Rauschraster. */
+    float n1 = vnoise(mat2(0.8,-0.6,0.6,0.8)*drift + warp * 1.6);
+    float n2 = vnoise(mat2(0.6,0.8,-0.8,0.6)*drift * 2.3 + warp + vec2(5.1,11.7));
+    float micro = vnoise(mat2(0.92,0.39,-0.39,0.92)*drift * 5.4 + vec2(19.1,3.7));
+    float across = 1.0 - smoothstep(0.68, 1.05, abs(w) + (n1-0.5)*0.18);
+    float core = (1.0 - smoothstep(0.035,0.22,abs(x)+(n2-0.5)*0.08)) * across;
+    float wake = smoothstep(-0.04,0.18,x) * exp(-max(x,0.0)*1.7)
+               * (1.0-smoothstep(0.35+max(x,0.0)*0.15,0.94+max(x,0.0)*0.20,abs(w)));
+    float lace = smoothstep(0.48,0.72,n1*0.42+n2*0.38+micro*0.20);
+    float radius = length(vec2(max(x,0.0)*uFlow.x,w*uFlow.y));
+    float ring = sin(radius*15.0-t*2.5+vnoise(vec2(x*2.0,w*2.7))*0.7);
+    float pressure = (1.0-smoothstep(0.025,0.16,abs(ring))) * exp(-radius*1.25)
+                     * smoothstep(0.15,0.4,x) * (1.0-smoothstep(0.72,1.25,abs(w)));
     float edge = smoothstep(-0.35, -0.2, x) * (1.0 - smoothstep(1.45, 1.8, x))
                * (1.0 - smoothstep(1.05, 1.35, abs(w)));
-    float al = clamp(core * (0.76 + n2 * 0.2) + wake * lace * 0.50 + pressure * 0.12, 0.0, 0.97) * edge;
-    vec3 c = mix(vec3(0.65,0.79,0.81), vec3(0.94,0.97,0.96), core * 0.68 + n2 * 0.28)
-           * (amb * 0.5 + vec3(Lw) * (0.66 + 0.18 * sh));
+    float bubbles = smoothstep(0.22,0.7,n2*0.4+micro*0.6);
+    float al = clamp(core*(0.18+bubbles*0.62) + wake*lace*0.54 + pressure*0.18,0.0,0.92)*edge;
+    vec3 c = mix(waterMid,waterFoam,0.65+core*0.25+micro*0.1)
+           * (amb * 0.5 + vec3(Lw) * (0.64 + 0.18 * sh));
     return vec4(c, al);
   }
 
@@ -472,7 +485,7 @@ const G3 = (() => {
     float v = s * 1.5 - t * 0.95;
     float n1 = vnoise(vec2(w * 2.1, v * 0.5)), n2 = vnoise(vec2(w * 4.6 + 3.7, v * 1.25 - t * 0.15)), n3 = vnoise(vec2(w * 8.5 + 1.1, s * 2.9 - t * 1.8));
     float depth = 1.0 - smoothstep(0.1, 1.05, aw + (n1 - 0.5) * 0.3);
-    vec3 deep = vec3(0.11, 0.32, 0.38), mid = vec3(0.23, 0.48, 0.53), shal = vec3(0.40, 0.55, 0.49);
+    vec3 deep = waterDeep, mid = waterMid, shal = waterShallow;
     vec3 c = mix(shal, mix(mid, deep, smoothstep(0.4, 1.0, depth)), smoothstep(0.0, 0.5, depth));
     c = mix(c, deep * 0.9, (1.0 - n1) * 0.18 * depth);                                  /* langsam ziehende, dunklere Bahnen */
     float streak = smoothstep(0.6, 0.9, n2 * 0.65 + n1 * 0.35) * (0.3 + 0.7 * smoothstep(0.3, 0.9, sp)) * (1.0 - 0.6 * smoothstep(0.75, 1.0, aw));
@@ -491,11 +504,11 @@ const G3 = (() => {
     float fr = 0.05 + 0.28 * pow(clamp(1.0 - abs(dot(nn, vv)), 0.0, 1.0), 4.0);
     col = mix(col, uSky * 1.2 + vec3(0.05, 0.07, 0.09), fr);
     vec3 lit = amb * 0.45 + vec3(Lw) * (0.62 + 0.2 * sh);
-    col = mix(col, vec3(0.66, 0.80, 0.82) * lit, streak * 0.23 + fine * 0.22);
+    col = mix(col, mix(waterMid,waterFoam,0.45) * lit, streak * 0.23 + fine * 0.22);
     /* v310: wandernde Schaumflecken auf den Stufen, keine gleichmäßig helle Gleitfläche. */
     float aeration = smoothstep(0.28, 0.75, n2 * 0.35 + n3 * 0.65);
     float whiteWater = max(foam, steep * (0.18 + aeration * 0.64));
-    col = mix(col, vec3(0.92, 0.96, 0.97) * lit, clamp(whiteWater * 0.82, 0.0, 0.84));
+    col = mix(col, waterFoam * lit, clamp(whiteWater * 0.82, 0.0, 0.84));
     col += pow(max(dot(nn, hh), 0.0), 140.0) * 1.3 * sh * uSunCol * (0.4 + 0.6 * spc);
     return vec4(col, 1.0);
   }
@@ -1282,5 +1295,5 @@ const G3 = (() => {
     };
   }
 
-  return { MB, create, governor, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
+  return { MB, create, governor, WATER, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
 })();

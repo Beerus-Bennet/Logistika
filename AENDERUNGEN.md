@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v325 – Wasserfall-Aufprall, Wasserfarben und Strömung entlang des Flusses
+
+**Ursache:** Die Aufprallfläche erzeugte im Nachtbild einen groben, hellen Schaumfleck. Bergbach/Fall und Quellbecken verwendeten unterschiedliche Farbpaletten und Materialien. Der untere Fluss animierte sein Wasser pauschal nach Westen; die Muster folgten seinen Biegungen und dem seitlichen Abfluss des Beckens nicht.
+
+**Lösung:**
+- `gl3d.js`: gemeinsame blaugrüne Tiefen-/Uferpalette `G3.WATER`, verwendet von Bach, Fall, Becken und großem See. Helleres Fallwasser entsteht durch Luftblasen; Schaum berücksichtigt weiterhin das Tages-/Nachtlicht. Die Aufprallzone hat einen schmalen, unterbrochenen Saum, bewegte Schaumadern und schwache auslaufende Wellen. Gedrehte Rauschskalen vermeiden ein sichtbares quadratisches Raster. Die Schaumadern teilen eine Laufzeit und werden stromabwärts langsamer; keine mit dem Ort multiplizierte Zeitphase.
+- `woodmodels.js`: `creekCurrent` führt eine gemeinsame Laufstrecke vom wirklichen Aufprall über eine tangential angeschlossene Beckenbiegung bis in alle Flusskurven. `springPool2` und `creekWater` kodieren diese Strecke für das bestehende Bachmaterial. Der Beckenanschluss hat dieselbe Phase wie der Fluss. Die flache Schaumfahne biegt zum Abfluss ab und liegt vollständig innerhalb der tatsächlichen Wasserfläche.
+- `worldview.js`: Quellbecken und nördlicher Fluss verwenden dasselbe Wasser-Material wie der Bergbach. Schaumflächen erhalten ihre wirklichen Längs-/Quermaße. Neue Modellschlüssel nur für Schaum und neu eingefärbtes Seewasser.
+- Unveränderte Fallbahn, gemeinsame Anschlusszeilen, Ufer, Wasserhöhen und Partikelraten. Keine zusätzlichen Texturen oder Zeichenknoten, keine Spielstandänderung. Service Worker und die drei geänderten Produktdateien v325; Filterleistenkorrektur v324 ist enthalten.
+
+**Geprüft:**
+- `water-impact-v325.test.js`: 85 Flussstationen mit echter Bogenlänge, Beckenanschluss, drei gedrehte Landschaften, 3481 Beckenpolygone mit Strömungskoordinaten, Schaum innerhalb der Wasserfläche und talwärts gerichtete Shaderphase bis 7200 Sekunden.
+- Bestehende `water-seams-v297.test.js`, `waterflow-v296.test.js`, `waterfall-v289.test.js`: 72 Kaskadenpunkte, neun Hauptfall-Anschlüsse, 576 Bachbettprüfungen, See-Aufprall, unverändertes Budget von 8448 Wasserdreiecken und Partikelprüfungen bei 30/60/120 Bildern pro Sekunde bestanden.
+- Originalmodelle mit den echten WebGL-Shadern bei Tages-/Nachtlicht zu je drei Zeitpunkten vor/nach der Änderung gerendert und gesichtet. Vollständiges Spiel in Chromium/Playwright bei 390 × 844 Pixeln: freigeschalteter Hof, Tag 168 um 02:09 sowie 12:00, Wasserfall und Flusskurve ohne JavaScript-/WebGL-Fehler oder horizontalen Überlauf.
+- Syntaxprüfung und `git diff --check`. Kein Test auf einem echten iPhone oder in Safari; keine Aussage zur dortigen Bildrate.
+
 ## v324 – Filterleisten aufgeräumt (Aufträge, Live, Flotte, Markt)
 **Meldung Bennet:** Der Filterbereich über den Listen wirkt unprofessionell und unübersichtlich.
 

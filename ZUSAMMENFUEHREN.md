@@ -1,5 +1,15 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v325 – Wasserfall, Wasserfarben und Fluss auf main 261173a / v324
+
+Branch `claude/waterfall-impact`, vom aktuellen GitHub-Stand nach der Sammellieferung v323 begonnen und auf v324 vorgezogen. Keine früheren Lieferungen erneut einspielen.
+
+- `gl3d.js`: `G3.WATER` als gemeinsame Palette, neuer Schaum mit gemeinsamer Laufzeit, auslaufenden Wellen und korrektem Nachtlicht. Bestehende Qualitätssteuerung `G3.governor`/`R.scale` erhalten.
+- `woodmodels.js`: Palette über `G3.WATER`; `creekCurrent` erzeugt den Laufweg durch das Quellbecken in den Fluss. `o.current` kodiert Laufstrecke, Uferabstand und Turbulenz anstelle der RGB-Farbe. `springImpact().foam` enthält Längsmaß, Quermaß, Biegung und Wasserhöhe für Geometrie/Shader. Schaumgeometrie bleibt flach; die Verbindungskanten der Wasserfälle bleiben erhalten.
+- `worldview.js`: Quellbecken und nördlicher Fluss mit `water: 7`, `current: true`; Maße für beide Schaumknoten, neue Schaum-/Seemodellschlüssel. Übrige Wasserobjekte und Partikelraten erhalten.
+- `index.html` / `sw.js`: `gl3d.js`, `woodmodels.js`, `worldview.js` und Service Worker v325. Gemeinsam übernehmen, da die Modelle die exportierte Palette verwenden. Die v324-Verweise für `game.js`/`style.css` behalten.
+- `water-impact-v325.test.js`: neue Strömungs-/Aufprallprüfung. Drei vorhandene Wasserprüfungen und Chromium mit Originalmodellen sowie vollständigem Spiel bestanden. Keine neuen Bilder, Texturen, Pakete oder Spielstandfelder.
+
 ## v322 – Büroausstattung und lokaler Fahrzeugkauf auf main 7e0df0d / v313
 
 Branch `claude/office-value`. Eigenständige Lieferung; frühere offene PRs werden nicht erneut eingespielt. Vor Upload und nach Erstellung des PR die aktuelle Basis und Mergefähigkeit prüfen.
