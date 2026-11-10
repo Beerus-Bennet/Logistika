@@ -19,13 +19,28 @@ const VILLAGE_PEOPLE = (() => {
     const sideDist=Math.abs(right[0])*sz[0]/2+Math.abs(right[1])*sz[1]/2+.75;
     const candidates=[[c[0]+forward[0]*dist,c[1]+forward[1]*dist],...[-1,1].map(s=>[c[0]+s*right[0]*sideDist+forward[0]*.35,c[1]+s*right[1]*sideDist+forward[1]*.35]),[c[0]-forward[0]*dist,c[1]-forward[1]*dist]];
     if(typeof navPath!=='function')return null;
+    /* v345: Eigene Radplätze reservieren, Tresen freihalten und nach dem
+       Absteigen seitlich um das Rad gehen. Ohne freien Platz Besuch verschieben. */
+    const reservations=Object.entries(VILLAGE.state().homes).filter(([id,h])=>id!==p.id&&h.life&&h.life.active&&h.life.active.trip&&h.life.active.trip.oid===o.id).map(([,h])=>h.life.active.trip.parking);
+    const clearPark=q=>!reservations.some(a=>Math.hypot(a[0]-q[0],a[1]-q[1])<3.4);
+    const clearWalk=path=>path.every((a,i)=>{if(!i)return true;const b=path[i-1],n=Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1])/.2);for(let j=0;j<=n;j++){const x=b[0]+(a[0]-b[0])*j/Math.max(1,n),z=b[1]+(a[1]-b[1])*j/Math.max(1,n);if(reservations.some(q=>Math.hypot(x-q[0],z-q[1])<1.6))return false;}return true;});
     for(const counter of candidates){
       if(Math.abs(counter[1]-VILLAGE_SITE.main)<1.18)continue;
-      const space=(Number(p.id)%3-1)*.9,parking=[counter[0]+right[0]*(1.8+space),counter[1]+right[1]*(1.8+space)];
-      if(Math.abs(parking[1]-VILLAGE_SITE.main)<1.75)parking[1]=VILLAGE_SITE.main+Math.sign(parking[1]-VILLAGE_SITE.main)*1.75;
-      if(VILLAGE_SITE.blocked(...parking)||VILLAGE_SITE.blocked(...counter))continue;
-      const path=navPath(5,18.5,parking[0],parking[1],'besucher'),walk=path&&navPath(parking[0],parking[1],counter[0],counter[1],'besucher');
-      if(path&&walk)return {oid:o.id,center:c,market,parking,counter,path,walk,ry:Math.atan2(c[0]-counter[0],c[1]-counter[1]),parkYaw:Math.abs(parking[1]-VILLAGE_SITE.main)<4?Math.PI/2:ry};
+      for(const space of [3.5,-3.5,6.9,-6.9,10.3,-10.3,13.7,-13.7]){
+      const parking=[counter[0]+right[0]*space,counter[1]+right[1]*space];
+      if(Math.abs(parking[1]-VILLAGE_SITE.main)<2.5)parking[1]=VILLAGE_SITE.main+Math.sign(parking[1]-VILLAGE_SITE.main)*2.5;
+      if(!clearPark(parking)||Math.hypot(parking[0]-counter[0],parking[1]-counter[1])<3||VILLAGE_SITE.blocked(...parking,1.2)||VILLAGE_SITE.blocked(...counter))continue;
+      const parkYaw=Math.abs(parking[1]-VILLAGE_SITE.main)<4?Math.PI/2:ry;
+      const lateral=p.side*.48*SCALE,back=-.22*SCALE,stand=[parking[0]+Math.cos(parkYaw)*lateral+Math.sin(parkYaw)*back,parking[1]-Math.sin(parkYaw)*lateral+Math.cos(parkYaw)*back];
+      if(VILLAGE_SITE.blocked(...stand))continue;
+      const path=navPath(5,18.5,parking[0],parking[1],'besucher');if(!path||!clearWalk(path))continue;
+      const pt=(x,z)=>[parking[0]+Math.cos(parkYaw)*x+Math.sin(parkYaw)*z,parking[1]-Math.sin(parkYaw)*x+Math.cos(parkYaw)*z];
+      for(const dir of [-1,1]){const side=p.side*1.05,u=pt(side,-.22*SCALE),v=pt(side,dir*1.75),tail=navPath(v[0],v[1],counter[0],counter[1],'besucher');if(!tail)continue;
+        const walk=[stand,u,v,...tail.slice(1)];
+        const outside=walk.every((q,i)=>{if(!i)return true;const a=walk[i-1],n=Math.max(1,Math.ceil(Math.hypot(q[0]-a[0],q[1]-a[1])/.15));for(let j=0;j<=n;j++){const x=a[0]+(q[0]-a[0])*j/n-parking[0],z=a[1]+(q[1]-a[1])*j/n-parking[1],lx=x*Math.cos(parkYaw)-z*Math.sin(parkYaw),lz=x*Math.sin(parkYaw)+z*Math.cos(parkYaw);if(Math.abs(lx)<.65&&Math.abs(lz)<1.5)return false;}return true;});
+        if(outside&&clearWalk(walk)&&walk.every((q,i)=>!i||VILLAGE_SITE.clearLine(walk[i-1],q)))return {oid:o.id,center:c,market,parking,stand,counter,path,walk,ry:Math.atan2(c[0]-counter[0],c[1]-counter[1]),parkYaw};
+      }
+      }
     }return null;
   }
   function start(id,kind,market){const h=VILLAGE.home(id),p=VILLAGE.plot(id);if(!h||!h.resident||h.life&&h.life.active||VILLAGE.obstruction(p))return false;
@@ -40,7 +55,7 @@ const VILLAGE_PEOPLE = (() => {
       steps=[move('walk',walkToBike),wait('unlock',A.stand,1.2,Math.PI),move('push',exit),wait('look',A.mount,1.1,Math.PI),wait('mount',A.mount,2.4,Math.PI),move('ride',out),wait('dismount',trip.parking,2.4,trip.parkYaw),move('walk',trip.walk),wait('buy',trip.counter,7,trip.ry),move('walk',trip.walk.slice().reverse()),wait('mount',trip.parking,2.4,trip.parkYaw),move('ride',back),wait('dismount',A.back,2.4,0),move('push',entry),wait('lock',A.stand,1.2,Math.PI),move('walk',walkToBike.slice().reverse())];life.shopDay=day;
     }
     for(const s of steps){if(['walk','push'].includes(s.kind)){const route=VILLAGE_SITE.safePath(s.pts);if(!route){W.lastBlocked={kind:s.kind,pts:s.pts};return false;}s.pts=route;s.duration=Math.max(.2,len(route)/speed[s.kind]);}}
-    life.active={v:344,kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
+    life.active={v:345,kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
   }
   function buy(h,L){if(L.attempted)return;L.attempted=true;const M=L.trip;if(!M||!stallObj(M.market)||stallObj(M.market).id!==M.oid||M.market&&!farmAreaOpen('see'))return;
     const at=farmCenter(stallObj(M.market));if(M.center&&Math.hypot(at[0]-M.center[0],at[1]-M.center[1])>.1)return;
@@ -50,7 +65,7 @@ const VILLAGE_PEOPLE = (() => {
   }
   function tick(){if(!farmOn())return;const T=VILLAGE.state(),day=Math.floor(S.time/DAY),m=S.time%DAY;
     for(const p of VILLAGE_DATA.plots){const h=T.homes[p.id];if(!h.resident)continue;const life=h.life||(h.life={});let L=life.active;
-      if(L&&L.v!==344){life.active=null;L=null;}
+      if(L&&L.v!==345){life.active=null;L=null;}
       if(L&&L.blocked){L.at+=Math.max(0,S.time-(L.lastTime??S.time));L.lastTime=S.time;continue;}if(L)L.lastTime=S.time;
       if(L){let n=0;while(L&&n++<32){const step=L.steps[L.index],end=L.at+step.duration;if(S.time<end)break;
           /* Am Markt erst zum Tresen gehen, wenn der vorherige Kunde Platz macht. */
@@ -115,7 +130,7 @@ const VILLAGE_PEOPLE = (() => {
       if(bikeAction){b.x=q.x;b.z=q.z;b.ry=q.ry;b.rz=0;
         if(stage==='ride'||stage==='mount'||stage==='dismount'){
           const k=stage==='ride'?1:smooth(stage==='mount'?q.f:1-q.f),side=p.side,seated=smooth((k-.65)/.35);
-          const lx=(1-k)*side*.4*SCALE,lz=-.22*SCALE;n.x=q.x+Math.cos(q.ry)*lx+Math.sin(q.ry)*lz;n.z=q.z-Math.sin(q.ry)*lx+Math.cos(q.ry)*lz;n.y=.04+.14*SCALE*seated;
+          const lx=(1-k)*side*.48*SCALE,lz=-.22*SCALE;n.x=q.x+Math.cos(q.ry)*lx+Math.sin(q.ry)*lz;n.z=q.z-Math.sin(q.ry)*lx+Math.cos(q.ry)*lz;n.y=.04+.14*SCALE*seated;
           ridePose(e,stage==='ride'?q.distance/.70:0);e.hip.rx*=k;e.arms.forEach(a=>{a.upper.rx*=.5+.5*k;});
           if(k<1)e.legs.forEach((l,i)=>{const swing=i===(side>0?1:0),lift=Math.sin(k*Math.PI);
             l.thigh.rz=swing?side*lift*.5:0;l.thigh.rx=l.thigh.rx*seated+(swing?-.55*lift:0)*(1-seated);l.shin.rx=l.shin.rx*seated+(swing?1.0*lift:0)*(1-seated);l.foot.rx=-l.thigh.rx-l.shin.rx;});
