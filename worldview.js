@@ -3765,10 +3765,11 @@ function energyHTML() {
   const sun = typeof pvSun === "function" && pvSun(), full = typeof pvFull === "function" && pvFull(), n = typeof pvN === "function" ? pvN() : 0;
   const cap = farmEnCap(), en = sun ? cap : Math.floor(S.farm.en || 0);
   const mech = typeof staffHas === "function" && staffHas("mechaniker");
-  const note = sun ? "☀️ Volles Solardach: tagsüber laufen die Maschinen mit Sonnenstrom – der Kessel bleibt aus. Erst nachts, wenn keine Sonne scheint, heizt er wieder" + (mech ? " – das übernimmt der Mechaniker." : ".")
-    : full ? "🌙 Nacht: kein Sonnenstrom. Der Kessel verfeuert Holzreste, Äste oder Brennholz" + (mech ? " – der Mechaniker heizt ein." : " – oder stell einen Mechaniker ein, der nachts einheizt.")
+  /* v335: Kurze Hinweise in einer Zeile (vorher drei Zeilen Fließtext) */
+  const note = sun ? "☀️ Sonnenstrom läuft – Kessel aus."
+    : full ? "🌙 Nacht: Kessel heizt" + (mech ? " (Mechaniker)." : " – Mechaniker einstellen.")
     : !(S.farm.saw && S.farm.saw.motor) ? "Erst den Motor reparieren."
-    : "Der Kessel verfeuert Holzreste, Äste oder Brennholz." + (n ? ` ☀️ ${n}/${FPV.max} Solarmodule: +${n * FPV.kwh} kWh je Stunde am Tag.` : "");
+    : "Kessel: Holzreste, Äste, Brennholz." + (n ? ` ☀️ ${n}/${FPV.max} Module.` : "");
   return `<div class="fen${sun ? " sun" : ""}"><span>${sun ? "☀️" : "⚡"}</span><div><b>${sun ? "Sonnenstrom" : "Strom " + en + " / " + cap + " kWh"}</b><i><em style="width:${Math.round(en / cap * 100)}%"></em></i>
     <small>${note}</small></div></div>`;
 }

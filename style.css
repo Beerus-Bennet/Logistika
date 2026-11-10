@@ -4772,3 +4772,29 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 #farmBoot .fbDigit,#officeBoot .fbDigit{display:block;height:30px;width:.65em;overflow:hidden}
 #farmBoot .fbReel,#officeBoot .fbReel{display:block}
 #farmBoot .fbReel>span,#officeBoot .fbReel>span{display:block;height:30px;line-height:30px}
+
+/* ===== v335: Produktionsfenster auf dem Handy größer und lesbarer (Bennet: auch ältere Spieler) – Schrift +25–40 %, größere Plätze und Rezeptkarten ===== */
+@media(max-width:699px){
+  #farmSheet.mach .fq{gap:7px}
+  #farmSheet.mach .fq-s{flex:0 0 64px;width:64px;height:64px;border-radius:12px}
+  #farmSheet.mach .fq-s>.ic.th,#farmSheet.mach .fq-s>.ic.th img{width:36px;height:36px}
+  #farmSheet.mach .fq-s>.ic.th b{font-size:28px;line-height:36px}
+  #farmSheet.mach .fq-s small{font-size:12px}
+  #farmSheet.mach .fq-all{min-height:52px;font-size:14px}
+  #farmSheet.mach .fen{gap:10px;padding:10px 12px;margin:10px 0;border-radius:13px;align-items:center}
+  #farmSheet.mach .fen>span{font-size:28px}
+  #farmSheet.mach .fen>div{font-size:15px;line-height:1.3}
+  #farmSheet.mach .fen b{font-size:17px}
+  #farmSheet.mach .fen i{height:9px;margin:4px 0}
+  #farmSheet.mach .fen small{font-size:14px;line-height:1.3}
+  #farmSheet.mach .fs-sub{font-size:14px;line-height:1.35;margin:8px 0}
+  #farmSheet.mach .frecs{gap:9px}
+  #farmSheet.mach .frec{grid-template-columns:36px minmax(0,1fr);gap:6px;padding:9px}
+  #farmSheet.mach .frec>.ic{font-size:30px}
+  #farmSheet.mach .frec>.ic.th,#farmSheet.mach .frec>.ic.th img{width:36px;height:36px}
+  #farmSheet.mach .frec b{font-size:15.5px;line-height:1.2}
+  #farmSheet.mach .frec small{font-size:12.5px;line-height:1.3;margin-top:3px}
+  #farmSheet.mach .fchip{font-size:15px;padding:2px 6px;margin:2px 3px 2px 0;border-width:2px}
+  #farmSheet.mach .fchip b{font-size:13px}
+  #farmSheet.mach .fq-log{font-size:13px;line-height:1.35;padding:8px 10px}
+}
