@@ -79,3 +79,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v338: Auktionshaus – Limit-Feld zeigt Tausenderpunkte (`ahGroup`, `ahGroupInput`, `ahDigits` in `auction.js`).
 - v339: Auktionshaus – fehlende Autofotos per Wikipedia-Suche („Marke Modell“, Treffer muss die Marke im Titel haben) als vierter Schritt in `resolvePics`.
 - v341: Seeblick – Zoomgrenze beim Verlassen des Ortsbereichs weich statt hart (`FV.distSoft`, `distLim` in `clampCam`/`farmLoop`); keine Namensschilder über bewohnten Häusern (`tags` in `villageview.js`).
+- v342: Hochsitz – Wolken (`cloud` in `vista.js`) über echte Projektion `R.project` und feste Form je Wolke statt Näherung `hy − f·tan(e)` und Zähler.

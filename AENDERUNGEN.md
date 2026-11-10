@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v342 – Hochsitz: Wolken bleiben beim Hoch- und Runterschauen fest am Himmel
+**Meldung Bennet:** Beim Hoch- und Runterschauen skalieren die Wolken immer wieder neu und verschieben sich.
+
+**Ursache (`vista.js`, `cloud`):** Die Wolken wurden mit einer vereinfachten Formel platziert: Höhe über dem Horizont = Brennweite × tan(Elevation), unabhängig von der Kameraneigung. Die echte Projektion hängt aber von der Neigung ab; bei 0,4–0,6 rad Nicken liegt die Wolke bis zu rund 21 % neben ihrer richtigen Position (und ihre Breite wurde nur pauschal skaliert). Dadurch wanderte sie gegenüber Horizont und Bäumen und änderte ihre Größe. Außerdem bekam jede Wolke ihre Form über einen Zähler (`ci++`), der sich änderte, sobald beim Drehen eine Wolke aus dem Bild lief – die Formen wechselten.
+
+**Lösung:** Mitte und Breite jeder Wolke kommen jetzt aus der echten Kameraprojektion (`R.project` für Mitte und beide Ränder auf der Himmelskugel); damit sitzt sie fest am Himmel, Neigung und Drehung verändern nur den Bildausschnitt. Die Form hängt an der Nummer der Wolke (`id`), nicht mehr am Zähler. Farben, Verteilung, Drift und Mondrand sind unverändert; Sonne, Mond und Sterne habe ich nicht angefasst.
+
+**Geprüft:** Rechnerisch mit einer Lochkamera (Nicken −0,3 … 0,6 rad): alte Formel weicht bis 21 % ab, die Projektion nicht; `VISTA.draw` läuft im Testbrowser mit vorgetäuschtem Hochsitz-Zustand ohne Fehler. **Nicht geprüft:** das Aussehen im echten Hochsitz (der Testaufbau ließ sich nicht flach genug auf den Horizont stellen, kein Bildschirmfoto), am Handy. Sonne, Mond und Sterne verwenden dieselbe vereinfachte Formel; falls sie bei starkem Nicken ebenfalls wandern, ziehe ich sie nach.
+
 ## v341 – Seeblick: ruhiges Zurückfahren der Kamera, keine Namensschilder über Häusern
 **Wunsch Bennet:** Das Herauszoomen im Ort gefällt, aber das Zurückfedern in die Standardansicht wirkt abgehackt und unprofessionell; die Namensschilder über den Häusern (z. B. „Thomas“, „Cem“) sollen weg.
 
