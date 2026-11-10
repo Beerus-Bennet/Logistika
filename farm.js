@@ -331,7 +331,16 @@ function farmExternalCost(st, n) {
   const lv = farmExternalLevel(st), cost = farmExternalTotal(st, lv + n) - farmExternalTotal(st, lv);
   return Number.isSafeInteger(cost) && cost > 0 ? cost : null;
 }
-function farmExternalAvailable(st) { return !!(FEXTERNAL[st] && farmOn() && S.farm.logi && flv() >= 15); }
+function farmExternalAvailable(st) { return !!(FEXTERNAL[st] && farmOn() && S.farm.logi && flv() >= 15 && farmStores().includes(st)); }
+/* v331: Eine Kartenmarke je gekauftem Lagerstandort, unabhängig von der
+   Abschnittszahl. Keine Zufallspositionen oder zusätzlichen Lagerbestände. */
+function farmExternalSites() {
+  if (!farmOn()) return [];
+  return Object.entries(FEXTERNAL).filter(([st]) => FSTORE[st] && farmExternalLevel(st)).map(([st, E]) => ({
+    id: st, name: E.n, icon: FSTORE[st].i, sections: farmExternalLevel(st), capacity: farmExternalCap(st),
+    p: [FARM_PT[0] + E.offset[0], FARM_PT[1] + E.offset[1]]
+  }));
+}
 function farmExternalBuy(st, n) {
   const cost = farmExternalCost(st, n);
   if (!farmExternalAvailable(st) || cost == null) return false;
@@ -1069,7 +1078,7 @@ function farmOrderArea(o) {
 }
 function farmOrderAreaOn(a) { return a === "hof" || (typeof farmAreaOpen === "function" && farmAreaOpen(a)); }
 /* wie viele offene Angebote je Tafel (angenommene zählen nicht mit) */
-function farmAreaCap(a) { return a === "hof" ? farmOrderCap() + (Object.keys(FEXTERNAL).some(st => farmExternalLevel(st)) ? 2 : 0) : Math.min(5, 2 + Math.floor(flv() / 8)); }
+function farmAreaCap(a) { return a === "hof" ? farmOrderCap() + (["silo", "barn"].some(st => farmExternalLevel(st)) ? 2 : 0) : Math.min(5, 2 + Math.floor(flv() / 8)); }
 function farmOffers(a) { return farmOrders().filter(o => !o.acc && (!a || farmOrderArea(o) === a)); }
 /* Annehmen: Standardbestellungen ohne Frist, v330-Großaufträge mit eigener Lieferzeit. */
 const FORD_NOLIMIT = 525600;
@@ -1124,7 +1133,7 @@ function farmBulkWindow(n, kg, stock, daily, trip) {
 }
 function farmBulkTerm(o) { return o.acc ? "Liefern bis " + stamp(o.deadline) : "Lieferzeit ab Annahme: " + dur(o.bulk.window); }
 function farmBulkMake() {
-  if (!farmOn() || !S.farm.logi || flv() < 15 || !Object.keys(FEXTERNAL).some(st => farmExternalLevel(st)) || farmBulkCount() >= 2) return null;
+  if (!farmOn() || !S.farm.logi || flv() < 15 || !["silo", "barn"].some(st => farmExternalLevel(st)) || farmBulkCount() >= 2) return null;
   const busy = new Set(farmOrders().map(o => o.shipper));
   const pool = FBULK_CUSTOMERS.filter(c => N[c.town] && isUnlocked(c.town) && !busy.has(c.n));
   while (pool.length) {

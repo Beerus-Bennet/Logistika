@@ -1,3 +1,12 @@
+## v331 – Ladeanzeige und Außenlager aller Arten mit eigenen Kartenmarken
+
+Branch `claude/external-storage-pins`, auf `main` nach dem bereits zusammengeführten PR #49 (`956f546`). Vor und nach dem Upload aktuelle parallele PRs und Hauptbranch erneut prüfen.
+
+- Zusammengehörig: `farmdata.js` (alle sechs Außenlager, feste Positionsversätze zum Hof), `farm.js` (`farmExternalSites`, Verfügbarkeit, gezielte Hof-Großkundenfreischaltung), `game.js` (`warehouse`-Stecknadeln mit `solo`/`minZoom`, Infokarte und Lagerknopf), `farmview.js` (Karten-/Stationsknöpfe, kurze Ziffernrollen und gemeinsame Animationszeit), angehängte v331-CSS-Regeln und Cache-Verweise.
+- Externe Bestände bleiben Teil des gemeinsamen `S.farm.inv`, Käufe in `S.farm.external` bleiben unverändert. Standorte werden abgeleitet, nicht zufällig erzeugt oder als Transportknoten in das Routing eingebaut. Kein zusätzlicher Warenverbrauch beim Antippen. Alte Silo-/Scheunenkäufe erscheinen automatisch auf der Karte.
+- `ldMake`/`ldStart` werden auch von `officefp.js` benutzt: neue Rollen und Styles für **beide** Ladeschirme übernehmen. Lkw, Füllung und Ziffern starten auf derselben `document.timeline`; die bis 92 % laufende Zeitprognose und der anschließende Abschluss bleiben erhalten.
+- Erweiterte Prüfung `farm-wholesale-v330.test.js`: tatsächliche Registrierung der Präparate aus `hunt.js`, alle sechs Lagerarten, Sperren für verborgene Lager, Kauf/Preis/Kapazität, feste Kartenpunkte, JSON-Migration und Verschwinden nach Hofverkauf. Bestehende Liefer- und Präparateprüfungen weiterverwenden.
+
 ## v330 – Außenlager, Großkunden und aufklappbare Büroteams
 
 Branch `claude/office-folds-external-storage`, basiert auf `main` nach PR #48 (`37b0aff`). Beim abschließenden GitHub-Abgleich offene parallele PRs und einen inzwischen geänderten Hauptbranch erneut prüfen. Nicht direkt in `main` veröffentlichen.

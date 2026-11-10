@@ -8,7 +8,7 @@ const C=vm.createContext({console,Math,JSON,Date,setTimeout:()=>0,clearTimeout()
  document:{addEventListener(){},querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,createElement:el,body:el(),documentElement:el()},
  window:{addEventListener(){},matchMedia:()=>({matches:false,addEventListener(){}})}});
 const run=s=>vm.runInContext(s,C),read=f=>fs.readFileSync(path.join(__dirname,f),'utf8');
-for(const f of ['data.js','farmdata.js','fishdata.js','erbedata.js','places.js','map.js','game.js','farm.js','erbe.js'])run(read(f));
+for(const f of ['data.js','farmdata.js','fishdata.js','erbedata.js','places.js','map.js','game.js','farm.js','erbe.js','gl3d.js','hunt.js'])run(read(f));
 run(`
  var notices=[];
  toast=m=>notices.push(m);save=()=>{};render=()=>{};renderInspector=()=>{};mapRedraw=()=>{};logMoney=()=>{};
@@ -56,13 +56,31 @@ test('Level, Speditionsgründung, falsches Lager und leere Kasse blockieren ohne
   assert.equal(run('farmExternalBuy("silo",1)'),false);
   assert.equal(run('JSON.stringify({money:S.money,inv:S.farm.inv,external:S.farm.external,orders:S.orders})'),run('before'));
  }
- run('fresh();');for(const args of ['"holz",1','"troph",1','"silo",0','"silo",-1','"silo",2'])assert.equal(run('farmExternalBuy('+args+')'),false);
+ run('fresh();');for(const args of ['"unbekannt",1','"troph",1','"fisch",1','"koeder",1','"silo",0','"silo",-1','"silo",2'])assert.equal(run('farmExternalBuy('+args+')'),false);
  assert.equal(run('S.money'),3e8);
 });
 test('Ausgebauter Platz speichert echte Ware; JSON und Migration erhalten Geld, Ausbau und Bestand',()=>{
  run('fresh();farmExternalBuy("silo",5);farmAdd("weizen",3000,4);var saved=JSON.stringify({money:S.money,external:S.farm.external,inv:S.farm.inv,cap:farmStoreCap("silo")});S=JSON.parse(JSON.stringify(S));farmMigrate();');
  assert.ok(run('farmInv("weizen")')>1080);
  assert.equal(run('JSON.stringify({money:S.money,external:S.farm.external,inv:S.farm.inv,cap:farmStoreCap("silo")})'),run('saved'));
+});
+/* v331: Auch Holz, Fischerei und Sammlung verwenden dieselbe echte Kauf- und Speicherlogik. */
+test('Alle sechs Lager extern ausbaubar; genau eine feste Kartenmarke je gekauftem Standort',()=>{
+ run('fresh();S.farm.areas.see=true;S.farm.objs.push({t:"f_steg",id:S.farm.seq++,x:32,z:30});farmAdd("tro_fasan_3",1,3);');
+ assert.equal(run('farmExternalSites().length'),0);
+ for(const st of ['silo','barn','holz','fisch','koeder','troph']){
+  C.store=st;const cap=run('farmStoreCap(store)'),cost=run('farmExternalCost(store,1)'),money=run('S.money');
+  assert.ok(run('farmExternalBuy(store,1)'),st);assert.equal(run('S.money'),money-cost);
+  assert.equal(run('farmStoreCap(store)-'+cap),run('FEXTERNAL[store].places'));
+  assert.ok(run('farmExternalBuy(store,5)'),st);
+  assert.equal(run('farmExternalSites().filter(s=>s.id===store).length'),1);
+ }
+ assert.equal(run('farmExternalSites().length'),6);
+ assert.equal(run('mapPins().filter(p=>p.kind==="warehouse"&&p.solo).length'),6);
+ assert.ok(run('farmExternalSites().every(s=>hav(s.p,FARM_PT)<1 && hav(s.p,FARM_PT)>.1)'));
+ run('var sites=JSON.stringify(farmExternalSites()),stocks=JSON.stringify(S.farm.inv);S=JSON.parse(JSON.stringify(S));farmMigrate();');
+ assert.equal(run('JSON.stringify(farmExternalSites())'),run('sites'));assert.equal(run('JSON.stringify(S.farm.inv)'),run('stocks'));
+ run('S.farm.sold={price:1};');assert.equal(run('farmExternalSites().length'),0);
 });
 test('Großaufträge mit echter Straße, Adresse und deutlich größerer Menge; höchstens zwei zugleich',()=>{
  run('largeFarm();var o=farmBulkMake();');assert.ok(run('o && o.bulk'));
