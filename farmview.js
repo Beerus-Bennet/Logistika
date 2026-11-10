@@ -2288,6 +2288,19 @@ function openMachine(o) {
   bindMachQueue(o);
 }
 
+/* v330: Außenflächen für Hofware, direkt im passenden Lager bedienbar. */
+function farmExternalHTML(st) {
+  const E = FEXTERNAL[st];
+  if (!E) return "";
+  const extra = farmExternalCap(st), available = farmExternalAvailable(st);
+  return `<section class="fs-external"><div><b>🏭 Außenlager · ${esc(E.n)}</b><small>Zusätzliche Fläche außerhalb des Hofs. Deine Ware verwaltest du weiterhin hier im Lager.</small></div>
+    <strong>${extra ? "+" + fmt(extra) + " Plätze extern" : "Noch keine Außenfläche"}</strong>
+    ${available ? `<div class="external-buy">${[1, 5, 10].map(n => { const price = farmExternalCost(st, n), disabled = price == null || S.money < price; return `<button class="btn tiny${n > 1 ? " ghost" : ""}${disabled ? " disabled" : ""}" data-external="${st}|${n}"${disabled ? " disabled" : ""}>+${fmt(E.places * n)} Plätze<small>${price == null ? "nicht verfügbar" : eur(price) + " einmalig"}</small></button>`; }).join("")}</div>`
+      : `<small>Ab Hof-Level 15 und nach Gründung deiner Spedition.</small>`}
+    ${extra ? `<button class="btn tiny ghost" data-bulk-orders="1">📋 Großkundenaufträge ansehen</button>` : ""}
+    <small>Großkunden bestellen passend zu Sortiment, Vorräten, Produktion und Fuhrpark. Ihre Lieferfrist beginnt bei Annahme.</small></section>`;
+}
+
 /* Lager */
 function openFarmStore(st) {
   if (!FSTORE[st] || !farmStores().includes(st)) st = farmStores()[0];
@@ -2299,9 +2312,10 @@ function openFarmStore(st) {
   const sel = wall == null && FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
   const trk = S.farm.trkStored ? `<button class="fup2" id="fsTrk"><span>🚜</span><b>Traktor im Lager</b><small>Antippen und auf dem Hof oder rund um den Hof aufstellen</small></button>` : "";
   openFarmSheet(`${trk}<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
-    <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${used} / ${cap} Plätze</span></div>
+    <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${fmt(used)} / ${fmt(cap)} Plätze</span></div>
     ${typeof farmHallBonus === "function" && FHALL.stores.includes(st) ? (farmHallBonus(st) ? `<div class="fs-sub fhall">🏬 Davon +${farmHallBonus(st)} Plätze durch die Große Lagerhalle.</div>`
       : `<div class="fs-sub fhall">🏬 Mehr Platz für alle Lager: Große Lagerhalle im Laden unter „Gebäude“${flv() < 5 ? " (ab Level 5)" : ""}.</div>`) : ""}
+    ${farmExternalCap(st) ? `<div class="fs-sub">🏭 Davon +${fmt(farmExternalCap(st))} Plätze im Außenlager.</div>` : ""}
     ${wall != null ? wall : `<div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>`}
     ${sel ? (() => {
@@ -2317,6 +2331,7 @@ function openFarmStore(st) {
         : "Großhandel zahlt sofort, aber nur den halben Wert – Bestellungen bringen mehr."}</small></div>`;
     })() : ""}
     ${uc != null ? `<button class="btn fup" id="fsUp">🔨 ${esc(FSTORE[st].n)} ausbauen: +${FSTORE[st].step * (typeof farmHallK === "function" ? farmHallK(st) : 1)} Plätze · ${eur(uc)}<small>Stufe ${(S.farm.cap[st] || 1) + 1} von ${FSTORE[st].cost.length + 1}</small></button>` : `<div class="fs-sub">${esc(FSTORE[st].n)}: höchste Stufe (${FSTORE[st].cost.length + 1}) erreicht.</div>`}
+    ${farmExternalHTML(st)}
     <div class="fs-sub">${st === "holz" ? "Sauber gefällt gibt mehr Sterne – und Sterne bringen mehr Geld."
       : st === "fisch" ? "Die Sterne zeigen die Qualität: Große, gut genährte Fische geben mehr Sterne, der Preis richtet sich nach dem Gewicht. Fischlager und Kühlhaus schaffen mehr Platz."
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
@@ -2331,6 +2346,11 @@ function openFarmStore(st) {
   });
   const up = $("#fsUp");
   if (up) up.onclick = () => { if (farmStoreUp(st)) { sfx("build"); save(); openFarmStore(st); } };
+  $$("#farmSheetIn [data-external]").forEach(b => b.onclick = () => {
+    const [kind, n] = b.dataset.external.split("|");
+    if (farmExternalBuy(kind, +n)) { sfx("build"); save(); renderFarmUI(); openFarmStore(st); }
+  });
+  $$("#farmSheetIn [data-bulk-orders]").forEach(b => b.onclick = () => openFarmOrders(null, "hof"));
   if (wall != null) HUNT.wallBind(() => openFarmStore(st));
 }
 
@@ -2443,7 +2463,7 @@ function openFarmOrders(sendFor, area) {
     const ready = farmOrderReady(o);
     const q = farmOrderQ(o), pf = 1 + (q - 3) * 0.08;
     const km = o.refDist;
-    const tag = o.abo ? `<span class="fo-tag abo">📅 Lieferung ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
+    const tag = o.bulk ? `<span class="fo-tag bulk">🏭 Großauftrag · ${esc(farmBulkTerm(o))}</span>${!o.acc ? `<span class="fo-tag">Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>` : ""}` : o.abo ? `<span class="fo-tag abo">📅 Lieferung ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
       : `<span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>`;
     const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small>${tag}</div>`;
     const items = `<div class="fo-it">${Object.keys(o.farm.items).map(id => itemChip(id, o.farm.items[id], farmInv(id))).join("")}</div>`;
@@ -2483,8 +2503,8 @@ function openFarmOrders(sendFor, area) {
   }).join("")}</div>` : "";
   const fa = typeof staffOf === "function" && staffOf("fahrer");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">📋</span>Bestellungen · ${A0.n}<small>${vehLine}</small></div>${tabs}
-    ${acc.length ? `<div class="fo-sec">✓ Angenommen<small>ohne Frist – liefern, wenn alles da ist</small></div><div class="fos">${acc.map(card).join("")}</div>` : ""}
-    <div class="fo-sec">📨 Angebote<small>${fa ? esc(fa.name) + " nimmt die lukrativsten selbst an" : "verfallen nach einem Tag"}</small></div>
+    ${acc.length ? `<div class="fo-sec">✓ Angenommen<small>${acc.some(o => o.bulk) ? "Großaufträge mit Liefertermin · Standardbestellungen ohne Frist" : "ohne Frist – liefern, wenn alles da ist"}</small></div><div class="fos">${acc.map(card).join("")}</div>` : ""}
+    <div class="fo-sec">📨 Angebote<small>${fa ? esc(fa.name) + " nimmt die lukrativsten selbst an" : "Gültigkeit steht am jeweiligen Angebot"}</small></div>
     <div class="fos">${offs.map(card).join("") || `<div class="fs-empty">${esc(FT().noOrders)}</div>`}</div>
     ${aboHTML}
     <div class="fs-sub">Gute Qualität bringt bis zu 16 % mehr. Lieferungen verfolgst du unter „Live“.</div>`, "orders");

@@ -164,6 +164,20 @@ const FSTORE = {
    und ist auf dem Hof entsprechend groß (10 × 6 statt 6 × 4 Kacheln, siehe farmHallGrow). */
 const FHALL = { t: "lagerhalle", mult: 1, stores: ["silo", "barn", "holz", "fisch", "koeder"] };
 
+/* v330: Zusätzliche Flächen außerhalb des Hofs, unabhängig vom Hallenbonus.
+   Je Abschnitt einmaliger Kaufpreis; weitere Abschnitte kosten 15 % mehr. */
+const FEXTERNAL = {
+  silo: { n: "Erntehalle", places: 1000, price: 75000 },
+  barn: { n: "Temperiertes Lebensmittellager", places: 500, price: 125000 }
+};
+const FBULK_CUSTOMERS = [
+  { n: "Großbäckerei Potsdam", town: "potsdam", items: ["weizen", "mehl", "maismehl"] },
+  { n: "Mosterei Glindow · Großabnahme", town: "w-glindow", items: ["apfel", "birne", "kirsche"] },
+  { n: "Havel-Frischegroßhandel", town: "w-werder", items: ["tomate", "karotte", "kartoffel", "erdbeere", "kuerbis", "ei", "milch"] },
+  { n: "Regionalküche Geltow", town: "w-geltow", items: ["brot", "pizza", "kaese", "butter", "apfelkuchen"] },
+  { n: "Fleischgroßhandel Michendorf", town: "w-michendorf", items: ["spaket", "rpaket", "bratwurst", "schinken"] }
+];
+
 /* Kachelgröße der Objekte (Breite × Tiefe) */
 const FSIZE = {
   house: [5, 4], barn: [4, 4], silo: [2, 2], lagerhalle: [10, 6], bakery: [3, 3], mill: [2, 2], dairy: [3, 3], butcher: [3, 3], spinnery: [3, 3],
