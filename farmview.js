@@ -1470,7 +1470,7 @@ function updateFarmTags() {
     const p = FV.R.project(cx, h, cz);
     if (!p || tagCut(el, p)) { el.style.display = "none"; return; }
     el.style.display = "";
-    el.style.transform = `translate(${Math.round(p[0])}px,${Math.round(p[1])}px)`;
+    el.style.left = Math.round(p[0]) + "px"; el.style.top = Math.round(p[1]) + "px";   /* v334: nicht per transform – die Wippen-Animation (fbob) überschreibt transform und warf die Blasen nach (0,0) in die obere linke Ecke */
   });
   box.querySelectorAll(".ftag").forEach(el => { if (!keep.has(el.dataset.k)) el.remove(); });
   /* Hofschild am Tor: seit v54 steht der Name auf der Tafel selbst (Bild in 3D) */

@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v334 – Hof: „fertig“-Blasen sitzen wieder am Objekt statt in der oberen linken Ecke
+**Meldung Bennet:** Oben links unter der Kopfleiste sieht man weiße Stellen, die periodisch auftauchen. Der Fehler aus v332 war damit nicht behoben.
+
+**Ursache (`farmview.js`, `worldview.js`, `style.css`):** Die Blasen über Feldern, Gebäuden und Werkstätten (`.ftag`) wurden per `style.transform` an ihren Platz geschoben. Die Blasen mit Zustand „fertig“ (`.ready`) und „hungrig“ (`.hungry`) wippen aber über eine CSS-Animation (`fbob`), die selbst `transform` setzt und den Platz damit überschreibt. Alle diese Blasen saßen deshalb an Position (0, 0) in der oberen linken Ecke der Hofansicht. Der Rest der Blase lag außerhalb des Bildes, nur Schwanz und Rand schauten unter der Kopfleiste hervor – und wippten dort auf und ab. Im Test: die „fertig“-Blase eines Feldes stand bei x −25…25, y −31…−5 statt am Feld. Die Blasen ohne Animation („info“, z. B. 📋 am Brett) saßen richtig, deshalb fiel es nur teilweise auf. Die Korrektur aus v332 (halbe Blasen ausblenden) griff nicht, weil die Blasen dort gar nicht am erwarteten Ort standen.
+
+**Lösung:** Die Position steht jetzt in `left`/`top` (px) statt in `transform`. Die Wippen-Animation behält `transform` für sich. Gilt für Hof- und Weltmarken. Die Ausblendregel aus v332 bleibt für echte Randfälle.
+
+**Geprüft (Testbrowser, 390 × 844):** Die „fertig“-Blasen stehen jetzt am Feld bzw. am Brett (x −2…48, y 231…257 und x 85…149, y 616…645), keine Blase mehr in der Ecke. Keine Konsolenfehler. **Nicht geprüft:** am Handy.
+
 ## v333 – Bert hält alle Köder vorrätig (Dauerbestellung für jede Sorte)
 **Wunsch Bennet:** Mit „100 Stück“ soll Bert von allen Ködern jeweils 100 produzieren und neue Tauwürmer machen, sobald sie ausgehen.
 
