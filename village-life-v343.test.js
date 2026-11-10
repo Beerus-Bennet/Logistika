@@ -89,6 +89,11 @@ test('Markt reserviert getrennte Radplätze und Fußwege umgehen das eigene Rad'
  run('var homes=VILLAGE.state().homes;for(const h of Object.values(homes))if(h.life&&h.life.active)h.life.active.v=344;VILLAGE_PEOPLE.tick();');
  assert.ok(run('Object.values(homes).every(h=>!h.life||!h.life.active)'));
 });
+test('Verkehrspause hält den Einkaufsschritt an, danach geht derselbe Ablauf weiter',()=>{
+ run('prepared();VILLAGE_PEOPLE.start("000","shop",false);var L=VILLAGE.home("000").life.active;L.index=7;L.at=S.time;VILLAGE.tick();L.trafficWait=true;S.time+=20;VILLAGE.tick();');
+ assert.equal(run('L.index'),7);assert.equal(run('S.time-L.at'),0);
+ run('L.trafficWait=false;S.time+=L.steps[7].duration+.001;VILLAGE.tick();');assert.equal(run('L.index'),8);
+});
 test('Pedalumdrehung bleibt erreichbar: Kniegelenke und Füße folgen den Pedalen',()=>{
  for(let i=0;i<128;i++){
   const t=i/128*Math.PI*2,y=.3+.11*Math.cos(t)-.56,z=-.06+.11*Math.sin(t)+.22;
