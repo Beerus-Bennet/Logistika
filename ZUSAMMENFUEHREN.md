@@ -1,3 +1,9 @@
+## v345 – Marktbesucher mit Abstand; Hauptstraße ohne Gebietsschleier
+
+Basis main acf12e2 (PR #63). `villagepeople.js`: reservierte Radplätze, Freiraum zum Tresen, Absteigepunkt am Rad und Fußweg darum; aktive Abläufe jetzt Kennung 345, Altpläne ohne erneuten Verkauf beenden. Keine Änderung an Waren, Preisen oder Auszahlungen. Tests ergänzt in `village-life-v343.test.js`.
+
+`worldview.js` setzt in `worldLocks` den Straßenkorridor aus WGRID und der realen Bordbreite. `gl3d.js` berücksichtigt `R.lockRoad` im Gebietsschleier; Standardwert deaktiviert, andere 3D-Szenen bleiben unverändert. Keine zusätzlichen Sperrrechtecke, daher kein Abschneiden durch das bestehende 12-Rechteck-Limit. Zusammen mit den drei Cache-Verweisen in index.html/sw.js und SW-Version 345 übernehmen. Alle offenen PRs vor/nach Push erneut prüfen; kein automatischer Merge und keine Live-Veröffentlichung.
+
 ## v344 – Kollisionen, Hausvarianten, Wendeplatz und Ortstafel
 
 Basis main fd81807 (PR #62). Gebäudeumrisse einschließlich Veranda/Treppe und Körperradius in `VILLAGE_SITE.blocked`; sichere Wege und Laufglättung prüfen dieselben Hindernisse. Ältere aktive Abläufe werden ohne erneuten Verkauf beendet. Familienhaus mit eigenem Anbau sowie passendem Baugrund/Rohbau; Haustürpunkte vor die Stufen verlegt. Wendeplatz nur vor Erweiterung. Anklickbare Holztafel ersetzt die schwebende Seeblick-Blase. Zusammengehörig: village.js, villagesite.js, villagepeople.js, villageview.js und Cache-Verweise v344. Vor/nach Push main und alle PRs prüfen.

@@ -1851,6 +1851,9 @@ function worldLocks() {
     A.locks.forEach(r => (typeof VILLAGE !== "undefined" ? VILLAGE.clipLock(r) : [r]).forEach(q => out.push({ r:q, c: A.reveal, rad: rv ? rv.rad : 0, a: 1 })));
   });
   R.locks = out;
+  /* v345: Nur die tatsächlich gebaute öffentliche Straße aussparen, keine
+     angrenzenden Wälder, Grundstücke oder noch gesperrten Seitenwege öffnen. */
+  R.lockRoad = [WGRID.x0, 18.5 - 1.02, WGRID.x1, 18.5 + 1.02];
 }
 function worldSyncBarriers() {
   const R = FV.R;

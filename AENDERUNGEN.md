@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v345 – Freie Hauptstraße und Abstand beim Markteinkauf
+
+Die öffentliche Hauptstraße einschließlich Bordkante bleibt auch zwischen gesperrten Gebieten sichtbar. Eine schmale Aussparung im Gebietsschleier ersetzt das Grau nur auf dem Straßenkorridor; Wälder, Seegebiete und gesperrte Seitenwege bleiben verhüllt. Die Freischaltbedingungen ändern sich nicht.
+
+Marktbesucher reservieren getrennte Fahrradplätze mit mindestens 3,4 Welteinheiten Abstand und mindestens drei Einheiten zum Tresen. Nach dem Absteigen beginnt der Fußweg neben dem Rad und führt daran vorbei. Andere reservierte Plätze bleiben auf Anfahrt und Fußweg frei. Nur ein Kunde geht gleichzeitig zum Tresen; ohne erreichbaren freien Radplatz wird der Besuch verschoben. Ältere gespeicherte Abläufe werden beendet, ohne Waren oder Einnahmen erneut zu erzeugen.
+
+Geprüft: 12 Bewohner-/Straßen-Testgruppen und 12 Stadt-Integrationsgruppen; Syntax und Diff-Prüfung. Lokales Chromium: echte Wegsuche, mehrere reservierte Radplätze, Warteschlange, sichtbare Bewohner am Stand, Verkauf und Käuferanzeige bei 320/390/1280 Pixeln sowie Straße bei gesperrten Nachbarflächen. Kein Test auf echtem iPhone/Safari.
+
 ## v344 – Bewohnerkollisionen, Haustypen, Wendeplatz und Ortstafel
 
 Gebäude, Veranden, Treppen und Grundstückszäune berücksichtigen nun den Körperradius der Bewohner. Haustürpunkte liegen vor den Stufen; blockierte Laufabschnitte werden umgangen oder der Ablauf bleibt gesperrt. Die Darstellung prüft auch geglättete Bewegungen. Alte gespeicherte Bewegungsabläufe werden beendet, ohne Verkäufe erneut auszuführen.

@@ -79,6 +79,16 @@ test('Zweiter Kunde wartet beim abgestellten Rad, bis der Tresen frei wird',()=>
  assert.equal(run('b.waiting'),true);assert.equal(run('b.index'),6);
  run('S.time+=30;VILLAGE.tick();');assert.equal(run('b.waiting'),false);assert.ok(run('b.index>=7'));
 });
+test('Markt reserviert getrennte Radplätze und Fußwege umgehen das eigene Rad',()=>{
+ run(`prepared();var plans=[];for(const id of ['000','001','002','003','004','005']){if(VILLAGE_PEOPLE.start(id,'shop',false))plans.push(VILLAGE.home(id).life.active.trip);}`);
+ assert.ok(run('plans.length>=2'));
+ assert.ok(run('plans.every((p,i)=>plans.slice(i+1).every(q=>Math.hypot(p.parking[0]-q.parking[0],p.parking[1]-q.parking[1])>=3.4))'));
+ assert.ok(run('plans.every(p=>Math.hypot(p.parking[0]-p.counter[0],p.parking[1]-p.counter[1])>=3)'));
+ assert.ok(run('plans.every(p=>Math.hypot(p.walk[0][0]-p.parking[0],p.walk[0][1]-p.parking[1])>.7)'));
+ assert.ok(run(`plans.every(p=>p.walk.every((q,i)=>{if(!i)return true;const a=p.walk[i-1],n=Math.ceil(Math.hypot(q[0]-a[0],q[1]-a[1])/.05);for(let j=0;j<=n;j++){const x=a[0]+(q[0]-a[0])*j/n-p.parking[0],z=a[1]+(q[1]-a[1])*j/n-p.parking[1];if(Math.abs(x*Math.cos(p.parkYaw)-z*Math.sin(p.parkYaw))<.65&&Math.abs(x*Math.sin(p.parkYaw)+z*Math.cos(p.parkYaw))<1.5)return false;}return true;}))`));
+ run('var homes=VILLAGE.state().homes;for(const h of Object.values(homes))if(h.life&&h.life.active)h.life.active.v=344;VILLAGE_PEOPLE.tick();');
+ assert.ok(run('Object.values(homes).every(h=>!h.life||!h.life.active)'));
+});
 test('Pedalumdrehung bleibt erreichbar: Kniegelenke und Füße folgen den Pedalen',()=>{
  for(let i=0;i<128;i++){
   const t=i/128*Math.PI*2,y=.3+.11*Math.cos(t)-.56,z=-.06+.11*Math.sin(t)+.22;
