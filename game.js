@@ -1476,6 +1476,16 @@ function missingHelpHTML(leg, o, i) {
   const price = S.money >= from ? "ab " + money(from) : "ab " + money(from) + " · dir fehlen " + money(from - S.money);
   return busyNote + `<button class="btn tiny shopjump" data-shop="${i}">🛒 Fahrzeug in ${esc(N[leg.from].short)} kaufen · ${price}</button>`;
 }
+/* v325: Erklärung + Ausweg, wenn kein freies Fahrzeug den Startpunkt einer Teilstrecke erreicht */
+function unreachableHTML(leg, o, i, rows) {
+  const mi = MODE_INFO[leg.mode], to = N[leg.from].short;
+  const where = [...new Set(rows.map(r => N[r.f.at].short))];
+  const whereTxt = where.slice(0, 4).map(esc).join(", ") + (where.length > 4 ? " …" : "");
+  return `<div class="warnbox unreach">🚫 <b>Keines deiner freien Fahrzeuge kommt nach ${esc(to)}.</b>
+      Sie stehen in ${whereTxt} – von dort führt kein ${esc(mi.name)}netz bis ${esc(to)}.</div>
+    <div class="modenote howto">💡 <b>So kommst du an ein passendes Fahrzeug:</b> Kaufe es direkt dort – es wird in ${esc(to)} bereitgestellt, ganz ohne Anfahrt, und bleibt danach für weitere Aufträge in der Gegend.</div>
+    ${missingHelpHTML(leg, o, i)}`;
+}
 let marketFocus = null;          /* { orderId, leg, ids, label, at } solange der Markt gefiltert ist */
 function openShopFor(legIdx) {
   const ps = planState; if (!ps) return;
@@ -1731,9 +1741,12 @@ function renderPlanner(fit) {
       .sort((a, b) => a.sc.s - b.sc.s || a.rc.t - b.rc.t);
     if (rows.length > 1 && isFinite(rows[0].sc.s)) rows[0].best = true;
     const LIMIT = 3;
-    let shown = ps.showAll && ps.showAll[i] ? rows : rows.slice(0, LIMIT);
+    /* v325: Kommt keines der freien Fahrzeuge hin, steht die Lösung (Fahrzeug direkt am Startpunkt kaufen) oben, die Liste der
+       nicht erreichbaren Fahrzeuge ist eingeklappt – statt acht Zeilen „kommt nicht hin“ vor dem einzigen Ausweg. */
+    const allBad = rows.length > 0 && !rows.some(r => r.rc.ok);
+    let shown = ps.showAll && ps.showAll[i] ? rows : allBad ? [] : rows.slice(0, LIMIT);
     const selRow = rows.find(r => r.f.uid === ps.assign[i]);
-    if (selRow && !shown.includes(selRow)) shown = shown.concat(selRow);
+    if (selRow && !shown.includes(selRow) && !allBad) shown = shown.concat(selRow);
     const more = rows.length - shown.length;
     const via = d.leg.nodes.length > 2
       ? `<div class="via">über ${d.leg.nodes.slice(1, -1).map(n => esc(N[n].short)).join(" · ")}</div>` : "";
@@ -1752,17 +1765,17 @@ function renderPlanner(fit) {
         <span class="leg-dist">${kmf(d.dist || d.leg.dist)}</span></div>
       <div class="leg-route">${esc(d.leg.fa || (i === 0 ? addrText(oPick(o), true) : N[d.leg.from].name))} <b>→</b> ${esc(d.leg.fb || (i === ev.detail.length - 1 ? addrText(oDrop(o), true) : N[d.leg.to].name))}</div>
       ${via}${qtyLine}${xsLine}${when}
+      ${allBad ? unreachableHTML(d.leg, o, i, rows) : ""}
       ${rows.length
         ? `<div class="vpick" data-leg="${i}">
-             <div class="vp-h">Fahrzeug wählen <small>· passendstes zuerst</small></div>
+             ${shown.length ? `<div class="vp-h">Fahrzeug wählen <small>· passendstes zuerst</small></div>` : ""}
              ${shown.map(r => vehOptHTML(r, i, r.f.uid === ps.assign[i])).join("")}
-             ${more > 0 ? `<button class="vmore" data-more="${i}">+ ${more} weitere${more === 1 ? "s" : ""} Fahrzeug${more === 1 ? "" : "e"} zeigen</button>` : ""}
+             ${more > 0 ? `<button class="vmore" data-more="${i}">${allBad ? "ℹ️ " + more + " Fahrzeug" + (more === 1 ? "" : "e") + ", die nicht hinkommen, zeigen" : "+ " + more + " weitere" + (more === 1 ? "s" : "") + " Fahrzeug" + (more === 1 ? "" : "e") + " zeigen"}</button>` : ""}
            </div>`
         : `<div class="warnbox">Kein freies Fahrzeug: ${mi.name}, ${door ? "ab " + kgf(o.weight / D2D_TRIPS) + " Nutzlast (mehrere Fahrten)" : "mind. " + kgf(o.weight)}${cg.req.length ? ", " + cg.req.map(flagName).join(" + ") : ""}${d.leg.maxHop > 400 ? ", Reichweite " + kmf(d.leg.maxHop) : ""}.</div>`}
       ${modeNote(d.leg, o, ps)}
       ${typeof legEventNote === "function" ? legEventNote(d.leg) : ""}
-      ${rows.length && !rows.some(r => r.rc.ok) ? `<div class="warnbox">Keines der freien Fahrzeuge erreicht ${esc(N[d.leg.from].short)} über das ${esc(mi.name)}netz. Stelle ein passendes Fahrzeug direkt am Ladeort bereit.</div>` : ""}
-      ${missingHelpHTML(d.leg, o, i)}
+      ${allBad ? "" : missingHelpHTML(d.leg, o, i)}
     </div>`;
   }).join("");
 
