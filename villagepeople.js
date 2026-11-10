@@ -23,6 +23,7 @@ const VILLAGE_PEOPLE = (() => {
       if(Math.abs(counter[1]-VILLAGE_SITE.main)<1.18)continue;
       const space=(Number(p.id)%3-1)*.9,parking=[counter[0]+right[0]*(1.8+space),counter[1]+right[1]*(1.8+space)];
       if(Math.abs(parking[1]-VILLAGE_SITE.main)<1.75)parking[1]=VILLAGE_SITE.main+Math.sign(parking[1]-VILLAGE_SITE.main)*1.75;
+      if(VILLAGE_SITE.blocked(...parking)||VILLAGE_SITE.blocked(...counter))continue;
       const path=navPath(5,18.5,parking[0],parking[1],'besucher'),walk=path&&navPath(parking[0],parking[1],counter[0],counter[1],'besucher');
       if(path&&walk)return {oid:o.id,center:c,market,parking,counter,path,walk,ry:Math.atan2(c[0]-counter[0],c[1]-counter[1]),parkYaw:Math.abs(parking[1]-VILLAGE_SITE.main)<4?Math.PI/2:ry};
     }return null;
@@ -38,7 +39,8 @@ const VILLAGE_PEOPLE = (() => {
       const walkToBike=[A.d,[A.park[0]+p.side*1.55,A.d[1]],[A.park[0]+p.side*1.55,A.stand[1]],A.stand];
       steps=[move('walk',walkToBike),wait('unlock',A.stand,1.2,Math.PI),move('push',exit),wait('look',A.mount,1.1,Math.PI),wait('mount',A.mount,2.4,Math.PI),move('ride',out),wait('dismount',trip.parking,2.4,trip.parkYaw),move('walk',trip.walk),wait('buy',trip.counter,7,trip.ry),move('walk',trip.walk.slice().reverse()),wait('mount',trip.parking,2.4,trip.parkYaw),move('ride',back),wait('dismount',A.back,2.4,0),move('push',entry),wait('lock',A.stand,1.2,Math.PI),move('walk',walkToBike.slice().reverse())];life.shopDay=day;
     }
-    life.active={kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
+    for(const s of steps){if(['walk','push'].includes(s.kind)){const route=VILLAGE_SITE.safePath(s.pts);if(!route){W.lastBlocked={kind:s.kind,pts:s.pts};return false;}s.pts=route;s.duration=Math.max(.2,len(route)/speed[s.kind]);}}
+    life.active={v:344,kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
   }
   function buy(h,L){if(L.attempted)return;L.attempted=true;const M=L.trip;if(!M||!stallObj(M.market)||stallObj(M.market).id!==M.oid||M.market&&!farmAreaOpen('see'))return;
     const at=farmCenter(stallObj(M.market));if(M.center&&Math.hypot(at[0]-M.center[0],at[1]-M.center[1])>.1)return;
@@ -48,6 +50,8 @@ const VILLAGE_PEOPLE = (() => {
   }
   function tick(){if(!farmOn())return;const T=VILLAGE.state(),day=Math.floor(S.time/DAY),m=S.time%DAY;
     for(const p of VILLAGE_DATA.plots){const h=T.homes[p.id];if(!h.resident)continue;const life=h.life||(h.life={});let L=life.active;
+      if(L&&L.v!==344){life.active=null;L=null;}
+      if(L&&L.blocked){L.at+=Math.max(0,S.time-(L.lastTime??S.time));L.lastTime=S.time;continue;}if(L)L.lastTime=S.time;
       if(L){let n=0;while(L&&n++<32){const step=L.steps[L.index],end=L.at+step.duration;if(S.time<end)break;
           /* Am Markt erst zum Tresen gehen, wenn der vorherige Kunde Platz macht. */
           if(L.trip&&L.index===6&&Object.values(T.homes).some(o=>o!==h&&o.life&&o.life.active&&o.life.active.trip&&o.life.active.trip.oid===L.trip.oid&&o.life.active.index>=7&&o.life.active.index<=9)){
@@ -99,7 +103,7 @@ const VILLAGE_PEOPLE = (() => {
   function ridePose(e,phase){e.hip.rx=.17;e.arms.forEach(a=>{a.upper.rx=-.95;a.lower.rx=-.75;});e.legs.forEach((l,i)=>{const t=phase+i*Math.PI;legIK(l,.3+.11*Math.cos(t)-.56,-.06+.11*Math.sin(t)+.22);l.thigh.rz=(i?-1:1)*.19;l.foot.rz=-l.thigh.rz;});}
   function step(dt,time){if(!W.R||!farmOn())return;tick();sync();
     for(const {p,h}of VILLAGE.residents()){const e=W.actors.get(p.id),A=access(p),L=h.life&&h.life.active,n=e.node,b=e.bike;
-      b.x=A.park[0];b.z=A.park[1];b.y=.04;b.ry=p.ry;b.rz=.10;b.visible=!VILLAGE.obstruction(p);n.visible=!!L&&b.visible;
+      b.x=A.park[0];b.z=A.park[1];b.y=.04;b.ry=p.ry;b.rz=.10;b.visible=!VILLAGE.obstruction(p);n.visible=!!L&&b.visible;if(!L)e.prevN=null;
       e.paper.visible=e.bag.visible=e.basketBag.visible=false;if(!L)continue;
       const q=sample(L),stage=q.kind,moving=['walk','push','ride'].includes(stage),phase=q.distance/1.05*Math.PI*2;
       n.x=q.x;n.z=q.z;n.y=.04+(moving&&stage!=='ride'?Math.abs(Math.sin(phase))*.045:0);n.ry=q.ry;n.rx=n.rz=e.hip.rx=0;
@@ -127,6 +131,8 @@ const VILLAGE_PEOPLE = (() => {
       if(pb&&Math.hypot(pb.x-b.x,pb.z-b.z)<8){const bx=b.x,bz=b.z,br=b.ry,dr=turn(br,pb.ry)*(1-k);b.x=pb.x+(b.x-pb.x)*k;b.z=pb.z+(b.z-pb.z)*k;b.ry=br+dr;
         if(bikeAction){const x=n.x-bx,z=n.z-bz;n.x=b.x+x*Math.cos(dr)+z*Math.sin(dr);n.z=b.z-x*Math.sin(dr)+z*Math.cos(dr);n.ry=b.ry;}}
       const pn=e.prevN;if(!bikeAction&&pn&&Math.hypot(pn.x-n.x,pn.z-n.z)<3){n.x=pn.x+(n.x-pn.x)*k;n.z=pn.z+(n.z-pn.z)*k;n.ry=pn.ry+turn(pn.ry,n.ry)*k;}
+      L.blocked=false;if(VILLAGE_SITE.blocked(n.x,n.z)){L.blocked=true;n.visible=false;if(e.prevN&&!VILLAGE_SITE.blocked(e.prevN.x,e.prevN.z)){n.x=e.prevN.x;n.z=e.prevN.z;n.visible=true;}}
+      else if(e.prevN&&!VILLAGE_SITE.clearLine([e.prevN.x,e.prevN.z],[n.x,n.z])){L.blocked=true;n.x=e.prevN.x;n.z=e.prevN.z;}
       e.prevB={x:b.x,z:b.z,ry:b.ry};e.prevN={x:n.x,z:n.z,ry:n.ry};
     }
   }

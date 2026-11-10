@@ -18,6 +18,10 @@ const VILLAGE_VIEW = (() => {
     W.road=add(fmesh("village-road343",()=>roadMesh(false)),{shadow:false});
     W.extension=add(fmesh("village-grid343",()=>roadMesh(true)),{shadow:false,visible:VILLAGE.state().expanded});
     W.fences=add(null,{shadow:true});
+    const sign=new FM.MB();for(const x of [-.8,.8])sign.box(.12,1.8,.12,0x715035,{x});sign.box(1.85,.9,.12,0x9a714b,{y:.8});sign.box(2.0,.1,.4,0x82533c,{y:1.72});
+    W.sign=add(fmesh("town-sign344",()=>sign),{x:-64.5,z:24});
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=192;const ctx=canvas.getContext('2d');ctx.fillStyle='#e9d7ac';ctx.fillRect(0,0,512,192);ctx.fillStyle='#3d5137';ctx.textAlign='center';ctx.font='bold 70px sans-serif';ctx.fillText('Seeblick',256,106);ctx.font='25px sans-serif';ctx.fillText('Nachbarschaft · Stadtbau',256,151);
+    W.R.addChild(W.sign,W.R.node(null,{y:1.25,z:.071,decal:{t:W.R.texture(canvas),w:1.7,h:.65}}));
     sync();
   }
   function sync(){
@@ -27,13 +31,14 @@ const VILLAGE_VIEW = (() => {
         e={garden:add(fmesh("village-garden343:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
       const blocked=!!VILLAGE.obstruction(p),built=!!h.resident||h.status==="ready";
       e.marker.visible=!p.starter&&T.expanded&&!built;
+      e.site.mesh=fmesh("village-site344:"+(h.type||"holz"),()=>VILLAGE_SITE.construction(h.type||"holz"));
       e.site.visible=h.status==="building"&&!blocked;
       e.garden.visible=built&&!blocked;
       if((built||h.status==="building")&&e.type!==h.type){
         for(const n of [e.house,e.lit])if(n){const i=W.R.nodes.indexOf(n);if(i>=0)W.R.nodes.splice(i,1);}
         const k=D.houses[h.type],style=Number(p.id)%3;
         e.garden.mesh=fmesh("village-garden343:"+p.id+":"+h.type,()=>garden(p));
-        e.house=add(fmesh("village-house:"+style,()=>RENT.homeMesh(style)),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:built&&!blocked});
+        e.house=add(fmesh("village-house344:"+h.type+":"+style,()=>VILLAGE_SITE.homeMesh(h.type,style)),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:built&&!blocked});
         e.lit=add(fmesh("village-light340",()=>RENT.homeLights()),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:false,shadow:false,glow:.55});e.type=h.type;
       }
       if(e.house){e.house.visible=built&&!blocked;if(built)e.house.sy=D.houses[h.type].scale;}
@@ -62,11 +67,11 @@ const VILLAGE_VIEW = (() => {
       if(e.lit&&e.lit.visible&&Math.random()<dt*.2){const k=D.houses[h.type],c=VILLAGE.local(p,-2.95*k.scale,-.2*k.scale);W.R.emit({x:c[0],y:7*k.scale,z:c[1],vx:.08,vy:.35,vz:.05,life:2,size:.18,size2:.5,col:[.72,.72,.7,.2],drag:.8});}
     }
   }
-  function pick(x,y){if(!W.R)return null;const ray=W.R.ray(x,y);let best=null;
+  function pick(x,y){if(!W.R)return null;const ray=W.R.ray(x,y);const sd=W.R.hitBox(ray,[-65.5,0,23.7],[-63.5,1.9,24.3]);let best=sd!=null?{d:sd,id:null}:null;
     for(const p of D.plots){const h=VILLAGE.home(p.id),e=W.homes.get(p.id);if(!e||(!e.garden.visible&&!e.marker.visible&&!e.site.visible))continue;
       const d=W.R.hitBox(ray,[p.x-4.6,0,p.z-3.2],[p.x+4.6,h.resident||h.status==="ready"?6.5:2.3,p.z+3.2]);
       if(d!=null&&(!best||d<best.d))best={d,id:p.id};}return best;}
-  function tags(){if(!W.R||!farmOn())return [];const T=VILLAGE.state(),out=[{id:"town",x:-62,y:2,z:24,html:"🏘️ "+esc(T.name),open:()=>VILLAGE_UI.open()}];
+  function tags(){if(!W.R||!farmOn())return [];const T=VILLAGE.state(),out=[];
     for(const p of D.plots){const h=T.homes[p.id];if(W.R.cam.dist>65||Math.hypot(W.R.cam.tx-p.x,W.R.cam.tz-p.z)>34)continue;
       /* v341: keine Namensschilder über bewohnten Häusern mehr (Antippen des Hauses öffnet weiterhin die Nachbarschaft, siehe pick) */
       if(!h.resident&&(h.status==="building"||h.status==="ready"))out.push({id:p.id,x:p.x,y:h.status==="ready"?6:2.5,z:p.z,html:h.status==="building"?"🏗️ "+p.number:"🏡 Wohnanfragen",open:()=>VILLAGE_UI.open(p.id)});}

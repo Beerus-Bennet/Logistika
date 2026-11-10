@@ -57,7 +57,8 @@ const VILLAGE_SITE = (() => {
     const left=expanded?-117:-81,right=-43,breaks=(expanded?roads.slice():[roads[0]]).sort((a,c)=>a-c);let at=left;
     for(const x of breaks.concat([right+half+radius])){const stop=Math.min(right,x-half-radius);if(stop>at)b.plate(stop-at,walk,paving,{x:(at+stop)/2,z:edge+curb+walk/2,y0:.047});at=x+half+radius;}
     if(!expanded){
-      b.disc(2.1,32,paving,{x:-62,z:64,y0:.046});b.disc(1.33,32,asphalt,{x:-62,z:64,y0:.049});
+      /* v344: Provisorischer Wendeplatz zwischen letztem Grundstück und künftigem Block. */
+      b.disc(3.18,48,paving,{x:-62,z:65.2,y0:.046});b.disc(2.4,48,asphalt,{x:-62,z:65.2,y0:.049});
       /* Den zweiten Anschluss bis zur Erschließung wieder mit Bordkante schließen. */
       b.plate((half+radius)*2,.12,0xb9b3a6,{x:-98,z:main+.96,y0:.032});
     }else{
@@ -89,5 +90,36 @@ const VILLAGE_SITE = (() => {
   function gateMesh(){const b=new FM.MB();for(const y of [.23,.47])b.box(.065,.075,1.2,0x9b7954,{y,z:.6});for(let i=0;i<6;i++)b.box(.045,.47,.085,0xab8b66,{z:.1+i*.2,y:.09});return b;}
   function mailboxMesh(){const b=new FM.MB();b.box(.07,.87,.07,0x67503c);b.box(.28,.28,.31,0x536b71,{y:.87});b.box(.31,.035,.34,0x71878b,{y:1.15});b.box(.12,.018,.018,0x263b40,{y:1.08,z:.164});return b;}
   function mailFlap(){const b=new FM.MB();b.box(.25,.23,.025,0x617e83,{y:-.23});b.box(.05,.025,.027,0xd2bf88,{y:-.18,z:.025});return b;}
-  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap};
+  /* v344: Umrisse gelten für Füße UND Körper, auch bei älteren gespeicherten Wegen. */
+  function blocked(x,z,r=.34){
+    for(const p of VILLAGE_DATA.plots){const h=VILLAGE.home(p.id);if(!h.resident&&!['ready','building'].includes(h.status))continue;
+      const k=VILLAGE_DATA.houses[h.type],dx=x-p.x,dz=z-p.z,lx=dx*Math.cos(p.ry)-dz*Math.sin(p.ry),lz=dx*Math.sin(p.ry)+dz*Math.cos(p.ry);
+      const boxes=[[-3,-2.6,3,4.65]];if(h.type==='familie')boxes.push([-5.9,-2.2,-2.2,2.2]);
+      if(boxes.some(b=>lx>b[0]*k.scale-r&&lx<b[2]*k.scale+r&&lz>b[1]*k.scale-r&&lz<b[3]*k.scale+r))return true;
+      const a=lot(p),g=gate(p),back=p.side<0?a[0]:a[2],pad=r+.045;
+      if(z>=a[1]-pad&&z<=a[3]+pad&&Math.abs(x-back)<pad)return true;
+      if(x>=a[0]-pad&&x<=a[2]+pad&&(Math.abs(z-a[1])<pad||Math.abs(z-a[3])<pad))return true;
+      if(Math.abs(x-g[0])<pad&&z>=a[1]-pad&&z<=a[3]+pad&&Math.abs(z-g[1])>.6-r)return true;
+    }
+    return S.farm.objs.some(o=>{if(['path','road','field','tree','board'].includes(o.t))return false;const s=farmSize(o),a=o.x-FG/2,b=o.z-FG/2;return x>a-r&&x<a+s[0]+r&&z>b-r&&z<b+s[1]+r;});
+  }
+  function clearLine(a,b,r=.34){const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.15));for(let i=0;i<=n;i++)if(blocked(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,r))return false;return true;}
+  function safePath(points,r=.34){const out=[points[0]];if(blocked(...points[0],r))return null;
+    for(let i=1;i<points.length;i++){const a=out[out.length-1],b=points[i];if(clearLine(a,b,r)){out.push(b);continue;}
+      const step=.5,pad=8,x0=Math.floor(Math.min(a[0],b[0])-pad),z0=Math.floor(Math.min(a[1],b[1])-pad),w=Math.ceil((Math.abs(a[0]-b[0])+2*pad)/step)+1,H=Math.ceil((Math.abs(a[1]-b[1])+2*pad)/step)+1;
+      const start=[Math.round((a[0]-x0)/step),Math.round((a[1]-z0)/step)],end=[Math.round((b[0]-x0)/step),Math.round((b[1]-z0)/step)],key=q=>q[1]*w+q[0],world=q=>[x0+q[0]*step,z0+q[1]*step],queue=[start],prev=new Map([[key(start),null]]);let found=null;
+      for(let j=0;j<queue.length&&j<30000;j++){const q=queue[j];if(q[0]===end[0]&&q[1]===end[1]&&clearLine(world(q),b,r)){found=q;break;}
+        for(const [dx,dz]of [[1,0],[-1,0],[0,1],[0,-1]]){const v=[q[0]+dx,q[1]+dz],k=key(v);if(v[0]<0||v[0]>=w||v[1]<0||v[1]>=H||prev.has(k)||!clearLine(j===0?a:world(q),world(v),r))continue;prev.set(k,q);queue.push(v);}}
+      if(!found)return null;const path=[];for(let q=found;q;q=prev.get(key(q)))path.push(world(q));path.reverse();out.push(...path,b);
+    }return out;
+  }
+  function homeMesh(type,style){const b=RENT.homeMesh(style);if(type==='familie'){
+    b.box(3.6,2.65,4.2,0xd4c5a7,{x:-4.05,z:0});b.roof(3.9,4.5,1.45,0x81594b,{x:-4.05,y:2.65});
+    for(const z of [-1.1,1.1]){b.box(.045,1.05,.85,0x536879,{x:-5.87,y:1,z});b.box(.055,.07,.92,0xe9dfcd,{x:-5.9,y:1.5,z});}
+    b.box(1.3,1.05,.04,0x536879,{x:-4.05,y:1,z:2.12});
+  }return b;}
+  function construction(type){const b=new FM.MB(),family=type==='familie',w=family?8.8:5.8,cx=family?-1.5:0;
+    b.plate(w,7.4,0xb7b0a4,{x:cx,z:.8,y0:.055});for(const x of family?[-5.7,-2.6,2.6]:[-2.6,2.6])for(const z of [-2.1,2.1,3.9])b.box(.14,2.7,.14,0xc69a66,{x,z});
+    for(const y of [1.3,2.6])b.box(w,.12,.12,0xc69a66,{x:cx,y,z:-2.1});if(family)b.box(3.6,.25,4.2,0xc3b9a6,{x:-4.05,z:0,y:.1});return b;}
+  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
 })();

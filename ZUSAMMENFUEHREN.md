@@ -1,3 +1,7 @@
+## v344 – Kollisionen, Hausvarianten, Wendeplatz und Ortstafel
+
+Basis main fd81807 (PR #62). Gebäudeumrisse einschließlich Veranda/Treppe und Körperradius in `VILLAGE_SITE.blocked`; sichere Wege und Laufglättung prüfen dieselben Hindernisse. Ältere aktive Abläufe werden ohne erneuten Verkauf beendet. Familienhaus mit eigenem Anbau sowie passendem Baugrund/Rohbau; Haustürpunkte vor die Stufen verlegt. Wendeplatz nur vor Erweiterung. Anklickbare Holztafel ersetzt die schwebende Seeblick-Blase. Zusammengehörig: village.js, villagesite.js, villagepeople.js, villageview.js und Cache-Verweise v344. Vor/nach Push main und alle PRs prüfen.
+
 ## v343 – Straßen, Zäune und Bewohnerabläufe in Seeblick
 
 Branch `claude/town-roads-fences`, Basis aktuelles main v342 (`36301a0`, PR #61). Vor und nach dem Upload alle offenen PRs und den Hauptstand erneut prüfen; keine automatische Veröffentlichung/Zusammenführung.
