@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v335 – Produktionsfenster: kurze Hinweise, größere Schrift (auch für ältere Spieler)
+**Wunsch Bennet:** Der Sonnenstrom-Text im Produktionsfenster soll auf eine Zeile gekürzt werden, und alles soll größer skaliert werden, damit auch ältere Menschen das Spiel gut lesen können.
+
+**Ursache (`worldview.js` `energyHTML`, `style.css`):** Der Hinweis zum Strom war ein dreizeiliger Fließtext. Im Produktionsfenster auf dem Handy (v286) standen Schriften bei 9 bis 12 px, Plätze 48 px, Rezeptkarten sehr dicht.
+
+**Lösung:**
+- **Hinweise einzeilig:** „☀️ Sonnenstrom läuft – Kessel aus.“, „🌙 Nacht: Kessel heizt (Mechaniker).“ bzw. „… – Mechaniker einstellen.“, „Kessel: Holzreste, Äste, Brennholz. ☀️ n/m Module.“
+- **Größer (nur Handy-Produktionsfenster `#farmSheet.mach`):** Plätze 48 → 64 px mit 36-px-Symbolen, Platzbeschriftung 9 → 12 px; Strombox 11/12 → 15/17 px mit 28-px-Symbol; Hinweise 10,5 → 14 px; Rezeptkarten: Titel 11,5 → 15,5 px, Zeilen 9 → 12,5 px, Symbole 28 → 36 px; Zutaten-Chips 12 → 15 px; Protokoll 10 → 13 px.
+- Die Logik ist unverändert.
+
+**Geprüft (Testbrowser, 390 × 844):** Gattersäge-Fenster: Strombox mit Hinweis in einer Zeile, Schrift deutlich größer, kein seitliches Überlaufen, Rezepttitel 15,5 px, Plätze 64 px, keine Konsolenfehler, Bildschirmfoto gesichtet. **Nicht geprüft:** am Handy; der Hinweis „Sonnenstrom läuft“ nur im Code (im Test ist kein volles Solardach da). Andere Fenster (Laden, Lager, Büros, Auftragskarten) sind noch in der bisherigen Größe. Sag mir, welche als Nächstes größer werden sollen. Eine globale Schriftstufe wäre auch möglich.
+
 ## v334 – Hof: „fertig“-Blasen sitzen wieder am Objekt statt in der oberen linken Ecke
 **Meldung Bennet:** Oben links unter der Kopfleiste sieht man weiße Stellen, die periodisch auftauchen. Der Fehler aus v332 war damit nicht behoben.
 
