@@ -2008,6 +2008,13 @@ function stallCollectAll(market) {
   return m;
 }
 /* Kundschaft kommt vorbei: teurer → seltener */
+/* v343: Sichtbare Nachbarn kaufen dieselben angebotenen Waren. Geld wird wie
+   bisher erst am Stand kassiert; ein bereits verkauftes Los zählt nie doppelt. */
+function stallCustomerSale(market,it,buyer){
+  const St=stallState(market);if(!St||!St.slots.includes(it)||!it||it.sold)return false;
+  it.sold=true;if(buyer)it.buyer=buyer;S.farm.stats.stallSold++;
+  farmXP(Math.max(1,Math.round(FITEMS[it.id].xp*it.n*.5)));farmEvent("stall:sold",1);return true;
+}
 function stallTick(market, dt) {
   const St = stallState(market);
   if (market && !stallObj(true)) return;
@@ -2017,10 +2024,7 @@ function stallTick(market, dt) {
     const r = it.p / Math.max(0.1, base);
     const chance = 0.045 * clamp(1.9 - r, 0.08, 1.4) * dt;
     if (Math.random() < chance) {
-      it.sold = true;
-      S.farm.stats.stallSold++;
-      farmXP(Math.max(1, Math.round(FITEMS[it.id].xp * it.n * 0.5)));
-      farmEvent("stall:sold", 1);
+      stallCustomerSale(market,it);
     }
   });
 }

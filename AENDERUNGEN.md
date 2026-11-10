@@ -1,5 +1,21 @@
 # Änderungen – kurz für den Kollegen
 
+## v343 – Seeblick: Straßen, Grundstücke und Bewohneralltag
+
+**Wunsch/Ursache:** Die Nebenstraße war breiter als die Hauptstraße und überdeckte diese mit einer Asphaltplatte. Hecken endeten vor dem Gehweg. Kleine Bewohner liefen ohne konkrete Tätigkeit im Kreis. Gewünscht sind stimmige Grundstücke sowie Postrunden und Fahrradeinkäufe mit Animationen im Arbeitermaßstab.
+
+**Lösung:**
+- Wohnstraßen in der Breite der vorhandenen Straße, gerundete Einmündungen, geöffnete Bordkanten und Vorfahrtsmarkierung; Hauptfahrbahn/Mittelmarkierung bleiben sichtbar. Zusammenhängende Gehwege, zunächst eine kleine Wendemöglichkeit, nach Ausbau zwei direkt angebundene Straßen mit Querstraßen. Keine parallele Straße direkt neben der Hauptstraße oder Stummel ins Feld.
+- Grundstücke bis zum Gehweg, Holzlattenzäune mit Pfosten und einmal gezeichneten gemeinsamen Grenzen. Je ein bewegliches Tor am Haustürweg, Briefkasten daneben und eigener Fahrradstellplatz. Häuser, Verträge und Grundstückskennungen bleiben erhalten. Lieferungen und Bewohner benutzen dieselbe Toröffnung.
+- Bewohner im Arbeitermaßstab 1,45 mit Hüft-, Arm-, Knie- und Fußgelenken, wegabhängigem Gang sowie geglätteten Richtungs-/Positionswechseln. Postrunde: hinausgehen, Tor passieren, Briefkasten öffnen, Brief herausnehmen, Klappe schließen und heimkehren.
+- Fahrradeinkauf: Rad lösen, zum Straßenrand schieben, umsehen, mit Stützbein aufsteigen, fahren/pedalieren, außerhalb der Fahrbahn parken, absteigen und einkaufen. Anschließend mit Tasche zurück, aufsteigen, heimfahren, Rad abstellen und ins Haus gehen. Eigene Fahrradmodelle mit Rädern, Pedalen und Korb. Andere Kunden warten beim Rad, solange der Tresen besetzt ist.
+- Letzte Wege zum tatsächlichen Stand über die bestehende Wegsuche. Fischmarkt erst nach Seefreigabe und gebautem Markt. Höchstens ein bezahlbares angebotenes Lebensmittel-Los innerhalb der Fahrradmenge; keine Käufe von Tierfutter, Abfällen/Ködern, entfernten/versetzten Ständen, überteuerten oder schon verkauften Losen. Käufername am Los; kein zweiter Warenabzug. Geld weiterhin erst beim Kassieren am Stand. Gemeinsamer Verkaufsabschluss für bisherige Kunden und Nachbarn.
+- Optionale Tagesmarken und aktiver Ablauf in `home.life`, auch außerhalb der Hofansicht fortgesetzt. Speichern unterwegs oder nach dem Kauf beginnt keinen zweiten Verkauf. `villagesite.js` und `villagepeople.js` neu im Offline-Shell. Service Worker/geänderte Assets v343; aktuelles main v342 (`36301a0`, PR #61) einschließlich Kamerakorrektur und festen Hochsitzwolken enthalten.
+
+**Geprüft:** `village-life-v343.test.js`: zehn Gruppen für Einmündung, unveränderte Straßendaten, Grundstücke/gemeinsame Grenzen, Tor-/Lieferwege, Post, Einkaufen ohne doppelte Entnahme/Auszahlung, Sperren, Warteschlange, 128 Pedalstellungen mit erreichbaren Fußzielen und versetzten Markt. Bestehende Stadt-/Vertrags-, Außenlager-/Großkunden- und Tür-zu-Tür-Prüfungen bestanden. Chromium/Playwright mit echtem WebGL: Einmündung/Zäune, Postrunde, Hof-/Fischmarkt mit echter Wegsuche und Ware, Auf-/Absteigen und Pedalieren; mobiler Viewport 390 × 844 mit Laden während der Fahrt und nach dem Einkauf, genau ein Verkauf. Keine JavaScript-Fehler. Animation aufgezeichnet und Einzelbilder gesichtet. Syntax und Cache-Reihenfolge geprüft.
+
+**Nicht geprüft:** echtes iPhone/Safari, der individuelle Nutzer-Spielstand und langfristig alle 20 Haushalte auf dem Gerät.
+
 ## v342 – Hochsitz: Wolken bleiben beim Hoch- und Runterschauen fest am Himmel
 **Meldung Bennet:** Beim Hoch- und Runterschauen skalieren die Wolken immer wieder neu und verschieben sich.
 
