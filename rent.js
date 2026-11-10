@@ -1312,6 +1312,10 @@ const RENT = (() => {
     };
   }
 
-  return { phase, PHASES, H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, DOCK, DOCK_NEED, DOCK_COST, clear, attach, pick, tagInfo, tagDock, dockSheet, dockBuildNow, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
+  /* v340: Wiederverwendbare Architektur, ohne die Hütte oder ihren Mietvertrag zu verändern. */
+  function homeMesh(style) {const keep={...C},pal=[{log:0xa8794e,log2:0x936b46,board:0xb48c62,roof:0x4b5663,roofD:0x39424d},{log:0xb29d7a,log2:0xa18d6c,board:0xc4b18f,roof:0x95584a,roofD:0x714036},{log:0x7d8a70,log2:0x6b785e,board:0x96a18b,roof:0x4b5057,roofD:0x353a41}][style%3];
+    Object.assign(C,pal);try{return hutMesh();}finally{Object.assign(C,keep);}}
+  function homeLights(){const b=MB();b.merge(litMesh(0),{});b.merge(litMesh(1),{});return b;}
+  return { homeMesh,homeLights,phase, PHASES, H, NEED, COST, LV, RENT_DAY, MAINT, ISSUES, CYCLE, PATH, CAR, DOCK, DOCK_NEED, DOCK_COST, clear, attach, pick, tagInfo, tagDock, dockSheet, dockBuildNow, sheet, step, tick, built, unlocked, buildNow, repair, maintain,
     _st: st, _doing: (t, now) => doing(t, now), _plan: (t, d) => plan(t, d), _lights: (t, now) => lightsOn(t, now), _W: W, _spawnIssue: () => spawnIssue(st()) };
 })();

@@ -41,6 +41,7 @@ function farmNew() {
   const add = (t, x, z, extra) => farmAddObj(Object.assign({ t, x, z }, extra || {}));
   farmStartHof(add, F);
   erbeInit(F, true);
+  if (typeof VILLAGE !== "undefined") VILLAGE.state();
   farmBoundsUpdate();
   return F;
 }
@@ -216,6 +217,7 @@ function farmWildKeep() {
 }
 function farmWildOk(x, z, w, d, except) {
   const wx0 = x - FG / 2, wz0 = z - FG / 2, wx1 = wx0 + w, wz1 = wz0 + d;
+  if (typeof VILLAGE !== "undefined" && VILLAGE.overlaps(wx0,wz0,w,d)) return false;
   if (typeof farmCamRect === "function") { const cr = farmCamRect(); if (wx0 < cr[0] + 0.5 || wx1 > cr[2] - 0.5 || wz0 < cr[1] + 0.5 || wz1 > cr[3] - 0.5) return false; }
   /* Hof samt Zaun und künftigem Ausbau: 0,7 m Abstand */
   const H = typeof FHOF_MAX !== "undefined" ? FHOF_MAX : null;
@@ -1195,6 +1197,12 @@ function makeFarmOrder(area) {
   if ((!area || area === "hof") && (farmBulkCount() === 0 || Math.random() < .35)) {
     const bulk = farmBulkMake(); if (bulk) return bulk;
   }
+  /* v340: Der Hof beginnt bei seinen sechs Nachbarn. Empfehlungen erweitern
+     den Kundenkreis; erst später mischen sich wieder entferntere Bestellungen dazu. */
+  if ((!area || area === "hof") && typeof VILLAGE !== "undefined") {
+    const neighbor = VILLAGE.nextOrder(); if (neighbor) return neighbor;
+    if (flv() < 5) return null;
+  }
   const lv = flv();
   const towns = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv <= lv && N[id] && isUnlocked(id));
   if (!towns.length) return null;
@@ -1475,6 +1483,7 @@ function farmGiveBack(o) {
 function farmPayFactor(o) { return o.farm ? 1 + ((o.farm.q || 3) - 3) * 0.08 : 1; }
 function farmDelivered(o, pay) {
   if (!S.farm) return;
+  if (typeof VILLAGE !== "undefined") VILLAGE.delivered(o);
   farmAboDelivered(o);
   S.farm.stats.deliv++;
   S.farm.stats.earned += pay;
@@ -1494,6 +1503,7 @@ function farmDelivered(o, pay) {
    Statt des großen Planers: freie Fahrzeuge am Hof, die die Bestellung
    schaffen – mit Fahrzeit und Kosten. Ein Tipp schickt es los.        */
 function farmVariant(o, mode) {
+  if (o.village && !o.village.friend && typeof VILLAGE !== "undefined") return VILLAGE.variants(o, mode)[0] || null;
   const e = dijkstra(o.from, o.to, mode, "time", o.cargo, o.weight);
   if (!e || !e.length) return null;
   const legs = toLegs(e);
@@ -1654,6 +1664,7 @@ function farmValue() {
   });
   farmStores().forEach(st => { v += FSTORE[st].cost.slice(0, (S.farm.cap[st] || 1) - 1).reduce((a, b) => a + b, 0); });
   for (const st of Object.keys(FEXTERNAL)) v += farmExternalTotal(st, farmExternalLevel(st)) * .7;
+  if (typeof VILLAGE !== "undefined") v += VILLAGE.value();
   for (const id in S.farm.inv) v += farmStackV(id, S.farm.inv[id].n) * 0.8;   /* v59: Fisch nach Gewicht */
   return Math.round(v / 500) * 500;
 }
@@ -1695,6 +1706,7 @@ if (typeof N !== "undefined" && N.potsdam) N.potsdam.farmX = "hof";
 function farmMigrate() {
   let F = S.farm;
   if (!F || F.sold) return;
+  if (typeof VILLAGE !== "undefined") VILLAGE.state();
   farmHallGrow(F);
   /* v40: Die Ostsee-Fischerei gibt es nicht mehr – aus ihr wird Opas Hof */
   if (F.kind === "fisch") { farmConvertFisch(F); F = S.farm; }
@@ -1950,6 +1962,7 @@ function roadNodes(a, b) {
 /* Linie einer Strecke, so wie sie auf der Karte gefahren wird */
 function roadDisp(pts) {
   if (!pts || pts.length < 2 || !roadOn()) return pts;
+  if (pts.gm && pts.gm.every(m => m === "v")) return pts;  /* v340: eigenes Wohnstraßennetz, nicht auf OSM versetzen */
   const c = ROADC.get(pts);
   if (c) return c.pts;
   const ins = pts.map(roadIn);

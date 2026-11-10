@@ -356,11 +356,12 @@ const G3 = (() => {
   /* gesperrte Gebiete: Rechteck (x0, z0, x1, z1) wird grau, außer im
      wachsenden Kreis (cx, cz, Radius, Stärke) – so deckt sich ein Gebiet
      beim Freischalten Stück für Stück auf */
-  uniform vec4 uLockR[6]; uniform vec4 uLockC[6]; uniform int uLockN;
+  /* v340: Die Ortsaussparung darf die übrigen Sperrgebiete nicht abschneiden. */
+  uniform vec4 uLockR[12]; uniform vec4 uLockC[12]; uniform int uLockN;
   out vec4 o;
   float lockAmt(vec2 p){
     float g = 0.0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 12; i++) {
       if (i >= uLockN) break;
       vec4 r = uLockR[i], c = uLockC[i];
       /* v274: Nur außen weich ausblenden, damit angrenzende Sperrflächen keine hellen Nähte bilden. */
@@ -1040,10 +1041,10 @@ const G3 = (() => {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-      const LK = R.locks.filter(l => l.a > 0.001).slice(0, 6);
+      const LK = R.locks.filter(l => l.a > 0.001).slice(0, 12);
       let lkA = null, lkB = null;
       if (LK.length) {
-        lkA = new Float32Array(24); lkB = new Float32Array(24);
+        lkA = new Float32Array(48); lkB = new Float32Array(48);
         LK.forEach((l, i) => { lkA.set(l.r, i * 4); lkB.set([l.c[0], l.c[1], l.rad || 0, l.a], i * 4); });
       }
       /* gemeinsame Szenen-Uniforms – für das Hauptprogramm und die Instanzvariante (v90) */
