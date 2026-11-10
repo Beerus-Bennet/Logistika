@@ -58,9 +58,30 @@ function kmFactor(c, km) {
   return clamp(1.1 - km / ref, 0.5, 1.1);
 }
 function carValue(c, cond, km, luck) { return carMarket(c) * AH_COND[cond].f * kmFactor(c, km) * (luck || 1); }
+/* v327: Haltebonus. Steht ein Sammlerauto in der Garage (nicht als Wertkurier unterwegs, nicht in der Auktion), gibt es alle 21 Tage eine
+   Marktpreis-Anpassung zu deinen Gunsten: ab 1 Mio. € Marktwert +6 %, ab 250.000 € +3,5 %, darunter +2 %. Sie wirkt im Marktwert und bei
+   der Auktion (g.hold, Faktor ≥ 1, kumuliert) – wer das Auto verkauft, bekommt sie bezahlt. */
+const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 2.5;      /* Obergrenze: höchstens das 2,5-Fache durch den Haltebonus */
+const holdRate = v => v >= 1e6 ? 0.06 : v >= 250000 ? 0.035 : 0.02;
 function gValue(g) {
   if (g.kind === "veh") return 0;
-  return nice(carValue(CAR[g.car], g.cond, g.km, g.luck));
+  return nice(carValue(CAR[g.car], g.cond, g.km, g.luck) * (g.hold || 1));
+}
+/* Täglich: fällige Anpassungen für Garagenautos. Alte Garagen starten ihre erste Frist am Tag des Updates (keine Nachzahlung). */
+function ahHoldTick() {
+  const A = ah(), out = [];
+  A.garage.forEach(g => {
+    if (g.kind === "veh") return;
+    if (g.fleet || g.consigned) { g.adjAt = S.time; return; }        /* nur ruhende Autos: Fahren und Einliefern setzen die Frist zurück */
+    if (g.adjAt == null) { g.adjAt = S.time; return; }
+    let n = 0;
+    while (S.time - g.adjAt >= AH_HOLD_DAYS * 1440 && n < 8) {
+      const base = gValue(g), r = holdRate(base);
+      g.hold = Math.min(AH_HOLD_MAX, Math.round((g.hold || 1) * (1 + r) * 10000) / 10000); g.adjAt += AH_HOLD_DAYS * 1440; n++;
+    }
+    if (n) out.push({ g, n });
+  });
+  return out;
 }
 function lotName(l) { return l.kind === "veh" ? vType(l.vt).name : carName(CAR[l.car]); }
 function wpick(obj) {
@@ -116,7 +137,7 @@ function makeLot(opt) {
     l.cond = g ? g.cond : +wpick(l.y >= 2010 ? { 1: 45, 2: 45, 3: 10 } : { 1: 15, 2: 35, 3: 30, 4: 13, 5: 7 });
     l.paint = g ? g.paint : (paintOfPhoto(c.id) || pick(CAR_PAINTS[c.b]));
     l.luck = g ? g.luck : rnd(0.93, 1.07);
-    l.val = Math.round(carValue(c, l.cond, l.km, l.luck));
+    l.val = Math.round(carValue(c, l.cond, l.km, l.luck) * (g && g.hold || 1));     /* v327: Haltebonus wird mitbezahlt */
     l.est = [nice(l.val * 0.85), nice(l.val * 1.12)];
   }
   l.start = nice(l.val * rnd(0.45, 0.62));
@@ -227,6 +248,11 @@ function dayAuction(days) {
   for (let d = 0; d < days; d++) CARS.forEach(c => {
     A.idx[c.id] = clamp((A.idx[c.id] || 1) * (1 + c.tr / 100 / 365), 0.3, 5);
     A.nz[c.id] = clamp(1 + ((A.nz[c.id] || 1) - 1) * 0.97 + (Math.random() - 0.5) * 0.012, 0.85, 1.15);
+  });
+  /* v327: Haltebonus für ruhende Garagenautos */
+  ahHoldTick().forEach(({ g, n }) => {
+    const nm = carName(CAR[g.car]), v = gValue(g);
+    toast("📈 Marktpreis-Anpassung: " + nm + (n > 1 ? " (" + n + " Anpassungen)" : "") + " – Marktwert jetzt " + money(v) + ", weil du ihn in der Garage lässt.", "ok", true);
   });
 }
 function canHammer() {
@@ -946,6 +972,8 @@ function garageCardHTML(g) {
       <div class="lot-name"><b>${esc(carName(c))}</b><small>${g.y} · ${fmt(g.km, 0)} km · ${esc(g.paint[0])} · Note ${g.cond}</small></div>
       <div class="lot-row"><span class="lot-price"><small>Marktwert heute</small><b>${money(val)}</b></span>
         <span class="lot-lead ${d >= 0 ? "me" : "out"}">${d >= 0 ? "▲" : "▼"} ${fmt(Math.abs(pct), 1)} %</span></div>
+      ${g.hold > 1 ? `<div class="lot-est hold">📈 Haltebonus seit Kauf: +${fmt((g.hold - 1) * 100, 1)} % · nächste Anpassung in ${dur(Math.max(0, (g.adjAt || S.time) + AH_HOLD_DAYS * 1440 - S.time))}</div>`
+        : !g.fleet && !lot ? `<div class="lot-est hold">📈 Bleibt er in der Garage, steigt der Marktwert alle ${AH_HOLD_DAYS} Tage (+${(holdRate(val) * 100).toString().replace(".", ",")} %).</div>` : ""}
       <div class="lot-est">Gekauft für ${money(g.paid)} (inkl. Aufgeld) · ${c.track ? "nur Rennstrecke" : "⚖️ " + kgf(c.cap) + " Gepäck · " + carSpeed(c) + " km/h im Schnitt"}</div>
       <div class="buyrow">
         <button class="btn tiny ghost" data-carview="${c.id}">ansehen</button>
@@ -994,7 +1022,7 @@ function renderAuction() {
   } else if (A.view === "garage") {
     const tot = A.garage.reduce((a, g) => a + gValue(g), 0), paid = A.garage.reduce((a, g) => a + g.paid, 0);
     html = A.garage.length
-      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen fallen – Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
+      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen schwanken – aber wer ein Auto ruhig in der Garage lässt, bekommt alle 21 Tage eine Marktpreis-Anpassung nach oben (ab 1 Mio. € +6 %). Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
           <div class="meta small"><span>Marktwert ${money(tot)}</span><span>bezahlt ${money(paid)}</span><span class="${tot >= paid ? "up" : "down"}">${tot >= paid ? "+" : "−"}${money(Math.abs(tot - paid))}</span></div></div>`
         + A.garage.map(garageCardHTML).join("")
       : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;
