@@ -50,7 +50,7 @@ function tests() {
     for (const L of H.SP.keiler.legs) assert.ok(H._inTorso('keiler', L.h, 0) > .02);
     const pose = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: -.35, legs: [[-.5, 1.1], [0, 0], [.4, -.8], [0, 0]] };
     for (const i of [0, 2]) {
-      const L = H.SP.keiler.legs[i], a = pose.legs[i], q = H.rot([0, -.12, 0], a[1], 0, 0), p = H.rot([q[0], q[1] - L.lu, q[2] + (L.f ? 0 : -.025)], a[0], 0, 0);
+      const L = H.SP.keiler.legs[i], a = pose.legs[i], q = H.rot([0, -.12, 0], a[1], 0, 0), p = H.rot([q[0], q[1] - L.lu, q[2] + H._legDim('keiler', L)[2]], a[0], 0, 0);   /* v343: Versatz des Sprunggelenks aus dem Modell statt fester Zahl */
       assert.equal(H.zoneHit('keiler', pose, [6, p[1] + L.h[1], p[2] + L.h[2]], [-1, 0, 0]).zone, 'lauf');
     }
   });

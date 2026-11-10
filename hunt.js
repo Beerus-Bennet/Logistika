@@ -739,7 +739,7 @@ const HUNT = (() => {
         ell(q, X([br[0] - 0.003, br[1] + 0.003, br[2]]), [0.02, 0.009, 0.03], (p) => boarCoat(p, 0.8, 0.3), 7, 4);      /* Brauenwulst */
         const ep = headPt(0.045, 0.86);
         /* v343: Teller seitlich-oben am Hinterhaupt, leicht nach außen gekippt und nach vorn-außen gedreht; am liegenden Stück entspannt nach hinten gelegt */
-        q.at(resting ? { x: s * ep[0], y: ep[1] - 0.018, z: ep[2] - 0.006, rz: -s * 0.25, rx: -1.25 } : { x: s * ep[0], y: ep[1] - 0.016, z: ep[2], rz: -s * 0.5, rx: -0.3 }, o => boarEarInto(o, s));
+        q.at(resting ? { x: s * (ep[0] - 0.022), y: ep[1] - 0.012, z: ep[2] - 0.006, rz: s * 0.12, rx: -1.3 } : { x: s * ep[0], y: ep[1] - 0.016, z: ep[2], rz: -s * 0.5, rx: -0.3 }, o => boarEarInto(o, s));
         /* Backenbart: helle Büschel unten an den Wangen, nach hinten und unten */
         for (let k = 0; k < 6; k++) {
           const p = headPt(-0.05 + k * 0.032, -0.62 - (k % 2) * 0.22 - rr() * 0.08);
@@ -851,14 +851,23 @@ const HUNT = (() => {
   }
   /* v262: Flugflügel mit Arm (Decken hell) und Hand (Schwingen dunkel, gefingert), Drehpunkt am Ansatz – vorher ein einzelnes Viereck */
   function phWing(s) {
+    /* v343: für die Nahansicht am erlegten Stück – gewölbte Decken in Rumpffarbe, 6 Armschwingen und 8 gebänderte Handschwingen (vorher 3 helle Flächen) */
     const b = MB(), X = p => [s * p[0], p[1], p[2]];
-    const two = (P, c) => { for (let i = 1; i < P.length - 1; i++) { const a = X(P[0]), m = X(P[i]), n = X(P[i + 1]); if (s > 0) { b.tri(a, m, n, c); b.tri(a, n, m, mulc(RGB(c), 0.8)); } else { b.tri(a, n, m, c); b.tri(a, m, n, mulc(RGB(c), 0.8)); } } };
-    two([[0, 0, 0.07], [0.07, 0.012, 0.075], [0.15, 0.016, 0.055], [0.16, 0.012, -0.045], [0.08, 0.006, -0.075], [0, 0, -0.06]], PHC.wing);       /* Arm, Decken */
-    for (let f = 0; f < 5; f++) {                                                                                                                 /* Handschwingen */
-      const z0 = 0.05 - f * 0.024, L = 0.15 - f * 0.012, bar = f % 2 ? PHC.wingD : mixc(PHC.wingD, 0x2a2018, 0.4);
-      two([[0.145, 0.015, z0 + 0.012], [0.145 + L, 0.012 - f * 0.002, z0 - 0.004 - f * 0.012], [0.145 + L * 0.94, 0.011, z0 - 0.026 - f * 0.012], [0.145, 0.013, z0 - 0.02]], bar);
+    const two = (P, C) => { for (let i = 1; i < P.length - 1; i++) { const a = X(P[0]), m = X(P[i]), n = X(P[i + 1]), ca = RGB(C[0]), cm = RGB(C[i]), cn = RGB(C[i + 1]), d = c => mulc(c, 0.72);
+      if (s > 0) { b.triV(a, m, n, ca, cm, cn); b.triV(a, n, m, d(ca), d(cn), d(cm)); } else { b.triV(a, n, m, ca, cn, cm); b.triV(a, m, n, d(ca), d(cm), d(cn)); } } };
+    const cov = mixc(PHC.wing, PHC.copper, 0.45), covD = mixc(PHC.wingD, PHC.copperD, 0.4), buff = mixc(PHC.wing, 0xe9d7ae, 0.5), dark = mixc(PHC.wingD, 0x2a2018, 0.45);
+    /* Decken: zwei Reihen, zur Vorderkante gewölbt */
+    two([[0, 0, 0.07], [0.05, 0.014, 0.078], [0.1, 0.02, 0.074], [0.15, 0.016, 0.058], [0.15, 0.014, 0.012], [0.075, 0.012, 0.004], [0, 0.002, 0.004]], [covD, cov, cov, covD, covD, PHC.wing, covD]);
+    for (let f = 0; f < 6; f++) {                                                                                       /* Armschwingen */
+      const x0 = 0.012 + f * 0.024, x1 = x0 + 0.03, L = 0.085 + f * 0.004;
+      two([[x0, 0.008, 0.008], [x1, 0.009, 0.006], [x1 + 0.008, 0.004, -L * 0.6], [x1 - 0.004, 0.001, -L], [x0 + 0.002, 0.003, -L * 0.62]], [covD, PHC.wing, f % 2 ? buff : PHC.wingD, buff, PHC.wingD]);
     }
-    two([[0.0, 0.002, -0.055], [0.15, 0.012, -0.04], [0.13, 0.008, -0.1], [0.02, 0.002, -0.095]], mixc(PHC.wing, PHC.wingD, 0.5));            /* Armschwingen */
+    for (let f = 0; f < 8; f++) {                                                                                       /* Handschwingen: fächerförmig, hell-dunkel gebändert */
+      const a = -0.25 + f * 0.2, L = 0.165 - Math.abs(f - 2.5) * 0.009, dx = Math.cos(a), dz = -Math.sin(a), o = [0.146 + f * 0.001, 0.014 - f * 0.001, 0.05 - f * 0.011], w = 0.013;
+      const P = t => [o[0] + dx * L * t, o[1] - 0.004 * t, o[2] + dz * L * t], N = [-dz * w, 0, dx * w];
+      for (let k = 0; k < 3; k++) { const p0 = P(k / 3), p1 = P((k + 1) / 3), wk = 1 - k * 0.2, wn = k === 2 ? 0.25 : 1 - (k + 1) * 0.2, c = (k + f) % 2 ? buff : dark;
+        two([[p0[0] - N[0] * wk, p0[1], p0[2] - N[2] * wk], [p0[0] + N[0] * wk, p0[1], p0[2] + N[2] * wk], [p1[0] + N[0] * wn, p1[1], p1[2] + N[2] * wn], [p1[0] - N[0] * wn, p1[1], p1[2] - N[2] * wn]], [c, c, c, c]); }
+    }
     return b;
   }
   /* Ständer im Flug und am liegenden Stück: Lauf angezogen, Zehen eingekrallt (zum Lauf hin gebogen) */
@@ -2135,9 +2144,14 @@ const HUNT = (() => {
         const dp = deadPose(A), g = dp.y;
         A.fly.vy -= 14 * dt; A.y = Math.max(g, A.y + A.fly.vy * dt); A.x += A.fly.vx * dt * 0.3; A.z += A.fly.vz * dt * 0.3;
         A.rz += (dp.rz - A.rz) * Math.min(1, dt * 3.5); A.rx += (0 - A.rx) * Math.min(1, dt * 3);
-        A.wings.forEach((w, i) => { w.sx = Math.max(0.05, (w.sx || 1) - dt * 2.5); w.rz = (i ? 1 : -1) * 0.5; });
+        /* v343: bleibt in der Liegeform eine Schwinge offen, legt sie sich im Fallen nicht an, sondern schlägt haltlos mit */
+        A.wings.forEach((w, i) => {
+          const tw = dp.wings && dp.wings[i];
+          if (tw) { w.sx += (tw.sx - w.sx) * Math.min(1, dt * 4); w.rz = (i ? 1 : -1) * (0.55 + 0.35 * Math.sin(time * 17 + i * 2.1)); }
+          else { w.sx = Math.max(0.05, (w.sx || 1) - dt * 2.5); w.rz = (i ? 1 : -1) * 0.5; }
+        });
         if (A.y <= g + 0.001) {
-          A.wings.forEach(w => { w.visible = false; });
+          A.wings.forEach((w, i) => { if (!(dp.wings && dp.wings[i])) w.visible = false; else w.rz0 = w.rz; });
           const q = lieSpot(A, A.x, A.z);
           A.st = "fall"; A.t = 0.35; A.fT = 0.35; A.rz0 = A.rz; A.y0 = A.y; A.rx0 = A.rx; A.fs = { x0: A.x, z0: A.z, T: 0.35, to: q };
         }
@@ -2200,6 +2214,16 @@ const HUNT = (() => {
         const tx = dead ? lerp(1.5, fp[i][0], kf) : near ? 0.25 : ["fly", "drop"].includes(A.st) ? 1.5 : 0, tz = dead ? fp[i][1] * kf : 0;
         f.rx = spr(P, "ft" + i, tx, 8, dt); f.rz = spr(P, "fz" + i, tz, 8, dt);
         const m = f.rx > 0.7 ? A.footM[1] : A.footM[0]; if (f.mesh !== m) f.mesh = m;
+      });
+    }
+    /* v343: offene Schwingen des liegenden Fasans – aus der letzten Flug-/Fallstellung (oder angelegt) weich in die Liegeform */
+    if (A.wings && (A.st === "dead" || A.st === "fall")) {
+      const dw = deadPose(A).wings, kw = fallK(A);
+      if (dw) A.wings.forEach((w, i) => {
+        const tw = dw[i]; if (!tw) return;
+        if (w.rz0 == null) { w.rz0 = w.visible ? w.rz : tw.rz; w.sx0 = w.visible ? w.sx : 0.05; }
+        if (w.sx0 == null) w.sx0 = w.sx;
+        w.visible = true; w.rz = lerp(w.rz0, tw.rz, kw); w.sx = lerp(w.sx0, tw.sx, kw);
       });
     }
     /* Kopf, Hals, Lauscher, Wedel über Federn: weich, beim Aufschrecken schnell */
@@ -2337,13 +2361,54 @@ const HUNT = (() => {
      • Fasan: Hals leicht abgelegt, Ständer angezogen ohne Bauch und Boden zu durchstoßen, angelegte Schwingen bleiben (Rumpfmodell). */
   const POSE = {
     hirsch: { rz: 1.42, legs: { bf: [-0.55, 0.42], tf: [-0.34, 0.92], bh: [0.48, -0.36], th: [0.26, -0.72] },
-      lim: { f: [[-1.15, 0.45], [0, 1.9]], h: [[-0.6, 1.1], [-1.75, 0.05]] }, ab: [-0.3, 0.72], vary: [0.09, 0.13],
+      lim: { f: [[-1.15, 0.45], [0, 1.9]], h: [[-0.6, 1.1], [-1.75, 0.05]] }, ab: [-0.3, 0.72], vary: [0.12, 0.16],
       neck: 1.0, headX: [-0.85, -0.5, -0.2], bend: [-0.15, 0.7], roll: 1.0, tol: 0.004 },
     keiler: { rz: 1.5, legs: { bf: [-0.5, 0.45], tf: [-0.38, 0.78], bh: [0.48, -0.4], th: [0.36, -0.67] },
-      lim: { f: [[-1.0, 0.4], [0, 1.7]], h: [[-0.5, 1.0], [-1.5, 0.05]] }, ab: [-0.3, 1.0], vary: [0.06, 0.1],
+      lim: { f: [[-1.0, 0.4], [0, 1.7]], h: [[-0.5, 1.0], [-1.5, 0.05]] }, ab: [-0.3, 1.0], vary: [0.09, 0.13],
       neck: [-0.42, -0.28, -0.12], yaw: [-0.2, 0.6], roll: 0.5, tol: 0.003 },
     fasan: { rz: 1.4, neck: [0.85, 1.05, 1.25], bend: [-0.1, 0.8], feet: [[0.85, 1.75], [-0.45, 0.45]], tol: 0.002 }
   };
+  /* ------------------- v343: Liegeformen -------------------
+     Vorher lag jedes Stück gleich: Seitenlage, Läufe halb angewinkelt, Träger nach vorn – nur um wenige Grad je Stück verschieden,
+     der Fasan immer auf derselben Seite mit angelegten Schwingen. Jetzt gibt es je Art mehrere Formen (o überschreibt POSE):
+     • ruhe    – wie bisher: Läufe halb angewinkelt
+     • streck  – alle Läufe gestreckt, Träger lang (im Lauf verendet)
+     • hock    – Läufe eng angezogen (im Feuer gelegen), Haupt zur Brust
+     • schlag  – ungleich: ein Vorderlauf vor, einer angewinkelt, Hinterläufe versetzt; beim Hirsch das Haupt zurückgeworfen
+     • rueck   – über die Seite hinaus gerollt, die Läufe ragen etwas auf
+     Fasan: seite · schwinge (untere Schwinge offen hinter dem Rücken) · ruecken (Brust oben, beide Schwingen offen, Ständer in der Luft) ·
+     bauch (auf der Brust, Schwingen halb offen, Hals lang).
+     Die Form ist je Stück fest (Erbgut, Güte, Variante – kein Zufall beim Zeichnen) und folgt dem Hergang: nach einer Flucht (run) eher
+     gestreckt, an Ort und Stelle (spot) eher angezogen, der Fasan aus dem Flug (air) eher mit offenen Schwingen. */
+  const LIE = {
+    hirsch: [
+      { id: "ruhe", w: 28 },
+      { id: "streck", w: 24, run: 2.4, spot: 0.5, o: { rz: 1.46, legs: { bf: [-0.86, 0.14], tf: [-0.6, 0.34], bh: [0.8, -0.14], th: [0.56, -0.34] }, neck: 0.8 } },
+      { id: "hock", w: 20, run: 0.35, spot: 2.2, o: { rz: 1.38, legs: { bf: [-0.3, 1.3], tf: [-0.1, 1.6], bh: [0.1, -1.1], th: [-0.12, -1.4] }, neck: 1.2, headX: [-0.5, -0.2, 0.1] } },
+      { id: "schlag", w: 16, run: 1.5, o: { rz: 1.44, legs: { bf: [-0.82, 0.2], tf: [0.12, 1.25], bh: [0.3, -0.95], th: [0.78, -0.16] }, neck: 0.5, bend: [-0.35, 0.5] } },
+      { id: "rueck", w: 12, o: { rz: 1.7, legs: { bf: [-0.45, 0.85], tf: [-0.28, 1.15], bh: [0.36, -0.75], th: [0.14, -1.05] }, neck: 0.9, ab: [-0.3, 1.0] } }
+    ],
+    keiler: [
+      { id: "ruhe", w: 26 },
+      { id: "streck", w: 24, run: 2.4, spot: 0.5, o: { rz: 1.52, legs: { bf: [-0.78, 0.12], tf: [-0.58, 0.3], bh: [0.74, -0.12], th: [0.54, -0.3] }, neck: [-0.62, -0.48, -0.34] } },
+      { id: "hock", w: 20, run: 0.35, spot: 2.2, o: { rz: 1.46, legs: { bf: [-0.25, 1.2], tf: [-0.08, 1.5], bh: [0.08, -1.0], th: [-0.12, -1.3] }, neck: [-0.2, -0.05, 0.1] } },
+      { id: "schlag", w: 14, run: 1.5, o: { rz: 1.5, legs: { bf: [-0.72, 0.2], tf: [0.15, 1.15], bh: [0.28, -0.9], th: [0.72, -0.15] } } },
+      { id: "rueck", w: 16, o: { rz: 1.78, legs: { bf: [-0.42, 0.8], tf: [-0.28, 1.05], bh: [0.36, -0.7], th: [0.18, -0.95] }, ab: [-0.3, 1.2] } }
+    ],
+    fasan: [
+      { id: "seite", w: 34 },
+      { id: "schwinge", w: 24, air: 1.6, o: { wing: "unten" } },
+      { id: "ruecken", w: 20, air: 2.2, o: { rz: 2.82, neck: [1.4, 1.55, 1.7], bend: [-0.6, 0.6], feet: [[0.25, 1.3], [-0.5, 0.5]], feetRx: 0.7, wing: "beide", wingA: 0 } },
+      { id: "bauch", w: 22, air: 1.8, o: { rz: 0.14, lift: 0.012, neck: [1.9, 2.15, 2.4], bend: [-0.9, 0.9], feet: [[1.45, 1.75], [-0.5, 0.5]], feetRx: 1.6, wing: "beide", wingA: -0.55 } }
+    ]
+  };
+  function lieVariant(A) {
+    const L = LIE[A.k], run = (A.dist || 0) > 1.5 || (A.k !== "fasan" && A.mv), spot = !run && A.zone != null;
+    const w = L.map(v => v.w * (run ? v.run || 1 : 1) * (spot ? v.spot || 1 : 1) * (A.k === "fasan" && A.air ? v.air || 1 : 1));
+    let r = (poseRnd(A, 40) * 0.5 + 0.5) * w.reduce((a, c) => a + c, 0);
+    for (let i = 0; i < L.length; i++) { r -= w[i]; if (r <= 0) return L[i]; }
+    return L[0];
+  }
   /* Knotenwinkel ↔ Feder-Zielwerte in stepAnimal (neckRot) */
   const neckRot = (k, nrx, nry) => k === "keiler" ? [nrx - 0.55, nry * 0.6] : k === "hirsch" ? [nrx - 0.35, nry] : [nrx * 0.6 - 0.2, nry * 0.6];
   const neckRotInv = (k, rx, ry) => k === "keiler" ? [rx + 0.55, ry / 0.6] : k === "hirsch" ? [rx + 0.35, ry] : [(rx + 0.2) / 0.6, ry / 0.6];
@@ -2378,7 +2443,8 @@ const HUNT = (() => {
     const U = k === "keiler" ? (front ? BLEG_FU : BLEG_HU) : (front ? LEG_FU : LEG_HU), Lo = k === "keiler" ? BLEG_LO : LEG_LO;
     const len = U[U.length - 1][0];
     S = [];
-    U.forEach(r => { if (r[0] < len * 0.4) S.push([[0, r[0], r[3]], Math.max(r[1], r[2]) * 0.85, 0]); });          /* nicht am Hüft-/Schulteransatz (steckt im Rumpf) */
+    /* nicht am Hüft-/Schulteransatz (steckt im Rumpf); v343: erst ab 60 % – Keule und Unterarm sind oben breit und liegen am Rumpf an */
+    U.forEach(r => { if (r[0] < len * 0.6) S.push([[0, r[0], r[3]], Math.max(r[1], r[2]) * 0.85, 0]); });
     for (let i = 0; i < Lo.length; i++) { const r = Lo[i]; S.push([[0, r[0], r[3]], Math.max(r[1], r[2]) * 0.9, 1]); }
     if (k === "keiler") S.push([[0, -0.186, 0.025], 0.02, 1]);                                                       /* Schalen */
     else S.push([[0, -0.452, 0.03], 0.03, 1]);
@@ -2414,13 +2480,20 @@ const HUNT = (() => {
   const mapp = (M, p) => [M[0] * p[0] + M[1] * p[1] + M[2] * p[2], M[3] * p[0] + M[4] * p[1] + M[5] * p[2], M[6] * p[0] + M[7] * p[1] + M[8] * p[2]];
   const flat = L => { const f = new Float64Array(L.length * 3); L.forEach((p, i) => { f[i * 3] = p[0]; f[i * 3 + 1] = p[1]; f[i * 3 + 2] = p[2]; }); return f; };
   function calcDead(A) {
-    const k = A.k, S0 = SP[k], D = POSE[k], side = A.side || 1, rz = side * D.rz, s = A.s || 1, down = -side;
+    const k = A.k, S0 = SP[k], LV = lieVariant(A), D = Object.assign({}, POSE[k], LV.o || {}), side = A.side || 1, rz = side * D.rz, s = A.s || 1, down = -side;
     const W = (p, y) => { const q = rot([p[0] * s, p[1] * s, p[2] * s], 0, A.ry || 0, rz); return [q[0], y + q[1], q[2]]; };
     const Wy = p => (Math.sin(rz) * p[0] + Math.cos(rz) * p[1]) * s;                           /* Höhe ohne Verschiebung (ry ändert sie nicht) */
     const BP = ptsOf("b:" + k + ":" + lookKey(k, A.gn), () => withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody));
     let lo = 1e9; BP.forEach(p => { lo = Math.min(lo, Wy(p)); });
-    const y = -lo + 0.002 * s, tol = D.tol * s;
+    /* v343: Keule und Schulter stehen seitlich über den Rumpf hinaus – ihr Ansatz (nahe am Drehpunkt, kaum abhängig von der Spreizung) zählt mit */
+    const UP = [];
+    (S0.legs || []).forEach(L => {
+      const top = L.h[0] * side > 0, base = D.legs[(top ? "t" : "b") + (L.f ? "f" : "h")];
+      ptsOf("fall:u:" + k + !!L.f + lookKey(k, A.gn), () => withLook(k, A.gn, () => k === "keiler" ? boarUpper(!!L.f) : deerUpper(!!L.f))).forEach(q => { if (q[1] > -0.17) { const w = add3(L.h, rot(q, base[0], 0, 0)); UP.push(w); lo = Math.min(lo, Wy(w)); } });
+    });
+    const y = -lo + (0.002 + (D.lift || 0)) * s, tol = D.tol * s;
     const pts = BP.map(p => W(p, y));
+    UP.forEach((p, i) => { if (i % 3 === 0 || Wy(p) + y < 0.02 * s) pts.push(W(p, y)); });
     /* ---- Läufe: unten liegende zuerst, dann die oberen (dürfen auf den unteren ruhen) ---- */
     const placed = [], legs = [], legInfo = [];
     const order = (S0.legs || []).map((L, i) => ({ L, i, top: L.h[0] * side > 0 })).sort((a, b) => a.top - b.top);
@@ -2528,11 +2601,29 @@ const HUNT = (() => {
         for (let rx = D.feet[0][0]; rx <= D.feet[0][1] + 1e-9; rx += 0.05) for (let fz = D.feet[1][0]; fz <= D.feet[1][1] + 1e-9; fz += 0.05) {
           let p = 0;
           HP.feet.forEach(q => { const w = add3(o, rot(q, rx, 0, fz)), h = Wy(w) + y; if (h < -tol) p += -h * 4; if (inTorso(k, w, -0.006) > 0) p += 0.02; });
-          const c = p * 50 + Math.abs(rx - 1.3) * 0.2 + Math.abs(fz) * 0.3;
+          const c = p * 50 + Math.abs(rx - (D.feetRx || 1.3)) * 0.2 + Math.abs(fz) * 0.3;
           if (!fb || c < fb.c) fb = { c, rx, fz };
         }
         HP.feet.forEach((q, j) => { if (j % 2 === 0) pts.push(W(add3(o, rot(q, fb.rx, 0, fb.fz)), y)); });
         return [fb.rx, fb.fz];
+      });
+    }
+    /* v343: offene Schwingen – jede wird um ihren Ansatz so weit gedreht, bis sie aufliegt (Spitze am Boden), ohne Boden oder Rumpf zu durchdringen */
+    let wings = null;
+    if (k === "fasan" && D.wing) {
+      wings = [-1, 1].map(sg => {
+        if (D.wing === "unten" && sg * side > 0) return null;                               /* nur die unten liegende Schwinge */
+        const o = [sg * 0.075, 0.3, 0.03], sx = 0.86, WP = ptsOf("w:" + sg, () => phWing(sg)), a0 = D.wingA != null ? sg * D.wingA : sg * 1.45;
+        let fb = null;
+        for (let a = -1.9; a <= 1.9 + 1e-9; a += 0.05) {
+          const M = mat3(0, 0, a); let pen = 0, low = 1e9;
+          WP.forEach(q => { const w = add3(o, mapp(M, [q[0] * sx, q[1], q[2]])), h = Wy(w) + y; if (h < -tol) pen += -h; low = Math.min(low, h); if (inTorso(k, w, -0.03) > 0) pen += 0.003; });
+          const c = pen * 60 + Math.max(0, low) * 4 + Math.abs(a - a0) * 0.06;
+          if (!fb || c < fb.c) fb = { c, a };
+        }
+        const M = mat3(0, 0, fb.a);
+        WP.forEach(q => pts.push(W(add3(o, mapp(M, [q[0] * sx, q[1], q[2]])), y)));
+        return { rz: fb.a, sx };
       });
     }
     /* v200: Anker für den Merkmals-Hinweis – beim Hirsch die Geweihmitte (oberste Punkte des Hauptes), sonst die Mitte des Hauptes */
@@ -2542,7 +2633,7 @@ const HUNT = (() => {
     const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
     pts.forEach(p => { for (let j = 0; j < 3; j++) { mn[j] = Math.min(mn[j], p[j]); mx[j] = Math.max(mx[j], p[j]); } });
     const nT = neckRotInv(k, hb.nx, hb.ny || 0), p3low = p => p[1] < 0.02 * s;
-    return { rz, y, legs, neckT: nT[0], nyT: nT[1], nz: hb.nz || 0, headT: k === "hirsch" ? hb.hx : 0, hz: hb.hz || 0, feet, mn, mx, ha,
+    return { rz, y, legs, neckT: nT[0], nyT: nT[1], nz: hb.nz || 0, headT: k === "hirsch" ? hb.hx : 0, hz: hb.hz || 0, feet, wings, variant: LV.id, feetLim: D.feet, mn, mx, ha,
       pts: pts.filter((_, i) => i % 3 === 0 || p3low(pts[i])), contact: pts.filter(p => p[1] < 0.035 * s), head: { gap: hr.gap, carried: hr.carried, pen: hr.pen }, legInfo };
   }
   function deadPose(A) { return A.dp || (A.dp = calcDead(A)); }
@@ -2555,7 +2646,7 @@ const HUNT = (() => {
       ground = Math.min(ground, Hh(q) - r * s); legBody = Math.max(legBody, inTorso(k, q, r * 0.55));
       Q.forEach((P2, j) => { if (j > i) P2.forEach(([q2, r2]) => { legLeg = Math.max(legLeg, (r + r2) * 0.92 - Math.hypot(q[0] - q2[0], q[1] - q2[1], q[2] - q2[2])); }); });
     }));
-    return { ground, legLeg, legBody, head: dp.head, legs: dp.legs, lim: POSE[k].lim };
+    return { ground, legLeg, legBody, head: dp.head, legs: dp.legs, lim: POSE[k].lim, variant: dp.variant, feetLim: dp.feetLim };
   }
   /* v307: gemeinsame Zeit, aber versetzte Bewegung für Läufe, Rumpf und Haupt. */
   const fallU = A => A.st === "dead" ? 1 : A.st === "fall" ? clamp(1 - A.t / (A.fT || 0.8), 0, 1) : 0;
@@ -2828,7 +2919,9 @@ const HUNT = (() => {
     if (A.mv == null) { const c = context || shotContext(A); A.mv = c.mv; A.air = c.air; A.wv = c.wv; }   /* v307: für Beschriftung, Jagdbuch und Flugauftrag */
     const Z = ZONE[zone];
     if (A.k === "fasan") {
-      if (A.st === "fly") { A.st = "drop"; A.side = 1; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; A.side = 1; fallStart(A, 0.45); }
+      /* v343: Seite je Stück (vorher immer dieselbe) */
+      A.side = poseRnd(A, 41) < 0 ? -1 : 1;
+      if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; fallStart(A, 0.45); }
       A.zone = zone; X.target = A; buzz(22);
       msg("Waidmannsheil! " + A.T.name + " · " + dm + " m", 3, "good");
       return;
@@ -3618,8 +3711,8 @@ const HUNT = (() => {
     clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
     wallHTML, wallBind, collSync, trophyBuild, trophyKey, trophyInfo, stats, genes, valueOf, shotOf, RAR, RAR_V, COATS, FORMS, dexAll,
     _v200: { hv200, dexPut, dexCount, pbPut, jobsEnsure, jobsEval, jobsLost, jobTxt, pinRec, presOf, featList, lookKey, weakFirst, sellRec: u => sellRec(u), st: () => st(), withLook, traits },
-    _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr, F) => deerHead(P, sc, vr, F), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
-      boarBody: () => boarBody(), boarHead: (sc, cm) => boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: () => phHead(), phLeg: () => phLeg(), phLegCurl: () => phLegCurl(), phWing: s => phWing(s), antlerPlan, qS, REP_S },
+    _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr, F, rest) => rest ? (G3.seed(5102 + P), deerHeadInto(MB(), P, sc, vr, F, false, true)) : deerHead(P, sc, vr, F), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
+      boarBody: () => boarBody(), boarHead: (sc, cm, rest) => rest ? (G3.seed(5202), boarHeadInto(MB(), sc, cm, true)) : boarHead(sc, cm), boarLeg: f => boarLeg(f), boarUpper: f => boarUpper(f), boarLower: () => boarLower(), phBody: () => phBody(), phHead: rest => phHead(!!rest), phLeg: () => phLeg(), phLegCurl: () => phLegCurl(), phWing: s => phWing(s), antlerPlan, qS, REP_S },
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
