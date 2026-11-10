@@ -9,6 +9,20 @@
 
 **Geprüft (Testbrowser, 390 × 844):** Die „fertig“-Blasen stehen jetzt am Feld bzw. am Brett (x −2…48, y 231…257 und x 85…149, y 616…645), keine Blase mehr in der Ecke. Keine Konsolenfehler. **Nicht geprüft:** am Handy.
 
+## v333 – Bert hält alle Köder vorrätig (Dauerbestellung für jede Sorte)
+**Wunsch Bennet:** Mit „100 Stück“ soll Bert von allen Ködern jeweils 100 produzieren und neue Tauwürmer machen, sobald sie ausgehen.
+
+**Ursache (`erbe.js` `bertKeepTick`):** Die Dauerbestellung kannte nur Tauwürmer. Profi-Köder und Spezialköder musste man einzeln bestellen.
+
+**Lösung:** Bert hält jetzt **jede Sorte** auf der gewählten Stückzahl (20/50/100 „je Stück“): Tauwürmer, Profi-Köder (sobald freigeschaltet) und jeden schon entwickelten Spezialköder.
+- **Tauwürmer zuerst:** Für 5 Spezialköder braucht er 2 Tauwürmer. Der Wurm-Sollwert ist die Stückzahl plus der Bedarf der noch fehlenden Spezialköder. Gehen die Würmer aus, macht er automatisch neue.
+- **Reihum statt nacheinander:** Er legt je Sorte abwechselnd einen Satz in die Werkstatt (bis zu 6 Plätze), damit nicht eine Sorte alles blockiert.
+- **Fertiges** holt er für alle Sorten ab, solange im Lager Platz ist.
+- **Lagerplatz:** Die Köderkiste ist für alle Köder gemeinsam. Ist sie kleiner als Sorten × Stückzahl, teilt er sie gleichmäßig auf (zum Beispiel 60 Plätze, 4 Sorten: je etwa 15). Nur wer mehr Lagerplatz hat (Köderkiste ausbauen, Lagerhalle), kommt auf 100 je Sorte.
+- Geld: Wie bisher kostet jeder Satz seinen Preis (Tauwürmer 3 €, Profi-Köder 60 €, Spezialköder je nach Art). Reicht das Geld nicht, wartet er.
+- Der Text im Fenster sagt jetzt, dass es für jede Sorte gilt (Knöpfe „je 20/50/100 Stück“). Alter Spielstand: `U.bert.keep` bleibt gültig, ein alter Wert „100“ gilt nun für alle Sorten.
+
+**Geprüft (Testbrowser, Zeit vorgespult, Berts Kombi mit Tauwürmern, Profi-Köder, Barsch- und Hecht-Spezialköder):** Bei 60 Plätzen in der Kiste 22/15/15/5 (Würmer/Profi/Barsch/Hecht, gefüllt bis zum Rand). Bei großem Lager (2.000 Plätze) 100/100/100/100, dabei sank der Wurmbestand durch die Spezialköder auf 102 und wurde wieder auf 100 aufgefüllt. **Nicht geprüft:** am Handy; mit deinem echten Lagerstand (ich kenne die Größe deiner Köderkiste nicht – bei 60 Plätzen bekommst du nicht 100 je Sorte).
 ## v332 – Hof: Blasen schauen nicht mehr halb unter der Kopfleiste hervor
 **Meldung Bennet:** Am oberen Rand der Hofansicht, direkt unter dem grünen Menü, schauen periodisch Sprechblasen oder Ähnliches hervor.
 

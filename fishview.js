@@ -298,8 +298,8 @@ function bertWorkHTML(o) {
     ? `<div class="uf-row"><span class="ic">✨</span><div><b>Profi-Köder fertig</b><small>deine alte Bestellung · ${old.n} Stück</small></div><button class="btn tiny" id="bLureGet">Abholen</button></div>`
     : `<div class="uf-row"><span class="ic">✨</span><div><b>Bert baut Profi-Köder</b><small>deine alte Bestellung · noch ${fdur(Math.max(1, old.end - S.time))}</small></div></div>`;
   return `${oldH}
-    <div class="fs-sub">🪱 Dauerbestellung: Bert hält Tauwürmer vorrätig (du hast ${farmInv("wurm")}). Er legt neue in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
-    <div class="fs-row bert-keep">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? k + " Stück" : "aus"}</button>`).join("")}</div>`;
+    <div class="fs-sub">🪱 Dauerbestellung: Bert hält jede Sorte vorrätig – Tauwürmer (du hast ${farmInv("wurm")}), Profi-Köder und jeden Spezialköder, den er schon kann – je ${keep || "…"} Stück. Gehen die Tauwürmer aus, macht er neue. Er legt sie in die Werkstatt, sobald ein Platz frei ist und das Geld reicht.</div>
+    <div class="fs-row bert-keep">${FBERT_KEEP.map(k => `<button class="btn tiny${k === keep ? "" : " ghost"}" data-keep="${k}">${k ? "je " + k + " Stück" : "aus"}</button>`).join("")}</div>`;
 }
 function bertDevBtnHTML() {
   const ask = Object.keys(FSPEC_BAIT).filter(id => specS(id) && !specWhy(id)).length;
