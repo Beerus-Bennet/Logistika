@@ -1,5 +1,33 @@
 # Änderungen – kurz für den Kollegen
 
+## v330 – Außenlager und Großkunden für Hofware
+
+**Wunsch:** Der Hof soll auch spät im Spiel größere Warenmengen sammeln und verkaufen können. Dafür braucht es zusätzlichen Lagerraum außerhalb des Hofs und größere Bestellungen mit längerer Lieferfrist.
+
+**Lösung:**
+- Im Lagerfenster von Silo und Scheune gibt es ab Hof-Level 15 und gegründeter Spedition ein Außenlager. Ein Abschnitt bietet +1.000 Ernteplätze (ab 75.000 €) oder +500 Lebensmittelplätze (ab 125.000 €). Je Kauf sind 1, 5 oder 10 Abschnitte möglich; jeder weitere Abschnitt kostet 15 % des Grundpreises zusätzlich. Kein neues Stufenmaximum und keine zusätzliche Hoffläche. Die Große Lagerhalle verdoppelt weiterhin nur den Platz auf dem Hof.
+- Ausbau steht in `S.farm.external`; fehlende Felder alter Spielstände bedeuten null Zusatzfläche. Vorräte bleiben im bestehenden gemeinsamen Lager. Kauf wird genau einmal abgebucht, Außenflächen zählen mit 70 % ihrer Baukosten zum Hofwert.
+- Fünf regionale Großkunden bestellen größere Mengen aus dem tatsächlich vorhandenen oder herstellbaren Sortiment. Mengen werden durch Lagerraum, freie Vorräte nach angenommenen Bestellungen, Felder/Bäume/Tiere, Zutaten-/Maschinenleistung und die Nutzlast des Fuhrparks begrenzt. Höchstens zwei Großaufträge sind zugleich offen oder angenommen. Normale Nachbarschaftsbestellungen bleiben verfügbar.
+- Großangebote gelten drei Spieltage. Ihre Lieferzeit beginnt erst bei Annahme: je Menge, Produktionsbedarf und Fahrt zwischen fünf und 45 Spieltagen. Das Lager und die normale Auftragsliste zeigen das Zeitfenster bzw. den festen Termin. Angenommene Standardbestellungen behalten ihre bisherige großzügige Frist.
+- Die Ware fährt durch die bestehende Tür-zu-Tür-Logistik und wird nach Zustellung zum normalen Hofwarenpreis samt Qualitätsaufschlag bezahlt. Fehlende Ware, verfallene Aufträge und Doppelklicks verbrauchen keine Vorräte. Ein angenommener Großauftrag verfällt erst zum angegebenen Termin; unversandte Ware bleibt dabei im Lager.
+- Zusammen mit der Büroansicht aus v329 ausgeliefert. Cache-Verweise der geänderten Hof-/Spieldateien und des Stylesheets sowie Service Worker v330 aktualisiert; übrige Assets behalten ihre Version.
+
+**Geprüft:** `farm-wholesale-v330.test.js` mit elf Gruppen gegen echte Spiel-/Routingdateien: Altstand und wiederholte Migration, Kauf/Preis/Platz/Hofwert, Sperren, JSON-Laden, Mengen-/Fahrzeuggrenzen, Zutatenketten, spätere Annahme, Standardaufträge, Ablauf im echten Spieltakt und tatsächliche Lieferung mit genau einer Entnahme und Auszahlung, einschließlich Laden während der Fahrt. Bestehende Büroprüfungen, `d2d-v313.test.js` und `trophy-exhibits-v328.test.js` bestanden. Chromium/Playwright: Silo und Scheune, Käufe mit einem/fünf Abschnitten, Geld-/Levelsperren, Großangebote und Annahme, Auftragsliste, echtes Speichern/Neuladen; bei 320/390/1280 Pixeln kein horizontaler Überlauf, keine JavaScript-Fehler. Bildschirmbilder gesichtet. Kein Test auf einem echten Handy oder in Safari; langfristige Wirtschaftsbalance noch nicht im Dauerspiel geprüft.
+
+## v329 – Büros, Teams und einzelne Personen aufklappen
+
+**Ursache:** Bereits ein Büro mit 18 Beschäftigten belegt eine lange Personalliste. Bei mehreren Standorten folgen alle Büro-, Bewerbungs- und Fahrzeugdetails untereinander; die übrigen Büros sind nur mit viel Scrollen erreichbar.
+
+**Lösung:**
+- `offices.js`: Jedes Büro ist unabhängig aufklappbar und startet als kompakte Zeile mit Standort, Bürotyp, Personal-/Fahrzeugbelegung und Stimmung. Ein Betriebsstillstand bleibt auch eingeklappt sichtbar. Der geöffnete Bürokopf bleibt beim Scrollen erreichbar, um das Büro direkt wieder schließen zu können.
+- Das Team hat einen eigenen Klappbereich mit Personenanzahl. Jede Person lässt sich zusätzlich einzeln öffnen: Name, Rolle und Können stehen in der Zeile; Lohn, vollständiges Merkmal, Fahrerzuordnung, Versetzen und Kündigen im Detailbereich. Eine eigene Ziehfläche verhindert, dass das Öffnen einer Person gleichzeitig einen Ziehvorgang startet. Die Ziehvorschau nennt die gewählte Person.
+- Native `details`/`summary` mit Tastaturbedienung und sichtbarem Fokus. `OFFICE_FOLDS` merkt die Zustände beim Neuzeichnen und Tabwechsel, auch wenn übergeordnete Bereiche geschlossen sind. Vor dem Neuzeichnen wird unmittelbar aus dem DOM gelesen; der Tastaturfokus bleibt auf der geöffneten Zeile. Reiner Ansichtszustand innerhalb der Sitzung, keine neuen Spielstandfelder.
+- Beim Prüfen mit acht Büros gefunden: Die Versetzungsziele drückten die Fahrzeugzeile der Ablageleiste auf null Breite. Ein vermeintlicher Fahrzeugtreffer konnte dadurch auf ein Büro fallen. Fahrzeuge und Büros erhalten beim Ziehen getrennte, horizontal scrollbare Zielzeilen. Das Ablegeziel wird vor dem Zurücksetzen der Ziehdarstellung ermittelt. Die vorhandenen Personal-/Kostenfunktionen werden weiterverwendet.
+- `intro.js`: Linas Büro-Rundgang öffnet die übergeordneten Klappbereiche seines jeweiligen Ziels, damit Grundriss, Stellen und Bewerbungen weiter sichtbar erklärt werden.
+- `style.css`: eigener v329-Block am Ende; Büro-/Teamstile auf `#tab-bases` begrenzt. Cache-Verweise für `offices.js`, `intro.js`, `style.css` und Service Worker v329.
+
+**Geprüft:** Chromium/Playwright mit acht Büros, 144 Beschäftigten und je drei Fahrzeugen: unabhängiges Öffnen/Schließen aller drei Ebenen, Touch-Tipps ohne versehentliches Ziehen, Leertaste/Enter, Fokus und Zustand nach `renderBases`, Einstellung, Kündigungsdialog abbrechen, Versetzen per Knopf, tatsächliche Fahrerzuordnung per Ziehen und Tabwechsel. Linas vollständiger dreistufiger Büro-Rundgang, verschachtelte Ziele und leere Bewerberliste geprüft. Inhaltshöhe im Testspielstand eingeklappt 1765 statt 25984 Pixel. Bei 320/390/1280 Pixeln kein horizontaler Überlauf; Vorher-/Nachherbilder gesichtet, keine JavaScript-Fehler. `office-value-v322.test.js` und `office-limits.test.js` bestanden; Syntax und `git diff --check` geprüft. Kein Test auf einem echten iPhone oder in Safari.
+
 ## v328 – Fasan und einzeln aufstellbare Ganzkörperpräparate
 
 **Wunsch:** Der Fasan soll im Revier und nach dem Erlegen als Vogel mit stimmigem Gefieder erkennbar sein. Alle Trophäen sollen vollständige, ausgestopfte Tiere in fester Pose auf eigenen runden Ausstellern werden, frei platzierbar und wieder einlagerbar.

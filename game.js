@@ -1861,7 +1861,7 @@ function acceptOrder(vi) {
   const o = ps.order, v = ps.variants[vi];
   if (o.farm && typeof farmOrderReady === "function" && !farmOrderReady(o))
     return toast("🧺 Es fehlt noch Ware: " + farmMissing(o.farm.items).map(m => fqty(m.id, m.need)).join(", "), "warn");
-  startJob(o, v, ps.assign, ps.vi === vi ? ps.extra : undefined);
+  if (startJob(o, v, ps.assign, ps.vi === vi ? ps.extra : undefined) === false) return;
   /* Erst Lina Bescheid geben, dann schließen – sonst hielte sie das
      Schließen für ein Abbrechen und schickte einen zurück zur Liste. */
   const tut = tutorialRunning();
@@ -1901,6 +1901,12 @@ function cancelJob(id) {
 /* v313: Kette von Tür zu Tür (job.v = D2D_V) – alle Fahrzeuge starten sofort Richtung Ladepunkt,
    die Ware fließt Teilstrecke für Teilstrecke (d2dTick). extra = weitere Fahrzeuge je Teilstrecke. */
 function startJob(o, variant, assign, extra) {
+  /* v330: Auch der normale Planer startet die Produktionsfrist erst bei
+     Annahme. Abgelaufene/doppelt angeklickte Großaufträge verbrauchen keine Ware. */
+  if (o.bulk && (!farmOrderReady(o) || o.farm.taken || o.deadline <= S.time || (!o.acc && !farmAcceptOrder(o)))) {
+    toast("Der Großauftrag ist abgelaufen, bereits verladen oder noch nicht vollständig bereit.", "warn");
+    return false;
+  }
   if (!extra) extra = extraFor(variant, o, assign);
   const job = {
     id: "J" + (S.seq++), order: o, curLeg: 0, started: S.time, cost: 0, v: D2D_V,
@@ -1928,6 +1934,7 @@ function startJob(o, variant, assign, extra) {
   if (typeof onJobStart === "function") onJobStart(job);
   job.legs.forEach((l, i) => l.vehs.slice().forEach(u => d2dGo(job, i, u)));
   job.legs.forEach(l => { if (typeof geoPrefetch === "function") geoPrefetch(legCoords(l)); });   /* v321: Linien schon beim Annehmen berechnen */
+  return true;
 }
 
 /* ------------------------------ Disposition -------------------------------
@@ -2441,7 +2448,9 @@ function tick(dtMin) {
   }
 
   const before = S.orders.length;
-  S.orders = S.orders.filter(o => o.expire > S.time && o.deadline > S.time + 30);
+  const overdueBulk = S.orders.filter(o => o.bulk && o.acc && o.deadline <= S.time);
+  if (overdueBulk.length) toast("🏭 " + overdueBulk.length + (overdueBulk.length === 1 ? " Großauftrag ist" : " Großaufträge sind") + " abgelaufen – die Ware bleibt im Lager.", "warn", true);
+  S.orders = S.orders.filter(o => o.expire > S.time && o.deadline > S.time + (o.bulk && o.acc ? 0 : 30));
   if (S.orders.length !== before) renderDirty = true;
   if (S.time - S.lastSpawn > 120) { S.lastSpawn = S.time; if (spawnOrders(3 + Math.floor(S.fleet.length / 6))) renderDirty = true; }
   /* Anfangs nur ab und zu ein Juwelier, später regelmäßig */
@@ -3706,7 +3715,7 @@ function renderOrders() {
     const tx = !o.farm && !o.jewel && typeof orderStory === "function" ? orderStory(o) : null;
     const net = p.ok && isFinite(p.profit) ? `<span class="netpay${p.profit < 0 ? " neg" : ""}">≈ ${p.profit < 0 ? "−" : "+"}${money(Math.abs(p.profit))} Gewinn</span>` : "";
     const modesIc = tx && tx.modes ? tx.modes.all.filter(m => MODE_INFO[m]).map(m => `<i title="${esc(MODE_INFO[m].name)}">${MODE_INFO[m].icon}</i>`).join("") : "";
-    const window_ = o.acc ? (o.abo ? "Dauerauftrag" : "angenommen · ohne Frist") : o.farm ? "Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "Lieferung bis " + stamp(o.deadline);
+    const window_ = o.bulk ? "Großauftrag · " + farmBulkTerm(o) : o.acc ? (o.abo ? "Dauerauftrag" : "angenommen · ohne Frist") : o.farm ? "Angebot noch " + dur(Math.max(1, o.expire - S.time)) : "Lieferung bis " + stamp(o.deadline);
     const offer = !o.acc && !o.farm && !o.rival && o.expire && o.expire - S.time < 1440 * 2 ? `<span>Angebot gültig noch ${dur(Math.max(1, o.expire - S.time))}</span>` : "";
     const kindCls = tx ? (o.rival ? "tender" : o.contract ? "contract" : o.series ? "project" : tx.tier >= 2 ? "reg" : tx.tier === 1 ? "known" : "new") : "";
     const cost = p.ok && isFinite(p.profit) ? o.pay - p.profit : null;
@@ -3714,7 +3723,7 @@ function renderOrders() {
     const facts = [
       ["Ladung", tx ? tx.menge : kgf(o.weight)],
       ["Strecke", kmf(o.refDist)],
-      [o.acc ? "Status" : o.farm ? "Angebot" : "Liefertermin", o.acc ? window_ : o.farm ? "noch " + dur(Math.max(1, o.expire - S.time)) : stamp(o.deadline), tight ? "o-tight" : ""],
+      [o.bulk ? "Großauftrag" : o.acc ? "Status" : o.farm ? "Angebot" : "Liefertermin", o.bulk ? farmBulkTerm(o) : o.acc ? window_ : o.farm ? "noch " + dur(Math.max(1, o.expire - S.time)) : stamp(o.deadline), tight ? "o-tight" : ""],
       ["Fahrzeit", "ab " + dur(o.refTime)]
     ];
     if (offer) facts.push(["Angebot gültig", "noch " + dur(Math.max(1, o.expire - S.time))]);
@@ -3749,7 +3758,7 @@ function renderOrders() {
           <dt>Auftragswert</dt><dd>${money(o.pay)}${cost != null ? ` · Kosten ≈ ${money(cost)} · Gewinn ≈ <b class="${p.profit < 0 ? "bad" : "good"}">${money(p.profit)}</b>` : " · Kosten erst mit passendem Fahrzeug berechenbar"}</dd>
           <dt>Ware</dt><dd>${esc(tx.menge)}</dd>
           ${tx.cap ? `<dt>Kapazität</dt><dd>${esc(tx.cap)}</dd>` : ""}
-          <dt>Zeitfenster</dt><dd>${o.acc ? esc(window_) : "Lieferung bis " + stamp(o.deadline) + " · noch " + dur(Math.max(1, rest))}${o.rival ? " · Vergabe in " + dur(Math.max(1, o.rival.at - S.time)) : o.expire && !o.farm && !o.acc ? " · Angebot bis " + stamp(o.expire) : ""}</dd>
+          <dt>Zeitfenster</dt><dd>${o.acc || o.bulk ? esc(window_) : "Lieferung bis " + stamp(o.deadline) + " · noch " + dur(Math.max(1, rest))}${o.rival ? " · Vergabe in " + dur(Math.max(1, o.rival.at - S.time)) : o.expire && !o.farm && !o.acc ? " · Angebot bis " + stamp(o.expire) : ""}</dd>
           <dt>Kunde</dt><dd>${esc(o.shipper)}${tx.p && tx.p.br ? " · " + esc(tx.p.br) : ""}${tx.rel ? " · " + esc(tx.rel) : ""}</dd>
           ${tx.next ? `<dt>Beziehung</dt><dd>${esc(tx.next)}</dd>` : ""}
         </dl>` : ""}

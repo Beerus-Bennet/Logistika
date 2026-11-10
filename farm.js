@@ -279,7 +279,7 @@ function farmInv(id) { return (S.farm.inv[id] && S.farm.inv[id].n) || 0; }
 function farmQ(id) { const e = S.farm.inv[id]; return e && e.n ? e.q : 0; }
 function farmStoreCap(st) {
   const c = farmStoreCapBase(st);
-  return c + farmHallBonus(st, c);
+  return c + farmHallBonus(st, c) + farmExternalCap(st);
 }
 /* v269: Platz ohne Große Lagerhalle (Grundstock, Ausbau, Etappe, Sägewerk, Fischerei-Gebäude) */
 function farmStoreCapBase(st) {
@@ -318,6 +318,33 @@ function farmHallBonus(st, base) {
 }
 /* Faktor für einen Ausbauschritt (mit Halle zählt jeder neue Platz doppelt) */
 const farmHallK = st => farmHallBonus(st) ? 1 + FHALL.mult : 1;
+/* v330: Außenflächen bleiben ein eigener Zusatz, damit die Hofhalle sie
+   nicht nochmals verdoppelt. Alte Spielstände brauchen keine Migration. */
+function farmExternalLevel(st) {
+  const n = S.farm && S.farm.external && S.farm.external[st];
+  return FEXTERNAL[st] && Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+function farmExternalCap(st) { return FEXTERNAL[st] ? farmExternalLevel(st) * FEXTERNAL[st].places : 0; }
+function farmExternalTotal(st, n) { return FEXTERNAL[st] ? Math.round(FEXTERNAL[st].price * (n + .075 * n * (n - 1))) : 0; }
+function farmExternalCost(st, n) {
+  if (!FEXTERNAL[st] || ![1, 5, 10].includes(n)) return null;
+  const lv = farmExternalLevel(st), cost = farmExternalTotal(st, lv + n) - farmExternalTotal(st, lv);
+  return Number.isSafeInteger(cost) && cost > 0 ? cost : null;
+}
+function farmExternalAvailable(st) { return !!(FEXTERNAL[st] && farmOn() && S.farm.logi && flv() >= 15); }
+function farmExternalBuy(st, n) {
+  const cost = farmExternalCost(st, n);
+  if (!farmExternalAvailable(st) || cost == null) return false;
+  if (S.money < cost) { toast("Für das Außenlager fehlen " + money(cost - S.money) + ".", "warn"); return false; }
+  const lv = farmExternalLevel(st);
+  S.money -= cost; S.expense += cost;
+  S.farm.external = S.farm.external || {};
+  S.farm.external[st] = lv + n;
+  logMoney("farm", "Außenlager: " + FEXTERNAL[st].n + " · +" + fmt(FEXTERNAL[st].places * n) + " Plätze", -cost);
+  const order = farmBulkMake();
+  if (order) S.orders.push(order);
+  return true;
+}
 function farmStoreUsed(st) {
   let n = 0;
   for (const id in S.farm.inv) if (FITEMS[id] && FITEMS[id].st === st) n += S.farm.inv[id].n;
@@ -1042,16 +1069,85 @@ function farmOrderArea(o) {
 }
 function farmOrderAreaOn(a) { return a === "hof" || (typeof farmAreaOpen === "function" && farmAreaOpen(a)); }
 /* wie viele offene Angebote je Tafel (angenommene zählen nicht mit) */
-function farmAreaCap(a) { return a === "hof" ? farmOrderCap() : Math.min(5, 2 + Math.floor(flv() / 8)); }
+function farmAreaCap(a) { return a === "hof" ? farmOrderCap() + (Object.keys(FEXTERNAL).some(st => farmExternalLevel(st)) ? 2 : 0) : Math.min(5, 2 + Math.floor(flv() / 8)); }
 function farmOffers(a) { return farmOrders().filter(o => !o.acc && (!a || farmOrderArea(o) === a)); }
-/* Annehmen: ab jetzt ohne Frist – das Angebot selbst verfällt nach einem Tag */
+/* Annehmen: Standardbestellungen ohne Frist, v330-Großaufträge mit eigener Lieferzeit. */
 const FORD_NOLIMIT = 525600;
 function farmAcceptOrder(o, by) {
   if (!o || !o.farm || o.acc) return false;
+  if (o.bulk && o.expire <= S.time) return false;
   o.acc = by || "chef";
   o.accT = S.time;
-  o.expire = S.time + FORD_NOLIMIT; o.deadline = S.time + FORD_NOLIMIT;
+  if (o.bulk) { o.deadline = S.time + o.bulk.window; o.expire = o.deadline + 1440; }
+  else { o.expire = S.time + FORD_NOLIMIT; o.deadline = S.time + FORD_NOLIMIT; }
   return true;
+}
+/* v330: Großkunden bestellen echte, verfügbare Hofware. Zwei offene oder
+   angenommene Großaufträge gleichzeitig; laufende Lieferungen sind bereits verladen. */
+function farmBulkCount() { return farmOrders().filter(o => o.bulk && !o.farm.taken && o.expire > S.time && o.deadline > S.time).length; }
+function farmBulkStock(id) {
+  const reserved = farmOrders().filter(o => o.acc && !o.farm.taken && o.deadline > S.time)
+    .reduce((n, o) => n + (o.farm.items[id] || 0), 0);
+  return Math.max(0, farmInv(id) - reserved);
+}
+/* Vorsichtige Tagesleistung ohne Gieß-/Glücksbonus. Bei Veredelung begrenzen
+   Zutaten und Maschinen den Durchsatz; Rohstoffvorräte werden mit einbezogen. */
+function farmBulkDaily(id, days, seen) {
+  seen = new Set(seen || []);
+  if (seen.has(id)) return 0;
+  seen.add(id);
+  const objs = S.farm.objs;
+  if (FCROPS[id]) return farmCropOk(id) ? objs.filter(o => o.t === "field").length * 2 * 1440 / FCROPS[id].t : 0;
+  if (FTREES[id]) return objs.filter(o => o.t === "tree" && o.kind === id).length * FTREES[id].yield * 1440 / FTREES[id].t;
+  const input = x => farmBulkDaily(x, days, seen) + farmBulkStock(x) / days;
+  let rate = 0;
+  for (const A of Object.values(FANIMALS)) {
+    if (A.out !== id) continue;
+    const animals = objs.filter(o => o.t === A.house).reduce((n, o) => n + o.animals.length, 0), yield_ = (A.yield || 1) / (A.mast || 1);
+    rate += Math.min(animals * 1440 / A.t, input(A.feed)) * yield_;
+  }
+  for (const [kind, M] of Object.entries(FMACHINES)) {
+    const machines = objs.filter(o => o.t === kind && machReady(o)).length;
+    if (!machines) continue;
+    for (const r of M.recipes) {
+      if (r.id !== id || r.lv > flv() || (r.ok && !r.ok())) continue;
+      const cycles = Math.min(machines * 1440 / r.t, ...Object.entries(r.in).map(([x, n]) => input(x) / n));
+      rate = Math.max(rate, cycles * (r.out || 1));
+    }
+  }
+  return rate;
+}
+function farmBulkWindow(n, kg, stock, daily, trip) {
+  const production = Math.max(0, n - stock) / Math.max(.01, daily) * 1440;
+  const preparation = (3 + Math.ceil(n / 250) + Math.ceil(kg / 5000)) * 1440;
+  return Math.ceil(Math.min(45 * 1440, Math.max(5 * 1440, preparation, production * 1.4 + 2 * 1440) + trip * 2) / 60) * 60;
+}
+function farmBulkTerm(o) { return o.acc ? "Liefern bis " + stamp(o.deadline) : "Lieferzeit ab Annahme: " + dur(o.bulk.window); }
+function farmBulkMake() {
+  if (!farmOn() || !S.farm.logi || flv() < 15 || !Object.keys(FEXTERNAL).some(st => farmExternalLevel(st)) || farmBulkCount() >= 2) return null;
+  const busy = new Set(farmOrders().map(o => o.shipper));
+  const pool = FBULK_CUSTOMERS.filter(c => N[c.town] && isUnlocked(c.town) && !busy.has(c.n));
+  while (pool.length) {
+    const c = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    const ids = c.items.filter(id => farmExternalLevel(FITEMS[id].st) && (farmCanMake(id) || farmInv(id) > 0));
+    while (ids.length) {
+      const id = ids.splice(Math.floor(Math.random() * ids.length), 1)[0], it = FITEMS[id];
+      const days = Math.min(28, 14 + Math.ceil(Math.sqrt(farmExternalLevel(it.st)) * 3));
+      const stock = farmBulkStock(id), daily = farmBulkDaily(id, days);
+      const room = farmStoreCap(it.st) - farmStoreUsed(it.st) + farmInv(id);
+      const limit = Math.floor(Math.min(farmStoreCap(it.st) * .6, room, farmMaxKg() / it.kg, stock + daily * days * .75));
+      const minimum = Math.ceil(Math.max(50, (2 + Math.ceil(flv() * .6)) * 2) / 10) * 10;
+      if (limit < minimum) continue;
+      const qty = Math.max(minimum, Math.floor(limit * (.75 + Math.random() * .25) / 10) * 10);
+      const o = farmOrderObj(c.town, c.n, { [id]: qty }, { area: "hof" });
+      if (!o) continue;
+      o.bulk = { window: farmBulkWindow(qty, o.weight, stock, daily, o.refTime) };
+      o.expire = S.time + 3 * 1440; o.deadline = S.time + o.bulk.window;
+      o.desc = "Großauftrag: " + fqty(id, qty);
+      return o;
+    }
+  }
+  return null;
 }
 /* zurückgeben: ohne Strafe, solange noch nichts unterwegs ist */
 function farmReturnOrder(o) {
@@ -1087,6 +1183,9 @@ function farmOrderQty(id, lv, big) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 function makeFarmOrder(area) {
+  if ((!area || area === "hof") && (farmBulkCount() === 0 || Math.random() < .35)) {
+    const bulk = farmBulkMake(); if (bulk) return bulk;
+  }
   const lv = flv();
   const towns = Object.keys(FTOWNS).filter(id => FTOWNS[id].lv <= lv && N[id] && isUnlocked(id));
   if (!towns.length) return null;
@@ -1413,7 +1512,7 @@ function farmDispatchOptions(o) {
 }
 function farmSend(o, opt) {
   if (!farmOrderReady(o)) { toast("Es fehlt noch Ware für " + o.shipper + ".", "warn"); return false; }
-  startJob(o, opt.v, [opt.f.uid]);
+  if (startJob(o, opt.v, [opt.f.uid]) === false) return false;
   toast(opt.t.icon + " " + opt.t.brand + " fährt los: " + o.shipper + " in " + N[o.to].short, "ok");
   save();
   return true;
@@ -1545,6 +1644,7 @@ function farmValue() {
     if (o.slots) v += FSLOT_COST.slice(0, o.slots).reduce((a, b) => a + b, 0);
   });
   farmStores().forEach(st => { v += FSTORE[st].cost.slice(0, (S.farm.cap[st] || 1) - 1).reduce((a, b) => a + b, 0); });
+  for (const st of Object.keys(FEXTERNAL)) v += farmExternalTotal(st, farmExternalLevel(st)) * .7;
   for (const id in S.farm.inv) v += farmStackV(id, S.farm.inv[id].n) * 0.8;   /* v59: Fisch nach Gewicht */
   return Math.round(v / 500) * 500;
 }

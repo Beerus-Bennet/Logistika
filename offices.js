@@ -1154,19 +1154,31 @@ function faceHTML(p, uid) {
 }
 function stars(n) { return `<i class="sskill">${"★".repeat(n)}<u>${"★".repeat(5 - n)}</u></i>`; }
 
+/* v329: Nur Ansichtszustand, kein neues Spielstandfeld. Vor dem Neuzeichnen
+   direkt aus dem DOM lesen: native toggle-Ereignisse können noch ausstehen. */
+const OFFICE_FOLDS = new Map();
+function officeFoldAttrs(key) { return `data-office-fold="${esc(key)}"${OFFICE_FOLDS.get(key) ? " open" : ""}`; }
+
 function staffRow(b, s) {
   const r = ROLES[s.role];
   const drives = S.fleet.find(f => f.driver === s.id);
-  return `<div class="staff" data-staffdrag="${b.id}|${s.id}">
-    ${faceHTML(s, "s" + s.id)}
-    <div class="stx">
-      <b>${esc(s.name)}</b>
-      <small>${r.icon} ${esc(r.name)} · ${stars(s.skill)} · ${money(s.wage)}/Tag</small>
-      <small class="trait">${drives ? "🧑‍✈️ fährt " + esc(vType(drives.type).name) : esc(s.trait)}</small>
+  return `<details class="staff staff-fold" ${officeFoldAttrs("staff:" + s.id)}>
+    <summary class="staff-summary">
+      ${faceHTML(s, "s" + s.id)}
+      <span class="stx"><b>${esc(s.name)}</b><small>${r.icon} ${esc(r.name)} · ${stars(s.skill)}</small></span>
+      <span class="office-chevron" aria-hidden="true">▸</span>
+    </summary>
+    <div class="staff-body">
+      <b class="staff-wage">${money(s.wage)}/Tag</b>
+      <p class="staff-trait">${esc(s.trait)}</p>
+      ${drives ? `<p class="staff-driver">🧑‍✈️ fährt ${esc(vType(drives.type).name)}</p>` : ""}
+      <div class="staff-actions">
+        ${S.bases.length > 1 ? `<button class="btn tiny ghost" data-move="${b.id}|${s.id}" aria-label="${esc(s.name)} in ein anderes Büro versetzen">⇄ Versetzen</button>` : ""}
+        <button class="btn tiny ghost danger" data-fire="${b.id}|${s.id}" aria-label="${esc(s.name)} kündigen">✕ Kündigen</button>
+      </div>
+      <div class="staff-drag" data-staffdrag="${b.id}|${s.id}" data-staffname="${esc(s.name)}">↔ Zum Versetzen oder Zuordnen hier ziehen</div>
     </div>
-    ${S.bases.length > 1 ? `<button class="xmini" data-move="${b.id}|${s.id}" title="in anderes Büro versetzen">⇄</button>` : ""}
-    <button class="xmini" data-fire="${b.id}|${s.id}" title="kündigen">✕</button>
-  </div>`;
+  </details>`;
 }
 function candRow(b, c) {
   const r = ROLES[c.role];
@@ -1192,10 +1204,16 @@ function baseCard(b) {
   const covered = ROLE_KEYS.map(r => `<button class="cov${roleCount(b, r) ? " on" : ""}" title="${ROLES[r].name} – antippen, Lina erklärt" data-role="${r}" data-rolebase="${b.id}">
       ${ROLES[r].icon}<i>${rolePower(b, r) || "–"}</i><small>${ROLES[r].name.split(" ")[0]}</small></button>`).join("");
 
-  return `<div class="card base${paused ? " halted" : ""}">
-    <div class="card-top">
-      <span class="vicon">${t.icon}</span>
-      <div class="vname">${esc(n.name)}<small>${t.name} · ${b.rent ? "gemietet" : "im Eigentum"}</small></div>
+  return `<details class="card base base-fold${paused ? " halted" : ""}" ${officeFoldAttrs("base:" + b.id)}>
+    <summary class="base-summary">
+      <span class="vicon" aria-hidden="true">${t.icon}</span>
+      <span class="base-label"><b>${esc(n.name)}</b><small>${t.name} · ${b.rent ? "gemietet" : "im Eigentum"}</small>
+        <span class="base-brief"><span>👥 ${b.staff.length}/${t.desks}</span><span>🚚 ${b.vehicles.length}/${t.slots}</span><span${b.mood < 50 ? ` class="bad"` : ""}>Stimmung ${Math.round(b.mood)} %</span></span>
+        ${paused ? `<small class="bad">⛔ Betrieb steht still · noch ${rest}</small>` : ""}</span>
+      <span class="office-chevron" aria-hidden="true">▸</span>
+    </summary>
+    <div class="base-body"><div class="base-cost">
+      <span>Standortkosten</span>
       <span class="price">${money(monthlyRent(b))}<small>/Monat</small></span>
     </div>
 
@@ -1241,11 +1259,13 @@ function baseCard(b) {
           ? `<div class="hintbox warn">Zu wenig Fahrpersonal: ${mine.length} Fahrzeuge, ${cap} gleichzeitig – drückt die Stimmung.</div>`
           : ""}
 
-    <div class="sechead sm">Team</div>
-    ${b.staff.length ? b.staff.map(s => staffRow(b, s)).join("")
-                     : `<div class="empty sm">Noch niemand eingestellt.</div>`}
+    <details class="team-fold" ${officeFoldAttrs("team:" + b.id)}>
+      <summary><b>Team</b><small>${b.staff.length} ${b.staff.length === 1 ? "Person" : "Personen"}</small><span class="office-chevron" aria-hidden="true">▸</span></summary>
+      <div class="team-body">${b.staff.length ? b.staff.map(s => staffRow(b, s)).join("")
+                     : `<div class="empty sm">Noch niemand eingestellt.</div>`}</div>
+    </details>
 
-    <div class="sechead sm">Bewerbungen<small>neue jeden Morgen · ${3 + Math.floor(S.stage / 2) + ([0, 1, 2, 3, 5][b.tier] || 0)} pro Tag</small></div>
+    <div class="sechead sm base-applications">Bewerbungen<small>neue jeden Morgen · ${3 + Math.floor(S.stage / 2) + ([0, 1, 2, 3, 5][b.tier] || 0)} pro Tag</small></div>
     ${(b.pool || []).length ? b.pool.map(c => candRow(b, c)).join("")
                             : `<div class="empty sm">Heute keine Bewerbungen mehr – morgen früh neue. Oder schalte eine Anzeige:</div>`}
     <div class="assignrow adrow">
@@ -1287,7 +1307,7 @@ function baseCard(b) {
           : `<span class="lockchip">🔒 ${OFFICE_TIERS[b.tier + 1].name} ab Etappe ${OFFICE_TIERS[b.tier + 1].st}</span>`) : ""}
       <button class="btn tiny ghost danger" data-close="${b.id}">${b.rent ? "kündigen" : "verkaufen"}</button>
     </div>
-  </div>`;
+  </div></details>`;
 }
 
 function newBaseCard() {
@@ -1327,6 +1347,8 @@ function newBaseCard() {
 function renderBases() {
   ensureOffices();
   const el = $("#tab-bases"); if (!el) return;
+  const focused = document.activeElement, focusKey = focused && focused.matches("summary") && focused.parentElement.dataset.officeFold;
+  el.querySelectorAll("details[data-office-fold]").forEach(d => OFFICE_FOLDS.set(d.dataset.officeFold, d.open));
   el.innerHTML =
     (S.bases.length
       ? `<div class="sechead" style="margin-top:0">Deine Standorte</div>` + S.bases.map(baseCard).join("")
@@ -1399,6 +1421,11 @@ function renderBases() {
     const sel = $("#newBaseNode");
     if (sel && sel.value) openBase(sel.value, +tier, rent === "1");
   });
+  /* v329: Tastaturfokus beim regelmäßigen Neuzeichnen am Klappkopf halten. */
+  if (focusKey) {
+    const fold = Array.from(el.querySelectorAll("details[data-office-fold]")).find(d => d.dataset.officeFold === focusKey);
+    if (fold) fold.querySelector("summary").focus({ preventScroll: true });
+  }
 }
 
 /* =========================================================================
@@ -1930,7 +1957,7 @@ function makeDraggable(el, payload) {
         openDropBar(payload);
         ghost = document.createElement("div");
         ghost.className = "dragghost";
-        ghost.innerHTML = el.innerHTML;
+        ghost.innerHTML = el.dataset.staffname ? esc(el.dataset.staffname) : el.innerHTML;
         document.body.appendChild(ghost);
         el.classList.add("ghosted");
       }
@@ -1946,11 +1973,13 @@ function makeDraggable(el, payload) {
       document.removeEventListener("pointerup", up);
       document.removeEventListener("pointercancel", up);
       if (!active) return;
+      /* v329: Ziel prüfen, solange die sichtbare Ablageleiste noch ihre
+         Zieh-Anordnung hat. Erst danach die Darstellung zurücksetzen. */
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      const zone = under && under.closest ? under.closest("[data-drop]") : null;
       document.body.classList.remove("dragging-staff");
       el.classList.remove("ghosted");
       if (ghost) ghost.remove();
-      const under = document.elementFromPoint(ev.clientX, ev.clientY);
-      const zone = under && under.closest ? under.closest("[data-drop]") : null;
       $$("[data-drop]").forEach(z => z.classList.remove("over"));
       if (zone) handleStaffDrop(payload, zone.dataset.drop);
       closeDropBar();

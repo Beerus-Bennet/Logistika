@@ -768,6 +768,10 @@ function tutText(st) { return typeof st.tx === "function" ? st.tx() : st.tx; }
 function tutResolve(st) {
   if (!st.target) return null;
   const t = typeof st.target === "function" ? st.target() : document.querySelector(st.target);
+  /* v329: Linas Ziel auch in zugeklappten Büro-/Teambereichen sichtbar machen. */
+  if (t) for (let p = t.parentElement; p; p = p.parentElement) {
+    if (p.tagName === "DETAILS") p.open = true;
+  }
   return t || null;
 }
 
@@ -1091,7 +1095,6 @@ addEventListener("keydown", e => {
    Kurze Einschübe, sobald etwas Neues auftaucht: Mr. Snus, Don Pablo und
    die Büros (einmal ohne, einmal mit erstem Standort). Jedes nur einmal –
    unter „Welt“ lassen sie sich wiederholen. Die Uhr steht dabei still.  */
-const baseHead = i => () => $$("#tab-bases .card.base .sechead.sm")[i] || null;
 /* v76: alle Gespräche gekürzt (vorher 5 bis 14 Blasen) – nur noch, was man wissen MUSS, um nicht in
    eine Falle zu laufen oder festzustecken. Der Rest erklärt sich beim Ausprobieren; die Stellen im Büro
    erklärt Lina auf Zuruf (Tipp auf eine Stelle), unter „Welt“ lässt sich alles wiederholen. */
@@ -1133,7 +1136,7 @@ const LINA_TALKS = {
       target: "#tab-bases .card.base .covrow" },
     { tx: "Täglich neue <b>Bewerbungen</b>: Sterne = Können, 🤝 stellt ein. Alles Weitere – Fahrzeuge zuordnen, Fahrpersonal "
         + "auf Fahrzeuge ziehen, ausbauen – probierst du am besten selbst aus.",
-      target: () => $("#tab-bases .card.base .staff.cand") || baseHead(1)() }
+      target: () => $("#tab-bases .card.base .staff.cand") || $("#tab-bases .card.base .base-applications") }
   ]
 };
 

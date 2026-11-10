@@ -4715,3 +4715,54 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 #viewTools .fchip.sel.on select{color:#fff}
 #viewTools .fchip.sel select option{color:#0d1b2a}
 #viewTools .chiprow:not([data-l]){padding-top:6px}
+
+/* ---------- v329: Büros, Team und einzelne Mitarbeitende aufklappen ---------- */
+#tab-bases .base-fold{padding:0}
+#tab-bases .base-fold summary{list-style:none;cursor:pointer}
+#tab-bases .base-fold summary::-webkit-details-marker{display:none}
+#tab-bases .base-fold summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:10px}
+#tab-bases .base-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px;min-height:78px;border-radius:12px;background:#f1f6fd}
+#tab-bases .base-fold[open]>.base-summary{position:sticky;top:-10px;z-index:3;border-bottom:2px solid #cad8e8;border-radius:12px 12px 0 0}
+#tab-bases .base-label{min-width:0}
+#tab-bases .base-label>b{display:block;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+#tab-bases .base-label>small{display:block;font-size:11px;font-weight:700;line-height:1.4;color:#4e6070;margin-top:2px}
+#tab-bases .base-brief{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11px;font-weight:700;line-height:1.5;margin-top:4px;color:#40586b}
+#tab-bases .base-label .bad{color:var(--red)}
+#tab-bases .office-chevron{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1.5px solid #afc3db;border-radius:50%;background:var(--card);font-size:17px;line-height:1;transition:transform .15s}
+#tab-bases details[open]>summary>.office-chevron{transform:rotate(90deg)}
+#tab-bases .base-body{padding:10px}
+#tab-bases .base-body summary{scroll-margin-top:120px}
+#tab-bases .base-cost{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:12px;font-weight:700;color:#4e6070}
+#tab-bases .team-fold{border:2px solid #b5c9df;border-radius:12px;background:#f3f7fc;margin:12px 0}
+#tab-bases .team-fold>summary{display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 10px;font-size:13px}
+#tab-bases .team-fold>summary small{flex:1;min-width:0;font-size:11px;font-weight:700;color:#4e6070}
+#tab-bases .team-body{padding:0 8px 8px}
+#tab-bases .staff-fold{display:block;padding:0;min-width:0}
+#tab-bases .staff-summary{display:flex;align-items:center;gap:8px;padding:8px;min-height:54px}
+#tab-bases .staff-body{padding:0 10px 10px;border-top:1px solid #d5dfeb}
+#tab-bases .staff-wage{display:block;font-size:12px;margin-top:8px}
+#tab-bases .staff-trait,#tab-bases .staff-driver{font-size:12px;font-weight:600;line-height:1.5;margin:5px 0;overflow-wrap:anywhere}
+#tab-bases .staff-trait{color:#4e6070}
+#tab-bases .staff-driver{color:var(--green-d)}
+#tab-bases .staff-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+#tab-bases .staff-actions .btn.tiny{min-height:40px;margin:0}
+#tab-bases .staff-drag{font-size:11px;font-weight:700;color:#4e6070;line-height:1.5;padding:9px 7px;margin-top:8px;border:1.5px dashed #9eb6ce;border-radius:8px;cursor:grab;touch-action:pan-y}
+#tab-bases .staff-drag.ghosted{opacity:.35}
+/* Bei vielen Büros dürfen die Versetzungsziele die Fahrzeugziele nicht auf
+   null Pixel zusammendrücken. Jede Zielgruppe hat ihre eigene Scrollzeile. */
+body.dragging-staff #dropbar .dropbar-row{display:grid;grid-template-columns:minmax(0,1fr) 112px}
+body.dragging-staff #dropbar .dropbar-scroll{grid-column:1/-1;width:100%}
+body.dragging-staff #dropbar .dropzone-grp{min-width:0;border-left:0;padding-left:0}
+body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112px;min-width:0;max-width:none}
+@media(prefers-reduced-motion:reduce){#tab-bases .office-chevron{transition:none}}
+
+/* ---------- v330: Außenlager und Großaufträge für Hofware ---------- */
+.fs-external{display:grid;gap:10px;margin:16px 0;padding:14px;border:2px solid #9cb7d0;border-radius:16px;background:#f6faff}
+.fs-external b{font-size:15px;display:block}
+.fs-external small{display:block;color:#4e6070;font-size:12px;font-weight:600;line-height:1.5}
+.fs-external strong{color:var(--green-d);font-size:13px}
+.external-buy{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.external-buy .btn{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;min-height:64px;padding:8px 4px;white-space:normal;line-height:1.35}
+.external-buy .btn small{font-size:10px;color:inherit}
+.fo-tag.bulk{background:#e4f2ff;color:#245681;white-space:normal;line-height:1.4}
+@media(max-width:360px){.external-buy{grid-template-columns:1fr}.external-buy .btn{min-height:52px}}

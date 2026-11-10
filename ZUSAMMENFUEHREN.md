@@ -1,3 +1,23 @@
+## v330 – Außenlager, Großkunden und aufklappbare Büroteams
+
+Branch `claude/office-folds-external-storage`, basiert auf `main` nach PR #48 (`37b0aff`). Beim abschließenden GitHub-Abgleich offene parallele PRs und einen inzwischen geänderten Hauptbranch erneut prüfen. Nicht direkt in `main` veröffentlichen.
+
+- Zusammengehörig: `farmdata.js` (Außenlagerpreise und Großkunden), `farm.js` (Kapazität, Ausbau, Angebotsmengen/Fristen/Hofwert), `farmview.js` (Kauf und Auftragsdarstellung), `game.js` (Start-/Fristprüfung, Auftragsliste), angehängter v330-CSS-Block sowie passende Cache-Verweise. v329-Büroänderungen sind im selben Branch enthalten.
+- Neue optionale Felder: `S.farm.external.silo/barn` zählen gekaufte Abschnitte; `order.bulk.window` enthält die Lieferzeit in Spielminuten. Nach Annahme gelten `deadline/expire`, nach Verladung der bestehende Auftrag in `S.jobs`. Kein zweiter Warenbestand, kein neues Saveformat und keine Nachvergütung beim Laden.
+- Außenlagerbonus erst **nach** `farmHallBonus` addieren. Die Hofhalle darf Außenflächen nicht nochmals verdoppeln. Ausbau hat kein neues Spielmaximum; Mengenpakete 1/5/10, steigender Preis und Geldprüfung begrenzen den Kauf.
+- Großaufträge benutzen `farmOrderObj`, `farmAcceptOrder`, `farmSend/startJob`, `farmTakeOrder` und `finishJob/farmDelivered`. Normale Bestellungen/Daueraufträge behalten ihre Annahmefristen. Terminablauf eines unverladenen Großauftrags lässt den Vorrat unangetastet.
+- Prüfen mit `node farm-wholesale-v330.test.js` (elf Gruppen), `node office-value-v322.test.js`, `node office-limits.test.js`, `node d2d-v313.test.js`, `node trophy-exhibits-v328.test.js`. Browserabläufe siehe `AENDERUNGEN.md`; keine neuen Pakete.
+
+## v329 – Aufklappbare Büro- und Teamansicht
+
+Enthalten in Branch `claude/office-folds-external-storage`, auf aktuellem `main` nach PR #48. `offices.js`, `intro.js`, angehängten v329-Block in `style.css` sowie die zugehörigen Cache-Verweise in `index.html`/`sw.js` gemeinsam übernehmen. Die gemeinsame Lieferung v330 erhöht das Stylesheet und den Service Worker nochmals auf v330.
+
+- Büro, Team und einzelne Person sind native `details` mit Schlüsseln `base:<id>`, `team:<id>`, `staff:<id>` in `data-office-fold`. `renderBases` liest die Zustände vor dem Ersetzen des DOM und stellt den Summary-Fokus wieder her. Die Schlüssel bleiben über Personalaktionen und Tabwechsel erhalten; kein neues Feld in `S`.
+- `data-staffdrag` liegt auf der Ziehfläche innerhalb der geöffneten Person. Öffnen/Schließen löst keinen Ziehvorgang aus; die bisherigen Versetzen-/Kündigen-/Fahrerfunktionen bleiben angebunden. `makeDraggable` ermittelt beim Loslassen das Ziel, bevor `dragging-staff` entfernt wird, da diese Klasse die Anordnung der Ablageleiste bestimmt.
+- Die Zeilen der Ablageleiste werden während des Ziehens getrennt angeordnet: keine auf null Breite zusammengeschobenen Fahrzeugziele bei vielen Büros. Der reine Versetzen-Dialog behält seine bisherige Bedienung.
+- `tutResolve` öffnet die Vorfahren eines Tutorialziels, damit Linas erster Büro-Rundgang auch bei anfangs geschlossenen Karten funktioniert.
+- Bestehende Büro-/Kaufgrenzenprüfungen sowie Browserabläufe mit acht Büros und 144 Beschäftigten bestanden. Keine neuen Pakete, Bilder oder Spielstandmigrationen.
+
 ## v328 – Fasan und individuelle Ganzkörperpräparate
 
 Branch `claude/fullbody-trophies`. Aktuelles `main` und alle beim Upload offenen PRs abgleichen; Versionsdateien und Changelogs zusammenführen, keine Veröffentlichung/Merge ohne Auftrag.
