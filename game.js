@@ -3603,7 +3603,10 @@ function setTools(tab, html, bind) {
   bind(vt);
 }
 /* v324: Jede Zeile der Werkzeugleiste trägt links eine kleine Beschriftung (Sortieren, Zeigen, Art …) – so ist klar, was die Chips tun */
-const toolRow = (label, inner) => `<div class="chiprow" data-l="${label}">${inner}</div>`;
+const toolRow = (label, inner) => `<div class="chiprow"${label ? ` data-l="${label}"` : ""}>${inner}</div>`;
+/* v324: Auswahlfeld im Chip-Stil für alles, was man selten umstellt (Ladungsart, Fahrzeugart, Sortierung). on = weicht vom Standard ab */
+const selChip = (id, opts, cur, icon, on) => `<label class="fchip sel${on ? " on" : ""}">${icon}<select id="${id}" aria-label="${icon}">${opts.map(([k, l]) =>
+  `<option value="${k}"${String(k) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
 const chipHTML = (attr, key, label, n, on, extra) =>
   `<button class="fchip${on ? " on" : ""}${n === 0 && !on ? " zero" : ""}${extra ? " " + extra : ""}" ${attr}="${key}">${label}${n != null ? ` <b>${n}</b>` : ""}</button>`;
 
@@ -3625,8 +3628,6 @@ function orderMatches(o, p, f) {
   return o.cargo === f;
 }
 function orderToolsHTML(rows, mode, filt) {
-  const seg = toolRow("Sortieren", `<div class="seg" aria-label="Sortieren">${ORDER_SORTS.map(([k, i, l]) =>
-    `<button data-sort="${k}" class="${k === mode ? "on" : ""}"><i>${i}</i>${l}</button>`).join("")}</div>`);
   const n = {};
   rows.forEach(({ o }) => { n[o.cargo] = (n[o.cargo] || 0) + 1; if (o.air) n.air = (n.air || 0) + 1; });
   /* Hof, Sägewerk, Fischerei: je Station ein Filter (statt einem für alle Hofwaren) */
@@ -3636,9 +3637,12 @@ function orderToolsHTML(rows, mode, filt) {
   const chips = [chipHTML("data-of", "all", "Alle", rows.length, filt === "all"),
     chipHTML("data-of", "ok", "✅ jetzt machbar", rows.filter(r => orderDoable(r.o, r.p)).length, filt === "ok")];
   areas.forEach(a => chips.push(chipHTML("data-of", "f:" + a.id, a.i + " " + a.n, rows.filter(({ o }) => o.farm && farmOrderArea(o) === a.id).length, filt === "f:" + a.id)));
-  if (n.air || filt === "air") chips.push(chipHTML("data-of", "air", "✈️ Luftfracht", n.air || 0, filt === "air"));
-  kinds.forEach(k => chips.push(chipHTML("data-of", k, icon(k) + " " + (ORDER_CHIP[k] || CARGO[k].name), n[k] || 0, filt === k)));
-  return seg + toolRow("Zeigen", chips.join(""));
+  /* v324: eine Zeile. Vorn, was man ständig braucht (Alle, jetzt machbar, Hof-Stationen); Ladungsart und Sortierung als Auswahlfelder dahinter. */
+  const txt = k => (k === "snus" ? "🎩" : CARGO[k].icon) + " " + (ORDER_CHIP[k] || CARGO[k].name) + " (" + (n[k] || 0) + ")";
+  const kindOpts = [["", "Jede Ladung"]].concat(n.air || filt === "air" ? [["air", "✈️ Luftfracht (" + (n.air || 0) + ")"]] : [], kinds.map(k => [k, txt(k)]));
+  const isKind = filt === "air" || kinds.includes(filt);
+  return toolRow("", chips.join("") + `<span class="chipdiv"></span>` + selChip("ofKind", kindOpts, isKind ? filt : "", "📦", isKind)
+    + selChip("ofSort", ORDER_SORTS.map(([k, i, l]) => [k, "Nach " + l]), mode, "↕", false));
 }
 function renderOrders() {
   const el = $("#tab-orders");
@@ -3662,10 +3666,9 @@ function renderOrders() {
   const pin = o => o.tut ? 3 : o.tutNext ? 2 : o.vip ? 1 : 0;
   rows.sort((a, b) => pin(b.o) - pin(a.o) || by(a, b));
   setTools("orders", orderToolsHTML(rows, mode, filt), vt => {
-    vt.querySelectorAll("[data-sort]").forEach(b => b.onclick = () => {
-      S.orderSort = b.dataset.sort; save(); renderOrders();
-      $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
-    });
+    const top = () => { save(); renderOrders(); $("#view .view-body") && ($("#view .view-body").scrollTop = 0); };
+    const so = vt.querySelector("#ofSort"); if (so) so.onchange = () => { so.blur(); S.orderSort = so.value; top(); };
+    const kd = vt.querySelector("#ofKind"); if (kd) kd.onchange = () => { kd.blur(); S.orderFilter = kd.value || "all"; top(); };
     vt.querySelectorAll("[data-of]").forEach(b => b.onclick = () => {
       S.orderFilter = b.dataset.of === S.orderFilter ? "all" : b.dataset.of; save(); renderOrders();
       $("#view .view-body") && ($("#view .view-body").scrollTop = 0);
@@ -3759,7 +3762,7 @@ function jobMatches(j, k) {
   return k === "all" || (k === "legal" && !grey) || (k === "grey" && grey) || (k === "vip" && !!o.vip) || (k === "trouble" && jobTrouble(j));
 }
 function jobToolsHTML(k) {
-  return toolRow("Zeigen", JOB_FILTERS.map(([id, l]) => {
+  return toolRow("", JOB_FILTERS.map(([id, l]) => {
     const n = S.jobs.filter(j => jobMatches(j, id)).length;
     if ((id === "vip" || id === "grey") && !n && k !== id) return "";
     return chipHTML("data-jf", id, l, n, k === id, id === "trouble" && n ? "alert" : "");
@@ -3958,37 +3961,31 @@ function fleetList(F) {
   };
   return S.fleet.filter(f => fleetPass(f, F)).sort(sorts[F.sort] || sorts.std);
 }
+/* v324: eine Zeile. Vorn der Einsatz (Alle, im Einsatz, frei, ungenutzt), dahinter Auswahlfelder für Art, Zuständigkeit und Sortierung.
+   „Alle“ hebt jeden Filter auf – ein eigener Rücksetz-Knopf ist nicht mehr nötig. Die Tage-Auswahl gibt es nur beim Filter „ungenutzt“. */
 function fleetToolsHTML(F) {
   const n = (k, v) => S.fleet.filter(f => fleetPass(f, Object.assign({}, F, { [k]: v }), null)).length;
-  const use = FLEET_USE.map(([k, l]) => chipHTML("data-fu", k, k === "unused" ? `${l} ≥ ${F.days} T` : l, n("use", k), F.use === k,
-    k === "unused" && n("use", k) ? "alert" : "")).join("");
-  const modes = [...new Set(S.fleet.map(f => vType(f.type).mode))];
-  const mchips = modes.length > 1 ? ["all"].concat(["b", "r", "i", "l", "s", "a"].filter(m => modes.includes(m)))
-    .map(m => chipHTML("data-fm", m, m === "all" ? "Alle Arten" : MODE_INFO[m].icon + " " + MODE_INFO[m].name, m === "all" ? S.fleet.length : n("mode", m), F.mode === m && (m !== "all" || !fleetFiltered(F)))).join("") : "";
   if (F.own === "lease" || F.own === "own") F.own = "all";   /* v244: kein Leasing mehr – alle Fahrzeuge gehören dir */
-  /* v324: drei beschriftete Zeilen – Zeigen (Einsatz und Zuständigkeit), Art, Sortieren. Der Chip „Alle“ bei der Zuständigkeit entfällt
-     (erneutes Antippen hebt die Wahl auf), die Tage-Auswahl erscheint nur beim Filter „ungenutzt“. */
-  const own = [["base", "🏢 im Büro"], ["self", "✋ selbst"]];
-  const sel = (id, opts, cur, lbl) => `<label class="fchip sel" title="${lbl}">${lbl}<select id="${id}" aria-label="${lbl}">${opts.map(([k, l]) =>
-    `<option value="${k}"${String(k) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-  return toolRow("Zeigen", use + `<span class="chipdiv"></span>` + own.map(([k, l]) => chipHTML("data-fo", k, l, n("own", k), F.own === k)).join(""))
-    + (mchips ? toolRow("Art", mchips) : "")
-    + toolRow("Sortieren", sel("ffSort", FLEET_SORTS, F.sort, "↕")
-      + (F.use === "unused" ? sel("ffDays", FLEET_DAYS.map(d => [d, "ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️") : "")
-      + (fleetFiltered(F) ? `<button class="fchip reset" data-ffreset="1">✕ Filter aus</button>` : ""));
+  const use = FLEET_USE.map(([k, l]) => k === "all" ? chipHTML("data-fu", k, l, S.fleet.length, !fleetFiltered(F))
+    : chipHTML("data-fu", k, l, n("use", k), F.use === k, k === "unused" && n("use", k) ? "alert" : "")).join("");
+  const modes = ["b", "r", "i", "l", "s", "a"].filter(m => S.fleet.some(f => vType(f.type).mode === m));
+  const mode = modes.length > 1 ? selChip("ffMode", [["all", "Jede Art"]].concat(modes.map(m => [m, MODE_INFO[m].icon + " " + MODE_INFO[m].name + " (" + n("mode", m) + ")"])), F.mode, "🚚", F.mode !== "all") : "";
+  const own = (S.bases || []).length ? selChip("ffOwn", [["all", "Büro und selbst"], ["base", "🏢 im Büro (" + n("own", "base") + ")"], ["self", "✋ selbst (" + n("own", "self") + ")"]], F.own, "👤", F.own !== "all") : "";
+  return toolRow("", use
+    + (F.use === "unused" ? selChip("ffDays", FLEET_DAYS.map(d => [d, "ab " + d + (d === 1 ? " Tag" : " Tagen")]), F.days, "🕸️", false) : "")
+    + `<span class="chipdiv"></span>` + mode + own + selChip("ffSort", FLEET_SORTS, F.sort, "↕", F.sort !== "std"));
 }
 function bindFleetTools(vt) {
   const F = fleetF();
   const again = () => { save(); renderFleet(); const vb = $("#view .view-body"); if (vb) vb.scrollTop = 0; };
-  vt.querySelectorAll("[data-fu]").forEach(b => b.onclick = () => { F.use = b.dataset.fu === F.use ? "all" : b.dataset.fu; again(); });
-  /* v147: „Alle Arten“ zeigt wirklich alle Fahrzeuge – auch die in einem Büro (setzt Einsatz-/Besitz-Filter zurück) */
-  vt.querySelectorAll("[data-fm]").forEach(b => b.onclick = () => {
-    if (b.dataset.fm === "all") { F.mode = "all"; F.own = "all"; F.use = "all"; } else F.mode = b.dataset.fm === F.mode ? "all" : b.dataset.fm;
+  vt.querySelectorAll("[data-fu]").forEach(b => b.onclick = () => {
+    if (b.dataset.fu === "all") { F.use = "all"; F.mode = "all"; F.own = "all"; } else F.use = b.dataset.fu === F.use ? "all" : b.dataset.fu;
     again(); });
-  vt.querySelectorAll("[data-fo]").forEach(b => b.onclick = () => { F.own = b.dataset.fo === F.own ? "all" : b.dataset.fo; again(); });
-  const so = vt.querySelector("#ffSort"); if (so) so.onchange = () => { so.blur(); F.sort = so.value; again(); };
-  const dd = vt.querySelector("#ffDays"); if (dd) dd.onchange = () => { dd.blur(); F.days = +dd.value; if (F.use !== "unused") F.use = "unused"; again(); };
-  const rs = vt.querySelector("[data-ffreset]"); if (rs) rs.onclick = () => { S.fleetF = null; again(); };
+  const on = (id, f) => { const e = vt.querySelector(id); if (e) e.onchange = () => { e.blur(); f(e.value); again(); }; };
+  on("#ffMode", v => { F.mode = v; });
+  on("#ffOwn", v => { F.own = v; });
+  on("#ffSort", v => { F.sort = v; });
+  on("#ffDays", v => { F.days = +v; });
 }
 function useLineHTML(v) {
   const d = idleDays(v), u = utilOf(v);

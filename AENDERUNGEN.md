@@ -8,15 +8,14 @@
 - Die Zeilen hatten keine Beschriftung. In der Flotte standen drei Reihen mit zwei „Alle“-Chips, zwei Auswahlfeldern und gemischten Bedeutungen untereinander.
 - Bei den Aufträgen war die Sortierung ein großer Kasten in anderem Stil als der Rest.
 
-**Lösung:**
+**Lösung (nach Bennets Zusatz „der Spieler soll nicht zu viel nachdenken müssen“ auf eine Zeile verdichtet):**
 - Eigener Stil nur für die Leiste (`#viewTools`): alle Chips 30 px hoch, 12,5 px Schrift, rund, ohne Schlagschatten. Aktiv ist blau. Zähler sitzen als kleine Plakette im Chip.
-- Jede Zeile trägt links eine kleine feste Beschriftung (`toolRow`): **Sortieren**, **Zeigen**, **Art**, **Auswahl**. Die Chips scrollen rechts daneben.
-- Aufträge: Sortieren als flache Dreier-Auswahl in Chip-Höhe, darunter „Zeigen“.
-- Flotte: „Zeigen“ (Einsatz und Zuständigkeit), „Art“, „Sortieren“. Der doppelte „Alle“-Chip der Zuständigkeit entfällt (erneutes Antippen hebt die Wahl auf). Die Tage-Auswahl erscheint nur beim Filter „ungenutzt“. „Filter aus“ steht am Ende der Sortierzeile.
-- Markt: „Art“ und „Auswahl“. Live: „Zeigen“.
-- Die Filterlogik ist unverändert: dieselben Filter, Sortierungen und gespeicherten Einstellungen.
+- **Aufträge – eine Zeile:** vorn „Alle“, „✅ jetzt machbar“ und die Hof-Stationen. Dahinter zwei Auswahlfelder: Ladungsart („Jede Ladung“, vorher bis zu elf einzelne Chips) und Sortierung („Nach Erlös/Leerfahrt/Frist“).
+- **Fuhrpark – eine Zeile:** vorn „Alle“, „im Einsatz“, „frei“, „ungenutzt“. Dahinter Auswahlfelder für Art, Zuständigkeit (nur wenn es Büros gibt) und Sortierung. „Alle“ hebt jeden Filter auf, der eigene Rücksetz-Knopf entfällt. Die Tage-Auswahl erscheint nur beim Filter „ungenutzt“. Ein Auswahlfeld, das vom Standard abweicht, ist blau.
+- **Live:** eine Zeile. **Markt:** zwei beschriftete Zeilen („Art“, „Auswahl“) über `toolRow`.
+- Die Filterlogik ist unverändert: dieselben Filter, Sortierungen und gespeicherten Einstellungen. Einzige Verhaltensänderung: Im Fuhrpark setzt jetzt der Chip „Alle“ alles zurück (vorher „Alle Arten“ bzw. „Filter aus“).
 
-**Geprüft (Testbrowser, 390 × 844):** Höhe der Leiste: Aufträge 86 px, Flotte 124 px, Markt 130 px (inklusive Umschalter). Alle Chips 30 px hoch mit 12,5 px Schrift. Echte Tipps: Aufträge sortieren und filtern, Flotte nach Einsatz, Art und Zuständigkeit filtern (3 Treffer) und zurücksetzen. Keine Konsolenfehler, Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy; Live-Reiter und Auktionshaus nur über den gemeinsamen Stil, nicht einzeln gesichtet.
+**Geprüft (Testbrowser, 390 × 844):** Höhe der Leiste: Aufträge 50 px, Fuhrpark 50 px (vorher im Bildschirmfoto etwa 160 bzw. 230 px), Markt 130 px mit Umschalter. Echte Tipps und Auswahlen: Aufträge nach Frist sortieren, „jetzt machbar“, Ladungsart wählen (11 Karten, alle passend); Fuhrpark „frei“ + Art „Straße“ + Sortierung (3 Karten), „Alle“ setzt zurück (9 Karten). Keine Konsolenfehler, Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy (dort öffnet das Auswahlfeld die Systemliste); Live-Reiter und Auktionshaus nur über den gemeinsamen Stil.
 
 ## v323 – Sammellieferung: alle offenen Pull Requests in einem Stand
 Dieser Stand fasst die neun offenen Pull Requests #34 bis #42 zusammen (Branch `claude/sammel-v323`, Basis `main` nach PR #33 / v314). Es gibt eine Versionsnummer für alle geänderten Dateien. Die Einzelabschnitte v315 bis v322 stehen unten unverändert.

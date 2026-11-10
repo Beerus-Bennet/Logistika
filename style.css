@@ -4711,3 +4711,7 @@ input,textarea,[contenteditable="true"],[contenteditable=""],[contenteditable="p
 #viewTools .chiprow.mswitch .fchip:nth-child(2){border-radius:0 12px 12px 0}
 #viewTools .chiprow.mswitch .fchip.on{background:linear-gradient(135deg,#7a1f2b,#3b0f18);color:#ffe7a8}
 #viewTools .chiprow.mswitch .fchip:first-child.on{background:var(--ink);color:#fff}
+#viewTools .fchip.sel.on{background:var(--blue);color:#fff}
+#viewTools .fchip.sel.on select{color:#fff}
+#viewTools .fchip.sel select option{color:#0d1b2a}
+#viewTools .chiprow:not([data-l]){padding-top:6px}
