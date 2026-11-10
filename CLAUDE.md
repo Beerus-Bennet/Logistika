@@ -77,3 +77,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v336: Auktionshaus – keine Nutzfahrzeug-Zufallslose mehr (`makeLot` nur noch für eigene Einlieferung, `ensureLots` räumt alte fremde Lose auf); `cars.js` 127 Modelle, 10 neue Marken (Aston Martin, McLaren, Rolls-Royce, Bentley, Maserati, Jaguar, Pagani, Koenigsegg, Lotus, Ford); Foto-Filter `CAR_FX` sanft (`lineA` 0, Cache `/__carcomic/v3/`).
 - v337: Auktionshaus – `ahPurgeVeh` entfernt alte fremde Nutzfahrzeug-Lose auch mit Spielergebot, beim Nachlegen und beim Öffnen.
 - v338: Auktionshaus – Limit-Feld zeigt Tausenderpunkte (`ahGroup`, `ahGroupInput`, `ahDigits` in `auction.js`).
+- v339: Auktionshaus – fehlende Autofotos per Wikipedia-Suche („Marke Modell“, Treffer muss die Marke im Titel haben) als vierter Schritt in `resolvePics`.
