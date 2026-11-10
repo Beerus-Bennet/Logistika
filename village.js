@@ -25,7 +25,8 @@ const VILLAGE = (() => {
     return [[r[0],r[1],x0,r[3]],[x1,r[1],r[2],r[3]],[x0,r[1],x1,z0],[x0,z1,x1,r[3]]].filter(a=>a[2]>a[0]&&a[3]>a[1]);
   }
   function obstruction(p){
-    return S.farm.objs.find(o=>{const s=farmSize(o),x=o.x-FG/2,z=o.z-FG/2;return x<p.x+6.5&&x+s[0]>p.x-6.5&&z<p.z+5.3&&z+s[1]>p.z-5.3;});
+    const r=typeof VILLAGE_SITE!=="undefined"?VILLAGE_SITE.lot(p):[p.x-6.5,p.z-5.3,p.x+6.5,p.z+5.3];
+    return S.farm.objs.find(o=>{const s=farmSize(o),x=o.x-FG/2,z=o.z-FG/2;return x<r[2]&&x+s[0]>r[0]&&z<r[3]&&z+s[1]>r[1];});
   }
   function residents(){const T=state();return T?D.plots.filter(p=>T.homes[p.id].resident).map(p=>({p,h:T.homes[p.id],r:T.homes[p.id].resident})):[];}
   function changed(){save();renderDirty=true;if(typeof VILLAGE_VIEW!=="undefined")VILLAGE_VIEW.sync();}
@@ -80,6 +81,7 @@ const VILLAGE = (() => {
   }
   function tick(){
     const T=state();if(!T)return;
+    if(typeof VILLAGE_PEOPLE!=="undefined")VILLAGE_PEOPLE.tick(); /* v343: Abläufe auch außerhalb der 3D-Ansicht weiterführen. */
     for(const p of D.plots){const h=T.homes[p.id];
       if(h.status==="building"&&S.time>=h.ready){h.status="ready";toast("🏘️ "+p.street+" "+p.number+" ist fertig und kann angeboten werden.","ok");renderDirty=true;}
       if(h.listing){const L=h.listing;if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}else if(!L.offers&&S.time>=L.ready){L.offers=offers(p.id);toast("🏡 Neue Wohnanfragen für "+p.street+" "+p.number+".","ok");renderDirty=true;}}
@@ -90,9 +92,9 @@ const VILLAGE = (() => {
   }
   function value(){const T=state();return T?Object.values(T.homes).reduce((v,h)=>v+(["land","building","ready","rented"].includes(h.status)?Math.round((h.invested||0)*.85):0),0):0;}
   function route(id){
-    const p=plot(id),end=door(p),base=[[0,0],[5,0],[5,18.5],[-62,18.5]];
-    if(p.road!==-62)base.push([-62,22],[p.road,22]);
-    base.push([p.road,p.z],[p.road+p.side*2.5,p.z],[end[0],p.z],end);return base;
+    const p=plot(id),end=door(p),sx=typeof VILLAGE_SITE!=="undefined"?VILLAGE_SITE.sidewalk:1.335;
+    /* v343: Beide Wohnstraßen münden direkt ein; Haustürwege gehen durch das tatsächliche Tor. */
+    return [[0,0],[5,0],[5,18.5],[p.road,18.5],[p.road,end[1]],[p.road+p.side*sx,end[1]],end];
   }
   function variants(o,mode){
     if(!o.village||o.village.friend)return null;

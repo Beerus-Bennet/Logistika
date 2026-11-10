@@ -1055,7 +1055,8 @@ function worldStatic() {
   /* v188: abgelegtes Baumaterial an den Bauplätzen (bauplatz.js) */
   if (typeof SITE3D !== "undefined") SITE3D.attach(R);
   const st = new FM.MB();
-  st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
+  const roadCenter=(WGRID.x0+WGRID.x1)/2;
+  st.merge(FM.road(WGRID.x1-WGRID.x0,typeof VILLAGE_SITE!=="undefined"?VILLAGE_SITE.mainBreaks(roadCenter):null),{x:roadCenter,z:18.5,ry:Math.PI/2});
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
   const LO = { gnd: wGroundAt, roadCol: 0x7c7f86, mouthR: 0.75, teeR: 0.6, leafOk: (x, z) => z > 19.8 };
   const oW = Object.assign({ y: 0.027, ey: 0.0185, caps: [false, false], mouth: [true, false] }, LO);
@@ -3829,7 +3830,7 @@ function openStall(market) {
   for (let i = 0; i < cap; i++) {
     const it = St.slots[i];
     if (!it) slots.push(`<button class="fstl free" data-pick="${i}"><span>＋</span><small>Ware einstellen</small></button>`);
-    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}">${itemIc(it.id)}<b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small></button>`);
+    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}">${itemIc(it.id)}<b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small>${it.buyer?`<small>${esc(it.buyer)}</small>`:""}</button>`);
   }
   let pickH = "";
   if (sel && sel.id == null) {

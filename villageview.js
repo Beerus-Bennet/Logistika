@@ -1,33 +1,11 @@
 /* v340: Die Wohnsiedlung verwendet dieselbe Hausarchitektur wie die Hütte
    am See. Bewohner tragen Alltagskleidung und haben gegliederte Gehbewegungen. */
 const VILLAGE_VIEW = (() => {
-  const D=VILLAGE_DATA,W={R:null,homes:new Map(),actors:new Map(),road:null,extension:null},DAY=1440;
+  const D=VILLAGE_DATA,W={R:null,homes:new Map(),actors:new Map(),road:null,extension:null,fences:null,fenceKey:""},DAY=1440;
   const add=(mesh,o)=>{const n=fnode(mesh,o);W.R.nodes.push(n);return n;};
-  function roadMesh(extension){
-    const b=new FM.MB(),asphalt=0x656d78,kerb=0xc9c7bb;
-    const street=(a,c)=>{const x=(a[0]+c[0])/2,z=(a[1]+c[1])/2,vertical=a[0]===c[0],length=Math.hypot(c[0]-a[0],c[1]-a[1]);
-      b.plate(vertical?3:length,vertical?length:3,asphalt,{x,z,y0:.045});
-      [-1,1].forEach(s=>b.plate(vertical?.72:length,vertical?length:.72,kerb,{x:x+(vertical?s*1.88:0),z:z+(vertical?0:s*1.88),y0:.065}));};
-    if(!extension){street([-62,20],[-62,64]);b.plate(3,3,asphalt,{x:-62,z:19.5,y0:.047});
-      for(let x=-63.1;x<-60.8;x+=.6)b.plate(.3,.7,0xf0ebd9,{x,z:21.8,y0:.071});
-      b.box(.07,1.1,.07,0x64717a,{x:-64.8,z:23.2});b.box(.65,.65,.06,0xf0f0e7,{x:-64.8,z:23.2,y:.8});
-      b.box(.45,.36,.065,0x466e85,{x:-64.8,z:23.24,y:.94});
-    }else{street([-62,64],[-62,98]);street([-98,22],[-98,98]);[22,64,98].forEach(z=>street([-116,z],[-62,z]));
-      [-62,-98].forEach(x=>[22,64,98].forEach(z=>b.plate(4.6,4.6,asphalt,{x,z,y0:.073})));}
-    return b;
-  }
-  function garden(p){
-    const b=new FM.MB(),rnd=erbeRng(Number(p.id)+31);
-    b.plate(13,10.4,[0x86b85b,0x90ba66,0x80ac58][Number(p.id)%3],{y0:.032});
-    const step=VILLAGE.door(p),xx=step[0]-p.x,zz=step[1]-p.z,curb=p.road+p.side*2.35-p.x;
-    b.plate(Math.abs(xx-curb)+.4,.8,0xc9c1aa,{x:(xx+curb)/2,z:zz,y0:.06});
-    /* Niedrige Hecken hinter dem Haus; der Zugang zur Straße bleibt offen. */
-    [-1,1].forEach(s=>b.box(11.8,.38,.25,0x477b3d,{x:-p.side*.3,y:.04,z:s*5.04}));
-    b.box(.25,.38,10,0x477b3d,{x:p.side*6.2,y:.04});
-    for(let i=0;i<5;i++){const x=p.side*(4.8+rnd()*.6),z=-3.8+i*.5;b.ico(.14,0x45823a,{x,y:.18,z});b.ico(.07,[0xe4ae5a,0xc86c95,0x8da8ce][i%3],{x,y:.3,z});}
-    b.box(.42,.32,.34,0x526a6d,{x:curb+p.side*.3,z:1,y:.7});b.box(.06,.7,.06,0x5d4f3d,{x:curb+p.side*.3,z:1});
-    return b;
-  }
+  /* v343: Lageplan, Einmündungen und gemeinsame Grundstücksgrenzen. */
+  const roadMesh=expanded=>VILLAGE_SITE.roadMesh(expanded);
+  const garden=p=>VILLAGE_SITE.garden(p);
   function buildingMesh(){
     const b=new FM.MB();b.plate(5.2,5.2,0xb5ada0,{y0:.05});
     [-2,2].forEach(x=>[-2,2].forEach(z=>b.box(.13,2.2,.13,0xc69a66,{x,z})));
@@ -36,26 +14,17 @@ const VILLAGE_VIEW = (() => {
   }
   function markerMesh(){const b=new FM.MB();[-6,6].forEach(x=>[-4.9,4.9].forEach(z=>{b.box(.08,.5,.08,0x987454,{x,z});b.box(.13,.1,.13,0xe9dfb9,{x,z,y:.4});}));return b;}
   function attach(R){
-    W.R=R;W.homes.clear();W.actors.clear();
-    W.road=add(fmesh("village-road340",()=>roadMesh(false)),{shadow:false});
-    W.extension=add(fmesh("village-grid340",()=>roadMesh(true)),{shadow:false,visible:VILLAGE.state().expanded});
+    W.R=R;W.homes.clear();W.fenceKey="";VILLAGE_PEOPLE.attach(R);W.actors=VILLAGE_PEOPLE._world.actors;
+    W.road=add(fmesh("village-road343",()=>roadMesh(false)),{shadow:false});
+    W.extension=add(fmesh("village-grid343",()=>roadMesh(true)),{shadow:false,visible:VILLAGE.state().expanded});
+    W.fences=add(null,{shadow:true});
     sync();
   }
-  function actor(p,r){
-    const old=W.actors.get(p.id);if(old&&old.id===r.id)return old;
-    if(old){const i=W.R.nodes.indexOf(old.node);if(i>=0)W.R.nodes.splice(i,1);}
-    const L=r.look,full=FWM.person(L);let top=0;for(let i=1;i<full.v.length;i+=9)top=Math.max(top,full.v[i]);
-    const scale=(.88+(r.seed%4)*.015)/top;
-    const n=add(fmesh("village-body:"+r.id,()=>FWM.person({...L,noLegs:true,noArms:true})),{x:p.x,z:p.z,s:scale,visible:false});
-    const legs=[-1,1].map(s=>W.R.addChild(n,fnode(fmesh("village-leg:"+L.pants+":"+L.boots,()=>{const b=new FM.MB();b.box(.09,.42,.11,L.pants,{y:-.42});b.box(.1,.05,.16,L.boots||0x4b4946,{y:-.42,z:.025});return b;}),{x:s*.07,y:.42})));
-    const arms=[-1,1].map(s=>W.R.addChild(n,fnode(fmesh("village-arm:"+L.shirt+":"+L.skin,()=>FWM.arm(L)),{x:s*(L.fem?.17:.19),y:.78})));
-    const a={id:r.id,node:n,legs,arms,scale};W.actors.set(p.id,a);return a;
-  }
   function sync(){
-    if(!W.R||!farmOn())return;const T=VILLAGE.state();W.extension.visible=T.expanded;
+    if(!W.R||!farmOn())return;const T=VILLAGE.state();W.extension.visible=T.expanded;W.road.visible=!T.expanded;
     for(const p of D.plots){const h=T.homes[p.id];let e=W.homes.get(p.id);
       if(!e){
-        e={garden:add(fmesh("village-garden:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
+        e={garden:add(fmesh("village-garden343:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
       const blocked=!!VILLAGE.obstruction(p),built=!!h.resident||h.status==="ready";
       e.marker.visible=!p.starter&&T.expanded&&!built;
       e.site.visible=h.status==="building"&&!blocked;
@@ -63,29 +32,33 @@ const VILLAGE_VIEW = (() => {
       if((built||h.status==="building")&&e.type!==h.type){
         for(const n of [e.house,e.lit])if(n){const i=W.R.nodes.indexOf(n);if(i>=0)W.R.nodes.splice(i,1);}
         const k=D.houses[h.type],style=Number(p.id)%3;
-        e.garden.mesh=fmesh("village-garden:"+p.id+":"+h.type,()=>garden(p));
+        e.garden.mesh=fmesh("village-garden343:"+p.id+":"+h.type,()=>garden(p));
         e.house=add(fmesh("village-house:"+style,()=>RENT.homeMesh(style)),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:built&&!blocked});
         e.lit=add(fmesh("village-light340",()=>RENT.homeLights()),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:false,shadow:false,glow:.55});e.type=h.type;
       }
       if(e.house){e.house.visible=built&&!blocked;if(built)e.house.sy=D.houses[h.type].scale;}
-      if(h.resident)actor(p,h.resident);else if(W.actors.has(p.id))W.actors.get(p.id).node.visible=false;
+      if(!e.gate){
+        const g=VILLAGE_SITE.gate(p),m=VILLAGE_SITE.mailbox(p);
+        e.gate=add(fmesh("village-gate343",VILLAGE_SITE.gateMesh),{x:g[0],z:g[1]-.6});
+        e.mail=add(fmesh("village-mail343",VILLAGE_SITE.mailboxMesh),{x:m[0],z:m[1],ry:-p.side*Math.PI/2});
+        e.flap=W.R.addChild(e.mail,fnode(fmesh("village-mailflap343",VILLAGE_SITE.mailFlap),{y:1.12,z:.17}));
+      }
+      const g=VILLAGE_SITE.gate(p),m=VILLAGE_SITE.mailbox(p);e.gate.x=g[0];e.gate.z=g[1]-.6;e.mail.x=m[0];e.mail.z=m[1];
+      e.gate.visible=e.mail.visible=built&&!blocked;
     }
+    const occupied=D.plots.filter(p=>{const h=T.homes[p.id];return (h.resident||h.status==="ready")&&!VILLAGE.obstruction(p);}),key=occupied.map(p=>p.id).join(",");
+    if(key!==W.fenceKey){W.fenceKey=key;const plan=VILLAGE_SITE.fencePlan(occupied);W.fences.mesh=fmesh("village-fences343:"+key,()=>VILLAGE_SITE.fenceMesh(plan));}
+    VILLAGE_PEOPLE.sync();
   }
-  function walkPoint(points,part){const ds=points.slice(1).map((q,i)=>Math.hypot(q[0]-points[i][0],q[1]-points[i][1]));let n=ds.reduce((a,b)=>a+b,0)*part;
-    for(let i=0;i<ds.length;i++){if(n<=ds[i]||i===ds.length-1){const f=ds[i]?n/ds[i]:0;return {x:points[i][0]+(points[i+1][0]-points[i][0])*f,z:points[i][1]+(points[i+1][1]-points[i][1])*f,ry:Math.atan2(points[i+1][0]-points[i][0],points[i+1][1]-points[i][1])};}n-=ds[i];}return {x:points[0][0],z:points[0][1],ry:0};}
   function step(dt,time){
-    if(!W.R||!farmOn())return;const T=VILLAGE.state(),m=S.time%DAY;
+    if(!W.R||!farmOn())return;VILLAGE_PEOPLE.step(dt,time);const T=VILLAGE.state(),m=S.time%DAY;
     for(const p of D.plots){const h=T.homes[p.id],e=W.homes.get(p.id);if(!e)continue;
       if(e.lit)e.lit.visible=!!h.resident&&e.house.visible&&((m>=360&&m<450)||(m>=1080&&m<1350));
       if(h.status==="building"&&e.house){const f=1-(h.ready-S.time)/(D.houses[h.type].days*DAY);e.house.visible=f>.7&&!VILLAGE.obstruction(p);e.house.sy=D.houses[h.type].scale*Math.max(.08,(f-.7)/.3);}
-      const a=W.actors.get(p.id);if(!a||!h.resident)continue;
-      const r=h.resident,atHome=m>=360&&m<1320&&(r.job.includes("Ruhestand")||r.job==="Selbstständig"||m<510||m>=990),blocked=!!VILLAGE.obstruction(p);
-      a.node.visible=atHome&&!blocked;if(!a.node.visible)continue;
-      const front=VILLAGE.door(p),sx=p.road+p.side*2.5,clock=(S.time+r.seed*11)%110;
-      const moving=clock>38&&clock<92,part=Math.max(0,Math.min(1,(clock-38)/54));
-      const pts=[front,[sx,p.z],[sx,Math.max(24,p.z-5)],[sx,p.z],front],q=moving?walkPoint(pts,part):{x:front[0],z:front[1],ry:p.ry};
-      a.node.x=q.x;a.node.z=q.z;a.node.y=.04+(moving?Math.abs(Math.sin(time*8))*.018:0);a.node.ry=q.ry;
-      const wave=moving?Math.sin(time*8+r.seed)*.45:0;a.legs.forEach((n,i)=>n.rx=(i?1:-1)*wave);a.arms.forEach((n,i)=>n.rx=(i?-1:1)*wave*.7);
+      const actor=W.actors.get(p.id),g=VILLAGE_SITE.gate(p),L=h.life&&h.life.active,q=L&&VILLAGE_PEOPLE.sample(L);
+      if(e.gate){const nearby=actor&&actor.node.visible&&Math.hypot(actor.node.x-g[0],actor.node.z-g[1])<2.1;
+        e.gate.ry+=((nearby?p.side*1.15:0)-e.gate.ry)*Math.min(1,dt*5);
+        const flap=q&&q.kind==="mail"?Math.sin(Math.PI*q.f)*1.35:0;e.flap.rx+=(flap-e.flap.rx)*Math.min(1,dt*7);}
       if(e.lit&&e.lit.visible&&Math.random()<dt*.2){const k=D.houses[h.type],c=VILLAGE.local(p,-2.95*k.scale,-.2*k.scale);W.R.emit({x:c[0],y:7*k.scale,z:c[1],vx:.08,vy:.35,vz:.05,life:2,size:.18,size2:.5,col:[.72,.72,.7,.2],drag:.8});}
     }
   }

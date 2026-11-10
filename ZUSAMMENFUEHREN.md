@@ -1,3 +1,15 @@
+## v343 – Straßen, Zäune und Bewohnerabläufe in Seeblick
+
+Branch `claude/town-roads-fences`, Basis aktuelles main v342 (`36301a0`, PR #61). Vor und nach dem Upload alle offenen PRs und den Hauptstand erneut prüfen; keine automatische Veröffentlichung/Zusammenführung.
+
+- Gemeinsam übernehmen: neue `villagesite.js`, `villagepeople.js`, Anpassungen in `villageview.js`, `village.js`, `farmmodels.js`, `worldview.js`, `erbe.js` und neue Cache-Verweise. Skripte nach `rent.js`, vor `villageview.js`; beide auch in `sw.js`. Keine zusätzlichen Pakete oder Fremdmodelle.
+- `VILLAGE_SITE` ist der gemeinsame Lageplan für Straße, Gehweg, Grundstück, Tor, Briefkasten und Rad. Grundstückskennungen, Hauspositionen und Verträge bleiben stabil. `FM.road(len, joins)` öffnet optional Bordkanten; Aufrufer ohne `joins` behalten die bisherige Straße. Hauptstraße und Mittelmarkierung niemals mit einer Anschlussplatte überdecken.
+- Gemeinsame Zaunsegmente deduplizieren; ein Zaunmesh je Belegungszustand, bewegliche Tore/Briefklappen als eigene Knoten. Nachbargrundstücke teilen Seiten- und Rückgrenzen. Der zweite Anschluss bleibt bis zur Erweiterung geschlossen. Die ehemalige Parallelstraße bei z=22 und Straßenstummel westlich der Siedlung entfallen. Neue Lieferlinien benutzen die tatsächlichen Tore; laufende Aufträge werden nicht umgeschrieben.
+- Optionale Daten `home.life`: `mailDay`, `shopDay`, Wiederholungszeit, Einkaufszähler und `active` mit Schritten, Zeitbeginn, Marktkennung/Position und Kaufmerkmal. Fehlende Felder sind unschädlich. `VILLAGE.tick` führt Abläufe auch bei geschlossenem Hof weiter; Darstellung getrennt in `VILLAGE_PEOPLE.step`. Kein zweiter Verkauf beim Laden oder beim Aufruf aus beiden Takten.
+- Marktrouten verwenden die bestehende Wegsuche, Park-/Warteplätze außerhalb der Hauptfahrbahn. `stallCustomerSale` markiert dasselbe angebotene Los wie bisherige Kunden; kein neuer Inventarabzug oder sofortiger Geldeingang. Geld wird wie zuvor mit `stallTake` kassiert. `it.buyer` ist optional und wird nur angezeigt. Gebaute/freigegebene Märkte, Menge, Preis, vorhandene Ware und unveränderter Standort werden geprüft.
+- Arbeitermaßstab 1,45; gegliederte Beine mit IK zu den Pedalen. Gemeinsame Position-/Drehglättung hält Fahrer und Fahrrad verbunden. Auf-/Absteigen mit Stützbein; Bewohner passieren bewegliche Tore. Kamerarückfahrt und entfernte Namensschilder aus v341 erhalten.
+- Prüfungen: `node village-life-v343.test.js`, `node village-v340.test.js`, `node farm-wholesale-v330.test.js`, `node d2d-v313.test.js`; tatsächliche Browserabläufe und Grenzen in `AENDERUNGEN.md`.
+
 ## v340 – Seeblick: eigene Siedlung und persönliche Lieferkunden
 
 Branch `claude/lakeside-town`, basiert auf dem aktuellen Hauptstand v339 (`f43143d`) nach PR #58. Alle zwischenzeitlichen PRs #51–#58 sind bereits auf main zusammengeführt und enthalten; beim Abgleich gab es keine offenen PRs. Vor und nach dem Upload erneut Hauptbranch, alle offenen PRs und Mergefähigkeit prüfen. Keine automatische Zusammenführung oder Veröffentlichung.

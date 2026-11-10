@@ -1377,12 +1377,14 @@ const FM = (() => {
     b.disc(r, 36, C.water, { wob: 0.05 });
     return b;
   }
-  function road(len) {
+  function road(len, joins) {
     G3.seed(930);
     const b = new MB();
     b.plate(1.8, len, 0x7c7f86, { y0: 0.03 });
     for (let z = -len / 2 + 0.5; z < len / 2; z += 1.2) b.plate(0.08, 0.5, 0xf3efe6, { z, y0: 0.035 });
-    b.plate(0.12, len, 0xb9b3a6, { x: 0.96, y0: 0.032 }); b.plate(0.12, len, 0xb9b3a6, { x: -0.96, y0: 0.032 });
+    /* v343: Bordkante nur an echten Einmündungen öffnen; Fahrbahn/Markierung bleiben durchgehend. */
+    for(const side of [-1,1]){let at=-len/2;const holes=(joins||[]).filter(j=>j.side===side).sort((a,c)=>a.z-c.z);
+      for(const j of holes.concat([{z:len/2,half:0}])){const end=Math.min(len/2,j.z-j.half);if(end>at)b.plate(.12,end-at,0xb9b3a6,{x:side*.96,z:(at+end)/2,y0:.032});at=Math.max(at,j.z+j.half);}}
     return b;
   }
 
