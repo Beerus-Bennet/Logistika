@@ -37,6 +37,7 @@ function farmDOM() {
     <div id="farmSide">
       <button class="fbtn" id="fbShop" title="Laden: Felder, Tiere, Gebäude, Deko"><i>🛒</i><span>Laden</span></button>
       <button class="fbtn" id="fbStore" title="Lager"><i>🌾</i><span>Lager</span></button>
+      <button class="fbtn" id="fbTown" title="Nachbarschaft und Stadtbau"><i>🏘️</i><span>Seeblick</span></button>
       <button class="fbtn" id="fbOrders" title="Bestellungen" hidden><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
     </div>
     <button id="farmPaused" hidden>⏸ Spiel angehalten · <b>weiter</b></button>
@@ -51,6 +52,7 @@ function farmDOM() {
   document.body.insertBefore(s, $("#mapUI"));
   $("#fbShop").onclick = () => openFarmShop();
   $("#fbStore").onclick = () => openFarmStore(farmStores()[0]);
+  $("#fbTown").onclick = () => VILLAGE_UI.open();
   $("#fbOrders").onclick = () => openFarmOrders();
   /* v53: Kunden- und Ton-Knopf sind weg – Bestellungen an den Tafeln, Ton im Bauernhaus */
   /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
@@ -810,8 +812,10 @@ function clampCam() {
   const r = typeof farmCamRect === "function" && S.farm ? farmCamRect() : [-FV_BOUNDS, -FV_BOUNDS, FV_BOUNDS + 5, FV_BOUNDS + 3];
   c.tx = clamp(c.tx, r[0], r[2]);
   c.tz = clamp(c.tz, r[1], r[3]);
-  c.dist = clamp(c.dist, 11, 54);
-  c.pitch = FV.camOv ? FV.camOv.pitch : 0.8 + (c.dist - 11) / 43 * 0.2;      /* v167: Schatz-Show darf steiler von oben schauen */
+  /* v340: Die neue Ortsübersicht muss auch im Hochformat vollständig ins Bild passen. */
+  const town = typeof VILLAGE !== "undefined" && VILLAGE.clear(c.tx,c.tz);
+  c.dist = clamp(c.dist, 11, town ? 450 : 54);
+  c.pitch = FV.camOv ? FV.camOv.pitch : 0.8 + Math.min(43,c.dist - 11) / 43 * 0.2;      /* v167: Schatz-Show darf steiler von oben schauen */
 }
 function farmFocus(o, dist) {
   if (!FV.R || !o || FV.fp) return;
@@ -1472,7 +1476,8 @@ function updateFarmTags() {
     el.style.display = "";
     el.style.left = Math.round(p[0]) + "px"; el.style.top = Math.round(p[1]) + "px";   /* v334: nicht per transform – die Wippen-Animation (fbob) überschreibt transform und warf die Blasen nach (0,0) in die obere linke Ecke */
   });
-  box.querySelectorAll(".ftag").forEach(el => { if (!keep.has(el.dataset.k)) el.remove(); });
+  /* v340: Welt-/Nachbarschaftsmarken werden von worldTags verwaltet. */
+  box.querySelectorAll(".ftag[data-k]").forEach(el => { if (!keep.has(el.dataset.k)) el.remove(); });
   /* Hofschild am Tor: seit v54 steht der Name auf der Tafel selbst (Bild in 3D) */
   if (typeof brandSync === "function") brandSync();
   let sign = box.querySelector(".fsign");
@@ -2479,7 +2484,9 @@ function openFarmOrders(sendFor, area) {
     const km = o.refDist;
     const tag = o.bulk ? `<span class="fo-tag bulk">🏭 Großauftrag · ${esc(farmBulkTerm(o))}</span>${!o.acc ? `<span class="fo-tag">Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>` : ""}` : o.abo ? `<span class="fo-tag abo">📅 Lieferung ${o.aboWeek || 1}</span>` : o.acc ? `<span class="fo-tag acc">✓ angenommen · ohne Frist</span>`
       : `<span class="fo-tag">⏳ Angebot noch ${fdur(Math.max(1, o.expire - S.time))}</span>`;
-    const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${km} km · ${kgf(o.weight)}</small>${tag}</div>`;
+    /* v340: Bekannte Nachbarn und deren Empfehlungen auch auf der Tafel zeigen. */
+    const neighbor = o.village && typeof VILLAGE !== "undefined" ? `<span class="fo-neighbor">🤝 ${esc(VILLAGE.note(o))}</span>` : "";
+    const head = `<div class="fo-h"><b>${esc(o.shipper)}</b><small>${esc(N[o.to].name)} · ${fmt(km,km<1?2:0)} km · ${kgf(o.weight)}</small>${neighbor}${tag}</div>`;
     const items = `<div class="fo-it">${Object.keys(o.farm.items).map(id => itemChip(id, o.farm.items[id], farmInv(id))).join("")}</div>`;
     const reward = `<div class="fo-r"><span class="fo-m">${eur(Math.round(o.pay * pf))}</span><span class="fo-x">+${o.farm.xp} EP</span>${ready ? `<span class="fo-q">${qStars(q)}${pf !== 1 ? (pf > 1 ? " +" : " ") + Math.round((pf - 1) * 100) + " %" : ""}</span>` : ""}</div>`;
     let send = "";
@@ -2705,7 +2712,8 @@ function openFarmHouse(tab) {
   } else if (tab === "ausbau") body = typeof stageHTML === "function" ? stageHTML() : "";
   else if (tab === "team") body = typeof staffHTML === "function" ? staffHTML() : "";
   else if (tab === "extras") body = `<div class="fshops cos">${typeof cosShopHTML === "function" ? cosShopHTML() : ""}</div>`;
-  openFarmSheet(head + tabs + body, "house");
+  openFarmSheet(head + tabs + (typeof VILLAGE_UI !== "undefined" ? `<button class="btn ghost town-entry" id="fhTown">🏘️ Seeblick · Nachbarschaft & Stadtbau</button>` : "") + body, "house");
+  const town = $("#fhTown"); if (town) town.onclick = () => VILLAGE_UI.open();
   $$("#farmSheetIn [data-htab]").forEach(b => b.onclick = () => openFarmHouse(b.dataset.htab));
   const val = farmValue();
   const fd = $("#fhFound"); if (fd) fd.onclick = askFound;
@@ -2915,7 +2923,7 @@ const FTUT_HOF = [
   { title: "Brot herausholen", tx: "Ist das Brot fertig, wartet es im Ofen auf dich.",
     act: "Tippe den Backofen an und hole das Brot heraus.",
     target: () => firstObj(o => o.t === "bakery"), wait: "make:brot", n: 1, ok: "Frisches Brot liegt im Lager." },
-  { title: "Erste Lieferung", tx: "Café Inselblick bestellt 2 Brote und 3 Äpfel.",
+  { title: "Erste Lieferung", tx: "Nachbarin Anna Köhler im Lindenweg 1 bestellt 2 Brote und 3 Apfelkisten. Das passt auf dein Fahrrad.",
     act: "Tippe die Bestelltafel an und schicke die Lieferung los.",
     target: () => firstObj(o => o.t === "board"), wait: "send", n: 1, before: farmTutOrder, ok: "Die Lieferung ist unterwegs!" },
   { title: "Der Hof läuft", tx: "Klasse – das war das Wichtigste. Den Rest entdeckst du selbst.",
@@ -2926,7 +2934,7 @@ function farmTutList() { return FTUT_HOF; }
 function firstObj(fn) { return S.farm.objs.find(fn) || null; }
 function farmTutOrder() {
   if (S.orders.some(o => o.tutF)) return;
-  const o = farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
+  const o = typeof VILLAGE !== "undefined" ? VILLAGE.orderFor("000", { brot: 2, apfel: 3 }, { tutF: true }) : farmOrderObj("w-werder", "Café Inselblick", { brot: 2, apfel: 3 }, { tutF: true });
   if (o) { o.acc = "tut"; o.expire = S.time + 99999; o.deadline = S.time + 99999; S.orders.push(o); }
 }
 /* v256: Zustand des Rundgangs. ftT – der Rundgang, zu dem Timer und Fokus gehören (ein neuer – Wiederholung,

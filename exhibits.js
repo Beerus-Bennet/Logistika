@@ -14,6 +14,7 @@ const TROPHIES = (() => {
      Berghänge bleiben frei; vorhandene Bau-/Wegesperren gelten weiterhin. */
   function canPlace(x, z, w, d, except) {
     if (![x,z,w,d].every(Number.isFinite)) return false;
+    if (typeof VILLAGE !== "undefined" && VILLAGE.overlaps(x-FG/2,z-FG/2,w,d)) return false;
     const R = farmZoneRect("display");
     if (x < R.x0 || z < R.z0 || x+w > R.x1 || z+d > R.z1) return false;
     for (let a = x; a <= x+w; a += .5) for (let b = z; b <= z+d; b += .5) {

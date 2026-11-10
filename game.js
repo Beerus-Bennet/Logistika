@@ -431,7 +431,7 @@ function d2dUnloaded(job, veh, leg) {
   leg.dn = Math.min(leg.qty, leg.dn + (veh.load || 0)); veh.load = 0; veh.jobs++;
   if (leg.dn >= leg.qty - 1e-6) leg.done = true;
   job.curLeg = d2dCur(job);
-  if (last && leg.done) { d2dRelease(veh); finishJob(job); return; }
+  if (last && leg.done) { if (job.order.village && !job.order.village.friend) veh.villageAt=job.order.village.plot; d2dRelease(veh); finishJob(job); return; }
   if (last && !job.partToast) { job.partToast = 1; toast("📦 Teilweise zugestellt: " + job.order.shipper + " – " + kgf(leg.dn) + " von " + kgf(leg.qty) + ".", "ok"); }
   if (leg.qty - leg.ld > 1e-6) {
     /* Es liegt noch Ware am Start: leer zurück und die nächste Teilmenge holen */
@@ -668,6 +668,7 @@ function farmOwnPlace(id) {
   /* nur Orte der eigenen Gegend (Berlin & Co. bleiben bis zur Gründung zu) */
   if (n.home ? n.home !== S.farm.kind : n.farmX !== S.farm.kind) return false;
   if (typeof FARM_NODE !== "undefined" && id === FARM_NODE) return true;
+  if (id === "w-seeblick" && typeof VILLAGE !== "undefined") return true;
   const t = typeof FTOWNS !== "undefined" ? FTOWNS[id] : null;
   return !!t && t.lv <= level();
 }
@@ -1196,6 +1197,7 @@ function repoPath(from, to, mode) {
    das Netz bis vor die Tür des Auftraggebers (bei der ersten Teilstrecke)
    bzw. bis zum Umschlagterminal. pts = die gefahrene Linie. */
 function repoCost(veh, leg, order, i) {
+  if (typeof VILLAGE !== "undefined") { const local = VILLAGE.repo(veh, leg, order); if (local) return local; }
   const t = vType(veh.type);
   const O = vehPoint(veh), T = legStartPt(leg, order, i || 0);
   if (veh.at === leg.from) {
@@ -1226,6 +1228,7 @@ let planState = null;
    so bleibt etwa Schiff + Flugzeug nur, wenn es wirklich Zeit gegenüber dem Schiff und Geld
    gegenüber dem Flugzeug spart. Übrig bleiben höchstens Schnellste, Ausgewogen, Günstigste. */
 function buildVariants(o) {
+  if (o.village && !o.village.friend && typeof VILLAGE !== "undefined") return VILLAGE.variants(o);
   d2dInit(o);
   const um = unlockedModes(), cands = [];
   const add = p => {
@@ -1903,8 +1906,8 @@ function cancelJob(id) {
 function startJob(o, variant, assign, extra) {
   /* v330: Auch der normale Planer startet die Produktionsfrist erst bei
      Annahme. Abgelaufene/doppelt angeklickte Großaufträge verbrauchen keine Ware. */
-  if (o.bulk && (!farmOrderReady(o) || o.farm.taken || o.deadline <= S.time || (!o.acc && !farmAcceptOrder(o)))) {
-    toast("Der Großauftrag ist abgelaufen, bereits verladen oder noch nicht vollständig bereit.", "warn");
+  if ((o.bulk || o.village) && (!farmOrderReady(o) || o.farm.taken || o.expire <= S.time || o.deadline <= S.time || (!o.acc && !farmAcceptOrder(o)))) {
+    toast("Die Bestellung ist abgelaufen, bereits verladen oder noch nicht vollständig bereit.", "warn");
     return false;
   }
   if (!extra) extra = extraFor(variant, o, assign);
@@ -1922,6 +1925,7 @@ function startJob(o, variant, assign, extra) {
       if (leg.pts) L.pts = leg.pts.map(p => p.slice());
       if (leg.ta) L.ta = leg.ta.slice();
       if (leg.tb) L.tb = leg.tb.slice();
+      if (leg.localStreet) L.localStreet = true;    /* v340: Wohnstraßen bleiben nach dem Laden ortsfest */
       return L;
     })
   };
@@ -2049,7 +2053,7 @@ function legCoords(leg) {
 function legLine(leg, a, b) {
   if (leg.pts) {
     const p = leg.pts.map(x => x.slice());
-    p.gm = p.slice(1).map(() => leg.mode === "b" ? "b" : "r");
+    p.gm = p.slice(1).map(() => leg.localStreet ? "v" : leg.mode === "b" ? "b" : "r");
     return p;
   }
   const p = pathPts(leg.nodes, a, b, leg.mode);
@@ -2250,6 +2254,7 @@ function finishJob(job) {
   job.fin = 1;
   S.fleet.forEach(f => {
     if (f.jobId !== job.id) return;
+    if (job.order.village && !job.order.village.friend) f.villageAt = job.order.village.plot;
     parkHere(f);
     f.phase = "idle"; f.jobId = null; f.legIdx = -1; f.route = null; f.load = 0;
   });

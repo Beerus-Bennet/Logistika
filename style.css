@@ -4798,3 +4798,29 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
   #farmSheet.mach .fchip b{font-size:13px}
   #farmSheet.mach .fq-log{font-size:13px;line-height:1.35;padding:8px 10px}
 }
+
+/* ---------- v340: Seeblick – Nachbarschaft, Stadtbau und Wohnverträge ---------- */
+.fo-neighbor{display:block;margin:4px 0;color:#347254;font-size:11px;font-weight:800;overflow-wrap:anywhere}
+.town-entry{width:100%;margin:0 0 12px}
+#farmSheet.town .town-content{min-width:0}
+#farmSheet.town .town-lead{font-size:13px;line-height:1.55;margin:8px 0 12px}
+#farmSheet.town .town-stats{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;font-weight:700;margin-bottom:12px}
+#farmSheet.town .town-stats>span{border:1px solid #bbcfda;border-radius:9px;padding:5px 8px;background:#f9fcff}
+#farmSheet.town .town-plan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 7px;margin:15px 0;padding:10px;background:#c7d7bd;border-radius:14px}
+#farmSheet.town .town-plan>button{min-width:0;min-height:76px;padding:5px 2px;background:#f5f4e8;border:2px solid #a5b5a2;border-radius:9px;font:700 10px var(--font);color:var(--ink);cursor:pointer;overflow-wrap:anywhere}
+#farmSheet.town .town-plan>button.lived{border-color:#477b63;background:#ecf7e8}
+#farmSheet.town .town-plan>button>span{display:block;font-size:23px}
+#farmSheet.town .town-plan small{display:block;font-size:9px;font-weight:600;margin-top:2px}
+#farmSheet.town .town-card,#farmSheet.town .town-person,#farmSheet.town .town-applicant{margin:12px 0;padding:12px;border:2px solid #afc4d6;border-radius:13px;background:#fcfdff;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+#farmSheet.town .town-card>b{font-size:15px;display:block}
+#farmSheet.town .town-card>small{display:block;color:#4e6070;font-weight:600;margin-top:4px}
+#farmSheet.town .town-card .btn,#farmSheet.town .town-actions .btn{width:100%;margin:8px 0 0;white-space:normal;min-height:44px}
+#farmSheet.town summary{cursor:pointer;min-height:42px}
+#farmSheet.town summary small{display:block;color:#526779;font-size:11px;margin:3px 0}
+#farmSheet.town .town-reply{padding:10px;border-left:4px solid #72a8c0;background:#eaf4fa}
+#farmSheet.town .town-negotiate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
+#farmSheet.town .town-negotiate label{display:grid;gap:5px;font-size:11px;font-weight:700;min-width:0}
+#farmSheet.town .town-negotiate input,#farmSheet.town .town-negotiate select{width:100%;min-width:0;box-sizing:border-box;min-height:44px;border:2px solid #a1b7ca;border-radius:8px;padding:6px;font:inherit;font-size:14px;background:white}
+#farmSheet.town .town-negotiate button{grid-column:1/-1;min-height:44px}
+#farmSheet.town button:disabled{opacity:.45;cursor:default;pointer-events:none}
+#farmSheet.town .town-agreement{padding:10px;background:#f3f7e8;border-radius:9px}

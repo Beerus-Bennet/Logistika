@@ -552,6 +552,8 @@ function farmTractorEnsure() {
 }
 function farmCamRect() {
   let r = FCAM_HOF.slice();
+  /* v340: Das bewohnte Dorf ist schon vor der Fischerei erreichbar. */
+  if (typeof VILLAGE !== "undefined" && farmOn()) { const T=VILLAGE.state();r=[Math.min(r[0],T.expanded?-118:-82),r[1],r[2],Math.max(r[3],T.expanded?100:64)]; }
   FAREA_ORDER.forEach(id => {
     const A = FAREAS[id];
     if (!farmAreaOpen(id) || !A.cam) return;
@@ -2035,6 +2037,7 @@ function farmErbeTick(dt) {
   try { farmTreasureTick(); } catch (e) { console.warn("Schatz", e); }   /* v166: ein Fehler in der Ereignis-Anzeige darf Takt und Fenster nicht blockieren */
   try { pvTick(); } catch (e) { console.warn("PV", e); }
   try { if (typeof RENT !== "undefined") RENT.tick(); } catch (e) { console.warn("Hütte", e); }   /* v182: Miete, Probleme, Instandhaltung */
+  if (typeof VILLAGE !== "undefined") VILLAGE.tick();  /* v340: Baufortschritt, Wohnanfragen und Mietabrechnung */
   staffWork();
   if (typeof staffGroupCheck === "function") staffGroupCheck();
   stallTick(false, dt || 1);

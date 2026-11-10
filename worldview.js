@@ -184,6 +184,7 @@ function wayCamSide(x, z) {
 const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24, kirsche: 0.74 };
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
+  if (typeof VILLAGE !== "undefined" && VILLAGE.clear(x,z)) return false;
   if (inHofMax(x, z, 3.2)) return false;      /* v99: Krone soll nicht im Hofzaun stehen (vorher 1,5) */
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
   if (typeof HUNT !== "undefined" && HUNT.clear(x, z, "bg")) return false;      /* v107: Wildwiese am Hochsitz */
@@ -317,6 +318,7 @@ function wFreeGround(x, z, r, MK) {
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
   if (typeof HUNT !== "undefined" && r > 0.25 && HUNT.clear(x, z, "bush")) return false;     /* v107: Wildwiese bleibt offen (Gras und Blumen dürfen) */
   if (typeof RENT !== "undefined" && RENT.clear(x, z)) return false;              /* v182: Hütte am See */
+  if (typeof VILLAGE !== "undefined" && VILLAGE.clear(x,z)) return false;
   if (x > 24.5 - r && x < 47 + r && z > -17.5 - r && z < 17.5 + r) return false;
   if (z > 15.8 - r && z < 22.5 + r) return false;
   if (z > 20 && z < 34 && x > -24 && x < 44) return false;
@@ -1049,6 +1051,7 @@ function worldStatic() {
   if (typeof HUNT !== "undefined") HUNT.attach(R);
   /* v182: Hütte am See (rent.js) */
   if (typeof RENT !== "undefined") RENT.attach(R);
+  if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.attach(R);
   /* v188: abgelegtes Baumaterial an den Bauplätzen (bauplatz.js) */
   if (typeof SITE3D !== "undefined") SITE3D.attach(R);
   const st = new FM.MB();
@@ -1844,7 +1847,7 @@ function worldLocks() {
   FAREA_ORDER.forEach(id => {
     const A = FAREAS[id], rv = WV.reveal && WV.reveal.id === id ? WV.reveal : null;
     if (farmAreaOpen(id) && !rv) return;
-    A.locks.forEach(r => out.push({ r, c: A.reveal, rad: rv ? rv.rad : 0, a: 1 }));
+    A.locks.forEach(r => (typeof VILLAGE !== "undefined" ? VILLAGE.clipLock(r) : [r]).forEach(q => out.push({ r:q, c: A.reveal, rad: rv ? rv.rad : 0, a: 1 })));
   });
   R.locks = out;
 }
@@ -2970,6 +2973,7 @@ function pickObjT(x, y) {
 }
 /* Gebiet unter dem Finger, falls dort gesperrt */
 function lockedAreaAt(x, z) {
+  if (typeof VILLAGE !== "undefined" && VILLAGE.clear(x,z)) return null;
   for (const id of FAREA_ORDER) {
     if (farmAreaOpen(id)) continue;
     if (FAREAS[id].locks.some(r => x > r[0] && x < r[2] && z > r[1] && z < r[3])) {
@@ -3007,6 +3011,8 @@ function worldTap(x, y) {
   }
   /* v182: Hütte am See */
   const rn = typeof RENT !== "undefined" ? RENT.pick(x, y) : null;
+  const vn = typeof VILLAGE_VIEW !== "undefined" ? VILLAGE_VIEW.pick(x,y) : null;
+  if (vn && (!ho || vn.d < ho.d) && (!ht || vn.d < ht.d+.5) && (!rn || vn.d < rn.d)) { sfx("tap"); VILLAGE_UI.open(vn.id); return true; }
   if (rn && (!ho || rn.d < ho.d) && (!ht || rn.d < ht.d + 0.5)) { sfx("tap"); RENT.sheet(rn.k); return true; }   /* v218: k = "dock" am Steg */
   /* v188: Materialstapel am Bauplatz → Fenster des Bauplatzes */
   const sp3 = typeof SITE3D !== "undefined" ? SITE3D.pick(x, y) : null;
@@ -3286,6 +3292,7 @@ function worldTags() {
   const box = $("#farmTags");
   if (!box || !FV.R) return;
   const want = [];
+  if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.tags().forEach(t=>want.push(["village:"+t.id,t.x,t.y,t.z,t.html,"",t.open]));
   worldEvSpots().forEach((s, i) => { if (!s.area || farmAreaOpen(s.area)) want.push(["e" + i + s.act, s.x, s.y, s.z, s.ic, s.cls || "ready", () => worldEvAct(s)]); });
   if (typeof pvVisit === "function" && pvVisit()) { const at = pvAt(); want.push(["pv", at[0] + 1.3, 2.9, at[1] + 1.2, "☀️<b>" + pvN() + "/" + FPV.max + "</b>", "ready", () => openPV()]); }
   { const hg = typeof HUNT !== "undefined" ? HUNT.tagInfo() : null; if (hg) want.push(["hunt", hg.x, hg.y, hg.z, hg.html, hg.cls, () => HUNT.sheet()]); }
@@ -3454,6 +3461,7 @@ function worldStep(dt, time) {
   if (typeof CAMP !== "undefined") CAMP.step(dt, time);
   if (typeof HUNT !== "undefined") HUNT.step(dt, time);
   if (typeof RENT !== "undefined") RENT.step(dt, time);
+  if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.step(dt,time);
   if (typeof SITE3D !== "undefined") SITE3D.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
@@ -3521,6 +3529,7 @@ function worldSync(force) {
   worldSyncTreasure();
   worldSyncPV();
   worldSyncPiles();
+  if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.sync();
   if (typeof SITE3D !== "undefined") SITE3D.sync();            /* v188: Stapel am Bauplatz */
   if (!WV.reveal) worldLocks();
   /* Ware auf dem Verkaufsstand */
