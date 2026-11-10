@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v338 – Auktionshaus: Limit-Feld mit Tausenderpunkten
+**Meldung Bennet:** Die Zahl im Feld „Limit (Maximalgebot)“ (z. B. 4550000) ist auf dem Handy schwer zu lesen.
+
+**Ursache (`auction.js`, Los-Fenster):** Das Feld war ein `type="number"` ohne Formatierung. Auf dem Handy zeigt es nur die nackte Ziffernfolge.
+
+**Lösung:**
+- Das Feld ist ein Textfeld mit Ziffernblock (`inputmode="numeric"`) und zeigt Punkte an: 4.550.000. Beim Tippen wird neu formatiert, der Cursor bleibt hinter derselben Ziffer.
+- Gelesen wird nur die Ziffernfolge (`ahDigits`), damit „4.550.000“ und „4550000“ dasselbe bedeuten. Die Logik für Limit und Gebot ist unverändert.
+- Das Vorschlagslimit wird ebenfalls mit Punkten angezeigt.
+
+**Geprüft (Testbrowser, 390 × 844, Handy-Emulation):** Startwert zeigt „3.000.000“; nach dem Eintippen von 4550000 zeigt das Feld „4.550.000“; „Limit setzen“ übernimmt 4550000 als Limit, Spielführung „du führst“, keine Konsolenfehler. Screenshot gesichtet. **Nicht geprüft:** am echten Handy (Tastatur und Cursor-Verhalten auf iOS bitte bei Gelegenheit ansehen).
+
 ## v337 – Auktionshaus: alte Nutzfahrzeug-Lose verschwinden jetzt auch mit deinem Gebot
 **Meldung Bennet:** Im Auktionshaus steht noch ein Nutzfahrzeug-Los („China-Europa-Blockzug“, Reiter „Meine Gebote 1“).
 
