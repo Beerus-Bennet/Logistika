@@ -95,7 +95,8 @@ const VILLAGE_VIEW = (() => {
       if(d!=null&&(!best||d<best.d))best={d,id:p.id};}return best;}
   function tags(){if(!W.R||!farmOn())return [];const T=VILLAGE.state(),out=[{id:"town",x:-62,y:2,z:24,html:"🏘️ "+esc(T.name),open:()=>VILLAGE_UI.open()}];
     for(const p of D.plots){const h=T.homes[p.id];if(W.R.cam.dist>65||Math.hypot(W.R.cam.tx-p.x,W.R.cam.tz-p.z)>34)continue;
-      if(h.resident||h.status==="building"||h.status==="ready")out.push({id:p.id,x:p.x,y:h.resident||h.status==="ready"?6:2.5,z:p.z,html:h.resident?"🏡 "+esc(h.resident.n.split(" ")[0]):h.status==="building"?"🏗️ "+p.number:"🏡 Wohnanfragen",open:()=>VILLAGE_UI.open(p.id)});}
+      /* v341: keine Namensschilder über bewohnten Häusern mehr (Antippen des Hauses öffnet weiterhin die Nachbarschaft, siehe pick) */
+      if(!h.resident&&(h.status==="building"||h.status==="ready"))out.push({id:p.id,x:p.x,y:h.status==="ready"?6:2.5,z:p.z,html:h.status==="building"?"🏗️ "+p.number:"🏡 Wohnanfragen",open:()=>VILLAGE_UI.open(p.id)});}
     return out;}
   function focus(id){const p=id&&VILLAGE.plot(id),wide=VILLAGE.state().expanded,R=FV.R;
     const aspect=R.w/R.h,tan=Math.tan(R.cam.fov/2),span=Math.max(wide?91:47,(wide?103:50)/aspect),dist=span/(2*tan)*1.16+(wide?30:15),near=Math.max(25,12/(2*tan*aspect)*1.16+5);

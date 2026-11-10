@@ -1,5 +1,16 @@
 # Änderungen – kurz für den Kollegen
 
+## v341 – Seeblick: ruhiges Zurückfahren der Kamera, keine Namensschilder über Häusern
+**Wunsch Bennet:** Das Herauszoomen im Ort gefällt, aber das Zurückfedern in die Standardansicht wirkt abgehackt und unprofessionell; die Namensschilder über den Häusern (z. B. „Thomas“, „Cem“) sollen weg.
+
+**Ursache (`farmview.js`, `clampCam`):** Die maximale Kameraentfernung ist 450 über dem Ortsbereich, sonst 54. Verlässt die Kamera den Ortsbereich (Wischen, Schwung nach dem Wischen), wurde die Entfernung in einem Bild hart auf 54 gesetzt – ein Sprung statt einer Fahrt. Die Schilder kamen aus `tags()` in `villageview.js`.
+
+**Lösung:**
+- **Kamera:** Die Zoomgrenze schrumpft jetzt weich (`FV.distSoft`): Ausgangspunkt ist die aktuelle Entfernung, dann nimmt das Verhältnis Entfernung/Grenze gleichmäßig ab (das Verhältnis fällt gleichmäßig, Ausklingen nach rund 2 s) – ein ruhiges Herauszoomen rückwärts statt eines Rucks. Während der Fahrt läuft die Ansicht mit voller Bildrate, danach wie bisher gedrosselt. Berührt der Spieler die Kamera, begrenzt die weiche Grenze nur nach oben; Hineinzoomen bleibt sofort möglich.
+- **Schilder:** Bewohnte Häuser zeigen keinen Namen mehr. „Im Bau“ und „Wohnanfragen“ (bezugsfertig, noch ohne Mieter) sowie „Seeblick“ bleiben, weil sie eine Handlung auslösen. Das Antippen eines bewohnten Hauses öffnet weiterhin die Nachbarschaft (`pick`, unverändert).
+
+**Geprüft (Testbrowser, Hof-Ansicht):** Kamera im Ort auf Entfernung 300, dann den Ortsbereich verlassen: vorher (v340) sofort 54, jetzt 300 und dann gleichmäßig fallend bis 54 (Verlauf geprüft: nie ansteigend). Neben einem bewohnten Haus liefert `tags()` nur noch „Seeblick“, keinen Namen. **Nicht geprüft:** das Aussehen der Fahrt und der Schilder am Handy (Bildschirmfoto im Testaufbau nicht aussagekräftig); die Konsolenfehlermeldung „reading 'name'“ im Testaufbau tritt auch ohne diese Änderung auf (Spielstand ohne Spielerprofil in der Testseite).
+
 ## v340 – Seeblick: Nachbarschaft, Stadtbau und Wohnverträge
 
 **Wunsch:** Auf der Seeseite wächst neben dem bestehenden Haus eine eigene Siedlung. Sechs bewohnte Häuser bringen die ersten persönlichen Fahrradaufträge; Empfehlungen, neue Häuser und sachliche Miet-/Kaufverhandlungen entwickeln den Ort weiter. Ohne Einigung bleibt ein Neubau unbewohnt.
