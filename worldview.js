@@ -972,7 +972,7 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   lines.merge(FWM.creekBank(FWORLD.creek, CR), {});
   lines.merge(FWM.creekBank(LCR, CL), {});
   const SP = FWORLD.spring;
@@ -981,14 +981,14 @@ function worldStatic() {
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
   /* v190: Ufer um Quelltopf und Bachanfang aus einem Guss (deckt das Bachufer dort ab) */
   if (SPI) { const sb2 = new FM.MB(); sb2.merge(FWM.springBank(FWORLD.creek, CR, wGroundAt), {}); R.nodes.push(fnode(R.mesh(sb2), { shadow: false })); }
-  /* v125: nur der nördliche Fluss fließt von Osten nach Westen (water: 2) – v176: im ruhigen Muster des großen Sees */
+  /* v325: Der nördliche Fluss folgt seinen Kurven, vom Wasserfallbecken bis zum Kartenrand. */
   const cr = new FM.MB(); cr.merge(FWM.creekWater(FWORLD.creek, CR), {});
-  R.nodes.push(fnode(R.mesh(cr), { water: 2, shadow: false }));
+  R.nodes.push(fnode(R.mesh(cr), { water: 7, shadow: false }));
   /* v177: der Seebach fließt (water: 5, Richtung Westen in den See) und geht an der Mündung in die Seebewegung über; Quelltopf wie der See */
   const sb = new FM.MB(); sb.merge(FWM.creekWater(LCR, CL), {});
   R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
   if (SPI) {
-    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 3, shadow: false }));
+    const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 7, shadow: false }));
     const ry = Math.atan2(-SPI.dir[1], SPI.dir[0]);
     /* v191: Felsen und Wasserfall 1,5-mal so groß (Topf jetzt Radius 4,5) */
     const SF = FWM.SPRING_FALL, k = SF.S;
@@ -1009,13 +1009,13 @@ function worldStatic() {
     R.nodes.push(fnode(R.mesh(FWM.springFlora()), {}));
     R.nodes.push(fnode(fmesh("wspringrun310", FWM.springRun), Object.assign({ water: 7, shadow: false }, nF)));
     R.nodes.push(fnode(fmesh("wspringcasc310", FWM.springCascades), Object.assign({ water: 7, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringrunfoam310", FWM.springRunFoam), Object.assign({ water: 6, alpha: 0.68, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringrunfoam325", FWM.springRunFoam), Object.assign({ water: 6, flow: [0.36,0.32,0,0], alpha: 0.68, shadow: false }, nF)));
     const I = FWM.springRunInfo();
     WV.springRun = { feet: I.feet.map(f => { const a = WF(f[0], f[2]), l = WF(f[3], f[5]); return { x: a[0], z: a[1], y: f[1] * k, dx: a[0] - l[0], dz: a[1] - l[1] }; }), src: (() => { const a = WF(I.src[0], I.src[2]); return { x: a[0], z: a[1], y: I.src[1] * k }; })() };
     /* v310: Belüftete Stränge gehen in eine sichtbare, flache Aufprallzone über.
        Gemeinsame Anschlusskanten und der Verzicht auf abstehende Nebenfälle bleiben erhalten. */
     R.nodes.push(fnode(fmesh("wspringfall310", FWM.springFall), Object.assign({ water: 6, flow: FWM.springFallJoin(), alpha: 0.98, shadow: false }, nF)));
-    R.nodes.push(fnode(fmesh("wspringfoam310", FWM.springFoam), Object.assign({ water: 6, alpha: 0.96, shadow: false }, nF)));
+    R.nodes.push(fnode(fmesh("wspringfoam325", FWM.springFoam), Object.assign({ water: 6, flow: FWM.springImpact().foam, alpha: 0.96, shadow: false }, nF)));
     /* Fuß und Kante des Wasserfalls in Weltkoordinaten (Gischt und fallende Tropfen in worldStep); dx/dz = Fallrichtung */
     const impact = FWM.springImpact(), lip = FWM.springFallPath(0.24), ft = WF(impact.x, impact.z), lp = WF(lip[0], lip[3]), fl = Math.hypot(ft[0] - lp[0], ft[1] - lp[1]) || 1, fd = [(ft[0] - lp[0]) / fl, (ft[1] - lp[1]) / fl];
     /* v296: Aufprall auf der echten Seehöhe; Schleier folgt derselben Kurve wie das Modell. */
@@ -1099,7 +1099,7 @@ function worldStatic() {
   const lkSh = [[-29, 4, 3.6], [-34, -4, 3], [-26, 14, 3], [22, -12, 3], [30, 4, 3], [-31, -14, 3], [-12, 10, 4.6], [20, -7.5, 4.2]];
   const lkSkip = ["f_steg", "f_boot"].filter(k => typeof FFISHERY !== "undefined" && FFISHERY[k]).map(k => Math.atan2((FFISHERY[k].z - Lk.z) / Lk.rz, (FFISHERY[k].x - Lk.x) / Lk.rx)).concat([LK_MOUTH]);
   R.nodes.push(fnode(fmesh("lakeShore180", () => FWM.lakeShore(Lk.rx, Lk.rz, (x, z) => wGroundAt(Lk.x + x, Lk.z + z), lkW, [LK_MOUTH])), { x: Lk.x, z: Lk.z, shadow: false }));
-  R.nodes.push(fnode(fmesh("lakeWater180", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
+  R.nodes.push(fnode(fmesh("lakeWater325", () => FWM.lakeWater(Lk.rx, Lk.rz, lkSh)), { x: Lk.x, y: 0.035, z: Lk.z, water: 4, shadow: false }));
   R.nodes.push(fnode(fmesh("lakeFoam180", () => FWM.lakeFoam(Lk.rx, Lk.rz, [LK_MOUTH])), { x: Lk.x, y: 0.047, z: Lk.z, alpha: 0.4, shadow: false }));
   R.nodes.push(fnode(fmesh("lakeReeds180", () => FWM.lakeReeds(Lk.rx, Lk.rz, lkSkip)), { x: Lk.x, z: Lk.z, sway: 0.9 }));
   const lk = new FM.MB();

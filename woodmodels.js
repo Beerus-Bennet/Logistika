@@ -1367,7 +1367,7 @@ const FWM = (() => {
   /* v176/v177: Querprofil wie das Seeufer – Abstände relativ zum Wasserrand (h = 1,15 · f): Schlamm −0,55 (unter dem Wasser),
      nasser Sand +0,15, trockener Sand +0,88, Gelände +2,2 (genau wie lakeShore). Wasser: Mitte → Rand wie der Seerand. */
   const CR_H = 1.15, CB_R = [-0.55, 0.15, 0.88, 2.2], CB_C = [0x75704f, 0xa89878, 0xc9b98c];
-  const CW_F = [0, 0.5, 1], CW_C = [0x3f96b4, 0x62adb4, 0x8cbca8];
+  const CW_F = [0, 0.5, 1], CW_C = [G3.WATER.deep, G3.WATER.mid, G3.WATER.shallow];
   /* Bachlinie nach Bogenlänge: W(s, l, y) = Weltpunkt im Abstand l (quer, links +) bei Bogenlänge s */
   function creekFrame(P) {
     const n = P.length, L = [0];
@@ -1380,6 +1380,38 @@ const FWM = (() => {
       return [P[j][0] + (P[j + 1][0] - P[j][0]) * t + nn[0] * l, y, P[j][1] + (P[j + 1][1] - P[j][1]) * t + nn[1] * l];
     };
     return { L, W };
+  }
+  /* v325: Laufstrecke vom wirklichen Einschlag durch die Beckenbiegung in den Bach.
+     Die Farbe trägt Meter entlang dieser Linie statt einer pauschalen Ost-West-Richtung. */
+  function creekCurrent(P, spring) {
+    let path = P, prefix = 0;
+    if (spring) {
+      const I = springImpact(), k = SPRING_FALL.S, D = spring.dir, J = [D[1],-D[0]], C = spring.C;
+      const A = [C[0]+(J[0]*I.x+D[0]*I.z)*k,C[1]+(J[1]*I.x+D[1]*I.z)*k], B = P[0];
+      const reach = Math.hypot(B[0]-A[0],B[1]-A[1])*0.55;
+      const U = [A[0]+J[0]*reach,A[1]+J[1]*reach], V = [B[0]-D[0]*reach,B[1]-D[1]*reach];
+      path = Array.from({length:25},(_,i)=> {
+        const t=i/24,s=1-t;
+        return [s*s*s*A[0]+3*s*s*t*U[0]+3*s*t*t*V[0]+t*t*t*B[0],s*s*s*A[1]+3*s*s*t*U[1]+3*s*t*t*V[1]+t*t*t*B[1]];
+      });
+      for(let i=1;i<path.length;i++)prefix+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+      path=path.concat(P.slice(1));
+    }
+    const segments=[];let length=0;
+    for(let i=1;i<path.length;i++) {
+      const a=path[i-1],dx=path[i][0]-a[0],dz=path[i][1]-a[1],l=Math.hypot(dx,dz);
+      if(l>1e-8){segments.push({a,dx,dz,l,s:length});length+=l;}
+    }
+    return {prefix,path,at:(x,z)=> {
+      let best=Infinity,phase=0,side=1;
+      segments.forEach((q,i)=> {
+        const t0=((x-q.a[0])*q.dx+(z-q.a[1])*q.dz)/(q.l*q.l);
+        const t=Math.max(i===0?-Infinity:0,Math.min(i===segments.length-1?Infinity:1,t0));
+        const dx=x-q.a[0]-q.dx*t,dz=z-q.a[1]-q.dz*t,d=dx*dx+dz*dz;
+        if(d<best){best=d;phase=q.s+t*q.l;side=q.dx*dz-q.dz*dx<0?-1:1;}
+      });
+      return [phase,side];
+    }};
   }
   /* Querschnitte („Stationen“) je Seite sg: s, Wasserrand h, Randnormale (ns, nl) in Bachkoordinaten (l = Abstand nach außen),
      Verjüngung f, Strandbreite wS (Anteil), Seefarben-Anteil cw. o.mouth = { R, shoreD, shoreW }: Mündung in den See
@@ -1465,13 +1497,15 @@ const FWM = (() => {
     const b = new MB(), P = smoothLine(pts, 6), Fr = creekFrame(P), M = o && o.mouth;
     const SS = [1, -1].map(sg => creekStations(P, o, Fr, sg)), Lc = (SS[0].Q + SS[1].Q) / 2;
     const m = S => !M ? 0 : Math.max(0, Math.min(1, 1 - (S.s - Lc) / (M.R + 3)));
-    const col = (S, k) => G3.col(m(S) > 0 ? mix(CW_C[k], CW_C[2], m(S)) : CW_C[k]);
+    const current = o && o.current ? creekCurrent(P,o.spring) : null;
+    const col = (S, k, sg) => current ? [current.prefix+S.s,sg*CW_F[k],0.45]
+      : G3.col(m(S) > 0 ? mix(CW_C[k], CW_C[2], m(S)) : CW_C[k]);
     [1, -1].forEach((sg, si) => {
       const st = SS[si];
       for (let i = 1; i < st.length; i++) for (let k = 1; k < CW_F.length; k++) {
         const S0 = st[i - 1], S1 = st[i];
         const A = Fr.W(S0.s, sg * S0.h * CW_F[k - 1], 0.03), B = Fr.W(S1.s, sg * S1.h * CW_F[k - 1], 0.03), Cc = Fr.W(S1.s, sg * S1.h * CW_F[k], 0.03), D = Fr.W(S0.s, sg * S0.h * CW_F[k], 0.03);
-        quadUp(b, A, B, Cc, D, col(S0, k - 1), col(S1, k - 1), col(S1, k), col(S0, k));
+        quadUp(b, A, B, Cc, D, col(S0, k - 1, sg), col(S1, k - 1, sg), col(S1, k, sg), col(S0, k, sg));
       }
     });
     return b;
@@ -1539,6 +1573,7 @@ const FWM = (() => {
   /* Wasser des Quelltopfs: nur im Topf (Bachwasser zeichnet creekWater), Farbe nach dem Abstand zur gemeinsamen Wasserkante */
   function springPool2(pts, o) {
     const G = springGeo(pts, o), b = new MB(), Hs = G.RP * 1.2 + 4.2, cell = 0.25, n = Math.ceil(2 * Hs / cell), y = SPR.waterY;
+    const current = o && o.current ? creekCurrent(G.P,{C:G.C,dir:G.d0}) : null;
     const V = []; for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = G.C[0] - Hs + i * cell, z = G.C[1] - Hs + j * cell; { const d = G.dU(x, z); V.push({ x, z, v: d, d }); } }
     const at = (i, j) => V[j * (n + 1) + i];
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
@@ -1548,7 +1583,12 @@ const FWM = (() => {
         const poly = clipLT(T, 0, ["x", "z", "v", "d"]);
         if (poly.length < 3) return;
         /* tiefer in der Mitte: u 0 = Mitte (dunkel), 1 = Rand (hell); im Topf zusätzlich zur Mitte hin dunkler */
-        const c = poly.map(p => { const r = Math.hypot(p.x - G.C[0], p.z - G.C[1]) / G.RP; return waterCol(Math.min(1 - Math.min(1, -p.d / G.hRef), 0.15 + 0.85 * r)); });
+        const c = poly.map(p => {
+          const r = Math.hypot(p.x-G.C[0],p.z-G.C[1])/G.RP, shore = Math.min(1-Math.min(1,-p.d/G.hRef),0.15+0.85*r);
+          if(!current)return waterCol(shore);
+          const [phase,side] = current.at(p.x,p.z);
+          return [phase,side*shore,0.45+0.4*Math.exp(-phase*phase/1.8)];
+        });
         for (let k = 1; k < poly.length - 1; k++) triUp(b, [poly[0].x, y, poly[0].z], [poly[k].x, y, poly[k].z], [poly[k + 1].x, y, poly[k + 1].z], c[0], c[k], c[k + 1]);
       });
     }
@@ -1691,7 +1731,7 @@ const FWM = (() => {
     let lo = 0.24, hi = 1;
     for (let i = 0; i < 24; i++) { const a = (lo + hi) / 2; if (springFallPath(a)[1] > y) lo = a; else hi = a; }
     const a = (lo + hi) / 2, p = springFallPath(a);
-    return { x: p[0], y, z: p[3], w: p[2], a, foamY: y + 0.006 };
+    return { x: p[0], y, z: p[3], w: p[2], a, foamY: y + 0.006, foam: [1.45,p[2]*0.62,0.38,SPR.waterY] };
   }
   function springFall() { return springWaterMesh("fall"); }
   /* v297: Strömungsanschluss am Anfang der Rinne für die Materialüberblendung im Shader.
@@ -2197,11 +2237,12 @@ const FWM = (() => {
 
   /* v297: Flacher, quer zur Fallbreite verteilter Schaum statt eines hellen Mittelpunktes.
      Vertexfarbe: r = Strecke stromabwärts, g = quer zur Strömung, b = -1. */
-  function impactPatch(b, x, y, z, width, length, dx, dz) {
+  function impactPatch(b, x, y, z, width, length, dx, dz, bend) {
     const N=14,M=12;
     const Q=(i,j) => {
       const u=-0.35+2.15*i/N, w=-1.35+2.7*j/M;
-      return { p:[x+dx*u*length-dz*w*width,y,z+dz*u*length+dx*w*width], c:[u,w,-1] };
+      const turn = (bend||0)*Math.max(0,u)*Math.max(0,u);
+      return { p:[x+dx*u*length-dz*(w*width+turn),y,z+dz*u*length+dx*(w*width+turn)], c:[u,w,-1] };
     };
     for(let i=0;i<N;i++) for(let j=0;j<M;j++) {
       const A=Q(i,j),B=Q(i+1,j),C=Q(i+1,j+1),D=Q(i,j+1);
@@ -2222,7 +2263,8 @@ const FWM = (() => {
   }
   function springFoam() {
     const b=new MB(), I=springImpact();
-    impactPatch(b,I.x,I.foamY,I.z,I.w*0.55,1.05,1,0);
+    /* v325: Schaumfahne biegt im Becken zum seitlichen Bachabfluss, bleibt auf Seehöhe. */
+    impactPatch(b,I.x,I.foamY,I.z,I.foam[1],I.foam[0],1,0,I.foam[2]);
     return b;
   }
 
@@ -2517,7 +2559,7 @@ const FWM = (() => {
   }
   /* v145: Wasser wie am Teich – tief und dunkel in der Mitte, türkis und hell zum Ufer hin; flache Stellen (sh: [[x, z, r], …] in
      Seekoordinaten: Schilf, Steinkante, Insel) werden heller, damit Schilf und Steine nicht mitten im tiefen Wasser stehen */
-  const LAKE_F = [0, 0.35, 0.62, 0.82, 0.93, 1.0], LAKE_C = [0x174f7a, 0x1d5f8d, 0x2a7aa6, 0x3f96b4, 0x62adb4, 0x8cbca8];
+  const LAKE_F = [0, 0.35, 0.62, 0.82, 0.93, 1.0], LAKE_C = [0.58,0.72,0.86].map(k=>G3.shade(G3.col(G3.WATER.deep),k)).concat(CW_C);
   function lakeWater(rx, rz, sh) {
     const b = new MB(), seg = 128, NR = 18, shoals = sh || [];
     const grad = f => { let k = 0; while (k < LAKE_F.length - 2 && f > LAKE_F[k + 1]) k++; return mix(LAKE_C[k], LAKE_C[k + 1], Math.min(1, (f - LAKE_F[k]) / (LAKE_F[k + 1] - LAKE_F[k]))); };
