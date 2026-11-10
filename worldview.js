@@ -3331,7 +3331,7 @@ function worldTags() {
     el.onclick = fn;
     if (el._h !== html) { el.innerHTML = html; el._h = html; el.className = "ftag wtag " + cls; }
     const p = FV.R.project(x, y, z);
-    if (!p || p[0] < -40 || p[1] < -40 || p[0] > FV.R.w + 40 || p[1] > FV.R.h + 40) { el.style.display = "none"; return; }
+    if (!p || p[0] < -40 || p[0] > FV.R.w + 40 || p[1] > FV.R.h + 40 || (typeof tagCut === "function" && tagCut(el, p))) { el.style.display = "none"; return; }   /* v332: auch nicht halb unter der Kopfleiste */
     el.style.display = "";
     el.style.transform = `translate(${Math.round(p[0])}px,${Math.round(p[1])}px)`;
   });

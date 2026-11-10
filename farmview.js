@@ -1252,6 +1252,13 @@ function flyGain(o, g, i) {
 /* Fliegende Sachen liegen in einer festen Ebene über allem – sonst würden
    sie am oberen Rand des Hofs abgeschnitten, bevor sie Geld oder EP oben
    in der Kopfzeile erreichen. x/y kommen relativ zu #farmFx. */
+/* v332: Blasen über Objekten (.ftag) hängen oberhalb ihres Ankers. Liegt der Anker nahe am oberen Rand der Hofansicht, würde die Blase abgeschnitten
+   und schaute nur mit der unteren Hälfte unter der Kopfleiste hervor – dann ganz ausblenden (Fläche, nicht der Anker, entscheidet). */
+function tagCut(el, p) {
+  if (el.style.display === "none") { el.style.display = ""; }
+  const h = el.offsetHeight || 34;
+  return p[1] - h - 8 < 2;
+}
 function fxLayer() {
   let el = document.getElementById("flyFx");
   if (!el) { el = document.createElement("div"); el.id = "flyFx"; document.body.appendChild(el); }
@@ -1461,7 +1468,7 @@ function updateFarmTags() {
     if (el._h !== html || el._c !== cls) { el.innerHTML = html; el.className = "ftag " + cls; el._h = html; el._c = cls; }
     const [cx, cz] = farmCenter(o);
     const p = FV.R.project(cx, h, cz);
-    if (!p) { el.style.display = "none"; return; }
+    if (!p || tagCut(el, p)) { el.style.display = "none"; return; }
     el.style.display = "";
     el.style.transform = `translate(${Math.round(p[0])}px,${Math.round(p[1])}px)`;
   });
