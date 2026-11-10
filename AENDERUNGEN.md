@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v346 – Gemeinsame Abstände für Bewohner, Arbeiter und Fahrräder
+
+Die bisherige Ausweichkorrektur kannte nur Arbeiter untereinander und prüfte keine kreuzenden Bewegungen. `peopletraffic.js` prüft jetzt nach den Bewegungsabläufen alle sichtbaren Bewohner und Hofarbeiter gemeinsam. Fahrräder besitzen einen länglichen Kollisionsraum einschließlich Vorder-/Hinterrad; abgestellte Räder und sitzende Arbeiter bleiben an ihrem Platz. Relative Bewegungen werden über den ganzen Bildschritt geprüft. Figuren bremsen oder weichen mit einer beibehaltenen Seite aus. In Engstellen warten sie, statt durch andere Personen zu laufen. Bereits überlappende Standorte werden an einen freien, baulich erreichbaren Nachbarpunkt getrennt.
+
+Die gemeinsame Prüfung ersetzt die alte reine Arbeiter-Verschiebung. Erlaubte Arbeitswege des Landwirts und menschliche Zauntore bleiben nutzbar. Bewohnerabläufe pausieren bei einem Rückstau und setzen danach denselben Schritt fort; ein Einkauf wird dadurch nicht vorzeitig ausgelöst. Kollisionsverlauf und Ausweichziele bleiben reine Darstellungsdaten und werden beim Wechsel von Spielstand, Renderer oder Figur verworfen. Verträge, Warenwerte und Verkaufsauszahlungen bleiben unverändert.
+
+Geprüft: acht Verkehrsprüfungen (Gegenverkehr, kreuzende Wege, Rad/Fußgänger, abgestelltes Rad, Engstelle, alte Überlappungen, Rad/Rad sowie Anbindung an Arbeiterwege), 13 Bewohner-/Straßenprüfungen und 12 Stadt-Integrationsgruppen. Lokales Chromium mit echten Figuren: 450 Bewegungsschritte mit kreuzendem Radfahrer und Hofarbeiter, keine Körper-/Radüberlappung, Bremspausen und Weiterfahrt; Ansichten bei 1280 und 390 Pixeln ohne JavaScript-Fehler. Syntax und Diff geprüft. Nicht auf echtem iPhone/Safari geprüft.
+
 ## v345 – Freie Hauptstraße und Abstand beim Markteinkauf
 
 Die öffentliche Hauptstraße einschließlich Bordkante bleibt auch zwischen gesperrten Gebieten sichtbar. Eine schmale Aussparung im Gebietsschleier ersetzt das Grau nur auf dem Straßenkorridor; Wälder, Seegebiete und gesperrte Seitenwege bleiben verhüllt. Die Freischaltbedingungen ändern sich nicht.

@@ -66,7 +66,7 @@ const VILLAGE_PEOPLE = (() => {
   function tick(){if(!farmOn())return;const T=VILLAGE.state(),day=Math.floor(S.time/DAY),m=S.time%DAY;
     for(const p of VILLAGE_DATA.plots){const h=T.homes[p.id];if(!h.resident)continue;const life=h.life||(h.life={});let L=life.active;
       if(L&&L.v!==345){life.active=null;L=null;}
-      if(L&&L.blocked){L.at+=Math.max(0,S.time-(L.lastTime??S.time));L.lastTime=S.time;continue;}if(L)L.lastTime=S.time;
+      if(L&&(L.blocked||L.trafficWait)){L.at+=Math.max(0,S.time-(L.lastTime??S.time));L.lastTime=S.time;continue;}if(L)L.lastTime=S.time;
       if(L){let n=0;while(L&&n++<32){const step=L.steps[L.index],end=L.at+step.duration;if(S.time<end)break;
           /* Am Markt erst zum Tresen gehen, wenn der vorherige Kunde Platz macht. */
           if(L.trip&&L.index===6&&Object.values(T.homes).some(o=>o!==h&&o.life&&o.life.active&&o.life.active.trip&&o.life.active.trip.oid===L.trip.oid&&o.life.active.index>=7&&o.life.active.index<=9)){

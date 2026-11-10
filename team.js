@@ -1752,7 +1752,6 @@ function staffGroundTool(s, e, tg) {
   g.visible = true; g.x = tg.x; g.z = tg.z; g.ry = tg.ry + (lay ? 0 : 0); g.rx = lay ? -1.5 : 0; g.y = 0.07 + tg.lift * 0.3;
 }
 /* Jedes Bild: hinlaufen, arbeiten (Arm schwingt das Werkzeug), winken, zurück an den Platz */
-const STAFF_GAP = 0.8;     /* v232: Mindestabstand zwischen zwei Figuren */
 function stepStaff(dt, time) {
   const F = S.farm;
   if (!F || !F.staff) return;
@@ -1880,31 +1879,8 @@ function stepStaff(dt, time) {
       if (t) { WV.hit = { id: t.id, t0: wnow() }; FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: 4, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.2, up: 1.4, size: 0.06, shape: 1 }); }
     }
   });
-  /* v232: Abstand halten – niemand läuft in einen anderen hinein. Wer näher als STAFF_GAP kommt, weicht seitlich aus (sanft, höchstens 0,7);
-     Sitzende am Feuer und das Ablegen an der Werkzeugplane bleiben unberührt. */
-  {
-    const L = [];
-    F.staff.forEach(s => { const e = WV.staff.get(s.id); if (e && e.node.visible && !e.isSit && !e.dw && e.riseT == null) L.push(e); });
-    L.forEach(e => { e.tx = 0; e.tz = 0; });
-    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) {
-      const A = L[a], B = L[b];
-      if (typeof CAMP !== "undefined" && CAMP.blockedW && (CAMP.blockedW(A.x, A.z) || CAMP.blockedW(B.x, B.z))) continue;
-      let dx = A.x - B.x, dz = A.z - B.z, d = Math.hypot(dx, dz);
-      if (d >= STAFF_GAP) continue;
-      if (d < 1e-3) { const q = (A.ph || 0) - (B.ph || 0) + 1; dx = Math.cos(q); dz = Math.sin(q); d = 1; }
-      const push = (STAFF_GAP - Math.hypot(A.x - B.x, A.z - B.z)) / 2 + 0.02, ux = dx / d, uz = dz / d;
-      /* wer läuft, weicht stärker aus als wer steht */
-      const wa = A.mv && !B.mv ? 1.5 : !A.mv && B.mv ? 0.5 : 1;
-      A.tx += ux * push * wa; A.tz += uz * push * wa; B.tx -= ux * push * (2 - wa); B.tz -= uz * push * (2 - wa);
-    }
-    F.staff.forEach(s => {
-      const e = WV.staff.get(s.id); if (!e) return;
-      if (e.isSit || e.dw || e.riseT != null) { e.ox = 0; e.oz = 0; return; }
-      const k = Math.min(1, dt * 6), m = Math.hypot(e.tx || 0, e.tz || 0), c = m > 0.7 ? 0.7 / m : 1;
-      e.ox = (e.ox || 0) + ((e.tx || 0) * c - (e.ox || 0)) * k; e.oz = (e.oz || 0) + ((e.tz || 0) * c - (e.oz || 0)) * k;
-      if (Math.abs(e.ox) > 0.002 || Math.abs(e.oz) > 0.002) { e.node.x = e.x + e.ox; e.node.z = e.z + e.oz; }
-    });
-  }
+  /* v346: Abstand jetzt gemeinsam mit Bewohnern und Fahrrädern in
+     PEOPLE_TRAFFIC; keine zweite, widersprechende Verschiebung hier. */
   /* offene Blase über einer Kraft: Text aktuell halten */
   if (FV.pop && FV.pop.kind === "staff") {
     const P = FV.pop, el = $("#farmPop");

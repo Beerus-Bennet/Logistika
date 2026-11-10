@@ -1,3 +1,9 @@
+## v346 – Gemeinsamer Bewegungsraum für Bewohner und Arbeiter
+
+Basis main 25b86d0 (PR #64). Neue `peopletraffic.js` nach `villagepeople.js` einbinden und im SW cachen. `worldStep` ruft die gemeinsame Prüfung nach Arbeiter-/Bewohnerbewegungen auf. Die bisherige Arbeiter-Abstandskorrektur in `team.js` entfällt. `villagepeople.js` pausiert bei `L.trafficWait` genauso wie bei einem blockierten Bauhindernis; gespeicherte Ablaufkennung 345 bleibt kompatibel. Keine Verkaufs-/Vertragsmigration.
+
+Körperradius 0,39, Radkette über ±0,95 mit Radius 0,25 und zusätzlicher Abstand 0,035. Bewegungen relativ über den Bildschritt prüfen, bei Begegnungen ausweichen/bremsen; statische Fahrräder und Sitzende nicht verschieben. Historie nur im Speicher, an Renderer, Hofzustand und Knotenidentität gebunden. Tests: `peopletraffic-v346.test.js`, erweiterte `village-life-v343.test.js`. Neue SW-Version und Cache-Verweise v346 für team/worldview/villagepeople/peopletraffic gemeinsam übernehmen. Vor/nach Upload alle PRs und main erneut prüfen, kein automatischer Merge/Live-Deployment.
+
 ## v345 – Marktbesucher mit Abstand; Hauptstraße ohne Gebietsschleier
 
 Basis main acf12e2 (PR #63). `villagepeople.js`: reservierte Radplätze, Freiraum zum Tresen, Absteigepunkt am Rad und Fußweg darum; aktive Abläufe jetzt Kennung 345, Altpläne ohne erneuten Verkauf beenden. Keine Änderung an Waren, Preisen oder Auszahlungen. Tests ergänzt in `village-life-v343.test.js`.
