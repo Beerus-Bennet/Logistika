@@ -3333,7 +3333,7 @@ function worldTags() {
     const p = FV.R.project(x, y, z);
     if (!p || p[0] < -40 || p[0] > FV.R.w + 40 || p[1] > FV.R.h + 40 || (typeof tagCut === "function" && tagCut(el, p))) { el.style.display = "none"; return; }   /* v332: auch nicht halb unter der Kopfleiste */
     el.style.display = "";
-    el.style.transform = `translate(${Math.round(p[0])}px,${Math.round(p[1])}px)`;
+    el.style.left = Math.round(p[0]) + "px"; el.style.top = Math.round(p[1]) + "px";   /* v334: nicht per transform – die Wippen-Animation (fbob) überschreibt transform und warf die Blasen nach (0,0) in die obere linke Ecke */
   });
   if (WV.tagEls) for (const [k, el] of WV.tagEls) if (!keep.has(k)) { el.remove(); WV.tagEls.delete(k); }
 }
