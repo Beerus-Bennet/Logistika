@@ -5,7 +5,7 @@ const C = { console, antlers: [] }; C.window = C; vm.createContext(C);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'gl3d.js'), 'utf8'), C);
 const source = fs.readFileSync(path.join(__dirname, 'hunt.js'), 'utf8');
 vm.runInContext(source.replace('function antlersInto(b, P, sc, vr, F) {',
-  'function antlersInto(b, P, sc, vr, F) { if (F && F.skull) window.antlers.push({P,sc,vr,F});') + '\nthis.H = HUNT; this.G = G3;', C);
+  'function antlersInto(b, P, sc, vr, F) { window.antlers.push({P,sc,vr,F});') + '\nthis.H = HUNT; this.G = G3;', C);
 const { H, G } = C, json = v => JSON.parse(JSON.stringify(v));
 const rec = (k, m, seed = 77, score = [0,.42,.62,.8,.95][m]) => ({ u: k + seed, k, m, s: score, vr: seed % 6, gn: json(H.genes(k, score, seed)), pin: 1, t: 90 });
 function bounds(v) {

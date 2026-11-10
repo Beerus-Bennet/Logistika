@@ -1,5 +1,16 @@
 # Zwei Stände zusammenführen (v46 + Fischerei vom Kollegen)
 
+## v315 – Liegebewegung und Kopfpräparate auf main 7e0df0d / v313
+
+Branch `claude/natural-hunt-mounts`. Die parallele Kartenkorrektur PR #33 verwendet v314; sie ändert `map.js`, während diese Lieferung nur die Jagddarstellung ändert. Bei einer späteren Zusammenführung beide Changelog-Abschnitte, `map.js?v=314`, `hunt.js?v=315` und Service Worker v315 behalten.
+
+- `hunt.js`: weichere Hirschkonturen/Schecken, entspanntere Seitenlage und weich auslaufende Bewegung, geschlossene Lider mit Kopfmodellcache. Hirsch-/Keilerpräparate verwenden die echten Köpfe mit Halsansatz und gespeicherten Merkmalen. Alle Ehrenplätze teilen einen Maßstab und werden nach Modellbreite verteilt.
+- `index.html` / `sw.js`: `hunt.js?v=315`, Service Worker v315; übrige Dateiverweise behalten.
+- `hunt-presentation-v315.test.js`: neue Prüfung für Kopfpräparate, Maßstab, Daten-/Werteerhalt, Endbewegung und Modellwiederverwendung. `trophy-layout-v310.test.js`: Geweihprüfung auch beim vollständigen Kopf statt nur beim Schädel.
+- Keine neuen Spielstandfelder, Bilder, Texturen oder Abhängigkeiten. Geschäftslogik und vorhandene Trophäendaten bleiben erhalten.
+
+Modell-, Bewegungs-, Treffer- und Leistungstests bestanden; Originalmodelle mit WebGL vor/nach der Änderung sowie die mobile Browseransicht geprüft. Kein Test auf einem echten iPhone oder in Safari.
+
 ## v313 – Tür-zu-Tür-Logistik auf main 462093c / v312
 
 Branch `claude/tuer-zu-tuer`, Pull Request auf main; v312 (PR #31) ist eingemischt. Bei Konflikten in `index.html`/`sw.js` jeweils die höhere Dateiversion behalten.
