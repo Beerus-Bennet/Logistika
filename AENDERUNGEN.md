@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v337 – Auktionshaus: alte Nutzfahrzeug-Lose verschwinden jetzt auch mit deinem Gebot
+**Meldung Bennet:** Im Auktionshaus steht noch ein Nutzfahrzeug-Los („China-Europa-Blockzug“, Reiter „Meine Gebote 1“).
+
+**Ursache (`auction.js`, `ensureLots`):** Die Bereinigung aus v336 ließ fremde Nutzfahrzeug-Lose stehen, auf die schon geboten wurde (`me.max > 0`) – genau das Los im Bildschirmfoto. Außerdem lief sie nur, wenn das Haus neue Lose nachlegte, nicht beim Öffnen der Liste.
+
+**Lösung:** Neue Funktion `ahPurgeVeh` entfernt alle fremden, laufenden Nutzfahrzeug-Lose, auch mit deinem Gebot (es ist nichts reserviert, das Budget wird nur berechnet – es geht also kein Geld verloren). Sie läuft beim Nachlegen und beim Öffnen des Auktionshauses; danach wird die Liste wieder aufgefüllt. Eigene Einlieferungen und abgeschlossene Lose bleiben.
+
+**Geprüft (Testbrowser):** Altstand mit drei Nutzfahrzeug-Losen (fremd mit Gebot / fremd / eigen) → nach dem Öffnen nur noch das eigene, 8 Auto-Lose in der Liste, keine Konsolenfehler. **Nicht geprüft:** am Handy. Hinweis: Wer noch v335 oder älter sieht, hat den alten Zwischenspeicher – Seite neu laden bzw. Spiel einmal schließen.
+
 ## v336 – Auktionshaus: keine Nutzfahrzeuge mehr, 50 neue Luxusautos, Fotos weicher
 **Wunsch Bennet:** Nutzfahrzeuge (z. B. „Larry vs Harry Bullitt“, „China-Europa-Blockzug“) sollen aus dem Auktionshaus raus und durch Autos ersetzt werden; die Vielfalt unter den Luxusautos soll deutlich und professionell erweitert werden; die Autofotos (BMW M5 E39) sehen durch den Comic-Filter schlecht aus.
 

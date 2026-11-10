@@ -145,10 +145,16 @@ function makeLot(opt) {
   A.lots.push(l);
   return l;
 }
+/* v337: alte Nutzfahrzeug-Lose fremder Verkäufer fliegen raus – auch mit deinem Gebot (das Budget ist nur berechnet, nichts ist reserviert).
+   Eigene Einlieferungen und abgeschlossene Lose bleiben. */
+function ahPurgeVeh() {
+  const A = ah(), n = A.lots.length;
+  A.lots = A.lots.filter(l => l.kind !== "veh" || l.mine || l.done);
+  return A.lots.length !== n;
+}
 function ensureLots(initial) {
   const A = ah();
-  /* v336: alte Nutzfahrzeug-Lose fremder Verkäufer fliegen raus (eigene Einlieferungen und Lose mit deinem Gebot bleiben) */
-  A.lots = A.lots.filter(l => l.kind !== "veh" || l.mine || l.done || (l.me && l.me.max > 0));
+  ahPurgeVeh();
   let n = liveLots().filter(l => !l.mine).length;
   while (n < AH_LOTS) {
     const l = makeLot();
@@ -1000,6 +1006,7 @@ function pastRowHTML(p) {
 }
 function renderAuction() {
   const A = ah(); ahFixPaints();
+  if (ahPurgeVeh()) { ensureLots(false); save(); }
   if (!A.lots.length) ensureLots(true);
   setTools("market", ahToolsHTML(), bindAhTools);
   $("#viewTitle").textContent = "Auktionshaus";
