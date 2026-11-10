@@ -4766,3 +4766,9 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 .external-buy .btn small{font-size:10px;color:inherit}
 .fo-tag.bulk{background:#e4f2ff;color:#245681;white-space:normal;line-height:1.4}
 @media(max-width:360px){.external-buy{grid-template-columns:1fr}.external-buy .btn{min-height:52px}}
+
+/* ---------- v331: Kompakte Prozentziffern für Hof und Büro ---------- */
+#farmBoot .fbDigits,#officeBoot .fbDigits{display:inline-flex;vertical-align:top}
+#farmBoot .fbDigit,#officeBoot .fbDigit{display:block;height:30px;width:.65em;overflow:hidden}
+#farmBoot .fbReel,#officeBoot .fbReel{display:block}
+#farmBoot .fbReel>span,#officeBoot .fbReel>span{display:block;height:30px;line-height:30px}

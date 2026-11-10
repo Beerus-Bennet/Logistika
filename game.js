@@ -2897,7 +2897,7 @@ function snusPinImg() {
   snusImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(snusLogo(64, true));
   return null;
 }
-const PIN_COL = { yellow: "#ffc12e", orange: "#ff8a3d", gray: "#a3aebb", white: "#ffffff" };
+const PIN_COL = { yellow: "#ffc12e", orange: "#ff8a3d", gray: "#a3aebb", white: "#ffffff", teal: "#49c4b4" };
 let pinHits = [];
 function jobPicked(j) {
   if (j.v === D2D_V) {                     /* v313: abgeholt, sobald die erste Teilmenge unterwegs ist */
@@ -2927,6 +2927,11 @@ function mapPins() {
     const star = o.tut || o.tutNext || o.vip;   /* Linas Übung / Sonderfahrt: eigene Nadel, nie gebündelt */
     out.push({ kind: "order", id: o.id, p: orderPinPt(o), col: grey ? "gray" : "yellow",
       icon: o.vip ? "✉️" : star ? "⭐" : o.snus ? SNUS_PIN : o.pablo ? "❄️" : CARGO[o.cargo].icon, prio: star ? 3 : grey ? 0 : 1, solo: !!star });
+  });
+  /* v331: Gekaufte Außenlager sind eigene Ziele, keine Aufträge. Einzelne
+     Marken behalten ihren Namen und werden nicht mit Aufträgen gebündelt. */
+  if (typeof farmExternalSites === "function") farmExternalSites().forEach(s => {
+    out.push({ kind: "warehouse", id: s.id, p: s.p, col: "teal", icon: s.icon, prio: 4, solo: true, minZoom: 10 });
   });
   return out;
 }
@@ -2972,7 +2977,7 @@ function drawPinShape(c, x, y, R, fill, icon, opts) {
 function drawPins(m, z) {
   const R = pinSize(z);
   const list = mapPins().map(p => ({ ...p, s: m.screenPos(p.p[0], p.p[1]) }))
-    .filter(p => p.s[0] > -40 && p.s[0] < m.width + 40 && p.s[1] > -40 && p.s[1] < m.height + 60);
+    .filter(p => (!p.minZoom || z >= p.minZoom) && p.s[0] > -40 && p.s[0] < m.width + 40 && p.s[1] > -40 && p.s[1] < m.height + 60);
   /* Nahe Nadeln bündeln – die wichtigste liegt oben */
   list.sort((a, b) => b.prio - a.prio);
   const groups = [];
@@ -3002,6 +3007,11 @@ function drawPins(m, z) {
     const r = isSel ? R * 1.18 : top.flag ? R * 0.8 : R;
     const head = drawPinShape(ctx, g.s[0], g.s[1], r, PIN_COL[col], top.icon, { count: g.items.length > 1 ? g.items.length : 0, sel: isSel });
     pinHits.push({ x: head[0], y: head[1], r: r + 6, items: g.items, s: g.s });
+    if (top.kind === "warehouse" && z >= 13) {
+      ctx.font = "800 10px " + LABEL_FONT; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.strokeText(FSTORE[top.id].n, g.s[0], g.s[1] + 5);
+      ctx.fillStyle = "#0d1b2a"; ctx.fillText(FSTORE[top.id].n, g.s[0], g.s[1] + 5);
+    }
   });
 }
 function rrect(c, x, y, w, h, r) {
@@ -3194,6 +3204,15 @@ function renderInspector() {
       selected = { kind: b.dataset.k, id: b.dataset.id };
       renderInspector(); mapRedraw();
     });
+  } else if (selected.kind === "warehouse") {
+    const site = farmExternalSites().find(s => s.id === selected.id);
+    if (!site) { selected = null; return renderInspector(); }
+    el.innerHTML = `<button class="xbtn" id="insClose">✕</button>
+      <div class="ins-title">${site.icon} ${esc(site.name)}</div>
+      <div class="ins-sub">Außenlager nahe ${esc(FT().title(S.player ? S.player.company : ""))}</div>
+      <div class="ins-row">+${fmt(site.capacity)} Plätze · ${fmt(site.sections)} ${site.sections === 1 ? "Abschnitt" : "Abschnitte"}</div>
+      <div class="ins-row small">Gemeinsamer Bestand ${esc(FSTORE[site.id].n)}: ${fmt(farmStoreUsed(site.id))} / ${fmt(farmStoreCap(site.id))} Plätze</div>
+      <div class="ins-btns"><button class="btn tiny" id="insWarehouse">Lager öffnen</button></div>`;
   } else if (selected.kind === "base") {
     const b = (S.bases || []).find(x => x.id === selected.id);
     if (!b) { selected = null; return renderInspector(); }
@@ -3230,6 +3249,8 @@ function renderInspector() {
   if (jb) jb.onclick = () => { const id = selected.id; selected = null; renderInspector(); showInList("jobs", id); };
   const ib = $("#insBase");
   if (ib) ib.onclick = () => { const id = selected.id; selected = null; renderInspector(); showTab("bases"); if (typeof openOffice === "function") openOffice(id); };
+  const iw = $("#insWarehouse");
+  if (iw) iw.onclick = () => { const id = selected.id; selected = null; renderInspector(); showTab("farm"); openFarmStore(id); };
 }
 /* Aus der Karte in die Liste: Reiter öffnen, Karte hinscrollen, kurz aufleuchten */
 function showInList(tab, id) {

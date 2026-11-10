@@ -167,8 +167,14 @@ const FHALL = { t: "lagerhalle", mult: 1, stores: ["silo", "barn", "holz", "fisc
 /* v330: Zusätzliche Flächen außerhalb des Hofs, unabhängig vom Hallenbonus.
    Je Abschnitt einmaliger Kaufpreis; weitere Abschnitte kosten 15 % mehr. */
 const FEXTERNAL = {
-  silo: { n: "Erntehalle", places: 1000, price: 75000 },
-  barn: { n: "Temperiertes Lebensmittellager", places: 500, price: 125000 }
+  silo: { n: "Erntehalle", places: 1000, price: 75000, offset: [-.00039, -.01214] },
+  barn: { n: "Temperiertes Lebensmittellager", places: 500, price: 125000, offset: [.00605, -.00900] },
+  /* v331: Eigenständige Außenflächen für sämtliche Lagerarten. Die Standorte
+     liegen auf der Landseite westlich des Hofs und bleiben bei jedem Laden gleich. */
+  holz: { n: "Holzlagerhalle", places: 1000, price: 100000, offset: [-.00230, -.01085] },
+  fisch: { n: "Externes Kühllager", places: 500, price: 175000, offset: [-.00065, -.00244] },
+  koeder: { n: "Köderdepot", places: 1000, price: 60000, offset: [-.00474, -.00664] },
+  troph: { n: "Präparatedepot", places: 120, price: 90000, offset: [.00340, -.00179] }
 };
 const FBULK_CUSTOMERS = [
   { n: "Großbäckerei Potsdam", town: "potsdam", items: ["weizen", "mehl", "maismehl"] },

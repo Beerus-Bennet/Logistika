@@ -1,5 +1,24 @@
 # Änderungen – kurz für den Kollegen
 
+## v331 – Ladeprozente und Außenlager auf der Karte für alle Lagerarten
+
+**Wunsch:** Die Prozentzahl des Ladeschirms soll zum bereits weit gefüllten Balken passen. Gekaufte Außenlager sollen nahe dem Hof als eigene Stecknadeln sichtbar sein; externer Ausbau fehlt bisher bei Holz und Fischerei.
+
+**Lösung:**
+- `farmview.js`/`style.css`: Drei kurze Ziffernrollen ersetzen die einzelne 3030 Pixel hohe Rolle mit 101 Prozentzeilen. Die größte Rolle enthält elf Zeilen. Ziffern, Lkw, Balken und Texte erhalten dieselbe Startzeit; beim Abschluss fahren alle zusammen auf 100 %. Gilt für Hof und Büro, die denselben Ladeschirm benutzen. Der Fortschritt bleibt wie bisher eine Zeitschätzung während des blockierenden 3D-Aufbaus.
+- `farmdata.js`/`farm.js`: Außenlager jetzt für **alle sechs Lagerarten**: Silo (+1.000 Plätze, Grundpreis 75.000 €), Scheune (+500, 125.000 €), Holz (+1.000, 100.000 €), Kühlkiste (+500, 175.000 €), Köderkiste (+1.000, 60.000 €) und Präparate (+120, 90.000 €). Vorhandene Käufe bleiben erhalten. Jeweils 1/5/10 Abschnitte, dieselbe Preissteigerung und eigene Zusatzkapazität ohne erneute Verdopplung durch die Hofhalle. Freischaltung ab Hof-Level 15 und gegründeter Spedition für bereits verfügbare Lager.
+- `farmExternalSites()` leitet je gekaufter Lagerart einen festen Standort auf der Landseite westlich des Hofes ab. Kein zweiter Warenbestand und keine zusätzlichen Savefelder. Mehr Abschnitte vergrößern denselben Standort. Ab Kartenzoom 10 eigene türkisfarbene Stecknadeln, ab Zoom 13 zusätzlich beschriftet; keine Bündelung mit Aufträgen. Antippen zeigt Standort, Abschnitte, Zusatzkapazität und gemeinsamen Bestand. „Lager öffnen“ führt zum passenden Lager.
+- Jedes Außenlager hat im Lagerfenster den Knopf „Außenlager auf der Karte“. Bei Holz und Fischerei führt „Bestellungen ansehen“ zur richtigen Station; die Präparatesammlung erhält keinen Auftragsknopf. Großkunden und deren zusätzliche Hof-Auftragsplätze bleiben an Ernte-/Lebensmittelaußenlager gebunden.
+- Service Worker v331, Cache-Verweise nur für die tatsächlich geänderten Spiel-/Hofdateien und das Stylesheet erhöht. Keine Pakete oder Fremdbilder hinzugefügt.
+
+**Geprüft:**
+- `farm-wholesale-v330.test.js`: zwölf Gruppen, darunter alle sechs Außenlager mit tatsächlichen Kaufkosten, Kapazitätszuwachs, unverändertem Bestand, festen Kartenpunkten nach JSON-Laden/Migration und Entfernung der Marken nach Hofverkauf. Die vorhandenen Großauftrags-/Lieferprüfungen bestehen weiterhin.
+- `trophy-exhibits-v328.test.js` und `d2d-v313.test.js` bestanden. Syntax, Cache-Verweise und `git diff --check` geprüft.
+- Chromium/Playwright, mobiler Viewport mit dreifacher Pixeldichte: sichtbare Prozentziffern bei 0/7/9/10/17/50/73/89/90/92 sowie Abschluss auf 100 gegen die tatsächliche Balkenfüllung geprüft, jeweils für Hof und Büro. Kurze Rollen, gemeinsamen Start und Abschluss gesichtet. Echter Hofstart blendet den Ladeschirm wieder aus.
+- Im tatsächlichen Spiel: alle sechs Außenlager gekauft; Breiten 320/390/1280 ohne horizontalen Überlauf. Auf dem OSM-Kartenausschnitt alle sechs Marken per Touch geöffnet und zum jeweils richtigen Lager gewechselt. Lager→Karte, Fischerei→Bestellungen sowie Neuladen und kalter Hofeinstieg über eine Kühlhausmarke erfolgreich. Keine JavaScript-Fehler. Bildschirmbilder gesichtet.
+
+**Nicht geprüft:** echtes iPhone/Safari und eine Langzeitsitzung auf dem Gerät aus dem Screenshot.
+
 ## v330 – Außenlager und Großkunden für Hofware
 
 **Wunsch:** Der Hof soll auch spät im Spiel größere Warenmengen sammeln und verkaufen können. Dafür braucht es zusätzlichen Lagerraum außerhalb des Hofs und größere Bestellungen mit längerer Lieferfrist.

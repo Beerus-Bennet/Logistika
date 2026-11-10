@@ -2292,13 +2292,14 @@ function openMachine(o) {
 function farmExternalHTML(st) {
   const E = FEXTERNAL[st];
   if (!E) return "";
-  const extra = farmExternalCap(st), available = farmExternalAvailable(st);
+  const extra = farmExternalCap(st), available = farmExternalAvailable(st), hof = st === "silo" || st === "barn";
   return `<section class="fs-external"><div><b>🏭 Außenlager · ${esc(E.n)}</b><small>Zusätzliche Fläche außerhalb des Hofs. Deine Ware verwaltest du weiterhin hier im Lager.</small></div>
     <strong>${extra ? "+" + fmt(extra) + " Plätze extern" : "Noch keine Außenfläche"}</strong>
     ${available ? `<div class="external-buy">${[1, 5, 10].map(n => { const price = farmExternalCost(st, n), disabled = price == null || S.money < price; return `<button class="btn tiny${n > 1 ? " ghost" : ""}${disabled ? " disabled" : ""}" data-external="${st}|${n}"${disabled ? " disabled" : ""}>+${fmt(E.places * n)} Plätze<small>${price == null ? "nicht verfügbar" : eur(price) + " einmalig"}</small></button>`; }).join("")}</div>`
       : `<small>Ab Hof-Level 15 und nach Gründung deiner Spedition.</small>`}
-    ${extra ? `<button class="btn tiny ghost" data-bulk-orders="1">📋 Großkundenaufträge ansehen</button>` : ""}
-    <small>Großkunden bestellen passend zu Sortiment, Vorräten, Produktion und Fuhrpark. Ihre Lieferfrist beginnt bei Annahme.</small></section>`;
+    ${extra ? `<button class="btn tiny ghost" data-external-map="${st}">📍 Außenlager auf der Karte</button>` : ""}
+    ${extra && st !== "troph" ? `<button class="btn tiny ghost" data-store-orders="${hof ? "hof" : st === "holz" ? "saege" : "see"}">📋 ${hof ? "Großkundenaufträge" : "Bestellungen"} ansehen</button>` : ""}
+    <small>${hof ? "Großkunden bestellen passend zu Sortiment, Vorräten, Produktion und Fuhrpark. Ihre Lieferfrist beginnt bei Annahme." : st === "troph" ? "Mehr Platz für deine einzelnen Präparate. Du kannst sie weiterhin aufstellen oder wieder einlagern." : "Zusatzplätze für deinen gemeinsamen Lagerbestand. Die Große Lagerhalle auf dem Hof bleibt davon unabhängig."}</small></section>`;
 }
 
 /* Lager */
@@ -2350,7 +2351,13 @@ function openFarmStore(st) {
     const [kind, n] = b.dataset.external.split("|");
     if (farmExternalBuy(kind, +n)) { sfx("build"); save(); renderFarmUI(); openFarmStore(st); }
   });
-  $$("#farmSheetIn [data-bulk-orders]").forEach(b => b.onclick = () => openFarmOrders(null, "hof"));
+  $$("#farmSheetIn [data-store-orders]").forEach(b => b.onclick = () => openFarmOrders(null, b.dataset.storeOrders));
+  $$("#farmSheetIn [data-external-map]").forEach(b => b.onclick = () => {
+    const site = farmExternalSites().find(s => s.id === b.dataset.externalMap);
+    if (!site) return;
+    closeFarmSheet(); showTab("map"); map.flyTo(site.p, 14.5, 600);
+    selected = { kind: "warehouse", id: site.id }; renderInspector();
+  });
   if (wall != null) HUNT.wallBind(() => openFarmStore(st));
 }
 
@@ -3153,13 +3160,15 @@ const LD_BG = `<svg class="fbBg" viewBox="0 0 300 130" preserveAspectRatio="xMid
   [8, 30, 52, 232, 258, 284, 150, 176].map((x, i) => { const h = 22 + (i * 7) % 14; return `<path d="M${x} ${130 - h}l-9 ${h}h18z M${x} ${130 - h - 10}l-7 ${h * .6}h14z" fill="#1f8a3d" opacity=".2"/>`; }).join("") + `</svg>`;
 function ldMake(el, T) {
   el.innerHTML = `<div class="fbBox" role="status" aria-label="Der Hof wird geladen">${LD_BG}<div class="fbTitle">Weitwind Spedition</div>` +
-    `<div class="fbPct"><div class="fbReel">${Array.from({ length: 101 }, (_, i) => `<div>${i} %</div>`).join("")}</div></div>` +
+    /* v331: Kurze Ziffernrollen statt einer 3030px langen Ebene vermeiden
+       übergroße Rasterflächen bei hoher Pixeldichte. Gemeinsame Zeitbasis in ldStart. */
+    `<div class="fbPct" aria-hidden="true"><span class="fbDigits">${[["", 1], ["", ...Array.from({ length: 10 }, (_, i) => i)], Array.from({ length: 10 }, (_, i) => i)].map(ds => `<span class="fbDigit"><span class="fbReel">${ds.map(d => `<span>${d}</span>`).join("")}</span></span>`).join("")}</span><span> %</span></div>` +
     `<div class="fbTrack"><div class="fbTrees"></div><div class="fbTruck"><div>${LD_TRUCK}</div></div><div class="fbRoad"><i class="fbFill"></i></div></div>` +
     `<div class="fbMsg">${LD_MSG.map(t => `<span>${t}</span>`).join("")}</div></div>`;
   return el;
 }
 function ldStart(el, T) {
-  const q = s => el.querySelector(s), road = q(".fbRoad"), fill = q(".fbFill"), truck = q(".fbTruck"), reel = q(".fbReel"), treesEl = q(".fbTrees");
+  const q = s => el.querySelector(s), road = q(".fbRoad"), fill = q(".fbFill"), truck = q(".fbTruck"), reels = [...el.querySelectorAll(".fbReel")], treesEl = q(".fbTrees");
   const msgs = [...el.querySelectorAll(".fbMsg span")];
   const TW = 54, W = Math.max(150, road.clientWidth || 260), run = W - TW;
   const n = Math.max(8, Math.floor(run / 15)), trees = [];
@@ -3173,12 +3182,19 @@ function ldStart(el, T) {
   let anims = [], main = null;
   function ride(from, to, dur) {
     anims.forEach(a => a.cancel()); anims = [];
-    const A = (e, kf, o) => { const a = e.animate(kf, Object.assign({ duration: dur, fill: "forwards", easing: "linear" }, o)); anims.push(a); return a; };
+    const started = document.timeline.currentTime;
+    const A = (e, kf, o) => { const a = e.animate(kf, Object.assign({ duration: dur, fill: "forwards", easing: "linear" }, o)); if (started != null) a.startTime = started; anims.push(a); return a; };
     const f = Math.round(from), t = Math.round(to);
-    fill.style.transform = `translateX(${from - 100}%)`; truck.style.transform = `translateX(${from / 100 * run}px)`; reel.style.transform = `translateY(${-f * LD_LH}px)`;
+    fill.style.transform = `translateX(${from - 100}%)`; truck.style.transform = `translateX(${from / 100 * run}px)`;
     A(fill, [{ transform: `translateX(${from - 100}%)` }, { transform: `translateX(${to - 100}%)` }]);
     const m = A(truck, [{ transform: `translateX(${from / 100 * run}px)` }, { transform: `translateX(${to / 100 * run}px)` }]);
-    if (t > f) A(reel, [{ transform: `translateY(${-f * LD_LH}px)` }, { transform: `translateY(${-t * LD_LH}px)` }], { easing: `steps(${t - f}, end)` });
+    const digit = (p, i) => i === 0 ? (p >= 100 ? 1 : 0) : i === 1 ? (p < 10 ? 0 : 1 + Math.floor(p / 10) % 10) : p % 10;
+    reels.forEach((reel, i) => {
+      const kf = [];
+      for (let p = f; p <= t; p++) kf.push({ transform: `translateY(${-digit(p, i) * LD_LH}px)`, offset: t > f ? (p - f) / (t - f) : 0, easing: "steps(1, end)" });
+      if (kf.length === 1) kf.push({ ...kf[0], offset: 1 });
+      reel.style.transform = kf[0].transform; A(reel, kf);
+    });
     msgs.forEach((sp, j) => {
       const kf = [];
       for (let p = f; p <= t; p++) kf.push({ opacity: sec(p) === j ? 1 : 0, offset: t > f ? (p - f) / (t - f) : p > f ? 1 : 0 });
