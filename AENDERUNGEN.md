@@ -1,5 +1,13 @@
 # Änderungen – kurz für den Kollegen
 
+## v347 – Geordnete Platzvorschläge und einheitlicher Sammelabbruch
+
+Felder und Obstbäume erhalten beim Kauf einen Vorschlag am vorhandenen Bestand statt nur in Kameranähe. Feldlücken haben Vorrang, neue Beete bilden kompakte Blöcke. Obstbaumreihen übernehmen die vorhandenen Abstände; Einzelbäume beginnen mit zusätzlichem Abstand. Wege, Gebäude und Baugrenzen werden weiterhin durch die reguläre Bauprüfung geschützt. Die Vorschau kostet nichts, bezahlt wird erst beim Bestätigen. Manuelles Verschieben bleibt möglich; bei fortlaufendem Feldbau nutzt auch das nächste Feld die neue Platzsuche. Der Hinweis lautet „Bestätigen oder verschieben“.
+
+„Alle abbrechen“ nutzt in allen Produktionswarteschlangen dieselbe Kachelklasse, Größe, Rahmenstärke und Rundung wie belegte Plätze. Die Aktion bleibt durch rotes Kreuz und Text erkennbar. Rückfrage und Zutatenrückgabe bleiben unverändert.
+
+Geprüft: sieben automatisierte Platzierungsprüfungen sowie Syntax und Diff. Lokales Chromium: Vorschau ohne Kauf, Bestätigung mit anschließendem Feldvorschlag, Baumreihe; gleiche Kachelmaße, Rahmen und Rundungen sowie kein horizontaler Fensterüberlauf bei 320/390/1280 Pixeln in Mühle und Bäckerei. Sammelabbruch öffnet die Rückfrage und leert erst nach Zustimmung die Schlange. Keine JavaScript-Fehler. Kein Test auf echtem iPhone/Safari. GitHub-Upload als eigener Branch mit Pull Request; keine automatische Zusammenführung oder Live-Veröffentlichung.
+
 ## v346 – Gemeinsame Abstände für Bewohner, Arbeiter und Fahrräder
 
 Die bisherige Ausweichkorrektur kannte nur Arbeiter untereinander und prüfte keine kreuzenden Bewegungen. `peopletraffic.js` prüft jetzt nach den Bewegungsabläufen alle sichtbaren Bewohner und Hofarbeiter gemeinsam. Fahrräder besitzen einen länglichen Kollisionsraum einschließlich Vorder-/Hinterrad; abgestellte Räder und sitzende Arbeiter bleiben an ihrem Platz. Relative Bewegungen werden über den ganzen Bildschritt geprüft. Figuren bremsen oder weichen mit einer beibehaltenen Seite aus. In Engstellen warten sie, statt durch andere Personen zu laufen. Bereits überlappende Standorte werden an einen freien, baulich erreichbaren Nachbarpunkt getrennt.

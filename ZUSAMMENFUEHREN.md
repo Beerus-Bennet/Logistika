@@ -1,3 +1,7 @@
+## v347 – Platzierungshilfe für Felder/Bäume; Sammelabbruch als Warteschlangenkachel
+
+Basis main 9b7d0ac, neuer lokaler Entwurf. `farmSuggestedSpot` in farm.js ist eine reine Vorschlagssuche, verwendet farmFits und verändert weder Objekte noch Geld. farmview.js nutzt sie beim Neukauf und beim nächsten Feld; explizite Koordinaten und Verschieben behalten Vorrang. „Alle abbrechen“ erhält zusätzlich fq-s; abschließender CSS-Block gleicht Desktop-/Mobilmaße und Rahmen an die übrigen Plätze an. Rückfrage, Abbruch und Erstattung bleiben gleich. Geänderte Cache-Verweise farm/farmview/style und SW-Version 347 gemeinsam übernehmen. Tests: placement-v347.test.js. Vor/nach dem Upload main und alle offenen PRs abgleichen. Kein automatischer Merge und kein Live-Deployment.
+
 ## v346 – Gemeinsamer Bewegungsraum für Bewohner und Arbeiter
 
 Basis main 25b86d0 (PR #64). Neue `peopletraffic.js` nach `villagepeople.js` einbinden und im SW cachen. `worldStep` ruft die gemeinsame Prüfung nach Arbeiter-/Bewohnerbewegungen auf. Die bisherige Arbeiter-Abstandskorrektur in `team.js` entfällt. `villagepeople.js` pausiert bei `L.trafficWait` genauso wie bei einem blockierten Bauhindernis; gespeicherte Ablaufkennung 345 bleibt kompatibel. Keine Verkaufs-/Vertragsmigration.
