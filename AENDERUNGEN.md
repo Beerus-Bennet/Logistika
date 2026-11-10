@@ -1,5 +1,25 @@
 # Änderungen – kurz für den Kollegen
 
+## v321 – Züge fahren auf Schienen, Routen erst berechnen und dann zeichnen
+**Meldung Bennet (Handy):** Züge fahren auf Autobahnen und Straßen. Außerdem erscheinen Routen nach der Annahme kurz als gerade Linie und werden erst danach berechnet.
+
+**Ursachen (`routegeo.js`, `game.js`):**
+- **Züge auf Straßen:** Für die Fahrart „Schiene“ wurde derselbe Auto-Routing-Dienst abgefragt wie für Lkw. Die Linie folgte deshalb Straßen. Gleise kennt dieser Dienst nicht. Diese Straßenlinien lagen außerdem im Gerätespeicher.
+- **Gerade Linie zuerst:** Die Linie wird nachgeladen. Bis sie da war, zeichnete die Karte die Luftlinie, und das Fahrzeug fuhr schon darauf. Danach sprang beides auf den echten Weg.
+
+**Lösung:**
+- **Schiene:** Eigene Abfrage an den Schienen-Routingdienst OpenRailRouting (`routing.openrailrouting.org`, Profil `all_tracks`). Es gibt keinen Rückgriff auf den Auto-Dienst. Scheitert der Schienen-Dienst, bleibt die gerade Linie, aber keine Straße. Der Speicher heißt jetzt `logistika-geo-v2`. Aus dem alten Speicher werden Straßen- und Radlinien übernommen, die alten „Schienen“-Linien (waren Straßen) verworfen.
+- **Erst berechnen, dann zeichnen:** `geoPending` meldet, ob die Linie einer Strecke noch aussteht.
+  - Solange das so ist, zeichnet die Karte sie nicht (laufende Aufträge und Vorschau im Planer), und das Fahrzeug wartet am Start.
+  - Beim Annehmen werden alle Linien sofort mit Vorrang angefragt.
+  - Dauert eine Anfrage länger als 25 s oder scheitert sie oder ist das Gerät offline, gilt die gerade Linie als endgültig. Das Fahrzeug fährt dann los.
+- **Kein Springen:** Sobald ein Fahrzeug auf einer Linie fährt, wird sie eingefroren (`route.fz`). Eine später eintreffende Antwort ändert sie nicht mehr.
+
+**Geprüft (Testbrowser, Dienste simuliert):** Die Abfrage von Schiene und Straße geht an den jeweils richtigen Dienst (Schiene: nur Schienen-Dienst, Straße: Auto-Dienst). Nach der Annahme steht die Linie aus, gezeichnet wird nichts, die Fahrzeuge bleiben bei Position 0. Nach der Antwort ist die Linie da und fahrbar. Eine später steigende Versionsnummer ändert eine fahrende Linie nicht. Alter Speicher: Schienenlinie verworfen, Straßenlinie behalten. Der Unit-Test `d2d-v313.test.js` besteht weiter.
+
+**Nicht geprüft:**
+- **Der echte Schienen-Dienst.** Aus dieser Umgebung ist kein Zugriff auf `routing.openrailrouting.org` möglich. Aufbau der Anfrage und Antwort (GraphHopper-Format) habe ich nach meinem Kenntnisstand umgesetzt und nur gegen eine nachgebaute Antwort getestet. Ob dieser öffentliche Dienst erreichbar ist, Anfragen von der Seite erlaubt (CORS) und lange Strecken liefert, zeigt erst ein Test auf dem Handy. Fällt er aus, sieht man Schienenstrecken als gerade Linie. Das ist hässlicher als zuvor, aber nicht mehr falsch auf Straßen.
+- Das Handy selbst.
 ## v320 – Gegossene und trockene Beete: sanfterer Farbunterschied
 **Wunsch Bennet:** Die Farben von bewässerten und nicht bewässerten Feldern sind zu hart. Der Unterschied soll sanfter sein.
 
