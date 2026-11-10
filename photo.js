@@ -202,8 +202,10 @@ function comicFilter(id, strong, preset) {
    Helligkeits- UND Farbkanten (rotes Auto vor grauer Wand), aber nur dort,
    wo wirklich eine Kante ist – Schatten bleiben Fläche. Läuft im Worker
    (auction.js), deshalb ohne Bezug auf andere Teile des Spiels.         */
-const CAR_FX = { it: 4, rad: 4, ss: 3, sr: 26, sigma: 1.05, k: 1.6, tau: 0.98, eps: -0.010, phi: 90, cedge: 0.8, clean: 4,
-                 soft: 0.55, boost: 1.3, lineA: 0.92, bins: 6, mixQ: 0.65, phiQ: 1.8, con: 1.1, bri: 0.05, sat: 1.4, gmin: 0.02 };
+/* v336: sanfte Fassung – kein Tuschestrich mehr (lineA 0), weniger Glättung, feinere Tonstufen. Die alte, harte Fassung (4 Durchgänge, Linien
+   aus Farb- und Helligkeitskanten, 6 Stufen) machte aus Lack und Chrom Flecken und aus Kanten Krümel; jetzt bleibt das Foto erkennbar. */
+const CAR_FX = { it: 1, rad: 3, ss: 3, sr: 18, sigma: 1.05, k: 1.6, tau: 0.98, eps: -0.010, phi: 90, cedge: 0.8, clean: 4,
+                 soft: 0.55, boost: 1.3, lineA: 0, bins: 10, mixQ: 0.25, phiQ: 1.2, con: 1.05, bri: 0.02, sat: 1.18, gmin: 0.02 };
 function comicCar(id, P) {
   const W = id.width, H = id.height, p = id.data, n = W * H;
   let rgb = new Float32Array(n * 3);
@@ -212,21 +214,22 @@ function comicCar(id, P) {
   const lum = new Float32Array(n);
   for (let j = 0; j < n; j++) lum[j] = (0.299 * rgb[j * 3] + 0.587 * rgb[j * 3 + 1] + 0.114 * rgb[j * 3 + 2]) / 255;
   /* Tuschelinien: XDoG auf dem geglätteten Bild … */
-  const g1 = phGauss(lum, W, H, P.sigma), g2 = phGauss(lum, W, H, P.sigma * P.k);
+  const useInk = P.lineA > 0;
+  const g1 = useInk ? phGauss(lum, W, H, P.sigma) : null, g2 = useInk ? phGauss(lum, W, H, P.sigma * P.k) : null;
   const ink = new Float32Array(n);
-  for (let j = 0; j < n; j++) {
+  if (useInk) for (let j = 0; j < n; j++) {
     const D = g1[j] - P.tau * g2[j];
     ink[j] = D >= P.eps ? 0 : Math.min(1, -Math.tanh(P.phi * (D - P.eps)));
   }
   /* nur wo wirklich eine Kante ist – große dunkle Flächen (Schatten) bleiben Fläche */
-  if (P.gmin) for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+  if (useInk && P.gmin) for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const j = y * W + x;
     if (!ink[j]) continue;
     const gx = g1[j + 1] - g1[j - 1], gy = g1[j + W] - g1[j - W], gm = Math.sqrt(gx * gx + gy * gy);
     ink[j] *= Math.min(1, Math.max(0, (gm - P.gmin) / P.gmin));
   }
   /* … plus Farbkanten (rotes Auto vor grauem Hintergrund hat kaum Helligkeitskante) */
-  if (P.cedge) {
+  if (useInk && P.cedge) {
     for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
       const j = y * W + x;
       let g = 0;
@@ -243,7 +246,7 @@ function comicCar(id, P) {
   }
   /* Krümel weg */
   const ink2 = new Float32Array(n);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  if (useInk) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const j = y * W + x;
     if (ink[j] < 0.25) continue;
     let c = 0;
@@ -255,7 +258,7 @@ function comicCar(id, P) {
     ink2[j] = c >= P.clean ? ink[j] : 0;
   }
   /* Linien leicht weichzeichnen (Kantenglättung) */
-  const inkS = P.soft ? phGauss(ink2, W, H, P.soft) : ink2;
+  const inkS = useInk && P.soft ? phGauss(ink2, W, H, P.soft) : ink2;
   const INK = [24, 26, 36], bins = P.bins, dq = 1 / bins;
   for (let j = 0; j < n; j++) {
     const i = j * 4;

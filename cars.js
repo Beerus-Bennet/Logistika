@@ -19,7 +19,10 @@ const CAR_CLS = {
 };
 const CAR_BRANDS = [
   ["porsche", "Porsche"], ["audi", "Audi"], ["mercedes", "Mercedes"], ["bmw", "BMW"],
-  ["ferrari", "Ferrari"], ["bugatti", "Bugatti"], ["lambo", "Lamborghini"]
+  ["ferrari", "Ferrari"], ["bugatti", "Bugatti"], ["lambo", "Lamborghini"],
+  /* v336: neue Marken */
+  ["aston", "Aston Martin"], ["mclaren", "McLaren"], ["rolls", "Rolls-Royce"], ["bentley", "Bentley"], ["maserati", "Maserati"],
+  ["jaguar", "Jaguar"], ["pagani", "Pagani"], ["koenig", "Koenigsegg"], ["lotus", "Lotus"], ["ford", "Ford"]
 ];
 /* Echte Lacknamen der Hersteller */
 const CAR_PAINTS = {
@@ -29,7 +32,18 @@ const CAR_PAINTS = {
   bmw:      [["Alpinweiß", "#f5f5f2"], ["Imolarot", "#c40d1e"], ["Estorilblau", "#1a4fa3"], ["Le-Mans-Blau", "#1a3d7c"], ["Brooklyn Grau", "#8a8f94"], ["Hellrot", "#d1202f"]],
   ferrari:  [["Rosso Corsa", "#d40000"], ["Giallo Modena", "#f7d000"], ["Nero Daytona", "#121212"], ["Blu Tour de France", "#1a2c5b"], ["Bianco Avus", "#f4f4f2"], ["Grigio Silverstone", "#8e9092"]],
   bugatti:  [["French Racing Blue", "#1c3f94"], ["Nocturne Black", "#101114"], ["Italian Red", "#b3121c"], ["Argent Silver", "#c0c4c8"], ["Atlantic Blue", "#1d4a8a"]],
-  lambo:    [["Verde Mantis", "#6fbe2c"], ["Arancio Borealis", "#ff7a00"], ["Giallo Orion", "#f5c700"], ["Blu Cepheus", "#1a4ecb"], ["Nero Noctis", "#101010"], ["Bianco Monocerus", "#f2f2f2"], ["Viola Pasifae", "#6b2fa0"]]
+  lambo:    [["Verde Mantis", "#6fbe2c"], ["Arancio Borealis", "#ff7a00"], ["Giallo Orion", "#f5c700"], ["Blu Cepheus", "#1a4ecb"], ["Nero Noctis", "#101010"], ["Bianco Monocerus", "#f2f2f2"], ["Viola Pasifae", "#6b2fa0"]],
+  /* v336: neue Marken (Lacknamen der Hersteller bzw. gängige Sonderlacke) */
+  aston:    [["Racing Green", "#1f4d37"], ["Silver Birch", "#bdbfc2"], ["Midnight Blue", "#14213d"], ["Magnetic Silver", "#8f959b"], ["Skyfall Silver", "#c3c7ca"], ["Volcano Red", "#b3131b"], ["China Grey", "#6f7377"]],
+  mclaren:  [["Volcano Orange", "#ff6a00"], ["Memphis Red", "#c6121f"], ["Ice Silver", "#c5c9cc"], ["Aurora Blue", "#2a6fb7"], ["Onyx Black", "#121214"], ["Mantis Green", "#7bbd1f"]],
+  rolls:    [["Diamantschwarz", "#101113"], ["English White", "#f1f0ea"], ["Salamanca Blue", "#1d3557"], ["Madeira Red", "#5a1020"], ["Tempest Grey", "#6f7479"]],
+  bentley:  [["British Racing Green", "#14452f"], ["Beluga", "#0e0f11"], ["Glacier White", "#f1f2f2"], ["Moonbeam", "#c9c3b6"], ["Sequin Blue", "#1e4a8f"], ["St. James' Red", "#a1182a"], ["Tungsten", "#6c7075"]],
+  maserati: [["Rosso Magma", "#b3101c"], ["Blu Nobile", "#1b2f6b"], ["Bianco Audace", "#f2f2f0"], ["Grigio Maratea", "#7d8186"], ["Giallo Genio", "#f2d000"], ["Nero Ribelle", "#121214"]],
+  jaguar:   [["British Racing Green", "#14452f"], ["Opalescent Silver Blue", "#7a97b8"], ["Carmen Red", "#a3141f"], ["Cotswold Blue", "#7eaad6"], ["Old English White", "#ebe7da"], ["Schwarz", "#111112"]],
+  pagani:   [["Sichtcarbon", "#2b2d33"], ["Argento", "#b8bcc1"], ["Rosso Monza", "#c4122c"], ["Blu Pagani", "#1d3f94"], ["Bianco Perla", "#f1efe8"]],
+  koenig:   [["Sichtcarbon", "#2b2d33"], ["Ghost White", "#eceeed"], ["Ocean Blue", "#1d5c9b"], ["Orange", "#ee6a12"], ["Rot", "#b4121e"]],
+  lotus:    [["Racing Green", "#1f4d37"], ["Sunburst Yellow", "#f2c500"], ["Metallic Silver", "#b8bcc0"], ["Carbon Grey", "#4a4e54"], ["Passionate Red", "#c01327"]],
+  ford:     [["Heritage Blue", "#1b4fa0"], ["Mark IV Rot", "#c1121c"], ["Gulf-Blau", "#6fa8dc"], ["Frozen White", "#f3f3f1"], ["Triple Yellow", "#f3d400"], ["Tungsten", "#6c7075"]]
 };
 
 /* b Marke · m Modell · y typisches Baujahr · ps Leistung · vmax km/h ·
@@ -67,6 +81,12 @@ const CARS = [
   { id: "pcay", b: "porsche", m: "Cayenne Turbo", wp: "Porsche Cayenne", yrs: "seit 2002", y: 2020, ps: 550, vmax: 286, acc: 3.9, n: null, cls: "sport", val: 95000, tr: -5, cap: 500, eng: "4,0-l-V8, Biturbo", body: "suv",
     note: "Sport-SUV mit riesigem Kofferraum – der schnellste Weg für viele Wertsachen." },
 
+  { id: "prs", b: "porsche", m: "911 Carrera RS 2.7", wp: "Porsche 911 Carrera RS 2.7", yrs: "1972–1973", y: 1973, ps: 210, vmax: 245, acc: 5.8, n: 1580, cls: "classic", val: 900000, tr: 5, cap: 120, eng: "2,7-l-Boxer", body: "coupe",
+    note: "Der „Entenbürzel“ – das erste Serien-Auto mit Heckspoiler." },
+  { id: "p911r", b: "porsche", m: "911 R (991)", wp: "Porsche 911 R", yrs: "2016", y: 2016, ps: 500, vmax: 323, acc: 3.8, n: 991, cls: "super", val: 700000, tr: 3, cap: 100, eng: "4,0-l-Boxer", body: "coupe",
+    note: "Handschaltung, ohne Heckflügel – 991 Stück, alle sofort vergriffen." },
+  { id: "p917", b: "porsche", m: "917 K", wp: "Porsche 917", yrs: "1969–1971", y: 1970, ps: 580, vmax: 340, acc: null, n: 65, cls: "legend", val: 14000000, tr: 5, cap: 0, eng: "4,5-l-Zwölfzylinder-Boxer", body: "coupe", track: true,
+    note: "Der erste Gesamtsieger von Le Mans für Porsche – nur auf der Rennstrecke." },
   /* -------------------------------- Audi -------------------------------- */
   { id: "aurq", b: "audi", m: "quattro („Ur-quattro“)", wp: "Audi Quattro", yrs: "1980–1991", y: 1985, ps: 200, vmax: 222, acc: 7.1, n: 11452, cls: "classic", val: 65000, tr: 5, cap: 300, eng: "2,1-l-Fünfzylinder, Turbo", body: "coupe",
     note: "Machte den Allradantrieb im Pkw salonfähig – und Rallye-Geschichte." },
@@ -105,6 +125,8 @@ const CARS = [
   { id: "mg63", b: "mercedes", m: "AMG G 63", wp: "Mercedes-Benz G-Class", yrs: "seit 2018", y: 2021, ps: 585, vmax: 220, acc: 4.5, n: null, cls: "sport", val: 165000, tr: -2, cap: 650, eng: "4,0-l-V8, Biturbo", body: "suv",
     note: "Kastenform, Seitenrohre, drei Sperren – Kult seit 1979." },
 
+  { id: "m540", b: "mercedes", m: "540 K", wp: "Mercedes-Benz 540K", yrs: "1936–1939", y: 1937, ps: 180, vmax: 170, acc: null, n: 419, cls: "legend", val: 5500000, tr: 4, cap: 40, eng: "5,4-l-Reihenachtzylinder, Kompressor", body: "classic",
+    note: "Kompressor auf Knopfdruck – das schnelle Luxusauto der Vorkriegszeit." },
   /* --------------------------------- BMW -------------------------------- */
   { id: "b507", b: "bmw", m: "507", wp: "BMW 507", yrs: "1956–1959", y: 1957, ps: 150, vmax: 220, acc: 11.1, n: 252, cls: "legend", val: 2300000, tr: 4, cap: 80, eng: "3,2-l-V8", body: "roadster",
     note: "Elvis Presley fuhr einen – nur 252 Exemplare entstanden." },
@@ -125,6 +147,8 @@ const CARS = [
   { id: "bm2", b: "bmw", m: "M2 (G87)", wp: "BMW M2", yrs: "seit 2023", y: 2024, ps: 460, vmax: 285, acc: 4.1, n: null, cls: "sport", val: 72000, tr: -4, cap: 390, eng: "3,0-l-Reihensechszylinder, Biturbo", body: "coupe",
     note: "Kompakter Hecktriebler mit Reihensechser, auf Wunsch handgeschaltet." },
 
+  { id: "b02t", b: "bmw", m: "2002 turbo", wp: "BMW 02 Series", yrs: "1973–1974", y: 1973, ps: 170, vmax: 211, acc: 6.9, n: 1672, cls: "classic", val: 90000, tr: 5, cap: 200, eng: "2,0-l-Vierzylinder, Turbo", body: "limo",
+    note: "Europas erstes Serienauto mit Turbolader – spiegelverkehrte Schrift auf dem Bug." },
   /* ------------------------------- Ferrari ------------------------------ */
   { id: "f250", b: "ferrari", m: "250 GTO", wp: "Ferrari 250 GTO", yrs: "1962–1964", y: 1962, ps: 300, vmax: 280, acc: 6.1, n: 36, cls: "legend", val: 48000000, tr: 5, cap: 20, eng: "3,0-l-V12", body: "classic",
     note: "Der „Heilige Gral“ der Sammler: 36 Stück, Rekordpreise jenseits von 50 Millionen." },
@@ -155,6 +179,10 @@ const CARS = [
   { id: "fpur", b: "ferrari", m: "Purosangue", wp: "Ferrari Purosangue", yrs: "seit 2022", y: 2023, ps: 725, vmax: 310, acc: 3.3, n: null, cls: "super", val: 480000, tr: 0, cap: 470, eng: "6,5-l-V12", body: "suv",
     note: "Ferraris erster Viertürer mit V12 – das Wort SUV hört man in Maranello nicht gern." },
 
+  { id: "fdyt", b: "ferrari", m: "365 GTB/4 Daytona", wp: "Ferrari 365 GTB/4", yrs: "1968–1973", y: 1970, ps: 352, vmax: 280, acc: 5.4, n: 1406, cls: "classic", val: 650000, tr: 4, cap: 40, eng: "4,4-l-V12", body: "coupe",
+    note: "Beim Sieg in Daytona 1967 benannt – der letzte Frontmotor-V12 der Siebziger." },
+  { id: "froma", b: "ferrari", m: "Roma", wp: "Ferrari Roma", yrs: "seit 2019", y: 2021, ps: 620, vmax: 320, acc: 3.4, n: null, cls: "sport", val: 215000, tr: -4, cap: 230, eng: "3,9-l-V8, Biturbo", body: "coupe",
+    note: "Das „Dolce Vita“-Coupé der neuen Zeit." },
   /* ------------------------------- Bugatti ------------------------------ */
   { id: "bt57", b: "bugatti", m: "Type 57", wp: "Bugatti Type 57", yrs: "1934–1940", y: 1937, ps: 135, vmax: 153, acc: null, n: 710, cls: "legend", val: 1500000, tr: 4, cap: 60, eng: "3,3-l-Reihenachtzylinder", body: "classic",
     note: "Jean Bugattis Meisterwerk der Art-déco-Zeit." },
@@ -203,7 +231,103 @@ const CARS = [
   { id: "luru", b: "lambo", m: "Urus", wp: "Lamborghini Urus", yrs: "seit 2018", y: 2021, ps: 650, vmax: 305, acc: 3.6, n: null, cls: "sport", val: 210000, tr: -3, cap: 550, eng: "4,0-l-V8, Biturbo", body: "suv",
     note: "Super-SUV – ein Lamborghini, in den auch Koffer passen." },
   { id: "lrev", b: "lambo", m: "Revuelto", wp: "Lamborghini Revuelto", yrs: "seit 2023", y: 2024, ps: 1015, vmax: 350, acc: 2.5, n: null, cls: "super", val: 560000, tr: 0, cap: 80, eng: "6,5-l-V12 + 3 E-Motoren", e: "hybrid", body: "coupe",
-    note: "V12-Plug-in-Hybrid mit 1.015 PS, Nachfolger des Aventador." }
+    note: "V12-Plug-in-Hybrid mit 1.015 PS, Nachfolger des Aventador." },
+  { id: "lesa", b: "lambo", m: "Espada", wp: "Lamborghini Espada", yrs: "1968–1978", y: 1972, ps: 350, vmax: 245, acc: 6.8, n: 1217, cls: "classic", val: 120000, tr: 4, cap: 300, eng: "3,9-l-V12", body: "coupe",
+    note: "Viersitziger Gran Turismo mit V12 – der meistgebaute Lamborghini der Siebziger." },
+  { id: "ltem", b: "lambo", m: "Temerario", wp: "Lamborghini Temerario", yrs: "seit 2024", y: 2025, ps: 920, vmax: 343, acc: 2.7, n: null, cls: "super", val: 360000, tr: -5, cap: 90, eng: "4,0-l-V8, Biturbo + 3 E-Motoren", e: "hybrid", body: "coupe",
+    note: "Plug-in-Hybrid mit 10.000 Umdrehungen – löst den Huracán ab." },
+  /* v336: Aston Martin */
+  { id: "adb5", b: "aston", m: "DB5", wp: "Aston Martin DB5", yrs: "1963–1965", y: 1964, ps: 282, vmax: 233, acc: 8.1, n: 1059, cls: "classic", val: 1250000, tr: 4, cap: 100, eng: "4,0-l-Reihensechszylinder", body: "coupe",
+    note: "James Bonds Dienstwagen – den Schleudersitz gab es allerdings nur im Film." },
+  { id: "adbz", b: "aston", m: "DB4 GT Zagato", wp: "Aston Martin DB4 GT Zagato", yrs: "1960–1963", y: 1961, ps: 314, vmax: 245, acc: null, n: 19, cls: "legend", val: 12000000, tr: 6, cap: 20, eng: "3,7-l-Reihensechszylinder", body: "coupe",
+    note: "Nur 19 Stück mit Zagato-Karosserie – eines der teuersten britischen Autos bei Auktionen." },
+  { id: "avan", b: "aston", m: "V12 Vanquish", wp: "Aston Martin V12 Vanquish", yrs: "2001–2007", y: 2003, ps: 460, vmax: 306, acc: 4.8, n: 2578, cls: "sport", val: 85000, tr: 3, cap: 100, eng: "5,9-l-V12", body: "coupe",
+    note: "Bonds Wagen in „Stirb an einem anderen Tag“ – Karbon-Aluminium-Struktur." },
+  { id: "aone", b: "aston", m: "One-77", wp: "Aston Martin One-77", yrs: "2009–2012", y: 2010, ps: 760, vmax: 354, acc: 3.5, n: 77, cls: "hyper", val: 1900000, tr: 3, cap: 20, eng: "7,3-l-V12", body: "coupe",
+    note: "Handgeformtes Aluminium, stärkster Saugmotor seiner Zeit – 77 Stück." },
+  { id: "avnt", b: "aston", m: "Vantage (2018)", wp: "Aston Martin Vantage (2018)", yrs: "seit 2018", y: 2020, ps: 510, vmax: 314, acc: 3.6, n: null, cls: "sport", val: 150000, tr: -4, cap: 200, eng: "4,0-l-V8, Biturbo (AMG)", body: "coupe",
+    note: "Kompakter Sportwagen mit AMG-Achtzylinder – der Einstieg in die Marke." },
+  { id: "adva", b: "aston", m: "Valkyrie", wp: "Aston Martin Valkyrie", yrs: "2021–2024", y: 2022, ps: 1160, vmax: 350, acc: null, n: 150, cls: "hyper", val: 3800000, tr: 3, cap: 10, eng: "6,5-l-V12 + E-Motor", e: "hybrid", body: "coupe",
+    note: "Gemeinsam mit Red Bull entwickelt – ein Formel-1-Wagen für die Straße." },
+  /* v336: McLaren */
+  { id: "mf1", b: "mclaren", m: "F1", wp: "McLaren F1", yrs: "1992–1998", y: 1996, ps: 627, vmax: 391, acc: 3.2, n: 106, cls: "legend", val: 22000000, tr: 6, cap: 60, eng: "6,1-l-V12 (BMW)", body: "coupe",
+    note: "Mittiger Fahrersitz, Goldfolie im Motorraum – Rekord für Saugmotoren bis heute." },
+  { id: "mp1", b: "mclaren", m: "P1", wp: "McLaren P1", yrs: "2013–2015", y: 2014, ps: 916, vmax: 350, acc: 2.8, n: 375, cls: "hyper", val: 2300000, tr: 3, cap: 30, eng: "3,8-l-V8, Biturbo + E-Motor", e: "hybrid", body: "coupe",
+    note: "Hybrid-Hypercar mit Formel-1-Technik wie Schubumkehr-Spoiler und KERS." },
+  { id: "msen", b: "mclaren", m: "Senna", wp: "McLaren Senna", yrs: "2018–2019", y: 2018, ps: 800, vmax: 335, acc: 2.8, n: 500, cls: "hyper", val: 1300000, tr: 3, cap: 20, eng: "4,0-l-V8, Biturbo", body: "coupe",
+    note: "Benannt nach Ayrton Senna – 800 kg Abtrieb, gebaut für die Rennstrecke." },
+  { id: "mspe", b: "mclaren", m: "Speedtail", wp: "McLaren Speedtail", yrs: "2020–2021", y: 2020, ps: 1070, vmax: 403, acc: 2.9, n: 106, cls: "hyper", val: 2800000, tr: 3, cap: 30, eng: "4,0-l-V8, Biturbo + E-Motor", e: "hybrid", body: "coupe",
+    note: "Langheck-Hypercar mit dem Fahrer in der Mitte – über 400 km/h." },
+  { id: "m765", b: "mclaren", m: "765LT", wp: "McLaren 720S", yrs: "2020–2022", y: 2021, ps: 765, vmax: 330, acc: 2.8, n: 765, cls: "super", val: 500000, tr: 2, cap: 60, eng: "4,0-l-V8, Biturbo", body: "coupe",
+    note: "Leichtbau-Longtail, auf 765 Coupés begrenzt." },
+  { id: "mart", b: "mclaren", m: "Artura", wp: "McLaren Artura", yrs: "seit 2021", y: 2023, ps: 680, vmax: 330, acc: 3.0, n: null, cls: "super", val: 240000, tr: -4, cap: 80, eng: "3,0-l-V6, Biturbo + E-Motor", e: "hybrid", body: "coupe",
+    note: "Erster Serien-Hybrid-Supersportwagen von McLaren." },
+  /* v336: Rolls-Royce */
+  { id: "rssh", b: "rolls", m: "Silver Shadow", wp: "Rolls-Royce Silver Shadow", yrs: "1965–1980", y: 1970, ps: 200, vmax: 190, acc: 10.9, n: 32000, cls: "classic", val: 35000, tr: 2, cap: 400, eng: "6,2-l-V8", body: "limo",
+    note: "Erster Rolls-Royce mit selbsttragender Karosserie und Niveauregulierung." },
+  { id: "rpha", b: "rolls", m: "Phantom (VIII)", wp: "Rolls-Royce Phantom VIII", yrs: "seit 2017", y: 2019, ps: 571, vmax: 250, acc: 5.3, n: null, cls: "sport", val: 380000, tr: -5, cap: 500, eng: "6,75-l-V12, Biturbo", body: "limo",
+    note: "Der Inbegriff der Luxuslimousine – mit „Gallery“ im Armaturenbrett." },
+  { id: "rcul", b: "rolls", m: "Cullinan", wp: "Rolls-Royce Cullinan", yrs: "seit 2018", y: 2020, ps: 571, vmax: 250, acc: 5.2, n: null, cls: "sport", val: 330000, tr: -5, cap: 560, eng: "6,75-l-V12, Biturbo", body: "suv",
+    note: "Benannt nach dem größten Rohdiamanten der Welt – Luxus-SUV mit Heckklappe als „Salon“." },
+  { id: "rspe", b: "rolls", m: "Spectre", wp: "Rolls-Royce Spectre", yrs: "seit 2023", y: 2024, ps: 584, vmax: 250, acc: 4.5, n: null, cls: "sport", val: 360000, tr: -6, cap: 380, eng: "2 E-Motoren, 102 kWh", e: "elektro", body: "coupe",
+    note: "Erster vollelektrischer Rolls-Royce – „Starlight Doors“ mit Sternenhimmel." },
+  /* v336: Bentley */
+  { id: "bblo", b: "bentley", m: "4½ Litre Blower", wp: "Bentley 4½ Litre", yrs: "1929–1931", y: 1930, ps: 175, vmax: 170, acc: null, n: 55, cls: "legend", val: 4500000, tr: 5, cap: 30, eng: "4,4-l-Vierzylinder mit Kompressor", body: "classic",
+    note: "Der „Blower“ – gegen den Rat von W. O. Bentley gebaut und von Tim Birkin in Le Mans gefahren." },
+  { id: "bcon", b: "bentley", m: "Continental R", wp: "Bentley Continental R", yrs: "1991–2002", y: 1996, ps: 385, vmax: 241, acc: 6.6, n: 1079, cls: "young", val: 70000, tr: 3, cap: 300, eng: "6,75-l-V8, Turbo", body: "coupe",
+    note: "Handgefertigtes Coupé – der erste neue Bentley-Zweitürer seit Jahrzehnten." },
+  { id: "bcgt", b: "bentley", m: "Continental GT (2003)", wp: "Bentley Continental GT", yrs: "2003–2011", y: 2005, ps: 560, vmax: 318, acc: 4.8, n: 40000, cls: "young", val: 38000, tr: 0, cap: 350, eng: "6,0-l-W12, Biturbo", body: "coupe",
+    note: "Machte Bentley mit VW-Technik zum Millionenseller seiner Klasse." },
+  { id: "bcsp", b: "bentley", m: "Continental GT Speed", wp: "Bentley Continental GT", yrs: "seit 2024", y: 2024, ps: 782, vmax: 335, acc: 3.2, n: null, cls: "sport", val: 330000, tr: -5, cap: 300, eng: "4,0-l-V8, Biturbo + E-Motor", e: "hybrid", body: "coupe",
+    note: "Plug-in-Hybrid mit 782 PS – der stärkste Serien-Bentley." },
+  /* v336: Maserati */
+  { id: "mbor", b: "maserati", m: "Bora", wp: "Maserati Bora", yrs: "1971–1978", y: 1973, ps: 310, vmax: 275, acc: 6.5, n: 564, cls: "classic", val: 170000, tr: 5, cap: 100, eng: "4,7-l-V8", body: "coupe",
+    note: "Erster Mittelmotor-Maserati, gezeichnet von Giugiaro." },
+  { id: "mmc12", b: "maserati", m: "MC12", wp: "Maserati MC12", yrs: "2004–2005", y: 2004, ps: 630, vmax: 330, acc: 3.8, n: 50, cls: "hyper", val: 3500000, tr: 5, cap: 20, eng: "6,0-l-V12", body: "coupe",
+    note: "Straßenversion des GT-Rennwagens auf Enzo-Basis – nur 50 Stück." },
+  { id: "mmc20", b: "maserati", m: "MC20", wp: "Maserati MC20", yrs: "seit 2020", y: 2022, ps: 630, vmax: 325, acc: 2.9, n: null, cls: "super", val: 230000, tr: -2, cap: 150, eng: "3,0-l-V6, Biturbo („Nettuno“)", body: "coupe",
+    note: "Mit Vorkammerzündung aus der Formel 1 – Maseratis Rückkehr ins Supercar-Lager." },
+  /* v336: Jaguar */
+  { id: "jxk", b: "jaguar", m: "XK120", wp: "Jaguar XK120", yrs: "1948–1954", y: 1951, ps: 160, vmax: 200, acc: 10.0, n: 12078, cls: "classic", val: 130000, tr: 4, cap: 40, eng: "3,4-l-Reihensechszylinder", body: "roadster",
+    note: "1949 mit rund 200 km/h das schnellste Serienauto der Welt." },
+  { id: "jetp", b: "jaguar", m: "E-Type Serie 1", wp: "Jaguar E-Type", yrs: "1961–1975", y: 1962, ps: 265, vmax: 240, acc: 6.9, n: 72520, cls: "classic", val: 160000, tr: 4, cap: 60, eng: "3,8-l-Reihensechszylinder", body: "roadster",
+    note: "Angeblich nannte Enzo Ferrari ihn das schönste Auto der Welt." },
+  { id: "jxkss", b: "jaguar", m: "XKSS", wp: "Jaguar XKSS", yrs: "1957", y: 1957, ps: 250, vmax: 240, acc: null, n: 16, cls: "legend", val: 15000000, tr: 5, cap: 15, eng: "3,4-l-Reihensechszylinder (D-Type)", body: "roadster",
+    note: "Straßen-D-Type – 16 Stück, neun weitere verbrannten im Werksbrand." },
+  { id: "jxj", b: "jaguar", m: "XJ220", wp: "Jaguar XJ220", yrs: "1992–1994", y: 1993, ps: 549, vmax: 341, acc: 3.6, n: 275, cls: "super", val: 600000, tr: 4, cap: 40, eng: "3,5-l-V6, Biturbo", body: "coupe",
+    note: "Sollte ein V12 sein, wurde ein V6 – dafür 1992 das schnellste Serienauto." },
+  /* v336: Pagani */
+  { id: "pzon", b: "pagani", m: "Zonda C12-S 7.3", wp: "Pagani Zonda", yrs: "1999–2011", y: 2002, ps: 555, vmax: 345, acc: 3.7, n: 140, cls: "hyper", val: 1500000, tr: 4, cap: 20, eng: "7,3-l-V12 (AMG)", body: "coupe",
+    note: "Horacio Paganis Erstling mit Mercedes-V12 und Auspuff wie vier Orgelpfeifen." },
+  { id: "phuy", b: "pagani", m: "Huayra", wp: "Pagani Huayra", yrs: "2011–2015", y: 2013, ps: 730, vmax: 370, acc: 3.3, n: 100, cls: "hyper", val: 2800000, tr: 3, cap: 20, eng: "6,0-l-V12, Biturbo (AMG)", body: "coupe",
+    note: "Mit aktiven Klappen an Front und Heck – benannt nach dem Windgott der Anden." },
+  { id: "putop", b: "pagani", m: "Utopia", wp: "Pagani Utopia", yrs: "seit 2022", y: 2023, ps: 864, vmax: 350, acc: null, n: 99, cls: "hyper", val: 3000000, tr: 3, cap: 25, eng: "6,0-l-V12, Biturbo (AMG)", body: "coupe",
+    note: "Wieder mit Handschaltung – 99 Stück, alle schon vor Produktionsbeginn verkauft." },
+  /* v336: Koenigsegg */
+  { id: "kccr", b: "koenig", m: "CCR", wp: "Koenigsegg CCR", yrs: "2004–2006", y: 2005, ps: 806, vmax: 388, acc: 3.2, n: 14, cls: "hyper", val: 2200000, tr: 4, cap: 15, eng: "4,7-l-V8, Kompressor", body: "coupe",
+    note: "Stellte 2005 den Geschwindigkeitsrekord von McLaren F1 ein – 388 km/h." },
+  { id: "kreg", b: "koenig", m: "Regera", wp: "Koenigsegg Regera", yrs: "2016–2020", y: 2018, ps: 1500, vmax: 410, acc: 2.8, n: 80, cls: "hyper", val: 2500000, tr: 3, cap: 20, eng: "5,0-l-V8, Biturbo + 3 E-Motoren", e: "hybrid", body: "coupe",
+    note: "Ohne klassisches Getriebe: Direktantrieb für die Hinterräder." },
+  { id: "kagr", b: "koenig", m: "Agera RS", wp: "Koenigsegg Agera", yrs: "2015–2018", y: 2017, ps: 1360, vmax: 447, acc: 2.8, n: 25, cls: "legend", val: 3800000, tr: 3, cap: 30, eng: "5,0-l-V8, Biturbo", body: "coupe",
+    note: "Hielt 2017 mit 447 km/h den Rekord für Serienautos." },
+  /* v336: Lotus */
+  { id: "lesp", b: "lotus", m: "Esprit Turbo", wp: "Lotus Esprit", yrs: "1976–2004", y: 1987, ps: 215, vmax: 242, acc: 5.4, n: 10675, cls: "young", val: 45000, tr: 5, cap: 100, eng: "2,2-l-Reihenvierzylinder, Turbo", body: "coupe",
+    note: "Bond tauchte darin als U-Boot – „Der Spion, der mich liebte“." },
+  { id: "lels", b: "lotus", m: "Elise (S1)", wp: "Lotus Elise (Series 1)", yrs: "1996–2001", y: 1998, ps: 118, vmax: 204, acc: 5.9, n: 10000, cls: "young", val: 28000, tr: 6, cap: 40, eng: "1,8-l-Reihenvierzylinder (Rover K)", body: "roadster",
+    note: "Nur 725 Kilo – Leichtbau statt Leistung." },
+  { id: "lemi", b: "lotus", m: "Emira", wp: "Lotus Emira", yrs: "seit 2021", y: 2023, ps: 405, vmax: 290, acc: 4.2, n: null, cls: "sport", val: 95000, tr: -3, cap: 200, eng: "3,5-l-V6, Kompressor", body: "coupe",
+    note: "Der letzte Lotus mit Verbrenner." },
+  { id: "leva", b: "lotus", m: "Evija", wp: "Lotus Evija", yrs: "seit 2022", y: 2023, ps: 2013, vmax: 350, acc: null, n: 130, cls: "hyper", val: 2400000, tr: 2, cap: 20, eng: "4 E-Motoren, 70 kWh", e: "elektro", body: "coupe",
+    note: "Mit über 2.000 PS eines der stärksten Serienautos der Welt." },
+  /* v336: Ford */
+  { id: "fgt40", b: "ford", m: "GT40 Mk I", wp: "Ford GT40", yrs: "1964–1969", y: 1966, ps: 335, vmax: 265, acc: null, n: 105, cls: "legend", val: 3000000, tr: 4, cap: 15, eng: "4,7-l-V8", body: "coupe",
+    note: "Gebaut, um Ferrari zu schlagen – vier Le-Mans-Siege in Folge (1966–1969)." },
+  { id: "fsh", b: "ford", m: "Shelby GT350", wp: "Shelby Mustang", yrs: "1965–1966", y: 1965, ps: 310, vmax: 200, acc: 6.5, n: 562, cls: "classic", val: 900000, tr: 4, cap: 100, eng: "4,7-l-V8 („289“)", body: "coupe",
+    note: "Carroll Shelbys Rennstrecken-Mustang – weiß mit blauen Streifen." },
+  { id: "fgt05", b: "ford", m: "GT (2005)", wp: "Ford GT", yrs: "2004–2006", y: 2005, ps: 550, vmax: 330, acc: 3.8, n: 4038, cls: "super", val: 400000, tr: 4, cap: 60, eng: "5,4-l-V8, Kompressor", body: "coupe",
+    note: "Neuauflage zum 100. Firmenjubiläum – größer, aber im Geist des GT40." },
+  { id: "fgt17", b: "ford", m: "GT (2017)", wp: "Ford GT (second generation)", yrs: "2016–2022", y: 2018, ps: 656, vmax: 348, acc: 3.0, n: 1350, cls: "hyper", val: 1100000, tr: 3, cap: 20, eng: "3,5-l-V6, Biturbo", body: "coupe",
+    note: "Carbon-Cockpit mit EcoBoost-V6 – Käufer wurden vom Werk ausgewählt." }
 ];
 const CAR = {};
 CARS.forEach(c => { CAR[c.id] = c; });

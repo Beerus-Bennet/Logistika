@@ -1,5 +1,18 @@
 # Änderungen – kurz für den Kollegen
 
+## v336 – Auktionshaus: keine Nutzfahrzeuge mehr, 50 neue Luxusautos, Fotos weicher
+**Wunsch Bennet:** Nutzfahrzeuge (z. B. „Larry vs Harry Bullitt“, „China-Europa-Blockzug“) sollen aus dem Auktionshaus raus und durch Autos ersetzt werden; die Vielfalt unter den Luxusautos soll deutlich und professionell erweitert werden; die Autofotos (BMW M5 E39) sehen durch den Comic-Filter schlecht aus.
+
+**Ursache:** (1) `makeLot` (`auction.js`) machte mit 12 % Wahrscheinlichkeit ein Nutzfahrzeug-Los aus einer „Insolvenzmasse“. (2) Der Comic-Filter `CAR_FX` (`photo.js`) glättete mit vier Durchgängen, legte Tuschelinien aus Farb- und Helligkeitskanten darüber und teilte in nur 6 Tonstufen – bei Lack, Chrom und Spiegelungen wurden daraus Flecken und Krümel.
+
+**Lösung:**
+- **Nutzfahrzeuge:** keine Zufallslose mehr; `makeLot` baut Fahrzeug-Lose nur noch für deine eigenen Einlieferungen (`consignVeh`). Alte Spielstände: `ensureLots` entfernt fremde Nutzfahrzeug-Lose aus der Liste (Lose mit deinem Gebot und eigene Lose bleiben).
+- **Vielfalt:** `cars.js` von 77 auf 127 Modelle. Neue Marken: Aston Martin, McLaren, Rolls-Royce, Bentley, Maserati, Jaguar, Pagani, Koenigsegg, Lotus, Ford (`CAR_BRANDS`, Lacknamen in `CAR_PAINTS`). Dazu Ergänzungen bei Porsche (911 Carrera RS 2.7, 911 R, 917 K – nur Rennstrecke), Mercedes (540 K), BMW (2002 turbo), Ferrari (365 GTB/4 Daytona, Roma), Lamborghini (Espada, Temerario). Klassen von Youngtimer (Lotus Elise, Bentley Continental GT) bis Legende (McLaren F1, Jaguar XKSS, Aston Martin DB4 GT Zagato). Mittelmotor-Marken (McLaren, Pagani, Koenigsegg) bekommen die flache Keilform im Ersatzbild (`carArtShape`).
+- **Fotos:** `CAR_FX` sanfter: ein Glättungsdurchgang, keine Tuschelinien (`lineA` 0, dann werden die Linien gar nicht erst berechnet – schneller), 10 statt 6 Tonstufen, weniger Farbverstärkung. Der Zwischenspeicher bekommt eine neue Kennung (`/__carcomic/v3/`), damit die alten, harten Bilder neu berechnet werden.
+- Geschäftslogik, Preise und Spielstände sonst unverändert; die neuen Autos nutzen dieselben Felder wie die alten (auch als Wertkurier-Fahrzeug).
+
+**Geprüft (Testbrowser, 390 × 844):** In 600 erzeugten Losen kein einziges Nutzfahrzeug, alle 17 Marken kommen vor; Altspielstand mit drei Nutzfahrzeug-Losen (fremd / mit Gebot / eigen) → nur das fremde verschwindet; Katalog und Live-Liste zeigen die neuen Marken und Modelle (Ersatzbilder), keine Konsolenfehler; Datenprüfung aller 127 Einträge (eindeutige Kennungen, Marke, Lack, Klasse, Bauform vorhanden); Filter läuft auf einem Testbild in ca. 150 ms ohne Fehler. **Nicht geprüft:** der Filter an echten Wikipedia-Fotos (im Testbrowser ohne Netz nicht möglich, nur an einem synthetischen Bild abgestimmt – bitte das M5-Foto ansehen), die Wikipedia-Titel der neuen Modelle (Bilder werden erst beim Laden gefunden; fehlt eines, bleibt das Ersatzbild), am Handy. Leistungsdaten und Marktwerte der neuen Modelle sind aus dem Gedächtnis angelehnt an Herstellerangaben und Auktionspreise, nicht einzeln nachgeprüft.
+
 ## v335 – Produktionsfenster: kurze Hinweise, größere Schrift (auch für ältere Spieler)
 **Wunsch Bennet:** Der Sonnenstrom-Text im Produktionsfenster soll auf eine Zeile gekürzt werden, und alles soll größer skaliert werden, damit auch ältere Menschen das Spiel gut lesen können.
 

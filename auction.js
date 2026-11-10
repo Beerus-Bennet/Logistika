@@ -106,17 +106,12 @@ function makeLot(opt) {
   const A = ah(), o = opt || {};
   const l = { id: "L" + (A.seq++), hist: [], bids: 0, lead: null, me: { max: 0 }, done: false, seller: pick(AH_SELLERS) };
   const used = new Set(liveLots().map(x => x.car));
-  if (o.veh || (!o.car && !o.garage && Math.random() < 0.12)) {
-    /* Nutzfahrzeug aus einer Insolvenzmasse – oder dein eigenes */
-    let t = o.veh ? vType(o.veh.type) : null;
-    if (!t) {
-      const pool = VEHICLES.filter(v => !v.special && v.stage <= S.stage && unlockedModes().includes(v.mode) && v.price <= 400000 * stageK());
-      t = pick(pool);
-      l.seller = pick(["Insolvenzmasse einer Spedition", "Leasingrückläufer", "Flottenauflösung", "Aus einer Konkursmasse"]);
-    }
+  if (o.veh) {
+    /* Dein eigenes Nutzfahrzeug (v336: keine Nutzfahrzeuge aus Insolvenzmassen mehr – das Haus versteigert nur noch Autos) */
+    const t = vType(o.veh.type);
     l.kind = "veh"; l.vt = t.id;
-    l.wear = o.veh ? Math.round(wearOf(o.veh)) : Math.round(rnd(18, 70));
-    l.km = o.veh ? Math.round(o.veh.kmTotal || 0) : Math.round(rnd(20000, 380000) / 1000) * 1000;
+    l.wear = Math.round(wearOf(o.veh));
+    l.km = Math.round(o.veh.kmTotal || 0);
     l.val = Math.round(t.price * 0.7 * (1 - l.wear / 100 * 0.5));
     l.est = [nice(l.val * 0.8), nice(l.val * 1.1)];
   } else {
@@ -152,6 +147,8 @@ function makeLot(opt) {
 }
 function ensureLots(initial) {
   const A = ah();
+  /* v336: alte Nutzfahrzeug-Lose fremder Verkäufer fliegen raus (eigene Einlieferungen und Lose mit deinem Gebot bleiben) */
+  A.lots = A.lots.filter(l => l.kind !== "veh" || l.mine || l.done || (l.me && l.me.max > 0));
   let n = liveLots().filter(l => !l.mine).length;
   while (n < AH_LOTS) {
     const l = makeLot();
@@ -577,7 +574,7 @@ function bindPicRetry(root) {
    klappt der Filter nicht, kommt das Originalfoto.                      */
 const COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_TRY = new Map(), COMIC_Q = [];
 let comicBusy = false;
-const comicKey = id => location.origin + "/__carcomic/v2/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
+const comicKey = id => location.origin + "/__carcomic/v3/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
 function wantComic(id, front) {
   if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) return;
   if (PICS[id] && PICS[id].art && PICS[id].src) { COMIC_URL.set(id, PICS[id].src); showCarPic(id); detectPaint(id, PICS[id].src); return; }   /* v79: Zeichnung – kein Filter */
@@ -821,7 +818,7 @@ function hexMix(a, b, t) {
 }
 function carArtShape(c) {
   const b = (c && c.body) || "coupe";
-  if (b === "coupe" && c && (c.cls === "super" || c.cls === "hyper" || c.b === "lambo" || c.b === "bugatti" || (c.b === "ferrari" && c.cls !== "classic"))) return "wedge";
+  if (b === "coupe" && c && (c.cls === "super" || c.cls === "hyper" || c.b === "lambo" || c.b === "bugatti" || c.b === "mclaren" || c.b === "pagani" || c.b === "koenig" || (c.b === "ferrari" && c.cls !== "classic"))) return "wedge";
   return CAR_ART[b] ? b : "coupe";
 }
 function carArt(c, paint) {
