@@ -1,5 +1,18 @@
 # Änderungen – kurz für den Kollegen
 
+## v326 – Planer: Wenn kein Fahrzeug hinkommt, steht der Ausweg oben
+**Wunsch Bennet:** Im Planer soll man sehen, wie und woher man passende Fahrzeuge bekommt, wenn die eigenen nicht zum Startpunkt kommen (Beispiel: Nachlauf ab Lanzhou, alle Lkw „kommt nicht hin“).
+
+**Ursache (`game.js`, Planer):** Der Hinweis und der Kaufknopf standen erst unter der langen Liste aus bis zu acht Zeilen „kommt nicht hin“. Die Liste selbst erklärte nicht, warum die Fahrzeuge nicht hinkommen.
+
+**Lösung:** Erreicht keines der freien Fahrzeuge den Startpunkt einer Teilstrecke (`unreachableHTML`):
+1. Ein roter Hinweis nennt den Grund und die Standorte: „Keines deiner freien Fahrzeuge kommt nach Lanzhou. Sie stehen in Westhafen, Hamburg, GVZ Großbeeren – von dort führt kein Straßenetz bis Lanzhou.“
+2. Darunter steht der Ausweg: „Kaufe es direkt dort – es wird in Lanzhou bereitgestellt, ganz ohne Anfahrt, und bleibt danach für weitere Aufträge in der Gegend.“
+3. Der Kaufknopf mit dem günstigsten passenden Fahrzeug folgt (Markt, gefiltert auf diese Teilstrecke, danach zurück in den Planer). Ist noch kein passendes Fahrzeug freigeschaltet oder gerade im Einsatz, sagt der Knopf das wie bisher („erst ab Etappe …“, „im Einsatz …“).
+4. Die Liste der nicht erreichbaren Fahrzeuge ist eingeklappt („3 Fahrzeuge, die nicht hinkommen, zeigen“). Erreicht mindestens ein Fahrzeug den Startpunkt, bleibt alles wie bisher.
+
+**Geprüft (Testbrowser, 390 × 844):** Direktfahrt ab Lanzhou mit Lkw in Westhafen, Hamburg und GVZ Großbeeren: Hinweis, Ausweg, Kaufknopf („ab 8.900 €“) und eingeklappte Liste sichtbar. Der Knopf öffnet den Markt, ein dort gekauftes Fahrzeug steht in Lanzhou, der Planer ist danach ohne den Hinweis. Keine Konsolenfehler, Bildschirmfoto gesichtet. `d2d-v313.test.js` besteht. **Nicht geprüft:** am Handy; die Anzeige bei Kette mit mehreren nicht erreichbaren Teilstrecken nur über denselben Code je Teilstrecke.
+
 ## v325 – Wasserfall-Aufprall, Wasserfarben und Strömung entlang des Flusses
 
 **Ursache:** Die Aufprallfläche erzeugte im Nachtbild einen groben, hellen Schaumfleck. Bergbach/Fall und Quellbecken verwendeten unterschiedliche Farbpaletten und Materialien. Der untere Fluss animierte sein Wasser pauschal nach Westen; die Muster folgten seinen Biegungen und dem seitlichen Abfluss des Beckens nicht.
@@ -32,19 +45,6 @@
 - Die Filterlogik ist unverändert: dieselben Filter, Sortierungen und gespeicherten Einstellungen. Einzige Verhaltensänderung: Im Fuhrpark setzt jetzt der Chip „Alle“ alles zurück (vorher „Alle Arten“ bzw. „Filter aus“).
 
 **Geprüft (Testbrowser, 390 × 844):** Höhe der Leiste: Aufträge 50 px, Fuhrpark 50 px (vorher im Bildschirmfoto etwa 160 bzw. 230 px), Markt 130 px mit Umschalter. Echte Tipps und Auswahlen: Aufträge nach Frist sortieren, „jetzt machbar“, Ladungsart wählen (11 Karten, alle passend); Fuhrpark „frei“ + Art „Straße“ + Sortierung (3 Karten), „Alle“ setzt zurück (9 Karten). Keine Konsolenfehler, Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy (dort öffnet das Auswahlfeld die Systemliste); Live-Reiter und Auktionshaus nur über den gemeinsamen Stil.
-
-## v325 – Planer: Wenn kein Fahrzeug hinkommt, steht der Ausweg oben
-**Wunsch Bennet:** Im Planer soll man sehen, wie und woher man passende Fahrzeuge bekommt, wenn die eigenen nicht zum Startpunkt kommen (Beispiel: Nachlauf ab Lanzhou, alle Lkw „kommt nicht hin“).
-
-**Ursache (`game.js`, Planer):** Der Hinweis und der Kaufknopf standen erst unter der langen Liste aus bis zu acht Zeilen „kommt nicht hin“. Die Liste selbst erklärte nicht, warum die Fahrzeuge nicht hinkommen.
-
-**Lösung:** Erreicht keines der freien Fahrzeuge den Startpunkt einer Teilstrecke (`unreachableHTML`):
-1. Ein roter Hinweis nennt den Grund und die Standorte: „Keines deiner freien Fahrzeuge kommt nach Lanzhou. Sie stehen in Westhafen, Hamburg, GVZ Großbeeren – von dort führt kein Straßenetz bis Lanzhou.“
-2. Darunter steht der Ausweg: „Kaufe es direkt dort – es wird in Lanzhou bereitgestellt, ganz ohne Anfahrt, und bleibt danach für weitere Aufträge in der Gegend.“
-3. Der Kaufknopf mit dem günstigsten passenden Fahrzeug folgt (Markt, gefiltert auf diese Teilstrecke, danach zurück in den Planer). Ist noch kein passendes Fahrzeug freigeschaltet oder gerade im Einsatz, sagt der Knopf das wie bisher („erst ab Etappe …“, „im Einsatz …“).
-4. Die Liste der nicht erreichbaren Fahrzeuge ist eingeklappt („3 Fahrzeuge, die nicht hinkommen, zeigen“). Erreicht mindestens ein Fahrzeug den Startpunkt, bleibt alles wie bisher.
-
-**Geprüft (Testbrowser, 390 × 844):** Direktfahrt ab Lanzhou mit Lkw in Westhafen, Hamburg und GVZ Großbeeren: Hinweis, Ausweg, Kaufknopf („ab 8.900 €“) und eingeklappte Liste sichtbar. Der Knopf öffnet den Markt, ein dort gekauftes Fahrzeug steht in Lanzhou, der Planer ist danach ohne den Hinweis. Keine Konsolenfehler, Bildschirmfoto gesichtet. `d2d-v313.test.js` besteht. **Nicht geprüft:** am Handy; die Anzeige bei Kette mit mehreren nicht erreichbaren Teilstrecken nur über denselben Code je Teilstrecke.
 
 ## v323 – Sammellieferung: alle offenen Pull Requests in einem Stand
 Dieser Stand fasst die neun offenen Pull Requests #34 bis #42 zusammen (Branch `claude/sammel-v323`, Basis `main` nach PR #33 / v314). Es gibt eine Versionsnummer für alle geänderten Dateien. Die Einzelabschnitte v315 bis v322 stehen unten unverändert.
