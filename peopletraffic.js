@@ -75,17 +75,21 @@ const PEOPLE_TRAFFIC = (() => {
     if(typeof WV!=='undefined')for(const [id,e]of WV.staff){
       const s=(S.farm.staff||[]).find(s=>s.id===id);if(!s)continue;
       add('staff:'+id,e.node,[{x:0,z:0,r:.39}],(p,delayed)=>{
+        /* v351: Der Routenzeiger folgt der wirklich freigegebenen Strecke,
+           nicht einem vom Zaun oder Gegenverkehr verworfenen Schritt. */
+        const j=s.job,from=ahead.get('staff:'+id),dx=e.node.x-from.x,dz=e.node.z-from.z,l2=dx*dx+dz*dz;
+        if(j&&e.rj===j&&e.rPrev!=null&&distance(p,e.node)>.001){const f=l2?Math.max(0,Math.min(1,((p.x-from.x)*dx+(p.z-from.z)*dz)/l2)):0;e.rs=e.rPrev+(e.rs-e.rPrev)*f;}
         e.x=e.node.x=p.x;e.z=e.node.z=p.z;e.ox=e.oz=0;
-        if(delayed){e.mv=false;const j=s.job;if(j&&j.route&&S.time-j.t0<j.walk&&gdt){j.t0+=gdt;j.t1+=gdt;if(s.jobEnd)s.jobEnd+=gdt;}}
-      },{fixed:!!e.isSit||!!e.sitT||e.riseT!=null,resting:!s.job,valid:(a,b)=>{
+        if(delayed){e.mv=false;if(j&&j.route&&S.time-j.t0<j.walk&&gdt){j.t0+=gdt;j.t1+=gdt;if(s.jobEnd)s.jobEnd+=gdt;}}
+      },{fixed:!!e.isSit||!!e.sitT||e.riseT!=null||!!(e.gearAction&&e.gearAction.t>0),resting:!s.job,valid:(a,b)=>{
         if(typeof VILLAGE!=='undefined'&&(VILLAGE.clear(a.x,a.z)||VILLAGE.clear(b.x,b.z))&&!valid(a,b))return false;
         if(typeof navLive!=='function'||distance(a,b)<.001)return true;
         navLive();if(navHit(a.x,a.z,b.x,b.z,navWallsFor(s.role)))return false;
-        /* Landwirte betreten ihre Felder, Menschen nutzen die Zauntore.
-           Der Lagerfeuerweg besitzt bereits seine eigene Einlassführung. */
-        if(s.job&&s.job.k==='lunch')return true;
+        /* v351: Auch der Rückweg nutzt die ausdrücklich geplanten Camp-Wege.
+           Die A*-Sperre des ganzen Platzes darf den Ausgang nicht verriegeln. */
         const n=Math.max(1,Math.ceil(distance(a,b)/.2));
         for(let i=1;i<=n;i++){const x=Math.floor(a.x+(b.x-a.x)*i/n),z=Math.floor(a.z+(b.z-a.z)*i/n);
+          if(typeof CAMP!=='undefined'&&s.job&&s.job.route&&CAMP.blockedW(x+.5,z+.5))continue;
           if(navIn(x,z)){const k=NAV.blk[navIdx(x,z)];if(k&&!(k===2&&s.role==='farmer'))return false;}}
         return true;
       }});
