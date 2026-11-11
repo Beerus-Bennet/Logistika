@@ -1,5 +1,15 @@
 # Änderungen – kurz für den Kollegen
 
+## v349 – Hofteam mit Bekanntschaften und fließenden Sitzposen
+
+Alle neun Hofrollen bekommen feste Personen mit eigener Herkunft, Motivation und einem praktischen Tipp: Nachbarssohn Erwin Krüger, Tierpflegerin Marta Feldmann, Hofmeisterin Bente Krüger, Fahrer Tom Albrecht, Holzfäller Hannes Brandt, Sägewerker Ralf Henning, Mechanikerin Aylin Demir, Angler Willi Schmied und Fischwirtin Nele Peters. Empfehlungen verbinden die Rollen miteinander; neue Kontakte werden mit Abstand angekündigt. Kennenlernen im Bauernhaus ist unverbindlich. Erst die ausdrückliche Vereinbarung auf der letzten Gesprächsseite bucht die bestehende einmalige Startzahlung und beginnt die Arbeit. Lohn, Brotzeit und Freischaltungen bleiben erhalten. Namen und Vertragsdaten bereits beschäftigter Personen werden nicht überschrieben.
+
+Erwin übernimmt den Hof-Rundgang, erste Hof-Tipps und entsprechende Menütexte; Lina bleibt die Ansprechpartnerin für Logistik und vermittelt Willi am Steg. Die Charaktererstellung begleitet eine gesichtslose Silhouette. Der bisher ältere Sägewerksbesitzer heißt zur Unterscheidung Heinrich Krüger und ist Erwins Vater. Hofbezogene Rückfragen kommen vom Team. Die Gesprächskarte zeigt die jeweilige 3D-Figur; bestehende Beschäftigte lassen sich auch direkt über ihr Arbeitsmenü ansprechen.
+
+Beim Hinsetzen und Aufstehen bleibt die Figur durchgehend gegliedert: zum Sitz drehen, rückwärts herantreten, Knie und Ellbogen beugen; danach Blickkontakt und kleine Gesprächsgesten. Feste Gliedlängen und Sohlenhöhe ersetzen den abrupten Wechsel zwischen Steh- und Sitzmodell. Ein unterbrochenes Hinsetzen lässt sich wieder auflösen. Die gemeinsame Abstandskorrektur behandelt auch Übergangsposen als ortsfest.
+
+Geprüft: zehn neue Hofteam-/Sitzgruppen, zehn bestehende Lagerfeuer-Gruppen, acht Verkehrsgruppen und 13 Bewohner-/Straßengruppen; Syntax und Diff. Lokales Chromium: alle neun Gespräche, kostenloses Vertagen, tatsächliche Zusage mit einmaliger Buchung, frühe Erwin-Beratung ohne Arbeitsfreigabe, Hof-Rundgang und gesichtslose Charaktererstellung; Fensterbreiten 320/390/1280 Pixel. Darstellung aller neun echten Figuren am Lagerfeuer mit kontrollierten Bewegungsschritten geprüft (Softwaregrafik im Testbrowser). Nicht auf echtem iPhone/Safari geprüft. GitHub-Abgleich aller offenen PRs vor und nach dem Upload; kein automatischer Merge und keine Live-Veröffentlichung.
+
 ## v348 – Haifisch-Moment bei einer Konzernübernahme
 
 Eine erfolgreiche Übernahme erhält vor der bestehenden Zeitung eine eigene Meeresinszenierung: Lichtstrahlen, aufsteigende Luftblasen, ein eigens gezeichneter Hai mit Schwanz-/Flossenbewegung, Vorbeizug, Wasserring und goldener Markenenthüllung. Der Machtzuwachs gehört sichtbar dem Spieler: Sein Firmenname steht groß im Zentrum, begleitet von „Du gibst den Kurs vor“ und den tatsächlichen Zugewinnen an Fahrzeugen, Personal und Marktanteil beziehungsweise Stammkunden. Keine erfundenen Belohnungen.

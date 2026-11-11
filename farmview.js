@@ -2910,7 +2910,7 @@ function farmLevelUp(l) {
    machbar? Wenn nicht – oder wenn lange nichts passiert –, gibt es „Schritt auslassen“ statt endlosen Wartens. */
 const FTUT_HOF = [
   { title: "Willkommen auf dem Hof",
-    tx: () => `Moin, ${esc(S.player.name)}! Ich bin Lina, deine Nachbarin. Opas Hof gehört jetzt dir – in ein paar kurzen Schritten zeige ich dir, wie er läuft.`,
+    tx: () => `Moin, ${esc(S.player.name)}! Ich bin Erwin Krüger, der Sohn von nebenan. Ich habe Opa oft bei der Ernte geholfen. Opas Hof gehört jetzt dir. Ich zeige dir ein paar Handgriffe — ganz ohne Arbeitsvertrag. Über feste Unterstützung reden wir später.`,
     next: "Los geht’s" },
   { title: "Weizen ernten", tx: "Goldene Felder sind reif.",
     act: "Tippe ein goldenes Feld an und ziehe die Sichel über die reifen Felder.",
@@ -2973,6 +2973,7 @@ function farmTutShow() {
   }
   /* v76: alte Spielstände mitten im (längeren) Rundgang auf die neue Schrittfolge umrechnen */
   if (!T.v76) { T.v76 = 1; const m = [0, 1, 2, 3, 3, 4, 4, 5, 6, 7, 8, 8]; if (T.step > 0 && m[T.step] != null) T.step = m[T.step]; }
+  if(typeof FARM_STORY!=="undefined")FARM_STORY.meet("farmer");
   const list = farmTutList(), st = list[T.step];
   if (!st) return farmTutEnd();
   if (st.before && !T.replay) st.before();
@@ -2988,11 +2989,11 @@ function farmTutShow() {
   }
   const offer = mode === "task" && !done && (!ready || ftSlow === T.step);
   const card = ftExit
-    ? linaExitHTML({ uid: "fx", ctx: "Nachbarin · Hof-Rundgang", title: "Rundgang beenden?",
+    ? linaExitHTML({ uid: "fx", speaker:typeof FARM_STORY!=="undefined"?FARM_STORY.speaker("farmer"):null, ctx: "Nachbar · Hof-Rundgang", title: "Rundgang beenden?",
         tx: T.replay ? "Du kannst ihn jederzeit im Bauernhaus oder unter „Welt“ wiederholen."
           : "Der Hof läuft dann frei weiter, und die ersten Bestellungen kommen. Wiederholen kannst du den Rundgang im Bauernhaus oder unter „Welt“.",
         quit: "Rundgang beenden" })
-    : linaCardHTML({ uid: "f" + T.step, kind: done ? "done" : mode, ctx: T.replay ? "Nachbarin · Rundgang (Wiederholung)" : "Nachbarin · Hof-Rundgang",
+    : linaCardHTML({ uid: "f" + T.step, speaker:typeof FARM_STORY!=="undefined"?FARM_STORY.speaker("farmer"):null, kind: done ? "done" : mode, ctx: T.replay ? "Erwin · Rundgang (Wiederholung)" : "Erwin · Hof-Rundgang",
         step: T.step + 1, total: list.length, title: st.title, tx: typeof st.tx === "function" ? st.tx() : st.tx,
         act: mode === "task" && !done ? st.act : (T.replay && st.act ? st.act : null),
         part: mode === "task" && need > 1 ? `${Math.min(T.cnt, need)} von ${need} ${st.part || "erledigt"}` : null,
@@ -3075,8 +3076,9 @@ function farmTutEsc() { if (!farmTutState()) return; ftExit = !ftExit; farmTutSh
 /* v76: Lina-Tipps auf dem Hof, wenn es zum ersten Mal passt (statt im Rundgang) */
 function farmHintFor(key) {
   if (typeof linaHint !== "function") return;
-  if (key.split(":")[0] === "plant") linaHint("f_water", "<b>Gießen</b> macht frisch gesäte Felder schneller und besser: Feld antippen und gießen.");
-  if (key === "collect:ei") linaHint("f_feed", "Die Hühner haben jetzt Hunger: <b>Stall antippen und das Futter über die Hühner ziehen</b> – dann legen sie wieder.");
+  const hint=(key,tx)=>typeof FARM_STORY!=="undefined"?FARM_STORY.hint("farmer",key,tx):linaHint(key,tx);
+  if (key.split(":")[0] === "plant") hint("f_water", "<b>Gießen</b> macht frisch gesäte Felder schneller und besser: Feld antippen und gießen.");
+  if (key === "collect:ei") hint("f_feed", "Die Hühner haben jetzt Hunger: <b>Stall antippen und das Futter über die Hühner ziehen</b> – dann legen sie wieder.");
 }
 function farmTutSignal(key, n) {
   if (S.farm && S.farm.tut && S.farm.tut.done && !S.farm.tut.replay) farmHintFor(key);

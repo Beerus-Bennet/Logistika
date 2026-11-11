@@ -63,6 +63,8 @@ function probeGuideArt() {
   };
   img.src = GUIDE_ART;
 }
+/* v349: Gesichtslose Silhouette begleitet nur die Charaktererstellung. */
+function onboardingFigure(){return `<svg viewBox="0 0 120 180" class="onboarding-shadow" role="img" aria-label="Gesichtslose Begleitfigur"><defs><linearGradient id="onboardShade" x2="0" y2="1"><stop stop-color="#243747"/><stop offset="1" stop-color="#0b1621"/></linearGradient></defs><ellipse cx="60" cy="171" rx="47" ry="7" fill="#15233122"/><path d="M27 164 30 96Q35 75 60 75T90 96L93 164Z" fill="url(#onboardShade)"/><ellipse cx="60" cy="46" rx="25" ry="31" fill="#243747"/><path d="M39 31Q60 12 81 31" fill="none" stroke="#627989" stroke-width="2"/></svg>`;}
 function guideFigure(size, uid) {
   return guideArt
     ? `<img class="guide-art" src="${guideArt}" alt="${GUIDE.name}" width="289" height="821">`
@@ -90,14 +92,16 @@ function linaFaceFail(img) {
 /* c: { uid, cls, kind ("info"|"task"|"finish"|"done"|"exit"), ctx, step, total, title, tx, act, part, partK,
         ok, note, primary {id,label}, secondary [{id,label}], close (Beschriftung des ✕), modal }            */
 function linaCardHTML(c) {
+  /* v349: Dieselbe Kartenbedienung, aber die passende Person als Sprecher. */
+  const speaker=c.speaker||null;
   const id = "ltc" + String(c.uid || "x").replace(/\W/g, "");
   const btn = (b, cls) => `<button type="button" class="${cls}" data-lt="${b.id}">${b.label}</button>`;
   const pct = c.total ? Math.round(Math.min(1, c.step / c.total) * 100) : 0;
   const acts = (c.secondary || []).map(b => btn(b, "ltc-sec")).join("") + (c.primary ? btn(c.primary, "btn ltc-pri") : "");
   return `<div class="ltc ltc-${c.kind}${c.cls ? " " + c.cls : ""}" role="${c.modal ? "dialog" : "region"}" aria-labelledby="${id}-t" tabindex="-1">
     <div class="ltc-head">
-      <span class="ltc-face" aria-hidden="true">${linaFace(c.uid)}</span>
-      <span class="ltc-who"><b>${GUIDE.name}</b><small>${c.ctx || GUIDE.role}</small></span>
+      <span class="ltc-face" aria-hidden="true">${speaker?speaker.face:linaFace(c.uid)}</span>
+      <span class="ltc-who"><b>${speaker?esc(speaker.name):GUIDE.name}</b><small>${c.ctx || (speaker?speaker.role:GUIDE.role)}</small></span>
       ${c.close ? `<button type="button" class="ltc-x" data-lt="close" aria-label="${c.close}" title="${c.close}">✕</button>` : ""}
     </div>
     ${c.total > 1 ? `<div class="ltc-prog"><span>Schritt ${c.step} von ${c.total}</span><i aria-hidden="true"><u style="width:${pct}%"></u></i></div>` : ""}
@@ -112,7 +116,7 @@ function linaCardHTML(c) {
 }
 /* Rückfrage vor dem Beenden: Folgen kurz erklärt, Weitermachen ist die Hauptaktion */
 function linaExitHTML(o) {
-  return linaCardHTML({ uid: o.uid, cls: o.cls, kind: "exit", modal: o.modal, ctx: o.ctx, title: o.title, tx: o.tx,
+  return linaCardHTML({ uid: o.uid, cls: o.cls, speaker:o.speaker, kind: "exit", modal: o.modal, ctx: o.ctx, title: o.title, tx: o.tx,
     primary: { id: "stay", label: "Weitermachen" }, secondary: [{ id: "quit", label: o.quit }] });
 }
 /* Screenreader: nur bei einem echten Schrittwechsel ansagen, nicht bei jedem Neuzeichnen */
@@ -166,10 +170,10 @@ function renderIntro() {
         </div>
       </div>
       <div class="intro-card greet">
-        <div class="greet-fig">${guideFigure(150, "g0")}</div>
+        <div class="greet-fig">${onboardingFigure()}</div>
         <div class="greet-tx">
-          <b>${GUIDE.name}</b><span>Nachbarin · fährt die Ware aus</span>
-          <div class="intro-p">„Moin! Ich zeig dir gleich alles.“</div>
+          <b>Dein Weg beginnt</b><span>Eine kurze Einführung</span>
+          <div class="intro-p">„Zuerst legen wir deinen Namen und dein Aussehen fest. Auf dem Hof wartet Erwin Krüger auf dich.“</div>
         </div>
       </div>
       <div class="intro-btns"><button class="btn go" id="iNext">Los geht’s</button></div>`;
@@ -619,8 +623,8 @@ function hintNext() {
   if (typeof save === "function") save();
   let el = $("#linaHint");
   if (!el) { el = document.createElement("div"); el.id = "linaHint"; document.body.appendChild(el); }
-  el.innerHTML = `<button class="lh-box" type="button" aria-label="Lina-Tipp schließen"><span class="lh-face ltc-face" aria-hidden="true">${linaFace("h")}</span>`
-    + `<span class="lh-tx" role="status"><b>Lina-Tipp</b>${tx}</span><span class="lh-x" aria-hidden="true">✕</span></button>`;
+  el.innerHTML = `<button class="lh-box" type="button" aria-label="Tipp schließen"><span class="lh-face ltc-face" aria-hidden="true">${h.o.speaker?h.o.speaker.face:linaFace("h")}</span>`
+    + `<span class="lh-tx" role="status"><b>${h.o.speaker?esc(h.o.speaker.name)+" · Tipp":"Lina-Tipp"}</b>${tx}</span><span class="lh-x" aria-hidden="true">✕</span></button>`;
   el.className = "on" + (h.o.top ? " top" : "");
   document.body.classList.toggle("hint-bot", !h.o.top);
   hintOn = h;

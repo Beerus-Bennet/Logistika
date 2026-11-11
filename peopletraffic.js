@@ -77,7 +77,7 @@ const PEOPLE_TRAFFIC = (() => {
       add('staff:'+id,e.node,[{x:0,z:0,r:.39}],(p,delayed)=>{
         e.x=e.node.x=p.x;e.z=e.node.z=p.z;e.ox=e.oz=0;
         if(delayed){e.mv=false;const j=s.job;if(j&&j.route&&S.time-j.t0<j.walk&&gdt){j.t0+=gdt;j.t1+=gdt;if(s.jobEnd)s.jobEnd+=gdt;}}
-      },{fixed:!!e.isSit||e.riseT!=null,resting:!s.job,valid:(a,b)=>{
+      },{fixed:!!e.isSit||!!e.sitT||e.riseT!=null,resting:!s.job,valid:(a,b)=>{
         if(typeof VILLAGE!=='undefined'&&(VILLAGE.clear(a.x,a.z)||VILLAGE.clear(b.x,b.z))&&!valid(a,b))return false;
         if(typeof navLive!=='function'||distance(a,b)<.001)return true;
         navLive();if(navHit(a.x,a.z,b.x,b.z,navWallsFor(s.role)))return false;
