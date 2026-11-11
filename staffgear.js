@@ -26,7 +26,7 @@ const STAFF_GEAR = (() => {
     for(const st of j.stops){const start=(st.d+before)*rate;before+=st.w;if(!st.rack351||st.done351||S.time-j.t0<start-.0001)continue;
       let a=e.gearAction;if(!a||a.job!==j||a.stop!==st)a=e.gearAction={job:j,stop:st,t:0,hand:null};
       const at=j.route[st.i],near=at&&Math.hypot(e.x-at[0],e.z-at[1])<.18;
-      if(near&&(gdt>0||typeof clockRunning!=='function'||clockRunning()))a.t+=Math.min(dt,.1);
+      if(near&&(gdt>0||typeof clockRunning!=='function'||clockRunning())){if(!a.hold)a.hold=[e.x,e.z];a.t+=Math.min(dt,.1);}
       const p=Math.min(1,a.t/1.8);retime(s,j,S.time-start-st.w*rate*p);
       if(p>=1){st.done351=true;retime(s,j,j.t0-.0001);e.gearAction=null;}
       return;

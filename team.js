@@ -1874,6 +1874,9 @@ function stepStaff(dt, time) {
     else if (moving) { const k = Math.min(1, Math.max(sp, d * dt * 3) / d); e.x += dx * k; e.z += dz * k; n.ry += angTo(n.ry, Math.atan2(dx, dz)) * Math.min(1, dt * 12); }
     else if (face != null) n.ry += angTo(n.ry, face) * Math.min(1, dt * 6);
     if (work && moving && d > 0.3) work = false;
+    /* v351: Den bereits freigegebenen Bedienplatz während des Greifens
+       halten; kein letzter Ruck in eine vorbeigehende Person. */
+    if(e.gearAction&&e.gearAction.hold){e.x=e.gearAction.hold[0];e.z=e.gearAction.hold[1];moving=false;}
     n.x = e.x; n.z = e.z; e.dw = !!dwell&&!moving; e.mv = moving;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     /* v112: Halt an der Werkzeugplane – hinstellen, bücken, ablegen (oder aufnehmen), aufrichten */
