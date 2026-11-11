@@ -4824,3 +4824,42 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 #farmSheet.town .town-negotiate button{grid-column:1/-1;min-height:44px}
 #farmSheet.town button:disabled{opacity:.45;cursor:default;pointer-events:none}
 #farmSheet.town .town-agreement{padding:10px;background:#f3f7e8;border-radius:9px}
+
+/* ===== v343: Jagd – Trefferbild (Röntgen mit Schusskanal) ===== */
+#huntUI .hu-xb{width:100%;justify-content:center;margin-top:8px;font-size:14px}
+#huntUI.xr-on .hu-card2,#huntUI.xr-on .hu-win,#huntUI.xr-on .hu-drag,#huntUI.xr-on .hu-top,#huntUI.xr-on .hu-call{visibility:hidden}
+#huntUI .hu-xr{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;pointer-events:auto;color:#e8f1ff;
+  background:radial-gradient(120% 70% at 50% 30%,#16324f 0%,#0b1a2c 55%,#060d18 100%)}
+#huntUI .hu-xr .xr-view{position:relative;flex:1 1 52%;min-height:210px;touch-action:none;cursor:grab}
+#huntUI .hu-xr .xr-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#huntUI .hu-xr.nogl .xr-view{display:none}
+#huntUI .hu-xr .xr-pan{flex:0 1 auto;max-height:54%;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+  background:rgba(8,18,32,.86);border-top:2px solid #2c5a8a}
+#huntUI .hu-xr .xr-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#huntUI .hu-xr .xr-hd b{font:800 19px/1 var(--display,inherit);letter-spacing:.3px;color:#fff}
+#huntUI .hu-xr .xr-hd span{flex:1;font-size:14px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#huntUI .hu-xr .xr-x{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid #0d1b2a;background:#fff7e6;color:#0d1b2a;font:800 18px/1 inherit;cursor:pointer}
+#huntUI .hu-xr .xr-nav{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#huntUI .hu-xr .xr-nav>div{flex:1;text-align:center;line-height:1.25}
+#huntUI .hu-xr .xr-nav b{display:block;font-size:16px}
+#huntUI .hu-xr .xr-nav small{font-size:13px;color:#ffb347;font-weight:800}
+#huntUI .hu-xr .xr-nav .btn{min-width:46px;min-height:42px;font-size:22px;justify-content:center}
+#huntUI .hu-xr .xr-dmg{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;margin-bottom:8px}
+#huntUI .hu-xr .xr-dmg i{flex:1;height:10px;border-radius:6px;background:#1d3550;overflow:hidden}
+#huntUI .hu-xr .xr-dmg i b{display:block;height:100%;width:var(--d);background:linear-gradient(90deg,#ffb347,#f2553c);border-radius:6px}
+#huntUI .hu-xr .xr-org{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}
+#huntUI .hu-xr .xr-org li{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.06)}
+#huntUI .hu-xr .xr-org li i{width:10px;height:10px;border-radius:50%;background:#7fb4f5;flex:none}
+#huntUI .hu-xr .xr-org li.v i{background:#f2553c}
+#huntUI .hu-xr .xr-org li.b i{background:#e6eefc;border-radius:2px}
+#huntUI .hu-xr .xr-org li em{margin-left:auto;font-style:normal;font-size:12px;font-weight:800;color:#ffb347}
+#huntUI .hu-xr .xr-sec{font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#8fb8e8;margin:8px 0 5px}
+#huntUI .hu-xr .xr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#huntUI .hu-xr .xr-grid span{background:rgba(255,255,255,.06);border-radius:8px;padding:5px 8px;min-width:0}
+#huntUI .hu-xr .xr-grid small{display:block;font-size:11px;opacity:.7}
+#huntUI .hu-xr .xr-grid b{display:block;font-size:14px;overflow-wrap:anywhere}
+#huntUI .hu-xr .xr-tip{margin:10px 0 0;font-size:12px;opacity:.65;text-align:center}
+@media (min-width:700px) and (min-aspect-ratio:5/4){
+  #huntUI .hu-xr{flex-direction:row}
+  #huntUI .hu-xr .xr-pan{max-height:none;width:min(400px,42%);border-top:0;border-left:2px solid #2c5a8a}
+}

@@ -245,6 +245,31 @@ test("Liegepose v262/v343: Boden, Gelenkgrenzen, keine Durchdringung, Haupt lieg
   assert.strictEqual(forms.keiler.size, 5, "Keiler: fünf Liegeformen " + [...forms.keiler]); assert.strictEqual(forms.hirsch.size, 5, "Hirsch: fünf Liegeformen " + [...forms.hirsch]);
   assert.strictEqual(forms.fasan.size, 4, "Fasan: vier Liegeformen " + [...forms.fasan]);
 });
+test("Trefferbild v343: Schusskanal nennt die getroffenen Organe, passt zur Wertung, Wirkung und Schussbericht stimmen", () => {
+  const P = k => ({ x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: k === "hirsch" ? -0.35 : 0, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] });
+  const rec = (k, y, z) => { const o = [6, y, z], d = [-1, 0, 0], h = H4.zoneHit(k, P(k), o, d); return h && H4._shotRec(k, P(k), o, d, h, 160, { tf: 0.2, drift: 0.05, wv: 3 }); };
+  const ids = r => r.org.map(o => o.id);
+  /* Hirsch breitseits durch die Lunge: beide Flügel, lebenswichtig, 100 % */
+  let r = rec("hirsch", 1.0, 0.18); assert.strictEqual(r.zone, "lunge");
+  assert.ok(ids(r).includes("lungeL") && ids(r).includes("lungeR"), "beide Lungenflügel " + ids(r)); assert.strictEqual(r.org[0].id, "decke"); assert.strictEqual(r.dmg, 100);
+  /* Herz: Wertung und Liste stimmen überein */
+  r = rec("hirsch", 0.88, 0.28); assert.strictEqual(r.zone, "herz"); assert.ok(ids(r).includes("herz"));
+  /* Weichschuss hinten: Gescheide, keine lebenswichtigen Organe, Wirkung unter 100 % */
+  r = rec("hirsch", 0.92, -0.36); assert.strictEqual(r.zone, "koerper"); assert.ok(ids(r).includes("darm")); assert.ok(!r.org.some(o => o.v), "nichts Lebenswichtiges"); assert.ok(r.dmg < 100 && r.dmg >= 30);
+  /* Lauf und Haupt: Knochen */
+  r = rec("hirsch", 0.3, 0.34); assert.strictEqual(r.zone, "lauf"); assert.strictEqual(ids(r).join(), "lauf"); assert.strictEqual(r.dmg, 20);
+  /* Keiler und Fasan */
+  r = rec("keiler", 0.5, 0.2); assert.ok(["lunge", "herz"].includes(r.zone)); assert.ok(r.org.some(o => o.v));
+  r = rec("fasan", 0.24, -0.02); assert.strictEqual(r.zone, "vogel"); assert.strictEqual(r.org[0].n, "Federkleid und Muskel"); assert.strictEqual(r.dmg, 100);
+  /* Schussbericht: Geschwindigkeit sinkt mit der Entfernung, Energie plausibel (Büchse: 2 000 … 4 000 J) */
+  assert.ok(r.v < 820 && r.v > 600 && r.e > 2000 && r.e < 4000, r.v + " m/s, " + r.e + " J");
+  /* Strahl in Tierkoordinaten: gedrehtes, verschobenes, größeres Stück ergibt denselben Kanal */
+  const p2 = Object.assign(P("hirsch"), { x: 4, z: -3, ry: 1.1, s: 1.1 }), W = l => { const q = H4.rot(l.map(v => v * 1.1), 0, 1.1, 0); return [4 + q[0], q[1], -3 + q[2]]; };
+  const o2 = W([6, 1.0, 0.18]), t2 = W([0, 1.0, 0.18]), d2 = [t2[0] - o2[0], t2[1] - o2[1], t2[2] - o2[2]].map(v => v / (6 * 1.1)), h2 = H4.zoneHit("hirsch", p2, o2, d2), r2 = H4._shotRec("hirsch", p2, o2, d2, h2, 160, {});
+  assert.strictEqual(h2.zone, "lunge"); assert.ok(Math.abs(r2.lo[0] - 6) < 1e-6 && Math.abs(r2.lo[1] - 1.0) < 1e-6 && Math.abs(r2.ld[0] + 1) < 1e-6, "Strahl " + r2.lo + " " + r2.ld);
+  /* jedes Organ liegt im Rumpf seiner Art */
+  ["hirsch", "keiler", "fasan"].forEach(k => H4.ORG[k].forEach(O => { if (!O.b) assert.ok(H4._inTorso(k, O.c, 0) > 0, k + " " + O.id + " liegt im Rumpf"); }));
+});
 test("Geweih v262: Name und Modell zählen dieselben Enden (auch ungerade, doppelte Augsprosse, abnorme Sprosse)", () => {
   const Fs = [{}, { extra: -1 }, { extra: 1 }, { aug: -1 }, { aug: 1 }, { abn: -1 }, { abn: 1 }];
   for (let P = 6; P <= 16; P += 2) Fs.forEach(F => {

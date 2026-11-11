@@ -2765,6 +2765,10 @@ const HUNT = (() => {
       if (a === "mini") { if (X.card && !X.card.classList.contains("saved")) { X.card.classList.toggle("hu-min"); snd("tap"); } return; }
       if (a === "next") return harvestDone(false);
       if (a === "wall") return harvestDone(true);
+      if (a === "xray") return xrShow();
+      if (a === "xclose") return xrHide();
+      if (a === "xprev") return xrGo(-1);
+      if (a === "xnext") return xrGo(1);
     });
     /* v119: Atem halten und gleichzeitig schießen. Vorher löste JEDES pointerup (auch das des zweiten Fingers auf „Schuss“) den
        Atem wieder, und der Schuss kam erst über „click“, den iOS bei gedrücktem ersten Finger oft verschluckt. Jetzt: Atem merkt sich
@@ -2901,6 +2905,8 @@ const HUNT = (() => {
       const A = best.A, at = [r0.o[0] + d[0] * best.h.t, r0.o[1] + d[1] * best.h.t, r0.o[2] + d[2] * best.h.t];
       const dm = Math.round(Math.hypot(at[0] - E[0], at[1] - E[1], at[2] - E[2]) * M_PER_U);
       const context = shotContext(A), session = X;        /* v307: Zustand des sichtbaren Ziels festhalten, bevor Flugzeit/Schreck es ändern. */
+      /* v343: Schusskanal für das Trefferbild – Strahl in Tierkoordinaten und Haltung im Augenblick des Einschlags */
+      context.rec = shotRec(A.k, poseOf(A, best.tf), r0.o, d, best.h, dm, { tf: best.tf, drift: Math.tan(Math.abs(dr)) * dm, wv: X.wind.v });
       setTimeout(() => { if (X !== session) return; hitSound(); FV.R.burst({ x: at[0], y: at[1], z: at[2], n: 6, col: [[0.45, 0.1, 0.08, 1], [0.35, 0.25, 0.18, 1]], speed: 0.9, up: 0.6, size: 0.05, life: 0.6, shape: 1 }); onHit(A, best.h.zone, dm, context); scare(1.6, at, 140, A); }, Math.round(best.tf * 1000) + 60);
     } else {
       let t = tb;
@@ -2916,6 +2922,7 @@ const HUNT = (() => {
   function onHit(A, zone, dm, context) {
     if (!X || !A.node || !alive(A)) return;
     A.hits.push(zone); A.dm = A.dm || dm;
+    (A.shots = A.shots || []).push(context && context.rec ? context.rec : shotRecDefault(A, zone, dm));
     if (A.mv == null) { const c = context || shotContext(A); A.mv = c.mv; A.air = c.air; A.wv = c.wv; }   /* v307: für Beschriftung, Jagdbuch und Flugauftrag */
     const Z = ZONE[zone];
     if (A.k === "fasan") {
@@ -3265,6 +3272,7 @@ const HUNT = (() => {
         <p class="hu-pbl${P.rec ? " on" : ""}">${recTxt}</p>
         ${note ? `<p class="hu-note">${esc(note)}</p>` : ""}
       </div>
+      <button class="btn ghost hu-xb" data-hu="xray">🩻 Trefferbild · Schusskanal ansehen</button>
       ${room > 0 ? `<button class="btn hu-keep" data-hu="keep">🏆 Trophäe sichern</button>` : `<button class="btn hu-keep" data-hu="sell">💰 Trophäenlager voll – an Sammler · ${eur(price)}</button>`}`;
   }
   function showCard(A) {
@@ -3322,6 +3330,7 @@ const HUNT = (() => {
           <em>${sell ? "an einen Sammler · +" + eur(price) : M.n + " · in deiner Sammlung"}</em>
           <span>${sell ? "" : (n === 1 ? "dein erstes Stück an der Wand" : n + " Stücke an der Wand") + " · "}+${XP[A.k][A.medal]} EP</span></div></div>
       ${lines.join("")}
+      <button class="btn ghost hu-xb" data-hu="xray">🩻 Trefferbild</button>
       <div class="hu-sb">${sell ? "" : `<button class="btn ghost hu-wall" data-hu="wall">🏆 Sammlung</button>`}<button class="btn hu-go" data-hu="next">Weiter jagen</button></div>`;
     X.drag.classList.add("off");
     if (X.call) X.call.hidden = true;
@@ -3336,6 +3345,7 @@ const HUNT = (() => {
     renderBar(); snd("swish");
   }
   function harvestUIClear() {
+    xrHide();
     if (!X) return;
     [X.win, X.card, X.call].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
     if (X.drag) X.drag.hidden = true;
@@ -3343,6 +3353,205 @@ const HUNT = (() => {
     if (X.ui) X.ui.classList.remove("lv3", "lv4");
   }
 
+
+  /* ============================ v343: Trefferbild (Röntgen) ============================
+     Wunsch: wie in „theHunter“ – beim erlegten Stück lässt sich ein Röntgenbild aufrufen: das Tier durchscheinend in der Haltung des
+     Einschlags, Skelett und Organe, der Schusskanal als Linie, dazu welche Organe und Knochen getroffen wurden und mit welcher Wirkung;
+     bei mehreren Treffern schaltet man durch. Darunter Tierdetails und Schussbericht.
+     Organe und Knochen liegen in Tierkoordinaten (wie die Trefferzonen SP) – Herz und Lunge an denselben Stellen wie die Zonen,
+     sodass Bild und Wertung zusammenpassen. Gezeichnet wird in einer eigenen Leinwand mit eigenem Zeichner (wie die Drehansicht). */
+  const ORG = {
+    hirsch: [
+      { id: "lungeL", n: "Lungenflügel links", c: [-0.058, 0.97, 0.24], r: [0.058, 0.125, 0.14], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", c: [0.058, 0.97, 0.24], r: [0.058, 0.125, 0.14], v: 1 },
+      { id: "herz", n: "Herz", c: [0, 0.87, 0.28], r: [0.06, 0.075, 0.07], v: 2 }, { id: "leber", n: "Leber", c: [0.02, 0.9, 0.055], r: [0.09, 0.11, 0.065] },
+      { id: "pansen", n: "Pansen", c: [-0.02, 0.9, -0.14], r: [0.125, 0.15, 0.14] }, { id: "darm", n: "Gescheide", c: [0, 0.9, -0.37], r: [0.11, 0.13, 0.12] },
+      { id: "blattL", n: "Schulterblatt", c: [-0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 },
+      { id: "becken", n: "Becken", c: [0, 1.02, -0.46], r: [0.1, 0.06, 0.1], b: 1 } ],
+    keiler: [
+      { id: "lungeL", n: "Lungenflügel links", c: [-0.056, 0.54, 0.2], r: [0.056, 0.11, 0.13], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", c: [0.056, 0.54, 0.2], r: [0.056, 0.11, 0.13], v: 1 },
+      { id: "herz", n: "Herz", c: [0, 0.45, 0.24], r: [0.055, 0.065, 0.065], v: 2 }, { id: "leber", n: "Leber", c: [0.02, 0.49, 0.045], r: [0.09, 0.1, 0.065] },
+      { id: "magen", n: "Magen", c: [-0.02, 0.5, -0.12], r: [0.12, 0.13, 0.12] }, { id: "darm", n: "Gescheide", c: [0, 0.5, -0.32], r: [0.11, 0.12, 0.11] },
+      { id: "blattL", n: "Schulterblatt", c: [-0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 },
+      { id: "becken", n: "Becken", c: [0, 0.6, -0.41], r: [0.1, 0.06, 0.09], b: 1 } ],
+    fasan: [
+      { id: "lunge", n: "Lunge", c: [0, 0.275, 0.04], r: [0.045, 0.035, 0.05], v: 1 }, { id: "herz", n: "Herz", c: [0, 0.232, 0.078], r: [0.022, 0.025, 0.025], v: 2 },
+      { id: "magen", n: "Muskelmagen", c: [0, 0.215, -0.03], r: [0.04, 0.04, 0.045] }, { id: "darm", n: "Gescheide", c: [0, 0.22, -0.11], r: [0.045, 0.04, 0.05] },
+      { id: "brust", n: "Brustbein", c: [0, 0.165, 0.05], r: [0.012, 0.03, 0.08], b: 1 } ]
+  };
+  /* Wirbelsäule: Punkte unter der Rückenlinie des Profils */
+  const SPINE = {};
+  function spineOf(k) {
+    if (SPINE[k]) return SPINE[k];
+    const T = TORSO_OF[k], z0 = T[0][0] + (k === "fasan" ? 0.04 : 0.1), z1 = T[T.length - 1][0] - (k === "fasan" ? 0.06 : 0.12), P = [];
+    for (let i = 0; i <= 10; i++) { const z = lerp(z0, z1, i / 10); P.push([0, prof(T, z)[0] - (k === "fasan" ? 0.03 : k === "keiler" ? 0.1 : 0.075), z]); }
+    return SPINE[k] = { pts: P, r: k === "fasan" ? 0.012 : 0.034 };
+  }
+  /* Was der Schusskanal trifft: Liste in Reihenfolge des Durchschusses, v = lebenswichtig, b = Knochen */
+  function shotOrgans(k, lo, ld, zone) {
+    const L = [];
+    ORG[k].forEach(O => { const t = rayEll(lo, ld, O.c, O.r); if (t != null) L.push({ id: O.id, n: O.n, t, v: O.v || 0, b: O.b || 0 }); });
+    const Sp = spineOf(k); let ts = null; Sp.pts.forEach(q => { const t = raySphere(lo, ld, q, Sp.r); if (t != null && (ts == null || t < ts)) ts = t; });
+    if (ts != null) L.push({ id: "wirbel", n: "Wirbelsäule", t: ts, v: 2, b: 1 });
+    L.sort((a, c) => a.t - c.t);
+    const out = [], seen = new Set(), add = (id, n, v, b) => { if (!seen.has(n)) { seen.add(n); out.push({ id, n, v: v || 0, b: b || 0 }); } };
+    if (zone === "kopf") add("kopf", k === "fasan" ? "Kopf" : "Schädel und Gehirn", 2, 1);
+    else if (zone === "hals") add("hals", k === "fasan" ? "Hals" : "Träger: Halswirbel und Schlagader", 2, 1);
+    else if (zone === "lauf") add("lauf", "Laufknochen", 0, 1);
+    else {
+      add("decke", k === "fasan" ? "Federkleid und Muskel" : k === "keiler" ? "Schwarte und Muskel" : "Decke und Muskel");
+      L.forEach(o => add(o.id, o.n, o.v, o.b));
+      /* Bild und Wertung müssen übereinstimmen: die Wertung (zoneHit) entscheidet */
+      if (zone === "herz") add("herz", "Herz", 2);
+      if (zone === "lunge" && !out.some(o => /^lunge/.test(o.id))) add("lungeL", k === "fasan" ? "Lunge" : "Lungenflügel", 1);
+    }
+    return out;
+  }
+  const shotDamage = (zone, org) => ZONE[zone] && ZONE[zone].kill ? 100 : zone === "lauf" ? 20 : Math.min(85, 30 + (org.some(o => o.id === "leber") ? 30 : 0) + (org.some(o => /pansen|magen|darm/.test(o.id)) ? 15 : 0));
+  /* Geschoss: Geschwindigkeit und Energie am Ziel (11,7 g, einfache Abnahme über die Strecke) */
+  function shotRec(k, pose, o, d, h, dm, B) {
+    const s = pose.s || 1, lo = unrot([(o[0] - pose.x) / s, (o[1] - (pose.y || 0)) / s, (o[2] - pose.z) / s], pose.rx || 0, pose.ry || 0, pose.rz || 0), ld = v3n(unrot(d, pose.rx || 0, pose.ry || 0, pose.rz || 0));
+    const t = h.t / s, org = shotOrgans(k, lo, ld, h.zone), v = Math.round(V0 * Math.exp(-dm / 1150));
+    return { zone: h.zone, lo, ld, t, dm, org, dmg: shotDamage(h.zone, org), v, e: Math.round(0.5 * 0.0117 * v * v), tf: B.tf, drift: B.drift, wv: B.wv,
+      pose: { nrx: pose.nrx || 0, nry: pose.nry || 0, hrx: pose.hrx || 0, legs: (pose.legs || []).map(a => a.slice()) } };
+  }
+  /* ohne aufgezeichneten Strahl (alte Abläufe, Tests): Schuss von der Seite durch die Mitte der gewerteten Zone */
+  function shotRecDefault(A, zone, dm) {
+    const k = A.k, S0 = SP[k], c = zone === "herz" && S0.heart ? S0.heart.c : zone === "lunge" && S0.lung ? S0.lung.c : zone === "kopf" ? add3(S0.neckP, add3(S0.headP, S0.head.c)) : zone === "hals" ? add3(S0.neckP, [0, 0.1, 0.06]) : zone === "lauf" && S0.legs[0] ? add3(S0.legs[0].h, [0, -0.45, 0]) : S0.body.c;
+    const lo = [c[0] + 3, c[1] + 0.25, c[2] + 0.4], ld = v3n([-3, -0.25, -0.4]), org = shotOrgans(k, lo, ld, zone), v = Math.round(V0 * Math.exp(-(dm || 150) / 1150));
+    return { zone, lo, ld, t: 2.8, dm: dm || 0, org, dmg: shotDamage(zone, org), v, e: Math.round(0.5 * 0.0117 * v * v), tf: (dm || 150) / V0, drift: 0, wv: A.wv || 0,
+      pose: { nrx: A.neck ? A.neck.rx : 0, nry: A.neck ? A.neck.ry : 0, hrx: A.head && A.head !== A.neck ? A.head.rx : 0, legs: (A.legsA || []).map(a => a.slice(0, 2)) } };
+  }
+  /* ---- Zeichner ---- */
+  const XR = { R: null, cv: null, meshes: [], raf: 0, yaw: 0, pitch: 0.12, dist: 3, c: [0, 0.6, 0], i: 0, A: null, el: null };
+  const XC = { skin: [0.36, 0.66, 1, 0.86], bone: [0.86, 0.93, 1], org: [0.5, 0.72, 0.98], hit: [0.98, 0.3, 0.22], vit: [0.72, 0.8, 1], line: [1, 1, 1] };
+  function xrBuild(A, sh) {
+    const R = XR.R, k = A.k, S0 = SP[k], gn = A.gn, q = qS(A.score), P = sh.pose, mk = b => { const m = R.mesh(b); XR.meshes.push(m); return m; };
+    XR.meshes.forEach(m => R.free(m)); XR.meshes = []; R.nodes.length = 0;
+    const L = fn => mk(withLook(k, gn, fn)), nd = (m, o) => R.node(m, Object.assign({ shadow: false }, o));
+    /* Haut: durchscheinend, bläulich – in der Haltung des Einschlags (stehend, Tier schaut nach +z) */
+    const skin = nd(L(k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), { s: A.s, alpha: 0.24, tint: XC.skin });
+    const inner = nd(null, { s: A.s });
+    R.nodes.push(inner, skin);                                             /* erst das Innere (deckend), dann die Haut darüber */
+    const both = (o, meshFn) => [R.addChild(skin, nd(meshFn ? L(meshFn) : null, o)), R.addChild(inner, nd(null, o))];
+    const hitIds = new Set(sh.org.map(o => o.id));
+    const col = c => () => c.slice(0, 3), bone = (b, pts, r) => tube(b, pts, pts.map(() => r), pts.map(() => XC.bone), 6, { cap0: true });
+    /* Rumpf: Wirbelsäule, Rippen, Organe */
+    { const b = MB(), Sp = spineOf(k), T = TORSO_OF[k];
+      tube(b, Sp.pts, Sp.pts.map(() => Sp.r * 0.8), Sp.pts.map(() => hitIds.has("wirbel") ? XC.hit : XC.bone), 6, { cap0: true });
+      if (k !== "fasan") for (let i = 0; i < 9; i++) {                      /* Rippenbögen */
+        const z = lerp(S0.lung.c[2] + 0.17, S0.lung.c[2] - 0.2, i / 8), [top, bot, hw] = prof(T, z), yc = (top + bot) / 2, hy = (top - bot) / 2, sy = Sp.pts[0][1] - prof(T, Sp.pts[0][2])[0] + top;
+        [-1, 1].forEach(sd => bone(b, [0.15, 0.6, 1.1, 1.6, 2.05].map(a => [sd * Math.sin(a) * hw * 0.86, Math.min(sy, yc + Math.cos(a) * hy * 0.9), z - (a - 0.15) * 0.03]), 0.0085));
+      }
+      ORG[k].forEach(O => ell(b, O.c, O.r, col(hitIds.has(O.id) || (/^lunge/.test(O.id) && sh.zone === "lunge" && !sh.org.some(x => /^lunge/.test(x.id))) ? XC.hit : O.b ? XC.bone : O.v ? XC.vit : XC.org), 12, 8));
+      R.addChild(inner, nd(mk(b), {}));
+    }
+    /* Träger und Haupt */
+    const nk = both({ x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2], rx: P.nrx, ry: P.nry }, k === "hirsch" ? deerNeck : k === "keiler" ? () => boarHead(q, A.T.cm) : phHead);
+    { const b = MB(), hz = sh.zone === "hals", hk = sh.zone === "kopf";
+      if (k === "hirsch") {
+        bone(b, [[0, -0.16, -0.09], [0, 0.1, 0.0], [0, 0.3, 0.09], [0, 0.5, 0.19]].map(p => p), 0.03); if (hz) ell(b, [0, 0.2, 0.05], [0.04, 0.2, 0.05], col(XC.hit), 8, 6);
+        R.addChild(nk[1], nd(mk(b), {}));
+        const hd = both({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: P.hrx }, () => deerHead(A.T.P, q, A.vr || 0, antF(gn)));
+        [-1, 1].forEach(sg => R.addChild(hd[0], nd(L(() => deerEar(sg)), { x: sg * 0.075, y: 0.08, z: 0.02, rz: sg * 0.15 })));
+        const h = MB(); ell(h, [0, 0.0, 0.1], [0.06, 0.06, 0.11], col(hk ? XC.hit : XC.bone), 10, 7); ell(h, [0, -0.03, 0.3], [0.035, 0.035, 0.13], col(hk ? XC.hit : XC.bone), 8, 6);
+        R.addChild(hd[1], nd(mk(h), {}));
+      } else if (k === "keiler") {
+        b.at({ rx: 0.38 }, e => { ell(e, [0, 0.0, 0.0], [0.085, 0.085, 0.12], col(hk ? XC.hit : XC.bone), 10, 7); ell(e, [0, -0.02, 0.26], [0.045, 0.045, 0.2], col(hk ? XC.hit : XC.bone), 8, 6); });
+        if (hz) ell(b, [0, -0.04, -0.02], [0.09, 0.1, 0.1], col(XC.hit), 8, 6);
+        R.addChild(nk[1], nd(mk(b), {}));
+      } else {
+        bone(b, [[0, -0.04, -0.02], [0, 0.05, 0.012], [0, 0.14, 0.03]], 0.008); ell(b, [0, 0.153, 0.045], [0.024, 0.022, 0.032], col(hk ? XC.hit : hz ? XC.hit : XC.bone), 8, 6);
+        R.addChild(nk[1], nd(mk(b), {}));
+        [-1, 1].forEach(sg => R.addChild(skin, nd(L(phLeg), { x: sg * 0.036, y: 0.137, z: 0.01 })));
+      }
+    }
+    if (k === "hirsch") R.addChild(skin, nd(L(deerTail), { x: 0, y: 1.07, z: -0.578 }));
+    /* Läufe mit Knochen */
+    S0.legs.forEach((Lg, i) => {
+      const a = P.legs[i] || [0, 0], dm = legDim(k, Lg), f = !!Lg.f, lh = sh.zone === "lauf";
+      const up = both({ x: Lg.h[0], y: Lg.h[1], z: Lg.h[2], rx: a[0] }, k === "keiler" ? () => boarUpper(f) : () => deerUpper(f));
+      const lo = [R.addChild(up[0], nd(L(k === "keiler" ? boarLower : () => deerLower(f)), { y: -dm[0], z: dm[2], rx: a[1] || 0 })), R.addChild(up[1], nd(null, { y: -dm[0], z: dm[2], rx: a[1] || 0 }))];
+      const bu = MB(), bl = MB(), c = lh ? XC.hit : XC.bone, mid = f ? [0, -dm[0] * 0.5, -0.02] : [0, -dm[0] * 0.45, 0.035 + dm[2] * 0.3];
+      tube(bu, [[0, 0, 0], mid, [0, -dm[0], dm[2]]], [0.017, 0.015, 0.014], [c, c, c], 6, { cap0: true }); ell(bu, [0, -dm[0], dm[2]], [0.02, 0.02, 0.02], col(c), 6, 4);
+      tube(bl, [[0, 0, 0], [0, -dm[1] * 0.9, 0.012]], [0.012, 0.01], [c, c], 6, { cap0: true });
+      R.addChild(up[1], nd(mk(bu), {})); R.addChild(lo[1], nd(mk(bl), {}));
+    });
+    /* Schusskanal: Linie vom Schützen durch das Stück, Einschuss markiert */
+    { const b = MB(), at = u => [sh.lo[0] + sh.ld[0] * u, sh.lo[1] + sh.ld[1] * u, sh.lo[2] + sh.ld[2] * u], len = k === "fasan" ? 0.5 : 1.3, th = k === "fasan" ? 0.0035 : 0.007;
+      tube(b, [at(sh.t - len), at(sh.t), at(sh.t + len * 0.55)], [th, th, th * 0.8], [XC.line, XC.line, [1, 0.8, 0.7]], 6, { cap0: true });
+      ell(b, at(sh.t), [th * 3, th * 3, th * 3], col([1, 0.62, 0.2]), 8, 6);
+      R.addChild(inner, nd(mk(b), {}));
+    }
+    /* Kamera: von der Schützenseite, schräg – der Kanal läuft sichtbar durchs Bild; Abstand so, dass das Stück ins Hochformat passt */
+    const len = (k === "fasan" ? 0.75 : k === "keiler" ? 1.75 : 2.0) * A.s, hgt = (k === "fasan" ? 0.42 : k === "keiler" ? 0.95 : 1.9) * A.s;
+    XR.c = [0, hgt * (k === "hirsch" ? 0.48 : 0.5), (k === "fasan" ? -0.08 : 0.16) * A.s]; XR.len = len; XR.hgt = hgt;
+    XR.yaw = Math.atan2(-sh.ld[2], -sh.ld[0]) + (Math.abs(sh.ld[0]) > 0.5 ? (sh.ld[2] * sh.ld[0] > 0 ? -0.35 : 0.35) : 0); XR.pitch = 0.1; XR.zoom = 1;
+    /* nie genau in Schussrichtung schauen: mindestens gut 50° zur Längsachse des Stücks, damit Organe und Kanal nebeneinander liegen */
+    { const sd = Math.cos(XR.yaw) >= 0 ? 1 : -1, a = Math.atan2(Math.sin(XR.yaw), Math.abs(Math.cos(XR.yaw))); XR.yaw = sd > 0 ? clamp(a, -0.6, 0.6) : Math.PI - clamp(a, -0.6, 0.6); }
+  }
+  function xrLoop(now) {
+    if (!XR.cv || !XR.cv.isConnected || !XR.R) { XR.raf = 0; return; }
+    const R = XR.R, tv = Math.tan(0.6 / 2), asp = R.w / Math.max(1, R.h);
+    const vis = Math.abs(Math.sin(XR.yaw)) * XR.len + Math.abs(Math.cos(XR.yaw)) * XR.len * 0.42;      /* sichtbare Breite je nach Blickwinkel */
+    const dist = Math.max(vis / (2 * tv * asp), XR.hgt / (2 * tv)) * 1.06 * XR.zoom;
+    Object.assign(R.cam, { tx: XR.c[0], ty: XR.c[1], tz: XR.c[2], dist, yaw: XR.yaw, pitch: XR.pitch, fov: 0.6, near: 0.05, far: 60 });
+    R.render(now / 1000);
+    XR.raf = requestAnimationFrame(xrLoop);
+  }
+  const ZN = { herz: "Herz", lunge: "Lunge", hals: "Träger", kopf: "Haupt", koerper: "Weichschuss", lauf: "Lauf", vogel: "Körper" };
+  function xrPanelHTML(A) {
+    const sh = A.shots[XR.i], n = A.shots.length, gn = A.gn || {}, Z = ZONE[sh.zone] || ZONE.koerper, T = A.T;
+    const sex = A.k === "hirsch" ? "männlich (Hirsch)" : A.k === "keiler" ? "männlich (Keiler)" : "männlich (Hahn)";
+    const coat = (coatOf(A.k, gn.c) || [])[3] || "–", tmp = temperOf(gn).name, row = (a, b) => `<span><small>${a}</small><b>${b}</b></span>`;
+    const org = sh.org.map(o => `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}"><i></i>${esc(o.n)}${o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`).join("");
+    return `<div class="xr-hd"><b>Trefferbild</b><span>${esc(T.name)}</span><button class="xr-x" data-hu="xclose" aria-label="Trefferbild schließen">✕</button></div>
+      <div class="xr-nav"><button class="btn tiny ghost" data-hu="xprev"${n < 2 ? " disabled" : ""} aria-label="vorheriger Treffer">‹</button>
+        <div><b>Treffer ${XR.i + 1} von ${n}</b><small>${esc(Z.n)} · ${sh.dm || "?"} m</small></div>
+        <button class="btn tiny ghost" data-hu="xnext"${n < 2 ? " disabled" : ""} aria-label="nächster Treffer">›</button></div>
+      <div class="xr-dmg"><span>Wirkung</span><i style="--d:${sh.dmg}%"><b></b></i><em>${sh.dmg} %</em></div>
+      <ul class="xr-org">${org}</ul>
+      <div class="xr-sec">Schussbericht</div>
+      <div class="xr-grid">${row("Entfernung", (sh.dm || "?") + " m")}${row("Flugzeit", fnum(sh.tf || 0, 2) + " s")}${row("Auftreffen", sh.v + " m/s")}${row("Energie", sh.e.toLocaleString("de-DE") + " J")}${row("Wind", fnum(sh.wv || 0, 1) + " m/s")}${row("Abdrift", Math.round((sh.drift || 0) * 100) + " cm")}</div>
+      <div class="xr-sec">Stück</div>
+      <div class="xr-grid">${row("Geschlecht", sex)}${row("Gewicht", fkg(A))}${row("Decke", esc(coat))}${row("Wesen", esc(tmp))}${row("Trophäe", esc(T.troph))}${row("Güte", Math.round(A.score * 100) + (A.medal ? " · " + MEDALS[A.medal].n : ""))}</div>
+      <p class="xr-tip">↔ Wischen dreht das Stück · rot = getroffen</p>`;
+  }
+  function xrShow() {
+    const A = X && X.hrv && X.hrv.A; if (!A || typeof G3 === "undefined") return;
+    if (!A.shots || !A.shots.length) A.shots = [shotRecDefault(A, A.zone || "lunge", A.dm)];
+    if (!XR.el) {
+      XR.el = document.createElement("div"); XR.el.className = "hu-xr";
+      XR.el.innerHTML = `<div class="xr-view"><canvas class="xr-cv"></canvas></div><div class="xr-pan"></div>`;
+      XR.cv = XR.el.querySelector("canvas");
+      let P = null;
+      const v = XR.el.querySelector(".xr-view");
+      v.addEventListener("pointerdown", e => { P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { v.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } e.stopPropagation(); });
+      v.addEventListener("pointermove", e => { if (!P || P.id !== e.pointerId) return; XR.yaw -= (e.clientX - P.x) * 0.01; XR.pitch = clamp(XR.pitch + (e.clientY - P.y) * 0.006, -0.35, 1.2); P.x = e.clientX; P.y = e.clientY; e.stopPropagation(); });
+      const up = e => { if (P && P.id === e.pointerId) P = null; }; v.addEventListener("pointerup", up); v.addEventListener("pointercancel", up);
+      v.addEventListener("wheel", e => { e.preventDefault(); e.stopPropagation(); XR.zoom = clamp(XR.zoom * Math.exp(e.deltaY * 0.0012), 0.45, 1.6); }, { passive: false });
+      XR.el.addEventListener("pointerdown", e => e.stopPropagation());
+    }
+    X.ui.appendChild(XR.el);
+    try { if (!XR.R) { XR.R = G3.create(XR.cv, { shadowSize: 256, shadowBox: 3, maxDpr: 2 }); if (XR.R) { const E = XR.R.env; E.fogR = [400, 800]; E.sun = G3.norm([-0.3, 0.8, 0.5]); E.sunCol = [0.55, 0.6, 0.7]; E.sky = [0.5, 0.62, 0.8]; E.ground = [0.2, 0.26, 0.36]; } } } catch (e) { XR.R = null; }
+    XR.A = A; XR.i = clamp(XR.i || 0, 0, A.shots.length - 1);
+    if (A !== XR.last) { XR.i = Math.max(0, A.shots.map(s => !!(ZONE[s.zone] && ZONE[s.zone].kill)).lastIndexOf(true)); XR.last = A; }     /* zuerst der tödliche Treffer */
+    XR.el.classList.toggle("nogl", !XR.R);
+    xrGo(0); snd("swish");
+    X.ui.classList.add("xr-on");
+  }
+  function xrGo(d) {
+    const A = XR.A; if (!A) return;
+    XR.i = (XR.i + d + A.shots.length) % A.shots.length;
+    XR.el.querySelector(".xr-pan").innerHTML = xrPanelHTML(A);
+    if (XR.R) { xrBuild(A, A.shots[XR.i]); cancelAnimationFrame(XR.raf); XR.raf = requestAnimationFrame(xrLoop); }
+    if (d) snd("tap");
+  }
+  function xrHide() {
+    if (XR.el && XR.el.isConnected) XR.el.remove();
+    cancelAnimationFrame(XR.raf); XR.raf = 0; XR.A = null;
+    if (XR.R) { XR.meshes.forEach(m => XR.R.free(m)); XR.meshes = []; XR.R.nodes.length = 0; }
+    if (X && X.ui) X.ui.classList.remove("xr-on");
+  }
   /* ---------------------------- Trophäenwand (v120) ----------------------------
      Im Lager-Reiter „Trophäen“: jedes Stück einzeln als großes Bild (das echte 3D-Modell, von vorn), Name, Enden bzw. Länge,
      Medaille, Wert. Antippen öffnet die Nahansicht: das Präparat dreht sich langsam hin und her (eigener kleiner Zeichner,
@@ -3716,7 +3925,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _legDim: (k, L) => legDim(k, L), _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
+    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _xray: () => xrShow(), _xr: () => XR, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
