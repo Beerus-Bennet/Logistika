@@ -4,7 +4,7 @@ Basis main f0614dc (PR #68). Paralleler Jagd-PR #69 wird zusätzlich in diesen E
 
 staffwalk.js und staffgear.js vor staffseat.js/team.js einbinden und im SW cachen. worldSyncStaff baut Körper ohne starre Beine/Arme und hängt Laufgelenke an; die bestehende Werkzeughand bleibt. worldStep ruft STAFF_WALK und STAFF_GEAR nach PEOPLE_TRAFFIC auf. STAFF_SEAT blendet die Laufgelenke während Sitz-/Stehübergängen aus. Geometriecache in neuen Schlüsseln; kein persistierter Laufzustand.
 
-CAMP-LANES jetzt 0,9 Abstand, Tool-Z 4,5, Stand-Z 5,22; zwei notierte Werkbänke mit Mittelgang. Neue Routenstopps rack351/done351: Übergabe wartet auf tatsächliche Ankunft, hält während des Handgriffs die Routenzeit an und merkt den Abschluss. Bestehende Stopps bleiben lesbar. STAFF_GEAR verwendet das gehaltene Gerätemesh auch im Regal; keine Inventaränderung. Händevorgang und sitzende Personen sind bei der Abstandskorrektur ortsfest.
+CAMP-LANES jetzt 0,9 Abstand, Tool-Z 4,5, Stand-Z 5,22; zwei nummerierte Werkbänke mit Mittelgang. Neue Routenstopps rack351/done351: Übergabe wartet auf tatsächliche Ankunft, hält während des Handgriffs die Routenzeit an und merkt den Abschluss. Bestehende Stopps bleiben lesbar. STAFF_GEAR verwendet das gehaltene Gerätemesh auch im Regal; keine Inventaränderung. Händevorgang und sitzende Personen sind bei der Abstandskorrektur ortsfest.
 
 PEOPLE_TRAFFIC lässt die geplanten Camp-Wege in beide Richtungen zu und korrigiert verworfenen Routenfortschritt. staffFollow passiert höchstens eine Biegung pro Bild. staffRepath351 repariert alte Zaunquerungen ab tatsächlicher Position, erhält restliche Arbeitszeit und nutzt echte Tore.
 
