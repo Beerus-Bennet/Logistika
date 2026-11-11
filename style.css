@@ -4953,3 +4953,22 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
   #huntUI .hu-xr{flex-direction:row}
   #huntUI .hu-xr .xr-pan{max-height:none;width:min(400px,42%);border-top:0;border-left:2px solid #2c5a8a}
 }
+
+/* ===== v353: Jagd-Testbühne (index.html?test&jagd) und Farblegende im Trefferbild ===== */
+#jtPill{position:fixed;left:8px;top:42%;z-index:400;border:2px solid #0d1b2a;border-radius:999px;background:#fff7e6;color:#0d1b2a;font:800 13px/1 inherit;padding:8px 10px;box-shadow:0 3px 0 #0d1b2a}
+#jgTest{position:fixed;inset:0;z-index:401;display:none;align-items:flex-end;justify-content:center;background:rgba(6,13,24,.45)}
+#jgTest.on{display:flex}
+#jgTest .jt-sheet{width:min(520px,100%);max-height:80%;overflow-y:auto;background:#fff7e6;color:#0d1b2a;border:3px solid #0d1b2a;border-bottom:0;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+#jgTest .jt-head{display:flex;align-items:center;justify-content:space-between;font-size:17px}
+#jgTest .jt-x{width:40px;height:40px;border-radius:50%;border:2px solid #0d1b2a;background:#fff;font:800 20px/1 inherit}
+#jgTest .jt-note{margin:6px 0;font-size:12px;opacity:.75}
+#jgTest .jt-h{margin:10px 0 6px;font-size:13px;font-weight:800;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#jgTest .jt-d{border:2px solid #0d1b2a;border-radius:999px;background:#fff;font:800 12px/1 inherit;padding:5px 8px}
+#jgTest .jt-d.on{background:#2f6fed;color:#fff}
+#jgTest .jt-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+#jgTest .jt-row .btn{flex:1 1 auto;justify-content:center;min-height:44px;font-size:14px}
+#huntUI .hu-xr .xr-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 6px;font-size:12px;font-weight:700;opacity:.9}
+#huntUI .hu-xr .xr-leg span{display:flex;align-items:center;gap:5px}
+#huntUI .hu-xr .xr-leg i{width:10px;height:10px;border-radius:50%;flex:none}
+#huntUI .hu-xr .xr-leg i.b{background:#dbe9ff;border-radius:2px}
+#huntUI .hu-xr .xr-leg i.h{background:#fa4d38}

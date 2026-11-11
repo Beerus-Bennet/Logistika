@@ -18,9 +18,11 @@ test("Hirsch breitseits: Lunge, Herz, Weichschuss, Lauf, Kopf, vorbei", () => {
   assert.strictEqual(shoot(P0, 0.88, 0.28).zone, "herz");
   assert.strictEqual(shoot(P0, 0.98, -0.32).zone, "koerper");
   assert.strictEqual(shoot(P0, 0.3, 0.34).zone, "lauf");
-  const S0 = H.SP.hirsch, hp = H.rot([0, 0, 0.18], P0.hrx, 0, 0), np = H.rot([S0.headP[0] + hp[0], S0.headP[1] + hp[1], S0.headP[2] + hp[2]], P0.nrx, 0, 0);
-  const head = [0, S0.neckP[1] + np[1], S0.neckP[2] + np[2]];
+  /* v353: Kopfschuss nur durch den Hirnschädel; mitten durch den Äser (Kiefer) ist ein Streifschuss am Haupt – nicht tödlich */
+  const S0 = H.SP.hirsch, at = c => { const hp = H.rot(c, P0.hrx, 0, 0), np = H.rot([S0.headP[0] + hp[0], S0.headP[1] + hp[1], S0.headP[2] + hp[2]], P0.nrx, 0, 0); return [0, S0.neckP[1] + np[1], S0.neckP[2] + np[2]]; };
+  const head = at(S0.brain.c), snout = at([0, -0.03, 0.24]);
   assert.strictEqual(shoot(P0, head[1], head[2]).zone, "kopf");
+  assert.strictEqual(shoot(P0, snout[1], snout[2]).zone, "haupt"); assert.strictEqual(H.ZONE.haupt.kill, false);
   assert.strictEqual(shoot(P0, 2.4, 0), null);
   assert.strictEqual(shoot(P0, 0.98, 1.6), null);
 });
@@ -269,6 +271,22 @@ test("Trefferbild v350: Schusskanal nennt die getroffenen Organe, passt zur Wert
   assert.strictEqual(h2.zone, "lunge"); assert.ok(Math.abs(r2.lo[0] - 6) < 1e-6 && Math.abs(r2.lo[1] - 1.0) < 1e-6 && Math.abs(r2.ld[0] + 1) < 1e-6, "Strahl " + r2.lo + " " + r2.ld);
   /* jedes Organ liegt im Rumpf seiner Art */
   ["hirsch", "keiler", "fasan"].forEach(k => H4.ORG[k].forEach(O => { if (!O.b) assert.ok(H4._inTorso(k, O.c, 0) > 0, k + " " + O.id + " liegt im Rumpf"); }));
+});
+test("Streifschüsse v353: nur gut platzierte Schüsse erlegen – Rand der Decke, des Hauptes und der Organe zählt nicht", () => {
+  const Pk = { x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: -0.55, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] }, z = (k, p, y, zz) => { const r = H4.zoneHit(k, p, [6, y, zz], [-1, 0, 0]); return r && r.zone; };
+  /* Keiler: knapp unter dem Gebrech hindurch (der Fall aus dem Bild) – kein Kopfschuss mehr */
+  const S0 = H4.SP.keiler, hc = H4.rot(S0.head.c, Pk.nrx, 0, 0), hy = S0.neckP[1] + hc[1], hz = S0.neckP[2] + hc[2];
+  const low = z("keiler", Pk, hy - S0.head.r * 0.93, hz); assert.ok(low === "haupt" || low === null, "unter dem Gebrech: " + low);
+  assert.strictEqual(z("keiler", Pk, hy, hz + 0.05), "haupt", "mitten durchs Gebrech ist kein Kopfschuss");
+  const bc = H4.rot(S0.brain.c, Pk.nrx, 0, 0); assert.ok(["kopf", "hals"].includes(z("keiler", Pk, S0.neckP[1] + bc[1], S0.neckP[2] + bc[2])), "Hirnschädel bleibt tödlich");
+  /* Rand der Decke: Streifschuss; Mitte: Weichschuss */
+  const B = H4.SP.hirsch.body, Ph = Object.assign({}, Pk, { nrx: -0.35 });
+  assert.strictEqual(z("hirsch", Ph, B.c[1] + B.r[1] * 0.985, 0), "streif"); assert.strictEqual(z("hirsch", Ph, B.c[1], -0.3), "koerper");
+  /* Rand der Lunge zählt nicht als Lungenschuss, die Mitte schon */
+  const Lg = H4.SP.hirsch.lung; assert.strictEqual(z("hirsch", Ph, Lg.c[1], Lg.c[2]), "lunge"); assert.notStrictEqual(z("hirsch", Ph, Lg.c[1] + Lg.r * 0.97, Lg.c[2] - Lg.r * 0.1), "lunge");
+  /* Fasan: Federkleid gestreift erlegt nicht, Körpermitte schon */
+  const Bf = H4.SP.fasan.body; assert.strictEqual(z("fasan", Pk, Bf.c[1], Bf.c[2]), "vogel"); assert.strictEqual(z("fasan", Pk, Bf.c[1] + Bf.r[1] * 0.985, Bf.c[2]), "streif");
+  assert.strictEqual(H4.ZONE.streif.kill, false);
 });
 test("Geweih v262: Name und Modell zählen dieselben Enden (auch ungerade, doppelte Augsprosse, abnorme Sprosse)", () => {
   const Fs = [{}, { extra: -1 }, { extra: 1 }, { aug: -1 }, { aug: 1 }, { abn: -1 }, { abn: 1 }];

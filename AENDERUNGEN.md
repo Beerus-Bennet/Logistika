@@ -1,5 +1,17 @@
 # Änderungen – kurz für den Kollegen
 
+## v353 – Jagd: Testbühne, Streifschüsse nicht mehr tödlich, Organe im Trefferbild deutlicher (lokal, noch nicht hochgeladen)
+**Wunsch Bennet:** Vorerst nichts pushen, Aufträge aufeinander aufbauen. Eine Testmöglichkeit für den Jagdposten ohne Bezug zum echten Spielstand mit viel Wild. Erster Auftrag: (1) Organe im Trefferbild deutlicher, Anatomie prüfen (Bild: Fasan). (2) Ein Schuss, der wie ein Streifschuss unter dem Haupt des Keilers hindurchgeht, darf nicht tödlich sein – nur gut platzierte Schüsse erlegen.
+
+**Ursache (`hunt.js`):** (1) Alle Organe waren gleich blau und beim Fasan nur vier grobe Kugeln. (2) Die Kopfzone war eine Kugel (Radius 0,14) um Gesicht und Kiefer; jede Berührung zählte als Kopfschuss – auch am unteren Rand unter dem Gebrech. Der Hirnschädel selbst lag gar nicht in dieser Kugel. Herz, Lunge und Rumpf zählten ebenfalls schon bei der kleinsten Berührung.
+
+**Lösung:**
+- **Testbühne `index.html?test&jagd` (`jagdtest.js`, nur Testmodus, eigener Spielstand `logistika.test.v3`):** Hochsitz sofort betreten (Spiel wird bei Bedarf gegründet), Wild auf 40/60/100/160 m stellen (3 Hirsche, 3 Keiler, 4 Fasane, 9 gemischt, Fasan im Flug), Wild ruhig halten, Bestand bleibt gefüllt, Mittag/Abend/Nacht, Wild entfernen. Wertung, Medaillen und Trefferbild sind die echten.
+- **Wertung:** `ellDepth` misst, wie tief der Strahl durch eine Zone geht (0 = Rand, 1 = Mitte), Schwellen in `GRAZE`. Kopfschuss nur noch durch den Hirnschädel (`SP.*.brain`, eigene Trefferfläche); Gesicht/Kiefer/Gebrech = neue Zone `haupt` („Streifschuss am Haupt“, nicht tödlich). Herz/Lunge zählen erst ab 35 % Tiefe; nur am Rand der Decke entlang = neue Zone `streif` (nicht tödlich). Fasan: Federkleid gestreift erlegt nicht mehr. Träger/Stich (v265) bleiben wie sie sind.
+- **Organe:** eigene Farbe je Organart (`OC`) mit Legende, getroffen = Rot. Neu: Nieren, Luftröhre; Fasan nach Vogelanatomie – Kropf, zwei Lungen am Rücken, Herz hinter dem Brustbein, zwei Leberlappen, Muskelmagen, Gescheide, Nieren, Brustbein mit Kiel, Rippen, Oberschenkel- und Flügelknochen.
+
+**Geprüft:** Unit-Tests `hunt.test.js` 23 bestanden (neu: Streifschüsse; Kopfschuss-Test auf Hirnschädel umgestellt), dazu `hunt-v283`, `hunt-v307`, `hunt-thighs-v290`, `hunt-presentation-v315`, `trophy-layout-v310`, `trophy-exhibits-v328`. Testbrowser (390 × 844): Testbühne startet, legt nur `logistika.test.v3` an, Hochsitz betreten, 9 Stück Wild auf 60–78 m, Fasan erlegt, Trefferbild mit farbigen Organen und Legende, keine Konsolenfehler. **Nicht geprüft:** am Handy; echter Schuss durchs Zielfernrohr (im Test über dieselben Funktionen gesetzt); Träger-Streifschüsse sind weiter tödlich (Wunsch aus v265) – bei Bedarf nachziehen.
+
 ## v352 – Hochsitz: Himmel hängt fest an einer Himmelskugel (keine Wolkenverzerrung beim Kopfbewegen)
 **Meldung Bennet (Video, Abendhimmel):** Beim Bewegen des Kopfes verzerren sich die Wolken, und der Himmel verändert sich.
 
