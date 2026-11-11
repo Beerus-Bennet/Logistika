@@ -1,6 +1,6 @@
 # Änderungen – kurz für den Kollegen
 
-## v351 – Hochsitz: Himmel hängt fest an einer Himmelskugel (keine Wolkenverzerrung beim Kopfbewegen)
+## v352 – Hochsitz: Himmel hängt fest an einer Himmelskugel (keine Wolkenverzerrung beim Kopfbewegen)
 **Meldung Bennet (Video, Abendhimmel):** Beim Bewegen des Kopfes verzerren sich die Wolken, und der Himmel verändert sich.
 
 **Ursache (`vista.js`):** (1) Seit v342 wurde die Breite einer Wolke zwischen zwei projizierten Randpunkten gemessen. Diese Strecke wächst zum Bildrand hin und ändert sich beim Neigen – die langen Abendbänder dehnten und stauchten sich bei jeder Kopfbewegung. (2) Sterne, Sonne, Mond und Sternschnuppen lagen noch über die alte Näherung `hy − f·tan(e)` und verschoben sich gegen die Wolken. (3) Der Farbverlauf des Himmels hing am Bildschirm (feste Pixelhöhe über dem Horizont) statt am Himmel.
@@ -8,6 +8,19 @@
 **Lösung:** Eine gemeinsame Funktion `sky(a, e)` legt jeden Himmelspunkt über die echte Kameraprojektion fest; Wolken, Sterne, Sonne, Mond und Sternschnuppen nutzen sie. Wolken haben eine feste Größe (Winkelbreite × Brennweite) – nur ihre Mitte wandert. Die Oberkante des Farbverlaufs liegt dort, wo die Himmelshöhe 0,97 rad wirklich im Bild steht. Farben, Verteilung, Drift und Wetter unverändert; die nicht mehr genutzte Näherung `yOf` ist entfernt.
 
 **Geprüft (Testbrowser, 390 × 700, Abend 20:50):** fünf Blickrichtungen (geradeaus, hoch, weit hoch, links, rechts) – Wolken gleich groß und gleich geformt, Sterne bleiben an ihrem Platz zu den Wolken, keine Konsolenfehler; Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy; als Bewegung (nur Standbilder); die Milchstraße nutzt weiter ihre Spaltennäherung und kann bei starkem Neigen leicht gegen die Sterne wandern.
+## v351 – Laufbewegung, Werkzeugstation und freie Rückwege
+
+Hofarbeiter erhalten gegliederte Ober-/Unterschenkel, waagerechte Sohlen und gegenläufige Armbewegungen. Die Schritte richten sich nach der tatsächlich zurückgelegten Strecke nach der gemeinsamen Kollisionsprüfung. Beim Warten endet der Schritt; getragene Geräte begrenzen das Pendeln des rechten Arms. Sitz- und Laufgelenke werden gegenseitig ausgeblendet. Größe, Kleidung, Werkzeuge und Arbeitsfunktionen bleiben erhalten.
+
+Zwei seitliche Werkzeugregale ersetzen die Plane vor dem Lagerfeuer. Jede Person hat ein eigenes Fach und einen körperbreiten Bedienplatz. Fußhalter und Aussparungen nehmen lange Stiele/Ruten auf; Kisten, Taschen und Kleinteile liegen erhöht auf Ablagen. Beim Einräumen und Abholen wird dieselbe Gerätemesh zwischen Hand und Fach bewegt; der Arm greift dazu. Der Vorgang beginnt erst am Fach und dauert auch bei schneller Uhr sichtbar rund 1,8 Sekunden. Neue Stopps speichern ihr Abschlussmerkmal, damit Laden keine fertige Übergabe erneut startet. Bestehende Wege werden toleriert; der nächste Gang nutzt die neuen Fächer. Keine neue Inventar- oder Geldbuchung.
+
+Ursache des Hängenbleibens nach der Mittagspause: Die gemeinsame Kollisionsprüfung ließ nur den Hinweg durch die A*-Sperre des Lagerfeuerplatzes zu. Nun ist auch der ausdrücklich geplante Rückweg frei. Figuren folgen jeder Wegbiegung; verworfene Schritte treiben den Routenzeiger nicht weiter. Ein alter, direkt durch einen Zaun führender Weg wird ab der tatsächlichen Position durch ein gültiges Tor neu geplant. Verbleibende Arbeitszeit bleibt erhalten, kein Versetzen durch den Zaun.
+
+Bewohnerfahrräder stehen längs zum Grundstückszaun auf eigenen gepflasterten Stellflächen mit Anlehnbügeln. Vor der Toröffnung wird das ganze Rad ausgerichtet; im engen Durchgang führt die Person es näher am Körper und leicht versetzt. Richtungswechsel erfolgen erst außerhalb der Pfosten. Parkende Räder werden nicht mehr aus einem früheren Bewegungszustand quer durch den Zaun geglättet. Alte Bewohnerabläufe enden ohne doppelte Verkäufe; Verträge, Ware und Erlöse bleiben erhalten.
+
+Geprüft: zehn neue Bewegungs-/Regal-/Fahrradgruppen, zehn Lagerfeuer-, zehn Hofteam-/Sitz-, acht Verkehrs- und 13 Bewohnergruppen; Syntax und Diff. Chromium mit kontrollierten Bewegungsschritten: alle neun echten Figuren, Werkzeugablage und Rücknahme, gleiche Gerätemeshes, wechselnde Beinschritte und Arme, Regale bei 390/1280 Pixeln; alle neun Rückwege in der vollständigen Wald-/Hofszene ohne Zaunüberschreitung bis zum Ziel, Fahrradstellplätze mit ganzer Radlänge frei. Nach Integration des Jagd-Stands außerdem hunt.test (22), hunt-v283, hunt-v307, hunt-thighs-v290, hunt-presentation-v315, trophy-layout-v310 und trophy-exhibits-v328 bestanden. Kein Test auf echtem iPhone/Safari und keine Aussage zur Bildrate auf dem Handy.
+
+Parallelen Jagd-PR #69 (v350) vor dem Upload geprüft und als eigenen Commit-Stand integriert; seine Dokumentation und Änderungen bleiben erhalten. Kein automatischer Merge auf main und keine Live-Veröffentlichung.
 
 ## v350 – Jagd: Trefferbild (Röntgen mit Schusskanal), abwechslungsreiche Liegeformen, realistischere Tiere
 **Wunsch Bennet:** Erlegte Tiere liegen immer gleich da. Mehr von „theHunter: Call of the Wild“: die Ansicht mit dem Kugelverlauf durch die Organe, beim Betrachten des erlegten Stücks wählbar, im Hochformat, mit Durchschalten der Treffer, getroffenen Organen/Knochen, Wirkung, Schussbericht und Tierdetails. Die Tiere sollen näher an der Wirklichkeit sein, besonders Ohren und Schenkel, und insgesamt besser werden.

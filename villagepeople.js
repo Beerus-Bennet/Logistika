@@ -12,7 +12,7 @@ const VILLAGE_PEOPLE = (() => {
   const move=(kind,pts)=>({kind,pts,duration:Math.max(.2,len(pts)/speed[kind])});
   const wait=(kind,pt,duration,ry=0)=>({kind,pts:[pt,pt],duration,ry});
   function access(p){const d=VILLAGE.door(p),g=VILLAGE_SITE.gate(p),m=VILLAGE_SITE.mailbox(p),park=VILLAGE_SITE.bikePark(p),side=p.road+p.side*VILLAGE_SITE.sidewalk;
-    return {d,g,m,park,stand:[park[0],park[1]+.36*SCALE],side,mail:[p.road+p.side*1.48,m[1]+p.side*.26],mount:[p.road+.42,g[1]],back:[p.road-.42,g[1]]};}
+    return {d,g,m,park,stand:[park[0]+p.side*.48*SCALE,park[1]-.22*SCALE],side,mail:[p.road+p.side*1.48,m[1]+p.side*.26],mount:[p.road+.42,g[1]],back:[p.road-.42,g[1]]};}
   function marketPlan(p,market){
     if(market&&!farmAreaOpen('see'))return null;const o=stallObj(market);if(!o)return null;
     const c=farmCenter(o),sz=farmSize(o),ry=farmRotation(o)*Math.PI/2,forward=[Math.sin(ry),Math.cos(ry)],right=[Math.cos(ry),-Math.sin(ry)],dist=Math.abs(forward[0])*sz[0]/2+Math.abs(forward[1])*sz[1]/2+.75;
@@ -50,12 +50,14 @@ const VILLAGE_PEOPLE = (() => {
     }else{
       trip=marketPlan(p,!!market);if(!trip)return false;
       const out=rounded([A.mount,[p.road+.42,20.1],[p.road+.7,18.92],[5,18.92],...trip.path.slice(1)]),back=rounded([...trip.path].reverse().concat([[5,18.08],[p.road-.7,18.08],[p.road-.42,20.1],A.back]));
-      const exit=[A.park,[A.g[0]+p.side*.8,A.park[1]],[A.g[0]+p.side*.8,A.g[1]],A.g,[A.side,A.g[1]],A.mount],entry=[A.back,[A.side,A.g[1]],A.g,[A.park[0]+p.side*.8,A.g[1]],[A.park[0]+p.side*.8,A.park[1]],A.park];
+      /* v351: Vor dem Tor gerade ausrichten; erst drehen, wenn auch das
+         Hinterrad vollständig durch die Öffnung ist. */
+      const inside=[A.g[0]+p.side*1.5,A.g[1]],exit=[A.park,[A.park[0],A.g[1]],inside,A.g,A.mount],entry=[A.back,A.g,inside,[A.park[0],A.g[1]],A.park];
       const walkToBike=[A.d,[A.park[0]+p.side*1.55,A.d[1]],[A.park[0]+p.side*1.55,A.stand[1]],A.stand];
-      steps=[move('walk',walkToBike),wait('unlock',A.stand,1.2,Math.PI),move('push',exit),wait('look',A.mount,1.1,Math.PI),wait('mount',A.mount,2.4,Math.PI),move('ride',out),wait('dismount',trip.parking,2.4,trip.parkYaw),move('walk',trip.walk),wait('buy',trip.counter,7,trip.ry),move('walk',trip.walk.slice().reverse()),wait('mount',trip.parking,2.4,trip.parkYaw),move('ride',back),wait('dismount',A.back,2.4,0),move('push',entry),wait('lock',A.stand,1.2,Math.PI),move('walk',walkToBike.slice().reverse())];life.shopDay=day;
+      steps=[move('walk',walkToBike),wait('unlock',A.stand,1.2,-p.side*Math.PI/2),move('push',exit),wait('look',A.mount,1.1,Math.PI),wait('mount',A.mount,2.4,Math.PI),move('ride',out),wait('dismount',trip.parking,2.4,trip.parkYaw),move('walk',trip.walk),wait('buy',trip.counter,7,trip.ry),move('walk',trip.walk.slice().reverse()),wait('mount',trip.parking,2.4,trip.parkYaw),move('ride',back),wait('dismount',A.back,2.4,0),move('push',entry),wait('lock',A.stand,1.2,-p.side*Math.PI/2),move('walk',walkToBike.slice().reverse())];life.shopDay=day;
     }
     for(const s of steps){if(['walk','push'].includes(s.kind)){const route=VILLAGE_SITE.safePath(s.pts);if(!route){W.lastBlocked={kind:s.kind,pts:s.pts};return false;}s.pts=route;s.duration=Math.max(.2,len(route)/speed[s.kind]);}}
-    life.active={v:345,kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
+    life.active={v:351,kind,at:S.time,index:0,steps,trip,bought:false,attempted:false,day};return true;
   }
   function buy(h,L){if(L.attempted)return;L.attempted=true;const M=L.trip;if(!M||!stallObj(M.market)||stallObj(M.market).id!==M.oid||M.market&&!farmAreaOpen('see'))return;
     const at=farmCenter(stallObj(M.market));if(M.center&&Math.hypot(at[0]-M.center[0],at[1]-M.center[1])>.1)return;
@@ -65,7 +67,8 @@ const VILLAGE_PEOPLE = (() => {
   }
   function tick(){if(!farmOn())return;const T=VILLAGE.state(),day=Math.floor(S.time/DAY),m=S.time%DAY;
     for(const p of VILLAGE_DATA.plots){const h=T.homes[p.id];if(!h.resident)continue;const life=h.life||(h.life={});let L=life.active;
-      if(L&&L.v!==345){life.active=null;L=null;}
+      /* v351: Alte Wege beenden, ohne einen bereits getätigten Einkauf erneut zu buchen. */
+      if(L&&L.v!==351){life.active=null;L=null;}
       if(L&&(L.blocked||L.trafficWait)){L.at+=Math.max(0,S.time-(L.lastTime??S.time));L.lastTime=S.time;continue;}if(L)L.lastTime=S.time;
       if(L){let n=0;while(L&&n++<32){const step=L.steps[L.index],end=L.at+step.duration;if(S.time<end)break;
           /* Am Markt erst zum Tresen gehen, wenn der vorherige Kunde Platz macht. */
@@ -118,7 +121,7 @@ const VILLAGE_PEOPLE = (() => {
   function ridePose(e,phase){e.hip.rx=.17;e.arms.forEach(a=>{a.upper.rx=-.95;a.lower.rx=-.75;});e.legs.forEach((l,i)=>{const t=phase+i*Math.PI;legIK(l,.3+.11*Math.cos(t)-.56,-.06+.11*Math.sin(t)+.22);l.thigh.rz=(i?-1:1)*.19;l.foot.rz=-l.thigh.rz;});}
   function step(dt,time){if(!W.R||!farmOn())return;tick();sync();
     for(const {p,h}of VILLAGE.residents()){const e=W.actors.get(p.id),A=access(p),L=h.life&&h.life.active,n=e.node,b=e.bike;
-      b.x=A.park[0];b.z=A.park[1];b.y=.04;b.ry=p.ry;b.rz=.10;b.visible=!VILLAGE.obstruction(p);n.visible=!!L&&b.visible;if(!L)e.prevN=null;
+      b.x=A.park[0];b.z=A.park[1];b.y=.04;b.ry=0;b.rz=.08;b.visible=!VILLAGE.obstruction(p);n.visible=!!L&&b.visible;if(!L)e.prevN=null;
       e.paper.visible=e.bag.visible=e.basketBag.visible=false;if(!L)continue;
       const q=sample(L),stage=q.kind,moving=['walk','push','ride'].includes(stage),phase=q.distance/1.05*Math.PI*2;
       n.x=q.x;n.z=q.z;n.y=.04+(moving&&stage!=='ride'?Math.abs(Math.sin(phase))*.045:0);n.ry=q.ry;n.rx=n.rz=e.hip.rx=0;
@@ -143,9 +146,18 @@ const VILLAGE_PEOPLE = (() => {
       if(L.bought){e.basketBag.visible=['ride','push','look','mount','dismount','lock'].includes(stage);e.bag.visible=!e.basketBag.visible;}
       /* Übergänge und Lenken glätten; Fahrer und Rad bleiben dabei verbunden. */
       const turn=(a,c)=>((c-a+Math.PI*3)%(Math.PI*2))-Math.PI,k=Math.min(1,dt*9),pb=e.prevB;
-      if(pb&&Math.hypot(pb.x-b.x,pb.z-b.z)<8){const bx=b.x,bz=b.z,br=b.ry,dr=turn(br,pb.ry)*(1-k);b.x=pb.x+(b.x-pb.x)*k;b.z=pb.z+(b.z-pb.z)*k;b.ry=br+dr;
+      if(bikeAction&&pb&&Math.hypot(pb.x-b.x,pb.z-b.z)<8){const bx=b.x,bz=b.z,br=b.ry,dr=turn(br,pb.ry)*(1-k);b.x=pb.x+(b.x-pb.x)*k;b.z=pb.z+(b.z-pb.z)*k;b.ry=br+dr;
         if(bikeAction){const x=n.x-bx,z=n.z-bz;n.x=b.x+x*Math.cos(dr)+z*Math.sin(dr);n.z=b.z-x*Math.sin(dr)+z*Math.cos(dr);n.ry=b.ry;}}
       const pn=e.prevN;if(!bikeAction&&pn&&Math.hypot(pn.x-n.x,pn.z-n.z)<3){n.x=pn.x+(n.x-pn.x)*k;n.z=pn.z+(n.z-pn.z)*k;n.ry=pn.ry+turn(pn.ry,n.ry)*k;}
+      /* v351: Das lange Rad bleibt im schmalen Tor quer zur Zaunlinie.
+         Die Drehung erfolgt erst im freien Vorraum, nicht zwischen den Pfosten. */
+      if(stage==='push'&&Math.abs(b.x-A.g[0])<1.6&&Math.abs(b.z-A.g[1])<.4){
+        const yaw=(L.index===2?-p.side:p.side)*Math.PI/2,k=smooth((1.6-Math.abs(b.x-A.g[0]))/.6),side=p.side*(.36*SCALE+(.33-.36*SCALE)*k),back=-.15*k;
+        /* Beide passen gemeinsam durchs Tor: das Rad leicht versetzt führen,
+           dabei näher am Rahmen und einen halben Schritt dahinter gehen. */
+        b.ry=yaw;b.z=A.g[1]+Math.sin(yaw)*p.side*.10*k;
+        n.x=b.x+Math.cos(yaw)*side+Math.sin(yaw)*back;n.z=b.z-Math.sin(yaw)*side+Math.cos(yaw)*back;n.ry=yaw;
+      }
       L.blocked=false;if(VILLAGE_SITE.blocked(n.x,n.z)){L.blocked=true;n.visible=false;if(e.prevN&&!VILLAGE_SITE.blocked(e.prevN.x,e.prevN.z)){n.x=e.prevN.x;n.z=e.prevN.z;n.visible=true;}}
       else if(e.prevN&&!VILLAGE_SITE.clearLine([e.prevN.x,e.prevN.z],[n.x,n.z])){L.blocked=true;n.x=e.prevN.x;n.z=e.prevN.z;}
       e.prevB={x:b.x,z:b.z,ry:b.ry};e.prevN={x:n.x,z:n.z,ry:n.ry};

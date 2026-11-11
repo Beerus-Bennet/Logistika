@@ -28,7 +28,7 @@ const VILLAGE_VIEW = (() => {
     if(!W.R||!farmOn())return;const T=VILLAGE.state();W.extension.visible=T.expanded;W.road.visible=!T.expanded;
     for(const p of D.plots){const h=T.homes[p.id];let e=W.homes.get(p.id);
       if(!e){
-        e={garden:add(fmesh("village-garden343:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
+        e={garden:add(fmesh("village-garden351:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
       const blocked=!!VILLAGE.obstruction(p),built=!!h.resident||h.status==="ready";
       e.marker.visible=!p.starter&&T.expanded&&!built;
       e.site.mesh=fmesh("village-site344:"+(h.type||"holz"),()=>VILLAGE_SITE.construction(h.type||"holz"));
@@ -37,7 +37,7 @@ const VILLAGE_VIEW = (() => {
       if((built||h.status==="building")&&e.type!==h.type){
         for(const n of [e.house,e.lit])if(n){const i=W.R.nodes.indexOf(n);if(i>=0)W.R.nodes.splice(i,1);}
         const k=D.houses[h.type],style=Number(p.id)%3;
-        e.garden.mesh=fmesh("village-garden343:"+p.id+":"+h.type,()=>garden(p));
+        e.garden.mesh=fmesh("village-garden351:"+p.id+":"+h.type,()=>garden(p));
         e.house=add(fmesh("village-house344:"+h.type+":"+style,()=>VILLAGE_SITE.homeMesh(h.type,style)),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:built&&!blocked});
         e.lit=add(fmesh("village-light340",()=>RENT.homeLights()),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:false,shadow:false,glow:.55});e.type=h.type;
       }

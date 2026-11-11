@@ -297,7 +297,7 @@ const VISTA = (() => {
     const X = ctx;
     X.setTransform(1, 0, 0, 1, 0, 0);
     /* Himmel */
-    /* v351: Oberkante des Verlaufs dort, wo die Himmelshöhe 0,97 rad (tan = 1,45) wirklich im Bild liegt – der Farbverlauf hängt am Himmel,
+    /* v352: Oberkante des Verlaufs dort, wo die Himmelshöhe 0,97 rad (tan = 1,45) wirklich im Bild liegt – der Farbverlauf hängt am Himmel,
        nicht am Bildschirm; vorher verschob er sich beim Hoch- und Runterschauen gegen Horizont und Wolken. */
     const tq = R.project(eye[0] + Math.cos(fwd) * Math.cos(0.97) * S0, eye[1] + Math.sin(0.97) * S0, eye[2] + Math.sin(fwd) * Math.cos(0.97) * S0);
     const top = tq && tq[1] * sc < hy - 4 ? tq[1] * sc : hy - fs * 1.45, g = X.createLinearGradient(0, top, 0, hy + 2);
@@ -306,7 +306,7 @@ const VISTA = (() => {
     if (top > 0) { X.fillStyle = rgb(P.zen); X.fillRect(0, 0, cw, Math.max(0, top)); }
     /* Hilfsfunktionen: Richtung → Bildposition */
     const sx = a => { const q = R.project(eye[0] + Math.cos(a) * S0, eye[1], eye[2] + Math.sin(a) * S0); return q ? q[0] * sc : null; };
-    /* v351: Punkt am Himmel (Azimut a, Höhe e) über die echte Kameraprojektion. Sterne, Sonne, Mond und Wolken hängen damit an derselben
+    /* v352: Punkt am Himmel (Azimut a, Höhe e) über die echte Kameraprojektion. Sterne, Sonne, Mond und Wolken hängen damit an derselben
        Himmelskugel – vorher lagen Sterne/Sonne/Mond über die Näherung hy − f·tan(e) und verschoben sich beim Kopfbewegen gegen die Wolken. */
     const sky = (a, e) => { const ce = Math.cos(e), q = R.project(eye[0] + Math.cos(a) * ce * S0, eye[1] + Math.sin(e) * S0, eye[2] + Math.sin(a) * ce * S0); return q ? [q[0] * sc, q[1] * sc] : null; };
     const night = clamp((sunEl(h) < 0 ? -sunEl(h) : 0) * 7, 0, 1) * (h > 12 || h < 6 ? 1 : 0);
@@ -434,7 +434,7 @@ const VISTA = (() => {
     const cloud = (id, a, e, w, hgt, band) => {
       const d = angN(a - fwd);
       if (Math.abs(d) > halfH + 0.5) return;
-      /* v351: feste Größe je Wolke (Winkelbreite × Brennweite). v342 maß die Breite zwischen zwei projizierten Randpunkten – die wächst zum
+      /* v352: feste Größe je Wolke (Winkelbreite × Brennweite). v342 maß die Breite zwischen zwei projizierten Randpunkten – die wächst zum
          Bildrand und beim Neigen (die langen Abendbänder dehnten und stauchten sich beim Kopfbewegen). Jetzt wandert nur noch die Mitte. */
       const q = sky(a, e);
       if (!q) return;
