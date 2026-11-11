@@ -1,3 +1,9 @@
+## v348 – Haifisch-Inszenierung nach erfolgreicher Übernahme
+
+Basis main f8c8dfe (PR #66). Neue corpshark.js direkt nach corp.js einbinden und im SW cachen. corpOffer gibt optional Audio beim bestätigenden Klick frei; corpShow leitet nur win zunächst an CORP_SHARK.open und danach über eine Ereigniskopie mit sharkShown zur bestehenden Zeitung. Kennung ist kein gespeichertes Spielfeld. Derselbe Dialogname corpShow schützt weiter vor konkurrierenden Meldungen. Kauf und Speicherung bleiben in corpClose.
+
+Animation ist reine DOM/SVG-Darstellung ohne Pakete oder neue Bilddateien. Eigene CSS-Blöcke am Dateiende; übrige Zeitungsansichten bleiben bestehen. Gemeinsamer farmAC, eigene Quellen rechtzeitig beenden; Ton aus bleibt aus. Reduzierte Bewegung, Tastaturfokus und einmaliger Übergang gehören gemeinsam zum Ablauf. Neue SW-Version 348 und Verweise für corp/corpshark/style zusammen übernehmen. Vor/nach Push main und alle offenen PRs prüfen; kein automatischer Merge oder Live-Deployment.
+
 ## v347 – Platzierungshilfe für Felder/Bäume; Sammelabbruch als Warteschlangenkachel
 
 Basis main 9b7d0ac, neuer lokaler Entwurf. `farmSuggestedSpot` in farm.js ist eine reine Vorschlagssuche, verwendet farmFits und verändert weder Objekte noch Geld. farmview.js nutzt sie beim Neukauf und beim nächsten Feld; explizite Koordinaten und Verschieben behalten Vorrang. „Alle abbrechen“ erhält zusätzlich fq-s; abschließender CSS-Block gleicht Desktop-/Mobilmaße und Rahmen an die übrigen Plätze an. Rückfrage, Abbruch und Erstattung bleiben gleich. Geänderte Cache-Verweise farm/farmview/style und SW-Version 347 gemeinsam übernehmen. Tests: placement-v347.test.js. Vor/nach dem Upload main und alle offenen PRs abgleichen. Kein automatischer Merge und kein Live-Deployment.
