@@ -297,18 +297,23 @@ const VISTA = (() => {
     const X = ctx;
     X.setTransform(1, 0, 0, 1, 0, 0);
     /* Himmel */
-    const top = hy - fs * 1.45, g = X.createLinearGradient(0, top, 0, hy + 2);
+    /* v352: Oberkante des Verlaufs dort, wo die Himmelshöhe 0,97 rad (tan = 1,45) wirklich im Bild liegt – der Farbverlauf hängt am Himmel,
+       nicht am Bildschirm; vorher verschob er sich beim Hoch- und Runterschauen gegen Horizont und Wolken. */
+    const tq = R.project(eye[0] + Math.cos(fwd) * Math.cos(0.97) * S0, eye[1] + Math.sin(0.97) * S0, eye[2] + Math.sin(fwd) * Math.cos(0.97) * S0);
+    const top = tq && tq[1] * sc < hy - 4 ? tq[1] * sc : hy - fs * 1.45, g = X.createLinearGradient(0, top, 0, hy + 2);
     g.addColorStop(0, rgb(P.zen)); g.addColorStop(0.62, rgb(P.mid)); g.addColorStop(1, rgb(P.hor));
     X.fillStyle = g; X.fillRect(0, 0, cw, ch);
     if (top > 0) { X.fillStyle = rgb(P.zen); X.fillRect(0, 0, cw, Math.max(0, top)); }
     /* Hilfsfunktionen: Richtung → Bildposition */
     const sx = a => { const q = R.project(eye[0] + Math.cos(a) * S0, eye[1], eye[2] + Math.sin(a) * S0); return q ? q[0] * sc : null; };
+    /* v352: Punkt am Himmel (Azimut a, Höhe e) über die echte Kameraprojektion. Sterne, Sonne, Mond und Wolken hängen damit an derselben
+       Himmelskugel – vorher lagen Sterne/Sonne/Mond über die Näherung hy − f·tan(e) und verschoben sich beim Kopfbewegen gegen die Wolken. */
+    const sky = (a, e) => { const ce = Math.cos(e), q = R.project(eye[0] + Math.cos(a) * ce * S0, eye[1] + Math.sin(e) * S0, eye[2] + Math.sin(a) * ce * S0); return q ? [q[0] * sc, q[1] * sc] : null; };
     const night = clamp((sunEl(h) < 0 ? -sunEl(h) : 0) * 7, 0, 1) * (h > 12 || h < 6 ? 1 : 0);
     const el = sunEl(h), cl = Math.cos(el);
     /* Mondphase nach Spieltag (29,5 Tage); Mondlicht hellt den Himmel auf und schluckt schwache Sterne */
     const day = Math.floor(S.time / 1440), mph = ((day + 9.5) % 29.53) / 29.53, moonI = 0.5 - 0.5 * Math.cos(mph * 2 * Math.PI);
     const rot = h * 0.2618;                                                                       /* Himmel dreht sich mit 15° je Stunde */
-    const yOf = (a, e) => { const d = angN(a - fwd), c0 = Math.cos(d); return c0 < 0.2 ? null : hy - fs * Math.tan(e) / c0; };
     if (night > 0.05) {
       const vis = night * (1 - wg * 0.85);
       /* Lichtglocke der Städte im Osten, darüber ein Hauch Luftleuchten */
@@ -347,8 +352,9 @@ const VISTA = (() => {
       let cur = -1;
       for (const st of ST.list) {
         const a = st.a + rot, d = angN(a - fwd); if (Math.abs(d) > halfH) continue;
-        const y = yOf(a, st.e); if (y == null || y > hy - 1 || y < -6) continue;
-        const x = sx(a); if (x == null || x < -6 || x > cw + 6) continue;
+        const q = sky(a, st.e); if (!q) continue;
+        const y = q[1]; if (y > hy - 1 || y < -6) continue;
+        const x = q[0]; if (x < -6 || x > cw + 6) continue;
         const m = st.m, hz = clamp((hy - y) / (fs * 0.12), 0, 1);                           /* am Horizont im Dunst schwächer */
         const tw = m > 0.35 ? 0.78 + 0.22 * Math.sin(time * st.ts + st.tw) : 1;
         const al = vis * hz * tw * (m > 0.5 ? 1 : dim) * (0.3 + 0.7 * Math.sqrt(m));
@@ -377,8 +383,8 @@ const VISTA = (() => {
         else {
           const hd = Math.min(1, k * 1.25), tl = Math.max(0, hd - 0.35);
           const pa = [C.a + C.da * hd, C.e + C.de * hd], pb = [C.a + C.da * tl, C.e + C.de * tl];
-          const xa = sx(pa[0]), ya = yOf(pa[0], pa[1]), xb = sx(pb[0]), yb = yOf(pb[0], pb[1]);
-          if (xa != null && xb != null && ya != null && yb != null) {
+          const qa = sky(pa[0], pa[1]), qb = sky(pb[0], pb[1]), xa = qa && qa[0], ya = qa && qa[1], xb = qb && qb[0], yb = qb && qb[1];
+          if (qa && qb) {
             const fa = Math.sin(Math.PI * k) * vis, lg = X.createLinearGradient(xb, yb, xa, ya);
             lg.addColorStop(0, "rgba(200,220,255,0)"); lg.addColorStop(1, rgb([235, 242, 255], fa));
             X.strokeStyle = lg; X.lineWidth = 1.6 * pxs; X.lineCap = "round"; X.beginPath(); X.moveTo(xb, yb); X.lineTo(xa, ya); X.stroke();
@@ -391,11 +397,11 @@ const VISTA = (() => {
     /* Sonne (bzw. Mond gegenüber) – Scheibe und Lichthof */
     /* v133: nachts steht der Mond vor dir, etwas rechts und hoch genug, um ihn beim Hochschauen zu sehen */
     const bodyAz = el >= -0.02 ? sol.az : sol.az + 0.5, bodyEl = el >= -0.02 ? 0.05 + Math.max(0, el) * 0.85 : 0.3 + Math.min(0.95, -el) * 0.14;
-    const bx = sx(bodyAz);
+    const bq = sky(bodyAz, bodyEl);
     let sunX = null, sunY = 0, sunV = 0;
-    if (bx != null) {
+    if (bq) {
       const dd = ((bodyAz - fwd + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      sunX = bx; sunY = hy - fs * Math.tan(bodyEl) / Math.max(0.2, Math.cos(dd));
+      sunX = bq[0]; sunY = bq[1];
       const isSun = el >= -0.02, vis = (1 - wg * 0.85) * (isSun ? 1 : 0.8) * clamp(isSun ? 1 : night * 1.4, 0, 1);
       sunV = vis;
       if (!isSun) {
@@ -428,11 +434,11 @@ const VISTA = (() => {
     const cloud = (id, a, e, w, hgt, band) => {
       const d = angN(a - fwd);
       if (Math.abs(d) > halfH + 0.5) return;
-      const ce = Math.cos(e), se = Math.sin(e), half = w * (band ? 1.1 : 0.85);
-      const at = aa => R.project(eye[0] + Math.cos(aa) * ce * S0, eye[1] + se * S0, eye[2] + Math.sin(aa) * ce * S0);
-      const q = at(a), q1 = at(a - half), q2 = at(a + half);
-      if (!q || !q1 || !q2) return;
-      const SH = CS[id % CS.length], x = q[0] * sc, y = q[1] * sc, wd = Math.hypot(q2[0] - q1[0], q2[1] - q1[1]) * sc, ht = wd * SH.H / SH.W * (band ? 0.35 : 0.55 + hgt * 0.45);
+      /* v352: feste Größe je Wolke (Winkelbreite × Brennweite). v342 maß die Breite zwischen zwei projizierten Randpunkten – die wächst zum
+         Bildrand und beim Neigen (die langen Abendbänder dehnten und stauchten sich beim Kopfbewegen). Jetzt wandert nur noch die Mitte. */
+      const q = sky(a, e);
+      if (!q) return;
+      const SH = CS[id % CS.length], x = q[0], y = q[1], wd = fs * w * (band ? 2.2 : 1.7), ht = wd * SH.H / SH.W * (band ? 0.35 : 0.55 + hgt * 0.45);
       X.drawImage(tintCloud(SH, lit, dkc, cAl), x - wd / 2, y - ht * 0.8, wd, ht);
       if (moonA != null && sunV > 0.05) {
         const md = Math.abs(angN(a - moonA)), rk = Math.exp(-Math.pow(md / 0.6, 2)) * sunV * (0.2 + 0.5 * moonI) * night;

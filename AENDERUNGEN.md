@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v352 – Hochsitz: Himmel hängt fest an einer Himmelskugel (keine Wolkenverzerrung beim Kopfbewegen)
+**Meldung Bennet (Video, Abendhimmel):** Beim Bewegen des Kopfes verzerren sich die Wolken, und der Himmel verändert sich.
+
+**Ursache (`vista.js`):** (1) Seit v342 wurde die Breite einer Wolke zwischen zwei projizierten Randpunkten gemessen. Diese Strecke wächst zum Bildrand hin und ändert sich beim Neigen – die langen Abendbänder dehnten und stauchten sich bei jeder Kopfbewegung. (2) Sterne, Sonne, Mond und Sternschnuppen lagen noch über die alte Näherung `hy − f·tan(e)` und verschoben sich gegen die Wolken. (3) Der Farbverlauf des Himmels hing am Bildschirm (feste Pixelhöhe über dem Horizont) statt am Himmel.
+
+**Lösung:** Eine gemeinsame Funktion `sky(a, e)` legt jeden Himmelspunkt über die echte Kameraprojektion fest; Wolken, Sterne, Sonne, Mond und Sternschnuppen nutzen sie. Wolken haben eine feste Größe (Winkelbreite × Brennweite) – nur ihre Mitte wandert. Die Oberkante des Farbverlaufs liegt dort, wo die Himmelshöhe 0,97 rad wirklich im Bild steht. Farben, Verteilung, Drift und Wetter unverändert; die nicht mehr genutzte Näherung `yOf` ist entfernt.
+
+**Geprüft (Testbrowser, 390 × 700, Abend 20:50):** fünf Blickrichtungen (geradeaus, hoch, weit hoch, links, rechts) – Wolken gleich groß und gleich geformt, Sterne bleiben an ihrem Platz zu den Wolken, keine Konsolenfehler; Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy; als Bewegung (nur Standbilder); die Milchstraße nutzt weiter ihre Spaltennäherung und kann bei starkem Neigen leicht gegen die Sterne wandern.
+
 ## v351 – Laufbewegung, Werkzeugstation und freie Rückwege
 
 Hofarbeiter erhalten gegliederte Ober-/Unterschenkel, waagerechte Sohlen und gegenläufige Armbewegungen. Die Schritte richten sich nach der tatsächlich zurückgelegten Strecke nach der gemeinsamen Kollisionsprüfung. Beim Warten endet der Schritt; getragene Geräte begrenzen das Pendeln des rechten Arms. Sitz- und Laufgelenke werden gegenseitig ausgeblendet. Größe, Kleidung, Werkzeuge und Arbeitsfunktionen bleiben erhalten.
