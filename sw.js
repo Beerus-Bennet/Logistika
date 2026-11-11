@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v349";
+const VERSION = "v351";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -56,24 +56,26 @@ const SHELL = [
   "./treebark.js?v=109",
   "./forestmodels.js?v=109",
   "./forest.js?v=109",
-  "./camp.js?v=109",
+  "./camp.js?v=351",
   "./vista.js?v=342",
   "./farmview.js?v=349",
-  "./worldview.js?v=349",
+  "./worldview.js?v=351",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
   "./hunt.js?v=328",
   "./exhibits.js?v=340",
   "./rent.js?v=340",
-  "./villagesite.js?v=344",
-  "./villagepeople.js?v=346",
-  "./peopletraffic.js?v=349",
-  "./villageview.js?v=344",
+  "./villagesite.js?v=351",
+  "./villagepeople.js?v=351",
+  "./peopletraffic.js?v=351",
+  "./villageview.js?v=351",
   "./bauplatz.js?v=274",
   "./fishview.js?v=333",
-  "./staffseat.js?v=349",
-  "./team.js?v=349",
+  "./staffwalk.js?v=351",
+  "./staffgear.js?v=351",
+  "./staffseat.js?v=351",
+  "./team.js?v=351",
   "./jail.js?v=323",
   "./lucky3d.js?v=273",
   "./luckytest.js?v=271",

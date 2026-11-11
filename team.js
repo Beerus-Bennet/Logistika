@@ -1355,11 +1355,25 @@ function routeProject(r, x, z) {
 function staffFollow(e, j, D, dt) {
   const r = j.route;
   if (!r || r.length < 2) return null;
-  if (e.rj !== j) { const pr = routeProject(r, e.x, e.z); if (pr.dist > 3) return null; e.rj = j; e.rs = pr.s; }
-  if (e.rs >= D - 1e-3) return null;
-  e.rs = Math.min(D, e.rs + 12 * dt);
-  const q = routeAt(r, e.rs); e.x = q[0]; e.z = q[1];
+  if (e.rj !== j) { const pr = routeProject(r, e.x, e.z); if (pr.dist > 3) { if(staffRepath351(e,j))return e.node.ry;return null; } e.rj = j; e.rs = pr.s; }
+  if (e.rs >= D - 1e-3) {if(D>=routeLen(r)-.01){const q=routeAt(r,D);if(Math.hypot(e.x-q[0],e.z-q[1])>.05&&staffRepath351(e,j))return e.node.ry;}return null;}
+  e.rPrev=e.rs;
+  /* v351: In einem Bild höchstens bis zur nächsten Wegbiegung. Sonst
+     schneidet der sichtbare Schritt trotz gültiger Route eine Zaunecke. */
+  let corner=0;for(let i=1;i<r.length;i++){corner+=Math.hypot(r[i][0]-r[i-1][0],r[i][1]-r[i-1][1]);if(corner>e.rs+1e-3)break;}
+  const next = Math.min(D, e.rs + 12 * dt,corner),q = routeAt(r,next);
+  /* v351: Bereits festgefahrene/alte Wege an einem Zaun von der wirklichen
+     Position neu durch das Tor führen, statt immer denselben Schritt zu verwerfen. */
+  if(navHit(e.x,e.z,q[0],q[1],navWallsFor(e.role))){staffRepath351(e,j);return e.node.ry;}
+  e.rs=next;e.x = q[0]; e.z = q[1];
   return q[2];
+}
+function staffRepath351(e,j){
+  if(typeof CAMP!=="undefined"&&CAMP.blockedW(e.x,e.z))return false;
+  const r=navPathSafe(e.x,e.z,j.x,j.z,e.role);if(!r||r.slice(1).some((p,i)=>navHit(...r[i],...p,navWallsFor(e.role))))return false;
+  const remaining=Math.max(0,j.t1-Math.max(S.time,j.t0+j.walk)),len=routeLen(r);j.route=r;j.len=len;j.sx=e.x;j.sz=e.z;j.walk=Math.max(.4,staffWalkLen(r)/5);j.t0=S.time;j.t1=S.time+j.walk+remaining;delete j.stops;
+  const s=(S.farm.staff||[]).find(s=>WV.staff.get(s.id)===e);if(s&&s.jobEnd!=null)s.jobEnd=j.t1;
+  e.rj=j;e.rs=e.rPrev=0;e.gearAction=null;return true;
 }
 function staffAtHome(s, i) { if (s.px == null) return true; const h = staffHome(s.role, i); return Math.hypot(s.px - h[0], s.pz - h[1]) < 0.9; }
 /* Erledigen – erst jetzt passiert es wirklich (alles noch einmal prüfen) */
@@ -1680,7 +1694,8 @@ function worldSyncStaff() {
     /* v57: Vertretung kommt oder geht – neue Figur an derselben Stelle */
     if (old) { const k = R.nodes.indexOf(old.node); if (k >= 0) R.nodes.splice(k, 1); if (old.gt) { const g = R.nodes.indexOf(old.gt); if (g >= 0) R.nodes.splice(g, 1); } WV.staff.delete(s.id); }
     const h = old ? [old.x, old.z] : s.px != null ? [s.px, s.pz] : staffHome(s.role, i), body = staffBody(s);
-    const node = fnode(fmesh("staffb:" + staffKey(s), () => FWM.person(Object.assign({}, body, { armR: false }))), { x: h[0], z: h[1], ry: 0.6 + i, s: 1.45 });
+    const walking=typeof STAFF_WALK!=="undefined";
+    const node = fnode(fmesh("staffb351:" + staffKey(s), () => FWM.person(Object.assign({}, body, walking?{noLegs:true,noArms:true}:{armR:false}))), { x: h[0], z: h[1], ry: 0.6 + i, s: 1.45 });
     R.nodes.push(node);
     const arm = R.addChild(node, fnode(fmesh("starm:" + body.shirt + ":" + body.skin, () => FWM.arm(body)), Object.assign({ rz: 0.08 }, STAFF_SHOULDER)));
     const armM = arm.mesh, armPh = fmesh("starmph:" + body.shirt + ":" + body.skin, () => staffPhoneArm(body));
@@ -1693,7 +1708,8 @@ function worldSyncStaff() {
     const armSitM = fmesh("starmsit:" + body.shirt + ":" + body.skin, () => FWM.armSit(body));
     const gt = T ? fnode(fmesh("sgt:" + s.role, T.fn), { s: T.s * 1.45, visible: false, shadow: true }) : null;
     if (gt) R.nodes.push(gt);
-    WV.staff.set(s.id, { node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key, armM, armPh, armSitM, gt });
+    const e={ node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key, armM, armPh, armSitM, gt,role:s.role };
+    WV.staff.set(s.id,e);if(walking)STAFF_WALK.attach(s,e);
   });
 }
 const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1785,6 +1801,7 @@ function stepStaff(dt, time) {
     if (!e) return;
     const j = s.job, n = e.node, A = e.arm, calling = staffCalling(s);
     const gdt = e.lt != null ? Math.max(0, S.time - e.lt) : 0; e.lt = S.time;   /* v232: Spielzeit seit dem letzten Bild */
+    if(typeof STAFF_GEAR!=="undefined")STAFF_GEAR.prepare(s,e,dt,gdt);
     /* v106: Telefonat mit dem Büro – Anzeigetext folgt dem Zustand */
     if (calling) s.doing = STAFF_CALL_TXT; else if (j && s.doing === STAFF_CALL_TXT) s.doing = j.what;
     /* v81: Mittagspause – angekommen: hinsetzen (Sitzfigur), danach wieder aufstehen.
@@ -1832,7 +1849,7 @@ function stepStaff(dt, time) {
     if (j) {
       const el = S.time - j.t0;
       if (el < j.walk) { const p = staffRoutePos(j); tx = p[0]; tz = p[1]; rh = p[2]; onRoute = true; dwell = p[3] || null; lagD = staffRouteDist(j); }
-      else if (j.route && j.route.length > 1 && e.rj === j && e.rs != null && e.rs < routeLen(j.route) - 0.2 && !j.spots) { tx = j.x; tz = j.z; lagD = routeLen(j.route); face = Math.atan2(j.fx - j.x, j.fz - j.z); }   /* v232: noch nicht am Ziel der Route */
+      else if (j.route && j.route.length > 1 && !j.spots && Math.hypot(e.x-j.x,e.z-j.z)>.05) { tx = j.x; tz = j.z; lagD = routeLen(j.route); face = Math.atan2(j.fx - j.x, j.fz - j.z); }   /* v351: auch nach Laden und einem abgewiesenen Schritt weiter dem Weg folgen */
       else if (j.spots) {
         /* von Feld zu Feld */
         const per = (j.t1 - j.t0 - j.walk) / j.spots.length, q = j.spots[Math.min(j.spots.length - 1, Math.floor((el - j.walk) / per))];
@@ -1843,25 +1860,25 @@ function stepStaff(dt, time) {
     const dx = tx - e.x, dz = tz - e.z, d = Math.hypot(dx, dz), sp = 6 * dt;
     let moving = d > 0.05;
     let fh = null;
-    if (lagD != null && d >= 2.5 && d <= 60 && (fh = staffFollow(e, j, lagD, dt)) != null) {
+    if (lagD != null && (fh = staffFollow(e, j, lagD, dt)) != null) {
       /* v232: hängt hinter der Route zurück → auf dem Weg aufholen, nicht quer durchs Gelände */
       moving = true; n.ry += angTo(n.ry, fh) * Math.min(1, dt * 12);
     }
-    else if (d > 40) { e.x = tx; e.z = tz; if (j && j.route && lagD != null) { e.rj = j; e.rs = lagD; } }
+    else if (lagD!=null) { moving=false; } /* v351: Ohne erreichbare Route warten, nie durch Zäune versetzen. */
     else if (onRoute && d < 2.5) {
       /* auf dem Weg: genau der Wegspur folgen (auch bei schneller Uhr) */
-      moving = !dwell;
-      e.x = tx; e.z = tz; if (lagD != null) { e.rj = j; e.rs = lagD; }
+      moving = !dwell && d>.005;
+      /* v351: Am Ende des aktuellen Wegabschnitts stehen bleiben. */
       if (rh != null) n.ry += angTo(n.ry, rh) * Math.min(1, dt * 12);
     }
     else if (moving) { const k = Math.min(1, Math.max(sp, d * dt * 3) / d); e.x += dx * k; e.z += dz * k; n.ry += angTo(n.ry, Math.atan2(dx, dz)) * Math.min(1, dt * 12); }
     else if (face != null) n.ry += angTo(n.ry, face) * Math.min(1, dt * 6);
     if (work && moving && d > 0.3) work = false;
-    n.x = e.x; n.z = e.z; e.dw = !!dwell; e.mv = moving;
+    n.x = e.x; n.z = e.z; e.dw = !!dwell&&!moving; e.mv = moving;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     /* v112: Halt an der Werkzeugplane – hinstellen, bücken, ablegen (oder aufnehmen), aufrichten */
     let bend = 0;
-    if (dwell) {
+    if (dwell&&!(dwell.st&&dwell.st.rack351)) {
       const p = dwell.p; bend = p < 0.2 ? staffSS(p / 0.2) : p < 0.65 ? 1 : 1 - staffSS((p - 0.65) / 0.35);
       n.rx = 0.85 * bend; n.y = -0.22 * bend; n.ry += angTo(n.ry, rh != null ? rh : n.ry) * Math.min(1, dt * 12);
     } else if (n.rx) { n.rx *= Math.max(0, 1 - dt * 10); if (Math.abs(n.rx) < 0.004) n.rx = 0; }

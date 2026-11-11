@@ -3467,6 +3467,9 @@ function worldStep(dt, time) {
   if (typeof RENT !== "undefined") RENT.step(dt, time);
   if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.step(dt,time);
   if (typeof PEOPLE_TRAFFIC !== "undefined") PEOPLE_TRAFFIC.step(dt);
+  /* v351: Nur die nach Ausweichen/Bremsen tatsächlich zurückgelegte Strecke animieren. */
+  if (typeof STAFF_WALK !== "undefined") STAFF_WALK.step(dt,time);
+  if (typeof STAFF_GEAR !== "undefined") STAFF_GEAR.step(dt,time);
   if (typeof SITE3D !== "undefined") SITE3D.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }

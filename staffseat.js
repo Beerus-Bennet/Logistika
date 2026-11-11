@@ -26,8 +26,8 @@ const STAFF_SEAT = (() => {
     r.arms.forEach((a,i)=>{a.upper.y=.42+.36*Math.cos(lean);a.upper.z=.36*Math.sin(lean);a.upper.rx=lean-.08*k+(i?gesture:0);a.upper.rz=(i?1:-1)*(.08-.04*k);a.fore.rx=-Math.PI/2*k;});
     e.head.y=.42+.38*Math.cos(lean);e.head.z=.38*Math.sin(lean);e.node.rx=0;
   }
-  function activate(s,e){const r=create(s,e);if(r.active)return;r.active=true;e.mStand=e.node.mesh;e.node.mesh=null;r.torso.visible=true;r.arms[0].upper.visible=true;e.arm.mesh=r.upper;r.arms.forEach(a=>a.fore.visible=true);r.legs.forEach(l=>l.thigh.visible=true);e.head.visible=true;pose(e,0);}
-  function deactivate(e){const r=e.seatRig;if(!r||!r.active)return;r.active=false;r.torso.visible=r.arms[0].upper.visible=false;r.arms.forEach(a=>a.fore.visible=false);r.legs.forEach(l=>l.thigh.visible=false);e.node.mesh=e.mStand;e.arm.mesh=e.armM;e.arm.rx=0;e.arm.rz=.08;e.arm.y=.78;e.arm.z=0;e.head.visible=false;e.head.y=.8;e.head.z=0;e.node.y=e.node.rx=0;}
+  function activate(s,e){const r=create(s,e);if(r.active)return;if(typeof STAFF_WALK!=="undefined")STAFF_WALK.reset(e,true);r.active=true;e.mStand=e.node.mesh;e.node.mesh=null;r.torso.visible=true;r.arms[0].upper.visible=true;e.arm.mesh=r.upper;r.arms.forEach(a=>a.fore.visible=true);r.legs.forEach(l=>l.thigh.visible=true);e.head.visible=true;pose(e,0);}
+  function deactivate(e){const r=e.seatRig;if(!r||!r.active)return;r.active=false;r.torso.visible=r.arms[0].upper.visible=false;r.arms.forEach(a=>a.fore.visible=false);r.legs.forEach(l=>l.thigh.visible=false);e.node.mesh=e.mStand;e.arm.mesh=e.armM;e.arm.rx=e.arm.ry=0;e.arm.rz=.08;e.arm.y=.78;e.arm.z=0;e.head.visible=false;e.head.y=.8;e.head.z=0;e.node.y=e.node.rx=0;if(typeof STAFF_WALK!=="undefined")STAFF_WALK.reset(e);}
   function down(s,e,sl,dt){
     const n=e.node,P=CAMP.pose(sl),st=CAMP.toW(...CAMP.standPt(sl));e.riseT=null;
     if(!e.sitT){

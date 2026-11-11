@@ -7,7 +7,10 @@ const VILLAGE_SITE = (() => {
     const a=p.road+p.side*front,b=p.road+p.side*back;return [Math.min(a,b),p.z-6,Math.max(a,b),p.z+6];}
   function gate(p){const d=VILLAGE.door(p);return [p.road+p.side*front,d[1]];}
   function mailbox(p){const g=gate(p);return [g[0]+p.side*.1,g[1]+1.15];}
-  function bikePark(p){const g=gate(p);return [g[0]+p.side*1.6,g[1]+1.35];}
+  /* v351: Längs zum Zaun in einer eigenen Bucht, mit Platz für Lenker,
+     beide Räder und die Person daneben. Nie quer in der Toröffnung. */
+  function bikePark(p){const g=gate(p);return [g[0]+p.side*2.05,g[1]+1.8];}
+  function bikeClear(x,z,ry){for(const t of [-1.12,-.65,0,.65,1.12])if(blocked(x+Math.sin(ry)*t,z+Math.cos(ry)*t,.27))return false;return true;}
   function path(p){const d=VILLAGE.door(p);return [d,gate(p),[p.road+p.side*sidewalk,d[1]]];}
   function segments(expanded){return expanded?[
     [[-62,edge],[-62,98]],[[-98,edge],[-98,98]],
@@ -78,7 +81,10 @@ const VILLAGE_SITE = (() => {
   function garden(p){const b=new FM.MB(),r=lot(p),g=gate(p),d=VILLAGE.door(p),sx=p.road+p.side*sidewalk;
     b.plate(r[2]-r[0],r[3]-r[1],[0x86b85b,0x90ba66,0x80ac58][Number(p.id)%3],{x:(r[0]+r[2])/2-p.x,z:0,y0:.032});
     b.plate(Math.abs(d[0]-sx),.84,0xc7bca6,{x:(d[0]+sx)/2-p.x,z:d[1]-p.z,y0:.057});
-    const park=bikePark(p);b.plate(2.8,1.1,0xb7b19f,{x:park[0]-p.x,z:park[1]-p.z,y0:.051});b.plate(.55,1.4,0xb7b19f,{x:park[0]-p.x,z:d[1]-p.z+.65,y0:.052});
+    const park=bikePark(p);b.plate(1.65,3.1,0xb7b19f,{x:park[0]-p.x,z:park[1]-p.z,y0:.051});b.plate(.7,1.8,0xb7b19f,{x:park[0]-p.x,z:d[1]-p.z+.8,y0:.052});
+    /* v351: Niedriger Anlehnbügel innerhalb der Bucht. */
+    for(const zz of [-.38,.38])b.box(.035,.58,.035,0x56646a,{x:park[0]-p.x-p.side*.19,z:park[1]-p.z+zz,y:.06});
+    b.box(.035,.035,.8,0x56646a,{x:park[0]-p.x-p.side*.19,z:park[1]-p.z,y:.64});
     const rnd=erbeRng(Number(p.id)+31);for(let i=0;i<5;i++){const x=p.side*(5+rnd()*.5),z=-3.5+i*.6;b.ico(.15,0x45823a,{x,y:.18,z});b.ico(.07,[0xe4ae5a,0xc86c95,0x8da8ce][i%3],{x,y:.3,z});}
     return b;
   }
@@ -121,5 +127,5 @@ const VILLAGE_SITE = (() => {
   function construction(type){const b=new FM.MB(),family=type==='familie',w=family?8.8:5.8,cx=family?-1.5:0;
     b.plate(w,7.4,0xb7b0a4,{x:cx,z:.8,y0:.055});for(const x of family?[-5.7,-2.6,2.6]:[-2.6,2.6])for(const z of [-2.1,2.1,3.9])b.box(.14,2.7,.14,0xc69a66,{x,z});
     for(const y of [1.3,2.6])b.box(w,.12,.12,0xc69a66,{x:cx,y,z:-2.1});if(family)b.box(3.6,.25,4.2,0xc3b9a6,{x:-4.05,z:0,y:.1});return b;}
-  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
+  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,bikeClear,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
 })();
