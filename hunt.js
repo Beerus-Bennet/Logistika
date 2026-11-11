@@ -3484,7 +3484,7 @@ const HUNT = (() => {
     }
     /* Kamera: von der Schützenseite, schräg – der Kanal läuft sichtbar durchs Bild; Abstand so, dass das Stück ins Hochformat passt */
     const len = (k === "fasan" ? 1.2 : k === "keiler" ? 1.75 : 2.0) * A.s, hgt = (k === "fasan" ? 0.5 : k === "keiler" ? 0.95 : 1.9) * A.s;      /* Fasan: der lange Stoß gehört ins Bild */
-    XR.c = [0, hgt * (k === "hirsch" ? 0.48 : 0.5), (k === "fasan" ? -0.2 : 0.16) * A.s]; XR.len = len; XR.hgt = hgt;
+    XR.c = [0, hgt * (k === "hirsch" ? 0.48 : 0.5), (k === "fasan" ? -0.14 : 0.16) * A.s]; XR.len = len; XR.hgt = hgt;
     XR.yaw = Math.atan2(-sh.ld[2], -sh.ld[0]) + (Math.abs(sh.ld[0]) > 0.5 ? (sh.ld[2] * sh.ld[0] > 0 ? -0.35 : 0.35) : 0); XR.pitch = 0.1; XR.zoom = 1;
     /* nie genau in Schussrichtung schauen: mindestens gut 50° zur Längsachse des Stücks, damit Organe und Kanal nebeneinander liegen */
     { const sd = Math.cos(XR.yaw) >= 0 ? 1 : -1, a = Math.atan2(Math.sin(XR.yaw), Math.abs(Math.cos(XR.yaw))); XR.yaw = sd > 0 ? clamp(a, -0.6, 0.6) : Math.PI - clamp(a, -0.6, 0.6); }
@@ -3492,7 +3492,7 @@ const HUNT = (() => {
   function xrLoop(now) {
     if (!XR.cv || !XR.cv.isConnected || !XR.R) { XR.raf = 0; return; }
     const R = XR.R, tv = Math.tan(0.6 / 2), asp = R.w / Math.max(1, R.h);
-    const vis = Math.abs(Math.sin(XR.yaw)) * XR.len + Math.abs(Math.cos(XR.yaw)) * XR.len * 0.42;      /* sichtbare Breite je nach Blickwinkel */
+    const vis = Math.abs(Math.cos(XR.yaw)) * XR.len + Math.abs(Math.sin(XR.yaw)) * XR.len * 0.42;      /* sichtbare Breite je nach Blickwinkel */
     const dist = Math.max(vis / (2 * tv * asp), XR.hgt / (2 * tv)) * 1.06 * XR.zoom;
     Object.assign(R.cam, { tx: XR.c[0], ty: XR.c[1], tz: XR.c[2], dist, yaw: XR.yaw, pitch: XR.pitch, fov: 0.6, near: 0.05, far: 60 });
     R.render(now / 1000);
