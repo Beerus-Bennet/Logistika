@@ -1,5 +1,14 @@
 # Änderungen – kurz für den Kollegen
 
+## v351 – Hochsitz: Himmel hängt fest an einer Himmelskugel (keine Wolkenverzerrung beim Kopfbewegen)
+**Meldung Bennet (Video, Abendhimmel):** Beim Bewegen des Kopfes verzerren sich die Wolken, und der Himmel verändert sich.
+
+**Ursache (`vista.js`):** (1) Seit v342 wurde die Breite einer Wolke zwischen zwei projizierten Randpunkten gemessen. Diese Strecke wächst zum Bildrand hin und ändert sich beim Neigen – die langen Abendbänder dehnten und stauchten sich bei jeder Kopfbewegung. (2) Sterne, Sonne, Mond und Sternschnuppen lagen noch über die alte Näherung `hy − f·tan(e)` und verschoben sich gegen die Wolken. (3) Der Farbverlauf des Himmels hing am Bildschirm (feste Pixelhöhe über dem Horizont) statt am Himmel.
+
+**Lösung:** Eine gemeinsame Funktion `sky(a, e)` legt jeden Himmelspunkt über die echte Kameraprojektion fest; Wolken, Sterne, Sonne, Mond und Sternschnuppen nutzen sie. Wolken haben eine feste Größe (Winkelbreite × Brennweite) – nur ihre Mitte wandert. Die Oberkante des Farbverlaufs liegt dort, wo die Himmelshöhe 0,97 rad wirklich im Bild steht. Farben, Verteilung, Drift und Wetter unverändert; die nicht mehr genutzte Näherung `yOf` ist entfernt.
+
+**Geprüft (Testbrowser, 390 × 700, Abend 20:50):** fünf Blickrichtungen (geradeaus, hoch, weit hoch, links, rechts) – Wolken gleich groß und gleich geformt, Sterne bleiben an ihrem Platz zu den Wolken, keine Konsolenfehler; Bildschirmfotos gesichtet. **Nicht geprüft:** am Handy; als Bewegung (nur Standbilder); die Milchstraße nutzt weiter ihre Spaltennäherung und kann bei starkem Neigen leicht gegen die Sterne wandern.
+
 ## v350 – Jagd: Trefferbild (Röntgen mit Schusskanal), abwechslungsreiche Liegeformen, realistischere Tiere
 **Wunsch Bennet:** Erlegte Tiere liegen immer gleich da. Mehr von „theHunter: Call of the Wild“: die Ansicht mit dem Kugelverlauf durch die Organe, beim Betrachten des erlegten Stücks wählbar, im Hochformat, mit Durchschalten der Treffer, getroffenen Organen/Knochen, Wirkung, Schussbericht und Tierdetails. Die Tiere sollen näher an der Wirklichkeit sein, besonders Ohren und Schenkel, und insgesamt besser werden.
 
