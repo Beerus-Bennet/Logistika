@@ -388,7 +388,7 @@ const HUNT = (() => {
         const sv = Math.sin((j / m) * Math.PI * 2);
         let c0 = mixc(DEER.nape, DEER.mane, ss((sv + 0.25) / 0.6));
         if (sv > 0.3) c0 = mixc(c0, DEER.maneL, hsh(i, j, 5) * 0.55 * Math.min(1, mane * 3));          /* hellere Haarspitzen in der Mähne */
-        c0 = mixc(c0, mixc(DEER.coat, DEER.back, 0.35), ss((0.5 - t) / 0.34) * 0.86);                 /* v343: weit hinauf in die Decke übergehen – vorher saß der Träger als dunkler Block vor dem Rumpf */
+        c0 = mixc(c0, mixc(DEER.coat, DEER.back, 0.35), ss((0.5 - t) / 0.34) * 0.86);                 /* v350: weit hinauf in die Decke übergehen – vorher saß der Träger als dunkler Block vor dem Rumpf */
         return pie(mulc(c0, fur(p, 1.3)), [p[0], p[1] + 1, p[2] + 0.4], 0);
       }));
     }
@@ -502,7 +502,7 @@ const HUNT = (() => {
     });
     return b;
   }
-  /* Lauscher v343: gewölbtes, spitz auslaufendes Blatt (Becher nach vorn offen), außen Decke mit dunkler Spitze, innen hell mit dunklem Rand.
+  /* Lauscher v350: gewölbtes, spitz auslaufendes Blatt (Becher nach vorn offen), außen Decke mit dunkler Spitze, innen hell mit dunklem Rand.
      Vorher zwei flache Ellipsoide (wirkten wie aufgesteckte Löffel). */
   const DEAR_W = [[0, 0.017], [0.14, 0.031], [0.42, 0.041], [0.7, 0.035], [0.88, 0.021], [1, 0.006]];
   function deerEarInto(b, s) {
@@ -526,7 +526,7 @@ const HUNT = (() => {
   function deerTail() { const b = MB(); ell(b, [0, -0.07, -0.02], [0.036, 0.085, 0.03], (p, y) => mulc(mixc(DEER.back, DEER.rumpB, ss((-y + 0.2) / 0.8)), fur(p)), 8, 6); return b; }
   /* Läufe: oben kräftig (Unterarm/Keule), Vorderfußwurzel- bzw. Sprunggelenk als Verdickung, schlanker Röhrenknochen,
      Fesselgelenk, schräge Fessel, gespaltene Schalen, Afterklauen. Länge und Gelenkpunkte wie bisher. */
-  /* v343: Schenkel nach dem Vorbild. Vorn: Unterarm oben kräftig mit Ellbogenhöcker, zur Vorderfußwurzel schlank. Hinten: breite Keule,
+  /* v350: Schenkel nach dem Vorbild. Vorn: Unterarm oben kräftig mit Ellbogenhöcker, zur Vorderfußwurzel schlank. Hinten: breite Keule,
      das Knie steht vorn unter der Flanke, der Unterschenkel läuft schräg nach hinten zum Sprunggelenk (DHOCK hinter dem Hüftlot),
      darunter steht der Lauf senkrecht – vorher hingen Hüfte, Sprunggelenk und Schale auf einer Linie (Stelzen). */
   const DHOCK = -0.112;
@@ -583,7 +583,7 @@ const HUNT = (() => {
     return pie(mulc(c, (0.98 + 0.04 * g2) * fur(p, 0.45)), [p[0] * 1.3, p[1] * 1.3 + 0.7, p[2] * 1.3], 0);
   }
   /* v307: geschlossene, vorn kräftige Silhouette; Bauchlinie steigt zur schmaleren Hinterhand an. */
-  /* v343: Kruppe fällt deutlicher ab (Keilform: Widerrist hoch, Hinterhand niedriger), Bauch hinter den Rippen etwas aufgezogen. */
+  /* v350: Kruppe fällt deutlicher ab (Keilform: Widerrist hoch, Hinterhand niedriger), Bauch hinter den Rippen etwas aufgezogen. */
   const BOAR_T = [[-0.535, 0.535, 0.468, 0.03], [-0.51, 0.602, 0.404, 0.092], [-0.455, 0.662, 0.352, 0.142], [-0.37, 0.696, 0.336, 0.163], [-0.29, 0.712, 0.354, 0.17], [-0.2, 0.729, 0.374, 0.176],
     [-0.06, 0.764, 0.36, 0.19], [0.08, 0.812, 0.318, 0.208], [0.18, 0.85, 0.29, 0.217], [0.27, 0.856, 0.288, 0.214], [0.36, 0.82, 0.314, 0.199], [0.44, 0.756, 0.354, 0.176],
     [0.49, 0.682, 0.392, 0.143], [0.52, 0.61, 0.43, 0.084], [0.535, 0.56, 0.46, 0.03]];
@@ -591,7 +591,7 @@ const HUNT = (() => {
   /* Borstenbüschel: kurzer Kegel, unten im Fell verankert, Spitze heller */
   function bristle(b, p, d, l, r, c0, c1) {
     const n = v3n(d), q1 = [p[0] + n[0] * l * 0.55, p[1] + n[1] * l * 0.55, p[2] + n[2] * l * 0.55], q2 = [p[0] + n[0] * l, p[1] + n[1] * l, p[2] + n[2] * l];
-    tube(b, [p, q1, q2], [r, r * 0.62, r * 0.12], [RGB(c0), mixc(c0, c1, 0.4), RGB(c1)], 3, { tip: true });      /* v343: dreikantig – spart Dreiecke für Teller und Läufe, auf Schussentfernung nicht zu unterscheiden */
+    tube(b, [p, q1, q2], [r, r * 0.62, r * 0.12], [RGB(c0), mixc(c0, c1, 0.4), RGB(c1)], 3, { tip: true });      /* v350: dreikantig – spart Dreiecke für Teller und Läufe, auf Schussentfernung nicht zu unterscheiden */
   }
   function boarBody() {
     G3.seed(5201);
@@ -599,7 +599,7 @@ const HUNT = (() => {
     for (let i = 0; i <= nZ; i++) {
       const u = i / nZ, z = lerp(BOAR_T[0][0], BOAR_T[BOAR_T.length - 1][0], u * 0.55 + (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.45), [top, bot, hw] = prof(BOAR_T, z), yc = (top + bot) / 2, hy = (top - bot) / 2;
       const sh = 1 - ss(Math.abs(z - 0.2) / 0.15), ham = 1 - ss(Math.abs(z + 0.38) / 0.14);
-      /* v343: Blatt (Schulter) und Keule treten als Muskelmasse aus der Flanke – vorher war der Rumpf eine glatte Walze */
+      /* v350: Blatt (Schulter) und Keule treten als Muskelmasse aus der Flanke – vorher war der Rumpf eine glatte Walze */
       const R = ring([0, yc, z], [1, 0, 0], [0, 1, 0], hw, hy, hy, m, 2.1, (j, cu, sv) => [1 - 0.2 * Math.pow(Math.max(0, sv), 2) - 0.04 * Math.pow(Math.max(0, -sv), 3)
         + 0.06 * sh * Math.max(0, 1 - Math.abs(sv + 0.05) * 1.5) + 0.075 * ham * Math.max(0, 1 - Math.abs(sv + 0.22) * 1.35), 1]);
       P.push(R);
@@ -630,7 +630,7 @@ const HUNT = (() => {
   /* v307: Schulter-/Hüftdrehpunkt im Rumpf statt unter dem Bauch. Der obere Muskel steckt im Körper,
      verjüngt sich zum Gelenk und beugt zusammen mit dem Unterlauf; auch die Trefferzonen folgen beiden Segmenten. */
   const BLU = 0.32, BLL = 0.19;
-  /* v343: Läufe nach dem Vorbild – kurz und stämmig statt Stelzen. Vorn: kräftiger Unterarm mit Ellbogenhöcker, breite Vorderfußwurzel.
+  /* v350: Läufe nach dem Vorbild – kurz und stämmig statt Stelzen. Vorn: kräftiger Unterarm mit Ellbogenhöcker, breite Vorderfußwurzel.
      Hinten: die Keule setzt die Rumpfkontur fort, das Knie steht vorn unter der Flanke, der Unterschenkel läuft schräg nach hinten zum
      Sprunggelenk (BHOCK hinter dem Hüftlot), darunter steht der Lauf senkrecht. Spalten: y, halbe Breite, halbe Tiefe, Versatz der Mitte nach vorn. */
   const BHOCK = -0.065;
@@ -640,7 +640,7 @@ const HUNT = (() => {
   const boarLegCol = (p, k) => pie(mulc(mixc(BOAR.leg, BOAR.legD, k), 0.92 + 0.16 * hsh(p[0] * 5, p[1] * 5, p[2] * 5)), [p[0] * 1.3, p[1] * 1.3 + 0.4, p[2] * 1.3], 0.25);
   function boarUpperInto(b, front) {
     /* v290: Schulter und Keule länglich modelliert, ohne kugelige Aufsätze. */
-    legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.1) / 0.16)), true, true);     /* v343: feine Ringe – Keule und Unterarm sind jetzt sichtbare Muskelformen; die Schwarte reicht weiter herab */
+    legInto(b, front ? BLEG_FU : BLEG_HU, (p, y) => mixc(boarCoat(p, 0.1, 0.4), boarLegCol(p, 0), ss((-y - 0.1) / 0.16)), true, true);     /* v350: feine Ringe – Keule und Unterarm sind jetzt sichtbare Muskelformen; die Schwarte reicht weiter herab */
     if (!front) ell(b, [0, -0.308, BHOCK - 0.036], [0.02, 0.03, 0.02], BOAR.leg, 6, 4);         /* Fersenhöcker */
     return b;
   }
@@ -675,7 +675,7 @@ const HUNT = (() => {
     const de = Math.hypot(Math.abs(p[0]) - eye[0], p[1] - eye[1], p[2] - eye[2]);
     return mixc(c, BOAR.coatD, (1 - ss((de - 0.012) / 0.02)) * 0.8);                                                                             /* dunkel um die Lichter */
   }
-  /* Teller (Ohren) v343 nach dem Vorbild: breites, oben gerundetes Blatt (größte Breite auf zwei Fünfteln der Länge), aufrecht, als Becher
+  /* Teller (Ohren) v350 nach dem Vorbild: breites, oben gerundetes Blatt (größte Breite auf zwei Fünfteln der Länge), aufrecht, als Becher
      nach vorn-außen offen, dick behaart – außen dunkle Schwarte, innen fast schwarz mit hellen Haaren, Haarsaum am Rand.
      Vorher (v135): schmaler, spitz zulaufender Kegel mit Haarpinsel – von der Seite ein Stachel. */
   const BEAR_W = [[0, 0.04], [0.14, 0.056], [0.4, 0.066], [0.64, 0.06], [0.82, 0.044], [0.93, 0.027], [1, 0.01]];
@@ -738,7 +738,7 @@ const HUNT = (() => {
         const br = headPt(0.122, 0.8);
         ell(q, X([br[0] - 0.003, br[1] + 0.003, br[2]]), [0.02, 0.009, 0.03], (p) => boarCoat(p, 0.8, 0.3), 7, 4);      /* Brauenwulst */
         const ep = headPt(0.045, 0.86);
-        /* v343: Teller seitlich-oben am Hinterhaupt, leicht nach außen gekippt und nach vorn-außen gedreht; am liegenden Stück entspannt nach hinten gelegt */
+        /* v350: Teller seitlich-oben am Hinterhaupt, leicht nach außen gekippt und nach vorn-außen gedreht; am liegenden Stück entspannt nach hinten gelegt */
         q.at(resting ? { x: s * (ep[0] - 0.022), y: ep[1] - 0.012, z: ep[2] - 0.006, rz: s * 0.12, rx: -1.3 } : { x: s * ep[0], y: ep[1] - 0.016, z: ep[2], rz: -s * 0.5, rx: -0.3 }, o => boarEarInto(o, s));
         /* Backenbart: helle Büschel unten an den Wangen, nach hinten und unten */
         for (let k = 0; k < 6; k++) {
@@ -760,7 +760,7 @@ const HUNT = (() => {
   const PHC = { copper: 0xc4672c, copperD: 0x8f3f1b, gold: 0xe0aa52, scale: 0x2c1b10, rump: 0x7f8c74, belly: 0x5a3720, wing: 0xc9a46c, wingD: 0x6f5232,
     neck: 0x1c5a52, neckB: 0x23407a, head: 0x2c2a5e, ring: 0xf4f1e8, red: 0xd2281e, redD: 0x9c1a14, beak: 0xdcc58b, leg: 0x8d8379, eye: 0xd9b23a,
     fA: 0xc29a5c, fB: 0x9a7a45, fBar: 0x2e2216, fIn: 0x4a3520 };                                   /* v200: Federfarben des Stoßes (vorher fest im Code) */
-  /* v343: Brust voller und tiefer, Rücken fällt zum Bürzel ab, Hinterleib schlanker – vorher ein gleichmäßiges Ei */
+  /* v350: Brust voller und tiefer, Rücken fällt zum Bürzel ab, Hinterleib schlanker – vorher ein gleichmäßiges Ei */
   const PH_T = [[-0.215, 0.268, 0.24, 0.02], [-0.19, 0.298, 0.196, 0.056], [-0.12, 0.326, 0.164, 0.086], [-0.03, 0.344, 0.14, 0.1], [0.06, 0.35, 0.133, 0.099],
     [0.13, 0.345, 0.15, 0.086], [0.18, 0.331, 0.184, 0.062], [0.21, 0.312, 0.228, 0.03]];
   function phCol(p, sv, z) {
@@ -812,7 +812,7 @@ const HUNT = (() => {
     return b;
   }
   /* Ständer: Lauf mit Sporn und drei Zehen nach vorn, eine nach hinten */
-  /* v343: befiederter Schenkel („Hose“) – setzt den Bauch fort und läuft zum nackten Lauf aus; vorher kam der Lauf als Stab direkt aus dem Bauch */
+  /* v350: befiederter Schenkel („Hose“) – setzt den Bauch fort und läuft zum nackten Lauf aus; vorher kam der Lauf als Stab direkt aus dem Bauch */
   function phThigh(b) {
     ell(b, [0, -0.012, -0.006], [0.021, 0.044, 0.028], (p, y) => mixc(mixc(PHC.belly, PHC.copper, 0.3 + 0.25 * hsh(p[0] * 60, p[1] * 60, p[2] * 60)), PHC.leg, ss((-y - 0.55) / 0.4) * 0.5), 7, 5);
   }
@@ -851,7 +851,7 @@ const HUNT = (() => {
   }
   /* v262: Flugflügel mit Arm (Decken hell) und Hand (Schwingen dunkel, gefingert), Drehpunkt am Ansatz – vorher ein einzelnes Viereck */
   function phWing(s) {
-    /* v343: für die Nahansicht am erlegten Stück – gewölbte Decken in Rumpffarbe, 6 Armschwingen und 8 gebänderte Handschwingen (vorher 3 helle Flächen) */
+    /* v350: für die Nahansicht am erlegten Stück – gewölbte Decken in Rumpffarbe, 6 Armschwingen und 8 gebänderte Handschwingen (vorher 3 helle Flächen) */
     const b = MB(), X = p => [s * p[0], p[1], p[2]];
     const two = (P, C) => { for (let i = 1; i < P.length - 1; i++) { const a = X(P[0]), m = X(P[i]), n = X(P[i + 1]), ca = RGB(C[0]), cm = RGB(C[i]), cn = RGB(C[i + 1]), d = c => mulc(c, 0.72);
       if (s > 0) { b.triV(a, m, n, ca, cm, cn); b.triV(a, n, m, d(ca), d(cn), d(cm)); } else { b.triV(a, n, m, ca, cn, cm); b.triV(a, m, n, d(ca), d(cm), d(cn)); } } };
@@ -909,7 +909,7 @@ const HUNT = (() => {
       neckP: [0, 1.02, 0.4], headP: [0, 0.5, 0.22], body: { c: [0, 0.98, 0], r: [0.2, 0.22, 0.5] }, lung: { c: [0, 0.96, 0.24], r: 0.135 }, heart: { c: [0, 0.88, 0.28], r: 0.08 },
       head: { c: [0, 0.0, 0.18], r: 0.12 }, neckZ: [[0, 0.05, 0.02], [0, 0.46, 0.2]], neckR: 0.095, neckS: deerNeckZones(), sens: 1.3 },
     keiler: { n: "Keiler", i: "🐗", walk: 1.1, sneak: 0.8, run: 8.0, s0: 0.92, s1: 1.15,
-      legs: [{ h: [-0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [-0.12, 0.51, -0.37], lu: BLU, ll: BLL, f: 0 }, { h: [0.12, 0.51, -0.37], lu: BLU, ll: BLL, f: 0 }],     /* v343: Hüfte weiter hinten – die Keule schließt den Rumpf ab */
+      legs: [{ h: [-0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [0.12, 0.51, 0.24], lu: BLU, ll: BLL, f: 1 }, { h: [-0.12, 0.51, -0.37], lu: BLU, ll: BLL, f: 0 }, { h: [0.12, 0.51, -0.37], lu: BLU, ll: BLL, f: 0 }],     /* v350: Hüfte weiter hinten – die Keule schließt den Rumpf ab */
       neckP: [0, 0.6, 0.4], headP: [0, 0, 0], body: { c: [0, 0.53, 0], r: [0.21, 0.23, 0.46] }, lung: { c: [0, 0.52, 0.2], r: 0.125 }, heart: { c: [0, 0.46, 0.24], r: 0.07 },
       head: { c: [0, -0.06, 0.32], r: 0.14 }, neckZ: [[0, 0.02, 0.0], [0, 0.0, 0.14]], neckR: 0.13, stich: { c: [0, 0.455, 0.44], r: [0.17, 0.13, 0.135] }, sens: 1.2 },
     fasan: { n: "Fasan", i: "🐦", walk: 0.45, sneak: 0.35, run: 1.8, s0: 1.2, s1: 1.4, legs: [],
@@ -1457,7 +1457,7 @@ const HUNT = (() => {
     S0.legs.forEach((L, i) => {
       const a = (pose.legs && pose.legs[i]) || [0, 0];
       for (let j = 1; j <= 4; j++) {
-        /* v343: die Kugelkette folgt der Keule bis zum nach hinten versetzten Sprunggelenk (dm[2]) */
+        /* v350: die Kugelkette folgt der Keule bis zum nach hinten versetzten Sprunggelenk (dm[2]) */
         const dm = legDim(k, L), up = legPt(L, dm, a[0], a[1] || 0, a[2] || 0, [0, -L.lu * j / 4, dm[2] * j / 4], false), t = raySphere(lo, ld, up, 0.06); if (t != null) hits.push(["lauf", t]);
         if (L.ll) { const lp = legPt(L, dm, a[0], a[1] || 0, a[2] || 0, [0, -L.ll * j / 4.2, 0], true), t2 = raySphere(lo, ld, lp, 0.045); if (t2 != null) hits.push(["lauf", t2]); }
       }
@@ -2144,7 +2144,7 @@ const HUNT = (() => {
         const dp = deadPose(A), g = dp.y;
         A.fly.vy -= 14 * dt; A.y = Math.max(g, A.y + A.fly.vy * dt); A.x += A.fly.vx * dt * 0.3; A.z += A.fly.vz * dt * 0.3;
         A.rz += (dp.rz - A.rz) * Math.min(1, dt * 3.5); A.rx += (0 - A.rx) * Math.min(1, dt * 3);
-        /* v343: bleibt in der Liegeform eine Schwinge offen, legt sie sich im Fallen nicht an, sondern schlägt haltlos mit */
+        /* v350: bleibt in der Liegeform eine Schwinge offen, legt sie sich im Fallen nicht an, sondern schlägt haltlos mit */
         A.wings.forEach((w, i) => {
           const tw = dp.wings && dp.wings[i];
           if (tw) { w.sx += (tw.sx - w.sx) * Math.min(1, dt * 4); w.rz = (i ? 1 : -1) * (0.55 + 0.35 * Math.sin(time * 17 + i * 2.1)); }
@@ -2216,7 +2216,7 @@ const HUNT = (() => {
         const m = f.rx > 0.7 ? A.footM[1] : A.footM[0]; if (f.mesh !== m) f.mesh = m;
       });
     }
-    /* v343: offene Schwingen des liegenden Fasans – aus der letzten Flug-/Fallstellung (oder angelegt) weich in die Liegeform */
+    /* v350: offene Schwingen des liegenden Fasans – aus der letzten Flug-/Fallstellung (oder angelegt) weich in die Liegeform */
     if (A.wings && (A.st === "dead" || A.st === "fall")) {
       const dw = deadPose(A).wings, kw = fallK(A);
       if (dw) A.wings.forEach((w, i) => {
@@ -2368,7 +2368,7 @@ const HUNT = (() => {
       neck: [-0.42, -0.28, -0.12], yaw: [-0.2, 0.6], roll: 0.5, tol: 0.003 },
     fasan: { rz: 1.4, neck: [0.85, 1.05, 1.25], bend: [-0.1, 0.8], feet: [[0.85, 1.75], [-0.45, 0.45]], tol: 0.002 }
   };
-  /* ------------------- v343: Liegeformen -------------------
+  /* ------------------- v350: Liegeformen -------------------
      Vorher lag jedes Stück gleich: Seitenlage, Läufe halb angewinkelt, Träger nach vorn – nur um wenige Grad je Stück verschieden,
      der Fasan immer auf derselben Seite mit angelegten Schwingen. Jetzt gibt es je Art mehrere Formen (o überschreibt POSE):
      • ruhe    – wie bisher: Läufe halb angewinkelt
@@ -2412,7 +2412,7 @@ const HUNT = (() => {
   /* Knotenwinkel ↔ Feder-Zielwerte in stepAnimal (neckRot) */
   const neckRot = (k, nrx, nry) => k === "keiler" ? [nrx - 0.55, nry * 0.6] : k === "hirsch" ? [nrx - 0.35, nry] : [nrx * 0.6 - 0.2, nry * 0.6];
   const neckRotInv = (k, rx, ry) => k === "keiler" ? [rx + 0.55, ry / 0.6] : k === "hirsch" ? [rx + 0.35, ry] : [(rx + 0.2) / 0.6, ry / 0.6];
-  const legDim = (k, L) => k === "keiler" ? [BLU, BLL, L.f ? 0 : BHOCK] : [L.lu, L.ll, L.f ? 0 : DHOCK];        /* v343: dritter Wert = Versatz des Sprunggelenks nach hinten */
+  const legDim = (k, L) => k === "keiler" ? [BLU, BLL, L.f ? 0 : BHOCK] : [L.lu, L.ll, L.f ? 0 : DHOCK];        /* v350: dritter Wert = Versatz des Sprunggelenks nach hinten */
   const TORSO_OF = { hirsch: TORSO, keiler: BOAR_T, fasan: PH_T };
   /* Punkt (Tierkoordinaten, ohne Maßstab) im Rumpf? Querschnitt an der Stelle z aus dem Profil; m vergrößert den Querschnitt */
   function inTorso(k, p, m) {
@@ -2443,7 +2443,7 @@ const HUNT = (() => {
     const U = k === "keiler" ? (front ? BLEG_FU : BLEG_HU) : (front ? LEG_FU : LEG_HU), Lo = k === "keiler" ? BLEG_LO : LEG_LO;
     const len = U[U.length - 1][0];
     S = [];
-    /* nicht am Hüft-/Schulteransatz (steckt im Rumpf); v343: erst ab 60 % – Keule und Unterarm sind oben breit und liegen am Rumpf an */
+    /* nicht am Hüft-/Schulteransatz (steckt im Rumpf); v350: erst ab 60 % – Keule und Unterarm sind oben breit und liegen am Rumpf an */
     U.forEach(r => { if (r[0] < len * 0.6) S.push([[0, r[0], r[3]], Math.max(r[1], r[2]) * 0.85, 0]); });
     for (let i = 0; i < Lo.length; i++) { const r = Lo[i]; S.push([[0, r[0], r[3]], Math.max(r[1], r[2]) * 0.9, 1]); }
     if (k === "keiler") S.push([[0, -0.186, 0.025], 0.02, 1]);                                                       /* Schalen */
@@ -2460,7 +2460,7 @@ const HUNT = (() => {
   /* Haupt-Teile in ihren eigenen Koordinaten (beim Hirsch Träger, Haupt ohne Geweih, Geweih, beide Lauscher getrennt) */
   function headParts(A) {
     const q = Math.round(A.score * 20) / 20, gn = A.gn, lk = ":" + lookKey(A.k, gn);
-    /* v343: das liegende Haupt (geschlossene Lider, Teller nach hinten gelegt) – dieselbe Geometrie, die am erlegten Stück gezeichnet wird */
+    /* v350: das liegende Haupt (geschlossene Lider, Teller nach hinten gelegt) – dieselbe Geometrie, die am erlegten Stück gezeichnet wird */
     if (A.k === "keiler") return { head: ptsOf("h:kr" + A.T.cm + ":" + q + lk, () => withLook("keiler", gn, () => { G3.seed(5202); return boarHeadInto(MB(), q, A.T.cm, true); }), 2) };
     if (A.k === "fasan") return { head: ptsOf("h:f" + lk, () => withLook("fasan", gn, phHead)), feet: ptsOf("f:fcb", () => phLegCurl(true)) };
     const hk = A.T.P + ":" + q + ":" + (A.vr || 0) + lk + antKey(gn);
@@ -2485,7 +2485,7 @@ const HUNT = (() => {
     const Wy = p => (Math.sin(rz) * p[0] + Math.cos(rz) * p[1]) * s;                           /* Höhe ohne Verschiebung (ry ändert sie nicht) */
     const BP = ptsOf("b:" + k + ":" + lookKey(k, A.gn), () => withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody));
     let lo = 1e9; BP.forEach(p => { lo = Math.min(lo, Wy(p)); });
-    /* v343: Keule und Schulter stehen seitlich über den Rumpf hinaus – ihr Ansatz (nahe am Drehpunkt, kaum abhängig von der Spreizung) zählt mit */
+    /* v350: Keule und Schulter stehen seitlich über den Rumpf hinaus – ihr Ansatz (nahe am Drehpunkt, kaum abhängig von der Spreizung) zählt mit */
     const UP = [];
     (S0.legs || []).forEach(L => {
       const top = L.h[0] * side > 0, base = D.legs[(top ? "t" : "b") + (L.f ? "f" : "h")];
@@ -2608,7 +2608,7 @@ const HUNT = (() => {
         return [fb.rx, fb.fz];
       });
     }
-    /* v343: offene Schwingen – jede wird um ihren Ansatz so weit gedreht, bis sie aufliegt (Spitze am Boden), ohne Boden oder Rumpf zu durchdringen */
+    /* v350: offene Schwingen – jede wird um ihren Ansatz so weit gedreht, bis sie aufliegt (Spitze am Boden), ohne Boden oder Rumpf zu durchdringen */
     let wings = null;
     if (k === "fasan" && D.wing) {
       wings = [-1, 1].map(sg => {
@@ -2905,7 +2905,7 @@ const HUNT = (() => {
       const A = best.A, at = [r0.o[0] + d[0] * best.h.t, r0.o[1] + d[1] * best.h.t, r0.o[2] + d[2] * best.h.t];
       const dm = Math.round(Math.hypot(at[0] - E[0], at[1] - E[1], at[2] - E[2]) * M_PER_U);
       const context = shotContext(A), session = X;        /* v307: Zustand des sichtbaren Ziels festhalten, bevor Flugzeit/Schreck es ändern. */
-      /* v343: Schusskanal für das Trefferbild – Strahl in Tierkoordinaten und Haltung im Augenblick des Einschlags */
+      /* v350: Schusskanal für das Trefferbild – Strahl in Tierkoordinaten und Haltung im Augenblick des Einschlags */
       context.rec = shotRec(A.k, poseOf(A, best.tf), r0.o, d, best.h, dm, { tf: best.tf, drift: Math.tan(Math.abs(dr)) * dm, wv: X.wind.v });
       setTimeout(() => { if (X !== session) return; hitSound(); FV.R.burst({ x: at[0], y: at[1], z: at[2], n: 6, col: [[0.45, 0.1, 0.08, 1], [0.35, 0.25, 0.18, 1]], speed: 0.9, up: 0.6, size: 0.05, life: 0.6, shape: 1 }); onHit(A, best.h.zone, dm, context); scare(1.6, at, 140, A); }, Math.round(best.tf * 1000) + 60);
     } else {
@@ -2926,7 +2926,7 @@ const HUNT = (() => {
     if (A.mv == null) { const c = context || shotContext(A); A.mv = c.mv; A.air = c.air; A.wv = c.wv; }   /* v307: für Beschriftung, Jagdbuch und Flugauftrag */
     const Z = ZONE[zone];
     if (A.k === "fasan") {
-      /* v343: Seite je Stück (vorher immer dieselbe) */
+      /* v350: Seite je Stück (vorher immer dieselbe) */
       A.side = poseRnd(A, 41) < 0 ? -1 : 1;
       if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; fallStart(A, 0.45); }
       A.zone = zone; X.target = A; buzz(22);
@@ -3354,7 +3354,7 @@ const HUNT = (() => {
   }
 
 
-  /* ============================ v343: Trefferbild (Röntgen) ============================
+  /* ============================ v350: Trefferbild (Röntgen) ============================
      Wunsch: wie in „theHunter“ – beim erlegten Stück lässt sich ein Röntgenbild aufrufen: das Tier durchscheinend in der Haltung des
      Einschlags, Skelett und Organe, der Schusskanal als Linie, dazu welche Organe und Knochen getroffen wurden und mit welcher Wirkung;
      bei mehreren Treffern schaltet man durch. Darunter Tierdetails und Schussbericht.
@@ -3483,8 +3483,8 @@ const HUNT = (() => {
       R.addChild(inner, nd(mk(b), {}));
     }
     /* Kamera: von der Schützenseite, schräg – der Kanal läuft sichtbar durchs Bild; Abstand so, dass das Stück ins Hochformat passt */
-    const len = (k === "fasan" ? 0.75 : k === "keiler" ? 1.75 : 2.0) * A.s, hgt = (k === "fasan" ? 0.42 : k === "keiler" ? 0.95 : 1.9) * A.s;
-    XR.c = [0, hgt * (k === "hirsch" ? 0.48 : 0.5), (k === "fasan" ? -0.08 : 0.16) * A.s]; XR.len = len; XR.hgt = hgt;
+    const len = (k === "fasan" ? 1.2 : k === "keiler" ? 1.75 : 2.0) * A.s, hgt = (k === "fasan" ? 0.5 : k === "keiler" ? 0.95 : 1.9) * A.s;      /* Fasan: der lange Stoß gehört ins Bild */
+    XR.c = [0, hgt * (k === "hirsch" ? 0.48 : 0.5), (k === "fasan" ? -0.2 : 0.16) * A.s]; XR.len = len; XR.hgt = hgt;
     XR.yaw = Math.atan2(-sh.ld[2], -sh.ld[0]) + (Math.abs(sh.ld[0]) > 0.5 ? (sh.ld[2] * sh.ld[0] > 0 ? -0.35 : 0.35) : 0); XR.pitch = 0.1; XR.zoom = 1;
     /* nie genau in Schussrichtung schauen: mindestens gut 50° zur Längsachse des Stücks, damit Organe und Kanal nebeneinander liegen */
     { const sd = Math.cos(XR.yaw) >= 0 ? 1 : -1, a = Math.atan2(Math.sin(XR.yaw), Math.abs(Math.cos(XR.yaw))); XR.yaw = sd > 0 ? clamp(a, -0.6, 0.6) : Math.PI - clamp(a, -0.6, 0.6); }

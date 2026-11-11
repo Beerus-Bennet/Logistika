@@ -168,7 +168,8 @@ const FAREAS = {
     n: "Sägewerk Krüger", i: "🪚", lv: 9,
     locks: [[-54, -54, -28, -28]], reveal: [-41, -29], cam: null,
     reqs: [{ t: "Kettensäge gekauft", n: 1, v: () => Math.min(1, S.farm.tools.saw || 0), yes: true }, { t: "Bäume gefällt", n: 30, v: () => S.farm.stats.felled || 0 }],
-    who: "Nachbar Erwin Krüger", whoI: "👴", whoRole: "Nachbar",
+    /* v349: Der ältere Sägewerksbesitzer ist Erwins Vater. */
+    who: "Nachbar Heinrich Krüger", whoI: "👴", whoRole: "Erwins Vater · Nachbar",
     msg: "Nachbar Krüger schenkt dir sein altes Sägewerk.",
     talk: "Tach! Mein altes Sägewerk gehört jetzt dir – erst reparieren, dann läuft’s."
   },

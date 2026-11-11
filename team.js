@@ -27,6 +27,14 @@ function staffSlots() { return staffRoles().length; }
 function staffHas(role) { return (S.farm.staff || []).some(s => s.role === role); }
 /* Bewerbungen: jeden Tag neu, je offener Aufgabe eine Person */
 function staffCands() {
+  /* v349: Bekannte bleiben über Tage dieselben Personen. Alte Angestellte
+     behalten ihre bisherigen Namen, Eigenschaften und Verträge. */
+  if(typeof FARM_STORY!=="undefined"){
+    const F=S.farm,roles=staffRoles().filter(r=>!staffHas(r));
+    const old=F.cand&&F.cand.list||[];
+    F.cand={day:staffDay(),sig:"story349:"+roles.join(","),list:roles.map(r=>old.find(c=>c.role===r&&c.story349)||FARM_STORY.candidate(r))};
+    return F.cand.list;
+  }
   const F = S.farm, roles = staffRoles().filter(r => !staffHas(r)), sig = staffDay() + ":" + roles.join(",");
   if (!F.cand || F.cand.sig !== sig) {
     const keep = F.cand && F.cand.day === staffDay() ? F.cand.list : [];
@@ -50,12 +58,14 @@ function staffHire(cid) {
   if (!c) return false;
   if (!staffRoleOpen(c.role)) return toast("Für diese Station kannst du noch niemanden einstellen.", "warn"), false;
   if (staffHas(c.role)) return toast("Für diese Aufgabe hast du schon jemanden.", "warn"), false;
+  if(c.story349&&typeof FARM_STORY!=="undefined"&&!FARM_STORY.state().met[c.role])return toast("Lerne "+c.name+" erst im Gespräch kennen.","warn"),false;
   const fee = c.wage * 2;
-  if (S.money < fee) return toast("Für das Antrittsgeld fehlen " + eur(fee - S.money) + ".", "warn"), false;
+  if (S.money < fee) return toast("Für die Startprämie fehlen " + eur(fee - S.money) + ".", "warn"), false;
   S.money -= fee; S.expense += fee;
   logMoney("farm", "Eingestellt: " + c.name + " (" + FSTAFF_ROLES[c.role].n + ")", -fee);
   const h = staffHome(c.role, F.staff.length);
   F.staff.push(Object.assign({}, c, { since: S.time, fed: true, work: S.time - 999, px: h[0], pz: h[1], doing: "fängt gerade an" }));
+  if(c.story349&&typeof FARM_STORY!=="undefined")FARM_STORY.state().agreed[c.role]=S.time;
   farmXP(15);
   farmEvent("staff");
   return true;
@@ -795,14 +805,15 @@ function staffWlInit(F) {
   F.wlV = 2;
   F.tasks = (F.tasks || []).filter(T => !(T.from === "chef" && (staffWlOn(T.role) || T.role === "fahrer")));
 }
-/* Für dich: Lina sagt Bescheid, wenn die Kette an etwas hängt, das keiner macht */
+/* v349: Rückfragen zur Hofarbeit kommen aus dem Hofteam. */
 function staffChefNote(T) {
   const F = S.farm;
   F.taskNote = F.taskNote || {};
   const day = staffDay();
   if (F.taskNote[T.item] === day || typeof phoneMsg !== "function") return;
   F.taskNote[T.item] = day;
-  phoneMsg({ from: "Lina Sturm", kind: "info", title: "Es fehlt: " + staffItemName(T.item),
+  const role=FSTAFF_ROLES[T.from]?T.from:"farmer",person=staffOf(role);
+  phoneMsg({ from: person?person.name:typeof FARM_STORY!=="undefined"?FARM_STORY.profile(role).name:"Hofteam", kind: "info", title: "Es fehlt: " + staffItemName(T.item),
     body: "Chef, " + (T.note ? T.note + " " : "") + "fehlt " + staffItemName(T.item) + " – " + (T.why || "das macht bei uns niemand") + ". Steht im Haus unter „Team“ bei „Für dich“." });
 }
 /* Unterauftrag: wer macht die fehlende Ware? */
@@ -1607,10 +1618,12 @@ function staffBody(s) {
   if (L.garb === "overall") o.pants = o.shirt;                                         /* Overall: Hose in Hemdfarbe */
   if (L.garb === "plaid" && o.shirt === 0x2f6a4a) o.gc = 0x1f4a32;
   if (!(hs === "pferd" || hs === "lang" || hs === "dutt") && ((k >> 5) % 3 === 1 || hs === "glatze")) o.beard = hs === "glatze" ? 0x3a2a1a : mixHairBeard(hair);   /* Bart: bei Glatze häufiger */
+  /* v349: Alter und Frisur passen zur festen Person, unabhängig vom Zufallslook. */
+  if(s.story349&&!b){const hair={farmer:["kurz",0x7a4a2a],pfleger:["dutt",0x3a2a1a],hofmeister:["kurz",0xa8a8a8],fahrer:["locken",0x3a2a1a],holzfaeller:["kurz",0x7a4a2a],saeger:["scheitel",0x858585],mechaniker:["pferd",0x1d1d20],fischer:["kurz",0xb8b8b8],fischwirt:["pferd",0x8a3a1a]},h=hair[s.role];if(h){o.hs=h[0];o.hair=h[1];}delete o.beard;if(["holzfaeller","saeger","fischer"].includes(s.role))o.beard=mixHairBeard(o.hair);}
   return o;
 }
 const mixHairBeard = c => { const r = (c >> 16) & 255, g = (c >> 8) & 255, bl = c & 255; return ((r * 0.85) << 16) | ((g * 0.85) << 8) | (bl * 0.85 | 0); };
-const staffKey = s => { const b = staffStandIn(s); return s.role + ":" + (b ? "v" + b.look : s.look != null ? s.look % 400 : s.name); };
+const staffKey = s => { const b = staffStandIn(s); return s.role + ":" + (b ? "v" + b.look : s.look != null ? s.look % 400 : s.name)+(s.story349?":p349":""); };
 /* Werkzeug in der Hand (relativ zur Figur – für das Bildchen) */
 function staffToolAt(T) { return T.rod ? { x: 0.22, y: 0.42, z: 0.1, rx: -0.5, s: T.s } : { x: 0.26, y: 0.3, z: 0.12, s: T.s }; }
 /* … und relativ zur Schulter des beweglichen Arms (auf dem Hof) */
@@ -1687,6 +1700,7 @@ const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
 const staffSS = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 /* v112: Hinsetzen – 1,2 s: zum Feuer drehen, rückwärts an den Sitz, in die Knie; am Ende erst die Sitzfigur. true = noch in Bewegung */
 function staffSitDown(s, e, sl, dt) {
+  if(typeof STAFF_SEAT!=="undefined")return STAFF_SEAT.down(s,e,sl,dt);
   const n = e.node, A = e.arm, P = CAMP.pose(sl);
   e.riseT = null; e.sitT = (e.sitT || 0) + dt;
   const t = e.sitT, kx = Math.min(1, dt * 2.4);
@@ -1708,6 +1722,7 @@ function staffSitDown(s, e, sl, dt) {
 }
 /* v112: Aufstehen – 1,15 s: vorbeugen, Hände aufs Knie, Stehfigur, hochdrücken. true = noch in Bewegung */
 function staffRise(s, e, dt) {
+  if(typeof STAFF_SEAT!=="undefined"&&e.seatRig)return STAFF_SEAT.up(s,e,dt);
   const n = e.node, A = e.arm;
   e.sitT = 0; e.riseT = (e.riseT == null ? 0 : e.riseT) + dt;
   const t = e.riseT;
@@ -1752,7 +1767,6 @@ function staffGroundTool(s, e, tg) {
   g.visible = true; g.x = tg.x; g.z = tg.z; g.ry = tg.ry + (lay ? 0 : 0); g.rx = lay ? -1.5 : 0; g.y = 0.07 + tg.lift * 0.3;
 }
 /* Jedes Bild: hinlaufen, arbeiten (Arm schwingt das Werkzeug), winken, zurück an den Platz */
-const STAFF_GAP = 0.8;     /* v232: Mindestabstand zwischen zwei Figuren */
 function stepStaff(dt, time) {
   const F = S.farm;
   if (!F || !F.staff) return;
@@ -1777,7 +1791,7 @@ function stepStaff(dt, time) {
        v112: weich – erst zum Feuer umdrehen, rückwärts an den Sitz, in die Knie; beim Aufstehen vorbeugen, Hände aufs Knie, hoch */
     const sl = j && j.k === "lunch" && S.time - j.t0 >= j.walk && typeof CAMP !== "undefined" ? CAMP.slotOf(s.id) : null;
     if (sl && !e.isSit) { if (staffSitDown(s, e, sl, dt)) return; }
-    else if (!sl && (e.isSit || e.riseT != null)) {
+    else if (!sl && (e.isSit || e.sitT || e.riseT != null)) {
       /* v232: Beim Aufstehen läuft die Uhr der nächsten Arbeit nicht weiter – sonst ist der Weg schon halb vorbei, bevor die Figur steht */
       if (j && j.k !== "lunch" && gdt > 0 && S.time < j.t1) { j.t0 += gdt; j.t1 += gdt; if (s.jobEnd) s.jobEnd += gdt; }
       if (staffRise(s, e, dt)) return;
@@ -1804,6 +1818,7 @@ function stepStaff(dt, time) {
     n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off && !noHand; if (e.head) e.head.visible = !off && !!e.isSit;
     if (off) return;
     if (sl) {
+      if(e.seatRig&&typeof STAFF_SEAT!=="undefined"){STAFF_SEAT.idle(e,sl,dt,time,CAMP.talkOf(sl.id));return;}
       const P = CAMP.pose(sl), k = Math.min(1, dt * 5), G = CAMP.talkOf(sl.id), kx = Math.min(1, dt * 4);
       /* v95: vom Standpunkt vor dem Sofa rückwärts auf den Sitz, dabei zum Feuer umdrehen */
       e.x += (sl.x - e.x) * kx; e.z += (sl.z - e.z) * kx; n.x = e.x; n.z = e.z; if (e.tool) e.tool.visible = false;
@@ -1880,31 +1895,8 @@ function stepStaff(dt, time) {
       if (t) { WV.hit = { id: t.id, t0: wnow() }; FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: 4, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.2, up: 1.4, size: 0.06, shape: 1 }); }
     }
   });
-  /* v232: Abstand halten – niemand läuft in einen anderen hinein. Wer näher als STAFF_GAP kommt, weicht seitlich aus (sanft, höchstens 0,7);
-     Sitzende am Feuer und das Ablegen an der Werkzeugplane bleiben unberührt. */
-  {
-    const L = [];
-    F.staff.forEach(s => { const e = WV.staff.get(s.id); if (e && e.node.visible && !e.isSit && !e.dw && e.riseT == null) L.push(e); });
-    L.forEach(e => { e.tx = 0; e.tz = 0; });
-    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) {
-      const A = L[a], B = L[b];
-      if (typeof CAMP !== "undefined" && CAMP.blockedW && (CAMP.blockedW(A.x, A.z) || CAMP.blockedW(B.x, B.z))) continue;
-      let dx = A.x - B.x, dz = A.z - B.z, d = Math.hypot(dx, dz);
-      if (d >= STAFF_GAP) continue;
-      if (d < 1e-3) { const q = (A.ph || 0) - (B.ph || 0) + 1; dx = Math.cos(q); dz = Math.sin(q); d = 1; }
-      const push = (STAFF_GAP - Math.hypot(A.x - B.x, A.z - B.z)) / 2 + 0.02, ux = dx / d, uz = dz / d;
-      /* wer läuft, weicht stärker aus als wer steht */
-      const wa = A.mv && !B.mv ? 1.5 : !A.mv && B.mv ? 0.5 : 1;
-      A.tx += ux * push * wa; A.tz += uz * push * wa; B.tx -= ux * push * (2 - wa); B.tz -= uz * push * (2 - wa);
-    }
-    F.staff.forEach(s => {
-      const e = WV.staff.get(s.id); if (!e) return;
-      if (e.isSit || e.dw || e.riseT != null) { e.ox = 0; e.oz = 0; return; }
-      const k = Math.min(1, dt * 6), m = Math.hypot(e.tx || 0, e.tz || 0), c = m > 0.7 ? 0.7 / m : 1;
-      e.ox = (e.ox || 0) + ((e.tx || 0) * c - (e.ox || 0)) * k; e.oz = (e.oz || 0) + ((e.tz || 0) * c - (e.oz || 0)) * k;
-      if (Math.abs(e.ox) > 0.002 || Math.abs(e.oz) > 0.002) { e.node.x = e.x + e.ox; e.node.z = e.z + e.oz; }
-    });
-  }
+  /* v346: Abstand jetzt gemeinsam mit Bewohnern und Fahrrädern in
+     PEOPLE_TRAFFIC; keine zweite, widersprechende Verschiebung hier. */
   /* offene Blase über einer Kraft: Text aktuell halten */
   if (FV.pop && FV.pop.kind === "staff") {
     const P = FV.pop, el = $("#farmPop");
@@ -2034,6 +2026,7 @@ function staffPopHTML(s, P) {
   const cur = s.job && s.job.task ? staffTaskList().find(T => T.id === s.job.task) : null;
   let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(staffName(s))} · ${R0.i} ${esc(R0.n)}
     <small>${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}${cur ? " · für " + esc(staffWho(cur)) : s.job ? " · eigener Plan" : ""}</small></div></div>`;
+  if(typeof FARM_STORY!=="undefined")h+=`<button class="btn tiny ghost" data-staff-story="${s.role}">Unsere Zusammenarbeit</button>`;
   if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
   const wl = staffWlOn(s.role), fahr = s.role === "fahrer";
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
@@ -2109,6 +2102,7 @@ function renderStaffPop(el, P, force) {
   const oldBox = el.querySelector(".fp-box.fstp"), keepTop = oldBox ? oldBox.scrollTop : 0;      /* v277: Scrollstand bleibt beim Neuzeichnen */
   el.innerHTML = `<div class="fp-box fstp">${h}</div>`;
 
+  el.querySelectorAll("[data-staff-story]").forEach(b=>b.onclick=ev=>{ev.stopPropagation();closeFarmPop();FARM_STORY.open(b.dataset.staffStory);});
   el.querySelectorAll("[data-tdel]").forEach(b => b.onclick = ev => { ev.stopPropagation(); if (staffTaskDel(b.dataset.tdel, true)) { sfx("pop"); save(); } renderStaffPop(el, P, true); });
   el.querySelectorAll("[data-tadd]").forEach(b => b.onclick = ev => { ev.stopPropagation(); P.add = true; renderStaffPop(el, P, true); });
   /* v61: Freigabe umschalten / Fahrer-Modus wählen – gilt sofort und bleibt gespeichert */
@@ -2211,22 +2205,22 @@ function staffHTML() {
           <small>${esc(R0.job)}</small><em class="fst-do">${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}</em>
           ${ts.length ? `<small class="fst-tl">📋 ${ts.map(T => esc(staffItemName(T.item, T.n)) + " (" + esc(staffWho(T)) + ")").join(" · ")}</small>` : ""}
           <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small>
-          ${staffTrainHTML(s)}</div>
+          ${typeof FARM_STORY!=="undefined"?`<button class="btn tiny ghost" data-story="${r}">Unsere Zusammenarbeit</button>`:""}${staffTrainHTML(s)}</div>
           <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${s.ride && staffRideGone(s) ? "disabled" : ""}>📍 Orten</button>
           <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div></div>`;
       }
-      if (!open || flv() < R0.lv) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b><small>${esc(R0.job)}</small><small>🔒 ${open ? "ab Level " + R0.lv : esc(G.lock)}</small></div></div>`;
+      if (!open || flv() < R0.lv) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b>${typeof FARM_STORY!=="undefined"?`<small>${esc(FARM_STORY.profile(r).name)} · ${esc(FARM_STORY.profile(r).via)}</small>`:""}<small>${esc(R0.job)}</small><small>🔒 ${open ? "ab Level " + R0.lv : esc(G.lock)}</small>${typeof FARM_STORY!=="undefined"&&FARM_STORY.state().met[r]?`<button class="btn tiny ghost" data-story="${r}">Gespräch fortsetzen</button>`:""}</div></div>`;
       const c = cands.find(x => x.role === r);
-      if (!c) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b><small>Morgen kommt eine neue Bewerbung.</small></div></div>`;
+      if (!c) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b><small>Eine neue Bekanntschaft ergibt sich später.</small></div></div>`;
       return `<div class="fstaff cand"><div class="fst-p">${staffIc(c)}</div><div><b>${esc(c.name)} · ${R0.i} ${esc(R0.n)}</b><small>${esc(R0.job)}</small>
-          <small>${esc(c.trait)} +${c.perk} % · ${eur(c.wage)} am Tag</small></div>
-          <button class="btn tiny" data-hire="${c.id}" ${S.money < c.wage * 2 ? "disabled" : ""}>Einstellen<small>${eur(c.wage * 2)}</small></button></div>`;
+          <small>${esc(c.trait)} +${c.perk} % · ${eur(c.wage)} am Tag</small>${typeof FARM_STORY!=="undefined"?`<em>${esc(FARM_STORY.profile(r).via)}</em>`:""}</div>
+          <button class="btn tiny" data-story="${r}">Kennenlernen<small>unverbindlich</small></button></div>`;
     }).join("");
     const auto = open && roles.filter(r => FSTAFF_ROLES[r].gap).every(staffHas);
     return `<div class="fteam${open ? "" : " lock"}"><div class="fteam-h"><span>${G.i}</span><b>${esc(G.n)}</b><small>${open ? (auto ? "✓ läuft von allein" : hired + "/" + roles.length + " eingestellt") : "🔒 " + esc(G.lock)}</small></div>${rows}</div>`;
   }).join("");
-  return `<div class="fs-sub">👷 Ist die nächste Etappe offen, übernehmen deine Leute die alte Station – langsamer als du, aber ohne Pause. Tipp eine Kraft auf dem Hof an: Sie zeigt ihre Aufträge, und du legst fest, was sie machen darf.</div>
-    ${forYou}${groups}
+  return `<div class="fs-sub">🤝 Dein Hofteam entsteht aus Bekanntschaften. Lerne die Menschen kennen und vereinbare mit ihnen die Zusammenarbeit, sobald ihre Station offen ist. Tipp eine Kraft auf dem Hof an: Sie zeigt ihre Aufträge, und du legst fest, was sie machen darf.</div>
+    ${typeof FARM_STORY!=="undefined"&&!staffHas("farmer")?`<button class="btn ghost" data-story="farmer">Mit Erwin über den Hof sprechen</button>`:""}${forYou}${groups}
     <div class="fs-sub">Täglich Lohn + Brotzeit aus dem Lager – hungrig schaffen sie nur die Hälfte.</div>`;
 }
 /* Fortbildung: Knopf oder Hinweis, wann es wieder geht */
@@ -2261,6 +2255,7 @@ function staffLocate(id) {
   }, 220);
 }
 function staffBind(again) {
+  $$("#farmSheetIn [data-story]").forEach(b=>b.onclick=()=>FARM_STORY.open(b.dataset.story,again));
   $$("#farmSheetIn [data-loc]").forEach(b => b.onclick = () => { sfx("tap"); staffLocate(b.dataset.loc); });
   $$("#farmSheetIn [data-train]").forEach(b => b.onclick = () => {
     const s = S.farm.staff.find(x => x.id === b.dataset.train);
@@ -2273,7 +2268,7 @@ function staffBind(again) {
     });
   });
   $$("#farmSheetIn [data-hire]").forEach(b => b.onclick = () => { if (staffHire(b.dataset.hire)) { sfx("build"); save(); farmSyncScene(); again(); } else sfx("bad"); });
-  $$("#farmSheetIn [data-fire]").forEach(b => b.onclick = () => askConfirm("Wirklich entlassen?", "Die Stelle wird frei – neue Bewerbungen kommen jeden Tag.", "Entlassen", () => { staffFire(b.dataset.fire); save(); farmSyncScene(); again(); }));
+  $$("#farmSheetIn [data-fire]").forEach(b => b.onclick = () => askConfirm("Wirklich entlassen?", "Die Stelle wird frei. Eine spätere erneute Zusammenarbeit könnt ihr im Teamgespräch vereinbaren.", "Entlassen", () => { staffFire(b.dataset.fire); save(); farmSyncScene(); again(); }));
   $$("#farmSheetIn [data-tdel]").forEach(b => b.onclick = () => { staffTaskDel(b.dataset.tdel, true); sfx("pop"); save(); again(); });
   if (typeof thumbFill === "function") thumbFill();
 }
@@ -2301,6 +2296,7 @@ function staffSubPopup(s, back) {
 }
 /* Neue Station fürs Personal offen: Lina sagt Bescheid (einmal je Station) */
 function staffGroupCheck() {
+  if(typeof FARM_STORY!=="undefined"){if(S.farm&&!S.farm.sold)FARM_STORY.announce();return;}
   const F = S.farm;
   if (!F || F.sold || (F.tut && !F.tut.done) || flv() < 8) return;
   F.teamSeen = F.teamSeen || {};

@@ -276,6 +276,49 @@ function farmFreeSpot(w, d, px, pz, t, k) {
   return best;
 }
 
+/* v347: Felder zu kompakten Blöcken, Obstbäume in Reihen ergänzen.
+   Bestehende Abstände übernehmen; Vorschläge müssen dieselbe Bauprüfung
+   bestehen wie eine manuelle Platzierung. Der Spielstand bleibt unberührt. */
+function farmSuggestedSpot(proto, px, pz) {
+  if (!['field', 'tree'].includes(proto.t)) return null;
+  const [w,d]=farmSize(proto),tree=proto.t==='tree';
+  const peers=S.farm.objs.filter(o=>o.t===proto.t&&farmSize(o)[0]===w&&farmSize(o)[1]===d);
+  if (!peers.length) return farmFreeSpot(w,d,px,pz,proto.t,proto.k);
+  const pitch=(axis,size)=>{
+    const counts=new Map(),other=axis==='x'?'z':'x';
+    for(let i=0;i<peers.length;i++)for(let j=i+1;j<peers.length;j++){
+      const n=Math.abs(peers[i][axis]-peers[j][axis]);
+      if(peers[i][other]===peers[j][other]&&n>=size&&n<=size+2)counts.set(n,(counts.get(n)||0)+1);
+    }
+    return [...counts].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]||size+(tree?1:0);
+  };
+  const sx=pitch('x',w),sz=pitch('z',d),minGap=tree?Math.min(sx-w,sz-d):0,seen=new Set(),options=[];
+  const treeRoom=(x,z)=>!tree||!peers.some(p=>Math.hypot(Math.max(0,p.x-x-w,x-p.x-w),Math.max(0,p.z-z-d,z-p.z-d))<minGap);
+  for(const o of peers)for(const [x,z]of [[o.x+sx,o.z],[o.x-sx,o.z],[o.x,o.z+sz],[o.x,o.z-sz]]){
+    const key=x+':'+z;if(seen.has(key))continue;seen.add(key);
+    if(!farmFits(x,z,w,d,null,proto.t,proto.k))continue;
+    if(!treeRoom(x,z))continue;
+    const neighbours=peers.filter(p=>(p.z===z&&Math.abs(p.x-x)===sx)||(p.x===x&&Math.abs(p.z-z)===sz));
+    /* Nur den örtlichen Bestand bewerten, nicht einzelne weit entfernte Beete. */
+    const cluster=peers.filter(p=>Math.abs(p.x-x)<=sx*4&&Math.abs(p.z-z)<=sz*4);
+    const x0=Math.min(x,...cluster.map(p=>p.x)),z0=Math.min(z,...cluster.map(p=>p.z));
+    const bw=Math.max(x,...cluster.map(p=>p.x))+w-x0,bd=Math.max(z,...cluster.map(p=>p.z))+d-z0;
+    const minX=Math.min(...cluster.map(p=>p.x)),minZ=Math.min(...cluster.map(p=>p.z));
+    const rowCount=cluster.filter(p=>p.z===z).length;
+    const score=[-neighbours.length,tree&&(rowCount===0||rowCount>=4)?1:0,Math.max(bw/sx,bd/sz)/Math.min(bw/sx,bd/sz),bw*bd,
+      (x<minX?1:0)+(z<minZ?1:0),Math.hypot(x+w/2-px,z+d/2-pz),z,x];
+    options.push({at:[x,z],score});
+  }
+  options.sort((a,b)=>{for(let i=0;i<a.score.length;i++)if(a.score[i]!==b.score[i])return a.score[i]-b.score[i];return 0;});
+  if(options.length)return options[0].at;
+  let best=null,dist=Infinity;
+  for(let z=FIN.z0;z+d<=FIN.z1;z++)for(let x=FIN.x0;x+w<=FIN.x1;x++){
+    const dd=Math.hypot(x+w/2-px,z+d/2-pz);
+    if(dd<dist&&treeRoom(x,z)&&farmFits(x,z,w,d,null,proto.t,proto.k)){best=[x,z];dist=dd;}
+  }
+  return best;
+}
+
 /* ------------------------------ Lager --------------------------------- */
 function farmInv(id) { return (S.farm.inv[id] && S.farm.inv[id].n) || 0; }
 function farmQ(id) { const e = S.farm.inv[id]; return e && e.n ? e.q : 0; }

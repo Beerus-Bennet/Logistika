@@ -1,3 +1,51 @@
+## v349 – Persönliche Hofbekanntschaften und gegliederte Sitzanimation
+
+Basis main f8c8dfe; dieser Branch enthält bereits v348 aus PR #67. Die Haifisch-Änderung nicht nochmals kopieren. Bei Zusammenführung von #67 zuerst bleibt hier nur der zusätzliche Hofteam-Commit übrig. Alle offenen PRs und main vor/nach Upload prüfen; nicht automatisch mergen oder veröffentlichen.
+
+Neue farmstory.js vor intro.js und staffseat.js vor team.js einbinden; beide gemeinsam in index.html und SW aufnehmen. Neue optionale Speicherdaten S.farm.people349 (met, agreed, introduced, nextIntroAt) und story349 an neuen Kandidaten/Mitarbeitern. Keine Umbenennung bestehender Angestellter, keine neue kostenlose Automatisierung. Kandidaten behalten ihre Identität über Tageswechsel; Kennenlernen kostet nichts, staffHire prüft weiterhin Station, freie Rolle und Geld. Bisherige doppelte Tageslohn-Startzahlung, täglicher Lohn und Brotzeit bleiben erhalten. staffGroupCheck delegiert Bekanntschaften mit zeitlichem Abstand an FARM_STORY. staffChefNote nutzt die tatsächliche Person aus dem Hofteam.
+
+intro.js unterstützt einen optionalen Sprecher in den bestehenden Tutorialkarten und Tipps. Erwin für FTUT_HOF und Hof-Tipps, Lina für die bestehende Spedition; Charaktererstellung mit eigener Silhouette. Passende Texte in farmdata/erbedata/worldview gemeinsam übernehmen: älterer Nachbar Heinrich Krüger ist der Vater des jungen Landwirts Erwin. Stammdaten, Gebäude und Gebietsfreigaben bleiben gleich.
+
+STAFF_SEAT hält einen Gelenkaufbau je gerenderter Person; kein eigener persistierter Posezustand. CAMP.standPt liefert lokale Koordinaten, daher mit CAMP.toW umrechnen. Right-Arm-Knoten und gesonderter Kopf werden wiederverwendet; nach dem Aufstehen alle Hilfsglieder ausblenden und ursprüngliche Meshes wiederherstellen. peopletraffic.js schützt sitT zusätzlich vor Ausweichverschiebungen. Gemeinsame Cache-Version 349 für alle geänderten Assets und SW übernehmen. Tests: farmteam-v349.test.js sowie bestehende camp-, peopletraffic- und village-life-Prüfungen.
+
+## v348 – Haifisch-Inszenierung nach erfolgreicher Übernahme
+
+Basis main f8c8dfe (PR #66). Neue corpshark.js direkt nach corp.js einbinden und im SW cachen. corpOffer gibt optional Audio beim bestätigenden Klick frei; corpShow leitet nur win zunächst an CORP_SHARK.open und danach über eine Ereigniskopie mit sharkShown zur bestehenden Zeitung. Kennung ist kein gespeichertes Spielfeld. Derselbe Dialogname corpShow schützt weiter vor konkurrierenden Meldungen. Kauf und Speicherung bleiben in corpClose.
+
+Animation ist reine DOM/SVG-Darstellung ohne Pakete oder neue Bilddateien. Eigene CSS-Blöcke am Dateiende; übrige Zeitungsansichten bleiben bestehen. Gemeinsamer farmAC, eigene Quellen rechtzeitig beenden; Ton aus bleibt aus. Reduzierte Bewegung, Tastaturfokus und einmaliger Übergang gehören gemeinsam zum Ablauf. Neue SW-Version 348 und Verweise für corp/corpshark/style zusammen übernehmen. Vor/nach Push main und alle offenen PRs prüfen; kein automatischer Merge oder Live-Deployment.
+
+## v347 – Platzierungshilfe für Felder/Bäume; Sammelabbruch als Warteschlangenkachel
+
+Basis main 9b7d0ac, neuer lokaler Entwurf. `farmSuggestedSpot` in farm.js ist eine reine Vorschlagssuche, verwendet farmFits und verändert weder Objekte noch Geld. farmview.js nutzt sie beim Neukauf und beim nächsten Feld; explizite Koordinaten und Verschieben behalten Vorrang. „Alle abbrechen“ erhält zusätzlich fq-s; abschließender CSS-Block gleicht Desktop-/Mobilmaße und Rahmen an die übrigen Plätze an. Rückfrage, Abbruch und Erstattung bleiben gleich. Geänderte Cache-Verweise farm/farmview/style und SW-Version 347 gemeinsam übernehmen. Tests: placement-v347.test.js. Vor/nach dem Upload main und alle offenen PRs abgleichen. Kein automatischer Merge und kein Live-Deployment.
+
+## v346 – Gemeinsamer Bewegungsraum für Bewohner und Arbeiter
+
+Basis main 25b86d0 (PR #64). Neue `peopletraffic.js` nach `villagepeople.js` einbinden und im SW cachen. `worldStep` ruft die gemeinsame Prüfung nach Arbeiter-/Bewohnerbewegungen auf. Die bisherige Arbeiter-Abstandskorrektur in `team.js` entfällt. `villagepeople.js` pausiert bei `L.trafficWait` genauso wie bei einem blockierten Bauhindernis; gespeicherte Ablaufkennung 345 bleibt kompatibel. Keine Verkaufs-/Vertragsmigration.
+
+Körperradius 0,39, Radkette über ±0,95 mit Radius 0,25 und zusätzlicher Abstand 0,035. Bewegungen relativ über den Bildschritt prüfen, bei Begegnungen ausweichen/bremsen; statische Fahrräder und Sitzende nicht verschieben. Historie nur im Speicher, an Renderer, Hofzustand und Knotenidentität gebunden. Tests: `peopletraffic-v346.test.js`, erweiterte `village-life-v343.test.js`. Neue SW-Version und Cache-Verweise v346 für team/worldview/villagepeople/peopletraffic gemeinsam übernehmen. Vor/nach Upload alle PRs und main erneut prüfen, kein automatischer Merge/Live-Deployment.
+
+## v345 – Marktbesucher mit Abstand; Hauptstraße ohne Gebietsschleier
+
+Basis main acf12e2 (PR #63). `villagepeople.js`: reservierte Radplätze, Freiraum zum Tresen, Absteigepunkt am Rad und Fußweg darum; aktive Abläufe jetzt Kennung 345, Altpläne ohne erneuten Verkauf beenden. Keine Änderung an Waren, Preisen oder Auszahlungen. Tests ergänzt in `village-life-v343.test.js`.
+
+`worldview.js` setzt in `worldLocks` den Straßenkorridor aus WGRID und der realen Bordbreite. `gl3d.js` berücksichtigt `R.lockRoad` im Gebietsschleier; Standardwert deaktiviert, andere 3D-Szenen bleiben unverändert. Keine zusätzlichen Sperrrechtecke, daher kein Abschneiden durch das bestehende 12-Rechteck-Limit. Zusammen mit den drei Cache-Verweisen in index.html/sw.js und SW-Version 345 übernehmen. Alle offenen PRs vor/nach Push erneut prüfen; kein automatischer Merge und keine Live-Veröffentlichung.
+
+## v344 – Kollisionen, Hausvarianten, Wendeplatz und Ortstafel
+
+Basis main fd81807 (PR #62). Gebäudeumrisse einschließlich Veranda/Treppe und Körperradius in `VILLAGE_SITE.blocked`; sichere Wege und Laufglättung prüfen dieselben Hindernisse. Ältere aktive Abläufe werden ohne erneuten Verkauf beendet. Familienhaus mit eigenem Anbau sowie passendem Baugrund/Rohbau; Haustürpunkte vor die Stufen verlegt. Wendeplatz nur vor Erweiterung. Anklickbare Holztafel ersetzt die schwebende Seeblick-Blase. Zusammengehörig: village.js, villagesite.js, villagepeople.js, villageview.js und Cache-Verweise v344. Vor/nach Push main und alle PRs prüfen.
+
+## v343 – Straßen, Zäune und Bewohnerabläufe in Seeblick
+
+Branch `claude/town-roads-fences`, Basis aktuelles main v342 (`36301a0`, PR #61). Vor und nach dem Upload alle offenen PRs und den Hauptstand erneut prüfen; keine automatische Veröffentlichung/Zusammenführung.
+
+- Gemeinsam übernehmen: neue `villagesite.js`, `villagepeople.js`, Anpassungen in `villageview.js`, `village.js`, `farmmodels.js`, `worldview.js`, `erbe.js` und neue Cache-Verweise. Skripte nach `rent.js`, vor `villageview.js`; beide auch in `sw.js`. Keine zusätzlichen Pakete oder Fremdmodelle.
+- `VILLAGE_SITE` ist der gemeinsame Lageplan für Straße, Gehweg, Grundstück, Tor, Briefkasten und Rad. Grundstückskennungen, Hauspositionen und Verträge bleiben stabil. `FM.road(len, joins)` öffnet optional Bordkanten; Aufrufer ohne `joins` behalten die bisherige Straße. Hauptstraße und Mittelmarkierung niemals mit einer Anschlussplatte überdecken.
+- Gemeinsame Zaunsegmente deduplizieren; ein Zaunmesh je Belegungszustand, bewegliche Tore/Briefklappen als eigene Knoten. Nachbargrundstücke teilen Seiten- und Rückgrenzen. Der zweite Anschluss bleibt bis zur Erweiterung geschlossen. Die ehemalige Parallelstraße bei z=22 und Straßenstummel westlich der Siedlung entfallen. Neue Lieferlinien benutzen die tatsächlichen Tore; laufende Aufträge werden nicht umgeschrieben.
+- Optionale Daten `home.life`: `mailDay`, `shopDay`, Wiederholungszeit, Einkaufszähler und `active` mit Schritten, Zeitbeginn, Marktkennung/Position und Kaufmerkmal. Fehlende Felder sind unschädlich. `VILLAGE.tick` führt Abläufe auch bei geschlossenem Hof weiter; Darstellung getrennt in `VILLAGE_PEOPLE.step`. Kein zweiter Verkauf beim Laden oder beim Aufruf aus beiden Takten.
+- Marktrouten verwenden die bestehende Wegsuche, Park-/Warteplätze außerhalb der Hauptfahrbahn. `stallCustomerSale` markiert dasselbe angebotene Los wie bisherige Kunden; kein neuer Inventarabzug oder sofortiger Geldeingang. Geld wird wie zuvor mit `stallTake` kassiert. `it.buyer` ist optional und wird nur angezeigt. Gebaute/freigegebene Märkte, Menge, Preis, vorhandene Ware und unveränderter Standort werden geprüft.
+- Arbeitermaßstab 1,45; gegliederte Beine mit IK zu den Pedalen. Gemeinsame Position-/Drehglättung hält Fahrer und Fahrrad verbunden. Auf-/Absteigen mit Stützbein; Bewohner passieren bewegliche Tore. Kamerarückfahrt und entfernte Namensschilder aus v341 erhalten.
+- Prüfungen: `node village-life-v343.test.js`, `node village-v340.test.js`, `node farm-wholesale-v330.test.js`, `node d2d-v313.test.js`; tatsächliche Browserabläufe und Grenzen in `AENDERUNGEN.md`.
+
 ## v340 – Seeblick: eigene Siedlung und persönliche Lieferkunden
 
 Branch `claude/lakeside-town`, basiert auf dem aktuellen Hauptstand v339 (`f43143d`) nach PR #58. Alle zwischenzeitlichen PRs #51–#58 sind bereits auf main zusammengeführt und enthalten; beim Abgleich gab es keine offenen PRs. Vor und nach dem Upload erneut Hauptbranch, alle offenen PRs und Mergefähigkeit prüfen. Keine automatische Zusammenführung oder Veröffentlichung.

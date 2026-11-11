@@ -424,6 +424,8 @@ function corpOffer(id, amount, takeAsk) {
     t.chat.push({ me: false, t: pick(c.wave ? ["Der Aufsichtsrat hat zugestimmt. Glückwunsch – Sie spielen jetzt in einer anderen Liga.", "Unterschrieben. Ich hätte nie gedacht, dass ausgerechnet Sie uns schlucken."]
       : ["Abgemacht. Ich lasse die Verträge aufsetzen.", "Das ist ein faires Angebot. Wir haben einen Deal.", "Schweren Herzens – aber ja. Kümmern Sie sich gut um meine Leute."]) });
     t.done = true;
+    /* v348: Audio noch im bestätigenden Fingertipp freigeben, falls eingeschaltet. */
+    if (typeof CORP_SHARK !== "undefined") CORP_SHARK.prime();
     corpClose(id, amount);
     return renderCorp();
   }
@@ -599,6 +601,11 @@ function corpMyLogo(sz) {
 }
 function corpShow(ev) {
   if (!ev || document.getElementById("corpShow")) return;
+  /* v348: Erst der Hai-Moment, dann dieselbe vollständige Übernahmeübersicht.
+     Der Kauf ist schon gespeichert; Überspringen löst keinen zweiten aus. */
+  if (ev.kind === "win" && !ev.sharkShown && typeof CORP_SHARK !== "undefined") {
+    if (CORP_SHARK.open(ev, () => corpShow(Object.assign({}, ev, { sharkShown: true })))) return;
+  }
   corpSyncRivals();
   const me = S.player.company, C = corp(), RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let head, sub, duel, chips, crown = "", price = "", quote, btn, stampT;

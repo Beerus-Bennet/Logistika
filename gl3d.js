@@ -358,6 +358,7 @@ const G3 = (() => {
      beim Freischalten Stück für Stück auf */
   /* v340: Die Ortsaussparung darf die übrigen Sperrgebiete nicht abschneiden. */
   uniform vec4 uLockR[12]; uniform vec4 uLockC[12]; uniform int uLockN;
+  uniform vec4 uLockRoad;
   out vec4 o;
   float lockAmt(vec2 p){
     float g = 0.0;
@@ -368,6 +369,12 @@ const G3 = (() => {
       float inside = smoothstep(-1.2, 0.0, min(min(p.x - r.x, r.z - p.x), min(p.y - r.y, r.w - p.y)));
       float out1 = smoothstep(c.z - 4.0, c.z, distance(p, c.xy));
       g = max(g, inside * out1 * c.w);
+    }
+    /* v345: Öffentliche Fahrbahn samt Bordkante bleibt sichtbar; nur außerhalb
+       des schmalen Straßenkorridors weich in die Gebietssperre übergehen. */
+    if (uLockRoad.z > uLockRoad.x) {
+      float d = max(max(uLockRoad.x - p.x, p.x - uLockRoad.z), max(uLockRoad.y - p.y, p.y - uLockRoad.w));
+      g *= smoothstep(0.0, 0.18, d);
     }
     return g;
   }
@@ -694,7 +701,7 @@ const G3 = (() => {
       },
       shadowBox: opts.shadowBox || 24,
       /* gesperrte Gebiete: { r: [x0, z0, x1, z1], c: [cx, cz], rad, a } */
-      locks: [],
+      locks: [], lockRoad: [0, 0, 0, 0],
       culled: 0,
       V: ID(), P: ID(), VP: ID(), IVP: ID(), LVP: ID(), eye: [0, 0, 0], w: 1, h: 1, dpr: 1,
       time: 0, onRestore: null
@@ -1062,6 +1069,7 @@ const G3 = (() => {
         if (u.uPlant) gl.uniform1f(u.uPlant, 0);
         /* Sperrgebiete */
         gl.uniform1i(u.uLockN, LK.length);
+        gl.uniform4fv(u.uLockRoad, R.lockRoad);
         if (LK.length && u["uLockR[0]"]) { gl.uniform4fv(u["uLockR[0]"], lkA); gl.uniform4fv(u["uLockC[0]"], lkB); }
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
         gl.uniform1i(u.uShadow, 0);

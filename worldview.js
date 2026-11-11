@@ -1055,7 +1055,8 @@ function worldStatic() {
   /* v188: abgelegtes Baumaterial an den Bauplätzen (bauplatz.js) */
   if (typeof SITE3D !== "undefined") SITE3D.attach(R);
   const st = new FM.MB();
-  st.merge(FM.road(WGRID.x1 - WGRID.x0), { x: (WGRID.x0 + WGRID.x1) / 2, z: 18.5, ry: Math.PI / 2 });
+  const roadCenter=(WGRID.x0+WGRID.x1)/2;
+  st.merge(FM.road(WGRID.x1-WGRID.x0,typeof VILLAGE_SITE!=="undefined"?VILLAGE_SITE.mainBreaks(roadCenter):null),{x:roadCenter,z:18.5,ry:Math.PI/2});
   /* Wege am See (v75: Knoten und Kanten, siehe LAKE_STEM / LAKE_WAY / LAKE_EAST) */
   const LO = { gnd: wGroundAt, roadCol: 0x7c7f86, mouthR: 0.75, teeR: 0.6, leafOk: (x, z) => z > 19.8 };
   const oW = Object.assign({ y: 0.027, ey: 0.0185, caps: [false, false], mouth: [true, false] }, LO);
@@ -1850,6 +1851,9 @@ function worldLocks() {
     A.locks.forEach(r => (typeof VILLAGE !== "undefined" ? VILLAGE.clipLock(r) : [r]).forEach(q => out.push({ r:q, c: A.reveal, rad: rv ? rv.rad : 0, a: 1 })));
   });
   R.locks = out;
+  /* v345: Nur die tatsächlich gebaute öffentliche Straße aussparen, keine
+     angrenzenden Wälder, Grundstücke oder noch gesperrten Seitenwege öffnen. */
+  R.lockRoad = [WGRID.x0, 18.5 - 1.02, WGRID.x1, 18.5 + 1.02];
 }
 function worldSyncBarriers() {
   const R = FV.R;
@@ -3462,6 +3466,7 @@ function worldStep(dt, time) {
   if (typeof HUNT !== "undefined") HUNT.step(dt, time);
   if (typeof RENT !== "undefined") RENT.step(dt, time);
   if (typeof VILLAGE_VIEW !== "undefined") VILLAGE_VIEW.step(dt,time);
+  if (typeof PEOPLE_TRAFFIC !== "undefined") PEOPLE_TRAFFIC.step(dt);
   if (typeof SITE3D !== "undefined") SITE3D.step(dt, time);
   if (typeof SAW3D !== "undefined") SAW3D.step(dt, time);
   if (WV.npc) { WV.npc.node.y = Math.abs(Math.sin(time * 3)) * 0.06; WV.npc.node.ry = Math.PI / 4 + Math.sin(time * 1.2) * 0.3; }
@@ -3814,7 +3819,7 @@ function openSawOffice() {
     ${rep ? energyHTML() : ""}
     <div class="fs-sub">Maschinen im Sägewerk:</div><div class="fr-in">${mach}</div>
     <div class="fs-row"><button class="btn tiny" id="foRep">${rep ? "🏭 Zur Säge" : "🔧 Reparaturen"}</button><button class="btn tiny ghost" id="foShop">🛒 Maschinen kaufen</button><button class="btn tiny ghost" id="foWood">🪵 Holzhändler</button></div>
-    <div class="fletter mini"><p>„Dreißig Jahre hat meine Säge gesungen – jetzt singt sie für dich.“ – Erwin Krüger</p></div>`, "office");
+    <div class="fletter mini"><p>„Dreißig Jahre hat meine Säge gesungen – jetzt singt sie für dich.“ – Heinrich Krüger</p></div>`, "office");
   $("#foRep").onclick = () => { const h = farmObj1("sw_halle"); if (rep && h) openMachine(h); else openSawRepair(); };
   $("#foShop").onclick = () => openFarmShop("saege");
   $("#foWood").onclick = () => openFarmStore("holz");
@@ -3829,7 +3834,7 @@ function openStall(market) {
   for (let i = 0; i < cap; i++) {
     const it = St.slots[i];
     if (!it) slots.push(`<button class="fstl free" data-pick="${i}"><span>＋</span><small>Ware einstellen</small></button>`);
-    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}">${itemIc(it.id)}<b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small></button>`);
+    else slots.push(`<button class="fstl${it.sold ? " sold" : ""}" data-slot="${i}">${itemIc(it.id)}<b>${esc(fqty(it.id, it.n))}</b><small>${it.sold ? "💰 " + eur(it.p) + " · kassieren" : eur(it.p) + " · wartet"}</small>${it.buyer?`<small>${esc(it.buyer)}</small>`:""}</button>`);
   }
   let pickH = "";
   if (sel && sel.id == null) {
@@ -3901,7 +3906,7 @@ function openNeighbor() {
   if (!c || c.k !== "nachbar") return;
   FV.sheetFn = openNeighbor;
   const m = Math.round(Object.keys(c.data.items).reduce((s, id) => s + FITEMS[id].v * c.data.items[id], 0) * 1.5);
-  openFarmSheet(`<div class="fvisit"><div class="fv-fig">👴</div><div class="fv-tx"><b>Erwin Krüger</b><small>Nachbar</small>
+  openFarmSheet(`<div class="fvisit"><div class="fv-fig">👴</div><div class="fv-tx"><b>Heinrich Krüger</b><small>Erwins Vater · Nachbar</small>
     <p>„Hast du Holz für mich? Ich zahl gut – plus ${FNEIGHBOR_CLOVER === 1 ? "ein Kleeblatt" : (["", "", "zwei", "drei", "vier"][FNEIGHBOR_CLOVER] || FNEIGHBOR_CLOVER) + " Kleeblätter"} obendrauf!“</p></div></div>
     <div class="fr-in">${Object.keys(c.data.items).map(id => itemChip(id, c.data.items[id], farmInv(id))).join("")}</div>
     <button class="btn fgo" id="fnGo" ${farmHasAll(c.data.items) ? "" : "disabled"}>🤝 Übergeben · ${eur(m)} + 🍀 ${FNEIGHBOR_CLOVER}</button>

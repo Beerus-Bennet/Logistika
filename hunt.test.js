@@ -199,7 +199,7 @@ test("Modelle v135: Keiler und Fasan ganz, ohne NaN, im Budget", () => {
     boarLower: whole(M4.boarLower(), "boarLower"), boarLeg: whole(M4.boarLeg(true), "boarLeg"), phBody: whole(M4.phBody(), "phBody"), phHead: whole(M4.phHead(), "phHead"), phLeg: whole(M4.phLeg(), "phLeg") };
   const one = T.boarBody + T.boarHead + 2 * (T.boarUpperV + T.boarUpperH) + 4 * T.boarLower;
   assert.ok(one < 9000, "Keiler gesamt " + one);
-  assert.ok(T.phBody + T.phHead + 2 * T.phLeg < 4800, "Fasan gesamt");          /* v343: befiederte Schenkel (+56 Dreiecke je Ständer) */
+  assert.ok(T.phBody + T.phHead + 2 * T.phLeg < 4800, "Fasan gesamt");          /* v350: befiederte Schenkel (+56 Dreiecke je Ständer) */
 });
 test("Keiler v135: Waffen wachsen mit den gespeicherten Zentimetern", () => {
   /* gleiche Eckenzahl – es unterscheiden sich nur die Waffen; deren Ausdehnung muss mit den Zentimetern wachsen */
@@ -210,7 +210,7 @@ test("Keiler v135: Waffen wachsen mit den gespeicherten Zentimetern", () => {
   assert.ok(pa.length > 20, "Waffen-Ecken " + pa.length);
   assert.ok(diag(pb) > diag(pa) * 1.15, "24 cm größer als 8 cm: " + diag(pb).toFixed(3) + " / " + diag(pa).toFixed(3));
 });
-test("Liegepose v262/v343: Boden, Gelenkgrenzen, keine Durchdringung, Haupt liegt auf, immer gleich – alle Arten, alle Liegeformen, beide Seiten, klein und groß", () => {
+test("Liegepose v262/v350: Boden, Gelenkgrenzen, keine Durchdringung, Haupt liegt auf, immer gleich – alle Arten, alle Liegeformen, beide Seiten, klein und groß", () => {
   const forms = { keiler: new Set(), hirsch: new Set(), fasan: new Set() };
   ["keiler", "hirsch", "fasan"].forEach(k => [-1, 1].forEach(side => [0.1, 0.5, 0.95].forEach(sc => [0, 77, 4242, 90001, 5, 31, 123, 999].forEach(g => {
     const gn = H4.genes(k, sc, g), S0 = H4.SP[k];
@@ -226,7 +226,7 @@ test("Liegepose v262/v343: Boden, Gelenkgrenzen, keine Durchdringung, Haupt lieg
     d.legs.forEach((l, i) => {
       const L = S0.legs[i], lim = c.lim[L.f ? "f" : "h"];
       assert.ok(l[0] >= lim[0][0] - 1e-9 && l[0] <= lim[0][1] + 1e-9 && l[1] >= lim[1][0] - 1e-9 && l[1] <= lim[1][1] + 1e-9, tag + " Gelenk " + i + " " + l);
-      assert.ok(Math.abs(l[2]) <= 1.2 + 1e-9, tag + " Spreizung " + l[2]);          /* v343: über die Seite gerollt (rueck) bis 1,2 */
+      assert.ok(Math.abs(l[2]) <= 1.2 + 1e-9, tag + " Spreizung " + l[2]);          /* v350: über die Seite gerollt (rueck) bis 1,2 */
     });
     if (d.legs.length) assert.ok(new Set(d.legs.map(l => l[0].toFixed(2) + "/" + l[1].toFixed(2))).size === 4, tag + " vier verschiedene Winkel");
     /* keine Durchdringung: Lauf ↔ Boden, Lauf ↔ Lauf, Lauf ↔ Rumpf (mit denselben Abtastpunkten nachgemessen) */
@@ -238,14 +238,14 @@ test("Liegepose v262/v343: Boden, Gelenkgrenzen, keine Durchdringung, Haupt lieg
     /* Haupt: keine Durchdringung; liegt auf – beim Hirsch darf das Geweih tragen, dann höchstens eine Handbreit angehoben */
     assert.ok(d.head.pen < 0.004, tag + " Haupt/Geweih durchdringt " + d.head.pen.toFixed(4));
     assert.ok(d.head.gap < (d.head.carried ? 0.13 : 0.03) * A.s, tag + " Haupt schwebt " + d.head.gap.toFixed(3) + (d.head.carried ? " (Geweih trägt)" : ""));
-    /* v343: Ständer in den Grenzen der jeweiligen Liegeform; offene Schwingen liegen auf, nicht im Boden */
+    /* v350: Ständer in den Grenzen der jeweiligen Liegeform; offene Schwingen liegen auf, nicht im Boden */
     if (k === "fasan") { const FL = c.feetLim; d.feet.forEach(f => assert.ok(f[0] >= FL[0][0] - 1e-9 && f[0] <= FL[0][1] + 1e-9 && f[1] >= FL[1][0] - 1e-9 && f[1] <= FL[1][1] + 1e-9, tag + " Ständer " + f)); }
     if (d.wings) d.wings.forEach(w => { if (w) assert.ok(Math.abs(w.rz) <= 1.9 + 1e-9 && w.sx > 0.5, tag + " Schwinge " + JSON.stringify(w)); });
   }))));
   assert.strictEqual(forms.keiler.size, 5, "Keiler: fünf Liegeformen " + [...forms.keiler]); assert.strictEqual(forms.hirsch.size, 5, "Hirsch: fünf Liegeformen " + [...forms.hirsch]);
   assert.strictEqual(forms.fasan.size, 4, "Fasan: vier Liegeformen " + [...forms.fasan]);
 });
-test("Trefferbild v343: Schusskanal nennt die getroffenen Organe, passt zur Wertung, Wirkung und Schussbericht stimmen", () => {
+test("Trefferbild v350: Schusskanal nennt die getroffenen Organe, passt zur Wertung, Wirkung und Schussbericht stimmen", () => {
   const P = k => ({ x: 0, y: 0, z: 0, ry: 0, s: 1, nrx: k === "hirsch" ? -0.35 : 0, nry: 0, hrx: 0, legs: [[0, 0], [0, 0], [0, 0], [0, 0]] });
   const rec = (k, y, z) => { const o = [6, y, z], d = [-1, 0, 0], h = H4.zoneHit(k, P(k), o, d); return h && H4._shotRec(k, P(k), o, d, h, 160, { tf: 0.2, drift: 0.05, wv: 3 }); };
   const ids = r => r.org.map(o => o.id);
