@@ -425,7 +425,8 @@ const FSITES = {
       sellHead: "Hof verkaufen?", sold: "🏡 Hof verkauft für ",
       sellText: "Für {p} geht der Hof samt Tieren und Lager weg – Fahrzeuge und Spedition bleiben. Endgültig!",
       keepText: "Behalte den Hof (über „Hof“ erreichbar) oder verkauf ihn für die Spedition – endgültig.",
-      valHead: "Hofwert heute", tour: "🎓 Rundgang mit Lina", tourMenu: "🎓 Hof-Rundgang mit Lina",
+      /* v349: Erwin begleitet den Hof, Lina die Spedition. */
+      valHead: "Hofwert heute", tour: "🎓 Rundgang mit Erwin", tourMenu: "🎓 Hof-Rundgang mit Erwin",
       foundText: "Ab jetzt kommen fremde Aufträge – erst um Berlin, später weltweit. Der Hof läuft weiter.",
       notYet: "Erst die Spedition gründen – geht, sobald Opas Notizbuch abgehakt ist."
     }

@@ -1,3 +1,13 @@
+## v349 – Persönliche Hofbekanntschaften und gegliederte Sitzanimation
+
+Basis main f8c8dfe; dieser Branch enthält bereits v348 aus PR #67. Die Haifisch-Änderung nicht nochmals kopieren. Bei Zusammenführung von #67 zuerst bleibt hier nur der zusätzliche Hofteam-Commit übrig. Alle offenen PRs und main vor/nach Upload prüfen; nicht automatisch mergen oder veröffentlichen.
+
+Neue farmstory.js vor intro.js und staffseat.js vor team.js einbinden; beide gemeinsam in index.html und SW aufnehmen. Neue optionale Speicherdaten S.farm.people349 (met, agreed, introduced, nextIntroAt) und story349 an neuen Kandidaten/Mitarbeitern. Keine Umbenennung bestehender Angestellter, keine neue kostenlose Automatisierung. Kandidaten behalten ihre Identität über Tageswechsel; Kennenlernen kostet nichts, staffHire prüft weiterhin Station, freie Rolle und Geld. Bisherige doppelte Tageslohn-Startzahlung, täglicher Lohn und Brotzeit bleiben erhalten. staffGroupCheck delegiert Bekanntschaften mit zeitlichem Abstand an FARM_STORY. staffChefNote nutzt die tatsächliche Person aus dem Hofteam.
+
+intro.js unterstützt einen optionalen Sprecher in den bestehenden Tutorialkarten und Tipps. Erwin für FTUT_HOF und Hof-Tipps, Lina für die bestehende Spedition; Charaktererstellung mit eigener Silhouette. Passende Texte in farmdata/erbedata/worldview gemeinsam übernehmen: älterer Nachbar Heinrich Krüger ist der Vater des jungen Landwirts Erwin. Stammdaten, Gebäude und Gebietsfreigaben bleiben gleich.
+
+STAFF_SEAT hält einen Gelenkaufbau je gerenderter Person; kein eigener persistierter Posezustand. CAMP.standPt liefert lokale Koordinaten, daher mit CAMP.toW umrechnen. Right-Arm-Knoten und gesonderter Kopf werden wiederverwendet; nach dem Aufstehen alle Hilfsglieder ausblenden und ursprüngliche Meshes wiederherstellen. peopletraffic.js schützt sitT zusätzlich vor Ausweichverschiebungen. Gemeinsame Cache-Version 349 für alle geänderten Assets und SW übernehmen. Tests: farmteam-v349.test.js sowie bestehende camp-, peopletraffic- und village-life-Prüfungen.
+
 ## v348 – Haifisch-Inszenierung nach erfolgreicher Übernahme
 
 Basis main f8c8dfe (PR #66). Neue corpshark.js direkt nach corp.js einbinden und im SW cachen. corpOffer gibt optional Audio beim bestätigenden Klick frei; corpShow leitet nur win zunächst an CORP_SHARK.open und danach über eine Ereigniskopie mit sharkShown zur bestehenden Zeitung. Kennung ist kein gespeichertes Spielfeld. Derselbe Dialogname corpShow schützt weiter vor konkurrierenden Meldungen. Kauf und Speicherung bleiben in corpClose.

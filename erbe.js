@@ -1076,8 +1076,9 @@ function angelInit(F) {
   if (!angelPots().length) angelPotPlace(0);
   if (!U.linaMsg && typeof phoneMsg === "function") {
     U.linaMsg = true;
-    phoneMsg({ from: "Lina Sturm", kind: "info", title: "Lehmanns alte Angel",
-      body: "Chef, der Steg steht! Der alte Lehmann hat dir seine Angel dagelassen – sie liegt am Steg. Die Weißfische beißen auf Mais aus deinem Silo. Tipp einfach auf den Steg." });
+    if(typeof FARM_STORY!=="undefined")FARM_STORY.meet("fischer");
+    phoneMsg({ from: "Lina Sturm", kind: "info", title: "Ich möchte dir Willi Schmied vorstellen",
+      body: "Der Steg steht! Ich kenne Willi Schmied von meinen Lieferungen an die Hafenleute. Er zeigt dir die Fischerei: Lehmanns alte Angel liegt am Steg, und Weißfische beißen auf Mais aus deinem Silo. Im Bauernhaus unter Team könnt ihr euch unverbindlich unterhalten. Feste Unterstützung vereinbart ihr später, wenn die Fischerei so weit ist." });
   }
 }
 function angelPots() { return S.farm.objs.filter(o => o.t === "pot" && o.area === "see"); }

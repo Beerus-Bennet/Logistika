@@ -3819,7 +3819,7 @@ function openSawOffice() {
     ${rep ? energyHTML() : ""}
     <div class="fs-sub">Maschinen im Sägewerk:</div><div class="fr-in">${mach}</div>
     <div class="fs-row"><button class="btn tiny" id="foRep">${rep ? "🏭 Zur Säge" : "🔧 Reparaturen"}</button><button class="btn tiny ghost" id="foShop">🛒 Maschinen kaufen</button><button class="btn tiny ghost" id="foWood">🪵 Holzhändler</button></div>
-    <div class="fletter mini"><p>„Dreißig Jahre hat meine Säge gesungen – jetzt singt sie für dich.“ – Erwin Krüger</p></div>`, "office");
+    <div class="fletter mini"><p>„Dreißig Jahre hat meine Säge gesungen – jetzt singt sie für dich.“ – Heinrich Krüger</p></div>`, "office");
   $("#foRep").onclick = () => { const h = farmObj1("sw_halle"); if (rep && h) openMachine(h); else openSawRepair(); };
   $("#foShop").onclick = () => openFarmShop("saege");
   $("#foWood").onclick = () => openFarmStore("holz");
@@ -3906,7 +3906,7 @@ function openNeighbor() {
   if (!c || c.k !== "nachbar") return;
   FV.sheetFn = openNeighbor;
   const m = Math.round(Object.keys(c.data.items).reduce((s, id) => s + FITEMS[id].v * c.data.items[id], 0) * 1.5);
-  openFarmSheet(`<div class="fvisit"><div class="fv-fig">👴</div><div class="fv-tx"><b>Erwin Krüger</b><small>Nachbar</small>
+  openFarmSheet(`<div class="fvisit"><div class="fv-fig">👴</div><div class="fv-tx"><b>Heinrich Krüger</b><small>Erwins Vater · Nachbar</small>
     <p>„Hast du Holz für mich? Ich zahl gut – plus ${FNEIGHBOR_CLOVER === 1 ? "ein Kleeblatt" : (["", "", "zwei", "drei", "vier"][FNEIGHBOR_CLOVER] || FNEIGHBOR_CLOVER) + " Kleeblätter"} obendrauf!“</p></div></div>
     <div class="fr-in">${Object.keys(c.data.items).map(id => itemChip(id, c.data.items[id], farmInv(id))).join("")}</div>
     <button class="btn fgo" id="fnGo" ${farmHasAll(c.data.items) ? "" : "disabled"}>🤝 Übergeben · ${eur(m)} + 🍀 ${FNEIGHBOR_CLOVER}</button>

@@ -4898,3 +4898,19 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 .shk-power{font-size:clamp(15px,2.5vw,20px);font-weight:900;letter-spacing:.04em;color:#ffe6ab;margin:10px 0 0}
 .shk-reveal .shk-orbit{border-color:#f3d58c44;box-shadow:0 0 0 35px #e1c57e07,0 0 0 70px #e1c57e05,0 0 100px #e1c57e0c}
 @media(max-height:560px){.shk-power{font-size:14px;margin-top:5px}.shk-result h3.shk-brand-long{font-size:28px}}
+
+/* v349: Persönliche Hofbekanntschaften und ihre Arbeitsvereinbarung. */
+.onboarding-shadow{display:block;width:105px;height:155px;filter:drop-shadow(0 6px 8px #172b3422)}
+.ltc-face>svg,.lh-face>svg{display:block;width:100%;height:100%;border-radius:50%}
+.fst-story{max-width:560px;margin:0 auto;padding:8px 4px 15px;font-size:15px;line-height:1.55}
+.fst-story-face{display:flex;align-items:center;justify-content:center;width:90px;height:90px;margin:3px auto 12px;border:3px solid var(--ink);border-radius:50%;background:#fff9e9;overflow:hidden}
+.fst-story-face svg{width:100%;height:100%}.fst-story-face .ic.th,.fst-story-face .ic.th img{width:82px;height:82px;object-fit:contain}
+.fst-story h3{font-size:19px;line-height:1.2;margin:8px 0 12px}.fst-story p{margin:8px 0 14px}.fst-story .fst-story-via{font-size:12px;font-weight:800;color:#496159;text-align:center}
+.fst-terms{display:flex;flex-direction:column;gap:7px;background:#fff7db;border:2px solid var(--ink);border-radius:13px;padding:12px;margin-top:15px;font-size:13px}.fst-terms small{color:#5b6470;font-size:12px}
+.fst-story-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;border-top:1px solid #aab7bb66;padding:10px 0 0}
+.fst-story-actions .btn{min-height:44px;white-space:normal}.fst-story-actions small{display:block;font-size:11px}
+.fstaff [data-story]{white-space:normal;max-width:135px;min-height:40px}.fstaff [data-story] small{display:block;font-size:10px}.fstaff>div:nth-child(2){min-width:0;overflow-wrap:anywhere}
+@media(max-width:399px){.fst-story{font-size:14px}.fst-story-actions .btn{flex:1 1 90px;font-size:12px}.fstaff [data-story]{font-size:11px;max-width:105px}}
+/* v349: Gesprächsaktionen bleiben beim Lesen langer Vereinbarungen erreichbar. */
+#farmSheet.story .fs-in{max-height:95%}
+#farmSheet.story .fst-story-actions{position:sticky;bottom:-18px;z-index:3;background:var(--paper);padding:10px 0 12px;box-shadow:0 -6px 12px var(--paper)}
