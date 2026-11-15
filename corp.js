@@ -377,6 +377,7 @@ function openCorp(id) {
     t.chat.push({ me: false, t: "Das vollständige Angebot mit Fahrzeugen, Team und eingerichteten Standorten liegt zur Prüfung vor. Diese Ausstattung bleibt für diese Verhandlung reserviert." });
     save();
   }
+  if (corpDealParking356(t.deal353)) save();
   corpOpen = id;
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderCorp();
@@ -524,7 +525,8 @@ function corpHqOpen(id, silent) {
   S.fleet.forEach(v => {
     if (b.vehicles.length >= slots || !v.foreign || v.foreign.id !== id || baseOfVehicle(v.uid)) return;
     if (!N[c.hq].modes.includes(vType(v.type).mode)) return;
-    v.at = c.hq; b.vehicles.push(v.uid);
+    b.vehicles.push(v.uid);
+    if (v.phase === "idle" && !v.jobId && !(v.jobs || 0) && v.at === b.node && (!v.spot || /^Stellplatz(?:,|$)/.test(v.spot.t || ""))) parkAtOffice(v, b);
   });
   S.bases.push(b);
   delete C.hq[id];
@@ -558,6 +560,7 @@ function corpHqRepair() {
 /* Läuft regelmäßig und nach jeder Etappe: vorgemerkte Firmensitze öffnen, sobald es geht. */
 function corpHqTry() {
   if (!S.corp) return;
+  if (typeof corpParkRepair356 === "function") corpParkRepair356();
   if (S.corp.owned && (!S.corp.hqRestore281 || Object.values(S.corp.owned).some(o => !o.hq))) corpHqRepair();
   const ids = Object.keys(S.corp.hq || {});
   if (!ids.length) return;
@@ -607,71 +610,7 @@ function corpShow(ev) {
   }
   corpSyncRivals();
   if (ev.kind === "win") return corpWinReport(ev);
-  const me = S.player.company, C = corp(), RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  let head, sub, duel, chips, crown = "", price = "", quote, btn, stampT;
-  {
-    const Rs = (ev.ids || []).map(id => ({ r: rivalById(id), c: CORP[id] })).filter(x => x.r && x.c); if (!Rs.length) return;
-    head = pick(["KONZERNE GREIFEN AN", "ANGRIFF AUF DEN MARKTFÜHRER", "DIE GROSSEN KOMMEN"]);
-    sub = `${Rs.map(x => x.r.name).join(" und ")} drängen auf den Markt – ${me} soll die Spitze verlieren.`;
-    stampT = "KAMPFANSAGE";
-    duel = `<div class="cs-side">${corpMyLogo(70)}<b>${esc(me)}</b></div><div class="cs-arrow vs">VS</div>
-      ${Rs.map(x => `<div class="cs-side them big" style="--rc:${x.r.col}"><span class="cs-logo them">${x.r.icon}</span><b>${esc(x.r.name)}</b></div>`).join("")}<i class="cs-stamp red">${stampT}</i>`;
-    chips = Rs.map((x, i) => `<span class="cs-chip threat" style="animation-delay:${(RM ? 0.2 : 1.9) + i * 0.2}s">${x.r.icon} ${esc(x.r.name)} · ${x.c.fleet + Math.floor(S.stage / 2)} Fahrzeuge · Sitz ${esc(N[x.c.hq].short)} · Firmenwert ~${money(corpValue(x.r.id))}</span>`).join("");
-    quote = `<b>„${esc(Rs[0].c.hello)}“</b><small>– ${esc(Rs[0].c.boss)}, ${esc(Rs[0].c.role)}, ${esc(Rs[0].r.name)}</small>`;
-    crown = `<div class="cs-crown threat"><span>⚔️</span><b>Sie schnappen Aufträge schneller weg</b><small>Hol dir die Marktführung zurück – dann kannst du sie kaufen.</small></div>`;
-    btn = "⚔️ Herausforderung annehmen";
-  }
-  const el = document.createElement("div");
-  el.id = "corpShow"; el.className = "cs-" + ev.kind + (RM ? " rm" : "");
-  el.innerHTML = `<div class="cs-rays"></div><div class="cs-fx"></div>
-    <div class="cs-wrap">
-      <div class="cs-paper">
-        <div class="cs-mast"><b>Logistik-Kurier</b><small>Sonderausgabe · ${esc(stamp(S.time))}</small></div>
-        <h2 class="cs-head${head.length > 34 ? " long" : ""}">${esc(head)}</h2>
-        <p class="cs-sub">${esc(sub)}</p>
-        <div class="cs-duel">${duel}</div>
-      </div>
-      ${price}
-      <div class="cs-loot">${chips}</div>
-      ${crown}
-      <div class="cs-quote">${quote}</div>
-      <button class="btn cs-go">${btn}</button>
-    </div>`;
-  document.body.appendChild(el);
-  document.body.classList.add("cs-open");
-  const later = (ms, f) => setTimeout(() => { if (el.isConnected) f(); }, RM ? Math.min(ms, 300) : ms);
-  const snd = k => { if (typeof sfx === "function") try { sfx(k); } catch (e) { /* stumm */ } };
-  if (ev.kind !== "win") snd("horn");
-  later(1150, () => {
-    if (ev.kind !== "win") { snd("thud"); snd("bad"); }
-    el.classList.add("hit");
-    try { if (navigator.vibrate) navigator.vibrate(ev.kind === "win" ? [60, 40, 120] : [90, 50, 90]); } catch (e) { /* kein Rütteln */ }
-  });
-  /* Zahlen zählen hoch, jede mit einem Münzklang */
-  el.querySelectorAll(".cs-chip").forEach((chip, i) => later(1900 + i * 170, () => {
-    snd(ev.kind === "win" ? "coin" : "pop");
-    const b = chip.querySelector("b[data-n]"); if (!b) return;
-    const to = +b.dataset.n, t0 = performance.now();
-    const step = () => { const k = Math.min(1, (performance.now() - t0) / 600); b.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
-    step();
-  }));
-  /* Goldregen (Sieg) bzw. Funken (Kampfansage) */
-  if (!RM) later(1200, () => {
-    const fx = el.querySelector(".cs-fx"), n = ev.kind === "win" ? 26 : 22;   /* v319: auch beim Sieg Goldregen */
-    for (let i = 0; i < n; i++) {
-      const p = document.createElement("i");
-      p.textContent = ev.kind === "win" ? pick(["🪙", "✨", "💶", "⭐"]) : pick(["⚡", "💥"]);
-      p.style.left = Math.random() * 100 + "%"; p.style.animationDelay = (Math.random() * 1.6).toFixed(2) + "s";
-      p.style.animationDuration = (2.2 + Math.random() * 1.8).toFixed(2) + "s"; p.style.fontSize = (14 + Math.random() * 16).toFixed(0) + "px";
-      fx.appendChild(p);
-    }
-  });
-  /* v282: Keine zusätzliche Siegesfanfare bei einer Übernahme. */
-  el.querySelector(".cs-go").onclick = () => {
-    snd("tap");
-    el.classList.add("out");
-    setTimeout(() => { el.remove(); document.body.classList.remove("cs-open"); if (typeof activeTab !== "undefined" && activeTab === "world" && typeof renderWorld === "function") renderWorld(); }, 320);
-  };
+  return corpThreatReport(ev);
 }
 
 if (typeof ACHS !== "undefined") ACHS.push(

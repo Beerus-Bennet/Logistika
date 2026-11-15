@@ -1,3 +1,9 @@
+## v356 – Unternehmensdetails und Standortauswahl
+
+Basis main `9e6320d` (PR #72/#73 bereits gemergt). Neue Cache-Version 356, neue Verweise für corpassets/corp/corpreport/offices/style in index.html und sw.js. Bestehende Übernahmepakete/Belege behalten Schema 353. corpDealParking356 ergänzt nur Standortadressen und Parkpunkte; C.parking356 markiert die einmalige Korrektur unbenutzter Standardstellplätze. Keine Vergabe weiterer Fahrzeuge, keine neue Bewertung/Abbuchung. parkAtOffice in offices.js verwendet baseAddr/setSpot/termPt aus game.js zur Laufzeit.
+
+corpDealContents liefert verschachtelte details ohne open-Attribute. corpShow delegiert Kampfansagen an corpThreatReport in corpreport.js. Kaufbeleg und Kampfansage teilen sich das Fokus-/Schließverhalten. newBaseNode ist ein Button mit value statt eines nativen select; Kaufen/Mieten liest weiter denselben Wert. openBaseLocation356 verwendet ein natives dialog in der obersten Darstellungsebene, blockiert währenddessen Konzernmeldungen und lässt den Büro-Refresh aussetzen. Suchtext/gewählter Ort werden nicht nach wenigen Sekunden weggerendert; Listener werden beim Schließen entfernt. Tests company-parking-v356.test.js und company-ui-v356.browser.js, bestehende Unternehmens-/Büroprüfungen beibehalten. Kein automatischer Merge/Live-Deployment.
+
 ## v355 – Verbindliche Unternehmenskäufe und Übernahmeinszenierung
 
 PR #73 enthält den Kopf `bed6700` von PR #72 (v353/v354) zusätzlich zum Unternehmenskauf. Erst #72, dann #73 kann auf main zusammengeführt werden; keine automatische Zusammenführung/Veröffentlichung durch diese Arbeit. Alle Farm-/Jagd-/Bewohner-Änderungen aus #72 bleiben enthalten. Gemeinsame index.html/style.css/sw.js-Konflikte in diesem Arbeitsbranch aufgelöst, Lieferung/Cache v355; Jagd-/Hof-Dateien behalten ihre v354-Verweise und jagdtest.js v353.

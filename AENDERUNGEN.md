@@ -1,3 +1,12 @@
+## v356 – Klappbereiche, kompakte Konzernmeldung und Parkplätze am Standort
+
+- Angebots- und Belegdetails: Flotte, Standorte und Personal starten jeweils eingeklappt. Standorte und Teams sind darunter separat aufklappbar.
+- Konzern-Kampfansage: kompakte Meldung mit beiden Firmen, Fahrzeugzahlen, Sitz, Firmenwert, Regel und Zitat statt langer animierter Titelseite. Bei den fünf geprüften Bildschirmgrößen kein Scrollen; bei großer Schrift bleibt ein lesbarer Scroll-Fallback.
+- Ursache der abseits parkenden Übernahmefahrzeuge: logischer Ort war gesetzt, aber keine konkrete Parkadresse. Reservierte Straßenfahrzeuge erhalten jetzt die Bürohofadresse, andere Verkehrsmittel den passenden Terminalpunkt. Ältere offene Angebote werden nur um Parkdaten ergänzt. Einmalige Korrektur für eindeutig zugeordnete, unbenutzte Übernahmefahrzeuge am Standardstellplatz; laufende Fahrten, benutzte Fahrzeuge und Kundenparkplätze bleiben erhalten.
+- Standortauswahl: suchbares, per Tastatur bedienbares Auswahlfenster ohne Orts-Emojis; einheitliche Schrift, automatisch wachsende Zeilen, Fokus-Rückkehr. Büro-Refresh und wartende Konzernmeldung unterbrechen eine offene Auswahl nicht.
+- Geprüft: sechs neue Park-/Bestandsschutzszenarien, 18 Übernahmeszenarien, zwölf Bewertungsfälle und bestehende Büro-/Verhandlungsprüfungen. Chromium: Konzernmeldung bei 390×664, 375×667, 320×520, 844×390, 1280×800; große Schrift, unabhängige Klappbereiche, Suche, Tastatur, Escape, Refresh und ausstehende Meldung. Echter Kauf mit 17 Lkw: alle exakt an ihrer Bürohofadresse. Bestehender vollständiger Browser-Kaufablauf inklusive Premiumkauf und 3D-Büro besteht.
+- Kein echter iPhone-/Safari-Test. Dokumentation und Vorschau: docs/UNTERNEHMEN-UI-v356.md.
+
 ## v355 – Vollständige Unternehmenskäufe, Haifisch-Moment und kompakter Kaufbeleg
 
 - Ursache: Bei schon vorhandenem Büro wurde der gekaufte Sitz automatisch verkauft und sein reserviertes Personal gelöscht; neue Firmen bekamen unabhängig vom Wert erst beim Kauf zwei bis vier zufällige Mitarbeiter. Bericht und Hai-Inszenierung nutzten zu viel Platz beziehungsweise erklärten den Erfolg unzureichend.

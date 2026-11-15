@@ -1006,6 +1006,12 @@ Frühere Übernahmen werden nicht ohne belegbare Historie nachträglich mit
 zufälligem Personal oder Vermögenswerten aufgefüllt. Die bereits vorhandene
 Legacy-Reparatur reservierter Firmensitze bleibt erhalten.
 
+Seit v356 lassen sich in den Übernahmedetails **Flotte, Standorte und Personal**
+getrennt aufklappen. Die Konzernmeldung zeigt die neue Konkurrenz kompakt auf
+einer Seite. Übernommene Straßenfahrzeuge stehen an der Adresse ihres Bürohofs;
+Schiffe, Züge und Flugzeuge am passenden Terminal. Beim Eröffnen eines Büros
+hilft eine suchbare Ortsauswahl mit einheitlichen Zeilen ohne Orts-Emojis.
+
 ### Lackierung & Logo
 
 Unter *Flotte* oder *Welt* → „🎨 Lackierung & Logo“: Grund- und Zweitfarbe

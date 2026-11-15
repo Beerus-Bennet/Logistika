@@ -34,16 +34,44 @@ function corpWinReport(ev) {
     <footer class="crp-footer"><button type="button" class="btn crp-close">Zur Unternehmensübersicht →</button></footer>
   </div>`;
   document.body.appendChild(el); document.body.classList.add("cs-open");
+  corpDialogBind356(el, ".crp-close", previous, true);
+}
+
+/* v356: Kompakte Konzernmeldung mit allen Kennzahlen auf einer Seite. */
+function corpThreatReport(ev) {
+  const rivals = (ev.ids || []).map(id => ({r: rivalById(id), c: CORP[id], id})).filter(x => x.r && x.c);
+  if (!rivals.length || document.getElementById("corpShow")) return;
+  const previous = document.activeElement, el = document.createElement("div");
+  el.id = "corpShow"; el.className = "cs-challenge";
+  el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "ctTitle"); el.tabIndex = -1;
+  const cards = rivals.map(({r, c, id}) => {
+    const a = corpAppraisal(id), initials = r.name.split(/\s+/).map(w => w[0]).join("").slice(0, 2);
+    return `<article class="ct-rival"><div class="ct-rival-head"><span class="ct-mark" aria-hidden="true">${esc(initials)}</span><h3>${esc(r.name)}</h3></div>
+      <dl><div><dt>Fahrzeuge</dt><dd>${a.fleet.length}</dd></div><div><dt>Firmensitz</dt><dd>${esc(N[c.hq].short)}</dd></div><div><dt>Firmenwert</dt><dd>${esc(money(a.total))}</dd></div></dl></article>`;
+  }).join("");
+  el.innerHTML = `<section class="ct-sheet"><header class="ct-mast"><b>LOGISTIK-KURIER</b><small>${esc(stamp(S.time))}</small></header>
+    <div class="ct-heading"><p>NEUE KONZERNE AM MARKT</p><h2 id="ctTitle">Konzerne greifen an</h2><span>Neue Konkurrenz für <strong>${esc(S.player.company)}</strong></span></div>
+    <div class="ct-rivals">${cards}</div>
+    <div class="ct-rule"><b>Sie bewerben sich schneller um Aufträge.</b><span>Hol dir die Marktführung zurück – dann kannst du sie kaufen.</span></div>
+    <blockquote class="ct-quote"><p>„${esc(rivals[0].c.hello || "Wir wollen die Marktführung.")}“</p><cite>${esc(rivals[0].c.boss)} · ${esc(rivals[0].c.role)}</cite></blockquote>
+    <footer class="ct-footer"><button type="button" class="btn ct-close">Herausforderung annehmen</button></footer></section>`;
+  document.body.appendChild(el); document.body.classList.add("cs-open");
+  corpDialogBind356(el, ".ct-close", previous, false);
+  if (typeof sfx === "function") try { sfx("horn"); } catch (_) { /* Stumm weiterhin bedienbar. */ }
+}
+
+/* v356: Gemeinsames Schließen/Fokusverhalten der beiden Konzernmeldungen. */
+function corpDialogBind356(el, selector, previous, goToWorld) {
   const oldInert = [];
   Array.from(document.body.children).forEach(child => {
     if (child !== el && child.tagName !== "SCRIPT" && !child.inert) { oldInert.push(child); child.inert = true; }
   });
   let closed = false;
-  function close(goToWorld = false) {
+  function close(navigate = false) {
     if (closed) return; closed = true;
     document.removeEventListener("keydown", key, true); el.remove(); document.body.classList.remove("cs-open");
     oldInert.forEach(child => { child.inert = false; });
-    if (goToWorld && typeof showTab === "function") showTab("world");
+    if (navigate && goToWorld && typeof showTab === "function") showTab("world");
     else if (typeof activeTab !== "undefined" && activeTab === "world" && typeof renderWorld === "function") renderWorld();
     if (previous && previous.isConnected && !previous.closest("[inert]")) previous.focus({ preventScroll: true });
     else { const tab = document.querySelector('[data-tab="world"]'); if (tab) tab.focus({ preventScroll: true }); }
@@ -53,10 +81,10 @@ function corpWinReport(ev) {
     if (e.key === "Tab") {
       const focusable = [...el.querySelectorAll("button, summary")].filter(b => b.getClientRects().length);
       const i = focusable.indexOf(document.activeElement);
-      e.preventDefault(); if (focusable.length) focusable[(i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+      e.preventDefault(); if (focusable.length) focusable[i < 0 ? (e.shiftKey ? focusable.length - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
     }
   }
   document.addEventListener("keydown", key, true);
-  el.querySelector(".crp-close").onclick = () => close(true);
+  el.querySelector(selector).onclick = () => close(true);
   el.focus({ preventScroll: true });
 }
