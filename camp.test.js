@@ -27,7 +27,7 @@ test("Weg hinein: nie näher als 1,45 ans Feuer, nie durch Sofa oder Wand (ab To
       const l = loc(x, z), rr = Math.hypot(l[0], l[1]);
       assert.ok(rr > 1.44, s.id + " zu nah am Feuer " + rr.toFixed(2));
       const gang = Math.abs(l[0]) < 0.2 && l[1] > 1.4, ring = rr < 1.62, fin = Math.abs(Math.sin(Math.atan2(-l[1], l[0]) - s.ang * Math.PI / 180)) < 0.02;
-      const reihe = Math.abs(l[1] - C.STAND_Z) < 0.02 && Math.abs(l[0]) <= 5.2;   /* v112: Stehreihe vor der Werkzeugplane */
+      const reihe = (Math.abs(l[1] - C.STAND_Z) < 0.02 && Math.abs(l[0]) <= C.AISLE_X + .02) || (Math.abs(Math.abs(l[0])-C.AISLE_X)<.02 && l[1]>=-1.62 && l[1]<=C.STAND_Z+.02);   /* v357: Quergang und seitliche Zugangsgassen */
       assert.ok(gang || ring || fin || reihe, s.id + " Wegpunkt außerhalb der freien Wege " + l.map(v => v.toFixed(2)));
     });
     const e = loc(...r[r.length - 1]); assert.ok(Math.hypot(e[0] - s.lx, e[1] - s.lz) < 0.8, "Standpunkt nah am Sitz");
@@ -43,24 +43,24 @@ test("Weg heraus beginnt am Sitz und endet am Tor außerhalb des gesperrten Plat
   });
 });
 test("Bogen führt auf dem kürzeren Weg (höchstens 180° um das Feuer)", () => {
-  C.slots.forEach(s => { const r = C.routeIn(s); let tot = 0; for (let i = 1; i < r.length; i++) tot += Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]); assert.ok(tot < 8.2 + 1.5 * Math.PI + 1.6 + 12, s.id + " " + tot.toFixed(1)); });
+  C.slots.forEach(s => { const r = C.routeIn(s), ring = r.map(p => loc(...p)).filter(p => Math.abs(Math.hypot(...p)-C.RING)<.02); let angle = 0; for(let i=1;i<ring.length;i++){const d=Math.atan2(ring[i][1],ring[i][0])-Math.atan2(ring[i-1][1],ring[i-1][0]);angle+=Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));} assert.ok(angle<=Math.PI+.02, s.id+" Bogen "+angle); let tot = 0; for (let i = 1; i < r.length; i++) tot += Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]); assert.ok(tot < 40, s.id + " " + tot.toFixed(1)); });
 });
 test("Gesperrter Platz: Feuer, Sofas, Wände innen gesperrt; Gelände davor frei", () => {
   assert.ok(C.blockedW(C.CX, C.CZ)); assert.ok(C.blockedW(...C.slots[0] && [C.slots[0].x, C.slots[0].z]));
   const f = C.gate(); assert.ok(!C.blockedW(f[0], f[1]));
 });
 
-test("v351 Werkzeugregale: eigene Fächer, Mittelgang frei, Halte zum Einräumen und Abholen", () => {
+test("v357 Werkzeugregale: eigene Fächer, Mittelgang frei, Halte zum Einräumen und Abholen", () => {
   const lanes = new Set();
   C.slots.forEach(s => {
     const T = C.toolSpot(s), l = loc(T.x, T.z);
-    assert.ok(Math.abs(l[1] - C.TOOL_Z) < 0.01 && Math.abs(l[0]) >= 0.49 && Math.abs(l[0]) <= 5.2, s.id + " Bahn " + l.map(v => v.toFixed(2)));
-    assert.ok(Math.hypot(l[0], l[1]) > 3, "weit vom Feuer"); lanes.add(l[0].toFixed(2));
+    assert.ok(Math.abs(Math.abs(l[0])-C.RACK_X)<.01 && l[1]>=-1.61 && l[1]<=3.81, s.id + " Bahn " + l.map(v => v.toFixed(2)));
+    assert.ok(Math.hypot(l[0], l[1]) > 3, "weit vom Feuer"); lanes.add(l.map(v=>v.toFixed(2)).join(":"));
     const rin = C.routeIn(s), ro = C.routeOut(s.x, s.z);
     assert.strictEqual(rin.stops.length, 1); assert.strictEqual(rin.stops[0].kind, "drop");
-    const p = loc(...rin[rin.stops[0].i]); assert.ok(Math.abs(p[0] - l[0]) < 0.02 && Math.abs(p[1] - C.STAND_Z) < 0.02, "steht vor der Bahn");
+    assert.ok(Math.hypot(rin[rin.stops[0].i][0]-T.sx,rin[rin.stops[0].i][1]-T.sz)<.02, "steht vor der Bahn");
     assert.strictEqual(ro.stops.length, 1); assert.strictEqual(ro.stops[0].kind, "pick");
-    const q = loc(...ro[ro.stops[0].i]); assert.ok(Math.abs(q[0] - l[0]) < 0.02, "holt von der eigenen Bahn");
+    assert.ok(Math.hypot(ro[ro.stops[0].i][0]-T.sx,ro[ro.stops[0].i][1]-T.sz)<.02, "holt von der eigenen Bahn");
     assert.ok(Math.hypot(rin.stops[0].tx - T.x, rin.stops[0].tz - T.z) < 0.01);
   });
   assert.strictEqual(lanes.size, 9, "keine zwei auf einer Bahn");

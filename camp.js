@@ -97,23 +97,20 @@ const CAMP = (() => {
     slots.forEach(s => { const q = Math.hypot(s.x - x, s.z - z); if (q < bd) { bd = q; b = s; } });
     return b;
   }
-  /* ------------- v112: Werkzeugplane vor der Feuerstelle -------------
-     Wer zum Essen kommt, legt sein Werkzeug auf die Plane vor dem Feuer und holt es nach der Pause wieder ab.
-     Zehn Bahnen quer zur Laufrichtung (Gasse in der Mitte bleibt frei), jede Kraft hat ihre eigene – passend zum Sitzplatz. */
-  /* v351: Zwei seitliche Werkbänke mit körperbreiten Fächern. Der Zugang
-     in der Mitte bleibt 2,1 m breit; niemand muss über abgelegte Geräte gehen. */
-  const LANES = [-5.1,-4.2,-3.3,-2.4,-1.5,1.5,2.4,3.3,4.2,5.1], LANE_OF = [0, 1, 2, 3, 4, 5, 7, 8, 9];
-  const TOOL_Z = 4.5, STAND_Z = 5.22;
+  /* v357: Ein persönliches Fach je Kraft, längs der Seitenwände.
+     Feste Zuordnung zum Sitzplatz: Einstellungen/Entlassungen verschieben kein Gerät. */
+  const RACK_X = 6.0, AISLE_X = 5.25, STAND_Z = 5.4;
   function toolSpot(sl) {
-    const i = LANE_OF[sl.n - 1] != null ? LANE_OF[sl.n - 1] : 0, lx = LANES[i], w = toW(lx, TOOL_Z), st = toW(lx, STAND_Z);
-    return { x: w[0], z: w[1], ry: RY+Math.PI, sx: st[0], sz: st[1], lx };
+    const i = sl.n - 1, side = i < 5 ? -1 : 1, lx = side * RACK_X, lz = 3.8 - (i % 5) * 1.35;
+    const ax = side * AISLE_X, w = toW(lx, lz), st = toW(ax, lz);
+    return { x: w[0], z: w[1], ry: RY + side * Math.PI / 2, rackRy: RY - side * Math.PI / 2, sx: st[0], sz: st[1], lx, lz, ax, side };
   }
   /* Weg hinein: Tor → Gasse → vor die eigene Bahn (Werkzeug ablegen) → zurück in die Gasse → Ring ums Feuer → Bogen → Sofa.
      Das Ergebnis trägt .stops = [{ i: Punkt im Weg, kind: "drop" | "pick", tx, tz, ry }] */
   function routeIn(sl) {
-    const a0 = -Math.PI / 2, T = toolSpot(sl), L = [[0, OUT_Z], [0, STAND_Z], [T.lx, STAND_Z], [0, STAND_Z], polar(a0, RING)].concat(arcPts(a0, rad(sl.ang), RING));
+    const a0 = -Math.PI / 2, T = toolSpot(sl), L = [[0, OUT_Z], [0, STAND_Z], [T.ax, STAND_Z], [T.ax, T.lz], [T.ax, STAND_Z], [0, STAND_Z], polar(a0, RING)].concat(arcPts(a0, rad(sl.ang), RING));
     L.push(standPt(sl));
-    const r = wpts(L); r.stops = [{ i: 2, kind: "drop", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1 }];
+    const r = wpts(L); r.stops = [{ i: 3, kind: "drop", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack357:1 }];
     return r;
   }
   function routeOut(x, z) {
@@ -126,8 +123,8 @@ const CAMP = (() => {
       arcPts(a, a0, RING).forEach(q => L.push(q));
       if (sl) {                                                          /* Werkzeug von der Plane holen */
         const T = toolSpot(sl);
-        L.push([0, STAND_Z], [T.lx, STAND_Z]); stop = { i: L.length - 1, kind: "pick", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1 };
-        L.push([0, STAND_Z]);
+        L.push([0, STAND_Z], [T.ax, STAND_Z], [T.ax, T.lz]); stop = { i: L.length - 1, kind: "pick", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack357:1 };
+        L.push([T.ax, STAND_Z], [0, STAND_Z]);
       } else L.push([0, IN_Z]);
     }
     L.push([0, OUT_Z]);
@@ -365,7 +362,7 @@ const CAMP = (() => {
     [-1, 1].forEach(sd => {
       for (let i = 0; i < 12; i++) {
         const x = sd * (4.4 + rnd() * 1.8), z = -3.6 + i * 0.62 + (rnd() - 0.5) * 0.4;
-        if (!ok(x, z) || z > 3.4) continue;
+        if (!ok(x, z) || z > -2.8) continue; /* v357: Zugangsgassen an beiden Wänden frei */
         const k = (i + (sd > 0 ? 2 : 0)) % 5;
         if (k === 0) tropical(b, x, z, 0.9 + rnd() * 0.4);
         else if (k === 1) shrub(b, x, z, 0.5 + rnd() * 0.3);
@@ -377,7 +374,7 @@ const CAMP = (() => {
     /* Bodendecker und Gräser vor dem Kiesrand */
     for (let i = 0; i < 46; i++) {
       const a = rnd() * 6.28, d = 5.55 + rnd() * 1.6, x = Math.cos(a) * d, z = Math.sin(a) * d * 0.95;
-      if (z > 3.0 && Math.abs(x + 1) < 1.9 || z>3.8&&z<6.0&&Math.abs(x)<6.2) continue;
+      if (z > 3.0 && Math.abs(x + 1) < 1.9 || z>3.8&&z<6.0&&Math.abs(x)<6.2 || Math.abs(x)>4.45&&z>-2.5&&z<4.7) continue;
       if (i % 3 === 0) b.ico(0.22 + rnd() * 0.2, mixc(K.moss, K.leafD, rnd()), { x, y: 0.05, z, jitter: 0.3, flat: 0.4, ry: rnd() * 6 });
       else grass(b, x, z, 0.9 + rnd() * 0.5);
     }
@@ -397,29 +394,47 @@ const CAMP = (() => {
   /* v112: der Korbsessel links vorn ist entfernt – nur Steine und ein kleiner Hocker rechts vorn */
   function furniture(b) {
     G3.seed(8105);
-    [[4.5, 2.4, 0.38], [4.95, 3.1, 0.26], [4.1, 3.2, 0.2]].forEach(([x, z, r]) => b.ico(r, mixc(K.stone, K.rim, rnd() * 0.5), { x, y: r * 0.1, z, jitter: 0.25, flat: 0.7, ry: rnd() * 6 }));
+    [[4.5, 2.4, 0.38], [3.8, 3.1, 0.26], [4.1, 3.2, 0.2]].forEach(([x, z, r]) => b.ico(r, mixc(K.stone, K.rim, rnd() * 0.5), { x, y: r * 0.1, z, jitter: 0.25, flat: 0.7, ry: rnd() * 6 }));
     b.cyl(0.3, 0.3, 0.42, 10, K.wal, { x: 3.7, z: 2.4, top: K.chest });                      /* Hocker / Beistelltisch */
     b.cyl(0.15, 0.15, 0.06, 8, K.anth, { x: 3.7, y: 0.42, z: 2.4 });
   }
 
-  /* v351: Offene Werkzeugstation aus geöltem Holz und dunklen Metallbügeln.
-     Hohe Geräte stehen im Fußhalter, Kisten auf der Werkbank; nummerierte Fächer. */
-  function racks(b){for(const side of [-1,1]){const cx=side*3.3,z=TOOL_Z,wood=0x8b6543,dark=0x3e352c,metal=0x39494b;
-    b.plate(4.65,1.65,0xb2afa3,{x:cx,z:z+.22,y0:.045});
-    for(const x of [cx-2.22,cx+2.22]){b.box(.12,1.4,.12,dark,{x,z:z-.20,y:.07});b.box(.14,.08,.62,metal,{x,z,y:.06});}
-    b.box(4.52,.09,.13,dark,{x:cx,z:z-.22,y:1.27});
-    for(const y of [.75,1.0])b.box(4.52,.15,.06,wood,{x:cx,z:z-.22,y});
-    for(let i=0;i<5;i++){const x=cx+(i-2)*.9;
-      /* v351: Offene Aussparung für Stiele/Ruten; keine Tischplatte durch das Gerät. */
-      b.box(.82,.09,.35,wood,{x,z:z-.125,y:.49});
-      for(const dx of [-.31,.31])b.box(.20,.09,.25,wood,{x:x+dx,z:z+.175,y:.49});
-      b.box(.78,.045,.43,0x6b7774,{x,z:z+.03,y:.14});
-      for(const dx of [-.19,.19]){b.box(.035,.21,.035,metal,{x:x+dx,z:z+.12,y:1.01});b.box(.035,.035,.27,metal,{x:x+dx,z:z-.03,y:1.01});}
-      b.box(.23,.12,.025,0xd4bc82,{x,z:z+.31,y:.34});
-      /* Kleine Kerbmarken statt unleserlicher Welttexturen. */
-      for(let k=0;k<=i;k++)b.box(.012,.065,.028,dark,{x:x-.08+k*.035,z:z+.33,y:.365});
+  /* v357: Ein modulares Fach; zur Platzmitte offen, mit Stielhalter und Ablage.
+     Alle Kräfte teilen dasselbe Netz. Sichtbar sind nur tatsächlich belegte Fächer. */
+  function rackBay() {
+    const b = new G3.MB(), wood = 0x8b6543, dark = 0x3e352c, metal = 0x39494b;
+    b.plate(1.12, .9, 0xb2afa3, {z:.12,y0:.045});
+    for (const x of [-.48,.48]) {
+      b.box(.09,1.4,.09,dark,{x,z:-.2,y:.07});
+      b.box(.12,.08,.62,metal,{x,y:.06});
     }
-  }}
+    b.box(1.05,.09,.13,dark,{z:-.22,y:1.27});
+    for (const y of [.75,1]) b.box(1.05,.15,.06,wood,{z:-.22,y});
+    b.box(.9,.09,.35,wood,{z:-.125,y:.49});
+    for (const x of [-.35,.35]) b.box(.2,.09,.25,wood,{x,z:.175,y:.49});
+    b.box(.86,.045,.43,0x6b7774,{z:.03,y:.14});
+    for (const x of [-.19,.19]) {
+      b.box(.035,.21,.035,metal,{x,z:.12,y:1.01});
+      b.box(.035,.035,.27,metal,{x,z:-.03,y:1.01});
+    }
+    b.box(.23,.12,.025,0xd4bc82,{z:.31,y:.34});
+    return b;
+  }
+  function syncRacks(R) {
+    const staff = S.farm && S.farm.staff || [];
+    staff.forEach((s,i) => slotFor(s, typeof FSTAFF_ROLES === "undefined" ? i : Object.keys(FSTAFF_ROLES).indexOf(s.role)));
+    for (const sl of slots) {
+      const s = staff.find(s => s.id === workerOf(sl.id));
+      const needed = !!(s && typeof staffTool === "function" && staffTool(s.role));
+      let n = ST.racks.get(sl.id);
+      if (needed && !n) {
+        const T = toolSpot(sl);
+        n = R.addChild(ST.root, fnode(fmesh("camp_rack357", rackBay), {x:T.lx,z:T.lz,ry:T.rackRy-RY}));
+        ST.racks.set(sl.id,n);
+      }
+      if (n) n.visible = needed;
+    }
+  }
 
   /* Lampen: Pfosten + Schirm (starr) – Birnen und Lichtinseln sind eigene Knoten */
   const LAMPS = [[-4.3, -2.6, 0.95], [4.3, -2.2, 0.85], [-1.9, -4.5, 0.75], [2.4, -4.5, 0.9], [-4.8, 1.8, 0.7], [4.7, 1.2, 0.8], [-3.3, 4.0, 0.6]];
@@ -453,14 +468,14 @@ const CAMP = (() => {
     sofa(b, 2.9, [116, 90, 64], { cush: [[0, K.sand, 0.1], [1, K.slate, -0.2], [2, K.slateD, 0.15]] });
     sofa(b, 2.4, [24, 0, -24], { cush: [[1, K.slate, 0.1]] });
     const pl = new G3.MB(); plants(pl); b.add(trim(pl));
-    wall(b); furniture(b); racks(b); lampPosts(b);
+    wall(b); furniture(b); lampPosts(b);
     return b;
   }
 
   /* --------------------------------- Szene --------------------------------- */
-  const ST = { root: null, fl: [], halo: null, fglow: null, bulbs: null, sp: 0, ph: 0 };
+  const ST = { racks: new Map(), root: null, fl: [], halo: null, fglow: null, bulbs: null, sp: 0, ph: 0 };
   function attach(R) {
-    ST.fl = []; ST.root = fnode(fmesh("camp_v351", build), { x: CX, y: 0, z: CZ, ry: RY });
+    ST.fl = []; ST.racks = new Map(); ST.root = fnode(fmesh("camp_v357", build), { x: CX, y: 0, z: CZ, ry: RY });
     R.nodes.push(ST.root);
     const add = (key, fn, o) => R.addChild(ST.root, fnode(fmesh(key, fn), Object.assign({ shadow: false }, o)));
     ST.fglow = add("camp_fglow", fireGlowMesh, { alpha: 0.1, glow: 1 });
@@ -470,12 +485,14 @@ const CAMP = (() => {
     ST.fl.push(add("camp_fl4", () => flame(0.18, 0.62, 0xff9a26), { x: -0.2, y: 0.24, z: -0.12, alpha: 0.85, glow: 1 }));
     add("camp_embers", () => { const m = new G3.MB(); m.disc(0.55, 12, 0xff5a12, { y0: 0.215 }); m.disc(0.3, 10, 0xffb040, { y0: 0.218 }); return m; }, { glow: 1 });
     ST.bulbs = add("camp_bulbs", lampBulbs, { glow: 1 });
+    syncRacks(R);
     return ST.root;
   }
   /* je Bild: Flammen züngeln, Funken, Lichtinseln nachts */
   function step(dt, time) {
     if (!ST.root || typeof FV === "undefined" || !FV.R) return;
     const R = FV.R, c = R.cam, near2 = c && Math.hypot(c.tx - CX, c.tz - CZ) < 60;
+    syncRacks(R);
     if (!near2) return;
     const t = time || 0;
     ST.fl.forEach((n, i) => {
@@ -492,5 +509,5 @@ const CAMP = (() => {
     }
   }
 
-  return { GRAVEL: K.gr1, CX, CZ, RY, slots, SIT_Y, SEAT_OFF, RING, gate, routeIn, routeOut, standPt, slotAt, blockedL, blockedW, toolSpot, TOOL_Z, STAND_Z, LANES, talkStep, talkOf, talkReset, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
+  return { GRAVEL: K.gr1, CX, CZ, RY, slots, SIT_Y, SEAT_OFF, RING, gate, routeIn, routeOut, standPt, slotAt, blockedL, blockedW, toolSpot, RACK_X, AISLE_X, STAND_Z, syncRacks, talkStep, talkOf, talkReset, byId, toW, toL, store, slotOf, workerOf, free, assign, remove, tidy, slotFor, pose, near, clear, build, attach, step, LAMPS };
 })();

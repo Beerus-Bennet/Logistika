@@ -1,3 +1,12 @@
+## v357 – Schwebende 3D-Insel, seitliche Werkzeugfächer und sichtbarer App-Rahmen
+
+- Ursache des Kartenrands: Die v354-Kulisse streckte ringförmige Landschaft bis 1.500 Einheiten nach außen. Sie ist ersetzt durch einen endlichen Grasrand mit Erdschicht, gebrochenen Felsflanken und geschlossenem, nach unten zulaufendem Inselkörper. 3.960 Dreiecke, deterministisch, kein Aufbau je Bild. Spielfläche, Bebauung, Freischaltungen und Bewegungsgrenzen bleiben an ihren bisherigen Koordinaten.
+- Werkzeugstation: Einzelne Fächer längs beider Seitenwände statt zwei überbreiter Frontregale. Sichtbar genau ein Fach je vorhandener Kraft mit Werkzeug; keine zusätzlichen leeren Reihen. Ablage, Blickrichtung, Ein-/Ausräumen und Hin-/Rückwege nutzen dieselben seitlichen Punkte. Pflanzen in den Zugangsgassen entfernt; feste Zuordnung bleibt beim Personalwechsel stabil.
+- Laufende alte Frontregal-Wege werden ab der tatsächlichen Position angepasst. Bereits abgeschlossene Übergaben werden nicht wiederholt; sitzende Kräfte behalten insbesondere das Pausenende um 13 Uhr. Keine neue Lohn-, Inventar- oder Aufgabenbuchung.
+- Browserlayout: Neuer früher Viewport-Abgleich für Neuladen, Pageshow, Drehen und Änderungen der sichtbaren Fläche. Alle festen Spielbereiche beziehen sich auf denselben Rahmen; Fenster bleiben innen scrollbar. Luckybox-Versatz wird nicht doppelt angewendet. Die markierte Domain-Pille ist native iOS-Browseroberfläche: Ihr Erscheinen lässt sich nicht durch die Website verbieten. Ohne Browserleiste läuft das Spiel als installierte Web-App über „Zum Home-Bildschirm“.
+- Geprüft: Inselnetz auf Anschlusskanten, geschlossene Flanken/Unterseite und Flächenausrichtung; 13 Bewegungs-/Werkzeugszenarien, zehn Camp-, zehn Hofteam- sowie neun Sammelprüfungen. Chromium: gerenderte Insel, neun bzw. zwei sichtbare Fächer mit Geräten, mobile Canvas-/Navigationsgrenzen; Reload mit erhaltenem Spielstand, Hoch-/Querformat, simulierte Visual-Viewport-Größen und Versätze, Pinch-Schutz, Luckybox-Scrollen und Fallback. Bestehender v356-Browserablauf für Unternehmensdialoge und Standortauswahl besteht.
+- Grenzen: kein echtes iPhone/Safari und keine Behauptung, dass der native iOS-Toolbar-Effekt damit behoben ist. Vorschauen und technische Abnahme: docs/INSEL-WERKZEUGE-v357.md.
+
 ## v356 – Klappbereiche, kompakte Konzernmeldung und Parkplätze am Standort
 
 - Angebots- und Belegdetails: Flotte, Standorte und Personal starten jeweils eingeklappt. Standorte und Teams sind darunter separat aufklappbar.

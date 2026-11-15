@@ -14,14 +14,40 @@ const STAFF_GEAR = (() => {
       if(!best||score<best.score)best={rx,ry,rz,s:scale,lo,hi,score};
     }cache.set(s.role,best);return best;
   }
-  function parking(s,e){const sl=CAMP.slotOf(s.id),f=fit(s);if(!sl||!f)return null;const T=CAMP.toolSpot(sl),a=CAMP.RY,c=Math.cos(a),sn=Math.sin(a),ox=-(f.lo[0]+f.hi[0])/2,oz=(['holzfaeller','fischer'].includes(s.role)?.18:-.05)-(f.lo[2]+f.hi[2])/2;
+  function parking(s,e){const sl=CAMP.slotOf(s.id),f=fit(s);if(!sl||!f)return null;const T=CAMP.toolSpot(sl),a=T.rackRy,c=Math.cos(a),sn=Math.sin(a),ox=-(f.lo[0]+f.hi[0])/2,oz=(['holzfaeller','fischer'].includes(s.role)?.18:-.05)-(f.lo[2]+f.hi[2])/2;
     return {x:T.x+c*ox+sn*oz,z:T.z-sn*ox+c*oz,y:(['holzfaeller','fischer'].includes(s.role)?.16:.58)-f.lo[1],rx:f.rx,ry:a+f.ry,rz:f.rz,s:f.s};
   }
   const put=(n,p)=>{for(const k of ['x','y','z','rx','ry','rz'])n[k]=p[k];n.sx=n.sy=n.sz=p.s;};
   function retime(s,j,t0){const delta=t0-j.t0;j.t0=t0;j.t1+=delta;if(s.jobEnd!=null)s.jobEnd+=delta;}
+  /* v357: Gespeicherte Wege zu den früheren Frontregalen auf die Seitenfächer
+     umstellen. Tatsächliche Position, restliche Arbeitszeit und erledigte
+     Übergaben bleiben erhalten; keine erneute Aufgaben-/Lohnbuchung. */
+  function relocate(s,e,j) {
+    if (!j || !j.route || !j.stops) return;
+    const sl=CAMP.slotOf(s.id), old=j.stops.find(st=>st.rack351&&!st.rack357);
+    if (!sl || !old) return;
+    if (S.time>=j.t0+j.walk) {
+      /* Bereits sitzende/arbeitende Kräfte behalten insbesondere ihr Pausenende. */
+      const T=CAMP.toolSpot(sl);old.tx=T.x;old.tz=T.z;old.ry=T.ry;old.rack357=1;return;
+    }
+    const T=CAMP.toolSpot(sl), line=staffTimeline(j), passed=line.geo>old.d+.01 || !!old.done351;
+    const rate=j.walk/((j.len||routeLen(j.route))+j.stops.reduce((n,st)=>n+st.w,0));
+    const remaining=Math.max(0,j.t1-(j.t0+j.walk)), entry=CAMP.toW(T.ax,CAMP.STAND_Z), at=[T.sx,T.sz];
+    j.route.splice(old.i,1,entry,at,entry.slice());
+    for (const st of j.stops) {
+      if (st===old) { st.i++;st.tx=T.x;st.tz=T.z;st.ry=T.ry;st.rack357=1;if(passed)st.done351=true; }
+      else if (st.i>old.i-1) st.i+=2;
+      st.d=routeLen(j.route.slice(0,st.i+1));
+    }
+    j.len=routeLen(j.route);j.walk=(j.len+j.stops.reduce((n,st)=>n+st.w,0))*rate;
+    const geo=routeProject(j.route,e.x,e.z).s, waits=j.stops.reduce((n,st)=>n+(st.done351||geo>st.d+.01?st.w:0),0);
+    j.t0=S.time-(geo+waits)*rate;j.t1=j.t0+j.walk+remaining;
+    if(s.jobEnd!=null)s.jobEnd=j.t1;
+    e.rj=null;e.rs=0;e.gearAction=null;
+  }
   /* Die Übergabe dauert auch bei schneller Spieluhr sichtbar 1,8 s.
      Bei Rückstau beginnt sie erst, wenn die Kraft vor ihrem Fach steht. */
-  function prepare(s,e,dt,gdt){const j=s.job;if(!j||!j.route||!j.stops)return;
+  function prepare(s,e,dt,gdt){const j=s.job;relocate(s,e,j);if(!j||!j.route||!j.stops)return;
     let before=0;const total=(j.len||routeLen(j.route))+j.stops.reduce((n,st)=>n+st.w,0),rate=j.walk/total;
     for(const st of j.stops){const start=(st.d+before)*rate;before+=st.w;if(!st.rack351||st.done351||S.time-j.t0<start-.0001)continue;
       let a=e.gearAction;if(!a||a.job!==j||a.stop!==st)a=e.gearAction={job:j,stop:st,t:0,hand:null};
@@ -50,5 +76,5 @@ const STAFF_GEAR = (() => {
       }else{restore(e);put(e.gt,park);e.gt.visible=!off&&!!(tg&&tg.ground);e.tool.visible=!off&&!e.isSit&&!e.sitT&&e.riseT==null&&!staffCalling(s)&&!e.gt.visible;}
     }
   }
-  return {prepare,step,parking,fit,restore,world};
+  return {prepare,step,parking,fit,restore,world,relocate};
 })();

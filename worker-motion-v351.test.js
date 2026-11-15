@@ -54,8 +54,33 @@ test('Sitz-/Laufgelenke sind nie gleichzeitig sichtbar; nach Aufstehen wieder zw
  assert.equal(run('e.walkRig.group.visible'),false);run('for(let i=0;i<120;i++)staffRise(s,e,1/60);');assert.equal(run('e.walkRig.group.visible'),true);assert.equal(run('e.seatRig.active'),false);
 });
 test('Werkzeugfächer liegen seitlich mit Abstand; Langgeräte stehen und Kleinteile liegen erhöht',()=>{
- run('allWorkers();');const points=[];for(let i=0;i<9;i++){C.idx=i;run('var s=S.farm.staff[idx],e=WV.staff.get(s.id),sl=CAMP.slotOf(s.id),T=CAMP.toolSpot(sl),P=STAFF_GEAR.parking(s,e),f=STAFF_GEAR.fit(s);');points.push(JSON.parse(run('JSON.stringify([T.lx,CAMP.TOOL_Z])')));assert.ok(run('Math.abs(T.lx)>=1.49'));assert.ok(run('P.y+f.lo[1]>=.159'));assert.ok(run('f.hi[0]-f.lo[0]<.81'));}
- for(let i=0;i<points.length;i++)for(let j=0;j<i;j++)assert.ok(Math.abs(points[i][0]-points[j][0])>=.89);
+ run('allWorkers();');const points=[];for(let i=0;i<9;i++){C.idx=i;run('var s=S.farm.staff[idx],e=WV.staff.get(s.id),sl=CAMP.slotOf(s.id),T=CAMP.toolSpot(sl),P=STAFF_GEAR.parking(s,e),f=STAFF_GEAR.fit(s);');points.push(JSON.parse(run('JSON.stringify([T.lx,T.lz])')));assert.ok(run('Math.abs(T.lx)>=1.49'));assert.ok(run('P.y+f.lo[1]>=.159'));assert.ok(run('f.hi[0]-f.lo[0]<.81'));}
+ for(let i=0;i<points.length;i++)for(let j=0;j<i;j++)assert.ok(Math.hypot(points[i][0]-points[j][0],points[i][1]-points[j][1])>=1.34);
+});
+test('v357 Fächerzahl folgt dem Team, Entfernen und Neueinstellen erzeugt keine zusätzlichen sichtbaren Regale',()=>{
+ run('allWorkers();CAMP.attach(FV.R);var root=FV.R.nodes[FV.R.nodes.length-1];');
+ const racks=()=>run('root.children.filter(n=>n.mesh.key==="camp_rack357"&&n.visible).length');
+ assert.equal(racks(),9);
+ run('S.farm.staff=S.farm.staff.slice(0,2);CAMP.syncRacks(FV.R);');assert.equal(racks(),2);
+ run('S.farm.staff=[];CAMP.syncRacks(FV.R);');assert.equal(racks(),0);
+ run('S.farm.staff=Object.keys(FSTAFF_ROLES).slice(0,3).map(role=>FARM_STORY.candidate(role));CAMP.tidy(new Set(S.farm.staff.map(s=>s.id)));CAMP.syncRacks(FV.R);');assert.equal(racks(),3);
+});
+test('v357 alter Frontregal-Weg wird ab tatsächlicher Position ohne Arbeitszeitverlust umgestellt',()=>{
+ run(`allWorkers();var s=S.farm.staff[0],e=WV.staff.get(s.id),sl=CAMP.slotOf(s.id);
+  staffGo(s,0,{k:'home',i:0});var j=s.job,st=j.stops[0],i=st.i;
+  j.route.splice(i-1,3,CAMP.toW(-5.1,5.22));st.i=i-1;delete st.rack357;st.d=routeLen(j.route.slice(0,st.i+1));j.len=routeLen(j.route);
+  var work=j.t1-j.t0-j.walk,before=[e.x,e.z],cash=S.money,inv=JSON.stringify(S.farm.inv);
+  STAFF_GEAR.relocate(s,e,j);var T=CAMP.toolSpot(sl),at=j.route[st.i],saved=JSON.stringify(j);STAFF_GEAR.relocate(s,e,j);`);
+ assert.ok(run('Math.hypot(at[0]-T.sx,at[1]-T.sz)<.01'));
+ assert.ok(run('Math.abs((j.t1-j.t0-j.walk)-work)<1e-8'));
+ assert.equal(run('JSON.stringify(j)'),run('saved'));assert.ok(run('e.x===before[0]&&e.z===before[1]'));
+ assert.equal(run('S.money'),run('cash'));assert.equal(run('JSON.stringify(S.farm.inv)'),run('inv'));
+});
+test('v357 Laden während der Pause lässt das Ende um 13 Uhr und erledigte Arbeit unverändert',()=>{
+ run(`allWorkers();var s=S.farm.staff[0],e=WV.staff.get(s.id);staffGo(s,0,{k:'home',i:0});var j=s.job;delete j.stops[0].rack357;
+  j.k='lunch';j.t0=700;j.walk=10;j.t1=780;s.jobEnd=780;S.time=750;var before=JSON.stringify([j.t0,j.walk,j.t1,s.jobEnd]);
+  STAFF_GEAR.relocate(s,e,j);`);
+ assert.equal(run('JSON.stringify([j.t0,j.walk,j.t1,s.jobEnd])'),run('before'));assert.ok(run('j.stops[0].rack357'));
 });
 test('Rückwege nach der Pause verlassen das Camp durch den Eingang und erreichen alle neun Arbeitsplätze',()=>{
  run(`allWorkers();PEOPLE_TRAFFIC.reset();for(let i=0;i<9;i++)staffGo(S.farm.staff[i],i,{k:'home',i});var crossed=0,maxJump=0,jumpInfo=null;var oldMoney=S.money,oldInv=JSON.stringify(S.farm.inv);for(let i=0;i<6500;i++){var before=new Map([...WV.staff].map(([id,e])=>[id,[e.x,e.z]]));S.time+=.02;simTime=i*.05;stepStaff(.05,simTime);PEOPLE_TRAFFIC.step(.05);STAFF_WALK.step(.05,simTime);STAFF_GEAR.step(.05,simTime);for(const s of S.farm.staff){const e=WV.staff.get(s.id),b=before.get(s.id);if(navHit(...b,e.x,e.z,navWallsFor(s.role)))crossed++;var jump=Math.hypot(e.x-b[0],e.z-b[1]);if(jump>maxJump){maxJump=jump;jumpInfo={role:s.role,frame:i,from:b,to:[e.x,e.z],fixed:!!e.gearAction};}}}var distances=S.farm.staff.map(s=>{const e=WV.staff.get(s.id);return [s.role,Math.hypot(e.x-s.job.x,e.z-s.job.z)];});`);
