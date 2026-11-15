@@ -4991,12 +4991,7 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 /* ---------------------------------------------------------------------
    v354: Jagd – Zoomknöpfe in der Ansicht des erlegten Stücks
    --------------------------------------------------------------------- */
-#huntUI .hu-zoom{position:absolute;right:10px;bottom:45%;z-index:5;display:flex;gap:6px}
-#huntUI .hu-zoom[hidden]{display:none}
-#huntUI .hu-zoom button{width:44px;height:44px;border:var(--line);border-radius:14px;background:#fffaf0;color:var(--ink);font:inherit;font-size:22px;font-weight:800;line-height:1;
-  box-shadow:3px 3px 0 var(--ink);cursor:pointer;touch-action:manipulation}
-#huntUI .hu-zoom button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-#huntUI.xr-on .hu-zoom{visibility:hidden}
+/* v356: Zoomknöpfe entfernt – gezoomt wird mit zwei Fingern bzw. dem Mausrad */
 #farmTut.ft-tiny .ltc-do,#farmTut.ft-tiny .ltc-head{display:none}
 #farmTut.ft-tiny .ltc-title{margin-top:0}
 /* v355: Ein Kauf, ein übersichtlicher Beleg. Mehr Platz nur für freiwillige
@@ -5035,3 +5030,22 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 @media(max-width:360px) and (max-height:650px){.crp-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.crp-stat{display:flex;flex-direction:column;justify-content:center;text-align:center;padding:6px 3px;gap:3px}.crp-stat>span{display:none}.crp-stat small{font-size:11px}.crp-stat b{font-size:21px}.crp-group{padding:5px 8px}}
 @media(orientation:landscape) and (max-height:550px){.cs-receipt .crp-sheet{gap:5px 12px;padding:8px 12px 7px}}
 @media(max-width:360px) and (max-height:650px){.cs-receipt .crp-sheet{gap:4px}.crp-heading{gap:7px}.crp-heading h2{font-size:24px}.crp-check{flex-basis:32px;height:32px;font-size:20px}.crp-close{min-height:44px}}
+
+/* ---------------------------------------------------------------------
+   v356: Trefferbild – Schusskanal, Trefferpunkt und Organnamen über der Zeichnung
+   --------------------------------------------------------------------- */
+#huntUI .hu-xr .xr-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+#huntUI .hu-xr .xo-in{stroke:#fff;stroke-width:1.6;stroke-linecap:round;opacity:.75}
+#huntUI .hu-xr .xo-ch{stroke:#ff6b4a;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:5 4}
+#huntUI .hu-xr .xo-entry{fill:#ffa23a;stroke:#fff;stroke-width:1.5}
+#huntUI .hu-xr .xo-out{fill:#ff6b4a;opacity:.8}
+#huntUI .hu-xr .xo-hit{fill:rgba(255,196,60,.18);stroke:#ffc43c;stroke-width:2.4}
+#huntUI .hu-xr .xo-hit.kill{fill:rgba(255,70,50,.22);stroke:#ff5a40}
+#huntUI .hu-xr .xr-labs{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#huntUI .hu-xr .xr-labs>*{position:absolute;left:0;top:0;white-space:nowrap;font-size:10.5px;line-height:1;font-weight:700;padding:2px 5px;border-radius:6px;
+  background:rgba(8,20,40,.62);color:#d7e6ff;border:1px solid rgba(150,190,255,.35)}
+#huntUI .hu-xr .xr-labs>span.hit{color:#fff;background:rgba(190,45,30,.85);border-color:#ff8a70}
+#huntUI .hu-xr .xr-labs>.xo-hl{font-size:11.5px;font-weight:800;padding:3px 7px;color:#1a1304;background:#ffc43c;border-color:#fff}
+#huntUI .hu-xr .xr-labs>.xo-hl.kill{color:#fff;background:#e2412b}
+#huntUI .hu-xr .xo-lead{stroke:rgba(190,215,255,.55);stroke-width:1}
+#huntUI .hu-xr .xo-lead.hit{stroke:#ff8a70;stroke-width:1.4}

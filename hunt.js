@@ -1443,6 +1443,12 @@ const HUNT = (() => {
     const s = Math.sqrt(D), t0 = (-b - s) / (2 * a), t1 = (-b + s) / (2 * a);
     return t1 < 0 ? null : Math.max(0, t0);
   }
+  /* v356: Ein- und Austritt des Strahls an einem Ellipsoid [t0, t1] (d normiert) oder null */
+  function ellSeg(o, d, c, r) {
+    const R = Array.isArray(r) ? r : [r, r, r], ox = (o[0] - c[0]) / R[0], oy = (o[1] - c[1]) / R[1], oz = (o[2] - c[2]) / R[2], dx = d[0] / R[0], dy = d[1] / R[1], dz = d[2] / R[2];
+    const a = dx * dx + dy * dy + dz * dz, b = 2 * (ox * dx + oy * dy + oz * dz), D = b * b - 4 * a * (ox * ox + oy * oy + oz * oz - 1);
+    if (D <= 0) return null; const q = Math.sqrt(D); return [(-b - q) / (2 * a), (-b + q) / (2 * a)];
+  }
   function rayEll(o, d, c, r) { return raySphere([(o[0] - c[0]) / r[0], (o[1] - c[1]) / r[1], (o[2] - c[2]) / r[2]], [d[0] / r[0], d[1] / r[1], d[2] / r[2]], [0, 0, 0], 1); }
   /* v353: wie tief geht der Strahl durch ein Ellipsoid? 0 = vorbei, nahe 0 = Streifen am Rand, 1 = mitten hindurch (halbe Sehne im Einheitsmaß) */
   function ellDepth(o, d, c, r) {
@@ -2760,14 +2766,12 @@ const HUNT = (() => {
       <div class="hu-call" hidden></div>
       <div class="hu-job" hidden></div>
       <div class="hu-drag" hidden>↔ Wischen dreht · zwei Finger zoomen</div>
-      <div class="hu-zoom" hidden><button type="button" data-hu="hzout" aria-label="Herauszoomen">−</button><button type="button" data-hu="hzreset" aria-label="Ansicht zurücksetzen">⟲</button><button type="button" data-hu="hzin" aria-label="Heranzoomen">+</button></div>
       <div class="hu-card2" hidden></div>
       <div class="hu-fade"></div>`;
     host.appendChild(el);
     X.ui = el;
     ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl", "call", "jobEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind", ".hu-call", ".hu-job"][i]); });
     renderBar();
-    X.zoomEl = el.querySelector(".hu-zoom");
     let P = null, pinch = null;
     /* v354: Alle Finger auf der Ansicht – zwei davon zoomen das erlegte Stück (Abstand der Finger), einer dreht wie bisher. */
     const PS = new Map(), span = () => { const [a, b] = [...PS.values()]; return Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)); };
@@ -2775,7 +2779,7 @@ const HUNT = (() => {
       if (e.target.closest("button,.hu-card2")) return;
       if (X && X.view === "harvest" && X.hrv && X.hrv.ui < 2) X.hrv.skip = true;          /* v135: Antippen überspringt das Warten */
       PS.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (PS.size === 2 && X && X.view === "harvest" && X.hrv && X.hrv.cut) { pinch = { d0: span(), z0: X.hrv.zoom || 1 }; hvTake(X.hrv); }
+      if (PS.size === 2 && X && X.view === "harvest" && X.hrv && X.hrv.cut) { pinch = { d0: span(), z0: X.hrv.zoom || 1 }; hvTake(X.hrv); if (X.card && !X.card.hidden && !X.card.classList.contains("saved")) X.card.classList.add("hu-min"); }
       P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { el.setPointerCapture(e.pointerId); } catch (er) { /* egal */ }
     });
     el.addEventListener("pointermove", e => {
@@ -2819,15 +2823,9 @@ const HUNT = (() => {
       if (a === "eye") return setView("eye");
       if (a === "zoom") return zoomStep(1, true);
       if (a === "fire") return fire();
-      if (a === "hzin" || a === "hzout" || a === "hzreset") {
-        const Hv = X.hrv; if (!Hv || X.view !== "harvest") return;
-        hvTake(Hv);
-        if (a === "hzreset") { Hv.zoom = 1; Hv.uy = 0; Hv.up = 0; } else Hv.zoom = (Hv.zoom || 1) * (a === "hzin" ? 0.8 : 1.25);
-        return;
-      }
       if (a === "keep") return keepTrophy();
       if (a === "sell") return keepTrophy(true);
-      if (a === "mini") { if (X.card && !X.card.classList.contains("saved")) { X.card.classList.toggle("hu-min"); snd("tap"); } return; }
+      if (a === "mini") { if (X.card && !X.card.classList.contains("saved")) { X.card.classList.toggle("hu-min"); if (X.hrv) X.hrv.userCard = true; snd("tap"); } return; }
       if (a === "next") return harvestDone(false);
       if (a === "wall") return harvestDone(true);
       if (a === "xray") return xrShow();
@@ -3208,16 +3206,17 @@ const HUNT = (() => {
       if (!X.win.hidden) Hv.ft = clamp((X.win.getBoundingClientRect().bottom - r.top + 6) / h, 0.05, 0.4);
       if (!X.card.hidden) {
         const cr = X.card.getBoundingClientRect(), side = cr.left - r.left > r.width * 0.35;        /* breite Bildschirme: Karte rechts, das Stück links daneben */
+        /* v356: Bleibt zwischen Überschrift und Karte kaum Platz für das Stück, zeigt die Karte zuerst nur das Wichtigste
+           (Medaille, Trophäe, Knöpfe) – ein Tipp auf den Pfeil klappt die Werte auf; danach bleibt es bei der Wahl des Spielers. */
+        if (!side && !Hv.userCard && !X.card.classList.contains("saved") && !X.card.classList.contains("hu-min") && 1 - (Hv.ft || Hv.fr.t) - (r.bottom - cr.top + 8) / h < 0.3) X.card.classList.add("hu-min");
         Hv.fb = side ? 0.04 : clamp((r.bottom - cr.top + 8) / h, 0.1, 0.62); Hv.fR = side ? clamp((r.right - cr.left + 10) / Math.max(1, r.width), 0, 0.6) : 0;
-        X.drag.style.bottom = Math.round(r.bottom - cr.top + 6 + (side ? 0 : 54)) + "px";      /* v354: über den Zoomknöpfen */
+        X.drag.style.bottom = Math.round(r.bottom - cr.top + 6) + "px";
       }
     }
     if (Hv.ft != null) Hv.fr.t += (Hv.ft - Hv.fr.t) * Math.min(1, dt * 3);
     if (Hv.fb != null) Hv.fr.b += (Hv.fb - Hv.fr.b) * Math.min(1, dt * 3);
     if (Hv.fR != null) Hv.fr.r += (Hv.fR - (Hv.fr.r || 0)) * Math.min(1, dt * 3);
     if (X.drag && !X.drag.hidden && (Hv.dragged || t > Hv.dragT)) X.drag.classList.add("off");
-    /* v354: Zoomknöpfe sitzen rechts direkt über der Karte (bzw. unten links neben ihr, wenn die Karte seitlich steht) */
-    if (X.zoomEl && !X.zoomEl.hidden) { X.zoomEl.style.bottom = "calc(" + (Hv.fr.b * 100).toFixed(1) + "% + 8px)"; X.zoomEl.style.right = "calc(" + ((Hv.fr.r || 0) * 100).toFixed(1) + "% + 10px)"; }
     /* Merkmals-Hinweis folgt dem Haupt des Stücks, verblasst nach 6 s oder sobald die Werte aufgeklappt sind */
     if (X.call && !X.call.hidden && A.headAt) {
       const p = FV.R.project(A.headAt[0], A.headAt[1] + (A.k === "hirsch" ? 0.12 : 0.18) * A.s, A.headAt[2]), r = X.ui.getBoundingClientRect();
@@ -3367,7 +3366,6 @@ const HUNT = (() => {
     /* kleine Bildschirme: Karte schmal (nur Medaille, Trophäe, Knopf) – Antippen klappt die Werte auf */
     X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : "") + " lv" + A.pres.lv; X.card.hidden = false;
     X.drag.hidden = false; X.drag.classList.remove("off"); X.hrv.dragT = X.hrv.t + 4.5;
-    if (X.zoomEl) X.zoomEl.hidden = false;
     snd(A.medal >= 3 ? "pearl" : "collect");
     /* v225: Merkmals-Blase („Waffen 21 cm“, „8-Ender“, „Stoß …“) am erlegten Stück entfällt für alle Tiere – die Werte stehen in der Trophäenkarte */
     if (A.medal >= 3 && A.box && A.pres.gn.r < 2) {         /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück (Seltene haben ihre eigene Enthüllung) */
@@ -3437,7 +3435,6 @@ const HUNT = (() => {
     if (!X) return;
     [X.win, X.card, X.call].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
     if (X.drag) X.drag.hidden = true;
-    if (X.zoomEl) X.zoomEl.hidden = true;
     if (X.vig) X.vig.classList.remove("on");
     if (X.ui) X.ui.classList.remove("lv3", "lv4");
   }
@@ -3456,16 +3453,21 @@ const HUNT = (() => {
   const OC = { lunge: [0.84, 0.68, 0.94], herz: [0.74, 0.42, 0.88], leber: [0.82, 0.56, 0.36], magen: [0.5, 0.8, 0.54], darm: [0.9, 0.82, 0.5], niere: [0.36, 0.76, 0.74], kropf: [0.66, 0.86, 0.5], knochen: [0.86, 0.93, 1] };
   const ORG = {
     hirsch: [
-      { id: "lungeL", n: "Lungenflügel links", t: "lunge", c: [-0.058, 0.97, 0.24], r: [0.058, 0.125, 0.14], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", t: "lunge", c: [0.058, 0.97, 0.24], r: [0.058, 0.125, 0.14], v: 1 },
-      { id: "herz", n: "Herz", t: "herz", c: [0, 0.87, 0.28], r: [0.06, 0.075, 0.07], v: 2 }, { id: "leber", n: "Leber", t: "leber", c: [0.02, 0.9, 0.055], r: [0.09, 0.11, 0.065] },
-      { id: "pansen", n: "Pansen", t: "magen", c: [-0.02, 0.9, -0.14], r: [0.125, 0.15, 0.14] }, { id: "darm", n: "Gescheide", t: "darm", c: [0, 0.88, -0.37], r: [0.11, 0.12, 0.12] },
+      /* v356: Lage nach der Anatomie des Wiederkäuers (Blick von der Seite): Die Lunge liegt oben unter der Wirbelsäule und zieht
+         sich nach hinten zum Zwerchfell; das Herz liegt tief in der Brust hinter dem Ellbogen und schaut unter der Lunge hervor
+         (vorher steckte es fast ganz in den Lungenflügeln und war von der Seite nicht zu sehen). Leber rechts am Zwerchfell,
+         Pansen links, Gescheide rechts dahinter, Nieren unter der Lende. Die Wertungszonen (SP) sind unverändert. */
+      { id: "lungeL", n: "Lungenflügel links", t: "lunge", c: [-0.06, 1.0, 0.215], r: [0.056, 0.1, 0.16], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", t: "lunge", c: [0.06, 1.0, 0.215], r: [0.056, 0.1, 0.16], v: 1 },
+      { id: "herz", n: "Herz", t: "herz", c: [0, 0.865, 0.285], r: [0.058, 0.075, 0.068], v: 2 }, { id: "leber", n: "Leber", t: "leber", c: [0.045, 0.9, 0.045], r: [0.085, 0.11, 0.06] },
+      { id: "pansen", n: "Pansen", t: "magen", c: [-0.04, 0.9, -0.14], r: [0.12, 0.15, 0.14] }, { id: "darm", n: "Gescheide", t: "darm", c: [0.03, 0.88, -0.37], r: [0.105, 0.12, 0.12] },
       { id: "niereL", n: "Niere", t: "niere", c: [-0.05, 1.05, -0.24], r: [0.03, 0.028, 0.05] }, { id: "niereR", n: "Niere", t: "niere", c: [0.05, 1.05, -0.24], r: [0.03, 0.028, 0.05] },
       { id: "blattL", n: "Schulterblatt", c: [-0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 },
       { id: "becken", n: "Becken", c: [0, 1.02, -0.46], r: [0.1, 0.06, 0.1], b: 1 } ],
     keiler: [
-      { id: "lungeL", n: "Lungenflügel links", t: "lunge", c: [-0.056, 0.54, 0.2], r: [0.056, 0.11, 0.13], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", t: "lunge", c: [0.056, 0.54, 0.2], r: [0.056, 0.11, 0.13], v: 1 },
-      { id: "herz", n: "Herz", t: "herz", c: [0, 0.45, 0.24], r: [0.055, 0.065, 0.065], v: 2 }, { id: "leber", n: "Leber", t: "leber", c: [0.02, 0.49, 0.045], r: [0.09, 0.1, 0.065] },
-      { id: "magen", n: "Magen", t: "magen", c: [-0.02, 0.5, -0.12], r: [0.12, 0.13, 0.12] }, { id: "darm", n: "Gescheide", t: "darm", c: [0, 0.5, -0.32], r: [0.11, 0.12, 0.11] },
+      /* v356: Schwarzwild – Lunge oben, Herz tief zwischen den Vorderläufen, Leber am Zwerchfell, Magen links, Gescheide dahinter */
+      { id: "lungeL", n: "Lungenflügel links", t: "lunge", c: [-0.058, 0.565, 0.18], r: [0.054, 0.09, 0.145], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", t: "lunge", c: [0.058, 0.565, 0.18], r: [0.054, 0.09, 0.145], v: 1 },
+      { id: "herz", n: "Herz", t: "herz", c: [0, 0.445, 0.245], r: [0.054, 0.065, 0.062], v: 2 }, { id: "leber", n: "Leber", t: "leber", c: [0.035, 0.49, 0.04], r: [0.085, 0.1, 0.06] },
+      { id: "magen", n: "Magen", t: "magen", c: [-0.035, 0.5, -0.12], r: [0.115, 0.13, 0.12] }, { id: "darm", n: "Gescheide", t: "darm", c: [0.02, 0.5, -0.32], r: [0.105, 0.12, 0.11] },
       { id: "niereL", n: "Niere", t: "niere", c: [-0.05, 0.62, -0.2], r: [0.03, 0.026, 0.045] }, { id: "niereR", n: "Niere", t: "niere", c: [0.05, 0.62, -0.2], r: [0.03, 0.026, 0.045] },
       { id: "blattL", n: "Schulterblatt", c: [-0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 },
       { id: "becken", n: "Becken", c: [0, 0.6, -0.41], r: [0.1, 0.06, 0.09], b: 1 } ],
@@ -3591,9 +3593,26 @@ const HUNT = (() => {
     });
     /* Schusskanal: Linie vom Schützen durch das Stück, Einschuss markiert */
     { const b = MB(), at = u => [sh.lo[0] + sh.ld[0] * u, sh.lo[1] + sh.ld[1] * u, sh.lo[2] + sh.ld[2] * u], len = k === "fasan" ? 0.5 : 1.3, th = k === "fasan" ? 0.0035 : 0.007;
-      tube(b, [at(sh.t - len), at(sh.t), at(sh.t + len * 0.55)], [th, th, th * 0.8], [XC.line, XC.line, [1, 0.8, 0.7]], 6, { cap0: true });
+      /* v356: Der Kanal endet am Ausschuss (bzw. kurz hinter dem Treffer), nicht irgendwo hinter dem Stück */
+      const bs = ellSeg(sh.lo, sh.ld, S0.body.c, S0.body.r), inBody = !["kopf", "haupt", "hals", "lauf"].includes(sh.zone) && bs && bs[1] > sh.t;
+      const tOut = inBody ? bs[1] : sh.t + (k === "fasan" ? 0.07 : 0.2);
+      tube(b, [at(sh.t - len), at(sh.t), at(tOut)], [th, th, th * 0.8], [XC.line, XC.line, [1, 0.8, 0.7]], 6, { cap0: true });
       ell(b, at(sh.t), [th * 3, th * 3, th * 3], col([1, 0.62, 0.2]), 8, 6);
       R.addChild(inner, nd(mk(b), {}));
+      /* Bildebene über der Zeichnung (xrOverlay): Kanal, Einschuss, Trefferpunkt und Organnamen – immer sichtbar, auch hinter
+         Rippen und Lunge. Trefferpunkt: Mitte des Kanals im gewerteten Organ; streift der Strahl es nur, der nächste Punkt. */
+      const sc = p => [p[0] * A.s, p[1] * A.s, p[2] * A.s], want = sh.zone === "herz" ? /^herz$/ : sh.zone === "lunge" ? /^lunge/ : null;
+      const tgt = ORG[k].filter(O => want ? want.test(O.id) : hitIds.has(O.id) && O.t).map(O => ({ O, sg: ellSeg(sh.lo, sh.ld, O.c, O.r) })).sort((a, c) => (a.sg ? a.sg[0] : 9) - (c.sg ? c.sg[0] : 9))[0];
+      let hitP = at(sh.t), hitN = (ZONE[sh.zone] || ZONE.koerper).n;
+      if (inBody && tgt) {
+        const O = tgt.O, u = tgt.sg ? (tgt.sg[0] + tgt.sg[1]) / 2 : (O.c[0] - sh.lo[0]) * sh.ld[0] + (O.c[1] - sh.lo[1]) * sh.ld[1] + (O.c[2] - sh.lo[2]) * sh.ld[2];
+        hitP = at(clamp(u, sh.t, tOut)); hitN = O.t === "lunge" ? "Lunge" : O.n;
+      }
+      const seen = new Set(), lab = [];
+      ORG[k].forEach(O => { if (!O.t || seen.has(O.t)) return; seen.add(O.t);
+        const pair = ORG[k].filter(Q => Q.t === O.t), c = [0, 1, 2].map(i => pair.reduce((v, Q) => v + Q.c[i], 0) / pair.length);
+        lab.push({ p: sc(c), n: O.t === "lunge" ? "Lunge" : O.t === "niere" ? "Nieren" : O.t === "leber" ? "Leber" : O.n, hit: pair.some(Q => hitIds.has(Q.id)) || (O.t === "lunge" && sh.zone === "lunge") || (O.t === "herz" && sh.zone === "herz") }); });
+      XR.ov = { a: sc(at(sh.t - len * 0.45)), e: sc(at(sh.t)), x: sc(at(tOut)), h: sc(hitP), hn: hitN, kill: !!(ZONE[sh.zone] && ZONE[sh.zone].kill), lab };
     }
     /* Kamera: von der Schützenseite, schräg – der Kanal läuft sichtbar durchs Bild; Abstand so, dass das Stück ins Hochformat passt */
     const len = (k === "fasan" ? 1.2 : k === "keiler" ? 1.75 : 2.0) * A.s, hgt = (k === "fasan" ? 0.5 : k === "keiler" ? 0.95 : 1.9) * A.s;      /* Fasan: der lange Stoß gehört ins Bild */
@@ -3609,7 +3628,41 @@ const HUNT = (() => {
     const dist = Math.max(vis / (2 * tv * asp), XR.hgt / (2 * tv)) * 1.06 * XR.zoom;
     Object.assign(R.cam, { tx: XR.c[0], ty: XR.c[1], tz: XR.c[2], dist, yaw: XR.yaw, pitch: XR.pitch, fov: 0.6, near: 0.05, far: 60 });
     R.render(now / 1000);
+    xrOverlay();
     XR.raf = requestAnimationFrame(xrLoop);
+  }
+  /* v356: Beschriftung über dem Trefferbild. Kanal im Stück als Linie, Einschuss als Punkt, Trefferpunkt als Ring mit Namen,
+     dazu die Organe mit Namen (getroffene rot). Namen, die sich überdecken würden, rücken untereinander. */
+  function xrOverlay() {
+    const O = XR.ov, el = XR.svg; if (!O || !el || !XR.R) return;
+    const R = XR.R, P = p => { const q = R.project(p[0], p[1], p[2]); return q && q[2] < 1 ? q : null; }, a = P(O.a), e = P(O.e), x = P(O.x), h = P(O.h);
+    const set = (n, at) => { for (const k in at) n.setAttribute(k, at[k]); }, ln = (n, p, q) => { n.style.display = p && q ? "" : "none"; if (p && q) set(n, { x1: p[0].toFixed(1), y1: p[1].toFixed(1), x2: q[0].toFixed(1), y2: q[1].toFixed(1) }); };
+    set(el, { viewBox: "0 0 " + R.w + " " + R.h });
+    ln(XR.sv.in, a, e); ln(XR.sv.ch, e, x);
+    [[XR.sv.e, e], [XR.sv.h, h], [XR.sv.x, x]].forEach(([n, p]) => { n.style.display = p ? "" : "none"; if (p) set(n, { cx: p[0].toFixed(1), cy: p[1].toFixed(1) }); });
+    XR.sv.h.setAttribute("class", "xo-hit" + (O.kill ? " kill" : ""));
+    /* Trefferschild über dem Trefferpunkt; Organnamen in zwei versetzten Zeilen am unteren Bildrand, in der Reihenfolge der
+       Organe von links nach rechts, jeder mit einer feinen Linie zu seinem Organ – so verdeckt kein Name ein Organ. */
+    if (h) { const w = XR.hitL.offsetWidth || 90; XR.hitL.style.display = ""; XR.hitL.style.transform = "translate(" + clamp(h[0], w / 2 + 3, R.w - w / 2 - 3).toFixed(1) + "px," + clamp(h[1] - 22, 10, R.h - 10).toFixed(1) + "px) translate(-50%,-50%)"; } else XR.hitL.style.display = "none";
+    const L = O.lab.map((l, i) => ({ i, p: P(l.p) })).filter(q => q.p).sort((q, r) => q.p[0] - r.p[0]), n = L.length;
+    O.lab.forEach((l, i) => { XR.labs[i].style.display = "none"; XR.lead[i].style.display = "none"; });
+    L.forEach((q, m) => { const el2 = XR.labs[q.i], w = el2.offsetWidth || 50, x = clamp((m + 0.5) / n * R.w, w / 2 + 3, R.w - w / 2 - 3), y = R.h - 11 - (m % 2) * 17;
+      el2.style.display = ""; el2.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) translate(-50%,-50%)";
+      ln(XR.lead[q.i], [x, y - 8], q.p); XR.lead[q.i].setAttribute("class", "xo-lead" + (O.lab[q.i].hit ? " hit" : "")); });
+  }
+  function xrOverlayBuild() {
+    const v = XR.el.querySelector(".xr-view"), O = XR.ov; if (!v || !O) return;
+    if (!XR.svg) {
+      const NS = "http://www.w3.org/2000/svg", mk = (t, c) => { const n = document.createElementNS(NS, t); n.setAttribute("class", c); return n; };
+      XR.svg = mk("svg", "xr-ov"); XR.sv = { in: mk("line", "xo-in"), ch: mk("line", "xo-ch"), x: mk("circle", "xo-out"), e: mk("circle", "xo-entry"), h: mk("circle", "xo-hit") };
+      XR.sv.e.setAttribute("r", 4.5); XR.sv.x.setAttribute("r", 3); XR.sv.h.setAttribute("r", 9);
+      [XR.sv.in, XR.sv.ch, XR.sv.x, XR.sv.e, XR.sv.h].forEach(n => XR.svg.appendChild(n)); v.appendChild(XR.svg);
+      XR.labBox = document.createElement("div"); XR.labBox.className = "xr-labs"; v.appendChild(XR.labBox);
+    }
+    XR.labBox.innerHTML = `<b class="xo-hl${O.kill ? " kill" : ""}">◎ ${esc(O.hn)}</b>` + O.lab.map(L => `<span class="${L.hit ? "hit" : ""}">${esc(L.n)}</span>`).join("");
+    XR.hitL = XR.labBox.firstChild; XR.labs = [...XR.labBox.querySelectorAll("span")];
+    (XR.lead || []).forEach(n => n.remove());
+    XR.lead = O.lab.map(() => { const n = document.createElementNS("http://www.w3.org/2000/svg", "line"); XR.svg.insertBefore(n, XR.svg.firstChild); return n; });
   }
     function xrPanelHTML(A) {
     const sh = A.shots[XR.i], n = A.shots.length, gn = A.gn || {}, Z = ZONE[sh.zone] || ZONE.koerper, T = A.T;
@@ -3627,7 +3680,7 @@ const HUNT = (() => {
       <div class="xr-grid">${row("Entfernung", (sh.dm || "?") + " m")}${row("Flugzeit", fnum(sh.tf || 0, 2) + " s")}${row("Auftreffen", sh.v + " m/s")}${row("Energie", sh.e.toLocaleString("de-DE") + " J")}${row("Wind", fnum(sh.wv || 0, 1) + " m/s")}${row("Abdrift", Math.round((sh.drift || 0) * 100) + " cm")}</div>
       <div class="xr-sec">Stück</div>
       <div class="xr-grid">${row("Geschlecht", sex)}${row("Gewicht", fkg(A))}${row("Decke", esc(coat))}${row("Wesen", esc(tmp))}${row("Trophäe", esc(T.troph))}${row("Güte", Math.round(A.score * 100) + (A.medal ? " · " + MEDALS[A.medal].n : ""))}</div>
-      <p class="xr-tip">↔ Wischen dreht das Stück · rot = getroffen</p>`;
+      <p class="xr-tip">↔ Wischen dreht · zwei Finger zoomen · ◎ Treffer · ● Einschuss · rot = getroffen</p>`;
   }
   function xrShow() {
     const A = X && X.hrv && X.hrv.A; if (!A || typeof G3 === "undefined") return;
@@ -3638,9 +3691,15 @@ const HUNT = (() => {
       XR.cv = XR.el.querySelector("canvas");
       let P = null;
       const v = XR.el.querySelector(".xr-view");
-      v.addEventListener("pointerdown", e => { P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { v.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } e.stopPropagation(); });
-      v.addEventListener("pointermove", e => { if (!P || P.id !== e.pointerId) return; XR.yaw -= (e.clientX - P.x) * 0.01; XR.pitch = clamp(XR.pitch + (e.clientY - P.y) * 0.006, -0.35, 1.2); P.x = e.clientX; P.y = e.clientY; e.stopPropagation(); });
-      const up = e => { if (P && P.id === e.pointerId) P = null; }; v.addEventListener("pointerup", up); v.addEventListener("pointercancel", up);
+      /* v356: zwei Finger zoomen auch hier (vorher nur das Mausrad) */
+      const PS = new Map(), span = () => { const [a, b] = [...PS.values()]; return Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)); }; let pinch = null;
+      v.addEventListener("pointerdown", e => { PS.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (PS.size === 2) pinch = { d0: span(), z0: XR.zoom };
+        P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { v.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } e.stopPropagation(); });
+      v.addEventListener("pointermove", e => { if (PS.has(e.pointerId)) PS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch) { if (PS.size === 2) XR.zoom = clamp(pinch.z0 * pinch.d0 / span(), 0.45, 1.6); e.stopPropagation(); return; }
+        if (!P || P.id !== e.pointerId) return; XR.yaw -= (e.clientX - P.x) * 0.01; XR.pitch = clamp(XR.pitch + (e.clientY - P.y) * 0.006, -0.35, 1.2); P.x = e.clientX; P.y = e.clientY; e.stopPropagation(); });
+      const up = e => { PS.delete(e.pointerId); if (pinch && PS.size < 2) { pinch = null; const r = [...PS.entries()][0]; P = r ? { id: r[0], x: r[1].x, y: r[1].y } : null; return; } if (P && P.id === e.pointerId) P = null; };
+      v.addEventListener("pointerup", up); v.addEventListener("pointercancel", up);
       v.addEventListener("wheel", e => { e.preventDefault(); e.stopPropagation(); XR.zoom = clamp(XR.zoom * Math.exp(e.deltaY * 0.0012), 0.45, 1.6); }, { passive: false });
       XR.el.addEventListener("pointerdown", e => e.stopPropagation());
     }
@@ -3656,7 +3715,7 @@ const HUNT = (() => {
     const A = XR.A; if (!A) return;
     XR.i = (XR.i + d + A.shots.length) % A.shots.length;
     XR.el.querySelector(".xr-pan").innerHTML = xrPanelHTML(A);
-    if (XR.R) { xrBuild(A, A.shots[XR.i]); cancelAnimationFrame(XR.raf); XR.raf = requestAnimationFrame(xrLoop); }
+    if (XR.R) { xrBuild(A, A.shots[XR.i]); xrOverlayBuild(); cancelAnimationFrame(XR.raf); XR.raf = requestAnimationFrame(xrLoop); }
     if (d) snd("tap");
   }
   function xrHide() {
@@ -4038,7 +4097,9 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
+    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), /* v356 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
+      if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
