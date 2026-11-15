@@ -1,3 +1,11 @@
+## v355 – Vollständige Unternehmenskäufe, Haifisch-Moment und kompakter Kaufbeleg
+
+- Ursache: Bei schon vorhandenem Büro wurde der gekaufte Sitz automatisch verkauft und sein reserviertes Personal gelöscht; neue Firmen bekamen unabhängig vom Wert erst beim Kauf zwei bis vier zufällige Mitarbeiter. Bericht und Hai-Inszenierung nutzten zu viel Platz beziehungsweise erklärten den Erfolg unzureichend.
+- Lösung: Verbindliche Pakete aus konkreter Flotte, benanntem Team, eingerichteten Standorten und Kundenaufträgen. Qualifikation, Kapazität und Preis aufeinander abgestimmt; zusätzliche Niederlassungen bleiben erhalten. Zahlung/Übernahme bei Speicherfehler vollständig zurückgenommen. Kaufbeleg bleibt abrufbar; Animation mit eigener Weißhai-Grafik, Flossenauftakt, Vorbeizug und sichtbarer Eingliederung. Kompakte Übersicht mit aufklappbaren Details.
+- Parallelität: PR #72 (`bed6700`, v353/v354) in den eigenen Arbeitsbranch integriert. Gemeinsame Lade-/CSS-Konflikte mit beiderseitigem Inhalt gelöst; Lieferung v355. Keine Zusammenführung auf main oder Live-Veröffentlichung.
+- Geprüft: 18 Übernahmeszenarien und zwölf Bewertungsfälle sowie Bürogrenzen/-ausstattung, Verhandlung, Büroansicht und Hofteam. Chromium: zwei Käufe einschließlich 101,2-Mio.-Premiumkonzern mit 15 Fahrzeugen, 33 Mitarbeitern, drei Standorten und dreistöckiger 3D-Zentrale; fünf Fenstergrößen, große Schrift, Schriftausfall, lange Namen, Laden, Beleg-Wiederöffnung, Überspringen, reduzierte Bewegung und simulierte Sichtbarkeitspause. Einzelheiten/Vorschau in docs/UNTERNEHMENSKAUF-v355.md.
+- Grenzen: kein echtes iPhone/Safari, kein Mobilhardware-Leistungsnachweis. Historischer office-workers-v284.test.js:22 scheitert auch auf unverändertem main (null-Sprechblasenposition); officefp.js unverändert.
+
 # Änderungen – kurz für den Kollegen
 
 ## v354 – Sammelkorrektur nach Bennets PDF: Säen im Rundgang, Bewohner/Fahrräder, Jagd (Zoom, Trefferbild, Keilerohr, Ansätze), Wendeplatz, Kartenrand

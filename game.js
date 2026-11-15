@@ -4475,8 +4475,8 @@ function render() {
    den gerade gelöschten Spielstand nicht wieder zurückschreiben. */
 let noSave = false;
 function save() {
-  if (noSave) return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* Speicher voll */ }
+  if (noSave) return false;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); return true; } catch (e) { return false; }
 }
 function wipeAndRestart() {
   noSave = true;

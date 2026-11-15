@@ -1,3 +1,9 @@
+## v355 – Verbindliche Unternehmenskäufe und Übernahmeinszenierung
+
+PR #73 enthält den Kopf `bed6700` von PR #72 (v353/v354) zusätzlich zum Unternehmenskauf. Erst #72, dann #73 kann auf main zusammengeführt werden; keine automatische Zusammenführung/Veröffentlichung durch diese Arbeit. Alle Farm-/Jagd-/Bewohner-Änderungen aus #72 bleiben enthalten. Gemeinsame index.html/style.css/sw.js-Konflikte in diesem Arbeitsbranch aufgelöst, Lieferung/Cache v355; Jagd-/Hof-Dateien behalten ihre v354-Verweise und jagdtest.js v353.
+
+corpassets.js vor corp.js, corpreport.js nach corp.js und vor corpshark.js laden und im SW cachen. Neue Reservierungen und Kaufbelege verwenden die stabilen internen Felder deal353/receipt353/sites353 (Schema 353), unabhängig von der Liefernummer 355. Vertragspaket vor dem Kauf festlegen, dieselben IDs vollständig übertragen. Keine automatische Auszahlung/Personalentfernung bei vorhandenem Büro. save() gibt Erfolg/Misserfolg zurück; bei Misserfolg Kauf und Verhandlungszustimmung zurücknehmen. Beleg und Animation rein darstellend; keine Vergabe am Animationsende. Details und Grenzen: docs/UNTERNEHMENSKAUF-v355.md. Tests company-acquisition-v355.test.js, company-values-v306.test.js und optional company-acquisition-v355.browser.js.
+
 ## v354 – Sammelkorrektur (Rundgang, Bewohnerwege, Jagd, Wendeplatz, Kartenrand)
 
 Basis main bceb8c7 (v352) plus v353 (Jagd-Testbühne, im selben Branch). Geänderte Dateien: farm.js, farmview.js, hunt.js, peopletraffic.js, villagepeople.js, villagesite.js, worldview.js, style.css (drei Blöcke am Ende), index.html, sw.js; Tests village-life-v343, worker-motion-v351 angepasst, fixes-v354 neu.

@@ -1207,8 +1207,8 @@ function baseCard(b) {
   return `<details class="card base base-fold${paused ? " halted" : ""}" ${officeFoldAttrs("base:" + b.id)}>
     <summary class="base-summary">
       <span class="vicon" aria-hidden="true">${t.icon}</span>
-      <span class="base-label"><b>${esc(n.name)}</b><small>${t.name} · ${b.rent ? "gemietet" : "im Eigentum"}</small>
-        <span class="base-brief"><span>👥 ${b.staff.length}/${t.desks}</span><span>🚚 ${b.vehicles.length}/${t.slots}</span><span${b.mood < 50 ? ` class="bad"` : ""}>Stimmung ${Math.round(b.mood)} %</span></span>
+      <span class="base-label"><b>${esc(n.name)}</b><small>${t.name} · ${b.rent ? "gemietet" : "im Eigentum"}${b.sourceCompany ? " · " + esc(b.sourceCompany) : ""}</small>
+        <span class="base-brief"><span>👥 ${b.staff.length}/${t.desks} Personalplätze</span><span>🚚 ${b.vehicles.length}/${t.slots} zugeordnet</span><span${b.mood < 50 ? ` class="bad"` : ""}>Stimmung ${Math.round(b.mood)} %</span></span>
         ${paused ? `<small class="bad">⛔ Betrieb steht still · noch ${rest}</small>` : ""}</span>
       <span class="office-chevron" aria-hidden="true">▸</span>
     </summary>

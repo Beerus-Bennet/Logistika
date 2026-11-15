@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v354";
+const VERSION = "v355";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -13,7 +13,7 @@ const MAX_PICS = 260;
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=354",
+  "./style.css?v=355",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -24,7 +24,7 @@ const SHELL = [
   "./photo.js?v=336",
   "./map.js?v=311",
   "./routegeo.js?v=323",
-  "./offices.js?v=329",
+  "./offices.js?v=355",
   "./wallet.js?v=109",
   "./snus.js?v=302",
   "./pablo.js?v=302",
@@ -35,7 +35,7 @@ const SHELL = [
   "./kunden.js?v=109",
   "./lucky.js?v=271",
   "./loading.js?v=109",
-  "./game.js?v=340",
+  "./game.js?v=355",
   "./farm.js?v=354",
   "./erbe.js?v=349",
   "./village.js?v=344",
@@ -44,8 +44,10 @@ const SHELL = [
   "./cars.js?v=336",
   "./auction.js?v=339",
   "./customs.js?v=109",
-  "./corp.js?v=348",
-  "./corpshark.js?v=348",
+  "./corpassets.js?v=355",
+  "./corp.js?v=355",
+  "./corpreport.js?v=355",
+  "./corpshark.js?v=355",
   "./livery.js?v=109",
   "./gl3d.js?v=345",
   "./farmmodels.js?v=343",

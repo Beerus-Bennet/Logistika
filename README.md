@@ -981,10 +981,30 @@ deinen einen Tipp und zehn Sekunden mehr.
 Unter *Welt* → „🦈 Übernahmen“: ab Level 5 und sobald du mehr Marktanteil
 hast als die Konkurrentin, kannst du ihr ein Angebot machen. Bis zu drei
 Runden, mit Gegenangeboten – wer zu frech bietet, wird zwei Tage nicht mehr
-angehört. Nach dem Kauf gehören dir ihre Flotte (noch in alten Farben), ihr
-Firmensitz als Büro samt zwei Leuten (oder der Erlös aus dem Verkauf) und ihr
-Marktanteil; sie schnappt keine Aufträge mehr weg. Neu dazu: Atlas Global
-Freight (Etappe 4) und Pacific Star Lines (Etappe 5).
+angehört. Seit v355 enthält das Angebot ein **verbindliches Paket**: konkrete
+Fahrzeuge mit Zustand, ein benanntes Team samt Qualifikation und Löhnen sowie
+vollständig eingerichtete Standorte. Das Paket bleibt beim Schließen, Laden
+und Etappenwechsel unverändert. Der Preis beruht auf Flotte, Immobilien und
+einem begrenzten Kunden-/Organisationswert. Hochwertige Firmen besitzen größere
+Zentralen und erfahrenere Teams; Schwerlast, Kühlkette und Lkw-Betriebe erhalten
+passende Flotten. Benötigt die Flotte weitere Verkehrsknoten, sind diese
+Niederlassungen bereits im Angebot und Preis enthalten.
+
+Bezahlte Niederlassungen bleiben **zusätzlich** zu eigenen Büros am selben Ort
+erhalten; sie werden nicht automatisch verkauft und verlieren keine Mitarbeiter.
+Die Etappengrenze gilt weiter für selbst gegründete Büros. Noch gesperrte Orte
+bleiben samt Team reserviert. Ein fehlgeschlagenes Speichern nimmt die gesamte
+Übernahme zurück. Nach erfolgreicher Speicherung folgt der Haifisch-Moment:
+Flosse, kraftvoller Vorbeizug und Eingliederung in die eigene Unternehmensgruppe.
+Überspringen verändert den Kauf nicht. Der kompakte Abschlussbeleg ist später
+unter *Welt → Übernahmen → Kaufbeleg* erneut abrufbar; alle enthaltenen Fahrzeuge,
+Menschen und Standorte lassen sich dort aufklappen. Normale mobile Ansichten
+zeigen die Zusammenfassung auf einer Seite, kleine Höhen und große Schrift
+behalten einen lesbaren Scroll-Fallback.
+
+Frühere Übernahmen werden nicht ohne belegbare Historie nachträglich mit
+zufälligem Personal oder Vermögenswerten aufgefüllt. Die bereits vorhandene
+Legacy-Reparatur reservierter Firmensitze bleibt erhalten.
 
 ### Lackierung & Logo
 
@@ -1155,6 +1175,9 @@ carpics.mjs             holt die Autofotos einmal nach cars/ (GitHub-Aktion „A
 zcheck.js               Entwicklerwerkzeug: findet Z-Fighting (deckungsgleiche Flächen) in den 3D-Modellen
 customs.js              Zoll: Grenzen, Zollanmeldung als Minispiel, Grüne Spur, Beschau
 corp.js                 Übernahmen der Konkurrenz: Firmenwert, Verhandlung, Übergabe
+corpassets.js           Verbindliche Kaufpakete, Betriebsplanung und gespeicherter Kaufbeleg
+corpreport.js           Kompakter Abschlussbeleg mit aufklappbaren Details
+corpshark.js            Haifisch-Inszenierung nach dem gespeicherten Unternehmenskauf
 livery.js               Firmen-Lackierung und Logo: Editor, Kosten, Kartenfarben
 loading.js              Packspiel „Selbst beladen“
 snus.js                 Mr. Snus: Chat, Einkauf, Lager, Kunden, Zivilfahnder, Haft

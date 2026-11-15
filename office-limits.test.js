@@ -33,8 +33,9 @@ for (const [stage, cap] of [[1,1],[2,3],[3,10],[4,15],[5,20],[6,Infinity]]) {
     assert.doesNotMatch(run('newBaseCard()'), /Infinity|nächste Etappe|Alle Standorte/);
   }
 }
-// Übernahmesitze bleiben an der Grenze über einen Speicherzyklus erhalten.
-run(`S.stage=2; S.bases=S.bases.slice(0,3); N['b-tempel']={id:'b-tempel',name:'Tempelhof',short:'Tempelhof',stage:1,modes:'r'};
+// Gesperrte Übernahmesitze bleiben über einen Speicherzyklus erhalten.
+// Bezahlte Sitze umgehen seit v353 die reine Gründungsgrenze.
+run(`S.stage=2; S.bases=S.bases.slice(0,3); N['b-tempel']={id:'b-tempel',name:'Tempelhof',short:'Tempelhof',stage:3,modes:'r'};
 S.corp={owned:{blitz:{hq:1}}, hq:{blitz:{staff:[{id:'P1',name:'Erhalten',role:'disp',skill:3,wage:100}]}}};
 corpHqTry();`);
 assert.equal(run('S.bases.length'),3);
@@ -56,7 +57,7 @@ assert.equal(run('baseAtNode("b-tempel").staff[0].id'),'RESTORED');
 assert.equal(run('S.corp.hqRestore281'),true);
 run('S.bases=[]; corpHqTry();');
 assert.equal(run('S.bases.length'),0); // Nach der einmaligen Reparatur kein Wiederbeleben verkaufter Büros.
-run(`S.stage=1; S.bases=[{id:'existing',node:'n0',staff:[],vehicles:[]}];
+run(`N['b-tempel'].stage=2;S.stage=1; S.bases=[{id:'existing',node:'n0',staff:[],vehicles:[]}];
 S.corp={owned:{blitz:{hq:1}},hq:{}}; corpHqTry(); S=JSON.parse(JSON.stringify(S));`);
 assert.equal(run('S.corp.hq.blitz.staff[0].id'),'RESTORED');
 run('S.stage=2; corpHqTry();');

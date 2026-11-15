@@ -2,7 +2,7 @@
    LOGISTIKA – Übernahmen
    Wer im Markt vorn liegt, kann eine Konkurrentin kaufen: Firmenwert,
    Verhandlung über bis zu drei Runden mit Gegenangeboten. Nach der
-   Übernahme gehören Flotte, Firmensitz, ein Teil des Personals und der
+   Übernahme gehören Flotte, Firmensitz, das angebotene Personal und der
    Marktanteil dir – und die Konkurrentin schnappt keine Aufträge mehr weg.
    v170: Wer 14 Tage am Stück den Markt anführt, lockt Konzerne an (je Welle
    zwei, größer, teurer, schneller). Jede Übernahme läuft als Zeitungs-Show
@@ -37,7 +37,7 @@ function corp() { if (!S.corp) S.corp = { owned: {}, talks: {} }; return S.corp;
 const CORP_LEAD_DAYS = 14;
 const CORP_WAVE_POOL = [
   { k: "kraft", name: "Kraftmann Logistik AG", icon: "🏭", col: "#7a3fb0", boss: "Viktor Kraftmann", role: "Vorstandsvorsitzender",
-    about: "Börsennotierter Riese aus dem Ruhrgebiet: 40 Standorte, eigene Werkstätten, Kampfpreise.",
+    about: "Börsennotierter Logistikkonzern aus dem Ruhrgebiet: eigene Betriebsstandorte, moderne Flotte, Kampfpreise.",
     hello: "Sie hatten zwei schöne Wochen an der Spitze. Die sind jetzt vorbei." },
   { k: "ostwind", name: "Ostwind Express", icon: "🌪️", col: "#d0662a", boss: "Ljudmila Arendt", role: "Gründerin & CEO",
     about: "Mit Risikokapital vollgepumpt: neue Flotte, App-Disposition, wächst um jeden Preis.",
@@ -72,7 +72,7 @@ function corpSyncRivals(force) {
   for (let i = RIVALS.length - 1; i >= 0; i--) if (RIVALS[i].wave) { delete CORP[RIVALS[i].id]; RIVALS.splice(i, 1); }
   list.forEach(d => {
     RIVALS.push({ id: d.id, name: d.name, icon: d.icon, col: d.col, st: 0, wave: d.wave });
-    CORP[d.id] = { boss: d.boss, role: d.role, hq: d.hq, base: d.base, fleet: d.fleet, tier: d.tier, modes: d.modes, about: d.about, hello: d.hello, wave: d.wave };
+    CORP[d.id] = { boss: d.boss, role: d.role, hq: d.hq, base: d.base, fleet: d.fleet, tier: d.tier, modes: d.modes, k: d.k, about: d.about, hello: d.hello, wave: d.wave };
   });
 }
 /* Marktführer: mehr Anteil als jede aktive Konkurrentin (oder keine mehr übrig) */
@@ -257,7 +257,7 @@ function shares() {
    Preisbereich verteilt statt zufällig nur Flugzeuge oder nur Kleinwagen. */
 function corpFleetPlan(id) {
   const c = CORP[id], C = corp(), n = c.fleet + Math.floor(S.stage / 2);
-  const key = [S.stage, n, c.modes, !!c.wave].join("|");
+  const key = [S.stage, n, c.modes, !!c.wave, c.k || ""].join("|");
   const all = C.fleets306 || (C.fleets306 = {}), old = all[id];
   if (old && old.key === key && old.fleet.length === n && old.fleet.every(f => vType(f.type))) return old;
   let pool = rivalFleet(id).slice().sort((a, b) => b.price - a.price || a.id.localeCompare(b.id));
@@ -278,12 +278,12 @@ function corpFleetPlan(id) {
    nur seinen tatsächlichen Immobilien-Zeitwert bei; die frühere rohe
    Konzern-Basis und STAGE_K werden nicht noch einmal multipliziert. */
 function corpAppraisal(id) {
-  const c = CORP[id], plan = corpFleetPlan(id);
-  const fleetValue = plan.fleet.reduce((sum, f) => sum + vehValue(f), 0);
-  const hqValue = Math.round(buyPrice(c.hq, OFFICE_TIERS[c.tier]) * 0.6);
-  const assets = fleetValue + hqValue, share = shares()[id] || 0;
-  const goodwill = Math.round(assets * (0.15 + share * 1.8));
-  return { fleet: plan.fleet, fleetValue, hqValue, goodwill, total: roundK(assets + goodwill, 1000) };
+  const t = corp().talks[id];
+  if (t && !t.done && t.deal353 && !(t.round >= 3 && t.cool <= S.time)) {
+    const d = t.deal353;
+    return { ...d.appraisal, fleet: d.fleet, sites: d.sites };
+  }
+  return corpBusinessAppraisal(id, t && !t.done && t.fleet306 || corpFleetPlan(id).fleet);
 }
 function corpValue(id) { return corpAppraisal(id).total; }
 /* v306: Im Angebot ist erkennbar, ob die Flotte etwa Schiffe/Flugzeuge
@@ -323,7 +323,7 @@ function corpHTML() {
     const o = C.owned[r.id];
     return `<div class="corp-row owned" style="--rc:${r.col}"><span class="cr-i">${r.icon}<i class="cr-x">✕</i></span>
       <span class="cr-t"><b>${esc(r.name)}</b><small>gehört seit ${stamp(o.at)} zu ${esc(S.player.company)} · ${money(o.price)}</small></span>
-      <span class="cr-st">✓ übernommen</span></div>`;
+      <span class="cr-st">✓ übernommen${o.receipt353 ? `<button class="btn tiny ghost" data-corp-receipt="${r.id}">Kaufbeleg</button>` : ""}</span></div>`;
   }).join("");
   const Ow = Object.values(C.owned || {}), veh = Ow.reduce((x, o) => x + (o.veh || 0), 0), paid = Ow.reduce((x, o) => x + (o.price || 0), 0);
   const emp = Ow.length ? `<div class="corp-emp"><b>Deine Unternehmensgruppe</b><span>${Ow.length} ${Ow.length === 1 ? "Firma" : "Firmen"} übernommen${veh ? " · " + veh + " Fahrzeuge übernommen" : ""} · ${money(paid)} investiert</span></div>` : "";
@@ -332,7 +332,13 @@ function corpHTML() {
     ${emp}${rows}
   </div>`;
 }
-function bindCorp() { $$("#tab-world [data-corp]").forEach(b => b.onclick = () => openCorp(b.dataset.corp)); }
+function bindCorp() {
+  $$("#tab-world [data-corp]").forEach(b => b.onclick = () => openCorp(b.dataset.corp));
+  $$("#tab-world [data-corp-receipt]").forEach(b => b.onclick = () => {
+    const o = corp().owned[b.dataset.corpReceipt];
+    if (o && o.receipt353) corpShow({ ...o.receipt353, sharkShown: true });
+  });
+}
 
 /* ------------------------------ Verhandlung ---------------------------- */
 let corpOpen = null;
@@ -343,7 +349,7 @@ function openCorp(id) {
   let t = C.talks[id];
   /* v306: Auch gespeicherte Gespräche auf die einheitliche Bewertung umrechnen;
      Runde, Verhandlungsfortschritt und bestehende Sperrzeiten bleiben erhalten. */
-  if (t && !t.done && t.val && t.val !== val) {
+  if (t && !t.done && !t.deal353 && t.val && t.val !== val) {
     const k = val / t.val; t.res = Math.round(t.res * k);
     if (t.ask) t.ask = roundK(t.ask * k, 1000);
     if (t.offer) t.offer = Math.round(t.offer * k);
@@ -354,21 +360,35 @@ function openCorp(id) {
   if (!t || t.done || t.cool <= S.time && t.round >= 3) {
     /* Was sie insgeheim verlangt: je stärker du, desto weicher wird sie */
     const dom = (sh.me || 0) > 2 * (sh[id] || 0) ? 0.94 : 1;
-    t = C.talks[id] = { round: 0, val, res: Math.round(val * rnd(0.88, 1.04) * dom * ((C.spite || {})[id] || 1)), chat: [], ask: null, cool: 0 };
+    t = C.talks[id] = { round: 0, val, res: Math.max(appraisal.floor, Math.round(val * rnd(0.88, 1.04) * dom * ((C.spite || {})[id] || 1))), chat: [], ask: null, cool: 0 };
     t.chat.push({ me: false, t: c.wave ? `${c.boss}, ${r.name}. Sie wollen einen Konzern kaufen? Mutig. Der Aufsichtsrat hört zu – machen Sie ein Angebot.`
       : `${c.boss}, ${r.name}. Sie wollen uns kaufen? Machen Sie ein Angebot.` });
   }
-  /* v306: Die Zusage gilt für diese konkrete Flotte, auch wenn vor dem
-     Unterschreiben eine weitere Etappe freigeschaltet wird. */
-  t.fleet306 = appraisal.fleet.map(f => ({ ...f }));
-  t.appraisal306 = { fleetValue: appraisal.fleetValue, hqValue: appraisal.hqValue, goodwill: appraisal.goodwill };
+  /* v355: Auch beim erneuten Öffnen bleibt das vollständige Paket stabil.
+     Eine ältere Verhandlung erhält einmalig einen sichtbaren Angebotsstand. */
+  if (!t.deal353) {
+    const source = corpBusinessAppraisal(id, t.fleet306 && t.fleet306.length ? t.fleet306 : appraisal.fleet);
+    t.deal353 = corpMakeDeal(id, source);
+    t.val = source.total;
+    t.res = Math.max(source.floor, t.res);
+    if (t.ask) t.ask = Math.max(source.floor, t.ask);
+    t.fleet306 = t.deal353.fleet.map(({type, wear, kmTotal}) => ({type, wear, kmTotal}));
+    t.appraisal306 = t.deal353.appraisal;
+    t.chat.push({ me: false, t: "Das vollständige Angebot mit Fahrzeugen, Team und eingerichteten Standorten liegt zur Prüfung vor. Diese Ausstattung bleibt für diese Verhandlung reserviert." });
+    save();
+  }
   corpOpen = id;
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   renderCorp();
 }
 function rivalFleet(id) {
   const c = CORP[id];
-  const pool = VEHICLES.filter(v => !v.special && v.stage <= S.stage && c.modes.includes(v.mode) && unlockedModes().includes(v.mode));
+  const profile = c.k || id.split("_").slice(1).join("_");
+  const modes = ({ vulkan: "rl", titan: "r", eisberg: "ris" })[profile] || c.modes;
+  let pool = VEHICLES.filter(v => !v.special && v.stage <= S.stage && modes.includes(v.mode) && unlockedModes().includes(v.mode));
+  if (profile === "vulkan") pool = pool.filter(v => v.flags.includes("sperrig") && (v.mode !== "r" || v.cap >= 20000));
+  if (profile === "titan") pool = pool.filter(v => v.cap >= 12000);
+  if (profile === "eisberg") pool = pool.filter(v => v.flags.includes("kuehl"));
   return pool.length ? pool : VEHICLES.filter(v => !v.special && v.stage <= S.stage && v.mode === "r");
 }
 function renderCorp(note) {
@@ -376,7 +396,8 @@ function renderCorp(note) {
   if (!r || !t) return;
   const sh = shares(), val = t.val, lo = Math.round(val * 0.6), hi = Math.round(val * 1.6);
   const cur = t.offer || Math.round(val * 0.9);
-  const hqOk = isUnlocked(c.hq), baseRoom = (S.bases || []).length < maxBases() && !baseAtNode(c.hq);
+  const d = t.deal353, summary = d ? corpDealSummary(d) : null;
+  const primary = d ? d.sites[0] : {node: c.hq, tier: c.tier};
   $("#modalBody").innerHTML = `<div class="corpm">
     <div class="mhead"><div><div class="mtitle">${r.icon} ${esc(r.name)}</div>
       <div class="msub">${esc(c.boss)} · ${esc(c.role)}</div></div>
@@ -386,11 +407,13 @@ function renderCorp(note) {
       <div><small>Firmenwert</small><b>${money(val)}</b></div>
       <div><small>Marktanteil</small><b>${Math.round((sh[id] || 0) * 100)} % · deiner ${Math.round((sh.me || 0) * 100)} %</b></div>
       <div><small>Flotte</small><b>${t.fleet306 ? t.fleet306.length : c.fleet + Math.floor(S.stage / 2)} Fahrzeuge</b>${t.fleet306 ? `<small title="Fahrzeuge je Verkehrsträger">${corpFleetText(t.fleet306)}</small>` : ""}</div>
-      <div><small>Firmensitz</small><b>${esc(N[c.hq].short)} · ${OFFICE_TIERS[c.tier].name}</b></div>
+      <div><small>Firmensitz</small><b>${esc(N[primary.node].short)} · ${OFFICE_TIERS[primary.tier].name}</b></div>
+      ${summary ? `<div><small>Team · verbindlich enthalten</small><b>${summary.staff} Mitarbeitende · Ø ${summary.skill.toFixed(1)}/5</b><small>${money(summary.wages)} Löhne/Tag</small></div><div><small>Standorte im Eigentum</small><b>${summary.sites} bezugsfertig eingerichtet</b></div>` : ""}
     </div>
     ${t.appraisal306 ? `<div class="lot-est">Bewertung: Flotte ${money(t.appraisal306.fleetValue)} · Sitz ${money(t.appraisal306.hqValue)} · Kunden & Organisation ${money(t.appraisal306.goodwill)}</div>` : ""}
-    <div class="lim">${t.done ? "✔ Übernommen – Flotte, Firmensitz und Marktanteil gehören jetzt " + esc(S.player.company) + "."
-      : "Du bekommst: Flotte, " + (hqOk && baseRoom ? "Firmensitz als Büro + " + (c.wave ? 2 + Math.min(2, c.wave) : 2) + " Leute," : "Firmensitz samt Leuten (vorgemerkt – wird dein Büro, sobald Etappe und Standortplatz da sind),") + " " + (c.wave ? 2 + c.wave : 2) + " Stammkunden, Marktanteil, +" + (c.wave ? 5 : 3) + " Ruf."}</div>
+    <div class="lim">${t.done ? "✔ Übernommen – der Kaufbeleg zeigt die vollständig übertragenen Inhalte."
+      : d ? `Du bekommst: ${d.fleet.length} Fahrzeuge, ${summary.staff} Mitarbeitende, ${summary.sites} eingerichtete Standorte, ${d.orders.length} Kundenaufträge, Marktanteil und bis zu +${d.rep} Ruf. Mitgekaufte Niederlassungen bleiben zusätzlich zu deinen bisherigen Büros erhalten.${d.sites.some(b => !isUnlocked(b.node)) ? " Gesperrte Standorte bleiben mit ihrem gesamten Team bis zur Freischaltung reserviert." : ""}` : ""}</div>
+    ${d ? corpDealDetails(d) : ""}
     <div class="nego-chat corp-chat">${t.chat.map(m => `<div class="bub ${m.me ? "out" : "in"}">${esc(m.t)}</div>`).join("")}</div>
     ${note ? `<div class="lotm-msg">${esc(note)}</div>` : ""}
     ${t.done ? "" : `<div class="lotm-box">
@@ -415,18 +438,27 @@ function renderCorp(note) {
 function corpSpite(id, f) { const C = corp(); C.spite = C.spite || {}; C.spite[id] = Math.min(1.3, (C.spite[id] || 1) * f); }
 function corpOffer(id, amount, takeAsk) {
   const t = corp().talks[id], r = rivalById(id), c = CORP[id];
-  if (!t || t.done) return;
+  if (!t || t.done || ownedRival(id)) return;
   amount = Math.round(amount);
+  if (!Number.isFinite(amount) || amount <= 0) return renderCorp("Bitte ein gültiges Angebot abgeben.");
+  if (t.cool > S.time) return renderCorp("Die Verhandlung ist bis " + stamp(t.cool) + " pausiert.");
+  if (t.deal353 && amount < t.deal353.appraisal.floor && takeAsk) return renderCorp("Dieses Gegenangebot ist nicht mehr gültig.");
   if (amount > S.money) return renderCorp("Dafür fehlen " + money(amount - S.money) + " – die Hausbank unter „Welt“ hilft.");
+  const chatBefore = t.chat.length, roundBefore = t.round;
   t.chat.push({ me: true, t: takeAsk ? "Einverstanden: " + money(amount) + "." : "Wir bieten " + money(amount) + " für " + r.name + "." });
   t.round++;
-  if (takeAsk || amount >= t.res) {
+  if ((takeAsk || amount >= t.res) && (!t.deal353 || amount >= t.deal353.appraisal.floor)) {
     t.chat.push({ me: false, t: pick(c.wave ? ["Der Aufsichtsrat hat zugestimmt. Glückwunsch – Sie spielen jetzt in einer anderen Liga.", "Unterschrieben. Ich hätte nie gedacht, dass ausgerechnet Sie uns schlucken."]
       : ["Abgemacht. Ich lasse die Verträge aufsetzen.", "Das ist ein faires Angebot. Wir haben einen Deal.", "Schweren Herzens – aber ja. Kümmern Sie sich gut um meine Leute."]) });
-    t.done = true;
     /* v348: Audio noch im bestätigenden Fingertipp freigeben, falls eingeschaltet. */
     if (typeof CORP_SHARK !== "undefined") CORP_SHARK.prime();
-    corpClose(id, amount);
+    const receipt = corpClose(id, amount);
+    if (receipt === false) {
+      const restored = corp().talks[id];
+      restored.round = roundBefore; restored.chat.length = chatBefore;
+      return renderCorp("Der Kauf wurde nicht abgeschlossen. Dein Besitz und das reservierte Angebot bleiben erhalten.");
+    }
+    if (!corp().talks[id].deal353) corp().talks[id].done = true;
     return renderCorp();
   }
   if (amount < t.val * 0.6) {
@@ -451,7 +483,7 @@ function corpOffer(id, amount, takeAsk) {
   const previous = t.ask || t.res;
   const target = Math.min(t.res, t.val);
   const counter = roundK(amount + (Math.max(amount, target) - amount) * 0.55, 1000);
-  t.ask = Math.max(amount, Math.min(previous, counter));
+  t.ask = Math.max(t.deal353 ? t.deal353.appraisal.floor : 0, amount, Math.min(previous, counter));
   t.res = Math.min(t.res, t.ask);
   t.chat.push({ me: false, t: `Danke für Ihr Angebot. Wir können Ihnen entgegenkommen: Für ${money(t.ask)} können wir die Übernahme vereinbaren.` });
   save(); renderCorp();
@@ -466,26 +498,27 @@ function corpHqStaff(r, W) {
   });
   return out;
 }
-/* Macht aus einem vorgemerkten Firmensitz ein Büro – wenn Etappe und Platz es erlauben. Gibt das Büro zurück oder null. */
+/* Macht aus einem bezahlten, vorgemerkten Firmensitz ein Büro, sobald der Ort freigeschaltet ist. Gibt das Büro zurück oder null. */
 function corpHqOpen(id, silent) {
   const C = corp(), p = C.hq && C.hq[id], c = CORP[id], r = rivalById(id);
   if (!p || !c || !r) return null;
   if (!isUnlocked(c.hq)) return null;
   ensureOffices();
-  if (baseAtNode(c.hq)) {                    /* dort steht schon ein eigenes Büro → Sitz wie früher verkaufen */
-    /* v306: Ein doppelter Sitz wird zum Immobilien-Zeitwert verkauft, nicht
-       als pauschaler Anteil am gesamten Konzern samt Schiffen/Flugzeugen. */
-    const cash = Math.round(buyPrice(c.hq, OFFICE_TIERS[c.tier]) * 0.6);
-    S.money += cash; S.revenue += cash; logMoney("corp", "Verkauf Firmensitz " + r.name, cash);
-    delete C.hq[id];
-    phoneMsg({ from: c.boss, kind: "info", title: "Firmensitz " + r.name + " verkauft", body: `An diesem Ort hast du schon ein Büro – der Firmensitz ging für ${money(cash)} weg.` });
-    return null;
+  if (p.sites353) {
+    const ready = p.sites353.filter(b => isUnlocked(b.node));
+    ready.forEach(b => { if (!baseById(b.id)) S.bases.push(b); });
+    p.sites353 = p.sites353.filter(b => !isUnlocked(b.node));
+    if (!p.sites353.length) delete C.hq[id];
+    if (ready.length && !silent) { toast("🏢 Übernommene Niederlassung jetzt verfügbar: " + r.name, "ok"); save(); render(); }
+    return ready[0] || null;
   }
-  if (S.bases.length >= maxBases()) return null;
+  /* Bezahlte Sitze sind zusätzliche Niederlassungen. Ein bereits vorhandenes
+     Büro und das Limit für selbst gegründete Büros vernichten keine Leute. */
   const W = c.wave || 0;
   const b = { id: "S" + (S.seq++), node: c.hq, tier: c.tier, rent: false, staff: p.staff || [], vehicles: [], mood: W ? 80 : 70, opened: S.time, done: 0,
     nextAt: S.time + 30, pausedUntil: 0, pool: null, poolDay: -1, rentDue: S.time + 30 * 1440,
-    deco: { floor: "beton", tint: "natur", wall: "weiss", kitchen: "keine", plants: [] } };
+    sourceCompany: r.name, deco: officeFitout(c.tier) };
+  decoOf(b);
   if (!b.staff.length) b.staff = corpHqStaff(r, W);
   const slots = OFFICE_TIERS[b.tier].slots;
   S.fleet.forEach(v => {
@@ -528,66 +561,32 @@ function corpHqTry() {
   if (S.corp.owned && (!S.corp.hqRestore281 || Object.values(S.corp.owned).some(o => !o.hq))) corpHqRepair();
   const ids = Object.keys(S.corp.hq || {});
   if (!ids.length) return;
-  const had = S.bases.length;
-  for (const id of ids) { if (S.bases.length >= maxBases()) break; const legacy = (S.corp.hq[id] || {}).legacy; const b = corpHqOpen(id, false); if (b && legacy) toast("↩️ Rückwirkend: der damals verkaufte Firmensitz ist wieder da.", "ok"); }
+  for (const id of ids) { const legacy = (S.corp.hq[id] || {}).legacy; const b = corpHqOpen(id, false); if (b && legacy) toast("↩️ Rückwirkend: der damals verkaufte Firmensitz ist wieder da.", "ok"); }
 }
 function corpClose(id, price) {
-  const C = corp(), r = rivalById(id), c = CORP[id], W = c.wave || 0;
-  const pct = Math.round((shares()[id] || 0) * 100);            /* v170: für die Show – wie viel Markt du gerade geschluckt hast */
-  S.money -= price; S.expense += price;
-  logMoney("corp", "Übernahme: " + r.name, -price);
-  /* Marktanteil wandert zu dir, offene Kaperversuche enden */
-  const sh = shareState(); sh.me = (sh.me || 0) + (sh[id] || 0); sh[id] = 0;
-  S.orders.forEach(o => { if (o.rival && o.rival.id === id) delete o.rival; });
-  /* v306: Exakt die angebotene Flotte statt einer neuen Zufallsziehung. */
-  const fleet = C.talks[id] && C.talks[id].fleet306 || corpFleetPlan(id).fleet, got = [];
-  const at = isUnlocked(c.hq) ? c.hq : null;
-  for (const f of fleet) {
-    const t = vType(f.type);
-    const v = makeVehicle(t.id, false);
-    if (at && N[at].modes.includes(t.mode)) v.at = at;
-    v.wear = f.wear; v.kmTotal = f.kmTotal;
-    v.foreign = { id, col: r.col };
-    S.fleet.push(v); got.push(v);
+  const r = rivalById(id), c = CORP[id];
+  if (!r || !c || ownedRival(id)) return false;
+  let receipt;
+  try {
+    receipt = corpCommitDeal(id, price);
+  } catch (error) {
+    toast(error.message || "Die Übernahme konnte nicht abgeschlossen werden.", "warn");
+    return false;
   }
-  /* v230: Der Firmensitz wird NIE mehr sofort verkauft. Ist die Etappe noch gesperrt oder kein Standortplatz frei,
-     bleibt er vorgemerkt (samt Leuten) und geht von selbst als Büro auf, sobald beides passt. */
-  let baseTxt, hqChip, staffN = 0;
-  const hqSt = corpHqStaff(r, W);
-  staffN = hqSt.length;
-  corp().hq = corp().hq || {};
-  corp().hq[id] = { staff: hqSt };
-  const nb = corpHqOpen(id, true);
-  if (nb) {
-    baseTxt = `Firmensitz ${N[c.hq].name} ist jetzt dein ${OFFICE_TIERS[nb.tier].name} – ${staffN} Leute bleiben.`;
-    hqChip = `🏢 ${OFFICE_TIERS[nb.tier].name} in ${N[c.hq].short}`;
-  } else {
-    baseTxt = `Der Firmensitz in ${N[c.hq].name} ist für dich vorgemerkt – ${staffN} Leute warten dort. Er wird automatisch dein Büro, sobald ${isUnlocked(c.hq) ? "ein Standortplatz frei ist (nächste Etappe)" : "die Etappe freigeschaltet ist"}.`;
-    hqChip = `🏢 Firmensitz vorgemerkt · ${N[c.hq].short}`;
-  }
-  /* v170: Stammkunden der Konkurrentin wechseln zu dir – gut bezahlte Aufträge sofort im Auftragsbuch */
-  let cust = 0;
-  for (let i = 0; i < (W ? 2 + W : 2); i++) {
-    const o = typeof makeOrder === "function" ? makeOrder() : null;
-    if (!o) continue;
-    o.pay = Math.round(o.pay * (W ? 1.4 : 1.25)); o.expire = Math.max(o.expire, S.time + 1440); o.loyal = r.name;
-    S.orders.push(o); cust++;
-  }
-  if (cust) renderDirty = true;
-  if (typeof repAdd === "function") repAdd(S.stage, W ? 5 : 3);
-  C.owned[id] = { at: S.time, price, veh: got.length, cust, wave: W, hq: 1 };
-  if (S.stake && S.stake.id === id) S.stake = null;   /* v241: die Beteiligung gehört jetzt wieder dir */
+  if (!receipt) return false;
+  renderDirty = true;
   phoneMsg({ from: c.boss, kind: "good", title: r.name + " gehört jetzt zu " + S.player.company,
     toastText: "🦈 Übernahme: " + r.name + " gehört dir!",
-    body: `${W ? "„Sie haben uns geschlagen. Respekt.“ " : ""}Unterschrieben! ${got.length} Fahrzeuge fahren jetzt für Sie – umlackieren unter „Flotte“. ${baseTxt}${cust ? " " + cust + " Stammkunden wechseln zu Ihnen." : ""}` });
+    body: `${receipt.veh} Fahrzeuge, ${receipt.staff} Mitarbeitende und ${receipt.sites} eingerichtete Standorte sind vollständig übernommen.${receipt.pending ? " Davon " + receipt.pending + " Standorte bis zur Freischaltung reserviert." : ""} Deinen Kaufbeleg findest du jederzeit unter Welt → Übernahmen.` });
   if (typeof checkAchievements === "function") checkAchievements();
   save(); render();
-  /* v170: die große Show – Verhandlungsfenster zu, Zeitung auf */
-  const left = activeRivals().length;
+  const game = S;
   setTimeout(() => {
+    if (S !== game) return;
     if (corpOpen === id) { corpOpen = null; closeModal(); }
-    corpShow({ kind: "win", id, price, veh: got.length, pct, hq: hqChip, staff: staffN, cust, rep: W ? 5 : 3, left });
-  }, 900);
+    corpShow(receipt);
+  }, 400);
+  return receipt;
 }
 
 /* ======================= v170: Zeitungs-Show =======================
@@ -607,30 +606,10 @@ function corpShow(ev) {
     if (CORP_SHARK.open(ev, () => corpShow(Object.assign({}, ev, { sharkShown: true })))) return;
   }
   corpSyncRivals();
+  if (ev.kind === "win") return corpWinReport(ev);
   const me = S.player.company, C = corp(), RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let head, sub, duel, chips, crown = "", price = "", quote, btn, stampT;
-  if (ev.kind === "win") {
-    const r = rivalById(ev.id), c = CORP[ev.id]; if (!r || !c) return;
-    const A = me.toUpperCase(), B = r.name.toUpperCase();
-    head = `${A} ÜBERNIMMT ${B}`;
-    sub = `${me} und ${r.name} haben die Übernahme für ${money(ev.price)} vereinbart. Der Geschäftsbetrieb wird unter dem Dach von ${me} fortgeführt.`;
-    stampT = "ÜBERNOMMEN";
-    duel = `<div class="cs-side">${corpMyLogo(84)}<b>${esc(me)}</b></div>
-      <div class="cs-arrow">⟸</div>
-      <div class="cs-side them" style="--rc:${r.col}"><span class="cs-logo them">${r.icon}<i class="cs-crack"></i></span><b>${esc(r.name)}</b><i class="cs-stamp">${stampT}</i></div>`;
-    const ch = [["🚚", ev.veh, " Fahrzeuge", "+"], ["📈", ev.pct, " % Marktanteil", "+"], [null, ev.hq], ev.staff ? ["👥", ev.staff, " Leute übernommen", "+"] : null,
-      ev.cust ? ["📋", ev.cust, " Stammkunden", "+"] : null, ["⭐", ev.rep, " Ruf", "+"]].filter(Boolean);
-    chips = ch.map((x, i) => `<span class="cs-chip" style="animation-delay:${(RM ? 0.2 : 1.9) + i * 0.17}s">${x[0] ? `${x[0]} ${x[3]}<b data-n="${x[1]}">0</b>${x[2]}` : esc(x[1])}</span>`).join("");
-    /* v319: Kaufpreis dieser Übernahme groß, darunter die Gruppe: Anzahl, Fahrzeuge und was alle Übernahmen zusammen gekostet haben
-       (vorher stand nur „24,86 Mio. € investiert“ – ohne zu sagen, dass es die Summe aller bisherigen Käufe plus diesem ist) */
-    const Ow = Object.values(C.owned || {}), paid = Ow.reduce((a, o) => a + (o.price || 0), 0), before = paid - (ev.price || 0), vehAll = Ow.reduce((a, o) => a + (o.veh || 0), 0);
-    price = `<div class="cs-price"><small>Kaufpreis</small><b>${money(ev.price)}</b></div>`;
-    crown = `<div class="cs-crown"><span>👑</span><b>Deine Unternehmensgruppe</b>
-      <div class="cs-gstats"><i><b>${Ow.length}</b>${Ow.length === 1 ? "Übernahme" : "Übernahmen"}</i><i><b>${vehAll}</b>Fahrzeuge</i><i><b>${money(paid)}</b>Kaufpreise gesamt</i></div>
-      ${before > 0 ? `<small>${money(before)} für die früheren Übernahmen + ${money(ev.price)} für ${esc(r.name)}</small>` : `<small>Erste Übernahme – der Anfang deines Imperiums.</small>`}</div>`;
-    quote = `<b>Übernahme abgeschlossen</b><small>Die Integration von Flotte, Standorten und Personal beginnt.</small>`;
-    btn = "Zur Unternehmensübersicht";
-  } else {
+  {
     const Rs = (ev.ids || []).map(id => ({ r: rivalById(id), c: CORP[id] })).filter(x => x.r && x.c); if (!Rs.length) return;
     head = pick(["KONZERNE GREIFEN AN", "ANGRIFF AUF DEN MARKTFÜHRER", "DIE GROSSEN KOMMEN"]);
     sub = `${Rs.map(x => x.r.name).join(" und ")} drängen auf den Markt – ${me} soll die Spitze verlieren.`;
