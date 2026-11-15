@@ -373,6 +373,12 @@ const HUNT = (() => {
     return skin(b, P, C, { cap0: true, cap1: true });
   }
   function deerBody() { G3.seed(5101); return deerBodyInto(MB()); }
+  /* v354: Farbe der Decke an einem Punkt in Rumpfkoordinaten – Träger, Schulter und Keule übernehmen sie an ihrem Ansatz,
+     damit dort keine Farbkante entsteht (dieselbe Funktion wie der Rumpf selbst). */
+  function flankCol(P) {
+    const z = clamp(P[2], TORSO[0][0], TORSO[TORSO.length - 1][0]), [top, bot] = prof(TORSO, z), yc = (top + bot) / 2, hy = Math.max(0.01, (top - bot) / 2);
+    return torsoCol([P[0], P[1], z], clamp((P[1] - yc) / hy, -1, 1), z);
+  }
   /* Träger (Hals): kräftig, unten die lange dunkle Brunftmähne mit unruhiger Kante, oben der Nacken */
   /* Halsprofil: t (Ansatz im Rumpf → Kopf), halbe Breite, Tiefe vorn (Kehle/Mähne), Tiefe hinten (Nacken) */
   const NECK = [[0, 0.11, 0.15, 0.13], [0.2, 0.148, 0.225, 0.185], [0.45, 0.12, 0.19, 0.148], [0.72, 0.092, 0.135, 0.105], [0.9, 0.075, 0.1, 0.085], [1, 0.062, 0.078, 0.07]];
@@ -389,7 +395,9 @@ const HUNT = (() => {
         let c0 = mixc(DEER.nape, DEER.mane, ss((sv + 0.25) / 0.6));
         if (sv > 0.3) c0 = mixc(c0, DEER.maneL, hsh(i, j, 5) * 0.55 * Math.min(1, mane * 3));          /* hellere Haarspitzen in der Mähne */
         c0 = mixc(c0, mixc(DEER.coat, DEER.back, 0.35), ss((0.5 - t) / 0.34) * 0.86);                 /* v350: weit hinauf in die Decke übergehen – vorher saß der Träger als dunkler Block vor dem Rumpf */
-        return pie(mulc(c0, fur(p, 1.3)), [p[0], p[1] + 1, p[2] + 0.4], 0);
+        const cn = pie(mulc(c0, fur(p, 1.3)), [p[0], p[1] + 1, p[2] + 0.4], 0), wB = 1 - ss((t - 0.2) / 0.26);
+        /* v354: am Ansatz genau die Farbe des Rumpfs an dieser Stelle */
+        return wB > 0 ? mixc(cn, flankCol([p[0], p[1] + 1.02, p[2] + 0.4]), wB) : cn;
       }));
     }
     return skin(b, P, C, { cap0: true, cap1: true });
@@ -523,6 +531,8 @@ const HUNT = (() => {
     return b;
   }
   function deerEar(s) { return deerEarInto(MB(), s); }
+  /* v354: Ansatz des Lauschers am Haupt – ein Wert für das lebende Stück und das Trefferbild. */
+  const DEER_EAR = s => ({ x: s * 0.075, y: 0.08, z: 0.02 });
   function deerTail() { const b = MB(); ell(b, [0, -0.07, -0.02], [0.036, 0.085, 0.03], (p, y) => mulc(mixc(DEER.back, DEER.rumpB, ss((-y + 0.2) / 0.8)), fur(p)), 8, 6); return b; }
   /* Läufe: oben kräftig (Unterarm/Keule), Vorderfußwurzel- bzw. Sprunggelenk als Verdickung, schlanker Röhrenknochen,
      Fesselgelenk, schräge Fessel, gespaltene Schalen, Afterklauen. Länge und Gelenkpunkte wie bisher. */
@@ -542,11 +552,19 @@ const HUNT = (() => {
     }
     return skin(b, P, C, { cap0: true, cap1 });
   }
+  /* v354: Darstellungsprofile der Oberläufe: Der Ansatz läuft flacher aus dem Rumpf (vorher sprang er gleich unter der
+     Spitze auf volle Breite – eine Kuppe auf der Flanke). Verankerung und Muskelbauch bleiben; die Liegepose rechnet
+     weiter mit LEG_FU/LEG_HU. */
+  const LEG_FU_V = [[0.07, 0.002, 0.003, 0], [0.042, 0.027, 0.046, 0], [0.005, 0.043, 0.07, 0]].concat(LEG_FU.slice(2));
+  const LEG_HU_V = [[0.07, 0.002, 0.003, 0], [0.045, 0.031, 0.058, -0.008], [0.005, 0.054, 0.098, -0.022]].concat(LEG_HU.slice(2));
   function deerUpper(front) {
-    const b = MB();
+    const b = MB(), hip = front ? [0.12, 0.84, 0.34] : [0.12, 0.86, -0.34];
     /* v290: Durchgehendes Muskelprofil statt aufgesetzter Gelenkkugel.
        Das schmale obere Ende steckt im Rumpf, der Muskelbauch liegt längs am Lauf. */
-    legInto(b, front ? LEG_FU : LEG_HU, (p, y) => pie(mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), false, true);
+    legInto(b, front ? LEG_FU_V : LEG_HU_V, (p, y) => {
+      const c = pie(mulc(mixc(front ? mixc(DEER.coat, DEER.leg, 0.35 * ss((-y - 0.02) / 0.14)) : DEER.coat, DEER.leg, ss((-y - 0.12) / 0.26)), fur(p)), [p[0], p[1] + 0.9, p[2] + (front ? 0.3 : -0.3)], 0), w = 1 - ss((-y - 0.01) / 0.15);
+      return w > 0 ? mixc(c, flankCol([hip[0] + Math.abs(p[0]) * 0.4, hip[1] + p[1], hip[2] + p[2]]), w) : c;      /* am Ansatz die Farbe der Flanke */
+    }, false, true);
     if (!front) ell(b, [0, -0.385, DHOCK - 0.034], [0.022, 0.034, 0.022], DEER.leg, 6, 4);        /* Fersenhöcker am Sprunggelenk */
     return b;
   }
@@ -738,8 +756,10 @@ const HUNT = (() => {
         const br = headPt(0.122, 0.8);
         ell(q, X([br[0] - 0.003, br[1] + 0.003, br[2]]), [0.02, 0.009, 0.03], (p) => boarCoat(p, 0.8, 0.3), 7, 4);      /* Brauenwulst */
         const ep = headPt(0.045, 0.86);
-        /* v350: Teller seitlich-oben am Hinterhaupt, leicht nach außen gekippt und nach vorn-außen gedreht; am liegenden Stück entspannt nach hinten gelegt */
-        q.at(resting ? { x: s * (ep[0] - 0.022), y: ep[1] - 0.012, z: ep[2] - 0.006, rz: s * 0.12, rx: -1.3 } : { x: s * ep[0], y: ep[1] - 0.016, z: ep[2], rz: -s * 0.5, rx: -0.3 }, o => boarEarInto(o, s));
+        /* v350: Teller seitlich-oben am Hinterhaupt, leicht nach außen gekippt und nach vorn-außen gedreht.
+           v354: Am liegenden Stück bleibt der Teller am selben Ansatz und sinkt nur wenig nach hinten-außen. Vorher wurde er
+           um 74° umgelegt und nach innen gekippt – das sah abgeknickt aus und sprang beim Verenden um. */
+        q.at({ x: s * ep[0], y: ep[1] - 0.016, z: ep[2], rz: -s * (resting ? 0.6 : 0.5), rx: resting ? -0.46 : -0.3 }, o => boarEarInto(o, s));
         /* Backenbart: helle Büschel unten an den Wangen, nach hinten und unten */
         for (let k = 0; k < 6; k++) {
           const p = headPt(-0.05 + k * 0.032, -0.62 - (k % 2) * 0.22 - rr() * 0.08);
@@ -1978,7 +1998,7 @@ const HUNT = (() => {
       A.node = addNode(M("_b", deerBody), { x: A.x, z: A.z, ry: A.ry, s: A.s });
       A.neck = addNode(M("_n", deerNeck), { x: S0.neckP[0], y: S0.neckP[1], z: S0.neckP[2] }, A.node);
       A.head = addNode(M("_h" + A.T.P + "_" + Math.round(A.score * 20) + "_" + A.vr + antKey(gn), () => deerHead(A.T.P, Math.round(A.score * 20) / 20, A.vr, antF(gn))), { x: S0.headP[0], y: S0.headP[1], z: S0.headP[2] }, A.neck);
-      A.ears = [-1, 1].map(s => addNode(M("_e" + s, () => deerEar(s)), { x: s * 0.075, y: 0.08, z: 0.02 }, A.head));
+      A.ears = [-1, 1].map(s => addNode(M("_e" + s, () => deerEar(s)), DEER_EAR(s), A.head));
       A.tail = addNode(M("_t", deerTail), { x: 0, y: 1.07, z: -0.578 }, A.node);
       A.legN = S0.legs.map(L => { const up = addNode(M("_u" + L.f, () => deerUpper(!!L.f)), { x: L.h[0], y: L.h[1], z: L.h[2] }, A.node); return { up, lo: addNode(M("_l" + L.f, () => deerLower(!!L.f)), { y: -L.lu, z: L.f ? 0 : DHOCK }, up) }; });
     } else if (k === "keiler") {
@@ -2739,24 +2759,32 @@ const HUNT = (() => {
       <div class="hu-win" hidden></div>
       <div class="hu-call" hidden></div>
       <div class="hu-job" hidden></div>
-      <div class="hu-drag" hidden>↔ Wischen dreht die Ansicht</div>
+      <div class="hu-drag" hidden>↔ Wischen dreht · zwei Finger zoomen</div>
+      <div class="hu-zoom" hidden><button type="button" data-hu="hzout" aria-label="Herauszoomen">−</button><button type="button" data-hu="hzreset" aria-label="Ansicht zurücksetzen">⟲</button><button type="button" data-hu="hzin" aria-label="Heranzoomen">+</button></div>
       <div class="hu-card2" hidden></div>
       <div class="hu-fade"></div>`;
     host.appendChild(el);
     X.ui = el;
     ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl", "call", "jobEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind", ".hu-call", ".hu-job"][i]); });
     renderBar();
-    let P = null;
+    X.zoomEl = el.querySelector(".hu-zoom");
+    let P = null, pinch = null;
+    /* v354: Alle Finger auf der Ansicht – zwei davon zoomen das erlegte Stück (Abstand der Finger), einer dreht wie bisher. */
+    const PS = new Map(), span = () => { const [a, b] = [...PS.values()]; return Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)); };
     el.addEventListener("pointerdown", e => {
       if (e.target.closest("button,.hu-card2")) return;
       if (X && X.view === "harvest" && X.hrv && X.hrv.ui < 2) X.hrv.skip = true;          /* v135: Antippen überspringt das Warten */
+      PS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (PS.size === 2 && X && X.view === "harvest" && X.hrv && X.hrv.cut) { pinch = { d0: span(), z0: X.hrv.zoom || 1 }; hvTake(X.hrv); }
       P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { el.setPointerCapture(e.pointerId); } catch (er) { /* egal */ }
     });
     el.addEventListener("pointermove", e => {
+      if (PS.has(e.pointerId)) PS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch) { if (PS.size === 2 && X && X.view === "harvest" && X.hrv) X.hrv.zoom = pinch.z0 * pinch.d0 / span(); return; }
       /* v135: beim erlegten Stück dreht Wischen die Ansicht um das Stück (seitlich frei, Neigung begrenzt) */
       if (P && P.id === e.pointerId && X && X.view === "harvest" && X.hrv && X.hrv.cut) {
         const dx = e.clientX - P.x, dy = e.clientY - P.y, Hv = X.hrv; P.x = e.clientX; P.y = e.clientY;
-        if (!Hv.dragged && Math.abs(dx) + Math.abs(dy) > 2) { Hv.kd = Hv.k; Hv.uy += 0.035 * Math.sin(Hv.t * 0.4) * Hv.k; }     /* v262: Stand übernehmen, ohne Sprung */
+        if (Math.abs(dx) + Math.abs(dy) > 2) hvTake(Hv);                                   /* v262: Stand übernehmen, ohne Sprung */
         Hv.uy -= dx * 0.009; Hv.up = clamp(Hv.up + dy * 0.005, -0.22, 0.5);
         if (Math.abs(dx) + Math.abs(dy) > 2) { Hv.dragged = true; if (X.card && !X.card.hidden && !X.card.classList.contains("saved")) X.card.classList.add("hu-min"); }
         return;
@@ -2769,9 +2797,18 @@ const HUNT = (() => {
       const t0 = X.th0 != null ? X.th0 : X.th;
       X.th = t0 + clamp(angN(X.th - dx * k - t0), -1.15, 1.15); X.ph = clamp(X.ph + dy * k, -0.34, 0.62);
     });
-    const up = e => { if (P && P.id === e.pointerId) P = null; };
+    const up = e => {
+      PS.delete(e.pointerId);
+      /* nach dem Zoomen dreht der verbliebene Finger weiter – ab seinem jetzigen Ort, ohne Sprung */
+      if (pinch && PS.size < 2) { pinch = null; const r = [...PS.entries()][0]; P = r ? { id: r[0], x: r[1].x, y: r[1].y } : null; return; }
+      if (P && P.id === e.pointerId) P = null;
+    };
     el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
-    el.addEventListener("wheel", e => { if (X && X.view === "scope") { e.preventDefault(); zoomStep(e.deltaY < 0 ? 1 : -1); } }, { passive: false });
+    el.addEventListener("wheel", e => {
+      if (X && X.view === "scope") { e.preventDefault(); zoomStep(e.deltaY < 0 ? 1 : -1); }
+      /* v354: Mausrad/Trackpad zoomt das erlegte Stück; über der Karte scrollt die Karte */
+      else if (X && X.view === "harvest" && X.hrv && X.hrv.cut && !e.target.closest(".hu-card2,.hu-xr")) { e.preventDefault(); hvTake(X.hrv); X.hrv.zoom = (X.hrv.zoom || 1) * Math.exp(clamp(e.deltaY, -120, 120) * 0.0016); }
+    }, { passive: false });
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-hu]"); if (!b || !X) return;
       e.stopPropagation();
@@ -2782,6 +2819,12 @@ const HUNT = (() => {
       if (a === "eye") return setView("eye");
       if (a === "zoom") return zoomStep(1, true);
       if (a === "fire") return fire();
+      if (a === "hzin" || a === "hzout" || a === "hzreset") {
+        const Hv = X.hrv; if (!Hv || X.view !== "harvest") return;
+        hvTake(Hv);
+        if (a === "hzreset") { Hv.zoom = 1; Hv.uy = 0; Hv.up = 0; } else Hv.zoom = (Hv.zoom || 1) * (a === "hzin" ? 0.8 : 1.25);
+        return;
+      }
       if (a === "keep") return keepTrophy();
       if (a === "sell") return keepTrophy(true);
       if (a === "mini") { if (X.card && !X.card.classList.contains("saved")) { X.card.classList.toggle("hu-min"); snd("tap"); } return; }
@@ -3105,28 +3148,44 @@ const HUNT = (() => {
   }
   /* Einstellung: kleinster Abstand, bei dem alle Punkte des liegenden Stücks in den freien Bereich passen (zwischen Überschrift
      oben und Karte unten, links/rechts mit Rand); das Stück sitzt mittig in diesem Bereich. Anfahrt: etwas weiter und seitlich. */
+  /* v354: Der Spieler übernimmt die Ansicht (Wischen, Zoomen): Anfahrt und Pendeln bleiben auf ihrem Stand stehen. */
+  function hvTake(Hv) { if (Hv.dragged) return; Hv.kd = Hv.k; Hv.uy += 0.035 * Math.sin(Hv.t * 0.4) * Hv.k; Hv.dragged = true; }
   function heroCam(Hv) {
     /* v262: nach dem Wischen gehört die Ansicht dem Spieler – Anfahrt und leichtes Pendeln bleiben auf dem Stand des ersten Wischens stehen */
     const A = Hv.A, R = FV.R, P = A.foot, k = Hv.dragged ? Hv.kd : Hv.k, tv = Math.tan(HV_FOV / 2), th = tv * R.w / Math.max(1, R.h);
     const yaw = Hv.yaw + Hv.uy - 0.42 * (1 - k) + (Hv.dragged ? 0 : 0.035 * Math.sin(Hv.t * 0.4) * k), pitch = clamp(Hv.pitch + Hv.up + 0.08 * (1 - k), 0.1, 0.95);
     const cp = Math.cos(pitch), sp = Math.sin(pitch), E = [Math.cos(yaw) * cp, sp, Math.sin(yaw) * cp], rt = [Math.sin(yaw), 0, -Math.cos(yaw)], up = [-Math.cos(yaw) * sp, cp, -Math.sin(yaw) * sp];
     const B = A.box, c = [(B.mn[0] + B.mx[0]) / 2, (B.mn[1] + B.mx[1]) / 2, (B.mn[2] + B.mx[2]) / 2];
-    const yTop = 1 - 2 * Hv.fr.t, yBot = -1 + 2 * Hv.fr.b, yMid = (yTop + yBot) / 2, xR = 1 - 2 * (Hv.fr.r || 0), xMid = (xR - 1) / 2;
-    const tgt = d => { const o = yMid * tv * d, ox = xMid * th * d; return [c[0] - up[0] * o - rt[0] * ox, c[1] - up[1] * o, c[2] - up[2] * o - rt[2] * ox]; };
-    const fits = d => {
-      const T = tgt(d), e = [T[0] + E[0] * d, T[1] + E[1] * d, T[2] + E[2] * d];
-      for (let i = 0; i < P.length; i++) {
-        const p = P[i], v0 = p[0] - e[0], v1 = p[1] - e[1], v2 = p[2] - e[2], zc = -(v0 * E[0] + v1 * E[1] + v2 * E[2]);
-        if (zc < 0.4) return false;
-        const xs = (v0 * rt[0] + v2 * rt[2]) / (zc * th), ys = (v0 * up[0] + v1 * up[1] + v2 * up[2]) / (zc * tv);
-        if (xs > xR - 0.12 || xs < -0.86 || ys > yTop - 0.05 || ys < yBot + 0.05) return false;
-      }
-      return true;
+    const yBot = -1 + 2 * Hv.fr.b, xR = 1 - 2 * (Hv.fr.r || 0), xMid = (xR - 1) / 2;
+    /* v354: Auf kleinen Schirmen bleibt zwischen Überschrift und Karte nur ein schmaler Streifen – das Stück passte dann
+       gar nicht (Abstand am Anschlag, Tier winzig oder außerhalb). Die Überschrift ist nur Schrift über dem Bild: Wird der
+       Abstand mit ihr als Sperrfläche deutlich größer als ohne, darf das Stück teilweise bzw. ganz unter ihr liegen. */
+    const solve = topK => {
+      const yTop = 1 - 2 * Math.max(0.03, Hv.fr.t * topK), yMid = (yTop + yBot) / 2;
+      const tgt = d => { const o = yMid * tv * d, ox = xMid * th * d; return [c[0] - up[0] * o - rt[0] * ox, c[1] - up[1] * o, c[2] - up[2] * o - rt[2] * ox]; };
+      const fits = d => {
+        const T = tgt(d), e = [T[0] + E[0] * d, T[1] + E[1] * d, T[2] + E[2] * d];
+        for (let i = 0; i < P.length; i++) {
+          const p = P[i], v0 = p[0] - e[0], v1 = p[1] - e[1], v2 = p[2] - e[2], zc = -(v0 * E[0] + v1 * E[1] + v2 * E[2]);
+          if (zc < 0.4) return false;
+          const xs = (v0 * rt[0] + v2 * rt[2]) / (zc * th), ys = (v0 * up[0] + v1 * up[1] + v2 * up[2]) / (zc * tv);
+          if (xs > xR - 0.12 || xs < -0.86 || ys > yTop - 0.05 || ys < yBot + 0.05) return false;
+        }
+        return true;
+      };
+      let lo = 0.45, hi = 16;                                                            /* v262: Fasan darf näher heran */
+      for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; if (fits(m)) hi = m; else lo = m; }
+      return { hi, tgt };
     };
-    let lo = 0.45, hi = 16;                                                              /* v262: Fasan darf näher heran */
-    for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; if (fits(m)) hi = m; else lo = m; }
-    const T = tgt(hi);
-    return { tx: T[0], ty: T[1], tz: T[2], dist: hi * (1 + 0.3 * (1 - k)), yaw, pitch, fov: HV_FOV };
+    const open = solve(0);
+    let fit = solve(1);
+    if (fit.hi > open.hi * 1.35) { fit = solve(0.5); if (fit.hi > open.hi * 1.35) fit = open; }
+    const hi = fit.hi, tgt = fit.tgt;
+    /* v354: Zoom des Spielers um den passenden Abstand herum. Nah: nie in das Stück hinein (größte Ausdehnung als Maß),
+       fern: höchstens gut doppelt so weit – das Stück bleibt immer im Bild. */
+    const dim = Math.max(B.mx[0] - B.mn[0], B.mx[1] - B.mn[1], B.mx[2] - B.mn[2]);
+    const z = Hv.zoom = clamp(Hv.zoom || 1, Math.min(1, (0.55 * dim + 0.35) / hi), 2.2), T = tgt(hi * z);
+    return { tx: T[0], ty: T[1], tz: T[2], dist: hi * z * (1 + 0.3 * (1 - k)), yaw, pitch, fov: HV_FOV };
   }
   function harvestStep(Hv, dt) {
     Hv.t += dt;
@@ -3150,13 +3209,15 @@ const HUNT = (() => {
       if (!X.card.hidden) {
         const cr = X.card.getBoundingClientRect(), side = cr.left - r.left > r.width * 0.35;        /* breite Bildschirme: Karte rechts, das Stück links daneben */
         Hv.fb = side ? 0.04 : clamp((r.bottom - cr.top + 8) / h, 0.1, 0.62); Hv.fR = side ? clamp((r.right - cr.left + 10) / Math.max(1, r.width), 0, 0.6) : 0;
-        X.drag.style.bottom = Math.round(r.bottom - cr.top + 6) + "px";
+        X.drag.style.bottom = Math.round(r.bottom - cr.top + 6 + (side ? 0 : 54)) + "px";      /* v354: über den Zoomknöpfen */
       }
     }
     if (Hv.ft != null) Hv.fr.t += (Hv.ft - Hv.fr.t) * Math.min(1, dt * 3);
     if (Hv.fb != null) Hv.fr.b += (Hv.fb - Hv.fr.b) * Math.min(1, dt * 3);
     if (Hv.fR != null) Hv.fr.r += (Hv.fR - (Hv.fr.r || 0)) * Math.min(1, dt * 3);
     if (X.drag && !X.drag.hidden && (Hv.dragged || t > Hv.dragT)) X.drag.classList.add("off");
+    /* v354: Zoomknöpfe sitzen rechts direkt über der Karte (bzw. unten links neben ihr, wenn die Karte seitlich steht) */
+    if (X.zoomEl && !X.zoomEl.hidden) { X.zoomEl.style.bottom = "calc(" + (Hv.fr.b * 100).toFixed(1) + "% + 8px)"; X.zoomEl.style.right = "calc(" + ((Hv.fr.r || 0) * 100).toFixed(1) + "% + 10px)"; }
     /* Merkmals-Hinweis folgt dem Haupt des Stücks, verblasst nach 6 s oder sobald die Werte aufgeklappt sind */
     if (X.call && !X.call.hidden && A.headAt) {
       const p = FV.R.project(A.headAt[0], A.headAt[1] + (A.k === "hirsch" ? 0.12 : 0.18) * A.s, A.headAt[2]), r = X.ui.getBoundingClientRect();
@@ -3306,6 +3367,7 @@ const HUNT = (() => {
     /* kleine Bildschirme: Karte schmal (nur Medaille, Trophäe, Knopf) – Antippen klappt die Werte auf */
     X.card.className = "hu-card2" + (FV.R.h < 560 && !sideUI() ? " hu-min" : "") + " lv" + A.pres.lv; X.card.hidden = false;
     X.drag.hidden = false; X.drag.classList.remove("off"); X.hrv.dragT = X.hrv.t + 4.5;
+    if (X.zoomEl) X.zoomEl.hidden = false;
     snd(A.medal >= 3 ? "pearl" : "collect");
     /* v225: Merkmals-Blase („Waffen 21 cm“, „8-Ender“, „Stoß …“) am erlegten Stück entfällt für alle Tiere – die Werte stehen in der Trophäenkarte */
     if (A.medal >= 3 && A.box && A.pres.gn.r < 2) {         /* nur bei Gold und Diamant: wenige feine Lichtpunkte hinter dem Stück (Seltene haben ihre eigene Enthüllung) */
@@ -3375,6 +3437,7 @@ const HUNT = (() => {
     if (!X) return;
     [X.win, X.card, X.call].forEach(e => { if (e) { e.hidden = true; e.innerHTML = ""; } });
     if (X.drag) X.drag.hidden = true;
+    if (X.zoomEl) X.zoomEl.hidden = true;
     if (X.vig) X.vig.classList.remove("on");
     if (X.ui) X.ui.classList.remove("lv3", "lv4");
   }
@@ -3472,7 +3535,9 @@ const HUNT = (() => {
     const skin = nd(L(k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), { s: A.s, alpha: 0.24, tint: XC.skin });
     const inner = nd(null, { s: A.s });
     R.nodes.push(inner, skin);                                             /* erst das Innere (deckend), dann die Haut darüber */
-    const both = (o, meshFn) => [R.addChild(skin, nd(meshFn ? L(meshFn) : null, o)), R.addChild(inner, nd(null, o))];
+    /* Jedes Gelenk gibt es zweimal (Haut und Inneres). v354: par – übergeordnetes Gelenk; ohne Angabe der Rumpf.
+       Das Haupt sitzt am Träger (wie am lebenden Stück, A.head unter A.neck), nicht am Rumpf. */
+    const both = (o, meshFn, par) => [R.addChild(par ? par[0] : skin, nd(meshFn ? L(meshFn) : null, o)), R.addChild(par ? par[1] : inner, nd(null, o))];
     const hitIds = new Set(sh.org.map(o => o.id));
     const col = c => () => c.slice(0, 3), bone = (b, pts, r) => tube(b, pts, pts.map(() => r), pts.map(() => XC.bone), 6, { cap0: true });
     /* Rumpf: Wirbelsäule, Rippen, Organe */
@@ -3499,8 +3564,8 @@ const HUNT = (() => {
       if (k === "hirsch") {
         bone(b, [[0, -0.16, -0.09], [0, 0.1, 0.0], [0, 0.3, 0.09], [0, 0.5, 0.19]].map(p => p), 0.03); if (hz) ell(b, [0, 0.2, 0.05], [0.04, 0.2, 0.05], col(XC.hit), 8, 6);
         R.addChild(nk[1], nd(mk(b), {}));
-        const hd = both({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: P.hrx }, () => deerHead(A.T.P, q, A.vr || 0, antF(gn)));
-        [-1, 1].forEach(sg => R.addChild(hd[0], nd(L(() => deerEar(sg)), { x: sg * 0.075, y: 0.08, z: 0.02, rz: sg * 0.15 })));
+        const hd = both({ x: S0.headP[0], y: S0.headP[1], z: S0.headP[2], rx: P.hrx }, () => deerHead(A.T.P, q, A.vr || 0, antF(gn)), nk);
+        [-1, 1].forEach(sg => R.addChild(hd[0], nd(L(() => deerEar(sg)), Object.assign({ rz: sg * 0.15 }, DEER_EAR(sg)))));
         const h = MB(); ell(h, [0, 0.0, 0.1], [0.06, 0.06, 0.11], col(hk ? XC.hit : XC.bone), 10, 7); ell(h, [0, -0.03, 0.3], [0.035, 0.035, 0.13], col(hk ? XC.hit : XC.bone), 8, 6);
         R.addChild(hd[1], nd(mk(h), {}));
       } else if (k === "keiler") {
@@ -3973,7 +4038,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _xray: () => xrShow(), _xr: () => XR, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
+    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }

@@ -4972,3 +4972,28 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 #huntUI .hu-xr .xr-leg i{width:10px;height:10px;border-radius:50%;flex:none}
 #huntUI .hu-xr .xr-leg i.b{background:#dbe9ff;border-radius:2px}
 #huntUI .hu-xr .xr-leg i.h{background:#fa4d38}
+
+/* ---------------------------------------------------------------------
+   v354: Hof-Rundgang – Karte weicht dem Werkzeugmenü aus
+   Offenes Saat-/Sichelmenü: Karte nur mit Titel, Aufgabe und Fortschritt;
+   beim Ziehen durchsichtig und ohne Trefferfläche. Zielmarkierung fängt nie Eingaben ab.
+   --------------------------------------------------------------------- */
+#farmTut.ft-mini .ltc{padding:8px 10px 9px}
+#farmTut.ft-mini .ltc-tx,#farmTut.ft-mini .ltc-prog,#farmTut.ft-mini .ltc-note,#farmTut.ft-mini .ltc-who small{display:none}
+#farmTut.ft-mini .ltc-face{width:30px;height:30px}
+#farmTut.ft-mini .ltc-title{font-size:15px;margin-top:4px}
+#farmTut.ft-mini .ltc-do{margin-top:5px;padding:6px 9px;font-size:13px}
+#farmTut.ft-mini .ltc-part{margin-top:6px}
+#farmTut.ft-drag .ltc{opacity:.3;pointer-events:none;transition:opacity .12s}
+#farmTut .ft-mark,#farmTut .ft-mark *{pointer-events:none}
+#farmTut.ft-mini:not(.ft-drag) .ft-mark{display:none!important}
+
+/* ---------------------------------------------------------------------
+   v354: Jagd – Zoomknöpfe in der Ansicht des erlegten Stücks
+   --------------------------------------------------------------------- */
+#huntUI .hu-zoom{position:absolute;right:10px;bottom:45%;z-index:5;display:flex;gap:6px}
+#huntUI .hu-zoom[hidden]{display:none}
+#huntUI .hu-zoom button{width:44px;height:44px;border:var(--line);border-radius:14px;background:#fffaf0;color:var(--ink);font:inherit;font-size:22px;font-weight:800;line-height:1;
+  box-shadow:3px 3px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+#huntUI .hu-zoom button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+#huntUI.xr-on .hu-zoom{visibility:hidden}
