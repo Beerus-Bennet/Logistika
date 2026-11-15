@@ -4997,3 +4997,5 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
   box-shadow:3px 3px 0 var(--ink);cursor:pointer;touch-action:manipulation}
 #huntUI .hu-zoom button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 #huntUI.xr-on .hu-zoom{visibility:hidden}
+#farmTut.ft-tiny .ltc-do,#farmTut.ft-tiny .ltc-head{display:none}
+#farmTut.ft-tiny .ltc-title{margin-top:0}

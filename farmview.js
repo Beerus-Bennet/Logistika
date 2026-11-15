@@ -3019,7 +3019,7 @@ function farmTutShow() {
   /* Einblenden nur beim Schrittwechsel – Teilfortschritt, Rückmeldung und Rückfrage tauschen nur den Inhalt */
   const still = ftAnim === T.step + (T.replay ? "r" : "");
   ftAnim = T.step + (T.replay ? "r" : "");
-  el.className = "on " + (ftExit ? "exit" : done ? "done" : mode) + (el.classList.contains("alt") ? " alt" : "") + (el.classList.contains("ft-mini") ? " ft-mini" : "") + (el.classList.contains("ft-drag") ? " ft-drag" : "") + (still ? " still" : "");
+  el.className = "on " + (ftExit ? "exit" : done ? "done" : mode) + (el.classList.contains("alt") ? " alt" : "") + (el.classList.contains("ft-mini") ? " ft-mini" : "") + (el.classList.contains("ft-drag") ? " ft-drag" : "") + (el.classList.contains("ft-tiny") ? " ft-tiny" : "") + (still ? " still" : "");
   document.body.classList.add("ftut-on");
   el.innerHTML = card + `<div class="ft-mark" id="ftHand" aria-hidden="true"><i></i><span>👆</span></div>`;
   const step = T.step;
@@ -3157,6 +3157,10 @@ function farmTutPoint() {
   const busy = el.classList.contains("task") && !!(FV.pop || FV.tool);
   if (el.classList.contains("ft-mini") !== busy) el.classList.toggle("ft-mini", busy);
   if (el.classList.contains("ft-drag") !== !!FV.tool) el.classList.toggle("ft-drag", !!FV.tool);
+  /* Sehr kleine Schirme: Passt das Menü trotzdem nicht neben die Karte, bleibt von ihr nur Titel und Fortschritt. */
+  { const box = busy && $("#farmPop .fp-box"), cd = el.querySelector(".ltc"), Hf = FV.R ? FV.R.h : innerHeight;
+    const tiny = !!(box && cd) && (el.classList.contains("ft-tiny") ? box.offsetHeight + cd.offsetHeight + 90 > Hf : box.offsetHeight + cd.offsetHeight + 24 > Hf);
+    if (el.classList.contains("ft-tiny") !== tiny) el.classList.toggle("ft-tiny", tiny); }
   const o = el.classList.contains("task") && st && st.target && st.target();
   let p = null;
   if (o && !FV.sheet && FV.R && !FV.fp) { const [cx, cz] = farmCenter(o); p = FV.R.project(cx, objH(o) * 0.55, cz); }

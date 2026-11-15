@@ -3,6 +3,8 @@
 const VILLAGE_SITE = (() => {
   const half=.9,walk=.78,curb=.045,front=1.95,main=18.5,edge=main+.9,sidewalk=half+curb+walk/2;
   const roads=[-62,-98],radius=1.1;
+  /* v354: Vorläufiger Wendeplatz am Ende des Lindenwegs – eine Lage für Fahrfläche, Bordstein und Gehwegring. */
+  const turn={x:-62,z:65.2,r:2.4,rim:3.18};
   function lot(p){const back=p.road===-62&&p.side<0||p.road===-98&&p.side>0?18:17.5;
     const a=p.road+p.side*front,b=p.road+p.side*back;return [Math.min(a,b),p.z-6,Math.max(a,b),p.z+6];}
   function gate(p){const d=VILLAGE.door(p);return [p.road+p.side*front,d[1]];}
@@ -33,7 +35,10 @@ const VILLAGE_SITE = (() => {
     for(const [a,c]of lines){const vertical=a[0]===c[0],lo=vertical?a[1]:a[0],hi=vertical?c[1]:c[0],v=vertical?a[0]:a[1];
       b.plate(vertical?half*2:hi-lo,vertical?hi-lo:half*2,asphalt,{x:vertical?v:(lo+hi)/2,z:vertical?(lo+hi)/2:v,y0:y});
       for(const side of [-1,1]){
-        const start=vertical&&lo===edge?edge+radius:lo,cuts=[start,hi];for(const q of joints)if((vertical?q[0]:q[1])===v){const t=vertical?q[1]:q[0];cuts.push(Math.max(start,t-half-walk-curb),Math.min(hi,t+half+walk+curb));}
+        /* v354: Am Wendeplatz enden Gehweg und Bordstein dort, wo der Bordstein den Kreis trifft –
+           vorher liefen sie als helle Streifen bis in die Fahrfläche. */
+        const stop=!expanded&&vertical&&v===turn.x?turn.z-Math.sqrt(turn.r*turn.r-(half+curb)**2):hi;
+        const start=vertical&&lo===edge?edge+radius:lo,cuts=[start,stop];for(const q of joints)if((vertical?q[0]:q[1])===v){const t=vertical?q[1]:q[0];cuts.push(Math.max(start,t-half-walk-curb),Math.min(stop,t+half+walk+curb));}
         const sorted=[...new Set(cuts)].sort((x,z)=>x-z);
         for(let i=1;i<sorted.length;i++){const l=sorted[i-1],h=sorted[i],mid=(l+h)/2,x=vertical?v+side*(half+curb+walk/2):mid,z=vertical?mid:v+side*(half+curb+walk/2);
           if(inRoad(x,z))continue;
@@ -61,7 +66,13 @@ const VILLAGE_SITE = (() => {
     for(const x of breaks.concat([right+half+radius])){const stop=Math.min(right,x-half-radius);if(stop>at)b.plate(stop-at,walk,paving,{x:(at+stop)/2,z:edge+curb+walk/2,y0:.047});at=x+half+radius;}
     if(!expanded){
       /* v344: Provisorischer Wendeplatz zwischen letztem Grundstück und künftigem Block. */
-      b.disc(3.18,48,paving,{x:-62,z:65.2,y0:.046});b.disc(2.4,48,asphalt,{x:-62,z:65.2,y0:.049});
+      /* v354: Fahrfläche als Scheibe; Bordstein und Gehweg als Ringe, die an der Einmündung offen sind und genau an
+         die geraden Kanten anschließen (Öffnung = Fahrbahn + Bordstein). Keine Fläche liegt mehr über einer anderen. */
+      b.disc(turn.r,48,asphalt,{x:turn.x,z:turn.z,y0:.034});
+      const open=half+curb,ring=(r0,r1,c,y)=>{const a0=Math.asin(open/r0),a1=Math.asin(open/r1),n=44,pt=(r,a)=>[turn.x+r*Math.sin(a),turn.z-r*Math.cos(a)];
+        for(let i=0;i<n;i++){const f0=i/n,f1=(i+1)/n,i0=a0+(2*Math.PI-2*a0)*f0,i1=a0+(2*Math.PI-2*a0)*f1,o0=a1+(2*Math.PI-2*a1)*f0,o1=a1+(2*Math.PI-2*a1)*f1;
+          quad(b,[pt(r0,i0),pt(r0,i1),pt(r1,o1),pt(r1,o0)],c,y);}};
+      ring(turn.r,turn.r+curb,stone,.052);ring(turn.r+curb,turn.rim,paving,.047);
       /* Den zweiten Anschluss bis zur Erschließung wieder mit Bordkante schließen. */
       b.plate((half+radius)*2,.12,0xb9b3a6,{x:-98,z:main+.96,y0:.032});
     }else{
@@ -143,5 +154,5 @@ const VILLAGE_SITE = (() => {
   function construction(type){const b=new FM.MB(),family=type==='familie',w=family?8.8:5.8,cx=family?-1.5:0;
     b.plate(w,7.4,0xb7b0a4,{x:cx,z:.8,y0:.055});for(const x of family?[-5.7,-2.6,2.6]:[-2.6,2.6])for(const z of [-2.1,2.1,3.9])b.box(.14,2.7,.14,0xc69a66,{x,z});
     for(const y of [1.3,2.6])b.box(w,.12,.12,0xc69a66,{x:cx,y,z:-2.1});if(family)b.box(3.6,.25,4.2,0xc3b9a6,{x:-4.05,z:0,y:.1});return b;}
-  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,bikeClear,stallBox,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
+  return {half,walk,curb,front,main,edge,sidewalk,roads,turn,lot,gate,mailbox,bikePark,bikeClear,stallBox,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
 })();

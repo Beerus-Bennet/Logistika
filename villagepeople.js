@@ -49,13 +49,13 @@ const VILLAGE_PEOPLE = (() => {
     const st=beside({x:park[0],z:park[1],ry:0},p.side);
     /* Auf- und Absteigen auf der rechten Fahrspur (Rechtsverkehr), vor der Einfahrt. Wer die Straße
        queren muss, hält weiter vorn – gegenüberliegende Nachbarn stehen sich so nicht im Weg. */
-    return {d,g,m,park,stand:[st.x,st.z],side,mail:[p.road+p.side*1.48,m[1]+p.side*.26],mount:[p.road-.5,g[1]-SHIFT-1.9-(p.side>0?3.4:0)],back:[p.road+.5,g[1]+SHIFT-1.9-(p.side<0?3.4:0)]};}
+    return {d,g,m,park,stand:[st.x,st.z],side,mail:[p.road+p.side*1.48,m[1]+p.side*.26],mount:[p.road-.5,g[1]-SHIFT-1.9-(p.side>0?3.4:0)],back:[p.road+.5,g[1]+SHIFT-(p.side<0?5.3:2.8)]};}
   /* Wege mit dem Rad durchs Gartentor: gerade durch die Öffnung, das Rad so weit zur Seite,
      dass Rad und Person zusammen mittig durchpassen. */
   function homePaths(p,A){const s=p.side,zo=A.g[1]-SHIFT,zi=A.g[1]+SHIFT,inX=A.g[0]+s*1.5,outX=A.g[0]-s*.95;
     return {exit:[A.park,[A.park[0],zo],[inX,zo],[outX,zo],[p.road-.5,zo],A.mount],
       /* Liegt das Tor gleich neben der Fahrspur, erst nach links ausholen: Das Rad steht gerade, bevor es die Öffnung erreicht. */
-      entry:(s>0?[A.back,[p.road-.15,zi-1],[p.road-.15,zi]]:[A.back,[p.road+.5,zi]]).concat([[outX,zi],[inX,zi],[A.park[0],zi],A.park])};}
+      entry:(s>0?[A.back,[p.road+.5,zi-2],[p.road-.15,zi-1],[p.road-.15,zi]]:[A.back,[p.road+.5,zi]]).concat([[outX,zi],[inX,zi],[A.park[0],zi],A.park])};}
   function marketPlan(p,market){
     if(market&&!farmAreaOpen('see'))return null;const o=stallObj(market);if(!o)return null;
     const V=VILLAGE_SITE.stallBox(o),c=[(V[0]+V[2])/2,(V[1]+V[3])/2],ry=farmRotation(o)*Math.PI/2,forward=[Math.sin(ry),Math.cos(ry)],right=[Math.cos(ry),-Math.sin(ry)];
@@ -77,8 +77,10 @@ const VILLAGE_PEOPLE = (() => {
         if(others.some(t=>Math.hypot(t.parking[0]-parking[0],t.parking[1]-parking[1])<3.4)||VILLAGE_SITE.blocked(...parking,1.2,taken))continue;
         /* Von der Fahrspur gerade auf den Platz; die Anfahrt bestimmt die Stellrichtung. */
         const near=navPath(parking[0],main,parking[0],parking[1],'besucher');if(!near)continue;
-        const approach=[[parking[0]-2.2,main-.42],[parking[0]-.7,main-.42],...near.slice(1)],n=approach.length,a=approach[n-2],parkYaw=Math.atan2(parking[0]-a[0],parking[1]-a[1]);
-        const leave=[...near.slice(1).reverse(),[parking[0],main],[parking[0]-1.5,main+.42]];
+        /* An- und Abfahrt teilen sich das letzte gerade Stück vor dem Platz – so passt die Stellrichtung zu beiden. */
+        const mid=near.length>2?near.slice(1,-1):[[parking[0],parking[1]+Math.sign(main-parking[1])*1.2]];
+        const approach=[[parking[0]-2.2,main-.42],[parking[0]-.7,main-.42],...mid,parking],a=mid[mid.length-1],parkYaw=Math.atan2(parking[0]-a[0],parking[1]-a[1]);
+        const leave=[parking,...mid.slice().reverse(),[parking[0],main],[parking[0]-1.5,main+.42]];
         const st=beside({x:parking[0],z:parking[1],ry:parkYaw},p.side),stand=[st.x,st.z],own=bikeCircles(parking,parkYaw);
         const walk=VILLAGE_SITE.safePath([stand,counter],.34,taken.concat(own));if(!walk)continue;
         return {oid:o.id,center:farmCenter(o),market,parking,stand,counter,path:approach,leave,walk,ry:Math.atan2(c[0]-counter[0],c[1]-counter[1]),parkYaw};
