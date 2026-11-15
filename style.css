@@ -4991,12 +4991,7 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 /* ---------------------------------------------------------------------
    v354: Jagd – Zoomknöpfe in der Ansicht des erlegten Stücks
    --------------------------------------------------------------------- */
-#huntUI .hu-zoom{position:absolute;right:10px;bottom:45%;z-index:5;display:flex;gap:6px}
-#huntUI .hu-zoom[hidden]{display:none}
-#huntUI .hu-zoom button{width:44px;height:44px;border:var(--line);border-radius:14px;background:#fffaf0;color:var(--ink);font:inherit;font-size:22px;font-weight:800;line-height:1;
-  box-shadow:3px 3px 0 var(--ink);cursor:pointer;touch-action:manipulation}
-#huntUI .hu-zoom button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-#huntUI.xr-on .hu-zoom{visibility:hidden}
+/* v357: Zoomknöpfe entfernt – gezoomt wird mit zwei Fingern bzw. dem Mausrad */
 #farmTut.ft-tiny .ltc-do,#farmTut.ft-tiny .ltc-head{display:none}
 #farmTut.ft-tiny .ltc-title{margin-top:0}
 /* v355: Ein Kauf, ein übersichtlicher Beleg. Mehr Platz nur für freiwillige
@@ -5048,3 +5043,21 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 .ct-sheet{width:min(520px,100%);max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px 16px 12px;border:2px solid #172d3d;border-radius:20px;background:#fffaf0;box-shadow:0 18px 70px #0006;color:var(--ink)}.ct-sheet>*{flex-shrink:0}.ct-mast{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:6px;border-bottom:1px solid #d9c9bf}.ct-mast b{font-size:11px;letter-spacing:.1em}.ct-mast small{font-size:11px;color:#71616a}.ct-heading>p{font-size:10px;letter-spacing:.14em;font-weight:900;color:#943c4e;margin:0 0 3px}.ct-heading h2{font:400 clamp(27px,7.5vw,36px)/1.05 var(--display);margin:0 0 5px}.ct-heading>span{display:block;font-size:12px;line-height:1.35;overflow-wrap:anywhere}.ct-rivals{display:flex;flex-direction:column;gap:8px}.ct-rival{padding:9px 11px;border:1px solid #dfbec5;border-radius:12px;background:#fff}.ct-rival-head{display:flex;align-items:center;gap:8px}.ct-mark{display:grid;place-items:center;width:30px;height:30px;flex:none;border:1px solid #d6a6b2;border-radius:9px;color:#873a4b;background:#f8e7eb;font:400 18px var(--display)}.ct-rival h3{font:800 15px/1.2 var(--font);margin:0;overflow-wrap:anywhere}.ct-rival dl{display:grid;grid-template-columns:.7fr 1fr 1.2fr;gap:8px;margin:8px 0 0}.ct-rival dl>div{min-width:0}.ct-rival dt{font-size:10px;line-height:1.3;color:#71616a}.ct-rival dd{font-size:13px;font-weight:800;line-height:1.25;margin:2px 0 0;overflow-wrap:anywhere}.ct-rival dl>div:last-child dd{font-family:var(--display);font-weight:400;font-size:clamp(16px,4.8vw,21px);white-space:normal}.ct-rule{display:flex;flex-direction:column;gap:3px;padding:9px 11px;background:#f8e5e9;border-left:3px solid #a3435b;border-radius:4px 10px 10px 4px;font-size:12px;line-height:1.35}.ct-rule b{font-size:12px}.ct-quote{margin:0;padding:0 4px;color:#5f4c53}.ct-quote p{font-size:12px;font-weight:700;line-height:1.4;margin:0 0 4px}.ct-quote cite{display:block;font-size:11px;font-style:normal;line-height:1.3;overflow-wrap:anywhere}.ct-footer{position:sticky;bottom:-12px;background:#fffaf0;padding-top:4px}.ct-close{width:100%;min-height:46px;font-size:14px;padding:9px 6px}
 @media(max-height:650px){.ct-sheet{padding:10px 12px 9px;gap:7px}.ct-heading h2{font-size:27px}.ct-rivals{gap:6px}.ct-rival{padding:7px 9px}.ct-rival dl{margin-top:6px}.ct-rule{padding:7px 9px}.ct-quote p{font-size:11px;margin-bottom:3px}.ct-mark{width:25px;height:25px;font-size:16px}}
 @media(orientation:landscape) and (max-height:550px){.ct-sheet{width:min(820px,100%);display:grid;grid-template-columns:1fr 1fr;gap:7px 14px}.ct-mast,.ct-footer{grid-column:1/-1}.ct-heading{grid-column:1;grid-row:2}.ct-rivals{grid-column:2;grid-row:2/5}.ct-rule,.ct-quote{grid-column:1}}
+/* ---------------------------------------------------------------------
+   v357: Trefferbild – Schusskanal, Trefferpunkt und Organnamen über der Zeichnung
+   --------------------------------------------------------------------- */
+#huntUI .hu-xr .xr-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+#huntUI .hu-xr .xo-in{stroke:#fff;stroke-width:1.6;stroke-linecap:round;opacity:.75}
+#huntUI .hu-xr .xo-ch{stroke:#ff6b4a;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:5 4}
+#huntUI .hu-xr .xo-entry{fill:#ffa23a;stroke:#fff;stroke-width:1.5}
+#huntUI .hu-xr .xo-out{fill:#ff6b4a;opacity:.8}
+#huntUI .hu-xr .xo-hit{fill:rgba(255,196,60,.18);stroke:#ffc43c;stroke-width:2.4}
+#huntUI .hu-xr .xo-hit.kill{fill:rgba(255,70,50,.22);stroke:#ff5a40}
+#huntUI .hu-xr .xr-labs{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#huntUI .hu-xr .xr-labs>*{position:absolute;left:0;top:0;white-space:nowrap;font-size:10.5px;line-height:1;font-weight:700;padding:2px 5px;border-radius:6px;
+  background:rgba(8,20,40,.62);color:#d7e6ff;border:1px solid rgba(150,190,255,.35)}
+#huntUI .hu-xr .xr-labs>span.hit{color:#fff;background:rgba(190,45,30,.85);border-color:#ff8a70}
+#huntUI .hu-xr .xr-labs>.xo-hl{font-size:11.5px;font-weight:800;padding:3px 7px;color:#1a1304;background:#ffc43c;border-color:#fff}
+#huntUI .hu-xr .xr-labs>.xo-hl.kill{color:#fff;background:#e2412b}
+#huntUI .hu-xr .xo-lead{stroke:rgba(190,215,255,.55);stroke-width:1}
+#huntUI .hu-xr .xo-lead.hit{stroke:#ff8a70;stroke-width:1.4}

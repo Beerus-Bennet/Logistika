@@ -1,3 +1,18 @@
+## v357 – Jagd: Trefferbild zeigt klar, wo der Schuss sitzt (Organlage, Kanal, Namen); Zoom nur noch mit zwei Fingern
+Zuerst als v356 gebaut; nach dem Merge von PR 74 (v356 des Kollegen) auf v357 umnummeriert.
+
+**Meldung Bennet (zwei Bildschirmfotos):** (1) „Herzschuss“, aber im Trefferbild ist nicht zu erkennen, wo der Schuss sitzt; Anatomie aller Wildarten prüfen, Organe richtig legen, der Spieler soll sehen, welches Organ wo liegt. (2) Die Knöpfe − ⟲ + stören (sie lagen über dem Sammlerwert); lieber per Zoomen – vor dem Hochladen selbst auf Ansichtsprobleme prüfen.
+
+**Ursache (`hunt.js`):** (1) Das Herz steckte fast ganz in den beiden Lungenflügeln (gleiche Höhe, Lunge größer) und war von der Seite nicht zu sehen; der Schusskanal lag als dünne Röhre im Inneren hinter Rippen und Lunge und reichte beliebig weit hinter das Stück – sichtbar blieb nur der Einschuss. Organnamen gab es nur als Farblegende unter dem Bild. (2) Die Knöpfe saßen über der Karte; bei voller Karte blieb zwischen Überschrift und Karte kaum Platz für das Stück.
+
+**Lösung:**
+- **Organlage (`ORG`):** Hirsch und Keiler nach der Anatomie von der Seite – Lunge oben unter der Wirbelsäule und nach hinten zum Zwerchfell gezogen, Herz tief in der Brust hinter dem Ellbogen (schaut unter der Lunge hervor), Leber rechts am Zwerchfell, Pansen/Magen links, Gescheide dahinter, Nieren unter der Lende. Fasan unverändert (seit v353 nach Vogelanatomie). **Die Wertungszonen (`SP`) sind unverändert** – Zeichnung und Wertung passen weiter zusammen (Test).
+- **Treffer sichtbar (`xrOverlay`, `XR.ov`, `ellSeg`):** über der 3D-Zeichnung liegt eine Bildebene: Einschuss als Punkt, der Kanal im Stück als gestrichelte rote Linie bis zum Ausschuss, der Trefferpunkt als Ring mit Schild („◎ Herz“) – Mitte des Kanals im gewerteten Organ. Jedes Organ ist am unteren Bildrand benannt und über eine feine Linie mit seiner Lage verbunden; getroffene rot. Alles folgt dem Drehen und Zoomen.
+- **Zoom:** Knöpfe entfernt. Zwei Finger zoomen das erlegte Stück und jetzt auch das Trefferbild (dort ging bisher nur das Mausrad); Mausrad bleibt. Bleibt für das Stück weniger als 30 % der Höhe frei, zeigt die Karte zuerst nur Medaille, Trophäe und Knöpfe (Pfeil klappt die Werte auf; danach gilt die Wahl des Spielers); Zoomen klappt die Karte wie das Wischen ein.
+
+**Geprüft:** Unit-Test neu `trefferbild-v357.test.js` (4 Gruppen: Organlage, Trefferpunkt im Organ, Wertungszonen unverändert, keine Zoomknöpfe); `hunt.test.js` (23), `fixes-v354`, `hunt-v283`, `hunt-v307`, `hunt-thighs-v290`, `hunt-presentation-v315`, `trophy-layout-v310`, `trophy-exhibits-v328` bestanden. Testbrowser (Chromium, emulierte Touch-Eingaben, Jagd-Testbühne) mit echten Schüssen über die Wertung (`_shootAt`): Hirsch Herz (äsend) und Lunge, Keiler Herz, Fasan – Trefferbild aus zwei Richtungen gesichtet; Zwei-Finger-Zoom im Trefferbild und beim erlegten Stück (heran, heraus), bei 390 × 700, 430 × 820, 320 × 560 und 844 × 390; keine Konsolenfehler. **Nicht geprüft:** am Handy und in Safari. **Grenzen:** Von schräg oben verdecken die Rippen das Herz weiterhin teilweise – Ring, Schild und Linie zeigen die Stelle. Auf sehr kleinen Schirmen (320 × 560) liegt das Stück teilweise unter der Überschrift. Ein Knopf zum Zurücksetzen der Ansicht entfällt mit den Zoomknöpfen.
+
+
 ## v356 – Klappbereiche, kompakte Konzernmeldung und Parkplätze am Standort
 
 - Angebots- und Belegdetails: Flotte, Standorte und Personal starten jeweils eingeklappt. Standorte und Teams sind darunter separat aufklappbar.
