@@ -93,10 +93,44 @@ function corpMakeDeal(id, appraisal) {
     o.pay = Math.round(o.pay * (c.wave ? 1.4 : 1.25)); o.loyal = r.name;
     orders.push(o);
   }
-  return { version: 353, dealId, id, name: r.name, icon: r.icon, col: r.col, created: S.time,
+  const deal = { version: 353, dealId, id, name: r.name, icon: r.icon, col: r.col, created: S.time,
     fleet, sites, orders, rep: c.wave ? 5 : 3,
     appraisal: { fleetValue: appraisal.fleetValue, hqValue: appraisal.hqValue,
       teamValue: appraisal.teamValue, goodwill: appraisal.goodwill, floor: appraisal.floor, total: appraisal.total } };
+  corpDealParking356(deal);
+  return deal;
+}
+
+/* v356: Reservierte Fahrzeuge stehen an derselben Adresse wie der Betrieb,
+   Schiffe/Züge/Flugzeuge am passenden Terminal. Auch ältere offene Angebote
+   erhalten diese Parkdaten, ohne Preis, Personal oder Fahrzeugzahl zu ändern. */
+function corpDealParking356(d) {
+  if (!d || d.parking356) return false;
+  d.sites.forEach(b => {
+    baseAddr(b);
+    b.vehicles.forEach(uid => { const v = d.fleet.find(f => f.uid === uid); if (v) parkAtOffice(v, b); });
+  });
+  d.parking356 = true;
+  return true;
+}
+
+/* Nur noch nie eingesetzte, untätige Übernahmefahrzeuge am bisherigen
+   Standardstellplatz korrigieren. Kundenadressen und laufende Fahrten behalten. */
+function corpParkRepair356() {
+  const C = S.corp;
+  if (!C || C.parking356) return 0;
+  const ids = new Set(Object.values(C.owned || {}).flatMap(o => o.receipt353 ? o.receipt353.vehicleIds : []));
+  let count = 0;
+  S.fleet.forEach(v => {
+    if (!ids.has(v.uid) && !(v.foreign && (C.owned || {})[v.foreign.id])) return;
+    if (v.phase !== "idle" || v.jobId || (v.jobs || 0) !== 0 || v.route) return;
+    const b = baseOfVehicle(v.uid);
+    if (!b || b.node !== v.at || (v.spot && v.spotAt === v.at && !/^Stellplatz(?:,|$)/.test(v.spot.t || ""))) return;
+    if (parkAtOffice(v, b)) count++;
+  });
+  C.parking356 = true;
+  if (count) save();
+  return count;
 }
 
 function corpDealSummary(d) {
@@ -109,13 +143,14 @@ function corpDealDetails(d) {
   return `<details class="corp-package"><summary>Enthaltenes Unternehmen im Detail</summary>${corpDealContents(d)}</details>`;
 }
 function corpDealContents(d) {
-  return `<div class="corp-package-body"><h4>Verbindliche Flotte · ${d.fleet.length} Fahrzeuge</h4>
-    ${d.fleet.map(v => `<p>${esc(vType(v.type).name)} <small>${esc(N[v.at].short)} · Zustand ${100 - v.wear} %</small></p>`).join("")}
-    ${d.sites.map(b => `<h4>${esc(OFFICE_TIERS[b.tier].name)} · ${esc(N[b.node].short)}</h4>
-      <p>${esc(officeFitoutText(b.tier))}</p><p>${b.staff.length} Mitarbeitende · ${b.vehicles.length} Fahrzeuge
-      ${!isUnlocked(b.node) ? " · Betrieb ab Freischaltung des Ortes" : ""}</p>
-      ${b.staff.map(p => `<p>${esc(p.name)} <small>${esc(ROLES[p.role].name)} · ${p.skill}/5 · ${money(p.wage)}/Tag</small></p>`).join("")}`).join("")}
-    </div>`;
+  const fold = (label, count, body) => `<details class="corp-subfold"><summary><span>${esc(label)}</span><b>${count}</b></summary><div class="corp-fold-body">${body}</div></details>`;
+  const staff = d.sites.flatMap(b => b.staff.map(p => ({ p, b })));
+  const fleet = d.fleet.map(v => `<div class="corp-record"><b>${esc(vType(v.type).name)}</b><small>${esc(N[v.at].short)} · Zustand ${100 - v.wear} %</small></div>`).join("");
+  const sites = d.sites.map(b => fold(N[b.node].short + " · " + OFFICE_TIERS[b.tier].name, b.vehicles.length + " Fahrzeuge",
+    `<p>${esc(officeFitoutText(b.tier))}</p><p>${b.staff.length} Mitarbeitende${!isUnlocked(b.node) ? " · Betrieb ab Freischaltung des Ortes" : ""}</p>`)).join("");
+  const people = d.sites.map(b => fold(N[b.node].short, b.staff.length + " Personen", b.staff.map(p =>
+    `<div class="corp-record"><b>${esc(p.name)}</b><small>${esc(ROLES[p.role].name)} · ${p.skill}/5 · ${money(p.wage)}/Tag</small></div>`).join(""))).join("");
+  return `<div class="corp-package-body">${fold("Verbindliche Flotte", d.fleet.length + " Fahrzeuge", fleet)}${fold("Standorte übernehmen", d.sites.length, sites)}${fold("Personal übernehmen", staff.length + " Personen", people)}</div>`;
 }
 
 function corpValidateDeal(d) {
@@ -150,6 +185,7 @@ function corpCommitDeal(id, price) {
   if (C.owned[id]) return null;
   if (!Number.isFinite(price) || price <= 0 || price > S.money) throw Error("Kaufpreis oder Guthaben stimmt nicht.");
   const d = t && t.deal353;
+  corpDealParking356(d);
   corpValidateDeal(d);
   if (d.id !== id || price < d.appraisal.floor) throw Error("Das Angebot liegt unter dem verhandelbaren Mindestwert.");
   const before = corpCopy(S), snapshot = corpCopy(d);

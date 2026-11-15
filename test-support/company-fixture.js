@@ -13,6 +13,9 @@ for(const n of ['vType','makeVehicle'])run(extract('game.js',n));
 for(const n of ['wearOf','wearValueFactor'])run(extract('extras.js',n));
 run(read('game.js').match(/^const vehValue = [^\n]+/m)[0]);
 run(`const N=Object.fromEntries(NODES.map(a=>[a[0],{id:a[0],name:a[1],lat:a[2],lon:a[3],stage:a[5],modes:a[6],type:a[7],short:a[8]}]));`);
+run(read('places.js'));
+for (const n of ['AIR_OFF_KM','isDoorMode','normLon']) run(read('game.js').match(new RegExp('^const '+n+' = [^\\n]+','m'))[0]);
+for (const n of ['baseAddr','setSpot','termPt','termName']) run(extract('game.js',n));
 run(read('corpassets.js'));run(read('corp.js'));
 for(const n of ['shareState','rivalById'])run(extract('vip.js',n));
 run(`

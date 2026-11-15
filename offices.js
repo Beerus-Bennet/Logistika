@@ -304,6 +304,16 @@ function basesOf() { ensureOffices(); return S.bases; }
 function baseById(id) { return (S.bases || []).find(b => b.id === id); }
 function baseAtNode(nodeId) { return (S.bases || []).find(b => b.node === nodeId); }
 function baseOfVehicle(uid) { return (S.bases || []).find(b => b.vehicles.includes(uid)); }
+/* v356: Ein Bürohof ist eine konkrete Adresse, kein zufälliger Stellplatz
+   irgendwo im selben Ort. Nicht straßengängige Fahrzeuge gehören ans Terminal. */
+function parkAtOffice(v, b) {
+  if (!v || !b || v.at !== b.node) return false;
+  const type = vType(v.type); if (!type) return false;
+  const mode = type.mode;
+  if (isDoorMode(mode)) { const a = baseAddr(b); setSpot(v, [a.lat, a.lon], a); }
+  else setSpot(v, termPt(b.node, mode), { t: termName(b.node, mode), a: N[b.node].short });
+  return true;
+}
 function tierOf(b) { return OFFICE_TIERS[b.tier]; }
 /* v281: Etappenlimits; die Welt-Etappe hat keine numerische Bürogrenze. */
 function maxBases() { return S.stage >= 6 ? Infinity : [1, 3, 10, 15, 20][S.stage - 1] || 1; }
@@ -1324,9 +1334,8 @@ function newBaseCard() {
       <div class="vname">Neuer Standort<small>${Number.isFinite(maxBases()) ? `${(S.bases || []).length} von ${maxBases()} belegt · die nächste Etappe erhöht die Bürogrenze` : `${(S.bases || []).length} Büros · unbegrenzt viele Standorte möglich`}</small></div></div>
     ${(() => { const ids = Object.keys((S.corp && S.corp.hq) || {}).filter(id => CORP[id]); return ids.length ? `<div class="hintbox">🏢 Vorgemerkt aus Übernahme: ${ids.map(id => esc(N[CORP[id].hq].name) + " (" + esc(rivalById(id) ? rivalById(id).name : id) + ")").join(", ")} – wird automatisch dein Büro, sobald Etappe und Standortplatz es erlauben.</div>` : ""; })()}
     ${!room ? `<div class="hintbox">Bürogrenze dieser Etappe erreicht – die nächste Etappe erhöht sie. Übernommene Firmensitze bleiben samt Personal vorgemerkt.</div>` : `
-      <div class="assignrow">
-        <select id="newBaseNode">${free.map(n =>
-          `<option value="${n.id}"${n.id === sel ? " selected" : ""}>${TYPE_GLYPH[n.type] || "🏙"} ${esc(n.name)}</option>`).join("")}</select>
+      <div class="base-location"><label for="newBaseNode">Ort wählen</label>
+        <button type="button" id="newBaseNode" value="${sel || ""}" aria-haspopup="dialog" aria-controls="baseLocationDialog" aria-expanded="false" ${!sel ? "disabled" : ""}><span>${sel ? esc(N[sel].name) : "Keine freien Orte"}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></button>
       </div>
       <div class="tierlist">${OFFICE_TIERS.map((t, i) => `
         <div class="tier${tierOpen(t) ? "" : " locked"}${tierFloors(t) > 1 ? " big" : ""}">
@@ -1345,6 +1354,9 @@ function newBaseCard() {
 }
 
 function renderBases() {
+  /* v356: Der regelmäßige Büro-Refresh darf die offene Ortsauswahl und die
+     Such-/Tastatureingabe nicht nach wenigen Sekunden wegzeichnen. */
+  if (baseLocationDialog356 && baseLocationDialog356.isConnected) return;
   ensureOffices();
   const el = $("#tab-bases"); if (!el) return;
   const focused = document.activeElement, focusKey = focused && focused.matches("summary") && focused.parentElement.dataset.officeFold;
@@ -1416,6 +1428,7 @@ function renderBases() {
   });
   const nodeSel = $("#newBaseNode");
   if (nodeSel) nodeSel.onchange = () => { newBaseCard.sel = nodeSel.value; renderBases(); };
+  if (nodeSel) nodeSel.onclick = () => openBaseLocation356(nodeSel);
   $$("#tab-bases [data-open]").forEach(b => b.onclick = () => {
     const [tier, rent] = b.dataset.open.split("|");
     const sel = $("#newBaseNode");
@@ -1426,6 +1439,77 @@ function renderBases() {
     const fold = Array.from(el.querySelectorAll("details[data-office-fold]")).find(d => d.dataset.officeFold === focusKey);
     if (fold) fold.querySelector("summary").focus({ preventScroll: true });
   }
+}
+
+/* v356: Eigene, suchbare Ortsauswahl statt des auf iOS nicht gestaltbaren
+   nativen Optionsfensters. Zeilen wachsen mit langen Namen, Schrift bleibt lesbar. */
+let baseLocationDialog356 = null;
+function openBaseLocation356(trigger) {
+  if (baseLocationDialog356) return;
+  const taken = new Set((S.bases || []).map(b => b.node));
+  const places = unlockedNodes().filter(n => !taken.has(n.id)).sort((a, b) => a.name.localeCompare(b.name, "de"));
+  const kind = { city: "Stadt", port: "Hafen", rail: "Bahnterminal", air: "Flughafen" };
+  const dialog = document.createElement("dialog");
+  dialog.id = "baseLocationDialog"; dialog.className = "base-location-dialog";
+  dialog.setAttribute("aria-labelledby", "baseLocationTitle");
+  dialog.innerHTML = `<header><h3 id="baseLocationTitle">Standort auswählen</h3><button type="button" class="location-close" aria-label="Ortsauswahl schließen">×</button></header>
+    <label class="location-search" for="baseLocationSearch">Ort suchen<input type="search" id="baseLocationSearch" autocomplete="off" placeholder="Name eingeben …"></label>
+    <div class="location-options" role="listbox" aria-label="Freie Standorte"></div><p class="location-count" role="status"></p>`;
+  const hadModal = document.body.classList.contains("modal-open");
+  document.body.classList.add("modal-open");
+  document.body.appendChild(dialog); baseLocationDialog356 = dialog;
+  const list = dialog.querySelector(".location-options"), search = dialog.querySelector("input");
+  trigger.setAttribute("aria-expanded", "true");
+  function draw() {
+    const needle = search.value.trim().toLocaleLowerCase("de-DE");
+    const matches = places.filter(n => n.name.toLocaleLowerCase("de-DE").includes(needle));
+    const first = matches.find(n => n.id === trigger.value) || matches[0];
+    list.innerHTML = matches.map(n => `<button type="button" role="option" data-place="${n.id}" aria-selected="${n.id === trigger.value}" tabindex="${first && first.id === n.id ? 0 : -1}"><span>${esc(n.name)}</span><small>${esc(kind[n.type] || "Standort")}</small></button>`).join("") || `<p class="location-empty">Kein passender Ort gefunden.</p>`;
+    dialog.querySelector(".location-count").textContent = matches.length + (matches.length === 1 ? " Ort verfügbar" : " Orte verfügbar");
+    list.querySelectorAll("[data-place]").forEach(button => button.onclick = () => {
+      newBaseCard.sel = button.dataset.place; dialog.close();
+    });
+  }
+  function position() {
+    const view = window.visualViewport, left = view ? view.offsetLeft : 0, top = view ? view.offsetTop : 0;
+    const width = view ? view.width : innerWidth, height = view ? view.height : innerHeight;
+    const r = trigger.getBoundingClientRect(), w = Math.min(Math.max(r.width, 280), 440, width - 24);
+    const below = top + height - r.bottom - 10, above = r.top - top - 10;
+    const up = below < 280 && above > below, room = up ? above : below;
+    const h = Math.min(440, height - 24, Math.max(240, room));
+    dialog.style.width = w + "px"; dialog.style.maxHeight = h + "px";
+    dialog.style.left = Math.max(left + 12, Math.min(r.left, left + width - w - 12)) + "px";
+    dialog.style.top = Math.max(top + 12, Math.min(up ? r.top - h - 6 : r.bottom + 6, top + height - h - 12)) + "px";
+  }
+  search.oninput = draw;
+  dialog.querySelector(".location-close").onclick = () => dialog.close();
+  dialog.addEventListener("click", e => {
+    if (e.target !== dialog) return;
+    const r = dialog.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
+  });
+  dialog.addEventListener("keydown", e => {
+    const options = Array.from(list.querySelectorAll("[data-place]"));
+    if (!options.length) return;
+    const index = options.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp" || (index >= 0 && (e.key === "Home" || e.key === "End"))) {
+      e.preventDefault();
+      const next = e.key === "Home" ? 0 : e.key === "End" ? options.length - 1 : index < 0 ? (e.key === "ArrowUp" ? options.length - 1 : 0) : Math.max(0, Math.min(options.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)));
+      options.forEach((b, i) => { b.tabIndex = i === next ? 0 : -1; }); options[next].focus();
+    } else if (e.key === "Enter" && e.target === search) { e.preventDefault(); options[0].click(); }
+  });
+  dialog.addEventListener("close", () => {
+    window.removeEventListener("resize", position);
+    if (window.visualViewport) { visualViewport.removeEventListener("resize", position); visualViewport.removeEventListener("scroll", position); }
+    dialog.remove(); baseLocationDialog356 = null;
+    if (!hadModal) document.body.classList.remove("modal-open");
+    renderBases(); const current = document.getElementById("newBaseNode"); if (current) current.focus({ preventScroll: true });
+  }, { once: true });
+  draw(); dialog.showModal(); position();
+  const selected = list.querySelector('[aria-selected="true"]') || list.querySelector("button");
+  if (selected) selected.focus({ preventScroll: true });
+  window.addEventListener("resize", position);
+  if (window.visualViewport) { visualViewport.addEventListener("resize", position); visualViewport.addEventListener("scroll", position); }
 }
 
 /* =========================================================================
