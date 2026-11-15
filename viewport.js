@@ -1,4 +1,4 @@
-/* v357: Die App bleibt im sichtbaren Browserfenster, auch beim Neuladen,
+/* v358: Die App bleibt im sichtbaren Browserfenster, auch beim Neuladen,
    Drehen und Ein-/Ausblenden der iOS-Browserleisten. Native Browseroberflächen
    gehören dem Browser; kein Scroll-Trick und kein erzwungener Vollbildmodus. */
 (() => {

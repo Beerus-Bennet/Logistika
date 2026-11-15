@@ -104,7 +104,7 @@ test('Keilerteller: liegendes Stück behält Ansatz und Stellung des lebenden (k
 });
 
 /* ---------- Landschaftskulisse ---------- */
-test('v357 Insel: schließt oben außerhalb der Spielfläche an, hat Felsvolumen statt kilometerweiter Streifen',()=>{
+test('v358 Insel: schließt oben außerhalb der Spielfläche an, hat Felsvolumen statt kilometerweiter Streifen',()=>{
  const src=read('worldview.js'),K=vm.createContext({console,Math});
  vm.runInContext(read('gl3d.js'),K);
  vm.runInContext(`var FM={MB:G3.MB},WGRID={x0:-160,z0:-160,x1:104,z1:104},clamp=(v,a,b)=>Math.max(a,Math.min(b,v));

@@ -1,4 +1,4 @@
-/* v357: Anschlusskante, Volumen und geschlossener Inselkörper ohne WebGL. */
+/* v358: Anschlusskante, Volumen und geschlossener Inselkörper ohne WebGL. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const src=fs.readFileSync('worldview.js','utf8'),C=vm.createContext({console,Math});
 vm.runInContext(fs.readFileSync('gl3d.js','utf8'),C);
@@ -22,4 +22,4 @@ const open=[...edges].filter(([,n])=>n===1);assert.equal(open.length,264,'nur An
 assert.ok([...edges.values()].every(n=>n===1||n===2),'keine mehrfachen oder losen Innenkanten');
 for(const [k] of open)for(const a of k.split('|')){const [x,y,z]=a.split(',').map(Number);assert.equal(y,0);assert.ok(x===-160||x===104||z===-160||z===104);}
 assert.ok(top>=1000&&low>=264&&soil>=500);assert.ok(area>2e5);assert.ok(v.length/27<5000,'Geometriebudget');
-console.log('OK v357: 264 exakte Anschlusskanten, geschlossene Flanken/Unterseite, korrekte Flächenausrichtung, '+v.length/27+' Dreiecke.');
+console.log('OK v358: 264 exakte Anschlusskanten, geschlossene Flanken/Unterseite, korrekte Flächenausrichtung, '+v.length/27+' Dreiecke.');

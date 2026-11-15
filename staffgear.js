@@ -19,23 +19,23 @@ const STAFF_GEAR = (() => {
   }
   const put=(n,p)=>{for(const k of ['x','y','z','rx','ry','rz'])n[k]=p[k];n.sx=n.sy=n.sz=p.s;};
   function retime(s,j,t0){const delta=t0-j.t0;j.t0=t0;j.t1+=delta;if(s.jobEnd!=null)s.jobEnd+=delta;}
-  /* v357: Gespeicherte Wege zu den früheren Frontregalen auf die Seitenfächer
+  /* v358: Gespeicherte Wege zu den früheren Frontregalen auf die Seitenfächer
      umstellen. Tatsächliche Position, restliche Arbeitszeit und erledigte
      Übergaben bleiben erhalten; keine erneute Aufgaben-/Lohnbuchung. */
   function relocate(s,e,j) {
     if (!j || !j.route || !j.stops) return;
-    const sl=CAMP.slotOf(s.id), old=j.stops.find(st=>st.rack351&&!st.rack357);
+    const sl=CAMP.slotOf(s.id), old=j.stops.find(st=>st.rack351&&!st.rack358);
     if (!sl || !old) return;
     if (S.time>=j.t0+j.walk) {
       /* Bereits sitzende/arbeitende Kräfte behalten insbesondere ihr Pausenende. */
-      const T=CAMP.toolSpot(sl);old.tx=T.x;old.tz=T.z;old.ry=T.ry;old.rack357=1;return;
+      const T=CAMP.toolSpot(sl);old.tx=T.x;old.tz=T.z;old.ry=T.ry;old.rack358=1;return;
     }
     const T=CAMP.toolSpot(sl), line=staffTimeline(j), passed=line.geo>old.d+.01 || !!old.done351;
     const rate=j.walk/((j.len||routeLen(j.route))+j.stops.reduce((n,st)=>n+st.w,0));
     const remaining=Math.max(0,j.t1-(j.t0+j.walk)), entry=CAMP.toW(T.ax,CAMP.STAND_Z), at=[T.sx,T.sz];
     j.route.splice(old.i,1,entry,at,entry.slice());
     for (const st of j.stops) {
-      if (st===old) { st.i++;st.tx=T.x;st.tz=T.z;st.ry=T.ry;st.rack357=1;if(passed)st.done351=true; }
+      if (st===old) { st.i++;st.tx=T.x;st.tz=T.z;st.ry=T.ry;st.rack358=1;if(passed)st.done351=true; }
       else if (st.i>old.i-1) st.i+=2;
       st.d=routeLen(j.route.slice(0,st.i+1));
     }

@@ -27,7 +27,7 @@ test("Weg hinein: nie näher als 1,45 ans Feuer, nie durch Sofa oder Wand (ab To
       const l = loc(x, z), rr = Math.hypot(l[0], l[1]);
       assert.ok(rr > 1.44, s.id + " zu nah am Feuer " + rr.toFixed(2));
       const gang = Math.abs(l[0]) < 0.2 && l[1] > 1.4, ring = rr < 1.62, fin = Math.abs(Math.sin(Math.atan2(-l[1], l[0]) - s.ang * Math.PI / 180)) < 0.02;
-      const reihe = (Math.abs(l[1] - C.STAND_Z) < 0.02 && Math.abs(l[0]) <= C.AISLE_X + .02) || (Math.abs(Math.abs(l[0])-C.AISLE_X)<.02 && l[1]>=-1.62 && l[1]<=C.STAND_Z+.02);   /* v357: Quergang und seitliche Zugangsgassen */
+      const reihe = (Math.abs(l[1] - C.STAND_Z) < 0.02 && Math.abs(l[0]) <= C.AISLE_X + .02) || (Math.abs(Math.abs(l[0])-C.AISLE_X)<.02 && l[1]>=-1.62 && l[1]<=C.STAND_Z+.02);   /* v358: Quergang und seitliche Zugangsgassen */
       assert.ok(gang || ring || fin || reihe, s.id + " Wegpunkt außerhalb der freien Wege " + l.map(v => v.toFixed(2)));
     });
     const e = loc(...r[r.length - 1]); assert.ok(Math.hypot(e[0] - s.lx, e[1] - s.lz) < 0.8, "Standpunkt nah am Sitz");
@@ -50,7 +50,7 @@ test("Gesperrter Platz: Feuer, Sofas, Wände innen gesperrt; Gelände davor frei
   const f = C.gate(); assert.ok(!C.blockedW(f[0], f[1]));
 });
 
-test("v357 Werkzeugregale: eigene Fächer, Mittelgang frei, Halte zum Einräumen und Abholen", () => {
+test("v358 Werkzeugregale: eigene Fächer, Mittelgang frei, Halte zum Einräumen und Abholen", () => {
   const lanes = new Set();
   C.slots.forEach(s => {
     const T = C.toolSpot(s), l = loc(T.x, T.z);

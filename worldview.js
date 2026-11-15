@@ -673,7 +673,7 @@ function worldTreeSpace(chunks, chunkOf, MK, rockObs) {
    eines Flecks endet innerhalb der markierten Kacheln, dort ist die Farbe genau die Dreiecks-Interpolation der groben Kachel. */
 const GROUND_SUB = 3;
 const GROUND_A = { moss: 0.72, damp: 0.7, leaf: 0.78, needle: 0.72, earth: 0.8, glade: 0.42 };     /* Deckkraft je Bodenart */
-/* v357: Endliche schwebende Insel statt kilometerweit gestreckter Kulisse.
+/* v358: Endliche schwebende Insel statt kilometerweit gestreckter Kulisse.
    Die bebaubare Welt bleibt unverändert. Gemeinsame Randpunkte schließen die
    Grasdecke an; Erdschicht, Felsflanken und geschlossener Kiel bilden Volumen.
    Ein statisches Netz, keine zusätzlichen Bäume außerhalb der Spielfläche. */
@@ -905,7 +905,7 @@ function worldStatic() {
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
   worldGround(chunkOf, GC, nx, nz, cell, gcAt, WV.forest);
-  /* v357: Grasrand und Felskörper der schwebenden Insel (worldApron) */
+  /* v358: Grasrand und Felskörper der schwebenden Insel (worldApron) */
   try { WV.apron = fnode(R.mesh(worldApron(gcAt)), { shadow: false }); R.nodes.push(WV.apron); } catch (e) { console.warn("Kulisse:", e); WV.apron = null; }
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
   R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map(); WV.bgGH = new Map(); WV.bgHi = new Map(); TLOD.dirty = true;
@@ -1725,7 +1725,7 @@ function bgFinal(b) {
   if (b.sp === "eiche" && area !== "altwald") sz = Math.min(sz, 3);
   b.fz = sz; b.fa = area;
   b.fs = +clamp(b.s / FWM.TH[sz], 0.8, 1.25).toFixed(2);
-  b.fv = (((b.k * 2654435761) >>> 0) >>> 11) % 3;
+  b.fv = (((b.k * 2654435861) >>> 0) >>> 11) % 3;
   b.fx = +b.x.toFixed(2); b.fzz = +b.z.toFixed(2); b.fry = +b.ry.toFixed(2);
   return b;
 }

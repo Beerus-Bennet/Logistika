@@ -1,6 +1,6 @@
-/* v357: Reproduzierbare 3D-Abnahme, nur generierte Spielstände. */
+/* v358: Reproduzierbare 3D-Abnahme, nur generierte Spielstände. */
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
-const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-island-v357';fs.mkdirSync(out,{recursive:true});
+const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-island-v358';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const p=await b.newPage({viewport:{width:1100,height:850},serviceWorkers:'block'});
  const errors=[];
@@ -45,11 +45,25 @@ await p.evaluate(()=>{
 });
  await p.waitForTimeout(400);
  await p.screenshot({path:out+'/camp-two.png'});
-const counts=await p.evaluate(()=>({staff:S.farm.staff.length,racks:FV.R.nodes.find(n=>n.mesh===FV.meshes.camp_v357).children.filter(n=>n.mesh===FV.meshes.camp_rack357&&n.visible).length,gear:[...WV.staff.values()].filter(e=>e.gt&&e.gt.visible).length}));assert.deepEqual(counts,{staff:2,racks:2,gear:2});
+const counts=await p.evaluate(()=>({staff:S.farm.staff.length,racks:FV.R.nodes.find(n=>n.mesh===FV.meshes.camp_v358).children.filter(n=>n.mesh===FV.meshes.camp_rack358&&n.visible).length,gear:[...WV.staff.values()].filter(e=>e.gt&&e.gt.visible).length}));assert.deepEqual(counts,{staff:2,racks:2,gear:2});
 await p.setViewportSize({width:390,height:760});await p.evaluate(()=>{FV.R.cam.dist=42;});
  await p.waitForTimeout(300);
  await p.screenshot({path:out+'/camp-mobile.png'});
 const frame=await p.evaluate(()=>({farm:document.querySelector('#farm').getBoundingClientRect().toJSON(),canvas:document.querySelector('#farmCv').getBoundingClientRect().toJSON(),nav:document.querySelector('#nav').getBoundingClientRect().toJSON(),h:visualViewport.height}));assert.ok(Math.abs(frame.farm.bottom-frame.nav.top)<1);assert.equal(frame.canvas.height,frame.farm.height);assert.equal(frame.nav.bottom,frame.h);assert.deepEqual(errors,[]);
+/* Integrationsprobe für PR #75: gleiche feste App-Fläche, eigenes Trefferbild. */
+await p.evaluate(()=>{S.farm.hunt={built:S.time,stock:6,at:S.time};HUNT.begin();});
+await p.waitForFunction(()=>HUNT.X&&HUNT.X.inRv&&HUNT.X.mode==='hold',{timeout:60000});
+const shot=await p.evaluate(()=>{
+ const E=HUNT.EYER,F=HUNT.FC,dx=F.x-E[0],dz=F.z-E[2],l=Math.hypot(dx,dz),ux=dx/l,uz=dz/l;
+ HUNT._spawn('hirsch',false,{x:E[0]+ux*12,z:E[2]+uz*12,st:'graze',t:600,ry:Math.atan2(-uz,ux),score:.7});
+ const A=HUNT.X.animals[HUNT.X.animals.length-1];window.testDeer358=A;return HUNT._shootAt(A,HUNT.SP.hirsch.heart.c);
+});assert.ok(['herz','lunge'].includes(shot),shot);
+await p.waitForFunction(()=>testDeer358.st==='dead',{timeout:30000});await p.evaluate(()=>HUNT._harvest(testDeer358));
+await p.waitForSelector('[data-hu="xray"]',{state:'visible',timeout:30000});await p.evaluate(()=>HUNT._xray());
+await p.waitForFunction(()=>document.querySelector('.xo-hl')&&HUNT._xr().ov,{timeout:30000});
+await p.waitForTimeout(300);await p.screenshot({path:out+'/hunt-integration.png'});
+assert.deepEqual(errors,[]);
+console.log('OK: Integrierter Jagd-PR: echter Schuss, erlegter Hirsch und Trefferbild mit Treffermarkierung im gemeinsamen App-Rahmen.');
 console.log('OK: Insel in WebGL, neun seitliche Fächer, zwei Kräfte mit exakt zwei sichtbaren Fächern und Geräten; Hochformat ohne Überlappung.');
 }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
 

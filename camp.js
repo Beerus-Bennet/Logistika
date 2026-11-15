@@ -97,7 +97,7 @@ const CAMP = (() => {
     slots.forEach(s => { const q = Math.hypot(s.x - x, s.z - z); if (q < bd) { bd = q; b = s; } });
     return b;
   }
-  /* v357: Ein persönliches Fach je Kraft, längs der Seitenwände.
+  /* v358: Ein persönliches Fach je Kraft, längs der Seitenwände.
      Feste Zuordnung zum Sitzplatz: Einstellungen/Entlassungen verschieben kein Gerät. */
   const RACK_X = 6.0, AISLE_X = 5.25, STAND_Z = 5.4;
   function toolSpot(sl) {
@@ -110,7 +110,7 @@ const CAMP = (() => {
   function routeIn(sl) {
     const a0 = -Math.PI / 2, T = toolSpot(sl), L = [[0, OUT_Z], [0, STAND_Z], [T.ax, STAND_Z], [T.ax, T.lz], [T.ax, STAND_Z], [0, STAND_Z], polar(a0, RING)].concat(arcPts(a0, rad(sl.ang), RING));
     L.push(standPt(sl));
-    const r = wpts(L); r.stops = [{ i: 3, kind: "drop", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack357:1 }];
+    const r = wpts(L); r.stops = [{ i: 3, kind: "drop", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack358:1 }];
     return r;
   }
   function routeOut(x, z) {
@@ -123,7 +123,7 @@ const CAMP = (() => {
       arcPts(a, a0, RING).forEach(q => L.push(q));
       if (sl) {                                                          /* Werkzeug von der Plane holen */
         const T = toolSpot(sl);
-        L.push([0, STAND_Z], [T.ax, STAND_Z], [T.ax, T.lz]); stop = { i: L.length - 1, kind: "pick", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack357:1 };
+        L.push([0, STAND_Z], [T.ax, STAND_Z], [T.ax, T.lz]); stop = { i: L.length - 1, kind: "pick", tx: +T.x.toFixed(3), tz: +T.z.toFixed(3), ry: T.ry, rack351:1, rack358:1 };
         L.push([T.ax, STAND_Z], [0, STAND_Z]);
       } else L.push([0, IN_Z]);
     }
@@ -362,7 +362,7 @@ const CAMP = (() => {
     [-1, 1].forEach(sd => {
       for (let i = 0; i < 12; i++) {
         const x = sd * (4.4 + rnd() * 1.8), z = -3.6 + i * 0.62 + (rnd() - 0.5) * 0.4;
-        if (!ok(x, z) || z > -2.8) continue; /* v357: Zugangsgassen an beiden Wänden frei */
+        if (!ok(x, z) || z > -2.8) continue; /* v358: Zugangsgassen an beiden Wänden frei */
         const k = (i + (sd > 0 ? 2 : 0)) % 5;
         if (k === 0) tropical(b, x, z, 0.9 + rnd() * 0.4);
         else if (k === 1) shrub(b, x, z, 0.5 + rnd() * 0.3);
@@ -399,7 +399,7 @@ const CAMP = (() => {
     b.cyl(0.15, 0.15, 0.06, 8, K.anth, { x: 3.7, y: 0.42, z: 2.4 });
   }
 
-  /* v357: Ein modulares Fach; zur Platzmitte offen, mit Stielhalter und Ablage.
+  /* v358: Ein modulares Fach; zur Platzmitte offen, mit Stielhalter und Ablage.
      Alle Kräfte teilen dasselbe Netz. Sichtbar sind nur tatsächlich belegte Fächer. */
   function rackBay() {
     const b = new G3.MB(), wood = 0x8b6543, dark = 0x3e352c, metal = 0x39494b;
@@ -429,7 +429,7 @@ const CAMP = (() => {
       let n = ST.racks.get(sl.id);
       if (needed && !n) {
         const T = toolSpot(sl);
-        n = R.addChild(ST.root, fnode(fmesh("camp_rack357", rackBay), {x:T.lx,z:T.lz,ry:T.rackRy-RY}));
+        n = R.addChild(ST.root, fnode(fmesh("camp_rack358", rackBay), {x:T.lx,z:T.lz,ry:T.rackRy-RY}));
         ST.racks.set(sl.id,n);
       }
       if (n) n.visible = needed;
@@ -475,7 +475,7 @@ const CAMP = (() => {
   /* --------------------------------- Szene --------------------------------- */
   const ST = { racks: new Map(), root: null, fl: [], halo: null, fglow: null, bulbs: null, sp: 0, ph: 0 };
   function attach(R) {
-    ST.fl = []; ST.racks = new Map(); ST.root = fnode(fmesh("camp_v357", build), { x: CX, y: 0, z: CZ, ry: RY });
+    ST.fl = []; ST.racks = new Map(); ST.root = fnode(fmesh("camp_v358", build), { x: CX, y: 0, z: CZ, ry: RY });
     R.nodes.push(ST.root);
     const add = (key, fn, o) => R.addChild(ST.root, fnode(fmesh(key, fn), Object.assign({ shadow: false }, o)));
     ST.fglow = add("camp_fglow", fireGlowMesh, { alpha: 0.1, glow: 1 });

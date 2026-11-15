@@ -1,4 +1,4 @@
-/* v357: Reload/Orientierung und simulierte Visual-Viewport-Änderungen.
+/* v358: Reload/Orientierung und simulierte Visual-Viewport-Änderungen.
    Chromium prüft den App-Rahmen, keine Behauptung über native Safari-Chrome. */
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({executablePath:process.env.LOGISTIKA_CHROMIUM||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
@@ -25,6 +25,6 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.evaluate(()=>{Object.assign(testViewport,{height:620,offsetTop:0,scale:1});window.dispatchEvent(new Event('pageshow'));});await p.evaluate(()=>new Promise(requestAnimationFrame));assert.deepEqual(await frame(),[0,620,620]);
  await p.reload();await p.evaluate(()=>document.body.classList.remove('locked'));assert.deepEqual(await frame(),[0,620,620]);await mock.close();
  const fallback=await browser.newContext({viewport:{width:375,height:667},serviceWorkers:'block'});await fallback.addInitScript(()=>Object.defineProperty(window,'visualViewport',{value:undefined}));const f=await fallback.newPage();await f.goto(url);assert.equal(await f.evaluate(()=>document.body.getBoundingClientRect().height),667);await fallback.close();
- assert.deepEqual(errors,[]);console.log('OK v357: Reload mit erhaltenem Spielstand, Hoch-/Querformat, kleinere Browserfläche, Offset/Resize/Pageshow, Pinch-Schutz und Fallback ohne visualViewport.');
+ assert.deepEqual(errors,[]);console.log('OK v358: Reload mit erhaltenem Spielstand, Hoch-/Querformat, kleinere Browserfläche, Offset/Resize/Pageshow, Pinch-Schutz und Fallback ohne visualViewport.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
