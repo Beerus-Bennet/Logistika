@@ -1,3 +1,15 @@
+## v358 – Inselkörper, Werkzeugfächer und Viewport
+
+Basis main `2a02935` (PR #74/v356 gemergt); PR #75 (`e475d44`, Jagd v357) wurde während der Abnahme neu geöffnet und in diesen Arbeitsbranch integriert. Beide Arbeiten bleiben enthalten; gemeinsame Cache-/Liefernummer 358. Auf eigenem Branch bereitstellen, main/Pages nicht automatisch veröffentlichen.
+
+`worldApron(gcAt)`/`WV.apron` heißen aus Kompatibilitätsgründen weiter so, erzeugen jetzt aber den Inselkörper. APRON enthält margin/depth/cell statt Fernlandschaftsringen. Sichtbarkeit in der Ich-Perspektive bleibt aus. Keine Änderung von WGRID oder Spiel-/Baudaten.
+
+CAMP.toolSpot liefert zusätzlich lz/ax/rackRy; CAMP.routeIn/routeOut, STAFF_GEAR.parking und die neue rack358-Kennung gemeinsam übernehmen. CAMP.syncRacks blendet nur benötigte Einzelfächer ein; maximal neun Knoten teilen ein Netz. STAFF_GEAR.relocate passt bestehende Wege ohne Positionssprung und ohne neue Wirtschaftsbuchung an. Bereits im Sitzen/Arbeiten befindliche Jobs behalten ihre Zeitleiste. Keine globale Spielstandmigration.
+
+Neue viewport.js früh im HTML-Kopf laden und im SW cachen. CSS contain:layout paint am Body bildet den Bezugsrahmen für feste Spieloberflächen; --app-height/--app-top kommen vom sichtbaren Viewport. Native Dialoge im Top-Layer behalten die bestehende Positionierung in offices.js. Luckybox CSS top:0/height:100% verhindert doppelten Offset. Dialog-Maximalhöhen berücksichtigen --app-height. Keine Safari-Suchleisten-Manipulation und kein automatischer Vollbild-/Scroll-Trick.
+
+SW/LOGI_V 358 und neue Asset-Verweise für viewport.js, style.css, worldview.js, camp.js, staffgear.js gemeinsam übernehmen; andere Asset-Versionen bleiben erhalten. Prüfungen/Vorschauen in docs/INSEL-WERKZEUGE-v358.md. Native Safari-Toolbar und echte Mobilhardware weiterhin am Gerät prüfen.
+
 ## v356 – Unternehmensdetails und Standortauswahl
 
 Basis main `9e6320d` (PR #72/#73 bereits gemergt). Neue Cache-Version 356, neue Verweise für corpassets/corp/corpreport/offices/style in index.html und sw.js. Bestehende Übernahmepakete/Belege behalten Schema 353. corpDealParking356 ergänzt nur Standortadressen und Parkpunkte; C.parking356 markiert die einmalige Korrektur unbenutzter Standardstellplätze. Keine Vergabe weiterer Fahrzeuge, keine neue Bewertung/Abbuchung. parkAtOffice in offices.js verwendet baseAddr/setSpot/termPt aus game.js zur Laufzeit.

@@ -104,7 +104,7 @@ test('Keilerteller: liegendes Stück behält Ansatz und Stellung des lebenden (k
 });
 
 /* ---------- Landschaftskulisse ---------- */
-test('Kulisse: schließt an der Weltkante an, liegt außerhalb der Spielfläche, fest und sparsam',()=>{
+test('v358 Insel: schließt oben außerhalb der Spielfläche an, hat Felsvolumen statt kilometerweiter Streifen',()=>{
  const src=read('worldview.js'),K=vm.createContext({console,Math});
  vm.runInContext(read('gl3d.js'),K);
  vm.runInContext(`var FM={MB:G3.MB},WGRID={x0:-160,z0:-160,x1:104,z1:104},clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -112,9 +112,9 @@ test('Kulisse: schließt an der Weltkante an, liegt außerhalb der Spielfläche,
   function forestK(x,z){return z<0?1:0;}
   ${src.slice(src.indexOf('const APRON ='),src.indexOf('function worldApron('))}${cut(src,'worldApron')}
   var a=worldApron(()=>[.4,.6,.3]).v,b2=worldApron(()=>[.4,.6,.3]).v,inside=0,far=0,low=0;
-  for(let i=0;i<a.length;i+=9){const x=a[i],z=a[i+2];if(x>-156.5&&x<100.5&&z>-156.5&&z<100.5)inside++;far=Math.max(far,Math.hypot(x+28,z+28));if(a[i+1]<-.1)low++;}`,K);
+  for(let i=0;i<a.length;i+=9){const x=a[i],z=a[i+2];if(a[i+1]>=0&&x>-159.99&&x<103.99&&z>-159.99&&z<103.99)inside++;far=Math.max(far,Math.hypot(x+28,z+28));if(a[i+1]<-.1)low++;}`,K);
  const k=s=>vm.runInContext(s,K);
- assert.equal(k('inside'),0,'nichts innerhalb der Welt');assert.ok(k('far')>1400);assert.equal(k('low'),0);
+ assert.equal(k('inside'),0,'nichts innerhalb der Welt');assert.ok(k('far')<250&&k('far')>180);assert.ok(k('low')>500);
  assert.ok(k('a.length/27')<26000,'Dreiecke: '+k('a.length/27'));assert.ok(k('a.length===b2.length&&a.every((v,i)=>v===b2[i])'),'reproduzierbar');
 });
 console.log(count+' Prüfgruppen v354 bestanden.');

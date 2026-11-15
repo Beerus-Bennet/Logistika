@@ -673,42 +673,52 @@ function worldTreeSpace(chunks, chunkOf, MK, rockObs) {
    eines Flecks endet innerhalb der markierten Kacheln, dort ist die Farbe genau die Dreiecks-Interpolation der groben Kachel. */
 const GROUND_SUB = 3;
 const GROUND_A = { moss: 0.72, damp: 0.7, leaf: 0.78, needle: 0.72, earth: 0.8, glade: 0.42 };     /* Deckkraft je Bodenart */
-/* v354: Landschaftskulisse rund um die Welt. Der Boden endete an der Gitterkante (x, z = −160 … 104) als gerade Linie vor
-   der Hintergrundfarbe; Kulissenbäume am Rand standen über dem Nichts. Jetzt schließt außen ein Geländering an:
-   an der Kante die Bodenfarbe der Welt, danach Wiesen, Felder und Waldstücke, weiter draußen sanfte Hügel, die im Dunst
-   (Nebel der Szene = Farbe des Hintergrunds) verschwinden. Davor ein unregelmäßiger Saum vereinfachter Bäume, dichter, wo
-   innen Wald steht. Ein einziges Netz ohne Schatten, fest (Zufall mit festem Startwert), keine Spielfläche: Kamera-,
-   Bau- und Laufgrenzen bleiben, wie sie sind. */
-const APRON = { rings: [-3, 12, 36, 80, 170, 330, 640, 1500], hills: [-0.06, -0.06, 0.15, 0.9, 3.2, 8, 17, 30], seg: 208, trees: 380 };
+/* v358: Endliche schwebende Insel statt kilometerweit gestreckter Kulisse.
+   Die bebaubare Welt bleibt unverändert. Gemeinsame Randpunkte schließen die
+   Grasdecke an; Erdschicht, Felsflanken und geschlossener Kiel bilden Volumen.
+   Ein statisches Netz, keine zusätzlichen Bäume außerhalb der Spielfläche. */
+const APRON = { margin: 42, depth: 210, cell: 4 };
 function worldApron(gcAt) {
-  const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, N = APRON.seg, K = APRON.rings.length;
-  const rnd = erbeRng(35401), mixA = (a, c, t) => [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t, a[2] + (c[2] - a[2]) * t];
-  const tones = [G3.col(0x6f9c44), G3.col(0x8bb85a), G3.col(0xb9b468), G3.col(0x537e36), G3.col(0x9aa860)], haze = G3.col(0x8fae9c);
-  /* Randpunkt in Richtung a und der Weg nach außen (radial) */
-  const edge = a => { const dx = Math.cos(a), dz = Math.sin(a), t = Math.min(hx / Math.max(1e-6, Math.abs(dx)), hz / Math.max(1e-6, Math.abs(dz))); return [cx + dx * t, cz + dz * t, dx, dz]; };
-  const land = (a, k) => { const n = Math.sin(a * 5 + k * 1.7) * 0.5 + Math.sin(a * 11 - k * 0.9) * 0.3 + Math.sin(a * 23 + k * 2.3) * 0.2; return tones[Math.floor((n * 0.5 + 0.5) * 4.999)]; };
+  const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2;
+  const hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, edge = [];
+  /* Rand im Uhrzeigersinn aus Sicht von unten; exakt die Rasterecken. */
+  const nx = Math.round(2 * hx / APRON.cell), nz = Math.round(2 * hz / APRON.cell);
+  for (let i = 0; i < nx; i++) edge.push([W.x0 + i * 2 * hx / nx, W.z0]);
+  for (let i = 0; i < nz; i++) edge.push([W.x1, W.z0 + i * 2 * hz / nz]);
+  for (let i = 0; i < nx; i++) edge.push([W.x1 - i * 2 * hx / nx, W.z1]);
+  for (let i = 0; i < nz; i++) edge.push([W.x0, W.z1 - i * 2 * hz / nz]);
+  const mix = (a, c, t) => a.map((v, k) => v + (c[k] - v) * t);
+  const grass = G3.col(0x719c48), soil = G3.col(0x6a5138), rock = G3.col(0x8a8b83), deep = G3.col(0x59616a);
+  /* Größere, ebene Bruchflächen statt einer glatten umlaufenden Wand.
+     Periodische Stützwerte halten auch die letzte/erste Kante geschlossen. */
+  const faults = Math.ceil(edge.length / 4), hash = (i,k) => { const n=Math.sin((i%faults)*127.1+k*311.7)*43758.5453;return (n-Math.floor(n))*2-1; };
   const P = [], C = [];
-  for (let i = 0; i < N; i++) {
-    const a = i / N * Math.PI * 2, e = edge(a), seam = gcAt(clamp(e[0], W.x0 + 0.5, W.x1 - 0.5), clamp(e[1], W.z0 + 0.5, W.z1 - 0.5)), rp = [], rc = [];
-    for (let k = 0; k < K; k++) {
-      const d = APRON.rings[k], roll = 0.55 + 0.45 * Math.sin(a * 7 + k * 1.3) * Math.sin(a * 3 - k * 0.7) + 0.25 * Math.sin(a * 17 + k);
-      rp.push([e[0] + e[2] * d, APRON.hills[k] * (k < 2 ? 1 : Math.max(0.25, roll)), e[1] + e[3] * d]);
-      rc.push(k < 2 ? [seam[0], seam[1], seam[2]] : mixA(mixA(seam, land(a, k), k === 2 ? 0.55 : 1), haze, Math.max(0, (k - 3) / (K - 3)) * 0.55));
-    }
-    P.push(rp); C.push(rc);
+  for (let i=0;i<edge.length;i++) {
+    const [x,z]=edge[i], f=i/edge.length*faults, j=Math.floor(f), u=f-j;
+    const fault=k=>hash(j,k)*(1-u)+hash(j+1,k)*u;
+    const a = Math.atan2(z - cz, x - cx), dx = Math.cos(a), dz = Math.sin(a);
+    /* Abgerundetes Rechteck umfasst auch die vier Ecken der bestehenden Welt. */
+    const r = Math.pow(Math.pow(Math.abs(dx) / (hx + APRON.margin), 4) + Math.pow(Math.abs(dz) / (hz + APRON.margin), 4), -.25);
+    const wave = 3.8 * Math.sin(a * 7) + 2.1 * Math.sin(a * 13 + .7), ox = cx + dx * (r + wave), oz = cz + dz * (r + wave);
+    const seam = gcAt(x, z), shade = .94 + .06 * Math.sin(a * 19);
+    P.push([[x, 0, z], [x + (ox - x) * .48, 0, z + (oz - z) * .48], [ox, -.35, oz],
+      [cx + (ox - cx) * .998, -3.2, cz + (oz - cz) * .998],
+      [cx + (ox - cx) * (.985+fault(1)*.015), -32 + fault(1)*4, cz + (oz - cz) * (.985+fault(1)*.015)],
+      [cx + (ox - cx) * (.93+fault(2)*.04), -65 + fault(2)*7, cz + (oz - cz) * (.93+fault(2)*.04)],
+      [cx + (ox - cx) * (.65+fault(3)*.06), -132 + fault(3)*8, cz + (oz - cz) * (.65+fault(3)*.06)],
+      [cx + (ox - cx) * (.25+fault(4)*.04), -APRON.depth + 12 + fault(4)*4, cz + (oz - cz) * (.25+fault(4)*.04)]]);
+    C.push([seam, mix(seam, grass, .88), grass, soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => c.map(v => v * (k<4?shade:.9+fault(k)*.16))));
+    /* Nahtfarbe unverändert, damit es an der bisherigen Welt keine Farblinie gibt. */
+    C[C.length - 1][0] = seam;
   }
-  for (let i = 0; i < N; i++) { const j = (i + 1) % N; for (let k = 0; k < K - 1; k++) {
-    b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]); b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]); } }
-  /* Baumsaum: vereinfachte Nadel- und Laubbäume, nach außen lichter */
-  const greens = [0x2f5f33, 0x3b7038, 0x4a8440, 0x5a9147, 0x44763a];
-  for (let n = 0; n < APRON.trees; n++) {
-    const a = rnd() * Math.PI * 2, e = edge(a), d = 2.5 + Math.pow(rnd(), 1.8) * 85, x = e[0] + e[2] * d + (rnd() - 0.5) * 6, z = e[1] + e[3] * d + (rnd() - 0.5) * 6;
-    const fk = forestK(clamp(e[0], W.x0 + 2, W.x1 - 2), clamp(e[1], W.z0 + 2, W.z1 - 2));
-    if (rnd() > 0.3 + 0.7 * fk) continue;
-    const sc = 0.8 + rnd() * 0.7, g = greens[Math.floor(rnd() * greens.length)], y = d > 36 ? 0.15 * (d - 36) / 44 : 0;
-    b.box(0.32 * sc, 1.5 * sc, 0.32 * sc, 0x5d4430, { x, y, z });
-    if (rnd() < 0.45 + 0.4 * fk) { b.cone(1.5 * sc, 3.4 * sc, 6, g, { x, y: y + 1.1 * sc, z }); b.cone(1.05 * sc, 2.6 * sc, 6, g, { x, y: y + 3.1 * sc, z }); }
-    else b.ico(1.75 * sc, g, { x, y: y + 2.9 * sc, z });
+  for (let i = 0; i < P.length; i++) {
+    const j = (i + 1) % P.length;
+    for (let k = 0; k < P[i].length - 1; k++) {
+      b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]);
+      b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]);
+    }
+    const k = P[i].length - 1;
+    b.triV(P[i][k], P[j][k], [cx, -APRON.depth, cz], C[i][k], C[j][k], deep);
   }
   return b;
 }
@@ -895,7 +905,7 @@ function worldStatic() {
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
   worldGround(chunkOf, GC, nx, nz, cell, gcAt, WV.forest);
-  /* v354: Gelände und Baumsaum außerhalb der Welt (worldApron) */
+  /* v358: Grasrand und Felskörper der schwebenden Insel (worldApron) */
   try { WV.apron = fnode(R.mesh(worldApron(gcAt)), { shadow: false }); R.nodes.push(WV.apron); } catch (e) { console.warn("Kulisse:", e); WV.apron = null; }
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
   R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map(); WV.bgGH = new Map(); WV.bgHi = new Map(); TLOD.dirty = true;
@@ -1715,7 +1725,7 @@ function bgFinal(b) {
   if (b.sp === "eiche" && area !== "altwald") sz = Math.min(sz, 3);
   b.fz = sz; b.fa = area;
   b.fs = +clamp(b.s / FWM.TH[sz], 0.8, 1.25).toFixed(2);
-  b.fv = (((b.k * 2654435761) >>> 0) >>> 11) % 3;
+  b.fv = (((b.k * 2654435861) >>> 0) >>> 11) % 3;
   b.fx = +b.x.toFixed(2); b.fzz = +b.z.toFixed(2); b.fry = +b.ry.toFixed(2);
   return b;
 }
