@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v352";
+const VERSION = "v354";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -13,7 +13,7 @@ const MAX_PICS = 260;
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=350",
+  "./style.css?v=354",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -36,7 +36,7 @@ const SHELL = [
   "./lucky.js?v=271",
   "./loading.js?v=109",
   "./game.js?v=340",
-  "./farm.js?v=347",
+  "./farm.js?v=354",
   "./erbe.js?v=349",
   "./village.js?v=344",
   "./farmstory.js?v=349",
@@ -58,17 +58,17 @@ const SHELL = [
   "./forest.js?v=109",
   "./camp.js?v=351",
   "./vista.js?v=352",
-  "./farmview.js?v=349",
-  "./worldview.js?v=351",
+  "./farmview.js?v=354",
+  "./worldview.js?v=354",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
-  "./hunt.js?v=350",
+  "./hunt.js?v=354",
   "./exhibits.js?v=340",
   "./rent.js?v=340",
-  "./villagesite.js?v=351",
-  "./villagepeople.js?v=351",
-  "./peopletraffic.js?v=351",
+  "./villagesite.js?v=354",
+  "./villagepeople.js?v=354",
+  "./peopletraffic.js?v=354",
   "./villageview.js?v=351",
   "./bauplatz.js?v=274",
   "./fishview.js?v=333",
@@ -79,6 +79,7 @@ const SHELL = [
   "./jail.js?v=323",
   "./lucky3d.js?v=273",
   "./luckytest.js?v=271",
+  "./jagdtest.js?v=353",
   "./officekitchen.js?v=263",
   "./officefp.js?v=323",
   "./manifest.webmanifest",

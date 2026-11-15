@@ -3,6 +3,8 @@
 const VILLAGE_SITE = (() => {
   const half=.9,walk=.78,curb=.045,front=1.95,main=18.5,edge=main+.9,sidewalk=half+curb+walk/2;
   const roads=[-62,-98],radius=1.1;
+  /* v354: Vorläufiger Wendeplatz am Ende des Lindenwegs – eine Lage für Fahrfläche, Bordstein und Gehwegring. */
+  const turn={x:-62,z:65.2,r:2.4,rim:3.18};
   function lot(p){const back=p.road===-62&&p.side<0||p.road===-98&&p.side>0?18:17.5;
     const a=p.road+p.side*front,b=p.road+p.side*back;return [Math.min(a,b),p.z-6,Math.max(a,b),p.z+6];}
   function gate(p){const d=VILLAGE.door(p);return [p.road+p.side*front,d[1]];}
@@ -33,7 +35,10 @@ const VILLAGE_SITE = (() => {
     for(const [a,c]of lines){const vertical=a[0]===c[0],lo=vertical?a[1]:a[0],hi=vertical?c[1]:c[0],v=vertical?a[0]:a[1];
       b.plate(vertical?half*2:hi-lo,vertical?hi-lo:half*2,asphalt,{x:vertical?v:(lo+hi)/2,z:vertical?(lo+hi)/2:v,y0:y});
       for(const side of [-1,1]){
-        const start=vertical&&lo===edge?edge+radius:lo,cuts=[start,hi];for(const q of joints)if((vertical?q[0]:q[1])===v){const t=vertical?q[1]:q[0];cuts.push(Math.max(start,t-half-walk-curb),Math.min(hi,t+half+walk+curb));}
+        /* v354: Am Wendeplatz enden Gehweg und Bordstein dort, wo der Bordstein den Kreis trifft –
+           vorher liefen sie als helle Streifen bis in die Fahrfläche. */
+        const stop=!expanded&&vertical&&v===turn.x?turn.z-Math.sqrt(turn.r*turn.r-(half+curb)**2):hi;
+        const start=vertical&&lo===edge?edge+radius:lo,cuts=[start,stop];for(const q of joints)if((vertical?q[0]:q[1])===v){const t=vertical?q[1]:q[0];cuts.push(Math.max(start,t-half-walk-curb),Math.min(stop,t+half+walk+curb));}
         const sorted=[...new Set(cuts)].sort((x,z)=>x-z);
         for(let i=1;i<sorted.length;i++){const l=sorted[i-1],h=sorted[i],mid=(l+h)/2,x=vertical?v+side*(half+curb+walk/2):mid,z=vertical?mid:v+side*(half+curb+walk/2);
           if(inRoad(x,z))continue;
@@ -61,7 +66,13 @@ const VILLAGE_SITE = (() => {
     for(const x of breaks.concat([right+half+radius])){const stop=Math.min(right,x-half-radius);if(stop>at)b.plate(stop-at,walk,paving,{x:(at+stop)/2,z:edge+curb+walk/2,y0:.047});at=x+half+radius;}
     if(!expanded){
       /* v344: Provisorischer Wendeplatz zwischen letztem Grundstück und künftigem Block. */
-      b.disc(3.18,48,paving,{x:-62,z:65.2,y0:.046});b.disc(2.4,48,asphalt,{x:-62,z:65.2,y0:.049});
+      /* v354: Fahrfläche als Scheibe; Bordstein und Gehweg als Ringe, die an der Einmündung offen sind und genau an
+         die geraden Kanten anschließen (Öffnung = Fahrbahn + Bordstein). Keine Fläche liegt mehr über einer anderen. */
+      b.disc(turn.r,48,asphalt,{x:turn.x,z:turn.z,y0:.034});
+      const open=half+curb,ring=(r0,r1,c,y)=>{const a0=Math.asin(open/r0),a1=Math.asin(open/r1),n=44,pt=(r,a)=>[turn.x+r*Math.sin(a),turn.z-r*Math.cos(a)];
+        for(let i=0;i<n;i++){const f0=i/n,f1=(i+1)/n,i0=a0+(2*Math.PI-2*a0)*f0,i1=a0+(2*Math.PI-2*a0)*f1,o0=a1+(2*Math.PI-2*a1)*f0,o1=a1+(2*Math.PI-2*a1)*f1;
+          quad(b,[pt(r0,i0),pt(r0,i1),pt(r1,o1),pt(r1,o0)],c,y);}};
+      ring(turn.r,turn.r+curb,stone,.052);ring(turn.r+curb,turn.rim,paving,.047);
       /* Den zweiten Anschluss bis zur Erschließung wieder mit Bordkante schließen. */
       b.plate((half+radius)*2,.12,0xb9b3a6,{x:-98,z:main+.96,y0:.032});
     }else{
@@ -96,8 +107,18 @@ const VILLAGE_SITE = (() => {
   function gateMesh(){const b=new FM.MB();for(const y of [.23,.47])b.box(.065,.075,1.2,0x9b7954,{y,z:.6});for(let i=0;i<6;i++)b.box(.045,.47,.085,0xab8b66,{z:.1+i*.2,y:.09});return b;}
   function mailboxMesh(){const b=new FM.MB();b.box(.07,.87,.07,0x67503c);b.box(.28,.28,.31,0x536b71,{y:.87});b.box(.31,.035,.34,0x71878b,{y:1.15});b.box(.12,.018,.018,0x263b40,{y:1.08,z:.164});return b;}
   function mailFlap(){const b=new FM.MB();b.box(.25,.23,.025,0x617e83,{y:-.23});b.box(.05,.025,.027,0xd2bf88,{y:-.18,z:.025});return b;}
-  /* v344: Umrisse gelten für Füße UND Körper, auch bei älteren gespeicherten Wegen. */
-  function blocked(x,z,r=.34){
+  /* v354: Sichtbarer Umriss eines Verkaufsstands (Tresen, Stützen, Markise) bzw. des Fischmarkts.
+     Der Hofstand wird versetzt gezeichnet (farmStallShift) – geprüft wird, was man sieht. */
+  function stallBox(o){const c=farmCenter(o),s=farmSize(o);if(o.t!=='stall')return [c[0]-s[0]/2,c[1]-s[1]/2,c[0]+s[0]/2,c[1]+s[1]/2];
+    const odd=farmRotation(o)%2,sh=typeof farmStallShift==='function'?farmStallShift(o):0,hx=odd?.5:.98,hz=odd?.98:.5;return [c[0]-hx,c[1]+sh-hz,c[0]+hx,c[1]+sh+hz];}
+  /* v354: Hofzaun und Sägewerkszaun (dieselben Linien und Tore wie das Wegenetz der Arbeiter). */
+  function fenceHit(x,z,r){if(typeof navWalls!=='function')return false;const pad=r+.06;
+    for(const w of navWalls()){const v=w[0]?x:z,t=w[0]?z:x;if(Math.abs(v-w[1])<pad&&t>w[2]-pad&&t<w[3]+pad&&!(t>w[4]+r&&t<w[5]-r))return true;}return false;}
+  /* v344: Umrisse gelten für Füße UND Körper, auch bei älteren gespeicherten Wegen.
+     v354: extra – zusätzliche Kreise [{x,z,r}] (abgestellte Räder, reservierte Plätze). */
+  function blocked(x,z,r=.34,extra){
+    if(extra&&extra.some(q=>Math.hypot(x-q.x,z-q.z)<r+q.r))return true;
+    if(fenceHit(x,z,r))return true;
     for(const p of VILLAGE_DATA.plots){const h=VILLAGE.home(p.id);if(!h.resident&&!['ready','building'].includes(h.status))continue;
       const k=VILLAGE_DATA.houses[h.type],dx=x-p.x,dz=z-p.z,lx=dx*Math.cos(p.ry)-dz*Math.sin(p.ry),lz=dx*Math.sin(p.ry)+dz*Math.cos(p.ry);
       const boxes=[[-3,-2.6,3,4.65]];if(h.type==='familie')boxes.push([-5.9,-2.2,-2.2,2.2]);
@@ -107,17 +128,23 @@ const VILLAGE_SITE = (() => {
       if(x>=a[0]-pad&&x<=a[2]+pad&&(Math.abs(z-a[1])<pad||Math.abs(z-a[3])<pad))return true;
       if(Math.abs(x-g[0])<pad&&z>=a[1]-pad&&z<=a[3]+pad&&Math.abs(z-g[1])>.6-r)return true;
     }
-    return S.farm.objs.some(o=>{if(['path','road','field','tree','board'].includes(o.t))return false;const s=farmSize(o),a=o.x-FG/2,b=o.z-FG/2;return x>a-r&&x<a+s[0]+r&&z>b-r&&z<b+s[1]+r;});
+    return S.farm.objs.some(o=>{if(['path','road','field','tree','board'].includes(o.t))return false;
+      if(o.t==='stall'){const q=stallBox(o);if(x>q[0]-r&&x<q[2]+r&&z>q[1]-r&&z<q[3]+r)return true;}
+      const s=farmSize(o),a=o.x-FG/2,b=o.z-FG/2;return x>a-r&&x<a+s[0]+r&&z>b-r&&z<b+s[1]+r;});
   }
-  function clearLine(a,b,r=.34){const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.15));for(let i=0;i<=n;i++)if(blocked(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,r))return false;return true;}
-  function safePath(points,r=.34){const out=[points[0]];if(blocked(...points[0],r))return null;
+  function clearLine(a,b,r=.34,extra){const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.15));for(let i=0;i<=n;i++)if(blocked(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,r,extra))return false;return true;}
+  function safePath(points,r=.34,extra){const clearLine0=clearLine,blocked0=blocked;
+    return (function(clearLine,blocked){const out=[points[0]];if(blocked(...points[0],r))return null;
     for(let i=1;i<points.length;i++){const a=out[out.length-1],b=points[i];if(clearLine(a,b,r)){out.push(b);continue;}
       const step=.5,pad=8,x0=Math.floor(Math.min(a[0],b[0])-pad),z0=Math.floor(Math.min(a[1],b[1])-pad),w=Math.ceil((Math.abs(a[0]-b[0])+2*pad)/step)+1,H=Math.ceil((Math.abs(a[1]-b[1])+2*pad)/step)+1;
       const start=[Math.round((a[0]-x0)/step),Math.round((a[1]-z0)/step)],end=[Math.round((b[0]-x0)/step),Math.round((b[1]-z0)/step)],key=q=>q[1]*w+q[0],world=q=>[x0+q[0]*step,z0+q[1]*step],queue=[start],prev=new Map([[key(start),null]]);let found=null;
       for(let j=0;j<queue.length&&j<30000;j++){const q=queue[j];if(q[0]===end[0]&&q[1]===end[1]&&clearLine(world(q),b,r)){found=q;break;}
         for(const [dx,dz]of [[1,0],[-1,0],[0,1],[0,-1]]){const v=[q[0]+dx,q[1]+dz],k=key(v);if(v[0]<0||v[0]>=w||v[1]<0||v[1]>=H||prev.has(k)||!clearLine(j===0?a:world(q),world(v),r))continue;prev.set(k,q);queue.push(v);}}
-      if(!found)return null;const path=[];for(let q=found;q;q=prev.get(key(q)))path.push(world(q));path.reverse();out.push(...path,b);
-    }return out;
+      if(!found)return null;const path=[];for(let q=found;q;q=prev.get(key(q)))path.push(world(q));path.reverse();
+      /* v354: Treppenstufen des Rasters begradigen, solange die Abkürzung selbst frei ist. */
+      const line=[a,...path,b],slim=[a];for(let k=0;k<line.length-1;){let m=line.length-1;while(m>k+1&&!clearLine(line[k],line[m],r))m--;slim.push(line[m]);k=m;}
+      out.push(...slim.slice(1));
+    }return out;})((u,v,rr)=>clearLine0(u,v,rr,extra),(x,z,rr)=>blocked0(x,z,rr,extra));
   }
   function homeMesh(type,style){const b=RENT.homeMesh(style);if(type==='familie'){
     b.box(3.6,2.65,4.2,0xd4c5a7,{x:-4.05,z:0});b.roof(3.9,4.5,1.45,0x81594b,{x:-4.05,y:2.65});
@@ -127,5 +154,5 @@ const VILLAGE_SITE = (() => {
   function construction(type){const b=new FM.MB(),family=type==='familie',w=family?8.8:5.8,cx=family?-1.5:0;
     b.plate(w,7.4,0xb7b0a4,{x:cx,z:.8,y0:.055});for(const x of family?[-5.7,-2.6,2.6]:[-2.6,2.6])for(const z of [-2.1,2.1,3.9])b.box(.14,2.7,.14,0xc69a66,{x,z});
     for(const y of [1.3,2.6])b.box(w,.12,.12,0xc69a66,{x:cx,y,z:-2.1});if(family)b.box(3.6,.25,4.2,0xc3b9a6,{x:-4.05,z:0,y:.1});return b;}
-  return {half,walk,curb,front,main,edge,sidewalk,roads,lot,gate,mailbox,bikePark,bikeClear,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
+  return {half,walk,curb,front,main,edge,sidewalk,roads,turn,lot,gate,mailbox,bikePark,bikeClear,stallBox,path,segments,mainBreaks,fencePlan,roadMesh,garden,fenceMesh,gateMesh,mailboxMesh,mailFlap,blocked,clearLine,safePath,homeMesh,construction};
 })();

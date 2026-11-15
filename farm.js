@@ -606,7 +606,7 @@ function farmPlant(o, crop) {
   if (S.money < c.seed) { toast("Für Saatgut fehlt das Geld.", "warn"); return false; }
   S.money -= c.seed; S.expense += c.seed;
   o.crop = crop; o.end = S.time + c.t; o.w = false; o.rot = o.last && o.last !== crop ? 1 : 0;
-  farmEvent("plant:" + crop);
+  farmEvent("plant:" + crop, 1, o.id);   /* v354: mit Feld-Kennung */
   return true;
 }
 function farmWater(o) {
@@ -1619,13 +1619,14 @@ function farmChapterOf(c) {
 }
 function farmChapter() { const q = farmQuest(); return farmChapterOf(q ? q.c : FCHAPTERS.length - 1); }
 function farmDone() { return !!(S.farm && !S.farm.sold && (S.farm.done || (S.farm.qset && FQUESTS.every((q, k) => farmQDone(k))))); }
-function farmEvent(key, n) {
+function farmEvent(key, n, ref) {
   if (!S.farm) return;
   n = n || 1;
   const T = S.farm.tally || (S.farm.tally = {});
   T[key] = (T[key] || 0) + n;
   farmQuestCheck();
-  if (typeof farmTutSignal === "function") farmTutSignal(key, n);
+  /* v354: ref – das betroffene Objekt (Feld), damit der Rundgang dasselbe Feld nicht doppelt zählt */
+  if (typeof farmTutSignal === "function") farmTutSignal(key, n, ref);
 }
 /* Erledigtes abhaken – auch mehrere auf einmal (nachträglich Geschafftes) */
 let farmQBusy = false;
