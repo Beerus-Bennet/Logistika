@@ -364,7 +364,7 @@ function openCorp(id) {
     t.chat.push({ me: false, t: c.wave ? `${c.boss}, ${r.name}. Sie wollen einen Konzern kaufen? Mutig. Der Aufsichtsrat hört zu – machen Sie ein Angebot.`
       : `${c.boss}, ${r.name}. Sie wollen uns kaufen? Machen Sie ein Angebot.` });
   }
-  /* v353: Auch beim erneuten Öffnen bleibt das vollständige Paket stabil.
+  /* v355: Auch beim erneuten Öffnen bleibt das vollständige Paket stabil.
      Eine ältere Verhandlung erhält einmalig einen sichtbaren Angebotsstand. */
   if (!t.deal353) {
     const source = corpBusinessAppraisal(id, t.fleet306 && t.fleet306.length ? t.fleet306 : appraisal.fleet);

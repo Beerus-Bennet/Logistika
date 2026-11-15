@@ -77,7 +77,8 @@ test('Ein alter direkter Weg durch den Sägewerkszaun wird durch das Tor ersetzt
 test('Beide Schieberichtungen passieren die Gartentore mit dem ganzen Rad',()=>{
  run(`prepared();S.time=600;for(const h of Object.values(VILLAGE.state().homes))h.life={mailDay:0,shopDay:0};VILLAGE_PEOPLE.attach(FV.R);var badPush=[];`);
  for(const id of ['000','001']){C.id=id;assert.ok(run('VILLAGE_PEOPLE.start(id,"shop",false)'));
-  for(const index of [2,13])for(let k=0;k<40;k++){C.pushIndex=index;C.f=k/40;run(`var L=VILLAGE.home(id).life.active;L.index=pushIndex;L.at=S.time-L.steps[pushIndex].duration*f;L.lastTime=S.time;var actor=VILLAGE_PEOPLE._world.actors.get(id);actor.prevN=actor.prevB=null;VILLAGE_PEOPLE.step(.05,20);if(!VILLAGE_SITE.bikeClear(actor.bike.x,actor.bike.z,actor.bike.ry)||L.blocked)badPush.push({id,index:pushIndex,f,x:actor.bike.x,z:actor.bike.z,ry:actor.bike.ry,body:L.blocked});`);}
+  /* v354: Schieben ist jetzt Schritt 3 (hinaus) und 15 (hinein); Halt statt blocked. */
+  for(const index of [3,15])for(let k=0;k<40;k++){C.pushIndex=index;C.f=k/40;run(`var L=VILLAGE.home(id).life.active;L.index=pushIndex;L.at=S.time-L.steps[pushIndex].duration*f;L.lastTime=S.time;var actor=VILLAGE_PEOPLE._world.actors.get(id);actor.prevN=actor.prevB=null;VILLAGE_PEOPLE.step(.05,20);if(L.steps[pushIndex].kind!=='push'||!VILLAGE_SITE.bikeClear(actor.bike.x,actor.bike.z,actor.bike.ry)||VILLAGE_SITE.blocked(actor.node.x,actor.node.z,.3)||L.hold)badPush.push({id,index:pushIndex,f,x:actor.bike.x,z:actor.bike.z,ry:actor.bike.ry,body:L.hold});`);}
  }
  assert.equal(run('badPush.length'),0,run('JSON.stringify(badPush.slice(0,5))'));
 });

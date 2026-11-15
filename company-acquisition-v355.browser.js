@@ -1,9 +1,9 @@
 /* Optionaler echter Browsercheck: lokaler Server auf Port 8000, Playwright und
-   Chromium erforderlich. node company-acquisition-v353.browser.js
+   Chromium erforderlich. node company-acquisition-v355.browser.js
    Nur generierte Testdaten unter ?test=1; kein Zugriff auf den Live-Spielstand. */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const output=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-company-v353';
+const output=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-company-v355';
 const url=process.env.LOGISTIKA_TEST_URL||'http://127.0.0.1:8000/';
 fs.mkdirSync(output,{recursive:true});
 (async()=>{

@@ -28,7 +28,7 @@ const PEOPLE_TRAFFIC = (() => {
       let from=a.from,dx=a.want.x-from.x,dz=a.want.z-from.z,d=Math.hypot(dx,dz);
       /* Alte Spielstände dürfen bereits überlappende Standorte enthalten. Nur
          an einen freien, baulich erreichbaren Nachbarpunkt versetzen. */
-      if(!free(a,from,from,actors)){
+      if(!a.rail&&!free(a,from,from,actors)){
         let found=null;
         for(let r=.25;r<=3&&!found;r+=.25)for(let i=0;i<16;i++){
           const t=i*Math.PI/8,p={x:from.x+Math.cos(t)*r,z:from.z+Math.sin(t)*r};
@@ -36,6 +36,10 @@ const PEOPLE_TRAFFIC = (() => {
         }
         if(found){a.from=from=found;dx=a.want.x-from.x;dz=a.want.z-from.z;d=Math.hypot(dx,dz);}
       }
+      /* v354: Bewohner bleiben auf ihrem geprüften Weg („Schiene“): Zielpunkt frei → vorrücken,
+         sonst an Ort und Stelle warten. Kein seitliches Ausweichen quer durch Zaun, Tresen oder Hauswand. */
+      if(a.rail){const ok=free(a,a.want,a.want,actors);a.used=!ok&&a.pass&&free(a,a.want,a.want,actors.filter(o=>!o.rail));
+        a.to=ok||a.used?a.want:from;a.delayed=a.to===from&&d>.003;continue;}
       const limit=Math.max(.025,dt*12),k=d?Math.min(1,limit/d):0;
       let to={x:from.x+dx*k,z:from.z+dz*k};
       if(a.avoid&&a.avoid.left>0){
@@ -97,24 +101,28 @@ const PEOPLE_TRAFFIC = (() => {
     if(typeof VILLAGE_PEOPLE!=='undefined')for(const [id,e]of VILLAGE_PEOPLE._world.actors){
       const h=VILLAGE.home(id),L=h&&h.life&&h.life.active,n=e.node,b=e.bike,kind=L&&L.steps[L.index].kind;
       const attached=n.visible&&L&&['push','look','mount','ride','dismount'].includes(kind);
-      const bikeParts=()=>[-.95,-.48,0,.48,.95].map(z=>({x:Math.sin(b.ry)*z,z:Math.cos(b.ry)*z,r:.25}));
-      const parts=[{x:0,z:0,r:.39}];
+      const riding=kind==='ride',bikeParts=()=>[-.95,-.48,0,.48,.95].map(z=>({x:Math.sin(b.ry)*z,z:Math.cos(b.ry)*z,r:riding?.2:.25}));
+      /* v354: Im Sattel zählt die schmale Silhouette – zwei Radler passen auf ihren Spuren aneinander vorbei. */
+      const parts=[{x:0,z:0,r:riding?.26:.39}];
       if(attached)for(const q of bikeParts())parts.push({x:b.x-n.x+q.x,z:b.z-n.z+q.z,r:q.r});
+      const old=history.get('resident:'+id),stuck=old&&old.node===n&&old.stuck||0;
       add('resident:'+id,n,parts,(p,delayed)=>{
         const dx=p.x-n.x,dz=p.z-n.z;n.x=p.x;n.z=p.z;
         if(attached){b.x+=dx;b.z+=dz;e.prevB={x:b.x,z:b.z,ry:b.ry};}
         e.prevN={x:p.x,z:p.z,ry:n.ry};
         if(L)L.trafficWait=!!delayed;
-        if(delayed&&distance(p,ahead.get('resident:'+id))<.003&&['walk','push'].includes(kind)){
+        if(delayed&&['walk','push'].includes(kind)){
           for(const l of e.legs){l.thigh.rx=l.shin.rx=l.foot.rx=0;}
         }
-      });
+      },{rail:true,valid:null,stuck,pass:stuck>8});
       if(b.visible&&!attached)add('bike:'+id,b,bikeParts(),()=>{},{fixed:true,owner:'resident:'+id});
     }
     const ahead=new Map(actors.map(a=>[a.id,{...a.from}]));
     solve(actors,Math.min(.1,Math.max(0,dt)));
     const next=new Map();
-    for(const a of actors){const p=a.to||a.from;a.apply(p,a.delayed);next.set(a.id,{pos:p,node:a.node,side:a.side,avoid:a.avoid});}
+    /* v354: stuck – Sekunden ohne Vorankommen. Stehen sich zwei Bewohner länger als 8 s gegenüber,
+       darf einer am anderen Bewohner vorbei (nie an Bauten, Arbeitern oder abgestellten Rädern). */
+    for(const a of actors){const p=a.to||a.from;a.apply(p,a.delayed);next.set(a.id,{pos:p,node:a.node,side:a.side,avoid:a.avoid,stuck:a.rail&&(a.delayed||a.used)?(a.stuck||0)+dt:0});}
     history=next;
   }
   return {step,solve,swept,reset(){history.clear();renderer=null;lastTime=null;}};

@@ -1,8 +1,11 @@
-# Unternehmenskauf v353 – Prüfung und Umsetzung
+# Unternehmenskauf v355 – Prüfung und Umsetzung
 
 Grundlage: „Logistika 2.pdf“, sieben Seiten, sowie GitHub `main` auf
-`bceb8c7` (v352). Vor Beginn und vor dem Upload wurden die offenen Pull
-Requests geprüft. Zu diesen Zeitpunkten war kein PR offen.
+`bceb8c7` (v352). Vor Beginn waren keine Pull Requests offen. Während des Uploads erschien
+Claudes PR #72 (v353/v354, Kopf `bed6700`). Er wurde in diesen Arbeitsbranch
+integriert; beide Seiten der gemeinsamen Lade- und CSS-Dateien bleiben erhalten.
+Diese Lieferung verwendet deshalb Version 355. main wurde nicht zusammengeführt
+oder veröffentlicht.
 
 ## Befunde
 
@@ -58,7 +61,7 @@ Nachweis eines einzelnen fehlerhaften Kaufs ausgegeben.
 ## Verifikation
 
 ```sh
-node company-acquisition-v353.test.js
+node company-acquisition-v355.test.js
 node company-values-v306.test.js
 node office-limits.test.js
 node office-value-v322.test.js
@@ -66,6 +69,12 @@ node review-v282.test.js
 node office-appearance-v298.test.js
 node worker-motion-v351.test.js
 node farmteam-v349.test.js
+node fixes-v354.test.js
+node village-life-v343.test.js
+# Der historische Jagdtest erwartet die Projektwurzel eine Ebene höher:
+mkdir -p .qa-v355
+cp hunt.test.js .qa-v355/hunt.test.js
+node .qa-v355/hunt.test.js
 ```
 
 18 gezielte Übernahmeszenarien und zwölf Firmenwertszenarien bestehen.
@@ -79,7 +88,7 @@ Browsercheck mit installiertem Playwright/Chromium und lokalem HTTP-Server:
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 # In einem zweiten Terminal:
-node company-acquisition-v353.browser.js
+node company-acquisition-v355.browser.js
 ```
 
 Der Browsercheck bedient Schieber und Kaufbutton. Er prüft Animation,
@@ -115,8 +124,8 @@ reproduziert. `officefp.js` wird durch diesen Branch nicht geändert.
 
 Generierte Testkäufe; kein echter Nutzer-Spielstand.
 
-![Kompakter mobiler Kaufbeleg](assets/company-v353-receipt.png)
+![Kompakter mobiler Kaufbeleg](assets/company-v355-receipt.png)
 
-![Haifisch-Moment während des Vorbeizugs](assets/company-v353-shark.png)
+![Haifisch-Moment während des Vorbeizugs](assets/company-v355-shark.png)
 
-![Kauf eines Premiumkonzerns](assets/company-v353-premium.png)
+![Kauf eines Premiumkonzerns](assets/company-v355-premium.png)

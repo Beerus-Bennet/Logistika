@@ -1,4 +1,4 @@
-/* v353: Verbindliche Übernahmepakete. Angebot, Übergabe und Beleg verwenden
+/* v355: Verbindliche Übernahmepakete. Angebot, Übergabe und Beleg verwenden
    dieselben Objekte; bestehende Käufe werden nicht nachträglich neu bewertet. */
 "use strict";
 

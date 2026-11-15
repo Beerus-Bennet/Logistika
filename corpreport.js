@@ -1,4 +1,4 @@
-/* v353: Kaufbeleg aus dem gespeicherten Ergebnis, mit lesbarer mobiler Übersicht. */
+/* v355: Kaufbeleg aus dem gespeicherten Ergebnis, mit lesbarer mobiler Übersicht. */
 "use strict";
 function corpWinReport(ev) {
   if (document.getElementById("corpShow")) return;

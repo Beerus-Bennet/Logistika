@@ -673,6 +673,45 @@ function worldTreeSpace(chunks, chunkOf, MK, rockObs) {
    eines Flecks endet innerhalb der markierten Kacheln, dort ist die Farbe genau die Dreiecks-Interpolation der groben Kachel. */
 const GROUND_SUB = 3;
 const GROUND_A = { moss: 0.72, damp: 0.7, leaf: 0.78, needle: 0.72, earth: 0.8, glade: 0.42 };     /* Deckkraft je Bodenart */
+/* v354: Landschaftskulisse rund um die Welt. Der Boden endete an der Gitterkante (x, z = −160 … 104) als gerade Linie vor
+   der Hintergrundfarbe; Kulissenbäume am Rand standen über dem Nichts. Jetzt schließt außen ein Geländering an:
+   an der Kante die Bodenfarbe der Welt, danach Wiesen, Felder und Waldstücke, weiter draußen sanfte Hügel, die im Dunst
+   (Nebel der Szene = Farbe des Hintergrunds) verschwinden. Davor ein unregelmäßiger Saum vereinfachter Bäume, dichter, wo
+   innen Wald steht. Ein einziges Netz ohne Schatten, fest (Zufall mit festem Startwert), keine Spielfläche: Kamera-,
+   Bau- und Laufgrenzen bleiben, wie sie sind. */
+const APRON = { rings: [-3, 12, 36, 80, 170, 330, 640, 1500], hills: [-0.06, -0.06, 0.15, 0.9, 3.2, 8, 17, 30], seg: 208, trees: 380 };
+function worldApron(gcAt) {
+  const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, N = APRON.seg, K = APRON.rings.length;
+  const rnd = erbeRng(35401), mixA = (a, c, t) => [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t, a[2] + (c[2] - a[2]) * t];
+  const tones = [G3.col(0x6f9c44), G3.col(0x8bb85a), G3.col(0xb9b468), G3.col(0x537e36), G3.col(0x9aa860)], haze = G3.col(0x8fae9c);
+  /* Randpunkt in Richtung a und der Weg nach außen (radial) */
+  const edge = a => { const dx = Math.cos(a), dz = Math.sin(a), t = Math.min(hx / Math.max(1e-6, Math.abs(dx)), hz / Math.max(1e-6, Math.abs(dz))); return [cx + dx * t, cz + dz * t, dx, dz]; };
+  const land = (a, k) => { const n = Math.sin(a * 5 + k * 1.7) * 0.5 + Math.sin(a * 11 - k * 0.9) * 0.3 + Math.sin(a * 23 + k * 2.3) * 0.2; return tones[Math.floor((n * 0.5 + 0.5) * 4.999)]; };
+  const P = [], C = [];
+  for (let i = 0; i < N; i++) {
+    const a = i / N * Math.PI * 2, e = edge(a), seam = gcAt(clamp(e[0], W.x0 + 0.5, W.x1 - 0.5), clamp(e[1], W.z0 + 0.5, W.z1 - 0.5)), rp = [], rc = [];
+    for (let k = 0; k < K; k++) {
+      const d = APRON.rings[k], roll = 0.55 + 0.45 * Math.sin(a * 7 + k * 1.3) * Math.sin(a * 3 - k * 0.7) + 0.25 * Math.sin(a * 17 + k);
+      rp.push([e[0] + e[2] * d, APRON.hills[k] * (k < 2 ? 1 : Math.max(0.25, roll)), e[1] + e[3] * d]);
+      rc.push(k < 2 ? [seam[0], seam[1], seam[2]] : mixA(mixA(seam, land(a, k), k === 2 ? 0.55 : 1), haze, Math.max(0, (k - 3) / (K - 3)) * 0.55));
+    }
+    P.push(rp); C.push(rc);
+  }
+  for (let i = 0; i < N; i++) { const j = (i + 1) % N; for (let k = 0; k < K - 1; k++) {
+    b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]); b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]); } }
+  /* Baumsaum: vereinfachte Nadel- und Laubbäume, nach außen lichter */
+  const greens = [0x2f5f33, 0x3b7038, 0x4a8440, 0x5a9147, 0x44763a];
+  for (let n = 0; n < APRON.trees; n++) {
+    const a = rnd() * Math.PI * 2, e = edge(a), d = 2.5 + Math.pow(rnd(), 1.8) * 85, x = e[0] + e[2] * d + (rnd() - 0.5) * 6, z = e[1] + e[3] * d + (rnd() - 0.5) * 6;
+    const fk = forestK(clamp(e[0], W.x0 + 2, W.x1 - 2), clamp(e[1], W.z0 + 2, W.z1 - 2));
+    if (rnd() > 0.3 + 0.7 * fk) continue;
+    const sc = 0.8 + rnd() * 0.7, g = greens[Math.floor(rnd() * greens.length)], y = d > 36 ? 0.15 * (d - 36) / 44 : 0;
+    b.box(0.32 * sc, 1.5 * sc, 0.32 * sc, 0x5d4430, { x, y, z });
+    if (rnd() < 0.45 + 0.4 * fk) { b.cone(1.5 * sc, 3.4 * sc, 6, g, { x, y: y + 1.1 * sc, z }); b.cone(1.05 * sc, 2.6 * sc, 6, g, { x, y: y + 3.1 * sc, z }); }
+    else b.ico(1.75 * sc, g, { x, y: y + 2.9 * sc, z });
+  }
+  return b;
+}
 function worldGround(chunkOf, GC, nx, nz, cell, gcAt, F) {
   const W = WGRID, N = GROUND_SUB, sc = cell / N, col = h => G3.col(h);
   const prep = [];
@@ -856,6 +895,8 @@ function worldStatic() {
     res.grass.instances.forEach(g => chunkOf(g.position[0], g.position[2]).v.add(WV.grassm[g.variantSeed % BUSH.GRASS.variants], g.position[0], g.position[2], g.rotationY, g.scale[0], g.scale[1], g.tint));
   }
   worldGround(chunkOf, GC, nx, nz, cell, gcAt, WV.forest);
+  /* v354: Gelände und Baumsaum außerhalb der Welt (worldApron) */
+  try { WV.apron = fnode(R.mesh(worldApron(gcAt)), { shadow: false }); R.nodes.push(WV.apron); } catch (e) { console.warn("Kulisse:", e); WV.apron = null; }
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
   R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map(); WV.bgGH = new Map(); WV.bgHi = new Map(); TLOD.dirty = true;
   for (const [key, c] of chunks) {
@@ -3459,6 +3500,8 @@ function worldStep(dt, time) {
     if (e && !e.falling) { e.node.rz = Math.sin((now - WV.hit.t0) * 38) * 0.05 * k; if (!k) { e.node.rz = 0; WV.hit = null; } } else WV.hit = null;
   }
   /* v185: Maschinen des Sägewerks – Werkstück, Ablauf und Signalleuchte nach dem Spielstand (sawwerk.js) */
+  /* v354: In der Ich-Perspektive (Hochsitz, Sägen) steht hinter der Welt die gemalte Aussicht – dort bleibt die Kulisse aus */
+  if (WV.apron) WV.apron.visible = !FV.fp;
   if (typeof SWK !== "undefined") SWK.step(dt, time);
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);

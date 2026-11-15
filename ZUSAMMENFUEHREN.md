@@ -1,3 +1,25 @@
+## v355 – Verbindliche Unternehmenskäufe und Übernahmeinszenierung
+
+PR #73 enthält den Kopf `bed6700` von PR #72 (v353/v354) zusätzlich zum Unternehmenskauf. Erst #72, dann #73 kann auf main zusammengeführt werden; keine automatische Zusammenführung/Veröffentlichung durch diese Arbeit. Alle Farm-/Jagd-/Bewohner-Änderungen aus #72 bleiben enthalten. Gemeinsame index.html/style.css/sw.js-Konflikte in diesem Arbeitsbranch aufgelöst, Lieferung/Cache v355; Jagd-/Hof-Dateien behalten ihre v354-Verweise und jagdtest.js v353.
+
+corpassets.js vor corp.js, corpreport.js nach corp.js und vor corpshark.js laden und im SW cachen. Neue Reservierungen und Kaufbelege verwenden die stabilen internen Felder deal353/receipt353/sites353 (Schema 353), unabhängig von der Liefernummer 355. Vertragspaket vor dem Kauf festlegen, dieselben IDs vollständig übertragen. Keine automatische Auszahlung/Personalentfernung bei vorhandenem Büro. save() gibt Erfolg/Misserfolg zurück; bei Misserfolg Kauf und Verhandlungszustimmung zurücknehmen. Beleg und Animation rein darstellend; keine Vergabe am Animationsende. Details und Grenzen: docs/UNTERNEHMENSKAUF-v355.md. Tests company-acquisition-v355.test.js, company-values-v306.test.js und optional company-acquisition-v355.browser.js.
+
+## v354 – Sammelkorrektur (Rundgang, Bewohnerwege, Jagd, Wendeplatz, Kartenrand)
+
+Basis main bceb8c7 (v352) plus v353 (Jagd-Testbühne, im selben Branch). Geänderte Dateien: farm.js, farmview.js, hunt.js, peopletraffic.js, villagepeople.js, villagesite.js, worldview.js, style.css (drei Blöcke am Ende), index.html, sw.js; Tests village-life-v343, worker-motion-v351 angepasst, fixes-v354 neu.
+
+villagepeople.js: Schrittfolge des Einkaufs hat jetzt 18 Schritte (zwei `turn`); wer Schritt-Indizes fest verdrahtet hat (früher 2/13 Schieben, 6 Absteigen am Markt), auf `kind` bzw. `zone` umstellen. `life.active.v` ist 354; ältere Abläufe enden beim nächsten Takt ohne Nachbuchung. Die Lage kommt aus `pose`; die frühere Ortsglättung und `L.blocked` gibt es nicht mehr (`L.hold` = wartet auf freien Weg). `access().mount/back` liegen auf der rechten Fahrspur und sind je Straßenseite versetzt.
+
+villagesite.js: `blocked(x, z, r, extra)` kennt den sichtbaren Stand (`stallBox`) und den Hofzaun (`navWalls` aus team.js, mit `typeof`-Schutz); `clearLine`/`safePath` reichen `extra` durch. Der Standversatz steht nur noch in `farmStallShift` (farmview.js) – beim Zusammenführen nicht wieder als Zahl in `farmObjNode` eintragen.
+
+peopletraffic.js: Bewohner laufen mit `rail` (kein seitliches Ausweichen, kein `valid`); Arbeiter unverändert.
+
+farmview.js/farm.js: `farmEvent(key, n, ref)` und `farmTutSignal(key, n, ref)` haben ein drittes, optionales Argument. Klassen der Rundgang-Karte heißen `ft-mini`, `ft-tiny`, `ft-drag` (`.mini` ist global vergeben).
+
+hunt.js: neue Darstellungsprofile `LEG_FU_V`/`LEG_HU_V` nur für `deerUpper`; `NECK`, `LEG_FU`, `LEG_HU` und alle Zonen unverändert. Trefferbild: `both(o, meshFn, par)`.
+
+worldview.js: `worldApron` wird nach `worldGround` einmal je Weltaufbau gebaut (`WV.apron`), in `worldStep` für die Ich-Perspektive ausgeblendet.
+
 ## v351 – Arbeiterbewegung, Werkzeugregale, Camp-Rückweg und Fahrräder
 
 Basis main f0614dc (PR #68). Paralleler Jagd-PR #69 wird zusätzlich in diesen Entwurf integriert; dessen hunt.js, style.css, Tests und Doku behalten. Delivery-Version 351, Jagd-Assets weiter Version 350. Vor/nach Upload alle offenen PRs und main prüfen; keine automatische Zusammenführung auf main oder Veröffentlichung.

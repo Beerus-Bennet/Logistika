@@ -4954,7 +4954,52 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
   #huntUI .hu-xr .xr-pan{max-height:none;width:min(400px,42%);border-top:0;border-left:2px solid #2c5a8a}
 }
 
-/* v353: Ein Kauf, ein übersichtlicher Beleg. Mehr Platz nur für freiwillige
+/* ===== v353: Jagd-Testbühne (index.html?test&jagd) und Farblegende im Trefferbild ===== */
+#jtPill{position:fixed;left:8px;top:42%;z-index:400;border:2px solid #0d1b2a;border-radius:999px;background:#fff7e6;color:#0d1b2a;font:800 13px/1 inherit;padding:8px 10px;box-shadow:0 3px 0 #0d1b2a}
+#jgTest{position:fixed;inset:0;z-index:401;display:none;align-items:flex-end;justify-content:center;background:rgba(6,13,24,.45)}
+#jgTest.on{display:flex}
+#jgTest .jt-sheet{width:min(520px,100%);max-height:80%;overflow-y:auto;background:#fff7e6;color:#0d1b2a;border:3px solid #0d1b2a;border-bottom:0;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+#jgTest .jt-head{display:flex;align-items:center;justify-content:space-between;font-size:17px}
+#jgTest .jt-x{width:40px;height:40px;border-radius:50%;border:2px solid #0d1b2a;background:#fff;font:800 20px/1 inherit}
+#jgTest .jt-note{margin:6px 0;font-size:12px;opacity:.75}
+#jgTest .jt-h{margin:10px 0 6px;font-size:13px;font-weight:800;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#jgTest .jt-d{border:2px solid #0d1b2a;border-radius:999px;background:#fff;font:800 12px/1 inherit;padding:5px 8px}
+#jgTest .jt-d.on{background:#2f6fed;color:#fff}
+#jgTest .jt-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+#jgTest .jt-row .btn{flex:1 1 auto;justify-content:center;min-height:44px;font-size:14px}
+#huntUI .hu-xr .xr-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 6px;font-size:12px;font-weight:700;opacity:.9}
+#huntUI .hu-xr .xr-leg span{display:flex;align-items:center;gap:5px}
+#huntUI .hu-xr .xr-leg i{width:10px;height:10px;border-radius:50%;flex:none}
+#huntUI .hu-xr .xr-leg i.b{background:#dbe9ff;border-radius:2px}
+#huntUI .hu-xr .xr-leg i.h{background:#fa4d38}
+
+/* ---------------------------------------------------------------------
+   v354: Hof-Rundgang – Karte weicht dem Werkzeugmenü aus
+   Offenes Saat-/Sichelmenü: Karte nur mit Titel, Aufgabe und Fortschritt;
+   beim Ziehen durchsichtig und ohne Trefferfläche. Zielmarkierung fängt nie Eingaben ab.
+   --------------------------------------------------------------------- */
+#farmTut.ft-mini .ltc{padding:8px 10px 9px}
+#farmTut.ft-mini .ltc-tx,#farmTut.ft-mini .ltc-prog,#farmTut.ft-mini .ltc-note,#farmTut.ft-mini .ltc-who small{display:none}
+#farmTut.ft-mini .ltc-face{width:30px;height:30px}
+#farmTut.ft-mini .ltc-title{font-size:15px;margin-top:4px}
+#farmTut.ft-mini .ltc-do{margin-top:5px;padding:6px 9px;font-size:13px}
+#farmTut.ft-mini .ltc-part{margin-top:6px}
+#farmTut.ft-drag .ltc{opacity:.3;pointer-events:none;transition:opacity .12s}
+#farmTut .ft-mark,#farmTut .ft-mark *{pointer-events:none}
+#farmTut.ft-mini:not(.ft-drag) .ft-mark{display:none!important}
+
+/* ---------------------------------------------------------------------
+   v354: Jagd – Zoomknöpfe in der Ansicht des erlegten Stücks
+   --------------------------------------------------------------------- */
+#huntUI .hu-zoom{position:absolute;right:10px;bottom:45%;z-index:5;display:flex;gap:6px}
+#huntUI .hu-zoom[hidden]{display:none}
+#huntUI .hu-zoom button{width:44px;height:44px;border:var(--line);border-radius:14px;background:#fffaf0;color:var(--ink);font:inherit;font-size:22px;font-weight:800;line-height:1;
+  box-shadow:3px 3px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+#huntUI .hu-zoom button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+#huntUI.xr-on .hu-zoom{visibility:hidden}
+#farmTut.ft-tiny .ltc-do,#farmTut.ft-tiny .ltc-head{display:none}
+#farmTut.ft-tiny .ltc-title{margin-top:0}
+/* v355: Ein Kauf, ein übersichtlicher Beleg. Mehr Platz nur für freiwillige
    Detailansicht oder große Schrift; keine abgeschnittenen Inhalte. */
 #corpShow.cs-receipt{display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:radial-gradient(ellipse at 50% 20%,#1c4353,#081622 85%);overflow:auto;color:var(--ink)}
 .cs-receipt .crp-sheet{width:min(520px,100%);max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;border:3px solid #102433;border-radius:22px;padding:14px 16px 12px;box-shadow:0 20px 80px #0008;display:flex;flex-direction:column;gap:10px}
@@ -4971,7 +5016,7 @@ body.dragging-staff #dropbar .dropbar-row>.dropzone.fire{grid-column:2;width:112
 @media(max-height:700px){.cs-receipt .crp-sheet{padding:10px 12px 9px;gap:7px}.crp-heading h2{font-size:27px}.crp-stat{padding:5px 8px}.crp-stat b{font-size:20px}.crp-operation{font-size:11px}.crp-group{padding:6px 9px}.crp-mast{padding-bottom:5px}}
 @media(orientation:landscape) and (max-height:550px){.cs-receipt .crp-sheet{width:min(800px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:7px 14px}.crp-mast{grid-column:1/-1}.crp-heading{grid-column:1;grid-row:2/4}.crp-price{grid-column:2}.crp-stats{grid-column:2;grid-row:3/6}.crp-operation,.crp-group{grid-column:1}.crp-details,.crp-footer{grid-column:1/-1}.crp-stat small{font-size:10px}.crp-stat b{font-size:18px}}
 
-/* v353: Flosse im Vorfeld, kraftvoller Vorbeizug und sichtbare Eingliederung
+/* v355: Flosse im Vorfeld, kraftvoller Vorbeizug und sichtbare Eingliederung
    in die eigene Marke. Die gekaufte Firma wird nicht vernichtet. */
 .shk-caption{top:17%;left:7%;right:7%}.shk-caption .shk-kicker{max-width:680px;margin:0 auto 12px;overflow-wrap:anywhere;font-size:12px;letter-spacing:.12em}.shk-caption h2{font-size:clamp(36px,8vw,76px);text-wrap:balance;overflow-wrap:anywhere;line-height:1.05}.shk-intro{font-size:14px;font-weight:700;max-width:32em}.shk-intro span{margin-top:6px}
 .shk-stage{top:59%;width:min(132vw,1160px)}.shk-animal{filter:drop-shadow(0 25px 13px #000a) drop-shadow(0 -2px 3px #8be0e544)}

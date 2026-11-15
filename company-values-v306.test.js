@@ -1,4 +1,4 @@
-/* v306/v353: Firmenwert-Regressionsprüfungen. Branchen werden für den
+/* v306/v355: Firmenwert-Regressionsprüfungen. Branchen werden für den
    Preisvergleich angeglichen; gleiche Anzahl allein bedeutet nicht gleicher Wert. */
 const assert=require('node:assert/strict');
 const {run,get}=require('./test-support/company-fixture');

@@ -1,4 +1,4 @@
-/* node company-acquisition-v353.test.js — echte Angebots-/Übergabelogik,
+/* node company-acquisition-v355.test.js — echte Angebots-/Übergabelogik,
    Fahrzeugwerte, Büroklassen, Personalregeln; UI separat im Browser geprüft. */
 const assert = require('node:assert/strict');
 const {run,get} = require('./test-support/company-fixture');

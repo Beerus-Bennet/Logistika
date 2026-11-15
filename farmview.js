@@ -228,12 +228,15 @@ const PEN_HUT = {
   beef:  { key: "beefShelter",  fn: () => FM.beefShelter(),  x: 1.6,  z: 1.1,  hx: 3.1,  hz: 2.2 }
 };
 /* Knoten für ein Objekt (samt Kindern) */
+/* v354: Der Stand an der Straße wird um 0,4 zum Weg hin versetzt gezeichnet (v208). Dieselbe Zahl gilt für die
+   Hindernisprüfung der Bewohner (VILLAGE_SITE.stallBox) – sonst laufen sie durch den sichtbaren Tresen. */
+function farmStallShift(o) { return o.t === "stall" && farmCenter(o)[1] > 15.9 ? 0.4 : 0; }
 function buildObjNode(o) {
   const R = FV.R;
   const [cx, cz] = farmCenter(o);
   /* Reusen im See: die Modelle rechnen mit dem tieferen Wasser der alten Kaikante */
   /* Verkaufsstand am Straßenrand: ein Stück zur Straße hin (nicht in Mauer oder Zaun) */
-  const root = fnode(objMesh(o), { x: cx, z: cz + (o.t === "stall" && cz > 15.9 ? 0.4 : 0), y: o.t === "pot" && o.area ? 0.34 : 0, ry: farmYaw(o) });   /* v208: Stellplatz mit offener Seite zum Weg */
+  const root = fnode(objMesh(o), { x: cx, z: cz + farmStallShift(o), y: o.t === "pot" && o.area ? 0.34 : 0, ry: farmYaw(o) });   /* v208: Stellplatz mit offener Seite zum Weg */
   const parts = {};
   if (o.t === "mill") {
     const h = FM.MILL_HUB;
@@ -1673,6 +1676,15 @@ function positionFarmPop() {
   let x = clamp(p[0] - w / 2, 8, W - w - 8), y = p[1] - hgt - 24;
   if (y < 56) y = Math.min(H - hgt - 8, p[1] + 40);
   y = clamp(y, 8, Math.max(8, H - hgt - 8));
+  /* v354: Nie unter der Rundgang-Karte – die Werkzeuge müssen erreichbar bleiben. */
+  const fr = typeof farmTutFree === "function" ? farmTutFree(W, H) : null;
+  if (fr) {
+    if (fr.x1 - fr.x0 >= w) x = clamp(x, fr.x0, fr.x1 - w);
+    if (fr.y1 - fr.y0 >= hgt) {
+      const above = p[1] - hgt - 24, below = p[1] + 40;
+      y = above >= fr.y0 ? Math.min(above, fr.y1 - hgt) : below + hgt <= fr.y1 ? Math.max(below, fr.y0) : clamp(y, fr.y0, fr.y1 - hgt);
+    } else y = fr.y0;
+  }
   box.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
   const left = el.querySelector(".fp-left");
   if (left && (P.kind === "grow" || P.kind === "tree" || P.kind === "potgrow")) {
@@ -2917,7 +2929,7 @@ const FTUT_HOF = [
     target: () => firstObj(o => o.t === "field" && fieldState(o) === "ripe"), ready: () => !!firstObj(o => o.t === "field" && fieldState(o) === "ripe"),
     wait: "harvestField", n: 3, part: "Feldern geerntet", ok: "Geerntet! Das gibt ⭐ Erfahrung und Weizen fürs Lager." },
   { title: "Neu säen", tx: "Leere Felder bringen nichts – also gleich wieder einsäen.",
-    act: "Tippe ein leeres Feld an und ziehe den Weizen darüber.",
+    act: "Tippe ein leeres Feld an und ziehe den Weizen darüber – oder tippe den Weizen einfach an.",
     target: () => firstObj(o => o.t === "field" && fieldState(o) === "empty"), ready: () => !!firstObj(o => o.t === "field" && fieldState(o) === "empty"),
     wait: "plant", n: 2, part: "Feldern gesät", ok: "Gesät! In ein paar Minuten ist der Weizen wieder reif." },
   { title: "Eier einsammeln", tx: "Die Hühner haben gelegt.",
@@ -3007,7 +3019,7 @@ function farmTutShow() {
   /* Einblenden nur beim Schrittwechsel – Teilfortschritt, Rückmeldung und Rückfrage tauschen nur den Inhalt */
   const still = ftAnim === T.step + (T.replay ? "r" : "");
   ftAnim = T.step + (T.replay ? "r" : "");
-  el.className = "on " + (ftExit ? "exit" : done ? "done" : mode) + (el.classList.contains("alt") ? " alt" : "") + (still ? " still" : "");
+  el.className = "on " + (ftExit ? "exit" : done ? "done" : mode) + (el.classList.contains("alt") ? " alt" : "") + (el.classList.contains("ft-mini") ? " ft-mini" : "") + (el.classList.contains("ft-drag") ? " ft-drag" : "") + (el.classList.contains("ft-tiny") ? " ft-tiny" : "") + (still ? " still" : "");
   document.body.classList.add("ftut-on");
   el.innerHTML = card + `<div class="ft-mark" id="ftHand" aria-hidden="true"><i></i><span>👆</span></div>`;
   const step = T.step;
@@ -3050,7 +3062,7 @@ function farmTutNext(from) {
   if (!T) return;
   if (from != null && from !== T.step) return;
   clearTimeout(ftAdvT); clearTimeout(ftSlowT); ftAdvT = ftSlowT = 0;
-  T.step++; T.cnt = 0; T.adv = false; ftGen++; ftSlow = -1; ftExit = false;
+  T.step++; T.cnt = 0; T.adv = false; delete T.ids; ftGen++; ftSlow = -1; ftExit = false;
   sfx("pop");
   if (T.step >= farmTutList().length) return farmTutEnd();
   save();
@@ -3080,7 +3092,7 @@ function farmHintFor(key) {
   if (key.split(":")[0] === "plant") hint("f_water", "<b>Gießen</b> macht frisch gesäte Felder schneller und besser: Feld antippen und gießen.");
   if (key === "collect:ei") hint("f_feed", "Die Hühner haben jetzt Hunger: <b>Stall antippen und das Futter über die Hühner ziehen</b> – dann legen sie wieder.");
 }
-function farmTutSignal(key, n) {
+function farmTutSignal(key, n, ref) {
   if (S.farm && S.farm.tut && S.farm.tut.done && !S.farm.tut.replay) farmHintFor(key);
   const T = farmTutState();
   if (!T) return;
@@ -3090,6 +3102,12 @@ function farmTutSignal(key, n) {
   const match = st.wait === key || (st.wait === "plant" && k === "plant") || (st.wait === "feed" && k === "feed") || (st.wait === "bait" && k === "bait")
     || (st.wait === "harvestField" && key === "harvest:weizen");
   if (!match) return;
+  /* v354: Beim Säen zählt jedes Feld nur einmal (T.ids; fehlt in alten Ständen und wird toleriert) */
+  if (st.wait === "plant" && ref != null) {
+    const ids = T.ids || (T.ids = []);
+    if (ids.includes(ref)) return;
+    ids.push(ref);
+  }
   T.cnt = (T.cnt || 0) + (st.wait === "harvestField" || st.calls ? 1 : n || 1);
   /* Fortschritt: das Angebot „auslassen“ verschwindet, die Wartezeit beginnt neu */
   clearTimeout(ftSlowT); ftSlowT = 0; if (ftSlow === T.step) ftSlow = -1;
@@ -3118,12 +3136,31 @@ function farmTutNudge(o, dx, dy) {
   };
   step();
 }
+/* v354: Freier Bereich neben der Rundgang-Karte (Koordinaten des Hofs) – oder null ohne Karte.
+   Hochformat: Streifen über bzw. unter der Karte; liegt die Karte seitlich (Querformat, Desktop), der Streifen daneben. */
+function farmTutFree(W, H) {
+  const el = $("#farmTut"), card = el && el.classList.contains("on") && el.querySelector(".ltc"), farm = $("#farm");
+  if (!card || !farm) return null;
+  const f = farm.getBoundingClientRect(), r = card.getBoundingClientRect(), m = 8;
+  const l = r.left - f.left, t = r.top - f.top, rt = r.right - f.left, b = r.bottom - f.top;
+  if (rt - l > W * 0.7) return H - b > t ? { x0: m, x1: W - m, y0: b + m, y1: H - m } : { x0: m, x1: W - m, y0: m, y1: t - m };
+  return W - rt > l ? { x0: rt + m, x1: W - m, y0: m, y1: H - m } : { x0: m, x1: l - m, y0: m, y1: H - m };
+}
 /* Markierung über dem Ziel (ruhiger Ring + Finger). Liegt das Ziel unter der Karte, weicht die Karte aus
    (Hochformat nach oben, Querformat nach rechts) – mit Abstand, damit sie nicht hin- und herspringt. */
 function farmTutPoint() {
   const el = $("#farmTut"), h = $("#ftHand");
   if (!el || !h || !el.classList.contains("on")) return;
   const T = farmTutState(), st = T && farmTutList()[T.step];
+  /* v354: Ist ein Werkzeugmenü offen, zieht sich die Karte auf Titel, Aufgabe und Fortschritt zusammen;
+     während des Ziehens wird sie durchsichtig und fängt nichts ab. */
+  const busy = el.classList.contains("task") && !!(FV.pop || FV.tool);
+  if (el.classList.contains("ft-mini") !== busy) el.classList.toggle("ft-mini", busy);
+  if (el.classList.contains("ft-drag") !== !!FV.tool) el.classList.toggle("ft-drag", !!FV.tool);
+  /* Sehr kleine Schirme: Passt das Menü trotzdem nicht neben die Karte, bleibt von ihr nur Titel und Fortschritt. */
+  { const box = busy && $("#farmPop .fp-box"), cd = el.querySelector(".ltc"), Hf = FV.R ? FV.R.h : innerHeight;
+    const tiny = !!(box && cd) && (el.classList.contains("ft-tiny") ? box.offsetHeight + cd.offsetHeight + 90 > Hf : box.offsetHeight + cd.offsetHeight + 24 > Hf);
+    if (el.classList.contains("ft-tiny") !== tiny) el.classList.toggle("ft-tiny", tiny); }
   const o = el.classList.contains("task") && st && st.target && st.target();
   let p = null;
   if (o && !FV.sheet && FV.R && !FV.fp) { const [cx, cz] = farmCenter(o); p = FV.R.project(cx, objH(o) * 0.55, cz); }

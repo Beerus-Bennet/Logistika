@@ -981,7 +981,7 @@ deinen einen Tipp und zehn Sekunden mehr.
 Unter *Welt* → „🦈 Übernahmen“: ab Level 5 und sobald du mehr Marktanteil
 hast als die Konkurrentin, kannst du ihr ein Angebot machen. Bis zu drei
 Runden, mit Gegenangeboten – wer zu frech bietet, wird zwei Tage nicht mehr
-angehört. Seit v353 enthält das Angebot ein **verbindliches Paket**: konkrete
+angehört. Seit v355 enthält das Angebot ein **verbindliches Paket**: konkrete
 Fahrzeuge mit Zustand, ein benanntes Team samt Qualifikation und Löhnen sowie
 vollständig eingerichtete Standorte. Das Paket bleibt beim Schließen, Laden
 und Etappenwechsel unverändert. Der Preis beruht auf Flotte, Immobilien und

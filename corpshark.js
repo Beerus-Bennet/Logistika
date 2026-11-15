@@ -1,4 +1,4 @@
-/* v353: Ein verständlicher Hai-Moment nach der bereits gespeicherten Übernahme.
+/* v355: Ein verständlicher Hai-Moment nach der bereits gespeicherten Übernahme.
    Reine Darstellung: weder Kauf noch Flotte noch Auszahlungen werden hier
    ausgeführt. Überspringen führt genau einmal zur bestehenden Übersicht. */
 const CORP_SHARK = (() => {
