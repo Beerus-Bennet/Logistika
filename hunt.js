@@ -1443,7 +1443,7 @@ const HUNT = (() => {
     const s = Math.sqrt(D), t0 = (-b - s) / (2 * a), t1 = (-b + s) / (2 * a);
     return t1 < 0 ? null : Math.max(0, t0);
   }
-  /* v356: Ein- und Austritt des Strahls an einem Ellipsoid [t0, t1] (d normiert) oder null */
+  /* v357: Ein- und Austritt des Strahls an einem Ellipsoid [t0, t1] (d normiert) oder null */
   function ellSeg(o, d, c, r) {
     const R = Array.isArray(r) ? r : [r, r, r], ox = (o[0] - c[0]) / R[0], oy = (o[1] - c[1]) / R[1], oz = (o[2] - c[2]) / R[2], dx = d[0] / R[0], dy = d[1] / R[1], dz = d[2] / R[2];
     const a = dx * dx + dy * dy + dz * dz, b = 2 * (ox * dx + oy * dy + oz * dz), D = b * b - 4 * a * (ox * ox + oy * oy + oz * oz - 1);
@@ -3206,7 +3206,7 @@ const HUNT = (() => {
       if (!X.win.hidden) Hv.ft = clamp((X.win.getBoundingClientRect().bottom - r.top + 6) / h, 0.05, 0.4);
       if (!X.card.hidden) {
         const cr = X.card.getBoundingClientRect(), side = cr.left - r.left > r.width * 0.35;        /* breite Bildschirme: Karte rechts, das Stück links daneben */
-        /* v356: Bleibt zwischen Überschrift und Karte kaum Platz für das Stück, zeigt die Karte zuerst nur das Wichtigste
+        /* v357: Bleibt zwischen Überschrift und Karte kaum Platz für das Stück, zeigt die Karte zuerst nur das Wichtigste
            (Medaille, Trophäe, Knöpfe) – ein Tipp auf den Pfeil klappt die Werte auf; danach bleibt es bei der Wahl des Spielers. */
         if (!side && !Hv.userCard && !X.card.classList.contains("saved") && !X.card.classList.contains("hu-min") && 1 - (Hv.ft || Hv.fr.t) - (r.bottom - cr.top + 8) / h < 0.3) X.card.classList.add("hu-min");
         Hv.fb = side ? 0.04 : clamp((r.bottom - cr.top + 8) / h, 0.1, 0.62); Hv.fR = side ? clamp((r.right - cr.left + 10) / Math.max(1, r.width), 0, 0.6) : 0;
@@ -3453,7 +3453,7 @@ const HUNT = (() => {
   const OC = { lunge: [0.84, 0.68, 0.94], herz: [0.74, 0.42, 0.88], leber: [0.82, 0.56, 0.36], magen: [0.5, 0.8, 0.54], darm: [0.9, 0.82, 0.5], niere: [0.36, 0.76, 0.74], kropf: [0.66, 0.86, 0.5], knochen: [0.86, 0.93, 1] };
   const ORG = {
     hirsch: [
-      /* v356: Lage nach der Anatomie des Wiederkäuers (Blick von der Seite): Die Lunge liegt oben unter der Wirbelsäule und zieht
+      /* v357: Lage nach der Anatomie des Wiederkäuers (Blick von der Seite): Die Lunge liegt oben unter der Wirbelsäule und zieht
          sich nach hinten zum Zwerchfell; das Herz liegt tief in der Brust hinter dem Ellbogen und schaut unter der Lunge hervor
          (vorher steckte es fast ganz in den Lungenflügeln und war von der Seite nicht zu sehen). Leber rechts am Zwerchfell,
          Pansen links, Gescheide rechts dahinter, Nieren unter der Lende. Die Wertungszonen (SP) sind unverändert. */
@@ -3464,7 +3464,7 @@ const HUNT = (() => {
       { id: "blattL", n: "Schulterblatt", c: [-0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.135, 1.0, 0.3], r: [0.02, 0.13, 0.07], b: 1 },
       { id: "becken", n: "Becken", c: [0, 1.02, -0.46], r: [0.1, 0.06, 0.1], b: 1 } ],
     keiler: [
-      /* v356: Schwarzwild – Lunge oben, Herz tief zwischen den Vorderläufen, Leber am Zwerchfell, Magen links, Gescheide dahinter */
+      /* v357: Schwarzwild – Lunge oben, Herz tief zwischen den Vorderläufen, Leber am Zwerchfell, Magen links, Gescheide dahinter */
       { id: "lungeL", n: "Lungenflügel links", t: "lunge", c: [-0.058, 0.565, 0.18], r: [0.054, 0.09, 0.145], v: 1 }, { id: "lungeR", n: "Lungenflügel rechts", t: "lunge", c: [0.058, 0.565, 0.18], r: [0.054, 0.09, 0.145], v: 1 },
       { id: "herz", n: "Herz", t: "herz", c: [0, 0.445, 0.245], r: [0.054, 0.065, 0.062], v: 2 }, { id: "leber", n: "Leber", t: "leber", c: [0.035, 0.49, 0.04], r: [0.085, 0.1, 0.06] },
       { id: "magen", n: "Magen", t: "magen", c: [-0.035, 0.5, -0.12], r: [0.115, 0.13, 0.12] }, { id: "darm", n: "Gescheide", t: "darm", c: [0.02, 0.5, -0.32], r: [0.105, 0.12, 0.11] },
@@ -3593,7 +3593,7 @@ const HUNT = (() => {
     });
     /* Schusskanal: Linie vom Schützen durch das Stück, Einschuss markiert */
     { const b = MB(), at = u => [sh.lo[0] + sh.ld[0] * u, sh.lo[1] + sh.ld[1] * u, sh.lo[2] + sh.ld[2] * u], len = k === "fasan" ? 0.5 : 1.3, th = k === "fasan" ? 0.0035 : 0.007;
-      /* v356: Der Kanal endet am Ausschuss (bzw. kurz hinter dem Treffer), nicht irgendwo hinter dem Stück */
+      /* v357: Der Kanal endet am Ausschuss (bzw. kurz hinter dem Treffer), nicht irgendwo hinter dem Stück */
       const bs = ellSeg(sh.lo, sh.ld, S0.body.c, S0.body.r), inBody = !["kopf", "haupt", "hals", "lauf"].includes(sh.zone) && bs && bs[1] > sh.t;
       const tOut = inBody ? bs[1] : sh.t + (k === "fasan" ? 0.07 : 0.2);
       tube(b, [at(sh.t - len), at(sh.t), at(tOut)], [th, th, th * 0.8], [XC.line, XC.line, [1, 0.8, 0.7]], 6, { cap0: true });
@@ -3631,7 +3631,7 @@ const HUNT = (() => {
     xrOverlay();
     XR.raf = requestAnimationFrame(xrLoop);
   }
-  /* v356: Beschriftung über dem Trefferbild. Kanal im Stück als Linie, Einschuss als Punkt, Trefferpunkt als Ring mit Namen,
+  /* v357: Beschriftung über dem Trefferbild. Kanal im Stück als Linie, Einschuss als Punkt, Trefferpunkt als Ring mit Namen,
      dazu die Organe mit Namen (getroffene rot). Namen, die sich überdecken würden, rücken untereinander. */
   function xrOverlay() {
     const O = XR.ov, el = XR.svg; if (!O || !el || !XR.R) return;
@@ -3691,7 +3691,7 @@ const HUNT = (() => {
       XR.cv = XR.el.querySelector("canvas");
       let P = null;
       const v = XR.el.querySelector(".xr-view");
-      /* v356: zwei Finger zoomen auch hier (vorher nur das Mausrad) */
+      /* v357: zwei Finger zoomen auch hier (vorher nur das Mausrad) */
       const PS = new Map(), span = () => { const [a, b] = [...PS.values()]; return Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)); }; let pinch = null;
       v.addEventListener("pointerdown", e => { PS.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (PS.size === 2) pinch = { d0: span(), z0: XR.zoom };
         P = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { v.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } e.stopPropagation(); });
@@ -4097,7 +4097,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), /* v356 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),

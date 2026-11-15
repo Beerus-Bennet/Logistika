@@ -1,4 +1,4 @@
-/* v356: Trefferbild – Organlage, sichtbarer Trefferpunkt, Zoom ohne Knöpfe. node trefferbild-v356.test.js */
+/* v357: Trefferbild – Organlage, sichtbarer Trefferpunkt, Zoom ohne Knöpfe. node trefferbild-v357.test.js */
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const C={console};C.window=C;vm.createContext(C);for(const f of ['gl3d.js','hunt.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,f),'utf8'),C);
 const run=s=>vm.runInContext(s,C);let n=0;const test=(t,fn)=>{fn();console.log('ok '+(++n)+' '+t);};
@@ -35,4 +35,4 @@ test('Zoom ohne Knöpfe: keine Zoom-Schaltflächen mehr, Zwei-Finger-Zoom in bei
  assert.doesNotMatch(js,/hu-zoom|hzin|hzout|hzreset/);assert.doesNotMatch(css,/\.hu-zoom\{/);
  assert.match(js,/X\.hrv\.zoom = pinch\.z0 \* pinch\.d0 \/ span\(\)/);assert.match(js,/XR\.zoom = clamp\(pinch\.z0 \* pinch\.d0 \/ span\(\)/);
 });
-console.log(n+' Prüfgruppen v356 bestanden.');
+console.log(n+' Prüfgruppen v357 bestanden.');
