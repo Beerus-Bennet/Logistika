@@ -2337,8 +2337,28 @@ function farmExternalHTML(st) {
 }
 
 /* Lager */
+/* v359: Kleine Spielgrafiken für Lager und Sammlung, gleiche Tuschekontur
+   und Farbpalette wie Logistika; unabhängig von der Emoji-Schrift des Geräts. */
+function logiStorageIcon(k){
+  const shapes={
+    silo:'<path fill="#c8d5dd" d="M9 10h18v20H9z"/><path fill="#e8b64a" d="M7 10 18 3l11 7z"/><path d="M12 15h12m-12 6h12m-12 5h12M18 11v18"/>',
+    barn:'<path fill="#c76547" d="M5 15 18 5l13 10v16H5z"/><path fill="#f8eac8" d="M12 18h12v13H12z"/><path d="m12 18 12 13m0-13L12 31M3 15 18 3l15 12"/>',
+    holz:'<path fill="#aa794e" d="m5 22 16-10 11 10-16 9z"/><path fill="#edc887" d="m5 22 11 9V19L5 12z"/><path fill="#be925f" d="m5 12 16-8 11 9-16 6z"/><path d="m9 20 3 2m9-6 6-3"/>',
+    cold:'<path fill="#9acde7" d="M5 12h26v19H5z"/><path fill="#e4f4ff" d="M4 6h28v7H4z"/><path d="M18 17v10m-5-8 10 6m0-6-10 6"/>',
+    bait:'<path fill="#e8b64a" d="M5 12h26v19H5z"/><path fill="#f7df9b" d="M4 8h28v6H4z"/><path stroke="#a64f4f" d="M10 22q4-8 8 0t8 0"/>',
+    troph:'<path fill="#ffd446" d="M10 4h16v9c0 10-16 10-16 0z"/><path d="M10 7H5c0 9 4 10 8 10m13-10h5c0 9-4 10-8 10M18 21v7"/><path fill="#e4ac30" d="M11 28h14v4H11z"/>',
+    book:'<path fill="#f8edcf" d="M3 6q8-3 15 2 7-5 15-2v24q-8-3-15 1-7-4-15-1z"/><path d="M18 8v23M7 11l7 1m-7 5 7 1m8-6 7-1m-7 7 7-1"/>',
+    jobs:'<path fill="#f8edcf" d="M8 7h21v25H8z"/><path fill="#83b2ce" d="M13 4h11v6H13z"/><path d="m12 16 2 2 3-4m3 2h5m-13 8h13"/>',
+    warehouse:'<path fill="#9db7c5" d="M4 13 18 5l14 8v19H4z"/><path fill="#f8edcf" d="M11 20h14v12H11z"/><path d="M7 15h22m-14 9h6m-6 4h6"/>',
+    hirsch:'<path stroke="#866344" d="M13 12 7 6V2m0 5L3 5m20 7 6-6V2m0 5 4-2"/><path fill="#b58b5a" d="m10 12 8-4 8 4-3 17-5 4-5-4z"/><path d="M14 18h1m6 0h1m-7 9h6"/>',
+    keiler:'<path fill="#8a7967" d="m5 10 9 3h10l7-3-1 14-7 7H13l-7-7z"/><path fill="#c3a889" d="M11 21h14v8H11z"/><path d="M15 25h1m5 0h1M10 17h2m12 0h2"/>',
+    fasan:'<path fill="#ba783c" d="M8 14q15-4 17 9-6 10-17 0L2 31l4-14z"/><path fill="#43816a" d="M21 15V8q7-9 10 0v8z"/><path fill="#f4ce5d" d="m30 8 5 2-5 2"/><path d="M22 29v4m-9-4v4"/>'
+  };
+  return `<svg class="logi-icon" viewBox="0 0 36 36" aria-hidden="true" focusable="false" fill="none" stroke="#14283a" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">${shapes[k==="fisch"?"cold":k==="koeder"?"bait":k]||shapes.warehouse}</svg>`;
+}
 function openFarmStore(st) {
   if (!FSTORE[st] || !farmStores().includes(st)) st = farmStores()[0];
+  const resetScroll=FV.sheet!=="store"||FV.storeTab359!==st;FV.storeTab359=st; /* v359: kein alter Verhandlungs-/Lager-Scrollstand im neuen Bereich */
   FV.sheetFn = () => openFarmStore(st);
   const ids = Object.keys(FITEMS).filter(id => FITEMS[id].st === st && farmInv(id) > 0);
   const cap = farmStoreCap(st), used = farmStoreUsed(st), uc = storeUpCost(st);
@@ -2346,11 +2366,11 @@ function openFarmStore(st) {
   const wall = st === "troph" && typeof HUNT !== "undefined" && HUNT.wallHTML ? HUNT.wallHTML() : null;
   const sel = wall == null && FV.storeSel && farmInv(FV.storeSel) > 0 && FITEMS[FV.storeSel].st === st ? FV.storeSel : null;
   const trk = S.farm.trkStored ? `<button class="fup2" id="fsTrk"><span>🚜</span><b>Traktor im Lager</b><small>Antippen und auf dem Hof oder rund um den Hof aufstellen</small></button>` : "";
-  openFarmSheet(`${trk}<div class="fs-tabs">${farmStores().map(k => `<button class="${st === k ? "on" : ""}" data-st="${k}">${FSTORE[k].i} ${esc(FSTORE[k].n)}</button>`).join("")}</div>
+  openFarmSheet(`${trk}<div class="store-head">${logiStorageIcon(st)}<label>Lagerbereich<select id="fsStoreSelect">${farmStores().map(k=>`<option value="${k}"${st===k?" selected":""}>${esc(FSTORE[k].n)}</option>`).join("")}</select></label></div>
     <div class="fcap"><i style="width:${Math.min(100, used / cap * 100)}%" class="${used / cap > 0.9 ? "full" : ""}"></i><span>${fmt(used)} / ${fmt(cap)} Plätze</span></div>
-    ${typeof farmHallBonus === "function" && FHALL.stores.includes(st) ? (farmHallBonus(st) ? `<div class="fs-sub fhall">🏬 Davon +${farmHallBonus(st)} Plätze durch die Große Lagerhalle.</div>`
-      : `<div class="fs-sub fhall">🏬 Mehr Platz für alle Lager: Große Lagerhalle im Laden unter „Gebäude“${flv() < 5 ? " (ab Level 5)" : ""}.</div>`) : ""}
-    ${farmExternalCap(st) ? `<div class="fs-sub">🏭 Davon +${fmt(farmExternalCap(st))} Plätze im Außenlager.</div>` : ""}
+    ${typeof farmHallBonus === "function" && FHALL.stores.includes(st) ? (farmHallBonus(st) ? `<div class="fs-sub fhall">${logiStorageIcon("warehouse")} Davon +${farmHallBonus(st)} Plätze durch die Große Lagerhalle.</div>`
+      : `<div class="fs-sub fhall">${logiStorageIcon("warehouse")} Mehr Platz für alle Lager: Große Lagerhalle im Laden unter „Gebäude“${flv() < 5 ? " (ab Level 5)" : ""}.</div>`) : ""}
+    ${farmExternalCap(st) ? `<div class="fs-sub store-external">${logiStorageIcon("warehouse")} Davon +${fmt(farmExternalCap(st))} Plätze im Außenlager.</div>` : ""}
     ${wall != null ? wall : `<div class="finv">${ids.length ? ids.map(id => `<button class="fit${sel === id ? " on" : ""}" data-it="${id}">${icOf(id)}<b>${famt(id, farmInv(id))}</b><small>${farmHasQ(id) ? qStars(farmQ(id)) : "&nbsp;"}</small></button>`).join("")
       : `<div class="fs-empty">${esc(FSTORE[st].empty)}</div>`}</div>`}
     ${sel ? (() => {
@@ -2372,7 +2392,9 @@ function openFarmStore(st) {
       : st === "koeder" ? "Köder für Angel und Reusen – sie belegen keine Plätze in der Kühlkiste."
       : st === "troph" ? "Jedes Stück bleibt als Ganzkörperpräparat mit seinen eigenen Merkmalen erhalten. In der Sammlung kannst du es aufstellen, drehen, verschieben oder einlagern. Favoriten sind vor Verkauf geschützt."
       : "Sterne = Qualität: Gießen, Fruchtwechsel und Platz für die Tiere bringen mehr Geld."}</div>`, "store");
+  if(resetScroll)$("#farmSheetIn").scrollTop=0;
   const tb = $("#fsTrk"); if (tb) tb.onclick = farmTractorPlace;
+  $("#fsStoreSelect").onchange=e=>{FV.storeSel=null;openFarmStore(e.target.value);}; /* v359 */
   $$("#farmSheetIn [data-st]").forEach(b => b.onclick = () => openFarmStore(b.dataset.st));
   $$("#farmSheetIn [data-it]").forEach(b => b.onclick = () => { FV.storeSel = FV.storeSel === b.dataset.it ? null : b.dataset.it; openFarmStore(st); });
   $$("#farmSheetIn [data-sell]").forEach(b => b.onclick = () => {
@@ -3313,6 +3335,7 @@ function farmShowGo() {
 }
 function farmHide() {
   FV.on = false;
+  if(typeof VILLAGE_UI!=="undefined")VILLAGE_UI.closeTalk(false); /* v359: kein verwaistes modales Fenster */
   closeFarmPop();
   if (typeof MG !== "undefined" && MG.on) MG.close({ ok: false });
   if (FV.place) cancelPlace();

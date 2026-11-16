@@ -102,7 +102,7 @@ const VILLAGE_UI = (() => {
       <p>Sehr geehrte Damen und Herren,<br>${c.referrer?esc(c.referrer)+" hat mir Ihr Haus empfohlen.":"ich bin auf Ihre Onlineanzeige aufmerksam geworden."} Ich interessiere mich für das Haus ${address(p)}. ${c.kind==="rent"?"Ich biete "+money(c.price)+" monatliche Kaltmiete.":"Mein Kaufangebot beträgt "+money(c.price)+"."}<br>Mit freundlichen Grüßen<br>${esc(c.n)}</p>
       ${c.reply?`<p class="town-reply">${esc(c.reply)}</p>`:""}
       ${c.declined?`<b>Anfrage zurückgezogen</b>`:a?`<div class="town-agreement"><b>Vertragsangebot prüfen</b><p>${kind==="rent"?"Unbefristete Vermietung · "+money(price)+" Kaltmiete/Monat. Abrechnung alle sieben Spieltage, 8 % Rücklage werden abgezogen.":"Verkauf für "+money(price)+". Das Haus gehört anschließend der neuen Partei; du erhältst keine Miete."}</p><button class="btn" data-town-sign="${c.id}">${kind==="rent"?"Mietvertrag abschließen":"Kaufvertrag abschließen"}</button></div>`:
-      `<form class="town-negotiate" data-town-negotiate="${c.id}"><label>Vertragsart<select name="kind"><option value="rent"${kind==="rent"?" selected":""}>Miete / Monat</option><option value="buy"${kind==="buy"?" selected":""}>Kaufpreis</option></select></label><label>Ihr Angebot in €<input name="price" type="number" min="1" step="1" required value="${price}"></label><button class="btn tiny ghost" type="submit">Konditionen vorschlagen</button></form>`}</details>`;
+      `<button class="btn ghost" data-town-talk="${c.id}">Preis verhandeln</button>`}</details>`;
   }
   function detail(id){const p=VILLAGE.plot(id),h=VILLAGE.home(id),T=VILLAGE.state(),k=D.houses[h.type],block=VILLAGE.obstruction(p);
     let s=`<button class="btn tiny ghost" data-town-home="">← Übersicht</button><div class="town-card"><b>${address(p)}</b><small>${esc(labels[h.status])}</small><button class="btn tiny ghost" data-town-focus="${id}">📍 Zum Grundstück</button></div>`;
@@ -131,16 +131,59 @@ const VILLAGE_UI = (() => {
     q("[data-town-build]").forEach(b=>b.onclick=()=>{const [k,m]=b.dataset.townBuild.split("|");act(()=>VILLAGE.build(id,k,m==="own"));});
     q("[data-town-list]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.list(id,b.dataset.townList)));
     q("[data-town-relist]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.relist(id)));
-    q("[data-town-negotiate]").forEach(f=>{
-      f.oninput=()=>f.dataset.dirty="1";
-      f.elements.kind.onchange=()=>{const k=D.houses[VILLAGE.home(id).type];f.elements.price.value=f.elements.kind.value==="rent"?k.rent:k.sale;};
-      f.onsubmit=e=>{e.preventDefault();VILLAGE.negotiate(id,f.dataset.townNegotiate,f.elements.kind.value,+f.elements.price.value);open(id);};
-    });
+    q("[data-town-talk]").forEach(b=>b.onclick=()=>openTalk(id,b.dataset.townTalk));
     q("[data-town-sign]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.sign(id,b.dataset.townSign)));
     q("[data-town-orders]").forEach(b=>b.onclick=()=>openFarmOrders(null,"hof"));
-    FV.sheetTick=()=>{const active=document.activeElement;if((active&&active.closest(".town-negotiate"))||document.querySelector('.town-negotiate[data-dirty="1"]'))return;
+    FV.sheetTick=()=>{if(talk)return;
       VILLAGE.tick();if((id?detail(id):overview())===content)return;
       const box=document.querySelector("#farmSheetIn"),top=box.scrollTop;open(id);box.scrollTop=top;};
   }
-  return {open};
+  /* v359: Eigenes, ruhiges Verhandlungsfenster statt Eingaben im schrumpfenden
+     Bodenblatt. Formularknoten bleiben über Antworten/Ticks erhalten. */
+  const drafts=new Map();let talk=null;
+  function closeTalk(refresh=true){
+    if(!talk)return;const t=talk;talk=null;
+    window.removeEventListener('resize',t.position);
+    if(window.visualViewport){visualViewport.removeEventListener('resize',t.position);visualViewport.removeEventListener('scroll',t.position);}
+    t.el.close();t.el.remove();document.body.classList.remove('modal-open');
+    if(refresh&&farmOn()){
+      open(t.id);const box=document.querySelector('#farmSheetIn');box.scrollTop=t.scroll;
+      const b=box.querySelector('[data-town-talk="'+t.offer+'"],[data-town-sign="'+t.offer+'"]');if(b)b.focus({preventScroll:true});
+    }
+  }
+  function openTalk(id,offer){
+    if(talk){talk.el.querySelector('input').focus({preventScroll:true});return;}
+    const h=VILLAGE.home(id),p=VILLAGE.plot(id),c=h&&h.listing&&h.listing.offers&&h.listing.offers.find(c=>c.id===offer);
+    if(!c||c.declined||c.agreed||h.status!=='ready'||S.time>=h.listing.expires)return;
+    const key=id+':'+offer,draft=drafts.get(key)||{kind:c.kind,price:String(c.price)},el=document.createElement('dialog');
+    el.id='townNegotiation';el.className='town-talk';el.setAttribute('aria-labelledby','townTalkTitle');
+    el.innerHTML=`<header><div><small>${address(p)}</small><h2 id="townTalkTitle" tabindex="-1">${esc(c.n)}</h2></div><button type="button" class="tn-close" aria-label="Verhandlung schließen">✕</button></header>
+      <form class="tn-form"><div class="tn-body"><p class="tn-intro">${c.kind==='rent'?'Mietanfrage':'Kaufinteresse'} · ursprüngliches Angebot ${money(c.price)}${c.kind==='rent'?' / Monat':''}</p>
+      <div class="tn-fields"><label>Vertragsart<select name="kind"><option value="rent">Miete / Monat</option><option value="buy">Kaufpreis</option></select></label><label>Ihr Angebot in €<input name="price" type="text" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" aria-label="Ihr Angebot in Euro"></label></div>
+      <p class="tn-reply" role="status" aria-live="polite"></p></div><footer><button class="btn" type="submit">Konditionen vorschlagen</button><button class="btn" type="button" data-sign hidden>Vertrag abschließen</button></footer></form>`;
+    const f=el.querySelector('form'),reply=el.querySelector('.tn-reply'),submit=f.querySelector('[type="submit"]'),sign=f.querySelector('[data-sign]');
+    f.elements.kind.value=draft.kind;f.elements.price.value=draft.price;
+    const remember=()=>drafts.set(key,{kind:f.elements.kind.value,price:f.elements.price.value});
+    const current=()=>{const H=VILLAGE.home(id),L=H&&H.listing;return H&&H.status==='ready'&&L&&S.time<L.expires&&L.offers&&L.offers.find(x=>x.id===offer);};
+    const update=()=>{const C=current();reply.textContent=C?(C.reply||'Nennen Sie die gewünschten Konditionen.'): 'Diese Anfrage ist nicht mehr gültig. Bitte schließen Sie das Fenster und prüfen Sie neue Wohnanfragen.';
+      const agreed=C&&C.agreed,locked=!C||C.declined||!!agreed;
+      f.elements.kind.disabled=f.elements.price.disabled=locked;submit.hidden=!!agreed;submit.disabled=locked;sign.hidden=!agreed;
+      if(agreed){sign.textContent=agreed.kind==='rent'?'Mietvertrag abschließen':'Kaufvertrag abschließen';reply.textContent+=' '+money(agreed.price)+(agreed.kind==='rent'?' Kaltmiete / Monat.':' Kaufpreis.');}
+    };
+    f.addEventListener('input',remember);
+    f.elements.kind.onchange=()=>{const k=D.houses[h.type];f.elements.price.value=String(f.elements.kind.value==='rent'?k.rent:k.sale);remember();};
+    f.onsubmit=e=>{e.preventDefault();const C=current();if(!C||C.declined||C.agreed){update();return;}
+      if(!f.reportValidity())return;remember();VILLAGE.negotiate(id,offer,f.elements.kind.value,Number(f.elements.price.value));update();};
+    sign.onclick=()=>{if(!current()){update();return;}if(VILLAGE.sign(id,offer)){drafts.delete(key);closeTalk();}else update();};
+    const position=()=>{const v=window.visualViewport,w=Math.min(480,(v?v.width:innerWidth)-16),height=(v?v.height:innerHeight)-16;
+      el.classList.toggle('tn-tight',height<320);el.style.width=Math.max(240,w)+'px';el.style.maxHeight=Math.max(120,height)+'px';el.style.left=((v?v.offsetLeft:0)+((v?v.width:innerWidth)-w)/2)+'px';el.style.top=((v?v.offsetTop:0)+8)+'px';};
+    talk={el,id,offer,position,scroll:document.querySelector('#farmSheetIn').scrollTop};
+    el.querySelector('.tn-close').onclick=()=>closeTalk();el.addEventListener('cancel',e=>{e.preventDefault();closeTalk();});
+    el.addEventListener('close',()=>{if(talk&&talk.el===el)closeTalk();});
+    document.body.appendChild(el);document.body.classList.add('modal-open');position();update();el.showModal();
+    /* Kein Autofokus auf die Zahl: die Tastatur öffnet sich erst auf Wunsch. */
+    el.querySelector('h2').focus({preventScroll:true});window.addEventListener('resize',position);
+    if(window.visualViewport){visualViewport.addEventListener('resize',position);visualViewport.addEventListener('scroll',position);}
+  }
+  return {open,openTalk,closeTalk};
 })();

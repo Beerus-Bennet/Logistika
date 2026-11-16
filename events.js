@@ -27,7 +27,7 @@ const EVENT_DEF = {
 };
 function evState() { if (!S.events) S.events = []; return S.events; }
 function evActive() { return evState().filter(e => S.time < e.until); }
-function evRadiusKm(e) { return e.type === "stau" ? [4, 14, 28, 45, 60, 60][Math.min(6, S.stage) - 1] : 45; }
+function evRadiusKm(e) { return e.type === "stau" ? .15 : 45; /* v359: Straßenabschnitt statt 60-km-Umkreis */ }
 function evTitle(e) {
   switch (e.type) {
     case "stau": return "Stau " + e.road;
@@ -44,6 +44,7 @@ function evHits(e, veh) {
   const d = EVENT_DEF[e.type], t = vType(veh.type);
   if (!d.mode.includes(t.mode)) return false;
   if (d.global) return true;
+  if(e.type==="stau"&&(!["haul","repo"].includes(veh.phase)||!evRouteHits(e,veh.route,(veh.pos||0)/(veh.routeDist||pathLen(veh.route)||1))))return false;
   const p = vehPoint(veh);
   return !!p && hav(p, evCenter(e)) <= evRadiusKm(e);
 }
@@ -68,17 +69,57 @@ function hubHold(veh, leg) {
     return d.hub && d.mode.includes(t.mode) && e.node === at;
   });
 }
+/* v359: Eine Straßenstörung muss die noch zu befahrende, tatsächlich gezeichnete
+   Linie treffen. Große Stadienradien und bereits passierte Strecken zählen nicht.
+   Schnittbereiche werden je unveränderlicher Anzeigelinie/Ereignis gemerkt. */
+const EV_ROUTE_RANGES = new WeakMap();
+function evRouteHits(e,pts,ratio=0){
+  if(!pts||pts.length<2||(typeof routePending==='function'&&routePending(pts)))return false;
+  const line=typeof roadLine==='function'?roadLine(pts):pts;if(!line||line.length<2)return false;
+  let memo=EV_ROUTE_RANGES.get(line);if(!memo)EV_ROUTE_RANGES.set(line,memo=new WeakMap());
+  let rec=memo.get(e);const c=evCenter(e),radius=evRadiusKm(e);
+  if(!rec||rec.lat!==c[0]||rec.lon!==c[1]||rec.radius!==radius){
+    const ranges=[];let acc=0;
+    const lon=d=>((d+180)%360+360)%360-180,px=p=>lon(p[1]-c[1])*111.32*Math.cos(c[0]*Math.PI/180),py=p=>(p[0]-c[0])*111.32;
+    for(let i=1;i<line.length;i++){
+      const a=line[i-1],b=line[i],ax=px(a),ay=py(a),dx=lon(b[1]-a[1])*111.32*Math.cos(c[0]*Math.PI/180),dy=(b[0]-a[0])*111.32,L=hav(a,b),ll=dx*dx+dy*dy;
+      const t=ll?-(ax*dx+ay*dy)/ll:0,near=Math.max(0,Math.min(1,t)),dist=Math.hypot(ax+dx*near,ay+dy*near);
+      if(dist<=radius){const cross=ll?Math.sqrt(Math.max(0,radius*radius-Math.pow(ax+dx*t,2)-Math.pow(ay+dy*t,2))/ll):0;
+        ranges.push([acc+Math.max(0,t-cross)*L,acc+Math.min(1,t+cross)*L]);}
+      acc+=L;
+    }
+    rec={ranges,total:acc,lat:c[0],lon:c[1],radius};memo.set(e,rec);
+  }
+  const passed=Math.max(0,Math.min(1,ratio))*rec.total;
+  return rec.ranges.some(([a,b])=>b>=passed-.005&&a<=rec.total);
+}
+function evLegAffected(e,j,leg,idx,f){
+  const d=EVENT_DEF[e.type];if(!d||!d.mode.includes(leg.mode||vType(f.type).mode))return false;
+  const current=f.jobId===j.id&&f.legIdx===idx;
+  if(d.global)return true;
+  if(d.hub)return leg.to===e.node||(leg.from===e.node&&(!current||['reserved','repo','load','wait'].includes(f.phase)));
+  if(e.type==='stau'){
+    if(current&&['haul','repo'].includes(f.phase)&&f.route){const total=f.routeDist||pathLen(f.route);return evRouteHits(e,f.route,total?(f.pos||0)/total:0);}
+    if(current&&f.phase==='unload')return false;
+    return evRouteHits(e,legCoords(leg));
+  }
+  return false;
+}
 function evAffectedJobs(e) {
-  const out = [];
-  S.jobs.forEach(j => {
-    const f = S.fleet.find(x => x.uid === (j.legs[j.curLeg] || {}).veh);
-    if (!f) return;
-    const leg = j.legs[j.curLeg], d = EVENT_DEF[e.type], t = vType(f.type);
-    const nodeHit = d.hub && d.mode.includes(t.mode) && (leg.from === e.node || leg.to === e.node);
-    if (evHits(e, f) || nodeHit || (d.global && d.mode.includes(leg.mode))) out.push({ j, f });
-  });
+  const out=[];
+  for(const j of S.jobs||[]){
+    for(let idx=0;idx<j.legs.length;idx++){
+      if(!j.v&&idx<(j.curLeg||0))continue;
+      const leg=j.legs[idx];if(leg.qty!=null&&leg.dn>=leg.qty)continue;
+      for(const uid of new Set([...(leg.vehs||[]),leg.veh].filter(Boolean))){
+        const f=S.fleet.find(f=>f.uid===uid);if(!f||out.some(x=>x.j.id===j.id&&x.f.uid===uid))continue;
+        if(evLegAffected(e,j,leg,idx,f))out.push({j,f});
+      }
+    }
+  }
   return out;
 }
+function evRelevant(){return evActive().filter(e=>evAffectedJobs(e).length>0||(S.fleet||[]).some(f=>!f.jobId&&['haul','repo'].includes(f.phase)&&EVENT_DEF[e.type].mode.includes(vType(f.type).mode)&&(e.type==='stau'?evRouteHits(e,f.route,(f.pos||0)/(f.routeDist||pathLen(f.route)||1)):evHits(e,f))));}
 
 function spawnEvent() {
   const modes = unlockedModes();
@@ -97,8 +138,8 @@ function spawnEvent() {
     const road = S.fleet.filter(f => (f.phase === "haul" || f.phase === "repo") && vType(f.type).mode === "r");
     const f = road.length && Math.random() < 0.7 ? pick(road) : null;
     const base = f ? vehPoint(f) : nodePt(pick(unlockedNodes().filter(n => n.modes.includes("r"))).id);
-    e.at = [base[0] + rnd(-0.02, 0.02), base[1] + rnd(-0.03, 0.03)];
-    e.road = pick(ROADS[Math.min(6, S.stage)] || ROADS[1]);
+    e.at = f ? base.slice() : [base[0] + rnd(-0.02, 0.02), base[1] + rnd(-0.03, 0.03)]; /* v359: eigene Störung auf die gefahrene Straße setzen */
+    e.road = f ? "auf der befahrenen Strecke" : pick(ROADS[Math.min(6, S.stage)] || ROADS[1]);
     e.detour = [];
   } else if (d.hub) {
     const kind = d.hub === "air" ? "air" : "port";
@@ -116,7 +157,7 @@ function spawnEvent() {
 function evNotify(e) {
   const hit = evAffectedJobs(e);
   const title = evTitle(e);
-  if (!hit.length) { toast(EVENT_DEF[e.type].icon + " " + title + " – bis " + clock(e.until) + ".", "warn", true); return; }
+  if (!hit.length) return; /* v359: keine Warnung für fremde/unbenutzte Routen */
   const who = hit.slice(0, 3).map(x => vType(x.f.type).name).join(", ") + (hit.length > 3 ? " …" : "");
   const extra = Math.round((e.until - S.time) * (e.type === "stau" ? 0.5 : 0.8));
   const choices = [];
@@ -128,16 +169,19 @@ function evNotify(e) {
   choices.push({ label: "Kunden um Aufschub bitten", sub: "Frist +" + dur(extra) + ", dafür 8 % Nachlass" });
   decisionMsg({ from: "Verkehrsleitstelle", icon: EVENT_DEF[e.type].icon, type: "event", title,
     body: `Betroffen: ${who} · bis ${clock(e.until)}.`,
-    choices, def: e.type === "stau" ? 1 : 0, wait: 45, ctx: { ev: e.id, jobs: hit.map(x => x.j.id), extra } });
+    choices, def: e.type === "stau" ? 1 : 0, wait: 45, ctx: { ev: e.id, jobs: [...new Set(hit.map(x => x.j.id))], vehicles:hit.map(x=>x.f.uid), extra } });
 }
 DECISIONS.event = {
   choose(m, idx, cost) {
     const e = evState().find(x => x.id === m.dec.ctx.ev);
     const c = m.dec.choices[idx];
-    const jobs = m.dec.ctx.jobs.map(id => S.jobs.find(j => j.id === id)).filter(Boolean);
+    const affected=e&&S.time<e.until?evAffectedJobs(e).filter(x=>m.dec.ctx.jobs.includes(x.j.id)):[];
+    if(!affected.length)return "Die Störung betrifft aktuell keine deiner Fahrten mehr. Es entstehen keine Kosten.";
+    const jobs=[...new Map(affected.map(x=>[x.j.id,x.j])).values()];
     if (c.label.startsWith("Umfahren") && e) {
       payOut(cost, "drive", "Umleitung · " + evTitle(e));
-      jobs.forEach(j => { const u = j.legs[j.curLeg] && j.legs[j.curLeg].veh; if (u) e.detour.push(u); });
+      const uids=affected.map(x=>x.f.uid);
+      uids.filter(Boolean).forEach(uid=>{if(!e.detour.includes(uid))e.detour.push(uid);});
       return "Fahrer nehmen die Umleitung (" + money(cost) + ").";
     }
     if (c.label.startsWith("Kunden")) {
@@ -323,7 +367,7 @@ let eventHits = [];
 function drawEvents(m) {
   eventHits = [];
   const z = m.zoom;
-  evActive().forEach(e => {
+  evRelevant().forEach(e => {
     const d = EVENT_DEF[e.type];
     if (d.global) return;
     const c = evCenter(e);
@@ -374,7 +418,7 @@ function renderEventBar() {
     const ui = document.getElementById("mapUI"); if (!ui) return;
     ui.appendChild(el);
   }
-  const list = evActive();
+  const list = evRelevant();
   if (!list.length) evBarOpen = false;
   const key = list.map(e => e.id + e.until).join("|") + "|" + evBarOpen;
   if (key === evBarKey) return;
@@ -404,7 +448,7 @@ function legEventNote(leg) {
     const d = EVENT_DEF[e.type];
     if (!d.mode.includes(leg.mode)) return;
     const near = d.global || (e.node && (leg.from === e.node || leg.to === e.node))
-      || (!e.node && leg.nodes.some(id => hav(nodePt(id), evCenter(e)) <= evRadiusKm(e) * 1.5));
+      || (!e.node && evRouteHits(e,legCoords(leg)));
     if (near) notes.push(`${d.icon} ${esc(evTitle(e))} – bis ${clock(e.until)}`);
   });
   return notes.length ? `<div class="warnbox evnote">${notes.join("<br>")}</div>` : "";

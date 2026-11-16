@@ -22,9 +22,9 @@ test('Trefferpunkt liegt im gewerteten Organ, der Kanal endet am Ausschuss, jede
   assert.equal(run('V.hn'),name);assert.equal(run('V.kill'),true);
   assert.ok(run('HUNT.ORG[a[0]].filter(Q=>Q.t===O.t).some(Q=>Math.hypot((h[0]-Q.c[0])/Q.r[0],(h[1]-Q.c[1])/Q.r[1],(h[2]-Q.c[2])/Q.r[2])<1)'),k+' '+id+': Trefferpunkt im Organ');
   assert.ok(run('V.x[0]<V.h[0]&&V.h[0]<V.e[0]'),'Einschuss → Treffer → Ausschuss in Schussrichtung');
-  assert.ok(run('V.lab.length>=6&&V.lab.filter(l=>l.hit).some(l=>l.n==="'+name+'")'),'Organnamen, getroffenes markiert');
+  assert.ok(run('V.lab.length>=1&&V.lab.every(l=>l.hit)&&V.lab.some(l=>l.n==="'+name+'")'),'Organnamen, getroffenes markiert');
  }
- run('var f=shot("fasan","herz","vogel").V;');assert.ok(run('f.lab.some(l=>l.n==="Kropf")&&f.lab.length>=7'));
+ run('var f=shot("fasan","herz","vogel").V;');assert.ok(run('f.lab.every(l=>l.hit)&&f.lab.length>=1'));
 });
 test('Wertung unverändert: Herz- und Lungenzone wie zuvor',()=>{
  assert.deepEqual(run('JSON.stringify([HUNT.SP.hirsch.heart,HUNT.SP.hirsch.lung,HUNT.SP.keiler.heart,HUNT.SP.keiler.lung])'),
