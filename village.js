@@ -39,23 +39,39 @@ const VILLAGE = (() => {
     const h=home(id),p=plot(id),k=D.houses[type],cost=k&&(materials?k.cost:k.turnkey);
     if(!h||!p||!k||h.status!=="land"||S.money<cost||obstruction(p)||(materials&&!farmHasAll(k.need)))return false;
     if(materials)for(const [item,n]of Object.entries(k.need))farmTake(item,n);
-    pay("Bau "+k.n,cost);h.invested+=cost;h.status="building";h.type=type;h.ready=S.time+k.days*DAY;changed();return true;
+    pay("Bau "+k.n,cost);h.invested+=cost;h.status="building";h.type=type;h.ready=S.time+k.days*DAY;applyCampaign(h);changed();return true;
   }
+  /* v365: Eine zentrale Anzeige erreicht Interessenten für passende Häuser,
+     auch im Bau. Konditionen sind vormerkbar; Übergabe erst bei Bezugsfertigkeit. */
+  function applyCampaign(h){
+    const C=state().campaign;if(!C||S.time>=C.expires||h.listing||!['building','ready'].includes(h.status)||!C.types.includes(h.type))return;
+    h.listing={channel:C.channel,at:S.time,ready:Math.max(S.time,C.ready),expires:Math.max(S.time+8*DAY,(h.ready||S.time)+8*DAY),offers:null,preference:C.kind};
+  }
+  function advertise(channel,types,kind){
+    const T=state();types=[...new Set(types||[])].filter(k=>D.houses[k]);
+    if(!T||T.campaign&&S.time<T.campaign.expires||!types.length||!['any','rent','buy'].includes(kind)||!['referral','online'].includes(channel))return false;
+    if(!Object.values(T.homes).some(h=>h.status==='land'||['building','ready'].includes(h.status)&&types.includes(h.type)))return false;
+    if(channel==='referral'&&T.deliveries<3&&(S.farm.stats.deliv||0)<3)return false;
+    if(channel==='online'){if(S.money<D.ad)return false;pay('Sammelanzeige für Wohnhäuser',D.ad);}
+    T.campaign={channel,types,kind,at:S.time,ready:S.time+(channel==='online'?8*60:DAY),expires:S.time+14*DAY};
+    Object.values(T.homes).forEach(applyCampaign);changed();return true;
+  }
+  function stopAdvert(){const T=state();if(!T||!T.campaign)return false;delete T.campaign;changed();return true;}
   function list(id,channel){
-    const h=home(id),T=state();if(!h||h.status!=="ready"||h.listing||!["referral","online"].includes(channel))return false;
+    const h=home(id),T=state();if(!h||!["ready","building"].includes(h.status)||h.listing||!["referral","online"].includes(channel))return false;
     if(channel==="referral"&&T.deliveries<3&&(S.farm.stats.deliv||0)<3)return false;
     if(channel==="online"){if(S.money<D.ad)return false;pay("Onlineanzeige",D.ad);}
-    h.listing={channel,at:S.time,ready:S.time+(channel==="online"?8*60:DAY),expires:S.time+8*DAY,offers:null};changed();return true;
+    h.listing={channel,at:S.time,ready:S.time+(channel==="online"?8*60:DAY),expires:Math.max(S.time+8*DAY,(h.ready||S.time)+8*DAY),offers:null};changed();return true;
   }
-  function relist(id){const h=home(id),L=h&&h.listing;if(!h||h.status!=="ready"||!L||!L.offers||!L.offers.every(c=>c.declined))return false;
+  function relist(id){const h=home(id),L=h&&h.listing;if(!h||!["ready","building"].includes(h.status)||!L||!L.offers||!L.offers.every(c=>c.declined))return false;
     h.lastApplicants=L.offers.map(c=>c.n);delete h.listing;changed();return true;}
   function offers(id){
     const T=state(),h=home(id),k=D.houses[h.type],R=erbeRng(T.seq++*937+Number(id)*137+Math.floor(S.time));
     const first=["Marie","David","Emilia","Jonas","Amira","Lars","Sofia","Alexander","Clara","Daniel"],last=["Weber","Krüger","Peters","Fischer","Becker","Lorenz","Sommer","Hahn","Winter","Vogel"];
-    const used=new Set([...(h.lastApplicants||[]),...residents().map(x=>x.r.n)]);
+    const used=new Set([...(h.lastApplicants||[]),...residents().map(x=>x.r.n),...Object.values(T.homes).flatMap(x=>x.listing&&x.listing.offers?x.listing.offers.map(c=>c.n):[]) ]);
     return Array.from({length:3},(_,i)=>{const seed=T.seq++;let j=Math.floor(R()*first.length),l=Math.floor(R()*last.length),n=first[j]+" "+last[l];
       for(let tries=0;used.has(n)&&tries<100;tries++){j=(j+1)%first.length;if(!j)l=(l+1)%last.length;n=first[j]+" "+last[l];}used.add(n);
-      const kind=i===1?"buy":"rent",factor=.92+R()*.1;
+      const kind=h.listing.preference&&h.listing.preference!=="any"?h.listing.preference:i===1?"buy":"rent",factor=.92+R()*.1;
       return {id:"I"+seed,n,seed,job:["Angestellt","Fachkraft","Selbstständig"][i],size:1+Math.floor(R()*3),look:{...D.looks[(j%2)+2*(seed%3)],seed},
         kind,price:Math.round((kind==="rent"?k.rent:k.sale)*factor/(kind==="rent"?10:1000))*(kind==="rent"?10:1000),
         rentBudget:Math.round(k.rent*(1.02+R()*.13)/10)*10,buyBudget:Math.round(k.sale*(1.02+R()*.1)/1000)*1000,rounds:0,
@@ -63,7 +79,7 @@ const VILLAGE = (() => {
   }
   function negotiate(id,offerId,kind,price){
     const h=home(id),L=h&&h.listing,c=L&&L.offers&&L.offers.find(c=>c.id===offerId),k=h&&D.houses[h.type];
-    if(!c||h.status!=="ready"||S.time>=L.expires||c.declined||!["rent","buy"].includes(kind)||!Number.isFinite(price)||price<=0)return false;
+    if(!c||!["ready","building"].includes(h.status)||S.time>=L.expires||c.declined||!["rent","buy"].includes(kind)||!Number.isFinite(price)||price<=0)return false;
     if(price<(kind==="rent"?k.rent:k.sale)*.6){c.reply="Bitte nennen Sie ein marktübliches Angebot. Prüfen Sie Betrag und Vertragsart.";changed();return false;}
     c.rounds++;const budget=kind==="rent"?c.rentBudget:c.buyBudget;
     if(price<=budget){c.agreed={kind,price:Math.round(price)};c.reply="Vielen Dank für Ihr Angebot. Den genannten Konditionen stimme ich zu. Bitte lassen Sie uns den Vertrag abschließen.";}
@@ -83,7 +99,8 @@ const VILLAGE = (() => {
     const T=state();if(!T)return;
     if(typeof VILLAGE_PEOPLE!=="undefined")VILLAGE_PEOPLE.tick(); /* v343: Abläufe auch außerhalb der 3D-Ansicht weiterführen. */
     for(const p of D.plots){const h=T.homes[p.id];
-      if(h.status==="building"&&S.time>=h.ready){h.status="ready";toast("🏘️ "+p.street+" "+p.number+" ist fertig und kann angeboten werden.","ok");renderDirty=true;}
+      if(h.status==="building"&&S.time>=h.ready){h.status="ready";toast("🏘️ "+p.street+" "+p.number+" ist bezugsfertig. Vorgemerkte Konditionen können jetzt abgeschlossen werden.","ok");renderDirty=true;}
+      applyCampaign(h);
       if(h.listing){const L=h.listing;if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}else if(!L.offers&&S.time>=L.ready){L.offers=offers(p.id);toast("🏡 Neue Wohnanfragen für "+p.street+" "+p.number+".","ok");renderDirty=true;}}
       if(h.status==="rented"&&S.time>=h.contract.next){const C=h.contract,n=1+Math.floor((S.time-C.next)/WEEK),gross=Math.round(C.price*7/30*n),cost=Math.round(gross*.08);
         S.money+=gross-cost;S.revenue+=gross;S.expense+=cost;C.earned+=gross-cost;T.earned+=gross-cost;C.next+=n*WEEK;
@@ -141,5 +158,5 @@ const VILLAGE = (() => {
       toast("🤝 "+h.resident.n+" empfiehlt Ihren Hof weiter: "+D.friends[p.resident].n+" kennt jetzt Ihr Angebot.","ok");}
   }
   function note(o){if(!o.village)return "";return o.village.friend?"Empfohlen von "+o.village.referrer:"Nachbarschaft · "+address(plot(o.village.plot)).t;}
-  return {state,home,plot,geo,local,door,address,clear,overlaps,clipLock,obstruction,residents,expand,canExpand,buy,build,list,relist,negotiate,sign,tick,value,route,variants,repo,orderFor,nextOrder,delivered,note};
+  return {state,home,plot,geo,local,door,address,clear,overlaps,clipLock,obstruction,residents,expand,canExpand,buy,build,advertise,stopAdvert,list,relist,negotiate,sign,tick,value,route,variants,repo,orderFor,nextOrder,delivered,note};
 })();

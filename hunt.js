@@ -2373,9 +2373,9 @@ const HUNT = (() => {
   }
   function fallStart(A, T) {
     /* v307: Aus der gerade sichtbaren Bewegung beginnen; Dauer je Art und Stück statt starrem Wegkippen in 0,55 s. */
-    if (A.k !== "fasan") T = (A.k === "keiler" ? 1.18 : 1.34) + poseRnd(A, 34) * 0.08;
+    if (A.k !== "fasan") T = (A.collapse365?(A.k === "keiler"?.78:.92):(A.k === "keiler" ? 1.18 : 1.34)) + poseRnd(A, 34) * 0.08;
     /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
-    const sl = (A.v || 0) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
+    const sl = (A.collapse365&&A.zone!=="kopf"?0:(A.v || 0)) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
     A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
     A.t = A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
     A.rz0 = A.node.rz || 0; A.y0 = A.node.y || 0; A.rx0 = A.node.rx || 0;
@@ -2749,6 +2749,12 @@ const HUNT = (() => {
   }
 
   /* ------------------------------ Eingabe --------------------------------- */
+  /* v365: Abrufbare Erklärung statt wiederholter Belehrung bei jeder Bergung. */
+  function qualityHTML(){return `<p><b>Tiergüte und Schussnote sind zwei verschiedene Werte.</b></p><p>Die Tiergüte (0–100) steht bereits bei der Begegnung fest: Sie beschreibt die natürliche Stärke des Tieres und seiner Trophäe. Du kannst sie bei diesem Tier nicht erhöhen. Beobachte mit dem Fernglas und wähle ein stärkeres Stück; weitere Begegnungen bieten andere Tiere.</p><p>Ein sauberer Herzschuss gibt <b>+5 Punkte</b>, ein Lungenschuss <b>+2 Punkte</b> für die Medaille. Beispiel: Tiergüte 46 + Herzbonus 5 = 51, also Silber. Ein perfekter Schuss macht aus einem schwachen Tier kein Diamantstück.</p><p><b>Medaille:</b> Bronze unter 50, Silber ab 50, Gold ab 72, Diamant ab 90 Punkten. Ein beschädigtes Haupt begrenzt auf Silber, ein Trägerschuss auf Gold, ein erst krank geschossenes Stück auf Bronze.</p><p>Die <b>Schussnote</b> bewertet dagegen den Treffer und die Schussumstände. Ruhe, ein sauberer erster Treffer und kontrolliertes Zielen helfen dabei. Seltenheit beschreibt besondere Merkmale und ist unabhängig von der Schussnote.</p>`;}
+  function qualityHelp(){
+    if(document.getElementById('huntQuality'))return;const d=document.createElement('dialog');d.id='huntQuality';d.className='hunt-quality';d.innerHTML=`<h2>Tiergüte verstehen</h2>${qualityHTML()}<button class="btn" type="button">Verstanden</button>`;
+    document.body.appendChild(d);d.querySelector('button').onclick=()=>d.close();d.onclose=()=>d.remove();d.showModal();
+  }
   function ui() {
     const host = $("#farm");
     if (!host) return;
@@ -2757,7 +2763,7 @@ const HUNT = (() => {
     el.innerHTML = `<svg class="hu-ov" width="100%" height="100%"></svg>
       <div class="hu-marks"></div>
       <div class="hu-spot" hidden></div>
-      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
+      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><button class="hu-quality" data-hu="quality" aria-label="Tiergüte erklären">?</button><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
       <div class="hu-msg" hidden></div>
       <div class="hu-range" hidden></div>
       <div class="hu-bar"></div>
@@ -2817,6 +2823,7 @@ const HUNT = (() => {
       const b = e.target.closest("[data-hu]"); if (!b || !X) return;
       e.stopPropagation();
       const a = b.dataset.hu;
+      if (a === "quality") return qualityHelp();
       if (a === "exit") return end();
       if (a === "bino") return setView(X.view === "bino" ? "eye" : "bino");
       if (a === "scope") return setView("scope");
@@ -2982,6 +2989,9 @@ const HUNT = (() => {
     }
     save();
   }
+  /* v365: Nicht jedes Tier flüchtet nach einem tödlichen Treffer. Ein ruhiges
+     Stück kann auf Herztreffer direkt zusammenbrechen; Träger/Hirn immer. */
+  function instantCollapse(A,zone){return zone==='kopf'||zone==='hals'||zone==='herz'&&(A.v||0)<1.5&&poseRnd(A,365)<-.1;}
   function onHit(A, zone, dm, context) {
     if (!X || !A.node || !alive(A)) return;
     A.hits.push(zone); A.dm = A.dm || dm;
@@ -3010,7 +3020,7 @@ const HUNT = (() => {
     }
     A.zone = zone;
     const running = A.st === "wounded" || A.st === "flee" || A.st === "hit";
-    A.dist = 0; A.runL = lerp(Z.run[0], Z.run[1], rnd());
+    A.dist = 0; A.collapse365=instantCollapse(A,zone); A.runL = A.collapse365?0:lerp(Z.run[0], Z.run[1], rnd());
     X.target = A; buzz(22);
     if (A.hits.some(z => !ZONE[z].kill)) A.capW = true;         /* erst krank, dann erlegt: höchstens Bronze */
     if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.55); }
@@ -3417,7 +3427,7 @@ const HUNT = (() => {
       <div class="hu-chips">${chips}</div>
       <div class="hu-more">
         <div class="hu-c3"><span><small>Gewicht</small><b>${fkg(A)}</b></span><span><small>Treffer</small><b>${esc(Z.n)}</b></span><span><small>${flucht[0]}</small><b>${esc(flucht[1])}</b></span></div>
-        <div class="hu-q"><span>Güte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
+        <div class="hu-q"><span>Tiergüte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
           <i class="hu-qb" style="--q:${(eff * 100).toFixed(1)}%;--mc:${BARC[A.medal]}"><b></b>${tick(50, 2)}${tick(72, 3)}${tick(90, 4)}</i></div>
         <div class="hu-shot"><span>Schuss</span><b title="${sh.v} von 5">${stars(sh.v)}</b><small>${esc(shTxt)}</small></div>
         <p class="hu-pbl${P.rec ? " on" : ""}">${recTxt}</p>
@@ -3977,7 +3987,7 @@ const HUNT = (() => {
     const tot = SPK.reduce((t, x) => t + dexCount(H, x).got, 0), totOf = SPK.reduce((t, x) => t + dexCount(H, x).of, 0);
     const gPb = [H.pb.dm ? `<span><small>Weitester Schuss</small><b>${H.pb.dm.v} m</b><em>${esc(SP[H.pb.dm.k].n)}</em></span>` : "", H.pb.sh ? `<span><small>Beste Schussnote</small><b>${stars(H.pb.sh.v)}</b><em>${esc(SP[H.pb.sh.k].n)}</em></span>` : "",
       pb ? `<span><small>Stärkster ${esc(SP[k].n)}</small><b>Güte ${Math.round(pb.s * 100)}</b><em>${esc(pb.txt || "")}</em></span>` : ""].filter(Boolean).join("");
-    return `<div class="tw-fl">${tabs}</div>
+    return `<details class="tw-quality"><summary>Wie entstehen Tiergüte, Medaille und Schussnote?</summary>${qualityHTML()}</details><div class="tw-fl">${tabs}</div>
       <div class="tw-prog"><b>${SP[k].i} ${esc(SP[k].n)}</b><span>${(H.n && H.n[k]) || 0} erlegt · ${cnt.got} von ${cnt.of} Merkmalen dokumentiert</span><i style="--p:${Math.round(cnt.got / cnt.of * 100)}%"></i>
         <small>Jagdbuch gesamt: ${tot} von ${totOf}</small></div>
       ${gPb ? `<div class="tw-pbs">${gPb}</div>` : ""}
@@ -4216,6 +4226,7 @@ const HUNT = (() => {
 
   /* ------------------------------ Ende ------------------------------------ */
   function end() {
+    const q=document.getElementById("huntQuality");if(q)q.close();
     if (!X || X.mode === "out" || X.mode === "in") return;
     if (X.view === "harvest" || X.view === "back") return;
     X.mode = "out"; X.p = 0; X.from = camOf(FV.R.cam);
@@ -4276,7 +4287,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),

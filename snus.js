@@ -507,15 +507,20 @@ function jailServe() {
     <p class="rp-note">Hofgang, Kantine, Warten.</p>
   </div>`);
   const total = j.until - j.from;
-  const t0 = performance.now(), minMs = ctl ? (window.JAIL_MS_TEST || JAIL_MS) : 2800;
+  const minMs = ctl ? (window.JAIL_MS_TEST || JAIL_MS) : 2800;
+  /* v365: Restzeit nach Laden, begrenzte Rechenschritte und keine Aufholsprünge
+     nach Hintergrundpause. Der Balken zeigt ausschließlich berechnete Zeit. */
+  const remaining=Math.max(0,j.until-S.time);let last=performance.now(),target=S.time;
   muteToasts = true;
   let lastSave = performance.now();
   const step = () => {
-    if (!S.jail) { if (ctl) ctl.close(); return; }
-    const target = j.from + total * Math.min(1, (performance.now() - t0) / minMs);
+    if (S.jail!==j) { muteToasts=false;if (ctl) ctl.close(); return; }
+    const now=performance.now(),elapsed=document.hidden?0:Math.min(100,Math.max(0,now-last));last=now;
+    target=Math.min(j.until,S.time+120,target+elapsed*remaining/minMs);
+    if(document.hidden){requestAnimationFrame(step);return;}
     /* Zeitbudget statt fester Anzahl: das Bild bleibt flüssig, die Spielzeit holt auf */
     const tb = performance.now();
-    while (S.time < Math.min(target, j.until) && performance.now() - tb < 10) tick(Math.min(10, j.until - S.time));
+    let steps=0;while (S.time < target-1e-7 && steps++<6 && performance.now() - tb < 3) tick(Math.min(10,target-S.time,j.until-S.time));
     if (performance.now() - lastSave > 2000) { lastSave = performance.now(); try { save(); } catch (e) {} }
     const k = (S.time - j.from) / total;
     if (ctl) ctl.update({ k, money: S.money, moneyTxt: money(S.money), jobs: Math.max(0, S.done - j.done0) });

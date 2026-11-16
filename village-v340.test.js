@@ -80,7 +80,7 @@ function listed(){built();run('VILLAGE.list("030","online");S.time=VILLAGE.home(
 test('Kauf und Bau genau einmal; eine echte Bauzeit, danach mehrere formelle Miet-/Kaufanfragen',()=>{
  run('fresh(10);S.money=1e7;S.farm.stats.deliv=6;var m=S.money;');assert.ok(run('VILLAGE.expand()'));assert.ok(run('VILLAGE.buy("030")'));assert.ok(run('VILLAGE.build("030","holz",false)'));
  assert.equal(run('m-S.money'),48000+35000+215000);assert.equal(run('VILLAGE.home("030").status'),'building');
- assert.equal(run('VILLAGE.build("030","holz",false)'),false);assert.equal(run('VILLAGE.list("030","online")'),false);
+ assert.equal(run('VILLAGE.build("030","holz",false)'),false);
  run('S.time=VILLAGE.home("030").ready-.01;VILLAGE.tick();');assert.equal(run('VILLAGE.home("030").status'),'building');
  run('S.time+=.01;VILLAGE.tick();');assert.equal(run('VILLAGE.home("030").status'),'ready');
  assert.ok(run('VILLAGE.list("030","online")'));assert.equal(run('VILLAGE.list("030","online")'),false);

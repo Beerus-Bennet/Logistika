@@ -3438,6 +3438,8 @@ function toastEnd(fast) {
 }
 
 function phaseLabel(v) {
+  /* v365: Ausstehende Schienengeometrie erklären statt unsichtbar festhängen. */
+  if(['repo','haul'].includes(v.phase)&&v.route&&typeof geoStatus==='function'){routeGm(v);const status=geoStatus(v.route);if(status)return status;}
   if (typeof haltLabel === "function") { const h = haltLabel(v); if (h) return h; }
   const job = S.jobs.find(j => j.id === v.jobId);
   const leg = job ? job.legs[v.legIdx] : null;
@@ -4699,7 +4701,7 @@ function boot() {
     if (S.jail && typeof jailCheck === "function") jailCheck();
     if (S.over && typeof overCheck === "function") overCheck();
     acc += real;
-    if (acc > 0.9 && playing()) {
+    if (acc > 0.9 && playing() && !document.body.classList.contains("jl-open") && !document.body.classList.contains("office3d")) {
       acc = 0; renderHud(); renderPause();
       /* Im Tutorial steht die Uhr – nichts ändert sich, also auch nichts neu zeichnen */
       const hold = touchDown || performance.now() - touchUpAt < 450 || tutorialRunning();
@@ -4711,7 +4713,7 @@ function boot() {
       if (selected) renderInspector();
       renderFollowBar();
     }
-    if (activeTab !== "farm" && !document.body.classList.contains("jl-open")) mapRedraw();
+    if (activeTab !== "farm" && !document.hidden && !document.body.classList.contains("jl-open") && !document.body.classList.contains("office3d")) mapRedraw();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

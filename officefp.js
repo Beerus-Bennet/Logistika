@@ -1567,7 +1567,7 @@ const OFFICE3D = (() => {
       const wait = Math.max(0, 1700 - (performance.now() - t0));
       setTimeout(() => {
         if (!live()) return;
-        const out = () => { if (!live()) return; ld.classList.add("out"); setTimeout(() => ld.remove(), 450); const h = el.querySelector("#ofpHint"); if (h) { h.classList.add("on"); setTimeout(() => h.classList.remove("on"), 5200); } };
+        const out = () => { if (!live()) return; if(O.build&&O.build.length){setTimeout(out,80);return;} ld.classList.add("out"); setTimeout(() => ld.remove(), 450); const h = el.querySelector("#ofpHint"); if (h) { h.classList.add("on"); setTimeout(() => h.classList.remove("on"), 5200); } };
         if (L) L.finish().then(out); else out();
       }, wait);
     }, 60));
@@ -1575,7 +1575,7 @@ const OFFICE3D = (() => {
 
   function start() {
     const el = O.el, cv = el.querySelector("#ofpCv");
-    const R = G3.create(cv, { shadowSize: 2048, shadowBox: 8.5, maxDpr: 1.75 });
+    const R = G3.create(cv, { shadowSize: 1024, shadowBox: 8.5, maxDpr: 1.5, powerPreference:"low-power" });
     if (!R) return false;
     O.R = R;
     const E = R.env;
@@ -1586,18 +1586,20 @@ const OFFICE3D = (() => {
     buildFloor(true);
     bindInput();
     O.last = performance.now(); O.t = 0;
-    const gov = G3.governor(R);                    /* v316: Ruckelbremse (gl3d.js) */
+    const gov = G3.governor(R,{frameMs:1000/30,minScale:.7}),pace=G3.pacer(30); /* v365 */
     const frame = now => {
       if (!O || !O.alive || O.R !== R) return;
-      const raw = now - O.last;
-      const dt = Math.max(0, Math.min(0.05, raw / 1000)); O.last = now; O.t += dt;
+      O.raf = requestAnimationFrame(frame);
+      const timing=pace(now);if(!timing)return;const {raw,dt}=timing;O.last=now;O.t+=dt;
+      /* Je Bild mindestens einen kleinen Aufbauschritt; nach 3 ms freigeben. */
+      const end=performance.now()+3;do{const task=O.build&&O.build.shift();if(task)task();else break;}while(performance.now()<end);
+      el.classList.toggle('ofp-building',!!(O.build&&O.build.length));
       gov(raw, now);
       step(dt, now);
       if (!O || !O.alive || O.R !== R) return;
       R.stepParticles(dt);
       try { R.render(O.t); } catch (e) { /* Kontextverlust */ }
       updateAction();
-      O.raf = requestAnimationFrame(frame);
     };
     O.raf = requestAnimationFrame(frame);
     return true;
@@ -1617,7 +1619,7 @@ const OFFICE3D = (() => {
       if (d.type === "shard") { d.pos = d.pos.slice(); d.pos[1] = surfBelow(d.pos[0], d.pos[2], d.pos[1]).y + 0.002; d.rot = [0, d.rot[1], 0]; }
       return d;
     }));
-    O.fx = []; O.later = [];
+    O.fx = []; O.later = []; O.build=[];
     if (O.kitRuntime) {
       const state = O.kitRuntime.snapshot();
       /* v259: Etagenwechsel stellt Getragenes zurück; Team-Neuaufbau erhält die Hand. */
@@ -1639,20 +1641,15 @@ const OFFICE3D = (() => {
     R.nodes.push(R.node(M1(room.shell), { shadow: false, glow: 0.55 }));     /* Decke: von unten sonst zu dunkel */
     R.nodes.push(R.node(M1(room.trim), { shadow: false }));
     R.nodes.push(R.node(M1(room.glow), { shadow: false, glow: 0.85 }));
-    /* Personal */
-    O.staff = room.seats.map(s => { R.nodes.push(buildFigure(R, s, M)); return s; });
-    /* Bildschirme (384 × 240, nur bei geänderten Daten neu) */
-    O.screens = room.screens.filter(s => !s.mirror).map((s, n) => {
-      const c = document.createElement("canvas"); c.width = 384; c.height = 240;
-      const sig = screenCanvas(c, b, s.p), t = TX(c);
-      R.nodes.push(R.node(null, { x: s.x, y: s.y, z: s.z, decal: { t, w: 0.6, h: 0.36 } }));
-      return Object.assign(s, { c, t, sig, next: performance.now() + 600 + n * 23 });
-    });
-    /* v322: Doppelmonitore teilen dieselbe Textur; weiterhin nur eine Aktualisierung pro Arbeitsplatz. */
-    room.screens.filter(s => s.mirror).forEach(s => {
-      const source = O.screens.find(x => x.i === s.i);
-      R.nodes.push(R.node(null, {x:s.x,y:s.y,z:s.z,decal:{t:source.t,w:.56,h:.36}}));
-    });
+    /* v365: Persönliche Figuren/Texturen in kleinen Schritten aufbauen. */
+    O.staff=[];O.screens=[];O.build=[];
+    room.seats.forEach(s=>O.build.push(()=>{R.nodes.push(buildFigure(R,s,M));O.staff.push(s);}));
+    room.screens.filter(s=>!s.mirror).forEach((s,n)=>O.build.push(()=>{
+      const c=document.createElement('canvas');c.width=384;c.height=240;
+      const sig=screenCanvas(c,b,s.p),t=TX(c);R.nodes.push(R.node(null,{x:s.x,y:s.y,z:s.z,decal:{t,w:.6,h:.36}}));
+      O.screens.push(Object.assign(s,{c,t,sig,next:performance.now()+900+n*31}));
+      room.screens.filter(m=>m.mirror&&m.i===s.i).forEach(m=>R.nodes.push(R.node(null,{x:m.x,y:m.y,z:m.z,decal:{t,w:.56,h:.36}})));
+    }));
     /* v301: Standorttafel und Personalposter; kein Firmenschriftzug an der Küchenwand. */
     R.nodes.push(R.node(null, { x: -2.6, y: 1.55, z: RD - 0.012, ry: PI, decal: { t: TX(boardCanvas(b)), w: 2.4, h: 1.5 } }));
     const pc = posterCanvas(b, null), pt = TX(pc), P = room.poster;
@@ -1768,7 +1765,9 @@ const OFFICE3D = (() => {
     (O.staff || []).forEach(st => {
       const dx = O.pos[0] - st.x, dz = O.pos[1] - st.z;
       const pl = { d: Math.hypot(dx, dz), front: -dz / FS > -0.3, l: [-dx / FS, EYE / FS, -dz / FS] };
-      if (st.dead) animDead(st, dt); else animFigure(st, dt, now, pl);
+      const p=O.R.project(st.x,1.1,st.z),visible=p&&p[2]<1&&p[0]>-80&&p[0]<O.R.w+80&&p[1]>-80&&p[1]<O.R.h+80;
+      st.animDt=(st.animDt||0)+dt;
+      if(visible&&pl.d<6||st.gift||st.animDt>=.16){const d=st.animDt;st.animDt=0;if(st.dead)animDead(st,d);else animFigure(st,d,now,pl);}
     });
     /* Sprechblase folgt dem Kopf */
     if (O.sayAt) {
@@ -1782,7 +1781,7 @@ const OFFICE3D = (() => {
     }
     updateScreens(now);
     /* Team oder Auszeichnung geändert? */
-    if (now > O.pollAt) {
+    if (now > O.pollAt && !O.build.length) {
       O.pollAt = now + 3000;
       const b = typeof baseById === "function" ? baseById(O.b.id) : null;
       if (!b) { leave(); return; }
