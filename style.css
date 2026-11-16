@@ -5071,3 +5071,14 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-xr .xr-labs>.xo-hl.kill{color:#fff;background:#e2412b}
 #huntUI .hu-xr .xo-lead{stroke:rgba(190,215,255,.55);stroke-width:1}
 #huntUI .hu-xr .xo-lead.hit{stroke:#ff8a70;stroke-width:1.4}
+
+/* ---------------------------------------------------------------------
+   v359: Jagd – Aura um Gold- und Diamant-Stücke (Überschrift leuchtet mit)
+   --------------------------------------------------------------------- */
+#huntUI.md3 .hu-win b{color:#ffe9a8;text-shadow:0 2px 0 #3a2500,0 0 14px rgba(255,190,60,.9),0 0 34px rgba(255,170,30,.55)}
+#huntUI.md4 .hu-win b{color:#eafcff;text-shadow:0 2px 0 #06283a,0 0 16px rgba(120,225,255,.95),0 0 44px rgba(80,200,255,.7)}
+#huntUI.md3 .hu-win small{color:#ffd76a}
+#huntUI.md4 .hu-win small{color:#a8ecff}
+#huntUI.md4 .hu-win b{animation:huAuraTitle 2.6s ease-in-out infinite}
+@keyframes huAuraTitle{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@media (prefers-reduced-motion:reduce){#huntUI.md4 .hu-win b{animation:none}}
