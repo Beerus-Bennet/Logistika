@@ -570,6 +570,15 @@ function createMap(canvas, opts) {
   };
 
   window.addEventListener("resize", resize);
+  /* v363: Die Kartenfläche ändert ihre Größe auch ohne Fenster-„resize“ – beim Neuladen setzt viewport.js die App-Höhe
+     nach (iOS-Browserleisten), Leisten klappen ein und aus. Die Zeichenfläche behielt dann ihre alte Pixelgröße und wurde
+     nur gestreckt: das Bild war verzerrt. Jetzt folgt sie der tatsächlichen Größe des Elements; eine verborgene Karte
+     (Größe 0) bleibt unberührt. */
+  if (typeof ResizeObserver === "function") new ResizeObserver(() => {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return;
+    if (Math.round(r.width) !== W || Math.round(r.height) !== H) resize();
+  }).observe(canvas);
   resize();
   return api;
 }
