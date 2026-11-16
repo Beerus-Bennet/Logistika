@@ -1,5 +1,4 @@
-/* =========================================================================
-   LOGISTIKA – Comic-Style in Blau
+/* ==================================================================   LOGISTIKA – Comic-Style in Blau
    ========================================================================= */
 :root{
   --ink:#0d1b2a;
@@ -1895,8 +1894,7 @@ button.cov{font:inherit;color:var(--ink);padding:3px 2px}
 .card.bulkbar{background:linear-gradient(135deg,#fff6d6,#ffe9ef)}
 .card.bulkbar .btn{display:block;width:100%;margin-top:8px}
 
-/* =========================================================================
-   v36 – Der Hof (3D)
+/* ==================================================================   v36 – Der Hof (3D)
    ========================================================================= */
 body:not(.has-farm) .navbtn[data-tab="farm"]{display:none}
 body.farm-phase .navbtn[data-tab="bases"]{display:none}
@@ -2378,8 +2376,7 @@ body.farm-phase #controls{display:none}
 .flv-wrap{position:relative;animation:flvin .45s cubic-bezier(.2,1.6,.4,1)}
 .flv-wrap .flv{animation:none;z-index:1}
 .flv-wrap .flv-rays{z-index:0}
-/* =========================================================================
-   v39 – Fischerei an der Ostsee, neue Tiere
+/* ==================================================================   v39 – Fischerei an der Ostsee, neue Tiere
    ========================================================================= */
 body.site-fisch #farm{background:linear-gradient(180deg,#6fb0ec,#cfe8f7)}
 .frec .fr-trip{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--blue);line-height:1.15;margin-top:1px}
@@ -5072,6 +5069,43 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-xr .xo-lead{stroke:rgba(190,215,255,.55);stroke-width:1}
 #huntUI .hu-xr .xo-lead.hit{stroke:#ff8a70;stroke-width:1.4}
 
+/* v359 – Wohnverhandlungen im eigenen stabilen Fenster, über HUD/Navigation.
+   Mindestens 16 px verhindern iOS-Eingabezoom; nur der Inhalt scrollt. */
+.town-talk{position:fixed;margin:0;padding:0;max-width:none;border:3px solid var(--ink);border-radius:18px;background:var(--paper);color:var(--ink);box-shadow:0 15px 65px #0007;overflow:hidden}
+.town-talk[open]{display:flex;flex-direction:column}
+.town-talk::backdrop{background:#081b2e99}
+.town-talk header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #b7cbdc;flex-shrink:0}
+.town-talk header small{display:block;font-size:11px;color:#526779}.town-talk h2{font:800 18px/1.25 var(--font);margin:2px 0 0}
+.town-talk .tn-close{width:40px;height:40px;flex-shrink:0;background:white;border:2px solid var(--ink);border-radius:50%;font-size:18px;cursor:pointer}
+.tn-form{display:flex;flex-direction:column;min-height:0;margin:0}.tn-body{padding:10px 14px;overflow:auto;overscroll-behavior:contain;min-height:0;touch-action:pan-y}
+.tn-intro{font-size:12px;margin:0 0 10px}.tn-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tn-fields label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px;font-weight:800}
+.tn-fields input,.tn-fields select{width:100%;min-width:0;min-height:44px;padding:7px;border:2px solid #9db6cb;border-radius:9px;background:#fff;color:var(--ink);font:600 16px/1.3 var(--font)}
+.tn-fields :focus-visible{outline:3px solid #71b9ee;outline-offset:1px}.tn-reply{margin:12px 0 0;padding:10px;border-left:3px solid #72a8c0;background:#f9fcff;font-size:13px;line-height:1.45}
+.tn-form footer{flex-shrink:0;padding:10px 14px;border-top:1px solid #b7cbdc;background:var(--paper)}.tn-form footer .btn{width:100%;min-height:44px;font-size:14px;white-space:normal}.tn-form [hidden]{display:none}
+
+/* v359 – Klare Hierarchie im Lager: ein Bereich, darunter Inhalt und Filter. */
+.logi-icon{display:inline-block;width:28px;height:28px;vertical-align:middle;flex:none}
+.store-head{display:flex;align-items:center;gap:10px;margin:0 48px 10px 0}.store-head>.logi-icon{width:38px;height:38px;padding:4px;background:#fff8df;border:2px solid var(--ink);border-radius:10px}
+.store-head label{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#526779;font-weight:800}
+.store-head select{width:100%;min-width:0;min-height:44px;background:white;border:2px solid var(--ink);border-radius:9px;padding:5px 8px;font:800 16px var(--font);color:var(--ink)}
+#farmSheet.store .fs-in{max-height:88%}#farmSheet.store .fcap{height:24px;border-width:2px;margin:0 0 8px;font-size:12px}
+#farmSheet .fhall .logi-icon,#farmSheet .store-external .logi-icon{width:20px;height:20px}#farmSheet .store-external,#farmSheet .fhall{font-size:11px;margin:5px 0}
+.tw .tw-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:wrap;margin:12px 0 9px}.tw .tw-head>b{font-size:17px}.tw .tw-head>small{font-size:11px}
+.tw .tw-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 10px}.tw .tw-tabs button{min-width:0;min-height:44px;padding:6px 3px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;border-width:2px;border-radius:10px;box-shadow:none}.tw .tw-tabs .logi-icon{width:23px;height:23px}.tw .tw-tabs button b{font-size:10px;padding:1px 5px}
+.tw-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px;padding:9px;background:#dbe7f2;border-radius:10px}
+.tw-filters label{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:10px;font-weight:800;color:#526779}.tw-filters select{width:100%;min-width:0;min-height:40px;border:1.5px solid #a1b7ca;border-radius:7px;padding:4px;background:#fff;color:var(--ink);font:600 16px var(--font)}
+/* v359: Pan für den Bericht reservieren; Drehen/Zoomen nur auf der 3D-Fläche. */
+#huntUI .hu-xr .xr-view{min-height:0;min-width:0}
+#huntUI .hu-xr .xr-pan{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+#huntUI .hu-xr .xr-hd{position:sticky;top:-10px;z-index:2;background:#0b1a2c;padding:5px 0}
+#farmSheet.store .store-head{position:sticky;top:0;z-index:3;background:var(--paper);padding:3px 0}
+/* v359: Vergrößerte, ruhige Organansicht neben dem Namen. Die maßstäbliche
+   Lage im Tier bleibt erhalten; Details sind auch ohne starken Zoom erkennbar. */
+#huntUI .hu-xr .xr-organ-model{display:grid;place-items:center;flex:none;width:54px;height:54px;border:1px solid #35526d;border-radius:9px;background:#142b43}
+#huntUI .hu-xr .xr-organ-model .ic{width:46px;height:46px;display:block}
+#huntUI .hu-xr .xr-organ-model img{width:100%;height:100%;object-fit:contain}
+#huntUI .hu-xr .xr-organ-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.town-talk.tn-tight header{padding:6px 12px}.town-talk.tn-tight header h2{font-size:16px}.town-talk.tn-tight .tn-close{width:32px;height:32px}.tn-tight .tn-intro{display:none}.tn-tight .tn-body{padding:8px 12px}.tn-tight footer{padding:6px 12px}.tn-tight .tn-reply{font-size:12px;padding:6px;margin-top:8px}
 /* ---------------------------------------------------------------------
    v359: Jagd – Aura um Gold- und Diamant-Stücke (Überschrift leuchtet mit)
    --------------------------------------------------------------------- */
@@ -5132,3 +5166,10 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #farmSheet.town .town-plan>button>.ic{display:grid;place-items:center;height:40px;margin:0 auto 2px;font-size:23px}
 #farmSheet.town .town-plan>button>.ic.th img{width:44px;height:40px;object-fit:contain;display:block}
 #farmSheet.town .town-plan>button>.ic.th b{font-weight:400}
+
+/* v365 – Zentrale Wohnanzeige, abrufbare Gütehilfe und ruhigere Innenräume. */
+.town-ad{border-color:#2f6fd0}.town-ad summary{cursor:pointer}.town-ad summary small{display:block}.town-ad form{display:grid;gap:10px;margin-top:12px}.town-ad label{display:flex;gap:8px;align-items:center;font-size:13px}.town-ad label>select{flex:1;min-width:0;min-height:44px;font:600 16px var(--font);border:2px solid #9db6cb;border-radius:8px;background:white;padding:5px}.town-ad fieldset{border:1px solid #9db6cb;border-radius:8px;display:grid;gap:9px;padding:10px}.town-ad input[type=checkbox]{width:20px;height:20px}.town-ad small{line-height:1.45}
+.hu-info .hu-quality{pointer-events:auto;margin-left:8px;border:2px solid #1a2a3b;background:#fff6da;color:#16293b;border-radius:50%;width:32px;height:32px;font:bold 18px var(--font);cursor:pointer}
+.hunt-quality{width:min(480px,calc(100vw - 24px));max-height:calc(var(--app-height,100dvh) - 32px);overflow:auto;border:3px solid var(--ink);border-radius:18px;background:var(--paper);color:var(--ink);padding:18px;font:14px/1.55 var(--font)}.hunt-quality::backdrop{background:#07182fbf}.hunt-quality h2{margin-top:0;font-size:21px}.hunt-quality .btn{width:100%;min-height:44px}.tw-quality{margin:8px 0 12px;padding:10px;background:#fff7dc;border-radius:9px;font-size:13px;line-height:1.5}.tw-quality summary{font-weight:800;cursor:pointer}
+#ofp.ofp-building::after{content:'Büro wird eingerichtet …';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:12px 18px;background:#f8f5e9;border:3px solid var(--ink);border-radius:12px;font-size:14px;font-weight:800;pointer-events:none}
+.jl-say{max-width:min(190px,calc(100% - 16px));white-space:normal;text-align:center;line-height:1.35;z-index:4}.jl-say.on{animation:jlSpeak365 3.6s ease-out forwards}@keyframes jlSpeak365{0%{opacity:0}10%,85%{opacity:1}100%{opacity:0}}

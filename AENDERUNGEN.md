@@ -1,3 +1,17 @@
+## v365 – Aufgaben aus „Logistika 3.pdf“ und offene Oberflächenkorrekturen
+
+**Auftrag:** Alle 13 PDF-Seiten mit sechs Aufgabenbereichen geprüft. Grundlage ist main `bf7fd14` einschließlich Jagd-Aura aus PR #77; die aufeinander aufbauenden offenen PRs #78–#82 (bis v364) sind zusätzlich integriert. Die bereits vorbereiteten Eingabe-/Lager-/Trefferbericht-/Störungskorrekturen werden gemeinsam ausgeliefert.
+
+**Lösung:** Zentrale Seeblick-Anzeige für Haustypen und Miete/Kauf, schon während des Baus. Einmalige Anzeigengebühr, spätere passende Bauvorhaben nehmen teil; Konditionen können vorgemerkt werden, Einzug und Buchung erst nach Fertigstellung. Jagdgüte heißt nun Tiergüte und wird auf Wunsch am Hochsitz oder im Jagdbuch erklärt; die bestehenden Werte/Medaillenschwellen bleiben erhalten. Ruhiges Wild kann nach Herztreffer unmittelbar mit einknickenden Gelenken zusammenbrechen, Träger/Hirn ohne Flucht; bewegtes Wild und Lungentreffer behalten ihre Fluchtabläufe.
+
+Bürofiguren und Monitore werden schrittweise aufgebaut. Büro/Haft zeichnen höchstens 30 Bilder/s, verwenden kleinere Schatten und begrenzte adaptive Auflösung. Die Ruckelbremse berücksichtigt diesen absichtlichen Bildtakt; verdeckte Hof-/Kartenansichten pausieren. Haftnachberechnung mit maximal sechs Schritten und 3-ms-Budget je Bild, kein Zeitüberschießen, kein Aufholen langer Hintergrundpausen, korrekte Restzeit nach Laden. Mehr Hafttexte ohne direkte Wiederholung; Blasen über/neben dem tatsächlichen Kopf. Schienenrouting liefert bei Fehlern keine eingefrorene Luftlinie mehr: expliziter Wartestatus, erneute Anfrage, echte angeschnappte Gleisendpunkte und feinere Kurven; alter Schienen-Darstellungscache wird erneuert, Spielstände bleiben bestehen.
+
+Zusätzlich: stabiler Preisdialog mit 16-px-Eingaben und Tastatur-Viewport; kompakte Lagerauswahl, gleichmäßige Trophäenfilter und eigene SVG-Symbole; Trefferbericht mit nativem Touch-Scrollen bis zum Ende, nur getroffenen Organen, festen Beschriftungsplätzen und geformten artspezifischen Organmodellen. Störungen erscheinen nur bei tatsächlich betroffenen eigenen Fahrten, anhand des verbleibenden Routenverlaufs.
+
+**Geprüft:** Neue PDF-Prüfgruppen, bestehende Seeblick-/Hofteam-/Tür-zu-Tür-/Jagd-/Trefferbild-/Büro-/Haftprüfungen, Cache-/Syntaxprüfung; mobile Chromium-Abnahme mit WebGL, echten Touch-Ereignissen, reserviertem Neubau und anschließendem Mietvertrag, zwölf sichtbaren Büroarbeitsplätzen und Haftprojektion. Live-Schienenanfrage Berlin–Schwedt: 168 Punkte, rund 94,72 km, dieselbe Linie auf der Karte. Details, Reproduktionsbefehle und Vorschauen: [Prüfbericht](docs/PDF-3-v365.md).
+
+**Grenzen:** Kein Test auf einem echten iPhone/Safari, keine Temperatur-/Akkumessung und kein Nachweis garantierter 30 FPS. Software-WebGL im Testbrowser bleibt langsam. Schienen ohne lokal gespeicherten Verlauf benötigen den Routingdienst; bei dessen Ausfall wartet die Fahrt mit sichtbarem Status. Ein einzelner Simulationstakt oder Figurenaufbau kann das nominelle Zeitbudget überschreiten.
+
 ## v364 – Seeblick: Grundstücksplan mit 3D-Bildchen statt Emojis
 **Wunsch Bennet (Bild: Grundstücksplan):** Die Emojis (Haus, Kran, Schraffur) durch Bildchen im Stil von Logistika ersetzen – wie die 3D-Darstellung der Hofprodukte.
 

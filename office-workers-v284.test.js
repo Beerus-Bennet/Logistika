@@ -19,7 +19,10 @@ for(const act of ['type','mouse','read','note','phone','cup','look']){
 F.shock={at:state.t-10,F:{dead:false},pt:[0,1,0]};state.deaths=1;F.act='type';F.actT=4;
 for(let i=0;i<120;i++){state.t+=1/60;Q.animFigure(F,1/60,state.t*1000,pl);}
 assert.equal(F.actT,4);assert.equal(F.arm[0].g,'rest');assert.equal(F.arm[1].g,'rest');assert.equal(F.pen.visible,false);assert.equal(F.held,null);
-for(const x of [-200,0,390,1000]){const p=Q.bubblePosition(x,30,390,700,220,140);assert.ok(p[0]>=118&&p[0]<=272);assert.ok(p[1]>=160);}
+/* v365: Seit v315 verschwinden Blasen außerhalb des Bildes (statt am Rand zu kleben). */
+for(const x of [-200,1000])assert.equal(Q.bubblePosition(x,30,390,700,220,140),null);
+for(const x of [0,390]){const p=Q.bubblePosition(x,30,390,700,220,140);assert.ok(p[0]>=118&&p[0]<=272);assert.ok(p[1]>=144);}
+
 const g={measureText:t=>({width:String(t).length*6})};const lines=Q.screenLines(g,'Mein Monat: 13 Aufträge mit Papieren betreut',240);assert.ok(lines.length>1);assert.ok(lines.every(x=>g.measureText(x).width<=240));
 assert.ok(g.measureText(Q.fitScreenText(g,'LOGISTIKA · Zoll & Papiere',184)).width<=184);
 console.log('OK: alle Tätigkeiten, Armreichweite, Notfall ohne Weiterarbeiten, Bildschirmtexte und Sprechblasengrenzen.');

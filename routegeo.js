@@ -10,8 +10,8 @@
    Fahrzeugposition folgen dem Weg (gleicher Anteil der Strecke). Siehe game.js
    roadLine / vehPoint.
    ========================================================================= */
-const GEO = { ver: 0, mem: new Map(), pend: new Set(), q: [], busy: false, failAt: new Map(), ids: null, sea: null, ok: true };
-const GEO_STORE = "logistika-geo-v2", GEO_STORE_OLD = "logistika-geo-v1";   /* v321: v1 enthält Güterzug-Linien über Straßen – nur Straße/Rad werden übernommen */
+const GEO = { ver: 0, mem: new Map(), pend: new Set(), q: [], busy: 0, failAt: new Map(), ids: null, sea: null, ok: true };
+const GEO_STORE = "logistika-geo-v3", GEO_STORE_OLD = "logistika-geo-v1";   /* v321: v1 enthält Güterzug-Linien über Straßen – nur Straße/Rad werden übernommen */
 const GEO_HOSTS = {
   car: ["https://routing.openstreetmap.de/routed-car/route/v1/driving/", "https://router.project-osrm.org/route/v1/driving/"],
   bike: ["https://routing.openstreetmap.de/routed-bike/route/v1/driving/", "https://router.project-osrm.org/route/v1/driving/"],
@@ -78,6 +78,7 @@ function geoLoad() {
     } catch (e) { /* kein Speicher */ }
   };
   take(GEO_STORE_OLD, true);       /* alte Straßen-/Radlinien behalten, alte „Schienen“-Linien (waren Straßen) verwerfen */
+  take("logistika-geo-v2", true); /* v365: alte Schienen-Geometrie mit angehängten Luftlinien verwerfen. */
   take(GEO_STORE, false);
 }
 let geoSaveT = 0;
@@ -291,8 +292,6 @@ function geoNeeds(a, b, mode) {
   if (mode !== "r" && mode !== "l" && mode !== "b") return false;
   return geoHav(a, b) >= (mode === "r" ? 0.8 : 0.8);
 }
-/* Wie lange eine Anfrage höchstens erwartet wird, bevor die gerade Linie als endgültig gilt (ms) */
-const GEO_WAIT = 25000;
 function geoWant(a, b, mode, urgent) {
   const key = geoKey(a, b, mode);
   if (GEO.pend.has(key)) { if (urgent) { const i = GEO.q.findIndex(j => j.key === key); if (i > 0) GEO.q.unshift(GEO.q.splice(i, 1)[0]); } return; }
@@ -305,38 +304,41 @@ function geoWant(a, b, mode, urgent) {
   if (urgent) GEO.q.unshift(job); else GEO.q.push(job);
   geoPump();
 }
-/* Steht die Linie dieser Strecke noch aus? (Anfrage läuft und ist jünger als GEO_WAIT) – dann weder zeichnen noch fahren */
+/* Steht die Linie noch aus? Dann weder zeichnen noch losfahren. */
+/* v365: Schiene darf auch bei Timeout/Offline nicht zur Luftlinie werden.
+   Eine Warteschlange läuft nicht ab; erst die tatsächliche Anfrage hat Timeout. */
 function geoPending(pts) {
   if (!pts || !pts.gm || pts.length < 2 || !GEO.ok) return false;
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
-  const now = Date.now();
-  for (let i = 1; i < pts.length; i++) {
-    const m = pts.gm[i - 1];
-    if (!geoNeeds(pts[i - 1], pts[i], m)) continue;
-    const key = geoKey(pts[i - 1], pts[i], m === "d" ? "r" : m);
-    if (GEO.mem.has(key)) continue;
-    const f = GEO.failAt.get(key);
-    if (f && now - f < 5 * 60e3) continue;                         /* gescheitert: gerade Linie, endgültig */
-    const t = GEO.since && GEO.since.get(key);
-    if (t == null) { geoWant(pts[i - 1], pts[i], m, true); return true; }
-    if (GEO.pend.has(key) && now - t < GEO_WAIT) return true;
-    if (!GEO.pend.has(key)) { geoWant(pts[i - 1], pts[i], m, true); return true; }
+  let pending=false;
+  for (let i=1;i<pts.length;i++) {
+    const m=pts.gm[i-1],a=pts[i-1],b=pts[i];if(!geoNeeds(a,b,m))continue;
+    const key=geoKey(a,b,m==='d'?'r':m);if(GEO.mem.has(key))continue;
+    geoWant(a,b,m,true);
+    if(m==='l'||GEO.pend.has(key))pending=true;
   }
-  return false;
+  return pending;
+}
+function geoStatus(pts){
+  if(!pts||!pts.gm)return null;
+  for(let i=1;i<pts.length;i++){const m=pts.gm[i-1];if(m!=='l'||!geoNeeds(pts[i-1],pts[i],m))continue;
+    const k=geoKey(pts[i-1],pts[i],m);if(GEO.mem.has(k))continue;
+    return typeof navigator!=='undefined'&&navigator.onLine===false?'Schienenroute benötigt eine Internetverbindung':GEO.failAt.has(k)?'Schienenroute nicht verfügbar · erneuter Versuch folgt':'Schienenroute wird berechnet';
+  }return null;
 }
 /* Alle Teilstrecken vormerken (vor dem Zeichnen/Losfahren) – dringend, vor dem Rest der Warteschlange */
 function geoPrefetch(pts) { if (pts && pts.gm) geoPending(pts); }
 function geoPump() {
-  if (GEO.busy || !GEO.q.length) return;
-  GEO.busy = true;
+  if (GEO.busy>=2 || !GEO.q.length) return;
+  GEO.busy++;
   const job = GEO.q.shift();
   if (GEO.since) GEO.since.set(job.key, Date.now());                /* v321: die Wartezeit zählt ab Beginn der Anfrage, nicht ab der Warteschlange */
   geoFetch(job).then(pts => {
     if (pts) { GEO.mem.set(job.key, pts); GEO.ver++; geoSave(); } else GEO.failAt.set(job.key, Date.now());
   }).catch(() => { GEO.failAt.set(job.key, Date.now()); }).then(() => {
-    GEO.pend.delete(job.key); GEO.busy = false;
-    setTimeout(geoPump, 350);
+    GEO.pend.delete(job.key); GEO.busy--;
+    setTimeout(geoPump, 100);
   });
+  if(GEO.q.length)geoPump();
 }
 async function geoFetch(job) {
   if (typeof fetch === "undefined") return null;
@@ -344,9 +346,9 @@ async function geoFetch(job) {
   const hosts = rail ? GEO_HOSTS.rail : job.mode === "b" ? GEO_HOSTS.bike : GEO_HOSTS.car;
   const co = job.a[1].toFixed(5) + "," + job.a[0].toFixed(5) + ";" + job.b[1].toFixed(5) + "," + job.b[0].toFixed(5);
   for (const h of hosts) {
-    try {
+    let to=0;try {
       const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const to = ctl ? setTimeout(() => ctl.abort(), 20000) : 0;
+      to = ctl ? setTimeout(() => ctl.abort(), 12000) : 0;
       const url = rail
         ? h + "?point=" + job.a[0].toFixed(5) + "," + job.a[1].toFixed(5) + "&point=" + job.b[0].toFixed(5) + "," + job.b[1].toFixed(5) + "&profile=all_tracks&points_encoded=false&instructions=false"
         : h + co + "?overview=full&geometries=geojson&alternatives=false&steps=false";
@@ -357,17 +359,19 @@ async function geoFetch(job) {
       /* OSRM: routes[0].geometry.coordinates · GraphHopper: paths[0].points.coordinates (jeweils [Länge, Breite]) */
       const co2 = rail ? j && j.paths && j.paths[0] && j.paths[0].points && j.paths[0].points.coordinates
         : j && j.routes && j.routes[0] && j.routes[0].geometry && j.routes[0].geometry.coordinates;
-      if (!co2 || co2.length < 2) continue;
+      if (!Array.isArray(co2) || co2.length < 2 || !co2.every(c=>Array.isArray(c)&&c.length>=2&&Number.isFinite(c[0])&&Number.isFinite(c[1])&&Math.abs(c[0])<=180&&Math.abs(c[1])<=90)) continue;
       let pts = co2.map(c => [c[1], c[0]]);
       const straight = geoHav(job.a, job.b), len = geoLen(pts);
       /* nur sinnvolle Wege: nicht viel kürzer, nicht endlos Umweg, Start/Ziel nah am Wunschpunkt (Gleise liegen oft weiter weg von der Stadtmitte) */
       if (len < straight * 0.92 || len > straight * 2.6 + 4) continue;
       const snap = rail ? 25 : 6;
       if (geoHav(pts[0], job.a) > snap || geoHav(pts[pts.length - 1], job.b) > snap) continue;
-      pts = geoSimplify(pts, straight > 200 ? 0.0012 : 0.0005);
-      pts = [job.a.slice()].concat(pts, [job.b.slice()]);
+      /* v365: Gleiskurven auf Stadtzoom erhalten; keine bis zu 25 km lange
+         Gerade vom Ortsmittelpunkt bis zum angeschnappten Bahnhof anhängen. */
+      pts = geoSimplify(pts, rail ? .00004 : straight > 200 ? 0.0012 : 0.0005);
+      if(!rail)pts = [job.a.slice()].concat(pts, [job.b.slice()]);
       return pts;
-    } catch (e) { /* nächster Dienst */ }
+    } catch (e) { /* nächster Dienst */ } finally {clearTimeout(to);}
   }
   return null;
 }
@@ -401,15 +405,18 @@ const GEOC = new WeakMap();
 function geoDisp(pts) {
   if (!pts || !pts.gm || pts.length < 2) return pts;
   const c = GEOC.get(pts);
-  if (c && (c.ver === GEO.ver || pts.fz)) return c.out;          /* v321: pts.fz = Fahrzeug ist darauf unterwegs – die Linie springt nicht mehr */
+  if (c && (c.ver === GEO.ver || pts.fz&&c.complete)) return c.out;          /* v321: pts.fz = Fahrzeug ist darauf unterwegs – die Linie springt nicht mehr */
   let out = [pts[0]], changed = false;
   for (let i = 1; i < pts.length; i++) {
     const seg = geoSeg(pts[i - 1], pts[i], pts.gm[i - 1]);
-    if (seg && seg.length > 2) { for (let k = 1; k < seg.length; k++) out.push(seg[k]); changed = true; }
+    if (seg && seg.length >= 2) {
+      if(pts.gm[i-1]==='l'&&i===1)out=[];
+      for(let k=pts.gm[i-1]==='l'?0:1;k<seg.length;k++)if(!out.length||geoHav(out[out.length-1],seg[k])>.000001)out.push(seg[k]);changed=true;
+    }
     else out.push(pts[i]);
   }
   if (!changed) out = pts; else out = geoUnwrap(out);
-  GEOC.set(pts, { ver: GEO.ver, out });
+  GEOC.set(pts, { ver: GEO.ver, out, complete: !geoPending(pts) });
   return out;
 }
 /* Anzeige-Linie: Weg, danach (rund um den Hof) die Hofstraßen */

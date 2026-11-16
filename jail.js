@@ -36,7 +36,7 @@ const JAIL3D = (() => {
     "Jeder Strich an der Wand ist ein Tag weniger.",
     "Hofgang um drei. Danach wieder Warten."
   ];
-  const SAY = { man: ["Alles gut.", "Nur noch ein paar Tage …", "Ich vermisse die Lieferungen.", "Hallo?", "Das war's wert. Fast."], rat: ["Hubert!", "Quiek!", "Krümel!"], tap: ["Tropf.", "Tropf, tropf …", "Der Hahn tropft."], win: ["Freiheit …", "Schöner Tag draußen.", "Ein Vogel!"] };
+  const SAY = { man: ["Alles gut.", "Nur noch ein paar Tage …", "Ich vermisse die Lieferungen.", "Hallo?", "Das war's wert. Fast.", "Hubert hat mehr Auslauf als ich.", "Mein Kalender hat gerade sehr viel Platz.", "Ich könnte die Lieferketten auch im Schlaf planen.", "Der Kaffee hier hat Vorstrafen.", "Heute schon die Fliesen gezählt?", "Mein Paket an die Freiheit ist noch unterwegs.", "Die Matratze bekommt eine ehrliche Bewertung."], rat: ["Hubert!", "Quiek!", "Krümel!", "Mein kleinster Mitbewohner.", "Hubert prüft die Kantine.", "Ohne Frachtbrief keine Krümel!", "Du hast den besseren Fluchtplan.", "Hubert, wo bleibt der Zimmerservice?"], tap: ["Tropf.", "Tropf, tropf …", "Der Hahn tropft.", "Expresslieferung: ein Tropfen.", "Der Taktgeber der Zelle.", "Kein Mengenrabatt beim Wasser.", "Wasserstand: verlässlich tropfend."], win: ["Freiheit …", "Schöner Tag draußen.", "Ein Vogel!", "Der braucht keine Ausreisegenehmigung.", "Luftfracht ohne Aufpreis.", "Fensterplatz mit Vollverpflegung.", "Da draußen liegt meine nächste Tour."] };
   /* v264: Untersuchungshaft nach dem Todesfall im Büro – eigene, ernste Texte (kein „Das war's wert“) */
   const TIPS_U = [
     "Dein Anwalt hat die Haftprüfung beantragt.",
@@ -48,7 +48,7 @@ const JAIL3D = (() => {
     "Hofgang um drei. Danach wieder Warten.",
     "Die Ratte heißt Hubert. Sie ist die Einzige, die dich besucht. Tipp sie an."
   ];
-  const SAY_U = { man: ["Ich wollte das nicht …", "Wann ist die Haftprüfung?", "Hallo?", "Ich kann nicht schlafen."], rat: SAY.rat, tap: SAY.tap, win: ["Draußen geht alles weiter …", "Ein Vogel!", "Wie es dem Team wohl geht?"] };
+  const SAY_U = { man: ["Ich wollte das nicht …", "Wann ist die Haftprüfung?", "Hallo?", "Ich kann nicht schlafen.", "Hoffentlich meldet sich mein Anwalt bald.", "Hubert hält wenigstens keine langen Vorträge.", "Ich denke an das Team.", "Schon wieder Kantinenkaffee.", "Ich habe jede Fliese schon zweimal gezählt."], rat: SAY.rat, tap: SAY.tap, win: ["Draußen geht alles weiter …", "Ein Vogel!", "Wie es dem Team wohl geht?"] };
 
   const hex = c => typeof c === "number" ? c : parseInt(String(c).replace("#", ""), 16);
   const mixc = (a, b, t) => { const A = G3.col(a), B = G3.col(b); return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; };
@@ -301,6 +301,15 @@ const JAIL3D = (() => {
   }
 
   /* -------------------------------- Szene --------------------------------- */
+  /* Blasenkoordinaten beziehen sich auf den unteren Mittelpunkt (CSS). */
+  function speechPlace(p,face,w,h,bw,bh,top,bottom){
+    const half=bw/2,pad=8;let x=Math.max(half+pad,Math.min(w-half-pad,p[0])),y=Math.min(Math.max(top+bh,p[1]-14),Math.max(top+bh,bottom));
+    if(face&&Math.abs(x-face[0])<half+35&&y>face[1]-35&&y-bh<face[1]+28){
+      const right=face[0]+half+40,left=face[0]-half-40;
+      if(right<=w-half-pad)x=right;else if(left>=half+pad)x=left;else y=face[1]-35;
+    }
+    return [x,y];
+  }
   function open(host, opt) {
     opt = opt || {};
     const DAYS = opt.days || 14, U = opt.kind === "uhaft", tips = U ? TIPS_U : TIPS, says = U ? SAY_U : SAY;
@@ -319,7 +328,7 @@ const JAIL3D = (() => {
       </div><div class="jl-flash" id="jlFlash"></div></div>`;
     const cv = host.querySelector("#jlCv");
     let R = null;
-    try { R = G3.create(cv, { shadowSize: 1024, shadowBox: 3.6, maxDpr: 1.75 }); } catch (e) { R = null; }
+    try { R = G3.create(cv, { shadowSize: 1024, shadowBox: 3.6, maxDpr: 1.5, powerPreference:"low-power" }); } catch (e) { R = null; }
     if (!R) { host.innerHTML = ""; return null; }
     const lookv = look();
     const mesh = mb => R.mesh(mb);
@@ -397,7 +406,18 @@ const JAIL3D = (() => {
     /* v317: Beine baumeln frei über der Bettkante und schwingen nur von senkrecht bis nach vorn, nie unter das Bett – nie unter das Bett in den Rahmen */
     const KNEE = v => -0.12 + v * 0.12;
     const damp = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-k * dt));
-    const say = (txt, x, y) => { const el = host.querySelector("#jlSay"); if (!el) return; el.textContent = txt; el.style.left = x + "px"; el.style.top = y + "px"; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); };
+    /* v365: Blase am Kopf statt am Schoß verankern; keine direkte Wiederholung. */
+    const sayN={};let speech=null;
+    const say=(kind)=>{const el=host.querySelector('#jlSay'),L=says[kind];if(!el)return;
+      const i=sayN[kind]==null?Math.floor(Math.random()*L.length):(sayN[kind]+1)%L.length;sayN[kind]=i;
+      el.textContent=L[i];speech={kind,until:performance.now()+3600};el.classList.remove('on');void el.offsetWidth;el.classList.add('on');positionSay();};
+    function positionSay(){const el=host.querySelector('#jlSay');if(!speech||!el)return;
+      if(performance.now()>speech.until){speech=null;el.classList.remove('on');return;}
+      const k=speech.kind,P=k==='man'?[SEAT.x,SIT_Y+.383+.16,SEAT.z]:k==='rat'?[st.rat.x,.13,st.rat.z]:k==='tap'?[X0+.1,.72,.1]:[X0,1.55,(WIN.z0+WIN.z1)/2];
+      const p=R.project(...P),face=R.project(SEAT.x,SIT_Y+.383+.16,SEAT.z),top=host.querySelector('.jl-top').getBoundingClientRect(),bot=host.querySelector('.jl-bot').getBoundingClientRect(),rc=cv.getBoundingClientRect();
+      if(!p||p[2]>1){el.style.visibility='hidden';return;}const pos=speechPlace(p,face,R.w,R.h,el.offsetWidth,el.offsetHeight,top.bottom-rc.top+6,bot.top-rc.top-8);
+      el.style.left=pos[0]+'px';el.style.top=pos[1]+'px';el.style.visibility='visible';
+    }
     const proj = (x, y, z) => R.project(x, y, z);
 
     function step(dt) {
@@ -469,8 +489,8 @@ const JAIL3D = (() => {
         ["win", proj(X0, 1.25, (WIN.z0 + WIN.z1) / 2), 70]
       ].filter(q => q[1]).map(([k, p, r]) => [k, p, r, Math.hypot(p[0] - x, p[1] - y)]).filter(q => q[3] < q[2]).sort((a, b) => a[3] - b[3]);
       if (!T.length) return;
-      const [k, p] = T[0], L = says[k];
-      say(L[Math.floor(Math.random() * L.length)], p[0], p[1] - 40);
+      const [k] = T[0];
+      say(k);
       if (k === "man") { st.wave = 2.2; }
       else if (k === "rat") { if (st.rat.s !== "hide") st.rat.s = "flee"; else { st.rat.t = 0; } }
       else if (k === "tap") { st.drop.t = 0; setTimeout(() => { st.drop.t = 0; }, 380); }
@@ -478,22 +498,22 @@ const JAIL3D = (() => {
     });
 
     /* -------------------------------- Schleife -------------------------------- */
-    let raf = 0, last = performance.now(), alive = true;
-    const gov = G3.governor(R);                   /* v316: Ruckelbremse (gl3d.js) */
+    let raf = 0, alive = true;
+    const gov = G3.governor(R,{frameMs:1000/30,minScale:.7}),pace=G3.pacer(30); /* v365 */
     const frame = now => {
       if (!alive) return;
-      const raw = now - last, dt = Math.min(0.05, raw / 1000); last = now;
+      raf=requestAnimationFrame(frame);const timing=pace(now);if(!timing)return;const {raw,dt}=timing;
       gov(raw, now);
       fit();
       step(dt);
       R.stepParticles(dt);
       try { R.render(st.t); } catch (e) { /* Kontextverlust o. Ä. */ }
-      raf = requestAnimationFrame(frame);
+      positionSay();
     };
     raf = requestAnimationFrame(frame);
 
     const ctl = {
-      R, st, legs: { knL, knR, hipL, hipR },   /* legs nur für Prüfungen */
+      R, st, say, legs: { knL, knR, hipL, hipR },   /* legs nur für Prüfungen */
       update(o) {
         if (!alive) return;
         const k = Math.max(0, Math.min(1, o.k || 0));
@@ -529,5 +549,5 @@ const JAIL3D = (() => {
     return ctl;
   }
 
-  return { open, look, cellStatic, prisoner, ratMesh, beamMesh, raysMesh, cupMesh, bookMesh, SIT_Y, guardMesh, birdMesh, TIPS, SAY, TIPS_U, SAY_U, UM, LM, BUNK, WIN, SEAT, LIGHT };
+  return { open, speechPlace, look, cellStatic, prisoner, ratMesh, beamMesh, raysMesh, cupMesh, bookMesh, SIT_Y, guardMesh, birdMesh, TIPS, SAY, TIPS_U, SAY_U, UM, LM, BUNK, WIN, SEAT, LIGHT };
 })();

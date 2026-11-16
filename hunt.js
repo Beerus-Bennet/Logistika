@@ -2373,9 +2373,9 @@ const HUNT = (() => {
   }
   function fallStart(A, T) {
     /* v307: Aus der gerade sichtbaren Bewegung beginnen; Dauer je Art und Stück statt starrem Wegkippen in 0,55 s. */
-    if (A.k !== "fasan") T = (A.k === "keiler" ? 1.18 : 1.34) + poseRnd(A, 34) * 0.08;
+    if (A.k !== "fasan") T = (A.collapse365?(A.k === "keiler"?.78:.92):(A.k === "keiler" ? 1.18 : 1.34)) + poseRnd(A, 34) * 0.08;
     /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
-    const sl = (A.v || 0) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
+    const sl = (A.collapse365&&A.zone!=="kopf"?0:(A.v || 0)) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
     A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
     A.t = A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
     A.rz0 = A.node.rz || 0; A.y0 = A.node.y || 0; A.rx0 = A.node.rx || 0;
@@ -2749,6 +2749,12 @@ const HUNT = (() => {
   }
 
   /* ------------------------------ Eingabe --------------------------------- */
+  /* v365: Abrufbare Erklärung statt wiederholter Belehrung bei jeder Bergung. */
+  function qualityHTML(){return `<p><b>Tiergüte und Schussnote sind zwei verschiedene Werte.</b></p><p>Die Tiergüte (0–100) steht bereits bei der Begegnung fest: Sie beschreibt die natürliche Stärke des Tieres und seiner Trophäe. Du kannst sie bei diesem Tier nicht erhöhen. Beobachte mit dem Fernglas und wähle ein stärkeres Stück; weitere Begegnungen bieten andere Tiere.</p><p>Ein sauberer Herzschuss gibt <b>+5 Punkte</b>, ein Lungenschuss <b>+2 Punkte</b> für die Medaille. Beispiel: Tiergüte 46 + Herzbonus 5 = 51, also Silber. Ein perfekter Schuss macht aus einem schwachen Tier kein Diamantstück.</p><p><b>Medaille:</b> Bronze unter 50, Silber ab 50, Gold ab 72, Diamant ab 90 Punkten. Ein beschädigtes Haupt begrenzt auf Silber, ein Trägerschuss auf Gold, ein erst krank geschossenes Stück auf Bronze.</p><p>Die <b>Schussnote</b> bewertet dagegen den Treffer und die Schussumstände. Ruhe, ein sauberer erster Treffer und kontrolliertes Zielen helfen dabei. Seltenheit beschreibt besondere Merkmale und ist unabhängig von der Schussnote.</p>`;}
+  function qualityHelp(){
+    if(document.getElementById('huntQuality'))return;const d=document.createElement('dialog');d.id='huntQuality';d.className='hunt-quality';d.innerHTML=`<h2>Tiergüte verstehen</h2>${qualityHTML()}<button class="btn" type="button">Verstanden</button>`;
+    document.body.appendChild(d);d.querySelector('button').onclick=()=>d.close();d.onclose=()=>d.remove();d.showModal();
+  }
   function ui() {
     const host = $("#farm");
     if (!host) return;
@@ -2757,7 +2763,7 @@ const HUNT = (() => {
     el.innerHTML = `<svg class="hu-ov" width="100%" height="100%"></svg>
       <div class="hu-marks"></div>
       <div class="hu-spot" hidden></div>
-      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
+      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><button class="hu-quality" data-hu="quality" aria-label="Tiergüte erklären">?</button><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
       <div class="hu-msg" hidden></div>
       <div class="hu-range" hidden></div>
       <div class="hu-bar"></div>
@@ -2817,6 +2823,7 @@ const HUNT = (() => {
       const b = e.target.closest("[data-hu]"); if (!b || !X) return;
       e.stopPropagation();
       const a = b.dataset.hu;
+      if (a === "quality") return qualityHelp();
       if (a === "exit") return end();
       if (a === "bino") return setView(X.view === "bino" ? "eye" : "bino");
       if (a === "scope") return setView("scope");
@@ -2982,6 +2989,9 @@ const HUNT = (() => {
     }
     save();
   }
+  /* v365: Nicht jedes Tier flüchtet nach einem tödlichen Treffer. Ein ruhiges
+     Stück kann auf Herztreffer direkt zusammenbrechen; Träger/Hirn immer. */
+  function instantCollapse(A,zone){return zone==='kopf'||zone==='hals'||zone==='herz'&&(A.v||0)<1.5&&poseRnd(A,365)<-.1;}
   function onHit(A, zone, dm, context) {
     if (!X || !A.node || !alive(A)) return;
     A.hits.push(zone); A.dm = A.dm || dm;
@@ -3010,7 +3020,7 @@ const HUNT = (() => {
     }
     A.zone = zone;
     const running = A.st === "wounded" || A.st === "flee" || A.st === "hit";
-    A.dist = 0; A.runL = lerp(Z.run[0], Z.run[1], rnd());
+    A.dist = 0; A.collapse365=instantCollapse(A,zone); A.runL = A.collapse365?0:lerp(Z.run[0], Z.run[1], rnd());
     X.target = A; buzz(22);
     if (A.hits.some(z => !ZONE[z].kill)) A.capW = true;         /* erst krank, dann erlegt: höchstens Bronze */
     if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.55); }
@@ -3417,7 +3427,7 @@ const HUNT = (() => {
       <div class="hu-chips">${chips}</div>
       <div class="hu-more">
         <div class="hu-c3"><span><small>Gewicht</small><b>${fkg(A)}</b></span><span><small>Treffer</small><b>${esc(Z.n)}</b></span><span><small>${flucht[0]}</small><b>${esc(flucht[1])}</b></span></div>
-        <div class="hu-q"><span>Güte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
+        <div class="hu-q"><span>Tiergüte <b>${Math.round(A.score * 100)}</b>${bonus ? `<em>+${Math.round(bonus * 100)} ${esc(Z.n)}</em>` : ""}</span>
           <i class="hu-qb" style="--q:${(eff * 100).toFixed(1)}%;--mc:${BARC[A.medal]}"><b></b>${tick(50, 2)}${tick(72, 3)}${tick(90, 4)}</i></div>
         <div class="hu-shot"><span>Schuss</span><b title="${sh.v} von 5">${stars(sh.v)}</b><small>${esc(shTxt)}</small></div>
         <p class="hu-pbl${P.rec ? " on" : ""}">${recTxt}</p>
@@ -3515,7 +3525,7 @@ const HUNT = (() => {
      Säuger: Herz tief in der Brust zwischen den Vorderläufen, Lunge darüber und dahinter, Zwerchfell, dahinter Leber, dann Pansen/Magen
      und Gescheide, Nieren unter der Lende. Vogel: Kropf am Halsansatz, Lunge klein und fest am Rücken, Herz vorn-unten hinter dem Brustbein,
      Leberlappen beiderseits des Herzens, Muskelmagen dahinter, Gescheide im Hinterleib, Nieren am Becken; großes Brustbein mit Kiel. */
-  const OC = { lunge: [0.84, 0.68, 0.94], herz: [0.74, 0.42, 0.88], leber: [0.82, 0.56, 0.36], magen: [0.5, 0.8, 0.54], darm: [0.9, 0.82, 0.5], niere: [0.36, 0.76, 0.74], kropf: [0.66, 0.86, 0.5], knochen: [0.86, 0.93, 1] };
+  const OC = { lunge: [0.86, 0.53, 0.57], herz: [0.83, 0.3, 0.34], leber: [0.66, 0.28, 0.23], magen: [0.85, 0.65, 0.52], darm: [0.86, 0.62, 0.55], niere: [0.66, 0.35, 0.29], kropf: [0.87, 0.7, 0.54], knochen: [0.86, 0.93, 1] };
   const ORG = {
     hirsch: [
       /* v357: Lage nach der Anatomie des Wiederkäuers (Blick von der Seite): Die Lunge liegt oben unter der Wirbelsäule und zieht
@@ -3545,6 +3555,107 @@ const HUNT = (() => {
       { id: "niere", n: "Nieren", t: "niere", c: [0, 0.288, -0.075], r: [0.028, 0.013, 0.04] },
       { id: "brust", n: "Brustbein", c: [0, 0.158, 0.05], r: [0.009, 0.026, 0.09], b: 1 } ]
   };
+  /* v359: Anatomische Darstellungsnetze. ORG/SP bleiben die bestehenden
+     Auswertungsvolumen; die Oberfläche ist kein neuer Treffer-/Preismechanismus.
+     Keine pulsierenden Organe: ein festes Modell in der Haltung des Einschlags. */
+  function organSurface(b,point,color,m=18,n=12){
+    const P=[],C=[];
+    for(let i=1;i<n;i++){const t=i/n*Math.PI,s=Math.sin(t),v=Math.cos(t),row=[],cols=[];
+      for(let j=0;j<m;j++){const a=j/m*Math.PI*2;row.push(point(Math.cos(a)*s,v,Math.sin(a)*s));cols.push(color);}P.push(row);C.push(cols);}
+    skin(b,P,C,{cap0:true,cap1:true,tip0:point(0,1,0),tip1:point(0,-1,0)});
+  }
+  function organLoft(b,rows,color){
+    const P=[],C=[],m=18;
+    for(const [y,rx,rz,x=0,z=0] of rows){const row=[],cols=[];for(let j=0;j<m;j++){const a=j/m*Math.PI*2;row.push([x+Math.cos(a)*rx,y,z+Math.sin(a)*rz]);cols.push(color);}P.push(row);C.push(cols);}
+    const a=rows[0],c=rows[rows.length-1];
+    /* skin erwartet die Ringe von oben nach unten. */
+    skin(b,P.reverse(),C.reverse(),{cap0:true,cap1:true,tip0:[c[3]||0,c[0]+.01,c[4]||0],tip1:[a[3]||0,a[0]-.01,a[4]||0]});
+  }
+  function organMesh(k,O){
+    const b=MB(),color=OC[O.t]||XC.org,dark=color.map(v=>v*.7),light=color.map(v=>Math.min(1,v*1.18+.05));
+    const pipe=(m,P,r,c=light)=>tube(m,P,P.map(()=>r),P.map(()=>c),8,{cap0:true,cap1:true});
+    b.at({x:O.c[0],y:O.c[1],z:O.c[2],sx:O.r[0],sy:O.r[1],sz:O.r[2]},m=>{
+      if(O.t==='herz'){
+        /* Schräge Herzspitze, breite Kammerbasis, Vorhöfe und austretende Gefäße. */
+        organLoft(m,[[-.98,.035,.035,.19,-.12],[-.72,.29,.25,.14,-.06],[-.38,.59,.5,.06,0],[.05,.83,.68,-.02,0],[.42,.85,.72,-.06,.02],[.68,.62,.56,0,0],[.76,.22,.25,0,0]],color);
+        for(const sd of [-1,1])pipe(m,[[sd*.4,.55,-.12],[sd*.52,.72,.02],[sd*.32,.76,.24]],.16,color);
+        pipe(m,[[-.18,.68,-.05],[-.2,.94,-.02],[.02,1.0,-.16],[.26,.88,-.3]],.11);
+        pipe(m,[[.27,.61,.26],[.3,.88,.33],[.46,.95,.1]],.1);
+        pipe(m,[[.18,.53,.66],[.12,.15,.68],[.22,-.27,.47],[.21,-.63,.21]],.025,dark);
+      }else if(O.t==='lunge'){
+        if(k==='fasan'){
+          /* Vogellungen sind klein, fest und am Rücken angewachsen, keine hängenden Säugerlappen. */
+          organSurface(m,(u,v,w)=>[u*(.9-.14*Math.cos(w*3)),v*.64,w],color);
+          for(let i=-2;i<=2;i++)pipe(m,[[-.7,.48,i*.3],[0,.58,i*.3+.03],[.65,.45,i*.3]],.025,dark);
+          pipe(m,[[0,-.35,.65],[0,-.2,0],[0,-.16,-.6]],.07);
+        }else{
+          const sd=O.id==='lungeL'?-1:1,lobes=sd<0?3:4;
+          organSurface(m,(u,v,w)=>{
+            const cut=Math.pow(Math.abs(Math.sin((w+1)*Math.PI*lobes/2)),14),fissure=1-.2*cut;
+            const notch=Math.max(0,-v)*Math.exp(-Math.pow((w-.42)/.34,2))*.48;
+            return [u*(.85+.15*v)*fissure, v*.92+notch+Math.max(0,-v)*.4*cut, w];
+          },color);
+          /* Bronchialbaum auf der medialen Seite; Äste enden in den Lappen. */
+          pipe(m,[[-sd*.62,.15,.77],[-sd*.42,.2,.25],[-sd*.5,.2,-.45]],.065);
+          for(const z of [-.55,-.08,.42])pipe(m,[[-sd*.45,.2,z+.12],[0,.25,z],[sd*.62,.22,z-.15]],.035);
+          for(let i=1;i<lobes;i++){const z=-1+2*i/lobes;pipe(m,[[sd*.3,-.7,z+.12],[sd*.82,-.22,z],[sd*.68,.35,z-.09]],.018,dark);}
+        }
+      }else if(O.t==='leber'){
+        /* Flache, nach unten auslaufende Leberlappen statt einer Leberkugel.
+           Beim Vogel bildet jeder Datensatz einen der beiden Hauptlappen. */
+        const lobes=k==='fasan'?1:k==='keiler'?4:3;
+        for(let i=0;i<lobes;i++){const x=-.7+1.4*(i+.5)/lobes,w=.98/lobes;
+          organLoft(m,[[-.92+.13*(i%2),.025,.025,x,0],[-.65,w*.7,.46,x+.05,0],[-.12,w,.65,x,0],[.42,w,.59,x-.04,0],[.73,w*.64,.25,x,0],[.8,.025,.025,x,0]],color);}
+        pipe(m,[[-.68,.35,.61],[-.2,.46,.7],[.22,.38,.69],[.62,.12,.6]],.022,dark);
+      }else if(O.t==='niere'){
+        if(k==='fasan'){
+          /* Je Seite drei längliche Nierenabschnitte im Becken. */
+          for(const sd of [-1,1]){
+            organSurface(m,(u,v,w)=>{const l=.68+.32*Math.cos(w*3*Math.PI);return[sd*.48+u*.34*l,v*.65*l,w*.98];},color,20,16);
+            pipe(m,[[sd*.24,-.3,.65],[sd*.22,-.4,0],[sd*.2,-.45,-.8]],.035,light);
+          }
+        }else{
+          const sd=O.c[0]<0?-1:1;
+          organSurface(m,(u,v,w)=>[u+sd*.48*Math.max(0,-sd*u)*Math.exp(-w*w/.16),v*.78,w],color);
+          pipe(m,[[-sd*.4,0,0],[-sd*.62,-.16,-.12],[-sd*.56,-.65,-.35]],.055,light);
+        }
+      }else if(O.t==='darm'){
+        /* Zusammenhängende Darmschlingen; beim Vogel schmaler, mit paarigen Blinddärmen. */
+        const P=[],turns=k==='fasan'?5:8;
+        for(let i=0;i<=120;i++){const t=i/120,a=t*turns*Math.PI*2;P.push([.68*Math.cos(a),.58*Math.sin(a*.43),-.72+1.44*t+.1*Math.sin(a)]);}
+        pipe(m,P,k==='fasan'?.085:.11,color);
+        if(k==='fasan')for(const sd of [-1,1])pipe(m,[[sd*.56,-.35,.65],[sd*.75,-.35,0],[sd*.66,-.25,-.65]],.07,dark);
+      }else if(O.t==='magen'){
+        if(k==='hirsch'){
+          /* Großer Pansensack mit dorsalem/ventralem Anteil und Trennfurche. */
+          organSurface(m,(u,v,w)=>{const waist=1-.13*Math.exp(-v*v/.035);return[u*waist,v,w*(.9+.1*v)*waist];},color);
+          const P=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2;P.push([Math.cos(a)*.88,-.03,Math.sin(a)*.84]);}pipe(m,P,.024,dark);
+        }else if(k==='fasan'){
+          /* Muskelmagen: abgeflachte Muskelwände mit heller Sehnenscheibe. */
+          organSurface(m,(u,v,w)=>[u*.8,v,w*.86],color);
+          for(const sd of [-1,1])organSurface(m,(u,v,w)=>[sd*.76+u*.035,v*.44,w*.5],light,16,10);
+        }else{
+          /* Einhöhliger, gekrümmter Schweinemagen: Fundus → enger Pförtner. */
+          const P=[[-.3,.4,.2],[-.52,.2,.05],[-.48,-.16,-.14],[-.16,-.35,-.26],[.24,-.25,-.18],[.56,.02,-.02],[.72,.3,.03]],r=[.42,.45,.42,.35,.24,.15,.1];
+          tube(m,P,r,P.map(()=>color),16,{cap0:true,cap1:true});
+        }
+      }else if(O.t==='kropf'){
+        organLoft(m,[[-.92,.07,.07,0,0],[-.66,.65,.6,.1,0],[-.22,.85,.8,.06,0],[.3,.53,.48,0,0],[.73,.16,.17,-.1,0],[1,.13,.14,-.1,0]],color);
+      }
+    });return b;
+  }
+  function organPreview(k,O){
+    const b=MB(),scale=1/Math.max(...O.r);
+    b.at({s:scale},m=>m.merge(organMesh(k,O),{x:-O.c[0],y:-O.c[1],z:-O.c[2]}));
+    return b; /* v359: maßstäbliche Form, für das Detailbild hochauflösend vergrößert */
+  }
+  function xrHitIds(k,sh){
+    const ids=new Set((sh.org||[]).map(o=>o.id));
+    /* Die bestehende Trefferwertung ist auch bei alten Aufzeichnungen maßgeblich. */
+    if(sh.zone==='herz')ids.add('herz');
+    if(sh.zone==='lunge'&&![...ids].some(id=>/^lunge/.test(id)))ids.add('lungeL');
+    return ids;
+  }
   /* Wirbelsäule: Punkte unter der Rückenlinie des Profils */
   const SPINE = {};
   function spineOf(k) {
@@ -3605,7 +3716,8 @@ const HUNT = (() => {
     /* Jedes Gelenk gibt es zweimal (Haut und Inneres). v354: par – übergeordnetes Gelenk; ohne Angabe der Rumpf.
        Das Haupt sitzt am Träger (wie am lebenden Stück, A.head unter A.neck), nicht am Rumpf. */
     const both = (o, meshFn, par) => [R.addChild(par ? par[0] : skin, nd(meshFn ? L(meshFn) : null, o)), R.addChild(par ? par[1] : inner, nd(null, o))];
-    const hitIds = new Set(sh.org.map(o => o.id));
+    const hitIds = xrHitIds(k,sh);
+    XR.visibleOrgans = ORG[k].filter(O=>O.t&&hitIds.has(O.id)).map(O=>O.id);
     const col = c => () => c.slice(0, 3), bone = (b, pts, r) => tube(b, pts, pts.map(() => r), pts.map(() => XC.bone), 6, { cap0: true });
     /* Rumpf: Wirbelsäule, Rippen, Organe */
     { const b = MB(), Sp = spineOf(k), T = TORSO_OF[k];
@@ -3614,9 +3726,12 @@ const HUNT = (() => {
         const z = lerp(S0.lung.c[2] + 0.17, S0.lung.c[2] - 0.2, i / 8), [top, bot, hw] = prof(T, z), yc = (top + bot) / 2, hy = (top - bot) / 2, sy = Sp.pts[0][1] - prof(T, Sp.pts[0][2])[0] + top;
         [-1, 1].forEach(sd => bone(b, [0.15, 0.6, 1.1, 1.6, 2.05].map(a => [sd * Math.sin(a) * hw * 0.86, Math.min(sy, yc + Math.cos(a) * hy * 0.9), z - (a - 0.15) * 0.03]), 0.0085));
       }
-      ORG[k].forEach(O => ell(b, O.c, O.r, col(hitIds.has(O.id) || (/^lunge/.test(O.id) && sh.zone === "lunge" && !sh.org.some(x => /^lunge/.test(x.id))) ? XC.hit : O.b ? XC.bone : OC[O.t] || XC.org), 14, 9));
+      ORG[k].forEach(O => {
+        if(O.b)ell(b,O.c,O.r,col(hitIds.has(O.id)?XC.hit:XC.bone),14,9);
+        else if(hitIds.has(O.id))b.merge(organMesh(k,O),{});
+      });
       /* v353: Luftröhre vom Halsansatz zur Lunge; beim Vogel zusätzlich Kiel, Oberschenkel und Flügelknochen */
-      { const L0 = ORG[k].find(O => /^lunge/.test(O.id)), a0 = add3(S0.neckP, k === "fasan" ? [0, -0.01, -0.01] : [0, -0.02, -0.02]), a1 = [0, L0.c[1] + L0.r[1] * 0.3, L0.c[2] + L0.r[2] * 0.6];
+      if(XR.visibleOrgans.some(id=>/^lunge/.test(id))){ const L0 = ORG[k].find(O => /^lunge/.test(O.id)), a0 = add3(S0.neckP, k === "fasan" ? [0, -0.01, -0.01] : [0, -0.02, -0.02]), a1 = [0, L0.c[1] + L0.r[1] * 0.3, L0.c[2] + L0.r[2] * 0.6];
         tube(b, [a0, [0, (a0[1] + a1[1]) / 2, (a0[2] + a1[2]) / 2 + 0.01], a1], [1, 1, 1].map(() => k === "fasan" ? 0.006 : 0.016), [1, 1, 1].map(() => OC.lunge), 6, { cap0: true }); }
       if (k === "fasan") [-1, 1].forEach(sd => {
         bone(b, [[sd * 0.034, 0.215, -0.03], [sd * 0.04, 0.165, -0.005], [sd * 0.036, 0.137, 0.01]], 0.006);
@@ -3674,8 +3789,8 @@ const HUNT = (() => {
         hitP = at(clamp(u, sh.t, tOut)); hitN = O.t === "lunge" ? "Lunge" : O.n;
       }
       const seen = new Set(), lab = [];
-      ORG[k].forEach(O => { if (!O.t || seen.has(O.t)) return; seen.add(O.t);
-        const pair = ORG[k].filter(Q => Q.t === O.t), c = [0, 1, 2].map(i => pair.reduce((v, Q) => v + Q.c[i], 0) / pair.length);
+      ORG[k].forEach(O => { if (!O.t || !hitIds.has(O.id) || seen.has(O.t)) return; seen.add(O.t);
+        const pair = ORG[k].filter(Q => Q.t === O.t && hitIds.has(Q.id)), c = [0, 1, 2].map(i => pair.reduce((v, Q) => v + Q.c[i], 0) / pair.length);
         lab.push({ p: sc(c), n: O.t === "lunge" ? "Lunge" : O.t === "niere" ? "Nieren" : O.t === "leber" ? "Leber" : O.n, hit: pair.some(Q => hitIds.has(Q.id)) || (O.t === "lunge" && sh.zone === "lunge") || (O.t === "herz" && sh.zone === "herz") }); });
       XR.ov = { a: sc(at(sh.t - len * 0.45)), e: sc(at(sh.t)), x: sc(at(tOut)), h: sc(hitP), hn: hitN, kill: !!(ZONE[sh.zone] && ZONE[sh.zone].kill), lab };
     }
@@ -3709,7 +3824,7 @@ const HUNT = (() => {
     /* Trefferschild über dem Trefferpunkt; Organnamen in zwei versetzten Zeilen am unteren Bildrand, in der Reihenfolge der
        Organe von links nach rechts, jeder mit einer feinen Linie zu seinem Organ – so verdeckt kein Name ein Organ. */
     if (h) { const w = XR.hitL.offsetWidth || 90; XR.hitL.style.display = ""; XR.hitL.style.transform = "translate(" + clamp(h[0], w / 2 + 3, R.w - w / 2 - 3).toFixed(1) + "px," + clamp(h[1] - 22, 10, R.h - 10).toFixed(1) + "px) translate(-50%,-50%)"; } else XR.hitL.style.display = "none";
-    const L = O.lab.map((l, i) => ({ i, p: P(l.p) })).filter(q => q.p).sort((q, r) => q.p[0] - r.p[0]), n = L.length;
+    const L = O.lab.map((l, i) => ({ i, p: P(l.p) })).filter(q => q.p), n = L.length; /* v359: feste Reihenfolge, keine springenden Namensplätze beim Drehen */
     O.lab.forEach((l, i) => { XR.labs[i].style.display = "none"; XR.lead[i].style.display = "none"; });
     L.forEach((q, m) => { const el2 = XR.labs[q.i], w = el2.offsetWidth || 50, x = clamp((m + 0.5) / n * R.w, w / 2 + 3, R.w - w / 2 - 3), y = R.h - 11 - (m % 2) * 17;
       el2.style.display = ""; el2.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) translate(-50%,-50%)";
@@ -3733,14 +3848,17 @@ const HUNT = (() => {
     const sh = A.shots[XR.i], n = A.shots.length, gn = A.gn || {}, Z = ZONE[sh.zone] || ZONE.koerper, T = A.T;
     const sex = A.k === "hirsch" ? "männlich (Hirsch)" : A.k === "keiler" ? "männlich (Keiler)" : "männlich (Hahn)";
     const coat = (coatOf(A.k, gn.c) || [])[3] || "–", tmp = temperOf(gn).name, row = (a, b) => `<span><small>${a}</small><b>${b}</b></span>`;
-    const org = sh.org.map(o => `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}"><i></i>${esc(o.n)}${o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`).join("");
+    const org = sh.org.map(o => {
+      const O=ORG[A.k].find(O=>O.id===o.id&&O.t),model=O&&typeof thumbSpan==='function'?`<span class="xr-organ-model">${thumbSpan('organ359:'+A.k+':'+O.id,()=>organPreview(A.k,O),'',false,{yaw:O.t==='lunge'&&O.c[0]<0?Math.PI-.75:.75,pitch:.18,noShadow:true})}</span>`:'<i></i>';
+      return `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}">${model}<span class="xr-organ-name">${esc(o.n)}</span>${o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`;
+    }).join("");
     return `<div class="xr-hd"><b>Trefferbild</b><span>${esc(T.name)}</span><button class="xr-x" data-hu="xclose" aria-label="Trefferbild schließen">✕</button></div>
       <div class="xr-nav"><button class="btn tiny ghost" data-hu="xprev"${n < 2 ? " disabled" : ""} aria-label="vorheriger Treffer">‹</button>
         <div><b>Treffer ${XR.i + 1} von ${n}</b><small>${esc(Z.n)} · ${sh.dm || "?"} m</small></div>
         <button class="btn tiny ghost" data-hu="xnext"${n < 2 ? " disabled" : ""} aria-label="nächster Treffer">›</button></div>
       <div class="xr-dmg"><span>Wirkung</span><i style="--d:${sh.dmg}%"><b></b></i><em>${sh.dmg} %</em></div>
       <ul class="xr-org">${org}</ul>
-      <div class="xr-leg">${[["lunge", "Lunge"], ["herz", "Herz"], ["leber", "Leber"], ["magen", A.k === "hirsch" ? "Pansen" : A.k === "fasan" ? "Muskelmagen" : "Magen"], ["darm", "Gescheide"], ["niere", "Nieren"]].concat(A.k === "fasan" ? [["kropf", "Kropf"]] : []).map(([t, n]) => `<span><i style="background:rgb(${OC[t].map(v => Math.round(v * 255)).join(",")})"></i>${n}</span>`).join("")}<span><i class="b"></i>Knochen</span><span><i class="h"></i>getroffen</span></div>
+      <p class="xr-leg">Nur vom ausgewählten Treffer betroffene Organe sind eingeblendet. Das Skelett dient zur Orientierung.</p>
       <div class="xr-sec">Schussbericht</div>
       <div class="xr-grid">${row("Entfernung", (sh.dm || "?") + " m")}${row("Flugzeit", fnum(sh.tf || 0, 2) + " s")}${row("Auftreffen", sh.v + " m/s")}${row("Energie", sh.e.toLocaleString("de-DE") + " J")}${row("Wind", fnum(sh.wv || 0, 1) + " m/s")}${row("Abdrift", Math.round((sh.drift || 0) * 100) + " cm")}</div>
       <div class="xr-sec">Stück</div>
@@ -3780,6 +3898,8 @@ const HUNT = (() => {
     const A = XR.A; if (!A) return;
     XR.i = (XR.i + d + A.shots.length) % A.shots.length;
     XR.el.querySelector(".xr-pan").innerHTML = xrPanelHTML(A);
+    XR.el.querySelector(".xr-pan").scrollTop=0; /* v359: jeder Treffer beginnt am Berichtsanfang */
+    if(typeof thumbFill==="function")thumbFill();
     if (XR.R) { xrBuild(A, A.shots[XR.i]); xrOverlayBuild(); cancelAnimationFrame(XR.raf); XR.raf = requestAnimationFrame(xrLoop); }
     if (d) snd("tap");
   }
@@ -3810,9 +3930,10 @@ const HUNT = (() => {
     if (performance.now() - WALL.at > 60000 || WALL.seen0 == null) { WALL.seen0 = H.wseen || 0; H.wseen = S.time; }   /* „neu“ = seit dem letzten Besuch */
     WALL.at = performance.now();
     const sum = C.reduce((t, r) => t + valueOf(r), 0), open = jobsEnsure(H).length;
-    const tabs = [["wand", "🏆 Sammlung"], ["buch", "📖 Jagdbuch"], ["jobs", "📋 Aufträge"]].map(([k, n]) => `<button class="${WALL.tab === k ? "on" : ""}" data-twt="${k}">${n}${k === "jobs" && open ? ` <b>${open}</b>` : ""}</button>`).join("");
+    const icon=k=>typeof logiStorageIcon==="function"?logiStorageIcon(k):"";
+    const tabs = [["wand", "Sammlung", "troph"], ["buch", "Jagdbuch", "book"], ["jobs", "Aufträge", "jobs"]].map(([k, n, i]) => `<button class="${WALL.tab === k ? "on" : ""}" data-twt="${k}">${icon(i)}${n}${k === "jobs" && open ? ` <b>${open}</b>` : ""}</button>`).join("");
     const body = WALL.tab === "buch" ? buchHTML(H, C) : WALL.tab === "jobs" ? jobsHTML(H) : wandHTML(H, C);
-    return `<div class="tw"><div class="tw-head"><b>🏆 Präparatesammlung</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>
+    return `<div class="tw"><div class="tw-head"><b>Präparatesammlung</b><small>${C.length} ${C.length === 1 ? "Stück" : "Stücke"} · Sammlerwert ${eur(sum)}</small></div>
       <div class="tw-tabs">${tabs}</div>${body}</div>`;
   }
   function wandHTML(H, C0) {
@@ -3824,10 +3945,11 @@ const HUNT = (() => {
     C = C.slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || so(a, b));
     const sel = C0.find(r => r.u === WALL.sel);
     if (!sel) WALL.sel = null;
-    const chip = (attr, v, cur, txt) => `<button class="tw-f${cur === v ? " on" : ""}" ${attr}="${v}">${txt}</button>`;
-    const filt = `<div class="tw-fl">${chip("data-twk", "all", WALL.fk, "Alle")}${ks.map(k => chip("data-twk", k, WALL.fk, SP[k].i + " " + SP[k].n)).join("")}</div>
-      <div class="tw-fl">${chip("data-twr", "0", String(WALL.fr), "Jede Seltenheit")}${chip("data-twr", "1", String(WALL.fr), "✦ ab Auffällig")}${chip("data-twr", "2", String(WALL.fr), "✦✦ ab Selten")}
-        <span class="tw-sp"></span>${chip("data-tws", "best", WALL.so, "Stärkste")}${chip("data-tws", "neu", WALL.so, "Neueste")}${chip("data-tws", "wert", WALL.so, "Wert")}</div>`;
+    /* v359: Drei benannte Filter statt mehrerer Reihen gleich aussehender Chips. */
+    const opts=(rows,value)=>rows.map(([v,n])=>`<option value="${v}"${String(value)===String(v)?" selected":""}>${esc(n)}</option>`).join("");
+    const filt=`<div class="tw-filters"><label>Tierart<select data-tw-filter="kind">${opts([["all","Alle Tiere"],...ks.map(k=>[k,SP[k].n])],WALL.fk)}</select></label>
+      <label>Seltenheit<select data-tw-filter="rarity">${opts([[0,"Alle"],...RAR.slice(1).map((r,i)=>[i+1,r.n+"+"])],WALL.fr)}</select></label>
+      <label>Sortierung<select data-tw-filter="sort">${opts([["best","Stärkste"],["neu","Neueste"],["wert","Wert"]],WALL.so)}</select></label></div>`;
     let det = "";
     if (sel) {
       const gn = gnOf(sel), T = traits(sel.k, sel.s, gn), M = MEDALS[sel.m], z = sel.zone && ZONE[sel.zone] ? shotName(sel) : null, deployed = onDisplay(sel);
@@ -3865,7 +3987,7 @@ const HUNT = (() => {
     const tot = SPK.reduce((t, x) => t + dexCount(H, x).got, 0), totOf = SPK.reduce((t, x) => t + dexCount(H, x).of, 0);
     const gPb = [H.pb.dm ? `<span><small>Weitester Schuss</small><b>${H.pb.dm.v} m</b><em>${esc(SP[H.pb.dm.k].n)}</em></span>` : "", H.pb.sh ? `<span><small>Beste Schussnote</small><b>${stars(H.pb.sh.v)}</b><em>${esc(SP[H.pb.sh.k].n)}</em></span>` : "",
       pb ? `<span><small>Stärkster ${esc(SP[k].n)}</small><b>Güte ${Math.round(pb.s * 100)}</b><em>${esc(pb.txt || "")}</em></span>` : ""].filter(Boolean).join("");
-    return `<div class="tw-fl">${tabs}</div>
+    return `<details class="tw-quality"><summary>Wie entstehen Tiergüte, Medaille und Schussnote?</summary>${qualityHTML()}</details><div class="tw-fl">${tabs}</div>
       <div class="tw-prog"><b>${SP[k].i} ${esc(SP[k].n)}</b><span>${(H.n && H.n[k]) || 0} erlegt · ${cnt.got} von ${cnt.of} Merkmalen dokumentiert</span><i style="--p:${Math.round(cnt.got / cnt.of * 100)}%"></i>
         <small>Jagdbuch gesamt: ${tot} von ${totOf}</small></div>
       ${gPb ? `<div class="tw-pbs">${gPb}</div>` : ""}
@@ -3884,9 +4006,11 @@ const HUNT = (() => {
   function wallBind(redraw) {
     const H = st(), on = (sel, fn) => $$("#farmSheetIn " + sel).forEach(el => el.onclick = () => { snd("tap"); fn(el); redraw(); });
     on("[data-twt]", el => { WALL.tab = el.dataset.twt; WALL.sel = null; });
-    on("[data-twk]", el => { WALL.fk = el.dataset.twk; WALL.lim = 24; });
-    on("[data-twr]", el => { WALL.fr = +el.dataset.twr; WALL.lim = 24; });
-    on("[data-tws]", el => { WALL.so = el.dataset.tws; });
+    $$("#farmSheetIn [data-tw-filter]").forEach(el=>el.onchange=()=>{
+      if(el.dataset.twFilter==='kind')WALL.fk=el.value;
+      else if(el.dataset.twFilter==='rarity')WALL.fr=+el.value;
+      else WALL.so=el.value;WALL.lim=24;redraw();
+    });
     on("[data-twm]", () => { WALL.lim += 24; });
     on("[data-twb]", el => { WALL.sp = el.dataset.twb; });
     on("[data-twgo]", el => { WALL.tab = "wand"; WALL.fk = "all"; WALL.fr = 0; WALL.sel = el.dataset.twgo; });
@@ -4102,6 +4226,7 @@ const HUNT = (() => {
 
   /* ------------------------------ Ende ------------------------------------ */
   function end() {
+    const q=document.getElementById("huntQuality");if(q)q.close();
     if (!X || X.mode === "out" || X.mode === "in") return;
     if (X.view === "harvest" || X.view === "back") return;
     X.mode = "out"; X.p = 0; X.from = camOf(FV.R.cam);
@@ -4162,7 +4287,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),

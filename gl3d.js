@@ -684,7 +684,7 @@ const G3 = (() => {
   /* ------------------------------ Renderer ------------------------------ */
   function create(canvas, opts) {
     opts = opts || {};
-    const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.keep });
+    const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true, powerPreference: opts.powerPreference || "high-performance", preserveDrawingBuffer: !!opts.keep });
     if (!gl) return null;
     let main, shad, mainI, shadI, part, dec, decVAO, decBuf;
     const texs = new Set();
@@ -1293,16 +1293,23 @@ const G3 = (() => {
      sinkt die Auflösung stufenweise (R.scale). Nur abwärts, damit nichts hin und her springt; die ersten 2,5 s,
      Pausen und Hänger über 1,5 s zählen nicht. Aufruf je Bild: gov(Millisekunden seit dem letzten Bild, jetzt). */
   const QUALITY = [1, 0.8, 0.65, 0.5];
-  function governor(R) {
+  function governor(R, opt) {
+    opt=opt||{};const levels=opt.minScale?[1,.85,opt.minScale]:QUALITY,limit=opt.frameMs?opt.frameMs*1.35:30;
     const g = { ema: 16, level: 0, since: null, last: 0 };
     return (raw, now) => {
       if (g.since === null) g.since = g.last = now;
       if (raw > 1500 || document.hidden) { g.since = now; return; }
       g.ema += (raw - g.ema) * 0.08;
-      if (now - g.since < 2500 || now - g.last < 1500 || g.level >= QUALITY.length - 1) return;
-      if (g.ema > 30) { g.level++; g.last = now; g.ema = 16; R.scale = QUALITY[g.level]; }
+      if (now - g.since < 2500 || now - g.last < 1500 || g.level >= levels.length - 1) return;
+      if (g.ema > limit) { g.level++; g.last = now; g.ema = 16; R.scale = levels[g.level]; }
     };
   }
 
-  return { MB, create, governor, WATER, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
+  /* v365: 30-Hz-Takt für Innenräume. Absichtliche Bildpausen zählen nicht als
+     Überlast; nach Hintergrundpause keine nachgeholten Animationssprünge. */
+  function pacer(fps){let last=null,next=0;const gap=1000/fps;
+    return now=>{if(document.hidden){last=null;next=0;return null;}if(now+1<next)return null;
+      const raw=last==null?gap:Math.max(0,now-last);last=now;next=now+gap;return {raw,dt:Math.min(.1,raw/1000)};};
+  }
+  return { MB, create, governor, pacer, WATER, col, shade, srand: () => srand(), seed: s => { seed = s || 1; }, mul, trs, ID, norm };
 })();
