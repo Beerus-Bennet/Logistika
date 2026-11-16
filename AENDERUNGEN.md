@@ -1,3 +1,12 @@
+## v363 – Karte: kein verzerrtes Bild mehr nach dem Neuladen
+**Meldung Bennet (Bild: Weltkarte, Symbole in die Höhe gezogen):** Beim Neuladen des Spiels ist das Kartenbild verzerrt.
+
+**Ursache (`map.js`), im Testbrowser nachgestellt:** Die Karte passte ihre Zeichenfläche nur beim Fenster-Ereignis „resize“ an. Seit v358 setzt `viewport.js` die App-Höhe nach dem Laden nach (iOS-Browserleisten) – die Kartenfläche wird dabei größer oder kleiner, ohne dass ein „resize“ kommt. Die Zeichenfläche behielt ihre alte Pixelgröße und wurde nur gestreckt (gemessen: Element 390 × 560, Zeichenfläche weiter 390 × 700).
+
+**Lösung:** Die Karte beobachtet die Größe ihres eigenen Elements (`ResizeObserver`) und zeichnet bei jeder Änderung in der richtigen Größe neu; eine verborgene Karte (Größe 0) bleibt unberührt. Ohne `ResizeObserver` gilt das bisherige Verhalten.
+
+**Geprüft:** Testbrowser (Chromium, 390 × 700): App-Höhe ohne Fenster-„resize“ auf 560 und zurück auf 700 gesetzt – vorher blieb die Zeichenfläche bei 390 × 700 (verzerrt), nachher folgt sie (390 × 560, dann 390 × 700); keine Konsolenfehler. **Nicht geprüft:** am Handy und in Safari – dort entsteht der Fehler durch die Browserleisten, die ich im Testbrowser nur nachgebildet habe.
+
 ## v362 – Übernahme: Kaufbeleg auf einer Seite, nüchterner Belegstil
 **Meldung Bennet (Bild: Kaufbeleg Titan Freight Holding):** Alles soll sauber auf eine Seite passen, ohne zu scrollen; dazu professioneller und seriöser.
 

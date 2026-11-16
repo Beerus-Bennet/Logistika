@@ -96,3 +96,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v360: Seeblick – Vermittlungstext ohne Zeitangabe für die ersten Wohnanfragen (`villageview.js`, nur Text).
 - v361: Insel – Grasdecke von `worldApron` mit zwei Zwischenringen in der Bodenfarbe der Welt (`worldGroundCol` über die Kante hinaus), keine sichtbare Naht mehr.
 - v362: Kaufbeleg der Übernahme (`corpWinReport` in `corpreport.js`) auf einer Seite: Aufbau `.crp-sheet.crp2` mit `.crp2-body` (Belegteil) und festem Knopf; Bestand als eigene Ansicht über dem Beleg (`details[open]` absolut). Klassen `crp2-*`, CSS-Block am Ende von `style.css`.
+- v363: Karte folgt der Größe ihres Elements (`ResizeObserver` in `map.js`) – kein gestrecktes Bild mehr, wenn `viewport.js` die App-Höhe ohne Fenster-„resize“ ändert.
