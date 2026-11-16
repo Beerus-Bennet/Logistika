@@ -1,5 +1,4 @@
-/* =========================================================================
-   LOGISTIKA – Comic-Style in Blau
+/* ==================================================================   LOGISTIKA – Comic-Style in Blau
    ========================================================================= */
 :root{
   --ink:#0d1b2a;
@@ -1895,8 +1894,7 @@ button.cov{font:inherit;color:var(--ink);padding:3px 2px}
 .card.bulkbar{background:linear-gradient(135deg,#fff6d6,#ffe9ef)}
 .card.bulkbar .btn{display:block;width:100%;margin-top:8px}
 
-/* =========================================================================
-   v36 – Der Hof (3D)
+/* ==================================================================   v36 – Der Hof (3D)
    ========================================================================= */
 body:not(.has-farm) .navbtn[data-tab="farm"]{display:none}
 body.farm-phase .navbtn[data-tab="bases"]{display:none}
@@ -2378,8 +2376,7 @@ body.farm-phase #controls{display:none}
 .flv-wrap{position:relative;animation:flvin .45s cubic-bezier(.2,1.6,.4,1)}
 .flv-wrap .flv{animation:none;z-index:1}
 .flv-wrap .flv-rays{z-index:0}
-/* =========================================================================
-   v39 – Fischerei an der Ostsee, neue Tiere
+/* ==================================================================   v39 – Fischerei an der Ostsee, neue Tiere
    ========================================================================= */
 body.site-fisch #farm{background:linear-gradient(180deg,#6fb0ec,#cfe8f7)}
 .frec .fr-trip{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--blue);line-height:1.15;margin-top:1px}
@@ -5109,3 +5106,13 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-xr .xr-organ-model img{width:100%;height:100%;object-fit:contain}
 #huntUI .hu-xr .xr-organ-name{flex:1;min-width:0;overflow-wrap:anywhere}
 .town-talk.tn-tight header{padding:6px 12px}.town-talk.tn-tight header h2{font-size:16px}.town-talk.tn-tight .tn-close{width:32px;height:32px}.tn-tight .tn-intro{display:none}.tn-tight .tn-body{padding:8px 12px}.tn-tight footer{padding:6px 12px}.tn-tight .tn-reply{font-size:12px;padding:6px;margin-top:8px}
+/* ---------------------------------------------------------------------
+   v359: Jagd – Aura um Gold- und Diamant-Stücke (Überschrift leuchtet mit)
+   --------------------------------------------------------------------- */
+#huntUI.md3 .hu-win b{color:#ffe9a8;text-shadow:0 2px 0 #3a2500,0 0 14px rgba(255,190,60,.9),0 0 34px rgba(255,170,30,.55)}
+#huntUI.md4 .hu-win b{color:#eafcff;text-shadow:0 2px 0 #06283a,0 0 16px rgba(120,225,255,.95),0 0 44px rgba(80,200,255,.7)}
+#huntUI.md3 .hu-win small{color:#ffd76a}
+#huntUI.md4 .hu-win small{color:#a8ecff}
+#huntUI.md4 .hu-win b{animation:huAuraTitle 2.6s ease-in-out infinite}
+@keyframes huAuraTitle{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@media (prefers-reduced-motion:reduce){#huntUI.md4 .hu-win b{animation:none}}

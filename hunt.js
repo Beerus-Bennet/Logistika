@@ -3190,6 +3190,7 @@ const HUNT = (() => {
     const t = Hv.t, A = Hv.A;
     X.fade = t < 0.3 ? t / 0.3 : Math.max(0, 1 - (t - 0.3) / 0.45);
     if (!Hv.cut && t >= 0.3) { Hv.cut = true; bedShow(A); }
+    auraStep(dt);
     const lv = A.pres ? A.pres.lv : 0, dur = lv >= 3 ? 3.4 : 2.6;
     Hv.k = 1 - Math.pow(1 - clamp((t - 0.3) / dur, 0, 1), 3);
     /* v200: seltene Stücke – die Kamera wandert danach noch langsam ein Stück um das Tier (bis Wischen sie übernimmt) */
@@ -3301,8 +3302,72 @@ const HUNT = (() => {
       const G = RG.get("hu_gt" + g.v); if (G) { G.remove("hg" + i); hid.push([G, i, g]); }
     });
     X.bed = { node, mesh, hid };
+    auraShow(A, cx, cz, near);                                        /* v359 */
+  }
+  /* ---- v359: Aura um Gold- und Diamant-Stücke -------------------------------------------------------------------------------
+     Gold: warmer Lichtschein am Boden, langsam drehender Strahlenkranz, eine Lichtsäule, aufsteigende Funken, ab und zu eine
+     Lichtwelle. Diamant: alles größer und heller in Eisblau-Weiß, dazu abgedunkelte Umgebung (das Stück liegt wie auf einer
+     Bühne), ein zweiter gegenläufiger Kranz, vier Lichtlanzen im Kreis, dichtere Funken, schnellere Wellen und ein Blitz beim
+     Erscheinen. Alles aus unbeleuchteten, additiv leuchtenden Aufklebern (gl3d: decal add/unlit/mul) – keine Spiellogik.
+     Reduzierte Bewegung: der Schein steht still, Funken und Wellen entfallen. */
+  const AURA = { 3: { col: [1, 0.74, 0.22], hot: [1, 0.93, 0.6], k: 1, dark: 0.5, rays: 1, lances: 0, spark: 14, wave: 3.4, shaft: 5.2 },
+    4: { col: [0.42, 0.86, 1], hot: [0.92, 0.99, 1], k: 1.5, dark: 0.78, rays: 2, lances: 4, spark: 36, wave: 1.7, shaft: 9 } };
+  function auraTex() {
+    const mk = (w, h, fn) => { const c = document.createElement("canvas"); c.width = w; c.height = h; fn(c.getContext("2d"), w, h); return FV.R.texture(c); };
+    const radial = (g, w, stops) => { const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); stops.forEach(q => r.addColorStop(q[0], q[1])); g.fillStyle = r; g.fillRect(0, 0, w, w); };
+    return {
+      glow: mk(128, 128, (g, w) => radial(g, w, [[0, "rgba(255,255,255,.95)"], [0.35, "rgba(255,255,255,.5)"], [0.7, "rgba(255,255,255,.14)"], [1, "rgba(255,255,255,0)"]])),
+      dark: mk(128, 128, (g, w) => radial(g, w, [[0, "rgba(0,0,0,0)"], [0.22, "rgba(0,0,0,.08)"], [0.5, "rgba(0,0,0,.75)"], [0.82, "rgba(0,0,0,.55)"], [1, "rgba(0,0,0,0)"]])),
+      ring: mk(256, 256, (g, w) => radial(g, w, [[0, "rgba(255,255,255,0)"], [0.8, "rgba(255,255,255,0)"], [0.9, "rgba(255,255,255,.95)"], [0.96, "rgba(255,255,255,.25)"], [1, "rgba(255,255,255,0)"]])),
+      rays: mk(256, 256, (g, w) => { g.translate(w / 2, w / 2); for (let i = 0; i < 18; i++) { g.rotate(Math.PI * 2 / 18); const l = w / 2 * (i % 3 === 0 ? 0.98 : i % 3 === 1 ? 0.74 : 0.86), b = i % 3 === 0 ? 9 : 5.5, gr = g.createLinearGradient(0, 0, l, 0);
+        gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.2, "rgba(255,255,255,.75)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.beginPath(); g.moveTo(w * 0.07, -b * 0.35); g.lineTo(l, 0); g.lineTo(w * 0.07, b * 0.35); g.closePath(); g.fill(); } }),
+      shaft: mk(64, 256, (g, w, h) => { const v = g.createLinearGradient(0, h, 0, 0); v.addColorStop(0, "rgba(255,255,255,.9)"); v.addColorStop(0.35, "rgba(255,255,255,.4)"); v.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = v; g.fillRect(0, 0, w, h);
+        g.globalCompositeOperation = "destination-in"; const u = g.createLinearGradient(0, 0, w, 0); u.addColorStop(0, "rgba(0,0,0,0)"); u.addColorStop(0.5, "rgba(0,0,0,1)"); u.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = u; g.fillRect(0, 0, w, h); })
+    };
+  }
+  function auraShow(A, cx, cz, near) {
+    const P = AURA[A.medal]; if (!P || X.aura || !FV.R.texture) return;
+    const T = auraTex(), r = (near + 1.1) * P.k, flat = { rx: -Math.PI / 2 }, mul = (c, f) => c.map(v => v * f), nodes = [];
+    const dec = (t, w, h, o, c, add) => { const n = addNode(null, Object.assign({ x: cx, z: cz, shadow: false, decal: { t, w, h, unlit: true, add: add !== false, mul: c } }, o)); nodes.push(n); return n; };
+    const U = { P, T, nodes, t: 0, cx, cz, r, wave: [], emit: 0, still: typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches };
+    U.dark = dec(T.dark, r * 5.2, r * 5.2, Object.assign({ y: 0.02 }, flat), [0, 0, 0], false); U.dark.alpha = 0;
+    U.glow = dec(T.glow, r * 2.9, r * 2.9, Object.assign({ y: 0.03 }, flat), mul(P.col, 0));
+    U.rays = []; for (let i = 0; i < P.rays; i++) U.rays.push(dec(T.rays, r * (3.3 + i * 0.9), r * (3.3 + i * 0.9), Object.assign({ y: 0.034 + i * 0.002 }, flat), mul(i ? P.hot : P.col, 0)));
+    U.ringN = dec(T.ring, r * 2.25, r * 2.25, Object.assign({ y: 0.04 }, flat), mul(P.hot, 0));
+    for (let i = 0; i < 2; i++) U.wave.push({ n: dec(T.ring, 1, 1, Object.assign({ y: 0.042 + i * 0.001 }, flat), [0, 0, 0]), t: -i * P.wave / 2 });
+    U.shaft = dec(T.shaft, r * 1.1, P.shaft, { y: P.shaft / 2 }, mul(P.col, 0)); U.core = dec(T.shaft, r * 0.32, P.shaft * 1.05, { y: P.shaft * 0.525 }, mul(P.hot, 0));
+    U.lances = []; for (let i = 0; i < P.lances; i++) { const a = i / P.lances * Math.PI * 2 + 0.6; U.lances.push({ a, n: dec(T.shaft, 0.55, P.shaft * 0.55, { y: P.shaft * 0.275 }, mul(P.col, 0)) }); }
+    X.aura = U;
+    if (X.ui) X.ui.classList.add("md" + A.medal);
+    if (!U.still) FV.R.burst({ x: cx, y: 0.3, z: cz, n: A.medal >= 4 ? 46 : 22, col: [P.col.concat(1), P.hot.concat(1)], speed: 2.6 * P.k, up: 3.4, size: 0.09, life: 1.3, spread: r, g: -2.5 });
+  }
+  function auraStep(dt) {
+    const U = X && X.aura; if (!U) return;
+    U.t += dt;
+    const P = U.P, t = U.t, on = clamp(t / 1.1, 0, 1), k = on * on * (3 - 2 * on), pulse = U.still ? 1 : 1 + 0.12 * Math.sin(t * 2.1), set = (n, c, f) => { const m = n.decal.mul; m[0] = c[0] * f; m[1] = c[1] * f; m[2] = c[2] * f; };
+    /* Blitz beim Erscheinen (Diamant kräftig, Gold kurz) */
+    const flash = U.still ? 0 : Math.max(0, 1 - t / (P.k > 1 ? 0.55 : 0.3)) * (P.k > 1 ? 1.1 : 0.5);
+    U.dark.alpha = P.dark * k;
+    set(U.glow, P.col, (0.2 * P.k * pulse + flash * 0.5) * k);
+    U.rays.forEach((n, i) => { set(n, i ? P.hot : P.col, (0.3 + 0.08 * i) * k * (U.still ? 1 : 0.8 + 0.2 * Math.sin(t * 1.3 + i * 2))); if (!U.still) n.rz = t * (i ? -0.16 : 0.11); });
+    set(U.ringN, P.hot, 0.42 * k * pulse);
+    const yaw = Math.PI / 2 - FV.R.cam.yaw;
+    U.shaft.ry = U.core.ry = yaw; set(U.shaft, P.col, (0.11 * P.k + flash * 0.25) * k * pulse); set(U.core, P.hot, 0.13 * k * (2 - pulse));
+    U.lances.forEach((L, i) => { const a = L.a + (U.still ? 0 : t * 0.22); L.n.x = U.cx + Math.cos(a) * U.r * 1.25; L.n.z = U.cz + Math.sin(a) * U.r * 1.25; L.n.ry = yaw; set(L.n, P.col, 0.26 * k * (U.still ? 1 : 0.6 + 0.4 * Math.sin(t * 2.4 + i * 1.6))); });
+    /* Lichtwellen laufen vom Stück nach außen und verblassen */
+    U.wave.forEach(W => { if (U.still) return; W.t += dt; if (W.t > P.wave) W.t -= P.wave; const f = W.t < 0 ? 0 : W.t / P.wave, s = U.r * (1.2 + 3.4 * f); W.n.decal.w = W.n.decal.h = s; set(W.n, P.hot, k * 0.5 * (1 - f) * (1 - f) * (f > 0 ? 1 : 0)); });
+    /* Funken steigen auf */
+    if (!U.still && k > 0.3) { U.emit += dt * P.spark; while (U.emit >= 1) { U.emit -= 1; const a = Math.random() * Math.PI * 2, d = U.r * (0.25 + Math.random() * 1.15), c = Math.random() < 0.35 ? P.hot : P.col;
+      FV.R.emit({ x: U.cx + Math.cos(a) * d, y: 0.05 + Math.random() * 0.25, z: U.cz + Math.sin(a) * d, vx: (Math.random() - 0.5) * 0.25, vy: 0.55 + Math.random() * 0.9 * P.k, vz: (Math.random() - 0.5) * 0.25, g: 0.25, drag: 0.5, life: 1.5 + Math.random() * 1.4, size: 0.035 + Math.random() * 0.05 * P.k, size2: 0.01, col: [c[0], c[1], c[2], 0.95] }); } }
+  }
+  function auraClear() {
+    const U = X && X.aura; if (!U) return;
+    X.aura = null; U.nodes.forEach(rmNode);
+    if (FV.R && FV.R.texFree) Object.values(U.T).forEach(t => FV.R.texFree(t));
+    if (X.ui) X.ui.classList.remove("md3", "md4");
   }
   function bedClear() {
+    auraClear();
     if (!X || !X.bed) return;
     const Bd = X.bed; X.bed = null;
     rmNode(Bd.node); if (FV.R && FV.R.free) FV.R.free(Bd.mesh);
@@ -4211,7 +4276,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
