@@ -93,3 +93,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v357: Jagd – Trefferbild mit Bildebene über der Zeichnung (`xrOverlay`/`xrOverlayBuild`, Daten `XR.ov`, `ellSeg`): Einschuss, Kanal, Trefferring mit Schild, Organnamen mit Linien; Organlage `ORG` für Hirsch/Keiler nach Anatomie (Wertungszonen `SP` unverändert); Zoomknöpfe entfernt, Zwei-Finger-Zoom auch im Trefferbild, Karte klappt bei wenig Platz ein (`Hv.userCard`). Prüfstand `_shootAt`. Test: `trefferbild-v357.test.js`.
 - v359: Jagd – Aura um Gold-/Diamant-Stücke in der Bergung (`AURA`, `auraShow`/`auraStep`/`auraClear` in `hunt.js`, additive Aufkleber, Klassen `md3`/`md4` an `#huntUI`); Diamant größer, heller, mit abgedunkelter Umgebung. Prüfstand `_aura`. Test: `aura-v359.test.js`.
+- v360: Seeblick – Vermittlungstext ohne Zeitangabe für die ersten Wohnanfragen (`villageview.js`, nur Text).

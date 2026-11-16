@@ -1,3 +1,10 @@
+## v360 – Seeblick: Vermittlung ohne Zeitangabe für die ersten Wohnanfragen
+**Wunsch Bennet (Bild: Seegarten 2, bezugsfertig):** „Erste Wohnanfragen in 7 h 52 min“ soll entfallen – wann sich Interessenten melden, weiß man in der Realität auch nicht.
+
+**Lösung (`villageview.js`, nur Text):** Statt der Restzeit steht dort „Die Vermittlung läuft. Sobald sich Interessenten melden, erscheinen ihre Wohnanfragen hier.“ Der Ablauf selbst (wann Anfragen eintreffen, Laufzeit der Anzeige) ist unverändert; die Restlaufzeit der Anzeige bleibt sichtbar.
+
+**Geprüft:** Syntaxprüfung, `village-v340.test.js` und `village-life-v343.test.js` bestanden. **Nicht geprüft:** im Browser und am Handy (reine Textänderung).
+
 ## v359 – Jagd: Aura um Gold- und Diamant-Stücke
 **Wunsch Bennet (Bild: erlegter Hirsch):** Bei Gold-Stücken ein spektakuläres Umfeld um das erlegte Tier, für alle Wildarten; bei Diamant noch einmal deutlich stärker – der Spieler soll spüren, wie mächtig das Stück ist.
 
