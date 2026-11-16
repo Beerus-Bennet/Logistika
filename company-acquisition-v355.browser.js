@@ -48,7 +48,9 @@ fs.mkdirSync(output,{recursive:true});
  assert.equal(committed.cash,expected.cash-committed.receipt.price+other);
  for(const [width,height] of [[390,844],[375,667],[320,568],[844,390],[1280,800]]){
   await page.setViewportSize({width,height});await page.waitForTimeout(50);
-  const size=await page.evaluate(()=>{const sheet=document.querySelector('.crp-sheet'),button=document.querySelector('.crp-close');return {h:sheet.clientHeight,scroll:sheet.scrollHeight,w:sheet.clientWidth,sw:sheet.scrollWidth,button:button.getBoundingClientRect().bottom,vh:innerHeight};});
+  const size=await page.evaluate(()=>{const sheet=document.querySelector('.crp-sheet'),button=document.querySelector('.crp-close');const body=document.querySelector('.crp2-body');return {h:sheet.clientHeight,scroll:sheet.scrollHeight,w:sheet.clientWidth,sw:sheet.scrollWidth,button:button.getBoundingClientRect().bottom,vh:innerHeight,bh:body.clientHeight,bs:body.scrollHeight};});
+  /* v362: Der Inhalt liegt in .crp2-body – auch dort darf nichts scrollen, und der Knopf bleibt im Bild. */
+  assert.ok(size.bs<=size.bh+1,'Belegteil passt ohne Scrollen '+width+'x'+height+' ('+size.bs+' > '+size.bh+')');assert.ok(size.button<=size.vh,'Knopf im Bild '+width+'x'+height);
   assert.ok(size.sw<=size.w+1,'Kein horizontaler Überlauf '+width);
   assert.ok(size.scroll<=size.h+1,'Zusammenfassung passt ohne Scrollen '+width+'x'+height);
   console.log('Beleg',width+'x'+height,size);
@@ -71,7 +73,8 @@ fs.mkdirSync(output,{recursive:true});
   const nodes=[...document.querySelectorAll('#corpShow *')].map(el=>[el,parseFloat(getComputedStyle(el).fontSize)]);
   nodes.forEach(([el,size])=>{el.style.fontSize=size*2+'px';});
  });
- const enlarged=await page.evaluate(()=>{const s=document.querySelector('.crp-sheet');s.scrollTop=s.scrollHeight;const b=document.querySelector('.crp-close').getBoundingClientRect();return {scroll:s.scrollHeight,client:s.clientHeight,bottom:b.bottom};});
+ /* v362: Der Belegteil (.crp2-body) scrollt dann für sich; der Knopf darunter bleibt stehen. */
+ const enlarged=await page.evaluate(()=>{const s=document.querySelector('.crp2-body');s.scrollTop=s.scrollHeight;const b=document.querySelector('.crp-close').getBoundingClientRect();return {scroll:s.scrollHeight,client:s.clientHeight,bottom:b.bottom};});
  assert.ok(enlarged.scroll>enlarged.client);assert.ok(enlarged.bottom<=844);
  await page.screenshot({path:path.join(output,'receipt-large-type.png')});await page.keyboard.press('Escape');
  await page.emulateMedia({reducedMotion:'reduce'});
