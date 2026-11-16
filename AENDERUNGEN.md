@@ -1,3 +1,48 @@
+## v364 – Seeblick: Grundstücksplan mit 3D-Bildchen statt Emojis
+**Wunsch Bennet (Bild: Grundstücksplan):** Die Emojis (Haus, Kran, Schraffur) durch Bildchen im Stil von Logistika ersetzen – wie die 3D-Darstellung der Hofprodukte.
+
+**Lösung (`villageview.js`, `style.css`; nur Darstellung):** Jede Kachel zeigt ein 3D-Bildchen aus denselben Modellen wie im Ort (`townIc`/`townModel` über `thumbSpan`): bewohntes Haus in seiner Farbvariante (Holzhaus bzw. Familienhaus), bezugsfertiges Haus mit Vermietungsschild, Rohbau, abgestecktes Grundstück mit Grenzpflöcken, eigenes Baugrundstück mit Schild. Ohne WebGL bleiben die bisherigen Zeichen. Texte, Status und Bedienung unverändert.
+
+**Geprüft:** Testbrowser (Chromium, 390 × 760): Plan mit allen fünf Zuständen aufgebaut – 20 Bildchen gerendert, keine Platzhalter übrig, keine Konsolenfehler; Bild gesichtet (Schilder danach vergrößert, diese letzte Größe nicht erneut gesichtet). `village-v340.test.js` und `village-life-v343.test.js` bestanden. **Nicht geprüft:** am Handy. **Nicht geändert:** die Zeichen in der Kennzahlenzeile (Einwohner, Lieferungen, Empfehlungen), im Knopf „Wohnviertel ansehen“ und in den Schildern über den Baustellen im Ort – dafür gibt es noch keine passenden Modelle.
+
+## v363 – Karte: kein verzerrtes Bild mehr nach dem Neuladen
+**Meldung Bennet (Bild: Weltkarte, Symbole in die Höhe gezogen):** Beim Neuladen des Spiels ist das Kartenbild verzerrt.
+
+**Ursache (`map.js`), im Testbrowser nachgestellt:** Die Karte passte ihre Zeichenfläche nur beim Fenster-Ereignis „resize“ an. Seit v358 setzt `viewport.js` die App-Höhe nach dem Laden nach (iOS-Browserleisten) – die Kartenfläche wird dabei größer oder kleiner, ohne dass ein „resize“ kommt. Die Zeichenfläche behielt ihre alte Pixelgröße und wurde nur gestreckt (gemessen: Element 390 × 560, Zeichenfläche weiter 390 × 700).
+
+**Lösung:** Die Karte beobachtet die Größe ihres eigenen Elements (`ResizeObserver`) und zeichnet bei jeder Änderung in der richtigen Größe neu; eine verborgene Karte (Größe 0) bleibt unberührt. Ohne `ResizeObserver` gilt das bisherige Verhalten.
+
+**Geprüft:** Testbrowser (Chromium, 390 × 700): App-Höhe ohne Fenster-„resize“ auf 560 und zurück auf 700 gesetzt – vorher blieb die Zeichenfläche bei 390 × 700 (verzerrt), nachher folgt sie (390 × 560, dann 390 × 700); keine Konsolenfehler. **Nicht geprüft:** am Handy und in Safari – dort entsteht der Fehler durch die Browserleisten, die ich im Testbrowser nur nachgebildet habe.
+
+## v362 – Übernahme: Kaufbeleg auf einer Seite, nüchterner Belegstil
+**Meldung Bennet (Bild: Kaufbeleg Titan Freight Holding):** Alles soll sauber auf eine Seite passen, ohne zu scrollen; dazu professioneller und seriöser.
+
+**Ursache (`corpreport.js`, `style.css`):** Der aufgeklappte Bestand („Fahrzeuge, Team & Standorte“) verlängerte den Beleg nach unten; der Knopf lag dann über der Liste, und man musste scrollen. Die Kennzahlen standen in sechs großen Karten mit Bildzeichen.
+
+**Lösung (nur Darstellung, Zahlen und Inhalt unverändert):**
+- Der Beleg besteht aus Kopf, Belegteil und Knopf. Der Belegteil passt auf eine Seite; der Knopf steht fest darunter.
+- „Bestand im Einzelnen ansehen“ öffnet den Bestand als eigene Ansicht über dem Beleg (scrollt dort für sich, „‹ Zurück zum Beleg“ schließt sie). Der Beleg selbst wird dadurch nicht länger.
+- Belegstil: Kennzahlen als Raster 3 × 2 ohne Bildzeichen, Kaufpreis als ruhige Zeile mit Akzentstrich statt gelbem Verlauf, Firmensitz/Team/Status/Gruppe als Zeilen mit Trennlinien, Kopfzeile „LOGISTIK-KURIER · KAUFBELEG“.
+- Bei sehr großer Systemschrift scrollt nur der Belegteil; der Knopf bleibt sichtbar.
+
+**Geprüft:** `company-acquisition-v355.browser.js` (um die Einseiten-Prüfung des Belegteils und „Knopf im Bild“ ergänzt; die Großschrift-Prüfung misst jetzt den Belegteil) und `company-ui-v356.browser.js` im Testbrowser (Chromium) bestanden: Beleg ohne Scrollen bei 390 × 844, 375 × 667, 320 × 568, 844 × 390 und 1280 × 800; Bestand öffnen, schließen, erneut öffnen, Laden, große Schrift. Bilder bei 320 × 568 und 844 × 390 gesichtet. **Nicht geprüft:** am Handy und in Safari; die geöffnete Bestandsansicht habe ich nicht als Bild gesichtet (nur über den Testablauf bedient).
+
+## v361 – Insel: weicher Übergang von der Welt zum Inselrand
+**Meldung Bennet (Bild: Seeblick, Rand unten links):** Der Übergang vom sichtbaren Gelände zum Inselrand ist noch unflüssig.
+
+**Ursache (`worldview.js`, `worldApron`):** Die Grasdecke der Insel übernahm nur genau an der Naht die Bodenfarbe der Welt und ging auf halbem Weg zum Rand in ein einheitliches, dunkleres Grün über. Die Welt selbst hat überall ihr Farbmuster – die Naht stand deshalb als gerade Linie mit dunklerem Streifen dahinter im Bild.
+
+**Lösung:** Die Grasdecke hat zwei Zwischenringe und nimmt dort dieselbe Bodenfarbe wie die Welt (`worldGroundCol` läuft über die Kante weiter, an der Naht exakt die bisherige Farbe). Erst an der Abbruchkante wird das Gras etwas satter. Form, Größe, Flanken und Unterseite der Insel sind unverändert; 4.488 statt 3.960 Dreiecke (Budget des Insel-Tests: 5.000).
+
+**Geprüft:** `floating-island-v358.test.js` und `fixes-v354.test.js` bestanden. Testbrowser (Chromium, 390 × 700, Gebiete freigeschaltet, Mittag): vier Randstellen vorher/nachher gesichtet (Seeblick-Ecke, Westrand, Waldrand im Norden, Ostrand) – der dunkle Streifen ist weg, Wiese und Waldboden laufen durch; keine Konsolenfehler. **Nicht geprüft:** am Handy und in Safari; bei Nacht; gesperrte (graue) Gebiete. **Grenze:** Bäume und Grasbüschel enden weiterhin an der alten Weltkante – nur der Boden läuft durch.
+
+## v360 – Seeblick: Vermittlung ohne Zeitangabe für die ersten Wohnanfragen
+**Wunsch Bennet (Bild: Seegarten 2, bezugsfertig):** „Erste Wohnanfragen in 7 h 52 min“ soll entfallen – wann sich Interessenten melden, weiß man in der Realität auch nicht.
+
+**Lösung (`villageview.js`, nur Text):** Statt der Restzeit steht dort „Die Vermittlung läuft. Sobald sich Interessenten melden, erscheinen ihre Wohnanfragen hier.“ Der Ablauf selbst (wann Anfragen eintreffen, Laufzeit der Anzeige) ist unverändert; die Restlaufzeit der Anzeige bleibt sichtbar.
+
+**Geprüft:** Syntaxprüfung, `village-v340.test.js` und `village-life-v343.test.js` bestanden. **Nicht geprüft:** im Browser und am Handy (reine Textänderung).
+
 ## v359 – Jagd: Aura um Gold- und Diamant-Stücke
 **Wunsch Bennet (Bild: erlegter Hirsch):** Bei Gold-Stücken ein spektakuläres Umfeld um das erlegte Tier, für alle Wildarten; bei Diamant noch einmal deutlich stärker – der Spieler soll spüren, wie mächtig das Stück ist.
 

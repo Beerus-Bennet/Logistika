@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v359";
+const VERSION = "v364";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -14,7 +14,7 @@ const SHELL = [
   "./",
   "./index.html",
   "./viewport.js?v=358",
-  "./style.css?v=359",
+  "./style.css?v=364",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -23,7 +23,7 @@ const SHELL = [
   "./places.js?v=109",
   "./avatar.js?v=282",
   "./photo.js?v=336",
-  "./map.js?v=311",
+  "./map.js?v=363",
   "./routegeo.js?v=323",
   "./offices.js?v=356",
   "./wallet.js?v=109",
@@ -47,7 +47,7 @@ const SHELL = [
   "./customs.js?v=109",
   "./corpassets.js?v=356",
   "./corp.js?v=356",
-  "./corpreport.js?v=356",
+  "./corpreport.js?v=362",
   "./corpshark.js?v=355",
   "./livery.js?v=109",
   "./gl3d.js?v=345",
@@ -62,7 +62,7 @@ const SHELL = [
   "./camp.js?v=358",
   "./vista.js?v=352",
   "./farmview.js?v=359",
-  "./worldview.js?v=358",
+  "./worldview.js?v=361",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",

@@ -9,28 +9,32 @@ function corpWinReport(ev) {
   const group = d.group || { count: Object.keys(corp().owned).length,
     vehicles: Object.values(corp().owned).reduce((n, o) => n + (o.veh || 0), 0),
     paid: Object.values(corp().owned).reduce((n, o) => n + (o.price || 0), 0) };
-  const stat = (icon, value, label) => `<div class="crp-stat"><span aria-hidden="true">${icon}</span><b>${esc(value)}</b><small>${esc(label)}</small></div>`;
+  /* v362: Der Beleg passt ohne Scrollen auf eine Seite. Kennzahlen als nüchternes Raster ohne Bildzeichen, Angaben zum
+     Betrieb als Zeilen; der Bestand im Einzelnen klappt als eigene Ansicht über den Beleg (scrollt dort für sich),
+     der Knopf darunter bleibt immer sichtbar. Inhalt und Zahlen wie bisher. */
+  const stat = (value, label) => `<div class="crp2-kpi"><b>${esc(value)}</b><small>${esc(label)}</small></div>`;
+  const row = (label, value) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
   const el = document.createElement("div");
   el.id = "corpShow"; el.className = "cs-receipt";
   el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "crpTitle"); el.tabIndex = -1;
-  el.innerHTML = `<div class="crp-sheet">
-    <header class="crp-mast"><span>LOGISTIK-KURIER</span><small>${esc(stamp(d.at == null ? S.time : d.at))}</small></header>
-    <section class="crp-heading"><span class="crp-check" aria-hidden="true">✓</span><div><p>ÜBERNAHME ABGESCHLOSSEN</p>
-      <h2 id="crpTitle">${esc(name)}</h2><span>Jetzt Teil von <strong>${esc(company)}</strong></span></div></section>
-    <div class="crp-price"><span>Kaufpreis</span><b>${esc(money(d.price))}</b></div>
-    <div class="crp-stats" aria-label="Bei diesem Kauf übernommen">
-      ${stat("🚚", "+" + d.veh, "Fahrzeuge im Eigentum")}
-      ${stat("👥", "+" + (d.staff || 0), "Mitarbeitende übernommen")}
-      ${stat("🏢", d.sites || 1, "Standorte im Eigentum")}
-      ${stat("📈", "+" + (d.pct || 0), "Prozentpunkte Marktanteil")}
-      ${stat("📋", "+" + (d.cust || 0), "Aufträge von Kunden")}
-      ${stat("⭐", "+" + (d.rep || 0), "Ruf")}
+  el.innerHTML = `<div class="crp-sheet crp2">
+    <header class="crp-mast"><span>LOGISTIK-KURIER · KAUFBELEG</span><small>${esc(stamp(d.at == null ? S.time : d.at))}</small></header>
+    <div class="crp2-body">
+      <section class="crp2-head"><p><i aria-hidden="true">✓</i>Übernahme abgeschlossen</p>
+        <h2 id="crpTitle">${esc(name)}</h2><span>Jetzt Teil von <strong>${esc(company)}</strong></span></section>
+      <div class="crp2-price"><span>Kaufpreis</span><b>${esc(money(d.price))}</b></div>
+      <div class="crp2-kpis" aria-label="Bei diesem Kauf übernommen">
+        ${stat("+" + d.veh, "Fahrzeuge")}${stat("+" + (d.staff || 0), "Mitarbeitende")}${stat(d.sites || 1, (d.sites || 1) === 1 ? "Standort" : "Standorte")}
+        ${stat("+" + (d.pct || 0) + " %-Pkt.", "Marktanteil")}${stat("+" + (d.cust || 0), "Aufträge")}${stat("+" + (d.rep || 0), "Ruf")}
+      </div>
+      <dl class="crp2-rows">
+        ${row("Firmensitz", esc(d.hq || "übernommen"))}
+        ${row("Team", summary ? `Ø ${summary.skill.toFixed(1)} von 5 · ${esc(money(summary.wages))} Löhne/Tag` : "übernommen")}
+        ${row("Status", d.pending ? `${d.pending} Standorte bis zur Freischaltung reserviert` : "Eingerichtet, Team und Flotte zugeordnet")}
+        ${row("Deine Gruppe", `${group.count} Übernahmen · ${group.vehicles} Fahrzeuge · ${esc(money(group.paid))}`)}
+      </dl>
+      ${d.assets ? `<details class="corp-package crp-details"><summary><span class="crp2-open">Bestand im Einzelnen ansehen</span><span class="crp2-back">‹ Zurück zum Beleg</span></summary><div class="crp-detail-content">${corpDealContents(d.assets)}</div></details>` : ""}
     </div>
-    <div class="crp-operation"><b>${esc(d.hq || "Firmensitz übernommen")}</b>
-      <span>${summary ? `Team Ø ${summary.skill.toFixed(1)}/5 · ${esc(money(summary.wages))} Löhne/Tag` : "Flotte und Team gehören jetzt dir."}</span>
-      <span>${d.pending ? `${d.pending} Standorte mit Team bis zur Freischaltung reserviert.` : "Eingerichtet · Team und Flotte zugeordnet"}</span></div>
-    <div class="crp-group"><b>Deine Gruppe nach diesem Kauf</b><span>${group.count} Übernahmen · ${group.vehicles} Fahrzeuge übernommen</span><small>${esc(money(group.paid))} Kaufpreise insgesamt</small></div>
-    ${d.assets ? `<details class="corp-package crp-details"><summary>Fahrzeuge, Team & Standorte ansehen</summary><div class="crp-detail-content">${corpDealContents(d.assets)}</div></details>` : ""}
     <footer class="crp-footer"><button type="button" class="btn crp-close">Zur Unternehmensübersicht →</button></footer>
   </div>`;
   document.body.appendChild(el); document.body.classList.add("cs-open");
