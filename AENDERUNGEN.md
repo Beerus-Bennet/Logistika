@@ -1,3 +1,13 @@
+## v366 – Insel: weite Übersicht überall, Bäche fließen über die Kante, Baumsaum auf dem Randstreifen
+**Wunsch Bennet (Bild: weit herausgezoomter Seeblick):** (1) Diese Rauszoom-Ansicht für die ganze Insel ermöglichen. (2) Den Fluss so weit verlängern, dass er von der Insel herunterfließt. (3) Baumsaum auf dem Randstreifen.
+
+**Lösung (`farmview.js`, `worldview.js`; nur Darstellung und Kamera):**
+- **Zoom:** Die weite Übersicht (Abstand bis 450) gab es nur, solange die Kamera über dem Ort stand, sonst war bei 54 Schluss. Jetzt gilt 450 überall (`clampCam`). Wohin man die Kamera schieben kann, ist unverändert.
+- **Bäche:** Beide Bäche endeten am alten Weltrand. `creekToRim` verlängert sie in sanften Bögen bis knapp über die Inselkante (Ufer und Wasser wie bisher über `FWM.creekBank`/`creekWater`); dort fällt das Wasser als Band mit hellen Strähnen und Gischt in die Tiefe (`rimFall`). `FWORLD.creek` und `LAKE_CREEK` selbst bleiben unverändert – Bäume, Wege und Laufnetz rechnen wie zuvor.
+- **Baumsaum:** `worldApronTrees` setzt vereinfachte Nadel- und Laubbäume auf den Randstreifen, dichter, wo innen Wald steht; Bachläufe und die Kante bleiben frei. Eigenes Netz ohne Schatten, fester Zufall; die Kante kommt für Insel, Bäume und Bachenden aus einer Formel (`apronRim`).
+
+**Geprüft:** Unit-Test neu `inselrand-v366.test.js`; `floating-island-v358.test.js` und `fixes-v354.test.js` bestanden. Testbrowser (Chromium, 390 × 700, Gebiete freigeschaltet, Mittag): mit dem Mausrad über dem Hof bis Abstand 450 herausgezoomt; beide Bachenden mit Wasserfall, Baumsaum im Westen, Norden und Süden und die weite Übersicht als Bilder gesichtet; keine Konsolenfehler. **Nicht geprüft:** am Handy – vor allem die Bildrate bei weiter Übersicht über dem Wald (im Testbrowser mit Software-Grafik kaum langsamer als die nahe Ansicht, das sagt aber wenig über das Handy); Nacht; gesperrte Gebiete; Zwei-Finger-Zoom (nur Mausrad). **Grenzen:** Bei Abstand 450 passt im Hochformat nicht die ganze Insel auf einmal ins Bild – es ist dieselbe Ansicht wie bisher über dem Ort, nur überall. Der Wasserfall steht still (keine Fließbewegung).
+
 ## v365 – Aufgaben aus „Logistika 3.pdf“ und offene Oberflächenkorrekturen
 
 **Auftrag:** Alle 13 PDF-Seiten mit sechs Aufgabenbereichen geprüft. Grundlage ist main `bf7fd14` einschließlich Jagd-Aura aus PR #77; die aufeinander aufbauenden offenen PRs #78–#82 (bis v364) sind zusätzlich integriert. Die bereits vorbereiteten Eingabe-/Lager-/Trefferbericht-/Störungskorrekturen werden gemeinsam ausgeliefert.
