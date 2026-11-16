@@ -2206,14 +2206,13 @@ const HUNT = (() => {
         break;
       }
       case "fall": {
-        /* v307: erst einknicken, dann über die Schulter auf die Flanke rollen, zuletzt ausruhen.
-           Die Höhe wird nach dem Stellen der Gelenke zusätzlich an der tatsächlichen Haut begrenzt. */
-        const dp = deadPose(A), u = fallU(A), k = A.k === "fasan" ? ss(u) : restEase((u - 0.13) / 0.65);
-        const impact = A.k === "fasan" ? 0 : ss((u - 0.74) / 0.12) * (1 - ss((u - 0.86) / 0.14));
-        A.vT = 0; A.rz = lerp(A.rz0 || 0, dp.rz, k) + (A.side || 1) * 0.025 * impact;
-        A.y = lerp(A.y0 || 0, dp.y, k) - (A.k === "fasan" ? 0 : Math.sin(Math.PI * ss(u / 0.85)) * 0.2 * A.s);
-        A.rx = lerp(A.rx0 || 0, 0, ss(u / 0.85)) + (A.k === "fasan" ? 0 : 0.1 * Math.sin(Math.PI * ss(u / 0.7)) * (1 - k));
-        neckT = lerp(0.2, dp.neckT, k); nyT = dp.nyT * k; headT = lerp(0.3, dp.headT, k); stiff = 9;
+        /* v366: Der Rumpf verliert seitlich die Stütze. Kein vorgezogenes
+           gemeinsames Einknicken aller Läufe und kein künstlicher Bauch-Dip. */
+        const dp = deadPose(A), u = fallU(A), k = A.k === "fasan" ? ss(u) : restEase((u - .04) / .88);
+        A.vT = 0; A.rz = lerp(A.rz0 || 0, dp.rz, k);
+        A.y = lerp(A.y0 || 0, dp.y, k);
+        A.rx = lerp(A.rx0 || 0, 0, restEase(u));
+        neckT = lerp(.2, dp.neckT, k); nyT = dp.nyT * k; headT = lerp(.3, dp.headT, k); stiff = 9;
         if (A.t <= 0) { if (A.fs) { A.x = A.fs.to[0]; A.z = A.fs.to[1]; A.fs = null; } A.st = "dead"; A.deadAt = X.t; A.v = 0; settle(A); }
         break;
       }
@@ -2228,7 +2227,11 @@ const HUNT = (() => {
       A.vx = Math.sin(A.ry) * A.v; A.vz = Math.cos(A.ry) * A.v;
       A.x += A.vx * dt; A.z += A.vz * dt;
       if (A.st === "fall" || A.st === "dead") { A.vx = A.vz = 0; }
-      if (A.st === "fall" && A.fs) { const u = fallU(A), k = A.k === "fasan" ? ss(u) : (1 - Math.exp(-4 * u)) / (1 - Math.exp(-4)); A.x = lerp(A.fs.x0, A.fs.to[0], k); A.z = lerp(A.fs.z0, A.fs.to[1], k); A.v = 0; }
+      if (A.st === "fall" && A.fs) {
+        const u=fallU(A);
+        if(A.fs.center){const c=fallShift(A,A.rx,A.rz),k=1-(1-u)**3;A.x=A.fs.x0+c[0]+A.fs.drift[0]*k;A.z=A.fs.z0+c[2]+A.fs.drift[1]*k;}
+        else{const k=ss(u);A.x=lerp(A.fs.x0,A.fs.to[0],k);A.z=lerp(A.fs.z0,A.fs.to[1],k);}A.v=0;
+      }
       void step;
     }
     /* Gang: Schritt ↔ Galopp nach Tempo; in der Pause bleibt die Phase stehen (Lauf in der Luft) */
@@ -2374,11 +2377,19 @@ const HUNT = (() => {
   function fallStart(A, T) {
     /* v307: Aus der gerade sichtbaren Bewegung beginnen; Dauer je Art und Stück statt starrem Wegkippen in 0,55 s. */
     if (A.k !== "fasan") T = (A.collapse365?(A.k === "keiler"?.78:.92):(A.k === "keiler" ? 1.18 : 1.34)) + poseRnd(A, 34) * 0.08;
-    /* Zielpunkt aus Ausrutschweg des Laufs ermitteln, dann während des Zusammenbrechens dorthin gleiten */
-    const sl = (A.collapse365&&A.zone!=="kopf"?0:(A.v || 0)) / 3.2 * (1 - Math.exp(-3.2 * T)), px = A.x + Math.sin(A.ry) * sl, pz = A.z + Math.cos(A.ry) * sl;
-    A.fs = { x0: A.x, z0: A.z, T, to: lieSpot(A, px, pz) };
     A.t = A.fT = T; A.legs0 = (A.legsA || []).map(a => a.slice());
     A.rz0 = A.node.rz || 0; A.y0 = A.node.y || 0; A.rx0 = A.node.rx || 0;
+    const sl = (A.collapse365&&A.zone!=="kopf"?0:(A.v || 0)) / 3.2 * (1 - Math.exp(-3.2 * T));
+    A.fs = { x0:A.x, z0:A.z, T, support:clamp(1-(A.v||0)/4,0,1) };
+    if(A.k!=="fasan"){
+      /* v366: Um den Körperschwerpunkt absinken, statt den ganzen Rumpf
+         starr um den Weltursprung an den Hufen zu schwenken. */
+      const C=SP[A.k].body.c.map(v=>v*A.s);A.fs.center=rot(C,A.rx0,0,A.rz0);
+      const dp=deadPose(A),shift=fallShift(A,0,dp.rz),side=rot([-.1*Math.sign(dp.rz)*A.s,0,0],0,A.ry,0);
+      A.fs.to=lieSpot(A,A.x+Math.sin(A.ry)*sl+shift[0]+side[0],A.z+Math.cos(A.ry)*sl+shift[2]+side[2]);
+      A.fs.drift=[A.fs.to[0]-A.x-shift[0],A.fs.to[1]-A.z-shift[2]];
+      A.fs.feet=SP[A.k].legs.map((L,i)=>{const a=A.legs0[i]||[0,0],dm=legDim(A.k,L),q=legPt(L,dm,a[0],a[1]||0,a[2]||0,[0,-dm[1],0],true),w=rot(q.map(v=>v*A.s),A.rx0,A.ry,A.rz0);return [w[0]+A.x,w[1]+A.y0,w[2]+A.z];});
+    }else A.fs.to=lieSpot(A,A.x+Math.sin(A.ry)*sl,A.z+Math.cos(A.ry)*sl);
     restHead(A);
     A.pose0 = { neck: [A.neck.rx || 0, A.neck.ry || 0, A.neck.rz || 0], head: [A.head.rx || 0, A.head.rz || 0], ears: (A.ears || []).map(e => [e.rz || 0, e.ry || 0]) };
   }
@@ -2701,14 +2712,32 @@ const HUNT = (() => {
   /* v315: Ruhige Übergänge mit stetiger Beschleunigung bis zur Endpose. */
   const restEase = t => { t = clamp(t, 0, 1); return t*t*t*(t*(t*6-15)+10); };
   const fallK = A => restEase(fallU(A));
-  /* v307: Die Vorderläufe geben zuerst nach; Hinterläufe und obere Seite folgen etwas später. */
+  /* v366: Weder zusätzliche Knickpose noch ein zweites Ausstrecken. Die
+     belasteten Hufe bleiben anfangs stehen; freie Läufe sinken später nach. */
+  function fallShift(A,rx,rz){
+    const C=SP[A.k].body.c.map(v=>v*A.s),c=rot(C,rx,0,rz);
+    return rot(A.fs.center.map((v,i)=>v-c[i]),0,A.ry,0);
+  }
+  function supportLeg(A,i){
+    const L=SP[A.k].legs[i],dm=legDim(A.k,L),F=A.fs.feet[i];
+    const p=unrot([(F[0]-A.x)/A.s,(F[1]-A.y)/A.s,(F[2]-A.z)/A.s],A.rx||0,A.ry,A.rz||0).map((v,j)=>v-L.h[j]);
+    const lu=Math.hypot(dm[0],dm[2]),ll=dm[1],phi=Math.atan2(-dm[2],dm[0]);
+    const bend=(L.f?1:-1)*Math.acos(clamp((p[0]*p[0]+p[1]*p[1]+p[2]*p[2]-lu*lu-ll*ll)/(2*lu*ll),-1,1)),lower=bend+phi;
+    /* Gelenkfolge wie im Modell: Rx(oben) · Rz(Spreizung) · Rx(unten). */
+    const y=-dm[0]-ll*Math.cos(lower),z=dm[2]-ll*Math.sin(lower),th=Math.asin(clamp(p[0]/Math.max(.001,-y),-1,1));
+    const upper=angN(Math.atan2(p[2],p[1])-Math.atan2(z,y*Math.cos(th)));
+    const lim=POSE[A.k].lim[L.f?'f':'h'],a=A.legs0[i];
+    return [clamp(upper,Math.min(lim[0][0],a[0]),Math.max(lim[0][1],a[0])),clamp(lower,Math.min(lim[1][0],a[1]||0),Math.max(lim[1][1],a[1]||0)),clamp(th,POSE[A.k].ab[0],POSE[A.k].ab[1])];
+  }
   function deadLeg(A, i) {
     const d = deadPose(A).legs[i], a = (A.legs0 && A.legs0[i]) || [0, 0];
     if (A.st === "dead") return d.slice();
-    const L = SP[A.k].legs[i], u = fallU(A), delay = (L.f ? 0 : 0.08) + (L.h[0] * (A.side || 1) > 0 ? 0.04 : 0);
-    const fold = restEase((u - delay) / 0.34), rest = restEase((u - 0.29 - delay) / (0.71 - delay));
-    const mid = L.f ? [-0.4, 1.24] : [0.46, -1.12];
-    return [lerp(lerp(a[0], mid[0], fold), d[0], rest), lerp(lerp(a[1] || 0, mid[1], fold), d[1], rest), lerp(a[2] || 0, d[2], restEase((u - 0.22) / 0.74))];
+    const L=SP[A.k].legs[i],u=fallU(A),top=L.h[0]*(A.side||1)>0,delay=top?.02:.06;
+    const k=restEase((u-.12-delay)/(1-.12-delay));
+    const relaxed=[lerp(a[0],d[0],k),lerp(a[1]||0,d[1],k),lerp(a[2]||0,d[2],k)];
+    if(!A.fs||!A.fs.feet||A.fs.support===0)return relaxed;
+    const release=top?.18:.30,w=(1-restEase((u-release)/.32))*(1-restEase((Math.abs(A.rz-(A.rz0||0))-.12)/.38))*(A.fs.support==null?1:A.fs.support),held=supportLeg(A,i);
+    return relaxed.map((v,j)=>lerp(v,held[j],w));
   }
   /* v307: Bodenauflage während der Bewegung anhand derselben Modellpunkte wie in der Liegepose.
      Geometrie einmal je Stück beziehen; pro Bild nur Matrizen und Höhen, keine neuen Modelle/GPU-Objekte. */
@@ -2751,10 +2780,6 @@ const HUNT = (() => {
   /* ------------------------------ Eingabe --------------------------------- */
   /* v365: Abrufbare Erklärung statt wiederholter Belehrung bei jeder Bergung. */
   function qualityHTML(){return `<p><b>Tiergüte und Schussnote sind zwei verschiedene Werte.</b></p><p>Die Tiergüte (0–100) steht bereits bei der Begegnung fest: Sie beschreibt die natürliche Stärke des Tieres und seiner Trophäe. Du kannst sie bei diesem Tier nicht erhöhen. Beobachte mit dem Fernglas und wähle ein stärkeres Stück; weitere Begegnungen bieten andere Tiere.</p><p>Ein sauberer Herzschuss gibt <b>+5 Punkte</b>, ein Lungenschuss <b>+2 Punkte</b> für die Medaille. Beispiel: Tiergüte 46 + Herzbonus 5 = 51, also Silber. Ein perfekter Schuss macht aus einem schwachen Tier kein Diamantstück.</p><p><b>Medaille:</b> Bronze unter 50, Silber ab 50, Gold ab 72, Diamant ab 90 Punkten. Ein beschädigtes Haupt begrenzt auf Silber, ein Trägerschuss auf Gold, ein erst krank geschossenes Stück auf Bronze.</p><p>Die <b>Schussnote</b> bewertet dagegen den Treffer und die Schussumstände. Ruhe, ein sauberer erster Treffer und kontrolliertes Zielen helfen dabei. Seltenheit beschreibt besondere Merkmale und ist unabhängig von der Schussnote.</p>`;}
-  function qualityHelp(){
-    if(document.getElementById('huntQuality'))return;const d=document.createElement('dialog');d.id='huntQuality';d.className='hunt-quality';d.innerHTML=`<h2>Tiergüte verstehen</h2>${qualityHTML()}<button class="btn" type="button">Verstanden</button>`;
-    document.body.appendChild(d);d.querySelector('button').onclick=()=>d.close();d.onclose=()=>d.remove();d.showModal();
-  }
   function ui() {
     const host = $("#farm");
     if (!host) return;
@@ -2763,14 +2788,14 @@ const HUNT = (() => {
     el.innerHTML = `<svg class="hu-ov" width="100%" height="100%"></svg>
       <div class="hu-marks"></div>
       <div class="hu-spot" hidden></div>
-      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><button class="hu-quality" data-hu="quality" aria-label="Tiergüte erklären">?</button><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
+      <div class="hu-top"><div class="hu-info"><b>Hochsitz · Revier</b><small class="hu-sub"></small></div><div class="hu-wind" title="Wind"><i>➤</i><span></span></div><button class="hu-x" data-hu="exit" aria-label="Hochsitz verlassen">✕</button></div>
       <div class="hu-msg" hidden></div>
       <div class="hu-range" hidden></div>
       <div class="hu-bar"></div>
       <div class="hu-vig"></div>
       <div class="hu-win" hidden></div>
       <div class="hu-call" hidden></div>
-      <div class="hu-job" hidden></div>
+      <details class="hu-job" hidden><summary>Jagdaufträge</summary><div class="hu-job-list"></div></details>
       <div class="hu-drag" hidden>↔ Wischen dreht · zwei Finger zoomen</div>
       <div class="hu-card2" hidden></div>
       <div class="hu-fade"></div>`;
@@ -2778,11 +2803,13 @@ const HUNT = (() => {
     X.ui = el;
     ["bar", "ov", "marks", "spotEl", "msgEl", "sub", "range", "vig", "win", "drag", "card", "fadeEl", "windEl", "call", "jobEl"].forEach((k, i) => { X[k] = el.querySelector([".hu-bar", ".hu-ov", ".hu-marks", ".hu-spot", ".hu-msg", ".hu-sub", ".hu-range", ".hu-vig", ".hu-win", ".hu-drag", ".hu-card2", ".hu-fade", ".hu-wind", ".hu-call", ".hu-job"][i]); });
     renderBar();
+    const head=el.querySelector('.hu-top'),placeJobs=()=>{X&&X.ui===el&&X.jobEl.style.setProperty('--hu-job-top',(head.offsetTop+head.offsetHeight+8)+'px');};
+    if(typeof ResizeObserver==='function'){X.jobResize=new ResizeObserver(placeJobs);X.jobResize.observe(head);}placeJobs();
     let P = null, pinch = null;
     /* v354: Alle Finger auf der Ansicht – zwei davon zoomen das erlegte Stück (Abstand der Finger), einer dreht wie bisher. */
     const PS = new Map(), span = () => { const [a, b] = [...PS.values()]; return Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)); };
     el.addEventListener("pointerdown", e => {
-      if (e.target.closest("button,.hu-card2")) return;
+      if (e.target.closest("button,.hu-card2,.hu-job")) return;
       if (X && X.view === "harvest" && X.hrv && X.hrv.ui < 2) X.hrv.skip = true;          /* v135: Antippen überspringt das Warten */
       PS.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (PS.size === 2 && X && X.view === "harvest" && X.hrv && X.hrv.cut) { pinch = { d0: span(), z0: X.hrv.zoom || 1 }; hvTake(X.hrv); if (X.card && !X.card.hidden && !X.card.classList.contains("saved")) X.card.classList.add("hu-min"); }
@@ -2823,7 +2850,6 @@ const HUNT = (() => {
       const b = e.target.closest("[data-hu]"); if (!b || !X) return;
       e.stopPropagation();
       const a = b.dataset.hu;
-      if (a === "quality") return qualityHelp();
       if (a === "exit") return end();
       if (a === "bino") return setView(X.view === "bino" ? "eye" : "bino");
       if (a === "scope") return setView("scope");
@@ -4163,12 +4189,14 @@ const HUNT = (() => {
       X.ui.style.setProperty("--fade", X.fade.toFixed(3));
       const k = R.w + "x" + R.h + X.view + X.zoom; if (X.ovKey !== k) drawOverlay();
       X.sub.innerHTML = `Wild <b class="hu-dots">${dots(H.stock)}</b> · 🎯 ${H.shots} · 🏆 ${H.kills}`;
-      /* v200: offene Jagdaufträge, nacheinander eingeblendet (nicht beim Bergen) */
+      /* v366: Alle Aufträge unter dem Revier, zunächst eingeklappt.
+         Nur geänderte Zeilen ersetzen; details und dessen Offen-Zustand bleiben. */
       if (X.jobEl) {
-        const show = ["eye", "bino"].includes(X.view) && X.mode === "hold", J = show ? jobsEnsure(H) : [];
-        if (J.length) { const i = Math.floor(X.t / 7) % J.length, j = J[i], key = j.id + ":" + j.got;
-          if (X.jobK !== key) { X.jobK = key; X.jobEl.innerHTML = `<i>📋</i><span>${esc(jobTxt(j))}${j.n > 1 ? ` <b>${j.got}/${j.n}</b>` : ""}</span><em>${["leicht", "mittel", "schwer"][j.d]} · ${eur(JOB_PAY[j.d][0])}</em>`; } }
-        X.jobEl.hidden = !J.length;
+        const show=["eye","bino"].includes(X.view)&&X.mode==="hold",J=show?jobsEnsure(H):[];
+        if(J.length){const key=J.map(j=>j.id+':'+j.got).join('|');
+          if(X.jobK!==key){X.jobK=key;X.jobEl.querySelector('summary').textContent='Jagdaufträge · '+J.length;
+            X.jobEl.querySelector('.hu-job-list').innerHTML=J.map(j=>`<div class="hu-job-row"><b>${esc(jobTxt(j))}</b><small>${['Leicht','Mittel','Schwer'][j.d]}${j.n>1?' · '+j.got+'/'+j.n:''}</small><em>${eur(JOB_PAY[j.d][0])}</em></div>`).join('');}}
+        X.jobEl.hidden=!J.length;
       }
       const rel = angN(X.wind.dir - X.th);                          /* Pfeil: wohin der Wind weht, relativ zur Blickrichtung (oben = vorn) */
       X.windEl.querySelector("i").style.transform = `rotate(${(rel * 180 / Math.PI - 90).toFixed(0)}deg)`;
@@ -4226,7 +4254,6 @@ const HUNT = (() => {
 
   /* ------------------------------ Ende ------------------------------------ */
   function end() {
-    const q=document.getElementById("huntQuality");if(q)q.close();
     if (!X || X.mode === "out" || X.mode === "in") return;
     if (X.view === "harvest" || X.view === "back") return;
     X.mode = "out"; X.p = 0; X.from = camOf(FV.R.cam);
@@ -4241,6 +4268,7 @@ const HUNT = (() => {
     CAM_KEYS.forEach(k => { c[k] = X.saved[k]; });
     delete c.near; delete c.far;
     X.nodes.slice().forEach(rmNode);
+    if(X.jobResize)X.jobResize.disconnect();
     if (X.ui && X.ui.parentNode) X.ui.parentNode.removeChild(X.ui);
     if (X.rel) { window.removeEventListener("pointerup", X.rel); window.removeEventListener("pointercancel", X.rel); }
     if (X.key) { window.removeEventListener("keydown", X.key); window.removeEventListener("keyup", X.key); }
@@ -4290,7 +4318,7 @@ const HUNT = (() => {
     _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
-    _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _fall: A => { A.st = "fall"; A.t = 0.8; A.side = 1; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
+    _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _stepAnimal:stepAnimal, _deadLeg:deadLeg, _fallFloor:fallFloor, _fall: (A,side=1) => { A.st = "fall"; A.t = 0.8; A.side = side; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }
   };

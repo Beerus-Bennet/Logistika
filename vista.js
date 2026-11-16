@@ -6,7 +6,7 @@
      Sonne (rot und groß am Horizont) samt Lichthof, Mond und Sterne, Wolken, ein See mit Spiegelung,
      drei gestaffelte Bergketten mit Dunst und Wiesen davor.
    Die 3D-Welt geht am Horizont in denselben Dunst über (VISTA.env färbt den Nebel).
-   Der Himmel ist reine Kulisse: Er richtet sich nach der Kamera, die Sonne steht beim Hinsehen leicht rechts vor dir.
+   Wolken sind im Himmelsraum verankert; die Kamera ändert nur den sichtbaren Ausschnitt.
    API:  VISTA.draw(R, time)   nach R.render(): zeichnet oder versteckt die Ebene (aktiv, solange FV.fp gesetzt ist)
          VISTA.env(E, h)       Nebel- und Lichtfarbe der Szene an die Aussicht anpassen (nur in der Ich-Perspektive)
          VISTA.pal(h)          Farbpalette zur Stunde h (0 … 24), Testhilfe
@@ -269,6 +269,36 @@ const VISTA = (() => {
     return storm ? 0.85 : wx === "regen" ? 0.7 : wx === "nebel" ? 0.8 : wx === "wolken" ? 0.45 : 0;
   }
 
+  /* v366: Wolken sind feste Flächen im Himmelsraum. Alle Ecken werden
+     projiziert, nicht nur die Mitte eines immer bildschirmparallelen Bildes. */
+  function cloudGrid(R,eye,a,e,width,height,cols,rows,sc){
+    const D=dirOf(a,e),U=[-Math.sin(a),0,Math.cos(a)],V=[-Math.sin(e)*Math.cos(a),Math.cos(e),-Math.sin(e)*Math.sin(a)],out=[];
+    for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){
+      const u=i/cols,v=j/rows,P=D.map((d,k)=>eye[k]+4000*(d+U[k]*(u-.5)*width+V[k]*(.8-v)*height)),q=R.project(...P);
+      out.push({u,v,p:q?[q[0]*sc,q[1]*sc]:null,world:P});
+    }return out;
+  }
+  function cloudTriangle(X,img,A,B,C,cw,ch){
+    if(!A.p||!B.p||!C.p)return;
+    const P=[A.p,B.p,C.p];if(Math.max(...P.map(p=>p[0]))<0||Math.min(...P.map(p=>p[0]))>cw||Math.max(...P.map(p=>p[1]))<0||Math.min(...P.map(p=>p[1]))>ch)return;
+    const s=[A,B,C].map(p=>[p.u*img.width,p.v*img.height]),dx1=s[1][0]-s[0][0],dy1=s[1][1]-s[0][1],dx2=s[2][0]-s[0][0],dy2=s[2][1]-s[0][1],det=dx1*dy2-dx2*dy1;
+    if(Math.abs(det)<.00001)return;
+    const px1=P[1][0]-P[0][0],py1=P[1][1]-P[0][1],px2=P[2][0]-P[0][0],py2=P[2][1]-P[0][1];
+    const a=(px1*dy2-px2*dy1)/det,b=(py1*dy2-py2*dy1)/det,c=(px2*dx1-px1*dx2)/det,d=(py2*dx1-py1*dx2)/det;
+    X.save();X.beginPath();X.moveTo(...P[0]);X.lineTo(...P[1]);X.lineTo(...P[2]);X.closePath();X.clip();
+    X.transform(a,b,c,d,P[0][0]-a*s[0][0]-c*s[0][1],P[0][1]-b*s[0][0]-d*s[0][1]);X.drawImage(img,0,0);X.restore();
+  }
+  let cloudLayer=null;
+  function cloudImage(X,img,grid,cols,rows,cw,ch){
+    /* v366: Kanten der Teilflächen additiv auf einer transparenten Ebene
+       zusammensetzen. So entstehen keine sichtbaren Antialiasing-Nähte. */
+    if(!cloudLayer)cloudLayer=document.createElement('canvas');
+    if(cloudLayer.width!==cw||cloudLayer.height!==ch){cloudLayer.width=cw;cloudLayer.height=ch;}
+    const G=cloudLayer.getContext('2d');G.setTransform(1,0,0,1,0,0);G.clearRect(0,0,cw,ch);G.globalCompositeOperation='lighter';
+    for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const k=j*(cols+1)+i,A=grid[k],B=grid[k+1],C=grid[k+cols+2],D=grid[k+cols+1];cloudTriangle(G,img,A,B,C,cw,ch);cloudTriangle(G,img,A,C,D,cw,ch);}
+    X.drawImage(cloudLayer,0,0);
+  }
+
   function draw(R, time) {
     const fp = typeof FV !== "undefined" ? FV.fp : null;
     if (!fp) { hide(); return; }
@@ -428,26 +458,18 @@ const VISTA = (() => {
     /* v133: Wolken aus vorgerechneten, gelockten Formen – unten Schatten, oben Licht; nachts dunkel vor den Sternen, mit silbernem Mondrand */
     const CS = cloudShapes(), lit = mix(P.cl, P.sun, 0.25 * evening), dkc = P.cd, cAl = night > 0.5 ? 0.9 : 0.95 * (1 - wg * 0.25);
     const moonA = el < -0.02 && sunX != null ? sol.az + 0.5 : null;
-    /* v342: Wolken sitzen fest auf der Himmelskugel. Mitte und Breite kommen aus der echten Kameraprojektion (R.project) – vorher stand die Höhe über dem
-       Horizont als hy − f·tan(e), unabhängig von der Neigung; beim Hoch- und Runterschauen wuchsen und wanderten die Wolken dadurch. Die Form hängt an der
-       Nummer der Wolke (id), nicht mehr an einem Zähler, der beim Drehen wechselte. */
-    const cloud = (id, a, e, w, hgt, band) => {
-      const d = angN(a - fwd);
-      if (Math.abs(d) > halfH + 0.5) return;
-      /* v352: feste Größe je Wolke (Winkelbreite × Brennweite). v342 maß die Breite zwischen zwei projizierten Randpunkten – die wächst zum
-         Bildrand und beim Neigen (die langen Abendbänder dehnten und stauchten sich beim Kopfbewegen). Jetzt wandert nur noch die Mitte. */
-      const q = sky(a, e);
-      if (!q) return;
-      const SH = CS[id % CS.length], x = q[0], y = q[1], wd = fs * w * (band ? 2.2 : 1.7), ht = wd * SH.H / SH.W * (band ? 0.35 : 0.55 + hgt * 0.45);
-      X.drawImage(tintCloud(SH, lit, dkc, cAl), x - wd / 2, y - ht * 0.8, wd, ht);
-      if (moonA != null && sunV > 0.05) {
-        const md = Math.abs(angN(a - moonA)), rk = Math.exp(-Math.pow(md / 0.6, 2)) * sunV * (0.2 + 0.5 * moonI) * night;
-        if (rk > 0.03) { X.globalAlpha = Math.min(1, rk * 1.3); X.globalCompositeOperation = "lighter"; X.drawImage(rimCloud(SH), x - wd / 2, y - ht * 0.8, wd, ht); X.globalCompositeOperation = "source-over"; X.globalAlpha = 1; }
-      }
+    /* v366: Weltfeste Ausrichtung und unveränderte Wolkenpositionen beim
+       Umsehen. Keine bildschirmparallelen Bänder und keine zusätzliche Drift. */
+    const cloud=(id,a,e,w,hgt,band)=>{
+      const d=angN(a-fwd);if(Math.abs(d)>halfH+(band?1.5:.8))return;
+      const SH=CS[id%CS.length],width=w*(band?2.2:1.7),height=width*SH.H/SH.W*(band?.35:.55+hgt*.45),cols=band?6:3,rows=2;
+      const grid=cloudGrid(R,eye,a,e,width,height,cols,rows,sc);
+      cloudImage(X,tintCloud(SH,lit,dkc,cAl),grid,cols,rows,cw,ch);
+      if(moonA!=null&&sunV>.05){const md=Math.abs(angN(a-moonA)),rk=Math.exp(-Math.pow(md/.6,2))*sunV*(.2+.5*moonI)*night;
+        if(rk>.03){X.globalAlpha=Math.min(1,rk*1.3);X.globalCompositeOperation='lighter';cloudImage(X,rimCloud(SH),grid,cols,rows,cw,ch);X.globalCompositeOperation='source-over';X.globalAlpha=1;}}
     };
-    const drift = time * 0.004;
-    CLOUDS.forEach((k, i) => { if (i < 8 + Math.round(wg * 6)) cloud(i, k.a + drift * k.sp, k.e * (1 + wg * 0.1), k.w * (1 + wg * 0.5), k.hgt, false); });
-    if ((evening > 0.05 || h > 17.2 && h < 21.8)) for (let i = 0; i < 6; i++) cloud(20 + i, i * 1.05 + 0.4 + drift * 0.6, 0.025 + (i % 3) * 0.05 + (i % 2) * 0.02, 0.45 + (i % 3) * 0.12, 0.7, true);
+    CLOUDS.forEach((k,i)=>{if(i<8+Math.round(wg*6))cloud(i,k.a,k.e*(1+wg*.1),k.w*(1+wg*.5),k.hgt,false);});
+    if(evening>.05||h>17.2&&h<21.8)for(let i=0;i<6;i++)cloud(20+i,i*1.05+.4,.025+(i%3)*.05+(i%2)*.02,.45+(i%3)*.12,.7,true);
     /* Gelände: Berge, See, Hügel – jede Kette ein Polygon, oben die Farbe der Kette, unten im Dunst */
     const a0 = fwd - halfH, a1 = fwd + halfH, N = 110, pts = [];
     for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N, x = sx(a); if (x != null) pts.push({ a, x, d: Math.abs(((a - fwd + Math.PI * 3) % (Math.PI * 2)) - Math.PI) }); }
@@ -504,6 +526,6 @@ const VISTA = (() => {
     if (w > 0 && E.sunCol) { const sc = mix(E.sunCol, P.sun.map(v => v / 255 * 0.95), 0.55 * w); E.sunCol = sc; }
     if (w > 0 && E.sky) E.sky = mix(E.sky, [0.5, 0.36, 0.42], 0.25 * w);
   }
-  return { draw, env, pal, sunEl, hide, _mw: () => milky().c };
+  return { draw, env, pal, sunEl, hide, _cloudGrid:cloudGrid, _mw: () => milky().c };
 })();
 if (typeof module !== "undefined") module.exports = VISTA;

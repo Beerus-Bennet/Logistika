@@ -4646,7 +4646,7 @@ function boot() {
   ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
   /* v148: iOS-Lupe/Textcursor beim langen Halten überall abstellen (Sägen, Jagen, Minispiele, Welt) – nur Eingabefelder bleiben */
   const loupeOk = t => !!(t && t.closest && t.closest("input,textarea,select,[contenteditable]"));
-  const loupeNo = t => !!(t && t.closest && t.closest("#farmCv,#farmAngel,#huntUI,#mgStage,.mg-stage,.hold,.fa-go,.fp-gauge,.fp-hint") && !t.closest("button:not(.hold):not(.fa-go),a,.fa-box,select,input,textarea,.xr-pan"));
+  const loupeNo = t => !!(t && t.closest && t.closest("#farmCv,#farmAngel,#huntUI,#mgStage,.mg-stage,.hold,.fa-go,.fp-gauge,.fp-hint") && !t.closest("button:not(.hold):not(.fa-go),a,.fa-box,select,input,textarea,.xr-pan,.hu-job"));
   document.addEventListener("touchstart", e => { if (e.cancelable && !loupeOk(e.target) && loupeNo(e.target)) e.preventDefault(); }, { passive: false, capture: true });
   document.addEventListener("selectionchange", () => { try { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) || (a && a.isContentEditable)) return; const g = getSelection(); if (g && g.rangeCount && !g.isCollapsed) g.removeAllRanges(); } catch (x) { /* egal */ } });
   document.addEventListener("touchend", () => { try { const g = getSelection(); if (g && g.rangeCount && !g.isCollapsed && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) g.removeAllRanges(); } catch (x) { /* egal */ } }, true);
