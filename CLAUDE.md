@@ -95,3 +95,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v359: Jagd – Aura um Gold-/Diamant-Stücke in der Bergung (`AURA`, `auraShow`/`auraStep`/`auraClear` in `hunt.js`, additive Aufkleber, Klassen `md3`/`md4` an `#huntUI`); Diamant größer, heller, mit abgedunkelter Umgebung. Prüfstand `_aura`. Test: `aura-v359.test.js`.
 - v360: Seeblick – Vermittlungstext ohne Zeitangabe für die ersten Wohnanfragen (`villageview.js`, nur Text).
 - v361: Insel – Grasdecke von `worldApron` mit zwei Zwischenringen in der Bodenfarbe der Welt (`worldGroundCol` über die Kante hinaus), keine sichtbare Naht mehr.
+- v362: Kaufbeleg der Übernahme (`corpWinReport` in `corpreport.js`) auf einer Seite: Aufbau `.crp-sheet.crp2` mit `.crp2-body` (Belegteil) und festem Knopf; Bestand als eigene Ansicht über dem Beleg (`details[open]` absolut). Klassen `crp2-*`, CSS-Block am Ende von `style.css`.

@@ -1,3 +1,16 @@
+## v362 – Übernahme: Kaufbeleg auf einer Seite, nüchterner Belegstil
+**Meldung Bennet (Bild: Kaufbeleg Titan Freight Holding):** Alles soll sauber auf eine Seite passen, ohne zu scrollen; dazu professioneller und seriöser.
+
+**Ursache (`corpreport.js`, `style.css`):** Der aufgeklappte Bestand („Fahrzeuge, Team & Standorte“) verlängerte den Beleg nach unten; der Knopf lag dann über der Liste, und man musste scrollen. Die Kennzahlen standen in sechs großen Karten mit Bildzeichen.
+
+**Lösung (nur Darstellung, Zahlen und Inhalt unverändert):**
+- Der Beleg besteht aus Kopf, Belegteil und Knopf. Der Belegteil passt auf eine Seite; der Knopf steht fest darunter.
+- „Bestand im Einzelnen ansehen“ öffnet den Bestand als eigene Ansicht über dem Beleg (scrollt dort für sich, „‹ Zurück zum Beleg“ schließt sie). Der Beleg selbst wird dadurch nicht länger.
+- Belegstil: Kennzahlen als Raster 3 × 2 ohne Bildzeichen, Kaufpreis als ruhige Zeile mit Akzentstrich statt gelbem Verlauf, Firmensitz/Team/Status/Gruppe als Zeilen mit Trennlinien, Kopfzeile „LOGISTIK-KURIER · KAUFBELEG“.
+- Bei sehr großer Systemschrift scrollt nur der Belegteil; der Knopf bleibt sichtbar.
+
+**Geprüft:** `company-acquisition-v355.browser.js` (um die Einseiten-Prüfung des Belegteils und „Knopf im Bild“ ergänzt; die Großschrift-Prüfung misst jetzt den Belegteil) und `company-ui-v356.browser.js` im Testbrowser (Chromium) bestanden: Beleg ohne Scrollen bei 390 × 844, 375 × 667, 320 × 568, 844 × 390 und 1280 × 800; Bestand öffnen, schließen, erneut öffnen, Laden, große Schrift. Bilder bei 320 × 568 und 844 × 390 gesichtet. **Nicht geprüft:** am Handy und in Safari; die geöffnete Bestandsansicht habe ich nicht als Bild gesichtet (nur über den Testablauf bedient).
+
 ## v361 – Insel: weicher Übergang von der Welt zum Inselrand
 **Meldung Bennet (Bild: Seeblick, Rand unten links):** Der Übergang vom sichtbaren Gelände zum Inselrand ist noch unflüssig.
 
