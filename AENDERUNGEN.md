@@ -1,3 +1,15 @@
+## v359 – Jagd: Aura um Gold- und Diamant-Stücke
+**Wunsch Bennet (Bild: erlegter Hirsch):** Bei Gold-Stücken ein spektakuläres Umfeld um das erlegte Tier, für alle Wildarten; bei Diamant noch einmal deutlich stärker – der Spieler soll spüren, wie mächtig das Stück ist.
+
+**Lösung (`hunt.js`, `style.css`; reine Darstellung):** Mit dem Liegeplatz erscheint ab Medaille Gold eine Aura (`AURA`, `auraShow`/`auraStep`/`auraClear`), gebaut aus unbeleuchteten, additiv leuchtenden Aufklebern der Engine.
+- **Gold:** warmer Lichtschein am Boden, langsam drehender Strahlenkranz, heller Ring, Lichtsäule, aufsteigende Funken, alle 3,4 s eine Lichtwelle; die Umgebung wird leicht abgedunkelt.
+- **Diamant:** anderthalbfache Größe in Eisblau-Weiß, stark abgedunkelte Umgebung (das Stück liegt wie auf einer Bühne), zweiter gegenläufiger Strahlenkranz, vier kreisende Lichtlanzen, höhere Lichtsäule, gut doppelt so viele Funken, Lichtwellen alle 1,7 s und ein Blitz beim Erscheinen.
+- Die Überschrift leuchtet in der Medaillenfarbe mit (`#huntUI.md3`/`.md4`). Bronze und Silber bleiben wie bisher.
+- Reduzierte Bewegung: der Schein steht still, Funken, Wellen und Blitz entfallen. Die Aura wird mit dem Liegeplatz wieder entfernt, ihre Texturen freigegeben.
+- Medaillengrenzen, Preise, Erfahrung und Wertung unverändert.
+
+**Geprüft:** Unit-Test neu `aura-v359.test.js`; `hunt.test.js` (23), `trefferbild-v357`, `fixes-v354`, `hunt-presentation-v315`, `hunt-v307`, `trophy-exhibits-v328` bestanden. Testbrowser (Chromium, Jagd-Testbühne, 390 × 700, echte Schüsse über die Wertung): Hirsch Silber (keine Aura), Hirsch Gold, Fasan Gold, Hirsch Diamant bei Tag, Keiler Diamant bei Nacht – Bilder gesichtet; nach dem Sichern der Trophäe sind Aura, Klassen und Knoten wieder weg; keine Konsolenfehler. Erster Stand war bei Tageslicht zu grell (Boden überstrahlte zu Weiß) – Helligkeit zurückgenommen und erneut gesichtet. **Nicht geprüft:** am Handy und in Safari; die Bewegung selbst (nur Standbilder); reduzierte Bewegung; Querformat; Bildrate auf schwachen Geräten (13 zusätzliche Aufkleber und bis zu 36 Funken je Sekunde bei Diamant).
+
 ## v358 – Schwebende 3D-Insel, seitliche Werkzeugfächer und sichtbarer App-Rahmen
 
 - Ursache des Kartenrands: Die v354-Kulisse streckte ringförmige Landschaft bis 1.500 Einheiten nach außen. Sie ist ersetzt durch einen endlichen Grasrand mit Erdschicht, gebrochenen Felsflanken und geschlossenem, nach unten zulaufendem Inselkörper. 3.960 Dreiecke, deterministisch, kein Aufbau je Bild. Spielfläche, Bebauung, Freischaltungen und Bewegungsgrenzen bleiben an ihren bisherigen Koordinaten.
