@@ -1,3 +1,12 @@
+## v361 – Insel: weicher Übergang von der Welt zum Inselrand
+**Meldung Bennet (Bild: Seeblick, Rand unten links):** Der Übergang vom sichtbaren Gelände zum Inselrand ist noch unflüssig.
+
+**Ursache (`worldview.js`, `worldApron`):** Die Grasdecke der Insel übernahm nur genau an der Naht die Bodenfarbe der Welt und ging auf halbem Weg zum Rand in ein einheitliches, dunkleres Grün über. Die Welt selbst hat überall ihr Farbmuster – die Naht stand deshalb als gerade Linie mit dunklerem Streifen dahinter im Bild.
+
+**Lösung:** Die Grasdecke hat zwei Zwischenringe und nimmt dort dieselbe Bodenfarbe wie die Welt (`worldGroundCol` läuft über die Kante weiter, an der Naht exakt die bisherige Farbe). Erst an der Abbruchkante wird das Gras etwas satter. Form, Größe, Flanken und Unterseite der Insel sind unverändert; 4.488 statt 3.960 Dreiecke (Budget des Insel-Tests: 5.000).
+
+**Geprüft:** `floating-island-v358.test.js` und `fixes-v354.test.js` bestanden. Testbrowser (Chromium, 390 × 700, Gebiete freigeschaltet, Mittag): vier Randstellen vorher/nachher gesichtet (Seeblick-Ecke, Westrand, Waldrand im Norden, Ostrand) – der dunkle Streifen ist weg, Wiese und Waldboden laufen durch; keine Konsolenfehler. **Nicht geprüft:** am Handy und in Safari; bei Nacht; gesperrte (graue) Gebiete. **Grenze:** Bäume und Grasbüschel enden weiterhin an der alten Weltkante – nur der Boden läuft durch.
+
 ## v360 – Seeblick: Vermittlung ohne Zeitangabe für die ersten Wohnanfragen
 **Wunsch Bennet (Bild: Seegarten 2, bezugsfertig):** „Erste Wohnanfragen in 7 h 52 min“ soll entfallen – wann sich Interessenten melden, weiß man in der Realität auch nicht.
 

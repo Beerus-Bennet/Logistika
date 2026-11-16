@@ -701,13 +701,18 @@ function worldApron(gcAt) {
     const r = Math.pow(Math.pow(Math.abs(dx) / (hx + APRON.margin), 4) + Math.pow(Math.abs(dz) / (hz + APRON.margin), 4), -.25);
     const wave = 3.8 * Math.sin(a * 7) + 2.1 * Math.sin(a * 13 + .7), ox = cx + dx * (r + wave), oz = cz + dz * (r + wave);
     const seam = gcAt(x, z), shade = .94 + .06 * Math.sin(a * 19);
-    P.push([[x, 0, z], [x + (ox - x) * .48, 0, z + (oz - z) * .48], [ox, -.35, oz],
+    /* v361: Die Grasdecke hat zwei Zwischenringe und nimmt dort dieselbe Bodenfarbe wie die Welt (worldGroundCol läuft
+       über die Kante weiter). Vorher ging sie nach der Naht sofort in ein einheitliches, dunkleres Grün über – als gerade
+       Linie sichtbar. Erst an der Abbruchkante wird das Gras etwas satter. */
+    const at = t => [x + (ox - x) * t, z + (oz - z) * t], q1 = at(.33), q2 = at(.66);
+    const ground = (q, t) => typeof worldGroundCol === 'function' ? mix(seam, G3.col(worldGroundCol(q[0], q[1])), Math.min(1, t * 2.2)) : seam;
+    P.push([[x, 0, z], [q1[0], 0, q1[1]], [q2[0], 0, q2[1]], [ox, -.35, oz],
       [cx + (ox - cx) * .998, -3.2, cz + (oz - cz) * .998],
       [cx + (ox - cx) * (.985+fault(1)*.015), -32 + fault(1)*4, cz + (oz - cz) * (.985+fault(1)*.015)],
       [cx + (ox - cx) * (.93+fault(2)*.04), -65 + fault(2)*7, cz + (oz - cz) * (.93+fault(2)*.04)],
       [cx + (ox - cx) * (.65+fault(3)*.06), -132 + fault(3)*8, cz + (oz - cz) * (.65+fault(3)*.06)],
       [cx + (ox - cx) * (.25+fault(4)*.04), -APRON.depth + 12 + fault(4)*4, cz + (oz - cz) * (.25+fault(4)*.04)]]);
-    C.push([seam, mix(seam, grass, .88), grass, soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => c.map(v => v * (k<4?shade:.9+fault(k)*.16))));
+    C.push([seam, ground(q1, .33), ground(q2, .66), mix(ground([ox, oz], 1), grass, .4), soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => c.map(v => v * (k<3?1:k<5?shade:.9+fault(k)*.16))));
     /* Nahtfarbe unverändert, damit es an der bisherigen Welt keine Farblinie gibt. */
     C[C.length - 1][0] = seam;
   }
