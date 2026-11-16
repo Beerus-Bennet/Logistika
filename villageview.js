@@ -87,11 +87,28 @@ const VILLAGE_UI = (() => {
   const D=VILLAGE_DATA,labels={vacant:"Freies Grundstück",land:"Eigenes Baugrundstück",building:"Im Bau",ready:"Bezugsfertig",resident:"Bewohnt · Nachbarschaft",rented:"Vermietet",sold:"Verkauft · bewohnt"};
   const folds=new Map();
   const address=p=>esc(p.street+" "+p.number);
+  /* v364: Kacheln des Grundstücksplans als 3D-Bildchen im Stil der Hofwaren (dieselben Modelle wie im Ort):
+     bewohntes Haus in seiner Farbvariante, bezugsfertiges Haus mit Schild, Rohbau, abgestecktes Grundstück. */
+  function townModel(kind,type,style){return ()=>{
+    if(kind==="bau")return VILLAGE_SITE.construction(type);
+    const b=new FM.MB();
+    if(kind==="haus"||kind==="frei"){b.merge(VILLAGE_SITE.homeMesh(type,style),{});
+      if(kind==="frei"){b.box(.22,2.2,.22,0x6b5038,{x:3.4,z:5.8});b.box(2.6,1.5,.16,0xf6f1e6,{x:3.4,y:2.2,z:5.8});b.box(2.6,.42,.18,0x2f8f6b,{x:3.4,y:3.3,z:5.8});}
+      return b;}
+    /* Grundstück: Rasenfläche, vier Grenzpflöcke mit roter Kappe, beim eigenen ein Schild */
+    b.box(8,.18,6,0x86b85b,{y:0});b.box(7.2,.02,5.2,0x93c466,{y:.18});
+    for(const x of [-3.7,3.7])for(const z of [-2.7,2.7]){b.box(.2,1,.2,0xb58d59,{x,z,y:.18});b.box(.24,.22,.24,0xd8332b,{x,z,y:1.18});}
+    if(kind==="eigen"){b.box(.24,2.2,.24,0x6b5038,{y:.18});b.box(3.4,1.7,.18,0xf6f1e6,{y:2.1});b.box(3.4,.45,.2,0x2f6fd0,{y:3.35});}
+    return b;};}
+  function townIc(p,h){const built=h.resident||h.status==="ready",kind=h.resident?"haus":h.status==="ready"?"frei":h.status==="building"?"bau":h.status==="land"?"eigen":"platz";
+    const type=h.type||"holz",style=Number(p.id)%3,emoji=h.resident?"🏡":h.status==="building"?"🏗️":"▧";
+    if(typeof thumbSpan!=="function")return `<span>${emoji}</span>`;
+    return thumbSpan("town:"+kind+":"+(built||kind==="bau"?type+":"+(kind==="bau"?0:style):0),townModel(kind,type,style),emoji,false,{yaw:.75,pitch:.5});}
   function overview(){const T=VILLAGE.state(),people=VILLAGE.residents();
     return `<p class="town-lead">Sechs Haushalte sind schon hier zu Hause. Lerne deine Nachbarn durch kleine Fahrradlieferungen kennen. Gute Erfahrungen werden weitererzählt.</p>
       <div class="town-stats"><span>🏡 ${people.length} bewohnte Häuser</span><span>👥 ${people.reduce((n,x)=>n+x.r.size,0)} Einwohner</span><span>🚲 ${T.deliveries} Lieferungen</span><span>🤝 ${T.referrals.length} Empfehlungen</span></div>
       <button class="btn ghost" data-town-focus="">📍 Wohnviertel ansehen</button>
-      <div class="town-plan" aria-label="Grundstücksplan der Siedlung">${[0,1,2,3,4].map(row=>["1"+row+"0","1"+row+"1","0"+row+"0","0"+row+"1"].map(id=>{const p=VILLAGE.plot(id),h=T.homes[id];return `<button data-town-home="${id}" class="${h.resident?"lived":""}" aria-label="${address(p)}: ${labels[h.status]}"><span>${h.resident?"🏡":h.status==="building"?"🏗️":"▧"}</span>${address(p)}<small>${h.resident?esc(h.resident.n.split(" ")[0]):esc(labels[h.status])}</small></button>`;}).join("")).join("")}</div>
+      <div class="town-plan" aria-label="Grundstücksplan der Siedlung">${[0,1,2,3,4].map(row=>["1"+row+"0","1"+row+"1","0"+row+"0","0"+row+"1"].map(id=>{const p=VILLAGE.plot(id),h=T.homes[id];return `<button data-town-home="${id}" class="${h.resident?"lived":""}" aria-label="${address(p)}: ${labels[h.status]}">${townIc(p,h)}${address(p)}<small>${h.resident?esc(h.resident.n.split(" ")[0]):esc(labels[h.status])}</small></button>`;}).join("")).join("")}</div>
       ${!T.expanded?`<section class="town-card"><b>Das nächste Quartier erschließen</b><p>Rechtwinklige Querstraßen, Gehwege und Versorgungsleitungen öffnen weitere 14 Baugrundstücke.</p><small>Ab Hof-Level 8 und sechs Hoflieferungen · ${money(D.extension)}</small><button class="btn" data-town-expand ${!VILLAGE.canExpand()||S.money<D.extension?"disabled":""}>Quartier erschließen</button></section>`:""}
       <div class="sechead sm">Nachbarn und Bekanntschaften</div>${people.map(({p,h,r})=>`<details class="town-person" data-town-fold="${r.id}"><summary><b>${esc(r.n)}</b><small>${address(p)} · ${h.deliveries||0} Lieferungen</small></summary><p>${esc(r.job)} · ${r.size} ${r.size===1?"Person":"Personen"} im Haushalt</p><button class="btn tiny ghost" data-town-home="${p.id}">Haus und Kontakt öffnen</button></details>`).join("")}
       ${T.referrals.length?`<div class="sechead sm">Weiterempfohlen</div>${T.referrals.map(f=>`<div class="town-card"><b>${esc(f.n)}</b><small>${esc(f.job)} · ${esc(N[f.town].short)}<br>Kennt deinen Hof durch ${esc(f.referrer)}.</small></div>`).join("")}`:""}

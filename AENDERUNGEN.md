@@ -1,3 +1,10 @@
+## v364 – Seeblick: Grundstücksplan mit 3D-Bildchen statt Emojis
+**Wunsch Bennet (Bild: Grundstücksplan):** Die Emojis (Haus, Kran, Schraffur) durch Bildchen im Stil von Logistika ersetzen – wie die 3D-Darstellung der Hofprodukte.
+
+**Lösung (`villageview.js`, `style.css`; nur Darstellung):** Jede Kachel zeigt ein 3D-Bildchen aus denselben Modellen wie im Ort (`townIc`/`townModel` über `thumbSpan`): bewohntes Haus in seiner Farbvariante (Holzhaus bzw. Familienhaus), bezugsfertiges Haus mit Vermietungsschild, Rohbau, abgestecktes Grundstück mit Grenzpflöcken, eigenes Baugrundstück mit Schild. Ohne WebGL bleiben die bisherigen Zeichen. Texte, Status und Bedienung unverändert.
+
+**Geprüft:** Testbrowser (Chromium, 390 × 760): Plan mit allen fünf Zuständen aufgebaut – 20 Bildchen gerendert, keine Platzhalter übrig, keine Konsolenfehler; Bild gesichtet (Schilder danach vergrößert, diese letzte Größe nicht erneut gesichtet). `village-v340.test.js` und `village-life-v343.test.js` bestanden. **Nicht geprüft:** am Handy. **Nicht geändert:** die Zeichen in der Kennzahlenzeile (Einwohner, Lieferungen, Empfehlungen), im Knopf „Wohnviertel ansehen“ und in den Schildern über den Baustellen im Ort – dafür gibt es noch keine passenden Modelle.
+
 ## v363 – Karte: kein verzerrtes Bild mehr nach dem Neuladen
 **Meldung Bennet (Bild: Weltkarte, Symbole in die Höhe gezogen):** Beim Neuladen des Spiels ist das Kartenbild verzerrt.
 
