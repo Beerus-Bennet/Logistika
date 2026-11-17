@@ -1,3 +1,7 @@
+## v376 – PR #92: Werkzeugübergabe nach aktuellem main integrieren
+
+PR #92 bleibt auf `claude/werkzeug-einraeumen`; main `e6f1713` mit Jagdleiste373 und Berglandschaft375 vollständig integriert. Beide Änderungen an team.js bleiben erhalten: ALPINE-Sperrfläche in navBuild und Drehung zum Werkzeugfach während gearAction. staffgear.js mit Beugung unverändert aus ursprünglichem PR374. Keine weitere Geschäftslogik oder Migration. Gemeinsame Lieferung/Offline-Cache376, Index/SW mit team.js/staffgear.js376, Bergdateien375 und Jagd-CSS373 erhalten. worker-motion-v351.test.js sowie Berg-/Insel-/Wasserprüfungen und Asset-Abgleich nach Zusammenführung ausführen.
+
 ## v375 – Quellgebirge und Bergsee
 
 Basis main `92aa6ec`, PR #91/v373 enthalten. Eigener Branch `claude/berglandschaft-v375`; kompakte Jagdleiste unverändert integriert, Versions-/Dokumentationskonflikte aufgelöst. Offene PR #92/v374 bleibt separat. `alpine.js` nach woodmodels und vor worldview laden, Index/SW gemeinsam übernehmen. ALPINE hält ein gemeinsames Höhenfeld für See, Rinne, Gelände, Inselkante und Tiere; keine Spielstandmigration. In woodmodels nur `hillH` um eine ausschließlich absenkende neue Abflussrinne ergänzt, bisherigen Wasserfall nicht ersetzen. `worldApron` behält den geschlossenen Kiel; Grasring nur bei vollständiger Überdeckung auslassen. Vegetation am Boden des Gebirges verhindern, eigener Höhenwald.
