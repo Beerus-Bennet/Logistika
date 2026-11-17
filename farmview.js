@@ -821,10 +821,9 @@ function clampCam() {
   const r = typeof farmCamRect === "function" && S.farm ? farmCamRect() : [-FV_BOUNDS, -FV_BOUNDS, FV_BOUNDS + 5, FV_BOUNDS + 3];
   c.tx = clamp(c.tx, r[0], r[2]);
   c.tz = clamp(c.tz, r[1], r[3]);
-  /* v340: Die neue Ortsübersicht muss auch im Hochformat vollständig ins Bild passen. */
-  const town = typeof VILLAGE !== "undefined" && VILLAGE.clear(c.tx,c.tz);
   /* v341: Verlässt die Kamera den Ortsbereich, schrumpft die Zoomgrenze weich (farmLoop) statt sofort von bis zu 450 auf 54 zu springen. */
-  const lim = town ? 450 : 54;
+  /* v366: Die weite Übersicht gibt es jetzt überall – die ganze Insel passt ins Bild (vorher nur über dem Ort). */
+  const lim = 450;
   if (FV.distLim != null && lim < FV.distLim && c.dist > lim) FV.distSoft = c.dist;
   FV.distLim = lim;
   c.dist = clamp(c.dist, 11, FV.distSoft != null ? Math.max(lim, FV.distSoft) : lim);
