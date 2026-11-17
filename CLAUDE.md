@@ -134,4 +134,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
 
+- v385: Inselrand – Baumsaum aus echten Waldbäumen (`worldApronTreeSpots` → `WV.bgG`, Wind/Fernstufen), Grasdecke mit acht Ringen (`APRON_RINGS`) gegen Streifen; Dreiecksbudget im Test 8000.
 - v386: Größerer Bergfall/Becken, optionale FWM.width mit ALPINE.riverWidth; Wasser8 gemeinsame Palette mit7, Weltkoordinatenwellen in Becken. uFallStart optional(Standard.24/Berg.05), Aufprallwellen und begrenzte Sprühpartikel. worldGround/ALPINE.setGroundSampler für gleiche Randfarben; dezente Felsfacetten. Keine neue Migration. Tests wasseroptik-v386.*, Bericht docs/WASSEROPTIK-v386.md; parallelen Inselrand-PR102/v385 beim Mergen vollständig erhalten.
