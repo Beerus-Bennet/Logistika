@@ -132,7 +132,7 @@ DECISIONS.invite = {
     if (idx !== 0) return "Mit Bedauern abgesagt.";
     o.expire = o.deadline;
     S.orders.unshift(o);
-    toast("✉️ Zugesagt: " + o.shipper + " – jetzt disponieren!", "ok");
+    toast("✉️ Zugesagt: " + o.shipper + " – jetzt disponieren!", "ok", false, "order:" + o.id);
     setTimeout(() => { if (S.orders.includes(o)) openPlanner(o.id); }, 350);
     return "Zugesagt – Chefsache.";
   }

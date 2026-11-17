@@ -1,3 +1,15 @@
+## v371 – Fernbäume sehen aus wie die echten; Meldungen am Bildschirmrand führen zum Ziel
+**Meldung Bennet (drei Bildschirmfotos):** (1) Der Übergang der verschwindenden Objekte beim Herauszoomen ist noch klar und hart zu sehen – weicher bzw. unsichtbar machen. (2) Die Meldung unten („Neue Wohnanfragen für Seegarten 6.“) soll antippbar sein, und jede Meldung oberhalb der Menüleiste soll einzeln zum Passenden führen (Vertrag, Auto, Büro usw.).
+
+**1. Übergang (`worldview.js`).** Die Fotos zeigen noch den Stand v368/v369 (hartes Umschalten); die stufenlose Überblendung aus v370 war noch nicht in `main`. Beim Nachstellen zeigte sich zusätzlich ein zweiter Grund für den harten Eindruck: Das Fernmodell der Kulissenbäume war ein einzelner Ballen in Durchschnittsfarbe – viel dunkler und klobiger als die echten Bäume. Jetzt entsteht es aus dem echten Modell durch Zusammenfassen der Eckpunkte (`treeFarMesh`): gleiche Silhouette und Facettenfarben, nur gröbere Flächen (rund ein Drittel der Dreiecke). Die Überblendung der Bäume läuft breiter (Abstand 150 bis 235 statt 140 bis 185), Büsche und Kleinteile 200 bis 260.
+
+**2. Antippbare Meldungen (`game.js`, `village.js`, `vip.js`).** Der Mechanismus (`toast(msg, kind, low, go)`) gab es schon, aber kaum ein Aufrufer nutzte ihn. Neu:
+- Ziele als Kennung: `tab:…`, `veh:<uid>` (öffnet Flotte und das Fahrzeug), `job:<id>`, `order:<id>` (öffnet Aufträge und den Auftrag), `village:<parzelle>` (öffnet das Wohnhaus), `base:…`, `auction:…`.
+- Ereignis-Meldungen ohne eigenes Ziel bekommen eines nach ihrem Inhalt (`TOAST_GO`): Vertrag/Auftrag → Aufträge, Zustellung/Zoll/Kontrolle → Live, Fahrzeug/Werkstatt → Flotte, Standort/Büro/Miete/Personal → Büros, Auktion → Markt, Etappe/Übernahme → Welt. Nur Meldungen, die mit einem Symbol beginnen; Absagen („Dafür fehlen …“, „Erst …“) und eigene Antworten bleiben ohne Ziel.
+- Genau: „Neue Wohnanfragen“ öffnet das jeweilige Haus; „Zugesagt“ öffnet den Auftrag; „Teilweise zugestellt“ öffnet die Fahrt. Antippbare Meldungen stehen etwas länger.
+
+**Geprüft:** Testbrowser (Chromium, echte Touch-Eingaben, 390 × 760): acht Meldungen eingeblendet und angetippt – Wohnanfrage → Haus-Fenster, Verspätet → Live, Vertragsfahrt → Aufträge, Instandhaltung → Flotte, Monatsmiete → Büros, Überboten → Markt, Etappe → Welt; die Absage bleibt ohne Pfeil und ohne Ziel. `veh:`/`order:` mit echten Kennungen öffnen Flotte bzw. Aufträge samt Detailansicht. Fernbäume: voll, halb und fern bei gleichem Abstand nebeneinander gesichtet (Farbe und Silhouette passen jetzt, zuvor deutlich dunkler); keine Konsolenfehler. **Nicht geprüft:** am Handy – besonders, ob die Überblendung bei der dortigen Auflösung unsichtbar ist (im Testbrowser mit niedriger Auflösung sieht man mitten im Übergang ein feines Muster); weitere der rund 300 Meldungen (nur nach Schlüsselwörtern zugeordnet – manche landen im richtigen Reiter, aber nicht im einzelnen Eintrag); Nacht.
+
 ## v370 – Fernstufen ohne sichtbares Umschalten
 **Wunsch Bennet:** Der Übergang der verschwindenden Objekte beim Herauszoomen soll flüssig wirken – der Spieler soll nicht mitbekommen, wie sie verschwinden.
 

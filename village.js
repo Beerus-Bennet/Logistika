@@ -101,7 +101,7 @@ const VILLAGE = (() => {
     for(const p of D.plots){const h=T.homes[p.id];
       if(h.status==="building"&&S.time>=h.ready){h.status="ready";toast("🏘️ "+p.street+" "+p.number+" ist bezugsfertig. Vorgemerkte Konditionen können jetzt abgeschlossen werden.","ok");renderDirty=true;}
       applyCampaign(h);
-      if(h.listing){const L=h.listing;if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}else if(!L.offers&&S.time>=L.ready){L.offers=offers(p.id);toast("🏡 Neue Wohnanfragen für "+p.street+" "+p.number+".","ok");renderDirty=true;}}
+      if(h.listing){const L=h.listing;if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}else if(!L.offers&&S.time>=L.ready){L.offers=offers(p.id);toast("🏡 Neue Wohnanfragen für "+p.street+" "+p.number+".","ok",false,"village:"+p.id);renderDirty=true;}}
       if(h.status==="rented"&&S.time>=h.contract.next){const C=h.contract,n=1+Math.floor((S.time-C.next)/WEEK),gross=Math.round(C.price*7/30*n),cost=Math.round(gross*.08);
         S.money+=gross-cost;S.revenue+=gross;S.expense+=cost;C.earned+=gross-cost;T.earned+=gross-cost;C.next+=n*WEEK;
         logMoney("farm","Miete · "+p.street+" "+p.number,gross);logMoney("farm","Instandhaltungsrücklage · "+p.street+" "+p.number,-cost);renderDirty=true;}
