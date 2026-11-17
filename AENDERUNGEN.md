@@ -1,4 +1,4 @@
-## v380 – Trefferbild: Todesursache, Kanal durch den ganzen Hals, Hals-Organe passend zum Netz
+## v381 – Trefferbild: Todesursache, Kanal durch den ganzen Hals, Hals-Organe passend zum Netz
 
 **Ursache:** (1) Ein Trägerschuss ohne Treffer an Wirbel oder Adern wurde als „knapp verfehlt“ gezeigt, das Stück fiel aber trotzdem sofort um – der Spieler sah nicht, woran es verendet. (2) Beim Trägerschuss endete der Kanal 20 cm hinter dem Einschuss mitten im Tier; beim Keiler lagen die Halsorgane (nur geschätzte Maße) neben dem Kanal, es wurde nichts getroffen.
 
