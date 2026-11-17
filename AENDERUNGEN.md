@@ -1,3 +1,10 @@
+## v373 – Jagd: Auftragsleiste im Hochsitz kompakter
+**Wunsch Bennet (Bild: Hochsitz, Leiste „Jagdaufträge · 3“):** Die Leiste oben schmaler und kürzer darstellen, orientiert an der markierten Fläche.
+
+**Lösung (`style.css`; nur Darstellung):** Die geschlossene Leiste ist nur noch so breit wie ihr Text (gemessen 125 statt 330 Pixel bei 390 Breite) und niedriger (40 statt 48 Pixel, kleinere Schrift und Pfeil). Aufgeklappt bleibt sie unverändert 330 Pixel breit, damit die Aufträge lesbar bleiben. Inhalt und Verhalten unverändert.
+
+**Geprüft:** Testbrowser (Chromium, Jagd-Testbühne, 390 × 700): geschlossen und aufgeklappt, vorher/nachher nebeneinander gesichtet; keine Konsolenfehler. **Nicht geprüft:** am Handy; Querformat. **Hinweis:** Die Fläche ist mit 40 Pixel Höhe etwas niedriger als die empfohlene Tippfläche von 44 Pixeln.
+
 ## v372 – Autofotos passen zu Modell, Baujahr und Lack
 
 **Ursache:** Die automatische Wikipedia-Suche konnte eine andere Generation/Variante derselben Marke liefern; zufällige Baujahre lagen außerhalb der tatsächlichen Modellzeit. Pixelbasierte Lackschätzungen überschrieben gespeicherte Farben, der Bild-Cache verglich nur URL-Längen.
