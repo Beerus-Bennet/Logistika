@@ -1,3 +1,11 @@
+## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
+
+**Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
+
+**Lösung (`worldview.js`):** `farmEvGo` (als `MSG_GO.farmev`): Antippen fährt die Kamera zum Ereignis, Händler und Nachbar öffnen sich gleich (wie der Ereignis-Knopf oben); funktioniert auch aus anderen Reitern (wechselt erst zum Hof). `farmEvView` hängt das Ziel an die Start-Meldung von Händler, Nachbar, weißem Hirsch, Reh, Lieferung, Fischschwarm und defekter Säge. Die Wohnanfragen-Meldung („Neue Wohnanfragen für …“) war schon seit v371 antippbar (`village:<Parzelle>`, öffnet Seeblick) – im Testbrowser bestätigt; auf dem Gerät, von dem der Screenshot stammt, fehlt noch das Seeblick-Knopf-Update (v379), er läuft also mit einer älteren zwischengespeicherten Version.
+
+**Geprüft:** Testbrowser (`?test`): Händler (Kamera + Fenster „Händler“), Nachbar (Kamera + Fenster), weißer Hirsch (Kamera), Wohnanfragen-Meldung mit Pfeil/„go“; keine Konsolenfehler. **Nicht geprüft:** Handy/Safari; Reh, Lieferung, Schwarm, defekte Säge einzeln (gleicher Pfad).
+
 ## v385 – Inselrand: echte Bäume statt Platzhalter, keine Streifen mehr im Gras
 
 **Ursache:** (1) Der Baumsaum auf dem Randstreifen (v366) bestand aus einfachen Kegeln und Kugeln in einem festen Netz – ohne Wind, deutlich gröber als der Wald daneben. (2) Die Grasdecke des Randstreifens hatte nur zwei Zwischenringe auf 42 m: jede Bodenfarbe der Weltkante wurde zu einem langen, 4 m schmalen Dreieck nach außen gezogen – sichtbar als helle und dunkle Streifen quer über den Rand.

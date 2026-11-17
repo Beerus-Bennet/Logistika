@@ -2856,6 +2856,19 @@ function worldSyncEvents() {
   /* v73: Lieferkiste vorm Hoftor – kommt erst, wenn der Lieferwagen sie abgestellt hat */
   if (c.k === "lieferung" && !(WV.parcelIntro && WV.parcelIntro.t0 === c.t0 && !WV.parcelIntro.landed)) worldParcelNodes(c, add);
 }
+/* v390: Ziel antippbarer Ereignis-Meldungen (Händler, Nachbar, weißer Hirsch, Reh, Lieferung …): wie der Ereignis-Knopf oben –
+   Kamera zum Ort, Händler und Nachbar öffnen sich gleich. Auch aus anderen Reitern: erst zum Hof wechseln. */
+function farmEvGo() {
+  if (typeof showTab === "function" && !(FV && FV.on)) showTab("farm");
+  setTimeout(() => {
+    if (!S.farm || !FV.R) return;
+    const s = worldEvSpots()[0];
+    if (!s) return;
+    farmFocusXZ(s.x, s.z + 1, 22, 700);
+    if (s.act === "haendler" || s.act === "nachbar") setTimeout(() => worldEvAct(s), 720);
+  }, 150);
+}
+MSG_GO.farmev = farmEvGo;
 /* Wo sitzt das Ereignis? Für Blase und Kamera */
 function worldEvSpots() {
   const c = S.farm.ev && S.farm.ev.cur;
@@ -3910,7 +3923,7 @@ function farmEvView(type, c) {
       nachbar: "Nachbar Krüger braucht Holz – er zahlt gut.", holzpreis: "Holzpreise steigen: Rohholz bringt 30 % mehr – für ein paar Stunden.", fischpreis: "Fischpreise steigen: Ganze Fische bringen 30 % mehr – für ein paar Stunden.",
       hirsch: "Ein weißer Hirsch im Wald – ein Glücksbringer!", defekt: "Die Säge im Sägewerk klemmt!",
       lieferung: "Ein Lieferwagen hat eine Kiste vor dem Hoftor abgestellt – tipp sie an!", reh: "Ein Reh steht auf dem Weg."
-    }[c.k] || D.n), "");
+    }[c.k] || D.n), "", false, worldEvSpots().length || c.k === "lieferung" || c.k === "defekt" ? "farmev" : null);      /* v390: antippen → Kamera zum Ereignis, Händler/Nachbar öffnen */
     if (c.k === "lieferung") worldParcelIntro(c);
     farmSyncScene();
   } else {

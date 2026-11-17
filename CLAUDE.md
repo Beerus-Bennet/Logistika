@@ -135,3 +135,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
 
 - v385: Inselrand – Baumsaum aus echten Waldbäumen (`worldApronTreeSpots` → `WV.bgG`, Wind/Fernstufen), Grasdecke mit acht Ringen (`APRON_RINGS`) gegen Streifen; Dreiecksbudget im Test 8000.
+
+- v390: Hof-Ereignismeldungen antippbar – `farmEvGo`/`MSG_GO.farmev` in `worldview.js` (Kamera zum Ereignis, Händler/Nachbar öffnen), Ziel von `farmEvView` gesetzt.
