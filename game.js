@@ -432,7 +432,7 @@ function d2dUnloaded(job, veh, leg) {
   if (leg.dn >= leg.qty - 1e-6) leg.done = true;
   job.curLeg = d2dCur(job);
   if (last && leg.done) { if (job.order.village && !job.order.village.friend) veh.villageAt=job.order.village.plot; d2dRelease(veh); finishJob(job); return; }
-  if (last && !job.partToast) { job.partToast = 1; toast("📦 Teilweise zugestellt: " + job.order.shipper + " – " + kgf(leg.dn) + " von " + kgf(leg.qty) + ".", "ok"); }
+  if (last && !job.partToast) { job.partToast = 1; toast("📦 Teilweise zugestellt: " + job.order.shipper + " – " + kgf(leg.dn) + " von " + kgf(leg.qty) + ".", "ok", false, "job:" + job.id); }
   if (leg.qty - leg.ld > 1e-6) {
     /* Es liegt noch Ware am Start: leer zurück und die nächste Teilmenge holen */
     const c = legCoords(leg), r = c.map(p => p.slice()).reverse();
@@ -3384,8 +3384,39 @@ const MSG_GO = {};
 function runMsgGo(go) {
   try {
     if (go && go.startsWith("msg:")) { if (typeof openPhone === "function") openPhone(go.slice(4)); return; }   /* v124: Telefon-Meldung → direkt in den Chat */
+    /* v371: Jede Meldung führt dorthin, worum es geht – "tab:orders", "veh:<uid>", "job:<id>", "base:<ort>", "village:<parzelle>" */
+    const m = go && /^(tab|veh|job|order|base|village|auction):(.*)$/.exec(go);
+    if (m) {
+      const k = m[1], id = m[2];
+      if (k === "tab") return showTab(id);
+      if (k === "veh" || k === "job") {
+        const ok = k === "veh" ? S.fleet.some(f => String(f.uid) === id) : S.jobs.some(j => String(j.id) === id);
+        showTab(k === "veh" ? "fleet" : "jobs");
+        if (ok) { selected = { kind: k, id: k === "veh" ? (S.fleet.find(f => String(f.uid) === id) || {}).uid : (S.jobs.find(j => String(j.id) === id) || {}).id }; renderInspector(); }
+        return;
+      }
+      if (k === "order") { showTab("orders"); const o = S.orders.find(x => String(x.id) === id); if (o) { selected = { kind: "order", id: o.id }; renderInspector(); } return; }
+      if (k === "base") { showTab("bases"); return; }
+      if (k === "village") { showTab("farm"); if (typeof VILLAGE_UI !== "undefined") setTimeout(() => VILLAGE_UI.open(id), 120); return; }
+      if (k === "auction") { showTab("market"); return; }
+    }
     if (go && MSG_GO[go]) MSG_GO[go]();
   } catch (e) { console.warn(e); }
+}
+/* v371: Meldungen ohne eigenes Ziel bekommen eines nach ihrem Inhalt. Nur Ereignis-Meldungen (beginnen mit einem Symbol);
+   Absagen und Hinweise („Dafür fehlen …“, „Erst …“) bleiben bewusst ohne Ziel. */
+const TOAST_GO = [
+  [/Überboten|Auktion|Gebot|🔨/, "tab:market"],
+  [/Ausschreibung|Vertrag|Projekt|Auftrag|Bestellung|Kundschaft|Zugesagt|Einigung|Preis zu hoch|Einladung|📑|🔗|📋/, "tab:orders"],
+  [/zugestellt|Ladung|Kontrolle|Zoll|Fahrt|Lieferung|unterwegs|Verspätet|Strecke|🚓|🛃|📦|⏰|💥/, "tab:jobs"],
+  [/Fahrzeug|Wagen|Lackier|Werkstatt|Instandhaltung|Kraftstoff|Stellplätze|⛽|🔧|🎨|🚚|🏎️/, "tab:fleet"],
+  [/Standort|Büro|Niederlassung|Dispo|Bewerbung|Personal|Anzeige|Miete|Mitarbeit|👷|🏢|📣/, "tab:bases"],
+  [/Etappe|Konzern|Übernahme|Beteiligung|Welt|🌍|🤝/, "tab:world"]
+];
+function toastAutoGo(txt) {
+  if (!txt || /^[A-Za-zÄÖÜäöü"„(\[]/.test(txt)) return null;
+  const hit = TOAST_GO.find(r => r[0].test(txt));
+  return hit ? hit[1] : null;
 }
 function toast(msg, kind, low, go) {
   if (muteToasts) return;
@@ -3396,7 +3427,8 @@ function toast(msg, kind, low, go) {
   const txt = hiddenToasts && low ? msg + "  (+" + hiddenToasts + ")" : msg;
   if (low) hiddenToasts = 0;
   if ((TQ.cur && TQ.cur.txt === txt) || TQ.q.some(x => x.txt === txt)) return;
-  const it = { txt, kind: kind || "", t: now, fb: now - TQ.tapAt < 1200, go: go || null };
+  const fb = now - TQ.tapAt < 1200;
+  const it = { txt, kind: kind || "", t: now, fb, go: go || (fb ? null : toastAutoGo(msg)) };      /* v371: eigene Antworten bleiben ohne Ziel */
   if (it.fb) {
     TQ.q.unshift(it);
     if (TQ.cur && !TQ.cur.fb) toastEnd(true);              /* eigene Antwort geht vor */
@@ -3426,7 +3458,7 @@ function toastNext() {
   box.innerHTML = "";
   box.appendChild(el);
   TQ.cur = it; TQ.el = el;
-  const dur = Math.min(4200, 2300 + it.txt.length * 18);
+  const dur = Math.min(it.go ? 5600 : 4200, 2300 + it.txt.length * 18 + (it.go ? 1200 : 0));      /* v371: antippbare Meldungen etwas länger */
   TQ.timer = setTimeout(() => toastEnd(false), dur);
 }
 function toastEnd(fast) {

@@ -1798,18 +1798,23 @@ function bgFinal(b) {
 /* v368: Fernbaum – ein Stamm und eine Krone (Kegel bei Nadelbäumen, sonst ein Ballen) in den mittleren Farben und der
    Größe des echten Modells. Rund 40 statt mehrerer hundert Dreiecke; nur für die weite Übersicht. */
 function treeFarMesh(sp, sz, v) {
-  const a = FWM.tree(sp, sz, v).v, b = new FM.MB(), fc = [0, 0, 0], tc = [0, 0, 0];
-  let y1 = 0.1, r = 0.3, fn = 0, tn = 0;
-  for (let i = 0; i < a.length; i += 9) if (a[i + 1] > y1) y1 = a[i + 1];
-  for (let i = 0; i < a.length; i += 9) {
-    const y = a[i + 1];
-    if (y > y1 * 0.42) { fn++; for (let k = 0; k < 3; k++) fc[k] += a[i + 6 + k]; r = Math.max(r, Math.hypot(a[i], a[i + 2])); }
-    else if (y < y1 * 0.22) { tn++; for (let k = 0; k < 3; k++) tc[k] += a[i + 6 + k]; }
+  /* v371: Fernbaum durch Zusammenfassen der Eckpunkte des echten Modells (Raster): gleiche Silhouette, gleiche Facettenfarben,
+     nur grobere Flächen. Vorher ein einzelner Ballen in Durchschnittsfarbe – der sah neben den vollen Bäumen viel dunkler
+     und klobiger aus (der Übergang war deutlich zu sehen). */
+  const a = FWM.tree(sp, sz, v).v, b = new FM.MB();
+  let top = 0.1; for (let i = 1; i < a.length; i += 9) if (a[i] > top) top = a[i];
+  const cell = Math.max(0.5, top * 0.24), key = i => Math.round(a[i] / cell) + "," + Math.round(a[i + 1] / cell) + "," + Math.round(a[i + 2] / cell), acc = new Map();
+  for (let i = 0; i < a.length; i += 9) { const k = key(i); let c = acc.get(k); if (!c) acc.set(k, c = [0, 0, 0, 0]); c[0] += a[i]; c[1] += a[i + 1]; c[2] += a[i + 2]; c[3]++; }
+  const P = i => { const c = acc.get(key(i)); return [c[0] / c[3], c[1] / c[3], c[2] / c[3]]; };
+  for (let t = 0; t < a.length; t += 27) {
+    const k0 = key(t), k1 = key(t + 9), k2 = key(t + 18);
+    if (k0 === k1 || k1 === k2 || k0 === k2) continue;
+    const A = P(t), B = P(t + 9), C = P(t + 18), u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], w = [C[0] - A[0], C[1] - A[1], C[2] - A[2]];
+    let n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]; const l = Math.hypot(...n); if (l < 1e-9) continue; n = n.map(x => x / l);
+    const o = [a[t + 3], a[t + 4], a[t + 5]]; if (n[0] * o[0] + n[1] * o[1] + n[2] * o[2] < 0) n = n.map(x => -x);           /* Richtung wie am Original */
+    const col = [(a[t + 6] + a[t + 15] + a[t + 24]) / 3, (a[t + 7] + a[t + 16] + a[t + 25]) / 3, (a[t + 8] + a[t + 17] + a[t + 26]) / 3];
+    for (const Q of [A, B, C]) b.v.push(Q[0], Q[1], Q[2], n[0], n[1], n[2], col[0], col[1], col[2]);
   }
-  const hex = (c, n) => n ? (Math.round(Math.min(1, c[0] / n) * 255) << 16) | (Math.round(Math.min(1, c[1] / n) * 255) << 8) | Math.round(Math.min(1, c[2] / n) * 255) : 0x4a8440;
-  b.box(Math.max(0.16, r * 0.16), y1 * 0.5, Math.max(0.16, r * 0.16), tn ? hex(tc, tn) : 0x5d4430, {});
-  if (sp === "kiefer" || sp === "fichte") b.cone(r * 0.82, y1 * 0.74, 6, hex(fc, fn), { y: y1 * 0.26 });
-  else b.ico(r * 0.86, hex(fc, fn), { y: Math.max(r * 0.86, y1 - r * 0.86) });
   return b;
 }
 /* v368: In der weiten Übersicht zeichnet jede Baumgruppe ihren Fernbaum statt des vollen Modells (dieselben Standorte).
@@ -3620,7 +3625,7 @@ function worldStep(dt, time) {
      Kulissenbäume gehen zwischen 140 und 185 in ihr Fernmodell über (beide Modelle werden mit gegenläufigem Rauschmuster
      überblendet). In der Ich-Perspektive gilt immer die volle Darstellung. */
   { const d = FV.fp ? 0 : FV.R.cam.dist, L = WV.far || (WV.far = { g: 0, s: 1, d: 0, t: 0, p: false }), ramp = (a, b) => Math.max(0, Math.min(1, (d - a) / (b - a)));
-    const g = ramp(95, 125), sh = 1 - ramp(105, 150), dd = ramp(200, 240), t = ramp(140, 185);      /* g, dd, t: Auflösung 0 = voll … 1 = weg */
+    const g = ramp(95, 125), sh = 1 - ramp(105, 150), dd = ramp(200, 260), t = ramp(150, 235);      /* v371: Bäume breiter überblendet */      /* g, dd, t: Auflösung 0 = voll … 1 = weg */
     if (g !== L.g) { L.g = g; VEGQ.nodes.forEach(e => { e.node.fade = g; e.node.visible = g < 0.999; }); }
     if (dd !== L.d) { L.d = dd; (WV.farD || []).forEach(n => { n.fade = dd; n.visible = dd < 0.999; }); }
     if (sh !== L.s) { L.s = sh; FV.R.shadowK = sh; FV.R.noShadow = sh <= 0.001; }
