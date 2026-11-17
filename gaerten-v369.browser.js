@@ -1,6 +1,6 @@
-/* v368: Wohnverträge, echter Renderer, Einzug/LOD/Wege und sichtbare Gärten. */
+/* v369: Wohnverträge, echter Renderer, Einzug/LOD/Wege und sichtbare Gärten. */
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
-const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v368';fs.mkdirSync(out,{recursive:true});
+const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v369';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const ctx=await browser.newContext({viewport:{width:390,height:760},isMobile:true,hasTouch:true,serviceWorkers:'block'}),page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
  await page.goto('http://127.0.0.1:8000/?test=1');await page.evaluate(()=>{
@@ -11,7 +11,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v368';fs.m
   VILLAGE.state().expanded=true;VILLAGE.buy('030');VILLAGE.build('030','familie',false);S.time=VILLAGE.home('030').ready;VILLAGE.tick();S.time=Math.floor(S.time/1440)*1440+720;
   for(const h of Object.values(VILLAGE.state().homes))h.life={mailDay:Math.floor(S.time/1440),shopDay:Math.floor(S.time/1440)};
   document.querySelector('#toasts').replaceChildren();VILLAGE_VIEW.attach(R);window.gardenRender=(id,dist=34,yaw=3.7)=>{const p=VILLAGE.plot(id);Object.assign(R.cam,{tx:p.x,ty:.5,tz:p.z,dist,yaw,pitch:.87,fov:.65});VILLAGE_VIEW.step(.016,S.time);R.render(0);};
-  gardenRender('030');window.beforeHouse368=VILLAGE_VIEW._world.homes.get('030').house;
+  gardenRender('030');window.beforeHouse369=VILLAGE_VIEW._world.homes.get('030').house;
  });
  assert.equal(await page.evaluate(()=>!!VILLAGE_VIEW._world.homes.get('030').yard),false);
  await page.screenshot({path:out+'/bezugsfertig.png'});
@@ -19,7 +19,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v368';fs.m
   const h=VILLAGE.home('030');VILLAGE.list('030','online');S.time=h.listing.ready;VILLAGE.tick();const c=h.listing.offers[0];c.size=3;VILLAGE.negotiate('030',c.id,'rent',c.price);VILLAGE.sign('030',c.id);
   document.querySelector('#toasts').replaceChildren();gardenRender('030');
  });
- assert.equal(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').house===beforeHouse368),true);
+ assert.equal(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').house===beforeHouse369),true);
  assert.ok(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').yard.visible));
  await page.screenshot({path:out+'/familiengarten-mobil.png'});
  for(const [id,name,yaw] of [['000','blumengarten',3.6],['001','familie-gegenueber',-.55],['010','ruhe-feuerstelle',3.6],['011','grillgarten',-.55],['021','nutzgarten',-.55]]){
@@ -36,10 +36,10 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v368';fs.m
   const result=[];for(const d of [80,115,107,96,80]){R.cam.dist=d;VILLAGE_VIEW.step(.016,S.time);result.push(read());}return result;
  });
  assert.deepEqual(lod.map(q=>[q.detail,q.far]),[[true,false],[false,true],[false,true],[true,false],[true,false]]);assert.ok(lod.every(q=>q.ground&&q.blocked));
- await page.evaluate(()=>{const old=FV.fp;FV.fp={};FV.R.cam.dist=260;VILLAGE_VIEW.step(.016,S.time);window.fpYard368=VILLAGE_VIEW._world.homes.get('030').yard.visible;FV.fp=old;});assert.equal(await page.evaluate(()=>fpYard368),true);
+ await page.evaluate(()=>{const old=FV.fp;FV.fp={};FV.R.cam.dist=260;VILLAGE_VIEW.step(.016,S.time);window.fpYard369=VILLAGE_VIEW._world.homes.get('030').yard.visible;FV.fp=old;});assert.equal(await page.evaluate(()=>fpYard369),true);
  const stable=await page.evaluate(()=>{const n=FV.R.nodes.length,m=Object.keys(FV.meshes).length,cash=S.money;for(let i=0;i<40;i++)VILLAGE_VIEW.sync();return {nodes:FV.R.nodes.length-n,meshes:Object.keys(FV.meshes).length-m,cash:S.money===cash};});assert.deepEqual(stable,{nodes:0,meshes:0,cash:true});
- const empty=await page.evaluate(()=>{const h=VILLAGE.home('030');window.backupGarden368=JSON.stringify(h);delete h.resident;h.status='ready';VILLAGE_VIEW.sync();const e=VILLAGE_VIEW._world.homes.get('030');return[e.yard.visible,e.yardFar.visible,e.yardGround.visible];});assert.deepEqual(empty,[false,false,false]);
- await page.evaluate(()=>{VILLAGE.state().homes['030']=JSON.parse(backupGarden368);VILLAGE_VIEW.sync();});assert.ok(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').yard.visible));
+ const empty=await page.evaluate(()=>{const h=VILLAGE.home('030');window.backupGarden369=JSON.stringify(h);delete h.resident;h.status='ready';VILLAGE_VIEW.sync();const e=VILLAGE_VIEW._world.homes.get('030');return[e.yard.visible,e.yardFar.visible,e.yardGround.visible];});assert.deepEqual(empty,[false,false,false]);
+ await page.evaluate(()=>{VILLAGE.state().homes['030']=JSON.parse(backupGarden369);VILLAGE_VIEW.sync();});assert.ok(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').yard.visible));
  // Integrationsblick in die vollständige Insel, einschließlich der parallelen Fernstufen.
  await page.evaluate(()=>{S.time=Math.ceil(S.time/1440)*1440+720;farmBuildScene();Object.assign(FV.R.cam,{tx:-81,ty:0,tz:58,dist:260,yaw:-.7,pitch:1.0,fov:.65});worldStep(.016,0);FV.R.render(0);});
  const island=await page.evaluate(()=>({shadow:FV.R.noShadow,shadowTriangles:FV.R.stats.sTris,gardens:[...VILLAGE_VIEW._world.homes.values()].filter(e=>e.yardFar&&e.yardFar.visible).length}));

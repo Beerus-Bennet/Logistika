@@ -96,7 +96,7 @@ const VILLAGE_SITE = (() => {
     /* v351: Niedriger Anlehnbügel innerhalb der Bucht. */
     for(const zz of [-.38,.38])b.box(.035,.58,.035,0x56646a,{x:park[0]-p.x-p.side*.19,z:park[1]-p.z+zz,y:.06});
     b.box(.035,.035,.8,0x56646a,{x:park[0]-p.x-p.side*.19,z:park[1]-p.z,y:.64});
-    /* v368: Pflanzung kommt aus dem bewohnten Gartenplan, damit keine alten
+    /* v369: Pflanzung kommt aus dem bewohnten Gartenplan, damit keine alten
        Blumenkugeln unter Gartenhaus oder Spielgeräten stehen. */
     return b;
   }
@@ -124,7 +124,7 @@ const VILLAGE_SITE = (() => {
       const k=VILLAGE_DATA.houses[h.type],dx=x-p.x,dz=z-p.z,lx=dx*Math.cos(p.ry)-dz*Math.sin(p.ry),lz=dx*Math.sin(p.ry)+dz*Math.cos(p.ry);
       const boxes=[[-3,-2.6,3,4.65]];if(h.type==='familie')boxes.push([-5.9,-2.2,-2.2,2.2]);
       if(boxes.some(b=>lx>b[0]*k.scale-r&&lx<b[2]*k.scale+r&&lz>b[1]*k.scale-r&&lz<b[3]*k.scale+r))return true;
-      /* v368: Dieselben Gartenflächen wie die sichtbare Ausstattung sperren. */
+      /* v369: Dieselben Gartenflächen wie die sichtbare Ausstattung sperren. */
       if(typeof VILLAGE_GARDEN!=='undefined'&&VILLAGE_GARDEN.blocked(p,h,x,z,r))return true;
       const a=lot(p),g=gate(p),back=p.side<0?a[0]:a[2],pad=r+.045;
       if(z>=a[1]-pad&&z<=a[3]+pad&&Math.abs(x-back)<pad)return true;

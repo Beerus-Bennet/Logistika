@@ -1,23 +1,14 @@
-## v368 – Bewohnte Häuser bekommen individuelle Gärten
+## v369 – Bewohnte Häuser bekommen individuelle Gärten
 
 **Wunsch:** Häuser nach dem Einzug mit realistischen Gartendetails beleben. Gartenplanungsartikel und Fotos von HORNBACH/OBI geprüft; daraus Hausnähe der Sitzecke, Stauraum am Rand, freie Rasenflächen und getrennte Spiel-/Nutz-/Ruhebereiche abgeleitet.
 
 **Lösung:** Vier stabile Haushaltsprofile mit Gartenhäuschen/Regentonne, Tisch/Stühlen, Kugelgrill, unbefeuerter Feuerstelle/Bänken, Schaukel/Sandkasten oder Hochbeeten/Vogelbad. Pflanzkästen, Stauden und bei genügend Platz kleine Obstbäume ergänzen die Grundstücke. Ausstattung erst nach Einzug, auch für bestehende Bewohner und Käufer; keine neue Kosten-/Vertragslogik und keine Save-Migration. Neue Nachbarn aktualisieren den Garten ohne Hausneubau. Leerstand blendet ihn aus. Haus/Anbau, Tore, Briefkasten und Fahrradplatz bleiben frei; Gegenstände sind Hindernisse für Bewohner. Vereinfachte Fernmodelle und gemeinsame Meshes begrenzen zusätzliche Zeichenlast.
 
-**Integration/Prüfung:** main `43249c4`, parallel PR #86 (`8de6f28`) einschließlich Fernstufen vollständig integriert; Lieferung/Offline-Cache 368. Fünf Garten-Prüfgruppen mit allen Grundstücken, beiden Haustypen und vier Profilen; echter Einzug und vollständige Insel im Chromium-WebGL-Test, Zoom/Leerstand/Laden, vorhandene Bewohner-/Markt-/Inseltests. Nicht auf echtem iPhone/Safari geprüft. Quellen, Bilder und Prüfdetails: [docs/WOHNGAERTEN-v368.md](docs/WOHNGAERTEN-v368.md).
+**Integration/Prüfung:** aktuelles main `788a2b5` einschließlich PR #86/v368 vollständig integriert; Lieferung/Offline-Cache 369. Fünf Garten-Prüfgruppen mit allen Grundstücken, beiden Haustypen und vier Profilen; echter Einzug und vollständige Insel im Chromium-WebGL-Test, Zoom/Leerstand/Laden, vorhandene Bewohner-/Markt-/Inseltests. Nicht auf echtem iPhone/Safari geprüft. Quellen, Bilder und Prüfdetails: [docs/WOHNGAERTEN-v369.md](docs/WOHNGAERTEN-v369.md).
 
-## v367 – Jagdbewegung, Wolken, stimmiges Trefferbild und bedienbarer Kaufbeleg
+## v368 – Weite Übersicht flüssiger: Fernstufen für Gras, Schatten, Kleinteile und Bäume
+Zuerst als v367 gebaut; nach dem Merge von PR 85 (ebenfalls v367) auf v368 umnummeriert.
 
-**Ursachen und Lösung:** Starre Zwischenknicke im Tierfall durch stetiges Entspannen aus der tatsächlichen Gangpose, anfängliche Hufstütze und Drehung um den Schwerpunkt ersetzt. Fragezeichen am Hochsitz entfernt; Jagdaufträge als zunächst geschlossenes Dropdown unter dem Revier. Wolken aus dem geprüften Video mit vollständig projizierter Form/Ausrichtung statt bildschirmparallelen Streifen.
-
-Die Organliste prüft jetzt dieselben Oberflächen, die das Trefferbild zeichnet. Keine Magenangabe bei verfehltem Magen; keine nachträglich erfundenen Herz-/Lungentreffer. Neue kritische Treffer brauchen tatsächlichen Organkontakt. Geschlossener Schweinemagen, klarere Lungenlappen, zurückgenommenes Skelett, geordnete Randbeschriftungen und Zeiger auf dem echten Schusskanal. Alte Aufnahmen werden nur für die Ansicht berichtigt, frühere Wertung/Erlöse bleiben gespeichert.
-
-Der Kaufbestand hat eine eigene begrenzte Scrollansicht; die lange Flotte ist per Finger vollständig erreichbar, Navigation bleibt sichtbar. Hai-Animation samt Skriptladung und Audiovorbereitung aus dem Übernahmeablauf entfernt: direkt zum Kaufbeleg.
-
-**Integration:** main `d4a1664`, paralleler Insel-PR #84 (`b7da342`, v366) vollständig integriert; gemeinsame Liefer-/Cacheversion 367. Details, Bilder, Fallvideos und Prüfungen: [Prüfbericht](docs/JAGD-UEBERNAHME-v367.md).
-
-**Geprüft:** WebGL-/Touch-Tests, 16 Fallkombinationen, drei Tierarten/25 Organmodelle, konkrete falsche/echte Magenberührungen und korrigierte Altaufnahmen, Kauf mit 17 Fahrzeugen in drei Bildschirmformaten; bestehende Jagd-, Übernahme-, PDF- und Releaseprüfungen. **Nicht geprüft:** echtes iPhone/Safari. Kein medizinisches oder physikalisches Simulationsmodell.
-## v367 – Weite Übersicht flüssiger: Fernstufen für Gras, Schatten, Kleinteile und Bäume
 **Meldung Bennet:** Das Spiel ruckelt in der Rauszoom-Ansicht jetzt sehr.
 
 **Ursache (gemessen im Testbrowser, `R.stats`):** Seit v366 lässt sich überall bis Abstand 450 herauszoomen. Dort zeichnete das Spiel je Bild rund 1,39 Mio. Dreiecke und noch einmal 1,22 Mio. im Schattendurchgang – bei Abstand 54 sind es 93.000 und 65.000. Alles lief in voller Darstellung, obwohl man Gras, Schatten und Baumdetails aus dieser Höhe nicht erkennt.
@@ -30,6 +21,17 @@ Der Kaufbestand hat eine eigene begrenzte Scrollansicht; die lange Flotte ist pe
 In der Ich-Perspektive (Hochsitz, Sägen) gilt immer die volle Darstellung. Beim Hineinzoomen ist alles wieder da.
 
 **Geprüft:** Testbrowser (Chromium, Software-Grafik, 390 × 700, Gebiete freigeschaltet). Dreiecke je Bild einschließlich Schatten: Abstand 450 von 2,61 Mio. auf 0,59 Mio.; Abstand 300 von 1,83 Mio. auf 0,42 Mio.; Abstand 150 von 0,64 Mio. auf 0,25 Mio.; Abstand 54 und 30 unverändert. Hin und zurück (54 → 200 → 450 → 54): Stufen schalten wie vorgesehen, danach wieder 93 von 93 Graskacheln, Schatten und alle 45 Baumgruppen in voller Darstellung; Bilder gesichtet, keine Konsolenfehler. `floating-island-v358`, `inselrand-v366`, `fixes-v354`, `shadow.test.js` bestanden. **Nicht geprüft:** am Handy – ob es dort jetzt flüssig genug ist, zeigt erst der Test auf dem Gerät. **Grenzen:** Es bleiben rund 0,59 Mio. Dreiecke bei voller Rauszoom-Stufe; ein großer Teil davon sind die fällbaren Bäume, die noch ihr volles Modell zeigen. Beim Über- und Unterschreiten der Stufen wechselt die Darstellung sichtbar (Schatten und Gras verschwinden).
+## v367 – Jagdbewegung, Wolken, stimmiges Trefferbild und bedienbarer Kaufbeleg
+
+**Ursachen und Lösung:** Starre Zwischenknicke im Tierfall durch stetiges Entspannen aus der tatsächlichen Gangpose, anfängliche Hufstütze und Drehung um den Schwerpunkt ersetzt. Fragezeichen am Hochsitz entfernt; Jagdaufträge als zunächst geschlossenes Dropdown unter dem Revier. Wolken aus dem geprüften Video mit vollständig projizierter Form/Ausrichtung statt bildschirmparallelen Streifen.
+
+Die Organliste prüft jetzt dieselben Oberflächen, die das Trefferbild zeichnet. Keine Magenangabe bei verfehltem Magen; keine nachträglich erfundenen Herz-/Lungentreffer. Neue kritische Treffer brauchen tatsächlichen Organkontakt. Geschlossener Schweinemagen, klarere Lungenlappen, zurückgenommenes Skelett, geordnete Randbeschriftungen und Zeiger auf dem echten Schusskanal. Alte Aufnahmen werden nur für die Ansicht berichtigt, frühere Wertung/Erlöse bleiben gespeichert.
+
+Der Kaufbestand hat eine eigene begrenzte Scrollansicht; die lange Flotte ist per Finger vollständig erreichbar, Navigation bleibt sichtbar. Hai-Animation samt Skriptladung und Audiovorbereitung aus dem Übernahmeablauf entfernt: direkt zum Kaufbeleg.
+
+**Integration:** main `d4a1664`, paralleler Insel-PR #84 (`b7da342`, v366) vollständig integriert; gemeinsame Liefer-/Cacheversion 367. Details, Bilder, Fallvideos und Prüfungen: [Prüfbericht](docs/JAGD-UEBERNAHME-v367.md).
+
+**Geprüft:** WebGL-/Touch-Tests, 16 Fallkombinationen, drei Tierarten/25 Organmodelle, konkrete falsche/echte Magenberührungen und korrigierte Altaufnahmen, Kauf mit 17 Fahrzeugen in drei Bildschirmformaten; bestehende Jagd-, Übernahme-, PDF- und Releaseprüfungen. **Nicht geprüft:** echtes iPhone/Safari. Kein medizinisches oder physikalisches Simulationsmodell.
 
 ## v366 – Insel: weite Übersicht überall, Bäche fließen über die Kante, Baumsaum auf dem Randstreifen
 **Wunsch Bennet (Bild: weit herausgezoomter Seeblick):** (1) Diese Rauszoom-Ansicht für die ganze Insel ermöglichen. (2) Den Fluss so weit verlängern, dass er von der Insel herunterfließt. (3) Baumsaum auf dem Randstreifen.

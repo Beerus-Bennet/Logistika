@@ -1,4 +1,4 @@
-/* v368: Bewohnte Gärten – ein gemeinsamer, deterministischer Plan für
+/* v369: Bewohnte Gärten – ein gemeinsamer, deterministischer Plan für
    Ausstattung, Zeichnung und Hindernisse. Maßstab passend zu den Bewohnern.
    Vorbild: Gartenräume/Sichtachsen, Sitzplatz am Haus, Stauraum am Rand. */
 const VILLAGE_GARDEN = (() => {
