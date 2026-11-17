@@ -967,13 +967,13 @@ function worldStatic() {
     R.addChild(WV.apron, fnode(R.mesh(worldApronTrees((x, z) => ends.every(E => distLine(x, z, E.line) > 5))), { shadow: false }));
     ends.forEach(E => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, 2.3)), { shadow: false })));
   } } catch (e) { console.warn("Inselrand:", e); }
-  WV.far = null; WV.bgFar = null;                      /* v367: neue Knoten sind sichtbar – Fernstufen neu bestimmen */
+  WV.far = null; WV.bgFar = null;                      /* v368: neue Knoten sind sichtbar – Fernstufen neu bestimmen */
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
   R.instClear(); WV.bgInst = new Map(); WV.bgG = new Map(); WV.bgGH = new Map(); WV.bgHi = new Map(); TLOD.dirty = true;
   WV.farD = [];
   for (const [key, c] of chunks) {
     if (c.g.n) R.nodes.push(fnode(R.mesh(c.g.out()), { shadow: false }));
-    if (c.d.n) { const dn = fnode(R.mesh(c.d.out())); R.nodes.push(dn); WV.farD.push(dn); }      /* v367: für die weite Übersicht merken */
+    if (c.d.n) { const dn = fnode(R.mesh(c.d.out())); R.nodes.push(dn); WV.farD.push(dn); }      /* v368: für die weite Übersicht merken */
     if (c.v.n) {
       /* v88: Gras je Chunk in einem eigenen Knoten – ohne Schattenwurf, Wind über den gemeinsamen Shader (sway = 0 im statischen Betrieb) */
       const [i, j] = key.split(",").map(Number);
@@ -1795,7 +1795,7 @@ function bgFinal(b) {
 }
 /* Kachel mit WV.bgInst abgleichen: Bäume in c.trees stehen als Instanz, alle anderen (angetippt, im Nahaufnahme-Minispiel
    ausgeblendet) nicht. Je Art/Größe/Variante gibt es eine Gruppe mit dem Mesh des echten Baums. */
-/* v367: Fernbaum – ein Stamm und eine Krone (Kegel bei Nadelbäumen, sonst ein Ballen) in den mittleren Farben und der
+/* v368: Fernbaum – ein Stamm und eine Krone (Kegel bei Nadelbäumen, sonst ein Ballen) in den mittleren Farben und der
    Größe des echten Modells. Rund 40 statt mehrerer hundert Dreiecke; nur für die weite Übersicht. */
 function treeFarMesh(sp, sz, v) {
   const a = FWM.tree(sp, sz, v).v, b = new FM.MB(), fc = [0, 0, 0], tc = [0, 0, 0];
@@ -1812,7 +1812,7 @@ function treeFarMesh(sp, sz, v) {
   else b.ico(r * 0.86, hex(fc, fn), { y: Math.max(r * 0.86, y1 - r * 0.86) });
   return b;
 }
-/* v367: In der weiten Übersicht zeichnet jede Baumgruppe ihren Fernbaum statt des vollen Modells (dieselben Standorte).
+/* v368: In der weiten Übersicht zeichnet jede Baumgruppe ihren Fernbaum statt des vollen Modells (dieselben Standorte).
    Beim Einschalten werden die Standorte frisch übernommen – gefällte oder nachgewachsene Bäume stimmen also wieder. */
 function treeFarSet(on) {
   if (!WV.bgG) return;
@@ -3608,7 +3608,7 @@ function worldStep(dt, time) {
   /* v185: Maschinen des Sägewerks – Werkstück, Ablauf und Signalleuchte nach dem Spielstand (sawwerk.js) */
   /* v354: In der Ich-Perspektive (Hochsitz, Sägen) steht hinter der Welt die gemalte Aussicht – dort bleibt die Kulisse aus */
   if (WV.apron) WV.apron.visible = !FV.fp;
-  /* v367: Weite Übersicht flüssig halten. Gemessen: bei Abstand 450 rund 1,4 Mio. Dreiecke je Bild und noch einmal
+  /* v368: Weite Übersicht flüssig halten. Gemessen: bei Abstand 450 rund 1,4 Mio. Dreiecke je Bild und noch einmal
      1,2 Mio. im Schattendurchgang (bei Abstand 54: 93.000 und 65.000). Was man aus der Ferne nicht mehr erkennt, bleibt
      weg: Grasbüschel ab Abstand 110, Schattenwurf ab 130, Büsche und Kleinteile ab 230; Bäume zeigen ab 170 ihr Fernmodell. Mit etwas Abstand zwischen
      Ein- und Ausschalten, damit an der Grenze nichts flackert; in der Ich-Perspektive gilt immer die volle Darstellung. */

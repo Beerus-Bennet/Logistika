@@ -14,12 +14,12 @@ test('Herz, Leber, Darm und Nieren sind unterschiedliche Formen; Vogel- und Säu
  assert.ok(run(`new Set(['herz','leber','darm','niereL'].map(id=>HUNT._organMesh('keiler',id).v.length)).size===4`));
  assert.ok(run(`function depth(k){const O=HUNT.ORG[k][k==='fasan'?1:0],v=HUNT._organMesh(k,O.id).v,Y=v.filter((_,i)=>i%9===1);return (Math.max(...Y)-Math.min(...Y))/O.r[1];}depth('fasan')<depth('hirsch')*.8`));
 });
-test('Nur protokollierte Organe und die gewertete Primärzone bleiben sichtbar, alte Datensätze ebenfalls',()=>{
+test('v367: Nur vom gespeicherten Strahl geschnittene Organe bleiben sichtbar, falsche Alteinträge entfallen',()=>{
  run(`var R={nodes:[],mesh:b=>({b}),free(){},node:(m,o)=>Object.assign({mesh:m,ch:[]},o),addChild:(p,n)=>{p.ch.push(n);return n;}};
  function build(k,zone,org){const gn=HUNT.genes(k,.7,3),A={k,s:1,score:.7,gn,T:HUNT.traits(k,.7,gn),vr:0};HUNT._xrBuild(R,A,{zone,org,lo:[3,.9,.28],ld:[-1,0,0],t:2.8,pose:{nrx:0,nry:0,hrx:0,legs:[]}});return HUNT._xr();}`);
  run(`var x=build('hirsch','herz',[{id:'herz'}]);`);assert.equal(run('x.visibleOrgans.join(",")'),'herz');assert.equal(run('x.ov.lab.map(l=>l.n).join(",")'),'Herz');
- run(`x=build('keiler','lunge',[{id:'lungeR'},{id:'leber'}]);`);assert.equal(run('x.visibleOrgans.join(",")'),'lungeR,leber');assert.equal(run('x.ov.lab.map(l=>l.n).join(",")'),'Lunge,Leber');
- run(`x=build('fasan','herz',[]);`);assert.equal(run('x.visibleOrgans.join(",")'),'herz');
+ run(`x=build('keiler','lunge',[{id:'lungeR'},{id:'leber'}]);`);assert.equal(run('x.visibleOrgans.join(",")'),'');assert.equal(run('x.ov.lab.length'),0);
+ run(`x=build('fasan','herz',[]);`);assert.equal(run('x.visibleOrgans.join(",")'),'');
 });
 const E=vm.createContext({console});const ev=s=>vm.runInContext(s,E);
 ev(`var S={time:100,stage:6,jobs:[],fleet:[],events:[]},DECISIONS={},notes=[],toasts=[];
