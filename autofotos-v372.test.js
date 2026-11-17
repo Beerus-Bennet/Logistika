@@ -36,5 +36,5 @@ test('Cache-Schlüssel unterscheidet gleich lange Bildquellen und ignoriert alte
 });
 test('Zuschlag und Wiedereinlieferung behalten Modell und Lack, buchen genau einmal',()=>{
  const {ctx,run}=fixture();run('let purchase=makeLot({car:"prs"});purchase.rivals=[];globalThis.buyId=purchase.id;');const start=run('purchase.start');assert.equal(run('playerBid(purchase,purchase.start).ok'),true);const before=ctx.S.money;assert.equal(run('finishLot(purchase)'),'won');assert.equal(ctx.S.money,before-Math.round(start*1.12));assert.equal(run('ah().garage[0].car'),'prs');assert.equal(run('ah().garage[0].paint[0]'),'Schwarz');run('finishLot(purchase)');assert.equal(run('ah().garage.length'),1);
- const cash=ctx.S.money;run('let sold=consignCar(ah().garage[0].uid,500000)');assert.equal(run('sold.car'),'prs');assert.equal(run('sold.y'),1973);assert.equal(run('sold.paint[0]'),'Schwarz');assert.equal(ctx.S.money,cash);
+ const cash=ctx.S.money,boughtYear=run('ah().garage[0].y');run('let sold=consignCar(ah().garage[0].uid,500000)');assert.equal(run('sold.car'),'prs');assert.equal(run('sold.y'),boughtYear);assert.equal(run('sold.paint[0]'),'Schwarz');assert.equal(ctx.S.money,cash);
 });
