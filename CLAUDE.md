@@ -119,3 +119,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v376: PR #92/v374 mit main e6f1713 (v375) zusammengeführt. Werkzeugausrichtung/Beugung erhalten, Bergnavigation unverändert. Gesamt-/Cacheversion376 und team.js/staffgear.js376, andere Assets behalten ihre Versionen. Keine zusätzliche Spiel-/Speicherlogikänderung.
 
 - v377: Trefferbild – Lunge/Leber/Pansen nach Rumpfprofil (`lungeY`, `LUNG_LO`), Halsorgane `NORG`/`neckContacts` im Schusskanal; Nebel beim Hochsitz-Übergang stufenlos (`fogMix`). Tests `trefferbild-v357`/`hunt.test.js` angepasst.
+
+- v378: Revier-Layout auf der Karte (`worldRevier`, `WRV` in `hunt.js`): Bäume (60 %), Steine, Stämme der Ich-Perspektive stehen verkleinert auf der Wildwiese; `clear("tree")` mit Ring `WRV.margin`.
