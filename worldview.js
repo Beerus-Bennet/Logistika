@@ -4086,9 +4086,10 @@ function openTrader() {
   FV.sheetFn = openTrader;
   const rows = c.data.deals.map((d, i) => {
     const it = d.item ? FITEMS[d.item] : null;
-    const t = d.kind === "buy" ? `${esc(d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : `${esc(fqty(d.item, d.qty))} verkaufen`;
+    /* v386: Menge im Titel, Grund des Angebots als kleine Marke */
+    const t = d.kind === "buy" ? `${esc(d.qty > 1 || !d.n ? fqty(d.item, d.qty) : d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : d.kind === "lucky" ? (d.box === "gold" ? "Goldene Luckybox kaufen" : "Luckybox kaufen") : `${esc(fqty(d.item, d.qty))} verkaufen`;
     const p = d.kind === "sell" ? "+" + eur(Math.round(farmStackV(d.item, d.qty) * d.mult * 10) / 10) + " (+" + Math.round((d.mult - 1) * 100) + " %)" : eur(d.price);
-    return `<button class="frec${d.done ? " lock" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b><small>${d.done ? "erledigt" : p}</small></button>`;
+    return `<button class="frec${d.done ? " lock" : ""}${d.why === "Für deinen Auftrag" ? " fr-need" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b>${d.why && !d.done ? `<em class="fr-why">${esc(d.why)}</em>` : ""}<small>${d.done ? "erledigt" : p}${d.q && !d.done ? " · " + "★".repeat(d.q) : ""}</small></button>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🧑‍💼</span>Fliegender Händler<small>noch ${fdur(Math.max(1, c.until - S.time))} an der Straße</small></div>
     <div class="frecs">${rows}</div><div class="fs-sub">„Heute nur bei mir – morgen bin ich in Brandenburg an der Havel!“</div>`, "trader");

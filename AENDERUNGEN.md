@@ -1,3 +1,15 @@
+## v386 – Fliegender Händler bietet an, was gerade gebraucht wird
+
+**Ursache:** Der Händler hatte immer dieselben Angebote (1 Walnussstamm für 95 €, bis zu 4 Stück Lagerware mit +40 %, 2 Kleeblätter) – für wohlhabende Spieler bedeutungslos, nie auf die Lage des Spielers abgestimmt.
+
+**Lösung (`erbe.js` `farmTraderNeed`/`farmTraderDeals`, Anzeige `openTrader` in `worldview.js`):**
+- **Auftragshilfe:** Fehlt Ware für angenommene Hofbestellungen, bringt er genau die Fehlmenge (bis 2 Sorten, Qualität ★★★★) – bei Geldknappheit unter Warenwert (0,9×), sonst 1,15×.
+- **Geldlage nach Level:** Richtwert 20.000 € · (1 + Level/10)². Unter 35 % davon kauft er zwei Lagerposten mit +80 %/+60 % an, unter dem Richtwert einen mit +60 %, sonst +40 %; Mengen bis zu 25 % (knapp) bzw. 10 % des Richtwerts.
+- **Wohlhabend (über 5 × Richtwert):** 12 Kleeblätter mit 25 % Rabatt, oft eine Luckybox (4 % bzw. bei der goldenen 12 % des Richtwerts) oder 6–10 Edelholzstämme in bester Qualität.
+- Jedes Angebot zeigt seinen Grund als Marke („Für deinen Auftrag“, „Gutes Geld, wenn's knapp ist“, „Großpaket −25 %“, „Glücksfund“); Mengen und Sterne stehen im Titel. Alte, schon gezogene Angebote bleiben gültig.
+
+**Geprüft:** Testbrowser (`?test`, Level 100): reich (50 Mio. €), knapp (900 €) und mittel (120.000 €) mit angenommener Bestellung – Angebote wie oben, alle vier Käufe/Verkäufe ausführbar, keine Konsolenfehler. **Nicht geprüft:** Handy/Safari; Balance über längere Spielzeit (Preise der Luckybox, Ankaufsmengen) nur geschätzt; kein Unit-Test.
+
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 
 **Ursache:** Separater Überlauf mit erhöhtem Endstück, darüberliegender alter Wiesenboden und unterschiedlich geformte Geländestufen erzeugten Lücken und Rastermuster. Wasser und äußerer Wasserfall orientierten sich nicht an derselben gezeichneten Inselkante.

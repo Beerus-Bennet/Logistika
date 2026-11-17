@@ -5237,3 +5237,10 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 .wp-st em{font-style:normal;font-weight:600;opacity:.75;margin-left:auto}
 .wp-main p{margin:2px 0;line-height:1.35}.wp-real{font-size:11px;opacity:.7}
 .wp-main .btn{align-self:flex-start;margin-top:4px}
+
+/* ---------------------------------------------------------------------
+   v386: Fliegender Händler – Grund des Angebots als Marke
+   --------------------------------------------------------------------- */
+#farmSheetIn .frec .fr-why{display:inline-block;align-self:flex-start;font-style:normal;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;background:#fff1c9;color:#7a4b00;margin-top:2px}
+#farmSheetIn .frec.fr-need{border-color:#2f8f4e;background:#eef9ee}
+#farmSheetIn .frec.fr-need .fr-why{background:#2f8f4e;color:#fff}

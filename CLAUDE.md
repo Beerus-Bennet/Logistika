@@ -133,3 +133,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v382: Jagd – Einschussloch in der Bergung (`woundSpot`/`woundMesh`/`addWound`, `A.woundM`/`A.woundX`), Fallseite `fallSide`; gedämpft, ohne Blutspritzer.
 
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
+
+- v386: Fliegender Händler nach Bedarf (`farmTraderNeed`/`farmTraderDeals` in `erbe.js`): Auftragshilfe für Fehlmengen, Ankauf nach Geldlage (Richtwert 20.000·(1+Level/10)²), Kleeblatt-Paket/Luckybox/Edelholz für Wohlhabende; Grund-Marke `fr-why` in `openTrader`.
