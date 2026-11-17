@@ -27,6 +27,9 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - Code-Kommentare auf Deutsch mit Versionsmarke (`/* v253: … */`); neue CSS-Blöcke ans Ende von `style.css` mit Kopfzeile.
 - Keine Geschäftslogik ändern, wenn nur Gestaltung oder Texte gewünscht sind.
 
+## Bekannte Fehlerquellen (zum Merken)
+- **Bewegung, die „wild hin und her“ geht (v388):** Zuerst messen, nicht raten – Richtungswechsel je Figur pro Bild zählen (Bewegung > 0,03, Richtungsprodukt < −0,5) und den Ort/Zustand dazu ausgeben. Typische Ursache: zwei Systeme setzen dieselbe Position gegeneinander, z. B. `staffFollow` (setzt Hofkräfte jedes Bild auf ihre Route) gegen `PEOPLE_TRAFFIC` (seitliches Ausweichen). Ein Ausweichschritt, den der Routenfolger im nächsten Bild zurücknimmt, ergibt Pendeln und eine stehende Wegeuhr. Lösung dort: Figuren, die fest einer Route folgen, nicht seitlich ausweichen lassen. Regressionstest: `worker-motion-v351.test.js` („v388 Pausenende“).
+
 ## Wichtige Dateien
 `data.js` (Welt, Fahrzeuge, Ladungsarten, Etappen) · `game.js` (Kern: Aufträge, Routing, Planer, Listen, Tick, Speichern) · `kunden.js` (Kundenprofile, Auftragstexte mit Prüfung, Beziehungsstufen, Projekte, Unterschriften) · `vip.js` (Sonderfahrten, Konkurrenz/Ausschreibungen, Verhandlung, Zeitung) · `extras.js` (Telefon, Entscheidungen, Steuern, Kredit) · `offices.js` (Büros, Personal, Diensthandy) · `goals.js` · `corp.js` · `vehmodels.js` (3D-Fahrzeugbildchen) · `officefp.js` (Büro in der Ich-Perspektive) · Hof/Welt: `farm*.js`, `worldview.js`, `team.js` u. a. Vollständige Tabelle in `docs/UEBERGABE.md`.
 
@@ -135,5 +138,12 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
 
 - v385: Inselrand – Baumsaum aus echten Waldbäumen (`worldApronTreeSpots` → `WV.bgG`, Wind/Fernstufen), Grasdecke mit acht Ringen (`APRON_RINGS`) gegen Streifen; Dreiecksbudget im Test 8000.
+- v386: Größerer Bergfall/Becken, optionale FWM.width mit ALPINE.riverWidth; Wasser8 gemeinsame Palette mit7, Weltkoordinatenwellen in Becken. uFallStart optional(Standard.24/Berg.05), Aufprallwellen und begrenzte Sprühpartikel. worldGround/ALPINE.setGroundSampler für gleiche Randfarben; dezente Felsfacetten. Keine neue Migration. Tests wasseroptik-v386.*, Bericht docs/WASSEROPTIK-v386.md; parallelen Inselrand-PR102/v385 beim Mergen vollständig erhalten.
+- v388: Trefferbild ohne doppeltes Primärschild/Todesursachenblock, Herzstatus direkt in Organliste. organName nutzt anatomische Tierseite(−X rechts/+X links), alte IDs erhalten; Lungenlappen entsprechend. xrShot beachtet sh.stop ohne gespeicherte Wirkung zu ändern. Tests trefferklarheit-v388.*, Bericht docs/TREFFERKLARHEIT-v388.md. Andere offene PRs beim Mergen erhalten.
+- v386: Fliegender Händler nach Bedarf (`farmTraderNeed`/`farmTraderDeals` in `erbe.js`): Auftragshilfe für Fehlmengen, Ankauf nach Geldlage (Richtwert 20.000·(1+Level/10)²), Kleeblatt-Paket/Luckybox/Edelholz für Wohlhabende; Grund-Marke `fr-why` in `openTrader`.
+- v387: Rahmenvertrag – „Machbarkeit prüfen“ (`contractFeasibility`/`contractFeasHTML` in `goals.js`, Knopf `data-feas` in `extras.js`): je Büro Reichweite, Fahrpersonal, Fahrzeugkette, 20-h-Frist, freie Fahrten/Tag; grüner/roter Daumen (`.feas`, `.fth`).
+- v388: Pausenende ohne Pendeln – Hofkräfte weichen einander in `peopletraffic.js` nicht mehr aus (Ausweichen kollidierte mit `staffFollow`); Test „v388 Pausenende“ in `worker-motion-v351.test.js`; Merkpunkt unter „Bekannte Fehlerquellen“.
+
+- v389: Weißer Hirsch/Reh/Paket – Zusatzspruch entfernt, nur die Kleeblatt-Anzeige bleibt (`worldEvAct` in `worldview.js`).
 
 - v390: Hof-Ereignismeldungen antippbar – `farmEvGo`/`MSG_GO.farmev` in `worldview.js` (Kamera zum Ereignis, Händler/Nachbar öffnen), Ziel von `farmEvView` gesetzt.

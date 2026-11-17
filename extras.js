@@ -96,6 +96,7 @@ function decisionMsgHTML(m) {
       <span class="pmsg-time">${stamp(m.time)} ${phoneTTL(m)}</span></div>
     <b>${esc(m.title)}</b>
     <p>${esc(m.body)}</p>
+    ${!d.done && d.type === "contract" && typeof contractFeasHTML === "function" ? contractFeasHTML(m) : ""}
     ${d.done ? `<div class="pmsg-note ok">✔ ${esc(m.result || "erledigt")}</div>`
       : `<div class="dchoices">${acts}</div>
          <div class="pmsg-note">Ohne Antwort bis ${clock(d.until)}: „${esc(d.choices[d.def].label)}“</div>`}
@@ -104,6 +105,12 @@ function decisionMsgHTML(m) {
 function bindDecisionMsgs(root) {
   (root || document).querySelectorAll("[data-dec]").forEach(b => b.onclick = () => {
     const [id, i] = b.dataset.dec.split("|"); decide(id, +i);
+  });
+  /* v387: Machbarkeit eines Rahmenvertrags bei den Büros erfragen (Ergebnis bleibt an der Nachricht) */
+  (root || document).querySelectorAll("[data-feas]").forEach(b => b.onclick = () => {
+    const m = S.phone.msgs.find(x => x.id === b.dataset.feas); if (!m || !m.dec || m.dec.done) return;
+    m.dec.feas = contractFeasibility(m.dec.ctx.c); if (typeof sfx === "function") sfx(m.dec.feas.ok ? "collect" : "bad"); save();
+    if (typeof phoneOpen === "function" && phoneOpen()) renderPhone(); else render();
   });
 }
 

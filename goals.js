@@ -52,6 +52,52 @@ DECISIONS.contract = {
     return "Unterschrieben – ab " + stamp(c.start) + ".";
   }
 };
+/* v387: Machbarkeit prüfen – Rücksprache mit den Büros vor der Unterschrift.
+   Je Büro: liegt der Abholort in seiner Reichweite, gibt es Fahrpersonal, passende Fahrzeuge für die ganze Kette einer
+   Variante, und schafft die Strecke die 20-Stunden-Frist einer Vertragsfahrt? Daraus: wie viele der täglichen Fahrten das
+   Büro übernehmen kann (Fahrzeugketten × Umläufe am Tag, gedeckelt durch Fahrpersonal, abzüglich laufender Verträge in seiner
+   Reichweite). Gesamturteil: Summe der Büros gegen die geforderte Tagesmenge. Nur Anzeige – am Vertrag ändert sich nichts. */
+function contractFeasibility(c) {
+  const o = { id: "probe", from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay, pk: PAY_K, cid: c.cid, gi: c.gi, created: S.time,
+    deadline: S.time + 1200, expire: S.time + 1200, refDist: c.refDist, refTime: c.refTime, pick: Object.assign({}, c.pick), drop: Object.assign({}, c.drop) };
+  let vars = []; try { vars = buildVariants(o); } catch (e) { vars = []; }
+  const fits = (f, l) => { const t = vType(f.type); if (!t || t.mode !== l.mode) return false;
+    if (typeof isDoorMode === "function" && isDoorMode(l.mode)) return canCarry(t, o.cargo, 0, l.maxHop) && t.cap * D2D_TRIPS >= o.weight;
+    return canCarry(t, o.cargo, o.weight, l.maxHop); };
+  const modesTxt = v => [...new Set(v.legs.map(l => MODE_VEH[l.mode] || l.mode))].join(" + ");
+  const fast = vars.slice().sort((a, b) => a.time - b.time)[0];
+  const rows = (S.bases || []).map(b => {
+    const name = N[b.node] ? N[b.node].short : b.node, km = Math.round(hav(N[b.node], N[c.from])), reach = typeof reachKm === "function" ? reachKm(b) : 400;
+    if (km > reach) return { name, ok: false, n: 0, why: "Zu weit weg: " + km + " km bis " + N[c.from].short + " (Reichweite " + Math.round(reach) + " km)" };
+    const drivers = typeof roleCount === "function" ? roleCount(b, "fahr") : 1;
+    if (!drivers) return { name, ok: false, n: 0, why: "Kein Fahrpersonal im Büro" };
+    const fleet = (b.vehicles || []).map(u => S.fleet.find(f => f.uid === u)).filter(Boolean);
+    let best = null;
+    vars.forEach(v => { const sets = Math.min(...v.legs.map(l => fleet.filter(f => fits(f, l)).length));
+      if (sets > 0 && v.time <= 1200) { const per = clamp(Math.floor(960 / Math.max(60, v.time * 2)), 1, 4), n = sets * per; if (!best || n > best.n) best = { n, v }; } });
+    if (!best) return { name, ok: false, n: 0, why: fast && fast.time > 1200 ? "Strecke dauert länger als die Tagesfrist (" + Math.round(fast.time / 60) + " h)" : "Kein passendes Fahrzeug" + (fast ? " (braucht " + modesTxt(fast) + ")" : "") };
+    const team = (typeof driverCap === "function" ? driverCap(b) : drivers) + (typeof assignedDriverIds === "function" ? assignedDriverIds(b).size : 0);
+    const inReach = activeContracts().filter(k => N[k.from] && hav(N[b.node], N[k.from]) <= reach).reduce((x, k) => x + k.per, 0);
+    const n = Math.max(0, Math.min(best.n, Math.max(1, team)) - inReach);
+    return n > 0 ? { name, ok: true, n: Math.min(n, c.per), why: "Kann " + Math.min(n, c.per) + " von " + c.per + " Fahrten täglich übernehmen · " + modesTxt(best.v) + (inReach ? " · " + inReach + " Vertragsfahrten laufen schon" : "") }
+      : { name, ok: false, n: 0, why: "Ausgelastet: " + inReach + " Vertragsfahrten täglich laufen schon" };
+  });
+  const sum = rows.reduce((a, r) => a + r.n, 0);
+  const ok = rows.length ? sum >= c.per : fleetCanDo(o);
+  const sumTxt = rows.length ? (ok ? "Machbar: Die Büros schaffen zusammen " + c.per + " von " + c.per + " Fahrten täglich."
+      : "Nicht machbar: zusammen nur " + sum + " von " + c.per + " Fahrten täglich – es droht die Vertragsstrafe.")
+    : ok ? "Kein Büro zum Nachfragen – die Flotte hätte passende Fahrzeuge, geplant wird aber nur von Hand." : "Kein Büro und kein passendes Fahrzeug in der Flotte.";
+  return { ok, sum, rows, sumTxt, t: S.time };
+}
+/* Daumen als Vektorbild (Form nach Material Icons „thumb_up“, Apache-2.0), grün = ja, rot und gedreht = nein */
+const FEAS_THUMB = ok => `<i class="fth ${ok ? "yes" : "no"}"><svg viewBox="0 0 24 24" aria-label="${ok ? "ja" : "nein"}"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></i>`;
+function contractFeasHTML(m) {
+  const F = m.dec.feas;
+  if (!F) return `<button class="dfeas" data-feas="${m.id}">🔎 Machbarkeit prüfen <small>Rücksprache mit den Büros</small></button>`;
+  return `<div class="feas ${F.ok ? "yes" : "no"}"><div class="feas-sum">${FEAS_THUMB(F.ok)}<b>${esc(F.sumTxt)}</b></div>
+    ${F.rows.map(r => `<div class="feas-row ${r.ok ? "yes" : "no"}">${FEAS_THUMB(r.ok)}<span><b>${esc(r.name)}</b><small>${esc(r.why)}</small></span></div>`).join("")}
+    <small class="feas-t">Stand ${clock(F.t)}</small></div>`;
+}
 function contractOrder(c) {
   const o = { id: "A" + (S.seq++), from: c.from, to: c.to, cargo: c.cargo, weight: c.weight, pay: c.pay, pk: PAY_K, cid: c.cid, gi: c.gi,
     deadline: Math.round(S.time + 20 * 60), shipper: c.client, desc: c.desc + " · Rahmenvertrag", created: S.time,
