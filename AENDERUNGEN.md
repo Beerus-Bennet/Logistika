@@ -1,3 +1,18 @@
+## v368 – Weite Übersicht flüssiger: Fernstufen für Gras, Schatten, Kleinteile und Bäume
+Zuerst als v367 gebaut; nach dem Merge von PR 85 (ebenfalls v367) auf v368 umnummeriert.
+
+**Meldung Bennet:** Das Spiel ruckelt in der Rauszoom-Ansicht jetzt sehr.
+
+**Ursache (gemessen im Testbrowser, `R.stats`):** Seit v366 lässt sich überall bis Abstand 450 herauszoomen. Dort zeichnete das Spiel je Bild rund 1,39 Mio. Dreiecke und noch einmal 1,22 Mio. im Schattendurchgang – bei Abstand 54 sind es 93.000 und 65.000. Alles lief in voller Darstellung, obwohl man Gras, Schatten und Baumdetails aus dieser Höhe nicht erkennt.
+
+**Lösung (`worldview.js`, `gl3d.js`; nur Darstellung):** Abstandsabhängige Fernstufen in `worldStep` (`WV.far`), jeweils mit etwas Abstand zwischen Ein- und Ausschalten, damit an der Grenze nichts flackert:
+- ab Abstand 110 keine Grasbüschel,
+- ab 130 kein Schattendurchgang (`R.noShadow`),
+- ab 170 zeichnen die Kulissenbäume ein Fernmodell (`treeFarMesh`/`treeFarSet`: Stamm und Krone in Größe und mittleren Farben des echten Baums, rund 40 statt mehrerer hundert Dreiecke; `g.hide` an der Instanzgruppe),
+- ab 230 keine Büsche und Kleinteile.
+In der Ich-Perspektive (Hochsitz, Sägen) gilt immer die volle Darstellung. Beim Hineinzoomen ist alles wieder da.
+
+**Geprüft:** Testbrowser (Chromium, Software-Grafik, 390 × 700, Gebiete freigeschaltet). Dreiecke je Bild einschließlich Schatten: Abstand 450 von 2,61 Mio. auf 0,59 Mio.; Abstand 300 von 1,83 Mio. auf 0,42 Mio.; Abstand 150 von 0,64 Mio. auf 0,25 Mio.; Abstand 54 und 30 unverändert. Hin und zurück (54 → 200 → 450 → 54): Stufen schalten wie vorgesehen, danach wieder 93 von 93 Graskacheln, Schatten und alle 45 Baumgruppen in voller Darstellung; Bilder gesichtet, keine Konsolenfehler. `floating-island-v358`, `inselrand-v366`, `fixes-v354`, `shadow.test.js` bestanden. **Nicht geprüft:** am Handy – ob es dort jetzt flüssig genug ist, zeigt erst der Test auf dem Gerät. **Grenzen:** Es bleiben rund 0,59 Mio. Dreiecke bei voller Rauszoom-Stufe; ein großer Teil davon sind die fällbaren Bäume, die noch ihr volles Modell zeigen. Beim Über- und Unterschreiten der Stufen wechselt die Darstellung sichtbar (Schatten und Gras verschwinden).
 ## v367 – Jagdbewegung, Wolken, stimmiges Trefferbild und bedienbarer Kaufbeleg
 
 **Ursachen und Lösung:** Starre Zwischenknicke im Tierfall durch stetiges Entspannen aus der tatsächlichen Gangpose, anfängliche Hufstütze und Drehung um den Schwerpunkt ersetzt. Fragezeichen am Hochsitz entfernt; Jagdaufträge als zunächst geschlossenes Dropdown unter dem Revier. Wolken aus dem geprüften Video mit vollständig projizierter Form/Ausrichtung statt bildschirmparallelen Streifen.
