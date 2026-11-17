@@ -1971,7 +1971,9 @@ const FWM = (() => {
     const w = sst(1.0, 3.2, Math.abs(z)), sh = 1 - sst(1.1, 2.3, Math.abs(z - 0.12));
     const xs = -6.5 - 2.6 * w + 2.5 * sh, len = 1.4 + 2.2 * w - 0.85 * sh;
     h *= Math.max(1 - sst(xs, xs + len, x), sst(6.4, 9.0, Math.hypot(x, z)));
-    return h - 0.06 * (1 - sst(0, 0.35, h));
+    h -= 0.06 * (1 - sst(0, 0.35, h));
+    /* v375: Sichtbarer Seeauslauf mündet in den bisherigen Bergbach. */
+    return typeof ALPINE!=="undefined" ? ALPINE.cutChannel(X,Z,h*k,true)/k : h;
   }
   /* Höhe in Weltmaß an einem Weltpunkt (Bäume, Prüfungen) */
   function springHeightW(X, Z) { const l = toL(X, Z); return hillH(l[0], l[1]) * sfr().k; }

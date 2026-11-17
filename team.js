@@ -211,6 +211,7 @@ function navBuild() {
   const lakePaths = typeof LAKE_WAY !== "undefined" ? [LAKE_STEM, LAKE_WAY, LAKE_EAST] : [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
+    if(typeof ALPINE!=="undefined"&&ALPINE.contains(cx,cz)){blk[i]=1;continue;} /* v375: kein Weg durch Berg oder Quellsee */
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
     if (creeks.some(c => distLine(cx, cz, c) < (c === FWORLD.creek ? 2.1 : 1.5)) || (FWORLD.spring && Math.hypot(cx - FWORLD.spring[0], cz - FWORLD.spring[1]) < 7.5)) { if (onDeck(cx, cz)) { cost[i] = 0.45; continue; } blk[i] = 1; continue; }
     /* v109: Wege lohnen sich – quer durch den Wald ist teuer, über die Wiese etwas teurer, im Hof fast gleich */

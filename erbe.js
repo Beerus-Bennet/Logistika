@@ -236,6 +236,7 @@ function springHillNear(x, z) {
   return best;
 }
 function inSpringHill(x, z, m) {
+  if(typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))return true; /* v375: keine Wege oder Pflanzplätze im Gebirge */
   const H = FWORLD.springHill; if (!H) return false;
   return springHillNear(x, z).d < (m || 0);
 }
