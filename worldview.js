@@ -679,6 +679,7 @@ const GROUND_A = { moss: 0.72, damp: 0.7, leaf: 0.78, needle: 0.72, earth: 0.8, 
    Grasdecke an; Erdschicht, Felsflanken und geschlossener Kiel bilden Volumen.
    Ein statisches Netz, keine zusätzlichen Bäume außerhalb der Spielfläche. */
 const APRON = { margin: 42, depth: 210, cell: 4 };
+const APRON_RINGS = [0, .12, .24, .36, .48, .6, .72, .86];        /* v385: Grasringe zwischen Weltkante (0) und Abbruch (1) */
 /* v366: Abstand der Inselkante vom Weltmittelpunkt in Richtung a – eine Formel für Insel, Baumsaum und Bachenden. */
 function apronRim(a) {
   const W = WGRID, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, dx = Math.cos(a), dz = Math.sin(a);
@@ -723,22 +724,22 @@ function rimFall(E,w){const b=new FM.MB(),[x,z]=E.end,[ux,uz]=E.dir,N=24,H=95;
  const at=(t,p)=>[p[0]+ux*3*t+(p[0]-x)*(-.22*t),.03-H*t*t,p[2]+uz*3*t+(p[2]-z)*(-.22*t)];
  for(let k=0;k<N;k++)for(let j=1;j<lip.length;j++){const t=k/N,u=(k+1)/N,p=lip[j-1],q=lip[j],s=(p[7]+1)/2,v=(q[7]+1)/2,A=at(t,p),B=at(t,q),C=at(u,q),D=at(u,p),ca=[t,s,1],cb=[t,v,1],cc=[u,v,1],cd=[u,s,1];b.triV(A,B,C,ca,cb,cc);b.triV(A,C,D,ca,cc,cd);b.triV(A,C,B,ca,cc,cb);b.triV(A,D,C,ca,cd,cc);}return b;
 }
-/* v366: Baumsaum auf dem Randstreifen der Insel: vereinfachte Nadel- und Laubbäume, dichter, wo innen Wald steht;
-   Bachläufe und die Kante selbst bleiben frei. Eigenes Netz (das Inselnetz behält sein Dreiecksbudget), fester Zufall. */
-function worldApronTrees(keep) {
-  const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, rnd = erbeRng(36601);
-  const greens = [0x2f5f33, 0x3b7038, 0x4a8440, 0x5a9147, 0x44763a];
+/* v366: Baumsaum auf dem Randstreifen der Insel, dichter, wo innen Wald steht; Bachläufe und die Kante bleiben frei.
+   v385: Statt einfacher Kegel/Kugeln (Platzhalter, ohne Wind) dieselben Waldbäume wie innen – gleiche Modelle, Wind und
+   Fernstufen (WV.bgG). Hier nur die Standorte; eingesetzt werden sie in worldBuild nach dem Leeren der Instanzgruppen. */
+function worldApronTreeSpots(keep) {
+  const W = WGRID, cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, rnd = erbeRng(36601), out = [];
   for (let n = 0; n < 1100; n++) {
     const a = rnd() * Math.PI * 2, dx = Math.cos(a), dz = Math.sin(a), t = Math.min(hx / Math.max(1e-6, Math.abs(dx)), hz / Math.max(1e-6, Math.abs(dz)));
     const room = apronRim(a) - t - 5; if (room < 3) { rnd(); rnd(); rnd(); rnd(); continue; }
     const d = 1.5 + rnd() * room, x = cx + dx * (t + d), z = cz + dz * (t + d), ex = clamp(cx + dx * t, W.x0 + 2, W.x1 - 2), ez = clamp(cz + dz * t, W.z0 + 2, W.z1 - 2);
-    const fk = typeof forestK === "function" ? forestK(ex, ez) : 0, pick = rnd(), sc = 0.85 + rnd() * 0.7, g = greens[Math.floor(rnd() * greens.length)];
-    if (pick > 0.4 + 0.6 * fk || (keep && !keep(x, z)) || (typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))) continue;
-    b.box(0.3 * sc, 1.4 * sc, 0.3 * sc, 0x5d4430, { x, z });
-    if ((n * 7) % 10 < 4 + 4 * fk) { b.cone(1.45 * sc, 3.3 * sc, 6, g, { x, y: 1.0 * sc, z }); b.cone(1.0 * sc, 2.5 * sc, 6, g, { x, y: 2.9 * sc, z }); }
-    else b.ico(1.7 * sc, g, { x, y: 2.8 * sc, z });
+    const fk = typeof forestK === "function" ? forestK(ex, ez) : 0, pick = rnd(), r2 = rnd(), r3 = rnd();
+    if (pick > 0.4 + 0.6 * fk || (keep && !keep(x, z)) || (typeof ALPINE!=="undefined"&&ALPINE.contains(x,z)) || islandGap(x, z) < 2.5) continue;
+    const con = (n * 7) % 10 < 4 + 4 * fk, sp = con ? (r2 < 0.5 ? "kiefer" : "fichte") : ["buche", "eiche", "birke"][Math.floor(r2 * 3)];
+    const fz = sp === "eiche" ? 2 + Math.floor(r3 * 2) : 2 + Math.floor(r3 * 3);
+    out.push({ k: "apron" + n, sp, fz, fv: n % 3, fs: +(0.85 + r3 * 0.3).toFixed(2), fx: +x.toFixed(2), fzz: +z.toFixed(2), fry: +(a * 3.7 % 6.283).toFixed(2) });
   }
-  return b;
+  return out;
 }
 function worldApron(gcAt) {
   const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2;
@@ -761,25 +762,29 @@ function worldApron(gcAt) {
     /* v361: Die Grasdecke hat zwei Zwischenringe und nimmt dort dieselbe Bodenfarbe wie die Welt (worldGroundCol läuft
        über die Kante weiter). Vorher ging sie nach der Naht sofort in ein einheitliches, dunkleres Grün über – als gerade
        Linie sichtbar. Erst an der Abbruchkante wird das Gras etwas satter. */
-    const at = t => [x + (ox - x) * t, z + (oz - z) * t], q1 = at(.33), q2 = at(.66);
+    /* v385: Acht Ringe (etwa so dicht wie die Randpunkte) statt zwei. Vorher spannte jede Farbe der Kante ein 14 m langes,
+       4 m schmales Dreieck nach außen – das ergab helle und dunkle Streifen quer über den Rand. Jetzt trägt jeder Ring die
+       flächige Bodenfarbe seines Ortes (worldGroundCol), die Flecken liegen rund statt gestreckt. */
+    const at = t => [x + (ox - x) * t, z + (oz - z) * t], RT = APRON_RINGS;
     const ground = (q, t) => typeof worldGroundCol === 'function' ? mix(seam, G3.col(worldGroundCol(q[0], q[1])), Math.min(1, t * 2.2)) : seam;
-    P.push([[x, 0, z], [q1[0], 0, q1[1]], [q2[0], 0, q2[1]], [ox, -.35, oz],
+    P.push([[x, 0, z], ...RT.slice(1).map(t => { const q = at(t); return [q[0], 0, q[1]]; }), [ox, -.35, oz],
       [cx + (ox - cx) * .998, -3.2, cz + (oz - cz) * .998],
       [cx + (ox - cx) * (.985+fault(1)*.015), -32 + fault(1)*4, cz + (oz - cz) * (.985+fault(1)*.015)],
       [cx + (ox - cx) * (.93+fault(2)*.04), -65 + fault(2)*7, cz + (oz - cz) * (.93+fault(2)*.04)],
       [cx + (ox - cx) * (.65+fault(3)*.06), -132 + fault(3)*8, cz + (oz - cz) * (.65+fault(3)*.06)],
       [cx + (ox - cx) * (.25+fault(4)*.04), -APRON.depth + 12 + fault(4)*4, cz + (oz - cz) * (.25+fault(4)*.04)]]);
-    C.push([seam, ground(q1, .33), ground(q2, .66), mix(ground([ox, oz], 1), grass, .4), soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => c.map(v => v * (k<3?1:k<5?shade:.9+fault(k)*.16))));
+    const G = RT.length;
+    C.push([seam, ...RT.slice(1).map(t => ground(at(t), t)), mix(ground([ox, oz], 1), grass, .4), soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => { const o = k < G ? Math.min(k, 2) : k - G + 3; return c.map(v => v * (o<3?1:o<5?shade:.9+fault(o)*.16)); }));
     /* Nahtfarbe unverändert, damit es an der bisherigen Welt keine Farblinie gibt. */
     C[C.length - 1][0] = seam;
     /* v375: Gebirge wächst aus der Insel, keine schwebende Platte über dem alten Grasrand. */
-    if(typeof ALPINE!=="undefined")for(let k=0;k<5;k++){const p=P[P.length-1][k],h=ALPINE.height(p[0],p[2]);if(k>=3)p[1]+=h;if(h>.1)C[C.length-1][k]=k<4?ALPINE.color(p[0],p[2],h):soil;}
+    if(typeof ALPINE!=="undefined")for(let k=0;k<G+2;k++){const p=P[P.length-1][k],h=ALPINE.height(p[0],p[2]);if(k>=G)p[1]+=h;if(h>.1)C[C.length-1][k]=k<=G?ALPINE.color(p[0],p[2],h):soil;}
   }
   for (let i = 0; i < P.length; i++) {
     const j = (i + 1) % P.length;
     for (let k = 0; k < P[i].length - 1; k++) {
       /* v375: Die Bergdecke ersetzt hier den Grasring; keine überlappenden Höhenflächen. */
-      if(k<3&&typeof ALPINE!=="undefined"){if([P[i][k],P[j][k],P[j][k+1],P[i][k+1]].every(p=>ALPINE.replacesGround(p[0],p[2])))continue;}
+      if(k<APRON_RINGS.length&&typeof ALPINE!=="undefined"){if([P[i][k],P[j][k],P[j][k+1],P[i][k+1]].every(p=>ALPINE.replacesGround(p[0],p[2])))continue;}
       b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]);
       b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]);
     }
@@ -980,7 +985,7 @@ function worldStatic() {
   /* v366: Baumsaum auf dem Randstreifen und Wasserfälle an den Bachenden (hängen als Kinder an der Insel) */
   try { if (WV.apron) {
     const ends = [creekToRim(FWORLD.creek), creekToRim(LAKE_CREEK)];
-    R.addChild(WV.apron, fnode(R.mesh(worldApronTrees((x, z) => ends.every(E => distLine(x, z, E.line) > 5))), { shadow: false }));
+    WV.apronSpots = worldApronTreeSpots((x, z) => ends.every(E => distLine(x, z, E.line) > 5));
     ends.forEach((E,i) => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, i===0?1.725:1.15)), { shadow: false,water:6,alpha:.98,flow:[0,.55,1,-250] })));
   } } catch (e) { console.warn("Inselrand:", e); }
   WV.far = null; WV.bgFar = null;                      /* v368: neue Knoten sind sichtbar – Fernstufen neu bestimmen */
@@ -999,6 +1004,10 @@ function worldStatic() {
     }
     if (c.trees.length) { const [i, j] = key.split(",").map(Number); WV.bgChunks.set(key, { trees: c.trees, all: c.trees.slice(), x0: WGRID.x0 + i * CH, z0: WGRID.z0 + j * CH }); }
   }
+  /* v385: Baumsaum am Inselrand in dieselben Baumgruppen wie der Wald (Modelle, Wind, Fernstufe) */
+  (WV.apronSpots || []).forEach(t => { const key = t.sp + ":" + t.fz + ":" + t.fv; let g = WV.bgG.get(key);
+    if (!g) { g = R.instGroup(fmesh("wt:" + key, () => FWM.tree(t.sp, t.fz, t.fv)), { sway: 0.22 }); WV.bgG.set(key, g); }
+    g.add(t.k, t.fx, t.fzz, t.fry, t.fs); });
   { const tB = performance.now(); for (const c of WV.bgChunks.values()) bgChunkBuild(c);
     let n = 0; WV.bgG.forEach(g => { n += g.n; });
     WV.bgInfo = { trees: n, types: WV.bgG.size, ms: +(performance.now() - tB).toFixed(0) }; }
