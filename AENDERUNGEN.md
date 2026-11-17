@@ -1,3 +1,10 @@
+## v388 – Pausenende: Arbeiter pendeln nicht mehr hin und her
+
+**Ursache (gemessen):** Beim Pausenende (und Pausenbeginn) gehen alle Kräfte gleichzeitig durch die nur eine Person breite Werkzeuggasse des Camps und über schmale Wege. Der gemeinsame Bewegungsraum (`peopletraffic.js`, v346) ließ Kollegen einander seitlich ausweichen. Hofkräfte folgen aber fest ihrer Route: `staffFollow` setzt sie in jedem Bild auf den Weg zurück, im nächsten Bild wichen sie wieder aus – ein Pendeln mit bis zu 0,6 Einheiten je Bild. Gleichzeitig stand die Uhr ihres Wegs still (verzögert), die Übergabe am Fach begann nicht. Gemessen mit 9 Kräften nach Pausenende: 13–69 Richtungswechsel je Kraft; im Testbrowser (8 Kräfte) bis 11.
+
+**Lösung:** Hofkräfte weichen einander nicht mehr aus (`free` in `peopletraffic.js`: Paar aus zwei Hofkräften ist frei). Kollegen gehen Schulter an Schulter aneinander vorbei; gegenüber Bewohnern und Rädern gilt die Kollision unverändert. Keine Spiel- oder Speicherlogik geändert.
+
+**Geprüft:** Neuer Test „v388 Pausenende: niemand pendelt im Camp hin und her“ in `worker-motion-v351.test.js` (9 Kräfte, höchstens 3 Richtungswechsel – die Wenden des Wegs selbst; vorher 13–69, nachher 1–3). Testbrowser (`?test`, 8 Kräfte, echtes Pausenende): vorher 10/11 Richtungswechsel bei zwei Kräften, nachher höchstens 1. `worker-motion-v351` (14), `peopletraffic-v346` (8), `village-life-v343`, `fixes-v354`. **Nicht geprüft:** Handy/Safari. Hofkräfte können sich jetzt kurz überlappen, wenn sie sich auf engem Weg begegnen. Begegnet eine Hofkraft einem Bewohner auf engem Weg, kann dasselbe Ausweichen noch auftreten (seltener, nicht gemessen).
 ## v387 – Rahmenvertrag: „Machbarkeit prüfen“ mit den Büros
 
 **Wunsch:** Vor dem Unterschreiben eines Rahmenvertrags Rücksprache mit den Büros halten – haben ein oder mehrere Büros Kapazität? Grüner Daumen = ja, roter Daumen = nein.
