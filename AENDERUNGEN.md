@@ -1,3 +1,11 @@
+## v389 – Weißer Hirsch: nur noch eine Anzeige (Kleeblätter)
+
+**Ursache:** Beim Antippen des weißen Hirschs (und Rehs/Pakets) erschienen zwei Texte übereinander: der Zusatzspruch („Ein Glücksbringer!“, „Wie friedlich …“, „Ein Paket für dich!“) und die Kleeblatt-Anzeige „🍀 +3 · Weißer Hirsch“.
+
+**Lösung (`worldview.js`, `worldEvAct`):** Der Zusatzspruch entfällt; es bleibt die Kleeblatt-Anzeige samt fliegenden Kleeblättern, Erfahrung und Münzen. Belohnungen unverändert.
+
+**Geprüft:** Syntax; Code-Pfad gelesen (die Kleeblatt-Zeile kommt aus `farmClover` → `farmCloverFly`, unabhängig vom entfernten Text). **Nicht geprüft:** im Testbrowser/auf dem Handy (kein Hirsch-Ereignis ausgelöst).
+
 ## v388 – Pausenende: Arbeiter pendeln nicht mehr hin und her
 
 **Ursache (gemessen):** Beim Pausenende (und Pausenbeginn) gehen alle Kräfte gleichzeitig durch die nur eine Person breite Werkzeuggasse des Camps und über schmale Wege. Der gemeinsame Bewegungsraum (`peopletraffic.js`, v346) ließ Kollegen einander seitlich ausweichen. Hofkräfte folgen aber fest ihrer Route: `staffFollow` setzt sie in jedem Bild auf den Weg zurück, im nächsten Bild wichen sie wieder aus – ein Pendeln mit bis zu 0,6 Einheiten je Bild. Gleichzeitig stand die Uhr ihres Wegs still (verzögert), die Übergabe am Fach begann nicht. Gemessen mit 9 Kräften nach Pausenende: 13–69 Richtungswechsel je Kraft; im Testbrowser (8 Kräfte) bis 11.

@@ -143,3 +143,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v386: Fliegender Händler nach Bedarf (`farmTraderNeed`/`farmTraderDeals` in `erbe.js`): Auftragshilfe für Fehlmengen, Ankauf nach Geldlage (Richtwert 20.000·(1+Level/10)²), Kleeblatt-Paket/Luckybox/Edelholz für Wohlhabende; Grund-Marke `fr-why` in `openTrader`.
 - v387: Rahmenvertrag – „Machbarkeit prüfen“ (`contractFeasibility`/`contractFeasHTML` in `goals.js`, Knopf `data-feas` in `extras.js`): je Büro Reichweite, Fahrpersonal, Fahrzeugkette, 20-h-Frist, freie Fahrten/Tag; grüner/roter Daumen (`.feas`, `.fth`).
 - v388: Pausenende ohne Pendeln – Hofkräfte weichen einander in `peopletraffic.js` nicht mehr aus (Ausweichen kollidierte mit `staffFollow`); Test „v388 Pausenende“ in `worker-motion-v351.test.js`; Merkpunkt unter „Bekannte Fehlerquellen“.
+
+- v389: Weißer Hirsch/Reh/Paket – Zusatzspruch entfernt, nur die Kleeblatt-Anzeige bleibt (`worldEvAct` in `worldview.js`).

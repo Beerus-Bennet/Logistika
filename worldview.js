@@ -2892,7 +2892,8 @@ function worldEvAct(s) {
     case "lieferung": worldParcelOpen(); break;
     case "hirsch": case "reh": {
       const r = farmEvReward(s.act);
-      if (r) { floatText(p[0], p[1] - 20, s.act === "hirsch" ? "Ein Glücksbringer!" : s.act === "reh" ? "Wie friedlich …" : "Ein Paket für dich!", "gold"); reward(r, p[0], p[1]); }
+      /* v389: kein zusätzlicher Spruch mehr – die Kleeblatt-Anzeige („🍀 +3 · Weißer Hirsch“) reicht */
+      if (r) reward(r, p[0], p[1]);
       break;
     }
     case "schwarm": if (typeof openFishingAt === "function") openFishingAt(c.data.g); break;
