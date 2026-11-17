@@ -5212,3 +5212,28 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #farmSide #fbShop{width:60px;height:60px}
 #farmSide .fbtn i{font-size:23px}
 #farmSide .fbtn span{font-size:9.5px}
+
+/* ---------------------------------------------------------------------
+   v380: Trefferbild – Todesursache über der Organliste
+   --------------------------------------------------------------------- */
+.hu-xr .xr-cause{margin:8px 0 10px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.07);border-left:4px solid #f0a040;font-size:13px;line-height:1.4}
+.hu-xr .xr-cause b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+
+/* ---------------------------------------------------------------------
+   v383: Waffenschrank (weapons.js) und Munitionsanzeige im Hochsitz
+   --------------------------------------------------------------------- */
+.hu-fire .hu-am{position:absolute;right:-4px;top:-6px;font-style:normal;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:#fff7e0;color:#3b2a14;border:2px solid var(--ink,#1c1c24)}
+.wp-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.wp-card{display:flex;gap:10px;padding:10px;border:3px solid var(--ink,#1c1c24);border-radius:16px;background:#fffaf0;box-shadow:3px 3px 0 var(--ink,#1c1c24)}
+.wp-card.sel{background:#e8f6e2}.wp-card.gold{background:linear-gradient(135deg,#fff3c4,#ffe08a)}.wp-card.lock{opacity:.75;background:#eee}
+.wp-img{flex:0 0 118px;height:84px;display:flex;align-items:center;justify-content:center;font-size:34px}
+.wp-img .ic{width:118px;height:84px}.wp-img .ic img{width:100%;height:100%;object-fit:contain}
+.wp-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:12px}
+.wp-main>b{font-size:15px}.wp-main small{opacity:.7}
+.wp-eig{display:flex;gap:6px;font-size:16px}.wp-eig .no{opacity:.28;filter:grayscale(1)}
+.wp-st{display:flex;flex-direction:column;gap:2px;margin:2px 0}
+.wp-st span{display:flex;align-items:center;gap:6px;font-weight:700;font-size:11px}
+.wp-st .wp-bar{flex:0 0 70px;height:7px;border-radius:9px;background:#e3d9c4;overflow:hidden;display:inline-block}.wp-bar b{display:block;height:100%;background:#e0852a}
+.wp-st em{font-style:normal;font-weight:600;opacity:.75;margin-left:auto}
+.wp-main p{margin:2px 0;line-height:1.35}.wp-real{font-size:11px;opacity:.7}
+.wp-main .btn{align-self:flex-start;margin-top:4px}

@@ -6,6 +6,34 @@
 
 **Geprüft:** tatsächliche Wasserquerschnitte/Ufer/Falllippen, alter Weltboden, Baummigration, 1.800 Tierschritte, 200 Zoomwechsel und festes Grafikbudget. Vollständiges Spiel im mobilen Chromium mit 24 Zoomwechseln ohne Meshwachstum/Kontextverlust, ältere Spielobjekte erhalten. Bestehende Arbeiter- und Wassertests bestanden. Kein echtes iPhone. Bilder, Messdaten und Grenzen: [docs/WASSERLANDSCHAFT-v384.md](docs/WASSERLANDSCHAFT-v384.md).
 
+
+## v383 – Waffenschrank: kaufbare Jagdwaffen, Magazin, Schrot, Durchschuss, Sonderwaffe im Lucky-Rad
+
+**Wunsch:** Ein Waffenshop mit realen Waffen für verschiedene Situationen: Mehrfachschüsse (kosten Bewertung), starke Gewehre mit garantiertem Durchschuss, Handfeuerwaffen wie die Glock 17 für den Fasan in der Luft, eine besondere Waffe nur im Lucky-Rad. Recherche und Quellen: `docs/WAFFEN-v383.md`. „Schießstand“ = Hochsitz (Annahme, im Bericht benannt).
+
+**Lösung:** Neu `weapons.js` (Katalog mit 10 Waffen, Spielstand `S.farm.guns`, Kauf, Energie/Eignung, 3D-Modelle im Hof-Stil, Waffenschrank-Fenster). `hunt.js`: gewählte Waffe bestimmt Magazin, Feuerfolge, Zoomstufen, Geschwindigkeit/Flugzeit, Energie (`gunZone`, neue Zone `schwach`), Schrotgarbe, Reichweite, Wild-Abstand für Kurzwaffen (`nearD`), Eindringtiefe (`stop`/`thru`, Ausschussloch), Nachschuss-Abzug und Sonderbonus in `goHarvest`, Waffenwechsel im Stand, Trefferbild mit Waffe/Durchschuss, waffenabhängiger Knall. `lucky.js`: neuer legendärer Preis „Sonderwaffe: Goldjagd“, Symbol, Legendär-Anteil verdoppelt (Bulli-Chance gleich). CSS-Block `wp-*` am Ende von `style.css`.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader): Waffenschrank mit allen 10 Karten und 3D-Bildchen; echte Schüsse über `fire()` mit Glock (17/17, 0,17 s, Fasan erlegt, Hirsch „zu schwach“), Flinte (24 Körner, Fasan erlegt), Revolver, Doppelbüchse (2 Schuss, Nachladen), Sonderwaffe, M18; Lucky-Rad mit neuem Preis und Symbol; Bergung/Trefferbild. `weapons-v383.test.js` (7), `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Handy/Safari; Balance (Preise, Reichweiten, Medaillen-Abzug) nur nach Gefühl; Fasan im Flug mit Pistole im echten Spielablauf; Kauf mit echtem Spielstand-Neuladen; Magazin je Stand (kein Munitionskauf); Hirsch-/Keiler-Verhalten mit allen Waffen einzeln.
+
+## v382 – Einschussloch am erlegten Stück
+
+**Ursache:** In der Bergungsansicht war nirgends zu sehen, wo die Kugel eingetreten ist; das Loch gab es nur als Markierung im Trefferbild.
+
+**Lösung (`hunt.js`, `woundSpot`, `woundMesh`, `addWound`):** Beim Treffer entsteht am passenden Knoten (Rumpf, Hals oder Haupt; Läufe ausgenommen) eine kleine, gedämpfte Stelle auf der Decke: struppiges dunkles Haar, schwacher rotbrauner Rand, dunkles Loch – dort, wo der aufgezeichnete Schusskanal die Oberfläche trifft. Sie bewegt sich mit dem Tier und wird beim Abbau freigegeben. Bewusst kinderfreundlich: kein Blutfleck, keine Spritzer. Das Stück fällt auf die Seite ohne Einschuss (`fallSide`), sodass die Wunde oben liegt. Nur Darstellung und Fallseite; Wertung, Fluchtweg und Spielstand unverändert. Baut auf v381 (PR #98) auf.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Herzschuss Hirsch und Keiler, Wunde in der Bergungsansicht gesichtet; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Fasan, Schüsse in Hals/Haupt in der Bergung, Handy/Safari; steile Schüsse vom Turm treffen meist den Rücken, dort liegt die Wunde dann oben auf der Rückenlinie.
+
+## v381 – Trefferbild: Todesursache, Kanal durch den ganzen Hals, Hals-Organe passend zum Netz
+
+**Ursache:** (1) Ein Trägerschuss ohne Treffer an Wirbel oder Adern wurde als „knapp verfehlt“ gezeigt, das Stück fiel aber trotzdem sofort um – der Spieler sah nicht, woran es verendet. (2) Beim Trägerschuss endete der Kanal 20 cm hinter dem Einschuss mitten im Tier; beim Keiler lagen die Halsorgane (nur geschätzte Maße) neben dem Kanal, es wurde nichts getroffen.
+
+**Lösung (`hunt.js`):**
+- **Todesursache** (`deathCause`) als Kasten über der Organliste: Gehirn, Wirbelsäule/Rückenmark, Halsschlagader/Drosselvene, Luftröhre, Herz, Lunge oder „nur Halsmuskulatur – kein sauberer Schuss“.
+- **Verhalten:** Trägerschuss mit Wirbelsäule: sofort tot (wie bisher). Mit Adern/Luftröhre: kurze Flucht (`runL` 3–9). Nur Weichteile: längere Flucht (8–18), Wirkung 65 % statt 100 %. Wertung (Trägerschuss, Erlegung, Medaille) unverändert – nur der Fluchtweg ist neu.
+- **Kanal:** läuft bei Trägerschüssen von Eintritt bis Austritt durch Hals (und ggf. Brustansatz).
+- **Organe im Hals** beim Keiler und Fasan aus dem echten Halsnetz gemessen (`neckExt`, `NECK_AX`); beim Keiler laufen Luft-/Speiseröhre und Schlagadern in den Brustansatz (Stich). Namen links/rechts getrennt.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Trägerschüsse Hirsch (8 Punkte: Wirbel → sofort, Adern/Luftröhre/Weichteile → Flucht) und Keiler (Stich), Trefferbilder gesichtet; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-thighs-v290`, `hunt-presentation-v315`. **Nicht geprüft:** Fasan-Trefferbild im Browser, Handy/Safari, Fluchtlängen im Spiel (nur Werte geprüft, nicht die Bewegung).
 ## v380 – Großer Bergsee-Wasserfall und natürliche Flussbögen
 
 **Wunsch:** Alten Quell-/Serpentinenbach entfernen, großen Wasserfall mit Auffangbecken und sinnvoll angebundenem Überlauf bauen. Hauptfluss stärker mäandrieren lassen, Wasserbreite konstant halten und Insel-Austritt nach Süden verschieben.

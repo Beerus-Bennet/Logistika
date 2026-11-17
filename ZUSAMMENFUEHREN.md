@@ -1,3 +1,7 @@
+## v384 – Konfliktauflösung nach PR #98–#100
+
+main 88684e6 vollständig integriert: Jagd381/382, Waffenschrank383 und zugehörige Assets bleiben erhalten. Gesamtversion384 und Landschaftsassets384; weapons/hunt/lucky/style behalten ihre Versionen aus main. Konflikte in Dokumentation unter Erhalt beider Inhalte gelöst, SW-Version384.
+
 ## v384 – Wasseranschlüsse, Inselkontur und Vorberge
 
 Basis main 5d0076e/v380, eigener Branch claude/wasserlandschaft-v384. Offene PRs #98/v381, #99/v382, #100/v383 bleiben separat; nicht aus alten Index-/SW-Dateien überschreiben. Gesamtversion384, nur alpine/worldview/woodmodels/erbe auf384. Andere Assetnummern aus main erhalten.
@@ -5,6 +9,10 @@ Basis main 5d0076e/v380, eigener Branch claude/wasserlandschaft-v384. Offene PRs
 ALPINE.riverLine() enthält den Überlauf und den bisherigen Hauptfluss als gemeinsame Kontrolllinie. CR nutzt level/bankY/bankCut; keine separate outlet-Fläche/flowLength und keine erhöhte Endkappe zurückbringen. ALPINE.replacesGround ist der feste Darstellungsbereich, contains die tatsächlich gesperrte Berg-/Talfläche: unterschiedliche Zwecke. worldGround und worldApron lassen den ersetzten Boden weg; das Bergnetz deckt seinen Bereich vollständig ab. Ein festes adaptives Geländenetz statt überblendeter unterschiedlicher Nah-/Fernformen. Tier-/Vegetations-Fernstufen bleiben.
 
 apronEdges/apronEdgeRadius gemeinsam für Inselkontur, islandClip und äußere Falllippen. rimFall übernimmt die Randpunkte des beschnittenen Wassers, Material water6/alpha.98; keine weißen Icos oder .4-Abstand an der Lippe. Östlicher Fall Halbbreite1.15, Hauptfluss1.725. F.mountains384 ergänzt die erhaltende Baumversetzung, F.river380 nicht zurücksetzen. Keine Preise/Aufträge/Bestände ändern. Neuer Prüfstand wasserlandschaft-v384.test.js/.browser.js und Bericht docs/WASSERLANDSCHAFT-v384.md; alte v375/v380-Geländestufenannahmen sind ersetzt.
+
+## v383 – Waffenschrank (stapelt auf PR #98/#99)
+
+Basis main 5d0076e (v380) plus PR #98 (v381, Todesursache/Halsorgane) und PR #99 (v382, Einschussloch) – diese bitte zuerst mergen. Neue Datei `weapons.js` (vor `hunt.js` laden, in `index.html` und `sw.js` ergänzt); `hunt.js`, `lucky.js`, `style.css` erweitert. Cache-Versionen: weapons/hunt/lucky/style 383, Gesamtversion 383. Details und Quellen `docs/WAFFEN-v383.md`.
 
 ## v380 – Neue Wasserführung und südliche Mäander
 
