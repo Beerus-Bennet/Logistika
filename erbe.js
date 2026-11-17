@@ -1708,26 +1708,64 @@ function farmMachFix(o) {
   o.broken = 0;
   if (farmEvOn("defekt")) { S.farm.ev.cur.until = S.time; }
 }
-/* Händler: drei Angebote */
+/* Händler: Angebote nach Bedarf.
+   v386: Vorher immer dasselbe (1 Walnussstamm für 95 €, 4 Stück verkaufen, 2 Kleeblätter) – für einen reichen Spieler bedeutungslos.
+   Jetzt schaut der Händler, was gerade fehlt: Für angenommene Hofbestellungen bringt er genau die fehlende Ware mit (Auftragshilfe).
+   Ist das Geld für das Spieler-Level knapp, kauft er Lagerware zu deutlich besseren Preisen an. Wohlhabenden bietet er große, beste
+   Ware, Kleeblatt-Pakete mit Rabatt und manchmal eine Luckybox. Mengen und Preise wachsen mit Level und Vermögen. */
+function farmTraderNeed() {
+  const L = typeof level === "function" ? level() : flv(), ref = 20000 * Math.pow(1 + L / 10, 2), m = S.money || 0;
+  const tight = m < ref * 0.35 ? 2 : m < ref ? 1 : 0, rich = m > ref * 5;
+  /* Fehlmengen aller angenommenen, noch nicht gelieferten Hofbestellungen (zusammengezählt, abzüglich Lager) */
+  const need = {};
+  (typeof farmOrders === "function" ? farmOrders() : []).filter(o => o.acc && o.farm && !o.farm.taken).forEach(o => {
+    for (const id in o.farm.items) need[id] = (need[id] || 0) + o.farm.items[id]; });
+  const miss = Object.keys(need).filter(id => FITEMS[id] && need[id] > farmInv(id)).map(id => ({ id, n: need[id] - farmInv(id) }))
+    .sort((a, b) => FITEMS[b.id].v * b.n - FITEMS[a.id].v * a.n);
+  return { L, ref, tight, rich, miss };
+}
 function farmTraderDeals() {
-  const lv = flv(), deals = [];
-  deals.push({ kind: "buy", id: "kirsche-setzling", n: "Edelholz-Stamm (Walnuss)", item: "edelholz", qty: 1, price: 95, i: "💎" });
-  const sellable = Object.keys(S.farm.inv).filter(id => FITEMS[id] && FITEMS[id].v >= 4 && farmInv(id) >= 2 && FITEMS[id].k !== "energy");
-  if (sellable.length) { const id = pick(sellable); deals.push({ kind: "sell", item: id, qty: Math.min(4, farmInv(id)), mult: 1.4, i: FITEMS[id].i }); }
-  deals.push({ kind: "clover", qty: 2, price: 60 + lv * 10, i: "🍀" });
-  return deals;
+  const N = farmTraderNeed(), lv = flv(), deals = [], used = new Set();
+  /* 1. Auftragshilfe: fehlende Ware für angenommene Bestellungen, Qualität 4 – bei Geldknappheit zum Freundschaftspreis */
+  N.miss.slice(0, 2).forEach(m => {
+    const qty = Math.min(99, m.n), k = N.tight ? 0.9 : 1.15;
+    deals.push({ kind: "buy", item: m.id, qty, q: 4, price: Math.max(1, Math.round(FITEMS[m.id].v * qty * k)), i: FITEMS[m.id].i, why: "Für deinen Auftrag" });
+    used.add(m.id);
+  });
+  /* 2. Ankauf aus dem Lager: knapp bei Kasse → bessere Preise, größere Mengen (bis zu einem Viertel des Level-Richtwerts) */
+  const stock = Object.keys(S.farm.inv).filter(id => FITEMS[id] && FITEMS[id].k !== "energy" && !used.has(id) && farmInv(id) >= 2 && !N.miss.some(x => x.id === id))
+    .map(id => ({ id, val: farmStackV(id, farmInv(id)) })).sort((a, b) => b.val - a.val);
+  const buys = N.tight === 2 ? 2 : 1, mult = N.tight === 2 ? 1.8 : N.tight ? 1.6 : 1.4, cap = Math.max(400, N.ref * (N.tight ? 0.25 : 0.1));
+  stock.slice(0, buys).forEach((st, j) => {
+    const one = farmStackV(st.id, 1) || FITEMS[st.id].v || 1, qty = Math.max(1, Math.min(farmInv(st.id), Math.floor(cap / (one * mult))));
+    deals.push({ kind: "sell", item: st.id, qty, mult: j ? mult - 0.2 : mult, i: FITEMS[st.id].i, why: N.tight ? "Gutes Geld, wenn's knapp ist" : "Ich nehme dir das ab" });
+  });
+  /* 3. Kleeblätter: Paket wächst mit dem Vermögen, Wohlhabende bekommen Rabatt */
+  const cq = N.rich ? 12 : N.tight ? 2 : 5, per = 30 + lv * 5;
+  deals.push({ kind: "clover", qty: cq, price: Math.round(per * cq * (N.rich ? 0.75 : N.tight ? 1 : 0.9)), i: "🍀", why: N.rich ? "Großpaket −25 %" : "" });
+  /* 4. Seltene Ware (beste Qualität) oder, bei vollem Konto, eine Luckybox */
+  if (!N.tight && Math.random() < (N.rich ? 0.45 : 0.2) && typeof luckyGive === "function") {
+    const gold = N.rich && Math.random() < 0.35;
+    deals.push({ kind: "lucky", box: gold ? "gold" : "std", price: Math.round(clamp(N.ref * (gold ? 0.12 : 0.04), 1500, 900000) / 100) * 100, i: gold ? "💎" : "🎁", why: "Glücksfund" });
+  } else {
+    const qty = N.rich ? 6 + Math.floor(Math.random() * 5) : N.tight ? 1 : 2 + Math.floor(Math.random() * 2);
+    deals.push({ kind: "buy", item: "edelholz", n: "Edelholz-Stämme (Walnuss)", qty, q: 5, price: Math.round(FITEMS.edelholz.v * qty * (N.rich ? 0.8 : 0.75)), i: "💎", why: "Selten · beste Qualität" });
+  }
+  return deals.slice(0, 4);
 }
 function farmTraderDeal(i) {
   const c = S.farm.ev.cur;
   if (!c || c.k !== "haendler") return false;
   const d = c.data.deals[i];
   if (!d || d.done) return false;
-  if (d.kind === "buy" || d.kind === "clover") {
+  if (d.kind === "buy" || d.kind === "clover" || d.kind === "lucky") {
     if (S.money < d.price) return toast("Dafür fehlen " + eur(d.price - S.money) + ".", "warn"), false;
     if (d.kind === "buy" && farmRoom(d.item) < d.qty) return farmFull(FITEMS[d.item].st), false;
     S.money -= d.price; S.expense += d.price;
     logMoney("farm", "Fliegender Händler", -d.price);
-    if (d.kind === "buy") farmAdd(d.item, d.qty, 5); else farmClover(d.qty, "Händler");
+    if (d.kind === "buy") farmAdd(d.item, d.qty, d.q || 5);
+    else if (d.kind === "lucky") luckyGive(d.box || "std", "vom fliegenden Händler");          /* v386 */
+    else farmClover(d.qty, "Händler");
   } else {
     if (farmInv(d.item) < d.qty) return toast("Davon ist nicht mehr genug da.", "warn"), false;
     const m = Math.round(farmStackV(d.item, d.qty) * d.mult * 10) / 10;   /* v59: Fisch nach Gewicht */

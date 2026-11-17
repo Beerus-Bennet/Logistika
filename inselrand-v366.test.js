@@ -13,9 +13,11 @@ for(const line of ['[[-140,-61.5],[-164,-64]]','[[100,64],[112,65]]']){
  assert.ok(run('E.line.length>3&&E.line.slice(1).every((p,i)=>Math.hypot(p[0]-E.line[i][0],p[1]-E.line[i][1])<26)'),'keine Sprünge im Verlauf');
  assert.ok(run('rimFall(E,2.3).v.every(Number.isFinite)'));
 }
-run('var v=worldApronTrees((x,z)=>Math.abs(z+64)>6).v,inside=0,out=0,near=0;for(let i=0;i<v.length;i+=9){const x=v[i],z=v[i+2];if(x>-158&&x<102&&z>-158&&z<102)inside++;if(Math.hypot(x+28,z+28)>apronRim(Math.atan2(z+28,x+28))-1.5)out++;if(Math.abs(z+64)<3.5&&x<-160)near++;}');
+/* v385: Baumsaum als Standorte echter Waldbäume (worldApronTreeSpots) – gleiche Prüfungen auf die Fußpunkte */
+run('var v=worldApronTreeSpots((x,z)=>Math.abs(z+64)>6),inside=0,out=0,near=0;for(const t of v){const x=t.fx,z=t.fzz;if(x>-158&&x<102&&z>-158&&z<102)inside++;if(Math.hypot(x+28,z+28)>apronRim(Math.atan2(z+28,x+28))-1.5)out++;if(Math.abs(z+64)<3.5&&x<-160)near++;}');
 assert.equal(run('inside'),0,'kein Baum in der Spielwelt');assert.equal(run('out'),0,'kein Baum über der Kante');assert.equal(run('near'),0,'Bachlauf frei');
-assert.ok(run('v.length/27')>3000&&run('v.length/27')<40000,'Baumsaum vorhanden und sparsam: '+run('v.length/27'));
-assert.ok(run('var w=worldApronTrees(null).v;w.length>=v.length'));
+assert.ok(run('v.length')>150&&run('v.length')<1100,'Baumsaum vorhanden: '+run('v.length'));
+assert.ok(run('v.every(t=>["kiefer","fichte","buche","eiche","birke"].includes(t.sp)&&t.fz>=2&&t.fz<=4&&t.fv>=0&&t.fv<3)'),'echte Baumarten und Größen');
+assert.ok(run('var w=worldApronTreeSpots(null);w.length>=v.length'));
 assert.match(fs.readFileSync('farmview.js','utf8'),/const lim = 450;/);
-console.log('OK v366: Bachenden an der Kante, Baumsaum nur auf dem Randstreifen ('+Math.round(run('v.length/27'))+' Dreiecke), weite Übersicht überall.');
+console.log('OK v366: Bachenden an der Kante, Baumsaum nur auf dem Randstreifen ('+run('v.length')+' Bäume), weite Übersicht überall.');

@@ -5,6 +5,41 @@
 **Lösung:** Hofkräfte weichen einander nicht mehr aus (`free` in `peopletraffic.js`: Paar aus zwei Hofkräften ist frei). Kollegen gehen Schulter an Schulter aneinander vorbei; gegenüber Bewohnern und Rädern gilt die Kollision unverändert. Keine Spiel- oder Speicherlogik geändert.
 
 **Geprüft:** Neuer Test „v388 Pausenende: niemand pendelt im Camp hin und her“ in `worker-motion-v351.test.js` (9 Kräfte, höchstens 3 Richtungswechsel – die Wenden des Wegs selbst; vorher 13–69, nachher 1–3). Testbrowser (`?test`, 8 Kräfte, echtes Pausenende): vorher 10/11 Richtungswechsel bei zwei Kräften, nachher höchstens 1. `worker-motion-v351` (14), `peopletraffic-v346` (8), `village-life-v343`, `fixes-v354`. **Nicht geprüft:** Handy/Safari. Hofkräfte können sich jetzt kurz überlappen, wenn sie sich auf engem Weg begegnen. Begegnet eine Hofkraft einem Bewohner auf engem Weg, kann dasselbe Ausweichen noch auftreten (seltener, nicht gemessen).
+## v387 – Rahmenvertrag: „Machbarkeit prüfen“ mit den Büros
+
+**Wunsch:** Vor dem Unterschreiben eines Rahmenvertrags Rücksprache mit den Büros halten – haben ein oder mehrere Büros Kapazität? Grüner Daumen = ja, roter Daumen = nein.
+
+**Lösung:** Neuer Knopf „🔎 Machbarkeit prüfen“ in der Vertragsnachricht des Diensttelefons (`contractFeasHTML` in `goals.js`, Bindung in `bindDecisionMsgs`, `extras.js`). `contractFeasibility` prüft je Büro: Abholort in Reichweite (`reachKm`), Fahrpersonal vorhanden, passende Fahrzeuge des Büros für die ganze Kette einer Variante, Fahrzeit innerhalb der 20-Stunden-Frist einer Vertragsfahrt; daraus die übernehmbaren Fahrten pro Tag (Fahrzeugketten × Umläufe, gedeckelt durch Fahrpersonal, abzüglich laufender Verträge in Reichweite). Gesamturteil grün/rot mit Summe gegen die geforderte Tagesmenge, darunter jedes Büro mit Daumen und Begründung. Ohne Büro: Hinweis, ob die Flotte es könnte. Das Ergebnis bleibt an der Nachricht stehen. Nur Anzeige – Vertrag, Annahme und Dispo unverändert.
+
+**Geprüft:** Testbrowser (`?test=100`, Spedition an, Büro „Hof“ mit Lkw und Fahrer): Knopf sichtbar, grünes Ergebnis (1 von 1 Fahrten, Lkw) und rotes Ergebnis ohne Fahrzeuge (0 von 3, „Kein passendes Fahrzeug (braucht Lkw)“), keine Konsolenfehler. **Nicht geprüft:** Handy/Safari; mehrere Büros gleichzeitig (Etappe 1 erlaubt nur eins); die Kapazitätsschätzung ist vereinfacht (Umläufe aus der schnellsten Fahrzeit, laufende Verträge pauschal abgezogen) – keine echte Dispo-Simulation.
+## v386 – Fliegender Händler bietet an, was gerade gebraucht wird
+
+**Ursache:** Der Händler hatte immer dieselben Angebote (1 Walnussstamm für 95 €, bis zu 4 Stück Lagerware mit +40 %, 2 Kleeblätter) – für wohlhabende Spieler bedeutungslos, nie auf die Lage des Spielers abgestimmt.
+
+**Lösung (`erbe.js` `farmTraderNeed`/`farmTraderDeals`, Anzeige `openTrader` in `worldview.js`):**
+- **Auftragshilfe:** Fehlt Ware für angenommene Hofbestellungen, bringt er genau die Fehlmenge (bis 2 Sorten, Qualität ★★★★) – bei Geldknappheit unter Warenwert (0,9×), sonst 1,15×.
+- **Geldlage nach Level:** Richtwert 20.000 € · (1 + Level/10)². Unter 35 % davon kauft er zwei Lagerposten mit +80 %/+60 % an, unter dem Richtwert einen mit +60 %, sonst +40 %; Mengen bis zu 25 % (knapp) bzw. 10 % des Richtwerts.
+- **Wohlhabend (über 5 × Richtwert):** 12 Kleeblätter mit 25 % Rabatt, oft eine Luckybox (4 % bzw. bei der goldenen 12 % des Richtwerts) oder 6–10 Edelholzstämme in bester Qualität.
+- Jedes Angebot zeigt seinen Grund als Marke („Für deinen Auftrag“, „Gutes Geld, wenn's knapp ist“, „Großpaket −25 %“, „Glücksfund“); Mengen und Sterne stehen im Titel. Alte, schon gezogene Angebote bleiben gültig.
+
+**Geprüft:** Testbrowser (`?test`, Level 100): reich (50 Mio. €), knapp (900 €) und mittel (120.000 €) mit angenommener Bestellung – Angebote wie oben, alle vier Käufe/Verkäufe ausführbar, keine Konsolenfehler. **Nicht geprüft:** Handy/Safari; Balance über längere Spielzeit (Preise der Luckybox, Ankaufsmengen) nur geschätzt; kein Unit-Test.
+## v388 – Eindeutige Organbeschriftung und richtige Tierseite
+
+Primärorgan im Trefferbild nur einmal beschriftet; separater Todesursachenblock entfernt, stattdessen „Herz (zerstört)“ direkt in der Organliste. Anatomische Links-/Rechtsnamen aus Tierkoordinaten statt gespiegelter Zuordnung, einschließlich Lungenlappen. Beide Lungen als gemeinsames Primärschild bei beidseitigem Kontakt. Alte Schussansichten berücksichtigen die gespeicherte Eindringtiefe; gespeicherte Wertung/Belohnung bleiben erhalten.
+
+Geprüft: sechs einseitige Lungenkanäle, Schussstopp, unveränderte Altaufnahme, elf bestehende Anatomie-/Trefferbildprüfgruppen und mobile Browseransicht für Herz sowie beide Lungenflügel. Kein echtes iPhone. [Bilder und Details](docs/TREFFERKLARHEIT-v388.md).
+## v386 – Größerer Wasserfall, gemeinsame Wasserfarben und klare Felshänge
+
+Gebirge mit dezenten Felsfacetten und gedeckten Kiesufern; Randfarben aus dem echten Waldboden beseitigen rechteckige Flussartefakte. Fallhöhe15 statt10,4, Breite6,4 statt4,1; größeres Becken mit breit einlaufendem, weich verengtem Abfluss. Gemeinsame Wasserpalette/Beleuchtung, flächige Beckenwellen statt Fächerstreifen. Breitere bewegte Aufpralladern, größere Druckwellen und begrenzte Spritzer/Gischt.
+
+Geprüft: Wassergeometrie/Breiten/Becken, 1.800 Tierschritte, 200 Zoomwechsel, Spielstandschutz, Browser mit acht Zoomwechseln und zeitlich veränderten Wasserpixeln bei fester Kamera, bestehende Wassertests. Keine echte iPhone-Prüfung. Bilder/Grenzen: [docs/WASSEROPTIK-v386.md](docs/WASSEROPTIK-v386.md).
+## v385 – Inselrand: echte Bäume statt Platzhalter, keine Streifen mehr im Gras
+
+**Ursache:** (1) Der Baumsaum auf dem Randstreifen (v366) bestand aus einfachen Kegeln und Kugeln in einem festen Netz – ohne Wind, deutlich gröber als der Wald daneben. (2) Die Grasdecke des Randstreifens hatte nur zwei Zwischenringe auf 42 m: jede Bodenfarbe der Weltkante wurde zu einem langen, 4 m schmalen Dreieck nach außen gezogen – sichtbar als helle und dunkle Streifen quer über den Rand.
+
+**Lösung (`worldview.js`):** `worldApronTreeSpots` liefert nur noch Standorte (Kiefer, Fichte, Buche, Eiche, Birke in Waldgrößen 2–4); sie gehen in dieselben Baumgruppen wie der Wald (`WV.bgG`) – gleiche Modelle, Wind und Fernstufen (`treeFarSet`). Grasdecke mit acht Ringen (`APRON_RINGS`), jeder mit der flächigen Bodenfarbe seines Ortes. Keine Spiel- oder Speicherlogik geändert.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test`): Randstreifen vorher/nachher aus mehreren Höhen – Platzhalter weg, echte Bäume am Rand, 636 Randbäume; `floating-island-v358` (Dreiecksbudget von 5000 auf 8000 angehoben: 7128 Dreiecke), `inselrand-v366` auf Standorte umgestellt, `fixes-v354`. **Nicht geprüft:** Handy/Safari und Bildrate auf dem Handy (rund 640 zusätzliche Bauminstanzen, in der weiten Übersicht als Fernbäume). Die Streifen konnte ich im Testbrowser nicht direkt vergleichen – dort ist der noch nicht freigeschaltete Rand grau eingefärbt. `inselrand-v366` (Bachende), `berglandschaft-v375` und `bergwasserfall-v380` schlagen schon auf main fehl.
 
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 
