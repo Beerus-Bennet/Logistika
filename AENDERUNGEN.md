@@ -1,3 +1,11 @@
+## v369 – Bewohnte Häuser bekommen individuelle Gärten
+
+**Wunsch:** Häuser nach dem Einzug mit realistischen Gartendetails beleben. Gartenplanungsartikel und Fotos von HORNBACH/OBI geprüft; daraus Hausnähe der Sitzecke, Stauraum am Rand, freie Rasenflächen und getrennte Spiel-/Nutz-/Ruhebereiche abgeleitet.
+
+**Lösung:** Vier stabile Haushaltsprofile mit Gartenhäuschen/Regentonne, Tisch/Stühlen, Kugelgrill, unbefeuerter Feuerstelle/Bänken, Schaukel/Sandkasten oder Hochbeeten/Vogelbad. Pflanzkästen, Stauden und bei genügend Platz kleine Obstbäume ergänzen die Grundstücke. Ausstattung erst nach Einzug, auch für bestehende Bewohner und Käufer; keine neue Kosten-/Vertragslogik und keine Save-Migration. Neue Nachbarn aktualisieren den Garten ohne Hausneubau. Leerstand blendet ihn aus. Haus/Anbau, Tore, Briefkasten und Fahrradplatz bleiben frei; Gegenstände sind Hindernisse für Bewohner. Vereinfachte Fernmodelle und gemeinsame Meshes begrenzen zusätzliche Zeichenlast.
+
+**Integration/Prüfung:** aktuelles main `788a2b5` einschließlich PR #86/v368 vollständig integriert; Lieferung/Offline-Cache 369. Fünf Garten-Prüfgruppen mit allen Grundstücken, beiden Haustypen und vier Profilen; echter Einzug und vollständige Insel im Chromium-WebGL-Test, Zoom/Leerstand/Laden, vorhandene Bewohner-/Markt-/Inseltests. Nicht auf echtem iPhone/Safari geprüft. Quellen, Bilder und Prüfdetails: [docs/WOHNGAERTEN-v369.md](docs/WOHNGAERTEN-v369.md).
+
 ## v368 – Weite Übersicht flüssiger: Fernstufen für Gras, Schatten, Kleinteile und Bäume
 Zuerst als v367 gebaut; nach dem Merge von PR 85 (ebenfalls v367) auf v368 umnummeriert.
 

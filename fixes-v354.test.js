@@ -33,7 +33,7 @@ const V=vm.createContext({console,Math,JSON,Date,setTimeout:()=>0,clearTimeout()
  document:{addEventListener(){},querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,createElement:el,body:el(),documentElement:el()},
  window:{addEventListener(){},matchMedia:()=>({matches:false,addEventListener(){}})}});
 const run=s=>vm.runInContext(s,V);
-for(const f of ['data.js','farmdata.js','fishdata.js','erbedata.js','villagedata.js','places.js','map.js','game.js','farm.js','erbe.js','village.js','gl3d.js','farmmodels.js','woodmodels.js','rent.js','hunt.js','villagesite.js','villagepeople.js'])run(read(f));
+for(const f of ['data.js','farmdata.js','fishdata.js','erbedata.js','villagedata.js','places.js','map.js','game.js','farm.js','erbe.js','village.js','gl3d.js','farmmodels.js','woodmodels.js','rent.js','hunt.js','villagesite.js','villagegarden.js','villagepeople.js'])run(read(f));
 run(cut(read('farmview.js'),'farmStallShift'));
 run(`toast=()=>{};save=()=>{};render=()=>{};renderInspector=()=>{};mapRedraw=()=>{};logMoney=()=>{};checkLevel=()=>{};farmCheckLevel=()=>{};farmEvent=()=>{};
  function umschlagFactor(){return 1;}function tickBases(){}function baseDayChange(){}function staffPerk(){return 0;}spawnOrders=()=>0;spawnJewels=()=>{};
