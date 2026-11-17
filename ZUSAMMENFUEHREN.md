@@ -1,3 +1,7 @@
+## v383 – Waffenschrank (stapelt auf PR #98/#99)
+
+Basis main 5d0076e (v380) plus PR #98 (v381, Todesursache/Halsorgane) und PR #99 (v382, Einschussloch) – diese bitte zuerst mergen. Neue Datei `weapons.js` (vor `hunt.js` laden, in `index.html` und `sw.js` ergänzt); `hunt.js`, `lucky.js`, `style.css` erweitert. Cache-Versionen: weapons/hunt/lucky/style 383, Gesamtversion 383. Details und Quellen `docs/WAFFEN-v383.md`.
+
 ## v380 – Neue Wasserführung und südliche Mäander
 
 Basis main ca16b9c/v379. Gemeinsame Lieferung380, alpine/worldview/woodmodels/erbe/exhibits sowie Index/SW zusammen übernehmen. ALPINE-Daten RUN/POOL/DRAIN/FALL ersetzen alte SPI-Modelle; alte Effektreferenzen leeren. FWM-Altfunktionen für isolierte Prüfstände behalten, nicht wieder zusätzlich in die Szene hängen. Überlauf muss den Beckenrand nach dessen Höhenbildung durchschneiden; beide Geländestufen am Kanal verfeinern. Main-Creek Kontrollpunkte westlich der bestehenden Brücke neu, gleichbleibende Wasserbreite und trockene Ufer separat. F.river380 ist erhaltende Baumversetzung, keine Löschung. Neue Tests bergwasserfall-v380.test.js/.browser.js, Bericht docs/WASSERLANDSCHAFT-v380.md. Keine zusätzlichen dynamischen Meshes/Shaderprogramme im Takt.

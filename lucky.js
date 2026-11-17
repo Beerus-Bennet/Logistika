@@ -31,11 +31,15 @@ const PRIZES = [
   { id: "boost", r: "e", icon: "📈", name: "Hochsaison", desc: () => "24 Stunden lang +20 % auf alle Frachterlöse" },
   { id: "head", r: "e", icon: "🕴️", name: "Headhunter", desc: () => (S.bases || []).length ? "Eine ★★★★★-Fachkraft bewirbt sich – in jedem Büro, ohne Gebühr" : "Noch kein Büro – dafür " + money(luckyCash() * 3) },
   { id: "vip", r: "e", icon: "✉️", name: "Insider-Tipp", desc: () => level() >= 3 ? "Sonderfahrt-Einladung kommt in wenigen Stunden" : "Noch zu früh für Einladungen – dafür " + money(luckyCash() * 3) },
+  { id: "gun", r: "l", icon: "🔫", name: "Sonderwaffe: Goldjagd", desc: () => typeof WEAPONS !== "undefined" && WEAPONS.owns("royal")
+      ? "Die hast du schon – dafür der Jackpot: " + money(luckyJackpot())
+      : "H&H Royal Deluxe: Gold-Doppelbüchse mit Durchschuss, ohne Abzug bei Nachschüssen und mit Bonus bei der Bewertung. Nicht käuflich." },
   { id: "bulli", r: "l", icon: "🏆", name: "Hauptpreis: Goldener Bulli", desc: () => ownsBulli()
       ? "Den hast du schon – dafür der Jackpot: " + money(luckyJackpot())
       : "VW T1 Samba „Goldstück“: 900 kg, 95 km/h, +10 % Erlös pro Tour. Nicht käuflich." }
 ];
-const LUCKY_ODDS = { std: { c: 55, r: 28, e: 13, l: 4 }, gold: { c: 25, r: 40, e: 27, l: 8 } };
+/* v383: zwei legendäre Preise – damit der Goldene Bulli seine bisherige Chance behält, wurde der Legendär-Anteil verdoppelt (zulasten Gewöhnlich) */
+const LUCKY_ODDS = { std: { c: 51, r: 28, e: 13, l: 8 }, gold: { c: 17, r: 40, e: 27, l: 16 } };
 const luckyCash = () => roundK(rnd(300, 800) * stageK(), 10);
 const luckyXP = () => 60 + level() * 40;
 const luckyJackpot = () => roundK(25000 * stageK(), 100);
@@ -102,6 +106,10 @@ function applyPrize(p) {
     case "vip":
       if (level() >= 3 && typeof vipState === "function") vipState().next = S.time + rnd(60, 360);
       else { const v = luckyCash() * 3; S.money += v; S.revenue += v; logMoney("bonus", "Luckybox", v); }
+      break;
+    case "gun":
+      if (typeof WEAPONS !== "undefined" && S.farm && WEAPONS.grant("royal")) logMoney("farm", "Luckybox: Gold-Doppelbüchse", 0);
+      else { const v = luckyJackpot(); S.money += v; S.revenue += v; logMoney("bonus", "Luckybox: Jackpot", v); }
       break;
     case "bulli":
       if (ownsBulli()) { const v = luckyJackpot(); S.money += v; S.revenue += v; logMoney("bonus", "Luckybox: Jackpot", v); }
@@ -269,6 +277,13 @@ function lbIconPaint(g, id) {
       P(null, () => { g.moveTo(15, 34); g.lineTo(64, 72); g.lineTo(113, 34); }, 6);
       P("#f2c443", () => star(64, 72, 19, 9));
       break;
+    case "gun":                                                      /* Gold-Doppelbüchse */
+      g.save(); g.translate(64, 66); g.rotate(-0.42);
+      P("#8a5634", () => rr(-58, -4, 46, 18, 7)); P("#8a5634", () => rr(-62, -8, 14, 26, 6));
+      fat([[2, -4], [60, -4]], "#4a505a"); fat([[2, 6], [60, 6]], "#4a505a");
+      P("#8a5634", () => rr(10, 8, 28, 10, 5)); P("#f1c94b", () => rr(-18, -14, 36, 26, 7)); HL(() => rr(-14, -11, 28, 7, 4), 0.4);
+      P("#f1c94b", () => circ(56, -4, 4), 3);
+      g.restore(); break;
     case "bulli":                                                    /* goldener Kleinbus, zweifarbig */
       P("#fff1c4", () => rr(10, 34, 108, 62, 18));
       P("#e0a800", () => { g.moveTo(10, 70); g.lineTo(84, 70); g.lineTo(118, 52); g.lineTo(118, 80); g.arcTo(118, 96, 100, 96, 16); g.lineTo(28, 96); g.arcTo(10, 96, 10, 80, 16); g.closePath(); });

@@ -1,3 +1,11 @@
+## v383 – Waffenschrank: kaufbare Jagdwaffen, Magazin, Schrot, Durchschuss, Sonderwaffe im Lucky-Rad
+
+**Wunsch:** Ein Waffenshop mit realen Waffen für verschiedene Situationen: Mehrfachschüsse (kosten Bewertung), starke Gewehre mit garantiertem Durchschuss, Handfeuerwaffen wie die Glock 17 für den Fasan in der Luft, eine besondere Waffe nur im Lucky-Rad. Recherche und Quellen: `docs/WAFFEN-v383.md`. „Schießstand“ = Hochsitz (Annahme, im Bericht benannt).
+
+**Lösung:** Neu `weapons.js` (Katalog mit 10 Waffen, Spielstand `S.farm.guns`, Kauf, Energie/Eignung, 3D-Modelle im Hof-Stil, Waffenschrank-Fenster). `hunt.js`: gewählte Waffe bestimmt Magazin, Feuerfolge, Zoomstufen, Geschwindigkeit/Flugzeit, Energie (`gunZone`, neue Zone `schwach`), Schrotgarbe, Reichweite, Wild-Abstand für Kurzwaffen (`nearD`), Eindringtiefe (`stop`/`thru`, Ausschussloch), Nachschuss-Abzug und Sonderbonus in `goHarvest`, Waffenwechsel im Stand, Trefferbild mit Waffe/Durchschuss, waffenabhängiger Knall. `lucky.js`: neuer legendärer Preis „Sonderwaffe: Goldjagd“, Symbol, Legendär-Anteil verdoppelt (Bulli-Chance gleich). CSS-Block `wp-*` am Ende von `style.css`.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader): Waffenschrank mit allen 10 Karten und 3D-Bildchen; echte Schüsse über `fire()` mit Glock (17/17, 0,17 s, Fasan erlegt, Hirsch „zu schwach“), Flinte (24 Körner, Fasan erlegt), Revolver, Doppelbüchse (2 Schuss, Nachladen), Sonderwaffe, M18; Lucky-Rad mit neuem Preis und Symbol; Bergung/Trefferbild. `weapons-v383.test.js` (7), `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Handy/Safari; Balance (Preise, Reichweiten, Medaillen-Abzug) nur nach Gefühl; Fasan im Flug mit Pistole im echten Spielablauf; Kauf mit echtem Spielstand-Neuladen; Magazin je Stand (kein Munitionskauf); Hirsch-/Keiler-Verhalten mit allen Waffen einzeln.
+
 ## v382 – Einschussloch am erlegten Stück
 
 **Ursache:** In der Bergungsansicht war nirgends zu sehen, wo die Kugel eingetreten ist; das Loch gab es nur als Markierung im Trefferbild.
