@@ -1,13 +1,11 @@
-# LOGISTIKA – Autofotos fürs Auktionshaus einmalig ins Spiel holen.
-# GitHub → Actions → „Autofotos holen“ → Run workflow. Holt die Fotos der 77 Autos
-# von Wikimedia Commons (500 px) nach cars/ samt cars/credits.json (Urheber, Lizenz)
-# und legt sie als Commit ab. Danach braucht das Auktionshaus Wikipedia nicht mehr.
+# v372: Ausschließlich freigegebene Fotos aus carphotos.js wiederherstellen.
+# Modell, Lizenz und SHA-256 bleiben verbindlich; keine automatische Bildsuche.
 name: Autofotos holen
 on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Alle Fotos neu holen (sonst nur fehlende)"
+        description: "Freigegebene Dateien erneut prüfen und laden"
         type: boolean
         default: false
 permissions:
@@ -20,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Fotos holen
+      - name: Freigegebene Fotos wiederherstellen
         run: node carpics.mjs ${{ inputs.force && '--force' || '' }}
       - name: Ins Repository legen
         run: |
@@ -28,5 +26,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add cars
           if git diff --cached --quiet; then echo "Keine neuen Fotos."; exit 0; fi
-          git commit -m "Autofotos fürs Auktionshaus (Wikimedia Commons)"
+          git commit -m "Freigegebene Autofotos wiederherstellen (Wikimedia Commons)"
           git push

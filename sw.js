@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v370";
+const VERSION = "v372";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -42,8 +42,9 @@ const SHELL = [
   "./village.js?v=365",
   "./farmstory.js?v=349",
   "./intro.js?v=349",
-  "./cars.js?v=336",
-  "./auction.js?v=339",
+  "./cars.js?v=372",
+  "./carphotos.js?v=372",
+  "./auction.js?v=372",
   "./customs.js?v=109",
   "./corpassets.js?v=356",
   "./corp.js?v=367",
@@ -153,7 +154,7 @@ self.addEventListener("fetch", e => {
 
   /* Autofotos von Wikimedia (v77: und die eigenen im Ordner cars/): einmal geladen, danach auch offline da –
      über Versionen hinweg, damit sie nach einem Update nicht neu geladen werden */
-  if (url.hostname === "upload.wikimedia.org" || url.hostname === "thumb.wikimedia.org" || (url.origin === self.location.origin && /\/cars\/(art\/)?[^/]+\.(jpe?g|png|webp)$/i.test(url.pathname))) {
+  if (url.hostname === "upload.wikimedia.org" || url.hostname === "thumb.wikimedia.org" || (url.origin === self.location.origin && /\/cars\/((art|photos)\/)?[^/]+\.(jpe?g|png|webp)$/i.test(url.pathname))) {
     e.respondWith((async () => {
       const cache = await caches.open(PICS);
       const hit = await cache.match(req);

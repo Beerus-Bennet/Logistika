@@ -4,7 +4,7 @@
    in der Schlussphase live gegen Sammler und Konkurrenz steigern, eigene
    Autos und Flottenfahrzeuge einliefern. Gekaufte Autos stehen in der
    Garage, gewinnen oder verlieren an Wert – und fahren auf Wunsch als
-   Wertkurier mit. Fotos kommen zur Laufzeit von Wikipedia/Wikimedia Commons.
+   Wertkurier mit. Geprüfte Modellfotos liegen fest zugeordnet im Spiel.
    ========================================================================= */
 "use strict";
 
@@ -34,7 +34,14 @@ CARS.forEach(c => {
 /* ------------------------------- Zustand ------------------------------- */
 function ah() {
   if (!S.ah) S.ah = { on: false, lots: [], garage: [], past: [], idx: {}, seq: 1, view: "live", brand: "all", next: 0 };
-  return S.ah;
+  const A=S.ah;
+  /* v372: Nur unmögliche Baujahre alter Datensätze berichtigen. Gebote,
+     Preise, IDs, Lacke und Besitz unverändert lassen. Idempotent pro Save. */
+  if(!A.modelYears372){
+    for(const item of [...(A.lots||[]),...(A.garage||[])])if(item.kind==='car'&&CAR[item.car])item.y=carValidYear(CAR[item.car],item.y);
+    A.modelYears372=1;
+  }
+  return A;
 }
 const ahMode = () => !!(S && S.ah && S.ah.on);
 const lotById = id => ah().lots.find(l => l.id === id);
@@ -124,8 +131,7 @@ function makeLot(opt) {
     c = c || pick(CARS);
     l.kind = "car"; l.car = c.id;
     const g = o.garage;
-    const ongoing = /seit|ab/.test(c.yrs);
-    l.y = g ? g.y : clamp(c.y + Math.round(rnd(-1, 2)), ongoing ? c.y - 1 : c.y - 2, 2026);
+    l.y = carValidYear(c,g?g.y:c.y+Math.round(rnd(-1,2)));
     const age = Math.max(0.4, 2026.7 - l.y);
     const per = { hyper: [200, 1500], legend: [150, 1200], super: [1000, 5000], sport: [3000, 14000], classic: [500, 4000], young: [5000, 12000] }[c.cls];
     l.km = g ? Math.round(g.km) : Math.round(age * rnd(per[0], per[1]) / 100) * 100;
@@ -393,233 +399,59 @@ function carDriven(veh, km) {
 }
 
 /* ------------------------------- Fotos -------------------------------- */
-/* v2: Vorschaubilder in 500 px (eine Standardgröße von Wikimedia, die fast
-   immer schon fertig im Cache liegt – große Sondergrößen werden gedrosselt) */
-const PIC_KEY = "logistika-carpics-2";
-const PIC_W = 500;
-try { localStorage.removeItem("logistika-carpics-1"); } catch (_) { /* egal */ }
-let PICS = (() => { try { return JSON.parse(localStorage.getItem(PIC_KEY)) || {}; } catch (_) { return {}; } })();
-let picsBusy = false;
-function plainText(html) {
-  if (!html) return "";
-  try { return (new DOMParser().parseFromString(String(html), "text/html").body.textContent || "").replace(/\s+/g, " ").trim(); }
-  catch (_) { return String(html).replace(/<[^>]*>/g, "").trim(); }
+/* v372: Ausschließlich fest zugeordnete, geprüfte Modellfotos. Weder ein
+   Wikipedia-Titelbild noch ein Marken-Suchtreffer darf die Zuordnung ändern.
+   Alte Quellen-/Lackschätzungen werden nicht aus localStorage übernommen. */
+const PIC_KEY = "logistika-carpics-3";
+try { for(const k of ['logistika-carpics-1','logistika-carpics-2',PIC_KEY])localStorage.removeItem(k); } catch (_) { /* privater Modus */ }
+function modelPic(id) {
+  const p=typeof CAR_PHOTOS==='undefined'?null:CAR_PHOTOS[id];
+  if(!CAR[id]||!p||p.model!==id||!/^photos\/[\w-]+\.(jpg|png|webp)$/.test(p.f)||!p.file||!/^[a-f0-9]{64}$/.test(p.sha256)||!Array.isArray(p.paint))return null;
+  return {...p,src:'cars/'+p.f+'?image='+p.sha256.slice(0,16),local:1};
 }
-/* Zustand für die Anzeige: wie viele Fotos da sind, was zuletzt schiefging */
-const PIC_STATE = { err: "", at: 0 };
-function withTimeout(ms) {
-  const ac = typeof AbortController === "function" ? new AbortController() : null;
-  const t = ac ? setTimeout(() => ac.abort(), ms) : 0;
-  return { signal: ac ? ac.signal : undefined, done: () => clearTimeout(t) };
-}
-const errText = e => e && e.name === "AbortError" ? "Zeitüberschreitung" : (e && e.message) || "Netzwerkfehler";
-async function wikiApi(params) {
-  const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&" + params;
-  const to = withTimeout(15000);
-  try {
-    const r = await fetch(url, { signal: to.signal, credentials: "omit" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return await r.json();
-  } finally { to.done(); }
-}
-/* Ersatzweg: Kurzfassung des Artikels (anderer Endpunkt, liefert Titelbild) */
-async function wikiSummary(title) {
-  const to = withTimeout(12000);
-  try {
-    const r = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")), { signal: to.signal, credentials: "omit" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return await r.json();
-  } finally { to.done(); }
-}
-/* v78: Wikimedia liefert Vorschaubilder inzwischen von thumb.wikimedia.org – beide Hosts sind in Ordnung */
-const okSrc = u => typeof u === "string" && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(u);
-/* Vorschaubild auf eine Standardbreite setzen (nur bei echten Thumbnails) */
-const thumbAt = (u, w) => /\/thumb\//.test(u) ? u.replace(/\/\d+px-([^/]+)$/, "/" + w + "px-$1") : u;
-/* Titelbild der Wikipedia-Artikel samt Vorschaubild holen, dann Urheber und
-   Lizenz – alles gebündelt in wenigen Anfragen, danach gespeichert. Jeder
-   Schritt für sich: scheitert die Urheber-Abfrage, bleiben die Bilder. */
-/* v77: eigene Fotos im Spiel selbst (Ordner cars/, siehe carpics.mjs und die GitHub-Aktion
-   „Autofotos holen“): cars/credits.json nennt je Auto Datei, Urheber und Lizenz. Die liegen auf derselben
-   Seite wie das Spiel – kein Umweg über Wikipedia, klappt auch, wenn Wikipedia blockiert ist. */
-let localPics = null;                       /* null: noch nicht gefragt, sonst { id: {...} } (leer, wenn es keine gibt) */
-async function loadLocalPics() {
-  if (localPics) return localPics;
-  try {
-    const r = await fetch("cars/credits.json?v=" + (window.LOGI_V || ""), { cache: "no-cache" });
-    localPics = r.ok ? await r.json() : {};
-  } catch (_) { localPics = {}; }
-  if (!localPics || typeof localPics !== "object") localPics = {};
-  let n = 0;
-  Object.entries(localPics).forEach(([id, p]) => {
-    if (!CAR[id] || !p || !p.f) return;
-    PICS[id] = { src: "cars/" + p.f, page: p.page || "", by: p.by || "", lic: p.lic || "", t: Date.now(), local: 1 };
-    n++;
-  });
-  /* v79: KI-Zeichnungen (cars/art.json: { id: "art/<id>.png?v=…" }) gehen den Fotos vor und brauchen keinen Comic-Filter */
-  let art = {};
-  try {
-    const r = await fetch("cars/art.json?v=" + (window.LOGI_V || ""), { cache: "no-cache" });
-    art = r.ok ? await r.json() : {};
-  } catch (_) { art = {}; }
-  if (!art || typeof art !== "object") art = {};
-  Object.keys(PICS).forEach(id => { if (PICS[id] && PICS[id].art && !(typeof art[id] === "string")) { delete PICS[id]; COMIC_URL.delete(id); COMIC_FAIL.delete(id); n++; } });
-  Object.entries(art).forEach(([id, f]) => {
-    if (!CAR[id] || typeof f !== "string" || !/^art\/[\w.\-]+(\?v=\d+)?$/.test(f)) return;
-    PICS[id] = { src: "cars/" + f, by: "KI-Illustration", lic: "", t: Date.now(), local: 1, art: 1 };
-    COMIC_URL.delete(id); COMIC_FAIL.delete(id);
-    n++;
-  });
-  if (n) { savePics(); applyPics(); renderPicStatus(); }
-  return localPics;
-}
-let picRetryT = 0, picRetryN = 0;
+let PICS=Object.fromEntries(CARS.map(c=>[c.id,modelPic(c.id)]).filter(([,p])=>p));
+let localPics=true;
+const PIC_STATE={err:'',at:0};
+function withTimeout(ms) {const ac=typeof AbortController==='function'?new AbortController():null,t=ac?setTimeout(()=>ac.abort(),ms):0;return {signal:ac?ac.signal:undefined,done:()=>clearTimeout(t)};}
+const thumbAt=(u,w)=>/\/thumb\//.test(u)?u.replace(/\/\d+px-([^/]+)$/,'/'+w+'px-$1'):u;
+function approvedPic(id,p=PICS[id]) {const expected=modelPic(id);return !!(expected&&p&&p.model===id&&p.file===expected.file&&p.sha256===expected.sha256&&p.src===expected.src);}
+function photoFits(id,paint) {const p=PICS[id];return approvedPic(id,p)&&(!paint||String(p.paint[1]).toLowerCase()===String(paint).toLowerCase());}
+function paintOfPhoto(id) {const p=modelPic(id);return p?p.paint.slice():null;}
+async function loadLocalPics() {PICS=Object.fromEntries(CARS.map(c=>[c.id,modelPic(c.id)]).filter(([,p])=>p));localPics=true;return PICS;}
 async function resolvePics(force) {
-  if (picsBusy || typeof fetch !== "function") return;
-  if (!localPics) { picsBusy = true; try { await loadLocalPics(); } finally { picsBusy = false; } }
-  const now = Date.now();
-  if (force) CARS.forEach(c => { if (PICS[c.id] && !PICS[c.id].src) delete PICS[c.id]; });
-  const todo = CARS.filter(c => !PICS[c.id] || (!PICS[c.id].src && now - (PICS[c.id].t || 0) > 10 * 60e3));
-  if (!todo.length) return;
-  picsBusy = true;
-  PIC_STATE.err = "";
-  renderPicStatus();
-  const files = {};
-  try {
-    todo.forEach(c => { if (c.file) files[c.id] = c.file; });
-    /* 1. Titelbild + fertiges Vorschaubild je Artikel */
-    const wp = todo.filter(c => c.wp && !c.file);
-    try {
-      for (let i = 0; i < wp.length; i += 40) {
-        const batch = wp.slice(i, i + 40);
-        const j = await wikiApi("redirects=1&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=" + PIC_W + "&pilimit=50&pilicense=free&titles="
-          + batch.map(c => encodeURIComponent(c.wp)).join("%7C"));
-        const q = j.query || {}, map = {};
-        (q.normalized || []).forEach(n => { map[n.from] = n.to; });
-        (q.redirects || []).forEach(n => { map[n.from] = n.to; });
-        const fin = t => { let x = t, k = 0; while (map[x] && k++ < 4) x = map[x]; return x; };
-        const pages = {};
-        (q.pages || []).forEach(p => { pages[p.title] = p; });
-        batch.forEach(c => {
-          const p = pages[fin(c.wp)];
-          if (!p) return;
-          if (p.pageimage) files[c.id] = p.pageimage.replace(/_/g, " ");
-          const th = p.thumbnail && p.thumbnail.source;
-          if (okSrc(th)) PICS[c.id] = { src: th, page: "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent((p.pageimage || "").replace(/ /g, "_")), by: "", lic: "", t: now };
-        });
-      }
-    } catch (e) { PIC_STATE.err = errText(e); }
-    /* 2. Urheber, Lizenz (und für feste Dateinamen auch das Vorschaubild) */
-    try {
-      const ids = Object.keys(files);
-      for (let i = 0; i < ids.length; i += 40) {
-        const batch = ids.slice(i, i + 40);
-        const j = await wikiApi("prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=" + PIC_W + "&iiextmetadatafilter=Artist%7CLicenseShortName&titles="
-          + batch.map(id => encodeURIComponent("File:" + files[id])).join("%7C"));
-        const q = j.query || {}, map = {};
-        (q.normalized || []).forEach(n => { map[n.from] = n.to; });
-        const pages = {};
-        (q.pages || []).forEach(p => { pages[p.title] = p; });
-        batch.forEach(id => {
-          const t0 = "File:" + files[id], p = pages[map[t0] || t0];
-          const ii = p && p.imageinfo && p.imageinfo[0];
-          if (!ii) return;
-          const src = ii.thumburl || ii.url, md = ii.extmetadata || {}, old = PICS[id] && PICS[id].src ? PICS[id] : null;
-          if (!old && !okSrc(src)) return;
-          PICS[id] = { src: old ? old.src : src, page: ii.descriptionurl || (old && old.page) || "",
-                       by: plainText(md.Artist && md.Artist.value).slice(0, 70), lic: plainText(md.LicenseShortName && md.LicenseShortName.value), t: now };
-        });
-      }
-    } catch (e) { if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
-    /* 3. Was noch fehlt: einzeln über die Kurzfassung des Artikels */
-    const miss = todo.filter(c => !PICS[c.id] || !PICS[c.id].src).filter(c => c.wp);
-    let fails = 0;
-    for (const c of miss) {
-      if (fails >= 6) break;
-      try {
-        const j = await wikiSummary(c.wp);
-        const o = j && j.originalimage, th = j && j.thumbnail;
-        let src = null;
-        if (o && okSrc(o.source) && (o.width || 9999) <= 800) src = o.source;
-        else if (th && okSrc(th.source)) src = thumbAt(th.source, PIC_W);
-        if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
-      } catch (e) { fails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
-    }
-    /* v339: Titel ohne Foto (falscher oder umbenannter Artikelname) → Wikipedia-Suche nach „Marke Modell“. Nur Treffer, in deren Titel die
-       Marke steht, damit kein fremdes Auto auftaucht; höchstens 12 Versuche je Durchlauf, bei Fehlern früh Schluss. */
-    const still = todo.filter(c => c.wp && !c.file && (!PICS[c.id] || !PICS[c.id].src));
-    let sfails = 0;
-    for (const c of still.slice(0, 12)) {
-      if (sfails >= 3) break;
-      try {
-        const brand = carBrand(c).split(/[ -]/)[0].toLowerCase();
-        const q = await wikiApi("list=search&srlimit=4&srnamespace=0&srsearch=" + encodeURIComponent(carBrand(c) + " " + c.m.replace(/\s*\(.*\)/, "")));
-        const hit = ((q.query || {}).search || []).find(h => h.title.toLowerCase().includes(brand));
-        if (!hit) continue;
-        const j = await wikiSummary(hit.title);
-        const o = j && j.originalimage, th = j && j.thumbnail;
-        let src = null;
-        if (o && okSrc(o.source) && (o.width || 9999) <= 800) src = o.source;
-        else if (th && okSrc(th.source)) src = thumbAt(th.source, PIC_W);
-        if (src) PICS[c.id] = { src, page: j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : "", by: "", lic: "Wikimedia Commons", t: now, sum: 1 };
-      } catch (e) { sfails++; if (!PIC_STATE.err) PIC_STATE.err = errText(e); }
-    }
-    /* v77: nur merken, dass es für ein Auto kein Foto gibt, wenn die Abfrage selbst geklappt hat – vorher sperrte ein
-       Fehlschlag (z. B. kurz offline) alle 77 Autos für zehn Minuten („0 von 77 Fotos geladen“, ohne Fehlermeldung) */
-    const gotAny = todo.some(c => PICS[c.id] && PICS[c.id].src);
-    if (gotAny && !PIC_STATE.err) todo.forEach(c => { if (!PICS[c.id]) PICS[c.id] = { t: now }; });
-    if (picCount() > CARS.length * 0.5) PIC_STATE.err = "";
-    /* nichts bekommen: in 45 s, 2 und 5 Minuten noch einmal (solange das Spiel offen ist) */
-    if (!gotAny && picRetryN < 3 && !picRetryT) picRetryT = setTimeout(() => { picRetryT = 0; picRetryN++; resolvePics(true); }, [45e3, 120e3, 300e3][picRetryN]);
-    if (gotAny) picRetryN = 0;
-    savePics();
-    applyPics();
-  } catch (e) { PIC_STATE.err = errText(e); }
-  PIC_STATE.at = Date.now();
-  picsBusy = false;
-  renderPicStatus();
+  if(!localPics||force)await loadLocalPics();
+  PIC_STATE.at=Date.now();applyPics();renderPicStatus();
 }
-function savePics() { try { localStorage.setItem(PIC_KEY, JSON.stringify(PICS)); } catch (_) { /* voll */ } }
-function picCount() { return CARS.filter(c => PICS[c.id] && PICS[c.id].src).length; }
-/* Hinweis im Auktionshaus, wenn Fotos fehlen – mit „Erneut versuchen“ */
+function picCount() {return CARS.filter(c=>approvedPic(c.id)).length;}
 function picStatusHTML() {
-  const n = picCount();
-  if (n >= CARS.length * 0.9 && !PIC_STATE.err) return "";
-  /* v77: ohne Fotos zeigt das Auktionshaus gezeichnete Autos – der Hinweis bleibt klein */
-  const txt = picsBusy ? "📷 Fotos werden geladen …"
-    : PIC_STATE.err ? "📷 Wikipedia gerade nicht erreichbar (" + PIC_STATE.err + ") – bis dahin gezeichnete Autos"
-    : n ? "📷 " + n + " von " + CARS.length + " Fotos geladen" : "📷 Fotos noch nicht geladen – bis dahin gezeichnete Autos";
-  return `<div class="picstat"><span>${esc(txt)}</span>${picsBusy ? "" : `<button class="btn tiny ghost" data-picretry="1">↻ Erneut versuchen</button>`}</div>`;
+  const n=picCount();if(n>=CARS.length*.9&&!PIC_STATE.err)return '';
+  return `<div class="picstat"><span>${n} von ${CARS.length} Modellfotos · sonst Illustration in Fahrzeugfarbe</span><button class="btn tiny ghost" data-picretry="1">↻ Erneut versuchen</button></div>`;
 }
-function renderPicStatus() {
-  const el = document.querySelector("#tab-market .picstat-slot");
-  if (el) { el.innerHTML = picStatusHTML(); bindPicRetry(el); }
-}
-function bindPicRetry(root) {
-  root.querySelectorAll("[data-picretry]").forEach(b => b.onclick = () => {
-    COMIC_FAIL.clear(); COMIC_TRY.clear();
-    try { localStorage.removeItem(PIC_KEY); } catch (_) { /* egal */ }
-    PICS = {}; localPics = null; picRetryN = 0; if (picRetryT) { clearTimeout(picRetryT); picRetryT = 0; }
-    resolvePics(true);
-    renderPicStatus();
-  });
-}
+function renderPicStatus() {const el=document.querySelector('#tab-market .picstat-slot');if(el){el.innerHTML=picStatusHTML();bindPicRetry(el);}}
+function bindPicRetry(root) {root.querySelectorAll('[data-picretry]').forEach(b=>b.onclick=()=>{
+  for(const src of COMIC_URL.values())if(src.startsWith('blob:'))URL.revokeObjectURL(src);
+  COMIC_URL.clear();COMIC_FAIL.clear();COMIC_TRY.clear();COMIC_SOURCE.clear();resolvePics(true);
+});}
 
 /* ------------------- Fotos im Comic-Look (photo.js) ---------------------
-   Die Fotos werden nacheinander geladen (nicht alle auf einmal – das mag
-   Wikimedia nicht), mit dem Comic-Filter für Autos gezeichnet und als JPEG
+   Die lokalen Fotos werden nacheinander geladen, mit dem Comic-Filter für Autos gezeichnet und als JPEG
    im Foto-Speicher abgelegt. Bis dahin steht die gezeichnete Silhouette da;
    klappt der Filter nicht, kommt das Originalfoto.                      */
-const COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_TRY = new Map(), COMIC_Q = [];
+const COMIC_SOURCE = new Map(), COMIC_URL = new Map(), COMIC_FAIL = new Set(), COMIC_TRY = new Map(), COMIC_Q = [];
 let comicBusy = false;
-const comicKey = id => location.origin + "/__carcomic/v3/" + id + "-" + (PICS[id] && PICS[id].src ? PICS[id].src.length : 0) + ".jpg";
-function wantComic(id, front) {
-  if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) return;
-  if (PICS[id] && PICS[id].art && PICS[id].src) { COMIC_URL.set(id, PICS[id].src); showCarPic(id); detectPaint(id, PICS[id].src); return; }   /* v79: Zeichnung – kein Filter */
-  if (!PICS[id] || !PICS[id].src || typeof comicCar !== "function") return;
-  const at = COMIC_Q.indexOf(id);
-  if (at >= 0) { if (front && at > 0) { COMIC_Q.splice(at, 1); COMIC_Q.unshift(id); } return; }
-  if (front) COMIC_Q.unshift(id); else COMIC_Q.push(id);
-  if (!comicBusy) setTimeout(comicNext, 30);
+/* v372: Vollständiger Inhaltsfingerabdruck statt URL-Länge. Gleich lange
+   Quellen können völlig andere Autos sein; alte v3-Comics werden nicht gelesen. */
+const comicKey=id=>location.origin+'/__carcomic/v4/'+id+'/'+(PICS[id]?PICS[id].sha256:'missing')+'.jpg';
+const comicReady=id=>!!(PICS[id]&&COMIC_SOURCE.get(id)===PICS[id].sha256&&(COMIC_URL.has(id)||COMIC_FAIL.has(id)));
+function wantComic(id,front) {
+  if(!approvedPic(id))return;
+  if(comicReady(id))return;
+  if(COMIC_URL.has(id)){const old=COMIC_URL.get(id);if(old.startsWith('blob:'))URL.revokeObjectURL(old);COMIC_URL.delete(id);}
+  COMIC_FAIL.delete(id);
+  const at=COMIC_Q.indexOf(id);
+  if(at>=0){if(front&&at>0){COMIC_Q.splice(at,1);COMIC_Q.unshift(id);}return;}
+  if(front)COMIC_Q.unshift(id);else COMIC_Q.push(id);
+  if(!comicBusy)setTimeout(comicNext,30);
 }
 async function loadBitmap(blob) {
   if (typeof createImageBitmap === "function") { try { return await createImageBitmap(blob); } catch (_) { /* weiter unten */ } }
@@ -685,6 +517,8 @@ async function comicNext() {
   const id = COMIC_Q.shift();
   if (!id) { comicBusy = false; return; }
   comicBusy = true;
+  const source=PICS[id],sourceKey=source&&source.sha256;
+  if(!approvedPic(id,source)){setTimeout(comicNext,120);return;}
   try {
     const cache = typeof caches !== "undefined" ? await caches.open("logistika-carpics").catch(() => null) : null;
     const key = comicKey(id);
@@ -692,7 +526,7 @@ async function comicNext() {
     const hit = cache && await cache.match(key).catch(() => null);
     if (hit) blob = await hit.blob();
     else {
-      const bm = await loadBitmap(await fetchPic(PICS[id].src));
+      const bm = await loadBitmap(await fetchPic(source.src));
       const W0 = bm.width, H0 = bm.height, k = Math.min(1, 640 / W0);
       const W = Math.max(1, Math.round(W0 * k)), H = Math.max(1, Math.round(H0 * k));
       const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
@@ -707,117 +541,55 @@ async function comicNext() {
       if (!blob) throw new Error("JPEG");
       if (cache) cache.put(key, new Response(blob, { headers: { "Content-Type": "image/jpeg" } })).catch(() => {});
     }
+    /* Ein alter asynchroner Auftrag darf kein zwischenzeitlich ersetztes
+       Modellfoto überschreiben. */
+    if(!approvedPic(id,source)||!PICS[id]||PICS[id].sha256!==sourceKey){setTimeout(comicNext,120);return;}
     const url = URL.createObjectURL(blob);
-    COMIC_URL.set(id, url);
-    showCarPic(id);
-    detectPaint(id, blob);
+    COMIC_SOURCE.set(id,sourceKey);COMIC_URL.set(id,url);showCarPic(id);
   } catch (_) {
     /* später nochmal (z. B. gedrosselt), nach drei Versuchen bleibt das Originalfoto */
+    if(!PICS[id]||PICS[id].sha256!==sourceKey){setTimeout(comicNext,120);return;}
     const n = (COMIC_TRY.get(id) || 0) + 1;
     COMIC_TRY.set(id, n);
     if (n < 3) setTimeout(() => wantComic(id), 4000 * n);
-    else { COMIC_FAIL.add(id); showCarPic(id); }
+    else { COMIC_SOURCE.set(id,sourceKey);COMIC_FAIL.add(id);showCarPic(id); }
   }
   setTimeout(comicNext, 120);
 }
-/* v154: Lackfarbe aus dem Foto bestimmen – Notiz („Kyalamigrün“) und Autobild passen so immer zusammen */
-function hex2lab(h) {
-  const n = parseInt(h.replace("#", ""), 16), f = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
-  return rgb2lab(f(n >> 16 & 255), f(n >> 8 & 255), f(n & 255));
-}
-function rgb2lab(r, g, b) {
-  const X = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047, Y = r * 0.2126 + g * 0.7152 + b * 0.0722, Z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
-  const q = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
-  const fx = q(X), fy = q(Y), fz = q(Z);
-  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
-}
-function paintFromPixels(d, W, H, list) {
-  const labs = list.map(p => hex2lab(p[1])), votes = list.map(() => 0);
-  let n = 0, dark = 0;
-  const x0 = Math.floor(W * 0.18), x1 = Math.ceil(W * 0.82), y0 = Math.floor(H * 0.32), y1 = Math.ceil(H * 0.66);
-  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-    const i = (y * W + x) * 4; if (d[i + 3] < 200) continue;
-    const f = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
-    const L = rgb2lab(f(d[i]), f(d[i + 1]), f(d[i + 2]));
-    n++;
-    if (L[0] < 20) { dark++; continue; }   /* Reifen, Scheiben, Schatten */
-    let b = 0, bd = 1e9;
-    labs.forEach((q, k) => { const dd = 0.45 * (L[0] - q[0]) ** 2 + (L[1] - q[1]) ** 2 + (L[2] - q[2]) ** 2; if (dd < bd) { bd = dd; b = k; } });
-    votes[b] += 1 + Math.hypot(L[1], L[2]) / 40;   /* kräftige Farben zählen mehr als Grau (Straße, Himmel) */
-  }
-  if (n < 20) return -1;
-  let best = 0; votes.forEach((v, k) => { if (v > votes[best]) best = k; });
-  const bl = list.findIndex(p => hex2lab(p[1])[0] < 22);
-  if (bl >= 0 && dark / n > 0.5) return bl;
-  return best;
-}
-async function detectPaint(id, src) {
-  const p = PICS[id], c = CAR[id];
-  if (!p || !c || p.pc || !CAR_PAINTS[c.b]) return;
-  try {
-    const bm = await loadBitmap(typeof src === "string" ? await (await fetch(src)).blob() : src);
-    const W = 96, H = Math.max(24, Math.round(96 * bm.height / bm.width));
-    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-    const cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(bm, 0, 0, W, H);
-    if (bm.close) bm.close();
-    const k = paintFromPixels(cx.getImageData(0, 0, W, H).data, W, H, CAR_PAINTS[c.b]);
-    if (k < 0) return;
-    p.pc = CAR_PAINTS[c.b][k][0]; savePics();
-    if (ahFixPaints()) ahRefreshPaintUI();
-  } catch (_) { /* Foto nicht lesbar: Lack bleibt wie gewürfelt */ }
-}
-function paintOfPhoto(carId) {
-  const p = PICS[carId], c = CAR[carId];
-  if (!p || !p.pc || !c || !CAR_PAINTS[c.b]) return null;
-  return CAR_PAINTS[c.b].find(q => q[0] === p.pc) || null;
-}
-/* alle Lose, Garage und Verlauf an das Foto angleichen; true = etwas geändert */
-function ahFixPaints() {
-  if (typeof S === "undefined" || !S || !S.ah) return false;
-  const A = S.ah; let ch = false;
-  const fix = o => { if (!o || o.kind !== "car") return; const q = paintOfPhoto(o.car); if (q && (!o.paint || o.paint[0] !== q[0])) { o.paint = [q[0], q[1]]; ch = true; } };
-  (A.lots || []).forEach(fix); (A.garage || []).forEach(fix); (A.past || []).forEach(fix);
-  return ch;
-}
-function ahRefreshPaintUI() {
-  try {
-    if (typeof lotModal !== "undefined" && lotModal && typeof refreshLotModal === "function") renderLotModal();
-    else if (activeTab === "market" && !document.body.classList.contains("modal-open")) renderAuction();
-  } catch (_) { /* egal */ }
-}
 /* Bild in alle Rahmen dieses Autos setzen (Comic, sonst Original) */
 function showCarPic(id) {
-  const p = PICS[id];
-  if (!p || !p.src) return;
-  document.querySelectorAll(`[data-carpic="${id}"]`).forEach(el => {
-    el.classList.remove("loading");
-    const im = el.querySelector("img");
-    if (COMIC_URL.has(id)) {
-      if (im) { im.classList.add("cx"); im.removeAttribute("onerror"); im.src = COMIC_URL.get(id); }
-      else el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
-    } else if (COMIC_FAIL.has(id) && !im) el.insertAdjacentHTML("beforeend", picImgHTML(id, p));
+  const p=PICS[id];
+  document.querySelectorAll(`[data-carpic="${id}"]`).forEach(el=>{
+    el.classList.remove('loading');
+    if(!photoFits(id,el.dataset.carpaint)||!comicReady(id)){
+      el.querySelectorAll('img,.credit').forEach(n=>n.remove());
+      if(!el.querySelector('.media-note'))el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');
+      return;
+    }
+    el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend',picImgHTML(id,p));
   });
 }
-function picCredit(p) { if (p.art) return "🎨 KI-Illustration"; return "📷 " + (p.by || "Wikimedia Commons") + (p.lic ? " · " + p.lic : ""); }
+function picCredit(p) {return 'Modellfoto · '+(p.by||'Wikimedia Commons')+(p.lic?' · '+p.lic:'');}
 function applyPics() {
-  document.querySelectorAll("[data-carpic]").forEach(el => {
-    const id = el.dataset.carpic;
-    if (COMIC_URL.has(id) || COMIC_FAIL.has(id)) showCarPic(id);
-    else wantComic(id, el.classList.contains("big"));
+  document.querySelectorAll('[data-carpic]').forEach(el=>{
+    const id=el.dataset.carpic;
+    if(!photoFits(id,el.dataset.carpaint)){showCarPic(id);return;}
+    if(comicReady(id))showCarPic(id);else wantComic(id,el.classList.contains('big'));
   });
 }
-/* Foto lädt nicht? Der Reihe nach andere Wege probieren, dann aufgeben */
+/* v372: Nur dasselbe freigegebene Foto als Rückfall verwenden. Bei Ausfall
+   bleibt die gekennzeichnete Illustration; niemals ein anderes Automodell. */
 function picFail(im) {
-  const n = +(im.dataset.try || 0) + 1;
-  im.dataset.try = n;
-  const id = im.closest("[data-carpic]") && im.closest("[data-carpic]").dataset.carpic, p = PICS[id];
-  const urls = p && p.src ? picUrls(p.src) : [];
-  if (!urls[n]) { const cr = im.nextElementSibling; if (cr && cr.classList.contains("credit")) cr.remove(); im.remove(); return; }
-  im.src = urls[n];
+  const el=im.closest('[data-carpic]'),id=el&&el.dataset.carpic;
+  if(el&&photoFits(id,el.dataset.carpaint)&&im.classList.contains('cx')&&!im.dataset.fallback){
+    im.dataset.fallback='1';im.classList.remove('cx');im.src=PICS[id].src;return;
+  }
+  if(el){el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');}
 }
 function picImgHTML(id, p) {
-  const comic = COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
-  return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))}" referrerpolicy="no-referrer"${p.art ? ` onerror="this.nextElementSibling&&this.nextElementSibling.remove();this.remove()"` : comic ? "" : ` onerror="picFail(this)"`}>`
+  if(!approvedPic(id,p))return '';
+  const comic = comicReady(id)&&COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
+  return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))} · Modellfoto" referrerpolicy="no-referrer" onerror="picFail(this)">`
     + `<span class="credit">${esc(picCredit(p))}</span>`;
 }
 /* Gezeichnetes Auto, solange kein Foto da ist (oder offline). v77: statt einer einfachen Silhouette eine
@@ -854,6 +626,7 @@ function hexMix(a, b, t) {
   return "#" + A.map((x, i) => Math.round(x + (B[i] - x) * t).toString(16).padStart(2, "0")).join("");
 }
 function carArtShape(c) {
+  if(c&&["prs","p930","p356"].includes(c.id))return "classic";
   const b = (c && c.body) || "coupe";
   if (b === "coupe" && c && (c.cls === "super" || c.cls === "hyper" || c.b === "lambo" || c.b === "bugatti" || c.b === "mclaren" || c.b === "pagani" || c.b === "koenig" || (c.b === "ferrari" && c.cls !== "classic"))) return "wedge";
   return CAR_ART[b] ? b : "coupe";
@@ -903,13 +676,11 @@ function carArt(c, paint) {
     ${S.wh.map(wheel).join("")}
   </svg>`;
 }
-function carPicHTML(c, paint, big) {
-  const p = PICS[c.id], col = paint || (CAR_PAINTS[c.b] || [["", "#888"]])[0][1];
-  /* Comic fertig (oder Filter gescheitert): Bild gleich mit; sonst erst die
-     Silhouette, das Foto kommt aus der Warteschlange nach */
-  let ready = p && p.src && (COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id));
-  if (p && p.src && !ready) { wantComic(c.id, big); ready = COMIC_URL.has(c.id) || COMIC_FAIL.has(c.id); }
-  return `<div class="carpic${big ? " big" : ""}${p && p.src && !ready ? " loading" : ""}" data-carpic="${c.id}" style="--pc:${col}">${carArt(c, col)}${ready ? picImgHTML(c.id, p) : ""}</div>`;
+function carPicHTML(c,paint,big) {
+  const p=PICS[c.id],col=paint||(p&&p.paint?p.paint[1]:(CAR_PAINTS[c.b]||[['','#888']])[0][1]),allowed=photoFits(c.id,paint);
+  let ready=allowed&&comicReady(c.id);
+  if(allowed&&!ready){wantComic(c.id,big);ready=comicReady(c.id);}
+  return `<div class="carpic${big?' big':''}${allowed&&!ready?' loading':''}" data-carpic="${c.id}" data-carpaint="${esc(paint||'')}" style="--pc:${col}">${carArt(c,col)}${ready?picImgHTML(c.id,p):'<span class="credit media-note">Illustration in Fahrzeugfarbe</span>'}</div>`;
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];
@@ -1036,7 +807,7 @@ function pastRowHTML(p) {
     <span class="pr-p"><b>${p.lead ? money(p.price) : "–"}</b>${r[1] ? `<small class="${r[0]}">${r[1]}</small>` : ""}</span></div>`;
 }
 function renderAuction() {
-  const A = ah(); ahFixPaints();
+  const A = ah();
   if (ahPurgeVeh()) { ensureLots(false); save(); }
   if (!A.lots.length) ensureLots(true);
   setTools("market", ahToolsHTML(), bindAhTools);
@@ -1063,7 +834,7 @@ function renderAuction() {
       : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;
   } else if (A.view === "cat") {
     const list = CARS.filter(bf);
-    html = `<div class="ah-head"><b>📖 Katalog</b><small>${list.length} Modelle · Marktwert bei Zustandsnote 2 · Fotos: Wikipedia/Wikimedia Commons</small></div>`
+    html = `<div class="ah-head"><b>📖 Katalog</b><small>${list.length} Modelle · Marktwert bei Zustandsnote 2 · Geprüfte Modellfotos: Wikimedia Commons</small></div>`
       + `<div class="catlist">${list.map(catRowHTML).join("")}</div>`;
   } else {
     html = A.past.length ? `<div class="card">${A.past.map(pastRowHTML).join("")}</div>` : `<div class="empty">Noch keine Auktion beendet.</div>`;
@@ -1115,16 +886,15 @@ function specsHTML(c, l) {
   const row = (k, v) => v == null || v === "" ? "" : `<div><small>${k}</small><b>${v}</b></div>`;
   return `<div class="specs">
     ${row("Leistung", c.ps + " PS")}${row("Spitze", c.vmax + " km/h")}${row("0–100 km/h", c.acc ? fmt(c.acc, c.acc % 1 ? (String(c.acc).split(".")[1] || "").length : 0) + " s" : "–")}
-    ${row("Motor", esc(c.eng))}${row("Bauzeit", esc(c.yrs))}${row("Gebaut", c.n ? (c.n === 1 ? "Einzelstück" : fmt(c.n, 0) + " Stück") : "laufende Serie")}
+    ${row("Motor", esc(c.eng))}${row("Bauzeit", esc(c.yrs))}${row("Gebaut", c.n ? (c.n === 1 ? "Einzelstück" : fmt(c.n, 0) + " Stück") : /seit|ab/.test(c.yrs) ? "laufende Serie" : "nicht ausgewiesen")}
     ${l ? row("Baujahr", l.y) + row("Laufleistung", fmt(l.km, 0) + " km") + row("Farbe", esc(l.paint[0])) + row("Zustand", "Note " + l.cond + " · " + AH_COND[l.cond].n) : ""}
     ${row("Als Kurier", c.track ? "keine Straßenzulassung" : c.cap < 1 ? "kein Kofferraum" : kgf(c.cap) + " · " + carSpeed(c) + " km/h · " + fmt(carCostKm(c), 2) + " €/km")}
   </div>`;
 }
-function creditHTML(c) {
+function creditHTML(c,paint) {
   const p = PICS[c.id];
-  if (!p || !p.src) return `<div class="piccredit">✏️ Zeichnung – das Foto kommt, sobald es geladen ist.</div>`;
-  if (p.art) return `<div class="piccredit">🎨 KI-Illustration (Gemini)</div>`;
-  return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}</div>`;
+  if(!photoFits(c.id,paint))return '<div class="piccredit">Illustration in Fahrzeugfarbe · kein passendes Modellfoto für diese Lackierung.</div>';
+  return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}<br>Darstellung mit Comicfilter; unverändertes Original unter der Quellenangabe.</div>`;
 }
 let lotModal = null;
 function openLot(id) {
@@ -1134,7 +904,6 @@ function openLot(id) {
   renderLotModal();
 }
 function renderLotModal(msg) {
-  ahFixPaints();
   const l = lotById(lotModal);
   if (!l) { lotModal = null; return; }
   const c = l.kind === "car" ? CAR[l.car] : null, t = l.kind === "veh" ? vType(l.vt) : null;
@@ -1146,7 +915,7 @@ function renderLotModal(msg) {
       <div class="msub">Los ${l.id.slice(1)} · ${esc(l.seller)} · endet ${stamp(l.ends)}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button></div>
     <div class="lotm-pic">${lotPicHTML(l, true)}</div>
-    ${c ? creditHTML(c) : ""}
+    ${c ? creditHTML(c,l.paint&&l.paint[1]) : ""}
     ${c ? `<p class="lotm-note">${esc(c.note)}</p>` + specsHTML(c, l)
       : `<div class="specs"><div><small>Typ</small><b>${esc(t.brand)}</b></div><div><small>Nutzlast</small><b>${kgf(t.cap)}</b></div>
          <div><small>Tempo</small><b>${t.speed} km/h</b></div><div><small>Zustand</small><b>${100 - l.wear} %</b></div><div><small>Laufleistung</small><b>${fmt(l.km, 0)} km</b></div>
@@ -1188,7 +957,6 @@ function refreshLotModal() {
 }
 function openCar(id) {
   const c = CAR[id]; if (!c) return;
-  ahFixPaints();
   const A = ah(), live = liveLots().find(l => l.car === id && !l.mine), own = A.garage.filter(g => g.car === id);
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
   const paint = own[0] ? own[0].paint[1] : live ? live.paint[1] : undefined;
@@ -1197,7 +965,7 @@ function openCar(id) {
       <div class="msub">${CAR_CLS[c.cls].name} · Marktwert ~${money(nice(carMarket(c)))} (Note 2)</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button></div>
     <div class="lotm-pic">${carPicHTML(c, paint, true)}</div>
-    ${creditHTML(c)}
+    ${creditHTML(c,paint)}
     <p class="lotm-note">${esc(c.note)}</p>
     ${specsHTML(c, own[0] ? Object.assign({}, own[0]) : null)}
     ${own.length ? `<div class="lim">🏁 In deiner Garage: Marktwert ${money(gValue(own[0]))}, gekauft für ${money(own[0].paid)}.</div>` : ""}

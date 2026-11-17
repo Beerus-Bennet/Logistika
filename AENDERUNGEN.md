@@ -1,3 +1,11 @@
+## v372 – Autofotos passen zu Modell, Baujahr und Lack
+
+**Ursache:** Die automatische Wikipedia-Suche konnte eine andere Generation/Variante derselben Marke liefern; zufällige Baujahre lagen außerhalb der tatsächlichen Modellzeit. Pixelbasierte Lackschätzungen überschrieben gespeicherte Farben, der Bild-Cache verglich nur URL-Längen.
+
+**Lösung:** 127 gesichtete, fest zugeordnete Commons-Modellfotos lokal mit Quelle/Lizenz/SHA-256. Neue Lose erhalten die Fotofarbe; bestehende Lacke bleiben erhalten und bekommen bei Abweichungen eine gekennzeichnete Illustration. Baujahrgrenzen je Variante, einmalige Korrektur unmöglicher Altjahre ohne Änderungen an Geboten/Besitz/Preisen. Keine dynamische Titelfoto-/Markensuche oder automatische Umfärbung mehr. Comic-Cache nach Bildinhalt und Prüfung laufender Filteraufträge; Importer kann ausschließlich freigegebene Fotos wiederherstellen.
+
+**Geprüft:** sechs Prüfgruppen, 2.540 Lose über alle Modelle, alter Porsche-Spielstand, Zuschlag/Wiedereinlieferung; mobile Chromium-Auktion/Garage, alle 127 Fotos dekodiert, Rückfälle und verspätete Bilder; Quellen-/Lizenz-/Hashprüfung. main mit PR #88/v370 integriert; offene v371 bleibt separat. Nicht auf echtem iPhone/Safari. Details und Bilder: [docs/AUTOFOTOS-v372.md](docs/AUTOFOTOS-v372.md).
+
 ## v370 – Fernstufen ohne sichtbares Umschalten
 **Wunsch Bennet:** Der Übergang der verschwindenden Objekte beim Herauszoomen soll flüssig wirken – der Spieler soll nicht mitbekommen, wie sie verschwinden.
 
