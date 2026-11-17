@@ -827,6 +827,8 @@ function worldGround(chunkOf, GC, nx, nz, cell, gcAt, F) {
     }
     return c;
   };
+  /* v386: Bergdecke übernimmt exakt die Waldbodenfarben, auch an ihrer rechteckigen Grenze. */
+  if(typeof ALPINE!=="undefined")ALPINE.setGroundSampler((x,z)=>{const i=Math.floor((x-W.x0)/cell),j=Math.floor((z-W.z0)/cell);return colAt(x,z,cellP.get(j*nx+i)||[]);});
   /* Eckfarben des feinen Gitters einmal je Punkt (gemeinsame Kanten haben so garantiert dieselbe Farbe) */
   const FX = nx * N + 1, vc = new Map();
   const vAt = (I, J, L) => { const k = J * FX + I; let c = vc.get(k); if (!c) { c = colAt(W.x0 + I * sc, W.z0 + J * sc, L); vc.set(k, c); } return c; };
@@ -1112,7 +1114,7 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, width:typeof ALPINE!=="undefined"?ALPINE.riverWidth:null,level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   /* v366: Beide Bäche laufen über den alten Weltrand hinaus bis zur Inselkante (creekToRim) */
   const CRX = creekToRim(typeof ALPINE!=="undefined"?ALPINE.riverLine():FWORLD.creek).line, LCRX = creekToRim(LCR).line;
   lines.merge(islandClip(FWM.creekBank(CRX, CR)), {});
@@ -4095,9 +4097,10 @@ function openTrader() {
   FV.sheetFn = openTrader;
   const rows = c.data.deals.map((d, i) => {
     const it = d.item ? FITEMS[d.item] : null;
-    const t = d.kind === "buy" ? `${esc(d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : `${esc(fqty(d.item, d.qty))} verkaufen`;
+    /* v386: Menge im Titel, Grund des Angebots als kleine Marke */
+    const t = d.kind === "buy" ? `${esc(d.qty > 1 || !d.n ? fqty(d.item, d.qty) : d.n)} kaufen` : d.kind === "clover" ? `${d.qty} Kleeblätter kaufen` : d.kind === "lucky" ? (d.box === "gold" ? "Goldene Luckybox kaufen" : "Luckybox kaufen") : `${esc(fqty(d.item, d.qty))} verkaufen`;
     const p = d.kind === "sell" ? "+" + eur(Math.round(farmStackV(d.item, d.qty) * d.mult * 10) / 10) + " (+" + Math.round((d.mult - 1) * 100) + " %)" : eur(d.price);
-    return `<button class="frec${d.done ? " lock" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b><small>${d.done ? "erledigt" : p}</small></button>`;
+    return `<button class="frec${d.done ? " lock" : ""}${d.why === "Für deinen Auftrag" ? " fr-need" : ""}" data-deal="${i}" ${d.done ? "disabled" : ""}>${d.item && FITEMS[d.item] ? itemIc(d.item) : `<span class="ic">${d.i}</span>`}<b>${t}</b>${d.why && !d.done ? `<em class="fr-why">${esc(d.why)}</em>` : ""}<small>${d.done ? "erledigt" : p}${d.q && !d.done ? " · " + "★".repeat(d.q) : ""}</small></button>`;
   }).join("");
   openFarmSheet(`<div class="fs-h"><span class="fs-ic">🧑‍💼</span>Fliegender Händler<small>noch ${fdur(Math.max(1, c.until - S.time))} an der Straße</small></div>
     <div class="frecs">${rows}</div><div class="fs-sub">„Heute nur bei mir – morgen bin ich in Brandenburg an der Havel!“</div>`, "trader");

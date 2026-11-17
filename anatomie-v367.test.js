@@ -16,7 +16,7 @@ test('Alle 25 weichen Organmodelle sind von beiden Seiten treffbar; leere Umgebu
  for(const k of ['hirsch','keiler','fasan'])assert.equal(run(`HUNT._shotOrgans('${k}',[3,5,4],[-1,0,0],'koerper').filter(o=>HUNT.ORG['${k}'].some(O=>O.t&&O.id===o.id)).length`),0);
 });
 test('Paarige Nieren bleiben getrennt und stehen in wirklicher Durchschussreihenfolge, auch von der Gegenseite',()=>{
- assert.equal(run(`HUNT._shotOrgans('keiler',[3,.62,-.2],[-1,0,0],'koerper').filter(o=>/^niere/.test(o.id)).map(o=>o.n).join(',')`),'Niere rechts,Niere links');
+ assert.equal(run(`HUNT._shotOrgans('keiler',[3,.62,-.2],[-1,0,0],'koerper').filter(o=>/^niere/.test(o.id)).map(o=>o.n).join(',')`),'Niere links,Niere rechts');
  assert.equal(run(`HUNT._shotOrgans('keiler',[-3,.62,-.2],[1,0,0],'koerper').filter(o=>/^niere/.test(o.id)).map(o=>o.id).join(',')`),'niereL,niereR');
 });
 test('Ein neuer Schuss wird ohne tatsächlichen Herzkontakt nicht mehr allein durch die großzügige alte Herzzone zum Herzschuss',()=>{
@@ -40,7 +40,7 @@ test('Gezeichnete Trefferpunkte und Namenszeiger sitzen auf demselben Kanal und 
  run(`var R={nodes:[],mesh:b=>({b}),free(){},node:(m,o)=>Object.assign({mesh:m,ch:[]},o),addChild:(p,n)=>{p.ch.push(n);return n;}};
  var gn=HUNT.genes('keiler',.7,3),A={k:'keiler',s:1,score:.7,gn,T:HUNT.traits('keiler',.7,gn),vr:0},sh={zone:'koerper',lo:[3,.5,-.12],ld:d,t:2.8,org:[],pose:{legs:[]}};
  HUNT._xrBuild(R,A,sh);var x=HUNT._xr();`);
- assert.equal(run('x.visibleOrgans.join(",")'),'magen');assert.equal(run('x.ov.lab[0].n'),'Magen');assert.ok(run('Math.abs(x.ov.lab[0].p[1]-.5)<1e-8&&Math.abs(x.ov.lab[0].p[2]+.12)<1e-8'));
+ assert.equal(run('x.visibleOrgans.join(",")'),'magen');assert.equal(run('x.ov.hn'),'Magen');assert.equal(run('x.ov.lab.length'),0);
  const hit=run(`HUNT._organSegment('keiler','magen',sh.lo,sh.ld)[0]`);assert.ok(Math.abs(run('x.ov.h[0]')-(3-hit))<1e-7);
  assert.ok(run('x.ov.e[0]>x.ov.h[0]&&x.ov.h[0]>x.ov.x[0]'));
 });

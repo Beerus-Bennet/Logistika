@@ -1,0 +1,15 @@
+/* v366: Reale Fallgelenke, touchbedienbare Jagdaufträge und weltfeste Wolken. */
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
+const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-v388';fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const ctx=await b.newContext({viewport:{width:390,height:760},isMobile:true,hasTouch:true,serviceWorkers:'block'}),p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(String(e)));
+ await p.goto('http://127.0.0.1:8000/?test=1');await p.evaluate(()=>{
+  S=Object.assign(newGame(),{phase:'play',stage:6,money:1e7,time:21.6*60,speed:0,tut:{done:true},player:{name:'Jonas',company:'Weitwind Spedition',origin:3,color:0,avatar:{art:'p1'}}});farmNew();S.farm.logi=true;S.farm.stage=4;S.farm.tut.done=true;S.farm.snd=false;S.farm.areas={wald:true,see:true,saege:true,altwald:true};
+  document.querySelector('#intro').classList.remove('on');document.body.className='has-farm tab-farm';activeTab='farm';FV.on=true;farmDOM();syncHeadH();FV.R=G3.create(document.querySelector('#farmCv'),{shadowSize:256,maxDpr:1});HUNT._v200.st().built=1;HUNT.begin();HUNT.X.mode='hold';HUNT.X.inRv=true;HUNT.X.spawnT=1e9;HUNT.X.flyT=1e9;HUNT.step(.01,0);FV.R.render(0);VISTA.draw(FV.R,0);
+ });
+
+ await p.evaluate(()=>{FV.on=false;const A=HUNT._spawn('hirsch',false,{score:.7,g:36,vr:0,x:HUNT.FC.x,z:HUNT.FC.z});const O=HUNT.ORG.hirsch.find(o=>o.id==='herz');A.shots=[{zone:'herz',lo:[3,O.c[1],O.c[2]],ld:[-1,0,0],t:2.8,dm:74,dmg:100,v:750,e:3300,org:[],pose:{legs:[]}}];HUNT.X.hrv={A};HUNT._xray();window.testA387=A;});
+ await p.waitForTimeout(300);assert.equal(await p.locator('.xr-cause').count(),0);assert.equal(await p.locator('.xr-organ-name').filter({hasText:'Herz (zerstört)'}).count(),1);assert.equal(await p.locator('.xr-labs').getByText('Herz',{exact:true}).count(),0);assert.equal(await p.locator('.xo-hl').textContent(),'◎ Herz');await p.screenshot({path:out+'/herz.png'});
+ for(const side of [-1,1]){await p.evaluate(side=>{const A=testA387,O=HUNT.ORG.hirsch.find(q=>q.t==='lunge'&&Math.sign(q.c[0])===side);A.shots=[{zone:'lunge',lo:[O.c[0],O.c[1],3],ld:[0,0,-1],t:2.8,dm:74,dmg:100,v:750,e:3300,org:[],pose:{legs:[]}}];HUNT._xray();},side);await p.waitForTimeout(150);const name='Lungenflügel '+(side<0?'rechts':'links');assert.equal(await p.locator('.xr-organ-name').filter({hasText:name}).count(),1);assert.equal(await p.locator('.xo-hl').textContent(),'◎ '+name);assert.equal(await p.locator('.xr-labs span').filter({hasText:name}).count(),0);await p.screenshot({path:out+'/lunge-'+(side<0?'rechts':'links')+'.png'});}
+ assert.deepEqual(errors,[]);console.log('OK v388 Browser: Herz einmal beschriftet, Herz (zerstört) in Liste, kein Todesursachenblock; linke/rechte Lunge stimmen in Schild und Liste überein.');
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

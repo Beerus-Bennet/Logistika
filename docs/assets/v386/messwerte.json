@@ -1,0 +1,138 @@
+{
+  "viewport": "390×760 / 960×800, Chromium SwiftShader",
+  "baseline": {
+    "meshes": 338,
+    "nodes": 666,
+    "alpMeshes": 16
+  },
+  "frames": [
+    {
+      "dist": 70,
+      "ms": 4.5,
+      "tris": 61690,
+      "shadowTris": 30931,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 7,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 150,
+      "ms": 2.1999999955296516,
+      "tris": 116016,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 7,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 185,
+      "ms": 2.8000000044703484,
+      "tris": 180797,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 7,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 225,
+      "ms": 2.5999999940395355,
+      "tris": 276356,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 0,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 450,
+      "ms": 6.899999998509884,
+      "tris": 410965,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 0,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 225,
+      "ms": 2.100000001490116,
+      "tris": 276356,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 0,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 150,
+      "ms": 1.8999999985098839,
+      "tris": 116016,
+      "shadowTris": 0,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 7,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    },
+    {
+      "dist": 70,
+      "ms": 1.6000000014901161,
+      "tris": 61690,
+      "shadowTris": 30931,
+      "near": true,
+      "fade": 0,
+      "terrainMesh": 25746,
+      "animals": 7,
+      "meshes": 338,
+      "alpMeshes": 16,
+      "lost": 0
+    }
+  ],
+  "ownBudget": {
+    "tri": 13035,
+    "draws": 12
+  },
+  "movement": {
+    "before": [
+      38.17338802776982,
+      -136.0223461821555,
+      108.57208850677566,
+      -148.91924277940188
+    ],
+    "after": [
+      37.14259473105881,
+      -134.87728908031485,
+      100.77899196298927,
+      -139.4437459986917
+    ],
+    "legs": true
+  },
+  "nav": {
+    "inside": true,
+    "blocked": true
+  },
+  "errors": []
+}

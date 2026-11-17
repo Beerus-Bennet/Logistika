@@ -17,14 +17,14 @@ test('Trefferpunkt liegt im gewerteten Organ, der Kanal endet am Ausschuss, jede
  run(`var R={nodes:[],mesh:b=>({b}),free(){},node:(m,o)=>Object.assign({mesh:m,ch:[]},o),addChild:(p,n)=>{p.ch.push(n);return n;}};
   function shot(k,id,zone){const gn=HUNT.genes(k,.7,3),A={k,s:1.1,score:.7,gn,T:HUNT.traits(k,.7,gn),vr:0},O=HUNT.ORG[k].find(o=>o.id===id),lo=[O.c[0]+3,O.c[1]+.3,O.c[2]+.2],l=Math.hypot(3,.3,.2),ld=[-3/l,-.3/l,-.2/l];
    HUNT._xrBuild(R,A,{zone,lo,ld,t:l-.19,org:HUNT._shotOrgans(k,lo,ld,zone),pose:{nrx:0,nry:0,hrx:0,legs:[]}});return {V:HUNT._xr().ov,O,s:A.s};}`);
- for(const [k,id,zone,name] of [['hirsch','herz','herz','Herz'],['keiler','herz','herz','Herz'],['hirsch','lungeL','lunge','Lunge']]){
+ for(const [k,id,zone,name] of [['hirsch','herz','herz','Herz'],['keiler','herz','herz','Herz'],['hirsch','lungeL','lunge','Lunge (beidseitig)']]){
   C.a=[k,id,zone];run('var r=shot(...a),V=r.V,O=r.O,h=V.h.map(v=>v/r.s);');
   assert.equal(run('V.hn'),name);assert.equal(run('V.kill'),true);
   assert.ok(run('HUNT.ORG[a[0]].filter(Q=>Q.t===O.t).some(Q=>Math.hypot((h[0]-Q.c[0])/Q.r[0],(h[1]-Q.c[1])/Q.r[1],(h[2]-Q.c[2])/Q.r[2])<1)'),k+' '+id+': Trefferpunkt im Organ');
   assert.ok(run('V.x[0]<V.h[0]&&V.h[0]<V.e[0]'),'Einschuss → Treffer → Ausschuss in Schussrichtung');
-  assert.ok(run('V.lab.length>=1&&V.lab.every(l=>l.hit)&&V.lab.some(l=>l.n==="'+name+'")'),'Organnamen, getroffenes markiert');
+  assert.ok(run('V.lab.every(l=>l.hit)&&!V.lab.some(l=>l.n==="'+name+'")'),'Organnamen, getroffenes markiert');
  }
- run('var f=shot("fasan","herz","vogel").V;');assert.ok(run('f.lab.every(l=>l.hit)&&f.lab.length>=1'));
+ run('var f=shot("fasan","herz","vogel").V;');assert.ok(run('f.lab.every(l=>l.hit)&&!f.lab.some(l=>l.n==="Herz")'));
 });
 test('Wertung: Herzzone unverändert, Lungenzone (v375) folgt der größeren, anatomischen Lunge',()=>{
  assert.deepEqual(run('JSON.stringify([HUNT.SP.hirsch.heart,HUNT.SP.hirsch.lung,HUNT.SP.keiler.heart,HUNT.SP.keiler.lung])'),
