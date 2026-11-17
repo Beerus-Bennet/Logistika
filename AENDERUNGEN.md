@@ -1,3 +1,11 @@
+## v382 – Einschussloch am erlegten Stück
+
+**Ursache:** In der Bergungsansicht war nirgends zu sehen, wo die Kugel eingetreten ist; das Loch gab es nur als Markierung im Trefferbild.
+
+**Lösung (`hunt.js`, `woundSpot`, `woundMesh`, `addWound`):** Beim Treffer entsteht am passenden Knoten (Rumpf, Hals oder Haupt; Läufe ausgenommen) eine kleine, gedämpfte Stelle auf der Decke: struppiges dunkles Haar, schwacher rotbrauner Rand, dunkles Loch – dort, wo der aufgezeichnete Schusskanal die Oberfläche trifft. Sie bewegt sich mit dem Tier und wird beim Abbau freigegeben. Bewusst kinderfreundlich: kein Blutfleck, keine Spritzer. Das Stück fällt auf die Seite ohne Einschuss (`fallSide`), sodass die Wunde oben liegt. Nur Darstellung und Fallseite; Wertung, Fluchtweg und Spielstand unverändert. Baut auf v381 (PR #98) auf.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Herzschuss Hirsch und Keiler, Wunde in der Bergungsansicht gesichtet; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Fasan, Schüsse in Hals/Haupt in der Bergung, Handy/Safari; steile Schüsse vom Turm treffen meist den Rücken, dort liegt die Wunde dann oben auf der Rückenlinie.
+
 ## v381 – Trefferbild: Todesursache, Kanal durch den ganzen Hals, Hals-Organe passend zum Netz
 
 **Ursache:** (1) Ein Trägerschuss ohne Treffer an Wirbel oder Adern wurde als „knapp verfehlt“ gezeigt, das Stück fiel aber trotzdem sofort um – der Spieler sah nicht, woran es verendet. (2) Beim Trägerschuss endete der Kanal 20 cm hinter dem Einschuss mitten im Tier; beim Keiler lagen die Halsorgane (nur geschätzte Maße) neben dem Kanal, es wurde nichts getroffen.
@@ -9,6 +17,13 @@
 - **Organe im Hals** beim Keiler und Fasan aus dem echten Halsnetz gemessen (`neckExt`, `NECK_AX`); beim Keiler laufen Luft-/Speiseröhre und Schlagadern in den Brustansatz (Stich). Namen links/rechts getrennt.
 
 **Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Trägerschüsse Hirsch (8 Punkte: Wirbel → sofort, Adern/Luftröhre/Weichteile → Flucht) und Keiler (Stich), Trefferbilder gesichtet; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-thighs-v290`, `hunt-presentation-v315`. **Nicht geprüft:** Fasan-Trefferbild im Browser, Handy/Safari, Fluchtlängen im Spiel (nur Werte geprüft, nicht die Bewegung).
+## v380 – Großer Bergsee-Wasserfall und natürliche Flussbögen
+
+**Wunsch:** Alten Quell-/Serpentinenbach entfernen, großen Wasserfall mit Auffangbecken und sinnvoll angebundenem Überlauf bauen. Hauptfluss stärker mäandrieren lassen, Wasserbreite konstant halten und Insel-Austritt nach Süden verschieben.
+
+**Lösung:** Nach Recherche bei NPS und zu Wasserfällen/Kolkbecken/Mäandern neue durchgehende Anlage vom Bergsee bis zum bisherigen Flussanfang. Freie Fallbahn unter Erdbeschleunigung, bestehendes Fall-/Aufprallmaterial, begrenzte Gischt, echtes Becken und offener Talüberlauf auch im Fernmodell. Altanlage/Alt-Effekte entfallen. Westliche Flussbögen mit inneren/äußeren Uferunterschieden, Wasserbreite durchgehend3,45; Brücke/Oberlauf erhalten, Austritt deutlich südlicher. Betroffene gespeicherte Bäume werden unter Datenerhalt ans freie Ufer versetzt, nicht gelöscht.
+
+**Geprüft:** neue Wasser-/Gelände-/Baum- und Mäanderprüfungen, 133 Breitenquerschnitte, tatsächlicher Talüberlauf in Nah/Fern, Tier-/Zoomregressionen, Mobile-Chromium und bestehende Arbeiter-/Insel-/Wassertests. Kein echtes iPhone. Quellen, Grenzen und Prüfanleitung: [docs/WASSERLANDSCHAFT-v380.md](docs/WASSERLANDSCHAFT-v380.md).
 
 ## v379 – Hof: Seitenknöpfe kleiner, Seeblick-Knopf entfernt
 

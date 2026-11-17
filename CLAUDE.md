@@ -124,4 +124,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v379: Hof – Seitenknöpfe Laden/Lager kleiner (Block am Ende von `style.css`), Seeblick-Knopf `#fbTown` entfernt; Zugang über das Bauernhaus-Fenster (`#fhTown`) besteht noch.
 
+- v380: ALPINE ersetzt alte SPI-Quellanlage (worldview: SPI=null, springFx/springRun=null). Bergsee→freier Fall→POOL→DRAIN→FWORLD.creek, alte Hill-Masken aus; Kanal nach Beckenrandbildung schneiden. Nah/Fern am schmalen Überlauf verfeinern, nicht nur Nahmodell. Fall/Pool/Schaum feste Meshes mit vorhandenen Materialien, Partikel nur nah begrenzt. Westliche Mäander/konstante3,45 Breite, südlicher Austritt; o.meander verändert nur trockene Ufer, o.prefix verbindet Strömungsmuster. F.river380 verschiebt betroffene Bäume unter Datenerhalt. Neue Tests bergwasserfall-v380.* ersetzen v375-Erwartungen zur alten Wasserführung. Details docs/WASSERLANDSCHAFT-v380.md.
 - v381: Trefferbild – Todesursache (`deathCause`, `neckFate`), Trägerschuss ohne Wirbelsäule rennt noch (`runL` 3–18), Kanal durch den ganzen Hals, Halsmaße von Keiler/Fasan aus dem Netz (`neckExt`).
+
+- v382: Jagd – Einschussloch in der Bergung (`woundSpot`/`woundMesh`/`addWound`, `A.woundM`/`A.woundX`), Fallseite `fallSide`; gedämpft, ohne Blutspritzer.
