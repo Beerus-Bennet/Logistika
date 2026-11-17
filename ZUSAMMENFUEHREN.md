@@ -1,3 +1,13 @@
+## v368 – Wohnhausgärten nach dem Einzug
+
+Basis main `43249c4` (PR #85/v367 gemergt). Paralleler Performance-PR #86 bis `8de6f28` vollständig in `claude/wohn-gaerten-v368` integriert; Konflikte nur in AENDERUNGEN/CLAUDE, beide Inhalte erhalten. Insel-Fernstufen in worldview/gl3d bleiben erhalten. Gesamt-/Cacheversion 368; integrierte gl3d/worldview-Assets behalten367.
+
+Neues optionales Modul `villagegarden.js` zwischen villagesite und villagepeople laden und in SW-SHELL aufnehmen. `VILLAGE_GARDEN.plan(p,h)` liefert deterministische Belegung für bewohnte Status resident/rented/sold, sonst null; keine Änderungen im Save. Grounds/Modelle/Caches stammen aus demselben Plan. `modelKey` erlaubt Meshteilung zwischen vergleichbaren Haushalten. Haushaltwechsel wird über Bewohner-ID/Seed/Größe/Beruf erkannt.
+
+`villageview.js`: eigene Knoten yardGround/yard/yardFar statt Einbau in den nur bei Haustypwechsel erneuerten Hausknoten. sync erkennt Einzug/Leerstand unabhängig vom Haustyp. Hysterese 112/98, Ich-Perspektive voll; Kollision zoomunabhängig. `villagesite.blocked` verwendet Gartenflächen; Modulguard bleibt für alte isolierte Prüfstände. Bisherige Blumenkugeln entfernt, Basismesh-Key auf368 aktualisiert.
+
+Eigenes Asset villagesite/villageview/villagegarden 368; LOGI_V/SW368, sonstige Assetnummern unverändert. Prüfungen und eigene Screenshots: docs/WOHNGAERTEN-v368.md. Main/Pages nicht automatisch veröffentlichen.
+
 ## v367 – Jagd, Organbericht und Übernahmebedienung
 
 Vor dem Push abgeglichen: PR #84 wurde inzwischen auf main gemergt (`bb76a87`). Dieses aktuelle main ist ebenfalls vollständig und konfliktfrei integriert.

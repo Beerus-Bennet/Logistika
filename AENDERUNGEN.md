@@ -1,3 +1,11 @@
+## v368 – Bewohnte Häuser bekommen individuelle Gärten
+
+**Wunsch:** Häuser nach dem Einzug mit realistischen Gartendetails beleben. Gartenplanungsartikel und Fotos von HORNBACH/OBI geprüft; daraus Hausnähe der Sitzecke, Stauraum am Rand, freie Rasenflächen und getrennte Spiel-/Nutz-/Ruhebereiche abgeleitet.
+
+**Lösung:** Vier stabile Haushaltsprofile mit Gartenhäuschen/Regentonne, Tisch/Stühlen, Kugelgrill, unbefeuerter Feuerstelle/Bänken, Schaukel/Sandkasten oder Hochbeeten/Vogelbad. Pflanzkästen, Stauden und bei genügend Platz kleine Obstbäume ergänzen die Grundstücke. Ausstattung erst nach Einzug, auch für bestehende Bewohner und Käufer; keine neue Kosten-/Vertragslogik und keine Save-Migration. Neue Nachbarn aktualisieren den Garten ohne Hausneubau. Leerstand blendet ihn aus. Haus/Anbau, Tore, Briefkasten und Fahrradplatz bleiben frei; Gegenstände sind Hindernisse für Bewohner. Vereinfachte Fernmodelle und gemeinsame Meshes begrenzen zusätzliche Zeichenlast.
+
+**Integration/Prüfung:** main `43249c4`, parallel PR #86 (`8de6f28`) einschließlich Fernstufen vollständig integriert; Lieferung/Offline-Cache 368. Fünf Garten-Prüfgruppen mit allen Grundstücken, beiden Haustypen und vier Profilen; echter Einzug und vollständige Insel im Chromium-WebGL-Test, Zoom/Leerstand/Laden, vorhandene Bewohner-/Markt-/Inseltests. Nicht auf echtem iPhone/Safari geprüft. Quellen, Bilder und Prüfdetails: [docs/WOHNGAERTEN-v368.md](docs/WOHNGAERTEN-v368.md).
+
 ## v367 – Jagdbewegung, Wolken, stimmiges Trefferbild und bedienbarer Kaufbeleg
 
 **Ursachen und Lösung:** Starre Zwischenknicke im Tierfall durch stetiges Entspannen aus der tatsächlichen Gangpose, anfängliche Hufstütze und Drehung um den Schwerpunkt ersetzt. Fragezeichen am Hochsitz entfernt; Jagdaufträge als zunächst geschlossenes Dropdown unter dem Revier. Wolken aus dem geprüften Video mit vollständig projizierter Form/Ausrichtung statt bildschirmparallelen Streifen.

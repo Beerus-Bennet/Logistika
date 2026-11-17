@@ -14,7 +14,7 @@ const VILLAGE_VIEW = (() => {
   }
   function markerMesh(){const b=new FM.MB();[-6,6].forEach(x=>[-4.9,4.9].forEach(z=>{b.box(.08,.5,.08,0x987454,{x,z});b.box(.13,.1,.13,0xe9dfb9,{x,z,y:.4});}));return b;}
   function attach(R){
-    W.R=R;W.homes.clear();W.fenceKey="";VILLAGE_PEOPLE.attach(R);W.actors=VILLAGE_PEOPLE._world.actors;
+    W.R=R;W.homes.clear();W.fenceKey="";W.yardFar=false;VILLAGE_PEOPLE.attach(R);W.actors=VILLAGE_PEOPLE._world.actors;
     W.road=add(fmesh("village-road343",()=>roadMesh(false)),{shadow:false});
     W.extension=add(fmesh("village-grid343",()=>roadMesh(true)),{shadow:false,visible:VILLAGE.state().expanded});
     W.fences=add(null,{shadow:true});
@@ -28,7 +28,7 @@ const VILLAGE_VIEW = (() => {
     if(!W.R||!farmOn())return;const T=VILLAGE.state();W.extension.visible=T.expanded;W.road.visible=!T.expanded;
     for(const p of D.plots){const h=T.homes[p.id];let e=W.homes.get(p.id);
       if(!e){
-        e={garden:add(fmesh("village-garden351:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
+        e={garden:add(fmesh("village-garden368:"+p.id,()=>garden(p)),{x:p.x,z:p.z,visible:false,shadow:false}),marker:add(fmesh("village-markers340",markerMesh),{x:p.x,z:p.z,visible:false}),site:add(fmesh("village-site340",buildingMesh),{x:p.x,z:p.z,visible:false}),house:null,lit:null,type:null};W.homes.set(p.id,e);}
       const blocked=!!VILLAGE.obstruction(p),built=!!h.resident||h.status==="ready";
       e.marker.visible=!p.starter&&T.expanded&&!built;
       e.site.mesh=fmesh("village-site344:"+(h.type||"holz"),()=>VILLAGE_SITE.construction(h.type||"holz"));
@@ -37,10 +37,25 @@ const VILLAGE_VIEW = (() => {
       if((built||h.status==="building")&&e.type!==h.type){
         for(const n of [e.house,e.lit])if(n){const i=W.R.nodes.indexOf(n);if(i>=0)W.R.nodes.splice(i,1);}
         const k=D.houses[h.type],style=Number(p.id)%3;
-        e.garden.mesh=fmesh("village-garden351:"+p.id+":"+h.type,()=>garden(p));
+        e.garden.mesh=fmesh("village-garden368:"+p.id+":"+h.type,()=>garden(p));
         e.house=add(fmesh("village-house344:"+h.type+":"+style,()=>VILLAGE_SITE.homeMesh(h.type,style)),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:built&&!blocked});
         e.lit=add(fmesh("village-light340",()=>RENT.homeLights()),{x:p.x,z:p.z,ry:p.ry,s:k.scale,visible:false,shadow:false,glow:.55});e.type=h.type;
       }
+      /* v368: Ausstattung erst beim wirklichen Einzug; auch bestehende
+         Miet-/Kaufhaushalte erhalten ihren stabilen Garten ohne Save-Migration. */
+      const P=typeof VILLAGE_GARDEN!=='undefined'?VILLAGE_GARDEN.plan(p,h):null;
+      if(P&&e.yardKey!==P.modelKey){
+        if(!e.yard){
+          e.yardGround=add(null,{x:p.x,z:p.z,shadow:false});
+          e.yard=add(null,{x:p.x,z:p.z,shadow:true});
+          e.yardFar=add(null,{x:p.x,z:p.z,shadow:false});
+        }
+        e.yardGround.mesh=fmesh('village-yard-floor368:'+P.modelKey,()=>VILLAGE_GARDEN.grounds(p,P));
+        e.yard.mesh=fmesh('village-yard368:'+P.modelKey,()=>VILLAGE_GARDEN.mesh(p,P,false));
+        e.yardFar.mesh=fmesh('village-yard-far368:'+P.modelKey,()=>VILLAGE_GARDEN.mesh(p,P,true));
+        e.yardKey=P.modelKey;
+      }
+      e.yardActive=!!P&&!blocked;yardVisible(e);
       if(e.house){e.house.visible=built&&!blocked;if(built)e.house.sy=D.houses[h.type].scale;}
       if(!e.gate){
         const g=VILLAGE_SITE.gate(p),m=VILLAGE_SITE.mailbox(p);
@@ -55,9 +70,16 @@ const VILLAGE_VIEW = (() => {
     if(key!==W.fenceKey){W.fenceKey=key;const plan=VILLAGE_SITE.fencePlan(occupied);W.fences.mesh=fmesh("village-fences343:"+key,()=>VILLAGE_SITE.fenceMesh(plan));}
     VILLAGE_PEOPLE.sync();
   }
+  function yardVisible(e){
+    const on=!!e.yardActive,far=W.yardFar||false;
+    if(e.yard){e.yardGround.visible=on;e.yard.visible=on&&!far;e.yardFar.visible=on&&far;}
+  }
   function step(dt,time){
-    if(!W.R||!farmOn())return;VILLAGE_PEOPLE.step(dt,time);const T=VILLAGE.state(),m=S.time%DAY;
+    if(!W.R||!farmOn())return;VILLAGE_PEOPLE.step(dt,time);
+    const distance=typeof FV!=='undefined'&&FV.fp?0:W.R.cam.dist;
+    W.yardFar=W.yardFar?distance>98:distance>112;const T=VILLAGE.state(),m=S.time%DAY;
     for(const p of D.plots){const h=T.homes[p.id],e=W.homes.get(p.id);if(!e)continue;
+      yardVisible(e);
       if(e.lit)e.lit.visible=!!h.resident&&e.house.visible&&((m>=360&&m<450)||(m>=1080&&m<1350));
       if(h.status==="building"&&e.house){const f=1-(h.ready-S.time)/(D.houses[h.type].days*DAY);e.house.visible=f>.7&&!VILLAGE.obstruction(p);e.house.sy=D.houses[h.type].scale*Math.max(.08,(f-.7)/.3);}
       const actor=W.actors.get(p.id),g=VILLAGE_SITE.gate(p),L=h.life&&h.life.active,q=L&&VILLAGE_PEOPLE.sample(L);
