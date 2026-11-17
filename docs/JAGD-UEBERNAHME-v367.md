@@ -1,5 +1,7 @@
 # v367 – Tierfall, Jagdaufträge, Wolken, Trefferbild und Kaufbeleg
 
+Vor dem Push abgeglichen: PR #84 wurde inzwischen auf main gemergt (`bb76a87`). Dieses aktuelle main ist ebenfalls vollständig und konfliktfrei integriert.
+
 Stand: 17. November 2026. Basis main `d4a1664` (v365), zusätzlich PR #84 bis `b7da342` integriert. Dieser parallele Inselstand führt v366; gemeinsame Lieferung daher v367. Keine Veröffentlichung auf main/Pages.
 
 ## Fallbewegung

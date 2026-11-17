@@ -1,5 +1,7 @@
 ## v367 – Jagd, Organbericht und Übernahmebedienung
 
+Vor dem Push abgeglichen: PR #84 wurde inzwischen auf main gemergt (`bb76a87`). Dieses aktuelle main ist ebenfalls vollständig und konfliktfrei integriert.
+
 Basis main `d4a1664`; PR #84 (`claude/insel-zoom-fluss`, `b7da342`) in diesem Branch vollständig integriert. Die doppelte vorläufige Nummer 366 wird gemeinsam als v367 ausgeliefert. Insel-Zoom, Wasserfall und Baumsaum aus #84 unverändert erhalten. Konflikte in index/sw nur bei Assetversionen aufgelöst. Branch `claude/jagd-uebernahme-v367`; main/Pages nicht automatisch veröffentlichen.
 
 `hunt.js`: Hufstütze/Gelenk-IK und Schwerpunkt beim Tierfall sind transient, keine neue gespeicherte Liegeform. `hu-job` ist ein natives geschlossenes details; beide Touch-Wachen in game/index müssen die Liste ausnehmen. Fragezeichen entfernt, Tiergütehilfe bleibt im Jagdbuch.
