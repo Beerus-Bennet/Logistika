@@ -3,9 +3,8 @@
    Reale Modelle von Porsche, Audi, Mercedes-Benz, BMW, Ferrari, Bugatti und
    Lamborghini. Leistungsdaten nach Herstellerangaben, Marktwerte angelehnt an
    reale Auktions- und Händlerpreise (gerundet, Zustand „sehr gut“).
-   Fotos: Titelbild des englischen Wikipedia-Artikels (wp) bzw. eine
-   bestimmte Datei auf Wikimedia Commons (file) – geladen zur Laufzeit,
-   mit Urheber und Lizenz (siehe auction.js).
+   Fotos: feste, geprüfte Dateizuordnungen in carphotos.js. wp/file sind
+   historische Quellenhinweise, keine automatische Bildsuche mehr.
    ========================================================================= */
 "use strict";
 
@@ -52,11 +51,11 @@ const CAR_PAINTS = {
    cap Gepäck in kg (für Wertkurier-Fahrten) · e Antrieb · body Bauform */
 const CARS = [
   /* ------------------------------ Porsche ------------------------------ */
-  { id: "p356", b: "porsche", m: "356 B 1600 Super", wp: "Porsche 356", yrs: "1948–1965", y: 1961, ps: 75, vmax: 175, acc: 14.5, n: 76000, cls: "classic", val: 120000, tr: 3, cap: 60, eng: "1,6-l-Vierzylinder-Boxer", body: "classic",
+  { id: "p356", b: "porsche", m: "356 B 1600 Super", wp: "Porsche 356", yrs: "1959–1963", y: 1961, ps: 75, vmax: 175, acc: 14.5, n: 76000, cls: "classic", val: 120000, tr: 3, cap: 60, eng: "1,6-l-Vierzylinder-Boxer", body: "classic",
     note: "Der erste Serien-Porsche – Käfer-Technik unter handgedengeltem Blech." },
   { id: "p550", b: "porsche", m: "550 Spyder", wp: "Porsche 550", yrs: "1953–1956", y: 1955, ps: 110, vmax: 220, acc: null, n: 90, cls: "legend", val: 4200000, tr: 5, cap: 10, eng: "1,5-l-Boxer (Fuhrmann-Motor)", body: "roadster",
     note: "Leichtbau-Rennsportwagen für die Straße – nur 90 Exemplare." },
-  { id: "p930", b: "porsche", m: "911 Turbo 3.3 (930)", wp: "Porsche 930", yrs: "1975–1989", y: 1987, ps: 300, vmax: 260, acc: 5.4, n: 21589, cls: "classic", val: 140000, tr: 4, cap: 60, eng: "3,3-l-Boxer, Turbo", body: "coupe",
+  { id: "p930", b: "porsche", m: "911 Turbo 3.3 (930)", wp: "Porsche 930", yrs: "1978–1989", y: 1987, ps: 300, vmax: 260, acc: 5.4, n: 21589, cls: "classic", val: 140000, tr: 4, cap: 60, eng: "3,3-l-Boxer, Turbo", body: "coupe",
     note: "Der „Witwenmacher“: brachialer Turbo-Schub und breiter Heckflügel." },
   { id: "p959", b: "porsche", m: "959", wp: "Porsche 959", yrs: "1986–1993", y: 1988, ps: 450, vmax: 317, acc: 3.7, n: 292, cls: "legend", val: 1900000, tr: 5, cap: 50, eng: "2,85-l-Boxer, Biturbo", body: "coupe",
     note: "Technologieträger mit Allrad und Biturbo – 1986 das schnellste Serienauto der Welt." },
@@ -70,15 +69,15 @@ const CARS = [
     note: "Stärkster Elfer seiner Zeit, 2017 Rekord auf der Nordschleife." },
   { id: "p924", b: "porsche", m: "924", wp: "Porsche 924", yrs: "1976–1988", y: 1981, ps: 125, vmax: 204, acc: 9.6, n: 150000, cls: "young", val: 11000, tr: 3, cap: 150, eng: "2,0-l-Reihenvierzylinder", body: "coupe",
     note: "Transaxle-Einstieg in die Porsche-Welt, Motor aus dem VW-Regal." },
-  { id: "p944", b: "porsche", m: "944", wp: "Porsche 944", yrs: "1982–1991", y: 1986, ps: 163, vmax: 220, acc: 8.4, n: 163000, cls: "young", val: 17000, tr: 4, cap: 180, eng: "2,5-l-Reihenvierzylinder", body: "coupe",
+  { id: "p944", b: "porsche", m: "944", wp: "Porsche 944", yrs: "1982–1988", y: 1986, ps: 163, vmax: 220, acc: 8.4, n: 163000, cls: "young", val: 17000, tr: 4, cap: 180, eng: "2,5-l-Reihenvierzylinder", body: "coupe",
     note: "Breite Backen, ausgewogene Achslast – ein Liebling der Kurvenfans." },
-  { id: "p928", b: "porsche", m: "928 S4", wp: "Porsche 928", yrs: "1977–1995", y: 1988, ps: 320, vmax: 270, acc: 5.9, n: 61000, cls: "classic", val: 42000, tr: 4, cap: 200, eng: "5,0-l-V8", body: "coupe",
+  { id: "p928", b: "porsche", m: "928 S4", wp: "Porsche 928", yrs: "1987–1991", y: 1988, ps: 320, vmax: 270, acc: 5.9, n: 61000, cls: "classic", val: 42000, tr: 4, cap: 200, eng: "5,0-l-V8", body: "coupe",
     note: "V8-Gran-Turismo, der einmal den 911 ablösen sollte." },
-  { id: "p986", b: "porsche", m: "Boxster (986)", wp: "Porsche Boxster (986)", yrs: "1996–2004", y: 2000, ps: 204, vmax: 240, acc: 6.9, n: 164000, cls: "young", val: 13000, tr: 1, cap: 130, eng: "2,5-l-Boxer", body: "roadster",
+  { id: "p986", b: "porsche", m: "Boxster 2.5 (986)", wp: "Porsche Boxster (986)", yrs: "1996–1999", y: 1998, ps: 204, vmax: 240, acc: 6.9, n: 164000, cls: "young", val: 13000, tr: 1, cap: 130, eng: "2,5-l-Boxer", body: "roadster",
     note: "Der Mittelmotor-Roadster, der Porsche in den 90ern gerettet hat." },
-  { id: "ptay", b: "porsche", m: "Taycan Turbo S", wp: "Porsche Taycan", yrs: "seit 2019", y: 2021, ps: 761, vmax: 260, acc: 2.8, n: null, cls: "sport", val: 115000, tr: -6, cap: 150, eng: "2 E-Motoren, 800 Volt", e: "elektro", body: "limo",
+  { id: "ptay", b: "porsche", m: "Taycan Turbo S", wp: "Porsche Taycan", yrs: "2019–2023", y: 2021, ps: 761, vmax: 260, acc: 2.8, n: null, cls: "sport", val: 115000, tr: -6, cap: 150, eng: "2 E-Motoren, 800 Volt", e: "elektro", body: "limo",
     note: "Elektrische Sportlimousine – leise, aber brutal schnell." },
-  { id: "pcay", b: "porsche", m: "Cayenne Turbo", wp: "Porsche Cayenne", yrs: "seit 2002", y: 2020, ps: 550, vmax: 286, acc: 3.9, n: null, cls: "sport", val: 95000, tr: -5, cap: 500, eng: "4,0-l-V8, Biturbo", body: "suv",
+  { id: "pcay", b: "porsche", m: "Cayenne Turbo", wp: "Porsche Cayenne", yrs: "2018–2023", y: 2020, ps: 550, vmax: 286, acc: 3.9, n: null, cls: "sport", val: 95000, tr: -5, cap: 500, eng: "4,0-l-V8, Biturbo", body: "suv",
     note: "Sport-SUV mit riesigem Kofferraum – der schnellste Weg für viele Wertsachen." },
 
   { id: "prs", b: "porsche", m: "911 Carrera RS 2.7", wp: "Porsche 911 Carrera RS 2.7", yrs: "1972–1973", y: 1973, ps: 210, vmax: 245, acc: 5.8, n: 1580, cls: "classic", val: 900000, tr: 5, cap: 120, eng: "2,7-l-Boxer", body: "coupe",
@@ -96,11 +95,11 @@ const CARS = [
     note: "Kombi mit Porsche-Hilfe – der Urahn aller RS-Modelle." },
   { id: "ar8a", b: "audi", m: "R8 4.2 FSI (Typ 42)", wp: "Audi R8 (Type 42)", yrs: "2006–2015", y: 2008, ps: 420, vmax: 301, acc: 4.6, n: null, cls: "sport", val: 65000, tr: 0, cap: 100, eng: "4,2-l-V8", body: "coupe",
     note: "Erster Mittelmotor-Sportwagen von Audi – mit offener Schaltkulisse." },
-  { id: "ar8", b: "audi", m: "R8 V10 performance (Typ 4S)", wp: "Audi R8 (Type 4S)", yrs: "2015–2024", y: 2020, ps: 620, vmax: 331, acc: 3.1, n: null, cls: "sport", val: 165000, tr: -3, cap: 110, eng: "5,2-l-V10", body: "coupe",
+  { id: "ar8", b: "audi", m: "R8 V10 performance (Typ 4S)", wp: "Audi R8 (Type 4S)", yrs: "2019–2024", y: 2020, ps: 620, vmax: 331, acc: 3.1, n: null, cls: "sport", val: 165000, tr: -3, cap: 110, eng: "5,2-l-V10", body: "coupe",
     note: "Saug-V10 mit Mittelmotor, eng verwandt mit dem Huracán." },
   { id: "ars6", b: "audi", m: "RS 6 Avant (C8)", wp: "Audi RS 6", yrs: "seit 2019", y: 2022, ps: 600, vmax: 305, acc: 3.6, n: null, cls: "sport", val: 115000, tr: -5, cap: 560, eng: "4,0-l-V8, Biturbo", body: "kombi",
     note: "Der Familienkombi, der Supersportwagen jagt – mit 565 Litern Kofferraum." },
-  { id: "aetr", b: "audi", m: "RS e-tron GT", wp: "Audi e-tron GT", yrs: "seit 2021", y: 2022, ps: 646, vmax: 250, acc: 3.3, n: null, cls: "sport", val: 105000, tr: -7, cap: 180, eng: "2 E-Motoren, 800 Volt", e: "elektro", body: "limo",
+  { id: "aetr", b: "audi", m: "RS e-tron GT", wp: "Audi e-tron GT", yrs: "2021–2024", y: 2022, ps: 646, vmax: 250, acc: 3.3, n: null, cls: "sport", val: 105000, tr: -7, cap: 180, eng: "2 E-Motoren, 800 Volt", e: "elektro", body: "limo",
     note: "Elektrischer Gran Turismo auf der Technik des Taycan." },
   { id: "ars4", b: "audi", m: "RS 4 Avant (B9)", wp: "Audi RS 4", yrs: "seit 2017", y: 2019, ps: 450, vmax: 280, acc: 4.1, n: null, cls: "sport", val: 62000, tr: -4, cap: 450, eng: "2,9-l-V6, Biturbo", body: "kombi",
     note: "V6-Biturbo-Kombi – Alltag und Autobahn in einem." },
@@ -108,9 +107,9 @@ const CARS = [
   /* ---------------------------- Mercedes-Benz --------------------------- */
   { id: "m300", b: "mercedes", m: "300 SL Flügeltürer (W 198)", wp: "Mercedes-Benz 300 SL", yrs: "1954–1957", y: 1955, ps: 215, vmax: 250, acc: 9.5, n: 1400, cls: "legend", val: 1350000, tr: 4, cap: 40, eng: "3,0-l-Reihensechszylinder, Direkteinspritzung", body: "classic",
     note: "Direkteinspritzung und Flügeltüren – der Supersportwagen des Wirtschaftswunders." },
-  { id: "m113", b: "mercedes", m: "280 SL „Pagode“ (W 113)", wp: "Mercedes-Benz W113", yrs: "1963–1971", y: 1969, ps: 170, vmax: 200, acc: 9.3, n: 48912, cls: "classic", val: 110000, tr: 3, cap: 120, eng: "2,8-l-Reihensechszylinder", body: "roadster",
+  { id: "m113", b: "mercedes", m: "280 SL „Pagode“ (W 113)", wp: "Mercedes-Benz W113", yrs: "1967–1971", y: 1969, ps: 170, vmax: 200, acc: 9.3, n: 48912, cls: "classic", val: 110000, tr: 3, cap: 120, eng: "2,8-l-Reihensechszylinder", body: "roadster",
     note: "Das gewölbte Hardtop gab ihr den Spitznamen." },
-  { id: "m129", b: "mercedes", m: "500 SL (R 129)", wp: "Mercedes-Benz SL-Class (R129)", yrs: "1989–2001", y: 1994, ps: 326, vmax: 250, acc: 6.2, n: 204940, cls: "young", val: 28000, tr: 4, cap: 250, eng: "5,0-l-V8", body: "roadster",
+  { id: "m129", b: "mercedes", m: "500 SL (R 129)", wp: "Mercedes-Benz SL-Class (R129)", yrs: "1989–1992", y: 1991, ps: 326, vmax: 250, acc: 6.2, n: 204940, cls: "young", val: 28000, tr: 4, cap: 250, eng: "5,0-l-V8", body: "roadster",
     note: "Mit Überrollbügel, der in 0,3 Sekunden hochschnellt – Ingenieurskunst der 90er." },
   { id: "mclk", b: "mercedes", m: "CLK GTR", wp: "Mercedes-Benz CLK GTR", yrs: "1998–1999", y: 1998, ps: 612, vmax: 320, acc: 3.8, n: 26, cls: "legend", val: 9000000, tr: 6, cap: 10, eng: "6,9-l-V12", body: "coupe",
     note: "Straßenversion des GT1-Rennwagens – eines der seltensten Autos der Welt." },
@@ -118,7 +117,7 @@ const CARS = [
     note: "Kompressor-V8 unter der Pfeilnase, Seitenrohre hinter den Vorderrädern." },
   { id: "msls", b: "mercedes", m: "SLS AMG", wp: "Mercedes-Benz SLS AMG", yrs: "2010–2014", y: 2012, ps: 571, vmax: 317, acc: 3.8, n: null, cls: "super", val: 240000, tr: 3, cap: 120, eng: "6,2-l-V8", body: "coupe",
     note: "Die Flügeltüren sind zurück – mit 6,2-Liter-Saugmotor." },
-  { id: "mamg", b: "mercedes", m: "AMG GT S (C 190)", wp: "Mercedes-AMG GT", yrs: "2014–2021", y: 2017, ps: 522, vmax: 310, acc: 3.8, n: null, cls: "sport", val: 85000, tr: -3, cap: 180, eng: "4,0-l-V8, Biturbo", body: "coupe",
+  { id: "mamg", b: "mercedes", m: "AMG GT S (C 190)", wp: "Mercedes-AMG GT", yrs: "2015–2017", y: 2016, ps: 510, vmax: 310, acc: 3.8, n: null, cls: "sport", val: 85000, tr: -3, cap: 180, eng: "4,0-l-V8, Biturbo", body: "coupe",
     note: "Lange Haube, kurzes Heck, Biturbo-V8 im „heißen V“." },
   { id: "mone", b: "mercedes", m: "AMG One", wp: "Mercedes-AMG One", yrs: "2022–2023", y: 2022, ps: 1063, vmax: 352, acc: 2.9, n: 275, cls: "hyper", val: 3300000, tr: 2, cap: 5, eng: "1,6-l-V6-Turbo + 4 E-Motoren", e: "hybrid", body: "coupe",
     note: "Formel-1-Antrieb mit Straßenzulassung." },
@@ -130,7 +129,7 @@ const CARS = [
   /* --------------------------------- BMW -------------------------------- */
   { id: "b507", b: "bmw", m: "507", wp: "BMW 507", yrs: "1956–1959", y: 1957, ps: 150, vmax: 220, acc: 11.1, n: 252, cls: "legend", val: 2300000, tr: 4, cap: 80, eng: "3,2-l-V8", body: "roadster",
     note: "Elvis Presley fuhr einen – nur 252 Exemplare entstanden." },
-  { id: "be9", b: "bmw", m: "3.0 CSi (E9)", wp: "BMW E9", yrs: "1968–1975", y: 1972, ps: 200, vmax: 220, acc: 7.5, n: 30546, cls: "classic", val: 95000, tr: 5, cap: 300, eng: "3,0-l-Reihensechszylinder", body: "classic",
+  { id: "be9", b: "bmw", m: "3.0 CSi (E9)", wp: "BMW E9", yrs: "1971–1975", y: 1972, ps: 200, vmax: 220, acc: 7.5, n: 30546, cls: "classic", val: 95000, tr: 5, cap: 300, eng: "3,0-l-Reihensechszylinder", body: "classic",
     note: "Das elegante Coupé, aus dem das „Batmobil“ 3.0 CSL wurde." },
   { id: "bm1", b: "bmw", m: "M1", wp: "BMW M1", yrs: "1978–1981", y: 1980, ps: 277, vmax: 262, acc: 5.6, n: 453, cls: "legend", val: 650000, tr: 5, cap: 50, eng: "3,5-l-Reihensechszylinder", body: "coupe",
     note: "Einziger Mittelmotor-Sportwagen von BMW, Karosserie von Giugiaro." },
@@ -138,13 +137,13 @@ const CARS = [
     note: "Tourenwagen-Champion für die Straße – Kultobjekt mit Kotflügelverbreiterung." },
   { id: "bm5", b: "bmw", m: "M5 (E39)", file: "BMW M5 E39 (5763351352).jpg", yrs: "1998–2003", y: 2001, ps: 400, vmax: 250, acc: 5.3, n: 20482, cls: "young", val: 38000, tr: 6, cap: 460, eng: "5,0-l-V8", body: "limo",
     note: "V8-Limousine, die viele für den besten M5 aller Zeiten halten." },
-  { id: "bz3", b: "bmw", m: "Z3 roadster 2.8", wp: "BMW Z3", yrs: "1995–2002", y: 1998, ps: 193, vmax: 230, acc: 7.1, n: 297000, cls: "young", val: 12000, tr: 3, cap: 165, eng: "2,8-l-Reihensechszylinder", body: "roadster",
+  { id: "bz3", b: "bmw", m: "Z3 roadster 2.8", wp: "BMW Z3", yrs: "1996–2000", y: 1998, ps: 193, vmax: 230, acc: 7.1, n: 297000, cls: "young", val: 12000, tr: 3, cap: 165, eng: "2,8-l-Reihensechszylinder", body: "roadster",
     note: "Der Roadster aus dem Bond-Film „GoldenEye“." },
   { id: "bz8", b: "bmw", m: "Z8", wp: "BMW Z8", yrs: "2000–2003", y: 2001, ps: 400, vmax: 250, acc: 4.7, n: 5703, cls: "super", val: 260000, tr: 5, cap: 200, eng: "5,0-l-V8", body: "roadster",
     note: "Retro-Roadster als Hommage an den 507 – mit dem V8 aus dem M5." },
   { id: "bi8", b: "bmw", m: "i8", wp: "BMW i8", yrs: "2014–2020", y: 2016, ps: 374, vmax: 250, acc: 4.4, n: 20465, cls: "sport", val: 55000, tr: -4, cap: 90, eng: "1,5-l-Dreizylinder-Turbo + E-Motor", e: "hybrid", body: "coupe",
     note: "Plug-in-Hybrid mit Flügeltüren – die Zukunft zum Anfassen." },
-  { id: "bm2", b: "bmw", m: "M2 (G87)", wp: "BMW M2", yrs: "seit 2023", y: 2024, ps: 460, vmax: 285, acc: 4.1, n: null, cls: "sport", val: 72000, tr: -4, cap: 390, eng: "3,0-l-Reihensechszylinder, Biturbo", body: "coupe",
+  { id: "bm2", b: "bmw", m: "M2 (G87)", wp: "BMW M2", yrs: "2023–2024", y: 2024, ps: 460, vmax: 285, acc: 4.1, n: null, cls: "sport", val: 72000, tr: -4, cap: 390, eng: "3,0-l-Reihensechszylinder, Biturbo", body: "coupe",
     note: "Kompakter Hecktriebler mit Reihensechser, auf Wunsch handgeschaltet." },
 
   { id: "b02t", b: "bmw", m: "2002 turbo", wp: "BMW 02 Series", yrs: "1973–1974", y: 1973, ps: 170, vmax: 211, acc: 6.9, n: 1672, cls: "classic", val: 90000, tr: 5, cap: 200, eng: "2,0-l-Vierzylinder, Turbo", body: "limo",
@@ -194,7 +193,7 @@ const CARS = [
     note: "1.500 PS – elektronisch abgeregelt bei 420 km/h." },
   { id: "bdiv", b: "bugatti", m: "Divo", wp: "Bugatti Divo", yrs: "2019–2021", y: 2020, ps: 1500, vmax: 380, acc: 2.4, n: 40, cls: "hyper", val: 6500000, tr: 4, cap: 20, eng: "8,0-l-W16, vier Turbos", body: "coupe",
     note: "Auf Kurven getrimmt, benannt nach Targa-Florio-Sieger Albert Divo." },
-  { id: "bnoi", b: "bugatti", m: "La Voiture Noire", wp: "Bugatti La Voiture Noire", yrs: "2019", y: 2021, ps: 1500, vmax: 420, acc: 2.4, n: 1, cls: "legend", val: 16700000, tr: 3, cap: 20, eng: "8,0-l-W16, vier Turbos", body: "coupe",
+  { id: "bnoi", b: "bugatti", m: "La Voiture Noire", wp: "Bugatti La Voiture Noire", yrs: "2021", y: 2021, ps: 1500, vmax: 420, acc: 2.4, n: 1, cls: "legend", val: 16700000, tr: 3, cap: 20, eng: "8,0-l-W16, vier Turbos", body: "coupe",
     note: "Ein einziges Exemplar – Hommage an den verschollenen Type 57 SC Atlantic." },
   { id: "b110", b: "bugatti", m: "Centodieci", wp: "Bugatti Centodieci", yrs: "2022", y: 2022, ps: 1600, vmax: 380, acc: 2.4, n: 10, cls: "hyper", val: 9000000, tr: 4, cap: 20, eng: "8,0-l-W16, vier Turbos", body: "coupe",
     note: "Zehn Stück zum 110. Geburtstag der Marke – Hommage an den EB110." },
@@ -206,23 +205,23 @@ const CARS = [
     note: "V16-Hybrid mit Instrumenten wie ein Uhrwerk – Nachfolger des Chiron." },
 
   /* ----------------------------- Lamborghini ---------------------------- */
-  { id: "lmiu", b: "lambo", m: "Miura P400", wp: "Lamborghini Miura", yrs: "1966–1973", y: 1968, ps: 350, vmax: 280, acc: 6.7, n: 764, cls: "legend", val: 2100000, tr: 5, cap: 30, eng: "3,9-l-V12, quer eingebaut", body: "coupe",
+  { id: "lmiu", b: "lambo", m: "Miura P400", wp: "Lamborghini Miura", yrs: "1966–1969", y: 1968, ps: 350, vmax: 280, acc: 6.7, n: 764, cls: "legend", val: 2100000, tr: 5, cap: 30, eng: "3,9-l-V12, quer eingebaut", body: "coupe",
     note: "Der erste Supersportwagen mit quer eingebautem Mittelmotor-V12." },
-  { id: "lcou", b: "lambo", m: "Countach 5000 QV", wp: "Lamborghini Countach", yrs: "1974–1990", y: 1985, ps: 455, vmax: 295, acc: 4.9, n: 1999, cls: "classic", val: 550000, tr: 6, cap: 50, eng: "5,2-l-V12", body: "coupe",
+  { id: "lcou", b: "lambo", m: "Countach 5000 QV", wp: "Lamborghini Countach", yrs: "1985–1988", y: 1985, ps: 455, vmax: 295, acc: 4.9, n: 1999, cls: "classic", val: 550000, tr: 6, cap: 50, eng: "5,2-l-V12", body: "coupe",
     note: "Das Poster über jedem Kinderbett der 80er – Scherentüren inklusive." },
   { id: "llm2", b: "lambo", m: "LM002", wp: "Lamborghini LM002", yrs: "1986–1993", y: 1988, ps: 450, vmax: 210, acc: 7.7, n: 328, cls: "classic", val: 420000, tr: 6, cap: 700, eng: "5,2-l-V12", body: "suv",
     note: "Der „Rambo-Lambo“: Countach-V12 im Geländewagen." },
   { id: "ldia", b: "lambo", m: "Diablo", wp: "Lamborghini Diablo", yrs: "1990–2001", y: 1994, ps: 492, vmax: 325, acc: 4.5, n: 2884, cls: "classic", val: 320000, tr: 6, cap: 50, eng: "5,7-l-V12", body: "coupe",
     note: "Nachfolger des Countach und erstes Serienauto über 320 km/h." },
-  { id: "lmur", b: "lambo", m: "Murciélago", wp: "Lamborghini Murciélago", yrs: "2001–2010", y: 2004, ps: 580, vmax: 330, acc: 3.8, n: 4099, cls: "super", val: 240000, tr: 4, cap: 60, eng: "6,2-l-V12", body: "coupe",
+  { id: "lmur", b: "lambo", m: "Murciélago", wp: "Lamborghini Murciélago", yrs: "2001–2006", y: 2004, ps: 580, vmax: 330, acc: 3.8, n: 4099, cls: "super", val: 240000, tr: 4, cap: 60, eng: "6,2-l-V12", body: "coupe",
     note: "Erster Lamborghini unter Audi-Regie, benannt nach einem Kampfstier." },
-  { id: "lgal", b: "lambo", m: "Gallardo", wp: "Lamborghini Gallardo", yrs: "2003–2013", y: 2006, ps: 520, vmax: 315, acc: 4.0, n: 14022, cls: "sport", val: 105000, tr: 2, cap: 110, eng: "5,0-l-V10", body: "coupe",
+  { id: "lgal", b: "lambo", m: "Gallardo", wp: "Lamborghini Gallardo", yrs: "2006–2008", y: 2006, ps: 520, vmax: 315, acc: 4.0, n: 14022, cls: "sport", val: 105000, tr: 2, cap: 110, eng: "5,0-l-V10", body: "coupe",
     note: "Der „Baby-Lambo“ mit V10 – der meistverkaufte Lamborghini seiner Zeit." },
   { id: "lven", b: "lambo", m: "Veneno", wp: "Lamborghini Veneno", yrs: "2013–2014", y: 2013, ps: 750, vmax: 355, acc: 2.8, n: 12, cls: "legend", val: 9000000, tr: 5, cap: 20, eng: "6,5-l-V12", body: "coupe",
     note: "Drei Coupés und neun Roadster zum 50. Firmenjubiläum." },
-  { id: "lave", b: "lambo", m: "Aventador LP 700-4", wp: "Lamborghini Aventador", yrs: "2011–2022", y: 2014, ps: 700, vmax: 350, acc: 2.9, n: 11465, cls: "super", val: 280000, tr: 1, cap: 150, eng: "6,5-l-V12", body: "coupe",
+  { id: "lave", b: "lambo", m: "Aventador LP 700-4", wp: "Lamborghini Aventador", yrs: "2011–2016", y: 2014, ps: 700, vmax: 350, acc: 2.9, n: 11465, cls: "super", val: 280000, tr: 1, cap: 150, eng: "6,5-l-V12", body: "coupe",
     note: "Carbon-Monocoque, Scherentüren und ein 6,5-Liter-V12." },
-  { id: "lhur", b: "lambo", m: "Huracán LP 610-4", wp: "Lamborghini Huracán", yrs: "2014–2024", y: 2016, ps: 610, vmax: 325, acc: 3.2, n: null, cls: "super", val: 190000, tr: 0, cap: 100, eng: "5,2-l-V10", body: "coupe",
+  { id: "lhur", b: "lambo", m: "Huracán LP 610-4", wp: "Lamborghini Huracán", yrs: "2014–2019", y: 2016, ps: 610, vmax: 325, acc: 3.2, n: null, cls: "super", val: 190000, tr: 0, cap: 100, eng: "5,2-l-V10", body: "coupe",
     note: "V10-Sauger mit Allrad – erfolgreich wie kein Lamborghini vor dem Urus." },
   { id: "lcen", b: "lambo", m: "Centenario", wp: "Lamborghini Centenario", yrs: "2016–2017", y: 2016, ps: 770, vmax: 350, acc: 2.8, n: 40, cls: "hyper", val: 3000000, tr: 4, cap: 20, eng: "6,5-l-V12", body: "coupe",
     note: "Zum 100. Geburtstag von Ferruccio Lamborghini – 20 Coupés, 20 Roadster." },
@@ -241,11 +240,11 @@ const CARS = [
     note: "James Bonds Dienstwagen – den Schleudersitz gab es allerdings nur im Film." },
   { id: "adbz", b: "aston", m: "DB4 GT Zagato", wp: "Aston Martin DB4 GT Zagato", yrs: "1960–1963", y: 1961, ps: 314, vmax: 245, acc: null, n: 19, cls: "legend", val: 12000000, tr: 6, cap: 20, eng: "3,7-l-Reihensechszylinder", body: "coupe",
     note: "Nur 19 Stück mit Zagato-Karosserie – eines der teuersten britischen Autos bei Auktionen." },
-  { id: "avan", b: "aston", m: "V12 Vanquish", wp: "Aston Martin V12 Vanquish", yrs: "2001–2007", y: 2003, ps: 460, vmax: 306, acc: 4.8, n: 2578, cls: "sport", val: 85000, tr: 3, cap: 100, eng: "5,9-l-V12", body: "coupe",
+  { id: "avan", b: "aston", m: "V12 Vanquish", wp: "Aston Martin V12 Vanquish", yrs: "2001–2004", y: 2003, ps: 460, vmax: 306, acc: 4.8, n: 2578, cls: "sport", val: 85000, tr: 3, cap: 100, eng: "5,9-l-V12", body: "coupe",
     note: "Bonds Wagen in „Stirb an einem anderen Tag“ – Karbon-Aluminium-Struktur." },
   { id: "aone", b: "aston", m: "One-77", wp: "Aston Martin One-77", yrs: "2009–2012", y: 2010, ps: 760, vmax: 354, acc: 3.5, n: 77, cls: "hyper", val: 1900000, tr: 3, cap: 20, eng: "7,3-l-V12", body: "coupe",
     note: "Handgeformtes Aluminium, stärkster Saugmotor seiner Zeit – 77 Stück." },
-  { id: "avnt", b: "aston", m: "Vantage (2018)", wp: "Aston Martin Vantage (2018)", yrs: "seit 2018", y: 2020, ps: 510, vmax: 314, acc: 3.6, n: null, cls: "sport", val: 150000, tr: -4, cap: 200, eng: "4,0-l-V8, Biturbo (AMG)", body: "coupe",
+  { id: "avnt", b: "aston", m: "Vantage (2018)", wp: "Aston Martin Vantage (2018)", yrs: "2018–2023", y: 2020, ps: 510, vmax: 314, acc: 3.6, n: null, cls: "sport", val: 150000, tr: -4, cap: 200, eng: "4,0-l-V8, Biturbo (AMG)", body: "coupe",
     note: "Kompakter Sportwagen mit AMG-Achtzylinder – der Einstieg in die Marke." },
   { id: "adva", b: "aston", m: "Valkyrie", wp: "Aston Martin Valkyrie", yrs: "2021–2024", y: 2022, ps: 1160, vmax: 350, acc: null, n: 150, cls: "hyper", val: 3800000, tr: 3, cap: 10, eng: "6,5-l-V12 + E-Motor", e: "hybrid", body: "coupe",
     note: "Gemeinsam mit Red Bull entwickelt – ein Formel-1-Wagen für die Straße." },
@@ -290,14 +289,14 @@ const CARS = [
   /* v336: Jaguar */
   { id: "jxk", b: "jaguar", m: "XK120", wp: "Jaguar XK120", yrs: "1948–1954", y: 1951, ps: 160, vmax: 200, acc: 10.0, n: 12078, cls: "classic", val: 130000, tr: 4, cap: 40, eng: "3,4-l-Reihensechszylinder", body: "roadster",
     note: "1949 mit rund 200 km/h das schnellste Serienauto der Welt." },
-  { id: "jetp", b: "jaguar", m: "E-Type Serie 1", wp: "Jaguar E-Type", yrs: "1961–1975", y: 1962, ps: 265, vmax: 240, acc: 6.9, n: 72520, cls: "classic", val: 160000, tr: 4, cap: 60, eng: "3,8-l-Reihensechszylinder", body: "roadster",
+  { id: "jetp", b: "jaguar", m: "E-Type Serie 1", wp: "Jaguar E-Type", yrs: "1961–1964", y: 1962, ps: 265, vmax: 240, acc: 6.9, n: 72520, cls: "classic", val: 160000, tr: 4, cap: 60, eng: "3,8-l-Reihensechszylinder", body: "roadster",
     note: "Angeblich nannte Enzo Ferrari ihn das schönste Auto der Welt." },
   { id: "jxkss", b: "jaguar", m: "XKSS", wp: "Jaguar XKSS", yrs: "1957", y: 1957, ps: 250, vmax: 240, acc: null, n: 16, cls: "legend", val: 15000000, tr: 5, cap: 15, eng: "3,4-l-Reihensechszylinder (D-Type)", body: "roadster",
     note: "Straßen-D-Type – 16 Stück, neun weitere verbrannten im Werksbrand." },
   { id: "jxj", b: "jaguar", m: "XJ220", wp: "Jaguar XJ220", yrs: "1992–1994", y: 1993, ps: 549, vmax: 341, acc: 3.6, n: 275, cls: "super", val: 600000, tr: 4, cap: 40, eng: "3,5-l-V6, Biturbo", body: "coupe",
     note: "Sollte ein V12 sein, wurde ein V6 – dafür 1992 das schnellste Serienauto." },
   /* v336: Pagani */
-  { id: "pzon", b: "pagani", m: "Zonda C12-S 7.3", wp: "Pagani Zonda", yrs: "1999–2011", y: 2002, ps: 555, vmax: 345, acc: 3.7, n: 140, cls: "hyper", val: 1500000, tr: 4, cap: 20, eng: "7,3-l-V12 (AMG)", body: "coupe",
+  { id: "pzon", b: "pagani", m: "Zonda C12-S 7.3", wp: "Pagani Zonda", yrs: "2002–2005", y: 2002, ps: 555, vmax: 345, acc: 3.7, n: 140, cls: "hyper", val: 1500000, tr: 4, cap: 20, eng: "7,3-l-V12 (AMG)", body: "coupe",
     note: "Horacio Paganis Erstling mit Mercedes-V12 und Auspuff wie vier Orgelpfeifen." },
   { id: "phuy", b: "pagani", m: "Huayra", wp: "Pagani Huayra", yrs: "2011–2015", y: 2013, ps: 730, vmax: 370, acc: 3.3, n: 100, cls: "hyper", val: 2800000, tr: 3, cap: 20, eng: "6,0-l-V12, Biturbo (AMG)", body: "coupe",
     note: "Mit aktiven Klappen an Front und Heck – benannt nach dem Windgott der Anden." },
@@ -311,7 +310,7 @@ const CARS = [
   { id: "kagr", b: "koenig", m: "Agera RS", wp: "Koenigsegg Agera", yrs: "2015–2018", y: 2017, ps: 1360, vmax: 447, acc: 2.8, n: 25, cls: "legend", val: 3800000, tr: 3, cap: 30, eng: "5,0-l-V8, Biturbo", body: "coupe",
     note: "Hielt 2017 mit 447 km/h den Rekord für Serienautos." },
   /* v336: Lotus */
-  { id: "lesp", b: "lotus", m: "Esprit Turbo", wp: "Lotus Esprit", yrs: "1976–2004", y: 1987, ps: 215, vmax: 242, acc: 5.4, n: 10675, cls: "young", val: 45000, tr: 5, cap: 100, eng: "2,2-l-Reihenvierzylinder, Turbo", body: "coupe",
+  { id: "lesp", b: "lotus", m: "Turbo Esprit HC", wp: "Lotus Esprit", yrs: "1986–1987", y: 1987, ps: 215, vmax: 242, acc: 5.4, n: 10675, cls: "young", val: 45000, tr: 5, cap: 100, eng: "2,2-l-Reihenvierzylinder, Turbo", body: "coupe",
     note: "Bond tauchte darin als U-Boot – „Der Spion, der mich liebte“." },
   { id: "lels", b: "lotus", m: "Elise (S1)", wp: "Lotus Elise (Series 1)", yrs: "1996–2001", y: 1998, ps: 118, vmax: 204, acc: 5.9, n: 10000, cls: "young", val: 28000, tr: 6, cap: 40, eng: "1,8-l-Reihenvierzylinder (Rover K)", body: "roadster",
     note: "Nur 725 Kilo – Leichtbau statt Leistung." },
@@ -334,3 +333,13 @@ CARS.forEach(c => { CAR[c.id] = c; });
 const carBrand = c => (CAR_BRANDS.find(x => x[0] === c.b) || [0, ""])[1];
 const carName = c => c.m === "LaFerrari" ? c.m
   : (c.b === "mercedes" ? (/^AMG/.test(c.m) ? "Mercedes-" : "Mercedes-Benz ") : carBrand(c) + " ") + c.m;
+
+/* v372: Baujahre gehören zur konkreten Variante, nicht zu einem freien
+   Zufallsfenster. Einzeljahre und laufende Serien sind ausdrücklich begrenzt. */
+const CAR_YEAR_NOW = 2026;
+function carBuildYears(c) {
+  const years=(c.yrs.match(/(?:18|19|20)\d{2}/g)||[]).map(Number);
+  const first=years[0]||c.y,last=/seit|ab/i.test(c.yrs)?CAR_YEAR_NOW:(years[1]||first);
+  return [first,Math.min(CAR_YEAR_NOW,last)];
+}
+function carValidYear(c,y) {const [a,b]=carBuildYears(c);return Math.max(a,Math.min(b,Math.round(Number.isFinite(y)?y:c.y)));}

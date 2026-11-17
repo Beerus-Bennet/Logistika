@@ -1,3 +1,9 @@
+## v372 – Feste Autofotos und Datenkonsistenz
+
+Basis main `210d580` (PR #88/v370 und PR #89/v371 enthalten). Eigene Lieferung auf `claude/autofotos-v372`; Versions- und Dokumentationskonflikte beider Lieferungen gemeinsam aufgelöst. `carphotos.js` zwingend zwischen cars.js und auction.js laden, beide Shell-Listen mitnehmen; alle 127 `cars/photos/*.jpg` und `cars/credits.json` gehören dazu. Lizenz/Urheber/Commons-Seite und SHA je Foto verbindlich, keine automatisch wechselnden Titelbilder oder Markensuch-Fallbacks wiedereinbauen. `carpics.mjs --check` prüft alles offline; Downloadmodus ersetzt keine ungeprüften Bytes.
+
+`modelYears372` nur einmalige Korrektur unmöglicher Baujahre an `kind:car` in lots/garage, keine Geld-/Besitz-/Lackmigration. `paintOfPhoto` liest Freigabe statt Pixelschätzung. Bestehende abweichende Lacke bleiben als gekennzeichnete Illustration; `data-carpaint` in jedem Rahmen erhalten. Comic-Schlüssel v4 mit vollständigem Bild-SHA, `COMIC_SOURCE` und Abschlussprüfung schützen asynchrone Ergebnisse. Daten-/Bildmanifest zusammen pflegen. Prüfanleitung/Bilder in docs/AUTOFOTOS-v372.md; Version/SW und eigene Assets372, gl3d370 und worldview/game/village/vip371 aus main unverändert.
+
 ## v369 – Wohnhausgärten nach dem Einzug
 
 Basis main `788a2b5` (PR #85/v367 und PR #86/v368 gemergt). Paralleler Performance-PR #86 bis `eb91b68` vollständig in `claude/wohn-gaerten-v369` integriert; Konflikte nur in AENDERUNGEN/CLAUDE, beide Inhalte erhalten. Insel-Fernstufen in worldview/gl3d bleiben erhalten. Gesamt-/Cacheversion 369; integrierte gl3d/worldview-Assets behalten368.

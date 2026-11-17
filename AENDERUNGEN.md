@@ -1,3 +1,11 @@
+## v372 – Autofotos passen zu Modell, Baujahr und Lack
+
+**Ursache:** Die automatische Wikipedia-Suche konnte eine andere Generation/Variante derselben Marke liefern; zufällige Baujahre lagen außerhalb der tatsächlichen Modellzeit. Pixelbasierte Lackschätzungen überschrieben gespeicherte Farben, der Bild-Cache verglich nur URL-Längen.
+
+**Lösung:** 127 gesichtete, fest zugeordnete Commons-Modellfotos lokal mit Quelle/Lizenz/SHA-256. Neue Lose erhalten die Fotofarbe; bestehende Lacke bleiben erhalten und bekommen bei Abweichungen eine gekennzeichnete Illustration. Baujahrgrenzen je Variante, einmalige Korrektur unmöglicher Altjahre ohne Änderungen an Geboten/Besitz/Preisen. Keine dynamische Titelfoto-/Markensuche oder automatische Umfärbung mehr. Comic-Cache nach Bildinhalt und Prüfung laufender Filteraufträge; Importer kann ausschließlich freigegebene Fotos wiederherstellen.
+
+**Geprüft:** sechs Prüfgruppen, 2.540 Lose über alle Modelle, alter Porsche-Spielstand, Zuschlag/Wiedereinlieferung; mobile Chromium-Auktion/Garage, alle 127 Fotos dekodiert, Rückfälle und verspätete Bilder; Quellen-/Lizenz-/Hashprüfung. main einschließlich PR #89/v371 integriert; Versions- und Dokumentationskonflikte gemeinsam aufgelöst. Nicht auf echtem iPhone/Safari. Details und Bilder: [docs/AUTOFOTOS-v372.md](docs/AUTOFOTOS-v372.md).
+
 ## v371 – Fernbäume sehen aus wie die echten; Meldungen am Bildschirmrand führen zum Ziel
 **Meldung Bennet (drei Bildschirmfotos):** (1) Der Übergang der verschwindenden Objekte beim Herauszoomen ist noch klar und hart zu sehen – weicher bzw. unsichtbar machen. (2) Die Meldung unten („Neue Wohnanfragen für Seegarten 6.“) soll antippbar sein, und jede Meldung oberhalb der Menüleiste soll einzeln zum Passenden führen (Vertrag, Auto, Büro usw.).
 
