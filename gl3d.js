@@ -1089,7 +1089,8 @@ const G3 = (() => {
         if (u.uFlow) gl.uniform4fv(u.uFlow, n.flow || NOTINT);              /* v193: fallendes Wasser */
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
-        gl.uniform1f(u.uFade, n.fade || 0); gl.uniform1f(u.uFadeInv, 0);
+        /* v375: Auch normale Knoten können zwei feste Detailstufen lückenlos überblenden. */
+        gl.uniform1f(u.uFade, n.fade || 0); gl.uniform1f(u.uFadeInv, n.inv ? 1 : 0);
         gl.bindVertexArray(n.mesh.vao);
         gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
         ST.draws++; ST.tris += n.mesh.count / 3; if (n.sway) ST.sway++;
