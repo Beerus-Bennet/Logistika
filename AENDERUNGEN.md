@@ -3,6 +3,18 @@
 Primärorgan im Trefferbild nur einmal beschriftet; separater Todesursachenblock entfernt, stattdessen „Herz (zerstört)“ direkt in der Organliste. Anatomische Links-/Rechtsnamen aus Tierkoordinaten statt gespiegelter Zuordnung, einschließlich Lungenlappen. Beide Lungen als gemeinsames Primärschild bei beidseitigem Kontakt. Alte Schussansichten berücksichtigen die gespeicherte Eindringtiefe; gespeicherte Wertung/Belohnung bleiben erhalten.
 
 Geprüft: sechs einseitige Lungenkanäle, Schussstopp, unveränderte Altaufnahme, elf bestehende Anatomie-/Trefferbildprüfgruppen und mobile Browseransicht für Herz sowie beide Lungenflügel. Kein echtes iPhone. [Bilder und Details](docs/TREFFERKLARHEIT-v388.md).
+## v386 – Größerer Wasserfall, gemeinsame Wasserfarben und klare Felshänge
+
+Gebirge mit dezenten Felsfacetten und gedeckten Kiesufern; Randfarben aus dem echten Waldboden beseitigen rechteckige Flussartefakte. Fallhöhe15 statt10,4, Breite6,4 statt4,1; größeres Becken mit breit einlaufendem, weich verengtem Abfluss. Gemeinsame Wasserpalette/Beleuchtung, flächige Beckenwellen statt Fächerstreifen. Breitere bewegte Aufpralladern, größere Druckwellen und begrenzte Spritzer/Gischt.
+
+Geprüft: Wassergeometrie/Breiten/Becken, 1.800 Tierschritte, 200 Zoomwechsel, Spielstandschutz, Browser mit acht Zoomwechseln und zeitlich veränderten Wasserpixeln bei fester Kamera, bestehende Wassertests. Keine echte iPhone-Prüfung. Bilder/Grenzen: [docs/WASSEROPTIK-v386.md](docs/WASSEROPTIK-v386.md).
+## v385 – Inselrand: echte Bäume statt Platzhalter, keine Streifen mehr im Gras
+
+**Ursache:** (1) Der Baumsaum auf dem Randstreifen (v366) bestand aus einfachen Kegeln und Kugeln in einem festen Netz – ohne Wind, deutlich gröber als der Wald daneben. (2) Die Grasdecke des Randstreifens hatte nur zwei Zwischenringe auf 42 m: jede Bodenfarbe der Weltkante wurde zu einem langen, 4 m schmalen Dreieck nach außen gezogen – sichtbar als helle und dunkle Streifen quer über den Rand.
+
+**Lösung (`worldview.js`):** `worldApronTreeSpots` liefert nur noch Standorte (Kiefer, Fichte, Buche, Eiche, Birke in Waldgrößen 2–4); sie gehen in dieselben Baumgruppen wie der Wald (`WV.bgG`) – gleiche Modelle, Wind und Fernstufen (`treeFarSet`). Grasdecke mit acht Ringen (`APRON_RINGS`), jeder mit der flächigen Bodenfarbe seines Ortes. Keine Spiel- oder Speicherlogik geändert.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test`): Randstreifen vorher/nachher aus mehreren Höhen – Platzhalter weg, echte Bäume am Rand, 636 Randbäume; `floating-island-v358` (Dreiecksbudget von 5000 auf 8000 angehoben: 7128 Dreiecke), `inselrand-v366` auf Standorte umgestellt, `fixes-v354`. **Nicht geprüft:** Handy/Safari und Bildrate auf dem Handy (rund 640 zusätzliche Bauminstanzen, in der weiten Übersicht als Fernbäume). Die Streifen konnte ich im Testbrowser nicht direkt vergleichen – dort ist der noch nicht freigeschaltete Rand grau eingefärbt. `inselrand-v366` (Bachende), `berglandschaft-v375` und `bergwasserfall-v380` schlagen schon auf main fehl.
 
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 

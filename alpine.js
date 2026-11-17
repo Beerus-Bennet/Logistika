@@ -2,17 +2,17 @@
    Ufer, Bachanschluss, Inselkante und Tiere; feste Budgets, keine Meshes im Takt. */
 "use strict";
 const ALPINE = (()=>{
- const B={x0:4,x1:156,z0:-214,z1:-88},L={x:80,z:-149,rx:20,rz:13,y:10.4};
+ const B={x0:4,x1:156,z0:-214,z1:-88},L={x:80,z:-149,rx:20,rz:13,y:15.0};
  const PEAKS=[[42,-168,28,22,25],[68,-181,32,25,39],[95,-177,31,29,45],[121,-157,27,30,36],[116,-128,28,23,24],[61,-153,20,23,21]];
  /* v384: Kleinere Vorberge gliedern die Talseite; dieselbe Oberfläche trägt die Tiere. */
  const FOREPEAKS=[[30,-146,17,17,10],[35,-124,16,16,9],[61,-116,19,17,12],[86,-110,18,16,15],[110,-111,18,17,12],[132,-137,18,20,17]];
  const LEDGES=[[31,-145],[37,-124],[62,-116],[88,-113],[119,-135]];
- const RUN=[[64,-146,10.4,2.05],[62,-144,10.4,2.05]],POOL={x:58,z:-138.5,rx:6.8,rz:6,y:.12};
- const DRAIN=[[54.5,-133.65,.12,1.725],[51.2,-128.8,.11,1.725],[48.8,-123.2,.09,1.725],[43.2,-120,.07,1.725],[38,-112.8,.05,1.725],[31.2,-105.6,.03,1.725]];
+ const RUN=[[64,-146,15,3.2],[62,-144,15,3.2]],POOL={x:58,z:-138.5,rx:8.2,rz:7.2,y:.12};
+ const DRAIN=[[54.1,-132.9,.12,3.0],[51.2,-128.8,.11,2.3],[48.8,-123.2,.09,1.725],[43.2,-120,.07,1.725],[38,-112.8,.05,1.725],[31.2,-105.6,.03,1.725]];
  const FALL={lip:[62,L.y,-144],foot:[60.8,POOL.y,-142.8],duration:Math.sqrt(2*(L.y-POOL.y)/9.81)};
  const sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
  const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t),col=n=>G3.col(n);
- let scene=null,grid=null,clock=0,geometry=null,spray=0,mist=0;
+ let scene=null,grid=null,clock=0,geometry=null,spray=0,mist=0,groundSampler=null;
  function mountainWeight(x,z){const e=Math.hypot((x-79)/75,(z+155)/58);let w=(1-sm(.76,1,e))*sm(14,34,x)*(1-sm(-135,-119,z));
   for(const [px,pz,rx,rz] of FOREPEAKS)w=Math.max(w,1-sm(.64,1.18,Math.hypot((x-px)/rx,(z-pz)/rz)));return w;
  }
@@ -25,7 +25,7 @@ const ALPINE = (()=>{
   for(let i=0;i<N;i++){const a=i/N*Math.PI*2,r=wob(a),p=[cx+Math.cos(a)*rx*r,cz+Math.sin(a)*rz*r];if(mouth&&Math.abs(delta(angle(p),ma))<span)continue;points.push(p);}
   if(ends)points.push(...ends);return points.sort((a,b)=>angle(a)-angle(b)).map(p=>({p,a:angle(p)}));
  }
- const lakeOutline=outline(L.x,L.z,L.rx,L.rz,96,a=>1+.055*Math.sin(a*3+.8)+.035*Math.sin(a*7),{x:62,z:-144,nx:Math.SQRT1_2,nz:Math.SQRT1_2,w:2.05});
+ const lakeOutline=outline(L.x,L.z,L.rx,L.rz,96,a=>1+.055*Math.sin(a*3+.8)+.035*Math.sin(a*7),{x:62,z:-144,nx:Math.SQRT1_2,nz:Math.SQRT1_2,w:3.2});
  const first=FWM.smoothLine(DRAIN.map(p=>p.slice(0,2)),6),dsx=first[1][0]-first[0][0],dsz=first[1][1]-first[0][1],dsl=Math.hypot(dsx,dsz);
  const poolOutline=outline(POOL.x,POOL.z,POOL.rx,POOL.rz,64,a=>1+.06*Math.sin(a*3+.4)+.035*Math.cos(a*5),{x:DRAIN[0][0],z:DRAIN[0][1],nx:-dsz/dsl,nz:dsx/dsl,w:DRAIN[0][3]});
  function radialE(poly,cx,cz,x,z){const dx=x-cx,dz=z-cz,r=Math.hypot(dx,dz);if(r<1e-8)return 0;const a=Math.atan2(dz,dx);let lo=0,hi=poly.length;while(lo<hi){const m=(lo+hi)>>1;if(poly[m].a<a)lo=m+1;else hi=m;}
@@ -35,7 +35,7 @@ const ALPINE = (()=>{
  let river=null;
  function riverLine(){return DRAIN.map(p=>p.slice(0,2)).concat(FWORLD.creek.slice(1));}
  function riverProfile(){if(river)return river;const p=FWM.smoothLine(riverLine().slice(0,DRAIN.length+3),6);river=[];let dist=0;
-  p.forEach((q,i)=>{if(i)dist+=Math.hypot(q[0]-p[i-1][0],q[1]-p[i-1][1]);const k=Math.min(DRAIN.length-1,Math.floor(i/6)),t=i/6-k,a=DRAIN[k],b=DRAIN[Math.min(DRAIN.length-1,k+1)];river.push([q[0],q[1],a[2]+(b[2]-a[2])*Math.max(0,Math.min(1,t)),1.725,dist]);});return river;
+  p.forEach((q,i)=>{if(i)dist+=Math.hypot(q[0]-p[i-1][0],q[1]-p[i-1][1]);const k=Math.min(DRAIN.length-1,Math.floor(i/6)),t=i/6-k,a=DRAIN[k],b=DRAIN[Math.min(DRAIN.length-1,k+1)];river.push([q[0],q[1],a[2]+(b[2]-a[2])*Math.max(0,Math.min(1,t)),a[3]+(b[3]-a[3])*Math.max(0,Math.min(1,t)),dist]);});return river;
  }
  function nearest(line,x,z){let best=1e8,out=null;
   for(let i=1;i<line.length;i++){const a=line[i-1],b=line[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz))),d=Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t),w=a[3]+(b[3]-a[3])*t;if(d-w<best){best=d-w;out={d:d-w,y:a[2]+(b[2]-a[2])*t,w,s:(a[4]||0)+Math.hypot(dx,dz)*t};}}return out;
@@ -61,7 +61,7 @@ const ALPINE = (()=>{
   if(e<1.4){const basin=L.y-2.4+2.1*sm(.18,1,e),shore=L.y-.3+.8*sm(1,1.1,e);h=e<1?basin:shore+(h-shore)*sm(1.02,1.4,e);}
   if(e>=1||channel(x,z).y<1)h=cutChannel(x,z,h);
   const along=(-(x-62)+(z+144))/Math.SQRT2,side=((x-62)+(z+144))/Math.SQRT2;
-  if(along>-.4&&along<7&&Math.abs(side)<5){const cliff=10.3*(1-sm(-.1,1.5,along));h=h+(Math.min(h,cliff)-h)*(1-sm(3.3,5,Math.abs(side)));}
+  if(along>-.4&&along<7&&Math.abs(side)<5){const cliff=(L.y-.1)*(1-sm(-.1,1.5,along));h=h+(Math.min(h,cliff)-h)*(1-sm(3.3,5,Math.abs(side)));}
   const ePool=poolE(x,z);if(ePool<1.6){const bed=POOL.y-.32-1.3*(1-sm(.2,1,ePool));h=ePool<1?bed:POOL.y-.32+(h-POOL.y+.32)*sm(1,1.6,ePool);}
   if(channel(x,z).y<1)h=cutChannel(x,z,h,true);
   return h;
@@ -73,10 +73,11 @@ const ALPINE = (()=>{
   c=mix(c,mix(col(0x7f8584),col(0xb2b0a1),n),Math.max(sm(18,31,h),sm(.8,1.4,slope)));
   if(e<1.12)c=mix(col(e<1?0x3b6967:0x919685),c,sm(.94,1.12,e));
   if((-(x-62)+(z+144))/Math.SQRT2>.1&&Math.abs((x-62)+(z+144))<10&&h<L.y-.8&&slope>.8)c=mix(col(0x596760),col(0x8a8b7f),sm(1,2.4,slope)); /* v380: nasser Fels unter der Fallkante, kein türkis gefärbter Seegrund an der Wand */
-  const strata=.96+.04*Math.sin(h*2.8+x*.12+z*.09);c=c.map(v=>v*strata);
+  if(slope>.7&&h<L.y-1&&e<1.15)c=col(0x72796c);
+  const strata=.94+.06*Math.sin(h*.85+x*.09+z*.06);c=c.map(v=>v*strata);
   const q=channel(x,z);
-  const base=typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);let result=mix(base,c,w);
-  if(q.y<1&&q.d<3.2&&poolE(x,z)>.98){const shore=mix(col(0x7d8470),col(0xc9b98c),sm(-.1,1.1,q.d));result=mix(shore,result,sm(1.1,3.2,q.d));}return result;
+  const base=groundSampler?groundSampler(x,z):typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);let result=mix(base,c,w);
+  if(q.y<1&&q.d<4.5&&poolE(x,z)>.98){const shore=mix(col(0x7d8470),col(0x9a9b83),sm(-.1,1.1,q.d));result=mix(shore,result,sm(.5,4.5,q.d));}return result;
  }
  function inside(x,z){const cx=-28,cz=-28,a=Math.atan2(z-cz,x-cx);return Math.hypot(x-cx,z-cz)<apronEdgeRadius(a)-.25;}
  function project(x,z){if(inside(x,z))return [x,z];const a=Math.atan2(z+28,x+28),r=apronEdgeRadius(a)-.25;return [-28+Math.cos(a)*r,-28+Math.sin(a)*r];}
@@ -91,23 +92,28 @@ const ALPINE = (()=>{
    else if(J%N===0&&(!fine.has(j*nx+i)||!fine.has((j-1)*nx+i)))out=interpolate(V[(J/N)*(nx+1)+i],V[(J/N)*(nx+1)+i+1],u);
    else{const X=B.x0+I/N*dx,Z=B.z0+J/N*dz,p=project(X,Z),h=height(...p);out={out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])};}cache.set(key,out);return out;
   }
-  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;b.v.push(...a.p,...a.n,...a.c,...d.p,...d.n,...d.c,...c.p,...c.n,...c.c,...a.p,...a.n,...a.c,...c.p,...c.n,...c.c,...e.p,...e.n,...e.c);};
+  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),n=q=>G3.norm(mix(q.n,face,.12*sm(2,10,q.p[1])));b.v.push(...a.p,...n(a),...a.c,...d.p,...n(d),...d.c,...c.p,...n(c),...c.c,...a.p,...n(a),...a.c,...c.p,...n(c),...c.c,...e.p,...n(e),...e.c);};
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){if(fine.has(j*nx+i)){for(let v=0;v<N;v++)for(let u=0;u<N;u++){const I=i*N+u,J=j*N+v;quad(vertex(I,J),vertex(I,J+1),vertex(I+1,J+1),vertex(I+1,J));}}else quad(V[j*(nx+1)+i],V[(j+1)*(nx+1)+i],V[(j+1)*(nx+1)+i+1],V[j*(nx+1)+i+1]);}
   if(store)grid={nx,nz,dx,dz,V,fine,vertex,N};return b;
  }
+ /* v386: Ein Material für See, Kolk und Fluss; am Auslauf dieselben
+    Strömungskoordinaten statt einer sichtbaren Materialkante. */
  function basinWater(poly,cx,cz,y,N){const b=new FM.MB(),at=(i,r)=>[cx+(poly[i%poly.length].p[0]-cx)*r,y,cz+(poly[i%poly.length].p[1]-cz)*r];
-  for(let j=0;j<N;j++)for(let i=0;i<poly.length;i++){const r=j/N,s=(j+1)/N,c=mix(col(G3.WATER.deep),col(G3.WATER.shallow),Math.pow(r,3)),d=mix(col(G3.WATER.deep),col(G3.WATER.shallow),Math.pow(s,3));b.triV(at(i,r),at(i+1,s),at(i,s),c,d,d);if(j)b.triV(at(i,r),at(i+1,r),at(i+1,s),c,c,d);}return b;
+  const coords=p=>{const pool=y<1,head=pool?DRAIN[0]:[62,-144],tx=pool?dsx/dsl:-Math.SQRT1_2,tz=pool?dsz/dsl:Math.SQRT1_2,dx=p[0]-head[0],dz=p[2]-head[1],along=dx*tx+dz*tz,side=(-tz*dx+tx*dz)/(pool?3:3.2),rad=pool?poolE(p[0],p[2]):lakeE(p[0],p[2]),mouth=sm(-5,0,along)*(1-sm(1,2,Math.abs(side)))*(1-sm(0,2,along));return[along,rad*.85*(1-mouth)+side*mouth,.45];};
+  for(let j=0;j<N;j++)for(let i=0;i<poly.length;i++){const r=j/N,s=(j+1)/N,A=at(i,r),B=at(i+1,s),C=at(i,s),D=at(i+1,r);b.triV(A,B,C,coords(A),coords(B),coords(C));if(j)b.triV(A,D,B,coords(A),coords(D),coords(B));}return b;
  }
  function water(){return basinWater(lakeOutline,L.x,L.z,L.y,5);}
  /* v384: Das Talwasser gehört zum durchgehenden Flussmesh in worldview.js.
     Kein überlagertes Band, keine separat endende Strömungsphase. */
+ function riverWidth(x,z){return nearest(riverProfile(),x,z).w;}
+ function setGroundSampler(fn){if(!geometry)groundSampler=fn;}
  function riverLevel(x,z){return nearest(riverProfile(),x,z).y;}
  function riverBankY(x,z,y){return contains(x,z)?Math.max(y,height(x,z)+.032):y;}
- function fallPath(t){return [62-1.2*t,L.y-(L.y-POOL.y)*t*t,-144+1.2*t,2.05*(1-.25*t)];}
+ function fallPath(t){return [62-1.2*t,L.y-(L.y-POOL.y)*t*t,-144+1.2*t,3.2*(1-.2*t)];}
  function fallMesh(){const b=new FM.MB(),N=24,M=6;const at=(t,w)=>{const p=fallPath(t);return[p[0]+w*p[3]/Math.SQRT2,p[1],p[2]+w*p[3]/Math.SQRT2];};
   for(let i=0;i<N;i++)for(let j=0;j<M;j++){const t=i/N,u=(i+1)/N,a=-1+j*2/M,d=a+2/M,A=at(t,a),B=at(t,d),C=at(u,d),D=at(u,a),ca=[t,(a+1)/2,1],cb=[t,(d+1)/2,1],cc=[u,(d+1)/2,1],cd=[u,(a+1)/2,1];b.triV(A,B,C,ca,cb,cc);b.triV(A,C,D,ca,cc,cd);b.triV(A,C,B,ca,cc,cb);b.triV(A,D,C,ca,cd,cc);}return b;}
  function poolMesh(){return basinWater(poolOutline,POOL.x,POOL.z,POOL.y,4);}
- function foamMesh(){const b=new FM.MB(),N=12,M=12,at=(t,w)=>[60.8-t*1.7+w*1.7,POOL.y+.018,-142.8+t*3.5+w*.8];for(let i=0;i<N;i++)for(let j=0;j<M;j++){const t=i/N,u=(i+1)/N,a=-1+j*2/M,d=a+2/M;b.triV(at(t,a),at(u,d),at(t,d),[t*1.1,a,-1],[u*1.1,d,-1],[t*1.1,d,-1]);b.triV(at(t,a),at(u,a),at(u,d),[t*1.1,a,-1],[u*1.1,a,-1],[u*1.1,d,-1]);}return b;}
+ function foamMesh(){const b=new FM.MB(),N=12,M=12,at=(t,w)=>[60.8-t*2.1+w*2.8,POOL.y+.018,-142.8+t*3.5+w*.8];for(let i=0;i<N;i++)for(let j=0;j<M;j++){const t=i/N,u=(i+1)/N,a=-1+j*2/M,d=a+2/M;b.triV(at(t,a),at(u,d),at(t,d),[t*1.1,a,-1],[u*1.1,d,-1],[t*1.1,d,-1]);b.triV(at(t,a),at(u,a),at(u,d),[t*1.1,a,-1],[u*1.1,a,-1],[u*1.1,d,-1]);}return b;}
  function fir(b,x,y,z,s,far,tint){b.box(.18*s,1.4*s,.18*s,0x67513b,{x,y,z});
   const layers=far?2:4;for(let j=0;j<layers;j++){const t=j/layers,r=(1.3-.83*t)*s,Y=y+(1+t*3)*s;b.cone(r,(2.4-1.0*t)*s,far?5:7,tint,{x,y:Y,z});
    if(!far)for(let k=0;k<7;k++){const a=k/7*Math.PI*2+j*.8,da=.16,R=r*(1.08+.1*Math.sin(k*2+j));b.tri([x+Math.cos(a-da)*r*.65,Y+.27*s,z+Math.sin(a-da)*r*.65],[x+Math.cos(a)*R,Y-.16*s,z+Math.sin(a)*R],[x+Math.cos(a+da)*r*.65,Y+.1*s,z+Math.sin(a+da)*r*.65],tint);}
@@ -144,7 +150,7 @@ const ALPINE = (()=>{
    }if(cost<score){score=cost;best=[x,z];}if(cost<.5)break;
   }return best;
  }
- function makeAnimals(R,parent){const animals=[],node=(mesh,o)=>R.node(mesh,o),cache=(k,fn)=>fmesh('alp384:'+k,fn);
+ function makeAnimals(R,parent){const animals=[],node=(mesh,o)=>R.node(mesh,o),cache=(k,fn)=>fmesh('alp386:'+k,fn);
   const candidates=LEDGES;
   for(let i=0;i<7;i++){const m=i>4,wanted=m?[[96,-130],[66,-159]][i-5]:candidates[i],[x,z]=safeCenter(wanted,m,animals),root=node(cache(m?'marmot':'ibex',()=>body(m?'marmot':'ibex')),{shadow:false,s:m?1.1:i===4?.72:1.25});R.addChild(parent,root);
    const a={kind:m?'marmot':'ibex',root,x,z,phase:i*1.71,walk:0,legs:[],head:null,path:[]};
@@ -167,17 +173,17 @@ const ALPINE = (()=>{
   }
  }
  function build(R){prepare();
-  const cache=(k,mb)=>fmesh('alp384:'+k,()=>mb),root=R.node(null,{shadow:false});R.nodes.push(root);
+  const cache=(k,mb)=>fmesh('alp386:'+k,()=>mb),root=R.node(null,{shadow:false});R.nodes.push(root);
   const add=(k,mb,o={})=>R.addChild(root,R.node(cache(k,mb),Object.assign({shadow:false},o)));
   const near=add('terrain',geometry.terrainNear);
-  scene={root,near,treeNear:add('fir',geometry.treeNear),treeFar:add('firFar',geometry.treeFar,{inv:true,visible:false}),detail:add('detail',geometry.detail),water:add('water',geometry.water,{water:4}),fall:add('fall',geometry.fall,{alpha:.98,water:6,flow:[0,1.3,1,POOL.y]}),pool:add('pool',geometry.pool,{water:4}),foam:add('foam',geometry.foam,{water:6,flow:[3.9,1.7,1,POOL.y],alpha:.98}),...makeAnimals(R,root)};
+  scene={root,near,treeNear:add('fir',geometry.treeNear),treeFar:add('firFar',geometry.treeFar,{inv:true,visible:false}),detail:add('detail',geometry.detail),water:add('water',geometry.water,{water:8}),fall:add('fall',geometry.fall,{alpha:.98,water:6,flow:[0,.45,1,POOL.y],fallStart:.05}),pool:add('pool',geometry.pool,{water:8}),foam:add('foam',geometry.foam,{water:6,flow:[4.1,2.8,1,POOL.y],alpha:.98}),...makeAnimals(R,root)};
   clock=0;return scene;
  }
  function step(dt){if(!scene)return;const fp=!!FV.fp,d=FV.R.cam.dist,on=!fp,day=(S.time%1440)>330&&(S.time%1440)<1230;scene.root.visible=on;if(!on)return;
   const t=sm(140,225,d);scene.near.fade=0;scene.near.visible=true;scene.treeNear.fade=t;scene.treeNear.visible=t<.999;scene.treeFar.fade=t;scene.treeFar.visible=t>.001;
   const detail=sm(90,140,d);scene.detail.fade=detail;scene.detail.visible=detail<.999;clock+=Math.min(.05,Math.max(0,dt));
-  if(d<130&&Math.hypot(FV.R.cam.tx-POOL.x,FV.R.cam.tz-POOL.z)<65&&FV.R.emit){spray+=Math.min(.05,dt)*18;while(spray>=1){spray--;const a=clock*17+spray;FV.R.emit({x:60.8+Math.cos(a)*.5,y:.17,z:-142.8+Math.sin(a)*.5,vx:Math.cos(a)*1.2,vy:1.3+Math.sin(a*3)*.4,vz:Math.sin(a)*1.2,g:-9.81,life:.55,size:.04,size2:.1,col:[.85,.95,1,.45],shape:5});}}else spray=0;
-  if(d<130&&Math.hypot(FV.R.cam.tx-POOL.x,FV.R.cam.tz-POOL.z)<65&&FV.R.emit){mist+=Math.min(.05,dt)*2;if(mist>=1){mist--;FV.R.emit({x:60.8,y:.35,z:-142.8,vx:-.15,vy:.35,vz:.18,g:0,life:1.4,size:.18,size2:.7,col:[.86,.94,1,.075],drag:1.2,shape:4});}}else mist=0;
+  if(d<130&&Math.hypot(FV.R.cam.tx-POOL.x,FV.R.cam.tz-POOL.z)<65&&FV.R.emit){spray+=Math.min(.05,dt)*30;while(spray>=1){spray--;const a=clock*17+spray;FV.R.emit({x:60.8+Math.cos(a)*.5,y:.17,z:-142.8+Math.sin(a)*.5,vx:Math.cos(a)*1.2,vy:1.3+Math.sin(a*3)*.4,vz:Math.sin(a)*1.2,g:-9.81,life:.7,size:.055,size2:.12,col:[.85,.95,1,.45],shape:5});}}else spray=0;
+  if(d<130&&Math.hypot(FV.R.cam.tx-POOL.x,FV.R.cam.tz-POOL.z)<65&&FV.R.emit){mist+=Math.min(.05,dt)*4;if(mist>=1){mist--;FV.R.emit({x:60.8,y:.35,z:-142.8,vx:-.15,vy:.35,vz:.18,g:0,life:1.4,size:.28,size2:1.1,col:[.86,.94,1,.075],drag:1.2,shape:4});}}else mist=0;
   for(const a of scene.animals){const fade=sm(150,220,d),near=Math.hypot(a.x-FV.R.cam.tx,a.z-FV.R.cam.tz)<Math.max(50,d*.75);a.root.fade=fade;a.root.visible=fade<.999&&near&&(day||a.kind==='ibex');if(!a.root.visible)continue;
    const moving=day&&Math.sin(clock*.23+a.phase)>-.15,speed=a.kind==='marmot'?.12:.16;if(moving)a.walk+=Math.min(.05,dt)*speed;
    const f=(a.walk+a.phase)*64/(Math.PI*2),i=((Math.floor(f)%64)+64)%64,u=f-Math.floor(f),p=a.path[i],q=a.path[(i+1)%64],x=p[0]+(q[0]-p[0])*u,z=p[2]+(q[2]-p[2])*u;
@@ -189,5 +195,5 @@ const ALPINE = (()=>{
   }
   for(const b of scene.birds){b.root.visible=day;if(!day)continue;const t=clock*.12+b.phase;b.root.x=80+Math.cos(t)*29;b.root.z=-152+Math.sin(t)*18;b.root.y=43+Math.sin(t*1.4)*3;b.root.ry=-t;b.root.rz=Math.sin(t)*.12;const flap=Math.sin(clock*3+b.phase)>.82?Math.sin(clock*8+b.phase)*.13:.035;b.left.rz=flap;b.right.rz=-flap;}
  }
- return {riverLine,riverLevel,riverBankY,replacesGround,contains,weight,height,color,channel,cutChannel,lakeE,poolE,surface,build,step,info:()=>({scene,geometry,grid,clock,lake:L,lakeOutline,poolOutline,run:RUN,drain:DRAIN,profile:riverProfile(),pool:POOL,fall:FALL,fallPath,bounds:B,peaks:PEAKS,forepeaks:FOREPEAKS,ledges:LEDGES})};
+ return {setGroundSampler,riverWidth,riverLine,riverLevel,riverBankY,replacesGround,contains,weight,height,color,channel,cutChannel,lakeE,poolE,surface,build,step,info:()=>({scene,geometry,grid,clock,lake:L,lakeOutline,poolOutline,run:RUN,drain:DRAIN,profile:riverProfile(),pool:POOL,fall:FALL,fallPath,bounds:B,peaks:PEAKS,forepeaks:FOREPEAKS,ledges:LEDGES})};
 })();
