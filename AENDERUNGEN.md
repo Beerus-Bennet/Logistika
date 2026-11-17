@@ -1,3 +1,11 @@
+## v387 – Rahmenvertrag: „Machbarkeit prüfen“ mit den Büros
+
+**Wunsch:** Vor dem Unterschreiben eines Rahmenvertrags Rücksprache mit den Büros halten – haben ein oder mehrere Büros Kapazität? Grüner Daumen = ja, roter Daumen = nein.
+
+**Lösung:** Neuer Knopf „🔎 Machbarkeit prüfen“ in der Vertragsnachricht des Diensttelefons (`contractFeasHTML` in `goals.js`, Bindung in `bindDecisionMsgs`, `extras.js`). `contractFeasibility` prüft je Büro: Abholort in Reichweite (`reachKm`), Fahrpersonal vorhanden, passende Fahrzeuge des Büros für die ganze Kette einer Variante, Fahrzeit innerhalb der 20-Stunden-Frist einer Vertragsfahrt; daraus die übernehmbaren Fahrten pro Tag (Fahrzeugketten × Umläufe, gedeckelt durch Fahrpersonal, abzüglich laufender Verträge in Reichweite). Gesamturteil grün/rot mit Summe gegen die geforderte Tagesmenge, darunter jedes Büro mit Daumen und Begründung. Ohne Büro: Hinweis, ob die Flotte es könnte. Das Ergebnis bleibt an der Nachricht stehen. Nur Anzeige – Vertrag, Annahme und Dispo unverändert.
+
+**Geprüft:** Testbrowser (`?test=100`, Spedition an, Büro „Hof“ mit Lkw und Fahrer): Knopf sichtbar, grünes Ergebnis (1 von 1 Fahrten, Lkw) und rotes Ergebnis ohne Fahrzeuge (0 von 3, „Kein passendes Fahrzeug (braucht Lkw)“), keine Konsolenfehler. **Nicht geprüft:** Handy/Safari; mehrere Büros gleichzeitig (Etappe 1 erlaubt nur eins); die Kapazitätsschätzung ist vereinfacht (Umläufe aus der schnellsten Fahrzeit, laufende Verträge pauschal abgezogen) – keine echte Dispo-Simulation.
+
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 
 **Ursache:** Separater Überlauf mit erhöhtem Endstück, darüberliegender alter Wiesenboden und unterschiedlich geformte Geländestufen erzeugten Lücken und Rastermuster. Wasser und äußerer Wasserfall orientierten sich nicht an derselben gezeichneten Inselkante.
