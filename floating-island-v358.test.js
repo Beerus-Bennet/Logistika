@@ -21,5 +21,5 @@ for(let i=0;i<v.length;i+=27){
 const open=[...edges].filter(([,n])=>n===1);assert.equal(open.length,264,'nur Anschluss zum bestehenden Weltboden ist offen');
 assert.ok([...edges.values()].every(n=>n===1||n===2),'keine mehrfachen oder losen Innenkanten');
 for(const [k] of open)for(const a of k.split('|')){const [x,y,z]=a.split(',').map(Number);assert.equal(y,0);assert.ok(x===-160||x===104||z===-160||z===104);}
-assert.ok(top>=1000&&low>=264&&soil>=500);assert.ok(area>2e5);assert.ok(v.length/27<5000,'Geometriebudget');
+assert.ok(top>=1000&&low>=264&&soil>=500);assert.ok(area>2e5);assert.ok(v.length/27<8000,'Geometriebudget (v385: acht Grasringe gegen Streifen)');
 console.log('OK v358: 264 exakte Anschlusskanten, geschlossene Flanken/Unterseite, korrekte Flächenausrichtung, '+v.length/27+' Dreiecke.');
