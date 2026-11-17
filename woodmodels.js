@@ -871,7 +871,7 @@ const FWM = (() => {
     return b;
   }
   function bgLeaf(v) {
-    G3.seed(3860 + v);
+    G3.seed(3850 + v);
     const b = new MB(), c = [0x4f9e35, 0x5c9e37, 0x468f2c, 0x6fb845][v % 4];
     b.cyl(0.13, 0.1, 1.2, 5, v % 4 === 3 ? 0x9b9a92 : 0x6b4a30, { notop: true, nobot: true });
     b.noise(0.14, () => b.ico(0.95, c, { y: 1.75, jitter: 0.3, flat: 0.9 }));
@@ -1446,7 +1446,8 @@ const FWM = (() => {
   function creekStations(P, o, Fr, sg) {
     const f = creekScale(P, o), M = o && o.mouth, mo = M ? creekMouthSt(Fr, o, sg) : { st: [], lim: -1, w0: 1 }, st = mo.st;
     const wk = (o && o.w) || 1;                      /* v190: Breitenfaktor (Bach im Wald 1,5) */
-    Fr.L.forEach((s, i) => { if (s > mo.lim) st.push({ s, h: CR_H * wk * f[i], ns: 0, nl: 1, f: f[i] }); });
+    /* v386: Dieselbe optionale Breite für Wasser und beide Ufer. */
+    Fr.L.forEach((s,i)=>{if(s<=mo.lim)return;let h=CR_H*wk*f[i];if(o&&o.width){const p=Fr.W(s,0,0);h=o.width(p[0],p[2]);}st.push({s,h,ns:0,nl:1,f:f[i]});});
     /* Strandbreite und Seefarben entlang der Uferlinie ab dem Seeufer: Breite über 10 Einheiten auf Bachbreite, Farben über 4 */
     let d = 0, prev = null;
     st.forEach(S => {

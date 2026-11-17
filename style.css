@@ -5239,6 +5239,11 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 .wp-main .btn{align-self:flex-start;margin-top:4px}
 
 /* ---------------------------------------------------------------------
+   v386: Fliegender Händler – Grund des Angebots als Marke
+   --------------------------------------------------------------------- */
+#farmSheetIn .frec .fr-why{display:inline-block;align-self:flex-start;font-style:normal;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;background:#fff1c9;color:#7a4b00;margin-top:2px}
+#farmSheetIn .frec.fr-need{border-color:#2f8f4e;background:#eef9ee}
+#farmSheetIn .frec.fr-need .fr-why{background:#2f8f4e;color:#fff}
    v387: Rahmenvertrag – „Machbarkeit prüfen“ (Rücksprache mit den Büros)
    --------------------------------------------------------------------- */
 .dfeas{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-top:8px;padding:9px 12px;border:2.5px dashed #4a5aa8;border-radius:12px;background:#eef1ff;color:#24306e;font:800 14px var(--font);cursor:pointer;text-align:left}

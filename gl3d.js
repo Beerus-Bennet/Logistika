@@ -351,7 +351,7 @@ const G3 = (() => {
   precision highp float; precision highp sampler2DShadow;
   in vec3 vNor; in vec3 vCol; in vec3 vW; in vec4 vL;
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR;
-  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth; uniform vec4 uFlow;
+  uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth; uniform vec4 uFlow; uniform float uFallStart;
   /* v370: Überblendung (Fernstufen): uFade (0 = voll, 1 = weg) lässt Bildpunkte nach einem feinen Rauschmuster weg; uFadeInv spiegelt das Muster,
      sodass zwei Modelle ineinander übergehen, ohne dass einer von beiden sichtbar verschwindet. */
   uniform float uFade, uFadeInv;
@@ -439,7 +439,7 @@ const G3 = (() => {
       /* v310: belüftetes Wasser in unregelmäßigen Fäden statt einer durchsichtigen blauen Folie.
          Die Rinne bleibt bis zur Kante Bachwasser; erst danach brechen helle Stränge und Zwischenräume auf. */
       float ribbons = smoothstep(0.24, 0.76, 0.5 + 0.5 * sin(sx * 8.0 + sin(v * 0.38 + sx) * 0.7));
-      float fall = smoothstep(0.24, 0.48, a), foam = smoothstep(0.55, 0.96, a);
+      float fall = smoothstep(uFallStart, uFallStart + 0.24, a), foam = smoothstep(0.55, 0.96, a);
       vec3 deep = waterDeep, mid = waterMid, wht = waterFoam;
       vec3 c = mix(deep, mid, 0.32 + 0.48 * strands);
       c = mix(c, wht, clamp(0.12 + strands * 0.34 + fine * 0.30 + foam * (0.23 + 0.25 * s2), 0.0, 0.92));
@@ -472,13 +472,13 @@ const G3 = (() => {
                * (1.0-smoothstep(0.35+max(x,0.0)*0.15,0.94+max(x,0.0)*0.20,abs(w)));
     float lace = smoothstep(0.48,0.72,n1*0.42+n2*0.38+micro*0.20);
     float radius = length(vec2(max(x,0.0)*uFlow.x,w*uFlow.y));
-    float ring = sin(radius*15.0-t*2.5+vnoise(vec2(x*2.0,w*2.7))*0.7);
-    float pressure = (1.0-smoothstep(0.025,0.16,abs(ring))) * exp(-radius*1.25)
+    float ring = sin(radius*5.5-t*2.4+vnoise(vec2(x*2.0,w*2.7))*0.7);
+    float pressure = (1.0-smoothstep(0.025,0.16,abs(ring))) * exp(-radius*0.55)
                      * smoothstep(0.15,0.4,x) * (1.0-smoothstep(0.72,1.25,abs(w)));
     float edge = smoothstep(-0.35, -0.2, x) * (1.0 - smoothstep(1.45, 1.8, x))
                * (1.0 - smoothstep(1.05, 1.35, abs(w)));
     float bubbles = smoothstep(0.22,0.7,n2*0.4+micro*0.6);
-    float al = clamp(core*(0.18+bubbles*0.62) + wake*lace*0.54 + pressure*0.18,0.0,0.92)*edge;
+    float al = clamp(core*(0.18+bubbles*0.62) + wake*lace*0.54 + pressure*0.28,0.0,0.92)*edge;
     vec3 c = mix(waterMid,waterFoam,0.65+core*0.25+micro*0.1)
            * (amb * 0.5 + vec3(Lw) * (0.64 + 0.18 * sh));
     return vec4(c, al);
@@ -495,7 +495,10 @@ const G3 = (() => {
        während alle mitgeführten Muster dauerhaft zum nächsten Fall wandern. */
     float v = s * 1.5 - t * 0.95;
     float n1 = vnoise(vec2(w * 2.1, v * 0.5)), n2 = vnoise(vec2(w * 4.6 + 3.7, v * 1.25 - t * 0.15)), n3 = vnoise(vec2(w * 8.5 + 1.1, s * 2.9 - t * 1.8));
-    float depth = 1.0 - smoothstep(0.1, 1.05, aw + (n1 - 0.5) * 0.3);
+    /* v386: Flächenwellen im Becken in Weltkoordinaten: keine zum
+       Fächerzentrum gestreckten Schaum-/Glanzstreifen. Gemeinsame Palette. */
+    if(uWater>7.5){vec2 q=vW.xz*.8-vec2(t*.10,t*.07);n1=vnoise(q);n2=vnoise(q*2.3+3.7);n3=vnoise(q*4.1-vec2(t*.1,0.0));}
+    float depth = 1.0 - smoothstep(0.1, 1.05, aw + (n1 - 0.5) * 0.08);
     vec3 deep = waterDeep, mid = waterMid, shal = waterShallow;
     vec3 c = mix(shal, mix(mid, deep, smoothstep(0.4, 1.0, depth)), smoothstep(0.0, 0.5, depth));
     c = mix(c, deep * 0.9, (1.0 - n1) * 0.18 * depth);                                  /* langsam ziehende, dunklere Bahnen */
@@ -1086,6 +1089,7 @@ const G3 = (() => {
         if (!n.mesh.vao) return;
         gl.uniformMatrix4fv(u.uModel, false, n.W);
         gl.uniform1f(u.uSway, n.sway); gl.uniform1f(u.uSwayT, n.swayT); gl.uniform1f(u.uWater, n.water); gl.uniform1f(u.uPlant, n.plant || 0);
+        gl.uniform1f(u.uFallStart,n.fallStart == null ? .24 : n.fallStart);
         if (u.uFlow) gl.uniform4fv(u.uFlow, n.flow || NOTINT);              /* v193: fallendes Wasser */
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
