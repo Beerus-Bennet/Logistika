@@ -94,7 +94,7 @@ const HUNT = (() => {
   function clear(x, z, kind) {
     if (showClear(x, z)) return true;
     const tw = Math.hypot(x - TW.x, z - TW.z);
-    if (kind === "tree") return inMeadow(x, z, 2.5) || tw < 4;
+    if (kind === "tree") return inMeadow(x, z, WRV.margin) || tw < 4;     /* v378: Ring für die Revier-Bäume (worldRevier) */
     if (kind === "bush") return inMeadow(x, z, -1.2) || tw < 2.6;
     return inMeadow(x, z, 0.6) || tw < 3.4;
   }
@@ -1556,7 +1556,28 @@ const HUNT = (() => {
     /* v328: Präparate werden einzeln als Hofobjekte aufgestellt. */
     R.nodes.push(W.root, W.site);
     syncWorld();
+    worldRevier(R);
     return W.root;
+  }
+  /* v378: Die Bäume, Steine und Baumstämme aus dem Revier (Ich-Perspektive) stehen auch auf der Karte. Das Revier ist rund dreimal so
+     weit wie die Wildwiese – Orte werden deshalb mit gleichem Randfaktor und gleichem Winkel zum Hochsitz auf die Wiese verkleinert,
+     die Bäume dabei auf WRV.k ihrer Größe (sonst wäre die Wiese zugewachsen). Nur das Gelände bis zum Randfaktor WRV.e wird übernommen,
+     weiter draußen bleibt der Wald der Karte; dafür hält clear() "tree" dort die Karten-Bäume fern. */
+  const WRV = { k: 0.6, e: 1.6, margin: 7 };
+  function worldRevier(R) {
+    if (typeof FWM === "undefined" || !FWM.tree || !R.instGroup) return;
+    const L = revLayout(), groups = new Map(), taken = [], a0 = A_CT - aCR();
+    const grp = (key, fn, o) => { let g = groups.get(key); if (!g) { g = R.instGroup(fmesh(key, fn), o || {}); groups.set(key, g); } return g; };
+    const map = (x, z) => { const e = fieldE(x, z), a = Math.atan2((z - FC.z) / FRZ, (x - FC.x) / FRX) + a0; return [CX + Math.cos(a) * e * CR, CZ + Math.sin(a) * e * CR, e]; };
+    const free = (x, z, d) => !showClear(x, z) && Math.hypot(x - TW.x, z - TW.z) > 3.4 && !taken.some(p => Math.hypot(p[0] - x, p[1] - z) < d);
+    L.trees.forEach((t, i) => {
+      const [x, z, e] = map(t.x, t.z), s = t.s * WRV.k * (0.8 + 0.2 * (t.sz || 3) / 3);
+      if (e > WRV.e || !free(x, z, 1.5 * s + 0.9)) return;
+      taken.push([x, z]);
+      grp("wt:" + t.sp + ":" + t.sz + ":" + t.v, () => FWM.tree(t.sp, t.sz, t.v), { sway: 0.22 }).add("hw" + i, x, z, t.ry, s);
+    });
+    if (FWM.boulder) L.rocks.forEach((t, i) => { const [x, z] = map(t.x, t.z); if (free(x, z, 1)) { taken.push([x, z]); grp("hu_rock", () => FWM.boulder(1), {}).add("hwr" + i, x, z, t.ry, t.s * WRV.k); } });
+    if (FWM.deadLog) L.logs.forEach((t, i) => { const [x, z] = map(t.x, t.z); if (free(x, z, 1.2)) { taken.push([x, z]); grp("hu_log", () => FWM.deadLog(), {}).add("hwl" + i, x, z, t.ry, t.s * WRV.k); } });
   }
   function syncWorld() {
     if (!W.root) return;
