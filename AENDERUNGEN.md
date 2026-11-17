@@ -1,3 +1,9 @@
+## v386 – Größerer Wasserfall, gemeinsame Wasserfarben und klare Felshänge
+
+Gebirge mit dezenten Felsfacetten und gedeckten Kiesufern; Randfarben aus dem echten Waldboden beseitigen rechteckige Flussartefakte. Fallhöhe15 statt10,4, Breite6,4 statt4,1; größeres Becken mit breit einlaufendem, weich verengtem Abfluss. Gemeinsame Wasserpalette/Beleuchtung, flächige Beckenwellen statt Fächerstreifen. Breitere bewegte Aufpralladern, größere Druckwellen und begrenzte Spritzer/Gischt.
+
+Geprüft: Wassergeometrie/Breiten/Becken, 1.800 Tierschritte, 200 Zoomwechsel, Spielstandschutz, Browser mit acht Zoomwechseln und zeitlich veränderten Wasserpixeln bei fester Kamera, bestehende Wassertests. Keine echte iPhone-Prüfung. Bilder/Grenzen: [docs/WASSEROPTIK-v386.md](docs/WASSEROPTIK-v386.md).
+
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 
 **Ursache:** Separater Überlauf mit erhöhtem Endstück, darüberliegender alter Wiesenboden und unterschiedlich geformte Geländestufen erzeugten Lücken und Rastermuster. Wasser und äußerer Wasserfall orientierten sich nicht an derselben gezeichneten Inselkante.

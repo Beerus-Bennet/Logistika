@@ -822,6 +822,8 @@ function worldGround(chunkOf, GC, nx, nz, cell, gcAt, F) {
     }
     return c;
   };
+  /* v386: Bergdecke übernimmt exakt die Waldbodenfarben, auch an ihrer rechteckigen Grenze. */
+  if(typeof ALPINE!=="undefined")ALPINE.setGroundSampler((x,z)=>{const i=Math.floor((x-W.x0)/cell),j=Math.floor((z-W.z0)/cell);return colAt(x,z,cellP.get(j*nx+i)||[]);});
   /* Eckfarben des feinen Gitters einmal je Punkt (gemeinsame Kanten haben so garantiert dieselbe Farbe) */
   const FX = nx * N + 1, vc = new Map();
   const vAt = (I, J, L) => { const k = J * FX + I; let c = vc.get(k); if (!c) { c = colAt(W.x0 + I * sc, W.z0 + J * sc, L); vc.set(k, c); } return c; };
@@ -1103,7 +1105,7 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, width:typeof ALPINE!=="undefined"?ALPINE.riverWidth:null,level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   /* v366: Beide Bäche laufen über den alten Weltrand hinaus bis zur Inselkante (creekToRim) */
   const CRX = creekToRim(typeof ALPINE!=="undefined"?ALPINE.riverLine():FWORLD.creek).line, LCRX = creekToRim(LCR).line;
   lines.merge(islandClip(FWM.creekBank(CRX, CR)), {});

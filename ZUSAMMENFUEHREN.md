@@ -1,3 +1,7 @@
+## v386 – Wasseroptik und Gebirge
+
+Basis main c697106 mit PR101. Paralleler Inselrand-PR102/v385 bleibt eigenständig. Gesamtversion386; alpine/gl3d/woodmodels/worldview386, erbe bleibt384. Neue optionale FWM.width gilt für Wasser und beide Ufer. ALPINE.riverWidth liefert Profilbreiten; am Anfang3, später1,725 Halbbreite. Kein konstanter Breitenwert am Kolkauslauf zurückbringen. Wasser8 nutzt dieselbe streamWaterAt-Palette wie7, mit Weltkoordinaten für Beckenwellen. uFallStart optional pro Knoten, Standard.24 erhält alte Fälle, Bergfall.05. worldGround gibt colAt an ALPINE.setGroundSampler vor erstem Netzaufbau. Beide worldview-Änderungen aus dem Inselrand-PR erhalten. Migration mountains384 nicht zurücksetzen. Tests wasseroptik-v386.*, Bilder/Bericht docs/WASSEROPTIK-v386.md.
+
 ## v384 – Konfliktauflösung nach PR #98–#100
 
 main 88684e6 vollständig integriert: Jagd381/382, Waffenschrank383 und zugehörige Assets bleiben erhalten. Gesamtversion384 und Landschaftsassets384; weapons/hunt/lucky/style behalten ihre Versionen aus main. Konflikte in Dokumentation unter Erhalt beider Inhalte gelöst, SW-Version384.
