@@ -855,7 +855,7 @@ const FWM = (() => {
     return b;
   }
   function boulder(s) {
-    G3.seed(3830 + Math.round(s * 10));
+    G3.seed(3840 + Math.round(s * 10));
     const b = new MB();
     b.noise(0.12, () => { b.ico(0.6 * s, 0x9a948a, { y: 0.25 * s, jitter: 0.45, flat: 0.7 }); b.ico(0.35 * s, 0x8a847a, { x: 0.5 * s, y: 0.15 * s, z: 0.2 * s, jitter: 0.5, flat: 0.6 }); });
     b.ico(0.18 * s, 0x5f8a3a, { y: 0.55 * s, flat: 0.3, jitter: 0.5 });
@@ -1480,6 +1480,9 @@ const FWM = (() => {
         const S0 = st[i - 1], S1 = st[i];
         for (let k = 1; k < CB_R.length; k++) {
           const A = crAt(Fr, S0, sg, crR(S0, k - 1), 0.012), B = crAt(Fr, S1, sg, crR(S1, k - 1), 0.012), Cc = crAt(Fr, S1, sg, crR(S1, k), 0.012), D = crAt(Fr, S0, sg, crR(S0, k), 0.012);
+          if(o&&o.bankCut&&o.bankCut((A[0]+B[0]+Cc[0]+D[0])/4,(A[2]+B[2]+Cc[2]+D[2])/4))continue;
+          /* v384: Gemeinsame Wasserhöhe am Gebirgsüberlauf; Ufer folgen dessen Gelände. */
+          if(o&&o.level)for(const p of [A,B,Cc,D]){p[1]=o.level(p[0],p[2])-.018;if(o.bankY)p[1]=o.bankY(p[0],p[2],p[1]);}
           quadUp(b, A, B, Cc, D, col(k - 1, A, S0), col(k - 1, B, S1), col(k, Cc, S1), col(k, D, S0));
         }
       }
@@ -1490,7 +1493,9 @@ const FWM = (() => {
       const S = S2[Math.floor(rnd() * S2.length)], sg = rnd() < 0.5 ? 1 : -1, r = 0.2 + rnd() * 0.4, ds = (rnd() - 0.5) * 0.8;
       const p = Fr.W(S.s + ds, sg * (S.h + r * S.f), 0.05);
       if (o && o.spring && Math.hypot(p[0] - o.spring.C[0], p[2] - o.spring.C[1]) < o.spring.RP + 2.4) continue;   /* v190: am Quelltopf liegt das eigene Ufer */
-      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * S.f), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: 0.05, z: p[2], flat: 0.55, jitter: 0.5 });
+      if(o&&o.bankCut&&o.bankCut(p[0],p[2]))continue;
+      if(o&&o.level)p[1]=o.bankY?o.bankY(p[0],p[2],o.level(p[0],p[2])):o.level(p[0],p[2]);
+      b.ico((0.12 + rnd() * 0.12) * (0.6 + 0.4 * S.f), rnd() < 0.5 ? 0xa9a39a : 0x8f8a82, { x: p[0], y: p[1], z: p[2], flat: 0.55, jitter: 0.5 });
     }
     return b;
   }
@@ -1508,6 +1513,7 @@ const FWM = (() => {
       for (let i = 1; i < st.length; i++) for (let k = 1; k < CW_F.length; k++) {
         const S0 = st[i - 1], S1 = st[i];
         const A = Fr.W(S0.s, sg * S0.h * CW_F[k - 1], 0.03), B = Fr.W(S1.s, sg * S1.h * CW_F[k - 1], 0.03), Cc = Fr.W(S1.s, sg * S1.h * CW_F[k], 0.03), D = Fr.W(S0.s, sg * S0.h * CW_F[k], 0.03);
+        if(o&&o.level)for(const p of [A,B,Cc,D])p[1]=o.level(p[0],p[2]);
         quadUp(b, A, B, Cc, D, col(S0, k - 1, sg), col(S1, k - 1, sg), col(S1, k, sg), col(S0, k, sg));
       }
     });

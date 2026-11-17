@@ -297,6 +297,18 @@ function erbeMakeTrees() {
   return keep;
 }
 
+/* v384: Vorberge dürfen keinen gespeicherten Baum begraben. Nur betroffene
+   Bäume ziehen an einen freien, erreichbaren Hangfuß; Kennung/Zustand bleiben.
+   Bei Platzmangel keinen Baum löschen und beim nächsten Laden erneut suchen. */
+function farmAlpineTrees384(F){if(F.mountains384||typeof ALPINE==="undefined")return;let complete=true;
+ for(const t of F.trees){if(!ALPINE.contains(t.x,t.z))continue;let found=false;
+  for(let r=4;r<=60&&!found;r+=2)for(let k=0;k<32;k++){const a=k/32*Math.PI*2,x=+(t.x+Math.cos(a)*r).toFixed(2),z=+(t.z+Math.sin(a)*r).toFixed(2);
+   if(x< -155||x>100||z< -155||z>15||!treeSpotOk(x,z,2.4)||[[x-2.2,z],[x+2.2,z],[x,z-2.2],[x,z+2.2]].some(p=>ALPINE.contains(...p))||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.6))continue;
+   t.x=x;t.z=z;found=true;break;
+  }if(!found)complete=false;
+ }if(complete)F.mountains384=1;
+}
+
 /* -------------------------------- Init ----------------------------------- */
 function erbeInit(F, fresh) {
   if (F.xp == null) {
@@ -453,6 +465,7 @@ function erbeInit(F, fresh) {
   if(!F.river380){let complete=true;for(const t of F.trees){if(t.x>=-48||distLine(t.x,t.z,FWORLD.creek)>=4.2)continue;let found=false;
     for(let r=4;r<=28&&!found;r+=2)for(let k=0;k<24;k++){const a=k/24*Math.PI*2,x=t.x+Math.cos(a)*r,z=t.z+Math.sin(a)*r;if(distLine(x,z,FWORLD.creek)<4.5||!treeSpotOk(x,z,2.4)||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.4))continue;t.x=+x.toFixed(2);t.z=+z.toFixed(2);found=true;break;}if(!found)complete=false;
    }if(complete)F.river380=1;}
+  farmAlpineTrees384(F);
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */
   if (!F.v203lkw) {
     F.v203lkw = 1;
