@@ -684,33 +684,44 @@ function apronRim(a) {
   const W = WGRID, hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, dx = Math.cos(a), dz = Math.sin(a);
   return Math.pow(Math.pow(Math.abs(dx) / (hx + APRON.margin), 4) + Math.pow(Math.abs(dz) / (hz + APRON.margin), 4), -.25) + 3.8 * Math.sin(a * 7) + 2.1 * Math.sin(a * 13 + .7);
 }
-/* v366: Ein Bach, der am alten Weltrand endete, läuft in sanften Bögen weiter bis über die Inselkante (nur Darstellung –
-   FWORLD.creek/LAKE_CREEK bleiben, wie sie sind). Rückgabe: verlängerte Linie und der Punkt, an dem das Wasser fällt. */
-function creekToRim(line) {
-  const W = WGRID, cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2, n = line.length, a = line[n - 2], b = line[n - 1];
-  const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ux = (b[0] - a[0]) / l, uz = (b[1] - a[1]) / l, out = line.slice();
-  let p = b, t = 0;
-  for (let i = 0; i < 40; i++) {
-    t += 5; const w = Math.sin(t * 0.21) * 1.6, q = [b[0] + ux * t - uz * w, b[1] + uz * t + ux * w];
-    const over = Math.hypot(q[0] - cx, q[1] - cz) - apronRim(Math.atan2(q[1] - cz, q[0] - cx));
-    if (over > 0) { const d = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, f = Math.max(0.05, 1 - (over - 0.5) / d); p = [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]; out.push(p); break; }
-    out.push(q); p = q;
-  }
-  const m = out.length, e = out[m - 1], g = out[m - 2], d = Math.hypot(e[0] - g[0], e[1] - g[1]) || 1;
-  return { line: out, end: e, dir: [(e[0] - g[0]) / d, (e[1] - g[1]) / d] };
+/* v384: Dieselben Stützpunkte wie der gezeichnete Inselrand. Eine analytische
+   Kurve allein genügt hier nicht: zwischen ihren Punkten ist die Felskante gerade. */
+function apronEdges(){const W=WGRID,hx=(W.x1-W.x0)/2,hz=(W.z1-W.z0)/2,nx=Math.round(2*hx/APRON.cell),nz=Math.round(2*hz/APRON.cell),edge=[];
+ for(let i=0;i<nx;i++)edge.push([W.x0+i*2*hx/nx,W.z0]);
+ for(let i=0;i<nz;i++)edge.push([W.x1,W.z0+i*2*hz/nz]);
+ for(let i=0;i<nx;i++)edge.push([W.x1-i*2*hx/nx,W.z1]);
+ for(let i=0;i<nz;i++)edge.push([W.x0,W.z1-i*2*hz/nz]);return edge;
 }
-/* v366: Wasserfall über die Inselkante – ein Band, das nach außen kippt und in die Tiefe fällt, mit hellen Strähnen und Gischt an der Kante. */
-function rimFall(E, w) {
-  const b = new FM.MB(), [x, z] = E.end, [ux, uz] = E.dir, px = -uz, pz = ux, N = 9, H = 46;
-  const at = (k, s) => { const f = k / N, out = 0.4 + 2.6 * Math.sqrt(f), y = 0.03 - 0.4 * f - H * f * f, hw = w * (1 - 0.3 * f) * s; return [x + ux * out + px * hw, y, z + uz * out + pz * hw]; };
-  const mix = (A, B, t) => A.map((v, i) => v + (B[i] - v) * t), top = G3.col(0x8fd0e6), low = G3.col(0xd9f1f8), white = G3.col(0xffffff);
-  for (let k = 0; k < N; k++) for (let j = 0; j < 4; j++) {
-    const s0 = -1 + j * 0.5, s1 = s0 + 0.5, c0 = mix(top, low, k / N), c1 = mix(top, low, (k + 1) / N), st = j % 2 ? white : null;
-    const A = at(k, s0), B = at(k, s1), C = at(k + 1, s1), D = at(k + 1, s0), ca = st ? mix(c0, st, .55) : c0, cb = st ? mix(c1, st, .55) : c1;
-    b.triV(A, C, B, ca, cb, ca); b.triV(A, D, C, ca, cb, cb); b.triV(A, B, C, ca, ca, cb); b.triV(A, C, D, ca, cb, cb);
-  }
-  for (let i = 0; i < 6; i++) b.ico(0.5 + (i % 3) * 0.18, 0xffffff, { x: x + ux * 0.5 + px * w * (-0.9 + i * 0.36), y: 0.1, z: z + uz * 0.5 + pz * w * (-0.9 + i * 0.36) });
-  return b;
+let APRON_EDGE384=null;
+function apronEdgeRadius(a){const cx=(WGRID.x0+WGRID.x1)/2,cz=(WGRID.z0+WGRID.z1)/2;
+ if(!APRON_EDGE384)APRON_EDGE384=apronEdges().map(p=>{const a=Math.atan2(p[1]-cz,p[0]-cx),r=apronRim(a);return{a,x:Math.cos(a)*r,z:Math.sin(a)*r};}).sort((p,q)=>p.a-q.a);
+ const P=APRON_EDGE384;let lo=0,hi=P.length;while(lo<hi){const m=(lo+hi)>>1;if(P[m].a<a)lo=m+1;else hi=m;}
+ const p=P[(lo+P.length-1)%P.length],q=P[lo%P.length],dx=q.x-p.x,dz=q.z-p.z,ux=Math.cos(a),uz=Math.sin(a);return(p.x*dz-p.z*dx)/(ux*dz-uz*dx);
+}
+function islandGap(x,z){const cx=(WGRID.x0+WGRID.x1)/2,cz=(WGRID.z0+WGRID.z1)/2;return apronEdgeRadius(Math.atan2(z-cz,x-cx))-Math.hypot(x-cx,z-cz);}
+function shoreCross(a,b){let lo=0,hi=1;for(let i=0;i<30;i++){const t=(lo+hi)/2;if(islandGap(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t)>=0)lo=t;else hi=t;}return[a[0]+(b[0]-a[0])*(lo+hi)/2,a[1]+(b[1]-a[1])*(lo+hi)/2];}
+/* v384: Überstand nur als Baureserve. Beide Ufer und das Wasser werden danach
+   auf der echten Küstenkante beschnitten; der Fall beginnt auf derselben Kante. */
+function creekToRim(line){const n=line.length,a=line[n-2],b=line[n-1],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,ux=(b[0]-a[0])/l,uz=(b[1]-a[1])/l,out=line.slice();let p=b,end=b,dir=[ux,uz];
+ for(let i=1;i<=80;i++){const t=i*4,w=Math.sin(t*.12)*1.1,q=[b[0]+ux*t-uz*w,b[1]+uz*t+ux*w];
+  if(islandGap(...q)<0){end=shoreCross(p,q);const d=Math.hypot(q[0]-p[0],q[1]-p[1]);dir=[(q[0]-p[0])/d,(q[1]-p[1])/d];out.push(end,[end[0]+dir[0]*8,end[1]+dir[1]*8]);break;}out.push(q);p=q;
+ }return{line:out,end,dir};
+}
+function islandClip(mesh){const b=new FM.MB(),V=mesh.v,mix=(a,c,t)=>a.map((v,k)=>v+(c[k]-v)*t);
+ for(let i=0;i<V.length;i+=27){let poly=[V.slice(i,i+9),V.slice(i+9,i+18),V.slice(i+18,i+27)],next=[];
+  for(let j=0;j<poly.length;j++){const a=poly[j],c=poly[(j+1)%poly.length],ia=islandGap(a[0],a[2])>=0,ic=islandGap(c[0],c[2])>=0;if(ia)next.push(a);if(ia!==ic){const p=ia?shoreCross([a[0],a[2]],[c[0],c[2]]):shoreCross([c[0],c[2]],[a[0],a[2]]),dx=c[0]-a[0],dz=c[2]-a[2],t=((p[0]-a[0])*dx+(p[1]-a[2])*dz)/(dx*dx+dz*dz||1);next.push(mix(a,c,t));}}
+  for(let j=1;j<next.length-1;j++)b.v.push(...next[0],...next[j],...next[j+1]);
+ }return b;
+}
+/* v384: Freier, zeitlich bewegter Fall statt weißer Klötze. Jeder Querpunkt
+   beginnt am wirklichen Flussufer/Küsten-Schnitt, ohne Luftspalt vor der Wand. */
+function rimFall(E,w){const b=new FM.MB(),[x,z]=E.end,[ux,uz]=E.dir,N=24,H=95;
+ /* Die geschnittene Wasserfläche liefert ihre tatsächlichen Randpunkte. Das
+    erfasst auch den wechselnden Winkel der Küste über die gesamte Flussbreite. */
+ const water=islandClip(FWM.creekWater(E.line.slice(-5),{w:w/1.15,current:true})),lip=[];
+ for(let i=0;i<water.v.length;i+=9){const p=water.v.slice(i,i+9);if(Math.abs(islandGap(p[0],p[2]))<1e-6&&!lip.some(q=>Math.hypot(q[0]-p[0],q[2]-p[2])<1e-6))lip.push(p);}lip.sort((a,b)=>a[7]-b[7]);
+ const at=(t,p)=>[p[0]+ux*3*t+(p[0]-x)*(-.22*t),.03-H*t*t,p[2]+uz*3*t+(p[2]-z)*(-.22*t)];
+ for(let k=0;k<N;k++)for(let j=1;j<lip.length;j++){const t=k/N,u=(k+1)/N,p=lip[j-1],q=lip[j],s=(p[7]+1)/2,v=(q[7]+1)/2,A=at(t,p),B=at(t,q),C=at(u,q),D=at(u,p),ca=[t,s,1],cb=[t,v,1],cc=[u,v,1],cd=[u,s,1];b.triV(A,B,C,ca,cb,cc);b.triV(A,C,D,ca,cc,cd);b.triV(A,C,B,ca,cc,cb);b.triV(A,D,C,ca,cd,cc);}return b;
 }
 /* v366: Baumsaum auf dem Randstreifen der Insel: vereinfachte Nadel- und Laubbäume, dichter, wo innen Wald steht;
    Bachläufe und die Kante selbst bleiben frei. Eigenes Netz (das Inselnetz behält sein Dreiecksbudget), fester Zufall. */
@@ -732,12 +743,8 @@ function worldApronTrees(keep) {
 function worldApron(gcAt) {
   const W = WGRID, b = new FM.MB(), cx = (W.x0 + W.x1) / 2, cz = (W.z0 + W.z1) / 2;
   const hx = (W.x1 - W.x0) / 2, hz = (W.z1 - W.z0) / 2, edge = [];
-  /* Rand im Uhrzeigersinn aus Sicht von unten; exakt die Rasterecken. */
-  const nx = Math.round(2 * hx / APRON.cell), nz = Math.round(2 * hz / APRON.cell);
-  for (let i = 0; i < nx; i++) edge.push([W.x0 + i * 2 * hx / nx, W.z0]);
-  for (let i = 0; i < nz; i++) edge.push([W.x1, W.z0 + i * 2 * hz / nz]);
-  for (let i = 0; i < nx; i++) edge.push([W.x1 - i * 2 * hx / nx, W.z1]);
-  for (let i = 0; i < nz; i++) edge.push([W.x0, W.z1 - i * 2 * hz / nz]);
+  /* v384: Gemeinsame Kontur für Inseldecke, Wasserbeschnitt und Abbruch. */
+  edge.push(...apronEdges());
   const mix = (a, c, t) => a.map((v, k) => v + (c[k] - v) * t);
   const grass = G3.col(0x719c48), soil = G3.col(0x6a5138), rock = G3.col(0x8a8b83), deep = G3.col(0x59616a);
   /* Größere, ebene Bruchflächen statt einer glatten umlaufenden Wand.
@@ -772,7 +779,7 @@ function worldApron(gcAt) {
     const j = (i + 1) % P.length;
     for (let k = 0; k < P[i].length - 1; k++) {
       /* v375: Die Bergdecke ersetzt hier den Grasring; keine überlappenden Höhenflächen. */
-      if(k<3&&typeof ALPINE!=="undefined"){if([P[i][k],P[j][k],P[j][k+1],P[i][k+1]].every(p=>ALPINE.contains(p[0],p[2])))continue;}
+      if(k<3&&typeof ALPINE!=="undefined"){if([P[i][k],P[j][k],P[j][k+1],P[i][k+1]].every(p=>ALPINE.replacesGround(p[0],p[2])))continue;}
       b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]);
       b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]);
     }
@@ -823,6 +830,9 @@ function worldGround(chunkOf, GC, nx, nz, cell, gcAt, F) {
     for (let j = 0; j < nz; j++) {
       const x = W.x0 + i * cell, z = W.z0 + j * cell;
       if (x >= HOFG.x0 && x + cell <= HOFG.x1 && z >= HOFG.z0 && z + cell <= HOFG.z1) continue;     /* Hofwiese kommt extra */
+      /* v384: Die Bergdecke ersetzt auch den alten ebenen Boden. Sonst bleibt
+         dessen grüne Fläche über dem tiefer ausgeschnittenen Ufer sichtbar. */
+      if(typeof ALPINE!=="undefined"&&[[x,z],[x+cell,z],[x,z+cell],[x+cell,z+cell]].every(p=>ALPINE.replacesGround(...p)))continue;
       if (lakeE(x + cell / 2, z + cell / 2) < 0.8) continue;                          /* unter Wasser */
       const g = chunkOf(x + 0.1, z + 0.1).g, L = cellP.get(j * nx + i);
       if (!L) {
@@ -971,7 +981,7 @@ function worldStatic() {
   try { if (WV.apron) {
     const ends = [creekToRim(FWORLD.creek), creekToRim(LAKE_CREEK)];
     R.addChild(WV.apron, fnode(R.mesh(worldApronTrees((x, z) => ends.every(E => distLine(x, z, E.line) > 5))), { shadow: false }));
-    ends.forEach((E,i) => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, i===0?1.725:2.3)), { shadow: false })));
+    ends.forEach((E,i) => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, i===0?1.725:1.15)), { shadow: false,water:6,alpha:.98,flow:[0,.55,1,-250] })));
   } } catch (e) { console.warn("Inselrand:", e); }
   WV.far = null; WV.bgFar = null;                      /* v368: neue Knoten sind sichtbar – Fernstufen neu bestimmen */
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
@@ -1093,11 +1103,11 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, prefix:typeof ALPINE!=="undefined"?ALPINE.flowLength():0 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   /* v366: Beide Bäche laufen über den alten Weltrand hinaus bis zur Inselkante (creekToRim) */
-  const CRX = creekToRim(FWORLD.creek).line, LCRX = creekToRim(LCR).line;
-  lines.merge(FWM.creekBank(CRX, CR), {});
-  lines.merge(FWM.creekBank(LCRX, CL), {});
+  const CRX = creekToRim(typeof ALPINE!=="undefined"?ALPINE.riverLine():FWORLD.creek).line, LCRX = creekToRim(LCR).line;
+  lines.merge(islandClip(FWM.creekBank(CRX, CR)), {});
+  lines.merge(islandClip(FWM.creekBank(LCRX, CL)), {});
   const SP = FWORLD.spring;
   const SPI = typeof ALPINE!=="undefined" ? null : (SP ? FWM.springInfo(FWORLD.creek, CR) : null); /* v380: alte Quellanlage vollständig ersetzt */
   WV.springFx=null;WV.springRun=null;
@@ -1106,10 +1116,10 @@ function worldStatic() {
   /* v190: Ufer um Quelltopf und Bachanfang aus einem Guss (deckt das Bachufer dort ab) */
   if (SPI) { const sb2 = new FM.MB(); sb2.merge(FWM.springBank(FWORLD.creek, CR, wGroundAt), {}); R.nodes.push(fnode(R.mesh(sb2), { shadow: false })); }
   /* v325: Der nördliche Fluss folgt seinen Kurven, vom Wasserfallbecken bis zum Kartenrand. */
-  const cr = new FM.MB(); cr.merge(FWM.creekWater(CRX, CR), {});
+  const cr = new FM.MB(); cr.merge(islandClip(FWM.creekWater(CRX, CR)), {});
   R.nodes.push(fnode(R.mesh(cr), { water: 7, shadow: false }));
   /* v177: der Seebach fließt (water: 5, Richtung Westen in den See) und geht an der Mündung in die Seebewegung über; Quelltopf wie der See */
-  const sb = new FM.MB(); sb.merge(FWM.creekWater(LCRX, CL), {});
+  const sb = new FM.MB(); sb.merge(islandClip(FWM.creekWater(LCRX, CL)), {});
   R.nodes.push(fnode(R.mesh(sb), { water: 5, shadow: false }));
   if (SPI) {
     const cw = new FM.MB(); cw.merge(FWM.springPool2(FWORLD.creek, CR), {}); R.nodes.push(fnode(R.mesh(cw), { water: 7, shadow: false }));

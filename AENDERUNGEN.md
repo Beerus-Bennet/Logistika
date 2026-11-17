@@ -1,3 +1,11 @@
+## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
+
+**Ursache:** Separater Überlauf mit erhöhtem Endstück, darüberliegender alter Wiesenboden und unterschiedlich geformte Geländestufen erzeugten Lücken und Rastermuster. Wasser und äußerer Wasserfall orientierten sich nicht an derselben gezeichneten Inselkante.
+
+**Lösung:** Gemeinsames gebogenes Flussmesh ab Kolk, passend ausgeschnittenes Bett und direkt eingefärbte Ufer. Unregelmäßige See-/Beckenränder mit geteilten Auslasspunkten; vollständiger Bodenersatz. Ein festes adaptives Geländenetz. Beide Insel-Wasserfälle beginnen an der tatsächlichen beschnittenen Wasserfläche, ohne Luftspalt oder weiße Klötze. Sechs kleinere Vorberge mit Terrassen für fünf Steinböcke; vorhandene Tiere bleiben in gleicher Anzahl. Betroffene alte Bäume ziehen erhaltend an freie Standorte (`F.mountains384`).
+
+**Geprüft:** tatsächliche Wasserquerschnitte/Ufer/Falllippen, alter Weltboden, Baummigration, 1.800 Tierschritte, 200 Zoomwechsel und festes Grafikbudget. Vollständiges Spiel im mobilen Chromium mit 24 Zoomwechseln ohne Meshwachstum/Kontextverlust, ältere Spielobjekte erhalten. Bestehende Arbeiter- und Wassertests bestanden. Kein echtes iPhone. Bilder, Messdaten und Grenzen: [docs/WASSERLANDSCHAFT-v384.md](docs/WASSERLANDSCHAFT-v384.md).
+
 ## v380 – Großer Bergsee-Wasserfall und natürliche Flussbögen
 
 **Wunsch:** Alten Quell-/Serpentinenbach entfernen, großen Wasserfall mit Auffangbecken und sinnvoll angebundenem Überlauf bauen. Hauptfluss stärker mäandrieren lassen, Wasserbreite konstant halten und Insel-Austritt nach Süden verschieben.

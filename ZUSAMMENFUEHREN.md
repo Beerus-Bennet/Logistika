@@ -1,3 +1,11 @@
+## v384 – Wasseranschlüsse, Inselkontur und Vorberge
+
+Basis main 5d0076e/v380, eigener Branch claude/wasserlandschaft-v384. Offene PRs #98/v381, #99/v382, #100/v383 bleiben separat; nicht aus alten Index-/SW-Dateien überschreiben. Gesamtversion384, nur alpine/worldview/woodmodels/erbe auf384. Andere Assetnummern aus main erhalten.
+
+ALPINE.riverLine() enthält den Überlauf und den bisherigen Hauptfluss als gemeinsame Kontrolllinie. CR nutzt level/bankY/bankCut; keine separate outlet-Fläche/flowLength und keine erhöhte Endkappe zurückbringen. ALPINE.replacesGround ist der feste Darstellungsbereich, contains die tatsächlich gesperrte Berg-/Talfläche: unterschiedliche Zwecke. worldGround und worldApron lassen den ersetzten Boden weg; das Bergnetz deckt seinen Bereich vollständig ab. Ein festes adaptives Geländenetz statt überblendeter unterschiedlicher Nah-/Fernformen. Tier-/Vegetations-Fernstufen bleiben.
+
+apronEdges/apronEdgeRadius gemeinsam für Inselkontur, islandClip und äußere Falllippen. rimFall übernimmt die Randpunkte des beschnittenen Wassers, Material water6/alpha.98; keine weißen Icos oder .4-Abstand an der Lippe. Östlicher Fall Halbbreite1.15, Hauptfluss1.725. F.mountains384 ergänzt die erhaltende Baumversetzung, F.river380 nicht zurücksetzen. Keine Preise/Aufträge/Bestände ändern. Neuer Prüfstand wasserlandschaft-v384.test.js/.browser.js und Bericht docs/WASSERLANDSCHAFT-v384.md; alte v375/v380-Geländestufenannahmen sind ersetzt.
+
 ## v380 – Neue Wasserführung und südliche Mäander
 
 Basis main ca16b9c/v379. Gemeinsame Lieferung380, alpine/worldview/woodmodels/erbe/exhibits sowie Index/SW zusammen übernehmen. ALPINE-Daten RUN/POOL/DRAIN/FALL ersetzen alte SPI-Modelle; alte Effektreferenzen leeren. FWM-Altfunktionen für isolierte Prüfstände behalten, nicht wieder zusätzlich in die Szene hängen. Überlauf muss den Beckenrand nach dessen Höhenbildung durchschneiden; beide Geländestufen am Kanal verfeinern. Main-Creek Kontrollpunkte westlich der bestehenden Brücke neu, gleichbleibende Wasserbreite und trockene Ufer separat. F.river380 ist erhaltende Baumversetzung, keine Löschung. Neue Tests bergwasserfall-v380.test.js/.browser.js, Bericht docs/WASSERLANDSCHAFT-v380.md. Keine zusätzlichen dynamischen Meshes/Shaderprogramme im Takt.
