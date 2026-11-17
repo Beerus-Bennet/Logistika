@@ -1,3 +1,11 @@
+## v374 – Werkzeug-Übergabe am Regal: Kraft steht dem Fach zugewandt
+
+**Ursache:** Beim Ein- und Ausräumen folgte der Körper der Laufrichtung des Wegs (`staffFollow`); die Kraft stand dadurch parallel zum Regal oder mit dem Rücken dazu (gemessen: Abweichung bis 89°, im Mittel 57° beim Herausnehmen, 84° beim Einräumen).
+
+**Lösung:** `team.js`: Während der Übergabe (`gearAction` mit `rack351`) dreht sich der Körper weich zum Fach. `staffgear.js`: Oberkörper beugt sich während der Handbewegung leicht zum Fach (`node.rx`). Keine Spiel- oder Speicherlogik geändert.
+
+**Geprüft:** Testbrowser (Playwright, swiftshader): Körperrichtung zum Fach während der Übergabe jetzt ≤ 3° (vorher bis 89°); `worker-motion-v351.test.js` 13/13. **Nicht geprüft:** Nahaufnahme-Bilder waren wegen der Kameraeinstellung nicht aussagekräftig, optischer Gesamteindruck nicht beurteilt; nicht auf dem Handy geprüft. Ob das Werkzeug bei der Übergabe stets sichtbar in der Hand bleibt (Armreichweite ≈ 0,58 gegen ≈ 0,75 Abstand), ist nicht ausgewertet.
+
 ## v372 – Autofotos passen zu Modell, Baujahr und Lack
 
 **Ursache:** Die automatische Wikipedia-Suche konnte eine andere Generation/Variante derselben Marke liefern; zufällige Baujahre lagen außerhalb der tatsächlichen Modellzeit. Pixelbasierte Lackschätzungen überschrieben gespeicherte Farben, der Bild-Cache verglich nur URL-Längen.

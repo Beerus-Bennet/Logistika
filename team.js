@@ -1877,6 +1877,9 @@ function stepStaff(dt, time) {
     /* v351: Den bereits freigegebenen Bedienplatz während des Greifens
        halten; kein letzter Ruck in eine vorbeigehende Person. */
     if(e.gearAction&&e.gearAction.hold){e.x=e.gearAction.hold[0];e.z=e.gearAction.hold[1];moving=false;}
+    /* v374: Beim Ein- und Ausräumen steht die Kraft dem Fach zugewandt (gemessen: vorher im Mittel 85° daneben, zeitweise
+       mit dem Rücken zum Fach – das Werkzeug wanderte „parallel zum Regal“ ins Fach). Die Drehung folgt dem Fach, nicht der Gehrichtung. */
+    if(e.gearAction&&e.gearAction.stop&&e.gearAction.stop.rack351&&e.gearAction.stop.tx!=null){const g=e.gearAction.stop;n.ry+=angTo(n.ry,Math.atan2(g.tx-e.x,g.tz-e.z))*Math.min(1,dt*8);}
     n.x = e.x; n.z = e.z; e.dw = !!dwell&&!moving; e.mv = moving;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     /* v112: Halt an der Werkzeugplane – hinstellen, bücken, ablegen (oder aufnehmen), aufrichten */

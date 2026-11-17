@@ -110,3 +110,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v371: Fernbäume aus dem echten Modell per Eckpunkt-Raster (`treeFarMesh`); antippbare Meldungen: Ziele `tab:`/`veh:`/`job:`/`order:`/`village:` in `runMsgGo`, Auto-Zuordnung `TOAST_GO`/`toastAutoGo` in `game.js` (nur Ereignis-Meldungen mit Symbol am Anfang).
 
 - v372: Autofotos fest in carphotos.js (127 lokale cars/photos-Dateien, Lizenz/SHA in cars/credits.json), vor auction.js laden. Keine Wikipedia-Titel-/Markensuche oder Pixel-Lackmigration. Neue Lose Fotofarbe, alte Lacke bleiben und bei Abweichung Illustration. Modelljahre carBuildYears/carValidYear, einmaliges A.modelYears372. Comic v4 nach Bild-SHA mit COMIC_SOURCE/Abschlussprüfung. carpics.mjs --check prüft Freigaben offline; Download akzeptiert nur denselben SHA. Tests autofotos-v372.test.js/.browser.js; Details docs/AUTOFOTOS-v372.md. main einschließlich v371 integriert, gemeinsame Lieferung372.
+
+- v374: Werkzeug-Übergabe am Regal – Körper dreht sich zum Fach (`team.js`, `gearAction.stop.rack351`), Oberkörper beugt sich (`staffgear.js`, `node.rx`).
