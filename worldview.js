@@ -1814,18 +1814,22 @@ function treeFarMesh(sp, sz, v) {
 }
 /* v368: In der weiten Übersicht zeichnet jede Baumgruppe ihren Fernbaum statt des vollen Modells (dieselben Standorte).
    Beim Einschalten werden die Standorte frisch übernommen – gefällte oder nachgewachsene Bäume stimmen also wieder. */
-function treeFarSet(on) {
+function treeFarSet(t) {
   if (!WV.bgG) return;
-  const far = WV.bgFar || (WV.bgFar = new Map()), num = x => isNaN(+x) ? x : +x;
+  const far = WV.bgFar || (WV.bgFar = new Map()), num = x => isNaN(+x) ? x : +x, L = WV.far, on = t > 0;
+  /* Fernbäume erst anlegen/übernehmen, wenn der Übergang beginnt (Standorte frisch aus den vollen Gruppen) */
+  const fill = on && !L.p;
   WV.bgG.forEach((g, key) => {
     let f = far.get(key);
-    if (on) {
-      if (!f) { const q = key.split(":"); f = FV.R.instGroup(fmesh("wtf:" + key, () => treeFarMesh(q[0], num(q[1]), num(q[2]))), { shadow: false }); far.set(key, f); }
+    if (fill) {
+      if (!f) { const q = key.split(":"); f = FV.R.instGroup(fmesh("wtf:" + key, () => treeFarMesh(q[0], num(q[1]), num(q[2]))), { shadow: false, inv: true }); far.set(key, f); }
       f.n = 0; f.keys.length = 0; f.idx.clear();
       for (let i = 0; i < g.n; i++) f.add(g.keys[i], g.src[i * 4], g.src[i * 4 + 1], Math.atan2(g.src[i * 4 + 3], g.src[i * 4 + 2]), g.sc[i]);
     }
-    g.hide = on; if (f) f.hide = !on;
+    g.fade = t; g.hide = t >= 1;                         /* volles Modell löst sich auf … */
+    if (f) { f.fade = t; f.hide = !on; }                 /* … das Fernmodell erscheint mit gespiegeltem Muster an denselben Stellen */
   });
+  if (fill) L.p = true; else if (!on) L.p = false;
 }
 function bgChunkBuild(c) {
   const have = new Set();
@@ -3609,15 +3613,18 @@ function worldStep(dt, time) {
   /* v354: In der Ich-Perspektive (Hochsitz, Sägen) steht hinter der Welt die gemalte Aussicht – dort bleibt die Kulisse aus */
   if (WV.apron) WV.apron.visible = !FV.fp;
   /* v368: Weite Übersicht flüssig halten. Gemessen: bei Abstand 450 rund 1,4 Mio. Dreiecke je Bild und noch einmal
-     1,2 Mio. im Schattendurchgang (bei Abstand 54: 93.000 und 65.000). Was man aus der Ferne nicht mehr erkennt, bleibt
-     weg: Grasbüschel ab Abstand 110, Schattenwurf ab 130, Büsche und Kleinteile ab 230; Bäume zeigen ab 170 ihr Fernmodell. Mit etwas Abstand zwischen
-     Ein- und Ausschalten, damit an der Grenze nichts flackert; in der Ich-Perspektive gilt immer die volle Darstellung. */
-  { const d = FV.fp ? 0 : FV.R.cam.dist, L = WV.far || (WV.far = { g: false, s: false, d: false, t: false }), sw = (on, lim) => on ? d > lim - 12 : d > lim;
-    const g = sw(L.g, 110), sh = sw(L.s, 130), dd = sw(L.d, 230);
-    if (g !== L.g) { L.g = g; VEGQ.nodes.forEach(e => { e.node.visible = !g; }); }
-    if (dd !== L.d) { L.d = dd; (WV.farD || []).forEach(n => { n.visible = !dd; }); }
-    L.s = sh; FV.R.noShadow = sh;
-    const tt = sw(L.t, 170); if (tt !== L.t) { L.t = tt; treeFarSet(tt); } }
+     1,2 Mio. im Schattendurchgang (bei Abstand 54: 93.000 und 65.000). Was man aus der Ferne nicht mehr erkennt, bleibt weg.
+     v370: Nichts schaltet mehr um – alles geht stufenlos über den Abstand ineinander über, sodass man das Verschwinden nicht
+     bemerkt: Gras löst sich zwischen Abstand 95 und 125 auf, der Schatten wird zwischen 105 und 150 immer schwächer
+     (danach entfällt der Schattendurchgang ganz), Büsche und Kleinteile lösen sich zwischen 200 und 240 auf, und die
+     Kulissenbäume gehen zwischen 140 und 185 in ihr Fernmodell über (beide Modelle werden mit gegenläufigem Rauschmuster
+     überblendet). In der Ich-Perspektive gilt immer die volle Darstellung. */
+  { const d = FV.fp ? 0 : FV.R.cam.dist, L = WV.far || (WV.far = { g: 0, s: 1, d: 0, t: 0, p: false }), ramp = (a, b) => Math.max(0, Math.min(1, (d - a) / (b - a)));
+    const g = ramp(95, 125), sh = 1 - ramp(105, 150), dd = ramp(200, 240), t = ramp(140, 185);      /* g, dd, t: Auflösung 0 = voll … 1 = weg */
+    if (g !== L.g) { L.g = g; VEGQ.nodes.forEach(e => { e.node.fade = g; e.node.visible = g < 0.999; }); }
+    if (dd !== L.d) { L.d = dd; (WV.farD || []).forEach(n => { n.fade = dd; n.visible = dd < 0.999; }); }
+    if (sh !== L.s) { L.s = sh; FV.R.shadowK = sh; FV.R.noShadow = sh <= 0.001; }
+    if (t !== L.t) { L.t = t; treeFarSet(t); } }
   if (typeof SWK !== "undefined") SWK.step(dt, time);
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
