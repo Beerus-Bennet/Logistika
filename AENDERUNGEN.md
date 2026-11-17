@@ -1,3 +1,11 @@
+## v375 – Quellgebirge mit Bergsee und lebendigen Bergtieren
+
+**Wunsch:** Die markierte Nordostecke nach der Bergsee-Vorlage gestalten, Wasserursprung sichtbar machen, Inselkante einbeziehen und die Leistung beim Herauszoomen begrenzen.
+
+**Lösung:** Eigenes Gebirge mit sechs Felsrücken, Nadelwald, offenen Ufern und Schuttflächen; unregelmäßiger türkisfarbener See mit sichtbarem Auslauf in den bisherigen Bergbach und Wasserfall. Gemeinsames Höhenfeld für Ufer, Bachbett, Felsrand und Tierkontakte. Fünf Steinböcke, zwei Murmeltiere und zwei gleitende Adler mit Tag-/Nachtverhalten. Zwei feste, komplementär überblendete Gelände-/Baumstufen; keine Mesh-Erzeugung beim Zoomen oder Animieren. Zusätzliche Fernlast einschließlich Wasser und Adlern 4.516 Dreiecke in zehn Drawcalls. Hofwege und Aufsteller bleiben aus dem Gebirge heraus; keine Save-/Wirtschaftsmigration.
+
+**Geprüft:** Geometrie-/Wasseranschluss und Inselrand, 1.800 Tierbewegungsschritte, 200 Zoomwechsel ohne neue Meshes; vollständiger Hof in Chromium-WebGL mit 24 Zoomwechseln bis Abstand450, mobilen Screenshots und unveränderten Bäumen/Gebäuden/Geld. Bestehende Insel-, Wasser- und Autofotoprüfungen bestanden. Aktuelles main einschließlich Jagdleisten-PR #91/v373 integriert; beide Änderungen erhalten. Nicht auf echtem iPhone/Safari. Details und Bilder: [docs/BERGLANDSCHAFT-v375.md](docs/BERGLANDSCHAFT-v375.md).
+
 ## v373 – Jagd: Auftragsleiste im Hochsitz kompakter
 **Wunsch Bennet (Bild: Hochsitz, Leiste „Jagdaufträge · 3“):** Die Leiste oben schmaler und kürzer darstellen, orientiert an der markierten Fläche.
 

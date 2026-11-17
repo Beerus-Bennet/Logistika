@@ -1,3 +1,9 @@
+## v375 – Quellgebirge und Bergsee
+
+Basis main `92aa6ec`, PR #91/v373 enthalten. Eigener Branch `claude/berglandschaft-v375`; kompakte Jagdleiste unverändert integriert, Versions-/Dokumentationskonflikte aufgelöst. Offene PR #92/v374 bleibt separat. `alpine.js` nach woodmodels und vor worldview laden, Index/SW gemeinsam übernehmen. ALPINE hält ein gemeinsames Höhenfeld für See, Rinne, Gelände, Inselkante und Tiere; keine Spielstandmigration. In woodmodels nur `hillH` um eine ausschließlich absenkende neue Abflussrinne ergänzt, bisherigen Wasserfall nicht ersetzen. `worldApron` behält den geschlossenen Kiel; Grasring nur bei vollständiger Überdeckung auslassen. Vegetation am Boden des Gebirges verhindern, eigener Höhenwald.
+
+`gl3d.js`: n.inv optional auch bei normalen Knoten an uFadeInv weitergeben; vorhandene Knoten unverändert. Nah/Fern haben denselben Fade-Wert und inverse Masken, nicht 1-t für die inverse Stufe. ALPINE feste Meshes über fmesh, feste Tierzahl, dt begrenzen; niemals im Takt Netze erzeugen. team/nav, erbe/Pflanzplätze und exhibits sperren die Bergfläche. Tests berglandschaft-v375.test.js/.browser.js; Details/Bilder docs/BERGLANDSCHAFT-v375.md. Lieferung375, Landschaftssamen373 absichtlich unverändert.
+
 ## v372 – Feste Autofotos und Datenkonsistenz
 
 Basis main `210d580` (PR #88/v370 und PR #89/v371 enthalten). Eigene Lieferung auf `claude/autofotos-v372`; Versions- und Dokumentationskonflikte beider Lieferungen gemeinsam aufgelöst. `carphotos.js` zwingend zwischen cars.js und auction.js laden, beide Shell-Listen mitnehmen; alle 127 `cars/photos/*.jpg` und `cars/credits.json` gehören dazu. Lizenz/Urheber/Commons-Seite und SHA je Foto verbindlich, keine automatisch wechselnden Titelbilder oder Markensuch-Fallbacks wiedereinbauen. `carpics.mjs --check` prüft alles offline; Downloadmodus ersetzt keine ungeprüften Bytes.
