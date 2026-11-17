@@ -1,3 +1,17 @@
+## v377 – Trefferbild: Organe nach Anatomie, Schuss durch die Organe; Nebel beim Verlassen des Hochsitzes
+
+**Ursache:** (1) Lunge war nur ein kleiner Block (ca. 20 cm hoch), Leber und Pansen lagen noch in der Brusthöhle, der Träger bestand nur aus einem roten Rohr – ein Trägerschuss „traf“ keine Organe. (2) Beim Verlassen des Hochsitzes blieb der Nebel fest auf 40–90 m; aus der Höhe verschwand alles außer dem Turm im Dunst.
+
+**Lösung (`hunt.js`):**
+- Lunge nach Rumpfprofil: Dach unter der Wirbelsäule, hinten das schräge Zwerchfell, unten der Rippen-Zwerchfell-Winkel, vorn die Herzbucht (`lungeY`, `LUNG_LO`, Merkmal `sil` in `ORG`). Leber und Pansen jetzt hinter dem Zwerchfell (Pansen füllt die linke Flanke), Gescheide rechts; 13 Rippenpaare beim Hirsch. Herz unverändert.
+- Halsorgane (`NORG`, `neckFrame`, `neckMesh`, `neckContacts`): Halswirbel, Luft- und Speiseröhre, Halsschlagadern, Drosselvenen in Halskoordinaten; der Schusskanal nennt und zeichnet die tatsächlich getroffenen (Hirsch, Keiler, Fasan). Wertung des Trägerschusses (`zoneHit`) bleibt wie in v265; ohne Organkontakt steht ein Sammelname im Bericht.
+- Lungen-Vorprüfung (`SP.*.lung`) an die größere Lunge angepasst – Lungenschüsse zählen jetzt im ganzen sichtbaren Lungenbereich (Wertung insoweit geändert, Test `trefferbild-v357` angepasst).
+- Nebel (`fogMix`): beim Auf- und Abstieg stufenlos zwischen Hofnebel der gespeicherten Kamera und Revier-Nebel.
+
+**Quellen:** Allgemeine Jagd-/Veterinäranatomie (Herz tief in der Brust hinter dem Ellbogen, Lunge bis zum Zwerchfell, Leber unmittelbar dahinter, Pansen links; z. B. onX Hunt, Beiträge zur Jagd- und Wildforschung Bd. 33). Rotwild-spezifische Maße nicht belegt – Lage ist Näherung nach Anatomie, geprüft nur per Augenschein.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Trefferbilder Lunge, Herz, Pansen, Leber (Hirsch), Lunge (Keiler), Nebelübergang Vorher/Nachher; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-thighs-v290`, `hunt-presentation-v315`. `hunt-v307.test.js` schlägt schon vor dieser Änderung fehl. **Nicht geprüft:** Fasan-Trefferbild im Browser, Handy/Safari, Nebelübergang auf echtem Gerät.
+
 ## v376 – Werkzeugübergabe mit aktuellem Hauptbranch zusammengeführt
 
 **Ursache:** PR #92/v374 basierte auf v372 und kollidierte nach Übernahme von Jagdleiste und Berglandschaft mit gemeinsamen Versions-/Dokumentationsdateien und dem team.js-Verweis.

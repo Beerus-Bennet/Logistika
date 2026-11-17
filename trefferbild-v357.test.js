@@ -26,9 +26,9 @@ test('Trefferpunkt liegt im gewerteten Organ, der Kanal endet am Ausschuss, jede
  }
  run('var f=shot("fasan","herz","vogel").V;');assert.ok(run('f.lab.every(l=>l.hit)&&f.lab.length>=1'));
 });
-test('Wertung unverändert: Herz- und Lungenzone wie zuvor',()=>{
+test('Wertung: Herzzone unverändert, Lungenzone (v375) folgt der größeren, anatomischen Lunge',()=>{
  assert.deepEqual(run('JSON.stringify([HUNT.SP.hirsch.heart,HUNT.SP.hirsch.lung,HUNT.SP.keiler.heart,HUNT.SP.keiler.lung])'),
-  '[{"c":[0,0.88,0.28],"r":0.08},{"c":[0,0.96,0.24],"r":0.135},{"c":[0,0.46,0.24],"r":0.07},{"c":[0,0.52,0.2],"r":0.125}]');
+  '[{"c":[0,0.88,0.28],"r":0.08},{"c":[0,0.965,0.14],"r":[0.17,0.2,0.29]},{"c":[0,0.46,0.24],"r":0.07},{"c":[0,0.6,0.19],"r":[0.16,0.14,0.26]}]');
 });
 test('Zoom ohne Knöpfe: keine Zoom-Schaltflächen mehr, Zwei-Finger-Zoom in beiden Ansichten',()=>{
  const js=fs.readFileSync(path.join(__dirname,'hunt.js'),'utf8'),css=fs.readFileSync(path.join(__dirname,'style.css'),'utf8');
