@@ -53,7 +53,7 @@ Nicht auf einem echten iPhone/Safari oder einer schwachen Mobil-GPU geprüft. Di
 
 ## Integration
 
-Basis ist main `c24f3c6` nach PR #90/v372. Parallele PR #91/v373 (Jagdleiste) und #92/v374 (Werkzeugübergabe) werden nicht vorweggenommen; eigene Lieferung 375. `alpine.js` nach `woodmodels.js` und vor `worldview.js` laden. Alle eigenen geänderten Skripte und beide Asset-Listen tragen 375. Der Landschaftssamen `373` bleibt absichtlich unabhängig von der Liefernummer konstant. Keine neuen Spielstandfelder.
+Basis ist main `92aa6ec` nach PR #91/v373. Die kompakte Jagdleiste ist unverändert integriert; Versions-/Dokumentationskonflikte gemeinsam aufgelöst. PR #92/v374 (Werkzeugübergabe) bleibt separat; eigene Lieferung 375. `alpine.js` nach `woodmodels.js` und vor `worldview.js` laden. Alle eigenen geänderten Skripte und beide Asset-Listen tragen 375. Der Landschaftssamen `373` bleibt absichtlich unabhängig von der Liefernummer konstant. Keine neuen Spielstandfelder.
 
 ![Gesamte Insel mit Quellgebirge](assets/v375/insel-gesamt.png)
 

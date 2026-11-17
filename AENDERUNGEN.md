@@ -4,7 +4,14 @@
 
 **Lösung:** Eigenes Gebirge mit sechs Felsrücken, Nadelwald, offenen Ufern und Schuttflächen; unregelmäßiger türkisfarbener See mit sichtbarem Auslauf in den bisherigen Bergbach und Wasserfall. Gemeinsames Höhenfeld für Ufer, Bachbett, Felsrand und Tierkontakte. Fünf Steinböcke, zwei Murmeltiere und zwei gleitende Adler mit Tag-/Nachtverhalten. Zwei feste, komplementär überblendete Gelände-/Baumstufen; keine Mesh-Erzeugung beim Zoomen oder Animieren. Zusätzliche Fernlast einschließlich Wasser und Adlern 4.516 Dreiecke in zehn Drawcalls. Hofwege und Aufsteller bleiben aus dem Gebirge heraus; keine Save-/Wirtschaftsmigration.
 
-**Geprüft:** Geometrie-/Wasseranschluss und Inselrand, 1.800 Tierbewegungsschritte, 200 Zoomwechsel ohne neue Meshes; vollständiger Hof in Chromium-WebGL mit 24 Zoomwechseln bis Abstand450, mobilen Screenshots und unveränderten Bäumen/Gebäuden/Geld. Bestehende Insel-, Wasser- und Autofotoprüfungen bestanden. Nicht auf echtem iPhone/Safari. Details und Bilder: [docs/BERGLANDSCHAFT-v375.md](docs/BERGLANDSCHAFT-v375.md).
+**Geprüft:** Geometrie-/Wasseranschluss und Inselrand, 1.800 Tierbewegungsschritte, 200 Zoomwechsel ohne neue Meshes; vollständiger Hof in Chromium-WebGL mit 24 Zoomwechseln bis Abstand450, mobilen Screenshots und unveränderten Bäumen/Gebäuden/Geld. Bestehende Insel-, Wasser- und Autofotoprüfungen bestanden. Aktuelles main einschließlich Jagdleisten-PR #91/v373 integriert; beide Änderungen erhalten. Nicht auf echtem iPhone/Safari. Details und Bilder: [docs/BERGLANDSCHAFT-v375.md](docs/BERGLANDSCHAFT-v375.md).
+
+## v373 – Jagd: Auftragsleiste im Hochsitz kompakter
+**Wunsch Bennet (Bild: Hochsitz, Leiste „Jagdaufträge · 3“):** Die Leiste oben schmaler und kürzer darstellen, orientiert an der markierten Fläche.
+
+**Lösung (`style.css`; nur Darstellung):** Die geschlossene Leiste ist nur noch so breit wie ihr Text (gemessen 125 statt 330 Pixel bei 390 Breite) und niedriger (40 statt 48 Pixel, kleinere Schrift und Pfeil). Aufgeklappt bleibt sie unverändert 330 Pixel breit, damit die Aufträge lesbar bleiben. Inhalt und Verhalten unverändert.
+
+**Geprüft:** Testbrowser (Chromium, Jagd-Testbühne, 390 × 700): geschlossen und aufgeklappt, vorher/nachher nebeneinander gesichtet; keine Konsolenfehler. **Nicht geprüft:** am Handy; Querformat. **Hinweis:** Die Fläche ist mit 40 Pixel Höhe etwas niedriger als die empfohlene Tippfläche von 44 Pixeln.
 
 ## v372 – Autofotos passen zu Modell, Baujahr und Lack
 
