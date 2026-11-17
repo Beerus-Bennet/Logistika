@@ -58,7 +58,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-v359';fs.mkdirSync
    HUNT.X.hrv={A};HUNT.X.view='harvest';HUNT._xray();
   },{k,zone,orgId});
   await p.waitForFunction(()=>document.querySelector('.xo-hl')&&HUNT._xr().ov);await p.waitForTimeout(300);
-  assert.equal(await p.evaluate(()=>HUNT._xr().visibleOrgans.length),1);assert.equal(await p.locator('.xr-labs>span').count(),1);
+  assert.equal(await p.evaluate(()=>HUNT._xr().visibleOrgans.length),k==='keiler'?2:1);assert.equal(await p.locator('.xr-labs>span').count(),1);
   await p.screenshot({path:out+'/xray-'+k+'.png'});
  }
  const cd=await ctx.newCDPSession(p),pan=p.locator('.xr-pan'),pr=await pan.boundingBox();await p.evaluate(()=>{document.querySelector('.xr-pan').scrollTop=0;window.panPrevented=null;document.addEventListener('touchstart',e=>{if(e.target.closest('.xr-pan'))window.panPrevented=e.defaultPrevented;});});

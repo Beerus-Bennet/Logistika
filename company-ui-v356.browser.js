@@ -61,7 +61,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-company-v356';fs.m
  assert.equal(await page.evaluate(()=>S.money),cash);
  await page.setViewportSize({width:390,height:664});await page.evaluate(()=>{showTab('world');openCorp('w4_titan');});
  await page.locator('#coOff').evaluate(el=>{el.value=String(Math.round(corp().talks.w4_titan.val*1.1));el.dispatchEvent(new Event('input',{bubbles:true}));});
- await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-shark');await page.locator('.shk-skip').click();await page.locator('.crp-close').click();
+ await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-receipt');assert.equal(await page.locator('.cs-shark').count(),0);await page.locator('.crp-close').click();
  const parked=await page.evaluate(()=>{
   const own=corp().owned.w4_titan.receipt353,ids=new Set(own.vehicleIds),vehicles=S.fleet.filter(v=>ids.has(v.uid));
   return vehicles.map(v=>{const b=baseOfVehicle(v.uid),a=baseAddr(b);return {uid:v.uid,mode:vType(v.type).mode,at:v.at,node:b.node,lat:v.spot.lat,lon:v.spot.lon,baseLat:a.lat,baseLon:a.lon,label:v.spot.t,baseLabel:a.t};});

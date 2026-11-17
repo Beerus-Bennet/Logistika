@@ -17,7 +17,8 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-v365';fs.mkdirSync
  await p.locator('.town-applicant>summary').first().click();await p.locator('[data-town-talk]').first().click();const price=await p.evaluate(()=>VILLAGE.home('030').listing.offers[0].price);await p.locator('#townNegotiation input').fill(String(price));await p.locator('.tn-form [type=submit]').click();
  assert.equal(await p.locator('.tn-form [data-sign]').isDisabled(),true);assert.match(await p.locator('.tn-reply').innerText(),/nach Fertigstellung/);await p.screenshot({path:out+'/building-reservation.png'});await p.evaluate(()=>{S.time=VILLAGE.home('030').ready;VILLAGE.tick();FV.sheetTick();});assert.equal(await p.locator('.tn-form [data-sign]').isDisabled(),false);await p.locator('.tn-form [data-sign]').click();assert.equal(await p.evaluate(()=>VILLAGE.home('030').status),'rented');
  await p.evaluate(()=>{closeFarmSheet();FV.R=G3.create(document.querySelector('#farmCv'),{shadowSize:256,maxDpr:1});HUNT.begin();});
- await p.locator('[data-hu=quality]').click();assert.match(await p.locator('#huntQuality').innerText(),/Tiergüte 46/);await p.screenshot({path:out+'/quality-help.png'});await p.locator('#huntQuality button').click();
+ /* v366: Das Fragezeichen entfällt; die Erklärung bleibt im Jagdbuch. */
+ assert.equal(await p.locator('[data-hu=quality]').count(),0);assert.match(await p.evaluate(()=>HUNT._qualityHTML()),/Tiergüte 46/);
  /* Tatsächlicher sofortiger Fallpfad, einschließlich Gelenken und Lageübergang. */
  const collapse=await p.evaluate(()=>{
   const X=HUNT.X;X.mode='on';X.inRv=true;const A=HUNT._spawn('hirsch');let g=1;while(!HUNT._instantCollapse({...A,g,v:0},'herz'))g++;A.g=g;A.st='graze';A.v=0;A.zone='herz';const before=[A.x,A.z];HUNT._hit(A,'herz',100,{});

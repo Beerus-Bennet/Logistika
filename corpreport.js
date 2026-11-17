@@ -10,7 +10,7 @@ function corpWinReport(ev) {
     vehicles: Object.values(corp().owned).reduce((n, o) => n + (o.veh || 0), 0),
     paid: Object.values(corp().owned).reduce((n, o) => n + (o.price || 0), 0) };
   /* v362: Der Beleg passt ohne Scrollen auf eine Seite. Kennzahlen als nüchternes Raster ohne Bildzeichen, Angaben zum
-     Betrieb als Zeilen; der Bestand im Einzelnen klappt als eigene Ansicht über den Beleg (scrollt dort für sich),
+     Betrieb als Zeilen; v367: der Bestand öffnet als eigene begrenzte Scrollansicht über dem Beleg,
      der Knopf darunter bleibt immer sichtbar. Inhalt und Zahlen wie bisher. */
   const stat = (value, label) => `<div class="crp2-kpi"><b>${esc(value)}</b><small>${esc(label)}</small></div>`;
   const row = (label, value) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
@@ -33,11 +33,21 @@ function corpWinReport(ev) {
         ${row("Status", d.pending ? `${d.pending} Standorte bis zur Freischaltung reserviert` : "Eingerichtet, Team und Flotte zugeordnet")}
         ${row("Deine Gruppe", `${group.count} Übernahmen · ${group.vehicles} Fahrzeuge · ${esc(money(group.paid))}`)}
       </dl>
-      ${d.assets ? `<details class="corp-package crp-details"><summary><span class="crp2-open">Bestand im Einzelnen ansehen</span><span class="crp2-back">‹ Zurück zum Beleg</span></summary><div class="crp-detail-content">${corpDealContents(d.assets)}</div></details>` : ""}
+      ${d.assets ? `<button type="button" class="crp-inventory-open" aria-expanded="false" aria-controls="crpInventory">Bestand im Einzelnen ansehen <span aria-hidden="true">›</span></button>
+      <section id="crpInventory" class="crp-inventory" aria-label="Übernommener Bestand" hidden><button type="button" class="crp-inventory-back">‹ Zurück zum Beleg</button><div class="crp-detail-content" tabindex="0" aria-label="Bestandsliste">${corpDealContents(d.assets)}</div></section>` : ""}
     </div>
     <footer class="crp-footer"><button type="button" class="btn crp-close">Zur Unternehmensübersicht →</button></footer>
   </div>`;
   document.body.appendChild(el); document.body.classList.add("cs-open");
+  /* v367: Ein eigener begrenzter Flex-Bereich statt des anonymen Inhaltskastens
+     von <details>. So scrollt auch die lange Flotte nativ per Finger; der
+     Zurück-Knopf und die Unternehmensübersicht bleiben außerhalb der Liste. */
+  const open = el.querySelector(".crp-inventory-open"), inventory = el.querySelector(".crp-inventory");
+  if (open) {
+    const back = inventory.querySelector(".crp-inventory-back"), body = el.querySelector(".crp2-body");
+    open.onclick = () => { body.scrollTop = 0; inventory.hidden = false; body.classList.add("inventory-open"); open.inert = true; open.setAttribute("aria-expanded", "true"); back.focus({ preventScroll: true }); };
+    back.onclick = () => { inventory.hidden = true; body.classList.remove("inventory-open"); open.inert = false; open.setAttribute("aria-expanded", "false"); open.focus({ preventScroll: true }); };
+  }
   corpDialogBind356(el, ".crp-close", previous, true);
 }
 
@@ -83,7 +93,7 @@ function corpDialogBind356(el, selector, previous, goToWorld) {
   function key(e) {
     if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); }
     if (e.key === "Tab") {
-      const focusable = [...el.querySelectorAll("button, summary")].filter(b => b.getClientRects().length);
+      const focusable = [...el.querySelectorAll('button, summary, [tabindex="0"]')].filter(b => !b.disabled && !b.closest("[hidden],[inert]") && b.getClientRects().length);
       const i = focusable.indexOf(document.activeElement);
       e.preventDefault(); if (focusable.length) focusable[i < 0 ? (e.shiftKey ? focusable.length - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
     }

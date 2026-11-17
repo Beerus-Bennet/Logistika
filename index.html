@@ -20,12 +20,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Baloo+2:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Great+Vibes&family=Allura&family=Mrs+Saint+Delafield&family=Herr+Von+Muellerhoff&display=swap">
 <link rel="preload" as="image" href="lina.png">
-<link rel="stylesheet" href="style.css?v=365">
+<link rel="stylesheet" href="style.css?v=367">
 <script>
 /* v55: Fehler beim Start sichtbar machen (statt still auf der leeren Karte zu landen).
    Die Dateien tragen eine Versionsnummer (?v=…), damit nach einem Update nie
    alte und neue Dateien gemischt aus dem Zwischenspeicher kommen. */
-window.LOGI_V = "365";
+window.LOGI_V = "367";
 window.LOGI_ERRS = [];
 window.logiErr = function (msg, where) {
   try {
@@ -63,7 +63,7 @@ window.addEventListener("error", function (e) {
   document.addEventListener("contextmenu", noSelection, true);
   const ownedSurface = el => {
     if (!el || editable(el) || el.closest("button,a,label,summary,[role=button]")) return false;
-    if (el.closest(".xr-pan")) return false; /* v359: nativer Bericht-Scroll, keine Jagd-Geste */
+    if (el.closest(".xr-pan,.hu-job")) return false; /* v359: nativer Bericht-Scroll, keine Jagd-Geste */
     const canvas = el.closest("canvas");
     if (canvas && (getComputedStyle(canvas).touchAction === "none" || canvas.closest("#ofp,#farmAngel,#huntUI"))) return true;
     return !!el.closest("#ofpJoy,#huntUI");
@@ -181,7 +181,7 @@ window.addEventListener("error", function (e) {
 <script src="kunden.js?v=261"></script>
 <script src="lucky.js?v=271"></script>
 <script src="loading.js?v=255"></script>
-<script src="game.js?v=365"></script>
+<script src="game.js?v=367"></script>
 <script src="farm.js?v=354"></script>
 <script src="erbe.js?v=349"></script>
 <script src="village.js?v=365"></script>
@@ -191,9 +191,8 @@ window.addEventListener("error", function (e) {
 <script src="auction.js?v=339"></script>
 <script src="customs.js?v=255"></script>
 <script src="corpassets.js?v=356"></script>
-<script src="corp.js?v=356"></script>
-<script src="corpreport.js?v=362"></script>
-<script src="corpshark.js?v=355"></script>
+<script src="corp.js?v=367"></script>
+<script src="corpreport.js?v=367"></script>
 <script src="livery.js?v=255"></script>
 <script src="gl3d.js?v=365"></script>
 <script src="farmmodels.js?v=343"></script>
@@ -205,13 +204,13 @@ window.addEventListener("error", function (e) {
 <script src="forestmodels.js?v=255"></script>
 <script src="forest.js?v=255"></script>
 <script src="camp.js?v=358"></script>
-<script src="vista.js?v=352"></script>
+<script src="vista.js?v=367"></script>
 <script src="farmview.js?v=366"></script>
 <script src="worldview.js?v=366"></script>
 <script src="vehmodels.js?v=255"></script>
 <script src="minigames.js?v=255"></script>
 <script src="fpsaw.js?v=258"></script>
-<script src="hunt.js?v=365"></script>
+<script src="hunt.js?v=367"></script>
 <script src="exhibits.js?v=340"></script>
 <script src="rent.js?v=340"></script>
 <script src="villagesite.js?v=354"></script>

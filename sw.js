@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v366";
+const VERSION = "v367";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -14,7 +14,7 @@ const SHELL = [
   "./",
   "./index.html",
   "./viewport.js?v=358",
-  "./style.css?v=365",
+  "./style.css?v=367",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -36,7 +36,7 @@ const SHELL = [
   "./kunden.js?v=109",
   "./lucky.js?v=271",
   "./loading.js?v=109",
-  "./game.js?v=365",
+  "./game.js?v=367",
   "./farm.js?v=354",
   "./erbe.js?v=349",
   "./village.js?v=365",
@@ -46,9 +46,8 @@ const SHELL = [
   "./auction.js?v=339",
   "./customs.js?v=109",
   "./corpassets.js?v=356",
-  "./corp.js?v=356",
-  "./corpreport.js?v=362",
-  "./corpshark.js?v=355",
+  "./corp.js?v=367",
+  "./corpreport.js?v=367",
   "./livery.js?v=109",
   "./gl3d.js?v=365",
   "./farmmodels.js?v=343",
@@ -60,13 +59,13 @@ const SHELL = [
   "./forestmodels.js?v=109",
   "./forest.js?v=109",
   "./camp.js?v=358",
-  "./vista.js?v=352",
+  "./vista.js?v=367",
   "./farmview.js?v=366",
   "./worldview.js?v=366",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
-  "./hunt.js?v=365",
+  "./hunt.js?v=367",
   "./exhibits.js?v=340",
   "./rent.js?v=340",
   "./villagesite.js?v=354",

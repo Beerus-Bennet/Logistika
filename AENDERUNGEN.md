@@ -1,3 +1,15 @@
+## v367 – Jagdbewegung, Wolken, stimmiges Trefferbild und bedienbarer Kaufbeleg
+
+**Ursachen und Lösung:** Starre Zwischenknicke im Tierfall durch stetiges Entspannen aus der tatsächlichen Gangpose, anfängliche Hufstütze und Drehung um den Schwerpunkt ersetzt. Fragezeichen am Hochsitz entfernt; Jagdaufträge als zunächst geschlossenes Dropdown unter dem Revier. Wolken aus dem geprüften Video mit vollständig projizierter Form/Ausrichtung statt bildschirmparallelen Streifen.
+
+Die Organliste prüft jetzt dieselben Oberflächen, die das Trefferbild zeichnet. Keine Magenangabe bei verfehltem Magen; keine nachträglich erfundenen Herz-/Lungentreffer. Neue kritische Treffer brauchen tatsächlichen Organkontakt. Geschlossener Schweinemagen, klarere Lungenlappen, zurückgenommenes Skelett, geordnete Randbeschriftungen und Zeiger auf dem echten Schusskanal. Alte Aufnahmen werden nur für die Ansicht berichtigt, frühere Wertung/Erlöse bleiben gespeichert.
+
+Der Kaufbestand hat eine eigene begrenzte Scrollansicht; die lange Flotte ist per Finger vollständig erreichbar, Navigation bleibt sichtbar. Hai-Animation samt Skriptladung und Audiovorbereitung aus dem Übernahmeablauf entfernt: direkt zum Kaufbeleg.
+
+**Integration:** main `d4a1664`, paralleler Insel-PR #84 (`b7da342`, v366) vollständig integriert; gemeinsame Liefer-/Cacheversion 367. Details, Bilder, Fallvideos und Prüfungen: [Prüfbericht](docs/JAGD-UEBERNAHME-v367.md).
+
+**Geprüft:** WebGL-/Touch-Tests, 16 Fallkombinationen, drei Tierarten/25 Organmodelle, konkrete falsche/echte Magenberührungen und korrigierte Altaufnahmen, Kauf mit 17 Fahrzeugen in drei Bildschirmformaten; bestehende Jagd-, Übernahme-, PDF- und Releaseprüfungen. **Nicht geprüft:** echtes iPhone/Safari. Kein medizinisches oder physikalisches Simulationsmodell.
+
 ## v366 – Insel: weite Übersicht überall, Bäche fließen über die Kante, Baumsaum auf dem Randstreifen
 **Wunsch Bennet (Bild: weit herausgezoomter Seeblick):** (1) Diese Rauszoom-Ansicht für die ganze Insel ermöglichen. (2) Den Fluss so weit verlängern, dass er von der Insel herunterfließt. (3) Baumsaum auf dem Randstreifen.
 
