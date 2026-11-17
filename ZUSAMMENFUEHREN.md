@@ -1,10 +1,10 @@
 ## v369 – Wohnhausgärten nach dem Einzug
 
-Basis main `788a2b5` (PR #85/v367 und PR #86/v368 gemergt). Paralleler Performance-PR #86 bis `8de6f28` vollständig in `claude/wohn-gaerten-v369` integriert; Konflikte nur in AENDERUNGEN/CLAUDE, beide Inhalte erhalten. Insel-Fernstufen in worldview/gl3d bleiben erhalten. Gesamt-/Cacheversion 369; integrierte gl3d/worldview-Assets behalten368.
+Basis main `788a2b5` (PR #85/v367 und PR #86/v368 gemergt). Paralleler Performance-PR #86 bis `eb91b68` vollständig in `claude/wohn-gaerten-v369` integriert; Konflikte nur in AENDERUNGEN/CLAUDE, beide Inhalte erhalten. Insel-Fernstufen in worldview/gl3d bleiben erhalten. Gesamt-/Cacheversion 369; integrierte gl3d/worldview-Assets behalten368.
 
 Neues optionales Modul `villagegarden.js` zwischen villagesite und villagepeople laden und in SW-SHELL aufnehmen. `VILLAGE_GARDEN.plan(p,h)` liefert deterministische Belegung für bewohnte Status resident/rented/sold, sonst null; keine Änderungen im Save. Grounds/Modelle/Caches stammen aus demselben Plan. `modelKey` erlaubt Meshteilung zwischen vergleichbaren Haushalten. Haushaltwechsel wird über Bewohner-ID/Seed/Größe/Beruf erkannt.
 
-`villageview.js`: eigene Knoten yardGround/yard/yardFar statt Einbau in den nur bei Haustypwechsel erneuerten Hausknoten. sync erkennt Einzug/Leerstand unabhängig vom Haustyp. Hysterese 112/98, Ich-Perspektive voll; Kollision zoomunabhängig. `villagesite.blocked` verwendet Gartenflächen; Modulguard bleibt für alte isolierte Prüfstände. Bisherige Blumenkugeln entfernt, Basismesh-Key auf368 aktualisiert.
+`villageview.js`: eigene Knoten yardGround/yard/yardFar statt Einbau in den nur bei Haustypwechsel erneuerten Hausknoten. sync erkennt Einzug/Leerstand unabhängig vom Haustyp. Hysterese 112/98, Ich-Perspektive voll; Kollision zoomunabhängig. `villagesite.blocked` verwendet Gartenflächen; Modulguard bleibt für alte isolierte Prüfstände. Bisherige Blumenkugeln entfernt, Basismesh-Key auf369 aktualisiert.
 
 Eigenes Asset villagesite/villageview/villagegarden 369; LOGI_V/SW369, sonstige Assetnummern unverändert. Prüfungen und eigene Screenshots: docs/WOHNGAERTEN-v369.md. Main/Pages nicht automatisch veröffentlichen.
 
