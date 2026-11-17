@@ -2046,7 +2046,42 @@ const HUNT = (() => {
     }
     if (A.st === "dead" || A.st === "fall") { A.restingHead = false; restHead(A); }
   }
-  function unbuild(A) { if (A.node) rmNode(A.node); }
+  function unbuild(A) { if (A.woundM) { A.woundM.forEach(m => FV.R.free(m)); A.woundM = null; } if (A.node) rmNode(A.node); }
+  /* v382: Einschussloch am Stück – kleine, gedämpfte Stelle (struppiges Haar, schwacher rotbrauner Rand, dunkles Loch) auf der Decke an der
+     Stelle, an der der Strahl in Körper, Hals oder Haupt eintritt. Die Teile sitzen am passenden Knoten und bewegen sich mit dem Tier. */
+  function woundSpot(A, rec) {
+    const k = A.k, S0 = SP[k], p = rec.pose || {}, z = rec.zone;
+    if (!rec.lo || !rec.ld || z === "lauf") return null;
+    let parent = A.node, o = rec.lo, d = rec.ld, t = null;
+    if (z === "hals") { parent = A.neck; [o, d] = neckRay(k, o, d, p); const ns = meshSegment(neckMeshOf(k), o, d); t = ns ? ns[0] : rec.t; }
+    else if (z === "kopf" || z === "haupt") {
+      parent = A.head; [o, d] = neckRay(k, o, d, p);
+      if (k === "hirsch") { o = unrot(v3sub(o, S0.headP), p.hrx || 0, 0, 0); d = unrot(d, p.hrx || 0, 0, 0); }
+      const sg = ellSeg(o, d, S0.head.c, S0.head.r); if (!sg) return null; t = sg[0];
+    } else { const bs = meshSegment(withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), o, d); t = bs ? bs[0] : rec.t; }
+    const n = v3n([-d[0], -d[1], -d[2]]);
+    return { parent, P: [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], n, x: rec.lo[0] + rec.ld[0] * t };
+  }
+  function woundMesh(P, n) {
+    const b = MB(), up = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], u = v3n(v3crs(n, up)), v = v3crs(n, u), N = 16;
+    const layer = (r, off, c, rough) => {
+      const ctr = [P[0] + n[0] * off, P[1] + n[1] * off, P[2] + n[2] * off], pt = i => { const a = i / N * Math.PI * 2, q = r * (1 + rough * Math.sin(i * 2.7 + r * 90));
+        return [ctr[0] + (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * q, ctr[1] + (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * q, ctr[2] + (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * q]; };
+      for (let i = 0; i < N; i++) b.triV(ctr, pt(i), pt(i + 1), c, c, c);
+    };
+    layer(0.06, 0.003, [0.24, 0.15, 0.12], 0.16);        /* struppiges, dunkleres Haar */
+    layer(0.038, 0.0045, [0.5, 0.18, 0.15], 0.1);      /* schwacher rotbrauner Rand */
+    layer(0.018, 0.006, [0.04, 0.03, 0.03], 0.05);     /* Einschussloch */
+    return b;
+  }
+  function addWound(A, rec) {
+    const W = A.node && rec ? woundSpot(A, rec) : null;
+    if (!W || !W.parent) return;
+    const m = FV.R.mesh(woundMesh(W.P, W.n));
+    (A.woundM = A.woundM || []).push(m); A.woundX = W.x;
+    addNode(m, { shadow: false }, W.parent);
+  }
+  const fallSide = (A, other) => A.woundX ? (A.woundX > 0 ? 1 : -1) : other;      /* v382: fällt auf die Seite ohne Einschuss – die Wunde liegt oben und ist sichtbar */
   const alive = A => A.st !== "gone" && A.st !== "dead" && A.st !== "fall" && A.st !== "drop";
 
   /* gedämpfte Feder (kritisch gedämpft): weiche, natürliche Übergänge */
@@ -2158,7 +2193,7 @@ const HUNT = (() => {
         A.ry += clamp(angN(want - A.ry), -3 * dt, 3 * dt);
         A.dist += A.v * dt;
         if (A.st !== "flee") trail(A);
-        if (A.st === "hit" && A.dist >= A.runL) { A.st = "fall"; A.t = 0.8; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.8); }
+        if (A.st === "hit" && A.dist >= A.runL) { A.st = "fall"; A.t = 0.8; A.side = fallSide(A, rnd() < 0.5 ? -1 : 1); fallStart(A, 0.8); }
         if ((A.st === "flee" || A.st === "wounded") && fieldE(A.x, A.z) > 1.32) {
           if (A.st === "wounded") lostMsg(A);
           A.st = "gone"; unbuild(A);
@@ -3045,6 +3080,7 @@ const HUNT = (() => {
     if (!X || !A.node || !alive(A)) return;
     A.hits.push(zone); A.dm = A.dm || dm;
     (A.shots = A.shots || []).push(context && context.rec ? context.rec : shotRecDefault(A, zone, dm));
+    addWound(A, A.shots[A.shots.length - 1]);
     if (A.mv == null) { const c = context || shotContext(A); A.mv = c.mv; A.air = c.air; A.wv = c.wv; }   /* v307: für Beschriftung, Jagdbuch und Flugauftrag */
     const Z = ZONE[zone];
     if (A.k === "fasan" && !Z.kill) {      /* v353: nur Federn gestreift – der Hahn ist nicht erlegt */
@@ -3053,7 +3089,7 @@ const HUNT = (() => {
     }
     if (A.k === "fasan") {
       /* v350: Seite je Stück (vorher immer dieselbe) */
-      A.side = poseRnd(A, 41) < 0 ? -1 : 1;
+      A.side = fallSide(A, poseRnd(A, 41) < 0 ? -1 : 1);
       if (A.st === "fly") { A.st = "drop"; A.fly.vy = Math.min(0, A.fly.vy); } else { A.st = "fall"; A.t = 0.45; fallStart(A, 0.45); }
       A.zone = zone; X.target = A; buzz(22);
       msg("Waidmannsheil! " + A.T.name + " · " + dm + " m", 3, "good");
@@ -3072,7 +3108,7 @@ const HUNT = (() => {
     A.dist = 0; A.collapse365=instantCollapse(A,zone); A.runL = A.collapse365 ? 0 : zone === "hals" ? (neckFate(A.shots[A.shots.length - 1].org) === "vessel" ? lerp(3, 9, rnd()) : lerp(8, 18, rnd())) : lerp(Z.run[0], Z.run[1], rnd());   /* v380: Hals ohne Wirbelsäule rennt noch */
     X.target = A; buzz(22);
     if (A.hits.some(z => !ZONE[z].kill)) A.capW = true;         /* erst krank, dann erlegt: höchstens Bronze */
-    if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = rnd() < 0.5 ? -1 : 1; fallStart(A, 0.55); }
+    if (A.runL < 0.3) { A.st = "fall"; A.t = 0.55; A.side = fallSide(A, rnd() < 0.5 ? -1 : 1); fallStart(A, 0.55); }
     else { if (!running) fleeFrom(A, [EYER[0], EYER[2]]); A.st = "hit"; }
     msg("Waidmannsheil! " + Z.n + " · " + dm + " m", 3.2, "good");
   }
