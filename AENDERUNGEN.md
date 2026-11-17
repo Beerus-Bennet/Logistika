@@ -1,3 +1,11 @@
+## v378 – Revier-Bäume, -Steine und -Stämme auch in der Kartenansicht von oben
+
+**Ursache:** Die Bäume, Steine und Baumstämme des Reviers (Ich-Perspektive im Jagdturm) gab es nur in der Revier-Szene weit außerhalb der Karte; die Wildwiese von oben war leer, das Revier ist rund dreimal so weit wie die Wiese.
+
+**Lösung (`hunt.js`, `worldRevier`, `WRV`):** Das feste Revier-Layout (`revLayout`) wird beim Aufbau der Welt auf die Wildwiese verkleinert abgebildet (gleicher Randfaktor und Winkel zum Hochsitz). Bäume auf 60 % ihrer Größe, Steine und Stämme ebenso; es werden nur Orte bis Randfaktor 1,6 übernommen, nichts liegt auf Hochsitz oder Schautafel. `clear("tree")` hält dort die Karten-Bäume fern (Ring 7 statt 2,5), damit der Wald nicht doppelt wird. Keine Spiel- oder Speicherlogik geändert. Baut auf v377 (PR #94) auf.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`), Ansicht von oben vorher/nachher bei gleicher Kamera; `hunt.test.js` (23), `fixes-v354`, `trefferbild-v357`, `jagd-v366`, `hunt-v283`, `inselrand-v366`. **Nicht geprüft:** Handy/Safari, Leistung auf dem Handy (rund 100 zusätzliche Instanzen), andere Tageszeiten; der Testbrowser zeigte die Szene grau/dunkel.
+
 ## v377 – Trefferbild: Organe nach Anatomie, Schuss durch die Organe; Nebel beim Verlassen des Hochsitzes
 
 **Ursache:** (1) Lunge war nur ein kleiner Block (ca. 20 cm hoch), Leber und Pansen lagen noch in der Brusthöhle, der Träger bestand nur aus einem roten Rohr – ein Trägerschuss „traf“ keine Organe. (2) Beim Verlassen des Hochsitzes blieb der Nebel fest auf 40–90 m; aus der Höhe verschwand alles außer dem Turm im Dunst.
