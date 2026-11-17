@@ -1011,7 +1011,8 @@ const G3 = (() => {
       gl.useProgram(shad.p);
       gl.uniformMatrix4fv(shad.u.uLVP, false, R.LVP);
       gl.uniform1f(shad.u.uTime, time);
-      for (const [n, st] of slist) {
+      /* v367: R.noShadow – weite Übersicht ohne Schattendurchgang (die Schattenkarte bleibt leer = alles im Licht) */
+      for (const [n, st] of R.noShadow ? [] : slist) {
         if (!st.shadow || st.alpha < 0.99 || n.water || !n.mesh.vao) continue;
         /* v152: eigenes, gröberes Schattenmodell (feine Bäume werfen den Schatten der groben Stufe – gleicher Umriss, halbe Arbeit) */
         const sm = n.smesh && n.smesh.vao ? n.smesh : n.mesh;
@@ -1021,12 +1022,12 @@ const G3 = (() => {
         gl.drawArrays(gl.TRIANGLES, 0, sm.count);
         ST.sDraws++; ST.sTris += sm.count / 3;
       }
-      if (igroups.size) {
+      if (igroups.size && !R.noShadow) {
         gl.useProgram(shadI.p);
         gl.uniformMatrix4fv(shadI.u.uLVP, false, R.LVP);
         gl.uniform1f(shadI.u.uTime, time);
         for (const g of igroups) {
-          if (!g.n || !g.shadow) continue;
+          if (!g.n || !g.shadow || g.hide) continue;
           if (!g.vaoS) gUpload(g);
           if (!g.vaoS) continue;
           const nv = icull(g, PL);
@@ -1097,7 +1098,7 @@ const G3 = (() => {
         setScene(ui);
         gl.uniform1f(ui.uWater, 0); gl.uniform1f(ui.uGlow, 0); gl.uniform1f(ui.uAlpha, 1);
         for (const g of igroups) {
-          if (!g.n) continue;
+          if (!g.n || g.hide) continue;                     /* v367: g.hide – Gruppe vorübergehend nicht zeichnen */
           if (!g.vaoM) gUpload(g);
           if (!g.vaoM) continue;
           const nv = icull(g, PV);
