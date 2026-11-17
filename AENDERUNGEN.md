@@ -1,3 +1,11 @@
+## v379 – Hof: Seitenknöpfe kleiner, Seeblick-Knopf entfernt
+
+**Wunsch:** Die Knöpfe rechts auf dem Hof kleiner, den Seeblick-Knopf samt seiner Funktion entfernen.
+
+**Lösung:** `farmview.js`: Knopf `#fbTown` und sein Klick-Handler entfernt. `style.css` (Block am Ende): Laden 72→60 px, Lager 66→54 px, Symbole und Schrift kleiner. Der Spielstand und die Seeblick-Ansicht selbst (`VILLAGE_UI`, `villageview.js`) bleiben unangetastet; der zweite Zugang im Bauernhaus-Fenster („Seeblick · Nachbarschaft & Stadtbau“, `#fhTown`) ist noch vorhanden.
+
+**Geprüft:** Testbrowser (390–430 px breit): Knopfbreiten Laden 60 px, Lager 54 px, `#fbTown` nicht mehr vorhanden, keine Konsolenfehler; `fixes-v354`, `village-*`-Tests. **Nicht geprüft:** Handy/Safari.
+
 ## v378 – Revier-Bäume, -Steine und -Stämme auch in der Kartenansicht von oben
 
 **Ursache:** Die Bäume, Steine und Baumstämme des Reviers (Ich-Perspektive im Jagdturm) gab es nur in der Revier-Szene weit außerhalb der Karte; die Wildwiese von oben war leer, das Revier ist rund dreimal so weit wie die Wiese.
