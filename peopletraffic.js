@@ -16,6 +16,12 @@ const PEOPLE_TRAFFIC = (() => {
     const A=at(a,from),B=at(a,to);
     return others.every(o=>{
       if(o===a||o.owner===a.id||a.owner===o.id)return true;
+      /* v388: Hofkräfte weichen einander nicht mehr aus. Sie folgen fest ihrer Route (staffFollow setzt sie jedes Bild auf den
+         Weg zurück); ein seitlicher Ausweichschritt wurde im nächsten Bild zurückgenommen und wieder versucht – das „wilde Hin und Her“
+         (gemessen bis 69 Richtungswechsel je Kraft nach Pausenende, in der nur eine Person breiten Werkzeuggasse und auf schmalen Wegen,
+         die Uhr ihres Wegs stand dabei still). Kollegen gehen jetzt Schulter an Schulter aneinander vorbei; gegenüber Bewohnern und
+         Rädern gilt die Kollision unverändert. */
+      if(a.staff&&o.staff)return true;
       const C=at(o,o.from),D=at(o,o.to||o.from);
       return A.every((p,i)=>C.every((q,j)=>swept(p,B[i],q,D[j])>=p.r+q.r+gap-1e-6));
     });
@@ -85,7 +91,7 @@ const PEOPLE_TRAFFIC = (() => {
         if(j&&e.rj===j&&e.rPrev!=null&&distance(p,e.node)>.001){const f=l2?Math.max(0,Math.min(1,((p.x-from.x)*dx+(p.z-from.z)*dz)/l2)):0;e.rs=e.rPrev+(e.rs-e.rPrev)*f;}
         e.x=e.node.x=p.x;e.z=e.node.z=p.z;e.ox=e.oz=0;
         if(delayed){e.mv=false;if(j&&j.route&&S.time-j.t0<j.walk&&gdt){j.t0+=gdt;j.t1+=gdt;if(s.jobEnd)s.jobEnd+=gdt;}}
-      },{fixed:!!e.isSit||!!e.sitT||e.riseT!=null||!!(e.gearAction&&e.gearAction.t>0),resting:!s.job,valid:(a,b)=>{
+      },{staff:true,fixed:!!e.isSit||!!e.sitT||e.riseT!=null||!!(e.gearAction&&e.gearAction.t>0),resting:!s.job,valid:(a,b)=>{
         if(typeof VILLAGE!=='undefined'&&(VILLAGE.clear(a.x,a.z)||VILLAGE.clear(b.x,b.z))&&!valid(a,b))return false;
         if(typeof navLive!=='function'||distance(a,b)<.001)return true;
         navLive();if(navHit(a.x,a.z,b.x,b.z,navWallsFor(s.role)))return false;

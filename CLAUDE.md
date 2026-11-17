@@ -27,6 +27,9 @@ Diese Datei wird in jeder Claude-Code-Sitzung automatisch geladen. Ausführliche
 - Code-Kommentare auf Deutsch mit Versionsmarke (`/* v253: … */`); neue CSS-Blöcke ans Ende von `style.css` mit Kopfzeile.
 - Keine Geschäftslogik ändern, wenn nur Gestaltung oder Texte gewünscht sind.
 
+## Bekannte Fehlerquellen (zum Merken)
+- **Bewegung, die „wild hin und her“ geht (v388):** Zuerst messen, nicht raten – Richtungswechsel je Figur pro Bild zählen (Bewegung > 0,03, Richtungsprodukt < −0,5) und den Ort/Zustand dazu ausgeben. Typische Ursache: zwei Systeme setzen dieselbe Position gegeneinander, z. B. `staffFollow` (setzt Hofkräfte jedes Bild auf ihre Route) gegen `PEOPLE_TRAFFIC` (seitliches Ausweichen). Ein Ausweichschritt, den der Routenfolger im nächsten Bild zurücknimmt, ergibt Pendeln und eine stehende Wegeuhr. Lösung dort: Figuren, die fest einer Route folgen, nicht seitlich ausweichen lassen. Regressionstest: `worker-motion-v351.test.js` („v388 Pausenende“).
+
 ## Wichtige Dateien
 `data.js` (Welt, Fahrzeuge, Ladungsarten, Etappen) · `game.js` (Kern: Aufträge, Routing, Planer, Listen, Tick, Speichern) · `kunden.js` (Kundenprofile, Auftragstexte mit Prüfung, Beziehungsstufen, Projekte, Unterschriften) · `vip.js` (Sonderfahrten, Konkurrenz/Ausschreibungen, Verhandlung, Zeitung) · `extras.js` (Telefon, Entscheidungen, Steuern, Kredit) · `offices.js` (Büros, Personal, Diensthandy) · `goals.js` · `corp.js` · `vehmodels.js` (3D-Fahrzeugbildchen) · `officefp.js` (Büro in der Ich-Perspektive) · Hof/Welt: `farm*.js`, `worldview.js`, `team.js` u. a. Vollständige Tabelle in `docs/UEBERGABE.md`.
 
@@ -133,3 +136,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v382: Jagd – Einschussloch in der Bergung (`woundSpot`/`woundMesh`/`addWound`, `A.woundM`/`A.woundX`), Fallseite `fallSide`; gedämpft, ohne Blutspritzer.
 
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
+
+- v388: Pausenende ohne Pendeln – Hofkräfte weichen einander in `peopletraffic.js` nicht mehr aus (Ausweichen kollidierte mit `staffFollow`); Test „v388 Pausenende“ in `worker-motion-v351.test.js`; Merkpunkt unter „Bekannte Fehlerquellen“.
