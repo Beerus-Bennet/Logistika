@@ -211,6 +211,7 @@ function navBuild() {
   const lakePaths = typeof LAKE_WAY !== "undefined" ? [LAKE_STEM, LAKE_WAY, LAKE_EAST] : [[[5, 19.4], [5, 21.6], [-2, 22.2], [-20, 21.9]], [[5, 21.6], [14, 22.1], [26, 22.1], [38, 21.6]]];
   for (let z = NAV.z0; z < NAV.z1; z++) for (let x = NAV.x0; x < NAV.x1; x++) {
     const cx = x + 0.5, cz = z + 0.5, i = navIdx(x, z);
+    if(typeof ALPINE!=="undefined"&&ALPINE.contains(cx,cz)){blk[i]=1;continue;} /* v375: kein Weg durch Berg oder Quellsee */
     if (Math.hypot(cx - P.x, cz - P.z) < P.r + 0.4 || inLake(cx, cz, 0.4)) { blk[i] = 1; continue; }
     if (creeks.some(c => distLine(cx, cz, c) < (c === FWORLD.creek ? 2.1 : 1.5)) || (FWORLD.spring && Math.hypot(cx - FWORLD.spring[0], cz - FWORLD.spring[1]) < 7.5)) { if (onDeck(cx, cz)) { cost[i] = 0.45; continue; } blk[i] = 1; continue; }
     /* v109: Wege lohnen sich – quer durch den Wald ist teuer, über die Wiese etwas teurer, im Hof fast gleich */
@@ -1877,6 +1878,9 @@ function stepStaff(dt, time) {
     /* v351: Den bereits freigegebenen Bedienplatz während des Greifens
        halten; kein letzter Ruck in eine vorbeigehende Person. */
     if(e.gearAction&&e.gearAction.hold){e.x=e.gearAction.hold[0];e.z=e.gearAction.hold[1];moving=false;}
+    /* v374: Beim Ein- und Ausräumen steht die Kraft dem Fach zugewandt (gemessen: vorher im Mittel 85° daneben, zeitweise
+       mit dem Rücken zum Fach – das Werkzeug wanderte „parallel zum Regal“ ins Fach). Die Drehung folgt dem Fach, nicht der Gehrichtung. */
+    if(e.gearAction&&e.gearAction.stop&&e.gearAction.stop.rack351&&e.gearAction.stop.tx!=null){const g=e.gearAction.stop;n.ry+=angTo(n.ry,Math.atan2(g.tx-e.x,g.tz-e.z))*Math.min(1,dt*8);}
     n.x = e.x; n.z = e.z; e.dw = !!dwell&&!moving; e.mv = moving;
     n.y = moving ? Math.abs(Math.sin(time * 11 + e.ph)) * 0.07 : work ? Math.abs(Math.sin(time * 6 + e.ph)) * 0.03 : Math.abs(Math.sin(time * 2.2 + e.ph)) * 0.02;
     /* v112: Halt an der Werkzeugplane – hinstellen, bücken, ablegen (oder aufnehmen), aufrichten */

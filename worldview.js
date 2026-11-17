@@ -314,6 +314,7 @@ function worldWaterCheck() {
    Feldern, Wegen, Bach, See, Teich, Lagerplatz, Lichtungsmitte, Bäumen, Felsen, Totholz und anderen Büschen frei ist. */
 /* v91: freier Boden – nicht auf Hof, Wegen, Wasser, Lichtungsmitte (gemeinsam für Büsche und Waldboden) */
 function wFreeGround(x, z, r, MK) {
+  if(typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))return false; /* v375: kein Unterwuchs unter dem Berg */
   if (inHofMax(x, z, 1.5 + r)) return false;
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
   if (typeof HUNT !== "undefined" && r > 0.25 && HUNT.clear(x, z, "bush")) return false;     /* v107: Wildwiese bleibt offen (Gras und Blumen dürfen) */
@@ -721,7 +722,7 @@ function worldApronTrees(keep) {
     const room = apronRim(a) - t - 5; if (room < 3) { rnd(); rnd(); rnd(); rnd(); continue; }
     const d = 1.5 + rnd() * room, x = cx + dx * (t + d), z = cz + dz * (t + d), ex = clamp(cx + dx * t, W.x0 + 2, W.x1 - 2), ez = clamp(cz + dz * t, W.z0 + 2, W.z1 - 2);
     const fk = typeof forestK === "function" ? forestK(ex, ez) : 0, pick = rnd(), sc = 0.85 + rnd() * 0.7, g = greens[Math.floor(rnd() * greens.length)];
-    if (pick > 0.4 + 0.6 * fk || (keep && !keep(x, z))) continue;
+    if (pick > 0.4 + 0.6 * fk || (keep && !keep(x, z)) || (typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))) continue;
     b.box(0.3 * sc, 1.4 * sc, 0.3 * sc, 0x5d4430, { x, z });
     if ((n * 7) % 10 < 4 + 4 * fk) { b.cone(1.45 * sc, 3.3 * sc, 6, g, { x, y: 1.0 * sc, z }); b.cone(1.0 * sc, 2.5 * sc, 6, g, { x, y: 2.9 * sc, z }); }
     else b.ico(1.7 * sc, g, { x, y: 2.8 * sc, z });
@@ -764,10 +765,14 @@ function worldApron(gcAt) {
     C.push([seam, ground(q1, .33), ground(q2, .66), mix(ground([ox, oz], 1), grass, .4), soil, rock, rock, mix(rock, deep, .7), deep].map((c,k) => c.map(v => v * (k<3?1:k<5?shade:.9+fault(k)*.16))));
     /* Nahtfarbe unverändert, damit es an der bisherigen Welt keine Farblinie gibt. */
     C[C.length - 1][0] = seam;
+    /* v375: Gebirge wächst aus der Insel, keine schwebende Platte über dem alten Grasrand. */
+    if(typeof ALPINE!=="undefined")for(let k=0;k<5;k++){const p=P[P.length-1][k],h=ALPINE.height(p[0],p[2]);if(k>=3)p[1]+=h;if(h>.1)C[C.length-1][k]=k<4?ALPINE.color(p[0],p[2],h):soil;}
   }
   for (let i = 0; i < P.length; i++) {
     const j = (i + 1) % P.length;
     for (let k = 0; k < P[i].length - 1; k++) {
+      /* v375: Die Bergdecke ersetzt hier den Grasring; keine überlappenden Höhenflächen. */
+      if(k<3&&typeof ALPINE!=="undefined"){if([P[i][k],P[j][k],P[j][k+1],P[i][k+1]].every(p=>ALPINE.contains(p[0],p[2])))continue;}
       b.triV(P[i][k], P[j][k], P[j][k + 1], C[i][k], C[j][k], C[j][k + 1]);
       b.triV(P[i][k], P[j][k + 1], P[i][k + 1], C[i][k], C[j][k + 1], C[i][k + 1]);
     }
@@ -899,6 +904,7 @@ function worldStatic() {
       else if (x > 46) p = 0.1;
       else p = f * 0.6 * (0.4 + 1.2 * dm);
       const r0 = rnd(), r1 = rnd(), r2 = rnd();
+      if(typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))continue; /* v375: Bergwald hat eigene Höhen */
       if (r0 > p) {
         /* Waldboden: Farn, Pilze, Totholz – nur in Wegnähe, wo man hinsieht */
         if (f > 0.5 && r0 < 0.98 && (MK.at(x, z) & 2) && bgTreeOk(x, z, MK)) {
@@ -1140,6 +1146,7 @@ function worldStatic() {
       path: a => { const p = FWM.springFallPath(a), q = WF(p[0] + p[4], p[3]); return { x: q[0], y: p[1] * k, z: q[1], w: p[2] * k }; },
       strands: [] };
   }
+  if(typeof ALPINE!=="undefined")ALPINE.build(R); /* v375: Quelle, Inselkante und Bergsee bilden ein Gelände */
   worldWaterCheck();
   /* v72: die neue, längere Brücke liegt in der Wegachse (der Hauptweg läuft hier gerade von Süd nach Nord) */
   R.nodes.push(fnode(fmesh("wbridge2", FWM.bridge), { x: FWORLD.bridge[0], y: 0, z: FWORLD.bridge[1], ry: Math.PI / 2 }));
@@ -3590,6 +3597,7 @@ function vegStep(now) {
 function worldBusy() { return !!((typeof SITE3D !== "undefined" && SITE3D.busy()) || WV.falling.length || FV.fp || WV.reveal || WV.dust || WV.parcelOpen || WV.parcelIntro || WV.trReveal || WV.trIntro || (typeof MG !== "undefined" && MG.on) || (S.farm && S.farm.wx && (S.farm.wx.k === "regen" || farmEvOn("sturm")))); }
 function worldStep(dt, time) {
   if (!S.farm) return;
+  if(typeof ALPINE!=="undefined")ALPINE.step(dt); /* v375: feste Tierzahl und bestehende Fernstufen */
   vegStep(time);
   stepFalling();
   stepReveal(dt);
