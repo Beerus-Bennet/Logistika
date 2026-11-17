@@ -1,3 +1,14 @@
+## v370 – Fernstufen ohne sichtbares Umschalten
+**Wunsch Bennet:** Der Übergang der verschwindenden Objekte beim Herauszoomen soll flüssig wirken – der Spieler soll nicht mitbekommen, wie sie verschwinden.
+
+**Ursache:** Die Fernstufen aus v368 schalteten hart um: Gras, Schatten, Kleinteile und Baumdetails verschwanden bzw. wechselten bei festen Abständen auf einen Schlag.
+
+**Lösung (`gl3d.js`, `worldview.js`; nur Darstellung):** Alles geht jetzt stufenlos über den Abstand ineinander über.
+- **Engine:** Neues Überblendungsmuster im Fragment-Shader (`uFade`, `uFadeInv`; Knoten `n.fade`, Instanzgruppen `g.fade`/`g.inv`): Bildpunkte fallen nach einem feinen Rauschmuster weg, ohne Transparenz und ohne zusätzliche Sortierung. Mit gespiegeltem Muster gehen zwei Modelle ineinander über – an keiner Stelle fehlt dann beides. Die Schattenstärke ist stufenlos (`R.shadowK`).
+- **Verlauf:** Gras löst sich zwischen Abstand 95 und 125 auf; der Schatten wird zwischen 105 und 150 immer schwächer (erst danach entfällt der Schattendurchgang, wenn er nichts mehr bewirkt); die Kulissenbäume gehen zwischen 140 und 185 in ihr Fernmodell über; Büsche und Kleinteile lösen sich zwischen 200 und 240 auf. Es gibt keine festen Umschaltpunkte mehr, also auch keine Hysterese. In der Ich-Perspektive gilt weiter die volle Darstellung.
+
+**Geprüft:** Testbrowser (Chromium, Software-Grafik, 390 × 700): Abstände 90, 110, 125, 150, 165, 185, 220, 450 und zurück 54 – die Auflösungswerte steigen stetig (z. B. Gras 0 → 0,5 → 1; Schatten 1 → 0,89 → 0,56 → 0; Bäume 0 → 0,22 → 0,56 → 1), nach dem Zurückzoomen ist wieder alles voll da (Gras, Schatten, Baumgruppen); sechs Bilder an den Übergangsabständen nebeneinander gesichtet: kein Sprung zwischen den Stufen; keine Konsolenfehler. **Nicht geprüft:** am Handy; als Bewegung (nur Standbilder – das Rauschmuster steht im Bild still, kann beim Zoomen aber als feines Flimmern auffallen); Nacht; die Dreiecksbilanz gegenüber v368 (die Überblendung hält Gras und Schatten länger als vorher, die weite Ansicht ab 185 ist unverändert leicht).
+
 ## v369 – Bewohnte Häuser bekommen individuelle Gärten
 
 **Wunsch:** Häuser nach dem Einzug mit realistischen Gartendetails beleben. Gartenplanungsartikel und Fotos von HORNBACH/OBI geprüft; daraus Hausnähe der Sitzecke, Stauraum am Rand, freie Rasenflächen und getrennte Spiel-/Nutz-/Ruhebereiche abgeleitet.

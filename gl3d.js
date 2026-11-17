@@ -352,6 +352,9 @@ const G3 = (() => {
   in vec3 vNor; in vec3 vCol; in vec3 vW; in vec4 vL;
   uniform vec3 uSunDir, uSunCol, uSky, uGround, uFog, uCam; uniform vec2 uFogR;
   uniform vec4 uTint; uniform float uGlow, uAlpha, uWater, uShadowOn, uTime, uTexel, uNight; uniform vec3 uMouth; uniform vec4 uFlow;
+  /* v370: Überblendung (Fernstufen): uFade (0 = voll, 1 = weg) lässt Bildpunkte nach einem feinen Rauschmuster weg; uFadeInv spiegelt das Muster,
+     sodass zwei Modelle ineinander übergehen, ohne dass einer von beiden sichtbar verschwindet. */
+  uniform float uFade, uFadeInv;
   uniform sampler2DShadow uShadow;
   /* gesperrte Gebiete: Rechteck (x0, z0, x1, z1) wird grau, außer im
      wachsenden Kreis (cx, cz, Radius, Stärke) – so deckt sich ein Gebiet
@@ -522,6 +525,7 @@ const G3 = (() => {
   }
   vec4 streamWater(vec3 amb, float sh){ return streamWaterAt(vCol, amb, sh); }
   void main(){
+    if (uFade > 0.001) { float nz = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))); if (uFadeInv > 0.5 ? nz >= uFade : nz < uFade) discard; }
     vec3 n = normalize(vNor);
     bool fallW = uWater > 5.5 && uWater < 6.5, strW = uWater > 6.5;   /* v220: 7 = Bergbach */
     /* v126: 2 = Fluss (Ost→West), 3 = See (alle Richtungen), 1 = still; v145: 4 = großer See (ruhigeres, größeres Muster);
@@ -537,7 +541,7 @@ const G3 = (() => {
     }
     float d = dot(n, uSunDir);
     float wrap = clamp((d + 0.2) / 1.2, 0.0, 1.0);
-    float sh = uShadowOn > 0.5 ? shadow() : 1.0;
+    float sh = uShadowOn > 0.01 ? mix(1.0, shadow(), uShadowOn) : 1.0;     /* v370: Schattenstärke stufenlos */
     vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);
     vec3 c = vCol * (amb + uSunCol * wrap * sh);
     float aOut = uAlpha;
@@ -661,7 +665,7 @@ const G3 = (() => {
     if (uUnlit > 0.5) { o = vec4(t.rgb * uMul, t.a * uAlpha); return; }
     vec3 n = normalize(vNor);
     float wrap = clamp((dot(n, uSunDir) + 0.2) / 1.2, 0.0, 1.0);
-    float sh = uShadowOn > 0.5 ? shadow() : 1.0;
+    float sh = uShadowOn > 0.01 ? mix(1.0, shadow(), uShadowOn) : 1.0;     /* v370: Schattenstärke stufenlos */
     vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);
     vec3 c = t.rgb * uMul * (amb + uSunCol * wrap * sh);
     c = mix(c, uFog, smoothstep(uFogR.x, uFogR.y, length(vW - uCam)));
@@ -1063,7 +1067,7 @@ const G3 = (() => {
         gl.uniform3fv(u.uSky, E.sky); gl.uniform3fv(u.uGround, E.ground);
         gl.uniform3fv(u.uFog, E.fog); gl.uniform2fv(u.uFogR, E.fogR);
         gl.uniform3fv(u.uCam, R.eye);
-        gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, 1); gl.uniform1f(u.uTexel, 1 / SH);
+        gl.uniform1f(u.uTime, time); gl.uniform1f(u.uShadowOn, R.shadowK == null ? 1 : R.shadowK); gl.uniform1f(u.uTexel, 1 / SH);
         gl.uniform1f(u.uNight, E.night || 0);
         if (u.uMouth) gl.uniform3fv(u.uMouth, E.mouth || [0, 0, 0]);   /* v177: Bachmündung (Wasser-Shader) */
         if (u.uWind) gl.uniform4fv(u.uWind, E.wind || [0.8, 0.6, 1, 0]);
@@ -1085,6 +1089,7 @@ const G3 = (() => {
         if (u.uFlow) gl.uniform4fv(u.uFlow, n.flow || NOTINT);              /* v193: fallendes Wasser */
         gl.uniform4fv(u.uTint, st.tint || NOTINT);
         gl.uniform1f(u.uGlow, st.glow || 0); gl.uniform1f(u.uAlpha, st.alpha);
+        gl.uniform1f(u.uFade, n.fade || 0); gl.uniform1f(u.uFadeInv, 0);
         gl.bindVertexArray(n.mesh.vao);
         gl.drawArrays(gl.TRIANGLES, 0, n.mesh.count);
         ST.draws++; ST.tris += n.mesh.count / 3; if (n.sway) ST.sway++;
@@ -1104,6 +1109,7 @@ const G3 = (() => {
           const nv = icull(g, PV);
           if (!nv) continue;
           gl.uniform1f(ui.uSway, g.sway); gl.uniform1f(ui.uSwayT, g.swayT);
+          gl.uniform1f(ui.uFade, g.fade || 0); gl.uniform1f(ui.uFadeInv, g.inv ? 1 : 0);
           gl.uniform4fv(ui.uTint, g.tint || NOTINT);
           gl.bindVertexArray(g.vaoM);
           gl.bindBuffer(gl.ARRAY_BUFFER, g.bufM);
@@ -1154,7 +1160,7 @@ const G3 = (() => {
         gl.uniform3fv(d.uSunDir, E.sun); gl.uniform3fv(d.uSunCol, E.sunCol);
         gl.uniform3fv(d.uSky, E.sky); gl.uniform3fv(d.uGround, E.ground);
         gl.uniform3fv(d.uFog, E.fog); gl.uniform2fv(d.uFogR, E.fogR); gl.uniform3fv(d.uCam, R.eye);
-        gl.uniform1f(d.uTexel, 1 / SH); gl.uniform1f(d.uShadowOn, 1);
+        gl.uniform1f(d.uTexel, 1 / SH); gl.uniform1f(d.uShadowOn, R.shadowK == null ? 1 : R.shadowK);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex); gl.uniform1i(d.uShadow, 0);
         gl.uniform1i(d.uTex, 1);
         gl.enable(gl.BLEND);
