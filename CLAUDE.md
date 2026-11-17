@@ -121,3 +121,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v377: Trefferbild – Lunge/Leber/Pansen nach Rumpfprofil (`lungeY`, `LUNG_LO`), Halsorgane `NORG`/`neckContacts` im Schusskanal; Nebel beim Hochsitz-Übergang stufenlos (`fogMix`). Tests `trefferbild-v357`/`hunt.test.js` angepasst.
 
 - v378: Revier-Layout auf der Karte (`worldRevier`, `WRV` in `hunt.js`): Bäume (60 %), Steine, Stämme der Ich-Perspektive stehen verkleinert auf der Wildwiese; `clear("tree")` mit Ring `WRV.margin`.
+
+- v379: Hof – Seitenknöpfe Laden/Lager kleiner (Block am Ende von `style.css`), Seeblick-Knopf `#fbTown` entfernt; Zugang über das Bauernhaus-Fenster (`#fhTown`) besteht noch.

@@ -5203,3 +5203,12 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-job:not([open]){width:fit-content;max-width:min(230px,calc(100% - 20px));border-radius:11px}
 #huntUI .hu-job:not([open]) summary{min-height:36px;padding:6px 12px 6px 10px;gap:6px;font-size:12px;white-space:nowrap}
 #huntUI .hu-job:not([open]) summary::before{font-size:12px}
+
+/* ---------------------------------------------------------------------
+   v379: Hof – seitliche Knöpfe (Laden, Lager) kleiner; Seeblick-Knopf entfernt
+   --------------------------------------------------------------------- */
+#farmSide{gap:10px}
+#farmSide .fbtn{width:54px;height:54px}
+#farmSide #fbShop{width:60px;height:60px}
+#farmSide .fbtn i{font-size:23px}
+#farmSide .fbtn span{font-size:9.5px}

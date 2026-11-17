@@ -37,7 +37,6 @@ function farmDOM() {
     <div id="farmSide">
       <button class="fbtn" id="fbShop" title="Laden: Felder, Tiere, Gebäude, Deko"><i>🛒</i><span>Laden</span></button>
       <button class="fbtn" id="fbStore" title="Lager"><i>🌾</i><span>Lager</span></button>
-      <button class="fbtn" id="fbTown" title="Nachbarschaft und Stadtbau"><i>🏘️</i><span>Seeblick</span></button>
       <button class="fbtn" id="fbOrders" title="Bestellungen" hidden><i>📋</i><span>Kunden</span><em id="fbOrdN"></em></button>
     </div>
     <button id="farmPaused" hidden>⏸ Spiel angehalten · <b>weiter</b></button>
@@ -52,7 +51,6 @@ function farmDOM() {
   document.body.insertBefore(s, $("#mapUI"));
   $("#fbShop").onclick = () => openFarmShop();
   $("#fbStore").onclick = () => openFarmStore(farmStores()[0]);
-  $("#fbTown").onclick = () => VILLAGE_UI.open();
   $("#fbOrders").onclick = () => openFarmOrders();
   /* v53: Kunden- und Ton-Knopf sind weg – Bestellungen an den Tafeln, Ton im Bauernhaus */
   /* Auf dem Hof gibt es kein Tempo und keine Pause – nur einen Hinweis,
