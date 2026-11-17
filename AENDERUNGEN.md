@@ -1,3 +1,15 @@
+## v380 – Trefferbild: Todesursache, Kanal durch den ganzen Hals, Hals-Organe passend zum Netz
+
+**Ursache:** (1) Ein Trägerschuss ohne Treffer an Wirbel oder Adern wurde als „knapp verfehlt“ gezeigt, das Stück fiel aber trotzdem sofort um – der Spieler sah nicht, woran es verendet. (2) Beim Trägerschuss endete der Kanal 20 cm hinter dem Einschuss mitten im Tier; beim Keiler lagen die Halsorgane (nur geschätzte Maße) neben dem Kanal, es wurde nichts getroffen.
+
+**Lösung (`hunt.js`):**
+- **Todesursache** (`deathCause`) als Kasten über der Organliste: Gehirn, Wirbelsäule/Rückenmark, Halsschlagader/Drosselvene, Luftröhre, Herz, Lunge oder „nur Halsmuskulatur – kein sauberer Schuss“.
+- **Verhalten:** Trägerschuss mit Wirbelsäule: sofort tot (wie bisher). Mit Adern/Luftröhre: kurze Flucht (`runL` 3–9). Nur Weichteile: längere Flucht (8–18), Wirkung 65 % statt 100 %. Wertung (Trägerschuss, Erlegung, Medaille) unverändert – nur der Fluchtweg ist neu.
+- **Kanal:** läuft bei Trägerschüssen von Eintritt bis Austritt durch Hals (und ggf. Brustansatz).
+- **Organe im Hals** beim Keiler und Fasan aus dem echten Halsnetz gemessen (`neckExt`, `NECK_AX`); beim Keiler laufen Luft-/Speiseröhre und Schlagadern in den Brustansatz (Stich). Namen links/rechts getrennt.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Trägerschüsse Hirsch (8 Punkte: Wirbel → sofort, Adern/Luftröhre/Weichteile → Flucht) und Keiler (Stich), Trefferbilder gesichtet; `hunt.test.js` (23), `trefferbild-v357`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-thighs-v290`, `hunt-presentation-v315`. **Nicht geprüft:** Fasan-Trefferbild im Browser, Handy/Safari, Fluchtlängen im Spiel (nur Werte geprüft, nicht die Bewegung).
+
 ## v379 – Hof: Seitenknöpfe kleiner, Seeblick-Knopf entfernt
 
 **Wunsch:** Die Knöpfe rechts auf dem Hof kleiner, den Seeblick-Knopf samt seiner Funktion entfernen.

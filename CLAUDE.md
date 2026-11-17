@@ -123,3 +123,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v378: Revier-Layout auf der Karte (`worldRevier`, `WRV` in `hunt.js`): Bäume (60 %), Steine, Stämme der Ich-Perspektive stehen verkleinert auf der Wildwiese; `clear("tree")` mit Ring `WRV.margin`.
 
 - v379: Hof – Seitenknöpfe Laden/Lager kleiner (Block am Ende von `style.css`), Seeblick-Knopf `#fbTown` entfernt; Zugang über das Bauernhaus-Fenster (`#fhTown`) besteht noch.
+
+- v380: Trefferbild – Todesursache (`deathCause`, `neckFate`), Trägerschuss ohne Wirbelsäule rennt noch (`runL` 3–18), Kanal durch den ganzen Hals, Halsmaße von Keiler/Fasan aus dem Netz (`neckExt`).
