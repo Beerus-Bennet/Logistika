@@ -123,3 +123,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v378: Revier-Layout auf der Karte (`worldRevier`, `WRV` in `hunt.js`): Bäume (60 %), Steine, Stämme der Ich-Perspektive stehen verkleinert auf der Wildwiese; `clear("tree")` mit Ring `WRV.margin`.
 
 - v379: Hof – Seitenknöpfe Laden/Lager kleiner (Block am Ende von `style.css`), Seeblick-Knopf `#fbTown` entfernt; Zugang über das Bauernhaus-Fenster (`#fhTown`) besteht noch.
+
+- v380: ALPINE ersetzt alte SPI-Quellanlage (worldview: SPI=null, springFx/springRun=null). Bergsee→freier Fall→POOL→DRAIN→FWORLD.creek, alte Hill-Masken aus; Kanal nach Beckenrandbildung schneiden. Nah/Fern am schmalen Überlauf verfeinern, nicht nur Nahmodell. Fall/Pool/Schaum feste Meshes mit vorhandenen Materialien, Partikel nur nah begrenzt. Westliche Mäander/konstante3,45 Breite, südlicher Austritt; o.meander verändert nur trockene Ufer, o.prefix verbindet Strömungsmuster. F.river380 verschiebt betroffene Bäume unter Datenerhalt. Neue Tests bergwasserfall-v380.* ersetzen v375-Erwartungen zur alten Wasserführung. Details docs/WASSERLANDSCHAFT-v380.md.

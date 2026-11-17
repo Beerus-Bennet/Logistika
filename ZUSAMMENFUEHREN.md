@@ -1,3 +1,7 @@
+## v380 – Neue Wasserführung und südliche Mäander
+
+Basis main ca16b9c/v379. Gemeinsame Lieferung380, alpine/worldview/woodmodels/erbe/exhibits sowie Index/SW zusammen übernehmen. ALPINE-Daten RUN/POOL/DRAIN/FALL ersetzen alte SPI-Modelle; alte Effektreferenzen leeren. FWM-Altfunktionen für isolierte Prüfstände behalten, nicht wieder zusätzlich in die Szene hängen. Überlauf muss den Beckenrand nach dessen Höhenbildung durchschneiden; beide Geländestufen am Kanal verfeinern. Main-Creek Kontrollpunkte westlich der bestehenden Brücke neu, gleichbleibende Wasserbreite und trockene Ufer separat. F.river380 ist erhaltende Baumversetzung, keine Löschung. Neue Tests bergwasserfall-v380.test.js/.browser.js, Bericht docs/WASSERLANDSCHAFT-v380.md. Keine zusätzlichen dynamischen Meshes/Shaderprogramme im Takt.
+
 ## v376 – PR #92: Werkzeugübergabe nach aktuellem main integrieren
 
 PR #92 bleibt auf `claude/werkzeug-einraeumen`; main `e6f1713` mit Jagdleiste373 und Berglandschaft375 vollständig integriert. Beide Änderungen an team.js bleiben erhalten: ALPINE-Sperrfläche in navBuild und Drehung zum Werkzeugfach während gearAction. staffgear.js mit Beugung unverändert aus ursprünglichem PR374. Keine weitere Geschäftslogik oder Migration. Gemeinsame Lieferung/Offline-Cache376, Index/SW mit team.js/staffgear.js376, Bergdateien375 und Jagd-CSS373 erhalten. worker-motion-v351.test.js sowie Berg-/Insel-/Wasserprüfungen und Asset-Abgleich nach Zusammenführung ausführen.

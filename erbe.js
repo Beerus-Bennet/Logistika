@@ -53,7 +53,8 @@ const FWORLD = {
   /* Bach von Nordosten nach Südwesten, Brücke am Hauptweg.
      v75: er endet nirgends mehr offen auf der Wiese – im Nordosten entspringt er an einer Quelle mit Felsen
      (spring, der Bach verjüngt sich dorthin), im Westen läuft er bis über den Kartenrand (x = −160) */
-  creek: [[31.2, -105.6], [26, -100.5], [18, -94], [2, -88], [-12, -84], [-26, -78], [-36, -76], [-48, -72], [-60, -64], [-74, -62], [-92, -58], [-108, -60], [-124, -63], [-140, -61.5], [-164, -64]],
+  /* v380: Brücke und Oberlauf bleiben, breite Talbögen führen zum südlicheren Westaustritt. */
+  creek: [[31.2,-105.6],[26,-100.5],[18,-94],[2,-88],[-12,-84],[-26,-78],[-36,-76],[-48,-72],[-60,-64],[-74,-62],[-87,-64],[-99,-58],[-104,-43],[-116,-33],[-132,-36],[-138,-49],[-130,-62],[-137,-75],[-151,-74],[-159,-63],[-153,-48],[-156,-30],[-164,-18]],
   spring: [31.2, -105.6],
   /* v207: Felshang mit Hangquelle hinter dem Quell-Wasserfall – dort keine Bäume. v220: hinter dem Topf (Nordwesten).
      v228: Quellberg in der Nordostecke mit Hochfläche bis an den Fall (Gelände in woodmodels.js, MTN/SRUN). Grundriss als
@@ -236,7 +237,7 @@ function springHillNear(x, z) {
   return best;
 }
 function inSpringHill(x, z, m) {
-  if(typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))return true; /* v375: keine Wege oder Pflanzplätze im Gebirge */
+  if(typeof ALPINE!=="undefined")return ALPINE.contains(x,z); /* v380: nur die tatsächlich dargestellte Berg-/Talfläche sperren */
   const H = FWORLD.springHill; if (!H) return false;
   return springHillNear(x, z).d < (m || 0);
 }
@@ -447,6 +448,11 @@ function erbeInit(F, fresh) {
     });
     F.trees = F.trees.filter(t => !t._v228);
   }
+  /* v380: Keine gespeicherten Bäume im neuen Flussbett löschen. IDs, Art,
+     Wachstum und Arbeit bleiben; nur betroffene Standorte zum nächsten Ufer. */
+  if(!F.river380){let complete=true;for(const t of F.trees){if(t.x>=-48||distLine(t.x,t.z,FWORLD.creek)>=4.2)continue;let found=false;
+    for(let r=4;r<=28&&!found;r+=2)for(let k=0;k<24;k++){const a=k/24*Math.PI*2,x=t.x+Math.cos(a)*r,z=t.z+Math.sin(a)*r;if(distLine(x,z,FWORLD.creek)<4.5||!treeSpotOk(x,z,2.4)||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.4))continue;t.x=+x.toFixed(2);t.z=+z.toFixed(2);found=true;break;}if(!found)complete=false;
+   }if(complete)F.river380=1;}
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */
   if (!F.v203lkw) {
     F.v203lkw = 1;

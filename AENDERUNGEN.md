@@ -1,3 +1,11 @@
+## v380 – Großer Bergsee-Wasserfall und natürliche Flussbögen
+
+**Wunsch:** Alten Quell-/Serpentinenbach entfernen, großen Wasserfall mit Auffangbecken und sinnvoll angebundenem Überlauf bauen. Hauptfluss stärker mäandrieren lassen, Wasserbreite konstant halten und Insel-Austritt nach Süden verschieben.
+
+**Lösung:** Nach Recherche bei NPS und zu Wasserfällen/Kolkbecken/Mäandern neue durchgehende Anlage vom Bergsee bis zum bisherigen Flussanfang. Freie Fallbahn unter Erdbeschleunigung, bestehendes Fall-/Aufprallmaterial, begrenzte Gischt, echtes Becken und offener Talüberlauf auch im Fernmodell. Altanlage/Alt-Effekte entfallen. Westliche Flussbögen mit inneren/äußeren Uferunterschieden, Wasserbreite durchgehend3,45; Brücke/Oberlauf erhalten, Austritt deutlich südlicher. Betroffene gespeicherte Bäume werden unter Datenerhalt ans freie Ufer versetzt, nicht gelöscht.
+
+**Geprüft:** neue Wasser-/Gelände-/Baum- und Mäanderprüfungen, 133 Breitenquerschnitte, tatsächlicher Talüberlauf in Nah/Fern, Tier-/Zoomregressionen, Mobile-Chromium und bestehende Arbeiter-/Insel-/Wassertests. Kein echtes iPhone. Quellen, Grenzen und Prüfanleitung: [docs/WASSERLANDSCHAFT-v380.md](docs/WASSERLANDSCHAFT-v380.md).
+
 ## v379 – Hof: Seitenknöpfe kleiner, Seeblick-Knopf entfernt
 
 **Wunsch:** Die Knöpfe rechts auf dem Hof kleiner, den Seeblick-Knopf samt seiner Funktion entfernen.
