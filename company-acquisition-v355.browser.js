@@ -25,20 +25,10 @@ fs.mkdirSync(output,{recursive:true});
  await page.screenshot({path:path.join(output,'offer.png')});
  // Echter Angebotsschieber und Bestätigungsbutton statt Abkürzung am Commit.
  await page.locator('#coOff').evaluate(el=>{el.value=String(Math.round(corp().talks.pacific.val*1.05));el.dispatchEvent(new Event('input',{bubbles:true}));});
- await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-shark');
- await page.waitForTimeout(650);await page.screenshot({path:path.join(output,'shark-intro.png')});
- await page.waitForFunction(()=>parseFloat(document.querySelector('.shk-bottom b').style.width)>=34);
- // Simulierter Sichtbarkeitswechsel: Zeitachse und CSS müssen gemeinsam pausieren.
- await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
- const paused=await page.locator('.shk-bottom b').evaluate(el=>el.style.width);
- await page.waitForTimeout(250);
- assert.equal(await page.locator('.shk-bottom b').evaluate(el=>el.style.width),paused);
- assert.ok(await page.locator('#corpShow').evaluate(el=>el.classList.contains('shk-paused')));
- await page.screenshot({path:path.join(output,'shark-pass.png')});
- await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- await page.waitForSelector('.shk-reveal .shk-result');await page.waitForTimeout(1100);
- await page.screenshot({path:path.join(output,'shark-result.png')});
- await page.locator('.shk-details').click();await page.waitForSelector('.crp-sheet');
+ // v367: Kein animierter Zwischenschritt mehr, auch keine Audio-/Skriptladung.
+ await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-receipt');
+ assert.equal(await page.evaluate(()=>typeof CORP_SHARK),'undefined');
+ assert.equal(await page.locator('.cs-shark').count(),0);
  const committed=await page.evaluate(()=>({ids:S.fleet.map(v=>v.uid),staff:S.bases.reduce((n,b)=>n+b.staff.length,0),cash:S.money,ledger:S.ledger,receipt:corp().owned.pacific.receipt353}));
  assert.deepEqual(committed.ids,expected.ids);assert.equal(committed.staff,expected.staff);
  const payment=committed.ledger.filter(x=>x.k==='corp'&&x.l.startsWith('Übernahme:'));
@@ -57,7 +47,7 @@ fs.mkdirSync(output,{recursive:true});
   await page.screenshot({path:path.join(output,'receipt-'+width+'x'+height+'.png')});
  }
  await page.setViewportSize({width:390,height:844});
- await page.locator('.crp-details>summary').click();
+ await page.locator('.crp-inventory-open').click();
  await page.locator('.crp-close').click();assert.equal(await page.locator('#corpShow').count(),0);
  assert.equal(await page.evaluate(()=>document.querySelectorAll('[inert]').length),0);
  // Beleg über die echte Welt-Oberfläche erneut öffnen; keine zweite Zahlung.
@@ -67,7 +57,7 @@ fs.mkdirSync(output,{recursive:true});
  await page.evaluate(()=>save());await page.reload({waitUntil:'load'});
  assert.deepEqual(await page.evaluate(()=>corp().owned.pacific.receipt353.vehicleIds),expected.ids);
  assert.equal(await page.evaluate(()=>S.money),committed.cash);
- await page.evaluate(()=>corpShow({...corp().owned.pacific.receipt353,sharkShown:true}));
+ await page.evaluate(()=>corpShow({...corp().owned.pacific.receipt353}));
  // Große Schrift: lesbarer Scroll-Fallback, keine schrumpfenden/überlappenden Karten.
  await page.evaluate(()=>{
   const nodes=[...document.querySelectorAll('#corpShow *')].map(el=>[el,parseFloat(getComputedStyle(el).fontSize)]);
@@ -79,16 +69,16 @@ fs.mkdirSync(output,{recursive:true});
  await page.screenshot({path:path.join(output,'receipt-large-type.png')});await page.keyboard.press('Escape');
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.evaluate(()=>corpShow(corp().owned.pacific.receipt353));
- assert.ok(await page.locator('#corpShow').evaluate(el=>el.classList.contains('shk-rm')));
- await page.locator('.shk-details').click();await page.locator('.crp-close').click();
+ assert.ok(await page.locator('#corpShow').evaluate(el=>el.classList.contains('cs-receipt')));
+ await page.locator('.crp-close').click();
  assert.equal(await page.evaluate(()=>S.money),committed.cash);
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.evaluate(()=>corpShow(corp().owned.pacific.receipt353));
- await page.locator('.shk-skip').click();await page.locator('.crp-close').click();
+ await page.locator('.crp-close').click();
  assert.equal(await page.evaluate(()=>S.money),committed.cash);
  // Lange Namen und fehlende externe Schrift: zugänglicher Fallback.
  const fallbackStyle=await page.addStyleTag({content:'.cs-receipt *{font-family:Arial,sans-serif!important}'});
- await page.evaluate(()=>corpShow({...corp().owned.pacific.receipt353,sharkShown:true,name:'Pacific Star Lines International Transportgesellschaft',company:'Weitwind Internationale Spedition und Logistikgruppe'}));
+ await page.evaluate(()=>corpShow({...corp().owned.pacific.receipt353,name:'Pacific Star Lines International Transportgesellschaft',company:'Weitwind Internationale Spedition und Logistikgruppe'}));
  await page.screenshot({path:path.join(output,'receipt-long-name-fallback.png')});
  assert.ok(await page.locator('.crp-sheet').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
  await page.locator('.crp-close').click();
@@ -102,8 +92,7 @@ fs.mkdirSync(output,{recursive:true});
  const premium=await page.evaluate(()=>({staff:corpDealSummary(corp().talks.w3_zenit.deal353).staff,tier:corp().talks.w3_zenit.deal353.sites[0].tier}));
  assert.ok(premium.staff>=20);assert.equal(premium.tier,4);
  await page.locator('#coOff').evaluate(el=>{el.value=String(Math.round(corp().talks.w3_zenit.val*1.1));el.dispatchEvent(new Event('input',{bubbles:true}));});
- await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-shark');
- await page.locator('.shk-skip').click();await page.waitForSelector('.crp-sheet');
+ await page.locator('#coGo').click();await page.waitForSelector('#corpShow.cs-receipt');
  const premiumReceipt=await page.evaluate(()=>corp().owned.w3_zenit.receipt353);
  assert.ok(premiumReceipt.price>8e7&&premiumReceipt.price<12e7);
  await page.screenshot({path:path.join(output,'receipt-premium.png')});
@@ -121,6 +110,6 @@ fs.mkdirSync(output,{recursive:true});
  console.log('Premiumkauf',premiumReceipt.price,premiumReceipt.veh+' Fahrzeuge',premiumReceipt.staff+' Mitarbeitende',premiumReceipt.sites+' Standorte',actualPremium);
  assert.deepEqual(errors,[],'Keine JavaScript-Laufzeitfehler');
  fs.writeFileSync(path.join(output,'purchase-example.json'),JSON.stringify({price:committed.receipt.price,vehicles:committed.ids.length,staff:committed.staff,sites:committed.receipt.sites,premium:{price:premiumReceipt.price,vehicles:premiumReceipt.veh,staff:premiumReceipt.staff,sites:premiumReceipt.sites},errors},null,2));
- console.log('OK: zwei echte Käufe einschließlich Premiumkonzern und 3D-Büro, Animation, 5 Ansichten, Details, Wiederöffnung, Laden, große Schrift, reduzierte Bewegung, Sichtbarkeitspause, Überspringen und lange Namen. Chromium; kein echter iPhone-/Safari-Test.');
+ console.log('OK: zwei echte Käufe einschließlich Premiumkonzern und 3D-Büro, direkter Beleg ohne Hai, 5 Ansichten, Details, Wiederöffnung, Laden, große Schrift, reduzierte Bewegung und lange Namen. Chromium; kein echter iPhone-/Safari-Test.');
  } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

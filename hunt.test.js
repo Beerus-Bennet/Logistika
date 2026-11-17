@@ -8,6 +8,8 @@ let seed = 7; const rand = () => { seed = (seed * 16807) % 2147483647; return se
 const M = Object.create(Math); M.random = rand;
 const ctx = { console, Math: M, Object, Array, JSON, Map, Set, Float32Array, Uint8Array, Int32Array, Date };
 ctx.window = ctx; vm.createContext(ctx);
+/* v367: Trefferprüfung nutzt dieselben G3-Netze wie die Darstellung. */
+vm.runInContext(fs.readFileSync(path.join(ROOT, "gl3d.js"), "utf8"), ctx, { filename: "gl3d.js" });
 vm.runInContext(fs.readFileSync(path.join(ROOT, "hunt.js"), "utf8") + "\n;this.HUNT = HUNT;", ctx, { filename: "hunt.js" });
 const H = ctx.HUNT;
 const shoot = (pose, y, z, k) => H.zoneHit(k || "hirsch", pose, [6, y, z], [-1, 0, 0]);       /* von der Seite (+x), Tier schaut nach +z */

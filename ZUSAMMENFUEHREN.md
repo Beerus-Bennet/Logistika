@@ -1,3 +1,17 @@
+## v367 – Jagd, Organbericht und Übernahmebedienung
+
+Basis main `d4a1664`; PR #84 (`claude/insel-zoom-fluss`, `b7da342`) in diesem Branch vollständig integriert. Die doppelte vorläufige Nummer 366 wird gemeinsam als v367 ausgeliefert. Insel-Zoom, Wasserfall und Baumsaum aus #84 unverändert erhalten. Konflikte in index/sw nur bei Assetversionen aufgelöst. Branch `claude/jagd-uebernahme-v367`; main/Pages nicht automatisch veröffentlichen.
+
+`hunt.js`: Hufstütze/Gelenk-IK und Schwerpunkt beim Tierfall sind transient, keine neue gespeicherte Liegeform. `hu-job` ist ein natives geschlossenes details; beide Touch-Wachen in game/index müssen die Liste ausnehmen. Fragezeichen entfernt, Tiergütehilfe bleibt im Jagdbuch.
+
+`vista.js`: Wolken über feste Flächen und Projektion aller Stützpunkte; Zeitdrift entfernt, Hilfscanvas wiederverwendet. Nicht wieder auf bildschirmparallele drawImage-Sprites reduzieren.
+
+`organMesh` ist jetzt gemeinsame Geometrie für Darstellung und `shotOrgans` (Dreiecksstrahltest, Cache ORGAN_GEOMETRY). Neue kritische Treffer in `zoneHit` brauchen tatsächlichen Kontakt. Neue Schüsse tragen optional `anatomy367`. `xrShot` erstellt korrigierte Ansichtskopien aus alten Strahlen; es schreibt nicht in `A.shots`, Trophäen oder Geld. Keine erzwungenen Herz/Lunge-Fallbacks wieder einbauen. Paarorgane nach ID statt Namen deduplizieren. Knochen bleiben bisherige Volumen. Namensspalten und Ein-/Austritt folgen echten Schnittpunkten.
+
+`corpreport.js`: Bestandsansicht jetzt eigene Section mit begrenztem Flex-Scroller, nicht mehr absolut aufgeklapptes native details. Footer bleibt außerhalb. Tab-Falle berücksichtigt Liste/hidden/inert. `corpShow(win)` öffnet direkt den Beleg; Hai-Primer, Script- und Shell-Eintrag entfernt. Keine Änderung am atomaren Kauf.
+
+LOGI_V/SW 367; eigene geänderte Assets hunt/vista/game/corp/corpreport/style 367. Integrierte farmview/worldview behalten 366. Historische Prüfskripte jagd-v366.* behalten ihre Namen; gemeinsame Prüfung/Artefakte in docs/JAGD-UEBERNAHME-v367.md.
+
 ## v365 – PDF 3, zentrale Wohnanzeige und Darstellungs-/Bedienkorrekturen
 
 Basis main `bf7fd14`, PR #77 bereits gemergt. Die Kette PR #78–#82 bis `c566694` ist vollständig enthalten (Vermittlungstext ohne Rückmelde-Countdown, weicher Inselrand, kompakter Kaufbeleg, Map-ResizeObserver, Grundstücksbildchen). Gemeinsame Lieferung 365 auf `codex/pdf-3-v365`; main/Pages nicht automatisch mergen oder veröffentlichen. Die vorbereitete eigene v359-Arbeit ist ebenfalls enthalten; die getrennte Aura-v359 aus main bleibt erhalten.

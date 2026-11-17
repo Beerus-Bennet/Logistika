@@ -336,7 +336,7 @@ function bindCorp() {
   $$("#tab-world [data-corp]").forEach(b => b.onclick = () => openCorp(b.dataset.corp));
   $$("#tab-world [data-corp-receipt]").forEach(b => b.onclick = () => {
     const o = corp().owned[b.dataset.corpReceipt];
-    if (o && o.receipt353) corpShow({ ...o.receipt353, sharkShown: true });
+    if (o && o.receipt353) corpShow(o.receipt353);
   });
 }
 
@@ -451,8 +451,6 @@ function corpOffer(id, amount, takeAsk) {
   if ((takeAsk || amount >= t.res) && (!t.deal353 || amount >= t.deal353.appraisal.floor)) {
     t.chat.push({ me: false, t: pick(c.wave ? ["Der Aufsichtsrat hat zugestimmt. Glückwunsch – Sie spielen jetzt in einer anderen Liga.", "Unterschrieben. Ich hätte nie gedacht, dass ausgerechnet Sie uns schlucken."]
       : ["Abgemacht. Ich lasse die Verträge aufsetzen.", "Das ist ein faires Angebot. Wir haben einen Deal.", "Schweren Herzens – aber ja. Kümmern Sie sich gut um meine Leute."]) });
-    /* v348: Audio noch im bestätigenden Fingertipp freigeben, falls eingeschaltet. */
-    if (typeof CORP_SHARK !== "undefined") CORP_SHARK.prime();
     const receipt = corpClose(id, amount);
     if (receipt === false) {
       const restored = corp().talks[id];
@@ -603,11 +601,7 @@ function corpMyLogo(sz) {
 }
 function corpShow(ev) {
   if (!ev || document.getElementById("corpShow")) return;
-  /* v348: Erst der Hai-Moment, dann dieselbe vollständige Übernahmeübersicht.
-     Der Kauf ist schon gespeichert; Überspringen löst keinen zweiten aus. */
-  if (ev.kind === "win" && !ev.sharkShown && typeof CORP_SHARK !== "undefined") {
-    if (CORP_SHARK.open(ev, () => corpShow(Object.assign({}, ev, { sharkShown: true })))) return;
-  }
+  /* v367: Nach dem gespeicherten Kauf unmittelbar den Beleg öffnen. */
   corpSyncRivals();
   if (ev.kind === "win") return corpWinReport(ev);
   return corpThreatReport(ev);

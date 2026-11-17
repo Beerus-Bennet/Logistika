@@ -5186,3 +5186,13 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-job-row small{grid-column:1;font-size:11px;color:#bbc9d9}
 #huntUI .hu-job-row em{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11px;font-style:normal;color:#f7ca63}
 #huntUI .hu-top .hu-info{min-width:0}
+
+/* v367: Kaufbeleg – begrenzte Bestandsansicht mit nativem Touch-Scrollen. */
+.crp-inventory-open{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;width:100%;min-height:44px;padding:8px 12px;border:1px solid #cfd6d6;border-radius:8px;background:#fff;color:#132833;font:inherit;font-size:12.5px;font-weight:800;text-align:left;cursor:pointer}
+.crp2-body.inventory-open{overflow:hidden}
+.crp-inventory{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;min-height:0;background:#fffdf8}
+.crp-inventory[hidden]{display:none}
+.crp-inventory-back{flex:none;min-height:44px;padding:10px 0;border:0;border-bottom:1px solid #cfd6d6;background:none;color:#17705a;font:inherit;font-size:13px;font-weight:800;text-align:left;cursor:pointer}
+.crp-inventory .crp-detail-content{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:8px 2px 12px}
+.crp-inventory .corp-package-body{padding:0}
+.crp-inventory-open:focus-visible,.crp-inventory-back:focus-visible,.crp-detail-content:focus-visible{outline:3px solid #2d6be8;outline-offset:-3px}
