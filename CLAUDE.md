@@ -133,3 +133,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v382: Jagd – Einschussloch in der Bergung (`woundSpot`/`woundMesh`/`addWound`, `A.woundM`/`A.woundX`), Fallseite `fallSide`; gedämpft, ohne Blutspritzer.
 
 - v383: Waffenschrank (`weapons.js`, `S.farm.guns`, Katalog `LIST`, `canKill`, 3D-Modelle `MODELS`) im Hochsitz-Fenster; `hunt.js`: `gun()`, `gunZone`, Zone `schwach`, Magazin/Feuerfolge, Schrot (`pellets`/`cone`), `nearD`, Eindringtiefe (`stop`/`thru`), Nachschuss-Abzug; Lucky-Preis `gun` (Sonderwaffe Goldjagd). Recherche `docs/WAFFEN-v383.md`, Test `weapons-v383.test.js`.
+
+- v388: Trefferbild ohne doppeltes Primärschild/Todesursachenblock, Herzstatus direkt in Organliste. organName nutzt anatomische Tierseite(−X rechts/+X links), alte IDs erhalten; Lungenlappen entsprechend. xrShot beachtet sh.stop ohne gespeicherte Wirkung zu ändern. Tests trefferklarheit-v388.*, Bericht docs/TREFFERKLARHEIT-v388.md. Andere offene PRs beim Mergen erhalten.

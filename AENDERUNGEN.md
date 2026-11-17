@@ -1,3 +1,9 @@
+## v388 – Eindeutige Organbeschriftung und richtige Tierseite
+
+Primärorgan im Trefferbild nur einmal beschriftet; separater Todesursachenblock entfernt, stattdessen „Herz (zerstört)“ direkt in der Organliste. Anatomische Links-/Rechtsnamen aus Tierkoordinaten statt gespiegelter Zuordnung, einschließlich Lungenlappen. Beide Lungen als gemeinsames Primärschild bei beidseitigem Kontakt. Alte Schussansichten berücksichtigen die gespeicherte Eindringtiefe; gespeicherte Wertung/Belohnung bleiben erhalten.
+
+Geprüft: sechs einseitige Lungenkanäle, Schussstopp, unveränderte Altaufnahme, elf bestehende Anatomie-/Trefferbildprüfgruppen und mobile Browseransicht für Herz sowie beide Lungenflügel. Kein echtes iPhone. [Bilder und Details](docs/TREFFERKLARHEIT-v388.md).
+
 ## v384 – Geschlossene Wasseranschlüsse, Insel-Fallkante und kleinere Vorberge
 
 **Ursache:** Separater Überlauf mit erhöhtem Endstück, darüberliegender alter Wiesenboden und unterschiedlich geformte Geländestufen erzeugten Lücken und Rastermuster. Wasser und äußerer Wasserfall orientierten sich nicht an derselben gezeichneten Inselkante.
