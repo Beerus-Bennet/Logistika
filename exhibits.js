@@ -20,7 +20,7 @@ const TROPHIES = (() => {
     for (let a = x; a <= x+w; a += .5) for (let b = z; b <= z+d; b += .5) {
       const wx = a-FG/2, wz = b-FG/2;
       if (FAREA_ORDER.some(k => !farmAreaOpen(k) && FAREAS[k].locks.some(q => wx>q[0] && wx<q[2] && wz>q[1] && wz<q[3]))) return false;
-      if ((typeof ALPINE!=="undefined"&&ALPINE.contains(wx,wz)) || FWM.springHeightW(wx,wz) > .025) return false; /* v375: keine Aufsteller im Gebirge */
+      if (typeof ALPINE!=="undefined"?ALPINE.contains(wx,wz):FWM.springHeightW(wx,wz)>.025) return false; /* v375: keine Aufsteller im Gebirge */
     }
     const zone = farmZoneAt(x,z,w,d);
     if (zone === "hof" || zone === "yard") return farmFits(x,z,w,d,except,"deco");

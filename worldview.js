@@ -149,7 +149,7 @@ function worldMasks(fell) {
   [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
   stamp(FWORLD.creek, 3.3, 4);
   /* v190: großer Quelltopf mit Felswand – Platz rundherum */
-  if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } if (FWORLD.springHill) FWORLD.springHill.caps.forEach(([ax, az, bx, bz, r]) => stamp([[ax, az], [bx, bz]], r, 4));   /* v207: Quellhang; v228: Quellberg mit Hochfläche */ stamp(LAKE_CREEK, 2.3, 4);
+  if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } if (FWORLD.springHill&&typeof ALPINE==="undefined") FWORLD.springHill.caps.forEach(([ax, az, bx, bz, r]) => stamp([[ax, az], [bx, bz]], r, 4));   /* v207: Quellhang; v228: Quellberg mit Hochfläche */ stamp(LAKE_CREEK, 2.3, 4);
   const at = (x, z) => { const gx = Math.floor(x) - x0, gz = Math.floor(z) - z0; return gx < 0 || gz < 0 || gx >= W || gz >= H ? 0 : g[gz * W + gx]; };
   const hash = new Map();
   fell.forEach(t => { const k = Math.floor(t.x / 4) + "," + Math.floor(t.z / 4); (hash.get(k) || hash.set(k, []).get(k)).push(t); });
@@ -971,7 +971,7 @@ function worldStatic() {
   try { if (WV.apron) {
     const ends = [creekToRim(FWORLD.creek), creekToRim(LAKE_CREEK)];
     R.addChild(WV.apron, fnode(R.mesh(worldApronTrees((x, z) => ends.every(E => distLine(x, z, E.line) > 5))), { shadow: false }));
-    ends.forEach(E => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, 2.3)), { shadow: false })));
+    ends.forEach((E,i) => R.addChild(WV.apron, fnode(R.mesh(rimFall(E, i===0?1.725:2.3)), { shadow: false })));
   } } catch (e) { console.warn("Inselrand:", e); }
   WV.far = null; WV.bgFar = null;                      /* v368: neue Knoten sind sichtbar – Fernstufen neu bestimmen */
   WV.bgChunks = new Map(); VEGQ.nodes = []; VEGQ.on = VEGQ.mode !== "static"; VEGQ.why = VEGQ.on ? "start" : "Modus statisch";
@@ -1093,13 +1093,14 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, prefix:typeof ALPINE!=="undefined"?ALPINE.flowLength():0 }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   /* v366: Beide Bäche laufen über den alten Weltrand hinaus bis zur Inselkante (creekToRim) */
   const CRX = creekToRim(FWORLD.creek).line, LCRX = creekToRim(LCR).line;
   lines.merge(FWM.creekBank(CRX, CR), {});
   lines.merge(FWM.creekBank(LCRX, CL), {});
   const SP = FWORLD.spring;
-  const SPI = SP ? FWM.springInfo(FWORLD.creek, CR) : null;
+  const SPI = typeof ALPINE!=="undefined" ? null : (SP ? FWM.springInfo(FWORLD.creek, CR) : null); /* v380: alte Quellanlage vollständig ersetzt */
+  WV.springFx=null;WV.springRun=null;
   if (SPI) CR.spring = SPI;
   R.nodes.push(fnode(R.mesh(lines), { shadow: false }));
   /* v190: Ufer um Quelltopf und Bachanfang aus einem Guss (deckt das Bachufer dort ab) */

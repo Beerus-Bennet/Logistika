@@ -1455,6 +1455,8 @@ const FWM = (() => {
       prev = S;
       const k = Math.min(1, d / 10), e = k * k * (3 - 2 * k);
       S.wS = mo.w0 + (1 - mo.w0) * e;
+      /* v380: Gleithang innen breiter, Prallhang außen schmaler; Wasserbreite bleibt konstant. */
+      if(o&&o.meander){const a=Fr.W(S.s-2,0,0),p=Fr.W(S.s,0,0),c=Fr.W(S.s+2,0,0),bend=(p[0]-a[0])*(c[2]-p[2])-(p[2]-a[2])*(c[0]-p[0]);S.wS*=1+sg*Math.max(-.25,Math.min(.25,bend*.3));}
       S.cw = M ? Math.max(0, 1 - d / 4) : 0;
     });
     st.lim = mo.lim; st.Q = mo.Q || 0;
@@ -1498,6 +1500,7 @@ const FWM = (() => {
     const SS = [1, -1].map(sg => creekStations(P, o, Fr, sg)), Lc = (SS[0].Q + SS[1].Q) / 2;
     const m = S => !M ? 0 : Math.max(0, Math.min(1, 1 - (S.s - Lc) / (M.R + 3)));
     const current = o && o.current ? creekCurrent(P,o.spring) : null;
+    if(current&&o.prefix)current.prefix=o.prefix; /* v380: Muster folgt dem durchgehenden Talüberlauf */
     const col = (S, k, sg) => current ? [current.prefix+S.s,sg*CW_F[k],0.45]
       : G3.col(m(S) > 0 ? mix(CW_C[k], CW_C[2], m(S)) : CW_C[k]);
     [1, -1].forEach((sg, si) => {
