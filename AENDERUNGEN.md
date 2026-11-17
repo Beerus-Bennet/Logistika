@@ -1,3 +1,11 @@
+## v389 – Weißer Hirsch: nur noch eine Anzeige (Kleeblätter)
+
+**Ursache:** Beim Antippen des weißen Hirschs (und Rehs/Pakets) erschienen zwei Texte übereinander: der Zusatzspruch („Ein Glücksbringer!“, „Wie friedlich …“, „Ein Paket für dich!“) und die Kleeblatt-Anzeige „🍀 +3 · Weißer Hirsch“.
+
+**Lösung (`worldview.js`, `worldEvAct`):** Der Zusatzspruch entfällt; es bleibt die Kleeblatt-Anzeige samt fliegenden Kleeblättern, Erfahrung und Münzen. Belohnungen unverändert.
+
+**Geprüft:** Syntax; Code-Pfad gelesen (die Kleeblatt-Zeile kommt aus `farmClover` → `farmCloverFly`, unabhängig vom entfernten Text). **Nicht geprüft:** im Testbrowser/auf dem Handy (kein Hirsch-Ereignis ausgelöst).
+
 ## v385 – Inselrand: echte Bäume statt Platzhalter, keine Streifen mehr im Gras
 
 **Ursache:** (1) Der Baumsaum auf dem Randstreifen (v366) bestand aus einfachen Kegeln und Kugeln in einem festen Netz – ohne Wind, deutlich gröber als der Wald daneben. (2) Die Grasdecke des Randstreifens hatte nur zwei Zwischenringe auf 42 m: jede Bodenfarbe der Weltkante wurde zu einem langen, 4 m schmalen Dreieck nach außen gezogen – sichtbar als helle und dunkle Streifen quer über den Rand.
