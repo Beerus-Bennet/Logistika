@@ -97,7 +97,7 @@ function staffDaily() {
 /* ------------------------------ Fortbildung ---------------------------------
    Kostet etwas, die Kraft ist einen Tag weg vom Hof und kommt mit +2 % zurück.
    Je Kraft höchstens alle zwei Wochen. */
-const STAFF_TRAIN = { away: 1440, every: 20160, plus: 2, cap: 40 };
+const STAFF_TRAIN = { away: 1440, every: 20160, plus: 2, cap: 40, sub: 0.6 };      /* v398: sub = Chance, dass jemand einspringt */
 /* v57: Während der Fortbildung springt ein Freund / eine Freundin ein – gleiche Arbeit,
    gleicher Lohn (der Lohn läuft einfach weiter). Name und Aussehen stehen in s.away.sub. */
 const STAFF_FRIENDS = [["Tom", "m"], ["Lena", "f"], ["Finn", "m"], ["Nele", "f"], ["Jannik", "m"], ["Merle", "f"], ["Bent", "m"], ["Frieda", "f"], ["Mats", "m"], ["Hanna", "f"], ["Lukas", "m"], ["Maja", "f"]];
@@ -111,6 +111,9 @@ function staffMakeSub(s) {
   const f = (free.length ? free : STAFF_FRIENDS)[Math.floor(Math.random() * (free.length || STAFF_FRIENDS.length))];
   return { name: f[0], g: f[1], look: ((s.look || 0) + 211 + Math.floor(Math.random() * 300)) % 1000 };
 }
+/* v398: kurze Sprüche zur Vertretung – {N} Name, {P} Sie/Er, {F} „meine Freundin Maja“ / „mein Kumpel Tom“ */
+const STAFF_SUB_SAY = ["Danke, Chef! {N} übernimmt für mich – zum selben Lohn.", "{N} hilft aus, bis ich zurück bin.", "Keine Sorge, {N} macht meine Arbeit solange.", "Ich hab {N} gefragt. {P} springt gern ein.", "{N} vertritt mich – morgen bin ich wieder da.", "Alles geregelt: {N} macht meine Arbeit.", "Ich hab {F} gefragt – gleicher Lohn, keine Sorge.", "{F} springt für mich ein. Danke fürs Freigeben!"];
+const STAFF_NOSUB_SAY = ["Leider hab ich niemanden, der einspringt. Meine Arbeit bleibt liegen.", "Eine Vertretung hab ich nicht gefunden – kannst du meine Aufgaben übernehmen?", "Tut mir leid, Chef – keiner hat Zeit. Meine Aufgaben musst du selbst machen.", "Ich kenn gerade niemanden, der das kann. Bitte kümmere dich so lange.", "Keine Vertretung in Sicht. Bis ich zurück bin, bleibt meine Arbeit bei dir.", "Ich fürchte, ich find keinen Ersatz – die Arbeit musst du übernehmen."];
 function staffTrainCost(s) { return Math.round((150 + s.wage * 3) / 10) * 10; }
 function staffTrainWait(s) { return Math.max(0, (s.trainT != null ? s.trainT : -1e9) + STAFF_TRAIN.every - S.time); }
 function staffTrainOk(s) { return !s.away && !s.ride && staffTrainWait(s) <= 0 && (s.perk || 0) < STAFF_TRAIN.cap && S.money >= staffTrainCost(s); }
@@ -120,20 +123,22 @@ function staffTrain(id) {
   const c = staffTrainCost(s);
   S.money -= c; S.expense += c;
   logMoney("farm", "Fortbildung " + s.name, -c);
-  s.away = { t0: S.time, until: S.time + STAFF_TRAIN.away, sub: staffMakeSub(s) };
+  /* v398: nicht jede/r kennt jemanden – ohne Vertretung bleibt die Arbeit liegen, bis die Kraft zurück ist */
+  const has = Math.random() < STAFF_TRAIN.sub;
+  s.away = { t0: S.time, until: S.time + STAFF_TRAIN.away, sub: has ? staffMakeSub(s) : null, none: !has, q: Math.floor(Math.random() * 1000) };
   s.trainT = S.time; s.job = null;
   s.doing = "übernimmt die Arbeit";
-  return s.away.sub;
+  return s.away;
 }
 /* Fortbildung läuft: die Vertretung arbeitet ganz normal weiter (true). Ist der Tag um,
    übergibt sie/er an Ort und Stelle wieder an die eigene Kraft. */
 function staffAwayTick(s, i) {
-  if (!s.away.sub) s.away.sub = staffMakeSub(s);        /* ältere Stände: jemand springt nachträglich ein */
-  if (S.time < s.away.until) return true;
+  if (!s.away.sub && !s.away.none) s.away.sub = staffMakeSub(s);        /* ältere Stände: jemand springt nachträglich ein */
+  if (S.time < s.away.until) { if (s.away.none) { s.job = null; s.doing = "auf Fortbildung"; return false; } return true; }
   const sub = s.away.sub;
   s.away = null;
   s.perk = Math.min(STAFF_TRAIN.cap, (s.perk || 0) + STAFF_TRAIN.plus);
-  if (typeof toast === "function") toast("🎓 " + s.name + " ist zurück von der Fortbildung – jetzt +" + s.perk + " %. Danke, " + sub.name + "!", "ok");
+  if (typeof toast === "function") toast("🎓 " + s.name + " ist zurück von der Fortbildung – jetzt +" + s.perk + " %." + (sub ? " Danke, " + sub.name + "!" : ""), "ok");
   return true;
 }
 /* ------------------------- Fahrerin im Wagen -------------------------------
@@ -1830,7 +1835,7 @@ function stepStaff(dt, time) {
       return;
     }
     /* unterwegs mit dem Wagen: nicht auf dem Hof (auf Fortbildung arbeitet die Vertretung) */
-    const off = !!(s.ride && staffRideGone(s));
+    const off = !!(s.ride && staffRideGone(s)) || !!(s.away && s.away.none);      /* v398: ohne Vertretung ist die Kraft nicht auf dem Hof */
     const tg = off ? null : staffToolSpot(s, e), noHand = !!(tg && tg.ground);        /* v112: Werkzeug liegt auf der Plane */
     staffGroundTool(s, e, tg);
     n.visible = !off; if (A) A.visible = !off; if (e.tool) e.tool.visible = !off && !noHand; if (e.head) e.head.visible = !off && !!e.isSit;
@@ -2230,7 +2235,7 @@ function staffHTML() {
           ${ts.length ? `<small class="fst-tl">📋 ${ts.map(T => esc(staffItemName(T.item, T.n)) + " (" + esc(staffWho(T)) + ")").join(" · ")}</small>` : ""}
           <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small>
           ${typeof FARM_STORY!=="undefined"?`<button class="btn tiny ghost" data-story="${r}">Unsere Zusammenarbeit</button>`:""}${staffTrainHTML(s)}</div>
-          <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${s.ride && staffRideGone(s) ? "disabled" : ""}>📍 Orten</button>
+          <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${(s.ride && staffRideGone(s)) || (s.away && s.away.none) ? "disabled" : ""}>📍 Orten</button>
           <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div></div>`;
       }
       if (!open || flv() < R0.lv) return `<div class="fstaff lock"><div class="fst-p"><span class="fst-emo">${R0.i}</span></div><div><b>${esc(R0.n)}</b>${typeof FARM_STORY!=="undefined"?`<small>${esc(FARM_STORY.profile(r).name)} · ${esc(FARM_STORY.profile(r).via)}</small>`:""}<small>${esc(R0.job)}</small><small>🔒 ${open ? "ab Level " + R0.lv : esc(G.lock)}</small>${typeof FARM_STORY!=="undefined"&&FARM_STORY.state().met[r]?`<button class="btn tiny ghost" data-story="${r}">Gespräch fortsetzen</button>`:""}</div></div>`;
@@ -2249,7 +2254,7 @@ function staffHTML() {
 }
 /* Fortbildung: Knopf oder Hinweis, wann es wieder geht */
 function staffTrainHTML(s) {
-  if (s.away) return `<small class="fst-tr away">🎓 auf Fortbildung – zurück in ${esc(fdur(Math.max(1, s.away.until - S.time)))}${staffStandIn(s) ? " · " + esc(staffStandIn(s).name) + " springt ein" : ""}</small>`;
+  if (s.away) return `<small class="fst-tr away">🎓 auf Fortbildung – zurück in ${esc(fdur(Math.max(1, s.away.until - S.time)))}${staffStandIn(s) ? " · " + esc(staffStandIn(s).name) + " springt ein" : s.away.none ? " · keine Vertretung" : ""}</small>`;
   if ((s.perk || 0) >= STAFF_TRAIN.cap) return `<small class="fst-tr">🎓 Bestform: mehr geht nicht</small>`;
   const w = staffTrainWait(s);
   if (w > 0) return `<small class="fst-tr">🎓 nächste Fortbildung in ${Math.ceil(w / 1440)} ${Math.ceil(w / 1440) === 1 ? "Tag" : "Tagen"}</small>`;
@@ -2284,7 +2289,7 @@ function staffBind(again) {
   $$("#farmSheetIn [data-train]").forEach(b => b.onclick = () => {
     const s = S.farm.staff.find(x => x.id === b.dataset.train);
     if (!s) return;
-    askConfirm("Fortbildung für " + s.name + "?", "Kostet " + eur(staffTrainCost(s)) + ". " + s.name + " ist einen Tag weg und kommt mit +" + STAFF_TRAIN.plus + " % zurück. Wieder möglich in zwei Wochen.", "Anmelden", () => {
+    askConfirm("Fortbildung für " + s.name + "?", "Kostet " + eur(staffTrainCost(s)) + ". " + s.name + " ist einen Tag weg und kommt mit +" + STAFF_TRAIN.plus + " % zurück. Ob jemand einspringt, ist nicht sicher – sonst musst du die Aufgaben selbst übernehmen. Wieder möglich in zwei Wochen.", "Anmelden", () => {
       const sub = staffTrain(s.id);
       if (!sub) { sfx("bad"); again(); return; }
       sfx("coin"); save();
@@ -2299,8 +2304,9 @@ function staffBind(again) {
 /* v57: Meldung nach dem Anmelden – ein Freund / eine Freundin springt für den Tag ein */
 function staffSubPopup(s, back) {
   const b = staffStandIn(s), R0 = FSTAFF_ROLES[s.role];
-  if (!b) { if (back) back(); return; }
-  const fr = b.g === "f" ? "meine Freundin " + b.name : "meinen Kumpel " + b.name, pr = b.g === "f" ? "Sie" : "Er";
+  if (!b && !(s.away && s.away.none)) { if (back) back(); return; }
+  /* v398: Spruch aus der Liste (feste Wahl je Fortbildung) */
+  const q = s.away.q || 0, say = b ? STAFF_SUB_SAY[q % STAFF_SUB_SAY.length].replace(/\{N\}/g, b.name).replace(/\{P\}/g, b.g === "f" ? "Sie" : "Er").replace(/\{F\}/g, (b.g === "f" ? "meine Freundin " : "meinen Kumpel ") + b.name) : STAFF_NOSUB_SAY[q % STAFF_NOSUB_SAY.length];
   FV.sheetFn = null;
   /* v159: Porträt in hoher Auflösung, Figur von vorn und vollständig im Rahmen */
   const pu = typeof thumbOf === "function" && typeof FWM !== "undefined" && !THUMB.failed ? thumbOf("staffP:" + staffKey(s), () => staffModel(s), { big: 2, yaw: Math.PI / 2 - 0.3, pitch: 0.14, noShadow: true }) : null;
@@ -2310,11 +2316,11 @@ function staffSubPopup(s, back) {
       <div class="stp-body">
         <div class="stp-name">${esc(s.name)}</div>
         <div class="stp-role">${R0.i} ${esc(R0.n)}<span>Fortbildung</span></div>
-        <p class="stp-q">„Danke, Chef! Damit morgen nichts liegen bleibt, hab ich ${esc(fr)} gefragt. ${pr} macht meine Arbeit für denselben Lohn – bis ich zurück bin.“</p>
+        <p class="stp-q">„${esc(say)}“</p>
       </div>
     </div>
     <div class="stp-info"><div><b>🎓 Fortbildung</b><span>${esc(s.name)} ist einen Tag weg und kommt mit +${STAFF_TRAIN.plus} % zurück.</span></div>
-      <div><b>🤝 Vertretung</b><span>${esc(b.name)} arbeitet bis dahin auf dem Hof.</span></div></div>
+      ${b ? `<div><b>🤝 Vertretung</b><span>${esc(b.name)} arbeitet bis dahin auf dem Hof.</span></div>` : `<div><b>⚠️ Keine Vertretung</b><span>Die Aufgaben von ${esc(s.name)} musst du bis dahin selbst übernehmen.</span></div>`}</div>
     <button class="btn fgo" id="fsSubOk">👍 Alles klar</button>`, "visit");
   $("#fsSubOk").onclick = () => { if (back) back(); else closeFarmSheet(); };
 }

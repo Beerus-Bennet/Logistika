@@ -1,3 +1,11 @@
+## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
+
+**Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.
+
+**Lösung (`team.js`):** 8 kurze Sprüche mit Vertretung (`STAFF_SUB_SAY`) und 6 ohne (`STAFF_NOSUB_SAY`), feste Wahl je Fortbildung (`s.away.q`). Mit 60 % (`STAFF_TRAIN.sub`) kennt die Kraft jemanden; sonst `s.away.none`: Die Kraft ist einen Tag nicht auf dem Hof (Figur ausgeblendet, kein Auftrag, „📍 Orten“ gesperrt), ihre Aufgaben bleiben liegen, der Spieler muss sie selbst erledigen. Die Rückfrage vor dem Anmelden weist darauf hin, die Karte zeigt „⚠️ Keine Vertretung“, die Rückkehr-Meldung entfällt dann das Danke. Alte Spielstände: `s.away` ohne `none` verhält sich wie bisher (Vertretung wird nachgezogen).
+
+**Geprüft (Testbrowser):** Beide Fälle erzwungen – mit Vertretung (Figur sichtbar, Spruch mit Name, Info „Vertretung“), ohne (Figur ausgeblendet, Spruch ohne Vertretung, Info „Keine Vertretung“, `doing` „auf Fortbildung“); nach Ablauf der Zeit sind beide wieder da; keine Konsolenfehler. **Nicht geprüft:** Handy; ob zugewiesene Hof-Aufgaben der abwesenden Kraft in der Liste sichtbar bleiben (unverändert gelassen).
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
