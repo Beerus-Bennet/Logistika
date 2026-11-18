@@ -8,6 +8,8 @@ const ALPINE = (()=>{
  /* v384: Kleinere Vorberge gliedern die Talseite; dieselbe Oberfläche trägt die Tiere. */
  const FOREPEAKS=[[30,-146,17,17,10],[35,-124,16,16,9],[61,-116,19,17,12],[86,-110,18,16,15],[110,-111,18,17,12],[132,-137,18,20,17]];
  const LEDGES=[[31,-145],[37,-124],[62,-116],[88,-113],[119,-135]];
+ /* v409: Bauplatz der Almhütte – das Gelände wird dort eingeebnet (Abtrag/Aufschüttung), statt die Hütte schweben zu lassen */
+ const HUT={x:30,z:-132,r:6.2,f:9.5}; /* weit genug vom Bach (Uferanschnitt) */
  /* v403: Fall 10 statt 6,4 breit (FW = halbe Breite); Kolk kreisrund (r 8) vor der Wand, Mitte 9,5 vor der Falllippe */
  const FW=5,RUN=[[64,-146,15,FW],[62,-144,15,FW]],POOL={x:62-9.5*Math.SQRT1_2,z:-144+9.5*Math.SQRT1_2,rx:8,rz:8,y:.12};
  const DRAIN=[[51.82,-130.08,.12,3.0],[49.9,-126.3,.11,2.3],[48.8,-123.2,.09,1.725],[43.2,-120,.07,1.725],[38,-112.8,.05,1.725],[31.2,-105.6,.03,1.725]];
@@ -66,6 +68,7 @@ const ALPINE = (()=>{
   const ribs=.65*Math.sin(x*.55+z*.28)+.35*Math.sin(x*.9-z*.37),crag=sm(8,30,h)*h*(ridged(x,z)-.42)*.42;return Math.max(0,(h+crag+ribs*sm(3,15,h))*w);
  }
  function rawHeight(x,z){let h=baseHeight(x,z);for(const [cx,cz] of LEDGES){const d=Math.hypot(x-cx,z-cz);if(d<5.4)h+=(baseHeight(cx,cz)-h)*(1-sm(2.8,5.4,d));}
+  {const d=Math.hypot(x-HUT.x,z-HUT.z);if(d<HUT.f){const y=baseHeight(HUT.x,HUT.z);h+=(y-h)*(1-sm(HUT.r,HUT.f,d));}}
   /* v403: kleines Gipfelplateau am Hauptgipfel – Platz für Kreuz, Steinmann und Gipfelstürmer */
   const ds=Math.hypot(x-95,z+177);if(ds<7)h+=(Math.min(h,71.5+.3*ds)-h)*(1-sm(3.8,7,ds));return h;}
  function height(x,z){if(!contains(x,z))return 0;
@@ -170,10 +173,10 @@ const ALPINE = (()=>{
    if(k==='latsche')latsche(near,x,h,z,s,rot); /* Latschen blenden in der Fernstufe aus (Budget) */else if(k==='larch'){larch(near,x,h,z,s,false,rot);larch(far,x,h,z,s,true,rot);}
    else{const tint=[0x2f5243,0x3a6048,0x46694a][i%3];spruce(near,x,h,z,s,false,tint,rot);spruce(far,x,h,z,s,true,tint,rot);}
   }
-  for(let i=0;i<110;i++){const x=25+rnd()*112,z=-190+rnd()*65,h=height(x,z);if(!inside(x,z)||!contains(x,z)||h<1||lakeE(x,z)<1.08||poolE(x,z)<1.15||channel(x,z).d<1.8)continue;const r=.18+rnd()*.6;detail.ico(r,0x85897c,{x,y:h+r*.28,z,sy:.55,ry:rnd()*6.28});}
+  for(let i=0;i<110;i++){const x=25+rnd()*112,z=-190+rnd()*65,h=height(x,z);if(!inside(x,z)||!contains(x,z)||h<1||lakeE(x,z)<1.08||poolE(x,z)<1.15||channel(x,z).d<1.8)continue;const r=.18+rnd()*.6;if(Math.hypot(x-HUT.x,z-HUT.z)<HUT.f+1)continue;const sl=Math.hypot(height(x+.6,z)-h,height(x,z+.6)-h)/.6;detail.ico(r,0x85897c,{x,y:h+r*(.28-.4*Math.min(1,sl)),z,sy:.55,ry:rnd()*6.28});} /* v409: am Hang tiefer eingesunken, nicht am Hüttenplatz */
   /* v408: Felsköpfe und Schrofen an steilen Hängen – kantige, teils eingesunkene Blöcke in Felsfarbe, nur in der Nahstufe */
   for(let i=0;i<900;i++){const x=24+rnd()*112,z=-196+rnd()*72;if(!inside(x,z)||!contains(x,z))continue;const h=height(x,z);if(h<8||h>70||lakeE(x,z)<1.15||poolE(x,z)<1.3||channel(x,z).d<3)continue;
-   const sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8;if(sl<.9||sl>1.9||rnd()>.35)continue;const r=.6+rnd()*1.1,c=h>52?0xa9a79c:[0x7d7f79,0x8b8b82,0x6f716b][i%3];detail.ico(r,c,{x,y:h-r*.25,z,sx:1+rnd()*.5,sy:.55+rnd()*.3,ry:rnd()*6.28});}
+   const sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8;if(sl<.9||sl>1.9||rnd()>.35||Math.hypot(x-HUT.x,z-HUT.z)<HUT.f+2)continue;const r=.6+rnd()*1.1,c=h>52?0xa9a79c:[0x7d7f79,0x8b8b82,0x6f716b][i%3];detail.ico(r,c,{x,y:h-r*(.3+.25*Math.min(1,sl-.9)),z,sx:1+rnd()*.5,sy:.55+rnd()*.3,ry:rnd()*6.28});}
   // Schuttfächer und einzelne Felsschichten statt gleichmäßig verteilter Steinbälle.
   for(const [x,z,r] of [[96,-158,5],[105,-144,4],[50,-164,3]])for(let i=0;i<22;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*r,X=x+Math.cos(a)*d,Z=z+Math.sin(a)*d,h=height(X,Z);if(lakeE(X,Z)<1.08||poolE(X,Z)<1.15)continue;detail.ico(.13+rnd()*.3,0x939688,{x:X,y:h+.08,z:Z,sy:.45});}
   return {near,far,detail,trees};
@@ -221,15 +224,19 @@ const ALPINE = (()=>{
   put(P({shirt:0xd8432f,pants:0x3a3f4a,hat:'cap',hatC:0x2f6fb0,boots:0x3a2a1a,seed:31}),{x:top[0]-1.1,y:g(-1.1,.8)-.03,z:top[2]+.8,ry:2.3,s:1.2});
   fun.box(.5,.32,.4,0x2f6b4a,{x:top[0]-1.9,y:g(-1.9,.2),z:top[2]+.2,ry:.4});                                                               /* abgestellter Rucksack */
   /* Almhütte auf einer flachen Stelle der Talseite, Blick auf den Wasserfall */
-  const hut=flatSpot(ring(44,-136,0,16,260,4032),(x,z,h,sl)=>h>4&&h<22&&sl<.35&&free(x,z,4))||flatSpot(ring(70,-120,0,18,260,4033),(x,z,h,sl)=>h>2&&sl<.45&&free(x,z,3.5));
-  if(hut){const [x,y,z]=hut,ry=Math.atan2(POOL.x-x,POOL.z-z);hut[3]=ry;spots.hut=hut;fun.at({x,y,z,ry},b=>{
+  const hut=[HUT.x,surface(HUT.x,HUT.z),HUT.z]; /* v409: fester, eingeebneter Bauplatz */
+  /* v409: Hütte auf eingeebnetem Bauplatz (HUT im Höhenfeld) mit flacher Steinterrasse – vorher schwebte die Talseite in der Luft */
+  if(hut){const [x,,z]=hut,ry=Math.atan2(POOL.x-x,POOL.z-z),cr=Math.cos(ry),sr=Math.sin(ry);let lo=1e9,hi=-1e9;
+   for(let u=-3.3;u<=3.31;u+=.55)for(let v=-2.3;v<=3.41;v+=.57){const g=surface(x+cr*u+sr*v,z-sr*u+cr*v);lo=Math.min(lo,g);hi=Math.max(hi,g);}
+   const y=(hi+lo)/2+.15;hut[1]=y; /* halb eingeschnitten, halb aufgeschüttet – niedrige Mauer */hut[3]=ry;spots.hut=hut;fun.at({x,y,z,ry},b=>{
+    {const th=y-lo+.4;b.box(6.6,th,5.7,0x8f8c80,{y:.04-th,z:.55});b.box(6.7,.08,5.8,0x9a978c,{y:-.04,z:.55});}                             /* Steinterrasse bis unter den tiefsten Bodenpunkt */                                                                                          /* flache Steinterrasse auf dem eingeebneten Platz */
     b.box(5.2,.7,4,0x8f8d84,{y:-.3});b.box(4.8,2.1,3.6,0x8a5a34,{y:.4});for(let k=0;k<5;k++)b.box(4.86,.06,3.66,0x6e4528,{y:.6+k*.42});
     b.roof(5.8,4.4,1.5,0x6b6f72,{y:2.5,gable:0x7a4c2c});b.box(.5,1.1,.5,0x8f8d84,{x:1.3,y:3.1,z:-.6});
     b.box(1,1.6,.08,0x5a3a22,{z:1.82,y:.4});[-1.6,1.6].forEach(q=>{b.box(.8,.7,.08,0xcfe4ee,{x:q,y:1.3,z:1.82});b.box(.9,.18,.25,0x8a5a34,{x:q,y:1.12,z:1.95});for(let f=0;f<4;f++)b.ico(.11,[0xd8332b,0xe85a8a,0xd8332b,0xf2c231][f],{x:q-.3+f*.2,y:1.3,z:1.98});});
     b.box(2.4,.08,.45,0x7a4c2c,{x:0,y:.3,z:2.55});[-1,1].forEach(q=>b.box(.1,.3,.4,0x5a3a22,{x:q*1.05,y:0,z:2.55}));                   /* Bank – v406: Sitzhöhe = Oberschenkel der sitzenden Figur (0,317 × 1,2) */
     for(let k=0;k<12;k++)b.cyl(.13,.13,1.2,6,k%3?0xa07a50:0x8c6a46,{x:-2.9,y:.05+Math.floor(k/4)*.27+.13,z:-1.4+(k%4)*.3,rz:Math.PI/2}); /* Brennholz */
-    b.box(1.6,.45,.5,0x6e4b2f,{x:3.3,y:-.1,z:1.2});b.box(1.4,.06,.36,0x6a9ab8,{x:3.3,y:.32,z:1.2});b.box(.12,.9,.12,0x6e4b2f,{x:3.95,y:.1,z:1.2}); /* Brunnentrog */
-    for(let k=0;k<6;k++)b.box(.08,.8,.08,0x7a5a3a,{x:-2.6+k*1.05,y:-.1,z:3.6});b.box(5.4,.06,.06,0x7a5a3a,{x:0,y:.55,z:3.6});           /* Zaun */
+    b.box(.5,.45,1.5,0x6e4b2f,{x:2.85,y:-.05,z:1.3});b.box(.36,.06,1.3,0x6a9ab8,{x:2.85,y:.37,z:1.3});b.box(.12,.9,.12,0x6e4b2f,{x:2.85,y:.1,z:2.2}); /* Brunnentrog */
+    for(let k=0;k<6;k++)b.box(.08,.75,.08,0x7a5a3a,{x:-2.6+k*1.05,y:-.05,z:3.25});b.box(5.4,.06,.06,0x7a5a3a,{x:0,y:.55,z:3.25});           /* Zaun */
    });
    put(P({shirt:0x3f78c8,pants:0x5a4a3a,hat:'hut',seed:41,sit:true}),{x:x+Math.sin(ry)*2.42+Math.cos(ry)*.6,y,z:z+Math.cos(ry)*2.42-Math.sin(ry)*.6,ry,s:1.2}); /* v406: Rücken über der Sitzfläche, Beine vor der Bank */
    spots.smoke=[x+Math.cos(ry)*1.3-Math.sin(ry)*.6,y+4.3,z-Math.sin(ry)*1.3-Math.cos(ry)*.6];}
@@ -237,9 +244,9 @@ const ALPINE = (()=>{
   const shore=[];for(let i=0;i<72;i++){const a=i/72*Math.PI*2;for(const e of [1.3,1.45,1.6]){const x=L.x+Math.cos(a)*L.rx*e,z=L.z+Math.sin(a)*L.rz*e;shore.push([x,z]);}}
   /* v404: Aussichtsbank nur dort, wohin von der Hütte ein begehbarer Steig führt (Westufer; der Bach hat keine Brücke) */
   const slopeAt=(x,z)=>Math.hypot(surface(x+.7,z)-surface(x-.7,z),surface(x,z+.7)-surface(x,z-.7))/1.4,hutFront=hut?[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]:[33,-113];
-  const benchC=[];for(const [x,z] of shore){if(!inside(x,z)||!contains(x,z))continue;const h=surface(x,z),sl=Math.hypot(surface(x+1,z)-surface(x-1,z),surface(x,z+1)-surface(x,z-1))/2;if(sl<.5&&x<80&&h>L.y&&h<L.y+5&&free(x,z,2)&&Math.hypot(x-62,z+144)>9)benchC.push([sl,x,h,z]);}
+  const benchC=[];for(const [x,z] of shore){if(!inside(x,z)||!contains(x,z))continue;const h=surface(x,z),sl=Math.hypot(surface(x+1,z)-surface(x-1,z),surface(x,z+1)-surface(x,z-1))/2;if(sl<.55&&x<60&&h>L.y&&h<L.y+8&&free(x,z,1.2)&&Math.hypot(x-62,z+144)>9)benchC.push([sl,x,h,z]);}
   benchC.sort((a,b)=>a[0]-b[0]);let bench=null,benchRoute=null;
-  for(const c of benchC.slice(0,8)){const ry=Math.atan2(L.x-c[1],L.z-c[3]),r=route(hutFront,[c[1]-Math.sin(ry)*1.6,c[3]-Math.cos(ry)*1.6],slopeAt,true);if(r){bench=[c[1],c[2],c[3]];benchRoute=r;break;}}
+  for(const st of [true,false]){if(bench)break;for(const c of benchC.slice(0,8)){const ry=Math.atan2(L.x-c[1],L.z-c[3]),r=route(hutFront,[c[1]-Math.sin(ry)*1.6,c[3]-Math.cos(ry)*1.6],slopeAt,st);if(r){bench=[c[1],c[2],c[3]];benchRoute=r;break;}}} /* erst Steig ≤ 35°, sonst steilerer Weg; Bank immer westlich des Falls (kein Bachübergang) */
   if(!bench&&benchC.length)bench=[benchC[0][1],benchC[0][2],benchC[0][3]];
   if(bench){const [x,y,z]=bench,ry=Math.atan2(L.x-x,L.z-z);bench[3]=ry;spots.bench=bench;fun.at({x,y,z,ry},b=>{b.box(1.8,.08,.42,0x7a4c2c,{y:.5});b.box(1.8,.4,.06,0x7a4c2c,{y:.6,z:-.2});[-.75,.75].forEach(q=>b.box(.08,.5,.4,0x5a3a22,{x:q}));});
    /* Gartenzwerg auf einem Findling daneben */
@@ -260,10 +267,15 @@ const ALPINE = (()=>{
   const way=[[33,-113]].concat(hut?[[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]]:[]).concat(bench?[[bench[0]+Math.sin(bench[3]+Math.PI)*1.6,bench[2]+Math.cos(bench[3]+Math.PI)*1.6]]:[]);
   let path=[];for(let i=1;i<way.length;i++){const r=(i===2&&benchRoute)||route(way[i-1],way[i],slopeAt,true)||route(way[i-1],way[i],slopeAt);if(r)path=path.concat(path.length?r.slice(1):r);}
   path=resample(chaikin(chaikin(chaikin(pull(path,slopeAt)))),.6);spots.path=path;
-  if(path.length>3){const L=[],R=[],M=[];for(let i=0;i<path.length;i++){const a=path[Math.max(0,i-3)],b=path[Math.min(path.length-1,i+3)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,p0=path[Math.max(0,i-2)],p2=path[Math.min(path.length-1,i+2)],t1=Math.atan2(path[i][1]-p0[1],path[i][0]-p0[0]),t2=Math.atan2(p2[1]-path[i][1],p2[0]-path[i][0]),turn=Math.abs(Math.atan2(Math.sin(t2-t1),Math.cos(t2-t1))),w=(.42+.06*Math.sin(i*.7))*(1-.45*sm(.6,1.6,turn)),nx=-(b[1]-a[1])/l*w,nz=(b[0]-a[0])/l*w,[x,z]=path[i];
-    L.push([x-nx,surface(x-nx,z-nz)+.07,z-nz]);M.push([x,surface(x,z)+.08,z]);R.push([x+nx,surface(x+nx,z+nz)+.07,z+nz]);} /* Mittelreihe: Band folgt auch quer gewölbtem Gelände */
-   const tone=i=>vnoise(path[i][0]*.6,path[i][1]*.6)>.5?0xa58c69:0xb19a76;
-   for(let i=1;i<path.length;i++)for(const [A,Bq] of [[L,M],[M,R]]){fun.triV(A[i-1],Bq[i-1],Bq[i],tone(i-1),tone(i-1),tone(i));fun.triV(A[i-1],Bq[i],A[i],tone(i-1),tone(i),tone(i));}}
+  /* v409: Trampelpfad statt Band: fünf Reihen quer – Mitte festgetretene Erde, nach außen in die Geländefarbe auslaufend (keine harte
+     Kante), Breite schwankt leicht, vereinzelte Steine am Rand. Folgt dem Gelände über alle Reihen. */
+  if(path.length>3){const O=[-1,-.45,0,.45,1],rows=O.map(()=>[]),cols=O.map(()=>[]),earth=[col(0x8a7051),col(0x9b8260)];
+   for(let i=0;i<path.length;i++){const a=path[Math.max(0,i-3)],b=path[Math.min(path.length-1,i+3)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,p0=path[Math.max(0,i-2)],p2=path[Math.min(path.length-1,i+2)],t1=Math.atan2(path[i][1]-p0[1],path[i][0]-p0[0]),t2=Math.atan2(p2[1]-path[i][1],p2[0]-path[i][0]),turn=Math.abs(Math.atan2(Math.sin(t2-t1),Math.cos(t2-t1)));
+    const w=(.6+.08*Math.sin(i*.53)+.05*Math.sin(i*1.7))*(1-.35*sm(.6,1.6,turn)),ux=-(b[1]-a[1])/l,uz=(b[0]-a[0])/l,[x,z]=path[i],n=vnoise(x*.8,z*.8);
+    O.forEach((o,k)=>{const X=x+ux*w*o,Z=z+uz*w*o,g=surface(X,Z),edge=Math.abs(o)>.9;rows[k].push([X,g+(edge?.03:.07),Z]);
+     const e=mix(earth[0],earth[1],n),t=color(X,Z,g);cols[k].push(edge?mix(t,e,.18):o===0?e.map(v=>v*.94):mix(e,t,.15));});}
+   for(let i=1;i<path.length;i++)for(let k=0;k<O.length-1;k++){const A=rows[k],Bq=rows[k+1],cA=cols[k],cB=cols[k+1];fun.triV(A[i-1],Bq[i-1],Bq[i],cA[i-1],cB[i-1],cB[i]);fun.triV(A[i-1],Bq[i],A[i],cA[i-1],cB[i],cA[i]);}
+   for(let i=3;i<path.length-3;i+=4){const r=rnd();if(r>.55)continue;const k=r<.27?0:4,p=rows[k][i],q=rows[2][i],X=q[0]+(p[0]-q[0])*.85,Z=q[2]+(p[2]-q[2])*.85;fun.ico(.07+r*.12,0x8d8c84,{x:X,y:surface(X,Z)+.03,z:Z,sy:.6,ry:r*9});}}
   /* Wegweiser neben dem Weg; die gelben Tafeln sind selbst Pfeile (ein Stück, am Pfosten angesetzt) und zeigen entlang des Weges */
   const dirTo=(i,j)=>{const a=path[i],b=path[Math.max(0,Math.min(path.length-1,j))];return Math.atan2(-(b[1]-a[1]),b[0]-a[0]);};
   const sign=(i,dirs)=>{if(i<0||i>=path.length)return;const a=path[Math.max(0,i-1)],b=path[Math.min(path.length-1,i+1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,x=path[i][0]-(b[1]-a[1])/l*1.15,z=path[i][1]+(b[0]-a[0])/l*1.15,y=surface(x,z);
