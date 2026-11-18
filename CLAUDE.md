@@ -192,3 +192,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v414: Berghaus-Bodenplatte – Fundamentoberseite an Deckplatten-Unterseite (-.04) statt auf die sichtbare Oberseite (+.04). Beseitigt überlagernde Flächen ohne Render-/Tiefenpufferänderung; keine zusätzlichen Dreiecke. alpine414 und Gesamt-/SW/LOGI_V414; Stand413/412 erhalten. Tests huettenplatte-v414.*, Bericht docs/HUETTENPLATTE-v414.md. Lieferung per Pull Request; kein automatischer Merge nach main.
 
 - v415: Liefertruhe nutzt farmTreasureLoot wie Grabtruhe: Bedarf/Freigaben/Lager und kapital-/fortschrittsabhängiges Geld. Seltenheitschancen und Einmal-Schutz erhalten. erbe415, Gesamt415. Tests treasure-loot-v305.test.js und liefertruhe-v415.test.js.
+
+- v416: Waffenschrank-Eignung nutzt gecachte HUNT-Tiermodelle statt Emojis, mit Artnamen/zugänglicher Eignungsangabe. weapons/style416, Gesamt416; Jagdregeln unverändert.
