@@ -1012,6 +1012,22 @@ function phoneTTL(m) {
 }
 function phoneOpen() { return $("#modal").classList.contains("open") && !!$("#modalBody .phone"); }
 let phoneTab = "msgs";
+/* v393: Notizen im Diensthandy – Routinemeldungen (Kunde zufrieden, Werkstatt, Lackierung …) landen hier statt als Einblendung */
+const NOTE_MAX = 60;
+function noteState() { if (!S.notes) S.notes = { items: [], unread: 0 }; return S.notes; }
+function noteAdd(txt, kind) {
+  const N0 = noteState();
+  N0.items.unshift({ time: S.time, txt: String(txt), kind: kind || "" });
+  if (N0.items.length > NOTE_MAX) N0.items.length = NOTE_MAX;
+  N0.unread = Math.min(99, (N0.unread || 0) + 1);
+  if (typeof phoneOpen === "function" && phoneOpen() && typeof renderPhone === "function") renderPhone();
+}
+function notesHTML() {
+  const L = noteState().items;
+  if (!L.length) return `<div class="empty">Keine Notizen – Routinemeldungen (zufriedene Kunden, Werkstatt …) sammeln sich hier.</div>`;
+  return L.map(n => `<div class="pnote ${esc(n.kind)}"><span class="pnote-t">${esc(stamp(n.time))}</span><span>${esc(n.txt)}</span></div>`).join("") +
+    `<div class="mbtns"><button class="btn tiny ghost" data-noteclear>Notizen leeren</button></div>`;
+}
 function renderPhoneBadge(ring) {
   const el = $("#phoneBtn"); if (!el) return;
   const n = (S.phone && S.phone.unread) || 0;
@@ -1068,23 +1084,26 @@ function renderPhone(focusId) {
   })(m))).join("") : `<div class="empty">Noch keine Anrufe – hier meldet sich später
      dein Team.</div>`;
   const scroll = $(".phone-list") ? $(".phone-list").scrollTop : 0;
-  const calc = phoneTab === "calc", news = phoneTab === "news", contacts = phoneTab === "contacts";
+  const calc = phoneTab === "calc", news = phoneTab === "news", contacts = phoneTab === "contacts", notes = phoneTab === "notes";
   if (news && S.press && S.press.unread) { S.press.unread = 0; renderPhoneBadge(); }
+  if (notes && S.notes && S.notes.unread) S.notes.unread = 0;
+  const noteN = S.notes && S.notes.unread ? S.notes.unread : 0;
   const pressN = S.press && S.press.unread ? S.press.unread : 0;
 
   $("#modalBody").innerHTML = `
     <div class="mhead phone">
       <div><div class="mtitle">📞 Diensttelefon</div>
-      <div class="msub">${calc ? "Rechner" : news ? "Wirtschaftsmeldungen der letzten 7 Tage" : contacts ? "Deine gespeicherten Händlerkontakte" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
+      <div class="msub">${calc ? "Rechner" : notes ? "Routinemeldungen" : news ? "Wirtschaftsmeldungen der letzten 7 Tage" : contacts ? "Deine gespeicherten Händlerkontakte" : msgs.length + " Nachricht" + (msgs.length === 1 ? "" : "en") + " · löschen sich nach 24 h"}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button>
     </div>
     <div class="ptabs phone-tabs">
-      <button class="ptab${calc || news || contacts ? "" : " on"}" data-ptab="msgs" aria-label="Nachrichten"><span aria-hidden="true">💬</span><span>Chats</span></button>
+      <button class="ptab${calc || news || contacts || notes ? "" : " on"}" data-ptab="msgs" aria-label="Nachrichten"><span aria-hidden="true">💬</span><span>Chats</span></button>
       <button class="ptab${contacts ? " on" : ""}" data-ptab="contacts"><span aria-hidden="true">👥</span><span>Kontakte</span></button>
       <button class="ptab${news ? " on" : ""}" data-ptab="news"><span aria-hidden="true">📰</span><span>Zeitung${pressN ? ` <b class="ptab-n">${pressN > 9 ? "9+" : pressN}</b>` : ""}</span></button>
+      <button class="ptab${notes ? " on" : ""}" data-ptab="notes"><span aria-hidden="true">📝</span><span>Notizen${noteN ? ` <b class="ptab-n">${noteN > 9 ? "9+" : noteN}</b>` : ""}</span></button>
       <button class="ptab calc${calc ? " on" : ""}" data-ptab="calc" title="Rechner" aria-label="Rechner">🧮</button>
     </div>
-    <div class="phone-list${news ? " news" : ""}">${contacts ? phoneContactsHTML() : calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : news && typeof pressHTML === "function" ? pressHTML() : body}</div>
+    <div class="phone-list${news ? " news" : ""}">${notes ? notesHTML() : contacts ? phoneContactsHTML() : calc && typeof shadowBookHTML === "function" ? shadowBookHTML() : news && typeof pressHTML === "function" ? pressHTML() : body}</div>
     <div class="mbtns"><button class="btn ghost" id="mCancel">Schließen</button></div>`;
   $(".phone-list").scrollTop = scroll;          /* beim Tippen im Chat nicht nach oben springen */
   if (focusId) {                                /* v124: Tipp auf die Meldung → genau diese Nachricht zeigen */
@@ -1094,6 +1113,7 @@ function renderPhone(focusId) {
   $("#mClose").onclick = closeModal;
   $("#mCancel").onclick = closeModal;
   $$("#modalBody [data-ptab]").forEach(b => b.onclick = () => { phoneTab = b.dataset.ptab; $(".phone-list").scrollTop = 0; renderPhone(); });
+  $$("#modalBody [data-noteclear]").forEach(b => b.onclick = () => { noteState().items = []; renderPhone(); });
   $$("#modalBody [data-contact]").forEach(b => b.onclick = () => phoneContactDealer(b.dataset.contact));
   $$("#modalBody [data-fix]").forEach(btn =>
     btn.onclick = () => applyFix(btn.dataset.fix, +btn.dataset.idx));

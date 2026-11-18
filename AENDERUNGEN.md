@@ -1,3 +1,11 @@
+## v393 – Routinemeldungen als Notiz im Diensthandy
+
+**Ursache:** Hintergrundmeldungen wie „Hofladen Glindow ist zufrieden: +412 € …“, „… ist aus der Werkstatt zurück“ oder „… lackiert“ blendeten ständig über dem Spielfeld ein.
+
+**Lösung:** Neuer Tab „📝 Notizen“ im Diensttelefon (`noteAdd`/`notesHTML` in `offices.js`, `S.notes`, höchstens 60 Einträge, Zähler am Tab, „Notizen leeren“). `toast()` (`game.js`) leitet Meldungen mit Hintergrund-Kennzeichen (`low`, keine Warnung) und „… ist zufrieden: +…“ dorthin um. **Bleiben Einblendung:** Warnungen, Antworten auf einen eigenen Tipp (innerhalb 1,2 s), alle Meldungen ohne `low`-Kennzeichen (z. B. Überboten, Zustellung). Keine Spielstandmigration (`S.notes` entsteht bei Bedarf). Die Tableiste hat jetzt fünf Einträge (CSS-Block „v393“).
+
+**Geprüft (Testbrowser, Desktop-Chromium):** Zufriedenheit und Werkstatt-Meldung erscheinen nicht mehr als Einblendung, die Verspätungs-Warnung schon; beide Notizen stehen im Tab; keine Konsolenfehler. **Nicht geprüft:** Optik der fünf Tabs (Intro verdeckte die Ansicht), Handy.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
