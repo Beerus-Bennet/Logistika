@@ -176,3 +176,8 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v407: Bergsee – Umriss an der Falllippe gekappt (keine Wasserzunge), Felswangen direkt neben dem Fall, Felsrand Spiegel + 3,5 (`alpine.js`).
 - v407: Gebirge – Hüttenbank auf Sitzhöhe der Figuren, Zelt-Wanderer sitzt auf Baumstamm (`alpine.js`).
 - v408: Berggrafik (`alpine.js`) – Farbe je Dreieck (Facetten), Grasbänder auf flacheren Facetten, Rinnen/Grate über `ridged`, warme Kalktöne, Felsköpfe, Bergwald steiler; Fernbäume ohne Stamm.
+
+
+- v409: Nur alter Wald-Angelplatz – Stamm am Ende von paths[2] über `benchTurn[1]` umπ/2 gedreht. Schwarmziel `bachsteg` aus neuen Ereignissen, bestehenden Welt-Blasen, Ereignisknopf und Spritzern ausgeschlossen. Hauptsee-/Fischerei-Geometrie und Fangchancen unverändert, keine Migration. erbe/woodmodels/worldview409, Tests `waldplatz-v409.*`, Bericht `docs/WALDPLATZ-v409.md`.
+
+- v410: PR123 mit main9ea4f9f/PR124 integriert. alpine408 unverändert aus PR123/c93797b, erbe/woodmodels/worldview409 unverändert aus main; übrige main-Assets erhalten. Gesamt-/SW410, beide Konfliktdokumentationen erhalten.

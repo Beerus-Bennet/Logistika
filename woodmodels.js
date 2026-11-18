@@ -1333,7 +1333,7 @@ const FWM = (() => {
         }
       } else b.disc(R0, 14, 0xa89064, { x: cx, z: cz, y0: y - 0.006 });
       /* Bank aus einem halben Stamm am Rand der Lichtung */
-      const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2;
+      const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2 + (o.benchTurn&&o.benchTurn[k]||0); /* v409: gezielt ein Wegende drehen, Standard unverändert. */
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
     b.noise(0.012, () => ribbon(b, P, W, WAY_COL, y, WAY_RIM, o.caps || true, yE, o.gnd));

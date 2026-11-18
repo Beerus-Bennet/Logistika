@@ -1,3 +1,19 @@
+## v410 – Gebirgs-PR mit aktuellem main konfliktfrei zusammengeführt
+
+**Ursache:** Nach PR #124 kollidierten die unabhängigen Dokumentations- und Asset-Versionseinträge mit dem offenen Gebirgs-PR #123.
+
+**Lösung:** main9ea4f9f vollständig integriert; beide Dokumentationen erhalten. `alpine.js` und die Gebirgsvorschauen bleiben exakt auf dem geprüften Stand von PR #123/c93797b. Erbe/Waldmodelle/Weltansicht entsprechen exakt main einschließlich örtlicher Waldplatz-Korrektur409. Gesamt-/SW-Version410, alpine408 und erbe/woodmodels/worldview409; übrige Assets aus main erhalten. Keine neue Gestaltungs- oder Spielstandsänderung durch die Konfliktauflösung.
+
+**Geprüft:** Dateiidentität gegen die jeweiligen Zweige, Asset-Abgleich, Syntax und `git diff --check`; `waldplatz-v409.test.js` und `wasseroptik-v386.test.js`. Keine neue Bildaufnahme, da die Modell-/Darstellungsdateien beim Abgleich unverändert bleiben. Kein Test auf echtem Handy.
+
+## v409 – Alten Wald-Angelplatz örtlich bereinigen
+
+**Wunsch:** Den markierten Holzstamm am Wegende um 90 Grad drehen und Fischschwarm/Wasserspritzer entfernen, die nach der Flussverlegung auf dem Trockenen geblieben sind. Nur dieser Bereich, keine Änderung am Hauptsee.
+
+**Lösung:** Ausschließlich der Endstamm von `FWORLD.paths[2]` erhält eine Vierteldrehung um die Hochachse, Mittelpunkt/Höhe bleiben gleich. Optionales `benchTurn` verändert keine anderen Wegenden. Am früheren Fangplatz `bachsteg` werden die Fischblase, der Schwarm-Ereignisknopf und die dazugehörigen Spritzer unterdrückt, auch bei einem bereits gespeicherten Schwarm. Neue Schwärme wählen diesen alten Platz nicht mehr. Hauptsee-Fangplätze, Fangchancen, Fischmodelle, Wasserflächen und Wasserbewegungen bleiben erhalten. Keine Spielstand-/Inventarmigration.
+
+**Geprüft:** `waldplatz-v409.test.js` (tatsächliche Stammgeometrie: Vierteldrehung, gleicher Mittelpunkt/Höhe/Farbe, Standard-Wege unverändert). `waldplatz-v409.browser.js`: echter Hofaufbau, alter gespeicherter Schwarm ohne Blase/Knopf/Spritzer, Gegenprobe „Tiefe Mitte“ mit allen drei Effekten und gleichen Fangchancen; neue Schwärme erreichen sämtliche bisherigen Seeplätze, nicht `bachsteg`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden. Syntax und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/WALDPLATZ-v409.md`.
+
 ## v408 – Berggrafik: klare Facetten, Felsstruktur, Grasbänder, mehr Bergwald
 
 **Ursache:** Das Gebirge wirkte trotz v403 flächig grau und verschwommen: Farben liefen über große Dreiecke als weiche Verläufe, steile Hänge waren einheitlich grau, Rinnen und Grate kaum zu erkennen, auf steileren unteren Hängen fehlte Wald.
