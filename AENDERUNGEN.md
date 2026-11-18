@@ -58,6 +58,13 @@
 **Lösung (`hunt.js`):** `gunReach()` = 95 % der Waffenreichweite in Einheiten. `spawnPoint` begrenzt die Entfernung darauf, `pickWalk` wählt nur Ziele zwischen Mindestabstand (bei Kurzwaffen 0,7 · `nearD[0]`, sonst 32) und `gunReach()`; ohne Treffer nach 20 Versuchen ein Punkt aus `spawnPoint()` statt der Feldmitte. Gilt für alle Tierarten. Gewehre mit ≥ 400 m Reichweite verhalten sich praktisch wie zuvor.
 
 **Geprüft (Testbrowser, Glock):** Wanderziele von Fasan, Keiler, Hirsch liegen bei 39–55 m (vorher Feldmitte 232 m, per Code und gemessene Mitte 200 m belegt; den Alt-Lauf im Browser konnte ich wegen Zeitlimit nicht zu Ende messen). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Spielgefühl am Handy; schon vorhandenes Wild beim Waffenwechsel wird nicht umgesetzt, es wandert erst bei der nächsten Wegwahl in Reichweite.
+## v397 – Trägerschuss: Halsorgane werden häufiger getroffen
+
+**Ursache:** Die Halsorgane (`NORG` in `hunt.js`: Halswirbel, Luft-/Speiseröhre, Halsschlagadern, Drosselvenen) waren als sehr dünne Röhren modelliert. Ein Durchschuss durch die Mitte des Trägers traf bei 26 % (Hirsch), 55 % (Keiler) und 46 % (Fasan) keins davon – im Trefferbild stand nur „Halsweichteile (kein lebenswichtiges Organ)“.
+
+**Lösung:** Maße der Halsorgane je Art angehoben (`NECK_K`: Hirsch ×1,7, Keiler ×2,6, Fasan ×2,4; Halswirbel nur ×1,25, damit nicht jeder Trägerschuss die Wirbelsäule trifft). Der Keiler bekommt zusätzlich die beiden Drosselvenen, die ihm fehlten. Wertung (`SP`), Trefferzonen, Eindringtiefe und Spielstand unverändert; die Organe im Trefferbild folgen derselben Geometrie.
+
+**Geprüft:** Messung mit je 3000 zufälligen seitlichen Strahlen durch den Hals (Node/vm): Anteil mit mindestens einem Halsorgan Hirsch 74 → 86 %, Keiler 45 → 66 %, Fasan 54 → 71 %; Wirbelsäulentreffer Hirsch 33 → 40 %, Keiler 24 → 27 %, Fasan 23 → 28 %. `hunt.test.js`, `trefferbild-v357`, `anatomie-v367`, `trefferklarheit-v388` bestanden. **Nicht geprüft:** Optik der dickeren Röhren im Trefferbild (Screenshot im Browser gelang nicht), Handy. Der Rest ohne Kontakt entspricht Schüssen durch Mähne/Widerrist und Nackenmuskulatur.
 
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 

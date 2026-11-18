@@ -158,3 +158,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v394: Fasan – Laufanimation: Ständer im Wechselschritt mit Fußheben und Rumpfwippen (`A.pph` in `hunt.js`).
 - v395: Fasan – Einschussloch immer am Rumpf (`phBody(noTail)` in `woundSpot`), nicht mehr auf den Stoßfedern.
 - v396: Jagd – Wild bleibt in Schussweite der Waffe (`gunReach` in `spawnPoint`/`pickWalk`); vorher wanderte es bei Glock/Flinte auf 130–230 m weg („Zu weit“).
+- v397: Trägerschuss – Halsorgane (`NORG`) größer (`NECK_K`), Keiler mit Drosselvenen; Durchschuss trifft häufiger Organe.
