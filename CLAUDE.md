@@ -153,3 +153,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v391: Jagd – Schusswunde folgt der Haut (`woundSpot` liefert `surf`, `woundMesh` projiziert jeden Punkt auf das Tiernetz); Trefferbild: gleiche Zeilen für Gewebe/Organe (`xr-gen`), Hinweise unten (`xr-legs`).
 
 - v400: PR110 verfeinert – kleine Wundfläche mit Fellfarben-Übergang, Hautnormale und tatsächlichem Haupt-/Halsnetz; Ringpunkte geteilt, 264 Dreiecke maximal. Prüfungen `wundoptik-v400.test.js`/`.browser.js`, Bericht `docs/WUNDOPTIK-v400.md`. main510ae1b integriert, Fortbildung398 erhalten; offene andere Jagd-PRs separat.
+- v392: Fasan – Organe (`ORG.fasan`) größer und anatomisch im Rumpf angeordnet, Körperschüsse treffen mehr Organe (Messung 42 % → 65 %).
