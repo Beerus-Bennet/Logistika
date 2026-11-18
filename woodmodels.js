@@ -3279,8 +3279,8 @@ const FWM = (() => {
     const h = o.hair, hs = o.hs || "kurz";
     if (h == null || hs === "glatze") return;
     const hc = mix(h, 0x000000, 0.12);
-    if (hs === "buzz") { b.sphere(0.123, 8, 4, h, { y: 0.94 + yo, sy: 0.78 }); return; }
-    b.sphere(0.127, 8, 4, h, { y: 0.95 + yo, sy: 0.82 });                                  /* Kappe */
+    if (hs === "buzz") { b.sphere(0.124, 9, 5, h, { y: 0.995 + yo, z: -0.015, sy: 0.68 }); return; }
+    b.sphere(0.13, 9, 5, h, { y: 1.0 + yo, z: -0.02, sy: 0.7 });                                  /* Kappe – v400: sitzt höher und etwas nach hinten, Haaransatz über den Brauen statt Maske über den Augen */
     if (hs === "scheitel") { b.box(0.16, 0.05, 0.2, hc, { x: 0.035, y: 1.0 + yo, z: 0.0, rz: -0.18 }); b.box(0.03, 0.07, 0.17, hc, { x: -0.115, y: 0.9 + yo }); }
     else if (hs === "pferd") { b.sphere(0.05, 6, 4, hc, { y: 0.985 + yo, z: -0.115 }); b.box(0.05, 0.18, 0.05, h, { y: 0.8 + yo, z: -0.145, rx: 0.14 }); b.box(0.06, 0.02, 0.06, 0xd8332b, { y: 0.97 + yo, z: -0.125 }); }
     else if (hs === "lang") { b.box(0.26, 0.3, 0.06, h, { y: 0.66 + yo, z: -0.1 }); [-1, 1].forEach(q => b.box(0.04, 0.2, 0.1, hc, { x: q * 0.12, y: 0.78 + yo, z: -0.04 })); }
@@ -3300,7 +3300,7 @@ const FWM = (() => {
       [-1, 1].forEach(q => {
         b.box(0.034, 0.026, 0.012, 0xf4f1ea, { x: q * 0.042, y: 0.955 + yo, z: 0.113 });  /* Augapfel */
         b.box(0.018, 0.02, 0.01, o.eye || 0x2a2420, { x: q * 0.042 + q * 0.002, y: 0.955 + yo, z: 0.12 });  /* Pupille */
-        b.box(0.046, 0.01, 0.016, bro, { x: q * 0.043, y: 0.99 + yo, z: 0.097, rz: q * 0.1 });          /* Braue */
+        b.box(0.046, 0.01, 0.016, bro, { x: q * 0.043, y: 0.978 + yo, z: 0.098, rz: q * 0.1 });          /* Braue */
       });
     }
     b.box(0.024, 0.042, 0.032, sk2, { y: 0.915 + yo, z: 0.123 });                              /* Nase */

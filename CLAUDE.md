@@ -161,3 +161,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v397: Trägerschuss – Halsorgane (`NORG`) größer (`NECK_K`), Keiler mit Drosselvenen; Durchschuss trifft häufiger Organe.
 - v399: Gesichter der Figuren (`headParts` in `woodmodels.js`) – Kinn, Ohren, Nase, Augen mit Weiß, Brauen, Mund.
 - v401: Sammellieferung – PR #110–#116 und #118 (v391–v400) in einem Zweig zusammengeführt; Details je Version oben.
+- v402: Haare – Kappe höher/hinten (`hairdo` in `woodmodels.js`), Haaransatz über den Brauen statt Maske.
