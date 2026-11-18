@@ -1,3 +1,7 @@
+## v412 – Kopf-Trefferbild und Hochsitz-Menü
+
+Basis main b82ff69/Gebirge410. Nur hunt/style412, Gesamt-/SW412; andere Assets erhalten. `headMesh`/`headSegment`/`headRay` werden für Zeichnung und Gehirnprüfung gemeinsam verwendet. Kanal bis tatsächlichem Austritt bzw. stop, Kopfbericht `schaedel`/`gehirn` statt pauschalem `kopf`-Organ. Historische Schüsse werden nur in Ansichtskopien neu ausgewertet; Wirkung/Medaille/Erlös nicht migrieren. fire stuft einen Kopftreffer ohne erreichtes Gehirn ab. Revierbreite per bestehendem ResizeObserver an das Menü weitergereicht, CSS nur für aufgeklapptes Menü. Hals-Rastertest grenzt überdecktes Haupt aus, Kopfprüfstand testet diese Treffer separat. Bericht: docs/KOPFTREFFER-v412.md. Kein automatisches Merge/Deployment.
+
 ## v410 – Gebirgs-PR #123 nach Waldplatz-PR #124
 
 main9ea4f9f vollständig integriert. `alpine.js` und die vier Gebirgsvorschauen entsprechen exakt c93797b (PR123), erbe/woodmodels/worldview und Fischerei-Dateien exakt main (PR124 enthalten). Nur Dokumentations-/Versionseinträge mussten aufgelöst werden. Beide Seiten erhalten. Gesamt-/SW410, alpine408, erbe/woodmodels/worldview409; Lade-/Aussaat-/Trefferbildassets aus main unverändert. Kein automatisches Merge/Deployment.

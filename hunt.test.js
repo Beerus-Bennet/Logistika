@@ -171,7 +171,7 @@ vm.runInContext("this.HUNT = HUNT;", C4);
 const H4 = C4.HUNT, M4 = H4._m;
 const whole = (b, name) => { assert.ok(b.v.length % 27 === 0 && b.v.length > 0, name + " ganze Dreiecke"); for (let i = 0; i < b.v.length; i++) if (!Number.isFinite(b.v[i])) assert.fail(name + " NaN bei " + i); return b.v.length / 27; };
 /* v265: Schüsse von der Seite durch den sichtbaren Träger des Hirschs (Rasterpunkte der Silhouette) sind tödlich */
-test("Träger v265: Schuss durch den sichtbaren Hals ist tödlich, nie Weichschuss", () => {
+test("Träger v265/v412: Schuss durch den unverdeckten Hals ist tödlich, nie Weichschuss", () => {
   const nk = (p, nrx) => { const r = H4.rot(p, nrx, 0, 0), S0 = H4.SP.hirsch; return [S0.neckP[0] + r[0], S0.neckP[1] + r[1], S0.neckP[2] + r[2]]; };
   const mb = M4.deerNeck(), V = []; for (let i = 0; i < mb.v.length; i += 9) V.push([mb.v[i], mb.v[i + 1], mb.v[i + 2]]);
   const B = H4.SP.hirsch.body, outside = p => (p[0] / B.r[0]) ** 2 + ((p[1] - B.c[1]) / B.r[1]) ** 2 + ((p[2] - B.c[2]) / B.r[2]) ** 2 > 1;   /* Halsansatz im Rumpf ist unsichtbar */
@@ -182,6 +182,10 @@ test("Träger v265: Schuss durch den sichtbaren Hals ist tödlich, nie Weichschu
     let n = 0, kill = 0, soft = 0;
     for (let y = y0; y <= y1; y += 0.02) for (let z = z0; z <= z1; z += 0.02) {
       if (!P.some(p => Math.abs(p[1] - y) < 0.018 && Math.abs(p[2] - z) < 0.018)) continue;
+      /* v412: Haupt und Hals können sich in dieser Ansicht überdecken.
+         Solche Strahlen gehören in den Kopfprüfstand: ein Kiefertreffer darf
+         nicht allein wegen der dahinter liegenden Hals-Silhouette tödlich sein. */
+      if(H4._headContacts('hirsch',[6,y,z],[-1,0,0],pose).some(q=>q.O.id==='schaedel'))continue;
       const r = H4.zoneHit("hirsch", pose, [6, y, z], [-1, 0, 0]); n++;
       if (r && H4.ZONE[r.zone].kill) kill++; if (r && r.zone === "koerper") soft++;
     }

@@ -1,3 +1,10 @@
+## v412 – Verständlicher Hirnschädel, vollständiger Kopfkanal und schmales Hochsitz-Menü
+
+- Ursache: Pauschales Kopfkanal-Ende nach 20 cm, rot gefärbte Ersatzkörper statt verständlicher Kopf-Anatomie und ein zu breites aufgeklapptes Auftragsmenü.
+- Lösung: Schädel und Gehirn als getrennte artspezifische 3D-Modelle/Bildchen; Gehirnkontakt anhand des sichtbaren Netzes. Kopfkanal an der tatsächlichen Kopfhaut bis Austritt oder Eindringstopp, bei Bedarf durch Hals/Rumpf. Kein neuer Gehirntreffer ohne erreichtes Gehirn; historische Werte bleiben erhalten. Auftragsmenü orientiert sich am Revierkasten (lesbare Mindestbreite), Text umbricht über Schwierigkeit/Belohnung.
+- Geprüft: 18 Kopfkanäle einschließlich Posen, Richtungen, Steckschüssen und Save-Erhalt; alle 23 allgemeinen Jagd-Prüfgruppen; vier bestehende Treffer-/Anatomie-/Wundtests; Chromium-Touchansichten 320/390 px und Querformat ohne Überlauf oder JavaScriptfehler. Modelle und Grenzen gecacht, begrenzte Dreieckszahlen. Bericht/Vorschauen: `docs/KOPFTREFFER-v412.md`.
+- Nicht geprüft: echtes iPhone/Safari und Geräte-FPS. Keine Spielstandmigration, kein automatisches Merge/Deployment. Gesamt-/SW412, hunt/style412; andere Assets aus main erhalten.
+
 ## v410 – Gebirgs-PR mit aktuellem main konfliktfrei zusammengeführt
 
 **Ursache:** Nach PR #124 kollidierten die unabhängigen Dokumentations- und Asset-Versionseinträge mit dem offenen Gebirgs-PR #123.
