@@ -1,3 +1,11 @@
+## v402 – Haare: Haaransatz über den Brauen statt Maske über den Augen
+
+**Ursache:** Die Haarkappe (`hairdo` in `woodmodels.js`) war eine fast kugelförmige Kappe, die bis auf Augenhöhe herunterreichte und wie eine schwarze Maske über Stirn und Augen lag (bei kurzen Haaren/„buzz“ besonders).
+
+**Lösung:** Kappe sitzt höher und etwas nach hinten (Mittelpunkt y 1,0, z −0,02, flacher), Haaransatz über den Brauen; Brauen etwas tiefer, feinere Kugel (9 × 5). Frisuren-Zusätze (Dutt, Pferdeschwanz, Locken …) unverändert.
+
+**Geprüft (Testbrowser, Bilder von acht Mitarbeitern):** Haaransatz über den Augen, Gesicht frei, Hüte unverändert, keine Konsolenfehler. **Nicht geprüft:** jede Frisur einzeln (lang, Locken, Scheitel), Handy.
+
 ## v401 – Sammellieferung (v391–v400 in einem Pull Request)
 
 **Anlass:** Die einzelnen Pull Requests #110–#116 und #118 hatten sich gegenseitig Konflikte in `AENDERUNGEN.md`, `CLAUDE.md`, `sw.js` und `index.html` verursacht. Sie sind hier in einem Zweig zusammengeführt (Basis: main mit v398); die einzelnen Abschnitte stehen unverändert darunter.
