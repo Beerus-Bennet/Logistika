@@ -190,3 +190,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v413 Integration: Lokalen Kopf-/Menü-Branch412 vollständig eingebunden; hunt/style bytegleich zur geprüften412-Fassung, alpine bytegleich zur geprüften413-Fassung. Gemeinsame Version413 auch in window.LOGI_V (main411 hatte dort noch410). Kein GitHub-Push oder Merge.
 
 - v414: Berghaus-Bodenplatte – Fundamentoberseite an Deckplatten-Unterseite (-.04) statt auf die sichtbare Oberseite (+.04). Beseitigt überlagernde Flächen ohne Render-/Tiefenpufferänderung; keine zusätzlichen Dreiecke. alpine414 und Gesamt-/SW/LOGI_V414; Stand413/412 erhalten. Tests huettenplatte-v414.*, Bericht docs/HUETTENPLATTE-v414.md. Lieferung per Pull Request; kein automatischer Merge nach main.
+
+- v415: Liefertruhe nutzt farmTreasureLoot wie Grabtruhe: Bedarf/Freigaben/Lager und kapital-/fortschrittsabhängiges Geld. Seltenheitschancen und Einmal-Schutz erhalten. erbe415, Gesamt415. Tests treasure-loot-v305.test.js und liefertruhe-v415.test.js.

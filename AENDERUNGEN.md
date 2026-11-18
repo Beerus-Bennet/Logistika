@@ -1,3 +1,7 @@
+## v415 – Liefertruhe an Grabtruhe angeglichen
+
+Fester Brot-/Köderpool und kaum skalierendes Geld durch dieselbe bedarfsorientierte Warenauswahl und Geldskalierung wie bei der Grabtruhe ersetzt. Auftragslücken, Freischaltungen, Lagerplätze und Fortschritt berücksichtigt. Bestehender Einmal-Schutz erhalten. Seltenheitschancen unverändert. Gesamt415, erbe415. Syntax geprüft; kein echter Handytest.
+
 ## v414 – Flimmernde Bodenplatte am Berghaus korrigiert
 
 - Ursache: Fundament und Deckplatte hatten zwei sichtbare Oberseiten auf derselben Höhe. Dadurch konnten beim Drehen Streifen/Flimmern entstehen.

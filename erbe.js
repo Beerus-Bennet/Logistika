@@ -1826,16 +1826,17 @@ function farmEvReward(kind) {
   if (kind === "lieferung" && c.k === "lieferung" && !c.data.done) {
     const P = farmParcelRoll(c);
     c.data.done = true;
-    /* Geschenke aus dem Lager-Pool (nur was ins Lager passt), höhere Seltenheit = mehr Stück und mehr Sorten */
-    const pool = [["brot", 3], ["apfelkuchen", 1], ["bretter", 1], ["koeder", 6], ["brennholz", 2]].filter(([id]) => FITEMS[id] && FITEMS[id].st && farmRoom(id) > 0);
-    const items = [];
-    for (let i = 0; i < P.gifts && pool.length; i++) {
-      const g = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], n = Math.min(Math.ceil(g[1] * P.mult), farmRoom(g[0]));
-      if (n > 0) { farmAdd(g[0], n, 4); items.push([g[0], n]); }
-    }
+    /* v415: Wie die Grabtruhe: Auftragslücken und verfügbare, unterbesetzte
+       Waren statt fester Brot-/Köderauswahl. Seltenheit bestimmt die Qualität. */
+    const quality = Math.min(3, c.data.rar + 1), lv = flv(), stage = clamp(S.stage || 1, 1, 6);
+    const items = farmTreasureLoot(quality, lv, stage);
+    for (const [id, n] of items) farmAdd(id, n, 4);
     let m = 0;
     if (P.m[1] > 0) {
-      m = Math.max(5, Math.round((P.m[0] + Math.random() * (P.m[1] - P.m[0])) * (1 + flv() * 0.03) / 5) * 5);
+      const floor = (80 + lv * 15) * [1, 2, 5, 12, 24, 40][stage - 1] * [1, 1.4, 2][quality - 1];
+      const base = Math.max(floor, Math.max(0, S.money) * [0.005, 0.012, 0.02][quality - 1]);
+      m = Math.max(50, Math.round(base * (0.9 + Math.random() * 0.2) / 5) * 5);
+      m += Math.round(m * .1 * Math.max(0, quality - items.length) / quality / 5) * 5;
       S.money += m; S.revenue += m; S.farm.stats.earned = (S.farm.stats.earned || 0) + m;
       logMoney("farm", "Besondere Lieferung", m);
     }
