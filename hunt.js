@@ -817,7 +817,7 @@ const HUNT = (() => {
       else{b.triV(d.p,c.p,a.p,d.c,c.c,a.c);b.triV(e.p,d.p,a.p,e.c,d.c,a.c);}
     }
   }
-  function phBody() {
+  function phBody(noTail) {          /* v395: noTail – Einschussloch-Suche ohne Stoßfedern */
     G3.seed(5301);
     const b = MB(), P = [], C = [], m = 20, nZ = 22;
     for (let i = 0; i <= nZ; i++) {
@@ -833,7 +833,7 @@ const HUNT = (() => {
       for(let j=0;j<4;j++)phFeather(b,side,-.05+j*.17,.065-j*.017,.23-j*.008,.16,PHC.wingD);
     });
     /* Stoß: lange gebänderte Schwanzfedern im schmalen Fächer, schräg nach hinten oben */
-    [[-2,.40],[-1,.48],[0,.56],[1,.51],[2,.42],[.5,.35]].forEach(([f,L],i)=>
+    if(!noTail)[[-2,.40],[-1,.48],[0,.56],[1,.51],[2,.42],[.5,.35]].forEach(([f,L],i)=>
       b.at({x:f*.006,y:.295-i*.0006,z:-.185,rx:-1.72-Math.abs(f)*.025,rz:f*.045},q=>featherInto(q,L*LOOK.tail,.025,f*.014,i*3+2)));
     return b;
   }
@@ -2071,7 +2071,7 @@ const HUNT = (() => {
       parent = A.head; [o, d] = neckRay(k, o, d, p);
       if (k === "hirsch") { o = unrot(v3sub(o, S0.headP), p.hrx || 0, 0, 0); d = unrot(d, p.hrx || 0, 0, 0); }
       const hm=withLook(k,A.gn,k==='hirsch'?()=>deerHead(A.T.P,Math.round(A.score*20)/20,A.vr,antF(A.gn)):k==='keiler'?()=>boarHead(qS(A.score),A.T.cm):phHead),sg=meshSegment(hm,o,d);if(!sg)return null;t=sg[0];surf=onMesh(hm);
-    } else { const bm = withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), bs = meshSegment(bm, o, d); t = bs ? bs[out ? 1 : 0] : rec.t; surf = onMesh(bm); }
+    } else { const bm = withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : () => phBody(true))   /* v395: Fasan – Wunde sitzt am Rumpf, nie auf den Stoßfedern */, bs = meshSegment(bm, o, d); t = bs ? bs[out ? 1 : 0] : rec.t; surf = onMesh(bm); }
     if (out && (rec.stop == null || t > rec.stop)) return null;        /* v383: Ausschuss nur, wenn das Geschoss durchkommt */
     let n = out ? v3n(d) : v3n([-d[0], -d[1], -d[2]]);
     const center=o.map((v,i)=>v+d[i]*t);
@@ -4627,7 +4627,7 @@ const HUNT = (() => {
     zoneHit, medalOf, traits, drawScore, camLook, rot, unrot, windDrift, holdDots, unlocked, built, buildNow,
     get on() { return !!X; }, get X() { return X; },
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
-    _fire: () => fire(), _setView: v => setView(v), _camLook: camLook, FOV, _gunZone: gunZone, _neckExt: k => neckExt(k), _neckFrame: neckFrame, NORG, _neckContacts: neckContacts, _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _organSegment: (k,id,o,d)=>organSegment(k,ORG[k].find(O=>O.id===id),o,d), _xrShot:xrShot, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
+    _fire: () => fire(), _setView: v => setView(v), _camLook: camLook, FOV, _gunZone: gunZone, _neckExt: k => neckExt(k), _neckFrame: neckFrame, NORG, _neckContacts: neckContacts, _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _organSegment: (k,id,o,d)=>organSegment(k,ORG[k].find(O=>O.id===id),o,d), _xrShot:xrShot, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, _woundSpot: (A, rec, out) => woundSpot(A, rec, out), AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
       if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _woundSpot:woundSpot,_woundMesh:woundMesh,_addWound:addWound,_organName:organName, _organReportName:organReportName, _xrPanelHTML:xrPanelHTML, _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _stepAnimal:stepAnimal, _deadLeg:deadLeg, _fallFloor:fallFloor, _fall: (A,side=1) => { A.st = "fall"; A.t = 0.8; A.side = side; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),

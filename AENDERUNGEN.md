@@ -44,6 +44,13 @@
 **Lösung (`hunt.js`, Block „v394: Gehen auf dem Boden“):** Eigene Schrittphase `A.pph` aus Tempo und Beinlänge (Schrittlänge folgt dem Pendelwinkel, 0,5 → 0,75 rad beim Laufen). Die Ständer pendeln im Wechselschritt, der Fuß hebt sich beim Vorschwung (bis 2,8 cm), der Rumpf wippt bei jedem Schritt leicht. Im Stand, im Flug, beim Fallen und am liegenden Stück unverändert. Keine Wertungs-/Treffer-/Speicheränderung.
 
 **Geprüft:** Testbrowser (`?test&jagd`): Fasan im Gehen – Füße schwingen gegenläufig (±0,38 rad), Fuß hebt sich, Rumpf wippt, keine Konsolenfehler; `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Optik im Video/bei echter Bildrate (Testbrowser läuft nur mit Software-Rendering), Handy; kein Kniegelenk – die Beine schwingen als ganzes Stück.
+## v395 – Fasan: Einschussloch sitzt am Rumpf, nicht am Schwanz
+
+**Ursache:** Die Wundsuche (`woundSpot` in `hunt.js`) tastete das ganze Fasanmodell ab, also auch die langen Stoßfedern. Bei Schüssen von hinten oder flach über den Rumpf traf der Strahl zuerst eine Schwanzfeder, das Einschussloch saß mitten auf dem Schwanz.
+
+**Lösung:** `phBody(noTail)` baut das Modell ohne Stoßfedern; `woundSpot` nutzt es für den Fasan. Das Loch liegt damit immer auf dem Rumpf. Sichtbares Modell, Trefferzonen und Spielstand unverändert. Neuer Prüfstand-Export `HUNT._woundSpot`.
+
+**Geprüft (Testbrowser, `?test&jagd`):** Vier Schüsse (von vorn und von hinten, zwei Höhen) – alle Wunden liegen im Rumpfbereich (z zwischen −0,20 und +0,21, Rumpf −0,22 bis +0,18 am Ellipsoid), keine auf den Stoßfedern (die ragen bis z ≈ −0,7). **Nicht geprüft:** Optik im Bild (Screenshot), Handy; bei Schüssen von direkt hinten kann das Loch am Rumpfende teilweise unter den Schwanzfederansätzen liegen.
 
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 

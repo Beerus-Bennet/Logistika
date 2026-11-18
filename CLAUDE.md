@@ -156,3 +156,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v392: Fasan – Organe (`ORG.fasan`) größer und anatomisch im Rumpf angeordnet, Körperschüsse treffen mehr Organe (Messung 42 % → 65 %).
 - v393: Diensttelefon – Tab „Notizen“ (`noteAdd` in `offices.js`); `toast()` leitet `low`-Meldungen (keine Warnung) und „… ist zufrieden“ dorthin um statt sie einzublenden.
 - v394: Fasan – Laufanimation: Ständer im Wechselschritt mit Fußheben und Rumpfwippen (`A.pph` in `hunt.js`).
+- v395: Fasan – Einschussloch immer am Rumpf (`phBody(noTail)` in `woundSpot`), nicht mehr auf den Stoßfedern.
