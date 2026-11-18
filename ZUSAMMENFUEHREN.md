@@ -1,3 +1,7 @@
+## v410 – Gebirgs-PR #123 nach Waldplatz-PR #124
+
+main9ea4f9f vollständig integriert. `alpine.js` und die vier Gebirgsvorschauen entsprechen exakt c93797b (PR123), erbe/woodmodels/worldview und Fischerei-Dateien exakt main (PR124 enthalten). Nur Dokumentations-/Versionseinträge mussten aufgelöst werden. Beide Seiten erhalten. Gesamt-/SW410, alpine408, erbe/woodmodels/worldview409; Lade-/Aussaat-/Trefferbildassets aus main unverändert. Kein automatisches Merge/Deployment.
+
 ## v406 – Sichtbare Aussaat in bestehendem PR #121
 
 Ergänzt Ladeanzeige405 und Trefferbild403/404; main25c3000/Gebirge unverändert. Gesamt-/SW406 und team/staffwalk/staffgear406, Ladeassets405 und hunt/alpine403 erhalten. `fieldMode` neuer Feldaufträge wird gespeichert, alte Aufträge sind weiterhin lesbar. `e.sowAction` nur an der sichtbaren Figur, kein Save-Feld; bei Hintergrundarbeit keine Animationssperre. Laufanimation und Werkzeugablage dürfen den Säarm/die Sichel-Ausblendung nicht überschreiben. Saatkosten und Wachstumsbeginn erst nach eigenem Säauftrag; Ernte-/Saatmengen und vorhandene Freigaben bleiben erhalten.

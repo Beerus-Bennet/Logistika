@@ -1,3 +1,11 @@
+## v410 – Gebirgs-PR mit aktuellem main konfliktfrei zusammengeführt
+
+**Ursache:** Nach PR #124 kollidierten die unabhängigen Dokumentations- und Asset-Versionseinträge mit dem offenen Gebirgs-PR #123.
+
+**Lösung:** main9ea4f9f vollständig integriert; beide Dokumentationen erhalten. `alpine.js` und die Gebirgsvorschauen bleiben exakt auf dem geprüften Stand von PR #123/c93797b. Erbe/Waldmodelle/Weltansicht entsprechen exakt main einschließlich örtlicher Waldplatz-Korrektur409. Gesamt-/SW-Version410, alpine408 und erbe/woodmodels/worldview409; übrige Assets aus main erhalten. Keine neue Gestaltungs- oder Spielstandsänderung durch die Konfliktauflösung.
+
+**Geprüft:** Dateiidentität gegen die jeweiligen Zweige, Asset-Abgleich, Syntax und `git diff --check`; `waldplatz-v409.test.js` und `wasseroptik-v386.test.js`. Keine neue Bildaufnahme, da die Modell-/Darstellungsdateien beim Abgleich unverändert bleiben. Kein Test auf echtem Handy.
+
 ## v409 – Alten Wald-Angelplatz örtlich bereinigen
 
 **Wunsch:** Den markierten Holzstamm am Wegende um 90 Grad drehen und Fischschwarm/Wasserspritzer entfernen, die nach der Flussverlegung auf dem Trockenen geblieben sind. Nur dieser Bereich, keine Änderung am Hauptsee.
@@ -5,6 +13,43 @@
 **Lösung:** Ausschließlich der Endstamm von `FWORLD.paths[2]` erhält eine Vierteldrehung um die Hochachse, Mittelpunkt/Höhe bleiben gleich. Optionales `benchTurn` verändert keine anderen Wegenden. Am früheren Fangplatz `bachsteg` werden die Fischblase, der Schwarm-Ereignisknopf und die dazugehörigen Spritzer unterdrückt, auch bei einem bereits gespeicherten Schwarm. Neue Schwärme wählen diesen alten Platz nicht mehr. Hauptsee-Fangplätze, Fangchancen, Fischmodelle, Wasserflächen und Wasserbewegungen bleiben erhalten. Keine Spielstand-/Inventarmigration.
 
 **Geprüft:** `waldplatz-v409.test.js` (tatsächliche Stammgeometrie: Vierteldrehung, gleicher Mittelpunkt/Höhe/Farbe, Standard-Wege unverändert). `waldplatz-v409.browser.js`: echter Hofaufbau, alter gespeicherter Schwarm ohne Blase/Knopf/Spritzer, Gegenprobe „Tiefe Mitte“ mit allen drei Effekten und gleichen Fangchancen; neue Schwärme erreichen sämtliche bisherigen Seeplätze, nicht `bachsteg`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden. Syntax und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/WALDPLATZ-v409.md`.
+
+## v408 – Berggrafik: klare Facetten, Felsstruktur, Grasbänder, mehr Bergwald
+
+**Ursache:** Das Gebirge wirkte trotz v403 flächig grau und verschwommen: Farben liefen über große Dreiecke als weiche Verläufe, steile Hänge waren einheitlich grau, Rinnen und Grate kaum zu erkennen, auf steileren unteren Hängen fehlte Wald.
+
+**Lösung (`alpine.js`):** Farbe je Dreieck statt Verlauf (klare Low-Poly-Facetten wie bei Bäumen/Häusern) mit leichter Helligkeitsstreuung (Fels stärker, Wiese schwächer); Grasbänder auf flacheren Facetten zwischen den Felsen (nicht im Schnee, nicht am Wasser); Rinnen dunkler und Grate heller aus dem Gratrauschen der Form; warme Kalktöne im Wechsel mit kühlem Grau; Felsköpfe/Schrofen an steilen Hängen (Nahstufe); Bergwald auch auf steileren Hängen unterhalb ~22. Fernstufe der Bäume ohne Stamm (Budget).
+
+**Geprüft (Testbrowser):** Vorher/Nachher aus vier Blickwinkeln (`docs/assets/v404/berge-v408.png`); `wasseroptik-v386.test.js` bestanden (Fernlast 15.311 < 16.000). Nahlast ~40.000 Dreiecke (vorher ~35.000). **Nicht geprüft:** Handy.
+
+## v407 – Gebirge-Feinschliff (vorher als v404–v406 im PR #123 geführt; Nummern wegen paralleler Lieferungen auf v407 zusammengelegt): Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
+
+**Ursache (Rückmeldung zu v403):** Ente im Badeenten-Gelb; Steinbock mit sichtbaren Lücken (grobe Ellipse, loser Kopf, dünne Läufe); Wanderweg aus geraden Einzelstücken (Lücken/Überlappungen) quer über Felswände; Wegweiser-Pfeile lose neben den Tafeln und schlecht platziert; Regenbogen kaum sichtbar (von oben als dunkler Strich im Kolk); Aufprallschaum als kleine runde Ringzone – wirkte wie ein dünner, runder Strahl.
+
+**Lösung (`alpine.js`):**
+- Stockenten-Erpel in echten Farben (graubraun, dunkler Rücken, braune Brust, weißer Halsring, grüner Kopf, gelber Schnabel).
+- Steinbock geschlossen: runder Rumpf (feineres Netz), Brust/Schulter- und Keulenwölbung, Hals bis zum Kopf, Ansätze über den Läufen, kräftigere Läufe, heller Bauch, dunkler Aalstrich. Tiere meiden Wanderer, Hütte, Bank und Zelt (`safeCenter`).
+- Wanderweg per Wegsuche (`route`, A* auf dem Geländeraster, Kosten nach Steigung des Wegstücks, Wände > ~62° und Wasser gesperrt, Steig ≤ ~35°) → Serpentinen; danach straff gezogen (`pull`), gerundet (`chaikin`) und als durchgehendes Band mit Mittelreihe gelegt, in engen Kehren schmaler. Aussichtsbank nur dort, wohin ein begehbarer Steig führt (Westufer; der Bach hat keine Brücke).
+- Wegweiser neben dem Weg (Start, Abzweig Hütte, Ende), Tafeln selbst als gelbe Pfeile (ein Stück, am Pfosten angesetzt) in Wegrichtung (`arrowBoard`).
+- Regenbogen entfernt.
+- Aufprall als Schaumband über die ganze Fallbreite (`FOAM`, Schaderkoordinaten wie der Auftreffsaum), Ränder in den runden Kolk eingepasst.
+
+**Geprüft (Testbrowser, Software-WebGL):** Bilder von Ente, Steinbock (oben/seitlich), Weg (Übersicht, Start, Riegel), Wegweiser, Kolk von oben – siehe `docs/assets/v404/feinschliff.png`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden (Fernlast 15.503 < 16.000). Aufbau im Node-Prüfstand ~12 s statt ~10 s (Wegsuche). **Nicht geprüft:** Handy. Einzelne Wegstücke am Riegel sind steiler als 35° (geglättete Kehren).
+### v407 (Teil 2) – Bergsee: kein Knick an der Falllippe, höherer Felsrand
+
+**Ursache:** Der Seeumriss ragte rechts neben der Falllippe über die Lippenlinie hinaus; dort hing eine Wasserzunge über der Wand, der Fall wirkte geknickt. Zusätzlich wurde das Gelände neben der Kerbe breit auf Seehöhe abgesenkt, und der Wasserrand wuchs bis an die Lippe um 3,5 % – an den Lippenenden entstand eine Stufe. Der Felsrand lag nur 1,9 über dem Spiegel und war schmal, aus flachen Blickwinkeln sah der See übergelaufen aus.
+
+**Lösung (`alpine.js`):** Umrisspunkte hinter der Lippenlinie werden auf sie zurückgesetzt (Lippenpunkte bleiben exakt); der Zuwachs des Wasserrands läuft zur Abflusskante weich aus; an der Lippe stehen senkrechte Felswangen direkt neben dem Fall (Absenkung nur in Fallbreite, weiter unten wie bisher); Felsrand auf Spiegel + 3,5 und breiter, Talseite fällt erst später ab.
+
+**Geprüft (Testbrowser):** Vorher/Nachher von oben und aus flachem Winkel (`docs/assets/v404/lippe-rand-v405.png`), Lippe aus der Nähe; `wasseroptik-v386.test.js` bestanden. **Nicht geprüft:** Handy.
+
+### v407 (Teil 3) – Sitzende Figuren im Gebirge: Bank und Baumstamm
+
+**Ursache:** Die Bank vor der Almhütte war für die sitzende Figur zu hoch (Sitz 0,63, Oberschenkel der Figur bei 0,38) – der Mann saß in der Bank. Der Wanderer am Zelt saß ohne Sitzgelegenheit in der Luft.
+
+**Lösung (`alpine.js`):** Banksitz auf Oberschenkelhöhe (0,38) gesenkt, Figur so gesetzt, dass der Rücken über der Sitzfläche und die Beine davor sind; am Zelt ein Baumstamm als Sitz, Figur auf der Geländehöhe.
+
+**Geprüft (Testbrowser):** Nahbilder von Bank und Zelt (`docs/assets/v404/sitzen-v406.png`). **Nicht geprüft:** Handy.
 
 ## v406 – Landwirt sät sichtbar nach der Ernte
 
