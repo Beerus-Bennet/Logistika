@@ -2061,44 +2061,42 @@ const HUNT = (() => {
   function woundSpot(A, rec, out) {
     const k = A.k, S0 = SP[k], p = rec.pose || {}, z = rec.zone;
     if (!rec.lo || !rec.ld || z === "lauf") return null;
-    let parent = A.node, o = rec.lo, d = rec.ld, t = null, surf = null;
+    let parent = A.node, o = rec.lo, d = rec.ld, t = null, surf = null, source = null;
     /* v391: Lage auf der Oberfläche – jeder Punkt der Wunde wird entlang der Flächennormale auf das Netz des Tiers gesetzt (vorher eine
        ebene Scheibe senkrecht zum Schuss: auf der gekrümmten Decke steckte sie je nach Blickwinkel im Körper oder schwebte davor) */
-    const onMesh = mesh => (q, nn) => { const r = meshSegment(mesh, [q[0] + nn[0] * 0.3, q[1] + nn[1] * 0.3, q[2] + nn[2] * 0.3], [-nn[0], -nn[1], -nn[2]]); return r ? [q[0] + nn[0] * (0.3 - r[0]), q[1] + nn[1] * (0.3 - r[0]), q[2] + nn[2] * (0.3 - r[0])] : null; };
-    if (z === "hals") { parent = A.neck; [o, d] = neckRay(k, o, d, p); const nm = neckMeshOf(k), ns = meshSegment(nm, o, d); t = ns ? ns[out ? 1 : 0] : rec.t; surf = onMesh(nm); }
+    const onMesh = mesh => {source=mesh;return (q, nn) => { const r = meshSegment(mesh, [q[0] + nn[0] * 0.3, q[1] + nn[1] * 0.3, q[2] + nn[2] * 0.3], [-nn[0], -nn[1], -nn[2]]); return r ? [q[0] + nn[0] * (0.3 - r[0]), q[1] + nn[1] * (0.3 - r[0]), q[2] + nn[2] * (0.3 - r[0])] : null; };};
+    if (z === "hals") { parent = A.neck; [o, d] = neckRay(k, o, d, p); const nm = withLook(k,A.gn,k==='hirsch'?deerNeck:k==='keiler'?()=>boarHead(qS(A.score),A.T.cm):phHead), ns = meshSegment(nm, o, d); t = ns ? ns[out ? 1 : 0] : rec.t; surf = onMesh(nm); }
     else if (z === "kopf" || z === "haupt") {
       if (out) return null;
       parent = A.head; [o, d] = neckRay(k, o, d, p);
       if (k === "hirsch") { o = unrot(v3sub(o, S0.headP), p.hrx || 0, 0, 0); d = unrot(d, p.hrx || 0, 0, 0); }
-      const sg = ellSeg(o, d, S0.head.c, S0.head.r); if (!sg) return null; t = sg[0];
-      surf = (q, nn) => { const r = ellSeg([q[0] + nn[0] * 0.3, q[1] + nn[1] * 0.3, q[2] + nn[2] * 0.3], [-nn[0], -nn[1], -nn[2]], S0.head.c, S0.head.r); return r ? [q[0] + nn[0] * (0.3 - r[0]), q[1] + nn[1] * (0.3 - r[0]), q[2] + nn[2] * (0.3 - r[0])] : null; };
+      const hm=withLook(k,A.gn,k==='hirsch'?()=>deerHead(A.T.P,Math.round(A.score*20)/20,A.vr,antF(A.gn)):k==='keiler'?()=>boarHead(qS(A.score),A.T.cm):phHead),sg=meshSegment(hm,o,d);if(!sg)return null;t=sg[0];surf=onMesh(hm);
     } else { const bm = withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), bs = meshSegment(bm, o, d); t = bs ? bs[out ? 1 : 0] : rec.t; surf = onMesh(bm); }
     if (out && (rec.stop == null || t > rec.stop)) return null;        /* v383: Ausschuss nur, wenn das Geschoss durchkommt */
-    const n = out ? v3n(d) : v3n([-d[0], -d[1], -d[2]]);
-    return { parent, P: [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], n, surf, x: rec.lo[0] + rec.ld[0] * t };
+    let n = out ? v3n(d) : v3n([-d[0], -d[1], -d[2]]);
+    const center=o.map((v,i)=>v+d[i]*t);
+    /* v400: Normale der Fellfläche aus zwei projizierten Tangenten; beim
+       schrägen Treffer bleibt die kleine Wundfläche auf der Haut. */
+    if(surf){const u=v3n(v3crs(n,Math.abs(n[1])<.9?[0,1,0]:[1,0,0])),v=v3crs(n,u),at=(axis,sign)=>surf(center.map((p,i)=>p+axis[i]*.003*sign),n),a=at(u,1),b=at(u,-1),c=at(v,1),e=at(v,-1);if(a&&b&&c&&e){const nn=v3n(v3crs(v3sub(a,b),v3sub(c,e)));if(v3dot(nn,nn)>.5)n=v3dot(nn,n)<0?nn.map(v=>-v):nn;}}
+    let tone=[.35,.25,.17],closest=Infinity;if(source)for(let i=0;i<source.v.length;i+=9){const q=source.v,dist=Math.hypot(q[i]-center[0],q[i+1]-center[1],q[i+2]-center[2]);if(dist<closest){closest=dist;tone=q.slice(i+6,i+9);}}
+    return { parent, tone, mesh:source, P: [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], n, surf, x: rec.lo[0] + rec.ld[0] * t };
   }
-  function woundMesh(P, n, sc, surf) {
-    sc = sc || 1;
-    const b = MB(), up = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], u = v3n(v3crs(n, up)), v = v3crs(n, u), N = 16;
-    const layer = (r, off, c, rough) => {
-      const up2 = q => { const g = surf ? surf(q, n) : null, h = g || q; return [h[0] + n[0] * off, h[1] + n[1] * off, h[2] + n[2] * off]; }, ctr = up2(P);
-      const pt = i => { const a = i / N * Math.PI * 2, q = r * (1 + rough * Math.sin(i * 2.7 + r * 90));
-        return up2([P[0] + (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * q, P[1] + (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * q, P[2] + (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * q]); };
-      for (let i = 0; i < N; i++) b.triV(ctr, pt(i), pt(i + 1), c, c, c);
-    };
-    layer(0.06 * sc, 0.004, [0.24, 0.15, 0.12], 0.16);        /* struppiges, dunkleres Haar */
-    layer(0.038 * sc, 0.0065, [0.5, 0.18, 0.15], 0.1);      /* schwacher rotbrauner Rand */
-    layer(0.018 * sc, 0.009, [0.04, 0.03, 0.03], 0.05);     /* Einschussloch */
-    return b;
+  /* v400: Kleine, weich auslaufende Fellverfärbung statt dreier Scheiben.
+     Alle Ringe folgen dem tatsächlichen Netz, fehlende Projektionen entfallen. */
+  function woundMesh(P,n,sc,surf,tone){sc=sc||1;tone=tone||[.35,.25,.17];const b=MB(),up=Math.abs(n[1])<.9?[0,1,0]:[1,0,0],u=v3n(v3crs(n,up)),v=v3crs(n,u),N=24,R=6;
+    const point=(r,j)=>{const a=j/N*Math.PI*2,radius=.032*sc*r*(1+.05*Math.sin(j*2.7)),q=P.map((p,i)=>p+(u[i]*Math.cos(a)+v[i]*Math.sin(a))*radius),g=surf?surf(q,n):q;return g&&g.map((p,i)=>p+n[i]*.0012);};
+    const color=r=>{const inner=[.055,.035,.028],rim=[.25,.105,.075],t=clamp((r-.18)/.42,0,1),f=clamp((r-.55)/.45,0,1);return inner.map((v,i)=>(v+(rim[i]-v)*t)*(1-f)+tone[i]*f);};
+    const center=point(0,0),rings=Array.from({length:R+1},(_,i)=>Array.from({length:N},(_,j)=>i?point(i/R,j):center)),colors=Array.from({length:R+1},(_,i)=>color(i/R));
+    for(let i=0;i<R;i++)for(let j=0;j<N;j++){const next=(j+1)%N,A=rings[i][j],B=rings[i+1][j],C=rings[i+1][next],D=rings[i][next];if(A&&B&&C)b.triV(A,B,C,colors[i],colors[i+1],colors[i+1]);if(i&&A&&C&&D)b.triV(A,C,D,colors[i],colors[i+1],colors[i]);}return b;
   }
   function addWound(A, rec) {
     const W = A.node && rec ? woundSpot(A, rec) : null;
     if (!W || !W.parent) return;
-    const m = FV.R.mesh(woundMesh(W.P, W.n, 1, W.surf));
+    const m = FV.R.mesh(woundMesh(W.P, W.n, 1, W.surf,W.tone));
     (A.woundM = A.woundM || []).push(m); A.woundX = W.x;
     addNode(m, { shadow: false }, W.parent);
     const O = woundSpot(A, rec, true);          /* v383: Ausschuss – etwas größer und ausgefranster */
-    if (O) { const m2 = FV.R.mesh(woundMesh(O.P, O.n, 1.35, O.surf)); A.woundM.push(m2); addNode(m2, { shadow: false }, O.parent); }
+    if (O) { const m2 = FV.R.mesh(woundMesh(O.P, O.n, 1.35, O.surf,O.tone)); A.woundM.push(m2); addNode(m2, { shadow: false }, O.parent); }
   }
   const fallSide = (A, other) => A.woundX ? (A.woundX > 0 ? 1 : -1) : other;      /* v382: fällt auf die Seite ohne Einschuss – die Wunde liegt oben und ist sichtbar */
   const alive = A => A.st !== "gone" && A.st !== "dead" && A.st !== "fall" && A.st !== "drop";
@@ -4623,7 +4621,7 @@ const HUNT = (() => {
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
     _fire: () => fire(), _setView: v => setView(v), _camLook: camLook, FOV, _gunZone: gunZone, _neckExt: k => neckExt(k), _neckFrame: neckFrame, NORG, _neckContacts: neckContacts, _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _organSegment: (k,id,o,d)=>organSegment(k,ORG[k].find(O=>O.id===id),o,d), _xrShot:xrShot, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
-      if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _organName:organName, _organReportName:organReportName, _xrPanelHTML:xrPanelHTML, _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
+      if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _woundSpot:woundSpot,_woundMesh:woundMesh,_addWound:addWound,_organName:organName, _organReportName:organReportName, _xrPanelHTML:xrPanelHTML, _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _stepAnimal:stepAnimal, _deadLeg:deadLeg, _fallFloor:fallFloor, _fall: (A,side=1) => { A.st = "fall"; A.t = 0.8; A.side = side; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }

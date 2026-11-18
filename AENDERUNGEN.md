@@ -1,3 +1,11 @@
+## v400 – Dezente Wunde direkt auf dem Fell
+
+**Ursache:** Die frühere ebene Wundscheibe schwebte an gekrümmten Flächen oder verschwand darin. Auch die erste Oberflächenkorrektur wirkte durch große, hart abgegrenzte Farbscheiben noch aufgesetzt.
+
+**Lösung (`hunt.js`):** Eine kleine Fläche mit dunklem Kern, gedämpftem rotbraunem Rand und weichem Übergang zur tatsächlichen Fellfarbe. Alle Ringe werden auf das Tiernetz projiziert; die Ausrichtung folgt der Hautnormale. Hals und Haupt verwenden dieselben Modelle, Körpermaße und Fellvarianten wie das sichtbare Tier. Die Wunde bleibt Kind des betroffenen Körperteils und folgt Fall und Drehung. Ausschuss weiterhin nur bei ausreichender Eindringtiefe. Maximal 264 Dreiecke je Wunde, gemeinsame Ringpunkte nur einmal berechnet; kein neuer Effekt pro Bild. Trefferbild-Aufräumung aus v391 erhalten.
+
+**Geprüft:** Eigenständige Punkt-zu-Dreieck-Abstandsmessung an 18 Flächen (drei Arten, Körper/Hals/Haupt, beide Seiten), Einschuss/Ausschuss und Eindringgrenze. Chromium/WebGL mit mobiler Fenstergröße: Seiten, Schrägansicht, Gegenfläche und gedrehter Körper sowie abgeschlossener Fall; keine JavaScript-Seitenfehler. Bestehende Tests `trefferklarheit-v388`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** echtes iPhone/Safari und Laufzeitmessung auf Mobilhardware. Vorschau und Details: `docs/WUNDOPTIK-v400.md`.
+
 ## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
 
 **Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.

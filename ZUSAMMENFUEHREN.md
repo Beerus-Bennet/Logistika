@@ -1,3 +1,7 @@
+## v400 – Wundoptik / PR #110
+
+main510ae1b vollständig in den bestehenden Wunden-PR integriert; Dokumentation beider Seiten und Fortbildung398 erhalten. Gesamt-/SW-Version400, hunt400, style391 aus PR110; andere Assets behalten ihre Versionen. Weiterhin nur Gestaltung, keine Änderung an Trefferwirkung, Spielstand oder Belohnung. Wunden am tatsächlichen Tiernetz, Elternknoten folgen der Pose, Ausschuss nur bei Durchdringung. Parallele PRs111–116 nicht überschreiben; insbesondere Schwanz-Ausschluss des Fasans aus PR114 ist eine separate Änderung an `phBody`/`woundSpot` und beim späteren Zusammenführen zusätzlich zu dieser Flächenprojektion zu erhalten. Keine automatische Veröffentlichung oder Zusammenführung nach main.
+
 ## v388 – Trefferbeschriftung
 
 Basis main c697106. Eigenes hunt-Asset388 und Gesamt-/SW-Version388; offene Landschaft/Insel/Händler/Rahmenvertrags-PRs nicht überschreiben. `organName` leitet Tierseite aus lokalem X ab (−X rechts, +X links); historische IDs bleiben Speicherschlüssel. `organReportName` kompakter Herzstatus, kein Todesursachenblock. Hauptorgan-Typ aus zusätzlichen XR.ov.lab-Schildern ausschließen, beide Lungen im Hauptschild kennzeichnen. xrShot reicht sh.stop an shotOrgans durch; nur Ansichtskopie, keine Wertungs-/Belohnungsmigration. Tests trefferklarheit-v388.*, aktualisierte ältere Trefferbild-/Anatomieerwartungen und Bericht docs/TREFFERKLARHEIT-v388.md.
