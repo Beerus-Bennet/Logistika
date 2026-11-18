@@ -5268,3 +5268,8 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 #huntUI .hu-xr .xr-org li.v .xr-organ-model{border-color:#d9503a;background:#3a1b24}
 #huntUI .hu-xr .xr-legs{margin-top:10px;padding-top:6px;border-top:1px solid #243d57}
 #huntUI .hu-xr .xr-legs .xr-leg{margin:4px 0}
+/* ===== v393: Diensthandy – Tab „Notizen“ ===== */
+.phone-tabs{grid-template-columns:repeat(4,minmax(0,1fr)) 44px}
+.pnote{display:flex;gap:8px;align-items:baseline;padding:8px 10px;margin:0 0 6px;border-radius:10px;background:rgba(255,255,255,.06);font-size:13px;line-height:1.35}
+.pnote-t{flex:0 0 auto;font-size:11px;opacity:.6}
+.pnote.warn{border-left:3px solid #e0a030}
