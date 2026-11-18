@@ -1,3 +1,11 @@
+## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
+
+**Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.
+
+**Lösung (`team.js`):** 8 kurze Sprüche mit Vertretung (`STAFF_SUB_SAY`) und 6 ohne (`STAFF_NOSUB_SAY`), feste Wahl je Fortbildung (`s.away.q`). Mit 60 % (`STAFF_TRAIN.sub`) kennt die Kraft jemanden; sonst `s.away.none`: Die Kraft ist einen Tag nicht auf dem Hof (Figur ausgeblendet, kein Auftrag, „📍 Orten“ gesperrt), ihre Aufgaben bleiben liegen, der Spieler muss sie selbst erledigen. Die Rückfrage vor dem Anmelden weist darauf hin, die Karte zeigt „⚠️ Keine Vertretung“, die Rückkehr-Meldung entfällt dann das Danke. Alte Spielstände: `s.away` ohne `none` verhält sich wie bisher (Vertretung wird nachgezogen).
+
+**Geprüft (Testbrowser):** Beide Fälle erzwungen – mit Vertretung (Figur sichtbar, Spruch mit Name, Info „Vertretung“), ohne (Figur ausgeblendet, Spruch ohne Vertretung, Info „Keine Vertretung“, `doing` „auf Fortbildung“); nach Ablauf der Zeit sind beide wieder da; keine Konsolenfehler. **Nicht geprüft:** Handy; ob zugewiesene Hof-Aufgaben der abwesenden Kraft in der Liste sichtbar bleiben (unverändert gelassen).
+
 ## v391 – Schusswunde auf der Haut (alle Tiere), Trefferbild-Bericht aufgeräumt
 
 **Ursache:** (1) Die Schusswunde (v382) war eine ebene Scheibe senkrecht zum Schuss. Auf der gekrümmten Decke steckte sie je nach Blickwinkel im Körper oder schwebte davor – sichtbar nur aus bestimmten Winkeln. (2) Im Trefferbild hatte „Schwarte und Muskel“ eine schlichte Zeile mit Punkt, die Organe eine Zeile mit Bildkasten; der Hinweistext stand zwischen Liste und Schussbericht.
