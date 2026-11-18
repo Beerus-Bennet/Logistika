@@ -1,3 +1,11 @@
+## v396 – Jagd: Wild bleibt in Schussweite der gewählten Waffe
+
+**Ursache:** Das Wild erschien bei Glock/Flinte zwar nah (46–56 m, `nearD`), wanderte aber zu Zielen, die immer mehr als 32 Einheiten (128 m) vom Hochsitz entfernt lagen; fand `pickWalk` keins, lief es zur Feldmitte (200–232 m). Die Waffen reichen nur 60 m (`maxR`) – der Schuss endete mit „Zu weit für diese Waffe“, der Fasan war praktisch nicht abschießbar. Dasselbe galt für Doppelbüchse/CZ 375 (220/250 m), deren Wild bis 240 m erscheinen und wandern konnte.
+
+**Lösung (`hunt.js`):** `gunReach()` = 95 % der Waffenreichweite in Einheiten. `spawnPoint` begrenzt die Entfernung darauf, `pickWalk` wählt nur Ziele zwischen Mindestabstand (bei Kurzwaffen 0,7 · `nearD[0]`, sonst 32) und `gunReach()`; ohne Treffer nach 20 Versuchen ein Punkt aus `spawnPoint()` statt der Feldmitte. Gilt für alle Tierarten. Gewehre mit ≥ 400 m Reichweite verhalten sich praktisch wie zuvor.
+
+**Geprüft (Testbrowser, Glock):** Wanderziele von Fasan, Keiler, Hirsch liegen bei 39–55 m (vorher Feldmitte 232 m, per Code und gemessene Mitte 200 m belegt; den Alt-Lauf im Browser konnte ich wegen Zeitlimit nicht zu Ende messen). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Spielgefühl am Handy; schon vorhandenes Wild beim Waffenwechsel wird nicht umgesetzt, es wandert erst bei der nächsten Wegwahl in Reichweite.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
