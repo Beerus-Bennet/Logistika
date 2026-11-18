@@ -1648,7 +1648,7 @@ function farmEvStart(k) {
   const c = { k, t0: S.time, until: S.time + D.dur, data: {} };
   if (D.daily) { F.ev.days = F.ev.days || {}; F.ev.days[k] = staffDay(); }
   if (D.gap) { F.ev.last = F.ev.last || {}; F.ev.last[k] = S.time; }
-  if (k === "schwarm") { const gs = FGROUNDS.filter(farmGroundOk); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; }
+  if (k === "schwarm") { const gs = FGROUNDS.filter(g=>g.id!=="bachsteg"&&farmGroundOk(g)); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; } /* v409: kein neuer Schwarm am trockenen alten Wald-Bachstück. */
   if (k === "nachbar") {
     const pool = ["bretter", "balken", "kisten", "pfosten", "platten", "brennholz"].filter(id => flv() >= 9);
     const a = pick(pool), b = pick(pool.filter(x => x !== a));

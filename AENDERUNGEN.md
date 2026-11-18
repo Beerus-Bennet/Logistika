@@ -1,3 +1,11 @@
+## v409 – Alten Wald-Angelplatz örtlich bereinigen
+
+**Wunsch:** Den markierten Holzstamm am Wegende um 90 Grad drehen und Fischschwarm/Wasserspritzer entfernen, die nach der Flussverlegung auf dem Trockenen geblieben sind. Nur dieser Bereich, keine Änderung am Hauptsee.
+
+**Lösung:** Ausschließlich der Endstamm von `FWORLD.paths[2]` erhält eine Vierteldrehung um die Hochachse, Mittelpunkt/Höhe bleiben gleich. Optionales `benchTurn` verändert keine anderen Wegenden. Am früheren Fangplatz `bachsteg` werden die Fischblase, der Schwarm-Ereignisknopf und die dazugehörigen Spritzer unterdrückt, auch bei einem bereits gespeicherten Schwarm. Neue Schwärme wählen diesen alten Platz nicht mehr. Hauptsee-Fangplätze, Fangchancen, Fischmodelle, Wasserflächen und Wasserbewegungen bleiben erhalten. Keine Spielstand-/Inventarmigration.
+
+**Geprüft:** `waldplatz-v409.test.js` (tatsächliche Stammgeometrie: Vierteldrehung, gleicher Mittelpunkt/Höhe/Farbe, Standard-Wege unverändert). `waldplatz-v409.browser.js`: echter Hofaufbau, alter gespeicherter Schwarm ohne Blase/Knopf/Spritzer, Gegenprobe „Tiefe Mitte“ mit allen drei Effekten und gleichen Fangchancen; neue Schwärme erreichen sämtliche bisherigen Seeplätze, nicht `bachsteg`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden. Syntax und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/WALDPLATZ-v409.md`.
+
 ## v406 – Landwirt sät sichtbar nach der Ernte
 
 **Ursache:** `staffDo` führte bei Feldarbeit im selben Abschluss erst `farmHarvest` und direkt danach `farmPlant` aus. Ernte und Aussaat hatten dieselbe Sichelbewegung; das Feld erschien ohne eigenen Sägang erneut bepflanzt.
