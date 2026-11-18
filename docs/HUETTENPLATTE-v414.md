@@ -14,4 +14,4 @@ Das Fundament endet jetzt an der Unterseite der Deckplatte (`y=-0,04`). Die Deck
 
 `node huettenplatte-v414.browser.js` prüft den vollständigen Hof in Chromium/SwiftShader: vier Richtungen, Tag/Nacht,960×800 und390×760 – insgesamt16 Ansichten. Keine zusätzlichen GPU-Meshes/Knoten, kein Kontextverlust oder JavaScriptfehler; Gebäude, Bäume und Geld bleiben erhalten. Messwerte: [JSON](assets/v414/messwerte.json). Kein Test auf einem echten iPhone/Safari.
 
-Der lokale Lieferstand414 enthält die vorherigen Gebirgsänderungen413 und Kopf-/Menüfixes412. Nur alpine414 und Gesamt-/SW/LOGI_V414 neu erhöht; hunt/style bleiben412. Basis main21c3bf8. Kein GitHub-Upload, GitHub-Merge oder Deployment.
+Der Lieferstand414 enthält die vorherigen Gebirgsänderungen413 und Kopf-/Menüfixes412. Nur alpine414 und Gesamt-/SW/LOGI_V414 neu erhöht; hunt/style bleiben412. Basis main21c3bf8. Lieferung per Pull Request; kein automatisches Merge/Deployment.

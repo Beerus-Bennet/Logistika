@@ -1,6 +1,6 @@
 ## v414 – Berghaus-Bodenplatte
 
-Lokaler Stand413/412 und main21c3bf8 erhalten. Einzige Modellkorrektur: Fundamentsockel von `.04-th` auf `-.04-th` abgesenkt, damit seine Oberseite an der Unterseite der dünnen Deckplatte liegt. Kein Eingriff in Gelände, Wasser, Kamera, Jagd oder Tiefenpuffer. alpine414, Gesamt-/SW/LOGI_V414, hunt/style412. Geometrischer Regressionstest reproduziert den alten Fehler und prüft den neuen Anschluss;16 Browseransichten bestanden. Bericht docs/HUETTENPLATTE-v414.md. Kein GitHub-Upload/Merge/Deployment.
+Lokaler Stand413/412 und main21c3bf8 erhalten. Einzige Modellkorrektur: Fundamentsockel von `.04-th` auf `-.04-th` abgesenkt, damit seine Oberseite an der Unterseite der dünnen Deckplatte liegt. Kein Eingriff in Gelände, Wasser, Kamera, Jagd oder Tiefenpuffer. alpine414, Gesamt-/SW/LOGI_V414, hunt/style412. Geometrischer Regressionstest reproduziert den alten Fehler und prüft den neuen Anschluss;16 Browseransichten bestanden. Bericht docs/HUETTENPLATTE-v414.md. Lieferung per Pull Request; kein automatisches Merge/Deployment.
 
 ## v413 – Gebirgsform und Grafik
 
