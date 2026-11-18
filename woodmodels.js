@@ -3319,7 +3319,14 @@ const FWM = (() => {
       if (hat === "helmf") [-1, 1].forEach(q => { b.box(0.05, 0.09, 0.08, 0x2f5a3a, { x: q * 0.135, y: 0.9 + yo }); b.box(0.01, 0.02, 0.07, 0x2a2a2e, { x: q * 0.07, y: 1.07 + yo }); });    /* Gehörschutz */
       if (hat === "helmg") { b.box(0.19, 0.05, 0.03, 0x2a2e36, { y: 0.98 + yo, z: 0.125 }); [-1, 1].forEach(q => b.box(0.07, 0.035, 0.012, 0xcfe8f4, { x: q * 0.045, y: 0.985 + yo, z: 0.143 })); }   /* Schutzbrille */
     }
-    if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84 + yo, z: 0.1 });
+    if (o.beard) {
+      /* v400: Bart wie ein Vollbart um Kiefer und Kinn (vorher ein Klotz wie eine Maske), Mund und Wangen bleiben frei, Schnurrbart über dem Mund */
+      const bc = mix(o.beard, 0x000000, 0.3), bd = mix(bc, 0x000000, 0.25);
+      b.sphere(0.1, 9, 5, bc, { y: 0.815 + yo, z: 0.03, sy: 0.62 });
+      [-1, 1].forEach(q => b.box(0.028, 0.1, 0.1, bd, { x: q * 0.108, y: 0.88 + yo, z: 0.03 }));         /* Koteletten */
+      b.box(0.075, 0.016, 0.022, bd, { y: 0.885 + yo, z: 0.114 });                                         /* Schnurrbart */
+      b.box(0.04, 0.008, 0.01, 0x8a4a3a, { y: 0.865 + yo, z: 0.124 });                                     /* Mund im Bart */
+    }
     if (hat === "helmg") [-1, 1].forEach(q => b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: q * 0.04, y: 0.95 + yo, z: 0.115 }));      /* v399: Schutzbrille – alte Augen darunter */
   }
   /* v95: der Kopf allein, Drehpunkt am Hals (Ursprung = Halsansatz, y = 0,8 am Körper) – für Gespräch, Nicken, Kopfschütteln */
