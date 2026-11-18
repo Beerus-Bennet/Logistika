@@ -168,3 +168,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v403: Gebirge (`alpine.js`) – Hauptkamm bis ~80 mit Graten (`vnoise`/`ridged`), Schnee (`snowAmt`), Raster 2,4 mit Felsfacetten; Karsee mit Felsriegel (Ufer über dem Spiegel), Fall 10 breit (`FW`), runder Kolk r 8; Fichten/Lärchen/Latschen nach Höhenstufen; Entdeckungen (`extras`: Gipfelkreuz, Hütte, Weg, Zelt, Boot, Ente, Regenbogen, Yeti-Spuren); Kamera-ty folgt dem Gelände (`scene.camTy`/`camExt`).
 
 - v404: PR121 mit main25c3000/PR122 zusammengeführt; beide v403-Dokumentationen erhalten, Gesamt-/SW404, hunt403/alpine403 unverändert.
+
+- v405: Gemeinsame Hof-/Büro-Ladeanzeige ohne Zeitprozent (`ldMake`/`ldStart`), „Fertig“ erst nach tatsächlicher Fertigstellung; Hof-Aufbaufehler mit Rückmeldung/Neuladen. Büro wartet vor `finish` auf leere `O.build`. farmview/officefp/style405, andere Assets erhalten. Browserprüfung `hofladen-v405.browser.js`, Details `docs/HOFLADEN-v405.md`.

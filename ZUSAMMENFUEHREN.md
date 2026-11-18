@@ -1,3 +1,7 @@
+## v405 – Hof-Ladeanzeige im bestehenden PR #121
+
+Ergänzt die bereits geprüften anatomischen Trefferbild-Symbole und die Konfliktauflösung404; enthält main25c3000/aktuelles Gebirge unverändert. Gesamt-/SW405, farmview/officefp/style405; hunt403/alpine403 bleiben. Die gemeinsame `ldStart`-Schnittstelle behält `finish()`, ergänzt `fail(message)` und verwendet keine geschätzte Dauer mehr. Bei Büroaufrufern bleiben zusätzliche Argumente unschädlich; der Abschluss wartet auf `O.build`. Keine Save-Migration und kein automatisches Merge/Deployment. Ein echter iPhone-Hänger konnte nicht reproduziert werden; die Anzeige und der abgefangene Fehlerfall wurden geprüft.
+
 ## v404 – Konfliktauflösung PR #121 nach Gebirge #122
 
 main25c3000 vollständig integriert. `alpine.js`, die Gebirgsvorschauen und der angepasste Wassertest sind identisch mit main; `hunt.js` ist identisch mit der geprüften PR121-Fassung433a6d4. Beide Einträge aus den Konfliktdateien erhalten. Gemeinsame Version404, `index.html`/SW referenzieren hunt403 und alpine403. Kein Zurücksetzen von Landschaft, Jagd oder Spielständen.

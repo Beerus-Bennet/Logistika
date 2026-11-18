@@ -1,3 +1,11 @@
+## v405 – Ladeanzeige ohne widersprüchliche Prozentwerte
+
+**Befund:** Der Screenshot zeigt 13 %, obwohl der Balken deutlich weiter gefüllt ist. Die alte Anzeige animierte getrennte Ziffernrollen und Balken anhand einer gemerkten Ladezeit; sie maß keinen echten Aufbaufortschritt. Ein dauerhaftes Hängen auf dem iPhone wurde mangels Reproduktion nicht als behoben gewertet.
+
+**Lösung:** `ldMake`/`ldStart` zeigen eine unbestimmte Ladebewegung mit „Wird geladen …“ statt geschätzter Prozentzahlen. „Fertig“ folgt beim Hof erst nach Szenenaufbau und Zeichnung, beim Büro erst nach der gestaffelten Aufbauwarteschlange. Bei einem abgefangenen Hof-Aufbaufehler stoppen die Animationen und erscheinen eine lesbare Rückmeldung sowie „Neu laden“. Frühes Verlassen entfernt den Ladeschirm; erneut eintretende Spieler bekommen keine doppelten Ladeflächen. Reduzierte Bewegung wird berücksichtigt. Keine Änderung an Landschaft oder Spielständen, keine behauptete Verkürzung der Aufbauzeit.
+
+**Geprüft:** `hofladen-v405.browser.js` in Chromium/Software-WebGL (390 × 844): längere Ladezeit, 400-ms-Threadblock, Fertigstand, reduzierte Bewegung, echter Hofstart mit Gebirge, echtes Büro mit verzögerter Aufgabenliste, gezielt ausgelöster Aufbaufehler, frühes Verlassen. Syntaxprüfungen und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari, Spielstand aus dem Screenshot, Ursache eines möglichen gerätespezifischen Hängers. Vorschau/Bericht: `docs/HOFLADEN-v405.md`.
+
 ## v404 – Trefferbild-PR mit aktuellem Gebirge zusammengeführt
 
 **Ursache:** PR #122 wurde nach dem Erstellen von PR #121 gemergt. Die beiden unabhängigen v403-Änderungen ergänzten dieselben Stellen in `AENDERUNGEN.md` und `CLAUDE.md`.

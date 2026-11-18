@@ -3216,13 +3216,9 @@ function farmShow() {
   if (!FV.built) { farmBoot(); return; }
   farmShowGo();
 }
-/* v90: erster Aufbau des Hofs mit Ladescreen. Der Aufbau (Wald, Wege, Büsche, alle Bäume in Endform) blockiert den
-   Hauptthread; der Schirm wird deshalb erst gemalt, dann gebaut. Die Animation läuft auf dem Compositor weiter. */
-/* v201: neuer Ladescreen. Der Aufbau blockiert den Hauptthread, deshalb laufen Lkw, Balken, Prozentzahl, Bäume und Sprüche
-   ausschließlich als Web-Animationen (transform/opacity, Compositor) nach einer geschätzten Dauer (letzte Ladezeit, gemerkt).
-   Fertig gebaut: der Rest fährt in <1 s auf 100 %, dann Fade-out. Die Prozentzahl ist also Schätzung, nicht echter Fortschritt. */
+/* v405: Solange der synchrone Szenenaufbau läuft, zeigt der Compositor eine
+   unbestimmte Ladebewegung. Keine erfundenen Prozentwerte aus einer Zeitschätzung. */
 const LD_MSG = ["Setzlinge werden auf dem Hof gepflanzt …", "Sägewerk wird eingerichtet & Holztransport bereitgestellt …", "Sägen werden geschärft – gleich geht's los!", "Willkommen auf dem Erbhof!"];
-const LD_LH = 30;
 function ldTreeSVG(h) {
   return `<svg viewBox="0 0 20 28" width="${Math.round(h * 20 / 28)}" height="${h}" aria-hidden="true"><rect x="8.4" y="22" width="3.2" height="6" fill="#6b4423"/>` +
     `<path d="M10 13 0 24h10z" fill="#37b058"/><path d="M10 13l10 11H10z" fill="#1f8a3d"/>` +
@@ -3241,85 +3237,65 @@ const LD_BG = `<svg class="fbBg" viewBox="0 0 300 130" preserveAspectRatio="xMid
   `<path d="M0 130V78l38-38 28 26 34-46 44 58 30-24 40 40 30-30 56 36v30z" fill="#4a7fb5" opacity=".16"/>` +
   `<path d="M0 130V100l30-26 24 22 40-34 36 38 34-22 44 30 36-24 56 28v18z" fill="#3b6c9c" opacity=".14"/>` +
   [8, 30, 52, 232, 258, 284, 150, 176].map((x, i) => { const h = 22 + (i * 7) % 14; return `<path d="M${x} ${130 - h}l-9 ${h}h18z M${x} ${130 - h - 10}l-7 ${h * .6}h14z" fill="#1f8a3d" opacity=".2"/>`; }).join("") + `</svg>`;
-function ldMake(el, T) {
+function ldMake(el) {
   el.innerHTML = `<div class="fbBox" role="status" aria-label="Der Hof wird geladen">${LD_BG}<div class="fbTitle">Weitwind Spedition</div>` +
-    /* v331: Kurze Ziffernrollen statt einer 3030px langen Ebene vermeiden
-       übergroße Rasterflächen bei hoher Pixeldichte. Gemeinsame Zeitbasis in ldStart. */
-    `<div class="fbPct" aria-hidden="true"><span class="fbDigits">${[["", 1], ["", ...Array.from({ length: 10 }, (_, i) => i)], Array.from({ length: 10 }, (_, i) => i)].map(ds => `<span class="fbDigit"><span class="fbReel">${ds.map(d => `<span>${d}</span>`).join("")}</span></span>`).join("")}</span><span> %</span></div>` +
+    `<div class="fbPct">Wird geladen …</div>` +
     `<div class="fbTrack"><div class="fbTrees"></div><div class="fbTruck"><div>${LD_TRUCK}</div></div><div class="fbRoad"><i class="fbFill"></i></div></div>` +
     `<div class="fbMsg">${LD_MSG.map(t => `<span>${t}</span>`).join("")}</div></div>`;
   return el;
 }
-function ldStart(el, T) {
-  const q = s => el.querySelector(s), road = q(".fbRoad"), fill = q(".fbFill"), truck = q(".fbTruck"), reels = [...el.querySelectorAll(".fbReel")], treesEl = q(".fbTrees");
-  const msgs = [...el.querySelectorAll(".fbMsg span")];
-  const TW = 54, W = Math.max(150, road.clientWidth || 260), run = W - TW;
-  const n = Math.max(8, Math.floor(run / 15)), trees = [];
-  for (let i = 0; i < n; i++) {
-    const t = document.createElement("div"); t.className = "fbTree";
-    const x = 6 + run * (i + ((i * 37) % 7 - 3) * 0.04) / (n - 1), h = 20 + (i * 5) % 9;
-    t.style.left = Math.max(2, x - 7) + "px"; t.innerHTML = ldTreeSVG(h);
-    t._p = Math.min(100, Math.max(0, (x - 6) / run * 100)); treesEl.appendChild(t); trees.push(t);
-  }
-  const sec = p => p <= 30 ? 0 : p <= 70 ? 1 : p < 100 ? 2 : 3;
-  let anims = [], main = null;
-  function ride(from, to, dur) {
-    anims.forEach(a => a.cancel()); anims = [];
-    const started = document.timeline.currentTime;
-    const A = (e, kf, o) => { const a = e.animate(kf, Object.assign({ duration: dur, fill: "forwards", easing: "linear" }, o)); if (started != null) a.startTime = started; anims.push(a); return a; };
-    const f = Math.round(from), t = Math.round(to);
-    fill.style.transform = `translateX(${from - 100}%)`; truck.style.transform = `translateX(${from / 100 * run}px)`;
-    A(fill, [{ transform: `translateX(${from - 100}%)` }, { transform: `translateX(${to - 100}%)` }]);
-    const m = A(truck, [{ transform: `translateX(${from / 100 * run}px)` }, { transform: `translateX(${to / 100 * run}px)` }]);
-    const digit = (p, i) => i === 0 ? (p >= 100 ? 1 : 0) : i === 1 ? (p < 10 ? 0 : 1 + Math.floor(p / 10) % 10) : p % 10;
-    reels.forEach((reel, i) => {
-      const kf = [];
-      for (let p = f; p <= t; p++) kf.push({ transform: `translateY(${-digit(p, i) * LD_LH}px)`, offset: t > f ? (p - f) / (t - f) : 0, easing: "steps(1, end)" });
-      if (kf.length === 1) kf.push({ ...kf[0], offset: 1 });
-      reel.style.transform = kf[0].transform; A(reel, kf);
-    });
-    msgs.forEach((sp, j) => {
-      const kf = [];
-      for (let p = f; p <= t; p++) kf.push({ opacity: sec(p) === j ? 1 : 0, offset: t > f ? (p - f) / (t - f) : p > f ? 1 : 0 });
-      if (kf.length < 2) kf.push({ opacity: kf[0].opacity, offset: 1 });
-      sp.style.opacity = sec(f) === j ? 1 : 0; A(sp, kf);
-    });
-    trees.forEach(tr => {
-      if (tr._p < from) { tr.classList.add("on"); return; }
-      if (tr.classList.contains("on")) return;
-      A(tr, [{ transform: "scale(0)" }, { transform: "scale(1.18)", offset: .6 }, { transform: "scale(1)" }], { duration: 380, delay: (tr._p - from) / Math.max(1, to - from) * dur, fill: "both", easing: "ease-out" });
-    });
-    return m;
-  }
-  main = ride(0, 92, T);
+function ldStart(el) {
+  const q=s=>el.querySelector(s),fill=q(".fbFill"),truck=q(".fbTruck"),trees=q(".fbTrees"),status=q(".fbPct"),msgs=[...el.querySelectorAll(".fbMsg span")],run=Math.max(96,(q(".fbRoad").clientWidth||260)-54);
+  /* v405: Nur diese zwei einfachen Schleifen laufen während blockierender Arbeit.
+     Eine laufende Markierung ist kein prozentualer Fortschrittsbalken. */
+  trees.innerHTML=Array.from({length:8},(_,i)=>`<div class="fbTree on" style="left:${i/7*run}px">${ldTreeSVG(20+i%3*3)}</div>`).join("");
+  msgs.forEach((sp,i)=>sp.style.opacity=i===0?1:0);
+  fill.style.width="32%";
+  const anims=[],reduced=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduced){
+    anims.push(fill.animate([{transform:'translateX(-110%)'},{transform:'translateX(320%)'}],{duration:1800,iterations:Infinity,easing:'linear'}));
+    anims.push(truck.animate([{transform:'translateX(0)',opacity:0},{opacity:1,offset:.08},{opacity:1,offset:.92},{transform:`translateX(${run}px)`,opacity:0}],{duration:1800,iterations:Infinity,easing:'linear'}));
+  }else{fill.style.transform='translateX(100%)';truck.style.transform=`translateX(${run/2}px)`;}
+  const stop=()=>anims.forEach(a=>a.cancel());
+  let done=null;
   return {
-    finish() {
-      const p0 = Math.min(92, Math.max(0, (main.currentTime || 0) / T * 92));
-      const a = ride(p0, 100, Math.max(350, (100 - p0) * 9));
-      return a.finished.catch(() => {}).then(() => new Promise(r => setTimeout(r, 650)));
-    }
+    finish(){
+      if(done)return done;
+      stop();el.classList.add('ready');status.textContent='Fertig';fill.style.width='100%';fill.style.transform='translateX(0)';truck.style.transform=`translateX(${run}px)`;
+      msgs.forEach((sp,i)=>sp.style.opacity=i===msgs.length-1?1:0);
+      return done=new Promise(r=>setTimeout(r,650));
+    },
+    fail(message){stop();el.classList.add('failed');status.textContent='Nicht geladen';msgs.forEach((sp,i)=>{sp.style.opacity=i===0?1:0;});msgs[0].textContent=message;}
   };
 }
 function farmBoot() {
   FV.boot = true;
+  const previous=document.getElementById('farmBoot');if(previous)previous.remove(); /* v405: erneutes Betreten nach einem Fehler */
   const el = document.createElement("div");
   el.id = "farmBoot";
   ldMake(el);
   $("#farm").appendChild(el);
-  let T = 1800;
-  try { const v = +localStorage.getItem("fbMs"); if (v > 0) T = Math.min(6000, Math.max(900, v)); } catch (e) {}
-  const ld = ldStart(el, T);
-  const t0 = performance.now();
+  const ld = ldStart(el),t0=performance.now();
+  const failed=e=>{
+    FV.boot=false;FV.on=false;FV.built=false;
+    console.error("Hofaufbau",e);
+    ld.fail("Der Hof konnte nicht geladen werden. Bitte lade das Spiel neu.");
+    const button=document.createElement('button');button.className='btn';button.textContent='Neu laden';button.onclick=()=>location.reload();el.querySelector('.fbBox').appendChild(button);
+  };
   requestAnimationFrame(() => setTimeout(() => {
-    FV.boot = false;
-    if (document.body.classList.contains("tab-farm")) farmShowGo();
-    FV.bootMs = Math.round(performance.now() - t0);
-    try { localStorage.setItem("fbMs", String(FV.bootMs)); } catch (e) {}
-    /* zwei Bilder abwarten (Shader, erste Zeichnung), dann auf 100 % fahren und ausblenden */
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-      ld.finish().then(() => { el.classList.add("out"); setTimeout(() => el.remove(), 450); });
-    }, 0)));
-  }, 40));
+    try{
+      if(document.body.classList.contains("tab-farm"))farmShowGo();
+      else{FV.boot=false;el.remove();return;}
+      FV.bootMs=Math.round(performance.now()-t0);
+      try{localStorage.setItem("fbMs",String(FV.bootMs));}catch(e){}
+      /* v405: Erst nach Aufbau und erster Zeichnung fertig melden. Fehler lassen
+         eine klare Rückmeldung stehen, statt die Ladeanimation endlos laufen zu lassen. */
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        try{FV.R.render(performance.now()/1000);FV.boot=false;ld.finish().then(()=>{el.classList.add('out');setTimeout(()=>el.remove(),450);});}
+        catch(e){failed(e);}
+      }));
+    }catch(e){failed(e);}
+  },40));
 }
 function farmShowGo() {
   if (!FV.built) farmBuildScene();

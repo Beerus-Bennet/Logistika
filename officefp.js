@@ -1567,8 +1567,10 @@ const OFFICE3D = (() => {
       const wait = Math.max(0, 1700 - (performance.now() - t0));
       setTimeout(() => {
         if (!live()) return;
-        const out = () => { if (!live()) return; if(O.build&&O.build.length){setTimeout(out,80);return;} ld.classList.add("out"); setTimeout(() => ld.remove(), 450); const h = el.querySelector("#ofpHint"); if (h) { h.classList.add("on"); setTimeout(() => h.classList.remove("on"), 5200); } };
-        if (L) L.finish().then(out); else out();
+        const out = () => { if (!live()) return; ld.classList.add("out"); setTimeout(() => ld.remove(), 450); const h = el.querySelector("#ofpHint"); if (h) { h.classList.add("on"); setTimeout(() => h.classList.remove("on"), 5200); } };
+        /* v405: Die gemeinsame Ladeanzeige erst nach allen Büro-Aufbauschritten abschließen. */
+        const finish = () => { if (!live()) return; if(O.build&&O.build.length){setTimeout(finish,80);return;} if(L)L.finish().then(out);else out(); };
+        finish();
       }, wait);
     }, 60));
   }
