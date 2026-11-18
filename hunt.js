@@ -2336,9 +2336,16 @@ const HUNT = (() => {
          ab halb angezogen eingekrallte Zehen statt der gespreizten Standzehen */
       const dead = A.st === "dead" || A.st === "fall", near = A.st === "fly" && A.fly && A.fly.land && Math.hypot(A.fly.land[0] - A.x, A.fly.land[1] - A.z) < 2.5;
       const fp = dead ? deadPose(A).feet : null, kf = dead ? fallK(A) : 0;
+      /* v394: Gehen auf dem Boden – Ständer pendeln im Wechselschritt (Vorschwung hebt den Fuß), Schrittlänge folgt dem Tempo, Rumpf wippt;
+         vorher blieben die Füße starr und der Fasan glitt über den Boden */
+      const ground = !dead && !near && !["fly", "drop", "land"].includes(A.st), wk = ground ? clamp(A.v / 0.5, 0, 1) : 0;
+      const wamp = lerp(0.5, 0.75, clamp((A.v - 0.8) / 1, 0, 1)) * wk;
+      if (ground && !(A.pause > 0) && A.v > 0.02) A.pph = ((A.pph || 0) + dt * A.v / (4 * Math.sin(Math.max(0.3, wamp)) * 0.137 * (A.s || 1))) % 1;
       A.feet.forEach((f, i) => {
+        const c = ((A.pph || 0) + i * 0.5) * Math.PI * 2;
+        f.y = 0.137 + (ground ? Math.max(0, -Math.cos(c)) * 0.028 * wk : 0);
         const tx = dead ? lerp(1.5, fp[i][0], kf) : near ? 0.25 : ["fly", "drop"].includes(A.st) ? 1.5 : 0, tz = dead ? fp[i][1] * kf : 0;
-        f.rx = spr(P, "ft" + i, tx, 8, dt); f.rz = spr(P, "fz" + i, tz, 8, dt);
+        f.rx = spr(P, "ft" + i, ground ? Math.sin(c) * wamp : tx, ground ? 16 : 8, dt); f.rz = spr(P, "fz" + i, tz, 8, dt);
         const m = f.rx > 0.7 ? A.footM[1] : A.footM[0]; if (f.mesh !== m) f.mesh = m;
       });
     }
@@ -2389,7 +2396,7 @@ const HUNT = (() => {
     if (A.st === "fly" || A.st === "drop" || A.st === "land") { n.y = A.y; n.rx = A.rx; }
     else if (A.st === "dead" || A.st === "fall") { n.y = A.y; n.rx = A.rx || 0; n.sy = A.s; }  /* v307: Größenmaßstab auch in der Seitenlage erhalten. */
     else {
-      n.y = (bobW + gal * 0.2 + lp * 0.42 + A.jolt * 0.05) * A.s;
+      n.y = (bobW + gal * 0.2 + lp * 0.42 + A.jolt * 0.05 + (A.k === "fasan" ? -0.006 * A.gw * (1 - Math.cos((A.pph || 0) * Math.PI * 4)) : 0)) * A.s;
       n.rx = wR * Math.sin(A.ph * Math.PI * 2 + 1.2) * 0.1 - lp * 0.22 + (A.st === "graze" && A.k === "hirsch" ? 0.08 : 0) - A.jolt * 0.04;
       n.sy = A.s * (1 + Math.sin(time * 2.4 + A.seed) * 0.006);
       /* v120: im Stehen leichtes Verlagern des Gewichts (kaum sichtbar, aber das Tier wirkt nicht eingefroren) */

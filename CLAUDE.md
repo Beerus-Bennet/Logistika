@@ -155,3 +155,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v400: PR110 verfeinert – kleine Wundfläche mit Fellfarben-Übergang, Hautnormale und tatsächlichem Haupt-/Halsnetz; Ringpunkte geteilt, 264 Dreiecke maximal. Prüfungen `wundoptik-v400.test.js`/`.browser.js`, Bericht `docs/WUNDOPTIK-v400.md`. main510ae1b integriert, Fortbildung398 erhalten; offene andere Jagd-PRs separat.
 - v392: Fasan – Organe (`ORG.fasan`) größer und anatomisch im Rumpf angeordnet, Körperschüsse treffen mehr Organe (Messung 42 % → 65 %).
 - v393: Diensttelefon – Tab „Notizen“ (`noteAdd` in `offices.js`); `toast()` leitet `low`-Meldungen (keine Warnung) und „… ist zufrieden“ dorthin um statt sie einzublenden.
+- v394: Fasan – Laufanimation: Ständer im Wechselschritt mit Fußheben und Rumpfwippen (`A.pph` in `hunt.js`).
