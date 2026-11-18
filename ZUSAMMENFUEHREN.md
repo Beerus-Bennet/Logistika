@@ -1,3 +1,7 @@
+## v403 – Gebirge, Bergsee, Wasserfall, Entdeckungen
+
+Basis main be3958a (v402). Nur `alpine.js` (Asset 403) und `wasseroptik-v386.test.js` (Fallbreite aus `I.fall.w`). Neue Exporte: `info().fall.w`, `geometry.spots/fun/boat/duck/rainbow`, Szenenknoten `fun/boat/duck/rainbow`. Geänderte Konstanten: `PEAKS` (höher), `FW`/`RUN`/`POOL` (rund, r 8)/`DRAIN[0..1]`/`FALL.foot`. `ALPINE.step` setzt `FV.R.cam.ty` über dem Gebirge (nur solange niemand anderes ty gesetzt hat und keine Jagd läuft). Wer an Kolk/Bachanfang oder Gipfelhöhen arbeitet, bitte diese Werte übernehmen.
+
 ## v400 – Wundoptik / PR #110
 
 main510ae1b vollständig in den bestehenden Wunden-PR integriert; Dokumentation beider Seiten und Fortbildung398 erhalten. Gesamt-/SW-Version400, hunt400, style391 aus PR110; andere Assets behalten ihre Versionen. Weiterhin nur Gestaltung, keine Änderung an Trefferwirkung, Spielstand oder Belohnung. Wunden am tatsächlichen Tiernetz, Elternknoten folgen der Pose, Ausschuss nur bei Durchdringung. Parallele PRs111–116 nicht überschreiben; insbesondere Schwanz-Ausschluss des Fasans aus PR114 ist eine separate Änderung an `phBody`/`woundSpot` und beim späteren Zusammenführen zusätzlich zu dieser Flächenprojektion zu erhalten. Keine automatische Veröffentlichung oder Zusammenführung nach main.

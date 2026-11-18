@@ -21,7 +21,8 @@ assert.ok(stations>35&&widthError<.06);console.log('Durchgehende volle Flussbrei
 for(const [name,poly,cx,cz,y,mesh]of [['Bergsee',I.lakeOutline,I.lake.x,I.lake.z,I.lake.y,G.water],['Kolk',I.poolOutline,I.pool.x,I.pool.z,I.pool.y,G.pool]]){let cover=-Infinity;for(const q of poly)for(const r of [.4,.9,.999]){const x=cx+(q.p[0]-cx)*r,z=cz+(q.p[1]-cz)*r,ground=meshHeight(G.terrainNear,x,z);cover=Math.max(cover,ground-y);assert.ok(ground<y+.005,name+' wird von Ufer verdeckt '+JSON.stringify({x,z,ground,y}));}console.log(name+' Bodenfreiheit',cover);assert.ok(tri(mesh)<1000);}
 // Exakte Nahtpunkte statt nur ungefähr gleicher Mittelpunkte.
 const head=[...rows.values()][0];for(const side of [-1,1]){const p=head[side];assert.ok(I.poolOutline.some(q=>Math.hypot(q.p[0]-p[0],q.p[1]-p[2])<1e-7),'Kolk und Fluss teilen dieselbe Wasserkante');assert.ok(Math.abs(p[1]-I.pool.y)<1e-9);}
-for(const side of [-1,1]){const x=I.fall.lip[0]+side*3.2/Math.SQRT2,z=I.fall.lip[2]+side*3.2/Math.SQRT2;assert.ok(I.lakeOutline.some(q=>Math.hypot(q.p[0]-x,q.p[1]-z)<1e-7));assert.ok(G.fall.v.some((v,i)=>i%9===0&&Math.hypot(v-x,G.fall.v[i+1]-I.lake.y,G.fall.v[i+2]-z)<1e-7));}
+/* v403: Fallbreite steht jetzt in I.fall.w (vorher fest 3,2) */
+for(const side of [-1,1]){const x=I.fall.lip[0]+side*I.fall.w/Math.SQRT2,z=I.fall.lip[2]+side*I.fall.w/Math.SQRT2;assert.ok(I.lakeOutline.some(q=>Math.hypot(q.p[0]-x,q.p[1]-z)<1e-7));assert.ok(G.fall.v.some((v,i)=>i%9===0&&Math.hypot(v-x,G.fall.v[i+1]-I.lake.y,G.fall.v[i+2]-z)<1e-7));}
 for(let i=0;i<=20;i++){const t=i/20,p=run('ALPINE.info().fallPath('+t+')');assert.ok(Math.abs(p[1]-(I.fall.lip[1]-.5*9.81*(t*I.fall.duration)**2))<1e-6);}
 const shore=run('creekToRim(ALPINE.riverLine())'),clipped=run('islandClip(FWM.creekWater(creekToRim(ALPINE.riverLine()).line,{w:1.5,current:true,width:ALPINE.riverWidth,level:ALPINE.riverLevel}))');
 const end=shore.end;C.point=end;assert.ok(Math.abs(run('islandGap(...point)'))<1e-6);assert.ok(end[1]>0);
