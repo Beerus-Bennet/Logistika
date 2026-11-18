@@ -51,6 +51,13 @@
 **Lösung:** `phBody(noTail)` baut das Modell ohne Stoßfedern; `woundSpot` nutzt es für den Fasan. Das Loch liegt damit immer auf dem Rumpf. Sichtbares Modell, Trefferzonen und Spielstand unverändert. Neuer Prüfstand-Export `HUNT._woundSpot`.
 
 **Geprüft (Testbrowser, `?test&jagd`):** Vier Schüsse (von vorn und von hinten, zwei Höhen) – alle Wunden liegen im Rumpfbereich (z zwischen −0,20 und +0,21, Rumpf −0,22 bis +0,18 am Ellipsoid), keine auf den Stoßfedern (die ragen bis z ≈ −0,7). **Nicht geprüft:** Optik im Bild (Screenshot), Handy; bei Schüssen von direkt hinten kann das Loch am Rumpfende teilweise unter den Schwanzfederansätzen liegen.
+## v396 – Jagd: Wild bleibt in Schussweite der gewählten Waffe
+
+**Ursache:** Das Wild erschien bei Glock/Flinte zwar nah (46–56 m, `nearD`), wanderte aber zu Zielen, die immer mehr als 32 Einheiten (128 m) vom Hochsitz entfernt lagen; fand `pickWalk` keins, lief es zur Feldmitte (200–232 m). Die Waffen reichen nur 60 m (`maxR`) – der Schuss endete mit „Zu weit für diese Waffe“, der Fasan war praktisch nicht abschießbar. Dasselbe galt für Doppelbüchse/CZ 375 (220/250 m), deren Wild bis 240 m erscheinen und wandern konnte.
+
+**Lösung (`hunt.js`):** `gunReach()` = 95 % der Waffenreichweite in Einheiten. `spawnPoint` begrenzt die Entfernung darauf, `pickWalk` wählt nur Ziele zwischen Mindestabstand (bei Kurzwaffen 0,7 · `nearD[0]`, sonst 32) und `gunReach()`; ohne Treffer nach 20 Versuchen ein Punkt aus `spawnPoint()` statt der Feldmitte. Gilt für alle Tierarten. Gewehre mit ≥ 400 m Reichweite verhalten sich praktisch wie zuvor.
+
+**Geprüft (Testbrowser, Glock):** Wanderziele von Fasan, Keiler, Hirsch liegen bei 39–55 m (vorher Feldmitte 232 m, per Code und gemessene Mitte 200 m belegt; den Alt-Lauf im Browser konnte ich wegen Zeitlimit nicht zu Ende messen). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Spielgefühl am Handy; schon vorhandenes Wild beim Waffenwechsel wird nicht umgesetzt, es wandert erst bei der nächsten Wegwahl in Reichweite.
 
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 

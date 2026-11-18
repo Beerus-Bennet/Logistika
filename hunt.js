@@ -1964,10 +1964,12 @@ const HUNT = (() => {
 
   /* --------------------------- Tiere: Aufbau ------------------------------ */
   /* Platz im Feld, 150–240 m vom Hochsitz */
+  /* v396: Reichweite der Waffe in Einheiten – Wild darf weder dort erscheinen noch hinwandern, wo die Waffe nicht hinreicht */
+  const gunReach = () => gun().maxR / M_PER_U * 0.95;
   function spawnPoint(r, enter) {
     r = r || rnd;
     for (let i = 0; i < 80; i++) {
-      const a = Math.atan2(FC.z - EYER[2], FC.x - EYER[0]) + (r() - 0.5) * 1.3, nd = gun().nearD, d = nd ? nd[0] + r() * (nd[1] - nd[0]) : 38 + r() * 22;      /* v383: Kurzwaffen und Flinte – Wild steht nah */
+      const a = Math.atan2(FC.z - EYER[2], FC.x - EYER[0]) + (r() - 0.5) * 1.3, nd = gun().nearD, d = Math.min(gunReach(), nd ? nd[0] + r() * (nd[1] - nd[0]) : 38 + r() * 22);      /* v383: Kurzwaffen und Flinte – Wild steht nah */
       const x = EYER[0] + Math.cos(a) * d, z = EYER[2] + Math.sin(a) * d;
       if (fieldE(x, z) < 0.88) {
         if (!enter) return [x, z];
@@ -2415,8 +2417,10 @@ const HUNT = (() => {
       const b = A.ry + (rnd() - 0.5) * (quick ? 2.6 : 3.4), l = (A.k === "keiler" ? 3 : 4) + rnd() * (A.k === "keiler" ? 5 : 9);
       tx = A.x + Math.sin(b) * l; tz = A.z + Math.cos(b) * l;
       const de = Math.hypot(tx - EYER[0], tz - EYER[2]);
-      if (fieldE(tx, tz) < (A.k === "keiler" ? 0.98 : 0.86) && de > 32) break;
-      tx = FC.x - 8; tz = FC.z;
+      /* v396: Kurzwaffen/Flinte: Wild bleibt in Schussweite (vorher lief es immer über 128 m weg – dann „Zu weit“, nicht abschießbar) */
+      const hi = gunReach(), lo = Math.min(gun().nearD ? gun().nearD[0] * 0.7 : 32, hi * 0.6);
+      if (fieldE(tx, tz) < (A.k === "keiler" ? 0.98 : 0.86) && de > lo && de < hi) break;
+      if (i === 19) { const sp = spawnPoint(); tx = sp[0]; tz = sp[1]; } else { tx = FC.x - 8; tz = FC.z; }
     }
     A.tx = tx; A.tz = tz; A.st = "walk"; A.t = 0; A.trot = A.k === "keiler" && rnd() < 0.35; A.cautious = A.k === "hirsch" && rnd() < 0.5;
   }

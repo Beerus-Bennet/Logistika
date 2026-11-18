@@ -157,3 +157,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v393: Diensttelefon – Tab „Notizen“ (`noteAdd` in `offices.js`); `toast()` leitet `low`-Meldungen (keine Warnung) und „… ist zufrieden“ dorthin um statt sie einzublenden.
 - v394: Fasan – Laufanimation: Ständer im Wechselschritt mit Fußheben und Rumpfwippen (`A.pph` in `hunt.js`).
 - v395: Fasan – Einschussloch immer am Rumpf (`phBody(noTail)` in `woundSpot`), nicht mehr auf den Stoßfedern.
+- v396: Jagd – Wild bleibt in Schussweite der Waffe (`gunReach` in `spawnPoint`/`pickWalk`); vorher wanderte es bei Glock/Flinte auf 130–230 m weg („Zu weit“).
