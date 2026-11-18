@@ -1,3 +1,11 @@
+## v399 – Gesichter der Arbeiter realistischer
+
+**Ursache:** Der Kopf (`headParts` in `woodmodels.js`) bestand nur aus einer Kugel mit zwei dunklen Klötzchen als Augen – kein Kinn, keine Ohren, keine Nase.
+
+**Lösung:** Kinn/Kiefer, Ohren, Nase, Augen mit weißem Augapfel und Pupille (`o.eye` optional), Augenbrauen (Haarfarbe, etwas dunkler) und Mund. Bei der Schutzbrille (`helmg`) bleiben die alten dunklen Augen unter dem Glas, Brauen und Weiß entfallen. Gilt für alle Figuren, die `FWM.person`/`FWM.head` nutzen (Personal, Nachbarn, Dorfbewohner), Kopfgröße und Körper unverändert. Kein Spielstandseingriff.
+
+**Geprüft (Testbrowser, Vorher/Nachher-Bilder von vier Mitarbeitern):** Gesichter mit Nase, Ohren, Brauen, Augen und Mund; Hüte und Frisuren unverändert; keine Konsolenfehler. Eine Probe mit höher aufgelöstem Kopf (12 × 8) ließ die Haarkappe durchscheinen und wurde deshalb nicht übernommen. **Nicht geprüft:** Handy, kleine Darstellung im Hof (Figuren sind dort nur wenige Pixel groß), Mitarbeiter mit allen Frisuren/Hüten einzeln. Bei Bartträgern verdeckt der (unveränderte) Bart weiter Mund und Kinn.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
