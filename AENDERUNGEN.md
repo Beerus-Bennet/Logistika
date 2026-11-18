@@ -1,3 +1,11 @@
+## v403 – Anatomische Symbole im Trefferbild
+
+**Wunsch:** Die Kleidungs- und Knochen-Emojis passen nicht zu „Schwarte und Muskel“ beziehungsweise „Schulterblatt“. Der Satz „Durchschuss mit Ausschuss.“ soll entfallen.
+
+**Lösung (`hunt.js`):** Ersatz-Emojis durch kleine anatomische SVG-Zeichnungen ersetzt: Haut-/Muskelschichten, Schulterblatt mit Knochenleiste, Becken, Brustbein, Wirbel, Schädel, Laufknochen, Halsröhren und Gefäße. Vorhandene 3D-Organbilder bleiben erhalten. Die Symbole sitzen in denselben Bildkästen, sind ohne WebGL sichtbar und brauchen keine zusätzlichen Bildabrufe. Nur der gewünschte Durchschusssatz entfernt; der Hinweis bei steckengebliebenem Geschoss bleibt erhalten. Keine Änderung an Trefferwertung oder Spielständen.
+
+**Geprüft:** Chromium/WebGL in mobiler Fenstergröße: SVGs für Gewebe/beide Schulterblätter, keine Ersatz-Emojis, entfernten Satz und erhaltenen Hinweis für steckengebliebenes Geschoss kontrolliert; keine JavaScript-Seitenfehler. Syntax und `trefferklarheit-v388.test.js` bestanden. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/assets/v403/gewebe-knochen.png`, `docs/assets/v403/bericht.png`.
+
 ## v402 – Haare: Haaransatz über den Brauen statt Maske über den Augen
 
 **Ursache:** Die Haarkappe (`hairdo` in `woodmodels.js`) war eine fast kugelförmige Kappe, die bis auf Augenhöhe herunterreichte und wie eine schwarze Maske über Stirn und Augen lag (bei kurzen Haaren/„buzz“ besonders).
