@@ -75,7 +75,7 @@ const STAFF_GEAR = (() => {
         put(e.gt,out);e.gt.visible=!off;e.tool.visible=false;handPose(e,out,Math.sin(p*Math.PI));
         /* v374: Oberkörper beugt sich zum Fach, solange die Hand das Werkzeug einsetzt bzw. herausnimmt */
         e.node.rx=.2*Math.sin(Math.PI*Math.min(1,Math.max(0,(p-.08)/.84)));
-      }else{restore(e);put(e.gt,park);e.gt.visible=!off&&!!(tg&&tg.ground);e.tool.visible=!off&&!e.isSit&&!e.sitT&&e.riseT==null&&!staffCalling(s)&&!e.gt.visible;}
+      }else{restore(e);put(e.gt,park);e.gt.visible=!off&&!!(tg&&tg.ground);e.tool.visible=!off&&!e.isSit&&!e.sitT&&e.riseT==null&&!staffCalling(s)&&!e.gt.visible&&!e.sowing;} /* v406: Beim Säen keine Sichel in der Streuhand. */
     }
   }
   return {prepare,step,parking,fit,restore,world,relocate};

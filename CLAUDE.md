@@ -162,7 +162,16 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v399: Gesichter der Figuren (`headParts` in `woodmodels.js`) – Kinn, Ohren, Nase, Augen mit Weiß, Brauen, Mund.
 - v401: Sammellieferung – PR #110–#116 und #118 (v391–v400) in einem Zweig zusammengeführt; Details je Version oben.
 - v402: Haare – Kappe höher/hinten (`hairdo` in `woodmodels.js`), Haaransatz über den Brauen statt Maske.
+
+- v403: Trefferbild – `xrTissueIcon` liefert anatomische SVGs statt Ersatz-Emojis für Gewebe/Knochen/Halsstrukturen; Organbildchen bleiben. Nur „Durchschuss mit Ausschuss.“ entfernt, Hinweis bei `thru===false` erhalten. hunt403, Gesamt-/SW403.
+
 - v403: Gebirge (`alpine.js`) – Hauptkamm bis ~80 mit Graten (`vnoise`/`ridged`), Schnee (`snowAmt`), Raster 2,4 mit Felsfacetten; Karsee mit Felsriegel (Ufer über dem Spiegel), Fall 10 breit (`FW`), runder Kolk r 8; Fichten/Lärchen/Latschen nach Höhenstufen; Entdeckungen (`extras`: Gipfelkreuz, Hütte, Weg, Zelt, Boot, Ente, Regenbogen, Yeti-Spuren); Kamera-ty folgt dem Gelände (`scene.camTy`/`camExt`).
-- v404: Gebirge-Feinschliff (`alpine.js`) – Stockente, geschlossener Steinbock, Wanderweg per Wegsuche (`route`/`pull`/`chaikin`, Band mit Mittelreihe), Pfeil-Wegweiser (`arrowBoard`), Aufprallband über die Fallbreite (`FOAM`), Regenbogen entfernt.
-- v405: Bergsee – Umriss an der Falllippe gekappt (keine Wasserzunge), Felswangen direkt neben dem Fall, Felsrand Spiegel + 3,5 (`alpine.js`).
-- v406: Gebirge – Hüttenbank auf Sitzhöhe der Figuren, Zelt-Wanderer sitzt auf Baumstamm (`alpine.js`).
+
+- v404: PR121 mit main25c3000/PR122 zusammengeführt; beide v403-Dokumentationen erhalten, Gesamt-/SW404, hunt403/alpine403 unverändert.
+
+- v405: Gemeinsame Hof-/Büro-Ladeanzeige ohne Zeitprozent (`ldMake`/`ldStart`), „Fertig“ erst nach tatsächlicher Fertigstellung; Hof-Aufbaufehler mit Rückmeldung/Neuladen. Büro wartet vor `finish` auf leere `O.build`. farmview/officefp/style405, andere Assets erhalten. Browserprüfung `hofladen-v405.browser.js`, Details `docs/HOFLADEN-v405.md`.
+
+- v406: Feldarbeit getrennt über `j.fieldMode`/`staffFieldMode`; Ernte pflanzt nicht mehr sofort nach. `e.sowAction` ist reine Ansichtszeit (nicht gespeichert), im sichtbaren Nahbereich mindestens1,6s pro Feld; Hintergrund bleibt zeitgesteuert. Saatbeutel/Körner in team, linke Hand in staffwalk, Sichel-Ausblendung auch in staffgear. team/staffwalk/staffgear406. Tests `aussaat-v406.*`, Bericht `docs/AUSSAAT-v406.md`.
+- v407: Gebirge-Feinschliff (`alpine.js`) – Stockente, geschlossener Steinbock, Wanderweg per Wegsuche (`route`/`pull`/`chaikin`, Band mit Mittelreihe), Pfeil-Wegweiser (`arrowBoard`), Aufprallband über die Fallbreite (`FOAM`), Regenbogen entfernt.
+- v407: Bergsee – Umriss an der Falllippe gekappt (keine Wasserzunge), Felswangen direkt neben dem Fall, Felsrand Spiegel + 3,5 (`alpine.js`).
+- v407: Gebirge – Hüttenbank auf Sitzhöhe der Figuren, Zelt-Wanderer sitzt auf Baumstamm (`alpine.js`).

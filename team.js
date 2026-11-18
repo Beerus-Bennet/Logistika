@@ -955,7 +955,7 @@ function staffTaskJob(s, T) {
           const emptyL = fields.filter(o => fieldState(o) === "empty"), empty = staffNear(s, emptyL)[0];
           if (empty && S.money >= FCROPS[item].seed) return { k: "field", oid: empty.id, oids: staffBatch(empty, emptyL), crop: item, what: "sät " + name };
           const other = staffNear(s, fields.filter(o => fieldState(o) === "ripe" && o.crop !== item && staffWlHas("farmer", o.crop) && farmRoom(o.crop) >= 3))[0];
-          if (other) return { k: "field", oid: other.id, crop: item, what: "erntet " + FITEMS[other.crop].n + ", sät " + name };
+          if (other) return { k: "field", oid: other.id, crop: item, what: "erntet " + FITEMS[other.crop].n };
         }
         const dryL = fields.filter(o => o.crop === item && fieldState(o) === "grow" && !o.w), dry = staffNear(s, dryL)[0];
         if (dry) return { k: "water", oid: dry.id, oids: staffBatch(dry, dryL), what: "gießt den " + name };
@@ -1276,6 +1276,7 @@ const STAFF_CALL = 10, STAFF_CALL_TXT = "Telefonat mit dem Büro";   /* v106: Sp
 const staffHasOffice = () => !!(S.bases && S.bases.length);
 const staffCalling = s => !!(staffHasOffice() && s && s.job && s.job.cT1 != null && S.time < s.job.cT1 && s.job.k !== "lunch");
 function staffGo(s, i, j) {
+  if(j.k==='field')j.fieldMode=staffFieldMode(j); /* v406: Ernte und Aussaat sind getrennte Arbeitsgänge. */
   const R = FSTAFF_ROLES[s.role], h = s.px != null ? [s.px, s.pz] : staffHome(s.role, i);
   const p = staffPlace(s, j);
   let r = null;
@@ -1382,22 +1383,30 @@ function staffRepath351(e,j){
   e.rj=j;e.rs=e.rPrev=0;e.gearAction=null;return true;
 }
 function staffAtHome(s, i) { if (s.px == null) return true; const h = staffHome(s.role, i); return Math.hypot(s.px - h[0], s.pz - h[1]) < 0.9; }
+/* v406: Auch alte gespeicherte Feldaufträge erkennen, bevor die Ernte das Feld leert. */
+function staffFieldMode(j){return j.fieldMode||(/erntet/.test(j.what||'')||(j.oids||[j.oid]).some(id=>{const o=farmObj(id);return o&&fieldState(o)==='ripe';})?'harvest':'sow');}
+function staffSowVisible(s,j){
+  if(j.k!=='field'||staffFieldMode(j)!=='sow'||typeof FV==='undefined'||!FV.on||FV.fp||!FV.R||FV.R.cam.dist>=100||typeof WV==='undefined'||!WV.staff.has(s.id)||typeof document==='undefined'||document.hidden||!document.body.classList.contains('tab-farm'))return false;
+  const p=FV.R.project(j.fx??j.x,.2,j.fz??j.z);return !!(p&&p[2]<1&&p[0]>=0&&p[0]<=FV.R.w&&p[1]>=0&&p[1]<=FV.R.h);
+}
 /* Erledigen – erst jetzt passiert es wirklich (alles noch einmal prüfen) */
 function staffDo(s, j) {
   const F = S.farm, o = j.oid != null ? farmObj(j.oid) : null, got = [];
   const gain = (id, n) => { if (id && n > 0) { got.push({ id, n }); staffCredit(s.role, id, n); } };
   switch (j.k) {
     case "lunch": return;   /* v81: Mittagspause am Lagerfeuer – nichts zu erledigen */
-    case "field":
+    case "field": {
+      const fieldMode=staffFieldMode(j);
       (j.oids || [j.oid]).map(farmObj).forEach(o => {
         if (!o || o.t !== "field") return;
-        if (fieldState(o) === "ripe" && staffWlHas("farmer", o.crop) && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
-        if (fieldState(o) === "empty") {
+        if (fieldMode==='harvest'&&fieldState(o) === "ripe" && staffWlHas("farmer", o.crop) && farmRoom(o.crop) >= 3) { const r = farmHarvest(o); if (r) gain(r.id, r.n); }
+        if (fieldMode==='sow'&&fieldState(o) === "empty") {
           const c = j.crop && farmCropOk(j.crop) && staffWlHas("farmer", j.crop) && staffCropNeed(j.crop) ? j.crop : staffCrop(o);
           if (c && S.money >= FCROPS[c].seed) farmPlant(o, c);
         }
       });
       break;
+    }
     case "pick": if (o && treeRipe(o) && staffWlHas("farmer", o.kind) && farmRoom(o.kind) >= 4) { const r = farmPick(o); if (r) gain(r.id, r.n); } break;
     case "water": (j.oids || [j.oid]).map(farmObj).forEach(o => { if (o && staffWlHas("farmer", o.t === "field" ? o.crop : o.kind)) farmWater(o); }); break;   /* v61: nur Freigegebenes */
     case "pen": {
@@ -1530,6 +1539,9 @@ function staffWork() {
         staffGo(s, i, nj);
         return;
       }
+      /* v406: Im sichtbaren Nahbereich pro Feld wenigstens eine vollständige
+         Säbewegung zulassen, auch bei 30×. Außerhalb der Ansicht normal weiterarbeiten. */
+      if(staffSowVisible(s,j)){const e=WV.staff.get(s.id);if(!e.sowAction||e.sowAction.job!==j||!e.sowAction.done){j.t1=S.time+.25;s.jobEnd=j.t1;return;}}
       s.job = null; s.px = j.x; s.pz = j.z;
       if (j.k === "home") return;
       s.work = S.time;
@@ -1716,6 +1728,7 @@ function worldSyncStaff() {
     if (gt) R.nodes.push(gt);
     const e={ node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key, armM, armPh, armSitM, gt,role:s.role };
     WV.staff.set(s.id,e);if(walking)STAFF_WALK.attach(s,e);
+    if(s.role==='farmer')e.seedBag=R.addChild(node,fnode(fmesh('seedBag406',()=>{const b=new FM.MB();b.cyl(.105,.085,.18,8,0xa07c4b);b.cyl(.11,.11,.025,8,0x795b37,{y:.17});b.disc(.095,8,0xdbc28a,{y0:.198});for(let q=0;q<7;q++){const a=q*2.4;b.ico(.012,0xe5c375,{x:Math.cos(a)*.06,y:.2,z:Math.sin(a)*.06,sy:.6});}return b;}),{x:-.19,y:.19,z:.27,visible:false}));
   });
 }
 const angTo = (a, b) => (((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1806,6 +1819,8 @@ function stepStaff(dt, time) {
     const e = WV.staff.get(s.id);
     if (!e) return;
     const j = s.job, n = e.node, A = e.arm, calling = staffCalling(s);
+    e.sowing=false;if(e.seedBag)e.seedBag.visible=false;
+    if(e.sowAction&&e.sowAction.job!==j)e.sowAction=null;
     const gdt = e.lt != null ? Math.max(0, S.time - e.lt) : 0; e.lt = S.time;   /* v232: Spielzeit seit dem letzten Bild */
     if(typeof STAFF_GEAR!=="undefined")STAFF_GEAR.prepare(s,e,dt,gdt);
     /* v106: Telefonat mit dem Büro – Anzeigetext folgt dem Zustand */
@@ -1852,13 +1867,19 @@ function stepStaff(dt, time) {
       return;
     }
     let tx, tz, work = false, face = null, onRoute = false, rh = null, dwell = null, lagD = null;
+    /* v406: Für die sichtbare Aussaat dieselbe Feldreihenfolge wie die Arbeit.
+       Die Echtzeit gehört nur zur Darstellung und wird nicht im Spielstand gespeichert. */
+    const sowing=j&&staffSowVisible(s,j)&&S.time-j.t0>=j.walk;
+    if(sowing&&!e.sowAction)e.sowAction={job:j,index:0,t:0,done:false,grain:-1};
+    if(sowing){const a=e.sowAction,ids=j.oids||[j.oid];while(a.index<ids.length){const o=farmObj(ids[a.index]);if(o&&fieldState(o)==='empty')break;a.index++;a.t=0;a.grain=-1;}if(a.index>=ids.length)a.done=true;}
+
     if (j) {
       const el = S.time - j.t0;
       if (el < j.walk) { const p = staffRoutePos(j); tx = p[0]; tz = p[1]; rh = p[2]; onRoute = true; dwell = p[3] || null; lagD = staffRouteDist(j); }
       else if (j.route && j.route.length > 1 && !j.spots && Math.hypot(e.x-j.x,e.z-j.z)>.05) { tx = j.x; tz = j.z; lagD = routeLen(j.route); face = Math.atan2(j.fx - j.x, j.fz - j.z); }   /* v351: auch nach Laden und einem abgewiesenen Schritt weiter dem Weg folgen */
       else if (j.spots) {
         /* von Feld zu Feld */
-        const per = (j.t1 - j.t0 - j.walk) / j.spots.length, q = j.spots[Math.min(j.spots.length - 1, Math.floor((el - j.walk) / per))];
+        const per = (j.t1 - j.t0 - j.walk) / j.spots.length, index=sowing?e.sowAction.index:Math.floor((el-j.walk)/per), q = j.spots[Math.min(j.spots.length - 1,index)];
         tx = q[0]; tz = q[1]; work = true; face = Math.atan2(q[2] - q[0], q[3] - q[1]);
       }
       else { tx = j.x; tz = j.z; work = j.k !== "home"; face = Math.atan2(j.fx - j.x, j.fz - j.z); }
@@ -1895,6 +1916,19 @@ function stepStaff(dt, time) {
       n.rx = 0.85 * bend; n.y = -0.22 * bend; n.ry += angTo(n.ry, rh != null ? rh : n.ry) * Math.min(1, dt * 12);
     } else if (n.rx) { n.rx *= Math.max(0, 1 - dt * 10); if (Math.abs(n.rx) < 0.004) n.rx = 0; }
     if (A && e.armPh) { const want = calling ? e.armPh : e.armM; if (A.mesh !== want) A.mesh = want; if (e.tool) e.tool.visible = !calling && !e.isSit && !noHand; }
+    if(sowing&&work&&!moving&&!calling&&!e.sowAction.done){
+      const a=e.sowAction;
+      if(typeof clockRunning!=='function'||clockRunning())a.t+=Math.min(.1,dt);
+      const p=Math.min(1,a.t/1.6),sweep=p<.3?0:p<.75?staffSS((p-.3)/.45):1-staffSS((p-.75)/.25);
+      e.sowing=true;if(e.seedBag)e.seedBag.visible=true;if(e.tool)e.tool.visible=false;
+      n.rx=.08;n.y=0;
+      if(A){A.rx=-.65-.5*sweep;A.rz=-.75+1.2*sweep;}
+      /* Wenige Körner verlassen während des Streuens die wirkliche Hand,
+         fallen mit Schwerkraft zum Feld und verschwinden nach 0,7 s. */
+      const grain=p>=.45&&p<.75?Math.floor((p-.45)/.1):-1;
+      if(A&&grain>=0&&grain!==a.grain&&FV.R.emit){a.grain=grain;const c=Math.cos(n.ry),sn=Math.sin(n.ry),x=.19+.5*Math.sin(A.rz),z=-.5*Math.cos(A.rz)*Math.sin(A.rx),y=.78-.5*Math.cos(A.rz)*Math.cos(A.rx);for(let q=0;q<2;q++){const angle=n.ry+(q-.5)*.35;FV.R.emit({x:e.x+(c*x+sn*z)*1.45,y:y*1.45,z:e.z+(-sn*x+c*z)*1.45,vx:Math.sin(angle)*1.6,vy:.6,vz:Math.cos(angle)*1.6,g:-5.5,life:.7,size:.03,shape:1,col:[.88,.72,.4,1]});}}
+      if(p>=1){a.index++;a.t=0;a.grain=-1;if(a.index>=(j.oids||[j.oid]).length)a.done=true;}
+    }
     if (A && calling) {
       /* am Ohr, ruhig; beim Reden wippt er leicht und dreht sich ein wenig hin und her */
       const k2 = Math.min(1, dt * 6);
@@ -1905,7 +1939,7 @@ function stepStaff(dt, time) {
       /* Arm zum Boden: beim Bücken nach vorn unten, mit dem Werkzeug in der Hand bis zum Ablegen */
       const k2 = Math.min(1, dt * 9);
       A.rx += (-0.1 - 0.7 * bend - A.rx) * k2; A.rz += (0.1 - A.rz) * k2;
-    } else if (A) {
+    } else if (A && !e.sowing) {
       const rod = s.role === "fischer";
       if (work) {
         const sw = Math.sin(time * (s.role === "holzfaeller" ? 7 : 5) + e.ph);

@@ -1,20 +1,4 @@
-## v406 – Sitzende Figuren im Gebirge: Bank und Baumstamm
-
-**Ursache:** Die Bank vor der Almhütte war für die sitzende Figur zu hoch (Sitz 0,63, Oberschenkel der Figur bei 0,38) – der Mann saß in der Bank. Der Wanderer am Zelt saß ohne Sitzgelegenheit in der Luft.
-
-**Lösung (`alpine.js`):** Banksitz auf Oberschenkelhöhe (0,38) gesenkt, Figur so gesetzt, dass der Rücken über der Sitzfläche und die Beine davor sind; am Zelt ein Baumstamm als Sitz, Figur auf der Geländehöhe.
-
-**Geprüft (Testbrowser):** Nahbilder von Bank und Zelt (`docs/assets/v404/sitzen-v406.png`). **Nicht geprüft:** Handy.
-
-## v405 – Bergsee: kein Knick an der Falllippe, höherer Felsrand
-
-**Ursache:** Der Seeumriss ragte rechts neben der Falllippe über die Lippenlinie hinaus; dort hing eine Wasserzunge über der Wand, der Fall wirkte geknickt. Zusätzlich wurde das Gelände neben der Kerbe breit auf Seehöhe abgesenkt, und der Wasserrand wuchs bis an die Lippe um 3,5 % – an den Lippenenden entstand eine Stufe. Der Felsrand lag nur 1,9 über dem Spiegel und war schmal, aus flachen Blickwinkeln sah der See übergelaufen aus.
-
-**Lösung (`alpine.js`):** Umrisspunkte hinter der Lippenlinie werden auf sie zurückgesetzt (Lippenpunkte bleiben exakt); der Zuwachs des Wasserrands läuft zur Abflusskante weich aus; an der Lippe stehen senkrechte Felswangen direkt neben dem Fall (Absenkung nur in Fallbreite, weiter unten wie bisher); Felsrand auf Spiegel + 3,5 und breiter, Talseite fällt erst später ab.
-
-**Geprüft (Testbrowser):** Vorher/Nachher von oben und aus flachem Winkel (`docs/assets/v404/lippe-rand-v405.png`), Lippe aus der Nähe; `wasseroptik-v386.test.js` bestanden. **Nicht geprüft:** Handy.
-
-## v404 – Gebirge-Feinschliff: Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
+## v407 – Gebirge-Feinschliff (vorher als v404–v406 im PR #123 geführt; Nummern wegen paralleler Lieferungen auf v407 zusammengelegt): Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
 
 **Ursache (Rückmeldung zu v403):** Ente im Badeenten-Gelb; Steinbock mit sichtbaren Lücken (grobe Ellipse, loser Kopf, dünne Läufe); Wanderweg aus geraden Einzelstücken (Lücken/Überlappungen) quer über Felswände; Wegweiser-Pfeile lose neben den Tafeln und schlecht platziert; Regenbogen kaum sichtbar (von oben als dunkler Strich im Kolk); Aufprallschaum als kleine runde Ringzone – wirkte wie ein dünner, runder Strahl.
 
@@ -27,6 +11,53 @@
 - Aufprall als Schaumband über die ganze Fallbreite (`FOAM`, Schaderkoordinaten wie der Auftreffsaum), Ränder in den runden Kolk eingepasst.
 
 **Geprüft (Testbrowser, Software-WebGL):** Bilder von Ente, Steinbock (oben/seitlich), Weg (Übersicht, Start, Riegel), Wegweiser, Kolk von oben – siehe `docs/assets/v404/feinschliff.png`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden (Fernlast 15.503 < 16.000). Aufbau im Node-Prüfstand ~12 s statt ~10 s (Wegsuche). **Nicht geprüft:** Handy. Einzelne Wegstücke am Riegel sind steiler als 35° (geglättete Kehren).
+### v407 (Teil 2) – Bergsee: kein Knick an der Falllippe, höherer Felsrand
+
+**Ursache:** Der Seeumriss ragte rechts neben der Falllippe über die Lippenlinie hinaus; dort hing eine Wasserzunge über der Wand, der Fall wirkte geknickt. Zusätzlich wurde das Gelände neben der Kerbe breit auf Seehöhe abgesenkt, und der Wasserrand wuchs bis an die Lippe um 3,5 % – an den Lippenenden entstand eine Stufe. Der Felsrand lag nur 1,9 über dem Spiegel und war schmal, aus flachen Blickwinkeln sah der See übergelaufen aus.
+
+**Lösung (`alpine.js`):** Umrisspunkte hinter der Lippenlinie werden auf sie zurückgesetzt (Lippenpunkte bleiben exakt); der Zuwachs des Wasserrands läuft zur Abflusskante weich aus; an der Lippe stehen senkrechte Felswangen direkt neben dem Fall (Absenkung nur in Fallbreite, weiter unten wie bisher); Felsrand auf Spiegel + 3,5 und breiter, Talseite fällt erst später ab.
+
+**Geprüft (Testbrowser):** Vorher/Nachher von oben und aus flachem Winkel (`docs/assets/v404/lippe-rand-v405.png`), Lippe aus der Nähe; `wasseroptik-v386.test.js` bestanden. **Nicht geprüft:** Handy.
+
+### v407 (Teil 3) – Sitzende Figuren im Gebirge: Bank und Baumstamm
+
+**Ursache:** Die Bank vor der Almhütte war für die sitzende Figur zu hoch (Sitz 0,63, Oberschenkel der Figur bei 0,38) – der Mann saß in der Bank. Der Wanderer am Zelt saß ohne Sitzgelegenheit in der Luft.
+
+**Lösung (`alpine.js`):** Banksitz auf Oberschenkelhöhe (0,38) gesenkt, Figur so gesetzt, dass der Rücken über der Sitzfläche und die Beine davor sind; am Zelt ein Baumstamm als Sitz, Figur auf der Geländehöhe.
+
+**Geprüft (Testbrowser):** Nahbilder von Bank und Zelt (`docs/assets/v404/sitzen-v406.png`). **Nicht geprüft:** Handy.
+
+## v406 – Landwirt sät sichtbar nach der Ernte
+
+**Ursache:** `staffDo` führte bei Feldarbeit im selben Abschluss erst `farmHarvest` und direkt danach `farmPlant` aus. Ernte und Aussaat hatten dieselbe Sichelbewegung; das Feld erschien ohne eigenen Sägang erneut bepflanzt.
+
+**Lösung:** Feldaufträge merken `fieldMode` (Ernte/Aussaat). Ernte leert das Feld, Aussaat ist ein eigener Arbeitsgang und bucht Saatgut erst bei dessen Abschluss. Alte Aufträge werden anhand ihrer Absicht und des Feldzustands erkannt. Bei der sichtbaren Aussaat hält die linke Hand einen Saatbeutel, die rechte nimmt Saat auf und streut sie in einem Bogen; wenige kurzlebige Körner fallen mit Schwerkraft. Sichel und Werkzeugablage respektieren diese Darstellung. Im sichtbaren Nahbereich mindestens 1,6 s pro Feld, auch bei 30×; außerhalb der Ansicht keine Abhängigkeit von Animationsbildern. Bereits manuell bepflanzte Felder werden übersprungen beziehungsweise nicht erneut berechnet. Bei Sammelaufträgen erfolgt die Bepflanzung weiterhin am Ende des Arbeitsgangs, jetzt erst nach den Säbewegungen.
+
+**Geprüft:** `aussaat-v406.test.js` (Ernte ohne Neusaat, alte/zwischenzeitlich geleerte Aufträge, zwei Felder bei 30×, einmalige Kosten, Hintergrundarbeit, manuell bepflanztes Feld), `field-menu-v303.test.js` (10 Szenarien), `worker-motion-v351.test.js` (14 Bewegungs-/Werkzeugprüfungen). Chromium/WebGL 390 × 844 auf Prüfbühne mit tatsächlichem Feld-/Figurenmodell: Saatbeutel, Sichel ausgeblendet, Körner, Pflanzzeitpunkt nach fertiger Säbewegung; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari. Vorschau/Details `docs/AUSSAAT-v406.md`.
+
+## v405 – Ladeanzeige ohne widersprüchliche Prozentwerte
+
+**Befund:** Der Screenshot zeigt 13 %, obwohl der Balken deutlich weiter gefüllt ist. Die alte Anzeige animierte getrennte Ziffernrollen und Balken anhand einer gemerkten Ladezeit; sie maß keinen echten Aufbaufortschritt. Ein dauerhaftes Hängen auf dem iPhone wurde mangels Reproduktion nicht als behoben gewertet.
+
+**Lösung:** `ldMake`/`ldStart` zeigen eine unbestimmte Ladebewegung mit „Wird geladen …“ statt geschätzter Prozentzahlen. „Fertig“ folgt beim Hof erst nach Szenenaufbau und Zeichnung, beim Büro erst nach der gestaffelten Aufbauwarteschlange. Bei einem abgefangenen Hof-Aufbaufehler stoppen die Animationen und erscheinen eine lesbare Rückmeldung sowie „Neu laden“. Frühes Verlassen entfernt den Ladeschirm; erneut eintretende Spieler bekommen keine doppelten Ladeflächen. Reduzierte Bewegung wird berücksichtigt. Keine Änderung an Landschaft oder Spielständen, keine behauptete Verkürzung der Aufbauzeit.
+
+**Geprüft:** `hofladen-v405.browser.js` in Chromium/Software-WebGL (390 × 844): längere Ladezeit, 400-ms-Threadblock, Fertigstand, reduzierte Bewegung, echter Hofstart mit Gebirge, echtes Büro mit verzögerter Aufgabenliste, gezielt ausgelöster Aufbaufehler, frühes Verlassen. Syntaxprüfungen und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari, Spielstand aus dem Screenshot, Ursache eines möglichen gerätespezifischen Hängers. Vorschau/Bericht: `docs/HOFLADEN-v405.md`.
+
+## v404 – Trefferbild-PR mit aktuellem Gebirge zusammengeführt
+
+**Ursache:** PR #122 wurde nach dem Erstellen von PR #121 gemergt. Die beiden unabhängigen v403-Änderungen ergänzten dieselben Stellen in `AENDERUNGEN.md` und `CLAUDE.md`.
+
+**Lösung:** main25c3000 vollständig integriert, beide Dokumentationen erhalten. Anatomische Trefferbild-Symbole und entfernter Durchschusssatz aus PR #121 bleiben erhalten; die Gebirgsdatei, Bilder und Tests entsprechen exakt aktuellem main. Gesamt-/SW-Version404; unveränderte Einzelassets bleiben hunt403/alpine403.
+
+**Geprüft:** Syntax `hunt.js`/`alpine.js`/`sw.js`, `trefferklarheit-v388.test.js`, Abgleich der Landschaftsdateien und Asset-Versionen, keine Konfliktmarker. Keine neue optische Änderung, deshalb keine neue Bildaufnahme; die Vorschauen aus v403 bleiben gültig. Kein Test auf echtem Handy.
+
+## v403 – Anatomische Symbole im Trefferbild
+
+**Wunsch:** Die Kleidungs- und Knochen-Emojis passen nicht zu „Schwarte und Muskel“ beziehungsweise „Schulterblatt“. Der Satz „Durchschuss mit Ausschuss.“ soll entfallen.
+
+**Lösung (`hunt.js`):** Ersatz-Emojis durch kleine anatomische SVG-Zeichnungen ersetzt: Haut-/Muskelschichten, Schulterblatt mit Knochenleiste, Becken, Brustbein, Wirbel, Schädel, Laufknochen, Halsröhren und Gefäße. Vorhandene 3D-Organbilder bleiben erhalten. Die Symbole sitzen in denselben Bildkästen, sind ohne WebGL sichtbar und brauchen keine zusätzlichen Bildabrufe. Nur der gewünschte Durchschusssatz entfernt; der Hinweis bei steckengebliebenem Geschoss bleibt erhalten. Keine Änderung an Trefferwertung oder Spielständen.
+
+**Geprüft:** Chromium/WebGL in mobiler Fenstergröße: SVGs für Gewebe/beide Schulterblätter, keine Ersatz-Emojis, entfernten Satz und erhaltenen Hinweis für steckengebliebenes Geschoss kontrolliert; keine JavaScript-Seitenfehler. Syntax und `trefferklarheit-v388.test.js` bestanden. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/assets/v403/gewebe-knochen.png`, `docs/assets/v403/bericht.png`.
 
 ## v403 – Gebirge: mächtige Gipfel, eingefasster Bergsee, breiter Wasserfall, runder Kolk, Details zum Entdecken
 

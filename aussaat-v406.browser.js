@@ -1,0 +1,19 @@
+/* v406: Gerenderte Aussaat auf einem echten Feldmodell, vollständige Mitarbeiter- und Kostenlogik. */
+const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
+const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-v406';fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
+ const p=await b.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}),errors=[];p.on('pageerror',e=>errors.push(String(e)));
+ await p.goto(process.env.LOGISTIKA_TEST_URL||'http://127.0.0.1:8002/?test=1');await p.evaluate(()=>{
+  S=Object.assign(newGame(),{phase:'play',stage:6,money:1e7,time:600,speed:0,tut:{done:true},player:{name:'Jonas',company:'Weitwind Spedition',origin:3,color:0,avatar:{art:'p1'}}});farmNew();S.farm.logi=true;S.farm.stage=4;S.farm.xp=24**2*50;S.farm.lvSeen=25;S.farm.tut.done=true;S.farm.snd=false;S.farm.areas={wald:true,see:true,saege:true,altwald:true};
+  document.querySelector('#intro').classList.remove('on');document.body.className='has-farm tab-farm';activeTab='farm';farmDOM();syncHeadH();FV.on=true;FV.R=G3.create(document.querySelector('#farmCv'),{shadowSize:256,maxDpr:1});const R=FV.R;
+  const field=S.farm.objs.find(o=>o.t==='field'),center=farmCenter(field),s=FARM_STORY.candidate('farmer'),at=staffSpot(field,'farmer');field.crop=null;S.farm.staff=[s];s.px=at.x;s.pz=at.z;worldSyncStaff();const e=WV.staff.get(s.id);e.node.ry=Math.atan2(center[0]-at.x,center[1]-at.z);
+  const ground=new FM.MB();ground.box(18,.04,18,0x7b9e54,{x:center[0],y:-.06,z:center[1]});R.nodes.unshift(fnode(R.mesh(ground),{shadow:false}));R.nodes.push(fnode(R.mesh(FM.fieldSoil(false)),{x:center[0],z:center[1],shadow:false}));
+  farmPlant(field,'weizen');S.time=field.end;const crop=R.addChild(R.nodes[R.nodes.length-1],fnode(R.mesh(FM.cropMesh('weizen',3)),{}));const before=S.money;staffDo(s,{k:'field',oid:field.id,what:'erntet Weizen'});if(field.crop||S.money!==before)throw Error('Ernte hat automatisch gesät');crop.visible=false;
+  staffGo(s,0,{k:'field',oid:field.id,what:'sät Weizen'});S.time=s.job.t0+s.job.walk+.01;window.seed406={field,s,e,crop,original:s.job,frames:0,grains:0};const emit=R.emit;R.emit=o=>{seed406.grains++;emit(o);};window.run406=false;clockRunning=()=>run406;
+  Object.assign(R.cam,{tx:(center[0]+at.x)/2,ty:.65,tz:(center[1]+at.z)/2,dist:6,yaw:-.4,pitch:.55,fov:.75});R.env.fogR=[100,200];R.env.sunCol=[.7,.68,.62];R.env.sky=[.65,.72,.8];R.env.ground=[.2,.24,.16];R.render(0);
+  window.frame406=()=>{run406=true;S.time+=1.5;S.farm.taskT=S.time;staffWork();const t=++seed406.frames*.05;stepStaff(.05,t);STAFF_WALK.step(.05,t);STAFF_GEAR.step(.05,t);R.stepParticles(.05);if(seed406.field.crop){seed406.crop.mesh=R.mesh(FM.cropMesh(seed406.field.crop,0));seed406.crop.visible=true;}R.render(t);run406=false;return {crop:seed406.field.crop,sowing:seed406.e.sowing,bag:seed406.e.seedBag.visible,sickle:seed406.e.tool.visible};};
+ });
+ await p.screenshot({path:out+'/nach-ernte.png'});const states=[];
+ for(let i=0;i<36;i++){const state=await p.evaluate(()=>frame406());states.push(state);if([5,18,29,35].includes(i))await p.screenshot({path:out+'/aussaat-'+i+'.png'});}
+ assert.ok(states.slice(0,31).every(s=>!s.crop),'Keine Pflanzen vor dem Ende der Säbewegung');assert.ok(states.filter(s=>s.sowing).every(s=>s.bag&&!s.sickle));assert.ok(states.at(-1).crop);assert.ok(await p.evaluate(()=>seed406.grains>0&&seed406.grains<=6));assert.deepEqual(errors,[]);console.log('OK v406 Browser: Ernte hinterlässt leeres Feld, Saatbeutel/Streubewegung ohne Sichel, Körner und Pflanzen erst nach vollendeter Aussaat bei 30×; keine Seitenfehler.');
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
