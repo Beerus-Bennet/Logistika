@@ -3418,9 +3418,13 @@ function toastAutoGo(txt) {
   const hit = TOAST_GO.find(r => r[0].test(txt));
   return hit ? hit[1] : null;
 }
+/* v393: Routinemeldungen (Hintergrund, keine Warnung) und „… ist zufrieden“ gehen als Notiz ins Diensthandy statt auf den Bildschirm */
 function toast(msg, kind, low, go) {
   if (muteToasts) return;
   const now = performance.now();
+  if (kind !== "warn" && (low || /ist zufrieden: \+/.test(msg)) && now - TQ.tapAt >= 1200 && typeof noteAdd === "function") {
+    try { noteAdd(msg, kind); return; } catch (e) { console.warn(e); }
+  }
   /* Nebensächliche Meldungen nicht im Sekundentakt stapeln */
   if (low && now - lastToast < 2600) { hiddenToasts++; return; }
   lastToast = now;

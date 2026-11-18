@@ -148,3 +148,16 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v390: Hof-Ereignismeldungen antippbar – `farmEvGo`/`MSG_GO.farmev` in `worldview.js` (Kamera zum Ereignis, Händler/Nachbar öffnen), Ziel von `farmEvView` gesetzt.
 - v398: Fortbildung – kurze Sprüche in Varianten (`STAFF_SUB_SAY`/`STAFF_NOSUB_SAY`), mit 40 % keine Vertretung (`s.away.none`): Kraft weg, Aufgaben bleiben beim Spieler.
+
+
+- v391: Jagd – Schusswunde folgt der Haut (`woundSpot` liefert `surf`, `woundMesh` projiziert jeden Punkt auf das Tiernetz); Trefferbild: gleiche Zeilen für Gewebe/Organe (`xr-gen`), Hinweise unten (`xr-legs`).
+
+- v400: PR110 verfeinert – kleine Wundfläche mit Fellfarben-Übergang, Hautnormale und tatsächlichem Haupt-/Halsnetz; Ringpunkte geteilt, 264 Dreiecke maximal. Prüfungen `wundoptik-v400.test.js`/`.browser.js`, Bericht `docs/WUNDOPTIK-v400.md`. main510ae1b integriert, Fortbildung398 erhalten; offene andere Jagd-PRs separat.
+- v392: Fasan – Organe (`ORG.fasan`) größer und anatomisch im Rumpf angeordnet, Körperschüsse treffen mehr Organe (Messung 42 % → 65 %).
+- v393: Diensttelefon – Tab „Notizen“ (`noteAdd` in `offices.js`); `toast()` leitet `low`-Meldungen (keine Warnung) und „… ist zufrieden“ dorthin um statt sie einzublenden.
+- v394: Fasan – Laufanimation: Ständer im Wechselschritt mit Fußheben und Rumpfwippen (`A.pph` in `hunt.js`).
+- v395: Fasan – Einschussloch immer am Rumpf (`phBody(noTail)` in `woundSpot`), nicht mehr auf den Stoßfedern.
+- v396: Jagd – Wild bleibt in Schussweite der Waffe (`gunReach` in `spawnPoint`/`pickWalk`); vorher wanderte es bei Glock/Flinte auf 130–230 m weg („Zu weit“).
+- v397: Trägerschuss – Halsorgane (`NORG`) größer (`NECK_K`), Keiler mit Drosselvenen; Durchschuss trifft häufiger Organe.
+- v399: Gesichter der Figuren (`headParts` in `woodmodels.js`) – Kinn, Ohren, Nase, Augen mit Weiß, Brauen, Mund.
+- v401: Sammellieferung – PR #110–#116 und #118 (v391–v400) in einem Zweig zusammengeführt; Details je Version oben.

@@ -3291,6 +3291,20 @@ const FWM = (() => {
   function headParts(b, o, yo) {
     const skin = o.skin || 0xf2c9a0, hat = o.hat;
     b.sphere(0.12, 8, 6, skin, { y: 0.92 + yo });
+    /* v399: Gesicht – Kinn, Ohren, Nase, Augen mit Weiß, Brauen, Mund (vorher nur zwei dunkle Klötzchen) */
+    const sk2 = mix(skin, 0xa8604a, 0.22);
+    b.sphere(0.085, 10, 6, skin, { y: 0.865 + yo, z: 0.03, sy: 0.72 });                      /* Kinn/Kiefer */
+    [-1, 1].forEach(q => b.sphere(0.03, 6, 4, sk2, { x: q * 0.118, y: 0.925 + yo, z: -0.005, sx: 0.5, sy: 1.15 }));   /* Ohren */
+    if (!(hat === "helmg")) {
+      const bro = o.hair != null ? mix(o.hair, 0x000000, 0.25) : 0x4a3a2a;
+      [-1, 1].forEach(q => {
+        b.box(0.034, 0.026, 0.012, 0xf4f1ea, { x: q * 0.042, y: 0.955 + yo, z: 0.113 });  /* Augapfel */
+        b.box(0.018, 0.02, 0.01, o.eye || 0x2a2420, { x: q * 0.042 + q * 0.002, y: 0.955 + yo, z: 0.12 });  /* Pupille */
+        b.box(0.046, 0.01, 0.016, bro, { x: q * 0.043, y: 0.99 + yo, z: 0.097, rz: q * 0.1 });          /* Braue */
+      });
+    }
+    b.box(0.024, 0.042, 0.032, sk2, { y: 0.915 + yo, z: 0.123 });                              /* Nase */
+    b.box(0.05, 0.009, 0.012, 0xa05a4a, { y: 0.865 + yo, z: 0.108 });                          /* Mund */
     if (o.hair && !hat) hairdo(b, o, yo);
     if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 + yo }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 + yo }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 + yo }); }
     if (hat === "stroh") { b.cyl(0.235, 0.235, 0.02, 12, 0xe2c870, { y: 1.0 + yo }); b.cyl(0.125, 0.115, 0.1, 10, 0xe8d080, { y: 1.01 + yo }); b.cyl(0.128, 0.128, 0.03, 10, 0x9a3a2a, { y: 1.03 + yo, notop: true, nobot: true }); }
@@ -3305,8 +3319,15 @@ const FWM = (() => {
       if (hat === "helmf") [-1, 1].forEach(q => { b.box(0.05, 0.09, 0.08, 0x2f5a3a, { x: q * 0.135, y: 0.9 + yo }); b.box(0.01, 0.02, 0.07, 0x2a2a2e, { x: q * 0.07, y: 1.07 + yo }); });    /* Gehörschutz */
       if (hat === "helmg") { b.box(0.19, 0.05, 0.03, 0x2a2e36, { y: 0.98 + yo, z: 0.125 }); [-1, 1].forEach(q => b.box(0.07, 0.035, 0.012, 0xcfe8f4, { x: q * 0.045, y: 0.985 + yo, z: 0.143 })); }   /* Schutzbrille */
     }
-    if (o.beard) b.box(0.16, 0.1, 0.06, o.beard, { y: 0.84 + yo, z: 0.1 });
-    b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: 0.04, y: 0.95 + yo, z: 0.115 }); b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: -0.04, y: 0.95 + yo, z: 0.115 });
+    if (o.beard) {
+      /* v400: Bart wie ein Vollbart um Kiefer und Kinn (vorher ein Klotz wie eine Maske), Mund und Wangen bleiben frei, Schnurrbart über dem Mund */
+      const bc = mix(o.beard, 0x000000, 0.3), bd = mix(bc, 0x000000, 0.25);
+      b.sphere(0.1, 9, 5, bc, { y: 0.815 + yo, z: 0.03, sy: 0.62 });
+      [-1, 1].forEach(q => b.box(0.028, 0.1, 0.1, bd, { x: q * 0.108, y: 0.88 + yo, z: 0.03 }));         /* Koteletten */
+      b.box(0.075, 0.016, 0.022, bd, { y: 0.885 + yo, z: 0.114 });                                         /* Schnurrbart */
+      b.box(0.04, 0.008, 0.01, 0x8a4a3a, { y: 0.865 + yo, z: 0.124 });                                     /* Mund im Bart */
+    }
+    if (hat === "helmg") [-1, 1].forEach(q => b.box(0.03, 0.03, 0.02, 0x1d1d20, { x: q * 0.04, y: 0.95 + yo, z: 0.115 }));      /* v399: Schutzbrille – alte Augen darunter */
   }
   /* v95: der Kopf allein, Drehpunkt am Hals (Ursprung = Halsansatz, y = 0,8 am Körper) – für Gespräch, Nicken, Kopfschütteln */
   function head(o) {

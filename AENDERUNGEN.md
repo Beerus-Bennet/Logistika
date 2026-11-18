@@ -1,3 +1,28 @@
+## v401 – Sammellieferung (v391–v400 in einem Pull Request)
+
+**Anlass:** Die einzelnen Pull Requests #110–#116 und #118 hatten sich gegenseitig Konflikte in `AENDERUNGEN.md`, `CLAUDE.md`, `sw.js` und `index.html` verursacht. Sie sind hier in einem Zweig zusammengeführt (Basis: main mit v398); die einzelnen Abschnitte stehen unverändert darunter.
+
+**Enthalten:** v391/v400 Schusswunde auf der Haut und Trefferbild-Bericht (#110), v392 Fasan-Organe (#111), v393 Notizen im Diensttelefon (#112), v394 Fasan-Laufanimation (#113), v395 Einschussloch am Rumpf (#114), v396 Wild in Schussweite (#115), v397 Halsorgane (#116), v399 Gesichter (#118) samt neuem Vollbart (statt Bartklotz; bei Bartträgern liegt er jetzt um den Kiefer, Mund bleibt sichtbar).
+
+**Zusammenführung:** Version/Cache je Datei auf den höheren Stand; bei der Wundsuche (`woundSpot`) gilt beides: Oberflächenprojektion aus v400 auf dem Fasan-Rumpf ohne Stoßfedern (v395). Gesamtversion 401, `hunt.js` und `style.css` auf 401 gezählt.
+
+**Geprüft:** siehe die einzelnen Abschnitte; zusätzlich nach der Zusammenführung Regressionstests und Testbrowser-Lauf (Ergebnis im Pull Request). **Nicht geprüft:** Handy.
+
+## v400 – Dezente Wunde direkt auf dem Fell
+
+**Ursache:** Die frühere ebene Wundscheibe schwebte an gekrümmten Flächen oder verschwand darin. Auch die erste Oberflächenkorrektur wirkte durch große, hart abgegrenzte Farbscheiben noch aufgesetzt.
+
+**Lösung (`hunt.js`):** Eine kleine Fläche mit dunklem Kern, gedämpftem rotbraunem Rand und weichem Übergang zur tatsächlichen Fellfarbe. Alle Ringe werden auf das Tiernetz projiziert; die Ausrichtung folgt der Hautnormale. Hals und Haupt verwenden dieselben Modelle, Körpermaße und Fellvarianten wie das sichtbare Tier. Die Wunde bleibt Kind des betroffenen Körperteils und folgt Fall und Drehung. Ausschuss weiterhin nur bei ausreichender Eindringtiefe. Maximal 264 Dreiecke je Wunde, gemeinsame Ringpunkte nur einmal berechnet; kein neuer Effekt pro Bild. Trefferbild-Aufräumung aus v391 erhalten.
+
+**Geprüft:** Eigenständige Punkt-zu-Dreieck-Abstandsmessung an 18 Flächen (drei Arten, Körper/Hals/Haupt, beide Seiten), Einschuss/Ausschuss und Eindringgrenze. Chromium/WebGL mit mobiler Fenstergröße: Seiten, Schrägansicht, Gegenfläche und gedrehter Körper sowie abgeschlossener Fall; keine JavaScript-Seitenfehler. Bestehende Tests `trefferklarheit-v388`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** echtes iPhone/Safari und Laufzeitmessung auf Mobilhardware. Vorschau und Details: `docs/WUNDOPTIK-v400.md`.
+
+## v399 – Gesichter der Arbeiter realistischer
+
+**Ursache:** Der Kopf (`headParts` in `woodmodels.js`) bestand nur aus einer Kugel mit zwei dunklen Klötzchen als Augen – kein Kinn, keine Ohren, keine Nase.
+
+**Lösung:** Kinn/Kiefer, Ohren, Nase, Augen mit weißem Augapfel und Pupille (`o.eye` optional), Augenbrauen (Haarfarbe, etwas dunkler) und Mund. Bei der Schutzbrille (`helmg`) bleiben die alten dunklen Augen unter dem Glas, Brauen und Weiß entfallen. Gilt für alle Figuren, die `FWM.person`/`FWM.head` nutzen (Personal, Nachbarn, Dorfbewohner), Kopfgröße und Körper unverändert. Kein Spielstandseingriff.
+
+**Geprüft (Testbrowser, Vorher/Nachher-Bilder von vier Mitarbeitern):** Gesichter mit Nase, Ohren, Brauen, Augen und Mund; Hüte und Frisuren unverändert; keine Konsolenfehler. Eine Probe mit höher aufgelöstem Kopf (12 × 8) ließ die Haarkappe durchscheinen und wurde deshalb nicht übernommen. **Nicht geprüft:** Handy, kleine Darstellung im Hof (Figuren sind dort nur wenige Pixel groß), Mitarbeiter mit allen Frisuren/Hüten einzeln. Bei Bartträgern verdeckt der (unveränderte) Bart weiter Mund und Kinn.
 ## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
 
 **Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.
@@ -5,6 +30,58 @@
 **Lösung (`team.js`):** 8 kurze Sprüche mit Vertretung (`STAFF_SUB_SAY`) und 6 ohne (`STAFF_NOSUB_SAY`), feste Wahl je Fortbildung (`s.away.q`). Mit 60 % (`STAFF_TRAIN.sub`) kennt die Kraft jemanden; sonst `s.away.none`: Die Kraft ist einen Tag nicht auf dem Hof (Figur ausgeblendet, kein Auftrag, „📍 Orten“ gesperrt), ihre Aufgaben bleiben liegen, der Spieler muss sie selbst erledigen. Die Rückfrage vor dem Anmelden weist darauf hin, die Karte zeigt „⚠️ Keine Vertretung“, die Rückkehr-Meldung entfällt dann das Danke. Alte Spielstände: `s.away` ohne `none` verhält sich wie bisher (Vertretung wird nachgezogen).
 
 **Geprüft (Testbrowser):** Beide Fälle erzwungen – mit Vertretung (Figur sichtbar, Spruch mit Name, Info „Vertretung“), ohne (Figur ausgeblendet, Spruch ohne Vertretung, Info „Keine Vertretung“, `doing` „auf Fortbildung“); nach Ablauf der Zeit sind beide wieder da; keine Konsolenfehler. **Nicht geprüft:** Handy; ob zugewiesene Hof-Aufgaben der abwesenden Kraft in der Liste sichtbar bleiben (unverändert gelassen).
+
+## v391 – Schusswunde auf der Haut (alle Tiere), Trefferbild-Bericht aufgeräumt
+
+**Ursache:** (1) Die Schusswunde (v382) war eine ebene Scheibe senkrecht zum Schuss. Auf der gekrümmten Decke steckte sie je nach Blickwinkel im Körper oder schwebte davor – sichtbar nur aus bestimmten Winkeln. (2) Im Trefferbild hatte „Schwarte und Muskel“ eine schlichte Zeile mit Punkt, die Organe eine Zeile mit Bildkasten; der Hinweistext stand zwischen Liste und Schussbericht.
+
+**Lösung (`hunt.js`, `style.css`):**
+- `woundSpot`/`woundMesh`: Jeder Punkt der Wunde (Haar, Rand, Loch) wird entlang der Flächennormale auf das tatsächliche Netz des Tiers gesetzt (Rumpf, Hals, Haupt; Ein- und Ausschuss) und leicht abgehoben – die Wunde liegt auf der Haut und folgt der Wölbung, für Hirsch, Keiler und Fasan.
+- Trefferbild: alle Zeilen mit gleichem 54-px-Symbolkasten (Gewebe 🧥, Knochen 🦴, Gefäße 🩸 statt Punkt, Organe weiter mit 3D-Bildchen); Hinweistexte („Nur vom Schusskanal …“, Durchschuss/stecken geblieben, ältere Aufnahme) stehen ganz unten, unter der Bedienhilfe.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Hirsch, Keiler, Fasan aus je vier Blickwinkeln – Wunde (und Ausschuss) liegt überall auf der Oberfläche; Trefferbild-Liste gesichtet; `hunt.test.js` (23), `trefferklarheit-v388`, `trefferbild-v357`, `weapons-v383`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Handy/Safari; Wunde am Haupt (Kopfschuss) und bei Läufen (dort gibt es keine Wunde); Fasan-Ausschuss im Detail.
+## v392 – Fasan: Körperschüsse treffen Organe
+
+**Ursache:** Die Organe des Fasans (`ORG.fasan` in `hunt.js`) waren winzig (Radien 0,02–0,05) gegenüber dem Rumpf (0,13 × 0,13 × 0,2). Die meisten Körperschüsse flogen zwischen allen Organen hindurch; im Trefferbild stand nur „Federkleid und Muskel“ und „Brustmuskel“.
+
+**Lösung:** Organe größer und anatomisch angeordnet: Lunge beidseits am Rücken, Herz vorn zwischen den Leberlappen, Muskelmagen und Gescheide dahinter, Nieren im Becken, Kropf am Halsansatz. Wertung, Eindringtiefe und Speicherformat unverändert; Modelle skalieren über `ORG.r` mit.
+
+**Geprüft:** Messung mit 4000 Zufallsstrahlen durch den Rumpf (Node/vm): Anteil mit mindestens einem Organ 42 % → 65 %, davon lebenswichtig (Herz/Lunge) 16 % → 26 %; ein Rest trifft weiter nur Muskel (Keule/Schwanzansatz). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden (`trefferklarheit-v388` und `weapons-v383` ließen sich in dieser Umgebung nicht aus dem Wurzelordner starten, nicht bewertet). **Nicht geprüft:** Trefferbild im Browser (Optik der größeren Organe), Handy.
+## v393 – Routinemeldungen als Notiz im Diensthandy
+
+**Ursache:** Hintergrundmeldungen wie „Hofladen Glindow ist zufrieden: +412 € …“, „… ist aus der Werkstatt zurück“ oder „… lackiert“ blendeten ständig über dem Spielfeld ein.
+
+**Lösung:** Neuer Tab „📝 Notizen“ im Diensttelefon (`noteAdd`/`notesHTML` in `offices.js`, `S.notes`, höchstens 60 Einträge, Zähler am Tab, „Notizen leeren“). `toast()` (`game.js`) leitet Meldungen mit Hintergrund-Kennzeichen (`low`, keine Warnung) und „… ist zufrieden: +…“ dorthin um. **Bleiben Einblendung:** Warnungen, Antworten auf einen eigenen Tipp (innerhalb 1,2 s), alle Meldungen ohne `low`-Kennzeichen (z. B. Überboten, Zustellung). Keine Spielstandmigration (`S.notes` entsteht bei Bedarf). Die Tableiste hat jetzt fünf Einträge (CSS-Block „v393“).
+
+**Geprüft (Testbrowser, Desktop-Chromium):** Zufriedenheit und Werkstatt-Meldung erscheinen nicht mehr als Einblendung, die Verspätungs-Warnung schon; beide Notizen stehen im Tab; keine Konsolenfehler. **Nicht geprüft:** Optik der fünf Tabs (Intro verdeckte die Ansicht), Handy.
+## v394 – Fasan: Laufanimation
+
+**Ursache:** Die Ständer des Fasans waren beim Gehen starr (`A.legN` leer, `A.feet` nur für Flug/Liegepose) – er glitt über den Boden.
+
+**Lösung (`hunt.js`, Block „v394: Gehen auf dem Boden“):** Eigene Schrittphase `A.pph` aus Tempo und Beinlänge (Schrittlänge folgt dem Pendelwinkel, 0,5 → 0,75 rad beim Laufen). Die Ständer pendeln im Wechselschritt, der Fuß hebt sich beim Vorschwung (bis 2,8 cm), der Rumpf wippt bei jedem Schritt leicht. Im Stand, im Flug, beim Fallen und am liegenden Stück unverändert. Keine Wertungs-/Treffer-/Speicheränderung.
+
+**Geprüft:** Testbrowser (`?test&jagd`): Fasan im Gehen – Füße schwingen gegenläufig (±0,38 rad), Fuß hebt sich, Rumpf wippt, keine Konsolenfehler; `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Optik im Video/bei echter Bildrate (Testbrowser läuft nur mit Software-Rendering), Handy; kein Kniegelenk – die Beine schwingen als ganzes Stück.
+## v395 – Fasan: Einschussloch sitzt am Rumpf, nicht am Schwanz
+
+**Ursache:** Die Wundsuche (`woundSpot` in `hunt.js`) tastete das ganze Fasanmodell ab, also auch die langen Stoßfedern. Bei Schüssen von hinten oder flach über den Rumpf traf der Strahl zuerst eine Schwanzfeder, das Einschussloch saß mitten auf dem Schwanz.
+
+**Lösung:** `phBody(noTail)` baut das Modell ohne Stoßfedern; `woundSpot` nutzt es für den Fasan. Das Loch liegt damit immer auf dem Rumpf. Sichtbares Modell, Trefferzonen und Spielstand unverändert. Neuer Prüfstand-Export `HUNT._woundSpot`.
+
+**Geprüft (Testbrowser, `?test&jagd`):** Vier Schüsse (von vorn und von hinten, zwei Höhen) – alle Wunden liegen im Rumpfbereich (z zwischen −0,20 und +0,21, Rumpf −0,22 bis +0,18 am Ellipsoid), keine auf den Stoßfedern (die ragen bis z ≈ −0,7). **Nicht geprüft:** Optik im Bild (Screenshot), Handy; bei Schüssen von direkt hinten kann das Loch am Rumpfende teilweise unter den Schwanzfederansätzen liegen.
+## v396 – Jagd: Wild bleibt in Schussweite der gewählten Waffe
+
+**Ursache:** Das Wild erschien bei Glock/Flinte zwar nah (46–56 m, `nearD`), wanderte aber zu Zielen, die immer mehr als 32 Einheiten (128 m) vom Hochsitz entfernt lagen; fand `pickWalk` keins, lief es zur Feldmitte (200–232 m). Die Waffen reichen nur 60 m (`maxR`) – der Schuss endete mit „Zu weit für diese Waffe“, der Fasan war praktisch nicht abschießbar. Dasselbe galt für Doppelbüchse/CZ 375 (220/250 m), deren Wild bis 240 m erscheinen und wandern konnte.
+
+**Lösung (`hunt.js`):** `gunReach()` = 95 % der Waffenreichweite in Einheiten. `spawnPoint` begrenzt die Entfernung darauf, `pickWalk` wählt nur Ziele zwischen Mindestabstand (bei Kurzwaffen 0,7 · `nearD[0]`, sonst 32) und `gunReach()`; ohne Treffer nach 20 Versuchen ein Punkt aus `spawnPoint()` statt der Feldmitte. Gilt für alle Tierarten. Gewehre mit ≥ 400 m Reichweite verhalten sich praktisch wie zuvor.
+
+**Geprüft (Testbrowser, Glock):** Wanderziele von Fasan, Keiler, Hirsch liegen bei 39–55 m (vorher Feldmitte 232 m, per Code und gemessene Mitte 200 m belegt; den Alt-Lauf im Browser konnte ich wegen Zeitlimit nicht zu Ende messen). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Spielgefühl am Handy; schon vorhandenes Wild beim Waffenwechsel wird nicht umgesetzt, es wandert erst bei der nächsten Wegwahl in Reichweite.
+## v397 – Trägerschuss: Halsorgane werden häufiger getroffen
+
+**Ursache:** Die Halsorgane (`NORG` in `hunt.js`: Halswirbel, Luft-/Speiseröhre, Halsschlagadern, Drosselvenen) waren als sehr dünne Röhren modelliert. Ein Durchschuss durch die Mitte des Trägers traf bei 26 % (Hirsch), 55 % (Keiler) und 46 % (Fasan) keins davon – im Trefferbild stand nur „Halsweichteile (kein lebenswichtiges Organ)“.
+
+**Lösung:** Maße der Halsorgane je Art angehoben (`NECK_K`: Hirsch ×1,7, Keiler ×2,6, Fasan ×2,4; Halswirbel nur ×1,25, damit nicht jeder Trägerschuss die Wirbelsäule trifft). Der Keiler bekommt zusätzlich die beiden Drosselvenen, die ihm fehlten. Wertung (`SP`), Trefferzonen, Eindringtiefe und Spielstand unverändert; die Organe im Trefferbild folgen derselben Geometrie.
+
+**Geprüft:** Messung mit je 3000 zufälligen seitlichen Strahlen durch den Hals (Node/vm): Anteil mit mindestens einem Halsorgan Hirsch 74 → 86 %, Keiler 45 → 66 %, Fasan 54 → 71 %; Wirbelsäulentreffer Hirsch 33 → 40 %, Keiler 24 → 27 %, Fasan 23 → 28 %. `hunt.test.js`, `trefferbild-v357`, `anatomie-v367`, `trefferklarheit-v388` bestanden. **Nicht geprüft:** Optik der dickeren Röhren im Trefferbild (Screenshot im Browser gelang nicht), Handy. Der Rest ohne Kontakt entspricht Schüssen durch Mähne/Widerrist und Nackenmuskulatur.
 
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 

@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v398";
+const VERSION = "v401";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -14,7 +14,7 @@ const SHELL = [
   "./",
   "./index.html",
   "./viewport.js?v=358",
-  "./style.css?v=387",
+  "./style.css?v=401",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -25,7 +25,7 @@ const SHELL = [
   "./photo.js?v=336",
   "./map.js?v=363",
   "./routegeo.js?v=365",
-  "./offices.js?v=356",
+  "./offices.js?v=393",
   "./wallet.js?v=109",
   "./snus.js?v=365",
   "./pablo.js?v=302",
@@ -36,7 +36,7 @@ const SHELL = [
   "./kunden.js?v=109",
   "./lucky.js?v=383",
   "./loading.js?v=109",
-  "./game.js?v=371",
+  "./game.js?v=393",
   "./farm.js?v=354",
   "./erbe.js?v=386",
   "./village.js?v=371",
@@ -54,7 +54,7 @@ const SHELL = [
   "./farmmodels.js?v=343",
   "./fishmodels.js?v=109",
   "./bushes.js?v=109",
-  "./woodmodels.js?v=386",
+  "./woodmodels.js?v=399",
   "./alpine.js?v=386",
   "./sawwerk.js?v=109",
   "./treebark.js?v=109",
@@ -68,7 +68,7 @@ const SHELL = [
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
   "./weapons.js?v=383",
-  "./hunt.js?v=388",
+  "./hunt.js?v=401",
   "./exhibits.js?v=380",
   "./rent.js?v=340",
   "./villagesite.js?v=369",
