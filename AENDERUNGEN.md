@@ -6,6 +6,13 @@
 
 **Geprüft:** Eigenständige Punkt-zu-Dreieck-Abstandsmessung an 18 Flächen (drei Arten, Körper/Hals/Haupt, beide Seiten), Einschuss/Ausschuss und Eindringgrenze. Chromium/WebGL mit mobiler Fenstergröße: Seiten, Schrägansicht, Gegenfläche und gedrehter Körper sowie abgeschlossener Fall; keine JavaScript-Seitenfehler. Bestehende Tests `trefferklarheit-v388`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** echtes iPhone/Safari und Laufzeitmessung auf Mobilhardware. Vorschau und Details: `docs/WUNDOPTIK-v400.md`.
 
+## v399 – Gesichter der Arbeiter realistischer
+
+**Ursache:** Der Kopf (`headParts` in `woodmodels.js`) bestand nur aus einer Kugel mit zwei dunklen Klötzchen als Augen – kein Kinn, keine Ohren, keine Nase.
+
+**Lösung:** Kinn/Kiefer, Ohren, Nase, Augen mit weißem Augapfel und Pupille (`o.eye` optional), Augenbrauen (Haarfarbe, etwas dunkler) und Mund. Bei der Schutzbrille (`helmg`) bleiben die alten dunklen Augen unter dem Glas, Brauen und Weiß entfallen. Gilt für alle Figuren, die `FWM.person`/`FWM.head` nutzen (Personal, Nachbarn, Dorfbewohner), Kopfgröße und Körper unverändert. Kein Spielstandseingriff.
+
+**Geprüft (Testbrowser, Vorher/Nachher-Bilder von vier Mitarbeitern):** Gesichter mit Nase, Ohren, Brauen, Augen und Mund; Hüte und Frisuren unverändert; keine Konsolenfehler. Eine Probe mit höher aufgelöstem Kopf (12 × 8) ließ die Haarkappe durchscheinen und wurde deshalb nicht übernommen. **Nicht geprüft:** Handy, kleine Darstellung im Hof (Figuren sind dort nur wenige Pixel groß), Mitarbeiter mit allen Frisuren/Hüten einzeln. Bei Bartträgern verdeckt der (unveränderte) Bart weiter Mund und Kinn.
 ## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
 
 **Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.

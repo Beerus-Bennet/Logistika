@@ -159,3 +159,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v395: Fasan – Einschussloch immer am Rumpf (`phBody(noTail)` in `woundSpot`), nicht mehr auf den Stoßfedern.
 - v396: Jagd – Wild bleibt in Schussweite der Waffe (`gunReach` in `spawnPoint`/`pickWalk`); vorher wanderte es bei Glock/Flinte auf 130–230 m weg („Zu weit“).
 - v397: Trägerschuss – Halsorgane (`NORG`) größer (`NECK_K`), Keiler mit Drosselvenen; Durchschuss trifft häufiger Organe.
+- v399: Gesichter der Figuren (`headParts` in `woodmodels.js`) – Kinn, Ohren, Nase, Augen mit Weiß, Brauen, Mund.
