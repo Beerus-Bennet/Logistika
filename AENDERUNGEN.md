@@ -1,3 +1,11 @@
+## v395 – Fasan: Einschussloch sitzt am Rumpf, nicht am Schwanz
+
+**Ursache:** Die Wundsuche (`woundSpot` in `hunt.js`) tastete das ganze Fasanmodell ab, also auch die langen Stoßfedern. Bei Schüssen von hinten oder flach über den Rumpf traf der Strahl zuerst eine Schwanzfeder, das Einschussloch saß mitten auf dem Schwanz.
+
+**Lösung:** `phBody(noTail)` baut das Modell ohne Stoßfedern; `woundSpot` nutzt es für den Fasan. Das Loch liegt damit immer auf dem Rumpf. Sichtbares Modell, Trefferzonen und Spielstand unverändert. Neuer Prüfstand-Export `HUNT._woundSpot`.
+
+**Geprüft (Testbrowser, `?test&jagd`):** Vier Schüsse (von vorn und von hinten, zwei Höhen) – alle Wunden liegen im Rumpfbereich (z zwischen −0,20 und +0,21, Rumpf −0,22 bis +0,18 am Ellipsoid), keine auf den Stoßfedern (die ragen bis z ≈ −0,7). **Nicht geprüft:** Optik im Bild (Screenshot), Handy; bei Schüssen von direkt hinten kann das Loch am Rumpfende teilweise unter den Schwanzfederansätzen liegen.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
