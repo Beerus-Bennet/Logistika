@@ -1,3 +1,11 @@
+## v406 – Sitzende Figuren im Gebirge: Bank und Baumstamm
+
+**Ursache:** Die Bank vor der Almhütte war für die sitzende Figur zu hoch (Sitz 0,63, Oberschenkel der Figur bei 0,38) – der Mann saß in der Bank. Der Wanderer am Zelt saß ohne Sitzgelegenheit in der Luft.
+
+**Lösung (`alpine.js`):** Banksitz auf Oberschenkelhöhe (0,38) gesenkt, Figur so gesetzt, dass der Rücken über der Sitzfläche und die Beine davor sind; am Zelt ein Baumstamm als Sitz, Figur auf der Geländehöhe.
+
+**Geprüft (Testbrowser):** Nahbilder von Bank und Zelt (`docs/assets/v404/sitzen-v406.png`). **Nicht geprüft:** Handy.
+
 ## v405 – Bergsee: kein Knick an der Falllippe, höherer Felsrand
 
 **Ursache:** Der Seeumriss ragte rechts neben der Falllippe über die Lippenlinie hinaus; dort hing eine Wasserzunge über der Wand, der Fall wirkte geknickt. Zusätzlich wurde das Gelände neben der Kerbe breit auf Seehöhe abgesenkt, und der Wasserrand wuchs bis an die Lippe um 3,5 % – an den Lippenenden entstand eine Stufe. Der Felsrand lag nur 1,9 über dem Spiegel und war schmal, aus flachen Blickwinkeln sah der See übergelaufen aus.

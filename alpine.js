@@ -215,12 +215,12 @@ const ALPINE = (()=>{
     b.box(5.2,.7,4,0x8f8d84,{y:-.3});b.box(4.8,2.1,3.6,0x8a5a34,{y:.4});for(let k=0;k<5;k++)b.box(4.86,.06,3.66,0x6e4528,{y:.6+k*.42});
     b.roof(5.8,4.4,1.5,0x6b6f72,{y:2.5,gable:0x7a4c2c});b.box(.5,1.1,.5,0x8f8d84,{x:1.3,y:3.1,z:-.6});
     b.box(1,1.6,.08,0x5a3a22,{z:1.82,y:.4});[-1.6,1.6].forEach(q=>{b.box(.8,.7,.08,0xcfe4ee,{x:q,y:1.3,z:1.82});b.box(.9,.18,.25,0x8a5a34,{x:q,y:1.12,z:1.95});for(let f=0;f<4;f++)b.ico(.11,[0xd8332b,0xe85a8a,0xd8332b,0xf2c231][f],{x:q-.3+f*.2,y:1.3,z:1.98});});
-    b.box(2.4,.08,.45,0x7a4c2c,{x:0,y:.55,z:2.55});[-1,1].forEach(q=>b.box(.1,.5,.4,0x5a3a22,{x:q*1.05,y:.05,z:2.55}));                   /* Bank */
+    b.box(2.4,.08,.45,0x7a4c2c,{x:0,y:.3,z:2.55});[-1,1].forEach(q=>b.box(.1,.3,.4,0x5a3a22,{x:q*1.05,y:0,z:2.55}));                   /* Bank – v406: Sitzhöhe = Oberschenkel der sitzenden Figur (0,317 × 1,2) */
     for(let k=0;k<12;k++)b.cyl(.13,.13,1.2,6,k%3?0xa07a50:0x8c6a46,{x:-2.9,y:.05+Math.floor(k/4)*.27+.13,z:-1.4+(k%4)*.3,rz:Math.PI/2}); /* Brennholz */
     b.box(1.6,.45,.5,0x6e4b2f,{x:3.3,y:-.1,z:1.2});b.box(1.4,.06,.36,0x6a9ab8,{x:3.3,y:.32,z:1.2});b.box(.12,.9,.12,0x6e4b2f,{x:3.95,y:.1,z:1.2}); /* Brunnentrog */
     for(let k=0;k<6;k++)b.box(.08,.8,.08,0x7a5a3a,{x:-2.6+k*1.05,y:-.1,z:3.6});b.box(5.4,.06,.06,0x7a5a3a,{x:0,y:.55,z:3.6});           /* Zaun */
    });
-   put(P({shirt:0x3f78c8,pants:0x5a4a3a,hat:'hut',seed:41,sit:true}),{x:x+Math.sin(ry)*2.55+Math.cos(ry)*.6,y,z:z+Math.cos(ry)*2.55-Math.sin(ry)*.6,ry,s:1.2});
+   put(P({shirt:0x3f78c8,pants:0x5a4a3a,hat:'hut',seed:41,sit:true}),{x:x+Math.sin(ry)*2.42+Math.cos(ry)*.6,y,z:z+Math.cos(ry)*2.42-Math.sin(ry)*.6,ry,s:1.2}); /* v406: Rücken über der Sitzfläche, Beine vor der Bank */
    spots.smoke=[x+Math.cos(ry)*1.3-Math.sin(ry)*.6,y+4.3,z-Math.sin(ry)*1.3-Math.cos(ry)*.6];}
   /* Aussichtsbank, Zelt mit Feuer, Picknick und Gartenzwerg am Seeufer (südliche Terrasse) */
   const shore=[];for(let i=0;i<72;i++){const a=i/72*Math.PI*2;for(const e of [1.3,1.45,1.6]){const x=L.x+Math.cos(a)*L.rx*e,z=L.z+Math.sin(a)*L.rz*e;shore.push([x,z]);}}
@@ -241,7 +241,8 @@ const ALPINE = (()=>{
     b.box(1.6,.03,1.2,0xd8332b,{x:-.2,y:.02,z:1.5});for(let q=0;q<4;q++)b.box(.4,.035,.3,0xf4f1ea,{x:-.8+(q%2)*.8+(Math.floor(q/2)?.4:0),y:.025,z:1.2+Math.floor(q/2)*.6});    /* Picknickdecke rot-weiß */
     b.box(.5,.32,.32,0xb98a50,{x:.1,y:.03,z:1.5});b.cyl(.04,.04,.3,5,0x8a6a3a,{x:.1,y:.35,z:1.5,rz:Math.PI/2});                              /* Korb */
    });spots.fire=[x+Math.cos(ry)*1+Math.sin(ry)*.6,y+.4,z-Math.sin(ry)*1+Math.cos(ry)*.6];
-   put(P({shirt:0x2f8a5a,pants:0x3a3f4a,hat:'strick',hatC:0xd8332b,seed:52,sit:true}),{x:x+Math.cos(ry)*1.9+Math.sin(ry)*.6,y,z:z-Math.sin(ry)*1.9+Math.cos(ry)*.6,ry:ry-Math.PI/2,s:1.15});}
+   {const px=x+Math.cos(ry)*1.9+Math.sin(ry)*.6,pz=z-Math.sin(ry)*1.9+Math.cos(ry)*.6,py=surface(px,pz);put(P({shirt:0x2f8a5a,pants:0x3a3f4a,hat:'strick',hatC:0xd8332b,seed:52,sit:true}),{x:px,y:py,z:pz,ry:ry-Math.PI/2,s:1.15});
+    fun.at({x:px,y:py,z:pz,ry:ry-Math.PI/2},b=>b.cyl(.18,.18,1.1,7,0x7a5532,{x:-.55,y:.18,rz:-Math.PI/2}));}}   /* v406: sitzt auf einem Baumstamm statt in der Luft */
   /* v404: Wanderweg per Wegsuche (A*) auf einem 1er-Raster der Geländeoberfläche: jede Steigung kostet, über ~45° ist der Hang
      unbegehbar, See/Kolk/Bach sind gesperrt – so entstehen Serpentinen statt gerader Linien über Felswände. Danach geglättet und als
      durchgehendes Band mit gemeinsamen Kanten gelegt (vorher Einzelstücke mit Lücken und Überlappungen). */
