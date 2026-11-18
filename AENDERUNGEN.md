@@ -5,6 +5,13 @@
 **Lösung:** Kinn/Kiefer, Ohren, Nase, Augen mit weißem Augapfel und Pupille (`o.eye` optional), Augenbrauen (Haarfarbe, etwas dunkler) und Mund. Bei der Schutzbrille (`helmg`) bleiben die alten dunklen Augen unter dem Glas, Brauen und Weiß entfallen. Gilt für alle Figuren, die `FWM.person`/`FWM.head` nutzen (Personal, Nachbarn, Dorfbewohner), Kopfgröße und Körper unverändert. Kein Spielstandseingriff.
 
 **Geprüft (Testbrowser, Vorher/Nachher-Bilder von vier Mitarbeitern):** Gesichter mit Nase, Ohren, Brauen, Augen und Mund; Hüte und Frisuren unverändert; keine Konsolenfehler. Eine Probe mit höher aufgelöstem Kopf (12 × 8) ließ die Haarkappe durchscheinen und wurde deshalb nicht übernommen. **Nicht geprüft:** Handy, kleine Darstellung im Hof (Figuren sind dort nur wenige Pixel groß), Mitarbeiter mit allen Frisuren/Hüten einzeln. Bei Bartträgern verdeckt der (unveränderte) Bart weiter Mund und Kinn.
+## v398 – Fortbildung: kürzere Sprüche, nicht immer eine Vertretung
+
+**Ursache / Wunsch:** Beim Anmelden zur Fortbildung kam immer derselbe lange Satz, und stets sprang jemand ein.
+
+**Lösung (`team.js`):** 8 kurze Sprüche mit Vertretung (`STAFF_SUB_SAY`) und 6 ohne (`STAFF_NOSUB_SAY`), feste Wahl je Fortbildung (`s.away.q`). Mit 60 % (`STAFF_TRAIN.sub`) kennt die Kraft jemanden; sonst `s.away.none`: Die Kraft ist einen Tag nicht auf dem Hof (Figur ausgeblendet, kein Auftrag, „📍 Orten“ gesperrt), ihre Aufgaben bleiben liegen, der Spieler muss sie selbst erledigen. Die Rückfrage vor dem Anmelden weist darauf hin, die Karte zeigt „⚠️ Keine Vertretung“, die Rückkehr-Meldung entfällt dann das Danke. Alte Spielstände: `s.away` ohne `none` verhält sich wie bisher (Vertretung wird nachgezogen).
+
+**Geprüft (Testbrowser):** Beide Fälle erzwungen – mit Vertretung (Figur sichtbar, Spruch mit Name, Info „Vertretung“), ohne (Figur ausgeblendet, Spruch ohne Vertretung, Info „Keine Vertretung“, `doing` „auf Fortbildung“); nach Ablauf der Zeit sind beide wieder da; keine Konsolenfehler. **Nicht geprüft:** Handy; ob zugewiesene Hof-Aufgaben der abwesenden Kraft in der Liste sichtbar bleiben (unverändert gelassen).
 
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
