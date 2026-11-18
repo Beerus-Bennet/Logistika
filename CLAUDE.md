@@ -147,3 +147,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v389: Weißer Hirsch/Reh/Paket – Zusatzspruch entfernt, nur die Kleeblatt-Anzeige bleibt (`worldEvAct` in `worldview.js`).
 
 - v390: Hof-Ereignismeldungen antippbar – `farmEvGo`/`MSG_GO.farmev` in `worldview.js` (Kamera zum Ereignis, Händler/Nachbar öffnen), Ziel von `farmEvView` gesetzt.
+- v398: Fortbildung – kurze Sprüche in Varianten (`STAFF_SUB_SAY`/`STAFF_NOSUB_SAY`), mit 40 % keine Vertretung (`s.away.none`): Kraft weg, Aufgaben bleiben beim Spieler.
