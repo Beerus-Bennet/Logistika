@@ -1,3 +1,13 @@
+## v401 – Sammellieferung (v391–v400 in einem Pull Request)
+
+**Anlass:** Die einzelnen Pull Requests #110–#116 und #118 hatten sich gegenseitig Konflikte in `AENDERUNGEN.md`, `CLAUDE.md`, `sw.js` und `index.html` verursacht. Sie sind hier in einem Zweig zusammengeführt (Basis: main mit v398); die einzelnen Abschnitte stehen unverändert darunter.
+
+**Enthalten:** v391/v400 Schusswunde auf der Haut und Trefferbild-Bericht (#110), v392 Fasan-Organe (#111), v393 Notizen im Diensttelefon (#112), v394 Fasan-Laufanimation (#113), v395 Einschussloch am Rumpf (#114), v396 Wild in Schussweite (#115), v397 Halsorgane (#116), v399 Gesichter (#118) samt neuem Vollbart (statt Bartklotz; bei Bartträgern liegt er jetzt um den Kiefer, Mund bleibt sichtbar).
+
+**Zusammenführung:** Version/Cache je Datei auf den höheren Stand; bei der Wundsuche (`woundSpot`) gilt beides: Oberflächenprojektion aus v400 auf dem Fasan-Rumpf ohne Stoßfedern (v395). Gesamtversion 401, `hunt.js` und `style.css` auf 401 gezählt.
+
+**Geprüft:** siehe die einzelnen Abschnitte; zusätzlich nach der Zusammenführung Regressionstests und Testbrowser-Lauf (Ergebnis im Pull Request). **Nicht geprüft:** Handy.
+
 ## v400 – Dezente Wunde direkt auf dem Fell
 
 **Ursache:** Die frühere ebene Wundscheibe schwebte an gekrümmten Flächen oder verschwand darin. Auch die erste Oberflächenkorrektur wirkte durch große, hart abgegrenzte Farbscheiben noch aufgesetzt.
