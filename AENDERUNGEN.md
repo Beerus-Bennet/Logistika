@@ -1,3 +1,26 @@
+## v414 – Flimmernde Bodenplatte am Berghaus korrigiert
+
+- Ursache: Fundament und Deckplatte hatten zwei sichtbare Oberseiten auf derselben Höhe. Dadurch konnten beim Drehen Streifen/Flimmern entstehen.
+- Lösung: Fundamentoberkante an die Unterseite der Deckplatte gesetzt; der Sockel reicht weiter ins Gelände. Deckplatte, Hütte und Bauplatz behalten ihre Lage, keine zusätzliche Geometrie oder Änderung der allgemeinen Tiefenprüfung.
+- Geprüft: Originalfehler mit echten Modelldreiecken reproduziert; korrigierte Flächen und nahtloser Anschluss geprüft. 100 Zoomwechsel ohne Mesh-/Saveänderung. 16 Chromium-Ansichten (vier Richtungen, Tag/Nacht, Desktop-/Handyformat) ohne neue Ressourcen oder Fehler. Nicht geprüft: echtes iPhone/Safari. Bericht: `docs/HUETTENPLATTE-v414.md`.
+- Gesamt-/SW/LOGI_V414, alpine414, übrige Assetstände erhalten. Enthält den lokalen Gesamtstand413 samt Kopf-/Menükorrekturen412. Lieferung per Pull Request; kein automatisches Merge/Deployment.
+
+## v413 – Zusammenhängender Bergkamm, natürliche Ufer und ruhigere Felsgrafik
+
+- Ursache: Nadelartige Einzelberge, hoher ringförmiger Seerand und starke, gleichmäßige Dreieckskontraste.
+- Lösung: Verbundene Grate und abgestufte Schultern, Felsrippen zum Kar, breitere Seeterrasse mit niedrigem Kiesufer. Hauptgipfel nach hinten versetzt, Kreuz am Gelände. Ruhigere Kalksteinfarben, dezente Schichten/Firnfelder, Waldgruppen unterhalb der kahlen Hochlagen. Höhen-/Flussabfragen beim Aufbau vereinfacht.
+- Geprüft: Kamm, Ufer, Hüttenstand und Trampelpfad; Wasseranschlüsse, Fall und 1.800 Tierschritte; 240+200 rechnerische sowie 24 echte WebGL-Zoomwechsel ohne Ressourcenwachstum/Contextverlust. Gelände weiterhin9.918 Dreiecke, Gebirgs-Fernlast15.431 (<16.000). Tag/Nacht und Mobilformat in Chromium. Keine neue Spielstandmigration. Bericht/Vergleich: `docs/GEBIRGE-v413.md`.
+- Nicht geprüft: echtes iPhone/Safari und Geräte-FPS. Gesamt-/SW413, alpine413; andere main-Assets erhalten. Kein GitHub-Upload/Merge/Deployment.
+
+- Integration: Die bereits lokal geprüften Kopf-/Schusskanal- und Hochsitz-Menükorrekturen412 sind in derselben Lieferung enthalten (hunt/style412). Hütte/Trampelpfad411 und Gebirge413 erhalten.
+
+## v412 – Verständlicher Hirnschädel, vollständiger Kopfkanal und schmales Hochsitz-Menü
+
+- Ursache: Pauschales Kopfkanal-Ende nach 20 cm, rot gefärbte Ersatzkörper statt verständlicher Kopf-Anatomie und ein zu breites aufgeklapptes Auftragsmenü.
+- Lösung: Schädel und Gehirn als getrennte artspezifische 3D-Modelle/Bildchen; Gehirnkontakt anhand des sichtbaren Netzes. Kopfkanal an der tatsächlichen Kopfhaut bis Austritt oder Eindringstopp, bei Bedarf durch Hals/Rumpf. Kein neuer Gehirntreffer ohne erreichtes Gehirn; historische Werte bleiben erhalten. Auftragsmenü orientiert sich am Revierkasten (lesbare Mindestbreite), Text umbricht über Schwierigkeit/Belohnung.
+- Geprüft: 18 Kopfkanäle einschließlich Posen, Richtungen, Steckschüssen und Save-Erhalt; alle 23 allgemeinen Jagd-Prüfgruppen; vier bestehende Treffer-/Anatomie-/Wundtests; Chromium-Touchansichten 320/390 px und Querformat ohne Überlauf oder JavaScriptfehler. Modelle und Grenzen gecacht, begrenzte Dreieckszahlen. Bericht/Vorschauen: `docs/KOPFTREFFER-v412.md`.
+- Nicht geprüft: echtes iPhone/Safari und Geräte-FPS. Keine Spielstandmigration, kein automatisches Merge/Deployment. Gesamt-/SW412, hunt/style412; andere Assets aus main erhalten.
+
 ## v411 – Almhütte steht auf dem Boden, Wanderweg als Trampelpfad
 
 **Ursache:** Der Hüttenplatz lag direkt an der Bachböschung; das Gelände unter der Talseite wurde vom Bachbett abgegraben (bis 4 tiefer als unter der Hütte), die Hütte schwebte. Der Weg war ein einfarbiges, hart begrenztes Band in kräftigem Orange – sah nicht wie ein Pfad aus.

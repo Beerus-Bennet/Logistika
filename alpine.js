@@ -1,12 +1,17 @@
-/* v384: Zusammenhängende Wasserlandschaft mit vorgelagerten Bergkämmen. Gemeinsames Höhenfeld für Gelände,
+/* v413: Zusammenhängende Karlandschaft mit gegliedertem Hauptkamm. Gemeinsames Höhenfeld für Gelände,
    Ufer, Bachanschluss, Inselkante und Tiere; feste Budgets, keine Meshes im Takt. */
 "use strict";
 const ALPINE = (()=>{
  const B={x0:4,x1:156,z0:-214,z1:-88},L={x:80,z:-149,rx:20,rz:13,y:15.0};
- /* v403: Gipfel deutlich höher (Hauptkamm bis ~80), Form unten konkav, oben spitz – wie ein Kalkalpenkamm statt runder Hügel */
- const PEAKS=[[42,-168,28,22,40],[68,-181,32,25,64],[95,-177,31,29,80],[121,-157,27,30,60],[116,-128,28,23,36],[61,-153,20,23,30]];
+ /* v413: Breitere Bergschultern und verbundene Grate statt einzelner hoher Kegel.
+    Der Hauptgipfel bleibt ablesbar, die kleineren Rücken staffeln sich zum Tal. */
+ const PEAKS=[[40,-176,28,24,32],[67,-189,32,26,46],[95,-187,33,29,60],[122,-167,29,29,45],[121,-132,29,25,27],[55,-156,23,25,23]];
+ const RIDGES=[[0,1],[1,2],[2,3],[3,4],[0,5],[1,5]].map(([i,j])=>[PEAKS[i],PEAKS[j]]).concat([
+  [PEAKS[2],[101,-169,15,16,24]],[PEAKS[1],[61,-169,14,15,22]],[PEAKS[3],[116,-147,15,17,21]]
+ ]);
  /* v384: Kleinere Vorberge gliedern die Talseite; dieselbe Oberfläche trägt die Tiere. */
  const FOREPEAKS=[[30,-146,17,17,10],[35,-124,16,16,9],[61,-116,19,17,12],[86,-110,18,16,15],[110,-111,18,17,12],[132,-137,18,20,17]];
+ const SHOULDERS=PEAKS.concat(FOREPEAKS);
  const LEDGES=[[31,-145],[37,-124],[62,-116],[88,-113],[119,-135]];
  /* v409: Bauplatz der Almhütte – das Gelände wird dort eingeebnet (Abtrag/Aufschüttung), statt die Hütte schweben zu lassen */
  const HUT={x:30,z:-132,r:6.2,f:9.5}; /* weit genug vom Bach (Uferanschnitt) */
@@ -53,60 +58,80 @@ const ALPINE = (()=>{
  }
  function channel(x,z){const drain=nearest(riverProfile(),x,z),upper=nearest(RUN,x,z),along=(-(x-62)+(z+144))/Math.SQRT2;return along<.05&&upper.d<drain.d?upper:drain;}
  function weight(x,z){return Math.max(mountainWeight(x,z),1-sm(1,1.5,poolE(x,z)),(1-sm(2,5.5,nearest(riverProfile(),x,z).d))*sm(4,22,x)*(1-sm(-94,-85,z)));}
- const contains=(x,z)=>weight(x,z)>.035;
+ /* v413: Im Kerngebirge genügt dessen Gewicht. Das identische Ergebnis spart
+    dort die Suche entlang des gesamten Flussprofils bei jeder Höhenabfrage. */
+ const contains=(x,z)=>mountainWeight(x,z)>.035||weight(x,z)>.035;
  const replacesGround=(x,z)=>x>=B.x0&&x<=B.x1&&z>=B.z0&&z<=B.z1;
  /* Rinne auch ins alte Quellgelände schneiden; unabhängig vom Höhenfeld,
     damit springHeightW und dieses Modul sich nicht gegenseitig aufrufen. */
- function cutChannel(x,z,h,onlyCut){const q=channel(x,z);if(q.d>5.5)return h;
+ function cutChannel(x,z,h,onlyCut,cached){const q=cached||channel(x,z);if(q.d>5.5)return h;
   /* Kein erhöhtes Endstück: Profil läuft bis IN den vorhandenen Fluss weiter.
      Das Bett reicht über beide Wasserufer; kleine Rasterfehler verdecken es nicht. */
   const bed=q.y-.3,edge=q.y+.04,bank=bed+(edge-bed)*sm(.25,1.05,q.d),carved=bank+(Math.max(edge,h)-bank)*sm(1.05,5.5,q.d);return onlyCut?Math.min(h,carved):carved;
  }
  function baseHeight(x,z){const w=mountainWeight(x,z);if(w<=0)return 0;let h=0;
-  for(const [px,pz,rx,rz,top] of PEAKS.concat(FOREPEAKS)){const dx=(x-px)/rx,dz=(z-pz)/rz,a=Math.atan2(dz,dx),d=Math.hypot(dx,dz),r=Math.max(0,1-d*(1+.1*Math.sin(a*5+px)+.04*Math.cos(a*3-pz)));h=Math.max(h,top*Math.pow(r,top>30?1.3:.94));}
-  /* v403: Grate und Rinnen wachsen mit der Höhe; niedrige Vorberge bleiben weich */
-  const ribs=.65*Math.sin(x*.55+z*.28)+.35*Math.sin(x*.9-z*.37),crag=sm(8,30,h)*h*(ridged(x,z)-.42)*.42;return Math.max(0,(h+crag+ribs*sm(3,15,h))*w);
+  for(const [px,pz,rx,rz,top] of SHOULDERS){
+   const dx=(x-px)/rx,dz=(z-pz)/rz,a=Math.atan2(dz,dx),d=Math.hypot(dx,dz)*(1+.11*Math.sin(a*3+px));
+   /* Niedrige Bergschultern tragen die Grate; Vorberge laufen weich aus. */
+   h=Math.max(h,top*(top>20?.46:1)*(1-sm(.02,1.2,d)));
+  }
+  for(const [a,b] of RIDGES){const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz))),cx=a[0]+t*dx,cz=a[1]+t*dz;
+   const width=(a[2]+(b[2]-a[2])*t)*.74,d=Math.hypot(x-cx,z-cz)/width,saddle=.82+.18*(2*t-1)**2;
+   h=Math.max(h,(a[4]+(b[4]-a[4])*t)*saddle*Math.pow(Math.max(0,1-d/1.5),1.15));
+  }
+  /* Moränenschulter trägt den Karsee, statt ihn auf einen schmalen Ringwall zu
+     stellen. Wasser und Abfluss werden anschließend aus diesem Grund geschnitten. */
+  const e=Math.hypot((x-L.x)/L.rx,(z-L.z)/L.rz);h=Math.max(h,(L.y-.4)*(1-sm(1.18,2.35,e)));
+  /* Felsrippen bleiben wenige Einheiten tief und in Geländemaßstab – keine
+     mit der Gipfelhöhe anwachsenden, gleichmäßigen Zacken. */
+  const ribs=.6*Math.sin(x*.22+z*.31)+.24*Math.sin(x*.49-z*.18),crag=(ridged(x,z)-.42)*5.5*sm(12,36,h);
+  /* Zum Kar hin zusammenlaufende Erosionsrinnen gliedern die Felsflanken in
+     größere Rippen. Die Gipfel bleiben stehen; keine zusätzliche Detailgeometrie. */
+  const a=Math.atan2(z-L.z,x-L.x),gully=Math.max(0,Math.sin(a*11+.35*Math.sin(e*3)))**6*2.7*sm(18,36,h)*(1-sm(54,62,h));
+  return Math.max(0,(h+crag+ribs*sm(6,20,h)-gully)*w);
  }
  function rawHeight(x,z){let h=baseHeight(x,z);for(const [cx,cz] of LEDGES){const d=Math.hypot(x-cx,z-cz);if(d<5.4)h+=(baseHeight(cx,cz)-h)*(1-sm(2.8,5.4,d));}
   {const d=Math.hypot(x-HUT.x,z-HUT.z);if(d<HUT.f){const y=baseHeight(HUT.x,HUT.z);h+=(y-h)*(1-sm(HUT.r,HUT.f,d));}}
-  /* v403: kleines Gipfelplateau am Hauptgipfel – Platz für Kreuz, Steinmann und Gipfelstürmer */
-  const ds=Math.hypot(x-95,z+177);if(ds<7)h+=(Math.min(h,71.5+.3*ds)-h)*(1-sm(3.8,7,ds));return h;}
+  /* v413: Gipfelplatz an die neue Kammhöhe binden; das Kreuz bleibt auf dem
+     höchsten Rücken, die Standfläche geht ohne Sockel in die Schulter über. */
+  const summit=PEAKS[2],ds=Math.hypot(x-summit[0],z-summit[1]);if(ds<6)h+=(baseHeight(summit[0],summit[1])-.5-h)*(1-sm(1.6,6,ds));return h;}
  function height(x,z){if(!contains(x,z))return 0;
-  let h=rawHeight(x,z),e=lakeE(x,z);
+  const e=lakeE(x,z),profile=channel(x,z);let h=e<1?0:rawHeight(x,z);
   const along=(-(x-62)+(z+144))/Math.SQRT2,side=((x-62)+(z+144))/Math.SQRT2;
-  /* v403: Karsee mit Felsriegel – das Ufer steigt gleich hinter der Wasserlinie über den Spiegel (Kamm L.y+1,9); auf der Bergseite
-     wächst die Karwand weiter, zur Talseite fällt der Riegel erst danach ab. Nur die Abflusskerbe bleibt offen (vorher lag das
-     Gelände außen tiefer als der See, er wirkte wie übergelaufen). */
-  if(e<1.6){const basin=L.y-2.4+2.1*sm(.18,1,e),crest=L.y-.3+3.8*sm(1,1.16,e); /* v405: Felsrand höher (Spiegel + 3,5 statt + 1,9) */
-   if(e<1)h=basin;else h=h>=crest?crest+(h-crest)*sm(1.05,1.35,e):crest+(h-crest)*sm(1.32,1.75,e);
+  /* v413: Flaches Kiesufer und breiter Felsriegel statt umlaufender senkrechter
+     Badewannenwand. Rückwärtige Karhänge wachsen aus der Geländeform heraus. */
+  if(e<2){const basin=L.y-2.4+2.1*sm(.18,1,e),crest=L.y-.3+.55*sm(1,1.04,e)+1.35*sm(1.04,1.25,e);
+   if(e<1)h=basin;else h=h>=crest?crest+(h-crest)*sm(1.03,1.78,e):crest+(h-crest)*sm(1.28,2,e);
    const notch=(1-sm(FW-.2,FW+.6,Math.abs(side)))*sm(-3.6,-2.2,along);if(notch>0&&e>=1)h+=(Math.min(h,L.y-.3)-h)*notch;}
-  if(e>=1||channel(x,z).y<1)h=cutChannel(x,z,h);
+  if(e>=1||profile.y<1)h=cutChannel(x,z,h,false,profile);
   if(along>-.4&&along<11&&Math.abs(side)<FW+3){const cliff=(L.y-.1)*(1-sm(-.1,1.5,along));const sa=Math.abs(side),wide=sm(1,2.2,along),k=(1-sm(FW-.1,FW+.9,sa))*(1-wide)+(1-sm(FW+.3,FW+2.6,sa))*wide;h=h+(Math.min(h,cliff)-h)*k; /* v405: an der Lippe senkrechte Felswangen direkt neben dem Fall – kein Überlauf neben der Kerbe */}
   /* v403: runder, tiefer Kolk; wirkt nur vor der Wand (nicht durch den Riegel in den See) */
   const ePool=poolE(x,z);if(ePool<1.6&&along>.2){const k=sm(.2,1.5,along),bed=POOL.y-.4-2.2*(1-sm(.1,1,ePool)),bank=POOL.y-.32+1.1*sm(1,1.12,ePool),t=ePool<1?bed:bank+(h-bank)*sm(1.12,1.6,ePool);h+=(t-h)*k;}
-  if(channel(x,z).y<1)h=cutChannel(x,z,h,true);
+  if(profile.y<1)h=cutChannel(x,z,h,true,profile);
   return h;
  }
 
- /* v403: Schnee – Firnfelder über ~55 in flacheren Lagen, Restschnee in Mulden ab ~42, Gipfelkappen auch an steilen Flanken */
- function snowAmt(h,slope,n2,n3){const line=50+8*n2;return Math.min(1,sm(line-4,line+3,h)*(1-sm(1.3,2,slope))+sm(.6,.76,n3)*sm(40,50,h)*(1-sm(.9,1.5,slope))+sm(56,68,h)*(1-sm(2.4,3.8,slope))*.85);}
- function color(x,z,h){const w=sm(.02,.3,weight(x,z)),e=lakeE(x,z),n=Math.sin(x*.71+z*.43)*.5+.5;
-  const slope=Math.hypot(height(x+.6,z)-height(x-.6,z),height(x,z+.6)-height(x,z-.6))/1.2;
+ /* v413: Gebrochene Firnfelder auf den oberen Schultern; steile Felsrippen
+    bleiben frei, statt jeden Gipfel gleichmäßig weiß zu überziehen. */
+ function snowAmt(h,slope,n2,n3){const line=49+5*n2;return Math.min(1,sm(line-3,line+3,h)*(1-sm(.9,1.8,slope))*(.55+.45*sm(.35,.7,n3))+sm(.65,.83,n3)*sm(44,53,h)*(1-sm(.7,1.4,slope))*.45);}
+ function color(x,z,h){const mw=mountainWeight(x,z),w=sm(.02,.3,mw>=.3?mw:weight(x,z)),e=lakeE(x,z),n=Math.sin(x*.71+z*.43)*.5+.5;
+  const gx=(height(x+.6,z)-height(x-.6,z))/1.2,gz=(height(x,z+.6)-height(x,z-.6))/1.2,slope=Math.hypot(gx,gz);
   /* v403: Höhenstufen wie in den Kalkalpen – Bergwald, Almwiese, Latschen-/Schuttzone, heller gebänderter Fels, Schnee in Mulden und am Gipfel */
-  const n2=vnoise(x*.31+7,z*.31-3),n3=vnoise(x*1.7,z*1.7);
-  let c=mix(col(0x5b7c44),col(0x86a050),sm(8,22,h));c=mix(c,col(0x9aa462),sm(24,36,h)*(.6+.4*n2));
-  c=mix(c,mix(col(0xa9a593),col(0xc0baa4),n3),sm(.5,.85,slope)*(1-sm(1.2,1.6,slope))*sm(4,12,h));
-  const band=.88+.12*Math.sin(h*1.9+n2*3.1),rock=mix(mix(col(0x7c7f7e),col(0xb3ae9f),n2*.7+n3*.3),col(0x9a8a72),sm(.55,.8,vnoise(x*.08+3,z*.08))*.5).map(v=>v*band); /* v408: warme Kalktöne im Wechsel mit kühlem Grau */
-  /* v408: Rinnen dunkler, Grate heller (aus demselben Gratrauschen wie die Form) – macht die Felsstruktur lesbar */
-  const ao=.78+.34*ridged(x,z);c=mix(c,rock.map(v=>Math.min(1,v*ao)),Math.max(sm(.8,1.25,slope),sm(40,58,h)*.75));
-  const snow=snowAmt(h,slope,n2,n3);
+  const n2=vnoise(x*.08+7,z*.08-3),n3=vnoise(x*.27,z*.27);
+  let c=mix(col(0x637f4c),col(0x91a363),sm(8,27,h));c=mix(c,col(0xa0a17a),sm(27,40,h)*(.5+.5*n2));
+  c=mix(c,mix(col(0x999b8a),col(0xb3b09c),n3),sm(.55,.85,slope)*(1-sm(1.15,1.6,slope))*sm(5,14,h));
+  /* v413: Großflächige Kalkschichten und zurückhaltende Farbunterschiede,
+     damit Licht und Gratform die Hänge gliedern, nicht ein Dreiecks-Schachbrett. */
+  const band=.94+.06*Math.sin(h*.27+x*.035+z*.018+n2*2),rock=mix(col(0x909795),col(0xbab5a7),n2*.65+n3*.35).map(v=>v*band);
+  const ao=.92+.14*ridged(x,z);c=mix(c,rock.map(v=>Math.min(1,v*ao)),Math.max(sm(.68,1.2,slope),sm(34,50,h)*.85));
+  const snow=snowAmt(h,slope,n2,n3)*(.3+.7*sm(-.15,.45,gz/Math.max(.01,slope)));
   c=mix(c,col(0xeef3f6),Math.min(1,snow));
   /* v403: Kiesufer statt Wiesenkragen: heller Schotter am Wasser, dahinter Fels des Riegels */
   if(e<1.3){const sh=e<1?col(0x3b6967):mix(col(0x8b887b),col(0xaba692),n3);c=mix(sh,c,e<1?sm(.94,1.12,e):sm(1.1,1.3,e));}
   {const ep=poolE(x,z);if(ep>=1&&ep<1.35)c=mix(mix(col(0x5c645e),col(0x7b8076),n3),c,sm(1.05,1.35,ep));}
   if((-(x-62)+(z+144))/Math.SQRT2>.1&&Math.abs((x-62)+(z+144))<10&&h<L.y-.8&&slope>.8)c=mix(col(0x596760),col(0x8a8b7f),sm(1,2.4,slope)); /* v380: nasser Fels unter der Fallkante, kein türkis gefärbter Seegrund an der Wand */
   if(slope>.7&&h<L.y-1&&e<1.15)c=col(0x72796c);
-  const strata=.95+.05*Math.sin(h*.85+x*.09+z*.06);c=c.map(v=>v*strata);
+  const strata=.985+.015*Math.sin(h*.19+x*.035+z*.018);c=c.map(v=>v*strata);
   const q=channel(x,z);
   const base=groundSampler?groundSampler(x,z):typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);let result=mix(base,c,w);
   if(q.y<1&&q.d<4.5&&poolE(x,z)>.98){const shore=mix(col(0x7d8470),col(0x9a9b83),sm(-.1,1.1,q.d));result=mix(shore,result,sm(.5,4.5,q.d));}return result;
@@ -124,13 +149,11 @@ const ALPINE = (()=>{
    else if(J%N===0&&(!fine.has(j*nx+i)||!fine.has((j-1)*nx+i)))out=interpolate(V[(J/N)*(nx+1)+i],V[(J/N)*(nx+1)+i+1],u);
    else{const X=B.x0+I/N*dx,Z=B.z0+J/N*dz,p=project(X,Z),h=height(...p);out={out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])};}cache.set(key,out);return out;
   }
-  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),fk=(.12+.55*(1-sm(.5,.86,face[1])))*sm(2,10,(a.p[1]+c.p[1])/2),n=q=>G3.norm(mix(q.n,face,fk)); /* v403: Felswände facettiert, Wiesen weich */
-   /* v408: Farbe je Dreieck statt Verlauf über die Fläche – klare Low-Poly-Facetten wie bei Bäumen und Häusern (vorher verschwommene
-      Übergänge); Fels mit stärkerer, Wiese mit leichter Helligkeitsstreuung je Facette */
-   const rock=1-sm(.55,.85,face[1]),tc=(p,q,r)=>{const cx=(p.p[0]+q.p[0]+r.p[0])/3,cz=(p.p[2]+q.p[2]+r.p[2])/3,j=1+(vnoise(cx*1.7,cz*1.7)-.5)*(.06+.16*rock),hy=(p.p[1]+q.p[1]+r.p[1])/3;let m=[0,1,2].map(i=>(p.c[i]+q.c[i]+r.c[i])/3);
-    /* Grasbänder auf flacheren Facetten zwischen den Felsen (scharfe Fels-/Wiesengrenze), nicht im Schnee und nicht am Wasser */
-    const g=sm(.6,.76,face[1])*(1-sm(44,58,hy))*sm(6,12,hy)*(m[0]+m[1]+m[2]<2.3?1:0)*(lakeE(cx,cz)>1.3&&poolE(cx,cz)>1.4?1:0);if(g>0)m=mix(m,mix(col(0x7d9a4a),col(0x93a85a),vnoise(cx*.9,cz*.9)),g*.8);
-    return m.map(v=>Math.min(1,v*j));},c1=tc(a,d,c),c2=tc(a,c,e);
+  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),fk=(.08+.32*(1-sm(.5,.86,face[1])))*sm(2,10,(a.p[1]+c.p[1])/2),n=q=>G3.norm(mix(q.n,face,fk)); /* v403: Felswände facettiert, Wiesen weich */
+   /* v413: Low-Poly-Kanten erhalten, aber nur geringe Streuung je Facette.
+      Die Höhen-/Hangpalette steuert die Vegetation, kein zweiter grüner Anstrich. */
+   const rock=1-sm(.55,.85,face[1]),tc=(p,q,r)=>{const cx=(p.p[0]+q.p[0]+r.p[0])/3,cz=(p.p[2]+q.p[2]+r.p[2])/3,j=1+(vnoise(cx*.24,cz*.24)-.5)*(.025+.045*rock);
+    return [0,1,2].map(i=>Math.min(1,(p.c[i]+q.c[i]+r.c[i])/3*j));},c1=tc(a,d,c),c2=tc(a,c,e);
    b.v.push(...a.p,...n(a),...c1,...d.p,...n(d),...c1,...c.p,...n(c),...c1,...a.p,...n(a),...c2,...c.p,...n(c),...c2,...e.p,...n(e),...c2);};
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){if(fine.has(j*nx+i)){for(let v=0;v<N;v++)for(let u=0;u<N;u++){const I=i*N+u,J=j*N+v;quad(vertex(I,J),vertex(I,J+1),vertex(I+1,J+1),vertex(I+1,J));}}else quad(V[j*(nx+1)+i],V[(j+1)*(nx+1)+i],V[(j+1)*(nx+1)+i+1],V[j*(nx+1)+i+1]);}
   if(store)grid={nx,nz,dx,dz,V,fine,vertex,N};return b;
@@ -166,10 +189,12 @@ const ALPINE = (()=>{
  function larch(b,x,y,z,s,far,rot){if(!far)b.box(.15*s,1.6*s,.15*s,0x6b4a33,{x,y,z});const c=far?1:3;for(let j=0;j<c;j++){const t=j/c;b.ico((.95-.45*t)*s,[0x7f9a4c,0x8ea957,0x738f45][j%3],{x:x+Math.sin(rot+j)*.12*s,y:y+(1.7+t*2.1)*s,z:z+Math.cos(rot+j)*.12*s,sy:1.25,sx:.85,sz:.85});}}
  function latsche(b,x,y,z,s,rot){/* Legföhre: niedrige, breite, dunkle Polster */const n=3;for(let j=0;j<n;j++){const a=rot+j*2.1,d=j?.55*s:0;b.ico((.75-.12*j)*s,j%2?0x2f5236:0x3a6040,{x:x+Math.cos(a)*d,y:y+.22*s,z:z+Math.sin(a)*d,sy:.45,ry:a});}}
  function scenery(){const near=new FM.MB(),far=new FM.MB(),detail=new FM.MB(),rnd=wRng(373),trees=[];
-  /* v403: Höhenstufen: Fichten/Lärchen bis ~28, darüber Latschenfelder bis ~46 (wie die Waldgrenze in den Kalkalpen) */
-  for(let i=0;i<7000&&trees.length<245;i++){const x=22+rnd()*112,z=-191+rnd()*68,h=height(x,z),e=lakeE(x,z),sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8,lat=h>24;
-   if(!contains(x,z)||!inside(x,z)||h<1||h>46||sl>(lat?1.25:h<22?1.3:1.0)||e<1.3||poolE(x,z)<1.35||channel(x,z).d<3||trees.some(t=>Math.hypot(t.x-x,t.z-z)<(lat?2:2.6)))continue;
-   if(x<57&&z>-145)continue;const s=(lat?.8:.75)+rnd()*.6,rot=rnd()*6.28,k=lat?'latsche':rnd()<.2?'larch':'spruce';trees.push({x,z,h,s,k});
+  /* v413: Fichten/Lärchen unten, kleine Latschenfelder bis zur unregelmäßigen
+     Waldgrenze; obere Felsrücken bleiben unbewachsen. Baumlimit140. */
+  for(let i=0;i<7000&&trees.length<140;i++){const x=22+rnd()*112,z=-191+rnd()*68,h=height(x,z),e=lakeE(x,z),sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8,lat=h>24+5*(vnoise(x*.07+4,z*.07)-.5);
+   if(!contains(x,z)||!inside(x,z)||h<1||h>35||sl>(lat?.75:h<22?1.1:.85)||e<1.3||poolE(x,z)<1.35||channel(x,z).d<3||trees.some(t=>Math.hypot(t.x-x,t.z-z)<(lat?2:2.6)))continue;
+   /* v413: Waldgruppen und Lichtungen, zur Waldgrenze kleinere Kronen. */
+   if(x<57&&z>-145||vnoise(x*.095+11,z*.095)<.28)continue;const s=((lat?.8:.75)+rnd()*.6)*(1-.18*sm(17,30,h)),rot=rnd()*6.28,k=lat?'latsche':rnd()<.2?'larch':'spruce';trees.push({x,z,h,s,k});
    if(k==='latsche')latsche(near,x,h,z,s,rot); /* Latschen blenden in der Fernstufe aus (Budget) */else if(k==='larch'){larch(near,x,h,z,s,false,rot);larch(far,x,h,z,s,true,rot);}
    else{const tint=[0x2f5243,0x3a6048,0x46694a][i%3];spruce(near,x,h,z,s,false,tint,rot);spruce(far,x,h,z,s,true,tint,rot);}
   }
@@ -216,7 +241,7 @@ const ALPINE = (()=>{
  function extras(trees){const fun=new FM.MB(),rnd=wRng(4031),spots={},free=(x,z,r)=>!trees.some(t=>Math.hypot(t.x-x,t.z-z)<r)&&lakeE(x,z)>1.12&&poolE(x,z)>1.15&&channel(x,z).d>2.2;
   const P=o=>typeof FWM!=='undefined'&&FWM.person?FWM.person(o):null,put=(m,t)=>{if(m)fun.merge(m,t);};
   /* Gipfelkreuz auf dem Plateau des Hauptgipfels */
-  const top=[95,surface(95,-177),-177];spots.summit=top;
+  const summit=PEAKS[2],top=[summit[0],surface(summit[0],summit[1]),summit[1]];spots.summit=top;
   fun.box(.16,3.2,.16,0x6e4b2f,{x:top[0],y:top[1]-.2,z:top[2]});fun.box(1.5,.16,.16,0x6e4b2f,{x:top[0],y:top[1]+2.05,z:top[2]});
   fun.box(.5,.08,.5,0x4a3a2a,{x:top[0],y:top[1]+3.0,z:top[2]});fun.box(.22,.28,.14,0x8e9aa3,{x:top[0],y:top[1]+.9,z:top[2]+.12});           /* Dach, Gipfelbuch-Kasten */
   const g=(dx,dz)=>surface(top[0]+dx,top[2]+dz);
@@ -229,7 +254,12 @@ const ALPINE = (()=>{
   if(hut){const [x,,z]=hut,ry=Math.atan2(POOL.x-x,POOL.z-z),cr=Math.cos(ry),sr=Math.sin(ry);let lo=1e9,hi=-1e9;
    for(let u=-3.3;u<=3.31;u+=.55)for(let v=-2.3;v<=3.41;v+=.57){const g=surface(x+cr*u+sr*v,z-sr*u+cr*v);lo=Math.min(lo,g);hi=Math.max(hi,g);}
    const y=(hi+lo)/2+.15;hut[1]=y; /* halb eingeschnitten, halb aufgeschüttet – niedrige Mauer */hut[3]=ry;spots.hut=hut;fun.at({x,y,z,ry},b=>{
-    {const th=y-lo+.4;b.box(6.6,th,5.7,0x8f8c80,{y:.04-th,z:.55});b.box(6.7,.08,5.8,0x9a978c,{y:-.04,z:.55});}                             /* Steinterrasse bis unter den tiefsten Bodenpunkt */                                                                                          /* flache Steinterrasse auf dem eingeebneten Platz */
+    /* v414: Fundament endet an der UNTERSEITE der Deckplatte. Zuvor lagen
+       beide Oberseiten auf +.04 übereinander und flimmerten beim Drehen. */
+    {const th=y-lo+.4;
+     b.box(6.6,th,5.7,0x8f8c80,{y:-.04-th,z:.55});
+     b.box(6.7,.08,5.8,0x9a978c,{y:-.04,z:.55});
+    }
     b.box(5.2,.7,4,0x8f8d84,{y:-.3});b.box(4.8,2.1,3.6,0x8a5a34,{y:.4});for(let k=0;k<5;k++)b.box(4.86,.06,3.66,0x6e4528,{y:.6+k*.42});
     b.roof(5.8,4.4,1.5,0x6b6f72,{y:2.5,gable:0x7a4c2c});b.box(.5,1.1,.5,0x8f8d84,{x:1.3,y:3.1,z:-.6});
     b.box(1,1.6,.08,0x5a3a22,{z:1.82,y:.4});[-1.6,1.6].forEach(q=>{b.box(.8,.7,.08,0xcfe4ee,{x:q,y:1.3,z:1.82});b.box(.9,.18,.25,0x8a5a34,{x:q,y:1.12,z:1.95});for(let f=0;f<4;f++)b.ico(.11,[0xd8332b,0xe85a8a,0xd8332b,0xf2c231][f],{x:q-.3+f*.2,y:1.3,z:1.98});});
