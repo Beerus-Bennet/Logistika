@@ -1039,6 +1039,7 @@ function worldStatic() {
     /* v77: am Tor läuft der Weg 1 Einheit in den Hof hinein und dort in den Schotter aus (fade) */
     const fade = [gate(a) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(a) ? { L: 7, col: CAMP.GRAVEL } : null, gate(e) ? { L: 2.6, col: FWM.YARD_COL } : campEnd(e) ? { L: 7, col: CAMP.GRAVEL } : null];   /* v83: der Weg läuft in den Kies des Lagerfeuerplatzes aus */
     const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0 && !campEnd(a), loose(e) && tee[1] < 0 && !campEnd(e)], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
+      benchTurn:i===2?[0,Math.PI/2]:null, /* v409: nur Stamm am alten Wald-Angelplatz, Hauptsee/übrige Wegenden bleiben. */
       snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
     return { p, o, tee };
   });
@@ -2882,7 +2883,7 @@ function worldEvSpots() {
     case "hirsch": return [{ x: c.data.x, y: 2.4, z: c.data.z, ic: "🦌✨", act: "hirsch", area: "wald" }];
     case "reh": return [{ x: c.data.x, y: 1.9, z: c.data.z, ic: "🦌", act: "reh" }];
     case "lieferung": return WV.parcelOpen || (WV.parcelIntro && !WV.parcelIntro.landed) ? [] : [{ x: c.data.x, y: 1.5, z: c.data.z, ic: "📦", act: "lieferung" }];
-    case "schwarm": { const g = FGROUNDS.find(q => q.id === c.data.g); return g ? [{ x: g.x, y: 1.2, z: g.z, ic: "🐟", act: "schwarm" }] : []; }
+    case "schwarm": { const g = FGROUNDS.find(q => q.id === c.data.g); return g&&g.id!=="bachsteg" ? [{ x: g.x, y: 1.2, z: g.z, ic: "🐟", act: "schwarm" }] : []; } /* v409: kein Schwarm am trockenen alten Bachplatz. */
     case "defekt": { const h = farmObj1("sw_halle"); if (!h) return []; const [x, z] = farmCenter(h); return [{ x, y: 5.2, z, ic: "⚠️", act: "defekt", cls: "hungry" }]; }
   }
   return D ? [] : [];
@@ -3691,7 +3692,7 @@ function worldStep(dt, time) {
   WV.evNodes.forEach((n, i) => { if (n.glow) n.glow = 0.25 + Math.sin(time * 3 + i) * 0.15; });
   /* Fischschwarm: Blubbern und springende Fische */
   const ev = S.farm.ev && S.farm.ev.cur;
-  if (ev && ev.k === "schwarm" && S.time < ev.until && Math.random() < dt * 3) {
+  if (ev && ev.k === "schwarm" && ev.data.g!=="bachsteg" && S.time < ev.until && Math.random() < dt * 3) { /* v409: alte Spritzer dort unterdrücken, See bleibt unverändert. */
     const g = FGROUNDS.find(q => q.id === ev.data.g);
     if (g) FV.R.burst({ x: g.x + (Math.random() - 0.5) * 3, y: 0.06, z: g.z + (Math.random() - 0.5) * 3, n: 4, col: [0.9, 0.96, 1, 0.8], speed: 0.6, up: 1.6, size: 0.08, g: -6, life: 0.7 });
   }
@@ -3786,7 +3787,7 @@ function worldUI() {
   if (FV.R && FV.built && (WV.npc ? WV.npc.id : null) !== v && !WV.reveal) worldSyncNpc();
   const sta = Math.floor(farmSta()), mx = farmStaMax(), wx0 = FWEATHER[farmWeather()] || FWEATHER.sonne;
   const wx = wx0 === FWEATHER.sonne && farmTod() === "nacht" ? { n: "Klar", i: "🌙" } : wx0;
-  const ev = F.ev && F.ev.cur && FEVENTS[F.ev.cur.k] && S.time < F.ev.cur.until && !F.ev.cur.data.done ? F.ev.cur : null;
+  const ev = F.ev && F.ev.cur && FEVENTS[F.ev.cur.k] && S.time < F.ev.cur.until && !F.ev.cur.data.done && !(F.ev.cur.k==='schwarm'&&F.ev.cur.data.g==='bachsteg') ? F.ev.cur : null; /* v409: auch gespeicherte alte Schwärme hier nicht mehr anbieten. */
   const evT = ev ? FEVENTS[ev.k] : null;
   const left = ev ? Math.max(0, Math.ceil(ev.until - S.time)) : 0;
   const tr = farmTreasureCur(), trL = tr && !tr.done ? Math.max(0, Math.ceil(tr.until - S.time)) : 0;
