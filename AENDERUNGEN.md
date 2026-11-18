@@ -1,3 +1,11 @@
+## v404 – Trefferbild-PR mit aktuellem Gebirge zusammengeführt
+
+**Ursache:** PR #122 wurde nach dem Erstellen von PR #121 gemergt. Die beiden unabhängigen v403-Änderungen ergänzten dieselben Stellen in `AENDERUNGEN.md` und `CLAUDE.md`.
+
+**Lösung:** main25c3000 vollständig integriert, beide Dokumentationen erhalten. Anatomische Trefferbild-Symbole und entfernter Durchschusssatz aus PR #121 bleiben erhalten; die Gebirgsdatei, Bilder und Tests entsprechen exakt aktuellem main. Gesamt-/SW-Version404; unveränderte Einzelassets bleiben hunt403/alpine403.
+
+**Geprüft:** Syntax `hunt.js`/`alpine.js`/`sw.js`, `trefferklarheit-v388.test.js`, Abgleich der Landschaftsdateien und Asset-Versionen, keine Konfliktmarker. Keine neue optische Änderung, deshalb keine neue Bildaufnahme; die Vorschauen aus v403 bleiben gültig. Kein Test auf echtem Handy.
+
 ## v403 – Anatomische Symbole im Trefferbild
 
 **Wunsch:** Die Kleidungs- und Knochen-Emojis passen nicht zu „Schwarte und Muskel“ beziehungsweise „Schulterblatt“. Der Satz „Durchschuss mit Ausschuss.“ soll entfallen.
@@ -5,6 +13,22 @@
 **Lösung (`hunt.js`):** Ersatz-Emojis durch kleine anatomische SVG-Zeichnungen ersetzt: Haut-/Muskelschichten, Schulterblatt mit Knochenleiste, Becken, Brustbein, Wirbel, Schädel, Laufknochen, Halsröhren und Gefäße. Vorhandene 3D-Organbilder bleiben erhalten. Die Symbole sitzen in denselben Bildkästen, sind ohne WebGL sichtbar und brauchen keine zusätzlichen Bildabrufe. Nur der gewünschte Durchschusssatz entfernt; der Hinweis bei steckengebliebenem Geschoss bleibt erhalten. Keine Änderung an Trefferwertung oder Spielständen.
 
 **Geprüft:** Chromium/WebGL in mobiler Fenstergröße: SVGs für Gewebe/beide Schulterblätter, keine Ersatz-Emojis, entfernten Satz und erhaltenen Hinweis für steckengebliebenes Geschoss kontrolliert; keine JavaScript-Seitenfehler. Syntax und `trefferklarheit-v388.test.js` bestanden. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/assets/v403/gewebe-knochen.png`, `docs/assets/v403/bericht.png`.
+
+## v403 – Gebirge: mächtige Gipfel, eingefasster Bergsee, breiter Wasserfall, runder Kolk, Details zum Entdecken
+
+**Ursache:** Die Berge (`alpine.js`) waren runde Kegel bis Höhe 45 auf einem groben 3er-Raster mit weichen Farbverläufen – aus der Nähe verschwommen, aus der Ferne Hügel. Der See lag am Hang: außerhalb der Wasserlinie war das Gelände auf der Talseite tiefer als der Wasserspiegel (Ufer bei e = 1 sogar 0,3 darunter), daher wirkte er übergelaufen. Der Fall war 6,4 breit, der Kolk ein Oval mit Hals. Die Bergfichten waren einfache Kegel, oberhalb gab es nichts.
+
+**Lösung (`alpine.js`):**
+- Höhenfeld: Hauptkamm bis ~80 (Gipfel 40/64/80/60/36/30), oben spitz, unten konkav; Grat-/Rinnenrauschen (`vnoise`, `ridged`) wächst mit der Höhe; kleines Gipfelplateau am Hauptgipfel. Vorberge unverändert.
+- Gelände: Raster 2,4 statt 3 (feine Zonen am Wasser N = 3 statt 4, gleiche Feinheit), Felswände facettiert statt weich; Farben nach Höhenstufen der Kalkalpen: Bergwald, Almwiese, Schutt, gebänderter Fels, Schnee (`snowAmt`: Firn über ~50–58, Restschnee in Mulden, Gipfelkappen).
+- Bergsee als Karsee mit Felsriegel: Ufer steigt direkt hinter der Wasserlinie auf Spiegel + 1,9, Bergseite geht in die Karwand über, Talseite fällt erst danach ab; nur die Abflusskerbe ist offen. Kiesufer statt Wiesenkragen. Wasserflächen reichen 3,5 % unter das Ufer (saubere Uferlinie), Abflusskanten bleiben exakt.
+- Wasserfall 10 breit (`FW` = 5, vorher 3,2), weiterer Wurf (Fuß 3,4 vor der Wand); Kolk kreisrund (r 8, Mitte 9,5 vor der Lippe), tiefer, mit nassem Felsrand und Findlingen; Gischt als ovaler Teppich um den Aufprall, Spritzer/Nebel über die ganze Breite; Bachanfang an den neuen Kolkrand verlegt.
+- Bäume nach Höhenstufen: schlanke Bergfichten mit hängenden Etagen und heller Spitze, Lärchen, darüber Latschenpolster (nur Nahstufe). Fernstufe weiter zwei Kegel je Baum, Überblendung unverändert (140–225).
+- Entdeckungen (Nahstufe, ab Zoom < ~115 eingeblendet): Gipfelkreuz mit Gipfelbuch, Steinmann, Gipfelstürmer und Yeti-Spuren im Gipfelschnee; Almhütte mit Rauch aus dem Kamin, Bank mit Wanderer, Brennholz, Brunnentrog, Blumenkästen, Zaun; Wanderweg vom Tal über die Hütte westlich am Fall vorbei zur Aussichtsbank, gelbe Wegweiser, Steinmännchen, Wanderer mit Rucksack, verlorener Wanderschuh; Gartenzwerg am See; Zelt mit flackerndem Lagerfeuer, Picknickdecke und Korb; Ruderboot mit Angler (zieht Kreise), Gummiente im Kolk, Regenbogen in der Gischt (tagsüber), Edelweiß und Enzian.
+- Kamera: Über dem Gebirge folgt der Blickpunkt weich der Geländehöhe und die Kamera bleibt über dem Hang; über dem Hof bleibt alles wie bisher, fremd gesetzte Kamerahöhen (Tests, Jagd) werden nicht verändert.
+- Adler kreisen höher (58 statt 43). Keine Spielstandänderung.
+
+**Geprüft:** Testbrowser (Chromium/Software-WebGL): Vorher/Nachher-Bilder aus sieben Blickwinkeln (Übersicht, See, Kolk, Nacht, Gipfel, Insel, Tal) und Nahbilder von Hütte, Gipfel, Bank, Zelt; keine Seitenfehler. Kameraführung: über dem Gipfel Blickpunkt auf Geländehöhe, Auge über dem Hang; über dem Hof ty = 0; fremdes ty = −50 bleibt. `wasseroptik-v386.test.js` bestanden (Fernlast 15.299 Dreiecke < 16.000; Fallbreiten-Prüfung liest jetzt `I.fall.w` statt fest 3,2). `berglandschaft-v375`, `bergwasserfall-v380`, `wasserlandschaft-v384`, `inselrand-v366` schlugen schon vor dieser Änderung mit denselben Meldungen fehl (unverändert). Nahlast ~34.000 statt ~22.000 Dreiecke; Aufbau im Node-Prüfstand ~10 s statt ~8 s. **Nicht geprüft:** Handy (Bildrate, Aufbauzeit, Optik), echte GPU. Referenzbilder aus dem Netz konnte ich nicht laden (Wikimedia/Wikipedia in dieser Umgebung gesperrt) – Gestaltung nach Beschreibungen von Karseen mit Felsriegel und Kolken sowie der Höhenstufung der Kalkalpen.
 
 ## v402 – Haare: Haaransatz über den Brauen statt Maske über den Augen
 

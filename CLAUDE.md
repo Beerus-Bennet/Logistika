@@ -164,3 +164,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v402: Haare – Kappe höher/hinten (`hairdo` in `woodmodels.js`), Haaransatz über den Brauen statt Maske.
 
 - v403: Trefferbild – `xrTissueIcon` liefert anatomische SVGs statt Ersatz-Emojis für Gewebe/Knochen/Halsstrukturen; Organbildchen bleiben. Nur „Durchschuss mit Ausschuss.“ entfernt, Hinweis bei `thru===false` erhalten. hunt403, Gesamt-/SW403.
+
+- v403: Gebirge (`alpine.js`) – Hauptkamm bis ~80 mit Graten (`vnoise`/`ridged`), Schnee (`snowAmt`), Raster 2,4 mit Felsfacetten; Karsee mit Felsriegel (Ufer über dem Spiegel), Fall 10 breit (`FW`), runder Kolk r 8; Fichten/Lärchen/Latschen nach Höhenstufen; Entdeckungen (`extras`: Gipfelkreuz, Hütte, Weg, Zelt, Boot, Ente, Regenbogen, Yeti-Spuren); Kamera-ty folgt dem Gelände (`scene.camTy`/`camExt`).
+
+- v404: PR121 mit main25c3000/PR122 zusammengeführt; beide v403-Dokumentationen erhalten, Gesamt-/SW404, hunt403/alpine403 unverändert.
