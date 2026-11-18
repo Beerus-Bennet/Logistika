@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v403";
+const VERSION = "v406";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -14,7 +14,7 @@ const SHELL = [
   "./",
   "./index.html",
   "./viewport.js?v=358",
-  "./style.css?v=401",
+  "./style.css?v=405",
   "./data.js?v=109",
   "./farmdata.js?v=349",
   "./fishdata.js?v=109",
@@ -62,13 +62,13 @@ const SHELL = [
   "./forest.js?v=109",
   "./camp.js?v=358",
   "./vista.js?v=367",
-  "./farmview.js?v=379",
+  "./farmview.js?v=405",
   "./worldview.js?v=390",
   "./vehmodels.js?v=109",
   "./minigames.js?v=109",
   "./fpsaw.js?v=109",
   "./weapons.js?v=383",
-  "./hunt.js?v=401",
+  "./hunt.js?v=403",
   "./exhibits.js?v=380",
   "./rent.js?v=340",
   "./villagesite.js?v=369",
@@ -78,16 +78,16 @@ const SHELL = [
   "./villageview.js?v=369",
   "./bauplatz.js?v=274",
   "./fishview.js?v=333",
-  "./staffwalk.js?v=351",
-  "./staffgear.js?v=376",
+  "./staffwalk.js?v=406",
+  "./staffgear.js?v=406",
   "./staffseat.js?v=351",
-  "./team.js?v=398",
+  "./team.js?v=406",
   "./jail.js?v=365",
   "./lucky3d.js?v=273",
   "./luckytest.js?v=271",
   "./jagdtest.js?v=353",
   "./officekitchen.js?v=263",
-  "./officefp.js?v=365",
+  "./officefp.js?v=405",
   "./manifest.webmanifest",
   "./favicon-64.png?v=251",
   "./icon-180.png?v=251",

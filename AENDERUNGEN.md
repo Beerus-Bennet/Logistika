@@ -1,3 +1,35 @@
+## v406 – Landwirt sät sichtbar nach der Ernte
+
+**Ursache:** `staffDo` führte bei Feldarbeit im selben Abschluss erst `farmHarvest` und direkt danach `farmPlant` aus. Ernte und Aussaat hatten dieselbe Sichelbewegung; das Feld erschien ohne eigenen Sägang erneut bepflanzt.
+
+**Lösung:** Feldaufträge merken `fieldMode` (Ernte/Aussaat). Ernte leert das Feld, Aussaat ist ein eigener Arbeitsgang und bucht Saatgut erst bei dessen Abschluss. Alte Aufträge werden anhand ihrer Absicht und des Feldzustands erkannt. Bei der sichtbaren Aussaat hält die linke Hand einen Saatbeutel, die rechte nimmt Saat auf und streut sie in einem Bogen; wenige kurzlebige Körner fallen mit Schwerkraft. Sichel und Werkzeugablage respektieren diese Darstellung. Im sichtbaren Nahbereich mindestens 1,6 s pro Feld, auch bei 30×; außerhalb der Ansicht keine Abhängigkeit von Animationsbildern. Bereits manuell bepflanzte Felder werden übersprungen beziehungsweise nicht erneut berechnet. Bei Sammelaufträgen erfolgt die Bepflanzung weiterhin am Ende des Arbeitsgangs, jetzt erst nach den Säbewegungen.
+
+**Geprüft:** `aussaat-v406.test.js` (Ernte ohne Neusaat, alte/zwischenzeitlich geleerte Aufträge, zwei Felder bei 30×, einmalige Kosten, Hintergrundarbeit, manuell bepflanztes Feld), `field-menu-v303.test.js` (10 Szenarien), `worker-motion-v351.test.js` (14 Bewegungs-/Werkzeugprüfungen). Chromium/WebGL 390 × 844 auf Prüfbühne mit tatsächlichem Feld-/Figurenmodell: Saatbeutel, Sichel ausgeblendet, Körner, Pflanzzeitpunkt nach fertiger Säbewegung; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari. Vorschau/Details `docs/AUSSAAT-v406.md`.
+
+## v405 – Ladeanzeige ohne widersprüchliche Prozentwerte
+
+**Befund:** Der Screenshot zeigt 13 %, obwohl der Balken deutlich weiter gefüllt ist. Die alte Anzeige animierte getrennte Ziffernrollen und Balken anhand einer gemerkten Ladezeit; sie maß keinen echten Aufbaufortschritt. Ein dauerhaftes Hängen auf dem iPhone wurde mangels Reproduktion nicht als behoben gewertet.
+
+**Lösung:** `ldMake`/`ldStart` zeigen eine unbestimmte Ladebewegung mit „Wird geladen …“ statt geschätzter Prozentzahlen. „Fertig“ folgt beim Hof erst nach Szenenaufbau und Zeichnung, beim Büro erst nach der gestaffelten Aufbauwarteschlange. Bei einem abgefangenen Hof-Aufbaufehler stoppen die Animationen und erscheinen eine lesbare Rückmeldung sowie „Neu laden“. Frühes Verlassen entfernt den Ladeschirm; erneut eintretende Spieler bekommen keine doppelten Ladeflächen. Reduzierte Bewegung wird berücksichtigt. Keine Änderung an Landschaft oder Spielständen, keine behauptete Verkürzung der Aufbauzeit.
+
+**Geprüft:** `hofladen-v405.browser.js` in Chromium/Software-WebGL (390 × 844): längere Ladezeit, 400-ms-Threadblock, Fertigstand, reduzierte Bewegung, echter Hofstart mit Gebirge, echtes Büro mit verzögerter Aufgabenliste, gezielt ausgelöster Aufbaufehler, frühes Verlassen. Syntaxprüfungen und `git diff --check`. **Nicht geprüft:** echtes iPhone/Safari, Spielstand aus dem Screenshot, Ursache eines möglichen gerätespezifischen Hängers. Vorschau/Bericht: `docs/HOFLADEN-v405.md`.
+
+## v404 – Trefferbild-PR mit aktuellem Gebirge zusammengeführt
+
+**Ursache:** PR #122 wurde nach dem Erstellen von PR #121 gemergt. Die beiden unabhängigen v403-Änderungen ergänzten dieselben Stellen in `AENDERUNGEN.md` und `CLAUDE.md`.
+
+**Lösung:** main25c3000 vollständig integriert, beide Dokumentationen erhalten. Anatomische Trefferbild-Symbole und entfernter Durchschusssatz aus PR #121 bleiben erhalten; die Gebirgsdatei, Bilder und Tests entsprechen exakt aktuellem main. Gesamt-/SW-Version404; unveränderte Einzelassets bleiben hunt403/alpine403.
+
+**Geprüft:** Syntax `hunt.js`/`alpine.js`/`sw.js`, `trefferklarheit-v388.test.js`, Abgleich der Landschaftsdateien und Asset-Versionen, keine Konfliktmarker. Keine neue optische Änderung, deshalb keine neue Bildaufnahme; die Vorschauen aus v403 bleiben gültig. Kein Test auf echtem Handy.
+
+## v403 – Anatomische Symbole im Trefferbild
+
+**Wunsch:** Die Kleidungs- und Knochen-Emojis passen nicht zu „Schwarte und Muskel“ beziehungsweise „Schulterblatt“. Der Satz „Durchschuss mit Ausschuss.“ soll entfallen.
+
+**Lösung (`hunt.js`):** Ersatz-Emojis durch kleine anatomische SVG-Zeichnungen ersetzt: Haut-/Muskelschichten, Schulterblatt mit Knochenleiste, Becken, Brustbein, Wirbel, Schädel, Laufknochen, Halsröhren und Gefäße. Vorhandene 3D-Organbilder bleiben erhalten. Die Symbole sitzen in denselben Bildkästen, sind ohne WebGL sichtbar und brauchen keine zusätzlichen Bildabrufe. Nur der gewünschte Durchschusssatz entfernt; der Hinweis bei steckengebliebenem Geschoss bleibt erhalten. Keine Änderung an Trefferwertung oder Spielständen.
+
+**Geprüft:** Chromium/WebGL in mobiler Fenstergröße: SVGs für Gewebe/beide Schulterblätter, keine Ersatz-Emojis, entfernten Satz und erhaltenen Hinweis für steckengebliebenes Geschoss kontrolliert; keine JavaScript-Seitenfehler. Syntax und `trefferklarheit-v388.test.js` bestanden. **Nicht geprüft:** echtes iPhone/Safari. Vorschau: `docs/assets/v403/gewebe-knochen.png`, `docs/assets/v403/bericht.png`.
+
 ## v403 – Gebirge: mächtige Gipfel, eingefasster Bergsee, breiter Wasserfall, runder Kolk, Details zum Entdecken
 
 **Ursache:** Die Berge (`alpine.js`) waren runde Kegel bis Höhe 45 auf einem groben 3er-Raster mit weichen Farbverläufen – aus der Nähe verschwommen, aus der Ferne Hügel. Der See lag am Hang: außerhalb der Wasserlinie war das Gelände auf der Talseite tiefer als der Wasserspiegel (Ufer bei e = 1 sogar 0,3 darunter), daher wirkte er übergelaufen. Der Fall war 6,4 breit, der Kolk ein Oval mit Hals. Die Bergfichten waren einfache Kegel, oberhalb gab es nichts.

@@ -38,7 +38,7 @@ function selected(){return farmObj(FV.sel);}
 `);
 for(const [file,names] of [
  ['farm.js',['fieldState','fieldStage','farmCropOk','farmPlant','farmWater','farmHarvest']],
- ['team.js',['staffDo']],
+ ['team.js',['staffFieldMode','staffDo']],
  ['farmview.js',['fdur','openPop','popFresh','closeFarmPop','fieldPopState','refreshFieldPop','renderFarmPop','positionFarmPop','startToolDrag','applyToolAt','applyToolTo','doPlant','doWater','doHarvest','objScreen','farmSyncState']]
 ])for(const name of names){const s=extract(file,name);if(s)run(s);}
 let checks=0;
@@ -65,10 +65,12 @@ test('Farmer-Gießen zeigt gegossen, richtige Restzeit und Qualität ohne weiter
  show(/gegossen/);assert.doesNotMatch(run('html'),/data-tool="water"/);show(/★★★★★/);
  const end=run('o.end');run('staffDo({role:"farmer"},{k:"water",oid:1});');assert.equal(run('o.end'),end);
 });
-test('Reife und anschließende Farmer-Ernte/Aussaat wechseln ohne erneutes Antippen',()=>{
+test('Ernte zeigt leeres Feld, erst separater Säauftrag wechselt zum Gießen',()=>{
  run('staffDo({role:"farmer"},{k:"field",oid:1,crop:"weizen"});');tick();
  run('S.time=o.end;');tick();assert.equal(run('FV.pop.kind'),'sickle');show(/ist reif/);
  run('staffDo({role:"farmer"},{k:"field",oid:1,crop:"mais"});');tick();
+ assert.equal(run('o.crop'),null);assert.equal(run('FV.pop.kind'),'seed');show(/Was soll wachsen/);
+ run('staffDo({role:"farmer"},{k:"field",oid:1,crop:"mais",fieldMode:"sow"});');tick();
  assert.equal(run('o.crop'),'mais');assert.equal(run('FV.pop.kind'),'grow');show(/Mais/);show(/Gießen/);
  assert.equal(run('FV.sel'),1);assert.equal(run('S.farm.stats.harvest>=2'),true);
 });

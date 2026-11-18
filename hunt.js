@@ -4183,13 +4183,42 @@ const HUNT = (() => {
     (XR.lead || []).forEach(n => n.remove());
     XR.lead = O.lab.map(() => { const n = document.createElementNS("http://www.w3.org/2000/svg", "line"); XR.svg.insertBefore(n, XR.svg.firstChild); return n; });
   }
-    function xrPanelHTML(A) {
+  /* v403: Anatomische Zeichnungen statt Kleidungs-, Blut- und Knochen-Emojis.
+     Kleine SVGs bleiben auch ohne WebGL scharf und brauchen keinen Bildrenderer. */
+  function xrTissueIcon(k,o) {
+    const bone='#dedac9',edge='#847e6c',muscle='#a95250',skin=k==='keiler'?'#756253':k==='fasan'?'#916b43':'#9a7652';
+    let drawing;
+    if(o.id==='decke') {
+      drawing=`<path d="M9 31 38 21 55 32 26 43Z" fill="${muscle}"/><path d="M9 25 38 15 55 26 26 37v6L9 31Z" fill="#d9b99a"/><path d="M9 21 38 11 55 22v4L26 37 9 25Z" fill="${skin}"/><path d="m26 37 29-11v6L26 43Z" fill="#b96b61"/><path d="m14 20-2-5m9 3-1-5m9 2-1-5m9 2 1-5m7 8 2-4" stroke="${skin}" stroke-width="2.5"/>`;
+    } else if(o.id==='brustm'||o.id==='hals') {
+      drawing=`<path d="M9 39Q15 13 34 16q13 2 21 9-9 22-29 24Z" fill="${muscle}"/><path d="M14 37q13-16 35-12M18 42q13-15 31-14M25 45q11-12 20-13" fill="none" stroke="#df9890"/>`;
+    } else if(/^blatt/.test(o.id)) {
+      drawing=`<path d="M12 15Q28 6 49 14l-4 16-9 15-1 9h-9l-1-11-9-13Z" fill="${bone}" stroke="${edge}"/><path d="m31 13-1 27 4 8M17 19l11 15m17-13L33 36" fill="none" stroke="#b3ad98" stroke-width="2.5"/><ellipse cx="30" cy="52" rx="6" ry="3" fill="#bcb6a3" stroke="${edge}"/>`;
+    } else if(o.id==='becken') {
+      drawing=`<path d="M30 19Q15 6 10 17q-5 14 6 32 8 8 16-3 8 11 16 3 11-18 6-32-5-11-20 2Z" fill="${bone}" stroke="${edge}"/><ellipse cx="22" cy="38" rx="6" ry="10" fill="#142b43"/><ellipse cx="42" cy="38" rx="6" ry="10" fill="#142b43"/><path d="M29 15h6v25h-6Z" fill="#bbb5a1"/>`;
+    } else if(o.id==='brust') {
+      drawing=`<path d="M16 14q16-7 32 0l-4 30-12 9-12-9Z" fill="${bone}" stroke="${edge}"/><path d="M32 15 26 42l6 11 6-11Z" fill="#bcb5a0"/><path d="m17 21 10 4m20-4-10 4m-19 5 7 3m21-3-7 3" stroke="${edge}"/>`;
+    } else if(o.id==='wirbel'||o.id==='hwirbel') {
+      drawing=[15,30,45].map(y=>`<path d="m24 ${y-6} 8-4 8 4v10l-8 4-8-4Z" fill="${bone}" stroke="${edge}"/><path d="M24 ${y}H14m26 0h10M32 ${y-7}v-5" stroke="${bone}" stroke-width="4"/>`).join('');
+    } else if(o.id==='kopf'||o.id==='haupt') {
+      drawing=`<path d="M12 32Q7 12 24 11q17-2 20 17l12 7-3 12-20 3-5-8-12-2Z" fill="${bone}" stroke="${edge}"/><ellipse cx="26" cy="29" rx="6" ry="7" fill="#142b43"/><path d="m34 37 18 2M18 42l5 11 26-2 4-4" fill="none" stroke="${edge}" stroke-width="3"/>`;
+    } else if(o.b) {
+      drawing=`<path d="M25 14q-10-6-12 3t12 9l8 14q-7 9 0 12t9-7q10 4 10-5t-10-7L32 21q5-10-1-11Z" fill="${bone}" stroke="${edge}"/><path d="m28 26 10 13" stroke="#b5ae98" stroke-width="3"/>`;
+    } else if(/luftroehre|speiseroehre/.test(o.id)) {
+      drawing=`<path d="M26 10q-4 20 3 44h13q-7-23-3-44Z" fill="${/luft/.test(o.id)?'#c3c5b6':'#b9776c'}" stroke="#695c56"/>`;
+      if(/luft/.test(o.id))drawing+=[16,23,30,37,44,51].map(y=>`<path d="M27 ${y}h12" stroke="#888f86" stroke-width="2"/>`).join('');
+    } else {
+      drawing=`<path d="M25 54V29L12 13l8-6 12 17L46 7l8 7-16 18v22Z" fill="${/^drossel/.test(o.id)?'#6a80ad':'#b85655'}" stroke="#583f49"/><path d="M30 51V29L17 12m15 17 17-17" fill="none" stroke="#dca29c" stroke-width="2"/>`;
+    }
+    return `<svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke-linejoin="round" stroke-linecap="round">${drawing}</svg>`;
+  }
+  function xrPanelHTML(A) {
     const sh = xrShot(A.k,A.shots[XR.i]), n = A.shots.length, gn = A.gn || {}, Z = ZONE[sh.reportZone||sh.zone] || ZONE.koerper, T = A.T;
     const sex = A.k === "hirsch" ? "männlich (Hirsch)" : A.k === "keiler" ? "männlich (Keiler)" : "männlich (Hahn)";
     const coat = (coatOf(A.k, gn.c) || [])[3] || "–", tmp = temperOf(gn).name, row = (a, b) => `<span><small>${a}</small><b>${b}</b></span>`;
     const org = sh.org.map(o => {
       const O=ORG[A.k].find(O=>O.id===o.id&&O.t),model=O&&typeof thumbSpan==='function'?`<span class="xr-organ-model">${thumbSpan('organ367:'+A.k+':'+O.id,()=>organPreview(A.k,O),'',false,{yaw:O.t==='lunge'&&O.c[0]<0?Math.PI-.75:.75,pitch:.18,noShadow:true})}</span>`:'<i></i>';
-      const gen = `<span class="xr-organ-model xr-gen">${/^(decke|brustm)$/.test(o.id) ? "🧥" : o.b ? "🦴" : o.v ? "🩸" : "🩹"}</span>`;       /* v391: gleicher Symbolkasten wie bei Organen mit Bildchen */
+      const gen = `<span class="xr-organ-model">${xrTissueIcon(A.k,o)}</span>`;
       return `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}">${model.startsWith("<i") ? gen : model}<span class="xr-organ-name">${esc(organReportName(A.k,o,sh))}</span>${o.id === "herz" && sh.dmg>=100 ? "" : o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`;
     }).join("");
     return `<div class="xr-hd"><b>Trefferbild</b><span>${esc(T.name)}</span><button class="xr-x" data-hu="xclose" aria-label="Trefferbild schließen">✕</button></div>
@@ -4206,7 +4235,7 @@ const HUNT = (() => {
       <div class="xr-legs">
       <p class="xr-leg">Nur vom Schusskanal geschnittene Organe sind eingeblendet, aufgelistet in Durchschussrichtung. Das Skelett dient zur Orientierung.</p>
       ${sh.anatomyUpdated?'<p class="xr-leg">Ältere Aufnahme: Organliste anhand des gespeicherten Schusskanals berichtigt. Die damalige Wirkung und Trophäenwertung bleiben erhalten.</p>':''}
-      ${sh.thru === false ? `<p class="xr-leg">Das Geschoss ist im Körper stecken geblieben – kein Ausschuss.</p>` : sh.thru ? `<p class="xr-leg">Durchschuss mit Ausschuss.</p>` : ""}
+      ${sh.thru === false ? `<p class="xr-leg">Das Geschoss ist im Körper stecken geblieben – kein Ausschuss.</p>` : ""}
       </div>`;
   }
   function xrShow() {

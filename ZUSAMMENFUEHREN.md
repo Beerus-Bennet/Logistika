@@ -1,3 +1,15 @@
+## v406 – Sichtbare Aussaat in bestehendem PR #121
+
+Ergänzt Ladeanzeige405 und Trefferbild403/404; main25c3000/Gebirge unverändert. Gesamt-/SW406 und team/staffwalk/staffgear406, Ladeassets405 und hunt/alpine403 erhalten. `fieldMode` neuer Feldaufträge wird gespeichert, alte Aufträge sind weiterhin lesbar. `e.sowAction` nur an der sichtbaren Figur, kein Save-Feld; bei Hintergrundarbeit keine Animationssperre. Laufanimation und Werkzeugablage dürfen den Säarm/die Sichel-Ausblendung nicht überschreiben. Saatkosten und Wachstumsbeginn erst nach eigenem Säauftrag; Ernte-/Saatmengen und vorhandene Freigaben bleiben erhalten.
+
+## v405 – Hof-Ladeanzeige im bestehenden PR #121
+
+Ergänzt die bereits geprüften anatomischen Trefferbild-Symbole und die Konfliktauflösung404; enthält main25c3000/aktuelles Gebirge unverändert. Gesamt-/SW405, farmview/officefp/style405; hunt403/alpine403 bleiben. Die gemeinsame `ldStart`-Schnittstelle behält `finish()`, ergänzt `fail(message)` und verwendet keine geschätzte Dauer mehr. Bei Büroaufrufern bleiben zusätzliche Argumente unschädlich; der Abschluss wartet auf `O.build`. Keine Save-Migration und kein automatisches Merge/Deployment. Ein echter iPhone-Hänger konnte nicht reproduziert werden; die Anzeige und der abgefangene Fehlerfall wurden geprüft.
+
+## v404 – Konfliktauflösung PR #121 nach Gebirge #122
+
+main25c3000 vollständig integriert. `alpine.js`, die Gebirgsvorschauen und der angepasste Wassertest sind identisch mit main; `hunt.js` ist identisch mit der geprüften PR121-Fassung433a6d4. Beide Einträge aus den Konfliktdateien erhalten. Gemeinsame Version404, `index.html`/SW referenzieren hunt403 und alpine403. Kein Zurücksetzen von Landschaft, Jagd oder Spielständen.
+
 ## v403 – Gebirge, Bergsee, Wasserfall, Entdeckungen
 
 Basis main be3958a (v402). Nur `alpine.js` (Asset 403) und `wasseroptik-v386.test.js` (Fallbreite aus `I.fall.w`). Neue Exporte: `info().fall.w`, `geometry.spots/fun/boat/duck/rainbow`, Szenenknoten `fun/boat/duck/rainbow`. Geänderte Konstanten: `PEAKS` (höher), `FW`/`RUN`/`POOL` (rund, r 8)/`DRAIN[0..1]`/`FALL.foot`. `ALPINE.step` setzt `FV.R.cam.ty` über dem Gebirge (nur solange niemand anderes ty gesetzt hat und keine Jagd läuft). Wer an Kolk/Bachanfang oder Gipfelhöhen arbeitet, bitte diese Werte übernehmen.
