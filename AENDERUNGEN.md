@@ -1,3 +1,17 @@
+## v404 – Gebirge-Feinschliff: Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
+
+**Ursache (Rückmeldung zu v403):** Ente im Badeenten-Gelb; Steinbock mit sichtbaren Lücken (grobe Ellipse, loser Kopf, dünne Läufe); Wanderweg aus geraden Einzelstücken (Lücken/Überlappungen) quer über Felswände; Wegweiser-Pfeile lose neben den Tafeln und schlecht platziert; Regenbogen kaum sichtbar (von oben als dunkler Strich im Kolk); Aufprallschaum als kleine runde Ringzone – wirkte wie ein dünner, runder Strahl.
+
+**Lösung (`alpine.js`):**
+- Stockenten-Erpel in echten Farben (graubraun, dunkler Rücken, braune Brust, weißer Halsring, grüner Kopf, gelber Schnabel).
+- Steinbock geschlossen: runder Rumpf (feineres Netz), Brust/Schulter- und Keulenwölbung, Hals bis zum Kopf, Ansätze über den Läufen, kräftigere Läufe, heller Bauch, dunkler Aalstrich. Tiere meiden Wanderer, Hütte, Bank und Zelt (`safeCenter`).
+- Wanderweg per Wegsuche (`route`, A* auf dem Geländeraster, Kosten nach Steigung des Wegstücks, Wände > ~62° und Wasser gesperrt, Steig ≤ ~35°) → Serpentinen; danach straff gezogen (`pull`), gerundet (`chaikin`) und als durchgehendes Band mit Mittelreihe gelegt, in engen Kehren schmaler. Aussichtsbank nur dort, wohin ein begehbarer Steig führt (Westufer; der Bach hat keine Brücke).
+- Wegweiser neben dem Weg (Start, Abzweig Hütte, Ende), Tafeln selbst als gelbe Pfeile (ein Stück, am Pfosten angesetzt) in Wegrichtung (`arrowBoard`).
+- Regenbogen entfernt.
+- Aufprall als Schaumband über die ganze Fallbreite (`FOAM`, Schaderkoordinaten wie der Auftreffsaum), Ränder in den runden Kolk eingepasst.
+
+**Geprüft (Testbrowser, Software-WebGL):** Bilder von Ente, Steinbock (oben/seitlich), Weg (Übersicht, Start, Riegel), Wegweiser, Kolk von oben – siehe `docs/assets/v404/feinschliff.png`; keine Seitenfehler. `wasseroptik-v386.test.js` bestanden (Fernlast 15.503 < 16.000). Aufbau im Node-Prüfstand ~12 s statt ~10 s (Wegsuche). **Nicht geprüft:** Handy. Einzelne Wegstücke am Riegel sind steiler als 35° (geglättete Kehren).
+
 ## v403 – Gebirge: mächtige Gipfel, eingefasster Bergsee, breiter Wasserfall, runder Kolk, Details zum Entdecken
 
 **Ursache:** Die Berge (`alpine.js`) waren runde Kegel bis Höhe 45 auf einem groben 3er-Raster mit weichen Farbverläufen – aus der Nähe verschwommen, aus der Ferne Hügel. Der See lag am Hang: außerhalb der Wasserlinie war das Gelände auf der Talseite tiefer als der Wasserspiegel (Ufer bei e = 1 sogar 0,3 darunter), daher wirkte er übergelaufen. Der Fall war 6,4 breit, der Kolk ein Oval mit Hals. Die Bergfichten waren einfache Kegel, oberhalb gab es nichts.

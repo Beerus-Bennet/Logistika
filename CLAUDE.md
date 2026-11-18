@@ -163,3 +163,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v401: Sammellieferung – PR #110–#116 und #118 (v391–v400) in einem Zweig zusammengeführt; Details je Version oben.
 - v402: Haare – Kappe höher/hinten (`hairdo` in `woodmodels.js`), Haaransatz über den Brauen statt Maske.
 - v403: Gebirge (`alpine.js`) – Hauptkamm bis ~80 mit Graten (`vnoise`/`ridged`), Schnee (`snowAmt`), Raster 2,4 mit Felsfacetten; Karsee mit Felsriegel (Ufer über dem Spiegel), Fall 10 breit (`FW`), runder Kolk r 8; Fichten/Lärchen/Latschen nach Höhenstufen; Entdeckungen (`extras`: Gipfelkreuz, Hütte, Weg, Zelt, Boot, Ente, Regenbogen, Yeti-Spuren); Kamera-ty folgt dem Gelände (`scene.camTy`/`camExt`).
+- v404: Gebirge-Feinschliff (`alpine.js`) – Stockente, geschlossener Steinbock, Wanderweg per Wegsuche (`route`/`pull`/`chaikin`, Band mit Mittelreihe), Pfeil-Wegweiser (`arrowBoard`), Aufprallband über die Fallbreite (`FOAM`), Regenbogen entfernt.
