@@ -1,6 +1,6 @@
 # Gebirgsüberarbeitung v413
 
-Basis: main `21c3bf8` mit der bereits gemergten Almhütte und dem Trampelpfad aus PR125/v411. Stand: 18.11.2026.
+Basis: main `21c3bf8` mit der bereits gemergten Almhütte und dem Trampelpfad aus PR125/v411. Stand: 18.11.2026. Der gemeinsame lokale Lieferstand enthält außerdem die bereits geprüften [Kopf-/Schusskanal- und Hochsitz-Menüfixes412](KOPFTREFFER-v412.md). hunt/style412 und alpine413 sind jeweils bytegleich zu ihren geprüften Fassungen. Gesamt-/SW-Version und window.LOGI_V sind413.
 
 [Interaktiver Vorher-Nachher-Vergleich: Tag, Nacht, Seitenansicht](GEBIRGE-v413-VORSCHAU.html) – eine eigenständige HTML-Datei ohne externe Ressourcen.
 
@@ -19,7 +19,7 @@ Kühlgrauer und leicht warmer Kalkstein, zurückhaltende Schichtbänder und weni
 
 ## Leistung und Prüfung
 
-Das Geländenetz bleibt fest und wird beim Zoomen wiederverwendet. Der Höhenaufbau sucht das Flussprofil nur einmal je Probe; im Kerngebirge entfällt die unnötige Flusssuche für die Sperrflächenprüfung. Die Grundform wird unter dem See nicht berechnet, da sie dort ohnehin vom Seegrund ersetzt wird. Das sind rechnerisch identische Vereinfachungen der Abfragen.
+Das Geländenetz bleibt fest und wird beim Zoomen wiederverwendet. Der Kanalschnitt verwendet das bereits bestimmte Flussprofil; im Kerngebirge entfällt die zusätzliche Flusssuche für die Sperrflächenprüfung. Die Grundform wird unter dem See nicht berechnet, da sie dort ohnehin vom Seegrund ersetzt wird. Das sind rechnerisch identische Vereinfachungen der Abfragen.
 
 | Messgröße | main411 | v413 |
 | --- | ---: | ---: |
@@ -41,3 +41,5 @@ Nicht auf einem echten iPhone/Safari oder einer schwachen Handy-GPU getestet. De
 ![Felsgrat und Tal](assets/v413/kamm-seite.png)
 ![Kiesufer und Wasserfall](assets/v413/see-ufer.png)
 ![Erhaltene Almhütte mit Trampelpfad](assets/v413/huette.png)
+
+Im zusammengeführten lokalen Stand bestehen außerdem `kopftreffer-v412.test.js` (18 Kopfkanäle) und `kopftreffer-v412.browser.js` (3D-Kopfmodelle, Touch-Menü und Scrollen bei320/390px und im Querformat). Die Integration hat keine der geprüften alpine/hunt/style-Dateien verändert.

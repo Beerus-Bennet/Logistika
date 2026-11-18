@@ -1,6 +1,10 @@
 ## v413 – Gebirgsform und Grafik
 
-Basis main21c3bf8/PR125 (Hütte411). Hauptgipfel `PEAKS[2]` bei95/-187; Gipfelplatz/Kreuz daraus abgeleitet. Grate plus breite Schultern ersetzen Einzelkegel. Uferprofil niedrig, aber an der äußeren Wasserkante wieder im Gelände; Fall-/See-/Flussnetze und Materialien unverändert. `contains` nutzt identischen Kurzschluss über mountainWeight, `height` reicht sein berechnetes Kanalprofil optional an cutChannel weiter. Feste Geländeauflösung2,4/N3 bleibt; Waldlimit140, keine neue Migration. HUT-Plateau, Trampelpfad, Tieroberfläche und Inselrand weiter aus demselben Höhenfeld. Gesamt-/SW413 und nur alpine413 hochgezählt. Bericht/Vorschau: docs/GEBIRGE-v413.md. Kein automatischer Upload/Merge/Deployment.
+Basis main21c3bf8/PR125 (Hütte411). Hauptgipfel `PEAKS[2]` bei95/-187; Gipfelplatz/Kreuz daraus abgeleitet. Grate plus breite Schultern ersetzen Einzelkegel. Uferprofil niedrig, aber an der äußeren Wasserkante wieder im Gelände; Fall-/See-/Flussnetze und Materialien unverändert. `contains` nutzt identischen Kurzschluss über mountainWeight, `height` reicht sein berechnetes Kanalprofil optional an cutChannel weiter. Feste Geländeauflösung2,4/N3 bleibt; Waldlimit140, keine neue Migration. HUT-Plateau, Trampelpfad, Tieroberfläche und Inselrand weiter aus demselben Höhenfeld. Gesamt-/SW413, alpine413 sowie die lokal integrierten hunt/style412. Die geprüften Kopf-/Menüfixes412 sind unverändert enthalten. Bericht/Vorschau: docs/GEBIRGE-v413.md. Kein GitHub-Upload/Merge/Deployment.
+
+## v412 – Kopf-Trefferbild und Hochsitz-Menü
+
+Basis main b82ff69/Gebirge410. Nur hunt/style412, Gesamt-/SW412; andere Assets erhalten. `headMesh`/`headSegment`/`headRay` werden für Zeichnung und Gehirnprüfung gemeinsam verwendet. Kanal bis tatsächlichem Austritt bzw. stop, Kopfbericht `schaedel`/`gehirn` statt pauschalem `kopf`-Organ. Historische Schüsse werden nur in Ansichtskopien neu ausgewertet; Wirkung/Medaille/Erlös nicht migrieren. fire stuft einen Kopftreffer ohne erreichtes Gehirn ab. Revierbreite per bestehendem ResizeObserver an das Menü weitergereicht, CSS nur für aufgeklapptes Menü. Hals-Rastertest grenzt überdecktes Haupt aus, Kopfprüfstand testet diese Treffer separat. Bericht: docs/KOPFTREFFER-v412.md. Kein automatisches Merge/Deployment.
 
 ## v410 – Gebirgs-PR #123 nach Waldplatz-PR #124
 
