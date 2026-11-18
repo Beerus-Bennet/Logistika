@@ -182,3 +182,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v410: PR123 mit main9ea4f9f/PR124 integriert. alpine408 unverändert aus PR123/c93797b, erbe/woodmodels/worldview409 unverändert aus main; übrige main-Assets erhalten. Gesamt-/SW410, beide Konfliktdokumentationen erhalten.
 - v411: Almhütte auf eingeebnetem Bauplatz `HUT` (weg vom Bach) mit Steinterrasse; Wanderweg als Trampelpfad (Ränder in Geländefarbe), `alpine.js`.
+
+- v413: Gebirge mit verbundenen Graten/Schultern, Kar-Felsrippen, niedrigem Ufer und breitem Moränenrücken; Hauptgipfel PEAKS[2] bei95/-187 und Gipfelplatz dynamisch daran gebunden. Felskontrast reduziert, hohe Rücken kahl. Höhenabfragen sparen identische Fluss-/Grundformberechnungen; 9.918 Geländedreiecke, 15.431 Fernlast. HUT-/Wegkorrektur411 erhalten; alpine413, Gesamt-/SW413. Tests gebirge-v413.* und wasseroptik-v386.test.js; docs/GEBIRGE-v413.md/VORSCHAU.html.

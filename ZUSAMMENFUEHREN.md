@@ -1,3 +1,7 @@
+## v413 – Gebirgsform und Grafik
+
+Basis main21c3bf8/PR125 (Hütte411). Hauptgipfel `PEAKS[2]` bei95/-187; Gipfelplatz/Kreuz daraus abgeleitet. Grate plus breite Schultern ersetzen Einzelkegel. Uferprofil niedrig, aber an der äußeren Wasserkante wieder im Gelände; Fall-/See-/Flussnetze und Materialien unverändert. `contains` nutzt identischen Kurzschluss über mountainWeight, `height` reicht sein berechnetes Kanalprofil optional an cutChannel weiter. Feste Geländeauflösung2,4/N3 bleibt; Waldlimit140, keine neue Migration. HUT-Plateau, Trampelpfad, Tieroberfläche und Inselrand weiter aus demselben Höhenfeld. Gesamt-/SW413 und nur alpine413 hochgezählt. Bericht/Vorschau: docs/GEBIRGE-v413.md. Kein automatischer Upload/Merge/Deployment.
+
 ## v410 – Gebirgs-PR #123 nach Waldplatz-PR #124
 
 main9ea4f9f vollständig integriert. `alpine.js` und die vier Gebirgsvorschauen entsprechen exakt c93797b (PR123), erbe/woodmodels/worldview und Fischerei-Dateien exakt main (PR124 enthalten). Nur Dokumentations-/Versionseinträge mussten aufgelöst werden. Beide Seiten erhalten. Gesamt-/SW410, alpine408, erbe/woodmodels/worldview409; Lade-/Aussaat-/Trefferbildassets aus main unverändert. Kein automatisches Merge/Deployment.

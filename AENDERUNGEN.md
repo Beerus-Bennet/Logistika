@@ -1,3 +1,10 @@
+## v413 – Zusammenhängender Bergkamm, natürliche Ufer und ruhigere Felsgrafik
+
+- Ursache: Nadelartige Einzelberge, hoher ringförmiger Seerand und starke, gleichmäßige Dreieckskontraste.
+- Lösung: Verbundene Grate und abgestufte Schultern, Felsrippen zum Kar, breitere Seeterrasse mit niedrigem Kiesufer. Hauptgipfel nach hinten versetzt, Kreuz am Gelände. Ruhigere Kalksteinfarben, dezente Schichten/Firnfelder, Waldgruppen unterhalb der kahlen Hochlagen. Höhen-/Flussabfragen beim Aufbau vereinfacht.
+- Geprüft: Kamm, Ufer, Hüttenstand und Trampelpfad; Wasseranschlüsse, Fall und 1.800 Tierschritte; 240+200 rechnerische sowie 24 echte WebGL-Zoomwechsel ohne Ressourcenwachstum/Contextverlust. Gelände weiterhin9.918 Dreiecke, Gebirgs-Fernlast15.431 (<16.000). Tag/Nacht und Mobilformat in Chromium. Keine neue Spielstandmigration. Bericht/Vergleich: `docs/GEBIRGE-v413.md`.
+- Nicht geprüft: echtes iPhone/Safari und Geräte-FPS. Gesamt-/SW413, alpine413; andere main-Assets erhalten. Kein Upload/Merge/Deployment.
+
 ## v411 – Almhütte steht auf dem Boden, Wanderweg als Trampelpfad
 
 **Ursache:** Der Hüttenplatz lag direkt an der Bachböschung; das Gelände unter der Talseite wurde vom Bachbett abgegraben (bis 4 tiefer als unter der Hütte), die Hütte schwebte. Der Weg war ein einfarbiges, hart begrenztes Band in kräftigem Orange – sah nicht wie ein Pfad aus.
