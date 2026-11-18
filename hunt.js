@@ -3693,13 +3693,14 @@ const HUNT = (() => {
       { id: "niereL", n: "Niere links", t: "niere", c: [-0.05, 0.62, -0.2], r: [0.03, 0.026, 0.045] }, { id: "niereR", n: "Niere rechts", t: "niere", c: [0.05, 0.62, -0.2], r: [0.03, 0.026, 0.045] },
       { id: "blattL", n: "Schulterblatt", c: [-0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 }, { id: "blattR", n: "Schulterblatt", c: [0.145, 0.6, 0.24], r: [0.02, 0.12, 0.07], b: 1 },
       { id: "becken", n: "Becken", c: [0, 0.6, -0.41], r: [0.1, 0.06, 0.09], b: 1 } ],
+    /* v392: Organe füllen den Rumpf (vorher winzig, die meisten Körperschüsse trafen keins): Lunge am Rücken, Herz vorn zwischen den Leberlappen, Muskelmagen und Darm dahinter */
     fasan: [
-      { id: "kropf", n: "Kropf", t: "kropf", c: [0, 0.262, 0.14], r: [0.028, 0.028, 0.03] },
-      { id: "lungeL", n: "Lunge", t: "lunge", c: [-0.026, 0.295, 0.035], r: [0.02, 0.02, 0.042], v: 1 }, { id: "lungeR", n: "Lunge", t: "lunge", c: [0.026, 0.295, 0.035], r: [0.02, 0.02, 0.042], v: 1 },
-      { id: "herz", n: "Herz", t: "herz", c: [0, 0.228, 0.09], r: [0.02, 0.026, 0.026], v: 2 },
-      { id: "leberL", n: "Leber", t: "leber", c: [-0.032, 0.218, 0.04], r: [0.024, 0.03, 0.04] }, { id: "leberR", n: "Leber", t: "leber", c: [0.032, 0.218, 0.04], r: [0.024, 0.03, 0.04] },
-      { id: "magen", n: "Muskelmagen", t: "magen", c: [-0.012, 0.202, -0.04], r: [0.034, 0.034, 0.038] }, { id: "darm", n: "Gescheide", t: "darm", c: [0.008, 0.215, -0.118], r: [0.042, 0.038, 0.05] },
-      { id: "niere", n: "Nieren", t: "niere", c: [0, 0.288, -0.075], r: [0.028, 0.013, 0.04] },
+      { id: "kropf", n: "Kropf", t: "kropf", c: [0, 0.262, 0.15], r: [0.036, 0.036, 0.04] },
+      { id: "lungeL", n: "Lunge", t: "lunge", c: [-0.05, 0.3, 0.05], r: [0.034, 0.038, 0.07], v: 1 }, { id: "lungeR", n: "Lunge", t: "lunge", c: [0.05, 0.3, 0.05], r: [0.034, 0.038, 0.07], v: 1 },
+      { id: "herz", n: "Herz", t: "herz", c: [0, 0.232, 0.095], r: [0.036, 0.044, 0.046], v: 2 },
+      { id: "leberL", n: "Leber", t: "leber", c: [-0.05, 0.215, 0.02], r: [0.04, 0.05, 0.065] }, { id: "leberR", n: "Leber", t: "leber", c: [0.05, 0.215, 0.02], r: [0.04, 0.05, 0.065] },
+      { id: "magen", n: "Muskelmagen", t: "magen", c: [-0.01, 0.2, -0.075], r: [0.052, 0.05, 0.056] }, { id: "darm", n: "Gescheide", t: "darm", c: [0, 0.215, -0.14], r: [0.07, 0.06, 0.07] },
+      { id: "niere", n: "Nieren", t: "niere", c: [0, 0.29, -0.11], r: [0.05, 0.022, 0.065] },
       { id: "brust", n: "Brustbein", c: [0, 0.158, 0.05], r: [0.009, 0.026, 0.09], b: 1 } ]
   };
   /* v388: Tier blickt lokal nach +Z, oben ist +Y. Seine rechte Seite

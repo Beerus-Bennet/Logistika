@@ -1,3 +1,11 @@
+## v392 – Fasan: Körperschüsse treffen Organe
+
+**Ursache:** Die Organe des Fasans (`ORG.fasan` in `hunt.js`) waren winzig (Radien 0,02–0,05) gegenüber dem Rumpf (0,13 × 0,13 × 0,2). Die meisten Körperschüsse flogen zwischen allen Organen hindurch; im Trefferbild stand nur „Federkleid und Muskel“ und „Brustmuskel“.
+
+**Lösung:** Organe größer und anatomisch angeordnet: Lunge beidseits am Rücken, Herz vorn zwischen den Leberlappen, Muskelmagen und Gescheide dahinter, Nieren im Becken, Kropf am Halsansatz. Wertung, Eindringtiefe und Speicherformat unverändert; Modelle skalieren über `ORG.r` mit.
+
+**Geprüft:** Messung mit 4000 Zufallsstrahlen durch den Rumpf (Node/vm): Anteil mit mindestens einem Organ 42 % → 65 %, davon lebenswichtig (Herz/Lunge) 16 % → 26 %; ein Rest trifft weiter nur Muskel (Keule/Schwanzansatz). `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden (`trefferklarheit-v388` und `weapons-v383` ließen sich in dieser Umgebung nicht aus dem Wurzelordner starten, nicht bewertet). **Nicht geprüft:** Trefferbild im Browser (Optik der größeren Organe), Handy.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
