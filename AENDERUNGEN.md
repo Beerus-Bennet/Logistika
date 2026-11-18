@@ -1,3 +1,10 @@
+## v414 – Flimmernde Bodenplatte am Berghaus korrigiert
+
+- Ursache: Fundament und Deckplatte hatten zwei sichtbare Oberseiten auf derselben Höhe. Dadurch konnten beim Drehen Streifen/Flimmern entstehen.
+- Lösung: Fundamentoberkante an die Unterseite der Deckplatte gesetzt; der Sockel reicht weiter ins Gelände. Deckplatte, Hütte und Bauplatz behalten ihre Lage, keine zusätzliche Geometrie oder Änderung der allgemeinen Tiefenprüfung.
+- Geprüft: Originalfehler mit echten Modelldreiecken reproduziert; korrigierte Flächen und nahtloser Anschluss geprüft. 100 Zoomwechsel ohne Mesh-/Saveänderung. 16 Chromium-Ansichten (vier Richtungen, Tag/Nacht, Desktop-/Handyformat) ohne neue Ressourcen oder Fehler. Nicht geprüft: echtes iPhone/Safari. Bericht: `docs/HUETTENPLATTE-v414.md`.
+- Gesamt-/SW/LOGI_V414, alpine414, übrige Assetstände erhalten. Enthält den lokalen Gesamtstand413 samt Kopf-/Menükorrekturen412. Kein GitHub-Upload/Merge/Deployment.
+
 ## v413 – Zusammenhängender Bergkamm, natürliche Ufer und ruhigere Felsgrafik
 
 - Ursache: Nadelartige Einzelberge, hoher ringförmiger Seerand und starke, gleichmäßige Dreieckskontraste.

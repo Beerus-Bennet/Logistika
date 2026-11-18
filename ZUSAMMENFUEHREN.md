@@ -1,3 +1,7 @@
+## v414 – Berghaus-Bodenplatte
+
+Lokaler Stand413/412 und main21c3bf8 erhalten. Einzige Modellkorrektur: Fundamentsockel von `.04-th` auf `-.04-th` abgesenkt, damit seine Oberseite an der Unterseite der dünnen Deckplatte liegt. Kein Eingriff in Gelände, Wasser, Kamera, Jagd oder Tiefenpuffer. alpine414, Gesamt-/SW/LOGI_V414, hunt/style412. Geometrischer Regressionstest reproduziert den alten Fehler und prüft den neuen Anschluss;16 Browseransichten bestanden. Bericht docs/HUETTENPLATTE-v414.md. Kein GitHub-Upload/Merge/Deployment.
+
 ## v413 – Gebirgsform und Grafik
 
 Basis main21c3bf8/PR125 (Hütte411). Hauptgipfel `PEAKS[2]` bei95/-187; Gipfelplatz/Kreuz daraus abgeleitet. Grate plus breite Schultern ersetzen Einzelkegel. Uferprofil niedrig, aber an der äußeren Wasserkante wieder im Gelände; Fall-/See-/Flussnetze und Materialien unverändert. `contains` nutzt identischen Kurzschluss über mountainWeight, `height` reicht sein berechnetes Kanalprofil optional an cutChannel weiter. Feste Geländeauflösung2,4/N3 bleibt; Waldlimit140, keine neue Migration. HUT-Plateau, Trampelpfad, Tieroberfläche und Inselrand weiter aus demselben Höhenfeld. Gesamt-/SW413, alpine413 sowie die lokal integrierten hunt/style412. Die geprüften Kopf-/Menüfixes412 sind unverändert enthalten. Bericht/Vorschau: docs/GEBIRGE-v413.md. Kein GitHub-Upload/Merge/Deployment.

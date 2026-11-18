@@ -254,7 +254,12 @@ const ALPINE = (()=>{
   if(hut){const [x,,z]=hut,ry=Math.atan2(POOL.x-x,POOL.z-z),cr=Math.cos(ry),sr=Math.sin(ry);let lo=1e9,hi=-1e9;
    for(let u=-3.3;u<=3.31;u+=.55)for(let v=-2.3;v<=3.41;v+=.57){const g=surface(x+cr*u+sr*v,z-sr*u+cr*v);lo=Math.min(lo,g);hi=Math.max(hi,g);}
    const y=(hi+lo)/2+.15;hut[1]=y; /* halb eingeschnitten, halb aufgeschüttet – niedrige Mauer */hut[3]=ry;spots.hut=hut;fun.at({x,y,z,ry},b=>{
-    {const th=y-lo+.4;b.box(6.6,th,5.7,0x8f8c80,{y:.04-th,z:.55});b.box(6.7,.08,5.8,0x9a978c,{y:-.04,z:.55});}                             /* Steinterrasse bis unter den tiefsten Bodenpunkt */                                                                                          /* flache Steinterrasse auf dem eingeebneten Platz */
+    /* v414: Fundament endet an der UNTERSEITE der Deckplatte. Zuvor lagen
+       beide Oberseiten auf +.04 übereinander und flimmerten beim Drehen. */
+    {const th=y-lo+.4;
+     b.box(6.6,th,5.7,0x8f8c80,{y:-.04-th,z:.55});
+     b.box(6.7,.08,5.8,0x9a978c,{y:-.04,z:.55});
+    }
     b.box(5.2,.7,4,0x8f8d84,{y:-.3});b.box(4.8,2.1,3.6,0x8a5a34,{y:.4});for(let k=0;k<5;k++)b.box(4.86,.06,3.66,0x6e4528,{y:.6+k*.42});
     b.roof(5.8,4.4,1.5,0x6b6f72,{y:2.5,gable:0x7a4c2c});b.box(.5,1.1,.5,0x8f8d84,{x:1.3,y:3.1,z:-.6});
     b.box(1,1.6,.08,0x5a3a22,{z:1.82,y:.4});[-1.6,1.6].forEach(q=>{b.box(.8,.7,.08,0xcfe4ee,{x:q,y:1.3,z:1.82});b.box(.9,.18,.25,0x8a5a34,{x:q,y:1.12,z:1.95});for(let f=0;f<4;f++)b.ico(.11,[0xd8332b,0xe85a8a,0xd8332b,0xf2c231][f],{x:q-.3+f*.2,y:1.3,z:1.98});});

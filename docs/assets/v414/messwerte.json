@@ -1,0 +1,154 @@
+{
+  "baseline": {
+    "meshes": 291,
+    "nodes": 666
+  },
+  "frames": [
+    {
+      "size": "desktop",
+      "time": 720,
+      "direction": 0,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 720,
+      "direction": 1,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 720,
+      "direction": 2,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 720,
+      "direction": 3,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 188,
+      "direction": 0,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 188,
+      "direction": 1,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 188,
+      "direction": 2,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "desktop",
+      "time": 188,
+      "direction": 3,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 720,
+      "direction": 0,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 720,
+      "direction": 1,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 720,
+      "direction": 2,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 720,
+      "direction": 3,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 188,
+      "direction": 0,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 188,
+      "direction": 1,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 188,
+      "direction": 2,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    },
+    {
+      "size": "mobil",
+      "time": 188,
+      "direction": 3,
+      "meshes": 291,
+      "nodes": 666,
+      "lost": 0,
+      "funTris": 6052
+    }
+  ],
+  "errors": [],
+  "preserved": true
+}
