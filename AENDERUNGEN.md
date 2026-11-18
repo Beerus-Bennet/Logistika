@@ -1,3 +1,11 @@
+## v394 – Fasan: Laufanimation
+
+**Ursache:** Die Ständer des Fasans waren beim Gehen starr (`A.legN` leer, `A.feet` nur für Flug/Liegepose) – er glitt über den Boden.
+
+**Lösung (`hunt.js`, Block „v394: Gehen auf dem Boden“):** Eigene Schrittphase `A.pph` aus Tempo und Beinlänge (Schrittlänge folgt dem Pendelwinkel, 0,5 → 0,75 rad beim Laufen). Die Ständer pendeln im Wechselschritt, der Fuß hebt sich beim Vorschwung (bis 2,8 cm), der Rumpf wippt bei jedem Schritt leicht. Im Stand, im Flug, beim Fallen und am liegenden Stück unverändert. Keine Wertungs-/Treffer-/Speicheränderung.
+
+**Geprüft:** Testbrowser (`?test&jagd`): Fasan im Gehen – Füße schwingen gegenläufig (±0,38 rad), Fuß hebt sich, Rumpf wippt, keine Konsolenfehler; `hunt.test.js`, `trefferbild-v357`, `anatomie-v367` bestanden. **Nicht geprüft:** Optik im Video/bei echter Bildrate (Testbrowser läuft nur mit Software-Rendering), Handy; kein Kniegelenk – die Beine schwingen als ganzes Stück.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).
