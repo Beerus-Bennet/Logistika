@@ -3843,7 +3843,12 @@ const HUNT = (() => {
       { id: "luftroehre", n: "Luftröhre", t: "luftroehre", v: 2, off: 0.45, x: 0, r: 0.0045, col: NCOL.luft },
       { id: "speiseroehre", n: "Speiseröhre", t: "speiseroehre", v: 1, off: 0.15, x: 0, r: 0.0045, col: NCOL.speise },
       { id: "schlagaderL", n: "Halsschlagader links", t: "schlagader", v: 2, off: 0.2, x: -0.008, r: 0.0025, col: NCOL.arterie }, { id: "schlagaderR", n: "Halsschlagader rechts", t: "schlagader", v: 2, off: 0.2, x: 0.008, r: 0.0025, col: NCOL.arterie } ]
-  };
+  };  /* v397: Halsorgane waren zu schmal – ein Durchschuss durch den Träger traf oft keins (Hirsch 26 %, Keiler 55 %, Fasan 46 % ohne Kontakt).
+     Maße je Art angehoben, Keiler bekommt die Drosselvenen; Zonen/Wertung (SP) unverändert */
+  const NECK_K = { hirsch: 1.7, keiler: 2.6, fasan: 2.4 };
+  NORG.keiler.push({ id: "drosselL", n: "Drosselvene links", t: "vene", v: 2, off: 0.8, x: -0.085, r: 0.018, col: NCOL.vene }, { id: "drosselR", n: "Drosselvene rechts", t: "vene", v: 2, off: 0.8, x: 0.085, r: 0.018, col: NCOL.vene });
+  Object.keys(NORG).forEach(k => NORG[k].forEach(O => { O.r *= O.t === "wirbel" ? 1.25 : NECK_K[k] || 1; }));
+
   /* Mittellinie, Richtung zur Kehle und Halbtiefen am Halsabschnitt t (0 = Ansatz, 1 = Haupt) */
   function neckFrame(k, t) {
     if (k === "hirsch") {
