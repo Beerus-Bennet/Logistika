@@ -93,8 +93,9 @@ const ALPINE = (()=>{
   const n2=vnoise(x*.31+7,z*.31-3),n3=vnoise(x*1.7,z*1.7);
   let c=mix(col(0x5b7c44),col(0x86a050),sm(8,22,h));c=mix(c,col(0x9aa462),sm(24,36,h)*(.6+.4*n2));
   c=mix(c,mix(col(0xa9a593),col(0xc0baa4),n3),sm(.5,.85,slope)*(1-sm(1.2,1.6,slope))*sm(4,12,h));
-  const band=.88+.12*Math.sin(h*1.9+n2*3.1),rock=mix(col(0x7c7f7e),col(0xb3ae9f),n2*.7+n3*.3).map(v=>v*band);
-  c=mix(c,rock,Math.max(sm(.8,1.25,slope),sm(40,58,h)*.75));
+  const band=.88+.12*Math.sin(h*1.9+n2*3.1),rock=mix(mix(col(0x7c7f7e),col(0xb3ae9f),n2*.7+n3*.3),col(0x9a8a72),sm(.55,.8,vnoise(x*.08+3,z*.08))*.5).map(v=>v*band); /* v408: warme Kalktöne im Wechsel mit kühlem Grau */
+  /* v408: Rinnen dunkler, Grate heller (aus demselben Gratrauschen wie die Form) – macht die Felsstruktur lesbar */
+  const ao=.78+.34*ridged(x,z);c=mix(c,rock.map(v=>Math.min(1,v*ao)),Math.max(sm(.8,1.25,slope),sm(40,58,h)*.75));
   const snow=snowAmt(h,slope,n2,n3);
   c=mix(c,col(0xeef3f6),Math.min(1,snow));
   /* v403: Kiesufer statt Wiesenkragen: heller Schotter am Wasser, dahinter Fels des Riegels */
@@ -120,7 +121,14 @@ const ALPINE = (()=>{
    else if(J%N===0&&(!fine.has(j*nx+i)||!fine.has((j-1)*nx+i)))out=interpolate(V[(J/N)*(nx+1)+i],V[(J/N)*(nx+1)+i+1],u);
    else{const X=B.x0+I/N*dx,Z=B.z0+J/N*dz,p=project(X,Z),h=height(...p);out={out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])};}cache.set(key,out);return out;
   }
-  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),fk=(.12+.55*(1-sm(.5,.86,face[1])))*sm(2,10,(a.p[1]+c.p[1])/2),n=q=>G3.norm(mix(q.n,face,fk)); /* v403: Felswände facettiert, Wiesen weich */b.v.push(...a.p,...n(a),...a.c,...d.p,...n(d),...d.c,...c.p,...n(c),...c.c,...a.p,...n(a),...a.c,...c.p,...n(c),...c.c,...e.p,...n(e),...e.c);};
+  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),fk=(.12+.55*(1-sm(.5,.86,face[1])))*sm(2,10,(a.p[1]+c.p[1])/2),n=q=>G3.norm(mix(q.n,face,fk)); /* v403: Felswände facettiert, Wiesen weich */
+   /* v408: Farbe je Dreieck statt Verlauf über die Fläche – klare Low-Poly-Facetten wie bei Bäumen und Häusern (vorher verschwommene
+      Übergänge); Fels mit stärkerer, Wiese mit leichter Helligkeitsstreuung je Facette */
+   const rock=1-sm(.55,.85,face[1]),tc=(p,q,r)=>{const cx=(p.p[0]+q.p[0]+r.p[0])/3,cz=(p.p[2]+q.p[2]+r.p[2])/3,j=1+(vnoise(cx*1.7,cz*1.7)-.5)*(.06+.16*rock),hy=(p.p[1]+q.p[1]+r.p[1])/3;let m=[0,1,2].map(i=>(p.c[i]+q.c[i]+r.c[i])/3);
+    /* Grasbänder auf flacheren Facetten zwischen den Felsen (scharfe Fels-/Wiesengrenze), nicht im Schnee und nicht am Wasser */
+    const g=sm(.6,.76,face[1])*(1-sm(44,58,hy))*sm(6,12,hy)*(m[0]+m[1]+m[2]<2.3?1:0)*(lakeE(cx,cz)>1.3&&poolE(cx,cz)>1.4?1:0);if(g>0)m=mix(m,mix(col(0x7d9a4a),col(0x93a85a),vnoise(cx*.9,cz*.9)),g*.8);
+    return m.map(v=>Math.min(1,v*j));},c1=tc(a,d,c),c2=tc(a,c,e);
+   b.v.push(...a.p,...n(a),...c1,...d.p,...n(d),...c1,...c.p,...n(c),...c1,...a.p,...n(a),...c2,...c.p,...n(c),...c2,...e.p,...n(e),...c2);};
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){if(fine.has(j*nx+i)){for(let v=0;v<N;v++)for(let u=0;u<N;u++){const I=i*N+u,J=j*N+v;quad(vertex(I,J),vertex(I,J+1),vertex(I+1,J+1),vertex(I+1,J));}}else quad(V[j*(nx+1)+i],V[(j+1)*(nx+1)+i],V[(j+1)*(nx+1)+i+1],V[j*(nx+1)+i+1]);}
   if(store)grid={nx,nz,dx,dz,V,fine,vertex,N};return b;
  }
@@ -148,21 +156,24 @@ const ALPINE = (()=>{
   for(let i=0;i<N;i++)for(let j=0;j<M;j++){const x0=-.3+1.6*i/N,x1=-.3+1.6*(i+1)/N,w0=-1.15+2.3*j/M,w1=-1.15+2.3*(j+1)/M;
    b.triV(at(x0,w0),at(x1,w1),at(x0,w1),[x0,w0,-1],[x1,w1,-1],[x0,w1,-1]);b.triV(at(x0,w0),at(x1,w0),at(x1,w1),[x0,w0,-1],[x1,w0,-1],[x1,w1,-1]);}return b;}
  /* v403: Bergfichte schlank (Schneelast), fünf hängende Astetagen mit gezackten Rändern, helle Spitze; Fernstufe zwei Kegel */
- function spruce(b,x,y,z,s,far,tint,rot){b.box(.16*s,1.2*s,.16*s,0x5e4a36,{x,y,z});
+ function spruce(b,x,y,z,s,far,tint,rot){if(!far)b.box(.16*s,1.2*s,.16*s,0x5e4a36,{x,y,z}); /* v408: Fernstufe ohne Stamm (aus der Ferne unsichtbar, spart Dreiecke) */
  const L=far?2:5,top=G3.col(tint).map(v=>Math.min(1,v*1.22));for(let j=0;j<L;j++){const t=j/L,r=(1.05-.78*t)*s,Y=y+(.75+t*3.5)*s,hh=(far?2.6:1.7-.5*t)*s,cc=t>.7?top:tint;b.cone(r,hh,far?5:7,cc,{x,y:Y,z,ry:rot+j*.7});
   if(!far)for(let k=0;k<7;k++){const a=rot+j*.7+k/7*Math.PI*2,R=r*(1.12+.12*Math.sin(k*2.3+j));b.tri([x+Math.cos(a-.2)*r*.7,Y+.24*s,z+Math.sin(a-.2)*r*.7],[x+Math.cos(a)*R,Y-.2*s,z+Math.sin(a)*R],[x+Math.cos(a+.2)*r*.7,Y+.08*s,z+Math.sin(a+.2)*r*.7],cc);}}
  if(!far)b.cone(.12*s,.7*s,4,top,{x,y:y+4.6*s,z});}
- function larch(b,x,y,z,s,far,rot){b.box(.15*s,1.6*s,.15*s,0x6b4a33,{x,y,z});const c=far?1:3;for(let j=0;j<c;j++){const t=j/c;b.ico((.95-.45*t)*s,[0x7f9a4c,0x8ea957,0x738f45][j%3],{x:x+Math.sin(rot+j)*.12*s,y:y+(1.7+t*2.1)*s,z:z+Math.cos(rot+j)*.12*s,sy:1.25,sx:.85,sz:.85});}}
+ function larch(b,x,y,z,s,far,rot){if(!far)b.box(.15*s,1.6*s,.15*s,0x6b4a33,{x,y,z});const c=far?1:3;for(let j=0;j<c;j++){const t=j/c;b.ico((.95-.45*t)*s,[0x7f9a4c,0x8ea957,0x738f45][j%3],{x:x+Math.sin(rot+j)*.12*s,y:y+(1.7+t*2.1)*s,z:z+Math.cos(rot+j)*.12*s,sy:1.25,sx:.85,sz:.85});}}
  function latsche(b,x,y,z,s,rot){/* Legföhre: niedrige, breite, dunkle Polster */const n=3;for(let j=0;j<n;j++){const a=rot+j*2.1,d=j?.55*s:0;b.ico((.75-.12*j)*s,j%2?0x2f5236:0x3a6040,{x:x+Math.cos(a)*d,y:y+.22*s,z:z+Math.sin(a)*d,sy:.45,ry:a});}}
  function scenery(){const near=new FM.MB(),far=new FM.MB(),detail=new FM.MB(),rnd=wRng(373),trees=[];
   /* v403: Höhenstufen: Fichten/Lärchen bis ~28, darüber Latschenfelder bis ~46 (wie die Waldgrenze in den Kalkalpen) */
-  for(let i=0;i<7000&&trees.length<280;i++){const x=22+rnd()*112,z=-191+rnd()*68,h=height(x,z),e=lakeE(x,z),sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8,lat=h>24;
-   if(!contains(x,z)||!inside(x,z)||h<1||h>46||sl>(lat?1.25:1.0)||e<1.3||poolE(x,z)<1.35||channel(x,z).d<3||trees.some(t=>Math.hypot(t.x-x,t.z-z)<(lat?2:2.6)))continue;
+  for(let i=0;i<7000&&trees.length<245;i++){const x=22+rnd()*112,z=-191+rnd()*68,h=height(x,z),e=lakeE(x,z),sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8,lat=h>24;
+   if(!contains(x,z)||!inside(x,z)||h<1||h>46||sl>(lat?1.25:h<22?1.3:1.0)||e<1.3||poolE(x,z)<1.35||channel(x,z).d<3||trees.some(t=>Math.hypot(t.x-x,t.z-z)<(lat?2:2.6)))continue;
    if(x<57&&z>-145)continue;const s=(lat?.8:.75)+rnd()*.6,rot=rnd()*6.28,k=lat?'latsche':rnd()<.2?'larch':'spruce';trees.push({x,z,h,s,k});
    if(k==='latsche')latsche(near,x,h,z,s,rot); /* Latschen blenden in der Fernstufe aus (Budget) */else if(k==='larch'){larch(near,x,h,z,s,false,rot);larch(far,x,h,z,s,true,rot);}
    else{const tint=[0x2f5243,0x3a6048,0x46694a][i%3];spruce(near,x,h,z,s,false,tint,rot);spruce(far,x,h,z,s,true,tint,rot);}
   }
   for(let i=0;i<110;i++){const x=25+rnd()*112,z=-190+rnd()*65,h=height(x,z);if(!inside(x,z)||!contains(x,z)||h<1||lakeE(x,z)<1.08||poolE(x,z)<1.15||channel(x,z).d<1.8)continue;const r=.18+rnd()*.6;detail.ico(r,0x85897c,{x,y:h+r*.28,z,sy:.55,ry:rnd()*6.28});}
+  /* v408: Felsköpfe und Schrofen an steilen Hängen – kantige, teils eingesunkene Blöcke in Felsfarbe, nur in der Nahstufe */
+  for(let i=0;i<900;i++){const x=24+rnd()*112,z=-196+rnd()*72;if(!inside(x,z)||!contains(x,z))continue;const h=height(x,z);if(h<8||h>70||lakeE(x,z)<1.15||poolE(x,z)<1.3||channel(x,z).d<3)continue;
+   const sl=Math.hypot(height(x+.8,z)-h,height(x,z+.8)-h)/.8;if(sl<.9||sl>1.9||rnd()>.35)continue;const r=.6+rnd()*1.1,c=h>52?0xa9a79c:[0x7d7f79,0x8b8b82,0x6f716b][i%3];detail.ico(r,c,{x,y:h-r*.25,z,sx:1+rnd()*.5,sy:.55+rnd()*.3,ry:rnd()*6.28});}
   // Schuttfächer und einzelne Felsschichten statt gleichmäßig verteilter Steinbälle.
   for(const [x,z,r] of [[96,-158,5],[105,-144,4],[50,-164,3]])for(let i=0;i<22;i++){const a=rnd()*6.28,d=Math.sqrt(rnd())*r,X=x+Math.cos(a)*d,Z=z+Math.sin(a)*d,h=height(X,Z);if(lakeE(X,Z)<1.08||poolE(X,Z)<1.15)continue;detail.ico(.13+rnd()*.3,0x939688,{x:X,y:h+.08,z:Z,sy:.45});}
   return {near,far,detail,trees};

@@ -175,3 +175,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v407: Gebirge-Feinschliff (`alpine.js`) – Stockente, geschlossener Steinbock, Wanderweg per Wegsuche (`route`/`pull`/`chaikin`, Band mit Mittelreihe), Pfeil-Wegweiser (`arrowBoard`), Aufprallband über die Fallbreite (`FOAM`), Regenbogen entfernt.
 - v407: Bergsee – Umriss an der Falllippe gekappt (keine Wasserzunge), Felswangen direkt neben dem Fall, Felsrand Spiegel + 3,5 (`alpine.js`).
 - v407: Gebirge – Hüttenbank auf Sitzhöhe der Figuren, Zelt-Wanderer sitzt auf Baumstamm (`alpine.js`).
+- v408: Berggrafik (`alpine.js`) – Farbe je Dreieck (Facetten), Grasbänder auf flacheren Facetten, Rinnen/Grate über `ridged`, warme Kalktöne, Felsköpfe, Bergwald steiler; Fernbäume ohne Stamm.

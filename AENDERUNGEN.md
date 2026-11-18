@@ -1,3 +1,11 @@
+## v408 – Berggrafik: klare Facetten, Felsstruktur, Grasbänder, mehr Bergwald
+
+**Ursache:** Das Gebirge wirkte trotz v403 flächig grau und verschwommen: Farben liefen über große Dreiecke als weiche Verläufe, steile Hänge waren einheitlich grau, Rinnen und Grate kaum zu erkennen, auf steileren unteren Hängen fehlte Wald.
+
+**Lösung (`alpine.js`):** Farbe je Dreieck statt Verlauf (klare Low-Poly-Facetten wie bei Bäumen/Häusern) mit leichter Helligkeitsstreuung (Fels stärker, Wiese schwächer); Grasbänder auf flacheren Facetten zwischen den Felsen (nicht im Schnee, nicht am Wasser); Rinnen dunkler und Grate heller aus dem Gratrauschen der Form; warme Kalktöne im Wechsel mit kühlem Grau; Felsköpfe/Schrofen an steilen Hängen (Nahstufe); Bergwald auch auf steileren Hängen unterhalb ~22. Fernstufe der Bäume ohne Stamm (Budget).
+
+**Geprüft (Testbrowser):** Vorher/Nachher aus vier Blickwinkeln (`docs/assets/v404/berge-v408.png`); `wasseroptik-v386.test.js` bestanden (Fernlast 15.311 < 16.000). Nahlast ~40.000 Dreiecke (vorher ~35.000). **Nicht geprüft:** Handy.
+
 ## v407 – Gebirge-Feinschliff (vorher als v404–v406 im PR #123 geführt; Nummern wegen paralleler Lieferungen auf v407 zusammengelegt): Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
 
 **Ursache (Rückmeldung zu v403):** Ente im Badeenten-Gelb; Steinbock mit sichtbaren Lücken (grobe Ellipse, loser Kopf, dünne Läufe); Wanderweg aus geraden Einzelstücken (Lücken/Überlappungen) quer über Felswände; Wegweiser-Pfeile lose neben den Tafeln und schlecht platziert; Regenbogen kaum sichtbar (von oben als dunkler Strich im Kolk); Aufprallschaum als kleine runde Ringzone – wirkte wie ein dünner, runder Strahl.
