@@ -1,3 +1,11 @@
+## v409 – Almhütte steht auf dem Boden, Wanderweg als Trampelpfad
+
+**Ursache:** Der Hüttenplatz lag direkt an der Bachböschung; das Gelände unter der Talseite wurde vom Bachbett abgegraben (bis 4 tiefer als unter der Hütte), die Hütte schwebte. Der Weg war ein einfarbiges, hart begrenztes Band in kräftigem Orange – sah nicht wie ein Pfad aus.
+
+**Lösung (`alpine.js`):** Fester Bauplatz `HUT` weit vom Bach, im Höhenfeld eingeebnet (Abtrag/Aufschüttung, r 6,2 flach, bis 9,5 auslaufend); Hütte halb eingeschnitten auf flacher Steinterrasse bis unter den tiefsten Bodenpunkt; Trog und Zaun auf die Terrasse. Felsköpfe und flache Steine nicht am Hüttenplatz und am Hang tiefer eingesunken. Weg als Trampelpfad: fünf Reihen quer, Mitte festgetretene Erde, Ränder laufen in die Geländefarbe aus, Breite schwankt, vereinzelte Steine. Aussichtsbank: Kandidaten westlich des Falls, Höhe bis Spiegel + 8, erst Steig ≤ 35°, sonst steilerer Weg.
+
+**Geprüft (Testbrowser):** Hütte von oben und zwei Seiten, Pfad nah und weit (`docs/assets/v409/huette-pfad.png`); Geländehöhe unter dem Grundriss gemessen (Unterschied 0,2); `wasseroptik-v386.test.js` bestanden. **Nicht geprüft:** Handy.
+
 ## v410 – Gebirgs-PR mit aktuellem main konfliktfrei zusammengeführt
 
 **Ursache:** Nach PR #124 kollidierten die unabhängigen Dokumentations- und Asset-Versionseinträge mit dem offenen Gebirgs-PR #123.
