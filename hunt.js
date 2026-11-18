@@ -2061,39 +2061,44 @@ const HUNT = (() => {
   function woundSpot(A, rec, out) {
     const k = A.k, S0 = SP[k], p = rec.pose || {}, z = rec.zone;
     if (!rec.lo || !rec.ld || z === "lauf") return null;
-    let parent = A.node, o = rec.lo, d = rec.ld, t = null;
-    if (z === "hals") { parent = A.neck; [o, d] = neckRay(k, o, d, p); const ns = meshSegment(neckMeshOf(k), o, d); t = ns ? ns[out ? 1 : 0] : rec.t; }
+    let parent = A.node, o = rec.lo, d = rec.ld, t = null, surf = null;
+    /* v391: Lage auf der Oberfläche – jeder Punkt der Wunde wird entlang der Flächennormale auf das Netz des Tiers gesetzt (vorher eine
+       ebene Scheibe senkrecht zum Schuss: auf der gekrümmten Decke steckte sie je nach Blickwinkel im Körper oder schwebte davor) */
+    const onMesh = mesh => (q, nn) => { const r = meshSegment(mesh, [q[0] + nn[0] * 0.3, q[1] + nn[1] * 0.3, q[2] + nn[2] * 0.3], [-nn[0], -nn[1], -nn[2]]); return r ? [q[0] + nn[0] * (0.3 - r[0]), q[1] + nn[1] * (0.3 - r[0]), q[2] + nn[2] * (0.3 - r[0])] : null; };
+    if (z === "hals") { parent = A.neck; [o, d] = neckRay(k, o, d, p); const nm = neckMeshOf(k), ns = meshSegment(nm, o, d); t = ns ? ns[out ? 1 : 0] : rec.t; surf = onMesh(nm); }
     else if (z === "kopf" || z === "haupt") {
       if (out) return null;
       parent = A.head; [o, d] = neckRay(k, o, d, p);
       if (k === "hirsch") { o = unrot(v3sub(o, S0.headP), p.hrx || 0, 0, 0); d = unrot(d, p.hrx || 0, 0, 0); }
       const sg = ellSeg(o, d, S0.head.c, S0.head.r); if (!sg) return null; t = sg[0];
-    } else { const bs = meshSegment(withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), o, d); t = bs ? bs[out ? 1 : 0] : rec.t; }
+      surf = (q, nn) => { const r = ellSeg([q[0] + nn[0] * 0.3, q[1] + nn[1] * 0.3, q[2] + nn[2] * 0.3], [-nn[0], -nn[1], -nn[2]], S0.head.c, S0.head.r); return r ? [q[0] + nn[0] * (0.3 - r[0]), q[1] + nn[1] * (0.3 - r[0]), q[2] + nn[2] * (0.3 - r[0])] : null; };
+    } else { const bm = withLook(k, A.gn, k === "hirsch" ? deerBody : k === "keiler" ? boarBody : phBody), bs = meshSegment(bm, o, d); t = bs ? bs[out ? 1 : 0] : rec.t; surf = onMesh(bm); }
     if (out && (rec.stop == null || t > rec.stop)) return null;        /* v383: Ausschuss nur, wenn das Geschoss durchkommt */
     const n = out ? v3n(d) : v3n([-d[0], -d[1], -d[2]]);
-    return { parent, P: [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], n, x: rec.lo[0] + rec.ld[0] * t };
+    return { parent, P: [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], n, surf, x: rec.lo[0] + rec.ld[0] * t };
   }
-  function woundMesh(P, n, sc) {
+  function woundMesh(P, n, sc, surf) {
     sc = sc || 1;
     const b = MB(), up = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], u = v3n(v3crs(n, up)), v = v3crs(n, u), N = 16;
     const layer = (r, off, c, rough) => {
-      const ctr = [P[0] + n[0] * off, P[1] + n[1] * off, P[2] + n[2] * off], pt = i => { const a = i / N * Math.PI * 2, q = r * (1 + rough * Math.sin(i * 2.7 + r * 90));
-        return [ctr[0] + (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * q, ctr[1] + (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * q, ctr[2] + (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * q]; };
+      const up2 = q => { const g = surf ? surf(q, n) : null, h = g || q; return [h[0] + n[0] * off, h[1] + n[1] * off, h[2] + n[2] * off]; }, ctr = up2(P);
+      const pt = i => { const a = i / N * Math.PI * 2, q = r * (1 + rough * Math.sin(i * 2.7 + r * 90));
+        return up2([P[0] + (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * q, P[1] + (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * q, P[2] + (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * q]); };
       for (let i = 0; i < N; i++) b.triV(ctr, pt(i), pt(i + 1), c, c, c);
     };
-    layer(0.06 * sc, 0.003, [0.24, 0.15, 0.12], 0.16);        /* struppiges, dunkleres Haar */
-    layer(0.038 * sc, 0.0045, [0.5, 0.18, 0.15], 0.1);      /* schwacher rotbrauner Rand */
-    layer(0.018 * sc, 0.006, [0.04, 0.03, 0.03], 0.05);     /* Einschussloch */
+    layer(0.06 * sc, 0.004, [0.24, 0.15, 0.12], 0.16);        /* struppiges, dunkleres Haar */
+    layer(0.038 * sc, 0.0065, [0.5, 0.18, 0.15], 0.1);      /* schwacher rotbrauner Rand */
+    layer(0.018 * sc, 0.009, [0.04, 0.03, 0.03], 0.05);     /* Einschussloch */
     return b;
   }
   function addWound(A, rec) {
     const W = A.node && rec ? woundSpot(A, rec) : null;
     if (!W || !W.parent) return;
-    const m = FV.R.mesh(woundMesh(W.P, W.n));
+    const m = FV.R.mesh(woundMesh(W.P, W.n, 1, W.surf));
     (A.woundM = A.woundM || []).push(m); A.woundX = W.x;
     addNode(m, { shadow: false }, W.parent);
     const O = woundSpot(A, rec, true);          /* v383: Ausschuss – etwas größer und ausgefranster */
-    if (O) { const m2 = FV.R.mesh(woundMesh(O.P, O.n, 1.35)); A.woundM.push(m2); addNode(m2, { shadow: false }, O.parent); }
+    if (O) { const m2 = FV.R.mesh(woundMesh(O.P, O.n, 1.35, O.surf)); A.woundM.push(m2); addNode(m2, { shadow: false }, O.parent); }
   }
   const fallSide = (A, other) => A.woundX ? (A.woundX > 0 ? 1 : -1) : other;      /* v382: fällt auf die Seite ohne Einschuss – die Wunde liegt oben und ist sichtbar */
   const alive = A => A.st !== "gone" && A.st !== "dead" && A.st !== "fall" && A.st !== "drop";
@@ -4169,7 +4174,8 @@ const HUNT = (() => {
     const coat = (coatOf(A.k, gn.c) || [])[3] || "–", tmp = temperOf(gn).name, row = (a, b) => `<span><small>${a}</small><b>${b}</b></span>`;
     const org = sh.org.map(o => {
       const O=ORG[A.k].find(O=>O.id===o.id&&O.t),model=O&&typeof thumbSpan==='function'?`<span class="xr-organ-model">${thumbSpan('organ367:'+A.k+':'+O.id,()=>organPreview(A.k,O),'',false,{yaw:O.t==='lunge'&&O.c[0]<0?Math.PI-.75:.75,pitch:.18,noShadow:true})}</span>`:'<i></i>';
-      return `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}">${model}<span class="xr-organ-name">${esc(organReportName(A.k,o,sh))}</span>${o.id === "herz" && sh.dmg>=100 ? "" : o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`;
+      const gen = `<span class="xr-organ-model xr-gen">${/^(decke|brustm)$/.test(o.id) ? "🧥" : o.b ? "🦴" : o.v ? "🩸" : "🩹"}</span>`;       /* v391: gleicher Symbolkasten wie bei Organen mit Bildchen */
+      return `<li class="${o.v ? "v" : ""}${o.b ? " b" : ""}">${model.startsWith("<i") ? gen : model}<span class="xr-organ-name">${esc(organReportName(A.k,o,sh))}</span>${o.id === "herz" && sh.dmg>=100 ? "" : o.v === 2 ? "<em>tödlich</em>" : o.v ? "<em>lebenswichtig</em>" : o.b ? "<em>Knochen</em>" : ""}</li>`;
     }).join("");
     return `<div class="xr-hd"><b>Trefferbild</b><span>${esc(T.name)}</span><button class="xr-x" data-hu="xclose" aria-label="Trefferbild schließen">✕</button></div>
       <div class="xr-nav"><button class="btn tiny ghost" data-hu="xprev"${n < 2 ? " disabled" : ""} aria-label="vorheriger Treffer">‹</button>
@@ -4177,14 +4183,16 @@ const HUNT = (() => {
         <button class="btn tiny ghost" data-hu="xnext"${n < 2 ? " disabled" : ""} aria-label="nächster Treffer">›</button></div>
       <div class="xr-dmg"><span>${sh.anatomyUpdated?"Damals":"Wirkung"}</span><i style="--d:${sh.dmg}%"><b></b></i><em>${sh.dmg} %</em></div>
       <ul class="xr-org">${org}</ul>
-      <p class="xr-leg">Nur vom Schusskanal geschnittene Organe sind eingeblendet, aufgelistet in Durchschussrichtung. Das Skelett dient zur Orientierung.</p>
-      ${sh.anatomyUpdated?'<p class="xr-leg">Ältere Aufnahme: Organliste anhand des gespeicherten Schusskanals berichtigt. Die damalige Wirkung und Trophäenwertung bleiben erhalten.</p>':''}
-      ${sh.thru === false ? `<p class="xr-leg">Das Geschoss ist im Körper stecken geblieben – kein Ausschuss.</p>` : sh.thru ? `<p class="xr-leg">Durchschuss mit Ausschuss.</p>` : ""}
       <div class="xr-sec">Schussbericht</div>
       <div class="xr-grid">${row("Waffe", esc(((typeof WEAPONS !== "undefined" && WEAPONS.BY[sh.gun]) || GUN0).name))}${row("Entfernung", (sh.dm || "?") + " m")}${row("Flugzeit", fnum(sh.tf || 0, 2) + " s")}${row("Auftreffen", sh.v + " m/s")}${row("Energie", sh.e.toLocaleString("de-DE") + " J")}${row("Wind", fnum(sh.wv || 0, 1) + " m/s")}${row("Abdrift", Math.round((sh.drift || 0) * 100) + " cm")}</div>
       <div class="xr-sec">Stück</div>
       <div class="xr-grid">${row("Geschlecht", sex)}${row("Gewicht", fkg(A))}${row("Decke", esc(coat))}${row("Wesen", esc(tmp))}${row("Trophäe", esc(T.troph))}${row("Güte", Math.round(A.score * 100) + (A.medal ? " · " + MEDALS[A.medal].n : ""))}</div>
-      <p class="xr-tip">↔ Wischen dreht · zwei Finger zoomen · ◎ Treffer · ● Einschuss · rot = getroffen</p>`;
+      <p class="xr-tip">↔ Wischen dreht · zwei Finger zoomen · ◎ Treffer · ● Einschuss · rot = getroffen</p>
+      <div class="xr-legs">
+      <p class="xr-leg">Nur vom Schusskanal geschnittene Organe sind eingeblendet, aufgelistet in Durchschussrichtung. Das Skelett dient zur Orientierung.</p>
+      ${sh.anatomyUpdated?'<p class="xr-leg">Ältere Aufnahme: Organliste anhand des gespeicherten Schusskanals berichtigt. Die damalige Wirkung und Trophäenwertung bleiben erhalten.</p>':''}
+      ${sh.thru === false ? `<p class="xr-leg">Das Geschoss ist im Körper stecken geblieben – kein Ausschuss.</p>` : sh.thru ? `<p class="xr-leg">Durchschuss mit Ausschuss.</p>` : ""}
+      </div>`;
   }
   function xrShow() {
     const A = X && X.hrv && X.hrv.A; if (!A || typeof G3 === "undefined") return;

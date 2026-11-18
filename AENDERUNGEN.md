@@ -1,3 +1,13 @@
+## v391 – Schusswunde auf der Haut (alle Tiere), Trefferbild-Bericht aufgeräumt
+
+**Ursache:** (1) Die Schusswunde (v382) war eine ebene Scheibe senkrecht zum Schuss. Auf der gekrümmten Decke steckte sie je nach Blickwinkel im Körper oder schwebte davor – sichtbar nur aus bestimmten Winkeln. (2) Im Trefferbild hatte „Schwarte und Muskel“ eine schlichte Zeile mit Punkt, die Organe eine Zeile mit Bildkasten; der Hinweistext stand zwischen Liste und Schussbericht.
+
+**Lösung (`hunt.js`, `style.css`):**
+- `woundSpot`/`woundMesh`: Jeder Punkt der Wunde (Haar, Rand, Loch) wird entlang der Flächennormale auf das tatsächliche Netz des Tiers gesetzt (Rumpf, Hals, Haupt; Ein- und Ausschuss) und leicht abgehoben – die Wunde liegt auf der Haut und folgt der Wölbung, für Hirsch, Keiler und Fasan.
+- Trefferbild: alle Zeilen mit gleichem 54-px-Symbolkasten (Gewebe 🧥, Knochen 🦴, Gefäße 🩸 statt Punkt, Organe weiter mit 3D-Bildchen); Hinweistexte („Nur vom Schusskanal …“, Durchschuss/stecken geblieben, ältere Aufnahme) stehen ganz unten, unter der Bedienhilfe.
+
+**Geprüft:** Testbrowser (Chromium/swiftshader, `?test&jagd`): Hirsch, Keiler, Fasan aus je vier Blickwinkeln – Wunde (und Ausschuss) liegt überall auf der Oberfläche; Trefferbild-Liste gesichtet; `hunt.test.js` (23), `trefferklarheit-v388`, `trefferbild-v357`, `weapons-v383`, `aura-v359`, `fixes-v354`, `jagd-v366`, `hunt-v283`, `hunt-presentation-v315`. **Nicht geprüft:** Handy/Safari; Wunde am Haupt (Kopfschuss) und bei Läufen (dort gibt es keine Wunde); Fasan-Ausschuss im Detail.
+
 ## v390 – Hof-Ereignismeldungen antippbar (Händler, Nachbar, weißer Hirsch …)
 
 **Ursache:** Die Meldungen zu Hof-Ereignissen („Ein fliegender Händler steht an der Straße“, „Nachbar Krüger braucht Holz“, „Ein weißer Hirsch im Wald“ …) hatten kein Ziel (v371 verteilte Ziele nur an Meldungen mit passendem Stichwort).

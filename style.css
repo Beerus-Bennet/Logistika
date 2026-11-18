@@ -5258,3 +5258,13 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 .feas-row span{display:flex;flex-direction:column;min-width:0}.feas-row small{font-size:11px;opacity:.85;line-height:1.3}
 .feas-row.yes b{color:#1d7a3a}.feas-row.no b{color:#b3261e}
 .feas-t{display:block;padding:4px 11px 7px;font-size:10px;opacity:.6}
+
+/* ---------------------------------------------------------------------
+   v391: Trefferbild – gleiche Zeilen für Organe und Gewebe, Hinweise ganz unten
+   --------------------------------------------------------------------- */
+#huntUI .hu-xr .xr-org li{min-height:54px}
+#huntUI .hu-xr .xr-organ-model.xr-gen{font-size:26px;line-height:1;filter:saturate(.9)}
+#huntUI .hu-xr .xr-org li.b .xr-organ-model.xr-gen{background:#1c3550}
+#huntUI .hu-xr .xr-org li.v .xr-organ-model{border-color:#d9503a;background:#3a1b24}
+#huntUI .hu-xr .xr-legs{margin-top:10px;padding-top:6px;border-top:1px solid #243d57}
+#huntUI .hu-xr .xr-legs .xr-leg{margin:4px 0}
