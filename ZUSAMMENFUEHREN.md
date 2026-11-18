@@ -1,3 +1,7 @@
+## v406 – Sichtbare Aussaat in bestehendem PR #121
+
+Ergänzt Ladeanzeige405 und Trefferbild403/404; main25c3000/Gebirge unverändert. Gesamt-/SW406 und team/staffwalk/staffgear406, Ladeassets405 und hunt/alpine403 erhalten. `fieldMode` neuer Feldaufträge wird gespeichert, alte Aufträge sind weiterhin lesbar. `e.sowAction` nur an der sichtbaren Figur, kein Save-Feld; bei Hintergrundarbeit keine Animationssperre. Laufanimation und Werkzeugablage dürfen den Säarm/die Sichel-Ausblendung nicht überschreiben. Saatkosten und Wachstumsbeginn erst nach eigenem Säauftrag; Ernte-/Saatmengen und vorhandene Freigaben bleiben erhalten.
+
 ## v405 – Hof-Ladeanzeige im bestehenden PR #121
 
 Ergänzt die bereits geprüften anatomischen Trefferbild-Symbole und die Konfliktauflösung404; enthält main25c3000/aktuelles Gebirge unverändert. Gesamt-/SW405, farmview/officefp/style405; hunt403/alpine403 bleiben. Die gemeinsame `ldStart`-Schnittstelle behält `finish()`, ergänzt `fail(message)` und verwendet keine geschätzte Dauer mehr. Bei Büroaufrufern bleiben zusätzliche Argumente unschädlich; der Abschluss wartet auf `O.build`. Keine Save-Migration und kein automatisches Merge/Deployment. Ein echter iPhone-Hänger konnte nicht reproduziert werden; die Anzeige und der abgefangene Fehlerfall wurden geprüft.

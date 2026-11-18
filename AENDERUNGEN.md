@@ -1,3 +1,11 @@
+## v406 – Landwirt sät sichtbar nach der Ernte
+
+**Ursache:** `staffDo` führte bei Feldarbeit im selben Abschluss erst `farmHarvest` und direkt danach `farmPlant` aus. Ernte und Aussaat hatten dieselbe Sichelbewegung; das Feld erschien ohne eigenen Sägang erneut bepflanzt.
+
+**Lösung:** Feldaufträge merken `fieldMode` (Ernte/Aussaat). Ernte leert das Feld, Aussaat ist ein eigener Arbeitsgang und bucht Saatgut erst bei dessen Abschluss. Alte Aufträge werden anhand ihrer Absicht und des Feldzustands erkannt. Bei der sichtbaren Aussaat hält die linke Hand einen Saatbeutel, die rechte nimmt Saat auf und streut sie in einem Bogen; wenige kurzlebige Körner fallen mit Schwerkraft. Sichel und Werkzeugablage respektieren diese Darstellung. Im sichtbaren Nahbereich mindestens 1,6 s pro Feld, auch bei 30×; außerhalb der Ansicht keine Abhängigkeit von Animationsbildern. Bereits manuell bepflanzte Felder werden übersprungen beziehungsweise nicht erneut berechnet. Bei Sammelaufträgen erfolgt die Bepflanzung weiterhin am Ende des Arbeitsgangs, jetzt erst nach den Säbewegungen.
+
+**Geprüft:** `aussaat-v406.test.js` (Ernte ohne Neusaat, alte/zwischenzeitlich geleerte Aufträge, zwei Felder bei 30×, einmalige Kosten, Hintergrundarbeit, manuell bepflanztes Feld), `field-menu-v303.test.js` (10 Szenarien), `worker-motion-v351.test.js` (14 Bewegungs-/Werkzeugprüfungen). Chromium/WebGL 390 × 844 auf Prüfbühne mit tatsächlichem Feld-/Figurenmodell: Saatbeutel, Sichel ausgeblendet, Körner, Pflanzzeitpunkt nach fertiger Säbewegung; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari. Vorschau/Details `docs/AUSSAAT-v406.md`.
+
 ## v405 – Ladeanzeige ohne widersprüchliche Prozentwerte
 
 **Befund:** Der Screenshot zeigt 13 %, obwohl der Balken deutlich weiter gefüllt ist. Die alte Anzeige animierte getrennte Ziffernrollen und Balken anhand einer gemerkten Ladezeit; sie maß keinen echten Aufbaufortschritt. Ein dauerhaftes Hängen auf dem iPhone wurde mangels Reproduktion nicht als behoben gewertet.

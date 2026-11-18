@@ -170,3 +170,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v404: PR121 mit main25c3000/PR122 zusammengeführt; beide v403-Dokumentationen erhalten, Gesamt-/SW404, hunt403/alpine403 unverändert.
 
 - v405: Gemeinsame Hof-/Büro-Ladeanzeige ohne Zeitprozent (`ldMake`/`ldStart`), „Fertig“ erst nach tatsächlicher Fertigstellung; Hof-Aufbaufehler mit Rückmeldung/Neuladen. Büro wartet vor `finish` auf leere `O.build`. farmview/officefp/style405, andere Assets erhalten. Browserprüfung `hofladen-v405.browser.js`, Details `docs/HOFLADEN-v405.md`.
+
+- v406: Feldarbeit getrennt über `j.fieldMode`/`staffFieldMode`; Ernte pflanzt nicht mehr sofort nach. `e.sowAction` ist reine Ansichtszeit (nicht gespeichert), im sichtbaren Nahbereich mindestens1,6s pro Feld; Hintergrund bleibt zeitgesteuert. Saatbeutel/Körner in team, linke Hand in staffwalk, Sichel-Ausblendung auch in staffgear. team/staffwalk/staffgear406. Tests `aussaat-v406.*`, Bericht `docs/AUSSAAT-v406.md`.
