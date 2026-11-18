@@ -32,6 +32,9 @@ const ALPINE = (()=>{
   if(ends)points.push(...ends);return points.sort((a,b)=>angle(a)-angle(b)).map(p=>({p,a:angle(p)}));
  }
  const lakeOutline=outline(L.x,L.z,L.rx,L.rz,96,a=>1+.055*Math.sin(a*3+.8)+.035*Math.sin(a*7),{x:62,z:-144,nx:Math.SQRT1_2,nz:Math.SQRT1_2,w:FW});
+ /* v405: Kein Seeufer jenseits der Falllippe – Umrisspunkte hinter der Lippenlinie werden auf sie zurückgesetzt (vorher hing rechts
+    neben dem Fall eine Wasserzunge über der Wand, der Fall wirkte geknickt). Die beiden Lippenpunkte bleiben exakt. */
+ lakeOutline.forEach(q=>{const al=(-(q.p[0]-62)+(q.p[1]+144))/Math.SQRT2,sd=((q.p[0]-62)+(q.p[1]+144))/Math.SQRT2;if(al>-.4&&Math.abs(Math.abs(sd)-FW)>1e-6){const d=al+.4+.6*(1-sm(FW,FW+6,Math.abs(sd)));q.p=[q.p[0]+Math.SQRT1_2*d,q.p[1]-Math.SQRT1_2*d];}});
  const first=FWM.smoothLine(DRAIN.map(p=>p.slice(0,2)),6),dsx=first[1][0]-first[0][0],dsz=first[1][1]-first[0][1],dsl=Math.hypot(dsx,dsz);
  const poolOutline=outline(POOL.x,POOL.z,POOL.rx,POOL.rz,64,a=>1+.018*Math.sin(a*5+.4)+.012*Math.cos(a*3),{x:DRAIN[0][0],z:DRAIN[0][1],nx:-dsz/dsl,nz:dsx/dsl,w:DRAIN[0][3]});
  function radialE(poly,cx,cz,x,z){const dx=x-cx,dz=z-cz,r=Math.hypot(dx,dz);if(r<1e-8)return 0;const a=Math.atan2(dz,dx);let lo=0,hi=poly.length;while(lo<hi){const m=(lo+hi)>>1;if(poly[m].a<a)lo=m+1;else hi=m;}
@@ -71,11 +74,11 @@ const ALPINE = (()=>{
   /* v403: Karsee mit Felsriegel – das Ufer steigt gleich hinter der Wasserlinie über den Spiegel (Kamm L.y+1,9); auf der Bergseite
      wächst die Karwand weiter, zur Talseite fällt der Riegel erst danach ab. Nur die Abflusskerbe bleibt offen (vorher lag das
      Gelände außen tiefer als der See, er wirkte wie übergelaufen). */
-  if(e<1.6){const basin=L.y-2.4+2.1*sm(.18,1,e),crest=L.y-.3+2.2*sm(1,1.12,e);
-   if(e<1)h=basin;else h=h>=crest?crest+(h-crest)*sm(1.05,1.35,e):crest+(h-crest)*sm(1.2,1.6,e);
-   const notch=(1-sm(FW,FW+1.6,Math.abs(side)))*sm(-3.6,-2.2,along);if(notch>0&&e>=1)h+=(Math.min(h,L.y-.3)-h)*notch;}
+  if(e<1.6){const basin=L.y-2.4+2.1*sm(.18,1,e),crest=L.y-.3+3.8*sm(1,1.16,e); /* v405: Felsrand höher (Spiegel + 3,5 statt + 1,9) */
+   if(e<1)h=basin;else h=h>=crest?crest+(h-crest)*sm(1.05,1.35,e):crest+(h-crest)*sm(1.32,1.75,e);
+   const notch=(1-sm(FW-.2,FW+.6,Math.abs(side)))*sm(-3.6,-2.2,along);if(notch>0&&e>=1)h+=(Math.min(h,L.y-.3)-h)*notch;}
   if(e>=1||channel(x,z).y<1)h=cutChannel(x,z,h);
-  if(along>-.4&&along<11&&Math.abs(side)<FW+3){const cliff=(L.y-.1)*(1-sm(-.1,1.5,along));h=h+(Math.min(h,cliff)-h)*(1-sm(FW+.3,FW+2.6,Math.abs(side)));}
+  if(along>-.4&&along<11&&Math.abs(side)<FW+3){const cliff=(L.y-.1)*(1-sm(-.1,1.5,along));const sa=Math.abs(side),wide=sm(1,2.2,along),k=(1-sm(FW-.1,FW+.9,sa))*(1-wide)+(1-sm(FW+.3,FW+2.6,sa))*wide;h=h+(Math.min(h,cliff)-h)*k; /* v405: an der Lippe senkrechte Felswangen direkt neben dem Fall – kein Überlauf neben der Kerbe */}
   /* v403: runder, tiefer Kolk; wirkt nur vor der Wand (nicht durch den Riegel in den See) */
   const ePool=poolE(x,z);if(ePool<1.6&&along>.2){const k=sm(.2,1.5,along),bed=POOL.y-.4-2.2*(1-sm(.1,1,ePool)),bank=POOL.y-.32+1.1*sm(1,1.12,ePool),t=ePool<1?bed:bank+(h-bank)*sm(1.12,1.6,ePool);h+=(t-h)*k;}
   if(channel(x,z).y<1)h=cutChannel(x,z,h,true);
@@ -123,7 +126,7 @@ const ALPINE = (()=>{
  }
  /* v386: Ein Material für See, Kolk und Fluss; am Auslauf dieselben
     Strömungskoordinaten statt einer sichtbaren Materialkante. */
- function basinWater(poly,cx,cz,y,N,mouth){const b=new FM.MB(),grow=i=>{const p=poly[i%poly.length].p;return mouth&&mouth.some(m=>Math.hypot(p[0]-m[0],p[1]-m[1])<1e-6)?1:1.035;},at=(i,r)=>{const g=r>.999?grow(i):1;return [cx+(poly[i%poly.length].p[0]-cx)*r*g,y,cz+(poly[i%poly.length].p[1]-cz)*r*g];}; /* v403: Rand 3,5 % unter das ansteigende Ufer, Abflusskanten exakt */
+ function basinWater(poly,cx,cz,y,N,mouth){const b=new FM.MB(),grow=i=>{const p=poly[i%poly.length].p;if(!mouth)return 1.035;const mc=[(mouth[0][0]+mouth[1][0])/2,(mouth[0][1]+mouth[1][1])/2],hw=Math.hypot(mouth[0][0]-mc[0],mouth[0][1]-mc[1]);return 1+.035*sm(hw+.2,hw+4,Math.hypot(p[0]-mc[0],p[1]-mc[1])); /* v405: Zuwachs läuft zur Abflusskante weich aus – kein Knick an der Lippe */},at=(i,r)=>{const g=r>.999?grow(i):1;return [cx+(poly[i%poly.length].p[0]-cx)*r*g,y,cz+(poly[i%poly.length].p[1]-cz)*r*g];}; /* v403: Rand 3,5 % unter das ansteigende Ufer, Abflusskanten exakt */
   const coords=p=>{const pool=y<1,head=pool?DRAIN[0]:[62,-144],tx=pool?dsx/dsl:-Math.SQRT1_2,tz=pool?dsz/dsl:Math.SQRT1_2,dx=p[0]-head[0],dz=p[2]-head[1],along=dx*tx+dz*tz,side=(-tz*dx+tx*dz)/(pool?3:3.2),rad=pool?poolE(p[0],p[2]):lakeE(p[0],p[2]),mouth=sm(-5,0,along)*(1-sm(1,2,Math.abs(side)))*(1-sm(0,2,along));return[along,rad*.85*(1-mouth)+side*mouth,.45];};
   for(let j=0;j<N;j++)for(let i=0;i<poly.length;i++){const r=j/N,s=(j+1)/N,A=at(i,r),B=at(i+1,s),C=at(i,s),D=at(i+1,r);b.triV(A,B,C,coords(A),coords(B),coords(C));if(j)b.triV(A,D,B,coords(A),coords(D),coords(B));}return b;
  }

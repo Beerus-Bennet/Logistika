@@ -1,3 +1,11 @@
+## v405 – Bergsee: kein Knick an der Falllippe, höherer Felsrand
+
+**Ursache:** Der Seeumriss ragte rechts neben der Falllippe über die Lippenlinie hinaus; dort hing eine Wasserzunge über der Wand, der Fall wirkte geknickt. Zusätzlich wurde das Gelände neben der Kerbe breit auf Seehöhe abgesenkt, und der Wasserrand wuchs bis an die Lippe um 3,5 % – an den Lippenenden entstand eine Stufe. Der Felsrand lag nur 1,9 über dem Spiegel und war schmal, aus flachen Blickwinkeln sah der See übergelaufen aus.
+
+**Lösung (`alpine.js`):** Umrisspunkte hinter der Lippenlinie werden auf sie zurückgesetzt (Lippenpunkte bleiben exakt); der Zuwachs des Wasserrands läuft zur Abflusskante weich aus; an der Lippe stehen senkrechte Felswangen direkt neben dem Fall (Absenkung nur in Fallbreite, weiter unten wie bisher); Felsrand auf Spiegel + 3,5 und breiter, Talseite fällt erst später ab.
+
+**Geprüft (Testbrowser):** Vorher/Nachher von oben und aus flachem Winkel (`docs/assets/v404/lippe-rand-v405.png`), Lippe aus der Nähe; `wasseroptik-v386.test.js` bestanden. **Nicht geprüft:** Handy.
+
 ## v404 – Gebirge-Feinschliff: Stockente, Steinbock, Wanderweg, Wegweiser, Aufprall, kein Regenbogen
 
 **Ursache (Rückmeldung zu v403):** Ente im Badeenten-Gelb; Steinbock mit sichtbaren Lücken (grobe Ellipse, loser Kopf, dünne Läufe); Wanderweg aus geraden Einzelstücken (Lücken/Überlappungen) quer über Felswände; Wegweiser-Pfeile lose neben den Tafeln und schlecht platziert; Regenbogen kaum sichtbar (von oben als dunkler Strich im Kolk); Aufprallschaum als kleine runde Ringzone – wirkte wie ein dünner, runder Strahl.
