@@ -1,3 +1,16 @@
+## v417 – Außenlager-Pakete je einmal, Futter in Portionen je Mahlzeit
+
+**Ursache:** Die Außenlager-Pakete (+1.000/+5.000/+10.000 Plätze) ließen sich beliebig oft kaufen, obwohl je eines reicht. Bei der Fütterung verbrauchte jede Mahlzeit ein ganzes Gebinde (z. B. einen 20-kg-Ballen je Rind) – das Futter war schnell weg und die Tiere warteten.
+
+**Lösung:**
+- `farm.js`: Jedes Paket nur einmal (`farmExternalPacks` leitet die gekauften Pakete aus der Ausbaustufe ab: 10, 5, 1 – keine Migration, alte Stände mit doppelten Käufen behalten ihre Plätze). Knopf zeigt „✓ gekauft“ (`farmview.js`).
+- `farmdata.js`: `meal` = kg Futter je Mahlzeit – Huhn 0,15, Milchkuh 5, Schwein 1,5, Schaf 2, Rind 5 kg.
+- `farm.js`: Ein angebrochenes Gebinde liegt in `S.farm.feedOpen[futter]` (kg); erst wenn der Rest nicht mehr reicht, wird ein neues aus dem Lager genommen. Ein Ballen (20 kg) reicht so für 4 Rinder, ein Eimer Hühnerfutter (5 kg) für 33 Hühner. Hilfen `feedMeal`, `feedMeals`, `feedPacksFor`, `farmFeedAvail`; Großkunden-Tagesmenge rechnet mit Portionen.
+- `team.js`: Tierpflege, Einkaufsbedarf und Vertretung rechnen in Portionen statt in ganzen Gebinden.
+- Alte Spielstände ohne `feedOpen` starten mit 0 kg angebrochen.
+
+**Geprüft:** Unit-Test `aussenlager-futter-v417.test.js` (Pakete je einmal, alte Stände Stufe 20 und 2, 4 Rinder je Ballen, 33 Hühner je Eimer), `farm-wholesale-v330.test.js` bestanden; Testbrowser: Silo-Fenster mit Stufe 11 zeigt „+1.000 ✓ gekauft / +5.000 kaufbar / +10.000 ✓ gekauft“, keine Seitenfehler. **Nicht geprüft:** Handy, längerer Spielverlauf mit Hofkräften.
+
 ## v416 – Tierbildchen im Waffenschrank statt Emojis
 
 Markierte Tier-Eignungsanzeige mit denselben 3D-Modellen wie die Jagdsammlung. Drei gemeinsam gecachte Bildchen, Artnamen und zugängliche Eignungsbeschriftung; Regeln unverändert. weapons/style416, Gesamt416. Syntax geprüft; kein echter Handytest.

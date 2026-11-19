@@ -371,8 +371,11 @@ function farmExternalLevel(st) {
 }
 function farmExternalCap(st) { return FEXTERNAL[st] ? farmExternalLevel(st) * FEXTERNAL[st].places : 0; }
 function farmExternalTotal(st, n) { return FEXTERNAL[st] ? Math.round(FEXTERNAL[st].price * (n + .075 * n * (n - 1))) : 0; }
+/* v417: Jedes Paket (+1, +5, +10 Abschnitte) gibt es nur einmal. Gekaufte Pakete ergeben sich eindeutig aus dem Stand
+   (Summen von {1,5,10}); ältere Stände werden von groß nach klein zugeordnet – keine Migration nötig. */
+function farmExternalPacks(st) { let lv = farmExternalLevel(st); const got = new Set(); for (const n of [10, 5, 1]) if (lv >= n) { got.add(n); lv -= n; } return got; }
 function farmExternalCost(st, n) {
-  if (!FEXTERNAL[st] || ![1, 5, 10].includes(n)) return null;
+  if (!FEXTERNAL[st] || ![1, 5, 10].includes(n) || farmExternalPacks(st).has(n)) return null;
   const lv = farmExternalLevel(st), cost = farmExternalTotal(st, lv + n) - farmExternalTotal(st, lv);
   return Number.isSafeInteger(cost) && cost > 0 ? cost : null;
 }
@@ -741,10 +744,21 @@ function aniState(a) {
   if (a.fed == null) return "hungry";
   return S.time >= a.fed ? "ready" : "busy";
 }
+/* v417: Tiere fressen je Mahlzeit nur ihre Portion (A.meal kg); ein Ballen/Sack wird angebrochen und reicht für mehrere Mahlzeiten.
+   Der angebrochene Rest steht in S.farm.feedOpen (kg je Futterart, alte Stände ohne Feld = nichts angebrochen). */
+function feedMeal(A) { return A.meal || (FITEMS[A.feed] && FITEMS[A.feed].kg) || 1; }
+function feedPackKg(id) { return (FITEMS[id] && FITEMS[id].kg) || 1; }
+function feedOpen(id) { return (S.farm.feedOpen && S.farm.feedOpen[id]) || 0; }
+function farmFeedAvail(A) { return feedOpen(A.feed) + 1e-9 >= feedMeal(A) || farmInv(A.feed) > 0; }
+/* Mahlzeiten aus Vorrat + angebrochenem Rest, und wie viele Packungen für n Mahlzeiten fehlen */
+function feedMeals(A) { return Math.floor((farmInv(A.feed) * feedPackKg(A.feed) + feedOpen(A.feed)) / feedMeal(A) + 1e-9); }
+function feedPacksFor(A, meals) { return Math.max(0, Math.ceil((meals * feedMeal(A) - feedOpen(A.feed)) / feedPackKg(A.feed) - 1e-9)); }
 function farmFeed(o, a) {
   if (!a || aniState(a) !== "hungry") return false;
   const A = FANIMALS[penKind(o)];
-  if (!farmTake(A.feed, 1)) return "nofeed";
+  const m = feedMeal(A), O = S.farm.feedOpen = S.farm.feedOpen || {};
+  if ((O[A.feed] || 0) + 1e-9 < m) { if (!farmTake(A.feed, 1)) return "nofeed"; O[A.feed] = (O[A.feed] || 0) + feedPackKg(A.feed); }
+  O[A.feed] = Math.max(0, O[A.feed] - m);
   a.fed = S.time + A.t;
   const q = Math.min(5, penInfo(o).stars);
   if (a.mast) { a.qs = (a.qs || 0) + q; a.qn = (a.qn || 0) + 1; a.q = a.qs / a.qn; }
@@ -1158,7 +1172,7 @@ function farmBulkDaily(id, days, seen) {
   for (const A of Object.values(FANIMALS)) {
     if (A.out !== id) continue;
     const animals = objs.filter(o => o.t === A.house).reduce((n, o) => n + o.animals.length, 0), yield_ = (A.yield || 1) / (A.mast || 1);
-    rate += Math.min(animals * 1440 / A.t, input(A.feed)) * yield_;
+    rate += Math.min(animals * 1440 / A.t, input(A.feed) * feedPackKg(A.feed) / feedMeal(A)) * yield_;   /* v417: eine Packung reicht für mehrere Mahlzeiten */
   }
   for (const [kind, M] of Object.entries(FMACHINES)) {
     const machines = objs.filter(o => o.t === kind && machReady(o)).length;

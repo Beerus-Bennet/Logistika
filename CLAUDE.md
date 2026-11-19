@@ -194,3 +194,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v415: Liefertruhe nutzt farmTreasureLoot wie Grabtruhe: Bedarf/Freigaben/Lager und kapital-/fortschrittsabhängiges Geld. Seltenheitschancen und Einmal-Schutz erhalten. erbe415, Gesamt415. Tests treasure-loot-v305.test.js und liefertruhe-v415.test.js.
 
 - v416: Waffenschrank-Eignung nutzt gecachte HUNT-Tiermodelle statt Emojis, mit Artnamen/zugänglicher Eignungsangabe. weapons/style416, Gesamt416; Jagdregeln unverändert.
+- v417: Außenlager-Pakete je einmal (`farmExternalPacks` aus der Stufe, keine Migration); Futter in Portionen (`FANIMALS[].meal` kg, angebrochene Gebinde in `S.farm.feedOpen`, Hilfen `feedMeal`/`feedMeals`/`feedPacksFor`/`farmFeedAvail`, auch in `team.js`). Test `aussenlager-futter-v417.test.js`.
