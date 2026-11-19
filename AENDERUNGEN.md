@@ -1,3 +1,13 @@
+## v428 – Wanderweg beginnt am Gebirgsrand, Wegweiser steht nicht mehr auf der Veranda
+
+**Ursache:** Der Wanderweg begann bei (33, −113) mitten in der Bergwiese und führte in einem Bogen zur Hütte – ohne Anschluss an den Hof. Der Wegweiser an der Hütte wurde 1,15 Einheiten neben den Wegpunkt an der Hüttentür gesetzt und stand dadurch auf der Veranda.
+
+**Lösung (`alpine.js`):**
+- Der Weg beginnt jetzt am Gebirgsrand zum Hof hin (`TRAIL0` = (6, −100)) und führt von dort ohne Umweg zur Hütte und weiter zur Bank am Bergsee. Der Einstiegs-Wegweiser steht an diesem Anfang.
+- Der Wegweiser an der Hütte steht vor der Terrasse (mindestens 9,5 Einheiten vom Haus) auf der Seite, die vom Haus wegführt (`sign(…, away)`); die Tafeln zeigen zur Hütte und zurück.
+
+**Geprüft:** `gebirge-v413.test.js`, `huettenplatte-v414.test.js`, `wasseroptik-v386.test.js` bestanden (Weg bleibt trocken); Testbrowser-Bilder von Hütte, Weg und Gesamtansicht. **Nicht geprüft:** Handy; der Weg endet am Rand des Gebirgsbereichs und hat keine Verbindung zu einem Hofweg (dort gibt es keinen Hofweg in der Nähe).
+
 ## v427 – Mergekonflikte nach Fluss-Baumkorrektur behoben
 
 main65e4497 mit Fluss-Baumkorrektur424 vollständig integriert. Waffen425 und Arbeiterkorrektur426 erhalten; Dokumentation beider Seiten zusammengeführt. Gesamt-/SW427, einzelne Assetstände unverändert. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
