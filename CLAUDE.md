@@ -210,3 +210,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v423: hunt-v307-Prüfstand an seit v366 gültige Stützphase angepasst, fehlende UI-/Mesh-Schnittstellen ergänzt. Alle zehn Prüfgruppen grün, Spielcode unverändert; Gesamt-/SW423.
 
 - v425: Glock-Details nach offizieller G17-Gen5-Referenz; Thumbnail-Option outline nur für Waffen .0025 statt Standard .011. wpn425, weapons/worldview425, Gesamt425. Andere Modellkonturen und Spielmechanik erhalten. Bericht docs/WAFFENKONTUR-v425.md.
+
+- v426: Holzfäller-Pendeln – staffTreeSpot darf freie Nachbarposition beim Vorziehen nicht zurück in Baumzelle verschieben; mit gerundeten Wegkoordinaten prüfen. Alte gesperrte Fällziele in stepStaff ab tatsächlicher Position neu planen (staffRepath351, Restarbeit erhalten). worker-motion-v351.test.js enthält Regression für neue/gespeicherte Aufträge; team426, Gesamt426.

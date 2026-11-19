@@ -451,7 +451,17 @@ function staffTreeSpot(t, role) {
   const p = c ? [c[0] + 0.5, c[1] + 0.5] : [t.x + 0.75, t.z + 0.75];
   /* ein Stück zum Stamm hin, damit die Axt den Baum trifft */
   const dx = t.x - p[0], dz = t.z - p[1], l = Math.hypot(dx, dz) || 1;
-  return { x: p[0] + dx / l * Math.max(0, l - 0.7), z: p[1] + dz / l * Math.max(0, l - 0.7), fx: t.x, fz: t.z };
+  /* v426: Nur auf freier Fläche zum Stamm vorziehen. Sonst liegt der
+     Bedienplatz wieder in der Baumzelle und Ausweichen/Routenfolge pendeln. */
+  const advance=Math.max(0,l-.7),steps=Math.max(1,Math.ceil(advance/.05)),walls=navWallsFor(role);
+  let x=p[0],z=p[1];
+  for(let i=1;i<=steps;i++){
+    const qx=Math.round((p[0]+dx/l*advance*i/steps)*100)/100,qz=Math.round((p[1]+dz/l*advance*i/steps)*100)/100;
+    const ix=Math.floor(qx),iz=Math.floor(qz);
+    if(navIn(ix,iz)&&!navOk(navIdx(ix,iz),role,-1,-1)||navHit(x,z,qx,qz,walls))break;
+    x=qx;z=qz;
+  }
+  return {x,z,fx:t.x,fz:t.z};
 }
 const staffDist = (s, x, z) => Math.hypot((s.px == null ? x : s.px) - x, (s.pz == null ? z : s.pz) - z);
 function staffGap(s) { const R = FSTAFF_ROLES[s.role]; return R.gap * (1 - (s.perk || 0) / 100) * (s.fed === false ? 2 : 1); }
@@ -1819,6 +1829,15 @@ function stepStaff(dt, time) {
     const e = WV.staff.get(s.id);
     if (!e) return;
     const j = s.job, n = e.node, A = e.arm, calling = staffCalling(s);
+    /* v426: Alte gespeicherte Fällaufträge ab der wirklichen Figurposition
+       berichtigen; verbleibende Arbeitszeit bleibt beim Neuplanen erhalten. */
+    if(j&&j.k==='fell'&&navBlockedAt(j.x,j.z)){
+      const t=farmTree(j.tid),p=t&&staffTreeSpot(t,s.role);
+      if(p&&!navBlockedAt(p.x,p.z)){
+        const old=[j.x,j.z];j.x=p.x;j.z=p.z;
+        if(!staffRepath351(e,j)){j.x=old[0];j.z=old[1];}
+      }
+    }
     e.sowing=false;if(e.seedBag)e.seedBag.visible=false;
     if(e.sowAction&&e.sowAction.job!==j)e.sowAction=null;
     const gdt = e.lt != null ? Math.max(0, S.time - e.lt) : 0; e.lt = S.time;   /* v232: Spielzeit seit dem letzten Bild */
