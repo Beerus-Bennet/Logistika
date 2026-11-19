@@ -198,3 +198,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v419: Bestehende Waffenmodelle mit echten Mündungsvertiefungen/offenen Abzugsbügeln, erkennbaren Systemen und größerer gecachter Vorschau. BUILD nur Anzeige, LIST/Physik/Save unverändert. weapons/style419, Gesamt419, Basis main69f990c. Tests weapons-v383.test.js und weapons-v419.*, Bericht docs/WAFFENOPTIK-v419.md.
 
 - v420: Tagesaufgaben-Symbolspalte als Inline-SVG (DAILY_TASK_ART/dailyTaskIcon in goals.js), Verkehrsmittel nach gespeichertem t.m statt festem Schiff. Nur Darstellung, Ziele-/Belohnungslogik unverändert. goals/style420, Gesamt420; Waffen419 erhalten. Vier Chromium-Formate geprüft, Bericht docs/ZIELSYMBOLE-v420.md.
+
+- v417: Außenlager-Pakete je einmal (`farmExternalPacks` aus der Stufe, keine Migration); Futter in Portionen (`FANIMALS[].meal` kg, angebrochene Gebinde in `S.farm.feedOpen`, Hilfen `feedMeal`/`feedMeals`/`feedPacksFor`/`farmFeedAvail`, auch in `team.js`). Test `aussenlager-futter-v417.test.js`.
+
+- v421: main77a8093 in PR130 integriert; Außenlager/Futter417 und Waffen419/Zielsymbole420 erhalten, Gesamt-/SW421.

@@ -2326,7 +2326,7 @@ function farmExternalHTML(st) {
   const extra = farmExternalCap(st), available = farmExternalAvailable(st), hof = st === "silo" || st === "barn";
   return `<section class="fs-external"><div><b>🏭 Außenlager · ${esc(E.n)}</b><small>Zusätzliche Fläche außerhalb des Hofs. Deine Ware verwaltest du weiterhin hier im Lager.</small></div>
     <strong>${extra ? "+" + fmt(extra) + " Plätze extern" : "Noch keine Außenfläche"}</strong>
-    ${available ? `<div class="external-buy">${[1, 5, 10].map(n => { const price = farmExternalCost(st, n), disabled = price == null || S.money < price; return `<button class="btn tiny${n > 1 ? " ghost" : ""}${disabled ? " disabled" : ""}" data-external="${st}|${n}"${disabled ? " disabled" : ""}>+${fmt(E.places * n)} Plätze<small>${price == null ? "nicht verfügbar" : eur(price) + " einmalig"}</small></button>`; }).join("")}</div>`
+    ${available ? `<div class="external-buy">${[1, 5, 10].map(n => { const price = farmExternalCost(st, n), disabled = price == null || S.money < price; return `<button class="btn tiny${n > 1 ? " ghost" : ""}${disabled ? " disabled" : ""}" data-external="${st}|${n}"${disabled ? " disabled" : ""}>+${fmt(E.places * n)} Plätze<small>${farmExternalPacks(st).has(n) ? "✓ gekauft" : price == null ? "nicht verfügbar" : eur(price) + " einmalig"}</small></button>`; }).join("")}</div>`
       : `<small>Ab Hof-Level 15 und nach Gründung deiner Spedition.</small>`}
     ${extra ? `<button class="btn tiny ghost" data-external-map="${st}">📍 Außenlager auf der Karte</button>` : ""}
     ${extra && st !== "troph" ? `<button class="btn tiny ghost" data-store-orders="${hof ? "hof" : st === "holz" ? "saege" : "see"}">📋 ${hof ? "Großkundenaufträge" : "Bestellungen"} ansehen</button>` : ""}
