@@ -1,3 +1,11 @@
+## v418 – Trägerschuss nur durch Weichteile ist nicht mehr tödlich
+
+**Ursache:** Jeder Treffer in der Trägerzone galt als tödlich. Traf der Kanal weder Halswirbel noch Halsschlagader, Drosselvene oder Luftröhre, stand im Trefferbild zwar „Halsweichteile (kein lebenswichtiges Organ)“ mit 65 % Wirkung, das Stück fiel aber trotzdem nach 8–18 m. Messung (Seitenschüsse, Raster): beim Hirsch 43 %, beim Keiler 57 % aller Trägertreffer betrafen nur Weichteile.
+
+**Lösung (`hunt.js`):** Neue Wertung `halsweich` („Weichschuss am Träger“, nicht tödlich). Nach der Organprüfung im Schuss (`neckSoft`) wird ein reiner Weichteiltreffer beim Schalenwild dazu: Das Stück flüchtet krank wie beim Weichschuss, Wirkung 30 %. Halswirbel (sofort), Schlagader/Drossel/Luftröhre (kurze Flucht) bleiben tödlich. Die Aufzeichnung behält `zone: "hals"` für Schusskanal und Einschussloch; das Merkmal `soft418` sorgt im Trefferbild für die richtige Beschriftung. Fasan unverändert. Ältere gespeicherte Trägerschüsse behalten Wertung, Medaille und Erlös.
+
+**Geprüft:** neuer Unit-Test `traeger-weich-v418.test.js` (Raster aller Trägertreffer bei Hirsch und Keiler: weich → nicht tödlich, Wirbel/Adern/Luftröhre → tödlich; Fasan/andere Zonen unverändert; Trefferbild neu/alt). Jagd-Tests vorher/nachher mit gleichem Ergebnis (`hunt-v307` und `fixes-v359` schlugen schon vorher fehl). **Nicht geprüft:** Handy; kein Schuss im Testbrowser.
+
 ## v416 – Tierbildchen im Waffenschrank statt Emojis
 
 Markierte Tier-Eignungsanzeige mit denselben 3D-Modellen wie die Jagdsammlung. Drei gemeinsam gecachte Bildchen, Artnamen und zugängliche Eignungsbeschriftung; Regeln unverändert. weapons/style416, Gesamt416. Syntax geprüft; kein echter Handytest.
