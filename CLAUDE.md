@@ -208,4 +208,11 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v422: PR129 mit main2b55c29 integriert; hunt418 erhalten, Waffen419/Zielsymbole420/Futter417 ebenfalls. Gesamt-/SW422.
 
 - v423: hunt-v307-Prüfstand an seit v366 gültige Stützphase angepasst, fehlende UI-/Mesh-Schnittstellen ergänzt. Alle zehn Prüfgruppen grün, Spielcode unverändert; Gesamt-/SW423.
+
+- v425: Glock-Details nach offizieller G17-Gen5-Referenz; Thumbnail-Option outline nur für Waffen .0025 statt Standard .011. wpn425, weapons/worldview425, Gesamt425. Andere Modellkonturen und Spielmechanik erhalten. Bericht docs/WAFFENKONTUR-v425.md.
+
+- v426: Holzfäller-Pendeln – staffTreeSpot darf freie Nachbarposition beim Vorziehen nicht zurück in Baumzelle verschieben; mit gerundeten Wegkoordinaten prüfen. Alte gesperrte Fällziele in stepStaff ab tatsächlicher Position neu planen (staffRepath351, Restarbeit erhalten). worker-motion-v351.test.js enthält Regression für neue/gespeicherte Aufträge; team426, Gesamt426.
+
 - v424: Keine Bäume auf dem Sandrand des Flusses – `creekBankD`/`CREEK_BANK` in `erbe.js` (Pflanzplätze), einmalige Bereinigung `F.river424`. Test `fluss-baeume-v424.test.js`.
+
+- v427: PR133 mit main65e4497/Fluss-Baumkorrektur424 integriert, Waffen425 und Arbeiter426 erhalten. Gesamt-/SW427.

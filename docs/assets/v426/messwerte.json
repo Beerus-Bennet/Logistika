@@ -1,0 +1,13 @@
+{
+  "result": {
+    "initialBlocked": true,
+    "blocked": false,
+    "rev": 0,
+    "maxJump": 0,
+    "dist": 0,
+    "moving": false,
+    "moneySame": true,
+    "invSame": true
+  },
+  "errors": []
+}

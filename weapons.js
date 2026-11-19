@@ -195,16 +195,19 @@ const WEAPONS = (() => {
     bx(b, .02, .069, 0, .21, .004, .02, 0x30343a);
     bx(b, 0.0, 0.02, 0, 0.19, 0.023, 0.032, C.poly);
     tube(b, .1, .048, 0, .009, .0075, C.steel); muzzle(b, .126, .048, 0, .009, C.steel);
-    bx(b, -0.065, -0.04, 0, 0.05, 0.115, 0.034, C.poly, { rz: 0.2 }); bx(b, -0.085, -0.1, 0, 0.044, 0.012, 0.036, C.poly, { rz: 0.2 });
+    /* v425: Griff nach hinten geneigt, voller Gen5-Griff ohne Fingerrillen. */
+    profile(b, [[-.104,-.087],[-.043,-.087],[-.025,.019],[-.078,.026]], .034, C.poly);
+    bx(b, -.074, -.091, 0, .067, .009, .036, C.black);
     guard(b, .025, -.019, .08, .059, C.poly);
     for (const z of [-.016, .016]) {
       for (let i = 0; i < 5; i++) bx(b, -.068 + i * .009, .05, z, .003, .026, .002, C.steel);
-      bx(b, -.07, -.04, z * 1.12, .026, .058, .003, 0x414449, { rz: .2 });
+      profile(b, [[-.092,-.071],[-.052,-.071],[-.038,-.004],[-.078,.002]], .002, 0x34373b, z * 1.12);
+      for (let i=0;i<4;i++) bx(b, .073+i*.009, .05, z, .002, .023, .0015, C.steel);
     }
-    bx(b, .038, .057, .016, .045, .018, .003, C.steelL);                     /* Patronenlager im Auswurffenster */
-    bx(b, .038, .069, 0, .045, .003, .021, C.steelL);
+    bx(b, .028, .057, .016, .036, .014, .002, C.steel);                     /* Patronenlager im Auswurffenster */
+    bx(b, .028, .069, 0, .036, .002, .021, C.steel);
     bx(b, .018, .015, .019, .027, .005, .004, C.steel);                      /* Schlittenfang */
-    bx(b, 0.118, 0.073, 0, 0.012, 0.012, 0.01, C.steelL); bx(b, -0.07, 0.073, 0, 0.018, 0.012, 0.02, C.steelL);         /* Korn, Kimme */
+    bx(b, .118, .073, 0, .008, .005, .006, C.black); bx(b, -.07, .073, 0, .012, .005, .019, C.black);         /* Korn, Kimme */
     return b;
   }
   function revolver() {
@@ -262,7 +265,7 @@ const WEAPONS = (() => {
   function cardHTML(w) {
     const g = G(), mine = owns(w.id), sel = g.sel === w.id && mine;
     const compact = w.model === "pistol" || w.model === "revolver", build = BUILD[w.model];
-    const img = typeof thumbSpan === "function" ? thumbSpan("wpn419:" + w.id, () => model(w.id), "🔫", false, { yaw: 1.16, pitch: .22, big: true, noShadow: true }) : "🔫";
+    const img = typeof thumbSpan === "function" ? thumbSpan("wpn425:" + w.id, () => model(w.id), "🔫", false, { yaw: 1.16, pitch: .22, big: true, noShadow: true, outline: .0025 }) : "🔫";
     const act = sel ? `<button class="btn tiny" disabled>✔ Ausgerüstet</button>`
       : mine ? `<button class="btn tiny" data-wp="sel" data-id="${w.id}">Ausrüsten</button>`
       : w.special ? `<button class="btn tiny ghost" disabled>🎡 Nur im Lucky-Rad</button>`

@@ -101,6 +101,26 @@ test('Übergabe wartet am Fach, läuft sichtbar ab und wird nach dem Laden nicht
  run(`allWorkers();var s=S.farm.staff[0],e=WV.staff.get(s.id);staffGo(s,0,{k:'home',i:0});var j=s.job,st=j.stops[0],at=j.route[st.i],total=j.len+j.stops.reduce((n,q)=>n+q.w,0);j.t0=S.time-st.d*j.walk/total;e.x=at[0]+2;e.z=at[1];for(let i=0;i<20;i++){S.time+=.01;STAFF_GEAR.prepare(s,e,.02,.01);}var waited=e.gearAction.t;e.x=at[0];e.z=at[1];for(let i=0;i<92;i++){S.time+=.01;STAFF_GEAR.prepare(s,e,.02,.01);}var finished=st.done351;s.job=JSON.parse(JSON.stringify(j));e.gearAction=null;STAFF_GEAR.prepare(s,e,.02,.01);`);
  assert.equal(run('waited'),0);assert.equal(run('finished'),true);assert.equal(run('e.gearAction'),null);
 });
+/* v426: Wald-Arbeitsplatz darf nach dem Vorziehen nicht wieder im Baum liegen. */
+test('v426 Holzfäller: freie Baumplätze und kein Pendeln auch bei alten gespeicherten Zielen',()=>{
+ for(const legacy of [false,true]){
+  C.legacy=legacy;
+  run(`allWorkers();S.time=1100;var s=S.farm.staff.find(s=>s.role==='holzfaeller'),e=WV.staff.get(s.id);S.farm.staff=[s];
+   var blocked=S.farm.trees.filter(t=>t.st==='up').filter(t=>{const p=staffTreeSpot(t,s.role);return navBlockedAt(p.x,p.z);});`);
+  assert.equal(run('blocked.length'),0,'Baumplätze liegen auf freien Zellen');
+  run(`var t=S.farm.trees.find(t=>t.id===1);e.x=e.node.x=s.px=27.5;e.z=e.node.z=s.pz=-9.5;staffGo(s,0,{k:'fell',tid:t.id,what:'fällt eine Birke'});
+   if(legacy){var p=[27.5,-9.5],dx=t.x-p[0],dz=t.z-p[1],l=Math.hypot(dx,dz);s.job.x=p[0]+dx/l*(l-.7);s.job.z=p[1]+dz/l*(l-.7);s.job.route[s.job.route.length-1]=[s.job.x,s.job.z];s.job.len=routeLen(s.job.route);s.job=JSON.parse(JSON.stringify(s.job));}
+   var cash=S.money,inv=JSON.stringify(S.farm.inv),rev426=0,dir426=null,last426=[e.x,e.z],trail426=[];PEOPLE_TRAFFIC.reset();
+   for(let f=0;f<600;f++){S.time+=.05;simTime=f*.05;stepStaff(.05,simTime);PEOPLE_TRAFFIC.step(.05);
+    const dx=e.x-last426[0],dz=e.z-last426[1],l=Math.hypot(dx,dz);if(l>.03){const d=[dx/l,dz/l];if(dir426&&d[0]*dir426[0]+d[1]*dir426[1]<-.5)rev426++;dir426=d;last426=[e.x,e.z];}
+    if(f>500)trail426.push([e.x,e.z]);}
+   var report426={legacy,rev:rev426,dist:Math.hypot(e.x-s.job.x,e.z-s.job.z),blocked:navBlockedAt(s.job.x,s.job.z),moving:e.mv};`);
+  assert.ok(run('rev426<=3'),run('JSON.stringify(report426)'));
+  assert.ok(run('report426.dist<.06&&!report426.blocked&&!report426.moving'),run('JSON.stringify(report426)'));
+  assert.ok(run('trail426.every(p=>Math.hypot(p[0]-e.x,p[1]-e.z)<.01)'),'Arbeitsplatz stabil');
+  assert.equal(run('S.money'),run('cash'));assert.equal(run('JSON.stringify(S.farm.inv)'),run('inv'));
+ }
+});
 run(read('villagesite.js'));run(read('villagepeople.js'));
 test('Fahrräder stehen vollständig auf den Stellflächen innerhalb aller bewohnten Grundstücke',()=>{
  run(`prepared();for(const h of Object.values(VILLAGE.state().homes)){h.status='ready';h.type='familie';}var bikeBad=VILLAGE_DATA.plots.filter(p=>{const a=VILLAGE_SITE.bikePark(p);return !VILLAGE_SITE.bikeClear(...a,0);}).map(p=>p.id);`);

@@ -1,3 +1,15 @@
+## v427 – Mergekonflikte nach Fluss-Baumkorrektur behoben
+
+main65e4497 mit Fluss-Baumkorrektur424 vollständig integriert. Waffen425 und Arbeiterkorrektur426 erhalten; Dokumentation beider Seiten zusammengeführt. Gesamt-/SW427, einzelne Assetstände unverändert. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
+
+## v426 – Pendelnden Holzfäller am Baum korrigiert
+
+Freier Bedienplatz wurde beim Heranziehen an den Stamm wieder in eine gesperrte Baumzelle verschoben; Routenfolge und Ausweichen pendelten gegeneinander. Vorziehen jetzt nur bis zur letzten freien Position; alte gespeicherte Fällaufträge werden ab tatsächlicher Position mit erhaltener Restarbeitszeit berichtigt. Reproduzierter Ablauf vorher 39, danach 0 Richtungswechsel; gesperrte Baum-Arbeitsplätze 64 → 0. Alle 15 Bewegungs-/Werkzeugprüfungen bestanden, einschließlich neuer/alter Fällaufträge. Vollständiger Chromium-Hof: alter Auftrag korrigiert, 600 Schritte stabil, kein JS-Fehler oder Geld-/Inventarverlust. Kein echter Handytest. Bericht docs/ARBEITER-PENDELN-v426.md. Gesamt-/SW426, team426; übrige Änderungen425 erhalten.
+
+## v425 – Glock 17 verfeinert und Waffen-Umrandungen reduziert
+
+Herstellerreferenz der GLOCK G17 Gen5 verglichen: Griffneigung, Magazinboden, flachere Visierung, Front-Rillen und dezenteres Auswurffenster gezielt angepasst. Waffen-Thumbnail-Kontur rund 77 % dünner; übrige Modelle behalten ihre Standardkontur, alle anderen Waffen ihre Geometrie. Neue Bildcache-Schlüssel. Waffenprüfungen und vier Chromium-Formate bestanden, kein Zuschnitt/Überlauf/JS-Fehler; kein echter Handytest. Bericht/Referenz/Vergleich: docs/WAFFENKONTUR-v425.md. Gesamt-/SW425, weapons/worldview425; keine Spielmechanikänderung.
+
 ## v424 – Keine Bäume mehr auf dem Sandrand des Flusses
 
 **Ursache:** Der Abstand für Pflanzplätze (`treeSpotOk` 3,2, zweite Prüfung 3,6) war kleiner als die Breite des Sandrands. Gemessen reicht das Flussufer bis 4,45 Einheiten von der geglätteten Flussmitte; Bäume standen deshalb auf dem Sand.
