@@ -149,8 +149,14 @@ const WEAPONS = (() => {
   const bar = (v, max) => `<i class="wp-bar"><b style="width:${Math.round(Math.max(4, Math.min(100, v / max * 100)))}%"></b></i>`;
   const fj = n => (n >= 1000 ? (n / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " kJ" : Math.round(n) + " J");
   function eignung(w) {
-    const t = [["hirsch", "🦌"], ["keiler", "🐗"], ["fasan", "🐦"]], dm = Math.min(50, w.maxR);
-    return t.map(([k, ic]) => `<span class="${canKill(w, k, dm) ? "ok" : "no"}" title="${canKill(w, k, dm) ? "tödlich" : "zu schwach"}">${ic}</span>`).join("");
+    /* v416: Dieselben Tiermodelle wie die Sammlung, als drei gecachte Bildchen. */
+    const t = [["hirsch", "Hirsch"], ["keiler", "Keiler"], ["fasan", "Fasan"]], dm = Math.min(50, w.maxR);
+    return t.map(([k, name]) => {
+      const ok = canKill(w, k, dm), status = ok ? "geeignet" : "zu schwach";
+      const img = typeof thumbSpan === "function" && typeof HUNT !== "undefined"
+        ? thumbSpan("wp-animal416:" + k, () => HUNT._trophyBuild({ k, s: .6, m: 2, g: 416 }), "", false, { yaw: 1, pitch: .2, noShadow: true }) : "";
+      return `<span class="wp-animal ${ok ? "ok" : "no"}" title="${name}: ${status}" aria-label="${name}: ${status}">${img}<small>${name}</small></span>`;
+    }).join("");
   }
   function cardHTML(w) {
     const g = G(), mine = owns(w.id), sel = g.sel === w.id && mine;
