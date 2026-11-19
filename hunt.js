@@ -951,6 +951,7 @@ const HUNT = (() => {
     herz:    { n: "Herzschuss", kill: true, run: [0, 3], cap: 4, bonus: 0.05 },
     lunge:   { n: "Lungenschuss", kill: true, run: [6, 16], cap: 4, bonus: 0.02 },
     hals:    { n: "Trägerschuss", kill: true, run: [0, 0.5], cap: 3, bonus: 0 },
+    halsweich: { n: "Weichschuss am Träger", kill: false },          /* v418: Träger ohne Wirbel, Schlagader, Drossel oder Luftröhre – das Stück flüchtet krank */
     kopf:    { n: "Kopfschuss", kill: true, run: [0, 0], cap: 2, bonus: 0, note: "Kopfschuss – das Haupt ist beschädigt, höchstens Silber." },
     koerper: { n: "Weichschuss", kill: false },
     lauf:    { n: "Laufschuss", kill: false },
@@ -3126,6 +3127,9 @@ const HUNT = (() => {
         const z2 = zone === "kopf" && !rec.org.some(o=>o.id==='gehirn') ? (A.k==='fasan'?'streif':'haupt') : zone === "herz" && !rec.org.some(o => o.id === "herz") ? "koerper" : zone === "lunge" && !rec.org.some(o => /^lunge/.test(o.id)) ? "koerper" : zone;
         if (z2 === zone) break; zone = z2;
       }
+      /* v418: Nur Halsmuskel/Weichteile getroffen (kein Wirbel, keine Ader, keine Luftröhre) – beim Schalenwild nicht tödlich.
+         Die Aufzeichnung behält zone "hals" für Kanal und Wunde, soft418 markiert die Wertung. */
+      zone = neckSoft(A.k, zone, rec);
       context.rec = rec; context.gun = W.id;
       setTimeout(() => { if (X !== session) return; hitSound(); FV.R.burst({ x: at[0], y: at[1], z: at[2], n: 6, col: [[0.45, 0.1, 0.08, 1], [0.35, 0.25, 0.18, 1]], speed: 0.9, up: 0.6, size: 0.05, life: 0.6, shape: 1 }); onHit(A, zone, dm, context); scare(1.6, at, 140, A); }, Math.round(best.tf * 1000) + 60);
     } else {
@@ -3147,6 +3151,12 @@ const HUNT = (() => {
     if (A.k === "fasan") return W.pellets && pel < 2 ? "streif" : zone;
     if (W.pellets) return "schwach";
     return gunE(W, dm) >= NEED_E[A.k] ? zone : "schwach";
+  }
+  /* v418: Trägerschuss nur durch Halsmuskel/Weichteile (kein Wirbel, keine Ader, keine Luftröhre) ist beim Schalenwild nicht tödlich.
+     Die Aufzeichnung behält zone "hals" für Kanal und Wunde, soft418 markiert die Wertung. */
+  function neckSoft(k, zone, rec) {
+    if (zone !== "hals" || k === "fasan" || !rec || neckFate(rec.org) !== "soft") return zone;
+    rec.soft418 = 1; rec.dmg = 30; return "halsweich";
   }
   function instantCollapse(A,zone){const r=A.shots&&A.shots[A.shots.length-1];return zone==='kopf'||zone==='hals'&&(!r||!r.org||neckFate(r.org)==='spine')||zone==='herz'&&(A.v||0)<1.5&&poseRnd(A,365)<-.1;}
   function onHit(A, zone, dm, context) {
@@ -4080,8 +4090,9 @@ const HUNT = (() => {
     if(zone==='herz'&&!org.some(o=>o.id==='herz'))zone=org.some(o=>/^lunge/.test(o.id))?'lunge':'koerper';
     if(zone==='lunge'&&!org.some(o=>/^lunge/.test(o.id)))zone='koerper';
     if(zone==='kopf'&&!org.some(o=>o.id==='gehirn'))zone=k==='fasan'?'streif':'haupt';
+    if(sh.soft418)zone='halsweich';            /* v418: nur neue Aufzeichnungen; ältere Trägerschüsse behalten ihre Wertung */
     const channel=['kopf','haupt'].includes(sh.zone)?headChannel(k,sh):null;
-    return Object.assign({},sh,{org,reportZone:zone,thru:channel?channel.thru:sh.thru,anatomyUpdated:(!sh.anatomy367&&changed)||zone!==sh.zone});
+    return Object.assign({},sh,{org,reportZone:zone,thru:channel?channel.thru:sh.thru,anatomyUpdated:(!sh.anatomy367&&changed)||zone!==(sh.soft418?'halsweich':sh.zone)});
   }
   /* Wirbelsäule: Punkte unter der Rückenlinie des Profils */
   const SPINE = {};
@@ -4395,7 +4406,7 @@ const HUNT = (() => {
     X.ui.appendChild(XR.el);
     try { if (!XR.R) { XR.R = G3.create(XR.cv, { shadowSize: 256, shadowBox: 3, maxDpr: 2 }); if (XR.R) { const E = XR.R.env; E.fogR = [400, 800]; E.sun = G3.norm([-0.3, 0.8, 0.5]); E.sunCol = [0.72, 0.72, 0.74]; E.sky = [0.65, 0.72, 0.82]; E.ground = [0.3, 0.3, 0.34]; } } } catch (e) { XR.R = null; }
     XR.A = A; XR.i = clamp(XR.i || 0, 0, A.shots.length - 1);
-    if (A !== XR.last) { XR.i = Math.max(0, A.shots.map(s => !!(ZONE[s.zone] && ZONE[s.zone].kill)).lastIndexOf(true)); XR.last = A; }     /* zuerst der tödliche Treffer */
+    if (A !== XR.last) { XR.i = Math.max(0, A.shots.map(s => !s.soft418 && !!(ZONE[s.zone] && ZONE[s.zone].kill)).lastIndexOf(true)); XR.last = A; }     /* zuerst der tödliche Treffer */
     XR.el.classList.toggle("nogl", !XR.R);
     xrGo(0); snd("swish");
     X.ui.classList.add("xr-on");
@@ -4800,7 +4811,7 @@ const HUNT = (() => {
     _spawn: (k, enter, pre) => X && X.inRv && spawn(k, enter, pre), SPECIES_W, temperOf, shadeVariant, scentGain, FLY_FIRST, FLY_NEXT, LIMIT, pickSpecies, _flyEvent: () => X && flyEvent(st()), _counts: () => ({ ground: groundCount(), fly: flyCount(), live: liveAnimals().length }), toRv, fromRv, _mw: () => MW, _mwSpawn: mwSpawn, _fire: () => fire(), _view: v => setView(v), _rv: () => X && X.rv, TREE_HI,
     _fire: () => fire(), _setView: v => setView(v), _camLook: camLook, FOV, _gunZone: gunZone, _neckExt: k => neckExt(k), _neckFrame: neckFrame, NORG, _neckContacts: neckContacts, _organPreview: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organPreview(k,O):null; }, _organMesh: (k,id) => { const O=ORG[k].find(O=>O.id===id);return O&&O.t?organMesh(k,O):null; }, _hitIds: xrHitIds, _organSegment: (k,id,o,d)=>organSegment(k,ORG[k].find(O=>O.id===id),o,d), _xrShot:xrShot,_headMesh:headMesh,_headPoint:headPoint,_headRay:headRay,_headContacts:headContacts,_headChannel:headChannel,_headPreview:headPreview, _legDim: (k, L) => legDim(k, L), _shotOrgans: (k, lo, ld, zone) => shotOrgans(k, lo, ld, zone), _shotRec: (k, pose, o, d, h, dm, B) => shotRec(k, pose, o, d, h, dm, B || {}), _hit: (A, zone, dm, context) => onHit(A, zone, dm, context), _aura: () => X && X.aura, _woundSpot: (A, rec, out) => woundSpot(A, rec, out), AURA, _instantCollapse:instantCollapse, _qualityHTML:qualityHTML, /* v357 (Prüfstand): echter Schuss vom Auge auf einen Punkt in Tierkoordinaten – Wertung und Aufzeichnung wie in fire() */
     _shootAt: (A, lp) => { const P = poseOf(A), w = rot([lp[0] * P.s, lp[1] * P.s, lp[2] * P.s], P.rx || 0, P.ry || 0, P.rz || 0), t = [P.x + w[0], (P.y || 0) + w[1], P.z + w[2]], o = EYER, d = v3n([t[0] - o[0], t[1] - o[1], t[2] - o[2]]), h = zoneHit(A.k, P, o, d);
-      if (!h) return null; const dm = Math.round(h.t * M_PER_U); onHit(A, h.zone, dm, { rec: shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }) }); return h.zone; }, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _woundSpot:woundSpot,_woundMesh:woundMesh,_addWound:addWound,_organName:organName, _organReportName:organReportName, _xrPanelHTML:xrPanelHTML, _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
+      if (!h) return null; const dm = Math.round(h.t * M_PER_U), rec = shotRec(A.k, P, o, d, h, dm, { tf: 0.2, drift: 0, wv: 0 }), z = neckSoft(A.k, h.zone, rec); onHit(A, z, dm, { rec }); return z; }, _neckSoft: neckSoft, _poseOf: (A, tf) => poseOf(A, tf || 0), _xray: () => xrShow(), _woundSpot:woundSpot,_woundMesh:woundMesh,_addWound:addWound,_organName:organName, _organReportName:organReportName, _xrPanelHTML:xrPanelHTML, _xr: () => XR, _xrBuild: (R, A, sh) => { XR.R = R; xrBuild(A, sh); return R; }, ORG, _trophyBuild: r => trophyBuild(r), _harvest: A => goHarvest(A), _dead: A => deadPose(A), _antF: gn => antF(gn), _antSides: (P, F) => antSides(P, F), _inTorso: (k, p, m) => inTorso(k, p, m), _poseCheck: A => poseCheck(A),
     _antEnds: (P, sc, vr, F) => { const b = antlersInto(MB(), P, sc, vr, F); return [b._ends[-1], b._ends[1]]; }, _keep: s => keepTrophy(s), _done: w => harvestDone(w), _stepAnimal:stepAnimal, _deadLeg:deadLeg, _fallFloor:fallFloor, _fall: (A,side=1) => { A.st = "fall"; A.t = 0.8; A.side = side; fallStart(A, 0.8); }, _lie: (A, x, z) => lieSpot(A, x, z), _lieBlocked: (A, x, z) => lieBlocked(x, z, liePad(A)), _layout: () => revLayout(), _collSync: () => collSync(), _sellRec: u => sellRec(u),
     _headPos: A => { const n = A.node, s = A.s, S0 = SP[A.k], hp = rot([S0.headP[0], S0.headP[1], S0.headP[2] + 0.0], A.neck.rx, A.neck.ry, 0), f = rot([0, 0, 0.2], A.head.rx, 0, 0), f2 = rot(f, A.neck.rx, A.neck.ry, 0);
       const l = [(S0.neckP[0] + hp[0] + f2[0]) * s, (S0.neckP[1] + hp[1] + f2[1]) * s, (S0.neckP[2] + hp[2] + f2[2]) * s], w = rot(l, n.rx, n.ry, n.rz); return [n.x + w[0], n.y + w[1], n.z + w[2]]; }

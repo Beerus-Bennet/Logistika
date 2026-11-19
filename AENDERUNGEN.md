@@ -1,3 +1,7 @@
+## v422 – Trägerschuss-PR mit aktuellem main zusammengeführt
+
+main2b55c29 vollständig integriert. Trägerschuss-Korrektur418 sowie Waffen419, Zielsymbole420 und Außenlager/Futter417 erhalten. Gesamt-/SW422, hunt418; übrige Assetstände aus main. Syntax und alle drei Trägerschuss-Prüfgruppen bestanden. Älterer Test hunt-v307 scheitert an der Laufwinkel-Erwartung (Zeile86); hunt.js ist bytegleich zum ursprünglichen PR129. Kein echter Handytest.
+
 ## v421 – Mergekonflikte nach Außenlager-/Futteränderung behoben
 
 main77a8093 vollständig integriert. Außenlager/Futter417 und Waffen419/Zielsymbole420 erhalten. Konflikte nur in Dokumentation und Gesamtversion aufgelöst; Gesamt-/SW421, einzelne Assetstände erhalten. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
@@ -28,6 +32,14 @@ main77a8093 vollständig integriert. Außenlager/Futter417 und Waffen419/Zielsym
 - Alte Spielstände ohne `feedOpen` starten mit 0 kg angebrochen.
 
 **Geprüft:** Unit-Test `aussenlager-futter-v417.test.js` (Pakete je einmal, alte Stände Stufe 20 und 2, 4 Rinder je Ballen, 33 Hühner je Eimer), `farm-wholesale-v330.test.js` bestanden; Testbrowser: Silo-Fenster mit Stufe 11 zeigt „+1.000 ✓ gekauft / +5.000 kaufbar / +10.000 ✓ gekauft“, keine Seitenfehler. **Nicht geprüft:** Handy, längerer Spielverlauf mit Hofkräften.
+
+## v418 – Trägerschuss nur durch Weichteile ist nicht mehr tödlich
+
+**Ursache:** Jeder Treffer in der Trägerzone galt als tödlich. Traf der Kanal weder Halswirbel noch Halsschlagader, Drosselvene oder Luftröhre, stand im Trefferbild zwar „Halsweichteile (kein lebenswichtiges Organ)“ mit 65 % Wirkung, das Stück fiel aber trotzdem nach 8–18 m. Messung (Seitenschüsse, Raster): beim Hirsch 43 %, beim Keiler 57 % aller Trägertreffer betrafen nur Weichteile.
+
+**Lösung (`hunt.js`):** Neue Wertung `halsweich` („Weichschuss am Träger“, nicht tödlich). Nach der Organprüfung im Schuss (`neckSoft`) wird ein reiner Weichteiltreffer beim Schalenwild dazu: Das Stück flüchtet krank wie beim Weichschuss, Wirkung 30 %. Halswirbel (sofort), Schlagader/Drossel/Luftröhre (kurze Flucht) bleiben tödlich. Die Aufzeichnung behält `zone: "hals"` für Schusskanal und Einschussloch; das Merkmal `soft418` sorgt im Trefferbild für die richtige Beschriftung. Fasan unverändert. Ältere gespeicherte Trägerschüsse behalten Wertung, Medaille und Erlös.
+
+**Geprüft:** neuer Unit-Test `traeger-weich-v418.test.js` (Raster aller Trägertreffer bei Hirsch und Keiler: weich → nicht tödlich, Wirbel/Adern/Luftröhre → tödlich; Fasan/andere Zonen unverändert; Trefferbild neu/alt). Jagd-Tests vorher/nachher mit gleichem Ergebnis (`hunt-v307` und `fixes-v359` schlugen schon vorher fehl). **Nicht geprüft:** Handy; kein Schuss im Testbrowser.
 
 ## v416 – Tierbildchen im Waffenschrank statt Emojis
 

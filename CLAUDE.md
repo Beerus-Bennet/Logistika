@@ -202,3 +202,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v417: Außenlager-Pakete je einmal (`farmExternalPacks` aus der Stufe, keine Migration); Futter in Portionen (`FANIMALS[].meal` kg, angebrochene Gebinde in `S.farm.feedOpen`, Hilfen `feedMeal`/`feedMeals`/`feedPacksFor`/`farmFeedAvail`, auch in `team.js`). Test `aussenlager-futter-v417.test.js`.
 
 - v421: main77a8093 in PR130 integriert; Außenlager/Futter417 und Waffen419/Zielsymbole420 erhalten, Gesamt-/SW421.
+
+- v418: Trägerschuss nur durch Weichteile (kein Halswirbel/Ader/Luftröhre) nicht mehr tödlich – Zone `halsweich` über `neckSoft` (Aufzeichnung bleibt `hals`, Merkmal `soft418`), Fasan unverändert, alte Schüsse behalten Wertung. Test `traeger-weich-v418.test.js`.
+
+- v422: PR129 mit main2b55c29 integriert; hunt418 erhalten, Waffen419/Zielsymbole420/Futter417 ebenfalls. Gesamt-/SW422.
