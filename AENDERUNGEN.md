@@ -1,3 +1,7 @@
+## v425 – Glock 17 verfeinert und Waffen-Umrandungen reduziert
+
+Herstellerreferenz der GLOCK G17 Gen5 verglichen: Griffneigung, Magazinboden, flachere Visierung, Front-Rillen und dezenteres Auswurffenster gezielt angepasst. Waffen-Thumbnail-Kontur rund 77 % dünner; übrige Modelle behalten ihre Standardkontur, alle anderen Waffen ihre Geometrie. Neue Bildcache-Schlüssel. Waffenprüfungen und vier Chromium-Formate bestanden, kein Zuschnitt/Überlauf/JS-Fehler; kein echter Handytest. Bericht/Referenz/Vergleich: docs/WAFFENKONTUR-v425.md. Gesamt-/SW425, weapons/worldview425; keine Spielmechanikänderung.
+
 ## v423 – Veralteten Jagdprüfstand korrigiert
 
 Der v307-Test verlangte die seit v366 bewusst entfernte Knick-Zwischenpose. Er prüft jetzt anfängliche Stützphase, stetigen Gelenkverlauf und sprungfreien Übergang zur Liegepose bei beiden Tierarten/Seiten. Testaufbau um Munitionsanzeige und Wundmodell-Meshschnittstelle ergänzt; echte Modellgeometrie und Spielfunktionen werden weiter verwendet. Alle zehn v307-, vier v366- und drei Trägerschuss-Prüfgruppen bestanden. Keine Änderung an hunt.js oder Spielständen. V420-Commit im Verlauf enthalten; goals/weapons/style bytegleich zu main. Gesamt-/SW423, alle Einzelassets erhalten. Kein echter Handytest.

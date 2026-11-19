@@ -1614,7 +1614,8 @@ function thumbCrop(src, strict, N, opt) {
     ox.fillStyle = g; ox.beginPath(); ox.arc(0, 0, rx, 0, Math.PI * 2); ox.fill(); ox.restore(); }
     /* Kontur: Silhouette rundum leicht versetzt, eingefärbt, darunter gelegt */
     const t = document.createElement("canvas"); t.width = t.height = N;
-    const tx = t.getContext("2d"), ow = Math.max(1, N * 0.011);
+    /* v425: Optionale dünne Kontur für Waffen; Standard aller anderen Bildchen erhalten. */
+    const tx = t.getContext("2d"), ow = opt.outline == null ? Math.max(1, N * 0.011) : Math.max(0, N * opt.outline);
     for (let i = 0; i < 12; i++) { const an = i / 12 * Math.PI * 2; tx.drawImage(a, x0, y0, bw, bh, dx + Math.cos(an) * ow, dy + Math.sin(an) * ow, dw, dh); }
     tx.globalCompositeOperation = "source-in"; tx.fillStyle = "rgba(38,26,16,0.62)"; tx.fillRect(0, 0, N, N);
     ox.drawImage(t, 0, 0);

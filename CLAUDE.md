@@ -208,3 +208,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v422: PR129 mit main2b55c29 integriert; hunt418 erhalten, Waffen419/Zielsymbole420/Futter417 ebenfalls. Gesamt-/SW422.
 
 - v423: hunt-v307-Prüfstand an seit v366 gültige Stützphase angepasst, fehlende UI-/Mesh-Schnittstellen ergänzt. Alle zehn Prüfgruppen grün, Spielcode unverändert; Gesamt-/SW423.
+
+- v425: Glock-Details nach offizieller G17-Gen5-Referenz; Thumbnail-Option outline nur für Waffen .0025 statt Standard .011. wpn425, weapons/worldview425, Gesamt425. Andere Modellkonturen und Spielmechanik erhalten. Bericht docs/WAFFENKONTUR-v425.md.
