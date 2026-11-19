@@ -100,6 +100,13 @@ function distSeg(px, pz, a, b) {
   return Math.hypot(px - a[0] - dx * t, pz - a[1] - dz * t);
 }
 function distLine(px, pz, line) { let d = 1e9; for (let i = 1; i < line.length; i++) d = Math.min(d, distSeg(px, pz, line[i - 1], line[i])); return d; }
+/* v424: Abstand zur Flussmitte (geglättet wie das Flussmesh) – Uferband (Wasser 1,7 + Sand bis 4,45 gemessen) plus Rand */
+const CREEK_BANK = 4.7;
+let CREEK_SM = null;
+function creekBankD(x, z) {
+  if (!CREEK_SM) CREEK_SM = typeof FWM !== "undefined" && FWM.smoothLine ? FWM.smoothLine(FWORLD.creek, 6) : FWORLD.creek;
+  return distLine(x, z, CREEK_SM);
+}
 function nearPath(x, z) { let d = 1e9; for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p)); return d; }
 /* v77: nächster Punkt auf einem Waldweg (für das Wegrücken der Bäume) */
 function nearPathPt(x, z) {
@@ -248,7 +255,7 @@ function treeSpotOk(x, z, pathGap) {
   if (x > 25 && x < 45 && z > -17 && z < 17) return false;          /* Teichwiese: dort steht das Feldgehölz extra */
   if (inYard(x, z, 2) || inLkwBay(x, z, 1.5)) return false;
   if (nearPath(x, z) < (pathGap || 2.4)) return false;
-  if (distLine(x, z, FWORLD.creek) < 3.2) return false;                     /* v190: Bach breiter */
+  if (creekBankD(x, z) < CREEK_BANK) return false;                          /* v424: auch der Sandrand bleibt frei (vorher 3,2) */
   if (FWORLD.spring && Math.hypot(x - FWORLD.spring[0], z - FWORLD.spring[1]) < 11) return false;   /* v190: großer Quelltopf mit Felswand */
   if (inSpringHill(x, z)) return false;                                     /* v207: Hang mit Quelle */
   for (const c of FWORLD.clearings) if (Math.hypot(x - c[0], z - c[1]) < c[2]) return false;
@@ -465,6 +472,8 @@ function erbeInit(F, fresh) {
   if(!F.river380){let complete=true;for(const t of F.trees){if(t.x>=-48||distLine(t.x,t.z,FWORLD.creek)>=4.2)continue;let found=false;
     for(let r=4;r<=28&&!found;r+=2)for(let k=0;k<24;k++){const a=k/24*Math.PI*2,x=t.x+Math.cos(a)*r,z=t.z+Math.sin(a)*r;if(distLine(x,z,FWORLD.creek)<4.5||!treeSpotOk(x,z,2.4)||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.4))continue;t.x=+x.toFixed(2);t.z=+z.toFixed(2);found=true;break;}if(!found)complete=false;
    }if(complete)F.river380=1;}
+  /* v424: Bäume auf dem Sandrand des Flusses werden einmalig entfernt (Art/IDs der übrigen bleiben) */
+  if (!F.river424) { F.river424 = 1; F.trees = F.trees.filter(t => creekBankD(t.x, t.z) >= CREEK_BANK); }
   farmAlpineTrees384(F);
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */
   if (!F.v203lkw) {
@@ -1873,7 +1882,7 @@ function treasureSpotOk(x, z, area) {
   if (inHofMax(x, z, 1)) return false;
   if (Math.hypot(x - P.x, z - P.z) < P.r + 3) return false;
   if (Math.hypot((x - L.x) / L.rx, (z - L.z) / L.rz) < 1.15) return false;
-  if (nearPath(x, z) < 1.8 || distLine(x, z, FWORLD.creek) < 3.6) return false;
+  if (nearPath(x, z) < 1.8 || creekBankD(x, z) < CREEK_BANK) return false;
   if (inSpringHill(x, z, 1) || (FWORLD.spring && Math.hypot(x - FWORLD.spring[0], z - FWORLD.spring[1]) < 11)) return false;   /* v228: nicht im Quellberg, nicht im Topf */
   if (inYard(x, z, 2)) return false;
   if (inFieldN(x, z, 2)) return false;                                /* Nachbars Felder */

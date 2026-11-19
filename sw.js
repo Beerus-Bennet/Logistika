@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v423";
+const VERSION = "v424";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -38,7 +38,7 @@ const SHELL = [
   "./loading.js?v=109",
   "./game.js?v=393",
   "./farm.js?v=417",
-  "./erbe.js?v=415",
+  "./erbe.js?v=424",
   "./village.js?v=371",
   "./farmstory.js?v=349",
   "./intro.js?v=349",

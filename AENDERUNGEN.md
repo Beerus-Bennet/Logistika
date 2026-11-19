@@ -1,3 +1,11 @@
+## v424 – Keine Bäume mehr auf dem Sandrand des Flusses
+
+**Ursache:** Der Abstand für Pflanzplätze (`treeSpotOk` 3,2, zweite Prüfung 3,6) war kleiner als die Breite des Sandrands. Gemessen reicht das Flussufer bis 4,45 Einheiten von der geglätteten Flussmitte; Bäume standen deshalb auf dem Sand.
+
+**Lösung (`erbe.js`):** Gemeinsamer Abstand `creekBankD` (zur geglätteten Flusslinie wie das Flussmesh) mit `CREEK_BANK` 4,7 für beide Prüfungen. Einmalige Bereinigung `F.river424`: gespeicherte Bäume innerhalb dieses Abstands werden entfernt, alle anderen bleiben unverändert. Keine weitere Spielstandänderung.
+
+**Geprüft:** neuer Unit-Test `fluss-baeume-v424.test.js` (neues Spiel ohne Baum im Uferband, alter Stand mit Bäumen auf dem Sand wird bereinigt und nur einmal, Pflanzplatz am Sand gesperrt); `farm-wholesale-v330.test.js` bestanden. **Nicht geprüft:** Handy, Sicht im Testbrowser; Bäume am Seebach und am See sind nicht angefasst.
+
 ## v423 – Veralteten Jagdprüfstand korrigiert
 
 Der v307-Test verlangte die seit v366 bewusst entfernte Knick-Zwischenpose. Er prüft jetzt anfängliche Stützphase, stetigen Gelenkverlauf und sprungfreien Übergang zur Liegepose bei beiden Tierarten/Seiten. Testaufbau um Munitionsanzeige und Wundmodell-Meshschnittstelle ergänzt; echte Modellgeometrie und Spielfunktionen werden weiter verwendet. Alle zehn v307-, vier v366- und drei Trägerschuss-Prüfgruppen bestanden. Keine Änderung an hunt.js oder Spielständen. V420-Commit im Verlauf enthalten; goals/weapons/style bytegleich zu main. Gesamt-/SW423, alle Einzelassets erhalten. Kein echter Handytest.

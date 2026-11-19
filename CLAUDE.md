@@ -208,3 +208,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v422: PR129 mit main2b55c29 integriert; hunt418 erhalten, Waffen419/Zielsymbole420/Futter417 ebenfalls. Gesamt-/SW422.
 
 - v423: hunt-v307-Prüfstand an seit v366 gültige Stützphase angepasst, fehlende UI-/Mesh-Schnittstellen ergänzt. Alle zehn Prüfgruppen grün, Spielcode unverändert; Gesamt-/SW423.
+- v424: Keine Bäume auf dem Sandrand des Flusses – `creekBankD`/`CREEK_BANK` in `erbe.js` (Pflanzplätze), einmalige Bereinigung `F.river424`. Test `fluss-baeume-v424.test.js`.
