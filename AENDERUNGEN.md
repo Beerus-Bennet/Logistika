@@ -1,3 +1,21 @@
+## v421 – Mergekonflikte nach Außenlager-/Futteränderung behoben
+
+main77a8093 vollständig integriert. Außenlager/Futter417 und Waffen419/Zielsymbole420 erhalten. Konflikte nur in Dokumentation und Gesamtversion aufgelöst; Gesamt-/SW421, einzelne Assetstände erhalten. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
+
+## v420 – Passende Tagesaufgaben-Symbole im Logistika-Stil
+
+- Ursache: System-Emojis passten optisch nicht zur Spielgrafik; Verkehrsaufträge zeigten unabhängig vom tatsächlichen Verkehrsmittel immer ein Schiff.
+- Lösung: Eigene, leichte SVG-Zeichnungen für die linke Symbolspalte aller Tagesaufgaben. Lokomotive/Binnen-/Seeschiff/Flugzeug passend zur gespeicherten Aufgabe; Wertkoffer, Uhr sowie einheitliche Paket-, Rad-, Geld- und Kühlsymbole. Übrige Ziele-Ansicht erhalten. Aufgabenwahl, Fortschritt, Erledigt-Zustand und Belohnungslogik unverändert.
+- Geprüft: Chromium in vier Browserformaten (320/390 px, Querformat, Desktop), alle zehn Varianten ohne Zuschnitt/Überlauf, Reiterwechsel/Schließen und Spielstanderhalt. Keine JavaScriptfehler; Syntax und Assetverweise geprüft. Kein echter Handy/iPhone/Safari-Test. Vorschauen/Messwerte: `docs/ZIELSYMBOLE-v420.md`.
+- Gesamt-/SW/LOGI_V420, goals/style420; Waffen419 und übrige Assetstände erhalten. Ergänzung im noch offenen PR130, kein automatisches Merge/Deployment.
+
+## v419 – Waffenaufbau und Vorschauen verfeinert
+
+- Ursache: Geschlossene Mündungskappen, kaum erkennbare Bügel/Systeme und zu kleine Vorschaubilder erschwerten die Unterscheidung der Waffen.
+- Lösung: Bestehende zehn Modelle gezielt verfeinert: vertiefte Mündungen, offene Abzugsbügel, sichtbare Kammergriffe/Magazine, Kipplaufgelenke, Pistolenschlitten und Revolvertrommel. Schaftkonturen und Optikmontagen überarbeitet; größere gecachte Vorschau mit Bauteil- und Funktionszeile. Logistika-Look und vorhandene Karten/Bedienung erhalten, keine Waffenwerte oder Spielmechanik geändert.
+- Geprüft: sieben bisherige Waffen-Prüfgruppen; echte Modellöffnungen und festes Geometriebudget (512–1.192 Dreiecke je Modell); Chromium in vier Browserformaten ohne Zuschnitt/Überlauf/JavaScriptfehler. 20 Wiederöffnungen ohne neue Waffen-Meshes/Renderdurchläufe; Auswahl und Spielstanderhalt geprüft. Nicht geprüft: echtes Handy/iPhone/Safari oder Geräte-FPS. Bericht und Vergleich: `docs/WAFFENOPTIK-v419.md`.
+- Aktuelles main69f990c mit PR127 integriert. Gesamt-/SW/LOGI_V419, weapons/style419; übrige Assetstände erhalten. Eigener Pull Request, kein automatisches Merge/Deployment.
+
 ## v417 – Außenlager-Pakete je einmal, Futter in Portionen je Mahlzeit
 
 **Ursache:** Die Außenlager-Pakete (+1.000/+5.000/+10.000 Plätze) ließen sich beliebig oft kaufen, obwohl je eines reicht. Bei der Fütterung verbrauchte jede Mahlzeit ein ganzes Gebinde (z. B. einen 20-kg-Ballen je Rind) – das Futter war schnell weg und die Tiere warteten.

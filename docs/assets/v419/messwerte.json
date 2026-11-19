@@ -1,0 +1,43 @@
+{
+  "viewports": [
+    {
+      "width": 320,
+      "height": 640,
+      "cropped": [],
+      "overflow": [],
+      "sheetOverflow": false,
+      "cards": 10
+    },
+    {
+      "width": 390,
+      "height": 760,
+      "cropped": [],
+      "overflow": [],
+      "sheetOverflow": false,
+      "cards": 10
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "cropped": [],
+      "overflow": [],
+      "sheetOverflow": false,
+      "cards": 10
+    },
+    {
+      "width": 1100,
+      "height": 900,
+      "cropped": [],
+      "overflow": [],
+      "sheetOverflow": false,
+      "cards": 10
+    }
+  ],
+  "cache": {
+    "renders": 0,
+    "meshes": 0,
+    "saveUnchanged": true,
+    "contextLost": false
+  },
+  "errors": []
+}

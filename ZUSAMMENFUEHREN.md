@@ -1,3 +1,11 @@
+## v420 – Tagesaufgaben-Symbole als Ergänzung zu PR130
+
+Stand419 vollständig erhalten; main69f990c bleibt Basis. Nur Symbolausgabe der Tagesaufgaben in renderGoals durch dailyTaskIcon(t) ersetzt, zugehörige Zeichnungen und eng begrenztes CSS ergänzt. Aufgaben-/Belohnungslogik sowie Missionen/Erfolge unverändert. Inline-SVG braucht keine zusätzlichen Assets. goals/style420, weapons419 und übrige Assets unverändert, Gesamt-/SW/LOGI_V420. Im bestehenden offenen Waffen-PR130 ergänzen, damit dessen Änderungen gemeinsam reviewbar bleiben. Bericht docs/ZIELSYMBOLE-v420.md; kein automatisches Merge/Deployment.
+
+## v419 – Waffenmodelle und vorhandene Vorschau
+
+Basis main69f990c (PR127 bereits gemergt). Ausschließlich Waffenmodell-/Kartendarstellung in weapons.js und angehängtes CSS verändert. LIST, Kauf/Save, Energien/Eignung und hunt.js unverändert. Gemeinsame Helfer profile/guard/muzzle/scope verfeinern die bestehenden Modellfamilien; BUILD enthält nur Anzeigetexte. Vorschauschlüssel wpn419 mit gemeinsamem großen Thumbnailrenderer, Tierbilder weiterhin wp-animal416. Gesamt-/SW/LOGI_V419, weapons/style419; übrige Assetstände aus main erhalten. Geometrische Öffnungstests und vier Browserformate bestanden; Bericht docs/WAFFENOPTIK-v419.md. Eigenen PR verwenden, kein automatisches Merge/Deployment.
+
 ## v414 – Berghaus-Bodenplatte
 
 Lokaler Stand413/412 und main21c3bf8 erhalten. Einzige Modellkorrektur: Fundamentsockel von `.04-th` auf `-.04-th` abgesenkt, damit seine Oberseite an der Unterseite der dünnen Deckplatte liegt. Kein Eingriff in Gelände, Wasser, Kamera, Jagd oder Tiefenpuffer. alpine414, Gesamt-/SW/LOGI_V414, hunt/style412. Geometrischer Regressionstest reproduziert den alten Fehler und prüft den neuen Anschluss;16 Browseransichten bestanden. Bericht docs/HUETTENPLATTE-v414.md. Lieferung per Pull Request; kein automatisches Merge/Deployment.
