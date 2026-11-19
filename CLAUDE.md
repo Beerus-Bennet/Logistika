@@ -216,3 +216,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v424: Keine Bäume auf dem Sandrand des Flusses – `creekBankD`/`CREEK_BANK` in `erbe.js` (Pflanzplätze), einmalige Bereinigung `F.river424`. Test `fluss-baeume-v424.test.js`.
 
 - v427: PR133 mit main65e4497/Fluss-Baumkorrektur424 integriert, Waffen425 und Arbeiter426 erhalten. Gesamt-/SW427.
+
+- v428: ALPINE.step verändert Kamerahöhe nicht mehr; Gelände mit gemeinsamen Eckpunktfarben/-normalen statt Facettenfarben. Höhenfeld/Raster/Budget unverändert, alpine428/Gesamt428. Tests gebirge-v428, gebirge-v413 und wasseroptik-v386; Bericht docs/GEBIRGE-v428.md.

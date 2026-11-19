@@ -117,7 +117,7 @@ const ALPINE = (()=>{
  function color(x,z,h){const mw=mountainWeight(x,z),w=sm(.02,.3,mw>=.3?mw:weight(x,z)),e=lakeE(x,z),n=Math.sin(x*.71+z*.43)*.5+.5;
   const gx=(height(x+.6,z)-height(x-.6,z))/1.2,gz=(height(x,z+.6)-height(x,z-.6))/1.2,slope=Math.hypot(gx,gz);
   /* v403: Höhenstufen wie in den Kalkalpen – Bergwald, Almwiese, Latschen-/Schuttzone, heller gebänderter Fels, Schnee in Mulden und am Gipfel */
-  const n2=vnoise(x*.08+7,z*.08-3),n3=vnoise(x*.27,z*.27);
+  const n2=vnoise(x*.08+7,z*.08-3),n3=vnoise(x*.10,z*.10);
   let c=mix(col(0x637f4c),col(0x91a363),sm(8,27,h));c=mix(c,col(0xa0a17a),sm(27,40,h)*(.5+.5*n2));
   c=mix(c,mix(col(0x999b8a),col(0xb3b09c),n3),sm(.55,.85,slope)*(1-sm(1.15,1.6,slope))*sm(5,14,h));
   /* v413: Großflächige Kalkschichten und zurückhaltende Farbunterschiede,
@@ -149,12 +149,10 @@ const ALPINE = (()=>{
    else if(J%N===0&&(!fine.has(j*nx+i)||!fine.has((j-1)*nx+i)))out=interpolate(V[(J/N)*(nx+1)+i],V[(J/N)*(nx+1)+i+1],u);
    else{const X=B.x0+I/N*dx,Z=B.z0+J/N*dz,p=project(X,Z),h=height(...p);out={out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])};}cache.set(key,out);return out;
   }
-  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;const face=G3.norm([(d.p[1]-a.p[1])*(c.p[2]-a.p[2])-(d.p[2]-a.p[2])*(c.p[1]-a.p[1]),(d.p[2]-a.p[2])*(c.p[0]-a.p[0])-(d.p[0]-a.p[0])*(c.p[2]-a.p[2]),(d.p[0]-a.p[0])*(c.p[1]-a.p[1])-(d.p[1]-a.p[1])*(c.p[0]-a.p[0])]),fk=(.08+.32*(1-sm(.5,.86,face[1])))*sm(2,10,(a.p[1]+c.p[1])/2),n=q=>G3.norm(mix(q.n,face,fk)); /* v403: Felswände facettiert, Wiesen weich */
-   /* v413: Low-Poly-Kanten erhalten, aber nur geringe Streuung je Facette.
-      Die Höhen-/Hangpalette steuert die Vegetation, kein zweiter grüner Anstrich. */
-   const rock=1-sm(.55,.85,face[1]),tc=(p,q,r)=>{const cx=(p.p[0]+q.p[0]+r.p[0])/3,cz=(p.p[2]+q.p[2]+r.p[2])/3,j=1+(vnoise(cx*.24,cz*.24)-.5)*(.025+.045*rock);
-    return [0,1,2].map(i=>Math.min(1,(p.c[i]+q.c[i]+r.c[i])/3*j));},c1=tc(a,d,c),c2=tc(a,c,e);
-   b.v.push(...a.p,...n(a),...c1,...d.p,...n(d),...c1,...c.p,...n(c),...c1,...a.p,...n(a),...c2,...c.p,...n(c),...c2,...e.p,...n(e),...c2);};
+  /* v428: Gemeinsame Farbe und Normale je Rasterpunkt statt pauschaler
+     Dreiecksfarbe/Flächennormale. Keine zusätzliche Geländegeometrie. */
+  const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;
+   for(const q of [a,d,c,a,c,e])b.v.push(...q.p,...q.n,...q.c);};
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){if(fine.has(j*nx+i)){for(let v=0;v<N;v++)for(let u=0;u<N;u++){const I=i*N+u,J=j*N+v;quad(vertex(I,J),vertex(I,J+1),vertex(I+1,J+1),vertex(I+1,J));}}else quad(V[j*(nx+1)+i],V[(j+1)*(nx+1)+i],V[(j+1)*(nx+1)+i+1],V[j*(nx+1)+i+1]);}
   if(store)grid={nx,nz,dx,dz,V,fine,vertex,N};return b;
  }
@@ -400,13 +398,8 @@ const ALPINE = (()=>{
   const fz=sm(75,115,d);for(const k of ['fun','boat','duck'])if(scene[k]){scene[k].fade=fz;scene[k].visible=fz<.999;}
   if(scene.boat){const t=clock*.035;scene.boat.x=L.x+3+Math.cos(t)*7;scene.boat.z=L.z+1+Math.sin(t)*3.5;scene.boat.y=L.y+.12+Math.sin(clock*1.3)*.04;scene.boat.ry=-t+Math.PI;scene.boat.rz=Math.sin(clock*1.1)*.03;}
   if(scene.duck){const t=clock*.11;scene.duck.x=POOL.x-1.5+Math.cos(t)*3.2;scene.duck.z=POOL.z+2+Math.sin(t)*3.2;scene.duck.y=POOL.y+.1+Math.sin(clock*3)*.03;scene.duck.ry=-t;scene.duck.rx=Math.sin(clock*2.4)*.08;}
-  const cam=FV.R.cam,hunting=typeof HUNT!=='undefined'&&HUNT.X;if(scene.camTy!=null&&Math.abs((cam.ty||0)-scene.camTy)>1e-6)scene.camExt=Math.abs(cam.ty||0)>1e-6;
-  if(!hunting&&!scene.camExt){
-   /* v403: Über dem Gebirge folgt der Blickpunkt der Geländehöhe und die Kamera bleibt über dem Hang (sonst taucht sie bei
-      nahem Zoom in die höheren Gipfel ein). Setzt ein anderes Modul ty selbst (Tests, Jagd), bleibt es unangetastet, bis ty wieder 0 ist. */
-   const g=contains(cam.tx,cam.tz)?Math.max(0,surface(cam.tx,cam.tz)):0,want=g*(1-sm(170,320,d));let ty=(cam.ty||0)+(want-(cam.ty||0))*Math.min(1,Math.max(0,dt)*3);
-   const cp=Math.cos(cam.pitch||.8),ex=cam.tx+Math.cos(cam.yaw||0)*cp*d,ez=cam.tz+Math.sin(cam.yaw||0)*cp*d,eg=contains(ex,ez)?surface(ex,ez):0,ey=ty+Math.sin(cam.pitch||.8)*d;if(ey<eg+4)ty+=eg+4-ey;
-   cam.ty=ty;}scene.camTy=cam.ty||0;
+  /* v428: Kamerahöhe beim Schwenken nicht verändern. Die gewählte
+     Blickpunkthöhe gehört der Kamerasteuerung, nicht dem Gelände. */
   if(scene.spots&&scene.spots.smoke&&d<120&&FV.R.emit){scene.smoke=(scene.smoke||0)+Math.min(.05,dt)*1.6;if(scene.smoke>=1){scene.smoke--;const p=scene.spots.smoke;FV.R.emit({x:p[0],y:p[1],z:p[2],vx:.12,vy:.55,vz:.05,g:0,life:3.2,size:.22,size2:.9,col:[.8,.8,.82,.22],drag:.6,shape:4});}}
   if(scene.spots&&scene.spots.fire&&d<100&&FV.R.emit){scene.fire=(scene.fire||0)+Math.min(.05,dt)*(day?2:5);if(scene.fire>=1){scene.fire--;const p=scene.spots.fire;FV.R.emit({x:p[0],y:p[1],z:p[2],vx:0,vy:.7,vz:0,g:0,life:.8,size:.1,size2:.02,col:[1,.62,.2,.8],shape:5});}}
   if(d<130&&Math.hypot(FV.R.cam.tx-POOL.x,FV.R.cam.tz-POOL.z)<65&&FV.R.emit){spray+=Math.min(.05,dt)*45;while(spray>=1){spray--;const a=clock*17+spray;const u=Math.sin(a*1.7)*FW*.8;FV.R.emit({x:FALL.foot[0]+u*Math.SQRT1_2+Math.cos(a)*.5,y:.17,z:FALL.foot[2]+u*Math.SQRT1_2+Math.sin(a)*.5,vx:Math.cos(a)*1.4,vy:1.5+Math.sin(a*3)*.5,vz:Math.sin(a)*1.4,g:-9.81,life:.7,size:.055,size2:.12,col:[.85,.95,1,.45],shape:5});}}else spray=0;

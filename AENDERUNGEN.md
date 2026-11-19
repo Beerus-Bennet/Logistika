@@ -1,3 +1,7 @@
+## v428 – Kamerahöhe beim Gebirgsschwenk erhalten, Facettenraster geglättet
+
+Automatische Blickpunkt-/Mindesthöhenanpassung aus ALPINE.step entfernt. Statt pro Dreieck gemittelter Farben und beigemischter Flächennormalen verwendet das Gebirge durchgehende gemeinsame Eckpunktfarben/-normalen; Farbvariation großflächiger. Geländeform und Budget bleiben unverändert (9.918 Dreiecke). Kameraprüfung mit 270 Schwenks, Gebirgs-/Wasserprüfungen und vollständiger Chromium-Hof mit 24 WebGL-Zoomwechseln bestanden; keine Ressourcenvermehrung/JS-Fehler. Kein echter Handytest. Bericht/Vergleich: docs/GEBIRGE-v428.md. Gesamt-/SW428, alpine428; andere main-Assets erhalten.
+
 ## v427 – Mergekonflikte nach Fluss-Baumkorrektur behoben
 
 main65e4497 mit Fluss-Baumkorrektur424 vollständig integriert. Waffen425 und Arbeiterkorrektur426 erhalten; Dokumentation beider Seiten zusammengeführt. Gesamt-/SW427, einzelne Assetstände unverändert. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
