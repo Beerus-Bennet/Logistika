@@ -392,6 +392,40 @@ function checkAchievements() {
 }
 
 /* ============================ Ziele-Ansicht ============================ */
+/* v420: Eigene Tagesaufgaben-Zeichnungen mit Logistika-Kontur und festen
+   Farben. Nur Anzeige; Verkehrsmittel aus der gespeicherten Aufgabe lesen. */
+const DAILY_TASK_ART = {
+  n: `<path fill="#e5b56f" d="M9 20 31 10 55 20 33 31Z"/><path fill="#c58a47" d="M9 20 33 31V58L9 47Z"/><path fill="#efc988" d="M33 31 55 20V47L33 58Z"/>
+    <path fill="#fff3d5" d="m20 15 24 11v12l-7 3V29L13 18Z"/><path fill="#fffaf0" d="m14 34 11 5v9l-11-5Z" stroke-width="1.8"/>`,
+  bike: `<circle cx="15" cy="46" r="10" fill="#edf4f5"/><circle cx="49" cy="46" r="10" fill="#edf4f5"/>
+    <path d="M15 46 26 28 36 46H15L32 34 49 46 42 23H36" stroke-width="4.6"/><path d="M15 46 26 28 36 46H15L32 34 49 46 42 23H36" stroke="#2fa85c" stroke-width="2.2"/>
+    <path d="M23 27H31M5 32H23"/><rect x="5" y="12" width="17" height="17" rx="2" fill="#e5b56f"/><path d="M13 12V21" stroke="#fff3d5" stroke-width="4"/>`,
+  jewel: `<path d="M25 19v-7h14v7" stroke-width="4"/><path fill="#1d6a8b" d="m48 22 8-4v31l-8 6Z"/><rect x="7" y="22" width="42" height="33" rx="5" fill="#2e8eb8"/>
+    <path d="M13 29H43" stroke="#7cc9dd"/><path fill="#f6c445" d="m20 39 6-7h10l6 7-11 12Z"/><path d="m20 39 22 0m-16-7 5 19 5-19" stroke-width="1.5"/>`,
+  rev: `<g transform="rotate(-8 28 28)"><rect x="6" y="12" width="44" height="30" rx="4" fill="#52ad78"/><path d="M12 18H44V36H12Z" stroke="#23764b" stroke-width="2"/><ellipse cx="28" cy="27" rx="7" ry="9" fill="#c4edd0"/></g>
+    <circle cx="35" cy="48" r="10" fill="#dfaa2e"/><circle cx="50" cy="43" r="10" fill="#f6c445"/><path d="M35 43v10M50 38v10" stroke="#916a20"/><path d="M45 37q3-3 7-2" stroke="#fff0ab" stroke-width="2"/>`,
+  punct: `<rect x="26" y="4" width="12" height="6" rx="2" fill="#7f929e"/><circle cx="31" cy="33" r="23" fill="#f6c445"/><circle cx="31" cy="33" r="18" fill="#fffaf0"/>
+    <path d="M31 19v14l9 5M16 33h2M31 47v2M44 33h2"/><circle cx="31" cy="33" r="2" fill="#0d1b2a"/>
+    <circle cx="49" cy="49" r="11" fill="#2fa85c"/><path d="m43 49 4 4 8-9" stroke="#fffaf0" stroke-width="3"/>`,
+  kuehl: `<path fill="#a8dcec" d="m9 19 20-9 26 10-20 10Z"/><path fill="#3f98bf" d="m9 19 26 11v27L9 46Z"/><path fill="#6dbbd7" d="m35 30 20-10v27L35 57Z"/>
+    <path d="M14 17 40 28v26" stroke="#e0f4f8" stroke-width="3"/><g stroke="#fffaf0" stroke-width="2.3"><path d="M24 30v18m-8-14 16 10m-16 0 16-10M21 32l3 2 3-2m-6 14 3-2 3 2"/></g>`,
+  rail: `<path d="M5 54H59M9 60H59M13 52l4 9m13-9 4 9m13-9 4 9" stroke="#7f929e" stroke-width="2"/>
+    <path fill="#2f6fed" d="M7 26h33l15 9v12H7Z"/><path fill="#ec7044" d="M29 13h13l13 17v17H29Z"/><path fill="#a8dcec" d="M34 18h6l9 12H34Z"/>
+    <path fill="#79929e" d="M7 26h22v18H7Z"/><path d="M12 31h11m-11 6h11" stroke="#dce8eb" stroke-width="2"/><path d="M7 44H54" stroke="#f6c445" stroke-width="4"/>
+    <circle cx="16" cy="49" r="4" fill="#0d1b2a"/><circle cx="29" cy="49" r="4" fill="#0d1b2a"/><circle cx="46" cy="49" r="4" fill="#0d1b2a"/><path d="m33 12 7-7 7 7M34 4H51" stroke-width="2"/>`,
+  barge: `<path fill="#fffaf0" d="M7 22H22V39H7Z"/><path fill="#9fd4e7" d="M11 27h7v6h-7Z" stroke-width="1.7"/><path d="M5 21H23"/>
+    <rect x="27" y="29" width="13" height="11" rx="1" fill="#ed9643"/><rect x="40" y="29" width="13" height="11" rx="1" fill="#f6c445"/>
+    <path fill="#348d71" d="M5 39H59L50 53H14Z"/><path d="M10 44H51" stroke="#8dcbb0" stroke-width="2"/><path d="M7 58q5 3 10 0t10 0 10 0 10 0 10 0" stroke="#4ca7c6" stroke-width="2"/>`,
+  ship: `<path fill="#fffaf0" d="M7 18H21V39H7Z"/><path d="M6 18H23M11 14v4"/><path d="M11 24h6m-6 6h6" stroke="#548aab" stroke-width="3"/>
+    <rect x="25" y="21" width="13" height="11" fill="#ed9643"/><rect x="25" y="32" width="13" height="10" fill="#2fa85c"/><rect x="38" y="27" width="13" height="15" fill="#f6c445"/>
+    <path fill="#2f6fed" d="M4 39h45l11-6-7 19H14Z"/><path d="M11 45H46" stroke="#a8dcec" stroke-width="2"/><path d="M7 58q5 3 10 0t10 0 10 0 10 0 10 0" stroke="#4ca7c6" stroke-width="2"/>`,
+  air: `<path fill="#fffaf0" d="M29 10q3-8 6 0l1 16 22 13v6l-22-8v12l7 5v5l-11-4-11 4v-5l7-5V37L6 45v-6l22-13Z"/>
+    <path fill="#90c6df" d="M28 27 6 39v6l22-8m8-10 22 12v6l-22-8"/><path d="M29 17h6M32 48v7" stroke="#467c9a"/><path d="M17 37v8m30-8v8" stroke-width="5"/>`
+};
+function dailyTaskIcon(t) {
+  const key = t.id === "mode" ? ({ l: "rail", i: "barge", s: "ship", a: "air" }[t.m] || "n") : t.id;
+  return `<svg class="daily-icon" data-goal-icon="${esc(key)}" viewBox="0 0 64 64" aria-hidden="true" focusable="false" fill="none" stroke="#0d1b2a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${DAILY_TASK_ART[key] || DAILY_TASK_ART.n}</svg>`;
+}
 let goalsTab = "today";
 function openGoals() {
   $("#modal").classList.add("open"); document.body.classList.add("modal-open");
@@ -407,7 +441,7 @@ function renderGoals() {
     body = (typeof luckyShelfHTML === "function" ? luckyShelfHTML() : "")
       + `<div class="gsub">Jeden Morgen neu · je ${money(dailyReward())} · alle drei: +${money(dailyReward() * 2)} + 🎁 Luckybox</div>`
       + (d.tasks.length ? d.tasks.map(t => `<div class="gtask${t.done ? " done" : ""}">
-          <span class="gi">${T(t).icon}</span>
+          <span class="gi daily-gi">${dailyTaskIcon(t)}</span>
           <div class="gt"><b>${esc(T(t).label(t))}</b>${bar(Math.min(t.got, t.n), t.n)}
             <small>${T(t).money ? money(Math.min(t.got, t.n)) + " von " + money(t.n) : Math.min(t.got, t.n) + " von " + t.n}</small></div>
           <span class="gok">${t.done ? "✔" : ""}</span></div>`).join("")

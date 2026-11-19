@@ -1,0 +1,258 @@
+{
+  "viewports": [
+    {
+      "width": 320,
+      "height": 640,
+      "icons": [
+        "rail",
+        "jewel",
+        "punct"
+      ],
+      "labels": [
+        "Ein Auftrag per Schiene",
+        "2 Wertkurier-Fahrten",
+        "4 Zustellungen in Folge pünktlich"
+      ],
+      "progress": [
+        "0 von 1",
+        "0 von 2",
+        "4 von 4"
+      ],
+      "done": [
+        false,
+        false,
+        true
+      ],
+      "overflow": false,
+      "svgBounds": [
+        {
+          "x": 5,
+          "y": 4,
+          "w": 54,
+          "h": 57
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "w": 49,
+          "h": 43
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "w": 52,
+          "h": 56
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "icons": [
+        "rail",
+        "jewel",
+        "punct"
+      ],
+      "labels": [
+        "Ein Auftrag per Schiene",
+        "2 Wertkurier-Fahrten",
+        "4 Zustellungen in Folge pünktlich"
+      ],
+      "progress": [
+        "0 von 1",
+        "0 von 2",
+        "4 von 4"
+      ],
+      "done": [
+        false,
+        false,
+        true
+      ],
+      "overflow": false,
+      "svgBounds": [
+        {
+          "x": 5,
+          "y": 4,
+          "w": 54,
+          "h": 57
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "w": 49,
+          "h": 43
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "w": 52,
+          "h": 56
+        }
+      ]
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "icons": [
+        "rail",
+        "jewel",
+        "punct"
+      ],
+      "labels": [
+        "Ein Auftrag per Schiene",
+        "2 Wertkurier-Fahrten",
+        "4 Zustellungen in Folge pünktlich"
+      ],
+      "progress": [
+        "0 von 1",
+        "0 von 2",
+        "4 von 4"
+      ],
+      "done": [
+        false,
+        false,
+        true
+      ],
+      "overflow": false,
+      "svgBounds": [
+        {
+          "x": 5,
+          "y": 4,
+          "w": 54,
+          "h": 57
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "w": 49,
+          "h": 43
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "w": 52,
+          "h": 56
+        }
+      ]
+    },
+    {
+      "width": 1100,
+      "height": 900,
+      "icons": [
+        "rail",
+        "jewel",
+        "punct"
+      ],
+      "labels": [
+        "Ein Auftrag per Schiene",
+        "2 Wertkurier-Fahrten",
+        "4 Zustellungen in Folge pünktlich"
+      ],
+      "progress": [
+        "0 von 1",
+        "0 von 2",
+        "4 von 4"
+      ],
+      "done": [
+        false,
+        false,
+        true
+      ],
+      "overflow": false,
+      "svgBounds": [
+        {
+          "x": 5,
+          "y": 4,
+          "w": 54,
+          "h": 57
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "w": 49,
+          "h": 43
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "w": 52,
+          "h": 56
+        }
+      ]
+    }
+  ],
+  "allBounds": [
+    {
+      "id": "n",
+      "x": 9,
+      "y": 10,
+      "w": 46,
+      "h": 48
+    },
+    {
+      "id": "bike",
+      "x": 5,
+      "y": 12,
+      "w": 54,
+      "h": 44
+    },
+    {
+      "id": "jewel",
+      "x": 7,
+      "y": 12,
+      "w": 49,
+      "h": 43
+    },
+    {
+      "id": "rev",
+      "x": 3.987332820892334,
+      "y": 9.093902587890625,
+      "w": 56.01266860961914,
+      "h": 48.906097412109375
+    },
+    {
+      "id": "punct",
+      "x": 8,
+      "y": 4,
+      "w": 52,
+      "h": 56
+    },
+    {
+      "id": "kuehl",
+      "x": 9,
+      "y": 10,
+      "w": 46,
+      "h": 47
+    },
+    {
+      "id": "rail",
+      "x": 5,
+      "y": 4,
+      "w": 54,
+      "h": 57
+    },
+    {
+      "id": "barge",
+      "x": 5,
+      "y": 21,
+      "w": 54,
+      "h": 38.5
+    },
+    {
+      "id": "ship",
+      "x": 4,
+      "y": 14,
+      "w": 56,
+      "h": 45.5
+    },
+    {
+      "id": "air",
+      "x": 6,
+      "y": 6,
+      "w": 52,
+      "h": 53
+    }
+  ],
+  "unchanged": true,
+  "errors": []
+}

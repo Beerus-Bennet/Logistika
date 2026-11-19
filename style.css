@@ -5309,3 +5309,7 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 .wp-preview>small{display:block;text-align:center;font-size:10px;line-height:1.4;font-weight:800;color:#50565b;overflow-wrap:anywhere}
 .wp-card .wp-main{flex-basis:100%}
 .wp-main .wp-build{font-size:11px;line-height:1.45;color:#424b54;margin:4px 0 6px}
+
+/* v420: Nur die Tagesaufgaben – einheitliche Zeichnungen statt System-Emojis. */
+.goals .gtask .daily-gi{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px}
+.goals .daily-icon{display:block;width:38px;height:38px}
