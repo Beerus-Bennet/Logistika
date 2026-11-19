@@ -5295,3 +5295,21 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 .wp-eig .wp-animal .th{width:38px;height:38px;display:block}
 .wp-eig .wp-animal small{font-size:10px;line-height:1.2;font-weight:800;color:var(--ink);white-space:nowrap}
 .wp-eig .wp-animal .th img{display:block;width:38px;height:38px;object-fit:contain}
+
+/* v419: Bestehende Waffenkarten mit größerer, gecachter Modellvorschau.
+   Langwaffen nutzen den freien Rand des quadratischen Bildes; Kurzwaffen
+   bleiben vollständig eingepasst. Keine eigenen Canvas je Karte. */
+.wp-card{flex-wrap:wrap}
+.wp-preview{flex:0 0 100%;min-width:0;border-bottom:1px solid rgba(28,28,36,.15);padding-bottom:8px}
+.wp-preview .wp-img{width:100%;height:auto;aspect-ratio:3/1;overflow:hidden}
+.wp-preview .wp-img .th{display:block;width:100%;height:100%}
+.wp-preview .wp-img .th img{display:block;width:100%;height:100%;object-fit:cover}
+.wp-preview.compact .wp-img{height:146px}
+.wp-preview.compact .wp-img .th img{object-fit:contain}
+.wp-preview>small{display:block;text-align:center;font-size:10px;line-height:1.4;font-weight:800;color:#50565b;overflow-wrap:anywhere}
+.wp-card .wp-main{flex-basis:100%}
+.wp-main .wp-build{font-size:11px;line-height:1.45;color:#424b54;margin:4px 0 6px}
+
+/* v420: Nur die Tagesaufgaben – einheitliche Zeichnungen statt System-Emojis. */
+.goals .gtask .daily-gi{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px}
+.goals .daily-icon{display:block;width:38px;height:38px}

@@ -476,8 +476,8 @@ function staffWant(id) {
   if (FITEMS[id] && FITEMS[id].k === "feed") {
     let eat = 0;
     /* v61: Futter nur für Tierarten, die der Pfleger versorgen darf */
-    S.farm.objs.forEach(o => { if (o.animals && o.animals.length) { const A = FANIMALS[penKind(o)]; if (A && A.feed === id && staffKindOn(penKind(o))) eat += o.animals.length; } });
-    return need + eat * 2 + 2;
+    S.farm.objs.forEach(o => { if (o.animals && o.animals.length) { const A = FANIMALS[penKind(o)]; if (A && A.feed === id && staffKindOn(penKind(o))) eat += o.animals.length * feedMeal(A) / feedPackKg(id); } });   /* v417: Packungen statt Mahlzeiten */
+    return need + Math.ceil(eat * 2) + 2;
   }
   return need + 6;
 }
@@ -876,8 +876,8 @@ function staffPlan() {
     const A = FANIMALS[penKind(o)];
     if (!A || A.fish) return;
     const hungry = o.animals.filter(a => aniState(a) === "hungry").length, inv = farmInv(A.feed);
-    if (!hungry || inv >= hungry) return;
-    const need = o.animals.length * 2;
+    if (!hungry || feedMeals(A) >= hungry) return;
+    const need = Math.max(1, feedPacksFor(A, o.animals.length * 2));   /* v417: Packungen für zwei Mahlzeiten je Tier */
     const mk = staffMaker(A.feed);
     staffEnsureTask({ role: mk ? mk.role : "chef", item: A.feed, n: need - inv, stock: need, from: "pfleger", fromId: pf.id, note: "für die " + A.pl,
       why: !mk ? "keine Mühle" : !staffHas(mk.role) ? "dafür fehlt noch " + FSTAFF_ROLES[mk.role].n : "" });
@@ -992,8 +992,8 @@ function staffTaskJob(s, T) {
       for (const o of pens) {
         if (o.animals.some(a => aniState(a) === "ready") && farmRoom(A.out) >= (A.mast ? A.yield : 1)) return { k: "pen", oid: o.id, what: A.mast ? "bringt " + A.pl + " zum Metzger" : "sammelt " + name + " ein" };
         const hungry = o.animals.filter(a => aniState(a) === "hungry").length;
-        if (hungry && farmInv(A.feed) > 0) return { k: "pen", oid: o.id, what: "füttert die " + A.pl };
-        if (hungry) { staffSub(T, s, A.feed, o.animals.length * 2 - farmInv(A.feed), o.animals.length * 2); T.wait = "wartet auf " + staffItemName(A.feed); }
+        if (hungry && farmFeedAvail(A)) return { k: "pen", oid: o.id, what: "füttert die " + A.pl };
+        if (hungry) { const pk = Math.max(1, feedPacksFor(A, o.animals.length * 2)); staffSub(T, s, A.feed, pk - farmInv(A.feed), pk); T.wait = "wartet auf " + staffItemName(A.feed); }
       }
       if (!T.wait) { T.wait = "die " + A.pl + " sind satt – bald gibt es " + name; T.alive = S.time; }
       return null;
@@ -1143,7 +1143,7 @@ function staffPflegerJob(s) {
     const A = FANIMALS[penKind(o)];
     const ready = o.animals.filter(a => aniState(a) === "ready");
     if (ready.length && farmRoom(A.out) >= (A.mast ? A.yield : 1)) return { k: "pen", oid: o.id, what: A.mast ? "bringt " + A.pl + " zum Metzger" : "sammelt " + FITEMS[A.out].n + " ein" };
-    if (o.animals.some(a => aniState(a) === "hungry") && farmInv(A.feed) > 0) return { k: "pen", oid: o.id, what: "füttert die " + A.pl };
+    if (o.animals.some(a => aniState(a) === "hungry") && farmFeedAvail(A)) return { k: "pen", oid: o.id, what: "füttert die " + A.pl };
   }
   /* leere Plätze wieder auffüllen (Masttiere nach dem Metzger, Ferkel in den neuen Stall) */
   for (const o of pens) {
@@ -1414,7 +1414,7 @@ function staffDo(s, j) {
       const kind = penKind(o), A = FANIMALS[kind];
       if (!staffKindOn(kind)) break;   /* v61: Freigabe kann sich unterwegs geändert haben */
       o.animals.filter(a => aniState(a) === "ready").forEach(a => { if (farmRoom(A.out) >= (A.mast ? A.yield : 1)) { const r = farmCollect(o, a); if (r) gain(r.id, r.n); } });
-      o.animals.filter(a => aniState(a) === "hungry").forEach(a => { if (farmInv(A.feed) > 0) farmFeed(o, a); });
+      o.animals.filter(a => aniState(a) === "hungry").forEach(a => { if (farmFeedAvail(A)) farmFeed(o, a); });
       if (j.buy) {
         /* bis zu zwei Tiere je Gang (eigener Plan), auf deinen Auftrag genau eins */
         const B = FANIMALS[j.buy], times = j.auto ? 2 : 1;
