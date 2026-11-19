@@ -206,3 +206,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v418: Trägerschuss nur durch Weichteile (kein Halswirbel/Ader/Luftröhre) nicht mehr tödlich – Zone `halsweich` über `neckSoft` (Aufzeichnung bleibt `hals`, Merkmal `soft418`), Fasan unverändert, alte Schüsse behalten Wertung. Test `traeger-weich-v418.test.js`.
 
 - v422: PR129 mit main2b55c29 integriert; hunt418 erhalten, Waffen419/Zielsymbole420/Futter417 ebenfalls. Gesamt-/SW422.
+
+- v423: hunt-v307-Prüfstand an seit v366 gültige Stützphase angepasst, fehlende UI-/Mesh-Schnittstellen ergänzt. Alle zehn Prüfgruppen grün, Spielcode unverändert; Gesamt-/SW423.

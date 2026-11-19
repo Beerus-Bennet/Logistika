@@ -1,3 +1,7 @@
+## v423 – Veralteten Jagdprüfstand korrigiert
+
+Der v307-Test verlangte die seit v366 bewusst entfernte Knick-Zwischenpose. Er prüft jetzt anfängliche Stützphase, stetigen Gelenkverlauf und sprungfreien Übergang zur Liegepose bei beiden Tierarten/Seiten. Testaufbau um Munitionsanzeige und Wundmodell-Meshschnittstelle ergänzt; echte Modellgeometrie und Spielfunktionen werden weiter verwendet. Alle zehn v307-, vier v366- und drei Trägerschuss-Prüfgruppen bestanden. Keine Änderung an hunt.js oder Spielständen. V420-Commit im Verlauf enthalten; goals/weapons/style bytegleich zu main. Gesamt-/SW423, alle Einzelassets erhalten. Kein echter Handytest.
+
 ## v422 – Trägerschuss-PR mit aktuellem main zusammengeführt
 
 main2b55c29 vollständig integriert. Trägerschuss-Korrektur418 sowie Waffen419, Zielsymbole420 und Außenlager/Futter417 erhalten. Gesamt-/SW422, hunt418; übrige Assetstände aus main. Syntax und alle drei Trägerschuss-Prüfgruppen bestanden. Älterer Test hunt-v307 scheitert an der Laufwinkel-Erwartung (Zeile86); hunt.js ist bytegleich zum ursprünglichen PR129. Kein echter Handytest.

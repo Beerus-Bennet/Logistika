@@ -6,14 +6,14 @@ function harness(source) {
   const math = Object.create(Math); math.random = () => ((seed = Math.imul(seed, 1664525) + 1013904223 >>> 0) / 4294967296);
   const timers = [], cache = new Map(), C = { console, Math: math, navigator: {}, S: { time: 10, farm: { snd: false } }, save() {}, setTimeout: fn => { timers.push(fn); return timers.length; } };
   const node = (mesh, o = {}) => { const n = Object.assign({ mesh, x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, sx: 1, sy: 1, sz: 1, visible: true, children: [] }, o); if (o.s != null) n.sx = n.sy = n.sz = o.s; return n; };
-  C.FV = { R: { nodes: [], node, addChild(p, n) { p.children.push(n); n.parent = p; return n; }, burst() {}, updateCamera() {}, eye: [5, .24, 0], w: 400, h: 800, ray() { return { o: this.eye, d: [-1, 0, 0] }; } } };
+  C.FV = { R: { nodes: [], node, mesh: b => b, addChild(p, n) { p.children.push(n); n.parent = p; return n; }, burst() {}, updateCamera() {}, eye: [5, .24, 0], w: 400, h: 800, ray() { return { o: this.eye, d: [-1, 0, 0] }; } } };
   C.fnode = node; C.fmesh = (k, fn) => { if (!cache.has(k)) cache.set(k, fn()); return cache.get(k); };
   C.window = C; vm.createContext(C);
   vm.runInContext(fs.readFileSync(path.join(__dirname, 'gl3d.js'), 'utf8'), C);
   const code = source || fs.readFileSync(path.join(__dirname, 'hunt.js'), 'utf8');
   vm.runInContext(code.replace('    CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,',
     '    qa: { build, takeOff, stepAnimal, fallStart, deadLeg, shotContext: typeof shotContext === "undefined" ? null : shotContext, shotName: typeof shotName === "undefined" ? null : shotName, onHit, JOBT, setX: x => X = x }, CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,') + '\nthis.H = HUNT; this.G = G3;', C);
-  const H = C.H, G = C.G, Q = H.qa, X = { inRv: true, aid: 0, animals: [], nodes: [], wind: { v: 0, dir: 0 }, t: 0, view: 'scope', mode: 'hold', reload: 0 };
+  const H = C.H, G = C.G, Q = H.qa, X = { inRv: true, aid: 0, animals: [], nodes: [], wind: { v: 0, dir: 0 }, t: 0, view: 'scope', mode: 'hold', reload: 0, bar: { querySelector() { return null; } } };
   Q.setX(X);
   const animal = (k, score = .65, g = 77) => H._spawn(k, false, { g, score, x: H.FC.x, z: H.FC.z, st: 'look', t: 100, tx: H.FC.x, tz: H.FC.z, ry: .3 });
   function visit(root, fn, parent = G.ID()) {
@@ -80,10 +80,25 @@ function tests() {
     }
     console.log('  ' + frames + ' echte Animationsbilder vermessen');
   });
-  test('Vorderläufe knicken vor den Hinterläufen ein, bevor der Rumpf vollständig rollt', () => {
-    const A = animal('keiler'); Q.stepAnimal(A, .01, 1); A.side = 1; A.st = 'fall'; Q.fallStart(A, .8);
-    A.t = A.fT * .84; const front = Q.deadLeg(A, 0), rear = Q.deadLeg(A, 2);
-    assert.ok(Math.abs(front[1]) > Math.abs(rear[1]) + .15); assert.ok(A.fT > .8);
+  /* v423: Seit v366 halten belastete Hufe zunächst ihre Position; die alte
+     v307-Erwartung einer zusätzlichen Knickpose widersprach diesem Ablauf. */
+  test('Belastete Läufe halten anfangs und gehen stetig in die Liegepose über', () => {
+    for (const k of ['keiler', 'hirsch']) for (const side of [-1, 1]) {
+      const q = harness(), A = q.animal(k); q.Q.stepAnimal(A, .01, 1);
+      A.side = side; A.st = 'fall'; q.Q.fallStart(A, .8); assert.ok(A.fT > .8);
+      const at = u => { A.t = A.fT * (1-u); return [0,1,2,3].map(i => Array.from(q.Q.deadLeg(A,i))); };
+      const start = at(0), held = at(.16);
+      held.forEach((leg,i) => leg.forEach((v,j) => assert.ok(Math.abs(v-start[i][j]) < .001, k+' keine zusätzliche Knickpose')));
+      let previous = held;
+      for (let n=17;n<=100;n++) {
+        const current = at(n/100);
+        current.forEach((leg,i) => leg.forEach((v,j) => {
+          assert.ok(Number.isFinite(v)); assert.ok(Math.abs(v-previous[i][j]) < .12, k+' stetiger Gelenkverlauf');
+        })); previous = current;
+      }
+      A.st='dead';
+      previous.forEach((leg,i) => leg.forEach((v,j) => assert.ok(Math.abs(v-q.Q.deadLeg(A,i)[j]) < 1e-8, k+' kein Sprung zur Endpose')));
+    }
   });
   test('Gehender, pickender, startender, fliegender und gelandeter Fasan werden korrekt unterschieden', () => {
     for (const [st, y, air] of [['walk', 0, false], ['peck', 0, false], ['fly', 0, false], ['fly', 2, true], ['land', .02, false]]) {
