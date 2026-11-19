@@ -68,16 +68,17 @@ const FTREES = {
   kirsche: { n: "Kirschbaum", t: 1260, yield: 3, price: 60, lv: 4 },
   birne:   { n: "Birnbaum",   t: 1440, yield: 3, price: 90, lv: 7 }
 };
-/* Tiere: Futter je Durchgang, t = bis zum Produkt, space = Platz je Tier für
+/* v417: meal = kg Futter je Mahlzeit (realistischer Bruchteil eines Ballens/Sacks, der Rest bleibt angebrochen liegen).
+   Tiere: Futter je Durchgang, t = bis zum Produkt, space = Platz je Tier für
    volle Qualität, house = Stalltyp, pl = Mehrzahl, act = was man beim
    Abholen tut. Masttiere (mast = Mahlzeiten bis schlachtreif) geben am Ende
    yield × out und gehen zum Metzger; danach kauft man junge Tiere nach. */
 const FANIMALS = {
-  huhn:   { n: "Huhn",   pl: "Hühner",  i: "🐔", out: "ei",     feed: "hfutter",   t: 1440, price: 12,  step: 3,  lv: 1, space: 4,    house: "coop",  max: 9, unit: "m²", act: "Eier einsammeln" },
-  kuh:    { n: "Kuh",    pl: "Kühe",    i: "🐄", out: "milch",  feed: "kfutter",   t: 720, price: 350, step: 50, lv: 3, space: 1500, house: "cows",  max: 6, unit: "m²", act: "melken" },
-  schwein:{ n: "Schwein", pl: "Schweine", i: "🐖", out: "spaket", feed: "sfutter",  t: 720, price: 70,  step: 10, lv: 4, space: 10,   house: "pigs",  max: 8, unit: "m²", mast: 3, yield: 3, young: "Ferkel", act: "zum Metzger bringen" },
-  schaf:  { n: "Schaf",  pl: "Schafe",  i: "🐑", out: "wolle",  feed: "schfutter", t: 1440, price: 120, step: 15, lv: 5, space: 250,  house: "sheep", max: 8, unit: "m²", act: "scheren" },
-  rind:   { n: "Rind",   pl: "Rinder",  i: "🐂", out: "rpaket", feed: "kfutter",   t: 720, price: 220, step: 30, lv: 6, space: 2000, house: "beef",  max: 6, unit: "m²", mast: 4, yield: 4, act: "zum Metzger bringen" }
+  huhn:   { n: "Huhn",   pl: "Hühner",  i: "🐔", out: "ei",     feed: "hfutter", meal: 0.15,   t: 1440, price: 12,  step: 3,  lv: 1, space: 4,    house: "coop",  max: 9, unit: "m²", act: "Eier einsammeln" },
+  kuh:    { n: "Kuh",    pl: "Kühe",    i: "🐄", out: "milch",  feed: "kfutter", meal: 5,   t: 720, price: 350, step: 50, lv: 3, space: 1500, house: "cows",  max: 6, unit: "m²", act: "melken" },
+  schwein:{ n: "Schwein", pl: "Schweine", i: "🐖", out: "spaket", feed: "sfutter", meal: 1.5,  t: 720, price: 70,  step: 10, lv: 4, space: 10,   house: "pigs",  max: 8, unit: "m²", mast: 3, yield: 3, young: "Ferkel", act: "zum Metzger bringen" },
+  schaf:  { n: "Schaf",  pl: "Schafe",  i: "🐑", out: "wolle",  feed: "schfutter", meal: 2, t: 1440, price: 120, step: 15, lv: 5, space: 250,  house: "sheep", max: 8, unit: "m²", act: "scheren" },
+  rind:   { n: "Rind",   pl: "Rinder",  i: "🐂", out: "rpaket", feed: "kfutter", meal: 5,   t: 720, price: 220, step: 30, lv: 6, space: 2000, house: "beef",  max: 6, unit: "m²", mast: 4, yield: 4, act: "zum Metzger bringen" }
 };
 /* Auslauf je Ausbaustufe: Kacheln (w × d) und Fläche in m² (bei Fisch m³) */
 const FPENS = {
