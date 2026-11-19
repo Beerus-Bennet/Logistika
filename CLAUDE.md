@@ -194,3 +194,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v415: Liefertruhe nutzt farmTreasureLoot wie Grabtruhe: Bedarf/Freigaben/Lager und kapital-/fortschrittsabhängiges Geld. Seltenheitschancen und Einmal-Schutz erhalten. erbe415, Gesamt415. Tests treasure-loot-v305.test.js und liefertruhe-v415.test.js.
 
 - v416: Waffenschrank-Eignung nutzt gecachte HUNT-Tiermodelle statt Emojis, mit Artnamen/zugänglicher Eignungsangabe. weapons/style416, Gesamt416; Jagdregeln unverändert.
+
+- v419: Bestehende Waffenmodelle mit echten Mündungsvertiefungen/offenen Abzugsbügeln, erkennbaren Systemen und größerer gecachter Vorschau. BUILD nur Anzeige, LIST/Physik/Save unverändert. weapons/style419, Gesamt419, Basis main69f990c. Tests weapons-v383.test.js und weapons-v419.*, Bericht docs/WAFFENOPTIK-v419.md.

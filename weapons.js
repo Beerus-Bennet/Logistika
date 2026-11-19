@@ -76,67 +76,155 @@ const WEAPONS = (() => {
   const C = { steel: 0x3b4048, steelL: 0x7a8490, wood: 0x8a5634, woodD: 0x5a3822, poly: 0x2b2d31, gold: 0xe3b23c, goldD: 0xb5841c, black: 0x17181b, glass: 0x6aa7d8, brass: 0xc9a14a };
   const bx = (b, x, y, z, w, h, d, c, o) => b.box(w, h, d, c, Object.assign({ c: true, x, y, z }, o || {}));
   const tube = (b, x, y, z, len, r, c, r2) => b.cyl(r, r2 == null ? r : r2, len, 10, c, { x, y, z, rz: -Math.PI / 2 });
-  function scope(b, x, y, size, col) {
-    tube(b, x - 0.1, y, 0, 0.3, 0.013 * size, col || C.black); tube(b, x + 0.17, y, 0, 0.06, 0.021 * size, col || C.black, 0.017 * size); tube(b, x - 0.14, y, 0, 0.05, 0.019 * size, col || C.black, 0.013 * size);
-    bx(b, x - 0.03, y - 0.022, 0, 0.022, 0.026, 0.02, C.steelL); bx(b, x + 0.1, y - 0.022, 0, 0.022, 0.026, 0.02, C.steelL);
-    b.sphere(0.011, 8, 6, C.glass, { x: x + 0.2, y, z: 0 });
+  /* v419: Wenige feste Flächen für Schaftkonturen, offene Bügel und vertiefte
+     Mündungen. Keine laufende Simulation oder zusätzlichen WebGL-Kontexte. */
+  function profile(b, p, d, c, z = 0) {
+    const front = p.map(q => [q[0], q[1], z + d / 2]), back = p.map(q => [q[0], q[1], z - d / 2]);
+    for (let i = 1; i < p.length - 1; i++) {
+      b.tri(front[0], front[i], front[i + 1], c); b.tri(back[0], back[i + 1], back[i], c);
+    }
+    for (let i = 0; i < p.length; i++) { const j = (i + 1) % p.length; b.quad(front[i], back[i], back[j], front[j], c); }
+  }
+  function guard(b, x, y, w, h, c, twin = false) {
+    const p = [[-.5, -.25], [-.33, -.5], [.33, -.5], [.5, -.25], [.5, .3], [.35, .5], [-.35, .5], [-.5, .3]];
+    const at = (i, inner, z) => [x + p[i][0] * w * (inner ? .77 : 1), y + p[i][1] * h * (inner ? .65 : 1), z];
+    for (let i = 0; i < p.length; i++) {
+      const j = (i + 1) % p.length;
+      b.quad(at(i, false, .008), at(j, false, .008), at(j, true, .008), at(i, true, .008), c);
+      b.quad(at(j, false, -.008), at(i, false, -.008), at(i, true, -.008), at(j, true, -.008), c);
+      b.quad(at(i, false, -.008), at(j, false, -.008), at(j, false, .008), at(i, false, .008), c);
+      b.quad(at(i, true, .008), at(j, true, .008), at(j, true, -.008), at(i, true, -.008), c);
+    }
+    bx(b, x - w * .17, y + h * .1, 0, .007, h * .5, .008, C.steelL, { rz: -.22 });
+    if (twin) bx(b, x + w * .12, y + h * .1, 0, .007, h * .45, .008, C.steelL, { rz: -.22 });
+  }
+  function muzzle(b, x, y, z, r, c) {
+    const at = (a, xx, rr) => [xx, y + Math.cos(a) * rr, z + Math.sin(a) * rr];
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6, n = (i + 1) * Math.PI / 6, ri = r * .55;
+      b.quad(at(a, x - .025, r), at(n, x - .025, r), at(n, x, r), at(a, x, r), c);
+      b.quad(at(a, x, r), at(n, x, r), at(n, x, ri), at(a, x, ri), C.steelL);
+      b.quad(at(a, x, ri), at(n, x, ri), at(n, x - .016, ri), at(a, x - .016, ri), C.black);
+      b.tri([x - .016, y, z], at(a, x - .016, ri), at(n, x - .016, ri), C.black);
+    }
+  }
+  function scope(b, x, y, size = 1, col = C.black) {
+    tube(b, x - .1 * size, y, 0, .27 * size, .013 * size, col);
+    tube(b, x + .14 * size, y, 0, .07 * size, .013 * size, col, .024 * size);
+    tube(b, x - .15 * size, y, 0, .055 * size, .02 * size, col, .013 * size);
+    for (const dx of [-.04, .09]) {
+      bx(b, x + dx * size, y - .024, 0, .025, .027, .025, C.steel);
+      tube(b, x + (dx - .012) * size, y, 0, .024 * size, .016 * size, C.steelL);
+    }
+    /* Linsen liegen sichtbar an den Enden statt mitten im geschlossenen Tubus. */
+    tube(b, x + .21 * size, y, 0, .002, .019 * size, C.glass);
+    tube(b, x - .152 * size, y, 0, .002, .016 * size, C.glass);
+    b.cyl(.014 * size, .014 * size, .017 * size, 8, col, { x, y: y + .01 * size });
   }
   function rifle(o) {
     const b = new G3.MB(), wood = o.poly ? C.poly : C.wood, woodD = o.poly ? 0x1d1e21 : C.woodD, len = o.len || 0.62;
-    bx(b, -0.43, 0.0, 0, 0.34, 0.07, 0.042, wood); bx(b, -0.6, 0.005, 0, 0.04, 0.085, 0.045, woodD);                 /* Schaft und Schaftkappe */
-    bx(b, -0.4, 0.04, 0, 0.3, 0.02, 0.04, wood); bx(b, -0.2, -0.065, 0, 0.07, 0.11, 0.042, wood, { rz: -0.35 });      /* Kamm und Pistolengriff */
+    profile(b, [[-.6, -.05], [-.35, -.035], [-.22, .014], [-.28, .05], [-.59, .05]], .045, wood);
+    bx(b, -.6, 0, 0, .023, .105, .048, woodD); bx(b, -0.2, -0.065, 0, 0.07, 0.11, 0.042, wood, { rz: -0.35 });
     bx(b, 0.13, -0.022, 0, 0.27, 0.05, 0.046, wood); bx(b, 0.13, -0.052, 0, 0.27, 0.01, 0.048, woodD);                /* Vorderschaft */
     bx(b, -0.1, 0.012, 0, 0.21, 0.05, 0.042, C.steel); bx(b, -0.1, 0.04, 0, 0.21, 0.008, 0.03, C.steelL);             /* Verschlusskasten */
-    tube(b, 0.0, 0.012, 0, len, 0.0115, C.steel); tube(b, len - 0.02, 0.012, 0, 0.045, o.brake ? 0.019 : 0.0145, C.steelL);
-    if (o.auto) { tube(b, 0.05, -0.012, 0, 0.3, 0.007, C.steelL); bx(b, -0.04, 0.04, 0.024, 0.05, 0.02, 0.008, C.black); }
-    if (o.straight) bx(b, -0.14, 0.032, 0, 0.028, 0.018, 0.014, C.black);
-    else if (!o.auto) { b.cyl(0.006, 0.006, 0.06, 8, C.steelL, { x: -0.15, y: 0.026, z: 0.03, rx: Math.PI / 2 }); b.sphere(0.014, 8, 6, C.steelL, { x: -0.15, y: 0.026, z: 0.065 }); }
-    bx(b, -0.09, -0.04, 0, o.mag || 0.075, 0.05, 0.03, C.poly);                                                           /* Magazin */
-    bx(b, -0.14, -0.04, 0, 0.075, 0.005, 0.03, C.steel);                                                                 /* Abzugsbügel */
-    if (o.scope !== false) scope(b, -0.02, 0.07, o.scopeS || 1);
+    tube(b, 0.0, 0.012, 0, len, 0.0115, C.steel); muzzle(b, len + .025, .012, 0, o.brake ? .019 : .0145, C.steel);
+    if (o.brake) for (const z of [-.018, .018]) bx(b, len + .008, .012, z, .01, .008, .003, C.black);
+    bx(b, -.085, .018, .022, .087, .021, .003, C.black);                          /* Auswurffenster */
+    bx(b, -.085, .009, .024, .079, .005, .003, C.steelL);
+    if (o.auto) {
+      bx(b, -.047, .02, .035, .026, .009, .027, C.steelL);                      /* Ladegriff am System; Gasmechanik im Vorderschaft */
+    } else {
+      if (o.straight) {
+        bx(b, -.15, .025, .036, .035, .018, .036, C.steelL, { ry: -.3 });
+        b.sphere(.014, 8, 6, C.poly, { x: -.143, y: .014, z: .06 });
+      } else {
+        b.cyl(.006, .006, .047, 8, C.steelL, { x: -.15, y: .024, z: .021, rx: Math.PI / 2 });
+        b.sphere(.014, 8, 6, C.steelL, { x: -.15, y: .024, z: .068 });
+      }
+    }
+    bx(b, -.045, -.044, 0, o.mag || .065, .045, .034, C.poly);                 /* Magazin vor dem Abzug */
+    bx(b, -.045, -.069, 0, o.mag || .069, .008, .038, woodD);
+    guard(b, -.138, -.043, .082, .06, C.steel);
+    if (o.scope !== false) scope(b, -.02, .083, o.scopeS || 1);
     return b;
   }
   function double(o) {
     const b = new G3.MB(), gold = o.gold, wood = gold ? 0x6a3f24 : C.wood;
-    bx(b, -0.43, 0.0, 0, 0.34, 0.07, 0.05, wood); bx(b, -0.6, 0.005, 0, 0.04, 0.085, 0.052, C.woodD);
-    bx(b, -0.4, 0.04, 0, 0.3, 0.02, 0.046, wood); bx(b, -0.2, -0.06, 0, 0.065, 0.1, 0.044, wood, { rz: -0.3 });
+    profile(b, [[-.6, -.05], [-.35, -.035], [-.22, .012], [-.28, .05], [-.59, .05]], .05, wood);
+    bx(b, -.6, 0, 0, .023, .105, .053, C.woodD); bx(b, -0.2, -0.06, 0, 0.065, 0.1, 0.044, wood, { rz: -0.3 });
     bx(b, 0.07, -0.026, 0, 0.17, 0.045, 0.062, wood);                                                                    /* kurzer Vorderschaft */
     bx(b, -0.1, 0.006, 0, 0.17, 0.06, 0.062, gold ? C.goldD : C.steel);                                                  /* Basküle */
-    for (const z of [-0.02, 0.02]) { tube(b, -0.02, 0.016, z, 0.62, 0.0135, C.steel); tube(b, 0.58, 0.016, z, 0.02, 0.016, gold ? C.gold : C.steelL); }
+    for (const z of [-0.02, 0.02]) { tube(b, -.02, .016, z, .62, .0135, C.steel); muzzle(b, .625, .016, z, .0155, C.steel); }
     bx(b, 0.3, 0.036, 0, 0.6, 0.008, 0.02, gold ? C.gold : C.steelL);                                                    /* Schiene */
     for (const z of [-0.034, 0.034]) b.box(0.13, 0.05, 0.006, gold ? C.gold : C.steelL, { c: true, x: -0.1, y: 0.006, z });  /* Seitenschlösser */
-    bx(b, -0.14, -0.034, 0, 0.07, 0.005, 0.03, gold ? C.gold : C.steel);
-    bx(b, -0.02, 0.05, 0, 0.012, 0.012, 0.012, C.black);                                                                  /* Korn */
-    if (o.scope) scope(b, -0.02, 0.07, 0.8);
-    if (gold) for (let i = 0; i < 3; i++) bx(b, 0.12 + i * 0.16, 0.016, 0, 0.012, 0.062, 0.06, C.gold);
+    guard(b, -.14, -.051, .09, .052, gold ? C.gold : C.steel, true);
+    bx(b, .59, .049, 0, .012, .013, .008, C.brass);                          /* Korn an der Mündung */
+    bx(b, -.13, .043, .01, .067, .009, .013, gold ? C.gold : C.steelL, { ry: -.2 });
+    for (const z of [-.038, .038]) {
+      b.cyl(.009, .009, .004, 8, C.steel, { x: -.031, y: -.003, z, rx: Math.PI / 2 });
+      bx(b, -.027, .014, z, .004, .037, .002, C.black);                      /* Gelenk und Trennfuge */
+      if (gold) for (let i = 0; i < 3; i++) bx(b, -.147 + i * .03, .006, z, .013, .022, .003, C.goldD, { rz: .6 });
+    }
+    if (o.scope) scope(b, -.02, .087, .8);
     return b;
   }
   function shotgun() {
     const b = new G3.MB();
-    bx(b, -0.5, 0.0, 0, 0.38, 0.075, 0.044, C.wood); bx(b, -0.7, 0.005, 0, 0.04, 0.09, 0.046, C.woodD); bx(b, -0.46, 0.042, 0, 0.34, 0.02, 0.04, C.wood);
+    profile(b, [[-.7, -.055], [-.4, -.033], [-.29, .014], [-.34, .053], [-.69, .053]], .046, C.wood);
+    bx(b, -.7, 0, 0, .023, .113, .05, C.woodD);
     bx(b, -0.26, -0.065, 0, 0.07, 0.11, 0.044, C.wood, { rz: -0.3 }); bx(b, 0.1, -0.03, 0, 0.3, 0.05, 0.06, C.wood);
     bx(b, -0.12, 0.0, 0, 0.18, 0.07, 0.056, C.steelL);                                                                    /* Basküle */
     tube(b, -0.04, 0.02, 0, 0.78, 0.0145, C.steel); tube(b, -0.04, -0.012, 0, 0.78, 0.0145, C.steel);                   /* Über-/Unterlauf */
+    for (const y of [.02, -.012]) muzzle(b, .765, y, 0, .0155, C.steel);
     bx(b, 0.34, 0.036, 0, 0.74, 0.006, 0.014, C.steelL); b.sphere(0.007, 6, 4, C.brass, { x: 0.73, y: 0.042 });
-    bx(b, -0.2, -0.038, 0, 0.07, 0.005, 0.03, C.steel);
+    guard(b, -.191, -.059, .086, .052, C.steel);
+    bx(b, -.15, .042, .01, .06, .01, .014, C.steel, { ry: -.2 });
+    for (const z of [-.03, .03]) {
+      b.cyl(.009, .009, .004, 8, C.steel, { x: -.041, y: -.006, z, rx: Math.PI / 2 });
+      bx(b, -.033, .006, z, .004, .04, .002, C.black);
+    }
+    bx(b, .07, -.057, 0, .05, .004, .015, C.steelL);                       /* Vorderschaftverschluss */
     return b;
   }
   function pistol() {
     const b = new G3.MB();
-    bx(b, 0.02, 0.05, 0, 0.21, 0.036, 0.03, C.black); bx(b, 0.02, 0.069, 0, 0.21, 0.004, 0.02, 0x30343a);                /* Schlitten */
-    bx(b, 0.0, 0.02, 0, 0.19, 0.03, 0.032, C.poly); tube(b, 0.115, 0.048, 0, 0.03, 0.0075, C.steelL);                    /* Rahmen, Lauf */
+    bx(b, .0075, .05, 0, .185, .036, .03, C.black);
+    bx(b, .1125, .064, 0, .025, .008, .03, C.black);                       /* offene Schlittenfront um den Lauf */
+    bx(b, .1125, .035, 0, .025, .006, .03, C.black);
+    for (const z of [-.012, .012]) bx(b, .1125, .049, z, .025, .022, .006, C.black);
+    bx(b, .02, .069, 0, .21, .004, .02, 0x30343a);
+    bx(b, 0.0, 0.02, 0, 0.19, 0.023, 0.032, C.poly);
+    tube(b, .1, .048, 0, .009, .0075, C.steel); muzzle(b, .126, .048, 0, .009, C.steel);
     bx(b, -0.065, -0.04, 0, 0.05, 0.115, 0.034, C.poly, { rz: 0.2 }); bx(b, -0.085, -0.1, 0, 0.044, 0.012, 0.036, C.poly, { rz: 0.2 });
-    bx(b, 0.03, 0.0, 0, 0.055, 0.004, 0.022, C.poly); bx(b, 0.012, 0.012, 0, 0.012, 0.03, 0.012, C.black, { rz: -0.2 });  /* Abzugsbügel, Abzug */
+    guard(b, .025, -.019, .08, .059, C.poly);
+    for (const z of [-.016, .016]) {
+      for (let i = 0; i < 5; i++) bx(b, -.068 + i * .009, .05, z, .003, .026, .002, C.steel);
+      bx(b, -.07, -.04, z * 1.12, .026, .058, .003, 0x414449, { rz: .2 });
+    }
+    bx(b, .038, .057, .016, .045, .018, .003, C.steelL);                     /* Patronenlager im Auswurffenster */
+    bx(b, .038, .069, 0, .045, .003, .021, C.steelL);
+    bx(b, .018, .015, .019, .027, .005, .004, C.steel);                      /* Schlittenfang */
     bx(b, 0.118, 0.073, 0, 0.012, 0.012, 0.01, C.steelL); bx(b, -0.07, 0.073, 0, 0.018, 0.012, 0.02, C.steelL);         /* Korn, Kimme */
     return b;
   }
   function revolver() {
     const b = new G3.MB();
-    bx(b, -0.04, 0.03, 0, 0.12, 0.07, 0.034, C.steelL); tube(b, -0.03, 0.04, 0, 0.075, 0.037, C.steel);                  /* Rahmen, Trommel */
-    bx(b, 0.19, 0.045, 0, 0.3, 0.034, 0.03, C.steelL); tube(b, 0.04, 0.043, 0, 0.3, 0.012, C.steel);                    /* Laufmantel und Lauf */
-    bx(b, -0.11, -0.03, 0, 0.055, 0.12, 0.04, C.wood, { rz: 0.28 }); bx(b, -0.0, -0.002, 0, 0.06, 0.004, 0.026, C.steel);
-    bx(b, -0.07, 0.074, 0, 0.02, 0.012, 0.016, C.black); bx(b, 0.33, 0.066, 0, 0.012, 0.014, 0.01, C.black);
-    scope(b, 0.05, 0.095, 0.55);
+    bx(b, -.068, .018, 0, .032, .09, .035, C.steelL);
+    bx(b, -.002, .066, 0, .13, .016, .035, C.steelL); bx(b, -.002, -.024, 0, .13, .014, .033, C.steelL);
+    tube(b, -.052, .02, 0, .104, .037, C.steelL);                           /* freistehende Trommel im Rahmen */
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3, y = .02 + Math.cos(a) * .025, z = Math.sin(a) * .025;
+      tube(b, .052, y, z, .002, .007, C.black);                            /* sechs Kammern auf der Stirnseite */
+      tube(b, -.04, .02 + Math.cos(a) * .035, Math.sin(a) * .035, .074, .004, C.steel);
+    }
+    bx(b, .19, .041, 0, .3, .032, .031, C.steelL); tube(b, .054, .045, 0, .288, .012, C.steel);
+    muzzle(b, .367, .045, 0, .014, C.steelL);
+    tube(b, .061, .013, 0, .22, .007, C.steel);                             /* Ausstoßer unter dem Lauf */
+    bx(b, -.11, -.03, 0, .055, .12, .04, C.wood, { rz: .28 });
+    guard(b, -.011, -.055, .09, .054, C.steelL);
+    bx(b, -.083, .073, 0, .028, .014, .018, C.steel, { rz: .4 });           /* Hahn */
+    bx(b, -.07, .081, 0, .02, .012, .016, C.black); bx(b, .33, .068, 0, .012, .014, .01, C.black);
+    scope(b, .05, .106, .55);
     return b;
   }
   const MODELS = {
@@ -145,6 +233,19 @@ const WEAPONS = (() => {
     double: () => double({ scope: 1 }), royal: () => double({ gold: 1 }), shotgun, pistol, revolver
   };
   const model = id => { const w = BY[id]; return MODELS[w.model](); };
+  /* v419: Kurze Erklärung des sichtbaren Aufbaus; keine neuen Waffenwerte. */
+  const BUILD = {
+    bolt: ["Schaft · Zylinderverschluss · Lauf", "Der Kammergriff wird zum Repetieren gedreht und vor/zurück bewegt. Patronen kommen aus dem Magazin vor dem Abzug."],
+    straight: ["Schaft · Geradezugverschluss · Lauf", "Der seitliche Kammergriff bewegt den Verschluss gerade vor und zurück. Das Magazin sitzt unter dem System."],
+    auto: ["Schaft · Selbstladesystem · Lauf", "Gasdruck betätigt den Verschluss nach dem Schuss. Der seitliche Ladegriff dient zum manuellen Laden; das Magazin sitzt darunter."],
+    heavy: ["Schaft · Zylinderverschluss · Lauf", "Der Kammergriff wird zum Repetieren gedreht und vor/zurück bewegt. Vorn am Lauf sitzt eine Mündungsbremse."],
+    long: ["Schaft · Geradezugverschluss · langer Lauf", "Geradezugverschluss mit Magazin darunter. Das große Zielfernrohr sitzt über dem System, die Mündungsbremse am Laufende."],
+    double: ["Schaft · Kipplaufgelenk · zwei Läufe nebeneinander", "Zum Laden kippt das Laufpaar am Gelenk nach unten. Jeder der beiden Abzüge gehört zu einem Lauf."],
+    royal: ["Holzschaft · gravierte Basküle · zwei Läufe", "Zwei Läufe nebeneinander, mit je einem Abzug. Das Laufpaar klappt zum Laden nach unten; Goldbeschläge betonen das Gelenkgehäuse."],
+    shotgun: ["Schaft · Kipplaufgelenk · zwei Läufe übereinander", "Der obere Hebel entriegelt das Laufpaar zum Abkippen und Laden. Der einzelne Abzug löst die Läufe nacheinander aus."],
+    pistol: ["Schlitten & Lauf · Rahmen · Griffmagazin", "Der Schlitten bewegt sich beim Schuss zurück und wieder vor. Dabei wird eine neue Patrone aus dem Magazin im Griff zugeführt."],
+    revolver: ["Hahn · Sechsschusstrommel · Lauf", "Die Trommel dreht jeweils die nächste Kammer hinter den Lauf. Der Ausstoßer unter dem Lauf dient zum Entleeren der ausgeschwenkten Trommel."]
+  };
   /* ------------------------------- Shop -------------------------------- */
   const bar = (v, max) => `<i class="wp-bar"><b style="width:${Math.round(Math.max(4, Math.min(100, v / max * 100)))}%"></b></i>`;
   const fj = n => (n >= 1000 ? (n / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " kJ" : Math.round(n) + " J");
@@ -160,15 +261,17 @@ const WEAPONS = (() => {
   }
   function cardHTML(w) {
     const g = G(), mine = owns(w.id), sel = g.sel === w.id && mine;
-    const img = typeof thumbSpan === "function" ? thumbSpan("wpn383:" + w.id, () => model(w.id), "🔫", false, { yaw: 0.5, pitch: 0.18, noShadow: true }) : "🔫";
+    const compact = w.model === "pistol" || w.model === "revolver", build = BUILD[w.model];
+    const img = typeof thumbSpan === "function" ? thumbSpan("wpn419:" + w.id, () => model(w.id), "🔫", false, { yaw: 1.16, pitch: .22, big: true, noShadow: true }) : "🔫";
     const act = sel ? `<button class="btn tiny" disabled>✔ Ausgerüstet</button>`
       : mine ? `<button class="btn tiny" data-wp="sel" data-id="${w.id}">Ausrüsten</button>`
       : w.special ? `<button class="btn tiny ghost" disabled>🎡 Nur im Lucky-Rad</button>`
       : `<button class="btn tiny${S.money < w.price ? " ghost" : ""}" data-wp="buy" data-id="${w.id}">Kaufen · ${money(w.price)}</button>`;
     const cyc = w.cyc < 1 ? w.cyc.toLocaleString("de-DE") + " s" : w.cyc.toLocaleString("de-DE") + " s";
     return `<div class="wp-card${sel ? " sel" : ""}${w.special ? " gold" : ""}" data-w="${w.id}">
-      <div class="wp-img">${img}</div>
+      <div class="wp-preview${compact ? " compact" : ""}"><div class="wp-img" role="img" aria-label="${esc(w.name + ': ' + build[0])}">${img}</div><small>${esc(build[0])}</small></div>
       <div class="wp-main"><b>${esc(w.name)}</b><small>${esc(w.type)} · ${esc(w.cal)}</small>
+        <p class="wp-build">${esc(build[1])}</p>
         <div class="wp-eig">${eignung(w)}</div>
         <div class="wp-st"><span>Wucht ${bar(E0(w), 6000)}<em>${fj(E0(w))}</em></span><span>Feuerfolge ${bar(1 / w.cyc, 6)}<em>${w.mag} Schuss · ${cyc}</em></span><span>Reichweite ${bar(w.maxR, 600)}<em>${w.maxR} m</em></span></div>
         <p>${esc(w.txt)}</p><p class="wp-real">ℹ️ ${esc(w.real)}</p>${act}</div></div>`;

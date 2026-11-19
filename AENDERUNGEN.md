@@ -1,3 +1,10 @@
+## v419 – Waffenaufbau und Vorschauen verfeinert
+
+- Ursache: Geschlossene Mündungskappen, kaum erkennbare Bügel/Systeme und zu kleine Vorschaubilder erschwerten die Unterscheidung der Waffen.
+- Lösung: Bestehende zehn Modelle gezielt verfeinert: vertiefte Mündungen, offene Abzugsbügel, sichtbare Kammergriffe/Magazine, Kipplaufgelenke, Pistolenschlitten und Revolvertrommel. Schaftkonturen und Optikmontagen überarbeitet; größere gecachte Vorschau mit Bauteil- und Funktionszeile. Logistika-Look und vorhandene Karten/Bedienung erhalten, keine Waffenwerte oder Spielmechanik geändert.
+- Geprüft: sieben bisherige Waffen-Prüfgruppen; echte Modellöffnungen und festes Geometriebudget (512–1.192 Dreiecke je Modell); Chromium in vier Browserformaten ohne Zuschnitt/Überlauf/JavaScriptfehler. 20 Wiederöffnungen ohne neue Waffen-Meshes/Renderdurchläufe; Auswahl und Spielstanderhalt geprüft. Nicht geprüft: echtes Handy/iPhone/Safari oder Geräte-FPS. Bericht und Vergleich: `docs/WAFFENOPTIK-v419.md`.
+- Aktuelles main69f990c mit PR127 integriert. Gesamt-/SW/LOGI_V419, weapons/style419; übrige Assetstände erhalten. Eigener Pull Request, kein automatisches Merge/Deployment.
+
 ## v416 – Tierbildchen im Waffenschrank statt Emojis
 
 Markierte Tier-Eignungsanzeige mit denselben 3D-Modellen wie die Jagdsammlung. Drei gemeinsam gecachte Bildchen, Artnamen und zugängliche Eignungsbeschriftung; Regeln unverändert. weapons/style416, Gesamt416. Syntax geprüft; kein echter Handytest.
