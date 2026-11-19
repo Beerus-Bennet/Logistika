@@ -149,7 +149,7 @@ const ALPINE = (()=>{
    else if(J%N===0&&(!fine.has(j*nx+i)||!fine.has((j-1)*nx+i)))out=interpolate(V[(J/N)*(nx+1)+i],V[(J/N)*(nx+1)+i+1],u);
    else{const X=B.x0+I/N*dx,Z=B.z0+J/N*dz,p=project(X,Z),h=height(...p);out={out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])};}cache.set(key,out);return out;
   }
-  /* v428: Gemeinsame Farbe und Normale je Rasterpunkt statt pauschaler
+  /* v429: Gemeinsame Farbe und Normale je Rasterpunkt statt pauschaler
      Dreiecksfarbe/Flächennormale. Keine zusätzliche Geländegeometrie. */
   const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;
    for(const q of [a,d,c,a,c,e])b.v.push(...q.p,...q.n,...q.c);};
@@ -398,7 +398,7 @@ const ALPINE = (()=>{
   const fz=sm(75,115,d);for(const k of ['fun','boat','duck'])if(scene[k]){scene[k].fade=fz;scene[k].visible=fz<.999;}
   if(scene.boat){const t=clock*.035;scene.boat.x=L.x+3+Math.cos(t)*7;scene.boat.z=L.z+1+Math.sin(t)*3.5;scene.boat.y=L.y+.12+Math.sin(clock*1.3)*.04;scene.boat.ry=-t+Math.PI;scene.boat.rz=Math.sin(clock*1.1)*.03;}
   if(scene.duck){const t=clock*.11;scene.duck.x=POOL.x-1.5+Math.cos(t)*3.2;scene.duck.z=POOL.z+2+Math.sin(t)*3.2;scene.duck.y=POOL.y+.1+Math.sin(clock*3)*.03;scene.duck.ry=-t;scene.duck.rx=Math.sin(clock*2.4)*.08;}
-  /* v428: Kamerahöhe beim Schwenken nicht verändern. Die gewählte
+  /* v429: Kamerahöhe beim Schwenken nicht verändern. Die gewählte
      Blickpunkthöhe gehört der Kamerasteuerung, nicht dem Gelände. */
   if(scene.spots&&scene.spots.smoke&&d<120&&FV.R.emit){scene.smoke=(scene.smoke||0)+Math.min(.05,dt)*1.6;if(scene.smoke>=1){scene.smoke--;const p=scene.spots.smoke;FV.R.emit({x:p[0],y:p[1],z:p[2],vx:.12,vy:.55,vz:.05,g:0,life:3.2,size:.22,size2:.9,col:[.8,.8,.82,.22],drag:.6,shape:4});}}
   if(scene.spots&&scene.spots.fire&&d<100&&FV.R.emit){scene.fire=(scene.fire||0)+Math.min(.05,dt)*(day?2:5);if(scene.fire>=1){scene.fire--;const p=scene.spots.fire;FV.R.emit({x:p[0],y:p[1],z:p[2],vx:0,vy:.7,vz:0,g:0,life:.8,size:.1,size2:.02,col:[1,.62,.2,.8],shape:5});}}

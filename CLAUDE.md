@@ -217,4 +217,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v427: PR133 mit main65e4497/Fluss-Baumkorrektur424 integriert, Waffen425 und Arbeiter426 erhalten. Gesamt-/SW427.
 
-- v428: ALPINE.step verändert Kamerahöhe nicht mehr; Gelände mit gemeinsamen Eckpunktfarben/-normalen statt Facettenfarben. Höhenfeld/Raster/Budget unverändert, alpine428/Gesamt428. Tests gebirge-v428, gebirge-v413 und wasseroptik-v386; Bericht docs/GEBIRGE-v428.md.
+- v429: ALPINE.step verändert Kamerahöhe nicht mehr; Gelände mit gemeinsamen Eckpunktfarben/-normalen statt Facettenfarben. Höhenfeld/Raster/Budget unverändert, alpine429/Gesamt429. Tests gebirge-v429, gebirge-v413 und wasseroptik-v386; Bericht docs/GEBIRGE-v429.md.

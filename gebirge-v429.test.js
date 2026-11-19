@@ -20,4 +20,4 @@ const shared=new Map();let matched=0;
 for(let i=0;i<v.length;i+=9){const key=v.slice(i,i+3).join(','),attrs=v.slice(i+3,i+9),old=shared.get(key);if(old){attrs.forEach((x,j)=>assert.ok(Math.abs(x-old[j])<1e-6,'Gemeinsame Eckpunkte ohne Farb-/Normalensprung'));matched++;}else shared.set(key,attrs);}
 assert.ok(matched>1000,'Gemeinsame Eckpunkte geprüft');
 assert.equal(tri(G.terrainNear),9918,'Gleiches Grafikbudget');
-console.log('OK v428: 270 Schwenks mit unveränderter Kamerahöhe; durchgehende Eckpunktfarben, unverändert 9918 Geländedreiecke.',{varied,seen});
+console.log('OK v429: 270 Schwenks mit unveränderter Kamerahöhe; durchgehende Eckpunktfarben, unverändert 9918 Geländedreiecke.',{varied,seen});
