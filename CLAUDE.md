@@ -216,3 +216,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v424: Keine Bäume auf dem Sandrand des Flusses – `creekBankD`/`CREEK_BANK` in `erbe.js` (Pflanzplätze), einmalige Bereinigung `F.river424`. Test `fluss-baeume-v424.test.js`.
 
 - v427: PR133 mit main65e4497/Fluss-Baumkorrektur424 integriert, Waffen425 und Arbeiter426 erhalten. Gesamt-/SW427.
+- v428: Wanderweg im Gebirge beginnt am Gebirgsrand (`TRAIL0` in `alpine.js`), Hütten-Wegweiser vor der Terrasse (`sign(i, dirs, away)`).

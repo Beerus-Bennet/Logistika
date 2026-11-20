@@ -273,7 +273,7 @@ const ALPINE = (()=>{
   /* Aussichtsbank, Zelt mit Feuer, Picknick und Gartenzwerg am Seeufer (südliche Terrasse) */
   const shore=[];for(let i=0;i<72;i++){const a=i/72*Math.PI*2;for(const e of [1.3,1.45,1.6]){const x=L.x+Math.cos(a)*L.rx*e,z=L.z+Math.sin(a)*L.rz*e;shore.push([x,z]);}}
   /* v404: Aussichtsbank nur dort, wohin von der Hütte ein begehbarer Steig führt (Westufer; der Bach hat keine Brücke) */
-  const slopeAt=(x,z)=>Math.hypot(surface(x+.7,z)-surface(x-.7,z),surface(x,z+.7)-surface(x,z-.7))/1.4,hutFront=hut?[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]:[33,-113];
+  const slopeAt=(x,z)=>Math.hypot(surface(x+.7,z)-surface(x-.7,z),surface(x,z+.7)-surface(x,z-.7))/1.4,hutFront=hut?[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]:[33,-113],TRAIL0=[6,-100]; /* v428: Der Weg beginnt am Gebirgsrand zum Hof hin (Einstieg), nicht mitten in der Wiese */
   const benchC=[];for(const [x,z] of shore){if(!inside(x,z)||!contains(x,z))continue;const h=surface(x,z),sl=Math.hypot(surface(x+1,z)-surface(x-1,z),surface(x,z+1)-surface(x,z-1))/2;if(sl<.55&&x<60&&h>L.y&&h<L.y+8&&free(x,z,1.2)&&Math.hypot(x-62,z+144)>9)benchC.push([sl,x,h,z]);}
   benchC.sort((a,b)=>a[0]-b[0]);let bench=null,benchRoute=null;
   for(const st of [true,false]){if(bench)break;for(const c of benchC.slice(0,8)){const ry=Math.atan2(L.x-c[1],L.z-c[3]),r=route(hutFront,[c[1]-Math.sin(ry)*1.6,c[3]-Math.cos(ry)*1.6],slopeAt,st);if(r){bench=[c[1],c[2],c[3]];benchRoute=r;break;}}} /* erst Steig ≤ 35°, sonst steilerer Weg; Bank immer westlich des Falls (kein Bachübergang) */
@@ -294,7 +294,7 @@ const ALPINE = (()=>{
   /* v404: Wanderweg per Wegsuche (A*) auf einem 1er-Raster der Geländeoberfläche: jede Steigung kostet, über ~45° ist der Hang
      unbegehbar, See/Kolk/Bach sind gesperrt – so entstehen Serpentinen statt gerader Linien über Felswände. Danach geglättet und als
      durchgehendes Band mit gemeinsamen Kanten gelegt (vorher Einzelstücke mit Lücken und Überlappungen). */
-  const way=[[33,-113]].concat(hut?[[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]]:[]).concat(bench?[[bench[0]+Math.sin(bench[3]+Math.PI)*1.6,bench[2]+Math.cos(bench[3]+Math.PI)*1.6]]:[]);
+  const way=[TRAIL0].concat(hut?[[hut[0]+Math.sin(hut[3])*3.4,hut[2]+Math.cos(hut[3])*3.4]]:[]).concat(bench?[[bench[0]+Math.sin(bench[3]+Math.PI)*1.6,bench[2]+Math.cos(bench[3]+Math.PI)*1.6]]:[]);
   let path=[];for(let i=1;i<way.length;i++){const r=(i===2&&benchRoute)||route(way[i-1],way[i],slopeAt,true)||route(way[i-1],way[i],slopeAt);if(r)path=path.concat(path.length?r.slice(1):r);}
   path=resample(chaikin(chaikin(chaikin(pull(path,slopeAt)))),.6);spots.path=path;
   /* v409: Trampelpfad statt Band: fünf Reihen quer – Mitte festgetretene Erde, nach außen in die Geländefarbe auslaufend (keine harte
@@ -308,9 +308,12 @@ const ALPINE = (()=>{
    for(let i=3;i<path.length-3;i+=4){const r=rnd();if(r>.55)continue;const k=r<.27?0:4,p=rows[k][i],q=rows[2][i],X=q[0]+(p[0]-q[0])*.85,Z=q[2]+(p[2]-q[2])*.85;fun.ico(.07+r*.12,0x8d8c84,{x:X,y:surface(X,Z)+.03,z:Z,sy:.6,ry:r*9});}}
   /* Wegweiser neben dem Weg; die gelben Tafeln sind selbst Pfeile (ein Stück, am Pfosten angesetzt) und zeigen entlang des Weges */
   const dirTo=(i,j)=>{const a=path[i],b=path[Math.max(0,Math.min(path.length-1,j))];return Math.atan2(-(b[1]-a[1]),b[0]-a[0]);};
-  const sign=(i,dirs)=>{if(i<0||i>=path.length)return;const a=path[Math.max(0,i-1)],b=path[Math.min(path.length-1,i+1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,x=path[i][0]-(b[1]-a[1])/l*1.15,z=path[i][1]+(b[0]-a[0])/l*1.15,y=surface(x,z);
+  const sign=(i,dirs,away)=>{if(i<0||i>=path.length)return;const a=path[Math.max(0,i-1)],b=path[Math.min(path.length-1,i+1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,nx=-(b[1]-a[1])/l,nz=(b[0]-a[0])/l;let sd=1;
+   if(away&&Math.hypot(path[i][0]+nx*1.15-away[0],path[i][1]+nz*1.15-away[1])<Math.hypot(path[i][0]-nx*1.15-away[0],path[i][1]-nz*1.15-away[1]))sd=-1;   /* v428: auf der Seite, die vom Haus wegführt */
+   const x=path[i][0]+nx*1.15*sd,z=path[i][1]+nz*1.15*sd,y=surface(x,z);
    fun.box(.11,1.9,.11,0x7a5a3a,{x,y:y-.1,z});fun.box(.16,.06,.16,0x6a4a2a,{x,y:y+1.8,z});dirs.forEach((ry,k)=>fun.at({x,y:y+1.58-k*.3,z,ry},arrowBoard));};
-  if(path.length>12){sign(2,[dirTo(2,14),dirTo(2,0)]);if(hut&&way.length>2){const k=nearestIdx(path,way[1]);if(k>3&&k<path.length-4)sign(k,[dirTo(k,k+12),dirTo(k,k-12)]);}sign(path.length-3,[dirTo(path.length-3,path.length-15)]);}
+  if(path.length>12){sign(2,[dirTo(2,14),dirTo(2,0)]);if(hut&&way.length>2){const h=nearestIdx(path,way[1]);let k=h;while(k>3&&Math.hypot(path[k][0]-hut[0],path[k][1]-hut[2])<9.5)k--;   /* v428: Wegweiser vor der Hüttenterrasse, nicht auf der Veranda */
+    if(k>3&&k<path.length-4)sign(k,[dirTo(k,Math.min(path.length-1,k+12)),dirTo(k,k-12)],[hut[0],hut[2]]);}sign(path.length-3,[dirTo(path.length-3,path.length-15)]);}
   /* Steinmännchen im oberen Teil des Weges */
   for(let i=Math.floor(path.length*.45);i<path.length-6;i+=22){const a=path[i-1],b=path[i+1],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,X=path[i][0]+(b[1]-a[1])/l*1.2,Z=path[i][1]-(b[0]-a[0])/l*1.2,y=surface(X,Z);for(let k=0;k<3;k++)fun.ico(.3-k*.07,0x8f8d84,{x:X,y:y+.12+k*.3,z:Z,sy:.62,ry:k});}
   let hi=Math.floor(path.length*.45);while(hi<path.length-2&&LEDGES.some(q=>Math.hypot(q[0]-path[hi][0],q[1]-path[hi][1])<6))hi++; /* nicht im Revier der Steinböcke */
