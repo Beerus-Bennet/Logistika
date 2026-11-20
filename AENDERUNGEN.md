@@ -1,6 +1,20 @@
+## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
+
+main15b4536 einschließlich Wanderweg428 vollständig integriert. Feste Kamerahöhe und ruhige Eckpunktfarben/-normalen429 sowie neuer Wegbeginn und Wegweiserplatzierung428 erhalten. Gesamt-/SW430, alpine430, übrige Assetstände erhalten. Syntax und betroffene Gebirgs-/Wasser-/Wegprüfungen geprüft; kein echter Handytest.
+
 ## v429 – Kamerahöhe beim Gebirgsschwenk erhalten, Facettenraster geglättet
 
 Automatische Blickpunkt-/Mindesthöhenanpassung aus ALPINE.step entfernt. Statt pro Dreieck gemittelter Farben und beigemischter Flächennormalen verwendet das Gebirge durchgehende gemeinsame Eckpunktfarben/-normalen; Farbvariation großflächiger. Geländeform und Budget bleiben unverändert (9.918 Dreiecke). Kameraprüfung mit 270 Schwenks, Gebirgs-/Wasserprüfungen und vollständiger Chromium-Hof mit 24 WebGL-Zoomwechseln bestanden; keine Ressourcenvermehrung/JS-Fehler. Kein echter Handytest. Bericht/Vergleich: docs/GEBIRGE-v429.md. Gesamt-/SW429, alpine429; andere main-Assets erhalten.
+
+## v428 – Wanderweg beginnt am Gebirgsrand, Wegweiser steht nicht mehr auf der Veranda
+
+**Ursache:** Der Wanderweg begann bei (33, −113) mitten in der Bergwiese und führte in einem Bogen zur Hütte – ohne Anschluss an den Hof. Der Wegweiser an der Hütte wurde 1,15 Einheiten neben den Wegpunkt an der Hüttentür gesetzt und stand dadurch auf der Veranda.
+
+**Lösung (`alpine.js`):**
+- Der Weg beginnt jetzt am Gebirgsrand zum Hof hin (`TRAIL0` = (6, −100)) und führt von dort ohne Umweg zur Hütte und weiter zur Bank am Bergsee. Der Einstiegs-Wegweiser steht an diesem Anfang.
+- Der Wegweiser an der Hütte steht vor der Terrasse (mindestens 9,5 Einheiten vom Haus) auf der Seite, die vom Haus wegführt (`sign(…, away)`); die Tafeln zeigen zur Hütte und zurück.
+
+**Geprüft:** `gebirge-v413.test.js`, `huettenplatte-v414.test.js`, `wasseroptik-v386.test.js` bestanden (Weg bleibt trocken); Testbrowser-Bilder von Hütte, Weg und Gesamtansicht. **Nicht geprüft:** Handy; der Weg endet am Rand des Gebirgsbereichs und hat keine Verbindung zu einem Hofweg (dort gibt es keinen Hofweg in der Nähe).
 
 ## v427 – Mergekonflikte nach Fluss-Baumkorrektur behoben
 

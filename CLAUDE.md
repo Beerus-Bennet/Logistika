@@ -218,3 +218,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v427: PR133 mit main65e4497/Fluss-Baumkorrektur424 integriert, Waffen425 und Arbeiter426 erhalten. Gesamt-/SW427.
 
 - v429: ALPINE.step verändert Kamerahöhe nicht mehr; Gelände mit gemeinsamen Eckpunktfarben/-normalen statt Facettenfarben. Höhenfeld/Raster/Budget unverändert, alpine429/Gesamt429. Tests gebirge-v429, gebirge-v413 und wasseroptik-v386; Bericht docs/GEBIRGE-v429.md.
+
+- v428: Wanderweg im Gebirge beginnt am Gebirgsrand (`TRAIL0` in `alpine.js`), Hütten-Wegweiser vor der Terrasse (`sign(i, dirs, away)`).
+
+- v430: PR135 mit main15b4536/Wanderweg428 integriert; Kamera-/Oberflächenkorrektur429 erhalten. Gesamt-/SW430, alpine430.
