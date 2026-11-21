@@ -222,3 +222,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v428: Wanderweg im Gebirge beginnt am Gebirgsrand (`TRAIL0` in `alpine.js`), Hütten-Wegweiser vor der Terrasse (`sign(i, dirs, away)`).
 
 - v430: PR135 mit main15b4536/Wanderweg428 integriert; Kamera-/Oberflächenkorrektur429 erhalten. Gesamt-/SW430, alpine430.
+- v432: Uferband für Waldbäume/Pflanzplätze entlang `ALPINE.riverLine()` (geglättet, Radius 6: `worldMasks` in `worldview.js`, `CREEK_BANK`/`creekBankD` in `erbe.js`), einmalige Bereinigung `F.river432`.
