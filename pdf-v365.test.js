@@ -30,15 +30,15 @@ test('Eine Anzeige vermittelt passende Neubauten schon im Bau, einmalige Gebühr
  assert.ok(run(`VILLAGE.advertise('online',['holz'],'rent')`));assert.equal(run('m-S.money'),750);
  assert.ok(run(`VILLAGE.home('030').listing`));assert.equal(run(`VILLAGE.home('031').listing`),undefined);
  assert.equal(run(`VILLAGE.advertise('online',['holz'],'rent')`),false);assert.equal(run('m-S.money'),750);
- run(`S.time=VILLAGE.home('030').listing.ready;VILLAGE.tick();var h=VILLAGE.home('030'),c=h.listing.offers[0];`);
+ run(`S.time=VILLAGE.home('030').listing.ready;VILLAGE.tick();var h=VILLAGE.home('030');h.listing.offers=VILLAGE.offers('030',3);h.listing.extra=0;var c=h.listing.offers[0];`);
  assert.equal(run('h.status'),'building');assert.ok(run(`h.listing.offers.every(c=>c.kind==='rent')`));
- assert.ok(run(`VILLAGE.negotiate('030',c.id,'rent',c.price)`));assert.equal(run(`VILLAGE.sign('030',c.id)`),false);assert.equal(run('h.resident'),undefined);
+ assert.ok(run(`VILLAGE.accept('030',c.id)`));assert.equal(run(`VILLAGE.sign('030',c.id)`),false);assert.equal(run('h.resident'),undefined);
  run('S=JSON.parse(JSON.stringify(S));h=VILLAGE.home("030");c=h.listing.offers[0];S.time=h.ready;VILLAGE.tick();');
  assert.ok(run(`VILLAGE.sign('030',c.id)`));assert.equal(run(`VILLAGE.sign('030',c.id)`),false);assert.equal(run('h.status'),'rented');assert.equal(run('m-S.money'),750);
 });
 test('Neue passende Bauvorhaben treten bei, abgebrochene Verhandlungen bleiben leer, Anzeige endet ohne Doppelgebühr',()=>{
- run(`fresh();S.farm.stats.deliv=6;VILLAGE.expand();VILLAGE.buy('030');var m=S.money;VILLAGE.advertise('referral',['holz','familie'],'buy');VILLAGE.build('030','familie',false);var h=VILLAGE.home('030');S.time=h.listing.ready;VILLAGE.tick();`);
- assert.ok(run(`h.listing.offers.every(c=>c.kind==='buy')`));run(`for(const c of h.listing.offers)for(let i=0;i<3;i++)VILLAGE.negotiate('030',c.id,'buy',9999999);`);
+ run(`fresh();S.farm.stats.deliv=6;VILLAGE.expand();VILLAGE.buy('030');var m=S.money;VILLAGE.advertise('referral',['holz','familie'],'buy');VILLAGE.build('030','familie',false);var h=VILLAGE.home('030');S.time=h.listing.ready;VILLAGE.tick();h.listing.offers=VILLAGE.offers('030',3);h.listing.extra=0;`);
+ assert.ok(run(`h.listing.offers.every(c=>c.kind==='buy')`));run(`for(let i=0;i<3;i++){for(const c of h.listing.offers)if(!c.declined)VILLAGE.negotiate('030',c.id,'buy',9999999+i);S.time+=1.9*1440;VILLAGE.tick();}`);
  assert.ok(run('h.listing.offers.every(c=>c.declined)'));assert.equal(run('h.resident'),undefined);
  assert.ok(run('VILLAGE.stopAdvert()'));run(`VILLAGE.buy('031');VILLAGE.build('031','holz',false);`);assert.equal(run(`VILLAGE.home('031').listing`),undefined);
  assert.equal(run(`VILLAGE.negotiate('030',h.listing.offers[0].id,'buy',1)`),false);

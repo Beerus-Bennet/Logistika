@@ -222,3 +222,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v428: Wanderweg im Gebirge beginnt am Gebirgsrand (`TRAIL0` in `alpine.js`), Hütten-Wegweiser vor der Terrasse (`sign(i, dirs, away)`).
 
 - v430: PR135 mit main15b4536/Wanderweg428 integriert; Kamera-/Oberflächenkorrektur429 erhalten. Gesamt-/SW430, alpine430.
+- v433: Seeblick – schwankende Nachfrage (`demand`/`offerCount`, Nachzügler `L.extra`), mehrtägige Verhandlung mit verdecktem Budget (`pending`/`resolve`, `accept`), Hausrückkauf (`buyback`). Test `village-v340.test.js`.

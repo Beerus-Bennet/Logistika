@@ -142,11 +142,12 @@ const VILLAGE_UI = (() => {
       <p class="fs-sub">Wöchentliche Netto-Mieteinnahmen bisher: ${money(T.earned)}. Die sechs bestehenden Häuser gehören ihren Bewohnern.</p>`;
   }
   function applicant(p,h,c){const a=c.agreed,kind=a?a.kind:c.kind,price=a?a.price:c.price;
-    return `<details class="town-applicant" data-town-fold="${c.id}"${a?" open":""}><summary><b>${esc(c.n)}</b><small>${c.kind==="rent"?"Mietanfrage":"Kaufinteresse"} · ${c.size} ${c.size===1?"Person":"Personen"}</small></summary>
+    return `<details class="town-applicant" data-town-fold="${c.id}"${a?" open":""}><summary><b>${esc(c.n)}</b><small>${c.kind==="rent"?"Mietanfrage":"Kaufinteresse"} · ${c.size} ${c.size===1?"Person":"Personen"}${c.pending?" · Antwort steht aus":c.agreed?" · einig":c.declined?" · zurückgezogen":""}</small></summary>
       <p>Sehr geehrte Damen und Herren,<br>${c.referrer?esc(c.referrer)+" hat mir Ihr Haus empfohlen.":"ich bin auf Ihre Onlineanzeige aufmerksam geworden."} Ich interessiere mich für das Haus ${address(p)}.${h.status==="building"?" Der Einzug nach Fertigstellung ist für mich möglich.":""} ${c.kind==="rent"?"Ich biete "+money(c.price)+" monatliche Kaltmiete.":"Mein Kaufangebot beträgt "+money(c.price)+"."}<br>Mit freundlichen Grüßen<br>${esc(c.n)}</p>
       ${c.reply?`<p class="town-reply">${esc(c.reply)}</p>`:""}
       ${c.declined?`<b>Anfrage zurückgezogen</b>`:a?`<div class="town-agreement"><b>Vertragsangebot prüfen</b><p>${kind==="rent"?"Unbefristete Vermietung · "+money(price)+" Kaltmiete/Monat. Abrechnung alle sieben Spieltage, 8 % Rücklage werden abgezogen.":"Verkauf für "+money(price)+". Das Haus gehört anschließend der neuen Partei; du erhältst keine Miete."}</p>${h.status==="building"?`<p>Konditionen vorgemerkt. Vertragsabschluss nach Fertigstellung.</p>`:""}<button class="btn" data-town-sign="${c.id}"${h.status==="building"?" disabled":""}>${kind==="rent"?"Mietvertrag abschließen":"Kaufvertrag abschließen"}</button></div>`:
-      `<button class="btn ghost" data-town-talk="${c.id}">Preis verhandeln</button>`}</details>`;
+      c.pending?`<p class="town-reply">Dein Vorschlag (${money(c.pending.price)}${c.pending.kind==="rent"?" / Monat":""}) wird geprüft. Eine Antwort kommt in den nächsten Tagen.</p>`:
+      `<div class="town-actions"><button class="btn" data-town-accept="${c.id}">${c.kind==="rent"?"Mietanfrage annehmen":"Kaufangebot annehmen"} · ${money(c.price)}</button><button class="btn ghost" data-town-talk="${c.id}">Preis verhandeln</button></div>`}</details>`;
   }
   function detail(id){const p=VILLAGE.plot(id),h=VILLAGE.home(id),T=VILLAGE.state(),k=D.houses[h.type],block=VILLAGE.obstruction(p);
     let s=`<button class="btn tiny ghost" data-town-home="">← Übersicht</button><div class="town-card"><b>${address(p)}</b><small>${esc(labels[h.status])}</small><button class="btn tiny ghost" data-town-focus="${id}">📍 Zum Grundstück</button></div>`;
@@ -159,8 +160,10 @@ const VILLAGE_UI = (() => {
       const L=h.listing;
       s+=`<div class="town-card"><b>${esc(k.n)} · ${h.status==="building"?"Vermittlung im Bau":"bezugsfertig"}</b><p>Richtwert: ${money(k.rent)} Kaltmiete/Monat oder ${money(k.sale)} Kaufpreis. Die Interessenten können andere Konditionen vorschlagen.</p></div>`;
       if(!L)s+=`<div class="town-actions"><button class="btn" data-town-list="referral"${T.deliveries<3&&(S.farm.stats.deliv||0)<3?" disabled":""}>🤝 Über Nachbarn vermitteln · kostenlos</button><button class="btn ghost" data-town-list="online"${S.money<D.ad?" disabled":""}>🌐 Onlineanzeige · ${money(D.ad)}</button></div>`;
-      else s+=`<p class="fs-sub">${L.channel==="referral"?"Nachbarschaftsempfehlung":"Onlineanzeige"} · gültig noch ${dur(Math.max(1,L.expires-S.time))}</p>${L.offers?L.offers.map(c=>applicant(p,h,c)).join(""):`<p>Die Vermittlung läuft. Sobald sich Interessenten melden, erscheinen ihre Wohnanfragen hier.</p>` /* v360: ohne Zeitangabe – wann sich jemand meldet, weiß man vorher nicht */}${L.offers&&L.offers.every(c=>c.declined)?`<p>Es kam zu keiner Einigung. Das Haus bleibt unbewohnt. Du kannst neue Interessenten suchen.</p><button class="btn ghost" data-town-relist>Neu vermitteln</button>`:""}`;
+      else s+=`<p class="fs-sub">${L.channel==="referral"?"Nachbarschaftsempfehlung":"Onlineanzeige"} · gültig noch ${dur(Math.max(1,L.expires-S.time))}</p>${L.offers&&!L.offers.length?`<p>Bisher hat sich niemand gemeldet.${L.extra>0?" Es können sich noch Interessenten melden.":""}</p>`:""}${L.offers?L.offers.map(c=>applicant(p,h,c)).join(""):`<p>Die Vermittlung läuft. Sobald sich Interessenten melden, erscheinen ihre Wohnanfragen hier.</p>` /* v360: ohne Zeitangabe – wann sich jemand meldet, weiß man vorher nicht */}${L.offers&&L.offers.every(c=>c.declined)&&!(L.extra>0)?`<p>${L.offers.length?"Es kam zu keiner Einigung. ":"Es hat sich niemand gemeldet. "}Das Haus bleibt unbewohnt. Du kannst neue Interessenten suchen.</p><button class="btn ghost" data-town-relist>Neu vermitteln</button>`:""}`;
     }
+    if(h.status==="sold"&&h.contract){const bp=VILLAGE.buybackPrice(id),wait=h.contract.since+1440-S.time;
+      s+=`<div class="town-card"><b>Haus zurückkaufen</b><p>Die Bewohner würden das Haus gegen einen Aufschlag zurückgeben: ${money(bp)} (Verkaufspreis ${money(h.contract.price)} plus 20 % – jeden Tag kommt 1 % dazu, bis höchstens 70 %).${wait>0?" Frühestens in "+dur(wait)+".":""}</p><button class="btn" data-town-buyback ${wait>0||S.money<bp?"disabled":""}>Zurückkaufen · ${money(bp)}</button></div>`;}
     if(h.contract)s+=`<div class="town-card"><b>${h.contract.kind==="rent"?"Unbefristeter Mietvertrag":"Abgeschlossener Kaufvertrag"}</b><p>${h.contract.kind==="rent"?money(h.contract.price)+" Kaltmiete pro Monat · nächste Abrechnung in "+dur(Math.max(1,h.contract.next-S.time))+".<br>Netto erhalten: "+money(h.contract.earned):"Einmaliger Kaufpreis: "+money(h.contract.price)+". Eigentum der Bewohner."}</p></div>`;
     return s;
   }
@@ -180,6 +183,8 @@ const VILLAGE_UI = (() => {
     q("[data-town-list]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.list(id,b.dataset.townList)));
     q("[data-town-relist]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.relist(id)));
     q("[data-town-talk]").forEach(b=>b.onclick=()=>openTalk(id,b.dataset.townTalk));
+    q("[data-town-accept]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.accept(id,b.dataset.townAccept)));
+    q("[data-town-buyback]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.buyback(id)));
     q("[data-town-sign]").forEach(b=>b.onclick=()=>act(()=>VILLAGE.sign(id,b.dataset.townSign)));
     q("[data-town-orders]").forEach(b=>b.onclick=()=>openFarmOrders(null,"hof"));
     FV.sheetTick=()=>{if(talk){talk.refresh();return;}if(document.activeElement&&document.activeElement.closest("#townAdForm"))return;
@@ -202,11 +207,11 @@ const VILLAGE_UI = (() => {
   function openTalk(id,offer){
     if(talk){talk.el.querySelector('input').focus({preventScroll:true});return;}
     const h=VILLAGE.home(id),p=VILLAGE.plot(id),c=h&&h.listing&&h.listing.offers&&h.listing.offers.find(c=>c.id===offer);
-    if(!c||c.declined||c.agreed||!['ready','building'].includes(h.status)||S.time>=h.listing.expires)return;
-    const key=id+':'+offer,draft=drafts.get(key)||{kind:c.kind,price:String(c.price)},el=document.createElement('dialog');
+    if(!c||c.declined||c.agreed||c.pending||!['ready','building'].includes(h.status)||S.time>=h.listing.expires)return;
+    const key=id+':'+offer,draft=drafts.get(key)||{kind:c.kind,price:String(Math.max(c.price,Math.round((c.kind==='rent'?D.houses[h.type].rent:D.houses[h.type].sale)*1.1/(c.kind==='rent'?10:1000))*(c.kind==='rent'?10:1000)))},el=document.createElement('dialog');
     el.id='townNegotiation';el.className='town-talk';el.setAttribute('aria-labelledby','townTalkTitle');
     el.innerHTML=`<header><div><small>${address(p)}</small><h2 id="townTalkTitle" tabindex="-1">${esc(c.n)}</h2></div><button type="button" class="tn-close" aria-label="Verhandlung schließen">✕</button></header>
-      <form class="tn-form"><div class="tn-body"><p class="tn-intro">${c.kind==='rent'?'Mietanfrage':'Kaufinteresse'} · ursprüngliches Angebot ${money(c.price)}${c.kind==='rent'?' / Monat':''}</p>
+      <form class="tn-form"><div class="tn-body"><p class="tn-intro">${c.kind==='rent'?'Mietanfrage':'Kaufinteresse'} · aktuelles Angebot ${money(c.price)}${c.kind==='rent'?' / Monat':''}</p>
       <div class="tn-fields"><label>Vertragsart<select name="kind"><option value="rent">Miete / Monat</option><option value="buy">Kaufpreis</option></select></label><label>Ihr Angebot in €<input name="price" type="text" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" aria-label="Ihr Angebot in Euro"></label></div>
       <p class="tn-reply" role="status" aria-live="polite"></p></div><footer><button class="btn" type="submit">Konditionen vorschlagen</button><button class="btn" type="button" data-sign hidden>Vertrag abschließen</button></footer></form>`;
     const f=el.querySelector('form'),reply=el.querySelector('.tn-reply'),submit=f.querySelector('[type="submit"]'),sign=f.querySelector('[data-sign]');
@@ -214,7 +219,8 @@ const VILLAGE_UI = (() => {
     const remember=()=>drafts.set(key,{kind:f.elements.kind.value,price:f.elements.price.value});
     const current=()=>{const H=VILLAGE.home(id),L=H&&H.listing;return H&&['ready','building'].includes(H.status)&&L&&S.time<L.expires&&L.offers&&L.offers.find(x=>x.id===offer);};
     const update=()=>{const C=current();reply.textContent=C?(C.reply||'Nennen Sie die gewünschten Konditionen.'): 'Diese Anfrage ist nicht mehr gültig. Bitte schließen Sie das Fenster und prüfen Sie neue Wohnanfragen.';
-      const agreed=C&&C.agreed,locked=!C||C.declined||!!agreed;
+      const agreed=C&&C.agreed,locked=!C||C.declined||!!agreed||!!(C&&C.pending);
+      if(C&&C.pending)reply.textContent='Dein Vorschlag ('+money(C.pending.price)+') wird geprüft. Eine Antwort kommt in den nächsten Tagen.';
       f.elements.kind.disabled=f.elements.price.disabled=locked;submit.hidden=!!agreed;submit.disabled=locked;sign.hidden=!agreed;
       sign.disabled=VILLAGE.home(id).status!=='ready';
       if(agreed&&sign.disabled)reply.textContent+=' Die Konditionen sind vorgemerkt; der Vertragsabschluss ist nach Fertigstellung möglich.';
@@ -222,7 +228,7 @@ const VILLAGE_UI = (() => {
     };
     f.addEventListener('input',remember);
     f.elements.kind.onchange=()=>{const k=D.houses[h.type];f.elements.price.value=String(f.elements.kind.value==='rent'?k.rent:k.sale);remember();};
-    f.onsubmit=e=>{e.preventDefault();const C=current();if(!C||C.declined||C.agreed){update();return;}
+    f.onsubmit=e=>{e.preventDefault();const C=current();if(!C||C.declined||C.agreed||C.pending){update();return;}
       if(!f.reportValidity())return;remember();VILLAGE.negotiate(id,offer,f.elements.kind.value,Number(f.elements.price.value));update();};
     sign.onclick=()=>{if(!current()){update();return;}if(VILLAGE.sign(id,offer)){drafts.delete(key);closeTalk();}else update();};
     const position=()=>{const v=window.visualViewport,w=Math.min(480,(v?v.width:innerWidth)-16),height=(v?v.height:innerHeight)-16;
