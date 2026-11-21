@@ -1,3 +1,7 @@
+## v434 – Mergekonflikte mit aktuellem main behoben
+
+main4ef96fe einschließlich Hochformat431 integriert. Dokumentation beider Seiten und unabhängige Assetstände erhalten. Keine Änderung der Fachlogik durch Konfliktauflösung. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
+
 ## v432 – Bäume am Flussufer: Waldbäume und Pflanzplätze folgen der echten Flusslinie
 
 **Ursache:** v424 hat nur die gespeicherten Hofbäume (`S.farm.trees`) entfernt. Die Kulissen-Waldbäume (`worldview.js`, Uferband `stamp(FWORLD.creek, 3,3, 4)`) hielten dagegen nur 3,3 Einheiten Abstand zur *Rohlinie* des alten Bachs. Der echte Fluss (Gebirgsabfluss + Bach, geglättet, mit Windungen) hat einen Sandrand bis etwa 5,2 Einheiten – dort standen weiter Bäume. Auch `creekBankD` (v424) nutzte nur die alte Bachlinie.
@@ -5,6 +9,14 @@
 **Lösung:** Uferband der Waldbäume und Büsche entlang der geglätteten Linie `ALPINE.riverLine()` mit Radius 6 (`worldMasks`). Pflanzprüfung `CREEK_BANK` 6 und dieselbe Linie (`erbe.js`). Einmalige Bereinigung `F.river432` entfernt gespeicherte Hofbäume im Uferband (v424-Merkmal bleibt ungenutzt, alte Stände werden also erneut einmal bereinigt). Waldbäume entstehen deterministisch neu – sie bleiben fern vom Ufer, kein Spielstandeingriff.
 
 **Geprüft:** `fluss-baeume-v424.test.js` angepasst (Gebirgsabfluss-Linie, Merkmal `river432`) und bestanden; Testbrowser-Draufsicht auf mehrere Flussbögen: kein Baum mehr auf dem Sand, Grasstreifen dazwischen. **Nicht geprüft:** Handy; Bäume an Seebach/See unverändert.
+
+## v431 – Nur Hochformat auf dem Handy
+
+**Ursache:** Das Spiel war für Hoch- und Querformat freigegeben (Manifest `"orientation": "any"`); im Querformat ist die Spielfläche nur ein schmaler Streifen.
+
+**Lösung:** Manifest auf `portrait` (installierte App). In `viewport.js` wird auf Touchgeräten unter 500 px Kantenlänge `screen.orientation.lock("portrait-primary")` versucht (wirkt nur, wo der Browser es erlaubt). Im normalen Safari ist das nicht sperrbar: Dort deckt im Querformat auf Touchgeräten mit weniger als 500 px Höhe der Hinweis „Bitte das Handy ins Hochformat drehen“ (`#rotHint`, CSS am Ende von `style.css`) das Spiel ab. Tablets und Desktop bleiben unberührt.
+
+**Geprüft:** Testbrowser (Chromium): Handy 844×390 quer → Hinweis sichtbar; Handy hoch, Tablet 1180×820 quer und Desktop → kein Hinweis; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari, installierte App, `orientation.lock`.
 
 ## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
 

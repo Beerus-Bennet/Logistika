@@ -24,3 +24,6 @@
     vv.addEventListener("scroll", schedule);
   }
 })();
+
+/* v431: Hochformat sperren, wo der Browser es erlaubt (installierte App); sonst zeigt #rotHint im Querformat einen Hinweis. */
+try{if(screen.orientation&&screen.orientation.lock&&matchMedia("(pointer:coarse)").matches&&Math.min(screen.width,screen.height)<500)screen.orientation.lock("portrait-primary").catch(function(){});}catch(e){}
