@@ -1,3 +1,11 @@
+## v431 – Nur Hochformat auf dem Handy
+
+**Ursache:** Das Spiel war für Hoch- und Querformat freigegeben (Manifest `"orientation": "any"`); im Querformat ist die Spielfläche nur ein schmaler Streifen.
+
+**Lösung:** Manifest auf `portrait` (installierte App). In `viewport.js` wird auf Touchgeräten unter 500 px Kantenlänge `screen.orientation.lock("portrait-primary")` versucht (wirkt nur, wo der Browser es erlaubt). Im normalen Safari ist das nicht sperrbar: Dort deckt im Querformat auf Touchgeräten mit weniger als 500 px Höhe der Hinweis „Bitte das Handy ins Hochformat drehen“ (`#rotHint`, CSS am Ende von `style.css`) das Spiel ab. Tablets und Desktop bleiben unberührt.
+
+**Geprüft:** Testbrowser (Chromium): Handy 844×390 quer → Hinweis sichtbar; Handy hoch, Tablet 1180×820 quer und Desktop → kein Hinweis; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari, installierte App, `orientation.lock`.
+
 ## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
 
 main15b4536 einschließlich Wanderweg428 vollständig integriert. Feste Kamerahöhe und ruhige Eckpunktfarben/-normalen429 sowie neuer Wegbeginn und Wegweiserplatzierung428 erhalten. Gesamt-/SW430, alpine430, übrige Assetstände erhalten. Syntax und betroffene Gebirgs-/Wasser-/Wegprüfungen geprüft; kein echter Handytest.
