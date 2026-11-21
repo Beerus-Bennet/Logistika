@@ -5313,3 +5313,11 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 /* v420: Nur die Tagesaufgaben – einheitliche Zeichnungen statt System-Emojis. */
 .goals .gtask .daily-gi{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px}
 .goals .daily-icon{display:block;width:38px;height:38px}
+
+/* v431: Nur Hochformat auf dem Handy – im Querformat (Touchgerät, niedrige Höhe) deckt ein Hinweis das Spiel ab. */
+#rotHint{display:none}
+@media (orientation:landscape) and (pointer:coarse) and (max-height:500px){
+ #rotHint{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:#0d1b2a;color:#fff;text-align:center;font-family:inherit}
+ #rotHint b{display:block;font-size:56px;margin-bottom:8px}
+ #rotHint p{margin:0;font-size:18px;font-weight:700}
+}
