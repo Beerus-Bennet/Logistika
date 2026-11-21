@@ -147,7 +147,8 @@ function worldMasks(fell) {
   FWORLD.paths.forEach(p => { stamp(p, 2.2, 1); stamp(p, 6, 2); });
   /* v75: auch die Wege am See halten Kulissenbäume fern (der neue Ostuferweg läuft durch lockeren Baumbestand) */
   [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
-  stamp(FWORLD.creek, 3.3, 4);
+  /* v432: Uferband entlang der tatsächlichen, geglätteten Flusslinie (Gebirgsabfluss + Bach); Sandrand reicht bis ~5,2, daher 6 (vorher 3,3 an der Rohlinie) */
+  stamp(typeof FWM !== "undefined" && FWM.smoothLine ? FWM.smoothLine(typeof ALPINE !== "undefined" ? ALPINE.riverLine() : FWORLD.creek, 6) : FWORLD.creek, 6, 4);
   /* v190: großer Quelltopf mit Felswand – Platz rundherum */
   if (FWORLD.spring && FWORLD.creek.length > 1) { const q = FWORLD.creek[1], p = FWORLD.spring, l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, c = [p[0] - (q[0] - p[0]) / l * 2.5, p[1] - (q[1] - p[1]) / l * 2.5]; stamp([c, [c[0] + 0.01, c[1]]], 10, 4); } if (FWORLD.springHill&&typeof ALPINE==="undefined") FWORLD.springHill.caps.forEach(([ax, az, bx, bz, r]) => stamp([[ax, az], [bx, bz]], r, 4));   /* v207: Quellhang; v228: Quellberg mit Hochfläche */ stamp(LAKE_CREEK, 2.3, 4);
   const at = (x, z) => { const gx = Math.floor(x) - x0, gz = Math.floor(z) - z0; return gx < 0 || gz < 0 || gx >= W || gz >= H ? 0 : g[gz * W + gx]; };
