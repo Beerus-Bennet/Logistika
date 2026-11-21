@@ -1,3 +1,7 @@
+## v435 – Mergekonflikte mit aktuellem main behoben
+
+main4ef96fe einschließlich Hochformat431 integriert. Dokumentation beider Seiten und unabhängige Assetstände erhalten. Keine Änderung der Fachlogik durch Konfliktauflösung. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
+
 ## v433 – Wohnanfragen mit schwankender Nachfrage, mehrtägige Verhandlung mit echtem Gewinn, Hausrückkauf
 
 **Ursache:** Jede Anzeige brachte immer genau drei Bewerber (1× Kauf, 2× Miete); Verhandlungen waren sofort entschieden, die Budgets lagen nur 2–15 % über dem Richtwert, so dass kaum Gewinn möglich war. Verkaufte Häuser waren endgültig weg.
@@ -10,6 +14,14 @@
 - Alte Spielstände: Anfragen ohne neue Felder werden toleriert (`cur`/`pat` werden bei Bedarf abgeleitet); laufende Anzeigen ohne Wellen bleiben wie sie sind.
 
 **Geprüft:** `village-v340.test.js` (16 Gruppen, vier neu: Streuung/Nachfrage, verzögerte Antwort mit Gewinn über Richtwert, Gegenangebot und Rückzug, Annehmen und Rückkauf), `pdf-v365`, `gaerten-v369`, `village-life-v343`, `fixes-v354`, `worker-motion-v351` bestanden (pdf/gaerten-Tests an feste Anfragen angepasst); Testbrowser: Bewohner-Fenster mit Anzeige ohne Fehler. **Nicht geprüft:** Handy, langer Spielverlauf, Balance der Zahlen (Budgetspannen/Geduld sind Schätzwerte).
+
+## v431 – Nur Hochformat auf dem Handy
+
+**Ursache:** Das Spiel war für Hoch- und Querformat freigegeben (Manifest `"orientation": "any"`); im Querformat ist die Spielfläche nur ein schmaler Streifen.
+
+**Lösung:** Manifest auf `portrait` (installierte App). In `viewport.js` wird auf Touchgeräten unter 500 px Kantenlänge `screen.orientation.lock("portrait-primary")` versucht (wirkt nur, wo der Browser es erlaubt). Im normalen Safari ist das nicht sperrbar: Dort deckt im Querformat auf Touchgeräten mit weniger als 500 px Höhe der Hinweis „Bitte das Handy ins Hochformat drehen“ (`#rotHint`, CSS am Ende von `style.css`) das Spiel ab. Tablets und Desktop bleiben unberührt.
+
+**Geprüft:** Testbrowser (Chromium): Handy 844×390 quer → Hinweis sichtbar; Handy hoch, Tablet 1180×820 quer und Desktop → kein Hinweis; keine Seitenfehler. **Nicht geprüft:** echtes iPhone/Safari, installierte App, `orientation.lock`.
 
 ## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
 
