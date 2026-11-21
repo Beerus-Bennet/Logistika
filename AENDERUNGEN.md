@@ -1,3 +1,11 @@
+## v432 – Bäume am Flussufer: Waldbäume und Pflanzplätze folgen der echten Flusslinie
+
+**Ursache:** v424 hat nur die gespeicherten Hofbäume (`S.farm.trees`) entfernt. Die Kulissen-Waldbäume (`worldview.js`, Uferband `stamp(FWORLD.creek, 3,3, 4)`) hielten dagegen nur 3,3 Einheiten Abstand zur *Rohlinie* des alten Bachs. Der echte Fluss (Gebirgsabfluss + Bach, geglättet, mit Windungen) hat einen Sandrand bis etwa 5,2 Einheiten – dort standen weiter Bäume. Auch `creekBankD` (v424) nutzte nur die alte Bachlinie.
+
+**Lösung:** Uferband der Waldbäume und Büsche entlang der geglätteten Linie `ALPINE.riverLine()` mit Radius 6 (`worldMasks`). Pflanzprüfung `CREEK_BANK` 6 und dieselbe Linie (`erbe.js`). Einmalige Bereinigung `F.river432` entfernt gespeicherte Hofbäume im Uferband (v424-Merkmal bleibt ungenutzt, alte Stände werden also erneut einmal bereinigt). Waldbäume entstehen deterministisch neu – sie bleiben fern vom Ufer, kein Spielstandeingriff.
+
+**Geprüft:** `fluss-baeume-v424.test.js` angepasst (Gebirgsabfluss-Linie, Merkmal `river432`) und bestanden; Testbrowser-Draufsicht auf mehrere Flussbögen: kein Baum mehr auf dem Sand, Grasstreifen dazwischen. **Nicht geprüft:** Handy; Bäume an Seebach/See unverändert.
+
 ## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
 
 main15b4536 einschließlich Wanderweg428 vollständig integriert. Feste Kamerahöhe und ruhige Eckpunktfarben/-normalen429 sowie neuer Wegbeginn und Wegweiserplatzierung428 erhalten. Gesamt-/SW430, alpine430, übrige Assetstände erhalten. Syntax und betroffene Gebirgs-/Wasser-/Wegprüfungen geprüft; kein echter Handytest.
