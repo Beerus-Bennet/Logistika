@@ -63,28 +63,70 @@ const VILLAGE = (() => {
     if(channel==="online"){if(S.money<D.ad)return false;pay("Onlineanzeige",D.ad);}
     h.listing={channel,at:S.time,ready:S.time+(channel==="online"?8*60:DAY),expires:Math.max(S.time+8*DAY,(h.ready||S.time)+8*DAY),offers:null};changed();return true;
   }
-  function relist(id){const h=home(id),L=h&&h.listing;if(!h||!["ready","building"].includes(h.status)||!L||!L.offers||!L.offers.every(c=>c.declined))return false;
+  function relist(id){const h=home(id),L=h&&h.listing;if(!h||!["ready","building"].includes(h.status)||!L||!L.offers||!L.offers.every(c=>c.declined)||L.extra>0)return false;
     h.lastApplicants=L.offers.map(c=>c.n);delete h.listing;changed();return true;}
-  function offers(id){
-    const T=state(),h=home(id),k=D.houses[h.type],R=erbeRng(T.seq++*937+Number(id)*137+Math.floor(S.time));
-    const first=["Marie","David","Emilia","Jonas","Amira","Lars","Sofia","Alexander","Clara","Daniel"],last=["Weber","Krüger","Peters","Fischer","Becker","Lorenz","Sommer","Hahn","Winter","Vogel"];
-    const used=new Set([...(h.lastApplicants||[]),...residents().map(x=>x.r.n),...Object.values(T.homes).flatMap(x=>x.listing&&x.listing.offers?x.listing.offers.map(c=>c.n):[]) ]);
-    return Array.from({length:3},(_,i)=>{const seed=T.seq++;let j=Math.floor(R()*first.length),l=Math.floor(R()*last.length),n=first[j]+" "+last[l];
-      for(let tries=0;used.has(n)&&tries<100;tries++){j=(j+1)%first.length;if(!j)l=(l+1)%last.length;n=first[j]+" "+last[l];}used.add(n);
-      const kind=h.listing.preference&&h.listing.preference!=="any"?h.listing.preference:i===1?"buy":"rent",factor=.92+R()*.1;
-      return {id:"I"+seed,n,seed,job:["Angestellt","Fachkraft","Selbstständig"][i],size:1+Math.floor(R()*3),look:{...D.looks[(j%2)+2*(seed%3)],seed},
-        kind,price:Math.round((kind==="rent"?k.rent:k.sale)*factor/(kind==="rent"?10:1000))*(kind==="rent"?10:1000),
-        rentBudget:Math.round(k.rent*(1.02+R()*.13)/10)*10,buyBudget:Math.round(k.sale*(1.02+R()*.1)/1000)*1000,rounds:0,
+  /* v433: Nachfrage je Grundstück – Seeblick (nah am See) und ruhige Lage (wenige Nachbarn) ziehen mehr Interessenten an. */
+  function demand(id){
+    const T=state(),p=plot(id),h=T.homes[id],e=Math.hypot((p.x-14)/36,(p.z-48)/22),see=Math.max(0,Math.min(1,1-(e-1.8)/1.6));
+    const nb=D.plots.filter(q=>q.id!==id&&Math.hypot(q.x-p.x,q.z-p.z)<=24&&T.homes[q.id].resident).length,quiet=nb<=1?1:nb===2?.4:0;
+    return {see,nb,quiet,score:.5+4.5*see+1.2*quiet+(h.type==="familie"?.3:0)+(h.listing&&h.listing.channel==="online"?.3:0)};
+  }
+  /* Anzahl der Interessenten der ersten Welle: gar keine, eine oder viele – je nach Lage und Zufall */
+  function offerCount(id,R,wave){const dm=demand(id).score;return Math.max(0,Math.min(6,Math.floor(dm*(wave?.45:.3+1.4*R())*(wave?R():1))));}
+  function offers(id,count,more){
+    const T=state(),h=home(id),k=D.houses[h.type],R=erbeRng(T.seq++*937+Number(id)*137+Math.floor(S.time)),dm=demand(id);
+    if(count==null)count=offerCount(id,R,false);
+    const first=["Marie","David","Emilia","Jonas","Amira","Lars","Sofia","Alexander","Clara","Daniel","Tobias","Leyla","Finn","Hannah","Murat","Greta"],last=["Weber","Krüger","Peters","Fischer","Becker","Lorenz","Sommer","Hahn","Winter","Vogel","Brandt","Kaya","Ziegler","Roth","Lange","Engel"];
+    const used=new Set([...(h.lastApplicants||[]),...(more||[]).map(c=>c.n),...residents().map(x=>x.r.n),...Object.values(T.homes).flatMap(x=>x.listing&&x.listing.offers?x.listing.offers.map(c=>c.n):[]) ]);
+    return Array.from({length:count},()=>{const seed=T.seq++;let j=Math.floor(R()*first.length),l=Math.floor(R()*last.length),n=first[j]+" "+last[l];
+      for(let tries=0;used.has(n)&&tries<300;tries++){j=(j+1)%first.length;if(!j)l=(l+1)%last.length;n=first[j]+" "+last[l];}used.add(n);
+      const kind=h.listing.preference&&h.listing.preference!=="any"?h.listing.preference:R()<.3+.25*dm.see?"buy":"rent",
+        cur={rent:Math.round(k.rent*(.85+R()*.1)/10)*10,buy:Math.round(k.sale*(.85+R()*.1)/1000)*1000};
+      return {id:"I"+seed,n,seed,job:["Angestellt","Fachkraft","Selbstständig","Lehrkraft","Handwerker","Im Ruhestand"][Math.floor(R()*6)],size:1+Math.floor(R()*3),look:{...D.looks[(j%2)+2*(seed%3)],seed},
+        kind,cur,price:cur[kind],
+        rentBudget:Math.round(k.rent*(1.08+R()*.35+.1*dm.see)/10)*10,buyBudget:Math.round(k.sale*(1.06+R()*.3+.1*dm.see)/1000)*1000,pat:3+Math.floor(R()*2),rounds:0,
         referrer:h.listing.channel==="referral"?residents()[seed%residents().length].r.n:null};});
   }
+  /* v433: Verhandlung über mehrere Tage. Jede Anfrage hat ein verdecktes Budget (bis ~40 % über Richtwert) und Geduld.
+     Ein Vorschlag wird nach einigen Stunden bis Tagen beantwortet: im Budget → Zusage, sonst Gegenangebot, das sich dem Budget nähert. */
+  const unit=kind=>kind==="rent"?10:1000;
+  function curOf(c,kind){const k=c.cur||(c.cur={});if(k[kind]==null)k[kind]=kind===c.kind?c.price:Math.round((kind==="rent"?c.rentBudget:c.buyBudget)*.8/unit(kind))*unit(kind);return k[kind];}
   function negotiate(id,offerId,kind,price){
     const h=home(id),L=h&&h.listing,c=L&&L.offers&&L.offers.find(c=>c.id===offerId),k=h&&D.houses[h.type];
-    if(!c||!["ready","building"].includes(h.status)||S.time>=L.expires||c.declined||!["rent","buy"].includes(kind)||!Number.isFinite(price)||price<=0)return false;
+    if(!c||!["ready","building"].includes(h.status)||S.time>=L.expires||c.declined||c.pending||!["rent","buy"].includes(kind)||!Number.isFinite(price)||price<=0)return false;
     if(price<(kind==="rent"?k.rent:k.sale)*.6){c.reply="Bitte nennen Sie ein marktübliches Angebot. Prüfen Sie Betrag und Vertragsart.";changed();return false;}
-    c.rounds++;const budget=kind==="rent"?c.rentBudget:c.buyBudget;
-    if(price<=budget){c.agreed={kind,price:Math.round(price)};c.reply="Vielen Dank für Ihr Angebot. Den genannten Konditionen stimme ich zu. Bitte lassen Sie uns den Vertrag abschließen.";}
-    else{delete c.agreed;c.declined=c.rounds>=3;c.reply=c.declined?"Vielen Dank für Ihre Zeit. Leider kommen wir preislich nicht zusammen. Ich ziehe meine Anfrage zurück.":"Vielen Dank für Ihren Vorschlag. Mein Budget beträgt höchstens "+money(budget)+(kind==="rent"?" Kaltmiete im Monat.":" Kaufpreis.")+" Können wir uns darauf verständigen?";}
-    changed();return !!c.agreed;
+    price=Math.round(price);const cur=curOf(c,kind);
+    if(price<=cur){c.reply="Mein Angebot von "+money(cur)+" liegt bereits darüber. Sie können es direkt annehmen.";changed();return false;}
+    const R=erbeRng(c.seed*31+(c.rounds||0)*7+Math.floor(price));
+    c.pending={kind,price,due:S.time+DAY*(.5+R()*1.2)};delete c.agreed;
+    c.reply="Vielen Dank für Ihren Vorschlag. Ich bespreche das und melde mich in den nächsten Tagen.";
+    changed();return true;
+  }
+  function resolve(p,h,c){
+    const P=c.pending;if(!P)return;delete c.pending;c.rounds=(c.rounds||0)+1;
+    const budget=P.kind==="rent"?c.rentBudget:c.buyBudget,cur=curOf(c,P.kind),R=erbeRng(c.seed*17+c.rounds*13);
+    if(P.price<=budget){c.agreed={kind:P.kind,price:P.price};c.kind=P.kind;c.price=P.price;c.cur[P.kind]=P.price;
+      c.reply="Vielen Dank, ich bin mit "+money(P.price)+(P.kind==="rent"?" Kaltmiete im Monat":" Kaufpreis")+" einverstanden. Bitte lassen Sie uns den Vertrag abschließen.";return;}
+    c.pat=(c.pat==null?4-c.rounds+1:c.pat)-(P.price>budget*1.3?2:1);
+    if(c.pat<=0){c.declined=true;c.reply="Vielen Dank für Ihre Zeit. Leider kommen wir preislich nicht zusammen. Ich ziehe meine Anfrage zurück.";return;}
+    const u=unit(P.kind),next=Math.min(budget,Math.max(cur+u,Math.round((cur+(budget-cur)*(.3+R()*.3))/u)*u));
+    c.cur[P.kind]=next;c.kind=P.kind;c.price=next;
+    c.reply="Das übersteigt mein Budget. Ich könnte Ihnen mit "+money(next)+(P.kind==="rent"?" Kaltmiete im Monat":" Kaufpreis")+" entgegenkommen."+(c.pat<=1?" Viel mehr ist für mich nicht drin.":"");
+  }
+  /* Eigenes Angebot der Interessenten direkt annehmen (Mietanfrage ohne Verhandlung) */
+  function accept(id,offerId){
+    const h=home(id),L=h&&h.listing,c=L&&L.offers&&L.offers.find(c=>c.id===offerId);
+    if(!c||!["ready","building"].includes(h.status)||S.time>=L.expires||c.declined||c.pending||c.agreed)return false;
+    c.agreed={kind:c.kind,price:curOf(c,c.kind)};c.reply="Vielen Dank, ich freue mich! Bitte lassen Sie uns den Vertrag abschließen.";changed();return true;
+  }
+  /* v433: Rückkauf eines verkauften Hauses – frühestens nach einem Tag, 10 % Aufschlag auf den Verkaufspreis, danach 1 % je Tag (höchstens 20 %). */
+  function buybackPrice(id){const h=home(id);if(!h||h.status!=="sold"||!h.contract)return 0;return Math.round(h.contract.price*Math.min(1.2,1.1+.01*Math.max(0,(S.time-h.contract.since)/DAY))/1000)*1000;}
+  function buyback(id){
+    const h=home(id),p=plot(id),pr=buybackPrice(id);
+    if(!pr||S.time-h.contract.since<DAY||S.money<pr)return false;
+    pay("Rückkauf Haus "+p.street+" "+p.number,pr);
+    h.history=(h.history||[]).concat({n:h.resident.n,sold:h.contract.price,back:pr,at:S.time});h.lastApplicants=[h.resident.n];
+    delete h.resident;delete h.contract;h.status="ready";changed();return true;
   }
   function sign(id,offerId){
     const h=home(id),L=h&&h.listing,c=L&&L.offers&&L.offers.find(c=>c.id===offerId);
@@ -101,7 +143,14 @@ const VILLAGE = (() => {
     for(const p of D.plots){const h=T.homes[p.id];
       if(h.status==="building"&&S.time>=h.ready){h.status="ready";toast("🏘️ "+p.street+" "+p.number+" ist bezugsfertig. Vorgemerkte Konditionen können jetzt abgeschlossen werden.","ok");renderDirty=true;}
       applyCampaign(h);
-      if(h.listing){const L=h.listing;if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}else if(!L.offers&&S.time>=L.ready){L.offers=offers(p.id);toast("🏡 Neue Wohnanfragen für "+p.street+" "+p.number+".","ok",false,"village:"+p.id);renderDirty=true;}}
+      if(h.listing){const L=h.listing;
+        if(S.time>=L.expires){h.lastApplicants=(L.offers||[]).map(c=>c.n);delete h.listing;renderDirty=true;}
+        else if(!L.offers&&S.time>=L.ready){const R=erbeRng(T.seq++*71+Number(p.id)),n=offerCount(p.id,R,false);L.offers=offers(p.id,n);L.extra=n>0?Math.floor(R()*3):1+Math.floor(R()*2);L.nextWave=S.time+DAY*(1+R()*2);
+          if(n)toast("🏡 "+(n===1?"Eine neue Wohnanfrage":"Neue Wohnanfragen ("+n+")")+" für "+p.street+" "+p.number+".","ok",false,"village:"+p.id);renderDirty=true;}
+        else if(L.offers){
+          if(L.extra>0&&S.time>=L.nextWave&&L.offers.length<6){const R=erbeRng(T.seq++*53+Number(p.id)),n=Math.min(6-L.offers.length,offerCount(p.id,R,true));L.extra--;L.nextWave=S.time+DAY*(1+R()*2);
+            if(n>0){L.offers=L.offers.concat(offers(p.id,n,L.offers));toast("🏡 "+(n===1?"Weitere Wohnanfrage":"Weitere Wohnanfragen")+" für "+p.street+" "+p.number+".","ok",false,"village:"+p.id);}renderDirty=true;}
+          for(const c of L.offers)if(c.pending&&S.time>=c.pending.due){resolve(p,h,c);toast("💬 "+c.n+" hat auf dein Angebot geantwortet ("+p.street+" "+p.number+").","ok",false,"village:"+p.id);renderDirty=true;}}}
       if(h.status==="rented"&&S.time>=h.contract.next){const C=h.contract,n=1+Math.floor((S.time-C.next)/WEEK),gross=Math.round(C.price*7/30*n),cost=Math.round(gross*.08);
         S.money+=gross-cost;S.revenue+=gross;S.expense+=cost;C.earned+=gross-cost;T.earned+=gross-cost;C.next+=n*WEEK;
         logMoney("farm","Miete · "+p.street+" "+p.number,gross);logMoney("farm","Instandhaltungsrücklage · "+p.street+" "+p.number,-cost);renderDirty=true;}
@@ -158,5 +207,5 @@ const VILLAGE = (() => {
       toast("🤝 "+h.resident.n+" empfiehlt Ihren Hof weiter: "+D.friends[p.resident].n+" kennt jetzt Ihr Angebot.","ok");}
   }
   function note(o){if(!o.village)return "";return o.village.friend?"Empfohlen von "+o.village.referrer:"Nachbarschaft · "+address(plot(o.village.plot)).t;}
-  return {state,home,plot,geo,local,door,address,clear,overlaps,clipLock,obstruction,residents,expand,canExpand,buy,build,advertise,stopAdvert,list,relist,negotiate,sign,tick,value,route,variants,repo,orderFor,nextOrder,delivered,note};
+  return {state,home,plot,geo,local,door,address,clear,overlaps,clipLock,obstruction,residents,expand,canExpand,buy,build,advertise,stopAdvert,list,relist,offers,negotiate,accept,demand,buybackPrice,buyback,sign,tick,value,route,variants,repo,orderFor,nextOrder,delivered,note};
 })();
