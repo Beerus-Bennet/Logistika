@@ -142,7 +142,7 @@ test('v433: zu hohe Forderung führt zu Gegenangebot, Geduld endet mit Rückzug'
 test('v433: Gegenangebot direkt annehmen; Rückkauf nach Verkauf mit Aufschlag',()=>{
  listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0];c.kind="buy";c.price=c.cur.buy;');assert.ok(run('VILLAGE.accept("030",c.id)'));assert.ok(run('VILLAGE.sign("030",c.id)'));
  assert.equal(run('VILLAGE.buyback("030")'),false,'erst nach einem Tag');
- const sold=run('h.contract.price');run('S.time+=2*1440;var m=S.money,bp=VILLAGE.buybackPrice("030");');assert.ok(run('bp>h.contract.price*1.2'));
+ const sold=run('h.contract.price');run('S.time+=2*1440;var m=S.money,bp=VILLAGE.buybackPrice("030");');assert.ok(run('bp>h.contract.price*1.1&&bp<=h.contract.price*1.2+1'));run('S.time+=200*1440;');assert.ok(run('VILLAGE.buybackPrice("030")<=h.contract.price*1.2+1'),'höchstens 20 %');run('S.time-=200*1440;');
  assert.ok(run('VILLAGE.buyback("030")'));assert.equal(run('m-S.money'),run('bp'));assert.equal(run('h.status'),'ready');assert.equal(run('h.resident'),undefined);assert.equal(run('h.contract'),undefined);
  assert.equal(run('VILLAGE.buyback("030")'),false);assert.ok(run('VILLAGE.list("030","referral")'));
 });

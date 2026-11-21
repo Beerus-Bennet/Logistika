@@ -119,8 +119,8 @@ const VILLAGE = (() => {
     if(!c||!["ready","building"].includes(h.status)||S.time>=L.expires||c.declined||c.pending||c.agreed)return false;
     c.agreed={kind:c.kind,price:curOf(c,c.kind)};c.reply="Vielen Dank, ich freue mich! Bitte lassen Sie uns den Vertrag abschließen.";changed();return true;
   }
-  /* v433: Rückkauf eines verkauften Hauses – frühestens nach einem Tag, 20 % Aufschlag auf den Verkaufspreis, danach 1 % je Tag (höchstens 70 %). */
-  function buybackPrice(id){const h=home(id);if(!h||h.status!=="sold"||!h.contract)return 0;return Math.round(h.contract.price*Math.min(1.7,1.2+.01*Math.max(0,(S.time-h.contract.since)/DAY))/1000)*1000;}
+  /* v433: Rückkauf eines verkauften Hauses – frühestens nach einem Tag, 10 % Aufschlag auf den Verkaufspreis, danach 1 % je Tag (höchstens 20 %). */
+  function buybackPrice(id){const h=home(id);if(!h||h.status!=="sold"||!h.contract)return 0;return Math.round(h.contract.price*Math.min(1.2,1.1+.01*Math.max(0,(S.time-h.contract.since)/DAY))/1000)*1000;}
   function buyback(id){
     const h=home(id),p=plot(id),pr=buybackPrice(id);
     if(!pr||S.time-h.contract.since<DAY||S.money<pr)return false;
