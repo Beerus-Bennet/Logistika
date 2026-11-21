@@ -1,3 +1,7 @@
+## v436 – Offene PRs miteinander abgeglichen
+
+Wohnanfragen-PR138 enthält zusätzlich den konfliktfrei mit main abgeglichenen Flussbaum-PR137. Damit lassen sich beide Änderungen ohne erneuten gegenseitigen Versionskonflikt zusammenführen. Wohnanfragen/Flusscode bytegleich zu ihren geprüften Branchständen, Hochformat431 erhalten. Alle 16 Siedlungs- und drei Flussprüfgruppen bestanden; Syntax geprüft. Gesamt-/SW436, Einzelassetstände erhalten. Kein echter Handytest.
+
 ## v435 – Mergekonflikte mit aktuellem main behoben
 
 main4ef96fe einschließlich Hochformat431 integriert. Dokumentation beider Seiten und unabhängige Assetstände erhalten. Keine Änderung der Fachlogik durch Konfliktauflösung. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
@@ -14,6 +18,18 @@ main4ef96fe einschließlich Hochformat431 integriert. Dokumentation beider Seite
 - Alte Spielstände: Anfragen ohne neue Felder werden toleriert (`cur`/`pat` werden bei Bedarf abgeleitet); laufende Anzeigen ohne Wellen bleiben wie sie sind.
 
 **Geprüft:** `village-v340.test.js` (16 Gruppen, vier neu: Streuung/Nachfrage, verzögerte Antwort mit Gewinn über Richtwert, Gegenangebot und Rückzug, Annehmen und Rückkauf), `pdf-v365`, `gaerten-v369`, `village-life-v343`, `fixes-v354`, `worker-motion-v351` bestanden (pdf/gaerten-Tests an feste Anfragen angepasst); Testbrowser: Bewohner-Fenster mit Anzeige ohne Fehler. **Nicht geprüft:** Handy, langer Spielverlauf, Balance der Zahlen (Budgetspannen/Geduld sind Schätzwerte).
+
+## v434 – Mergekonflikte mit aktuellem main behoben
+
+main4ef96fe einschließlich Hochformat431 integriert. Dokumentation beider Seiten und unabhängige Assetstände erhalten. Keine Änderung der Fachlogik durch Konfliktauflösung. Syntax und betroffene Regressionstests geprüft; kein echter Handytest.
+
+## v432 – Bäume am Flussufer: Waldbäume und Pflanzplätze folgen der echten Flusslinie
+
+**Ursache:** v424 hat nur die gespeicherten Hofbäume (`S.farm.trees`) entfernt. Die Kulissen-Waldbäume (`worldview.js`, Uferband `stamp(FWORLD.creek, 3,3, 4)`) hielten dagegen nur 3,3 Einheiten Abstand zur *Rohlinie* des alten Bachs. Der echte Fluss (Gebirgsabfluss + Bach, geglättet, mit Windungen) hat einen Sandrand bis etwa 5,2 Einheiten – dort standen weiter Bäume. Auch `creekBankD` (v424) nutzte nur die alte Bachlinie.
+
+**Lösung:** Uferband der Waldbäume und Büsche entlang der geglätteten Linie `ALPINE.riverLine()` mit Radius 6 (`worldMasks`). Pflanzprüfung `CREEK_BANK` 6 und dieselbe Linie (`erbe.js`). Einmalige Bereinigung `F.river432` entfernt gespeicherte Hofbäume im Uferband (v424-Merkmal bleibt ungenutzt, alte Stände werden also erneut einmal bereinigt). Waldbäume entstehen deterministisch neu – sie bleiben fern vom Ufer, kein Spielstandeingriff.
+
+**Geprüft:** `fluss-baeume-v424.test.js` angepasst (Gebirgsabfluss-Linie, Merkmal `river432`) und bestanden; Testbrowser-Draufsicht auf mehrere Flussbögen: kein Baum mehr auf dem Sand, Grasstreifen dazwischen. **Nicht geprüft:** Handy; Bäume an Seebach/See unverändert.
 
 ## v431 – Nur Hochformat auf dem Handy
 

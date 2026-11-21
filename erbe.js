@@ -101,10 +101,10 @@ function distSeg(px, pz, a, b) {
 }
 function distLine(px, pz, line) { let d = 1e9; for (let i = 1; i < line.length; i++) d = Math.min(d, distSeg(px, pz, line[i - 1], line[i])); return d; }
 /* v424: Abstand zur Flussmitte (geglättet wie das Flussmesh) – Uferband (Wasser 1,7 + Sand bis 4,45 gemessen) plus Rand */
-const CREEK_BANK = 4.7;
+const CREEK_BANK = 6;
 let CREEK_SM = null;
 function creekBankD(x, z) {
-  if (!CREEK_SM) CREEK_SM = typeof FWM !== "undefined" && FWM.smoothLine ? FWM.smoothLine(FWORLD.creek, 6) : FWORLD.creek;
+  if (!CREEK_SM) CREEK_SM = typeof FWM !== "undefined" && FWM.smoothLine ? FWM.smoothLine(typeof ALPINE !== "undefined" ? ALPINE.riverLine() : FWORLD.creek, 6) : FWORLD.creek;   /* v432: wie das Flussmesh (inkl. Gebirgsabfluss) */
   return distLine(x, z, CREEK_SM);
 }
 function nearPath(x, z) { let d = 1e9; for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p)); return d; }
@@ -473,7 +473,7 @@ function erbeInit(F, fresh) {
     for(let r=4;r<=28&&!found;r+=2)for(let k=0;k<24;k++){const a=k/24*Math.PI*2,x=t.x+Math.cos(a)*r,z=t.z+Math.sin(a)*r;if(distLine(x,z,FWORLD.creek)<4.5||!treeSpotOk(x,z,2.4)||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.4))continue;t.x=+x.toFixed(2);t.z=+z.toFixed(2);found=true;break;}if(!found)complete=false;
    }if(complete)F.river380=1;}
   /* v424: Bäume auf dem Sandrand des Flusses werden einmalig entfernt (Art/IDs der übrigen bleiben) */
-  if (!F.river424) { F.river424 = 1; F.trees = F.trees.filter(t => creekBankD(t.x, t.z) >= CREEK_BANK); }
+  if (!F.river432) { F.river432 = 1; F.trees = F.trees.filter(t => creekBankD(t.x, t.z) >= CREEK_BANK); }
   farmAlpineTrees384(F);
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */
   if (!F.v203lkw) {
