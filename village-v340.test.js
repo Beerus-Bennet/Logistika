@@ -76,7 +76,7 @@ test('Unbezahlte Erweiterung und fehlendes Baumaterial verändern weder Geld noc
  assert.equal(run('VILLAGE.buy("030")'),false);
 });
 function built(){run('fresh(10);S.money=1e7;S.farm.stats.deliv=6;VILLAGE.expand();VILLAGE.buy("030");VILLAGE.build("030","holz",false);S.time=VILLAGE.home("030").ready;VILLAGE.tick();');}
-function listed(){built();run('VILLAGE.list("030","online");S.time=VILLAGE.home("030").listing.ready;VILLAGE.tick();');}
+function listed(){built();run('VILLAGE.list("030","online");S.time=VILLAGE.home("030").listing.ready;VILLAGE.tick();var L0=VILLAGE.home("030").listing;L0.offers=VILLAGE.offers("030",3);L0.extra=0;');}
 test('Kauf und Bau genau einmal; eine echte Bauzeit, danach mehrere formelle Miet-/Kaufanfragen',()=>{
  run('fresh(10);S.money=1e7;S.farm.stats.deliv=6;var m=S.money;');assert.ok(run('VILLAGE.expand()'));assert.ok(run('VILLAGE.buy("030")'));assert.ok(run('VILLAGE.build("030","holz",false)'));
  assert.equal(run('m-S.money'),48000+35000+215000);assert.equal(run('VILLAGE.home("030").status'),'building');
@@ -84,11 +84,11 @@ test('Kauf und Bau genau einmal; eine echte Bauzeit, danach mehrere formelle Mie
  run('S.time=VILLAGE.home("030").ready-.01;VILLAGE.tick();');assert.equal(run('VILLAGE.home("030").status'),'building');
  run('S.time+=.01;VILLAGE.tick();');assert.equal(run('VILLAGE.home("030").status'),'ready');
  assert.ok(run('VILLAGE.list("030","online")'));assert.equal(run('VILLAGE.list("030","online")'),false);
- run('S.time=VILLAGE.home("030").listing.ready;VILLAGE.tick();');assert.equal(run('VILLAGE.home("030").listing.offers.length'),3);
+ run('S.time=VILLAGE.home("030").listing.ready;VILLAGE.tick();');assert.ok(run('VILLAGE.home("030").listing.offers.length')<=6);
  assert.equal(run('VILLAGE.home("030").resident'),undefined);
 });
 test('Verhandlungen können scheitern: Leerstand, kein Geld, Neuvermittlung mit anderen Interessenten',()=>{
- listed();run('var h=VILLAGE.home("030"),oldNames=h.listing.offers.map(c=>c.n),m=S.money;for(const c of h.listing.offers)for(let i=0;i<3;i++)VILLAGE.negotiate("030",c.id,"rent",99999);');
+ listed();run('var h=VILLAGE.home("030"),oldNames=h.listing.offers.map(c=>c.n),m=S.money;for(let i=0;i<3;i++){for(const c of h.listing.offers)if(!c.declined)VILLAGE.negotiate("030",c.id,"rent",99999+i);S.time+=1.9*1440;VILLAGE.tick();}');
  assert.ok(run('h.listing.offers.every(c=>c.declined)'));assert.equal(run('VILLAGE.sign("030",h.listing.offers[0].id)'),false);
  assert.equal(run('h.resident'),undefined);assert.equal(run('h.status'),'ready');assert.equal(run('S.money'),run('m'));
  assert.ok(run('VILLAGE.relist("030")'));assert.ok(run('VILLAGE.list("030","referral")'));
@@ -96,7 +96,7 @@ test('Verhandlungen können scheitern: Leerstand, kein Geld, Neuvermittlung mit 
  run('S.time+=30*1440;VILLAGE.tick();');assert.equal(run('h.resident'),undefined);assert.equal(run('S.money'),run('m'));
 });
 test('Erst unterschriebener Mietvertrag erzeugt Einzug und wöchentliche Zahlungen, ohne Doppelzahlung nach Laden',()=>{
- listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0],m=S.money;VILLAGE.negotiate("030",c.id,"rent",c.price);');
+ listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0],m=S.money;c.kind="rent";c.price=c.cur.rent;VILLAGE.accept("030",c.id);');
  assert.equal(run('h.resident'),undefined);assert.ok(run('VILLAGE.sign("030",c.id)'));assert.equal(run('VILLAGE.sign("030",c.id)'),false);
  assert.equal(run('S.money'),run('m'));assert.equal(run('h.status'),'rented');
  run('S.time=h.contract.next-.1;VILLAGE.tick();');assert.equal(run('S.money'),run('m'));
@@ -104,7 +104,7 @@ test('Erst unterschriebener Mietvertrag erzeugt Einzug und wöchentliche Zahlung
  assert.ok(run('S.money>m'));run('S.time=VILLAGE.home("030").contract.next;VILLAGE.tick();');assert.ok(run('S.money>first'));
 });
 test('Kaufvertrag bezahlt genau einmal; verkaufte Häuser bleiben bewohnt und werfen keine Miete ab',()=>{
- listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[1];VILLAGE.negotiate("030",c.id,"buy",c.price);var m=S.money;');
+ listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[1];c.kind="buy";c.price=c.cur.buy;VILLAGE.accept("030",c.id);var m=S.money;');
  assert.ok(run('VILLAGE.sign("030",c.id)'));assert.equal(run('S.money-m'),run('c.price'));assert.equal(run('h.status'),'sold');
  run('var after=S.money;S.time+=90*1440;VILLAGE.tick();S=JSON.parse(JSON.stringify(S));VILLAGE.tick();');assert.equal(run('S.money'),run('after'));
  assert.equal(run('VILLAGE.buy("030")'),false);assert.ok(run('VILLAGE.home("030").resident'));
@@ -119,5 +119,31 @@ test('Siedlungsaussparung öffnet kein Seewasser; vorhandene Dekoration blockier
 test('Hausvorbild bleibt reproduzierbar und erhält mehrere Farbvarianten',()=>{
  run('var a=RENT.homeMesh(0).v,b=RENT.homeMesh(1).v,c=RENT.homeMesh(0).v;');
  assert.equal(run('JSON.stringify(a)'),run('JSON.stringify(c)'));assert.notEqual(run('JSON.stringify(a)'),run('JSON.stringify(b)'));
+});
+test('v433: Nachfrage schwankt (keine/eine/viele), Seeblick und ruhige Lage ziehen mehr an',()=>{
+ run('fresh(10);S.farm.stats.deliv=6;VILLAGE.expand();var D0=VILLAGE_DATA;');
+ const d=run('JSON.stringify(D0.plots.map(p=>p.id).map(id=>VILLAGE.demand(id).score))');
+ const sc=JSON.parse(d);assert.ok(Math.max(...sc)-Math.min(...sc)>1,'unterschiedliche Nachfrage '+d);
+ built();run('VILLAGE.list("030","online");');const counts=new Set();for(let i=0;i<40;i++){run('S.time+='+(i*137+11)+';var R=erbeRng('+(i*97+5)+');');counts.add(run('VILLAGE.offers("030",null).length'));}
+ assert.ok(counts.has(0)||counts.size>=3,'Anzahl streut: '+[...counts]);assert.ok(counts.size>=3,'mehrere verschiedene Anzahlen '+[...counts]);
+});
+test('v433: Verhandlung dauert Tage, Antwort kommt verzögert; im Budget gibt es Zusage mit Gewinn über Richtwert',()=>{
+ listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0];c.kind="rent";c.cur={rent:1200,buy:250000};c.price=1200;c.rentBudget=1800;c.pat=4;var ask=1700;');
+ assert.ok(run('VILLAGE.negotiate("030",c.id,"rent",ask)'));assert.ok(run('c.pending'));assert.equal(run('VILLAGE.negotiate("030",c.id,"rent",1750)'),false);
+ run('VILLAGE.tick();');assert.ok(run('c.pending'),'sofort keine Antwort');assert.ok(!run('c.agreed'));
+ run('S.time+=2*1440;VILLAGE.tick();');assert.ok(!run('c.pending'));assert.equal(run('c.agreed.price'),1700);assert.ok(1700>run('VILLAGE_DATA.houses.holz.rent'),'Gewinn über Richtwert');
+});
+test('v433: zu hohe Forderung führt zu Gegenangebot, Geduld endet mit Rückzug',()=>{
+ listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0];c.kind="rent";c.cur={rent:1200,buy:250000};c.price=1200;c.rentBudget=1500;c.pat=3;');
+ run('VILLAGE.negotiate("030",c.id,"rent",2000);S.time+=2*1440;VILLAGE.tick();');assert.ok(!run('c.agreed')&&!run('c.declined'));
+ assert.ok(run('c.price>1200&&c.price<=1500'),'Gegenangebot '+run('c.price'));
+ run('VILLAGE.negotiate("030",c.id,"rent",2000);S.time+=2*1440;VILLAGE.tick();VILLAGE.negotiate("030",c.id,"rent",2000);S.time+=2*1440;VILLAGE.tick();');assert.ok(run('c.declined'));
+});
+test('v433: Gegenangebot direkt annehmen; Rückkauf nach Verkauf mit Aufschlag',()=>{
+ listed();run('var h=VILLAGE.home("030"),c=h.listing.offers[0];c.kind="buy";c.price=c.cur.buy;');assert.ok(run('VILLAGE.accept("030",c.id)'));assert.ok(run('VILLAGE.sign("030",c.id)'));
+ assert.equal(run('VILLAGE.buyback("030")'),false,'erst nach einem Tag');
+ const sold=run('h.contract.price');run('S.time+=2*1440;var m=S.money,bp=VILLAGE.buybackPrice("030");');assert.ok(run('bp>h.contract.price*1.2'));
+ assert.ok(run('VILLAGE.buyback("030")'));assert.equal(run('m-S.money'),run('bp'));assert.equal(run('h.status'),'ready');assert.equal(run('h.resident'),undefined);assert.equal(run('h.contract'),undefined);
+ assert.equal(run('VILLAGE.buyback("030")'),false);assert.ok(run('VILLAGE.list("030","referral")'));
 });
 console.log('Seeblick: '+count+' Integrationsgruppen bestanden.');

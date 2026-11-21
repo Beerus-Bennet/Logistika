@@ -34,9 +34,9 @@ let count=0;const test=(name,fn)=>{fn();console.log('ok '+(++count)+' '+name);};
 test('Ausstattung erscheint erst nach echtem Vertrag/Einzug, nicht bei Bau oder bloßen Wohnanfragen',()=>{
  run(`prepared();VILLAGE.state().expanded=true;VILLAGE.buy('030');VILLAGE.build('030','familie',false);var p=VILLAGE.plot('030'),h=VILLAGE.home('030');`);
  assert.equal(run('VILLAGE_GARDEN.plan(p,h)'),null);
- run(`S.time=h.ready;VILLAGE.tick();VILLAGE.list('030','online');S.time=h.listing.ready;VILLAGE.tick();var offer=h.listing.offers[0];`);
+ run(`S.time=h.ready;VILLAGE.tick();VILLAGE.list('030','online');S.time=h.listing.ready;VILLAGE.tick();h.listing.offers=VILLAGE.offers('030',3);h.listing.extra=0;var offer=h.listing.offers[0];`);
  assert.equal(run('VILLAGE_GARDEN.plan(p,h)'),null);
- assert.equal(run(`VILLAGE.negotiate('030',offer.id,'rent',offer.price)&&VILLAGE.sign('030',offer.id)`),true);
+ assert.equal(run(`(offer.kind='rent',offer.price=offer.cur.rent,VILLAGE.accept('030',offer.id))&&VILLAGE.sign('030',offer.id)`),true);
  assert.ok(run('VILLAGE_GARDEN.plan(p,h).items.length>=6'));assert.equal(run('h.status'),'rented');
 });
 test('Bestehende Nachbarn und gekaufte Häuser erhalten Gärten; leerstehende oder unfertige Häuser bleiben frei',()=>{

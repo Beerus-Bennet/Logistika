@@ -1,3 +1,16 @@
+## v433 – Wohnanfragen mit schwankender Nachfrage, mehrtägige Verhandlung mit echtem Gewinn, Hausrückkauf
+
+**Ursache:** Jede Anzeige brachte immer genau drei Bewerber (1× Kauf, 2× Miete); Verhandlungen waren sofort entschieden, die Budgets lagen nur 2–15 % über dem Richtwert, so dass kaum Gewinn möglich war. Verkaufte Häuser waren endgültig weg.
+
+**Lösung (`village.js`, `villageview.js`):**
+- **Nachfrage je Grundstück** (`demand`): Seeblick (Nähe zum See) und ruhige Lage (höchstens ein bewohntes Nachbarhaus) erhöhen die Nachfrage, Familienhaus und Onlineanzeige etwas. Die Zahl der Anfragen streut: mal keine, mal eine, mal bis zu sechs (`offerCount`). Danach können in 1–2 Wellen im Abstand von 1–3 Tagen weitere Interessenten kommen (`L.extra`/`L.nextWave`). Kauf-/Mietwunsch, Beruf und Haushaltsgröße sind zufällig; Seeblick weckt öfter Kaufinteresse. Bei leerer Liste steht „Bisher hat sich niemand gemeldet“; neu vermitteln geht erst, wenn keine Nachzügler mehr kommen.
+- **Verhandlung über Tage:** Jede Anfrage hat ein verdecktes Budget (Miete bis ~1,5×, Kauf bis ~1,4× Richtwert, im Seeblick etwas mehr) und 3–4 Geduld. Ein Vorschlag wird nach 0,5–1,7 Tagen beantwortet (`pending`/`resolve`): im Budget → Zusage zum vorgeschlagenen Preis; darüber → Gegenangebot, das sich dem Budget nähert; sehr überzogene Forderungen (>130 % des Budgets) kosten doppelt Geduld; ohne Geduld zieht die Partei zurück. Antwort kommt als Meldung (antippbar). Ein Vorschlag unter dem aktuellen Angebot wird abgelehnt (ohne Runde).
+- **Direkt annehmen** (`accept`): Mietanfrage bzw. Kaufangebot zum aktuellen Preis ohne Verhandlung.
+- **Rückkauf** (`buybackPrice`/`buyback`): Bei verkauften Häusern ab einem Tag nach Verkauf für Verkaufspreis + 20 %, jeden Tag +1 % bis höchstens +70 %. Die Bewohner ziehen aus, das Haus ist wieder bezugsfertig und kann neu vermittelt werden.
+- Alte Spielstände: Anfragen ohne neue Felder werden toleriert (`cur`/`pat` werden bei Bedarf abgeleitet); laufende Anzeigen ohne Wellen bleiben wie sie sind.
+
+**Geprüft:** `village-v340.test.js` (16 Gruppen, vier neu: Streuung/Nachfrage, verzögerte Antwort mit Gewinn über Richtwert, Gegenangebot und Rückzug, Annehmen und Rückkauf), `pdf-v365`, `gaerten-v369`, `village-life-v343`, `fixes-v354`, `worker-motion-v351` bestanden (pdf/gaerten-Tests an feste Anfragen angepasst); Testbrowser: Bewohner-Fenster mit Anzeige ohne Fehler. **Nicht geprüft:** Handy, langer Spielverlauf, Balance der Zahlen (Budgetspannen/Geduld sind Schätzwerte).
+
 ## v430 – Gebirgs-PR mit Wanderwegkorrektur zusammengeführt
 
 main15b4536 einschließlich Wanderweg428 vollständig integriert. Feste Kamerahöhe und ruhige Eckpunktfarben/-normalen429 sowie neuer Wegbeginn und Wegweiserplatzierung428 erhalten. Gesamt-/SW430, alpine430, übrige Assetstände erhalten. Syntax und betroffene Gebirgs-/Wasser-/Wegprüfungen geprüft; kein echter Handytest.
