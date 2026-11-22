@@ -41,6 +41,11 @@ test('Nicht freigeben löscht die ganze Kette auch bei Kollegen und verhindert s
  assert.ok(run('staffApprove(msgs[0].id,false)'));assert.equal(run('S.farm.tasks.length'),0);assert.equal(run('staffWlHas("farmer","tomate")'),false);
  assert.equal(run('staffEnsureTask({role:"farmer",item:"tomate",n:1,from:"fischwirt",fromId:"s2"})'),null);
 });
+test('v441: Stammt die Kette aus einer Bestellung, wird die Bestellung abgelehnt und alle ihre Aufträge fallen weg',()=>{
+ run('prep();S.orders=[{id:"O1",shipper:"Möbelhaus",farm:{items:{tomate:2}},pay:100}];S.farm.lastOrd=0;staffWlSet("farmer","tomate",false);var P=staffEnsureTask({role:"fischwirt",item:"fischkonserve",n:1,from:"order",fromId:"O1",note:"Möbelhaus"});var P2=staffEnsureTask({role:"farmer",item:"weizen",n:1,from:"order",fromId:"O1"});var T=staffEnsureTask({role:"farmer",item:"tomate",n:1,from:"fischwirt",fromId:"s2",parent:P.id});var s=S.farm.staff[0];');
+ run('staffTaskJob(s,T);');assert.ok(run('staffApprove(msgs[0].id,false)'));
+ assert.equal(run('S.orders.length'),0);assert.equal(run('S.farm.tasks.length'),0);assert.match(run('msgs[0].result'),/Bestellung abgelehnt/);
+});
 test('Easter Egg: Satz entfernt, +2 Kleeblätter',()=>{
  const t=read('team.js');assert.ok(!t.includes('Telefonieren kannst du danach'));assert.match(t,/Zurück an die Arbeit · \+2 🍀/);assert.match(t,/farmClover\(2, "Easter Egg"\)/);
 });

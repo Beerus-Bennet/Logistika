@@ -243,3 +243,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v439: Button „Unsere Zusammenarbeit“ bei angestellten Arbeitern entfernt (Arbeitermenü und Personalfenster, `team.js`); Kennenlernen vor der Anstellung bleibt.
 
 - v440 Integration: main e63813e/Arbeiter-Menü439 zusätzlich eingebunden; team.js unverändert aus main.
+- v441: „Nicht freigeben“ lehnt bei Ketten aus Kundenbestellungen auch die Bestellung ab und löscht deren Aufträge bei allen Kräften (`staffApprove` in `team.js`).
