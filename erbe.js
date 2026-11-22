@@ -55,6 +55,8 @@ const FWORLD = {
      (spring, der Bach verjüngt sich dorthin), im Westen läuft er bis über den Kartenrand (x = −160) */
   /* v380: Brücke und Oberlauf bleiben, breite Talbögen führen zum südlicheren Westaustritt. */
   creek: [[31.2,-105.6],[26,-100.5],[18,-94],[2,-88],[-12,-84],[-26,-78],[-36,-76],[-48,-72],[-60,-64],[-74,-62],[-87,-64],[-99,-58],[-104,-43],[-116,-33],[-132,-36],[-138,-49],[-130,-62],[-137,-75],[-151,-74],[-159,-63],[-153,-48],[-156,-30],[-164,-18]],
+  /* v459: Anbindung des Bergwanderwegs (Einstieg am Gebirgsrand, alpine.js TRAIL0 = 6, −100) an den Hauptweg (Knick bei −34,6, −98). Eigene Liste, damit FWORLD.paths und die Bäume neuer Spiele gleich bleiben. */
+  mtnWay: [[-34.6, -98], [-24, -98.9], [-12, -99.7], [0, -100.2], [6.6, -100]],
   spring: [31.2, -105.6],
   /* v207: Felshang mit Hangquelle hinter dem Quell-Wasserfall – dort keine Bäume. v220: hinter dem Topf (Nordwesten).
      v228: Quellberg in der Nordostecke mit Hochfläche bis an den Fall (Gelände in woodmodels.js, MTN/SRUN). Grundriss als
@@ -107,11 +109,11 @@ function creekBankD(x, z) {
   if (!CREEK_SM) CREEK_SM = typeof FWM !== "undefined" && FWM.smoothLine ? FWM.smoothLine(typeof ALPINE !== "undefined" ? ALPINE.riverLine() : FWORLD.creek, 6) : FWORLD.creek;   /* v432: wie das Flussmesh (inkl. Gebirgsabfluss) */
   return distLine(x, z, CREEK_SM);
 }
-function nearPath(x, z) { let d = 1e9; for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p)); return d; }
+function nearPath(x, z) { let d = 1e9; for (const p of FWORLD.paths.concat([FWORLD.mtnWay])) d = Math.min(d, distLine(x, z, p)); return d; }
 /* v77: nächster Punkt auf einem Waldweg (für das Wegrücken der Bäume) */
 function nearPathPt(x, z) {
   let best = { d: 1e9, x, z };
-  for (const p of FWORLD.paths) for (let i = 1; i < p.length; i++) {
+  for (const p of FWORLD.paths.concat([FWORLD.mtnWay])) for (let i = 1; i < p.length; i++) {
     const a = p[i - 1], b = p[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
     const t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1), px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz);
     if (d < best.d) best = { d, x: px, z: pz };
@@ -473,6 +475,7 @@ function erbeInit(F, fresh) {
     for(let r=4;r<=28&&!found;r+=2)for(let k=0;k<24;k++){const a=k/24*Math.PI*2,x=t.x+Math.cos(a)*r,z=t.z+Math.sin(a)*r;if(distLine(x,z,FWORLD.creek)<4.5||!treeSpotOk(x,z,2.4)||F.trees.some(q=>q!==t&&Math.hypot(q.x-x,q.z-z)<2.4))continue;t.x=+x.toFixed(2);t.z=+z.toFixed(2);found=true;break;}if(!found)complete=false;
    }if(complete)F.river380=1;}
   /* v424: Bäume auf dem Sandrand des Flusses werden einmalig entfernt (Art/IDs der übrigen bleiben) */
+  if (!F.way459) { F.way459 = 1; F.trees = F.trees.filter(t => distLine(t.x, t.z, FWORLD.mtnWay) >= 2.4); }   /* v459: Bäume auf der neuen Wegverbindung entfernen (einmalig) */
   if (!F.river432) { F.river432 = 1; F.trees = F.trees.filter(t => creekBankD(t.x, t.z) >= CREEK_BANK); }
   farmAlpineTrees384(F);
   /* v203: Stellplatz neben den Weg; Bäume in der neuen Bucht rücken nach Westen */

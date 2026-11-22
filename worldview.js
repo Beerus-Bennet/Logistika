@@ -144,7 +144,7 @@ function worldMasks(fell) {
       }
     }
   };
-  FWORLD.paths.forEach(p => { stamp(p, 2.2, 1); stamp(p, 6, 2); });
+  FWORLD.paths.concat([FWORLD.mtnWay]).forEach(p => { stamp(p, 2.2, 1); stamp(p, 6, 2); });
   /* v75: auch die Wege am See halten Kulissenbäume fern (der neue Ostuferweg läuft durch lockeren Baumbestand) */
   [LAKE_STEM, LAKE_WAY, LAKE_EAST].forEach(p => stamp(p, 2.2, 1));
   /* v432: Uferband entlang der tatsächlichen, geglätteten Flusslinie (Gebirgsabfluss + Bach); Sandrand reicht bis ~5,2, daher 6 (vorher 3,3 an der Rohlinie) */
@@ -167,14 +167,14 @@ function worldMasks(fell) {
 /* v77: Abstand zur nächsten Wegmitte (Waldwege und Wege am See) – Kronen und Büsche ragen nicht über den Schotter */
 function wayGap(x, z) {
   let d = 1e9;
-  for (const p of FWORLD.paths) d = Math.min(d, distLine(x, z, p));
+  for (const p of FWORLD.paths.concat([FWORLD.mtnWay])) d = Math.min(d, distLine(x, z, p));
   for (const p of [LAKE_STEM, LAKE_WAY, LAKE_EAST]) d = Math.min(d, distLine(x, z, p));
   return d;
 }
 /* … auf der Kameraseite (Südosten) des nächsten Weges verdeckt eine Krone ihn früher: bis 0,9 mehr Abstand */
 function wayCamSide(x, z) {
   let d = 1e9, px = x, pz = z;
-  for (const p of FWORLD.paths.concat([LAKE_STEM, LAKE_WAY, LAKE_EAST])) for (let i = 1; i < p.length; i++) {
+  for (const p of FWORLD.paths.concat([FWORLD.mtnWay, LAKE_STEM, LAKE_WAY, LAKE_EAST])) for (let i = 1; i < p.length; i++) {
     const a = p[i - 1], b = p[i], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
     const t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1), qx = a[0] + dx * t, qz = a[1] + dz * t, e = Math.hypot(x - qx, z - qz);
     if (e < d) { d = e; px = qx; pz = qz; }
@@ -379,7 +379,7 @@ function worldBushes(trees, MK, extra, rocks, hidden) {
     });
     got.forEach(c => clearings.push(c));
   }
-  const pathLines = FWORLD.paths.concat([LAKE_STEM, LAKE_WAY, LAKE_EAST]);
+  const pathLines = FWORLD.paths.concat([FWORLD.mtnWay, LAKE_STEM, LAKE_WAY, LAKE_EAST]);
   const segs = []; let segLen = 0;
   pathLines.forEach(p => { for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (l > 0.1) { segs.push([p[i - 1], p[i], l]); segLen += l; } } });
   /* Standortmerkmale: rho = lokale Baumdichte im Umkreis von 5 relativ zum dichten Kernwald (1 = Kernwald, 0 = keine Bäume),
@@ -1044,6 +1044,8 @@ function worldStatic() {
       snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
     return { p, o, tee };
   });
+  /* v459: Anbindung des Bergwegs an den Hauptweg (Abzweig auf dem Knick (−34,6, −98) von paths[1], Ende läuft in den Wanderweg der Gebirgskulisse) */
+  {const p = FWORLD.mtnWay, i = 1; WAYS.push({ p, tee: [i, -1], o: { y: 0.026 + 7 * 0.003, ey: 0.016 + 7 * 0.0012, ends: [false, false], caps: [false, false], mouth: [false, false], snap: [null, null], fade: [null, null], gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: () => true } });}
   WAYS.forEach((W, i) => {
     let q = W.p;
     WAYS.forEach((V, j) => V.tee.forEach((t, k) => { if (t === i) q = FWM.wayStraightAt(q, k ? V.p[V.p.length - 1] : V.p[0], 1.4); }));

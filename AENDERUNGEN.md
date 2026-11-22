@@ -5,6 +5,13 @@
 **Lösung:** (1) `treeFarSet` arbeitet scheibchenweise (höchstens ~6 ms je Bild); noch nicht fertige Gruppen bleiben im vollen Modell sichtbar, fertige werden überblendet. Gemessen danach: höchstens ~9 ms je Bild beim Rauszoomen. (2) Hänger-Wächter am Ende von `farmview.js`: steht die sichtbare Hofansicht länger als 10 s ohne Bild oder bleibt der WebGL-Kontext 12 s verloren, wird gespeichert und die Seite neu geladen (Meldung in `logistika.lastError`). Keine Spielstand-Änderung.
 
 **Geprüft:** Zoom-Reihe 30 → 450 → 30 im Testbrowser mit Bildzeiten vorher/nachher; Wächter: kein Neuladen bei laufender Schleife, Neuladen nach ~13 s bei angehaltener Schleife. **Nicht geprüft:** Handy (dort trat der Hänger auf; echte Bildzeiten dort unbekannt), Neuladen bei verlorenem WebGL-Kontext.
+## v459 – Bergwanderweg an den Hauptweg angebunden
+
+**Ursache:** Der Wanderweg aus den Bergen begann am Gebirgsrand (`TRAIL0` = 6, −100) mitten in der Wiese ohne Verbindung zu einem Hofweg.
+
+**Lösung:** Neue Verbindung `FWORLD.mtnWay` (`erbe.js`) vom Knick des Hauptwegs (−34,6, −98) bis zum Wegweiser am Einstieg; gezeichnet als weiterer Weg mit Abzweig auf dem Hauptweg (`WAYS` in `worldview.js`), Kulissenbäume und neue Pflanzplätze halten Abstand (`nearPath`, `nearPathPt`, `wayGap`, Stempel). Eigene Liste, damit `FWORLD.paths` und die Bäume neuer Spiele unverändert bleiben. Einmalige Migration `F.way459`: Bäume im Weg (< 2,4) werden entfernt, sonst Spielstand unberührt.
+
+**Geprüft:** Draufsicht im Testbrowser (Weg läuft vom Hauptweg zum Wegweiser des Bergwegs), `fluss-baeume-v424`, `wegglaetten-v438`, `worker-motion-v351`, `gebirge-v429`. `inselrand-v366` schlägt auch ohne diese Änderung fehl. **Nicht geprüft:** Handy, Begehen durch Arbeiter/Wanderer auf dem neuen Weg.
 ## v458 – Figuren: Augen ruhiger, nicht mehr herausstehend
 
 **Ursache:** In `headParts` (`woodmodels.js`) standen Augenweiß und Pupille deutlich aus der Kopfkugel heraus und das Weiß war groß – die Figuren wirkten starrend und gruselig (z. B. beim Mittagspausen-Arbeiter am Lagerfeuer).
