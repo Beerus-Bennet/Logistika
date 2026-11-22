@@ -5,6 +5,13 @@
 **Lösung:** (1) `treeFarSet` arbeitet scheibchenweise (höchstens ~6 ms je Bild); noch nicht fertige Gruppen bleiben im vollen Modell sichtbar, fertige werden überblendet. Gemessen danach: höchstens ~9 ms je Bild beim Rauszoomen. (2) Hänger-Wächter am Ende von `farmview.js`: steht die sichtbare Hofansicht länger als 10 s ohne Bild oder bleibt der WebGL-Kontext 12 s verloren, wird gespeichert und die Seite neu geladen (Meldung in `logistika.lastError`). Keine Spielstand-Änderung.
 
 **Geprüft:** Zoom-Reihe 30 → 450 → 30 im Testbrowser mit Bildzeiten vorher/nachher; Wächter: kein Neuladen bei laufender Schleife, Neuladen nach ~13 s bei angehaltener Schleife. **Nicht geprüft:** Handy (dort trat der Hänger auf; echte Bildzeiten dort unbekannt), Neuladen bei verlorenem WebGL-Kontext.
+## v457 – Bachufer im Gebirge glatt (keine Sägezähne mehr)
+
+**Ursache:** Das Sandufer am Bach im Gebirgsgelände (`alpine.js`) ist ein schräg zum Dreiecksraster laufendes helles Band. Alle Vierecke wurden mit derselben Diagonale geteilt, dadurch entstanden Sägezähne und bei Nacht dunkle Streifen am Ufer. Gemessen: nur die Geländeebene `terrain` zeichnete die Zacken, die Vertexfarben selbst sind glatt.
+
+**Lösung:** `flipDiag` wählt je Viereck die Diagonale mit dem geringeren Farbunterschied; `surface` verwendet dieselbe Wahl, damit Höhenabfragen zum Netz passen. Nicht am Bergsee und am Kolk (dort bleibt der geprüfte Rand). Keine zusätzlichen Dreiecke, keine Spielstandänderung.
+
+**Geprüft:** Vorher/nachher-Bilder im Testbrowser (Chromium, Software-Rendering, zwei Ansichten am Bach), `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** Handy, Nachtansicht.
 
 ## v456 – Lackfarbe und Foto stimmen überein
 
