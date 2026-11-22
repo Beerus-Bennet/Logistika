@@ -3777,8 +3777,7 @@ const HUNT = (() => {
         if(k==='fasan'){
           /* Vogellungen sind klein, fest und am Rücken angewachsen, keine hängenden Säugerlappen. */
           organSurface(m,(u,v,w)=>[u*(.9-.14*Math.cos(w*3)),v*.64,w],color);
-          for(let i=-2;i<=2;i++)pipe(m,[[-.7,.48,i*.3],[0,.58,i*.3+.03],[.65,.45,i*.3]],.025,dark);
-          pipe(m,[[0,-.35,.65],[0,-.2,0],[0,-.16,-.6]],.07);
+          /* v451: Keine hellen Röhren im Lungenkörper – sie schimmerten im Trefferbild als fremde Linien durch das Organ. */
         }else{
           const sd=Math.sign(O.c[0]),lobes=sd<0?4:3;
           organSurface(m,(u,v,w)=>{
@@ -3787,10 +3786,8 @@ const HUNT = (() => {
             const notch=Math.max(0,-v)*Math.exp(-Math.pow((w-.42)/.34,2))*.16;
             return [u*(.85+.15*v)*fissure, v*.98+notch+Math.max(0,-v)*.1*cut, w];
           },color,18,14);
-          /* Bronchialbaum auf der medialen Seite; Äste enden in den Lappen. */
-          pipe(m,[[-sd*.62,.15,.77],[-sd*.42,.2,.25],[-sd*.5,.2,-.45]],.065);
-          for(const z of [-.55,-.08,.42])pipe(m,[[-sd*.45,.2,z+.12],[0,.25,z],[sd*.62,.22,z-.15]],.035);
-          for(let i=1;i<lobes;i++){const z=-1+2*i/lobes;pipe(m,[[sd*.3,-.7,z+.12],[sd*.82,-.22,z],[sd*.68,.35,z-.09]],.018,dark);}
+          /* v451: Bronchialbaum entfernt – hell/dunkel abgesetzte Röhren schimmerten als weiße Linien durch die Lunge und wirkten wie
+             fremde Gebilde im Organ. Die Lappen bleiben als klar abgegrenzte, einfarbige Fläche. */
         }
       }else if(O.t==='leber'){
         /* Flache, nach unten auslaufende Leberlappen statt einer Leberkugel.

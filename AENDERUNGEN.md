@@ -1,3 +1,54 @@
+## v455 – Sammellieferung (v450–v454 in einem Pull Request)
+
+**Anlass:** Die fünf offenen Pull Requests #152–#156 änderten dieselben Dateien (`sw.js`, `index.html`, Doku) und gerieten sich bei den Versionsnummern in Konflikt. Sie sind hier auf dem aktuellen `main` (v449) in einem Zweig zusammengeführt; die einzelnen Abschnitte stehen unverändert darunter.
+
+**Enthalten:** v450 Meldungen im Auktionshaus oben (#152), v451 Lunge im Trefferbild ohne fremde Linien (#153), v452 Jagd ohne Einblendungen und Zeit steht beim Begutachten still (#154), v453 Garagenautos zeigen ihr Modellfoto (#155), v454 Garage ohne Gepäck-Zeile und kräftigerer Haltebonus (#156).
+
+**Zusammenführung:** Version/Cache je Datei einheitlich auf 455 (game.js, style.css, hunt.js, worldview.js, auction.js); keine Code-Konflikte, nur `sw.js`, `index.html`, `AENDERUNGEN.md`, `CLAUDE.md`.
+
+**Geprüft:** siehe die einzelnen Abschnitte; nach der Zusammenführung Syntaxprüfung und Tests (Ergebnis im Pull Request). **Nicht geprüft:** Handy.
+
+## v454 – Garagen-Ansicht aufgeräumt, Haltebonus kräftiger und ohne genannte Prozentzahl
+
+**Änderungen (`auction.js`):**
+- Auf der Garagenkarte entfällt die Zeile „⚖️ 20 kg Gepäck · 115 km/h im Schnitt“; es steht nur noch „Gekauft für … (inkl. Aufgeld)“ (bei Rennwagen weiterhin „nur Rennstrecke“).
+- Die Höhe der Wertsteigerung wird in der Garage nicht mehr genannt: Statt „steigt der Marktwert alle 21 Tage (+6 %)“ steht „Bleibt er ruhig in der Garage, steigt sein Marktwert von Zeit zu Zeit.“; die Garagen-Übersicht nennt „+6 %“ und „alle 21 Tage“ nicht mehr. Der bisher aufgelaufene Zuwachs („Haltebonus seit Kauf: +x %“) bleibt sichtbar.
+- Der Haltebonus ist kräftiger: je Anpassung (alle 21 Spieltage) ab 1 Mio. € Marktwert +10 % (vorher +6 %), ab 250.000 € +6 % (vorher +3,5 %), darunter +4 % (vorher +2 %); Obergrenze durch den Haltebonus 3,5-fach (vorher 2,5-fach). Bereits aufgelaufene Zuwächse bleiben, die neuen Sätze gelten für künftige Anpassungen.
+
+**Geprüft:** Syntax; `autofotos-v372.test.js` bestanden; im Code keine verbliebene Nennung der Sätze. **Nicht geprüft:** Handy und Ansicht der geänderten Karte im Browser; Balance der neuen Sätze im längeren Spiel.
+
+## v453 – Garagenfahrzeuge zeigen wieder ihr Modellfoto
+
+**Ursache:** Seit v372 (feste Modellfotos, keine Umfärbung der Bilder) wurde ein Foto nur gezeigt, wenn die Lackfarbe des Fahrzeugs genau der Farbe des Fotos entsprach. Fahrzeuge in der Garage, die früher mit anderer Lackierung (z. B. Verde Mantis, Violett) gekauft wurden, fielen deshalb auf die gezeichnete Illustration zurück („Illustration in Fahrzeugfarbe“).
+
+**Lösung (`auction.js`):** Das freigegebene Modellfoto wird für jede Lackierung gezeigt (`photoFits` prüft nur noch die Freigabe, neue `paintMatch` die Farbe). Weicht die Fahrzeugfarbe vom Foto ab, steht das im Bildnachweis („… · Foto in Schwarz“) und in den Details („Das Foto zeigt das Modell in …; die Farbe deines Fahrzeugs weicht ab“). Das Bild wird weiterhin nicht umgefärbt; fehlt ein freigegebenes Foto, bleibt die Illustration. Lackfarbe, Preise und Spielstand unverändert.
+
+**Geprüft:** `autofotos-v372.test.js` (6 Tests, an das neue Verhalten angepasst) und Browserlauf `autofotos-v372.browser.js` (Garage mit abweichender Lackierung zeigt das Foto mit Hinweis, 127 Fotos dekodiert); Sichtprüfung des Garagenbildes im Testbrowser. **Nicht geprüft:** Handy; die abweichende Farbe des Fotos wird nicht angeglichen (Foto bleibt in Originalfarbe).
+
+## v452 – Ruhe während der Jagd: keine Einblendungen, Zeit steht beim Begutachten still
+
+**Ursache:** Auch während der Jagd erschienen Hofmeldungen und die Kleeblatt-Einblendung („+3 🍀“) – zum Beispiel nach einem Erfolg oder einer Aufgabe – mitten im Bild des Hochsitzes und über dem Trefferbild. Die Spielzeit lief beim Begutachten des erlegten Stücks weiter.
+
+**Lösung:** (`game.js`) Solange die Jagd läuft (`HUNT.on`), zeigt die Meldungsschlange nichts an – auch keine Rückmeldungen auf Tipper. Die Meldungen bleiben in der Schlange (Hintergrundmeldungen verfallen nach 60 s wie bisher) und erscheinen nach der Jagd. Beim Begutachten des Stücks (Bergung/Trefferbild, `X.view === "harvest"` bzw. `X.hrv`) steht die Spielzeit still (`clockRunning`). (`worldview.js`) Die Kleeblatt-Einblendung entfällt während der Jagd; die Gutschrift bleibt und steht als Notiz im Diensttelefon. Jagdeigene Hinweise im Jagdbild sind unverändert.
+
+**Geprüft:** Testbrowser in einer laufenden Jagd: Meldung wird in die Schlange gelegt statt angezeigt (0 sichtbar), Kleeblatt-Gutschrift als Notiz „🍀 +3 · Test“, Uhr läuft im Revier, steht in der Bergungsansicht still; keine Seitenfehler. **Nicht geprüft:** Handy; das Wiedereinblenden der gesammelten Meldungen nach Ende der Jagd (nur über die vorhandene Schlange, nicht eigens getestet); längeres Begutachten ohne Zeitablauf auf Nacht/Tag-Wechsel.
+
+## v451 – Lunge im Trefferbild klar abgegrenzt, keine fremden Linien im Organ
+
+**Ursache:** Das Lungenmodell enthielt einen Bronchialbaum aus hellen und dunklen Röhren im Inneren der Lappen. Da das Trefferbild die Organe halbtransparent zeigt, schimmerten diese Röhren als weiße Linien und Schleifen durch die Lunge (und über dem Herz) – wie fremde Gebilde im Organ.
+
+**Lösung (`hunt.js`, `buildOrganMesh`):** Der Bronchialbaum der Säugerlunge und die hellen Röhren der Vogellunge sind entfernt. Die Lungenflügel bleiben als klar abgegrenzte, einfarbige Lappen (Hirsch, Keiler, Fasan); Herz, Leber, Nieren, Magen und Darm sind unverändert. Wertungszonen, Trefferlogik und gespeicherte Aufnahmen unverändert.
+
+**Geprüft:** Testbrowser-Ansicht des Trefferbilds bei Hirsch (Herz) und Keiler (Lunge): Lunge ohne Linien im Inneren; `anatomie-v367`, `trefferbild-v357`, `trefferklarheit-v388`, `wundoptik-v400`, `halsorgane-v442`, `hunt.test.js` (23) bestanden. **Nicht geprüft:** Handy und der exakte Zoom wie auf deinem Screenshot (Ansicht im Testbrowser kleiner); falls im Herzbereich noch etwas auffällt, bitte erneut ein Screenshot.
+
+## v450 – Meldungen im Auktionshaus verdecken die Gebotsknöpfe nicht mehr
+
+**Ursache:** Meldungen wie „Sofort überboten – … hat ein höheres Limit.“ erscheinen unten über der Navigation. Im Auktionshaus liegen dort die Gebotsknöpfe der Karte, so dass man beim Bieten nicht darauf tippen konnte, solange die Meldung stand.
+
+**Lösung:** `showTab` setzt `body.tab-market` (`game.js`); im Markt/Auktionshaus stehen die Meldungen oben unter der Kopfleiste (`style.css`, Block am Ende, wie schon im Hof bei offenem Fenster). Keine Änderung an Texten, Zeiten oder Geschäftslogik.
+
+**Geprüft:** Testbrowser (390 × 800): Meldung im Markt liegt bei 104–162 px von oben statt unten, ohne Seitenfehler. **Nicht geprüft:** Handy; die Meldung kann oben kurz Titel oder Filterchips überdecken, Tippen darauf funktioniert (Meldungen sind nicht antippbar blockierend).
+
 ## v449 – Flussufer überall gleich (Ufernetz des Hofbachs bis zur Bergkulisse)
 
 **Ursache:** Der Fluss hatte zwei verschiedene Ufer: Auf dem Hofgelände ein Ufernetz mit knackigen Sandringen (Schlamm, nasser Sand, Sand, Kiesel), im Gebirgsgelände nur Farbe auf dem Gelände – heller, weicher und am Rand unscharf. Das Ufernetz wurde im ganzen Gebirgsgelände abgeschaltet (`bankCut` in `worldview.js`), so dass sich der Übergang in deinem Bild als zwei verschiedene Ufer zeigte.

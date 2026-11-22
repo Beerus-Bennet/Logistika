@@ -66,10 +66,11 @@ function kmFactor(c, km) {
 }
 function carValue(c, cond, km, luck) { return carMarket(c) * AH_COND[cond].f * kmFactor(c, km) * (luck || 1); }
 /* v327: Haltebonus. Steht ein Sammlerauto in der Garage (nicht als Wertkurier unterwegs, nicht in der Auktion), gibt es alle 21 Tage eine
-   Marktpreis-Anpassung zu deinen Gunsten: ab 1 Mio. € Marktwert +6 %, ab 250.000 € +3,5 %, darunter +2 %. Sie wirkt im Marktwert und bei
+   Marktpreis-Anpassung zu deinen Gunsten: ab 1 Mio. € Marktwert +10 %, ab 250.000 € +6 %, darunter +4 % (v454, vorher 6 / 3,5 / 2). Sie wirkt im Marktwert und bei
    der Auktion (g.hold, Faktor ≥ 1, kumuliert) – wer das Auto verkauft, bekommt sie bezahlt. */
-const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 2.5;      /* Obergrenze: höchstens das 2,5-Fache durch den Haltebonus */
-const holdRate = v => v >= 1e6 ? 0.06 : v >= 250000 ? 0.035 : 0.02;
+const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 3.5;      /* Obergrenze: höchstens das 3,5-Fache durch den Haltebonus (v454, vorher 2,5) */
+/* v454: kräftiger (vorher +6 / +3,5 / +2 %); die Höhe wird in der Garage nicht mehr genannt */
+const holdRate = v => v >= 1e6 ? 0.10 : v >= 250000 ? 0.06 : 0.04;
 function gValue(g) {
   if (g.kind === "veh") return 0;
   return nice(carValue(CAR[g.car], g.cond, g.km, g.luck) * (g.hold || 1));
@@ -415,7 +416,10 @@ const PIC_STATE={err:'',at:0};
 function withTimeout(ms) {const ac=typeof AbortController==='function'?new AbortController():null,t=ac?setTimeout(()=>ac.abort(),ms):0;return {signal:ac?ac.signal:undefined,done:()=>clearTimeout(t)};}
 const thumbAt=(u,w)=>/\/thumb\//.test(u)?u.replace(/\/\d+px-([^/]+)$/,'/'+w+'px-$1'):u;
 function approvedPic(id,p=PICS[id]) {const expected=modelPic(id);return !!(expected&&p&&p.model===id&&p.file===expected.file&&p.sha256===expected.sha256&&p.src===expected.src);}
-function photoFits(id,paint) {const p=PICS[id];return approvedPic(id,p)&&(!paint||String(p.paint[1]).toLowerCase()===String(paint).toLowerCase());}
+/* v453: Das freigegebene Modellfoto wird für jede Lackierung gezeigt (auch für ältere Garagenfahrzeuge mit anderer Farbe); weicht die
+   Fahrzeugfarbe vom Foto ab, steht das im Bildnachweis. Vorher (v372) fiel das Bild dann auf die Illustration zurück. */
+function photoFits(id,paint) {return approvedPic(id,PICS[id]);}
+function paintMatch(id,paint) {const p=PICS[id];return !!p&&(!paint||String(p.paint[1]).toLowerCase()===String(paint).toLowerCase());}
 function paintOfPhoto(id) {const p=modelPic(id);return p?p.paint.slice():null;}
 async function loadLocalPics() {PICS=Object.fromEntries(CARS.map(c=>[c.id,modelPic(c.id)]).filter(([,p])=>p));localPics=true;return PICS;}
 async function resolvePics(force) {
@@ -566,7 +570,7 @@ function showCarPic(id) {
       if(!el.querySelector('.media-note'))el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');
       return;
     }
-    el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend',picImgHTML(id,p));
+    el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend',picImgHTML(id,p,el.dataset.carpaint));
   });
 }
 function picCredit(p) {return 'Modellfoto · '+(p.by||'Wikimedia Commons')+(p.lic?' · '+p.lic:'');}
@@ -586,11 +590,11 @@ function picFail(im) {
   }
   if(el){el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');}
 }
-function picImgHTML(id, p) {
+function picImgHTML(id, p, paint) {
   if(!approvedPic(id,p))return '';
   const comic = comicReady(id)&&COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
   return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))} · Modellfoto" referrerpolicy="no-referrer" onerror="picFail(this)">`
-    + `<span class="credit">${esc(picCredit(p))}</span>`;
+    + `<span class="credit">${esc(picCredit(p))}${paint&&!paintMatch(id,paint)?' · Foto in '+esc(p.paint[0]):''}</span>`;
 }
 /* Gezeichnetes Auto, solange kein Foto da ist (oder offline). v77: statt einer einfachen Silhouette eine
    Seitenansicht im Comic-Stil – Bauform je Modell (Coupé, flacher Mittelmotor-Keil, Roadster, SUV, Kombi,
@@ -680,7 +684,7 @@ function carPicHTML(c,paint,big) {
   const p=PICS[c.id],col=paint||(p&&p.paint?p.paint[1]:(CAR_PAINTS[c.b]||[['','#888']])[0][1]),allowed=photoFits(c.id,paint);
   let ready=allowed&&comicReady(c.id);
   if(allowed&&!ready){wantComic(c.id,big);ready=comicReady(c.id);}
-  return `<div class="carpic${big?' big':''}${allowed&&!ready?' loading':''}" data-carpic="${c.id}" data-carpaint="${esc(paint||'')}" style="--pc:${col}">${carArt(c,col)}${ready?picImgHTML(c.id,p):'<span class="credit media-note">Illustration in Fahrzeugfarbe</span>'}</div>`;
+  return `<div class="carpic${big?' big':''}${allowed&&!ready?' loading':''}" data-carpic="${c.id}" data-carpaint="${esc(paint||'')}" style="--pc:${col}">${carArt(c,col)}${ready?picImgHTML(c.id,p,paint):'<span class="credit media-note">Illustration in Fahrzeugfarbe</span>'}</div>`;
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];
@@ -778,8 +782,8 @@ function garageCardHTML(g) {
       <div class="lot-row"><span class="lot-price"><small>Marktwert heute</small><b>${money(val)}</b></span>
         <span class="lot-lead ${d >= 0 ? "me" : "out"}">${d >= 0 ? "▲" : "▼"} ${fmt(Math.abs(pct), 1)} %</span></div>
       ${g.hold > 1 ? `<div class="lot-est hold">📈 Haltebonus seit Kauf: +${fmt((g.hold - 1) * 100, 1)} % · nächste Anpassung in ${dur(Math.max(0, (g.adjAt || S.time) + AH_HOLD_DAYS * 1440 - S.time))}</div>`
-        : !g.fleet && !lot ? `<div class="lot-est hold">📈 Bleibt er in der Garage, steigt der Marktwert alle ${AH_HOLD_DAYS} Tage (+${(holdRate(val) * 100).toString().replace(".", ",")} %).</div>` : ""}
-      <div class="lot-est">Gekauft für ${money(g.paid)} (inkl. Aufgeld) · ${c.track ? "nur Rennstrecke" : "⚖️ " + kgf(c.cap) + " Gepäck · " + carSpeed(c) + " km/h im Schnitt"}</div>
+        : !g.fleet && !lot ? `<div class="lot-est hold">📈 Bleibt er ruhig in der Garage, steigt sein Marktwert von Zeit zu Zeit.</div>` : ""}
+      <div class="lot-est">Gekauft für ${money(g.paid)} (inkl. Aufgeld)${c.track ? " · nur Rennstrecke" : ""}</div>
       <div class="buyrow">
         <button class="btn tiny ghost" data-carview="${c.id}">ansehen</button>
         ${lot ? "" : v ? `<button class="btn tiny ghost" data-gback="${v.uid}">🅿️ zurück in die Garage</button>`
@@ -828,7 +832,7 @@ function renderAuction() {
   } else if (A.view === "garage") {
     const tot = A.garage.reduce((a, g) => a + gValue(g), 0), paid = A.garage.reduce((a, g) => a + g.paid, 0);
     html = A.garage.length
-      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen schwanken – aber wer ein Auto ruhig in der Garage lässt, bekommt alle 21 Tage eine Marktpreis-Anpassung nach oben (ab 1 Mio. € +6 %). Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
+      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen schwanken – aber wer ein Auto ruhig in der Garage lässt, dessen Marktwert steigt mit der Zeit. Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
           <div class="meta small"><span>Marktwert ${money(tot)}</span><span>bezahlt ${money(paid)}</span><span class="${tot >= paid ? "up" : "down"}">${tot >= paid ? "+" : "−"}${money(Math.abs(tot - paid))}</span></div></div>`
         + A.garage.map(garageCardHTML).join("")
       : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;
@@ -893,8 +897,8 @@ function specsHTML(c, l) {
 }
 function creditHTML(c,paint) {
   const p = PICS[c.id];
-  if(!photoFits(c.id,paint))return '<div class="piccredit">Illustration in Fahrzeugfarbe · kein passendes Modellfoto für diese Lackierung.</div>';
-  return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}<br>Darstellung mit Comicfilter; unverändertes Original unter der Quellenangabe.</div>`;
+  if(!photoFits(c.id,paint))return '<div class="piccredit">Illustration in Fahrzeugfarbe · kein freigegebenes Modellfoto.</div>';
+  return `<div class="piccredit">${paintMatch(c.id,paint)?'':'Das Foto zeigt das Modell in '+esc(p.paint[0])+'; die Farbe deines Fahrzeugs weicht ab.<br>'}${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}<br>Darstellung mit Comicfilter; unverändertes Original unter der Quellenangabe.</div>`;
 }
 let lotModal = null;
 function openLot(id) {

@@ -608,7 +608,10 @@ function playing() { return S && S.phase === "play"; }
 /* Während des Tutorials steht die Welt still – sonst laufen die ersten
    Fristen schon ab, während Lina noch redet. */
 function tutorialRunning() { return document.body.classList.contains("tut-on"); }
-function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over; }
+/* v452: Jagd – Hintergrundmeldungen warten bis zum Ende der Jagd, und beim Begutachten des erlegten Stücks (Bergung/Trefferbild) steht die Spielzeit still. */
+const huntOn = () => typeof HUNT !== "undefined" && !!HUNT.on;
+const huntInspect = () => huntOn() && !!HUNT.X && (HUNT.X.view === "harvest" || !!HUNT.X.hrv);
+function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over && !huntInspect(); }
 let lastSpeed = 1;
 function setSpeed(v) {
   /* Auf dem Hof (vor der Speditionsgründung) läuft die Zeit immer in Echtzeit */
@@ -3449,7 +3452,7 @@ function toastNext() {
   const busy = toastBusy(), now = performance.now();
   /* alte Hintergrund-Meldungen verfallen */
   TQ.q = TQ.q.filter(x => x.fb || now - x.t < 60000);
-  const i = TQ.q.findIndex(x => x.fb || !busy);
+  const i = huntOn() ? -1 : TQ.q.findIndex(x => x.fb || !busy);      /* v452: während der Jagd keine Einblendungen, auch keine Rückmeldungen auf Tipper */
   if (i < 0) { if (TQ.q.length && !TQ.poll) TQ.poll = setTimeout(() => { TQ.poll = 0; toastNext(); }, 500); return; }
   const it = TQ.q.splice(i, 1)[0];
   const box = $("#toasts");
@@ -4484,6 +4487,7 @@ function showTab(name) {
   $$(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + name));
   $("#view").classList.toggle("on", name !== "map" && name !== "farm");
   document.body.classList.toggle("tab-map", name === "map");
+  document.body.classList.toggle("tab-market", name === "market");   /* v450: Meldungen im Markt/Auktionshaus oben, nicht über den Gebotsknöpfen */
   if (name === "farm") { if (typeof farmShow === "function") farmShow(); }
   else if (typeof farmHide === "function") farmHide();
   if (name !== "map" && name !== "farm") $("#viewTitle").textContent = (name === "market" && typeof ahMode === "function" && ahMode() ? "Auktionshaus" : TAB_TITLE[name]) || "";

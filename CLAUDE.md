@@ -256,3 +256,9 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v448: Kaufbeleg in corpreport.js mit crp448-Klasse, kräftigem Kopf/Preisblock und SVG-Kennzahlen; CSS ausschließlich am Ende ergänzt. Daten/Bestandsdialog/Fokusführung erhalten, nur Zahlen lokal formatiert. Browser kaufbeleg-v448 mit vier Handy-/zwei Desktopformaten, langen Werten, Altbeleg und reduzierter Bewegung; acquisition355 (18 Szenarien) und gebirge429 bestanden. corpreport/style/Gesamt448, Ufer447 aus PR149 erhalten. Bericht docs/KAUFBELEG-v448.md.
 - v449: Ufernetz des Hofbachs läuft durch das Gebirgstal (`bankCut` in `worldview.js` nur noch am Becken/See und für z < −112), Ufer links und rechts des Übergangs gleich.
+- v450: Meldungen im Markt/Auktionshaus oben (`body.tab-market` in `showTab`, CSS am Ende von `style.css`), damit sie die Gebotsknöpfe nicht verdecken.
+- v451: Trefferbild – Lunge ohne Bronchialbaum (`buildOrganMesh` in `hunt.js`), keine hellen Linien mehr im Organ.
+- v452: Jagd – Meldungen (`toastNext` in `game.js`) und Kleeblatt-Einblendung (`farmCloverFly`) nur außerhalb der Jagd, Spielzeit steht beim Begutachten still (`huntInspect` in `clockRunning`).
+- v453: Garagenfahrzeuge zeigen ihr Modellfoto auch bei abweichender Lackfarbe (`photoFits`/`paintMatch` in `auction.js`), Hinweis „Foto in <Farbe>“ im Bildnachweis; keine Umfärbung.
+- v454: Garage – Gepäck/Tempo-Zeile entfernt, Haltebonus ohne genannte Prozentzahl, Sätze `holdRate` 10/6/4 % und Obergrenze 3,5 (`auction.js`).
+- v455: Sammellieferung – PR #152–#156 (v450–v454) in einem Zweig zusammengeführt; Details je Version oben.

@@ -26,7 +26,7 @@ test('Alter Porsche-Spielstand: nur unmögliches Baujahr korrigieren, Gebote/Bes
  const once=JSON.stringify(ctx.S.ah);run('ah();paintOfPhoto("prs");carPicHTML(CAR.prs,"#15161a");carPicHTML(CAR.m129,"#452345");');assert.equal(JSON.stringify(ctx.S.ah),once);ctx.S.ah=JSON.parse(once);run('ah()');assert.equal(JSON.stringify(ctx.S.ah),once);
 });
 test('Nur freigegebene Quelle und passende Lackierung, keine Umfärbung',()=>{
- const {run}=fixture();assert.equal(run('photoFits("prs","#15161A")'),true);assert.equal(run('photoFits("prs","#008800")'),false);assert.match(run('carPicHTML(CAR.prs,"#008800")'),/Illustration in Fahrzeugfarbe/);assert.equal(run('carPicHTML(CAR.prs,"#008800").includes("<img")'),false);
+ const {run}=fixture();assert.equal(run('photoFits("prs","#15161A")'),true);assert.equal(run('paintMatch("prs","#15161A")'),true);assert.equal(run('paintMatch("prs","#008800")'),false);assert.equal(run('photoFits("prs","#008800")'),true);/* v453: Foto auch bei abweichender Farbe, kein Umfärben */
  for(const id of ['prs','mg63','m765'])assert.equal(run(`approvedPic('${id}',{...PICS['${id}'],file:'Wrong generation.jpg',src:'https://example.com/wrong-car.jpg'})`),false);
  assert.equal(run('approvedPic("prs",{...PICS.prs,model:"pgt3"})'),false);run('let paintCopy=paintOfPhoto("prs");paintCopy[0]="Kaputt";');assert.equal(run('CAR_PHOTOS.prs.paint[0]'),'Schwarz');
 });
