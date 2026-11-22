@@ -1,3 +1,11 @@
+## v462 – Fischer steht auf dem Steg, nicht in den Planken
+
+**Ursache:** Die Figuren stehen überall auf Bodenhöhe (y = 0). Die Planken des Angelstegs liegen mit der Oberkante bei 0,135 – der Fischer am Stegende (auch in der „Mittagspause“) steckte mit den Füßen in den Planken.
+
+**Lösung:** `staffDeckY` in `team.js` hebt die Figur auf dem Steg (Breite ±0,85, Anlauf an Land bis Stegende) um die Plankenhöhe, mit sanfter Rampe am Landende, damit nichts springt. Nur Darstellung; Wege, Aufträge und Spielstand unverändert.
+
+**Geprüft:** Neuer Test in `worker-motion-v351.test.js` (auf dem Steg 0,135, abseits 0) und alle 17 Bewegungsprüfungen laufen. Die Wege vom Stegende zum Lagerfeuer in der Mittagspause habe ich im Testlauf nachgestellt: die Kraft läuft normal los, es hängt nichts fest. **Nicht geprüft:** Ansicht im Spiel/Handy, andere Stege (z. B. Bachsteg-Fischer).
+
 ### v461 – Nachtrag: Zusammenführung und persönliche Gutschrift
 
 Aktuelles main einschließlich Ufer457 integriert; Versionskonflikte aufgelöst, beide Dokumentationsstände erhalten. Bewusst aufrufbarer Bonuslink `?rennbahnbonus=15000` schreibt dem lokalen Spielstand einmalig 15.000 Kleeblätter gut (`raceBonus15000`); erneuter Aufruf zahlt nicht erneut aus. Bei Speicherfehler wird die Gutschrift zurückgerollt. Kein automatischer Bonus für andere Spieler.

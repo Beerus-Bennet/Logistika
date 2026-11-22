@@ -270,3 +270,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v459: Bergwanderweg an den Hauptweg angebunden – `FWORLD.mtnWay` (`erbe.js`), Abzweig in `WAYS` (`worldview.js`), Migration `F.way459` entfernt Bäume im Weg.
 - v458: Gesichter – Augen bündig und ruhiger (`headParts` in `woodmodels.js`), nichts mehr herausstehend.
 - v457: Bachufer im Gebirge ohne Sägezähne – `flipDiag` in `alpine.js` wählt die Viereck-Diagonale nach Farbe (gemeinsam mit `surface`), nicht an Bergsee/Kolk.
+
+- v462: Fischer steht auf dem Angelsteg auf Plankenhöhe (`staffDeckY` in `team.js`), nicht mehr in den Planken.
