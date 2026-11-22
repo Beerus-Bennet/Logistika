@@ -4220,7 +4220,7 @@ const HUNT = (() => {
         [-1, 1].forEach(sd => bone(b, [0.15, 0.6, 1.1, 1.6, 2.05].map(a => [sd * Math.sin(a) * hw * 0.86, Math.min(sy, yc + Math.cos(a) * hy * 0.9), z - (a - 0.15) * 0.03]), 0.0085));
       }
       ORG[k].forEach(O => {
-        if(O.b)ell(b,O.c,O.r,col(hitIds.has(O.id)?XC.hit:XC.bone),14,9);
+        if(O.b){if(hitIds.has(O.id))ell(b,O.c,O.r,col(XC.hit),14,9);}   /* v465: Becken/Schulterblatt nur, wenn getroffen – sonst standen sie als blaue Ellipsen wie ein ungetroffenes Organ im Bild */
         else if(hitIds.has(O.id))organs.merge(organMesh(k,O),{});
       });
       /* v442: Keine frei gezeichnete Ersatz-Luftröhre in einen Lungenlappen.
