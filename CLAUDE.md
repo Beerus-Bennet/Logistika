@@ -264,3 +264,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v455: Sammellieferung – PR #152–#156 (v450–v454) in einem Zweig zusammengeführt; Details je Version oben.
 
 - v456: Fahrzeugfarbe = Fotofarbe – einmalige Angleichung `A.paint456` in `ah()` (`auction.js`), Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack.
+
+- v459: Bergwanderweg an den Hauptweg angebunden – `FWORLD.mtnWay` (`erbe.js`), Abzweig in `WAYS` (`worldview.js`), Migration `F.way459` entfernt Bäume im Weg.
