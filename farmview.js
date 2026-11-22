@@ -729,6 +729,7 @@ const CHIMNEYS = {
 function farmLoop(now) {
   if (!FV.on) return;
   requestAnimationFrame(farmLoop);
+  FV.alive = now;   /* v460: Lebenszeichen für den Hänger-Wächter (unten) */
   const R = FV.R;
   if (!R || R.lost() || document.hidden || (document.body.classList.contains("jl-open")||document.body.classList.contains("office3d")||document.body.classList.contains("race-open"))) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
   /* Akku schonen: ohne Berührung reichen ~30 Bilder pro Sekunde */
@@ -3329,3 +3330,22 @@ function farmHide() {
 }
 /* nach außen: Zustand geändert (Lieferung, Kauf aus anderem Reiter) */
 function farmRefresh() { if (FV.on) { farmSyncScene(); renderFarmUI(); } }
+
+/* v460: Hänger-Wächter. Steht die Hofansicht sichtbar länger als 10 s still (kein Bild mehr) oder bleibt der WebGL-Kontext 12 s verloren,
+   wird erst gespeichert und dann neu geladen – niemand soll mit einem eingefrorenen Bild festsitzen. */
+(function () {
+  let lostN = 0, since = performance.now();
+  document.addEventListener("visibilitychange", () => { since = performance.now(); FV.alive = 0; lostN = 0; });
+  setInterval(() => {
+    const now = performance.now();
+    if (!FV.on || document.hidden || document.body.classList.contains("jl-open") || document.body.classList.contains("office3d")) { FV.alive = 0; lostN = 0; since = now; return; }
+    const R = FV.R;
+    lostN = R && R.lost && R.lost() ? lostN + 1 : 0;
+    const stalled = FV.alive > 0 && now - FV.alive > 10000 && now - since > 10000;
+    if (stalled || lostN >= 4) {
+      try { if (typeof save === "function") save(); } catch (_) { /* Speichern darf das Neuladen nicht verhindern */ }
+      try { localStorage.setItem("logistika.lastError", new Date().toISOString() + " Hänger-Wächter: " + (stalled ? "kein Bild seit 10 s" : "WebGL verloren")); } catch (_) { /* privater Modus */ }
+      location.reload();
+    }
+  }, 3000);
+})();

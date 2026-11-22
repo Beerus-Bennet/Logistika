@@ -9,6 +9,20 @@ Aktuelles main einschließlich Ufer457 integriert; Versionskonflikte aufgelöst,
 **Lösung:** Drehbare 26 × 22-Bauvorschau; Bezahlung/Rodung erst bei Bestätigung, außerhalb bleiben die Baumdaten erhalten. Miniatur des rund 1,46-km-Kurses und separate Low-Poly-Fahrwelt mit Joystick, Bremse, Drift, Nitro, Minikarte, Motor-Audio, Tastatur und Pause. Training sowie ein Monatsrennen je 30 Spieltage gegen fünf KI-Fahrer; Siegprämie 250.000–5.000.000 € nach Etappe. Gefahrene Kilometer und zusätzlicher Verschleiß senken dauerhaft Garage-/Auktionswert. Reservierter Monatsstart, gemeinsames Speichern der Ergebnisgutschrift und Rollback bei Speicherfehler verhindern Doppelgewinne. Insel/Karte und Speditionszeit pausieren während des Besuchs. Keine Wälder in der Fahrszene; sparsame Miniatur, feste Physikschritte, begrenzte Spuren und Ressourcenfreigabe.
 
 **Geprüft:** Zwölf Physik-/Modellgruppen für 127 Autos; echte Chromium-Speicher-/Touchprüfungen, vollständiger Physiklauf mit KI und Ergebnisgutschrift, Tastatur/Audio/Pause und Hofwechsel ohne Hintergrundrendern. Altstände, Monatswechsel, Abbruch/Neuladen, Speicherfehler und Wiederverkauf geprüft. Regressionen Autofotos372, Platzierung347, Arbeiter351, Gebirge429, Wasser386 und Tierleben446. **Nicht geprüft:** echtes iPhone/Safari und reale Handy-Bildraten. Bei hartem Betriebssystem-Abbruch können letzte ungesicherte Fahrsekunden verloren gehen. Basis main756bdb7 einschließlich v449–v456 erhalten; Gesamt-/SW461, nur geänderte Assets hochgezählt. Details und Vorschauen: docs/AUTORENNBAHN-v461.md.
+## v460 – Rauszoomen hängt nicht mehr (Fernbäume scheibchenweise, Hänger-Wächter)
+
+**Ursache:** Aus Bennets Video: Beim Rauszoomen friert das Bild für gut eine Sekunde ein und springt dann. Gemessen im Testbrowser: Beim ersten Überblenden der Kulissenbäume in ihr Fernmodell (Abstand ab ~150, `treeFarSet` in `worldview.js`) wurden alle Baumgruppen auf einmal angelegt und übernommen – ein einzelnes Bild von ~92 ms am Rechner, auf dem Handy entsprechend länger; das passierte bei jedem erneuten Rauszoomen.
+
+**Lösung:** (1) `treeFarSet` arbeitet scheibchenweise (höchstens ~6 ms je Bild); noch nicht fertige Gruppen bleiben im vollen Modell sichtbar, fertige werden überblendet. Gemessen danach: höchstens ~9 ms je Bild beim Rauszoomen. (2) Hänger-Wächter am Ende von `farmview.js`: steht die sichtbare Hofansicht länger als 10 s ohne Bild oder bleibt der WebGL-Kontext 12 s verloren, wird gespeichert und die Seite neu geladen (Meldung in `logistika.lastError`). Keine Spielstand-Änderung.
+
+**Geprüft:** Zoom-Reihe 30 → 450 → 30 im Testbrowser mit Bildzeiten vorher/nachher; Wächter: kein Neuladen bei laufender Schleife, Neuladen nach ~13 s bei angehaltener Schleife. **Nicht geprüft:** Handy (dort trat der Hänger auf; echte Bildzeiten dort unbekannt), Neuladen bei verlorenem WebGL-Kontext.
+## v459 – Bergwanderweg an den Hauptweg angebunden
+
+**Ursache:** Der Wanderweg aus den Bergen begann am Gebirgsrand (`TRAIL0` = 6, −100) mitten in der Wiese ohne Verbindung zu einem Hofweg.
+
+**Lösung:** Neue Verbindung `FWORLD.mtnWay` (`erbe.js`) vom Knick des Hauptwegs (−34,6, −98) bis zum Wegweiser am Einstieg; gezeichnet als weiterer Weg mit Abzweig auf dem Hauptweg (`WAYS` in `worldview.js`), Kulissenbäume und neue Pflanzplätze halten Abstand (`nearPath`, `nearPathPt`, `wayGap`, Stempel). Eigene Liste, damit `FWORLD.paths` und die Bäume neuer Spiele unverändert bleiben. Einmalige Migration `F.way459`: Bäume im Weg (< 2,4) werden entfernt, sonst Spielstand unberührt.
+
+**Geprüft:** Draufsicht im Testbrowser (Weg läuft vom Hauptweg zum Wegweiser des Bergwegs), `fluss-baeume-v424`, `wegglaetten-v438`, `worker-motion-v351`, `gebirge-v429`. `inselrand-v366` schlägt auch ohne diese Änderung fehl. **Nicht geprüft:** Handy, Begehen durch Arbeiter/Wanderer auf dem neuen Weg.
 ## v458 – Figuren: Augen ruhiger, nicht mehr herausstehend
 
 **Ursache:** In `headParts` (`woodmodels.js`) standen Augenweiß und Pupille deutlich aus der Kopfkugel heraus und das Weiß war groß – die Figuren wirkten starrend und gruselig (z. B. beim Mittagspausen-Arbeiter am Lagerfeuer).
