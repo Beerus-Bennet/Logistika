@@ -1312,6 +1312,24 @@ const FWM = (() => {
      o.tee: [Anfang, Ende] = { pts, w } Hauptweg, auf dessen Mittellinie das Ende liegt,
      o.snap: [Anfang, Ende] = { at, dir, L } Knoten (Steg, Brückenkopf), auf den das Ende ausgerichtet wird,
      o.gnd: Bodenfarbe je Punkt (weiche Ränder), o.prepared: pts sind schon durch wayRaw gelaufen */
+  /* v462: Nur markierte Anschlüsse als Erdpfad mit gemeinsamen, weichen Kanten.
+     Breite/Farbe ändern sich nach Weglänge; der Berganschluss folgt dem Gelände. */
+  function footPath(b,P,W,o,y) {
+    const L=[0];for(let i=1;i<P.length;i++)L.push(L[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+    const total=L[L.length-1],O=[-1,-.55,0,.55,1],rows=[],colors=[],earth=G3.col(0x927957),road=G3.col(WAY_COL);
+    const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+    for(let i=0;i<P.length;i++){
+      const a=P[Math.max(0,i-1)],c=P[Math.min(P.length-1,i+1)],len=Math.hypot(c[0]-a[0],c[1]-a[1])||1,nx=-(c[1]-a[1])/len,nz=(c[0]-a[0])/len;
+      const t=o.footTrail?smooth(L[i]/6):smooth((L[i]-(total-o.trailTail))/o.trailTail),width=o.footTrail?W+(1.2-W)*t:W+(.75-W)*t;
+      const center=lerp3(road,earth,t),end=o.footTrail?0:smooth(1-(total-L[i])/1.5);rows[i]=[];colors[i]=[];
+      O.forEach(k=>{const x=P[i][0]+nx*k*width/2,z=P[i][1]+nz*k*width/2,g=o.gnd?G3.col(o.gnd(x,z)):G3.col(0x71974b),h=o.footTrail&&typeof ALPINE!=="undefined"&&ALPINE.contains(x,z)?ALPINE.surface(x,z):0;
+        rows[i].push([x,h+y,z]);colors[i].push(lerp3(center,g,Math.max(Math.abs(k)>.9?.94:Math.abs(k)>.5?.15:0,end)));});
+    }
+    for(let i=1;i<P.length;i++)for(let k=0;k<O.length-1;k++){
+      triUp(b,rows[i-1][k],rows[i-1][k+1],rows[i][k+1],colors[i-1][k],colors[i-1][k+1],colors[i][k+1]);
+      triUp(b,rows[i-1][k],rows[i][k+1],rows[i][k],colors[i-1][k],colors[i][k+1],colors[i][k]);
+    }
+  }
   function forestPath(pts, w, o) {
     o = o || {};
     G3.seed(3900 + pts.length);
@@ -1336,7 +1354,8 @@ const FWM = (() => {
       const bx = p[0] + dx / l * 1.5, bz = p[1] + dz / l * 1.5, ry = Math.atan2(dx, dz) + Math.PI / 2 + (o.benchTurn&&o.benchTurn[k]||0); /* v409: gezielt ein Wegende drehen, Standard unverändert. */
       b.at({ x: bx, z: bz, ry }, m => { m.cyl(0.2, 0.2, 1.3, 8, 0x8a6040, { rz: Math.PI / 2, x: 0.65, y: 0.2, top: 0xd8b07a }); [-0.45, 0.45].forEach(xx => m.box(0.14, 0.16, 0.3, 0x6b4a30, { x: xx })); });
     });
-    b.noise(0.012, () => ribbon(b, P, W, WAY_COL, y, WAY_RIM, o.caps || true, yE, o.gnd));
+    if(o.footTrail||o.trailTail) footPath(b,P,W,o,y);
+    else b.noise(0.012, () => ribbon(b, P, W, WAY_COL, y, WAY_RIM, o.caps || true, yE, o.gnd));
     const fo = { y, yE, gnd: o.gnd, roadCol: o.roadCol, mouthR: o.mouthR, teeR: o.teeR, mouthEdge: o.mouthEdge };
     (o.fade || []).forEach((F, k) => { if (F) wayFade(b, P, k, W, F, y, o.gnd); });
     (o.mouth || []).forEach((on, k) => { if (on) wayMouth(b, P, k, W, fo); });

@@ -1,3 +1,11 @@
+## v462 – Waldweg und Berganschluss laufen als Pfad aus
+
+**Ursache:** Der breite Waldweg endete stumpf; die neue Berganbindung traf als gleich breites, ebenes Band auf den schmalen Wanderpfad.
+
+**Lösung:** Berganschluss über sechs Einheiten von Hauptwegbreite zu einem 1,2 breiten Erdpfad verjüngt, weich in den Boden eingefärbte Ränder und Höhenanpassung am Berg. Am dargestellten nördlichen Waldwegende wird der Weg über die letzten 14 Einheiten schmaler und läuft weich ins Gelände aus. Keine Wegkoordinaten, Baumdaten, Spielregeln oder Seewege verändert.
+
+**Geprüft:** JavaScript-Syntax, gemessene Verjüngung (1,8 → 1,2 bzw. 0,75), WebGL-Vorschau beider Profile sowie Gebirge429, Wege438 und Platzierung347 bestanden. Kein echter Handy-/Safari-Test.
+
 ### v461 – Nachtrag: Zusammenführung und persönliche Gutschrift
 
 Aktuelles main einschließlich Ufer457 integriert; Versionskonflikte aufgelöst, beide Dokumentationsstände erhalten. Bewusst aufrufbarer Bonuslink `?rennbahnbonus=15000` schreibt dem lokalen Spielstand einmalig 15.000 Kleeblätter gut (`raceBonus15000`); erneuter Aufruf zahlt nicht erneut aus. Bei Speicherfehler wird die Gutschrift zurückgerollt. Kein automatischer Bonus für andere Spieler.
