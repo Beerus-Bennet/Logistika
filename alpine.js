@@ -142,6 +142,8 @@ const ALPINE = (()=>{
  function inside(x,z){const cx=-28,cz=-28,a=Math.atan2(z-cz,x-cx);return Math.hypot(x-cx,z-cz)<apronEdgeRadius(a)-.25;}
  function project(x,z){if(inside(x,z))return [x,z];const a=Math.atan2(z+28,x+28),r=apronEdgeRadius(a)-.25;return [-28+Math.cos(a)*r,-28+Math.sin(a)*r];}
  function normal(x,z){const d=.45;return G3.norm([height(x-d,z)-height(x+d,z),d*2,height(x,z-d)-height(x,z+d)]);}
+ /* v457: Wahl der Viereck-Diagonale – gemeinsam für das Netz und `surface` */
+ const flipDiag=(a,d,c,e)=>{const dc=(p,q)=>Math.abs(p.c[0]-q.c[0])+Math.abs(p.c[1]-q.c[1])+Math.abs(p.c[2]-q.c[2]);return dc(a,c)>dc(d,e)+.02&&[a,d,c,e].every(q=>lakeE(q.p[0],q.p[2])>1.4&&poolE(q.p[0],q.p[2])>1.8);}; /* nicht an Bergsee und Kolk, dort bleibt der Rand wie geprüft */
  function terrain(cell,store){const b=new FM.MB(),nx=Math.ceil((B.x1-B.x0)/cell),nz=Math.ceil((B.z1-B.z0)/cell),dx=(B.x1-B.x0)/nx,dz=(B.z1-B.z0)/nz,V=[],fine=new Set(),cache=new Map(),N=3;
   for(let j=0;j<=nz;j++)for(let i=0;i<=nx;i++){const X=B.x0+i*dx,Z=B.z0+j*dz,p=project(X,Z),h=height(...p);V.push({out:!inside(X,Z),p:[p[0],h+.012*sm(0,.5,h),p[1]],c:color(p[0],p[1],h),n:normal(p[0],p[1])});}
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const x=B.x0+(i+.5)*dx,z=B.z0+(j+.5)*dz,e=lakeE(x,z);if(channel(x,z).d<3.6||(e>.82&&e<1.18)||poolE(x,z)<1.5)fine.add(j*nx+i);}
@@ -155,7 +157,8 @@ const ALPINE = (()=>{
   /* v429: Gemeinsame Farbe und Normale je Rasterpunkt statt pauschaler
      Dreiecksfarbe/Flächennormale. Keine zusätzliche Geländegeometrie. */
   const quad=(a,d,c,e)=>{if([a,d,c,e].every(q=>q.out))return;
-   for(const q of [a,d,c,a,c,e])b.v.push(...q.p,...q.n,...q.c);};
+   /* v457: Diagonale dort, wo sich die Farbe weniger ändert – ein schräg laufendes helles Band (Sandufer) ergibt sonst Sägezähne im Dreiecksraster */
+   for(const q of flipDiag(a,d,c,e)?[a,d,e,d,c,e]:[a,d,c,a,c,e])b.v.push(...q.p,...q.n,...q.c);};
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){if(fine.has(j*nx+i)){for(let v=0;v<N;v++)for(let u=0;u<N;u++){const I=i*N+u,J=j*N+v;quad(vertex(I,J),vertex(I,J+1),vertex(I+1,J+1),vertex(I+1,J));}}else quad(V[j*(nx+1)+i],V[(j+1)*(nx+1)+i],V[(j+1)*(nx+1)+i+1],V[j*(nx+1)+i+1]);}
   if(store)grid={nx,nz,dx,dz,V,fine,vertex,N};return b;
  }
@@ -386,9 +389,11 @@ const ALPINE = (()=>{
  /* Bodenkontakt auf denselben Dreiecken wie die Nahansicht, nicht auf einer
     nur ähnlichen analytischen Höhe. Raster wird einmal je Aufbau erzeugt. */
  function surface(x,z){if(!grid){const h=height(x,z);return h+.012*sm(0,.5,h);}const {nx,nz,dx,dz,V,fine,vertex,N}=grid,fx=Math.max(0,Math.min(nx-.0001,(x-B.x0)/dx)),fz=Math.max(0,Math.min(nz-.0001,(z-B.z0)/dz)),i=Math.floor(fx),j=Math.floor(fz);let u=fx-i,v=fz-j,a,b,c,d;
-  if(fine.has(j*nx+i)){const I=Math.floor(fx*N),J=Math.floor(fz*N);u=fx*N-I;v=fz*N-J;a=vertex(I,J).p[1];b=vertex(I+1,J).p[1];c=vertex(I,J+1).p[1];d=vertex(I+1,J+1).p[1];}
-  else{a=V[j*(nx+1)+i].p[1];b=V[j*(nx+1)+i+1].p[1];c=V[(j+1)*(nx+1)+i].p[1];d=V[(j+1)*(nx+1)+i+1].p[1];}
-  return v>=u?a+(d-c)*u+(c-a)*v:a+(b-a)*u+(d-b)*v;
+  if(fine.has(j*nx+i)){const I=Math.floor(fx*N),J=Math.floor(fz*N);u=fx*N-I;v=fz*N-J;a=vertex(I,J);b=vertex(I+1,J);c=vertex(I,J+1);d=vertex(I+1,J+1);}
+  else{a=V[j*(nx+1)+i];b=V[j*(nx+1)+i+1];c=V[(j+1)*(nx+1)+i];d=V[(j+1)*(nx+1)+i+1];}
+  const ha=a.p[1],hb=b.p[1],hc=c.p[1],hd=d.p[1];
+  if(flipDiag(a,c,d,b))return u+v<=1?ha+(hb-ha)*u+(hc-ha)*v:hd+(hc-hd)*(1-u)+(hb-hd)*(1-v);
+  return v>=u?ha+(hd-hc)*u+(hc-ha)*v:ha+(hb-ha)*u+(hd-hb)*v;
  }
  function prepare(){
   if(!geometry){const terrainNear=terrain(2.4,true),decor=scenery(),ex=extras(decor.trees);geometry={terrainNear,treeNear:decor.near,treeFar:decor.far,detail:decor.detail,trees:decor.trees,fun:ex.fun,spots:ex.spots,boat:boatMesh(),duck:duckMesh(),water:water(),fall:fallMesh(),pool:poolMesh(),foam:foamMesh()};

@@ -1,3 +1,7 @@
+### v461 – Nachtrag: Zusammenführung und persönliche Gutschrift
+
+Aktuelles main einschließlich Ufer457 integriert; Versionskonflikte aufgelöst, beide Dokumentationsstände erhalten. Bewusst aufrufbarer Bonuslink `?rennbahnbonus=15000` schreibt dem lokalen Spielstand einmalig 15.000 Kleeblätter gut (`raceBonus15000`); erneuter Aufruf zahlt nicht erneut aus. Bei Speicherfehler wird die Gutschrift zurückgerollt. Kein automatischer Bonus für andere Spieler.
+
 ## v461 – Eigene Autorennbahn mit Garagenwagen, Drifts und Monatsrennen
 
 **Anlass:** Eine platzierbare Rennbahn für 15.000 Kleeblätter, mit eigenem Fahrspiel im Logistika-Stil und sinnvollem Einsatz der Garagenautos.
@@ -5,6 +9,13 @@
 **Lösung:** Drehbare 26 × 22-Bauvorschau; Bezahlung/Rodung erst bei Bestätigung, außerhalb bleiben die Baumdaten erhalten. Miniatur des rund 1,46-km-Kurses und separate Low-Poly-Fahrwelt mit Joystick, Bremse, Drift, Nitro, Minikarte, Motor-Audio, Tastatur und Pause. Training sowie ein Monatsrennen je 30 Spieltage gegen fünf KI-Fahrer; Siegprämie 250.000–5.000.000 € nach Etappe. Gefahrene Kilometer und zusätzlicher Verschleiß senken dauerhaft Garage-/Auktionswert. Reservierter Monatsstart, gemeinsames Speichern der Ergebnisgutschrift und Rollback bei Speicherfehler verhindern Doppelgewinne. Insel/Karte und Speditionszeit pausieren während des Besuchs. Keine Wälder in der Fahrszene; sparsame Miniatur, feste Physikschritte, begrenzte Spuren und Ressourcenfreigabe.
 
 **Geprüft:** Zwölf Physik-/Modellgruppen für 127 Autos; echte Chromium-Speicher-/Touchprüfungen, vollständiger Physiklauf mit KI und Ergebnisgutschrift, Tastatur/Audio/Pause und Hofwechsel ohne Hintergrundrendern. Altstände, Monatswechsel, Abbruch/Neuladen, Speicherfehler und Wiederverkauf geprüft. Regressionen Autofotos372, Platzierung347, Arbeiter351, Gebirge429, Wasser386 und Tierleben446. **Nicht geprüft:** echtes iPhone/Safari und reale Handy-Bildraten. Bei hartem Betriebssystem-Abbruch können letzte ungesicherte Fahrsekunden verloren gehen. Basis main756bdb7 einschließlich v449–v456 erhalten; Gesamt-/SW461, nur geänderte Assets hochgezählt. Details und Vorschauen: docs/AUTORENNBAHN-v461.md.
+## v457 – Bachufer im Gebirge glatt (keine Sägezähne mehr)
+
+**Ursache:** Das Sandufer am Bach im Gebirgsgelände (`alpine.js`) ist ein schräg zum Dreiecksraster laufendes helles Band. Alle Vierecke wurden mit derselben Diagonale geteilt, dadurch entstanden Sägezähne und bei Nacht dunkle Streifen am Ufer. Gemessen: nur die Geländeebene `terrain` zeichnete die Zacken, die Vertexfarben selbst sind glatt.
+
+**Lösung:** `flipDiag` wählt je Viereck die Diagonale mit dem geringeren Farbunterschied; `surface` verwendet dieselbe Wahl, damit Höhenabfragen zum Netz passen. Nicht am Bergsee und am Kolk (dort bleibt der geprüfte Rand). Keine zusätzlichen Dreiecke, keine Spielstandänderung.
+
+**Geprüft:** Vorher/nachher-Bilder im Testbrowser (Chromium, Software-Rendering, zwei Ansichten am Bach), `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** Handy, Nachtansicht.
 
 ## v456 – Lackfarbe und Foto stimmen überein
 

@@ -174,7 +174,17 @@ const RACE=(()=>{
  function close(){if(!on)return true;if(Q&&data().active&&!settle(false)){pause();notice('Beenden erst nach erfolgreichem Speichern möglich. Bitte erneut versuchen.');return false;}destroyScene();unsubs.forEach(fn=>fn());unsubs=[];inert.forEach(([e,v])=>e.inert=v);inert=[];U.remove();U=null;Q=null;on=false;document.body.classList.remove('race-open');if(typeof FV!=='undefined')FV.last=performance.now();if(focus&&focus.isConnected)focus.focus({preventScroll:true});focus=null;return true;}
  FSIZE.racetrack=[RACETRACK.W,RACETRACK.D];FFIXED.add('racetrack');
  FCOS_CATS.push(['freizeit','Freizeit']);FCOSMETIC.push({id:'racetrack',race:true,cat:'freizeit',n:'Autorennbahn',i:'🏁',price:COST,d:'Eigener Motorpark mit Drifts, Nitro und Monatsrennen. 26 × 22 Kacheln; nur die Baufläche wird gerodet.'});
- document.addEventListener('DOMContentLoaded',()=>{if(S&&S.farm)recoverSaved();});
+ /* v461: Vom Spieler ausdrücklich angeforderte, einmalige Gutschrift im lokalen Stand.
+    Nur ein bewusst geöffneter Bonuslink löst sie aus; kein allgemeiner Startbonus. */
+ document.addEventListener('DOMContentLoaded',()=>{
+  if(!S||!S.farm)return;recoverSaved();
+  const url=new URL(location.href),F=S.farm;
+  if(url.searchParams.get('rennbahnbonus')!=='15000'||F.raceBonus15000)return;
+  const before=F.clover;F.clover=(F.clover||0)+15000;F.raceBonus15000=true;
+  if(!persist()){F.clover=before;delete F.raceBonus15000;toast('Gutschrift konnte nicht gespeichert werden. Bitte erneut versuchen.','bad');return;}
+  url.searchParams.delete('rennbahnbonus');history.replaceState(null,'',url.href);
+  toast('15.000 Kleeblätter wurden deinem Spielstand gutgeschrieben.','ok');
+ });
  return {get on(){return on;},built,busy,clear,canPlace,place,planOrOpen,open,close,miniature:RACETRACK.miniature,
   _test:{available,month,prize,receipt,recoverSaved,checkpoint,settle,get session(){return Q;},input,start,pause,resume}};
 })();
