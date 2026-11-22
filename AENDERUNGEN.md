@@ -1,3 +1,11 @@
+## v438 – Arbeiter laufen runde Wege statt Zickzack
+
+**Ursache:** Die Wegsuche (`navPath`) liefert Wege auf einem Raster aus Achs- und Diagonalschritten; jede Richtungsänderung wurde zu einem scharfen Knick. Die Figuren folgten den Knicken genau und liefen dadurch im Zickzack (z. B. zur und von der Mittagspause).
+
+**Lösung (`team.js`, `navPathSafe` → `navSmooth`/`navClear`):** Zuerst werden Zwischenpunkte übersprungen, solange die Gerade frei bleibt (keine gesperrten Felder, kein Zaun, 0,3 Abstand zur Seite). Danach werden die Ecken als Kurve gerundet (quadratische Kurve, jede Rundung nur, wenn auch die Kurve frei ist). Start und Ziel bleiben unverändert. Gilt für alle Arbeitskräfte (`staffGo`, Lagerweg, Neuplanung). Tiere und die Notlösung für eingeschlossene Figuren (`navPathSafe` mit `NAV.loose`) sowie die Wege im Lagerplatz selbst bleiben unverändert.
+
+**Geprüft:** neuer Test `wegglaetten-v438.test.js` (120 Wege auf dem Hof: scharfe Knicke 343 → 10, Gesamtlänge kürzer, kein Zaunkontakt, keine gesperrten Felder); `worker-motion-v351`, `farmteam-v349`, `peopletraffic-v346`, `aussaat-v406` bestanden. **Nicht geprüft:** Handy, Optik im Spiel (Kurvenform nur gemessen, nicht angesehen), Wege innerhalb des Lagerplatzes.
+
 ## v436 – Offene PRs miteinander abgeglichen
 
 Wohnanfragen-PR138 enthält zusätzlich den konfliktfrei mit main abgeglichenen Flussbaum-PR137. Damit lassen sich beide Änderungen ohne erneuten gegenseitigen Versionskonflikt zusammenführen. Wohnanfragen/Flusscode bytegleich zu ihren geprüften Branchständen, Hochformat431 erhalten. Alle 16 Siedlungs- und drei Flussprüfgruppen bestanden; Syntax geprüft. Gesamt-/SW436, Einzelassetstände erhalten. Kein echter Handytest.

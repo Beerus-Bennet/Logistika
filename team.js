@@ -337,11 +337,52 @@ function navOk(i, role, si, ti) {
    Feldern um Start und Ziel gesperrte Felder überstiegen werden – der Rest des Wegs bleibt auf freien Feldern. */
 function navPathSafe(sx, sz, tx, tz, role) {
   const r = navPath(sx, sz, tx, tz, role);
-  if (r) return r;
+  if (r) return navSmooth(r, role);
   navBuild();
   const ax = Math.floor(sx) - NAV.x0, az = Math.floor(sz) - NAV.z0, bx = Math.floor(tx) - NAV.x0, bz = Math.floor(tz) - NAV.z0;
   NAV.loose = [ax, az, bx, bz];
-  try { return navPath(sx, sz, tx, tz, role); } finally { NAV.loose = null; }
+  try { return navSmooth(navPath(sx, sz, tx, tz, role), role, true); } finally { NAV.loose = null; }
+}
+/* v438: Wege der Arbeitskräfte ohne Zickzack. Das Raster liefert Achs- und Diagonalstücke mit vielen Knicken. Zuerst werden
+   Zwischenpunkte übersprungen, solange die Gerade frei bleibt (keine gesperrten Felder, kein Zaun, 0,3 Abstand zur Seite);
+   danach werden die Ecken als Kurve gerundet – jede Rundung nur, wenn die Kurve ebenfalls frei ist. Start und Ziel bleiben. */
+function navClear(a, b, role, walls) {
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(l / 0.25)), px = l ? -(b[1] - a[1]) / l : 0, pz = l ? (b[0] - a[0]) / l : 0;
+  for (let k = 0; k <= n; k++) {
+    const x = a[0] + (b[0] - a[0]) * k / n, z = a[1] + (b[1] - a[1]) * k / n;
+    for (const o of [0, -0.3, 0.3]) {
+      const cx = Math.floor(x + px * o), cz = Math.floor(z + pz * o);
+      if (!navIn(cx, cz)) return false;
+      const bl = NAV.blk[navIdx(cx, cz)];
+      if (bl && !(bl === 2 && role === "farmer")) return false;
+    }
+  }
+  return !navHit(a[0], a[1], b[0], b[1], walls);
+}
+function navSmooth(pts, role, loose) {
+  if (!pts || pts.length < 3 || loose) return pts;
+  navBuild();
+  const walls = navWallsFor(role);
+  /* 1) Zwischenpunkte überspringen */
+  const sh = [pts[0]]; let i = 0;
+  while (i < pts.length - 1) {
+    let j = Math.min(pts.length - 1, i + 14);
+    while (j > i + 1 && !navClear(pts[i], pts[j], role, walls)) j--;
+    sh.push(pts[j]); i = j;
+  }
+  if (sh.length < 3) return sh;
+  /* 2) Ecken runden (quadratische Kurve, drei Zwischenpunkte) */
+  const out = [sh[0]];
+  for (let k = 1; k < sh.length - 1; k++) {
+    const A = sh[k - 1], P = sh[k], B = sh[k + 1], la = Math.hypot(A[0] - P[0], A[1] - P[1]), lb = Math.hypot(B[0] - P[0], B[1] - P[1]), d = Math.min(1.3, 0.4 * la, 0.4 * lb);
+    if (d < 0.25) { out.push(P); continue; }
+    const q1 = [P[0] + (A[0] - P[0]) / la * d, P[1] + (A[1] - P[1]) / la * d], q2 = [P[0] + (B[0] - P[0]) / lb * d, P[1] + (B[1] - P[1]) / lb * d];
+    const arc = [q1].concat([0.25, 0.5, 0.75].map(t => [(1 - t) * (1 - t) * q1[0] + 2 * t * (1 - t) * P[0] + t * t * q2[0], (1 - t) * (1 - t) * q1[1] + 2 * t * (1 - t) * P[1] + t * t * q2[1]]), [q2]);
+    let ok = true; for (let m = 1; m < arc.length && ok; m++) ok = navClear(arc[m - 1], arc[m], role, walls);
+    if (ok) arc.forEach(q => out.push(q)); else out.push(P);
+  }
+  out.push(sh[sh.length - 1]);
+  return out.map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
 }
 /* A* vom Start zum Ziel – gibt die Wegpunkte zurück (oder null) */
 function navPath(sx, sz, tx, tz, role) {

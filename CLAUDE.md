@@ -235,3 +235,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v434: Aktuellen main4ef96fe/Hochformat431 vollständig integriert; beide Änderungsstände und Assetversionen erhalten.
 
 - v436: Aktuellen main4ef96fe/Hochformat431 vollständig integriert; beide Änderungsstände und Assetversionen erhalten.
+- v438: Wege der Arbeitskräfte geglättet – `navSmooth`/`navClear` in `team.js` (Zwischenpunkte überspringen, Ecken runden, nur auf freien Feldern ohne Zaun), genutzt in `navPathSafe`. Test `wegglaetten-v438.test.js`.
