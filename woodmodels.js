@@ -3323,12 +3323,13 @@ const FWM = (() => {
     if (!(hat === "helmg")) {
       const bro = o.hair != null ? mix(o.hair, 0x000000, 0.25) : 0x4a3a2a;
       [-1, 1].forEach(q => {
-        b.box(0.034, 0.026, 0.012, 0xf4f1ea, { x: q * 0.042, y: 0.955 + yo, z: 0.113 });  /* Augapfel */
-        b.box(0.018, 0.02, 0.01, o.eye || 0x2a2420, { x: q * 0.042 + q * 0.002, y: 0.955 + yo, z: 0.12 });  /* Pupille */
-        b.box(0.046, 0.01, 0.016, bro, { x: q * 0.043, y: 0.978 + yo, z: 0.098, rz: q * 0.1 });          /* Braue */
+        /* v458: Augen liegen fast bündig in der Kopfkugel (vorher standen Weiß und Pupille deutlich heraus und wirkten gruselig): kleineres Weiß, Pupille gleich groß wie das Weiß hoch, nur hauchdünn über der Haut */
+        b.box(0.03, 0.017, 0.008, 0xece8e0, { x: q * 0.042, y: 0.955 + yo, z: 0.1035 });  /* Augapfel */
+        b.box(0.02, 0.02, 0.006, o.eye || 0x2a2420, { x: q * 0.042 + q * 0.002, y: 0.955 + yo, z: 0.1085 });  /* Pupille */
+        b.box(0.046, 0.01, 0.014, bro, { x: q * 0.043, y: 0.978 + yo, z: 0.096, rz: q * 0.1 });          /* Braue */
       });
     }
-    b.box(0.024, 0.042, 0.032, sk2, { y: 0.915 + yo, z: 0.123 });                              /* Nase */
+    b.box(0.024, 0.04, 0.026, sk2, { y: 0.915 + yo, z: 0.118 });                              /* Nase */
     b.box(0.05, 0.009, 0.012, 0xa05a4a, { y: 0.865 + yo, z: 0.108 });                          /* Mund */
     if (o.hair && !hat) hairdo(b, o, yo);
     if (hat === "hut") { b.cyl(0.2, 0.2, 0.03, 10, 0x4a5a3a, { y: 1.0 + yo }); b.cyl(0.12, 0.1, 0.12, 10, 0x4a5a3a, { y: 1.02 + yo }); b.box(0.03, 0.06, 0.06, 0xd8332b, { x: 0.11, y: 1.06 + yo }); }
