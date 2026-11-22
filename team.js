@@ -2195,7 +2195,6 @@ function staffPopHTML(s, P) {
   const cur = s.job && s.job.task ? staffTaskList().find(T => T.id === s.job.task) : null;
   let h = `<div class="fp-h fst-h"><span class="fst-pi">${staffIcNow(s)}</span><div>${esc(staffName(s))} · ${R0.i} ${esc(R0.n)}
     <small>${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}${cur ? " · für " + esc(staffWho(cur)) : s.job ? " · eigener Plan" : ""}</small></div></div>`;
-  if(typeof FARM_STORY!=="undefined")h+=`<button class="btn tiny ghost" data-staff-story="${s.role}">Unsere Zusammenarbeit</button>`;
   if (!R0.gap || s.role === "mechaniker") return h + `<div class="fst-none">Arbeitet ohne Aufträge: nachts heizt er den Kessel für Strom, Reparaturen und Strom werden günstiger, nichts klemmt mehr.</div>`;
   const wl = staffWlOn(s.role), fahr = s.role === "fahrer";
   h += tasks.length ? `<div class="fst-ts">${tasks.map(T => staffTaskRow(T, true)).join("")}</div>`
@@ -2271,7 +2270,6 @@ function renderStaffPop(el, P, force) {
   const oldBox = el.querySelector(".fp-box.fstp"), keepTop = oldBox ? oldBox.scrollTop : 0;      /* v277: Scrollstand bleibt beim Neuzeichnen */
   el.innerHTML = `<div class="fp-box fstp">${h}</div>`;
 
-  el.querySelectorAll("[data-staff-story]").forEach(b=>b.onclick=ev=>{ev.stopPropagation();closeFarmPop();FARM_STORY.open(b.dataset.staffStory);});
   el.querySelectorAll("[data-tdel]").forEach(b => b.onclick = ev => { ev.stopPropagation(); if (staffTaskDel(b.dataset.tdel, true)) { sfx("pop"); save(); } renderStaffPop(el, P, true); });
   el.querySelectorAll("[data-tadd]").forEach(b => b.onclick = ev => { ev.stopPropagation(); P.add = true; renderStaffPop(el, P, true); });
   /* v61: Freigabe umschalten / Fahrer-Modus wählen – gilt sofort und bleibt gespeichert */
@@ -2374,7 +2372,7 @@ function staffHTML() {
           <small>${esc(R0.job)}</small><em class="fst-do">${s.job ? "▶ " : "· "}${esc(s.doing || "wartet")}</em>
           ${ts.length ? `<small class="fst-tl">📋 ${ts.map(T => esc(staffItemName(T.item, T.n)) + " (" + esc(staffWho(T)) + ")").join(" · ")}</small>` : ""}
           <small>${esc(s.trait)} +${s.perk} % · ${eur(s.wage)} am Tag${s.fed === false ? " · 😟 hungrig" : " · 😊 satt"}</small>
-          ${typeof FARM_STORY!=="undefined"?`<button class="btn tiny ghost" data-story="${r}">Unsere Zusammenarbeit</button>`:""}${staffTrainHTML(s)}</div>
+          ${staffTrainHTML(s)}</div>
           <div class="fst-btns"><button class="btn tiny" data-loc="${s.id}" ${(s.ride && staffRideGone(s)) || (s.away && s.away.none) ? "disabled" : ""}>📍 Orten</button>
           <button class="btn tiny ghost" data-fire="${s.id}">Entlassen</button></div></div>`;
       }

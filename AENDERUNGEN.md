@@ -1,3 +1,11 @@
+## v439 – Button „Unsere Zusammenarbeit“ bei angestellten Arbeitern entfernt
+
+**Ursache:** Der Button stammt aus v349 (Hofbekanntschaften) und öffnete die Geschichte einer bereits angestellten Kraft. Er stand im Arbeitermenü über der Auftragsliste und im Personalfenster auf jeder Karte und nahm dort Platz weg.
+
+**Lösung (`team.js`):** Der Button ist an beiden Stellen entfernt, samt zugehörigem Klick-Code. Das Kennenlernen vor der Anstellung („Kennenlernen“, „Mit Erwin über den Hof sprechen“) und die Geschichten in `farmstory.js` bleiben unverändert. Keine Spielstandänderung.
+
+**Geprüft:** Syntax; `farmteam-v349`, `worker-motion-v351`, `freigabe-v437` bestanden; keine Reste von `data-staff-story` im Code. **Nicht geprüft:** Anzeige im Spiel und auf dem Handy.
+
 ## v438 – Arbeiter laufen runde Wege statt Zickzack
 
 **Ursache:** Die Wegsuche (`navPath`) liefert Wege auf einem Raster aus Achs- und Diagonalschritten; jede Richtungsänderung wurde zu einem scharfen Knick. Die Figuren folgten den Knicken genau und liefen dadurch im Zickzack (z. B. zur und von der Mittagspause).
