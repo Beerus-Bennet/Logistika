@@ -271,4 +271,6 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v458: Gesichter – Augen bündig und ruhiger (`headParts` in `woodmodels.js`), nichts mehr herausstehend.
 - v457: Bachufer im Gebirge ohne Sägezähne – `flipDiag` in `alpine.js` wählt die Viereck-Diagonale nach Farbe (gemeinsam mit `surface`), nicht an Bergsee/Kolk.
 
-- v462: Fischer steht auf dem Angelsteg auf Plankenhöhe (`staffDeckY` in `team.js`), nicht mehr in den Planken.
+- v463: Fischer steht auf dem Angelsteg auf Plankenhöhe (`staffDeckY` in `team.js`), nicht mehr in den Planken.
+
+- v462: FWM.forestPath optional footTrail/trailTail, nur Berganschluss und nördliches Waldwegende verwenden weiches, längenabhängig verjüngtes Pfadband. Übrige Wege und gespeicherte Koordinaten bleiben gleich.

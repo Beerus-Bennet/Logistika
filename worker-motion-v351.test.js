@@ -98,7 +98,7 @@ test('v388 Pausenende: niemand pendelt im Camp hin und her',()=>{
  assert.ok(run('worst<=3'),run('JSON.stringify(rev)'));
 });
 /* v462: Fischer auf dem Steg stand auf Bodenhöhe und steckte mit den Füßen in den Planken (Oberkante 0,135) */
-test('v462 Steg: Kraft steht auf den Planken, abseits des Stegs auf dem Boden',()=>{
+test('v463 Steg: Kraft steht auf den Planken, abseits des Stegs auf dem Boden',()=>{
  run(`allWorkers();S.farm.objs.push({t:'f_steg',id:S.farm.seq++,x:-7,z:18.5});var st=farmObj1('f_steg'),sp=staffStegSpot(st);`);
  assert.ok(run('Math.abs(staffDeckY(sp[0],sp[1])-.135)<.001'),run('staffDeckY(sp[0],sp[1])'));
  assert.equal(run('staffDeckY(sp[0]+3,sp[1])'),0);assert.equal(run('staffDeckY(sp[0],sp[1]-9)'),0);

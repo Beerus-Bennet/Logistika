@@ -1044,10 +1044,11 @@ function worldStatic() {
     const o = { y: 0.026 + i * 0.003, ey: 0.016 + i * 0.0012, ends: [loose(a) && tee[0] < 0 && !campEnd(a), loose(e) && tee[1] < 0 && !campEnd(e)], caps: [cap(a, 0), cap(e, 1)], mouth: [road(a), road(e)],
       benchTurn:i===2?[0,Math.PI/2]:null, /* v409: nur Stamm am alten Wald-Angelplatz, Hauptsee/übrige Wegenden bleiben. */
       snap, fade, gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: (x, z) => !inHofMax(x, z, 0.7) && Math.abs(z - 18.5) > 1.25 && !inYard(x, z, 1.2) };
+    if(i===1){o.trailTail=14;o.ends[1]=false;o.caps[1]=false;} /* v462: Waldwegende als auslaufender Pfad */
     return { p, o, tee };
   });
   /* v459: Anbindung des Bergwegs an den Hauptweg (Abzweig auf dem Knick (−34,6, −98) von paths[1], Ende läuft in den Wanderweg der Gebirgskulisse) */
-  {const p = FWORLD.mtnWay, i = 1; WAYS.push({ p, tee: [i, -1], o: { y: 0.026 + 7 * 0.003, ey: 0.016 + 7 * 0.0012, ends: [false, false], caps: [false, false], mouth: [false, false], snap: [null, null], fade: [null, null], gnd: wGroundAt, roadCol: 0x7c7f86, leafOk: () => true } });}
+  {const p = FWORLD.mtnWay, i = 1; WAYS.push({ p, tee: [i, -1], o: { y: 0.026 + 7 * 0.003, ey: 0.016 + 7 * 0.0012, ends: [false, false], caps: [false, false], mouth: [false, false], snap: [null, null], fade: [null, null], gnd: wGroundAt, footTrail:true, leaves:false, roadCol: 0x7c7f86, leafOk: () => true } });}
   WAYS.forEach((W, i) => {
     let q = W.p;
     WAYS.forEach((V, j) => V.tee.forEach((t, k) => { if (t === i) q = FWM.wayStraightAt(q, k ? V.p[V.p.length - 1] : V.p[0], 1.4); }));

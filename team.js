@@ -2088,7 +2088,7 @@ function stepStaff(dt, time) {
       const t = farmTree(j.tid);
       if (t) { WV.hit = { id: t.id, t0: wnow() }; FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: 4, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.2, up: 1.4, size: 0.06, shape: 1 }); }
     }
-    n.y += staffDeckY(e.x, e.z);   /* v462: auf dem Angelsteg stehen die Füße auf den Planken, nicht darin */
+    n.y += staffDeckY(e.x, e.z);   /* v463: auf dem Angelsteg stehen die Füße auf den Planken, nicht darin */
   });
   /* v346: Abstand jetzt gemeinsam mit Bewohnern und Fahrrädern in
      PEOPLE_TRAFFIC; keine zweite, widersprechende Verschiebung hier. */
