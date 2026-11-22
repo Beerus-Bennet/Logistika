@@ -1,3 +1,7 @@
+## v442 – Halsorgane (Basis main5f33783)
+
+Nur hunt.js und dessen Cacheversion angefasst; Freigabe441/team441, NPC440, Gebirge430 sowie alle anderen main-Assets erhalten. Halsbilder und Trefferprüfung nutzen gemeinsame Netze. Neue Geometrien haben kleinere Kontaktflächen; keine unsichtbare alte Vergrößerung beibehalten. Alte Schussdaten werden nur für die Ansicht nachgeprüft, ihre Wertung nicht gespeichert/überschrieben. Keine Migration. Gesamt-/SW/LOGI_V442; Bericht docs/HALSORGANE-v442.md.
+
 ## v420 – Tagesaufgaben-Symbole als Ergänzung zu PR130
 
 Stand419 vollständig erhalten; main69f990c bleibt Basis. Nur Symbolausgabe der Tagesaufgaben in renderGoals durch dailyTaskIcon(t) ersetzt, zugehörige Zeichnungen und eng begrenztes CSS ergänzt. Aufgaben-/Belohnungslogik sowie Missionen/Erfolge unverändert. Inline-SVG braucht keine zusätzlichen Assets. goals/style420, weapons419 und übrige Assets unverändert, Gesamt-/SW/LOGI_V420. Im bestehenden offenen Waffen-PR130 ergänzen, damit dessen Änderungen gemeinsam reviewbar bleiben. Bericht docs/ZIELSYMBOLE-v420.md; kein automatisches Merge/Deployment.
