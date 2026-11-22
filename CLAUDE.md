@@ -264,3 +264,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v455: Sammellieferung – PR #152–#156 (v450–v454) in einem Zweig zusammengeführt; Details je Version oben.
 
 - v456: Fahrzeugfarbe = Fotofarbe – einmalige Angleichung `A.paint456` in `ah()` (`auction.js`), Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack.
+
+- v457: Bachufer im Gebirge ohne Sägezähne – `flipDiag` in `alpine.js` wählt die Viereck-Diagonale nach Farbe (gemeinsam mit `surface`), nicht an Bergsee/Kolk.
