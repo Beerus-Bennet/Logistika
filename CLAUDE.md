@@ -265,6 +265,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v456: Fahrzeugfarbe = Fotofarbe – einmalige Angleichung `A.paint456` in `ah()` (`auction.js`), Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack.
 
+- v461: Autorennbahn (`racetrack.js`, `racedrive.js`, `racing.js`), Hofladen/Kleeblätter/Freizeit, 15.000 erst beim bestätigten Bau; 26×22, nur Baufeld rodbar, dauerhaft fest. `S.farm.race` lazy, `g.raceWear` zusätzlich zu km, Auktionswert/-weitergabe erhalten. Ein Monatsstart je 30 Spieltage, fünf KI, Training frei; Teilnahme vor Start reservieren, Gewinne/Kilometer atomar speichern. RACE.on pausiert Spielzeit, Hof- und Kartenrendern; eigener Renderer ohne Wald, beim Schließen vollständig freigeben. Modell/Physik/Touch-/Speicher-/Weltprüfungen autorennbahn-v461.*, Bericht docs/AUTORENNBAHN-v461.md. Aktuelles main756bdb7 mit Lack456/Haltebonus454 unverändert bewahrt.
 - v460: Rauszoomen ohne Hänger – `treeFarSet` legt Fernbäume scheibchenweise an (`L.pend`/`f.ok`), Hänger-Wächter am Ende von `farmview.js` lädt nach 10 s Stillstand neu.
 - v459: Bergwanderweg an den Hauptweg angebunden – `FWORLD.mtnWay` (`erbe.js`), Abzweig in `WAYS` (`worldview.js`), Migration `F.way459` entfernt Bäume im Weg.
 - v458: Gesichter – Augen bündig und ruhiger (`headParts` in `woodmodels.js`), nichts mehr herausstehend.

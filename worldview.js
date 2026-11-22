@@ -185,6 +185,7 @@ function wayCamSide(x, z) {
 const BG_CR = { birke: 0.55, kiefer: 0.85, fichte: 0.7, buche: 1.07, eiche: 1.24, kirsche: 0.74 };
 /* Kulissenbaum hier erlaubt? */
 function bgTreeOk(x, z, M) {
+  if (typeof RACE !== "undefined" && RACE.clear(x,z,2.8)) return false; /* v461: ausschließlich Baufläche */
   if (typeof VILLAGE !== "undefined" && VILLAGE.clear(x,z)) return false;
   if (inHofMax(x, z, 3.2)) return false;      /* v99: Krone soll nicht im Hofzaun stehen (vorher 1,5) */
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;      /* v81: Lagerfeuerplatz */
@@ -315,6 +316,7 @@ function worldWaterCheck() {
    Feldern, Wegen, Bach, See, Teich, Lagerplatz, Lichtungsmitte, Bäumen, Felsen, Totholz und anderen Büschen frei ist. */
 /* v91: freier Boden – nicht auf Hof, Wegen, Wasser, Lichtungsmitte (gemeinsam für Büsche und Waldboden) */
 function wFreeGround(x, z, r, MK) {
+  if (typeof RACE !== "undefined" && RACE.clear(x,z,r)) return false; /* v461 */
   if(typeof ALPINE!=="undefined"&&ALPINE.contains(x,z))return false; /* v375: kein Unterwuchs unter dem Berg */
   if (inHofMax(x, z, 1.5 + r)) return false;
   if (typeof CAMP !== "undefined" && CAMP.clear(x, z, "bg")) return false;
@@ -1724,6 +1726,7 @@ function petThumbFn(k) {
   return () => { const b = new FM.MB(); b.merge(fn(), { ry: 0.5 }); return b; };
 }
 function cosModel(c) {
+  if (c.race) return ["racetrack461", RACE.miniature];
   if (c.skin && c.skin.barn) return ["barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn)];
   if (c.skin && c.skin.house) return ["house:" + c.skin.house, () => skinMB("house", c.skin.house)];
   if (c.skin && c.skin.tractor) return ["tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor)];
@@ -4283,10 +4286,10 @@ function cosShopHTML() {
   const head = `<div class="fcos-top"><div><b>🍀 ${F.clover || 0}</b><small>Kleeblätter gibt’s für Level, Kapitel, Ereignisse und den Tagesbonus.</small></div>
     <button class="btn tiny" id="fcDaily" ${F.daily === today ? "disabled" : ""}>${F.daily === today ? "✓ Tagesbonus" : "🎁 Tagesbonus"}</button></div>`;
   const cats = FCOS_CATS.map(([k, l]) => `<div class="fcos-cat">${l}</div>` + FCOSMETIC.filter(c => c.cat === k).map(c => {
-    const own = farmCos(c.id);
-    const note = own ? (c.deco ? "gehört dir · unter 🌷 Deko aufstellen" : c.pet ? "läuft auf dem Hof herum" : "aktiv") : "🍀 " + c.price;
+    const own = c.race ? !!RACE.built() : farmCos(c.id);
+    const note = own ? (c.race ? "gehört dir · Motorpark öffnen" : c.deco ? "gehört dir · unter 🌷 Deko aufstellen" : c.pet ? "läuft auf dem Hof herum" : "aktiv") : "🍀 " + c.price;
     const [tk, tf] = cosModel(c);
-    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco ? "disabled" : ""}>${thumbSpan(tk, tf, c.i)}<b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
+    return `<button class="fshop${own ? " own" : (F.clover || 0) < c.price ? " poor" : ""}" data-cos="${c.id}" ${own && !c.deco && !c.race ? "disabled" : ""}>${thumbSpan(tk, tf, c.i)}<b>${esc(c.n)}</b><small>${note}</small>${c.d ? `<p>${esc(c.d)}</p>` : ""}</button>`;
   }).join("")).join("");
   const ph = `<div class="fcos-cat">✨ Bald</div>
     <button class="fshop lock" disabled><span class="ic">🍀</span><b>Kleeblätter kaufen</b><small>kommt bald</small><p>Platzhalter – im Spiel gibt es Kleeblätter fürs Spielen.</p></button>
@@ -4299,6 +4302,7 @@ function cosShopBind(again) {
   $$("#farmSheetIn [data-cos]").forEach(b => b.onclick = () => {
     const C = FCOSMETIC.find(c => c.id === b.dataset.cos);
     if (!C) return;
+    if (C.race) { RACE.planOrOpen(); return; }
     const place = () => {
       const k = C.deco, D = FDECO[k];
       closeFarmSheet();

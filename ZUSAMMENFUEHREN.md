@@ -1,3 +1,11 @@
+## v461 – Autorennbahn
+
+Basis main `756bdb7` (v456), einschließlich Ufer449, Sammellieferung455 und Lack456. Änderungen dieser Version nicht gegen ältere Kopien von auction/game/worldview ersetzen: Haltebonus454, Modellfotoregeln453/456, Jagd-Pause452 und Ufer449 sind enthalten. Die offenen PRs159–162 wurden nicht mitgemergt. Vor dem Merge den dann aktuellen main-Stand prüfen.
+
+Neue Dateien `racetrack.js`, `racedrive.js`, `racing.js` **nach den bisherigen Spielskripten** in index und alle drei in den SW-Cache aufnehmen. Die Registrierung muss vor DOMContentLoaded/Spielstandladen laufen, damit `FSIZE.racetrack` bekannt ist. Gesamt-/SW461; Änderungen an auction, erbe, farm, farmview, game, worldview und style ebenfalls461, übrige Assetstände erhalten.
+
+Nicht entfernen: neue Bauart `racetrack`/fester Standort, Kaufweg über `RACE.place` statt `farmCosBuy`, lokale Rodungsmasken, `RACE.on`-Pausen in Spiel und Hof sowie `raceWearFactor` und die Weitergabe des Verschleißes in Auktionslosen. Keine Änderungen am Hauptsee oder Gebirge für dieses Feature. Spielstände ohne Rennbahn/Rennverschleiß bleiben kompatibel. Siehe `docs/AUTORENNBAHN-v461.md` und die vier Prüfdateien `autorennbahn-v461.*`.
+
 ## v446 – Tierbewegung und Wald-Fellvarianten
 
 Basis mainb823906 mit Mittagspause445, Ruger/Waffen444 und Trophäen443. animalmotion.js direkt nach woodmodels und vor alpine laden; im Service-Worker aufgenommen. FM.limb erhält statische Komplettmodelle für Bilder; optionale Teile werden nur bei lebenden Tieren benutzt. farmmodels, woodmodels, alpine, farmview, worldview und neue animalmotion auf Asset446; team445, Waffen444 und hunt443 unverändert erhalten. Gesamt-/SW/LOGI_V446. Keine Spielstandmigration. Modellcache ist rendererweise und wird beim Drehen/Simulieren nicht neu aufgebaut. Details/Prüfung: docs/TIERLEBEN-v446.md.

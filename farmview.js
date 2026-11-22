@@ -188,6 +188,7 @@ function objMesh(o) {
     case "spinnery": return fmesh("spinnery", FM.spinnery);
     case "lagerhalle": { const s = o.sz || FSIZE.lagerhalle; return fmesh("lagerhalle:" + s[0] + "x" + s[1], () => FM.lagerhalle(s[0], s[1])); }   /* v258, v269: nach Größe */
     case "board": return fmesh("board", FM.board);
+    case "racetrack": return fmesh("racetrack461", RACE.miniature);
     case "trophy": { const r = TROPHIES.record(o); return fmesh("exhibit:"+HUNT.trophyKey(r), () => HUNT.trophyBuild(r)); }
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil:" + (o.crop ? o.w ? "wet" : "dry" : "empty"), () => FM.fieldSoil(false, o.crop ? !!o.w : undefined));
@@ -212,7 +213,7 @@ function objMesh(o) {
   return typeof worldObjMesh === "function" ? worldObjMesh(o) : null;
 }
 const OBJ_H = {
-  house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0, lagerhalle: 5.0,
+  racetrack: 1.2, house: 4.7, barn: 4.5, silo: 4.3, mill: 4.4, bakery: 2.9, dairy: 2.9, butcher: 3.0, spinnery: 3.0, lagerhalle: 5.0,
   coop: 0.7, cows: 0.9, pigs: 0.8, sheep: 0.9, beef: 1.0, field: 0.35, tree: 2.3, board: 1.6, shed: 1.8, deco: 1.0,
   kuehl: 3.1, speicher: 3.2, fishhalle: 2.9, smoke: 3.8, feedk: 1.6, deli: 2.3, smith: 2.9, kutter: 2.2, steg: 0.9, pot: 0.5, mline: 0.35, netz: 0.7
 };
@@ -730,7 +731,7 @@ function farmLoop(now) {
   requestAnimationFrame(farmLoop);
   FV.alive = now;   /* v460: Lebenszeichen für den Hänger-Wächter (unten) */
   const R = FV.R;
-  if (!R || R.lost() || document.hidden || (document.body.classList.contains("jl-open")||document.body.classList.contains("office3d"))) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
+  if (!R || R.lost() || document.hidden || (document.body.classList.contains("jl-open")||document.body.classList.contains("office3d")||document.body.classList.contains("race-open"))) return;     /* v88: Tab im Hintergrund – nichts rechnen, nichts zeichnen */
   /* Akku schonen: ohne Berührung reichen ~30 Bilder pro Sekunde */
   const busy = FV.ptr.size || FV.focusing || FV.tool || FV.place || FV.drives.length || now - (FV.touchAt || 0) < 1500
     || FV.distSoft != null || Math.abs(FV.vel[0]) > 0.01 || Math.abs(FV.vel[1]) > 0.01 || (typeof worldBusy === "function" && worldBusy());
@@ -1068,6 +1069,7 @@ function objAction(o, x, y) {
     case "shed": openFarmShed(); break;
     case "deco": openPop(o, "deco"); break;
     case "trophy": openPop(o, "trophy"); break;
+    case "racetrack": closeFarmPop(); RACE.open(); break;
     case "tractor": openPop(o, "tractor"); break;
     case "steg": if (typeof openAngel === "function") openAngel(o); break;
   }
@@ -1959,6 +1961,13 @@ function confirmPlace() {
     save();
     return;
   }
+  if (P.spec.racetrack) { /* v461: Kauf und Rodung gemeinsam speichern. */
+    const o = RACE.place(P.x, P.z, P.r);
+    if (!o) { sfx("bad"); return; }
+    cancelPlace(true); farmBuildScene(); sfx("build");
+    toast("Autorennbahn gebaut – antippen und mit deinem Garagenauto losfahren.", "ok");
+    return;
+  }
   if (P.spec.trophy) {
     const o = TROPHIES.place(P.spec.trophy,P.x,P.z,P.r);
     if (!o) { sfx("bad"); return; }
@@ -2016,7 +2025,7 @@ function farmTractorPlace() {
   startPlace({ proto: { t: "tractor", r: 0 }, tractor: true }, at ? at[0] : null, at ? at[1] : null);
 }
 function startMove(o) {
-  if (FV.tutLock) return;
+  if (FV.tutLock || o.t === "racetrack") return; /* v461: dauerhaft gerodete Baufläche */
   sfx("pop");
   startPlace({ proto: Object.assign({}, o), move: o }, o.x, o.z);
 }
@@ -2030,7 +2039,7 @@ function renderPlaceBar() {
   if (!P) { el.innerHTML = ""; el.className = ""; return; }
   const rot = !noRotate(P.proto.t);
   el.className = "on";
-  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : P.spec.trophy ? "Präparat aufstellen" : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>${!P.move && ["field", "tree"].includes(P.proto.t) ? "Bestätigen oder verschieben" : "Zieh es an seinen Platz"}</small></div>
+  el.innerHTML = `<div class="fpl-t">${P.move ? "Verschieben" : P.spec.tractor ? "Traktor aufstellen" : P.spec.trophy ? "Präparat aufstellen" : P.spec.racetrack ? esc(P.spec.label) : esc(P.spec.label) + " · " + eur(P.spec.price)}<small>${!P.move && ["field", "tree"].includes(P.proto.t) ? "Bestätigen oder verschieben" : "Zieh es an seinen Platz"}</small></div>
     <button class="fpl-b no" id="fpNo">✕</button>
     ${rot ? `<button class="fpl-b" id="fpRot" aria-label="Um 90 Grad drehen" title="Um 90 Grad drehen">↻</button>` : ""}
     ${placeJumps(P).map(zn => `<button class="fpl-b zone" data-zone="${zn}" title="${zn === "yard" ? "ins Sägewerk" : zn === "wild" ? "rund um den Hof" : "auf den Hof"}">${zn === "yard" ? "🪚" : zn === "wild" ? "🌳" : "🏡"}</button>`).join("")}
