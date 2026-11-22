@@ -37,16 +37,29 @@ for (const feature of ['weit','eng','ungerade','doppelaug','abnorm']) for (const
 const proto=G.MB.prototype,merge=proto.merge;
 let animals=0;
 for(const k of ['hirsch','keiler','fasan']) for(const score of [.15,.95]) {
-  let body=null,animalVertices=null;
+  let body=null,animalVertices=null,originalAnimal=null;
   proto.merge=function(mesh,t) {
     const start=this.v.length,out=merge.call(this,mesh,t);
-    if(t.y && Math.abs(t.x||0)<1 && mesh.v.length>50000){animalVertices=this.v.slice(start);body=bounds(animalVertices);}
+    if(t.y && Math.abs(t.x||0)<1 && mesh.v.length>50000){animalVertices=this.v.slice(start);originalAnimal=mesh.v;body=bounds(animalVertices);}
     return out;
   };
   const r=rec(k,4,77,score),mesh=H.trophyBuild(r),B=mesh._stand;
   assert.ok(body,'Ganzes Tier wurde als ein Modell zusammengeführt');
   assert.ok(Math.abs(body.min[1]-.14)<1e-5,'Füße stehen auf der Sockeloberfläche');
-  assert.ok(body.max[1]>.14+(k==='fasan'?.4:k==='keiler'?.6:1.5),'Vollständiger Körper mit artspezifischer Höhe');
+  /* v443: Tier wird proportional in denselben Sockel eingepasst. Alle
+     Körperpunkte müssen denselben Maßstab haben, kein Körperteil darf fehlen. */
+  const raw=bounds(originalAnimal),fit=(body.max[1]-.14)/(raw.max[1]-raw.min[1]);
+  assert.ok(raw.max[1]-raw.min[1]>(k==='fasan'?.4:k==='keiler'?.6:1.5),'Vollständiger Körper mit artspezifischer Höhe');
+  assert.ok(fit>.55&&fit<=1.00001,'Gleichmäßiger Einpassmaßstab');
+  const rc=[(raw.min[0]+raw.max[0])/2,(raw.min[2]+raw.max[2])/2];let priorRadius=0;
+  for(let i=0;i<originalAnimal.length;i+=9)priorRadius=Math.max(priorRadius,Math.hypot(originalAnimal[i]-rc[0],originalAnimal[i+2]-rc[1]));
+  assert.ok(Math.abs(B.radius-Math.max(.36,priorRadius+.065))<1e-7,'Bestehende Sockelgröße erhalten');
+  assert.equal(B.size,Math.ceil((B.radius+.035)*2),'Belegte Fläche erhalten');
+  const shift=[0,1,2].map(j=>animalVertices[j]-originalAnimal[j]*fit);
+  assert.equal(animalVertices.length,originalAnimal.length);
+  for(let i=0;i<animalVertices.length;i+=9)for(let j=0;j<3;j++)assert.ok(Math.abs(animalVertices[i+j]-originalAnimal[i+j]*fit-shift[j])<2e-6,'Unverformtes vollständiges Tier');
+  const contact=[];for(let i=0;i<animalVertices.length;i+=9)if(animalVertices[i+1]<.175)contact.push([animalVertices[i],animalVertices[i+2]]);
+  for(const axis of [0,1])assert.ok(Math.abs(Math.min(...contact.map(p=>p[axis]))+Math.max(...contact.map(p=>p[axis])))<.015,'Hufe/Füße stehen mittig auf dem Sockel');
   assert.ok(B.radius*2<B.size && B.height<=body.max[1]+1e-5,'Platzierungsmaße umschließen das Modell');
   if(k!=='fasan') {
     const feet=[];

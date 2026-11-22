@@ -246,3 +246,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v441: „Nicht freigeben“ lehnt bei Ketten aus Kundenbestellungen auch die Bestellung ab und löscht deren Aufträge bei allen Kräften (`staffApprove` in `team.js`).
 
 - v442: Halsorgane – NECK_START begrenzt mitrotierende Netze am Brusteingang; Röhren/Gefäße proportional, Speiseröhre dorsal. Halswirbel mit Körpern/Fortsätzen, neckPreview aus genau neckMesh; MB.merge-Skalierung der Körperorganvorschau korrigiert. Kein schematischer Trachea-Lungensteg mehr. Neue Aufnahmen anatomy442, ältere Werte unverändert. hunt442/Gesamt442, main-Freigabe441 erhalten; Prüfungen halsorgane-v442.*, Bericht docs/HALSORGANE-v442.md.
+
+- v443: trophyBuild0 zentriert Präparate über die Aufstandsfläche (.04*scale über niedrigstem Tierpunkt) statt über Geweih/Kopf/Schwanz. Einheitliches Einpassen ins bisherige Sockelmaß; Radius/Fläche, gespeicherte Merkmale/Werte erhalten. trophyKey443, hunt/Gesamt443. Tests trophy-layout-v310, trophy-exhibits-v328, hunt-presentation-v315, Browser trophy-center-v443 bestanden.

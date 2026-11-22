@@ -1,3 +1,11 @@
+## v443 – Trophäen-Tiere mittig auf ihren Sockeln
+
+**Ursache:** Die bisherige Zentrierung nutzte die Außenmaße des ganzen Tiers einschließlich Geweih, Kopf und Schwanz. Dadurch standen Körper und Füße/Hufe seitlich oder längs versetzt auf dem Sockel.
+
+**Lösung:** Hirsch, Keiler und Fasan anhand ihrer gemeinsamen Aufstandsfläche zentriert. Das vollständige Tier wird bei Bedarf gleichmäßig in den vorhandenen Sockel eingepasst; Sockelradius und belegte Fläche bleiben erhalten. Geweih, Körperteile und individuelle Merkmale bleiben unverformt. Neuer Modell-Cache-Schlüssel443, Gesamt-/SW443 und hunt443. Organ-Korrektur442 aus mainccf4a2a enthalten.
+
+**Geprüft:** 36 Präparate, Altbestände, zehn Geweih-Sonderformen; sechs tatsächliche Bodenkontakt-/Sockelmessungen mit mittiger Standfläche, einheitlichem Maßstab und unveränderter Sockelgröße. Aufstellen/Einlagern, Spielstand und Werte sowie Präsentationstests bestanden. Chromium-Vorschau für alle drei Arten schräg und von oben ohne JavaScriptfehler. Kein echter iPhone-/Safari-Test. Vorschau: docs/TROPHÄENSOCKEL-v443.md.
+
 ## v442 – Halsorgane und Modellbilder stimmen überein
 
 **Ursache:** Überbreite Halsröhren, in den Brustraum verlängerte mitrotierende Halsnetze und eine zusätzliche schematische Luftröhre überlagerten Lungenlappen. Halswirbel waren als Wellenröhre, ihre Bildchen als abweichende SVG-Symbole dargestellt.
