@@ -691,6 +691,52 @@ function staffEnsureTask(o) {
   if (role === "chef") staffChefNote(T);
   return T;
 }
+/* v437: Nicht freigegebene Ware – die Kraft ruft dich auf dem Diensttelefon an und fragt nach der Freigabe.
+   „Freigeben“ schaltet die Ware für diese Kraft frei, „Nicht freigeben“ löscht die ganze Auftragskette (auch bei den Kollegen). */
+function staffAskApproval(s, T, item, name) {
+  if (typeof phoneMsg !== "function" || !S.phone) return;
+  const key = s.role + ":" + item;
+  if (S.phone.msgs.some(m => m.approve && m.approve.key === key && !m.handled)) return;
+  const R0 = FSTAFF_ROLES[s.role] || {}, first = String(s.name || "").split(" ")[0];
+  const who = T.from === "chef" ? "du hast" : T.from === "order" ? "eine Bestellung hat" : staffWho(T) + " hat";
+  phoneMsg({ from: s.name + (R0.n ? " · " + R0.n.replace("/in", "") : ""), kind: "approve", title: "Freigabe: " + name,
+    body: "Hallo Chef, " + who + " mich um „" + name + "“ gebeten. Bei mir ist das aber nicht freigegeben. Darf ich das machen?",
+    approve: { key, role: s.role, item, tid: T.id, name }, toastText: "📞 " + first + " fragt nach Freigabe: " + name });
+}
+function approveMsgHTML(m) {
+  const a = m.approve || {};
+  return `<div class="pmsg approve${m.handled ? " done" : ""}">
+    <div class="pmsg-head"><span class="pmsg-from">${esc(m.from)}</span><span class="pmsg-time">${stamp(m.time)} ${typeof phoneTTL === "function" ? phoneTTL(m) : ""}</span></div>
+    <b>${esc(m.title)}</b><p>${esc(m.body)}</p>
+    ${m.handled ? `<div class="pmsg-note ok">✔ ${esc(m.result || "erledigt")}</div>`
+      : `<div class="pmsg-acts"><button class="btn tiny" data-apr="${m.id}|1">✔ Freigeben</button><button class="btn tiny ghost" data-apr="${m.id}|0">✖ Nicht freigeben</button></div>`}
+  </div>`;
+}
+function staffApprove(msgId, yes) {
+  const m = (S.phone && S.phone.msgs || []).find(x => x.id === msgId), a = m && m.approve;
+  if (!m || !a || m.handled) return false;
+  if (yes) { staffWlSet(a.role, a.item, true); m.result = a.name + " ist jetzt für " + ((FSTAFF_ROLES[a.role] || {}).n || a.role).replace("/in", "") + " freigegeben."; }
+  else {
+    const list = staffTaskList();
+    let T = list.find(x => x.id === a.tid) || list.find(x => x.role === a.role && x.item === a.item);
+    if (T) {
+      let root = T, k = 0; while (root.parent && k++ < 8) { const p = list.find(x => x.id === root.parent); if (!p) break; root = p; }
+      const gone = new Set([root.id]); let grew = true;
+      while (grew) { grew = false; list.forEach(x => { if (x.parent && gone.has(x.parent) && !gone.has(x.id)) { gone.add(x.id); grew = true; } }); }
+      S.farm.taskMute = S.farm.taskMute || {};
+      list.forEach(x => { if (gone.has(x.id) && x.from !== "chef") S.farm.taskMute[x.role + ":" + x.item] = S.time + 720; });
+      staffTaskDel(root.id, false);
+    }
+    m.result = "Auftrag „" + a.name + "“ ist komplett gestrichen – auch bei den Kollegen.";
+  }
+  m.handled = true;
+  if (typeof save === "function") save();
+  if (typeof renderPhone === "function") renderPhone();
+  return true;
+}
+function bindApproveMsgs(root) {
+  (root || document).querySelectorAll("[data-apr]").forEach(b => b.onclick = () => { const [id, y] = b.dataset.apr.split("|"); staffApprove(id, y === "1"); });
+}
 /* Auftrag weg (mit allen Unteraufträgen). Von dir gelöscht: kommt eine Weile nicht wieder */
 function staffTaskDel(id, byChef) {
   const F = S.farm, list = staffTaskList(), T = list.find(x => x.id === id);
@@ -993,7 +1039,7 @@ function staffTaskJob(s, T) {
   const F = S.farm, item = T.item, name = staffItemName(item);
   /* v61: Freigaben gelten auch für Aufträge der Kollegen */
   /* v65: Ausnahme – Zwischenprodukt, das die Kraft für ein eigenes freigegebenes Rezept braucht (Balken für Paletten) */
-  if (staffWlOn(s.role) && !item.startsWith("ani:") && !staffWlHas(s.role, item) && !(T.from === s.role && T.parent)) { T.wait = name + " – bei " + s.name + " nicht freigegeben"; return null; }
+  if (staffWlOn(s.role) && !item.startsWith("ani:") && !staffWlHas(s.role, item) && !(T.from === s.role && T.parent)) { T.wait = name + " – wartet auf deine Freigabe (Diensttelefon)"; staffAskApproval(s, T, item, name); return null; }
   T.wait = "";
   switch (s.role) {
     case "farmer": {
@@ -2103,8 +2149,8 @@ function staffPhoneChat(s) {
         ${done ? `<div class="bub out">${esc(done.me)}</div><div class="bub in">${esc(done.re)}</div>` : ""}
       </div>
       ${done ? `<div class="pchat-egg">🤫 Easter Egg entdeckt – ${esc(first)} legt ab jetzt sofort auf, wenn du ${esc(first)} antippst.</div>
-        <button class="btn" id="pcBack">Zurück an die Arbeit</button>`
-      : `<button class="pchat-opt" id="pcSay">„${esc(first)}, wenn dein Chef mit dir redet, ist das Handy weg. Telefonieren kannst du danach – jetzt höre ich von dir, nicht vom Büro.“</button>`}`, "staffchat");
+        <button class="btn" id="pcBack">Zurück an die Arbeit · +2 🍀</button>`
+      : `<button class="pchat-opt" id="pcSay">„${esc(first)}, wenn dein Chef mit dir redet, ist das Handy weg.“</button>`}`, "staffchat");
     const b = $("#pcSay");
     if (b) b.onclick = () => {
       b.disabled = true; sfx("tap");
@@ -2112,7 +2158,7 @@ function staffPhoneChat(s) {
       $("#farmSheetIn .pchat").insertAdjacentHTML("beforeend", `<div class="bub out">${esc(me)}</div><div class="bub in typing">…</div>`);
       setTimeout(() => {
         const re = STAFF_PHONE_SORRY[staffHash(s) % STAFF_PHONE_SORRY.length];
-        s.noPhone = 1; staffHangUp(s); save();
+        s.noPhone = 1; staffHangUp(s); if (typeof farmClover === "function") farmClover(2, "Easter Egg"); save();   /* v437: +2 Kleeblätter für das Easter Egg (je Kraft einmal) */
         sfx("coin");
         draw({ me, re });
         if (typeof toast === "function") toast("🤫 Easter Egg: " + first + " lässt das Handy jetzt stecken, wenn du kommst.", "ok");

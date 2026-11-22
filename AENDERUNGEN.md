@@ -6,6 +6,16 @@
 
 **Geprüft:** neuer Test `wegglaetten-v438.test.js` (120 Wege auf dem Hof: scharfe Knicke 343 → 10, Gesamtlänge kürzer, kein Zaunkontakt, keine gesperrten Felder); `worker-motion-v351`, `farmteam-v349`, `peopletraffic-v346`, `aussaat-v406` bestanden. **Nicht geprüft:** Handy, Optik im Spiel (Kurvenform nur gemessen, nicht angesehen), Wege innerhalb des Lagerplatzes.
 
+## v437 – Freigabe-Anruf statt hängender Aufträge, Easter-Egg-Belohnung
+
+**Ursache:** Bekam z. B. die Landwirtin einen Auftrag vom Fischwirt oder Büro für eine Ware, die du bei ihr abgeschaltet hattest, stand der Auftrag nur mit „nicht freigegeben“ in der Liste und kam nie voran. Das Easter Egg (Handy-Belehrung) hatte einen langen Satz und keine Belohnung.
+
+**Lösung (`team.js`, `offices.js`, `style.css`):**
+- **Freigabe per Diensttelefon** (`staffAskApproval`): Ist eine Ware für die Kraft nicht freigegeben, ruft sie dich an (Nachricht im Tab „Chats“, antippbare Meldung „… fragt nach Freigabe“) und nennt Ware und Auftraggeber. Je Kraft und Ware gibt es höchstens eine offene Frage. **Freigeben** schaltet die Ware für diese Kraft frei, danach führt sie den Auftrag aus. **Nicht freigeben** löscht die ganze Auftragskette – vom Ursprungsauftrag bis zu allen Unteraufträgen, also auch bei den Kollegen – und hält gleiche Aufträge der Kräfte 12 Spielstunden lang fern. Gilt für alle Berufe mit Freigaben (Landwirt/in, Tierpfleger/in, Hofmeister/in, Holzfäller/in, Sägewerker/in, Fischwirt/in, Fischer/in). Unbeantwortete Fragen verfallen mit dem Telefonverlauf nach 24 h und werden dann neu gestellt. Im Auftragsfenster steht „wartet auf deine Freigabe (Diensttelefon)“.
+- **Easter Egg:** Der Satz „Telefonieren kannst du danach – jetzt höre ich von dir, nicht vom Büro.“ entfällt. Der Fund gibt **+2 Kleeblätter** (`farmClover`, je Kraft einmalig, weil danach kein Chat mehr kommt); der Knopf heißt „Zurück an die Arbeit · +2 🍀“. Gilt für alle Arbeiter.
+
+**Geprüft:** neuer Test `freigabe-v437.test.js` (Frage nur einmal, Freigeben, Ablehnen löscht Kette auch beim Kollegen und Nachwuchs wird gesperrt, Easter-Egg-Text/Belohnung); `farmteam-v349`, `worker-motion-v351`, `aussaat-v406` bestanden. **Nicht geprüft:** Handy, Anzeige im echten Diensttelefon, Reusenköder des Fischers (eigene Freigabe ohne Auftrag, unverändert), echte Spielverläufe mit mehreren Kräften.
+
 ## v436 – Offene PRs miteinander abgeglichen
 
 Wohnanfragen-PR138 enthält zusätzlich den konfliktfrei mit main abgeglichenen Flussbaum-PR137. Damit lassen sich beide Änderungen ohne erneuten gegenseitigen Versionskonflikt zusammenführen. Wohnanfragen/Flusscode bytegleich zu ihren geprüften Branchständen, Hochformat431 erhalten. Alle 16 Siedlungs- und drei Flussprüfgruppen bestanden; Syntax geprüft. Gesamt-/SW436, Einzelassetstände erhalten. Kein echter Handytest.

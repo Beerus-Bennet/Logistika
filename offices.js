@@ -1062,6 +1062,7 @@ function renderPhone(focusId) {
     if (m.kind === "snus" && typeof snusMsgHTML === "function") return snusMsgHTML(m);
     if (m.kind === "pablo" && typeof pabloMsgHTML === "function") return pabloMsgHTML(m);
     if (m.kind === "invite" && typeof inviteMsgHTML === "function") return inviteMsgHTML(m);
+    if (m.approve && typeof approveMsgHTML === "function") return approveMsgHTML(m);   /* v437: Freigabe-Anruf einer Arbeitskraft */
     if (m.dec && typeof decisionMsgHTML === "function") return decisionMsgHTML(m);
     const b = baseById(m.baseId);
     const acts = (m.actions || []).map(a =>
@@ -1120,6 +1121,7 @@ function renderPhone(focusId) {
   if (typeof bindSnusMsgs === "function") bindSnusMsgs();
   if (typeof bindPabloMsgs === "function") bindPabloMsgs();
   if (typeof bindDecisionMsgs === "function") bindDecisionMsgs($("#modalBody"));
+  if (typeof bindApproveMsgs === "function") bindApproveMsgs($("#modalBody"));
   $$("#modalBody [data-openinvite]").forEach(b => b.onclick = () => { closeModal(); openInvite(); });
   $$("#modalBody [data-msggo]").forEach(b => b.onclick = () => { closeModal(); runMsgGo(b.dataset.msggo); });
 }
