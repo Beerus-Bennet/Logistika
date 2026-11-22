@@ -1,3 +1,11 @@
+## v448 – Kaufbeleg mit stärkerem Logistika-Auftritt
+
+**Anlass:** Der Übernahmebeleg sollte markanter wirken und trotzdem übersichtlich bleiben.
+
+**Lösung:** Dunkelblauer Kopfbereich mit großem Firmennamen, goldener Preisblock, klar gegliederte sechs Kennzahlen mit passenden SVG-Symbolen, kräftiger Papier-/Buttonrahmen und ruhigerem Detailbereich. Deutsche Dezimalschreibweise; Geldbeträge in der Gruppenzeile bleiben zusammen. Bei normalen Handygrößen passt der Beleg auf eine Seite; kleine Displays und lange Namen können den Inhalt nativ scrollen. Bestandsliste, Zurück, Schließen, Fokusführung und historische Belege bleiben bedienbar. Nur Darstellung, keine Kauf-/Übertragungslogik oder gespeicherten Werte geändert. Kurzer Einblendeffekt respektiert reduzierte Bewegung, keine Partikel/3D-Animationen.
+
+**Geprüft:** Chromium in 320×568, 360×640, 390×760 und 430×820 sowie Desktop1100×900/844×390. Keine horizontalen Textüberläufe, lange Firmennamen/Zahlen, reservierte Standorte, Bestandsliste mit Touch-Scroll, Fokus/Zurück/Schließen/Escape und reduzierte Bewegung bestanden. 18 echte Übernahmeszenarien und Gebirgs-/Murmeltierprüfung grün. Kein echter iPhone-/Safari-Test. corpreport/style448 und Gesamt-/SW448; Gebirgsübergang447 aus PR149 unverändert enthalten. Bericht/Vorschau: docs/KAUFBELEG-v448.md.
+
 ## v447 – Flussufer im Gebirge ohne Zacken, nahtloser Übergang zum Hofbach
 
 **Ursache:** (1) Das Ufer im Gebirge war ein grau-grüner Farbverlauf bis 4,5 Einheiten Abstand zum Wasser. Er reichte über das feine Geländenetz (bis etwa 3,6) hinaus; dort färbten gröbere Dreiecke den Streifen in Zacken („Sägezähne“ entlang der Ufer). (2) Beim Hofbach ist das Ufer sandfarben (Schlamm, nasser Sand, Sand) und 2,2 breit. Am Gebirgsrand traf es hart auf den grauen Streifen, außerdem fehlte zwischen Geländerand (z = −88) und dem gekappten Ufernetz ein Stück Ufer – der sichtbare diagonale Knick im Fluss.

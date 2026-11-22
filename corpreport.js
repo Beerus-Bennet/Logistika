@@ -9,29 +9,37 @@ function corpWinReport(ev) {
   const group = d.group || { count: Object.keys(corp().owned).length,
     vehicles: Object.values(corp().owned).reduce((n, o) => n + (o.veh || 0), 0),
     paid: Object.values(corp().owned).reduce((n, o) => n + (o.price || 0), 0) };
-  /* v362: Der Beleg passt ohne Scrollen auf eine Seite. Kennzahlen als nüchternes Raster ohne Bildzeichen, Angaben zum
-     Betrieb als Zeilen; v367: der Bestand öffnet als eigene begrenzte Scrollansicht über dem Beleg,
-     der Knopf darunter bleibt immer sichtbar. Inhalt und Zahlen wie bisher. */
-  const stat = (value, label) => `<div class="crp2-kpi"><b>${esc(value)}</b><small>${esc(label)}</small></div>`;
+  /* v448: Markanter Übernahmebeleg mit klarer Preis-/Kennzahlenhierarchie.
+     Ausschließlich Darstellung des gespeicherten Kaufpakets, keine Neuberechnung. */
+  const num=(n,digits=0)=>Number(n||0).toLocaleString("de-DE",{maximumFractionDigits:digits});
+  const icons={
+    fleet:'<path d="M3 6h11v10H3zM14 10h4l3 4v2h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+    team:'<circle cx="9" cy="7" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 13a5 5 0 0 1 3 5v2"/>',
+    site:'<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+    share:'<path d="M4 4v16h16M7 15l4-4 4 2 5-7M16 6h4v4"/>',
+    orders:'<path d="M7 4H4v17h16V4h-3M8 3h8v4H8zM8 12h8M8 16h5"/>',
+    rep:'<path d="m12 3 3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 10l6-1Z"/>'
+  };
+  const stat=(value,label,icon,unit="")=>`<div class="crp2-kpi${value.length>6?' crp448-compact':''}"><span class="crp448-kpi-value"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[icon]}</svg><b>${esc(value)}</b></span>${unit?`<span class="crp448-unit">${esc(unit)}</span>`:''}<small>${esc(label)}</small></div>`;
   const row = (label, value) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
   const el = document.createElement("div");
   el.id = "corpShow"; el.className = "cs-receipt";
   el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "crpTitle"); el.tabIndex = -1;
-  el.innerHTML = `<div class="crp-sheet crp2">
-    <header class="crp-mast"><span>LOGISTIK-KURIER · KAUFBELEG</span><small>${esc(stamp(d.at == null ? S.time : d.at))}</small></header>
+  el.innerHTML = `<div class="crp-sheet crp2 crp448">
+    <header class="crp-mast"><span>LOGISTIK-KURIER<span class="crp448-document">Kaufbeleg</span></span><small>${esc(stamp(d.at == null ? S.time : d.at))}</small></header>
     <div class="crp2-body">
-      <section class="crp2-head"><p><i aria-hidden="true">✓</i>Übernahme abgeschlossen</p>
+      <section class="crp2-head"><p><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></i>Übernahme abgeschlossen</p>
         <h2 id="crpTitle">${esc(name)}</h2><span>Jetzt Teil von <strong>${esc(company)}</strong></span></section>
-      <div class="crp2-price"><span>Kaufpreis</span><b>${esc(money(d.price))}</b></div>
+      <div class="crp2-price"><span>Kaufpreis</span><b>${esc(money(d.price))}</b><svg class="crp448-price-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M12 9h30l10 10v36H12Z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M42 9v12h10M21 30h21M21 37h15M21 45l5 4 13-10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="crp2-kpis" aria-label="Bei diesem Kauf übernommen">
-        ${stat("+" + d.veh, "Fahrzeuge")}${stat("+" + (d.staff || 0), "Mitarbeitende")}${stat(d.sites || 1, (d.sites || 1) === 1 ? "Standort" : "Standorte")}
-        ${stat("+" + (d.pct || 0) + " %-Pkt.", "Marktanteil")}${stat("+" + (d.cust || 0), "Aufträge")}${stat("+" + (d.rep || 0), "Ruf")}
+        ${stat("+"+num(d.veh),"Fahrzeuge","fleet")}${stat("+"+num(d.staff),"Mitarbeitende","team")}${stat(num(d.sites||1),(d.sites||1)===1?"Standort":"Standorte","site")}
+        ${stat("+"+num(d.pct,1),"Marktanteil","share","%-Pkt.")}${stat("+"+num(d.cust),"Aufträge","orders")}${stat("+"+num(d.rep),"Ruf","rep")}
       </div>
       <dl class="crp2-rows">
         ${row("Firmensitz", esc(d.hq || "übernommen"))}
-        ${row("Team", summary ? `Ø ${summary.skill.toFixed(1)} von 5 · ${esc(money(summary.wages))} Löhne/Tag` : "übernommen")}
+        ${row("Team", summary ? `Ø ${num(summary.skill,1)} von 5 · ${esc(money(summary.wages))} Löhne/Tag` : "übernommen")}
         ${row("Status", d.pending ? `${d.pending} Standorte bis zur Freischaltung reserviert` : "Eingerichtet, Team und Flotte zugeordnet")}
-        ${row("Deine Gruppe", `${group.count} Übernahmen · ${group.vehicles} Fahrzeuge · ${esc(money(group.paid))}`)}
+        ${row("Deine Gruppe", `${group.count} Übernahmen · ${group.vehicles} Fahrzeuge · <span class="crp448-money">${esc(money(group.paid))}</span>`)}
       </dl>
       ${d.assets ? `<button type="button" class="crp-inventory-open" aria-expanded="false" aria-controls="crpInventory">Bestand im Einzelnen ansehen <span aria-hidden="true">›</span></button>
       <section id="crpInventory" class="crp-inventory" aria-label="Übernommener Bestand" hidden><button type="button" class="crp-inventory-back">‹ Zurück zum Beleg</button><div class="crp-detail-content" tabindex="0" aria-label="Bestandsliste">${corpDealContents(d.assets)}</div></section>` : ""}
