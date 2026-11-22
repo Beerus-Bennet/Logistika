@@ -5,6 +5,13 @@
 **Lösung:** Neue Verbindung `FWORLD.mtnWay` (`erbe.js`) vom Knick des Hauptwegs (−34,6, −98) bis zum Wegweiser am Einstieg; gezeichnet als weiterer Weg mit Abzweig auf dem Hauptweg (`WAYS` in `worldview.js`), Kulissenbäume und neue Pflanzplätze halten Abstand (`nearPath`, `nearPathPt`, `wayGap`, Stempel). Eigene Liste, damit `FWORLD.paths` und die Bäume neuer Spiele unverändert bleiben. Einmalige Migration `F.way459`: Bäume im Weg (< 2,4) werden entfernt, sonst Spielstand unberührt.
 
 **Geprüft:** Draufsicht im Testbrowser (Weg läuft vom Hauptweg zum Wegweiser des Bergwegs), `fluss-baeume-v424`, `wegglaetten-v438`, `worker-motion-v351`, `gebirge-v429`. `inselrand-v366` schlägt auch ohne diese Änderung fehl. **Nicht geprüft:** Handy, Begehen durch Arbeiter/Wanderer auf dem neuen Weg.
+## v457 – Bachufer im Gebirge glatt (keine Sägezähne mehr)
+
+**Ursache:** Das Sandufer am Bach im Gebirgsgelände (`alpine.js`) ist ein schräg zum Dreiecksraster laufendes helles Band. Alle Vierecke wurden mit derselben Diagonale geteilt, dadurch entstanden Sägezähne und bei Nacht dunkle Streifen am Ufer. Gemessen: nur die Geländeebene `terrain` zeichnete die Zacken, die Vertexfarben selbst sind glatt.
+
+**Lösung:** `flipDiag` wählt je Viereck die Diagonale mit dem geringeren Farbunterschied; `surface` verwendet dieselbe Wahl, damit Höhenabfragen zum Netz passen. Nicht am Bergsee und am Kolk (dort bleibt der geprüfte Rand). Keine zusätzlichen Dreiecke, keine Spielstandänderung.
+
+**Geprüft:** Vorher/nachher-Bilder im Testbrowser (Chromium, Software-Rendering, zwei Ansichten am Bach), `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** Handy, Nachtansicht.
 
 ## v456 – Lackfarbe und Foto stimmen überein
 
