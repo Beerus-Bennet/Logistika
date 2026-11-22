@@ -1,3 +1,11 @@
+## v442 – Halsorgane und Modellbilder stimmen überein
+
+**Ursache:** Überbreite Halsröhren, in den Brustraum verlängerte mitrotierende Halsnetze und eine zusätzliche schematische Luftröhre überlagerten Lungenlappen. Halswirbel waren als Wellenröhre, ihre Bildchen als abweichende SVG-Symbole dargestellt.
+
+**Lösung:** Halsnetze am Brusteingang begrenzt, Röhren-/Gefäßproportionen korrigiert und Speiseröhre dorsal zur Luftröhre getrennt angeordnet. Halswirbel mit einzelnen Körpern und Fortsätzen. Alle Halsorgan-Bildchen stammen aus denselben 3D-Netzen wie im Tier; Körperorgan-Vorschaumaßstab korrigiert. Sichtbare Halsgeometrie und Trefferprüfung bleiben identisch. Kleinere Kontaktflächen können neue Treffer anders einordnen; alte gespeicherte Wirkung, Medaille und Trophäe bleiben erhalten. Abweichende ältere Organlisten werden in der Ansicht gekennzeichnet.
+
+**Geprüft:** 34.008 Röhrenpunkt-/Lungenprüfungen über drei Arten und mehrere Hals-/Seitenhaltungen, identische Vorschaugeometrien, Modellbudgets, historische Aufnahmen; mobile Chromium-Ansichten von beiden Seiten mit allen Halsorgan-Bildchen. Anatomie367, Trefferbild357/388, Kopf412, Halsweich418, Wundoptik400, Jagd307 und Freigabe437 bestanden. Kein echter iPhone-/Safari-Test. main5f33783 einschließlich Freigabe441 erhalten; Gesamt-/SW442, nur hunt442. Details: docs/HALSORGANE-v442.md.
+
 ## v441 – „Nicht freigeben“ lehnt auch die zugehörige Kundenbestellung ab
 
 **Ursache:** „Nicht freigeben“ (v437) löschte nur die Aufträge der Arbeiter-Kette. Stammte die Kette aus einer Kundenbestellung (z. B. „Möbelhaus am Bassin“), blieb die Bestellung angenommen in der Bestelltafel stehen und erzeugte neue Aufträge.

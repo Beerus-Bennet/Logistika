@@ -244,3 +244,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v440 Integration: main e63813e/Arbeiter-Menü439 zusätzlich eingebunden; team.js unverändert aus main.
 - v441: „Nicht freigeben“ lehnt bei Ketten aus Kundenbestellungen auch die Bestellung ab und löscht deren Aufträge bei allen Kräften (`staffApprove` in `team.js`).
+
+- v442: Halsorgane – NECK_START begrenzt mitrotierende Netze am Brusteingang; Röhren/Gefäße proportional, Speiseröhre dorsal. Halswirbel mit Körpern/Fortsätzen, neckPreview aus genau neckMesh; MB.merge-Skalierung der Körperorganvorschau korrigiert. Kein schematischer Trachea-Lungensteg mehr. Neue Aufnahmen anatomy442, ältere Werte unverändert. hunt442/Gesamt442, main-Freigabe441 erhalten; Prüfungen halsorgane-v442.*, Bericht docs/HALSORGANE-v442.md.
