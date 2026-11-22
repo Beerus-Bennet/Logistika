@@ -1855,20 +1855,28 @@ function treeFarMesh(sp, sz, v) {
    Beim Einschalten werden die Standorte frisch übernommen – gefällte oder nachgewachsene Bäume stimmen also wieder. */
 function treeFarSet(t) {
   if (!WV.bgG) return;
-  const far = WV.bgFar || (WV.bgFar = new Map()), num = x => isNaN(+x) ? x : +x, L = WV.far, on = t > 0;
-  /* Fernbäume erst anlegen/übernehmen, wenn der Übergang beginnt (Standorte frisch aus den vollen Gruppen) */
-  const fill = on && !L.p;
+  const far = WV.bgFar || (WV.bgFar = new Map()), num = x => isNaN(+x) ? x : +x, L = WV.far, on = t > 0, t0 = performance.now();
+  /* v460: Fernbäume werden scheibchenweise (höchstens ~6 ms je Bild) angelegt und übernommen. Vorher passierte das für alle Baumgruppen auf
+     einmal beim ersten Rauszoomen – auf dem Handy ein Bild-Hänger von teils einer Sekunde, in dem sich die Ansicht aufgehängt anfühlte.
+     Gruppen, die noch nicht an der Reihe waren, bleiben im vollen Modell sichtbar; erst fertige Gruppen werden überblendet. */
+  let pending = false;
   WV.bgG.forEach((g, key) => {
     let f = far.get(key);
-    if (fill) {
-      if (!f) { const q = key.split(":"); f = FV.R.instGroup(fmesh("wtf:" + key, () => treeFarMesh(q[0], num(q[1]), num(q[2]))), { shadow: false, inv: true }); far.set(key, f); }
-      f.n = 0; f.keys.length = 0; f.idx.clear();
-      for (let i = 0; i < g.n; i++) f.add(g.keys[i], g.src[i * 4], g.src[i * 4 + 1], Math.atan2(g.src[i * 4 + 3], g.src[i * 4 + 2]), g.sc[i]);
+    if (on && (!f || !f.ok)) {
+      if (!pending && (!f || performance.now() - t0 < 6 || L.fillN === 0)) {
+        if (!f) { const q = key.split(":"); f = FV.R.instGroup(fmesh("wtf:" + key, () => treeFarMesh(q[0], num(q[1]), num(q[2]))), { shadow: false, inv: true }); far.set(key, f); }
+        f.n = 0; f.keys.length = 0; f.idx.clear();
+        for (let i = 0; i < g.n; i++) f.add(g.keys[i], g.src[i * 4], g.src[i * 4 + 1], Math.atan2(g.src[i * 4 + 3], g.src[i * 4 + 2]), g.sc[i]);
+        f.ok = true; L.fillN++;
+        if (performance.now() - t0 >= 6) pending = true;
+      } else pending = true;
     }
-    g.fade = t; g.hide = t >= 1;                         /* volles Modell löst sich auf … */
-    if (f) { f.fade = t; f.hide = !on; }                 /* … das Fernmodell erscheint mit gespiegeltem Muster an denselben Stellen */
+    if (f && f.ok) { g.fade = t; g.hide = t >= 1; f.fade = t; f.hide = !on; }     /* volles Modell löst sich auf … fertiges Fernmodell erscheint an denselben Stellen */
+    else { g.fade = on ? 0 : t; g.hide = false; if (f) f.hide = true; }
+    if (!on && f) f.ok = false;                          /* beim nächsten Rauszoomen frisch übernehmen (gefällte/nachgewachsene Bäume) */
   });
-  if (fill) L.p = true; else if (!on) L.p = false;
+  L.pend = on && pending;
+  if (!on) { L.p = false; L.fillN = 0; } else if (!pending) L.p = true;
 }
 function bgChunkBuild(c) {
   const have = new Set();
@@ -3693,7 +3701,7 @@ function worldStep(dt, time) {
     if (g !== L.g) { L.g = g; VEGQ.nodes.forEach(e => { e.node.fade = g; e.node.visible = g < 0.999; }); }
     if (dd !== L.d) { L.d = dd; (WV.farD || []).forEach(n => { n.fade = dd; n.visible = dd < 0.999; }); }
     if (sh !== L.s) { L.s = sh; FV.R.shadowK = sh; FV.R.noShadow = sh <= 0.001; }
-    if (t !== L.t) { L.t = t; treeFarSet(t); } }
+    if (t !== L.t || L.pend) { L.t = t; if (L.fillN === undefined) L.fillN = 0; treeFarSet(t); } }
   if (typeof SWK !== "undefined") SWK.step(dt, time);
   /* Mitarbeiter wippen bei der Arbeit, der Besucher winkt */
   if (typeof stepStaff === "function") stepStaff(dt, time);
