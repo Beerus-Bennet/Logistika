@@ -415,7 +415,10 @@ const PIC_STATE={err:'',at:0};
 function withTimeout(ms) {const ac=typeof AbortController==='function'?new AbortController():null,t=ac?setTimeout(()=>ac.abort(),ms):0;return {signal:ac?ac.signal:undefined,done:()=>clearTimeout(t)};}
 const thumbAt=(u,w)=>/\/thumb\//.test(u)?u.replace(/\/\d+px-([^/]+)$/,'/'+w+'px-$1'):u;
 function approvedPic(id,p=PICS[id]) {const expected=modelPic(id);return !!(expected&&p&&p.model===id&&p.file===expected.file&&p.sha256===expected.sha256&&p.src===expected.src);}
-function photoFits(id,paint) {const p=PICS[id];return approvedPic(id,p)&&(!paint||String(p.paint[1]).toLowerCase()===String(paint).toLowerCase());}
+/* v453: Das freigegebene Modellfoto wird für jede Lackierung gezeigt (auch für ältere Garagenfahrzeuge mit anderer Farbe); weicht die
+   Fahrzeugfarbe vom Foto ab, steht das im Bildnachweis. Vorher (v372) fiel das Bild dann auf die Illustration zurück. */
+function photoFits(id,paint) {return approvedPic(id,PICS[id]);}
+function paintMatch(id,paint) {const p=PICS[id];return !!p&&(!paint||String(p.paint[1]).toLowerCase()===String(paint).toLowerCase());}
 function paintOfPhoto(id) {const p=modelPic(id);return p?p.paint.slice():null;}
 async function loadLocalPics() {PICS=Object.fromEntries(CARS.map(c=>[c.id,modelPic(c.id)]).filter(([,p])=>p));localPics=true;return PICS;}
 async function resolvePics(force) {
@@ -566,7 +569,7 @@ function showCarPic(id) {
       if(!el.querySelector('.media-note'))el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');
       return;
     }
-    el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend',picImgHTML(id,p));
+    el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend',picImgHTML(id,p,el.dataset.carpaint));
   });
 }
 function picCredit(p) {return 'Modellfoto · '+(p.by||'Wikimedia Commons')+(p.lic?' · '+p.lic:'');}
@@ -586,11 +589,11 @@ function picFail(im) {
   }
   if(el){el.querySelectorAll('img,.credit').forEach(n=>n.remove());el.insertAdjacentHTML('beforeend','<span class="credit media-note">Illustration in Fahrzeugfarbe</span>');}
 }
-function picImgHTML(id, p) {
+function picImgHTML(id, p, paint) {
   if(!approvedPic(id,p))return '';
   const comic = comicReady(id)&&COMIC_URL.has(id), src = comic ? COMIC_URL.get(id) : p.src;
   return `<img src="${esc(src)}" class="${comic ? "cx" : ""}" alt="${esc(carName(CAR[id]))} · Modellfoto" referrerpolicy="no-referrer" onerror="picFail(this)">`
-    + `<span class="credit">${esc(picCredit(p))}</span>`;
+    + `<span class="credit">${esc(picCredit(p))}${paint&&!paintMatch(id,paint)?' · Foto in '+esc(p.paint[0]):''}</span>`;
 }
 /* Gezeichnetes Auto, solange kein Foto da ist (oder offline). v77: statt einer einfachen Silhouette eine
    Seitenansicht im Comic-Stil – Bauform je Modell (Coupé, flacher Mittelmotor-Keil, Roadster, SUV, Kombi,
@@ -680,7 +683,7 @@ function carPicHTML(c,paint,big) {
   const p=PICS[c.id],col=paint||(p&&p.paint?p.paint[1]:(CAR_PAINTS[c.b]||[['','#888']])[0][1]),allowed=photoFits(c.id,paint);
   let ready=allowed&&comicReady(c.id);
   if(allowed&&!ready){wantComic(c.id,big);ready=comicReady(c.id);}
-  return `<div class="carpic${big?' big':''}${allowed&&!ready?' loading':''}" data-carpic="${c.id}" data-carpaint="${esc(paint||'')}" style="--pc:${col}">${carArt(c,col)}${ready?picImgHTML(c.id,p):'<span class="credit media-note">Illustration in Fahrzeugfarbe</span>'}</div>`;
+  return `<div class="carpic${big?' big':''}${allowed&&!ready?' loading':''}" data-carpic="${c.id}" data-carpaint="${esc(paint||'')}" style="--pc:${col}">${carArt(c,col)}${ready?picImgHTML(c.id,p,paint):'<span class="credit media-note">Illustration in Fahrzeugfarbe</span>'}</div>`;
 }
 function vehPicHTML(t) {
   const mi = MODE_INFO[t.mode];
@@ -893,8 +896,8 @@ function specsHTML(c, l) {
 }
 function creditHTML(c,paint) {
   const p = PICS[c.id];
-  if(!photoFits(c.id,paint))return '<div class="piccredit">Illustration in Fahrzeugfarbe · kein passendes Modellfoto für diese Lackierung.</div>';
-  return `<div class="piccredit">${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}<br>Darstellung mit Comicfilter; unverändertes Original unter der Quellenangabe.</div>`;
+  if(!photoFits(c.id,paint))return '<div class="piccredit">Illustration in Fahrzeugfarbe · kein freigegebenes Modellfoto.</div>';
+  return `<div class="piccredit">${paintMatch(c.id,paint)?'':'Das Foto zeigt das Modell in '+esc(p.paint[0])+'; die Farbe deines Fahrzeugs weicht ab.<br>'}${p.page ? `<a href="${esc(p.page)}" target="_blank" rel="noopener">${esc(picCredit(p))} · Wikimedia Commons</a>` : esc(picCredit(p))}<br>Darstellung mit Comicfilter; unverändertes Original unter der Quellenangabe.</div>`;
 }
 let lotModal = null;
 function openLot(id) {
