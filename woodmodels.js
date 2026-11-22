@@ -3096,58 +3096,72 @@ const FWM = (() => {
   }
 
   /* ------------------------------ Wildtiere ----------------------------- */
+  /* v440: Klare Silhouetten und Artmerkmale mit begrenzten, gecachten
+     Modellflächen; Größen und Bewegungsachsen der NPCs bleiben erhalten. */
+  function wildEyes(b,x,y,z,r){for(const side of [-1,1]){
+    b.ico(r,0x171b1e,{x:side*x,y,z,detail:1});
+    b.ico(r*.28,0xf9f5e8,{x:side*(x+r*.65),y:y+r*.3,z:z+r*.3});
+  }}
   function deer(white) {
-    G3.seed(4500);
-    const b = new MB(), c = white ? 0xf4f2ec : 0xa86a3c, d = white ? 0xdedad0 : 0x8a5430;
-    b.box(0.32, 0.3, 0.75, c, { y: 0.6 });
-    [[-0.11, -0.28], [0.11, -0.28], [-0.11, 0.28], [0.11, 0.28]].forEach(([x, z]) => b.box(0.06, 0.6, 0.06, d, { x, z }));
-    b.box(0.13, 0.42, 0.13, c, { y: 0.8, z: 0.36, rx: 0.4 });
-    b.box(0.16, 0.16, 0.28, c, { y: 1.15, z: 0.5 });
-    b.box(0.06, 0.06, 0.06, 0x1d1d20, { y: 1.15, z: 0.65 });
-    [-1, 1].forEach(s => { b.box(0.03, 0.25, 0.03, white ? 0xe8d8a0 : 0x6b4a30, { x: s * 0.07, y: 1.3, z: 0.45, rz: s * 0.4 }); b.box(0.03, 0.12, 0.03, white ? 0xe8d8a0 : 0x6b4a30, { x: s * 0.14, y: 1.42, z: 0.45, rz: -s * 0.4 }); });
-    b.box(0.08, 0.1, 0.05, 0xffffff, { y: 0.66, z: -0.39 });
-    return b;
+    const b=new MB(),c=white?0xf4f2ec:0xa86a3c,d=white?0xdedad0:0x825034;
+    b.ico(1,c,{y:.73,sx:.19,sy:.22,sz:.42,detail:1});
+    b.ico(.18,white?0xffffff:0xc5a07b,{y:.65,z:.08,sx:.8,sy:.5,sz:1.5});
+    for(const x of [-.12,.12])for(const z of [-.27,.27]){b.cyl(.035,.025,.64,6,d,{x,z});b.box(.065,.055,.08,0x34302b,{x,z:z+.01});}
+    b.cyl(.10,.065,.43,7,c,{y:.82,z:.28,rx:.35});
+    b.ico(1,c,{y:1.18,z:.45,sx:.10,sy:.13,sz:.18,detail:1});
+    b.ico(.07,d,{y:1.14,z:.60,sz:1.4});b.ico(.035,0x262522,{y:1.15,z:.69,sx:1.15,sy:.6});
+    wildEyes(b,.085,1.22,.52,.022);
+    for(const side of [-1,1]){b.ico(.10,c,{x:side*.14,y:1.28,z:.43,sx:.5,sy:1.3,sz:.65,rz:-side*.65});
+      b.ico(.063,0xd5b6a0,{x:side*.15,y:1.29,z:.46,sx:.45,sy:1.2,sz:.3,rz:-side*.65});
+      b.cyl(.018,.008,.23,5,0x796145,{x:side*.07,y:1.3,z:.39,rz:side*.3});b.cyl(.012,.003,.12,5,0x796145,{x:side*.11,y:1.4,z:.39,rz:-side*.65});}
+    b.ico(.105,0xf6f0dc,{y:.73,z:-.38,sx:.8,sy:1.1,sz:.3});return b;
   }
-  function hare() {
-    const b = new MB();
-    b.sphere(0.13, 7, 5, 0x9a7a5a, { y: 0.14, sz: 1.3 });
-    b.sphere(0.08, 7, 5, 0x9a7a5a, { y: 0.24, z: 0.13 });
-    [-1, 1].forEach(s => b.box(0.03, 0.18, 0.05, 0x8a6a4a, { x: s * 0.035, y: 0.36, z: 0.11, rx: -0.3 }));
-    b.sphere(0.04, 6, 4, 0xffffff, { y: 0.16, z: -0.17 });
-    return b;
+  function hare(){const b=new MB(),c=0x9a7a5a;
+    b.ico(1,c,{y:.15,sx:.13,sy:.14,sz:.19,detail:1});b.ico(.095,c,{y:.26,z:.13,sy:1.05,sz:.9,detail:1});
+    for(const side of [-1,1]){b.ico(.055,0x806247,{x:side*.10,y:.07,z:-.10,sy:1.15,sz:1.4});
+      b.ico(.035,c,{x:side*.055,y:.03,z:.12,sy:.55,sz:1.8});
+      b.ico(.065,c,{x:side*.04,y:.41,z:.11,sx:.37,sy:1.8,sz:.55,rz:-side*.16});
+      b.ico(.042,0xdbc0a2,{x:side*.04,y:.42,z:.139,sx:.30,sy:1.8,sz:.18,rz:-side*.16});
+      b.ico(.025,0xf0dfc8,{x:side*.025,y:.23,z:.205,sz:.65});}
+    wildEyes(b,.073,.28,.17,.016);b.ico(.013,0x79564c,{y:.245,z:.23});b.ico(.045,0xf7f2e5,{y:.16,z:-.18});return b;
   }
-  function boar() {
-    const b = new MB();
-    b.box(0.34, 0.32, 0.7, 0x4a3a30, { y: 0.24 });
-    b.box(0.06, 0.12, 0.6, 0x3a2e26, { y: 0.56 });
-    b.box(0.24, 0.24, 0.26, 0x4a3a30, { y: 0.24, z: 0.44 });
-    b.box(0.12, 0.1, 0.06, 0x8a6a5a, { y: 0.24, z: 0.58 });
-    [-1, 1].forEach(s => b.box(0.02, 0.07, 0.02, 0xf2ead8, { x: s * 0.07, y: 0.28, z: 0.58, rz: s * 0.4 }));
-    [[-0.11, -0.25], [0.11, -0.25], [-0.11, 0.22], [0.11, 0.22]].forEach(([x, z]) => b.box(0.07, 0.12, 0.07, 0x2a221c, { x, z }));
-    return b;
+  function boar(){const b=new MB(),c=0x4a3c34;
+    b.ico(1,c,{y:.39,sx:.22,sy:.24,sz:.40,detail:1});b.ico(.20,0x514036,{y:.49,z:.17,sx:1.0,sy:1.2,sz:1.1});
+    b.ico(1,c,{y:.33,z:.43,sx:.14,sy:.18,sz:.23,detail:1});b.ico(.09,0x91725d,{y:.27,z:.62,sx:1.05,sy:.65,sz:.35});
+    for(const side of [-1,1]){b.ico(.012,0x302924,{x:side*.037,y:.28,z:.651});b.cone(.055,.12,4,c,{x:side*.11,y:.46,z:.36,rz:-side*.4});
+      b.cyl(.02,.004,.09,5,0xf5e9cb,{x:side*.09,y:.24,z:.59,rz:side*.35});}
+    wildEyes(b,.124,.40,.47,.019);
+    for(const x of [-.14,.14])for(const z of [-.25,.23]){b.cyl(.045,.03,.32,6,c,{x,z});b.box(.07,.04,.08,0x26211d,{x,z});}
+    for(let i=0;i<7;i++)b.cone(.035,.08,3,0x302a25,{y:.59,z:-.22+i*.07});
+    b.cyl(.018,.01,.14,5,c,{y:.43,z:-.36,rx:-1.1});return b;
   }
-  function fox() {
-    const b = new MB();
-    b.box(0.2, 0.18, 0.5, 0xd86a2a, { y: 0.22 });
-    [[-0.07, -0.18], [0.07, -0.18], [-0.07, 0.18], [0.07, 0.18]].forEach(([x, z]) => b.box(0.04, 0.22, 0.04, 0x2a221c, { x, z }));
-    b.box(0.16, 0.15, 0.18, 0xd86a2a, { y: 0.34, z: 0.3 });
-    b.cone(0.06, 0.16, 4, 0xe8eae6, { rx: Math.PI / 2, y: 0.36, z: 0.4 });
-    [-1, 1].forEach(s => b.cone(0.04, 0.1, 4, 0xd86a2a, { x: s * 0.05, y: 0.42, z: 0.28 }));
-    b.cyl(0.07, 0.03, 0.4, 6, 0xd86a2a, { rx: -1.9, y: 0.3, z: -0.24, top: 0xffffff });
-    /* Augen in der Glutfarbe – leuchten nachts wie echtes Augenleuchten */
-    [-1, 1].forEach(s => b.sphere(0.018, 5, 3, 0xffd47e, { x: s * 0.042, y: 0.37, z: 0.39 }));
-    return b;
+  function fox(){const b=new MB(),c=0xd77733;
+    b.ico(1,c,{y:.32,sx:.12,sy:.14,sz:.29,detail:1});b.ico(.10,0xf0d9b3,{y:.28,z:.20,sx:.8,sy:1.3,sz:.8});
+    for(const x of [-.08,.08])for(const z of [-.18,.18]){b.cyl(.027,.02,.28,6,0x452c23,{x,z});b.ico(.03,0x2d2622,{x,y:.025,z:z+.018,sy:.65,sz:1.6});}
+    b.ico(.11,c,{y:.45,z:.30,sz:1.05,detail:1});
+    b.cone(.072,.19,5,0xf2d8b4,{y:.42,z:.34,rx:Math.PI/2});b.ico(.024,0x262322,{y:.42,z:.525});
+    for(const side of [-1,1]){b.cone(.055,.14,4,c,{x:side*.066,y:.51,z:.27});b.cone(.032,.08,3,0x52352b,{x:side*.066,y:.55,z:.29});}
+    wildEyes(b,.085,.47,.36,.018);
+    b.ico(.13,c,{y:.27,z:-.34,sx:.7,sy:.85,sz:1.6,rx:-.35,detail:1});b.ico(.095,c,{y:.18,z:-.49,sx:.8,sy:.8,sz:1.6});b.ico(.075,0xf5e6ca,{y:.12,z:-.60,sy:.7,sz:1.4});return b;
   }
-  function squirrel() {
-    const b = new MB();
-    b.sphere(0.06, 6, 4, 0xb85a28, { y: 0.07, sy: 1.3 });
-    b.sphere(0.045, 6, 4, 0xb85a28, { y: 0.15, z: 0.03 });
-    b.cyl(0.05, 0.07, 0.18, 6, 0xc8682e, { y: 0.08, z: -0.07, rx: -0.4 });
-    return b;
+  function squirrel(){const b=new MB(),c=0xb65c2d,light=0xe5bd88;
+    b.ico(.067,c,{y:.085,sy:1.4,sz:1.1,detail:1});b.ico(.043,light,{y:.087,z:.051,sx:.8,sy:1.4,sz:.35});
+    b.ico(.05,c,{y:.168,z:.037,sz:1.15,detail:1});
+    for(const side of [-1,1]){b.ico(.018,c,{x:side*.031,y:.208,z:.023,sy:1.55});b.cone(.012,.027,4,0x76391f,{x:side*.031,y:.221,z:.023});
+      b.ico(.025,c,{x:side*.055,y:.026,z:-.01,sy:.6,sz:1.6});b.ico(.014,light,{x:side*.038,y:.095,z:.071,sy:.7,sz:1.2});}
+    wildEyes(b,.039,.177,.065,.013);b.ico(.01,0x35251d,{y:.158,z:.092});
+    /* Buschiger S-Bogen statt geradem Zylinder. */
+    b.ico(.065,0xc66e35,{y:.095,z:-.087,sx:.8,sy:1.3,sz:1.1,detail:1});
+    b.ico(.075,0xc66e35,{y:.192,z:-.12,sx:.8,sy:1.4,sz:.9,detail:1});
+    b.ico(.063,0xd88a4b,{y:.273,z:-.085,sx:.8,sy:.95,sz:1.15,detail:1});
+    b.ico(.043,0xd88a4b,{y:.277,z:-.024,sx:.8,sy:.65,sz:1.1});return b;
   }
   function bird(c) {
     const b = new MB();
-    b.sphere(0.06, 6, 4, c || 0x3a3a40, { sz: 1.6 });
+    b.ico(.063,c||0x3a3a40,{sz:1.6,detail:1});
+    b.ico(.045,c||0x3a3a40,{y:.045,z:.072,detail:1});
+    wildEyes(b,.034,.057,.098,.010);
+    b.box(.06,.014,.095,c||0x3a3a40,{y:-.01,z:-.12,rx:-.2});
     b.cone(0.02, 0.05, 4, 0xf2a531, { rx: Math.PI / 2, z: 0.1 });
     return b;
   }
@@ -3169,7 +3183,8 @@ const FWM = (() => {
       b.cone(0.024, 0.07, 4, c, { x: s * 0.06, y: 0.12, z: 0.12, rz: -s * 0.25 });   /* Federohren */
     });
     b.cone(0.016, 0.05, 4, 0x5a4a30, { rx: Math.PI / 2 + 0.5, y: 0.03, z: 0.25 });   /* Schnabel */
-    b.box(0.16, 0.025, 0.14, c, { y: -0.01, z: -0.2, top: 0x7a5a3c });              /* Schwanz */
+    b.box(0.16, 0.025, 0.14, c, { y: -0.01, z: -0.2, top: 0x7a5a3c });
+    for(const x of [-.05,0,.05])b.box(.035,.012,.12,0xb89a70,{x,y:-.005,z:-.23});              /* Schwanz */
     return b;
   }
   function owlWing() {
@@ -3185,13 +3200,15 @@ const FWM = (() => {
     const b = new MB(), c = 0x5a4844;
     b.sphere(0.045, 6, 4, c, { sz: 1.5 });
     b.sphere(0.034, 6, 4, c, { y: 0.012, z: 0.07 });
+    wildEyes(b,.025,.025,.09,.009);b.ico(.012,0x92756b,{y:.005,z:.105});
     [-1, 1].forEach(s => b.cone(0.013, 0.045, 3, c, { x: s * 0.018, y: 0.035, z: 0.07 }));
     return b;
   }
   function batWing() {
     const b = new MB(), c = 0x3e3230;
+    b.cyl(.004,.003,.19,4,0x8d7467,{x:.015,y:.018,z:.02,rz:-1.48});
     /* Flughaut mit gezackter Hinterkante – von beiden Seiten sichtbar */
-    const P = [[0, 0, 0.035], [0.1, 0.02, 0.05], [0.21, 0.012, 0.025], [0.17, 0, -0.03], [0.125, 0, -0.008], [0.08, 0, -0.05], [0.035, 0, -0.012], [0, 0, -0.04]];
+    const P = [[0,0,.04],[.10,.02,.10],[.28,.012,.08],[.24,0,-.09],[.18,0,-.04],[.13,0,-.13],[.075,0,-.06],[.035,0,-.10],[0,0,-.04]];
     for (let i = 1; i < P.length - 1; i++) { b.tri(P[0], P[i], P[i + 1], c); b.tri(P[0], P[i + 1], P[i], c); }
     b.box(0.2, 0.012, 0.012, 0x2e2422, { x: 0.1, y: 0.012, z: 0.035, rz: -0.08 });   /* Arm */
     return b;
@@ -3203,8 +3220,9 @@ const FWM = (() => {
     b.sphere(0.12, 8, 5, 0x6a5848, { y: 0.08, sy: 0.65, sz: 1.25 });
     for (let r = 0; r < 4; r++) for (let k = -2; k <= 2; k++) {
       const z = 0.08 - r * 0.07, a = k * 0.42;
-      b.cone(0.03, 0.09, 3, r % 2 ? sp : 0x4a3c30, { x: Math.sin(a) * 0.08, y: 0.08 + Math.cos(a) * 0.06, z, rz: -a * 1.2, rx: -0.7 - r * 0.15 });
+      b.cone(0.02, 0.05, 3, r % 2 ? sp : 0x4a3c30, { x: Math.sin(a) * 0.08, y: 0.08 + Math.cos(a) * 0.06, z, rz: -a * 1.2, rx: -0.7 - r * 0.15 });
     }
+    for(const side of [-1,1])b.ico(.025,0xb99c7b,{x:side*.055,y:.12,z:.11,sz:.45});
     b.cone(0.055, 0.11, 5, 0xc8aa84, { rx: Math.PI / 2, y: 0.06, z: 0.11 });
     b.sphere(0.016, 5, 3, 0x1d1d20, { y: 0.06, z: 0.225 });
     [-1, 1].forEach(s => b.sphere(0.012, 4, 3, 0x1d1d20, { x: s * 0.03, y: 0.09, z: 0.15 }));
@@ -3218,7 +3236,8 @@ const FWM = (() => {
     b.sphere(0.12, 8, 5, g, { y: 0.54, sz: 1.6, rx: -0.3 });
     [-1, 1].forEach(s => b.box(0.03, 0.09, 0.28, 0x6a707a, { x: s * 0.105, y: 0.5, z: -0.06, rx: -0.3, top: d })); /* Schwingen */
     b.box(0.08, 0.03, 0.14, d, { y: 0.48, z: -0.24, rx: -0.5 });                    /* Schwanz */
-    b.cyl(0.032, 0.026, 0.32, 5, w, { y: 0.6, z: 0.14, rx: 0.25 });                  /* Hals */
+    b.cyl(.035,.028,.19,6,w,{y:.61,z:.13,rx:-.45});
+    b.cyl(.028,.024,.17,6,w,{y:.77,z:.05,rx:.85});                  /* Hals */
     b.sphere(0.05, 6, 4, w, { y: 0.92, z: 0.22, sz: 1.2 });
     b.box(0.014, 0.014, 0.14, d, { y: 0.95, z: 0.12, rx: 0.3 });                     /* Schopf */
     b.cone(0.018, 0.17, 4, 0xe0a030, { rx: Math.PI / 2, y: 0.91, z: 0.26 });          /* Schnabel */
@@ -3228,30 +3247,35 @@ const FWM = (() => {
   /* Haustiere */
   function dog() {
     const b = new MB();
-    b.box(0.24, 0.2, 0.5, 0xc89a5a, { y: 0.24 });
-    [[-0.08, -0.18], [0.08, -0.18], [-0.08, 0.18], [0.08, 0.18]].forEach(([x, z]) => b.box(0.06, 0.24, 0.06, 0xb8884a, { x, z }));
-    b.box(0.2, 0.2, 0.22, 0xc89a5a, { y: 0.4, z: 0.3 });
-    b.box(0.1, 0.08, 0.1, 0x2a221c, { y: 0.4, z: 0.43 });
+    b.ico(1,0xc89a5a,{y:.34,sx:.14,sy:.14,sz:.28,detail:1});
+    [[-0.08, -0.18], [0.08, -0.18], [-0.08, 0.18], [0.08, 0.18]].forEach(([x, z]) => b.box(0.06, 0.30, 0.06, 0xb8884a, { x, z }));
+    b.ico(.13,0xc89a5a,{y:.49,z:.29,sy:1.1,sz:1.1,detail:1});
+    wildEyes(b,.098,.53,.36,.022);
+    b.ico(.085,0xe0c18c,{y:.45,z:.41,sx:.8,sy:.65,sz:1.1});
+    b.ico(.037,0x30251e,{y:.46,z:.485,sx:1.1,sy:.6,sz:.6});
     [-1, 1].forEach(s => b.box(0.05, 0.12, 0.08, 0x8a5a2a, { x: s * 0.1, y: 0.44, z: 0.28 }));
     b.cyl(0.03, 0.02, 0.25, 5, 0xc89a5a, { rx: -0.8, y: 0.38, z: -0.27 });
     return b;
   }
   function cat() {
     const b = new MB();
-    b.box(0.16, 0.14, 0.36, 0x6a6a72, { y: 0.16 });
+    b.ico(1,0x77777d,{y:.23,sx:.10,sy:.11,sz:.22,detail:1});
     [[-0.05, -0.12], [0.05, -0.12], [-0.05, 0.12], [0.05, 0.12]].forEach(([x, z]) => b.box(0.04, 0.16, 0.04, 0x5a5a62, { x, z }));
-    b.sphere(0.09, 7, 5, 0x6a6a72, { y: 0.3, z: 0.2 });
+    b.ico(.095,0x77777d,{y:.32,z:.20,detail:1});
+    for(const side of [-1,1]){b.ico(.025,0xe1d7ca,{x:side*.028,y:.285,z:.278});b.ico(.021,0x8fa65a,{x:side*.048,y:.34,z:.274});b.ico(.009,0x222623,{x:side*.048,y:.34,z:.291,sx:.5});}
+    b.ico(.012,0xb97777,{y:.301,z:.303});
     [-1, 1].forEach(s => b.cone(0.035, 0.07, 4, 0x5a5a62, { x: s * 0.05, y: 0.37, z: 0.2 }));
     b.cyl(0.02, 0.02, 0.3, 5, 0x5a5a62, { rx: -1.1, y: 0.2, z: -0.18 });
     return b;
   }
   function goat() {
     const b = new MB();
-    b.box(0.26, 0.26, 0.55, 0xf2ece0, { y: 0.32 });
-    [[-0.08, -0.2], [0.08, -0.2], [-0.08, 0.2], [0.08, 0.2]].forEach(([x, z]) => b.box(0.06, 0.32, 0.06, 0xdcd4c4, { x, z }));
+    b.ico(1,0xf2ece0,{y:.45,sx:.16,sy:.18,sz:.31,detail:1});
+    [[-0.08, -0.2], [0.08, -0.2], [-0.08, 0.2], [0.08, 0.2]].forEach(([x, z]) => b.box(0.06, 0.38, 0.06, 0xdcd4c4, { x, z }));
     /* Kopf (Boxen stehen auf y), Schnauze, Nase und Ziegenbart */
+    b.ico(.11,0xf2ece0,{y:.56,z:.23,sy:1.3});
     const F = 0.45;                                                     /* Vorderseite des Kopfs */
-    b.box(0.18, 0.21, 0.24, 0xf2ece0, { y: 0.55, z: 0.33 });
+    b.ico(1,0xf2ece0,{y:.65,z:.33,sx:.105,sy:.14,sz:.15,detail:1});
     b.box(0.11, 0.09, 0.08, 0xe9e1d2, { y: 0.53, z: F + 0.02 });
     b.box(0.05, 0.02, 0.012, 0x8a6a5a, { y: 0.595, z: F + 0.065 });
     b.box(0.04, 0.09, 0.03, 0xd8cfbf, { y: 0.45, z: F + 0.01 });

@@ -1,3 +1,7 @@
+## v440 – NPC-Tiere mit erkennbaren Artmerkmalen
+
+Eichhörnchen-Zylinderschwanz und sehr einfache Körperformen durch klarere Silhouetten, Gesichter und typische Merkmale ersetzt. 13 Hof-/Wald-/Haustiermodelle sowie Merkmale der vier Bergtierarten verfeinert; Tieranzahl, Größenfaktoren, Sichtungs-/Bewegungslogik und Spielmechanik erhalten. Feste Modellbudgets (260–796 Dreiecke je FWM-Körper), gemeinsam gecacht. Modellprüfungen, 26 Browseransichten und vollständiger mobiler Chromium-Hof mit konstanten Ressourcen/Spielstand bestanden; Berg-/Wasserprüfungen grün. Kein echter Handytest. Bericht/Vorschauen: docs/NPC-TIERE-v440.md. main976942e erhalten, Gesamt-/SW440, woodmodels/alpine440; übrige Assetstände unverändert.
+
 ## v438 – Arbeiter laufen runde Wege statt Zickzack
 
 **Ursache:** Die Wegsuche (`navPath`) liefert Wege auf einem Raster aus Achs- und Diagonalschritten; jede Richtungsänderung wurde zu einem scharfen Knick. Die Figuren folgten den Knicken genau und liefen dadurch im Zickzack (z. B. zur und von der Mittagspause).

@@ -334,7 +334,7 @@ const ALPINE = (()=>{
   b.cyl(.025,.015,2.6,4,0x3a2a1a,{x:.1,y:.9,z:.2,rz:-1.05});b.box(.012,1.8,.012,0xdddddd,{x:1.45,y:-.8,z:.2});return b;}
  /* v404: Stockenten-Erpel in echten Farben (graubrauner Körper, dunkler Rücken, braune Brust, weißer Halsring, grün schillernder Kopf, gelber Schnabel) */
  function duckMesh(){const b=new FM.MB();b.ico(.22,0x8c857a,{sy:.6,sz:1.2});b.ico(.17,0x5c5045,{y:.07,z:-.05,sy:.42,sz:1.1});b.ico(.13,0x6b3a28,{y:.04,z:.17,sy:.8});
-  b.cyl(.07,.075,.05,8,0xf2f0ea,{y:.14,z:.2});b.ico(.115,0x1f5a3a,{y:.25,z:.21,sz:1.15});b.box(.07,.035,.12,0xd8b13a,{y:.22,z:.34});
+  b.cyl(.07,.075,.05,8,0xf2f0ea,{y:.14,z:.2});b.ico(.115,0x1f5a3a,{y:.25,z:.21,sz:1.15});b.box(.07,.035,.12,0xd8b13a,{y:.22,z:.34});b.box(.05,.008,.012,0x473f2d,{y:.229,z:.402}); /* v440: abgegrenzte Schnabelspitze */
   b.ico(.02,0x141414,{x:.075,y:.28,z:.27});b.ico(.02,0x141414,{x:-.075,y:.28,z:.27});b.box(.09,.06,.1,0x1d1d1d,{y:.07,z:-.28,rx:-.4});b.box(.05,.04,.06,0xf2f0ea,{y:.12,z:-.32});return b;}
 
  function body(kind){const b=new FM.MB(),m=kind==='marmot';
@@ -346,9 +346,12 @@ const ALPINE = (()=>{
    {const a=[0,1.02,.5],d=[0,1.3,.66],l=Math.hypot(d[1]-a[1],d[2]-a[2]);b.cyl(.17,.13,l+.08,8,0x7d705d,{x:0,y:a[1],z:a[2],rx:Math.atan2(d[2]-a[2],d[1]-a[1])});}  /* Hals */
    for(const sx of [-1,1])for(const sz of [-1,1])b.ico(.15,sz>0?0x6c6050:0x786b5a,{x:sx*.22,y:.74,z:sz*.4,sy:1.7,sz:1.1});                    /* Schulter-/Schenkelansätze */
    b.box(.11,.22,.1,0x554636,{y:.85,z:-.6,rx:-.65});}
-  else{b.ico(.16,0x938064,{y:.37,z:.4});for(const s of [-1,1]){b.ico(.05,0x766149,{x:s*.11,y:.48,z:.36});b.ico(.018,0x141916,{x:s*.115,y:.405,z:.49});}b.ico(.038,0x39362f,{y:.35,z:.55});b.box(.12,.09,.35,0x665341,{y:.12,z:-.48});}return b;
+  else{ /* v440: Murmeltier mit hellen Wangen, kleinen Ohren und sichtbaren Pfoten. */
+   for(const side of [-1,1]){b.ico(.075,0x665440,{x:side*.16,y:.065,z:.16,sy:.6,sz:1.4});b.ico(.055,0x8f7c61,{x:side*.12,y:.24,z:.33,sy:1.4});b.ico(.052,0xc3af8c,{x:side*.06,y:.34,z:.55,sy:.7});}
+   b.ico(.16,0x938064,{y:.37,z:.4});for(const s of [-1,1]){b.ico(.05,0x766149,{x:s*.11,y:.48,z:.36});b.ico(.018,0x141916,{x:s*.115,y:.405,z:.49});}b.ico(.038,0x39362f,{y:.35,z:.55});b.ico(.09,0x665341,{y:.12,z:-.46,sx:.7,sy:.6,sz:1.7});}return b;
  }
- function head(){const b=new FM.MB();b.ico(.24,0x8d7e67,{sx:.78,sy:1.05,sz:1.35});b.ico(.12,0x403c32,{y:-.1,z:.23,sz:1.5});
+ function head(){const b=new FM.MB();b.ico(.24,0x8d7e67,{sx:.78,sy:1.05,sz:1.35});b.ico(.09,0xa99575,{y:-.08,z:.21,sz:1.4});b.ico(.065,0x403c32,{y:-.1,z:.31,sz:1.1});
+  b.cone(.045,.14,5,0x514637,{y:-.12,z:.12,rx:Math.PI}); /* v440: kurzer Steinbockbart */
   for(const s of [-1,1]){b.ico(.07,0xa3957b,{x:s*.22,y:.07,sz:1.8});b.ico(.025,0x161c17,{x:s*.16,y:.025,z:.15});
    const pts=[[s*.13,.15,-.06],[s*.17,.4,-.12],[s*.19,.62,-.29],[s*.18,.77,-.54],[s*.15,.78,-.75]];
    for(let i=1;i<pts.length;i++){const a=pts[i-1],d=pts[i],dx=d[0]-a[0],dy=d[1]-a[1],dz=d[2]-a[2],l=Math.hypot(dx,dy,dz);b.cyl(.065-i*.008,.057-i*.008,l,6,0x504a3b,{x:a[0],y:a[1],z:a[2],rx:Math.atan2(dz,dy),rz:-Math.asin(dx/l)});}}
@@ -356,7 +359,7 @@ const ALPINE = (()=>{
  }
  function leg(){const b=new FM.MB();b.box(.12,1.14,.13,0x675c4b,{y:-1});return b;} /* v404: etwas kräftiger, oben in den Ansatz hinein */
  function hoof(){const b=new FM.MB();b.box(.13,.1,.19,0x302f29,{z:.03});return b;}
- function eagle(){const b=new FM.MB();b.ico(.22,0x4a4032,{sy:.65,sz:1.8});b.ico(.11,0x8d7951,{y:.02,z:.35});b.cone(.04,.12,5,0xb99b54,{y:.01,z:.41,rx:Math.PI/2});b.box(.3,.04,.3,0x685944,{y:-.02,z:-.28});return b;}
+ function eagle(){const b=new FM.MB();b.ico(.22,0x4a4032,{sy:.65,sz:1.8});b.ico(.11,0x8d7951,{y:.02,z:.35});b.cone(.04,.12,5,0xb99b54,{y:.01,z:.41,rx:Math.PI/2});for(const side of [-1,1])b.ico(.018,0x191b1b,{x:side*.078,y:.06,z:.405});b.ico(.025,0x443929,{y:-.015,z:.50}); /* v440: Adlerauge und Hakenschnabel */b.box(.3,.04,.3,0x685944,{y:-.02,z:-.28});return b;}
  function wing(side){const b=new FM.MB();const A=[side*.15,.02,.12],B=[side*1.6,0,-.1],C=[side*1.25,0,-.42],D=[side*.15,0,-.22];b.quad(A,B,C,D,0x413b30);b.quad(D,C,B,A,0x413b30);for(let i=0;i<5;i++)b.box(.14,.035,.38,0x343229,{x:side*(1.0+i*.13),z:-.35-i*.02,ry:side*.25});return b;}
  function safeCenter(wanted,small,occupied){let best=wanted,score=1e6;
   for(let i=0;i<220;i++){const a=i*2.39996,r=i?Math.sqrt(i/220)*30:0,x=wanted[0]+Math.cos(a)*r,z=wanted[1]+Math.sin(a)*r;if(occupied.some(q=>Math.hypot(q.x-x,q.z-z)<(small?4:7)))continue;let cost=r*.008;
