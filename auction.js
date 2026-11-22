@@ -66,10 +66,11 @@ function kmFactor(c, km) {
 }
 function carValue(c, cond, km, luck) { return carMarket(c) * AH_COND[cond].f * kmFactor(c, km) * (luck || 1); }
 /* v327: Haltebonus. Steht ein Sammlerauto in der Garage (nicht als Wertkurier unterwegs, nicht in der Auktion), gibt es alle 21 Tage eine
-   Marktpreis-Anpassung zu deinen Gunsten: ab 1 Mio. € Marktwert +6 %, ab 250.000 € +3,5 %, darunter +2 %. Sie wirkt im Marktwert und bei
+   Marktpreis-Anpassung zu deinen Gunsten: ab 1 Mio. € Marktwert +10 %, ab 250.000 € +6 %, darunter +4 % (v454, vorher 6 / 3,5 / 2). Sie wirkt im Marktwert und bei
    der Auktion (g.hold, Faktor ≥ 1, kumuliert) – wer das Auto verkauft, bekommt sie bezahlt. */
-const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 2.5;      /* Obergrenze: höchstens das 2,5-Fache durch den Haltebonus */
-const holdRate = v => v >= 1e6 ? 0.06 : v >= 250000 ? 0.035 : 0.02;
+const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 3.5;      /* Obergrenze: höchstens das 3,5-Fache durch den Haltebonus (v454, vorher 2,5) */
+/* v454: kräftiger (vorher +6 / +3,5 / +2 %); die Höhe wird in der Garage nicht mehr genannt */
+const holdRate = v => v >= 1e6 ? 0.10 : v >= 250000 ? 0.06 : 0.04;
 function gValue(g) {
   if (g.kind === "veh") return 0;
   return nice(carValue(CAR[g.car], g.cond, g.km, g.luck) * (g.hold || 1));
@@ -778,8 +779,8 @@ function garageCardHTML(g) {
       <div class="lot-row"><span class="lot-price"><small>Marktwert heute</small><b>${money(val)}</b></span>
         <span class="lot-lead ${d >= 0 ? "me" : "out"}">${d >= 0 ? "▲" : "▼"} ${fmt(Math.abs(pct), 1)} %</span></div>
       ${g.hold > 1 ? `<div class="lot-est hold">📈 Haltebonus seit Kauf: +${fmt((g.hold - 1) * 100, 1)} % · nächste Anpassung in ${dur(Math.max(0, (g.adjAt || S.time) + AH_HOLD_DAYS * 1440 - S.time))}</div>`
-        : !g.fleet && !lot ? `<div class="lot-est hold">📈 Bleibt er in der Garage, steigt der Marktwert alle ${AH_HOLD_DAYS} Tage (+${(holdRate(val) * 100).toString().replace(".", ",")} %).</div>` : ""}
-      <div class="lot-est">Gekauft für ${money(g.paid)} (inkl. Aufgeld) · ${c.track ? "nur Rennstrecke" : "⚖️ " + kgf(c.cap) + " Gepäck · " + carSpeed(c) + " km/h im Schnitt"}</div>
+        : !g.fleet && !lot ? `<div class="lot-est hold">📈 Bleibt er ruhig in der Garage, steigt sein Marktwert von Zeit zu Zeit.</div>` : ""}
+      <div class="lot-est">Gekauft für ${money(g.paid)} (inkl. Aufgeld)${c.track ? " · nur Rennstrecke" : ""}</div>
       <div class="buyrow">
         <button class="btn tiny ghost" data-carview="${c.id}">ansehen</button>
         ${lot ? "" : v ? `<button class="btn tiny ghost" data-gback="${v.uid}">🅿️ zurück in die Garage</button>`
@@ -828,7 +829,7 @@ function renderAuction() {
   } else if (A.view === "garage") {
     const tot = A.garage.reduce((a, g) => a + gValue(g), 0), paid = A.garage.reduce((a, g) => a + g.paid, 0);
     html = A.garage.length
-      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen schwanken – aber wer ein Auto ruhig in der Garage lässt, bekommt alle 21 Tage eine Marktpreis-Anpassung nach oben (ab 1 Mio. € +6 %). Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
+      ? `<div class="card ah-sum"><div class="vname">🏁 Deine Garage<small>${A.garage.length} ${A.garage.length === 1 ? "Auto" : "Autos"} · Klassiker steigen eher, Sportwagen schwanken – aber wer ein Auto ruhig in der Garage lässt, dessen Marktwert steigt mit der Zeit. Kurier-Kilometer drücken den Wert. Steuerlich Handelsware: Kaufpreis + Aufgeld werden beim Verkauf abgesetzt, versteuert wird nur der Gewinn.</small></div>
           <div class="meta small"><span>Marktwert ${money(tot)}</span><span>bezahlt ${money(paid)}</span><span class="${tot >= paid ? "up" : "down"}">${tot >= paid ? "+" : "−"}${money(Math.abs(tot - paid))}</span></div></div>`
         + A.garage.map(garageCardHTML).join("")
       : `<div class="empty">Noch leer – dein erstes Auto gibt’s unter <b>🔴 Live</b>.</div>`;

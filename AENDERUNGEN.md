@@ -1,3 +1,12 @@
+## v454 – Garagen-Ansicht aufgeräumt, Haltebonus kräftiger und ohne genannte Prozentzahl
+
+**Änderungen (`auction.js`):**
+- Auf der Garagenkarte entfällt die Zeile „⚖️ 20 kg Gepäck · 115 km/h im Schnitt“; es steht nur noch „Gekauft für … (inkl. Aufgeld)“ (bei Rennwagen weiterhin „nur Rennstrecke“).
+- Die Höhe der Wertsteigerung wird in der Garage nicht mehr genannt: Statt „steigt der Marktwert alle 21 Tage (+6 %)“ steht „Bleibt er ruhig in der Garage, steigt sein Marktwert von Zeit zu Zeit.“; die Garagen-Übersicht nennt „+6 %“ und „alle 21 Tage“ nicht mehr. Der bisher aufgelaufene Zuwachs („Haltebonus seit Kauf: +x %“) bleibt sichtbar.
+- Der Haltebonus ist kräftiger: je Anpassung (alle 21 Spieltage) ab 1 Mio. € Marktwert +10 % (vorher +6 %), ab 250.000 € +6 % (vorher +3,5 %), darunter +4 % (vorher +2 %); Obergrenze durch den Haltebonus 3,5-fach (vorher 2,5-fach). Bereits aufgelaufene Zuwächse bleiben, die neuen Sätze gelten für künftige Anpassungen.
+
+**Geprüft:** Syntax; `autofotos-v372.test.js` bestanden; im Code keine verbliebene Nennung der Sätze. **Nicht geprüft:** Handy und Ansicht der geänderten Karte im Browser; Balance der neuen Sätze im längeren Spiel.
+
 ## v449 – Flussufer überall gleich (Ufernetz des Hofbachs bis zur Bergkulisse)
 
 **Ursache:** Der Fluss hatte zwei verschiedene Ufer: Auf dem Hofgelände ein Ufernetz mit knackigen Sandringen (Schlamm, nasser Sand, Sand, Kiesel), im Gebirgsgelände nur Farbe auf dem Gelände – heller, weicher und am Rand unscharf. Das Ufernetz wurde im ganzen Gebirgsgelände abgeschaltet (`bankCut` in `worldview.js`), so dass sich der Übergang in deinem Bild als zwei verschiedene Ufer zeigte.
