@@ -8,6 +8,22 @@
 
 **Geprüft:** Bilder von hinten/vorne/seitlich im Testbrowser, `gebirge-v429`, `gebirge-v413`, `npc-tiere-v440`, `wasseroptik-v386` (Erwartung Hufhub von 0,1 auf 0,2 angepasst). `wasserlandschaft-v384`/`berglandschaft-v375` schlagen auch ohne diese Änderung fehl. **Nicht geprüft:** Handy, Nachtansicht, Bewegung als Video.
 
+## v465 – Trefferbild: ungetroffene Knochen-Ellipsen nicht mehr als „Organ“ gezeigt
+
+**Ursache:** Im Trefferbild wurden Becken und Schulterblätter als blaue Ellipsoide immer gezeichnet (Orientierung) – sie sahen wie ein ungetroffenes Organ aus, z. B. hinten am Rumpf beim Lungenschuss (Rothirsch).
+
+**Lösung:** In `xrBuild` (`hunt.js`) erscheinen diese Ellipsoide nur noch, wenn sie getroffen sind (dann rot). Wirbelsäule, Rippen, Läufe und Schädel bleiben als Orientierung; Organe wurden schon vorher nur bei Treffer gezeichnet. Wertung, Aufzeichnung und Spielstand unverändert.
+
+**Geprüft:** `trefferbild-v357`, `hunt-v307`, `halsorgane-v442`, `hunt-presentation-v315` laufen. **Nicht geprüft:** Bild im Spiel/Handy; ich habe aus Lage und Form (Becken bei z −0,46, Höhe der Hüfte) geschlossen, dass die eingekreiste Ellipse das Becken ist.
+
+## v464 – Keine Blase mehr über dem Hochsitz
+
+**Ursache:** Über dem fertigen Hochsitz stand dauerhaft eine Blase „🔭 2“ (Wildbestand, bei Sichtung zusätzlich 🦌/🐗) und verdeckte den Turm.
+
+**Lösung:** `tagInfo` in `hunt.js` liefert für den fertigen Hochsitz keine Blase mehr (nachhaltig: die Blase wird nirgends sonst erzeugt). Die Baustellen-Blase (🔨) bleibt. Bestand und Wild zeigt weiter das Hochsitz-Fenster beim Antippen; keine Spiel-/Speicherlogik geändert.
+
+**Geprüft:** Syntax; der Aufrufer (`worldview.js`) behandelt `null` bereits (kein Eintrag). **Nicht geprüft:** Ansicht im Spiel/Handy.
+
 ## v463 – Fischer steht auf dem Steg, nicht in den Planken
 
 **Ursache:** Die Figuren stehen überall auf Bodenhöhe (y = 0). Die Planken des Angelstegs liegen mit der Oberkante bei 0,135 – der Fischer am Stegende (auch in der „Mittagspause“) steckte mit den Füßen in den Planken.
