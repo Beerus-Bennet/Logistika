@@ -1,3 +1,13 @@
+## v455 – Sammellieferung (v450–v454 in einem Pull Request)
+
+**Anlass:** Die fünf offenen Pull Requests #152–#156 änderten dieselben Dateien (`sw.js`, `index.html`, Doku) und gerieten sich bei den Versionsnummern in Konflikt. Sie sind hier auf dem aktuellen `main` (v449) in einem Zweig zusammengeführt; die einzelnen Abschnitte stehen unverändert darunter.
+
+**Enthalten:** v450 Meldungen im Auktionshaus oben (#152), v451 Lunge im Trefferbild ohne fremde Linien (#153), v452 Jagd ohne Einblendungen und Zeit steht beim Begutachten still (#154), v453 Garagenautos zeigen ihr Modellfoto (#155), v454 Garage ohne Gepäck-Zeile und kräftigerer Haltebonus (#156).
+
+**Zusammenführung:** Version/Cache je Datei einheitlich auf 455 (game.js, style.css, hunt.js, worldview.js, auction.js); keine Code-Konflikte, nur `sw.js`, `index.html`, `AENDERUNGEN.md`, `CLAUDE.md`.
+
+**Geprüft:** siehe die einzelnen Abschnitte; nach der Zusammenführung Syntaxprüfung und Tests (Ergebnis im Pull Request). **Nicht geprüft:** Handy.
+
 ## v454 – Garagen-Ansicht aufgeräumt, Haltebonus kräftiger und ohne genannte Prozentzahl
 
 **Änderungen (`auction.js`):**

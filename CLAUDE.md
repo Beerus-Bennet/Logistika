@@ -261,3 +261,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v452: Jagd – Meldungen (`toastNext` in `game.js`) und Kleeblatt-Einblendung (`farmCloverFly`) nur außerhalb der Jagd, Spielzeit steht beim Begutachten still (`huntInspect` in `clockRunning`).
 - v453: Garagenfahrzeuge zeigen ihr Modellfoto auch bei abweichender Lackfarbe (`photoFits`/`paintMatch` in `auction.js`), Hinweis „Foto in <Farbe>“ im Bildnachweis; keine Umfärbung.
 - v454: Garage – Gepäck/Tempo-Zeile entfernt, Haltebonus ohne genannte Prozentzahl, Sätze `holdRate` 10/6/4 % und Obergrenze 3,5 (`auction.js`).
+- v455: Sammellieferung – PR #152–#156 (v450–v454) in einem Zweig zusammengeführt; Details je Version oben.
