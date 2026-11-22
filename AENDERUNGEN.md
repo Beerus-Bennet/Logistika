@@ -1,3 +1,11 @@
+## v458 – Figuren: Augen ruhiger, nicht mehr herausstehend
+
+**Ursache:** In `headParts` (`woodmodels.js`) standen Augenweiß und Pupille deutlich aus der Kopfkugel heraus und das Weiß war groß – die Figuren wirkten starrend und gruselig (z. B. beim Mittagspausen-Arbeiter am Lagerfeuer).
+
+**Lösung:** Augen fast bündig in die Kopfkugel gesetzt, kleineres Weiß, größere Pupille, Braue dichter am Auge, Nase etwas flacher. Nur Darstellung; Namen, Aussehen-Werte und Spielstände unverändert.
+
+**Geprüft:** Kopf-Vergleich vorher/nachher im Testbrowser (Chromium, Software-Rendering). **Nicht geprüft:** Handy, Ansicht im Spiel am Lagerfeuer.
+
 ## v456 – Lackfarbe und Foto stimmen überein
 
 **Ursache:** Ältere Garagenfahrzeuge (z. B. Audi R8 „Ibisweiß“) behielten eine früher zufällig gewählte Lackfarbe, das freigegebene Modellfoto zeigt aber seine eigene Farbe (schwarz). Text und Bild widersprachen sich (seit v453 nur mit Hinweis im Bildnachweis).
