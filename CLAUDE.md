@@ -265,4 +265,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v456: Fahrzeugfarbe = Fotofarbe – einmalige Angleichung `A.paint456` in `ah()` (`auction.js`), Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack.
 
+- v458: Gesichter – Augen bündig und ruhiger (`headParts` in `woodmodels.js`), nichts mehr herausstehend.
 - v457: Bachufer im Gebirge ohne Sägezähne – `flipDiag` in `alpine.js` wählt die Viereck-Diagonale nach Farbe (gemeinsam mit `surface`), nicht an Bergsee/Kolk.
