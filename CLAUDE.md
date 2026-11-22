@@ -249,3 +249,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v443: trophyBuild0 zentriert Präparate über die Aufstandsfläche (.04*scale über niedrigstem Tierpunkt) statt über Geweih/Kopf/Schwanz. Einheitliches Einpassen ins bisherige Sockelmaß; Radius/Fläche, gespeicherte Merkmale/Werte erhalten. trophyKey443, hunt/Gesamt443. Tests trophy-layout-v310, trophy-exhibits-v328, hunt-presentation-v315, Browser trophy-center-v443 bestanden.
 - v445: Mittagspause bleibt nicht hängen – `staffRepath351` höchstens sechsmal je Auftrag (`rp445`), Auftragsende übernimmt die echte Figurenposition (`team.js`); Test in `worker-motion-v351.test.js`. Merkpunkt: wiederholte Neuplanung darf das Auftragsende nie verschieben.
+- v444: Ruger Super Redhawk (`revolver()` in `weapons.js`) neu nach dem Original gebaut (Rahmen, Trommel, Unterlauf, Visierung, Hahn, Gummigriff); `weapons-v419.test.js` an Mündung/Bügel angepasst.

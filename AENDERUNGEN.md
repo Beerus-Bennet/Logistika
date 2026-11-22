@@ -6,6 +6,15 @@
 
 **Geprüft:** Wiederholung des Fehlers im Tagessimulator: die Landwirtin läuft nach der Änderung sofort los (Weg bei 744 → 760 Minuten sichtbar fortschreitend); neue Gruppe in `worker-motion-v351.test.js` (Neuplanungen begrenzt, Position wird übernommen), alle 16 Gruppen bestanden. **Nicht geprüft:** der konkrete Steg-Fall des Fischers im echten Spiel und das Handy; Ergebnis des vollen Tageslaufs mit allen neun Kräften siehe Pull Request.
 
+
+## v444 – Ruger Super Redhawk nach dem Original
+
+**Ursache:** Das Revolvermodell war ein loser Klotz aus Einzelteilen: freistehende Trommel, kein Rahmen um die Trommel, ein dünner Lauf mit Stange darunter, Holzgriff. Es sah nicht aus wie ein Super Redhawk.
+
+**Lösung (`weapons.js`, `revolver()`):** Neu gebaut nach dem echten Aufbau: Edelstahlrahmen mit durchgehender oberer Brücke, Rückwand und Boden; kurze, dicke Trommel mit Kanten und sechs Kammern auf der Stirnseite; schwerer Lauf mit durchgehendem Unterlauf bis zur Mündung (verdeckt die Ausstoßerstange), Laufübergang am Rahmen und Laufschiene; Visierrampe mit orangefarbenem Korn, verstellbares Kimmenblatt hinten; Hahn mit breitem Sporn und Abzug; großer runder Abzugsbügel; schwarzer Gummigriff mit Rückenwölbung, Fingerriefen und Kappe; kleineres Zielfernrohr auf zwei Ringen. Beschreibungstext im Waffenschrank angepasst („Unterlauf“). Werte, Physik und Spielstand unverändert.
+
+**Geprüft:** `weapons-v383` und `weapons-v419` bestanden (v419-Test auf die neue Mündungs- und Bügellage angepasst); Testbrowser: Vorschaubilder aus drei Blickwinkeln angesehen. **Nicht geprüft:** Handy; ein Foto des echten Revolvers lag nicht vor, die Form folgt dem bekannten Aufbau der Waffe im kantigen Spielstil.
+
 ## v443 – Trophäen-Tiere mittig auf ihren Sockeln
 
 **Ursache:** Die bisherige Zentrierung nutzte die Außenmaße des ganzen Tiers einschließlich Geweih, Kopf und Schwanz. Dadurch standen Körper und Füße/Hufe seitlich oder längs versetzt auf dem Sockel.
