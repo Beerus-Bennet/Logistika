@@ -1,3 +1,11 @@
+## v450 – Meldungen im Auktionshaus verdecken die Gebotsknöpfe nicht mehr
+
+**Ursache:** Meldungen wie „Sofort überboten – … hat ein höheres Limit.“ erscheinen unten über der Navigation. Im Auktionshaus liegen dort die Gebotsknöpfe der Karte, so dass man beim Bieten nicht darauf tippen konnte, solange die Meldung stand.
+
+**Lösung:** `showTab` setzt `body.tab-market` (`game.js`); im Markt/Auktionshaus stehen die Meldungen oben unter der Kopfleiste (`style.css`, Block am Ende, wie schon im Hof bei offenem Fenster). Keine Änderung an Texten, Zeiten oder Geschäftslogik.
+
+**Geprüft:** Testbrowser (390 × 800): Meldung im Markt liegt bei 104–162 px von oben statt unten, ohne Seitenfehler. **Nicht geprüft:** Handy; die Meldung kann oben kurz Titel oder Filterchips überdecken, Tippen darauf funktioniert (Meldungen sind nicht antippbar blockierend).
+
 ## v448 – Kaufbeleg mit stärkerem Logistika-Auftritt
 
 **Anlass:** Der Übernahmebeleg sollte markanter wirken und trotzdem übersichtlich bleiben.

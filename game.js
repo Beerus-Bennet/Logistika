@@ -4484,6 +4484,7 @@ function showTab(name) {
   $$(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + name));
   $("#view").classList.toggle("on", name !== "map" && name !== "farm");
   document.body.classList.toggle("tab-map", name === "map");
+  document.body.classList.toggle("tab-market", name === "market");   /* v450: Meldungen im Markt/Auktionshaus oben, nicht über den Gebotsknöpfen */
   if (name === "farm") { if (typeof farmShow === "function") farmShow(); }
   else if (typeof farmHide === "function") farmHide();
   if (name !== "map" && name !== "farm") $("#viewTitle").textContent = (name === "market" && typeof ahMode === "function" && ahMode() ? "Auktionshaus" : TAB_TITLE[name]) || "";
