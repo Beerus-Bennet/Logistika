@@ -1,3 +1,11 @@
+## v456 – Lackfarbe und Foto stimmen überein
+
+**Ursache:** Ältere Garagenfahrzeuge (z. B. Audi R8 „Ibisweiß“) behielten eine früher zufällig gewählte Lackfarbe, das freigegebene Modellfoto zeigt aber seine eigene Farbe (schwarz). Text und Bild widersprachen sich (seit v453 nur mit Hinweis im Bildnachweis).
+
+**Lösung:** Einmalige Angleichung (`A.paint456` in `ah()`, `auction.js`): Fahrzeuge in Angebot, Garage und Verlauf, zu denen ein freigegebenes Modellfoto existiert, übernehmen den Lack des Fotos. Neue Lose taten das schon. Nur Anzeige, keine Wert-/Preislogik geändert.
+
+**Geprüft:** Syntax, Migration im Knoten-Test (siehe Pull Request). **Nicht geprüft:** Handy.
+
 ## v455 – Sammellieferung (v450–v454 in einem Pull Request)
 
 **Anlass:** Die fünf offenen Pull Requests #152–#156 änderten dieselben Dateien (`sw.js`, `index.html`, Doku) und gerieten sich bei den Versionsnummern in Konflikt. Sie sind hier auf dem aktuellen `main` (v449) in einem Zweig zusammengeführt; die einzelnen Abschnitte stehen unverändert darunter.

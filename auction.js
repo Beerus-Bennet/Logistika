@@ -41,6 +41,11 @@ function ah() {
     for(const item of [...(A.lots||[]),...(A.garage||[])])if(item.kind==='car'&&CAR[item.car])item.y=carValidYear(CAR[item.car],item.y);
     A.modelYears372=1;
   }
+  /* v456: Farbname und Foto stimmen überein – Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack (einmalig, nur Anzeige). */
+  if(!A.paint456){
+    for(const item of [...(A.lots||[]),...(A.garage||[]),...(A.past||[])])if(item.kind==='car'&&CAR[item.car]){const pp=paintOfPhoto(item.car);if(pp)item.paint=pp;}
+    A.paint456=1;
+  }
   return A;
 }
 const ahMode = () => !!(S && S.ah && S.ah.on);

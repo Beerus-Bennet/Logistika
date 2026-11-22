@@ -19,10 +19,10 @@ test('Lose bleiben für jedes Modell innerhalb des konkreten Bauzeitraums',()=>{
  for(const c of run('CARS')){ctx.model=c;const [a,b]=run('carBuildYears(model)');assert.ok(a<=b,c.id);assert.ok(c.y>=a&&c.y<=b,c.id+': Referenzjahr');for(let n=0;n<20;n++){const l=run('makeLot({car:model.id})');assert.ok(l.y>=a&&l.y<=b,c.id);assert.deepEqual(JSON.parse(JSON.stringify(l.paint)),JSON.parse(JSON.stringify(run('CAR_PHOTOS[model.id].paint'))));}assert.equal(run('carValidYear(model,1800)'),a);assert.equal(run('carValidYear(model,2099)'),b);}
  assert.equal(run('carValidYear(CAR.prs,1975)'),1973);
 });
-test('Alter Porsche-Spielstand: nur unmögliches Baujahr korrigieren, Gebote/Besitz/Lack behalten',()=>{
+test('Alter Porsche-Spielstand: nur unmögliches Baujahr korrigieren, Gebote/Besitz behalten (Lack folgt seit v456 dem Foto)',()=>{
  const {ctx,run,storage}=fixture();assert.equal(storage.size,0);
  const old={on:true,lots:[{id:'L1835',kind:'car',car:'prs',y:1975,paint:['Schwarz','#15161a'],price:300000,bids:1,me:{max:450000},lead:'me',done:false}],garage:[{uid:'owned',kind:'car',car:'m129',y:2001,paint:['Violett','#452345'],paid:78000,km:103100,luck:1,cond:3,consigned:'L1840'}],past:[{id:'L1800',price:120000}],idx:{},seq:1836,view:'live',brand:'all',next:20000};
- ctx.S.ah=structuredClone(old);const money=ctx.S.money;run('ah()');assert.equal(ctx.S.ah.lots[0].y,1973);assert.equal(ctx.S.ah.garage[0].y,1992);const after=structuredClone(ctx.S.ah);delete after.modelYears372;after.lots[0].y=1975;after.garage[0].y=2001;assert.deepEqual(after,old);assert.equal(ctx.S.money,money);
+ ctx.S.ah=structuredClone(old);const money=ctx.S.money;run('ah()');assert.equal(ctx.S.ah.lots[0].y,1973);assert.equal(ctx.S.ah.garage[0].y,1992);const after=structuredClone(ctx.S.ah);delete after.modelYears372;delete after.paint456;/* v456: Lack folgt dem Foto, Rest bleibt */after.lots[0].paint=old.lots[0].paint;after.garage[0].paint=old.garage[0].paint;after.lots[0].y=1975;after.garage[0].y=2001;assert.deepEqual(after,old);assert.equal(ctx.S.money,money);
  const once=JSON.stringify(ctx.S.ah);run('ah();paintOfPhoto("prs");carPicHTML(CAR.prs,"#15161a");carPicHTML(CAR.m129,"#452345");');assert.equal(JSON.stringify(ctx.S.ah),once);ctx.S.ah=JSON.parse(once);run('ah()');assert.equal(JSON.stringify(ctx.S.ah),once);
 });
 test('Nur freigegebene Quelle und passende Lackierung, keine Umfärbung',()=>{
