@@ -718,16 +718,25 @@ function staffApprove(msgId, yes) {
   if (yes) { staffWlSet(a.role, a.item, true); m.result = a.name + " ist jetzt für " + ((FSTAFF_ROLES[a.role] || {}).n || a.role).replace("/in", "") + " freigegeben."; }
   else {
     const list = staffTaskList();
+    let oid0 = null;
     let T = list.find(x => x.id === a.tid) || list.find(x => x.role === a.role && x.item === a.item);
     if (T) {
       let root = T, k = 0; while (root.parent && k++ < 8) { const p = list.find(x => x.id === root.parent); if (!p) break; root = p; }
       const gone = new Set([root.id]); let grew = true;
+      /* v441: Stammt die Kette aus einer Kundenbestellung, wird die Bestellung selbst abgelehnt und alle ihre Aufträge fallen weg */
+      const oid = root.from === "order" ? root.fromId : root.item.startsWith("order:") ? root.item.slice(6) : null;
+      oid0 = oid;
+      if (oid) {
+        list.forEach(x => { if ((x.from === "order" && x.fromId === oid) || x.item === "order:" + oid) gone.add(x.id); });
+        const o = S.orders.find(x => x.id === oid);
+        if (o && o.farm && !o.tutF) { S.orders = S.orders.filter(x => x !== o); S.farm.lastOrd = S.time - 15; }
+      }
       while (grew) { grew = false; list.forEach(x => { if (x.parent && gone.has(x.parent) && !gone.has(x.id)) { gone.add(x.id); grew = true; } }); }
       S.farm.taskMute = S.farm.taskMute || {};
       list.forEach(x => { if (gone.has(x.id) && x.from !== "chef") S.farm.taskMute[x.role + ":" + x.item] = S.time + 720; });
-      staffTaskDel(root.id, false);
+      S.farm.tasks = staffTaskList().filter(x => !gone.has(x.id));
     }
-    m.result = "Auftrag „" + a.name + "“ ist komplett gestrichen – auch bei den Kollegen.";
+    m.result = "Auftrag „" + a.name + "“ ist komplett gestrichen – auch bei den Kollegen" + (oid0 ? " und die Bestellung abgelehnt." : ".");
   }
   m.handled = true;
   if (typeof save === "function") save();

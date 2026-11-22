@@ -1,3 +1,11 @@
+## v441 – „Nicht freigeben“ lehnt auch die zugehörige Kundenbestellung ab
+
+**Ursache:** „Nicht freigeben“ (v437) löschte nur die Aufträge der Arbeiter-Kette. Stammte die Kette aus einer Kundenbestellung (z. B. „Möbelhaus am Bassin“), blieb die Bestellung angenommen in der Bestelltafel stehen und erzeugte neue Aufträge.
+
+**Lösung (`team.js`, `staffApprove`):** Hängt die Kette an einer Bestellung (Wurzel mit `from: "order"` oder Fahrer-Auftrag `order:…`), wird die Bestellung wie beim Papierkorb abgelehnt (`S.orders`, Takt für neue Bestellungen wie in `dropGo`), und alle Aufträge dieser Bestellung bei allen Kräften samt Unteraufträgen fallen weg. Die Antwort im Telefon nennt das („… und die Bestellung abgelehnt“).
+
+**Geprüft:** `freigabe-v437.test.js` um einen Fall mit Bestellung und zwei Berufen erweitert (Bestellung und alle Aufträge weg). **Nicht geprüft:** Handy und der Weg im echten Spiel. Bereits vorhandene Aufträge aus der Zeit vor v437 melden sich erst beim nächsten Versuch der Kraft per Telefon.
+
 ## v440 – NPC-Tiere mit erkennbaren Artmerkmalen
 
 Eichhörnchen-Zylinderschwanz und sehr einfache Körperformen durch klarere Silhouetten, Gesichter und typische Merkmale ersetzt. 13 Hof-/Wald-/Haustiermodelle sowie Merkmale der vier Bergtierarten verfeinert; Tieranzahl, Größenfaktoren, Sichtungs-/Bewegungslogik und Spielmechanik erhalten. Feste Modellbudgets (260–796 Dreiecke je FWM-Körper), gemeinsam gecacht. Modellprüfungen, 26 Browseransichten und vollständiger mobiler Chromium-Hof mit konstanten Ressourcen/Spielstand bestanden; Berg-/Wasserprüfungen grün. Kein echter Handytest. Bericht/Vorschauen: docs/NPC-TIERE-v440.md. main976942e erhalten, Gesamt-/SW440, woodmodels/alpine440; übrige Assetstände unverändert.
