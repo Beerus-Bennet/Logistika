@@ -210,24 +210,43 @@ const WEAPONS = (() => {
     bx(b, .118, .073, 0, .008, .005, .006, C.black); bx(b, -.07, .073, 0, .012, .005, .019, C.black);         /* Korn, Kimme */
     return b;
   }
+  /* v444: Ruger Super Redhawk nach dem Original: massiver Edelstahlrahmen mit durchgehender oberer Brücke, kurze dicke Trommel,
+     schwerer Lauf mit durchgehendem Unterlauf (verdeckt die Ausstoßerstange), Visierrampe vorn, verstellbares Kimmenblatt hinten,
+     Hahn mit breitem Sporn, großer runder Abzugsbügel und schwarzer Gummigriff mit Fingerriefen; Zielfernrohr auf zwei Ringen. */
   function revolver() {
-    const b = new G3.MB();
-    bx(b, -.068, .018, 0, .032, .09, .035, C.steelL);
-    bx(b, -.002, .066, 0, .13, .016, .035, C.steelL); bx(b, -.002, -.024, 0, .13, .014, .033, C.steelL);
-    tube(b, -.052, .02, 0, .104, .037, C.steelL);                           /* freistehende Trommel im Rahmen */
-    for (let i = 0; i < 6; i++) {
-      const a = i * Math.PI / 3, y = .02 + Math.cos(a) * .025, z = Math.sin(a) * .025;
-      tube(b, .052, y, z, .002, .007, C.black);                            /* sechs Kammern auf der Stirnseite */
-      tube(b, -.04, .02 + Math.cos(a) * .035, Math.sin(a) * .035, .074, .004, C.steel);
-    }
-    bx(b, .19, .041, 0, .3, .032, .031, C.steelL); tube(b, .054, .045, 0, .288, .012, C.steel);
-    muzzle(b, .367, .045, 0, .014, C.steelL);
-    tube(b, .061, .013, 0, .22, .007, C.steel);                             /* Ausstoßer unter dem Lauf */
-    bx(b, -.11, -.03, 0, .055, .12, .04, C.wood, { rz: .28 });
-    guard(b, -.011, -.055, .09, .054, C.steelL);
-    bx(b, -.083, .073, 0, .028, .014, .018, C.steel, { rz: .4 });           /* Hahn */
-    bx(b, -.07, .081, 0, .02, .012, .016, C.black); bx(b, .33, .068, 0, .012, .014, .01, C.black);
-    scope(b, .05, .106, .55);
+    const b = new G3.MB(), cy = .03, S1 = C.steelL, S2 = C.steel, BLK = C.black;
+    /* Rahmen: obere Brücke, Rückwand, vorderer Rahmenteil mit Kranhalterung, Boden unter der Trommel */
+    bx(b, -.03, .068, 0, .15, .026, .036, S1);
+    bx(b, -.092, .022, 0, .05, .09, .036, S1);
+    bx(b, .034, .03, 0, .028, .074, .036, S1);
+    bx(b, -.03, -.01, 0, .1, .02, .034, S1);
+    /* Trommel (sichtbar im Fenster): kurz, dick, glatt mit Rillen und sechs Kammern auf der Stirnseite */
+    tube(b, -.022, cy, 0, .06, .0275, 0x9aa4ae);
+    for (const x of [-.048, .004]) tube(b, x, cy, 0, .004, .0285, S2);               /* Trommelkanten */
+    for (let i = 0; i < 6; i++) { const a2 = i * Math.PI / 3; tube(b, .009, cy + Math.cos(a2) * .016, Math.sin(a2) * .016, .002, .0066, BLK); }
+    tube(b, .009, cy, 0, .002, .005, S2);
+    /* Lauf: dick, oben bündig mit der Brücke; darunter der durchgehende Unterlauf bis zur Mündung */
+    tube(b, .135, .062, 0, .2, .0185, S1);
+    bx(b, .135, .0335, 0, .2, .034, .034, S1);
+    bx(b, .135, .0155, 0, .2, .004, .03, S2);
+    tube(b, .042, .06, 0, .018, .021, S2);                                  /* Laufübergang am Rahmen */
+    muzzle(b, .236, .062, 0, .02, S1);
+    bx(b, .12, .0815, 0, .18, .004, .009, S2);                              /* Laufschiene mit Visierkante */
+    /* Visier: Rampe mit Korn, hinten verstellbares Kimmenblatt */
+    bx(b, .214, .088, 0, .022, .013, .007, BLK, { rz: -.2 }); bx(b, .22, .0955, 0, .006, .006, .0045, 0xd8662b);
+    bx(b, -.072, .089, 0, .018, .012, .022, BLK); bx(b, -.072, .0975, .0, .004, .005, .02, S2);
+    /* Rahmenfenster, Auswurfseite und Trommelhaube */
+    /* Hahn mit Sporn und Abzug */
+    bx(b, -.117, .07, 0, .022, .018, .012, S2, { rz: .55 }); bx(b, -.128, .066, 0, .014, .008, .016, S2, { rz: .55 });
+    bx(b, -.055, .0, 0, .006, .028, .006, S2, { rz: .25 });
+    /* Abzugsbügel (rund, groß) */
+    guard(b, -.045, -.028, .075, .064, S1);
+    /* Griff: Gummigriff mit Rücken-Wölbung, Fingerriefen vorn, Kappe unten */
+    profile(b, [[-.105, .036], [-.06, .036], [-.058, .0], [-.07, -.07], [-.088, -.128], [-.142, -.13], [-.136, -.07], [-.122, -.01]], .04, BLK);
+    for (let i = 0; i < 3; i++) bx(b, -.0665 - i * .004, -.024 - i * .03, 0, .005, .013, .042, 0x2a2c31, { rz: .15 });   /* Fingerriefen */
+    bx(b, -.115, -.131, 0, .06, .007, .046, S2);
+    /* Zielfernrohr auf zwei Ringen (Rahmenfräsung) */
+    scope(b, .05, .108, .5);
     return b;
   }
   const MODELS = {
@@ -247,7 +266,7 @@ const WEAPONS = (() => {
     royal: ["Holzschaft · gravierte Basküle · zwei Läufe", "Zwei Läufe nebeneinander, mit je einem Abzug. Das Laufpaar klappt zum Laden nach unten; Goldbeschläge betonen das Gelenkgehäuse."],
     shotgun: ["Schaft · Kipplaufgelenk · zwei Läufe übereinander", "Der obere Hebel entriegelt das Laufpaar zum Abkippen und Laden. Der einzelne Abzug löst die Läufe nacheinander aus."],
     pistol: ["Schlitten & Lauf · Rahmen · Griffmagazin", "Der Schlitten bewegt sich beim Schuss zurück und wieder vor. Dabei wird eine neue Patrone aus dem Magazin im Griff zugeführt."],
-    revolver: ["Hahn · Sechsschusstrommel · Lauf", "Die Trommel dreht jeweils die nächste Kammer hinter den Lauf. Der Ausstoßer unter dem Lauf dient zum Entleeren der ausgeschwenkten Trommel."]
+    revolver: ["Hahn · Sechsschusstrommel · Unterlauf", "Die Trommel dreht jeweils die nächste Kammer hinter den Lauf. Der durchgehende Unterlauf verdeckt die Ausstoßerstange; die Visierung sitzt auf Rahmen und Lauf."]
   };
   /* ------------------------------- Shop -------------------------------- */
   const bar = (v, max) => `<i class="wp-bar"><b style="width:${Math.round(Math.max(4, Math.min(100, v / max * 100)))}%"></b></i>`;
