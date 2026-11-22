@@ -1616,7 +1616,7 @@ const HUNT = (() => {
     if (!unlocked()) return null;
     const H = st();
     if (!H.built) { const ok = !missing().length; return { x: TW.x, y: 2.2, z: TW.z, html: "🔨" + (ok ? "✅" : "🪵"), cls: ok ? "ready" : "" }; }
-    return { x: TW.x, y: PH + 3.2, z: TW.z, html: "🔭" + (H.stock ? "<b>" + H.stock + "</b>" : "") + (MW.A && MW.A.node.visible && !X ? (MW.A.k === "hirsch" ? "🦌" : "🐗") : ""), cls: H.stock ? "ready" : "" };
+    return null;   /* v464: Über dem fertigen Hochsitz steht keine Blase mehr („🔭 2“ verdeckte den Turm); Bestand und Wild zeigt das Hochsitz-Fenster */
   }
   const dots = n => "●".repeat(n) + "○".repeat(Math.max(0, 2 - n));
   function sheet() {
