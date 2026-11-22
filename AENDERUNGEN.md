@@ -1,3 +1,11 @@
+## v452 – Ruhe während der Jagd: keine Einblendungen, Zeit steht beim Begutachten still
+
+**Ursache:** Auch während der Jagd erschienen Hofmeldungen und die Kleeblatt-Einblendung („+3 🍀“) – zum Beispiel nach einem Erfolg oder einer Aufgabe – mitten im Bild des Hochsitzes und über dem Trefferbild. Die Spielzeit lief beim Begutachten des erlegten Stücks weiter.
+
+**Lösung:** (`game.js`) Solange die Jagd läuft (`HUNT.on`), zeigt die Meldungsschlange nichts an – auch keine Rückmeldungen auf Tipper. Die Meldungen bleiben in der Schlange (Hintergrundmeldungen verfallen nach 60 s wie bisher) und erscheinen nach der Jagd. Beim Begutachten des Stücks (Bergung/Trefferbild, `X.view === "harvest"` bzw. `X.hrv`) steht die Spielzeit still (`clockRunning`). (`worldview.js`) Die Kleeblatt-Einblendung entfällt während der Jagd; die Gutschrift bleibt und steht als Notiz im Diensttelefon. Jagdeigene Hinweise im Jagdbild sind unverändert.
+
+**Geprüft:** Testbrowser in einer laufenden Jagd: Meldung wird in die Schlange gelegt statt angezeigt (0 sichtbar), Kleeblatt-Gutschrift als Notiz „🍀 +3 · Test“, Uhr läuft im Revier, steht in der Bergungsansicht still; keine Seitenfehler. **Nicht geprüft:** Handy; das Wiedereinblenden der gesammelten Meldungen nach Ende der Jagd (nur über die vorhandene Schlange, nicht eigens getestet); längeres Begutachten ohne Zeitablauf auf Nacht/Tag-Wechsel.
+
 ## v451 – Lunge im Trefferbild klar abgegrenzt, keine fremden Linien im Organ
 
 **Ursache:** Das Lungenmodell enthielt einen Bronchialbaum aus hellen und dunklen Röhren im Inneren der Lappen. Da das Trefferbild die Organe halbtransparent zeigt, schimmerten diese Röhren als weiße Linien und Schleifen durch die Lunge (und über dem Herz) – wie fremde Gebilde im Organ.

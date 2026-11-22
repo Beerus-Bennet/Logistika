@@ -258,3 +258,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v449: Ufernetz des Hofbachs läuft durch das Gebirgstal (`bankCut` in `worldview.js` nur noch am Becken/See und für z < −112), Ufer links und rechts des Übergangs gleich.
 - v450: Meldungen im Markt/Auktionshaus oben (`body.tab-market` in `showTab`, CSS am Ende von `style.css`), damit sie die Gebotsknöpfe nicht verdecken.
 - v451: Trefferbild – Lunge ohne Bronchialbaum (`buildOrganMesh` in `hunt.js`), keine hellen Linien mehr im Organ.
+- v452: Jagd – Meldungen (`toastNext` in `game.js`) und Kleeblatt-Einblendung (`farmCloverFly`) nur außerhalb der Jagd, Spielzeit steht beim Begutachten still (`huntInspect` in `clockRunning`).

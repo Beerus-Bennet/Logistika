@@ -3926,6 +3926,8 @@ function farmCloverFlyAt(x, y, n) {
 }
 function farmCloverFly(n, why) {
   if (!FV.on) return;
+  /* v452: Während der Jagd keine Kleeblatt-Einblendung – die Gutschrift steht danach als Notiz im Diensthandy. */
+  if (typeof HUNT !== "undefined" && HUNT.on) { if (typeof noteAdd === "function") noteAdd("🍀 +" + n + (why ? " · " + why : ""), "ok"); return; }
   const to = $("#fcClover");
   if (!to) return;
   const fr = $("#farmFx").getBoundingClientRect();
