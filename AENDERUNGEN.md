@@ -2,6 +2,14 @@
 
 Eichhörnchen-Zylinderschwanz und sehr einfache Körperformen durch klarere Silhouetten, Gesichter und typische Merkmale ersetzt. 13 Hof-/Wald-/Haustiermodelle sowie Merkmale der vier Bergtierarten verfeinert; Tieranzahl, Größenfaktoren, Sichtungs-/Bewegungslogik und Spielmechanik erhalten. Feste Modellbudgets (260–796 Dreiecke je FWM-Körper), gemeinsam gecacht. Modellprüfungen, 26 Browseransichten und vollständiger mobiler Chromium-Hof mit konstanten Ressourcen/Spielstand bestanden; Berg-/Wasserprüfungen grün. Kein echter Handytest. Bericht/Vorschauen: docs/NPC-TIERE-v440.md. main976942e erhalten, Gesamt-/SW440, woodmodels/alpine440; übrige Assetstände unverändert.
 
+## v439 – Button „Unsere Zusammenarbeit“ bei angestellten Arbeitern entfernt
+
+**Ursache:** Der Button stammt aus v349 (Hofbekanntschaften) und öffnete die Geschichte einer bereits angestellten Kraft. Er stand im Arbeitermenü über der Auftragsliste und im Personalfenster auf jeder Karte und nahm dort Platz weg.
+
+**Lösung (`team.js`):** Der Button ist an beiden Stellen entfernt, samt zugehörigem Klick-Code. Das Kennenlernen vor der Anstellung („Kennenlernen“, „Mit Erwin über den Hof sprechen“) und die Geschichten in `farmstory.js` bleiben unverändert. Keine Spielstandänderung.
+
+**Geprüft:** Syntax; `farmteam-v349`, `worker-motion-v351`, `freigabe-v437` bestanden; keine Reste von `data-staff-story` im Code. **Nicht geprüft:** Anzeige im Spiel und auf dem Handy.
+
 ## v438 – Arbeiter laufen runde Wege statt Zickzack
 
 **Ursache:** Die Wegsuche (`navPath`) liefert Wege auf einem Raster aus Achs- und Diagonalschritten; jede Richtungsänderung wurde zu einem scharfen Knick. Die Figuren folgten den Knicken genau und liefen dadurch im Zickzack (z. B. zur und von der Mittagspause).

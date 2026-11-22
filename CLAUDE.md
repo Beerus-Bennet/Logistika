@@ -239,3 +239,7 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v437: Freigabe-Anruf – Kraft fragt bei nicht freigegebener Ware per Diensttelefon (`staffAskApproval`/`staffApprove`/`approveMsgHTML` in `team.js`, `m.approve`), „Nicht freigeben“ löscht die ganze Auftragskette; Easter Egg ohne letzten Satz, +2 Kleeblätter. Test `freigabe-v437.test.js`.
 
 - v440: Frei lebende NPCs/Haustiere und Bergtiermerkmale verfeinert, keine Änderung an Arten/Anzahl/Sichtungszeiten/Navigation. FWM-Körper 260–796 Dreiecke, vorhandene Mesh-Caches erhalten. woodmodels/alpine440, Gesamt440; main976942e integriert. Tests npc-tiere-v440, gebirge-v429, wasseroptik-v386; Bericht docs/NPC-TIERE-v440.md.
+
+- v439: Button „Unsere Zusammenarbeit“ bei angestellten Arbeitern entfernt (Arbeitermenü und Personalfenster, `team.js`); Kennenlernen vor der Anstellung bleibt.
+
+- v440 Integration: main e63813e/Arbeiter-Menü439 zusätzlich eingebunden; team.js unverändert aus main.

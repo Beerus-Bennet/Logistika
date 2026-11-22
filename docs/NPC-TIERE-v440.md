@@ -21,4 +21,4 @@ Bei den Bergtieren sind Bart/Schnauze des Steinbocks, Pfoten/Wangen und der rund
 - `node gebirge-v429.test.js` und `node wasseroptik-v386.test.js`: Kamerahöhe, Gelände, Wasseranschlüsse, 1.800 Tierschritte mit Bodenkontakt und 200 Zoomwechsel bestanden. Geländebudget bleibt unverändert, Gebirgs-Fernlast unter 16.000 Dreiecken.
 - Kein Test auf einem echten Handy/iPhone/Safari, keine Geräte-FPS-Messung.
 
-Die Modelle werden weiterhin einmal aufgebaut und über vorhandene Modellschlüssel wiederverwendet. Keine neuen Bibliotheken, zusätzlichen Tierinstanzen oder laufenden Mesh-Neubauten. Aktuelles main976942e einschließlich geglätteter Arbeiterwege438 integriert. Gesamt-/SW440, woodmodels/alpine440; übrige Assetstände erhalten. Kein automatisches Merge/Deployment.
+Die Modelle werden weiterhin einmal aufgebaut und über vorhandene Modellschlüssel wiederverwendet. Keine neuen Bibliotheken, zusätzlichen Tierinstanzen oder laufenden Mesh-Neubauten. Aktuelles maine63813e einschließlich Arbeiterwege438 und Arbeiter-Menü439 integriert. Gesamt-/SW440, woodmodels/alpine440; übrige Assetstände erhalten. Kein automatisches Merge/Deployment.
