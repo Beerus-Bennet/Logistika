@@ -134,7 +134,10 @@ const ALPINE = (()=>{
   const strata=.985+.015*Math.sin(h*.19+x*.035+z*.018);c=c.map(v=>v*strata);
   const q=channel(x,z);
   const base=groundSampler?groundSampler(x,z):typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);let result=mix(base,c,w);
-  if(q.y<1&&q.d<4.5&&poolE(x,z)>.98){const shore=mix(col(0x7d8470),col(0x9a9b83),sm(-.1,1.1,q.d));result=mix(shore,result,sm(.5,4.5,q.d));}return result;
+  /* v447: Flussufer mit denselben Sandfarben und Abständen wie das Ufernetz im Hofbereich (CB_C/CB_R in woodmodels.js: Schlamm, nasser
+     Sand, Sand, dann Boden bei 2,2). Vorher grau-grüner Streifen bis 4,5 – er endete am Rand des feinen Netzes in Zacken und stieß am
+     Gebirgsrand hart auf die Sandufer des Hofbachs. */
+  if(q.y<1&&q.d<2.2&&poolE(x,z)>.98){const d=q.d,s0=col(0x75704f),s1=col(0xa89878),s2=col(0xc9b98c),sand=d<.15?mix(s0,s1,sm(-.55,.15,d)):d<.88?mix(s1,s2,(d-.15)/.73):s2;result=mix(sand,result,d<.88?0:sm(.88,2.2,d));}return result;
  }
  function inside(x,z){const cx=-28,cz=-28,a=Math.atan2(z-cz,x-cx);return Math.hypot(x-cx,z-cz)<apronEdgeRadius(a)-.25;}
  function project(x,z){if(inside(x,z))return [x,z];const a=Math.atan2(z+28,x+28),r=apronEdgeRadius(a)-.25;return [-28+Math.cos(a)*r,-28+Math.sin(a)*r];}
