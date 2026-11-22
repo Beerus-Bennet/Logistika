@@ -274,3 +274,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v463: Fischer steht auf dem Angelsteg auf Plankenhöhe (`staffDeckY` in `team.js`), nicht mehr in den Planken.
 
 - v462: FWM.forestPath optional footTrail/trailTail, nur Berganschluss und nördliches Waldwegende verwenden weiches, längenabhängig verjüngtes Pfadband. Übrige Wege und gespeicherte Koordinaten bleiben gleich.
+
+- v466: Steinbock (`alpine.js`) – Kopf/Hörner neu, zweigliedrige Läufe mit Zwei-Gelenk-Berechnung, Schritt-Gangart nach Strecke (`a.gp`), Rumpf 0,12 höher.

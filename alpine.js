@@ -343,28 +343,43 @@ const ALPINE = (()=>{
   b.cyl(.07,.075,.05,8,0xf2f0ea,{y:.14,z:.2});b.ico(.115,0x1f5a3a,{y:.25,z:.21,sz:1.15});b.box(.07,.035,.12,0xd8b13a,{y:.22,z:.34});b.box(.05,.008,.012,0x473f2d,{y:.229,z:.402}); /* v440: abgegrenzte Schnabelspitze */
   b.ico(.02,0x141414,{x:.075,y:.28,z:.27});b.ico(.02,0x141414,{x:-.075,y:.28,z:.27});b.box(.09,.06,.1,0x1d1d1d,{y:.07,z:-.28,rx:-.4});b.box(.05,.04,.06,0xf2f0ea,{y:.12,z:-.32});return b;}
 
- function body(kind,parts){const b=new FM.MB(),m=kind==='marmot';
+ function body(kind,parts){let b=new FM.MB();const m=kind==='marmot';
   if(m)b.ico(1,0x82715a,{x:0,y:.28,z:0,sx:.24,sy:.25,sz:.48});
   /* v404: Steinbock geschlossen modelliert – runder Rumpf, Brust/Schulter und Keule als eigene Wölbungen, Hals bis zum Kopf, Ansätze über
      den Läufen (vorher grobe Ellipse mit losem Kopf und Läufen, von oben sichtbare Lücken) */
-  if(!m){b.ico(1,0x746858,{y:.88,sx:.33,sy:.37,sz:.62,detail:1});b.ico(.3,0x6c6050,{y:.94,z:.4,sx:1.08,sy:1.05,sz:.95,detail:1});b.ico(.29,0x786b5a,{y:.9,z:-.42,sx:1.08,sy:1,sz:.9,detail:1});
-   b.ico(.27,0xb09c7d,{y:.66,z:.04,sx:.9,sy:.4,sz:1.9});b.box(.08,.06,1.05,0x4c4234,{y:1.24,z:0});                                         /* heller Bauch, dunkler Aalstrich */
+  if(!m){const c=b;b=new FM.MB();/* v466: Rumpf 0,12 höher – die Läufe waren mit rund 40 % der Schulterhöhe zu kurz und stämmig (echter Steinbock etwa die Hälfte) */b.ico(1,0x746858,{y:.88,sx:.33,sy:.37,sz:.62,detail:1});b.ico(.3,0x6c6050,{y:.94,z:.4,sx:1.08,sy:1.05,sz:.95,detail:1});b.ico(.29,0x786b5a,{y:.9,z:-.42,sx:1.08,sy:1,sz:.9,detail:1});
+   b.ico(.27,0xb09c7d,{y:.66,z:.04,sx:.9,sy:.4,sz:1.9});b.box(.08,.05,.8,0x4c4234,{y:1.215,z:.02});                                         /* heller Bauch, dunkler Aalstrich */
    {const a=[0,1.02,.5],d=[0,1.3,.66],l=Math.hypot(d[1]-a[1],d[2]-a[2]);b.cyl(.17,.13,l+.08,8,0x7d705d,{x:0,y:a[1],z:a[2],rx:Math.atan2(d[2]-a[2],d[1]-a[1])});}  /* Hals */
    for(const sx of [-1,1])for(const sz of [-1,1])b.ico(.15,sz>0?0x6c6050:0x786b5a,{x:sx*.22,y:.74,z:sz*.4,sy:1.7,sz:1.1});                    /* Schulter-/Schenkelansätze */
-   b.box(.11,.22,.1,0x554636,{y:.85,z:-.6,rx:-.65});}
+   b.box(.11,.22,.1,0x554636,{y:.85,z:-.6,rx:-.65});c.merge(b,{y:.12});return c;}
   else{ /* v440: Murmeltier mit hellen Wangen, kleinen Ohren und sichtbaren Pfoten. */
    for(const side of [-1,1]){FM.limb(b,parts,[side*.16,.16,.16],m=>m.ico(.075,0x665440,{y:-.095,sy:.6,sz:1.4}));FM.limb(b,parts,[side*.12,.16,-.16],m=>m.ico(.065,0x8f7c61,{y:-.095,sy:.65,sz:1.2}));b.ico(.052,0xc3af8c,{x:side*.06,y:.34,z:.55,sy:.7});}
    b.ico(.16,0x938064,{y:.37,z:.4});for(const s of [-1,1]){b.ico(.05,0x766149,{x:s*.11,y:.48,z:.36});b.ico(.018,0x141916,{x:s*.115,y:.405,z:.49});}b.ico(.038,0x39362f,{y:.35,z:.55});b.ico(.09,0x665341,{y:.12,z:-.46,sx:.7,sy:.6,sz:1.7});}return b;
  }
- function head(){const b=new FM.MB();b.ico(.24,0x8d7e67,{sx:.78,sy:1.05,sz:1.35});b.ico(.09,0xa99575,{y:-.08,z:.21,sz:1.4});b.ico(.065,0x403c32,{y:-.1,z:.31,sz:1.1});
-  b.cone(.045,.14,5,0x514637,{y:-.12,z:.12,rx:Math.PI}); /* v440: kurzer Steinbockbart */
-  for(const s of [-1,1]){b.ico(.07,0xa3957b,{x:s*.22,y:.07,sz:1.8});b.ico(.025,0x161c17,{x:s*.16,y:.025,z:.15});
-   const pts=[[s*.13,.15,-.06],[s*.17,.4,-.12],[s*.19,.62,-.29],[s*.18,.77,-.54],[s*.15,.78,-.75]];
-   for(let i=1;i<pts.length;i++){const a=pts[i-1],d=pts[i],dx=d[0]-a[0],dy=d[1]-a[1],dz=d[2]-a[2],l=Math.hypot(dx,dy,dz);b.cyl(.065-i*.008,.057-i*.008,l,6,0x504a3b,{x:a[0],y:a[1],z:a[2],rx:Math.atan2(dz,dy),rz:-Math.asin(dx/l)});}}
+ /* v466: Steinbockkopf – schmal und lang mit leicht gewölbtem Nasenrücken, dunklem Nasenspiegel, kleinen spitzen, seitlich-hinten stehenden Ohren,
+    Augen seitlich und Bart; Hörner dicker am Ansatz, mit Querwülsten, sichelförmig nach hinten (vorher glatte Stäbe, Ohren als lange Wülste, Augen
+    wie aufgesetzte Punkte). */
+ function head(){const b=new FM.MB(),sk=0x8a7b64;
+  b.ico(.21,sk,{y:.02,sx:.74,sy:1,sz:1.35});b.ico(.1,0x7e705b,{y:.0,z:.2,sx:.8,sy:.95,sz:1.5});b.ico(.085,0xa59478,{y:-.07,z:.27,sx:.8,sy:.85,sz:1.35});
+  b.ico(.05,0x2f2b26,{y:-.075,z:.38,sx:1.1,sy:.8});for(const s of [-1,1])b.ico(.012,0x0d0c0b,{x:s*.026,y:-.062,z:.42});
+  b.box(.075,.008,.012,0x3a312a,{y:-.12,z:.35});b.ico(.05,0xb3a285,{y:-.125,z:.24});
+  b.cone(.04,.13,5,0x514637,{y:-.13,z:.2,rx:Math.PI}); /* v440: kurzer Steinbockbart */
+  b.box(.04,.03,.22,0x4f4538,{y:.12,z:.1,rx:-.1}); /* dunkler Stirnstreif */
+  for(const s of [-1,1]){
+   b.ico(.036,0x5c503f,{x:s*.158,y:.035,z:.1,sx:.6});b.ico(.028,0x14110f,{x:s*.168,y:.035,z:.1,sx:.6}); /* Auge mit Lid-Ring */
+   b.cone(.042,.15,5,sk,{x:s*.16,y:.09,z:-.1,rz:-s*1.35,rx:-.3});b.cone(.022,.1,4,0xb09a80,{x:s*.17,y:.085,z:-.092,rz:-s*1.35,rx:-.3}); /* Ohr */
+   const pts=[[s*.12,.14,-.04],[s*.15,.36,-.1],[s*.17,.58,-.26],[s*.165,.73,-.5],[s*.14,.74,-.72]];
+   for(let i=1;i<pts.length;i++){const a=pts[i-1],d=pts[i],dx=d[0]-a[0],dy=d[1]-a[1],dz=d[2]-a[2],l=Math.hypot(dx,dy,dz),r0=.078-i*.012,r1=.07-i*.012;
+    b.cyl(r0,r1,l,7,0x504a3b,{x:a[0],y:a[1],z:a[2],rx:Math.atan2(dz,dy),rz:-Math.asin(dx/l)});
+    if(i<4)for(let w=0;w<3;w++){const t=(w+.5)/3,px=a[0]+dx*t,py=a[1]+dy*t,pz=a[2]+dz*t,rr=r0+(r1-r0)*t+.011;b.cyl(rr,rr,.016,7,0x6a6250,{x:px,y:py,z:pz,rx:Math.atan2(dz,dy),rz:-Math.asin(dx/l)});} /* Querwülste */
+   }}
   return b;
  }
- function leg(){const b=new FM.MB();b.box(.12,1.14,.13,0x675c4b,{y:-1});return b;} /* v404: etwas kräftiger, oben in den Ansatz hinein */
- function hoof(){const b=new FM.MB();b.box(.13,.1,.19,0x302f29,{z:.03});return b;}
+ /* v466: Lauf aus zwei Gliedern mit echten Längen (Länge über sy, Ursprung am Gelenk, zeigt nach unten): oben kräftig (Unterarm/Unterschenkel),
+    unten schlank und heller (Röhrbein), Gelenkkugel am Knie/Sprunggelenk; Huf als Spalthuf mit Afterklauen. */
+ function legUpper(){const b=new FM.MB();b.cyl(.085,.135,1,7,0x7d705d,{y:-1});b.ico(.09,0x6f6350,{y:0,sy:1/.42});return b;}
+ function legLower(){const b=new FM.MB();b.cyl(.052,.075,1,7,0x8f8068,{y:-1});b.ico(.075,0x6f6350,{y:0,sy:1/.42});b.ico(.06,0x6b5f4d,{y:-.93,sy:1/.42,sx:.9});return b;} /* Fesselgelenk */
+ function hoof(){const b=new FM.MB();for(const s of [-1,1]){b.box(.05,.08,.16,0x2b2a25,{x:s*.032,y:.04,z:.03});b.box(.03,.03,.04,0x2b2a25,{x:s*.042,y:.1,z:-.07});}return b;}
  function eagle(){const b=new FM.MB();b.ico(.22,0x4a4032,{sy:.65,sz:1.8});b.ico(.11,0x8d7951,{y:.02,z:.35});b.cone(.04,.12,5,0xb99b54,{y:.01,z:.41,rx:Math.PI/2});for(const side of [-1,1])b.ico(.018,0x191b1b,{x:side*.078,y:.06,z:.405});b.ico(.025,0x443929,{y:-.015,z:.50}); /* v440: Adlerauge und Hakenschnabel */b.box(.3,.04,.3,0x685944,{y:-.02,z:-.28});return b;}
  function wing(side){const b=new FM.MB();const A=[side*.15,.02,.12],B=[side*1.6,0,-.1],C=[side*1.25,0,-.42],D=[side*.15,0,-.22];b.quad(A,B,C,D,0x413b30);b.quad(D,C,B,A,0x413b30);for(let i=0;i<5;i++)b.box(.14,.035,.38,0x343229,{x:side*(1.0+i*.13),z:-.35-i*.02,ry:side*.25});return b;}
  function safeCenter(wanted,small,occupied){let best=wanted,score=1e6;
@@ -381,7 +396,7 @@ const ALPINE = (()=>{
    if(m&&typeof ANIMAL_MOTION!=="undefined")a.gait=ANIMAL_MOTION.mount(R,root,'alpine:marmot','marmot',parts=>body('marmot',parts));
    // Nur sichere Punkte auf dem tatsächlichen feinen Geländeraster verwenden.
    for(let k=0;k<64;k++){const t=k/64*Math.PI*2,X=x+Math.cos(t)*(m?.7:2.3),Z=z+Math.sin(t)*(m?.6:1.8);a.path.push([X,surface(X,Z),Z]);}
-   if(!m){a.head=R.addChild(root,node(cache('head',head),{y:1.27,z:.63}));for(const sx of [-1,1])for(const sz of [-1,1]){const hip=R.addChild(root,node(null,{x:sx*.22,y:.68,z:sz*.4}));a.legs.push({hip,upper:R.addChild(hip,node(cache('leg',leg),{})),lower:R.addChild(hip,node(cache('leg',leg),{})),hoof:R.addChild(hip,node(cache('hoof',hoof),{}))});};}
+   if(!m){a.gp=i*.19;a.gk=0;a.head=R.addChild(root,node(cache('head',head),{y:1.39,z:.63}));for(const sx of [-1,1])for(const sz of [-1,1]){const hip=R.addChild(root,node(null,{x:sx*.22,y:.8,z:sz*.4}));a.legs.push({hip,upper:R.addChild(hip,node(cache('legU',legUpper),{})),lower:R.addChild(hip,node(cache('legL',legLower),{})),hoof:R.addChild(hip,node(cache('hoof',hoof),{}))});};}
    animals.push(a);
   }
   const birds=[];for(let i=0;i<2;i++){const root=R.addChild(parent,node(cache('eagle',eagle),{shadow:false,s:1.4})),left=R.addChild(root,node(cache('wl',()=>wing(-1)),{})),right=R.addChild(root,node(cache('wr',()=>wing(1)),{}));birds.push({root,left,right,phase:i*2.8});}return {animals,birds};
@@ -425,10 +440,21 @@ const ALPINE = (()=>{
    const moved=a.lastX==null?0:Math.hypot(x-a.lastX,z-a.lastZ);a.lastX=x;a.lastZ=z;
    if(a.gait)ANIMAL_MOTION.step(a.gait,moved,dt);
    a.root.x=x;a.root.z=z;a.root.y=surface(x,z);a.root.ry=Math.atan2(q[0]-p[0],q[2]-p[2]);
-   a.legs.forEach((leg,j)=>{const wave=Math.sin(clock*5+a.phase+(j===0||j===3?0:Math.PI)),sc=a.root.sx,c=Math.cos(a.root.ry),s=Math.sin(a.root.ry),swing=moving?wave*.09:0,hip=leg.hip,X=x+(hip.x*c+(hip.z+swing)*s)*sc,Z=z+(-hip.x*s+(hip.z+swing)*c)*sc,toe=(surface(X,Z)-a.root.y)/sc-hip.y+(moving?Math.max(0,wave)*.06:0),knee=toe*.49,kz=(hip.z>0?.11:-.11)+swing*.4;
-    leg.upper.rx=Math.atan2(-kz,-knee);leg.upper.sy=Math.hypot(knee,kz);leg.lower.y=knee;leg.lower.z=kz;leg.lower.rx=Math.atan2(-(swing-kz),knee-toe);leg.lower.sy=Math.hypot(knee-toe,swing-kz);leg.hoof.y=toe;leg.hoof.z=swing;
-   });
-   if(a.head)a.head.rx=moving?-.05:.38+.05*Math.sin(clock*.8+a.phase);if(a.kind==='marmot')a.root.rx=moving?0:Math.sin(clock*.5+a.phase)>.5?-.2:0;
+   /* v466: Gangart des Steinbocks – Schritt (Viertakt, Passfolge hinten links → vorne links → hinten rechts → vorne rechts), Schrittlänge folgt der
+      zurückgelegten Strecke (vorher Takt nach Uhr: Beine pendelten, auch wenn sich das Tier kaum bewegte); Standphase 62 %, in der Schwungphase hebt
+      sich der Fuß, das Vorderknie (Handwurzel) knickt nach vorn, das Sprunggelenk hinten nach hinten (zweigliedriger Lauf mit echten Längen). */
+   if(a.gp!=null){const sc=a.root.sx,STR=.9,A=.28,L1=.42,L2=.42,OFF=[0,.25,.5,.75];
+    a.gp=(a.gp+moved/(STR*sc))%1;a.gk+=((moving?1:0)-a.gk)*Math.min(1,dt*4);
+    const c=Math.cos(a.root.ry),s=Math.sin(a.root.ry);
+    a.legs.forEach((leg,j)=>{const ph=(a.gp+OFF[j])%1,hip=leg.hip;let zo,lift;
+     if(ph<.62){const t=ph/.62;zo=A*(1-2*t);lift=0;}else{const t=(ph-.62)/.38,e=t*t*(3-2*t);zo=-A+2*A*e;lift=.14*Math.sin(Math.PI*t);}
+     zo*=a.gk;lift*=a.gk;
+     const front=hip.z>0,X=x+(hip.x*c+(hip.z+zo)*s)*sc,Z=z+(-hip.x*s+(hip.z+zo)*c)*sc,ty=(surface(X,Z)-a.root.y)/sc-hip.y+lift;
+     const hyp=Math.hypot(zo,ty),k=Math.max(1,hyp/(L1+L2-.005)),l1=L1*k,l2=L2*k,d=Math.max(.02,hyp),phi=Math.atan2(zo,-ty),ang=Math.acos(Math.max(-1,Math.min(1,(l1*l1+d*d-l2*l2)/(2*l1*d)))),side=front?1:-1;
+     const p1=phi+side*ang,ky=-l1*Math.cos(p1),kz=l1*Math.sin(p1),p2=Math.atan2(zo-kz,-(ty-ky));
+     leg.upper.rx=-p1;leg.upper.sy=l1;leg.lower.y=ky;leg.lower.z=kz;leg.lower.rx=-p2;leg.lower.sy=l2;leg.hoof.y=ty;leg.hoof.z=zo;leg.hoof.rx=0;
+    });}
+   if(a.head)a.head.rx=moving?-.05+.035*Math.sin(a.gp*Math.PI*4):.38+.05*Math.sin(clock*.8+a.phase);if(a.kind==='marmot')a.root.rx=moving?0:Math.sin(clock*.5+a.phase)>.5?-.2:0;
   }
   for(const b of scene.birds){b.root.visible=day;if(!day)continue;const t=clock*.12+b.phase;b.root.x=80+Math.cos(t)*29;b.root.z=-152+Math.sin(t)*18;b.root.y=58+Math.sin(t*1.4)*3;b.root.ry=-t;b.root.rz=Math.sin(t)*.12;const flap=Math.sin(clock*3+b.phase)>.82?Math.sin(clock*8+b.phase)*.13:.035;b.left.rz=flap;b.right.rz=-flap;}
  }
