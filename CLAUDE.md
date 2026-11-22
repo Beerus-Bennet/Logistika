@@ -259,3 +259,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v450: Meldungen im Markt/Auktionshaus oben (`body.tab-market` in `showTab`, CSS am Ende von `style.css`), damit sie die Gebotsknöpfe nicht verdecken.
 - v451: Trefferbild – Lunge ohne Bronchialbaum (`buildOrganMesh` in `hunt.js`), keine hellen Linien mehr im Organ.
 - v452: Jagd – Meldungen (`toastNext` in `game.js`) und Kleeblatt-Einblendung (`farmCloverFly`) nur außerhalb der Jagd, Spielzeit steht beim Begutachten still (`huntInspect` in `clockRunning`).
+- v453: Garagenfahrzeuge zeigen ihr Modellfoto auch bei abweichender Lackfarbe (`photoFits`/`paintMatch` in `auction.js`), Hinweis „Foto in <Farbe>“ im Bildnachweis; keine Umfärbung.

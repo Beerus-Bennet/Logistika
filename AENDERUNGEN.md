@@ -1,3 +1,11 @@
+## v453 – Garagenfahrzeuge zeigen wieder ihr Modellfoto
+
+**Ursache:** Seit v372 (feste Modellfotos, keine Umfärbung der Bilder) wurde ein Foto nur gezeigt, wenn die Lackfarbe des Fahrzeugs genau der Farbe des Fotos entsprach. Fahrzeuge in der Garage, die früher mit anderer Lackierung (z. B. Verde Mantis, Violett) gekauft wurden, fielen deshalb auf die gezeichnete Illustration zurück („Illustration in Fahrzeugfarbe“).
+
+**Lösung (`auction.js`):** Das freigegebene Modellfoto wird für jede Lackierung gezeigt (`photoFits` prüft nur noch die Freigabe, neue `paintMatch` die Farbe). Weicht die Fahrzeugfarbe vom Foto ab, steht das im Bildnachweis („… · Foto in Schwarz“) und in den Details („Das Foto zeigt das Modell in …; die Farbe deines Fahrzeugs weicht ab“). Das Bild wird weiterhin nicht umgefärbt; fehlt ein freigegebenes Foto, bleibt die Illustration. Lackfarbe, Preise und Spielstand unverändert.
+
+**Geprüft:** `autofotos-v372.test.js` (6 Tests, an das neue Verhalten angepasst) und Browserlauf `autofotos-v372.browser.js` (Garage mit abweichender Lackierung zeigt das Foto mit Hinweis, 127 Fotos dekodiert); Sichtprüfung des Garagenbildes im Testbrowser. **Nicht geprüft:** Handy; die abweichende Farbe des Fotos wird nicht angeglichen (Foto bleibt in Originalfarbe).
+
 ## v452 – Ruhe während der Jagd: keine Einblendungen, Zeit steht beim Begutachten still
 
 **Ursache:** Auch während der Jagd erschienen Hofmeldungen und die Kleeblatt-Einblendung („+3 🍀“) – zum Beispiel nach einem Erfolg oder einer Aufgabe – mitten im Bild des Hochsitzes und über dem Trefferbild. Die Spielzeit lief beim Begutachten des erlegten Stücks weiter.
