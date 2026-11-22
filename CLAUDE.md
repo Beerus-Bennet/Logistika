@@ -274,3 +274,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v463: Fischer steht auf dem Angelsteg auf Plankenhöhe (`staffDeckY` in `team.js`), nicht mehr in den Planken.
 
 - v462: FWM.forestPath optional footTrail/trailTail, nur Berganschluss und nördliches Waldwegende verwenden weiches, längenabhängig verjüngtes Pfadband. Übrige Wege und gespeicherte Koordinaten bleiben gleich.
+
+- v464: Keine Blase („🔭 2“) mehr über dem fertigen Hochsitz (`tagInfo` in `hunt.js` gibt `null`); Baustellen-Blase bleibt.
