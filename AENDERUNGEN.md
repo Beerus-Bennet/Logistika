@@ -1,3 +1,11 @@
+## v447 – Flussufer im Gebirge ohne Zacken, nahtloser Übergang zum Hofbach
+
+**Ursache:** (1) Das Ufer im Gebirge war ein grau-grüner Farbverlauf bis 4,5 Einheiten Abstand zum Wasser. Er reichte über das feine Geländenetz (bis etwa 3,6) hinaus; dort färbten gröbere Dreiecke den Streifen in Zacken („Sägezähne“ entlang der Ufer). (2) Beim Hofbach ist das Ufer sandfarben (Schlamm, nasser Sand, Sand) und 2,2 breit. Am Gebirgsrand traf es hart auf den grauen Streifen, außerdem fehlte zwischen Geländerand (z = −88) und dem gekappten Ufernetz ein Stück Ufer – der sichtbare diagonale Knick im Fluss.
+
+**Lösung:** `alpine.js` (`color`): Das Ufer im Gebirge nutzt dieselben Sandfarben und Abstände wie das Ufernetz des Hofbachs (Schlamm → nasser Sand → Sand → Boden bei 2,2) und liegt damit vollständig im feinen Netz – keine Zacken mehr, durchgehendes Ufer. `worldview.js`: Das Ufernetz des Hofbachs wird nur dort gekappt, wo das Gebirgsgelände wirklich liegt (`ALPINE.replacesGround`), nicht schon davor. Höhenfeld, Dreiecksbudget und Spielstand unverändert.
+
+**Geprüft:** Testbrowser-Vorher/Nachher aus mehreren Blickwinkeln (Übergang von oben, Tal, Gesamtansicht); `gebirge-v413`, `gebirge-v429` (9.918 Geländedreiecke unverändert), `wasseroptik-v386`, `huettenplatte-v414`, `fluss-baeume-v424` bestanden. **Nicht geprüft:** Handy; ein kleiner Absatz im Sandufer direkt am Gebirgsrand ist bei sehr naher Ansicht noch schwach zu erkennen. Die Zacken der Bergflanken selbst (Gelände abseits des Flusses) habe ich nicht verändert.
+
 ## v446 – Bewegliche Tiere und mehr Fellvielfalt im Wald
 
 **Ursache:** Viele Wald-, Haus- und Stalltiere waren starre Gesamtmodelle. Beim Laufen wippte oder hüpfte das gesamte Modell; Beine bewegten sich nicht. Waldtiere nutzten je Art immer dieselben Farben.
