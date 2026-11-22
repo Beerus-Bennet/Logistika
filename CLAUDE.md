@@ -264,3 +264,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v455: Sammellieferung – PR #152–#156 (v450–v454) in einem Zweig zusammengeführt; Details je Version oben.
 
 - v456: Fahrzeugfarbe = Fotofarbe – einmalige Angleichung `A.paint456` in `ah()` (`auction.js`), Fahrzeuge mit freigegebenem Modellfoto übernehmen dessen Lack.
+
+- v460: Rauszoomen ohne Hänger – `treeFarSet` legt Fernbäume scheibchenweise an (`L.pend`/`f.ok`), Hänger-Wächter am Ende von `farmview.js` lädt nach 10 s Stillstand neu.

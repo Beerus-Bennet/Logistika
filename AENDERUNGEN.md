@@ -1,3 +1,11 @@
+## v460 – Rauszoomen hängt nicht mehr (Fernbäume scheibchenweise, Hänger-Wächter)
+
+**Ursache:** Aus Bennets Video: Beim Rauszoomen friert das Bild für gut eine Sekunde ein und springt dann. Gemessen im Testbrowser: Beim ersten Überblenden der Kulissenbäume in ihr Fernmodell (Abstand ab ~150, `treeFarSet` in `worldview.js`) wurden alle Baumgruppen auf einmal angelegt und übernommen – ein einzelnes Bild von ~92 ms am Rechner, auf dem Handy entsprechend länger; das passierte bei jedem erneuten Rauszoomen.
+
+**Lösung:** (1) `treeFarSet` arbeitet scheibchenweise (höchstens ~6 ms je Bild); noch nicht fertige Gruppen bleiben im vollen Modell sichtbar, fertige werden überblendet. Gemessen danach: höchstens ~9 ms je Bild beim Rauszoomen. (2) Hänger-Wächter am Ende von `farmview.js`: steht die sichtbare Hofansicht länger als 10 s ohne Bild oder bleibt der WebGL-Kontext 12 s verloren, wird gespeichert und die Seite neu geladen (Meldung in `logistika.lastError`). Keine Spielstand-Änderung.
+
+**Geprüft:** Zoom-Reihe 30 → 450 → 30 im Testbrowser mit Bildzeiten vorher/nachher; Wächter: kein Neuladen bei laufender Schleife, Neuladen nach ~13 s bei angehaltener Schleife. **Nicht geprüft:** Handy (dort trat der Hänger auf; echte Bildzeiten dort unbekannt), Neuladen bei verlorenem WebGL-Kontext.
+
 ## v456 – Lackfarbe und Foto stimmen überein
 
 **Ursache:** Ältere Garagenfahrzeuge (z. B. Audi R8 „Ibisweiß“) behielten eine früher zufällig gewählte Lackfarbe, das freigegebene Modellfoto zeigt aber seine eigene Farbe (schwarz). Text und Bild widersprachen sich (seit v453 nur mit Hinweis im Bildnachweis).
