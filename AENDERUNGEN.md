@@ -1,3 +1,11 @@
+## v449 – Flussufer überall gleich (Ufernetz des Hofbachs bis zur Bergkulisse)
+
+**Ursache:** Der Fluss hatte zwei verschiedene Ufer: Auf dem Hofgelände ein Ufernetz mit knackigen Sandringen (Schlamm, nasser Sand, Sand, Kiesel), im Gebirgsgelände nur Farbe auf dem Gelände – heller, weicher und am Rand unscharf. Das Ufernetz wurde im ganzen Gebirgsgelände abgeschaltet (`bankCut` in `worldview.js`), so dass sich der Übergang in deinem Bild als zwei verschiedene Ufer zeigte.
+
+**Lösung (`worldview.js`):** Das Ufernetz des Bachs läuft jetzt auch durch das Gebirgstal (es folgt dort dem Gelände über `level`/`bankY`) und wird nur noch am Wasserfallbecken, am Bergsee und in der steilen Schlucht ab z < −112 abgeschaltet. Dort bleibt das Sandufer aus der Geländefarbe (v447). Damit sehen beide Seiten und beide Ufer gleich aus.
+
+**Geprüft:** Testbrowser-Vorher/Nachher (Übergang von oben, Tal, Schlucht); `gebirge-v429` (9.918 Geländedreiecke), `gebirge-v413`, `wasseroptik-v386`, `fluss-baeume-v424` bestanden; `wasserlandschaft-v384` schlägt auch ohne diese Änderung fehl. **Nicht geprüft:** Handy; am Übergang bei z = −112 wechselt das Ufer von Netz zu Geländefarbe (gleiche Farben, in sehr naher Ansicht schwach erkennbar); an steilen Hängen bleibt ein schmaler grüner Saum mit leichter Zackung.
+
 ## v448 – Kaufbeleg mit stärkerem Logistika-Auftritt
 
 **Anlass:** Der Übernahmebeleg sollte markanter wirken und trotzdem übersichtlich bleiben.
