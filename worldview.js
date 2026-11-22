@@ -1116,7 +1116,7 @@ function worldStatic() {
      v177/v178: An der Mündung laufen die Uferlinien des Bachs in einer weichen Kurve in die Seeuferlinie ein, sein Ufer geht in den
      Seestrand über (lkShoreCol), und die Fließbewegung geht im Shader stufenlos in die Seebewegung über (water: 5). */
   /* v190: Bach 1,5-mal so breit, verjüngt sich nur auf den letzten 6 Einheiten und bleibt an der Quelle kräftig; die Quelle hat einen großen Topf */
-  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, width:typeof ALPINE!=="undefined"?ALPINE.riverWidth:null,level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>ALPINE.replacesGround(x,z+.4)&&ALPINE.weight(x,z)>.035:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
+  const CR = { gnd: wGroundAt, taper: [0, 0], min: 0.7, w: 1.5, current: true, meander:true, width:typeof ALPINE!=="undefined"?ALPINE.riverWidth:null,level:typeof ALPINE!=="undefined"?ALPINE.riverLevel:null,bankY:typeof ALPINE!=="undefined"?ALPINE.riverBankY:null,bankCut:typeof ALPINE!=="undefined"?(x,z)=>z<-112||ALPINE.lakeE(x,z)<1.45||ALPINE.poolE(x,z)<1.9:null }, CL = { gnd: lkShoreCol, mouth: { R: 7, shoreD: lkShoreD, shoreW: (x, z) => lkW(lkAng(x, z)) } };
   /* v366: Beide Bäche laufen über den alten Weltrand hinaus bis zur Inselkante (creekToRim) */
   const CRX = creekToRim(typeof ALPINE!=="undefined"?ALPINE.riverLine():FWORLD.creek).line, LCRX = creekToRim(LCR).line;
   lines.merge(islandClip(FWM.creekBank(CRX, CR)), {});
