@@ -1,3 +1,11 @@
+## v463 – Fischer steht auf dem Steg, nicht in den Planken
+
+**Ursache:** Die Figuren stehen überall auf Bodenhöhe (y = 0). Die Planken des Angelstegs liegen mit der Oberkante bei 0,135 – der Fischer am Stegende (auch in der „Mittagspause“) steckte mit den Füßen in den Planken.
+
+**Lösung:** `staffDeckY` in `team.js` hebt die Figur auf dem Steg (Breite ±0,85, Anlauf an Land bis Stegende) um die Plankenhöhe, mit sanfter Rampe am Landende, damit nichts springt. Nur Darstellung; Wege, Aufträge und Spielstand unverändert.
+
+**Geprüft:** Neuer Test in `worker-motion-v351.test.js` (auf dem Steg 0,135, abseits 0) und alle 17 Bewegungsprüfungen laufen. Die Wege vom Stegende zum Lagerfeuer in der Mittagspause habe ich im Testlauf nachgestellt: die Kraft läuft normal los, es hängt nichts fest. **Nicht geprüft:** Ansicht im Spiel/Handy, andere Stege (z. B. Bachsteg-Fischer).
+
 ## v462 – Waldweg und Berganschluss laufen als Pfad aus
 
 **Ursache:** Der breite Waldweg endete stumpf; die neue Berganbindung traf als gleich breites, ebenes Band auf den schmalen Wanderpfad.

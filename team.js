@@ -1280,6 +1280,16 @@ function staffStegSpot(steg) {
   const [cx, cz] = farmCenter(steg), [, d] = farmSize(steg);
   return [cx, cz + d / 2 - 0.6, cx, cz + d / 2 + 3];
 }
+/* v462: Höhe der Stegplanken (Oberkante 0,135, Anlauf an Land ab −4,7, Breite ±0,85, Ende bei +3) – die Kraft stand vorher auf Bodenhöhe
+   und steckte mit den Füßen in den Planken. Sanfte Rampe am Landende, damit nichts springt. */
+function staffDeckY(x, z) {
+  const st = typeof farmObj1 === "function" ? farmObj1("f_steg") : null;
+  if (!st) return 0;
+  const [cx, cz] = farmCenter(st), dx = Math.abs(x - cx), dz = z - cz;
+  if (dx > 1.0 || dz > 3.2 || dz < -5.1) return 0;
+  const k = Math.max(0, Math.min(1, (dz + 5.1) / 0.7)) * Math.max(0, Math.min(1, (1.0 - dx) / 0.15));
+  return 0.135 * k * k * (3 - 2 * k);
+}
 /* v64: Köder für die Reusen – nur wenn „Reusenköder“ freigegeben ist; sonst bleiben die Reusen leer.
    Ohne Dosen nimmt er Mais, falls auch Mais freigegeben ist. */
 function staffPotBait() {
@@ -2078,6 +2088,7 @@ function stepStaff(dt, time) {
       const t = farmTree(j.tid);
       if (t) { WV.hit = { id: t.id, t0: wnow() }; FV.R.burst({ x: t.x + 0.3, y: 0.6, z: t.z + 0.3, n: 4, col: [[0.9, 0.78, 0.55, 1], [0.75, 0.55, 0.32, 1]], speed: 1.2, up: 1.4, size: 0.06, shape: 1 }); }
     }
+    n.y += staffDeckY(e.x, e.z);   /* v463: auf dem Angelsteg stehen die Füße auf den Planken, nicht darin */
   });
   /* v346: Abstand jetzt gemeinsam mit Bewohnern und Fahrrädern in
      PEOPLE_TRAFFIC; keine zweite, widersprechende Verschiebung hier. */
