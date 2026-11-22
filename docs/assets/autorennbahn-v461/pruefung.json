@@ -1,0 +1,85 @@
+[
+  {
+    "test": "Altstand und Kaufabbruch",
+    "valid": true,
+    "badWater": false,
+    "badHof": false,
+    "badBerg": false,
+    "fail": true,
+    "same": true,
+    "value": true,
+    "available": [
+      "G1"
+    ]
+  },
+  {
+    "test": "Kauf und begrenzte Rodung",
+    "obj": true,
+    "clover": 15000,
+    "removed": 0,
+    "inside": 0,
+    "duplicate": true,
+    "outside": true,
+    "blocked": true,
+    "save": true
+  },
+  {
+    "test": "Startreservierung",
+    "active": true,
+    "months": 1,
+    "stored": true,
+    "forest": 0
+  },
+  {
+    "test": "Touchlenkung und Nitro",
+    "v": 6.688552459458365,
+    "steer": 0.6696044950922088,
+    "nitro": 94.44166666666678,
+    "km": 0.0015899125890663911,
+    "held": true
+  },
+  {
+    "test": "Kilometer und Verschleiß atomar",
+    "no": true,
+    "rollback": true,
+    "yes": true,
+    "once": true,
+    "km": 12001.504958574491,
+    "wear": 0.8028258767418195,
+    "loss": true,
+    "locked": true
+  },
+  {
+    "test": "Preisgeld genau einmal",
+    "no": true,
+    "rollback": true,
+    "yes": true,
+    "award": 5000000,
+    "single": true,
+    "ledger": true,
+    "entry": {
+      "id": "R1",
+      "month": 7,
+      "uid": "G1",
+      "status": "fertig",
+      "pool": 5000000,
+      "place": 1,
+      "prize": 5000000,
+      "time": 150
+    },
+    "active": null
+  },
+  {
+    "test": "Neuladen ohne zweiten Start",
+    "active": null,
+    "entry": "abgebrochen",
+    "km": 12004.104958574491,
+    "wear": 1.4028258767418194
+  },
+  {
+    "test": "Auktionswert",
+    "wear": true,
+    "km": true,
+    "value": true
+  }
+]

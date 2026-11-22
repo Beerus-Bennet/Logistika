@@ -249,6 +249,7 @@ function inSpringHill(x, z, m) {
   return springHillNear(x, z).d < (m || 0);
 }
 function treeSpotOk(x, z, pathGap) {
+  if (typeof RACE !== "undefined" && RACE.clear(x,z,1.7)) return false; /* v461: kein Nachwuchs auf der Bahn */
   if (inHofMax(x, z, 1)) return false;
   if (z > 19.5) return false;                                       /* Straße und See */
   if (Math.hypot(x - FWORLD.pond.x, z - FWORLD.pond.z) < FWORLD.pond.r + 1.8) return false;
@@ -2013,7 +2014,7 @@ function farmClover(n, why) {
 function farmCos(id) { return !!(S.farm && S.farm.cos && S.farm.cos.own[id]); }
 function farmCosBuy(id) {
   const C = FCOSMETIC.find(c => c.id === id), F = S.farm;
-  if (!C || F.cos.own[id]) return false;
+  if (!C || C.race || F.cos.own[id]) return false; /* v461: Rennbahn bezahlt erst beim Platzieren */
   if ((F.clover || 0) < C.price) return toast("Dafür fehlen " + (C.price - (F.clover || 0)) + " 🍀.", "warn"), false;
   F.clover -= C.price;
   F.cos.own[id] = S.time;

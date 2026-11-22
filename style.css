@@ -5386,3 +5386,85 @@ body{position:fixed;top:var(--app-top,0px);left:0;width:100%;height:100dvh;heigh
 
 /* v450: Im Markt/Auktionshaus stehen Meldungen oben unter der Kopfleiste – unten verdeckten sie beim Bieten die Gebotsknöpfe. */
 body.tab-market #toasts{bottom:auto;top:calc(var(--head-h) + 8px)}
+
+/* v461: Logistika Motorpark – eigene, abgeschlossene Fahrbühne. */
+body.race-open { overflow: hidden; }
+.race-root { position: fixed; inset: 0; z-index: 20000; color: #102635; background: #102635; font-family: inherit; overflow: hidden; isolation: isolate; }
+.race-root *, .race-root *::before, .race-root *::after { box-sizing: border-box; }
+.race-root button, .race-root select, .race-root input { font: inherit; }
+.race-root button { cursor: pointer; touch-action: manipulation; }
+.race-root button:focus-visible, .race-root select:focus-visible, .race-root input:focus-visible { outline: 3px solid #f7bf43; outline-offset: 4px; }
+.race-root button:disabled { cursor: default; opacity: .45; }
+.race-root .btn { border: 3px solid #102635; border-radius: 14px; min-height: 46px; background: #2f6fed; color: #fff; font-weight: 900; padding: 10px 15px; box-shadow: 0 3px 0 #102635; white-space: normal; line-height: 1.3; }
+.race-root .btn.ghost { background: #fff9e9; color: #102635; }
+.race-lobby { max-width: 980px; height: 100%; margin: auto; overflow: auto; overscroll-behavior: contain; background: #f8f4e8; scrollbar-gutter: stable; }
+.race-hero { position: relative; padding: max(24px, env(safe-area-inset-top)) 28px 28px; min-height: 280px; overflow: hidden; background: #15394c; color: #fff9e7; border-bottom: 6px solid #102635; }
+.race-brand { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-right: 42px; font-size: 11px; font-weight: 900; letter-spacing: .16em; margin-bottom: 30px; }
+.race-brand span { color: #f2c453; }
+.race-kicker, .race-label { display: block; color: #536b78; font-size: 10px; font-weight: 900; letter-spacing: .13em; line-height: 1.6; }
+.race-kicker { color: #82d7c3; position: relative; z-index: 1; }
+.race-hero h1 { position: relative; z-index: 1; font-size: clamp(32px, 7vw, 50px); font-weight: 900; line-height: 1.06; margin: 8px 0 16px; letter-spacing: -.035em; }
+.race-hero h1 em { color: #f2c453; font-style: normal; }
+.race-hero p { position: relative; z-index: 1; max-width: 270px; margin: 0; font-size: 12px; line-height: 1.5; color: #d0e1e4; }
+.race-close { position: absolute; right: 18px; top: max(18px, env(safe-area-inset-top)); width: 42px; height: 42px; border: 3px solid #102635; border-radius: 50%; background: #fff6df; color: #102635; font-size: 26px !important; line-height: 1; z-index: 3; }
+.race-course { position: absolute; width: 50%; height: 74%; right: 0; top: 58px; opacity: .30; transform: rotate(-13deg); }
+.race-course path { fill: none; stroke: #81d4c1; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
+.race-course circle { fill: #f7c748; }
+.race-lobby-body { padding: 22px 26px 28px; }
+.race-lobby h2 { font-size: 19px; line-height: 1.25; margin: 0 0 15px; }
+.race-select { display: grid; gap: 5px; color: #536b78; font-size: 11px; font-weight: 800; }
+.race-select select { width: 100%; min-width: 0; border: 2px solid #102635; border-radius: 11px; padding: 11px 30px 11px 10px; background: #fff; font-size: 14px; color: #102635; font-weight: 800; }
+.race-garage { margin: 12px 0 20px; padding: 14px; border-left: 4px solid #2c9c88; border-radius: 0 10px 10px 0; background: #e5eee5; }
+.race-garage b { font-size: 15px; }.race-garage div { display: flex; flex-wrap: wrap; gap: 6px 15px; margin: 6px 0; font-size: 13px; font-weight: 800; }
+.race-garage small { color: #536b78; font-size: 11px; line-height: 1.5; }
+.race-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.race-modes article { display: flex; flex-direction: column; border: 3px solid #102635; border-radius: 17px; padding: 17px; background: #fffdf7; box-shadow: 0 4px 0 #102635; min-width: 0; }
+.race-modes article.race-month { background: #fff0c5; }
+.race-modes h3 { font-size: 23px; margin: 5px 0 9px; line-height: 1.1; }
+.race-modes p { font-size: 13px; line-height: 1.5; flex: 1; margin: 10px 0 18px; }.race-modes small { font-size: 11px; }
+.race-purse { font-size: clamp(18px, 3.5vw, 30px); letter-spacing: -.03em; white-space: nowrap; }
+.race-rules { margin: 25px 0 20px; padding: 15px 0 0; border-top: 2px dashed #bbc9c7; font-size: 12px; line-height: 1.6; color: #536b78; }
+.race-rules b { color: #102635; }.race-rules p { margin: 6px 0; }.race-back { width: 100%; }
+.race-empty { padding: 18px; margin: 10px 0 20px; border: 2px dashed #94aaa8; border-radius: 12px; font-size: 14px; }.race-empty p { line-height: 1.6; }
+.race-note { padding: 12px; border: 2px solid #c98431; border-radius: 10px; background: #fff0c5; color: #654514; font-size: 13px; line-height: 1.5; }
+.race-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; background: #a4cbdf; }
+.race-hud { position: absolute; inset: 0; pointer-events: none; color: #fff9e7; padding: max(16px, env(safe-area-inset-top)) 18px 0; text-shadow: 0 2px 1px #102635; }
+.race-topline { display: flex; justify-content: space-between; align-items: flex-start; }
+.race-topline>div { padding: 9px 13px; background: #102635e8; border: 2px solid #ffffff3b; border-radius: 13px; }.race-topline .race-label { color: #9bdcc9; font-size: 10px; }.race-topline b { display: block; font-size: 21px; }
+.race-pause { pointer-events: auto; width: 46px; height: 46px; border: 3px solid #102635; border-radius: 14px; background: #fff6df; font-size: 24px !important; color: #102635; }
+.race-stats { display: flex; gap: 12px; align-items: center; margin-top: 8px; font-size: 17px; font-variant-numeric: tabular-nums; }.race-stats b { padding: 6px 12px; background: #102635e8; border-radius: 8px; color: #f7cf68; }.race-stats span { padding: 6px 10px; border-radius: 8px; background: #102635bc; }
+.race-map { position: absolute; top: max(80px, calc(env(safe-area-inset-top) + 62px)); right: 12px; width: 123px; height: 105px; background: #102635c9; border: 2px solid #fff9e745; border-radius: 16px; }
+.race-speed { position: absolute; right: 20px; bottom: 238px; padding: 9px 15px 10px; min-width: 102px; text-align: right; background: #102635d9; border: 2px solid #fff9e73b; border-radius: 15px; }
+.race-speed strong { display: inline-block; font-size: 39px; line-height: 1; font-variant-numeric: tabular-nums; }.race-speed span { font-size: 12px; margin-left: 5px; }.race-speed small { display: block; font-size: 9px; color: #a2f4f0; letter-spacing: .15em; margin-top: 4px; }
+.race-nitro { margin-top: 9px; height: 6px; background: #ffffff30; border-radius: 8px; overflow: hidden; min-width: 75px; }.race-nitro i { display: block; background: #65e4de; height: 100%; width: 100%; }
+.race-banner { position: absolute; left: 15%; right: 15%; top: 30%; text-align: center; font-size: 37px; font-weight: 900; color: #ffcf62; line-height: 1.1; -webkit-text-stroke: 1px #102635; text-shadow: 0 3px 0 #102635; }.race-banner.race-drift { font-size: 25px; color: #93ede3; }
+.race-turn { position: absolute; left: 18px; top: max(146px, calc(env(safe-area-inset-top) + 128px)); border-radius: 8px; background: #102635c9; padding: 6px 10px; font-size: 12px; }
+.race-drive-note { pointer-events: auto; position: absolute; left: 15px; right: 15px; top: 42%; padding: 12px; color: #102635; background: #fff0c5; border: 2px solid #102635; border-radius: 10px; text-shadow: none; font-size: 12px; line-height: 1.5; z-index: 6; }
+.race-controls { position: absolute; bottom: max(66px, calc(env(safe-area-inset-bottom) + 56px)); left: 18px; right: 18px; display: flex; align-items: flex-end; justify-content: space-between; pointer-events: none; }
+.race-stick { width: 132px; height: 132px; border-radius: 50%; border: 3px solid #f8f0d5aa; background: #10263578; box-shadow: inset 0 0 0 20px #10263526; position: relative; touch-action: none; pointer-events: auto; user-select: none; }
+.race-stick::before, .race-stick::after { position: absolute; top: 46%; color: #fff6df88; font-size: 18px; line-height: 1; }.race-stick::before { content: '‹'; left: 7px; }.race-stick::after { content: '›'; right: 7px; }
+.race-stick-knob { position: absolute; width: 54px; height: 54px; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 3px solid #102635; border-radius: 50%; background: #fff6df; box-shadow: 0 4px 0 #10263566; }.race-stick>span { position: absolute; left: 0; right: 0; bottom: -22px; text-align: center; font-size: 9px; font-weight: 900; color: #fff6df; letter-spacing: .15em; text-shadow: 0 2px #102635; }
+.race-buttons { display: grid; grid-template-columns: 72px 72px; gap: 9px; pointer-events: auto; }.race-buttons button { height: 62px; border: 3px solid #102635; border-radius: 19px; color: #102635; background: #fff6df; font-size: 11px; font-weight: 900; box-shadow: 0 4px 0 #1026358a; touch-action: none; user-select: none; }
+.race-buttons .race-nitro-btn { grid-column: 1/-1; height: 66px; background: #55dbdc; font-size: 19px; letter-spacing: .08em; }.race-buttons button.held { transform: translateY(3px); background: #ffc849; box-shadow: 0 1px 0 #102635; }
+.race-bottom { position: absolute; left: 18px; right: 18px; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 10px; align-items: center; justify-content: space-between; color: #fff9e7; font-size: 11px; font-weight: 800; }
+.race-bottom button { padding: 7px 10px; border: 2px solid #102635; border-radius: 8px; background: #fff6df; color: #102635; font-size: 10px; }.race-bottom button small { display: inline; color: #75664c; }.race-bottom label { display: flex; align-items: center; gap: 5px; text-shadow: 0 2px #102635; }.race-bottom input { accent-color: #2bb699; width: 18px; height: 18px; }.race-bottom .race-gas { background: #5bc8a1; width: 53px; touch-action: none; user-select: none; }.race-gas.held { background: #f2c453; }
+.race-keyhint { position: absolute; bottom: 12px; left: 22%; right: 22%; text-align: center; color: #fff5df; text-shadow: 0 2px #102635; font-size: 11px; pointer-events: none; display: none; }
+.race-overlay { position: absolute; inset: 0; z-index: 10; display: flex; justify-content: center; align-items: center; background: #081c2ac9; padding: 20px; overflow: auto; overscroll-behavior: contain; }.race-root [hidden] { display: none !important; }
+.race-dialog { width: 100%; max-width: 430px; max-height: 100%; overflow: auto; border: 4px solid #102635; border-radius: 23px; padding: 24px; background: #fff9e9; box-shadow: 0 7px 0 #081c2a; text-align: center; }.race-dialog h2 { font-size: 32px; margin: 10px 0 18px; line-height: 1.15; }.race-dialog p { color: #536b78; font-size: 13px; line-height: 1.6; }.race-dialog button { display: block; width: 100%; margin-top: 12px; }.race-win { display: block; font-size: 32px; color: #1d8f72; letter-spacing: -.04em; margin-bottom: 20px; }
+.race-result-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #c3cfca; border-radius: 10px; overflow: hidden; text-align: left; }.race-result-grid>div { border: 1px solid #d4ddd6; padding: 11px; }.race-result-grid small { display: block; font-size: 9px; color: #536b78; font-weight: 900; letter-spacing: .05em; }.race-result-grid b { display: block; margin-top: 4px; font-size: 17px; }
+@media (max-width: 600px) { .race-modes { grid-template-columns: 1fr; }.race-modes article { padding: 17px 18px; }.race-modes p { margin: 6px 0 14px; }.race-purse { font-size: 30px; }.race-lobby-body { padding: 20px; }.race-hero { padding: 22px 22px 24px; min-height: 270px; }.race-hero h1 { font-size: 40px; }.race-course { right: -45px; width: 62%; }.race-brand { max-width: 250px; } }
+@media (max-width: 350px) { .race-stick { width: 110px; height: 110px; }.race-buttons { grid-template-columns: 62px 62px; gap: 7px; }.race-buttons button { height: 53px; font-size: 10px; }.race-buttons .race-nitro-btn { height: 59px; }.race-controls { left: 12px; right: 12px; }.race-speed { right: 14px; bottom: 213px; }.race-hero h1 { font-size: 35px; }.race-lobby-body { padding: 16px; }.race-modes article { padding: 15px; } }
+@media (min-width: 800px) and (min-height: 560px) { .race-keyhint { display: block; bottom: 20px; }.race-stick { width: 152px; height: 152px; }.race-controls { left: 35px; right: 35px; bottom: 78px; }.race-bottom { bottom: 18px; left: 35px; right: 35px; }.race-speed { right: 35px; bottom: 245px; } }
+@media (max-height: 480px) and (min-width: 600px) { .race-stick { width: 110px; height: 110px; }.race-controls { bottom: 55px; }.race-buttons { grid-template-columns: 64px 64px; gap: 7px; }.race-buttons button { height: 42px; }.race-buttons .race-nitro-btn { height: 44px; }.race-speed { bottom: 174px; right: 18px; padding: 6px 10px; }.race-speed strong { font-size: 28px; }.race-map { width: 95px; height: 82px; top: 72px; }.race-banner { top: 33%; font-size: 28px; }.race-topline b { font-size: 17px; }.race-topline>div { padding: 6px 10px; } }
+
+/* Die abgeschlossene Rennbühne unterstützt auch den breiteren Blick im Querformat. */
+body.race-open #rotHint { display: none; }
+
+/* v461: Ton im Fahrbild direkt erreichbar; die Hof-Toneinstellung gilt mit. */
+.race-topbuttons { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+.race-sound { min-height: 35px; padding: 6px 9px; border: 2px solid #102635; border-radius: 10px; background: #fff6df; color: #102635; font-size: 10px !important; font-weight: 900; }
+
+/* v461: Unten genügend Abstand zwischen Lenkbeschriftung und Hilfsknöpfen. */
+.race-controls { bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px)); }
+.race-bottom button { min-height: 38px; }
+@media (max-height: 480px) and (min-width: 600px) { .race-controls { bottom: 70px; } }

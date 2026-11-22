@@ -76,16 +76,18 @@ function carValue(c, cond, km, luck) { return carMarket(c) * AH_COND[cond].f * k
 const AH_HOLD_DAYS = 21, AH_HOLD_MAX = 3.5;      /* Obergrenze: höchstens das 3,5-Fache durch den Haltebonus (v454, vorher 2,5) */
 /* v454: kräftiger (vorher +6 / +3,5 / +2 %); die Höhe wird in der Garage nicht mehr genannt */
 const holdRate = v => v >= 1e6 ? 0.10 : v >= 250000 ? 0.06 : 0.04;
+/* v461: Zusätzlicher Rennverschleiß bleibt auch bei Einlieferung erhalten. */
+function raceWearFactor(g) { return 1 - Math.min(.4, Math.max(0, g.raceWear || 0) * .004); }
 function gValue(g) {
   if (g.kind === "veh") return 0;
-  return nice(carValue(CAR[g.car], g.cond, g.km, g.luck) * (g.hold || 1));
+  return Math.round(nice(carValue(CAR[g.car], g.cond, g.km, g.luck) * (g.hold || 1)) * raceWearFactor(g));
 }
 /* Täglich: fällige Anpassungen für Garagenautos. Alte Garagen starten ihre erste Frist am Tag des Updates (keine Nachzahlung). */
 function ahHoldTick() {
   const A = ah(), out = [];
   A.garage.forEach(g => {
     if (g.kind === "veh") return;
-    if (g.fleet || g.consigned) { g.adjAt = S.time; return; }        /* nur ruhende Autos: Fahren und Einliefern setzen die Frist zurück */
+    if (g.fleet || g.consigned || (typeof RACE !== "undefined" && RACE.busy(g.uid))) { g.adjAt = S.time; return; }        /* nur ruhende Autos: Fahren und Einliefern setzen die Frist zurück */
     if (g.adjAt == null) { g.adjAt = S.time; return; }
     let n = 0;
     while (S.time - g.adjAt >= AH_HOLD_DAYS * 1440 && n < 8) {
@@ -144,7 +146,8 @@ function makeLot(opt) {
     l.cond = g ? g.cond : +wpick(l.y >= 2010 ? { 1: 45, 2: 45, 3: 10 } : { 1: 15, 2: 35, 3: 30, 4: 13, 5: 7 });
     l.paint = g ? g.paint : (paintOfPhoto(c.id) || pick(CAR_PAINTS[c.b]));
     l.luck = g ? g.luck : rnd(0.93, 1.07);
-    l.val = Math.round(carValue(c, l.cond, l.km, l.luck) * (g && g.hold || 1));     /* v327: Haltebonus wird mitbezahlt */
+    if (g && g.raceWear > 0) l.raceWear = g.raceWear;
+    l.val = Math.round(carValue(c, l.cond, l.km, l.luck) * (g && g.hold || 1) * raceWearFactor(l));     /* v327: Haltebonus wird mitbezahlt */
     l.est = [nice(l.val * 0.85), nice(l.val * 1.12)];
   }
   l.start = nice(l.val * rnd(0.45, 0.62));
@@ -334,7 +337,7 @@ function finishLot(l) {
     /* v237: ein Auto für die Garage ist Handelsware – steuerlich erst beim Verkauf (Wareneinsatz) */
     logMoney("auction", "Ersteigert: " + name, -cost, l.kind === "car");
     if (l.kind === "car") {
-      A.garage.push({ uid: "G" + (A.seq++), kind: "car", car: l.car, y: l.y, km: l.km, cond: l.cond, paint: l.paint, luck: l.luck, paid: cost, at: S.time, ware: 1 });
+      A.garage.push({ uid: "G" + (A.seq++), kind: "car", car: l.car, y: l.y, km: l.km, cond: l.cond, paint: l.paint, luck: l.luck, paid: cost, at: S.time, ware: 1, ...(l.raceWear > 0 ? { raceWear: l.raceWear } : {}) });
     } else {
       const v = makeVehicle(l.vt, false); v.wear = l.wear; v.kmTotal = l.km;
       S.fleet.push(v);
@@ -356,12 +359,12 @@ function finishLot(l) {
 
 /* ------------------------- Garage & Einliefern ------------------------ */
 function carToFleet(uid) {
-  const g = garageById(uid); if (!g || g.fleet || g.consigned) return;
+  const g = garageById(uid); if (!g || g.fleet || g.consigned || (typeof RACE !== "undefined" && RACE.busy(uid))) return;
   const c = CAR[g.car];
   if (c.track) return toast("Keine Straßenzulassung – der " + c.m + " fährt nur auf der Rennstrecke.", "warn");
   if (c.cap < 1) return toast("Kein Kofferraum – für Kurierfahrten ungeeignet.", "warn");
   const v = makeVehicle("car-" + c.id, false);
-  v.garage = g.uid; v.wear = [0, 2, 8, 25, 45, 70][g.cond];
+  v.garage = g.uid; v.wear = Math.min(95, [0, 2, 8, 25, 45, 70][g.cond] + (g.raceWear || 0) * .6);
   S.fleet.push(v); g.fleet = v.uid;
   if (g.ware) { taxWare(g.paid, "Betriebsfahrzeug " + carName(c)); delete g.ware; }   /* v237: jetzt Betriebsfahrzeug – sofort absetzbar */
   toast("🏎️ " + carName(c) + " fährt jetzt als Wertkurier – jeder Kilometer kostet Sammlerwert.", "ok");
@@ -378,7 +381,7 @@ function carBack(vuid) {
   save(); render();
 }
 function consignCar(uid, reserve) {
-  const g = garageById(uid); if (!g || g.fleet || g.consigned) return null;
+  const g = garageById(uid); if (!g || g.fleet || g.consigned || (typeof RACE !== "undefined" && RACE.busy(uid))) return null;
   const l = makeLot({ car: g.car, garage: g, mine: true, reserve });
   g.consigned = l.id;
   toast("🔨 " + carName(CAR[g.car]) + " eingeliefert – Auktion endet " + stamp(l.ends) + ".", "ok");
@@ -783,7 +786,7 @@ function garageCardHTML(g) {
       ${v ? `<span class="lot-left">🏎️ ${esc(phaseLabel(v))}</span>` : lot ? `<span class="lot-left soon">🔨 im Auktionshaus · ${leftTxt(lot)}</span>` : ""}
     </div>
     <div class="lot-body">
-      <div class="lot-name"><b>${esc(carName(c))}</b><small>${g.y} · ${fmt(g.km, 0)} km · ${esc(g.paint[0])} · Note ${g.cond}</small></div>
+      <div class="lot-name"><b>${esc(carName(c))}</b>${g.raceWear > 0 ? `<small>Rennverschleiß ${fmt(g.raceWear, 2)} % · im Marktwert berücksichtigt</small>` : ""}<small>${g.y} · ${fmt(g.km, 0)} km · ${esc(g.paint[0])} · Note ${g.cond}</small></div>
       <div class="lot-row"><span class="lot-price"><small>Marktwert heute</small><b>${money(val)}</b></span>
         <span class="lot-lead ${d >= 0 ? "me" : "out"}">${d >= 0 ? "▲" : "▼"} ${fmt(Math.abs(pct), 1)} %</span></div>
       ${g.hold > 1 ? `<div class="lot-est hold">📈 Haltebonus seit Kauf: +${fmt((g.hold - 1) * 100, 1)} % · nächste Anpassung in ${dur(Math.max(0, (g.adjAt || S.time) + AH_HOLD_DAYS * 1440 - S.time))}</div>`
@@ -793,7 +796,8 @@ function garageCardHTML(g) {
         <button class="btn tiny ghost" data-carview="${c.id}">ansehen</button>
         ${lot ? "" : v ? `<button class="btn tiny ghost" data-gback="${v.uid}">🅿️ zurück in die Garage</button>`
           : `<button class="btn tiny ghost" data-gfleet="${g.uid}"${c.track || c.cap < 1 ? " disabled" : ""}>🏎️ als Wertkurier</button>
-             <button class="btn tiny" data-gsell="${g.uid}">🔨 einliefern</button>`}
+             <button class="btn tiny" data-gsell="${g.uid}">🔨 einliefern</button>
+             ${typeof RACE !== "undefined" && RACE.built() ? `<button class="btn tiny" data-grace="${g.uid}">Motorpark</button>` : ""}`}
       </div>
     </div>
   </div>`;
@@ -867,6 +871,7 @@ function bindAuctionBody(el) {
   el.querySelectorAll("[data-gfleet]").forEach(b => b.onclick = () => { carToFleet(b.dataset.gfleet); renderAuction(); });
   el.querySelectorAll("[data-gback]").forEach(b => b.onclick = () => { carBack(b.dataset.gback); renderAuction(); });
   el.querySelectorAll("[data-gsell]").forEach(b => b.onclick = () => openConsign({ garage: b.dataset.gsell }));
+  el.querySelectorAll("[data-grace]").forEach(b => b.onclick = () => RACE.open(b.dataset.grace));
 }
 /* Laufende Zahlen ohne komplettes Neuzeichnen auffrischen */
 let ahLiveKey = "";

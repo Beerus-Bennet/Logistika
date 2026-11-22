@@ -156,7 +156,7 @@ function pileTiles([x, z, ry]) {
 }
 const FSAW_MAIN = new Set(["sw_halle", "sw_lager", "sw_buero", "sw_lkw", "kessel"]);
 function farmZones(t, k) {
-  if (t === "trophy") return ["display"];
+  if (t === "trophy" || t === "racetrack") return ["display"];
   if (t === "stall") return ["road"];
   if (t === "tractor") return ["hof", "wild"];
   if (FSAW_MAIN.has(t) || (t === "board" && k === "saege")) return ["yard"];
@@ -181,6 +181,7 @@ function farmFreeRect(x, z, w, d, except) {
   return true;
 }
 function farmFits(x, z, w, d, except, t, k) {
+  if (t === "racetrack") return RACE.canPlace(x,z,w,d,except); /* v461 */
   if (t === "trophy") return TROPHIES.canPlace(x,z,w,d,except);
   const zn = farmZoneAt(x, z, w, d);
   if (!zn) return false;

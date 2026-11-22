@@ -611,7 +611,7 @@ function tutorialRunning() { return document.body.classList.contains("tut-on"); 
 /* v452: Jagd – Hintergrundmeldungen warten bis zum Ende der Jagd, und beim Begutachten des erlegten Stücks (Bergung/Trefferbild) steht die Spielzeit still. */
 const huntOn = () => typeof HUNT !== "undefined" && !!HUNT.on;
 const huntInspect = () => huntOn() && !!HUNT.X && (HUNT.X.view === "harvest" || !!HUNT.X.hrv);
-function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over && !huntInspect(); }
+function clockRunning() { return playing() && S.speed > 0 && !tutorialRunning() && !S.jail && !S.over && !huntInspect() && !(typeof RACE !== "undefined" && RACE.on); }
 let lastSpeed = 1;
 function setSpeed(v) {
   /* Auf dem Hof (vor der Speditionsgründung) läuft die Zeit immer in Echtzeit */
@@ -2382,6 +2382,7 @@ function logiLevelShow() {
 }
 
 function tick(dtMin) {
+  if (typeof RACE !== "undefined" && RACE.on) return; /* v461: eigene Rennbühne, kein Zeitnachlauf */
   S.time += dtMin;
   const d = Math.floor(S.time / 1440);
   if (d > S.lastDay) {
@@ -4669,7 +4670,7 @@ function boot() {
   renderPhoneBadge();
   $("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
   window.addEventListener("keydown", e => {
-    if (e.key !== "Escape" || tutorialRunning()) return;
+    if (e.key !== "Escape" || tutorialRunning() || (typeof RACE !== "undefined" && RACE.on)) return;
     if (typeof walletOpen === "function" && walletOpen()) walletClose();
     else if (document.body.classList.contains("call-open")) closeCall();
     else if (document.body.classList.contains("invite-open")) closeInvite();
@@ -4734,6 +4735,7 @@ function boot() {
   function frame(now) {
     const real = Math.min(0.4, (now - last) / 1000);
     last = now;
+    if (typeof RACE !== "undefined" && RACE.on) { acc = 0; requestAnimationFrame(frame); return; } /* v461: keine verdeckte Karte/Hofanzeige rendern */
     /* v166: ein Fehler in einem Takt (z. B. bei einem Ereignis) darf die Schleife nicht beenden – sonst bleibt alles stehen */
     try { if (clockRunning()) tick(real * S.speed); } catch (e) { console.warn("tick", e); }
     try { if (playing()) tickFollow(); } catch (e) { console.warn("follow", e); }
