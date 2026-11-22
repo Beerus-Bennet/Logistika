@@ -138,4 +138,11 @@ test('Beide Schieberichtungen passieren die Gartentore mit dem ganzen Rad',()=>{
  }
  assert.equal(run('badPush.length'),0,run('JSON.stringify(badPush.slice(0,5))'));
 });
+/* v445: Neuplanung ist begrenzt (sonst schiebt sie das Auftragsende ewig nach hinten); nächster Weg beginnt an der echten Figurenposition */
+test('v445 Neuplanungen je Auftrag begrenzt, Auftragsende nimmt die Figurenposition mit',()=>{
+ run(`allWorkers();var s=S.farm.staff[0],e=WV.staff.get(s.id);staffGo(s,0,{k:'home',i:0});var j=s.job;e.x=10;e.z=10;var n=0;for(let i=0;i<12;i++)if(staffRepath351(e,j))n++;`);
+ assert.ok(run('n<=6&&j.rp445>6'),'Neuplanungen '+run('n'));
+ run(`s.job={k:'home',x:-4.5,z:-5.5,t1:S.time-1,t0:S.time-2,walk:1};e.x=-0.5;e.z=-5.5;staffWork();`);
+ assert.ok(run('Math.abs(s.px+0.5)<1e-6&&Math.abs(s.pz+5.5)<1e-6'),'px '+run('s.px'));
+});
 console.log(count+' Bewegungs-/Werkzeugprüfungen bestanden.');

@@ -1,3 +1,11 @@
+## v445 – Mittagspause bleibt nicht mehr hängen (Fischer stand abends noch „in der Mittagspause“ am Steg)
+
+**Ursache (gemessen):** Im Tagessimulator blieb die Landwirtin nach 13 Uhr in der Mittagspause stecken (2.001 von 2.001 Messungen zwischen 13:20 und 15:00), das Auftragsende wanderte immer weiter nach hinten. Nach einem Auftrag mit mehreren Feldern wurde der nächste Weg am ersten Zielpunkt statt an der Figur begonnen (4 Einheiten Unterschied). Dann plante `staffRepath351` den Weg jedes Bild neu und setzte dabei jedes Mal Auftragsstart und -ende auf „jetzt“; der Auftrag endete nie. Dasselbe passiert, wenn eine Figur an einem Hindernis festhängt – wie der Fischer am Steg, der um 23:22 Uhr noch „Mittagspause“ zeigte.
+
+**Lösung (`team.js`):** (1) Höchstens sechs Neuplanungen je Auftrag (`rp445`); danach läuft der Auftrag mit der alten Zeit regulär zu Ende. (2) Am Auftragsende nimmt die Kraft ihre echte Figurenposition mit (wenn sie weniger als 8 Einheiten vom Ziel entfernt steht), so dass der nächste Weg dort beginnt.
+
+**Geprüft:** Wiederholung des Fehlers im Tagessimulator: die Landwirtin läuft nach der Änderung sofort los (Weg bei 744 → 760 Minuten sichtbar fortschreitend); neue Gruppe in `worker-motion-v351.test.js` (Neuplanungen begrenzt, Position wird übernommen), alle 16 Gruppen bestanden. **Nicht geprüft:** der konkrete Steg-Fall des Fischers im echten Spiel und das Handy; Ergebnis des vollen Tageslaufs mit allen neun Kräften siehe Pull Request.
+
 ## v443 – Trophäen-Tiere mittig auf ihren Sockeln
 
 **Ursache:** Die bisherige Zentrierung nutzte die Außenmaße des ganzen Tiers einschließlich Geweih, Kopf und Schwanz. Dadurch standen Körper und Füße/Hufe seitlich oder längs versetzt auf dem Sockel.

@@ -1483,6 +1483,9 @@ function staffFollow(e, j, D, dt) {
 }
 function staffRepath351(e,j){
   if(typeof CAMP!=="undefined"&&CAMP.blockedW(e.x,e.z))return false;
+  /* v445: Höchstens sechs Neuplanungen je Auftrag. Jede schiebt das Ende nach hinten; wer an einem Hindernis festhing, plante jedes Bild neu,
+     und der Auftrag (z. B. die Mittagspause) endete nie – die Kraft stand abends noch mit „Mittagspause“ am Steg. */
+  if((j.rp445=(j.rp445||0)+1)>6)return false;
   const r=navPathSafe(e.x,e.z,j.x,j.z,e.role);if(!r||r.slice(1).some((p,i)=>navHit(...r[i],...p,navWallsFor(e.role))))return false;
   const remaining=Math.max(0,j.t1-Math.max(S.time,j.t0+j.walk)),len=routeLen(r);j.route=r;j.len=len;j.sx=e.x;j.sz=e.z;j.walk=Math.max(.4,staffWalkLen(r)/5);j.t0=S.time;j.t1=S.time+j.walk+remaining;delete j.stops;
   const s=(S.farm.staff||[]).find(s=>WV.staff.get(s.id)===e);if(s&&s.jobEnd!=null)s.jobEnd=j.t1;
@@ -1649,6 +1652,9 @@ function staffWork() {
          Säbewegung zulassen, auch bei 30×. Außerhalb der Ansicht normal weiterarbeiten. */
       if(staffSowVisible(s,j)){const e=WV.staff.get(s.id);if(!e.sowAction||e.sowAction.job!==j||!e.sowAction.done){j.t1=S.time+.25;s.jobEnd=j.t1;return;}}
       s.job = null; s.px = j.x; s.pz = j.z;
+      /* v445: Nach Aufträgen mit mehreren Stellen (z. B. mehrere Felder) steht die Figur an der letzten Stelle, nicht am ersten Ziel –
+         der nächste Weg beginnt dort, sonst wich Start und Figur um mehr als drei Einheiten ab und der Weg wurde ständig neu geplant. */
+      { const e0 = typeof WV !== "undefined" && WV.staff && WV.staff.get(s.id); if (e0 && Number.isFinite(e0.x) && Math.hypot(e0.x - j.x, e0.z - j.z) < 8) { s.px = e0.x; s.pz = e0.z; } }
       if (j.k === "home") return;
       s.work = S.time;
       if (j.k === "lunch") { s.work = S.time - staffGap(s) - 1; s.jobEnd = S.time - 9; }   /* v112: nach dem Essen gleich weiter – Werkzeug holen, neue Arbeit oder heim */
