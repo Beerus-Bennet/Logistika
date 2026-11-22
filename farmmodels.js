@@ -656,13 +656,18 @@ const FM = (() => {
   }
 
   /* -------------------------------- Tiere ------------------------------- */
-  function chicken(variant) {
+  /* v446: Dasselbe Bein entweder ins Standmodell oder als eigenes Gelenkteil.
+     Die Modellbilder bleiben vollständig; laufende Tiere bekommen echte Gelenke. */
+  function limb(b,parts,p,draw){
+    if(parts){const mesh=new MB();draw(mesh);parts.push({mesh,p});}
+    else b.at({x:p[0],y:p[1],z:p[2]},()=>draw(b));
+  }
+  function chicken(variant, parts) {
     G3.seed(400 + (variant || 0));
     const b = new MB();
     const body = variant === 1 ? 0xb8662c : variant === 2 ? 0x2d2a2a : 0xfaf6ee;
     const wing = variant === 1 ? 0x9a5222 : variant === 2 ? 0x1e1c1c : 0xece4d6;
-    b.box(0.02, 0.1, 0.02, 0xf0a030, { x: 0.05, z: 0.02 }); b.box(0.02, 0.1, 0.02, 0xf0a030, { x: -0.05, z: 0.02 });
-    b.box(0.06, 0.012, 0.07, 0xf0a030, { x: 0.05, z: 0.04 }); b.box(0.06, 0.012, 0.07, 0xf0a030, { x: -0.05, z: 0.04 });
+    for(const x of [-.05,.05])limb(b,parts,[x,.1,.02],m=>{m.box(.02,.1,.02,0xf0a030,{y:-.1});m.box(.06,.012,.07,0xf0a030,{y:-.1,z:.02});});
     b.at({ y: 0.2 }, () => {
       b.sphere(0.13, 9, 7, body, { sy: 0.85, sz: 1.15, smooth: true });
       b.sphere(0.07, 7, 5, wing, { x: 0.11, sy: 0.7, sz: 1.3, smooth: true });
@@ -681,13 +686,12 @@ const FM = (() => {
     });
     return b;
   }
-  function cow(variant) {
+  function cow(variant, parts) {
     G3.seed(450 + (variant || 0));
     const b = new MB();
     const base = variant === 1 ? 0x8a5a36 : 0xf7f4ee, spot = variant === 1 ? 0xf7f4ee : 0x2b2b2e;
     [[0.17, 0.33], [-0.17, 0.33], [0.17, -0.33], [-0.17, -0.33]].forEach(([x, z]) => {
-      b.box(0.1, 0.36, 0.1, base, { x, z, y: 0.04 });
-      b.box(0.11, 0.06, 0.11, 0x3a3030, { x, z });
+      limb(b,parts,[x,.40,z],m=>{m.box(.1,.36,.1,base,{y:-.36});m.box(.11,.06,.11,0x3a3030,{y:-.4});});
     });
     b.at({ y: 0.6 }, () => {
       b.box(0.5, 0.36, 0.95, base, { c: true });
@@ -729,13 +733,12 @@ const FM = (() => {
   /* Futternapf-Symbol über hungrigen Tieren gibt es als HTML – hier nur der Trog */
 
   /* Schwein: rosa Hausschwein (0) oder Buntes Bentheimer mit Flecken (1) */
-  function pig(variant) {
+  function pig(variant, parts) {
     G3.seed(470 + (variant || 0));
     const b = new MB();
     const skin = 0xf3aaa2, dark = 0xe28d86, spot = 0x332a2a;
     [[0.11, 0.19], [-0.11, 0.19], [0.11, -0.19], [-0.11, -0.19]].forEach(([x, z]) => {
-      b.box(0.08, 0.2, 0.08, skin, { x, z, y: 0.02 });
-      b.box(0.085, 0.04, 0.085, 0x6e5048, { x, z });
+      limb(b,parts,[x,.22,z],m=>{m.box(.08,.2,.08,skin,{y:-.2});m.box(.085,.04,.085,0x6e5048,{y:-.22});});
     });
     b.at({ y: 0.36 }, () => {
       b.sphere(0.2, 11, 8, skin, { sy: 0.86, sz: 1.5, smooth: true });
@@ -755,11 +758,11 @@ const FM = (() => {
     return b;
   }
   /* Schaf: Schwarzkopf (0) oder helles Merino (1); geschoren schmal und hell */
-  function sheep(variant, shorn) {
+  function sheep(variant, shorn, parts) {
     G3.seed(490 + (variant || 0) * 3 + (shorn ? 1 : 0));
     const b = new MB();
     const wool = variant === 1 ? 0xeee5d3 : 0xf8f5ee, face = variant === 1 ? 0xeedfca : 0x2c2727, leg = variant === 1 ? 0xd8c7ae : 0x2c2727;
-    [[0.1, 0.17], [-0.1, 0.17], [0.1, -0.17], [-0.1, -0.17]].forEach(([x, z]) => b.box(0.05, 0.26, 0.05, leg, { x, z }));
+    [[0.1, 0.17], [-0.1, 0.17], [0.1, -0.17], [-0.1, -0.17]].forEach(([x,z])=>limb(b,parts,[x,.26,z],m=>m.box(.05,.26,.05,leg,{y:-.26})));
     b.at({ y: 0.4 }, () => {
       if (shorn) b.sphere(0.15, 10, 7, 0xf1e5d6, { sy: 0.9, sz: 1.5, smooth: true });
       else b.noise(0.07, () => {
@@ -778,13 +781,12 @@ const FM = (() => {
     return b;
   }
   /* Mastrind: Angus schwarz (0) oder Hochlandrind mit Hörnern und Zottelfell (1) */
-  function beef(variant) {
+  function beef(variant, parts) {
     G3.seed(460 + (variant || 0));
     const b = new MB();
     const hl = variant === 1, base = hl ? 0xa9592c : 0x2b2827, dark = hl ? 0x8a4521 : 0x1d1b1a;
     [[0.19, 0.33], [-0.19, 0.33], [0.19, -0.33], [-0.19, -0.33]].forEach(([x, z]) => {
-      b.box(0.12, 0.34, 0.12, base, { x, z, y: 0.04 });
-      b.box(0.13, 0.06, 0.13, 0x2a2222, { x, z });
+      limb(b,parts,[x,.38,z],m=>{m.box(.12,.34,.12,base,{y:-.34});m.box(.13,.06,.13,0x2a2222,{y:-.38});});
     });
     b.at({ y: 0.6 }, () => {
       b.noise(hl ? 0.18 : 0.05, () => {
@@ -1403,7 +1405,7 @@ const FM = (() => {
   }
 
   return {
-    C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
+    limb, C, house, barn, silo, bakery, mill, millSails, MILL_HUB, BAKERY_CHIMNEY, dairy, coopHut, coopRun, cowShed, pasture,
     board, shed, gate, fieldSoil, treeSoil, cropMesh, treeMesh, treeFruit, chicken, cow, egg, milkBottle,
     cargoBike, moped, van, pine, leafTree, bushes, flowers, rock, hayBale, scarecrow, mailbox, well, pumpkins, cart, bench,
     lamp, beehive, ground, path, lakeShore, lakeWater, road, tileMarker, fenceLine, rectFence, MB,

@@ -401,6 +401,8 @@ function ensureAnimal(o, a) {
   s = { id: a.id, pen: o.id, kind, V, cow: !!V.big, fish: !!V.fish, node, pn, mk, x, z, tx: x, tz: z, h: node.ry, mode: "idle",
         t: Math.random() * 2, ph: Math.random() * 6, ang, rad, dir: Math.random() < 0.5 ? 1 : -1 };
   if (FV.drop && FV.drop === a.id) { s.y = V.fish ? 1.6 : 3; s.vy = 0; FV.drop = null; }
+  /* v446: Modellbilder bleiben starr, lebende Stalltiere bekommen Gelenke. */
+  if(!V.fish&&typeof ANIMAL_MOTION!=="undefined")s.gait=ANIMAL_MOTION.farm(FV.R,node,kind,a.v||0,kind==='schaf'&&aniState(a)==='hungry');
   FV.ani.set(a.id, s);
   return s;
 }
@@ -446,8 +448,8 @@ function stepAnimals(dt, time) {
     if (!o) continue;
     const st = aniState(a);
     if (s.fish) { if (typeof stepFish === "function") stepFish(s, o, a, st, dt, time); continue; }
-    const ar = penArea(o), V = s.V;
-    if (s.kind === "schaf") { const [mk, mf] = V.mesh(a, st); if (mk !== s.mk) { s.mk = mk; s.node.mesh = fmesh(mk, mf); } }
+    const ar = penArea(o), V = s.V,ox=s.x,oz=s.z;
+    if (s.kind === "schaf") { const [mk, mf] = V.mesh(a, st); if (mk !== s.mk) { s.mk = mk; s.node.mesh = fmesh(mk, mf);if(typeof ANIMAL_MOTION!=="undefined")s.gait=ANIMAL_MOTION.farm(FV.R,s.node,s.kind,a.v||0,st==='hungry'); } }
     s.t -= dt;
     if (s.y != null) {                                /* frisch gekauft: plumpst rein */
       s.vy -= 18 * dt; s.y += s.vy * dt;
@@ -479,9 +481,10 @@ function stepAnimals(dt, time) {
     n.x = s.x; n.z = s.z; n.ry = s.h;
     s.ph += dt * (s.mode === "walk" ? V.walk : 2);
     const chick = s.kind === "huhn";
-    n.y = s.y != null ? s.y : s.mode === "walk" ? Math.abs(Math.sin(s.ph)) * V.bob : s.mode === "sit" ? (chick ? -0.04 : -0.03) : 0;
+    n.y = s.y != null ? s.y : s.mode === "walk" ? 0 : s.mode === "sit" ? (chick ? -0.04 : -0.03) : 0;
     n.rx = s.mode === "peck" ? (chick ? Math.max(0, Math.sin(s.ph * 3.2)) * 0.55 : 0.08 + Math.sin(s.ph) * 0.03) : 0;
     n.rz = s.mode === "walk" && !chick ? Math.sin(s.ph) * 0.03 : s.mode === "sit" && s.kind === "schwein" ? 0.5 : 0;
+    if(s.gait)ANIMAL_MOTION.step(s.gait,Math.hypot(s.x-ox,s.z-oz),dt);
     const sq = FV.bounce.get("a" + s.id);
     const base = V.s;
     if (sq) { const k = Math.max(0, 1 - (time - sq) * 3); n.sy = base * (1 + Math.sin((time - sq) * 25) * 0.25 * k); n.sx = n.sz = base * (1 - Math.sin((time - sq) * 25) * 0.1 * k); if (!k) { FV.bounce.delete("a" + s.id); n.sx = n.sy = n.sz = base; } }

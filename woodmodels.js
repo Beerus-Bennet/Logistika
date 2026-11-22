@@ -3102,11 +3102,11 @@ const FWM = (() => {
     b.ico(r,0x171b1e,{x:side*x,y,z,detail:1});
     b.ico(r*.28,0xf9f5e8,{x:side*(x+r*.65),y:y+r*.3,z:z+r*.3});
   }}
-  function deer(white) {
+  function deer(white,parts) {
     const b=new MB(),c=white?0xf4f2ec:0xa86a3c,d=white?0xdedad0:0x825034;
     b.ico(1,c,{y:.73,sx:.19,sy:.22,sz:.42,detail:1});
     b.ico(.18,white?0xffffff:0xc5a07b,{y:.65,z:.08,sx:.8,sy:.5,sz:1.5});
-    for(const x of [-.12,.12])for(const z of [-.27,.27]){b.cyl(.035,.025,.64,6,d,{x,z});b.box(.065,.055,.08,0x34302b,{x,z:z+.01});}
+    for(const x of [-.12,.12])for(const z of [-.27,.27])FM.limb(b,parts,[x,.64,z],m=>{m.cyl(.035,.025,.64,6,d,{y:-.64});m.box(.065,.055,.08,0x34302b,{y:-.64,z:.01});});
     b.cyl(.10,.065,.43,7,c,{y:.82,z:.28,rx:.35});
     b.ico(1,c,{y:1.18,z:.45,sx:.10,sy:.13,sz:.18,detail:1});
     b.ico(.07,d,{y:1.14,z:.60,sz:1.4});b.ico(.035,0x262522,{y:1.15,z:.69,sx:1.15,sy:.6});
@@ -3116,39 +3116,40 @@ const FWM = (() => {
       b.cyl(.018,.008,.23,5,0x796145,{x:side*.07,y:1.3,z:.39,rz:side*.3});b.cyl(.012,.003,.12,5,0x796145,{x:side*.11,y:1.4,z:.39,rz:-side*.65});}
     b.ico(.105,0xf6f0dc,{y:.73,z:-.38,sx:.8,sy:1.1,sz:.3});return b;
   }
-  function hare(){const b=new MB(),c=0x9a7a5a;
+  function hare(unused,parts){const b=new MB(),c=0x9a7a5a;
     b.ico(1,c,{y:.15,sx:.13,sy:.14,sz:.19,detail:1});b.ico(.095,c,{y:.26,z:.13,sy:1.05,sz:.9,detail:1});
-    for(const side of [-1,1]){b.ico(.055,0x806247,{x:side*.10,y:.07,z:-.10,sy:1.15,sz:1.4});
-      b.ico(.035,c,{x:side*.055,y:.03,z:.12,sy:.55,sz:1.8});
+    for(const side of [-1,1]){FM.limb(b,parts,[side*.10,.12,-.10],m=>m.ico(.055,0x806247,{y:-.05,sy:1.15,sz:1.4}));
+      FM.limb(b,parts,[side*.055,.09,.12],m=>m.ico(.035,c,{y:-.06,sy:.55,sz:1.8}));
       b.ico(.065,c,{x:side*.04,y:.41,z:.11,sx:.37,sy:1.8,sz:.55,rz:-side*.16});
       b.ico(.042,0xdbc0a2,{x:side*.04,y:.42,z:.139,sx:.30,sy:1.8,sz:.18,rz:-side*.16});
       b.ico(.025,0xf0dfc8,{x:side*.025,y:.23,z:.205,sz:.65});}
     wildEyes(b,.073,.28,.17,.016);b.ico(.013,0x79564c,{y:.245,z:.23});b.ico(.045,0xf7f2e5,{y:.16,z:-.18});return b;
   }
-  function boar(){const b=new MB(),c=0x4a3c34;
+  function boar(unused,parts){const b=new MB(),c=0x4a3c34;
     b.ico(1,c,{y:.39,sx:.22,sy:.24,sz:.40,detail:1});b.ico(.20,0x514036,{y:.49,z:.17,sx:1.0,sy:1.2,sz:1.1});
     b.ico(1,c,{y:.33,z:.43,sx:.14,sy:.18,sz:.23,detail:1});b.ico(.09,0x91725d,{y:.27,z:.62,sx:1.05,sy:.65,sz:.35});
     for(const side of [-1,1]){b.ico(.012,0x302924,{x:side*.037,y:.28,z:.651});b.cone(.055,.12,4,c,{x:side*.11,y:.46,z:.36,rz:-side*.4});
       b.cyl(.02,.004,.09,5,0xf5e9cb,{x:side*.09,y:.24,z:.59,rz:side*.35});}
     wildEyes(b,.124,.40,.47,.019);
-    for(const x of [-.14,.14])for(const z of [-.25,.23]){b.cyl(.045,.03,.32,6,c,{x,z});b.box(.07,.04,.08,0x26211d,{x,z});}
+    for(const x of [-.14,.14])for(const z of [-.25,.23])FM.limb(b,parts,[x,.32,z],m=>{m.cyl(.045,.03,.32,6,c,{y:-.32});m.box(.07,.04,.08,0x26211d,{y:-.32});});
     for(let i=0;i<7;i++)b.cone(.035,.08,3,0x302a25,{y:.59,z:-.22+i*.07});
     b.cyl(.018,.01,.14,5,c,{y:.43,z:-.36,rx:-1.1});return b;
   }
-  function fox(){const b=new MB(),c=0xd77733;
+  function fox(unused,parts){const b=new MB(),c=0xd77733;
     b.ico(1,c,{y:.32,sx:.12,sy:.14,sz:.29,detail:1});b.ico(.10,0xf0d9b3,{y:.28,z:.20,sx:.8,sy:1.3,sz:.8});
-    for(const x of [-.08,.08])for(const z of [-.18,.18]){b.cyl(.027,.02,.28,6,0x452c23,{x,z});b.ico(.03,0x2d2622,{x,y:.025,z:z+.018,sy:.65,sz:1.6});}
+    for(const x of [-.08,.08])for(const z of [-.18,.18])FM.limb(b,parts,[x,.28,z],m=>{m.cyl(.027,.02,.28,6,0x452c23,{y:-.28});m.ico(.03,0x2d2622,{y:-.255,z:.018,sy:.65,sz:1.6});});
     b.ico(.11,c,{y:.45,z:.30,sz:1.05,detail:1});
     b.cone(.072,.19,5,0xf2d8b4,{y:.42,z:.34,rx:Math.PI/2});b.ico(.024,0x262322,{y:.42,z:.525});
     for(const side of [-1,1]){b.cone(.055,.14,4,c,{x:side*.066,y:.51,z:.27});b.cone(.032,.08,3,0x52352b,{x:side*.066,y:.55,z:.29});}
     wildEyes(b,.085,.47,.36,.018);
     b.ico(.13,c,{y:.27,z:-.34,sx:.7,sy:.85,sz:1.6,rx:-.35,detail:1});b.ico(.095,c,{y:.18,z:-.49,sx:.8,sy:.8,sz:1.6});b.ico(.075,0xf5e6ca,{y:.12,z:-.60,sy:.7,sz:1.4});return b;
   }
-  function squirrel(){const b=new MB(),c=0xb65c2d,light=0xe5bd88;
+  function squirrel(unused,parts){const b=new MB(),c=0xb65c2d,light=0xe5bd88;
     b.ico(.067,c,{y:.085,sy:1.4,sz:1.1,detail:1});b.ico(.043,light,{y:.087,z:.051,sx:.8,sy:1.4,sz:.35});
     b.ico(.05,c,{y:.168,z:.037,sz:1.15,detail:1});
     for(const side of [-1,1]){b.ico(.018,c,{x:side*.031,y:.208,z:.023,sy:1.55});b.cone(.012,.027,4,0x76391f,{x:side*.031,y:.221,z:.023});
-      b.ico(.025,c,{x:side*.055,y:.026,z:-.01,sy:.6,sz:1.6});b.ico(.014,light,{x:side*.038,y:.095,z:.071,sy:.7,sz:1.2});}
+      FM.limb(b,parts,[side*.055,.075,-.01],m=>m.ico(.025,c,{y:-.049,sy:.6,sz:1.6}));
+      FM.limb(b,parts,[side*.038,.10,.071],m=>{m.cyl(.009,.008,.07,5,c,{y:-.07});m.ico(.014,light,{y:-.075,sy:.7,sz:1.2});});}
     wildEyes(b,.039,.177,.065,.013);b.ico(.01,0x35251d,{y:.158,z:.092});
     /* Buschiger S-Bogen statt geradem Zylinder. */
     b.ico(.065,0xc66e35,{y:.095,z:-.087,sx:.8,sy:1.3,sz:1.1,detail:1});
@@ -3214,7 +3215,7 @@ const FWM = (() => {
     return b;
   }
   /* Igel: rundlicher Körper voller Stacheln, helle Schnauze */
-  function hedgehog() {
+  function hedgehog(unused,parts) {
     G3.seed(4590);
     const b = new MB(), sp = 0x5a4a3a;
     b.sphere(0.12, 8, 5, 0x6a5848, { y: 0.08, sy: 0.65, sz: 1.25 });
@@ -3226,13 +3227,13 @@ const FWM = (() => {
     b.cone(0.055, 0.11, 5, 0xc8aa84, { rx: Math.PI / 2, y: 0.06, z: 0.11 });
     b.sphere(0.016, 5, 3, 0x1d1d20, { y: 0.06, z: 0.225 });
     [-1, 1].forEach(s => b.sphere(0.012, 4, 3, 0x1d1d20, { x: s * 0.03, y: 0.09, z: 0.15 }));
-    [[-0.06, -0.06], [0.06, -0.06], [-0.06, 0.07], [0.06, 0.07]].forEach(([x, z]) => b.box(0.03, 0.04, 0.03, 0x4a3c30, { x, z }));
+    [[-.06,-.06],[.06,-.06],[-.06,.07],[.06,.07]].forEach(([x,z])=>FM.limb(b,parts,[x,0.04,z],m=>m.box(0.03,0.04,0.03,0x4a3c30,{y:-0.04})));
     return b;
   }
   /* Graureiher: steht im flachen Wasser am Seeufer */
-  function heron() {
+  function heron(unused,parts) {
     const b = new MB(), g = 0x9aa2ac, w = 0xeceef0, d = 0x3a3c44;
-    [-1, 1].forEach(s => b.box(0.022, 0.44, 0.022, 0xc8a050, { x: s * 0.045 }));
+    [-1,1].forEach(side=>FM.limb(b,parts,[side*.045,.44,0],m=>m.box(.022,.44,.022,0xc8a050,{y:-.44})));
     b.sphere(0.12, 8, 5, g, { y: 0.54, sz: 1.6, rx: -0.3 });
     [-1, 1].forEach(s => b.box(0.03, 0.09, 0.28, 0x6a707a, { x: s * 0.105, y: 0.5, z: -0.06, rx: -0.3, top: d })); /* Schwingen */
     b.box(0.08, 0.03, 0.14, d, { y: 0.48, z: -0.24, rx: -0.5 });                    /* Schwanz */
@@ -3245,10 +3246,10 @@ const FWM = (() => {
     return b;
   }
   /* Haustiere */
-  function dog() {
+  function dog(unused,parts) {
     const b = new MB();
     b.ico(1,0xc89a5a,{y:.34,sx:.14,sy:.14,sz:.28,detail:1});
-    [[-0.08, -0.18], [0.08, -0.18], [-0.08, 0.18], [0.08, 0.18]].forEach(([x, z]) => b.box(0.06, 0.30, 0.06, 0xb8884a, { x, z }));
+    [[-.08,-.18],[.08,-.18],[-.08,.18],[.08,.18]].forEach(([x,z])=>FM.limb(b,parts,[x,0.3,z],m=>m.box(0.06,0.3,0.06,0xb8884a,{y:-0.3})));
     b.ico(.13,0xc89a5a,{y:.49,z:.29,sy:1.1,sz:1.1,detail:1});
     wildEyes(b,.098,.53,.36,.022);
     b.ico(.085,0xe0c18c,{y:.45,z:.41,sx:.8,sy:.65,sz:1.1});
@@ -3257,10 +3258,10 @@ const FWM = (() => {
     b.cyl(0.03, 0.02, 0.25, 5, 0xc89a5a, { rx: -0.8, y: 0.38, z: -0.27 });
     return b;
   }
-  function cat() {
+  function cat(unused,parts) {
     const b = new MB();
     b.ico(1,0x77777d,{y:.23,sx:.10,sy:.11,sz:.22,detail:1});
-    [[-0.05, -0.12], [0.05, -0.12], [-0.05, 0.12], [0.05, 0.12]].forEach(([x, z]) => b.box(0.04, 0.16, 0.04, 0x5a5a62, { x, z }));
+    [[-.05,-.12],[.05,-.12],[-.05,.12],[.05,.12]].forEach(([x,z])=>FM.limb(b,parts,[x,0.16,z],m=>m.box(0.04,0.16,0.04,0x5a5a62,{y:-0.16})));
     b.ico(.095,0x77777d,{y:.32,z:.20,detail:1});
     for(const side of [-1,1]){b.ico(.025,0xe1d7ca,{x:side*.028,y:.285,z:.278});b.ico(.021,0x8fa65a,{x:side*.048,y:.34,z:.274});b.ico(.009,0x222623,{x:side*.048,y:.34,z:.291,sx:.5});}
     b.ico(.012,0xb97777,{y:.301,z:.303});
@@ -3268,10 +3269,10 @@ const FWM = (() => {
     b.cyl(0.02, 0.02, 0.3, 5, 0x5a5a62, { rx: -1.1, y: 0.2, z: -0.18 });
     return b;
   }
-  function goat() {
+  function goat(unused,parts) {
     const b = new MB();
     b.ico(1,0xf2ece0,{y:.45,sx:.16,sy:.18,sz:.31,detail:1});
-    [[-0.08, -0.2], [0.08, -0.2], [-0.08, 0.2], [0.08, 0.2]].forEach(([x, z]) => b.box(0.06, 0.38, 0.06, 0xdcd4c4, { x, z }));
+    [[-.08,-.2],[.08,-.2],[-.08,.2],[.08,.2]].forEach(([x,z])=>FM.limb(b,parts,[x,0.38,z],m=>m.box(0.06,0.38,0.06,0xdcd4c4,{y:-0.38})));
     /* Kopf (Boxen stehen auf y), Schnauze, Nase und Ziegenbart */
     b.ico(.11,0xf2ece0,{y:.56,z:.23,sy:1.3});
     const F = 0.45;                                                     /* Vorderseite des Kopfs */

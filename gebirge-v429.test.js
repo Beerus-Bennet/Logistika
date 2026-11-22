@@ -1,6 +1,6 @@
 /* v413: Verbundener Bergkamm, standfeste Ausstattung und feste Grafikbudgets. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const C=vm.createContext({console});for(const f of ['gl3d.js','farmmodels.js','bushes.js','woodmodels.js','alpine.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C,{filename:f});
+const C=vm.createContext({console});for(const f of ['gl3d.js','farmmodels.js','bushes.js','woodmodels.js','animalmotion.js','alpine.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C,{filename:f});
 const erbe=fs.readFileSync('erbe.js','utf8'),start=erbe.indexOf('const FWORLD =');vm.runInContext(erbe.slice(start,erbe.indexOf('\n};',start)+3),C);
 const world=fs.readFileSync('worldview.js','utf8');vm.runInContext(`const WGRID={x0:-160,z0:-160,x1:104,z1:104};${world.slice(world.indexOf('const APRON ='),world.indexOf('function worldGround('))}
 function wRng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
@@ -21,3 +21,8 @@ for(let i=0;i<v.length;i+=9){const key=v.slice(i,i+3).join(','),attrs=v.slice(i+
 assert.ok(matched>1000,'Gemeinsame Eckpunkte geprüft');
 assert.equal(tri(G.terrainNear),9918,'Gleiches Grafikbudget');
 console.log('OK v429: 270 Schwenks mit unveränderter Kamerahöhe; durchgehende Eckpunktfarben, unverändert 9918 Geländedreiecke.',{varied,seen});
+
+// v446: Auch Murmeltiere verwenden tatsächlich gegliederte Laufmodelle.
+const marmots=run("ALPINE.info().scene.animals.filter(a=>a.kind==='marmot')");
+assert.equal(marmots.length,2);for(const a of marmots){run(`Object.assign(FV.R.cam,{tx:${a.x},tz:${a.z},dist:60});for(let j=0;j<600;j++)ALPINE.step(1/30);`);assert.equal(a.gait.legs.length,4);assert.ok(a.gait.phase>0);assert.ok(a.gait.legs.every(l=>Number.isFinite(l.node.rx)));}
+console.log('OK v446: Beide Murmeltiere mit vier bewegten Pfoten; Steinbock-Geländegelenke erhalten.');

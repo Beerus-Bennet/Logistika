@@ -337,7 +337,7 @@ const ALPINE = (()=>{
   b.cyl(.07,.075,.05,8,0xf2f0ea,{y:.14,z:.2});b.ico(.115,0x1f5a3a,{y:.25,z:.21,sz:1.15});b.box(.07,.035,.12,0xd8b13a,{y:.22,z:.34});b.box(.05,.008,.012,0x473f2d,{y:.229,z:.402}); /* v440: abgegrenzte Schnabelspitze */
   b.ico(.02,0x141414,{x:.075,y:.28,z:.27});b.ico(.02,0x141414,{x:-.075,y:.28,z:.27});b.box(.09,.06,.1,0x1d1d1d,{y:.07,z:-.28,rx:-.4});b.box(.05,.04,.06,0xf2f0ea,{y:.12,z:-.32});return b;}
 
- function body(kind){const b=new FM.MB(),m=kind==='marmot';
+ function body(kind,parts){const b=new FM.MB(),m=kind==='marmot';
   if(m)b.ico(1,0x82715a,{x:0,y:.28,z:0,sx:.24,sy:.25,sz:.48});
   /* v404: Steinbock geschlossen modelliert – runder Rumpf, Brust/Schulter und Keule als eigene Wölbungen, Hals bis zum Kopf, Ansätze über
      den Läufen (vorher grobe Ellipse mit losem Kopf und Läufen, von oben sichtbare Lücken) */
@@ -347,7 +347,7 @@ const ALPINE = (()=>{
    for(const sx of [-1,1])for(const sz of [-1,1])b.ico(.15,sz>0?0x6c6050:0x786b5a,{x:sx*.22,y:.74,z:sz*.4,sy:1.7,sz:1.1});                    /* Schulter-/Schenkelansätze */
    b.box(.11,.22,.1,0x554636,{y:.85,z:-.6,rx:-.65});}
   else{ /* v440: Murmeltier mit hellen Wangen, kleinen Ohren und sichtbaren Pfoten. */
-   for(const side of [-1,1]){b.ico(.075,0x665440,{x:side*.16,y:.065,z:.16,sy:.6,sz:1.4});b.ico(.055,0x8f7c61,{x:side*.12,y:.24,z:.33,sy:1.4});b.ico(.052,0xc3af8c,{x:side*.06,y:.34,z:.55,sy:.7});}
+   for(const side of [-1,1]){FM.limb(b,parts,[side*.16,.16,.16],m=>m.ico(.075,0x665440,{y:-.095,sy:.6,sz:1.4}));FM.limb(b,parts,[side*.12,.16,-.16],m=>m.ico(.065,0x8f7c61,{y:-.095,sy:.65,sz:1.2}));b.ico(.052,0xc3af8c,{x:side*.06,y:.34,z:.55,sy:.7});}
    b.ico(.16,0x938064,{y:.37,z:.4});for(const s of [-1,1]){b.ico(.05,0x766149,{x:s*.11,y:.48,z:.36});b.ico(.018,0x141916,{x:s*.115,y:.405,z:.49});}b.ico(.038,0x39362f,{y:.35,z:.55});b.ico(.09,0x665341,{y:.12,z:-.46,sx:.7,sy:.6,sz:1.7});}return b;
  }
  function head(){const b=new FM.MB();b.ico(.24,0x8d7e67,{sx:.78,sy:1.05,sz:1.35});b.ico(.09,0xa99575,{y:-.08,z:.21,sz:1.4});b.ico(.065,0x403c32,{y:-.1,z:.31,sz:1.1});
@@ -372,6 +372,7 @@ const ALPINE = (()=>{
   const candidates=LEDGES;
   for(let i=0;i<7;i++){const m=i>4,wanted=m?[[96,-130],[66,-159]][i-5]:candidates[i],[x,z]=safeCenter(wanted,m,animals.concat(['hiker','hut','bench','camp'].map(k=>geometry.spots&&geometry.spots[k]).filter(Boolean).map(p=>({x:p[0],z:p[2]})))) /* v404: Tiere nicht in Wanderer/Hütte/Bank/Zelt */,root=node(cache(m?'marmot':'ibex',()=>body(m?'marmot':'ibex')),{shadow:false,s:m?1.1:i===4?.72:1.25});R.addChild(parent,root);
    const a={kind:m?'marmot':'ibex',root,x,z,phase:i*1.71,walk:0,legs:[],head:null,path:[]};
+   if(m&&typeof ANIMAL_MOTION!=="undefined")a.gait=ANIMAL_MOTION.mount(R,root,'alpine:marmot','marmot',parts=>body('marmot',parts));
    // Nur sichere Punkte auf dem tatsächlichen feinen Geländeraster verwenden.
    for(let k=0;k<64;k++){const t=k/64*Math.PI*2,X=x+Math.cos(t)*(m?.7:2.3),Z=z+Math.sin(t)*(m?.6:1.8);a.path.push([X,surface(X,Z),Z]);}
    if(!m){a.head=R.addChild(root,node(cache('head',head),{y:1.27,z:.63}));for(const sx of [-1,1])for(const sz of [-1,1]){const hip=R.addChild(root,node(null,{x:sx*.22,y:.68,z:sz*.4}));a.legs.push({hip,upper:R.addChild(hip,node(cache('leg',leg),{})),lower:R.addChild(hip,node(cache('leg',leg),{})),hoof:R.addChild(hip,node(cache('hoof',hoof),{}))});};}
@@ -413,6 +414,8 @@ const ALPINE = (()=>{
   for(const a of scene.animals){const fade=sm(150,220,d),near=Math.hypot(a.x-FV.R.cam.tx,a.z-FV.R.cam.tz)<Math.max(50,d*.75);a.root.fade=fade;a.root.visible=fade<.999&&near&&(day||a.kind==='ibex');if(!a.root.visible)continue;
    const moving=day&&Math.sin(clock*.23+a.phase)>-.15,speed=a.kind==='marmot'?.12:.16;if(moving)a.walk+=Math.min(.05,dt)*speed;
    const f=(a.walk+a.phase)*64/(Math.PI*2),i=((Math.floor(f)%64)+64)%64,u=f-Math.floor(f),p=a.path[i],q=a.path[(i+1)%64],x=p[0]+(q[0]-p[0])*u,z=p[2]+(q[2]-p[2])*u;
+   const moved=a.lastX==null?0:Math.hypot(x-a.lastX,z-a.lastZ);a.lastX=x;a.lastZ=z;
+   if(a.gait)ANIMAL_MOTION.step(a.gait,moved,dt);
    a.root.x=x;a.root.z=z;a.root.y=surface(x,z);a.root.ry=Math.atan2(q[0]-p[0],q[2]-p[2]);
    a.legs.forEach((leg,j)=>{const wave=Math.sin(clock*5+a.phase+(j===0||j===3?0:Math.PI)),sc=a.root.sx,c=Math.cos(a.root.ry),s=Math.sin(a.root.ry),swing=moving?wave*.09:0,hip=leg.hip,X=x+(hip.x*c+(hip.z+swing)*s)*sc,Z=z+(-hip.x*s+(hip.z+swing)*c)*sc,toe=(surface(X,Z)-a.root.y)/sc-hip.y+(moving?Math.max(0,wave)*.06:0),knee=toe*.49,kz=(hip.z>0?.11:-.11)+swing*.4;
     leg.upper.rx=Math.atan2(-kz,-knee);leg.upper.sy=Math.hypot(knee,kz);leg.lower.y=knee;leg.lower.z=kz;leg.lower.rx=Math.atan2(-(swing-kz),knee-toe);leg.lower.sy=Math.hypot(knee-toe,swing-kz);leg.hoof.y=toe;leg.hoof.z=swing;

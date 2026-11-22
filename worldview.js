@@ -2160,7 +2160,9 @@ function worldMakeWild0() {
   WV.wild = WILD_SPOTS.map(([k, x, z, r, area], i) => {
     const D = WILD_DEF[k], node = fnode(fmesh("wild:" + k, D.mesh), { x, z, s: D.s, ry: i, visible: false, alpha: 0 });
     R.nodes.push(node);
-    return { k, D, home: [x, z], r, area, node, x, z, tx: x, tz: z, wait: Math.random() * 4, flee: 0, f: 0, i };
+    const w={k,D,home:[x,z],r,area,node,x,z,tx:x,tz:z,wait:Math.random()*4,flee:0,f:0,i};
+    if(typeof ANIMAL_MOTION!=="undefined")w.gait=ANIMAL_MOTION.wild(R,node,k,'normal');
+    return w;
   });
   WV.fly = FLY_SPOTS.map(([k, x, z, r, h, area, g], i) => {
     const D = FLY_DEF[k];
@@ -2183,6 +2185,13 @@ function worldMakeWild0() {
 /* v146: Wild läuft auf dem Wegenetz (team.js): nicht durch Gebäude, Bäume, Felsen, Wasser, Zäune; der Igel schlüpft unter Zäunen durch */
 const wildRole = w => w.k === "hedgehog" ? "igel" : "wild";
 function wildHome(w) {
+  /* v446: Pro Sichtung ein Fell, kein Farbwechsel während des Laufens.
+     Seltene Waldvarianten ändern weder Ereignisse noch Jagd-/Belohnungsregeln. */
+  if(typeof ANIMAL_MOTION!=="undefined"){
+    const look=ANIMAL_MOTION.choose(w.k);
+    if(!w.gait||w.gait.look!==look)w.gait=ANIMAL_MOTION.wild(FV.R,w.node,w.k,look);
+    w.gait.phase=w.i*1.71;w.gait.amount=0;
+  }
   const a = Math.random() * 6.28, d = Math.random() * w.r;
   let x = w.home[0] + Math.cos(a) * d, z = w.home[1] + Math.sin(a) * d;
   if (w.k !== "heron" && typeof navFree === "function") {
@@ -2213,6 +2222,7 @@ function stepWild(dt, time) {
     if (w.wait > 0 && !w.flee && !w.leave) {
       w.wait -= dt;
       w.node.y = 0;
+      if(w.gait)ANIMAL_MOTION.step(w.gait,0,dt);
       if (w.k === "deer") w.node.rx = Math.sin(time * 0.8 + w.i) > 0.6 ? 0.18 : 0;     /* grast */
       if (w.k === "heron") w.node.rx = Math.sin(time * 0.5 + w.i) > 0.85 ? 0.3 : 0;   /* späht ins Wasser */
       if (w.wait <= 0) {
@@ -2221,6 +2231,7 @@ function stepWild(dt, time) {
       }
       continue;
     }
+    const ox=w.x,oz=w.z;
     const sp = (w.flee > 0 ? w.D.run : w.D.sp) * dt;
     if (w.flee > 0) w.flee -= dt;
     let hd = null, arrived = false;
@@ -2233,10 +2244,12 @@ function stepWild(dt, time) {
       if (!w.path) arrived = true;
       else { const r = wanderMove(w, sp); hd = r.h; if (r.done) arrived = true; }
     }
-    if (arrived) { w.wait = (w.D.still ? 6 : 2) + Math.random() * (w.D.still ? 9 : 5); w.flee = 0; w.node.rx = 0; w.path = null; w.ptx = null; continue; }
+    if (arrived) { w.wait = (w.D.still ? 6 : 2) + Math.random() * (w.D.still ? 9 : 5); w.flee = 0; w.node.rx = 0; w.path = null; w.ptx = null;
+      w.node.x=w.x;w.node.z=w.z;w.node.y=0;if(w.gait)ANIMAL_MOTION.step(w.gait,Math.hypot(w.x-ox,w.z-oz),dt);continue; }
     w.node.x = w.x; w.node.z = w.z; w.node.rx = 0;
     if (hd != null) w.node.ry = hd;
-    w.node.y = w.D.hop ? Math.abs(Math.sin(time * (w.flee > 0 ? 14 : 9) + w.i)) * 0.12 : Math.abs(Math.sin(time * 8 + w.i)) * 0.02;
+    /* v446: Schritte durch echte Gelenke statt Hüpfen des ganzen Modells. */
+    w.node.y=0;if(w.gait)ANIMAL_MOTION.step(w.gait,Math.hypot(w.x-ox,w.z-oz),dt);
   }
   /* Vögel kreisen über dem Wald, Eulen und Fledermäuse nachts */
   const grp = {};
@@ -2813,17 +2826,19 @@ function worldSyncPets() {
     const fn = k === "hund" ? FWM.dog : k === "katze" ? FWM.cat : FWM.goat;
     const j = i * 2 % PET_WAY.length, node = fnode(fmesh("pet:" + k, fn), { x: PET_WAY[j][0], z: PET_WAY[j][1], s: 1.4 });
     R.nodes.push(node);
+    if(typeof ANIMAL_MOTION!=="undefined")ANIMAL_MOTION.mount(R,node,k,{hund:'dog',katze:'cat',ziege:'goat'}[k],parts=>fn(false,parts));
     WV.pets.set(k, { node, wi: j, tgt: null, tk: null, prev: null, x: PET_WAY[j][0], z: PET_WAY[j][1], wait: 1 + i, sp: k === "hund" ? 1.8 : k === "katze" ? 1.1 : 0.8 });
   });
 }
 function stepPets(dt, time) {
   for (const [k, p] of WV.pets) {
     const G = petTiles(k);
-    if (p.wait > 0) { p.wait -= dt; p.node.y = 0; if (p.wait <= 0) petNext(k, p, G); continue; }
+    if (p.wait > 0) { p.wait -= dt; p.node.y = 0;if(p.node._gait)ANIMAL_MOTION.step(p.node._gait,0,dt); if (p.wait <= 0) petNext(k, p, G); continue; }
     if (!p.tgt || (G && p.tk && !G.has(p.tk)) || (!G && p.tk)) petNext(k, p, G);
     const t = p.tgt, dx = t[0] - p.x, dz = t[1] - p.z, d = Math.hypot(dx, dz), s = p.sp * dt;
     if (d < s) {
-      p.x = t[0]; p.z = t[1]; p.tgt = null;
+      const moved=Math.hypot(p.x-t[0],p.z-t[1]);p.x = t[0]; p.z = t[1]; p.tgt = null;
+      p.node.x=p.x;p.node.z=p.z;p.node.y=0;if(p.node._gait)ANIMAL_MOTION.step(p.node._gait,moved,dt);
       /* stehen bleiben: Tim grast, Minka setzt sich, Bello schnuppert kurz */
       const r = G ? (k === "ziege" ? 0.2 : k === "katze" ? 0.18 : 0.06) : 0.3;
       if (Math.random() < r) p.wait = (G ? 2.5 : 4) + Math.random() * 6;
@@ -2831,7 +2846,7 @@ function stepPets(dt, time) {
     }
     p.x += dx / d * s; p.z += dz / d * s;
     p.node.x = p.x; p.node.z = p.z; p.node.ry = Math.atan2(dx, dz);
-    p.node.y = Math.abs(Math.sin(time * 10 + p.sp)) * 0.03;
+    p.node.y=0;if(p.node._gait)ANIMAL_MOTION.step(p.node._gait,s,dt);
   }
 }
 /* Mitarbeiter: Figuren, Laufen und Arbeiten siehe team.js */
