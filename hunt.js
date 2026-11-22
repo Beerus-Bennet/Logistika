@@ -1202,7 +1202,7 @@ const HUNT = (() => {
   const REP_S = [0, 0.42, 0.62, 0.8, 0.95];
   const repRec = (k, m) => ({ k, m, s: REP_S[m], vr: 0 });
   const qS = s => Math.round(clamp(s, 0, 1) * 20) / 20;
-  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(r.s * 1000) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v328"; }
+  function trophyKey(r) { const gn = gnOf(r), T = traits(r.k, r.s, gn); return r.k + r.m + "_" + (T.P || T.cm) + "_" + Math.round(r.s * 1000) + "_" + (r.vr || 0) + "_" + lookKey(r.k, gn) + antKey(gn) + "_v443"; }
   /* v328: Ganzkörperpräparate mit den gespeicherten Fell-, Geweih-, Waffen- und Federmerkmalen.
      Decke, Alter und sonstige Merkmale bleiben im Datensatz erhalten; keine neue Trophäenberechnung. */
   function trophyBuild(r) { const gn = gnOf(r); return withLook(r.k, gn, () => trophyBuild0(r, gn)); }
@@ -1231,12 +1231,22 @@ const HUNT = (() => {
     for(let i=0;i<animal.v.length;i+=9)for(let j=0;j<3;j++){mn[j]=Math.min(mn[j],animal.v[i+j]);mx[j]=Math.max(mx[j],animal.v[i+j]);}
     const cx=(mn[0]+mx[0])/2,cz=(mn[2]+mx[2])/2;let radius=0;
     for(let i=0;i<animal.v.length;i+=9)radius=Math.max(radius,Math.hypot(animal.v[i]-cx,animal.v[i+2]-cz));
-    radius=Math.max(.36,radius+.065);const b=MB(),top=.14;
+    radius=Math.max(.36,radius+.065);
+    /* v443: Geweih, Kopf und Schwanz dürfen die Standmitte nicht verschieben.
+       Die gemeinsame Aufstandsfläche aller Hufe/Füße zentrieren. Sockel und
+       belegte Fläche erhalten; das ganze Tier bei Bedarf gleichmäßig einpassen. */
+    const footMin=[Infinity,Infinity],footMax=[-Infinity,-Infinity];
+    for(let i=0;i<animal.v.length;i+=9)if(animal.v[i+1]<=mn[1]+.04*scale){
+      for(let j=0;j<2;j++){const v=animal.v[i+j*2];footMin[j]=Math.min(footMin[j],v);footMax[j]=Math.max(footMax[j],v);}
+    }
+    const fx=(footMin[0]+footMax[0])/2,fz=(footMin[1]+footMax[1])/2;let extent=0;
+    for(let i=0;i<animal.v.length;i+=9)extent=Math.max(extent,Math.hypot(animal.v[i]-fx,animal.v[i+2]-fz));
+    const fit=Math.min(1,(radius-.065)/extent),b=MB(),top=.14;
     b.cyl(radius*.96,radius,.035,48,WOOD.rim,{smooth:true});
     b.cyl(radius,radius,.075,48,p=>woodCol(p,.72),{y:.035,smooth:true});
     b.cyl(radius,radius*.96,.03,48,WOOD.rim,{y:.11,smooth:true,top:0x666346});
     b.cyl(radius*.94,radius*.94,.004,48,0x666346,{y:.138,smooth:true});
-    b.merge(animal,{x:-cx,y:top-mn[1],z:-cz});
+    b.merge(animal,{s:fit,x:-fx*fit,y:top-mn[1]*fit,z:-fz*fit});
     const plaque=Math.min(.30,radius*.7);
     plateInto(b,0,.071,radius-.004,plaque,r.m||1);
     /* Kleine Naturdetails sitzen auf dem Sockel, ohne die Tierkontur zu verdecken. */
@@ -1245,7 +1255,7 @@ const HUNT = (() => {
       ell(b,[x,top+.016,z],[.035,.022,.028],i===1?0x8b8d7d:0x77796a,7,4);
       [-1,0,1].forEach(j=>bristle(b,[x+.045,top,z],[j*.3,1,.25],.05+Math.abs(j)*.015,.005,0x738253,0xa6ad7a));
     }
-    b._stand={radius,height:mx[1]-mn[1]+top,size:Math.ceil((radius+.035)*2)};
+    b._stand={radius,height:(mx[1]-mn[1])*fit+top,size:Math.ceil((radius+.035)*2)};
     return b;
   }
   function trophyInfo(r){return trophyBuild(r)._stand;}
