@@ -255,3 +255,4 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v447: Gebirgsufer mit Sandfarben/Abständen des Hofbach-Ufers (`color` in `alpine.js`, keine Zacken am Rand des feinen Netzes), Ufernetz im Hof nur dort gekappt, wo das Gebirgsgelände liegt (`bankCut` in `worldview.js`).
 
 - v448: Kaufbeleg in corpreport.js mit crp448-Klasse, kräftigem Kopf/Preisblock und SVG-Kennzahlen; CSS ausschließlich am Ende ergänzt. Daten/Bestandsdialog/Fokusführung erhalten, nur Zahlen lokal formatiert. Browser kaufbeleg-v448 mit vier Handy-/zwei Desktopformaten, langen Werten, Altbeleg und reduzierter Bewegung; acquisition355 (18 Szenarien) und gebirge429 bestanden. corpreport/style/Gesamt448, Ufer447 aus PR149 erhalten. Bericht docs/KAUFBELEG-v448.md.
+- v451: Trefferbild – Lunge ohne Bronchialbaum (`buildOrganMesh` in `hunt.js`), keine hellen Linien mehr im Organ.
