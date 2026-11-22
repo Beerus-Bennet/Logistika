@@ -1,3 +1,11 @@
+## v457 – Bachufer im Gebirge glatt (keine Sägezähne mehr)
+
+**Ursache:** Das Sandufer am Bach im Gebirgsgelände (`alpine.js`) ist ein schräg zum Dreiecksraster laufendes helles Band. Alle Vierecke wurden mit derselben Diagonale geteilt, dadurch entstanden Sägezähne und bei Nacht dunkle Streifen am Ufer. Gemessen: nur die Geländeebene `terrain` zeichnete die Zacken, die Vertexfarben selbst sind glatt.
+
+**Lösung:** `flipDiag` wählt je Viereck die Diagonale mit dem geringeren Farbunterschied; `surface` verwendet dieselbe Wahl, damit Höhenabfragen zum Netz passen. Nicht am Bergsee und am Kolk (dort bleibt der geprüfte Rand). Keine zusätzlichen Dreiecke, keine Spielstandänderung.
+
+**Geprüft:** Vorher/nachher-Bilder im Testbrowser (Chromium, Software-Rendering, zwei Ansichten am Bach), `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** Handy, Nachtansicht.
+
 ## v456 – Lackfarbe und Foto stimmen überein
 
 **Ursache:** Ältere Garagenfahrzeuge (z. B. Audi R8 „Ibisweiß“) behielten eine früher zufällig gewählte Lackfarbe, das freigegebene Modellfoto zeigt aber seine eigene Farbe (schwarz). Text und Bild widersprachen sich (seit v453 nur mit Hinweis im Bildnachweis).
