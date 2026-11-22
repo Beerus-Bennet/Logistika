@@ -1,3 +1,7 @@
+## v446 – Tierbewegung und Wald-Fellvarianten
+
+Basis mainb823906 mit Mittagspause445, Ruger/Waffen444 und Trophäen443. animalmotion.js direkt nach woodmodels und vor alpine laden; im Service-Worker aufgenommen. FM.limb erhält statische Komplettmodelle für Bilder; optionale Teile werden nur bei lebenden Tieren benutzt. farmmodels, woodmodels, alpine, farmview, worldview und neue animalmotion auf Asset446; team445, Waffen444 und hunt443 unverändert erhalten. Gesamt-/SW/LOGI_V446. Keine Spielstandmigration. Modellcache ist rendererweise und wird beim Drehen/Simulieren nicht neu aufgebaut. Details/Prüfung: docs/TIERLEBEN-v446.md.
+
 ## v442 – Halsorgane (Basis main5f33783)
 
 Nur hunt.js und dessen Cacheversion angefasst; Freigabe441/team441, NPC440, Gebirge430 sowie alle anderen main-Assets erhalten. Halsbilder und Trefferprüfung nutzen gemeinsame Netze. Neue Geometrien haben kleinere Kontaktflächen; keine unsichtbare alte Vergrößerung beibehalten. Alte Schussdaten werden nur für die Ansicht nachgeprüft, ihre Wertung nicht gespeichert/überschrieben. Keine Migration. Gesamt-/SW/LOGI_V442; Bericht docs/HALSORGANE-v442.md.
