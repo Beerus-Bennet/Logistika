@@ -1,3 +1,11 @@
+## v451 – Lunge im Trefferbild klar abgegrenzt, keine fremden Linien im Organ
+
+**Ursache:** Das Lungenmodell enthielt einen Bronchialbaum aus hellen und dunklen Röhren im Inneren der Lappen. Da das Trefferbild die Organe halbtransparent zeigt, schimmerten diese Röhren als weiße Linien und Schleifen durch die Lunge (und über dem Herz) – wie fremde Gebilde im Organ.
+
+**Lösung (`hunt.js`, `buildOrganMesh`):** Der Bronchialbaum der Säugerlunge und die hellen Röhren der Vogellunge sind entfernt. Die Lungenflügel bleiben als klar abgegrenzte, einfarbige Lappen (Hirsch, Keiler, Fasan); Herz, Leber, Nieren, Magen und Darm sind unverändert. Wertungszonen, Trefferlogik und gespeicherte Aufnahmen unverändert.
+
+**Geprüft:** Testbrowser-Ansicht des Trefferbilds bei Hirsch (Herz) und Keiler (Lunge): Lunge ohne Linien im Inneren; `anatomie-v367`, `trefferbild-v357`, `trefferklarheit-v388`, `wundoptik-v400`, `halsorgane-v442`, `hunt.test.js` (23) bestanden. **Nicht geprüft:** Handy und der exakte Zoom wie auf deinem Screenshot (Ansicht im Testbrowser kleiner); falls im Herzbereich noch etwas auffällt, bitte erneut ein Screenshot.
+
 ## v450 – Meldungen im Auktionshaus verdecken die Gebotsknöpfe nicht mehr
 
 **Ursache:** Meldungen wie „Sofort überboten – … hat ein höheres Limit.“ erscheinen unten über der Navigation. Im Auktionshaus liegen dort die Gebotsknöpfe der Karte, so dass man beim Bieten nicht darauf tippen konnte, solange die Meldung stand.
