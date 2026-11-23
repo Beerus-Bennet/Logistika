@@ -1,0 +1,93 @@
+{
+  "framing": [
+    {
+      "width": 320,
+      "pose": "initial",
+      "x": 0.8999999831507309,
+      "y": 0.5095330412727663,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "pose": "front",
+      "x": 0.9000000400742106,
+      "y": 0.8986359297100727,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "pose": "side",
+      "x": 0.8999999897114811,
+      "y": 0.28496405347755716,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "pose": "rear",
+      "x": 0.899999996916787,
+      "y": 0.8810039050646706,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "pose": "initial",
+      "x": 0.9000000604338254,
+      "y": 0.560694394566533,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "pose": "front",
+      "x": 0.8297214346861436,
+      "y": 0.8999999062878274,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "pose": "side",
+      "x": 0.8999999718453805,
+      "y": 0.31001769150957764,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "pose": "rear",
+      "x": 0.84643931697217,
+      "y": 0.8999999549803082,
+      "overflow": false
+    },
+    {
+      "width": 980,
+      "pose": "initial",
+      "x": 0.8024938561161529,
+      "y": 0.8985323255980282,
+      "overflow": false
+    },
+    {
+      "width": 980,
+      "pose": "front",
+      "x": 0.5007550206928925,
+      "y": 0.8999999062878274,
+      "overflow": false
+    },
+    {
+      "width": 980,
+      "pose": "side",
+      "x": 0.9000000671573132,
+      "y": 0.5137294704853734,
+      "overflow": false
+    },
+    {
+      "width": 980,
+      "pose": "rear",
+      "x": 0.5108446280479769,
+      "y": 0.8999999549803082,
+      "overflow": false
+    }
+  ],
+  "touch": true,
+  "zoom": true,
+  "auction": true,
+  "modelEquality": true,
+  "errors": []
+}

@@ -1,5 +1,5 @@
 "use strict";
-/* v470: Drehbare Garagenansicht aus denselben Karosserie-/Radnetzen wie im Rennen.
+/* v472: Drehbare Garagenansicht aus denselben Karosserie-/Radnetzen wie im Rennen.
    Nur bei Eingabe/Größenänderung zeichnen, beim Schließen alle Quellen freigeben. */
 const RACECARVIEW=(()=>{
  function create(canvas,c,paint,status){
@@ -9,6 +9,7 @@ const RACECARVIEW=(()=>{
   const root=R.node(mesh(RACETRACK.car(c,paint))),wheel=mesh(RACETRACK.wheel(c));
   for(const side of [-1,1])for(const z of rig.axles)R.addChild(root,R.node(wheel,{x:side*rig.wheelX,y:rig.wheelY,z,ry:side<0?Math.PI:0}));
   const floor=new G3.MB();floor.disc(3.15,48,0xa5a69e,{y0:-.012});floor.plate(40,40,0xe4e1d7,{y0:-.05});R.nodes.push(R.node(mesh(floor)),root);
+  R.shadowK=.60; // v472: Flache Vorschau-Schatten zeigen Blechfugen ohne schwarze Flecken.
   R.env.sun=G3.norm([.55,.95,.70]);R.env.sunCol=[.66,.64,.61];R.env.sky=[.47,.49,.51];R.env.ground=[.25,.26,.27];R.env.fogR=[80,150];
   Object.assign(R.cam,{tx:0,ty:.54,tz:0,yaw:1.05,pitch:.19,fov:.56,near:.05,far:20});
   // Ausschnitt nach echten Modellpunkten: auch die Seite passt auf schmale Displays.
