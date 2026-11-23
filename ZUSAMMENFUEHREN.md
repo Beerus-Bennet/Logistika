@@ -1,3 +1,15 @@
+## v470 – Gallardo-Form als Ergänzung zu PR170
+
+Basis main `86adb33` mit PR169/Gallardo467/Fahrprofilen468. Der offene PR170 enthält bereits Zielfeier/Auslauf469; diese Lieferung ergänzt ausschließlich das Fahrzeugnetz und dessen Vorschau. Gesamt-/SW/LOGI_V470; nur racecars/racecarview auf Asset470. racedrive/racefinish/racing/style469, racehandling468, racetrack/farmview/worldview467, hunt465/alpine466 und alle übrigen Assetstände erhalten. Vor Push aktuellen main und PR prüfen; kein automatischer Merge.
+
+`RACECARS` bleibt die gemeinsame Quelle für Garage und Rennszene; `rig`/Achsen/Radmittelpunkte bleiben unverändert. Das detaillierte Gallardo-Netz nicht durch einen separaten Vorschau-Ersatz austauschen. Vollständiges Modell 5.657 Dreiecke (Budget <6.000), andere Autos unverändert. Vorschau passt den Abstand an tatsächliche Modellpunkte an; keine Skalierung oder neue Render-Dauerschleife. Keine neue Geschäftslogik, Spielstandfelder oder Migration. Superleggera-Foto nur als Formreferenz verwenden, Katalogeintrag bleibt frühes 520-PS-Coupé. Bericht/Bilder/Prüfungen: `docs/GALLARDO-FORM-v470.md`.
+
+## v469 – Zieleffekte und Kiessteuerung nach PR169
+
+Basis main `86adb33`, in dem PR169/v467–v468 bereits gemergt ist. Eigener Branch `claude/zielankunft-v469`. Neues `racefinish.js` vor `racing.js` laden und im SW aufnehmen. Gesamt-/SW469; racedrive/racefinish/racing/style469, racehandling468 und übrige Gallardo-/Streckenassets467 erhalten. main mit Trefferbild465/Steinbock466 bleibt enthalten, vor Push aktuellen Stand prüfen.
+
+`goalShown`/`goalFx` und Bestzeit-Vergleich nur an Q, niemals persistieren. FX-Lebensdauer und Audio beim Szenenabbau beenden; erneutes Speichern nach Fehler darf die Feier nicht neu starten. Geld weiter ausschließlich über settle/checkpoint sichern. Drift-/Nitro-Freigabe gilt auch im Kies; langsame Lenkhilfe nur unter Gas außerhalb des Asphalts, keine gelockerten Strecken-/Kontrollpunktgrenzen. Keine Migration oder neuen Prämien. Prüfung: `docs/ZIELANKUNFT-v469.md`. Kein automatisches Merge.
+
 ## v468 – Fahrzeugprofile und offenes Monatsfeld, Ergänzung zu PR169
 
 Ergänzt die vollständige Gallardo-/Umbau-Lieferung467 im bestehenden PR169. `racehandling.js` **vor racedrive und racing** laden und im SW cachen. Gesamt-/SW/LOGI_V468; nur racehandling, racedrive, racing und style auf Asset468. racecars/racetrack/racecarview, farmview/worldview bleiben467; hunt465/alpine466 sowie die übrigen main-Assets erhalten. Vor Push/Merge den aktuellen main-Stand integrieren.

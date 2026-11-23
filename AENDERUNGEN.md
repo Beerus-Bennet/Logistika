@@ -1,3 +1,19 @@
+## v470 – Gallardo mit geformter Karosserie und tieferen Details
+
+**Anlass/Ursache:** Im Vergleich zum echten Gallardo wirkten Front, Dach und Seiten zu kantig und flach. Einlässe, Spiegel und Räder waren zu grob; die helle Vorschau verdeckte die Lackform und zeigte fleckige Türschatten.
+
+**Lösung:** Gewölbte Kotflügel und Dach, weichere Blechübergänge, zurückgezogener unterer Stoßfänger mit echten Einlasskanälen/Wabengittern, gefasste Projektorscheinwerfer, geschlossene Kabine mit klaren Fensterrahmen/Wischern, vertiefte Seitenansaugungen, geformte Spiegel, Radhausschalen und detaillierte offene Felgen/Bremsen. Dieselben Netze fahren im Rennen. Neutralere Vorschau-Beleuchtung und automatische Einpassung des ganzen Autos bei schmalen Displays. Frühes Serien-Coupé und Garagenlack erhalten; keine Übertragung von Superleggera-Sonderausstattung oder Leistungswerten. Vollständiges Auto 5.657 Dreiecke, bisherige Fahrmaße/Physik unverändert.
+
+**Geprüft:** Neue geometrische Prüfung (8 Gruppen); zwölf tatsächliche Garagenansichten bei 320/390/980 px, Touchdrehung, Zoom, kein Überlauf/Abschneiden; Vorher/Nachher aus sechs identischen Blickwinkeln. Bestehende Rennbahn-/Gallardo-Unitprüfungen und Gallardo-Browserablauf einschließlich Modellgleichheit Garage/Fahrt, Umbau, Speicherfehler und Monatslimit bestanden. Bericht/Vergleichsbilder: `docs/GALLARDO-FORM-v470.md`. **Nicht geprüft:** echtes iPhone/Safari und Handy-Bildrate. Zieleffekte/Auslauf-Steuerung469 und alle main-Änderungen erhalten.
+
+## v469 – Zielfeier mit Konfetti/Feuerwerk und Freifahren im Auslauf
+
+**Anlass/Ursache:** Der Zieleinlauf zeigte bisher sofort eine nüchterne Ergebniskarte. Nitro und Drift waren außerhalb des Asphalts gesperrt; bei Stillstand gegen die Leitplanke reichte die Lenkung kaum zum Freifahren.
+
+**Lösung:** Einmalige, kurze Zielfeier mit Konfetti, Feuerwerk, Auszeichnung nach Platzierung, hervorgehobenem tatsächlich gebuchtem Preisgeld und Bestzeit-Hinweis. Bei eingeschaltetem Spielton kurzer Zielakkord. Sofort bedienbar, nach 4,6 Sekunden vollständig beendet; reduzierte Bewegung zeigt eine statische Auszeichnung. Speicherfehler/erneutes Speichern lösen keine doppelte Feier oder Gutschrift aus. Nitro/Drift funktionieren auch im Auslauf; eine begrenzte Lenkhilfe unter Gas löst langsame Fahrzeuge von der Leitplanke. Verbrauch, Kieswiderstand, Grenzen und Kontrollpunkte bleiben erhalten.
+
+**Geprüft:** Neue Unit-Prüfung (7 Gruppen, 30 Freifahrversuche auf drei Kursen in 3,38–4,98 s), neue Browserprüfung mit echter Zielpassage, sichtbaren Effekten, Speicherfehler, frühem Schließen, Zwei-Finger-Eingabe im Kies und reduzierter Bewegung; Ergebnisse bei 320/390/980 px. Bestehende Rennbahn-/Gallardo-Unit- und Rennbahn-Browserprüfungen einschließlich vollständigem Fahrablauf. Bericht/Vorschauen: `docs/ZIELANKUNFT-v469.md`. **Nicht geprüft:** echtes iPhone/Safari, Handy-Bildrate und echte Lautsprecher. Keine neuen Prämien oder Spielstandmigration.
+
 ## v468 – Eigene Fahrzeugstärken und feste Gegner im Monatsrennen
 
 **Ursache:** Die fünf KI-Fahrer nutzten bisher Kopien des Spielerautos. Ein besserer Garagenwagen brachte deshalb kaum Wettbewerbsvorteil. Masse, Antriebsart und Kurven-/Driftcharakter waren nicht modellbezogen.

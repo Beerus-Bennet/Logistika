@@ -20,9 +20,12 @@ const RACEDRIVE=(()=>{
   const last=RACETRACK.START+(a.next-1)*RACETRACK.length/12,s=((a.s-last)%RACETRACK.length+RACETRACK.length)%RACETRACK.length;a.progress=a.next-1+clamp(s/(RACETRACK.length/12),0,.995);
  }
  function update(a,input,dt){if(a.finish)return;const px=a.x,pz=a.z;dt=clamp(dt,0,.025);a.time+=dt;a.hit=Math.max(0,a.hit-dt);const n=RACETRACK.near(a.x,a.z,a.i),on=n.d<RACETRACK.HALF,sp=Math.hypot(a.vx,a.vz);a.i=n.i;
-  a.steer+=(clamp(input.steer||0,-1,1)-a.steer)*Math.min(1,dt*a.spec.response);a.drifting=!!input.drift&&sp>(a.spec.drive==='A'?12:10)&&on;a.boost=!!input.nitro&&a.nitro>0&&input.throttle>0&&on;
+  /* v469: Nitro und Drift auch im Auslauf. Beim langsamen Freifahren unter Gas
+     bleibt Lenkung möglich, obwohl die Leitplanke die Vorwärtsfahrt begrenzt. */
+  a.steer+=(clamp(input.steer||0,-1,1)-a.steer)*Math.min(1,dt*a.spec.response);a.drifting=!!input.drift&&sp>(on?(a.spec.drive==='A'?12:10):3);a.boost=!!input.nitro&&a.nitro>0&&input.throttle>0;
   a.nitro=clamp(a.nitro+(a.boost?-23:input.nitro?0:8)*dt,0,100);const max=a.spec.max*(a.boost?1.18:1),brake=clamp(input.brake||0,0,1),throttle=clamp(input.throttle||0,0,1);
-  const yaw=a.steer*1.65*a.spec.agility*(sp/(sp+12))*(a.drifting?1.05+.4*a.spec.drift:1)/(1+sp/145),limit=grip(a.spec,sp)/Math.max(8,sp)*(a.drifting?1.22:1);
+  const turnSp=!on&&throttle>0?Math.max(sp,input.drift?7:5):sp;
+  const yaw=a.steer*1.65*a.spec.agility*(turnSp/(turnSp+12))*(a.drifting?1.05+.4*a.spec.drift:1)/(1+sp/145),limit=grip(a.spec,sp)/Math.max(8,sp)*(a.drifting?1.22:1);
   a.h+=clamp(yaw,-limit,limit)*dt;
   const fx=Math.sin(a.h),fz=Math.cos(a.h),rx=fz,rz=-fx;let forward=a.vx*fx+a.vz*fz,lateral=a.vx*rx+a.vz*rz;
   const f=force(a.spec,Math.max(0,forward),a.boost);
