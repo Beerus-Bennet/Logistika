@@ -1,3 +1,11 @@
+## v472 – Bergfuß in den Farben der Hofwiese (kein dunkler Fleck mehr)
+
+**Ursache:** Der Fuß des Gebirges (`color` in `alpine.js`) war ein dunkleres, graueres Grün (z. B. RGB 98/125/75) als das Gras der Hofwiese (108/143/60) und bekam schon an jeder Fußböschung die graue Felsfarbe. Daraus entstand am Übergang zum Hof ein großer, weich begrenzter dunkler Fleck (Screenshot am Bach unterhalb der Almhütte).
+
+**Lösung:** Bis Höhe ~3 gilt die Bodenfarbe der Hofwiese (`groundSampler`), bis ~15 geht sie in die Berggrüns über; Fels erst ab Höhe ~4–14 (`sm(4,14,h)`). Gemessene Farbe am Fuß jetzt 103/140/60 (Wiese 108/143/60). Nur Farbe, Geometrie und Dreiecksbudget unverändert.
+
+**Geprüft:** Farbmessung entlang Schnitten, Testbilder, `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** echte Farbwirkung bei Abendlicht und auf dem Handy (mein Testbrowser rendert die Szene entfärbt); weitere Details aus dem Screenshot (weich verlaufender neuer Weg, Schatten bei tiefer Sonne) nicht angefasst.
+
 ## v471 – 3D-Darstellung für alle Auktionsautos
 
 **Ursache:** Nur der Gallardo hatte ein eigenes verfeinertes Netz; im Auktionsdialog fehlte eine drehbare Ansicht.
