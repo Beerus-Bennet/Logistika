@@ -1,3 +1,13 @@
+## v466 – Steinbock: Gesicht, Läufe und Gangart verbessert
+
+**Anlass:** Gesicht des Steinbocks wirkte fraglich; Vorderläufe/Laufart sollten gegen die Realität geprüft werden.
+
+**Befund (Vergleich mit dem echten Alpensteinbock):** Läufe nur rund 40 % der Schulterhöhe (echt ≈ 50 %), beide Laufglieder dieselbe grobe Kiste, die über das Gelenk hinausragte; Gangart nach Uhr statt nach Strecke (Beine pendelten auch im Stand), Diagonaltakt (Trab) statt Schritt, kaum Fußhub; Ohren als lange Wülste, Augen wie aufgesetzte Punkte, Hörner glatte Stäbe.
+
+**Lösung (`alpine.js`):** Rumpf 0,12 höher (längere Läufe); zweigliedriger Lauf (kräftiger Oberteil, schlankes helleres Röhrbein, Gelenkkugeln, Spalthuf mit Afterklauen) mit echter Zwei-Gelenk-Berechnung (Vorderknie knickt nach vorn, Sprunggelenk nach hinten, Länge streckt sich nur auf steilem Gelände). Gangart Schritt im Viertakt (hinten links → vorne links → hinten rechts → vorne rechts), Schrittlänge folgt der zurückgelegten Strecke, Standphase 62 %, Fußhub ≈ 0,14, leichtes Kopfnicken. Kopf: schmaler mit Nasenrücken, Nasenspiegel/Nüstern, Maul, Kinn, kleine spitze Ohren seitlich-hinten, Augen mit Lid-Ring, dunkler Stirnstreif; Hörner dicker am Ansatz mit Querwülsten, sichelförmig. Dorsalstreifen verkürzt (stand über die Kruppe hinaus). Keine Spielstand-/Logikänderung.
+
+**Geprüft:** Bilder von hinten/vorne/seitlich im Testbrowser, `gebirge-v429`, `gebirge-v413`, `npc-tiere-v440`, `wasseroptik-v386` (Erwartung Hufhub von 0,1 auf 0,2 angepasst). `wasserlandschaft-v384`/`berglandschaft-v375` schlagen auch ohne diese Änderung fehl. **Nicht geprüft:** Handy, Nachtansicht, Bewegung als Video.
+
 ## v465 – Trefferbild: ungetroffene Knochen-Ellipsen nicht mehr als „Organ“ gezeigt
 
 **Ursache:** Im Trefferbild wurden Becken und Schulterblätter als blaue Ellipsoide immer gezeichnet (Orientierung) – sie sahen wie ein ungetroffenes Organ aus, z. B. hinten am Rumpf beim Lungenschuss (Rothirsch).

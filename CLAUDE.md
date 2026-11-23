@@ -275,6 +275,8 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v462: FWM.forestPath optional footTrail/trailTail, nur Berganschluss und nördliches Waldwegende verwenden weiches, längenabhängig verjüngtes Pfadband. Übrige Wege und gespeicherte Koordinaten bleiben gleich.
 
+- v466: Steinbock (`alpine.js`) – Kopf/Hörner neu, zweigliedrige Läufe mit Zwei-Gelenk-Berechnung, Schritt-Gangart nach Strecke (`a.gp`), Rumpf 0,12 höher.
+
 - v465: Trefferbild – Becken/Schulterblatt-Ellipsen nur bei Treffer (`xrBuild` in `hunt.js`), nicht mehr als scheinbar ungetroffenes Organ.
 
 - v464: Keine Blase („🔭 2“) mehr über dem fertigen Hochsitz (`tagInfo` in `hunt.js` gibt `null`); Baustellen-Blase bleibt.
