@@ -1,3 +1,7 @@
+## v473 – Zwei-Runden-Trainingsziel
+
+Basis main58774ff mit Fahrzeugformen472. Gesamt-/SW473; nur racedrive/racing Asset473, alle Fahrzeug-/Vorschau-Assets472 erhalten. Q.p.training ist transient, kein Savefeld. Weiter 25 geordnete Vorwärtspassagen für zwei Runden, nur im Training volle befahrbare Torbreite; Monatsmodus unverändert. Bericht/Prüfungen docs/TRAININGSZIEL-v473.md. Kein automatischer Merge.
+
 ## v472 – Modellbezogene Fahrzeugformen und Referenzvergleich
 
 Basis main `2411c5a` mit PR171/Auktionsautos471. Neues `carforms.js` vor `carmodels.js` laden und im SW aufnehmen. Gesamt-/SW/LOGI_V472; nur carforms/carmodels/racecarview Asset472. auction3d/auction/racecars/racing471, racetrack467, racehandling468, racedrive/racefinish/style469 und alle übrigen main-Assets erhalten. Eigenständiger Branch `claude/fahrzeugformen-v472`; vor Push main prüfen, kein automatischer Merge.

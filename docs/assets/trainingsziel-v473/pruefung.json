@@ -1,0 +1,26 @@
+[
+  {
+    "layout": "werder",
+    "side": 1,
+    "laps": 2,
+    "celebration": true,
+    "noPrize": true,
+    "monthAvailable": true
+  },
+  {
+    "layout": "hafen",
+    "side": -1,
+    "laps": 2,
+    "celebration": true,
+    "noPrize": true,
+    "monthAvailable": true
+  },
+  {
+    "layout": "kurven",
+    "side": 1,
+    "laps": 2,
+    "celebration": true,
+    "noPrize": true,
+    "monthAvailable": true
+  }
+]

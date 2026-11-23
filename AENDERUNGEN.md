@@ -1,3 +1,11 @@
+## v473 – Training erreicht nach zwei Runden das Ziel
+
+**Ursache:** Die Zwei-Runden-Wertung war vorhanden, erfasste aber nicht den ganzen befahrbaren Auslauf. Beim äußeren Umfahren von Kontrollpunkten konnte die Trainings-Rundenzählung hängen bleiben.
+
+**Lösung:** Training erfasst den vollständigen befahrbaren Randbereich; zwei volle Vorwärtsrunden und die Kontrollpunktreihenfolge bleiben nötig. Trainingskarte erklärt Zeitwertung/Zielfeier; der Zähler zeigt nach dem Einlauf „Ziel · 2 / 2 Runden“. Monatsrennen behalten ihre bisherige Torbreite, Training verbraucht keinen Monatsstart.
+
+**Geprüft:** 18 Unit-Prüfgruppen, neun komplette Trainingsläufe auf drei Kursen; Browser mit erster/zweiter Runde, tatsächlicher Zielpassage am Außenrand, Ergebnis/Feier, freiem Monatsstart und unverändertem Geld. Rennbahn-, Gallardo-/Umbau- und Auslauf-Prüfungen bestanden. Chromium/SwiftShader; echtes iPhone/Safari nicht geprüft. Bericht `docs/TRAININGSZIEL-v473.md`. Fahrzeugformen472 erhalten, keine Migration.
+
 ## v472 – Fahrzeugformen nach Internet-Bildvergleich
 
 **Anlass/Ursache:** Der AMG One und viele andere Autos wirkten trotz eigener Maße wie dasselbe kantige Coupé. Kleine Kabinen, gewölbte Radkuppen, typische Fronten, Spiegelanschlüsse und Aero-Details fehlten oder waren zu pauschal.
