@@ -1,3 +1,11 @@
+## v474 – PR172 mit Fahrzeugen und Trainingsziel zusammengeführt
+
+**Ursache:** Der ältere Bergfarben-PR172 kollidierte mit den neueren Gesamtversionen und Dokumentationseinträgen.
+
+**Lösung:** Bergfuß-Farbkorrektur aus PR172, Fahrzeugformen472 aus main58774ff und Trainingsziel473 aus PR174 gemeinsam erhalten. Konflikte in Versions-/Cache-/Dokumentationsdateien aufgelöst; Gesamt-/SW474, alpine474, Fahrzeug-Assets472 und Trainings-Assets473. Die Bergfarblogik bleibt unverändert aus PR172, Fahr- und Fahrzeugcode unverändert aus den geprüften neueren Ständen. Keine Spielstandmigration.
+
+**Prüfung:** Siehe `docs/PR172-ABGLEICH-v474.md`; nach dem Push Mergefähigkeit auf GitHub kontrollieren. Echtes iPhone/Safari nicht geprüft.
+
 ## v473 – Training erreicht nach zwei Runden das Ziel
 
 **Ursache:** Die Zwei-Runden-Wertung war vorhanden, erfasste aber nicht den ganzen befahrbaren Auslauf. Beim äußeren Umfahren von Kontrollpunkten konnte die Trainings-Rundenzählung hängen bleiben.
@@ -13,6 +21,13 @@
 **Lösung:** 127 modellgenau zugeordnete Wikimedia-Bildreferenzen erneut aus dem Internet abgerufen und vorab verglichen. Explizite Formdaten je Katalogmodell, ausgeformte Hauben/Kabinen/Radläufe, echte vertiefte Front-/Seitenkanäle, modellspezifische Leuchten und passende Spoilerarten. AMG One mit kleinerer Kanzel, Dachansaugung, Finne und Kotflügelentlüftungen; eigene Vorkriegsformen. Rundere Reifen, offene Felgen und angebundene Spiegel; Vorschau-Schatten zurückgenommen. Gallardo470-Netz, Fahr-/Auktionsregeln und Spielstände erhalten. Alle vollständigen Autos unter 6.000 Dreiecken, Maximum 5.657.
 
 **Geprüft:** 127 Referenzen/127 Geometrien, gültige Normalen/Koordinaten, Radstand/Bodenanschluss und gezielte Volumenprüfungen; gesamter Katalog im WebGL-Renderer und elf Modelltafeln, zwölf AMG-One-Ansichten bei 320/390/980 px, Touch/Zoom, Auktionswechsel, Ressourcenfreigabe und Garage/Fahrt identisch. Bestehende Renn-/Gallardo-Prüfungen einschließlich Fahrt, Speicherfehler und Monatslimit bestanden. Bericht `docs/FAHRZEUGFORMEN-v472.md`, Einzelreferenzen `docs/FAHRZEUG-REFERENZEN-v472.md`. **Grenzen:** Stilisierte prozedurale Modelle statt CAD-Rekonstruktionen; kein echtes iPhone/Safari oder Handy-FPS-Test.
+## v472 – Bergfuß in den Farben der Hofwiese (kein dunkler Fleck mehr)
+
+**Ursache:** Der Fuß des Gebirges (`color` in `alpine.js`) war ein dunkleres, graueres Grün (z. B. RGB 98/125/75) als das Gras der Hofwiese (108/143/60) und bekam schon an jeder Fußböschung die graue Felsfarbe. Daraus entstand am Übergang zum Hof ein großer, weich begrenzter dunkler Fleck (Screenshot am Bach unterhalb der Almhütte).
+
+**Lösung:** Bis Höhe ~3 gilt die Bodenfarbe der Hofwiese (`groundSampler`), bis ~15 geht sie in die Berggrüns über; Fels erst ab Höhe ~4–14 (`sm(4,14,h)`). Gemessene Farbe am Fuß jetzt 103/140/60 (Wiese 108/143/60). Nur Farbe, Geometrie und Dreiecksbudget unverändert.
+
+**Geprüft:** Farbmessung entlang Schnitten, Testbilder, `gebirge-v429`, `gebirge-v413`, `wasseroptik-v386`. **Nicht geprüft:** echte Farbwirkung bei Abendlicht und auf dem Handy (mein Testbrowser rendert die Szene entfärbt); weitere Details aus dem Screenshot (weich verlaufender neuer Weg, Schatten bei tiefer Sonne) nicht angefasst.
 
 ## v471 – 3D-Darstellung für alle Auktionsautos
 

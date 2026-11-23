@@ -1,3 +1,9 @@
+## v474 – PR172 enthält Bergfarben und Trainingsfix174
+
+Gemeinsamer Stand aus main58774ff (Fahrzeugformen472), Trainings-Commit c9e6be5 aus PR174 und Bergfarben-Commit c803496 aus PR172. PR172 wird auf diesen gemeinsamen Nachfahren aktualisiert; Originalzweige werden nicht per Force-Push ersetzt. Dadurch enthält PR172 den kompletten Trainingsfix. Bei normalem Merge von PR172 sind auch die Trainings-Commits in main; PR174 nicht erneut auf einen älteren Stand zurücksetzen.
+
+Gesamt-/SW474, alpine474; carforms/carmodels/racecarview472, racedrive/racing473 und alle übrigen main-Assets erhalten. Bergcode bleibt unverändert aus PR172. Kein automatischer Merge. Nach Push konkreten Head und MERGEABLE/CLEAN prüfen; Bericht docs/PR172-ABGLEICH-v474.md.
+
 ## v473 – Zwei-Runden-Trainingsziel
 
 Basis main58774ff mit Fahrzeugformen472. Gesamt-/SW473; nur racedrive/racing Asset473, alle Fahrzeug-/Vorschau-Assets472 erhalten. Q.p.training ist transient, kein Savefeld. Weiter 25 geordnete Vorwärtspassagen für zwei Runden, nur im Training volle befahrbare Torbreite; Monatsmodus unverändert. Bericht/Prüfungen docs/TRAININGSZIEL-v473.md. Kein automatischer Merge.
