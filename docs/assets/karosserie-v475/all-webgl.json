@@ -1,0 +1,510 @@
+[
+  {
+    "id": "p356",
+    "tris": 5698
+  },
+  {
+    "id": "p550",
+    "tris": 5158
+  },
+  {
+    "id": "p930",
+    "tris": 5646
+  },
+  {
+    "id": "p959",
+    "tris": 6190
+  },
+  {
+    "id": "pcgt",
+    "tris": 6126
+  },
+  {
+    "id": "p918",
+    "tris": 6126
+  },
+  {
+    "id": "pgt3",
+    "tris": 6090
+  },
+  {
+    "id": "pgt2",
+    "tris": 6182
+  },
+  {
+    "id": "p924",
+    "tris": 5374
+  },
+  {
+    "id": "p944",
+    "tris": 5374
+  },
+  {
+    "id": "p928",
+    "tris": 5918
+  },
+  {
+    "id": "p986",
+    "tris": 5674
+  },
+  {
+    "id": "ptay",
+    "tris": 5738
+  },
+  {
+    "id": "pcay",
+    "tris": 5738
+  },
+  {
+    "id": "prs",
+    "tris": 5646
+  },
+  {
+    "id": "p911r",
+    "tris": 5966
+  },
+  {
+    "id": "p917",
+    "tris": 5602
+  },
+  {
+    "id": "aurq",
+    "tris": 5450
+  },
+  {
+    "id": "asq",
+    "tris": 5670
+  },
+  {
+    "id": "ars2",
+    "tris": 5570
+  },
+  {
+    "id": "ar8a",
+    "tris": 6142
+  },
+  {
+    "id": "ar8",
+    "tris": 5896
+  },
+  {
+    "id": "ars6",
+    "tris": 5592
+  },
+  {
+    "id": "aetr",
+    "tris": 5572
+  },
+  {
+    "id": "ars4",
+    "tris": 5592
+  },
+  {
+    "id": "m300",
+    "tris": 5876
+  },
+  {
+    "id": "m113",
+    "tris": 5232
+  },
+  {
+    "id": "m129",
+    "tris": 5232
+  },
+  {
+    "id": "mclk",
+    "tris": 5930
+  },
+  {
+    "id": "mslr",
+    "tris": 6084
+  },
+  {
+    "id": "msls",
+    "tris": 5976
+  },
+  {
+    "id": "mamg",
+    "tris": 5976
+  },
+  {
+    "id": "mone",
+    "tris": 6302
+  },
+  {
+    "id": "mg63",
+    "tris": 5692
+  },
+  {
+    "id": "m540",
+    "tris": 3994
+  },
+  {
+    "id": "b507",
+    "tris": 5446
+  },
+  {
+    "id": "be9",
+    "tris": 5658
+  },
+  {
+    "id": "bm1",
+    "tris": 5886
+  },
+  {
+    "id": "bm3",
+    "tris": 5606
+  },
+  {
+    "id": "bm5",
+    "tris": 5902
+  },
+  {
+    "id": "bz3",
+    "tris": 5630
+  },
+  {
+    "id": "bz8",
+    "tris": 5806
+  },
+  {
+    "id": "bi8",
+    "tris": 5938
+  },
+  {
+    "id": "bm2",
+    "tris": 5934
+  },
+  {
+    "id": "b02t",
+    "tris": 5618
+  },
+  {
+    "id": "f250",
+    "tris": 6192
+  },
+  {
+    "id": "f308",
+    "tris": 5618
+  },
+  {
+    "id": "f288",
+    "tris": 5718
+  },
+  {
+    "id": "ftr",
+    "tris": 5750
+  },
+  {
+    "id": "ff40",
+    "tris": 6134
+  },
+  {
+    "id": "ff50",
+    "tris": 5984
+  },
+  {
+    "id": "fenz",
+    "tris": 6222
+  },
+  {
+    "id": "flaf",
+    "tris": 5888
+  },
+  {
+    "id": "f458",
+    "tris": 5972
+  },
+  {
+    "id": "f812",
+    "tris": 6084
+  },
+  {
+    "id": "fsf90",
+    "tris": 6222
+  },
+  {
+    "id": "f296",
+    "tris": 5972
+  },
+  {
+    "id": "fsp3",
+    "tris": 6024
+  },
+  {
+    "id": "fpur",
+    "tris": 5738
+  },
+  {
+    "id": "fdyt",
+    "tris": 5562
+  },
+  {
+    "id": "froma",
+    "tris": 5724
+  },
+  {
+    "id": "bt57",
+    "tris": 4242
+  },
+  {
+    "id": "beb110",
+    "tris": 6280
+  },
+  {
+    "id": "bvey",
+    "tris": 6160
+  },
+  {
+    "id": "bchi",
+    "tris": 6288
+  },
+  {
+    "id": "bdiv",
+    "tris": 6162
+  },
+  {
+    "id": "bnoi",
+    "tris": 6240
+  },
+  {
+    "id": "b110",
+    "tris": 6160
+  },
+  {
+    "id": "bbol",
+    "tris": 5900
+  },
+  {
+    "id": "bmis",
+    "tris": 5788
+  },
+  {
+    "id": "btou",
+    "tris": 6240
+  },
+  {
+    "id": "lmiu",
+    "tris": 5702
+  },
+  {
+    "id": "lcou",
+    "tris": 5614
+  },
+  {
+    "id": "llm2",
+    "tris": 5544
+  },
+  {
+    "id": "ldia",
+    "tris": 5698
+  },
+  {
+    "id": "lmur",
+    "tris": 5938
+  },
+  {
+    "id": "lgal",
+    "tris": 6413
+  },
+  {
+    "id": "lven",
+    "tris": 6096
+  },
+  {
+    "id": "lave",
+    "tris": 6022
+  },
+  {
+    "id": "lhur",
+    "tris": 6034
+  },
+  {
+    "id": "lcen",
+    "tris": 6098
+  },
+  {
+    "id": "lsian",
+    "tris": 6022
+  },
+  {
+    "id": "luru",
+    "tris": 5738
+  },
+  {
+    "id": "lrev",
+    "tris": 6062
+  },
+  {
+    "id": "lesa",
+    "tris": 5422
+  },
+  {
+    "id": "ltem",
+    "tris": 6034
+  },
+  {
+    "id": "adb5",
+    "tris": 5916
+  },
+  {
+    "id": "adbz",
+    "tris": 5884
+  },
+  {
+    "id": "avan",
+    "tris": 5724
+  },
+  {
+    "id": "aone",
+    "tris": 5940
+  },
+  {
+    "id": "avnt",
+    "tris": 5896
+  },
+  {
+    "id": "adva",
+    "tris": 5966
+  },
+  {
+    "id": "mf1",
+    "tris": 6032
+  },
+  {
+    "id": "mp1",
+    "tris": 6034
+  },
+  {
+    "id": "msen",
+    "tris": 6116
+  },
+  {
+    "id": "mspe",
+    "tris": 5684
+  },
+  {
+    "id": "m765",
+    "tris": 6034
+  },
+  {
+    "id": "mart",
+    "tris": 6034
+  },
+  {
+    "id": "rssh",
+    "tris": 5782
+  },
+  {
+    "id": "rpha",
+    "tris": 5730
+  },
+  {
+    "id": "rcul",
+    "tris": 5730
+  },
+  {
+    "id": "rspe",
+    "tris": 5730
+  },
+  {
+    "id": "bblo",
+    "tris": 3994
+  },
+  {
+    "id": "bcon",
+    "tris": 5782
+  },
+  {
+    "id": "bcgt",
+    "tris": 5782
+  },
+  {
+    "id": "bcsp",
+    "tris": 5730
+  },
+  {
+    "id": "mbor",
+    "tris": 5430
+  },
+  {
+    "id": "mmc12",
+    "tris": 5958
+  },
+  {
+    "id": "mmc20",
+    "tris": 5784
+  },
+  {
+    "id": "jxk",
+    "tris": 5734
+  },
+  {
+    "id": "jetp",
+    "tris": 5572
+  },
+  {
+    "id": "jxkss",
+    "tris": 5420
+  },
+  {
+    "id": "jxj",
+    "tris": 5492
+  },
+  {
+    "id": "pzon",
+    "tris": 6298
+  },
+  {
+    "id": "phuy",
+    "tris": 6108
+  },
+  {
+    "id": "putop",
+    "tris": 6200
+  },
+  {
+    "id": "kccr",
+    "tris": 5780
+  },
+  {
+    "id": "kreg",
+    "tris": 5700
+  },
+  {
+    "id": "kagr",
+    "tris": 5938
+  },
+  {
+    "id": "lesp",
+    "tris": 5618
+  },
+  {
+    "id": "lels",
+    "tris": 5560
+  },
+  {
+    "id": "lemi",
+    "tris": 6222
+  },
+  {
+    "id": "leva",
+    "tris": 6134
+  },
+  {
+    "id": "fgt40",
+    "tris": 5936
+  },
+  {
+    "id": "fsh",
+    "tris": 5462
+  },
+  {
+    "id": "fgt05",
+    "tris": 6250
+  },
+  {
+    "id": "fgt17",
+    "tris": 6230
+  }
+]

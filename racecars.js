@@ -15,6 +15,15 @@ const RACECARS=(()=>{
   for(let j=0;j<nv;j++)for(let i=0;i<nu;i++){const k=j*(nu+1)+i,ids=[k,k+1,k+nu+2,k+nu+1];face(b,ids.map(k=>points[k]),typeof color==='function'?color(i/nu,j/nv):color,N,ids.map(k=>normals[k]));}
  }
  function beam(b,a,c,r,color){const d=sub(c,a),h=Math.hypot(...d);if(h<1e-6)return;b.cyl(r,r,h,5,color,{notop:true,nobot:true,x:a[0],y:a[1],z:a[2],ry:Math.atan2(d[0],d[2]),rx:Math.acos(clamp(d[1]/h,-1,1))});}
+ /* v475: Innenhaut mit umgekehrter Wicklung: Rückseiten bleiben im
+    normalen Backface-Culling sichtbar, ohne den Welt-Renderer zu ändern. */
+ function inner(b,start,color){const end=b.v.length;for(let i=start;i<end;i+=27)b.tri(b.v.slice(i,i+3),b.v.slice(i+18,i+21),b.v.slice(i+9,i+12),color);}
+ /* v475: Räder brauchen eine tiefe Radhauswanne samt innerer Rückwand.
+    Die Öffnung bleibt frei; hinter Speichen und Reifen steht kein Himmel. */
+ function well(b,s,a,r,y,outer,innerX,color){const n=16,R=r+.052,pt=(x,t)=>[s*x,y+Math.sin(t)*R,a+Math.cos(t)*R];
+  for(let j=0;j<n;j++){const q=j*Math.PI/n,t=(j+1)*Math.PI/n,P=[pt(outer,q),pt(outer,t),pt(innerX,t),pt(innerX,q)],N=[0,-Math.sin((q+t)/2),-Math.cos((q+t)/2)];face(b,P,color,N);face(b,P,color,N.map(x=>-x));
+   face(b,[[s*innerX,y-.12,a],pt(innerX,q),pt(innerX,t)],color,[s,0,0]);}
+ }
  function body(c,paint){
   if(!c||c.id!=='lgal')return typeof CARMODELS!=='undefined'&&c?CARMODELS.body(c,paint):null;
   const b=new G3.MB(),dark=0x161e23,trim=0x333e43,glass=0x284551,shade=f=>G3.col(paint).map(v=>v*f);
@@ -28,11 +37,14 @@ const RACECARS=(()=>{
   patch(b,(u,v)=>top(mix(-2.15,2.15,v),mix(-1,1,u)),10,26,paint,[0,1,0]);
   b.box(1.50,.075,3.85,dark,{y:.15});
   const zs=[-2.15,-2.02,-1.72,-1.32,-.95,-.83,-.65,-.50,0,.45,.8,1.24,1.62,1.95,2.15];for(const axle of gallardo.axles)for(let i=0;i<=16;i++)zs.push(axle-.365+i*.73/16);zs.sort((a,b)=>a-b);
+  // v475: Unterboden reicht bis an den Schweller, spart die Radwannen aus.
+  for(let j=1;j<zs.length;j++){const a=zs[j-1],d=zs[j];if(d-a<1e-6)continue;const w=z=>gallardo.axles.some(ax=>Math.abs(z-ax)<.395)?.66:width(z)-.02;face(b,[[-w(a),.225,a],[w(a),.225,a],[w(d),.225,d],[-w(d),.225,d]],dark,[0,-1,0]);}
   const hole=z=>{const t=clamp((z+.95)/.45,0,1),lo=z<-.83?mix(.745,.36,(z+.95)/.12):mix(.36,.33,(z+.83)/.33);return [lo,mix(.745,.765,t)];};
   for(const s of [-1,1]){
    // Dunkle Radhausschalen schließen den Blick durch den Freiraum zum Reifen.
-   for(const axle of gallardo.axles)for(let j=0;j<16;j++){const a=j*Math.PI/16,d=(j+1)*Math.PI/16,p=(r,t)=>[s*(width(axle)-.065),.335+Math.sin(t)*r,axle+Math.cos(t)*r];face(b,[p(.388,a),p(.388,d),p(.26,d),p(.26,a)],dark,[s,0,0]);}
+   for(const axle of gallardo.axles)well(b,s,axle,.335,.335,width(axle)-.012,.66,dark);
    for(let i=1;i<zs.length;i++){const a=zs[i-1],d=zs[i];if(d-a<1e-6)continue;const loA=lower(a),loD=lower(d),hiA=top(a,1)[1],hiD=top(d,1)[1],inside=a>=-.950001&&d<=-.499999;
+    if(hiA>=loA&&hiD>=loD)patch(b,(u,v)=>side(s,mix(a,d,u),mix(mix(loA,loD,u),mix(hiA,hiD,u),v),-.12),1,1,dark,[s,0,0]);
     const bands=inside?[[loA,hole(a)[0],loD,hole(d)[0]],[hole(a)[1],hiA,hole(d)[1],hiD]]:[[loA,hiA,loD,hiD]];
     for(const [l0,h0,l1,h1] of bands){if(h0<l0||h1<l1)continue;patch(b,(u,v)=>side(s,mix(a,d,u),mix(mix(l0,l1,u),mix(h0,h1,u),v)),1,2,paint,[s,0,0]);}
    }
@@ -55,6 +67,7 @@ const RACECARS=(()=>{
   const roof=(u,t)=>[mix(.585,.61,t)*u,1.165-.04*u*u-.018*(2*t-1)**2,-.10-.78*t+.015*u*u*(1-t)];
   const wind=(u,t)=>{const a=top(.78,u*.73/width(.78)),d=roof(u,0);return a.map((v,k)=>mix(v,d[k],t)+(k===1?.004*(1-t):0));};
   const rear=(u,t)=>{const a=top(-1.28,u*.70/width(-1.28)),d=roof(u,1);return a.map((v,k)=>mix(v,d[k],t)+(k===1?.004*(1-t):0));};
+  const cabinStart=b.v.length;
   patch(b,(u,v)=>roof(mix(-1,1,u),v),8,4,paint,[0,1,0]);
   for(const [fn,N] of [[wind,[0,.8,.6]],[rear,[0,.8,-.6]]]){
    patch(b,(u,v)=>fn(mix(-1,1,u),v),6,3,paint,N);
@@ -70,6 +83,7 @@ const RACECARS=(()=>{
    face(b,[[.80,.12],[.73,.89],[.95,.12]].map(([u,v])=>glassP(u,v)),0x1d3541,[s,0,0]);
    beam(b,glassP(.78,.12),glassP(.685,.88),.0085,dark);
   }
+  inner(b,cabinStart,0x1b2d37);
   // Scheinwerfer liegen auf der geformten Kotflügelfläche; zwei Projektorlinsen.
   const lampPoint=(s,x,z,dy)=>{const p=top(z,s*x/width(z));p[1]+=dy;return p;};
   for(const s of [-1,1]){

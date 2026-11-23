@@ -14,6 +14,15 @@ const CARMODELS=(()=>{
  function patch(b,fn,nu,nv,col,N){const points=[],normals=[];for(let j=0;j<=nv;j++)for(let i=0;i<=nu;i++){const u=i/nu,v=j/nv;points.push(fn(u,v));let n=G3.norm(cross(sub(fn(Math.min(1,u+.001),v),fn(Math.max(0,u-.001),v)),sub(fn(u,Math.min(1,v+.001)),fn(u,Math.max(0,v-.001)))));if(dot(n,N)<0)n=n.map(x=>-x);normals.push(n);}for(let j=0;j<nv;j++)for(let i=0;i<nu;i++){const k=j*(nu+1)+i,ids=[k,k+1,k+nu+2,k+nu+1];face(b,ids.map(k=>points[k]),col,N,ids.map(k=>normals[k]));}}
  function beam(b,a,d,r,col){const v=sub(d,a),h=Math.hypot(...v);if(h<1e-6)return;b.cyl(r,r,h,5,col,{x:a[0],y:a[1],z:a[2],rx:Math.acos(clamp(v[1]/h,-1,1)),ry:Math.atan2(v[0],v[2]),notop:true,nobot:true});}
  const poly=(cx,cy,rx,ry,n=12)=>Array.from({length:n},(_,i)=>[cx+Math.cos(i/n*Math.PI*2)*rx,cy+Math.sin(i/n*Math.PI*2)*ry]);
+ /* v475: Innenhaut mit umgekehrter Wicklung: Rückseiten bleiben im
+    normalen Backface-Culling sichtbar, ohne den Welt-Renderer zu ändern. */
+ function inner(b,start,color){const end=b.v.length;for(let i=start;i<end;i+=27)b.tri(b.v.slice(i,i+3),b.v.slice(i+18,i+21),b.v.slice(i+9,i+12),color);}
+ /* v475: Räder brauchen eine tiefe Radhauswanne samt innerer Rückwand.
+    Die Öffnung bleibt frei; hinter Speichen und Reifen steht kein Himmel. */
+ function well(b,s,a,r,y,outer,innerX,color){const n=16,R=r+.052,pt=(x,t)=>[s*x,y+Math.sin(t)*R,a+Math.cos(t)*R];
+  for(let j=0;j<n;j++){const q=j*Math.PI/n,t=(j+1)*Math.PI/n,P=[pt(outer,q),pt(outer,t),pt(innerX,t),pt(innerX,q)],N=[0,-Math.sin((q+t)/2),-Math.cos((q+t)/2)];face(b,P,color,N);face(b,P,color,N.map(x=>-x));
+   face(b,[[s*innerX,y-.12,a],pt(innerX,q),pt(innerX,t)],color,[s,0,0]);}
+ }
  function body(c,paint){const p=profile(c);if(p.vintage)return vintage(c,paint,p);const b=new G3.MB(),W=p.width/2,L=p.length/2,H=p.height,dark=0x172127,trim=0x34414a,glass=0x24414f,chrome=p.old?0xadb4b5:0x6a7880,shade=f=>G3.col(paint).map(x=>x*f),has=f=>p.features.includes(f),hyper=['hyper','prototype'].includes(p.shape),rear=p.shape==='rear',sport=!p.suv&&!p.saloon&&!p.wagon,bodyBase=p.suv?.29:.18;
   // Grundriss, Hauben und Radkuppen werden getrennt geformt, nicht aus einem Quader.
   const width=z=>W*(1-(p.box?.025:p.round?.13:.08)*Math.abs(z/L)**4-(p.mid?.035:.012)*Math.exp(-(((z/L)/.40)**2)));
@@ -37,14 +46,17 @@ const CARMODELS=(()=>{
   const zs=[-L,L,bf,br,portRear,portFront];for(let j=1;j<27;j++)zs.push(mix(-L,L,j/27));for(const a of p.axles)for(let j=0;j<=16;j++)zs.push(a+(p.wheelRadius+.032)*Math.cos(j*Math.PI/16));zs.sort((a,b)=>a-b);const unique=zs.filter((z,i)=>z>=-L&&z<=L&&(!i||z-zs[i-1]>1e-6));
   for(let j=1;j<unique.length;j++){const a=unique[j-1],d=unique[j];patch(b,(u,v)=>top(mix(-1,1,u),mix(a,d,v)),10,1,paint,[0,1,0]);
    for(const s of [-1,1]){const la=low(a),ld=low(d),ha=top(1,a)[1],hd=top(1,d)[1],inside=sidePort&&a>=portRear-1e-5&&d<=portFront+1e-5&&hole(a)[0]>la&&hole(d)[0]>ld;
+    // v475: Durchgehende innere Seitenwand hinter Einlass/Fugen.
+    if(ha>=la&&hd>=ld)patch(b,(u,v)=>side(s,mix(a,d,u),mix(mix(la,ld,u),mix(ha,hd,u),v),-.12),1,1,dark,[s,0,0]);
     const bands=inside?[[la,hole(a)[0],ld,hole(d)[0]],[hole(a)[1],ha,hole(d)[1],hd]]:[[la,ha,ld,hd]];
     for(const [l0,h0,l1,h1] of bands)if(h0>=l0&&h1>=l1)patch(b,(u,v)=>side(s,mix(a,d,u),mix(mix(l0,l1,u),mix(h0,h1,u),v)),1,2,paint,[s,0,0]);
    }
   }
   b.box(p.width*.76,.07,p.length*.87,dark,{y:.12});
+  for(let j=1;j<unique.length;j++){const a=unique[j-1],d=unique[j],w=z=>p.axles.some(ax=>Math.abs(z-ax)<p.wheelRadius+.06)?p.wheelX-.15:width(z)-.02;face(b,[[-w(a),bodyBase,a],[w(a),bodyBase,a],[w(d),bodyBase,d],[-w(d),bodyBase,d]],dark,[0,-1,0]);}
   for(const s of [-1,1]){
    // Radhausschalen schließen den hellen Durchblick zwischen Reifen und Blech.
-   for(const a of p.axles){for(let j=0;j<16;j++){const q=j*Math.PI/16,r=(j+1)*Math.PI/16,pt=(radius,t)=>[s*(width(a)-.065),p.wheelY+Math.sin(t)*radius,a+Math.cos(t)*radius];face(b,[pt(p.wheelRadius+.05,q),pt(p.wheelRadius+.05,r),pt(p.wheelRadius*.78,r),pt(p.wheelRadius*.78,q)],dark,[s,0,0]);}b.box(.025,.11,.07,p.old?0x62696b:0x746555,{x:s*(p.wheelX+.085),y:p.wheelY-.055,z:a+.13});}
+   for(const a of p.axles){well(b,s,a,p.wheelRadius,p.wheelY,width(a)-.012,p.wheelX-.15,dark);b.box(.025,.11,.07,p.old?0x62696b:0x746555,{x:s*(p.wheelX+.085),y:p.wheelY-.055,z:a+.13});}
    if(sidePort){const outline=[[portRear,hole(portRear)[1]],[portRear+.055,hole(portRear+.055)[0]],[portFront,hole(portFront)[0]],[portFront,hole(portFront)[1]]],outer=outline.map(([z,y])=>side(s,z,y,.002)),inner=outline.map(([z,y])=>side(s,z,y,-.075));face(b,inner,dark,[s,0,0]);for(let i=0;i<4;i++){const k=(i+1)%4;face(b,[outer[i],outer[k],inner[k],inner[i]],shade(.62),[0,(outer[0][1]+outer[1][1])/2-(outer[i][1]+outer[k][1])/2,cz-(outer[i][2]+outer[k][2])/2]);}
     if(has('strakes')||has('vents'))for(let j=1;j<=4;j++){const y=mix(hole(cz)[0],hole(cz)[1],j/5);beam(b,side(s,portRear+.06,y,.005),side(s,portFront,y,.005),.009,has('strakes')?paint:trim);}
    }
@@ -52,6 +64,7 @@ const CARMODELS=(()=>{
    const handleZ=(br+bf)*.14;b.box(.012,.016,.11,chrome,{x:s*(width(handleZ)+.002),y:top(1,handleZ)[1]-.07,z:handleZ});
    const seamA=side(s,bf-.12,top(1,bf-.12)[1]-.045,.003),seamB=side(s,bf-.18,bodyBase+.08,.003);beam(b,seamA,seamB,.0025,shade(.55));
   }
+  const cabinStart=b.v.length;
   if(!p.open){patch(b,(u,v)=>roof(mix(-1,1,u),v),8,4,has('softtop')?dark:paint,[0,1,0]);
    for(const [fn,N] of [[wind,[0,.8,.6]],[back,[0,.8,-.6]]]){patch(b,(u,v)=>fn(mix(-1,1,u),v),6,3,paint,N);patch(b,(u,v)=>{const pt=fn(mix(-.95,.95,u),mix(.05,.96,v));pt[1]+=.006;return pt;},6,3,glass,N);}
    for(const s of [-1,1]){const A=wind(s,0),B=roof(s,0),D=back(s,0),E=roof(s,1),P=(u,v)=>A.map((x,k)=>mix(mix(x,D[k],u),mix(B[k],E[k],u),v));patch(b,P,6,2,paint,[s,0,0]);patch(b,(u,v)=>{const pt=P(mix(.045,.955,u),mix(.10,.92,v));pt[0]+=s*.008;return pt;},6,2,glass,[s,0,0]);const pillar=p.wagon||p.saloon||p.suv?.55:.72;beam(b,P(pillar,.05).map((x,k)=>x+(k===0?s*.012:0)),P(pillar,.97).map((x,k)=>x+(k===0?s*.012:0)),p.box?.018:.012,paint);}
@@ -60,6 +73,7 @@ const CARMODELS=(()=>{
    for(const s of [-1,1]){b.box(.36,.22,.18,0x534b41,{x:s*W*.40,y:center(openZ)+.03,z:openZ-.23});b.box(.35,.05,.35,0x534b41,{x:s*W*.40,y:center(openZ)+.035,z:openZ});}
    patch(b,(u,v)=>wind(mix(-1,1,u),v),6,3,paint,[0,1,1]);patch(b,(u,v)=>{const pt=wind(mix(-.94,.94,u),mix(.07,.95,v));pt[1]+=.006;return pt;},6,3,glass,[0,1,1]);for(const s of [-1,1])beam(b,wind(s,0),roof(s,0),.018,paint);
   }
+  inner(b,cabinStart,0x1b2d37);
   // Spiegel mit verbundenen Stielen statt frei schwebender Blöcke.
   for(const s of [-1,1]){const a=wind(s,.18),m=[s*(W+.08),a[1]+.055,bf-.12];beam(b,a,m,.013,trim);b.sphere(1,8,4,paint,{x:m[0],y:m[1],z:m[2],sx:.12,sy:.050,sz:.095});face(b,[[s*(W-.01),m[1]-.025,m[2]-.087],[s*(W+.16),m[1]-.025,m[2]-.087],[s*(W+.15),m[1]+.025,m[2]-.087],[s*W,m[1]+.025,m[2]-.087]],0x60717a,[0,0,-1]);}
   for(const s of [-1,1]){const a=wind(s*.15,.10),d=wind(s*.80,.08);a[1]+=.01;d[1]+=.01;beam(b,a,d,.006,trim);}
@@ -137,6 +151,7 @@ const CARMODELS=(()=>{
   b.box(W*.92,.13,p.length*.88,dark,{y:.24});
   patch(b,(u,v)=>{const x=mix(-W*.49,W*.49,u),z=mix(-L*.12,L*.82,v);return[x,hoodTop-.12*(x/(W*.49))**2,z];},8,8,paint,[0,1,0]);
   for(const s of [-1,1]){b.box(.035,hoodTop-.35,L*.94,paint,{x:s*W*.49,y:.35,z:L*.35});
+   for(const axle of p.axles)well(b,s,axle,p.wheelRadius,p.wheelY,p.wheelX+.10,p.wheelX-.15,dark);
    for(const axle of p.axles)patch(b,(u,v)=>{const t=mix(.04,Math.PI-.04,u),r=p.wheelRadius+.10;return[s*(p.wheelX+mix(-.17,.17,v)),p.wheelY+Math.sin(t)*r,axle+Math.cos(t)*r];},12,2,c.id==='bt57'?dark:paint,[s,.6,0]);
    b.box(.22,.05,p.axles[1]-p.axles[0],paint,{x:s*(p.wheelX-.08),y:.31,z:0});
    const x=s*W*.64,y=hoodTop*.80,z=L*.78;beam(b,[s*W*.45,y-.12,z],[x,y,z],.025,chrome);b.cyl(.12,.12,.055,12,chrome,{x,y,z,rx:Math.PI/2});b.cyl(.105,.105,.016,12,0xd1dad7,{x,y,z:z+.017,rx:Math.PI/2});
@@ -145,6 +160,7 @@ const CARMODELS=(()=>{
   face(b,[[-W*.65,H*.64,-L*.08],[W*.65,H*.64,-L*.08],[W*.58,H*.94,-L*.18],[-W*.58,H*.94,-L*.18]],0x355562,[0,1,1]);
   for(const side of [-1,1])beam(b,[side*W*.65,H*.61,-L*.08],[side*W*.58,H*.94,-L*.18],.013,chrome);
   if(p.features.includes('roof')){b.sphere(1,12,6,dark,{y:H*.83,z:cabinZ,sx:W*.75,sy:H*.17,sz:L*.47});for(const s of [-1,1])face(b,[[s*W*.64,H*.68,-L*.12],[s*W*.64,H*.68,-L*.71],[s*W*.60,H*.88,-L*.65],[s*W*.60,H*.90,-L*.20]],0x355562,[s,0,0]);}
+  inner(b,0,0x1b2d37);
   const radiatorZ=L*.84;b.box(W*.78,H*.49,.055,chrome,{y:.35,z:radiatorZ});b.box(W*.68,H*.44,.060,dark,{y:.38,z:radiatorZ+.01});for(let i=-4;i<=4;i++)b.box(.012,H*.42,.065,chrome,{x:i*W*.067,y:.39,z:radiatorZ+.018});return b;
  }
  function wheel(c){const p=profile(c),b=new G3.MB(),r=p.wheelRadius,seg=20,dark=0x1b2329,wire=p.vintage||['f250','adb5','adbz','jetp','jxk'].includes(c.id),aero=['p928','p959','beb110','bm1'].includes(c.id),double=['bmw','bugatti','mercedes'].includes(c.b)&&!p.old;
