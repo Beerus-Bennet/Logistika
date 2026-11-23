@@ -188,7 +188,7 @@ function objMesh(o) {
     case "spinnery": return fmesh("spinnery", FM.spinnery);
     case "lagerhalle": { const s = o.sz || FSIZE.lagerhalle; return fmesh("lagerhalle:" + s[0] + "x" + s[1], () => FM.lagerhalle(s[0], s[1])); }   /* v258, v269: nach Größe */
     case "board": return fmesh("board", FM.board);
-    case "racetrack": return fmesh("racetrack461", RACE.miniature);
+    case "racetrack": return fmesh(RACE.modelKey(), RACE.miniature);
     case "trophy": { const r = TROPHIES.record(o); return fmesh("exhibit:"+HUNT.trophyKey(r), () => HUNT.trophyBuild(r)); }
     case "shed": return fmesh("shed", FM.shed);
     case "field": return fmesh("soil:" + (o.crop ? o.w ? "wet" : "dry" : "empty"), () => FM.fieldSoil(false, o.crop ? !!o.w : undefined));
@@ -262,7 +262,8 @@ function buildObjNode(o) {
   return { node: root, parts, sig: objSig(o) };
 }
 const ROD_REST = -0.55;
-function objSig(o) { return [o.t, o.x, o.z, o.r, o.lvl || 0, o.kind || "", o.k || "", typeof objVar === "function" ? objVar(o) : "", o.t === "house" || o.t === "barn" ? JSON.stringify((S.farm.cos && S.farm.cos.on) || {}) : ""].join(","); }
+/* v467: Ein Streckenumbau tauscht nur die Miniatur des vorhandenen Grundstücks. */
+function objSig(o) { return [o.t, o.t === "racetrack" ? RACE.layoutId() : "", o.x, o.z, o.r, o.lvl || 0, o.kind || "", o.k || "", typeof objVar === "function" ? objVar(o) : "", o.t === "house" || o.t === "barn" ? JSON.stringify((S.farm.cos && S.farm.cos.on) || {}) : ""].join(","); }
 
 function farmBuildScene() {
   const R = FV.R;
@@ -3338,7 +3339,8 @@ function farmRefresh() { if (FV.on) { farmSyncScene(); renderFarmUI(); } }
   document.addEventListener("visibilitychange", () => { since = performance.now(); FV.alive = 0; lostN = 0; });
   setInterval(() => {
     const now = performance.now();
-    if (!FV.on || document.hidden || document.body.classList.contains("jl-open") || document.body.classList.contains("office3d")) { FV.alive = 0; lostN = 0; since = now; return; }
+    /* v467: Der Motorpark pausiert den Hof absichtlich, auch in seiner 3D-Garage. */
+    if (!FV.on || document.hidden || document.body.classList.contains("jl-open") || document.body.classList.contains("office3d") || document.body.classList.contains("race-open")) { FV.alive = 0; lostN = 0; since = now; return; }
     const R = FV.R;
     lostN = R && R.lost && R.lost() ? lostN + 1 : 0;
     const stalled = FV.alive > 0 && now - FV.alive > 10000 && now - since > 10000;

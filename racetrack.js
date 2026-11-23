@@ -3,7 +3,15 @@
    Metereinheiten im Fahrspiel; die Übersicht verwendet eine feste Verkleinerung. */
 const RACETRACK=(()=>{
  const W=26,D=22,HALF=7.5,START=100,N=480,TAU=Math.PI*2;
- const controls=[[-155,142],[-60,125],[60,125],[155,115],[195,65],[185,5],[145,-24],[145,-53],[181,-94],[145,-155],[65,-158],[30,-105],[-30,-107],[-63,-153],[-144,-145],[-193,-90],[-173,-27],[-106,5],[-90,35],[-112,64],[-165,80],[-200,105],[-190,135]];
+ /* v467: Jeder Umbau besitzt eigene Kurven, Projektion und Geometrie.
+    Die Startgerade und die Grundstücksgröße bleiben für alle Varianten gleich. */
+ const layouts=[
+  {id:'werder',name:'Werder Ring',tag:'Ausgewogen',description:'Lange Nitro-Gerade, schnelle Bögen und technische S-Kurven.',points:[[-155,142],[-60,125],[60,125],[155,115],[195,65],[185,5],[145,-24],[145,-53],[181,-94],[145,-155],[65,-158],[30,-105],[-30,-107],[-63,-153],[-144,-145],[-193,-90],[-173,-27],[-106,5],[-90,35],[-112,64],[-165,80],[-200,105],[-190,135]]},
+  {id:'hafen',name:'Hafenring',tag:'Schnelle Bögen',description:'Flüssigere Kurven und längere Vollgasabschnitte zwischen den Containern.',points:[[-155,142],[-60,125],[60,125],[155,115],[195,65],[185,-15],[190,-102],[135,-152],[50,-155],[0,-130],[-55,-140],[-140,-140],[-192,-88],[-173,-27],[-106,5],[-90,35],[-112,64],[-165,80],[-200,105],[-190,135]]},
+  {id:'kurven',name:'Kurvenwerk',tag:'Drift & Bremspunkte',description:'Zusätzliche Richtungswechsel und eine tiefere S-Kombination fordern saubere Linien.',points:[[-155,142],[-60,125],[60,125],[155,115],[195,65],[185,5],[145,-24],[145,-53],[181,-94],[145,-155],[65,-158],[15,-118],[-35,-85],[-80,-110],[-130,-145],[-185,-110],[-178,-50],[-122,-6],[-90,35],[-112,64],[-165,80],[-200,105],[-190,135]]}
+ ];
+ function make(def){
+ const controls=def.points;
  const cat=(a,b,c,d,t)=>.5*(2*b+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t);
  const points=[],lengths=[0];let length=0;
  for(let i=0;i<=N;i++){const u=i/N*controls.length,j=Math.floor(u)%controls.length,t=u-Math.floor(u),q=[];
@@ -51,7 +59,9 @@ const RACETRACK=(()=>{
   b.plate(2.9,1.2,0xb8aa86,{z:9.7,y0:.06});for(const x of [-1.55,1.55])b.box(.14,.8,.14,0x233e51,{x,y:.05,z:9.75});b.box(3.25,.28,.14,0x2f6fed,{y:.65,z:9.75});
   return b;
  }
- function car(c,color=0x2f6fed){const b=new G3.MB(),suv=c.body==='suv',open=c.body==='roadster',classic=c.body==='classic',hyper=c.cls==='hyper'||c.track,H=suv?1.45:classic?1.02:.82,W=suv?2.05:hyper?2.02:1.86;
+ return {id:def.id,name:def.name,W,D,HALF,START,N,points,lengths,length,at,near,stage,miniature};
+ }
+ function car(c,color=0x2f6fed){if(typeof RACECARS!=='undefined'){const own=RACECARS.body(c,color);if(own)return own;}const b=new G3.MB(),suv=c.body==='suv',open=c.body==='roadster',classic=c.body==='classic',hyper=c.cls==='hyper'||c.track,H=suv?1.45:classic?1.02:.82,W=suv?2.05:hyper?2.02:1.86;
   b.box(W,.43,4.45,color,{y:.35});b.box(W*.94,.24,1.1,color,{y:.72,z:1.42});b.box(W*.97,.2,.9,color,{y:.70,z:-1.65});
   if(classic)b.ico(1,color,{y:.86,z:-.2,sx:W*.48,sy:.45,sz:1.35,detail:1});
   if(!open){
@@ -68,6 +78,14 @@ const RACETRACK=(()=>{
   if(hyper||/gt3|gt2/.test(c.id||'')){b.box(2.05,.10,.50,0x222f39,{y:1.23,z:-1.9});for(const x of [-.62,.62])b.box(.12,.45,.12,0x222f39,{x,y:.82,z:-1.9});}
   return b;
  }
- function wheel(){const b=new G3.MB();b.cyl(.39,.39,.24,12,0x1d252d,{x:.12,rz:Math.PI/2});b.cyl(.22,.22,.26,10,0xa8b4b9,{x:.13,rz:Math.PI/2});return b;}
- return {W,D,HALF,START,N,points,lengths,length,at,near,stage,miniature,car,wheel};
+ function wheel(c){if(typeof RACECARS!=='undefined'){const own=RACECARS.wheel(c);if(own)return own;}const b=new G3.MB();b.cyl(.39,.39,.24,12,0x1d252d,{x:.12,rz:Math.PI/2});b.cyl(.22,.22,.26,10,0xa8b4b9,{x:.13,rz:Math.PI/2});return b;}
+ const cache=new Map();
+ const forId=id=>{const def=layouts.find(l=>l.id===id)||layouts[0];if(!cache.has(def.id))cache.set(def.id,make(def));return cache.get(def.id);};
+ let active=forId('werder');
+ const use=id=>{active=forId(id);return active;};
+ const rig=c=>typeof RACECARS!=='undefined'?RACECARS.rig(c):{wheelX:.98,wheelY:.4,wheelRadius:.39,axles:[-1.35,1.36],exhaustX:.55,exhaustY:.52,exhaustZ:-2.65};
+ function displayCar(c,color){const b=new G3.MB().merge(car(c,color),{}),r=rig(c);for(const side of [-1,1])for(const z of r.axles)b.merge(wheel(c),{x:side*r.wheelX,y:r.wheelY,z,ry:side<0?Math.PI:0});return b;}
+ return {W,D,HALF,START,N,layouts:layouts.map(({id,name,tag,description})=>({id,name,tag,description})),forId,use,car,wheel,rig,displayCar,
+  get id(){return active.id;},get name(){return active.name;},get points(){return active.points;},get lengths(){return active.lengths;},get length(){return active.length;},
+  at:(...a)=>active.at(...a),near:(...a)=>active.near(...a),stage:(...a)=>active.stage(...a),miniature:(id)=>forId(id||active.id).miniature()};
 })();

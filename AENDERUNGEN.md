@@ -1,3 +1,19 @@
+## v468 – Eigene Fahrzeugstärken und feste Gegner im Monatsrennen
+
+**Ursache:** Die fünf KI-Fahrer nutzten bisher Kopien des Spielerautos. Ein besserer Garagenwagen brachte deshalb kaum Wettbewerbsvorteil. Masse, Antriebsart und Kurven-/Driftcharakter waren nicht modellbezogen.
+
+**Lösung:** Recherchebasierte Technikprofile für alle 127 vorhandenen Modelle (`racehandling.js`), mit Näherungen für Masse sowie gekennzeichneten Beschleunigungsschätzungen bei fehlendem Katalogwert. Modellbezogener Antritt, Leistungsgewicht, Lenkreaktion, Brems-/Kurvengrip und Driftverhalten in `racedrive.js`; keine Marken- oder Kaufpreisboni. Monatsrennen mit festem, vorab sichtbarem gemischtem Starterfeld, unabhängig vom Spielerwagen. Jeder Gegner fährt seine eigenen Daten und seine vorhandene Modellform. Fahrzeugkarte mit Antrieb, Masse, 0–100, PS/t und Fahrcharakter. Feld wird im Monatseintrag gespeichert. Bestehende Geld-/Kilometer-/Verschleißregeln und Umbauten bleiben erhalten.
+
+**Geprüft:** Neue Unit-Prüfung (8 Gruppen, 127 Beschleunigungen und 381 vollständige KI-Läufe), neue Browserprüfung bei 320/390/980 px; bestehende Rennbahn-/Gallardo-Tests bestanden. Gleicher KI-Fahrer auf Werder: 924 190,85 s, M2 159,20 s, GT3 149,43 s, Chiron 146,40 s. Hersteller-/Modellreferenzen, Grenzen, Vorschauen und Prüfdetails in `docs/FAHRPROFILE-v468.md`. **Nicht geprüft:** echtes iPhone/Safari, Handy-Bildrate. Gesamt-/SW468; Gallardo/Workshop467 und main mit Trefferbild465/Steinbock466 enthalten.
+
+## v467 – Gallardo als eigener 3D-Rennwagen und Streckenumbauten
+
+**Ursache:** Im Motorpark nutzte auch der Lamborghini Gallardo nur eine allgemeine Sportwagenform; das eigene Auto war kaum wiederzuerkennen. Die Rennbahn bot dauerhaft nur denselben Verlauf.
+
+**Lösung:** Eigenes Gallardo-Coupé-Modell passend zum vorhandenen Garagenfoto von 2006, mit flacher Keilform, schrägen Scheinwerfern, echten Radhausöffnungen, seitlichen Einlässen, V10-Heck, vier Endrohren und Doppelspeichenrädern. Garagenlack einschließlich Schwarz, modellgerechter Radstand und Radgröße gelten in Vorschau und Rennen. Drehbare 3D-Ansicht mit Front-/Seiten-/Heckansicht direkt im Motorpark. Die Streckenwerkstatt bietet Werder Ring, Hafenring und Kurvenwerk: kostenlose Vorschau, genau 50 Kleeblätter pro bestätigtem Wechsel, dauerhaft gespeichert, eigene Bestzeiten. Auch die Inselminiatur folgt dem gewählten Kurs. Grundstück, Wald und bestehender Monatsstart bleiben erhalten; bei Speicherfehler werden Kosten und Verlauf zurückgerollt. Der Hof-Hängerwächter berücksichtigt die absichtlich pausierte Rennbühne und lädt sie nicht nach zehn Sekunden neu.
+
+**Geprüft:** `gallardo-umbau-v467.test.js` (10 Gruppen, alle drei Kurse mit KI und freier Fahrphysik vollständig beendet); `gallardo-umbau-v467.browser.js` (echte Touch-Eingabe, Modellgleichheit, Miniaturwechsel, Kauf-/Speicherfehler, Monatslimit, Neuladen, Hofwächter; Ansichten bei 320/390/980 px). Bestehende Rennbahnprüfungen `autorennbahn-v461.test.js` (12 Gruppen/127 Modelle) und `.browser.js` (8 Integrationsgruppen) bestanden. Modell inklusive Rädern: 3.099 Dreiecke. Weitere Regressionen und Vorschauen: `docs/GALLARDO-UMBAU-v467.md`. **Nicht geprüft:** echtes iPhone/Safari und Handy-Bildrate. Andere Automodelle behalten ihre bisherige Form.
+
 ## v466 – Steinbock: Gesicht, Läufe und Gangart verbessert
 
 **Anlass:** Gesicht des Steinbocks wirkte fraglich; Vorderläufe/Laufart sollten gegen die Realität geprüft werden.
