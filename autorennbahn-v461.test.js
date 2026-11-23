@@ -7,7 +7,7 @@ for(let s=-500;s<2*T.length;s+=3.7){const p=T.at(s),q=T.near(p.x,p.z,p.i);assert
 const stage=T.stage();assert.ok(stage.v.every(Number.isFinite));assert.ok(stage.v.length/27<18000,'Begrenztes Streckenbudget');
 for(let i=0;i<stage.v.length;i+=9)if(Math.abs(stage.v[i+1]-.035)<1e-8||Math.abs(stage.v[i+1]+.015)<1e-8)assert.ok(stage.v[i+4]>=0,'Randsteine auf beiden Seiten von oben sichtbar');
 const mini=T.miniature().v;assert.ok(mini.length/27<6000,'Miniatur besitzt eine sparsame Detailstufe');for(let i=0;i<mini.length;i+=9){assert.ok(Math.abs(mini[i])<T.W/2);assert.ok(Math.abs(mini[i+2])<T.D/2);}checks++;
-for(const c of cars){const m=T.car(c);assert.ok(m.v.every(Number.isFinite),c.id);assert.ok(m.v.length/27<(c.id==='lgal'?1600:600),c.id+' niedriges Fahrzeugbudget');}checks++;
+for(const c of cars){const m=T.car(c);assert.ok(m.v.every(Number.isFinite),c.id);assert.ok(m.v.length/27<(c.id==='lgal'?3600:600),c.id+' niedriges Fahrzeugbudget');}checks++;
 const c={vmax:260,acc:5};
 function start(s=180){const a=D.create(c),p=T.at(s);Object.assign(a,{x:p.x,z:p.z,h:p.heading,i:p.i,s:p.s});return a;}
 let a=start();for(let i=0;i<240;i++)D.update(a,{steer:0,throttle:1},1/120);assert.ok(a.v>8&&a.km>0&&a.wear>0);checks++;

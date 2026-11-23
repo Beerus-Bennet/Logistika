@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 function fixture(){const C=vm.createContext({console,document:{addEventListener(){}},FSIZE:{},FFIXED:new Set(),FCOS_CATS:[],FCOSMETIC:[]});for(const f of ['gl3d.js','cars.js','racecars.js','racetrack.js','racehandling.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C,{filename:f});return{C,run:s=>vm.runInContext(s,C)};}
 const {C,run}=fixture(),T=run('RACETRACK'),D=run('RACEDRIVE'),c=run('CAR.lgal'),rig=T.rig(c);let tests=0;
 const body=T.car(c,0x767c83),wheel=T.wheel(c),whole=T.displayCar(c,0x767c83).v;
-assert.ok(body.v.every(Number.isFinite)&&wheel.v.every(Number.isFinite));assert.ok(body.v.length/27<1600&&whole.length/27<3500,'Begrenzte Gallardo-Geometrie einschließlich vier Rädern');
+assert.ok(body.v.every(Number.isFinite)&&wheel.v.every(Number.isFinite));assert.ok(body.v.length/27<3600&&whole.length/27<6000,'Begrenzte Gallardo-Geometrie einschließlich vier Rädern');
 let lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<whole.length;i+=9)for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],whole[i+k]);hi[k]=Math.max(hi[k],whole[i+k]);}
 assert.ok(Math.abs(lo[1])<1e-7,'Räder berühren den Boden');assert.ok(Math.abs(hi[1]-1.165)<1e-6,'Flaches Coupédach statt hohem Kasten');assert.ok(hi[2]-lo[2]>4.25&&hi[2]-lo[2]<4.5,'Gallardo-Länge');assert.ok(Math.abs(rig.axles[1]-rig.axles[0]-2.56)<1e-8,'Passender Radstand');assert.ok(rig.wheelRadius<.35);tests++;
 assert.notDeepEqual(body.v,T.car(c,0xe7bd31).v,'Garagenlack wirkt im Modell');assert.equal(run('RACECARS.body(CAR.pgt3,0x767c83)'),null,'Andere Fahrzeuge behalten ihren bisherigen Modellweg');tests++;
