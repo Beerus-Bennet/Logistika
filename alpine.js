@@ -118,12 +118,14 @@ const ALPINE = (()=>{
   const gx=(height(x+.6,z)-height(x-.6,z))/1.2,gz=(height(x,z+.6)-height(x,z-.6))/1.2,slope=Math.hypot(gx,gz);
   /* v403: Höhenstufen wie in den Kalkalpen – Bergwald, Almwiese, Latschen-/Schuttzone, heller gebänderter Fels, Schnee in Mulden und am Gipfel */
   const n2=vnoise(x*.08+7,z*.08-3),n3=vnoise(x*.10,z*.10);
-  let c=mix(col(0x637f4c),col(0x91a363),sm(8,27,h));c=mix(c,col(0xa0a17a),sm(27,40,h)*(.5+.5*n2));
+  /* v472: Der Bergfuß übernimmt die Farbe der Hofwiese (vorher ein dunkleres, graueres Grün, das als großer Fleck neben dem Gras stand) und geht erst mit der Höhe in die Berggrüns über; Fels erst ab Höhe, nicht schon an jeder Fußböschung */
+  const base=groundSampler?groundSampler(x,z):typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);
+  let c=mix(col(0x637f4c),col(0x91a363),sm(8,27,h));c=mix(base,c,sm(3,15,h));c=mix(c,col(0xa0a17a),sm(27,40,h)*(.5+.5*n2));
   c=mix(c,mix(col(0x999b8a),col(0xb3b09c),n3),sm(.55,.85,slope)*(1-sm(1.15,1.6,slope))*sm(5,14,h));
   /* v413: Großflächige Kalkschichten und zurückhaltende Farbunterschiede,
      damit Licht und Gratform die Hänge gliedern, nicht ein Dreiecks-Schachbrett. */
   const band=.94+.06*Math.sin(h*.27+x*.035+z*.018+n2*2),rock=mix(col(0x909795),col(0xbab5a7),n2*.65+n3*.35).map(v=>v*band);
-  const ao=.92+.14*ridged(x,z);c=mix(c,rock.map(v=>Math.min(1,v*ao)),Math.max(sm(.68,1.2,slope),sm(34,50,h)*.85));
+  const ao=.92+.14*ridged(x,z);c=mix(c,rock.map(v=>Math.min(1,v*ao)),Math.max(sm(.68,1.2,slope)*sm(4,14,h),sm(34,50,h)*.85));
   const snow=snowAmt(h,slope,n2,n3)*(.3+.7*sm(-.15,.45,gz/Math.max(.01,slope)));
   c=mix(c,col(0xeef3f6),Math.min(1,snow));
   /* v403: Kiesufer statt Wiesenkragen: heller Schotter am Wasser, dahinter Fels des Riegels */
@@ -133,7 +135,7 @@ const ALPINE = (()=>{
   if(slope>.7&&h<L.y-1&&e<1.15)c=col(0x72796c);
   const strata=.985+.015*Math.sin(h*.19+x*.035+z*.018);c=c.map(v=>v*strata);
   const q=channel(x,z);
-  const base=groundSampler?groundSampler(x,z):typeof worldGroundCol==='function'?col(worldGroundCol(x,z)):col(0x719c48);let result=mix(base,c,w);
+  let result=mix(base,c,w);
   /* v447: Flussufer mit denselben Sandfarben und Abständen wie das Ufernetz im Hofbereich (CB_C/CB_R in woodmodels.js: Schlamm, nasser
      Sand, Sand, dann Boden bei 2,2). Vorher grau-grüner Streifen bis 4,5 – er endete am Rand des feinen Netzes in Zacken und stieß am
      Gebirgsrand hart auf die Sandufer des Hofbachs. */
