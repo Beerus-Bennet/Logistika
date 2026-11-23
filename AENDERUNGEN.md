@@ -1,3 +1,11 @@
+## v472 – Fahrzeugformen nach Internet-Bildvergleich
+
+**Anlass/Ursache:** Der AMG One und viele andere Autos wirkten trotz eigener Maße wie dasselbe kantige Coupé. Kleine Kabinen, gewölbte Radkuppen, typische Fronten, Spiegelanschlüsse und Aero-Details fehlten oder waren zu pauschal.
+
+**Lösung:** 127 modellgenau zugeordnete Wikimedia-Bildreferenzen erneut aus dem Internet abgerufen und vorab verglichen. Explizite Formdaten je Katalogmodell, ausgeformte Hauben/Kabinen/Radläufe, echte vertiefte Front-/Seitenkanäle, modellspezifische Leuchten und passende Spoilerarten. AMG One mit kleinerer Kanzel, Dachansaugung, Finne und Kotflügelentlüftungen; eigene Vorkriegsformen. Rundere Reifen, offene Felgen und angebundene Spiegel; Vorschau-Schatten zurückgenommen. Gallardo470-Netz, Fahr-/Auktionsregeln und Spielstände erhalten. Alle vollständigen Autos unter 6.000 Dreiecken, Maximum 5.657.
+
+**Geprüft:** 127 Referenzen/127 Geometrien, gültige Normalen/Koordinaten, Radstand/Bodenanschluss und gezielte Volumenprüfungen; gesamter Katalog im WebGL-Renderer und elf Modelltafeln, zwölf AMG-One-Ansichten bei 320/390/980 px, Touch/Zoom, Auktionswechsel, Ressourcenfreigabe und Garage/Fahrt identisch. Bestehende Renn-/Gallardo-Prüfungen einschließlich Fahrt, Speicherfehler und Monatslimit bestanden. Bericht `docs/FAHRZEUGFORMEN-v472.md`, Einzelreferenzen `docs/FAHRZEUG-REFERENZEN-v472.md`. **Grenzen:** Stilisierte prozedurale Modelle statt CAD-Rekonstruktionen; kein echtes iPhone/Safari oder Handy-FPS-Test.
+
 ## v471 – 3D-Darstellung für alle Auktionsautos
 
 **Ursache:** Nur der Gallardo hatte ein eigenes verfeinertes Netz; im Auktionsdialog fehlte eine drehbare Ansicht.

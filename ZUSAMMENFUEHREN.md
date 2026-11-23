@@ -1,3 +1,9 @@
+## v472 – Modellbezogene Fahrzeugformen und Referenzvergleich
+
+Basis main `2411c5a` mit PR171/Auktionsautos471. Neues `carforms.js` vor `carmodels.js` laden und im SW aufnehmen. Gesamt-/SW/LOGI_V472; nur carforms/carmodels/racecarview Asset472. auction3d/auction/racecars/racing471, racetrack467, racehandling468, racedrive/racefinish/style469 und alle übrigen main-Assets erhalten. Eigenständiger Branch `claude/fahrzeugformen-v472`; vor Push main prüfen, kein automatischer Merge.
+
+`CAR_FORMS` muss alle 127 Katalog-IDs abdecken. `CARMODELS.profile` liefert Darstellungsmaße und unveränderten Technik-Radstand; nicht auf CAR/Garagenobjekte schreiben. Gallery/Rennszene bleiben an derselben Modellquelle. Gallardo-Sondernetz in racecars.js bleibt bytegleich. Keine Migration, neuen Spielstandfelder oder Geschäftsregeln. Quellen-/Prüfprotokoll und Modelltafeln: `docs/FAHRZEUGFORMEN-v472.md` und `docs/FAHRZEUG-REFERENZEN-v472.md`.
+
 ## v471 – Auktionsautos
 
 Basis main77a1127 mit PR170/v470. Neue carmodels.js und auction3d.js vor racecars laden, im SW registrieren; erst nach vollständigem Laden werden Technikprofile abgefragt. Gesamt471; auction/racing/racecars und neue Assets471. Gallardo-Geometrie470 erhalten. Kein neuer Spielstandzustand; Radcache im Rennen je Modell. Bericht `docs/AUKTIONSAUTOS-v471.md`. Kein automatischer Merge.
