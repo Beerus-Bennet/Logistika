@@ -1,3 +1,7 @@
+## v471 – Auktionsautos
+
+Basis main77a1127 mit PR170/v470. Neue carmodels.js und auction3d.js vor racecars laden, im SW registrieren; erst nach vollständigem Laden werden Technikprofile abgefragt. Gesamt471; auction/racing/racecars und neue Assets471. Gallardo-Geometrie470 erhalten. Kein neuer Spielstandzustand; Radcache im Rennen je Modell. Bericht `docs/AUKTIONSAUTOS-v471.md`. Kein automatischer Merge.
+
 ## v470 – Gallardo-Form als Ergänzung zu PR170
 
 Basis main `86adb33` mit PR169/Gallardo467/Fahrprofilen468. Der offene PR170 enthält bereits Zielfeier/Auslauf469; diese Lieferung ergänzt ausschließlich das Fahrzeugnetz und dessen Vorschau. Gesamt-/SW/LOGI_V470; nur racecars/racecarview auf Asset470. racedrive/racefinish/racing/style469, racehandling468, racetrack/farmview/worldview467, hunt465/alpine466 und alle übrigen Assetstände erhalten. Vor Push aktuellen main und PR prüfen; kein automatischer Merge.

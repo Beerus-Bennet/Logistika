@@ -4,7 +4,7 @@
 const RACECARS=(()=>{
  const gallardo=Object.freeze({length:4.30,width:1.90,height:1.165,wheelX:.81,wheelY:.335,wheelRadius:.335,axles:Object.freeze([-1.32,1.24]),exhaustZ:-2.25,exhaustY:.30,exhaustX:.61});
  const generic=Object.freeze({wheelX:.98,wheelY:.40,wheelRadius:.39,axles:Object.freeze([-1.35,1.36]),exhaustZ:-2.65,exhaustY:.52,exhaustX:.55});
- const rig=c=>c&&c.id==='lgal'?gallardo:generic;
+ const rig=c=>c&&c.id==='lgal'?gallardo:typeof CARMODELS!=='undefined'&&c?CARMODELS.profile(c):generic;
  const mix=(a,b,t)=>a+(b-a)*t,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),sub=(a,b)=>a.map((v,i)=>v-b[i]);
  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
  function face(b,P,color,N,normals){for(let i=1;i<P.length-1;i++){let ids=[0,i,i+1],n=cross(sub(P[i],P[0]),sub(P[i+1],P[0]));if(Math.hypot(...n)<1e-9)continue;if(n.reduce((s,v,j)=>s+v*N[j],0)<0)ids=[0,i+1,i];b.tri(...ids.map(j=>P[j]),color,...(normals?ids.map(j=>normals[j]):[]));}}
@@ -16,7 +16,7 @@ const RACECARS=(()=>{
  }
  function beam(b,a,c,r,color){const d=sub(c,a),h=Math.hypot(...d);if(h<1e-6)return;b.cyl(r,r,h,5,color,{notop:true,nobot:true,x:a[0],y:a[1],z:a[2],ry:Math.atan2(d[0],d[2]),rx:Math.acos(clamp(d[1]/h,-1,1))});}
  function body(c,paint){
-  if(!c||c.id!=='lgal')return null;
+  if(!c||c.id!=='lgal')return typeof CARMODELS!=='undefined'&&c?CARMODELS.body(c,paint):null;
   const b=new G3.MB(),dark=0x161e23,trim=0x333e43,glass=0x284551,shade=f=>G3.col(paint).map(v=>v*f);
   // z, Halbbreite, Haubenhöhe: weich interpoliert, Schulter über den Rädern angehoben.
   const stations=[[-2.15,.83,.67],[-2.02,.89,.72],[-1.72,.94,.79],[-1.32,.95,.80],[-.95,.94,.80],[-.65,.925,.80],[.45,.925,.79],[.80,.935,.78],[1.24,.94,.72],[1.62,.93,.65],[1.95,.89,.58],[2.15,.82,.52]];
@@ -109,7 +109,7 @@ const RACECARS=(()=>{
   return b;
  }
  function wheel(c){
-  if(!c||c.id!=='lgal')return null;const b=new G3.MB(),darkWheel=0x1c262b,seg=24,section=[[-.12,.28],[-.105,.313],[-.075,.335],[.075,.335],[.108,.313],[.125,.275]];
+  if(!c||c.id!=='lgal')return typeof CARMODELS!=='undefined'&&c?CARMODELS.wheel(c):null;const b=new G3.MB(),darkWheel=0x1c262b,seg=24,section=[[-.12,.28],[-.105,.313],[-.075,.335],[.075,.335],[.108,.313],[.125,.275]];
   for(let j=1;j<section.length;j++)for(let i=0;i<seg;i++){const a=i/seg*Math.PI*2,d=(i+1)/seg*Math.PI*2,[x0,r0]=section[j-1],[x1,r1]=section[j],p=(x,r,t)=>[x,Math.cos(t)*r,Math.sin(t)*r],n=t=>G3.norm([-(r1-r0)/(x1-x0),Math.cos(t),Math.sin(t)]);face(b,[p(x0,r0,a),p(x1,r1,a),p(x1,r1,d),p(x0,r0,d)],0x1c2023,[0,Math.cos((a+d)/2),Math.sin((a+d)/2)],[n(a),n(a),n(d),n(d)]);}
   const ring=(x,outer,inner,color)=>{for(let i=0;i<seg;i++){const a=i/seg*Math.PI*2,d=(i+1)/seg*Math.PI*2;face(b,[[x,Math.cos(a)*outer,Math.sin(a)*outer],[x,Math.cos(d)*outer,Math.sin(d)*outer],[x,Math.cos(d)*inner,Math.sin(d)*inner],[x,Math.cos(a)*inner,Math.sin(a)*inner]],color,[1,0,0]);}};
   ring(.127,.275,.241,0x242a2d);ring(.133,.243,.229,0x8a959b);ring(.113,.228,.211,0x3b464d);

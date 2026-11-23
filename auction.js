@@ -929,7 +929,7 @@ function renderLotModal(msg) {
       <div class="msub">Los ${l.id.slice(1)} · ${esc(l.seller)} · endet ${stamp(l.ends)}</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button></div>
     <div class="lotm-pic">${lotPicHTML(l, true)}</div>
-    ${c ? creditHTML(c,l.paint&&l.paint[1]) : ""}
+    ${c ? creditHTML(c,l.paint&&l.paint[1])+AUCTION3D.html : ""}
     ${c ? `<p class="lotm-note">${esc(c.note)}</p>` + specsHTML(c, l)
       : `<div class="specs"><div><small>Typ</small><b>${esc(t.brand)}</b></div><div><small>Nutzlast</small><b>${kgf(t.cap)}</b></div>
          <div><small>Tempo</small><b>${t.speed} km/h</b></div><div><small>Zustand</small><b>${100 - l.wear} %</b></div><div><small>Laufleistung</small><b>${fmt(l.km, 0)} km</b></div>
@@ -960,6 +960,7 @@ function renderLotModal(msg) {
   if (lmIn) lmIn.oninput = () => ahGroupInput(lmIn);
   const bs = $("#lmSet"); if (bs) bs.onclick = () => bid(ahDigits($("#lmMax").value));
   resolvePics();
+  if(c)AUCTION3D.bind(c,l.paint&&l.paint[1]);
 }
 function refreshLotModal() {
   const l = lotById(lotModal);
@@ -979,7 +980,7 @@ function openCar(id) {
       <div class="msub">${CAR_CLS[c.cls].name} · Marktwert ~${money(nice(carMarket(c)))} (Note 2)</div></div>
       <button class="xbtn" id="mClose" aria-label="Schließen">✕</button></div>
     <div class="lotm-pic">${carPicHTML(c, paint, true)}</div>
-    ${creditHTML(c,paint)}
+    ${creditHTML(c,paint)}${AUCTION3D.html}
     <p class="lotm-note">${esc(c.note)}</p>
     ${specsHTML(c, own[0] ? Object.assign({}, own[0]) : null)}
     ${own.length ? `<div class="lim">🏁 In deiner Garage: Marktwert ${money(gValue(own[0]))}, gekauft für ${money(own[0].paid)}.</div>` : ""}
@@ -988,6 +989,7 @@ function openCar(id) {
   $("#mClose").onclick = closeModal; $("#mCancel").onclick = closeModal;
   const ml = $("#mLot"); if (ml) ml.onclick = () => openLot(live.id);
   resolvePics();
+  AUCTION3D.bind(c,paint);
 }
 
 /* ------------------------------ Einliefern ----------------------------- */
