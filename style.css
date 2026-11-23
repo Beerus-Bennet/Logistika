@@ -5490,3 +5490,16 @@ body.race-open #rotHint { display: none; }
  .race-workshop-link .btn { width: 100%; }.race-car-canvas { height: 280px; }.race-layout-preview .race-route { height: 150px; }
 }
 @media (max-width: 350px) { .race-car-canvas { height: 250px; }.race-car-tools { gap: 6px; }.race-car-tools button { padding: 8px 9px; } }
+
+/* v468: Individuelles Fahrprofil und festes Monatsfeld, ohne Emoji-Ersatzbilder. */
+.race-garage .race-tech { display: block; margin: 16px 0 4px; padding-top: 12px; border-top: 1px solid #b3c9bc; }
+.race-tech>span { display: block; color: #23765f; font-size: 13px; font-weight: 900; }
+.race-garage .race-tech-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
+.race-garage .race-tech-grid>div { display: block; min-width: 0; padding: 9px 10px; margin: 0; border: 1px solid #b3c9bc; border-radius: 9px; background: #f7faf2; }
+.race-tech-grid small,.race-tech-grid b { display: block; }.race-tech-grid b { margin-top: 2px; font-variant-numeric: tabular-nums; }
+.race-garage .race-character { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 14px 0 10px; }
+.race-character span { min-width: 0; font-size: 11px; }.race-character meter { display: block; width: 100%; height: 14px; margin-top: 3px; accent-color: #248a72; }
+.race-tech p { margin: 10px 0 6px; color: #3c5762; font-weight: 600; font-size: 12px; line-height: 1.6; }
+.race-modes { align-items: start; }.race-field { list-style: none; margin: 0 0 20px; padding: 0; border-top: 1px solid #cabb88; }
+.race-field li { display: grid; grid-template-columns: 45px minmax(0,1fr); column-gap: 8px; padding: 9px 0; border-bottom: 1px solid #d8cc9f; }
+.race-field li>span { grid-row: 1/3; color: #796627; font-size: 11px; font-weight: 900; align-self: center; }.race-field b { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }.race-field small { grid-column: 2; color: #685d3c; margin-top: 2px; line-height: 1.5; }

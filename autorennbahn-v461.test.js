@@ -1,6 +1,6 @@
 /* v461: Fahrphysik, Kontrollpunkte, KI und begrenzte Modellarbeit. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const C=vm.createContext({console});for(const f of ['gl3d.js','cars.js','racecars.js','racetrack.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C);
+const C=vm.createContext({console});for(const f of ['gl3d.js','cars.js','racecars.js','racetrack.js','racehandling.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C);
 const get=s=>vm.runInContext(s,C),T=get('RACETRACK'),D=get('RACEDRIVE'),cars=get('CARS');let checks=0;
 assert.ok(T.length>1400&&T.length<1600);checks++;
 for(let s=-500;s<2*T.length;s+=3.7){const p=T.at(s),q=T.near(p.x,p.z,p.i);assert.ok(q.d<1e-7);assert.ok(Math.abs(Math.hypot(p.nx,p.nz)-1)<1e-10);}

@@ -1,6 +1,6 @@
 /* v467: Erkennbare Proportionen, befahrbare Umbauten und atomare Kleeblattkosten. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-function fixture(){const C=vm.createContext({console,document:{addEventListener(){}},FSIZE:{},FFIXED:new Set(),FCOS_CATS:[],FCOSMETIC:[]});for(const f of ['gl3d.js','cars.js','racecars.js','racetrack.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C,{filename:f});return{C,run:s=>vm.runInContext(s,C)};}
+function fixture(){const C=vm.createContext({console,document:{addEventListener(){}},FSIZE:{},FFIXED:new Set(),FCOS_CATS:[],FCOSMETIC:[]});for(const f of ['gl3d.js','cars.js','racecars.js','racetrack.js','racehandling.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C,{filename:f});return{C,run:s=>vm.runInContext(s,C)};}
 const {C,run}=fixture(),T=run('RACETRACK'),D=run('RACEDRIVE'),c=run('CAR.lgal'),rig=T.rig(c);let tests=0;
 const body=T.car(c,0x767c83),wheel=T.wheel(c),whole=T.displayCar(c,0x767c83).v;
 assert.ok(body.v.every(Number.isFinite)&&wheel.v.every(Number.isFinite));assert.ok(body.v.length/27<1600&&whole.length/27<3500,'Begrenzte Gallardo-Geometrie einschließlich vier Rädern');

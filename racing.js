@@ -2,7 +2,7 @@
 /* v461: Eigene Rennbühne. Die Insel bleibt beim Fahren vollständig angehalten.
    Kauf, Kilometer und Preisgeld werden erst nach erfolgreichem Speichern bestätigt. */
 const RACE=(()=>{
- const COST=15000,MONTH=30*1440,VERSION=467;
+ const COST=15000,MONTH=30*1440,VERSION=468;
  let showroom=null,view='lobby',viewUID=null,choice=null;
  let on=false,U=null,Q=null,raf=0,last=0,accum=0,unsubs=[],held={},stick=0,pointer=null,focus=null,inert=[],mapStatic=null;
  const data=()=>S&&S.farm&&S.farm.race,month=()=>Math.floor(S.time/MONTH),built=()=>S&&S.farm&&(S.farm.objs||[]).find(o=>o.t==='racetrack');
@@ -15,6 +15,15 @@ const RACE=(()=>{
  const prize=()=>Math.round(Math.min(5000000,250000*Math.pow(Math.max(1,S.stage||1),1.7))/1000)*1000;
  const receipt=()=>data()&&(data().months||[]).find(e=>e.month===month());
  const persist=()=>{try{return save()!==false;}catch(e){return false;}};
+ /* v468: Fahrweise am konkreten Modell erklären, nicht an der Marke. */
+ function drivingNote(p){
+  if(p.drive==='A')return 'Allrad bringt Traktion beim Herausbeschleunigen. Das Auto fängt seitliches Rutschen früher ab; lange Drifts brauchen mehr Einsatz.';
+  if(p.engine==='RR')return 'Das Gewicht auf der Hinterachse hilft beim Anfahren. Der Heckmotor verlangt in schnellen Kurven fein dosiertes Lenken und Gas.';
+  if(p.engine==='MR')return 'Die zentrale Motorlage und der kurze Weg der Massen helfen beim Richtungswechsel. Drifts lassen sich einleiten, verlangen aber Gefühl.';
+  return p.drift>.75?'Heckantrieb und genügend Leistung machen kontrollierte Powerdrifts leicht zugänglich. Mit Gegenlenken und dosiertem Gas hältst du die Linie.':'Heckantrieb; Gewicht, Radstand und Motorleistung bestimmen, wie flink und ausdauernd der Wagen driftet.';
+ }
+ function profileHTML(c){const p=RACEHANDLING.profile(c);return `<div class="race-tech"><span>${esc(p.driveName)} · ${esc(p.engineName)}</span><div class="race-tech-grid"><div><small>0–100 km/h</small><b>${p.estimated?'≈ ':''}${number(p.acc100,1)} s</b></div><div><small>Spitzentempo</small><b>${c.vmax} km/h</b></div><div><small>Masse ca.</small><b>${number(p.kg,0)} kg</b></div><div><small>Leistungsgewicht</small><b>${number(c.ps/p.kg*1000,0)} PS/t</b></div></div><div class="race-character"><span>Agilität <meter min="0" max="100" value="${Math.round((p.agility-.5)/.85*100)}"></meter></span><span>Drifteignung <meter min="0" max="100" value="${Math.round(p.drift*100)}"></meter></span></div><p>${drivingNote(p)}</p><small>Fahrcharakter im Spiel · ${p.estimated?'Beschleunigung angenähert; ':''}Masse je nach Ausstattung unterschiedlich.</small></div>`;}
+ function fieldHTML(){return `<ol class="race-field" aria-label="Festes Starterfeld dieses Spielmonats">${RACEHANDLING.lineup(month()).map(r=>{const c=CAR[r.id],p=RACEHANDLING.profile(c);return `<li><span>${esc(r.driver)}</span><b>${esc(carName(c))}</b><small>${c.ps} PS · ${number(p.acc100,1)} s · ${esc(p.driveName)}</small></li>`;}).join('')}</ol>`;}
  /* v467: Umbauten ändern nur den bestehenden Kurs – keine neue Rodung oder Monatsfreigabe. */
  const layoutId=()=>RACETRACK.forId(data()&&data().layout).id;
  const modelKey=()=>`racetrack467:${layoutId()}`;
@@ -106,20 +115,20 @@ const RACE=(()=>{
   U.innerHTML=`<div class="race-lobby"><header class="race-hero"><div class="race-brand">LOGISTIKA MOTORSPORT <span>${esc(RACETRACK.name.toUpperCase())}</span></div><button class="race-close" data-race="close" aria-label="Motorpark schließen">×</button><span class="race-kicker">DEIN MOTORPARK</span><h1>Asphalt. Kurven.<br><em>Dein Moment.</em></h1><p>${number(RACETRACK.length/1000,2)} km · 12 Kontrollpunkte · Nitro-Gerade & S-Kurven</p><svg class="race-course" viewBox="-240 -210 480 420" aria-label="Streckenverlauf" role="img"><path d="M${RACETRACK.points.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L')}"/><circle cx="${RACETRACK.at(RACETRACK.START).x}" cy="${RACETRACK.at(RACETRACK.START).z}" r="9"/></svg></header>
    <div class="race-lobby-body"><p class="race-note" data-note hidden role="status"></p><h2>Wähle deinen Garagenwagen</h2>${cars.length?`<label class="race-select">Fahrzeug<select id="raceCar">${cars.map(c=>`<option value="${esc(c.uid)}"${c===g?' selected':''}>${esc(carName(CAR[c.car]))} · ${c.y}</option>`).join('')}</select></label><div class="race-garage" id="raceGarage"></div>`:`<div class="race-empty"><b>Dein Startplatz wartet.</b><p>Ersteigere ein Auto im Auktionshaus. Autos im Kurierdienst oder in einer laufenden Auktion sind hier nicht verfügbar.</p><button class="btn" data-race="garage">Zur Garage</button></div>`}
    <div class="race-workshop-link"><div><b>${esc(RACETRACK.name)}</b><small>Dein aktueller Streckenverlauf</small></div><button class="btn ghost" data-race="workshop">Strecke umbauen · 50 Kleeblätter</button></div><div class="race-modes"><article><span class="race-label">FREIES FAHREN</span><h3>Training</h3><p>Zwei Runden, ohne Gegner. Lerne Bremspunkte, Drifts und Nitro kennen.</p><button class="btn" data-race="practice"${disabled?' disabled':''}>Training starten</button></article>
-   <article class="race-month"><span class="race-label">SPIELMONAT ${month()+1}</span><h3>Monatsrennen</h3><b class="race-purse">${cash(prize())}</b><small>Siegprämie · 5 KI-Fahrer · 2 Runden</small><p>${e?e.status==='fertig'?`Platz ${e.place} · ${cash(e.prize)} gewonnen.`:'Dein Startplatz wurde diesen Monat bereits genutzt.':`Die Gegner fahren mit vergleichbarer Leistung. Alle sechs Plätze erhalten Preisgeld.`}</p><button class="btn" data-race="monthly"${disabled||e?' disabled':''}>${e?'Nächstes Rennen in '+Math.ceil(((month()+1)*MONTH-S.time)/1440)+' Spieltagen':'Zum Monatsrennen'}</button></article></div>
+   <article class="race-month"><span class="race-label">SPIELMONAT ${month()+1}</span><h3>Monatsrennen</h3><b class="race-purse">${cash(prize())}</b><small>Siegprämie · 5 KI-Fahrer · 2 Runden</small><p>${e?e.status==='fertig'?`Platz ${e.place} · ${cash(e.prize)} gewonnen.`:'Dein Startplatz wurde diesen Monat bereits genutzt.':`Offenes Feld: Die Gegner bleiben diesen Spielmonat gleich. Dein schnelleres Auto bringt dir einen echten Vorteil. Alle sechs Plätze erhalten Preisgeld.`}</p>${fieldHTML()}<button class="btn" data-race="monthly"${disabled||e?' disabled':''}>${e?'Nächstes Rennen in '+Math.ceil(((month()+1)*MONTH-S.time)/1440)+' Spieltagen':'Zum Monatsrennen'}</button></article></div>
    <div class="race-rules"><b>Dein Auto fährt wirklich.</b><p>Jeder gefahrene Kilometer und zusätzlicher Rennverschleiß bleiben am Auto und senken seinen Sammlerwert. Kollisionen und Nitro beanspruchen es stärker. Ein Monat entspricht 30 Spieltagen. Verlassen oder Neuladen beendet den Monatsstart ohne Preisgeld.</p><p>Die Speditionszeit pausiert während deines Besuchs.${best?' Bestzeit auf diesem Kurs: '+clock(best)+'.':''}</p></div><button class="btn ghost race-back" data-race="close">Zurück zum Hof</button></div></div>`;
   const select=U.querySelector('#raceCar');if(select){select.onchange=carInfo;carInfo();}
  }
- function carInfo(){const g=garageById(U.querySelector('#raceCar').value);if(!g)return;const c=CAR[g.car];U.querySelector('#raceGarage').innerHTML=`<b>${esc(carName(c))}</b><div><span>${c.ps} PS</span><span>${c.vmax} km/h</span><span>${number(g.km,1)} km</span></div><small>Marktwert ${cash(gValue(g))} · Rennverschleiß ${number(g.raceWear||0,2)} %</small><button class="btn ghost race-car-open" data-race="carview">Auto in 3D ansehen</button>`;}
+ function carInfo(){const g=garageById(U.querySelector('#raceCar').value);if(!g)return;const c=CAR[g.car];U.querySelector('#raceGarage').innerHTML=`<b>${esc(carName(c))}</b><div><span>${c.ps} PS</span><span>${number(g.km,1)} km</span></div><small>Marktwert ${cash(gValue(g))} · Rennverschleiß ${number(g.raceWear||0,2)} %</small>${profileHTML(c)}<button class="btn ghost race-car-open" data-race="carview">Auto in 3D ansehen</button>`;}
  function start(mode){
   if(Q)return;const g=garageById(U.querySelector('#raceCar').value);if(!g||!available().includes(g)||mode==='monthly'&&receipt())return;
   const c=CAR[g.car];RACETRACK.use(layoutId());
   U.innerHTML=`<canvas class="race-canvas" aria-label="Rennstrecke, gesteuert mit Joystick oder Pfeiltasten"></canvas><div class="race-hud"><div class="race-topline"><div><span class="race-label">${mode==='monthly'?'MONATSRENNEN':'TRAINING'}</span><b data-lap>Runde 1 / 2</b></div><div class="race-topbuttons"><button class="race-sound" data-race="sound" aria-label="Motorton umschalten">TON ${S.farm.snd?'AN':'AUS'}</button><button class="race-pause" data-race="pause" aria-label="Rennen pausieren"><svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button></div></div><div class="race-stats"><b data-place>${mode==='monthly'?'6 / 6':'SOLO'}</b><span data-time>0:00,00</span></div><canvas class="race-map" width="140" height="120" aria-label="Streckenkarte mit Fahrzeugpositionen"></canvas><div class="race-speed"><strong data-speed>0</strong><span>km/h</span><div class="race-nitro"><i data-nitro></i></div><small>NITRO</small></div><div class="race-banner" data-banner role="status">3</div><div class="race-turn" data-turn></div><div class="race-drive-note" data-note hidden role="status"></div></div><div class="race-controls"><div class="race-stick" role="group" aria-label="Joystick: nach links oder rechts lenken, nach unten bremsen"><div class="race-stick-knob"></div><span>LENKEN</span></div><div class="race-buttons"><button class="race-nitro-btn" data-hold="nitro" aria-label="Nitro halten">NITRO</button><button data-hold="drift" aria-label="Drift halten">DRIFT</button><button data-hold="brake" aria-label="Bremse halten">BREMSE</button></div></div><div class="race-bottom"><button data-race="recover">Zur Strecke <small>+4 s</small></button><label><input id="raceAuto" type="checkbox" checked> Auto-Gas</label><button class="race-gas" data-hold="gas">GAS</button></div><div class="race-keyhint">Pfeile / WASD · Leertaste Drift · Umschalt Nitro · R zurück · Esc Pause</div><div class="race-overlay" hidden></div>`;
   Q={mode,g,c,layout:layoutId(),rig:RACETRACK.rig(c),p:RACEDRIVE.create(c,mode==='monthly'?5:0),ai:[],state:'countdown',count:3.4,total:0,chargedKm:0,chargedWear:0,value:gValue(g),baseKm:g.km,baseWear:g.raceWear||0,saveAt:0,hudAt:0,skidAt:0,auto:true,subAt:unsubs.length,meshes:[],tex:[],visuals:[],skids:[],skidSeq:0,camera:null};
-  if(mode==='monthly')for(let i=0;i<5;i++){const a=RACEDRIVE.create(c,i,true);a.skill=.83+i*.023;Q.ai.push(a);}
+  if(mode==='monthly')RACEHANDLING.lineup(month()).forEach((r,i)=>{const a=RACEDRIVE.create(CAR[r.id],i,true);a.skill=r.skill;a.driver=r.driver;a.color=r.color;Q.ai.push(a);});
   if(!buildScene()){Q=null;lobby(g.uid);notice('WebGL 2 ist nicht verfügbar. Der Monatsstart wurde nicht verbraucht.');return;}
-  const D=data(),before=JSON.stringify(D);Q.id='R'+D.seq++;D.active={id:Q.id,uid:g.uid,mode,layout:Q.layout,month:month(),km:0,wear:0};
-  if(mode==='monthly'){D.months.unshift({id:Q.id,month:month(),uid:g.uid,status:'gestartet',layout:Q.layout,pool:prize()});D.months.length=Math.min(12,D.months.length);}
+  const D=data(),before=JSON.stringify(D),field=Q.ai.map(a=>({car:a.car.id,driver:a.driver,skill:a.skill}));Q.id='R'+D.seq++;D.active={id:Q.id,uid:g.uid,mode,layout:Q.layout,month:month(),field,km:0,wear:0};
+  if(mode==='monthly'){D.months.unshift({id:Q.id,month:month(),uid:g.uid,status:'gestartet',layout:Q.layout,field,pool:prize()});D.months.length=Math.min(12,D.months.length);}
   if(!persist()){S.farm.race=JSON.parse(before);const uid=g.uid;lobby(uid);notice('Start nicht möglich: Der Spielstand konnte nicht gespeichert werden.');return;}
   bindControls();engineStart();last=0;accum=0;raf=requestAnimationFrame(frame);
  }
@@ -143,12 +152,12 @@ const RACE=(()=>{
   R.env.fog=[.67,.81,.86];R.env.fogR=[180,520];R.env.sky=[.64,.79,.88];R.env.sun=[.55,.8,.4];R.env.wind=[0,0,0,0];
   const mesh=b=>{const m=R.mesh(b);Q.meshes.push(m);return m;};Q.mesh=mesh;
   R.nodes.push(R.node(mesh(RACETRACK.stage())));
-  const wheel=mesh(RACETRACK.wheel(Q.c)),color=carColor(Q.g);
+  const wheels=new Map(),color=carColor(Q.g);
   const competitors=[Q.p,...Q.ai],cols=[color,0xe66a43,0xf2c453,0x41a29e,0xd6d8d7,0x806dc4];
-  competitors.forEach((a,i)=>{const body=mesh(RACETRACK.car(Q.c,cols[i])),root=R.node(null),shell=R.addChild(root,R.node(body)),w=[];
-   for(const x of [-Q.rig.wheelX,Q.rig.wheelX])for(const z of Q.rig.axles){const axle=R.addChild(root,R.node(null,{x,y:Q.rig.wheelY,z})),n=R.addChild(axle,R.node(wheel,{ry:x<0?Math.PI:0}));w.push({axle,n,front:z>0});}
-   const flameB=new G3.MB();for(const x of [-Q.rig.exhaustX,Q.rig.exhaustX])flameB.ico(1,0x56d5ed,{x,y:Q.rig.exhaustY,z:Q.rig.exhaustZ,sx:.16,sy:.16,sz:.75});const flame=R.addChild(root,R.node(mesh(flameB),{visible:false,glow:.9,shadow:false}));
-   R.nodes.push(root);Q.visuals.push({a,root,shell,w,flame});
+  competitors.forEach((a,i)=>{const c=a.car,rig=RACETRACK.rig(c),key=c.id==='lgal'?'lgal':'generic';if(!wheels.has(key))wheels.set(key,mesh(RACETRACK.wheel(c)));const wheel=wheels.get(key),body=mesh(RACETRACK.car(c,a.color||cols[i])),root=R.node(null),shell=R.addChild(root,R.node(body)),w=[];
+   for(const x of [-rig.wheelX,rig.wheelX])for(const z of rig.axles){const axle=R.addChild(root,R.node(null,{x,y:rig.wheelY,z})),n=R.addChild(axle,R.node(wheel,{ry:x<0?Math.PI:0}));w.push({axle,n,front:z>0});}
+   const flameB=new G3.MB();for(const x of [-rig.exhaustX,rig.exhaustX])flameB.ico(1,0x56d5ed,{x,y:rig.exhaustY,z:rig.exhaustZ,sx:.16,sy:.16,sz:.75});const flame=R.addChild(root,R.node(mesh(flameB),{visible:false,glow:.9,shadow:false}));
+   R.nodes.push(root);Q.visuals.push({a,rig,root,shell,w,flame});
   });
   const skidB=new G3.MB();for(const x of [-.87,.87])skidB.plate(.17,1.8,0x202c32,{x,y0:.055});const skidM=mesh(skidB);
   for(let i=0;i<64;i++){const n=R.node(skidM,{visible:false,shadow:false});Q.skids.push(n);R.nodes.push(n);}
@@ -168,7 +177,7 @@ const RACE=(()=>{
   if(!Q.camera||snap)Q.camera=target;else{for(const k of ['tx','tz','dist'])Q.camera[k]+=(target[k]-Q.camera[k])*(1-Math.exp(-(Q.renderDt||1/60)*10));Q.camera.yaw+=RACEDRIVE.wrap(yaw-Q.camera.yaw)*(1-Math.exp(-(Q.renderDt||1/60)*10));Q.camera.pitch=target.pitch;}
   Object.assign(R.cam,Q.camera,{fov:.78,near:.2,far:750});
  }
- function draw(t){if(!Q||!Q.R||Q.R.lost())return;for(const v of Q.visuals){const a=v.a;v.root.x=a.x;v.root.z=a.z;v.root.ry=a.h;v.shell.rz=-(a.steer||0)*Math.min(a.v/50,.7)*.035;for(const w of v.w){w.axle.ry=w.front?(a.steer||0)*.35:0;w.n.rx=-a.km*1000/Q.rig.wheelRadius;}v.flame.visible=!!a.boost;v.flame.sz=.75+Math.sin(t*40)*.22;}
+ function draw(t){if(!Q||!Q.R||Q.R.lost())return;for(const v of Q.visuals){const a=v.a;v.root.x=a.x;v.root.z=a.z;v.root.ry=a.h;v.shell.rz=-(a.steer||0)*Math.min(a.v/50,.7)*.035;for(const w of v.w){w.axle.ry=w.front?(a.steer||0)*.35:0;w.n.rx=-a.km*1000/v.rig.wheelRadius;}v.flame.visible=!!a.boost;v.flame.sz=.75+Math.sin(t*40)*.22;}
   if(Q.p.drifting&&Q.p.v>10&&t-Q.skidAt>.07){const n=Q.skids[Q.skidSeq++%Q.skids.length];n.visible=true;n.x=Q.p.x;n.z=Q.p.z;n.ry=Q.p.h;Q.skidAt=t;}
   camera(false);engineUpdate();Q.R.shadowBox=70;Q.R.render(t);minimap();
  }
