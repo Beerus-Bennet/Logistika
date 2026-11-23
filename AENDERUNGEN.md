@@ -1,3 +1,11 @@
+## v471 – 3D-Darstellung für alle Auktionsautos
+
+**Ursache:** Nur der Gallardo hatte ein eigenes verfeinertes Netz; im Auktionsdialog fehlte eine drehbare Ansicht.
+
+**Lösung:** Alle 127 Autos mit familienbasierter 3D-Geometrie, modellbezogenen Proportionen/Radständen, Frontmerkmalen, offenen Roadstern und unterschiedlichen Dachformen. 3D auf Wunsch in Modell- und Losdialog; ein Kontext, beim Verlassen freigegeben. Dieselben Netze in Garage/Rennen; Radcache je Modell. Fotos, Geschäftsdaten und Gallardo470 erhalten. Modelle bleiben stilisierte Annäherungen; Einzelmodelltreue variiert.
+
+**Geprüft:** Katalogprüfung aller 127 Modelle, 127 Geometrien, Bodenkontakt/Radstand/Lack/Budget; Chromium-Auktionsdialog mit Ansicht/Zoom/Schließen/Wechsel und neun visuellen Beispielen. Nicht geprüft: echtes iPhone/Safari und Handy-Bildrate. Bericht `docs/AUKTIONSAUTOS-v471.md`.
+
 ## v470 – Gallardo mit geformter Karosserie und tieferen Details
 
 **Anlass/Ursache:** Im Vergleich zum echten Gallardo wirkten Front, Dach und Seiten zu kantig und flach. Einlässe, Spiegel und Räder waren zu grob; die helle Vorschau verdeckte die Lackform und zeigte fleckige Türschatten.

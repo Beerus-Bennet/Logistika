@@ -154,7 +154,7 @@ const RACE=(()=>{
   R.nodes.push(R.node(mesh(RACETRACK.stage())));
   const wheels=new Map(),color=carColor(Q.g);
   const competitors=[Q.p,...Q.ai],cols=[color,0xe66a43,0xf2c453,0x41a29e,0xd6d8d7,0x806dc4];
-  competitors.forEach((a,i)=>{const c=a.car,rig=RACETRACK.rig(c),key=c.id==='lgal'?'lgal':'generic';if(!wheels.has(key))wheels.set(key,mesh(RACETRACK.wheel(c)));const wheel=wheels.get(key),body=mesh(RACETRACK.car(c,a.color||cols[i])),root=R.node(null),shell=R.addChild(root,R.node(body)),w=[];
+  competitors.forEach((a,i)=>{const c=a.car,rig=RACETRACK.rig(c),key=c.id;if(!wheels.has(key))wheels.set(key,mesh(RACETRACK.wheel(c)));const wheel=wheels.get(key),body=mesh(RACETRACK.car(c,a.color||cols[i])),root=R.node(null),shell=R.addChild(root,R.node(body)),w=[];
    for(const x of [-rig.wheelX,rig.wheelX])for(const z of rig.axles){const axle=R.addChild(root,R.node(null,{x,y:rig.wheelY,z})),n=R.addChild(axle,R.node(wheel,{ry:x<0?Math.PI:0}));w.push({axle,n,front:z>0});}
    const flameB=new G3.MB();for(const x of [-rig.exhaustX,rig.exhaustX])flameB.ico(1,0x56d5ed,{x,y:rig.exhaustY,z:rig.exhaustZ,sx:.16,sy:.16,sz:.75});const flame=R.addChild(root,R.node(mesh(flameB),{visible:false,glow:.9,shadow:false}));
    R.nodes.push(root);Q.visuals.push({a,rig,root,shell,w,flame});
