@@ -275,4 +275,6 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 
 - v462: FWM.forestPath optional footTrail/trailTail, nur Berganschluss und nördliches Waldwegende verwenden weiches, längenabhängig verjüngtes Pfadband. Übrige Wege und gespeicherte Koordinaten bleiben gleich.
 
+- v465: Trefferbild – Becken/Schulterblatt-Ellipsen nur bei Treffer (`xrBuild` in `hunt.js`), nicht mehr als scheinbar ungetroffenes Organ.
+
 - v464: Keine Blase („🔭 2“) mehr über dem fertigen Hochsitz (`tagInfo` in `hunt.js` gibt `null`); Baustellen-Blase bleibt.

@@ -1,3 +1,11 @@
+## v465 – Trefferbild: ungetroffene Knochen-Ellipsen nicht mehr als „Organ“ gezeigt
+
+**Ursache:** Im Trefferbild wurden Becken und Schulterblätter als blaue Ellipsoide immer gezeichnet (Orientierung) – sie sahen wie ein ungetroffenes Organ aus, z. B. hinten am Rumpf beim Lungenschuss (Rothirsch).
+
+**Lösung:** In `xrBuild` (`hunt.js`) erscheinen diese Ellipsoide nur noch, wenn sie getroffen sind (dann rot). Wirbelsäule, Rippen, Läufe und Schädel bleiben als Orientierung; Organe wurden schon vorher nur bei Treffer gezeichnet. Wertung, Aufzeichnung und Spielstand unverändert.
+
+**Geprüft:** `trefferbild-v357`, `hunt-v307`, `halsorgane-v442`, `hunt-presentation-v315` laufen. **Nicht geprüft:** Bild im Spiel/Handy; ich habe aus Lage und Form (Becken bei z −0,46, Höhe der Hüfte) geschlossen, dass die eingekreiste Ellipse das Becken ist.
+
 ## v464 – Keine Blase mehr über dem Hochsitz
 
 **Ursache:** Über dem fertigen Hochsitz stand dauerhaft eine Blase „🔭 2“ (Wildbestand, bei Sichtung zusätzlich 🦌/🐗) und verdeckte den Turm.
