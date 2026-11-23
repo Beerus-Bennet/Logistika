@@ -5503,3 +5503,20 @@ body.race-open #rotHint { display: none; }
 .race-modes { align-items: start; }.race-field { list-style: none; margin: 0 0 20px; padding: 0; border-top: 1px solid #cabb88; }
 .race-field li { display: grid; grid-template-columns: 45px minmax(0,1fr); column-gap: 8px; padding: 9px 0; border-bottom: 1px solid #d8cc9f; }
 .race-field li>span { grid-row: 1/3; color: #796627; font-size: 11px; font-weight: 900; align-self: center; }.race-field b { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }.race-field small { grid-column: 2; color: #685d3c; margin-top: 2px; line-height: 1.5; }
+
+/* v469: Zielfeier im Motorpark – kräftige Auszeichnung, lesbares Ergebnis. */
+.race-finish-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 14; pointer-events: none; }
+.race-result469 { --finish-color: #50c39b; position: relative; padding: 19px 22px; background: #fffaf0; animation: race-arrive469 .45s cubic-bezier(.16,.8,.25,1.2) both; }
+.race-result469.gold { --finish-color: #ffc849; }.race-result469.silver { --finish-color: #bbd2db; }.race-result469.bronze { --finish-color: #d89a61; }
+.race-finish-header { padding: 0 0 9px; }.race-finish-kicker { display: block; font-size: 10px; font-weight: 900; letter-spacing: .16em; color: #536b78; }
+.race-finish-badge { display: block; width: 80px; height: 77px; margin: 10px auto 6px; color: var(--finish-color); filter: drop-shadow(0 4px 0 #10263520); }
+.race-result469 .race-label { color: #337361; font-size: 10px; }.race-result469.gold .race-label { color: #916a12; }
+.race-result469 h2 { margin: 7px 0; font-size: clamp(32px,8vw,45px); line-height: 1.05; }.race-result469 .race-finish-header p { margin: 7px 0 4px; font-size: 12px; }
+.race-prize469 { margin: 6px 0 14px; padding: 12px 5px 10px; border: 2px solid #102635; border-radius: 12px; background: #fbe5a2; box-shadow: 0 4px 0 #102635; animation: race-prize469 .55s .16s both; }
+.race-prize469 small { display: block; font-size: 9px; letter-spacing: .14em; font-weight: 900; color: #6d5719; }.race-prize469 .race-win { font-size: clamp(27px,7vw,40px); line-height: 1.25; margin: 3px 0 0; white-space: nowrap; color: #166d54; }
+.race-best469 { margin: 0 0 12px; padding: 8px; border: 1px solid #8cbea2; background: #e0f2df; border-radius: 9px; color: #226147; font-size: 13px; font-weight: 900; }.race-best469 span { display: block; margin-top: 1px; font-size: 10px; font-weight: 700; }
+.race-result469 .race-result-grid>div { padding: 9px 10px; }.race-result469 .race-result-grid b { font-size: 16px; }.race-result469>p { font-size: 11px; margin: 13px 0 8px; }
+@keyframes race-arrive469 { from { opacity: 0; transform: translateY(20px) scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes race-prize469 { from { transform: scale(.92); } 65% { transform: scale(1.035); } to { transform: none; } }
+@media (max-width: 350px) { .race-result469 { padding: 16px; }.race-finish-badge { width: 64px; height: 62px; margin: 8px auto 5px; } }
+@media (prefers-reduced-motion: reduce) { .race-result469,.race-prize469 { animation: none; } }
