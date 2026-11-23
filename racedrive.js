@@ -15,8 +15,10 @@ const RACEDRIVE=(()=>{
  }
  const grip=(s,v)=>9.81*s.tyre*(1+s.aero*Math.min(1.6,(v/65)**2));
  function create(c,index=0,ai=false){const p=RACETRACK.at(RACETRACK.START-12-index*7.5,index%2?2.8:-2.8);return {car:c,x:p.x,z:p.z,h:p.heading,vx:0,vz:0,v:0,steer:0,s:p.s,i:p.i,next:0,lap:0,progress:-index/100,time:0,finish:0,km:0,wear:0,nitro:100,boost:false,drifting:false,drift:0,penalty:0,hit:0,ai,skill:1,index,spec:spec(c)};}
+ /* v473: Im Training zählt der gesamte befahrbare Auslauf. Reihenfolge und
+    zwei volle Runden bleiben nötig; das Monatsrennen behält seine Torbreite. */
  function gate(a,px,pz){if(a.finish)return;const p=RACETRACK.at(RACETRACK.START+(a.next%12)*RACETRACK.length/12),dx=Math.sin(p.heading),dz=Math.cos(p.heading),before=(px-p.x)*dx+(pz-p.z)*dz,after=(a.x-p.x)*dx+(a.z-p.z)*dz;
-  if(before<=0&&after>0&&Math.abs((a.x-p.x)*p.nx+(a.z-p.z)*p.nz)<RACETRACK.HALF+3&&Math.hypot(a.x-px,a.z-pz)<10){a.next++;a.lap=Math.floor((a.next-1)/12);if(a.lap>=2)a.finish=a.time+a.penalty;}
+  if(before<=0&&after>0&&Math.abs((a.x-p.x)*p.nx+(a.z-p.z)*p.nz)<RACETRACK.HALF+(a.training===true?6.55:3)&&Math.hypot(a.x-px,a.z-pz)<10){a.next++;a.lap=Math.floor((a.next-1)/12);if(a.lap>=2)a.finish=a.time+a.penalty;}
   const last=RACETRACK.START+(a.next-1)*RACETRACK.length/12,s=((a.s-last)%RACETRACK.length+RACETRACK.length)%RACETRACK.length;a.progress=a.next-1+clamp(s/(RACETRACK.length/12),0,.995);
  }
  function update(a,input,dt){if(a.finish)return;const px=a.x,pz=a.z;dt=clamp(dt,0,.025);a.time+=dt;a.hit=Math.max(0,a.hit-dt);const n=RACETRACK.near(a.x,a.z,a.i),on=n.d<RACETRACK.HALF,sp=Math.hypot(a.vx,a.vz);a.i=n.i;

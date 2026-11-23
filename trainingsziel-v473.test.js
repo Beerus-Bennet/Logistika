@@ -1,0 +1,10 @@
+/* v473: Zwei volle Vorwärtsrunden zählen auch am befahrbaren Trainingsrand. */
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),C=vm.createContext({console});for(const f of ['cars.js','racehandling.js','racetrack.js','racedrive.js'])vm.runInContext(fs.readFileSync(f,'utf8'),C);const run=s=>vm.runInContext(s,C),D=run('RACEDRIVE'),T=run('RACETRACK'),car=run('CAR.lgal');let checks=0;
+function sample(a,s,lane){const p=T.at(T.START+s,lane),px=a.x,pz=a.z;Object.assign(a,{x:p.x,z:p.z,s:p.s,i:p.i,time:a.time+.04});D.gate(a,px,pz);}
+function start(lane,training=true){const a=D.create(car),p=T.at(T.START-6,lane);Object.assign(a,{x:p.x,z:p.z,s:p.s,i:p.i,training});return a;}
+for(const layout of T.layouts){T.use(layout.id);for(const lane of [0,T.HALF+6.4,-T.HALF-6.4]){const a=start(lane);let finishAt=0;for(let s=-4;s<2*T.length+10;s+=2){sample(a,s,lane);if(s<T.length-2)assert.equal(a.lap,0);if(s<2*T.length)assert.equal(a.finish,0,'Keine vorzeitige Zielwertung');if(a.finish){finishAt=s;break;}}assert.equal(a.next,25);assert.equal(a.lap,2);assert.ok(finishAt>=2*T.length&&finishAt<2*T.length+4);const done=JSON.stringify(a);D.update(a,{throttle:1,nitro:true},.02);assert.equal(JSON.stringify(a),done,'Nach Ziel keine weitere Fahrt');checks++;}
+ const monthly=start(T.HALF+6.4,false);for(let s=-4;s<2*T.length+10;s+=2)sample(monthly,s,T.HALF+6.4);assert.equal(monthly.finish,0);assert.equal(monthly.next,0,'Monatliche Torbreite bleibt erhalten');checks++;
+ const reverse=start(0);for(let s=-8;s>-2*T.length-10;s-=2)sample(reverse,s,0);assert.equal(reverse.next,0);assert.equal(reverse.finish,0);checks++;
+ const wiggle=start(0);for(let n=0;n<8;n++){sample(wiggle,2,0);sample(wiggle,-2,0);}assert.equal(wiggle.next,1);assert.equal(wiggle.finish,0,'Startlinie pendeln ersetzt keine Runde');const next=wiggle.next;D.recover(wiggle);assert.equal(wiggle.next,next);assert.equal(wiggle.penalty,4);checks++;
+}
+console.log('OK v473:',checks,'Prüfgruppen auf drei Kursen; neun vollständige Trainingsläufe einschließlich beider Außenränder.');
