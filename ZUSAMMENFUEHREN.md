@@ -1,3 +1,7 @@
+## v475 – Karosserie-Innenflächen
+
+Basis main0930c00 einschließlich Bergfarben474, Trainingsziel473 und Fahrzeugformen472. Nur carmodels/racecars und deren Assetversionen475 verändert; Gesamt-/SW/LOGI_V475. Andere Assets/Geometrien/Fahrdaten erhalten. Wannen und Innenhaut gehören in beide Modellpfade (gemeinsamer Katalog und Gallardo). Welt-Culling nicht deaktivieren. Keine Migration. Prüfung/Bildvergleich: docs/KAROSSERIE-v475.md. Vor Push/Merge main prüfen, kein automatisches Merge.
+
 ## v474 – PR172 enthält Bergfarben und Trainingsfix174
 
 Gemeinsamer Stand aus main58774ff (Fahrzeugformen472), Trainings-Commit c9e6be5 aus PR174 und Bergfarben-Commit c803496 aus PR172. PR172 wird auf diesen gemeinsamen Nachfahren aktualisiert; Originalzweige werden nicht per Force-Push ersetzt. Dadurch enthält PR172 den kompletten Trainingsfix. Bei normalem Merge von PR172 sind auch die Trainings-Commits in main; PR174 nicht erneut auf einen älteren Stand zurücksetzen.

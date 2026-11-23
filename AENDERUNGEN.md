@@ -1,3 +1,11 @@
+## v475 – Geschlossene Innenflächen statt heller Karosserie-Durchblicke
+
+**Ursache:** Das Nutzervideo zeigt fehlende Radhaustiefe, einseitige Kabinenflächen und offene Einlassränder.
+
+**Lösung:** Alle 127 Autos erhalten tiefe Radhauswannen/Rückwände, innere Kabinenflächen und hinterlegte Seitenfugen; Unterboden bis zum Schweller. Gallardo und klassische Karosserien berücksichtigt. Fahrzeugformen, Fahrdaten, Preise und Spielstände erhalten. Gesamt-/SW475, carmodels/racecars475, übrige Assets unverändert.
+
+**Geprüft:** 11.670 Sichtstrahlen, kompletter Katalog im WebGL-Renderer, Garage-/Rennnetzgleichheit, Touch/Zoom, sechs Bauformen in drei Winkeln, Form-/Gallardo-/Trainingstests. Details/Bildvergleich: `docs/KAROSSERIE-v475.md`. Chromium/SwiftShader; kein echtes iPhone/Safari oder mobile Bildratenmessung.
+
 ## v474 – PR172 mit Fahrzeugen und Trainingsziel zusammengeführt
 
 **Ursache:** Der ältere Bergfarben-PR172 kollidierte mit den neueren Gesamtversionen und Dokumentationseinträgen.
