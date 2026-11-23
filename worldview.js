@@ -1727,7 +1727,7 @@ function petThumbFn(k) {
   return () => { const b = new FM.MB(); b.merge(fn(), { ry: 0.5 }); return b; };
 }
 function cosModel(c) {
-  if (c.race) return ["racetrack461", RACE.miniature];
+  if (c.race) return [RACE.modelKey(), RACE.miniature];
   if (c.skin && c.skin.barn) return ["barn:" + c.skin.barn, () => skinMB("barn", c.skin.barn)];
   if (c.skin && c.skin.house) return ["house:" + c.skin.house, () => skinMB("house", c.skin.house)];
   if (c.skin && c.skin.tractor) return ["tractor:" + c.skin.tractor, () => FWM.tractor(c.skin.tractor)];

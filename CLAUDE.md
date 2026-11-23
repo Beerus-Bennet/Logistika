@@ -280,3 +280,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v465: Trefferbild – Becken/Schulterblatt-Ellipsen nur bei Treffer (`xrBuild` in `hunt.js`), nicht mehr als scheinbar ungetroffenes Organ.
 
 - v464: Keine Blase („🔭 2“) mehr über dem fertigen Hochsitz (`tagInfo` in `hunt.js` gibt `null`); Baustellen-Blase bleibt.
+
+- v467: racecars.js liefert Gallardo lgal (frühes Coupé, eigener Radstand/Räder/Lack), racecarview.js nutzt dieselben Netze zum Drehen. racetrack.forId/use für drei unabhängige Kurse; racing: Vorschau gratis, bestätigter Wechsel 50 Kleeblätter atomar, Bestzeiten je Layout, Monatslimit bleibt. RACE.modelKey je Verlauf für Hof/Laden; Hof-Hängerwächter ignoriert race-open. Altstand ohne layout = Werder, best bleibt dessen Bestzeit. Neue Skripte vor DOMContentLoaded/mit SW laden. Bericht docs/GALLARDO-UMBAU-v467.md; main abeade8 mit hunt465/alpine466 erhalten.

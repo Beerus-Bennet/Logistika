@@ -1,3 +1,11 @@
+## v467 – Gallardo und Streckenwerkstatt
+
+Basis `main abeade8`, einschließlich PR167/Trefferbild465 und PR168/Steinbock466. `hunt.js`, `alpine.js`, Hauptsee, Gelände und übrige main-Korrekturen unverändert erhalten. Gesamt-/SW/LOGI_V467; nur style, farmview, worldview, racetrack, racing und die neuen Dateien auf Asset467. racedrive bleibt461, hunt465 und alpine466 bleiben erhalten.
+
+Ladereihenfolge am bisherigen Rennblock: **racecars → racetrack → racecarview → racedrive → racing**, alle vor DOMContentLoaded. Neue `racecars.js`/`racecarview.js` auch im Service-Worker aufnehmen. `RACETRACK.forId` liefert unabhängige Kurse, `use` wechselt den aktiven Kurs erst nach erfolgreichem Umbau oder beim Öffnen/Start. Während einer Fahrt nicht umschalten. Modelle für Insel/Laden mit `RACE.modelKey()` je Layout cachen; Hofwächter muss `race-open` als absichtliche Pause behandeln.
+
+Alte Stände ohne `race.layout` verwenden unverändert Werder. `race.best` gehört weiterhin zum Werder Ring, `race.bests` enthält neue kursbezogene Bestzeiten. Ein Umbau verändert nur `layout`/`lastBuild` und die 50 Kleeblätter, keine Rodung und keinen neuen Monatsstart. Monatseinträge/aktive Fahrt merken ihren Verlauf. Bisherige Kilometer-/Verschleiß-/Preisgeldsicherung erhalten. Nur Gallardo `lgal` hat das neue Einzelmodell; kein allgemeiner Modellumbau. Bericht und Prüfungen: `docs/GALLARDO-UMBAU-v467.md`. Pull Request bereitstellen, nicht automatisch mergen.
+
 ## v461 – Autorennbahn
 
 Basis main `756bdb7` (v456), einschließlich Ufer449, Sammellieferung455 und Lack456. Änderungen dieser Version nicht gegen ältere Kopien von auction/game/worldview ersetzen: Haltebonus454, Modellfotoregeln453/456, Jagd-Pause452 und Ufer449 sind enthalten. Die offenen PRs159–162 wurden nicht mitgemergt. Vor dem Merge den dann aktuellen main-Stand prüfen.
