@@ -78,23 +78,27 @@ const PEOPLE_TRAFFIC = (() => {
     const valid=(a,b)=>typeof VILLAGE_SITE==='undefined'||VILLAGE_SITE.clearLine([a.x,a.z],[b.x,b.z]);
     const add=(id,node,parts,apply,extra={})=>{
       if(!node||!node.visible)return;
-      let old=history.get(id);if(old&&old.node!==node)old=null;
+      let old=history.get(id);if(old&&(old.node!==node||extra.snap))old=null;
       const want=extra.resting&&old?old.pos:{x:node.x,z:node.z};
       actors.push({id,node,from:extra.fixed?want:old?old.pos:want,want,parts,apply,side:old&&old.side,avoid:old&&old.avoid,valid,...extra});
     };
     if(typeof WV!=='undefined')for(const [id,e]of WV.staff){
       const s=(S.farm.staff||[]).find(s=>s.id===id);if(!s)continue;
+      /* v480: Wer seiner Route folgt, darf auf sie gesetzt werden: bei schnellem Tempo, nach großem Rückstand oder wenn es sechs Sekunden
+         nicht weitergeht. Vorher zog ihn die Geschwindigkeitsgrenze geradeaus zum Ziel – an Gehegen und Gebäuden blieb er hängen. */
+      const was=history.get('staff:'+id),gapR=was?distance(was.pos,e.node):0,snap=!!(s.job&&e.rj===s.job&&gapR>.001&&(S.speed>3||gapR>4||e.stuckAt&&wnow()-e.stuckAt>6));
       add('staff:'+id,e.node,[{x:0,z:0,r:.39}],(p,delayed)=>{
         /* v351: Der Routenzeiger folgt der wirklich freigegebenen Strecke,
            nicht einem vom Zaun oder Gegenverkehr verworfenen Schritt. */
         const j=s.job,from=ahead.get('staff:'+id),dx=e.node.x-from.x,dz=e.node.z-from.z,l2=dx*dx+dz*dz;
         if(j&&e.rj===j&&e.rPrev!=null&&distance(p,e.node)>.001){const f=l2?Math.max(0,Math.min(1,((p.x-from.x)*dx+(p.z-from.z)*dz)/l2)):0;e.rs=e.rPrev+(e.rs-e.rPrev)*f;}
-        e.x=e.node.x=p.x;e.z=e.node.z=p.z;e.ox=e.oz=0;
+        e.x=e.node.x=p.x;e.z=e.node.z=p.z;e.ox=e.oz=0;e.stuckAt=delayed?e.stuckAt||wnow():0;
         if(delayed){e.mv=false;if(j&&j.route&&S.time-j.t0<j.walk&&gdt){j.t0+=gdt;j.t1+=gdt;if(s.jobEnd)s.jobEnd+=gdt;}}
-      },{staff:true,fixed:!!e.isSit||!!e.sitT||e.riseT!=null||!!(e.gearAction&&e.gearAction.t>0),resting:!s.job,valid:(a,b)=>{
+      },{staff:true,snap,fixed:!!e.isSit||!!e.sitT||e.riseT!=null||!!(e.gearAction&&e.gearAction.t>0),resting:!s.job,valid:(a,b)=>{
         if(typeof VILLAGE!=='undefined'&&(VILLAGE.clear(a.x,a.z)||VILLAGE.clear(b.x,b.z))&&!valid(a,b))return false;
         if(typeof navLive!=='function'||distance(a,b)<.001)return true;
         navLive();if(navHit(a.x,a.z,b.x,b.z,navWallsFor(s.role)))return false;
+        if(navBlockedAt(a.x,a.z))return true; /* v480: Wer schon im Gesperrten steht (Gehege darüber gebaut, alter Spielstand), darf hinaus. */
         /* v351: Auch der Rückweg nutzt die ausdrücklich geplanten Camp-Wege.
            Die A*-Sperre des ganzen Platzes darf den Ausgang nicht verriegeln. */
         const n=Math.max(1,Math.ceil(distance(a,b)/.2));

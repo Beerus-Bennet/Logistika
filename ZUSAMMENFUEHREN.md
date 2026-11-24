@@ -1,3 +1,7 @@
+## v480 – Wege der Arbeiter
+
+Basis main3087f12 (v479). Gesamt-/SW/LOGI_V480; team und peopletraffic Asset480, übrige unverändert. `NAV.loose` hat jetzt ein fünftes Feld (Umkreis). Keine Migration.
+
 ## v479 – Angler, Bachsteg, Trophäen-Markt
 
 Basis main682ef6a (v478). Gesamt-/SW/LOGI_V479; erbe, fishdata, fishview, game, hunt, staffwalk, team, worldview, style Asset479, übrige unverändert. `FGROUNDS` ohne `bachsteg`/`pier`. Der Steg ist im Wegenetz begehbar (`navBuild`). Keine Migration.

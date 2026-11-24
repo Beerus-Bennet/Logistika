@@ -1,3 +1,13 @@
+## v480 – Angler nutzt nur Wege, Arbeiter hängen nicht mehr im Gehege fest
+
+**Anlass:** Screenshot – der Fischer stand im Rindergehege und kam nicht weiter.
+
+**Ursache (aus dem Code, im Test nachgestellt; der Spielstand lag nicht vor):** Vor v479 liefen Wege ohne Ergebnis als Gerade quer über den Hof; ein so gespeicherter Standort konnte im Gehege liegen. `PEOPLE_TRAFFIC` wies dort jeden Schritt ab (Start- und Zielfeld gesperrt), `navPathSafe` fand bei großen Gehegen nichts. Ab Tempo 10× zog `PEOPLE_TRAFFIC` die Figur zudem geradeaus zum Routenpunkt.
+
+**Lösung:** `team.js` – `navPathSafe` erweitert den Umkreis um Start/Ziel auf 2/6/14 Felder, gesperrte Felder kosten das Achtfache. Rolle `fischer`: Felder abseits der Wege (`NAV_WAY` 0,65) kosten das Vierfache, keine Abkürzung beim Glätten. `staffPlaceFree`: eingesperrter gespeicherter Standort → nächstes freies Feld beim Laden. `staffRouteBad`: gespeicherte Wege durch Gesperrtes werden beim Laden neu geplant. `peopletraffic.js` – wer im Gesperrten steht, darf hinaus; Routenfolger werden bei Tempo > 3, Rückstand > 4 oder nach 6 s Stillstand auf ihre Route gesetzt (`snap`).
+
+**Geprüft:** Testbrowser – Fischer samt altem Geradenweg im 11 × 10-Gehege, vor dem Laden und im laufenden Spiel: kommt heraus und geht zum Steg; Weg Steg–Lagerfeuer 1,4 von 221 Einheiten abseits der Wege; neun Arbeiter rund 22 Spielstunden bei 30× (niemand auf gesperrten Feldern, Farmer nicht gezählt; alle zur Mittagspause am Feuer). **Nicht geprüft:** Handy, bestehender Spielstand, Unit-Tests (Node fehlt hier; `worker-motion-v351.test.js` und `peopletraffic-v346.test.js` bitte laufen lassen).
+
 ## v479 – Angler am Steg repariert, Bachsteg entfernt, keine Trophäen im Fahrzeugmarkt
 
 **Anlass:** Die 🎣-Blase saß nicht mittig über dem Steg; Wege und Aufgaben des Fischers sollten geprüft werden. Im Fahrzeugmarkt stand oben die Trophäensammlung mit Verkauf.
