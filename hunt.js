@@ -4809,35 +4809,9 @@ const HUNT = (() => {
     if (after) setTimeout(after, 80);                  /* v135: „Zur Trophäenwand“ */
   }
 
-  /* ------------------------------ Markt ----------------------------------- */
-  function marketHTML() {
-    if (typeof S === "undefined" || !S.farm || !S.farm.inv) return "";
-    const ids = Object.keys(S.farm.inv).filter(id => /^tro_/.test(id) && FITEMS[id] && farmInv(id) > 0);
-    if (!ids.length) return "";
-    ids.sort((a, b) => FITEMS[b].v - FITEMS[a].v);
-    /* v200: Ehrenplatz-Stücke stehen nicht zum Verkauf; verkauft wird das schwächste gewöhnliche Stück der Stufe, sein Seltenheitsaufschlag kommt dazu */
-    const C = collSync(), next = id => C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).sort(weakFirst)[0];
-    const free = id => Math.min(farmInv(id), C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).length);
-    const sum = ids.reduce((t, id) => t + C.filter(r => trophyId(r.k, r.m) === id && !r.pin && !onDisplay(r)).reduce((a, r) => a + farmSellPrice(id, 1) + extraOf(r), 0), 0);
-    return `<div class="card hu-mkt"><div class="card-top"><span class="vicon">🏆</span><div class="vname">Trophäen-Sammler<small>Sammler zahlen den vollen Wert und für seltene Stücke einen Aufschlag – verkauft wird jeweils das schwächste Stück der Stufe, Favoriten bleiben</small></div><span class="price">${money(sum)}</span></div>
-      <div class="hu-mrows">${ids.map(id => { const r = next(id), n = free(id);
-        return `<div><span>${FITEMS[id].i} ${esc(FITEMS[id].n)} <small>× ${farmInv(id)}${n < farmInv(id) ? " · " + (farmInv(id) - n) + " geschützt" : ""}</small></span>${r ? `<button class="btn tiny" data-husell="${id}">verkaufen · ${money(farmSellPrice(id, 1) + extraOf(r))}</button>` : `<button class="btn tiny" disabled>Favorit</button>`}</div>`; }).join("")}</div></div>`;
-  }
-  function marketBind() {
-    $$("#tab-market [data-husell]").forEach(b => b.onclick = () => {
-      const id = b.dataset.husell, r = collSync().filter(x => trophyId(x.k, x.m) === id && !x.pin && !onDisplay(x)).sort(weakFirst)[0];
-      if (!r) return;
-      const m = farmSell(id, 1);
-      if (m) {
-        const H = st(), i = H.coll.indexOf(r); if (i >= 0) H.coll.splice(i, 1);
-        const ex = extraOf(r); if (ex > 0) { S.money += ex; if (typeof logMoney === "function") logMoney("farm", "Seltenheitsaufschlag: " + RAR[gnOf(r).r].n, ex); }
-        collSync(); snd("coin"); save(); if (typeof toast === "function") toast("🏆 Trophäe verkauft: +" + money(m + ex), "good"); renderMarket();
-      }
-    });
-  }
   return {
     CX, CZ, CR, TW, TRY, PH, EYEP, EYER, RV, FC, M_PER_U, SP, ZONE, MEDALS, PRICE, NEED, DOT,
-    clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, marketHTML, marketBind, trophyId, trophyMesh,
+    clear, ground, inMeadow, edgeR, fieldE, fieldPt, spawnPoint, attach, pick, tagInfo, sheet, begin, step, end, trophyId, trophyMesh,
     wallHTML, wallBind, collSync, trophyBuild, trophyKey, trophyInfo, stats, genes, valueOf, shotOf, RAR, RAR_V, COATS, FORMS, dexAll,
     _v200: { hv200, dexPut, dexCount, pbPut, jobsEnsure, jobsEval, jobsLost, jobTxt, pinRec, presOf, featList, lookKey, weakFirst, sellRec: u => sellRec(u), st: () => st(), withLook, traits },
     _m: { deerBody: () => deerBody(), deerNeck: () => deerNeck(), deerHead: (P, sc, vr, F, rest) => rest ? (G3.seed(5102 + P), deerHeadInto(MB(), P, sc, vr, F, false, true)) : deerHead(P, sc, vr, F), deerUpper: f => deerUpper(f), deerLower: f => deerLower(f), deerEar: s => deerEar(s), deerTail: () => deerTail(),
