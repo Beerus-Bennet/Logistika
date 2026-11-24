@@ -111,7 +111,7 @@ test('Kaufvertrag bezahlt genau einmal; verkaufte Häuser bleiben bewohnt und we
 });
 test('Siedlungsaussparung öffnet kein Seewasser; vorhandene Dekoration blockiert Neubau und bleibt erhalten',()=>{
  run('fresh(10);var parts=VILLAGE.clipLock([-400,21,400,400]);');
- assert.ok(run('!parts.some(q=>-62>q[0]&&-62<q[2]&&43>q[1]&&43<q[3])'));
+ assert.ok(run('!parts.some(q=>-72>q[0]&&-72<q[2]&&43>q[1]&&43<q[3])'));
  assert.ok(run('parts.some(q=>14>q[0]&&14<q[2]&&48>q[1]&&48<q[3])'));
  run('S.farm.stats.deliv=6;VILLAGE.expand();var p=VILLAGE.plot("030");var obj=farmAddObj({t:"deco",k:"flowers",x:p.x+16,z:p.z+16});');
  assert.ok(run('VILLAGE.obstruction(p)'));assert.equal(run('VILLAGE.buy("030")'),false);assert.ok(run('S.farm.objs.includes(obj)'));

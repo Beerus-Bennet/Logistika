@@ -586,7 +586,7 @@ function farmTractorEnsure() {
 function farmCamRect() {
   let r = FCAM_HOF.slice();
   /* v340: Das bewohnte Dorf ist schon vor der Fischerei erreichbar. */
-  if (typeof VILLAGE !== "undefined" && farmOn()) { const T=VILLAGE.state();r=[Math.min(r[0],T.expanded?-118:-82),r[1],r[2],Math.max(r[3],T.expanded?100:64)]; }
+  if (typeof VILLAGE !== "undefined" && farmOn()) { const T=VILLAGE.state();r=[Math.min(r[0],T.expanded?VILLAGE_DATA.rect[0]:VILLAGE_DATA.roads[0]-20),r[1],r[2],Math.max(r[3],T.expanded?100:64)]; }
   FAREA_ORDER.forEach(id => {
     const A = FAREAS[id];
     if (!farmAreaOpen(id) || !A.cam) return;

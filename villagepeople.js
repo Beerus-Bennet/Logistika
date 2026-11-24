@@ -15,7 +15,7 @@ const VILLAGE_PEOPLE = (() => {
      Rad: Vorder- und Hinterrad liegen beide auf dem geprüften Weg (kein nachträgliches Glätten,
      das Ecken durch Zaun oder Tresen abkürzt). Person: neben dem Rad (side = Seite relativ zur
      Fahrtrichtung), beim Auf-/Absteigen bis in den Sattel. */
-  const VER=354,WB=.96*SCALE,LAT=.40,BACK=-.15,SEAT=-.22*SCALE,SHIFT=.22,BIKE_T=[-.9,-.45,0,.45,.9],
+  const VER=478,WB=.96*SCALE,LAT=.40,BACK=-.15,SEAT=-.22*SCALE,SHIFT=.22,BIKE_T=[-.9,-.45,0,.45,.9],
     /* Umriss des Rads längs der Achse: [Abstand von der Mitte, Radius] – Reifenspitzen schmal, Rahmen/Lenker/Korb breiter. */
     BIKE_SHAPE=[[-1.1,.1],[-.62,.2],[0,.22],[.62,.2],[1.1,.1]];
   const BIKE_WAIT=new Set(['unlock','lock','turn','look','mount','dismount']),BIKE_MOVE=new Set(['push','ride']);

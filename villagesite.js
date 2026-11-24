@@ -2,10 +2,10 @@
    Häuser/Adressen bleiben an ihren bisherigen Positionen. */
 const VILLAGE_SITE = (() => {
   const half=.9,walk=.78,curb=.045,front=1.95,main=18.5,edge=main+.9,sidewalk=half+curb+walk/2;
-  const roads=[-62,-98],radius=1.1;
+  const roads=VILLAGE_DATA.roads,[lane,lane2]=roads,radius=1.1;
   /* v354: Vorläufiger Wendeplatz am Ende des Lindenwegs – eine Lage für Fahrfläche, Bordstein und Gehwegring. */
-  const turn={x:-62,z:65.2,r:2.4,rim:3.18};
-  function lot(p){const back=p.road===-62&&p.side<0||p.road===-98&&p.side>0?18:17.5;
+  const turn={x:lane,z:65.2,r:2.4,rim:3.18};
+  function lot(p){const back=p.road===lane&&p.side<0||p.road===lane2&&p.side>0?18:17.5;
     const a=p.road+p.side*front,b=p.road+p.side*back;return [Math.min(a,b),p.z-6,Math.max(a,b),p.z+6];}
   function gate(p){const d=VILLAGE.door(p);return [p.road+p.side*front,d[1]];}
   function mailbox(p){const g=gate(p);return [g[0]+p.side*.1,g[1]+1.15];}
@@ -15,9 +15,9 @@ const VILLAGE_SITE = (() => {
   function bikeClear(x,z,ry){for(const t of [-1.12,-.65,0,.65,1.12])if(blocked(x+Math.sin(ry)*t,z+Math.cos(ry)*t,.27))return false;return true;}
   function path(p){const d=VILLAGE.door(p);return [d,gate(p),[p.road+p.side*sidewalk,d[1]]];}
   function segments(expanded){return expanded?[
-    [[-62,edge],[-62,98]],[[-98,edge],[-98,98]],
-    [[-98,64],[-62,64]],[[-98,98],[-62,98]]
-  ]:[[[-62,edge],[-62,64]]];}
+    [[lane,edge],[lane,98]],[[lane2,edge],[lane2,98]],
+    [[lane2,64],[lane,64]],[[lane2,98],[lane,98]]
+  ]:[[[lane,edge],[lane,64]]];}
   function mainBreaks(center){return roads.map(x=>({z:x-center,side:-1,half:half+radius}));}
   function fencePlan(plots){const lines=new Map(),gates=[];
     const line=(a,b)=>{if(Math.hypot(a[0]-b[0],a[1]-b[1])<.02)return;const pts=[a,b].sort((p,q)=>p[0]-q[0]||p[1]-q[1]);lines.set(pts.flat().map(n=>n.toFixed(3)).join(','),pts);};
@@ -62,7 +62,7 @@ const VILLAGE_SITE = (() => {
       for(const xx of [-.57,-.18,.21])b.tri([x+xx,.038,21.35],[x+xx+.22,.038,21.35],[x+xx+.11,.038,21.12],0xeee9de);
     }
     /* Begleitender Gehweg an der Ortsseite der Hauptstraße, mit Einmündungsöffnungen. */
-    const left=expanded?-117:-81,right=-43,breaks=(expanded?roads.slice():[roads[0]]).sort((a,c)=>a-c);let at=left;
+    const left=expanded?lane2-19:lane-19,right=lane+19,breaks=(expanded?roads.slice():[roads[0]]).sort((a,c)=>a-c);let at=left;
     for(const x of breaks.concat([right+half+radius])){const stop=Math.min(right,x-half-radius);if(stop>at)b.plate(stop-at,walk,paving,{x:(at+stop)/2,z:edge+curb+walk/2,y0:.047});at=x+half+radius;}
     if(!expanded){
       /* v344: Provisorischer Wendeplatz zwischen letztem Grundstück und künftigem Block. */
@@ -74,7 +74,7 @@ const VILLAGE_SITE = (() => {
           quad(b,[pt(r0,i0),pt(r0,i1),pt(r1,o1),pt(r1,o0)],c,y);}};
       ring(turn.r,turn.r+curb,stone,.052);ring(turn.r+curb,turn.rim,paving,.047);
       /* Den zweiten Anschluss bis zur Erschließung wieder mit Bordkante schließen. */
-      b.plate((half+radius)*2,.12,0xb9b3a6,{x:-98,z:main+.96,y0:.032});
+      b.plate((half+radius)*2,.12,0xb9b3a6,{x:lane2,z:main+.96,y0:.032});
     }else{
       /* Gehwege setzen sich um die Blockecken fort; jede Kreuzung bleibt frei. */
       for(const [x,z]of joints)for(const sx of [-1,1])for(const sz of [-1,1]){

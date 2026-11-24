@@ -7,7 +7,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v369';fs.m
   S=Object.assign(newGame(),{phase:'play',stage:6,money:3e8,time:12*60,speed:0,tut:{done:true},player:{name:'Jonas',company:'Weitwind Spedition',origin:3,color:0,avatar:{art:'p1'}}});farmNew();S.farm.logi=true;S.farm.stage=4;S.farm.xp=500000;S.farm.tut.done=true;S.farm.snd=false;S.farm.stats.deliv=6;S.farm.areas={wald:true,see:true,saege:true,altwald:true};
   document.querySelector('#intro').classList.remove('on');document.body.className='has-farm tab-farm';activeTab='farm';FV.on=true;farmDOM();syncHeadH();FV.R=G3.create(document.querySelector('#farmCv'),{shadowSize:512,shadowBox:55,maxDpr:1});FV.meshes={};
   const R=FV.R;R.env.fogR=[300,600];R.env.sun=G3.norm([-.5,1,.3]);R.env.sunCol=[.8,.77,.67];R.env.sky=[.47,.57,.68];R.env.ground=[.24,.31,.2];
-  const ground=new FM.MB();ground.plate(92,100,0x7da550,{x:-81,z:58,y0:.01});R.nodes.push(R.node(R.mesh(ground),{shadow:false}));
+  const ground=new FM.MB();ground.plate(92,100,0x7da550,{x:-91,z:58,y0:.01});R.nodes.push(R.node(R.mesh(ground),{shadow:false}));
   VILLAGE.state().expanded=true;VILLAGE.buy('030');VILLAGE.build('030','familie',false);S.time=VILLAGE.home('030').ready;VILLAGE.tick();S.time=Math.floor(S.time/1440)*1440+720;
   for(const h of Object.values(VILLAGE.state().homes))h.life={mailDay:Math.floor(S.time/1440),shopDay:Math.floor(S.time/1440)};
   document.querySelector('#toasts').replaceChildren();VILLAGE_VIEW.attach(R);window.gardenRender=(id,dist=34,yaw=3.7)=>{const p=VILLAGE.plot(id);Object.assign(R.cam,{tx:p.x,ty:.5,tz:p.z,dist,yaw,pitch:.87,fov:.65});VILLAGE_VIEW.step(.016,S.time);R.render(0);};
@@ -28,7 +28,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v369';fs.m
  // Vollständiger Ort zur Prüfung der Gesamtwirkung, nicht nur Einzelobjekte.
  await page.setViewportSize({width:960,height:800});await page.evaluate(()=>{
   for(const p of VILLAGE_DATA.plots){const h=VILLAGE.home(p.id);if(!h.resident){h.status='rented';h.type=Number(p.id)%2?'familie':'holz';h.resident={...VILLAGE_DATA.neighbors[Number(p.id)%6],id:'render-'+p.id};}}
-  document.querySelector('#toasts').replaceChildren();VILLAGE_VIEW.sync();Object.assign(FV.R.cam,{tx:-81,ty:0,tz:58,dist:139,yaw:-.7,pitch:1.0,fov:.65});VILLAGE_VIEW.step(.016,S.time);FV.R.render(0);
+  document.querySelector('#toasts').replaceChildren();VILLAGE_VIEW.sync();Object.assign(FV.R.cam,{tx:-91,ty:0,tz:58,dist:139,yaw:-.7,pitch:1.0,fov:.65});VILLAGE_VIEW.step(.016,S.time);FV.R.render(0);
  });
  await page.screenshot({path:out+'/quartier-uebersicht.png'});
  const lod=await page.evaluate(()=>{
@@ -41,7 +41,7 @@ const out=process.env.LOGISTIKA_ARTIFACT_DIR||'/tmp/logistika-gaerten-v369';fs.m
  const empty=await page.evaluate(()=>{const h=VILLAGE.home('030');window.backupGarden369=JSON.stringify(h);delete h.resident;h.status='ready';VILLAGE_VIEW.sync();const e=VILLAGE_VIEW._world.homes.get('030');return[e.yard.visible,e.yardFar.visible,e.yardGround.visible];});assert.deepEqual(empty,[false,false,false]);
  await page.evaluate(()=>{VILLAGE.state().homes['030']=JSON.parse(backupGarden369);VILLAGE_VIEW.sync();});assert.ok(await page.evaluate(()=>VILLAGE_VIEW._world.homes.get('030').yard.visible));
  // Integrationsblick in die vollständige Insel, einschließlich der parallelen Fernstufen.
- await page.evaluate(()=>{S.time=Math.ceil(S.time/1440)*1440+720;farmBuildScene();Object.assign(FV.R.cam,{tx:-81,ty:0,tz:58,dist:260,yaw:-.7,pitch:1.0,fov:.65});worldStep(.016,0);FV.R.render(0);});
+ await page.evaluate(()=>{S.time=Math.ceil(S.time/1440)*1440+720;farmBuildScene();Object.assign(FV.R.cam,{tx:-91,ty:0,tz:58,dist:260,yaw:-.7,pitch:1.0,fov:.65});worldStep(.016,0);FV.R.render(0);});
  const island=await page.evaluate(()=>({shadow:FV.R.noShadow,shadowTriangles:FV.R.stats.sTris,gardens:[...VILLAGE_VIEW._world.homes.values()].filter(e=>e.yardFar&&e.yardFar.visible).length}));
  assert.equal(island.shadow,true);assert.equal(island.shadowTriangles,0);assert.equal(island.gardens,20);
  await page.screenshot({path:out+'/insel-gaerten-fern.png'});

@@ -19,7 +19,7 @@ const VILLAGE_VIEW = (() => {
     W.extension=add(fmesh("village-grid343",()=>roadMesh(true)),{shadow:false,visible:VILLAGE.state().expanded});
     W.fences=add(null,{shadow:true});
     const sign=new FM.MB();for(const x of [-.8,.8])sign.box(.12,1.8,.12,0x715035,{x});sign.box(1.85,.9,.12,0x9a714b,{y:.8});sign.box(2.0,.1,.4,0x82533c,{y:1.72});
-    W.sign=add(fmesh("town-sign344",()=>sign),{x:-64.5,z:24});
+    W.sign=add(fmesh("town-sign344",()=>sign),{x:VILLAGE_SITE.roads[0]-2.5,z:24});
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=192;const ctx=canvas.getContext('2d');ctx.fillStyle='#e9d7ac';ctx.fillRect(0,0,512,192);ctx.fillStyle='#3d5137';ctx.textAlign='center';ctx.font='bold 70px sans-serif';ctx.fillText('Seeblick',256,106);ctx.font='25px sans-serif';ctx.fillText('Nachbarschaft · Stadtbau',256,151);
     W.R.addChild(W.sign,W.R.node(null,{y:1.25,z:.071,decal:{t:W.R.texture(canvas),w:1.7,h:.65}}));
     sync();
@@ -89,7 +89,7 @@ const VILLAGE_VIEW = (() => {
       if(e.lit&&e.lit.visible&&Math.random()<dt*.2){const k=D.houses[h.type],c=VILLAGE.local(p,-2.95*k.scale,-.2*k.scale);W.R.emit({x:c[0],y:7*k.scale,z:c[1],vx:.08,vy:.35,vz:.05,life:2,size:.18,size2:.5,col:[.72,.72,.7,.2],drag:.8});}
     }
   }
-  function pick(x,y){if(!W.R)return null;const ray=W.R.ray(x,y);const sd=W.R.hitBox(ray,[-65.5,0,23.7],[-63.5,1.9,24.3]);let best=sd!=null?{d:sd,id:null}:null;
+  function pick(x,y){if(!W.R)return null;const ray=W.R.ray(x,y);const sd=W.R.hitBox(ray,[VILLAGE_SITE.roads[0]-3.5,0,23.7],[VILLAGE_SITE.roads[0]-1.5,1.9,24.3]);let best=sd!=null?{d:sd,id:null}:null;
     for(const p of D.plots){const h=VILLAGE.home(p.id),e=W.homes.get(p.id);if(!e||(!e.garden.visible&&!e.marker.visible&&!e.site.visible))continue;
       const d=W.R.hitBox(ray,[p.x-4.6,0,p.z-3.2],[p.x+4.6,h.resident||h.status==="ready"?6.5:2.3,p.z+3.2]);
       if(d!=null&&(!best||d<best.d))best={d,id:p.id};}return best;}
@@ -100,7 +100,7 @@ const VILLAGE_VIEW = (() => {
     return out;}
   function focus(id){const p=id&&VILLAGE.plot(id),wide=VILLAGE.state().expanded,R=FV.R;
     const aspect=R.w/R.h,tan=Math.tan(R.cam.fov/2),span=Math.max(wide?91:47,(wide?103:50)/aspect),dist=span/(2*tan)*1.16+(wide?30:15),near=Math.max(25,12/(2*tan*aspect)*1.16+5);
-    closeFarmSheet();farmFocusXZ(p?p.x:wide?-81:-62,p?p.z:wide?59:44,p?near:dist,750);}
+    closeFarmSheet();farmFocusXZ(p?p.x:wide?(VILLAGE_SITE.roads[0]+VILLAGE_SITE.roads[1])/2:VILLAGE_SITE.roads[0],p?p.z:wide?59:44,p?near:dist,750);}
   return {attach,sync,step,pick,tags,focus,_world:W};
 })();
 
