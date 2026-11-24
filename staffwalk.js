@@ -38,9 +38,10 @@ const STAFF_WALK = (() => {
       r.legs.forEach((l,i)=>{const a=phase+i*Math.PI,z=Math.cos(a)*.11*w,lift=Math.max(0,Math.sin(a))*.075*w;l.thigh.y=hip;footAt(l,z,-hip+lift);});
       r.left.rx=-Math.cos(phase)*.38*w;r.left.rz=-.08;
       if(e.sowing){r.left.rx=-.55;r.left.rz=-.06;} /* v406: Die linke Hand hält den Saatbeutel. */
-      if(walking){e.node.y=0;const carrying=e.tool&&e.tool.visible,amplitude=carrying?.12:.38;
+      const ground=staffDeckY(e.x,e.z); /* v479: auf dem Angelsteg auf den Planken bleiben, nicht auf Bodenhöhe ziehen */
+      if(walking){e.node.y=ground;const carrying=e.tool&&e.tool.visible,amplitude=carrying?.12:.38;
         if(!staffCalling(s)){e.arm.rx=Math.cos(phase)*amplitude-(carrying?.12:0);e.arm.rz=.08;}
-      }else if(!e.dw&&!e.isSit){e.node.y*=Math.max(0,1-dt*12);}
+      }else if(!e.dw&&!e.isSit){e.node.y=ground+(e.node.y-ground)*Math.max(0,1-dt*12);}
     }
   }
   return {attach,step,reset,footAt,U,L,H,STRIDE};

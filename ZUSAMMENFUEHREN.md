@@ -1,3 +1,7 @@
+## v479 – Angler, Bachsteg, Trophäen-Markt
+
+Basis main682ef6a (v478). Gesamt-/SW/LOGI_V479; erbe, fishdata, fishview, game, hunt, staffwalk, team, worldview, style Asset479, übrige unverändert. `FGROUNDS` ohne `bachsteg`/`pier`. Der Steg ist im Wegenetz begehbar (`navBuild`). Keine Migration.
+
 ## v478 – Siedlung versetzt
 
 Basis main1d1a2d9 (v477). Lage der Siedlung nur noch über `VILLAGE_DATA.roads`/`rect` ändern, keine festen −62/−98 mehr. Gesamt-/SW/LOGI_V478; erbe, village, villagedata, villagesite, villagepeople, villageview Asset478, übrige Assets unverändert. Keine Migration.
