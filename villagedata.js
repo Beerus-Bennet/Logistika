@@ -1,8 +1,8 @@
 /* v340: Seeblick – feste Grundstücke und Nachbarn. Weltmaßstab: eine Kachel
    entspricht etwa zwei Metern; die Hauptstraße liegt auf z=18,5. */
 const VILLAGE_DATA = (() => {
-  const plots = [], rows = [31, 43, 55, 75, 87];
-  [-62, -98].forEach((road, col) => rows.forEach((z, row) => [-1, 1].forEach((side, s) => {
+  const plots = [], rows = [31, 43, 55, 75, 87], roads = [-72, -108]; /* v478: ganze Siedlung 10 Kacheln nach Westen, Abstand zur Hütte am See */
+  roads.forEach((road, col) => rows.forEach((z, row) => [-1, 1].forEach((side, s) => {
     const starter = col === 0 && row < 3;
     plots.push({ id: String(col) + row + s, x: road + side * 11, z, road, side, ry: side < 0 ? Math.PI / 2 : -Math.PI / 2,
       street: col ? "Seegarten" : "Lindenweg", number: row * 2 + s + 1, starter, resident: starter ? row * 2 + s : null });
@@ -27,7 +27,7 @@ const VILLAGE_DATA = (() => {
     holz:{n:"Holzhaus mit Veranda",cost:175000,turnkey:215000,days:2,rent:1450,sale:285000,scale:.8,need:{bauholz:8,balken:6,bretter:8,dielen:4,tueren:2}},
     familie:{n:"Großes Familienhaus",cost:260000,turnkey:315000,days:3,rent:2150,sale:415000,scale:.92,need:{bauholz:12,balken:10,bretter:12,dielen:6,tueren:3}}
   };
-  return {plots,neighbors,friends,looks,houses,land:35000,extension:48000,ad:750,rect:[-118,17,-43,100]};
+  return {plots,roads,neighbors,friends,looks,houses,land:35000,extension:48000,ad:750,rect:[-128,17,-53,100]};
 })();
 /* Eigener naher Lieferort im vorhandenen Straßen-/Radnetz. Keine Fernverkehrsaufträge. */
 NODES.push(["w-seeblick","Seeblick",52.35930,12.91098,"EUR",1,"br","city","Seeblick","hof"]);

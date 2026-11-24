@@ -1,3 +1,7 @@
+## v478 – Siedlung versetzt
+
+Basis main1d1a2d9 (v477). Lage der Siedlung nur noch über `VILLAGE_DATA.roads`/`rect` ändern, keine festen −62/−98 mehr. Gesamt-/SW/LOGI_V478; erbe, village, villagedata, villagesite, villagepeople, villageview Asset478, übrige Assets unverändert. Keine Migration.
+
 ## v475 – Karosserie-Innenflächen
 
 Basis main0930c00 einschließlich Bergfarben474, Trainingsziel473 und Fahrzeugformen472. Nur carmodels/racecars und deren Assetversionen475 verändert; Gesamt-/SW/LOGI_V475. Andere Assets/Geometrien/Fahrdaten erhalten. Wannen und Innenhaut gehören in beide Modellpfade (gemeinsamer Katalog und Gallardo). Welt-Culling nicht deaktivieren. Keine Migration. Prüfung/Bildvergleich: docs/KAROSSERIE-v475.md. Vor Push/Merge main prüfen, kein automatisches Merge.

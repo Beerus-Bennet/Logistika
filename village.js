@@ -65,9 +65,10 @@ const VILLAGE = (() => {
   }
   function relist(id){const h=home(id),L=h&&h.listing;if(!h||!["ready","building"].includes(h.status)||!L||!L.offers||!L.offers.every(c=>c.declined)||L.extra>0)return false;
     h.lastApplicants=L.offers.map(c=>c.n);delete h.listing;changed();return true;}
+  /* v478: Bewertung wie vor dem Versetzen (Siedlung −10, Bezugspunkt ebenfalls). */
   /* v433: Nachfrage je Grundstück – Seeblick (nah am See) und ruhige Lage (wenige Nachbarn) ziehen mehr Interessenten an. */
   function demand(id){
-    const T=state(),p=plot(id),h=T.homes[id],e=Math.hypot((p.x-14)/36,(p.z-48)/22),see=Math.max(0,Math.min(1,1-(e-1.8)/1.6));
+    const T=state(),p=plot(id),h=T.homes[id],e=Math.hypot((p.x-4)/36,(p.z-48)/22),see=Math.max(0,Math.min(1,1-(e-1.8)/1.6));
     const nb=D.plots.filter(q=>q.id!==id&&Math.hypot(q.x-p.x,q.z-p.z)<=24&&T.homes[q.id].resident).length,quiet=nb<=1?1:nb===2?.4:0;
     return {see,nb,quiet,score:.5+4.5*see+1.2*quiet+(h.type==="familie"?.3:0)+(h.listing&&h.listing.channel==="online"?.3:0)};
   }
@@ -172,7 +173,7 @@ const VILLAGE = (() => {
   }
   function repo(v,leg,o){
     if(!v.villageAt||!plot(v.villageAt)||leg.from!==FARM_NODE||!["b","r"].includes(leg.mode))return null;
-    const end=geo(...door(plot(v.villageAt)));if(hav(vehPoint(v),end)>.02)return null;
+    const end=geo(...door(plot(v.villageAt)));if(hav(vehPoint(v),end)>.04)return null;
     const pts=route(v.villageAt).map(q=>geo(...q)).reverse();pts.gm=pts.slice(1).map(()=>"v");
     const d=pathLen(pts);return {t:d/vType(v.type).speed*60,d,ok:true,edges:[],pts};
   }

@@ -2,7 +2,7 @@
    LOGISTIKA – Service Worker
    App-Shell offline verfügbar, Kartenkacheln werden zwischengespeichert.
    ========================================================================= */
-const VERSION = "v477";
+const VERSION = "v478";
 const APP   = "logistika-app-" + VERSION;
 const TILES = "logistika-tiles-" + VERSION;
 const MAX_TILES = 900;
@@ -29,7 +29,7 @@ const SHELL = [
   "./farmdata.js?v=417",
   "./fishdata.js?v=109",
   "./erbedata.js?v=349",
-  "./villagedata.js?v=340",
+  "./villagedata.js?v=478",
   "./places.js?v=109",
   "./avatar.js?v=282",
   "./photo.js?v=336",
@@ -48,8 +48,8 @@ const SHELL = [
   "./loading.js?v=109",
   "./game.js?v=461",
   "./farm.js?v=461",
-  "./erbe.js?v=461",
-  "./village.js?v=433",
+  "./erbe.js?v=478",
+  "./village.js?v=478",
   "./farmstory.js?v=349",
   "./intro.js?v=349",
   "./cars.js?v=372",
@@ -82,11 +82,11 @@ const SHELL = [
   "./hunt.js?v=465",
   "./exhibits.js?v=380",
   "./rent.js?v=340",
-  "./villagesite.js?v=369",
+  "./villagesite.js?v=478",
   "./villagegarden.js?v=369",
-  "./villagepeople.js?v=354",
+  "./villagepeople.js?v=478",
   "./peopletraffic.js?v=388",
-  "./villageview.js?v=433",
+  "./villageview.js?v=478",
   "./bauplatz.js?v=274",
   "./fishview.js?v=333",
   "./staffwalk.js?v=406",
