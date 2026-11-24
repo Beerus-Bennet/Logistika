@@ -299,3 +299,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v474: PR172/Bergfußfarben mit main58774ff/Fahrzeugformen472 und PR174/Trainingsziel473 integriert. Bergcode bytegleich c803496, Fahrzeugcode bytegleich main, Training bytegleich c9e6be5; nur Gesamt474/alpine-Cache474 und Dokumentation zusätzlich geändert. PR172 enthält PR174; kein automatischer Merge. Bericht docs/PR172-ABGLEICH-v474.md.
 
 - v475: Karosserie-Innenhaut/Radhauswannen in carmodels/racecars, auch Gallardo und Vintage. Backface-Culling erhalten. Budget komplett6500, max6455. Gesamt/SW475; carmodels/racecars475, sonst Assetstände aus main0930c00. Bericht docs/KAROSSERIE-v475.md, Sichtstrahltest karosserie-v475.test.js. Keine Geschäfts-/Saveänderung.
+
+- v476: Arbeiter folgen dem Fahrplan (`staffFollow` in `team.js`) – bei Tempo > 3 direkt, nach Abwesenheit (Lücke > 40) Sprung auf die Route statt langem Aufholen; Test „v476 Tempo 30×“ in `worker-motion-v351.test.js`. Zeit steht in der Rennbahn korrekt still.
