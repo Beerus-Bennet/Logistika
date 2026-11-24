@@ -105,6 +105,18 @@ test('v463 Steg: Kraft steht auf den Planken, abseits des Stegs auf dem Boden',(
  run(`var fs=S.farm.staff.find(s=>s.role==='fischer'),fe=WV.staff.get(fs.id);fe.x=sp[0];fe.z=sp[1];fs.px=sp[0];fs.pz=sp[1];fs.job=null;stepStaff(.05,1);`);
  assert.ok(run('fe.node.y>=.135'),run('fe.node.y'));
 });
+/* v476: Bei Tempo 30× lag die Figur 80–140 Einheiten hinter dem Fahrplan (feste Gehgeschwindigkeit) – Pause „verzögert“, langes Rennen. Nach langer
+   Abwesenheit der Hofansicht springt sie unbemerkt an die Planstelle auf dem Weg. */
+test('v476 Tempo 30×: Figur folgt dem Fahrplan, nach Abwesenheit springt sie auf den Weg',()=>{
+ run(`allWorkers();PEOPLE_TRAFFIC.reset();S.time=11*60;for(let i=0;i<9;i++)staffGo(S.farm.staff[i],i,{k:'home',i});S.speed=30;var lag={},seen={};
+  for(let i=0;i<500;i++){S.time+=.05*30;simTime+=.05;stepStaff(.05,simTime);for(const s of S.farm.staff){const j=s.job;if(!j||!j.route||seen[s.id]===j)continue;if(S.time>=j.t0+j.walk){const e=WV.staff.get(s.id),q=routeAt(j.route,j.len||routeLen(j.route));lag[s.role]=Math.hypot(e.x-q[0],e.z-q[1]);seen[s.id]=j;}}}
+  var worstLag=Math.max(0,...Object.values(lag));`);
+ assert.ok(run('Object.keys(lag).length>=7'));assert.ok(run('worstLag<10'),run('JSON.stringify(lag)'));
+ run(`allWorkers();PEOPLE_TRAFFIC.reset();S.speed=1;S.time=11*60;for(let i=0;i<9;i++)staffGo(S.farm.staff[i],i,{k:'home',i});for(let i=0;i<60;i++){S.time+=.05;simTime+=.05;stepStaff(.05,simTime);}
+  var jobs=S.farm.staff.map(s=>s.job);S.time+=Math.min(...jobs.map(j=>j.t0+j.walk))-S.time-3;stepStaff(.05,simTime+=.05);stepStaff(.05,simTime+=.05);var far=0;
+  for(const s of S.farm.staff){const j=s.job,e=WV.staff.get(s.id);if(!j||!j.route||j!==jobs[S.farm.staff.indexOf(s)])continue;far=Math.max(far,routeProject(j.route,e.x,e.z).dist);}`);
+ assert.ok(run('far<.5'),run('far'));
+});
 test('Übergabe wartet am Fach, läuft sichtbar ab und wird nach dem Laden nicht erneut begonnen',()=>{
  run(`allWorkers();var s=S.farm.staff[0],e=WV.staff.get(s.id);staffGo(s,0,{k:'home',i:0});var j=s.job,st=j.stops[0],at=j.route[st.i],total=j.len+j.stops.reduce((n,q)=>n+q.w,0);j.t0=S.time-st.d*j.walk/total;e.x=at[0]+2;e.z=at[1];for(let i=0;i<20;i++){S.time+=.01;STAFF_GEAR.prepare(s,e,.02,.01);}var waited=e.gearAction.t;e.x=at[0];e.z=at[1];for(let i=0;i<92;i++){S.time+=.01;STAFF_GEAR.prepare(s,e,.02,.01);}var finished=st.done351;s.job=JSON.parse(JSON.stringify(j));e.gearAction=null;STAFF_GEAR.prepare(s,e,.02,.01);`);
  assert.equal(run('waited'),0);assert.equal(run('finished'),true);assert.equal(run('e.gearAction'),null);
