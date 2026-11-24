@@ -336,7 +336,7 @@ function navOk(i, role, si, ti) {
   if (!b || i === si || i === ti || (b === 2 && role === "farmer")) return true;
   /* v295: Notlösung (navPathSafe): in der Nähe von Start und Ziel dürfen einzelne gesperrte Felder überstiegen werden */
   const L = NAV.loose;
-  if (L) { const x = i % NAV.W, z = (i / NAV.W) | 0; if ((Math.abs(x - L[0]) <= 2 && Math.abs(z - L[1]) <= 2) || (Math.abs(x - L[2]) <= 2 && Math.abs(z - L[3]) <= 2)) return true; }
+  if (L) { const x = i % NAV.W, z = (i / NAV.W) | 0; if ((Math.abs(x - L[0]) <= L[4] && Math.abs(z - L[1]) <= L[4]) || (Math.abs(x - L[2]) <= L[4] && Math.abs(z - L[3]) <= L[4])) return true; }
   return false;
 }
 /* v295: Wegsuche, die nie aufgibt: Steht jemand eingeschlossen (z. B. der Fischer am Steg zwischen Reusen, Boot und Hütte) oder soll er an
@@ -347,12 +347,17 @@ function navPathSafe(sx, sz, tx, tz, role) {
   if (r) return navSmooth(r, role);
   navBuild();
   const ax = Math.floor(sx) - NAV.x0, az = Math.floor(sz) - NAV.z0, bx = Math.floor(tx) - NAV.x0, bz = Math.floor(tz) - NAV.z0;
-  NAV.loose = [ax, az, bx, bz];
-  try { return navSmooth(navPath(sx, sz, tx, tz, role), role, true); } finally { NAV.loose = null; }
+  /* v480: Reichen zwei Felder nicht (z. B. mitten in einem großen Gehege), den Umkreis vergrößern – gesperrte Felder sind dabei teuer, es geht also
+     auf dem kürzesten Stück hinaus und dann auf freien Feldern weiter, nie als Gerade quer über den Hof. */
+  try {
+    for (const n of [2, 6, 14]) { NAV.loose = [ax, az, bx, bz, n]; const q = navPath(sx, sz, tx, tz, role); if (q) return navSmooth(q, role, true); }
+    return null;
+  } finally { NAV.loose = null; }
 }
 /* v438: Wege der Arbeitskräfte ohne Zickzack. Das Raster liefert Achs- und Diagonalstücke mit vielen Knicken. Zuerst werden
    Zwischenpunkte übersprungen, solange die Gerade frei bleibt (keine gesperrten Felder, kein Zaun, 0,3 Abstand zur Seite);
    danach werden die Ecken als Kurve gerundet – jede Rundung nur, wenn die Kurve ebenfalls frei ist. Start und Ziel bleiben. */
+const NAV_WAY = 0.65;   /* v480: bis zu diesen Kosten ist ein Feld ein Weg (Straße 0,6, Wege und Steg darunter) */
 function navClear(a, b, role, walls) {
   const l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(l / 0.25)), px = l ? -(b[1] - a[1]) / l : 0, pz = l ? (b[0] - a[0]) / l : 0;
   for (let k = 0; k <= n; k++) {
@@ -362,6 +367,7 @@ function navClear(a, b, role, walls) {
       if (!navIn(cx, cz)) return false;
       const bl = NAV.blk[navIdx(cx, cz)];
       if (bl && !(bl === 2 && role === "farmer")) return false;
+      if (role === "fischer" && !o && NAV.cost[navIdx(cx, cz)] > NAV_WAY) return false;   /* v480: keine Abkürzung über die Wiese */
     }
   }
   return !navHit(a[0], a[1], b[0], b[1], walls);
@@ -422,7 +428,7 @@ function navPath(sx, sz, tx, tz, role) {
         if (!navOk(a, role, si, ti) || !navOk(b, role, si, ti)) continue;
         if (navCross(x, z, x + dx, z, walls) || navCross(x, z, x, z + dz, walls) || navCross(x + dx, z, nx, nz, walls) || navCross(x, z + dz, nx, nz, walls)) continue;
       } else if (navCross(x, z, nx, nz, walls)) continue;
-      const c = (dx && dz ? 1.414 : 1) * NAV.cost[j] * (NAV.blk[j] === 2 ? 2.2 : 1);
+      const c = (dx && dz ? 1.414 : 1) * NAV.cost[j] * (NAV.blk[j] === 2 ? 2.2 : NAV.blk[j] ? 8 : 1) * (role === "fischer" && NAV.cost[j] > NAV_WAY ? 4 : 1);   /* v480: Fischer bleibt auf Wegen */
       if (g[i] + c < g[j]) { g[j] = g[i] + c; from[j] = i; push(g[j] + h(nx, nz), j); }
     }
   }
@@ -1834,6 +1840,22 @@ function staffPhoneArm(o) {
   b.box(0.006, 0.11, 0.045, 0xe9edf2, { x: -0.05, y: 0.125, z: 0.02, rx: 0.35, c: true });     /* … helle Rückseite nach außen */
   return b;
 }
+/* v480: Gespeicherter Standort beim Laden. Liegt er ringsum eingesperrt (mitten im Gehege – alte Laufwege führten als Gerade quer über den Hof),
+   steht die Kraft auf dem nächsten freien Feld. Der Lagerplatz ist für die Wegsuche absichtlich gesperrt und zählt nicht. */
+function staffPlaceFree(s) {
+  if (s.px == null) return null;
+  if (typeof CAMP !== "undefined" && CAMP.blockedW(s.px, s.pz) || !navBlockedAt(s.px, s.pz)) return [s.px, s.pz];
+  const role = s.role === "farmer" ? "farmer" : "", f = navFree(s.px, s.pz, role, 20);
+  if (Math.hypot(f[0] - s.px, f[1] - s.pz) < 1.5) return [s.px, s.pz];   /* dicht am Rand: dort kommt sie selbst heraus */
+  s.px = f[0]; s.pz = f[1];
+  return f;
+}
+/* v480: Führt ein gespeicherter Weg durch Gehege, Gebäude oder Wasser? (Anfang und Ende dürfen am Rand liegen) */
+function staffRouteBad(j) {
+  const L = routeLen(j.route);
+  for (let d = 1.5; d < L - 1.5; d += 0.5) { const q = routeAt(j.route, d); if (navBlockedAt(q[0], q[1]) && !(j.oid != null && farmObj(j.oid) && farmObj(j.oid).t === "field") && !(typeof CAMP !== "undefined" && CAMP.blockedW(q[0], q[1]))) return true; }
+  return false;
+}
 function worldSyncStaff() {
   if (typeof FV === "undefined" || !FV.R) return;
   const R = FV.R, F = S.farm, ids = new Set((F.staff || []).map(s => s.id));
@@ -1844,7 +1866,7 @@ function worldSyncStaff() {
     if (old && old.key === key) return;
     /* v57: Vertretung kommt oder geht – neue Figur an derselben Stelle */
     if (old) { const k = R.nodes.indexOf(old.node); if (k >= 0) R.nodes.splice(k, 1); if (old.gt) { const g = R.nodes.indexOf(old.gt); if (g >= 0) R.nodes.splice(g, 1); } WV.staff.delete(s.id); }
-    const h = old ? [old.x, old.z] : s.px != null ? [s.px, s.pz] : staffHome(s.role, i), body = staffBody(s);
+    const h = old ? [old.x, old.z] : staffPlaceFree(s) || staffHome(s.role, i), body = staffBody(s);
     const walking=typeof STAFF_WALK!=="undefined";
     const node = fnode(fmesh("staffb351:" + staffKey(s), () => FWM.person(Object.assign({}, body, walking?{noLegs:true,noArms:true}:{armR:false}))), { x: h[0], z: h[1], ry: 0.6 + i, s: 1.45 });
     R.nodes.push(node);
@@ -1861,6 +1883,7 @@ function worldSyncStaff() {
     if (gt) R.nodes.push(gt);
     const e={ node, arm, tool, head, ph: i, x: h[0], z: h[1], fx: 0, wave: null, key, armM, armPh, armSitM, gt,role:s.role };
     WV.staff.set(s.id,e);if(walking)STAFF_WALK.attach(s,e);
+    if (!old && s.job && s.job.route && s.job.route.length > 1 && S.time < s.job.t0 + s.job.walk && staffRouteBad(s.job)) staffRepath351(e, s.job);   /* v480 */
     if(s.role==='farmer')e.seedBag=R.addChild(node,fnode(fmesh('seedBag406',()=>{const b=new FM.MB();b.cyl(.105,.085,.18,8,0xa07c4b);b.cyl(.11,.11,.025,8,0x795b37,{y:.17});b.disc(.095,8,0xdbc28a,{y0:.198});for(let q=0;q<7;q++){const a=q*2.4;b.ico(.012,0xe5c375,{x:Math.cos(a)*.06,y:.2,z:Math.sin(a)*.06,sy:.6});}return b;}),{x:-.19,y:.19,z:.27,visible:false}));
   });
 }
