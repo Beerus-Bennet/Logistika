@@ -301,3 +301,5 @@ Gelten zusätzlich zu den festen Regeln oben. **Bei Widerspruch haben die Projek
 - v475: Karosserie-Innenhaut/Radhauswannen in carmodels/racecars, auch Gallardo und Vintage. Backface-Culling erhalten. Budget komplett6500, max6455. Gesamt/SW475; carmodels/racecars475, sonst Assetstände aus main0930c00. Bericht docs/KAROSSERIE-v475.md, Sichtstrahltest karosserie-v475.test.js. Keine Geschäfts-/Saveänderung.
 
 - v477: Autos im Foto-Vergleich (`carmodels.js`) – Bugecken geschlossen (`endZ` .13), Haubenprofil (`hood`), LaFerrari schwarzes Dach/kein Flügel (`blackroof`, `carforms.js`); Bericht docs/AUTOVERGLEICH-v477.md.
+
+- v476: Arbeiter folgen dem Fahrplan (`staffFollow` in `team.js`) – bei Tempo > 3 direkt, nach Abwesenheit (Lücke > 40) Sprung auf die Route statt langem Aufholen; Test „v476 Tempo 30×“ in `worker-motion-v351.test.js`. Zeit steht in der Rennbahn korrekt still.

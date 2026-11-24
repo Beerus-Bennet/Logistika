@@ -8,6 +8,16 @@
 
 **Geprüft:** Vorher/nachher-Bilder aller 127 Modelle (Bugecken), Nahaufnahme des Spalts vor/nach der Änderung, `fahrzeugformen-v472`, `auktionsautos-v471`, `gallardo-form-v470`. **Nicht geprüft:** Handy; Fahrphysik-Test `fahrprofile-v468` (unverändert, lief nicht durch/nicht abgewartet). **Offen:** Die Modelle bleiben vereinfacht (Scheinwerfer-, Kühlergrill-, Felgen- und Fensterformen je Modell) – Vorschläge im Bericht; ein Pixelvergleich aller 127 Fotos ist damit nicht abgeschlossen.
 
+## v476 – Arbeiter holen den Fahrplan nach (kein „wildes Rennen“, keine verzögerte Pause)
+
+**Anlass:** Nach der Autorennbahn begannen die Arbeiter ihre Pause verzögert und rannten über die Wiese, auch abseits der Wege (Screenshots 16:12/16:29).
+
+**Befund (gemessen):** Die Spielzeit steht in der Rennbahn tatsächlich still (`tick` und Hauptschleife sind gesperrt; `S.time` wird dort nirgends verändert) – ein Zeitleck habe ich nicht gefunden. Die Ursache liegt im Nachlaufen der Figuren: `staffFollow` (`team.js`) lässt jede Figur dem Fahrplan mit fester Geschwindigkeit (12 Einheiten/s) hinterherlaufen. Bei Tempo 30× lag sie bei der geplanten Ankunft 80–144 Einheiten hinter dem Plan; auch nach langer Abwesenheit der Hofansicht (Zeit lief woanders) läuft sie den Rückstand sichtbar auf. Das ergibt „verzögerte“ Pausen und langes Rennen.
+
+**Lösung:** Bei Tempo > 3 folgt die Figur dem Fahrplan direkt (Zeitraffer, Abstand bei Ankunft jetzt ≤ 6 statt 80–144); bei einer Lücke > 40 (Zeit lief außerhalb der Hofansicht) springt sie unbemerkt an die Planstelle auf der Route. Normales Tempo unverändert (Prüfung: alle bisherigen Bewegungsprüfungen). Wege bleiben die berechneten Routen.
+
+**Geprüft:** Neuer Test „v476 Tempo 30×…“ in `worker-motion-v351.test.js` (schlägt ohne die Änderung mit 80–125 fehl), alle 18 Bewegungsprüfungen, `wegglaetten-v438`, `fluss-baeume-v424`. **Nicht geprüft:** Handy, Spiel mit gebauter Rennbahn im Browser; ob die Routen abseits der Waldwege durch den Wald führen (Wegesuche meidet Hindernisse, bevorzugt aber keine Pfade) – das habe ich nicht verändert.
+
 ## v475 – Geschlossene Innenflächen statt heller Karosserie-Durchblicke
 
 **Ursache:** Das Nutzervideo zeigt fehlende Radhaustiefe, einseitige Kabinenflächen und offene Einlassränder.

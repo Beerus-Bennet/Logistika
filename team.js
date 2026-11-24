@@ -1484,10 +1484,14 @@ function staffFollow(e, j, D, dt) {
   /* v351: In einem Bild höchstens bis zur nächsten Wegbiegung. Sonst
      schneidet der sichtbare Schritt trotz gültiger Route eine Zaunecke. */
   let corner=0;for(let i=1;i<r.length;i++){corner+=Math.hypot(r[i][0]-r[i-1][0],r[i][1]-r[i-1][1]);if(corner>e.rs+1e-3)break;}
-  const next = Math.min(D, e.rs + 12 * dt,corner),q = routeAt(r,next);
+  /* v476: Die Figur holt den Fahrplan nach, statt ihm mit fester Gehgeschwindigkeit (12/s) hinterherzulaufen: Bei hohem Spieltempo (10×/30×) lag sie
+     80–140 Einheiten hinter dem Plan zurück – die Pause begann „verzögert“, sie rannte lange über die Wiese. Jetzt folgt sie bei Tempo > 3 dem Plan
+     direkt (Zeitraffer), und nach langer Abwesenheit der Hofansicht (Lücke > 40, Zeit lief woanders) springt sie unbemerkt an die Planstelle auf dem Weg. */
+  const lag = D - e.rs, jump = lag > 40, fast = S.speed > 3;
+  const next = jump ? D : Math.min(D, e.rs + Math.max(12 * dt, fast ? lag : 0), fast ? D : corner), q = routeAt(r,next);
   /* v351: Bereits festgefahrene/alte Wege an einem Zaun von der wirklichen
      Position neu durch das Tor führen, statt immer denselben Schritt zu verwerfen. */
-  if(navHit(e.x,e.z,q[0],q[1],navWallsFor(e.role))){staffRepath351(e,j);return e.node.ry;}
+  if(!jump&&!fast&&navHit(e.x,e.z,q[0],q[1],navWallsFor(e.role))){staffRepath351(e,j);return e.node.ry;}
   e.rs=next;e.x = q[0]; e.z = q[1];
   return q[2];
 }
