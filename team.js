@@ -197,7 +197,7 @@ function navKey() {
   /* v109: Kulissenbäume, Büsche und der Hochsitz zählen mit – sie entstehen erst mit der Welt */
   const w = typeof WV !== "undefined" ? (WV.bgChunks ? WV.bgChunks.size : 0) + "/" + (WV.bushes ? WV.bushes.length : 0) + "/" + (WV.forest && WV.forest.items ? WV.forest.items.length : 0) : "";
   const hu = typeof HUNT !== "undefined" ? (HUNT.built() ? 2 : HUNT.unlocked() ? 1 : 0) : 0;
-  return F.objs.length + ":" + h + ":" + w + ":" + hu + ":" + (typeof WV !== "undefined" && WV.rockObs ? WV.rockObs.length : 0);
+  return F.objs.length + ":" + (F.objs.some(o => o.t === "f_steg") ? 1 : 0) + ":" + h + ":" + w + ":" + hu + ":" + (typeof WV !== "undefined" && WV.rockObs ? WV.rockObs.length : 0);
 }
 function navIdx(x, z) { return (z - NAV.z0) * NAV.W + (x - NAV.x0); }
 function navIn(x, z) { return x >= NAV.x0 && z >= NAV.z0 && x < NAV.x1 && z < NAV.z1; }
@@ -238,6 +238,13 @@ function navBuild() {
     if (o.t === "deco" && FDECO[o.k] && FDECO[o.k].weg) { if (navIn(x0, z0)) cost[navIdx(x0, z0)] = 0.4; return; }
     for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) if (navIn(x0 + i, z0 + j)) blk[navIdx(x0 + i, z0 + j)] = v;
   });
+  /* v479: Der Angelsteg ist begehbar (Planken ±0,85, vom Ufer bis ans Ende). Er galt als Gebäude im gesperrten See – der Fischer fand keinen Weg,
+     bekam eine Gerade durchs Wasser und lief vor der Hütte hin und her. */
+  const steg = typeof farmObj1 === "function" ? farmObj1("f_steg") : null;
+  if (steg) {
+    const [cx, cz] = farmCenter(steg);
+    for (let z = Math.floor(cz - 4.7); z < cz + 3; z++) for (let x = Math.floor(cx - 0.85); x < cx + 0.85; x++) if (navIn(x, z)) { const i = navIdx(x, z); blk[i] = 0; cost[i] = 0.45; }
+  }
   /* Bäume (auch Setzlinge) */
   (S.farm.trees || []).forEach(t => { if ((t.st === "up" || t.st === "sapling") && navIn(Math.floor(t.x), Math.floor(t.z))) blk[navIdx(Math.floor(t.x), Math.floor(t.z))] = 1; });
   /* v109: auch nicht durch Kulissenbäume, Büsche, Baumstümpfe, Totholz und den Hochsitz – aber nie auf einem Weg sperren */

@@ -1305,7 +1305,7 @@ function staffFishPlan(target) {
       if (!staffBaitOk(b)) continue;
       const B = FBAITS[b];
       let best = null, bv = -1;
-      FGROUNDS.filter(g => farmGroundOk(g) && (!B.spec || g.fish[B.spec])).forEach(g => {
+      FGROUNDS.filter(g => !g.pier && farmGroundOk(g) && (!B.spec || g.fish[B.spec])).forEach(g => {
         const o = angelOdds(g.id, b, U.rod), sum = Object.values(o).reduce((a, x) => a + x, 0);
         if (!sum) return;
         const v = Object.keys(o).reduce((a, id) => a + o[id] * fishPrice(id, null, 3), 0) / sum;
@@ -1315,7 +1315,7 @@ function staffFishPlan(target) {
     }
     return { why: "kein freigegebener Köder da" };
   }
-  const has = FGROUNDS.filter(g => g.fish[target]);
+  const has = FGROUNDS.filter(g => !g.pier && g.fish[target]);   /* v479: der Fischer angelt am See, nicht am Bachsteg im Wald */
   const ok = has.filter(farmGroundOk);
   if (!ok.length) return { why: has.length ? (Math.min(...has.map(g => g.boat)) >= 2 ? "braucht das Motorboot" : "braucht das Ruderboot") : "gibt es hier nicht" };
   const list = STAFF_BAITS[D.cls] || [];

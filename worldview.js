@@ -3544,10 +3544,10 @@ function worldTags() {
       if (sold) want.push(["st" + o.id, cx, objH(o) + 0.4, cz, "💰<b>" + sold + "</b>", "ready", () => openStall(o.t === "f_markt")]);
     }
     if (o.t === "f_plot" && farmFishBuildCheck(o.k) === true) want.push(["pl" + o.id, cx, 1.3, cz, "🔨" + FFISHERY[o.k].i, "ready", () => openPlot(o)]);
-    /* Steg: Turnier bereit */
+    /* Steg: Turnier bereit – v479: mittig über dem sichtbaren Steg (mit Anlauf an Land −4,7 … +3) */
     if (o.t === "f_steg" && angelS()) {
       const tour = tourCanStart();
-      want.push(["us" + o.id, cx + 1.5, 1.4, cz, "🎣" + (tour ? "🏆" : ""), tour ? "ready" : "", () => openSteg(tour ? "tour" : null)]);
+      want.push(["us" + o.id, cx, 1.4, cz - 0.85, "🎣" + (tour ? "🏆" : ""), tour ? "ready" : "", () => openSteg(tour ? "tour" : null)]);
     }
     /* v59: Berts Kombi – fertige Köder zeigt die Maschinen-Blase; hier: alte Bestellung
        aus v58 fertig (✨) oder Bert wartet auf einen Fisch (🐟) */
