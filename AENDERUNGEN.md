@@ -1,3 +1,11 @@
+## v478 – Siedlung Seeblick 10 Kacheln nach Westen versetzt
+
+**Anlass:** Die Grundstücke am Lindenweg lagen direkt am Pfad der alten Hütte am See (Zaun x −44,5, Pfad ab etwa −45), der Gehweg lief über den Parkfleck der Hütte.
+
+**Lösung:** Straßenachsen `VILLAGE_DATA.roads` = [−72, −108] (vorher −62/−98), `rect` = [−128, 17, −53, 100]. `villagesite.js`, `villageview.js` und `farmCamRect` (`erbe.js`) leiten Straßen, Wendeplatz, Gehweg, Ortsschild und Kameragrenze daraus ab. `VILLAGE_PEOPLE` VER 478: laufende Wege der Bewohner beginnen neu. `demand`: Bezugspunkt um 10 mitversetzt, Nachfrage je Grundstück unverändert. `repo`: Toleranz 0,04 km für Fahrzeuge an der alten Haustür. Keine Migration; Häuser, Bewohner und Verträge hängen an der Grundstücks-ID.
+
+**Geprüft:** Testbrowser mit voll ausgebauter Siedlung (kein Grundstück blockiert, keine Bäume darin, Abstand zum Inselrand), Briefkasten-Wege der sechs Startbewohner, Nachbarschaftsauftrag, Ansicht. **Nicht geprüft:** Handy, bestehender Spielstand, Einkaufsfahrten mit dem Rad, Unit-Tests (`village-v340.test.js` und `gaerten-v369.browser.js` angepasst, nicht ausgeführt). **Bekannt:** Gerade laufende Nachbarschaftslieferungen fahren noch den alten Punkt an (rund 20 m daneben).
+
 ## v477 – Autos im Foto-Vergleich: Bugecken geschlossen, Haubenprofil, LaFerrari
 
 **Anlass:** Der LaFerrari im Betrachter sah gegenüber dem Foto zu generisch aus (großer Heckflügel, flache Haube, helles Dach). Alle 127 Modelle sollten mit ihren Fotos verglichen werden.
