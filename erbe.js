@@ -1071,8 +1071,7 @@ function farmCatch(gid, q, pre) {
   return r;
 }
 /* Fanggründe, die man gerade erreicht */
-function farmGroundOk(g) { if (g.pier) return !!farmObj1("f_steg") && farmAreaOpen("wald");      /* v189: Bachsteg – Angel gibt es am Seesteg */
-  return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
+function farmGroundOk(g) { return g.boat === 0 ? !!farmObj1("f_steg") : (S.farm.boat || 0) >= g.boat; }
 
 /* --------------------------------- Angeln ---------------------------------
    Ab dem Steg: Lehmanns alte Angel, Köder (Mais, Berts Würmer, Profi-Köder)
@@ -1305,7 +1304,7 @@ function staffFishPlan(target) {
       if (!staffBaitOk(b)) continue;
       const B = FBAITS[b];
       let best = null, bv = -1;
-      FGROUNDS.filter(g => !g.pier && farmGroundOk(g) && (!B.spec || g.fish[B.spec])).forEach(g => {
+      FGROUNDS.filter(g => farmGroundOk(g) && (!B.spec || g.fish[B.spec])).forEach(g => {
         const o = angelOdds(g.id, b, U.rod), sum = Object.values(o).reduce((a, x) => a + x, 0);
         if (!sum) return;
         const v = Object.keys(o).reduce((a, id) => a + o[id] * fishPrice(id, null, 3), 0) / sum;
@@ -1315,7 +1314,7 @@ function staffFishPlan(target) {
     }
     return { why: "kein freigegebener Köder da" };
   }
-  const has = FGROUNDS.filter(g => !g.pier && g.fish[target]);   /* v479: der Fischer angelt am See, nicht am Bachsteg im Wald */
+  const has = FGROUNDS.filter(g => g.fish[target]);
   const ok = has.filter(farmGroundOk);
   if (!ok.length) return { why: has.length ? (Math.min(...has.map(g => g.boat)) >= 2 ? "braucht das Motorboot" : "braucht das Ruderboot") : "gibt es hier nicht" };
   const list = STAFF_BAITS[D.cls] || [];
@@ -1661,7 +1660,7 @@ function farmEvStart(k) {
   const c = { k, t0: S.time, until: S.time + D.dur, data: {} };
   if (D.daily) { F.ev.days = F.ev.days || {}; F.ev.days[k] = staffDay(); }
   if (D.gap) { F.ev.last = F.ev.last || {}; F.ev.last[k] = S.time; }
-  if (k === "schwarm") { const gs = FGROUNDS.filter(g=>g.id!=="bachsteg"&&farmGroundOk(g)); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; } /* v409: kein neuer Schwarm am trockenen alten Wald-Bachstück. */
+  if (k === "schwarm") { const gs = FGROUNDS.filter(farmGroundOk); c.data.g = (gs.length ? pick(gs) : FGROUNDS[0]).id; }
   if (k === "nachbar") {
     const pool = ["bretter", "balken", "kisten", "pfosten", "platten", "brennholz"].filter(id => flv() >= 9);
     const a = pick(pool), b = pick(pool.filter(x => x !== a));

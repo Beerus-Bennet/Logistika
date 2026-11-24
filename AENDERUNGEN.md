@@ -1,3 +1,11 @@
+## v479 – Angler am Steg repariert, Bachsteg entfernt, keine Trophäen im Fahrzeugmarkt
+
+**Anlass:** Die 🎣-Blase saß nicht mittig über dem Steg; Wege und Aufgaben des Fischers sollten geprüft werden. Im Fahrzeugmarkt stand oben die Trophäensammlung mit Verkauf.
+
+**Ursache/Lösung:** (1) Blase (`worldview.js`): fester Versatz +1,5 entfernt, jetzt mittig über dem sichtbaren Steg. (2) Weg (`team.js`, `navBuild`): `f_steg` war als Gebäude im See gesperrt, die Wegesuche fand nichts, der Fischer bekam eine Gerade durchs Wasser und lief vor der Hütte hin und her – Planken sind jetzt begehbar, `navKey` merkt den Stegbau. (3) `staffwalk.js` zog die Figur auf Bodenhöhe 0 – jetzt auf `staffDeckY`. (4) Fanggrund `bachsteg` entfernt (`fishdata.js`, `fishview.js`, `erbe.js`): der Steg im Wald existiert seit der Flussverlegung nicht mehr, der Eintrag warf am Seesteg aus; auch der Fischer wählte ihn. Alte Spielstände mit `bachsteg` in Ereignissen oder Aufträgen werden toleriert. (5) `HUNT.marketHTML/marketBind` samt CSS entfernt; Verkauf weiter über Lager → Trophäen → „An Sammler“.
+
+**Geprüft:** Testbrowser – Fischer: Reuse beködern, angeln, Mittagspause, zurück, Reuse leeren (nie im Wasser, Füße auf den Planken), Sperrmeldungen, gezielter Auftrag; Angelliste ohne Bachsteg, altes Schwarm-Ereignis ohne Fehler; Markt ohne Trophäen, Verkauf über die Sammlung. **Nicht geprüft:** Handy, bestehender Spielstand, Tempo 10×/30×, Spezialköder, Unit-Tests (Node fehlt hier). **Toter Code:** Der Bachsteg-Aufbau in `worldview.js` (`worldPierFrame`, `WV.pier`, `worldPierTap`) ist wirkungslos und blieb unangetastet.
+
 ## v478 – Siedlung Seeblick 10 Kacheln nach Westen versetzt
 
 **Anlass:** Die Grundstücke am Lindenweg lagen direkt am Pfad der alten Hütte am See (Zaun x −44,5, Pfad ab etwa −45), der Gehweg lief über den Parkfleck der Hütte.
