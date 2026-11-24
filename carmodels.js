@@ -29,8 +29,11 @@ const CARMODELS=(()=>{
   const deck=p.suv?.66:p.box?.65:sport?.64:.65,frontH=p.suv?.54:p.box?.53:['m113','m129'].includes(c.id)?.58:p.grille==='horse'?.54:p.wedge?.40:p.old&&p.round?.39:.46,backH=p.suv?.61:p.box?.60:.57;
   const center=z=>H*(deck-(deck-frontH)*Math.max(0,z/L)**3-(deck-backH)*Math.max(0,-z/L)**4);
   const bulge=z=>p.axles.reduce((v,a)=>v+(p.box?.09:sport?.20:.12)*Math.exp(-(((z-a)/.48)**2)),0);
-  const endZ=(z,u)=>z-(z>L-.28?(p.box?.035:.20)*((z-L+.28)/.28)**2:z<-L+.25?-.045*((z+L-.25)/.25)**2:0)*u**4;
-  function top(u,z){const shoulder=Math.exp(-(((Math.abs(u)-.80)/.24)**2));return [width(z)*u,center(z)+bulge(z)*shoulder+.025*(1-u*u)-(p.box?.015:.07)*u**8,endZ(z,u)];}
+  /* v477: Eckenrundung am Bug höchstens .13 statt .20 – die Ableitung von z−c·s² (s = 0…1 auf .28) wird bei c > .14 negativ, die Fläche klappt am Eck zurück und lässt einen Spalt (weißer Zacken). */
+  const endZ=(z,u)=>z-(z>L-.28?(p.box?.035:.13)*((z-L+.28)/.28)**2:z<-L+.25?-.045*((z+L-.25)/.25)**2:0)*u**4;
+  /* v477: Haubenprofil wie bei den Fotos von Hypercars/Sportwagen: zwei Kotflügelkämme außen und eine flache Mulde in der Mitte (vorher glatte, flache Haube). */
+  const hoodShape=(sport||hyper||p.mid)&&!p.suv&&!p.wagon&&!p.box&&!p.saloon&&!p.old&&!p.vintage,hood=(u,z)=>{if(!hoodShape)return 0;const t=z/L;if(t<.12)return 0;const f=clamp((t-.12)/.2,0,1)*(1-clamp((t-.72)/.26,0,1));return f*(.05*Math.exp(-(((Math.abs(u)-.72)/.22)**2))-.028*Math.exp(-((u/.26)**2)));};
+  function top(u,z){const shoulder=Math.exp(-(((Math.abs(u)-.80)/.24)**2));return [width(z)*u,center(z)+bulge(z)*shoulder+.025*(1-u*u)-(p.box?.015:.07)*u**8+hood(u,z),endZ(z,u)];}
   const low=z=>{for(const a of p.axles){const dz=z-a,r=p.wheelRadius+.032;if(Math.abs(dz)<r)return p.wheelY+Math.sqrt(r*r-dz*dz);}return bodyBase;};
   function side(s,z,y,inset=0){const hi=top(1,z)[1],t=clamp((y-bodyBase)/(hi-bodyBase),0,1),waist=(p.box?.006:.025)*Math.sin(t*Math.PI)*Math.exp(-(((z/L)/.65)**4)),taper=z>L-.28?(p.old&&p.round?.16:.04)*((z-L+.28)/.28)*clamp((hi-y)/(hi-bodyBase),0,1)**2:0;return [s*(width(z)-waist+inset),y,endZ(z,1)-taper];}
   // Dachanteil nach Bauform: kleine Mittelmotor-Kanzel, lange Haube beim GT,
@@ -65,7 +68,7 @@ const CARMODELS=(()=>{
    const seamA=side(s,bf-.12,top(1,bf-.12)[1]-.045,.003),seamB=side(s,bf-.18,bodyBase+.08,.003);beam(b,seamA,seamB,.0025,shade(.55));
   }
   const cabinStart=b.v.length;
-  if(!p.open){patch(b,(u,v)=>roof(mix(-1,1,u),v),8,4,has('softtop')?dark:paint,[0,1,0]);
+  if(!p.open){patch(b,(u,v)=>roof(mix(-1,1,u),v),8,4,has('softtop')||has('blackroof')?dark:paint,[0,1,0]);
    for(const [fn,N] of [[wind,[0,.8,.6]],[back,[0,.8,-.6]]]){patch(b,(u,v)=>fn(mix(-1,1,u),v),6,3,paint,N);patch(b,(u,v)=>{const pt=fn(mix(-.95,.95,u),mix(.05,.96,v));pt[1]+=.006;return pt;},6,3,glass,N);}
    for(const s of [-1,1]){const A=wind(s,0),B=roof(s,0),D=back(s,0),E=roof(s,1),P=(u,v)=>A.map((x,k)=>mix(mix(x,D[k],u),mix(B[k],E[k],u),v));patch(b,P,6,2,paint,[s,0,0]);patch(b,(u,v)=>{const pt=P(mix(.045,.955,u),mix(.10,.92,v));pt[0]+=s*.008;return pt;},6,2,glass,[s,0,0]);const pillar=p.wagon||p.saloon||p.suv?.55:.72;beam(b,P(pillar,.05).map((x,k)=>x+(k===0?s*.012:0)),P(pillar,.97).map((x,k)=>x+(k===0?s*.012:0)),p.box?.018:.012,paint);}
   }else{

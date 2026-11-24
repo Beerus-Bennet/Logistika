@@ -56,7 +56,7 @@ ftr wedge pop slit none strakes,engine|Sehr breite hintere Schultern und durchge
 ff40 wedge rect triple integrated side,vents,engine|Extremer Keil, transparente Leuchtenabdeckungen und integrierter hoher Flügel
 ff50 mid oval oval integrated side,engine|Runde Vorderradkuppen und hoher bogenförmig integrierter Heckflügel
 fenz hyper vertical twin active side,engine|Zugespitzte mittige Nase und vertikale Leuchtengruppen
-flaf hyper swept oval active side,engine|Stark gewölbte Kotflügel, schmale Glaskanzel und tiefe seitliche Kanäle
+flaf hyper swept oval lip side,engine,blackroof|Stark gewölbte Kotflügel, schmale Glaskanzel und tiefe seitliche Kanäle
 f458 mid swept oval active side,engine|Nach hinten hochgezogene schlanke Leuchten und runder flacher Bug
 f812 gt swept oval active vents|Lange runde Frontmotorhaube mit großer tiefer Grillöffnung
 fsf90 mid slit triple active side,engine|Breite flache Front und horizontale dunkle Leuchtenbänder
