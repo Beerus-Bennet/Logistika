@@ -1,3 +1,13 @@
+## v477 – Autos im Foto-Vergleich: Bugecken geschlossen, Haubenprofil, LaFerrari
+
+**Anlass:** Der LaFerrari im Betrachter sah gegenüber dem Foto zu generisch aus (großer Heckflügel, flache Haube, helles Dach). Alle 127 Modelle sollten mit ihren Fotos verglichen werden.
+
+**Vorgehen:** Alle 127 Modelle in derselben Dreiviertel-Ansicht mit Foto-Lack neben ihre Fotos gelegt (Ergebnis und offene Punkte: `docs/AUTOVERGLEICH-v477.md`).
+
+**Lösung (`carmodels.js`, `carforms.js`):** (1) Bei **allen** Autos klaffte an den vorderen Bugecken ein Spalt (weißer Zacken, Durchblick): die Eckenrundung klappte die Fläche zurück (Faktor .20, ab .14 nicht mehr monoton) – jetzt .13, Ecke geschlossen. (2) Sport-/Hyper-/Mittelmotor-Coupés bekommen ein Haubenprofil mit zwei Kotflügelkämmen und flacher Mulde. (3) LaFerrari: schwarzes Dach, nur noch ein flacher Heckabschluss statt Flügel. Nur Darstellungsnetze; Technik, Preise, Garagen unverändert.
+
+**Geprüft:** Vorher/nachher-Bilder aller 127 Modelle (Bugecken), Nahaufnahme des Spalts vor/nach der Änderung, `fahrzeugformen-v472`, `auktionsautos-v471`, `gallardo-form-v470`. **Nicht geprüft:** Handy; Fahrphysik-Test `fahrprofile-v468` (unverändert, lief nicht durch/nicht abgewartet). **Offen:** Die Modelle bleiben vereinfacht (Scheinwerfer-, Kühlergrill-, Felgen- und Fensterformen je Modell) – Vorschläge im Bericht; ein Pixelvergleich aller 127 Fotos ist damit nicht abgeschlossen.
+
 ## v475 – Geschlossene Innenflächen statt heller Karosserie-Durchblicke
 
 **Ursache:** Das Nutzervideo zeigt fehlende Radhaustiefe, einseitige Kabinenflächen und offene Einlassränder.
